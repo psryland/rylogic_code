@@ -1,11 +1,8 @@
 //*****************************************
-// Menu Helper
+// Font Helper
 //	(c)opyright Paul Ryland 2009
 //*****************************************
-
-#ifndef PR_GUI_FONT_HELPER_H
-#define PR_GUI_FONT_HELPER_H
-
+#pragma once
 #include <windows.h>
 
 namespace pr
@@ -39,5 +36,3 @@ namespace pr
 		}
 	}
 }
-
-#endif

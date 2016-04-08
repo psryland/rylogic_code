@@ -12,10 +12,10 @@
 namespace ldr
 {
 	// Constructor
-	Plugin::Plugin(ldr::Main* ldr, char const* filepath, char const* args)
+	Plugin::Plugin(ldr::Main* ldr, wchar_t const* filepath, wchar_t const* args)
 		:m_ldr(ldr)
 		,m_dll()
-		,m_filepath(pr::filesys::StandardiseC(pr::filesys::CanonicaliseC<std::string>(filepath)))
+		,m_filepath(pr::filesys::StandardiseC<wstring>(filepath))
 		,m_name(pr::filesys::GetFiletitle(m_filepath))
 		,m_args(args)
 		,m_pi_initialise()
@@ -24,12 +24,13 @@ namespace ldr
 		,m_store()
 	{
 		// Load the dll
-		UINT last_error_mode = ::SetErrorMode(SEM_FAILCRITICALERRORS);
-		m_dll = ::LoadLibrary(m_filepath.c_str());
+		auto last_error_mode = ::SetErrorMode(SEM_FAILCRITICALERRORS);
+		m_dll = ::LoadLibraryW(m_filepath.c_str());
 		::SetErrorMode(last_error_mode);
-		if (!m_dll) throw LdrException(ELdrException::FailedToLoad, pr::Fmt("LoadLibrary called failed for %s",m_filepath.c_str()));
+		if (!m_dll)
+			throw LdrException(ELdrException::FailedToLoad, pr::Fmt("LoadLibrary called failed for %S",m_filepath.c_str()));
 
-		// Setup the function pointers
+		// Set up the function pointers
 		m_pi_initialise     = (ldrapi::Plugin_Initialise  )::GetProcAddress(m_dll, "ldrInitialise");
 		m_pi_uninitialise   = (ldrapi::Plugin_Uninitialise)::GetProcAddress(m_dll, "ldrUninitialise");
 		m_pi_step           = (ldrapi::Plugin_Step        )::GetProcAddress(m_dll, "ldrStep");
@@ -67,9 +68,9 @@ namespace ldr
 
 	// Create one or more objects described by 'reader'
 	// The last object created is returned. (hmm, could return a range of objects...)
-	pr::ldr::LdrObject* Plugin::RegisterObject(pr::script::Reader& reader, pr::ldr::ContextId ctx_id, bool async)
+	pr::ldr::LdrObject* Plugin::RegisterObject(pr::script::Reader& reader, pr::Guid const& ctx_id, bool async)
 	{
-		size_t initial = m_store.size();
+		auto initial = m_store.size();
 		pr::ldr::ParseResult out(m_store);
 		pr::ldr::Parse(m_ldr->m_rdr, reader, out, async, ctx_id);
 		

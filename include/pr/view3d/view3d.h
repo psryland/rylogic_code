@@ -275,8 +275,8 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_RemoveAllObjects  (View3DWindow window);
 	VIEW3D_API BOOL                    __stdcall View3D_HasObject         (View3DWindow window, View3DObject object);
 	VIEW3D_API int                     __stdcall View3D_ObjectCount       (View3DWindow window);
-	VIEW3D_API void                    __stdcall View3D_AddObjectsById    (View3DWindow window, int context_id);
-	VIEW3D_API void                    __stdcall View3D_RemoveObjectsById (View3DWindow window, int context_id);
+	VIEW3D_API void                    __stdcall View3D_AddObjectsById    (View3DWindow window, GUID const& context_id);
+	VIEW3D_API void                    __stdcall View3D_RemoveObjectsById (View3DWindow window, GUID const& context_id);
 	VIEW3D_API void                    __stdcall View3D_AddGizmo          (View3DWindow window, View3DGizmo giz);
 	VIEW3D_API void                    __stdcall View3D_RemoveGizmo       (View3DWindow window, View3DGizmo giz);
 
@@ -314,12 +314,12 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_ShowLightingDlg          (View3DWindow window);
 
 	// Objects
-	VIEW3D_API int                     __stdcall View3D_ObjectsCreateFromFile    (char const* ldr_filepath, int context_id, BOOL async, View3DIncludes const* includes);
-	VIEW3D_API View3DObject            __stdcall View3D_ObjectCreateLdr          (char const* ldr_script, BOOL file, int context_id, BOOL async, View3DIncludes const* includes);
-	VIEW3D_API View3DObject            __stdcall View3D_ObjectCreate             (char const* name, View3DColour colour, int icount, int vcount, View3D_EditObjectCB edit_cb, void* ctx, int context_id);
+	VIEW3D_API int                     __stdcall View3D_ObjectsCreateFromFile    (char const* ldr_filepath, GUID const& context_id, BOOL async, View3DIncludes const* includes);
+	VIEW3D_API View3DObject            __stdcall View3D_ObjectCreateLdr          (char const* ldr_script, BOOL file, GUID const& context_id, BOOL async, View3DIncludes const* includes);
+	VIEW3D_API View3DObject            __stdcall View3D_ObjectCreate             (char const* name, View3DColour colour, int icount, int vcount, View3D_EditObjectCB edit_cb, void* ctx, GUID const& context_id);
 	VIEW3D_API void                    __stdcall View3D_ObjectUpdate             (View3DObject object, char const* ldr_script, EView3DUpdateObject flags);
 	VIEW3D_API void                    __stdcall View3D_ObjectEdit               (View3DObject object, View3D_EditObjectCB edit_cb, void* ctx);
-	VIEW3D_API void                    __stdcall View3D_ObjectsDeleteById        (int context_id);
+	VIEW3D_API void                    __stdcall View3D_ObjectsDeleteById        (GUID const& context_id);
 	VIEW3D_API void                    __stdcall View3D_ObjectDelete             (View3DObject object);
 	VIEW3D_API View3DObject            __stdcall View3D_ObjectGetParent          (View3DObject object);
 	VIEW3D_API View3DObject            __stdcall View3D_ObjectGetChild           (View3DObject object, char const* name);

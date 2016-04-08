@@ -74,8 +74,14 @@ namespace pr
 			}
 
 			// Get/Set case sensitive keywords on/off
-			bool CaseSensitive() const { return m_case_sensitive; }
-			void CaseSensitive(bool cs) { m_case_sensitive = cs; }
+			bool CaseSensitive() const
+			{
+				return m_case_sensitive;
+			}
+			void CaseSensitive(bool cs)
+			{
+				m_case_sensitive = cs;
+			}
 
 			// Return the hash of a keyword using the current reader settings
 			static HashValue StaticHashKeyword(wchar_t const* keyword, bool case_sensitive) // Can't have the same name as 'HashKeyword' because it causes a compiler error

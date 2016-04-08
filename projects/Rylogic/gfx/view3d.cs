@@ -706,9 +706,9 @@ namespace pr.gfx
 			}
 
 			/// <summary>Add multiple objects by context id</summary>
-			public void AddObjects(int context_id)
+			public void AddObjects(Guid context_id)
 			{
-				View3D_AddObjectsById(m_wnd, context_id);
+				View3D_AddObjectsById(m_wnd, ref context_id);
 			}
 
 			/// <summary>Add a collection of objects to the window</summary>
@@ -731,9 +731,9 @@ namespace pr.gfx
 			}
 
 			/// <summary>Remove multiple objects by context id</summary>
-			public void RemoveObjects(int context_id)
+			public void RemoveObjects(Guid context_id)
 			{
-				View3D_RemoveObjectsById(m_wnd, context_id);
+				View3D_RemoveObjectsById(m_wnd, ref context_id);
 			}
 
 			/// <summary>Remove a collection of objects from the window</summary>
@@ -1202,25 +1202,25 @@ namespace pr.gfx
 				:this(ldr_script, file, null)
 			{}
 			public Object(string ldr_script, bool file, View3DIncludes? includes)
-				:this(ldr_script, file, DefaultContextId, false, includes)
+				:this(ldr_script, file, Guid.Empty, false, includes)
 			{}
-			public Object(string ldr_script, bool file, int context_id, bool async, View3DIncludes? includes)
+			public Object(string ldr_script, bool file, Guid context_id, bool async, View3DIncludes? includes)
 			{
 				m_owned = true;
 				var inc = includes ?? new View3DIncludes();
-				m_handle = View3D_ObjectCreateLdr(ldr_script, file, context_id, async, ref inc);
+				m_handle = View3D_ObjectCreateLdr(ldr_script, file, ref context_id, async, ref inc);
 				if (m_handle == HObject.Zero)
 					throw new Exception("Failed to create object from script\r\n{0}".Fmt(ldr_script.Summary(100)));
 			}
 
 			/// <summary>Create an object via callback</summary>
 			public Object(string name, uint colour, int icount, int vcount, EditObjectCB edit_cb)
-				:this(name, colour, icount, vcount, edit_cb, DefaultContextId)
+				:this(name, colour, icount, vcount, edit_cb, Guid.Empty)
 			{}
-			public Object(string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, int context_id)
+			public Object(string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, Guid context_id)
 			{
 				m_owned = true;
-				m_handle = View3D_ObjectCreate(name, colour, icount, vcount, edit_cb, IntPtr.Zero, context_id);
+				m_handle = View3D_ObjectCreate(name, colour, icount, vcount, edit_cb, IntPtr.Zero, ref context_id);
 				if (m_handle == HObject.Zero) throw new Exception("Failed to create object '{0}' via edit callback".Fmt(name));
 			}
 
@@ -1243,21 +1243,21 @@ namespace pr.gfx
 			/// 'include_paths' is a comma separate list of include paths to use to resolve #include directives (or nullptr)
 			/// Note, these objects cannot be accessed other than by context id.
 			/// This method is intended for creating static scenery</summary>
-			public static void CreateFromFile(string ldr_filepath, string[] include_paths, int context_id, bool async)
+			public static void CreateFromFile(string ldr_filepath, string[] include_paths, Guid context_id, bool async)
 			{
 				var inc = new View3DIncludes();
 				inc.m_include_paths = string.Join(",", include_paths ?? new string[0]);
-				View3D_ObjectsCreateFromFile(ldr_filepath, context_id, async, ref inc);
+				View3D_ObjectsCreateFromFile(ldr_filepath, ref context_id, async, ref inc);
 			}
 			public static void CreateFromFile(string ldr_filepath, string[] include_paths, bool async)
 			{
-				CreateFromFile(ldr_filepath, include_paths, DefaultContextId, async);
+				CreateFromFile(ldr_filepath, include_paths, Guid.Empty, async);
 			}
 
 			/// <summary>Delete all objects matching 'context_id'</summary>
-			public static void DeleteAll(int context_id)
+			public static void DeleteAll(Guid context_id)
 			{
-				View3D_ObjectsDeleteById(context_id);
+				View3D_ObjectsDeleteById(ref context_id);
 			}
 
 			/// <summary>Change the model for this object</summary>
@@ -1892,8 +1892,8 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_RemoveAllObjects       (HWindow window);
 		[DllImport(Dll)] private static extern bool              View3D_HasObject              (HWindow window, HObject obj);
 		[DllImport(Dll)] private static extern int               View3D_ObjectCount            (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_AddObjectsById         (HWindow window, int context_id);
-		[DllImport(Dll)] private static extern void              View3D_RemoveObjectsById      (HWindow window, int context_id);
+		[DllImport(Dll)] private static extern void              View3D_AddObjectsById         (HWindow window, ref Guid context_id);
+		[DllImport(Dll)] private static extern void              View3D_RemoveObjectsById      (HWindow window, ref Guid context_id);
 		[DllImport(Dll)] private static extern void              View3D_AddGizmo               (HWindow window, HGizmo giz);
 		[DllImport(Dll)] private static extern void              View3D_RemoveGizmo            (HWindow window, HGizmo giz);
 
@@ -1931,12 +1931,12 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_ShowLightingDlg          (HWindow window);
 
 		// Objects
-		[DllImport(Dll)] private static extern int               View3D_ObjectsCreateFromFile    (string ldr_filepath, int context_id, bool async, ref View3DIncludes includes);
-		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          (string ldr_script, bool file, int context_id, bool async, ref View3DIncludes includes);
-		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreate             (string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, IntPtr ctx, int context_id);
+		[DllImport(Dll)] private static extern int               View3D_ObjectsCreateFromFile    (string ldr_filepath, ref Guid context_id, bool async, ref View3DIncludes includes);
+		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          (string ldr_script, bool file, ref Guid context_id, bool async, ref View3DIncludes includes);
+		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreate             (string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, IntPtr ctx, ref Guid context_id);
 		[DllImport(Dll)] private static extern void              View3D_ObjectUpdate             (HObject obj, string ldr_script, EUpdateObject flags);
 		[DllImport(Dll)] private static extern void              View3D_ObjectEdit               (HObject obj, EditObjectCB edit_cb, IntPtr ctx);
-		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteById        (int context_id);
+		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteById        (ref Guid context_id);
 		[DllImport(Dll)] private static extern void              View3D_ObjectDelete             (HObject obj);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectGetParent          (HObject obj);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectGetChild           (HObject obj, string name);

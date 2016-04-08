@@ -5,8 +5,8 @@
 #pragma once
 
 #include <string>
-#include <atlbase.h>
-#include <atlapp.h>
+//#include <atlbase.h>
+//#include <atlapp.h>
 #include "pr/common/min_max_fix.h"
 #include "pr/common/assert.h"
 #include "pr/container/byte_data.h"
@@ -79,6 +79,7 @@ namespace pr
 		return pr::NormalisePoint(ClientArea(hwnd), pr::To<pr::v2>(pt), 1.0f, -1.0f);
 	}
 
+	#if 0
 	// Register a window class for a type that inherits WTL::CWindowImpl<> (e.g custom control)
 	// Call this before any instances of the control are created
 	template <typename T> inline ATOM RegisterClass(CAppModule& app_module)//, HINSTANCE hInstance)
@@ -151,6 +152,7 @@ namespace pr
 		::SendMessage(hwnd, pMsg->message, pMsg->wParam, pMsg->lParam);
 		return TRUE;
 	}
+	#endif
 
 	// Return a sub menu by address
 	// Use: auto menu = menu.SubMenuByName("&File,&Recent Files");

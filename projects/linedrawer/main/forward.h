@@ -4,26 +4,26 @@
 //*****************************************************************************************
 #pragma once
 
-//VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
-// Until all dialogs using pr::gui::wingui
-// Change these values to use different versions
-#define _WTL_NO_CSTRING
-// wtl
-#include <atlbase.h>
-#include <atlapp.h>
-#include <atldwm.h>
-#include <atlwin.h>
-#include <atlctrls.h>
-#include <atlcom.h>
-#include <atlmisc.h>
-#include <atlddx.h>
-#include <atlframe.h>
-#include <atlctrls.h>
-#include <atldlgs.h>
-#include <atlcrack.h>
-#include <shellapi.h>
-#include <atlctrlx.h>
-//^^^^^^
+////VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+//// Until all dialogs using pr::gui::wingui
+//// Change these values to use different versions
+//#define _WTL_NO_CSTRING
+//// wtl
+//#include <atlbase.h>
+//#include <atlapp.h>
+//#include <atldwm.h>
+//#include <atlwin.h>
+//#include <atlctrls.h>
+//#include <atlcom.h>
+//#include <atlmisc.h>
+//#include <atlddx.h>
+//#include <atlframe.h>
+//#include <atlctrls.h>
+//#include <atldlgs.h>
+//#include <atlcrack.h>
+//#include <shellapi.h>
+//#include <atlctrlx.h>
+////^^^^^^
 
 #include "pr/common/min_max_fix.h"
 
@@ -48,13 +48,14 @@
 #include "pr/filesys/fileex.h"
 #include "pr/filesys/filesys.h"
 #include "pr/camera/camera.h"
-#include "pr/camera/camera_dlg.h"
+#include "pr/camera/camera_ui.h"
 #include "pr/gui/wingui.h"
-#include "pr/gui/sim_message_loop.h"
+#include "pr/gui/colour_ctrl.h"
 #include "pr/gui/messagemap_dbg.h"
+#include "pr/gui/sim_message_loop.h"
 #include "pr/gui/menu_list.h"
 #include "pr/gui/recent_files.h"
-#include "pr/gui/progress_dlg.h"
+#include "pr/gui/progress_ui.h"
 #include "pr/gui/scintilla_ctrl.h"
 #include "pr/gui/windows_com.h"
 #include "pr/renderer11/renderer.h"
@@ -127,14 +128,15 @@ namespace ldr
 	#undef PR_ENUM
 
 	typedef pr::Exception<ELdrException> LdrException;
-	typedef std::vector<pr::ldr::ContextId> ContextIdCont;
+	typedef std::vector<pr::Guid> ContextIdCont;
 
 	wchar_t const* AppTitleW();
 	char const* AppTitleA();
 	char const* AppString();
 	char const* AppStringLine();
 
-	typedef pr::string<> string;
+	typedef pr::string<char> string;
+	typedef pr::string<wchar_t> wstring;
 	typedef std::istream istream;
 	typedef std::ostream ostream;
 	typedef std::stringstream sstream;
@@ -146,7 +148,4 @@ namespace ldr
 	class  PluginManager;
 	struct Plugin;
 	struct NavManager;
-
-	// The context id for application ldr objects
-	extern pr::ldr::ContextId LdrContext;
 }

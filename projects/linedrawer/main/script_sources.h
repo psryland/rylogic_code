@@ -15,7 +15,20 @@ namespace ldr
 	// This class is a collection of the file sources currently loaded in ldr
 	class ScriptSources :pr::IFileChangedHandler
 	{
-		StrList              m_files;
+	public:
+		struct File
+		{
+			pr::string<wchar_t> m_filepath;
+			pr::Guid m_context_id;
+			
+			File();
+			File(pr::string<wchar_t> const& filepath, pr::Guid const* context_id = nullptr);
+		};
+		using FileCont = pr::vector<File>;
+
+	private:
+
+		FileCont             m_files;
 		pr::FileWatch        m_watcher;
 		UserSettings&        m_settings;
 		pr::Renderer&        m_rdr;
@@ -33,7 +46,12 @@ namespace ldr
 		ScriptSources(UserSettings& settings, pr::Renderer& rdr, pr::ldr::ObjectCont& store, LuaSource& lua_src);
 
 		// Return const access to the source files
-		StrList const& List() const { return m_files; }
+		StrList List() const
+		{
+			StrList files;
+			for (auto& file : m_files) files.push_back(file.m_filepath);
+			return files;
+		}
 
 		// Remove all file sources
 		void Clear();

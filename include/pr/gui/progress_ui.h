@@ -20,7 +20,7 @@ namespace pr
 {
 	namespace gui
 	{
-		class ProgressDlg : public Form
+		class ProgressUI : public Form
 		{
 			using Lock = std::unique_lock<std::timed_mutex>;
 			struct State
@@ -50,15 +50,14 @@ namespace pr
 			};
 			enum { IDC_TEXT_DESC=1000, IDC_PROGRESS_BAR, WM_PROGRESS_UPDATE=WM_USER+1, ID_POLL_WORKER_COMPLETE=1, DefW=480, DefH=180};
 
-			State                       m_state;     // Progress dlg UI state
-			bool                        m_done;      // Task complete flag, set by the worker
-			bool                        m_cancel;    // Cancel signalled flag, set by this thread
-			EDialogResult               m_result;    // Dialog result to return
-			std::exception_ptr          m_exception; // An exception thrown by the task
-			bool                        m_shown;     // True when the dlg is visible
 			Label                       m_lbl_desc;  // The progress description
 			ProgressBar                 m_bar;       // The progress bar
 			Button                      m_btn;       // The cancel button
+			State                       m_state;     // Progress dialog UI state
+			bool                        m_done;      // Task complete flag, set by the worker
+			bool                        m_cancel;    // Cancel signalled flag, set by this thread
+			std::exception_ptr          m_exception; // An exception thrown by the task
+			bool                        m_shown;     // True when the dialog is visible
 			std::timed_mutex            m_mutex;     // Sync
 			std::condition_variable_any m_cv;        // Sync for flags
 			std::thread                 m_worker;    // The worker thread
@@ -66,10 +65,10 @@ namespace pr
 			// A dialog layout description used for this indirect dialog
 			static DlgTemplate const& Templ()
 			{
-				static auto templ = DlgTemplate(DlgParams().xy(0,0).wh(240,100))
-					.Add(CtrlParams().id(IDC_TEXT_DESC).wndclass(Label::WndClassName()))
-					.Add(CtrlParams().id(IDC_PROGRESS_BAR).wndclass(ProgressBar::WndClassName()))
-					.Add(CtrlParams().id(IDCANCEL).wndclass(Button::WndClassName()).text(L"Cancel").style(Button::DefaultStyleDefBtn));
+				static auto templ = DlgTemplate(DlgParams<>().xy(0,0).wh(240,100))
+					.Add(CtrlParams<>().id(IDC_TEXT_DESC).wndclass(Label::WndClassName()))
+					.Add(CtrlParams<>().id(IDC_PROGRESS_BAR).wndclass(ProgressBar::WndClassName()))
+					.Add(CtrlParams<>().id(IDCANCEL).wndclass(Button::WndClassName()).text(L"Cancel").style('+',BS_DEFPUSHBUTTON));
 				return templ;
 			}
 
@@ -210,6 +209,7 @@ namespace pr
 			}
 
 		public:
+
 			enum ECancelFlags
 			{
 				NonBlocking        = 0,
@@ -217,26 +217,29 @@ namespace pr
 				OptionalCancel     = 1 << 1,
 				_bitops_allowed
 			};
-			struct Params :DlgParams
+			template <typename Derived = void> struct Params :DlgParams<choose_non_void<Derived, Params<>>>
 			{
-				Params() { name("progress_dlg").templ(Templ()); }
+				wchar_t const* m_desc;
+				Params() : m_desc() { templ(Templ()).name("progress-ui"); }
+				This& desc(wchar_t const* d) { m_desc = d; return *me; }
 			};
 
-			ProgressDlg(pr::gui::Params const& p = Params())
+			ProgressUI() :ProgressUI(Params<>()) {}
+			template <typename D> ProgressUI(Params<D> const& p)
 				:Form(p)
-				,m_state(nullptr, L"", L"", 0.0f)
+				,m_lbl_desc(Label      ::Params<>().parent(this_).name("desc"  ).text(p.m_desc).id(IDC_TEXT_DESC).anchor(EAnchor::All))
+				,m_bar     (ProgressBar::Params<>().parent(this_).name("bar"   ).id(IDC_PROGRESS_BAR).anchor(EAnchor::LeftTopRight))
+				,m_btn     (Button     ::Params<>().parent(this_).name("cancel").id(IDCANCEL).anchor(EAnchor::Bottom))
+				,m_state(nullptr, p.m_text, p.m_desc, 0.0f)
 				,m_done(false)
 				,m_cancel(false)
-				,m_result(EDialogResult::Ok)
 				,m_exception()
 				,m_shown()
-				,m_lbl_desc(Label::Params().name("desc").id(IDC_TEXT_DESC).parent(this).anchor(EAnchor::All))
-				,m_bar(ProgressBar::Params().name("bar").id(IDC_PROGRESS_BAR).parent(this).anchor(EAnchor::LeftTopRight))
-				,m_btn(Button::Params().name("cancel").id(IDCANCEL).parent(this).anchor(EAnchor::Bottom))
 				,m_mutex()
 				,m_cv()
 				,m_worker()
 			{
+				m_dialog_result = EDialogResult::Ok;
 				m_btn.Click += [&](Button&,EmptyArgs const&)
 				{
 					if (Cancel(OptionalCancel|BlockTillCancelled))
@@ -245,19 +248,19 @@ namespace pr
 			}
 
 			// Construct the dialog starting the worker thread immediately.
-			// 'func' should have 'ProgressDlg*' as the first parameter
+			// 'func' should have 'ProgressUI*' as the first parameter
 			template <typename Func, typename... Args>
-			ProgressDlg(wchar_t const* title, wchar_t const* desc, Func&& func, Args&&... args) :ProgressDlg()
+			ProgressUI(wchar_t const* title, wchar_t const* desc, Func&& func, Args&&... args) :ProgressUI()
 			{
 				StartWorker(title, desc, std::forward<Func>(func), std::forward<Args>(args)...);
 			}
-			~ProgressDlg()
+			~ProgressUI()
 			{
 				Close();
 			}
 
 			// Execute a work function in a different thread while displaying a non-modal dialog.
-			// 'func' should have 'ProgressDlg*' as the first parameter
+			// 'func' should have 'ProgressUI*' as the first parameter
 			template <typename Func, typename... Args>
 			void Show(wchar_t const* title, wchar_t const* desc, Func&& func, Args&&... args)
 			{
@@ -284,10 +287,10 @@ namespace pr
 				BlockTillWorkerDone();
 
 				// Return the result
-				if (m_result == EDialogResult::Abort)
+				if (m_dialog_result == EDialogResult::Abort)
 					std::rethrow_exception(m_exception);
 
-				return m_result;
+				return m_dialog_result;
 			}
 
 			// Called by the worker thread to update the UI or by callers to set the progress state
@@ -340,12 +343,12 @@ namespace pr
 				// Don't close the window until the task has exited
 				Cancel(BlockTillCancelled);
 				if (m_hwnd) ::KillTimer(m_hwnd, ID_POLL_WORKER_COMPLETE);
-				return Close(int(m_result));
+				return Close(m_dialog_result);
 			}
 
 			// An event raised when the cancel button is hit
 			// Handlers can opt to not cancel.
-			EventHandler<ProgressDlg&, CancelEventArgs&> Cancelling;
+			EventHandler<ProgressUI&, CancelEventArgs&> Cancelling;
 
 		protected:
 
@@ -373,30 +376,30 @@ namespace pr
 
 				// Start the worker
 				m_worker = std::thread([&]
+				{
+					try
 					{
-						try
-						{
-							// Run the task
-							// Pass the dialog to the task function so that it can update progress.
-							// Passed as a pointer so that users have the option of passing nullptr
-							std::bind(std::forward<Func>(func), this, std::forward<Args>(args)...)();
+						// Run the task
+						// Pass the dialog to the task function so that it can update progress.
+						// Passed as a pointer so that users have the option of passing nullptr
+						std::bind(std::forward<Func>(func), this, std::forward<Args>(args)...)();
 
-							// Notify task complete
-							Lock lock(m_mutex);
-							m_done = true;
-							m_result = m_cancel ? EDialogResult::Cancel : EDialogResult::Ok;
-							m_cv.notify_all();
-						}
-						catch (...)
-						{
-							Lock lock(m_mutex);
-							m_done = true;
-							m_result = EDialogResult::Abort;
-							m_exception = std::current_exception();
-							m_cv.notify_all();
-						}
-						Progress(1.0f);
-					});
+						// Notify task complete
+						Lock lock(m_mutex);
+						m_done = true;
+						m_dialog_result = m_cancel ? EDialogResult::Cancel : EDialogResult::Ok;
+						m_cv.notify_all();
+					}
+					catch (...)
+					{
+						Lock lock(m_mutex);
+						m_done = true;
+						m_dialog_result = EDialogResult::Abort;
+						m_exception = std::current_exception();
+						m_cv.notify_all();
+					}
+					Progress(1.0f);
+				});
 			}
 
 			// Blocks until the worker thread exits
@@ -411,13 +414,13 @@ namespace pr
 			{
 				return Form::Show(show);
 			}
-			EDialogResult ShowDialog(WndRef parent, void* init_param) override
+			EDialogResult ShowDialog(WndRefC parent, void* init_param) override
 			{
 				return Form::ShowDialog(parent, init_param);
 			}
-			bool Close(int exit_code) override
+			bool Close(EDialogResult dialog_result) override
 			{
-				return Form::Close(exit_code);
+				return Form::Close(dialog_result);
 			}
 		};
 	}
@@ -447,8 +450,8 @@ namespace pr
 			using namespace pr::gui;
 			int arg = 42;
 
-			ProgressDlg dlg("Progressing...", "This is a progress dialog",
-				[](ProgressDlg* dlg, int a)
+			ProgressUI dlg("Progressing...", "This is a progress dialog",
+				[](ProgressUI* dlg, int a)
 				{
 					for (int i = 0; i != a; ++i)
 					{

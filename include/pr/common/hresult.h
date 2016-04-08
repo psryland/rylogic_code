@@ -11,8 +11,8 @@
 #include <iostream>
 #include <type_traits>
 #include <cassert>
+#include <cerrno>
 #include <windows.h>
-
 #include "pr/common/exception.h"
 
 // Support d3d errors if the header has been included before now. Dodgy I know :/
@@ -148,6 +148,53 @@ namespace pr
 	// Specialisations for non-enum types
 	template <> inline bool Succeeded(__int64 result) { return Succeeded(static_cast<HResult>(result)); }
 	template <> inline bool Succeeded(long result)    { return Succeeded(static_cast<HResult>(result)); }
+
+	// Check the 'errno' value, and throw if non-zero
+	template <typename T> inline T const& CheckErrno(T const& r)
+	{
+		switch (errno) {
+		default:           return r;
+		case EPERM:        throw std::exception("Operation not permitted");
+		case ENOENT:       throw std::exception("No such file or directory");
+		case ESRCH:        throw std::exception("No such process");
+		case EINTR:        throw std::exception("Interrupted function");
+		case EIO:          throw std::exception("I/O error");
+		case ENXIO:        throw std::exception("No such device or address");
+		case E2BIG:        throw std::exception("Argument list too long");
+		case ENOEXEC:      throw std::exception("Exec format error");
+		case EBADF:        throw std::exception("Bad file number");
+		case ECHILD:       throw std::exception("No spawned processes");
+		case EAGAIN:       throw std::exception("No more processes or not enough memory or maximum nesting level reached");
+		case ENOMEM:       throw std::exception("Not enough memory");
+		case EACCES:       throw std::exception("Permission denied");
+		case EFAULT:       throw std::exception("Bad address");
+		case EBUSY:        throw std::exception("Device or resource busy");
+		case EEXIST:       throw std::exception("File exists");
+		case EXDEV:        throw std::exception("Cross-device link");
+		case ENODEV:       throw std::exception("No such device");
+		case ENOTDIR:      throw std::exception("Not a directory");
+		case EISDIR:       throw std::exception("Is a directory");
+		case EINVAL:       throw std::exception("Invalid argument");
+		case ENFILE:       throw std::exception("Too many files open in system");
+		case EMFILE:       throw std::exception("Too many open files");
+		case ENOTTY:       throw std::exception("Inappropriate I/O control operation");
+		case EFBIG:        throw std::exception("File too large");
+		case ENOSPC:       throw std::exception("No space left on device");
+		case ESPIPE:       throw std::exception("Invalid seek");
+		case EROFS:        throw std::exception("Read-only file system");
+		case EMLINK:       throw std::exception("Too many links");
+		case EPIPE:        throw std::exception("Broken pipe");
+		case EDOM:         throw std::exception("Maths argument");
+		case ERANGE:       throw std::exception("Result too large (overflow or underflow)");
+		case EDEADLK:      throw std::exception("Resource deadlock would occur");
+		case ENAMETOOLONG: throw std::exception("Filename too long");
+		case ENOLCK:       throw std::exception("No locks available");
+		case ENOSYS:       throw std::exception("Function not supported");
+		case ENOTEMPTY:    throw std::exception("Directory not empty");
+		case EILSEQ:       throw std::exception("Illegal byte sequence");
+		case STRUNCATE:    throw std::exception("String was truncated");
+		}
+	}
 }
 
 #undef PR_SUPPORT_D3D9_ERRORS

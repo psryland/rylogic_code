@@ -597,9 +597,6 @@
     <ClInclude Include="..\include\pr\renderer11\textures\projected_texture.h">
       <Filter>pr\renderer11\textures</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\gui\progress_dlg.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\common\prtypes.h">
       <Filter>pr\common</Filter>
     </ClInclude>
@@ -952,6 +949,12 @@
       <Filter>pr\hardware</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\gui\sim_message_loop.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\colour_ctrl.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\progress_ui.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
   </ItemGroup>

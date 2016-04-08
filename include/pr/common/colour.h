@@ -10,6 +10,7 @@
 #include "pr/macros/enum.h"
 #include "pr/common/to.h"
 #include "pr/common/interpolate.h"
+#include "pr/str/to_string.h"
 
 #if defined(_WINGDI_) && !defined(NOGDI)
 #  define PR_SUPPORT_WINGDI(exp) exp
@@ -207,6 +208,9 @@ namespace pr
 		uint8    g() const                                      { return uint8((m_aarrggbb >>  8) & 0xFF); }
 		uint8    b() const                                      { return uint8((m_aarrggbb >>  0) & 0xFF); }
 
+		Colour32 a0() const                                     { return Colour32::make(m_aarrggbb & 0x00FFFFFF); }
+		Colour32 a1() const                                     { return Colour32::make(m_aarrggbb | 0xFF000000); }
+
 		PR_SUPPORT_WINGDI(COLORREF GetColorRef() const          { return RGB(r(), g(), b()); })
 		inline uint8 const* ToArray() const                     { return reinterpret_cast<uint8 const*>(this); }
 		inline uint8*       ToArray()                           { return reinterpret_cast<uint8*>      (this); }
@@ -387,7 +391,7 @@ namespace pr
 		{
 			template <typename Char> static Colour32 To(Char const* s, Char** end = nullptr)
 			{
-				return Colour32::make(strtoul(s, end, 16));
+				return Colour32::make(pr::To<uint32>(s, 16, end));
 			}
 			template <typename Str, typename Char = Str::value_type, typename = enable_if_str_class<Str>> static Colour32 To(Str const& s, Char** end = nullptr)
 			{

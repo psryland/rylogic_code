@@ -533,7 +533,7 @@ namespace pr
 			}
 			else if (m_count > newsize)
 			{
-				traits::destruct (alloc(), m_ptr + newsize, m_count - newsize);
+				traits::destruct(alloc(), m_ptr + newsize, m_count - newsize);
 			}
 			m_count = newsize;
 		}
@@ -1360,6 +1360,22 @@ namespace pr
 						PR_CHECK(arr0[i].val, i);
 				}
 				PR_CHECK(ObjectCount(), StartObjectCount());
+				StartObjectCount() = ObjectCount();
+				{
+					Array2 arr0;
+					arr0.emplace(arr0.end(), 2);
+					arr0.emplace(arr0.begin(), 1);
+					arr0.emplace(arr0.end(), 3);
+					Array2 arr1 = std::move(arr0);
+					arr1.emplace(arr1.begin(), 0);
+					arr0 = std::move(arr1);
+
+					PR_CHECK(arr0.size(), 4U);
+					for (uint i = 0; i != arr0.size(); ++i)
+						PR_CHECK(arr0[i].val, i);
+				}
+				PR_CHECK(ObjectCount(), StartObjectCount());
+				
 			}
 			{//GlobalConstrDestrCount
 				PR_CHECK(ObjectCount(), 0);

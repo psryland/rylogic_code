@@ -30,23 +30,19 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <UseOfAtl>Static</UseOfAtl>
     <PlatformToolset>v120</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <UseOfAtl>Static</UseOfAtl>
     <PlatformToolset>v120</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <UseOfAtl>Static</UseOfAtl>
     <PlatformToolset>v120</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <UseOfAtl>Static</UseOfAtl>
     <PlatformToolset>v120</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -227,23 +223,13 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\include\pr\linedrawer\ldr_tools.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-      </PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-      </PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </PrecompiledHeader>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pr\app\forward.h" />
     <ClInclude Include="..\include\pr\app\main.h" />
     <ClInclude Include="..\include\pr\app\main_gui.h" />
     <ClInclude Include="..\include\pr\camera\camera.h" />
-    <ClInclude Include="..\include\pr\camera\camera_dlg.h" />
+    <ClInclude Include="..\include\pr\camera\camera_ui.h" />
     <ClInclude Include="..\include\pr\gui\messagemap_dbg.h" />
     <ClInclude Include="..\include\pr\gui\sim_message_loop.h" />
     <ClInclude Include="..\include\pr\gui\wingui.h" />
@@ -263,14 +249,13 @@
     <ClInclude Include="..\projects\linedrawer\main\lua_source.h" />
     <ClInclude Include="..\projects\linedrawer\main\navigation.h" />
     <ClInclude Include="..\projects\linedrawer\main\stdafx.h" />
-    <ClInclude Include="..\projects\linedrawer\gui\about_dlg.h" />
+    <ClInclude Include="..\projects\linedrawer\gui\about_ui.h" />
     <ClInclude Include="..\projects\linedrawer\gui\options_dlg.h" />
     <ClInclude Include="..\projects\linedrawer\main\user_settings.h" />
     <ClInclude Include="..\projects\linedrawer\plugin\plugin_manager_dlg.h" />
-    <ClInclude Include="..\include\pr\gui\progress_dlg.h" />
+    <ClInclude Include="..\include\pr\gui\progress_ui.h" />
     <ClInclude Include="..\include\pr\gui\recent_files.h" />
-    <ClInclude Include="..\projects\linedrawer\gui\text_panel_dlg.h" />
-    <ClInclude Include="..\include\pr\gui\wtl_tab_view_ctrl.h" />
+    <ClInclude Include="..\projects\linedrawer\gui\text_panel_ui.h" />
     <ClInclude Include="..\projects\linedrawer\resources\linedrawer.res.h" />
     <ClInclude Include="..\projects\linedrawer\utility\debug.h" />
     <ClInclude Include="..\projects\linedrawer\utility\misc.h" />

@@ -33,8 +33,8 @@ namespace view3d
 		bool                        m_origin_point_visible;     // True if we should draw the origin point
 		pr::ldr::ScriptEditorDlg    m_editor_ui;                // Object manager for objects added to this window
 		pr::ldr::LdrObjectManagerUI m_obj_cont_ui;              // Object manager for objects added to this window
-		pr::ldr::MeasureDlg         m_measure_tool_ui;
-		pr::ldr::AngleDlg           m_angle_tool_ui;
+		pr::ldr::LdrMeasureUI       m_measure_tool_ui;
+		pr::ldr::LdrAngleUI         m_angle_tool_ui;
 		EditorCont                  m_editors;                  // User created editors
 		std::string                 m_settings;                 // Allows a char const* to be returned
 
@@ -69,8 +69,8 @@ namespace view3d
 			,m_origin_point_visible(false)
 			,m_editor_ui(hwnd)
 			,m_obj_cont_ui(hwnd)
-			,m_measure_tool_ui(ReadPoint, this_(), m_rdr, hwnd)
-			,m_angle_tool_ui(ReadPoint, this_(), m_rdr, hwnd)
+			,m_measure_tool_ui(hwnd, ReadPoint, this_(), m_rdr)
+			,m_angle_tool_ui(hwnd, ReadPoint, this_(), m_rdr)
 			,m_editors()
 			,m_settings()
 		{
@@ -134,17 +134,6 @@ namespace view3d
 		// Close any window handles
 		void Close()
 		{
-			//m_editor_ui      .Close();
-			//m_obj_cont_ui    .Close();
-			m_measure_tool_ui.Close();
-			m_angle_tool_ui  .Close();
-			//for (auto& e : m_editors) e->Close();
-
-			//m_editor_ui      .Detach();
-			//m_obj_cont_ui    .Detach();
-			m_measure_tool_ui.Detach();
-			m_angle_tool_ui  .Detach();
-
 			// Don't destroy 'm_hwnd' because it doesn't belong to us,
 			// we're simply drawing on that window. Signal close by setting it to null
 			m_hwnd = 0;

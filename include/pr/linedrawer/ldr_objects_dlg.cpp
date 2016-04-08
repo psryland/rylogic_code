@@ -41,26 +41,22 @@ namespace pr
 				,m_list_item(INVALID_LIST_ITEM)
 			{}
 
-			// Return the uidata for an object
+			// Return the 'uidata' for an object
 			static UIData* get(LdrObject& obj) { return &obj.m_user_data.get<UIData>(); }
 			static UIData* get(LdrObject* obj) { return obj ? get(*obj) : nullptr; }
 		};
 
 		struct LdrObjectManagerUIImpl :Form ,LdrObjectManagerUI
 		{
-			enum
-			{
-				ID_BTN_EXPAND = 100, ID_BTN_COLLAPSE, ID_BTN_FILTER, ID_TB_FILTER
-			};
+			enum { ID_BTN_EXPAND = 100, ID_BTN_COLLAPSE, ID_BTN_FILTER, ID_TB_FILTER };
 			static Params Params(HWND parent)
 			{
-				return FormParams().wndclass(RegisterWndClass<LdrObjectManagerUIImpl>())
+				return FormParams<>().wndclass(RegisterWndClass<LdrObjectManagerUIImpl>())
 					.name("ldr-object-manager").title(L"Scene Object Manager").wh(430, 380)
 					.icon_bg((HICON)::SendMessageW(parent, WM_GETICON, ICON_BIG, 0))
 					.icon_sm((HICON)::SendMessageW(parent, WM_GETICON, ICON_SMALL, 0))
 					//.start_pos(EStartPosition::CentreParent)
-					.parent(WndRef::Lookup(parent))
-					.hide_on_close(true).pin_window(true);
+					.parent(parent).hide_on_close(true).pin_window(true);
 			};
 
 			Button    m_btn_expand;
@@ -78,14 +74,16 @@ namespace pr
 			LdrObjectManagerUIImpl(HWND parent)
 				:Form(Params(parent))
 				,LdrObjectManagerUI(Internal())
-				,m_status(StatusBar::Params().name("status").parent(this).xy(0,-1).wh(Fill,StatusBar::DefH).dock(EDock::Bottom))
-				,m_btn_expand(Button::Params().name("btn-expand").id(ID_BTN_EXPAND).parent(this).xy(0,0).wh(20,20).text(L"+").margin(2).anchor(EAnchor::TopLeft))
-				,m_btn_collapse(Button::Params().name("btn-collapse").id(ID_BTN_COLLAPSE).parent(this).xy(Left|RightOf|ID_BTN_EXPAND, 0).wh(20,20).text(L"-").margin(2).anchor(EAnchor::TopLeft))
-				,m_btn_filter(Button::Params().name("btn-filter").id(ID_BTN_FILTER).parent(this).xy(-1,0).wh(60,20).text(L"Filter").margin(2).anchor(EAnchor::TopRight))
-				,m_tb_filter(TextBox::Params().name("tb-filter").id(ID_TB_FILTER).parent(this).xy(0,0).wh(Fill, 18).margin(50,3,64,3).anchor(EAnchor::LeftTopRight))
-				,m_split(Splitter::Params().vertical().name("split").parent(this).xy(0,Top|BottomOf|ID_TB_FILTER).wh(Fill,Fill).margin(3).anchor(EAnchor::All))
-				,m_tree(TreeView::Params().name("tree").parent(&m_split.Pane0).margin(0).border().dock(EDock::Fill))
-				,m_list(ListView::Params().mode(ListView::EViewType::Report).name("list").parent(&m_split.Pane1).margin(0).border().dock(EDock::Fill))
+				
+				,m_status      (StatusBar::Params<>().parent(this_         ).name("status").xy(0,-1).wh(Fill,StatusBar::DefH).dock(EDock::Bottom))
+				,m_btn_expand  (Button   ::Params<>().parent(this_         ).name("btn-expand").id(ID_BTN_EXPAND).xy(0,0).wh(20,20).text(L"+").margin(2).anchor(EAnchor::TopLeft))
+				,m_btn_collapse(Button   ::Params<>().parent(this_         ).name("btn-collapse").id(ID_BTN_COLLAPSE).xy(Left|RightOf|ID_BTN_EXPAND, 0).wh(20,20).text(L"-").margin(2).anchor(EAnchor::TopLeft))
+				,m_btn_filter  (Button   ::Params<>().parent(this_         ).name("btn-filter").id(ID_BTN_FILTER).xy(-1,0).wh(60,20).text(L"Filter").margin(2).anchor(EAnchor::TopRight))
+				,m_tb_filter   (TextBox  ::Params<>().parent(this_         ).name("tb-filter").id(ID_TB_FILTER).xy(0,0).wh(Fill, 18).margin(50,3,64,3).anchor(EAnchor::LeftTopRight))
+				,m_split       (Splitter ::Params<>().parent(this_         ).name("split").xy(0,Top|BottomOf|ID_TB_FILTER).wh(Fill,Fill).margin(3).anchor(EAnchor::All).vertical())
+				,m_tree        (TreeView ::Params<>().parent(&m_split.Pane0).name("tree").margin(0).border().dock(EDock::Fill))
+				,m_list        (ListView ::Params<>().parent(&m_split.Pane1).name("list").margin(0).border().dock(EDock::Fill).mode(ListView::EViewType::Report))
+				
 				,m_expanding(false)
 				,m_selection_changed(true)
 				,m_suspend_layout(false)
@@ -156,7 +154,7 @@ namespace pr
 				// If 'obj' is a top level object, then add it to the list
 				if (obj->m_parent == nullptr)
 				{
-					obj_uidata->m_list_item = m_list.InsertItem(ListView::ItemInfo(obj_name.c_str()).index((int)m_list.ItemCount()));
+					obj_uidata->m_list_item = m_list.InsertItem(ListView::ItemInfo(obj_name.c_str(), (int)m_list.ItemCount()));
 					if (obj_uidata->m_list_item == INVALID_LIST_ITEM) {}
 					// todo: Report errors, without spamming the user...
 				}
@@ -189,7 +187,7 @@ namespace pr
 					p = child.m_ptr;
 				}
 
-				// On leaving the last recusive call, fix up the references
+				// On leaving the last recursive call, fix up the references
 				if (last_call)
 					FixListCtrlReferences(obj_uidata->m_list_item);
 			}

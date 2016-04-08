@@ -9,7 +9,7 @@
 
 // Optional functions that the plugin can implement ****************************************
 // Called on startup/shutdown of a plugin
-LDR_API(LDR_IMPORT, void                  ,Initialise           ,(ldrapi::PluginHandle handle, char const* args))
+LDR_API(LDR_IMPORT, void                  ,Initialise           ,(ldrapi::PluginHandle handle, wchar_t const* args))
 LDR_API(LDR_IMPORT, void                  ,Uninitialise         ,())
 
 // Implementing this will cause the plugin to be stepped periodically (on a windows timer)
@@ -28,7 +28,7 @@ LDR_API(LDR_IMPORT, void                  ,Step                 ,(double elapsed
 // Functions that the plugin must/can implement ****************************************
 
 // Functions implemented by linedrawer *************************************************
-LDR_API(LDR_EXPORT, ldrapi::ObjectHandle  ,RegisterObject       ,(ldrapi::PluginHandle handle, char const* object_description, wchar_t const* include_paths, pr::ldr::ContextId ctx_id, bool async))
+LDR_API(LDR_EXPORT, ldrapi::ObjectHandle  ,RegisterObject       ,(ldrapi::PluginHandle handle, char const* object_description, wchar_t const* include_paths, pr::Guid const* ctx_id, bool async))
 LDR_API(LDR_EXPORT, void                  ,UnregisterObject     ,(ldrapi::PluginHandle handle, ldrapi::ObjectHandle object))
 LDR_API(LDR_EXPORT, void                  ,UnregisterAllObjects ,(ldrapi::PluginHandle handle))
 LDR_API(LDR_EXPORT, void                  ,Render               ,(ldrapi::PluginHandle handle))

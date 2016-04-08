@@ -321,7 +321,7 @@ VIEW3D_API int __stdcall View3D_ObjectCount(View3DWindow window)
 }
 
 // Add/Remove objects by context id
-VIEW3D_API void __stdcall View3D_AddObjectsById(View3DWindow window, int context_id)
+VIEW3D_API void __stdcall View3D_AddObjectsById(View3DWindow window, GUID const& context_id)
 {
 	try
 	{
@@ -334,7 +334,7 @@ VIEW3D_API void __stdcall View3D_AddObjectsById(View3DWindow window, int context
 	}
 	CatchAndReport(View3D_AddObjectsById, window,);
 }
-VIEW3D_API void __stdcall View3D_RemoveObjectsById(View3DWindow window, int context_id)
+VIEW3D_API void __stdcall View3D_RemoveObjectsById(View3DWindow window, GUID const& context_id)
 {
 	try
 	{
@@ -840,10 +840,10 @@ VIEW3D_API void __stdcall View3D_ShowLightingDlg(View3DWindow window)
 
 		DllLockGuard;
 		PreviewLighting pv(window);
-		LightingDlg<PreviewLighting> dlg(pv);
+		LightingUI<PreviewLighting> dlg(window->m_hwnd, pv);
 		dlg.m_light           = window->m_light;
 		dlg.m_camera_relative = window->m_light_is_camera_relative;
-		if (dlg.DoModal(window->m_wnd.m_hwnd) != IDOK) return;
+		if (dlg.ShowDialog(window->m_wnd.m_hwnd) != pr::gui::EDialogResult::Ok) return;
 		window->m_light                    = dlg.m_light;
 		window->m_light_is_camera_relative = dlg.m_camera_relative;
 		
@@ -878,7 +878,7 @@ pr::script::Includes<> GetIncludes(View3DIncludes const* includes)
 // These objects will not have handles but can be added/removed by their context id.
 // 'include_paths' is a comma separated list of include paths to use to resolve #include directives (or nullptr)
 // Returns the number of objects added.
-VIEW3D_API int __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, int context_id, BOOL async, View3DIncludes const* includes)
+VIEW3D_API int __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, GUID const& context_id, BOOL async, View3DIncludes const* includes)
 {
 	using namespace pr::script;
 	try
@@ -905,7 +905,7 @@ VIEW3D_API int __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, 
 // 'context_id' - the context id to create the LdrObjects with
 // 'async' - if objects should be created by a background thread
 // 'includes' - information used to resolve include directives in 'ldr_script'
-VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(char const* ldr_script, BOOL file, int context_id, BOOL async, View3DIncludes const* includes)
+VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(char const* ldr_script, BOOL file, GUID const& context_id, BOOL async, View3DIncludes const* includes)
 {
 	using namespace pr::script;
 	try
@@ -1013,7 +1013,7 @@ void __stdcall ObjectEditCB(ModelPtr model, void* ctx, pr::Renderer&)
 }
 
 // Create an object via callback
-VIEW3D_API View3DObject __stdcall View3D_ObjectCreate(char const* name, View3DColour colour, int icount, int vcount, View3D_EditObjectCB edit_cb, void* ctx, int context_id)
+VIEW3D_API View3DObject __stdcall View3D_ObjectCreate(char const* name, View3DColour colour, int icount, int vcount, View3D_EditObjectCB edit_cb, void* ctx, GUID const& context_id)
 {
 	try
 	{
@@ -1058,7 +1058,7 @@ VIEW3D_API void __stdcall View3D_ObjectEdit(View3DObject object, View3D_EditObje
 }
 
 // Delete all objects matching a context id
-VIEW3D_API void __stdcall View3D_ObjectsDeleteById(int context_id)
+VIEW3D_API void __stdcall View3D_ObjectsDeleteById(GUID const& context_id)
 {
 	try
 	{
@@ -1355,16 +1355,18 @@ VIEW3D_API void __stdcall View3D_TextureLoadSurface(View3DTexture tex, int level
 	{
 		(void)tex,level,tex_filepath,dst_rect,src_rect,filter,colour_key;
 		throw std::exception("not implemented");
-		//try
-		//{
-		//	tex->LoadSurfaceFromFile(tex_filepath, level, dst_rect, src_rect, filter, colour_key);
-		//	return EView3DResult::Success;
-		//}
-		//catch (std::exception const& e)
-		//{
-		//	PR_LOGE(Rdr().m_log, Exception, e, "Failed to load texture surface from file");
-		//	return EView3DResult::Failed;
-		//}
+		#if 0
+		try
+		{
+			tex->LoadSurfaceFromFile(tex_filepath, level, dst_rect, src_rect, filter, colour_key);
+			return EView3DResult::Success;
+		}
+		catch (std::exception const& e)
+		{
+			PR_LOGE(Rdr().m_log, Exception, e, "Failed to load texture surface from file");
+			return EView3DResult::Failed;
+		}
+		#endif
 	}
 	CatchAndReport(View3D_TextureLoadSurface, ,);
 }
@@ -1503,11 +1505,11 @@ void RenderWindow(view3d::Window& wnd)
 		giz->AddToScene(scene);
 
 	// Add the measure tool objects if the window is visible
-	if (wnd.m_measure_tool_ui.IsWindowVisible() && wnd.m_measure_tool_ui.Gfx())
+	if (wnd.m_measure_tool_ui.Visible() && wnd.m_measure_tool_ui.Gfx())
 		wnd.m_measure_tool_ui.Gfx()->AddToScene(scene);
 
 	// Add the angle tool objects if the window is visible
-	if (wnd.m_angle_tool_ui.IsWindowVisible() && wnd.m_angle_tool_ui.Gfx())
+	if (wnd.m_angle_tool_ui.Visible() && wnd.m_angle_tool_ui.Gfx())
 		wnd.m_angle_tool_ui.Gfx()->AddToScene(scene);
 
 	// Position the focus point
@@ -1806,7 +1808,7 @@ VIEW3D_API BOOL __stdcall View3D_MeasureToolVisible(View3DWindow window)
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		return window->m_measure_tool_ui.IsWindowVisible();
+		return window->m_measure_tool_ui.Visible();
 	}
 	CatchAndReport(View3D_MeasureToolVisible, window, false);
 }
@@ -1817,8 +1819,8 @@ VIEW3D_API void __stdcall View3D_ShowMeasureTool(View3DWindow window, BOOL show)
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		window->m_measure_tool_ui.SetReadPointCtx(window);
-		window->m_measure_tool_ui.Show(show != 0);
+		window->m_measure_tool_ui.SetReadPoint(&view3d::Window::ReadPoint, window);
+		window->m_measure_tool_ui.Visible(show != 0);
 	}
 	CatchAndReport(View3D_ShowMeasureTool, window,);
 }
@@ -1831,7 +1833,7 @@ VIEW3D_API BOOL __stdcall View3D_AngleToolVisible(View3DWindow window)
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		return window->m_angle_tool_ui.IsWindowVisible();
+		return window->m_angle_tool_ui.Visible();
 	}
 	CatchAndReport(View3D_AngleToolVisible, window, false);
 }
@@ -1842,8 +1844,8 @@ VIEW3D_API void __stdcall View3D_ShowAngleTool(View3DWindow window, BOOL show)
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		window->m_angle_tool_ui.SetReadPointCtx(window);
-		window->m_angle_tool_ui.Show(show != 0);
+		window->m_angle_tool_ui.SetReadPoint(&view3d::Window::ReadPoint, window);
+		window->m_angle_tool_ui.Visible(show != 0);
 	}
 	CatchAndReport(View3D_ShowAngleTool, window,);
 }
@@ -2151,7 +2153,7 @@ VIEW3D_API void __stdcall View3D_CreateDemoScene(View3DWindow window)
 		pr::script::Reader reader(src, false, nullptr, nullptr, &Dll().m_lua);
 
 		pr::ldr::ParseResult out;
-		pr::ldr::Parse(Dll().m_rdr, reader, out, true, pr::ldr::DefaultContext);
+		pr::ldr::Parse(Dll().m_rdr, reader, out, true, pr::GuidZero);
 		for (auto& obj : out.m_objects)
 			View3D_AddObject(window, obj.m_ptr);
 	}

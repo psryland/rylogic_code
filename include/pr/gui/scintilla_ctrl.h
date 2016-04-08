@@ -2,7 +2,7 @@
 // Scintilla control
 //  Copyright (c) Rylogic Ltd 2009
 //***********************************************
-// A wingui control for scintilla
+// A 'wingui' control for scintilla
 #pragma once
 
 #include "scintilla/include/scintilla.h"
@@ -23,16 +23,13 @@ namespace pr
 			static DWORD const DefaultStyle   = (DefaultControlStyle | WS_GROUP | SS_LEFT) & ~WS_TABSTOP;
 			static DWORD const DefaultStyleEx = DefaultControlStyleEx | WS_EX_STATICEDGE; // NOT WS_BORDER|
 			static wchar_t const* WndClassName() { return L"Scintilla"; }
-			struct Params :CtrlParams
+			template <typename Derived = void> struct Params :CtrlParams<choose_non_void<Derived, Params<>>>
 			{
-				Params() :CtrlParams()
-				{
-					wndclass(WndClassName()).name("scint").wh(DefW, DefH).style(DefaultStyle).style_ex(DefaultStyleEx);
-				}
-				Params& load_dll(wchar_t const* dllname = L"scintilla.dll", wchar_t const* dir = L".\\lib\\$(platform)")
+				Params() { wndclass(WndClassName()).name("scint").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
+				This& load_dll(wchar_t const* dllname = L"scintilla.dll", wchar_t const* dir = L".\\lib\\$(platform)")
 				{
 					pr::win32::LoadDll<struct Scintilla>(dllname, dir);
-					return *this;
+					return *me;
 				}
 			};
 
@@ -57,7 +54,9 @@ namespace pr
 
 		public:
 
-			ScintillaCtrl(pr::gui::Params const& p = Params())
+			// Construct
+			ScintillaCtrl() :ScintillaCtrl(Params<>()) {}
+			template <typename D> ScintillaCtrl(Params<D> const& p)
 				:Control(p)
 				,m_snd(m_hwnd != nullptr ? SciFnDirect(::SendMessageW(m_hwnd, SCI_GETDIRECTFUNCTION, 0, 0)) : nullptr)
 				,m_ptr(m_hwnd != nullptr ? sptr_t     (::SendMessageW(m_hwnd, SCI_GETDIRECTPOINTER , 0, 0)) : 0)
@@ -141,7 +140,7 @@ namespace pr
 				MarkerDefine(SC_MARKNUM_FOLDEROPENMID , SC_MARK_EMPTY);
 				MarkerDefine(SC_MARKNUM_FOLDERMIDTAIL , SC_MARK_EMPTY);
 
-				// set the forground color for some styles
+				// set the foreground color for some styles
 				StyleSetFore(0 , RGB(0   ,0  ,0  ));
 				StyleSetFore(2 , RGB(0   ,64 ,0  ));
 				StyleSetFore(5 , RGB(0   ,0  ,255));
@@ -150,7 +149,7 @@ namespace pr
 				StyleSetFore(10, RGB(255 ,0  ,64 ));
 				StyleSetFore(11, RGB(0   ,0  ,0  ));
 
-				// set the backgroundcolor of brace highlights
+				// set the background color of brace highlights
 				StyleSetBack(STYLE_BRACELIGHT, RGB(0,255,0));
 		
 				// set end of line mode to CRLF
@@ -158,7 +157,7 @@ namespace pr
 				EOLMode(2);
 				//   SndMsg<void>(SCI_SETVIEWEOL, TRUE, 0);
 
-				// set markersymbol for marker type 0 - bookmark
+				// set marker symbol for marker type 0 - bookmark
 				MarkerDefine(0, SC_MARK_CIRCLE);
 		
 				//// display all margins
@@ -235,7 +234,7 @@ namespace pr
 				MarginWidthN(0, TextWidth(STYLE_LINENUMBER, "_9999"));
 				MarginWidthN(1, 0);
 
-				// set markersymbol for marker type 0 - bookmark
+				// set marker symbol for marker type 0 - bookmark
 				MarkerDefine(0, SC_MARK_CIRCLE);
 
 				//// display all margins
@@ -243,13 +242,13 @@ namespace pr
 				//SetDisplayFolding(TRUE);
 				//SetDisplaySelection(TRUE);
 
-				// Initialise utf-8 with the ldr lexer
+				// Initialise UTF-8 with the ldr lexer
 				CodePage(SC_CP_UTF8);
 				Lexer(SCLEX_LDR);
 				LexerLanguage("ldr");
 			}
 
-			// Read contents from in istream
+			// Read contents from in 'istream'
 			// If the stream is not UTF8, it's the caller's responsibility to
 			// imbue the stream and skip over any byte order mask
 			void Load(std::istream& in, bool readonly = false)
@@ -267,7 +266,7 @@ namespace pr
 				ReadOnly(readonly);
 			}
 
-			// Write the contents to an ostream
+			// Write the contents to an 'ostream'
 			// The output content will be in utf8, it's the callers responsibility to
 			// imbue the stream and add a byte order mask if needed.
 			// Also, if this is a save, remember to call 'SetSavePoint()' to register the save point with scintilla

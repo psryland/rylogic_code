@@ -8,7 +8,7 @@
 #include "pr\app\skybox.h"
 #include "pr\camera\camctrl_dinput_wasd.h"
 #include "pr\camera\camera.h"
-#include "pr\camera\camera_dlg.h"
+#include "pr\camera\camera_ui.h"
 #include "pr\collision\collision.h"
 #include "pr\collision\col_box_vs_box.h"
 #include "pr\collision\col_sphere_vs_box.h"

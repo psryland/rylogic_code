@@ -26,9 +26,9 @@
 //      };
 //  }
 //  // Create the GUI window
-//  extern std::shared_ptr<pr::app::IAppMainGui> pr::app::CreateGUI(LPTSTR lpstrCmdLine)
+//  extern std::shared_ptr<pr::app::IAppMainGui> pr::app::CreateGUI(wchar_t const* lpstrCmdLine)
 //  {
-//      return CreateGUI<sol::MainGUI>(lpstrCmdLine);
+//      return CreateGUI<ns::MainGUI>(lpstrCmdLine);
 //  }
 
 #pragma once
@@ -41,15 +41,15 @@ namespace pr
 	{
 		// Custom apps must implement this function.
 		// Note: they can simply call the template version below for default creation
-		std::shared_ptr<pr::app::IAppMainGui> CreateGUI(LPTSTR lpstrCmdLine, int nCmdShow);
-		template <typename WinType> std::shared_ptr<pr::app::IAppMainGui> CreateGUI(LPTSTR cmdline, int nCmdShow)
+		std::shared_ptr<pr::app::IAppMainGui> CreateGUI(wchar_t const* lpstrCmdLine, int nCmdShow);
+		template <typename WinType> std::shared_ptr<pr::app::IAppMainGui> CreateGUI(wchar_t const* cmdline, int nCmdShow)
 		{
 			WinType* gui;
 			std::shared_ptr<pr::app::IAppMainGui> ptr(gui = new WinType(cmdline, nCmdShow));
 			return ptr;
 		}
 
-		// This type is a default and example of a setup object for the app.
+		// This type is a default and example of a set up object for the app.
 		struct DefaultSetup
 		{
 			// The Main object contains a user defined 'UserSettings' type which may be needed before

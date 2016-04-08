@@ -5,16 +5,12 @@
 
 #pragma once
 
-#include <atlbase.h>
-#include <atlapp.h>
-#include <atlwin.h>
-#include <atlframe.h>
-#include <atlctrls.h>
-#include <atldlgs.h>
-#include "pr/common/min_max_fix.h"
-#include "pr/common/events.h"
-#include "pr/renderer11/forward.h"
+#include <memory>
+#include "pr/common/guid.h"
+#include "pr/maths/maths.h"
+#include "pr/gui/wingui.h"
 #include "pr/linedrawer/ldr_object.h"
+#include "pr/renderer11/forward.h"
 
 namespace pr
 {
@@ -23,159 +19,275 @@ namespace pr
 		// Callback function for reading a world space point
 		typedef pr::v4 (__stdcall *ReadPointCB)(void* ctx);
 
-		// Measure *****************************************************************
-
-		// Special context id for private measure objects
-		extern ContextId LdrMeasurePrivateContextId;
-
-		class MeasureDlg
-			:public CIndirectDialogImpl<MeasureDlg>
-			,public CDialogResize<MeasureDlg>
+		// A UI for measuring distances within a 3D environment
+		struct LdrMeasureUI :pr::gui::Form ,pr::AlignTo<16>
 		{
-			ReadPointCB           m_read_point_cb;        // The callback for reading a world space point
-			void*                 m_read_point_ctx;       // Context for the callback function
-			pr::Renderer&         m_rdr;                  // Reference to the renderer
-			HWND                  m_parent;               // The parent window containing the 3d view
-			WTL::CButton          m_btn_point0;           // Set Point 0 button
-			WTL::CButton          m_btn_point1;           // Set Point 1 button
-			WTL::CEdit            m_edit_details;         // Measurement details
-			HFONT                 m_edit_details_font;    // The font to print the measurement details in
-			pr::v4                m_point0;               // The start of the measurement
-			pr::v4                m_point1;               // The end of the measurement
-			pr::ldr::LdrObjectPtr m_measurement_gfx;      // Graphics created by this Measure tool
+		private:
+			enum { ID_BTN_SET0 = 100, ID_BTN_SET1, ID_TB_VALUES };
 
-			MeasureDlg(MeasureDlg const&);
-			MeasureDlg& operator=(MeasureDlg const&);
+			// Members
+			pr::Guid         m_context_id;     // A graphics context Id
+			ReadPointCB      m_read_point_cb;  // The callback for reading a world space point
+			void*            m_read_point_ctx; // Context for the callback function
+			pr::Renderer&    m_rdr;            // Reference to the renderer
+			LdrObjectPtr     m_gfx;            // Graphics created by this tool
+			pr::gui::Button  m_btn_set0;       // Set the start point for measuring
+			pr::gui::Button  m_btn_set1;       // Set the end point for measuring
+			pr::gui::TextBox m_tb_values;      // The measured values
+			pr::v4           m_point0;         // The start of the measurement
+			pr::v4           m_point1;         // The end of the measurement
 
 		public:
-			enum {IDC_POINT0=1000, IDC_POINT1, IDC_DETAILS};
-			BEGIN_DIALOG_EX(0, 0, 83, 134, 0)
-				DIALOG_STYLE(DS_SHELLFONT | WS_CAPTION | WS_GROUP | WS_MAXIMIZEBOX | WS_POPUP | WS_THICKFRAME | WS_SYSMENU)
-				DIALOG_EXSTYLE(WS_EX_TOOLWINDOW | WS_EX_APPWINDOW)
-				DIALOG_CAPTION(TEXT("Measure"))
-				DIALOG_FONT(8, "MS Shell Dlg")
-			END_DIALOG()
-			BEGIN_CONTROLS_MAP()
-				CONTROL_PUSHBUTTON(TEXT("Set Point 0"), IDC_POINT0, 0, 0, 42, 14, 0, 0)
-				CONTROL_PUSHBUTTON(TEXT("Set Point 1"), IDC_POINT1, 41, 0, 42, 14, 0, 0)
-				CONTROL_EDITTEXT(IDC_DETAILS, 1, 15, 80, 118, ES_AUTOHSCROLL | ES_MULTILINE, 0)
-			END_CONTROLS_MAP()
-			BEGIN_DLGRESIZE_MAP(MeasureDlg)
-				DLGRESIZE_CONTROL(IDC_POINT0  ,0)
-				DLGRESIZE_CONTROL(IDC_POINT1  ,0)
-				DLGRESIZE_CONTROL(IDC_DETAILS ,DLSZ_SIZE_X|DLSZ_SIZE_Y)
-			END_DLGRESIZE_MAP()
-			BEGIN_MSG_MAP(MeasureDlg)
-				MESSAGE_HANDLER(WM_INITDIALOG ,OnInitDialog)
-				MESSAGE_HANDLER(WM_DESTROY    ,OnDestDialog)
-				COMMAND_ID_HANDLER(IDOK       ,OnClose)
-				COMMAND_ID_HANDLER(IDCLOSE    ,OnClose)
-				COMMAND_ID_HANDLER(IDCANCEL   ,OnClose)
-				COMMAND_HANDLER(IDC_POINT0 ,BN_CLICKED  ,OnSetPoint)
-				COMMAND_HANDLER(IDC_POINT1 ,BN_CLICKED  ,OnSetPoint)
-				CHAIN_MSG_MAP(CDialogResize<MeasureDlg>)
-			END_MSG_MAP()
 
-			MeasureDlg(ReadPointCB read_point_cb ,void* ctx ,pr::Renderer& rdr ,HWND parent = 0);
-			~MeasureDlg();
+			LdrMeasureUI(HWND parent, ReadPointCB read_point_cb, void* ctx, pr::Renderer& rdr)
+				:Form(FormParams<>().wndclass(RegisterWndClass<LdrMeasureUI>()).name("ldr-measure-ui").title(L"Measure Distances").wh(300, 110).style_ex('+',WS_EX_TOOLWINDOW).parent(parent).hide_on_close(true).pin_window(true))
+				,m_context_id(pr::GenerateGUID())
+				,m_read_point_cb(read_point_cb)
+				,m_read_point_ctx(ctx)
+				,m_rdr(rdr)
+				,m_gfx()
+				,m_btn_set0 (pr::gui::Button ::Params<>().parent(this_).name("btn-set0" ).id(ID_BTN_SET0 ).xy(0,0                        ).wh(80,20).text(L"Set Point 0").margin(2,2,1,1).anchor(EAnchor::TopLeft))
+				,m_btn_set1 (pr::gui::Button ::Params<>().parent(this_).name("btn-set1" ).id(ID_BTN_SET1 ).xy(Left|RightOf|ID_BTN_SET0,0 ).wh(80,20).text(L"Set Point 1").margin(1,2,2,1).anchor(EAnchor::TopLeft))
+				,m_tb_values(pr::gui::TextBox::Params<>().parent(this_).name("tb-values").id(ID_TB_VALUES).xy(0, Top|BottomOf|ID_BTN_SET0).wh(Fill, Fill).margin(2,1,2,2).anchor(EAnchor::All).font_name(L"Tahoma").font_size(16).multiline(true))
+				,m_point0(pr::v4Origin)
+				,m_point1(pr::v4Origin)
+			{
+				m_btn_set0.Click += std::bind(&LdrMeasureUI::HandleSetPoint, this, _1, _2);
+				m_btn_set1.Click += std::bind(&LdrMeasureUI::HandleSetPoint, this, _1, _2);
+				UpdateMeasurementInfo();
+			}
 
-			// Handler methods
-			LRESULT OnInitDialog(UINT, WPARAM, LPARAM, BOOL&);
-			LRESULT OnDestDialog(UINT, WPARAM, LPARAM, BOOL&);
-			LRESULT OnClose(WORD, WORD, HWND, BOOL&);
-			LRESULT OnSetPoint(WORD, WORD, HWND, BOOL&);
+			// Set the callback function used to read points in the 3d environment
+			void SetReadPoint(ReadPointCB cb, void* ctx)
+			{
+				m_read_point_cb = cb;
+				m_read_point_ctx = ctx;
+			}
 
-			pr::ldr::LdrObjectPtr Gfx() const { return m_measurement_gfx; }
+			// Graphics associated with the this measure tool
+			LdrObjectPtr Gfx() const
+			{
+				return m_gfx;
+			}
 
-			void SetReadPointCB(ReadPointCB read_point_cb, void* ctx);
-			void SetReadPointCtx(void* ctx);
-			void Show(bool show);
-			void UpdateMeasurementInfo(bool raise_event = true);
-			void Close();
+			// The context id for graphics objects belonging to this measurement UI
+			pr::Guid GfxContextId() const
+			{
+				return m_context_id;
+			}
+
+			// Handle a 'Set Point' button being clicked
+			void HandleSetPoint(pr::gui::Button& btn, pr::gui::EmptyArgs const&)
+			{
+				auto dummy = v4{};
+				auto& point =
+					&btn == &m_btn_set0 ? m_point0 :
+					&btn == &m_btn_set1 ? m_point1 :
+					dummy;
+
+				// Read the 3D point from the scene
+				point = m_read_point_cb(m_read_point_ctx);
+
+				// Update the measurement data
+				UpdateMeasurementInfo();
+			}
+
+			// Update the text in the measurement details text box
+			void UpdateMeasurementInfo()
+			{
+				using namespace pr::maths;
+
+				// Remove any existing graphics
+				m_gfx = nullptr;
+
+				// Create graphics for the two measurement points
+				if (m_point0 != m_point1)
+				{
+					auto p0 = pr::v4::make(m_point1.x, m_point0.y, m_point0.z, 1.0f);
+					auto p1 = pr::v4::make(m_point1.x, m_point1.y, m_point0.z, 1.0f);
+
+					auto str = std::string{};
+					GroupStart(str, "Measurement");
+					Line(str, "dist" , 0xFFFFFFFF, m_point0, m_point1);
+					Line(str, "distX", 0xFFFF0000, m_point0, p0);
+					Line(str, "distY", 0xFF00FF00, p0, p1);
+					Line(str, "distZ", 0xFF0000FF, p1, m_point1);
+					GroupEnd(str);
+
+					ParseResult out;
+					ParseString(m_rdr, str.c_str(), out, false, GfxContextId());
+					if (!out.m_objects.empty())
+						m_gfx = out.m_objects.back();
+				}
+
+				auto dx   = m_point1.x - m_point0.x;
+				auto dy   = m_point1.y - m_point0.y;
+				auto dz   = m_point1.z - m_point0.z;
+				auto len  = Len3(dx, dy, dz);
+				auto dxy  = Len2(dx, dy);
+				auto dyz  = Len2(dy, dz);
+				auto dzx  = Len2(dz, dx);
+				auto angx = dyz > tiny && fabs(dy) > tiny ? pr::RadiansToDegrees(pr::Angle(dyz, fabs(dy), fabs(dz))) : 0.0f;
+				auto angy = dzx > tiny && fabs(dx) > tiny ? pr::RadiansToDegrees(pr::Angle(dzx, fabs(dx), fabs(dz))) : 0.0f;
+				auto angz = dxy > tiny && fabs(dx) > tiny ? pr::RadiansToDegrees(pr::Angle(dxy, fabs(dx), fabs(dy))) : 0.0f;
+
+				// Update the text description
+				m_tb_values.Text(pr::FmtS(
+					L"     sep: %f %f %f  (%f) \r\n"
+					L"xy,yz,zx: %f %f %f \r\n"
+					L" ang (°): %f %f %f \r\n"
+					,dx ,dy ,dz ,len
+					,dxy ,dyz ,dzx
+					,angx ,angy ,angz));
+
+				// Notify the measurement data changed
+				MeasurementChanged(*this, pr::gui::EmptyArgs());
+			}
+
+			// Raised when the measurement data changes
+			// MeasurementChanged += [&](LdrMeasureUI&,EmptyArgs const&){}
+			pr::gui::EventHandler<LdrMeasureUI&, pr::gui::EmptyArgs const&> MeasurementChanged;
 		};
 
-		// Events
-		struct Evt_LdrMeasureCloseWindow {}; // The measurement window has closed
-		struct Evt_LdrMeasureUpdate {};      // The measurement info has been updated
-
-		// Angle *****************************************************************
-
-		// Special context id for private angle dlg objects
-		extern ContextId LdrAngleDlgPrivateContextId;
-
-		class AngleDlg
-			:public CIndirectDialogImpl<AngleDlg>
-			,public CDialogResize<AngleDlg>
+		// A UI for measuring angles within a 3D environment
+		struct LdrAngleUI :pr::gui::Form ,pr::AlignTo<16>
 		{
-			ReadPointCB              m_read_point_cb;        // The callback for reading a world space point
-			void*                    m_read_point_ctx;       // Context for the callback function
-			pr::Renderer&            m_rdr;                  // Reference to the renderer
-			HWND                     m_parent;               // The parent window containing the 3d view
-			WTL::CButton             m_btn_origin;           // Set Origin button
-			WTL::CButton             m_btn_point0;           // Set Point 0 button
-			WTL::CButton             m_btn_point1;           // Set Point 1 button
-			WTL::CEdit               m_edit_details;         // Angle details
-			HFONT                    m_edit_details_font;    // The font to print the measurement details in
-			pr::v4                   m_origin;               // The origin of the angle measurement
-			pr::v4                   m_point0;               // Point0 of the angle measurement
-			pr::v4                   m_point1;               // Point1 of the angle measurement
-			pr::ldr::LdrObjectPtr    m_angle_gfx;            // Graphics created by this tool
+		private:
+			enum { ID_BTN_ORIG = 100, ID_BTN_SET0, ID_BTN_SET1, ID_TB_VALUES };
 
-			AngleDlg(AngleDlg const&);
-			AngleDlg& operator=(AngleDlg const&);
+			// Members
+			pr::Guid         m_context_id;     // A graphics context Id
+			ReadPointCB      m_read_point_cb;  // The callback for reading a world space point
+			void*            m_read_point_ctx; // Context for the callback function
+			pr::Renderer&    m_rdr;            // Reference to the renderer
+			LdrObjectPtr     m_gfx;            // Graphics created by this tool
+			pr::gui::Button  m_btn_orig;       // Set the origin for angle measurement
+			pr::gui::Button  m_btn_set0;       // Set the point 0 for angle measurement
+			pr::gui::Button  m_btn_set1;       // Set the point 1 for angle measurement
+			pr::gui::TextBox m_tb_values;      // The measured values
+			pr::v4           m_origin;         // The angle apex
+			pr::v4           m_point0;         // The point0
+			pr::v4           m_point1;         // The end of the measurement
 
 		public:
-			enum {IDC_ORIGIN=1000, IDC_POINT0, IDC_POINT1, IDC_DETAILS};
-			BEGIN_DIALOG_EX(0, 0, 83, 134, 0)
-				DIALOG_STYLE(DS_SHELLFONT | WS_CAPTION | WS_GROUP | WS_MAXIMIZEBOX | WS_POPUP | WS_THICKFRAME | WS_SYSMENU)
-				DIALOG_EXSTYLE(WS_EX_TOOLWINDOW | WS_EX_APPWINDOW)
-				DIALOG_CAPTION("Angle")
-				DIALOG_FONT(8, "MS Shell Dlg")
-			END_DIALOG()
-			BEGIN_CONTROLS_MAP()
-				CONTROL_PUSHBUTTON(TEXT("Origin"), IDC_ORIGIN, 0, 0, 28, 14, 0, 0)
-				CONTROL_PUSHBUTTON(TEXT("Point0"), IDC_POINT0, 28, 0, 28, 14, 0, 0)
-				CONTROL_PUSHBUTTON(TEXT("Point1"), IDC_POINT1, 55, 0, 28, 14, 0, 0)
-				CONTROL_EDITTEXT(IDC_DETAILS, 1, 15, 80, 118, ES_AUTOHSCROLL | ES_MULTILINE, 0)
-			END_CONTROLS_MAP()
-			BEGIN_DLGRESIZE_MAP(AngleDlg)
-				DLGRESIZE_CONTROL(IDC_ORIGIN  ,0)
-				DLGRESIZE_CONTROL(IDC_POINT0  ,0)
-				DLGRESIZE_CONTROL(IDC_POINT1  ,0)
-				DLGRESIZE_CONTROL(IDC_DETAILS ,DLSZ_SIZE_X|DLSZ_SIZE_Y)
-			END_DLGRESIZE_MAP()
-			BEGIN_MSG_MAP(AngleDlg)
-				MESSAGE_HANDLER(WM_INITDIALOG ,OnInitDialog)
-				MESSAGE_HANDLER(WM_DESTROY    ,OnDestDialog)
-				COMMAND_ID_HANDLER(IDOK       ,OnClose)
-				COMMAND_ID_HANDLER(IDCLOSE    ,OnClose)
-				COMMAND_ID_HANDLER(IDCANCEL   ,OnClose)
-				COMMAND_HANDLER(IDC_ORIGIN ,BN_CLICKED  ,OnSetPoint)
-				COMMAND_HANDLER(IDC_POINT0 ,BN_CLICKED  ,OnSetPoint)
-				COMMAND_HANDLER(IDC_POINT1 ,BN_CLICKED  ,OnSetPoint)
-				CHAIN_MSG_MAP(CDialogResize<AngleDlg>)
-			END_MSG_MAP()
 
-			AngleDlg(ReadPointCB read_point_cb ,void* ctx ,pr::Renderer& rdr ,HWND parent = 0);
-			~AngleDlg();
+			LdrAngleUI(HWND parent, ReadPointCB read_point_cb, void* ctx, pr::Renderer& rdr)
+				:Form(FormParams<>().wndclass(RegisterWndClass<LdrMeasureUI>()).name("ldr-angle-ui").title(L"Measure Angles").wh(144, 126).style_ex('+',WS_EX_TOOLWINDOW).parent(parent).hide_on_close(true).pin_window(true))
+				,m_context_id(pr::GenerateGUID())
+				,m_read_point_cb(read_point_cb)
+				,m_read_point_ctx(ctx)
+				,m_rdr(rdr)
+				,m_gfx()
+				,m_btn_orig (pr::gui::Button ::Params<>().parent(this_).name("btn-orig" ).id(ID_BTN_ORIG ).xy(0,0).wh(40,20).text(L"Origin").margin(2,2,1,1).anchor(EAnchor::TopLeft))
+				,m_btn_set0 (pr::gui::Button ::Params<>().parent(this_).name("btn-set0" ).id(ID_BTN_SET0 ).xy(Left|RightOf|ID_BTN_ORIG,0).wh(40,20).text(L"Point 0").margin(1,2,1,1).anchor(EAnchor::TopLeft))
+				,m_btn_set1 (pr::gui::Button ::Params<>().parent(this_).name("btn-set1" ).id(ID_BTN_SET1 ).xy(Left|RightOf|ID_BTN_SET0,0).wh(40,20).text(L"Point 1").margin(1,2,2,1).anchor(EAnchor::TopLeft))
+				,m_tb_values(pr::gui::TextBox::Params<>().parent(this_).name("tb-values").id(ID_TB_VALUES).xy(0, Top|BottomOf|ID_BTN_ORIG).wh(Fill, Fill).margin(2,1,2,2).anchor(EAnchor::All).font_name(L"Tahoma").font_size(16).multiline(true))
+				,m_origin(pr::v4Origin)
+				,m_point0(pr::v4Origin)
+				,m_point1(pr::v4Origin)
+			{
+				m_btn_orig.Click += std::bind(&LdrAngleUI::HandleSetPoint, this, _1, _2);
+				m_btn_set0.Click += std::bind(&LdrAngleUI::HandleSetPoint, this, _1, _2);
+				m_btn_set1.Click += std::bind(&LdrAngleUI::HandleSetPoint, this, _1, _2);
+				UpdateMeasurementInfo();
+			}
 
-			// Handler methods
-			LRESULT OnInitDialog(UINT, WPARAM, LPARAM, BOOL&);
-			LRESULT OnDestDialog(UINT, WPARAM, LPARAM, BOOL&);
-			LRESULT OnClose(WORD, WORD, HWND, BOOL&);
-			LRESULT OnSetPoint(WORD, WORD, HWND, BOOL&);
+			// Set the callback function used to read points in the 3d environment
+			void SetReadPoint(ReadPointCB cb, void* ctx)
+			{
+				m_read_point_cb = cb;
+				m_read_point_ctx = ctx;
+			}
 
-			pr::ldr::LdrObjectPtr Gfx() const { return m_angle_gfx; }
+			// Graphics associated with the this measure tool
+			LdrObjectPtr Gfx() const
+			{
+				return m_gfx;
+			}
 
-			void SetReadPointCB(ReadPointCB read_point_cb, void* ctx);
-			void SetReadPointCtx(void* ctx);
-			void Show(bool show);
-			void UpdateAngleInfo(bool raise_event = true);
-			void Close();
+			// The context id for graphics objects belonging to this measurement UI
+			pr::Guid GfxContextId() const
+			{
+				return m_context_id;
+			}
+
+			// Handle a 'Set Point' button being clicked
+			void HandleSetPoint(pr::gui::Button& btn, pr::gui::EmptyArgs const&)
+			{
+				auto dummy = v4{};
+				auto& point =
+					&btn == &m_btn_orig ? m_origin :
+					&btn == &m_btn_set0 ? m_point0 :
+					&btn == &m_btn_set1 ? m_point1 :
+					dummy;
+
+				// Read the 3D point from the scene
+				point = m_read_point_cb(m_read_point_ctx);
+
+				// Update the measurement data
+				UpdateMeasurementInfo();
+			}
+
+			// Update the text in the measurement details text box
+			void UpdateMeasurementInfo()
+			{
+				using namespace pr::maths;
+
+				// Remove any existing graphics
+				m_gfx = nullptr;
+
+				// Create graphics
+				if (m_origin != m_point0 || m_origin != m_point1)
+				{
+					std::string str;
+					GroupStart(str, "Angle");
+					Line(str, "edge0", 0xFFFFFFFF, m_origin, m_point0);
+					Line(str, "edge1", 0xFFFFFF00, m_origin, m_point1);
+					Line(str, "edge2", 0xFF00FF00, m_point0, m_point1);
+					GroupEnd(str);
+
+					ParseResult out;
+					ParseString(m_rdr, str.c_str(), out, false, GfxContextId());
+					if (!out.m_objects.empty())
+						m_gfx = out.m_objects.back();
+				}
+
+				auto  e0    = m_point0 - m_origin;
+				auto  e1    = m_point1 - m_origin;
+				auto  e2    = m_point1 - m_point0;
+				float edge0 = pr::Length3(e0);
+				float edge1 = pr::Length3(e1);
+				float edge2 = pr::Length3(e2);
+				float ang   = (edge0 < tiny || edge1 < tiny) ? 0.0f : pr::RadiansToDegrees(pr::ACos(pr::Clamp(pr::Dot3(e0,e1) / (edge0 * edge1), -1.0f, 1.0f)));
+
+				// Update the text description
+				m_tb_values.Text(pr::FmtS(
+					L"edge0: %f\r\n"
+					L"edge1: %f\r\n"
+					L"edge2: %f\r\n"
+					L"angle: %f°\r\n"
+					,edge0 ,edge1 ,edge2
+					,ang
+					));
+
+				// Notify the measurement data changed
+				MeasurementChanged(*this, pr::gui::EmptyArgs());
+			}
+
+			// Raised when the measurement data changes
+			// MeasurementChanged += [&](LdrAngleUI&,EmptyArgs const&){}
+			pr::gui::EventHandler<LdrAngleUI&, pr::gui::EmptyArgs const&> MeasurementChanged;
 		};
-
-		// Events
-		struct Evt_LdrAngleDlgCloseWindow {}; // The angle dlg window has closed
-		struct Evt_LdrAngleDlgUpdate {};      // The angle info has been updated
 	}
 }
+
+//// Add a manifest dependency on common controls version 6
+//#if defined _M_IX86
+//#	pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
+//#elif defined _M_IA64
+//#	pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='ia64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+//#elif defined _M_X64
+//#	pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='amd64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+//#else
+//#	pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+//#endif

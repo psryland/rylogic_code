@@ -20,14 +20,12 @@ namespace ldr
 	char const Version[]     = "4.00.00";
 	char const Copyright[]   = "Copyright (c) Rylogic Limited 2002";
 
-	pr::ldr::ContextId LdrContext = 0xFFFFFFFF;
-
 	wchar_t const* AppTitleW()     { return AppNameW; }
 	char const*    AppTitleA()     { return AppNameA; }
 	char const*    AppString()     { return pr::FmtX<Main, 128>("%s - Version: %s\r\n%s\r\nAll Rights Reserved.", AppNameA, Version, Copyright); }
 	char const*    AppStringLine() { return pr::FmtX<Main, 128>("%s - Version: %s %s", AppNameA, Version, Copyright); }
 
-	// App setup
+	// App set up
 	struct Setup
 	{
 		ldr::UserSettings UserSettings() const

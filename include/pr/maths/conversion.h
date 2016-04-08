@@ -251,16 +251,6 @@ namespace pr
 			{
 				return RECT{0, 0, x.cx, x.cy};
 			}
-			#ifdef _GDIPLUS_H
-			static RECT To(Gdiplus::RectF const& r, DummyType<4> = 0)
-			{
-				return RECT{int(r.GetLeft()), int(r.GetTop()), int(r.GetRight()), int(r.GetBottom())};
-			}
-			static RECT To(Gdiplus::Rect const& r, DummyType<5> = 0)
-			{
-				return RECT{r.GetLeft(), r.GetTop(), r.GetRight(), r.GetBottom()};
-			}
-			#endif
 		};
 		#endif
 	}

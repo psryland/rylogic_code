@@ -32,13 +32,12 @@ namespace pr
 			};
 			static Params Params(HWND parent)
 			{
-				return FormParams().wndclass(RegisterWndClass<ScriptEditorDlgImpl>())
+				return FormParams<>().wndclass(RegisterWndClass<ScriptEditorDlgImpl>())
 					.name("ldr-script-editor").title(L"Script Editor").wh(430, 380)
 					.menu({{L"&File", ID_UNUSED}})
 					.icon_bg((HICON)::SendMessageW(parent, WM_GETICON, ICON_BIG, 0))
 					.icon_sm((HICON)::SendMessageW(parent, WM_GETICON, ICON_SMALL, 0))
-					.parent(WndRef::Lookup(parent))
-					.hide_on_close(true).pin_window(true);
+					.parent(parent).hide_on_close(true).pin_window(true);
 			}
 
 			ScintillaCtrl m_edit;
@@ -50,9 +49,9 @@ namespace pr
 			ScriptEditorDlgImpl(HWND parent, RenderCB render_cb)
 				:Form(Params(parent))
 				,ScriptEditorDlg(Internal())
-				,m_edit(ScintillaCtrl::Params().id(IDC_TEXT).name("m_edit").wh(Fill,Fill).margin(8,8,8,46).parent(this).anchor(EAnchor::All))
-				,m_btn_render(Button::Params().id(IDC_BTN_RENDER).name("m_btn_render").xy(12, -12).text(L"&Render (F5)").parent(this).anchor(EAnchor::BottomLeft))
-				,m_btn_close(Button::Params().id(IDC_BTN_CLOSE).name("m_btn_close").xy(-12, -12).text(L"&Close").parent(this).anchor(EAnchor::BottomRight))
+				,m_edit      (ScintillaCtrl::Params<>().parent(this_).id(IDC_TEXT      ).name("m_edit").wh(Fill,Fill).margin(8,8,8,46).anchor(EAnchor::All))
+				,m_btn_render(Button       ::Params<>().parent(this_).id(IDC_BTN_RENDER).name("m_btn_render").xy(12, -12).text(L"&Render (F5)").anchor(EAnchor::BottomLeft))
+				,m_btn_close (Button       ::Params<>().parent(this_).id(IDC_BTN_CLOSE ).name("m_btn_close" ).xy(-12, -12).text(L"&Close").anchor(EAnchor::BottomRight))
 				,m_render(render_cb)
 			{
 				// Set up the menu
@@ -104,7 +103,7 @@ namespace pr
 						case ID_LOAD:
 							{
 								COMDLG_FILTERSPEC filters[] = {{L"Ldr Script (*.ldr)",L"*.ldr"}};//,{L"All Files",L"*.*"}};
-								auto filename = OpenFileUI(nullptr, FileUIOptions(L"ldr", _countof(filters), &filters[0]));
+								auto filename = OpenFileUI(nullptr, FileUIOptions(L"ldr", &filters[0], _countof(filters)));
 								if (!filename.empty())
 								{
 									std::ifstream infile(filename[0]);
@@ -116,7 +115,7 @@ namespace pr
 						case ID_SAVE:
 							{
 								COMDLG_FILTERSPEC filters[] = {{L"Ldr Script (*.ldr)",L"*.ldr"}};//,{L"All Files",L"*.*"}};
-								auto filename = SaveFileUI(m_hwnd, FileUIOptions(L"ldr", _countof(filters), &filters[0]));
+								auto filename = SaveFileUI(m_hwnd, FileUIOptions(L"ldr", &filters[0], _countof(filters)));
 								if (!filename.empty())
 								{
 									std::ofstream outfile(filename);
@@ -152,7 +151,7 @@ namespace pr
 			// Show the window as a non-modal window
 			void Show(HWND parent) override
 			{
-				Parent(WndRef::Lookup(parent));
+				Parent(parent);
 				Form::Show(SW_SHOW);
 			}
 

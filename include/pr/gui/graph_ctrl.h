@@ -11,8 +11,6 @@
 #include <thread>
 #include <cassert>
 
-#include <gdiplus.h>
-
 #include "pr/common/min_max_fix.h"
 #include "pr/common/multi_cast.h"
 #include "pr/common/range.h"
@@ -331,7 +329,7 @@ namespace pr
 			using SeriesRdrOptions = typename Series::RdrOptions;
 
 			static wchar_t const* WndClassName() { return L"PRGRAPHCTRL"; }
-			struct Params :CtrlParams
+			template <typename Derived = void> struct Params :CtrlParams<choose_non_void<Derived, Params<>>>
 			{
 				Params() { wndclass(RegisterWndClass<GraphCtrl>()); }
 			};
@@ -429,7 +427,8 @@ namespace pr
 			// This should be used to synchronise source data changes with rendering.
 			std::mutex MutexRendering;
 
-			GraphCtrl(pr::gui::Params const& p)
+			GraphCtrl() :GraphCtrl(Params<>()) {}
+			template <typename D> GraphCtrl(Params<D> const& p)
 				:Control(p)
 				,m_gdiplus()
 				,m_rdr_thread()
@@ -1581,10 +1580,6 @@ namespace pr
 			{
 				Dirty(true);
 				Control::OnWindowPosChange(args);
-			}
-			bool OnEraseBkGnd(EmptyArgs const&) override
-			{
-				return true;
 			}
 			bool OnPaint(PaintEventArgs const& args) override
 			{

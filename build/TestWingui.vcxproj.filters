@@ -28,10 +28,10 @@
     <ClInclude Include="..\include\pr\gui\context_menu.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\gui\progress_dlg.h">
+    <ClInclude Include="..\include\pr\gui\scintilla_ctrl.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\gui\scintilla_ctrl.h">
+    <ClInclude Include="..\include\pr\gui\progress_ui.h">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>

@@ -13,20 +13,19 @@ namespace ldr
 	// Status message priority buffer
 	struct StatusPri
 	{
-		DWORD m_last_update;
-		int   m_priority;
-		DWORD m_min_display_time_ms;
-		CFont m_normal_font;
-		CFont m_bold_font;
+		DWORD         m_last_update;
+		int           m_priority;
+		DWORD         m_min_display_time_ms;
+		pr::gui::Font m_normal_font;
+		pr::gui::Font m_bold_font;
 
 		StatusPri()
-		:m_last_update(0)
-		,m_priority(0)
-		,m_min_display_time_ms(0)
-		{
-			m_normal_font.CreatePointFont(80, "Sans Merif");
-			m_bold_font.CreatePointFont(80, "Sans Merif", 0, true);
-		}
+			:m_last_update(0)
+			,m_priority(0)
+			,m_min_display_time_ms(0)
+			,m_normal_font(L"Sans Merif", 80)
+			,m_bold_font(L"Sans Merif", 80, 0, true)
+		{}
 	};
 
 	// A interface for classes that handle user input
@@ -34,7 +33,7 @@ namespace ldr
 	{
 		virtual ~IInputHandler() {}
 
-		// Called when input focus is given or removed. Implementors should use
+		// Called when input focus is given or removed. Implementers should use
 		// LostInputFocus() to abort any control operations in progress.
 		virtual void GainInputFocus(IInputHandler* gained_from) = 0;
 		virtual void LostInputFocus(IInputHandler* lost_to) = 0;
@@ -46,7 +45,7 @@ namespace ldr
 
 		// Mouse input.
 		// 'pos_ns' is the normalised screen space position of the mouse
-		//   i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal cartesian axes
+		//   i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal Cartesian axes
 		// 'button_state' is the state of the mouse buttons (pr::camera::ENavKey)
 		// 'start_or_end' is true on mouse down/up
 		// Returns true if the scene needs refreshing

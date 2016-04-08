@@ -8,9 +8,9 @@
 // rather than 'Run()'. Any process that requires periodic calling should
 // inherit 'pr::threads::Loop'
 //
-#ifndef PR_THREADS_SIM_MESSAGE_PUMP_H
-#define PR_THREADS_SIM_MESSAGE_PUMP_H
 #pragma once
+
+#if 0 // not using WTL anymore...
 
 #include <algorithm>
 #include <atlapp.h>
@@ -157,5 +157,4 @@ namespace pr
 		};
 	}
 }
-
 #endif

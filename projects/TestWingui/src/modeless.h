@@ -10,9 +10,9 @@ struct Modeless :Form
 
 	enum { IDC_LBL };
 	Modeless(WndRef parent)
-		:Form(ModelessParams().name("modeless").title(L"Modeless").parent(parent).menu(IDC_MENU).xy(0,0).wh(400,400).wndclass(RegisterWndClass<Modeless>()))
-		,m_lbl(Label::Params().name("modeless-label").text(L"I am a modeless dialog").xy(10,10).id(IDC_LBL).parent(this).anchor(EAnchor::TopLeft))
-		,m_btn_ok(Button::Params().name("btn_ok").text(L"OK").xy(-10,-10).id(IDOK).parent(this).anchor(EAnchor::BottomRight))
+		:Form(ModelessParams<>().name("modeless").title(L"Modeless").parent(parent).menu(IDC_MENU).xy(0,0).wh(400,400).wndclass(RegisterWndClass<Modeless>()))
+		,m_lbl   (Label ::Params<>().parent(this_).name("modeless-label").text(L"I am a modeless dialog").xy(10,10).id(IDC_LBL).anchor(EAnchor::TopLeft))
+		,m_btn_ok(Button::Params<>().parent(this_).name("btn_ok").text(L"OK").xy(-10,-10).id(IDOK).anchor(EAnchor::BottomRight))
 	{
 		HideOnClose(true);
 		m_btn_ok.Click += [&](Button&, EmptyArgs const&){ Close(); };

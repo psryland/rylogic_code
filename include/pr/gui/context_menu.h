@@ -9,10 +9,9 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-#include <gdiplus.h>
 
-#include "pr/gui/wingui.h"
 #include "pr/gui/gdiplus.h"
+#include "pr/gui/wingui.h"
 
 namespace pr
 {
@@ -22,23 +21,9 @@ namespace pr
 		struct ContextMenu;
 		struct ContextMenuStyle;
 		struct IContextMenuItem;
-		using StylePtr = std::shared_ptr<ContextMenuStyle>;
-		using GdiGraphics   = Gdiplus::Graphics;
-		using GdiPoint      = Gdiplus::Point;
-		using GdiPointF     = Gdiplus::PointF;
-		using GdiSize       = Gdiplus::Size;
-		using GdiSizeF      = Gdiplus::SizeF;
-		using GdiRect       = Gdiplus::Rect;
-		using GdiRectF      = Gdiplus::RectF;
-		using GdiColor      = Gdiplus::Color;
-		using GdiARGB       = Gdiplus::ARGB;
-		using GdiBitmap     = Gdiplus::Bitmap;
-		using GdiFont       = Gdiplus::Font;
-		using GdiPen        = Gdiplus::Pen;
-		using GdiSolidBrush = Gdiplus::SolidBrush;
-		using GdiStrFmt     = Gdiplus::StringFormat;
-		using BitmapPtr     = std::shared_ptr<GdiBitmap>;
-		using FontPtr       = std::shared_ptr<GdiFont>;
+		using StylePtr  = std::shared_ptr<ContextMenuStyle>;
+		using BitmapPtr = std::shared_ptr<gdi::Bitmap>;
+		using FontPtr   = std::shared_ptr<gdi::Font>;
 
 		enum EMenuItemState
 		{
@@ -53,14 +38,14 @@ namespace pr
 		#pragma region HelperFunctions
 		namespace impl
 		{
-			inline GdiColor ColAdj(GdiColor col, int dr, int dg, int db)
+			inline gdi::Color ColAdj(gdi::Color col, int dr, int dg, int db)
 			{
 				int r = col.GetR() + dr; if (r>255) r=255; else if (r<0) r=0;
 				int g = col.GetG() + dg; if (g>255) g=255; else if (g<0) g=0;
 				int b = col.GetB() + db; if (b>255) b=255; else if (b<0) b=0;
-				return GdiColor(col.GetA(), BYTE(r), BYTE(g), BYTE(b));
+				return gdi::Color(col.GetA(), BYTE(r), BYTE(g), BYTE(b));
 			}
-			inline GdiRect Inflate(GdiRect rect, int dx, int dy)
+			inline gdi::Rect Inflate(gdi::Rect rect, int dx, int dy)
 			{
 				rect.X -= dx;
 				rect.Y -= dy;
@@ -77,14 +62,20 @@ namespace pr
 		{
 			struct ColGrp
 			{
-				GdiColor m_text; // The text colour for an item
-				GdiColor m_bkgd; // The backgroud colour for an item
-				GdiColor m_brdr; // Border colour for an item
-				ColGrp(GdiColor text, GdiColor bkgd, GdiColor brdr)
+				gdi::Color m_text; // The text colour for an item
+				gdi::Color m_bkgd; // The background colour for an item
+				gdi::Color m_brdr; // Border colour for an item
+				ColGrp(gdi::Color text, gdi::Color bkgd, gdi::Color brdr)
 					:m_text(text)
 					,m_bkgd(bkgd)
 					,m_brdr(brdr)
 				{}
+				void set(gdi::Color text, gdi::Color bkgd, gdi::Color brdr)
+				{
+					m_text = text;
+					m_bkgd = bkgd;
+					m_brdr = brdr;
+				}
 			};
 
 			NonClientMetrics m_metrics;     // system metrics
@@ -99,11 +90,11 @@ namespace pr
 
 			ContextMenuStyle()
 				:m_metrics     ()
-				,m_font_text   (std::make_shared<GdiFont>(::GetDC(0), &m_metrics.lfMenuFont))
-				,m_font_marks  (std::make_shared<GdiFont>(L"Marlett", m_font_text->GetSize()))
-				,m_col_norm    (To<GdiColor>(::GetSysColor(COLOR_MENUTEXT)) , To<GdiColor>(::GetSysColor(COLOR_MENU)) , GdiColor())
-				,m_col_select  (To<GdiColor>(::GetSysColor(COLOR_MENUTEXT)) , GdiColor(0xFF,0xD1,0xE2,0xF2)           , GdiColor(0xFF,0x78,0xAE,0xE5))
-				,m_col_disable (To<GdiColor>(::GetSysColor(COLOR_GRAYTEXT)) , To<GdiColor>(::GetSysColor(COLOR_MENU)) , GdiColor())
+				,m_font_text   (std::make_shared<gdi::Font>(::GetDC(0), &m_metrics.lfMenuFont))
+				,m_font_marks  (std::make_shared<gdi::Font>(L"Marlett", m_font_text->GetSize()))
+				,m_col_norm    (To<gdi::Color>(::GetSysColor(COLOR_MENUTEXT)) , To<gdi::Color>(::GetSysColor(COLOR_MENU)) , gdi::Color())
+				,m_col_select  (To<gdi::Color>(::GetSysColor(COLOR_MENUTEXT)) , gdi::Color(0xFF,0xD1,0xE2,0xF2)           , gdi::Color(0xFF,0x78,0xAE,0xE5))
+				,m_col_disable (To<gdi::Color>(::GetSysColor(COLOR_GRAYTEXT)) , To<gdi::Color>(::GetSysColor(COLOR_MENU)) , gdi::Color())
 				,m_margin_left (20)
 				,m_text_margin (2)
 				,m_bmp_margin  (1)
@@ -113,9 +104,9 @@ namespace pr
 			static StylePtr WinXP()
 			{
 				auto sty = std::make_shared<ContextMenuStyle>();
-				sty->m_col_norm    = ColGrp(To<GdiColor>(::GetSysColor(COLOR_MENUTEXT))      , To<GdiColor>(::GetSysColor(COLOR_MENU))        , GdiColor());
-				sty->m_col_select  = ColGrp(To<GdiColor>(::GetSysColor(COLOR_HIGHLIGHTTEXT)) , To<GdiColor>(::GetSysColor(COLOR_MENUHILIGHT)) , GdiColor());
-				sty->m_col_disable = ColGrp(To<GdiColor>(::GetSysColor(COLOR_GRAYTEXT))      , To<GdiColor>(::GetSysColor(COLOR_MENU))        , GdiColor());
+				sty->m_col_norm   .set(To<gdi::Color>(::GetSysColor(COLOR_MENUTEXT))      , To<gdi::Color>(::GetSysColor(COLOR_MENU))        , gdi::Color());
+				sty->m_col_select .set(To<gdi::Color>(::GetSysColor(COLOR_HIGHLIGHTTEXT)) , To<gdi::Color>(::GetSysColor(COLOR_MENUHILIGHT)) , gdi::Color());
+				sty->m_col_disable.set(To<gdi::Color>(::GetSysColor(COLOR_GRAYTEXT))      , To<gdi::Color>(::GetSysColor(COLOR_MENU))        , gdi::Color());
 				return sty;
 			}
 
@@ -179,7 +170,7 @@ namespace pr
 				return true;
 			}
 
-			// True if the given key matches the hotkey prefix for this item
+			// True if the given key matches the hot-key prefix for this item
 			virtual bool HotkeyPrefix(wchar_t) const
 			{
 				return false;
@@ -202,13 +193,13 @@ namespace pr
 				}
 			}
 
-			virtual Size MeasureItem(GdiGraphics& gfx) = 0;
-			virtual void DrawItem   (GdiGraphics& gfx, Rect const& rect) = 0;
+			virtual Size MeasureItem(gdi::Graphics& gfx) = 0;
+			virtual void DrawItem   (gdi::Graphics& gfx, Rect const& rect) = 0;
 		};
 
 		// Context menu
 		// Note: this class requires GdiPlus, remember to instantiate an instance
-		// of 'pr::GdiPlus' somewhere so that the gdi+ dll is loaded
+		// of 'pr::GdiPlus' somewhere so that the GDI+ dll is loaded
 		struct ContextMenu :Form ,ContextMenuItem
 		{
 			using BForm = Form;
@@ -224,73 +215,73 @@ namespace pr
 				// FillRectangle is [inclusive,exclusive)
 				// DrawRectangle is [inclusive,inclusive]
 
-				static Rect MeasureText(GdiGraphics const& gfx, std::wstring const& text, GdiFont const& font)
+				static Rect MeasureText(gdi::Graphics const& gfx, std::wstring const& text, gdi::Font const& font)
 				{
-					GdiStrFmt fmt; fmt.SetHotkeyPrefix(Gdiplus::HotkeyPrefixShow);
-					GdiRectF text_sz; gfx.MeasureString(text.c_str(), int(text.size()), &font, GdiPointF(), &fmt, &text_sz);
+					gdi::StringFormat fmt; fmt.SetHotkeyPrefix(Gdiplus::HotkeyPrefixShow);
+					gdi::RectF text_sz; gfx.MeasureString(text.c_str(), int(text.size()), &font, gdi::PointF(), &fmt, &text_sz);
 					text_sz.Height += 1.0f; text_sz.Width += 1.0f; // Round up
 					return To<RECT>(text_sz);
 				}
 				static Rect MeasureBitmap(BitmapPtr const& bm, int width)
 				{
-					// Measure the size of a bitmap rescaled to fit widthwise within 'width'
+					// Measure the size of a bitmap rescaled to fit width-wise within 'width'
 					if (!bm) return Rect();
 					Rect rect(0, 0, bm->GetWidth(), bm->GetHeight());
 					rect.height(rect.height() * width / rect.width());
 					rect.width(width);
 					return rect;
 				}
-				static void Bkgd(GdiGraphics& gfx, Rect const& rect, EMenuItemState item_state, ContextMenuStyle const& style)
+				static void Bkgd(gdi::Graphics& gfx, Rect const& rect, EMenuItemState item_state, ContextMenuStyle const& style)
 				{
 					auto col = style.Col(item_state);
-					GdiSolidBrush bsh_bkgd(col.m_bkgd);
+					gdi::SolidBrush bsh_bkgd(col.m_bkgd);
 					int x = rect.left + style.m_margin_left;
 
-					gfx.FillRectangle(&bsh_bkgd, To<GdiRect>(rect));
+					gfx.FillRectangle(&bsh_bkgd, To<gdi::Rect>(rect));
 					if ((item_state & EMenuItemState::Selected) == 0)
 					{
-						GdiPen pen_3dhi(impl::ColAdj(col.m_bkgd, 10, 10, 10));
-						GdiPen pen_3dlo(impl::ColAdj(col.m_bkgd,-10,-10,-10));
+						gdi::Pen pen_3dhi(impl::ColAdj(col.m_bkgd, 10, 10, 10));
+						gdi::Pen pen_3dlo(impl::ColAdj(col.m_bkgd,-10,-10,-10));
 						gfx.DrawLine(&pen_3dlo, x+0, rect.top, x+0, rect.bottom - 1);
 						gfx.DrawLine(&pen_3dhi, x+1, rect.top, x+1, rect.bottom - 1);
 					}
 					else
 					{
-						if (col.m_brdr.GetValue() != GdiColor().GetValue())
+						if (col.m_brdr.GetValue() != gdi::Color().GetValue())
 						{
-							GdiPen pen_brdr(col.m_brdr);
-							auto border = To<GdiRect>(rect.Adjust(0,0,-1,-1));
+							gdi::Pen pen_brdr(col.m_brdr);
+							auto border = To<gdi::Rect>(rect.Adjust(0,0,-1,-1));
 							gfx.DrawRectangle(&pen_brdr, border);
 						}
 					}
 				}
-				static void Border(GdiGraphics& gfx, Rect const& rect, EMenuItemState item_state, ContextMenuStyle const& style)
+				static void Border(gdi::Graphics& gfx, Rect const& rect, EMenuItemState item_state, ContextMenuStyle const& style)
 				{
 					auto col = style.Col(item_state);
-					GdiPen pen(col.m_text);
-					auto border = To<GdiRect>(rect.Adjust(0,0,-1,-1));
+					gdi::Pen pen(col.m_text);
+					auto border = To<gdi::Rect>(rect.Adjust(0,0,-1,-1));
 					gfx.DrawRectangle(&pen, border);
 				}
-				static void Bitmap(GdiGraphics& gfx, Rect const& rect, BitmapPtr const& bm, ContextMenuStyle const& style)
+				static void Bitmap(gdi::Graphics& gfx, Rect const& rect, BitmapPtr const& bm, ContextMenuStyle const& style)
 				{
 					if (bm == 0) return;
 					auto bm_sz = MeasureBitmap(bm, style.m_margin_left - 2);
-					GdiRect r(int(rect.left + 1), int(rect.top + 1), int(bm_sz.width()), int(bm_sz.height()));
+					gdi::Rect r(int(rect.left + 1), int(rect.top + 1), int(bm_sz.width()), int(bm_sz.height()));
 					gfx.DrawImage(bm.get(), r);
 				}
-				static void Check(GdiGraphics& gfx, Rect const& rect, int check_state, EMenuItemState item_state, ContextMenuStyle const& style)
+				static void Check(gdi::Graphics& gfx, Rect const& rect, int check_state, EMenuItemState item_state, ContextMenuStyle const& style)
 				{
 					if (check_state == 0) return;
 					auto col = style.Col(item_state);
 					auto tick = (check_state == 1) ? L"a" : L"h";
 					int const tick_len = 1;
 					
-					GdiSolidBrush bsh_text(col.m_text);
-					GdiRectF sz; gfx.MeasureString(tick, tick_len, style.m_font_marks.get(), GdiPointF(), &sz);
-					GdiPointF pt(float(rect.left + (style.m_margin_left - sz.Width)*0.5f), float(rect.top + (rect.height() - sz.Height)*0.5f));
+					gdi::SolidBrush bsh_text(col.m_text);
+					gdi::RectF sz; gfx.MeasureString(tick, tick_len, style.m_font_marks.get(), gdi::PointF(), &sz);
+					gdi::PointF pt(float(rect.left + (style.m_margin_left - sz.Width)*0.5f), float(rect.top + (rect.height() - sz.Height)*0.5f));
 					gfx.DrawString(tick, tick_len, style.m_font_marks.get(), pt, &bsh_text);
 				}
-				//static void Label(GdiGraphics& gfx, GdiRect const& rect, UINT item_state, int check_state, std::wstring const& text, BitmapPtr bitmap, ContextMenuStyle const& style)
+				//static void Label(gdi::Graphics& gfx, gdi::Rect const& rect, UINT item_state, int check_state, std::wstring const& text, BitmapPtr bitmap, ContextMenuStyle const& style)
 				//{
 				//	// Draw background and left margin items
 				//	Bkgd  (gfx, rect, item_state, style);
@@ -299,9 +290,9 @@ namespace pr
 
 				//	// Draw the label text
 				//	auto col = style.Col(item_state);
-				//	GdiSolidBrush bsh_text(col.m_text);
-				//	GdiStrFmt fmt; fmt.SetHotkeyPrefix(Gdiplus::HotkeyPrefixShow);
-				//	GdiPointF pt(float(rect.X + style.m_margin_left + style.m_text_margin), float(rect.Y + (rect.Height - m_rect_text.Height)*0.5f));
+				//	gdi::SolidBrush bsh_text(col.m_text);
+				//	gdi::StringFormat fmt; fmt.SetHotkeyPrefix(Gdiplus::HotkeyPrefixShow);
+				//	gdi::PointF pt(float(rect.X + style.m_margin_left + style.m_text_margin), float(rect.Y + (rect.Height - m_rect_text.Height)*0.5f));
 				//	gfx.DrawString(text.c_str(), int(text.size()), style.m_font_text.get(), pt, &fmt, &bsh_text);
 				//}
 			};
@@ -322,19 +313,19 @@ namespace pr
 				{
 					return false;
 				}
-				Size MeasureItem(GdiGraphics&) override
+				Size MeasureItem(gdi::Graphics&) override
 				{
 					// Height = 6, 2 bkgd rows, dark row, light row, 2 bkgd rows
 					return Size(20, 6);
 				}
-				void DrawItem(GdiGraphics& gfx, Rect const& rect) override
+				void DrawItem(gdi::Graphics& gfx, Rect const& rect) override
 				{
 					auto& style = Style();
 					Draw::Bkgd(gfx, rect, EMenuItemState::Normal, style);
 
 					// Draw the separator line
-					GdiPen pen_3dhi(impl::ColAdj(style.m_col_norm.m_bkgd, +10, +10, +10));
-					GdiPen pen_3dlo(impl::ColAdj(style.m_col_norm.m_bkgd, -10, -10, -10));
+					gdi::Pen pen_3dhi(impl::ColAdj(style.m_col_norm.m_bkgd, +10, +10, +10));
+					gdi::Pen pen_3dlo(impl::ColAdj(style.m_col_norm.m_bkgd, -10, -10, -10));
 					auto x0 = rect.left + style.m_margin_left + 1;
 					auto x1 = rect.right - MenuMargin;
 					auto y  = rect.top + 2;
@@ -365,7 +356,7 @@ namespace pr
 					for (; *p && (*p != L'&' || towupper(*(p+1)) != hk); ++p) {}
 					return *p != 0;
 				}
-				Size MeasureItem(GdiGraphics& gfx) override
+				Size MeasureItem(gdi::Graphics& gfx) override
 				{
 					auto& style = Style();
 
@@ -382,7 +373,7 @@ namespace pr
 					sz.cy = std::max({tx_sz.height(), bm_sz.height(), long(GetSystemMetrics(SM_CYMENU))});
 					return sz;
 				}
-				void DrawItem(GdiGraphics& gfx, Rect const& rect) override
+				void DrawItem(gdi::Graphics& gfx, Rect const& rect) override
 				{
 					auto& style = Style();
 					auto col = style.Col(m_state);
@@ -394,9 +385,9 @@ namespace pr
 					Draw::Check (gfx, rect, check_state, m_state, style);
 
 					// Draw the label text
-					GdiSolidBrush bsh_text(col.m_text);
-					GdiStrFmt fmt; fmt.SetHotkeyPrefix(Gdiplus::HotkeyPrefixShow);
-					GdiPointF pt(float(rect.left) + style.m_margin_left + style.m_text_margin, float(rect.top) + 0.5f*(rect.height() - m_rect_text.height()));
+					gdi::SolidBrush bsh_text(col.m_text);
+					gdi::StringFormat fmt; fmt.SetHotkeyPrefix(Gdiplus::HotkeyPrefixShow);
+					gdi::PointF pt(float(rect.left) + style.m_margin_left + style.m_text_margin, float(rect.top) + 0.5f*(rect.height() - m_rect_text.height()));
 					gfx.DrawString(m_text.c_str(), int(m_text.size()), style.m_font_text.get(), pt, &fmt, &bsh_text);
 				}
 			};
@@ -415,7 +406,7 @@ namespace pr
 
 				TextBox(ContextMenu& menu, wchar_t const* text = L"<menu item>", wchar_t const* value = L"", int id = 0, EMenuItemState state = EMenuItemState::Normal, StylePtr style = nullptr, BitmapPtr bm = nullptr)
 					:Label(menu, text, id, state, style, bm)
-					,m_edit(TBox::Params().name("cmenu-edit").parent(&menu).anchor(EAnchor::None)) // positioned manually
+					,m_edit(TBox::Params<>().name("cmenu-edit").parent(&menu).anchor(EAnchor::None)) // positioned manually
 					,m_rect_value()
 					,m_value(value)
 					,m_value_font()
@@ -430,9 +421,9 @@ namespace pr
 				void CreateHostedControls() override
 				{
 					HWND parent = *static_cast<ContextMenu*>(m_menu);
-					m_edit.Create(TBox::Params().text(m_value.c_str()).parent(parent).wh(50, 18));
+					m_edit.Create(TBox::Params<>().text(m_value.c_str()).parent(parent).wh(50, 18));
 				}
-				Size MeasureItem(GdiGraphics& gfx) override
+				Size MeasureItem(gdi::Graphics& gfx) override
 				{
 					auto& style = Style();
 
@@ -448,7 +439,7 @@ namespace pr
 					sz.cy = std::max({lbl_sz.cy, edit_sz.height()+4, long(GetSystemMetrics(SM_CYMENU))});
 					return sz;
 				}
-				void DrawItem(GdiGraphics& gfx, Rect const& rect) override
+				void DrawItem(gdi::Graphics& gfx, Rect const& rect) override
 				{
 					auto& style = Style();
 					auto col = style.Col(m_state);
@@ -611,7 +602,7 @@ namespace pr
 				MenuMargin = 2,
 			};
 
-			// The name for the submenu
+			// The name for the sub-menu
 			std::wstring m_submenu_name;
 
 			// Child menu items
@@ -647,12 +638,12 @@ namespace pr
 			}
 			static DlgTemplate const& Templ()
 			{
-				static DlgTemplate cmenu_templ(DlgParams().wndclass(RegWndClass()).name("ctx-menu").style(WS_POPUP|WS_BORDER).style_ex(0));
+				static DlgTemplate cmenu_templ(DlgParams<>().wndclass(RegWndClass()).name("ctx-menu").style('=',WS_POPUP|WS_BORDER).style_ex('=',0));
 				return cmenu_templ;
 			}
 
 			ContextMenu(ContextMenu* menu, TCHAR const* text, EMenuItemState state, StylePtr style, BitmapPtr bm)
-				:Form(DlgParams().templ(Templ()))
+				:Form(DlgParams<>().templ(Templ()))
 				,ContextMenuItem(-1, menu, state, style, bm)
 				,m_submenu_name(Widen(text))
 				,m_items()
@@ -660,7 +651,7 @@ namespace pr
 				,m_selected()
 			{
 				// If no style is given and no parent to inherit the style from, create a default style
-				if (!m_style && !m_parent)
+				if (!m_style && m_parent == nullptr)
 					m_style = std::make_shared<ContextMenuStyle>();
 			}
 
@@ -677,7 +668,7 @@ namespace pr
 							item->CreateHostedControls();
 
 						// Measure the size of the menu
-						GdiGraphics gfx(m_hwnd);
+						gdi::Graphics gfx(m_hwnd);
 						Point pt(GetXLParam(lparam), GetYLParam(lparam));
 						m_size = MeasureItem(gfx);
 
@@ -749,7 +740,7 @@ namespace pr
 					#pragma region 
 					{
 						PaintStruct ps(m_hwnd);
-						GdiGraphics gfx(ps.hdc);
+						gdi::Graphics gfx(ps.hdc);
 						DrawItem(gfx, Rect());
 						return false;
 					}
@@ -857,7 +848,7 @@ namespace pr
 			}
 
 			// Measure the size of the context menu
-			Size MeasureItem(GdiGraphics& gfx) override
+			Size MeasureItem(gdi::Graphics& gfx) override
 			{
 				// Measure the required size of the context menu
 				Size sz;
@@ -872,12 +863,12 @@ namespace pr
 				sz.cx = std::max(sz.cx, long(MinimumWidth));
 				return sz;
 			}
-			void DrawItem(GdiGraphics& gfx, Rect const&) override
+			void DrawItem(gdi::Graphics& gfx, Rect const&) override
 			{
 				auto& style = BMenu::Style();
 
 				// Background
-				GdiSolidBrush bsh(style.m_col_norm.m_bkgd);
+				gdi::SolidBrush bsh(style.m_col_norm.m_bkgd);
 				gfx.FillRectangle(&bsh, 0, 0, m_size.cx + MenuMargin*2 + 1, m_size.cy + MenuMargin*2 + 1);
 
 				// Menu items
@@ -889,7 +880,7 @@ namespace pr
 					bounds.bottom += item->m_size.cy;
 
 					// Tell the item to draw
-					//gfx.SetClip(To<GdiRect>(bounds.Inflate(0,0,1,1)));
+					//gfx.SetClip(To<gdi::Rect>(bounds.Inflate(0,0,1,1)));
 					item->DrawItem(gfx, bounds);
 				}
 			}
@@ -942,8 +933,8 @@ namespace pr
 				return m_parent->Style();
 			}
 
-			virtual void MeasureItem(ContextMenu& menu, GdiGraphics& gfx, MEASUREITEMSTRUCT* mi) = 0;
-			virtual void DrawItem   (ContextMenu& menu, GdiGraphics& gfx, DRAWITEMSTRUCT* di) = 0;
+			virtual void MeasureItem(ContextMenu& menu, gdi::Graphics& gfx, MEASUREITEMSTRUCT* mi) = 0;
+			virtual void DrawItem   (ContextMenu& menu, gdi::Graphics& gfx, DRAWITEMSTRUCT* di) = 0;
 			virtual void Selected   (ContextMenu& /*menu*/, Rect const& /*rect*/, MENUITEMINFO const& /*mii*/) {}
 		};
 
@@ -957,51 +948,51 @@ namespace pr
 			// Helper methods for drawing context menu items
 			struct Draw
 			{
-				static GdiRect MeasureText(GdiGraphics const& gfx, std::wstring const& text, ContextMenuStyle const& style)
+				static gdi::Rect MeasureText(gdi::Graphics const& gfx, std::wstring const& text, ContextMenuStyle const& style)
 				{
-					GdiStrFmt fmt; fmt.SetHotkeyPrefix(Gdiplus::HotkeyPrefixShow);
-					GdiRectF text_sz; gfx.MeasureString(text.c_str(), int(text.size()), style.m_font_text.get(), GdiPointF(), &fmt, &text_sz);
-					return To<GdiRect>(text_sz);
+					gdi::StringFormat fmt; fmt.SetHotkeyPrefix(Gdiplus::HotkeyPrefixShow);
+					gdi::RectF text_sz; gfx.MeasureString(text.c_str(), int(text.size()), style.m_font_text.get(), gdi::PointF(), &fmt, &text_sz);
+					return To<gdi::Rect>(text_sz);
 				}
-				static GdiRect MeasureBitmap(BitmapPtr const& bm, int width)
+				static gdi::Rect MeasureBitmap(BitmapPtr const& bm, int width)
 				{
 					// Measure the size of a bitmap rescaled to fit widthwise within 'width'
-					if (!bm) return GdiRect();
-					GdiRect rect(0, 0, bm->GetWidth(), bm->GetHeight());
+					if (!bm) return gdi::Rect();
+					gdi::Rect rect(0, 0, bm->GetWidth(), bm->GetHeight());
 					rect.Height = rect.Height * width / rect.Width;
 					rect.Width = width;
 					return rect;
 				}
-				static void Bkgd(GdiGraphics& gfx, GdiRect const& rect, UINT item_state, ContextMenuStyle const& style)
+				static void Bkgd(gdi::Graphics& gfx, gdi::Rect const& rect, UINT item_state, ContextMenuStyle const& style)
 				{
 					auto col = style.Col(item_state);
-					GdiPen   pen_3dhi(impl::ColAdj(col.m_bkgd, 10, 10, 10));
-					GdiPen   pen_3dlo(impl::ColAdj(col.m_bkgd,-10,-10,-10));
-					GdiSolidBrush bsh_bkgd(col.m_bkgd);
+					gdi::Pen   pen_3dhi(impl::ColAdj(col.m_bkgd, 10, 10, 10));
+					gdi::Pen   pen_3dlo(impl::ColAdj(col.m_bkgd,-10,-10,-10));
+					gdi::SolidBrush bsh_bkgd(col.m_bkgd);
 
 					gfx.FillRectangle(&bsh_bkgd, rect);
 					int x = rect.X + style.m_margin_left;
 					gfx.DrawLine(&pen_3dlo, x+0, rect.GetTop(), x+0, rect.GetBottom() - 1);
 					gfx.DrawLine(&pen_3dhi, x+1, rect.GetTop(), x+1, rect.GetBottom() - 1);
 				}
-				static void Bitmap(GdiGraphics& gfx, GdiRect const& rect, BitmapPtr const& bm, ContextMenuStyle const& style)
+				static void Bitmap(gdi::Graphics& gfx, gdi::Rect const& rect, BitmapPtr const& bm, ContextMenuStyle const& style)
 				{
 					if (bm == 0) return;
 					auto bm_sz = MeasureBitmap(bm, style.m_margin_left - 2);
-					GdiRect r(rect.X + 1, rect.Y + 1, bm_sz.Width, bm_sz.Height);
+					gdi::Rect r(rect.X + 1, rect.Y + 1, bm_sz.Width, bm_sz.Height);
 					gfx.DrawImage(bm.get(), r);
 				}
-				static void Check(GdiGraphics& gfx, GdiRect const& rect, int check_state, UINT item_state, ContextMenuStyle const& style)
+				static void Check(gdi::Graphics& gfx, gdi::Rect const& rect, int check_state, UINT item_state, ContextMenuStyle const& style)
 				{
 					if (check_state == 0) return;
 					auto col = style.Col(item_state);
-					GdiSolidBrush bsh_text(col.m_text);
+					gdi::SolidBrush bsh_text(col.m_text);
 					auto tick = (check_state == 1) ? L"a" : L"h"; int const tick_len = 1;
-					GdiRectF sz; gfx.MeasureString(tick, tick_len, style.m_font_marks.get(), GdiPointF(), &sz);
-					GdiPointF pt(float(rect.X + (style.m_margin_left - sz.Width)*0.5f), float(rect.Y + (rect.Height - sz.Height)*0.5f));
+					gdi::RectF sz; gfx.MeasureString(tick, tick_len, style.m_font_marks.get(), gdi::PointF(), &sz);
+					gdi::PointF pt(float(rect.X + (style.m_margin_left - sz.Width)*0.5f), float(rect.Y + (rect.Height - sz.Height)*0.5f));
 					gfx.DrawString(tick, tick_len, style.m_font_marks.get(), pt, &bsh_text);
 				}
-				//static void Label(GdiGraphics& gfx, GdiRect const& rect, UINT item_state, int check_state, std::wstring const& text, BitmapPtr bitmap, ContextMenuStyle const& style)
+				//static void Label(gdi::Graphics& gfx, gdi::Rect const& rect, UINT item_state, int check_state, std::wstring const& text, BitmapPtr bitmap, ContextMenuStyle const& style)
 				//{
 				//	// Draw background and left margin items
 				//	Bkgd  (gfx, rect, item_state, style);
@@ -1010,9 +1001,9 @@ namespace pr
 
 				//	// Draw the label text
 				//	auto col = style.Col(item_state);
-				//	GdiSolidBrush bsh_text(col.m_text);
-				//	GdiStrFmt fmt; fmt.SetHotkeyPrefix(Gdiplus::HotkeyPrefixShow);
-				//	GdiPointF pt(float(rect.X + style.m_margin_left + style.m_text_margin), float(rect.Y + (rect.Height - m_rect_text.Height)*0.5f));
+				//	gdi::SolidBrush bsh_text(col.m_text);
+				//	gdi::StringFormat fmt; fmt.SetHotkeyPrefix(Gdiplus::HotkeyPrefixShow);
+				//	gdi::PointF pt(float(rect.X + style.m_margin_left + style.m_text_margin), float(rect.Y + (rect.Height - m_rect_text.Height)*0.5f));
 				//	gfx.DrawString(text.c_str(), int(text.size()), style.m_font_text.get(), pt, &fmt, &bsh_text);
 				//}
 			};
@@ -1030,20 +1021,20 @@ namespace pr
 					auto cmi = static_cast<ContextMenuItem*>(this);
 					Throw(::AppendMenuW(Menu(), MF_SEPARATOR|MF_OWNERDRAW, m_id, LPCWSTR(cmi)), "Failed to append menu separater");
 				}
-				void MeasureItem(ContextMenu&, GdiGraphics&, MEASUREITEMSTRUCT* mi) override
+				void MeasureItem(ContextMenu&, gdi::Graphics&, MEASUREITEMSTRUCT* mi) override
 				{
 					mi->itemWidth = 1;
 					mi->itemHeight = 3;
 				}
-				void DrawItem(ContextMenu&, GdiGraphics& gfx, DRAWITEMSTRUCT* di) override
+				void DrawItem(ContextMenu&, gdi::Graphics& gfx, DRAWITEMSTRUCT* di) override
 				{
 					auto& style = Style();
-					auto rect = To<GdiRect>(di->rcItem);
+					auto rect = To<gdi::Rect>(di->rcItem);
 					Draw::Bkgd(gfx, rect, di->itemState, style);
 
 					// Draw the separator line
-					GdiPen pen_3dhi(impl::ColAdj(style.m_col_norm.m_bkgd, +10, +10, +10));
-					GdiPen pen_3dlo(impl::ColAdj(style.m_col_norm.m_bkgd, -10, -10, -10));
+					gdi::Pen pen_3dhi(impl::ColAdj(style.m_col_norm.m_bkgd, +10, +10, +10));
+					gdi::Pen pen_3dlo(impl::ColAdj(style.m_col_norm.m_bkgd, -10, -10, -10));
 					auto x0 = rect.X + style.m_margin_left + 1;
 					auto x1 = rect.X + rect.Width;
 					auto y  = rect.Y + rect.Height / 2;
@@ -1059,7 +1050,7 @@ namespace pr
 			struct Label :ContextMenuItem
 			{
 				std::wstring m_text;      // The label text
-				GdiRect      m_rect_text; // The dimensions of the text
+				gdi::Rect      m_rect_text; // The dimensions of the text
 
 				Label(ContextMenu& menu, TCHAR const* text = _T("<menu item>"), int id = 0, int check_state = 0, StylePtr style = nullptr, BitmapPtr bm = nullptr)
 					:ContextMenuItem(id, &menu, check_state, style, bm)
@@ -1069,7 +1060,7 @@ namespace pr
 					auto cmi = static_cast<ContextMenuItem*>(this);
 					Throw(::AppendMenuW(Menu(), MF_OWNERDRAW, m_id, LPCWSTR(cmi)), "Failed to append menu item");
 				}
-				void MeasureItem(ContextMenu&, GdiGraphics& gfx, MEASUREITEMSTRUCT* mi) override
+				void MeasureItem(ContextMenu&, gdi::Graphics& gfx, MEASUREITEMSTRUCT* mi) override
 				{
 					auto& style = Style();
 
@@ -1085,10 +1076,10 @@ namespace pr
 					mi->itemHeight = std::max(sz.Height, std::max(bm_sz.Height, GetSystemMetrics(SM_CYMENU)));
 					m_rect_text = tx_sz;
 				}
-				void DrawItem(ContextMenu&, GdiGraphics& gfx, DRAWITEMSTRUCT* di) override
+				void DrawItem(ContextMenu&, gdi::Graphics& gfx, DRAWITEMSTRUCT* di) override
 				{
 					auto& style = Style();
-					auto rect = To<GdiRect>(di->rcItem);
+					auto rect = To<gdi::Rect>(di->rcItem);
 
 					// Draw background and left margin items
 					Draw::Bkgd  (gfx, rect, di->itemState, style);
@@ -1097,9 +1088,9 @@ namespace pr
 
 					// Draw the label text
 					auto col = style.Col(di->itemState);
-					GdiSolidBrush bsh_text(col.m_text);
-					GdiStrFmt fmt; fmt.SetHotkeyPrefix(Gdiplus::HotkeyPrefixShow);
-					GdiPointF pt(float(rect.X + style.m_margin_left + style.m_text_margin), float(rect.Y + (rect.Height - m_rect_text.Height)*0.5f));
+					gdi::SolidBrush bsh_text(col.m_text);
+					gdi::StringFormat fmt; fmt.SetHotkeyPrefix(Gdiplus::HotkeyPrefixShow);
+					gdi::PointF pt(float(rect.X + style.m_margin_left + style.m_text_margin), float(rect.Y + (rect.Height - m_rect_text.Height)*0.5f));
 					gfx.DrawString(m_text.c_str(), int(m_text.size()), style.m_font_text.get(), pt, &fmt, &bsh_text);
 				}
 
@@ -1121,7 +1112,7 @@ namespace pr
 				enum { InnerMargin = 2, OuterMargin = 2 };
 
 				TBox         m_edit;       // The hosted control
-				GdiRect      m_rect_value; // The dimensions of the value text
+				gdi::Rect      m_rect_value; // The dimensions of the value text
 				std::wstring m_value;      // The value to display in the edit box
 				FontPtr      m_value_font; // The font to use for the value, if null the label font is used
 				int          m_min_width;  // The minimum width of the edit box
@@ -1134,7 +1125,7 @@ namespace pr
 					,m_value_font()
 					,m_min_width(60)
 				{}
-				void MeasureItem(ContextMenu& menu, GdiGraphics& gfx, MEASUREITEMSTRUCT* mi) override
+				void MeasureItem(ContextMenu& menu, gdi::Graphics& gfx, MEASUREITEMSTRUCT* mi) override
 				{
 					auto& style = Style();
 
@@ -1142,8 +1133,8 @@ namespace pr
 					Label::MeasureItem(menu, gfx, mi);
 
 					// Measure the edit box portion
-					GdiRectF text_sz; gfx.MeasureString(m_value.c_str(), int(m_value.size()), style.m_font_text.get(), GdiPointF(), 0, &text_sz);
-					m_rect_value = To<GdiRect>(text_sz);
+					gdi::RectF text_sz; gfx.MeasureString(m_value.c_str(), int(m_value.size()), style.m_font_text.get(), gdi::PointF(), 0, &text_sz);
+					m_rect_value = To<gdi::Rect>(text_sz);
 					m_rect_value.Width = std::max(m_rect_value.Width, m_min_width);
 
 					// Expand the item dimensions
@@ -1151,11 +1142,11 @@ namespace pr
 					mi->itemWidth += r.Width;
 					mi->itemHeight = std::max(int(mi->itemHeight), r.Height);
 				}
-				void DrawItem(ContextMenu& menu, GdiGraphics& gfx, DRAWITEMSTRUCT* di) override
+				void DrawItem(ContextMenu& menu, gdi::Graphics& gfx, DRAWITEMSTRUCT* di) override
 				{
 					auto& style = Style();
 					auto col = style.Col(di->itemState);
-					auto rect = To<GdiRect>(di->rcItem);
+					auto rect = To<gdi::Rect>(di->rcItem);
 
 					// Draw the label
 					Label::DrawItem(menu, gfx, di);
@@ -1163,14 +1154,14 @@ namespace pr
 					// Draw an edit box
 					auto disabled = (di->itemState & ODS_DISABLED) != 0;
 					auto r = CtrlRect(rect, style.m_margin_left);
-					GdiSolidBrush bsh_bkgd(disabled ? GdiColor((GdiARGB)GdiColor::LightGray) : GdiColor((GdiARGB)GdiColor::WhiteSmoke));
-					GdiPen        pen_brdr(GdiColor((GdiARGB)GdiColor::Black), 0);
+					gdi::SolidBrush bsh_bkgd(disabled ? gdi::Color((GdiARGB)gdi::Color::LightGray) : gdi::Color((GdiARGB)gdi::Color::WhiteSmoke));
+					gdi::Pen        pen_brdr(gdi::Color((GdiARGB)gdi::Color::Black), 0);
 					gfx.FillRectangle(&bsh_bkgd, r);
 					gfx.DrawRectangle(&pen_brdr, r);
 
 					// Write the edit box text
-					GdiSolidBrush bsh_edittxt(style.m_col_norm.m_text);
-					GdiPointF pt(float(r.X + InnerMargin), float(r.Y + InnerMargin));
+					gdi::SolidBrush bsh_edittxt(style.m_col_norm.m_text);
+					gdi::PointF pt(float(r.X + InnerMargin), float(r.Y + InnerMargin));
 					gfx.DrawString(m_value.c_str(), int(m_value.size()), style.m_font_text.get(), pt, 0, &bsh_edittxt);
 				}
 				void Selected(ContextMenu&, Rect const& rect, MENUITEMINFO const&) override
@@ -1178,23 +1169,23 @@ namespace pr
 					auto& style = Style();
 
 					// Set the font to use in the edit control
-					//GdiGraphics gfx(menu); LOGFONTW logfont;
+					//gdi::Graphics gfx(menu); LOGFONTW logfont;
 					//auto& font = m_value_font ? m_value_font : style.m_font_text;
 					//if (font && font->GetLogFontW(&gfx, &logfont) == Gdiplus::Ok)
 					//	m_font = ::CreateFontIndirectW(&logfont);
 
 					// Display the control
 					// 'rect' should be the position of the control in screen space
-					auto r = To<RECT>(CtrlRect(To<GdiRect>(rect), style.m_margin_left));
+					auto r = To<RECT>(CtrlRect(To<gdi::Rect>(rect), style.m_margin_left));
 					m_edit.MoveWindow(r);
 					//TextBox::Show( DoModal(menu->m_hWnd, (LPARAM)&r);
 				}
 
 				// Returns the bounds of the hosted control
-				GdiRect CtrlRect(GdiRect const& rect, int margin) const
+				gdi::Rect CtrlRect(gdi::Rect const& rect, int margin) const
 				{
 					auto& style = Style();
-					return GdiRect(
+					return gdi::Rect(
 						rect.X + margin + style.m_text_margin + m_rect_text.Width + style.m_text_margin + OuterMargin,
 						rect.Y + OuterMargin,
 						m_rect_value.Width + 2*InnerMargin,
@@ -1326,7 +1317,7 @@ namespace pr
 							// If you get a crash in here, check that a "static_cast<ContextMenuItem*>(this)" pointer was used in AppendMenuW()
 							if (mi->CtlType == ODT_MENU)
 							{
-								GdiGraphics gfx(m_hwnd);
+								gdi::Graphics gfx(m_hwnd);
 								auto item = static_cast<ContextMenuItem*>((void*)(mi->itemData));
 								item->MeasureItem(*m_owner, gfx, mi);
 							}
@@ -1339,7 +1330,7 @@ namespace pr
 							// If you get a crash in here, check that a "static_cast<ContextMenuItem*>(this)" pointer was used in AppendMenuW()
 							if (di->CtlType == ODT_MENU)
 							{
-								GdiGraphics gfx(di->hDC);
+								gdi::Graphics gfx(di->hDC);
 								auto item = static_cast<ContextMenuItem*>((void*)(di->itemData));
 								item->DrawItem(*m_owner, gfx, di);
 							}
@@ -1362,11 +1353,11 @@ namespace pr
 			{
 				return m_root;
 			}
-			void MeasureItem(ContextMenu& menu, GdiGraphics& gfx, MEASUREITEMSTRUCT* mi) override
+			void MeasureItem(ContextMenu& menu, gdi::Graphics& gfx, MEASUREITEMSTRUCT* mi) override
 			{
 				m_label.MeasureItem(menu, gfx, mi);
 			}
-			void DrawItem(ContextMenu& menu, GdiGraphics& gfx, DRAWITEMSTRUCT* di) override
+			void DrawItem(ContextMenu& menu, gdi::Graphics& gfx, DRAWITEMSTRUCT* di) override
 			{
 				m_label.DrawItem(menu, gfx, di);
 			}
@@ -1421,7 +1412,7 @@ namespace pr
 			protected:
 				enum { InnerMargin = 2, OuterMargin = 2, ArwBtnWidth = 20 };
 				CComboBox     m_combo;         // The hosted combo control
-				GdiRect m_rect_value;    // The dimensions of the largest value
+				gdi::Rect m_rect_value;    // The dimensions of the largest value
 				CFont         m_font;          // The font used in the combo control
 
 			public:
@@ -1441,9 +1432,9 @@ namespace pr
 				,m_value_font()
 				,m_min_width(60)
 				{}
-				GdiRect CtrlRect(GdiRect const& rect, int margin) const
+				gdi::Rect CtrlRect(gdi::Rect const& rect, int margin) const
 				{
-					return GdiRect(
+					return gdi::Rect(
 						rect.X + margin + style.m_text_margin + m_rect_text.Width + style.m_text_margin + OuterMargin,
 						rect.Y + OuterMargin,
 						m_rect_value.Width + 2*InnerMargin + ArwBtnWidth,
@@ -1453,7 +1444,7 @@ namespace pr
 				{
 					return ::FindWindowW(L"#32768", 0);
 				}
-				void MeasureItem(ContextMenu* menu, GdiGraphics& gfx, MEASUREITEMSTRUCT* mi)
+				void MeasureItem(ContextMenu* menu, gdi::Graphics& gfx, MEASUREITEMSTRUCT* mi)
 				{
 					StylePtr const& style = m_style ? m_style : menu->m_def_style;
 
@@ -1461,11 +1452,11 @@ namespace pr
 					Label::MeasureItem(menu, gfx, mi);
 
 					// Measure the combo box portion
-					GdiRectF text_sz(0,0,0,0);
+					gdi::RectF text_sz(0,0,0,0);
 					for (auto value : m_values)
 					{
-						GdiRectF sz; gfx.MeasureString(value.c_str(), int(value.size()), style->m_font_text.get(), GdiPointF(), 0, &sz);
-						GdiRectF::Union(text_sz, text_sz, sz);
+						gdi::RectF sz; gfx.MeasureString(value.c_str(), int(value.size()), style->m_font_text.get(), gdi::PointF(), 0, &sz);
+						gdi::RectF::Union(text_sz, text_sz, sz);
 					}
 					m_rect_value = ToRect(text_sz);
 					m_rect_value.Width = std::max(m_rect_value.Width, m_min_width);
@@ -1478,7 +1469,7 @@ namespace pr
 					mi->itemWidth += r.Width;
 					mi->itemHeight = std::max(int(mi->itemHeight), r.Height);
 				}
-				void DrawItem(ContextMenu* menu, GdiGraphics& gfx, DRAWITEMSTRUCT* di)
+				void DrawItem(ContextMenu* menu, gdi::Graphics& gfx, DRAWITEMSTRUCT* di)
 				{
 					StylePtr const& style = m_style ? m_style : menu->m_def_style;
 					bool disabled = (di->itemState & ODS_DISABLED) != 0;
@@ -1486,10 +1477,10 @@ namespace pr
 					auto rect_ctrl = CtrlRect(rect, style->m_margin_left);
 					auto rect_btn  = rect_ctrl; rect_btn.X = rect_btn.GetRight() - ArwBtnWidth; rect_btn.Width = ArwBtnWidth;
 
-					GdiSolidBrush bsh_edittxt(style->m_col_text);
-					GdiSolidBrush bsh_bkgd(disabled ? GdiColor((GdiARGB)GdiColor::LightGray) : GdiColor((GdiARGB)GdiColor::WhiteSmoke));
-					GdiSolidBrush bsh_bkgdarw(GdiColor((GdiARGB)GdiColor::LightGray));
-					GdiPen        pen_brdr(GdiColor((GdiARGB)GdiColor::Black), 0);
+					gdi::SolidBrush bsh_edittxt(style->m_col_text);
+					gdi::SolidBrush bsh_bkgd(disabled ? gdi::Color((GdiARGB)gdi::Color::LightGray) : gdi::Color((GdiARGB)gdi::Color::WhiteSmoke));
+					gdi::SolidBrush bsh_bkgdarw(gdi::Color((GdiARGB)gdi::Color::LightGray));
+					gdi::Pen        pen_brdr(gdi::Color((GdiARGB)gdi::Color::Black), 0);
 
 					// Draw the label
 					Label::DrawItem(menu, gfx, di);
@@ -1500,14 +1491,14 @@ namespace pr
 					gfx.DrawRectangle(&pen_brdr, rect_ctrl);
 					gfx.FillRectangle(&bsh_bkgdarw, rect_btn);
 					gfx.DrawRectangle(&pen_brdr, rect_btn);
-					GdiRectF rect_arw; gfx.MeasureString(arw, 1, style->m_font_marks.get(), GdiPointF(), &rect_arw);
-					GdiPointF pt(rect_btn.X + (rect_btn.Width - rect_arw.Width) * 0.5f, rect_btn.Y + (rect_btn.Height - rect_arw.Height) * 0.5f);
+					gdi::RectF rect_arw; gfx.MeasureString(arw, 1, style->m_font_marks.get(), gdi::PointF(), &rect_arw);
+					gdi::PointF pt(rect_btn.X + (rect_btn.Width - rect_arw.Width) * 0.5f, rect_btn.Y + (rect_btn.Height - rect_arw.Height) * 0.5f);
 					gfx.DrawString(arw, 1, style->m_font_marks.get(), pt, &bsh_edittxt);
 
 					// Draw the selected value text
 					if (m_index < int(m_values.size()))
 					{
-						GdiPointF pt(float(rect_ctrl.X + InnerMargin), float(rect_ctrl.Y + InnerMargin));
+						gdi::PointF pt(float(rect_ctrl.X + InnerMargin), float(rect_ctrl.Y + InnerMargin));
 						gfx.DrawString(m_values[m_index].c_str(), int(m_values[m_index].size()), style->m_font_text.get(), pt, 0, &bsh_edittxt);
 					}
 				}
@@ -1516,7 +1507,7 @@ namespace pr
 					StylePtr const& style = m_style ? m_style : menu->m_def_style;
 
 					// Set the font to use in the control
-					GdiGraphics gfx(menu->m_hWnd); LOGFONTW logfont;
+					gdi::Graphics gfx(menu->m_hWnd); LOGFONTW logfont;
 					FontPtr font = m_value_font ? m_value_font : style->m_font_text;
 					if (font && font->GetLogFontW(&gfx, &logfont) == GdiOk) m_font = ::CreateFontIndirectW(&logfont);
 

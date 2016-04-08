@@ -5,16 +5,15 @@
 #include "linedrawer/main/stdafx.h"
 #include "linedrawer/gui/linedrawergui.h"
 #include "linedrawer/gui/options_dlg.h"
-#include "linedrawer/gui/about_dlg.h"
-#include "linedrawer/gui/text_panel_dlg.h"
-#include "linedrawer/resources/linedrawer.res.h"
+#include "linedrawer/gui/about_ui.h"
+#include "linedrawer/gui/text_panel_ui.h"
 #include "linedrawer/main/ldrexception.h"
 #include "linedrawer/plugin/plugin_manager_dlg.h"
 #include "linedrawer/utility/misc.h"
 #include "linedrawer/utility/debug.h"
 
 // Create the GUI window
-std::shared_ptr<pr::app::IAppMainGui> pr::app::CreateGUI(LPTSTR lpstrCmdLine, int nCmdShow)
+std::shared_ptr<pr::app::IAppMainGui> pr::app::CreateGUI(wchar_t const* lpstrCmdLine, int nCmdShow)
 {
 	pr::win32::LoadDll<struct Scintilla>(L"scintilla.dll");
 	return pr::app::CreateGUI<::ldr::MainGUI>(lpstrCmdLine, nCmdShow);
@@ -22,9 +21,8 @@ std::shared_ptr<pr::app::IAppMainGui> pr::app::CreateGUI(LPTSTR lpstrCmdLine, in
 
 namespace ldr
 {
-	TCHAR FileOpenFilter[] = TEXT("Ldr Script (*.ldr)\0*.ldr\0Lua Script (*.lua)\0*.lua\0DirectX Files (*.x)\0*.x\0All Files (*.*)\0*.*\0\0");
-	char const* StepRdrMainLoop = "rdr main loop";
-	char const* StepWatchFiles = "watch_files";
+	char const* StepRdrMainLoop = "renderer main loop";
+	char const* StepWatchFiles = "watch files";
 	char const* StepPlugin = "plugin step";
 
 	// Callback function for reading a point in world space
@@ -34,15 +32,15 @@ namespace ldr
 		return static_cast<pr::Camera*>(ctx)->FocusPoint();
 	}
 
-	MainGUI::MainGUI(LPTSTR cmdline, int showwnd)
+	MainGUI::MainGUI(wchar_t const* cmdline, int showwnd)
 		:base(Params().name("ldr_main").title(AppTitleW()).xy(Centre|CentreOf,Centre|CentreOf).menu(IDR_MENU_MAIN).accel(IDR_ACCELERATOR).icon(IDI_ICON_MAIN))
-		,m_status(StatusBar::Params().name("status bar").id(IDC_STATUSBAR_MAIN).parent(this).text(L"Ready"))
+		,m_status(StatusBar::Params<>().name("status bar").id(IDC_STATUSBAR_MAIN).parent(this).text(L"Ready"))
 		,m_recent_files()
 		,m_saved_views()
 		,m_store_ui(*this)
 		,m_editor_ui(*this)
-		,m_measure_tool_ui(ReadPoint, &m_main->m_cam, m_main->m_rdr, *this)
-		,m_angle_tool_ui(ReadPoint, &m_main->m_cam, m_main->m_rdr, *this)
+		,m_measure_tool_ui(*this, ReadPoint, &m_main->m_cam, m_main->m_rdr)
+		,m_angle_tool_ui(*this, ReadPoint, &m_main->m_cam, m_main->m_rdr)
 		,m_options_ui(this, m_main->m_settings)
 		,m_mouse_status_updates(true)
 		,m_suspend_render(false)
@@ -65,19 +63,25 @@ namespace ldr
 		// Initialise the script editor
 		m_editor_ui.Text(m_main->m_settings.m_NewObjectString.c_str());
 		m_editor_ui.Render([&](std::wstring&& script)
+		{
+			try
 			{
-				try
-				{
-					m_main->m_settings.m_NewObjectString = std::move(script);
-					m_main->m_settings.Save();
-					m_main->m_sources.AddString(m_main->m_settings.m_NewObjectString);
-					m_main->RenderNeeded();
-				}
-				catch (std::exception const& e)
-				{
-					pr::events::Send(Event_Error(pr::FmtS("Script error found while parsing source.\n%s", e.what())));
-				}
-			});
+				m_main->m_settings.m_NewObjectString = std::move(script);
+				m_main->m_settings.Save();
+				m_main->m_sources.AddString(m_main->m_settings.m_NewObjectString);
+				m_main->RenderNeeded();
+			}
+			catch (std::exception const& e)
+			{
+				pr::events::Send(Event_Error(pr::FmtS("Script error found while parsing source.\n%s", e.what())));
+			}
+		});
+
+		// Initialise the tools
+		m_measure_tool_ui.MeasurementChanged += std::bind(&Main::RenderNeeded, m_main.get());
+		m_angle_tool_ui.MeasurementChanged += std::bind(&Main::RenderNeeded, m_main.get());
+		m_measure_tool_ui.VisibilityChanged += std::bind(&MainGUI::UpdateUI, this);
+		m_angle_tool_ui.VisibilityChanged += std::bind(&MainGUI::UpdateUI, this);
 
 		// Initialise the recent files list and saved views
 		m_recent_files.MaxLength(m_main->m_settings.m_MaxRecentFiles);
@@ -124,28 +128,23 @@ namespace ldr
 				m_main->m_sources.RefreshChangedFiles();
 		}, 1.0f, false);
 
-		//m_msg_loop.AddStepContext("debug", [this](double)
-		//{
-		//	auto nc = NonClientAreas();
-		//	auto h = {50,300,500,700,1000,700,500,300};
-		//	static int i = 0;
-		//	OutputDebugStringA(pr::FmtS("\n%s PreMoveWindow (%d,%d) %d %d\n", m_name, WindowRect().left, WindowRect().top, ClientRect().width(), ClientRect().height()));
-		//	::MoveWindow(*this,
-		//		2500,0,
-		//		h.begin()[i]-nc.left+nc.right,
-		//		h.begin()[i]-nc.top+nc.bottom, TRUE);
-		//	OutputDebugStringA(pr::FmtS("%s PostMoveWindow (%d,%d) %d %d\n\n", m_name, WindowRect().left, WindowRect().top, ClientRect().width(), ClientRect().height()));
-		//	++i %= h.size();
-		//}, 0.5f, false);
+		#if 0
+		m_msg_loop.AddStepContext("debug", [this](double)
+		{
+			auto nc = NonClientAreas();
+			auto h = {50,300,500,700,1000,700,500,300};
+			static int i = 0;
+			OutputDebugStringA(pr::FmtS("\n%s PreMoveWindow (%d,%d) %d %d\n", m_name, WindowRect().left, WindowRect().top, ClientRect().width(), ClientRect().height()));
+			::MoveWindow(*this,
+				2500,0,
+				h.begin()[i]-nc.left+nc.right,
+				h.begin()[i]-nc.top+nc.bottom, TRUE);
+			OutputDebugStringA(pr::FmtS("%s PostMoveWindow (%d,%d) %d %d\n\n", m_name, WindowRect().left, WindowRect().top, ClientRect().width(), ClientRect().height()));
+			++i %= h.size();
+		}, 0.5f, false);
+		#endif
 
 		Show(showwnd);
-	}
-	MainGUI::~MainGUI()
-	{
-		//m_store_ui.Close();
-		//m_editor_ui.Close();
-		m_measure_tool_ui.Close();
-		m_angle_tool_ui.Close();
 	}
 
 	// Message map function
@@ -162,13 +161,13 @@ namespace ldr
 	}
 
 	// Close this form
-	bool MainGUI::Close(int exit_code)
+	bool MainGUI::Close(EDialogResult dialog_result)
 	{
 		// Remove the step contexts before destroying windows
 		m_msg_loop.RemoveStepContext(StepRdrMainLoop);
 		m_msg_loop.RemoveStepContext(StepPlugin);
 		m_msg_loop.RemoveStepContext(StepWatchFiles);
-		return base::Close(exit_code);
+		return base::Close(dialog_result);
 	}
 
 	// Handler timer messages
@@ -213,7 +212,7 @@ namespace ldr
 	{
 		if (enable_fullscreen)
 		{
-			// Hide the menu and status bar so that the the client area
+			// Hide the menu and status bar so that the client area
 			// is calculated correctly.
 			m_menu = Menu();
 			Menu(nullptr);
@@ -342,8 +341,8 @@ namespace ldr
 		case ID_FILE_NEWSCRIPT               : OnFileNewScript(); break;
 		case ID_FILE_OPEN1                   : OnFileOpen(false); break;
 		case ID_FILE_ADDITIVEOPEN            : OnFileOpen(true); break;
-		case ID_FILE_EXIT                    : CloseApp(0); break;
-		case IDCLOSE                         : CloseApp(0); break;
+		case ID_FILE_EXIT                    : Close(EDialogResult::Ok); break;
+		case IDCLOSE                         : Close(EDialogResult::Ok); break;
 		case ID_NAV_RESETVIEW_ALL            : OnResetView(EObjectBounds::All); break;
 		case ID_NAV_RESETVIEW_SELECTED       : OnResetView(EObjectBounds::Selected); break;
 		case ID_NAV_RESETVIEW_VISIBLE        : OnResetView(EObjectBounds::Visible); break;
@@ -402,13 +401,21 @@ namespace ldr
 	{
 		try
 		{
-			WTL::CFileDialog fd(FALSE,0,0,0,FileOpenFilter,*this);
-			if (fd.DoModal() != IDOK) return;
-			FileNew(pr::Widen(fd.m_szFileName).c_str());
+			COMDLG_FILTERSPEC const filters[] =
+			{
+				{ L"Ldr Script (*.ldr)" , L"*.ldr" },
+				{ L"Lua Script (*.lua)" , L"*.lua" },
+				{ L"DirectX Files (*.x)" , L"*.x" },
+				{ L"All Files (*.*)", L"*.*" }
+			};
+
+			auto file = SaveFileUI(m_hwnd, FileUIOptions(L"ldr", filters, _countof(filters)));
+			if (file.empty()) return;
+			FileNew(file.c_str());
 		}
 		catch (std::exception const& e)
 		{
-			pr::events::Send(Event_Error(pr::FmtS("Creating a new script failed.\nError details: %s", e.what())));
+			pr::events::Send(Event_Error(pr::FmtS("Creating a new script failed.\n%s", e.what())));
 		}
 	}
 
@@ -418,9 +425,6 @@ namespace ldr
 		auto files = OpenFileUI(nullptr);
 		if (files.empty()) return;
 		FileOpen(files[0].c_str(), additive);
-		//WTL::CFileDialog fd(TRUE,0,0,0,FileOpenFilter,*this);
-		//if (fd.DoModal() != IDOK) return;
-		//FileOpen(pr::Widen(fd.m_szFileName).c_str(), additive);
 	}
 
 	// Reset the view to all, selected, or visible objects
@@ -445,24 +449,28 @@ namespace ldr
 	// Set the position of the camera focus point in world space
 	void MainGUI::OnSetFocusPosition()
 	{
-		CTextEntryDlg dlg(*this, "Enter focus point position", "0 0 0", false);
-		if (dlg.DoModal() != IDOK) return;
+		// Prompt for the focus point
+		TextEntryUI dlg(m_hwnd, L"Enter focus point position", L"0 0 0", false);
+		if (dlg.ShowDialog(this) != EDialogResult::Ok)
+			return;
 
-		float pos[3];
-		if (pr::str::ExtractRealArrayC(&pos[0], 3, dlg.m_body.c_str()))
-			m_main->m_nav.FocusPoint(pr::v4::make(pos, 1.0f));
-		else
-			::MessageBoxA(*this, "Format incorrect", "Focus point not set", MB_OK|MB_ICONERROR);
-
-		m_main->RenderNeeded();
+		try
+		{
+			auto pos = pr::To<pr::v4>(dlg.m_body, 1.0f);
+			m_main->m_nav.FocusPoint(pos);
+			m_main->RenderNeeded();
+		}
+		catch (std::exception const& ex)
+		{
+			::MessageBoxA(*this, "Format incorrect", FmtS("Focus point not set\r\n%s", ex.what()), MB_OK|MB_ICONERROR);
+		}
 	}
 
 	// Set the position of the camera
 	void MainGUI::OnSetCameraPosition()
 	{
-		pr::camera::PositionDlg dlg;
-		dlg.m_cam = m_main->m_cam;
-		if (dlg.DoModal(*this) != IDOK) return;
+		pr::camera::PositionUI dlg(*this, m_main->m_cam);
+		if (dlg.ShowDialog(this) != EDialogResult::Ok) return;
 		m_main->m_cam = dlg.m_cam;
 		m_main->RenderNeeded();
 	}
@@ -486,8 +494,9 @@ namespace ldr
 		}
 		else
 		{
-			CTextEntryDlg dlg(*this, "Label for this view", pr::FmtS("view%d", m_saved_views.Items().size()), false);
-			if (dlg.DoModal() != IDOK) return;
+			TextEntryUI dlg(*this, L"Label for this view", pr::FmtS(L"view%d", m_saved_views.Items().size()), false);
+			if (dlg.ShowDialog(this) != EDialogResult::Ok)
+				return;
 
 			auto id = m_main->m_nav.SaveView();
 			m_saved_views.Add(pr::Widen(dlg.m_body).c_str(), (void*)id, false, true);
@@ -618,13 +627,12 @@ namespace ldr
 				m_main->m_settings.m_Light                 = prev_light;
 				m_main->m_settings.m_LightIsCameraRelative = prev_cam_rel;
 			}
-		};
+		} pv(m_main.get());
 
-		PreviewLighting pv(m_main.get());
-		pr::rdr::LightingDlg<PreviewLighting> dlg(pv);
+		pr::rdr::LightingUI<PreviewLighting> dlg(*this, pv);
 		dlg.m_light           = m_main->m_settings.m_Light;
 		dlg.m_camera_relative = m_main->m_settings.m_LightIsCameraRelative;
-		if (dlg.DoModal(*this) != IDOK) return;
+		if (dlg.ShowDialog(this) != EDialogResult::Ok) return;
 		m_main->m_settings.m_Light                 = dlg.m_light;
 		m_main->m_settings.m_LightIsCameraRelative = dlg.m_camera_relative;
 		m_main->RenderNeeded();
@@ -635,8 +643,12 @@ namespace ldr
 	{
 		switch (tool)
 		{
-		case ID_TOOLS_MEASURE: m_measure_tool_ui.Show(m_measure_tool_ui.IsWindowVisible() == FALSE); break;
-		case ID_TOOLS_ANGLE:   m_angle_tool_ui  .Show(m_angle_tool_ui  .IsWindowVisible() == FALSE); break;
+		case ID_TOOLS_MEASURE:
+			m_measure_tool_ui.Visible(true);
+			break;
+		case ID_TOOLS_ANGLE:
+			m_angle_tool_ui.Visible(true);
+			break;
 		}
 		UpdateUI();
 	}
@@ -664,8 +676,9 @@ namespace ldr
 	// Display the plugin manager dialog
 	void MainGUI::OnShowPluginMgr()
 	{
-		PluginManagerDlg dlg(m_main->m_plugin_mgr, *this);
-		if (dlg.DoModal() != IDOK) return;
+		PluginManagerUI dlg(m_main->m_plugin_mgr, *this);
+		if (dlg.ShowDialog(this) != EDialogResult::Ok)
+			return;
 	}
 
 	// Set the window draw order so that the line drawer window is always on top
@@ -679,9 +692,9 @@ namespace ldr
 	// Set the background colour
 	void MainGUI::OnWindowBackgroundColour()
 	{
-		CColorDialog dlg(m_main->m_settings.m_BackgroundColour.GetColorRef(), 0, *this);
-		if (dlg.DoModal() != IDOK) return;
-		m_main->m_settings.m_BackgroundColour = dlg.GetColor() & 0x00FFFFFF;
+		pr::gui::ColourUI dlg(*this, m_main->m_settings.m_BackgroundColour);
+		if (dlg.ShowDialog(this) != EDialogResult::Ok) return;
+		m_main->m_settings.m_BackgroundColour = dlg.m_colour.a0();
 		m_main->RenderNeeded();
 	}
 
@@ -710,16 +723,6 @@ namespace ldr
 	void MainGUI::OnWindowShowAboutBox()
 	{
 		ShowAbout();
-	}
-
-	// Shut the app down
-	void MainGUI::CloseApp(int exit_code)
-	{
-		m_angle_tool_ui.Close();
-		m_measure_tool_ui.Close();
-		//m_editor_ui.Close();
-		//m_store_ui.Close();
-		Close(exit_code);
 	}
 
 	// Create a new file
@@ -841,8 +844,8 @@ namespace ldr
 		ModifyMenu(Menu(), ID_RENDERING_TECHNIQUE, MF_BYCOMMAND, ID_RENDERING_TECHNIQUE, m_main->m_scene.FindRStep<pr::rdr::ForwardRender>() ? "&Deferred Rendering" : "&Forward Rendering");
 
 		// The tools windows
-		CheckMenuItem(Menu()  ,ID_TOOLS_MEASURE ,m_measure_tool_ui.IsWindowVisible() ? MF_CHECKED : MF_UNCHECKED);
-		CheckMenuItem(Menu()  ,ID_TOOLS_ANGLE   ,m_angle_tool_ui  .IsWindowVisible() ? MF_CHECKED : MF_UNCHECKED);
+		CheckMenuItem(Menu()  ,ID_TOOLS_MEASURE ,m_measure_tool_ui.Visible() ? MF_CHECKED : MF_UNCHECKED);
+		CheckMenuItem(Menu()  ,ID_TOOLS_ANGLE   ,m_angle_tool_ui  .Visible() ? MF_CHECKED : MF_UNCHECKED);
 		CheckMenuItem(Menu()  ,ID_TOOLS_MOVE    ,m_main->ControlMode() == EControlMode::Manipulation ? MF_CHECKED : MF_UNCHECKED);
 		//EnableMenuItem(Menu() ,ID_TOOLS_MOVE    ,m_main->m_store.empty() ? MF_DISABLED : MF_ENABLED);
 
@@ -877,8 +880,7 @@ namespace ldr
 	// Display the about dialog box
 	void MainGUI::ShowAbout() const
 	{
-		CAboutLineDrawer dlg;
-		dlg.DoModal(*this);
+		AboutUI().ShowDialog(this);
 	}
 
 	// Recent files on click
@@ -971,32 +973,6 @@ namespace ldr
 		m_main->RenderNeeded();
 	}
 
-	// The measure tool window was closed
-	void MainGUI::OnEvent(pr::ldr::Evt_LdrMeasureCloseWindow const&)
-	{
-		UpdateUI();
-		m_main->RenderNeeded();
-	}
-
-	// The measurement info has updated
-	void MainGUI::OnEvent(pr::ldr::Evt_LdrMeasureUpdate const&)
-	{
-		m_main->RenderNeeded();
-	}
-
-	// The angle tool window was closed
-	void MainGUI::OnEvent(pr::ldr::Evt_LdrAngleDlgCloseWindow const&)
-	{
-		UpdateUI();
-		m_main->RenderNeeded();
-	}
-
-	// The angle info has updated
-	void MainGUI::OnEvent(pr::ldr::Evt_LdrAngleDlgUpdate const&)
-	{
-		m_main->RenderNeeded();
-	}
-
 	// A number of objects are about to be added
 	void MainGUI::OnEvent(ldr::Event_StoreChanging const&)
 	{
@@ -1018,14 +994,17 @@ namespace ldr
 	}
 
 	// Parse command line options
-	bool MainGUI::CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end)
+	bool MainGUI::CmdLineOption(OptionString const& option, TArgIter& arg, TArgIter arg_end)
 	{
 		// Syntax: LineDrawer -plugin "c:\myplugin.dll" arg1 arg2
-		if (pr::str::EqualI(option, "-plugin") && arg != arg_end)
+		if (pr::str::EqualI(option, L"-plugin") && arg != arg_end)
 		{
-			std::string plugin_name = *arg;
-			std::string plugin_args = "";
-			for (++arg; arg != arg_end && !pr::cmdline::IsOption(*arg); ++arg) plugin_args += *arg;
+			// Forward the rest of the args to the plugin
+			auto plugin_name = *arg;
+			OptionString plugin_args;
+			for (++arg; arg != arg_end && !pr::cmdline::IsOption(*arg); ++arg)
+				plugin_args.append(*arg).append(1, ' ');
+
 			try { m_main->m_plugin_mgr.Add(plugin_name.c_str(), plugin_args.c_str()); }
 			catch (LdrException const& e) { pr::events::Send(Event_Error(pr::Fmt("Failed to load plugin %s.\nReason: %s", plugin_name.c_str(), e.what()))); }
 			return true;

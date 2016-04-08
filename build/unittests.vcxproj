@@ -171,6 +171,7 @@
     <ClInclude Include="..\include\pr\geometry\utility.h" />
     <ClInclude Include="..\include\pr\geometry\volume.h" />
     <ClInclude Include="..\include\pr\gui\atlgdix.h" />
+    <ClInclude Include="..\include\pr\gui\colour_ctrl.h" />
     <ClInclude Include="..\include\pr\gui\context_menu.h" />
     <ClInclude Include="..\include\pr\gui\font_helper.h" />
     <ClInclude Include="..\include\pr\gui\gdiplus.h" />
@@ -180,7 +181,7 @@
     <ClInclude Include="..\include\pr\gui\messagemap_dbg.h" />
     <ClInclude Include="..\include\pr\gui\mfc_helper.h" />
     <ClInclude Include="..\include\pr\gui\misc.h" />
-    <ClInclude Include="..\include\pr\gui\progress_dlg.h" />
+    <ClInclude Include="..\include\pr\gui\progress_ui.h" />
     <ClInclude Include="..\include\pr\gui\recent_files.h" />
     <ClInclude Include="..\include\pr\gui\richedit.h" />
     <ClInclude Include="..\include\pr\gui\round_button_ctrl.h" />

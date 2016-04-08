@@ -2,7 +2,7 @@
 // Win32 API
 //  Copyright (c) Rylogic Ltd 2004
 //**********************************************
-// Win32 api unicode independent
+// Win32 API Unicode independent
 //
 // _WIN32_WINNT version constants
 //    #define _WIN32_WINNT_NT4          0x0400 // Windows NT 4.0
@@ -44,7 +44,7 @@ namespace pr
 		return msg;
 	}
 
-	// Test an hresult and throw on error
+	// Test an HRESULT and throw on error
 	inline void Throw(HRESULT result, std::string message)
 	{
 		if (SUCCEEDED(result)) return;
@@ -57,7 +57,7 @@ namespace pr
 		Throw(SUCCEEDED(hr) ? E_FAIL : hr, message);
 	}
 
-	// "Type traits" for win32 api functions
+	// "Type traits" for win32 API functions
 	template <typename Char> struct Win32;
 	template <> struct Win32<char>
 	{

@@ -6,7 +6,7 @@
 #include "pr/app/main.h"
 #include "pr/app/main_gui.h"
 
-int __stdcall _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpstrCmdLine, int nCmdShow)
+int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpstrCmdLine, int nCmdShow)
 {
 	(void)hInstance;
 	int nRet;
@@ -19,7 +19,8 @@ int __stdcall _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR
 			pr::InitCom init_com;
 
 			// Create an instance of the main window and start it running
-			gui = pr::app::CreateGUI(lpstrCmdLine, nCmdShow);
+			auto cmd_line = pr::Widen(lpstrCmdLine);
+			gui = pr::app::CreateGUI(cmd_line.c_str(), nCmdShow);
 			nRet = gui->Run();
 		}
 		catch (std::exception const& ex)

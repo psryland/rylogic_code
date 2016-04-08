@@ -14,7 +14,7 @@
 #include "pr/maths/maths.h"
 #include "pr/maths/convexhull.h"
 #include "pr/gui/windows_com.h"
-#include "pr/gui/progress_dlg.h"
+#include "pr/gui/progress_ui.h"
 #include "pr/renderer11/renderer.h"
 
 using namespace pr::rdr;
@@ -64,11 +64,11 @@ namespace pr
 			Reader&        m_reader;
 			ObjectCont&    m_objects;
 			ModelCont&     m_models;
-			ContextId      m_context_id;
+			pr::Guid       m_context_id;
 			HashValue      m_keyword;
 			LdrObject*     m_parent;
 
-			ParseParams(pr::Renderer& rdr, Reader& reader, ObjectCont& objects, ModelCont& models, ContextId context_id, HashValue keyword, LdrObject* parent)
+			ParseParams(pr::Renderer& rdr, Reader& reader, ObjectCont& objects, ModelCont& models, pr::Guid const& context_id, HashValue keyword, LdrObject* parent)
 				:m_rdr(rdr)
 				,m_reader(reader)
 				,m_objects(objects)
@@ -87,7 +87,8 @@ namespace pr
 				,m_parent(parent)
 			{}
 
-			PR_NO_COPY(ParseParams);
+			ParseParams(ParseParams const&) = delete;
+			ParseParams& operator = (ParseParams const&) = delete;
 		};
 
 		// Forward declare the recursive object parsing function
@@ -556,7 +557,7 @@ namespace pr
 						p.m_reader.RealS(t, 2);
 						if (m_point.size() < 2)
 						{
-							p.m_reader.ReportError(pr::script::EResult::Failed, "No preceeding line to apply parametric values to");
+							p.m_reader.ReportError(pr::script::EResult::Failed, "No preceding line to apply parametric values to");
 							return true;
 						}
 						auto& p0 = m_point[m_point.size() - 2];
@@ -657,7 +658,7 @@ namespace pr
 			}
 		};
 
-		// Base class for arbitrary cubiod shapes
+		// Base class for arbitrary cuboid shapes
 		struct IObjectCreatorCuboid :IObjectCreatorTexture
 		{
 			pr::v4 m_pt[8];
@@ -1059,7 +1060,7 @@ namespace pr
 
 				pr::geometry::Props props;
 
-				// Colour interpolator iterator
+				// Colour interpolation iterator
 				auto col = pr::CreateLerpRepeater(m_colour.data(), m_colour.size(), m_point.size(), pr::Colour32White);
 				auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a() != 0xff; return c; };
 
@@ -1700,7 +1701,7 @@ namespace pr
 			}
 			void Parse(ParseParams& p) override
 			{
-				p.m_reader.ReportError(pr::script::EResult::UnknownValue, "Convext hull object description invalid");
+				p.m_reader.ReportError(pr::script::EResult::UnknownValue, "Convex hull object description invalid");
 				p.m_reader.FindSectionEnd();
 			}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
@@ -1813,8 +1814,8 @@ namespace pr
 			{
 				p.m_reader.Vector3(m_light.m_position, 1.0f);
 				p.m_reader.Vector3(m_light.m_direction, 0.0f);
-				p.m_reader.Real(m_light.m_inner_cos_angle); // actually in degress atm
-				p.m_reader.Real(m_light.m_outer_cos_angle); // actually in degress atm
+				p.m_reader.Real(m_light.m_inner_cos_angle); // actually in degrees
+				p.m_reader.Real(m_light.m_outer_cos_angle); // actually in degrees
 			}
 		};
 
@@ -1969,10 +1970,11 @@ namespace pr
 
 		// Reads all ldr objects from a script returning 'result'
 		template <typename AddCB>
-		void ParseLdrObjects(pr::Renderer& rdr, pr::script::Reader& reader, ContextId context_id, ParseResult& result, AddCB add_cb)
+		void ParseLdrObjects(pr::Renderer& rdr, pr::script::Reader& reader, pr::Guid const& context_id, ParseResult& result, AddCB add_cb)
 		{
 			// Your application needs to have called CoInitialise() before here
 			bool cancel = false;
+			reader.CaseSensitive(false); // Ldr script is not case sensitive
 			for (EKeyword kw; !cancel && reader.NextKeywordH(kw);)
 			{
 				switch (kw)
@@ -2026,34 +2028,34 @@ namespace pr
 
 		// Parse the ldr script in 'reader' adding the results to 'out'
 		// If 'async' is true, a progress dialog is displayed and parsing is done in a background thread.
-		void Parse(pr::Renderer& rdr, pr::script::Reader& reader, ParseResult& out, bool async, ContextId context_id)
+		void Parse(pr::Renderer& rdr, pr::script::Reader& reader, ParseResult& out, bool async, pr::Guid const& context_id)
 		{
 			// Does the work of parsing objects and adds them to 'models'
 			// 'total' is the total number of objects added
-			auto ParseObjects = [&](pr::gui::ProgressDlg* dlg, ParseResult& out)
+			auto ParseObjects = [&](pr::gui::ProgressUI* dlg, ParseResult& out)
 			{
 				// Note: your application needs to have called CoInitialise() before here
 				std::size_t start_time = GetTickCount();
 				std::size_t last_update = start_time;
 				ParseLdrObjects(rdr, reader, context_id, out, [&](LdrObjectPtr& obj)
-					{
-						// See if it's time for a progress update
-						if (dlg == nullptr) return true;
-						auto now = GetTickCount();
-						if (now - start_time < 200 || now - last_update < 100)
-							return true;
+				{
+					// See if it's time for a progress update
+					if (dlg == nullptr) return true;
+					auto now = GetTickCount();
+					if (now - start_time < 200 || now - last_update < 100)
+						return true;
 
-						last_update = now;
-						char const* type = obj ? ELdrObject::ToStringA(obj->m_type) : "";
-						std::string name = obj ? obj->m_name : "";
-						return dlg->Progress(-1.0f, pr::FmtS(L"Parsing scene...\r\nObject count: %d\r\n%s %s", out.m_objects.size(), type, name.c_str()));
-					});
+					last_update = now;
+					char const* type = obj ? ELdrObject::ToStringA(obj->m_type) : "";
+					std::string name = obj ? obj->m_name : "";
+					return dlg->Progress(-1.0f, pr::FmtS(L"Parsing scene...\r\nObject count: %d\r\n%s %s", out.m_objects.size(), type, name.c_str()));
+				});
 			};
 
 			if (async)
 			{
 				// Run the adding process as a background task while displaying a progress dialog
-				pr::gui::ProgressDlg dlg(L"Processing script", L"", ParseObjects, std::ref(out));
+				pr::gui::ProgressUI dlg(L"Processing script", L"", ParseObjects, std::ref(out));
 				dlg.ShowDialog(::GetActiveWindow(), 100);
 			}
 			else
@@ -2065,7 +2067,7 @@ namespace pr
 		// Add a custom object via callback
 		// Objects created by this method will have dynamic usage and are suitable for updating every frame
 		// They are intended to be used with the 'Edit' function.
-		LdrObjectPtr Add(pr::Renderer& rdr, ObjectAttributes attr, EPrim topo, int icount, int vcount, pr::uint16 const* indices, pr::v4 const* verts, int ccount, pr::Colour32 const* colours, int ncount, pr::v4 const* normals, pr::v2 const* tex_coords, ContextId context_id)
+		LdrObjectPtr Add(pr::Renderer& rdr, ObjectAttributes attr, EPrim topo, int icount, int vcount, pr::uint16 const* indices, pr::v4 const* verts, int ccount, pr::Colour32 const* colours, int ncount, pr::v4 const* normals, pr::v2 const* tex_coords, pr::Guid const& context_id)
 		{
 			LdrObjectPtr obj(new LdrObject(attr, 0, context_id));
 
@@ -2084,7 +2086,7 @@ namespace pr
 		// Add a custom object via callback
 		// Objects created by this method will have dynamic usage and are suitable for updating every frame
 		// They are intended to be used with the 'Edit' function.
-		LdrObjectPtr Add(pr::Renderer& rdr, ObjectAttributes attr, int icount, int vcount, EditObjectCB edit_cb, void* ctx, ContextId context_id)
+		LdrObjectPtr Add(pr::Renderer& rdr, ObjectAttributes attr, int icount, int vcount, EditObjectCB edit_cb, void* ctx, pr::Guid const& context_id)
 		{
 			LdrObjectPtr obj(new LdrObject(attr, 0, context_id));
 
@@ -2179,10 +2181,10 @@ namespace pr
 		// Remove all objects from 'objects' that have a context id matching one in 'doomed' and not in 'excluded'
 		// If 'doomed' is 0, all are assumed doomed. If 'excluded' is 0, none are assumed excluded
 		// 'excluded' is considered after 'doomed' so if any context ids are in both arrays, they will be excluded.
-		void Remove(ObjectCont& objects, ContextId const* doomed, std::size_t dcount, ContextId const* excluded, std::size_t ecount)
+		void Remove(ObjectCont& objects, pr::Guid const* doomed, std::size_t dcount, pr::Guid const* excluded, std::size_t ecount)
 		{
-			ContextId const* dend = doomed + dcount;
-			ContextId const* eend = excluded + ecount;
+			pr::Guid const* dend = doomed + dcount;
+			pr::Guid const* eend = excluded + ecount;
 			for (size_t i = objects.size(); i-- != 0;)
 			{
 				if (doomed   && std::find(doomed, dend, objects[i]->m_context_id) == dend) continue; // not in the doomed list
@@ -2870,7 +2872,7 @@ LR"(//********************************************
 		} g_ldr_object_tracker;
 		#endif
 
-		LdrObject::LdrObject(ObjectAttributes const& attr, LdrObject* parent, ContextId context_id)
+		LdrObject::LdrObject(ObjectAttributes const& attr, LdrObject* parent, pr::Guid const& context_id)
 			:RdrInstance()
 			, m_o2p(m4x4Identity)
 			, m_type(attr.m_type)
@@ -2938,7 +2940,7 @@ LR"(//********************************************
 				scene.AddInstance(m_bbox_instance); // Could add occlusion culling here...
 			}
 
-			// Rince and repeat for all children
+			// Rinse and repeat for all children
 			for (auto& child : m_child)
 				child->AddBBoxToScene(scene, bbox_model, time_s, &m_i2w);
 		}

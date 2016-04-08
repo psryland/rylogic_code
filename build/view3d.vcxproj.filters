@@ -110,9 +110,6 @@
     <ClCompile Include="..\include\pr\linedrawer\ldr_script_editor_dlg.cpp">
       <Filter>src\pr\linedrawer</Filter>
     </ClCompile>
-    <ClCompile Include="..\include\pr\linedrawer\ldr_tools.cpp">
-      <Filter>src\pr\linedrawer</Filter>
-    </ClCompile>
     <ClCompile Include="..\include\pr\lua\lua_core.c">
       <Filter>src\pr\lua</Filter>
     </ClCompile>

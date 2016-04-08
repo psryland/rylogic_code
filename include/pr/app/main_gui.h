@@ -42,13 +42,13 @@ namespace pr
 			int                   m_exit_code;                 // Exit code
 
 			//static HBRUSH WndBackground() { return nullptr; }
-			struct Params :pr::gui::FormParams
+			struct Params :pr::gui::FormParams<Params>
 			{
 				Params() { wndclass(RegisterWndClass<DerivedGUI>()).main_wnd(true); }
 			};
 
 			// Create the main application window.
-			// This class is subclassed from pr::gui::Form which actually does the 'CreateWindowEx' call in
+			// This class is sub-classed from pr::gui::Form which actually does the 'CreateWindowEx' call in
 			// it's constructor. This means the HWND is valid after the base class has been constructed.
 			// If your window uses common controls, remember to call InitCtrls() before this constructor
 			MainGUI(pr::gui::Params const& p = Params())

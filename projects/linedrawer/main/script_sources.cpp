@@ -17,6 +17,15 @@ using namespace pr::script;
 
 namespace ldr
 {
+	ScriptSources::File::File()
+		:m_filepath()
+		,m_context_id(pr::GuidZero)
+	{}
+	ScriptSources::File::File(pr::string<wchar_t> const& filepath, pr::Guid const* context_id)
+		:m_filepath(pr::filesys::StandardiseC<pr::string<wchar_t>>(filepath))
+		,m_context_id(context_id ? *context_id : pr::GenerateGUID())
+	{}
+
 	ScriptSources::ScriptSources(UserSettings& settings, pr::Renderer& rdr, pr::ldr::ObjectCont& store, LuaSource& lua_src)
 		:m_files()
 		,m_watcher()
@@ -29,27 +38,27 @@ namespace ldr
 	// Remove all file sources
 	void ScriptSources::Clear()
 	{
-		while (!m_files.empty())
-			Remove(m_files.front().c_str());
+		// Delete all objects belonging to the files
+		for (auto& file : m_files)
+			pr::ldr::Remove(m_store, &file.m_context_id, 1, 0, 0);
+
+		m_files.resize(0);
 	}
 
 	// Reload all files
 	void ScriptSources::Reload()
 	{
 		// Make a copy of the file list
-		StrList files = m_files;
+		auto files = m_files;
 		m_files.clear();
 
 		// Delete all objects belonging to these files
 		for (auto& file : files)
-		{
-			int context_id = pr::hash::HashC(file.c_str());
-			pr::ldr::Remove(m_store, &context_id, 1, 0, 0);
-		}
+			pr::ldr::Remove(m_store, &file.m_context_id, 1, 0, 0);
 
 		// Add each file again
 		for (auto& file : files)
-			AddFile(file.c_str(), Event_StoreChanged::EReason::Reload);
+			AddFile(file.m_filepath.c_str(), Event_StoreChanged::EReason::Reload);
 	}
 
 	// Add a string source
@@ -57,12 +66,14 @@ namespace ldr
 	{
 		try
 		{
-			ParseResult out(m_store);
-			std::size_t bcount = m_store.size();
+			using namespace pr::script;
 
-			pr::script::PtrW<> src(str.c_str());
-			pr::script::Reader reader(src, false, nullptr, nullptr, &m_lua_src);
-			Parse(m_rdr, reader, out, false, pr::ldr::DefaultContext);
+			ParseResult out(m_store);
+			auto bcount = m_store.size();
+
+			PtrW<> src(str.c_str());
+			Reader reader(src, false, nullptr, nullptr, &m_lua_src);
+			Parse(m_rdr, reader, out, false);
 
 			pr::events::Send(Event_StoreChanged(m_store, m_store.size() - bcount, out, Event_StoreChanged::EReason::NewData));
 			pr::events::Send(Event_Refresh());
@@ -92,7 +103,7 @@ namespace ldr
 		Remove(filepath);
 
 		// Add the filepath to the source files collection
-		m_files.push_back(pr::filesys::StandardiseC<pr::string<wchar_t>>(filepath));
+		m_files.push_back(File(filepath));
 		auto& file = m_files.back();
 
 		try
@@ -100,18 +111,17 @@ namespace ldr
 			ParseResult out(m_store);
 			auto bcount = m_store.size();
 
-			// All objects added as a result of this file will have this context id
-			int context_id = pr::hash::HashC(file.c_str());
-
-			// Add file watchers for the file and everything it included
-			m_watcher.Add(filepath, this, context_id, &file[0]);
-			auto watch = [&](pr::script::string const& fpath)
+			// Add file watchers for the file and everything it includes
+			m_watcher.Add(filepath, this, file.m_context_id, &file);
+			auto add_watch = [&](pr::script::string const& fpath)
 			{
-				m_watcher.Add(fpath.c_str(), this, context_id, &file[0]);
+				// Use the same ID for all included files as well
+				auto f = File(fpath, &file.m_context_id);
+				m_watcher.Add(f.m_filepath.c_str(), this, f.m_context_id, &file);
 			};
 
 			// Add the file based on it's file type
-			auto extn = pr::filesys::GetExtension(file);
+			auto extn = pr::filesys::GetExtension(file.m_filepath);
 			if (pr::str::EqualI(extn, "lua"))
 			{
 				m_lua_src.Add(filepath);
@@ -119,24 +129,24 @@ namespace ldr
 			else if (pr::str::EqualI(extn, "p3d"))
 			{
 				Includes<> inc;
-				inc.FileOpened += watch;
+				inc.FileOpened += add_watch;
 				inc.m_ignore_missing_includes = m_settings.m_IgnoreMissingIncludes;
 
 				Buffer<> src(ESrcType::Buffered, pr::FmtS("*Model {\"%s\"}", filepath));
 				Reader reader(src, false, &inc, nullptr, &m_lua_src);
 
-				Parse(m_rdr, reader, out, true, context_id);
+				Parse(m_rdr, reader, out, true, file.m_context_id);
 			}
 			else // assume ldr script file
 			{
 				Includes<> inc;
-				inc.FileOpened += watch;
+				inc.FileOpened += add_watch;
 				inc.m_ignore_missing_includes = m_settings.m_IgnoreMissingIncludes;
 
-				FileSrc<> src(file.c_str());
+				FileSrc<> src(file.m_filepath.c_str());
 				Reader reader(src, false, &inc, nullptr, &m_lua_src);
 
-				Parse(m_rdr, reader, out, true, context_id);
+				Parse(m_rdr, reader, out, true, file.m_context_id);
 			}
 
 			pr::events::Send(Event_StoreChanged(m_store, m_store.size() - bcount, out, reason));
@@ -165,17 +175,20 @@ namespace ldr
 	// Remove a file source
 	void ScriptSources::Remove(wchar_t const* filepath)
 	{
-		// Delete all objects belonging to this file
-		auto fpath = pr::filesys::StandardiseC<pr::string<wchar_t>>(filepath);
-		int context_id = pr::hash::HashC(fpath.c_str());
-		pr::ldr::Remove(m_store, &context_id, 1, 0, 0);
-
-		// Delete all associated file watches
-		m_watcher.RemoveAll(context_id);
+		// Find the file in the file list
+		File file(filepath);
+		auto iter = std::find_if(std::begin(m_files), std::end(m_files), [&](File const& f){ return f.m_filepath == file.m_filepath; });
+		if (iter == std::end(m_files)) return;
+		file = *iter;
 
 		// Remove it from the file list
-		auto iter = std::find(m_files.begin(), m_files.end(), fpath);
-		if (iter != m_files.end()) m_files.erase(iter);
+		m_files.erase(iter);
+
+		// Delete all objects belonging to this file
+		pr::ldr::Remove(m_store, &file.m_context_id, 1, 0, 0);
+
+		// Delete all associated file watches
+		m_watcher.RemoveAll(file.m_context_id);
 	}
 
 	// Check all file sources for modifications and reload any that have changed

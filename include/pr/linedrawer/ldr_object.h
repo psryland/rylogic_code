@@ -11,6 +11,7 @@
 #include "pr/common/min_max_fix.h"
 #include "pr/common/hash.h"
 #include "pr/common/new.h"
+#include "pr/common/guid.h"
 #include "pr/common/refcount.h"
 #include "pr/common/refptr.h"
 #include "pr/common/user_data.h"
@@ -27,11 +28,9 @@ namespace pr
 		// Forwards
 		struct LdrObject;
 		struct ObjectAttributes;
-		typedef int ContextId;
 		typedef pr::RefPtr<LdrObject> LdrObjectPtr;
 		typedef pr::vector<LdrObjectPtr, 8> ObjectCont;
 		typedef pr::string<char, 32> string32;
-		ContextId const DefaultContext = 0;
 
 		#pragma region Ldr object types
 		#define PR_ENUM(x)\
@@ -284,7 +283,7 @@ namespace pr
 			LdrObject*        m_parent;        // The parent of this object, 0 for top level instances.
 			ObjectCont        m_child;         // A container of pointers to child instances
 			string32          m_name;          // A name for the object
-			ContextId         m_context_id;    // The id of the context this instance was created in
+			GUID              m_context_id;    // The id of the context this instance was created in
 			pr::Colour32      m_base_colour;   // The original colour of this object
 			pr::uint          m_colour_mask;   // A bit mask for applying the base colour to child objects
 			Animation         m_anim;          // Animation data
@@ -298,13 +297,13 @@ namespace pr
 			// Predicate for matching this object by context id
 			struct MatchId
 			{
-				ContextId m_id;
-				MatchId(ContextId id) :m_id(id) {}
+				GUID m_id;
+				MatchId(GUID const& id) :m_id(id) {}
 				bool operator()(LdrObject const& obj) const { return obj.m_context_id == m_id; }
 				bool operator()(LdrObject const* obj) const { return obj && obj->m_context_id == m_id; }
 			};
 
-			LdrObject(ObjectAttributes const& attr, pr::ldr::LdrObject* parent, pr::ldr::ContextId context_id);
+			LdrObject(ObjectAttributes const& attr, pr::ldr::LdrObject* parent, GUID const& context_id);
 			~LdrObject();
 
 			// Return the type and name of this object
@@ -325,14 +324,14 @@ namespace pr
 			// If 'name' is "", then 'func' is applied to this object and all children recursively
 			// Otherwise, 'func' is applied to all child objects that match name.
 			// If 'name' begins with '#' then the remainder of the name is treated as a regular expression
-			// 'func' should have a signature: bool func(pr::ldr::LdrObject* obj);
+			// 'func' should have a signature: 'bool func(pr::ldr::LdrObject* obj);'
 			// 'obj' is a recursion parameter, callers should use 'nullptr'
 			// Returns 'true' if 'func' always returns 'true'.
 			template <typename TFunc> bool Apply(TFunc func, char const* name = nullptr, LdrObject* obj = nullptr) const
 			{
 				if (obj == nullptr)
 				{
-					// The constness of this function depends on 'func'
+					// The 'const-ness' of this function depends on 'func'
 					obj = const_cast<LdrObject*>(this);
 				}
 				if (name == nullptr)
@@ -455,28 +454,6 @@ namespace pr
 
 		#pragma region Events
 
-		//// A number of objects are about to be added
-		//struct Evt_AddBegin
-		//{};
-
-		//// The last object in a group has been added
-		//struct Evt_AddEnd
-		//{
-		//	int m_first, m_last;    // Index of the first and last object added
-		//	Evt_AddEnd(int first, int last) :m_first(first) ,m_last(last) {}
-		//};
-
-		//// All objects removed from the object manager
-		//struct Evt_DeleteAll
-		//{};
-
-		//// An ldr object has been added
-		//struct Evt_LdrObjectAdd
-		//{
-		//	LdrObjectPtr m_obj;     // The object that was added.
-		//	Evt_LdrObjectAdd(LdrObjectPtr obj) :m_obj(obj) {}
-		//};
-
 		// An ldr object has been modified
 		struct Evt_LdrObjectChg
 		{
@@ -484,47 +461,71 @@ namespace pr
 			Evt_LdrObjectChg(LdrObjectPtr obj) :m_obj(obj) {}
 		};
 
-		//// An ldr object is about to be deleted
-		//struct Evt_LdrObjectDelete
-		//{
-		//	LdrObject* m_obj;       // The object to be deleted. Note, not a ref ptr because this event is only sent when the ref count = 0
-		//	Evt_LdrObjectDelete(LdrObject* obj) :m_obj(obj) {}
-		//};
+		#if 0
+		// A number of objects are about to be added
+		struct Evt_AddBegin
+		{};
 
-		//// An object with step code has been created
-		//struct Evt_LdrObjectStepCode
-		//{
-		//	LdrObjectPtr m_obj;     // The object containing step code
-		//	Evt_LdrObjectStepCode(LdrObjectPtr obj) :m_obj(obj) {}
-		//};
+		// The last object in a group has been added
+		struct Evt_AddEnd
+		{
+			int m_first, m_last;    // Index of the first and last object added
+			Evt_AddEnd(int first, int last) :m_first(first) ,m_last(last) {}
+		};
 
-		//// A camera description has been read
-		//struct Evt_LdrSetCamera
-		//{
-		//	// Bit mask of set fields
-		//	enum EField
-		//	{
-		//		C2W     = 1 << 0,
-		//		Focus   = 1 << 1,
-		//		Align   = 1 << 2,
-		//		Aspect  = 1 << 3,
-		//		FovY    = 1 << 4,
-		//		Near    = 1 << 5,
-		//		Far     = 1 << 6,
-		//		AbsClip = 1 << 7,
-		//		Ortho   = 1 << 8,
-		//	};
-		//	pr::Camera m_cam;
-		//	size_t m_set_fields;
-		//	Evt_LdrSetCamera() :m_cam() ,m_set_fields() {}
-		//};
+		// All objects removed from the object manager
+		struct Evt_DeleteAll
+		{};
 
-		//// App commands read from the script
-		//struct Evt_LdrAppCommands
-		//{
-		//	bool m_clear;
-		//	bool m_wireframe;
-		//};
+		// An ldr object has been added
+		struct Evt_LdrObjectAdd
+		{
+			LdrObjectPtr m_obj;     // The object that was added.
+			Evt_LdrObjectAdd(LdrObjectPtr obj) :m_obj(obj) {}
+		};
+
+		// An ldr object is about to be deleted
+		struct Evt_LdrObjectDelete
+		{
+			LdrObject* m_obj;       // The object to be deleted. Note, not a ref ptr because this event is only sent when the ref count = 0
+			Evt_LdrObjectDelete(LdrObject* obj) :m_obj(obj) {}
+		};
+
+		// An object with step code has been created
+		struct Evt_LdrObjectStepCode
+		{
+			LdrObjectPtr m_obj;     // The object containing step code
+			Evt_LdrObjectStepCode(LdrObjectPtr obj) :m_obj(obj) {}
+		};
+
+		// A camera description has been read
+		struct Evt_LdrSetCamera
+		{
+			// Bit mask of set fields
+			enum EField
+			{
+				C2W     = 1 << 0,
+				Focus   = 1 << 1,
+				Align   = 1 << 2,
+				Aspect  = 1 << 3,
+				FovY    = 1 << 4,
+				Near    = 1 << 5,
+				Far     = 1 << 6,
+				AbsClip = 1 << 7,
+				Ortho   = 1 << 8,
+			};
+			pr::Camera m_cam;
+			size_t m_set_fields;
+			Evt_LdrSetCamera() :m_cam() ,m_set_fields() {}
+		};
+
+		// App commands read from the script
+		struct Evt_LdrAppCommands
+		{
+			bool m_clear;
+			bool m_wireframe;
+		};
+		#endif
 
 		#pragma endregion
 
@@ -586,11 +587,11 @@ namespace pr
 		// Parse the ldr script in 'reader' adding the results to 'out'
 		// If 'async' is true, a progress dialog is displayed and parsing is done in a background thread.
 		void Parse(
-			pr::Renderer& rdr,                    // The renderer to create models for
-			pr::script::Reader& reader,           // The source of the script
-			ParseResult& out,                     // The results of parsing the script
-			bool async = true,                    // True if parsing should be done in a background thread
-			ContextId context_id = DefaultContext // The context id to assign to each created object
+			pr::Renderer& rdr,                // The renderer to create models for
+			pr::script::Reader& reader,       // The source of the script
+			ParseResult& out,                 // The results of parsing the script
+			bool async = true,                // True if parsing should be done in a background thread
+			pr::Guid const& context_id = GuidZero // The context id to assign to each created object
 			);
 
 		// Parse ldr script from a text file
@@ -600,7 +601,7 @@ namespace pr
 			char const* filename,                  // The file containing the ldr script
 			ParseResult& out,                      // The results of parsing the script
 			bool async = true,                     // True if parsing should be done in a background thread
-			ContextId context_id = DefaultContext) // The context id to assign to each created object
+			pr::Guid const& context_id = GuidZero) // The context id to assign to each created object
 		{
 			pr::script::FileSrc<> src(filename);
 			pr::script::Reader reader(src);
@@ -615,7 +616,7 @@ namespace pr
 			Char const* ldr_script,                // The literal string containing the script
 			ParseResult& out,                      // The results of parsing the script
 			bool async = true,                     // True if parsing should be done in a background thread
-			ContextId context_id = DefaultContext) // The context id to assign to each created object
+			pr::Guid const& context_id = GuidZero) // The context id to assign to each created object
 		{
 			pr::script::Ptr<Char const*> src(ldr_script);
 			pr::script::Reader reader(src);
@@ -624,19 +625,19 @@ namespace pr
 
 		// Add a custom object
 		LdrObjectPtr Add(
-			pr::Renderer& rdr,                               // The reader to create models for
-			ObjectAttributes attr,                           // Object attributes to use with the created object
-			pr::rdr::EPrim prim_type,                        // The topology of the index data
-			int icount,                                      // The length of the 'indices' array
-			int vcount,                                      // The length of the 'verts' array
-			pr::uint16 const* indices,                       // The index data for the model
-			pr::v4 const* verts,                             // The vertex data for the model
-			int ccount = 0,                                  // The length of the 'colours' array. 0, 1, or vcount
-			pr::Colour32 const* colours = nullptr,           // The colour data for the model. nullptr, 1, or vcount colours
-			int ncount = 0,                                  // The length of the 'normals' array. 0, 1, or vcount
-			pr::v4 const* normals = nullptr,                 // The normal data for the model. nullptr or a pointer to vcount normals
-			pr::v2 const* tex_coords = nullptr,              // The texture coordinates data for the model. nullptr or a pointer to vcount tex coords
-			pr::ldr::ContextId context_id = DefaultContext); // The context id to assign to each created object
+			pr::Renderer& rdr,                      // The reader to create models for
+			ObjectAttributes attr,                  // Object attributes to use with the created object
+			pr::rdr::EPrim prim_type,               // The topology of the index data
+			int icount,                             // The length of the 'indices' array
+			int vcount,                             // The length of the 'verts' array
+			pr::uint16 const* indices,              // The index data for the model
+			pr::v4 const* verts,                    // The vertex data for the model
+			int ccount = 0,                         // The length of the 'colours' array. 0, 1, or 'vcount'
+			pr::Colour32 const* colours = nullptr,  // The colour data for the model. nullptr, 1, or 'vcount' colours
+			int ncount = 0,                         // The length of the 'normals' array. 0, 1, or 'vcount'
+			pr::v4 const* normals = nullptr,        // The normal data for the model. nullptr or a pointer to 'vcount' normals
+			pr::v2 const* tex_coords = nullptr,     // The texture coordinates data for the model. nullptr or a pointer to 'vcount' texture coords
+			pr::Guid const& context_id = GuidZero); // The context id to assign to each created object
 
 		// Callback function for editing a dynamic model
 		// This callback is intentionally low level, providing the whole model for editing.
@@ -646,7 +647,7 @@ namespace pr
 		// Add a custom object via callback
 		// Objects created by this method will have dynamic usage and are suitable for updating every frame
 		// They are intended to be used with the 'Edit' function.
-		LdrObjectPtr Add(pr::Renderer& rdr, ObjectAttributes attr, int icount, int vcount, EditObjectCB edit_cb, void* ctx, pr::ldr::ContextId context_id = DefaultContext);
+		LdrObjectPtr Add(pr::Renderer& rdr, ObjectAttributes attr, int icount, int vcount, EditObjectCB edit_cb, void* ctx, pr::Guid const& context_id = GuidZero);
 
 		// Modify the geometry of an LdrObject
 		void Edit(pr::Renderer& rdr, LdrObjectPtr object, EditObjectCB edit_cb, void* ctx);
@@ -657,7 +658,7 @@ namespace pr
 		// Remove all objects from 'objects' that have a context id matching one in 'doomed' and not in 'excluded'
 		// If 'doomed' is 0, all are assumed doomed. If 'excluded' is 0, none are assumed excluded
 		// 'excluded' is considered after 'doomed' so if any context ids are in both arrays, they will be excluded.
-		void Remove(ObjectCont& objects, pr::ldr::ContextId const* doomed, std::size_t dcount, pr::ldr::ContextId const* excluded, std::size_t ecount);
+		void Remove(ObjectCont& objects, pr::Guid const* doomed, std::size_t dcount, pr::Guid const* excluded, std::size_t ecount);
 
 		// Remove 'obj' from 'objects'
 		void Remove(ObjectCont& objects, pr::ldr::LdrObjectPtr obj);

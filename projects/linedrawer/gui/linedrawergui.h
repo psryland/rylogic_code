@@ -15,7 +15,7 @@ namespace ldr
 {
 	struct MainGUI
 		:pr::app::MainGUI<ldr::MainGUI, ldr::Main, pr::gui::SimMsgLoop>
-		,pr::cmdline::IOptionReceiver<>
+		,pr::cmdline::IOptionReceiver<wchar_t>
 		,pr::gui::RecentFiles::IHandler
 		,pr::events::IRecv<ldr::Event_Info>
 		,pr::events::IRecv<ldr::Event_Warn>
@@ -26,10 +26,6 @@ namespace ldr
 		,pr::events::IRecv<ldr::Event_StoreChanged>
 		,pr::events::IRecv<pr::rdr::Evt_UpdateScene>
 		,pr::events::IRecv<pr::ldr::Evt_Refresh>
-		,pr::events::IRecv<pr::ldr::Evt_LdrMeasureCloseWindow>
-		,pr::events::IRecv<pr::ldr::Evt_LdrMeasureUpdate>
-		,pr::events::IRecv<pr::ldr::Evt_LdrAngleDlgCloseWindow>
-		,pr::events::IRecv<pr::ldr::Evt_LdrAngleDlgUpdate>
 		,pr::events::IRecv<pr::settings::Evt<UserSettings>>
 		,pr::AlignTo<16>
 	{
@@ -45,8 +41,8 @@ namespace ldr
 		pr::gui::MenuList           m_saved_views;          // A list of camera snapshots
 		pr::ldr::LdrObjectManagerUI m_store_ui;             // UI for managing ldr objects in the scene
 		pr::ldr::ScriptEditorDlg    m_editor_ui;            // An editor for ldr script
-		pr::ldr::MeasureDlg         m_measure_tool_ui;      // The UI for the measuring tool
-		pr::ldr::AngleDlg           m_angle_tool_ui;        // The UI for the angle measuring tool
+		pr::ldr::LdrMeasureUI       m_measure_tool_ui;      // The UI for the measuring tool
+		pr::ldr::LdrAngleUI         m_angle_tool_ui;        // The UI for the angle measuring tool
 		ldr::OptionsUI              m_options_ui;           // The UI for setting LineDrawer settings
 		bool                        m_mouse_status_updates; // Whether to show mouse position in the status bar (todo: more general system for this)
 		bool                        m_suspend_render;       // True to prevent rendering
@@ -54,8 +50,7 @@ namespace ldr
 
 		static char const* AppName() { return ldr::AppTitleA(); }
 
-		MainGUI(LPTSTR cmdline, int nCmdShow);
-		~MainGUI();
+		MainGUI(wchar_t const* cmdline, int nCmdShow);
 
 	private:
 		// 30Hz step function
@@ -65,7 +60,7 @@ namespace ldr
 		bool ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override;
 
 		// Close this form
-		bool Close(int exit_code = 0) override;
+		bool Close(EDialogResult dialog_result) override;
 
 		bool OnPaint(PaintEventArgs const& args) override;
 		void OnDropFiles(DropFilesEventArgs const& drop) override;
@@ -110,7 +105,6 @@ namespace ldr
 		void OnCheckForUpdates();
 		void OnWindowShowAboutBox();
 
-		void CloseApp(int exit_code);
 		void FileNew(wchar_t const* filepath);
 		void FileOpen(wchar_t const* filepath, bool additive);
 		void OpenTextEditor(StrList const& files);
@@ -133,13 +127,9 @@ namespace ldr
 		void OnEvent(ldr::Event_StoreChanged const&) override;
 		void OnEvent(pr::rdr::Evt_UpdateScene const&) override;
 		void OnEvent(pr::ldr::Evt_Refresh const& e) override;
-		void OnEvent(pr::ldr::Evt_LdrMeasureCloseWindow const&) override;
-		void OnEvent(pr::ldr::Evt_LdrMeasureUpdate const&) override;
-		void OnEvent(pr::ldr::Evt_LdrAngleDlgCloseWindow const&) override;
-		void OnEvent(pr::ldr::Evt_LdrAngleDlgUpdate const&) override;
 		void OnEvent(pr::settings::Evt<UserSettings> const&) override;
 
 		// Command line
-		bool CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end);
+		bool CmdLineOption(OptionString const& option, TArgIter& arg, TArgIter arg_end);
 	};
 }

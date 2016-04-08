@@ -20,6 +20,16 @@ namespace pr
 		// Note: this object does not add references to LdrObjects
 		struct LdrObjectManagerUI
 		{
+		protected:
+
+			// pImpl pattern to hide window implementation
+			std::unique_ptr<LdrObjectManagerUI> m_ui;
+
+			struct Internal {};
+			LdrObjectManagerUI(Internal const&) {}
+
+		public:
+
 			virtual ~LdrObjectManagerUI() {}
 			LdrObjectManagerUI(HWND parent);
 			LdrObjectManagerUI(LdrObjectManagerUI const&) = delete;
@@ -47,13 +57,13 @@ namespace pr
 				EndPopulate();
 			}
 
-			// Begin repopulating the dlg
+			// Begin repopulating the dialog
 			virtual void BeginPopulate() { m_ui->BeginPopulate(); }
 			
-			// Add a root level object recursively to the dlg
+			// Add a root level object recursively to the dialog
 			virtual void Add(LdrObject* obj) { m_ui->Add(obj); }
 
-			// Finished populating the dlg
+			// Finished populating the dialog
 			virtual void EndPopulate() { m_ui->EndPopulate(); }
 
 			// Return the number of selected objects
@@ -74,14 +84,6 @@ namespace pr
 			// Hide the window instead of closing
 			virtual bool HideOnClose() const { return m_ui->HideOnClose(); }
 			virtual void HideOnClose(bool enable) { m_ui->HideOnClose(enable); }
-
-		protected:
-
-			// pImpl pattern to hide window implementation
-			std::unique_ptr<LdrObjectManagerUI> m_ui;
-
-			struct Internal {};
-			LdrObjectManagerUI(Internal const&) {}
 		};
 
 		#pragma region Events
@@ -103,7 +105,7 @@ namespace pr
 			Evt_LdrObjectSelectionChanged(LdrObjectManagerUI* sender) :m_ui(sender) {}
 		};
 
-		// Sent by the object manager ui whenever its settings have changed
+		// Sent by the object manager UI whenever its settings have changed
 		struct Evt_SettingsChanged
 		{
 			LdrObjectManagerUI* m_ui;

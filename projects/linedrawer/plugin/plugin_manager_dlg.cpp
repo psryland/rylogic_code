@@ -7,141 +7,130 @@
 #include "linedrawer/plugin/plugin_manager.h"
 #include "linedrawer/plugin/plugin.h"
 #include "linedrawer/main/ldrevent.h"
-#include "pr/gui/misc.h"
+
+using namespace pr::gui;
 
 namespace ldr
 {
-	TCHAR PluginFileFilter[] = TEXT("Ldr Plugin (*.dll)\0*.dll\0\0");
+	enum class EColumn { Name, Filepath, };
+	static COMDLG_FILTERSPEC const PluginFilterSpec[] = {{L"Ldr Plug-in (*.dll)", L"*.dll"}};
 
-	#define PR_ENUM(x)\
-		x(Name)\
-		x(Filepath)
-	PR_DEFINE_ENUM1(EColumn, PR_ENUM);
-	#undef PR_ENUM
+	PluginManagerUI::PluginManagerUI(PluginManager& plugin_mgr, HWND parent)
+		:Form(FormParams<>().parent(parent).title(L"Plug-in Manager").wh(317,213))
 
-	PluginManagerDlg::PluginManagerDlg(PluginManager& plugin_mgr, HWND parent)
-		:m_plugin_mgr(plugin_mgr)
-		,m_parent(parent)
-	{}
+		,m_list_plugins      (ListView::Params<>().parent(this_).id(ID_LIST_PLUGINS        ).xy( 5,   7).wh(305, 148).report().no_hdr_sort())
+		,m_tb_plugin_filepath(TextBox ::Params<>().parent(this_).id(ID_EDIT_PLUGIN_FILEPATH).xy(48, 160).wh(211, 14))
+		,m_tb_plugin_args    (TextBox ::Params<>().parent(this_).id(ID_EDIT_PLUGIN_ARGS    ).xy(48, 175).wh(211, 14))
+		
+		,m_btn_browse        (Button  ::Params<>().parent(this_).text(L"Browse..."  ).id(ID_BUTTON_BROWSE_PLUGIN).xy(260, 161).wh(50, 14))
+		,m_btn_add           (Button  ::Params<>().parent(this_).text(L"Add"        ).id(ID__BUTTON_ADDPLUGIN   ).xy(  7, 192).wh(50, 14))
+		,m_btn_remove        (Button  ::Params<>().parent(this_).text(L"Remove"     ).id(ID__BUTTON_REMOVEPLUGIN).xy( 62, 192).wh(50, 14))
+		,m_btn_ok            (Button  ::Params<>().parent(this_).text(L"OK"         ).id(IDOK                   ).xy(260, 192).wh(50, 14))
 
-	//
-	LRESULT PluginManagerDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
+		,m_lbl_plugin_dll    (Label   ::Params<>().parent(this_).text(L"Plugin Dll:").id(ID__LBL_PLUGIN_DLL ).xy(16, 162).wh(32, 8).style('+', SS_LEFT))
+		,m_lbl_arguments     (Label   ::Params<>().parent(this_).text(L"Arguments:" ).id(ID__LBL_PLUGIN_ARGS).xy( 9, 176).wh(38, 8).style('+', SS_LEFT))
+
+		,m_plugin_mgr(&plugin_mgr)
 	{
-		CenterWindow(m_parent);
-		m_list_plugins         .Attach(GetDlgItem(IDC_LIST_PLUGINS));
-		m_edit_plugin_filepath .Attach(GetDlgItem(IDC_EDIT_PLUGIN_FILEPATH));
-		m_edit_plugin_args     .Attach(GetDlgItem(IDC_EDIT_PLUGIN_ARGS));
-		m_btn_browse           .Attach(GetDlgItem(IDC_BUTTON_BROWSE_PLUGIN));
-		m_btn_add              .Attach(GetDlgItem(IDC_BUTTON_ADDPLUGIN));
-		m_btn_remove           .Attach(GetDlgItem(IDC_BUTTON_REMOVEPLUGIN));
+		CenterWindow(Parent());
 
 		// Add columns to the plugin list
-		for (int i = 0; i != EColumn::NumberOf; ++i)
-		{
-			m_list_plugins.AddColumn(EColumn::MemberName<TCHAR>(i), i);
-			m_list_plugins.SetColumnWidth(i, LVSCW_AUTOSIZE_USEHEADER);
-		}
+		m_list_plugins.InsertColumn(0, ListView::ColumnInfo(L"Name"    ).width(200));
+		m_list_plugins.InsertColumn(1, ListView::ColumnInfo(L"Filepath").width(200));
 
 		// Populate the plugin list
 		PluginManager::Iter iter;
-		for (Plugin const* p = m_plugin_mgr.First(iter); p; p = m_plugin_mgr.Next(iter))
+		for (auto p = m_plugin_mgr->First(iter); p; p = m_plugin_mgr->Next(iter))
 			AddPluginToList(p);
 
-		DlgResize_Init();
+		// List
+		m_list_plugins.SelectionChanged += [&](ListView&, ListView::ItemChangedEventArgs const&)
+		{
+			UpdateUI();
+		};
+
+		// Browse
+		m_btn_browse.Click += [&](pr::gui::Button&, pr::gui::EmptyArgs const&)
+		{
+			auto files = OpenFileUI(m_hwnd, FileUIOptions(L"dll", PluginFilterSpec, _countof(PluginFilterSpec)));
+			if (files.empty()) return;
+			m_tb_plugin_filepath.Text(files[0]);
+		};
+
+		// Add
+		m_btn_add.Click += [&](pr::gui::Button&, pr::gui::EmptyArgs const&)
+		{
+			AddPluginToList(nullptr);
+			UpdateUI();
+		};
+
+		// Remove
+		m_btn_remove.Click += [&](pr::gui::Button&, pr::gui::EmptyArgs const&)
+		{
+			RemovePluginsFromList();
+			UpdateUI();
+		};
+
 		UpdateUI();
-		return S_OK;
-	}
-
-	LRESULT PluginManagerDlg::OnCloseDialog(WORD, WORD wID, HWND, BOOL&)
-	{
-		EndDialog(wID);
-		return S_OK;
-	}
-
-	// Browse for a plugin filepath
-	LRESULT PluginManagerDlg::OnBrowsePlugin(WORD, WORD, HWND, BOOL&)
-	{
-		WTL::CFileDialog fd(TRUE,0,0,0,PluginFileFilter,m_hWnd);
-		if (fd.DoModal() != IDOK) return S_OK;
-		m_edit_plugin_filepath.SetWindowTextA(fd.m_szFileName);
-		return S_OK;
-	}
-
-	// Add a plugin
-	LRESULT PluginManagerDlg::OnAddPlugin(WORD, WORD, HWND, BOOL& bHandled)
-	{
-		// Check if a path to the plug in has been given, if not browse for one instead of adding
-		auto filepath = pr::GetCtrlText<TCHAR>(m_edit_plugin_filepath);
-		if (filepath.empty()) return OnBrowsePlugin(0,0,0,bHandled);
-
-		// Try to add the plugin
-		Plugin* plugin = 0;
-		try
-		{
-			auto text = pr::GetCtrlText<TCHAR>(m_edit_plugin_args);
-			plugin = m_plugin_mgr.Add(filepath.c_str(), text.c_str());
-		}
-		catch (LdrException const& ex)
-		{
-			pr::events::Send(Event_Error(pr::Fmt("Plugin %s failed to load.\nReason: %s", filepath.c_str(), ex.what())));
-			return S_OK;
-		}
-
-		// If successfully added, add an entry to the list
-		AddPluginToList(plugin);
-		UpdateUI();
-
-		pr::events::Send(Event_Refresh());
-		return S_OK;
-	}
-
-	// Remove selected plugins
-	LRESULT PluginManagerDlg::OnRemovePlugin(WORD, WORD, HWND, BOOL&)
-	{
-		// While there is a selected item, remove it
-		for (int i = m_list_plugins.GetNextItem(-1, LVNI_SELECTED); i != -1; i = m_list_plugins.GetNextItem(-1, LVNI_SELECTED))
-		{
-			Plugin* plugin = reinterpret_cast<Plugin*>(m_list_plugins.GetItemData(i));
-			m_plugin_mgr.Remove(plugin);
-			m_list_plugins.DeleteItem(i);
-		}
-		pr::events::Send(Event_Refresh());
-		return S_OK;
-	}
-
-	// Handle list items being selected
-	LRESULT PluginManagerDlg::OnListItemSelected(WPARAM, LPNMHDR hdr, BOOL& bHandled)
-	{
-		if (hdr->code == LVN_ITEMCHANGED)
-		{
-			NMLISTVIEW* data = reinterpret_cast<NMLISTVIEW*>(hdr);
-			if ((data->uNewState ^ data->uOldState) & LVIS_SELECTED) // If the selection has changed
-			{
-				UpdateUI();
-				return S_OK;
-			}
-		}
-		bHandled = false;
-		return S_OK;
 	}
 
 	// Add a plugin to the list in the UI
-	void PluginManagerDlg::AddPluginToList(Plugin const* plugin)
+	void PluginManagerUI::AddPluginToList(Plugin const* plugin)
 	{
-		int item = m_list_plugins.InsertItem(m_list_plugins.GetItemCount(), plugin->Name());
-		m_list_plugins.SetItemText(item ,EColumn::Name     ,plugin->Name());
-		m_list_plugins.SetItemText(item ,EColumn::Filepath ,plugin->Filepath());
-		m_list_plugins.SetItemData(item, reinterpret_cast<DWORD_PTR>(plugin));
+		// If no plugin is given, get it from the text box
+		if (plugin == nullptr)
+		{
+			// Check if a path to the plug in has been given, if not browse for one instead of adding
+			auto filepath = m_tb_plugin_filepath.Text();
+			if (filepath.empty())
+				return m_btn_browse.PerformClick();
 
-		// Resize the columns
-		for (int i = 0; i != EColumn::NumberOf; ++i)
-			m_list_plugins.SetColumnWidth(i, LVSCW_AUTOSIZE_USEHEADER);
+			// Try to add the plugin
+			try
+			{
+				auto text = m_tb_plugin_args.Text();
+				plugin = m_plugin_mgr->Add(filepath.c_str(), text.c_str());
+			}
+			catch (LdrException const& ex)
+			{
+				pr::events::Send(Event_Error(pr::Fmt("Plugin %s failed to load.\nReason: %s", filepath.c_str(), ex.what())));
+			}
+
+			// Don't add on failure
+			if (plugin == nullptr)
+				return;
+		}
+
+		auto name  = pr::Widen(plugin->Name());
+		auto fpath = pr::Widen(plugin->Filepath());
+
+		auto info = ListView::ItemInfo(name.c_str(), (int)m_list_plugins.ItemCount()).user((void*)plugin);
+		int item = m_list_plugins.InsertItem(info);
+
+		info = ListView::ItemInfo(item);
+		m_list_plugins.Item(info.subitem((int)EColumn::Name    ).text(name.c_str()));
+		m_list_plugins.Item(info.subitem((int)EColumn::Filepath).text(fpath.c_str()));
+
+		pr::events::Send(Event_Refresh());
+	}
+
+	// Remove the selected plugins from the list in the UI
+	void PluginManagerUI::RemovePluginsFromList()
+	{
+		// While there is a selected item, remove it
+		for (auto item = m_list_plugins.NextItem(LVNI_SELECTED); item != -1; item = m_list_plugins.NextItem(LVNI_SELECTED, -1))
+		{
+			auto plugin = m_list_plugins.UserData<Plugin>(item);
+			m_plugin_mgr->Remove(plugin);
+			m_list_plugins.DeleteItem(item);
+		}
+		pr::events::Send(Event_Refresh());
 	}
 
 	// Enable/Disable UI elements
-	void PluginManagerDlg::UpdateUI()
+	void PluginManagerUI::UpdateUI()
 	{
-		bool plugin_selected = m_list_plugins.GetSelectedCount() != 0;
-		m_btn_remove.EnableWindow(plugin_selected);
+		bool plugin_selected = m_list_plugins.SelectedCount() != 0;
+		m_btn_remove.Enabled(plugin_selected);
 	}
 }

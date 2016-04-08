@@ -2,14 +2,9 @@
 // Plugin manager
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
-
 #pragma once
-#ifndef PR_LDR_PLUGIN_MANAGER_H
-#define PR_LDR_PLUGIN_MANAGER_H
 
 #include "linedrawer/main/forward.h"
-#include "linedrawer/resources/linedrawer.res.h"
-#include "pr/linedrawer/ldr_plugin_interface.h"
 
 namespace ldr
 {
@@ -28,12 +23,12 @@ namespace ldr
 		PluginManager(PluginManager const&) = delete;
 		void operator =(PluginManager const&) = delete;
 
-		// Poll stepable plugins
+		// Poll step-able plugins
 		void Poll(double elapsed_s);
 
 		// Load a plugin and add it to the collection
 		// Returns a pointer to the plugin instance if started up correctly
-		Plugin* Add(char const* filepath, char const* args);
+		Plugin* Add(wchar_t const* filepath, wchar_t const* args);
 
 		// Shutdown and unload a plugin
 		void Remove(Plugin* plugin);
@@ -44,5 +39,3 @@ namespace ldr
 		Plugin const* Next(Iter& iter) const;
 	};
 }
-
-#endif

@@ -16,10 +16,14 @@
 // Plugin functions implementation *****************************************************************
 
 // Add objects to the store associated with a particular context id
-LDR_EXPORT ldrapi::ObjectHandle ldrRegisterObject(ldrapi::PluginHandle handle, char const* object_description, wchar_t const* include_paths, pr::ldr::ContextId ctx_id, bool async)
+LDR_EXPORT ldrapi::ObjectHandle ldrRegisterObject(ldrapi::PluginHandle handle, char const* object_description, wchar_t const* include_paths, pr::Guid const* ctx_id, bool async)
 {
 	if (!handle) return 0;
-	try { return handle->RegisterObject(object_description, include_paths, ctx_id, async); }
+	try
+	{
+		auto context_id = ctx_id ? *ctx_id : pr::GuidZero;
+		return handle->RegisterObject(object_description, include_paths, context_id, async);
+	}
 	catch (std::exception const& e)
 	{
 		pr::events::Send(ldr::Event_Error(pr::Fmt("Failed to create plugin object.\nReason: %s", e.what())));
@@ -117,7 +121,7 @@ namespace ldr
 			delete pi;
 	}
 
-	// Poll stepable plugins
+	// Poll step-able plugins
 	void PluginManager::Poll(double elapsed_s)
 	{
 		if (elapsed_s > 0.0 && elapsed_s < 1.0)
@@ -129,7 +133,7 @@ namespace ldr
 
 	// Load a plugin and add it to the collection
 	// Returns a pointer to the plugin instance if started up correctly
-	Plugin* PluginManager::Add(char const* filepath, char const* args)
+	Plugin* PluginManager::Add(wchar_t const* filepath, wchar_t const* args)
 	{
 		Plugin* plugin = new Plugin(m_ldr, filepath, args);
 		m_plugins.push_back(plugin);

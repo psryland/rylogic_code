@@ -6,6 +6,7 @@
 #pragma once
 
 #include <vector>
+#include "pr/common/guid.h"
 #include "pr/filesys/fileex.h"
 #include "pr/filesys/filesys.h"
 #include "pr/str/string.h"
@@ -14,10 +15,10 @@ namespace pr
 {
 	// Note about worker threads:
 	// It's tempting to try and make this type a worker thread that notifies the client when
-	// a file has changed. However this requires cross-thread marshelling which is only possible
+	// a file has changed. However this requires cross-thread marshalling which is only possible
 	// if the client has a message queue. There are three possibilities;
 	//  1) the client is a window - could use SendMessage() to notify the client (SendMessage
-	//     marshalls across threads) however it doesn't make sense for the FileWatch type to
+	//     marshals across threads) however it doesn't make sense for the FileWatch type to
 	//     require a windows handle
 	//  2) use PostThreadMessage - this has synchronisation problems i.e. notifications occur for
 	//     all changed files plus the filename cannot be passed to the client without allocation
@@ -43,10 +44,10 @@ namespace pr
 			pr::string<wchar_t>   m_filepath;  // The file to watch
 			pr::filesys::FileTime m_time;      // The last modified time stats
 			IFileChangedHandler*  m_onchanged; // The client to callback when a changed file is found
-			size_t                m_id;        // A user provided id used to identify groups of watched files
+			pr::Guid              m_id;        // A user provided id used to identify groups of watched files
 			void*                 m_user_data; // User data to provide in the callback
 		
-			File(pr::string<wchar_t> const& filepath, IFileChangedHandler* onchanged, size_t id, void* user_data)
+			File(pr::string<wchar_t> const& filepath, IFileChangedHandler* onchanged, pr::Guid const& id, void* user_data)
 				:m_filepath(filepath)
 				,m_time(pr::filesys::GetFileTimeStats(filepath))
 				,m_onchanged(onchanged)
@@ -55,7 +56,7 @@ namespace pr
 			{}
 
 			bool operator == (string const& filepath) const { return pr::str::EqualI(m_filepath, filepath); }
-			bool operator == (size_t id) const              { return m_id == id; }
+			bool operator == (pr::Guid const& id) const     { return m_id == id; }
 		};
 
 		using FileCont = std::vector<File>;
@@ -67,7 +68,7 @@ namespace pr
 		{}
 
 		// Add a file to be watched
-		void Add(wchar_t const* filepath, IFileChangedHandler* onchanged, pr::uint id, void* user_data)
+		void Add(wchar_t const* filepath, IFileChangedHandler* onchanged, pr::Guid const& id, void* user_data)
 		{
 			Remove(filepath);
 			auto fpath = pr::filesys::StandardiseC<string>(filepath);
@@ -83,7 +84,7 @@ namespace pr
 		}
 
 		// Remove all watches matching 'user_data'
-		void RemoveAll(size_t id)
+		void RemoveAll(pr::Guid const& id)
 		{
 			auto end = std::remove_if(std::begin(m_files), std::end(m_files), [&](File const& file) { return file.m_id == id; });
 			m_files.erase(end, std::end(m_files));
@@ -92,7 +93,7 @@ namespace pr
 		// Check the timestamps of all watched files and call the callback for those that have changed.
 		void CheckForChangedFiles()
 		{
-			// Build a collection of the changed files to prevent re-entrancy problems with the callbacks
+			// Build a collection of the changed files to prevent reentrancy problems with the callbacks
 			FileCont changed_files;
 			for (auto& file : m_files)
 			{

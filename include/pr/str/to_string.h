@@ -13,6 +13,7 @@
 #include <locale>
 #include <vector>
 #include "pr/common/to.h"
+#include "pr/common/hresult.h"
 #include "pr/str/string.h"
 
 namespace pr
@@ -20,12 +21,42 @@ namespace pr
 	namespace convert
 	{
 		// Convert a signed/unsigned int to a string. 'buf' should be at least 65 characters long
-		inline char*    itostr (long long from         , char*    buf, int count, int radix) { ::_i64toa_s (from, buf, count, radix); return buf; }
-		inline wchar_t* itostr (long long from         , wchar_t* buf, int count, int radix) { ::_i64tow_s (from, buf, count, radix); return buf; }
-		inline char*    uitostr(unsigned long long from, char*    buf, int count, int radix) { ::_ui64toa_s(from, buf, count, radix); return buf; }
-		inline wchar_t* uitostr(unsigned long long from, wchar_t* buf, int count, int radix) { ::_ui64tow_s(from, buf, count, radix); return buf; }
-		inline char*    dtostr (double from, char*    buf, int count) { auto n = ::_snprintf (buf, count,  "%f", from); buf[n >= 0 && n < count-1 ? n+1 : 0] = 0; return buf; }
-		inline wchar_t* dtostr (double from, wchar_t* buf, int count) { auto n = ::_snwprintf(buf, count, L"%f", from); buf[n >= 0 && n < count-1 ? n+1 : 0] = 0; return buf; }
+		inline char*    itostr (long long from         , char*    buf, int count, int radix)
+		{
+			if (::_i64toa_s (from, buf, count, radix) == 0) return buf;
+			throw std::exception("conversion from integral value to string failed");
+		}
+		inline wchar_t* itostr (long long from         , wchar_t* buf, int count, int radix)
+		{
+			if (::_i64tow_s (from, buf, count, radix) == 0) return buf;
+			throw std::exception("conversion from integral value to string failed");
+		}
+		inline char*    uitostr(unsigned long long from, char*    buf, int count, int radix)
+		{
+			if (::_ui64toa_s(from, buf, count, radix) == 0) return buf;
+			throw std::exception("conversion from unsigned integral value to string failed");
+		}
+		inline wchar_t* uitostr(unsigned long long from, wchar_t* buf, int count, int radix)
+		{
+			if (::_ui64tow_s(from, buf, count, radix) == 0) return buf;
+			throw std::exception("conversion from unsigned integral value to string failed");
+		}
+		inline char*    dtostr (double from, char*    buf, int count)
+		{
+			auto n = ::_snprintf (buf, count,  "%f", from);
+			if (n <= 0) throw std::exception("conversion from floating point value to string failed");
+			if (n >= count) throw std::exception("conversion from floating point value to string was truncated");
+			buf[count-1] = 0;
+			return buf;
+		}
+		inline wchar_t* dtostr (double from, wchar_t* buf, int count)
+		{
+			auto n = ::_snwprintf(buf, count, L"%f", from);
+			if (n <= 0) throw std::exception("conversion from floating point value to string failed");
+			if (n >= count) throw std::exception("conversion from floating point value to string was truncated");
+			buf[count-1] = 0;
+			return buf;
+		}
 
 		// To string
 		template <typename Str, typename Char = typename Str::value_type>
@@ -95,35 +126,43 @@ namespace pr
 			// Convert from raw strings to integral types
 			template <typename = enable_if<Signed && I32>> static Ty To(char const* from, int radix = 10, char** end = nullptr, DummyType<1> = 0)
 			{
-				return static_cast<Ty>(::strtol(from, end, radix) & ~Ty());
+				errno = 0;
+				return CheckErrno(static_cast<Ty>(::strtol(from, end, radix) & ~Ty()));
 			}
 			template <typename = enable_if<Signed && !I32>> static Ty To(char const* from, int radix = 10, char** end = nullptr, DummyType<2> = 0)
 			{
-				return static_cast<Ty>(::strtoll(from, end, radix) & ~Ty());
+				errno = 0;
+				return CheckErrno(static_cast<Ty>(::strtoll(from, end, radix) & ~Ty()));
 			}
 			template <typename = enable_if<!Signed && I32>> static Ty To(char const* from, int radix = 10, char** end = nullptr, DummyType<3> = 0)
 			{
-				return static_cast<Ty>(::strtoul(from, end, radix) & ~Ty());
+				errno = 0;
+				return CheckErrno(static_cast<Ty>(::strtoul(from, end, radix) & ~Ty()));
 			}
 			template <typename = enable_if<!Signed && !I32>> static Ty To(char const* from, int radix = 10, char** end = nullptr, DummyType<4> = 0)
 			{
-				return static_cast<Ty>(::strtoull(from, end, radix) & ~Ty());
+				errno = 0;
+				return CheckErrno(static_cast<Ty>(::strtoull(from, end, radix) & ~Ty()));
 			}
 			template <typename = enable_if<Signed && I32>> static Ty To(wchar_t const* from, int radix = 10, wchar_t** end = nullptr, DummyType<1> = 0)
 			{
-				return static_cast<Ty>(::wcstol(from, end, radix) & ~Ty());
+				errno = 0;
+				return CheckErrno(static_cast<Ty>(::wcstol(from, end, radix) & ~Ty()));
 			}
 			template <typename = enable_if<Signed && !I32>> static Ty To(wchar_t const* from, int radix = 10, wchar_t** end = nullptr, DummyType<2> = 0)
 			{
-				return static_cast<Ty>(::wcstoll(from, end, radix) & ~Ty());
+				errno = 0;
+				return CheckErrno(static_cast<Ty>(::wcstoll(from, end, radix) & ~Ty()));
 			}
 			template <typename = enable_if<!Signed && I32>> static Ty To(wchar_t const* from, int radix = 10, wchar_t** end = nullptr, DummyType<3> = 0)
 			{
-				return static_cast<Ty>(::wcstoul(from, end, radix) & ~Ty());
+				errno = 0;
+				return CheckErrno(static_cast<Ty>(::wcstoul(from, end, radix) & ~Ty()));
 			}
 			template <typename = enable_if<!Signed && !I32>> static Ty To(wchar_t const* from, int radix = 10, wchar_t** end = nullptr, DummyType<4> = 0)
 			{
-				return static_cast<Ty>(::wcstoull(from, end, radix) & ~Ty());
+				errno = 0;
+				return CheckErrno(static_cast<Ty>(::wcstoull(from, end, radix) & ~Ty()));
 			}
 
 			// String class to integral
@@ -141,11 +180,13 @@ namespace pr
 			// Convert raw string to floating point
 			template <typename = enable_if<F64>> static Ty To(char const* s, char** end = nullptr, DummyType<1> = 0)
 			{
-				return static_cast<Ty>(strtod(s, end));
+				errno = 0;
+				return CheckErrno(static_cast<Ty>(strtod(s, end)));
 			}
 			template <typename = enable_if<F64>> static Ty To(wchar_t const* s, wchar_t** end = nullptr, DummyType<1> = 0)
 			{
-				return static_cast<Ty>(::wcstod(s, end));
+				errno = 0;
+				return CheckErrno(static_cast<Ty>(::wcstod(s, end)));
 			}
 
 			// String class to floating point

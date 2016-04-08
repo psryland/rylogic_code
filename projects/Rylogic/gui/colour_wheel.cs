@@ -15,35 +15,21 @@ namespace pr.gui
 		private const string ValueLabel = "V";
 		private const string AlphaLabel = "A";
 
-		/// <summary>Parts of the colour wheel to draw</summary>
-		[Flags] public enum EParts
+		public ColourWheel()
 		{
-			None            = 0,
-			Wheel           = 1 << 0,
-			VSlider         = 1 << 1,
-			ASlider         = 1 << 2,
-			ColourSelection = 1 << 3,
-			VSelection      = 1 << 4,
-			ASelection      = 1 << 5,
-			All             =  Wheel | VSlider | ASlider | ColourSelection | VSelection | ASelection,
-		}
+			InitializeComponent();
+			m_hsv_colour      = new HSV(1f, 0f, 0f, 1f);
+			m_parts           = EParts.All;
+			m_slider_width    = 20;
+			m_vertical_layout = false;
+			m_measurements    = null;
 
-		/// <summary>The locations of control parts within the control</summary>
-		public class Measurements
-		{
-			public bool Empty { get { return Width == 0 || Height == 0; } }
-			public int Width;   // The total width required for the control
-			public int Height;  // The total height required for the control
-
-			public float Radius;     // The radius of the colour wheel
-			public Point Centre;     // The centre of the colour wheel (clamped to a pixel)
-			public Rectangle Wheel;   // The square area required for the wheel
-
-			public Rectangle VLabel;  // The area of the 'V' label
-			public Rectangle VSlider; // The area covered by the VSlider
-
-			public Rectangle ALabel;  // The area of the 'A' label
-			public Rectangle ASlider; // The area covered by the ASlider
+			SetStyle(
+				ControlStyles.OptimizedDoubleBuffer |
+				ControlStyles.AllPaintingInWmPaint|
+				ControlStyles.ResizeRedraw |
+				ControlStyles.Selectable |
+				ControlStyles.UserPaint, true);
 		}
 
 		/// <summary>The currently selected colour (rgb)</summary>
@@ -81,6 +67,17 @@ namespace pr.gui
 			}
 		}
 		private EParts m_parts;
+		[Flags] public enum EParts
+		{
+			None            = 0,
+			Wheel           = 1 << 0,
+			VSlider         = 1 << 1,
+			ASlider         = 1 << 2,
+			ColourSelection = 1 << 3,
+			VSelection      = 1 << 4,
+			ASelection      = 1 << 5,
+			All             =  Wheel | VSlider | ASlider | ColourSelection | VSelection | ASelection,
+		}
 
 		/// <summary>The width of the slider bars</summary>
 		public int SliderWidth
@@ -116,6 +113,22 @@ namespace pr.gui
 			get { return m_measurements ?? (m_measurements =  Measure(ClientSize.Width, ClientSize.Height, Parts, SliderWidth, VerticalLayout)); }
 		}
 		private Measurements m_measurements;
+		public class Measurements
+		{
+			public bool Empty { get { return Width == 0 || Height == 0; } }
+			public int Width;   // The total width required for the control
+			public int Height;  // The total height required for the control
+
+			public float Radius;     // The radius of the colour wheel
+			public Point Centre;     // The centre of the colour wheel (clamped to a pixel)
+			public Rectangle Wheel;   // The square area required for the wheel
+
+			public Rectangle VLabel;  // The area of the 'V' label
+			public Rectangle VSlider; // The area covered by the VSlider
+
+			public Rectangle ALabel;  // The area of the 'A' label
+			public Rectangle ASlider; // The area covered by the ASlider
+		}
 
 		/// <summary>An event raised whenever the selected colour is changed</summary>
 		public event EventHandler<ColourEventArgs> ColourChanged;
@@ -141,23 +154,6 @@ namespace pr.gui
 		{
 			if (ColourSelection == null) return;
 			ColourSelection(this, args);
-		}
-
-		public ColourWheel()
-		{
-			InitializeComponent();
-			m_hsv_colour      = new HSV(1f, 0f, 0f, 1f);
-			m_parts           = EParts.All;
-			m_slider_width    = 20;
-			m_vertical_layout = false;
-			m_measurements    = null;
-
-			SetStyle(
-				ControlStyles.OptimizedDoubleBuffer |
-				ControlStyles.AllPaintingInWmPaint|
-				ControlStyles.ResizeRedraw |
-				ControlStyles.Selectable |
-				ControlStyles.UserPaint, true);
 		}
 
 		/// <summary>Returns the measurements of a ColourWheel that fits in the given width/height/orientation</summary>

@@ -13,8 +13,6 @@
 //*/
 
 #pragma once
-#ifndef PR_MACROS_ENUM_H
-#define PR_MACROS_ENUM_H
 
 #include <exception>
 #include <functional>
@@ -525,6 +523,4 @@ namespace pr
 		}
 	}
 }
-#endif
-
 #endif

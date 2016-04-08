@@ -3,7 +3,7 @@
 #include "testwingui/src/modeless.h"
 #include "testwingui/src/graph.h"
 #include "pr/gui/wingui.h"
-#include "pr/gui/progress_dlg.h"
+#include "pr/gui/progress_ui.h"
 #include "pr/gui/context_menu.h"
 #include "pr/gui/scintilla_ctrl.h"
 #include "pr/win32/win32.h"
@@ -47,10 +47,10 @@ struct Main :Form
 	struct Tab :Panel
 	{
 		Label m_lbl;
-		Tab(){}
+		Tab() {}
 		Tab(wchar_t const* msg, int id, Control* parent)
-			:Panel(Panel::Params().id(id).parent(parent).dock(EDock::Fill).style(Panel::DefaultStyle | WS_BORDER))
-			,m_lbl(Label::Params().text(msg).xy(10,10).wh(60,16).parent(this))
+			:Panel(Panel::Params<>().id(id).parent(parent).dock(EDock::Fill).style('+',WS_BORDER))
+			,m_lbl(Label::Params<>().text(msg).xy(10,10).wh(60,16).parent(this))
 		{}
 	};
 
@@ -69,19 +69,19 @@ struct Main :Form
 	Tab           m_split_r;
 	TabControl    m_tc;
 	Modeless      m_modeless;
-	ProgressDlg   m_nm_progress;
+	ProgressUI    m_nm_progress;
 
 	enum { ID_FILE, ID_FILE_EXIT };
 	enum { IDC_PROGRESS = 100, IDC_NM_PROGRESS, IDC_MODELESS, IDC_CONTEXTMENU, IDC_POSTEST, IDC_ABOUT, IDC_SCINT, IDC_TAB, IDC_TAB1, IDC_TAB2, IDC_SPLITL, IDC_SPLITR };
 
-	struct Params :FormParams
+	struct Params :FormParams<Params>
 	{
 		Params()
 		{
 			wndclass(RegisterWndClass<Main>())
 			.name("main")
 			.title(L"Pauls Window")
-			.xy(0,0)
+			.xy(2000,100)
 			.wh(800,600)
 			.menu({{L"&File", Menu(Menu::EKind::Popup, {MenuItem(L"E&xit", IDCLOSE)})}})
 			.main_wnd(true);
@@ -90,25 +90,25 @@ struct Main :Form
 
 	Main()
 		:Form          (Params())
-		,m_lbl         (Label::Params()        .name("m_lbl")         .text(L"hello world")       .xy(10,10)                          .wh(60,16)                      .parent(this))
-		,m_btn_progress(Button::Params()       .name("m_btn_progress").text(L"progress")          .xy(10,30)                          .wh(100,20) .id(IDC_PROGRESS)   .parent(this))
-		,m_btn_nm_prog (Button::Params()       .name("m_btn_nm_prog") .text(L"non-modal progress").xy(10,Top|BottomOf|IDC_PROGRESS)   .wh(100,20) .id(IDC_NM_PROGRESS).parent(this))
-		,m_btn_modeless(Button::Params()       .name("m_btn_modeless").text(L"show modeless")     .xy(10,Top|BottomOf|IDC_NM_PROGRESS).wh(100,20) .id(IDC_MODELESS)   .parent(this))
-		,m_btn_cmenu   (Button::Params()       .name("m_btn_cmenu")   .text(L"context menu")      .xy(10,Top|BottomOf|IDC_MODELESS)   .wh(100,20) .id(IDC_CONTEXTMENU).parent(this))
-		,m_btn         (Button::Params()       .name("btn")           .text(L"BOOBS")             .xy(10,Top|BottomOf|IDC_CONTEXTMENU).wh(100,20) .id(IDC_POSTEST)    .parent(this))
-		,m_btn_about   (Button::Params()       .name("m_btn_about")   .text(L"click me!")         .xy(-10,-10)                        .wh(100,20) .id(IDC_ABOUT)      .parent(this).anchor(EAnchor::BottomRight)) 
-		,m_scint       (ScintillaCtrl::Params().name("m_scint")                                   .xy(0,0)                            .wh(100,100).id(IDC_SCINT)      .parent(this))
-		,m_tab1        (L"hi from tab1", IDC_TAB1, this)
-		,m_tab2        (L"hi from tab2", IDC_TAB2, this)
-		,m_split       (Splitter::Params().vertical().name("split").parent(this))
+		,m_lbl         (Label::Params<>()        .parent(this_).name("m_lbl")         .text(L"hello world")       .xy(10,10)                          .wh(60,16)                      )
+		,m_btn_progress(Button::Params<>()       .parent(this_).name("m_btn_progress").text(L"progress")          .xy(10,30)                          .wh(100,20) .id(IDC_PROGRESS)   )
+		,m_btn_nm_prog (Button::Params<>()       .parent(this_).name("m_btn_nm_prog") .text(L"non-modal progress").xy(10,Top|BottomOf|IDC_PROGRESS)   .wh(100,20) .id(IDC_NM_PROGRESS))
+		,m_btn_modeless(Button::Params<>()       .parent(this_).name("m_btn_modeless").text(L"show modeless")     .xy(10,Top|BottomOf|IDC_NM_PROGRESS).wh(100,20) .id(IDC_MODELESS)   )
+		,m_btn_cmenu   (Button::Params<>()       .parent(this_).name("m_btn_cmenu")   .text(L"context menu")      .xy(10,Top|BottomOf|IDC_MODELESS)   .wh(100,20) .id(IDC_CONTEXTMENU))
+		,m_btn         (Button::Params<>()       .parent(this_).name("btn")           .text(L"BOOBS")             .xy(10,Top|BottomOf|IDC_CONTEXTMENU).wh(100,20) .id(IDC_POSTEST)    )
+		,m_btn_about   (Button::Params<>()       .parent(this_).name("m_btn_about")   .text(L"About")             .xy(-10,-10)                        .wh(100,20) .id(IDC_ABOUT)      .anchor(EAnchor::BottomRight)) 
+		,m_scint       (ScintillaCtrl::Params<>().parent(this_).name("m_scint")                                   .xy(0,0)                            .wh(100,100).id(IDC_SCINT)      )
+		,m_tab1        (L"hi from tab1", IDC_TAB1, this_)
+		,m_tab2        (L"hi from tab2", IDC_TAB2, this_)
+		,m_split       (Splitter::Params<>().parent(this_).name("split").vertical().visible(false))
 		,m_split_l     (L"Left panel" , IDC_SPLITL, &m_split.Pane0)
 		,m_split_r     (L"Right panel", IDC_SPLITR, &m_split.Pane1)
-		,m_tc          (TabControl::Params().name("m_tc").text(L"tabctrl").xy(120,10).wh(500,500).id(IDC_TAB).parent(this).anchor(EAnchor::All).style_ex(0UL).padding(0))
-		,m_modeless    (this)
+		,m_tc          (TabControl::Params<>().parent(this_).name("m_tc").text(L"tabctrl").xy(120,10).wh(500,500).id(IDC_TAB).anchor(EAnchor::All).style_ex('=',0).padding(0))
+		,m_modeless    (this_)
 		,m_nm_progress ()
 	{
-		m_nm_progress.Create(ProgressDlg::Params().parent(this).hide_on_close(true));
-		auto busy_work = [](ProgressDlg* dlg)
+		m_nm_progress.Create(ProgressUI::Params<>().parent(this_).hide_on_close(true));
+		auto busy_work = [](ProgressUI* dlg)
 		{
 			for (int i = 0, iend = 500; dlg->Progress(i*1.f/iend) && i != iend; ++i)
 				Sleep(100);
@@ -119,7 +119,7 @@ struct Main :Form
 		// Assign button handlers
 		m_btn_progress.Click += [&](Button&,EmptyArgs const&)
 		{
-			ProgressDlg progress(L"Busy work", L"workin...", busy_work);
+			ProgressUI progress(L"Busy work", L"workin...", busy_work);
 			progress.ShowDialog(this);
 		};
 		m_btn_nm_prog.Click += [&](Button&,EmptyArgs const&)
@@ -164,8 +164,8 @@ struct Main :Form
 		m_btn.Click += std::bind(&Main::RunBoobs, this, _1, _2);
 		m_btn_about.Click += [&](Button&,EmptyArgs const&)
 		{
-			About about;
-			about.ShowDialog(this);
+			About().ShowDialog(this);
+			About2().ShowDialog(this);
 		};
 
 		if ((HWND)m_tc != nullptr)
@@ -203,14 +203,24 @@ struct Test :Form
 	enum { IDC_SPLIT = 100, IDC_LEFT, IDC_RITE,};
 	Splitter m_split;
 	Test()
-		:Form(FormParams().wndclass(RegisterWndClass<Test>()).name("test").title(L"Pauls Window").xy(2000,100).wh(800,600).menu({{L"&File", Menu(Menu::EKind::Popup, {MenuItem(L"E&xit", IDCLOSE)})}}).main_wnd(true))
-		,m_split(Splitter::Params().vertical().name("split").parent(this).dock(EDock::Fill))
+		:Form(FormParams<>().wndclass(RegisterWndClass<Test>()).name("test").title(L"Paul's Window").xy(2000,100).wh(800,600).menu({{L"&File", Menu(Menu::EKind::Popup, {MenuItem(L"E&xit", IDCLOSE)})}}).main_wnd(true))
+		,m_split(Splitter::Params<>().vertical().name("split").parent(this).dock(EDock::Fill))
 	{
 		m_split.Pane0.Style(EStyleOp::Add, WS_BORDER);
 		m_split.Pane1.Style(EStyleOp::Add, WS_BORDER);
 	}
 };
 
+struct Test2 :Form
+{
+	Label m_lbl;
+	Test2()
+		:Form(FormParams<>().wndclass(RegisterWndClass<Test2>()).name("test").title(L"Paul's Window").xy(2000,100).wh(320,256).main_wnd(true))
+		,m_lbl(Label::Params<>().parent(this_).name("lbl").text(L"BOOBS!"))
+	{}
+};
+
+// Entry point
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 {
 	pr::InitCom com;
@@ -230,8 +240,14 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 
 		pr::win32::LoadDll<struct Scintilla>(L"scintilla.dll");
 
-		Test main;
-		//Main main;
+		//return (int)About2().ShowDialog();
+		
+		//ProgressUI main(ProgressUI::Params<>().title(L"Progress").desc(L"This is not a drill").xy(2000,100).main_wnd());
+		//return main.ShowDialog();
+
+		Main main;
+		//Test main;
+		//Test2 main;
 		main.Show();
 
 		MessageLoop loop;

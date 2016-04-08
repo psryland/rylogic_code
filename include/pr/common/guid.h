@@ -10,6 +10,7 @@
 #include <objbase.h>
 #include "pr/common/to.h"
 #include "pr/common/scope.h"
+#include "pr/common/hresult.h"
 #include "pr/str/string.h"
 
 // Required lib: rpcrt4.lib
@@ -17,16 +18,19 @@
 
 namespace pr
 {
-	const GUID GUID_INVALID = { 0x00000000, 0x0000, 0x0000, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	using Guid = GUID;
+	const Guid GuidZero    = { 0x00000000, 0x0000, 0x0000, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	const Guid GuidInvalid = { 0x00000000, 0x0000, 0x0000, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
 	// Create a new GUID
-	inline GUID GenerateGUID()
+	inline Guid GenerateGUID()
 	{
-		GUID guid;
-		if (FAILED(CoCreateGuid(&guid))) return GUID_INVALID;
+		Guid guid;
+		Throw(CoCreateGuid(&guid), "Failed to create GUID");
 		return guid;
 	}
 
+	// Conversion
 	namespace convert
 	{
 		template <typename Str, typename Char = typename Str::value_type, bool Wide = is_same<Char,wchar_t>::value>
@@ -65,9 +69,9 @@ namespace pr
 			}
 		};
 	}
-	template <typename Char>                struct Convert<std::basic_string<Char>, GUID> :convert::GuidToString<std::basic_string<Char>> {};
-	template <typename Char, int L, bool F> struct Convert<pr::string<Char,L,F>,    GUID> :convert::GuidToString<pr::string<Char,L,F>> {};
-	template <typename TFrom>               struct Convert<GUID, TFrom>                   :convert::ToGuid {};
+	template <typename Char>                struct Convert<std::basic_string<Char>, Guid> :convert::GuidToString<std::basic_string<Char>> {};
+	template <typename Char, int L, bool F> struct Convert<pr::string<Char,L,F>,    Guid> :convert::GuidToString<pr::string<Char,L,F>> {};
+	template <typename TFrom>               struct Convert<Guid, TFrom>                   :convert::ToGuid {};
 }
 
 #if PR_UNITTESTS
@@ -78,10 +82,10 @@ namespace pr
 	{
 		PRUnitTest(pr_common_guid)
 		{
-			PR_CHECK(pr::To<std::string>(pr::GUID_INVALID), "00000000-0000-0000-0000-000000000000");
-			PR_CHECK(pr::To<std::wstring>(pr::GUID_INVALID), L"00000000-0000-0000-0000-000000000000");
-			PR_CHECK(pr::To<GUID>("00000000-0000-0000-0000-000000000000") == pr::GUID_INVALID, true);
-			PR_CHECK(pr::To<GUID>(L"00000000-0000-0000-0000-000000000000") == pr::GUID_INVALID, true);
+			PR_CHECK(pr::To<std::string>(pr::GuidInvalid), "00000000-0000-0000-0000-000000000000");
+			PR_CHECK(pr::To<std::wstring>(pr::GuidInvalid), L"00000000-0000-0000-0000-000000000000");
+			PR_CHECK(pr::To<Guid>("00000000-0000-0000-0000-000000000000") == pr::GuidInvalid, true);
+			PR_CHECK(pr::To<Guid>(L"00000000-0000-0000-0000-000000000000") == pr::GuidZero, true);
 		}
 	}
 }
