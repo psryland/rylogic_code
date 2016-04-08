@@ -4,45 +4,8 @@ using System.Windows.Forms;
 
 namespace pr.extn
 {
-	public static class DateTimeExtensions
+	public static class DateTimeEx
 	{
-		/// <summary>
-		/// Return a date time reinterpreted as 'kind'.
-		/// If the datetime already has a known kind that is different to 'kind' then an exception is raised.</summary>
-		public static DateTime As(this DateTime dt, DateTimeKind kind)
-		{
-			if (kind == dt.Kind)
-				return dt;
-			if (kind == DateTimeKind.Unspecified)
-				return System.DateTime.SpecifyKind(dt, DateTimeKind.Unspecified);
-			if (dt.Kind == DateTimeKind.Unspecified)
-				return System.DateTime.SpecifyKind(dt, kind);
-			else
-				throw new Exception("Reinterpret between UTC/Local, convert to Unspecified first");
-		}
-
-		/// <summary>Returns a new DateTimeOffset object clamped to within the given range</summary>
-		public static DateTime DateTime(this DateTimeOffset time, DateTimeKind kind)
-		{
-			return time.DateTime.As(kind);
-		}
-
-		/// <summary>Returns a new DateTimeOffset object clamped to within the given range</summary>
-		public static DateTime Clamp(this DateTime time, DateTime min, DateTime max)
-		{
-			if (time < min) return min;
-			if (time > max) return max;
-			return time;
-		}
-
-		/// <summary>Returns a new DateTimeOffset object clamped to within the given range</summary>
-		public static DateTimeOffset Clamp(this DateTimeOffset time, DateTimeOffset min, DateTimeOffset max)
-		{
-			if (time < min) return min;
-			if (time > max) return max;
-			return time;
-		}
-
 		/// <summary>Set the MinDate, MaxDate, and Value members all at once, avoiding out of range exceptions.</summary>
 		public static void Set(this DateTimePicker dtp, DateTime value, DateTime min, DateTime max)
 		{
@@ -61,11 +24,11 @@ namespace pr.extn
 			dtp.MinDate = DateTimePicker.MinimumDateTime;
 			dtp.MaxDate = DateTimePicker.MaximumDateTime;
 
-			min = Clamp(min, DateTimePicker.MinimumDateTime, DateTimePicker.MaximumDateTime);
-			max = Clamp(max, DateTimePicker.MinimumDateTime, DateTimePicker.MaximumDateTime);
+			min = min.Clamp(DateTimePicker.MinimumDateTime, DateTimePicker.MaximumDateTime);
+			max = max.Clamp(DateTimePicker.MinimumDateTime, DateTimePicker.MaximumDateTime);
 
 			// Setting Value before MinDate/MaxDate avoids setting Value twice when Value < MinDate or Value > MaxDate
-			dtp.Value = Clamp(value, min, max);
+			dtp.Value = value.Clamp(min, max);
 
 			dtp.MinDate = min;
 			dtp.MaxDate = max;
@@ -77,6 +40,7 @@ namespace pr.extn
 			var min = dtp.MinDate.ToUniversalTime();
 			var max = dtp.MaxDate.ToUniversalTime();
 			var val = dtp.Value.ToUniversalTime();
+			if (dtp is pr.gui.DateTimePicker) ((pr.gui.DateTimePicker)dtp).Kind = DateTimeKind.Utc;
 			dtp.Set(val, min, max);
 		}
 
@@ -86,12 +50,42 @@ namespace pr.extn
 			var min = dtp.MinDate.ToLocalTime();
 			var max = dtp.MaxDate.ToLocalTime();
 			var val = dtp.Value.ToLocalTime();
+			if (dtp is pr.gui.DateTimePicker) ((pr.gui.DateTimePicker)dtp).Kind = DateTimeKind.Local;
 			dtp.Set(val, min, max);
 		}
 	}
 	
 	public static class DateTime_
 	{
+		/// <summary>
+		/// Return a date time reinterpreted as 'kind'.
+		/// If the datetime already has a known kind that is different to 'kind' then an exception is raised.</summary>
+		public static DateTime As(this DateTime dt, DateTimeKind kind)
+		{
+			if (kind == dt.Kind)
+				return dt;
+			if (kind == DateTimeKind.Unspecified)
+				return System.DateTime.SpecifyKind(dt, DateTimeKind.Unspecified);
+			if (dt.Kind == DateTimeKind.Unspecified)
+				return System.DateTime.SpecifyKind(dt, kind);
+			else
+				throw new Exception("Reinterpret between UTC/Local, convert to Unspecified first");
+		}
+
+		/// <summary>Returns a new DateTimeOffset object clamped to within the given range</summary>
+		public static DateTime Clamp(this DateTime time, DateTime min, DateTime max)
+		{
+			if (time < min) return min;
+			if (time > max) return max;
+			return time;
+		}
+
+		/// <summary>Mask all parts of a date time not present in 'format' to zero</summary>
+		public static DateTime MaskByFormat(DateTime dt, string format)
+		{
+			return format.HasValue() ? DateTime.ParseExact(dt.ToString(format), format, null) : dt;
+		}
+
 		/// <summary>Parse 'val' as a date time using 'format'</summary>
 		public static DateTime Parse(string val, string format, DateTimeStyles style = DateTimeStyles.AllowWhiteSpaces|DateTimeStyles.AssumeUniversal)
 		{
@@ -106,7 +100,24 @@ namespace pr.extn
 		}
 	}
 
-	public static class TimeSpanEx
+	public static class DateTimeOffset_
+	{
+		/// <summary>Returns a new DateTimeOffset object clamped to within the given range</summary>
+		public static DateTime DateTime(this DateTimeOffset time, DateTimeKind kind)
+		{
+			return time.DateTime.As(kind);
+		}
+
+		/// <summary>Returns a new DateTimeOffset object clamped to within the given range</summary>
+		public static DateTimeOffset Clamp(this DateTimeOffset time, DateTimeOffset min, DateTimeOffset max)
+		{
+			if (time < min) return min;
+			if (time > max) return max;
+			return time;
+		}
+	}
+
+	public static class TimeSpan_
 	{
 		/// <summary>Return the absolute value of a time span</summary>
 		public static TimeSpan Abs(TimeSpan ts)

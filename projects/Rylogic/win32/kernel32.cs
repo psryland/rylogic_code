@@ -7,6 +7,8 @@ namespace pr.win32
 {
 	public static partial class Win32
 	{
+		public const int ATTACH_PARENT_PROCESS = -1;
+
 		[DllImport("Kernel32.dll", SetLastError = true)] public static extern IntPtr LoadLibrary(string path);
 		[DllImport("Kernel32.dll", SetLastError = true)] public static extern bool   FreeLibrary(IntPtr module);
 		[DllImport("kernel32.dll", SetLastError = true)] public static extern bool   AllocConsole();

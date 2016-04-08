@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 
@@ -158,48 +159,118 @@ namespace pr.extn
 	/// <summary>'int' type extensions</summary>
 	public static class int_
 	{
-		public static int? TryParse(string val)
+		public static int? TryParse(string val, NumberStyles style = NumberStyles.Integer)
 		{
 			int o;
-			return int.TryParse(val, out o) ? (int?)o : null;
+			return int.TryParse(val, style, null, out o) ? (int?)o : null;
 		}
 
 		/// <summary>Parse an array of integer values separated by delimiters given in 'delim'</summary>
 		/// <param name="val">The string containing the array of integer values</param>
 		/// <param name="delim">The set of delimiters. If null, then " ", "\t", "," are used</param>
 		/// <returns>An array of the parsed integers</returns>
-		public static int[] ParseArray(string val, string[] delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
+		public static int[] ParseArray(string val, NumberStyles style = NumberStyles.Integer, string[] delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
 		{
 			var strs = val.Split(delim ?? new[]{" ","\t",","}, opts);
-			return strs.Select(int.Parse).ToArray();
+			return strs.Select(s => int.Parse(s, style, null)).ToArray();
 		}
 	}
 
+	/// <summary>'uint' type extensions</summary>
+	public static class uint_
+	{
+		public static uint? TryParse(string val, NumberStyles style = NumberStyles.Integer)
+		{
+			uint o;
+			return uint.TryParse(val, style, null, out o) ? (uint?)o : null;
+		}
+
+		/// <summary>Parse an array of integer values separated by delimiters given in 'delim'</summary>
+		/// <param name="val">The string containing the array of integer values</param>
+		/// <param name="delim">The set of delimiters. If null, then " ", "\t", "," are used</param>
+		/// <returns>An array of the parsed integers</returns>
+		public static uint[] ParseArray(string val, NumberStyles style = NumberStyles.Integer, string[] delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
+		{
+			var strs = val.Split(delim ?? new[]{" ","\t",","}, opts);
+			return strs.Select(s => uint.Parse(s, style, null)).ToArray();
+		}
+	}
+	/// <summary>'long' type extensions</summary>
+	public static class long_
+	{
+		public static long? TryParse(string val, NumberStyles style = NumberStyles.Integer)
+		{
+			long o;
+			return long.TryParse(val, style, null, out o) ? (long?)o : null;
+		}
+
+		/// <summary>Parse an array of integer values separated by delimiters given in 'delim'</summary>
+		/// <param name="val">The string containing the array of integer values</param>
+		/// <param name="delim">The set of delimiters. If null, then " ", "\t", "," are used</param>
+		/// <returns>An array of the parsed integers</returns>
+		public static long[] ParseArray(string val, NumberStyles style = NumberStyles.Integer, string[] delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
+		{
+			var strs = val.Split(delim ?? new[]{" ","\t",","}, opts);
+			return strs.Select(s => long.Parse(s, style, null)).ToArray();
+		}
+	}
+
+	/// <summary>'ulong' type extensions</summary>
+	public static class ulong_
+	{
+		public static ulong? TryParse(string val, NumberStyles style = NumberStyles.Integer)
+		{
+			ulong o;
+			return ulong.TryParse(val, style, null, out o) ? (ulong?)o : null;
+		}
+
+		/// <summary>Parse an array of integer values separated by delimiters given in 'delim'</summary>
+		/// <param name="val">The string containing the array of integer values</param>
+		/// <param name="delim">The set of delimiters. If null, then " ", "\t", "," are used</param>
+		/// <returns>An array of the parsed integers</returns>
+		public static ulong[] ParseArray(string val, NumberStyles style = NumberStyles.Integer, string[] delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
+		{
+			var strs = val.Split(delim ?? new[]{" ","\t",","}, opts);
+			return strs.Select(s => ulong.Parse(s, style, null)).ToArray();
+		}
+	}
 	/// <summary>'float' type extensions</summary>
 	public static class float_
 	{
+		public static float? TryParse(string val, NumberStyles style = NumberStyles.Float)
+		{
+			float o;
+			return float.TryParse(val, style, null, out o) ? (float?)o : null;
+		}
+
 		/// <summary>Parse an array of floating point values separated by delimiters given in 'delim'</summary>
 		/// <param name="val">The string containing the array of floating point values</param>
 		/// <param name="delim">The set of delimiters. If null, then " ", "\t", "," are used</param>
 		/// <returns>An array of the parsed floating point values</returns>
-		public static float[] ParseArray(string val, string[] delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
+		public static float[] ParseArray(string val, NumberStyles style = NumberStyles.Float, string[] delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
 		{
 			var strs = val.Split(delim ?? new[]{" ","\t",","}, opts);
-			return strs.Select(float.Parse).ToArray();
+			return strs.Select(s => float.Parse(s, style, null)).ToArray();
 		}
 	}
 
 	/// <summary>'double' type extensions</summary>
 	public static class double_
 	{
+		public static double? TryParse(string val, NumberStyles style = NumberStyles.Float)
+		{
+			double o;
+			return double.TryParse(val, style, null, out o) ? (double?)o : null;
+		}
+
 		/// <summary>Parse an array of floating point values separated by delimiters given in 'delim'</summary>
 		/// <param name="val">The string containing the array of floating point values</param>
 		/// <param name="delim">The set of delimiters. If null, then " ", "\t", "," are used</param>
 		/// <returns>An array of the parsed floating point values</returns>
-		public static double[] ParseArray(string val, string[] delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
+		public static double[] ParseArray(string val, NumberStyles style = NumberStyles.Float, string[] delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
 		{
 			var strs = val.Split(delim ?? new[]{" ","\t",","}, opts);
-			return strs.Select(double.Parse).ToArray();
+			return strs.Select(s => double.Parse(s, style, null)).ToArray();
 		}
 	}
 }

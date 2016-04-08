@@ -44,13 +44,16 @@ namespace pr.container
 			// ResetBindings and ResetItem aren't override-able.
 			// Attach handlers to ensure we always receive the Reset event.
 			// Calling the 'new' method will cause the Pre events to be raised as well
-			ListChanged += (s,a) =>
-			{
-				if (a.ListChangedType == ListChangedType.Reset)
-					ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.Reset, -1, default(T)));
-				if (a.ListChangedType == ListChangedType.ItemChanged)
-					ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.ItemReset, a.NewIndex, this[a.NewIndex]));
-			};
+			ListChanged += InternalHandleListChanged;
+		}
+
+		/// <summary>Map ListChanged events to ListChanging events</summary>
+		private void InternalHandleListChanged(object sender, ListChangedEventArgs a)
+		{
+			if (a.ListChangedType == ListChangedType.Reset)
+				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.Reset, -1, default(T)));
+			if (a.ListChangedType == ListChangedType.ItemChanged)
+				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.ItemReset, a.NewIndex, this[a.NewIndex]));
 		}
 
 		/// <summary>Get/Set readonly for this list</summary>
@@ -243,11 +246,11 @@ namespace pr.container
 			{
 				var sign = direction == ListSortDirection.Ascending ? +1 : -1;
 				var cmp = Cmp<T>.From((lhs,rhs) =>
-					{
-						var l = prop.GetValue(lhs);
-						var r = prop.GetValue(rhs);
-						return sign * SortComparer.Compare(l,r);
-					});
+				{
+					var l = prop.GetValue(lhs);
+					var r = prop.GetValue(rhs);
+					return sign * SortComparer.Compare(l,r);
+				});
 				this.QuickSort(cmp);
 
 				SortDirection = direction;
@@ -304,7 +307,11 @@ namespace pr.container
 			ResetItem(idx);
 		}
 
-		/// <summary>RAII object for suspending list events</summary>
+		/// <summary>
+		/// RAII object for suspending list events
+		/// WARNING: Be careful using this. If list events are used to attach/detach handlers,
+		/// then suspending events will prevent that from happening! If you're trying to prevent
+		/// lots of UI updates due to a big change to the collection, try SuspendLayout, or use Invalidate</summary>
 		public Scope<bool> SuspendEvents(bool reset_bindings_on_resume = false)
 		{
 			// Returns Scope<bool> rather than Scope so that callers can change the state of 'raise'

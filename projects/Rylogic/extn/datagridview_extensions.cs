@@ -1174,14 +1174,17 @@ namespace pr.extn
 				m_dgv = dgv;
 				m_dgv_state = new Dictionary<string, object>();
 				m_header_cells = new FilterHeaderCell[m_dgv.ColumnCount];
-				m_bs = new RuntimeBindingSource(dgv);
 				ShortcutKey = Keys.F;
 
+				m_dgv.DataSourceChanged += HandleDataSourceChanged;
 				m_dgv.Disposed += HandleGridDisposed;
+
+				HandleDataSourceChanged();
 			}
 			public void Dispose()
 			{
 				Enabled = false;
+				m_dgv.DataSourceChanged -= HandleDataSourceChanged;
 				m_dgv.Disposed -= HandleGridDisposed;
 				m_header_cells = Util.DisposeAll(m_header_cells);
 			}
@@ -1213,10 +1216,13 @@ namespace pr.extn
 				private object m_bs;
 
 				/// <summary>The filtered view of the binding source</summary>
+				public object FilteredView { get { return m_view; } }
 				private object m_view;
 
 				public RuntimeBindingSource(DataGridView dgv)
 				{
+					Debug.Assert(dgv.DataSource != null, "DGV requires a data source ");
+
 					var original_src = dgv.DataSource;
 					var orig_ty = original_src.GetType();
 
@@ -1440,6 +1446,22 @@ namespace pr.extn
 			{
 				m_column_filters.Remove(m_dgv);
 				Dispose();
+			}
+
+			/// <summary>If the data source on the DGV changes, we need to reset the RuntimeBindingSource</summary>
+			private void HandleDataSourceChanged(object sender = null, EventArgs e = null)
+			{
+				// Remember, while filtering is enabled the DGV's data source will be 'm_bs.FilteredView'
+				if (m_bs != null && m_dgv.DataSource == m_bs.FilteredView)
+				{}
+
+				// If we don't currently have a runtime data source, and the grid has a data source, then create one
+				else if (m_bs == null && m_dgv.DataSource != null)
+					m_bs = new RuntimeBindingSource(m_dgv);
+
+				// Otherwise, if the grid no longer has a source, release our runtime data source
+				else if (m_bs != null && m_dgv.DataSource == null)
+					m_bs = null;
 			}
 
 			/// <summary>Custom column header cell for showing the filter string text box</summary>

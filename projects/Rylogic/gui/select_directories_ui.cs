@@ -193,7 +193,7 @@ namespace pr.gui
 				AddPath(path);
 		}
 
-		/// <summary>Called after 'path' has been added to the collectionsummary>
+		/// <summary>Called after 'path' has been added to the collection</summary>
 		private void HandlePathAdded(Path path)
 		{
 			// Look for paths that would include 'path' already
@@ -220,12 +220,8 @@ namespace pr.gui
 				else ++idx;
 
 				// Find the range of paths to remove
-				using (var raise = Paths.SuspendEvents(false))
-				{
-					var count = Paths.Skip(idx).Count(x => x.Name.StartsWith(path.Name));
-					Paths.RemoveRange(idx, count);
-					raise.Value = count != 0;
-				}
+				var count = Paths.Skip(idx).Count(x => x.Name.StartsWith(path.Name));
+				Paths.RemoveRange(idx, count);
 			}
 
 			// Check the siblings of 'path', if all are in 'Paths' then we can remove
@@ -284,26 +280,23 @@ namespace pr.gui
 			// If a parent is found, we need to add child paths for the ancestral siblings of 'path'
 			if (part_idx != parts.Length)
 			{
-				using (Paths.SuspendEvents(true))
-				{
-					// Remove the parent path
-					var idx = Paths.BinarySearch(p.ToString(), Path.Compare);
-					Paths.RemoveAt(idx);
+				// Remove the parent path
+				var idx = Paths.BinarySearch(p.ToString(), Path.Compare);
+				Paths.RemoveAt(idx);
 
-					// Add the child paths for the ancestral siblings of 'path'
-					for (++part_idx; part_idx != parts.Length; ++part_idx)
+				// Add the child paths for the ancestral siblings of 'path'
+				for (++part_idx; part_idx != parts.Length; ++part_idx)
+				{
+					foreach (var sib in PathEx.EnumFileSystem(path.Text.Substring(0, p.Length), SearchOption.TopDirectoryOnly).Where(x => x.IsDirectory))
 					{
-						foreach (var sib in PathEx.EnumFileSystem(path.Text.Substring(0, p.Length), SearchOption.TopDirectoryOnly).Where(x => x.IsDirectory))
-						{
-							if (string.CompareOrdinal(parts[part_idx], sib.FileName.ToLowerInvariant()) == 0) continue;
-							Paths.AddOrdered(sib.FullPath, Path.Compare);
-						}
-						p.Append(parts[part_idx]).Append("\\");
+						if (string.CompareOrdinal(parts[part_idx], sib.FileName.ToLowerInvariant()) == 0) continue;
+						Paths.AddOrdered(sib.FullPath, Path.Compare);
 					}
+					p.Append(parts[part_idx]).Append("\\");
 				}
 			}
 
-			// Update the checkboxes
+			// Update the check boxes
 			UpdateTree();
 		}
 

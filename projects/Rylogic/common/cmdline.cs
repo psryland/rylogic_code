@@ -74,7 +74,7 @@ namespace pr.common
 				}
 
 				// Check that the given command line arguments are self consistent
-				if (!cr.OptionsValid())
+				if (result == Result.Success && !cr.OptionsValid())
 				{
 					result = Result.Failed;
 					cr.ShowHelp();

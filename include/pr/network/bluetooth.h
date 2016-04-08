@@ -101,7 +101,7 @@ namespace pr
 			{}
 		};
 
-		// Wrapper for displaying a 'choose bluetooth device' gui
+		// Wrapper for displaying a 'choose bluetooth device' GUI
 		struct BluetoothDeviceUI
 		{
 			BLUETOOTH_SELECT_DEVICE_PARAMS m_params;

@@ -4880,6 +4880,9 @@ namespace pr.gui
 
 			/// <summary>Default XML import options</summary>
 			Default = AllElements | AllStyles,
+
+			/// <summary>XML nodes that fail to import will be silently ignored</summary>
+			IgnoreImportFailures = 1 << 5,
 		}
 
 		/// <summary>
@@ -4913,26 +4916,47 @@ namespace pr.gui
 						switch (n.Name.LocalName)
 						{
 						case XmlTag.NodeStyles:
+							#region
 							{
 								if (opts.HasFlag(EImportOptions.NodeStyles))
 								{
-									var node_styles = n.As<StyleCache<NodeStyle>>() ?? new StyleCache<NodeStyle>();
-									if (!merge) m_node_styles = node_styles;
-									else        m_node_styles.Merge(node_styles);
+									try
+									{
+										var node_styles = n.As<StyleCache<NodeStyle>>() ?? new StyleCache<NodeStyle>();
+										if (!merge) m_node_styles = node_styles;
+										else        m_node_styles.Merge(node_styles);
+									}
+									catch
+									{
+										if (!opts.HasFlag(EImportOptions.IgnoreImportFailures))
+											throw;
+									}
 								}
 								break;
 							}
+							#endregion
 						case XmlTag.ConnStyles:
+							#region
 							{
 								if (opts.HasFlag(EImportOptions.ConnectorStyles))
 								{
-									var conn_styles = n.As<StyleCache<ConnectorStyle>>() ?? new StyleCache<ConnectorStyle>();
-									if (!merge) m_connector_styles = conn_styles;
-									else        m_connector_styles.Merge(conn_styles);
+									try
+									{
+										var conn_styles = n.As<StyleCache<ConnectorStyle>>() ?? new StyleCache<ConnectorStyle>();
+										if (!merge) m_connector_styles = conn_styles;
+										else        m_connector_styles.Merge(conn_styles);
+									}
+									catch
+									{
+										if (!opts.HasFlag(EImportOptions.IgnoreImportFailures))
+											throw;
+									}
 								}
 								break;
 							}
+							#endregion
 						case XmlTag.Element:
+							#region
 							{
 								// True if the 'opts' say import the element
 								Func<Element, bool> import = e =>
@@ -4940,27 +4964,13 @@ namespace pr.gui
 									(e is Connector && opts.HasFlag(EImportOptions.Connectors)) ||
 									(e is Label     && opts.HasFlag(EImportOptions.Labels));
 
-								// Add the element to the diagram
-								if (!merge)
+								try
 								{
-									// Not merging, just add everything
-									var elem = (Element)n.ToObject();
-									if (import(elem))
+									// Add the element to the diagram
+									if (!merge)
 									{
-										map.Add(elem.Id, elem);
-										Elements.Add(elem);
-									}
-								}
-								else
-								{
-									// Read the id of the element and look for it among the existing elements
-									var id = n.Element(XmlTag.Id).As<Guid>();
-
-									Element elem = map.TryGetValue(id, out elem) ? elem : null;
-									if (elem == null)
-									{
-										// If not found, add a new element
-										elem = (Element)n.ToObject();
+										// Not merging, just add everything
+										var elem = (Element)n.ToObject();
 										if (import(elem))
 										{
 											map.Add(elem.Id, elem);
@@ -4969,13 +4979,36 @@ namespace pr.gui
 									}
 									else
 									{
-										// If found, update the existing element.
-										if (import(elem))
-											elem.Update(n);
+										// Read the id of the element and look for it among the existing elements
+										var id = n.Element(XmlTag.Id).As<Guid>();
+
+										Element elem = map.TryGetValue(id, out elem) ? elem : null;
+										if (elem == null)
+										{
+											// If not found, add a new element
+											elem = (Element)n.ToObject();
+											if (import(elem))
+											{
+												map.Add(elem.Id, elem);
+												Elements.Add(elem);
+											}
+										}
+										else
+										{
+											// If found, update the existing element.
+											if (import(elem))
+												elem.Update(n);
+										}
 									}
+								}
+								catch
+								{
+									if (!opts.HasFlag(EImportOptions.IgnoreImportFailures))
+										throw;
 								}
 								break;
 							}
+							#endregion
 						}
 					}
 				}

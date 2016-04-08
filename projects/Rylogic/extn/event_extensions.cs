@@ -7,17 +7,14 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Reflection;
 using System.Windows.Threading;
-using pr.common;
-using pr.extn;
 using pr.util;
 
 namespace pr.extn
 {
 	/// <summary>A helper for multicast delegate events</summary>
 	[DebuggerStepThrough]
-	public static class EventExtensions
+	public static class EventEx
 	{
 		// Notes:
 		//  - Suspend/Resume has no effect on a null event.
@@ -31,10 +28,10 @@ namespace pr.extn
 		/// <summary>A collection of suspended events and whether notify has been called on this suspended event</summary>
 		private static readonly Dictionary<object,SuspendData> m_suspended = new Dictionary<object,SuspendData>();
 
-		#region Impl
+		#region Implementation
 		private static class Impl<T>
 		{
-			/// <summary>Add 'evt' to the collection of suspended events. Returns true if the evt has been raised since suspended</summary>
+			/// <summary>Add 'evt' to the collection of suspended events. Returns true if the event has been raised since suspended</summary>
 			public static bool Suspend(T evt, bool suspend)
 			{
 				// Find the suspend data associated with this event
@@ -309,7 +306,7 @@ namespace pr.extn
 			return Impl<Action>.Suspend(evt, suspend);
 		}
 
-		/// <summary>Returns true if this event is currently suppended</summary>
+		/// <summary>Returns true if this event is currently suspended</summary>
 		public static bool IsSuspended(this Action evt)
 		{
 			return evt != null && Impl<Action>.IsSuspended(evt);
@@ -346,7 +343,7 @@ namespace pr.extn
 			return Impl<Action<T1>>.Suspend(evt, suspend);
 		}
 
-		/// <summary>Returns true if this event is currently suppended</summary>
+		/// <summary>Returns true if this event is currently suspended</summary>
 		public static bool IsSuspended<T1>(this Action<T1> evt)
 		{
 			return evt != null && Impl<Action<T1>>.IsSuspended(evt);
@@ -383,122 +380,10 @@ namespace pr.extn
 			return Impl<Action<T1,T2>>.Suspend(evt, suspend);
 		}
 
-		/// <summary>Returns true if this event is currently suppended</summary>
+		/// <summary>Returns true if this event is currently suspended</summary>
 		public static bool IsSuspended<T1,T2>(this Action<T1,T2> evt)
 		{
 			return evt != null && Impl<Action<T1,T2>>.IsSuspended(evt);
-		}
-
-		#endregion
-
-		#region MakeWeak
-
-		/// <summary>
-		/// Usage:
-		///   Attach a weak action/event handler to an event
-		///     provider.MyEvent += new EventHandler&lt;EventArgs&gt;(MyWeakEventHandler).MakeWeak(eh => provider.MyEvent -= eh);
-		///     ...
-		///     // Must be a real method, not a lambda
-		///     void MyWeakEventHandler(object sender, EventArgs e){}
-		///
-		/// Usage:
-		///   Make all attached event handlers weak
-		///   public class EventProvider
-		///   {
-		///      private EventHandler&lt;EventArgs&gt; m_MyEvent;
-		///      public event EventHandler&lt;EventArgs&gt; MyEvent
-		///      {
-		///          add { m_Event += value.MakeWeak(eh => m_Event -= eh); }
-		///          remove {}
-		///      }
-		///    }
-		///
-		/// Behaviour:
-		///   Gun gun = new Gun();
-		///   Target bob = new Target("Bob");
-		///   Target fred = new Target("Fred");
-		///   gun.Bang += new EventHandler&lt;EventArgs&gt;(bob.OnHit).MakeWeak(h => gun.Bang -= h);
-		///   gun.Bang += fred.OnHit;
-		///   gun.Bang += new EventHandler&lt;EventArgs&gt;((s,e)=>{MessageBox.Show("Don't do this")}).MakeWeak((h)=>gun.Bang -= h); // see WARNING
-		///   gun.Shoot();
-		///   bob = null;
-		///   fred = null;
-		///   GC.Collect();
-		///   Thread.Sleep(100); // bob collected here, but not fred
-		///   gun.Shoot(); // fred still shot here
-		///
-		/// WARNING:
-		///  Don't attach anonymous delegates as weak delegates. When the delegate goes out of
-		///  scope it will be collected and silently remove itself from the event</summary>
-		public static EventHandler MakeWeak(this EventHandler handler, UnregisterEventHandler unregister)
-		{
-			if (handler == null) throw new ArgumentNullException("handler");
-			if (handler.Method.IsStatic || handler.Target == null) throw new ArgumentException("Only instance methods are supported.", "handler");
-
-			var weh_type = typeof(WeakEventHandler<>).MakeGenericType(handler.Method.DeclaringType);
-			var cons = weh_type.GetConstructor(new[] {typeof(EventHandler), typeof(UnregisterEventHandler)});
-			var weh = (IWeakEventHandler)cons.Invoke(new object[] {handler, unregister});
-			return weh.Handler;
-		}
-		public static EventHandler<E> MakeWeak<E>(this EventHandler<E> event_handler, UnregisterEventHandler<E> unregister) where E: EventArgs
-		{
-			if (event_handler == null) throw new ArgumentNullException("event_handler");
-			if (event_handler.Method.IsStatic || event_handler.Target == null) throw new ArgumentException("Only instance methods are supported.", "event_handler");
-
-			var weh_type = typeof(WeakEventHandler<,>).MakeGenericType(event_handler.Method.DeclaringType, typeof(E));
-			var cons = weh_type.GetConstructor(new[] {typeof(EventHandler<E>), typeof(UnregisterEventHandler<E>)});
-			var weh = (IWeakEventHandler<E>)cons.Invoke(new object[] {event_handler, unregister});
-			return weh.Handler;
-		}
-		public static Action MakeWeak(this Action action, UnregisterAction unregister)
-		{
-			if (action == null) throw new ArgumentNullException("action");
-			if (action.Method.IsStatic || action.Target == null) throw new ArgumentException("Only instance methods are supported.", "action");
-
-			var type = typeof(WeakAction<>).MakeGenericType(action.Method.DeclaringType);
-			var cons = type.GetConstructor(new[] {typeof(Action), typeof(UnregisterAction)});
-			var weak_action = (IWeakAction)cons.Invoke(new object[] {action, unregister});
-			return weak_action.Handler;
-		}
-		public static Action<T1> MakeWeak<T1>(this Action<T1> action, UnregisterAction<T1> unregister)
-		{
-			if (action == null) throw new ArgumentNullException("action");
-			if (action.Method.IsStatic || action.Target == null) throw new ArgumentException("Only instance methods are supported.", "action");
-
-			var type = typeof(WeakAction<,>).MakeGenericType(action.Method.DeclaringType, typeof(T1));
-			var cons = type.GetConstructor(new[] {typeof(Action<T1>), typeof(UnregisterAction<T1>)});
-			var weak_action = (IWeakAction<T1>)cons.Invoke(new object[] {action, unregister});
-			return weak_action.Handler;
-		}
-		public static Action<T1,T2> MakeWeak<T1,T2>(this Action<T1,T2> action, UnregisterAction<T1,T2> unregister)
-		{
-			if (action == null) throw new ArgumentNullException("action");
-			if (action.Method.IsStatic || action.Target == null) throw new ArgumentException("Only instance methods are supported.", "action");
-
-			var type = typeof(WeakAction<,,>).MakeGenericType(action.Method.DeclaringType, typeof(T1), typeof(T2));
-			var cons = type.GetConstructor(new[] {typeof(Action<T1,T2>), typeof(UnregisterAction<T1,T2>)});
-			var weak_action = (IWeakAction<T1,T2>)cons.Invoke(new object[] {action, unregister});
-			return weak_action.Handler;
-		}
-		public static Action<T1,T2,T3> MakeWeak<T1,T2,T3>(this Action<T1,T2,T3> action, UnregisterAction<T1,T2,T3> unregister)
-		{
-			if (action == null) throw new ArgumentNullException("action");
-			if (action.Method.IsStatic || action.Target == null) throw new ArgumentException("Only instance methods are supported.", "action");
-
-			var type = typeof(WeakAction<,,,>).MakeGenericType(action.Method.DeclaringType, typeof(T1), typeof(T2), typeof(T3));
-			var cons = type.GetConstructor(new[] {typeof(Action<T1,T2,T3>), typeof(UnregisterAction<T1,T2,T3>)});
-			var weak_action = (IWeakAction<T1,T2,T3>)cons.Invoke(new object[] {action, unregister});
-			return weak_action.Handler;
-		}
-		public static Action<T1,T2,T3,T4> MakeWeak<T1,T2,T3,T4>(this Action<T1,T2,T3,T4> action, UnregisterAction<T1,T2,T3,T4> unregister)
-		{
-			if (action == null) throw new ArgumentNullException("action");
-			if (action.Method.IsStatic || action.Target == null) throw new ArgumentException("Only instance methods are supported.", "action");
-
-			var type = typeof(WeakAction<,,,,>).MakeGenericType(action.Method.DeclaringType, typeof(T1), typeof(T2), typeof(T3), typeof(T4));
-			var cons = type.GetConstructor(new[] {typeof(Action<T1,T2,T3,T4>), typeof(UnregisterAction<T1,T2,T3,T4>)});
-			var weak_action = (IWeakAction<T1,T2,T3,T4>)cons.Invoke(new object[] {action, unregister});
-			return weak_action.Handler;
 		}
 
 		#endregion
@@ -508,38 +393,11 @@ namespace pr.extn
 #if PR_UNITTESTS
 namespace pr.unittests
 {
-	using System.Threading;
+	using extn;
 
 	[TestFixture] public class TestEventExtns
 	{
 		private static event Action<int> BooEvent;
-
-		private static readonly List<string> collected = new List<string>();
-		private static readonly List<string> hit       = new List<string>();
-		private class Gun
-		{
-			public event EventHandler Firing;
-			public event Action<Gun> Bang;
-			public event EventHandler<FiredArgs> Fired;
-			public class FiredArgs :EventArgs { public string Noise { get; set; } }
-
-			~Gun() { collected.Add("gun"); }
-			public void Shoot()
-			{
-				Firing.Raise(this, EventArgs.Empty);
-				Bang.Raise(this);
-				Fired.Raise(this, new FiredArgs{Noise = "Bang!"});
-			}
-		}
-		private class Target
-		{
-			private readonly string m_name;
-			public Target(string name)                     { m_name = name; }
-			~Target()                                      { collected.Add(m_name); }
-			public void OnHit(Gun gun)                     { hit.Add(m_name); }
-			public void OnFiring(object s, EventArgs a)    { hit.Add("Dont Shoot"); }
-			public void OnFired(object s, Gun.FiredArgs a) { hit.Add(a.Noise); }
-		}
 
 		[Test] public void SuspendResume()
 		{
@@ -553,51 +411,6 @@ namespace pr.unittests
 			BooEvent.Raise(3);
 			Assert.True(BooEvent.Suspend(false));
 			Assert.AreEqual(0, boo_raised);
-		}
-
-		// These tests fail when run by ncrunch when instrumentation is turned on
-		// because it does things to the GC that prevent collection
-		[Test] public void WeakActions()
-		{
-			var gun = new Gun();
-			var bob = new Target("bob");
-			var fred = new Target("fred");
-			gun.Bang += new Action<Gun>(bob.OnHit).MakeWeak(h => gun.Bang -= h);
-			gun.Bang += fred.OnHit;
-			gun.Shoot();
-			Assert.True(hit.Contains("bob"));
-			Assert.True(hit.Contains("fred"));
-
-			hit.Clear();
-			bob = null;
-			fred = null;
-			GC.Collect(GC.MaxGeneration,GCCollectionMode.Forced);
-			Thread.Sleep(100); // bob collected here, but not fred
-			Assert.True(collected.Contains("bob"));
-			Assert.False(collected.Contains("fred"));
-			gun.Shoot(); // fred still shot here
-			Assert.False(hit.Contains("bob"));
-			Assert.True(hit.Contains("fred"));
-		}
-		[Test] public void WeakEventHandlers()
-		{
-			var gun = new Gun();
-			var bob = new Target("bob");
-			gun.Firing += new EventHandler               (bob.OnFiring).MakeWeak(eh => gun.Firing -= eh);
-			gun.Bang   += new Action<Gun>                (bob.OnHit   ).MakeWeak(eh => gun.Bang -= eh);
-			gun.Fired  += new EventHandler<Gun.FiredArgs>(bob.OnFired ).MakeWeak(eh => gun.Fired -= eh);
-			gun.Shoot();
-			Assert.True(hit.Contains("Dont Shoot"));
-			Assert.True(hit.Contains("bob"));
-			Assert.True(hit.Contains("Bang!"));
-
-			hit.Clear();
-			bob = null;
-			GC.Collect(GC.MaxGeneration,GCCollectionMode.Forced);
-			Thread.Sleep(100); // bob collected here, but not fred
-			Assert.True(collected.Contains("bob"));
-			gun.Shoot();
-			Assert.True(hit.Count == 0);
 		}
 	}
 }

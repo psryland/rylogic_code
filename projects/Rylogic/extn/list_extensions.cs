@@ -18,7 +18,7 @@ namespace pr.extn
 	public static class ListExtensions
 	{
 		/// <summary>Return true if the list is empty</summary>
-		public static bool Empty<T>(this IList<T> list)
+		public static bool Empty(this IList list)
 		{
 			return list.Count == 0;
 		}

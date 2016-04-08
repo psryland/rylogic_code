@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using pr.extn;
 
 namespace pr.gui
@@ -10,9 +7,12 @@ namespace pr.gui
 	public class DateTimePicker :System.Windows.Forms.DateTimePicker
 	{
 		///<remarks>
+		/// The DateTime values in the base.DateTimePicker have 'Kind' as unspecified since the control
+		/// does not provide a way for the user to select UTC/Local. This sub-classed control adds the 'Kind'
+		/// property and ensures the value,min,max properties are get/set is this kind.
 		/// Notes:
 		///  Conversion from DTO to DT leaves Kind as unspecified.
-		///  Conversion from DT to DTO sets Offset. If DT.Kind is unspecified, the local timezone offset is assumed			
+		///  Conversion from DT to DTO sets Offset. If DT.Kind is unspecified, the local time-zone offset is assumed
 		///</remarks>
 
 		public DateTimePicker()
@@ -41,7 +41,8 @@ namespace pr.gui
 			set
 			{
 				if (value.Kind != Kind) throw new Exception("DateTime.Kind value incorrect");
-				base.MinDate = value;
+				value = DateTime_.MaskByFormat(value, CustomFormat);
+				base.MinDate = value.As(DateTimeKind.Unspecified);
 			}
 		}
 
@@ -59,7 +60,8 @@ namespace pr.gui
 			set
 			{
 				if (value.Kind != Kind) throw new Exception("DateTime.Kind value incorrect");
-				base.MaxDate = value;
+				value = DateTime_.MaskByFormat(value, CustomFormat);
+				base.MaxDate = value.As(DateTimeKind.Unspecified);
 			}
 		}
 
@@ -76,7 +78,8 @@ namespace pr.gui
 			set
 			{
 				if (value.Kind != Kind) throw new Exception("DateTime.Kind value incorrect");
-				base.Value = value;
+				value = DateTime_.MaskByFormat(value, CustomFormat);
+				base.Value = value.As(DateTimeKind.Unspecified);
 			}
 		}
 	}
