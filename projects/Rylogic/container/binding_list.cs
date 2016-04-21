@@ -51,9 +51,9 @@ namespace pr.container
 		private void InternalHandleListChanged(object sender, ListChangedEventArgs a)
 		{
 			if (a.ListChangedType == ListChangedType.Reset)
-				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.Reset, -1, default(T)));
+				ListChanging.Raise(this, new ListChgEventArgs<T>(this, ListChg.Reset, -1, default(T)));
 			if (a.ListChangedType == ListChangedType.ItemChanged)
-				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.ItemReset, a.NewIndex, this[a.NewIndex]));
+				ListChanging.Raise(this, new ListChgEventArgs<T>(this, ListChg.ItemReset, a.NewIndex, this[a.NewIndex]));
 		}
 
 		/// <summary>Get/Set readonly for this list</summary>
@@ -85,7 +85,7 @@ namespace pr.container
 		{
 			if (RaiseListChangedEvents)
 			{
-				var args = new ListChgEventArgs<T>(ListChg.PreReset, -1, default(T));
+				var args = new ListChgEventArgs<T>(this, ListChg.PreReset, -1, default(T));
 				ListChanging.Raise(this, args);
 				if (args.Cancel)
 					return;
@@ -109,7 +109,7 @@ namespace pr.container
 		{
 			if (RaiseListChangedEvents)
 			{
-				var args = new ListChgEventArgs<T>(ListChg.ItemPreAdd, index, item);
+				var args = new ListChgEventArgs<T>(this, ListChg.ItemPreAdd, index, item);
 				ListChanging.Raise(this, args);
 				if (args.Cancel)
 					return;
@@ -127,7 +127,7 @@ namespace pr.container
 			IsSorted = false;
 	
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.ItemAdded, index, item));
+				ListChanging.Raise(this, new ListChgEventArgs<T>(this, ListChg.ItemAdded, index, item));
 		}
 
 		/// <summary>Removes the item at the specified index.</summary>
@@ -136,7 +136,7 @@ namespace pr.container
 			var item = this[index];
 			if (RaiseListChangedEvents)
 			{
-				var args = new ListChgEventArgs<T>(ListChg.ItemPreRemove, index, item);
+				var args = new ListChgEventArgs<T>(this, ListChg.ItemPreRemove, index, item);
 				ListChanging.Raise(this, args);
 				if (args.Cancel)
 					return;
@@ -147,7 +147,7 @@ namespace pr.container
 			IsSorted = false;
 	
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.ItemRemoved, -1, item));
+				ListChanging.Raise(this, new ListChgEventArgs<T>(this, ListChg.ItemRemoved, -1, item));
 		}
 		
 		/// <summary>Replaces the item at the specified index with the specified item.</summary>
@@ -157,14 +157,14 @@ namespace pr.container
 
 			if (RaiseListChangedEvents)
 			{
-				var args = new ListChgEventArgs<T>(ListChg.ItemPreRemove, index, old);
+				var args = new ListChgEventArgs<T>(this, ListChg.ItemPreRemove, index, old);
 				ListChanging.Raise(this, args);
 				if (args.Cancel)
 					return;
 			}
 			if (RaiseListChangedEvents)
 			{
-				var args = new ListChgEventArgs<T>(ListChg.ItemPreAdd, index, item);
+				var args = new ListChgEventArgs<T>(this, ListChg.ItemPreAdd, index, item);
 				ListChanging.Raise(this, args);
 				if (args.Cancel)
 					return;
@@ -177,9 +177,9 @@ namespace pr.container
 				ItemChanged.Raise(this, new ItemChgEventArgs<T>(index, old, item));
 
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.ItemRemoved, index, old));
+				ListChanging.Raise(this, new ListChgEventArgs<T>(this, ListChg.ItemRemoved, index, old));
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.ItemAdded, index, item));
+				ListChanging.Raise(this, new ListChgEventArgs<T>(this, ListChg.ItemAdded, index, item));
 		}
 
 		/// <summary>Optimised 'Contains'</summary>
@@ -236,7 +236,7 @@ namespace pr.container
 		{
 			if (RaiseListChangedEvents)
 			{
-				var args = new ListChgEventArgs<T>(ListChg.PreReordered, -1, default(T));
+				var args = new ListChgEventArgs<T>(this, ListChg.PreReordered, -1, default(T));
 				ListChanging.Raise(this, args);
 				if (args.Cancel)
 					return;
@@ -258,7 +258,7 @@ namespace pr.container
 			}
 
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.Reordered, -1, default(T)));
+				ListChanging.Raise(this, new ListChgEventArgs<T>(this, ListChg.Reordered, -1, default(T)));
 		}
 
 		/// <summary>Removes any sort applied with ApplySortCore()</summary>
@@ -274,7 +274,7 @@ namespace pr.container
 		{
 			if (RaiseListChangedEvents)
 			{
-				var args = new ListChgEventArgs<T>(ListChg.PreReset, -1, default(T));
+				var args = new ListChgEventArgs<T>(this, ListChg.PreReset, -1, default(T));
 				ListChanging.Raise(this, args);
 				if (args.Cancel)
 					return;
@@ -289,7 +289,7 @@ namespace pr.container
 		{
 			if (RaiseListChangedEvents)
 			{
-				var args = new ListChgEventArgs<T>(ListChg.ItemPreReset, position, this[position]);
+				var args = new ListChgEventArgs<T>(this, ListChg.ItemPreReset, position, this[position]);
 				ListChanging.Raise(this, args);
 				if (args.Cancel)
 					return;

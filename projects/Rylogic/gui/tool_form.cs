@@ -45,6 +45,8 @@ namespace pr.gui
 		{
 			m_ofs = ofs;
 			m_pin = pin;
+			AutoScaleDimensions = new SizeF(6F, 13F);
+			AutoScaleMode = AutoScaleMode.Font;
 			StartPosition = FormStartPosition.Manual;
 			HideOnClose = !modal;
 			AutoFade = false;

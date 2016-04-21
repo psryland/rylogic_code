@@ -57,8 +57,8 @@ namespace pr.maths
 		public static v2 XAxis { get { return m_xaxis; } }
 		public static v2 YAxis { get { return m_yaxis; } }
 		public static v2 One { get { return m_one; } }
-		public static v2 Min { get { return m_min; } }
-		public static v2 Max { get { return m_max; } }
+		public static v2 MinValue { get { return m_min; } }
+		public static v2 MaxValue { get { return m_max; } }
 
 		// Functions
 		public static v2   operator + (v2 lhs, v2 rhs)         { return new v2(lhs.x + rhs.x, lhs.y + rhs.y); }
@@ -91,11 +91,9 @@ namespace pr.maths
 		public Rectangle ToRectangle()                { return new Rectangle(Point.Empty, ToSize()); }
 		public RectangleF ToRectangleF()              { return new RectangleF(PointF.Empty, ToSizeF()); }
 
-		public static bool FEqlZero2(v2 vec, float tol)       { return vec.Length2Sq < tol * tol; }
-		public static bool FEqlZero2(v2 vec)                  { return FEqlZero2(vec, Maths.TinyF); }
 		public static bool FEql2(v2 lhs, v2 rhs, float tol)   { return Maths.FEql(lhs.x, rhs.x, tol) && Maths.FEql(lhs.y, rhs.y, tol); }
 		public static bool FEql2(v2 lhs, v2 rhs)              { return FEql2(lhs, rhs, Maths.TinyF); }
-		
+
 		public static v2 Random2(float min, float max, Rand r) { r = r ?? new Rand(); return new v2(r.Float(min,max)     ,r.Float(min,max)    ); }
 		public static v2 Random2(v2 min, v2 max, Rand r)       { r = r ?? new Rand(); return new v2(r.Float(min.x,max.x) ,r.Float(min.y,max.y)); }
 		public static v2 Random2(float rad, Rand r)            { r = r ?? new Rand(); var rad_sq = rad*rad; v2 v; for (; (v = Random2(-rad, rad, r)).Length2Sq > rad_sq; ){} return v; }

@@ -36,12 +36,6 @@ namespace pr.gui
 			}
 		}
 
-		/// <summary>Display a modal message box</summary>
-		public static DialogResult Show(string message, string title, MessageBoxButtons btns = MessageBoxButtons.OK, MessageBoxIcon icon = MessageBoxIcon.None, MessageBoxDefaultButton dflt_btn = MessageBoxDefaultButton.Button1, bool reflow = true, float reflow_aspect = 7f)
-		{
-			return Show(null, message,title, btns, icon, dflt_btn, reflow, reflow_aspect);
-		}
-
 		public MsgBox()                                                                          :this(null, string.Empty, string.Empty, MessageBoxButtons.OK, MessageBoxIcon.None, MessageBoxDefaultButton.Button1) {}
 		public MsgBox(string message, string title)                                              :this(null, message, title, MessageBoxButtons.OK, MessageBoxIcon.None, MessageBoxDefaultButton.Button1) {}
 		public MsgBox(string message, string title, MessageBoxButtons btns)                      :this(null, message, title, btns, MessageBoxIcon.None, MessageBoxDefaultButton.Button1) {}

@@ -72,7 +72,9 @@ namespace pr.util
 			// Pop each item from the collection and dispose it
 			for (; junk.Count != 0; )
 			{
-				var j = junk.Last();
+				// We have to remove each item, because the list might be a binding list
+				// that performs some action when items are removemd.
+				var j = junk.Back();
 				junk.RemoveAt(junk.Count - 1);
 				Dispose(ref j);
 			}
@@ -132,6 +134,28 @@ namespace pr.util
 			get { return LicenseManager.UsageMode == LicenseUsageMode.Designtime; }
 		}
 
+		/// <summary>Blocks until the debugger is attached</summary>
+		public static void WaitForDebugger()
+		{
+			if (Debugger.IsAttached) return;
+			var t = new Thread(new ThreadStart(() =>
+			{
+				try
+				{
+					var mb = new pr.gui.MsgBox("Waiting for Debugger...", "Debugging", MessageBoxButtons.OK, MessageBoxIcon.Information) { PositiveBtnText = "Continue" };
+					using (mb)
+					{
+						mb.Show(null);
+						for (;mb.DialogResult == DialogResult.None && !Debugger.IsAttached;)
+							Application.DoEvents();
+					}
+				}
+				catch {}
+			}));
+			t.Start();
+			t.Join();
+		}
+
 		/// <summary>True if the current thread is the 'main' thread</summary>
 		public static bool IsMainThread { get { return Thread.CurrentThread.ManagedThreadId == m_main_thread_id; } }
 		private static int m_main_thread_id = Thread.CurrentThread.ManagedThreadId;
@@ -164,7 +188,7 @@ namespace pr.util
 		/// <summary>Stop in the debugger if 'condition' is true. For when assert dialogs cause problems with threading</summary>
 		[Conditional("DEBUG")] public static void BreakIf(bool condition, string msg = null)
 		{
-			if (!condition) return;
+			if (!condition || !Debugger.IsAttached) return;
 			if (msg != null) Debug.WriteLine(msg);
 			Debugger.Break();
 		}
@@ -180,6 +204,78 @@ namespace pr.util
 				if (Debugger.IsAttached) Debugger.Break(); // If debugging, stop all threads immediately
 				Debug.Assert(false, "Not the main thread");
 			}
+		}
+
+		/// <summary>
+		/// Recursively checks the AutoScaleMode and AutoScaleDimensions of all container controls below 'root'.
+		/// 'on_failure' is a callback that receives each failing control. Return true from 'on_failure' to end the recursion</summary>
+		public static bool CheckAutoScaling(Control root, AutoScaleMode? mode_ = null, SizeF? dim_ = null, Func<Control,bool> on_failure = null)
+		{
+			// Guidelines: http://stackoverflow.com/questions/22735174/how-to-write-winforms-code-that-auto-scales-to-system-font-and-dpi-settings
+			var mode = mode_ ?? (root as ContainerControl)?.AutoScaleMode       ?? AutoScaleMode.Font;
+			var dim  = dim_  ?? (root as ContainerControl)?.AutoScaleDimensions ?? new SizeF(6F, 13F);
+			on_failure = on_failure ?? (c => false);
+
+			var failed = false;
+			var cc = root as ContainerControl;
+			if (cc != null)
+			{
+				if (cc.AutoScaleMode == AutoScaleMode.Inherit)
+				{
+					var parent = cc.Parents().OfType<ContainerControl>().FirstOrDefault(p => p.AutoScaleMode != AutoScaleMode.Inherit);
+					if (parent == null || parent.AutoScaleMode != mode || parent.AutoScaleDimensions != dim)
+					{
+						failed = true;
+						if (on_failure(root))
+							return false;
+					}
+				}
+				else if (cc.AutoScaleMode != mode)
+				{
+					failed = true;
+					if (on_failure(root))
+						return false;
+				}
+				else if (cc.AutoScaleDimensions != dim)
+				{
+					failed = true;
+					if (on_failure(root))
+						return false;
+				}
+			}
+			if (!failed)
+			{
+				foreach (var child in root.Controls.OfType<Control>())
+				{
+					if (!CheckAutoScaling(child, mode, dim, on_failure))
+						return false;
+				}
+			}
+			return true;
+		}
+		[Conditional("DEBUG")] public static void AssertAutoScaling(Control root, AutoScaleMode? mode_ = null, SizeF? dim_ = null)
+		{
+			string failures = string.Empty;
+			CheckAutoScaling(root, mode_, dim_, c =>
+			{
+				failures += "{0} {1}\r\n".Fmt(c.GetType().Name, c.Name);
+				return false; // Find them all...
+			});
+			Debug.Assert(failures.Length == 0, "Auto scaling properties not set correctly\r\n{0}".Fmt(failures));
+		}
+
+		/// <summary>Replace the AutoScaleMode and AutoScaleDimensions for all container controls below 'root'</summary>
+		public static void SetAutoScaling(Control root, AutoScaleMode? mode_ = null, SizeF? dim_ = null)
+		{
+			var mode = mode_ ?? (root as ContainerControl)?.AutoScaleMode       ?? AutoScaleMode.Font;
+			var dim  = dim_  ?? (root as ContainerControl)?.AutoScaleDimensions ?? new SizeF(6F, 13F);
+			CheckAutoScaling(root, mode, dim, c =>
+			{
+				var cc = (ContainerControl)c;
+				cc.AutoScaleMode = mode;
+				cc.AutoScaleDimensions = dim;
+				return false; // Do them all...
+			});
 		}
 
 		/// <summary>Swap two values</summary>
@@ -207,13 +303,14 @@ namespace pr.util
 			foreach (U i in collection) yield return conv(i);
 		}
 
-		/// <summary>Parse and return 'val' as type 'T' or return ' def' on parse error</summary>
-		public static byte   ParseOrDefault(string val, byte   def) { byte   o; return byte  .TryParse(val, out o) ? o : def; }
-		public static short  ParseOrDefault(string val, short  def) { short  o; return short .TryParse(val, out o) ? o : def; }
-		public static int    ParseOrDefault(string val, int    def) { int    o; return int   .TryParse(val, out o) ? o : def; }
-		public static uint   ParseOrDefault(string val, uint   def) { uint   o; return uint  .TryParse(val, out o) ? o : def; }
-		public static float  ParseOrDefault(string val, float  def) { float  o; return float .TryParse(val, out o) ? o : def; }
-		public static double ParseOrDefault(string val, double def) { double o; return double.TryParse(val, out o) ? o : def; }
+		// use the int_. static class
+		///// <summary>Parse and return 'val' as type 'T' or return ' def' on parse error</summary>
+		//public static byte   ParseOrDefault(string val, byte   def) { byte   o; return byte  .TryParse(val, out o) ? o : def; }
+		//public static short  ParseOrDefault(string val, short  def) { short  o; return short .TryParse(val, out o) ? o : def; }
+		//public static int    ParseOrDefault(string val, int    def) { int    o; return int   .TryParse(val, out o) ? o : def; }
+		//public static uint   ParseOrDefault(string val, uint   def) { uint   o; return uint  .TryParse(val, out o) ? o : def; }
+		//public static float  ParseOrDefault(string val, float  def) { float  o; return float .TryParse(val, out o) ? o : def; }
+		//public static double ParseOrDefault(string val, double def) { double o; return double.TryParse(val, out o) ? o : def; }
 
 		/// <summary>Attempts to robustly convert 'value' into type 'result_type' using reflection and a load of special cases</summary>
 		public static object ConvertTo(object value, Type result_type, bool ignore_case = false)
@@ -393,24 +490,33 @@ namespace pr.util
 		}
 
 		/// <summary>Add 'item' to a history list of items.</summary>
-		public static T[] AddToHistoryList<T>(IEnumerable<T> history, T item, int max_history_length, Func<T,T,bool> cmp = null)
+		public static T[] AddToHistoryList<T>(IEnumerable<T> history, T item, int max_history_length, int index = 0, Func<T,T,bool> cmp = null)
 		{
-			if (Equals(item, null)) throw new NullReferenceException("Null cannot be added to a history list");
-			cmp = cmp ?? ((l,r) => Equals(l,r));
+			if (Equals(item, null))
+				throw new NullReferenceException("Null cannot be added to a history list");
 
+			// Convert the history to a list
 			var list = history?.ToList() ?? new List<T>();
+
+			// Remove any existing occurrences of 'item'
+			cmp = cmp ?? ((l,r) => Equals(l,r));
 			list.RemoveIf(i => cmp(i,item));
-			list.Insert(0, item);
+
+			// Insert 'item' into the history
+			index = Maths.Min(index, max_history_length-1, list.Count);
+			list.Insert(index, item);
+
+			// Ensure the history doesn't grow too long
 			list.RemoveToEnd(max_history_length);
 			return list.ToArray();
 		}
 
 		/// <summary>Add 'item' to a history list of items.</summary>
-		public static T[] AddToHistoryList<T>(IEnumerable<T> history, T item, bool ignore_case, int max_history_length)
+		public static T[] AddToHistoryList<T>(IEnumerable<T> history, T item, bool ignore_case, int max_history_length, int index = 0)
 		{
 			return ignore_case
-				? AddToHistoryList(history, item, max_history_length, (l,r) => string.Compare(l.ToString(), r.ToString(), StringComparison.OrdinalIgnoreCase) == 0)
-				: AddToHistoryList(history, item, max_history_length, (l,r) => string.Compare(l.ToString(), r.ToString(), StringComparison.Ordinal) == 0);
+				? AddToHistoryList(history, item, max_history_length, index, (l,r) => string.Compare(l.ToString(), r.ToString(), StringComparison.OrdinalIgnoreCase) == 0)
+				: AddToHistoryList(history, item, max_history_length, index, (l,r) => string.Compare(l.ToString(), r.ToString(), StringComparison.Ordinal) == 0);
 		}
 
 		/// <summary>Return the distance between to points</summary>

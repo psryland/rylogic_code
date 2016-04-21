@@ -380,6 +380,20 @@ namespace pr.extn
 				queue.Enqueue(x);
 			}
 		}
+
+		/// <summary>Normalise the values in this array to 'to'</summary>
+		public static IEnumerable<float> Normalise(this IEnumerable<float> source, float to = 1f)
+		{
+			var sum = source.Sum();
+			return source.Select(x => x * to / sum);
+		}
+
+		/// <summary>Normalise the values in this array to 'to'</summary>
+		public static IEnumerable<double> Normalise(this IEnumerable<double> source, double to = 1.0)
+		{
+			var sum = source.Sum();
+			return source.Select(x => x * to / sum);
+		}
 	}
 }
 

@@ -182,7 +182,7 @@ namespace pr.unittests
 			var r  = CmdLine.Parse(t, new[]{"-A","B", "C", "D", "E"});
 			Assert.True(r == CmdLine.Result.Interrupted);
 			Assert.AreEqual(0, t.HelpShownCount);
-			Assert.AreEqual(1, t.ValidateCount);
+			Assert.AreEqual(0, t.ValidateCount);
 			Assert.AreEqual("-a", t.Option);
 			Assert.AreEqual("B", t.OptionArg1);
 			Assert.AreEqual("C", t.OptionArg2);

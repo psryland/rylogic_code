@@ -38,7 +38,7 @@ namespace RyLogViewer
 			// If there was an error display the error message
 			if (err != null)
 			{
-				MsgBox.Show(
+				MsgBox.Show(null,
 					"There is an error in the startup options provided.\r\n"+
 					"Error Details:\r\n{0}".Fmt(err.Message)
 					,"Command Line Error"
@@ -71,7 +71,7 @@ namespace RyLogViewer
 		/// <summary>Handle unhandled exceptions</summary>
 		private static void HandleTheUnhandled(object sender, UnhandledExceptionEventArgs args)
 		{
-			var res = MsgBox.Show(string.Format(
+			var res = MsgBox.Show(null, string.Format(
 				"{0} has shutdown with the following error.\r\n" +
 				"Error: {1}\r\n" +
 				"\r\n" +
@@ -123,7 +123,7 @@ namespace RyLogViewer
 
 					try
 					{
-						if (MsgBox.Show("Preview the report before sending?", "Review Report", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+						if (MsgBox.Show(null, "Preview the report before sending?", "Review Report", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
 						Process.Start(dg.FileName);
 					} catch {}
 

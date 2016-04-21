@@ -124,27 +124,27 @@ namespace pr.extn
 		/// <summary>
 		/// Returns an RAII object for suspending events.
 		/// The event will be raised if 'raise_on_resume' is true and it was signalled while suspended</summary>
-		public static Scope SuspendScope<TEventArgs>(this EventHandler<TEventArgs> evt, bool raise_if_signalled = false, object sender = null, TEventArgs args = null) where TEventArgs :EventArgs
+		public static Scope Suspend<TEventArgs>(this EventHandler<TEventArgs> evt, bool raise_if_signalled = false, object sender = null, TEventArgs args = null) where TEventArgs :EventArgs
 		{
 			if (evt == null) return Scope.Create(null,null);
 			return Scope.Create(
-				() => Suspend(evt, true),
+				() => DoSuspend(evt, true),
 				() =>
 				{
-					if (Suspend(evt, false) && raise_if_signalled)
+					if (DoSuspend(evt, false) && raise_if_signalled)
 						evt.Raise(sender, args);
 				});
 		}
 
 		/// <summary>Returns an RAII object for suspending events</summary>
-		public static Scope SuspendScope(this EventHandler evt, bool raise_if_signalled = false, object sender = null, EventArgs args = null)
+		public static Scope Suspend(this EventHandler evt, bool raise_if_signalled = false, object sender = null, EventArgs args = null)
 		{
 			if (evt == null) return Scope.Create(null,null);
 			return Scope.Create(
-				() => Suspend(evt, true),
+				() => DoSuspend(evt, true),
 				() =>
 				{
-					if (Suspend(evt, false) && raise_if_signalled)
+					if (DoSuspend(evt, false) && raise_if_signalled)
 						evt.Raise(sender, args);
 				});
 		}
@@ -153,7 +153,7 @@ namespace pr.extn
 		/// Block/Unblock this event from firing when Raise() is called.
 		/// Calls to suspend/resume must be matched.
 		/// Returns true if the event has been 'Raise'd while being suspended.</summary>
-		public static bool Suspend<TEventArgs>(this EventHandler<TEventArgs> evt, bool suspend) where TEventArgs :EventArgs
+		private static bool DoSuspend<TEventArgs>(this EventHandler<TEventArgs> evt, bool suspend) where TEventArgs :EventArgs
 		{
 			if (evt == null) return false;
 			return Impl<EventHandler<TEventArgs>>.Suspend(evt, suspend);
@@ -163,7 +163,7 @@ namespace pr.extn
 		/// Block/Unblock this event from firing when Raise() is called.
 		/// Calls to suspend/resume must be matched.
 		/// Returns true if the event has been 'Raise'd while being suspended.</summary>
-		public static bool Suspend(this EventHandler evt, bool suspend)
+		private static bool DoSuspend(this EventHandler evt, bool suspend)
 		{
 			if (evt == null) return false;
 			return Impl<EventHandler>.Suspend(evt, suspend);
@@ -196,14 +196,14 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns an RAII object for suspending events</summary>
-		public static Scope SuspendScope(this PropertyChangedEventHandler evt, bool raise_if_signalled = false, object sender = null, PropertyChangedEventArgs args = null)
+		public static Scope Suspend(this PropertyChangedEventHandler evt, bool raise_if_signalled = false, object sender = null, PropertyChangedEventArgs args = null)
 		{
 			if (evt == null) return Scope.Create(null,null);
 			return Scope.Create(
-				() => Suspend(evt, true),
+				() => DoSuspend(evt, true),
 				() =>
 				{
-					if (Suspend(evt, false) && raise_if_signalled)
+					if (DoSuspend(evt, false) && raise_if_signalled)
 						evt.Raise(sender, args);
 				});
 		}
@@ -212,7 +212,7 @@ namespace pr.extn
 		/// Block/Unblock this event from firing when Raise() is called.
 		/// Calls to suspend/resume must be matched.
 		/// Returns true if the event has been 'Raise'd while being suspended.</summary>
-		public static bool Suspend(this PropertyChangedEventHandler evt, bool suspend)
+		private static bool DoSuspend(this PropertyChangedEventHandler evt, bool suspend)
 		{
 			if (evt == null) return false;
 			return Impl<PropertyChangedEventHandler>.Suspend(evt, suspend);
@@ -241,14 +241,14 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns an RAII object for suspending events</summary>
-		public static Scope SuspendScope(this PropertyChangingEventHandler evt, bool raise_if_signalled = false, object sender = null, PropertyChangingEventArgs args = null)
+		public static Scope Suspend(this PropertyChangingEventHandler evt, bool raise_if_signalled = false, object sender = null, PropertyChangingEventArgs args = null)
 		{
 			if (evt == null) return Scope.Create(null,null);
 			return Scope.Create(
-				() => Suspend(evt, true),
+				() => DoSuspend(evt, true),
 				() =>
 				{
-					if (Suspend(evt, false) && raise_if_signalled)
+					if (DoSuspend(evt, false) && raise_if_signalled)
 						evt.Raise(sender, args);
 				});
 		}
@@ -257,7 +257,7 @@ namespace pr.extn
 		/// Block/Unblock this event from firing when Raise() is called.
 		/// Calls to suspend/resume must be matched.
 		/// Returns true if the event has been 'Raise'd while being suspended.</summary>
-		public static bool Suspend(this PropertyChangingEventHandler evt, bool suspend)
+		private static bool DoSuspend(this PropertyChangingEventHandler evt, bool suspend)
 		{
 			if (evt == null) return false;
 			return Impl<PropertyChangingEventHandler>.Suspend(evt, suspend);
@@ -284,14 +284,14 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns an RAII object for suspending events</summary>
-		public static Scope SuspendScope(this Action evt, bool raise_if_signalled = false)
+		public static Scope Suspend(this Action evt, bool raise_if_signalled = false)
 		{
 			if (evt == null) return Scope.Create(null,null);
 			return Scope.Create(
-				() => evt.Suspend(true),
+				() => evt.DoSuspend(true),
 				() =>
 				{
-					if (evt.Suspend(false) && raise_if_signalled)
+					if (evt.DoSuspend(false) && raise_if_signalled)
 						evt.Raise();
 				});
 		}
@@ -300,7 +300,7 @@ namespace pr.extn
 		/// Block/Unblock this action from firing when Raise() is called.
 		/// Calls to suspend/resume must be matched.
 		/// Returns true if the action has been 'Raise'd while being suspended.</summary>
-		public static bool Suspend(this Action evt, bool suspend)
+		private static bool DoSuspend(this Action evt, bool suspend)
 		{
 			if (evt == null) return false;
 			return Impl<Action>.Suspend(evt, suspend);
@@ -327,17 +327,17 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns an RAII object for suspending events</summary>
-		public static Scope SuspendScope<T1>(this Action<T1> evt)
+		public static Scope Suspend<T1>(this Action<T1> evt)
 		{
 			if (evt == null) return Scope.Create(null,null);
-			return Scope.Create(() => evt.Suspend(true), () => evt.Suspend(false));
+			return Scope.Create(() => evt.DoSuspend(true), () => evt.DoSuspend(false));
 		}
 
 		/// <summary>
 		/// Block/Unblock this action from firing when Raise() is called.
 		/// Calls to suspend/resume must be matched.
 		/// Returns true if the action has been 'Raise'd while being suspended.</summary>
-		public static bool Suspend<T1>(this Action<T1> evt, bool suspend)
+		private static bool DoSuspend<T1>(this Action<T1> evt, bool suspend)
 		{
 			if (evt == null) return false;
 			return Impl<Action<T1>>.Suspend(evt, suspend);
@@ -364,17 +364,17 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns an RAII object for suspending events</summary>
-		public static Scope SuspendScope<T1,T2>(this Action<T1,T2> evt)
+		public static Scope Suspend<T1,T2>(this Action<T1,T2> evt)
 		{
 			if (evt == null) return Scope.Create(null,null);
-			return Scope.Create(() => evt.Suspend(true), () => evt.Suspend(false));
+			return Scope.Create(() => evt.DoSuspend(true), () => evt.DoSuspend(false));
 		}
 
 		/// <summary>
 		/// Block/Unblock this action from firing when Raise() is called.
 		/// Calls to suspend/resume must be matched.
 		/// Returns true if the action has been 'Raise'd while being suspended.</summary>
-		public static bool Suspend<T1,T2>(this Action<T1,T2> evt, bool suspend)
+		private static bool DoSuspend<T1,T2>(this Action<T1,T2> evt, bool suspend)
 		{
 			if (evt == null) return false;
 			return Impl<Action<T1,T2>>.Suspend(evt, suspend);
@@ -404,12 +404,14 @@ namespace pr.unittests
 			// Test event suspend/resume
 			int boo_raised = 0;
 			BooEvent += i => ++boo_raised;
-			BooEvent.Suspend(true);
-			BooEvent.Raise(0);
-			BooEvent.Raise(1);
-			BooEvent.Raise(2);
-			BooEvent.Raise(3);
-			Assert.True(BooEvent.Suspend(false));
+			using (BooEvent.Suspend())
+			{
+				Assert.True(BooEvent.IsSuspended());
+				BooEvent.Raise(0);
+				BooEvent.Raise(1);
+				BooEvent.Raise(2);
+				BooEvent.Raise(3);
+			}
 			Assert.AreEqual(0, boo_raised);
 		}
 	}

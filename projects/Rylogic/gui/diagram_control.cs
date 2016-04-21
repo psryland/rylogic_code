@@ -186,25 +186,25 @@ namespace pr.gui
 				Invalidated.Raise(this);
 			}
 
-			/// <summary>Get/Set whether events from this element are suspended or not</summary>
-			public virtual bool RaiseEvents
-			{
-				get { return Invalidated.IsSuspended(); }
-				set
-				{
-					var suspend = !value;
-					Invalidated.Suspend(suspend);
-					DataChanged.Suspend(suspend);
-					SelectedChanged.Suspend(suspend);
-					PositionChanged.Suspend(suspend);
-					SizeChanged.Suspend(suspend);
-				}
-			}
-
 			/// <summary>RAII object for suspending events on this node</summary>
 			public Scope SuspendEvents()
 			{
-				return Scope.Create(() => RaiseEvents = false, () => RaiseEvents = true);
+				return Scope.Create(
+					() =>
+					{
+						return new[]
+						{
+							Invalidated.Suspend(),
+							DataChanged.Suspend(),
+							SelectedChanged.Suspend(),
+							PositionChanged.Suspend(),
+							SizeChanged.Suspend(),
+						};
+					},
+					arr =>
+					{
+						Util.DisposeAll(arr);
+					});
 			}
 
 			/// <summary>Raised whenever the element needs to be redrawn</summary>
@@ -3864,7 +3864,7 @@ namespace pr.gui
 		}
 		public Scope SuspendDiagramChanged(bool raise_on_resume = true)
 		{
-			return DiagramChanged.SuspendScope(raise_if_signalled:raise_on_resume, sender:this, args:new DiagramChangedEventArgs(EDiagramChangeType.Edited));
+			return DiagramChanged.Suspend(raise_if_signalled:raise_on_resume, sender:this, args:new DiagramChangedEventArgs(EDiagramChangeType.Edited));
 		}
 
 		/// <summary>Remove all data from the diagram</summary>
@@ -4446,15 +4446,16 @@ namespace pr.gui
 			// Block events while we move the nodes around
 			using (Scope.Create(
 				() =>
-					{
-						nodes.ForEach(x => x.RaiseEvents = false);
-						conns.ForEach(x => x.Visible = false);
-					},
-				() =>
-					{
-						nodes.ForEach(x => x.RaiseEvents = true);
-						conns.ForEach(x => x.Visible = true);
-					}))
+				{
+					var arr = nodes.Select(x => x.SuspendEvents()).ToArray();
+					foreach (var x in conns) x.Visible = false;
+					return arr;
+				},
+				arr =>
+				{
+					Util.DisposeAll(arr);
+					foreach (var x in conns) x.Visible = true;
+				}))
 			{
 				// Prevent issues with nodes exactly on top of each other
 				var rand = new Rand(); var djitter = 10f;

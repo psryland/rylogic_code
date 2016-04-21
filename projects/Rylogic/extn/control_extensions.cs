@@ -123,6 +123,22 @@ namespace pr.extn
 			return ctrl.Invoke(action);
 		}
 
+		/// <summary>Enumerators the parents of this control.</summary>
+		public static IEnumerable<Control> Parents(this Control ctrl, bool leaf_to_root = true)
+		{
+			if (leaf_to_root)
+			{
+				for (var p = ctrl.Parent; p != null; p = p.Parent)
+					yield return p;
+			}
+			else
+			{
+				var p = ctrl.Parents(leaf_to_root: true).ToArray();
+				for (var i = p.Length; i-- != 0;)
+					yield return p[i];
+			}
+		}
+
 		/// <summary>Add to the controls collection and return the control for method chaining</summary>
 		public static T Add2<T>(this Control.ControlCollection collection, T ctrl) where T:Control
 		{

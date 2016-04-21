@@ -553,7 +553,7 @@ namespace pr.gui
 			XAxis           = xaxis;
 			YAxis           = yaxis;
 			RenderOptions   = rdr_options;
-			m_impl_data     = data;
+			Data            = data;
 			Notes           = new List<Note>();
 			BaseRangeX      = base_xrange;
 			BaseRangeY      = base_yrange;
@@ -634,10 +634,26 @@ namespace pr.gui
 			{
 				if (m_impl_data == value) return;
 				lock (MutexRendering)
+				{
+					if (m_impl_data != null)
+					{
+						m_impl_data.ListChanging -= HandleDataChanging;
+					}
 					m_impl_data = value;
+					if (m_impl_data != null)
+					{
+						m_impl_data.ListChanging += HandleDataChanging;
+					}
+					Dirty = true;
+				}
 			}
 		}
 		private BindingListEx<Series> m_impl_data;
+		private void HandleDataChanging(object sender, ListChgEventArgs<Series> e)
+		{
+			if (e.IsPostEvent)
+				Dirty = true;
+		}
 
 		/// <summary>Notes to add to the graph</summary>
 		[Browsable(false)]
@@ -1002,7 +1018,7 @@ namespace pr.gui
 		/// <summary>A background thread used to render the plot</summary>
 		private Thread m_rdr_thread;
 
-		/// <summary>Atomic flag for cancelling renderering (yes, bool is atomic in C#)</summary>
+		/// <summary>Atomic flag for cancelling rendering (yes, bool is atomic in C#)</summary>
 		private volatile bool m_rdr_cancel;
 
 		/// <summary>Mutex that synchronises access to the Snapshot objects</summary>

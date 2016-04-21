@@ -14,8 +14,6 @@ namespace pr.maths
 		public v4 y;
 		public v4 z;
 
-		public override string ToString() { return x + " \n" + y + " \n" + z + " \n"; }
-
 		public m3x4(v4 x_, v4 y_, v4 z_) :this()                               { set(x_, y_, z_); }
 		public m3x4(v4 axis_norm, v4 axis_sine_angle, float cos_angle) :this() { set(axis_norm, axis_sine_angle, cos_angle); }
 		public m3x4(v4 axis_norm, float angle) :this()                         { set(axis_norm, angle); }
@@ -23,10 +21,32 @@ namespace pr.maths
 		public m3x4(float pitch, float yaw, float roll) :this()                { set(pitch, yaw, roll); }
 		public m3x4(v4 quaternion) :this()                                     { set(quaternion); }
 
+		public override string ToString()
+		{
+			return x + " \n" + y + " \n" + z + " \n";
+		}
+
+		/// <summary>Get/Set components by index</summary>
 		public v4 this[int i]
 		{
-			get { switch(i){case 0:return x;case 1:return y;case 2:return z;default: throw new ArgumentException("index out of range", "i");} }
-			set { switch(i){case 0:x=value;break;case 1:y=value;break;case 2:z=value;break;default: throw new ArgumentException("index out of range", "i");} }
+			get
+			{
+				switch (i) {
+				case 0: return x;
+				case 1: return y;
+				case 2: return z;
+				}
+				throw new ArgumentException("index out of range", "i");
+			}
+			set
+			{
+				switch (i) {
+				case 0: x = value; return;
+				case 1: y = value; return;
+				case 2: z = value; return;
+				}
+				throw new ArgumentException("index out of range", "i");
+			}
 		}
 
 		/// <summary>Create from vectors</summary>
@@ -90,15 +110,15 @@ namespace pr.maths
 
 		/// <summary>
 		/// Create from an pitch, yaw, and roll.
-		/// Order is roll, pitch, yaw because objects usually face along Z and have Y as up.</summary>
+		/// Order is roll, pitch, yaw because objects usually face along Z and have Y as up. (And to match DirectX)</summary>
 		public void set(float pitch, float yaw, float roll)
 		{
 			float cos_p = (float)Math.Cos(pitch), sin_p = (float)Math.Sin(pitch);
 			float cos_y = (float)Math.Cos(yaw  ), sin_y = (float)Math.Sin(yaw  );
 			float cos_r = (float)Math.Cos(roll ), sin_r = (float)Math.Sin(roll );
-			x.Set( cos_y*cos_r + sin_y*sin_p*sin_r , cos_p*sin_r , -sin_y*cos_r + cos_y*sin_p*sin_r , 0.0f);
-			y.Set(-cos_y*sin_r + sin_y*sin_p*cos_r , cos_p*cos_r ,  sin_y*sin_r + cos_y*sin_p*cos_r , 0.0f);
-			z.Set( sin_y*cos_p                     ,      -sin_p ,                      cos_y*cos_p , 0.0f);
+			x.set( cos_y*cos_r + sin_y*sin_p*sin_r , cos_p*sin_r , -sin_y*cos_r + cos_y*sin_p*sin_r , 0.0f);
+			y.set(-cos_y*sin_r + sin_y*sin_p*cos_r , cos_p*cos_r ,  sin_y*sin_r + cos_y*sin_p*cos_r , 0.0f);
+			z.set( sin_y*cos_p                     ,      -sin_p ,                      cos_y*cos_p , 0.0f);
 		}
 
 		/// <summary>Create from a quaternion</summary>
@@ -127,7 +147,9 @@ namespace pr.maths
 		public static m3x4 Zero     { get { return m_zero; } }
 		public static m3x4 Identity { get { return m_identity; } }
 
-		// Functions
+		// Operators
+		public override bool Equals(object o)               { return o is m3x4 && (m3x4)o == this; }
+		public override int GetHashCode()                   { unchecked { return x.GetHashCode() + y.GetHashCode() + z.GetHashCode(); } }
 		public static m3x4 operator - (m3x4 rhs)            { return new m3x4(-rhs.x, -rhs.y, -rhs.z); }
 		public static m3x4 operator + (m3x4 lhs, m3x4 rhs)  { return new m3x4(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z); }
 		public static m3x4 operator - (m3x4 lhs, m3x4 rhs)  { return new m3x4(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z); }
@@ -136,53 +158,6 @@ namespace pr.maths
 		public static m3x4 operator / (m3x4 lhs, float rhs) { return new m3x4(lhs.x / rhs, lhs.y / rhs, lhs.z / rhs); }
 		public static bool operator ==(m3x4 lhs, m3x4 rhs)  { return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z; }
 		public static bool operator !=(m3x4 lhs, m3x4 rhs)  { return !(lhs == rhs); }
-		public override bool Equals(object o)               { return o is m3x4 && (m3x4)o == this; }
-		public override int GetHashCode()                   { unchecked { return x.GetHashCode() + y.GetHashCode() + z.GetHashCode(); } }
-
-		public static void Transpose3x3(ref m3x4 m)
-		{
-			Maths.Swap(ref m.x.y, ref m.y.x);
-			Maths.Swap(ref m.x.z, ref m.z.x);
-			Maths.Swap(ref m.y.z, ref m.z.y);
-		}
-		public static m3x4 Transpose3x3(m3x4 m)
-		{
-			Transpose3x3(ref m);
-			return m;
-		}
-
-		public static void InvertFast(ref m3x4 m)
-		{
-			Debug.Assert(IsOrthonormal(m), "Matrix is not orthonormal");
-			Transpose3x3(ref m);
-		}
-		public static m3x4 InvertFast(m3x4 m)
-		{
-			InvertFast(ref m);
-			return m;
-		}
-
-		public static void Orthonormalise(ref m3x4 m)
-		{
-			v4.Normalise3(ref m.x);
-			m.y = v4.Normalise3(v4.Cross3(m.z, m.x));
-			m.z = v4.Cross3(m.x, m.y);
-		}
-		public static m3x4 Orthonormalise(m3x4 m)
-		{
-			Orthonormalise(ref m);
-			return m;
-		}
-
-		public static bool IsOrthonormal(m3x4 m)
-		{
-			return
-				Maths.FEql(m.x.Length3Sq, 1f, 2*Maths.TinyF) &&
-				Maths.FEql(m.y.Length3Sq, 1f, 2*Maths.TinyF) &&
-				Maths.FEql(m.z.Length3Sq, 1f, 2*Maths.TinyF) &&
-				v4.FEqlZero3(v4.Cross3(m.x, m.y) - m.z);
-		}
-
 		public static v4 operator * (m3x4 lhs, v4 rhs)
 		{
 			Transpose3x3(ref lhs);
@@ -201,6 +176,70 @@ namespace pr.maths
 				new v4(v4.Dot4(lhs.x, rhs.z), v4.Dot4(lhs.y, rhs.z), v4.Dot4(lhs.z, rhs.z), 0f));
 		}
 
+		/// <summary>Compare matrices</summary>
+		public static bool FEql(m3x4 lhs, m3x4 rhs, float tol)
+		{
+			return v4.FEql4(lhs.x, rhs.x, tol) && v4.FEql4(lhs.y, rhs.y, tol) && v4.FEql4(lhs.z, rhs.z, tol);
+		}
+		public static bool FEql(m3x4 lhs, m3x4 rhs)
+		{
+			return FEql(lhs, rhs, Maths.TinyF);
+		}
+
+		/// <summary>Transpose 'm' in-place</summary>
+		public static void Transpose3x3(ref m3x4 m)
+		{
+			Maths.Swap(ref m.x.y, ref m.y.x);
+			Maths.Swap(ref m.x.z, ref m.z.x);
+			Maths.Swap(ref m.y.z, ref m.z.y);
+		}
+
+		/// <summary>Return the transpose of 'm'</summary>
+		public static m3x4 Transpose3x3(m3x4 m)
+		{
+			Transpose3x3(ref m);
+			return m;
+		}
+
+		/// <summary>Invert 'm' in-place</summary>
+		public static void InvertFast(ref m3x4 m)
+		{
+			Debug.Assert(IsOrthonormal(m), "Matrix is not orthonormal");
+			Transpose3x3(ref m);
+		}
+
+		/// <summary>Return the inverse of 'm'</summary>
+		public static m3x4 InvertFast(m3x4 m)
+		{
+			InvertFast(ref m);
+			return m;
+		}
+
+		/// <summary>Orthonormalise 'm' in-place</summary>
+		public static void Orthonormalise(ref m3x4 m)
+		{
+			v4.Normalise3(ref m.x);
+			m.y = v4.Normalise3(v4.Cross3(m.z, m.x));
+			m.z = v4.Cross3(m.x, m.y);
+		}
+
+		/// <summary>Return an orthonormalised version of 'm'</summary>
+		public static m3x4 Orthonormalise(m3x4 m)
+		{
+			Orthonormalise(ref m);
+			return m;
+		}
+
+		/// <summary>True if 'm' is orthonormal</summary>
+		public static bool IsOrthonormal(m3x4 m)
+		{
+			return
+				Maths.FEql(m.x.Length3Sq, 1f, 2*Maths.TinyF) &&
+				Maths.FEql(m.y.Length3Sq, 1f, 2*Maths.TinyF) &&
+				Maths.FEql(m.z.Length3Sq, 1f, 2*Maths.TinyF) &&
+				v4.FEql3(v4.Cross3(m.x, m.y) - m.z, v4.Zero);
+		}
+
 		/// <summary>
 		/// Permute the rotation vectors in a matrix by 'n'.<para/>
 		/// n == 0 : x  y  z<para/>
@@ -216,8 +255,16 @@ namespace pr.maths
 			}
 		}
 
-		// Make an orientation matrix from a direction. Note the rotation around the direction
-		// vector is not defined. 'axis' is the axis that 'direction' will become
+		/// <summary>Return possible Euler angles for the rotation matrix 'mat'</summary>
+		public static v4 EulerAngles(m3x4 mat)
+		{
+			var q = quat.Make(mat);
+			return quat.EulerAngles(q);
+		}
+
+		/// <summary>
+		/// Make an orientation matrix from a direction. Note the rotation around the direction
+		/// vector is not defined. 'axis' is the axis that 'direction' will become.</summary>
 		public static m3x4 OriFromDir(v4 direction, AxisId axis, v4 preferred_up)
 		{
 			// Get the preferred up direction (handling parallel cases)
@@ -262,3 +309,20 @@ namespace pr.maths
 		}
 	}
 }
+
+#if PR_UNITTESTS
+namespace pr.unittests
+{
+	using extn;
+	using maths;
+
+	[TestFixture] public class UnitTestM3x4
+	{
+		[Test] public void TestQuatConversion()
+		{
+
+
+		}
+	}
+}
+#endif

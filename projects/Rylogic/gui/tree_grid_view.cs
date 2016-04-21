@@ -579,12 +579,7 @@ namespace pr.gui
 		/// <summary>Return the tree cell in this row</summary>
 		public TreeGridCell TreeCell
 		{
-			get
-			{
-				TreeGridCell tree_cell = null;
-				foreach (DataGridViewCell c in Cells) { if ((tree_cell = c as TreeGridCell) != null) break; } // Find the tree cell
-				return tree_cell;
-			}
+			get { return Cells.OfType<TreeGridCell>().FirstOrDefault(); }
 		}
 
 		/// <summary>The collection of child nodes for this node</summary>
@@ -610,6 +605,12 @@ namespace pr.gui
 				}
 				return base.Cells;
 			}
+		}
+
+		/// <summary>The cell values for this row/node</summary>
+		public IEnumerable Values
+		{
+			get { return Cells.OfType<DataGridViewCell>().Select(x => x.Value); }
 		}
 
 		/// <summary>Collapse the children of this node</summary>

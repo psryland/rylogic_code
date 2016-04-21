@@ -459,16 +459,38 @@ namespace pr.extn
 			var grid_width      = GridDisplayWidth(grid);
 			var widths          = columns.Select(x => (float)x.Width).ToArray();
 			var min_widths      = columns.Select(x => (float)x.MinimumWidth).ToArray();
-
 			var left_width      = widths.Take(column_index+1).Sum();
 			var right_width     = widths.Skip(column_index+1).Sum();
+			var left_min_width  = min_widths.Take(column_index+1).Sum();
 			var right_min_width = min_widths.Skip(column_index+1).Sum();
+			float space, scale;
 
-			// Squish the right hand side columns into the remaining space
-			var remaining = Math.Max(grid_width - left_width, right_min_width);
-			var scale = remaining / right_width;
-			for (int i = column_index+1; i != widths.Length; ++i)
-				widths[i] *= scale;
+			// Squish columns to the right, leaving left columns unchanged
+			if (Control.ModifierKeys == Keys.None)
+			{
+				// Squish the right hand side columns into the remaining space
+				space = Math.Max(grid_width - left_width, right_min_width);
+				scale = space / right_width;
+				for (int i = column_index+1; i != widths.Length; ++i)
+					widths[i] *= scale;
+			}
+
+			// Squish columns to the left, and stretch columns to the right
+			else if (Control.ModifierKeys == Keys.Alt)
+			{
+				var left_weights    = columns.Take(column_index+1).Select(x => x.FillWeight).Normalise().ToArray();
+				var right_weights   = columns.Skip(column_index+1).Select(x => x.FillWeight).Normalise().ToArray();
+
+				// Squish the left hand side columns
+				space = Math.Max(left_width, left_min_width);
+				for (int i = 0; i != column_index+1; ++i)
+					widths[i] = left_weights[i] * space;
+
+				// Expand the right hand side columns into the remaining space
+				space = Math.Max(grid_width - space, right_min_width);
+				for (int i = column_index+1; i != widths.Length; ++i)
+					widths[i] = right_weights[i-column_index-1] * space;
+			}
 
 			// Set the fill weights based on the new distribution of widths
 			var total_width = widths.Sum();
@@ -503,14 +525,14 @@ namespace pr.extn
 			var columns = grid.Columns.Cast<DataGridViewColumn>();
 
 			// Get the visible width available to the columns.
-			// Note, with scroll bars are visible, DisplayRectangle excludes their area
+			// Note, when scroll bars are visible, DisplayRectangle excludes their area
 			var grid_width = GridDisplayWidth(grid);
 
 			// Get the column fill weights
 			var fill_weights = grid.FillWeights(zero_if_not_visible:true, normalised:true);
 
 			// Generate a default set of widths
-			// Note, fill weights are relative to the display area, not the area minus row headers
+			// Note, fill weights are relative to the display area, not the area minus row headers if row headers are visible
 			var widths = fill_weights.Select(x => x*grid_width).ToArray();
 
 			// Measure each column's preferred width
@@ -518,11 +540,11 @@ namespace pr.extn
 			
 			// Return the cell's preferred size
 			Func<DataGridViewCell,float> MeasurePreferredWidth = (cell) =>
-				{
-					var sz = cell.PreferredSize;
-					var w = Maths.Clamp(sz.Width, 30, 64000); // DGV throws if width is greater than 65535
-					return w;
-				};
+			{
+				var sz = cell.PreferredSize;
+				var w = Maths.Clamp(sz.Width, 30, 64000); // DGV throws if width is greater than 65535
+				return w;
+			};
 
 			// Measure the column header cells,
 			if (opts.HasFlag(EColumnSizeOptions.IncludeColumnHeaders))
@@ -875,6 +897,19 @@ namespace pr.extn
 
 			/// <summary>What was hit</summary>
 			public DataGridViewHitTestType Type { get { return m_info.Type; } }
+
+			/// <summary>True if a column or row divider was hit</summary>
+			public bool Divider
+			{
+				get
+				{
+					var fi = m_info.GetType().GetField("typeInternal", BindingFlags.Instance | BindingFlags.NonPublic);
+					var value = fi.GetValue(m_info).ToString();
+					return
+						value.Equals("RowResizeTop") || value.Equals("RowResizeBottom") ||
+						value.Equals("ColumnResizeLeft") || value.Equals("ColumnResizeRight");
+				}
+			}
 
 			/// <summary>Gets the index of the column that contains the hit test point</summary>
 			public int ColumnIndex { get { return m_info.ColumnIndex; } }

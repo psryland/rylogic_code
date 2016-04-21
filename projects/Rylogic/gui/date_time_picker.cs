@@ -24,8 +24,23 @@ namespace pr.gui
 		/// <summary>
 		/// The default DateTime.Kind.
 		/// DateTime values in the base.DateTimePicker have 'Kind' as unspecified since the control
-		/// does not provide a way for the user to select UTC/Local. This value sets the Kind value used in all control values</summary>
-		public DateTimeKind Kind { get; set; }
+		/// does not provide a way for the user to select UTC/Local. This value sets the Kind value
+		/// used in all control values. Changing this value only changes the 'Kind' property on the
+		/// MinData, MaxDate, and Value properties</summary>
+		public DateTimeKind Kind
+		{
+			get { return m_kind; }
+			set
+			{
+				if (m_kind == value) return;
+				var min = DateTime.SpecifyKind(MinDate, value);
+				var max = DateTime.SpecifyKind(MaxDate, value);
+				var val = DateTime.SpecifyKind(Value  , value);
+				m_kind = value;
+				this.Set(val, min, max);
+			}
+		}
+		private DateTimeKind m_kind;
 
 		///<summary>
 		/// Gets or sets the minimum date and time that can be selected in the control.

@@ -243,7 +243,7 @@ namespace pr.container
 						throw new Exception("Binding to an IList<> that isn't also an IList has unexpected results");
 				}
 
-				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.PreReset, -1, default(TItem)));
+				RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.PreReset, -1, default(TItem)));
 
 				// Unhook
 				var bl = m_bs.DataSource as BindingListEx<TItem>;
@@ -287,7 +287,7 @@ namespace pr.container
 					RaiseListChangedEvents = bs.RaiseListChangedEvents;
 				}
 
-				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.Reset, -1, default(TItem)));
+				RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.Reset, -1, default(TItem)));
 			}
 		}
 
@@ -619,8 +619,8 @@ namespace pr.container
 				yield return (TItem)item;
 		}
 
-		/// <summary>Retrieves an array of System.ComponentModel.PropertyDescriptor objects representing the bindable properties of the data source list type.</summary>
-		/// <param name="listAccessors">An array of System.ComponentModel.PropertyDescriptor objects to find in the list as bindable.</param>
+		/// <summary>Retrieves an array of System.ComponentModel.PropertyDescriptor objects representing the bind-able properties of the data source list type.</summary>
+		/// <param name="listAccessors">An array of System.ComponentModel.PropertyDescriptor objects to find in the list as bind-able.</param>
 		/// <returns>An array of System.ComponentModel.PropertyDescriptor objects that represents the properties on this list type used to bind data.</returns>
 		public virtual PropertyDescriptorCollection GetItemProperties(PropertyDescriptor[] listAccessors)
 		{
@@ -738,7 +738,7 @@ namespace pr.container
 			var idx = m_bs.Position;
 
 			if (RaiseListChangedEvents)
-				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.PreReset, -1, default(TItem)));
+				RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.PreReset, -1, default(TItem)));
 
 			m_bs.ResetBindings(metadataChanged);
 
@@ -747,7 +747,7 @@ namespace pr.container
 				m_bs.Position = idx;
 
 			if (RaiseListChangedEvents)
-				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.Reset, -1, default(TItem)));
+				RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.Reset, -1, default(TItem)));
 		}
 
 		/// <summary>Causes a control bound to the System.Windows.Forms.BindingSource to reread the currently selected item and refresh its displayed value.</summary>
@@ -757,12 +757,12 @@ namespace pr.container
 			var index = Position;
 
 			if (RaiseListChangedEvents)
-				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.ItemPreReset, index, item));
+				RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.ItemPreReset, index, item));
 
 			m_bs.ResetCurrentItem();
 
 			if (RaiseListChangedEvents)
-				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.ItemReset, index, item));
+				RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.ItemReset, index, item));
 		}
 
 		/// <summary>Causes a control bound to this BindingSource to reread the item at the specified index, and refresh its displayed value.</summary>
@@ -772,12 +772,12 @@ namespace pr.container
 			var item = this[itemIndex];
 
 			if (RaiseListChangedEvents)
-				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.ItemPreReset, itemIndex, item));
+				RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.ItemPreReset, itemIndex, item));
 
 			m_bs.ResetItem(itemIndex);
 
 			if (RaiseListChangedEvents)
-				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.ItemReset, itemIndex, item));
+				RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.ItemReset, itemIndex, item));
 		}
 
 		/// <summary>Reset bindings for 'item'</summary>
@@ -1090,7 +1090,7 @@ namespace pr.container
 		/// A view of the binding source data that is filtered by a predicate.
 		/// Updates when the underlying binding source changes.
 		/// This class is intended to be the DataSource of another binding source instance</summary>
-		public class View :IDisposable ,IBindingList, IList, ICollection, IEnumerable<TItem>, IEnumerable, ICancelAddNew
+		public class View :IDisposable ,IBindingList, IList<TItem>, IList, ICollection, IEnumerable<TItem>, IEnumerable, ICancelAddNew
 		{
 			public View(BindingSource<TItem> bs, Func<TItem, bool> pred = null)
 			{
@@ -1211,7 +1211,7 @@ namespace pr.container
 			/// <summary>Update the list of items in this view</summary>
 			public void UpdateView()
 			{
-				HandleSourceChanging(this, new ListChgEventArgs<TItem>(ListChg.Reset, -1, default(TItem)));
+				HandleSourceChanging(this, new ListChgEventArgs<TItem>(this, ListChg.Reset, -1, default(TItem)));
 			}
 
 			/// <summary>Handle the underlying binding source changing</summary>
@@ -1281,7 +1281,7 @@ namespace pr.container
 			{
 				// Translate the changing Index collection to a changing item
 				var item = e.Index != -1 ? BindingSource[e.Item] : default(TItem);
-				ListChanging.Raise(this, new ListChgEventArgs<TItem>(e.ChangeType, e.Index, item));
+				ListChanging.Raise(this, new ListChgEventArgs<TItem>(this, e.ChangeType, e.Index, item));
 			}
 
 			/// <summary>Handle the IBindingList changed events</summary>
@@ -1411,6 +1411,11 @@ namespace pr.container
 			void IList.Remove(object value)
 			{
 				Remove((TItem)value);
+			}
+			bool ICollection<TItem>.Remove(TItem item)
+			{
+				ThrowIfReadOnly();
+				return ((ICollection<TItem>)BindingSource).Remove(item);
 			}
 
 			/// <summary>Add 'item' to the underlying data source. Note: 'item' won't be added to this view if Predicate(item) is false<</summary>

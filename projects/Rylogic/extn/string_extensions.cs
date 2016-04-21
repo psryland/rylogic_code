@@ -218,9 +218,10 @@ namespace pr.extn
 		}
 
 		/// <summary>Return the string as a stream</summary>
-		public static Stream ToStream(this string str)
+		public static Stream ToStream(this string str, Encoding enc = null)
 		{
-			return new MemoryStream(str.ToBytes(), false);
+			enc = enc ?? Encoding.UTF8;
+			return new MemoryStream(enc.GetBytes(str), false);
 		}
 
 		/// <summary>

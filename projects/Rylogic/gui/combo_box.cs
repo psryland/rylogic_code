@@ -220,10 +220,10 @@ namespace pr.gui
 			// Only allow selection setting for editable combo box styles
 			if (DropDownStyle != ComboBoxStyle.DropDownList && m_selection != null)
 			{
-				System.Diagnostics.Trace.WriteLine("Restoring Selection: [{0},{1}]".Fmt(m_selection.Value.Begini, m_selection.Value.Sizei));
+				//System.Diagnostics.Trace.WriteLine("Restoring Selection: [{0},{1}]".Fmt(m_selection.Value.Begini, m_selection.Value.Sizei));
 				Select(m_selection.Value.Begini, m_selection.Value.Sizei);
 				m_selection = null;
-				System.Diagnostics.Trace.WriteLine("Selection is now: [{0},{1}]".Fmt(SelectionStart, SelectionLength));
+				//System.Diagnostics.Trace.WriteLine("Selection is now: [{0},{1}]".Fmt(SelectionStart, SelectionLength));
 			}
 		}
 
@@ -234,8 +234,8 @@ namespace pr.gui
 			if (DropDownStyle != ComboBoxStyle.DropDownList)
 			{
 				m_selection = Range.FromStartLength(SelectionStart, SelectionLength);
-				System.Diagnostics.Trace.WriteLine("Selection Saved: [{0},{1}]\n\t{2}".Fmt(m_selection.Value.Begini, m_selection.Value.Sizei,
-					string.Join("\n\t", new System.Diagnostics.StackTrace().GetFrames().Take(5).Select(x => x.GetMethod()))));
+				//System.Diagnostics.Trace.WriteLine("Selection Saved: [{0},{1}]\n\t{2}".Fmt(m_selection.Value.Begini, m_selection.Value.Sizei,
+				//	string.Join("\n\t", new System.Diagnostics.StackTrace().GetFrames().Take(5).Select(x => x.GetMethod()))));
 			}
 		}
 

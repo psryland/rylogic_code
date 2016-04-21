@@ -64,6 +64,10 @@ namespace pr.maths
 		{
 			return (value & mask) != 0;
 		}
+		public static bool AnySet(byte value, byte mask)
+		{
+			return (value & mask) != 0;
+		}
 		public static bool AnySet<T>(T value, T mask) where T :struct, IConvertible
 		{
 			System.Diagnostics.Debug.Assert(typeof(T).HasAttribute<FlagsAttribute>(), "Type {0} is not a flags enum".Fmt(typeof(T).Name));
@@ -87,9 +91,13 @@ namespace pr.maths
 		{
 			return (value & mask) == mask;
 		}
+		public static bool AllSet(byte value, byte mask)
+		{
+			return (value & mask) == mask;
+		}
 		public static bool AllSet<T>(T value, T mask) where T :struct, IConvertible
 		{
-			System.Diagnostics.Debug.Assert(typeof(T).HasAttribute<FlagsAttribute>(), "Type {0} is not a flags enum".Fmt(typeof(T).Name));
+			System.Diagnostics.Debug.Assert(typeof(T).HasAttribute<FlagsAttribute>(), "Type {0} is not an enum with the [Flags] attribute".Fmt(typeof(T).Name));
 			return AnySet(value.ToUInt64(null), mask.ToUInt64(null));
 		}
 

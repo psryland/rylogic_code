@@ -11,22 +11,34 @@ using System.Xml.Linq;
 using pr.common;
 using pr.util;
 using pr.extn;
+using pr.gui;
+using System.Windows.Forms;
 
 // Example use of settings
 //  private sealed class Settings :SettingsBase<Settings>
 //  {
-//  	public string Str { get { return get(x => x.Str); } set { set(x => x.Str, value); } }
-//  	public int    Int { get { return get(x => x.Int); } set { set(x => x.Int, value); } }
+//  	public string Name  { get { return get(x => x.Name ); } set { set(x => x.Name , value); } }
+//  	public int    Value { get { return get(x => x.Value); } set { set(x => x.Value, value); } }
 //  	public Settings()
 //  	{
-//  		Str = "default";
-//  		Int = 4;
+//  		Name  = "default";
+//  		Value = 4;
 //  	}
 //		public Settings(string filepath) :base(filepath) {}
 //  }
 
 namespace pr.common
 {
+	public enum ESettingsEvent
+	{
+		LoadFailed,
+		NoVersion,
+		FileNotFound,
+		LoadingSettings,
+		SavingSettings,
+		SaveFailed,
+	}
+
 	public class SettingsPair
 	{
 		public string Key   { get; set; }
@@ -150,7 +162,7 @@ namespace pr.common
 			set(R<T>.Name(expression), value);
 		}
 
-		/// <summary>Return the settings as an xml node tree</summary>
+		/// <summary>Return the settings as an XML node tree</summary>
 		public virtual XElement ToXml(XElement node)
 		{
 			foreach (var d in Data)
@@ -158,7 +170,7 @@ namespace pr.common
 			return node;
 		}
 
-		/// <summary>Populate this object from xml</summary>
+		/// <summary>Populate this object from XML</summary>
 		public virtual void FromXml(XElement node)
 		{
 			// Load data from settings
@@ -219,9 +231,53 @@ namespace pr.common
 	public abstract class SettingsBase<T> :SettingsSet<T> where T:SettingsBase<T>, new()
 	{
 		protected const string VersionKey = "__SettingsVersion";
-		private string m_filepath;
 		private bool m_block_saving;
-		private bool m_auto_save;
+
+		protected SettingsBase()
+		{
+			m_filepath = "";
+			SettingsEvent = null;
+
+			// Default to off so users can enable after startup completes
+			AutoSaveOnChanges = false;
+		}
+		protected SettingsBase(SettingsBase<T> rhs, bool read_only = false) :this(rhs.ToXml(new XElement("root")), read_only)
+		{}
+		protected SettingsBase(XElement node, bool read_only = false) :this()
+		{
+			try
+			{
+				FromXml(node, read_only);
+			}
+			catch (Exception ex)
+			{
+				// If anything goes wrong, use the defaults
+				// Use 'new T().Data' so that reference types can be used, otherwise we'll change the defaults
+				SettingsEvent(ESettingsEvent.LoadFailed, ex, "Failed to load settings from XML data");
+				Data.AddRange(new T().Data);
+			}
+		}
+		protected SettingsBase(Stream stream, bool read_only = false) :this()
+		{
+			Debug.Assert(stream != null);
+			try
+			{
+				Load(stream, read_only);
+			}
+			catch (Exception ex)
+			{
+				// If anything goes wrong, use the defaults
+				// Use 'new T().Data' so that reference types can be used, otherwise we'll change the defaults
+				SettingsEvent(ESettingsEvent.LoadFailed, ex, "Failed to load settings from stream");
+				Data.AddRange(new T().Data);
+			}
+		}
+		protected SettingsBase(string filepath, bool read_only = false) :this()
+		{
+			Debug.Assert(!string.IsNullOrEmpty(filepath));
+			Filepath = filepath;
+			Reload(read_only);
+		}
 
 		/// <summary>Returns the directory in which to store app settings</summary>
 		public static string DefaultAppDataDirectory
@@ -256,57 +312,7 @@ namespace pr.common
 			get { return m_filepath; }
 			set { m_filepath = value ?? string.Empty; }
 		}
-
-		/// <summary>An event raised whenever the settings are loaded from persistent storage</summary>
-		public event EventHandler<SettingsLoadedEventArgs> SettingsLoaded;
-
-		/// <summary>An event raised whenever the settings are about to be saved to persistent storage</summary>
-		public event EventHandler<SettingsSavingEventArgs> SettingsSaving;
-
-		protected SettingsBase()
-		{
-			m_filepath = "";
-
-			// Default to off so users can enable after startup completes
-			AutoSaveOnChanges = false;
-		}
-		protected SettingsBase(SettingsBase<T> rhs, bool read_only = false) :this(rhs.ToXml(new XElement("root")), read_only)
-		{}
-		protected SettingsBase(XElement node, bool read_only = false) :this()
-		{
-			try
-			{
-				FromXml(node, read_only);
-			}
-			catch (Exception ex)
-			{
-				// If anything goes wrong, use the defaults
-				// Use 'new T().Data' so that reference types can be used, otherwise we'll change the defaults
-				Log.Exception(this, ex, "Failed to load settings from xml data");
-				Data.AddRange(new T().Data);
-			}
-		}
-		protected SettingsBase(Stream stream, bool read_only = false) :this()
-		{
-			Debug.Assert(stream != null);
-			try
-			{
-				Load(stream, read_only);
-			}
-			catch (Exception ex)
-			{
-				// If anything goes wrong, use the defaults
-				// Use 'new T().Data' so that reference types can be used, otherwise we'll change the defaults
-				Log.Exception(this, ex, "Failed to load settings from stream");
-				Data.AddRange(new T().Data);
-			}
-		}
-		protected SettingsBase(string filepath, bool read_only = false) :this()
-		{
-			Debug.Assert(!string.IsNullOrEmpty(filepath));
-			Filepath = filepath;
-			Reload(read_only);
-		}
+		private string m_filepath;
 
 		/// <summary>Get/Set whether to automatically save whenever a setting is changed</summary>
 		public bool AutoSaveOnChanges
@@ -315,15 +321,32 @@ namespace pr.common
 			set
 			{
 				if (m_auto_save == value) return;
-				m_auto_save = value;
-				
-				EventHandler<SettingChangedEventArgs> save = (s,a) => Save();
-				
-				SettingChanged -= save;
 				if (m_auto_save)
-					SettingChanged += save;
+				{
+					SettingChanged -= Save;
+				}
+				m_auto_save = value;
+				if (m_auto_save)
+				{
+					SettingChanged += Save;
+				}
 			}
 		}
+		private bool m_auto_save;
+
+		/// <summary>An event raised whenever the settings are loaded from persistent storage</summary>
+		public event EventHandler<SettingsLoadedEventArgs> SettingsLoaded;
+
+		/// <summary>An event raised whenever the settings are about to be saved to persistent storage</summary>
+		public event EventHandler<SettingsSavingEventArgs> SettingsSaving;
+
+		/// <summary>Called whenever an error or warning condition occurs. By default, this function calls 'OnSettingsError'</summary>
+		public Action<ESettingsEvent, Exception, string> SettingsEvent
+		{
+			get { return m_impl_settings_error; }
+			set { m_impl_settings_error = value ?? ((err,ex,msg) => OnSettingsEvent(err,ex,msg)); }
+		}
+		private Action<ESettingsEvent, Exception, string> m_impl_settings_error;
 
 		/// <summary>Resets the persistent settings to their defaults</summary>
 		public void Reset()
@@ -343,20 +366,20 @@ namespace pr.common
 			{
 				// If anything goes wrong, use the defaults
 				// Use 'new T().Data' so that reference types can be used, otherwise we'll change the defaults
-				Log.Exception(this, ex, "Failed to load settings from {0}".Fmt(Filepath));
+				SettingsEvent(ESettingsEvent.LoadFailed, ex, "Failed to load settings from {0}".Fmt(Filepath));
 				foreach (var d in new T().Data) // use 'set' so that ISettingsSets are parented correctly
 					set(d.Key, d.Value);
 			}
 		}
 
-		/// <summary>Load the settings from xml</summary>
+		/// <summary>Load the settings from XML</summary>
 		public override void FromXml(XElement node)
 		{
 			// Upgrade old settings
 			var vers = node.Element(VersionKey);
 			if (vers == null)
 			{
-				Log.Info(this,"Settings data does not contain a version, using defaults");
+				SettingsEvent(ESettingsEvent.NoVersion, null, "Settings data does not contain a version, using defaults");
 				Reset();
 				return; // Reset will recursively call Load again
 			}
@@ -365,7 +388,7 @@ namespace pr.common
 			if (vers.Value != Version)
 				Upgrade(node, vers.Value);
 
-			// Load the settings from xml
+			// Load the settings from XML
 			base.FromXml(node);
 			Validate();
 
@@ -387,12 +410,12 @@ namespace pr.common
 		{
 			if (!PathEx.FileExists(filepath))
 			{
-				Log.Info(this,"Settings file {0} not found, using defaults".Fmt(filepath));
+				SettingsEvent(ESettingsEvent.FileNotFound, null, "Settings file {0} not found, using defaults".Fmt(filepath));
 				Reset();
 				return; // Reset will recursively call Load again
 			}
 
-			Log.Debug(this,"Loading settings file {0}".Fmt(filepath));
+			SettingsEvent(ESettingsEvent.LoadingSettings, null, "Loading settings file {0}".Fmt(filepath));
 
 			var settings = XDocument.Load(filepath).Root;
 			if (settings == null) throw new Exception("Invalidate settings file ({0})".Fmt(filepath));
@@ -400,7 +423,7 @@ namespace pr.common
 			// Set the filepath before loading so that it's valid for the SettingsLoaded event
 			Filepath = filepath;
 
-			// Load the settings from xml. Block saving during load/upgrade
+			// Load the settings from XML. Block saving during load/upgrade
 			using (Scope.Create(() => m_block_saving = true, () => m_block_saving = false))
 				FromXml(settings);
 
@@ -409,7 +432,7 @@ namespace pr.common
 		}
 		public void Load(Stream stream, bool read_only = false)
 		{
-			Log.Debug(this,"Loading settings stream");
+			SettingsEvent(ESettingsEvent.LoadingSettings, null, "Loading settings from stream");
 
 			var settings = XDocument.Load(stream).Root;
 			if (settings == null) throw new Exception("Invalidate settings source");
@@ -417,7 +440,7 @@ namespace pr.common
 			// Set the filepath before loading so that it's valid for the SettingsLoaded event
 			Filepath = string.Empty;
 
-			// Load the settings from xml. Block saving during load/upgrade
+			// Load the settings from XML. Block saving during load/upgrade
 			using (Scope.Create(() => m_block_saving = true, () => m_block_saving = false))
 				FromXml(settings);
 
@@ -425,7 +448,7 @@ namespace pr.common
 			ReadOnly = read_only;
 		}
 
-		/// <summary>Return the settings as xml</summary>
+		/// <summary>Return the settings as XML</summary>
 		public XElement ToXml()
 		{
 			return ToXml(new XElement("settings"));
@@ -453,15 +476,24 @@ namespace pr.common
 				if (SettingsSaving != null) SettingsSaving(this, args);
 				if (args.Cancel) return;
 
+				SettingsEvent(ESettingsEvent.SavingSettings, null, "Saving settings to file {0}".Fmt(filepath));
+
 				// Ensure the save directory exists
 				filepath = Path.GetFullPath(filepath);
 				var path = Path.GetDirectoryName(filepath);
 				if (!PathEx.DirExists(path))
 					Directory.CreateDirectory(path);
 
-				// Perform the save
-				var settings = ToXml();
-				settings.Save(filepath, SaveOptions.None);
+				try
+				{
+					// Perform the save
+					var settings = ToXml();
+					settings.Save(filepath, SaveOptions.None);
+				}
+				catch (Exception ex)
+				{
+					SettingsEvent(ESettingsEvent.SaveFailed, ex, "Failed to save settings to file {0}".Fmt(filepath));
+				}
 			}
 		}
 		public void Save(Stream stream)
@@ -476,11 +508,18 @@ namespace pr.common
 				if (SettingsSaving != null) SettingsSaving(this, args);
 				if (args.Cancel) return;
 
-				Log.Debug(this, "Saving settings to stream");
+				SettingsEvent(ESettingsEvent.SavingSettings, null, "Saving settings to stream");
 
-				// Perform the save
-				var settings = ToXml();
-				settings.Save(stream, SaveOptions.None);
+				try
+				{
+					// Perform the save
+					var settings = ToXml();
+					settings.Save(stream, SaveOptions.None);
+				}
+				catch (Exception ex)
+				{
+					SettingsEvent(ESettingsEvent.SaveFailed, ex, "Failed to save settings to the given stream");
+				}
 			}
 		}
 
@@ -488,6 +527,10 @@ namespace pr.common
 		public void Save()
 		{
 			Save(Filepath);
+		}
+		public void Save(object sender, EventArgs args)
+		{
+			Save();
 		}
 
 		/// <summary>Remove the settings file from persistent storage</summary>
@@ -505,6 +548,36 @@ namespace pr.common
 
 		/// <summary>Perform validation on the loaded settings</summary>
 		public virtual void Validate() {}
+
+		/// <summary>Default handling of settings errors/warnings</summary>
+		public virtual void OnSettingsEvent(ESettingsEvent err, Exception ex, string msg)
+		{
+			switch (err)
+			{
+			default:
+				Debug.Assert(false, "Unknown settings event type");
+				Log.Exception(this, ex, msg);
+				break;
+			case ESettingsEvent.LoadingSettings:
+			case ESettingsEvent.SavingSettings:
+				Log.Debug(this, msg);
+				break;
+			case ESettingsEvent.NoVersion:
+				Log.Info(this, msg);
+				break;
+			case ESettingsEvent.FileNotFound:
+				Log.Warn(this, msg);
+				break;
+			case ESettingsEvent.LoadFailed:
+				Log.Exception(this, ex, msg);
+				break;
+			case ESettingsEvent.SaveFailed:
+				// By default, show an error message box. User code can prevent this by replacing
+				// the SettingsEvent action, or overriding OnSettingsEvent
+				MsgBox.Show(null, "An error occurred that prevented settings being saved.\r\n\r\n{0}\r\n{1}".Fmt(msg, ex.Message), "Save Settings", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				break;
+			}
+		}
 	}
 
 	#region Settings Event args

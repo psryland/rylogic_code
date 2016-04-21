@@ -56,7 +56,7 @@ namespace pr.gui
 						{
 							AutoSize = true,
 							Text = m_text,
-							ForeColor = SystemColors.GrayText,
+							ForeColor = BackColor,
 							Checked = false,
 						};
 						m_chk.CheckedChanged += HandleCheckedChanged;
@@ -68,7 +68,7 @@ namespace pr.gui
 						{
 							AutoSize = true,
 							Text = m_text,
-							ForeColor = SystemColors.GrayText,
+							ForeColor = ForeColor,
 							Checked = false,
 						};
 						m_rdo.CheckedChanged += HandleCheckedChanged;
@@ -157,6 +157,16 @@ namespace pr.gui
 		{
 			base.OnParentChanged(e);
 			HandleParentChanged();
+		}
+		protected override void OnForeColorChanged(EventArgs e)
+		{
+			if (m_rdo != null) m_rdo.ForeColor = ForeColor;
+			base.OnForeColorChanged(e);
+		}
+		protected override void OnBackColorChanged(EventArgs e)
+		{
+			if (m_rdo != null) m_rdo.BackColor = BackColor;
+			base.OnBackColorChanged(e);
 		}
 
 		/// <summary>Called when the check state changes for the group box</summary>

@@ -14,11 +14,11 @@ namespace pr.extn
 			if (value != value.Clamp(min,max))
 				throw new Exception("Date/time value is not within the given range of date/time values");
 			if (value.Kind == DateTimeKind.Unspecified)
-				throw new Exception("DateTimePicker Value has an unspecified timezone");
+				throw new Exception("DateTimePicker Value has an unspecified time-zone");
 			if (min.Kind == DateTimeKind.Unspecified)
-				throw new Exception("DateTimePicker Minimum Value has an unspecified timezone");
+				throw new Exception("DateTimePicker Minimum Value has an unspecified time-zone");
 			if (max.Kind == DateTimeKind.Unspecified)
-				throw new Exception("DateTimePicker Maximum Value has an unspecified timezone");
+				throw new Exception("DateTimePicker Maximum Value has an unspecified time-zone");
 
 			// Setting to MinimumDateTime/MaximumDateTime first avoids problems if min > MaxDate or max < MinDate
 			dtp.MinDate = DateTimePicker.MinimumDateTime;
@@ -181,7 +181,7 @@ namespace pr.unittests
 			}
 
 			// Implicit conversion from DT to DTO sets Offset.
-			// If DT.Kind is unspecified, the local timezone offset is assumed
+			// If DT.Kind is unspecified, the local time-zone offset is assumed
 			{
 				DateTimeOffset a = dt_utc; Assert.True(a.Offset == TimeSpan.Zero);
 				DateTimeOffset b = dt_loc; Assert.True(b.Offset == ofs);

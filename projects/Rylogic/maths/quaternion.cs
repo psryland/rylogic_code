@@ -12,8 +12,11 @@ namespace pr.maths
 	[Serializable]
 	public static class quat
 	{
-		// Static quat types
-		public static v4 Identity { get { return v4.WAxis; } }
+		// Static quaternion types
+		public static v4 Identity
+		{
+			get { return v4.WAxis; }
+		}
 		
 		/// <summary>Create a quaternion from an axis and an angle</summary>
 		public static v4 Make(v4 axis, float angle)
@@ -23,17 +26,18 @@ namespace pr.maths
 			return new v4(s*axis.x, s*axis.y, s*axis.z, w);
 		}
 		
-		/// <summary>Create a quaternion from Euler angles</summary>
+		/// <summary>Create a quaternion from Euler angles. Order is: roll, pitch, yaw (to match DirectX)</summary>
 		public static v4 Make(float pitch, float yaw, float roll)
 		{
-			float cos_r = (float)Math.Cos(roll  * 0.5), sin_r = (float)Math.Sin(roll  * 0.5);
+			// nicked from 'XMQuaternionRotationRollPitchYaw'
 			float cos_p = (float)Math.Cos(pitch * 0.5), sin_p = (float)Math.Sin(pitch * 0.5);
 			float cos_y = (float)Math.Cos(yaw   * 0.5), sin_y = (float)Math.Sin(yaw   * 0.5);
+			float cos_r = (float)Math.Cos(roll  * 0.5), sin_r = (float)Math.Sin(roll  * 0.5);
 			return new v4(
-				cos_r * sin_p * cos_y + sin_r * cos_p * sin_y,
-				cos_r * cos_p * sin_y - sin_r * sin_p * cos_y,
-				sin_r * cos_p * cos_y - cos_r * sin_p * sin_y,
-				cos_r * cos_p * cos_y + sin_r * sin_p * sin_y);
+				sin_p * cos_y * cos_r + cos_p * sin_y * sin_r,
+				cos_p * sin_y * cos_r - sin_p * cos_y * sin_r,
+				cos_p * cos_y * sin_r - sin_p * sin_y * cos_r,
+				cos_p * cos_y * cos_r + sin_p * sin_y * sin_r);
 		}
 
 		/// <summary>Create a quaternion from a rotation matrix</summary>
@@ -74,7 +78,21 @@ namespace pr.maths
 			return v4.Normalise4(new v4(axis.x, axis.y, axis.z, s));
 		}
 
-		/// <summary>Quaternion multiply. Same sematics at matrix multiply</summary>
+		/// <summary>Compare quaternions</summary>
+		public static bool FEql(v4 lhs, v4 rhs, float tol)
+		{
+			return
+				Maths.FEql(lhs.x, rhs.x, tol) &&
+				Maths.FEql(lhs.y, rhs.y, tol) &&
+				Maths.FEql(lhs.z, rhs.z, tol) &&
+				Maths.FEql(lhs.w, rhs.w, tol);
+		}
+		public static bool FEql(v4 lhs, v4 rhs)
+		{
+			return FEql(lhs, rhs, Maths.TinyF);
+		}
+
+		/// <summary>Quaternion multiply. Same semantics at matrix multiply</summary>
 		public static v4 Mul(v4 lhs, v4 rhs)
 		{
 			return new v4(
@@ -97,9 +115,24 @@ namespace pr.maths
 		public static void AxisAngle(v4 quat, out v4 axis, out float angle)
 		{
 			angle = (float)(2.0 * Math.Acos(quat.w));
-			float s = (float)Math.Sqrt(1.0f - quat.w * quat.w);
-			if (Maths.FEql(s, 0.0f)) axis = v4.Normalise3(new v4(quat.x, quat.y, quat.z, 0.0f));
-			else                     axis = new v4(quat.x/s, quat.y/s, quat.z/s, 0.0f);
+			var s = (float)Math.Sqrt(1.0f - quat.w * quat.w);
+			axis = Maths.FEql(s, 0.0f)
+				? v4.Normalise3(new v4(quat.x, quat.y, quat.z, 0.0f))
+				: new v4(quat.x/s, quat.y/s, quat.z/s, 0.0f);
+		}
+
+		/// <summary>Return possible Euler angles for the quaternion 'q'</summary>
+		public static v4 EulerAngles(v4 q)
+		{
+			throw new NotImplementedException();
+
+			// From wikipedia - doesn't work
+			//double q0 = q.w, q1 = q.x, q2 = q.y, q3 = q.z;
+			//return new v4(
+			//	(float)Math.Atan2(2.0 * (q0*q1 + q2*q3), 1.0 - 2.0 * (q1*q1 + q2*q2)),
+			//	(float)Math.Asin (2.0 * (q0*q2 - q3*q1)),
+			//	(float)Math.Atan2(2.0 * (q0*q3 + q1*q2), 1.0 - 2.0 * (q2*q2 + q3*q3)),
+			//	0f);
 		}
 
 		/// <summary>Construct a random quaternion rotation</summary>
@@ -136,7 +169,7 @@ namespace pr.maths
 			// Calculate coefficients
 			if (cos_angle < 0.95f)
 			{
-				// standard case (slerp)
+				// standard case ('slerp')
 				float angle     = (float)Math.Acos(cos_angle);
 				float sin_angle = (float)Math.Sin (angle);
 				float scale0    = (float)Math.Sin((1.0f - frac) * angle);
@@ -147,8 +180,7 @@ namespace pr.maths
 			return v4.Normalise4(v4.Lerp(src, abs_dst, frac));
 		}
 		
-		/// <summary>Rotate 'rotatee' by 'rotator'. If 'rotatee' has w = 0,
-		/// then this is equivalent to rotating a direction vector</summary>
+		/// <summary>Rotate 'rotatee' by 'rotator'. If 'rotatee' has w = 0, then this is equivalent to rotating a direction vector</summary>
 		public static v4 Rotate(v4 rotator, v4 rotatee)
 		{
 			Debug.Assert(Maths.FEql(rotator.Length4Sq, 1.0f), "Non-unit quaternion used for rotation");
@@ -156,3 +188,60 @@ namespace pr.maths
 		}
 	}
 }
+
+#if PR_UNITTESTS
+namespace pr.unittests
+{
+	using extn;
+	using maths;
+
+	[TestFixture] public class UnitTestQuat
+	{
+		[Test] public void General()
+		{
+		}
+		[Test] public void EulerAngles()
+		{
+			#if false
+			Action<float,float,float> Check = (p_,y_,r_) =>
+			{
+				var p = Maths.DegreesToRadians(p_);
+				var y = Maths.DegreesToRadians(y_);
+				var r = Maths.DegreesToRadians(r_);
+
+				// EulerAngles is not guaranteed to return the same as p,y,r,
+				// only angles that combined will create the same rotation as p,y,r.
+				var q0    = quat.Make(p, y, r);
+				var euler = quat.EulerAngles(q0);
+				var q1    = quat.Make(euler.x, euler.y, euler.z);
+				Assert.True(quat.FEql(q0, q1));
+			};
+
+			Check(+10f,0,0);
+			Check(-10f,0,0);
+			Check(0,+10f,0);
+			Check(0,-10f,0);
+			Check(0,0,+10f);
+			Check(0,0,-10f);
+
+			// Random cases
+			var rnd = new Random(1);
+			for (int i = 0; i != 100; ++i)
+			{
+				var pitch = (float)rnd.NextDoubleCentred(0.0, 360.0);
+				var yaw   = (float)rnd.NextDoubleCentred(0.0, 360.0);
+				var roll  = (float)rnd.NextDoubleCentred(0.0, 360.0);
+				Check(pitch, yaw, roll);
+			}
+
+			// Special cases
+			var angles = new []{0f, 90f, -90f, 180f, -180f, 270f, -270f, 360f, -360f};
+			foreach (var p in angles)
+				foreach (var y in angles)
+					foreach (var r in angles)
+						Check(p, y, r);
+			#endif
+		}
+	}
+}
+#endif

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace pr.container
@@ -42,13 +43,17 @@ namespace pr.container
 	/// <summary>Args for the event raised whenever the list is changed</summary>
 	public class ListChgEventArgs<T> :EventArgs
 	{
-		[DebuggerStepThrough] public ListChgEventArgs(ListChg chg, int index, T item)
+		[DebuggerStepThrough] public ListChgEventArgs(IList<T> list, ListChg chg, int index, T item)
 		{
+			List       = list;
 			ChangeType = chg;
 			Index      = index;
 			Item       = item;
 			Cancel     = false;
 		}
+
+		/// <summary>The list this event is associated with</summary>
+		public IList<T> List { get; private set; }
 
 		/// <summary>The change this event represents</summary>
 		public ListChg ChangeType { get; private set; }
