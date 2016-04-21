@@ -124,15 +124,13 @@ namespace pr.maths
 		/// <summary>Return possible Euler angles for the quaternion 'q'</summary>
 		public static v4 EulerAngles(v4 q)
 		{
-			throw new NotImplementedException();
-
-			// From wikipedia - doesn't work
-			//double q0 = q.w, q1 = q.x, q2 = q.y, q3 = q.z;
-			//return new v4(
-			//	(float)Math.Atan2(2.0 * (q0*q1 + q2*q3), 1.0 - 2.0 * (q1*q1 + q2*q2)),
-			//	(float)Math.Asin (2.0 * (q0*q2 - q3*q1)),
-			//	(float)Math.Atan2(2.0 * (q0*q3 + q1*q2), 1.0 - 2.0 * (q2*q2 + q3*q3)),
-			//	0f);
+			// From Wikipedia
+			double q0 = q.w, q1 = q.x, q2 = q.y, q3 = q.z;
+			return new v4(
+				(float)Math.Atan2(2.0 * (q0*q1 + q2*q3), 1.0 - 2.0 * (q1*q1 + q2*q2)),
+				(float)Math.Asin (2.0 * (q0*q2 - q3*q1)),
+				(float)Math.Atan2(2.0 * (q0*q3 + q1*q2), 1.0 - 2.0 * (q2*q2 + q3*q3)),
+				0f);
 		}
 
 		/// <summary>Construct a random quaternion rotation</summary>

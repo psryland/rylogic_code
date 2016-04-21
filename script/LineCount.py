@@ -14,7 +14,7 @@ try:
 		#r"R:\software\STM32",
 		#r"R:\software\ARM7",
 		r"R:\software\SDK\pr",
-		r"R:\software\PC",
+		#r"R:\software\SDK\pr\projects\Rylogic",
 		]
 
 	excludes = [

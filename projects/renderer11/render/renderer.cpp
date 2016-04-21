@@ -21,6 +21,7 @@ namespace pr
 			,m_driver_type(D3D_DRIVER_TYPE_HARDWARE)
 			,m_device_layers(gdi_compat ? D3D11_CREATE_DEVICE_BGRA_SUPPORT : 0)
 			,m_feature_levels()
+			,m_fallback_to_sw_device(true)
 		{
 			// Add the debug layer in debug mode
 			// Note: this automatically disables multi-sampling as well
@@ -40,7 +41,7 @@ namespace pr
 			PR_INFO_IF(PR_DBG_RDR, (m_settings.m_device_layers & D3D11_CREATE_DEVICE_BGRA_SUPPORT) != 0, "D3D11_CREATE_DEVICE_BGRA_SUPPORT is enabled");
 
 			// Create the device interface
-			pr::Throw(D3D11CreateDevice(
+			auto hr = D3D11CreateDevice(
 				m_settings.m_adapter.m_ptr,
 				m_settings.m_driver_type,
 				0,
@@ -50,8 +51,24 @@ namespace pr
 				D3D11_SDK_VERSION,
 				&m_device.m_ptr,
 				&m_feature_level,
-				&m_immediate.m_ptr
-				));
+				&m_immediate.m_ptr);
+
+			// If the device type is unsupported, fall-back to a software device
+			if (hr == DXGI_ERROR_UNSUPPORTED && m_settings.m_fallback_to_sw_device)
+			{
+				hr = D3D11CreateDevice(
+					m_settings.m_adapter.m_ptr,
+					D3D_DRIVER_TYPE_SOFTWARE,
+					0,
+					m_settings.m_device_layers,
+					m_settings.m_feature_levels.empty() ? nullptr : &m_settings.m_feature_levels[0],
+					static_cast<UINT>(m_settings.m_feature_levels.size()),
+					D3D11_SDK_VERSION,
+					&m_device.m_ptr,
+					&m_feature_level,
+					&m_immediate.m_ptr);
+			}
+			pr::Throw(hr);
 			PR_EXPAND(PR_DBG_RDR, NameResource(m_device, "dx device"));
 			PR_EXPAND(PR_DBG_RDR, NameResource(m_immediate, "immed dc"));
 

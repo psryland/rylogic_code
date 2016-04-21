@@ -14,6 +14,7 @@
 #include "pr/common/memstream.h"
 #include "pr/common/multi_cast.h"
 #include "pr/common/flags_enum.h"
+#include "pr/maths/bitfunctions.h"
 #include "pr/script/forward.h"
 #include "pr/script/fail_policy.h"
 
@@ -228,15 +229,15 @@ namespace pr
 				HMODULE module;
 
 				// Try file includes
-				if (AllSet(m_types, EType::Files) && ResolveFileInclude(include, AllSet(flags, EFlags::IncludeLocalDir), loc, result, searched_paths))
+				if (pr::AllSet(m_types, EType::Files) && ResolveFileInclude(include, AllSet(flags, EFlags::IncludeLocalDir), loc, result, searched_paths))
 					return result;
 
 				// Try resources
-				if (AllSet(m_types, EType::Resources) && ResolveResourceInclude(include, result, AllSet(flags, EFlags::Binary), module))
+				if (pr::AllSet(m_types, EType::Resources) && ResolveResourceInclude(include, result, AllSet(flags, EFlags::Binary), module))
 					return result;
 
 				// Try the string table
-				if (AllSet(m_types, EType::Strings) && ResolveStringInclude(include, result))
+				if (pr::AllSet(m_types, EType::Strings) && ResolveStringInclude(include, result))
 					return result;
 
 				// Ignore if missing includes flagged

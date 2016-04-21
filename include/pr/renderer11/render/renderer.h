@@ -21,11 +21,12 @@ namespace pr
 		// Settings for constructing the renderer
 		struct RdrSettings
 		{
-			MemFuncs                     m_mem;              // The manager of allocations/deallocations
-			D3DPtr<IDXGIAdapter>         m_adapter;          // The adapter to use. nullptr means use the default
-			D3D_DRIVER_TYPE              m_driver_type;      // HAL, REF, etc
-			UINT                         m_device_layers;    // Add layers over the basic device (see D3D11_CREATE_DEVICE_FLAG)
-			pr::vector<D3D_FEATURE_LEVEL> m_feature_levels;   // Features to support. Empty implies 9.1 -> 11.0
+			MemFuncs                      m_mem;                   // The manager of allocations/deallocations
+			D3DPtr<IDXGIAdapter>          m_adapter;               // The adapter to use. nullptr means use the default
+			D3D_DRIVER_TYPE               m_driver_type;           // HAL, REF, etc
+			UINT                          m_device_layers;         // Add layers over the basic device (see D3D11_CREATE_DEVICE_FLAG)
+			pr::vector<D3D_FEATURE_LEVEL> m_feature_levels;        // Features to support. Empty implies 9.1 -> 11.0
+			bool                          m_fallback_to_sw_device; // True to use a software device if 'm_driver_type' fails
 
 			RdrSettings(BOOL gdi_compat);
 		};

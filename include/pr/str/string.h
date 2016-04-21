@@ -95,14 +95,14 @@ namespace pr
 		static_assert(!is_pr_str<Type*>::value, "");
 
 		// true if 'tstr' is a 'std::basic_string<Type>'
-		template <typename tstr> using is_std_str = typename std::integral_constant<bool, std::is_same<tstr, std::basic_string<Type>>::value>;
+		template <typename tstr> using is_std_str = typename std::integral_constant<bool, std::is_same<tstr, std::basic_string<Type>>::value>::type;
 		static_assert( is_std_str<std::basic_string<Type>>::value, "");
 		static_assert(!is_std_str<string<Type, 1, true>>::value, "");
 		static_assert(!is_std_str<Type[]>::value, "");
 		static_assert(!is_std_str<Type*>::value, "");
 		
 		// true if 'tarr' has array-like semantics and an element type of 'Type' but is not a pointer
-		template <typename tarr> using is_char_array = typename std::integral_constant<bool, std::is_same<tarr, typename std::basic_string<Type>>::value || is_pr_str<tarr>::value>;
+		template <typename tarr> using is_char_array = typename std::integral_constant<bool, std::is_same<tarr, typename std::basic_string<Type>>::value || is_pr_str<tarr>::value>::type;
 		static_assert( is_char_array<std::basic_string<Type>>::value, "");
 		static_assert( is_char_array<string<Type, 1, true>>::value, "");
 		static_assert(!is_char_array<Type[]>::value, "");
@@ -128,10 +128,10 @@ namespace pr
 		static_assert(!is_char_pointer<decltype(std::vector<int>().begin())>::value, "");
 
 		// Enable if 'tarr' is an array-like container of 'Type'
-		template <typename tarr> using enable_if_char_array = std::enable_if<is_char_array<tarr>::value>;
+		template <typename tarr> using enable_if_char_array = typename std::enable_if<is_char_array<tarr>::value>::type;
 
 		// Enable if 'tptr' is a pointer or iterator to and contiguous buffer of 'Type'
-		template <typename tptr> using enable_if_char_iter = std::enable_if<is_char_pointer<tptr>::value>;
+		template <typename tptr> using enable_if_char_iter = typename std::enable_if<is_char_pointer<tptr>::value>::type;
 
 		#pragma endregion
 
