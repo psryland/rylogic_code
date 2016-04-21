@@ -23,7 +23,7 @@
       <OmitFramePointers>true</OmitFramePointers>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
       <WholeProgramOptimization>true</WholeProgramOptimization>
-      <PreprocessorDefinitions>NDEBUG;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;NOMINMAX;WIN32_LEAN_AND_MEAN;_WIN32_WINNT=0x0600</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;NOMINMAX;WIN32_LEAN_AND_MEAN;_WIN32_WINNT=_WIN32_WINNT_WIN7;GDIPVER=0x0110</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <OpenMPSupport>true</OpenMPSupport>
