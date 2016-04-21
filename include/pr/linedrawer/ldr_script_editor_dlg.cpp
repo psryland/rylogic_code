@@ -30,9 +30,9 @@ namespace pr
 				ID_LOAD, ID_SAVE, ID_CLOSE,
 				ID_UNDO, ID_REDO, ID_CUT, ID_COPY, ID_PASTE,
 			};
-			static Params Params(HWND parent)
+			static FormParams Params(HWND parent)
 			{
-				return FormParams<>().wndclass(RegisterWndClass<ScriptEditorDlgImpl>())
+				return MakeFormParams<>().wndclass(RegisterWndClass<ScriptEditorDlgImpl>())
 					.name("ldr-script-editor").title(L"Script Editor").wh(430, 380)
 					.menu({{L"&File", ID_UNUSED}})
 					.icon_bg((HICON)::SendMessageW(parent, WM_GETICON, ICON_BIG, 0))

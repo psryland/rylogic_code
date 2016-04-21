@@ -14,7 +14,7 @@
 namespace ldr
 {
 	struct MainGUI
-		:pr::app::MainGUI<ldr::MainGUI, ldr::Main, pr::gui::SimMsgLoop>
+		:pr::app::MainGUI<MainGUI, Main, pr::gui::SimMsgLoop>
 		,pr::cmdline::IOptionReceiver<wchar_t>
 		,pr::gui::RecentFiles::IHandler
 		,pr::events::IRecv<ldr::Event_Info>
@@ -29,7 +29,7 @@ namespace ldr
 		,pr::events::IRecv<pr::settings::Evt<UserSettings>>
 		,pr::AlignTo<16>
 	{
-		using base = pr::app::MainGUI<ldr::MainGUI, ldr::Main, pr::gui::SimMsgLoop>;
+		using base = pr::app::MainGUI<MainGUI, Main, pr::gui::SimMsgLoop>;
 
 		enum
 		{
@@ -43,7 +43,7 @@ namespace ldr
 		pr::ldr::ScriptEditorDlg    m_editor_ui;            // An editor for ldr script
 		pr::ldr::LdrMeasureUI       m_measure_tool_ui;      // The UI for the measuring tool
 		pr::ldr::LdrAngleUI         m_angle_tool_ui;        // The UI for the angle measuring tool
-		ldr::OptionsUI              m_options_ui;           // The UI for setting LineDrawer settings
+		OptionsUI                   m_options_ui;           // The UI for setting LineDrawer settings
 		bool                        m_mouse_status_updates; // Whether to show mouse position in the status bar (todo: more general system for this)
 		bool                        m_suspend_render;       // True to prevent rendering
 		StatusPri                   m_status_pri;           // Status priority buffer

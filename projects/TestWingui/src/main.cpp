@@ -3,12 +3,13 @@
 #include "testwingui/src/modeless.h"
 #include "testwingui/src/graph.h"
 #include "pr/gui/wingui.h"
+#include "pr/gui/gdiplus.h"
 #include "pr/gui/progress_ui.h"
 #include "pr/gui/context_menu.h"
 #include "pr/gui/scintilla_ctrl.h"
 #include "pr/win32/win32.h"
 
-//#define USE_ATL
+#define USE_ATL
 #ifdef USE_ATL
 #include <atlapp.h>
 //#include <atldwm.h>
@@ -40,6 +41,9 @@ struct WtlMain :WTL::CFrameWindowImpl<WtlMain>
 	}
 };
 #endif
+
+using namespace pr::gui;
+using namespace pr::gdi;
 
 // Application window
 struct Main :Form
@@ -74,22 +78,8 @@ struct Main :Form
 	enum { ID_FILE, ID_FILE_EXIT };
 	enum { IDC_PROGRESS = 100, IDC_NM_PROGRESS, IDC_MODELESS, IDC_CONTEXTMENU, IDC_POSTEST, IDC_ABOUT, IDC_SCINT, IDC_TAB, IDC_TAB1, IDC_TAB2, IDC_SPLITL, IDC_SPLITR };
 
-	struct Params :FormParams<Params>
-	{
-		Params()
-		{
-			wndclass(RegisterWndClass<Main>())
-			.name("main")
-			.title(L"Pauls Window")
-			.xy(2000,100)
-			.wh(800,600)
-			.menu({{L"&File", Menu(Menu::EKind::Popup, {MenuItem(L"E&xit", IDCLOSE)})}})
-			.main_wnd(true);
-		}
-	};
-
 	Main()
-		:Form          (Params())
+		:Form          (MakeFormParams<>().name("main").title(L"Pauls Window").xy(2000,100).wh(800,600).menu({{L"&File", Menu(Menu::EKind::Popup, {MenuItem(L"E&xit", IDCLOSE)})}}).main_wnd(true).wndclass(RegisterWndClass<Main>()))
 		,m_lbl         (Label::Params<>()        .parent(this_).name("m_lbl")         .text(L"hello world")       .xy(10,10)                          .wh(60,16)                      )
 		,m_btn_progress(Button::Params<>()       .parent(this_).name("m_btn_progress").text(L"progress")          .xy(10,30)                          .wh(100,20) .id(IDC_PROGRESS)   )
 		,m_btn_nm_prog (Button::Params<>()       .parent(this_).name("m_btn_nm_prog") .text(L"non-modal progress").xy(10,Top|BottomOf|IDC_PROGRESS)   .wh(100,20) .id(IDC_NM_PROGRESS))
@@ -107,7 +97,7 @@ struct Main :Form
 		,m_modeless    (this_)
 		,m_nm_progress ()
 	{
-		m_nm_progress.Create(ProgressUI::Params<>().parent(this_).hide_on_close(true));
+		m_nm_progress.Create(ProgressUI::Params<>().parent(this_).hide_on_close());
 		auto busy_work = [](ProgressUI* dlg)
 		{
 			for (int i = 0, iend = 500; dlg->Progress(i*1.f/iend) && i != iend; ++i)
@@ -203,7 +193,7 @@ struct Test :Form
 	enum { IDC_SPLIT = 100, IDC_LEFT, IDC_RITE,};
 	Splitter m_split;
 	Test()
-		:Form(FormParams<>().wndclass(RegisterWndClass<Test>()).name("test").title(L"Paul's Window").xy(2000,100).wh(800,600).menu({{L"&File", Menu(Menu::EKind::Popup, {MenuItem(L"E&xit", IDCLOSE)})}}).main_wnd(true))
+		:Form(MakeFormParams<>().name("test").title(L"Paul's Window").xy(2000,100).wh(800,600).menu({{L"&File", Menu(Menu::EKind::Popup, {MenuItem(L"E&xit", IDCLOSE)})}}).main_wnd(true).wndclass(RegisterWndClass<Test>()))
 		,m_split(Splitter::Params<>().vertical().name("split").parent(this).dock(EDock::Fill))
 	{
 		m_split.Pane0.Style(EStyleOp::Add, WS_BORDER);
@@ -214,11 +204,53 @@ struct Test :Form
 struct Test2 :Form
 {
 	Label m_lbl;
+	Button m_btn;
+
 	Test2()
-		:Form(FormParams<>().wndclass(RegisterWndClass<Test2>()).name("test").title(L"Paul's Window").xy(2000,100).wh(320,256).main_wnd(true))
+		:Form(MakeFormParams<>().name("test").title(L"Paul's Window").start_pos(EStartPosition::CentreParent).wh(320,256).main_wnd(true).wndclass(RegisterWndClass<Test2>()))
 		,m_lbl(Label::Params<>().parent(this_).name("lbl").text(L"BOOBS!"))
+		,m_btn(Button::Params<>().parent(this_).name("btn").text(L"Wahoo!").xy(50,50).wh(80,20))
 	{}
+
+	bool ProcessWindowMessage(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
+	{
+		//WndProcDebug(hwnd, message, wparam, lparam, FmtS("FormMsg: %s",m_name.c_str()));
+		switch (message)
+		{
+		default:
+			return Form::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
+		case WM_PAINT:
+			{
+				using namespace pr::gdi;
+				PaintStruct ps(hwnd);
+
+				std::wstring str = pr::FmtS(L"DPI: %d x %d", m_metrics.m_rt_dpi.X, m_metrics.m_rt_dpi.Y);
+
+				Graphics gfx(ps.hdc);
+				
+				SolidBrush bsh_back(0xFFC0C0C0);
+				gfx.FillRectangle(&bsh_back, pr::To<pr::gdi::Rect>(ps.rcPaint));
+
+				Pen pen(0xFF0000FF);
+				gfx.DrawEllipse(&pen, m_metrics.X(10), m_metrics.Y(20), m_metrics.X(50), m_metrics.Y(70));
+
+				SolidBrush bsh_text(0xFF00A000);
+				pr::gdi::Font font(FontFamily::GenericSansSerif(), m_metrics.Y(12.0f));
+				pr::gdi::PointF pt = {m_metrics.X(100.0f), m_metrics.Y(100.0f)};
+				gfx.DrawString(str.c_str(), int(str.size()), &font, pt, &bsh_text);
+				return Form::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
+			}
+
+		//#if(WINVER >= 0x0601)
+		//case WM_DPICHANGED:
+		//	break;
+		//#endif
+		}
+	}
+
 };
+
+
 
 // Entry point
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
@@ -236,19 +268,25 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 		//WtlMain wtl;
 		//wtl.Create(nullptr);
 		//wtl.ShowWindow(SW_SHOW);
+		CBitmap bm;
 		#endif
 
 		pr::win32::LoadDll<struct Scintilla>(L"scintilla.dll");
 
-		//return (int)About2().ShowDialog();
-		
+		About about1;
+		about1.Show();
+		About2 about2;
+		about2.Show();
+		//return 0;
 		//ProgressUI main(ProgressUI::Params<>().title(L"Progress").desc(L"This is not a drill").xy(2000,100).main_wnd());
 		//return main.ShowDialog();
 
-		Main main;
+		//Main main;
 		//Test main;
-		//Test2 main;
-		main.Show();
+		Test2 test2;
+		//test2.Show();
+
+		auto& main = test2;
 
 		MessageLoop loop;
 		loop.AddMessageFilter(main);

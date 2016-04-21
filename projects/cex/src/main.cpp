@@ -48,7 +48,7 @@ namespace cex
 				"    -shcopy   : Copy files using the explorer shell\n"
 				"    -shmove   : Move files using the explorer shell\n"
 				"    -shrename : Rename files using the explorer shell\n"
-				"    -shdelete : Delete filesusing the explorer shell\n"
+				"    -shdelete : Delete files using the explorer shell\n"
 				"    -clip     : Clip text to the system clipboard\n"
 				"    -hash     : Generate a hash of the given text input\n"
 				"    -guid     : Generate a guid\n"
@@ -59,6 +59,25 @@ namespace cex
 				// NEW_COMMAND - add a help string
 				"\n"
 				"  Type Cex -command -help for help on a particular command\n"
+				"\n"
+				"  Cex can be used as a proxy application. Rename cex.exe to whatever application\n"
+				"  name you like, and create an XML file with the same name in the same directory.\n"
+				"  In the XML file, put:\n"
+				"    <root>\n"
+				"        <process>some process full path</process>\n"
+				"        <startdir>some directory path</startdir>\n"
+				"        <arg>first argument</arg>\n"
+				"        <arg>next argument</arg>\n"
+				"        <arg>...</arg>\n"
+				"    </root>\n"
+				"  When the renamed Cex is run, it will look for the XML file and launch whatever\n"
+				"  process is specified. Note: you must specify the 'startdir' as well as the 'process'.\n"
+				"\n"
+				"  Alternatively, if no XML file is found, Cex runs as though the command line was:\n"
+				"     cex.exe -<name_that_cex_was_renamed_to>\n"
+				"  e.g.\n"
+				"     if the cex.exe is renamed to clip.exe, executing it is the same as executing\n"
+				"     cex.exe -clip\n"
 				;
 		}
 
@@ -71,7 +90,7 @@ namespace cex
 			auto name = pr::str::LowerCaseC(pr::filesys::GetFiletitle(exepath));
 			auto extn = pr::str::LowerCaseC(pr::filesys::GetExtension(exepath));
 
-			// Look for an xml file with the same name as this program in the local directory
+			// Look for an XML file with the same name as this program in the local directory
 			auto config = path + L"\\" + name + L".xml";
 			if (pr::filesys::FileExists(config))
 				return RunFromXml(config, args);
@@ -167,7 +186,7 @@ namespace cex
 		// Read 'config' and execute
 		int RunFromXml(std::wstring config, std::wstring args)
 		{
-			// Load the xml file
+			// Load the XML file
 			pr::xml::Node root;
 			try { pr::xml::Load(config.c_str(), root); }
 			catch (std::exception const& ex)
@@ -189,8 +208,15 @@ namespace cex
 			if (!process.empty())
 			{
 				pr::Process proc;
-				proc.Start(process.c_str(), args.c_str(), startdir.c_str());
-				return proc.BlockTillExit();
+				if (proc.Start(process.c_str(), args.c_str(), startdir.c_str()))
+					return proc.BlockTillExit();
+
+				// Copy the error message before any other calls to Succeeded overwrite it
+				auto err = pr::Reason();
+
+				ShowConsole();
+				std::wcout << "Failed to start process: " << process.c_str() << "\n" << err.c_str() << "\n";
+				return -1;
 			}
 
 			return -1;

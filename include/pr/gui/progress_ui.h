@@ -65,10 +65,11 @@ namespace pr
 			// A dialog layout description used for this indirect dialog
 			static DlgTemplate const& Templ()
 			{
-				static auto templ = DlgTemplate(DlgParams<>().xy(0,0).wh(240,100))
-					.Add(CtrlParams<>().id(IDC_TEXT_DESC).wndclass(Label::WndClassName()))
-					.Add(CtrlParams<>().id(IDC_PROGRESS_BAR).wndclass(ProgressBar::WndClassName()))
-					.Add(CtrlParams<>().id(IDCANCEL).wndclass(Button::WndClassName()).text(L"Cancel").style('+',BS_DEFPUSHBUTTON));
+				static auto templ =
+					DlgTemplate(MakeDlgParams<>().xy(0,0).wh(240,100))
+					.Add(Label::Params<>().id(IDC_TEXT_DESC))
+					.Add(ProgressBar::Params<>().id(IDC_PROGRESS_BAR))
+					.Add(Button::Params<>().id(IDCANCEL).text(L"Cancel").def_btn());
 				return templ;
 			}
 
@@ -217,15 +218,26 @@ namespace pr
 				OptionalCancel     = 1 << 1,
 				_bitops_allowed
 			};
-			template <typename Derived = void> struct Params :DlgParams<choose_non_void<Derived, Params<>>>
+			struct ProgressParams :FormParams
 			{
 				wchar_t const* m_desc;
-				Params() : m_desc() { templ(Templ()).name("progress-ui"); }
-				This& desc(wchar_t const* d) { m_desc = d; return *me; }
+				ProgressParams() :m_desc() {}
+				ProgressParams* clone() const override { return new ProgressParams(*this); }
+			};
+			template <typename TParams = ProgressParams, typename Derived = void> struct Params :MakeFormParams<TParams, choose_non_void<Derived, Params<>>>
+			{
+				using base = MakeFormParams<TParams, choose_non_void<Derived, Params<>>>;
+				Params() { templ(Templ()).name("progress-ui"); }
+				operator ProgressParams const&() const { return params; }
+				This& desc(wchar_t const* d)
+				{
+					params.m_desc = d;
+					return me();
+				}
 			};
 
 			ProgressUI() :ProgressUI(Params<>()) {}
-			template <typename D> ProgressUI(Params<D> const& p)
+			ProgressUI(ProgressParams const& p)
 				:Form(p)
 				,m_lbl_desc(Label      ::Params<>().parent(this_).name("desc"  ).text(p.m_desc).id(IDC_TEXT_DESC).anchor(EAnchor::All))
 				,m_bar     (ProgressBar::Params<>().parent(this_).name("bar"   ).id(IDC_PROGRESS_BAR).anchor(EAnchor::LeftTopRight))

@@ -33,7 +33,7 @@ namespace ldr
 	}
 
 	MainGUI::MainGUI(wchar_t const* cmdline, int showwnd)
-		:base(Params().name("ldr_main").title(AppTitleW()).xy(Centre|CentreOf,Centre|CentreOf).menu(IDR_MENU_MAIN).accel(IDR_ACCELERATOR).icon(IDI_ICON_MAIN))
+		:base(Params().name("ldr_main").title(AppTitleW()).xy(Centre|CentreOf,Centre|CentreOf).menu(IDR_MENU_MAIN).accel(IDR_ACCELERATOR).icon(IDI_ICON_MAIN).size_min(320,200))
 		,m_status(StatusBar::Params<>().name("status bar").id(IDC_STATUSBAR_MAIN).parent(this).text(L"Ready"))
 		,m_recent_files()
 		,m_saved_views()
@@ -97,10 +97,6 @@ namespace ldr
 
 		// Register for drag drop
 		AllowDrop(true);
-
-		// Set the window minimum size
-		m_min_max_info.ptMinTrackSize.x = 320;
-		m_min_max_info.ptMinTrackSize.y = 200;
 
 		// Note, 'm_main' can be null if the SimMsgLoop runs these contexts after the
 		// window has been destroyed, but before the message loop has been shutdown.
@@ -244,7 +240,7 @@ namespace ldr
 		switch (args.m_vk_key)
 		{
 		case VK_SPACE:
-			m_store_ui.Show(*this);
+			m_store_ui.Show();
 			m_store_ui.Populate(m_main->m_store);
 			break;
 		case VK_F5:

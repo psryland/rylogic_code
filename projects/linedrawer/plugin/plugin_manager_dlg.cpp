@@ -16,7 +16,7 @@ namespace ldr
 	static COMDLG_FILTERSPEC const PluginFilterSpec[] = {{L"Ldr Plug-in (*.dll)", L"*.dll"}};
 
 	PluginManagerUI::PluginManagerUI(PluginManager& plugin_mgr, HWND parent)
-		:Form(FormParams<>().parent(parent).title(L"Plug-in Manager").wh(317,213))
+		:Form(MakeFormParams<>().parent(parent).title(L"Plug-in Manager").wh(317,213))
 
 		,m_list_plugins      (ListView::Params<>().parent(this_).id(ID_LIST_PLUGINS        ).xy( 5,   7).wh(305, 148).report().no_hdr_sort())
 		,m_tb_plugin_filepath(TextBox ::Params<>().parent(this_).id(ID_EDIT_PLUGIN_FILEPATH).xy(48, 160).wh(211, 14))

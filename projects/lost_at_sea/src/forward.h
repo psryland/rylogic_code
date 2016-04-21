@@ -5,9 +5,11 @@
 #pragma once
 
 // Change these values to use different versions
-#define  WINVER       0x0600
-#define _WIN32_WINNT  0x0600
-#define DIRECTINPUT_VERSION 0x0800
+//#ifndef _WIN32_WINNT
+//#define _WIN32_WINNT  0x0600
+//#endif
+//#define  WINVER       0x0600
+//#define DIRECTINPUT_VERSION 0x0800
 
 #include "pr/common/min_max_fix.h"
 

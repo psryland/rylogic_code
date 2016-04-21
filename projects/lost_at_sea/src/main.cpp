@@ -12,7 +12,7 @@ using namespace pr::app;
 using namespace pr::gui;
 
 // Create the GUI window
-extern std::shared_ptr<IAppMainGui> pr::app::CreateGUI(LPTSTR lpstrCmdLine, int nCmdShow)
+extern std::shared_ptr<IAppMainGui> pr::app::CreateGUI(wchar_t const* lpstrCmdLine, int nCmdShow)
 {
 	return pr::app::CreateGUI<las::MainGUI>(lpstrCmdLine, nCmdShow);
 }
@@ -143,7 +143,7 @@ namespace las
 
 
 	// MainGUI ****************************************************
-	MainGUI::MainGUI(LPTSTR lpstrCmdLine, int nCmdShow)
+	MainGUI::MainGUI(wchar_t const* lpstrCmdLine, int nCmdShow)
 		:pr::app::MainGUI<MainGUI, Main, pr::gui::SimMsgLoop>(Params().title(AppTitle()))
 	{
 		(void)lpstrCmdLine,nCmdShow;

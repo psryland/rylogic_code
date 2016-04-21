@@ -51,4 +51,10 @@
   <ItemGroup>
     <None Include="..\projects\TestWingui\post_build.py" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\projects\TestWingui\res\icon1.ico" />
+    <Image Include="..\projects\TestWingui\res\Smiling gekko 140x110.ico">
+      <Filter>res</Filter>
+    </Image>
+  </ItemGroup>
 </Project>

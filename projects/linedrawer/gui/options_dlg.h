@@ -46,17 +46,12 @@ namespace ldr
 		UserSettings* m_settings;
 
 		OptionsUI(Control* main_ui, UserSettings& settings)
-			:Form(FormParams<>().name("options").title(L"Options").parent(main_ui).xy(CentreP,CentreP).wh(480,360).wndclass(RegisterWndClass<Form>()).hide_on_close(true))
+			:Form(MakeFormParams<>().name("options").title(L"Options").parent(main_ui).xy(CentreP,CentreP).wh(480,360).icon(IDI_ICON_MAIN).wndclass(RegisterWndClass<Form>()).hide_on_close().pin_window())
 			,m_tc(TabControl::Params<>().name("m_tc").text(L"tabctrl").wh(Fill,Fill).id(ID_TABCTRL).margin(10).parent(this).anchor(EAnchor::All))//, DefaultControlStyle, 0UL)
 			,m_tab_general(&m_tc)
 			,m_tab_navigation(&m_tc)
 			,m_settings(&settings)
 		{
-			// Set icons
-			Icon((HICON)::LoadImageW(m_hinst, MAKEINTRESOURCEW(IDI_ICON_MAIN), IMAGE_ICON, ::GetSystemMetrics(SM_CXICON),   ::GetSystemMetrics(SM_CYICON),   LR_DEFAULTCOLOR) ,true);
-			Icon((HICON)::LoadImageW(m_hinst, MAKEINTRESOURCEW(IDI_ICON_MAIN), IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR) ,false);
-			PinWindow(true);
-
 			m_tc.Insert(L"General", m_tab_general);
 			m_tc.Insert(L"Navigation", m_tab_navigation);
 			m_tc.SelectedIndex(0);

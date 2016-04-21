@@ -328,9 +328,10 @@ namespace pr
 			using AxisRange        = typename Axis::Range;
 			using SeriesRdrOptions = typename Series::RdrOptions;
 
-			static wchar_t const* WndClassName() { return L"PRGRAPHCTRL"; }
-			template <typename Derived = void> struct Params :CtrlParams<choose_non_void<Derived, Params<>>>
+			static wchar_t const* WndClassName() { return L"pr::gui::GraphCtrl"; }
+			template <typename TParams = CtrlParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
+				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(RegisterWndClass<GraphCtrl>()); }
 			};
 
@@ -428,7 +429,7 @@ namespace pr
 			std::mutex MutexRendering;
 
 			GraphCtrl() :GraphCtrl(Params<>()) {}
-			template <typename D> GraphCtrl(Params<D> const& p)
+			GraphCtrl(Params<> const& p)
 				:Control(p)
 				,m_gdiplus()
 				,m_rdr_thread()
@@ -1218,30 +1219,30 @@ namespace pr
 					,m_scale(scale)
 				{
 					// Get the data point
-					auto& gv = series[i];
-					auto sx = (int)(gv.x * scale.x);
+					auto& gv0 = series[i];
+					auto sx = (int)(gv0.x * scale.x);
 
 					// Init members
 					m_imin = m_imax = i;
-					m_xmin = m_xmax = gv.x;
-					m_ymin = m_ymax = gv.y;
-					m_ylo  = gv.y + gv.ylo;
-					m_yhi  = gv.y + gv.yhi;
+					m_xmin = m_xmax = gv0.x;
+					m_ymin = m_ymax = gv0.y;
+					m_ylo  = gv0.y + gv0.ylo;
+					m_yhi  = gv0.y + gv0.yhi;
 
 					// While the data point still represents the same X coordinate on-screen
 					// scan forward until x != sx, finding the bounds on points that fall at this X
 					for (++i; i != iend; ++i)
 					{
-						auto& gv = series[i];
-						auto x = (int)(gv.x * scale.x);
+						auto& gv1 = series[i];
+						auto x = (int)(gv1.x * scale.x);
 						if (x != sx) break;
 
 						m_imax = i;
-						m_xmax = gv.x;
-						m_ymin = std::min<real>(m_ymin , gv.y);
-						m_ymax = std::max<real>(m_ymax , gv.y);
-						m_ylo  = std::min<real>(m_ylo  , gv.y + gv.ylo);
-						m_yhi  = std::max<real>(m_yhi  , gv.y + gv.yhi);
+						m_xmax = gv1.x;
+						m_ymin = std::min<real>(m_ymin , gv1.y);
+						m_ymax = std::max<real>(m_ymax , gv1.y);
+						m_ylo  = std::min<real>(m_ylo  , gv1.y + gv1.ylo);
+						m_yhi  = std::max<real>(m_yhi  , gv1.y + gv1.yhi);
 					}
 				}
 				ScreenPoint(ScreenPoint const&) = delete;

@@ -11,8 +11,8 @@
 //#include <cassert>
 
 #include "pr/common/colour.h"
-#include "pr/gui/gdiplus.h"
 #include "pr/gui/wingui.h"
+#include "pr/gui/gdiplus.h"
 
 namespace pr
 {
@@ -25,8 +25,10 @@ namespace pr
 			enum :DWORD { DefaultStyle   = (DefaultControlStyle | WS_GROUP | SS_LEFT) & ~WS_TABSTOP };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"pr::gui::ColourCtrl"; }
-			template <typename Derived = void> struct Params :CtrlParams<choose_non_void<Derived, Params<>>>
+
+			template <typename TParams = CtrlParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
+				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(RegisterWndClass<ColourCtrl>()); }
 			};
 
@@ -37,7 +39,7 @@ namespace pr
 		public:
 
 			ColourCtrl() :ColourCtrl(Params<>()){}
-			template <typename D> ColourCtrl(Params<D> const& p)
+			ColourCtrl(Params<> const& p)
 				:Control(p)
 				,m_gdiplus()
 			{}
@@ -49,14 +51,10 @@ namespace pr
 			{
 				MemDC memdc(dc, area, nullptr);
 				gdi::Graphics gfx(memdc);
-				assert(gfx.GetLastStatus() == Gdiplus::Ok && "GDI+ not initialised");
+				assert(gfx.GetLastStatus() == gdi::Ok && "GDI+ not initialised");
 			}
 
 			// Handlers
-			bool OnEraseBkGnd(EmptyArgs const&) override
-			{
-				return true;
-			}
 			bool OnPaint(PaintEventArgs const& args) override
 			{
 				if (args.m_alternate_hdc) { DoPaint(args.m_alternate_hdc, ClientRect()); }
@@ -71,7 +69,7 @@ namespace pr
 			pr::Colour32 m_colour;
 
 			ColourUI(HWND parent, pr::Colour32 colour)
-				:Form(DlgParams<>().parent(parent).wndclass(RegisterWndClass<ColourUI>()))
+				:Form(MakeDlgParams<>().parent(parent).wndclass(RegisterWndClass<ColourUI>()))
 				,m_colour(colour)
 			{}
 		};

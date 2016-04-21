@@ -17,7 +17,7 @@ namespace ldr
 		std::wstring m_body;
 
 		TextEntryUI(HWND parent, wchar_t const* title, wchar_t const* body, bool multiline)
-			:Form(DlgParams<>().parent(parent).title(title).wh(132,46).start_pos(pr::gui::EStartPosition::CentreParent).tool_window().style(multiline?'-':'+',DS_MODALFRAME).style(multiline?'+':'-',WS_THICKFRAME))
+			:Form(MakeDlgParams<>().parent(parent).title(title).wh(132,46).start_pos(pr::gui::EStartPosition::CentreParent).tool_window().style(multiline?'-':'+',DS_MODALFRAME).style(multiline?'+':'-',WS_THICKFRAME))
 			,m_tb        (pr::gui::TextBox::Params<>().parent(this_).xy(6, 7).wh(119, 15).multiline(multiline).want_return(multiline).style(multiline?'+':'-',WS_HSCROLL|WS_VSCROLL))
 			,m_btn_cancel(pr::gui::Button ::Params<>().parent(this_).text(L"Cancel").id(IDCANCEL).xy(75, 27).wh(50, 14))
 			,m_btn_ok    (pr::gui::Button ::Params<>().parent(this_).text(L"OK").id(IDOK).xy(20, 27).wh(50, 14).def_btn())

@@ -37,7 +37,7 @@ namespace las
 	// Main app window
 	struct MainGUI :pr::app::MainGUI<MainGUI, Main, pr::gui::SimMsgLoop>
 	{
-		MainGUI(LPTSTR lpstrCmdLine, int nCmdShow);
+		MainGUI(wchar_t const* lpstrCmdLine, int nCmdShow);
 		static char const* AppName() { return "Lost At Sea"; }
 
 		//BOOL    OnIdle(int);

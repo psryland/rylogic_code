@@ -16,6 +16,7 @@
 #include <windows.h>
 #include <cassert>
 #include "pr/str/string_util.h"
+#include "pr/common/hresult.h"
 
 namespace pr
 {
@@ -27,11 +28,10 @@ namespace pr
 		// Reset things so that a process can be started
 		void Reset()
 		{
-			m_startup_info = STARTUPINFOW();
-			m_startup_info.cb = sizeof(m_startup_info);
+			m_startup_info = STARTUPINFOW{sizeof(STARTUPINFOW)};
 			m_process_info = PROCESS_INFORMATION();
-			m_process_info.hProcess = INVALID_HANDLE_VALUE;
-			m_process_info.hThread	= INVALID_HANDLE_VALUE;
+			m_process_info.hProcess = nullptr;
+			m_process_info.hThread	= nullptr;
 		}
 
 	public:
@@ -41,9 +41,9 @@ namespace pr
 		// Start the process
 		bool Start(wchar_t const* exe_path, wchar_t const* args, wchar_t const* startdir)
 		{
-			if (m_process_info.hProcess != INVALID_HANDLE_VALUE) Stop();
+			if (m_process_info.hProcess != nullptr) Stop();
 			auto cmdline = pr::str::Quotes<std::wstring>(exe_path, true).append(L" ").append(args);
-			return CreateProcessW(exe_path, &cmdline[0], 0, 0, TRUE, 0, 0, startdir, &m_startup_info, &m_process_info) == TRUE;
+			return Succeeded(CreateProcessW(exe_path, &cmdline[0], 0, 0, TRUE, 0, 0, startdir, &m_startup_info, &m_process_info));
 		}
 		bool Start(wchar_t const* exe_path, wchar_t const* args)
 		{
@@ -57,10 +57,14 @@ namespace pr
 		// Shutdown the process
 		int Stop()
 		{
-			PostThreadMessageW(m_process_info.dwThreadId, WM_QUIT, 0, 0);
-			int exit_code = BlockTillExit();
-			if (m_process_info.hProcess != INVALID_HANDLE_VALUE) CloseHandle(m_process_info.hProcess);
-			if (m_process_info.hThread  != INVALID_HANDLE_VALUE) CloseHandle(m_process_info.hThread);
+			int exit_code = -1;
+			if (m_process_info.hProcess != nullptr)
+			{
+				PostThreadMessageW(m_process_info.dwThreadId, WM_QUIT, 0, 0);
+				exit_code = BlockTillExit();
+			}
+			if (m_process_info.hProcess != nullptr) CloseHandle(m_process_info.hProcess);
+			if (m_process_info.hThread  != nullptr) CloseHandle(m_process_info.hThread);
 			Reset();
 			return exit_code;
 		}
@@ -68,18 +72,21 @@ namespace pr
 		// Block the calling thread until the child process exits
 		int BlockTillExit()
 		{
+			if (m_process_info.hProcess == nullptr)
+				throw std::exception("Process not running");
+
 			WaitForSingleObject(m_process_info.hProcess, INFINITE);
 			
 			DWORD exit_code;
-			if (!GetExitCodeProcess(m_process_info.hProcess, &exit_code)) { PR_ASSERT(PR_DBG, false, "Process exit code not available"); return -1; }
+			pr::Throw(GetExitCodeProcess(m_process_info.hProcess, &exit_code), "Process exit code not available");
 			return static_cast<int>(exit_code);
 		}
 
 		// Returns true if the process is running
 		bool IsActive() const
 		{
-			assert((m_process_info.hProcess == INVALID_HANDLE_VALUE) == (m_process_info.hThread == INVALID_HANDLE_VALUE));
-			return m_process_info.hProcess != INVALID_HANDLE_VALUE;
+			assert((m_process_info.hProcess == nullptr) == (m_process_info.hThread == nullptr));
+			return m_process_info.hProcess != nullptr;
 		}
 	};
 }

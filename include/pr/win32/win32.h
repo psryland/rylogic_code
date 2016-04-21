@@ -34,29 +34,6 @@
 
 namespace pr
 {
-	// Convert an error code into an error message
-	inline std::string ErrorMessage(HRESULT result)
-	{
-		char msg[16384];
-		DWORD length(_countof(msg));
-		if (!FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS, NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msg, length, NULL))
-			sprintf_s(msg, "Unknown error code: 0x%80X", result);
-		return msg;
-	}
-
-	// Test an HRESULT and throw on error
-	inline void Throw(HRESULT result, std::string message)
-	{
-		if (SUCCEEDED(result)) return;
-		throw std::exception(message.append("\n").append(ErrorMessage(GetLastError())).c_str());
-	}
-	inline void Throw(BOOL result, std::string message)
-	{
-		if (result != 0) return;
-		auto hr = HRESULT(GetLastError());
-		Throw(SUCCEEDED(hr) ? E_FAIL : hr, message);
-	}
-
 	// "Type traits" for win32 API functions
 	template <typename Char> struct Win32;
 	template <> struct Win32<char>

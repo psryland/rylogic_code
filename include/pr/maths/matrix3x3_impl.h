@@ -20,7 +20,7 @@ namespace pr
 		return *this;
 	}
 
-	// Create from quaterion
+	// Create from quaternion
 	inline m3x4& m3x4::set(Quat const& quat)
 	{
 		assert(!IsZero(quat) && "'quat' is a zero quaternion");
@@ -385,6 +385,7 @@ namespace pr
 
 	// Construct a rotation matrix
 	// Order is roll, pitch, yaw because objects usually face along Z and have Y as up.
+	// Also, its the same as the directX implementation.
 	inline m3x4 Rotation3x3(float pitch, float yaw, float roll)
 	{
 		return m3x4::make(pitch, yaw, roll);

@@ -21,27 +21,28 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{87A78A7C-5B8D-4816-ABB2-CCEB41214529}</ProjectGuid>
     <RootNamespace>TestWingui</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.10586.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>false</WholeProgramOptimization>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -70,7 +71,13 @@
     </PostBuildEvent>
     <ClCompile>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <AdditionalIncludeDirectories>..\projects;..\include;..\sdk;..\sdk\WTL\v9.0\include;..\sdk\sqlite\include;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
+    <Manifest />
+    <Manifest />
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile />
@@ -79,6 +86,14 @@
     <PostBuildEvent>
       <Command>py.exe $(ProjectDir)..\projects\testwingui\post_build.py $(ProjectDir) $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
     </PostBuildEvent>
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\projects;..\include;..\sdk;..\sdk\WTL\v9.0\include;..\sdk\sqlite\include;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Manifest />
+    <Manifest />
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile />
@@ -87,6 +102,14 @@
     <PostBuildEvent>
       <Command>py.exe $(ProjectDir)..\projects\testwingui\post_build.py $(ProjectDir) $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
     </PostBuildEvent>
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\projects;..\include;..\sdk;..\sdk\WTL\v9.0\include;..\sdk\sqlite\include;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Manifest />
+    <Manifest />
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile />
@@ -95,6 +118,14 @@
     <PostBuildEvent>
       <Command>py.exe $(ProjectDir)..\projects\testwingui\post_build.py $(ProjectDir) $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
     </PostBuildEvent>
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\projects;..\include;..\sdk;..\sdk\WTL\v9.0\include;..\sdk\sqlite\include;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Manifest />
+    <Manifest />
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pr\gui\context_menu.h" />
@@ -115,6 +146,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\TestWingui\post_build.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\projects\TestWingui\res\icon1.ico" />
+    <Image Include="..\projects\TestWingui\res\Smiling gekko 140x110.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -15,11 +15,21 @@ namespace cex
 	// Base class for ICex commands
 	struct ICex :pr::cmdline::IOptionReceiver<>
 	{
+		bool m_console_allocated;
+
+		ICex()
+			:m_console_allocated(false)
+		{}
+		virtual ~ICex()
+		{
+		}
+
+		// A title banner for cex.exe
 		static char const* Title()
 		{
 			return "\n"
 				"-------------------------------------------------------------\n"
-				"  Commandline Extensions \n" 
+				"  Command Line Extensions \n" 
 				"   Copyright (c) Rylogic 2004 \n"
 				"   Version: v1.2\n"
 				"-------------------------------------------------------------\n"
@@ -56,35 +66,53 @@ namespace cex
 		{}
 
 		// Show the console for this process
-		void ShowConsole() const
+		void ShowConsole()
 		{
 			// Attach to the current console
 			if (AttachConsole((DWORD)-1) || AllocConsole())
 			{
-				FILE *fp;
-				int h;
+				m_console_allocated = true;
 
-				// redirect unbuffered STDOUT to the console
-				h = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_OUTPUT_HANDLE)), _O_TEXT);
-				fp = _fdopen(h, "w");
-				*stdout = *fp;
-				setvbuf(stdout, NULL, _IONBF, 0);
+				// Redirect the CRT standard input, output, and error handles to the console
+				freopen("CONIN$", "r", stdin);
+				freopen("CONOUT$", "w", stdout);
+				freopen("CONOUT$", "w", stderr);
 
-				// redirect unbuffered STDIN to the console
-				h = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_INPUT_HANDLE )), _O_TEXT);
-				fp = _fdopen(h, "r");
-				*stdin = *fp;
-				setvbuf(stdin, NULL, _IONBF, 0);
+				// Clear the error state for each of the C++ standard stream objects. We need to do this, as
+				// attempts to access the standard streams before they refer to a valid target will cause the
+				// 'iostream' objects to enter an error state. In versions of Visual Studio after 2005, this seems
+				// to always occur during startup regardless of whether anything has been read from or written to
+				// the console or not.
+				std::wcout.clear();
+				std::cout.clear();
+				std::wcerr.clear();
+				std::cerr.clear();
+				std::wcin.clear();
+				std::cin.clear();
 
-				// redirect unbuffered STDERR to the console
-				h = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_ERROR_HANDLE )), _O_TEXT);
-				fp = _fdopen(h, "w");
-				*stderr = *fp;
-				setvbuf(stderr, NULL, _IONBF, 0);
+				//FILE *fp;
+				//int h;
 
-				// make cout, wcout, cin, wcin, wcerr, cerr, wclog and clog
-				// point to console as well
-				std::ios::sync_with_stdio();
+				//// redirect unbuffered STDOUT to the console
+				//h = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_OUTPUT_HANDLE)), _O_TEXT);
+				//fp = _fdopen(h, "w");
+				//*stdout = *fp;
+				//setvbuf(stdout, NULL, _IONBF, 0);
+
+				//// redirect unbuffered STDIN to the console
+				//h = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_INPUT_HANDLE )), _O_TEXT);
+				//fp = _fdopen(h, "r");
+				//*stdin = *fp;
+				//setvbuf(stdin, NULL, _IONBF, 0);
+
+				//// redirect unbuffered STDERR to the console
+				//h = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_ERROR_HANDLE )), _O_TEXT);
+				//fp = _fdopen(h, "w");
+				//*stderr = *fp;
+				//setvbuf(stderr, NULL, _IONBF, 0);
+
+				//// make cout, wcout, cin, wcin, wcerr, cerr, wclog and clog point to console as well
+				//std::ios::sync_with_stdio();
 			}
 		}
 

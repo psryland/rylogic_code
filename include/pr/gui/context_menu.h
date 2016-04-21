@@ -620,30 +620,30 @@ namespace pr
 			// Subclass the dialog window class for the context menu
 			static WndClassEx const& RegWndClass()
 			{
-				static WndClassEx wc = [=]
-					{
-						static wchar_t const* class_name = L"pr::gui::cmenu";
-						WndClassEx wc(class_name);
-						if (wc.m_atom != 0)
-							return std::move(wc);
+				static WndClassEx s_wc = [=]
+				{
+					static wchar_t const* class_name = L"pr::gui::cmenu";
+					WndClassEx wc(class_name);
+					if (wc.m_atom != 0)
+						return std::move(wc);
 
-						// Subclass the dialog window class
-						::GetClassInfoExW(wc.hInstance, (LPCWSTR)WC_DIALOG, &wc);
-						wc.style |= CS_DROPSHADOW;
-						wc.lpszClassName = class_name;
-						return std::move(wc.Register());
-					}();
+					// Subclass the dialog window class
+					::GetClassInfoExW(wc.hInstance, (LPCWSTR)WC_DIALOG, &wc);
+					wc.style |= CS_DROPSHADOW;
+					wc.lpszClassName = class_name;
+					return std::move(wc.Register());
+				}();
 
-				return wc;
+				return s_wc;
 			}
 			static DlgTemplate const& Templ()
 			{
-				static DlgTemplate cmenu_templ(DlgParams<>().wndclass(RegWndClass()).name("ctx-menu").style('=',WS_POPUP|WS_BORDER).style_ex('=',0));
+				static DlgTemplate cmenu_templ(MakeDlgParams<>().wndclass(RegWndClass()).name("ctx-menu").style('=',WS_POPUP|WS_BORDER).style_ex('=',0));
 				return cmenu_templ;
 			}
 
 			ContextMenu(ContextMenu* menu, TCHAR const* text, EMenuItemState state, StylePtr style, BitmapPtr bm)
-				:Form(DlgParams<>().templ(Templ()))
+				:Form(MakeDlgParams<>().templ(Templ()))
 				,ContextMenuItem(-1, menu, state, style, bm)
 				,m_submenu_name(Widen(text))
 				,m_items()
@@ -678,7 +678,7 @@ namespace pr
 						ParentRect(bounds, true);
 
 						// Turn off dialog behaviour so that we get WM_MOUSEMOVE events
-						m_dialog_behaviour = false;
+						cp().m_dlg_behaviour = false;
 
 						// Mouse hook static callback
 						auto MouseHook = [](int code, WPARAM wparam, LPARAM lparam)
@@ -720,7 +720,7 @@ namespace pr
 							ThreadHookMap().erase(thread_id);
 
 							// Turn dialog behaviour back on so destruction occurs properly
-							m_dialog_behaviour = true;
+							cp().m_dlg_behaviour = true;
 						}
 						break;
 					}

@@ -42,7 +42,7 @@ namespace pr
 			int                   m_exit_code;                 // Exit code
 
 			//static HBRUSH WndBackground() { return nullptr; }
-			struct Params :pr::gui::FormParams<Params>
+			struct Params :pr::gui::MakeFormParams<FormParams>
 			{
 				Params() { wndclass(RegisterWndClass<DerivedGUI>()).main_wnd(true); }
 			};
@@ -51,8 +51,9 @@ namespace pr
 			// This class is sub-classed from pr::gui::Form which actually does the 'CreateWindowEx' call in
 			// it's constructor. This means the HWND is valid after the base class has been constructed.
 			// If your window uses common controls, remember to call InitCtrls() before this constructor
-			MainGUI(pr::gui::Params const& p = Params())
-				:base(p)
+			MainGUI() :MainGUI(Params()) {}
+			MainGUI(FormParams const& p)
+				:Form(p)
 				,m_log(DerivedGUI::AppName(), pr::log::ToFile(FmtS("%s.log", DerivedGUI::AppName())), 0)
 				,m_msg_loop()
 				,m_main(std::make_unique<Main>(*static_cast<DerivedGUI*>(this)))
@@ -114,7 +115,7 @@ namespace pr
 				return base::Invalidate(erase, rect);
 			}
 
-			// Called when the system menu key command to switch between fullscreen and windowed is detected.
+			// Called when the system menu key command to switch between full-screen and windowed is detected.
 			// Derived types need to actually implement the mode switch as well as hide or show status bars, menus etc
 			virtual void OnFullScreenToggle(bool enable_fullscreen)
 			{
@@ -136,11 +137,6 @@ namespace pr
 
 				// Call the base to raise the paint event
 				return base::OnPaint(args);
-			}
-			virtual bool OnEraseBkGnd(pr::gui::EmptyArgs const& args) override
-			{
-				// We paint the entire window so no need to erase
-				return Minimised() ? base::OnEraseBkGnd(args) : true;
 			}
 
 			// Default mouse navigation behaviour

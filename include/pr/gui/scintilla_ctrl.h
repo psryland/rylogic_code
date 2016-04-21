@@ -23,8 +23,9 @@ namespace pr
 			static DWORD const DefaultStyle   = (DefaultControlStyle | WS_GROUP | SS_LEFT) & ~WS_TABSTOP;
 			static DWORD const DefaultStyleEx = DefaultControlStyleEx | WS_EX_STATICEDGE; // NOT WS_BORDER|
 			static wchar_t const* WndClassName() { return L"Scintilla"; }
-			template <typename Derived = void> struct Params :CtrlParams<choose_non_void<Derived, Params<>>>
+			template <typename TParams = CtrlParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
+				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(WndClassName()).name("scint").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
 				This& load_dll(wchar_t const* dllname = L"scintilla.dll", wchar_t const* dir = L".\\lib\\$(platform)")
 				{
@@ -56,7 +57,7 @@ namespace pr
 
 			// Construct
 			ScintillaCtrl() :ScintillaCtrl(Params<>()) {}
-			template <typename D> ScintillaCtrl(Params<D> const& p)
+			ScintillaCtrl(Params<> const& p)
 				:Control(p)
 				,m_snd(m_hwnd != nullptr ? SciFnDirect(::SendMessageW(m_hwnd, SCI_GETDIRECTFUNCTION, 0, 0)) : nullptr)
 				,m_ptr(m_hwnd != nullptr ? sptr_t     (::SendMessageW(m_hwnd, SCI_GETDIRECTPOINTER , 0, 0)) : 0)
@@ -288,7 +289,7 @@ namespace pr
 
 			// Get/Set the text in the control
 			// Scintilla uses UTF-8 and so always deals with arrays of chars
-			// IF you're expecting using code, use pr::Widen
+			// If you're expecting Unicode, use pr::Widen
 			std::string Text() const
 			{
 				std::string str;

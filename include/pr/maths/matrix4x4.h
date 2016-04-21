@@ -2,10 +2,7 @@
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
-
 #pragma once
-#ifndef PR_MATHS_MATRIX4X4_H
-#define PR_MATHS_MATRIX4X4_H
 
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
@@ -24,6 +21,8 @@ namespace pr
 		struct { v4 arr[4]; };
 		};
 		#pragma warning (default:4201)
+
+		m4x4() = default;
 
 		m4x4& set(v4 const& x_, v4 const& y_, v4 const& z_, v4 const& w_);
 		m4x4& set(m3x4 const& ori, v4 const& translation);
@@ -157,5 +156,3 @@ namespace pr
 	m4x4  ScaledOriFromDir(v4 const& dir, int axis, v4 const& up, v4 const& position);
 	m4x4  Sqrt(m4x4 const& mat);
 }
-
-#endif

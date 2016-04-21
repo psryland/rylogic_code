@@ -6,8 +6,8 @@
 
 #ifndef _WIN32_WINNT 
 #define _WIN32_WINNT 0x0501
-#elif _WIN32_WINNT < 0x0500
-#error "_WIN32_WINNT >= 0x0500 required"
+#elif _WIN32_WINNT < _WIN32_WINNT_WINXP 
+#error "_WIN32_WINNT >= _WIN32_WINNT_WINXP required"
 #endif
 
 //// Change these values to use different versions

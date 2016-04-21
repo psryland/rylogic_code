@@ -1547,9 +1547,9 @@ void SurfaceD2D::DrawRGBAImage(PRectangle rc, int width, int height, const unsig
 		rc.bottom = rc.top + height;
 
 		std::vector<unsigned char> image(height * width * 4);
-		for (int y=0; y<height; y++) {
-			for (int x=0; x<width; x++) {
-				unsigned char *pixel = &image[0] + (y*width+x) * 4;
+		for (int yy=0; yy<height; yy++) {
+			for (int xx=0; xx<width; xx++) {
+				unsigned char *pixel = &image[0] + (yy*width+xx) * 4;
 				unsigned char alpha = pixelsImage[3];
 				// Input is RGBA, output is BGRA with premultiplied alpha
 				pixel[2] = (*pixelsImage++) * alpha / 255;
@@ -2828,7 +2828,7 @@ LRESULT ListBoxX::WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam
 				WS_CHILD | WS_VSCROLL | WS_VISIBLE |
 				LBS_OWNERDRAWFIXED | LBS_NODATA | LBS_NOINTEGRALHEIGHT,
 				0, 0, 150,80, hWnd,
-				reinterpret_cast<HMENU>(ctrlID),
+				HMENU() + ctrlID,
 				hinstanceParent,
 				0);
 			WNDPROC prevWndProc = reinterpret_cast<WNDPROC>(::SetWindowLongPtr(lb, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(ControlWndProc)));

@@ -2184,7 +2184,7 @@ VIEW3D_API void __stdcall View3D_ShowObjectManager(View3DWindow window, BOOL sho
 
 		DllLockGuard;
 		auto& ui = window->m_obj_cont_ui;
-		ui.Show(window->m_hwnd);
+		ui.Show();
 		ui.Populate(window->m_objects);
 		ui.Visible(show != 0);
 	}

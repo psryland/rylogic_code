@@ -67,7 +67,7 @@ namespace pr
 			bool m_camera_relative;
 
 			LightingUI(HWND parent, Preview const& preview)
-				:Form(DlgParams<>().name("rdr-lighting-ui").title(L"Lighting Options").wh(218,190).style_ex('+',WS_EX_TOOLWINDOW).parent(parent).wndclass(RegisterWndClass<LightingUI>()))
+				:Form(MakeDlgParams<>().name("rdr-lighting-ui").title(L"Lighting Options").wh(218,190).style_ex('+',WS_EX_TOOLWINDOW).parent(parent).wndclass(RegisterWndClass<LightingUI>()))
 				,m_grp_light_type    (pr::gui::GroupBox::Params<>().parent(this_).text(L"Light Type").xy(3, 4).wh(56, 67))
 
 				,m_rdo_ambient       (pr::gui::Button::Params<>().parent(this_).text(L"Ambient"    ).id(ID_RADIO_AMBIENT    ).xy(9, 17).wh(41, 8).radio())

@@ -6,4 +6,3 @@
 #include "pr/gui/wingui.h"
 #include "pr/gui/windows_com.h"
 
-using namespace pr::gui;

@@ -188,7 +188,6 @@ namespace Csex
 			// 
 			// m_dock
 			// 
-			this.m_dock.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_dock.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_dock.Location = new System.Drawing.Point(0, 0);
 			this.m_dock.Margin = new System.Windows.Forms.Padding(0);

@@ -28,6 +28,7 @@
 	#define PR_SUPPORT_D3D11_ERRORS
 #endif
 
+// Map HRESULT to an enum type
 enum HResult
 {
 	Ok   = HRESULT(S_OK),
@@ -36,10 +37,6 @@ enum HResult
 
 namespace pr
 {
-	// Forward declare the ToString function
-	// Here 'Result' is expected to be an enum error code
-	template <typename Result> std::string ToString(Result result);
-
 	// Convert an HRESULT into an error message string
 	inline std::string HrMsg(HRESULT result)
 	{
@@ -96,22 +93,18 @@ namespace pr
 
 		// else ask windows
 		char msg[8192];
-		DWORD length(sizeof(msg));
-		if (FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS, NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msg, length, NULL))
-		{
-			return msg;
-		}
-		else
-		{
-			std::stringstream ss; ss << "Unknown error code: " << result;
-			return ss.str();
-		}
+		DWORD length(_countof(msg));
+		if (!FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS, NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msg, length, NULL))
+			sprintf_s(msg, "Unknown error code: 0x%80X", result);
+		return msg;
 	}
 
-	// Convert an HRESULT into a string
-	template <> inline std::string ToString<HResult>(HResult result)
+	// Forward declare the ToString function
+	// Here 'Result' is expected to be an enum error code
+	template <typename Result> std::string ToString(Result result);
+	template <> inline std::string ToString(HResult result)
 	{
-		return HrMsg((HRESULT)result);
+		return HrMsg(result);
 	}
 
 	// A string to put the last error message into
@@ -121,13 +114,7 @@ namespace pr
 		return s_reason;
 	}
 
-	template <typename T> struct is_int64 { static const bool value = false; };
-	template <> struct is_int64<__int64> { static const bool value = true; };
-
 	// Success / Failure / Verify
-	template <typename Result> inline bool Failed   (Result result)                       { return !Succeeded(result); }
-	template <typename Result> inline void Verify   (Result result)                       { assert(Succeeded(result) && Reason().c_str()); (void)result; }
-	template <typename Result> inline void Throw    (Result result, std::string msg = "") { if (!Succeeded(result)) throw pr::Exception<Result>(result, msg + " " + Reason()); }
 	template <typename Result> inline bool Succeeded(Result result)
 	{
 		static_assert(std::is_enum<Result>::value, "Only enum result codes should be used as ToString() for other types has a different meaning");
@@ -137,6 +124,18 @@ namespace pr
 		std::cerr << Reason();
 		return false;
 	}
+	template <> inline bool Succeeded(__int64 result)
+	{
+		return Succeeded(static_cast<HResult>(result));
+	}
+	template <> inline bool Succeeded(HRESULT result)
+	{
+		return Succeeded(static_cast<HResult>(result));
+	}
+	template <> inline bool Succeeded(BOOL result)
+	{
+		return Succeeded(result != 0 ? HResult::Ok : HResult::Fail);
+	}
 	template <> inline bool Succeeded(bool result)
 	{
 		if (result) return true;
@@ -144,10 +143,20 @@ namespace pr
 		std::cerr << Reason();
 		return false;
 	}
-
-	// Specialisations for non-enum types
-	template <> inline bool Succeeded(__int64 result) { return Succeeded(static_cast<HResult>(result)); }
-	template <> inline bool Succeeded(long result)    { return Succeeded(static_cast<HResult>(result)); }
+	template <typename Result> inline bool Failed(Result result)
+	{
+		return !Succeeded(result);
+	}
+	template <typename Result> inline void Verify(Result result)
+	{
+		assert(Succeeded(result) && Reason().c_str());
+		(void)result;
+	}
+	template <typename Result> inline void Throw(Result result, std::string msg = "")
+	{
+		if (Succeeded(result)) return;
+		throw pr::Exception<Result>(result, msg + " " + Reason());
+	}
 
 	// Check the 'errno' value, and throw if non-zero
 	template <typename T> inline T const& CheckErrno(T const& r)

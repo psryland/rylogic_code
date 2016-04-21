@@ -6,16 +6,19 @@
 
 #ifndef NOGDI
 
-#ifdef _GDIPLUS_H
-#error _GDIPLUS_H already included
+#ifndef GDIPVER
+#define GDIPVER 0x0110
 #endif
 
 #include <vector>
+#pragma warning(push,3)
 #include <gdiplus.h>
+#pragma warning(pop)
 #include "pr/common/to.h"
 #include "pr/filesys/filesys.h"
 
 #pragma comment(lib, "gdiplus.lib")
+static_assert(GDIPVER == 0x0110, "");
 
 namespace pr
 {
@@ -23,56 +26,6 @@ namespace pr
 	{
 		// Import the 'Gdiplus' namespace into 'pr::gdi'
 		using namespace Gdiplus;
-
-		// Singleton for accessing image codecs
-		class ImageCodec
-		{
-			std::vector<ImageCodecInfo> m_codecs;
-			ImageCodec()
-			{
-				UINT num = 0;  // number of image encoders
-				UINT size = 0; // size of the image encoder array in bytes
-				if (GetImageEncodersSize(&num, &size) != pr::gdi::Status::Ok)
-					throw std::exception("GDI+ Image encoders not available");
-
-				if (size != 0)
-				{
-					m_codecs.resize(size);
-					GetImageEncoders(num, size, m_codecs.data());
-				}
-			}
-			static ImageCodec const& This()
-			{
-				static ImageCodec inst;
-				return inst;
-			}
-
-		public:
-			static ImageCodecInfo const& Info(wchar_t const* mime)
-			{
-				for (auto& codec : This().m_codecs)
-				{
-					if (wcscmp(codec.MimeType, mime) != 0) continue;
-					return codec;
-				}
-				throw std::exception("Image codec not found");
-			}
-			static CLSID const& Clsid(wchar_t const* mime)
-			{
-				return Info(mime).Clsid;
-			}
-		};
-
-		// Helper for saving GDI Images that infers the codec from the file extension
-		inline Status Save(Image const& image, wchar_t const* filepath)
-		{
-			auto extn = pr::filesys::GetExtensionInPlace(filepath);
-			if (*extn == 0)
-				throw std::exception("Image save could not infer the image format from the file extension");
-
-			auto mime = std::wstring(L"image/").append(extn);
-			return const_cast<Image&>(image).Save(filepath, &ImageCodec::Clsid(mime.c_str()));
-		}
 	}
 
 	// RAII object for initialised/shutting down the GdiPlus framework
@@ -136,6 +89,74 @@ namespace pr
 	template <typename TFrom> struct Convert<gdi::RectF, TFrom> :convert_gdi::ToGdiRectF {};
 	template <> struct Convert<RECT, gdi::RectF> :convert_gdi::ToRECT {};
 	template <> struct Convert<RECT, gdi::Rect> :convert_gdi::ToRECT {};
+
+	namespace gdi
+	{
+		// Singleton for accessing image codecs
+		class ImageCodec
+		{
+			std::vector<ImageCodecInfo> m_codecs;
+			ImageCodec()
+			{
+				UINT num = 0;  // number of image encoders
+				UINT size = 0; // size of the image encoder array in bytes
+				if (GetImageEncodersSize(&num, &size) != pr::gdi::Status::Ok)
+					throw std::exception("GDI+ Image encoders not available");
+
+				if (size != 0)
+				{
+					m_codecs.resize(size);
+					GetImageEncoders(num, size, m_codecs.data());
+				}
+			}
+			static ImageCodec const& This()
+			{
+				static ImageCodec inst;
+				return inst;
+			}
+
+		public:
+			static ImageCodecInfo const& Info(wchar_t const* mime)
+			{
+				for (auto& codec : This().m_codecs)
+				{
+					if (wcscmp(codec.MimeType, mime) != 0) continue;
+					return codec;
+				}
+				throw std::exception("Image codec not found");
+			}
+			static CLSID const& Clsid(wchar_t const* mime)
+			{
+				return Info(mime).Clsid;
+			}
+		};
+
+		// Helper for saving GDI Images that infers the codec from the file extension
+		inline Status Save(Image const& image, wchar_t const* filepath)
+		{
+			auto extn = pr::filesys::GetExtensionInPlace(filepath);
+			if (*extn == 0)
+				throw std::exception("Image save could not infer the image format from the file extension");
+
+			auto mime = std::wstring(L"image/").append(extn);
+			return const_cast<Image&>(image).Save(filepath, &ImageCodec::Clsid(mime.c_str()));
+		}
+
+	}
 }
+
+// Update Manifest
+// We use features from GDI+ v1.1 which is new as of Windows Vista. There is no re-distributable for Windows XP.
+// This adds information to the .exe manifest to force GDI+ 1.1 version of gdiplus.dll to be loaded on Vista
+// without this, Vista defaults to loading version 1.0 and our application will fail to launch with missing entry points.
+#if defined _M_IX86
+#pragma comment(linker, "\"/manifestdependency:type='Win32' name='Microsoft.Windows.GdiPlus' version='1.1.0.0' processorArchitecture='X86' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#elif defined _M_IA64
+#pragma comment(linker, "\"/manifestdependency:type='Win32' name='Microsoft.Windows.GdiPlus' version='1.1.0.0' processorArchitecture='ia64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#elif defined _M_X64
+#pragma comment(linker, "\"/manifestdependency:type='Win32' name='Microsoft.Windows.GdiPlus' version='1.1.0.0' processorArchitecture='amd64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#else
+#pragma comment(linker, "\"/manifestdependency:type='Win32' name='Microsoft.Windows.GdiPlus' version='1.1.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#endif
 
 #endif // NOGDI

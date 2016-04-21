@@ -615,6 +615,7 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
+#include <directxmath.h>
 namespace pr
 {
 	namespace unittests
@@ -649,8 +650,9 @@ namespace pr
 				PR_CHECK(FEql4(V3, V4), true);
 			}
 			{//m4x4CreateFrom2
+				auto q = Quat::make(1.0f, 0.5f, 0.7f);
 				m4x4 m1 = Rotation4x4(1.0f, 0.5f, 0.7f, v4Origin);
-				m4x4 m2 = m4x4::make(Quat::make(1.0f, 0.5f, 0.7f), v4Origin);
+				m4x4 m2 = m4x4::make(q, v4Origin);
 				PR_CHECK(IsOrthonormal(m1), true);
 				PR_CHECK(IsOrthonormal(m2), true);
 				PR_CHECK(FEql(m1, m2), true);
@@ -664,12 +666,16 @@ namespace pr
 				PR_CHECK(FEql(m1, m2), true);
 			}
 			{//m4x4CreateFrom3
-				m4x4 a2b;
-				a2b.set(Random3N(0.0f), rand::fltc(0.0f,1.0f), Random3(0.0f, 10.0f, 1.0f));
-				
+				m4x4 a2b; a2b.set(Random3N(0.0f), rand::fltc(0.0f,1.0f), Random3(0.0f, 10.0f, 1.0f));
 				m4x4 b2a = Invert(a2b);
 				m4x4 a2a = b2a * a2b;
 				PR_CHECK(FEql(m4x4Identity, a2a), true);
+				{
+					auto dx_a2b = *(DirectX::XMMATRIX*)(&a2b);
+					auto dx_det = DirectX::XMMatrixDeterminant(dx_a2b);
+					m4x4 dx_b2a = (m4x4&)DirectX::XMMatrixInverse(&dx_det, dx_a2b);
+					PR_CHECK(FEql(b2a, *(m4x4*)(&dx_b2a)), true);
+				}
 
 				m4x4 b2a_fast = InvertFast(a2b);
 				PR_CHECK(FEql(b2a_fast, b2a), true);

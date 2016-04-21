@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.24720.0
+VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unittests", "unittests.vcxproj", "{64F62186-4F86-4CD6-AE3A-3C0E311BB2A6}"
 EndProject
@@ -71,8 +71,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "view3d", "view3d.vcxproj", 
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EscapeVelocity", "..\projects\EscapeVelocity\EscapeVelocity.csproj", "{0B7DDDD0-AB67-4C51-9628-8CC3243C2D15}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "clicket", "clicket.vcxproj", "{32BDC5E8-2E0B-433F-87B1-46044DBFE2A6}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lost_at_sea", "lost_at_sea.vcxproj", "{A96E7D7B-6550-4F4D-A630-80712E25AB13}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -316,16 +314,6 @@ Global
 		{0B7DDDD0-AB67-4C51-9628-8CC3243C2D15}.Release|x64.Build.0 = Release|Any CPU
 		{0B7DDDD0-AB67-4C51-9628-8CC3243C2D15}.Release|x86.ActiveCfg = Release|Any CPU
 		{0B7DDDD0-AB67-4C51-9628-8CC3243C2D15}.Release|x86.Build.0 = Release|Any CPU
-		{32BDC5E8-2E0B-433F-87B1-46044DBFE2A6}.Debug|Any CPU.ActiveCfg = Debug|Win32
-		{32BDC5E8-2E0B-433F-87B1-46044DBFE2A6}.Debug|x64.ActiveCfg = Debug|x64
-		{32BDC5E8-2E0B-433F-87B1-46044DBFE2A6}.Debug|x64.Build.0 = Debug|x64
-		{32BDC5E8-2E0B-433F-87B1-46044DBFE2A6}.Debug|x86.ActiveCfg = Debug|Win32
-		{32BDC5E8-2E0B-433F-87B1-46044DBFE2A6}.Debug|x86.Build.0 = Debug|Win32
-		{32BDC5E8-2E0B-433F-87B1-46044DBFE2A6}.Release|Any CPU.ActiveCfg = Release|Win32
-		{32BDC5E8-2E0B-433F-87B1-46044DBFE2A6}.Release|x64.ActiveCfg = Release|x64
-		{32BDC5E8-2E0B-433F-87B1-46044DBFE2A6}.Release|x64.Build.0 = Release|x64
-		{32BDC5E8-2E0B-433F-87B1-46044DBFE2A6}.Release|x86.ActiveCfg = Release|Win32
-		{32BDC5E8-2E0B-433F-87B1-46044DBFE2A6}.Release|x86.Build.0 = Release|Win32
 		{A96E7D7B-6550-4F4D-A630-80712E25AB13}.Debug|Any CPU.ActiveCfg = Debug|Win32
 		{A96E7D7B-6550-4F4D-A630-80712E25AB13}.Debug|x64.ActiveCfg = Debug|x64
 		{A96E7D7B-6550-4F4D-A630-80712E25AB13}.Debug|x64.Build.0 = Debug|x64
