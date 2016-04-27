@@ -161,8 +161,8 @@ namespace pr
 			// Clear the g-buffer and depth buffer
 			float diff_reset[4] = {m_scene->m_bkgd_colour.r, m_scene->m_bkgd_colour.g, m_scene->m_bkgd_colour.b, 0.5f};
 			dc->ClearRenderTargetView(m_rtv[0].m_ptr, diff_reset);
-			dc->ClearRenderTargetView(m_rtv[1].m_ptr, pr::v4Half.ToArray());
-			dc->ClearRenderTargetView(m_rtv[2].m_ptr, pr::v4Max.ToArray());
+			dc->ClearRenderTargetView(m_rtv[1].m_ptr, v4Half.arr);
+			dc->ClearRenderTargetView(m_rtv[2].m_ptr, v4Max.arr);
 			dc->ClearDepthStencilView(m_dsv.m_ptr, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0U);
 
 			// Set the viewport

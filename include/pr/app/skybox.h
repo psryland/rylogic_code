@@ -50,7 +50,7 @@ namespace pr
 				:m_inst()
 				,m_tex()
 				,m_scale(scale)
-				,m_i2w(pr::Scale4x4(scale, pr::v4Origin))
+				,m_i2w(m4x4::Scale(scale, pr::v4Origin))
 			{
 				switch (tex_style)
 				{

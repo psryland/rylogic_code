@@ -1264,10 +1264,11 @@ namespace pr
 			{//AlignedTypes
 				StartObjectCount() = ObjectCount();
 				{
-					pr::Spline spline = pr::Spline::make(pr::Random3N(1.0f), pr::Random3N(1.0f), pr::Random3N(1.0f), pr::Random3N(1.0f));
+					Rand rnd;
+					auto spline = Spline(Random3N(rnd, 1.0f), Random3N(rnd, 1.0f), Random3N(rnd, 1.0f), Random3N(rnd, 1.0f));
 
-					pr::vector<pr::v4> arr0;
-					pr::Raster(spline, arr0, 100);
+					pr::vector<v4> arr0;
+					Raster(spline, arr0, 100);
 
 					PR_CHECK(arr0.capacity() > arr0.LocalLength, true);
 					arr0.resize(5);

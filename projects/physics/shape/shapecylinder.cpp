@@ -72,14 +72,14 @@ v4 pr::ph::SupportVertex(ShapeCylinder const& shape, v4 const& direction, std::s
 		a *= (direction.x >= 0.0f) * 2.0f - 1.0f;
 		b *= (direction.z >= 0.0f) * 2.0f - 1.0f;
 		c  = (direction.y >= 0.0f) * 2.0f - 1.0f;
-		sup_vert.set(a * shape.m_radius, c * shape.m_height, b * shape.m_radius, 1.0f);
+		sup_vert = v4(a * shape.m_radius, c * shape.m_height, b * shape.m_radius, 1.0f);
 	}
 	else
 	{
 		b *= (direction.x >= 0.0f) * 2.0f - 1.0f;
 		a *= (direction.z >= 0.0f) * 2.0f - 1.0f;
 		c  = (direction.y >= 0.0f) * 2.0f - 1.0f;
-		sup_vert.set(b * shape.m_radius, c * shape.m_height, a * shape.m_radius, 1.0f);
+		sup_vert = v4(b * shape.m_radius, c * shape.m_height, a * shape.m_radius, 1.0f);
 	}
 	sup_vert_id = (sup_vert.z < 0.0f)*32 | (sup_vert.y < 0.0f)*16 | (sup_vert.x < 0.0f)*8 | xmajor*4 | id;
 	return sup_vert;

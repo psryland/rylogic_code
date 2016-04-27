@@ -296,7 +296,7 @@ int vorbis_book_init_encode(codebook *c,const static_codebook *s){
   return(0);
 }
 
-static int sort32a(const void *a,const void *b){
+static int __cdecl sort32a(const void *a,const void *b){
   return ( **(ogg_uint32_t **)a>**(ogg_uint32_t **)b)-
     ( **(ogg_uint32_t **)a<**(ogg_uint32_t **)b);
 }

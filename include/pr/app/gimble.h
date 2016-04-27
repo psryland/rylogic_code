@@ -39,7 +39,7 @@ namespace pr
 			void OnEvent(pr::rdr::Evt_UpdateScene const& e) override
 			{
 				pr::rdr::SceneView const& view = e.m_scene.m_view;
-				m_inst.m_i2w = pr::Scale4x4(m_scale, view.FocusPoint() + view.m_c2w * m_ofs_pos);
+				m_inst.m_i2w = m4x4::Scale(m_scale, view.FocusPoint() + view.m_c2w * m_ofs_pos);
 				e.m_scene.AddInstance(m_inst);
 			}
 
@@ -65,7 +65,7 @@ namespace pr
 				};
 
 				// Create the gimble model
-				m_inst.m_model = rdr.m_mdl_mgr.CreateModel(MdlSettings(verts, indices, pr::BBoxMake(verts), "gimble"));
+				m_inst.m_model = rdr.m_mdl_mgr.CreateModel(MdlSettings(verts, indices, BBox::Make(verts), "gimble"));
 
 				NuggetProps mat; // Get a suitable shader
 				mat.m_topo = EPrim::LineList;

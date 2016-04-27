@@ -1,8 +1,8 @@
 #pragma once
 
-// Waiting for C++ support...
-#define alignas(alignment) __declspec(align(alignment))
-
-
-#define PR_ALIGN(alignment, what) __declspec( align (alignment) ) what
+#if _MSC_VER < 1900
+#  ifndef alignas
+#    define alignas(alignment) __declspec(align(alignment))
+#  endif
+#endif
 

@@ -501,10 +501,10 @@ namespace pr
 			};
 			Vert verts[] =
 			{
-				Vert(pr::v4::make(0.0f, 0.0f, 0.0f, 1.0f), pr::v4Zero),
-				Vert(pr::v4::make(1.0f, 0.0f, 0.0f, 1.0f), pr::v4Zero),
-				Vert(pr::v4::make(1.0f, 1.0f, 0.0f, 1.0f), pr::v4Zero),
-				Vert(pr::v4::make(0.0f, 1.0f, 0.0f, 1.0f), pr::v4Zero),
+				Vert(v4(0.0f, 0.0f, 0.0f, 1.0f), pr::v4Zero),
+				Vert(v4(1.0f, 0.0f, 0.0f, 1.0f), pr::v4Zero),
+				Vert(v4(1.0f, 1.0f, 0.0f, 1.0f), pr::v4Zero),
+				Vert(v4(0.0f, 1.0f, 0.0f, 1.0f), pr::v4Zero),
 			};
 			int faces[] =
 			{

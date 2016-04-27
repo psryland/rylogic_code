@@ -2,13 +2,10 @@
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
-
 #pragma once
-#ifndef PR_MATHS_POLYNOMIAL_H
-#define PR_MATHS_POLYNOMIAL_H
 
 #include "pr/maths/forward.h"
-#include "pr/maths/scalar.h"
+#include "pr/maths/maths_core.h"
 
 namespace pr
 {
@@ -45,166 +42,172 @@ namespace pr
 			float m_e;
 		};
 
-		//*****
 		// Evaluate a polynomial
-		inline float Eval_F(const Quadratic& quadratic, float x)	{ return ((quadratic.m_a * x) + quadratic.m_b) * x + quadratic.m_c; }
-		inline float Eval_F(const Cubic& cubic, float x)			{ return (((cubic.m_a * x) + cubic.m_b) * x + cubic.m_c) * x + cubic.m_d; }
-		inline float Eval_F(const Quartic& quartic, float x)		{ return ((((quartic.m_a * x) + quartic.m_b) * x + quartic.m_c) * x + quartic.m_d) * x + quartic.m_e; }
-
-		//*****
-		// Evaluate the derivative of a polynomial
-		inline float Eval_dF(const Quadratic& quadratic, float x)	{ return (2.0f * quadratic.m_a * x) + quadratic.m_b; }
-		inline float Eval_dF(const Cubic& cubic, float x)			{ return ((3.0f * cubic.m_a * x) + 2.0f * cubic.m_b) * x + cubic.m_c; }
-		inline float Eval_dF(const Quartic& quartic, float x)		{ return (((4.0f * quartic.m_a * x) + 3.0f * quartic.m_b) * x + 2.0f * quartic.m_c) * x + quartic.m_d; }
-
-		namespace impl
+		inline float Eval_F(const Quadratic& quadratic, float x)
 		{
-			//*****
-			// Calculate the real roots of a polynomial
-			// This method is numerically more stable than (-b +/- sqrt(b^2-4ac)) / 2a
-			// see numerical recipes, p184
-			template <typename T> Roots FindRoots(const Quadratic& quadratic)
+			return ((quadratic.m_a * x) + quadratic.m_b) * x + quadratic.m_c;
+		}
+		inline float Eval_F(const Cubic& cubic, float x)
+		{
+			return (((cubic.m_a * x) + cubic.m_b) * x + cubic.m_c) * x + cubic.m_d;
+		}
+		inline float Eval_F(const Quartic& quartic, float x)
+		{
+			return ((((quartic.m_a * x) + quartic.m_b) * x + quartic.m_c) * x + quartic.m_d) * x + quartic.m_e;
+		}
+
+		// Evaluate the derivative of a polynomial
+		inline float Eval_dF(const Quadratic& quadratic, float x)
+		{
+			return (2.0f * quadratic.m_a * x) + quadratic.m_b;
+		}
+		inline float Eval_dF(const Cubic& cubic, float x)
+		{
+			return ((3.0f * cubic.m_a * x) + 2.0f * cubic.m_b) * x + cubic.m_c;
+		}
+		inline float Eval_dF(const Quartic& quartic, float x)
+		{
+			return (((4.0f * quartic.m_a * x) + 3.0f * quartic.m_b) * x + 2.0f * quartic.m_c) * x + quartic.m_d;
+		}
+
+		// Calculate the real roots of a polynomial
+		// This method is numerically more stable than (-b +/- sqrt(b^2-4ac)) / 2a (see numerical recipes, p184)
+		template <typename T = void> Roots FindRoots(Quadratic const& quadratic)
+		{
+			auto discriminant = quadratic.m_b * quadratic.m_b - 4.0f * quadratic.m_a * quadratic.m_c;
+			if (discriminant < 0.0f)
+				return Roots{ 0 };
+
+			discriminant = Sqrt(discriminant);
+			discriminant = quadratic.m_b < 0.0f
+				? -0.5f * (quadratic.m_b - discriminant)
+				: -0.5f * (quadratic.m_b + discriminant);
+
+			return Roots{ 2, discriminant / quadratic.m_a, quadratic.m_c / discriminant };
+		}
+
+		// See http://www2.hawaii.edu/suremath/jrootsCubic.html for method
+		template <typename T = void> Roots FindRoots(Cubic const& cubic)
+		{
+			auto a0 = cubic.m_d / cubic.m_a;
+			auto a1 = cubic.m_c / cubic.m_a;
+			auto a2 = cubic.m_b / cubic.m_a;
+
+			auto q = (a1 / 3.0f) - (a2 * a2 / 9.0f);
+			auto r = ((a1 * a2 - 3.0f * a0) / 6.0f) - (a2 * a2 * a2 / 27.0f);
+			auto temp = (q * q * q) + (r * r);
+
+			if (temp >= 0.0f)
 			{
-				float discriminant = quadratic.m_b * quadratic.m_b - 4.0f * quadratic.m_a * quadratic.m_c;
-				if( discriminant < 0.0f ) { Roots r = {0}; return r; }
+				temp = Sqrt(temp);
+				auto real_s1 = r + temp;
+				auto real_s2 = r - temp;
 
-				discriminant = Sqrt(discriminant);
-				if( quadratic.m_b < 0.0f )	{ discriminant = -0.5f * (quadratic.m_b - discriminant); }
-				else						{ discriminant = -0.5f * (quadratic.m_b + discriminant); }
-
-				Roots r = {2, discriminant / quadratic.m_a, quadratic.m_c / discriminant};
-				return r;
+				if (Abs(real_s1) > 0.0f)
+				{
+					real_s1 = Cubert(Abs(real_s1));
+					if (real_s1 < 0.0f)
+						real_s1 = -real_s1;
+				}
+				if (Abs(real_s2) > 0.0f)
+				{
+					real_s2 = Cubert(Abs(real_s2));
+					if (real_s2 < 0.0f)
+						real_s2 = -real_s2;
+				}
+				return Roots{ 1, real_s1 + real_s2 - a2 / 3.0f };
 			}
 
-			// See http://www2.hawaii.edu/suremath/jrootsCubic.html for method
-			template <typename T> Roots FindRoots(const Cubic& cubic)
+			temp = Abs(temp);
+			auto imaginary_s1 = Sqrt(temp);
+			auto imaginary_s2 = -imaginary_s1;
+			auto real_s1 = r;
+			auto real_s2 = r;
+
+			// cube root of s1 and s2
+			// note: magnitude of s1 and s2 are equal
+			auto magnitude = Cubert(Sqrt(imaginary_s1 * imaginary_s1 + real_s1 * real_s2));
+
+			float theta;
+			theta = ATan2(imaginary_s1, real_s1) / 3.0f;
+			real_s1 = magnitude * Cos(theta);
+			imaginary_s1 = magnitude * Sin(theta);
+
+			theta = ATan2(imaginary_s2, real_s2) / 3.0f;
+			real_s2 = magnitude * Cos(theta);
+			imaginary_s2 = magnitude * Sin(theta);
+
+			const float root3_ovr_2 = 0.866025f;
+			return Roots
 			{
-				float a0 = cubic.m_d / cubic.m_a;
-				float a1 = cubic.m_c / cubic.m_a;
-				float a2 = cubic.m_b / cubic.m_a;
+				3,
+				real_s1 + real_s2 - a2 / 3.0f,
+				((real_s1 + real_s2) / -2.0f - a2 / 3.0f + (imaginary_s2 - imaginary_s1) * root3_ovr_2),
+				((real_s1 + real_s2) / -2.0f - a2 / 3.0f - (imaginary_s2 - imaginary_s1) * root3_ovr_2)
+			};
+		}
 
-				float q = (a1 / 3.0f) - (a2 * a2 / 9.0f);
-				float r = ((a1 * a2 - 3.0f * a0) / 6.0f) - (a2 * a2 * a2 / 27.0f);
-				float temp = (q * q * q) + (r * r);
+		// See http://forum.swarthmore.edu/dr.math/problems/cowan2.5.27.98.html
+		template <typename T = void> Roots FindRoots(Quartic const& quartic)
+		{
+			// Calculate depressed equation (x^4 coefft. = 1, x^3 coefft. = 0) by substituting x = y - b / 4a
+			// See http://www.sosmath.com/algebra/factor/fac12/fac12.html
+			Quartic depressed_eqn =
+			{
+				1.0f,
+				0.0f,
+				(quartic.m_c - (quartic.m_b * quartic.m_b * 3.0f / (8.0f * quartic.m_a))) / quartic.m_a,
+				((quartic.m_d + (quartic.m_b * quartic.m_b * quartic.m_b / (8.0f * quartic.m_a * quartic.m_a))) - (quartic.m_b * quartic.m_c / (2.0f * quartic.m_a))) / quartic.m_a,
+				(((quartic.m_e - (quartic.m_b * quartic.m_b * quartic.m_b * quartic.m_b * 3.0f / (256.0f * quartic.m_a * quartic.m_a * quartic.m_a))) + (quartic.m_b * quartic.m_b * quartic.m_c / (16.0f * quartic.m_a * quartic.m_a))) - (quartic.m_b * quartic.m_d / (4.0f * quartic.m_a))) / quartic.m_a
+			};
 
-				if( temp >= 0.0f )
-				{
-					temp = Sqrt(temp);
-					float real_s1 = r + temp;
-					float real_s2 = r - temp;
+			// Calculate coefficients. of resolvent cubic equation.
+			Cubic res_cubic =
+			{
+				1.0f,
+				2.0f * depressed_eqn.m_c,
+				depressed_eqn.m_c * depressed_eqn.m_c - 4.0f * depressed_eqn.m_e,
+				-depressed_eqn.m_d * depressed_eqn.m_d
+			};
 
-					if( Abs(real_s1) > 0.0f )
-					{
-						real_s1 = Cubert(Abs(real_s1));
-						if( real_s1 < 0.0f ) real_s1 = -real_s1;
-					}
-					if( Abs(real_s2) > 0.0f )
-					{
-						real_s2 = Cubert(Abs(real_s2));
-						if( real_s2 < 0.0f ) real_s2 = -real_s2;
-					}
-					Roots rr = {1, real_s1 + real_s2 - a2 / 3.0f};
-					return rr;
-				}
+			auto res_cubic_roots = FindRoots(res_cubic);
+			if (res_cubic_roots.m_num_roots == 0)
+				return Roots{ 0 };
 
-				temp = Abs(temp);
-				float imaginary_s1 = Sqrt(temp);
-				float imaginary_s2 = -imaginary_s1;
-				float real_s1 = r;
-				float real_s2 = r;
+			// Find a positive root
+			int n = res_cubic_roots.m_num_roots;
+			while (res_cubic_roots.m_root[--n] < 0.0f)
+			{
+				if (n == 0)
+					return Roots{ 0 };
+			}
+			auto h = Sqrt(res_cubic_roots.m_root[n]);
+			auto j = (depressed_eqn.m_c + res_cubic_roots.m_root[n] - depressed_eqn.m_d / h) / 2.0f;
 
-				// cube root of s1 and s2
-
-				//n.b. magnitude of s1 and s2 are equal
-				float magnitude = Cubert(Sqrt(imaginary_s1 * imaginary_s1 + real_s1 * real_s2));
-
-				float theta;
-				theta		 = ATan2(imaginary_s1, real_s1) / 3.0f;
-				real_s1		 = magnitude * Cos(theta);
-				imaginary_s1 = magnitude * Sin(theta);
-
-				theta		 = ATan2(imaginary_s2, real_s2) / 3.0f;
-				real_s2		 = magnitude * Cos(theta);
-				imaginary_s2 = magnitude * Sin(theta);
-
-				const float root3_ovr_2 = 0.866025f;
-				Roots roots =
-				{
-					3,
-					real_s1 + real_s2 - a2 / 3.0f,
-					((real_s1 + real_s2) / -2.0f - a2 / 3.0f + (imaginary_s2 - imaginary_s1) * root3_ovr_2),
-					((real_s1 + real_s2) / -2.0f - a2 / 3.0f - (imaginary_s2 - imaginary_s1) * root3_ovr_2)
-				};
-				return roots;
+			auto roots = Roots{ 0 };
+			if (h * h - 4.0f * j >= 0.0f)
+			{
+				Quadratic quad = { 1.0f, h, j };
+				auto quad_roots = FindRoots(quad);
+				roots.m_num_roots += quad_roots.m_num_roots;
+				roots.m_root[roots.m_num_roots - 1] = quad_roots.m_root[0] - (quartic.m_b / (quartic.m_a * 4.0f));
+				roots.m_root[roots.m_num_roots - 2] = quad_roots.m_root[1] - (quartic.m_b / (quartic.m_a * 4.0f));
 			}
 
-			// See http://forum.swarthmore.edu/dr.math/problems/cowan2.5.27.98.html
-			template <typename T> Roots FindRoots(const Quartic& quartic)
+			h = -h;
+			j = depressed_eqn.m_e / j;
+			if (h * h - 4.0f * j >= 0.0f)
 			{
-				// Calculate depressed equation (x^4 coefft. = 1, x^3 coefft. = 0)
-				// by substituting x = y - b / 4a
-				// See http://www.sosmath.com/algebra/factor/fac12/fac12.html
-				Quartic depressed_eqn =
-				{
-					1.0f,
-					0.0f,
-					(quartic.m_c -(quartic.m_b * quartic.m_b * 3.0f / (8.0f * quartic.m_a))) / quartic.m_a,
-					((quartic.m_d + (quartic.m_b * quartic.m_b * quartic.m_b / (8.0f * quartic.m_a * quartic.m_a))) - (quartic.m_b * quartic.m_c / (2.0f * quartic.m_a))) / quartic.m_a,
-					(((quartic.m_e - (quartic.m_b * quartic.m_b * quartic.m_b * quartic.m_b * 3.0f / (256.0f * quartic.m_a * quartic.m_a * quartic.m_a))) + (quartic.m_b * quartic.m_b * quartic.m_c / (16.0f * quartic.m_a * quartic.m_a))) - (quartic.m_b * quartic.m_d / (4.0f * quartic.m_a))) / quartic.m_a
-				};
-
-				//calculate coeffs. of resolvent cubic eqn.
-				Cubic res_cubic =
-				{
-                    1.0f,
-					2.0f * depressed_eqn.m_c,
-					depressed_eqn.m_c * depressed_eqn.m_c - 4.0f * depressed_eqn.m_e,
-					-depressed_eqn.m_d * depressed_eqn.m_d
-				};
-
-				Roots res_cubic_roots = FindRoots<T>(res_cubic);
-				if( res_cubic_roots.m_num_roots == 0 )		{ Roots roots = {0}; return roots; }
-
-				// Find a positive root
-				int n = res_cubic_roots.m_num_roots;
-				while( res_cubic_roots.m_root[--n] < 0.0f )
-				{
-					if( n == 0 )							{ Roots roots = {0}; return roots; }
-				}
-				float h = Sqrt(res_cubic_roots.m_root[n]);
-				float j = (depressed_eqn.m_c + res_cubic_roots.m_root[n] - depressed_eqn.m_d / h) / 2.0f;
-
-				Roots roots = {0};
-				if( h * h - 4.0f * j >= 0.0f )
-				{
-					Quadratic quad = {1.0f, h, j};
-					Roots quad_roots = FindRoots<T>(quad);
-					roots.m_num_roots += quad_roots.m_num_roots;
-					roots.m_root[roots.m_num_roots - 1] = quad_roots.m_root[0] - (quartic.m_b / (quartic.m_a * 4.0f));
-					roots.m_root[roots.m_num_roots - 2] = quad_roots.m_root[1] - (quartic.m_b / (quartic.m_a * 4.0f));
-				}
-
-				h = -h;
-				j = depressed_eqn.m_e / j;
-				if( h * h - 4.0f * j >= 0.0f )
-				{
-					Quadratic quad = {1.0f, h, j};
-					Roots quad_roots = FindRoots<T>(quad);
-					roots.m_num_roots += quad_roots.m_num_roots;
-					roots.m_root[roots.m_num_roots - 1] = quad_roots.m_root[0] - (quartic.m_b / (quartic.m_a * 4.0f));
-					roots.m_root[roots.m_num_roots - 2] = quad_roots.m_root[1] - (quartic.m_b / (quartic.m_a * 4.0f));
-				}
-				return roots;
+				Quadratic quad = { 1.0f, h, j };
+				auto quad_roots = FindRoots(quad);
+				roots.m_num_roots += quad_roots.m_num_roots;
+				roots.m_root[roots.m_num_roots - 1] = quad_roots.m_root[0] - (quartic.m_b / (quartic.m_a * 4.0f));
+				roots.m_root[roots.m_num_roots - 2] = quad_roots.m_root[1] - (quartic.m_b / (quartic.m_a * 4.0f));
 			}
-		}//namespace impl
-
-		inline Roots FindRoots(const Quadratic& quadratic)		{ return impl::FindRoots<void>(quadratic); }
-		inline Roots FindRoots(const Cubic& cubic)				{ return impl::FindRoots<void>(cubic); }
-		inline Roots FindRoots(const Quartic& quartic)			{ return impl::FindRoots<void>(quartic); }
-	}//namespace polynomial
-}//namespace pr
-
-#endif//PR_MATHS_POLYNOMIAL_H
+			return roots;
+		}
+	}
+}
 
 ////   bezout
 ////   This code is based on MgcIntr2DElpElp.cpp written by David Eberly.  His

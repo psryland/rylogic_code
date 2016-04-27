@@ -80,7 +80,6 @@
     <ClInclude Include="..\include\pr\common\flags_enum.h" />
     <ClInclude Include="..\include\pr\common\fmt.h" />
     <ClInclude Include="..\include\pr\common\guid.h" />
-    <ClInclude Include="..\include\pr\common\hardtypedef.h" />
     <ClInclude Include="..\include\pr\common\hash.h" />
     <ClInclude Include="..\include\pr\common\hresult.h" />
     <ClInclude Include="..\include\pr\common\ienumoutput.h" />
@@ -206,8 +205,6 @@
     <ClInclude Include="..\include\pr\macros\constexpr.h" />
     <ClInclude Include="..\include\pr\macros\count_of.h" />
     <ClInclude Include="..\include\pr\macros\enum.h" />
-    <ClInclude Include="..\include\pr\macros\foreach.h" />
-    <ClInclude Include="..\include\pr\macros\for_each.h" />
     <ClInclude Include="..\include\pr\macros\join.h" />
     <ClInclude Include="..\include\pr\macros\link.h" />
     <ClInclude Include="..\include\pr\macros\noexcept.h" />
@@ -217,61 +214,43 @@
     <ClInclude Include="..\include\pr\macros\repeat.h" />
     <ClInclude Include="..\include\pr\macros\stringise.h" />
     <ClInclude Include="..\include\pr\maths\axis_id.h" />
-    <ClInclude Include="..\include\pr\maths\bitfunctions.h" />
-    <ClInclude Include="..\include\pr\maths\boundingbox.h" />
-    <ClInclude Include="..\include\pr\maths\boundingbox_impl.h" />
-    <ClInclude Include="..\include\pr\maths\boundingsphere.h" />
-    <ClInclude Include="..\include\pr\maths\boundingsphere_impl.h" />
+    <ClInclude Include="..\include\pr\maths\bit_fields.h" />
+    <ClInclude Include="..\include\pr\maths\bbox.h" />
+    <ClInclude Include="..\include\pr\maths\bsphere.h" />
     <ClInclude Include="..\include\pr\maths\compress.h" />
     <ClInclude Include="..\include\pr\maths\constants.h" />
     <ClInclude Include="..\include\pr\maths\conversion.h" />
-    <ClInclude Include="..\include\pr\maths\convexhull.h" />
+    <ClInclude Include="..\include\pr\maths\convex_hull.h" />
     <ClInclude Include="..\include\pr\maths\forward.h" />
-    <ClInclude Include="..\include\pr\maths\frect.h" />
-    <ClInclude Include="..\include\pr\maths\frect_impl.h" />
+    <ClInclude Include="..\include\pr\maths\rectangle.h" />
     <ClInclude Include="..\include\pr\maths\frustum.h" />
-    <ClInclude Include="..\include\pr\maths\frustum_impl.h" />
-    <ClInclude Include="..\include\pr\maths\irect.h" />
-    <ClInclude Include="..\include\pr\maths\irect_impl.h" />
-    <ClInclude Include="..\include\pr\maths\isize.h" />
+    <ClInclude Include="..\include\pr\maths\interpolate.h" />
     <ClInclude Include="..\include\pr\maths\ivector2.h" />
-    <ClInclude Include="..\include\pr\maths\ivector2_impl.h" />
     <ClInclude Include="..\include\pr\maths\ivector4.h" />
-    <ClInclude Include="..\include\pr\maths\ivector4_impl.h" />
-    <ClInclude Include="..\include\pr\maths\largeint.h" />
+    <ClInclude Include="..\include\pr\maths\large_int.h" />
     <ClInclude Include="..\include\pr\maths\line3.h" />
-    <ClInclude Include="..\include\pr\maths\line3_impl.h" />
     <ClInclude Include="..\include\pr\maths\maths.h" />
     <ClInclude Include="..\include\pr\maths\matrix2x2.h" />
-    <ClInclude Include="..\include\pr\maths\matrix2x2_impl.h" />
     <ClInclude Include="..\include\pr\maths\matrix3x3.h" />
-    <ClInclude Include="..\include\pr\maths\matrix3x3_impl.h" />
     <ClInclude Include="..\include\pr\maths\matrix4x4.h" />
-    <ClInclude Include="..\include\pr\maths\matrix4x4_impl.h" />
-    <ClInclude Include="..\include\pr\maths\orientedbox.h" />
-    <ClInclude Include="..\include\pr\maths\orientedbox_impl.h" />
-    <ClInclude Include="..\include\pr\maths\perlinnoise.h" />
+    <ClInclude Include="..\include\pr\maths\oriented_box.h" />
+    <ClInclude Include="..\include\pr\maths\perlin_noise.h" />
     <ClInclude Include="..\include\pr\maths\plane.h" />
     <ClInclude Include="..\include\pr\maths\polynomial.h" />
     <ClInclude Include="..\include\pr\maths\primes.h" />
     <ClInclude Include="..\include\pr\maths\pr_to_ode.h" />
     <ClInclude Include="..\include\pr\maths\quaternion.h" />
-    <ClInclude Include="..\include\pr\maths\quaternion_impl.h" />
     <ClInclude Include="..\include\pr\maths\rand.h" />
     <ClInclude Include="..\include\pr\maths\rand_mt19937.h" />
-    <ClInclude Include="..\include\pr\maths\scalar.h" />
-    <ClInclude Include="..\include\pr\maths\scalar_impl.h" />
+    <ClInclude Include="..\include\pr\maths\maths_core.h" />
     <ClInclude Include="..\include\pr\maths\spatial.h" />
     <ClInclude Include="..\include\pr\maths\spline.h" />
     <ClInclude Include="..\include\pr\maths\stat.h" />
     <ClInclude Include="..\include\pr\maths\triangulate.h" />
     <ClInclude Include="..\include\pr\maths\vector2.h" />
-    <ClInclude Include="..\include\pr\maths\vector2_impl.h" />
     <ClInclude Include="..\include\pr\maths\vector3.h" />
-    <ClInclude Include="..\include\pr\maths\vector3_impl.h" />
     <ClInclude Include="..\include\pr\maths\vector4.h" />
-    <ClInclude Include="..\include\pr\maths\vector4_impl.h" />
-    <ClInclude Include="..\include\pr\maths\vector_rand.h" />
+    <ClInclude Include="..\include\pr\maths\rand_vector.h" />
     <ClInclude Include="..\include\pr\meta\abs.h" />
     <ClInclude Include="..\include\pr\meta\and.h" />
     <ClInclude Include="..\include\pr\meta\constants.h" />
@@ -338,26 +317,26 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>

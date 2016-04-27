@@ -21,13 +21,13 @@ namespace pr
 #include <algorithm>
 #include "pr/common/unittests.h"
 #include "unittests/unittests.h" // all tests
-//#include "pr/win32/win32.h"
+//#include "pr/maths/maths.h"
 
 // For faster build times, comment out the 'all headers' include
 // and just include the header you care about
 using namespace std;
 
-int main(int argc, char const* argv[])
+int _cdecl main(int argc, char const* argv[])
 //int _tmain(int argc, _TCHAR* argv[])
 {
 	bool runtests = argc >= 2 && std::any_of(argv + 1, argv + argc, [](char const* x){ return strcmp(x, "runtests") == 0;} );

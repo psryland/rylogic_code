@@ -76,12 +76,12 @@ LDR_API(LDR_EXPORT, void                  ,ObjectSetWireframe   ,(ldrapi::Object
 // the cpp file. Doing this is risky tho, the members of LdrObject could be different
 // between LineDrawer and the plugin due to different compiler settings.
 
-#if LDR_EXPORTS // Defined when this header is being built in the linedrawer project
-#define LDR_EXPORT extern "C" __declspec(dllexport)
-#define LDR_IMPORT extern "C" __declspec(dllimport)
+#if LDR_EXPORTS // Defined when this header is being built in the LineDrawer project
+#define LDR_EXPORT  __declspec(dllexport)
+#define LDR_IMPORT  __declspec(dllimport)
 #else
-#define LDR_EXPORT extern "C" __declspec(dllimport)
-#define LDR_IMPORT extern "C" __declspec(dllexport)
+#define LDR_EXPORT  __declspec(dllimport)
+#define LDR_IMPORT  __declspec(dllexport)
 #endif
 
 // Forward declarations

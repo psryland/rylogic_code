@@ -204,7 +204,11 @@ namespace pr.gui
 		}
 
 		/// <summary>Enumerate all IDockable's managed by this container</summary>
-		internal IEnumerable<DockControl> AllContent
+		public IEnumerable<IDockable> AllContent
+		{
+			get { return AllContentInternal.Select(x => x.Dockable); }
+		}
+		internal IEnumerable<DockControl> AllContentInternal
 		{
 			get { return m_all_content; }
 		}
@@ -508,7 +512,7 @@ namespace pr.gui
 					menu.DropDownItems.Clear();
 
 					// Menu item for each content
-					foreach (var content in AllContent.OrderBy(x => x.TabText))
+					foreach (var content in AllContentInternal.OrderBy(x => x.TabText))
 					{
 						var opt = menu.DropDownItems.Add2(new ToolStripMenuItem(content.TabText, content.TabIcon, (ss,aa) => FindAndShow(content)));
 						opt.Checked = content == ActiveContent;
@@ -666,7 +670,7 @@ namespace pr.gui
 
 			// Record the state of the hosted content
 			var content_node = node.Add2(new XElement(XmlTag.Contents));
-			foreach (var content in AllContent)
+			foreach (var content in AllContentInternal)
 				content_node.Add2(XmlTag.Content, content, false);
 
 			// Record the name of the active content
@@ -699,7 +703,7 @@ namespace pr.gui
 			using (this.SuspendLayout(true))
 			{
 				// Get a collection of the content currently loaded
-				var all_content = AllContent.ToDictionary(x => x.PersistName, x => x);
+				var all_content = AllContentInternal.ToDictionary(x => x.PersistName, x => x);
 				DockControl content; 
 
 				// For each content node find a content object with matching PersistName and
@@ -743,7 +747,7 @@ namespace pr.gui
 		public virtual void ResetLayout()
 		{
 			// Adding each dockable without an address causes it to be moved to its default location
-			foreach (var dc in AllContent.ToArray())
+			foreach (var dc in AllContentInternal.ToArray())
 				Add(dc, dc.DefaultDockLocation);
 		}
 

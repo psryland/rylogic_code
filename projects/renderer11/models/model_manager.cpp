@@ -41,19 +41,19 @@ namespace pr
 			mb->m_mdl_mgr = this;
 			{// Create a vertex buffer
 				SubResourceData init(settings.m_vb.Data, 0, UINT(settings.m_vb.SizeInBytes()));
-				pr::Throw(m_device->CreateBuffer(&settings.m_vb, settings.m_vb.Data != 0 ? &init : 0, &mb->m_vb.m_ptr));
+				Throw(m_device->CreateBuffer(&settings.m_vb, settings.m_vb.Data != 0 ? &init : 0, &mb->m_vb.m_ptr));
 				mb->m_vb.m_range.set(0, settings.m_vb.ElemCount);
 				mb->m_vb.m_used.set(0, 0);
 				mb->m_vb.m_stride = settings.m_vb.StructureByteStride;
-				PR_EXPAND(PR_DBG_RDR, NameResource(mb->m_vb, pr::FmtS("model vbuffer <V:%d,I:%d>", settings.m_vb.ElemCount, settings.m_ib.ElemCount)));
+				PR_EXPAND(PR_DBG_RDR, NameResource(mb->m_vb, FmtS("model vbuffer <V:%d,I:%d>", settings.m_vb.ElemCount, settings.m_ib.ElemCount)));
 			}
 			{// Create an index buffer
 				SubResourceData init(settings.m_ib.Data, 0, UINT(settings.m_ib.SizeInBytes()));
-				pr::Throw(m_device->CreateBuffer(&settings.m_ib, settings.m_ib.Data != 0 ? &init : 0, &mb->m_ib.m_ptr));
+				Throw(m_device->CreateBuffer(&settings.m_ib, settings.m_ib.Data != 0 ? &init : 0, &mb->m_ib.m_ptr));
 				mb->m_ib.m_range.set(0, settings.m_ib.ElemCount);
 				mb->m_ib.m_used.set(0, 0);
 				mb->m_ib.m_format = settings.m_ib.Format;
-				PR_EXPAND(PR_DBG_RDR, NameResource(mb->m_ib, pr::FmtS("model ibuffer <V:%d,I:%d>", settings.m_vb.ElemCount, settings.m_ib.ElemCount)));
+				PR_EXPAND(PR_DBG_RDR, NameResource(mb->m_ib, FmtS("model ibuffer <V:%d,I:%d>", settings.m_vb.ElemCount, settings.m_ib.ElemCount)));
 			}
 			return mb;
 		}
@@ -101,16 +101,16 @@ namespace pr
 			{// Unit quad in Z = 0 plane
 				Vert verts[4] =
 				{
-					{pr::v4::make(-0.5f,-0.5f, 0, 1), pr::ColourWhite, pr::v4ZAxis, pr::v2::make(0.0000f,0.9999f)},
-					{pr::v4::make( 0.5f,-0.5f, 0, 1), pr::ColourWhite, pr::v4ZAxis, pr::v2::make(0.9999f,0.9999f)},
-					{pr::v4::make( 0.5f, 0.5f, 0, 1), pr::ColourWhite, pr::v4ZAxis, pr::v2::make(0.9999f,0.0000f)},
-					{pr::v4::make(-0.5f, 0.5f, 0, 1), pr::ColourWhite, pr::v4ZAxis, pr::v2::make(0.0000f,0.0000f)},
+					{v4(-0.5f,-0.5f, 0, 1), ColourWhite, v4ZAxis, v2(0.0000f,0.9999f)},
+					{v4( 0.5f,-0.5f, 0, 1), ColourWhite, v4ZAxis, v2(0.9999f,0.9999f)},
+					{v4( 0.5f, 0.5f, 0, 1), ColourWhite, v4ZAxis, v2(0.9999f,0.0000f)},
+					{v4(-0.5f, 0.5f, 0, 1), ColourWhite, v4ZAxis, v2(0.0000f,0.0000f)},
 				};
-				pr::uint16 idxs[] =
+				uint16 idxs[] =
 				{
 					0, 1, 2, 0, 2, 3
 				};
-				auto bbox = pr::BBox::make(pr::v4Origin, pr::v4::make(1,1,0,0));
+				auto bbox = BBox(v4Origin, v4(1,1,0,0));
 
 				MdlSettings s(verts, idxs, bbox, "unit quad");
 				m_unit_quad = CreateModel(s);

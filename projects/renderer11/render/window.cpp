@@ -293,15 +293,15 @@ namespace pr
 		}
 
 		// Returns the size of the render target
-		pr::iv2 Window::RenderTargetSize() const
+		iv2 Window::RenderTargetSize() const
 		{
 			DXGI_SWAP_CHAIN_DESC desc;
-			pr::Throw(m_swap_chain->GetDesc(&desc));
-			return pr::iv2::make(desc.BufferDesc.Width, desc.BufferDesc.Height);
+			Throw(m_swap_chain->GetDesc(&desc));
+			return iv2(desc.BufferDesc.Width, desc.BufferDesc.Height);
 		}
 
 		// Called when the window size changes (e.g. from a WM_SIZE message)
-		void Window::RenderTargetSize(pr::iv2 const& size)
+		void Window::RenderTargetSize(iv2 const& size)
 		{
 			// Applications can make some changes to make the transition from windowed to full screen more efficient.
 			// For example, on a WM_SIZE message, the application should release any outstanding swap-chain back buffers,

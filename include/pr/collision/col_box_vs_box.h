@@ -27,9 +27,9 @@ namespace pr
 			// Compute a transform for 'rhs' in 'lhs's frame
 			auto r2l = InvertFast(l2w) * r2w;
 
-			// Compute common subexpressions. Add in an epsilon term to counteract arithmetic
+			// Compute common sub expressions. Add in an epsilon term to counteract arithmetic
 			// errors when two edges are parallel and their cross product is (near) 0
-			auto r2l_abs = Abs(r2l.rot) + maths::tiny;
+			auto r2l_abs = Abs(r2l.rot) + m3x4(maths::tiny);
 
 			float ra, rb, sp;
 
@@ -175,18 +175,18 @@ namespace pr
 		{
 			using namespace pr::collision;
 
-			auto lhs = ShapeBox::make(pr::v4::make(0.3f, 0.4f, 0.5f, 0.0f));
-			auto rhs = ShapeBox::make(pr::v4::make(0.3f, 0.4f, 0.5f, 0.0f));
+			auto lhs = ShapeBox::make(pr::v4(0.3f, 0.4f, 0.5f, 0.0f));
+			auto rhs = ShapeBox::make(pr::v4(0.3f, 0.4f, 0.5f, 0.0f));
 			pr::m4x4 l2w_[] =
 			{
 				pr::m4x4Identity,
 			};
 			pr::m4x4 r2w_[] =
 			{
-				pr::Rotation4x4(pr::maths::tau_by_8, 0, 0, pr::v4::make(0.2f, 0.3f, 0.1f, 1.0f)),
-				pr::Rotation4x4(0, pr::maths::tau_by_8, 0, pr::v4::make(0.2f, 0.3f, 0.1f, 1.0f)),
-				pr::Rotation4x4(0, 0, pr::maths::tau_by_8, pr::v4::make(0.2f, 0.3f, 0.1f, 1.0f)),
-				pr::Rotation4x4(0, 0, -3*pr::maths::tau_by_8, pr::v4::make(0.2f, 0.3f, 0.1f, 1.0f)),
+				pr::Rotation4x4(pr::maths::tau_by_8, 0, 0, pr::v4(0.2f, 0.3f, 0.1f, 1.0f)),
+				pr::Rotation4x4(0, pr::maths::tau_by_8, 0, pr::v4(0.2f, 0.3f, 0.1f, 1.0f)),
+				pr::Rotation4x4(0, 0, pr::maths::tau_by_8, pr::v4(0.2f, 0.3f, 0.1f, 1.0f)),
+				pr::Rotation4x4(0, 0, -3*pr::maths::tau_by_8, pr::v4(0.2f, 0.3f, 0.1f, 1.0f)),
 			};
 
 			for (int i = 0; i != 20; ++i)

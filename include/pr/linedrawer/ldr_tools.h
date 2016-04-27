@@ -103,8 +103,8 @@ namespace pr
 				// Create graphics for the two measurement points
 				if (m_point0 != m_point1)
 				{
-					auto p0 = pr::v4::make(m_point1.x, m_point0.y, m_point0.z, 1.0f);
-					auto p1 = pr::v4::make(m_point1.x, m_point1.y, m_point0.z, 1.0f);
+					auto p0 = pr::v4(m_point1.x, m_point0.y, m_point0.z, 1.0f);
+					auto p1 = pr::v4(m_point1.x, m_point1.y, m_point0.z, 1.0f);
 
 					auto str = std::string{};
 					GroupStart(str, "Measurement");

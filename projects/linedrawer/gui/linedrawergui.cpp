@@ -210,8 +210,8 @@ namespace ldr
 		{
 			// Hide the menu and status bar so that the client area
 			// is calculated correctly.
-			m_menu = Menu();
-			Menu(nullptr);
+			m_menu = MenuStrip();
+			MenuStrip(nullptr);
 			m_status.Visible(false);
 
 			//todo, make this correct
@@ -229,7 +229,7 @@ namespace ldr
 			m_main->m_window.FullScreenMode(false, mode);
 
 			// Show the status and menu controls again
-			Menu(m_menu);
+			MenuStrip(m_menu);
 			m_status.Visible(true);
 		}
 	}
@@ -263,7 +263,7 @@ namespace ldr
 	// Convert screen space to normalised screen space
 	pr::v2 MainGUI::ToNormSS(pr::v2 const& pt_ss)
 	{
-		auto view = pr::IRect::make(pr::iv2Zero, m_main->m_nav.ViewSize());
+		auto view = pr::IRect(pr::iv2Zero, m_main->m_nav.ViewSize());
 		return pr::NormalisePoint(view, pt_ss, 1.0f, -1.0f);
 	}
 
@@ -353,7 +353,7 @@ namespace ldr
 		case ID_NAV_VIEW_AXIS_NEGY           : OnViewAxis(-pr::v4YAxis); break;
 		case ID_NAV_VIEW_AXIS_POSZ           : OnViewAxis( pr::v4ZAxis); break;
 		case ID_NAV_VIEW_AXIS_NEGZ           : OnViewAxis(-pr::v4ZAxis); break;
-		case ID_NAV_VIEW_AXIS_POSXYZ         : OnViewAxis(-pr::v4::make(0.577350f, 0.577350f, 0.577350f, 0.0f)); break;
+		case ID_NAV_VIEW_AXIS_POSXYZ         : OnViewAxis(-pr::v4(0.577350f, 0.577350f, 0.577350f, 0.0f)); break;
 		case ID_NAV_CLEARSAVEDVIEWS          : OnSaveView(true); break;
 		case ID_NAV_SAVEVIEW                 : OnSaveView(false); break;
 		case ID_NAV_SETFOCUSPOSITION         : OnSetFocusPosition(); break;
@@ -437,7 +437,7 @@ namespace ldr
 		pr::m4x4 c2w = m_main->m_nav.CameraToWorld();
 		pr::v4 focus = m_main->m_nav.FocusPoint();
 		pr::v4 cam = focus + axis * m_main->m_nav.FocusDistance();
-		pr::v4 up = pr::Parallel(axis, c2w.y) ? pr::Cross3(axis, c2w.x) : c2w.y;
+		pr::v4 up = pr::Parallel3(axis, c2w.y) ? pr::Cross3(axis, c2w.x) : c2w.y;
 		m_main->m_nav.LookAt(cam, focus, up);
 		m_main->RenderNeeded();
 	}
@@ -856,7 +856,7 @@ namespace ldr
 		string status;
 		{
 			// Display mouse coordinates
-			pr::v4 mouse_ss = pr::v4::make(mouse_location, m_main->m_nav.FocusDistance(), 0.0f);
+			pr::v4 mouse_ss = pr::v4(mouse_location, m_main->m_nav.FocusDistance(), 0.0f);
 			pr::v4 mouse_ws = m_main->m_nav.SSPointToWSPoint(mouse_ss);
 			pr::v4 focus_ws = m_main->m_nav.FocusPoint();
 			status += pr::FmtS("Mouse: {%3.3f %3.3f %3.3f} Focus: {%3.3f %3.3f %3.3f} Focus Distance: %3.3f"

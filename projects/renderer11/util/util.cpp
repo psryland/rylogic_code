@@ -70,19 +70,19 @@ namespace pr
 		}
 
 		// Returns the expected row pitch for a given image width and format
-		pr::ISize Pitch(ISize size, DXGI_FORMAT fmt)
+		iv2 Pitch(iv2 size, DXGI_FORMAT fmt)
 		{
-			ISize pitch;
-			DirectX::ComputePitch(fmt, size.x, size.y, pitch.x, pitch.y, DirectX::CP_FLAGS_NONE);
-			return pitch;
+			size_t row_pitch, slice_pitch;
+			DirectX::ComputePitch(fmt, size.x, size.y, row_pitch, slice_pitch, DirectX::CP_FLAGS_NONE);
+			return iv2(s_cast<int>(row_pitch), s_cast<int>(slice_pitch));
 		}
-		pr::ISize Pitch(TextureDesc const& tdesc)
+		iv2 Pitch(TextureDesc const& tdesc)
 		{
-			return Pitch(ISize::make(tdesc.Width, tdesc.Height), tdesc.Format);
+			return Pitch(iv2(s_cast<int>(tdesc.Width), s_cast<int>(tdesc.Height)), tdesc.Format);
 		}
 
 		// Returns the number of expected mip levels for a given width x height texture
-		size_t MipCount(pr::ISize size)
+		size_t MipCount(iv2 size)
 		{
 			size_t count, largest = std::max(size.x, size.y);
 			for (count = 1; largest /= 2; ++count) {}
@@ -90,14 +90,14 @@ namespace pr
 		}
 
 		// Returns the dimensions of a mip level 'levels' lower than the given size
-		pr::ISize MipDimensions(pr::ISize size, size_t levels)
+		iv2 MipDimensions(iv2 size, size_t levels)
 		{
 			PR_ASSERT(PR_DBG_RDR, levels > 0, "A specific mip level must be given");
 			PR_ASSERT(PR_DBG_RDR, levels <= MipCount(size), "The number of mip levels provided exceeds the expected number for this texture dimension");
 			for (;levels-- != 0;)
 			{
-				size.x = std::max<size_t>(size.x/2, 1U);
-				size.y = std::max<size_t>(size.y/2, 1U);
+				size.x = std::max(size.x/2, 1);
+				size.y = std::max(size.y/2, 1);
 			}
 			return size;
 		}
@@ -105,7 +105,7 @@ namespace pr
 		// Returns the number of pixels needed to contain the data for a mip chain with 'levels' levels
 		// If 'levels' is 0, all mips down to 1x1 are assumed
 		// Note, size.x should be the pitch rather than width of the texture
-		size_t MipChainSize(pr::ISize size, size_t levels)
+		size_t MipChainSize(iv2 size, size_t levels)
 		{
 			PR_ASSERT(PR_DBG_RDR, levels <= MipCount(size), "Number of mip levels provided exceeds the expected number for this texture dimension");
 

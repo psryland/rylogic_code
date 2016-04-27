@@ -24,7 +24,7 @@ namespace pr
 		{
 			auto lw = state.m_dle->m_instance->find<float>(EInstComp::SSWidth);
 			auto screen_size = state.m_rstep->m_scene->m_wnd->RenderTargetSize();
-			cb.m_dim_and_width = pr::v4::make(float(screen_size.x), float(screen_size.y), 0, lw ? *lw : default_width);
+			cb.m_dim_and_width = v4(float(screen_size.x), float(screen_size.y), 0, lw ? *lw : default_width);
 		}
 
 		#pragma region ThickLineListShaderGS

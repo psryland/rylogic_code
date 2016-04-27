@@ -37,9 +37,12 @@ static_assert(_WIN32_WINNT >= _WIN32_WINNT_VISTA, "_WIN32_WINNT version 0x0600 o
 
 // <dbghelp.h> has conflicts with <imagehlp.h>, so it cannot be included
 // <imagehlp.h> contains everything we would need from <dbghelp.h> anyway
+#pragma warning(push)
+#pragma warning(disable:4091)
 #include <imagehlp.h>
 #include <tlhelp32.h>
 #include <psapi.h>
+#pragma warning(pop)
 
 #pragma comment(lib, "dbghelp.lib")
 

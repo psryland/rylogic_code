@@ -17,9 +17,9 @@
 namespace pr
 {
 	// Return the size of the virtual screen
-	inline pr::IRect ScreenBounds()
+	inline IRect ScreenBounds()
 	{
-		return pr::IRect::make(0, 0, ::GetSystemMetrics(SM_CXSCREEN), ::GetSystemMetrics(SM_CYSCREEN));
+		return IRect(0, 0, ::GetSystemMetrics(SM_CXSCREEN), ::GetSystemMetrics(SM_CYSCREEN));
 	}
 
 	// Return the window bounds as an IRect
@@ -27,7 +27,7 @@ namespace pr
 	{
 		PR_ASSERT(PR_DBG, hwnd, "window handle must be non-null");
 		RECT r; ::GetWindowRect(hwnd, &r);
-		return pr::IRect::make(r.left, r.top, r.right, r.bottom);
+		return IRect(r.left, r.top, r.right, r.bottom);
 	}
 
 	// Return the client area of the window as an IRect
@@ -35,7 +35,7 @@ namespace pr
 	{
 		PR_ASSERT(PR_DBG, hwnd, "window handle must be non-null");
 		RECT r; ::GetClientRect(hwnd, &r);
-		return pr::IRect::make(r.left, r.top, r.right, r.bottom);
+		return IRect(r.left, r.top, r.right, r.bottom);
 	}
 
 	// Modifies a rectangle so that it's within 'bounds'
@@ -49,7 +49,7 @@ namespace pr
 		if (rect.m_min.y < bounds.m_min.y) yofs = (rect.m_max.y + h < bounds.m_max.y) ?  h : bounds.m_min.y - rect.m_min.y;
 		if (rect.m_max.x > bounds.m_max.x) xofs = (rect.m_min.x - w > bounds.m_min.x) ? -w : bounds.m_min.x - rect.m_min.x;
 		if (rect.m_max.y > bounds.m_max.y) yofs = (rect.m_min.y - h > bounds.m_min.y) ? -h : bounds.m_min.y - rect.m_min.y;
-		rect.shift(xofs, yofs);
+		rect = Shifted(rect, xofs, yofs);
 		return xofs != 0 || yofs != 0;
 	}
 

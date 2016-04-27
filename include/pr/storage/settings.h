@@ -318,14 +318,14 @@ namespace pr
 
 			//x(type, name, default_value, hashvalue, description)
 			#define PR_SETTING(x)\
-				x(int          , count    , 2                     , 0xC0A20C46, "")\
-				x(float        , scale    , 3.14f                 , 0x8FB215FF, "")\
-				x(unsigned int , mask     , 0xABCU                , 0x5CD68DFB, "")\
-				x(pr::Colour32 , colour   , pr::Colour32Green     , 0x0C32CB6F, "the colour")\
-				x(pr::v2       , area     , pr::v2::make(1,2)     , 0x1C6B5612, "")\
-				x(pr::v4       , position , pr::v4::make(1,2,3,1) , 0x6B614A7C, "")\
-				x(std::string  , name     , "hello settings"      , 0xC30D43FC, "")\
-				x(TestEnum     , emun     , TestEnum::Two         , 0xBC21407E, "")
+				x(int          , count    , 2                 , 0xC0A20C46, "")\
+				x(float        , scale    , 3.14f             , 0x8FB215FF, "")\
+				x(unsigned int , mask     , 0xABCU            , 0x5CD68DFB, "")\
+				x(pr::Colour32 , colour   , pr::Colour32Green , 0x0C32CB6F, "the colour")\
+				x(pr::v2       , area     , pr::v2(1,2)       , 0x1C6B5612, "")\
+				x(pr::v4       , position , pr::v4(1,2,3,1)   , 0x6B614A7C, "")\
+				x(std::string  , name     , "hello settings"  , 0xC30D43FC, "")\
+				x(TestEnum     , emun     , TestEnum::Two     , 0xBC21407E, "")
 			PR_DEFINE_SETTINGS(Settings, PR_SETTING);
 			#undef PR_SETTING
 		}
@@ -335,33 +335,33 @@ namespace pr
 			using namespace settings;
 
 			Settings s;
-			PR_CHECK(s.m_count    , 2                     );
-			PR_CHECK(s.m_scale    , 3.14f                 );
-			PR_CHECK(s.m_mask     , 0xABCU                );
-			PR_CHECK(s.m_colour   , pr::Colour32Green     );
-			PR_CHECK(s.m_area     , pr::v2::make(1,2)     );
-			PR_CHECK(s.m_position , pr::v4::make(1,2,3,1) );
-			PR_CHECK(s.m_name     , "hello settings"      );
-			PR_CHECK(s.m_emun     , TestEnum::Two         );
-			PR_CHECK(s.SaveRequired(), false);
+			PR_CHECK(s.m_count    , 2                 );
+			PR_CHECK(s.m_scale    , 3.14f             );
+			PR_CHECK(s.m_mask     , 0xABCU            );
+			PR_CHECK(s.m_colour   , pr::Colour32Green );
+			PR_CHECK(s.m_area     , pr::v2(1,2)       );
+			PR_CHECK(s.m_position , pr::v4(1,2,3,1)   );
+			PR_CHECK(s.m_name     , "hello settings"  );
+			PR_CHECK(s.m_emun     , TestEnum::Two     );
+			PR_CHECK(s.SaveRequired(), false          );
 
-			s.m_count    = 4                     ;
-			s.m_scale    = 1.6f                  ;
-			s.m_mask     = 0xCDEU                ;
-			s.m_colour   = pr::Colour32Blue      ;
-			s.m_area     = pr::v2One             ;
-			s.m_position = pr::v4::make(3,2,1,1) ;
-			s.m_name     = "renamed"             ;
-			s.m_emun     = TestEnum::Three       ;
-			PR_CHECK(s.SaveRequired(), true);
-			PR_CHECK(s.m_count    , 4                     );
-			PR_CHECK(s.m_scale    , 1.6f                  );
-			PR_CHECK(s.m_mask     , 0xCDEU                );
-			PR_CHECK(s.m_colour   , pr::Colour32Blue      );
-			PR_CHECK(s.m_area     , pr::v2One             );
-			PR_CHECK(s.m_position , pr::v4::make(3,2,1,1) );
-			PR_CHECK(s.m_name     , "renamed"             );
-			PR_CHECK(s.m_emun     , TestEnum::Three       );
+			s.m_count    = 4;
+			s.m_scale    = 1.6f;
+			s.m_mask     = 0xCDEU;
+			s.m_colour   = pr::Colour32Blue;
+			s.m_area     = pr::v2One;
+			s.m_position = pr::v4(3, 2, 1, 1);
+			s.m_name     = "renamed";
+			s.m_emun     = TestEnum::Three;
+			PR_CHECK(s.SaveRequired(), true         );
+			PR_CHECK(s.m_count    , 4               );
+			PR_CHECK(s.m_scale    , 1.6f            );
+			PR_CHECK(s.m_mask     , 0xCDEU          );
+			PR_CHECK(s.m_colour   , pr::Colour32Blue);
+			PR_CHECK(s.m_area     , pr::v2One       );
+			PR_CHECK(s.m_position , pr::v4(3,2,1,1) );
+			PR_CHECK(s.m_name     , "renamed"       );
+			PR_CHECK(s.m_emun     , TestEnum::Three );
 
 			std::string settings = s.Export();
 			PR_CHECK(settings,
@@ -375,16 +375,16 @@ namespace pr
 				"*emun {Three}\r\n");
 
 			Settings s2;
-			s2.Import(settings);
-			PR_CHECK(s2.m_count    , 4                     );
-			PR_CHECK(s2.m_scale    , 1.6f                  );
-			PR_CHECK(s2.m_mask     , 0xCDEU                );
-			PR_CHECK(s2.m_colour   , pr::Colour32Blue      );
-			PR_CHECK(s2.m_area     , pr::v2One             );
-			PR_CHECK(s2.m_position , pr::v4::make(3,2,1,1) );
-			PR_CHECK(s2.m_name     , "renamed"             );
-			PR_CHECK(s2.m_emun     , TestEnum::Three       );
-			PR_CHECK(s2.SaveRequired(), false);
+			s2.Import(settings                       );
+			PR_CHECK(s2.m_count    , 4               );
+			PR_CHECK(s2.m_scale    , 1.6f            );
+			PR_CHECK(s2.m_mask     , 0xCDEU          );
+			PR_CHECK(s2.m_colour   , pr::Colour32Blue);
+			PR_CHECK(s2.m_area     , pr::v2One       );
+			PR_CHECK(s2.m_position , pr::v4(3,2,1,1) );
+			PR_CHECK(s2.m_name     , "renamed"       );
+			PR_CHECK(s2.m_emun     , TestEnum::Three );
+			PR_CHECK(s2.SaveRequired(), false        );
 		}
 	}
 }

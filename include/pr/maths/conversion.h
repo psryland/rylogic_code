@@ -44,7 +44,7 @@ namespace pr
 			#ifdef _WINDEF_
 			static v2 To(POINT const& x)
 			{
-				return v2::make(float(x.x), float(x.y));
+				return v2(float(x.x), float(x.y));
 			}
 			#endif
 		};
@@ -57,7 +57,7 @@ namespace pr
 				auto y = pr::To<float>(e, &e);
 				auto z = pr::To<float>(e, &e);
 				if (end) *end = e;
-				return v3::make(x,y,z);
+				return v3(x,y,z);
 			}
 			template <typename Str, typename Char = Str::value_type, typename = enable_if_str_class<Str>>
 			static v3 To(Str const& s, Char** end = nullptr)
@@ -75,7 +75,7 @@ namespace pr
 				auto z = pr::To<float>(e, &e);
 				auto w = pr::To<float>(e, &e);
 				if (end) *end = e;
-				return v4::make(x,y,z,w);
+				return v4(x,y,z,w);
 			}
 			template <typename Char> static v4 To(Char const* s, float w, Char** end = nullptr)
 			{
@@ -84,7 +84,7 @@ namespace pr
 				auto y = pr::To<float>(e, &e);
 				auto z = pr::To<float>(e, &e);
 				if (end) *end = e;
-				return v4::make(x,y,z,w);
+				return v4(x,y,z,w);
 			}
 			template <typename Str, typename Char = Str::value_type, typename = enable_if_str_class<Str>>
 			static v4 To(Str const& s, Char** end = nullptr)
@@ -115,31 +115,31 @@ namespace pr
 
 			static iv2 To(IRect const& x)
 			{
-				return iv2::make(x.SizeX(), x.SizeY());
+				return iv2(x.SizeX(), x.SizeY());
 			}
 
 			#ifdef _WINDEF_
 			static iv2 To(POINT const& x)
 			{
-				return iv2::make(x.x, x.y);
+				return iv2(x.x, x.y);
 			}
 			static iv2 To(RECT const& x)
 			{
-				return iv2::make(x.right - x.left, x.bottom - x.top);
+				return iv2(x.right - x.left, x.bottom - x.top);
 			}
 			static iv2 To(SIZE const& x)
 			{
-				return iv2::make(x.cx, x.cy);
+				return iv2(x.cx, x.cy);
 			}
 			#endif
 			#ifdef _GDIPLUS_H
 			static iv2 To(Gdiplus::Rect const& x)
 			{
-				return iv2::make(x.Width, x.Height);
+				return iv2(x.Width, x.Height);
 			}
 			static iv2 To(Gdiplus::RectF const& x)
 			{
-				return iv2::make(int(x.Width), int(x.Height));
+				return iv2(int(x.Width), int(x.Height));
 			}
 			#endif
 		};
@@ -216,16 +216,16 @@ namespace pr
 		{
 			static IRect To(iv2 const& x)
 			{
-				return IRect::make(0, 0, x.x, x.y);
+				return IRect(0, 0, x.x, x.y);
 			}
 			#ifdef _WINDEF_
 			static IRect To(RECT const& x)
 			{
-				return IRect::make(x.left, x.top, x.right, x.bottom);
+				return IRect(x.left, x.top, x.right, x.bottom);
 			}
 			static IRect To(SIZE const& x)
 			{
-				return IRect::make(0, 0, x.cx, x.cy);
+				return IRect(0, 0, x.cx, x.cy);
 			}
 			#endif
 		};
@@ -287,35 +287,35 @@ namespace pr
 	#endif
 
 	// Write a vector to a stream
-	template <typename Stream> inline Stream& operator << (Stream& out, v2 const& vec)
+	template <typename Char> inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, v2 const& vec)
 	{
 		return out << vec.x << " " << vec.y;
 	}
-	template <typename Stream> inline Stream& operator << (Stream& out, v3 const& vec)
+	template <typename Char> inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, v3 const& vec)
 	{
 		return out << vec.x << " " << vec.y << " " << vec.z;
 	}
-	template <typename Stream> inline Stream& operator << (Stream& out, v4 const& vec)
+	template <typename Char> inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, v4 const& vec)
 	{
 		return out << vec.x << " " << vec.y << " " << vec.z << " " << vec.w;
 	}
-	template <typename Stream> inline Stream& operator << (Stream& out, iv2 const& vec)
+	template <typename Char> inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, iv2 const& vec)
 	{
 		return out << vec.x << " " << vec.y;
 	}
-	template <typename Stream> inline Stream& operator << (Stream& out, iv4 const& vec)
+	template <typename Char> inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, iv4 const& vec)
 	{
 		return out << vec.x << " " << vec.y << " " << vec.z << " " << vec.w;
 	}
-	template <typename Stream> inline Stream& operator << (Stream& out, m2x2 const& mat)
+	template <typename Char> inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, m2x2 const& mat)
 	{
 		return out << mat.x << " " << mat.y;
 	}
-	template <typename Stream> inline Stream& operator << (Stream& out, m3x4 const& mat)
+	template <typename Char> inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, m3x4 const& mat)
 	{
 		return out << mat.x << " " << mat.y << " " << mat.z;
 	}
-	template <typename Stream> inline Stream& operator << (Stream& out, m4x4 const& mat)
+	template <typename Char> inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, m4x4 const& mat)
 	{
 		return out << mat.x << " " << mat.y << " " << mat.z << " " << mat.w;
 	}

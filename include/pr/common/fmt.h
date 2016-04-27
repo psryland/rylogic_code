@@ -213,7 +213,12 @@ namespace pr
 					,6.28f
 					,6.28
 					);
-				PR_CHECK(s0, "A W hello world wide str 19088743 1431655765 2309737967 1234567 deadbeef DEADBEEF 6.280000 6.280000 6.280000e+000 6.280000E+000 6.28 6.28");
+				#if _MSC_VER >= 1900
+				auto s1 = "A W hello world wide str 19088743 1431655765 2309737967 1234567 deadbeef DEADBEEF 6.280000 6.280000 6.280000e+00 6.280000E+00 6.28 6.28";
+				#else
+				auto s1 = "A W hello world wide str 19088743 1431655765 2309737967 1234567 deadbeef DEADBEEF 6.280000 6.280000 6.280000e+000 6.280000E+000 6.28 6.28";
+				#endif
+				PR_CHECK(s0, s1);
 			}
 			{// wchar_t - simple
 				auto s0 = FmtS(L"%c %C %s %S %d %i %u %o %x %X %f %f %e %E %g %G"
@@ -232,7 +237,13 @@ namespace pr
 					,6.28f
 					,6.28
 					);
-				PR_CHECK(s0, L"A W hello world narrow str 19088743 1431655765 2309737967 1234567 deadbeef DEADBEEF 6.280000 6.280000 6.280000e+000 6.280000E+000 6.28 6.28");
+				#if _MSC_VER >= 1900
+				auto s1 = L"A W hello world narrow str 19088743 1431655765 2309737967 1234567 deadbeef DEADBEEF 6.280000 6.280000 6.280000e+00 6.280000E+00 6.28 6.28";
+				#else
+				auto s1 = L"A W hello world narrow str 19088743 1431655765 2309737967 1234567 deadbeef DEADBEEF 6.280000 6.280000 6.280000e+000 6.280000E+000 6.28 6.28";
+				#endif
+
+				PR_CHECK(s0, s1);
 			}
 			{// char - length specifiers
 				auto s0 = FmtS("%hhd %hd %lx %llx %Lf"

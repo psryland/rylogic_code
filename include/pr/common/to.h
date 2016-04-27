@@ -46,16 +46,11 @@ namespace pr
 	static_assert(!is_char<int>::value, "");
 
 	// True if 'Str' is a raw string
-	template <typename Str> struct is_raw_str
-	{
-	private:
-		static std::true_type  check(char const*);
-		static std::true_type  check(wchar_t const*);
-		static std::false_type check(...);
-	public:
-		using type = decltype(check(std::declval<Str>()));
-		static bool const value = type::value;
-	};
+	template <typename Str> struct is_raw_str :std::false_type {};
+	template <> struct is_raw_str<char const*> :std::true_type {};
+	template <> struct is_raw_str<wchar_t const*> :std::true_type {};
+	template <> struct is_raw_str<char const[]> :std::true_type {};
+	template <> struct is_raw_str<wchar_t const[]> :std::true_type {};
 	static_assert( is_raw_str<char const*>::value, "");
 	static_assert( is_raw_str<wchar_t const*>::value, "");
 	static_assert( is_raw_str<char const[]>::value, "");

@@ -28,7 +28,7 @@
 #include "pr/macros/repeat.h"
 #include "pr/macros/enum.h"
 #include "pr/macros/no_copy.h"
-#include "pr/meta/alignment_of.h"
+#include "pr/macros/align.h"
 #include "pr/common/min_max_fix.h"
 #include "pr/common/prtypes.h"
 #include "pr/common/assert.h"

@@ -68,16 +68,16 @@ namespace pr
 			std::size_t const icount = sizeof(indices)/sizeof(indices[0]);
 
 			// Texture coords
-			v2 const t00 = v2::make(0.0f, 0.0f);
-			v2 const t01 = v2::make(0.0f, 1.0f);
-			v2 const t10 = v2::make(1.0f, 0.0f);
-			v2 const t11 = v2::make(1.0f, 1.0f);
+			v2 const t00 = v2(0.0f, 0.0f);
+			v2 const t01 = v2(0.0f, 1.0f);
+			v2 const t10 = v2(1.0f, 0.0f);
+			v2 const t11 = v2(1.0f, 1.0f);
 
 			Props props;
 			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | EGeom::Norm | EGeom::Tex0;
 
 			// Helper function for generating normals
-			auto norm = [](v4 const& a, v4 const& b, v4 const& c) { return Normalise3IfNonZero(Cross3(c - b, a - b)); };
+			auto norm = [](v4 const& a, v4 const& b, v4 const& c) { return Normalise3(Cross3(c - b, a - b), v4Zero); };
 
 			// Colour iterator wrapper
 			auto col = pr::CreateRepeater(colours, num_colours, 8*num_boxes, Colour32White);
@@ -146,21 +146,22 @@ namespace pr
 		template <typename TVertIter, typename TIdxIter>
 		Props Box(v4 const& rad, m4x4 const& o2w, Colour32 colour, TVertIter out_verts, TIdxIter out_indices)
 		{
-			v4 const pt[8] =
-				{
-					{-rad.x, -rad.y, -rad.z, 1.0f},
-					{+rad.x, -rad.y, -rad.z, 1.0f},
-					{-rad.x, +rad.y, -rad.z, 1.0f},
-					{+rad.x, +rad.y, -rad.z, 1.0f},
-					{-rad.x, -rad.y,  rad.z, 1.0f},
-					{+rad.x, -rad.y,  rad.z, 1.0f},
-					{-rad.x, +rad.y,  rad.z, 1.0f},
-					{+rad.x, +rad.y,  rad.z, 1.0f},
-				};
+			v4 const alignas(16) pt[8] =
+			{
+				{-rad.x, -rad.y, -rad.z, 1.0f},
+				{+rad.x, -rad.y, -rad.z, 1.0f},
+				{-rad.x, +rad.y, -rad.z, 1.0f},
+				{+rad.x, +rad.y, -rad.z, 1.0f},
+				{-rad.x, -rad.y,  rad.z, 1.0f},
+				{+rad.x, -rad.y,  rad.z, 1.0f},
+				{-rad.x, +rad.y,  rad.z, 1.0f},
+				{+rad.x, +rad.y,  rad.z, 1.0f},
+			};
+			assert(pr::maths::is_aligned(&pt[0]));
 			return Boxes(1, &pt[0], o2w, 1, &colour, out_verts, out_indices);
 		}
 
-		// Create boxes at each point in 'positions' with side hald lengths = rad.x,rad.y,rad.z
+		// Create boxes at each point in 'positions' with side half lengths = rad.x,rad.y,rad.z
 		template <typename TVertCIter, typename TVertIter, typename TIdxIter>
 		Props BoxList(std::size_t num_boxes, TVertCIter positions, v4 const& rad, std::size_t num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices)
 		{
@@ -169,14 +170,14 @@ namespace pr
 			v4* pt = &points[0];
 			for (std::size_t i = 0; i != num_boxes; ++i, ++pos)
 			{
-				pt->set(pos->x - rad.x, pos->y - rad.y, pos->z - rad.z, 1.0f), ++pt;
-				pt->set(pos->x + rad.x, pos->y - rad.y, pos->z - rad.z, 1.0f), ++pt;
-				pt->set(pos->x - rad.x, pos->y + rad.y, pos->z - rad.z, 1.0f), ++pt;
-				pt->set(pos->x + rad.x, pos->y + rad.y, pos->z - rad.z, 1.0f), ++pt;
-				pt->set(pos->x - rad.x, pos->y - rad.y, pos->z + rad.z, 1.0f), ++pt;
-				pt->set(pos->x + rad.x, pos->y - rad.y, pos->z + rad.z, 1.0f), ++pt;
-				pt->set(pos->x - rad.x, pos->y + rad.y, pos->z + rad.z, 1.0f), ++pt;
-				pt->set(pos->x + rad.x, pos->y + rad.y, pos->z + rad.z, 1.0f), ++pt;
+				*pt++ = v4(pos->x - rad.x, pos->y - rad.y, pos->z - rad.z, 1.0f);
+				*pt++ = v4(pos->x + rad.x, pos->y - rad.y, pos->z - rad.z, 1.0f);
+				*pt++ = v4(pos->x - rad.x, pos->y + rad.y, pos->z - rad.z, 1.0f);
+				*pt++ = v4(pos->x + rad.x, pos->y + rad.y, pos->z - rad.z, 1.0f);
+				*pt++ = v4(pos->x - rad.x, pos->y - rad.y, pos->z + rad.z, 1.0f);
+				*pt++ = v4(pos->x + rad.x, pos->y - rad.y, pos->z + rad.z, 1.0f);
+				*pt++ = v4(pos->x - rad.x, pos->y + rad.y, pos->z + rad.z, 1.0f);
+				*pt++ = v4(pos->x + rad.x, pos->y + rad.y, pos->z + rad.z, 1.0f);
 			}
 			return Boxes(num_boxes, &points[0], num_colours, colours, out_verts, out_indices);
 		}

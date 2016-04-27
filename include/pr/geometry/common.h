@@ -14,6 +14,7 @@
 #include "pr/container/vector.h"
 #include "pr/container/deque.h"
 #include "pr/maths/maths.h"
+#include "pr/maths/interpolate.h"
 
 namespace pr
 {

@@ -63,18 +63,17 @@ namespace pr
 			// Note: the aspect ratio is independent of 'm_viewport' in the scene allowing the view to be stretched
 			float height = 2.0f * m_centre_dist * pr::Tan(m_fovY * 0.5f);
 			m_c2s = m_orthographic
-				? ProjectionOrthographic  (height*m_aspect ,height   ,m_near ,m_far ,true)
-				: ProjectionPerspectiveFOV(m_fovY          ,m_aspect ,m_near ,m_far ,true);
+				? m4x4::ProjectionOrthographic  (height*m_aspect ,height   ,m_near ,m_far ,true)
+				: m4x4::ProjectionPerspectiveFOV(m_fovY          ,m_aspect ,m_near ,m_far ,true);
 		}
 
 		// Return the scene views for the left and right eye in stereoscopic view
 		void SceneView::Stereo(float separation, SceneView (&eye)[EEye::NumberOf]) const
 		{
-			v4 sep = 0.5f * separation * m_c2w.x;
-
-			v4 focus_point = FocusPoint();
-			m4x4 lc2w = LookAt(m_c2w.pos - sep, focus_point, m_c2w.y);
-			m4x4 rc2w = LookAt(m_c2w.pos + sep, focus_point, m_c2w.y);
+			auto sep = 0.5f * separation * m_c2w.x;
+			auto focus_point = FocusPoint();
+			auto lc2w = m4x4::LookAt(m_c2w.pos - sep, focus_point, m_c2w.y);
+			auto rc2w = m4x4::LookAt(m_c2w.pos + sep, focus_point, m_c2w.y);
 
 			eye[EEye::Left ] = SceneView(lc2w, m_fovY, m_aspect, Length3(lc2w.pos - focus_point), m_orthographic);
 			eye[EEye::Right] = SceneView(rc2w, m_fovY, m_aspect, Length3(rc2w.pos - focus_point), m_orthographic);

@@ -43,6 +43,7 @@
 #include "pr/common/algorithm.h"
 #include "pr/common/static_callback.h"
 #include "pr/common/multi_cast.h"
+#include "pr/common/cast.h"
 #include "pr/container/vector.h"
 #include "pr/filesys/fileex.h"
 #include "pr/script/reader.h"

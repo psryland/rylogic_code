@@ -2,14 +2,10 @@
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
-
+//http://graphics.stanford.edu/~seander/bithacks.html
 #pragma once
-#ifndef PR_MATHS_BIT_FUNCTIONS_H
-#define PR_MATHS_BIT_FUNCTIONS_H
 
 #include "pr/maths/forward.h"
-
-//http://graphics.stanford.edu/~seander/bithacks.html
 
 namespace pr
 {
@@ -33,7 +29,7 @@ namespace pr
 	template <typename T, typename U> inline T SetBits(T value, U mask, U bitfield)
 	{
 		value &= ~mask;            // clear masked bits to zero
-		value |=  mask & bitfield; // set bits from bitfield
+		value |=  mask & bitfield; // set bits from bit field
 		return value;
 	}
 
@@ -279,6 +275,4 @@ namespace pr
 		}
 	}
 }
-#endif
-
 #endif

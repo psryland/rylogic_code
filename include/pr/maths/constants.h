@@ -8,26 +8,26 @@
 
 namespace pr
 {
-	template <typename Type> struct limits :std::numeric_limits<Type> {};
+	template <typename Type> using limits = std::numeric_limits<Type>;
 
 	namespace maths
 	{
 		// Careful!, these are global variables and therefore
 		// do not have a defined construction order. If you're using
 		// them in other global objects they mightn't be initialised
-		float const tiny       = 1.000000e-4F; // Can't go lower than this cos DX uses less precision
-		float const tiny_sq    = 1.000000e-8F; // Can't go lower than this cos DX uses less precision
-		float const phi        = 1.618034e+0F; // "Golden Ratio"
-		float const tau        = 6.283185e+0F; // circle constant
-		float const inv_tau    = 1.591549e-1F;
-		float const tau_by_2   = 3.141593e+0F;
-		float const tau_by_4   = 1.570796e+0F;
-		float const tau_by_8   = 7.853982e-1F;
-		float const tau_by_360 = 1.745329e-2F;
-		float const E60_by_tau = 5.729578e+1F;
-		float const root2      = 1.414214e+0F;
-		float const inv_root2  = 7.071069e-1F;
-		double const dbl_tiny = 1.000000e-12;
+		constexpr float const tiny       = 1.00000002e-4F; // Can't go lower than this cos DX uses less precision
+		constexpr float const tiny_sq    = 1.00000008e-8F; // Can't go lower than this cos DX uses less precision
+		constexpr float const phi        = 1.618034e+0F; // "Golden Ratio"
+		constexpr float const tau        = 6.283185e+0F; // circle constant
+		constexpr float const inv_tau    = 1.591549e-1F;
+		constexpr float const tau_by_2   = 3.141593e+0F;
+		constexpr float const tau_by_4   = 1.570796e+0F;
+		constexpr float const tau_by_8   = 7.853982e-1F;
+		constexpr float const tau_by_360 = 1.745329e-2F;
+		constexpr float const E60_by_tau = 5.729578e+1F;
+		constexpr float const root2      = 1.414214e+0F;
+		constexpr float const inv_root2  = 7.071069e-1F;
+		constexpr double const dbl_tiny = 1.000000e-12;
 
 		char const    char_min     = limits<char>::min();
 		char const    char_max     = limits<char>::max();

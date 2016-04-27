@@ -34,9 +34,9 @@ namespace pr
 			
 			v4 EvalN(float x, float y, float z) const
 			{
-				v4 p0; p0.set(x, y, z, 0.0f);
-				v4 p1; p1.set(x, 0.0f, z + 0.01f, 0.0f);
-				v4 p2; p2.set(x + 0.01f, 0.0f, z, 0.0f);
+				v4 p0(x, y, z, 0.0f);
+				v4 p1(x, 0.0f, z + 0.01f, 0.0f);
+				v4 p2(x + 0.01f, 0.0f, z, 0.0f);
 				p1.y = Eval(p1.x, p1.z);
 				p2.y = Eval(p2.x, p2.z);
 				return Normalise3(Cross3(p1 - p0, p2 - p0));

@@ -218,7 +218,8 @@ namespace pr
 			// Find the average point
 			auto avr = [&](v4 const* point, int count, Edge const* edges)
 			{
-				auto centre = pr::v4Zero; auto total = 0;
+				auto total = 0.0f;
+				auto centre = pr::v4Zero;
 				for (int i = 0; i != count; ++i)
 				{
 					if (!edges[i]) continue;
@@ -226,7 +227,7 @@ namespace pr
 					auto& e = point[(i+1)%count];
 					auto  d = e - s;
 					centre += s + 0.5f * (edges[i].t0 + edges[i].t1) * d;
-					++total;
+					total += 1.0f;
 				}
 				return centre / total;
 			};

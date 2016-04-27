@@ -141,14 +141,14 @@ namespace ldr
 		if (m_settings.m_ShowFocusPoint)
 		{
 			float scale = m_settings.m_FocusPointScale * m_nav.FocusDistance();
-			m_focus_point.m_i2w = pr::Scale4x4(scale, m_nav.FocusPoint());
+			m_focus_point.m_i2w = pr::m4x4::Scale(scale, m_nav.FocusPoint());
 		}
 
 		// Update the scale of the origin
 		if (m_settings.m_ShowOrigin)
 		{
 			float scale = m_settings.m_FocusPointScale * pr::Length3(m_cam.CameraToWorld().pos);
-			m_origin_point.m_i2w = pr::Scale4x4(scale, pr::v4Origin);
+			m_origin_point.m_i2w = pr::m4x4::Scale(scale, pr::v4Origin);
 		}
 
 		// Allow the navigation manager to adjust the camera, ready for this frame
@@ -278,18 +278,19 @@ namespace ldr
 		using namespace pr::rdr;
 		{
 			// Create the focus point models
-			pr::v4 verts[] =
+			static pr::v4 const verts[] = // 'static' is a workaround to make 'pt' aligned in VS2015 update 2
 			{
-				pr::v4::make(0.0f,  0.0f,  0.0f, 1.0f),
-				pr::v4::make(1.0f,  0.0f,  0.0f, 1.0f),
-				pr::v4::make(0.0f,  0.0f,  0.0f, 1.0f),
-				pr::v4::make(0.0f,  1.0f,  0.0f, 1.0f),
-				pr::v4::make(0.0f,  0.0f,  0.0f, 1.0f),
-				pr::v4::make(0.0f,  0.0f,  1.0f, 1.0f),
+				pr::v4(0.0f,  0.0f,  0.0f, 1.0f),
+				pr::v4(1.0f,  0.0f,  0.0f, 1.0f),
+				pr::v4(0.0f,  0.0f,  0.0f, 1.0f),
+				pr::v4(0.0f,  1.0f,  0.0f, 1.0f),
+				pr::v4(0.0f,  0.0f,  0.0f, 1.0f),
+				pr::v4(0.0f,  0.0f,  1.0f, 1.0f),
 			};
-			pr::Colour32 coloursFF[] = { 0xFFFF0000, 0xFFFF0000, 0xFF00FF00, 0xFF00FF00, 0xFF0000FF, 0xFF0000FF };
-			pr::Colour32 colours80[] = { 0xFF800000, 0xFF800000, 0xFF008000, 0xFF008000, 0xFF000080, 0xFF000080 };
-			pr::uint16 lines[]       = { 0, 1, 2, 3, 4, 5 };
+			pr::Colour32 const coloursFF[] = { 0xFFFF0000, 0xFFFF0000, 0xFF00FF00, 0xFF00FF00, 0xFF0000FF, 0xFF0000FF };
+			pr::Colour32 const colours80[] = { 0xFF800000, 0xFF800000, 0xFF008000, 0xFF008000, 0xFF000080, 0xFF000080 };
+			pr::uint16 const lines[]       = { 0, 1, 2, 3, 4, 5 };
+			assert(pr::maths::is_aligned(&verts[0]));
 
 			m_focus_point .m_model = ModelGenerator<>::Mesh(m_rdr, EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, PR_COUNTOF(coloursFF), coloursFF);
 			m_focus_point .m_model->m_name = "focus point";
@@ -301,18 +302,18 @@ namespace ldr
 		}
 		{
 			// Create the selection box model
-			pr::v4 verts[] =
+			static pr::v4 const verts[] = // 'static' is a workaround to make 'pt' aligned in VS2015 update 2
 			{
-				pr::v4::make(-0.5f, -0.5f, -0.5f, 1.0f), pr::v4::make(-0.4f, -0.5f, -0.5f, 1.0f), pr::v4::make(-0.5f, -0.4f, -0.5f, 1.0f), pr::v4::make(-0.5f, -0.5f, -0.4f, 1.0f),
-				pr::v4::make( 0.5f, -0.5f, -0.5f, 1.0f), pr::v4::make( 0.5f, -0.4f, -0.5f, 1.0f), pr::v4::make( 0.4f, -0.5f, -0.5f, 1.0f), pr::v4::make( 0.5f, -0.5f, -0.4f, 1.0f),
-				pr::v4::make( 0.5f,  0.5f, -0.5f, 1.0f), pr::v4::make( 0.4f,  0.5f, -0.5f, 1.0f), pr::v4::make( 0.5f,  0.4f, -0.5f, 1.0f), pr::v4::make( 0.5f,  0.5f, -0.4f, 1.0f),
-				pr::v4::make(-0.5f,  0.5f, -0.5f, 1.0f), pr::v4::make(-0.5f,  0.4f, -0.5f, 1.0f), pr::v4::make(-0.4f,  0.5f, -0.5f, 1.0f), pr::v4::make(-0.5f,  0.5f, -0.4f, 1.0f),
-				pr::v4::make(-0.5f, -0.5f,  0.5f, 1.0f), pr::v4::make(-0.4f, -0.5f,  0.5f, 1.0f), pr::v4::make(-0.5f, -0.4f,  0.5f, 1.0f), pr::v4::make(-0.5f, -0.5f,  0.4f, 1.0f),
-				pr::v4::make( 0.5f, -0.5f,  0.5f, 1.0f), pr::v4::make( 0.5f, -0.4f,  0.5f, 1.0f), pr::v4::make( 0.4f, -0.5f,  0.5f, 1.0f), pr::v4::make( 0.5f, -0.5f,  0.4f, 1.0f),
-				pr::v4::make( 0.5f,  0.5f,  0.5f, 1.0f), pr::v4::make( 0.4f,  0.5f,  0.5f, 1.0f), pr::v4::make( 0.5f,  0.4f,  0.5f, 1.0f), pr::v4::make( 0.5f,  0.5f,  0.4f, 1.0f),
-				pr::v4::make(-0.5f,  0.5f,  0.5f, 1.0f), pr::v4::make(-0.5f,  0.4f,  0.5f, 1.0f), pr::v4::make(-0.4f,  0.5f,  0.5f, 1.0f), pr::v4::make(-0.5f,  0.5f,  0.4f, 1.0f),
+				pr::v4(-0.5f, -0.5f, -0.5f, 1.0f), pr::v4(-0.4f, -0.5f, -0.5f, 1.0f), pr::v4(-0.5f, -0.4f, -0.5f, 1.0f), pr::v4(-0.5f, -0.5f, -0.4f, 1.0f),
+				pr::v4( 0.5f, -0.5f, -0.5f, 1.0f), pr::v4( 0.5f, -0.4f, -0.5f, 1.0f), pr::v4( 0.4f, -0.5f, -0.5f, 1.0f), pr::v4( 0.5f, -0.5f, -0.4f, 1.0f),
+				pr::v4( 0.5f,  0.5f, -0.5f, 1.0f), pr::v4( 0.4f,  0.5f, -0.5f, 1.0f), pr::v4( 0.5f,  0.4f, -0.5f, 1.0f), pr::v4( 0.5f,  0.5f, -0.4f, 1.0f),
+				pr::v4(-0.5f,  0.5f, -0.5f, 1.0f), pr::v4(-0.5f,  0.4f, -0.5f, 1.0f), pr::v4(-0.4f,  0.5f, -0.5f, 1.0f), pr::v4(-0.5f,  0.5f, -0.4f, 1.0f),
+				pr::v4(-0.5f, -0.5f,  0.5f, 1.0f), pr::v4(-0.4f, -0.5f,  0.5f, 1.0f), pr::v4(-0.5f, -0.4f,  0.5f, 1.0f), pr::v4(-0.5f, -0.5f,  0.4f, 1.0f),
+				pr::v4( 0.5f, -0.5f,  0.5f, 1.0f), pr::v4( 0.5f, -0.4f,  0.5f, 1.0f), pr::v4( 0.4f, -0.5f,  0.5f, 1.0f), pr::v4( 0.5f, -0.5f,  0.4f, 1.0f),
+				pr::v4( 0.5f,  0.5f,  0.5f, 1.0f), pr::v4( 0.4f,  0.5f,  0.5f, 1.0f), pr::v4( 0.5f,  0.4f,  0.5f, 1.0f), pr::v4( 0.5f,  0.5f,  0.4f, 1.0f),
+				pr::v4(-0.5f,  0.5f,  0.5f, 1.0f), pr::v4(-0.5f,  0.4f,  0.5f, 1.0f), pr::v4(-0.4f,  0.5f,  0.5f, 1.0f), pr::v4(-0.5f,  0.5f,  0.4f, 1.0f),
 			};
-			pr::uint16 lines[] =
+			pr::uint16 const lines[] =
 			{
 				0,  1,  0,  2,  0,  3,
 				4,  5,  4,  6,  4,  7,
@@ -323,29 +324,31 @@ namespace ldr
 				24, 25, 24, 26, 24, 27,
 				28, 29, 28, 30, 28, 31,
 			};
+			assert(pr::maths::is_aligned(&verts[0]));
 			m_selection_box.m_model = ModelGenerator<>::Mesh(m_rdr, EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines);
 			m_selection_box.m_model->m_name = "selection box";
 			m_selection_box.m_i2w   = pr::m4x4Identity;
 		}
 		{
 			// Create a bounding box model
-			pr::v4 verts[] =
+			static pr::v4 const verts[] = // 'static' is a workaround to make 'pt' aligned in VS2015 update 2
 			{
-				pr::v4::make(-0.5f, -0.5f, -0.5f, 1.0f),
-				pr::v4::make(0.5f, -0.5f, -0.5f, 1.0f),
-				pr::v4::make(0.5f,  0.5f, -0.5f, 1.0f),
-				pr::v4::make(-0.5f,  0.5f, -0.5f, 1.0f),
-				pr::v4::make(-0.5f, -0.5f,  0.5f, 1.0f),
-				pr::v4::make(0.5f, -0.5f,  0.5f, 1.0f),
-				pr::v4::make(0.5f,  0.5f,  0.5f, 1.0f),
-				pr::v4::make(-0.5f,  0.5f,  0.5f, 1.0f),
+				pr::v4(-0.5f, -0.5f, -0.5f, 1.0f),
+				pr::v4(0.5f, -0.5f, -0.5f, 1.0f),
+				pr::v4(0.5f,  0.5f, -0.5f, 1.0f),
+				pr::v4(-0.5f,  0.5f, -0.5f, 1.0f),
+				pr::v4(-0.5f, -0.5f,  0.5f, 1.0f),
+				pr::v4(0.5f, -0.5f,  0.5f, 1.0f),
+				pr::v4(0.5f,  0.5f,  0.5f, 1.0f),
+				pr::v4(-0.5f,  0.5f,  0.5f, 1.0f),
 			};
-			pr::uint16 lines[] =
+			pr::uint16 const lines[] =
 			{
 				0, 1, 1, 2, 2, 3, 3, 0,
 				4, 5, 5, 6, 6, 7, 7, 4,
 				0, 4, 1, 5, 2, 6, 3, 7
 			};
+			assert(pr::maths::is_aligned(&verts[0]));
 			m_bbox_model.m_model = ModelGenerator<>::Mesh(m_rdr, EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, 1, &pr::Colour32Blue);
 			m_bbox_model.m_model->m_name = "bbox";
 			m_bbox_model.m_i2w   = pr::m4x4Identity;
@@ -378,7 +381,7 @@ namespace ldr
 					for (auto& obj : m_store)
 					{
 						auto bb = obj->BBoxWS(true);
-						if (bb.IsValid())
+						if (!bb.empty())
 							pr::Encompass(m_bbox_scene, bb);
 					}
 				}
@@ -392,7 +395,7 @@ namespace ldr
 				for (auto obj = m_gui.m_store_ui.EnumSelected(iter); obj; obj = m_gui.m_store_ui.EnumSelected(iter))
 				{
 					auto bb = obj->BBoxWS(true);
-					if (bb.IsValid())
+					if (!bb.empty())
 						pr::Encompass(bbox, bb);
 				}
 				break;
@@ -405,14 +408,14 @@ namespace ldr
 					obj->Apply([&](pr::ldr::LdrObject* o)
 					{
 						auto bb = o->BBoxWS(false);
-						if (bb.IsValid()) pr::Encompass(bbox, bb);
+						if (!bb.empty()) pr::Encompass(bbox, bb);
 						return true;
 					}, "");
 				}
 				break;
 			}
 		}
-		return bbox.IsValid() ? bbox : pr::BBoxUnit;
+		return !bbox.empty() ? bbox : pr::BBoxUnit;
 	}
 
 	// User settings have been changed
@@ -430,7 +433,7 @@ namespace ldr
 
 		// Update the transform of the selection box
 		pr::BBox bbox = GetSceneBounds(EObjectBounds::Selected);
-		m_selection_box.m_i2w = pr::Scale4x4(bbox.SizeX(), bbox.SizeY(), bbox.SizeZ(), bbox.Centre());
+		m_selection_box.m_i2w = pr::m4x4::Scale(bbox.SizeX(), bbox.SizeY(), bbox.SizeZ(), bbox.Centre());
 
 		// Request a refresh when the selection changes (if the selection box is visible)
 		pr::events::Send(Event_Refresh());

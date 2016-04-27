@@ -87,7 +87,7 @@ float Project(v4 const& axis, v4 const& cyl_axis, float height, float radius, Po
 	float d = Dot3(axis, cyl_axis);
 	
 	// Project the long axis
-	if( FEqlZero(d, FaceToFaceTolerance) )
+	if( FEql(d, 0, FaceToFaceTolerance) )
 	{
 		//point.m_dof_axis[point.m_type++] = 0;
 		//PR_ASSERT(PR_DBG_PHYSICS, point.m_type <= EPointType_NumberOf);
@@ -106,7 +106,7 @@ float Project(v4 const& axis, v4 const& cyl_axis, float height, float radius, Po
 	// Project the radius
 	v4 radius_v4 = Cross3(cyl_axis, Cross3(cyl_axis, axis));
 	d = Length3(radius_v4);
-	if( FEqlZero(d, FaceToFaceTolerance) )
+	if( FEql(d, 0, FaceToFaceTolerance) )
 	{
 		//point.m_dof_axis[point.m_type++] = 0;
 		//PR_ASSERT(PR_DBG_PHYSICS, point.m_type <= EPointType_NumberOf);

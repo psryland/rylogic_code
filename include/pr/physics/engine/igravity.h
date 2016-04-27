@@ -43,7 +43,7 @@ namespace pr
 		struct DirectionalGravity : IGravity
 		{
 			v4 m_grav;
-			DirectionalGravity(v4 const& grav = v4::make(0.0f, -9.8f, 0.0f, 0.0f)) : m_grav(grav) {}
+			DirectionalGravity(v4 const& grav = v4(0.0f, -9.8f, 0.0f, 0.0f)) : m_grav(grav) {}
 			v4    GravityField    (v4 const&) const		{ return m_grav; }
 			float GravityPotential(v4 const& pos) const { return -Dot3(m_grav, pos); }
 		};

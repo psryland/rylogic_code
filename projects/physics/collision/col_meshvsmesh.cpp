@@ -38,8 +38,8 @@ namespace pr
 
 				ShapePolytope const& polyA = shape_cast<ShapePolytope>(shapeA);
 				ShapePolytope const& polyB = shape_cast<ShapePolytope>(shapeB);
-				m3x4 w2a = InvertFast(cast_m3x4(a2w));
-				m3x4 w2b = InvertFast(cast_m3x4(b2w));
+				auto w2a = InvertFast(a2w.rot);
+				auto w2b = InvertFast(b2w.rot);
 
 				//	if( a2w.pos == b2w.pos ) return false;
 
@@ -347,7 +347,7 @@ namespace pr
 						SetNearestBound(col.m_simplex.m_vertex[0], col);
 						SetNearestBound(col.m_simplex.m_vertex[1], col);
 						v4 x = col.m_simplex.m_vertex[1].m_r - col.m_simplex.m_vertex[0].m_r;
-						v4 y = Perpendicular(x);
+						v4 y = Perpendicular3(x);
 						v4 z = Cross3(x, y);
 						col.SupportVertex( y);	SetNearestBound(col.m_vertex, col);
 						col.SupportVertex( z);	SetNearestBound(col.m_vertex, col);
@@ -563,7 +563,7 @@ namespace pr
 					// Initialise the half space normal once we have two r's
 					// If the product is zero, then any vector perpendicular to 'r[0]' should do
 					half_space_normal = r[0] + r[1];
-					if( FEql3(half_space_normal,pr::v4Zero) )	{ half_space_normal = Perpendicular(r[0]); }
+					if( FEql3(half_space_normal,pr::v4Zero) )	{ half_space_normal = Perpendicular3(r[0]); }
 					else								{ half_space_normal = Normalise3(half_space_normal); }
 					first_new_r = 2;
 
@@ -656,15 +656,15 @@ namespace pr
 					// Calculate a new half space normal. Use the perpendicular to 'ra' unless
 					// that's zero in which case, use the perpendicular to 'rb'. If that's zero
 					// as well then is doesn't matter what we use, might as well be the x axis
-					v2 rn = v2::make(ra[1], -ra[0]);
+					v2 rn = v2(ra[1], -ra[0]);
 					if( !FEql2(rn, v2Zero) )		{ rn = Normalise2(rn); }
 					else
 					{
-						rn = v2::make(-rb[1], rb[0]);
+						rn = v2(-rb[1], rb[0]);
 						if( !FEql2(rn, v2Zero) )	{ rn = Normalise2(rn); }
 						else						{ rn = v2XAxis; }
 					}
-					half_space_normal = Transpose3x3(M) * v4::make(rn, 0.0f, 0.0f);
+					half_space_normal = Transpose3x3(M) * v4(rn, 0.0f, 0.0f);
 					
 					PR_ASSERT(PR_DBG_MESH_COLLISION, VerifyHalfSpace(r, first_new_r + 1, half_space_normal), "");
 					PR_ASSERT(PR_DBG_MESH_COLLISION, FindHalfPlaneBruteForce(r, first_new_r + 1, true), "");

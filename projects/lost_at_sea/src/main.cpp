@@ -78,7 +78,7 @@ namespace las
 	{
 		// Position the camera
 		m_cam.LookAt(
-			pr::v4::make(0, 0, 10.0f, 1.0f),
+			pr::v4(0, 0, 10.0f, 1.0f),
 			pr::v4Origin, 
 			pr::v4YAxis, true);
 	//	m_view.CameraToWorld(m_cam.CameraToWorld());

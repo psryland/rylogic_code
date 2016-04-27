@@ -100,7 +100,7 @@ void pr::ph::MeshVsTerrain(Shape const& mesh, m4x4 const& a2w, Shape const& terr
 		}
 		
 		// Sample the polytope in a range of directions to approximate it's shape
-		m3x4 w2a = InvertFast(cast_m3x4(a2w));
+		m3x4 w2a = InvertFast(a2w.rot);
 
 		std::size_t const NumVerts = 17;
 		num_points = NumVerts;

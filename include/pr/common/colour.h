@@ -254,10 +254,14 @@ namespace pr
 	inline Colour32& operator /= (Colour32& lhs, float s)      { lhs = lhs / s;   return lhs; }
 
 	// Random colours
-	inline Colour32 RandomRGB(Rnd& rnd, float a) { return Colour32::make(rnd.u8(), rnd.u8(), rnd.u8(), uint8(a*255.0f)); }
-	inline Colour32 RandomRGB(float a)           { return RandomRGB(rand::Rand(), a); }
-	inline Colour32 RandomRGB(Rnd& rnd)          { return RandomRGB(rnd, 1.0f); }
-	inline Colour32 RandomRGB()                  { return RandomRGB(rand::Rand()); }
+	inline Colour32 RandomRGB(Rand& rnd, float a)
+	{
+		return Colour32::make(rnd.u8(), rnd.u8(), rnd.u8(), uint8(a*255.0f));
+	}
+	inline Colour32 RandomRGB(Rand& rnd)
+	{
+		return RandomRGB(rnd, 1.0f);
+	}
 
 	// Equivalent to pr::v4, XMVECTOR, D3DCOLORVALUE, etc
 	struct alignas(16) Colour
@@ -350,7 +354,7 @@ namespace pr
 	// Conversion operators
 	inline Colour32::operator Colour() const { return Colour::make(*this); }
 	inline Colour::operator Colour32() const { return Colour32::make(r,g,b,a); }
-	inline Colour::operator v4() const { return v4::make(r,g,b,a); }
+	inline Colour::operator v4() const { return v4(r,g,b,a); }
 
 	// Miscellaneous ******************************************************************************
 

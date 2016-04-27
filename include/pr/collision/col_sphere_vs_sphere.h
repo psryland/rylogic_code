@@ -97,7 +97,7 @@ namespace pr
 			};
 			pr::m4x4 r2w_[] =
 			{
-				pr::Rotation4x4(pr::maths::tau_by_8, pr::maths::tau_by_8, pr::maths::tau_by_8, pr::v4::make(0.2f, 0.3f, 0.1f, 1.0f)),
+				pr::Rotation4x4(pr::maths::tau_by_8, pr::maths::tau_by_8, pr::maths::tau_by_8, pr::v4(0.2f, 0.3f, 0.1f, 1.0f)),
 			};
 
 			for (int i = 0; i != 20; ++i)

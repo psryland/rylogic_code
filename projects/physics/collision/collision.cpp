@@ -24,7 +24,7 @@ float pr::ph::ProjectBox(m3x4 const& box, v4 const& axis, collision::Point& poin
 	for( int i = 0; i != 3; ++i )
 	{
 		float d = Dot3(axis, box[i]);
-		if( FEqlZero(d, FaceToFaceTolerance) )
+		if( FEql(d, 0, FaceToFaceTolerance) )
 		{
 			// Store the index of the axis that is a free direction
 			PR_ASSERT(PR_DBG_PHYSICS, point.m_type < 2, "");

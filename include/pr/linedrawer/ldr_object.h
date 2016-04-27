@@ -254,7 +254,7 @@ namespace pr
 				case EAnimStyle::PlayContinuous:    t = time_s; break;
 				}
 
-				return pr::Rotation4x4(m_ang_velocity*t, m_velocity*t + pr::v4Origin);
+				return m4x4::Rotation(m_ang_velocity*t, m_velocity*t + pr::v4Origin);
 			}
 		};
 
@@ -405,7 +405,7 @@ namespace pr
 				if (m_model && pred(*this)) // Get the bbox from the graphics model
 				{
 					auto bb = i2w * m_model->m_bbox;
-					if (bb.IsValid()) pr::Encompass(bbox, bb);
+					if (!bb.empty()) pr::Encompass(bbox, bb);
 				}
 				if (include_children) // Add the bounding boxes of the children
 				{
@@ -413,7 +413,7 @@ namespace pr
 					{
 						auto c2w = i2w * child->m_o2p;
 						auto cbbox = child->BBoxMS(include_children, pred, time_s, &c2w);
-						if (cbbox.IsValid()) pr::Encompass(bbox, cbbox);
+						if (!cbbox.empty()) pr::Encompass(bbox, cbbox);
 					}
 				}
 				return bbox;
@@ -721,14 +721,14 @@ namespace pr
 							break;
 						}
 
-						p2w = pr::Rotation4x4(axis, direction, v4Origin) * p2w;
+						p2w = m4x4::Rotation(axis, direction, v4Origin) * p2w;
 						break;
 					}
 				case EKeyword::Quat:
 					{
-						pr::Quat quat;
-						reader.Vector4S(quat.xyzw);
-						p2w = Rotation4x4(quat, v4Origin) * p2w;
+						pr::quat q;
+						reader.Vector4S(q.xyzw);
+						p2w = m4x4::Rotation(q, v4Origin) * p2w;
 						break;
 					}
 				case EKeyword::Rand4x4:
@@ -739,7 +739,7 @@ namespace pr
 						reader.Vector3(centre, 1.0f);
 						reader.Real(radius);
 						reader.SectionEnd();
-						p2w = pr::Random4x4(centre, radius) * p2w;
+						p2w = pr::Random4x4(pr::g_Rand(), centre, radius) * p2w;
 						break;
 					}
 				case EKeyword::RandPos:
@@ -750,13 +750,13 @@ namespace pr
 						reader.Vector3(centre, 1.0f);
 						reader.Real(radius);
 						reader.SectionEnd();
-						p2w = Translation4x4(Random3(centre, radius, 1.0f)) * p2w;
+						p2w = m4x4::Translation(Random3(g_Rand(), centre, radius, 1.0f)) * p2w;
 						break;
 					}
 				case EKeyword::RandOri:
 					{
 						m4x4 m = m4x4Identity;
-						m.rot = pr::Random3x4();
+						m.rot = pr::Random3x4(pr::g_Rand());
 						p2w = m * p2w;
 						break;
 					}
@@ -764,7 +764,7 @@ namespace pr
 					{
 						pr::v4 angles;
 						reader.Vector3S(angles, 0.0f);
-						p2w = Rotation4x4(pr::DegreesToRadians(angles.x), pr::DegreesToRadians(angles.y), pr::DegreesToRadians(angles.z), pr::v4Origin) * p2w;
+						p2w = m4x4::Rotation(pr::DegreesToRadians(angles.x), pr::DegreesToRadians(angles.y), pr::DegreesToRadians(angles.z), pr::v4Origin) * p2w;
 						break;
 					}
 				case EKeyword::Scale:
@@ -780,7 +780,7 @@ namespace pr
 							reader.Real(scale.z);
 						}
 						reader.SectionEnd();
-						p2w = Scale4x4(scale.x, scale.y, scale.z, v4Origin) * p2w;
+						p2w = m4x4::Scale(scale.x, scale.y, scale.z, v4Origin) * p2w;
 						break;
 					}
 				case EKeyword::Transpose:

@@ -23,7 +23,7 @@ namespace pr
 		struct O2W
 		{
 			pr::m4x4 m_mat;
-			O2W(pr::v4 const& pos) :m_mat(pr::Translation4x4(pos)) {}
+			O2W(pr::v4 const& pos) :m_mat(m4x4::Translation(pos)) {}
 			O2W(pr::m4x4 const& mat) :m_mat(mat) {}
 		};
 		union Col
@@ -350,7 +350,7 @@ namespace pr
 			using namespace pr::ldr;
 
 			std::wstring str;
-			Append(str,L"*Box b",pr::Colour32Green,L"{",pr::v3::make(1.0f,2.0f,3.0f),O2W(pr::m4x4Identity),L"}");
+			Append(str,L"*Box b",pr::Colour32Green,L"{",pr::v3(1.0f,2.0f,3.0f),O2W(pr::m4x4Identity),L"}");
 			PR_CHECK(str, L"*Box b ff00ff00 {1.000000 2.000000 3.000000}");
 
 			str.resize(0);

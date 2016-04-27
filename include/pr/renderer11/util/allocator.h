@@ -16,8 +16,8 @@ namespace pr
 		// Functions the client provides to the renderer
 		struct MemFuncs
 		{
-			typedef void* (*AllocFunc  )(size_t size_in_bytes, size_t alignment);
-			typedef void  (*DeallocFunc)(void* mem);
+			typedef void* (_cdecl *AllocFunc  )(size_t size_in_bytes, size_t alignment);
+			typedef void  (_cdecl *DeallocFunc)(void* mem);
 
 			AllocFunc   m_alloc;
 			DeallocFunc m_dealloc;

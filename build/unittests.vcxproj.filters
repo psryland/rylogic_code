@@ -147,21 +147,6 @@
     <ClInclude Include="..\include\pr\container\bit_array.h">
       <Filter>pr\container</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\maths\bitfunctions.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\maths\boundingbox.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\maths\boundingbox_impl.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\maths\boundingsphere.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\maths\boundingsphere_impl.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\container\byte_data.h">
       <Filter>pr\container</Filter>
     </ClInclude>
@@ -205,9 +190,6 @@
       <Filter>pr\gui</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\maths\conversion.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\maths\convexhull.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\macros\count_of.h">
@@ -282,28 +264,13 @@
     <ClInclude Include="..\include\pr\common\fmt.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\macros\for_each.h">
-      <Filter>pr\macros</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\macros\foreach.h">
-      <Filter>pr\macros</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\app\forward.h">
       <Filter>pr\app</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\maths\forward.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\maths\frect.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\maths\frect_impl.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\maths\frustum.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\maths\frustum_impl.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\meta\function_arity.h">
@@ -333,13 +300,7 @@
     <ClInclude Include="..\include\pr\macros\join.h">
       <Filter>pr\macros</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\maths\ivector4_impl.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\maths\ivector4.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\maths\ivector2_impl.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\maths\ivector2.h">
@@ -357,9 +318,6 @@
     <ClInclude Include="..\include\pr\common\hash.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\common\hardtypedef.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\common\guid.h">
       <Filter>pr\common</Filter>
     </ClInclude>
@@ -375,31 +333,13 @@
     <ClInclude Include="..\include\pr\common\imposter.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\maths\irect_impl.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\maths\irect.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\maths\line3_impl.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\maths\line3.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\maths\matrix4x4_impl.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\maths\matrix4x4.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\maths\matrix3x3_impl.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\maths\matrix3x3.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\maths\matrix2x2_impl.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\maths\matrix2x2.h">
@@ -411,28 +351,13 @@
     <ClInclude Include="..\include\pr\maths\quaternion.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\maths\quaternion_impl.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\maths\vector4_impl.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\maths\vector4.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\maths\vector3_impl.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\maths\vector3.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\maths\vector2_impl.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\maths\vector2.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\maths\vector_rand.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\crypt\md5.h">
@@ -453,9 +378,6 @@
     <ClInclude Include="..\include\pr\linedrawer\ldr_script_editor_dlg.h">
       <Filter>pr\linedrawer</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\maths\isize.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\common\keystate.h">
       <Filter>pr\common</Filter>
     </ClInclude>
@@ -464,9 +386,6 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\common\ireport.h">
       <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\maths\largeint.h">
-      <Filter>pr\maths</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\macros\link.h">
       <Filter>pr\macros</Filter>
@@ -504,12 +423,6 @@
     <ClInclude Include="..\include\pr\gui\misc.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\maths\orientedbox.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\maths\orientedbox_impl.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\maths\primes.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
@@ -536,9 +449,6 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\geometry\p3d.h">
       <Filter>pr\geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\maths\perlinnoise.h">
-      <Filter>pr\maths</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\common\observe.h">
       <Filter>pr\common</Filter>
@@ -611,12 +521,6 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\container\queue.h">
       <Filter>pr\container</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\maths\scalar.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\maths\scalar_impl.h">
-      <Filter>pr\maths</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\filesys\recurse_directory.h">
       <Filter>pr\filesys</Filter>
@@ -956,6 +860,39 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\gui\progress_ui.h">
       <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\maths_core.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\interpolate.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\bbox.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\bsphere.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\rectangle.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\oriented_box.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\perlin_noise.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\rand_vector.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\large_int.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\convex_hull.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\bit_fields.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -142,7 +142,7 @@ namespace pr
 		// intersection point r, r = u*a + v*b + w*c. Note: If the line lies
 		// in the plane of the triangle then 'sum' will be zero
 		float sum = bary.x + bary.y + bary.z;
-		if (FEqlZero(sum))
+		if (FEql(sum,0))
 			return false;
 
 		float denom = 1.0f / sum;
@@ -211,7 +211,7 @@ namespace pr
 				auto t2 = (bb_max[i] - s[i]) * ood;
 
 				// Make t1 be intersection with near plane, t2 with far plane
-				if (t1 > t2) Swap(t1, t2);
+				if (t1 > t2) std::swap(t1, t2);
 
 				// Compute the intersection of slab intersections intervals
 				if (t1 > tmin) tmin = t1;
@@ -291,8 +291,8 @@ namespace pr
 
 	// Returns true if the infinite line that passes through 's' and 'e' passes
 	// through the infinite plane 'plane' (i.e. returns false if the line and plane are
-	// parallel but not coinsident). Also returns the parametric value of the intercept 't'.
-	// 'plane' can be a normalised or unnormalised plane.
+	// parallel but not coincident). Also returns the parametric value of the intercept 't'.
+	// 'plane' does not have to be a normalised plane.
 	inline bool Intersect_LineToPlane(Plane const& plane, v4 const& s, v4 const& e, float* t, float tmin, float tmax)
 	{
 		// Find the distances to the plane for the start and end of the line
@@ -316,8 +316,7 @@ namespace pr
 	inline bool Intersect_LineToSlab(v4 const& norm, float dist1, float dist2, v4 const& s, v4 const& e, v4& s_out, v4& e_out)
 	{
 		assert(dist1 <= dist2);
-		Plane plane;
-		plane::set(plane, norm, dist1);
+		auto plane = plane::make(norm, dist1);
 
 		float slab_width = dist2 - dist1;
 		float d1 = Distance_PointToPlane(s ,plane);
@@ -377,33 +376,33 @@ namespace pr
 		{
 			{// Intersect_LineToBBox
 				float tmin = 0.0f, tmax = 1.0f;
-				auto s = pr::v4::make(+1.0f, +0.2f, +0.5f, 1.0f);
-				auto e = pr::v4::make(-1.0f, -0.2f, -0.4f, 1.0f);
+				auto s = pr::v4(+1.0f, +0.2f, +0.5f, 1.0f);
+				auto e = pr::v4(-1.0f, -0.2f, -0.4f, 1.0f);
 				auto d = e - s;
-				auto bbox = pr::BBox::make(pr::v4Origin, pr::v4::make(0.25f, 0.15f, 0.2f, 0.0f));
+				auto bbox = BBox(v4Origin, v4(0.25f, 0.15f, 0.2f, 0.0f));
 				
 				auto r = Intersect_LineToBBox(s, d, bbox, tmin, tmax);
 				PR_CHECK(r, true);
-				PR_CHECK(pr::FEql3(s + tmin*d, pr::v4::make(+0.25f, +0.05f, +0.163f, 1.0f), 0.001f), true);
-				PR_CHECK(pr::FEql3(s + tmax*d, pr::v4::make(-0.25f, -0.05f, -0.063f, 1.0f), 0.001f), true);
+				PR_CHECK(pr::FEql3(s + tmin*d, pr::v4(+0.25f, +0.05f, +0.163f, 1.0f), 0.001f), true);
+				PR_CHECK(pr::FEql3(s + tmax*d, pr::v4(-0.25f, -0.05f, -0.063f, 1.0f), 0.001f), true);
 
-				s = pr::v4::make(+1.0f, +0.2f, -0.22f, 1.0f);
+				s = pr::v4(+1.0f, +0.2f, -0.22f, 1.0f);
 				r = Intersect_LineToBBox(s, d, bbox, tmin, tmax);
 				PR_CHECK(r, false);
 			}
 			{// Intersect_LineToSphere
 				float tmin = 0.0f, tmax = 1.0f;
-				auto s = pr::v4::make(+1.0f, +0.2f, +0.5f, 1.0f);
-				auto e = pr::v4::make(-1.0f, -0.2f, -0.4f, 1.0f);
+				auto s = pr::v4(+1.0f, +0.2f, +0.5f, 1.0f);
+				auto e = pr::v4(-1.0f, -0.2f, -0.4f, 1.0f);
 				auto d = e - s;
 				auto rad = 0.3f;
 				
 				auto r = Intersect_LineToSphere(s, d, rad, tmin, tmax);
 				PR_CHECK(r, true);
-				PR_CHECK(pr::FEql3(s + tmin*d, pr::v4::make(+0.247f, +0.049f, +0.161f, 1.0f), 0.001f), true);
-				PR_CHECK(pr::FEql3(s + tmax*d, pr::v4::make(-0.284f, -0.057f, -0.078f, 1.0f), 0.001f), true);
+				PR_CHECK(pr::FEql3(s + tmin*d, pr::v4(+0.247f, +0.049f, +0.161f, 1.0f), 0.001f), true);
+				PR_CHECK(pr::FEql3(s + tmax*d, pr::v4(-0.284f, -0.057f, -0.078f, 1.0f), 0.001f), true);
 
-				s = pr::v4::make(+1.0f, +0.2f, -0.22f, 1.0f);
+				s = pr::v4(+1.0f, +0.2f, -0.22f, 1.0f);
 				r = Intersect_LineToSphere(s, d, rad, tmin, tmax);
 				PR_CHECK(r, false);
 			}

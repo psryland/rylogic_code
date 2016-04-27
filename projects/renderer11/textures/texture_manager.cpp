@@ -16,16 +16,16 @@ namespace pr
 {
 	namespace rdr
 	{
-		// Create a DX texture from a dds,jpg,png,tga,gif,bmp file
+		// Create a DX texture from a 'dds,jpg,png,tga,gif,bmp' file
 		void LoadTextureFromFile(D3DPtr<ID3D11Device>& device, wchar_t const* filepath, D3DPtr<ID3D11Texture2D>& tex, D3DPtr<ID3D11ShaderResourceView>& srv)
 		{
 			using namespace DirectX;
 			auto extn = pr::filesys::GetExtensionInPlace(filepath);
 
-			// If the file is a dds file, use the faster dds loader
+			// If the file is a DDS file, use the faster DDS loader
 			if (_wcsicmp(extn, L"dds") == 0)
 			{
-				// This doesn't support some dds formats tho, so might be worth trying the directxtex dds loader
+				// This does not support some DDS formats tho, so might be worth trying the 'directxtex' DDS loader
 				D3DPtr<ID3D11Resource> res;
 				pr::Throw(DirectX::CreateDDSTextureFromFile(device.m_ptr, filepath, &res.m_ptr, &srv.m_ptr));
 				pr::Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex.m_ptr));
@@ -76,7 +76,7 @@ namespace pr
 			return inst;
 		}
 
-		// Create a texture instance from a dds file.
+		// Create a texture instance from a DDS file.
 		// 'filepath' can be a special string identifying a stock texture (e.g.  #black, #white, #checker, etc)
 		// Throws if creation fails. On success returns a pointer to the created texture.
 		Texture2DPtr TextureManager::CreateTexture2D(RdrId id, SamplerDesc const& sam_desc, wchar_t const* filepath, char const* name)
@@ -132,7 +132,7 @@ namespace pr
 			return CreateTexture2D(id, sam_desc, pr::To<wstring256>(filepath).c_str(), name);
 		}
 
-		// Create a Gdi texture instance
+		// Create a GDI texture instance
 		// 'id' is the id to assign to the created texture instance. Use 'AutoId' to auto generate an id
 		// 'src' is the initialisation data
 		// 'tdesc' is a description of the texture to be created
@@ -146,11 +146,11 @@ namespace pr
 			// Validate
 			if (tdesc.Format != DXGI_FORMAT_B8G8R8A8_UNORM &&
 				tdesc.Format != DXGI_FORMAT_B8G8R8A8_UNORM_SRGB)
-				throw pr::Exception<HRESULT>(E_FAIL, "Gdi textures must use the B8G8R8A8 format");
+				throw pr::Exception<HRESULT>(E_FAIL, "GDI textures must use the B8G8R8A8 format");
 			if (!pr::AllSet(tdesc.MiscFlags, D3D11_RESOURCE_MISC_GDI_COMPATIBLE))
-				throw pr::Exception<HRESULT>(E_FAIL, "Gdi textures require the GDI compatible flag");
+				throw pr::Exception<HRESULT>(E_FAIL, "GDI textures require the GDI compatible flag");
 			if (!tdesc.MipLevels == 1)
-				throw pr::Exception<HRESULT>(E_FAIL, "Gdi textures require the MipLevels == 1");
+				throw pr::Exception<HRESULT>(E_FAIL, "GDI textures require the MipLevels == 1");
 
 			// Allocate a new texture instance and dx texture resource
 			SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
@@ -169,9 +169,9 @@ namespace pr
 			tdesc.MiscFlags = D3D11_RESOURCE_MISC_GDI_COMPATIBLE;
 			return CreateTextureGdi(id, src, tdesc, SamplerDesc::LinearClamp(), name);
 		}
-		TextureGdiPtr TextureManager::CreateTextureGdi(RdrId id, size_t w, size_t h, char const* name)
+		TextureGdiPtr TextureManager::CreateTextureGdi(RdrId id, int w, int h, char const* name)
 		{
-			return CreateTextureGdi(id, Image::make(w,h), name);
+			return CreateTextureGdi(id, Image(w,h), name);
 		}
 
 		// Create a new texture instance that uses the same dx texture as an existing texture.
@@ -231,7 +231,7 @@ namespace pr
 			PR_ASSERT(PR_DBG_RDR, iter != m_lookup_tex.end(), "Texture not found");
 
 			// If the dx texture will be released when we clean up this texture
-			// then check whether it's in the fname lookup table and remove it if it is.
+			// then check whether it is in the 'fname' lookup table and remove it if it is.
 			if (tex->m_src_id != 0 && tex->m_tex.RefCount() == 1)
 			{
 				TexFileLookup::iterator jter = m_lookup_fname.find(tex->m_src_id);
@@ -248,17 +248,17 @@ namespace pr
 		{
 			{
 				pr::uint const data[] = {0};
-				Image src = Image::make(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
+				Image src(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
 				TextureDesc tdesc(src, 1, D3D11_USAGE_IMMUTABLE);
 				m_stock_textures.push_back(CreateTexture2D(EStockTexture::Black, src, tdesc, SamplerDesc::LinearClamp(), "#black"));
 			}{
 				pr::uint const data[] = {0xFFFFFFFF};
-				Image src = Image::make(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
+				Image src(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
 				TextureDesc tdesc(src, 1, D3D11_USAGE_IMMUTABLE);
 				m_stock_textures.push_back(CreateTexture2D(EStockTexture::White, src, tdesc, SamplerDesc::LinearClamp(), "#white"));
 			}{
 				pr::uint const data[] = {0xFF808080};
-				Image src = Image::make(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
+				Image src(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
 				TextureDesc tdesc(src, 1, D3D11_USAGE_IMMUTABLE);
 				m_stock_textures.push_back(CreateTexture2D(EStockTexture::Gray, src, tdesc, SamplerDesc::LinearClamp(), "#gray"));
 			}{
@@ -277,7 +277,7 @@ namespace pr
 					#undef X
 					#undef O
 				};
-				Image src = Image::make(8, 8, data, DXGI_FORMAT_R8G8B8A8_UNORM);
+				Image src(8, 8, data, DXGI_FORMAT_R8G8B8A8_UNORM);
 				TextureDesc tdesc(src, 0, D3D11_USAGE_IMMUTABLE);
 				auto sam = SamplerDesc::LinearWrap();
 				sam.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
@@ -285,7 +285,7 @@ namespace pr
 			}
 		}
 
-		// Updates the texture and srv pointers in 'existing' to those provided.
+		// Updates the texture and 'srv' pointers in 'existing' to those provided.
 		// If 'all_instances' is true, 'm_lookup_tex' is searched for Texture instances that point to the same
 		// dx resource as 'existing'. All are updated to point to the given 'tex' and 'srv' and the RdrId remains unchanged.
 		// If 'all_instances' is false, only 'existing' has its dx pointers changed.

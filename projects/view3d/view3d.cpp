@@ -1277,8 +1277,8 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureCreate(UINT32 width, UINT32 hei
 {
 	try
 	{
-		Image src = Image::make(width, height, data, options.m_format);
-		if (src.m_pixels != nullptr && src.m_pitch.x * src.m_pitch.y != data_size)
+		Image src(width, height, data, options.m_format);
+		if (src.m_pixels != nullptr && src.m_pitch.x * src.m_pitch.y != pr::s_cast<int>(data_size))
 			throw std::exception("Incorrect data size provided");
 
 		TextureDesc tdesc(src);
@@ -1516,14 +1516,14 @@ void RenderWindow(view3d::Window& wnd)
 	if (wnd.m_focus_point_visible)
 	{
 		float scale = wnd.m_focus_point_size * wnd.m_camera.FocusDist();
-		wnd.m_focus_point.m_i2w = pr::Scale4x4(scale, wnd.m_camera.FocusPoint());
+		wnd.m_focus_point.m_i2w = pr::m4x4::Scale(scale, wnd.m_camera.FocusPoint());
 		scene.AddInstance(wnd.m_focus_point);
 	}
 	// Scale the origin point
 	if (wnd.m_origin_point_visible)
 	{
 		float scale = wnd.m_origin_point_size * pr::Length3(wnd.m_camera.CameraToWorld().pos);
-		wnd.m_origin_point.m_i2w = pr::Scale4x4(scale, pr::v4Origin);
+		wnd.m_origin_point.m_i2w = pr::m4x4::Scale(scale, pr::v4Origin);
 		scene.AddInstance(wnd.m_origin_point);
 	}
 
@@ -1678,7 +1678,7 @@ VIEW3D_API void __stdcall View3D_SetRenderTargetSize(View3DWindow window, int wi
 		DllLockGuard;
 		if (width  < 0) width  = 0;
 		if (height < 0) height = 0;
-		window->m_wnd.RenderTargetSize(pr::iv2::make(width, height));
+		window->m_wnd.RenderTargetSize(pr::iv2(width, height));
 		auto size = window->m_wnd.RenderTargetSize();
 
 		// Update the window aspect ratio

@@ -127,7 +127,7 @@ namespace pr
 		PRUnitTest(pr_spinlock)
 		{
 			spinlock::Thing thing;
-			std::atomic_bool exit = std::atomic_bool();
+			std::atomic_bool exit(false);
 
 			std::thread thd1([&]
 			{

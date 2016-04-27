@@ -4,8 +4,6 @@
 //******************************************
 // Use to cast any pointer to a byte pointer
 #pragma once
-#ifndef PR_COMMON_CAST_H
-#define PR_COMMON_CAST_H
 
 #include <cassert>
 #include <type_traits>
@@ -44,9 +42,13 @@ namespace pr
 	//  uint8_t b = checked_cast<uint8_t>(s); <- gives an assert because -1302 cannot be stored in a uint8_t
 	template <typename T, typename U> inline T checked_cast(U x)
 	{
-		assert(static_cast<U>(static_cast<T>(x)) == x && "Cast loses data");
+		assert("Cast loses data" && static_cast<U>(static_cast<T>(x)) == x);
 		return static_cast<T>(x);
 	}
-}
 
-#endif
+	// Checked static cast
+	template <typename T, typename U> inline T s_cast(U x)
+	{
+		return checked_cast<T,U>(x);
+	}
+}

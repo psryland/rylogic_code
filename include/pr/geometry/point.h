@@ -148,15 +148,15 @@ namespace pr
 			{// PointWithinConvexPolygon
 				pr::v4 poly[] =
 				{
-					pr::v4::make(-2.0f, -1.0f, 0.0f, 1.0f),
-					pr::v4::make(+2.5f, -1.5f, 0.0f, 1.0f),
-					pr::v4::make(+2.0f, +0.5f, 0.0f, 1.0f),
-					pr::v4::make(-0.5f, +2.0f, 0.0f, 1.0f),
+					pr::v4(-2.0f, -1.0f, 0.0f, 1.0f),
+					pr::v4(+2.5f, -1.5f, 0.0f, 1.0f),
+					pr::v4(+2.0f, +0.5f, 0.0f, 1.0f),
+					pr::v4(-0.5f, +2.0f, 0.0f, 1.0f),
 				};
-				PR_CHECK(PointWithinConvexPolygon(pr::v4Origin                          , poly, _countof(poly)), true);
-				PR_CHECK(PointWithinConvexPolygon(poly[0]                               , poly, _countof(poly)), false);
-				PR_CHECK(PointWithinConvexPolygon(pr::v4::make(-1.0f, +2.0f, 0.0f, 1.0f), poly, _countof(poly)), false);
-				PR_CHECK(PointWithinConvexPolygon(pr::v4::make(+1.0f, -0.5f, 0.0f, 1.0f), poly, _countof(poly)), true);
+				PR_CHECK(PointWithinConvexPolygon(v4Origin, poly, _countof(poly)), true);
+				PR_CHECK(PointWithinConvexPolygon(poly[0], poly, _countof(poly)), false);
+				PR_CHECK(PointWithinConvexPolygon(v4(-1.0f, +2.0f, 0.0f, 1.0f), poly, _countof(poly)), false);
+				PR_CHECK(PointWithinConvexPolygon(v4(+1.0f, -0.5f, 0.0f, 1.0f), poly, _countof(poly)), true);
 			}
 		}
 	}

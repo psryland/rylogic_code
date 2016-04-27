@@ -43,8 +43,8 @@ namespace pr
 			{
 				auto h = 2.0f * pr::Tan(m_fovY * 0.5f);
 				return m_orthographic
-					? pr::v2::make(h * m_aspect, h)
-					: pr::v2::make(dist * h * m_aspect, dist * h);
+					? pr::v2(h * m_aspect, h)
+					: pr::v2(dist * h * m_aspect, dist * h);
 			}
 
 			// Update the camera to screen projection transform

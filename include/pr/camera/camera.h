@@ -153,8 +153,8 @@ namespace pr
 		{
 			float height = 2.0f * m_focus_dist * pr::Tan(m_fovY * 0.5f);
 			return m_orthographic
-				? ProjectionOrthographic(height*m_aspect, height, near_clip, far_clip, true)
-				: ProjectionPerspectiveFOV(m_fovY, m_aspect, near_clip, far_clip, true);
+				? m4x4::ProjectionOrthographic(height*m_aspect, height, near_clip, far_clip, true)
+				: m4x4::ProjectionPerspectiveFOV(m_fovY, m_aspect, near_clip, far_clip, true);
 		}
 		pr::m4x4 CameraToScreen() const
 		{
@@ -299,8 +299,8 @@ namespace pr
 		{
 			auto h = 2.0f * pr::Tan(m_fovY * 0.5f);
 			return m_orthographic
-				? pr::v2::make(h * m_aspect, h)
-				: pr::v2::make(dist * h * m_aspect, dist * h);
+				? pr::v2(h * m_aspect, h)
+				: pr::v2(dist * h * m_aspect, dist * h);
 		}
 
 		// Return the view frustum for this camera
@@ -416,7 +416,7 @@ namespace pr
 				m_focus_dist = m_base_focus_dist + dz;
 
 			// Translate
-			auto pos = m_base_c2w.pos + cast_m3x4(m_base_c2w) * pr::v4::make(dx, dy, dz, 0.0f);
+			auto pos = m_base_c2w.pos + m_base_c2w.rot * pr::v4(dx, dy, dz, 0.0f);
 			if (IsFinite(pos))
 				m_c2w.pos = pos;
 
@@ -462,14 +462,14 @@ namespace pr
 			pr::v4 old_focus = FocusPoint();
 
 			// Rotate the camera matrix
-			m_c2w = m_base_c2w * Rotation4x4(pitch, yaw, roll, v4Origin);
+			m_c2w = m_base_c2w * m4x4::Rotation(pitch, yaw, roll, v4Origin);
 
 			// Position the camera so that the focus is still in the same position
 			m_c2w.pos = old_focus + m_c2w.z * m_focus_dist;
 
 			// If an align axis is given, align up to it
 			if (Length3Sq(m_align) > maths::tiny)
-				m_c2w = pr::LookAt(m_c2w.pos, old_focus, m_align);
+				m_c2w = m4x4::LookAt(m_c2w.pos, old_focus, m_align);
 
 			// Set the base values
 			if (commit) Commit();
@@ -540,8 +540,8 @@ namespace pr
 			m_align = up;
 			if (Length3Sq(m_align) > maths::tiny)
 			{
-				if (pr::Parallel(m_c2w.z, m_align)) m_c2w.set(m_c2w.y, m_c2w.z, m_c2w.x, m_c2w.w);
-				m_c2w = pr::LookAt(m_c2w.pos, FocusPoint(), m_align);
+				if (pr::Parallel3(m_c2w.z, m_align)) m_c2w = m4x4(m_c2w.y, m_c2w.z, m_c2w.x, m_c2w.w);
+				m_c2w = m4x4::LookAt(m_c2w.pos, FocusPoint(), m_align);
 				m_moved = true;
 				m_base_c2w = m_c2w; // Update the base point
 			}
@@ -556,7 +556,7 @@ namespace pr
 		// Position the camera at 'position' looking at 'lookat' with up pointing 'up'
 		void LookAt(pr::v4 const& position, pr::v4 const& lookat, pr::v4 const& up, bool commit = true)
 		{
-			m_c2w = pr::LookAt(position, lookat, up);
+			m_c2w = m4x4::LookAt(position, lookat, up);
 			m_focus_dist = Length3(lookat - position);
 
 			// Set the base values
@@ -566,17 +566,17 @@ namespace pr
 		// Position the camera so that all of 'bbox' is visible to the camera when looking 'forward' and 'up'
 		void View(pr::BBox const& bbox, pr::v4 const& forward, pr::v4 const& up, bool update_base)
 		{
-			if (!bbox.IsValid()) return;
+			if (bbox.empty()) return;
 
 			pr::v4 bbox_centre = bbox.Centre();
 			pr::v4 bbox_radius = bbox.Radius();
 
 			// Get the radius of the bbox projected onto the plane 'forward'
 			float sizez = pr::maths::float_max;
-			sizez = pr::Min(sizez, pr::Abs(pr::Dot3(forward, pr::v4::make( bbox_radius.x,  bbox_radius.y,  bbox_radius.z, 0.0f))));
-			sizez = pr::Min(sizez, pr::Abs(pr::Dot3(forward, pr::v4::make(-bbox_radius.x,  bbox_radius.y,  bbox_radius.z, 0.0f))));
-			sizez = pr::Min(sizez, pr::Abs(pr::Dot3(forward, pr::v4::make( bbox_radius.x, -bbox_radius.y,  bbox_radius.z, 0.0f))));
-			sizez = pr::Min(sizez, pr::Abs(pr::Dot3(forward, pr::v4::make( bbox_radius.x,  bbox_radius.y, -bbox_radius.z, 0.0f))));
+			sizez = pr::Min(sizez, pr::Abs(pr::Dot3(forward, pr::v4( bbox_radius.x,  bbox_radius.y,  bbox_radius.z, 0.0f))));
+			sizez = pr::Min(sizez, pr::Abs(pr::Dot3(forward, pr::v4(-bbox_radius.x,  bbox_radius.y,  bbox_radius.z, 0.0f))));
+			sizez = pr::Min(sizez, pr::Abs(pr::Dot3(forward, pr::v4( bbox_radius.x, -bbox_radius.y,  bbox_radius.z, 0.0f))));
+			sizez = pr::Min(sizez, pr::Abs(pr::Dot3(forward, pr::v4( bbox_radius.x,  bbox_radius.y, -bbox_radius.z, 0.0f))));
 			float sizexy = pr::Sqrt(pr::Clamp(pr::Length3Sq(bbox_radius) - pr::Sqr(sizez), 0.0f, pr::maths::float_max));
 
 			// 'sizexy' is the radius of the bounding box projected into the 'forward' plane
@@ -598,7 +598,7 @@ namespace pr
 			pr::v4 axis = IsAligned() ? pr::InvertFast(m_c2w) * m_align : m_c2w.y;
 
 			// Rotate the camera transform and reposition to look at the focus point
-			m_c2w     = m_c2w * Rotation4x4(axis, angle_rad, v4Origin);
+			m_c2w     = m_c2w * m4x4::Rotation(axis, angle_rad, v4Origin);
 			m_c2w.pos = old_focus + m_focus_dist * m_c2w.z;
 			m_c2w     = pr::Orthonorm(m_c2w);
 

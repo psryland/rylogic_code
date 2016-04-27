@@ -298,20 +298,20 @@ namespace pr
 		}
 
 		// Insert an item delimiter into a stream
-		inline Csv& endi(Csv& csv)
+		inline Csv& __stdcall endi(Csv& csv)
 		{
 			if (csv.empty()) csv.push_back(Row());
 			csv.back().push_back(Str());
 			return csv;
 		}
-		inline Row& endi(Row& row)
+		inline Row& __stdcall endi(Row& row)
 		{
 			row.push_back(Str());
 			return row;
 		}
 
 		// Insert a row delimiter into a stream
-		inline Csv& endr(Csv& csv)
+		inline Csv& __stdcall endr(Csv& csv)
 		{
 			csv.push_back(Row());
 			return csv;
@@ -333,11 +333,11 @@ namespace pr
 		}
 
 		// Item,row delimiter manipulator
-		inline Csv& operator << (Csv& csv, Csv& (__cdecl *func)(Csv&))
+		inline Csv& operator << (Csv& csv, Csv& (__stdcall *func)(Csv&))
 		{
 			return (*func)(csv);
 		}
-		inline Row& operator << (Row& row, Row& (__cdecl *func)(Row&))
+		inline Row& operator << (Row& row, Row& (__stdcall *func)(Row&))
 		{
 			return (*func)(row);
 		}

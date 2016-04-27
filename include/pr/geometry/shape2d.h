@@ -33,7 +33,7 @@ namespace pr
 
 			Props props;
 			props.m_geom = EGeom::Vert | EGeom::Colr | (solid ? EGeom::Norm : 0) | (solid ? EGeom::Tex0 : 0);
-			props.m_bbox.set(pr::v4Origin, pr::v4::make(dimx, dimy, 0, 0));
+			props.m_bbox = BBox(v4Origin, v4(dimx, dimy, 0, 0));
 
 			// Set Verts
 			for (int i = 0; i != facets; ++i)
@@ -41,10 +41,10 @@ namespace pr
 				auto a = pr::maths::tau * i / facets;
 				auto c = pr::Cos(a);
 				auto s = pr::Sin(a);
-				SetPCNT(*v_out++, pr::v4::make(dimx * c, dimy * s, 0, 1), colour, pr::v4ZAxis, pr::v2::make(0.5f*(c + 1), 0.5f*(1 - s)));
+				SetPCNT(*v_out++, v4(dimx * c, dimy * s, 0, 1), colour, v4ZAxis, v2(0.5f*(c + 1), 0.5f*(1 - s)));
 			}
 			if (solid)
-				SetPCNT(*v_out++, pr::v4Origin, colour, pr::v4ZAxis, pr::v2::make(0.5f, 0.5f));
+				SetPCNT(*v_out++, pr::v4Origin, colour, pr::v4ZAxis, pr::v2(0.5f, 0.5f));
 
 			if (solid)
 			{
@@ -100,7 +100,7 @@ namespace pr
 			auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
 
 			// Tex coords
-			auto tr0 = FEqlZero(radius1) ? 0.0f : radius0 / radius1;
+			auto tr0 = FEql(radius1,0) ? 0.0f : radius0 / radius1;
 			auto tr1 = 1.0f;
 
 			// Set Verts
@@ -109,8 +109,8 @@ namespace pr
 				auto a = pr::Lerp(ang0, ang1, float(i) / facets);
 				auto c = pr::Cos(a);
 				auto s = pr::Sin(a);
-				SetPCNT(*v_out++, bb(pr::v4::make(radius0 * dimx * c, radius0 * dimy * s, 0, 1)), colour, pr::v4ZAxis, pr::v2::make(0.5f + 0.5f*tr0*c, 0.5f - 0.5f*tr0*s));
-				SetPCNT(*v_out++, bb(pr::v4::make(radius1 * dimx * c, radius1 * dimy * s, 0, 1)), colour, pr::v4ZAxis, pr::v2::make(0.5f + 0.5f*tr1*c, 0.5f - 0.5f*tr1*s));
+				SetPCNT(*v_out++, bb(v4(radius0 * dimx * c, radius0 * dimy * s, 0, 1)), colour, v4ZAxis, v2(0.5f + 0.5f*tr0*c, 0.5f - 0.5f*tr0*s));
+				SetPCNT(*v_out++, bb(v4(radius1 * dimx * c, radius1 * dimy * s, 0, 1)), colour, v4ZAxis, v2(0.5f + 0.5f*tr1*c, 0.5f - 0.5f*tr1*s));
 			}
 
 			if (solid)
@@ -155,7 +155,7 @@ namespace pr
 
 			Props props;
 			props.m_geom = EGeom::Vert | EGeom::Colr | (solid ? EGeom::Norm : 0) | (solid ? EGeom::Tex0 : 0);
-			props.m_bbox.set(pr::v4Origin, pr::v4::make(dimx, dimy, 0, 0));
+			props.m_bbox = BBox(v4Origin, v4(dimx, dimy, 0, 0));
 
 			// Limit the rounding to half the smallest rectangle side length
 			auto rad = corner_radius;
@@ -176,12 +176,12 @@ namespace pr
 				auto vb1 = v_out + verts_per_cnr * 2;
 				for (int i = 0; i != verts_per_cnr; ++i)
 				{
-					auto c = verts_per_cnr > 1 ? pr::Cos(pr::maths::tau_by_4 * i / (verts_per_cnr - 1)) : 0;
-					auto s = verts_per_cnr > 1 ? pr::Sin(pr::maths::tau_by_4 * i / (verts_per_cnr - 1)) : 0;
-					SetPCNT(*vb0++, pr::v4::make(-dimx + rad * (1 - c), +dimy - rad * (1 - s), 0, 1), colour, pr::v4ZAxis, pr::v2::make(t0 + (1 - c)*tx, t0 + (1 - s)*ty));
-					SetPCNT(*vb0++, pr::v4::make(-dimx + rad * (1 - c), -dimy + rad * (1 - s), 0, 1), colour, pr::v4ZAxis, pr::v2::make(t0 + (1 - c)*tx, t1 - (1 - s)*ty));
-					SetPCNT(*vb1++, pr::v4::make(+dimx - rad * (1 - s), +dimy - rad * (1 - c), 0, 1), colour, pr::v4ZAxis, pr::v2::make(t1 - (1 - s)*tx, t0 + (1 - c)*ty));
-					SetPCNT(*vb1++, pr::v4::make(+dimx - rad * (1 - s), -dimy + rad * (1 - c), 0, 1), colour, pr::v4ZAxis, pr::v2::make(t1 - (1 - s)*tx, t1 - (1 - c)*ty));
+					auto c = verts_per_cnr > 1 ? Cos(pr::maths::tau_by_4 * i / (verts_per_cnr - 1)) : 0;
+					auto s = verts_per_cnr > 1 ? Sin(pr::maths::tau_by_4 * i / (verts_per_cnr - 1)) : 0;
+					SetPCNT(*vb0++, v4(-dimx + rad * (1 - c), +dimy - rad * (1 - s), 0, 1), colour, v4ZAxis, v2(t0 + (1 - c)*tx, t0 + (1 - s)*ty));
+					SetPCNT(*vb0++, v4(-dimx + rad * (1 - c), -dimy + rad * (1 - s), 0, 1), colour, v4ZAxis, v2(t0 + (1 - c)*tx, t1 - (1 - s)*ty));
+					SetPCNT(*vb1++, v4(+dimx - rad * (1 - s), +dimy - rad * (1 - c), 0, 1), colour, v4ZAxis, v2(t1 - (1 - s)*tx, t0 + (1 - c)*ty));
+					SetPCNT(*vb1++, v4(+dimx - rad * (1 - s), -dimy + rad * (1 - c), 0, 1), colour, v4ZAxis, v2(t1 - (1 - s)*tx, t1 - (1 - c)*ty));
 				}
 			}
 			else // border only
@@ -193,12 +193,12 @@ namespace pr
 				auto vb3 = v_out + verts_per_cnr * 3;
 				for (int i = 0; i != verts_per_cnr; ++i)
 				{
-					auto c = verts_per_cnr > 1 ? pr::Cos(pr::maths::tau_by_4 * i / (verts_per_cnr - 1)) : 0;
-					auto s = verts_per_cnr > 1 ? pr::Sin(pr::maths::tau_by_4 * i / (verts_per_cnr - 1)) : 0;
-					SetPCNT(*vb0++, pr::v4::make(-dimx + rad * (1 - c), -dimy + rad * (1 - s), 0, 1), colour, pr::v4ZAxis, pr::v2::make(t0 + (1 - c)*tx, t1 - (1 - s)*ty));
-					SetPCNT(*vb1++, pr::v4::make(+dimx - rad * (1 - s), -dimy + rad * (1 - c), 0, 1), colour, pr::v4ZAxis, pr::v2::make(t1 - (1 - s)*tx, t1 - (1 - c)*ty));
-					SetPCNT(*vb2++, pr::v4::make(+dimx - rad * (1 - c), +dimy - rad * (1 - s), 0, 1), colour, pr::v4ZAxis, pr::v2::make(t1 - (1 - c)*tx, t0 + (1 - s)*ty));
-					SetPCNT(*vb3++, pr::v4::make(-dimx + rad * (1 - s), +dimy - rad * (1 - c), 0, 1), colour, pr::v4ZAxis, pr::v2::make(t0 + (1 - s)*tx, t0 + (1 - c)*ty));
+					auto c = verts_per_cnr > 1 ? Cos(pr::maths::tau_by_4 * i / (verts_per_cnr - 1)) : 0;
+					auto s = verts_per_cnr > 1 ? Sin(pr::maths::tau_by_4 * i / (verts_per_cnr - 1)) : 0;
+					SetPCNT(*vb0++, v4(-dimx + rad * (1 - c), -dimy + rad * (1 - s), 0, 1), colour, v4ZAxis, v2(t0 + (1 - c)*tx, t1 - (1 - s)*ty));
+					SetPCNT(*vb1++, v4(+dimx - rad * (1 - s), -dimy + rad * (1 - c), 0, 1), colour, v4ZAxis, v2(t1 - (1 - s)*tx, t1 - (1 - c)*ty));
+					SetPCNT(*vb2++, v4(+dimx - rad * (1 - c), +dimy - rad * (1 - s), 0, 1), colour, v4ZAxis, v2(t1 - (1 - c)*tx, t0 + (1 - s)*ty));
+					SetPCNT(*vb3++, v4(-dimx + rad * (1 - s), +dimy - rad * (1 - c), 0, 1), colour, v4ZAxis, v2(t0 + (1 - s)*tx, t0 + (1 - c)*ty));
 				}
 			}
 

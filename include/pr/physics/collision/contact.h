@@ -23,7 +23,12 @@ namespace pr
 			uint					m_material_idB;		// The material id for pointB
 
 			Contact() : m_depth(-maths::float_max)	{}
-			void FlipResults() { Swap(m_pointA, m_pointB); m_normal *= -1.0f; Swap(m_material_idA, m_material_idB); }
+			void FlipResults()
+			{
+				std::swap(m_pointA, m_pointB);
+				m_normal *= -1.0f;
+				std::swap(m_material_idA, m_material_idB);
+			}
 
 			//// This is not needed with the new solver system
 			//void Clear()							{ memset(this, 0, sizeof(*this)); }

@@ -478,6 +478,7 @@ namespace pr
 			using namespace pr::unittests::quad_tree;
 
 			pr::QuadTree<Watzit, 2> qtree({-10,-5},{20,10});
+			Rand rnd;
 
 			// just inside quad0 at the root level
 			Watzit w0(-0.5f*qtree.CellSize(0,15),-0.5f*qtree.CellSize(1,15), 0);
@@ -495,7 +496,7 @@ namespace pr
 			PR_CHECK(n1->m_coord[0], 10U);
 			PR_CHECK(n1->m_coord[1], 12U);
 
-			// Outside the reqion but within the overhang at level 1
+			// Outside the region but within the overhang at level 1
 			Watzit w2(-14.99f, -7.2499f, 0);
 			auto n2 = qtree.Insert(w2, w2.pos, w2.radius);
 			PR_CHECK(qtree.m_nodes.size(), 4U);
@@ -503,7 +504,7 @@ namespace pr
 			PR_CHECK(n2->m_coord[0], 0U);
 			PR_CHECK(n2->m_coord[1], 0U);
 
-			// Outside the reqion on y but within on x
+			// Outside the region on y but within on x
 			Watzit w3(6.5f, 7.24449f, 0);
 			auto n3 = qtree.Insert(w3, w3.pos, w3.radius);
 			PR_CHECK(qtree.m_nodes.size(), 5U);
@@ -513,7 +514,7 @@ namespace pr
 
 			for (int i = 0; i != 10000; ++i)
 			{
-				Watzit w(pr::rand::fltc(0.0f, qtree.m_size[0]), pr::rand::fltc(0.0f, qtree.m_size[1]), 0.2f*pr::rand::fltr(0.0f, 0.5f * pr::Len2(qtree.m_size[0], qtree.m_size[1])));
+				Watzit w(rnd.fltc(0.0f, qtree.m_size[0]), rnd.fltc(0.0f, qtree.m_size[1]), 0.2f*rnd.fltr(0.0f, 0.5f * Len2(qtree.m_size[0], qtree.m_size[1])));
 				auto n = qtree.Insert(w, w.pos, w.radius);
 
 				// the root node can have arbitrarily large objects in it
@@ -544,7 +545,7 @@ namespace pr
 					for (auto& item : node.m_items)
 						item.flag = false;
 
-				Watzit W(pr::rand::fltc(0.0f, qtree.m_size[0]), pr::rand::fltc(0.0f, qtree.m_size[1]), 0.2f*pr::rand::fltr(0.0f, 0.5f * pr::Len2(qtree.m_size[0], qtree.m_size[1])));
+				Watzit W(rnd.fltc(0.0f, qtree.m_size[0]), rnd.fltc(0.0f, qtree.m_size[1]), 0.2f*rnd.fltr(0.0f, 0.5f * pr::Len2(qtree.m_size[0], qtree.m_size[1])));
 				qtree.Traverse(W.pos, W.radius, [&](Watzit& w, void*)
 				{
 					w.flag = Collide(W, w);

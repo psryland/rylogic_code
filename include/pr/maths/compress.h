@@ -33,8 +33,8 @@ namespace pr
 			int y = (idx % 9) / 3;
 			int z = (idx / 9);
 			return renorm
-				? v4::normal3(x - 1.0f, y - 1.0f, z - 1.0f, 0.0f)
-				: v4::make   (x - 1.0f, y - 1.0f, z - 1.0f, 0.0f);
+				? v4::Normal3(x - 1.0f, y - 1.0f, z - 1.0f, 0.0f)
+				: v4(x - 1.0f, y - 1.0f, z - 1.0f, 0.0f);
 		}
 	};
 
@@ -128,9 +128,9 @@ namespace pr
 		//      9bits: the compressed value of the first component that isn't the dropped component or the second largest
 		//      9bits: the compressed value of the second component that isn't the dropped component or the second largest
 		// Approximate angular error ~0.27 degrees
-		template <typename T> uint32 CompressQuat32(Quat const& orientation)
+		template <typename T> uint32 CompressQuat32(quat const& orientation)
 		{
-			Quat ori = orientation;
+			quat ori = orientation;
 
 			// Choose the largest component
 			int largest1 = 0;
@@ -167,12 +167,12 @@ namespace pr
 			}
 			return compressed_quat;
 		}
-		template <typename T> Quat DecompressQuat32(uint32 compressed_orientation)
+		template <typename T> quat DecompressQuat32(uint32 compressed_orientation)
 		{
 			int largest1 = (compressed_orientation >> 30) & 0x3;
 			int largest2 = (compressed_orientation >> 28) & 0x3;
 
-			Quat orientation;
+			quat orientation;
 			orientation[largest2] = (int((compressed_orientation >> 18) & CompressQuat32_Mask1) - CompressQuat32_Ofs1) / CompressQuat32_FScale1;
 
 			int shift = 9;
@@ -196,15 +196,15 @@ namespace pr
 		#undef CompressQuat32_FScale2
 	}
 
-	inline uint32 CompressQuat32(Quat const& orientation)         { return impl::CompressQuat32<void>(orientation); }
-	inline Quat   DecompressQuat32(uint32 compressed_orientation) { return impl::DecompressQuat32<void>(compressed_orientation); }
+	inline uint32 CompressQuat32(quat const& orientation)         { return impl::CompressQuat32<void>(orientation); }
+	inline quat   DecompressQuat32(uint32 compressed_orientation) { return impl::DecompressQuat32<void>(compressed_orientation); }
 
 	// Pack a normalised 32bit float into 4 floats assuming each float is stored using 8bit precision
 	// This is mainly used for packing a normalised float value into a Colour32
 	inline pr::v4 EncodeNormalisedF32toV4(float value)
 	{
 		assert(value >= 0 && value <= 1 && "Only supports floats in the range [0,1]");
-		pr::v4 const shifts = pr::v4::make(1.677721e+7f, 6.553599e+4f, 2.559999e+2f, 9.999999e-1f); // 256^3, 256^2, 256, 1
+		pr::v4 const shifts = pr::v4(1.677721e+7f, 6.553599e+4f, 2.559999e+2f, 9.999999e-1f); // 256^3, 256^2, 256, 1
 		pr::v4 packed = pr::Frac(value * shifts);
 		packed.y -= packed.x / 256.0f;
 		packed.z -= packed.y / 256.0f;
@@ -213,20 +213,20 @@ namespace pr
 	}
 	inline float DecodeNormalisedF32(pr::v4 const& value)
 	{
-		pr::v4 const shifts = pr::v4::make(5.960464e-8f, 1.525879e-5f, 3.90625e-3f, 1.0f); // 1/256^3, 1/256^2, 1/256, 1
+		pr::v4 const shifts = pr::v4(5.960464e-8f, 1.525879e-5f, 3.90625e-3f, 1.0f); // 1/256^3, 1/256^2, 1/256, 1
 		return pr::Dot4(value, shifts);
 	}
 	inline pr::v2 EncodeNormalisedF32toV2(float value)
 	{
 		assert(value >= 0 && value <= 1 && "Only supports floats in the range [0,1]");
-		pr::v2 const shifts = pr::v2::make(2.559999e2f, 9.999999e-1f);
+		pr::v2 const shifts = pr::v2(2.559999e2f, 9.999999e-1f);
 		pr::v2 packed = pr::Frac(value * shifts);
 		packed.y -= packed.x / 256.0f;
 		return packed;
 	}
 	inline float DecodeNormalisedF32(pr::v2 const& value)
 	{
-		pr::v2 const shifts = pr::v2::make(3.90625e-3f, 1.0f);
+		pr::v2 const shifts = pr::v2(3.90625e-3f, 1.0f);
 		return pr::Dot2(value, shifts);
 	}
 
@@ -452,7 +452,7 @@ namespace pr
 				for (float y = -1.0f; y <= 1.0f; y += step)
 				for (float x = -1.0f; x <= 1.0f; x += step)
 				{
-					v4   in_  = v4::normal3(x,y,z,0);
+					v4   in_  = v4::Normal3(x,y,z,0);
 					auto enc  = Norm5bit::Compress(in_);
 					v4   out_ = Norm5bit::Decompress(enc);
 					max_error = std::max(Length3(out_ - in_), max_error);

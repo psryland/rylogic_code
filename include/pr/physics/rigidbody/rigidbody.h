@@ -92,7 +92,7 @@ namespace pr
 			ERigidbody      Type() const                            { return m_type; }
 			m4x4 const&     ObjectToWorld() const                   { return m_object_to_world; }
 			v4 const&       Position() const                        { return m_object_to_world.pos; }
-			m3x4 const&     Orientation() const                     { return cast_m3x4(m_object_to_world); }
+			m3x4 const&     Orientation() const                     { return m_object_to_world.rot; }
 			Shape const*    GetShape() const                        { return m_shape; }
 			float           Mass() const                            { return m_mass; }
 			EMotion         MotionType() const                      { return m_motion_type; }
@@ -101,8 +101,8 @@ namespace pr
 			v4              Velocity() const                        { return m_inv_mass * Momentum(); }
 			v4              AngVelocity() const                     { return m_inv_mass * (m_ws_inv_inertia_tensor * AngMomentum()); }
 			v4              VelocityAt(const v4& ws_offset) const   { return Velocity() + Cross3(AngVelocity(), ws_offset); }
-			BBox     BBoxWS() const                          { return m_ws_bbox; }
-			BBox     BBoxOS() const                          { return GetShape()->m_bbox; }
+			BBox            BBoxWS() const                          { return m_ws_bbox; }
+			BBox            BBoxOS() const                          { return GetShape()->m_bbox; }
 			m3x4            InertiaOS() const                       { return m_os_inertia_tensor; }
 			void*           UserData() const                        { return m_user_data; }
 			MassProperties  GetMassProperties() const               { MassProperties mp = {m_os_inertia_tensor, v4Zero, Mass()}; return mp; }

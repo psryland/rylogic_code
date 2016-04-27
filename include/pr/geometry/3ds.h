@@ -476,10 +476,10 @@ namespace pr
 							{
 								float matrix[4][3];
 								Read(src, &matrix, 1);
-								mesh.m_o2p.x.set(matrix[0], 0.0f);
-								mesh.m_o2p.y.set(matrix[1], 0.0f);
-								mesh.m_o2p.z.set(matrix[2], 0.0f);
-								mesh.m_o2p.w.set(matrix[3], 1.0f);
+								mesh.m_o2p.x = v4(matrix[0], 0.0f);
+								mesh.m_o2p.y = v4(matrix[1], 0.0f);
+								mesh.m_o2p.z = v4(matrix[2], 0.0f);
+								mesh.m_o2p.w = v4(matrix[3], 1.0f);
 								break;
 							}
 						case EChunkId::FacesDescription:

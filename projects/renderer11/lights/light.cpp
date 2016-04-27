@@ -11,7 +11,7 @@ namespace pr
 	{
 		Light::Light()
 			:m_position        (v4Origin)
-			,m_direction       (v4::make(-0.577350f, -0.577350f, -0.577350f, 0.0f))
+			,m_direction       (-0.577350f, -0.577350f, -0.577350f, 0.0f)
 			,m_type            (ELight::Directional)
 			,m_ambient         (Colour32::make(0.0f, 0.0f, 0.0f, 0.0f))
 			,m_diffuse         (Colour32::make(0.5f, 0.5f, 0.5f, 1.0f))
@@ -33,32 +33,32 @@ namespace pr
 			default: return false;
 			case ELight::Ambient:     return true;
 			case ELight::Point:       return true;
-			case ELight::Spot:        return !pr::IsZero3(m_direction);
-			case ELight::Directional: return !pr::IsZero3(m_direction);
+			case ELight::Spot:        return !IsZero3(m_direction);
+			case ELight::Directional: return !IsZero3(m_direction);
 			}
 		}
 
 		// Returns a light to world transform appropriate for this light type and facing 'centre'
-		pr::m4x4 Light::LightToWorld(v4 const& centre, float centre_dist) const
+		m4x4 Light::LightToWorld(v4 const& centre, float centre_dist) const
 		{
 			switch (m_type)
 			{
-			default:                  return pr::m4x4Identity;
-			case ELight::Directional: return pr::LookAt(centre - centre_dist*m_direction, centre, pr::Perpendicular(m_direction));
-			case ELight::Point:       return pr::LookAt(m_position, centre, pr::Perpendicular(centre - m_position));
-			case ELight::Spot:        return pr::LookAt(m_position, centre, pr::Perpendicular(centre - m_position));
+			default:                  return m4x4Identity;
+			case ELight::Directional: return m4x4::LookAt(centre - centre_dist*m_direction, centre, Perpendicular3(m_direction));
+			case ELight::Point:       return m4x4::LookAt(m_position, centre, Perpendicular3(centre - m_position));
+			case ELight::Spot:        return m4x4::LookAt(m_position, centre, Perpendicular3(centre - m_position));
 			}
 		}
 
 		// Returns a projection transform appropriate for this light type
-		pr::m4x4 Light::Projection(float centre_dist) const
+		m4x4 Light::Projection(float centre_dist) const
 		{
 			switch (m_type)
 			{
-			default:                  return pr::m4x4Identity;
-			case ELight::Directional: return pr::ProjectionOrthographic(10.0f, 10.0f, centre_dist * 0.01f, centre_dist * 100.0f, true);
-			case ELight::Point:       return pr::ProjectionPerspectiveFOV(pr::maths::tau_by_8, 1.0f, centre_dist * 0.01f, centre_dist * 100.0f, true);
-			case ELight::Spot:        return pr::ProjectionPerspectiveFOV(pr::maths::tau_by_8, 1.0f, centre_dist * 0.01f, centre_dist * 100.0f, true);
+			default:                  return m4x4Identity;
+			case ELight::Directional: return m4x4::ProjectionOrthographic(10.0f, 10.0f, centre_dist * 0.01f, centre_dist * 100.0f, true);
+			case ELight::Point:       return m4x4::ProjectionPerspectiveFOV(maths::tau_by_8, 1.0f, centre_dist * 0.01f, centre_dist * 100.0f, true);
+			case ELight::Spot:        return m4x4::ProjectionPerspectiveFOV(maths::tau_by_8, 1.0f, centre_dist * 0.01f, centre_dist * 100.0f, true);
 			}
 		}
 
@@ -81,8 +81,8 @@ namespace pr
 
 		// Check the hash values are correct
 		#if PR_DBG_RDR
-		auto hash = [](wchar_t const* s) { return pr::script::Reader::StaticHashKeyword(s, false); };
-		static bool s_light_kws_checked = pr::CheckHashEnum<ELightKW,wchar_t>(hash);
+		auto hash = [](wchar_t const* s) { return script::Reader::StaticHashKeyword(s, false); };
+		static bool s_light_kws_checked = CheckHashEnum<ELightKW,wchar_t>(hash);
 		#endif
 
 		// Get/Set light settings
@@ -115,8 +115,8 @@ namespace pr
 				Light light;
 
 				// Parse the settings
-				pr::script::PtrA<> src(settings);
-				pr::script::Reader reader(src, false);
+				script::PtrA<> src(settings);
+				script::Reader reader(src, false);
 
 				ELightKW kw;
 				while (reader.NextKeywordH(kw))
@@ -140,9 +140,9 @@ namespace pr
 				}
 				*this = light;
 			}
-			catch (pr::script::Exception const& e)
+			catch (script::Exception const& e)
 			{
-				throw pr::Exception<HRESULT>(E_INVALIDARG, e.what());
+				throw Exception<HRESULT>(E_INVALIDARG, e.what());
 			}
 		}
 	}

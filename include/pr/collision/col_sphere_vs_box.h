@@ -142,14 +142,14 @@ namespace pr
 			using namespace pr::collision;
 
 			auto lhs = ShapeSphere::make(0.3f);
-			auto rhs = ShapeBox   ::make(pr::v4::make(0.3f, 0.4f, 0.5f, 0.0f));
+			auto rhs = ShapeBox   ::make(pr::v4(0.3f, 0.4f, 0.5f, 0.0f));
 			pr::m4x4 l2w_[] =
 			{
 				pr::m4x4Identity,
 			};
 			pr::m4x4 r2w_[] =
 			{
-				pr::Rotation4x4(pr::maths::tau_by_8, pr::maths::tau_by_8, pr::maths::tau_by_8, pr::v4::make(0.2f, 0.3f, 0.1f, 1.0f)),
+				pr::Rotation4x4(pr::maths::tau_by_8, pr::maths::tau_by_8, pr::maths::tau_by_8, pr::v4(0.2f, 0.3f, 0.1f, 1.0f)),
 			};
 
 			for (int i = 0; i != 20; ++i)

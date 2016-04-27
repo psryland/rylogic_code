@@ -464,19 +464,19 @@ namespace pr
 			{
 				set(0.0f, 0.0f, float(area.x), float(area.y));
 			}
-			Viewport(pr::IRect const& rect)
+			Viewport(IRect const& rect)
 				:D3D11_VIEWPORT()
 			{
-				pr::FRect r = pr::FRect::make(rect);
+				auto r = FRect(rect);
 				set(r.X(), r.Y(), r.SizeX(), r.SizeY());
 			}
 
 			size_t WidthUI() const  { return static_cast<size_t>(Width); }
 			size_t HeightUI() const { return static_cast<size_t>(Height); }
 
-			pr::FRect AsFRect() const { return pr::FRect::make(TopLeftX, TopLeftY, TopLeftX + Width, TopLeftY + Height); }
-			pr::IRect AsIRect() const { return pr::IRect::make(int(TopLeftX), int(TopLeftY), int(TopLeftX + Width), int(TopLeftY + Height)); }
-			RECT      AsRECT() const  { return RECT{LONG(TopLeftX), LONG(TopLeftY), LONG(TopLeftX + Width), LONG(TopLeftY + Height)}; }
+			FRect AsFRect() const { return FRect(TopLeftX, TopLeftY, TopLeftX + Width, TopLeftY + Height); }
+			IRect AsIRect() const { return IRect(int(TopLeftX), int(TopLeftY), int(TopLeftX + Width), int(TopLeftY + Height)); }
+			RECT  AsRECT() const  { return RECT{LONG(TopLeftX), LONG(TopLeftY), LONG(TopLeftX + Width), LONG(TopLeftY + Height)}; }
 
 			// Convert a screen space point to normalised screen space
 			pr::v2 SSPointToNSSPoint(pr::v2 const& ss_point) const

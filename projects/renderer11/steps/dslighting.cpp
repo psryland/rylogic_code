@@ -35,16 +35,16 @@ namespace pr
 				Vert verts[4] =
 				{
 					// Encode the view frustum corner index in 'pos.x', biased for the float to int cast
-					{pr::v4::make(0.01f, 0, 0, 0), pr::ColourWhite, pr::v4Zero, pr::v2::make(t0,t1)},
-					{pr::v4::make(1.01f, 0, 0, 0), pr::ColourWhite, pr::v4Zero, pr::v2::make(t1,t1)},
-					{pr::v4::make(2.01f, 0, 0, 0), pr::ColourWhite, pr::v4Zero, pr::v2::make(t1,t0)},
-					{pr::v4::make(3.01f, 0, 0, 0), pr::ColourWhite, pr::v4Zero, pr::v2::make(t0,t0)},
+					{v4(0.01f, 0, 0, 0), ColourWhite, v4Zero, v2(t0,t1)},
+					{v4(1.01f, 0, 0, 0), ColourWhite, v4Zero, v2(t1,t1)},
+					{v4(2.01f, 0, 0, 0), ColourWhite, v4Zero, v2(t1,t0)},
+					{v4(3.01f, 0, 0, 0), ColourWhite, v4Zero, v2(t0,t0)},
 				};
-				pr::uint16 idxs[] =
+				uint16 idxs[] =
 				{
 					0, 1, 2, 0, 2, 3
 				};
-				auto bbox = pr::BBox::make(pr::v4Origin, pr::v4::make(1,1,0,0));
+				auto bbox = BBox(v4Origin, v4(1,1,0,0));
 
 				MdlSettings s(verts, idxs, bbox, "unit quad");
 				m_unit_quad.m_model = scene.m_wnd->mdl_mgr().CreateModel(s);

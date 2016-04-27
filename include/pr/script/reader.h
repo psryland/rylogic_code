@@ -439,11 +439,11 @@ namespace pr
 			}
 
 			// Extract a quaternion from the source
-			bool Quaternion(pr::Quat& quaternion)
+			bool Quaternion(pr::quat& quaternion)
 			{
 				return Real(quaternion.x) && Real(quaternion.y) && Real(quaternion.z) && Real(quaternion.w);
 			}
-			bool QuaternionS(pr::Quat& quaternion)
+			bool QuaternionS(pr::quat& quaternion)
 			{
 				return SectionStart() && Quaternion(quaternion) && SectionEnd();
 			}
@@ -570,7 +570,7 @@ namespace pr
 			unsigned int uival = 0;
 			float fval = 0.0f, farray[4];
 			pr::v4 vec = pr::v4Zero;
-			pr::Quat quat = pr::QuatIdentity;
+			pr::quat q = pr::quatIdentity;
 			pr::m3x4 mat3;
 			pr::m4x4 mat4;
 
@@ -610,11 +610,11 @@ namespace pr
 				PR_CHECK(farray[2], +2.0f   );
 				PR_CHECK(farray[3], -0.2f   );
 				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Vector3");
-				PR_CHECK(reader.Vector3(vec,-1.0f)          ,true); PR_CHECK(pr::FEql4(vec, pr::v4::make(1.0f, 2.0f, 3.0f,-1.0f)), true);
+				PR_CHECK(reader.Vector3(vec,-1.0f)          ,true); PR_CHECK(pr::FEql4(vec, pr::v4(1.0f, 2.0f, 3.0f,-1.0f)), true);
 				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Vector4");
-				PR_CHECK(reader.Vector4(vec)                ,true); PR_CHECK(pr::FEql4(vec, pr::v4::make(4.0f, 3.0f, 2.0f, 1.0f)), true);
+				PR_CHECK(reader.Vector4(vec)                ,true); PR_CHECK(pr::FEql4(vec, pr::v4(4.0f, 3.0f, 2.0f, 1.0f)), true);
 				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Quaternion");
-				PR_CHECK(reader.Quaternion(quat)            ,true); PR_CHECK(pr::FEql4(quat, pr::Quat::make(0.0f, -1.0f, -2.0f, -3.0f)), true);
+				PR_CHECK(reader.Quaternion(q)               ,true); PR_CHECK(pr::FEql4(q, pr::quat(0.0f, -1.0f, -2.0f, -3.0f)), true);
 				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "M3x3");
 				PR_CHECK(reader.Matrix3x3(mat3)             ,true); PR_CHECK(pr::FEql(mat3, pr::m3x4Identity), true);
 				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "M4x4");
@@ -633,14 +633,14 @@ namespace pr
 				PR_CHECK(reader.IsSourceEnd()               ,true);
 			}
 			{
-				char const* src =
+				char const* s =
 					"A.B\n"
 					"a.b.c\n"
 					"A.B.C.D\n"
 					;
 				std::string s0,s1,s2,s3;
 
-				Reader reader(src);
+				Reader reader(s);
 				reader.Identifiers('.',s0,s1);        PR_CHECK(s0 == "A" && s1 == "B", true);
 				reader.Identifiers('.',s0,s1,s2);     PR_CHECK(s0 == "a" && s1 == "b" && s2 == "c", true);
 				reader.Identifiers('.',s0,s1,s2,s3);  PR_CHECK(s0 == "A" && s1 == "B" && s2 == "C" && s3 == "D", true);

@@ -12,7 +12,7 @@
 #include "pr/common/assert.h"
 #include "pr/common/hash.h"
 #include "pr/maths/maths.h"
-#include "pr/maths/convexhull.h"
+#include "pr/maths/convex_hull.h"
 #include "pr/gui/windows_com.h"
 #include "pr/gui/progress_ui.h"
 #include "pr/renderer11/renderer.h"
@@ -313,7 +313,7 @@ namespace pr
 				}
 			case EKeyword::RandColour:
 				{
-					obj->m_base_colour = pr::RandomRGB();
+					obj->m_base_colour = pr::RandomRGB(g_Rand());
 					return true;
 				}
 			case EKeyword::Animation:
@@ -543,27 +543,27 @@ namespace pr
 				,m_linestrip(linestrip)
 				,m_linemesh(linemesh)
 			{}
-			bool ParseKeyword(ParseParams& p, EKeyword kw) override
+			bool ParseKeyword(ParseParams& pp, EKeyword kw) override
 			{
 				switch (kw)
 				{
-				default: return IObjectCreator::ParseKeyword(p, kw);
+				default: return IObjectCreator::ParseKeyword(pp, kw);
 				case EKeyword::Coloured: m_per_line_colour = true; return true;
 				case EKeyword::Smooth: m_smooth = true; return true;
-				case EKeyword::Width: p.m_reader.RealS(m_line_width); return true;
+				case EKeyword::Width: pp.m_reader.RealS(m_line_width); return true;
 				case EKeyword::Param:
 					{
 						float t[2];
-						p.m_reader.RealS(t, 2);
+						pp.m_reader.RealS(t, 2);
 						if (m_point.size() < 2)
 						{
-							p.m_reader.ReportError(pr::script::EResult::Failed, "No preceding line to apply parametric values to");
+							pp.m_reader.ReportError(pr::script::EResult::Failed, "No preceding line to apply parametric values to");
 							return true;
 						}
 						auto& p0 = m_point[m_point.size() - 2];
 						auto& p1 = m_point[m_point.size() - 1];
-						pr::v4 p = p0;
-						pr::v4 dir = p1 - p0;
+						auto p = p0;
+						auto dir = p1 - p0;
 						p0 = p + t[0] * dir;
 						p1 = p + t[1] * dir;
 						return true;
@@ -695,7 +695,7 @@ namespace pr
 				pr::m4x4 o2w, *po2w = nullptr;
 				if (m_axis_id != 3)
 				{
-					o2w = pr::Rotation4x4(pr::AxisId(3), m_axis_id, pr::v4Origin);
+					o2w = pr::m4x4::Rotation(pr::AxisId(3), m_axis_id, pr::v4Origin);
 					po2w = &o2w;
 				}
 
@@ -938,14 +938,14 @@ namespace pr
 				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) dim.z = dim.y; else p.m_reader.Real(dim.z);
 				dim *= 0.5f;
 
-				m_point.push_back(pr::v4::make(-dim.x, -dim.y, -dim.z, 1.0f));
-				m_point.push_back(pr::v4::make(+dim.x, -dim.y, -dim.z, 1.0f));
-				m_point.push_back(pr::v4::make(+dim.x, +dim.y, -dim.z, 1.0f));
-				m_point.push_back(pr::v4::make(-dim.x, +dim.y, -dim.z, 1.0f));
-				m_point.push_back(pr::v4::make(-dim.x, -dim.y, +dim.z, 1.0f));
-				m_point.push_back(pr::v4::make(+dim.x, -dim.y, +dim.z, 1.0f));
-				m_point.push_back(pr::v4::make(+dim.x, +dim.y, +dim.z, 1.0f));
-				m_point.push_back(pr::v4::make(-dim.x, +dim.y, +dim.z, 1.0f));
+				m_point.push_back(v4(-dim.x, -dim.y, -dim.z, 1.0f));
+				m_point.push_back(v4(+dim.x, -dim.y, -dim.z, 1.0f));
+				m_point.push_back(v4(+dim.x, +dim.y, -dim.z, 1.0f));
+				m_point.push_back(v4(-dim.x, +dim.y, -dim.z, 1.0f));
+				m_point.push_back(v4(-dim.x, -dim.y, +dim.z, 1.0f));
+				m_point.push_back(v4(+dim.x, -dim.y, +dim.z, 1.0f));
+				m_point.push_back(v4(+dim.x, +dim.y, +dim.z, 1.0f));
+				m_point.push_back(v4(-dim.x, +dim.y, +dim.z, 1.0f));
 
 				pr::uint16 idx[] = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
 				m_index.insert(m_index.end(), idx, idx + PR_COUNTOF(idx));
@@ -967,13 +967,13 @@ namespace pr
 				pr::v2 step = dim / div;
 				for (float i = -dim.x / 2; i <= dim.x / 2; i += step.x)
 				{
-					m_point.push_back(pr::v4::make(i, -dim.y / 2, 0, 1));
-					m_point.push_back(pr::v4::make(i, dim.y / 2, 0, 1));
+					m_point.push_back(v4(i, -dim.y / 2, 0, 1));
+					m_point.push_back(v4(i, dim.y / 2, 0, 1));
 				}
 				for (float i = -dim.y / 2; i <= dim.y / 2; i += step.y)
 				{
-					m_point.push_back(pr::v4::make(-dim.x / 2, i, 0, 1));
-					m_point.push_back(pr::v4::make(dim.x / 2, i, 0, 1));
+					m_point.push_back(v4(-dim.x / 2, i, 0, 1));
+					m_point.push_back(v4(dim.x / 2, i, 0, 1));
 				}
 			}
 		};
@@ -1159,7 +1159,7 @@ namespace pr
 			void Parse(ParseParams& p) override
 			{
 				pr::m4x4 basis;
-				p.m_reader.Matrix3x3(cast_m3x4(basis));
+				p.m_reader.Matrix3x3(basis.rot);
 
 				pr::v4       pts[] = { pr::v4Origin, basis.x.w1(), pr::v4Origin, basis.y.w1(), pr::v4Origin, basis.z.w1() };
 				pr::Colour32 col[] = { pr::Colour32Red, pr::Colour32Red, pr::Colour32Green, pr::Colour32Green, pr::Colour32Blue, pr::Colour32Blue };
@@ -1214,7 +1214,7 @@ namespace pr
 				pr::m4x4 o2w, *po2w = nullptr;
 				if (m_axis_id != 3)
 				{
-					o2w = pr::Rotation4x4(pr::AxisId(3), m_axis_id, pr::v4Origin);
+					o2w = pr::m4x4::Rotation(pr::AxisId(3), m_axis_id, pr::v4Origin);
 					po2w = &o2w;
 				}
 
@@ -1255,7 +1255,7 @@ namespace pr
 				pr::m4x4 o2w, *po2w = nullptr;
 				if (m_axis_id != 3)
 				{
-					o2w = pr::Rotation4x4(pr::AxisId(3), m_axis_id, pr::v4Origin);
+					o2w = pr::m4x4::Rotation(pr::AxisId(3), m_axis_id, pr::v4Origin);
 					po2w = &o2w;
 				}
 
@@ -1294,7 +1294,7 @@ namespace pr
 				pr::m4x4 o2w, *po2w = nullptr;
 				if (m_axis_id != 3)
 				{
-					o2w = pr::Rotation4x4(pr::AxisId(3), m_axis_id, pr::v4Origin);
+					o2w = pr::m4x4::Rotation(pr::AxisId(3), m_axis_id, pr::v4Origin);
 					po2w = &o2w;
 				}
 
@@ -1356,15 +1356,15 @@ namespace pr
 		{
 			void Parse(ParseParams& p) override
 			{
-				pr::v4 pnt, fwd; float w, h;
+				v4 pnt, fwd; float w, h;
 				p.m_reader.Vector3(pnt, 1.0f);
 				p.m_reader.Vector3(fwd, 0.0f);
 				p.m_reader.Real(w);
 				p.m_reader.Real(h);
 
-				fwd = pr::Normalise3(fwd);
-				pr::v4 up = pr::Perpendicular(fwd);
-				pr::v4 left = pr::Cross3(up, fwd);
+				fwd = Normalise3(fwd);
+				auto up = Perpendicular3(fwd);
+				auto left = Cross3(up, fwd);
 				up *= h * 0.5f;
 				left *= w * 0.5f;
 				m_point.push_back(pnt - up - left);
@@ -1482,13 +1482,12 @@ namespace pr
 			void Parse(ParseParams& p) override
 			{
 				float w = 0.1f, h = 0.1f;
-				pr::v4 s0, s1;
+				v4 s0, s1;
 				p.m_reader.Vector3(s0, 1.0f);
 				p.m_reader.Vector3(s1, 1.0f);
 				p.m_reader.Real(w);
 				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) h = w; else p.m_reader.Real(h);
-				m_dim.set(w, h, pr::Length3(s1 - s0), 0.0f);
-				m_dim *= 0.5f;
+				m_dim = v4(w, h, pr::Length3(s1 - s0), 0.0f) * 0.5f;
 				m_b2w = pr::OriFromDir(s1 - s0, 2, m_up, (s1 + s0) * 0.5f);
 			}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
@@ -1559,23 +1558,23 @@ namespace pr
 				float h = m_height * 0.5f / m_view_plane;
 				float n = m_near, f = m_far;
 
-				m_pt[0].set(-n*w, -n*h, n, 1.0f);
-				m_pt[1].set(-n*w, n*h, n, 1.0f);
-				m_pt[2].set(n*w, -n*h, n, 1.0f);
-				m_pt[3].set(n*w, n*h, n, 1.0f);
-				m_pt[4].set(f*w, -f*h, f, 1.0f);
-				m_pt[5].set(f*w, f*h, f, 1.0f);
-				m_pt[6].set(-f*w, -f*h, f, 1.0f);
-				m_pt[7].set(-f*w, f*h, f, 1.0f);
+				m_pt[0] = v4(-n*w, -n*h, n, 1.0f);
+				m_pt[1] = v4(-n*w, +n*h, n, 1.0f);
+				m_pt[2] = v4(+n*w, -n*h, n, 1.0f);
+				m_pt[3] = v4(+n*w, +n*h, n, 1.0f);
+				m_pt[4] = v4(+f*w, -f*h, f, 1.0f);
+				m_pt[5] = v4(+f*w, +f*h, f, 1.0f);
+				m_pt[6] = v4(-f*w, -f*h, f, 1.0f);
+				m_pt[7] = v4(-f*w, +f*h, f, 1.0f);
 
 				switch (m_axis_id){
 				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
-				case  1: m_b2w = pr::Rotation4x4(0.0f, -pr::maths::tau_by_4, 0.0f, pr::v4Origin); break;
-				case -1: m_b2w = pr::Rotation4x4(0.0f, pr::maths::tau_by_4, 0.0f, pr::v4Origin); break;
-				case  2: m_b2w = pr::Rotation4x4(-pr::maths::tau_by_4, 0.0f, 0.0f, pr::v4Origin); break;
-				case -2: m_b2w = pr::Rotation4x4(pr::maths::tau_by_4, 0.0f, 0.0f, pr::v4Origin); break;
-				case  3: m_b2w = pr::m4x4Identity; break;
-				case -3: m_b2w = pr::Rotation4x4(0.0f, pr::maths::tau_by_2, 0.0f, pr::v4Origin); break;
+				case  1: m_b2w = m4x4::Rotation(0.0f, -pr::maths::tau_by_4, 0.0f, v4Origin); break;
+				case -1: m_b2w = m4x4::Rotation(0.0f, pr::maths::tau_by_4, 0.0f, v4Origin); break;
+				case  2: m_b2w = m4x4::Rotation(-pr::maths::tau_by_4, 0.0f, 0.0f, v4Origin); break;
+				case -2: m_b2w = m4x4::Rotation(pr::maths::tau_by_4, 0.0f, 0.0f, v4Origin); break;
+				case  3: m_b2w = m4x4Identity; break;
+				case -3: m_b2w = m4x4::Rotation(0.0f, pr::maths::tau_by_2, 0.0f, v4Origin); break;
 				}
 
 				IObjectCreatorCuboid::CreateModel(p, obj);
@@ -1603,23 +1602,23 @@ namespace pr
 				float h = pr::Tan(pr::DegreesToRadians(m_fovY * 0.5f));
 				float w = m_aspect * h;
 				float n = m_near, f = m_far;
-				m_pt[0].set(-n*w, -n*h, n, 1.0f);
-				m_pt[1].set(n*w, -n*h, n, 1.0f);
-				m_pt[2].set(-n*w, n*h, n, 1.0f);
-				m_pt[3].set(n*w, n*h, n, 1.0f);
-				m_pt[4].set(-f*w, -f*h, f, 1.0f);
-				m_pt[5].set(f*w, -f*h, f, 1.0f);
-				m_pt[6].set(-f*w, f*h, f, 1.0f);
-				m_pt[7].set(f*w, f*h, f, 1.0f);
+				m_pt[0] = v4(-n*w, -n*h, n, 1.0f);
+				m_pt[1] = v4(+n*w, -n*h, n, 1.0f);
+				m_pt[2] = v4(-n*w, +n*h, n, 1.0f);
+				m_pt[3] = v4(+n*w, +n*h, n, 1.0f);
+				m_pt[4] = v4(-f*w, -f*h, f, 1.0f);
+				m_pt[5] = v4(+f*w, -f*h, f, 1.0f);
+				m_pt[6] = v4(-f*w, +f*h, f, 1.0f);
+				m_pt[7] = v4(+f*w, +f*h, f, 1.0f);
 
 				switch (m_axis_id) {
 				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
-				case  1: m_b2w = pr::Rotation4x4(0.0f, pr::maths::tau_by_4, 0.0f, pr::v4Origin); break;
-				case -1: m_b2w = pr::Rotation4x4(0.0f, -pr::maths::tau_by_4, 0.0f, pr::v4Origin); break;
-				case  2: m_b2w = pr::Rotation4x4(-pr::maths::tau_by_4, 0.0f, 0.0f, pr::v4Origin); break;
-				case -2: m_b2w = pr::Rotation4x4(pr::maths::tau_by_4, 0.0f, 0.0f, pr::v4Origin); break;
-				case  3: m_b2w = pr::m4x4Identity; break;
-				case -3: m_b2w = pr::Rotation4x4(0.0f, pr::maths::tau_by_2, 0.0f, pr::v4Origin); break;
+				case  1: m_b2w = m4x4::Rotation(0.0f, pr::maths::tau_by_4, 0.0f, v4Origin); break;
+				case -1: m_b2w = m4x4::Rotation(0.0f, -pr::maths::tau_by_4, 0.0f, v4Origin); break;
+				case  2: m_b2w = m4x4::Rotation(-pr::maths::tau_by_4, 0.0f, 0.0f, v4Origin); break;
+				case -2: m_b2w = m4x4::Rotation(pr::maths::tau_by_4, 0.0f, 0.0f, v4Origin); break;
+				case  3: m_b2w = m4x4Identity; break;
+				case -3: m_b2w = m4x4::Rotation(0.0f, pr::maths::tau_by_2, 0.0f, v4Origin); break;
 				}
 
 				IObjectCreatorCuboid::CreateModel(p, obj);
@@ -2208,6 +2207,7 @@ namespace pr
 		std::wstring CreateDemoScene()
 		{
 			return
+			#pragma region Demo Scene
 LR"(//********************************************
 // LineDrawer demo scene
 //  Copyright (c) Rylogic Ltd 2009
@@ -2231,6 +2231,8 @@ LR"(//********************************************
 //		instance = true (described below)
 *Box {1 2 3}
 
+)"
+LR"(
 // An example of applying a transform to an object.
 // All objects have an implicit object-to-parent transform that is identity.
 // Successive 'o2w' sections pre-multiply this transform for the object.
@@ -2258,7 +2260,8 @@ LR"(//********************************************
 	}
 }
 
-// There are a number of other object modifiers that can also be used:
+)"
+LR"(// There are a number of other object modifiers that can also be used:
 *Box obj_modifier_example FFFF0000
 {
 	0.2 0.5 0.4
@@ -2287,7 +2290,8 @@ LR"(//********************************************
 	}
 }
 
-// Model Instancing.
+)"
+LR"(// Model Instancing.
 // An instance can be created from any previously defined object. The instance will
 // share the renderable model from the object it is an instance of.
 // Note that properties of the object are not inherited by the instance.
@@ -2308,7 +2312,8 @@ LR"(//********************************************
 	*o2w {*Pos {-4 0.5 0.5}}
 }
 
-// Object Nesting.
+)"
+LR"(// Object Nesting.
 // Nested objects are given in the space of their parent so a parent transform is applied to all children
 *Box nesting_example1 80FFFF00
 {
@@ -2352,7 +2357,8 @@ LR"(//********************************************
 	}
 }
 
-// ************************************************************************************
+)"
+LR"(// ************************************************************************************
 // Camera
 // ************************************************************************************
 
@@ -2374,8 +2380,9 @@ LR"(//********************************************
 	//*AbsoluteClipPlanes     // Optional. Clip planes are a fixed distance, not relative to the focus point distance
 	//*Orthographic           // Optional. Use an orthographic projection rather than perspective
 }
-)"LR"(
-// ************************************************************************************
+
+)"
+LR"(// ************************************************************************************
 // Lights
 // ************************************************************************************
 // Light sources can be top level objects, children of other objects, or contain
@@ -2410,7 +2417,8 @@ LR"(//********************************************
 	*o2w{*pos{5 5 5}}         // Position and orientation (directional lights shine down -z)
 }
 
-// ************************************************************************************
+)"
+LR"(// ************************************************************************************
 // Objects
 // ************************************************************************************
 // Below is an example of every supported object type with notes on their syntax
@@ -2487,7 +2495,8 @@ LR"(//********************************************
 	*Width { 5 }                        // Optional line width and arrow head size
 }
 
-// A circle or ellipse
+)"
+LR"(// A circle or ellipse
 *Circle circle
 {
 	2                                   // axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z 
@@ -2551,7 +2560,7 @@ LR"(//********************************************
 	*o2w{*randpos{0 0 0 2}}
 	*Texture {"#checker"}              // Optional texture
 }
-)"LR"(
+
 // A quad given by 4 corner points
 *Quad quad FFFFFFFF
 {
@@ -2596,7 +2605,8 @@ LR"(//********************************************
 	}
 }
 
-// A box given by width, height, and depth
+)"
+LR"(// A box given by width, height, and depth
 *Box box
 {
 	0.2 0.5 0.3                       // Width, [height], [depth]. Accepts 1, 2, or 3 dimensions. 1dim=cube, 2=rod, 3=arbitrary box
@@ -2692,7 +2702,8 @@ LR"(//********************************************
 	*RandColour *o2w{*RandPos{0 0 0 2}}
 }
 
-// A mesh of lines, faces, or tetrahedra.
+)"
+LR"(// A mesh of lines, faces, or tetrahedra.
 // Syntax:
 //	*Mesh [name] [colour]
 //	{
@@ -2756,7 +2767,7 @@ LR"(//********************************************
 	}
 	*RandColour *o2w{*RandPos{0 0 -1 2}}
 }
-)"LR"(
+
 // Model from a 3d model file.
 // Supported formats: *.3ds
 //*Model model_from_file FFFFFFFF
@@ -2802,7 +2813,8 @@ LR"(//********************************************
 	#embedded(lua) return make_boxes() #end
 }
 
-// ************************************************************************************
+)"
+LR"(// ************************************************************************************
 // Ldr script syntax and features:
 // ************************************************************************************
 //		*Keyword                    - keywords are identified by '*' characters
@@ -2830,6 +2842,7 @@ LR"(//********************************************
 //			--lua code
 //		#end
 )";
+#pragma endregion
 		}
 
 		// LdrObject ***********************************

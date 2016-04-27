@@ -88,9 +88,9 @@ namespace pr
 		PRUnitTest(pr_maths_geometryfunctions)
 		{
 			{//TriangleAngles
-				v4 v0 = v4::make(+1.0f, +2.0f, 0.0f, 1.0f);
-				v4 v1 = v4::make(-2.0f, -1.0f, 0.0f, 1.0f);
-				v4 v2 = v4::make(+0.0f, -1.0f, 0.0f, 1.0f);
+				v4 v0(+1.0f, +2.0f, 0.0f, 1.0f);
+				v4 v1(-2.0f, -1.0f, 0.0f, 1.0f);
+				v4 v2(+0.0f, -1.0f, 0.0f, 1.0f);
 				v4 angles = TriangleAngles(v0, v1, v2);
 				angles.x = pr::RadiansToDegrees(angles.x);
 				angles.y = pr::RadiansToDegrees(angles.y);

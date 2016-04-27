@@ -98,7 +98,7 @@ namespace pr
 			// 'sdesc' is a description of the sampler to use
 			TextureGdiPtr CreateTextureGdi(RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, char const* name = nullptr);
 			TextureGdiPtr CreateTextureGdi(RdrId id, Image const& src, char const* name = nullptr);
-			TextureGdiPtr CreateTextureGdi(RdrId id, size_t w, size_t h, char const* name);
+			TextureGdiPtr CreateTextureGdi(RdrId id, int w, int h, char const* name);
 
 			// Create a new texture instance that wraps an existing dx texture.
 			// 'id' is the id to assign to this new texture instance. Use 'AutoId' to auto generate an id

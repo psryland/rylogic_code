@@ -123,7 +123,7 @@ void Rigidbody::SetPosition(v4 const& position)
 void Rigidbody::SetOrientation(m3x4 const& ori)
 {
 	PR_EXPAND(PR_LOG_RB, Log(*this, "SetOrientation");)
-	cast_m3x4(m_object_to_world) = ori;
+	m_object_to_world.rot = ori;
 	m_ws_bbox               = ObjectToWorld() * BBoxOS();
 	m_ws_inv_inertia_tensor = InvInertiaTensorWS(Orientation(), m_os_inv_inertia_tensor);
 	m_bp_entity.Update();

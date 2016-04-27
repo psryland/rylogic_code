@@ -151,8 +151,8 @@ namespace pr
 				float ang1 = 0.0f, ang2 = dAng * 0.5f;
 				for (uint w = 0; w != 6; ++w, ang1 += dAng, ang2 += dAng)
 				{
-					v4 norm_a = v4::make(R * Cos(ang1), R * Sin(ang1), H1, 0.0f);
-					v4 norm_b = v4::make(R * Cos(ang2), R * Sin(ang2), H2, 0.0f);
+					v4 norm_a = v4(R * Cos(ang1), R * Sin(ang1), H1, 0.0f);
+					v4 norm_b = v4(R * Cos(ang2), R * Sin(ang2), H2, 0.0f);
 					AddVertex( v4ZAxis ,ub[w] ,true  ,data);
 					AddVertex( norm_a  ,ua[w] ,false ,data);
 					AddVertex( norm_b  ,ub[w] ,false ,data);
@@ -175,7 +175,7 @@ namespace pr
 		Props Geosphere(v4 const& radius, std::size_t divisions, Colour32 colour, TVertIter out_verts, TIdxIter out_indices)
 		{
 			Props props;
-			props.m_bbox = BBox::make(pr::v4Origin, radius);
+			props.m_bbox = BBox(pr::v4Origin, radius);
 			props.m_geom = EGeom::Vert | EGeom::Colr | EGeom::Norm | EGeom::Tex0;
 			props.m_has_alpha = colour.a() != 0xFF;
 
@@ -199,7 +199,7 @@ namespace pr
 			// Output the verts and indices
 			for (auto i = std::begin(verts), iend = std::end(verts); i != iend; ++i)
 			{
-				SetPCNT(*out_verts++, i->m_vert, colour, i->m_norm, v2::make(i->m_ang, (1.0f - i->m_norm.z) * 0.5f));
+				SetPCNT(*out_verts++, i->m_vert, colour, i->m_norm, v2(i->m_ang, (1.0f - i->m_norm.z) * 0.5f));
 			}
 			for (auto i = std::begin(faces), iend = std::end(faces); i != iend; ++i)
 			{

@@ -240,7 +240,7 @@ int __stdcall wWinMain(HINSTANCE,HINSTANCE,LPWSTR lpCmdLine,int)
 	}
 }
 
-int wmain(int argc, wchar_t* argv[])
+int __cdecl wmain(int argc, wchar_t* argv[])
 {
 	cex::Main m;
 	std::wstring args;

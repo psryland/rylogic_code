@@ -73,7 +73,7 @@ void pr::ph::SphereVsCylinder(Shape const& sphere, m4x4 const& a2w, Shape const&
 	{
 		contact.m_depth		= cyl.m_radius + sph.m_radius - dist_xz;
 		if( dist_xz < maths::tiny ) contact.m_normal = a2w.x;	// choose arbitrarily
-		else contact.m_normal = b2w * v4::make(sphere_pos.x/dist_xz, 0.0f, sphere_pos.z/dist_xz, 0.0f);
+		else contact.m_normal = b2w * v4(sphere_pos.x/dist_xz, 0.0f, sphere_pos.z/dist_xz, 0.0f);
 		contact.m_pointA	= a2w.pos - sph.m_radius * contact.m_normal;
 		contact.m_pointB	= a2w.pos - (dist_xz - cyl.m_radius) * contact.m_normal;
 	}
@@ -82,7 +82,7 @@ void pr::ph::SphereVsCylinder(Shape const& sphere, m4x4 const& a2w, Shape const&
 	else
 	{
 		float scale = cyl.m_radius / dist_xz;
-		v4 rim = v4::make(sphere_pos.x*scale, Sign(sphere_pos.y)*cyl.m_height, sphere_pos.z*scale, 1.0f);
+		auto rim = v4(sphere_pos.x*scale, Sign(sphere_pos.y)*cyl.m_height, sphere_pos.z*scale, 1.0f);
 		float dist  = Sqrt(dxz_sq + dy_sq); // distance to the rim of the cylinder
 
 		contact.m_depth		= sph.m_radius - dist;

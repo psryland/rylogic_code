@@ -2,71 +2,95 @@
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
-
 #pragma once
-#ifndef PR_MATHS_PLANE_H
-#define PR_MATHS_PLANE_H
 
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
+#include "pr/maths/maths_core.h"
 #include "pr/maths/vector4.h"
 
 namespace pr
 {
 	// Planes are stored as: [dx dy dz -dist]
-	typedef v4 Plane;
+	using Plane = v4;
 
 	namespace plane
 	{
-		// The const functions are called 'Make' and the non-const functions
-		// are called 'Set' to stop clashes with overloaded function names
-		inline Plane& set(Plane& plane, float dx, float dy, float dz, float dist) { return plane.set(dx, dy, dz, -dist); }
-		inline Plane& set(Plane& plane, v4 const& point, v4 const& direction)     { plane = direction; plane.w = -Dot3(point, direction); return plane; }
-		inline Plane& set(Plane& plane, v4 const& a, v4 const& b, v4 const& c)    { plane = Normalise3(Cross3(b-a, c-a)); plane.w = -Dot3(a, plane); return plane; }
-		inline Plane& set(Plane& plane, v4 const& norm, float dist)               { plane = norm; plane.w = -dist; return plane; }
-		inline Plane  make(float dx, float dy, float dz, float dist)              { return v4::make(dx, dy, dz, dist); }
-		inline Plane  make(v4 const& point, v4 const& direction)                  { Plane p; return set(p, point, direction); }
-		inline Plane  make(v4 const& a, v4 const& b, v4 const& c)                 { Plane p; return set(p, a, b, c); }
-		inline Plane  make(v4 const& norm, float dist)                            { Plane p; return set(p, norm, dist); }
-		inline v4     GetDirection(Plane const& plane)                            { return v4::make(plane.x, plane.y, plane.z, 0.0f); }
-		inline float  GetDistance(Plane const& plane)                             { return -plane.w; }
-		inline Plane  Normalise(Plane const& plane)                               { return plane / Length3(plane); }
+		// Create a plane from components
+		inline Plane make(float dx, float dy, float dz, float dist)
+		{
+			return Plane(dx, dy, dz, dist);
+		}
+
+		// Create a point from a point and direction (not necessarily unit length)
+		inline Plane make(v4 const& point, v4 const& direction)
+		{
+			Plane p = direction;
+			p.w = -Dot3(point, direction);
+			return p;
+		}
+
+		// Create a point from 3 points in 3D space
+		inline Plane  make(v4 const& a, v4 const& b, v4 const& c)
+		{
+			Plane p = Normalise3(Cross3(b-a, c-a));
+			p.w = -Dot3(a, p);
+			return p;
+		}
+
+		// Create from a normal direction and distance
+		inline Plane  make(v4 const& norm, float dist)
+		{
+			Plane p = norm;
+			p.w = -dist;
+			return p;
+		}
 
 		// Make a best fit plane for a set of points. (designed for polygons really)
 		// This is using Newell's method of projecting the points into the yz, xz, and xy planes
-		inline Plane& set(Plane& plane, v4 const* begin, v4 const* end)
+		inline Plane make(v4 const* begin, v4 const* end)
 		{
-			plane     = v4Zero;
+			Plane p = v4Zero;
 			v4 centre = v4Zero;
 			for (v4 const *i = end - 1, *j = begin; j != end; i = j, ++j)
 			{
 				// Compute the normal as being proportional to the projected areas
 				// of the polygon onto the yz, xz, and xy planes.
-				// Also, compute centroid as representative point on the plane		
-				plane.x += (i->y - j->y) * (i->z + j->z);	// Projection onto YZ
-				plane.y += (i->z - j->z) * (i->x + j->x);	// Projection onto XZ
-				plane.z += (i->x - j->x) * (i->y + j->y);	// Projection onto XY
+				// Also, compute centroid as representative point on the plane
+				p.x += (i->y - j->y) * (i->z + j->z); // Projection onto YZ
+				p.y += (i->z - j->z) * (i->x + j->x); // Projection onto XZ
+				p.z += (i->x - j->x) * (i->y + j->y); // Projection onto XY
 				centre  += *j;
 			}
-			plane = Normalise3(plane);
-			plane.w = Dot4(centre, plane) / (end - begin);	// Centre / (end - begin) is the true centre
-			return plane;
+			p = Normalise3(p);
+			p.w = Dot4(centre, p) / (end - begin);	// Centre / (end - begin) is the true centre
+			return p;
 		}
 
-		inline Plane make(v4 const* begin, v4 const* end)
+		// Return the direction vector component of a plane
+		inline v4 Direction(Plane const& plane)
 		{
-			Plane p;
-			return set(p, begin, end);
+			return plane.w0();
 		}
-		
+
+		// Return the distance component of a plane
+		inline float Distance(Plane const& plane)
+		{
+			return -plane.w;
+		}
+
+		// Normalise (Canonicalise a plane)
+		inline Plane Normalise(Plane const& plane)
+		{
+			return plane / Length3(plane); // This scales the w-component as well
+		}
+
 		// Returns 'v' projected onto 'plane'
 		// So if plane.w == -dist, if v.w == 1 the returned point will lie on the plane at 'dist'
 		// from the origin. if v.w == 0, the returned vector will lie in a plane parallel to 'plane'.
 		inline v4 Project(Plane const& plane, v4 const& v)
 		{
-			return v - pr::Dot4(plane, v) * plane.w0();
+			return v - Dot4(plane, v) * plane.w0();
 		}
 	}
 }
-
-#endif

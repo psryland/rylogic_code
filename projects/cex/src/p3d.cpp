@@ -9,6 +9,7 @@
 #include "pr/geometry/p3d.h"
 #include "pr/geometry/3ds.h"
 #include "pr/geometry/utility.h"
+#include "pr/maths/bit_fields.h"
 
 using namespace pr::geometry;
 
@@ -289,7 +290,7 @@ namespace cex
 
 				// Quantise all the verts
 				for (auto& vert : mesh.m_verts)
-					vert.pos = pr::Quantise(vert.pos, m_quantisation);
+					vert.pos = pr::Quantise((pr::v4)vert.pos, m_quantisation);
 
 				// Initialise the map
 				map.resize(mesh.m_verts.size());
@@ -479,9 +480,9 @@ Syntax:
 		{
 			m_ptr->m_ops.push_back(EP3dOp::RemoveDegenerates);
 			if (!pr::str::ExtractIntC(m_ptr->m_quantisation, 10, arg->c_str()))
-				throw std::exception("Tolerence value expected following -remove_degenerates");
+				throw std::exception("Tolerance value expected following -remove_degenerates");
 			if (!pr::IsPowerOfTwo(m_ptr->m_quantisation))
-				throw std::exception("Tolerence value should be a power of 2, i.e. 256,1024,etc.");
+				throw std::exception("Tolerance value should be a power of 2, i.e. 256,1024,etc.");
 			++arg;
 			return true;
 		}

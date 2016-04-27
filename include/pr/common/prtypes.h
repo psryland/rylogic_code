@@ -2,9 +2,7 @@
 // Basic types
 //  Copyright (c) Rylogic Ltd 2008
 //**************************************************************
-
-#ifndef PR_TYPES_H
-#define PR_TYPES_H
+#pragma once
 
 namespace pr
 {
@@ -26,5 +24,3 @@ namespace pr
 		float        f;
 	};
 }
-
-#endif

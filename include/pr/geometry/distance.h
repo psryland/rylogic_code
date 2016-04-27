@@ -97,9 +97,9 @@ namespace pr
 		PRUnitTest(pr_geometry_distance)
 		{
 			{// DistanceSq_PointToLineSegment
-				auto s = pr::v4::make(1.0f, 1.0f, 0.0f, 1.0f);
-				auto e = pr::v4::make(3.0f, 2.0f, 0.0f, 1.0f);
-				auto a = pr::v4::make(2.0f, 1.0f, 0.0f, 1.0f);
+				auto s = pr::v4(1.0f, 1.0f, 0.0f, 1.0f);
+				auto e = pr::v4(3.0f, 2.0f, 0.0f, 1.0f);
+				auto a = pr::v4(2.0f, 1.0f, 0.0f, 1.0f);
 				PR_CHECK(FEql(DistanceSq_PointToLineSegment(s, s, e), 0.0f), true);
 				PR_CHECK(FEql(DistanceSq_PointToLineSegment(e, s, e), 0.0f), true);
 				PR_CHECK(FEql(DistanceSq_PointToLineSegment((s+e)*0.5f, s, e), 0.0f), true);

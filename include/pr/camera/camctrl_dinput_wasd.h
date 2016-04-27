@@ -62,7 +62,7 @@ namespace pr
 				bool rbtn  = m_mouse.btn(pr::dinput::Mouse::Right);
 				if (lbtn || rbtn)
 				{
-					pr::v2 mv = pr::v2::make(
+					pr::v2 mv = pr::v2(
 						 5.0f * m_pan_speed * m_mouse.dx() / float(m_area.SizeX()),
 						-5.0f * m_pan_speed * m_mouse.dy() / float(m_area.SizeY()));
 					m_cam->MouseControl(pr::v2Zero, ENavBtn::Right, true);
@@ -108,7 +108,7 @@ namespace pr
 				
 				// Rotate heading
 				if (rot != 0.0f)
-					m_heading = pr::Rotation3x3(pr::v4YAxis, rot) * m_heading;
+					m_heading = m3x4::Rotation(v4YAxis, rot) * m_heading;
 				
 				//// Integrate the rate of change of orientation implied by m_avel
 				//// Note: rate of change of orientation is not the same as angular velocity

@@ -11,6 +11,7 @@
 #endif
 
 #include <windows.h>
+#include <guiddef.h>
 #include <d3d11.h>
 
 #ifdef VIEW3D_EXPORTS

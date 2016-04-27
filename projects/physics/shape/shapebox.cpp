@@ -61,7 +61,7 @@ v4 pr::ph::SupportVertex(ShapeBox const& shape, v4 const& direction, std::size_t
 	int sign_z = (direction.z > 0.0f);
 
 	sup_vert_id = (sign_z << 2) | (sign_y << 1) | (sign_x);
-	return v4::make(
+	return v4(
 		(2.0f * sign_x - 1.0f) * shape.m_radius.x,
 		(2.0f * sign_y - 1.0f) * shape.m_radius.y,
 		(2.0f * sign_z - 1.0f) * shape.m_radius.z,

@@ -2,84 +2,161 @@
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
-
 #pragma once
 
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
+#include "pr/maths/maths_core.h"
 #include "pr/maths/vector2.h"
 #include "pr/maths/vector3.h"
 
 namespace pr
 {
-	struct alignas(16) v4
+	template <typename real> struct alignas(16) Vec4
 	{
+		using Vec2 = Vec2<real>;
+		using Vec3 = Vec3<real>;
+
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
 		union
 		{
-			struct { float x,y,z,w; };
-			struct { v2 xy, zw; };
-			struct { v3 xyz; };
-			#if PR_MATHS_USE_DIRECTMATH
-			DirectX::XMVECTOR vec;
-			#elif PR_MATHS_USE_INTRINSICS
+			struct { real x,y,z,w; };
+			struct { Vec2 xy, zw; };
+			struct { Vec3 xyz; real w; };
+			struct { real arr[4]; };
+			#if PR_MATHS_USE_INTRINSICS
 			__m128 vec;
 			#endif
 		};
 		#pragma warning(pop)
-		typedef float Array[4];
 
-		v4& set(float x_);
-		v4& set(float x_, float y_, float z_, float w_);
+		// Construct
+		Vec4() = default;
+		Vec4(real x_, real y_, real z_, real w_)
 		#if PR_MATHS_USE_INTRINSICS
-		v4& set(__m128 v);
+			:vec(_mm_set_ps(w_,z_,y_,x_))
+		#else
+			:x(x_)
+			,y(y_)
+			,z(z_)
+			,w(w_)
 		#endif
-		template <typename T> v4& set(T const& v, float z_, float w_);
-		template <typename T> v4& set(T const& v, float w_);
-		template <typename T> v4& set(T const& v);
-		template <typename T> v4& set(T const* v);
-		template <typename T> v4& set(T const* v, float w_);
-
-		v4 w0() const;
-		v4 w1() const;
-
-		Array const& ToArray() const;
-		Array&       ToArray();
-
-		float const& operator [] (int i) const;
-		float&       operator [] (int i);
-		v4&          operator = (iv4 const& rhs);
-
-		v2  vec2(int i0, int i1) const;
-		v3  vec3(int i0, int i1, int i2) const;
-
-		static v4                       make(float x)                               { v4 vec; return vec.set(x); }
-		static v4                       make(float x, float y, float z, float w)    { v4 vec; return vec.set(x, y, z, w); }
+		{
+			assert(maths::is_aligned(this));
+		}
+		explicit Vec4(real x_)
 		#if PR_MATHS_USE_INTRINSICS
-		static v4                       make(__m128 v)                              { v4 vec; return vec.set(v); }
+			:vec(_mm_set_ps1(x_))
+		#else
+			:x(x_)
+			,y(x_)
+			,z(x_)
+			,w(x_)
 		#endif
-		template <typename T> static v4 make(T const& v, float z, float w)          { v4 vec; return vec.set(v, z, w); }
-		template <typename T> static v4 make(T const& v, float w)                   { v4 vec; return vec.set(v, w); }
-		template <typename T> static v4 make(T const& v)                            { v4 vec; return vec.set(v); }
-		template <typename T> static v4 make(T const* v)                            { v4 vec; return vec.set(v); }
-		template <typename T> static v4 make(T const* v, float w)                   { v4 vec; return vec.set(v, w); }
-		static v4                       normal3(float x, float y, float z, float w) { v4 vec; return Normalise3(vec.set(x, y, z, w)); }
-		template <typename T> static v4 normal3(T const& v, float z, float w)       { v4 vec; return Normalise3(vec.set(v, z, w)); }
-		template <typename T> static v4 normal3(T const& v, float w)                { v4 vec; return Normalise3(vec.set(v, w)); }
-		template <typename T> static v4 normal3(T const& v)                         { v4 vec; return Normalise3(vec.set(v)); }
-		template <typename T> static v4 normal3(T const* v)                         { v4 vec; return Normalise3(vec.set(v)); }
-		template <typename T> static v4 normal3(T const* v, float w)                { v4 vec; return Normalise3(vec.set(v, w)); }
-		static v4                       normal4(float x, float y, float z, float w) { v4 vec; return Normalise4(vec.set(x, y, z, w)); }
-		template <typename T> static v4 normal4(T const& v, float z, float w)       { v4 vec; return Normalise4(vec.set(v, z, w)); }
-		template <typename T> static v4 normal4(T const& v, float w)                { v4 vec; return Normalise4(vec.set(v, w)); }
-		template <typename T> static v4 normal4(T const& v)                         { v4 vec; return Normalise4(vec.set(v)); }
-		template <typename T> static v4 normal4(T const* v)                         { v4 vec; return Normalise4(vec.set(v)); }
-		template <typename T> static v4 normal4(T const* v, float w)                { v4 vec; return Normalise4(vec.set(v, w)); }
+		{
+			assert(maths::is_aligned(this));
+		}
+		template <typename T, typename = maths::enable_if_v4<T>> Vec4(T const& v)
+			:Vec4(x_as<real>(v), y_as<real>(v), z_as<real>(v), w_as<real>(v))
+		{}
+		template <typename T, typename = maths::enable_if_v3<T>> Vec4(T const& v, real w_)
+			:Vec4(x_as<real>(v), y_as<real>(v), z_as<real>(v), w_)
+		{}
+		template <typename T, typename = maths::enable_if_v2<T>> Vec4(T const& v, real z_, real w_)
+			:Vec4(x_as<real>(v), y_as<real>(v), z_, w_)
+		{}
+		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit Vec4(T const* v)
+			:Vec4(x_as<real>(v), y_as<real>(v), z_as<real>(v), w_as<real>(v))
+		{}
+		template <typename T, typename = maths::enable_if_v4<T>> Vec4& operator = (T const& rhs)
+		{
+			x = x_as<real>(rhs);
+			y = y_as<real>(rhs);
+			z = z_as<real>(rhs);
+			w = w_as<real>(rhs);
+			return *this;
+		}
+		#if PR_MATHS_USE_INTRINSICS
+		Vec4(__m128 v)
+			:vec(v)
+		{
+			assert(maths::is_aligned(this));
+		}
+		#endif
+
+		// Array access
+		real const& operator [] (int i) const
+		{
+			assert("index out of range" && i >= 0 && i < _countof(arr));
+			return arr[i];
+		}
+		real& operator [] (int i)
+		{
+			assert("index out of range" && i >= 0 && i < _countof(arr));
+			return arr[i];
+		}
+
+		// Create other vector types
+		Vec4 w0() const
+		{
+			Vec4 r(x,y,z,0); // lvalue because of alignment
+			return r;
+		}
+		Vec4 w1() const
+		{
+			Vec4 r(x,y,z,1); // lvalue because of alignment
+			return r;
+		}
+		Vec2 vec2(int i0, int i1) const
+		{
+			return Vec2(arr[i0], arr[i1]);
+		}
+		Vec3 vec3(int i0, int i1, int i2) const
+		{
+			return Vec3(arr[i0], arr[i1], arr[i2]);
+		}
+
+		// Construct normalised
+		template <typename = void> static Vec4 Normal3(real x, real y, real z, real w)
+		{
+			return Normalise3(Vec4(x, y, z, w));
+		}
+		template <typename = void> static Vec4 Normal4(real x, real y, real z, real w)
+		{
+			return Normalise4(Vec4(x, y, z, w));
+		}
 	};
-	static_assert(std::alignment_of<v4>::value == 16, "v4 should have 16 byte alignment");
-	static_assert(std::is_pod<v4>::value, "Should be a pod type");
 
+	using v4 = Vec4<float>;
+	static_assert(std::is_pod<v4>::value || _MSC_VER < 1900, "v4 must be a pod type");
+	static_assert(std::alignment_of<v4>::value == 16, "v4 should have 16 byte alignment");
+	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
+	using v4_cref = v4 const;
+	#else
+	using v4_cref = v4 const&;
+	#endif
+
+	// Define component accessors for pointer types
+	inline float x_cp(v4_cref v) { return v.x; }
+	inline float y_cp(v4_cref v) { return v.y; }
+	inline float z_cp(v4_cref v) { return v.z; }
+	inline float w_cp(v4_cref v) { return v.w; }
+
+	#pragma region Traits
+	namespace maths
+	{
+		// Specialise marker traits
+		template <> struct is_vec<v4> :std::true_type
+		{
+			using elem_type = float;
+			using cp_type = float;
+			static int const dim = 4;
+		};
+	}
+	#pragma endregion
+
+	#pragma region Constants
 	static v4 const v4Zero    = {0.0f, 0.0f, 0.0f, 0.0f};
 	static v4 const v4Half    = {0.5f, 0.5f, 0.5f, 0.5f};
 	static v4 const v4One     = {1.0f, 1.0f, 1.0f, 1.0f};
@@ -91,100 +168,314 @@ namespace pr
 	static v4 const v4YAxis   = {0.0f, 1.0f, 0.0f, 0.0f};
 	static v4 const v4ZAxis   = {0.0f, 0.0f, 1.0f, 0.0f};
 	static v4 const v4Origin  = {0.0f, 0.0f, 0.0f, 1.0f};
+	#pragma endregion
 
-	// Element access
-	inline float GetX(v4 const& v) { return v.x; }
-	inline float GetY(v4 const& v) { return v.y; }
-	inline float GetZ(v4 const& v) { return v.z; }
-	inline float GetW(v4 const& v) { return v.w; }
+	#pragma region Operators
+	inline v4 pr_vectorcall operator + (v4_cref vec)
+	{
+		return vec;
+	}
+	inline v4 pr_vectorcall operator - (v4_cref vec)
+	{
+		return v4(-vec.x, -vec.y, -vec.z, -vec.w);
+	}
+	inline v4& pr_vectorcall operator *= (v4& lhs, float rhs)
+	{
+		lhs.x *= rhs;
+		lhs.y *= rhs;
+		lhs.z *= rhs;
+		lhs.w *= rhs;
+		return lhs;
+	}
+	inline v4& pr_vectorcall operator /= (v4& lhs, float rhs)
+	{
+		assert("divide by zero" && rhs != 0);
+		lhs.x /= rhs;
+		lhs.y /= rhs;
+		lhs.z /= rhs;
+		lhs.w /= rhs;
+		return lhs;
+	}
+	inline v4& pr_vectorcall operator %= (v4& lhs, float rhs)
+	{
+		assert("divide by zero" && rhs != 0);
+		lhs.x = Fmod(lhs.x, rhs);
+		lhs.y = Fmod(lhs.y, rhs);
+		lhs.z = Fmod(lhs.z, rhs);
+		lhs.w = Fmod(lhs.w, rhs);
+		return lhs;
+	}
+	inline v4& pr_vectorcall operator += (v4& lhs, v4_cref rhs)
+	{
+		lhs.x += rhs.x;
+		lhs.y += rhs.y;
+		lhs.z += rhs.z;
+		lhs.w += rhs.w;
+		return lhs;
+	}
+	inline v4& pr_vectorcall operator -= (v4& lhs, v4_cref rhs)
+	{
+		lhs.x -= rhs.x;
+		lhs.y -= rhs.y;
+		lhs.z -= rhs.z;
+		lhs.w -= rhs.w;
+		return lhs;
+	}
+	inline v4& pr_vectorcall operator *= (v4& lhs, v4_cref rhs)
+	{
+		lhs.x *= rhs.x; 
+		lhs.y *= rhs.y;
+		lhs.z *= rhs.z;
+		lhs.w *= rhs.w;
+		return lhs;
+	}
+	inline v4& pr_vectorcall operator /= (v4& lhs, v4_cref rhs)
+	{
+		assert("divide by zero" && !Any4(rhs, IsZero<float>));
+		lhs.x /= rhs.x;
+		lhs.y /= rhs.y;
+		lhs.z /= rhs.z;
+		lhs.w /= rhs.w;
+		return lhs;
+	}
+	inline v4& pr_vectorcall operator %= (v4& lhs, v4_cref rhs)
+	{
+		assert("divide by zero" && !Any4(rhs, IsZero<float>));
+		lhs.x = Fmod(lhs.x, rhs.x);
+		lhs.y = Fmod(lhs.y, rhs.y);
+		lhs.z = Fmod(lhs.z, rhs.z);
+		lhs.w = Fmod(lhs.w, rhs.w);
+		return lhs;
+	}
+	inline v4 pr_vectorcall operator + (v4 const& lhs, v4_cref rhs)
+	{
+		auto v = lhs;
+		return v += rhs;
+	}
+	inline v4 pr_vectorcall operator - (v4 const& lhs, v4_cref rhs)
+	{
+		auto v = lhs;
+		return v -= rhs;
+	}
+	inline v4 pr_vectorcall operator * (v4 const& lhs, v4_cref rhs)
+	{
+		auto v = lhs;
+		return v *= rhs;
+	}
+	inline v4 pr_vectorcall operator / (v4 const& lhs, v4_cref rhs)
+	{
+		auto v = lhs;
+		return v /= rhs;
+	}
+	inline v4 pr_vectorcall operator % (v4 const& lhs, v4_cref rhs)
+	{
+		auto v = lhs;
+		return v %= rhs;
+	}
+	#pragma endregion
 
-	// Assignment operators
-	template <typename T> inline v4& operator += (v4& lhs, T const& rhs) { lhs.x += GetXf(rhs); lhs.y += GetYf(rhs); lhs.z += GetZf(rhs); lhs.w += GetWf(rhs); return lhs; }
-	template <typename T> inline v4& operator -= (v4& lhs, T const& rhs) { lhs.x -= GetXf(rhs); lhs.y -= GetYf(rhs); lhs.z -= GetZf(rhs); lhs.w -= GetWf(rhs); return lhs; }
-	template <typename T> inline v4& operator *= (v4& lhs, T const& rhs) { lhs.x *= GetXf(rhs); lhs.y *= GetYf(rhs); lhs.z *= GetZf(rhs); lhs.w *= GetWf(rhs); return lhs; }
-	template <typename T> inline v4& operator /= (v4& lhs, T const& rhs) { assert(!IsZero4(rhs)); lhs.x /= GetXf(rhs);              lhs.y /= GetYf(rhs);              lhs.z /= GetZf(rhs);              lhs.w /= GetWf(rhs);              return lhs; }
-	template <typename T> inline v4& operator %= (v4& lhs, T const& rhs) { assert(!IsZero4(rhs)); lhs.x  = Fmod(lhs.x, GetXf(rhs)); lhs.y  = Fmod(lhs.y, GetYf(rhs)); lhs.z  = Fmod(lhs.z, GetZf(rhs)); lhs.w  = Fmod(lhs.w, GetWf(rhs)); return lhs; }
+	#pragma region Functions
 
-	// Binary operators
-	template <typename T> inline v4 operator + (v4 const& lhs, T const& rhs) { v4 v = lhs; return v += rhs; }
-	template <typename T> inline v4 operator - (v4 const& lhs, T const& rhs) { v4 v = lhs; return v -= rhs; }
-	template <typename T> inline v4 operator * (v4 const& lhs, T const& rhs) { v4 v = lhs; return v *= rhs; }
-	template <typename T> inline v4 operator / (v4 const& lhs, T const& rhs) { v4 v = lhs; return v /= rhs; }
-	template <typename T> inline v4 operator % (v4 const& lhs, T const& rhs) { v4 v = lhs; return v %= rhs; }
-	inline v4 operator + (float lhs, v4 const& rhs) { v4 v = rhs; return v += lhs; }
-	inline v4 operator - (float lhs, v4 const& rhs) { v4 v = rhs; return v -= lhs; }
-	inline v4 operator * (float lhs, v4 const& rhs) { v4 v = rhs; return v *= lhs; }
-	inline v4 operator / (float lhs, v4 const& rhs) { assert(All4(rhs,maths::NonZero<float>)); return v4::make(     GetXf(lhs)/rhs.x,       GetYf(lhs)/rhs.y,       GetZf(lhs)/rhs.z,       GetWf(lhs)/rhs.w); }
-	inline v4 operator % (float lhs, v4 const& rhs) { assert(All4(rhs,maths::NonZero<float>)); return v4::make(Fmod(GetXf(lhs),rhs.x), Fmod(GetYf(lhs),rhs.y), Fmod(GetZf(lhs),rhs.z), Fmod(GetWf(lhs),rhs.w)); }
-	inline v4 operator + (double lhs, v4 const& rhs) { return GetXf(lhs) + rhs; }
-	inline v4 operator - (double lhs, v4 const& rhs) { return GetXf(lhs) - rhs; }
-	inline v4 operator * (double lhs, v4 const& rhs) { return GetXf(lhs) * rhs; }
-	inline v4 operator / (double lhs, v4 const& rhs) { assert(All4(rhs,maths::NonZero<float>)); return v4::make(     GetXf(lhs)/rhs.x,       GetYf(lhs)/rhs.y,       GetZf(lhs)/rhs.z,       GetWf(lhs)/rhs.w); }
-	inline v4 operator % (double lhs, v4 const& rhs) { assert(All4(rhs,maths::NonZero<float>)); return v4::make(Fmod(GetXf(lhs),rhs.x), Fmod(GetYf(lhs),rhs.y), Fmod(GetZf(lhs),rhs.z), Fmod(GetWf(lhs),rhs.w)); }
+	// V4 FEql
+	inline bool pr_vectorcall FEql3(v4_cref lhs, v4_cref rhs, float tol = maths::tiny)
+	{
+		#if PR_MATHS_USE_INTRINSICS
+		const __m128 zero = _mm_set_ps(tol,tol,tol,tol);
+		auto d = _mm_sub_ps(lhs.vec, rhs.vec);                         /// d = lhs - rhs
+		auto r = _mm_cmple_ps(_mm_mul_ps(d,d), _mm_mul_ps(zero,zero)); /// r = sqr(d) <= sqr(zero)
+		auto m = _mm_movemask_ps(r);
+		return (m & 0x07) == 0x07;
+		#else
+		return
+			FEql(lhs.x, rhs.x, tol) &&
+			FEql(lhs.y, rhs.y, tol) &&
+			FEql(lhs.z, rhs.z, tol);
+		#endif
+	}
+	inline bool pr_vectorcall FEql4(v4_cref lhs, v4_cref rhs, float tol = maths::tiny)
+	{
+		#if PR_MATHS_USE_INTRINSICS
+		const __m128 zero = {tol, tol, tol, tol};
+		auto d = _mm_sub_ps(lhs.vec, rhs.vec);                         /// d = lhs - rhs
+		auto r = _mm_cmple_ps(_mm_mul_ps(d,d), _mm_mul_ps(zero,zero)); /// r = sqr(d) <= sqr(zero)
+		return (_mm_movemask_ps(r) & 0x0f) == 0x0f;
+		#else
+		return
+			FEql(lhs.x, rhs.x, tol) &&
+			FEql(lhs.y, rhs.y, tol) &&
+			FEql(lhs.z, rhs.z, tol) &&
+			FEql(lhs.w, rhs.w, tol);
+		#endif
+	}
+	inline bool pr_vectorcall FEql(v4_cref lhs, v4_cref rhs, float tol = maths::tiny)
+	{
+		return FEql4(lhs, rhs, tol);
+	}
 
-	// Unary operators
-	inline v4 operator + (v4 const& v) { return v; }
-	inline v4 operator - (v4 const& v) { return v4::make(-v.x, -v.y, -v.z, -v.w); }
+	// V4 length squared
+	inline float pr_vectorcall Length2Sq(v4_cref v)
+	{
+		#if PR_MATHS_USE_INTRINSICS
+		return _mm_dp_ps(v.vec, v.vec, 0x31).m128_f32[0];
+		#else
+		return Len2Sq(v.x, v.y);
+		#endif
+	}
+	inline float pr_vectorcall Length3Sq(v4_cref v)
+	{
+		#if PR_MATHS_USE_INTRINSICS
+		return _mm_dp_ps(v.vec, v.vec, 0x71).m128_f32[0];
+		#else
+		return Len3Sq(v.x, v.y, v.z);
+		#endif
+	}
+	inline float pr_vectorcall Length4Sq(v4_cref v)
+	{
+		#if PR_MATHS_USE_INTRINSICS
+		return _mm_dp_ps(v.vec, v.vec, 0xF1).m128_f32[0];
+		#else
+		return Len4Sq(v.x, v.y, v.z, v.w);
+		#endif
+	}
 
-	// Equality operators
-	inline bool operator == (v4 const& lhs, v4 const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
-	inline bool operator != (v4 const& lhs, v4 const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
-	inline bool operator <  (v4 const& lhs, v4 const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
-	inline bool operator >  (v4 const& lhs, v4 const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
-	inline bool operator <= (v4 const& lhs, v4 const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
-	inline bool operator >= (v4 const& lhs, v4 const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
+	// Normalise the 'xyz' components of 'v'. Note: 'w' is also scaled
+	inline v4 pr_vectorcall Normalise3(v4_cref v)
+	{
+		#if PR_MATHS_USE_DIRECTMATH
+		return v4(DirectX::XMVector3Normalize(v.vec));
+		#elif PR_MATHS_USE_INTRINSICS
+		// _mm_rsqrt_ps isn't accurate enough
+		return v4(_mm_div_ps(v.vec, _mm_sqrt_ps(_mm_dp_ps(v.vec, v.vec, 0x7F))));
+		#else
+		return v / Length3(v);
+		#endif
+	}
 
-	// DirectXMath conversion functions
-	#if PR_MATHS_USE_DIRECTMATH
-	inline DirectX::XMVECTOR const& dxv4(v4 const& v) { assert(maths::is_aligned(&v)); return v.vec; }
-	inline DirectX::XMVECTOR&       dxv4(v4&       v) { assert(maths::is_aligned(&v)); return v.vec; }
-	#endif
+	// Normalise all components of 'v'
+	inline v4 pr_vectorcall Normalise4(v4_cref v)
+	{
+		#if PR_MATHS_USE_DIRECTMATH
+		return v4(DirectX::XMVector4Normalize(v.vec));
+		#elif PR_MATHS_USE_INTRINSICS
+		return v4(_mm_div_ps(v.vec, _mm_sqrt_ps(_mm_dp_ps(v.vec, v.vec, 0xFF))));
+		#else
+		return v / Length4(v);
+		#endif
+	}
+	inline v4 pr_vectorcall Normalise(v4_cref v)
+	{
+		return Normalise4(v);
+	}
 
-	v4      Max(v4 const& lhs, v4 const& rhs);
-	v4      Min(v4 const& lhs, v4 const& rhs);
-	v4      Clamp(v4 const& x, v4 const& mn, v4 const& mx);
-	v4      Clamp(v4 const& x, float mn, float mx);
-	float   Length2Sq(v4 const& x);
-	float   Length3Sq(v4 const& x);
-	float   Length4Sq(v4 const& x);
-	float   Length2(v4 const& x);
-	float   Length3(v4 const& x);
-	float   Length4(v4 const& x);
-	bool    IsFinite(v4 const& v);
-	bool    IsFinite(v4 const& v, float max_value);
-	int     SmallestElement2(v4 const& v);
-	int     SmallestElement3(v4 const& v);
-	int     SmallestElement4(v4 const& v);
-	int     LargestElement2(v4 const& v);
-	int     LargestElement3(v4 const& v);
-	int     LargestElement4(v4 const& v);
-	v4      Normalise3(v4 const& v);
-	v4      Normalise4(v4 const& v);
-	v4      Abs(v4 const& v);
-	v4      Trunc(v4 const& v);
-	v4      Frac(v4 const& v);
-	v4      Sqr(v4 const& v);
-	float   Dot3(v4 const& lhs, v4 const& rhs);
-	float   Dot4(v4 const& lhs, v4 const& rhs);
-	v4      Cross3(v4 const& lhs, v4 const& rhs);
-	float   Triple3(v4 const& a, v4 const& b, v4 const& c);
-	v4      Quantise(v4 const& v, int pow2);
-	v4      Lerp(v4 const& src, v4 const& dest, float frac);
-	v4      SLerp3(v4 const& src, v4 const& dest, float frac);
-	int     SignCombined3(v4 const& v);
-	int     SignCombined4(v4 const& v);
-	bool    Parallel(v4 const& v0, v4 const& v1, float tol = 0.0f);
-	v4      CreateNotParallelTo(v4 const& v);
-	v4      Perpendicular(v4 const& v);
-	v4      Permute3(v4 const& v, int n);
-	uint    Octant(v4 const& v);
-	v4      RotationVectorApprox(m3x4 const& from, m3x4 const& to);
-	v4      RotationVectorApprox(m4x4 const& from, m4x4 const& to);
-	float   CosAngle3(v4 const& lhs, v4 const& rhs);
+	// Square: v * v
+	inline v4 Sqr(v4 const& v)
+	{
+		#if PR_MATHS_USE_INTRINSICS
+		return v4(_mm_mul_ps(v.vec, v.vec));
+		#else
+		return v4(Sqr(v.x), Sqr(v.y), Sqr(v.z), Sqr(v.w));
+		#endif
+	}
+
+	// Dot product: a . b
+	inline float pr_vectorcall Dot3(v4_cref a, v4_cref b)
+	{
+		#if PR_MATHS_USE_INTRINSICS
+		auto r = _mm_dp_ps(a.vec, b.vec, 0x71);
+		return r.m128_f32[0];
+		#else
+		return a.x * b.x + a.y * b.y + a.z * b.z;
+		#endif
+	}
+	inline float Dot4(v4_cref a, v4_cref b)
+	{
+		#if PR_MATHS_USE_INTRINSICS
+		return _mm_dp_ps(a.vec, b.vec, 0xF1).m128_f32[0];
+		#else
+		return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+		#endif
+	}
+	inline float pr_vectorcall Dot(v4_cref a, v4_cref b)
+	{
+		return Dot4(a,b);
+	}
+
+	// Cross product: a x b
+	inline v4 pr_vectorcall Cross3(v4_cref a, v4_cref b)
+	{
+		#if PR_MATHS_USE_INTRINSICS
+		return v4(_mm_sub_ps(
+			_mm_mul_ps(_mm_shuffle_ps(a.vec, a.vec, _MM_SHUFFLE(3, 0, 2, 1)), _mm_shuffle_ps(b.vec, b.vec, _MM_SHUFFLE(3, 1, 0, 2))), 
+			_mm_mul_ps(_mm_shuffle_ps(a.vec, a.vec, _MM_SHUFFLE(3, 1, 0, 2)), _mm_shuffle_ps(b.vec, b.vec, _MM_SHUFFLE(3, 0, 2, 1)))
+			));
+		#else
+		return v4(a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x, 0);
+		#endif
+	}
+
+	// Triple product: a . b x c
+	inline float Triple3(v4 const& a, v4 const& b, v4 const& c)
+	{
+		return Dot3(a, Cross3(b, c));
+	}
+
+	// Returns true if 'a' and 'b' parallel
+	inline bool Parallel3(v4 const& v0, v4 const& v1, float tol = maths::tiny)
+	{
+		return Length3Sq(Cross3(v0, v1)) <= Sqr(tol);
+	}
+
+	// Returns a vector guaranteed not parallel to 'v'
+	inline v4 CreateNotParallelTo3(v4 const& v)
+	{
+		bool x_aligned = Abs(v.x) > Abs(v.y) && Abs(v.x) > Abs(v.z);
+		return v4(static_cast<float>(!x_aligned), 0.0f, static_cast<float>(x_aligned), v.w);
+	}
+
+	// Returns a vector perpendicular to 'v'
+	inline v4 Perpendicular3(v4 const& v)
+	{
+		assert("Cannot make a perpendicular to a zero vector" && !IsZero3(v));
+		auto vec = Cross3(v, CreateNotParallelTo3(v));
+		vec *= Length3(v) / Length3(vec);
+		return vec;
+	}
+
+	// Returns a vector with the 'xyz' values permuted 'n' times. '0=xyzw, 1=yzxw, 2=zxyw'
+	inline v4 Permute3(v4 const& v, int n)
+	{
+		switch (n%3)
+		{
+		default: return v;
+		case 1:  return v4(v.y, v.z, v.x, v.w);
+		case 2:  return v4(v.z, v.x, v.y, v.w);
+		}
+	}
+
+	// Returns a vector with the values permuted 'n' times. '0=xyzw, 1=yzwx, 2=zwxy, 3=wxyz'
+	inline v4 Permute4(v4 const& v, int n)
+	{
+		switch (n%4)
+		{
+		default: return v;
+		case 1:  return v4(v.y, v.z, v.w, v.x);
+		case 2:  return v4(v.z, v.w, v.x, v.y);
+		case 3:  return v4(v.w, v.x, v.y, v.z);
+		}
+	}
+
+	// Returns a 3-bit bitmask of the octant the vector is in. 0=(-x,-y,-z), 1=(+x,-y,-z), 2=(-x,+y,-z), 3=(+x,+y,-z), 4=(-x,-y+z), 5=(+x,-y,+z), 6=(-x,+y,+z), 7=(+x,+y,+z)
+	inline uint Octant(v4 const& v)
+	{
+		return Octant(v.xyz);
+	}
+
+	#pragma endregion
 }
 
 namespace std
 {
+	#pragma region Numeric limits
 	template <> class numeric_limits<pr::v4>
 	{
 	public:
@@ -203,23 +494,121 @@ namespace std
 		static const bool has_denorm_loss = true;
 		static const float_denorm_style has_denorm = denorm_present;
 		static const int radix = 10;
-
-		//static const int digits = 128;
-		//static const int digits10 = 38;
-		//static T round_error() throw() { return 0; }
-		//static const int min_exponent = 0;
-		//static const int min_exponent10 = 0;
-		//static const int max_exponent = 0;
-		//static const int max_exponent10 = 0;
-		//static T infinity() throw() { return 0; }
-		//static T quiet_NaN() throw() { return 0; }
-		//static T signaling_NaN() throw() { return 0; }
-		//static T denorm_min() throw() { return 0; }
-		//static const bool is_iec559 = false;
-		//static const bool is_bounded = true;
-		//static const bool is_modulo = true;
-		//static const bool traps = false;
-		//static const bool tinyness_before = false;
-		//static const float_round_style round_style = round_toward_zero;
 	};
+	#pragma endregion
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+#include <directxmath.h>
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_maths_vector4)
+		{
+			#if PR_MATHS_USE_DIRECTMATH
+			{
+				v4 V0 = v4(1,2,3,4);
+				DirectX::XMVECTORF32 VX0;
+				VX0.v = V0.vec;
+				PR_CHECK(V0.x, VX0.f[0]);
+				PR_CHECK(V0.y, VX0.f[1]);
+				PR_CHECK(V0.z, VX0.f[2]);
+				PR_CHECK(V0.w, VX0.f[3]);
+			}
+			#endif
+			{
+				v4 a(1,2,-3,-4);
+				auto t2 = maths::tiny * 2.0f;
+
+				PR_CHECK(a.x, +1);
+				PR_CHECK(a.y, +2);
+				PR_CHECK(a.z, -3);
+				PR_CHECK(a.w, -4);
+				PR_CHECK( FEql (a, v4(1,2,-3,-4)), true);
+				PR_CHECK(!FEql (a, v4(1,2,-3,-4+t2)), true);
+				PR_CHECK( FEql4(a, v4(1,2,-3,-4)), true);
+				PR_CHECK(!FEql4(a, v4(1,2,-3,-4+t2)), true);
+				PR_CHECK( FEql3(a, v4(1,2,-3,-4+t2)), true);
+				PR_CHECK(!FEql3(a, v4(1,2,-3+t2,-4+t2)), true);
+				PR_CHECK( FEql2(a, v4(1,2,-3+t2,-4+t2)), true);
+				PR_CHECK(!FEql2(a, v4(1,2+t2,-3+t2,-4+t2)), true);
+			}
+			{
+				v4 a(3,-1,2,-4);
+				v4 b = {-2,-1,4,2};
+				PR_CHECK(Max(a,b), v4(3,-1,4,2));
+				PR_CHECK(Min(a,b), v4(-2,-1,2,-4));
+			}
+			{
+				v4 a(3,-1,2,-4);
+				PR_CHECK(Length2Sq(a), a.x*a.x + a.y*a.y);
+				PR_CHECK(Length2(a), sqrt(Length2Sq(a)));
+				PR_CHECK(Length3Sq(a), a.x*a.x + a.y*a.y + a.z*a.z);
+				PR_CHECK(Length3(a), sqrt(Length3Sq(a)));
+				PR_CHECK(Length4Sq(a), a.x*a.x + a.y*a.y + a.z*a.z + a.w*a.w);
+				PR_CHECK(Length4(a), sqrt(Length4Sq(a)));
+			}
+			{
+				v4 a(3,-1,2,-4);
+				v4 b = Normalise3(a);
+				v4 c = Normalise4(a);
+				PR_CHECK(Length3(b), 1.0f);
+				PR_CHECK(b.w, a.w / Length3(a));
+				PR_CHECK(sqrt(c.x*c.x + c.y*c.y + c.z*c.z + c.w*c.w), 1.0f);
+				PR_CHECK(IsNormal3(a), false);
+				PR_CHECK(IsNormal4(a), false);
+				PR_CHECK(IsNormal3(b), true);
+				PR_CHECK(IsNormal4(c), true);
+			}
+			{
+				PR_CHECK(IsZero3(pr::v4(0,0,0,1)), true);
+				PR_CHECK(IsZero4(pr::v4Zero), true);
+				PR_CHECK(FEql3(pr::v4(1e-20f,0,0,1)     , pr::v4Zero), true);
+				PR_CHECK(FEql4(pr::v4(1e-20f,0,0,1e-19f), pr::v4Zero), true);
+			}
+			{
+				v4 a = {-2,  4,  2,  6};
+				v4 b = { 3, -5,  2, -4};
+				m4x4 a2b = m4x4::CrossProductMatrix(a);
+
+				v4 c = Cross3(a,b);
+				v4 d = a2b * b;
+				PR_CHECK(FEql3(c,d), true);
+			}
+			{
+				v4 a = {-2,  4,  2,  6};
+				v4 b = { 3, -5,  2, -4};
+				PR_CHECK(Dot4(a,b), -46);
+				PR_CHECK(Dot3(a,b), -22);
+			}
+			{
+				char c0;
+				v4 const pt0[] =
+				{
+					v4(1,2,3,4),
+					v4(5,6,7,8),
+				};
+				char c1;
+				v4 const pt1[] =
+				{
+					v4(1,2,3,4),
+					v4(5,6,7,8),
+				};
+				(void)c0,c1;
+				PR_CHECK(maths::is_aligned(&pt0[0]), true);
+				PR_CHECK(maths::is_aligned(&pt1[0]), true);
+			}
+		}
+	}
+}
+#endif
+
+
+	//// DirectXMath conversion functions
+	//#if PR_MATHS_USE_DIRECTMATH
+	//inline DirectX::XMVECTOR const& dxv4(v4 const& v) { assert(maths::is_aligned(&v)); return v.vec; }
+	//inline DirectX::XMVECTOR&       dxv4(v4&       v) { assert(maths::is_aligned(&v)); return v.vec; }
+	//#endif
+

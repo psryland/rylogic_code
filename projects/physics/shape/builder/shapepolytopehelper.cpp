@@ -8,7 +8,7 @@
 #include "pr/physics/shape/shapepolytope.h"
 #include "pr/common/cast.h"
 #include "pr/container/vector.h"
-#include "pr/maths/convexhull.h"
+#include "pr/maths/convex_hull.h"
 
 //#define PH_SHAPE_POLYTOPE_LDR_OUTPUT 1
 #ifdef PH_SHAPE_POLYTOPE_LDR_OUTPUT
@@ -55,7 +55,7 @@ void GenerateNeighbours(v4 const* verts, std::size_t num_verts, ShapePolyFace co
 		// Calculate the face normal
 		v4 edge0 = verts[f->m_index[1]] - verts[f->m_index[0]];
 		v4 edge1 = verts[f->m_index[2]] - verts[f->m_index[0]];
-		v4 norm  = Normalise3IfNonZero(Cross3(edge0, edge1));
+		v4 norm  = Normalise3(Cross3(edge0, edge1), v4Zero);
 
 		// For each vertex in each face, add the other face vertices as neighbours
 		for( std::size_t i = 0, j = 1, k = 2; i != 3; ++i, j=(j+1)%3, k=(k+1)%3 )

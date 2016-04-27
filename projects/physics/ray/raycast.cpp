@@ -98,7 +98,7 @@ bool pr::ph::RayCast(Ray const& ray, ShapeBox const& shape, RayCastResult& resul
 			if( ta > tb ) { float swp = ta; ta = tb; tb = swp; sign = 1.0f; }
 
 			// Compute the intersection 
-			if( ta > result.m_t0 ) { result.m_t0 = ta; result.m_normal.set((i == 0) * sign, (i == 1) * sign, (i == 2) * sign, 0.0f); }
+			if( ta > result.m_t0 ) { result.m_t0 = ta; result.m_normal = v4((i == 0) * sign, (i == 1) * sign, (i == 2) * sign, 0.0f); }
 			if( tb < result.m_t1 ) { result.m_t1 = tb; }
 			if( result.m_t0 > result.m_t1 ) return false;
 		}
@@ -306,7 +306,7 @@ bool pr::ph::RayCast(Ray const& ray, ShapePolytope const& shape, RayCastResult& 
 	}
 	else
 	{
-		 dir = Perpendicular(ray.m_direction);
+		 dir = Perpendicular3(ray.m_direction);
 		 start_vert = SupportVertex(shape, dir, id, id);
 			PR_EXPAND(PR_PH_DBG_RAY_CAST, StartFile("C:/Deleteme/raycast_vert.pr_script");)
 			PR_EXPAND(PR_PH_DBG_RAY_CAST, ldr::Box("vert", "FFFFFF00", start_vert, 0.02f);)

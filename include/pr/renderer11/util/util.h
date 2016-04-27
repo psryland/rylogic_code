@@ -95,19 +95,19 @@ namespace pr
 		inline size_t BytesPerPixel(DXGI_FORMAT fmt) { return BitsPerPixel(fmt) >> 3; }
 
 		// Returns the expected row and slice pitch for a given image width*height and format
-		pr::ISize Pitch(pr::ISize size, DXGI_FORMAT fmt);
-		pr::ISize Pitch(TextureDesc const& tdesc);
+		iv2 Pitch(iv2 size, DXGI_FORMAT fmt);
+		iv2 Pitch(TextureDesc const& tdesc);
 
 		// Returns the number of expected mip levels for a given width x height texture
-		size_t MipCount(pr::ISize size);
+		size_t MipCount(iv2 size);
 
 		// Returns the dimensions of a mip level 'levels' below the given texture size
-		pr::ISize MipDimensions(pr::ISize size, size_t levels);
+		iv2 MipDimensions(iv2 size, size_t levels);
 
 		// Returns the number of pixels needed contain the data for a mip chain with 'levels' levels
 		// If 'levels' is 0, all mips down to 1x1 are assumed
 		// Note, size.x should be the pitch rather than width of the texture
-		size_t MipChainSize(pr::ISize size, size_t levels);
+		size_t MipChainSize(iv2 size, size_t levels);
 
 		// Return information about a surface determined from its dimensions and format. Any of the pointer parameters can be null
 		void GetSurfaceInfo(UINT width, UINT height, DXGI_FORMAT fmt, UINT* num_bytes, UINT* row_bytes, UINT* num_rows);
@@ -127,11 +127,11 @@ namespace pr
 			if (res->GetPrivateData(WKPDID_D3DDebugObjectName, &size, existing) != DXGI_ERROR_NOT_FOUND)
 			{
 				existing[size] = 0;
-				PR_ASSERT(PR_DBG_RDR, false, pr::FmtS("Resource is already named: %s", existing));
+				PR_ASSERT(PR_DBG_RDR, false, FmtS("Resource is already named: %s", existing));
 			}
 
 			string32 res_name = name;
-			pr::Throw(res->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(res_name.size()), res_name.c_str()));
+			Throw(res->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(res_name.size()), res_name.c_str()));
 			#endif
 		}
 

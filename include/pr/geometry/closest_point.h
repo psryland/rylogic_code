@@ -14,7 +14,7 @@ namespace pr
 	// Returns the point closest to 'point' on 'plane'
 	inline v4 ClosestPoint_PointToPlane(v4 const& point, Plane const& plane)
 	{
-		return point - Distance_PointToPlane(point, plane) * plane::GetDirection(plane);
+		return point - Distance_PointToPlane(point, plane) * plane::Direction(plane);
 	}
 	inline v4 ClosestPoint_PointToPlane(v4 const& point, v4 const& a, v4 const& b, v4 const& c)
 	{
@@ -79,7 +79,7 @@ namespace pr
 
 		// Special case minor axis lengths of zero
 		if (minor < maths::tiny)
-			return v2::make(Clamp(x, -major, major), 0.0f);
+			return v2(Clamp(x, -major, major), 0.0f);
 
 		float ratio = Sign(y) * minor / (major + maths::tiny); // Add an epsilon to prevent div by zero
 		float a = Sqr(major), b = Sqr(minor);
@@ -114,20 +114,20 @@ namespace pr
 			v4 ap = p - a;
 			float d1 = Dot3(ab, ap);
 			float d2 = Dot3(ac, ap);
-			if (d1 <= 0.0f && d2 <= 0.0f) { barycentric.set(1.0f, 0.0f, 0.0f, 0.0f); return a; } // Barycentric coordinates (1, 0, 0)
+			if (d1 <= 0.0f && d2 <= 0.0f) { barycentric = v4(1.0f, 0.0f, 0.0f, 0.0f); return a; } // Barycentric coordinates (1, 0, 0)
 
 			// Check if P in vertex region outside B
 			v4 bp = p - b;
 			float d3 = Dot3(ab, bp);
 			float d4 = Dot3(ac, bp);
-			if (d3 >= 0.0f && d4 <= d3) { barycentric.set(0.0f, 1.0f, 0.0f, 0.0f); return b; } // Barycentric coordinates (0, 1, 0)
+			if (d3 >= 0.0f && d4 <= d3) { barycentric = v4(0.0f, 1.0f, 0.0f, 0.0f); return b; } // Barycentric coordinates (0, 1, 0)
 
 			// Check if P in edge region of AB, if so return projection of P onto AB
 			float vc = d1*d4 - d3*d2;
 			if (vc <= 0.0f && d1 >= 0.0f && d3 <= 0.0f)
 			{
 				float v = d1 / (d1 - d3);
-				barycentric.set(1.0f - v, v, 0.0f, 0.0f);
+				barycentric = v4(1.0f - v, v, 0.0f, 0.0f);
 				return a + v * ab; // Barycentric coordinates (1-v, v, 0)
 			}
 
@@ -135,14 +135,14 @@ namespace pr
 			v4 cp = p - c;
 			float d5 = Dot3(ab, cp);
 			float d6 = Dot3(ac, cp);
-			if (d6 >= 0.0f && d5 <= d6) { barycentric.set(0.0f, 0.0f, 1.0f, 0.0f); return c; } // Barycentric coordinates (0, 0, 1)
+			if (d6 >= 0.0f && d5 <= d6) { barycentric = v4(0.0f, 0.0f, 1.0f, 0.0f); return c; } // Barycentric coordinates (0, 0, 1)
 
 			// Check if P in edge region of AC, if so return projection of P onto AC
 			float vb = d5*d2 - d1*d6;
 			if (vb <= 0.0f && d2 >= 0.0f && d6 <= 0.0f)
 			{
 				float w = d2 / (d2 - d6);
-				barycentric.set(1.0f - w, 0.0f, w, 0.0f);
+				barycentric = v4(1.0f - w, 0.0f, w, 0.0f);
 				return a + w * ac; // Barycentric coordinates (1-w, 0, w)
 			}
 
@@ -151,7 +151,7 @@ namespace pr
 			if (va <= 0.0f && d4 - d3 >= 0.0f && d5 - d6 >= 0.0f)
 			{
 				float w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
-				barycentric.set(0.0f, 1.0f - w, w, 0.0f);
+				barycentric = v4(0.0f, 1.0f - w, w, 0.0f);
 				return b + w * (c - b); // Barycentric coordinates (0, 1-w, w)
 			}
 
@@ -159,7 +159,7 @@ namespace pr
 			float denom = 1.0f / (va + vb + vc);
 			float v = vb * denom;
 			float w = vc * denom;
-			barycentric.set(1.0f - v - w, v, w, 0.0f);
+			barycentric = v4(1.0f - v - w, v, w, 0.0f);
 			return a + ab * v + ac * w; // = u*a + v*b + w*c, u = va * denom = 1.0f - v - w
 		}
 	}
@@ -186,32 +186,32 @@ namespace pr
 				v4 bary;
 				v4 q = ClosestPoint_PointToTriangle<T>(p, a, b, c, bary);
 				float dist_sq = Length3Sq(q - p);
-				if (dist_sq < best_dist_sq) { best_dist_sq  = dist_sq; closest_point = q; barycentric.set(bary.x, bary.y, bary.z, 0.0f); point_is_inside = false; }
+				if (dist_sq < best_dist_sq) { best_dist_sq  = dist_sq; closest_point = q; barycentric = v4(bary.x, bary.y, bary.z, 0.0f); point_is_inside = false; }
 			}
 			if (PointInFrontOfPlane(p, a, c, d)) // Test face acd
 			{
 				v4 bary;
 				v4 q = ClosestPoint_PointToTriangle<T>(p, a, c, d, bary);
 				float dist_sq = Length3Sq(q - p);
-				if (dist_sq < best_dist_sq) { best_dist_sq = dist_sq; closest_point = q; barycentric.set(bary.x, 0.0f, bary.y, bary.z); point_is_inside = false; }
+				if (dist_sq < best_dist_sq) { best_dist_sq = dist_sq; closest_point = q; barycentric = v4(bary.x, 0.0f, bary.y, bary.z); point_is_inside = false; }
 			}
 			if (PointInFrontOfPlane(p, a, d, b)) // Test face adb
 			{
 				v4 bary;
 				v4 q = ClosestPoint_PointToTriangle<T>(p, a, d, b, bary);
 				float dist_sq = Length3Sq(q - p);
-				if (dist_sq < best_dist_sq) { best_dist_sq = dist_sq; closest_point = q; barycentric.set(bary.x, bary.z, 0.0f, bary.y); point_is_inside = false; }
+				if (dist_sq < best_dist_sq) { best_dist_sq = dist_sq; closest_point = q; barycentric = v4(bary.x, bary.z, 0.0f, bary.y); point_is_inside = false; }
 			}
 			if (PointInFrontOfPlane(p, d, c, b)) // Test face dcb
 			{
 				v4 bary;
 				v4 q = ClosestPoint_PointToTriangle<T>(p, d, c, b, bary);
 				float dist_sq = Length3Sq(q - p);
-				if (dist_sq < best_dist_sq) { best_dist_sq = dist_sq; closest_point = q; barycentric.set(0.0f, bary.z, bary.y, bary.x); point_is_inside = false; }
+				if (dist_sq < best_dist_sq) { best_dist_sq = dist_sq; closest_point = q; barycentric = v4(0.0f, bary.z, bary.y, bary.x); point_is_inside = false; }
 			}
 			if (point_is_inside)
 			{
-				barycentric.set(0.25f, 0.25f, 0.25f, 0.25f); // This is wrong but it shouldn't be needed
+				barycentric = v4(0.25f, 0.25f, 0.25f, 0.25f); // This is wrong but it shouldn't be needed
 			}
 			return closest_point;
 		}
@@ -245,9 +245,9 @@ namespace pr
 			#pragma warning(default: 4127)
 			{
 				// Check if either or both segments are degenerate
-				if (FEqlZero(line0_length_sq) && FEqlZero(line1_length_sq)) { t0 = 0.0f; t1 = 0.0f; return; }
-				if (FEqlZero(line0_length_sq))                              { t0 = 0.0f; t1 = Clamp<float>(f / line1_length_sq, 0.0f, 1.0f); return; }
-				if (FEqlZero(line1_length_sq))                              { t1 = 0.0f; t0 = Clamp<float>(-c / line0_length_sq, 0.0f, 1.0f); return; }
+				if (FEql(line0_length_sq,0) && FEql(line1_length_sq,0)) { t0 = 0.0f; t1 = 0.0f; return; }
+				if (FEql(line0_length_sq,0))                            { t0 = 0.0f; t1 = Clamp<float>(f / line1_length_sq, 0.0f, 1.0f); return; }
+				if (FEql(line1_length_sq,0))                            { t1 = 0.0f; t0 = Clamp<float>(-c / line0_length_sq, 0.0f, 1.0f); return; }
 			}
 
 			// The general nondegenerate case starts here
@@ -317,7 +317,7 @@ namespace pr
 			float s0_on_line1		=  Dot3(separation, line1);
 
 			// Check if the segment is degenerate
-			if (FEqlZero(line0_length_sq))
+			if (FEql(line0_length_sq,0))
 			{
 				t0 = 0.0f;
 				t1 = s0_on_line1 / line1_length_sq; // t0 = 0 => t1 = (b*t0 + f) / line1_length_sq = f / line1_length_sq

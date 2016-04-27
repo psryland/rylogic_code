@@ -318,7 +318,7 @@ namespace pr
 			}
 			static ModelPtr Box(Renderer& rdr, float rad, m4x4 const& o2w = m4x4Identity, Colour32 colour = Colour32White, NuggetProps const* mat = nullptr)
 			{
-				return Box(rdr, v4::make(rad), o2w, colour, mat);
+				return Box(rdr, v4(rad), o2w, colour, mat);
 			}
 			static ModelPtr BoxList(Renderer& rdr, std::size_t num_boxes, v4 const* positions, v4 const& rad, std::size_t num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)
 			{
@@ -346,7 +346,7 @@ namespace pr
 			}
 			static ModelPtr Geosphere(Renderer& rdr, float radius, std::size_t divisions = 3, Colour32 colour = Colour32White, NuggetProps const* mat = nullptr)
 			{
-				return Geosphere(rdr, v4::make(radius, 0.0f), divisions, colour, mat);
+				return Geosphere(rdr, v4(radius, radius, radius, 0.0f), divisions, colour, mat);
 			}
 			static ModelPtr Sphere(Renderer& rdr, v4 const& radius, std::size_t wedges = 20, std::size_t layers = 5, Colour32 colour = Colour32White, NuggetProps const* mat = nullptr)
 			{

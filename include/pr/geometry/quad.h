@@ -71,7 +71,7 @@ namespace pr
 		// 'num_quads' is the number of sets of 4 points pointed to by 'verts'
 		// 'verts' is the input array of corner points for the quads
 		// 'num_colours' should be either 0, 1, num_quads, or num_quads*4 representing; no colour, 1 colour for all, 1 colour per quad, or 1 colour per quad vertex
-		// 't2q' is a tranform to apply to the standard texture coordinates 0,0 -> 1,1
+		// 't2q' is a transform to apply to the standard texture coordinates 0,0 -> 1,1
 		// 'out_verts' is an output iterator to receive the [vert,norm,colour,tex] data
 		// 'out_indices' is an output iterator to receive the index data
 		template <typename TVertCIter, typename TVertIter, typename TIdxIter>
@@ -83,7 +83,7 @@ namespace pr
 			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | EGeom::Norm | EGeom::Tex0;
 
 			// Helper function for generating normals
-			auto norm = [](v4 const& a, v4 const& b, v4 const& c) { return Normalise3IfNonZero(Cross3(a - b, c - b)); };
+			auto norm = [](v4 const& a, v4 const& b, v4 const& c) { return Normalise3(Cross3(a - b, c - b), v4Zero); };
 
 			// Colour iterator wrapper
 			auto col = pr::CreateRepeater(colours, num_colours, num_quads * 4, Colour32White);
@@ -93,10 +93,10 @@ namespace pr
 			auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
 
 			// Texture coords
-			v2 t00 = (t2q * v4::make(0.000f, 0.000f, 0.0f, 1.0f)).xy;
-			v2 t01 = (t2q * v4::make(0.000f, 0.999f, 0.0f, 1.0f)).xy;
-			v2 t10 = (t2q * v4::make(0.999f, 0.000f, 0.0f, 1.0f)).xy;
-			v2 t11 = (t2q * v4::make(0.999f, 0.999f, 0.0f, 1.0f)).xy;
+			v2 t00 = (t2q * v4(0.000f, 0.000f, 0.0f, 1.0f)).xy;
+			v2 t01 = (t2q * v4(0.000f, 0.999f, 0.0f, 1.0f)).xy;
+			v2 t10 = (t2q * v4(0.999f, 0.000f, 0.0f, 1.0f)).xy;
+			v2 t11 = (t2q * v4(0.999f, 0.999f, 0.0f, 1.0f)).xy;
 
 			for (std::size_t i = 0; i != num_quads; ++i)
 			{
@@ -154,7 +154,7 @@ namespace pr
 		// 'quad_z' is the length and direction of the quad_z axis (see above)
 		// 'divisions' is the number of times to divide the width/height of the quad. NOTE: num_verts_across = divisions.x + 2
 		// 'colour' is a colour for the whole quad
-		// 't2q' is a tranform to apply to the standard texture coordinates 0,0 -> 1,1
+		// 't2q' is a transform to apply to the standard texture coordinates 0,0 -> 1,1
 		template <typename TVertIter, typename TIdxIter>
 		Props Quad(v4 const& origin, v4 const& quad_x, v4 const& quad_z, iv2 const& divisions, Colour32 colour, m4x4 const& t2q, TVertIter v_out, TIdxIter i_out)
 		{
@@ -239,7 +239,7 @@ namespace pr
 		// Generate a strip of quads centred on a line of verts.
 		// 'num_quads' is the number quads in the strip (num_quads == num_verts - 1)
 		// 'verts' is the input array of line verts
-		// 'width' is the tranverse width of the quad strip (not half width)
+		// 'width' is the transverse width of the quad strip (not half width)
 		// 'num_normals' should be either 0, 1, num_quads+1 representing; no norm, 1 norm for all, 1 norm per vertex pair
 		// 'normals' is the normal of the first vertex. After that, normals on same side are used
 		// 'num_colours' should be either 0, 1, num_quads+1 representing; no colour, 1 colour for all, 1 colour per vertex pair
@@ -268,8 +268,8 @@ namespace pr
 			auto bb = [&](v4 const& v) { lwr = Min(lwr,v); upr = Max(upr,v); return v; };
 
 			// Texture coords (note: 1D texture)
-			v2 const t00 = v2::make(0.000f, 0.000f);
-			v2 const t10 = v2::make(0.999f, 0.000f);
+			v2 const t00 = v2(0.000f, 0.000f);
+			v2 const t10 = v2(0.999f, 0.000f);
 
 			VIdx index = 0;
 			auto hwidth = width * 0.5f;
@@ -278,7 +278,7 @@ namespace pr
 			Colour32 c0, c1 = *col++  , c2 = *col++  ;
 
 			// Create the first pair of verts
-			v4 bi = pr::Normalise3(pr::Cross3(n1, v2 - v1), pr::Perpendicular(n1));
+			v4 bi = Normalise3(Cross3(n1, v2 - v1), pr::Perpendicular3(n1));
 			SetPCNT(*v_out++, bb(v1 + bi*hwidth), cc(c1), n1, t00); *i_out++ = index++;
 			SetPCNT(*v_out++, bb(v1 - bi*hwidth), cc(c1), n1, t10); *i_out++ = index++;
 
@@ -290,9 +290,9 @@ namespace pr
 
 				auto d0 = v1 - v0;
 				auto d1 = v2 - v1;
-				auto b0 = pr::Normalise3(pr::Cross3(n1, d0), pr::Perpendicular(n1));
-				auto b1 = pr::Normalise3(pr::Cross3(n1, d1), pr::Perpendicular(n1));
-				bi = pr::Normalise3(b0 + b1, bi); // The bisector at v1
+				auto b0 = Normalise3(Cross3(n1, d0), Perpendicular3(n1));
+				auto b1 = Normalise3(Cross3(n1, d1), Perpendicular3(n1));
+				bi = Normalise3(b0 + b1, bi); // The bisector at v1
 				// Note: bi always points to the left of d0 and d1
 			
 				// Find the distance, t, along d0 to the inside corner vert
@@ -347,11 +347,11 @@ namespace pr
 			}
 
 			// Finish the previous quad
-			bi = pr::Normalise3(pr::Cross3(n2, v2 - v1), pr::Perpendicular(n2));
+			bi = Normalise3(Cross3(n2, v2 - v1), Perpendicular3(n2));
 			SetPCNT(*v_out++, bb(v2 + bi*hwidth), cc(c2), n2, t00); *i_out++ = index++;
 			SetPCNT(*v_out++, bb(v2 - bi*hwidth), cc(c2), n2, t10); *i_out++ = index++;
 
-			props.m_bbox = BBox::makeLU(lwr, upr);
+			props.m_bbox = BBox::Make(lwr, upr);
 			return props;
 		}
 	}

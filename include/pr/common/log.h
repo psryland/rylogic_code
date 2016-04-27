@@ -156,7 +156,7 @@ namespace pr
 				char const* delim = "";
 				m_outf->seekp(std::ios::end, 0); // In case the file contents have been deleted externally
 				auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(ev.m_timestamp);
-				if (!ev.m_file.empty()) { *m_outf << ev.m_file;                delim = " "; }
+				if (!ev.m_file.empty()) { *m_outf << ev.m_file.c_str(); delim = " "; }
 				if (ev.m_line != -1)    { *m_outf << "(" << ev.m_line << "):"; delim = " "; }
 				auto s = FmtS("%s%8s|%s|%s|%s\n", delim, ev.m_context.c_str(), To<char const*>(ev.m_level), To<std::string>(ev.m_timestamp, "%h:%mm:%ss:%fff").c_str(), ev.m_msg.c_str());
 				*m_outf << s;

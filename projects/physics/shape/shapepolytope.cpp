@@ -137,11 +137,10 @@ m3x4 pr::ph::CalcInertiaTensor(ShapePolytope const& shape)
 	volume					/= 6.0f;
 	diagonal_integrals		/= volume * 60.0f;  // Divide by total volume
 	off_diagonal_integrals	/= volume * 120.0f;
-	return m3x4::make(
-		v4::make(diagonal_integrals.y + diagonal_integrals.z  , -off_diagonal_integrals.z                   , -off_diagonal_integrals.y                 ,0),
-		v4::make(-off_diagonal_integrals.z                    , diagonal_integrals.x + diagonal_integrals.z , -off_diagonal_integrals.x                 ,0),
-		v4::make(-off_diagonal_integrals.y                    , -off_diagonal_integrals.x                   , diagonal_integrals.x+diagonal_integrals.y ,0)
-		);
+	return m3x4(
+		v4(diagonal_integrals.y + diagonal_integrals.z  , -off_diagonal_integrals.z                   , -off_diagonal_integrals.y                 ,0),
+		v4(-off_diagonal_integrals.z                    , diagonal_integrals.x + diagonal_integrals.z , -off_diagonal_integrals.x                 ,0),
+		v4(-off_diagonal_integrals.y                    , -off_diagonal_integrals.x                   , diagonal_integrals.x+diagonal_integrals.y ,0));
 }
 
 // Return mass properties for the polytope

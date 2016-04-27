@@ -274,12 +274,12 @@ namespace pr
 			// To compensate for this, the geometry shader reverses the winding order of the
 			// faces. The reason for doing this is to simplify texture lookup, pixels on the
 			// left of the screen will be on the left of the texture, rather than on the right.
-			pr::v4 fdim = shadow_frustum.Dim();
-			pr::v4 tl, TL, tr, TR, bl, BL, br, BR;
-			TL = c2w * pr::v4::make(-fdim.x,  fdim.y, sign_z[0]*fdim.z, 1.0f);
-			TR = c2w * pr::v4::make( fdim.x,  fdim.y, sign_z[1]*fdim.z, 1.0f);
-			BL = c2w * pr::v4::make(-fdim.x, -fdim.y, sign_z[2]*fdim.z, 1.0f);
-			BR = c2w * pr::v4::make( fdim.x, -fdim.y, sign_z[3]*fdim.z, 1.0f);
+			v4 fdim = shadow_frustum.Dim();
+			v4 tl, TL, tr, TR, bl, BL, br, BR;
+			TL = c2w * v4(-fdim.x,  fdim.y, sign_z[0]*fdim.z, 1.0f);
+			TR = c2w * v4( fdim.x,  fdim.y, sign_z[1]*fdim.z, 1.0f);
+			BL = c2w * v4(-fdim.x, -fdim.y, sign_z[2]*fdim.z, 1.0f);
+			BR = c2w * v4( fdim.x, -fdim.y, sign_z[3]*fdim.z, 1.0f);
 			PR_EXPAND(DBG_PROJ, Frust(TL,TR,BL,BR,light.m_direction));
 
 			w2s = m4x4Zero;
@@ -301,12 +301,12 @@ namespace pr
 					// the near plane at -max_range is as good as anywhere.
 
 					// Create a light to world transform.
-					pr::v4 centre = (TL + TR + BL + BR) * 0.25f;
-					pr::m4x4 lt2w = pr::LookAt(centre, centre + light.m_direction, pr::Parallel(light.m_direction,c2w.y) ? c2w.z : c2w.y);
-					w2s = pr::InvertFast(lt2w);
+					auto centre = (TL + TR + BL + BR) * 0.25f;
+					auto lt2w = m4x4::LookAt(centre, centre + light.m_direction, Parallel3(light.m_direction,c2w.y) ? c2w.z : c2w.y);
+					w2s = InvertFast(lt2w);
 
 					// Create an orthographic projection
-					pr::m4x4 lt2s = pr::ProjectionOrthographic(1.0f, 1.0f, -max_range, 0.0f, true);
+					auto lt2s = m4x4::ProjectionOrthographic(1.0f, 1.0f, -max_range, 0.0f, true);
 					w2s = lt2s * w2s;
 
 					// Project the four corners of the plane
@@ -317,10 +317,10 @@ namespace pr
 					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br,w2s*light.m_direction));
 
 					// Rotate so that TL is above BL and TR is above BR (i.e. the left and right edges are vertical)
-					pr::v2 ledge = Normalise2((tl - bl).xy);
-					pr::m4x4 R = pr::m4x4Identity;
-					R.x.set( ledge.y,  ledge.x, 0, 0);
-					R.y.set(-ledge.x,  ledge.y, 0, 0);
+					auto ledge = Normalise2((tl - bl).xy);
+					auto R = m4x4Identity;
+					R.x = v4( ledge.y,  ledge.x, 0, 0);
+					R.y = v4(-ledge.x,  ledge.y, 0, 0);
 					w2s = R * w2s;
 
 					// Project the four corners of the plane
@@ -331,7 +331,7 @@ namespace pr
 					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br,w2s*light.m_direction));
 
 					// Scale the face of the frustum into the viewport
-					pr::m4x4 S = pr::Scale4x4(2.0f/(tr.x - tl.x), 2.0f/(tr.y - br.y), 1.0f, pr::v4Origin);
+					auto S = m4x4::Scale(2.0f/(tr.x - tl.x), 2.0f/(tr.y - br.y), 1.0f, v4Origin);
 					w2s = S * w2s;
 
 					// Project the four corners of the plane
@@ -342,11 +342,11 @@ namespace pr
 					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br,w2s*light.m_direction));
 
 					// Shear to make the projected plane square
-					pr::m4x4 H1 = pr::Shear4x4((tl.y - tr.y)/(tr.x - tl.x), 0, 0, 0, 0, 0, pr::v4Origin);
+					auto H1 = m4x4::Shear((tl.y - tr.y)/(tr.x - tl.x), 0, 0, 0, 0, 0, v4Origin);
 					w2s = H1 * w2s;
 
 					// Shear to make the projection plane perpendicular to the light direction
-					pr::m4x4 H2 = pr::Shear4x4(0, 0.5f*(tl.z + bl.z) - 1.0f, 0, 0.5f*(bl.z + br.z) - 1.0f, 0, 0, pr::v4Origin);
+					auto H2 = m4x4::Shear(0, 0.5f*(tl.z + bl.z) - 1.0f, 0, 0.5f*(bl.z + br.z) - 1.0f, 0, 0, v4Origin);
 					w2s = H2 * w2s;
 
 					#if DBG_PROJ
@@ -369,8 +369,8 @@ namespace pr
 
 					// Create a light to world transform
 					// Position the light camera at the light position looking in the -frustum plane normal direction
-					pr::m4x4 lt2w = pr::LookAt(light.m_position, light.m_position - ws_norm, pr::Parallel(ws_norm,c2w.y) ? c2w.z : c2w.y);
-					w2s = pr::Invert(lt2w);
+					auto lt2w = m4x4::LookAt(light.m_position, light.m_position - ws_norm, Parallel3(ws_norm,c2w.y) ? c2w.z : c2w.y);
+					w2s = Invert(lt2w);
 					tl = w2s * TL;
 					tr = w2s * TR;
 					bl = w2s * BL;
@@ -379,7 +379,7 @@ namespace pr
 
 					// Create a perspective projection
 					float zr = 0.001f, zf = dist_to_light, zn = zf*zr;
-					pr::m4x4 lt2s = pr::ProjectionPerspective(tl.x*zr, tr.x*zr, tl.y*zr, bl.y*zr, zn, zf, true);
+					auto lt2s = m4x4::ProjectionPerspective(tl.x*zr, tr.x*zr, tl.y*zr, bl.y*zr, zn, zf, true);
 					w2s = lt2s * w2s;
 
 					#if DBG_PROJ

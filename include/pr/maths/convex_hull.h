@@ -143,9 +143,9 @@ namespace pr
 
 				// Move these vert indices to the convex hull end of the range.
 				// Ensure vmin is less than vmax, this prevents problems with swapping.
-				if( vmax < vmin ) { Swap(*vmin,*vmax); Swap(vmin,vmax); }
-				Swap(*vmin, *data.m_vhull_last++);
-				Swap(*vmax, *data.m_vhull_last++);
+				if( vmax < vmin ) { std::swap(*vmin,*vmax); std::swap(vmin,vmax); }
+				std::swap(*vmin, *data.m_vhull_last++);
+				std::swap(*vmax, *data.m_vhull_last++);
 
 				v4 const& zmin = data.m_vcont[*data.m_vbegin];
 				float zaxis_lensq = Length3Sq(zaxis);
@@ -169,7 +169,7 @@ namespace pr
 				v4 axis = Cross3(zaxis, data.m_vcont[*vmax] - zmin);
 
 				// Move 'vmax' to the convex hull end of the range.
-				Swap(*vmax, *data.m_vhull_last++);
+				std::swap(*vmax, *data.m_vhull_last++);
 
 				bool flip = false;
 
@@ -188,7 +188,7 @@ namespace pr
 				PR_EXPAND(PR_DBG_CONVEX_HULL, ldr::Line("xaxis", "FFFF0000", zmin, data.m_vcont[*vmax], ldr_extm));
 
 				// Move 'vmax' to the convex hull end of the range.
-				Swap(*vmax, *data.m_vhull_last++);
+				std::swap(*vmax, *data.m_vhull_last++);
 
 				// Generate the starting shape from the four hull verts we've found.
 				if( flip )
@@ -238,7 +238,7 @@ namespace pr
 					// If this vert is within all half spaces then it's not a hull vert
 					if( dist == 0.0f )
 					{
-						Swap(*v, *(--data.m_vnon_hull));
+						std::swap(*v, *(--data.m_vnon_hull));
 						continue;
 					}
 
@@ -309,7 +309,7 @@ namespace pr
 				typedef typename std::iterator_traits<typename HData::VertIter>::value_type VIndex;
 
 				// Move 'v' into the convex hull
-				Swap(*v, *data.m_vhull_last);
+				std::swap(*v, *data.m_vhull_last);
 				typename HData::VIndex v_idx = static_cast<typename HData::VIndex>(data.m_vhull_last - data.m_vbegin);
 				v4 const& vert = data.m_vcont[*data.m_vhull_last];
 				++data.m_vhull_last;
@@ -339,8 +339,8 @@ namespace pr
 						perimeter.AddEdge(c, a);
 
 						// Erase 'face'
-						Swap(*face , *(--data.m_flast));
-						Swap(*plane, *(--data.m_hs_last));
+						std::swap(*face , *(--data.m_flast));
+						std::swap(*plane, *(--data.m_hs_last));
 						PR_EXPAND(PR_DBG_CONVEX_HULL, DumpFaces(data));
 					}
 				}
@@ -367,8 +367,8 @@ namespace pr
 						perimeter.AddEdge(c, a);
 
 						// Erase 'face'
-						Swap(*face , *(--data.m_flast));
-						Swap(*plane, *(--data.m_hs_last));
+						std::swap(*face , *(--data.m_flast));
+						std::swap(*plane, *(--data.m_hs_last));
 						PR_EXPAND(PR_DBG_CONVEX_HULL, DumpFaces(data));
 					}
 				}

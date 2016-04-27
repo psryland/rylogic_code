@@ -631,8 +631,7 @@ namespace pr
 				PR_CHECK(count_days, 730485365);
 			}
 			{// Example of using the datetime functions to avoid C time interfaces
-				typedef duration<int, ratio_multiply<hours::period, ratio<24>>> days;
-				int year; unsigned month; unsigned day;
+				long long year; unsigned month; unsigned day;
 				hours h; minutes m; seconds s; microseconds us;
 				std::stringstream ss; std::string str;
 				auto utc_offset = hours(+12);  // my current UTC offset

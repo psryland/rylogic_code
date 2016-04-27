@@ -90,12 +90,12 @@ namespace view3d
 			// Create the focus point/origin models
 			pr::v4 verts[] =
 			{
-				pr::v4::make( 0.0f,  0.0f,  0.0f, 1.0f),
-				pr::v4::make( 1.0f,  0.0f,  0.0f, 1.0f),
-				pr::v4::make( 0.0f,  0.0f,  0.0f, 1.0f),
-				pr::v4::make( 0.0f,  1.0f,  0.0f, 1.0f),
-				pr::v4::make( 0.0f,  0.0f,  0.0f, 1.0f),
-				pr::v4::make( 0.0f,  0.0f,  1.0f, 1.0f),
+				pr::v4( 0.0f,  0.0f,  0.0f, 1.0f),
+				pr::v4( 1.0f,  0.0f,  0.0f, 1.0f),
+				pr::v4( 0.0f,  0.0f,  0.0f, 1.0f),
+				pr::v4( 0.0f,  1.0f,  0.0f, 1.0f),
+				pr::v4( 0.0f,  0.0f,  0.0f, 1.0f),
+				pr::v4( 0.0f,  0.0f,  1.0f, 1.0f),
 			};
 			pr::Colour32 coloursFF[] = { 0xFFFF0000, 0xFFFF0000, 0xFF00FF00, 0xFF00FF00, 0xFF0000FF, 0xFF0000FF };
 			pr::Colour32 colours80[] = { 0xFF800000, 0xFF800000, 0xFF008000, 0xFF008000, 0xFF000080, 0xFF000080 };
@@ -109,8 +109,9 @@ namespace view3d
 		Window& operator=(Window const&) = delete;
 		~Window()
 		{
-			if (m_error_cb.empty()) throw std::exception("Error callback stack is in consistent. Number of pushes != number of pops");
-			m_error_cb.pop_back();
+			assert("Error callback stack is in consistent. Number of pushes != number of pops" && m_error_cb.size() == 1U);
+			if (!m_error_cb.empty())
+				m_error_cb.pop_back();
 		}
 
 		// Settings changed event

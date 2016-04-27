@@ -18,7 +18,7 @@
 #include "pr/common/imposter.h"
 #include "pr/macros/link.h"
 #include "pr/maths/maths.h"
-#include "pr/maths/largeint.h"
+#include "pr/maths/large_int.h"
 #include "pr/physics/physics.h"
 #include "pr/lua/lua.h"
 #include "lstate.h"
@@ -312,7 +312,7 @@ ADDIN_API HRESULT WINAPI AddIn_stdofstream(DWORD, DbgHelper* pHelper, int, BOOL,
 ADDIN_API HRESULT WINAPI AddIn_Quaternion(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 {
 	ReentryGuard guard;
-	pr::Quat q;
+	pr::quat q;
 	if (FAILED(pHelper->Read(q))) return E_FAIL;
 	pr::v4 axis; float angle; AxisAngle(q, axis, angle);
 	_snprintf(pResult, max, "%f %f %f %f //Ang: %fdeg Len: %f", q[0], q[1], q[2], q[3], pr::RadiansToDegrees(angle), pr::Length4(q));
@@ -353,10 +353,10 @@ ADDIN_API HRESULT WINAPI AddIn_LargeInt(DWORD, DbgHelper* pHelper, int, BOOL, ch
 ADDIN_API HRESULT WINAPI AddIn_QuaternionAsMatrix(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 {
 	ReentryGuard guard;
-	pr::Quat q;
+	pr::quat q;
 	if (FAILED(pHelper->Read(q))) return E_FAIL;
 
-	pr::m3x4 mat = pr::m3x4::make(q);
+	pr::m3x4 mat(q);
 	_snprintf(pResult, max,
 		"\r\n%f\t%f\t%f"
 		"\r\n%f\t%f\t%f"
@@ -381,32 +381,32 @@ ADDIN_API HRESULT WINAPI AddIn_phShape(DWORD, DbgHelper* pHelper, int, BOOL, cha
 		{
 			ShapeSphere shape;
 			if (FAILED(pHelper->Read(shape))) return E_FAIL;
-			_snprintf(pResult, max, "Sph(%d): r=%f", shape.m_base.m_size, shape.m_radius);
+			_snprintf(pResult, max, "Sph(%d): r=%f", (int)shape.m_base.m_size, shape.m_radius);
 		}break;
 	case EShape_Cylinder:
 		{
 			ShapeCylinder shape;
 			if (FAILED(pHelper->Read(shape))) return E_FAIL;
-			_snprintf(pResult, max, "Cyl(%d): r=%f h=%f", shape.m_base.m_size, shape.m_radius, shape.m_height);
+			_snprintf(pResult, max, "Cyl(%d): r=%f h=%f", (int)shape.m_base.m_size, shape.m_radius, shape.m_height);
 		}break;
 	case EShape_Box:
 		{
 			ShapeBox shape;
 			if (FAILED(pHelper->Read(shape))) return E_FAIL;
-			_snprintf(pResult, max, "Box(%d): w=%f h=%f d=%f", shape.m_base.m_size, shape.m_radius.x, shape.m_radius.y, shape.m_radius.z);
+			_snprintf(pResult, max, "Box(%d): w=%f h=%f d=%f", (int)shape.m_base.m_size, shape.m_radius.x, shape.m_radius.y, shape.m_radius.z);
 		}break;
 	case EShape_Polytope:
 		{
 			ShapePolytope shape;
 			if (FAILED(pHelper->Read(shape))) return E_FAIL;
-			_snprintf(pResult, max, "Poly(%d): v=%d f=%d", shape.m_base.m_size, shape.m_vert_count, shape.m_face_count);
+			_snprintf(pResult, max, "Poly(%d): v=%d f=%d", (int)shape.m_base.m_size, shape.m_vert_count, shape.m_face_count);
 		}break;
 	case EShape_Triangle:
 		{
 			ShapeTriangle shape;
 			if (FAILED(pHelper->Read(shape))) return E_FAIL;
 			_snprintf(pResult, max, "Tri(%d): <%3.3f,%3.3f,%3.3f> <%3.3f,%3.3f,%3.3f> <%3.3f,%3.3f,%3.3f>"
-				,shape.m_base.m_size
+				,(int)shape.m_base.m_size
 				,shape.m_v.x.x ,shape.m_v.x.y ,shape.m_v.x.z
 				,shape.m_v.y.x ,shape.m_v.y.y ,shape.m_v.y.z
 				,shape.m_v.z.x ,shape.m_v.z.y ,shape.m_v.z.z);
@@ -415,13 +415,13 @@ ADDIN_API HRESULT WINAPI AddIn_phShape(DWORD, DbgHelper* pHelper, int, BOOL, cha
 		{
 			ShapeTerrain shape;
 			if (FAILED(pHelper->Read(shape))) return E_FAIL;
-			_snprintf(pResult, max, "Terr(%d): ", shape.m_base.m_size);
+			_snprintf(pResult, max, "Terr(%d): ", (int)shape.m_base.m_size);
 		}break;
 	case EShape_Array:
 		{
 			ShapeArray shape;
 			if (FAILED(pHelper->Read(shape))) return E_FAIL;
-			_snprintf(pResult, max, "Array(%d): n=%d", shape.m_base.m_size, shape.m_num_shapes);
+			_snprintf(pResult, max, "Array(%d): n=%d", (int)shape.m_base.m_size, (int)shape.m_num_shapes);
 		}break;
 	default:
 		_snprintf(pResult, max, "Unknown Shape");

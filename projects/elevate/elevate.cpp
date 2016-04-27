@@ -44,7 +44,7 @@ int Execute(std::string& cmdline)
 	return int(exit_code);
 }
 
-int main(int argc, char* argv[])
+int __cdecl main(int argc, char* argv[])
 {
 	// Compile the command line
 	std::string cmdline;

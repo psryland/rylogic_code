@@ -14,7 +14,7 @@
 #include "pr/common/memstream.h"
 #include "pr/common/multi_cast.h"
 #include "pr/common/flags_enum.h"
-#include "pr/maths/bitfunctions.h"
+#include "pr/maths/bit_fields.h"
 #include "pr/script/forward.h"
 #include "pr/script/fail_policy.h"
 

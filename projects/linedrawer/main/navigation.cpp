@@ -14,7 +14,7 @@ namespace ldr
 		:m_camera(camera)
 		,m_view_size()
 		,m_reset_up(pr::Length3Sq(reset_up) > pr::maths::tiny ? reset_up : pr::v4YAxis)
-		,m_reset_forward(pr::Parallel(m_reset_up, pr::v4ZAxis) ? -pr::v4XAxis : -pr::v4ZAxis)
+		,m_reset_forward(pr::Parallel3(m_reset_up, pr::v4ZAxis) ? -pr::v4XAxis : -pr::v4ZAxis)
 		,m_orbit_timer(GetTickCount())
 		,m_views()
 	{
@@ -46,7 +46,7 @@ namespace ldr
 	{
 		m_camera.SetAlign(up);
 		if (m_camera.IsAligned()) m_reset_up = m_camera.m_align;
-		m_reset_forward = pr::Parallel(m_reset_up, pr::v4ZAxis) ? -pr::v4XAxis : -pr::Normalise3(pr::Cross3(pr::v4XAxis, m_reset_up));
+		m_reset_forward = pr::Parallel3(m_reset_up, pr::v4ZAxis) ? -pr::v4XAxis : -pr::Normalise3(pr::Cross3(pr::v4XAxis, m_reset_up));
 	}
 	pr::v4 Navigation::CameraAlign() const
 	{
@@ -127,7 +127,7 @@ namespace ldr
 		// Note: 'screen' can be outside of 'm_client_area' because we capture the mouse
 		float x = -1.0f + 2.0f * screen.x / m_view_size.x;
 		float y = +1.0f - 2.0f * screen.y / m_view_size.y;
-		return m_camera.NSSPointToWSPoint(pr::v4::make(x, y, m_camera.FocusDist(), 0.0f));
+		return m_camera.NSSPointToWSPoint(pr::v4(x, y, m_camera.FocusDist(), 0.0f));
 	}
 
 	// Orbit the camera about the current focus point

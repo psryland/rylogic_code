@@ -415,8 +415,8 @@ namespace pr
 			long   dx() const   { return m_curr->lX; }
 			long   dy() const   { return m_curr->lY; }
 			long   dz() const   { return m_curr->lZ; }
-			pr::v2 dxy() const  { return pr::v2::make(float(dx()), float(dy())); }
-			pr::v4 dxyz() const { return pr::v4::make(float(dx()), float(dy()), float(dz()), 0.0f); }
+			pr::v2 dxy() const  { return pr::v2(float(dx()), float(dy())); }
+			pr::v4 dxyz() const { return pr::v4(float(dx()), float(dy()), float(dz()), 0.0f); }
 			long   daxis(int i) const { PR_ASSERT(PR_DBG_DINPUT, 0 <= i && i < 3, ""); return (&m_curr->lX)[i]; }
 			
 			// Sample the state of the mouse at this point in time

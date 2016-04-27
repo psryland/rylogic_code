@@ -22,6 +22,7 @@
 #include "pr/common/range.h"
 #include "pr/common/scope.h"
 #include "pr/geometry/common.h"
+#include "pr/maths/maths.h"
 
 namespace pr
 {
@@ -121,11 +122,12 @@ namespace pr
 				}
 			};
 
+			// Maths library types with no alignment requirements
 			struct Vec2
 			{
 				float x,y;
 				Vec2& operator = (v2 const& rhs) { x = rhs.x; y = rhs.y; return *this; }
-				operator v2() const { return v2::make(x, y); }
+				operator v2() const { return v2(x, y); }
 			};
 			inline bool operator == (Vec2 lhs, Vec2 rhs) { return lhs.x == rhs.x && lhs.y == rhs.y; }
 			inline bool operator != (Vec2 lhs, Vec2 rhs) { return !(lhs == rhs); }
@@ -140,7 +142,7 @@ namespace pr
 				#pragma warning (default:4201)
 				Vec4& operator = (v4 const& rhs)     { x = rhs.x; y = rhs.y; z = rhs.z; w = rhs.w; return *this; }
 				Vec4& operator = (Colour const& rhs) { r = rhs.r; g = rhs.g; b = rhs.b; a = rhs.a; return *this; }
-				operator v4() const     { return v4::make(x,y,z,w); }
+				operator v4() const     { return v4(x,y,z,w); }
 				operator Colour() const { return Colour::make(r,g,b,a); }
 			};
 			inline bool operator == (Vec4 lhs, Vec4 rhs) { return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w; }
@@ -152,7 +154,7 @@ namespace pr
 				Vec4 radius;
 				BBox() { centre = pr::v4Origin; radius = -pr::v4One.w0(); }
 				BBox& operator = (pr::BBox const& rhs) { centre = rhs.m_centre; radius = rhs.m_radius; return *this; }
-				operator pr::BBox() const { return pr::BBox::make(centre, radius); }
+				operator pr::BBox() const { return pr::BBox(centre, radius); }
 			};
 			struct Vert
 			{
@@ -338,11 +340,12 @@ namespace pr
 			// Build a chunk index from parts of a p3d model
 			inline ChunkIndex Index(Texture const& tex)
 			{
-				return ChunkIndex(EChunkId::DiffuseTexture, 0U,
-					{
-						ChunkIndex(EChunkId::TexFilepath, tex.m_filepath.size() + 1),
-						ChunkIndex(EChunkId::TexTiling, sizeof(u32))
-					});
+				auto sub_chunks =
+				{
+					ChunkIndex(EChunkId::TexFilepath, tex.m_filepath.size() + 1),
+					ChunkIndex(EChunkId::TexTiling, sizeof(u32))
+				};
+				return ChunkIndex(EChunkId::DiffuseTexture, 0U, sub_chunks);
 			}
 			inline ChunkIndex Index(Material const& mat)
 			{
@@ -1017,7 +1020,7 @@ namespace pr
 
 			p3d::Mesh mesh;
 			mesh.m_name = "mesh";
-			mesh.m_bbox = pr::BBox::make(v4Origin, v4::make(1,2,3,0));
+			mesh.m_bbox = pr::BBox(v4Origin, v4(1,2,3,0));
 			mesh.m_verts.push_back(p3d::Vert());
 			mesh.m_verts.push_back(p3d::Vert());
 			mesh.m_verts.push_back(p3d::Vert());

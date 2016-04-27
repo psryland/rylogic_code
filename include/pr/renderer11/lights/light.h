@@ -2,10 +2,7 @@
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
-
 #pragma once
-#ifndef PR_RDR_LIGHT_H
-#define PR_RDR_LIGHT_H
 
 #include "pr/renderer11/forward.h"
 
@@ -13,7 +10,7 @@ namespace pr
 {
 	namespace rdr
 	{
-		struct Light
+		struct Light :pr::AlignTo<16>
 		{
 			v4       m_position;        // Position, only valid for point,spot lights
 			v4       m_direction;       // Direction, only valid for directional,spot lights
@@ -48,5 +45,3 @@ namespace pr
 		inline bool operator != (Light const& lhs, Light const& rhs) { return !(lhs == rhs); }
 	}
 }
-
-#endif
