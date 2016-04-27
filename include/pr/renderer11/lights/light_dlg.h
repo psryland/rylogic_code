@@ -67,7 +67,7 @@ namespace pr
 			bool m_camera_relative;
 
 			LightingUI(HWND parent, Preview const& preview)
-				:Form(MakeDlgParams<>().name("rdr-lighting-ui").title(L"Lighting Options").wh(218,190).style_ex('+',WS_EX_TOOLWINDOW).parent(parent).wndclass(RegisterWndClass<LightingUI>()))
+				:Form(MakeDlgParams<>().name("rdr-lighting-ui").title(L"Lighting Options").wh(218,190).style_ex('+',WS_EX_TOOLWINDOW).start_pos(EStartPosition::CentreParent).parent(parent).wndclass(RegisterWndClass<LightingUI>()))
 				,m_grp_light_type    (pr::gui::GroupBox::Params<>().parent(this_).text(L"Light Type").xy(3, 4).wh(56, 67))
 
 				,m_rdo_ambient       (pr::gui::Button::Params<>().parent(this_).text(L"Ambient"    ).id(ID_RADIO_AMBIENT    ).xy(9, 17).wh(41, 8).radio())
@@ -112,8 +112,6 @@ namespace pr
 				,m_light()
 				,m_camera_relative(true)
 			{
-				CenterWindow(Parent());
-
 				auto update_ui = [&](pr::gui::Button&, pr::gui::EmptyArgs const&) { UpdateUI(); };
 				m_rdo_ambient.Click += update_ui;
 				m_rdo_directional.Click += update_ui;
@@ -174,7 +172,7 @@ namespace pr
 			//	COMMAND_ID_HANDLER_EX(IDC_RADIO_SPOT         ,OnCommand)
 			//	MESSAGE_RANGE_HANDLER(WM_MOUSEFIRST, WM_MOUSELAST, OnMouse);
 			//END_MSG_MAP            ()
-
+				CreateHandle();
 				PopulateControls();
 				UpdateUI();
 			}

@@ -2,10 +2,11 @@
 // User Data
 //  Copyright (c) Rylogic Ltd 2014
 //***************************************************************************************************
-// Mixin class
+// Mix-in class
 
 #include <memory>
 #include <unordered_map>
+#include "pr/common/new.h"
 
 #pragma once
 
@@ -13,7 +14,10 @@ namespace pr
 {
 	class UserData
 	{
-		struct IUData { virtual ~IUData() {} };
+		struct IUData :pr::AlignTo<16>
+		{
+			virtual ~IUData() {}
+		};
 		template <typename Id, typename TData> struct UData :std::unordered_map<Id,TData> ,IUData
 		{};
 

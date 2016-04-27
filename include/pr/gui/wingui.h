@@ -2714,13 +2714,14 @@ namespace pr
 		struct Control
 		{
 			// These are here to import the types within Control
-			using EAnchor       = pr::gui::EAnchor;
-			using EDock         = pr::gui::EDock;
-			using EDialogResult = pr::gui::EDialogResult;
-			using Controls      = std::vector<Control*>;
-			using WndRef        = pr::gui::WndRef;
-			using CtrlParams    = pr::gui::CtrlParams;
-			using FormParams    = pr::gui::FormParams;
+			using EAnchor        = pr::gui::EAnchor;
+			using EDock          = pr::gui::EDock;
+			using EDialogResult  = pr::gui::EDialogResult;
+			using EStartPosition = pr::gui::EStartPosition;
+			using Controls       = std::vector<Control*>;
+			using WndRef         = pr::gui::WndRef;
+			using CtrlParams     = pr::gui::CtrlParams;
+			using FormParams     = pr::gui::FormParams;
 
 			template <typename P = CtrlParams, typename D = void> using MakeCtrlParams = pr::gui::MakeCtrlParams<P, D>;
 			template <typename P = FormParams, typename D = void> using MakeFormParams = pr::gui::MakeFormParams<P, D>;
