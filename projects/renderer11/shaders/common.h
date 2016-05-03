@@ -80,7 +80,7 @@ namespace pr
 		{
 			pr::Colour32 const* col = inst.find<pr::Colour32>(EInstComp::TintColour32);
 			pr::Colour c = col ? *col : pr::ColourWhite;
-			cb.m_tint = c;
+			cb.m_tint = c.rgba;
 		}
 
 		// Set the texture properties of a constants buffer
@@ -106,9 +106,9 @@ namespace pr
 			cb.m_info         = iv4(int(light.m_type),0,0,0);
 			cb.m_ws_direction = light.m_direction;
 			cb.m_ws_position  = light.m_position;
-			cb.m_ambient      = static_cast<Colour>(light.m_ambient);
-			cb.m_colour       = static_cast<Colour>(light.m_diffuse);
-			cb.m_specular     = Colour::make(light.m_specular, light.m_specular_power);
+			cb.m_ambient      = Colour(light.m_ambient).rgba;
+			cb.m_colour       = Colour(light.m_diffuse).rgba;
+			cb.m_specular     = Colour(light.m_specular, light.m_specular_power).rgba;
 			cb.m_spot         = v4(light.m_inner_cos_angle, light.m_outer_cos_angle, light.m_range, light.m_falloff);
 		}
 

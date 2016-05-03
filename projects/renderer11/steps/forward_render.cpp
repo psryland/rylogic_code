@@ -61,7 +61,7 @@ namespace pr
 				PR_ASSERT(PR_DBG_RDR, rtv != nullptr, "Render target is null."); // Ensure RestoreRT has been called
 				PR_ASSERT(PR_DBG_RDR, dsv != nullptr, "Depth buffer is null."); // Ensure RestoreRT has been called
 
-				dc->ClearRenderTargetView(rtv.m_ptr, m_scene->m_bkgd_colour);
+				dc->ClearRenderTargetView(rtv.m_ptr, m_scene->m_bkgd_colour.arr);
 				dc->ClearDepthStencilView(dsv.m_ptr, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0U);
 			}
 

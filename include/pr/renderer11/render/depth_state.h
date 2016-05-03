@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
-#ifndef PR_RDR_RENDER_DEPTH_STATE_H
-#define PR_RDR_RENDER_DEPTH_STATE_H
 
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/util/lookup.h"
@@ -15,19 +13,21 @@ namespace pr
 {
 	namespace rdr
 	{
-		#define PR_ENUM(x)\
-			x(DepthEnable        ,= 1 << 0)\
-			x(DepthWriteMask     ,= 1 << 1)\
-			x(DepthFunc          ,= 1 << 2)\
-			x(StencilEnable      ,= 1 << 3)\
-			x(StencilReadMask    ,= 1 << 4)\
-			x(StencilWriteMask   ,= 1 << 5)\
-			x(StencilFunc        ,= 1 << 6)\
-			x(StencilDepthFailOp ,= 1 << 7)\
-			x(StencilPassOp      ,= 1 << 8)\
-			x(StencilFailOp      ,= 1 << 9)
-		PR_DEFINE_ENUM2_FLAGS(EDS, PR_ENUM);
-		#undef PR_ENUM
+		enum class EDS
+		{
+			DepthEnable        = 1 << 0,
+			DepthWriteMask     = 1 << 1,
+			DepthFunc          = 1 << 2,
+			StencilEnable      = 1 << 3,
+			StencilReadMask    = 1 << 4,
+			StencilWriteMask   = 1 << 5,
+			StencilFunc        = 1 << 6,
+			StencilDepthFailOp = 1 << 7,
+			StencilPassOp      = 1 << 8,
+			StencilFailOp      = 1 << 9,
+			_bitwise_operators_allowed,
+		};
+		static_assert(has_bitwise_operators_allowed<EDS>::value, "");
 
 		struct DSBlock :private StateBlock<DepthStateDesc, EDS, 2>
 		{
@@ -166,5 +166,3 @@ namespace pr
 		};
 	}
 }
-
-#endif

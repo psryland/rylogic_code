@@ -13,9 +13,9 @@ namespace pr
 			:m_position        (v4Origin)
 			,m_direction       (-0.577350f, -0.577350f, -0.577350f, 0.0f)
 			,m_type            (ELight::Directional)
-			,m_ambient         (Colour32::make(0.0f, 0.0f, 0.0f, 0.0f))
-			,m_diffuse         (Colour32::make(0.5f, 0.5f, 0.5f, 1.0f))
-			,m_specular        (Colour32::make(0.1f, 0.1f, 0.1f, 0.0f))
+			,m_ambient         (0.0f, 0.0f, 0.0f, 0.0f)
+			,m_diffuse         (0.5f, 0.5f, 0.5f, 1.0f)
+			,m_specular        (0.1f, 0.1f, 0.1f, 0.0f)
 			,m_specular_power  (1000.0f)
 			,m_range           (100.0f)
 			,m_falloff         (0.0f)
@@ -93,9 +93,9 @@ namespace pr
 				<< "  *" << ELightKW::Dir  << "{" << m_direction.xyz << "}\n"
 				<< "  *" << ELightKW::Type << "{" << m_type << "}\n"
 				<< std::hex
-				<< "  *" << ELightKW::Amb  << "{" << m_ambient.m_aarrggbb << "}\n"
-				<< "  *" << ELightKW::Diff << "{" << m_diffuse.m_aarrggbb << "}\n"
-				<< "  *" << ELightKW::Spec << "{" << m_specular.m_aarrggbb << "}\n"
+				<< "  *" << ELightKW::Amb  << "{" << m_ambient.argb << "}\n"
+				<< "  *" << ELightKW::Diff << "{" << m_diffuse.argb << "}\n"
+				<< "  *" << ELightKW::Spec << "{" << m_specular.argb << "}\n"
 				<< std::dec
 				<< "  *" << ELightKW::SPwr << "{" << m_specular_power << "}\n"
 				<< "  *" << ELightKW::InCA << "{" << m_inner_cos_angle << "}\n"
@@ -126,9 +126,9 @@ namespace pr
 					case ELightKW::Pos:  reader.Vector3S(light.m_position, 1.0f); break;
 					case ELightKW::Dir:  reader.Vector3S(light.m_direction, 0.0f); break;
 					case ELightKW::Type: reader.EnumS(light.m_type); break;
-					case ELightKW::Amb:  reader.IntS(light.m_ambient.m_aarrggbb, 16); break;
-					case ELightKW::Diff: reader.IntS(light.m_diffuse.m_aarrggbb, 16); break;
-					case ELightKW::Spec: reader.IntS(light.m_specular.m_aarrggbb, 16); break;
+					case ELightKW::Amb:  reader.IntS(light.m_ambient.argb, 16); break;
+					case ELightKW::Diff: reader.IntS(light.m_diffuse.argb, 16); break;
+					case ELightKW::Spec: reader.IntS(light.m_specular.argb, 16); break;
 					case ELightKW::SPwr: reader.RealS(light.m_specular_power); break;
 					case ELightKW::InCA: reader.RealS(light.m_inner_cos_angle); break;
 					case ELightKW::OtCA: reader.RealS(light.m_outer_cos_angle); break;

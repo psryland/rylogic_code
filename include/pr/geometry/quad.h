@@ -87,7 +87,7 @@ namespace pr
 
 			// Colour iterator wrapper
 			auto col = pr::CreateRepeater(colours, num_colours, num_quads * 4, Colour32White);
-			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a() != 0xff; return c; };
+			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a != 0xff; return c; };
 
 			// Bounding box
 			auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
@@ -258,7 +258,7 @@ namespace pr
 
 			// Colour iterator wrapper
 			auto col = pr::CreateLerpRepeater(colours, num_colours, num_verts, Colour32White);
-			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a() != 0xff; return c; };
+			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a != 0xff; return c; };
 
 			// Normal iterator wrapper
 			auto norm = pr::CreateLerpRepeater(normals, num_normals, num_verts, pr::v4ZAxis);

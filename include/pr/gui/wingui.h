@@ -56,9 +56,11 @@
 #pragma comment(lib, "gdiplus.lib")
 
 // C++11's thread_local
-#ifndef thread_local
-#define thread_local __declspec(thread)
-#define thread_local_defined
+#if _MSC_VER < 1900
+#  ifndef thread_local
+#    define thread_local __declspec(thread)
+#    define thread_local_defined
+#  endif
 #endif
 
 // Disable warnings
@@ -414,6 +416,14 @@ namespace pr
 		template <int N> void StrCopy(wchar_t (&dest)[N], wchar_t const* src) { wcsncpy(dest, src, N); dest[N-1] = 0; }
 
 		// Set bits.
+		template <typename T, typename U> inline bool AllSet(T value, U mask)
+		{
+			return static_cast<T>(value & mask) == static_cast<T>(mask);
+		}
+		template <typename T, typename U> inline bool AnySet(T value, U mask)
+		{
+			return static_cast<T>(value & mask) != 0;
+		}
 		template <typename T, typename U> inline T SetBits(T value, U mask, bool state)
 		{
 			// If 'state' is true, returns 'value | mask'. If false, returns 'value & ~mask'
@@ -1572,18 +1582,70 @@ namespace pr
 		};
 
 		// Event args for window sizing events
-		struct SizeEventArgs :EmptyArgs
+		struct WindowPosEventArgs :EmptyArgs
 		{
-			WindowPos m_pos;    // The new position/size info
-			Point     m_point;  // Convenience position value
-			Size      m_size;   // Convenience size value
-			bool      m_before; // True if this event is before the window pos change, false if after
-			SizeEventArgs(WindowPos const& pos, bool before)
-				:m_pos(pos)
-				,m_point(pos.x, pos.y)
-				,m_size(pos.cx, pos.cy)
+			WindowPos* m_wp;     // The new position/size info.
+			bool       m_before; // True if this event is before the window pos change, false if after
+
+			WindowPosEventArgs(WindowPos& wp, bool before)
+				:m_wp(&wp)
 				,m_before(before)
-			{}
+			{
+				//// If the WindowPos does not contain size/position information, add it
+				//if (AnySet(wp.flags, SWP_NOMOVE|SWP_NOSIZE))
+				//{
+				//	Rect r;
+				//	::GetClientRect(wp.hwnd, &r);
+				//	::MapWindowPoints(wp.hwnd, ::GetParent(wp.hwnd), r.points(), 2);
+				//	
+				//	if (AllSet(wp.flags, SWP_NOMOVE))
+				//	{
+				//		wp.x = r.left;
+				//		wp.y = r.top;
+				//	}
+				//	if (AllSet(wp.flags, SWP_NOSIZE))
+				//	{
+				//		wp.cx = r.width();
+				//		wp.cy = r.height();
+				//	}
+				//}
+			}
+
+			// True if the event represents a relocation of the window
+			bool IsReposition() const
+			{
+				return !AllSet(m_wp->flags, SWP_NOMOVE);
+			}
+
+			// True if the event represents a resize of the window
+			bool IsResize() const
+			{
+				return !AllSet(m_wp->flags, SWP_NOSIZE);
+			}
+
+			// True if the window is minimised
+			bool Iconic() const
+			{
+				return ::IsIconic(m_wp->hwnd) != 0;
+			}
+
+			// The new position of this window within it's parent (in parent client space). Valid both before and after
+			Rect ParentRect() const
+			{
+				return m_wp->Bounds();
+			}
+
+			// The new location in parent client space of the resized window
+			Point Location() const
+			{
+				return Point(m_wp->x, m_wp->y);
+			}
+
+			// The new size of the resized window
+			Size Size() const
+			{
+				return pr::gui::Size(m_wp->cx, m_wp->cy);
+			}
 		};
 
 		// Event args for shown events
@@ -1745,20 +1807,20 @@ namespace pr
 		// Base class and basic implementation of a message loop
 		struct MessageLoop :IMessageFilter
 		{
-			// The collection of message filters filtering messages in this loop
-			std::vector<IMessageFilter*> m_filters;
+			std::vector<IMessageFilter*> m_filters; // The collection of message filters filtering messages in this loop
 
-			virtual ~MessageLoop() {}
-			MessageLoop() :m_filters()
+			MessageLoop()
+				:m_filters()
 			{
 				m_filters.push_back(this);
 			}
+			virtual ~MessageLoop() {}
 
 			// Subclasses should replace this method
 			virtual int Run()
 			{
-				MSG msg;
-				for (int result; (result = ::GetMessageW(&msg, NULL, 0, 0)) != 0; )
+				MSG msg = {};
+				for (int result; (result = ::GetMessageW(&msg, NULL, 0, 0)) != 0;)
 				{
 					Throw(result > 0, "GetMessage failed"); // GetMessage returns negative values for errors
 
@@ -1782,7 +1844,7 @@ namespace pr
 				m_filters.erase(std::remove(std::begin(m_filters), std::end(m_filters), &filter), std::end(m_filters));
 			}
 
-		private:
+		protected:
 
 			// The message loop is always the last filter in the chain
 			bool TranslateMessage(MSG& msg) override
@@ -2344,7 +2406,7 @@ namespace pr
 				,m_h(50)
 				,m_id(ID_UNUSED)
 				,m_parent()
-				,m_anchor(EAnchor::TopLeft)
+				,m_anchor(EAnchor::None)
 				,m_dock(EDock::None)
 				,m_style(DefaultControlStyle)
 				,m_style_ex(DefaultControlStyleEx)
@@ -3640,7 +3702,7 @@ namespace pr
 			EventHandler<Control&, PaintEventArgs const&> Paint;
 
 			// Window position changing or changed
-			EventHandler<Control&, SizeEventArgs const&> WindowPosChange;
+			EventHandler<Control&, WindowPosEventArgs const&> WindowPosChange;
 
 			// Window shown or hidden
 			EventHandler<Control&, VisibleEventArgs const&> VisibilityChanged;
@@ -3674,8 +3736,12 @@ namespace pr
 			virtual void OnCreate()
 			{}
 
+			// Called when this control is about to be destroyed
+			virtual void OnDestroy()
+			{}
+
 			// Handle window size changing starting or stopping
-			virtual void OnWindowPosChange(SizeEventArgs const& args)
+			virtual void OnWindowPosChange(WindowPosEventArgs const& args)
 			{
 				WindowPosChange(*this, args);
 			}
@@ -3750,7 +3816,7 @@ namespace pr
 			// WndProc is called by windows, Forms forward messages to their child controls using 'ProcessWindowMessage'
 			virtual LRESULT WndProc(UINT message, WPARAM wparam, LPARAM lparam)
 			{
-				//WndProcDebug(m_hwnd, message, wparam, lparam, FmtS("CtrlWPMsg: %s",m_name.c_str()));
+				WndProcDebug(m_hwnd, message, wparam, lparam, FmtS("CtrlWPMsg: %s",cp().m_name));
 				switch (message)
 				{
 				case WM_GETCTRLPTR:
@@ -3781,6 +3847,7 @@ namespace pr
 				case WM_DESTROY:
 					#pragma region
 					{
+						OnDestroy();
 						Detach();
 						break;
 					}
@@ -3879,7 +3946,7 @@ namespace pr
 							DoubleBuffered(true);
 
 						// Notify of position changed
-						OnWindowPosChange(SizeEventArgs(wp, before));
+						OnWindowPosChange(WindowPosEventArgs(wp, before));
 
 						// Notify of visibility changed
 						if (!before)
@@ -4052,7 +4119,7 @@ namespace pr
 						auto& new_size = *(WindowPos*)lparam;
 
 						// If the parent window is actually resizing (don't care about anything else)
-						if (m_parent != nullptr && (new_size.flags & SWP_NOSIZE) == 0)
+						if (m_parent != nullptr && !AllSet(new_size.flags, SWP_NOSIZE))
 						{
 							// Get the new size of the parent's client area.
 							Rect rect;
@@ -4296,6 +4363,8 @@ namespace pr
 			}
 			#pragma endregion
 
+			#pragma region WndProc
+
 			// Window creation initialisation parameter wrapper
 			struct InitParam
 			{
@@ -4353,21 +4422,13 @@ namespace pr
 			#if PR_WNDPROCDEBUG
 			static void WndProcDebug(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, char const* name = nullptr)
 			{
-				if (true &&
-					//(name != nullptr && strncmp(name,"lbl-version",5) == 0) &&
-					(message == WM_WINDOWPOSCHANGING || message == WM_WINDOWPOSCHANGED || message == WM_ERASEBKGND || message == WM_PAINT))
+				if (true
+					// && (name != nullptr && strncmp(name,"lbl-version",5) == 0)
+					// && (message == WM_WINDOWPOSCHANGING || message == WM_WINDOWPOSCHANGED || message == WM_ERASEBKGND || message == WM_PAINT)
+					)
 				{
 					auto out = [](char const* s) { OutputDebugStringA(s); };
 					//auto out = [](char const* s) { std::ofstream("P:\\dump\\wingui.log", std::ofstream::app).write(s,strlen(s)); };
-
-					// Tracing, allows messages to be turned on/off for a short period of time
-					static bool trace = true;
-					if (hwnd == nullptr)
-					{
-						trace = message != 0;
-						if (trace) out("\n\n**********************************************\n");
-						return;
-					}
 
 					// Display the message
 					static int msg_idx = 0; ++msg_idx;
@@ -4388,6 +4449,12 @@ namespace pr
 			#else
 			static void WndProcDebug(HWND , UINT , WPARAM , LPARAM , char const* = nullptr) {}
 			#endif
+			static void WndProcDebug(MSG& msg, char const* name = nullptr)
+			{
+				WndProcDebug(msg.hwnd, msg.message, msg.wParam, msg.lParam, name);
+			}
+	
+			#pragma endregion
 
 			// Record the position of the control relative to 'm_parent'
 			void RecordPosOffset()
@@ -4510,8 +4577,7 @@ namespace pr
 
 		private:
 
-			// Mouse single click detection.
-			// Returns true on mouse up with within the click threshold
+			// Mouse single click detection. Returns true on mouse up with within the click threshold.
 			bool IsClick(EMouseKey btn, bool down)
 			{
 				int idx;
@@ -4646,104 +4712,19 @@ namespace pr
 			// Display as a modeless form, creating the window first if necessary
 			virtual void Show(int show = SW_SHOW)
 			{
-				// IF the window hasn't been created yet, we need to create it and all it's child windows
-				if (m_hwnd == nullptr)
-					Create(cp());
-
-				// Not showing the window modally
-				m_modal = false;
-
-				// Show the window, non-modally
-				ShowWindow(m_hwnd, show);
-				UpdateWindow(m_hwnd);
+				return ShowInternal(show);
 			}
 
-			// Display the form modally
-			virtual EDialogResult ShowDialog(WndRefC parent = nullptr, void* init_param = nullptr)
+			// Display the form modally, creating the window first if necessary
+			virtual EDialogResult ShowDialog(WndRefC parent = nullptr)
 			{
-				// Modal dialogs should not have their window handle created yet, the
-				// DialogBox() functions create the window and the message loop
-				//assert("Window already created, cannot be displayed modally. Did you forget to use ECreate::Defer or DlgParams?" && m_hwnd == nullptr);
-
-				// Showing the window modally
-				m_modal = true;
-
-				// If the window already exists, run the window modally
-				if (m_hwnd != nullptr)
-				{
-					struct ModalLoop :MessageLoop
-					{
-						WndRef m_parent;
-						ModalLoop(WndRef parent) :m_parent(parent)
-						{
-							if (m_parent != nullptr)
-								m_parent->Enabled(false);
-						}
-						~ModalLoop()
-						{
-							if (m_parent != nullptr)
-								m_parent->Enabled(true);
-						}
-						bool TranslateMessage(MSG& msg) override
-						{
-							// WM_QUIT must be manually forwarded
-							if (msg.message == WM_QUIT)
-							{
-								//fDone = TRUE;
-								PostMessageW(nullptr, WM_QUIT, 0, 0);
-					//			Close();
-								//break;
-							}
-							return true;
-						}
-					};
-					ModalLoop modal_loop(m_parent);
-					return EDialogResult(modal_loop.Run());
-				}
-
-				// If a dialog resource ID is given, create from a resource
-				InitParam lparam(this, init_param);
-				if (cp().m_id != ID_UNUSED)
-				{
-					auto r = ::DialogBoxParamW(cp().m_hinst, MakeIntResourceW(cp().m_id), parent, (DLGPROC)&InitWndProc, LPARAM(&lparam));
-					Throw(r >= 0, "Create dialog box failed");
-					return EDialogResult(r);
-				}
-
-				// Otherwise, generate a dialog template, and create from that
-				auto templ = GenerateDlgTemplate();
-				auto r = ::DialogBoxIndirectParamW(cp().m_hinst, templ, parent, (DLGPROC)&InitWndProc, LPARAM(&lparam));
-				Throw(r >= 0, "Create dialog box failed");
-				return EDialogResult(r);
+				return ShowDialogInternal(parent);
 			}
 
 			// Close this form
 			virtual bool Close(EDialogResult dialog_result = EDialogResult::None)
 			{
-				if (m_hwnd == nullptr)
-					return false;
-
-				// If we're only hiding, just go invisible
-				if (cp().m_hide_on_close)
-				{
-					Visible(false);
-					return true;
-				}
-
-				// Remove this window from its parent.
-				// Don't detach children, that happens when the Form/Control is destructed
-				Parent(nullptr);
-
-				// Save the dialog result
-				m_dialog_result = dialog_result;
-
-				// Close the form
-				auto r = m_modal
-					? ::EndDialog(m_hwnd, INT_PTR(m_dialog_result))
-					: ::DestroyWindow(m_hwnd);
-
-				// Don't null m_hwnd here, that happens in WM_DESTROY
-				return r != 0;
+				return CloseInternal(dialog_result);
 			}
 
 			// Get/Set whether the form uses dialog-like message handling
@@ -4876,6 +4857,89 @@ namespace pr
 
 		protected:
 
+			// Display as a modeless form, creating the window first if necessary
+			void ShowInternal(int show)
+			{
+				// If the window does not yet exist, create it
+				if (m_hwnd == nullptr)
+					Create(cp());
+
+				// Not showing the window modally
+				m_modal = false;
+
+				// Show the window, non-modally
+				ShowWindow(m_hwnd, show);
+				UpdateWindow(m_hwnd);
+			}
+
+			// Display the form modally
+			EDialogResult ShowDialogInternal(WndRefC parent)
+			{
+				// Showing the window modally
+				m_modal = true;
+
+				cp().m_parent = parent.hwnd();
+
+				// If the window does not yet exist, create it
+				if (m_hwnd == nullptr)
+					Create(cp());
+
+				// Create a message loop for this dialog
+				struct ModalLoop :MessageLoop
+				{
+					Form* m_dialog;
+
+					ModalLoop(Form* dialog)
+						:m_dialog(dialog)
+					{}
+					int Run() override
+					{
+						MSG msg = {};
+						for (int result; m_dialog->m_hwnd != nullptr && (result = ::GetMessageW(&msg, nullptr, 0, 0)) != 0; )
+						{
+							Throw(result > 0, "GetMessage failed"); // GetMessage returns negative values for errors
+							WndProcDebug(msg, "ModalLoop");
+
+							// If the message is handled as a dialog message, don't translate it
+							if (!m_dialog->cp().m_dlg_behaviour || !::IsDialogMessageW(m_dialog->m_hwnd, &msg))
+							{
+								TranslateMessage(msg);
+							}
+
+							// WM_QUIT must be manually forwarded
+							if (msg.message == WM_QUIT)
+							{
+								PostMessageW(nullptr, WM_QUIT, 0, 0);
+								break;
+							}
+						}
+						return 0;
+					}
+				};
+				ModalLoop modal_loop(this);
+
+				// Show the window modally
+				// Once the dialog is closed, destroy the window
+				ShowWindow(m_hwnd, SW_SHOW);
+				modal_loop.Run();
+
+				return m_dialog_result;
+			}
+
+			// Close this form
+			bool CloseInternal(EDialogResult dialog_result)
+			{
+				if (m_hwnd == nullptr)
+					return false;
+
+				// Save the dialog result
+				m_dialog_result = dialog_result;
+
+				// Post the close message to this form
+				SendMsg<int>(WM_CLOSE);
+				return true;
+			}
+
 			// Message map function
 			// 'hwnd' is the handle of the parent window that contains this control.
 			// Messages processed here are the messages sent to the parent window.
@@ -4909,6 +4973,11 @@ namespace pr
 						if (m_icon_sm != nullptr) Icon(m_icon_sm, false);
 						if (m_icon_bg != nullptr) Icon(m_icon_bg, true);
 
+						// If this form is running modally, disable the parent
+						auto parent = ::GetParent(m_hwnd);
+						if (m_modal && parent != nullptr)
+							::EnableWindow(parent, false);
+
 						// Let WM_CREATE fall through to Control::WndProc for this form.
 						return false;
 					}
@@ -4922,6 +4991,11 @@ namespace pr
 						// If no background brush for the dialog is set, use the default
 						if (m_wci.hbrBackground == nullptr)
 							m_wci.hbrBackground = WndBackground();
+
+						// If this form is running modally, disable the parent
+						auto parent = ::GetParent(m_hwnd);
+						if (m_modal && parent != nullptr)
+							::EnableWindow(parent, false);
 
 						// The default Control::ProcessWindowMessage() handler for WM_INITDIALOG calls
 						// 'Attach' which Forms don't need because we call Attach in InitWndProc.
@@ -4938,12 +5012,23 @@ namespace pr
 				case WM_CLOSE:
 					#pragma region
 					{
-						// Close the form in response to the WM_CLOSE request
-						Close();
+						// If this form is running modally, disable the parent
+						auto parent = ::GetParent(m_hwnd);
+						if (m_modal && parent != nullptr)
+							::EnableWindow(parent, true);
 
-						// If this is a hide-on-close form, return true so that the WM_CLOSE message isn't
-						// passed to the WndProc which would then send WM_DESTROY.
-						return cp().m_hide_on_close;
+						// If we're only hiding, just go invisible
+						if (cp().m_hide_on_close)
+						{
+							Visible(false);
+							return true;
+						}
+						
+						// Let the DefWndProc call DestroyWindow in response to the WM_CLOSE
+						// All forms are created using CreateWindow or CreateDialog, so in all
+						// cases we use 'DestroyWindow'.
+						// Don't null m_hwnd here, that happens in WM_DESTROY
+						return false;
 					}
 					#pragma endregion
 				case WM_DESTROY:
@@ -4952,6 +5037,10 @@ namespace pr
 						// Let children know the parent is destroying
 						if (ForwardToChildren(hwnd, message, wparam, lparam, result))
 							return true;
+
+						// Remove this window from its parent.
+						// Don't detach children, that happens when the Form/Control is destructed
+						Parent(nullptr);
 
 						// If we're the main app, post WM_QUIT
 						if (cp().m_main_wnd)
@@ -4996,7 +5085,10 @@ namespace pr
 							::CheckMenuItem(::GetSystemMenu(m_hwnd, FALSE), IDC_PINWINDOW_OPT, MF_BYCOMMAND|(PinWindow()? MF_CHECKED : MF_UNCHECKED));
 							return true;
 						}
-
+						if (id == SC_CLOSE)
+						{
+							m_dialog_result = EDialogResult::Close;
+						}
 						// Pass the WM_SYSCOMMAND to the WndProc
 						return false;
 					}
@@ -5006,9 +5098,9 @@ namespace pr
 					{
 						auto& wp = *reinterpret_cast<WindowPos*>(lparam);
 
-						// If shown for the first time, apply the start position
-						if ((wp.flags & SWP_SHOWWINDOW) != 0)
+						if (AllSet(wp.flags, SWP_SHOWWINDOW))
 						{
+							// If shown for the first time, apply the start position
 							// This will recursively call WM_WINDOWPOSCHANGED
 							switch (cp().m_start_pos)
 							{
@@ -6561,6 +6653,24 @@ namespace pr
 			{
 				switch (message)
 				{
+				case WM_NCCALCSIZE:
+					#pragma region
+					{
+						// todo: Should be using to set the effective client rect.
+						if (wparam != 0)
+						{
+							auto& parms = *reinterpret_cast<NCCALCSIZE_PARAMS*>(lparam);
+							auto& proposed = parms.rgrc[0];
+							auto& old_bounds_ps = parms.rgrc[1];
+							auto& old_client_ps = parms.rgrc[2];
+							(void)proposed, old_bounds_ps, old_client_ps;
+						}
+						else
+						{
+						}
+						break;
+					}
+					#pragma endregion
 				case WM_NOTIFY:
 					#pragma region
 					{
@@ -6645,17 +6755,22 @@ namespace pr
 			}
 
 			// Handle window size changing starting or stopping
-			void OnWindowPosChange(SizeEventArgs const& args) override
+			void OnWindowPosChange(WindowPosEventArgs const& args) override
 			{
-				if (args.m_before)
+				if (args.m_before && args.IsResize())
 				{
-					// This control is about to resize, resize the child windows to the new size
-					auto& new_size = args.m_pos;
-					auto b = ParentRect();
 					auto c = ClientRect();
-					auto rect = Rect(c.left, c.top, c.right + (new_size.cx - b.width()), c.bottom + (new_size.cy - b.height()));
-					UpdateLayout(rect);
+					c.size(args.Size());
+					UpdateLayout(c);
 				}
+				//{
+				//	// This control is about to resize, resize the child windows to the new size
+				//	auto& new_size = args.m_pos;
+				//	auto b = ParentRect();
+				//	auto c = ClientRect();
+				//	auto rect = Rect(c.left, c.top, c.right + (new_size.cx - b.width()), c.bottom + (new_size.cy - b.height()));
+				//	UpdateLayout(rect);
+				//}
 				Control::OnWindowPosChange(args);
 			}
 		};
@@ -6865,17 +6980,22 @@ namespace pr
 			}
 
 			// Handle window size changing starting or stopping
-			void OnWindowPosChange(SizeEventArgs const& args) override
+			void OnWindowPosChange(WindowPosEventArgs const& args) override
 			{
-				if (args.m_before)
+				if (args.m_before && args.IsResize())
 				{
-					// This control is about to resize, resize the child windows to the new size
-					auto& new_size = args.m_pos;
-					auto b = ParentRect();
 					auto c = ClientRect();
-					auto rect = Rect(c.left, c.top, c.right + (new_size.cx - b.width()), c.bottom + (new_size.cy - b.height()));
-					UpdateLayout(rect);
+					c.size(args.Size());
+					UpdateLayout(c);
 				}
+				//{
+				//	// This control is about to resize, resize the child windows to the new size
+				//	auto& new_size = args.m_pos;
+				//	auto b = ParentRect();
+				//	auto c = ClientRect();
+				//	auto rect = Rect(c.left, c.top, c.right + (new_size.cx - b.width()), c.bottom + (new_size.cy - b.height()));
+				//	UpdateLayout(rect);
+				//}
 				Control::OnWindowPosChange(args);
 			}
 

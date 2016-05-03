@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
-#ifndef PR_RDR_RENDER_BLEND_STATE_H
-#define PR_RDR_RENDER_BLEND_STATE_H
 
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/util/lookup.h"
@@ -15,19 +13,21 @@ namespace pr
 {
 	namespace rdr
 	{
-		#define PR_ENUM(x)\
-			x(AlphaToCoverageEnable  ,= 1 << 0)\
-			x(IndependentBlendEnable ,= 1 << 1)\
-			x(BlendEnable            ,= 1 << 2)\
-			x(SrcBlend               ,= 1 << 3)\
-			x(DestBlend              ,= 1 << 4)\
-			x(BlendOp                ,= 1 << 5)\
-			x(SrcBlendAlpha          ,= 1 << 6)\
-			x(DestBlendAlpha         ,= 1 << 7)\
-			x(BlendOpAlpha           ,= 1 << 8)\
-			x(RenderTargetWriteMask  ,= 1 << 9)
-		PR_DEFINE_ENUM2_FLAGS(EBS, PR_ENUM);
-		#undef PR_ENUM
+		enum class EBS
+		{
+			AlphaToCoverageEnable  = 1 << 0,
+			IndependentBlendEnable = 1 << 1,
+			BlendEnable            = 1 << 2,
+			SrcBlend               = 1 << 3,
+			DestBlend              = 1 << 4,
+			BlendOp                = 1 << 5,
+			SrcBlendAlpha          = 1 << 6,
+			DestBlendAlpha         = 1 << 7,
+			BlendOpAlpha           = 1 << 8,
+			RenderTargetWriteMask  = 1 << 9,
+			_bitwise_operators_allowed,
+		};
+		static_assert(has_bitwise_operators_allowed<EBS>::value, "");
 
 		struct BSBlock :private StateBlock<BlendStateDesc, EBS, 8>
 		{
@@ -148,5 +148,3 @@ namespace pr
 		};
 	}
 }
-
-#endif

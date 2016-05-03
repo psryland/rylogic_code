@@ -9,6 +9,7 @@ using pr.common;
 using pr.extn;
 using pr.util;
 using pr.win32;
+using Scintilla;
 
 namespace pr.gui
 {
@@ -284,33 +285,65 @@ namespace pr.gui
 			case Win32.WM_REFLECT + Win32.WM_NOTIFY:
 				#region
 				{
-					//Win32.WndProcDebug(hwnd, msg, wparam, lparam, "vt100");
 					var nmhdr = MarshalEx.PtrToStructure<Win32.NMHDR>(m.LParam);
 					var notif = MarshalEx.PtrToStructure<Sci.SCNotification>(m.LParam);
-					switch (notif.nmhdr.code)
+					HandleSCNotification(ref nmhdr, ref notif);
+					break;
+				}
+				#endregion
+			}
+			base.WndProc(ref m);
+		}
+
+		/// <summary>Handle notification from the native scintilla control</summary>
+		protected virtual void HandleSCNotification(ref Win32.NMHDR nmhdr, ref Scintilla.Scintilla.SCNotification notif)
+		{
+			switch (notif.nmhdr.code)
+			{
+			case Sci.SCN_CHARADDED:
+				#region
+				{
+					#region Auto Indent
+					if (AutoIndent)
 					{
-					case Sci.SCN_UPDATEUI:
+						var lem = Cmd(Sci.SCI_GETEOLMODE);
+						var lend =
+							(lem == Sci.SC_EOL_CR   && notif.ch == '\r') ||
+							(lem == Sci.SC_EOL_LF   && notif.ch == '\n') ||
+							(lem == Sci.SC_EOL_CRLF && notif.ch == '\n');
+						if (lend)
+						{
+							var line = Cmd(Sci.SCI_LINEFROMPOSITION, Cmd(Sci.SCI_GETCURRENTPOS));
+							var indent = line > 0 ? Cmd(Sci.SCI_GETLINEINDENTATION, line - 1) : 0;
+							Cmd(Sci.SCI_SETLINEINDENTATION, line, indent);
+							Cmd(Sci.SCI_GOTOPOS, Cmd(Sci.SCI_GETLINEENDPOSITION, line));
+						}
+					}
+					#endregion
+
+					// Notify text changed
+					TextChanged.Raise(this);
+					break;
+				}
+				#endregion
+			case Sci.SCN_UPDATEUI:
+				#region
+				{
+					switch (notif.updated)
+					{
+					case Sci.SC_UPDATE_SELECTION:
 						#region
 						{
-							switch (notif.updated)
-							{
-							case Sci.SC_UPDATE_SELECTION:
-								#region
-								{
-									OnSelectionChanged();
-									break;
-								}
-								#endregion
-							case Sci.SC_UPDATE_H_SCROLL:
-							case Sci.SC_UPDATE_V_SCROLL:
-								#region
-								{
-									var ori = notif.nmhdr.code == Sci.SC_UPDATE_H_SCROLL ? ScrollOrientation.HorizontalScroll : ScrollOrientation.VerticalScroll;
-									OnScroll(new ScrollEventArgs(ScrollEventType.ThumbPosition, 0, ori));
-									break;
-								}
-								#endregion
-							}
+							OnSelectionChanged();
+							break;
+						}
+						#endregion
+					case Sci.SC_UPDATE_H_SCROLL:
+					case Sci.SC_UPDATE_V_SCROLL:
+						#region
+						{
+							var ori = notif.nmhdr.code == Sci.SC_UPDATE_H_SCROLL ? ScrollOrientation.HorizontalScroll : ScrollOrientation.VerticalScroll;
+							OnScroll(new ScrollEventArgs(ScrollEventType.ThumbPosition, 0, ori));
 							break;
 						}
 						#endregion
@@ -319,8 +352,9 @@ namespace pr.gui
 				}
 				#endregion
 			}
-			base.WndProc(ref m);
 		}
+
+		/// <summary>Handle notification that the control has been invalidated</summary>
 		protected override void NotifyInvalidate(Rectangle invalidatedArea)
 		{
 			var rect = Win32.RECT.FromRectangle(invalidatedArea);
@@ -329,11 +363,11 @@ namespace pr.gui
 		}
 
 		/// <summary>Call the direct function</summary>
-		protected int Cmd(int code, IntPtr wparam, IntPtr lparam) { return Handle != null ? m_func(m_ptr, code, wparam, lparam) : 0; }
-		protected int Cmd(int code, int wparam, IntPtr lparam)    { return Cmd(code, (IntPtr)wparam, lparam); }
-		protected int Cmd(int code, int wparam, int lparam)       { return Cmd(code, (IntPtr)wparam, (IntPtr)lparam); }
-		protected int Cmd(int code, int wparam)                   { return Cmd(code, (IntPtr)wparam, IntPtr.Zero); }
-		protected int Cmd(int code)                               { return Cmd(code, IntPtr.Zero, IntPtr.Zero); }
+		public int Cmd(int code, IntPtr wparam, IntPtr lparam) { return Handle != null ? m_func(m_ptr, code, wparam, lparam) : 0; }
+		public int Cmd(int code, int wparam, IntPtr lparam)    { return Cmd(code, (IntPtr)wparam, lparam); }
+		public int Cmd(int code, int wparam, int lparam)       { return Cmd(code, (IntPtr)wparam, (IntPtr)lparam); }
+		public int Cmd(int code, int wparam)                   { return Cmd(code, (IntPtr)wparam, IntPtr.Zero); }
+		public int Cmd(int code)                               { return Cmd(code, IntPtr.Zero, IntPtr.Zero); }
 
 		#region Text
 		/// <summary>Clear all text from the control</summary>
@@ -387,7 +421,7 @@ namespace pr.gui
 		public new event EventHandler TextChanged;
 		#endregion
 
-		#region Selection
+		#region Selection/Navigation
 		/// <summary>Records a selection</summary>
 		public struct Selection
 		{
@@ -425,6 +459,11 @@ namespace pr.gui
 		{
 			SelectionChanged.Raise(this);
 		}
+		#endregion
+
+		#region Indenting
+		/// <summary>Enable/Disable auto indent mode</summary>
+		public bool AutoIndent { get; set; }
 		#endregion
 
 		#region Scrolling

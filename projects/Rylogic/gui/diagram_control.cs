@@ -4903,8 +4903,8 @@ namespace pr.gui
 
 			// Add a map function for AnchorPoint that references the elements being imported
 			var xml_anchor_point = Scope.Create(
-				() => XmlExtensions.AsMap[typeof(AnchorPoint)] = (elem, type, ctor) => new AnchorPoint(map, elem),
-				() => XmlExtensions.AsMap[typeof(AnchorPoint)] = null);
+				() => Xml_.AsMap[typeof(AnchorPoint)] = (elem, type, ctor) => new AnchorPoint(map, elem),
+				() => Xml_.AsMap[typeof(AnchorPoint)] = null);
 
 			// Suspend diagram changed events while importing
 			using (xml_anchor_point)

@@ -133,7 +133,7 @@ namespace pr
 			{
 				if (count >= 1) attr.m_name.clear();
 				if (count >= 1 && !pr::str::ExtractIdentifierC(attr.m_name, std::begin(tok0))) reader.ReportError(pr::script::EResult::TokenNotFound, "object name is invalid");
-				if (count >= 2 && !ExtractColour(tok1, attr.m_colour.m_aarrggbb))              reader.ReportError(pr::script::EResult::TokenNotFound, "object colour is invalid");
+				if (count >= 2 && !ExtractColour(tok1, attr.m_colour.argb))                    reader.ReportError(pr::script::EResult::TokenNotFound, "object colour is invalid");
 			}
 			return attr;
 		}
@@ -303,7 +303,7 @@ namespace pr
 				}
 			case EKeyword::Colour:
 				{
-					p.m_reader.IntS(obj->m_base_colour.m_aarrggbb, 16);
+					p.m_reader.IntS(obj->m_base_colour.argb, 16);
 					return true;
 				}
 			case EKeyword::ColourMask:
@@ -502,7 +502,7 @@ namespace pr
 				case EKeyword::Specular:
 					{
 						p.m_reader.SectionStart();
-						p.m_reader.Int(m_light.m_specular.m_aarrggbb, 16);
+						p.m_reader.Int(m_light.m_specular.argb, 16);
 						p.m_reader.Real(m_light.m_specular_power);
 						p.m_reader.SectionEnd();
 						return true;
@@ -738,7 +738,7 @@ namespace pr
 				case EKeyword::Colours:
 					{
 						p.m_reader.SectionStart();
-						for (pr::Colour32 c; !p.m_reader.IsSectionEnd();) { p.m_reader.Int(c.m_aarrggbb, 16); m_colours.push_back(c); }
+						for (pr::Colour32 c; !p.m_reader.IsSectionEnd();) { p.m_reader.Int(c.argb, 16); m_colours.push_back(c); }
 						p.m_reader.SectionEnd();
 						return true;
 					}
@@ -879,7 +879,7 @@ namespace pr
 				if (m_per_line_colour)
 				{
 					pr::Colour32 col;
-					p.m_reader.Int(col.m_aarrggbb, 16);
+					p.m_reader.Int(col.argb, 16);
 					m_colour.push_back(col);
 					m_colour.push_back(col);
 				}
@@ -900,7 +900,7 @@ namespace pr
 				if (m_per_line_colour)
 				{
 					pr::Colour32 col;
-					p.m_reader.Int(col.m_aarrggbb, 16);
+					p.m_reader.Int(col.argb, 16);
 					m_colour.push_back(col);
 					m_colour.push_back(col);
 				}
@@ -920,7 +920,7 @@ namespace pr
 				if (m_per_line_colour)
 				{
 					pr::Colour32 col;
-					p.m_reader.Int(col.m_aarrggbb, 16);
+					p.m_reader.Int(col.argb, 16);
 					m_colour.push_back(col);
 				}
 			}
@@ -998,7 +998,7 @@ namespace pr
 				if (m_per_line_colour)
 				{
 					pr::Colour32 col;
-					p.m_reader.Int(col.m_aarrggbb, 16);
+					p.m_reader.Int(col.argb, 16);
 					for (size_t i = 0, iend = raster.size(); i != iend; ++i)
 						m_colour.push_back(col);
 				}
@@ -1034,7 +1034,7 @@ namespace pr
 					if (m_per_line_colour)
 					{
 						pr::Colour32 col;
-						p.m_reader.Int(col.m_aarrggbb, 16);
+						p.m_reader.Int(col.argb, 16);
 						m_colour.push_back(col);
 					}
 				}
@@ -1062,7 +1062,7 @@ namespace pr
 
 				// Colour interpolation iterator
 				auto col = pr::CreateLerpRepeater(m_colour.data(), m_colour.size(), m_point.size(), pr::Colour32White);
-				auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a() != 0xff; return c; };
+				auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a != 0xff; return c; };
 
 				// Model bounding box
 				auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
@@ -1310,9 +1310,9 @@ namespace pr
 			void Parse(ParseParams& p) override
 			{
 				pr::v4 pt[3]; pr::Colour32 col[3];
-				p.m_reader.Vector3(pt[0], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[0].m_aarrggbb, 16));
-				p.m_reader.Vector3(pt[1], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[1].m_aarrggbb, 16));
-				p.m_reader.Vector3(pt[2], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[2].m_aarrggbb, 16));
+				p.m_reader.Vector3(pt[0], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[0].argb, 16));
+				p.m_reader.Vector3(pt[1], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[1].argb, 16));
+				p.m_reader.Vector3(pt[2], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[2].argb, 16));
 				m_point.push_back(pt[0]);
 				m_point.push_back(pt[1]);
 				m_point.push_back(pt[2]);
@@ -1333,10 +1333,10 @@ namespace pr
 			void Parse(ParseParams& p) override
 			{
 				pr::v4 pt[4]; pr::Colour32 col[4];
-				p.m_reader.Vector3(pt[0], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[0].m_aarrggbb, 16));
-				p.m_reader.Vector3(pt[1], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[1].m_aarrggbb, 16));
-				p.m_reader.Vector3(pt[2], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[2].m_aarrggbb, 16));
-				p.m_reader.Vector3(pt[3], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[3].m_aarrggbb, 16));
+				p.m_reader.Vector3(pt[0], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[0].argb, 16));
+				p.m_reader.Vector3(pt[1], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[1].argb, 16));
+				p.m_reader.Vector3(pt[2], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[2].argb, 16));
+				p.m_reader.Vector3(pt[3], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[3].argb, 16));
 				m_point.push_back(pt[0]);
 				m_point.push_back(pt[1]);
 				m_point.push_back(pt[2]);
@@ -1409,7 +1409,7 @@ namespace pr
 					if (m_per_vert_colour)
 					{
 						pr::Colour32 col;
-						p.m_reader.Int(col.m_aarrggbb, 16);
+						p.m_reader.Int(col.argb, 16);
 						m_colour.push_back(col);
 					}
 					break;
@@ -3051,10 +3051,10 @@ LR"(// *************************************************************************
 		{
 			Apply([=](LdrObject* o)
 			{
-				o->m_colour.m_aarrggbb = SetBits(o->m_base_colour.m_aarrggbb, mask, colour.m_aarrggbb);
+				o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, colour.argb);
 				if (o->m_model == nullptr) return true;
 
-				auto has_alpha = o->m_colour.a() != 0xFF;
+				auto has_alpha = o->m_colour.a != 0xFF;
 				for (auto& nug : o->m_model->m_nuggets)
 					nug.Alpha(has_alpha);
 
@@ -3070,7 +3070,7 @@ LR"(// *************************************************************************
 				o->m_colour = o->m_base_colour;
 				if (o->m_model == nullptr) return true;
 
-				auto has_alpha = o->m_colour.a() != 0xFF;
+				auto has_alpha = o->m_colour.a != 0xFF;
 				for (auto& nug : o->m_model->m_nuggets)
 					nug.Alpha(has_alpha);
 

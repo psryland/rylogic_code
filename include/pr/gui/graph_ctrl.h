@@ -1577,7 +1577,7 @@ namespace pr
 
 		protected:
 
-			void OnWindowPosChange(SizeEventArgs const& args) override
+			void OnWindowPosChange(WindowPosEventArgs const& args) override
 			{
 				Dirty(true);
 				Control::OnWindowPosChange(args);

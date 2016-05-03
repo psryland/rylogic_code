@@ -143,7 +143,7 @@ namespace pr
 				Vec4& operator = (v4 const& rhs)     { x = rhs.x; y = rhs.y; z = rhs.z; w = rhs.w; return *this; }
 				Vec4& operator = (Colour const& rhs) { r = rhs.r; g = rhs.g; b = rhs.b; a = rhs.a; return *this; }
 				operator v4() const     { return v4(x,y,z,w); }
-				operator Colour() const { return Colour::make(r,g,b,a); }
+				operator Colour() const { return Colour(r,g,b,a); }
 			};
 			inline bool operator == (Vec4 lhs, Vec4 rhs) { return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w; }
 			inline bool operator != (Vec4 lhs, Vec4 rhs) { return !(lhs == rhs); }
@@ -539,7 +539,7 @@ namespace pr
 					case EChunkId::DiffuseColour:
 						{
 							auto col = Read<Vec4>(src);
-							mat.m_diffuse = pr::Colour::make(col.r, col.g, col.b, col.a);
+							mat.m_diffuse = pr::Colour(col.r, col.g, col.b, col.a);
 							break;
 						}
 					case EChunkId::DiffuseTexture:

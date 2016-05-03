@@ -63,9 +63,14 @@ namespace pr
 	}
 
 	// Returns a bit mask containing only the lowest bit of 'n'
-	template <typename T> inline T LowBit(T n)
+	template <typename T, typename = std::enable_if<std::is_integral<T>::value>::type> inline T LowBit(T n)
 	{
 		return n - ((n - 1) & n);
+	}
+	template <typename T, typename = std::enable_if<std::is_enum<T>::value>::type> inline T LowBit(T n, int = 0)
+	{
+		auto x = static_cast<std::underlying_type<T>::type>(n);
+		return static_cast<T>(LowBit(x));
 	}
 
 	// Returns the bit position of the highest bit

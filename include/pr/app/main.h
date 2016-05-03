@@ -211,10 +211,10 @@ namespace pr
 
 		protected:
 
-			// Pre-scene render. Setup a simple default scene. Derived apps will override this
+			// Pre-scene render. Set up a simple default scene. Derived apps will override this
 			void OnEvent(pr::rdr::Evt_UpdateScene const& e) override
 			{
-				e.m_scene.m_bkgd_colour.set(0.5f,0.5f,0.5f,1.0f);
+				e.m_scene.m_bkgd_colour = Colour(0.5f,0.5f,0.5f,1.0f);
 				e.m_scene.m_global_light.m_on = true;
 				e.m_scene.SetView(m_cam);
 			}

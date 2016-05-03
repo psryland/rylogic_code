@@ -2,123 +2,204 @@
 // User Data
 //  Copyright (c) Rylogic Ltd 2014
 //***************************************************************************************************
-// Mix-in class
+// A container for user data.
+// Structure is:
+//    map<data-type-id, map<instance-id, IData*>>
+//
+// User data is lazily allocated when accessed.
+// Usage:
+//   // Allocates a default instance of 'MyThing' within the user data
+//   m_user_data.get<MyThing>() = my_thing;
+//
+#pragma once
 
 #include <memory>
+#include <vector>
 #include <unordered_map>
-#include "pr/common/new.h"
-
-#pragma once
+#include <new>
 
 namespace pr
 {
 	class UserData
 	{
-		struct IUData :pr::AlignTo<16>
+		// Ids associated with types
+		using typeid_t = size_t;
+		static typeid_t NextId()
 		{
-			virtual ~IUData() {}
+			static typeid_t id = 0;
+			return id++;
+		}
+		template <typename TData> static typeid_t TypeId()
+		{
+			static typeid_t id = NextId();
+			return id;
+		}
+
+		// Map from Id to data.
+		struct IMap { virtual ~IMap() {} }; // Common base so that maps of unspecified types can be added to 'm_user_data'
+		template <typename Id, typename Data> struct Map :IMap
+		{
+			// Aligned allocations
+			template <typename T> static T* New()
+			{
+				auto p = _aligned_malloc(sizeof(T), alignof(T));
+				return ::new (p) T;
+			}
+			template <typename T> static void Delete(T* obj)
+			{
+				obj->~T();
+				return _aligned_free(obj);
+			}
+
+			// Use pointers to data, because 'Data' may not be copyable
+			std::unordered_map<Id, Data*> m_cont;
+
+			Map()
+				:m_cont()
+			{}
+			~Map()
+			{
+				for (auto& x : m_cont)
+					Delete<Data>(x.second);
+			}
+
+			// True if there are no contained items
+			bool empty() const
+			{
+				return m_cont.empty();
+			}
+
+			// Return the number of items with 'm_id' == 'id'
+			size_t count(Id id) const
+			{
+				return m_cont.count(id);
+			}
+
+			// Get a contained item by 'id'
+			Data const& get(Id id) const
+			{
+				auto iter = m_cont.find(id);
+				if (iter != std::end(m_cont)) return *iter->second;
+				throw std::exception("user data not found");
+			}
+			Data& get(Id id, bool grow)
+			{
+				auto iter = m_cont.find(id);
+				if (iter != std::end(m_cont)) return *iter->second;
+				if (!grow) throw std::exception("user data not found");
+				return *(m_cont[id] = New<Data>());
+			}
+
+			// Remove an item from the collection
+			void erase(Id id)
+			{
+				auto iter = m_cont.find(id);
+				if (iter == std::end(m_cont)) return;
+				Delete<Data>(iter->second);
+				m_cont.erase(iter);
+			}
 		};
-		template <typename Id, typename TData> struct UData :std::unordered_map<Id,TData> ,IUData
-		{};
 
-		typedef size_t typeid_t;
-		typedef std::unordered_map<typeid_t, std::unique_ptr<IUData>> UDataMap;
-		UDataMap m_user_data;
-
-		static typeid_t NextId()                           { static typeid_t id = 0; return ++id; }
-		template <typename TData> static typeid_t TypeId() { static typeid_t id = NextId(); return id; }
-
-		// Find a pointer to the user data table for 'T'
-		template <typename Id, typename TData> UData<Id,TData> const* find() const
-		{
-			auto iter = m_user_data.find(TypeId<TData>());
-			return iter != std::end(m_user_data) ? static_cast<UData<Id,TData> const*>(iter->second.get()) : nullptr;
-		}
-		template <typename Id, typename TData> UData<Id,TData>* find()
-		{
-			auto iter = m_user_data.find(TypeId<TData>());
-			return iter != std::end(m_user_data) ? static_cast<UData<Id,TData>*>(iter->second.get()) : nullptr;
-		}
-
-		// Get/Create the user data table for 'TData'
-		template <typename Id, typename TData> UData<Id,TData>& table()
-		{
-			auto& ptr = m_user_data[TypeId<TData>()];
-			if (ptr == nullptr) ptr = std::make_unique<UData<Id,TData>>();
-			return static_cast<UData<Id,TData>&>(*ptr.get());
-		}
+		// A map from type Id to a map from instance Id to user data
+		// E.g.
+		//  auto   table = m_user_data[type-id];
+		//  IData* data  = table[instance-id];
+		// We allow the caller to choose the type of the instance-id. That is
+		// why this type is not: Map<TypeId, Map<InstId, IData*>>
+		std::vector<std::unique_ptr<IMap>> m_user_data;
 
 	public:
 
-		// Access user data by type and unique id
-		template <typename TData, typename Id = intptr_t> TData const& get(Id id = Id()) const
+		// True if this object contains user data of type 'TData' and associated with 'id'
+		template <typename Data, typename InstId = intptr_t> bool has(InstId id = InstId()) const
 		{
-			// Get the pointer to the UData<T> table
-			auto tab = find<Id,TData>();
-			if (tab == nullptr) throw std::exception("user data not found");
-
-			// Find the item within the table corresponding to 'id'
-			auto iter = tab->find(id);
-			if (iter == std::end(*tab)) throw std::exception("user data not found");
-
-			// Return it
-			return iter->second;
+			auto map = find_map<InstId, Data>(TypeId<Data>());
+			if (map == nullptr) return false;
+			return map->count(id) != 0;
 		}
 
-		// Access user data by type and unique id. User data is lazily created.
-		template <typename TData, typename Id = intptr_t> TData& get(Id id = Id())
+		// Read access to user data of type 'TData'.
+		// 'id' is an instance id. If not given, then the first instance is assumed.
+		// 'id' can be any type used as a key to lookup data, e.g. Guid, or int typically.
+		// e.g.  auto value = UserData.get<MyThing>(Guid(..)).Value;
+		template <typename Data, typename InstId = intptr_t> Data const& get(InstId id = InstId()) const
 		{
-			return table<Id,TData>()[id];
+			auto map = find_map<InstId, Data>(TypeId<Data>());
+			if (map == nullptr) throw std::exception("User data not found");
+			return map->get(id);
 		}
 
-		// True if this object contains user data matching 'id'
-		template <typename TData, typename Id = intptr_t> bool has(Id id = Id()) const
+		// Write access to user data of type 'TData'. User data is lazily created.
+		// 'id' is an instance id. If not given, then the first instance is assumed.
+		// 'id' can be any type used as a key to lookup data, e.g. Guid, or int typically.
+		// e.g.  UserData.get<MyThing>(Guid(..)) = my_thing;
+		template <typename Data, typename InstId = intptr_t> Data& get(InstId id = InstId())
 		{
-			auto tab = find<Id,TData>();
-			return tab != nullptr && tab->count(id) != 0;
+			auto map = find_map<InstId, Data>(TypeId<Data>(), true);
+			return map->get(id, true);
 		}
 
 		// Remove user data
-		template <typename TData, typename Id = intptr_t> void erase(Id id = Id())
+		template <typename Data, typename InstId = intptr_t> void erase(InstId id = InstId())
 		{
-			auto tab = find<Id,TData>();
-			if (tab != nullptr)
-				tab->erase(id);
+			auto map = find_map<InstId, Data>(TypeId<Data>(), false);
+			if (map == nullptr) return;
+			map->erase(id);
+		}
+
+	private:
+
+		// Find the map associated with a type id
+		template <typename InstId, typename Data> Map<InstId,Data> const* find_map(typeid_t type_id) const
+		{
+			return type_id < m_user_data.size() ? static_cast<Map<InstId,Data> const*>(m_user_data[type_id].get()) : nullptr;
+		}
+		template <typename InstId, typename Data> Map<InstId,Data>* find_map(typeid_t type_id, bool grow)
+		{
+			if (type_id >= m_user_data.size())
+			{
+				if (!grow) return nullptr;
+				m_user_data.resize(type_id + 1);
+				m_user_data[type_id].reset(new Map<InstId,Data>);
+			}
+			return static_cast<Map<InstId,Data>*>(m_user_data[type_id].get());
 		}
 	};
 }
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
+#include "pr/maths/maths.h"
 namespace pr
 {
 	namespace unittests
 	{
 		PRUnitTest(pr_common_userdata)
 		{
-			struct UDTest :pr::UserData
-			{
-				int i;
-			};
-
 			struct Blob
 			{
 				char str[20];
 				Blob() :str() {}
 				Blob(char const* s) :str() { strcat(str, s); }
-			} blob("HelloWorld\0");
+			};
 
-			UDTest udtest;
+			Blob blob("HelloWorld\0");
+
+			pr::UserData udtest;
 			udtest.get<Blob>() = blob;
 			udtest.get<double>() = 3.14;
+			udtest.get<m4x4>(0) = m4x4Identity; // store aligned types
 
 			PR_CHECK(udtest.has<Blob>(), true);
 			PR_CHECK(udtest.has<double>(), true);
 			PR_CHECK(udtest.has<int>(), false);
+			PR_CHECK(udtest.has<m4x4>(), true);
 
 			PR_CHECK(udtest.get<double>(), 3.14);
 			PR_CHECK(udtest.get<Blob>().str, "HelloWorld\0");
 			PR_CHECK(&udtest.get<Blob>() != &blob, true);
+			PR_CHECK(udtest.get<m4x4>() == m4x4Identity, true);
+			PR_CHECK(&udtest.get<m4x4>() != &m4x4Identity, true);
 
 			udtest.get<double>() = 6.28;
 			PR_CHECK(udtest.get<double>(), 6.28);

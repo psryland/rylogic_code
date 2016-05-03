@@ -1,31 +1,59 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Windows.Forms;
+using pr.extn;
 
 namespace pr.gui
 {
 	/// <summary>A helper dialog for prompting for a single line of user input</summary>
 	public class PromptForm :Form
 	{
+		#region UI Elements
+		private TextBox m_edit;
+		private Label m_lbl_info;
+		private Button m_btn_ok;
+		private Button m_btn_cancel;
+		private ToolTip m_tt;
+		#endregion
+
+		public PromptForm()
+		{
+			InitializeComponent();
+
+			InputType = EInputType.Anything;
+
+			m_edit.KeyPress += (s,a)=>
+			{
+				bool valid;
+				switch (InputType)
+				{
+				default: throw new ArgumentException("Unknown input type for prompt dialog");
+				case EInputType.Anything:
+					valid = true;
+					break;
+				case EInputType.Identifer:
+					valid = a.KeyChar == '_' || char.IsLetter(a.KeyChar) || (Value.Length != 0 && char.IsDigit(a.KeyChar));
+					break;
+				case EInputType.Number:
+					valid = char.IsDigit(a.KeyChar);
+					break;
+				case EInputType.Filename:
+					valid = Path.GetInvalidFileNameChars().IndexOf(a.KeyChar) == -1;
+					break;
+				}
+				a.Handled = !valid;
+				if (!valid) m_tt.Show("Invalid character. Expecting "+InputType.ToString()+" characters", this);
+			};
+		}
+
+		/// <summary>Limit user input to specific categories</summary>
+		public EInputType InputType { get; set; }
 		public enum EInputType
 		{
 			Anything,
 			Identifer,
 			Number,
 			Filename,
-		}
-		
-		private readonly ToolTip m_tt;
-		
-		/// <summary>Limit user input to specific categories</summary>
-		public EInputType InputType { get; set; }
-		
-		/// <summary>The text to display above the prompt edit box</summary>
-		public string PromptText
-		{
-			get { return m_lbl_info.Text; }
-			set { m_lbl_info.Text = value; }
 		}
 
 		/// <summary>The prompt dialog title</summary>
@@ -35,52 +63,20 @@ namespace pr.gui
 			set { Text = value; }
 		}
 
+		/// <summary>The text to display above the prompt edit box</summary>
+		public string PromptText
+		{
+			get { return m_lbl_info.Text; }
+			set { m_lbl_info.Text = value; }
+		}
+
 		/// <summary>The value entered in the edit box</summary>
 		public string Value
 		{
 			get { return m_edit.Text; }
 			set { m_edit.Text = value; }
 		}
-		
-		public PromptForm()
-		{
-			InitializeComponent();
-			InputType = EInputType.Anything;
-			m_tt = new ToolTip();
-			List<char> invalid_filename_chars = new List<char>(Path.GetInvalidFileNameChars());
-			m_edit.KeyPress += (s,a)=>
-				{
-					bool valid;
-					switch (InputType)
-					{
-					default: throw new ArgumentException("Unknown input type for prompt dialog");
-					case EInputType.Anything:
-						valid = true;
-						break;
-					case EInputType.Identifer:
-						valid = a.KeyChar == '_' || char.IsLetter(a.KeyChar) || (Value.Length != 0 && char.IsDigit(a.KeyChar));
-						break;
-					case EInputType.Number:
-						valid = char.IsDigit(a.KeyChar);
-						break;
-					case EInputType.Filename:
-						valid = !invalid_filename_chars.Contains(a.KeyChar);
-						break;
-					}
-					a.Handled = !valid;
-					if (!valid) m_tt.Show("Invalid character. Expecting "+InputType.ToString()+" characters", this);
-				};
-			Disposed += (s,a) =>
-				{
-					m_tt.Dispose();
-				};
-		}
 
-		private TextBox m_edit;
-		private Label m_lbl_info;
-		private Button m_btn_ok;
-		private Button m_btn_cancel;
-		
 		#region Windows Form Designer generated code
 		/// <summary>
 		/// Required designer variable.
@@ -106,10 +102,12 @@ namespace pr.gui
 		/// </summary>
 		private void InitializeComponent()
 		{
+			this.components = new System.ComponentModel.Container();
 			this.m_edit = new System.Windows.Forms.TextBox();
 			this.m_lbl_info = new System.Windows.Forms.Label();
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_btn_cancel = new System.Windows.Forms.Button();
+			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
 			this.SuspendLayout();
 			// 
 			// m_edit
@@ -150,6 +148,10 @@ namespace pr.gui
 			this.m_btn_cancel.TabIndex = 3;
 			this.m_btn_cancel.Text = "Cancel";
 			this.m_btn_cancel.UseVisualStyleBackColor = true;
+			// 
+			// toolTip1
+			// 
+			this.m_tt.ShowAlways = true;
 			// 
 			// PromptForm
 			// 

@@ -71,10 +71,10 @@ public:
 			m_pStreams[n].m_pszName = (LPSTR)(m_pStreams[n].m_pdwSize + 1);
 			m_pStreams[n].m_pbData = pbRoot + (*m_pStreams[n].m_pdwOffset);
 
-			auto x = strlen(m_pStreams[n].m_pszName) + 1;
-			if (x % 4) x += 4 - (x % 4);
+			auto y = strlen(m_pStreams[n].m_pszName) + 1;
+			if (y % 4) y += 4 - (y % 4);
 
-			pb = (LPBYTE)m_pStreams[n].m_pszName + x;
+			pb = (LPBYTE)m_pStreams[n].m_pszName + y;
 		}
 	}
 	virtual ~CMetadata(void)

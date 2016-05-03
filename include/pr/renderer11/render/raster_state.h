@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
-#ifndef PR_RDR_RENDER_RASTER_STATE_H
-#define PR_RDR_RENDER_RASTER_STATE_H
 
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/util/lookup.h"
@@ -14,19 +12,21 @@ namespace pr
 {
 	namespace rdr
 	{
-		#define PR_ENUM(x)\
-			x(FillMode               ,= 1 << 0)\
-			x(CullMode               ,= 1 << 1)\
-			x(DepthClipEnable        ,= 1 << 2)\
-			x(FrontCCW               ,= 1 << 3)\
-			x(MultisampleEnable      ,= 1 << 4)\
-			x(AntialiasedLineEnable  ,= 1 << 5)\
-			x(ScissorEnable          ,= 1 << 6)\
-			x(DepthBias              ,= 1 << 7)\
-			x(DepthBias_clamp        ,= 1 << 8)\
-			x(SlopeScaledDepthBias   ,= 1 << 9)
-		PR_DEFINE_ENUM2_FLAGS(ERS, PR_ENUM);
-		#undef PR_ENUM
+		enum class ERS
+		{
+			FillMode               = 1 << 0,
+			CullMode               = 1 << 1,
+			DepthClipEnable        = 1 << 2,
+			FrontCCW               = 1 << 3,
+			MultisampleEnable      = 1 << 4,
+			AntialiasedLineEnable  = 1 << 5,
+			ScissorEnable          = 1 << 6,
+			DepthBias              = 1 << 7,
+			DepthBias_clamp        = 1 << 8,
+			SlopeScaledDepthBias   = 1 << 9,
+			_bitwise_operators_allowed,
+		};
+		static_assert(has_bitwise_operators_allowed<ERS>::value, "");
 
 		struct RSBlock :private StateBlock<RasterStateDesc, ERS, 1>
 		{
@@ -144,5 +144,3 @@ namespace pr
 		};
 	}
 }
-
-#endif

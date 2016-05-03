@@ -22,7 +22,7 @@ namespace pr.extn
 		}
 
 		/// <summary>Value compare of a dictionary without regard to order</summary>
-		public static bool EqualUnordered<TKey, TValue>(this IDictionary<TKey, TValue> lhs, IDictionary<TKey, TValue> rhs)
+		public static bool SequenceEqualUnordered<TKey, TValue>(this IDictionary<TKey, TValue> lhs, IDictionary<TKey, TValue> rhs)
 		{
 			if (lhs == rhs) return true;
 			if (lhs == null || rhs == null) return false;
@@ -98,10 +98,10 @@ namespace pr.unittests
 			var d2 = new[]{4,3,2,1}.ToDictionary(k=>k,v=>v);
 			var d3 = new[]{4,2}.ToDictionary(k=>k,v=>v);
 
-			Assert.True(d1.EqualUnordered(d2));
-			Assert.True(d2.EqualUnordered(d1));
-			Assert.False(d1.EqualUnordered(d3));
-			Assert.False(d3.EqualUnordered(d1));
+			Assert.True(d1.SequenceEqualUnordered(d2));
+			Assert.True(d2.SequenceEqualUnordered(d1));
+			Assert.False(d1.SequenceEqualUnordered(d3));
+			Assert.False(d3.SequenceEqualUnordered(d1));
 		}
 	}
 }

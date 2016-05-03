@@ -495,7 +495,7 @@ namespace ldr
 				return;
 
 			auto id = m_main->m_nav.SaveView();
-			m_saved_views.Add(pr::Widen(dlg.m_body).c_str(), (void*)id, false, true);
+			m_saved_views.Add(pr::Widen(dlg.m_body).c_str(), (char*)0 + id, false, true);
 		}
 	}
 
@@ -888,7 +888,8 @@ namespace ldr
 		}
 		if (sender == &m_saved_views)
 		{
-			m_main->m_nav.RestoreView((Navigation::SavedViewID)item.m_tag);
+			auto id = static_cast<Navigation::SavedViewID>((char*)item.m_tag - (char*)0);
+			m_main->m_nav.RestoreView(id);
 			UpdateUI();
 			m_main->RenderNeeded();
 		}

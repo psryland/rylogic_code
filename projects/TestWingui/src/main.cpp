@@ -95,9 +95,8 @@ struct Main :Form
 		,m_split_r     (L"Right panel", IDC_SPLITR, &m_split.Pane1)
 		,m_tc          (TabControl::Params<>().parent(this_).name("m_tc").text(L"tabctrl").xy(120,10).wh(500,500).id(IDC_TAB).anchor(EAnchor::All).style_ex('=',0).padding(0))
 		,m_modeless    (this_)
-		,m_nm_progress ()
+		,m_nm_progress (ProgressUI::Params<>().parent(this_).hide_on_close())
 	{
-		m_nm_progress.Create(ProgressUI::Params<>().parent(this_).hide_on_close());
 		auto busy_work = [](ProgressUI* dlg)
 		{
 			for (int i = 0, iend = 500; dlg->Progress(i*1.f/iend) && i != iend; ++i)
@@ -154,7 +153,7 @@ struct Main :Form
 		m_btn.Click += std::bind(&Main::RunBoobs, this, _1, _2);
 		m_btn_about.Click += [&](Button&,EmptyArgs const&)
 		{
-			About().ShowDialog(this);
+			//About().ShowDialog(this);
 			About2().ShowDialog(this);
 		};
 
@@ -273,20 +272,17 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 
 		pr::win32::LoadDll<struct Scintilla>(L"scintilla.dll");
 
-		About about1;
-		about1.Show();
-		About2 about2;
-		about2.Show();
+		//About about1;
+		//about1.Show();
+		//About2 about2;
+		//about2.ShowDialog();
 		//return 0;
 		//ProgressUI main(ProgressUI::Params<>().title(L"Progress").desc(L"This is not a drill").xy(2000,100).main_wnd());
 		//return main.ShowDialog();
 
-		//Main main;
-		//Test main;
-		Test2 test2;
-		//test2.Show();
-
-		auto& main = test2;
+		Main main; main.Show();
+		//Test test1; auto& main = test1;
+		//Test2 test2; auto& main = test2; test2.Show();
 
 		MessageLoop loop;
 		loop.AddMessageFilter(main);

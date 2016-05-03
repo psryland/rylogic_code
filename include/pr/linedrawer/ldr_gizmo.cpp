@@ -671,8 +671,8 @@ namespace pr
 			,m_gfx()
 			,m_offset(m4x4Identity)
 			,m_ref_pt()
-			,m_col_hover(Colour32::make(0xFFBBBB00))
-			,m_col_manip(Colour32::make(0xFFFFFF00))
+			,m_col_hover(0xFFBBBB00U)
+			,m_col_manip(0xFFFFFF00U)
 			,m_last_hit(EComponent::None)
 			,m_component(EComponent::None)
 			,m_manipulating(false)
@@ -737,7 +737,7 @@ namespace pr
 				// On the second pass, draw the gizmo normally
 				NuggetProps nugget(pr::rdr::EPrim::TriList, Vert::GeomMask);
 				nugget.m_rsb.Set(ERS::CullMode, D3D11_CULL_BACK);
-				nugget.m_sort_key.Group(ESortGroup{ESortGroup::PostOpaques+1});
+				nugget.m_sort_key.Group(static_cast<ESortGroup>(int(ESortGroup::PostOpaques) + 1));
 				nugget.m_range_overlaps = true;
 				m_gfx.m_model->CreateNugget(nugget);
 			}

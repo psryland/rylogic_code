@@ -329,14 +329,14 @@ namespace pr
 						{
 							float rgb[3];
 							Read(src, rgb, 3);
-							return pr::Colour::make(rgb[0], rgb[1], rgb[2], 1.0f);
+							return pr::Colour(rgb[0], rgb[1], rgb[2], 1.0f);
 						}
 					case EChunkId::Color24: // char red, grn, blu;
 					case EChunkId::LinColor24: // char red, grn, blu;
 						{
 							u8 rgb[3];
 							Read(src, rgb, 3);
-							return pr::Colour::make(rgb[0], rgb[1], rgb[2], 255);
+							return pr::Colour(rgb[0], rgb[1], rgb[2], 255);
 						}
 					}
 				}

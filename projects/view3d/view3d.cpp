@@ -996,7 +996,7 @@ void __stdcall ObjectEditCB(ModelPtr model, void* ctx, pr::Renderer&)
 		auto vout = mlock.m_vlock.ptr<Vert>();
 		for (size_t i = 0; i != new_vcount; ++i, ++vin)
 		{
-			SetPCNT(*vout++, view3d::To<pr::v4>(vin->pos), pr::Colour32::make(vin->col), view3d::To<pr::v4>(vin->norm), view3d::To<pr::v2>(vin->tex));
+			SetPCNT(*vout++, view3d::To<pr::v4>(vin->pos), pr::Colour32(vin->col), view3d::To<pr::v4>(vin->norm), view3d::To<pr::v2>(vin->tex));
 			pr::Encompass(model->m_bbox, view3d::To<pr::v4>(vin->pos));
 		}
 		auto iin = std::begin(indices);
@@ -1019,7 +1019,7 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreate(char const* name, View3DCo
 	{
 		DllLockGuard;
 		ObjectEditCBData cbdata = {edit_cb, ctx};
-		pr::ldr::ObjectAttributes attr(pr::ldr::ELdrObject::Custom, name, pr::Colour32::make(colour));
+		pr::ldr::ObjectAttributes attr(pr::ldr::ELdrObject::Custom, name, pr::Colour32(colour));
 		auto obj = pr::ldr::Add(Dll().m_rdr, attr, icount, vcount, ObjectEditCB, &cbdata, context_id);
 		if (obj) Dll().m_obj_cont.push_back(obj);
 		return obj.m_ptr;
@@ -1222,7 +1222,7 @@ VIEW3D_API void __stdcall View3D_ObjectSetColour(View3DObject object, View3DColo
 		if (!object) throw std::exception("Object is null");
 
 		DllLockGuard;
-		object->Colour(pr::Colour32::make(colour), mask, name);
+		object->Colour(pr::Colour32(colour), mask, name);
 	}
 	CatchAndReport(View3D_ObjectSetColour, ,);
 }
@@ -1793,7 +1793,7 @@ VIEW3D_API void __stdcall View3D_SetBackgroundColour(View3DWindow window, int aa
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		window->m_background_colour = pr::Colour32::make(aarrggbb);
+		window->m_background_colour = pr::Colour32(aarrggbb);
 	}
 	CatchAndReport(View3D_SetBackgroundColour, window,);
 }

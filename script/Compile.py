@@ -51,7 +51,7 @@ def SetupVCEnvironment():
 		UserVars.winsdk + "\\References;" +
 		UserVars.winsdk + "\\References\\Windows.Foundation.UniversalApiContract\\1.0.0.0;" +
 		UserVars.winsdk + "\\References\\Windows.Foundation.FoundationContract\\1.0.0.0;" +
-		UserVars.winsdk + "\\References\Windows.Networking.Connectivity.WwanContract\\1.0.0.0;" +
+		UserVars.winsdk + "\\References\\Windows.Networking.Connectivity.WwanContract\\1.0.0.0;" +
 		UserVars.winsdk + "\\ExtensionSDKs\\Microsoft.VCLibs\\14.0\\References\\CommonConfiguration\\neutral;" +
 		"")
 	os.environ["NETFXSDKDir"]        = UserVars.winkit + "\\NETFXSDK\\4.6\\"

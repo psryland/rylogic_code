@@ -396,11 +396,12 @@ namespace pr.gui
 			var r = (TreeGridNode)base.Clone();
 			if (r != null)
 			{
-				r.m_grid         = m_grid;
-				r.m_parent       = null;
-				r.m_image        = m_image;
-				r.m_image_index  = m_image_index;
-				r.m_is_expanded  = m_is_expanded;
+				r.m_grid        = m_grid;
+				r.m_parent      = null;
+				r.m_image       = m_image;
+				r.m_image_index = m_image_index;
+				r.m_is_expanded = m_is_expanded;
+				r.m_is_in_grid  = false;
 			}
 			return r;
 		}
@@ -445,7 +446,7 @@ namespace pr.gui
 					m_parent.Nodes.RemoveInternal(this);
 
 					// Refresh the glyph next to the parent node
-					if (m_parent.Displayed && m_parent.Nodes.Count == 0 && !m_parent.IsRoot)
+					if (m_parent.IsInGrid && m_parent.Nodes.Count == 0 && !m_parent.IsRoot)
 						Grid.InvalidateRow(m_parent.RowIndex);
 				}
 
@@ -460,11 +461,11 @@ namespace pr.gui
 					m_parent.Nodes.AddInternal(this);
 
 					// Refresh the glyph next to the parent node
-					if (m_parent.Displayed && m_parent.Nodes.Count == 1 && !m_parent.IsRoot)
+					if (m_parent.IsInGrid && m_parent.Nodes.Count == 1 && !m_parent.IsRoot)
 						Grid.InvalidateRow(m_parent.RowIndex);
 
 					// If this node should be visible in the grid then display it
-					if (m_parent.Displayed && m_parent.IsExpanded)
+					if (m_parent.IsInGrid && m_parent.IsExpanded)
 						DisplayRowsInGrid(ref row_index);
 				}
 			}
@@ -500,6 +501,26 @@ namespace pr.gui
 		{
 			get { return m_is_expanded; }
 		}
+
+		/// <summary>True if this node has been added as a row in the grid (changes as nodes are expanded/collapsed)</summary>
+		public bool IsInGrid
+		{
+			get
+			{
+				Debug.Assert(!(m_is_in_grid && Grid == null), "Cannot be added to a grid while the Grid is null");
+				return m_is_in_grid || IsRoot;
+			}
+			set
+			{
+				if (m_is_in_grid == value) return;
+				m_is_in_grid = value;
+				if (m_is_in_grid)
+				{
+					Debug.Assert(Grid != null, "Cannot be added to a grid while the Grid is null");
+				}
+			}
+		}
+		private bool m_is_in_grid;
 
 		/// <summary>True if this node has children</summary>
 		public bool HasChildren
@@ -546,7 +567,7 @@ namespace pr.gui
 		}
 		private new int Index // hide the Index property of the row
 		{
-			get { return Displayed ? base.Index : -1; }
+			get { return IsInGrid ? base.Index : -1; }
 		}
 
 		/// <summary>Gets the index of the row after this node and its children (if visible in the grid).
@@ -555,10 +576,10 @@ namespace pr.gui
 		{
 			get
 			{
-				if (!Displayed) return -1;
+				if (!IsInGrid) return -1;
 				if (m_is_expanded && Nodes.Count != 0)
 				{
-					Debug.Assert(Nodes.Last().Displayed);
+					Debug.Assert(Nodes.Last().IsInGrid);
 					return Nodes.Last().NextRowIndex;
 				}
 				return RowIndex + 1;
@@ -605,8 +626,8 @@ namespace pr.gui
 		/// <summary>Collapse the children of this node</summary>
 		public bool Collapse(bool recursive = false)
 		{
-			if (!Displayed && Parent != null) Parent.Expand();
-			if (!Displayed) throw new Exception("Cannot collapse nodes that are not displayed in the grid");
+			if (!IsInGrid && Parent != null) Parent.Expand();
+			if (!IsInGrid) throw new Exception("Cannot collapse nodes that are not displayed in the grid");
 			if (!m_is_expanded) return true;
 
 			var grid = Grid;
@@ -632,8 +653,8 @@ namespace pr.gui
 		/// <summary>Expand the children of this node</summary>
 		public bool Expand(bool recusive = false)
 		{
-			if (!Displayed && Parent != null) Parent.Expand();
-			if (!Displayed) throw new Exception("Cannot expand nodes that are not displayed in the grid");
+			if (!IsInGrid && Parent != null) Parent.Expand();
+			if (!IsInGrid) throw new Exception("Cannot expand nodes that are not displayed in the grid");
 			if (m_is_expanded) return true;
 
 			var grid = Grid;
@@ -661,7 +682,7 @@ namespace pr.gui
 		internal void RemoveRowsFromGrid()
 		{
 			if (Grid == null) return;
-			if (!Displayed || IsRoot) return;
+			if (!IsInGrid || IsRoot) return;
 
 			// Remove all children from the grid
 			foreach (TreeGridNode child in Nodes)
@@ -669,18 +690,18 @@ namespace pr.gui
 
 			// Remove this node from the grid
 			Grid.Rows.Remove(this);
-			Debug.Assert(!Displayed);
+			IsInGrid = false;
 		}
 
 		/// <summary>Add this node to the grid</summary>
 		internal void DisplayRowsInGrid(ref int row_index)
 		{
 			if (Grid == null) return;
-			if (Displayed) return;
+			if (IsInGrid || IsRoot) return;
 
 			// Insert this node as a row in the grid
 			Grid.Rows.Insert(row_index++, this);
-			Debug.Assert(Displayed);
+			IsInGrid = true;
 			TreeCell.Dirty = true;
 
 			// If this node is expanded add all of it's children
@@ -701,7 +722,8 @@ namespace pr.gui
 			{
 				if (m_image_index == value) return;
 				m_image_index = value;
-				if (Displayed) Grid.InvalidateRow(base.Index);
+				if (IsInGrid)
+					Grid.InvalidateRow(base.Index);
 			}
 		}
 
@@ -718,7 +740,7 @@ namespace pr.gui
 			{
 				if (m_image == value) return;
 				m_image = value;
-				if (Displayed)
+				if (IsInGrid)
 					Grid.InvalidateRow(base.Index);
 			}
 		}

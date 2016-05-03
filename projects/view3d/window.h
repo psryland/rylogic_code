@@ -60,7 +60,7 @@ namespace view3d
 			,m_light()
 			,m_light_is_camera_relative(true)
 			,m_fill_mode(EView3DFillMode::Solid)
-			,m_background_colour(pr::Colour32::make(0xFF808080))
+			,m_background_colour(0xFF808080U)
 			,m_focus_point()
 			,m_origin_point()
 			,m_focus_point_size(0.05f)
@@ -81,9 +81,9 @@ namespace view3d
 			// The light for the scene
 			m_light.m_type           = pr::rdr::ELight::Directional;
 			m_light.m_on             = true;
-			m_light.m_ambient        = pr::Colour32::make(0x00101010);
-			m_light.m_diffuse        = pr::Colour32::make(0xFF808080);
-			m_light.m_specular       = pr::Colour32::make(0x00404040);
+			m_light.m_ambient        = pr::Colour32(0x00101010U);
+			m_light.m_diffuse        = pr::Colour32(0xFF808080U);
+			m_light.m_specular       = pr::Colour32(0x00404040U);
 			m_light.m_specular_power = 1000.0f;
 			m_light.m_direction      = -pr::v4ZAxis;
 

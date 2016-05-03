@@ -28,16 +28,16 @@ namespace pr
 		//
 
 		// Define sort groups
-		#define PR_ENUM(x                  )/*
-			*/x(Default     ,= 64          ) /* Make opaques the middle group
-			*/x(Skybox      ,              )/* Skybox after opaques
-			*/x(PostOpaques ,              )/*
-			*/x(PreAlpha    ,= 80          )/*
-			*/x(AlphaBack   ,              )/*
-			*/x(AlphaFront  ,              )/*
-			*/x(PostAlpha   ,              )
-		PR_DEFINE_ENUM2(ESortGroup, PR_ENUM);
-		#undef PR_ENUM
+		enum class ESortGroup
+		{
+			Default     = 64, // Make opaques the middle group
+			Skybox          , // Sky-box after opaques
+			PostOpaques     , // 
+			PreAlpha    = 80, // 
+			AlphaBack       , // 
+			AlphaFront      , // 
+			PostAlpha       , // 
+		};
 
 		// The sort key type (wraps a uint32)
 		struct SortKey
@@ -77,14 +77,15 @@ namespace pr
 			}
 			void Group(ESortGroup group)
 			{
-				PR_ASSERT(PR_DBG_RDR, group >= 0 && (uint32)group < MaxSortGroups, "sort group out of range");
+				auto g = value_type(group);
+				PR_ASSERT(PR_DBG_RDR, g >= 0 && g < MaxSortGroups, "sort group out of range");
 				m_value &= ~SortGroupMask;
-				m_value |= (group << SortGroupOfs) & SortGroupMask;
+				m_value |= (g << SortGroupOfs) & SortGroupMask;
 			}
 		};
 		static_assert(std::is_pod<SortKey>::value, "SortKey must be a pod type");
 		static_assert(8U * sizeof(SortKey) == SortKey::Bits, "8 * sizeof(Sortkey) != SortKey::Bits");
-		static_assert(ESortGroup::Default == SortKey::MaxSortGroups/2, "ESortGroup::Default should be the middle");
+		static_assert(uint32(ESortGroup::Default) == SortKey::MaxSortGroups/2, "ESortGroup::Default should be the middle");
 		inline SortKey& operator |= (SortKey& lhs, SortKey::value_type rhs) { lhs.m_value |= rhs; return lhs; }
 		inline SortKey& operator &= (SortKey& lhs, SortKey::value_type rhs) { lhs.m_value &= rhs; return lhs; }
 
@@ -92,8 +93,9 @@ namespace pr
 		// to override specific parts of the sort key.
 		struct SKOverride
 		{
-			SortKey::value_type m_mask; // The bits to override
-			SortKey::value_type m_key;  // The overridden bit values
+			using value_type = SortKey::value_type;
+			value_type m_mask; // The bits to override
+			value_type m_key;  // The overridden bit values
 
 			SKOverride()
 				:m_mask(0)
@@ -135,7 +137,7 @@ namespace pr
 			}
 			int Group() const
 			{
-				return static_cast<int>(((m_key & SortKey::SortGroupMask) >> SortKey::SortGroupOfs) - ESortGroup::Default);
+				return static_cast<int>(((m_key & SortKey::SortGroupMask) >> SortKey::SortGroupOfs) - value_type(ESortGroup::Default));
 			}
 			SKOverride& ClearGroup()
 			{
@@ -145,9 +147,10 @@ namespace pr
 			}
 			SKOverride& Group(ESortGroup group)
 			{
-				PR_ASSERT(PR_DBG_RDR, group >= 0 && (uint32)group < SortKey::MaxSortGroups, "sort group out of range");
+				auto g = value_type(group);
+				PR_ASSERT(PR_DBG_RDR, g >= 0 && g < SortKey::MaxSortGroups, "sort group out of range");
 				m_mask |= SortKey::SortGroupMask;
-				m_key  |= (group << SortKey::SortGroupOfs) & SortKey::SortGroupMask;
+				m_key  |= (g << SortKey::SortGroupOfs) & SortKey::SortGroupMask;
 				return *this;
 			}
 		};

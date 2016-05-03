@@ -203,9 +203,9 @@ namespace pr
 				m_tb_range         .Text(pr::FmtS(L"%3.3f" ,m_light.m_range));
 				m_tb_falloff       .Text(pr::FmtS(L"%3.3f" ,m_light.m_falloff));
 				m_tb_shadow_range  .Text(pr::FmtS(L"%3.3f" ,m_light.m_cast_shadow));
-				m_tb_ambient       .Text(pr::FmtS(L"%6.6X" ,0xFFFFFF & m_light.m_ambient.m_aarrggbb ));
-				m_tb_diffuse       .Text(pr::FmtS(L"%6.6X" ,0xFFFFFF & m_light.m_diffuse.m_aarrggbb ));
-				m_tb_specular      .Text(pr::FmtS(L"%6.6X" ,0xFFFFFF & m_light.m_specular.m_aarrggbb));
+				m_tb_ambient       .Text(pr::FmtS(L"%6.6X" ,0xFFFFFF & m_light.m_ambient.argb ));
+				m_tb_diffuse       .Text(pr::FmtS(L"%6.6X" ,0xFFFFFF & m_light.m_diffuse.argb ));
+				m_tb_specular      .Text(pr::FmtS(L"%6.6X" ,0xFFFFFF & m_light.m_specular.argb));
 				m_tb_spec_power    .Text(pr::FmtS(L"%d" ,(int)(0.5f + m_light.m_specular_power)));
 				m_tb_spot_inner    .Text(pr::FmtS(L"%d" ,(int)(0.5f + pr::RadiansToDegrees(pr::ACos(m_light.m_inner_cos_angle)))));
 				m_tb_spot_outer    .Text(pr::FmtS(L"%d" ,(int)(0.5f + pr::RadiansToDegrees(pr::ACos(m_light.m_outer_cos_angle)))));

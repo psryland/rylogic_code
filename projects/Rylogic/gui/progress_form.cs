@@ -25,6 +25,9 @@ namespace pr.gui
 			/// <summary>Control the style of the progress bar. Null means don't change</summary>
 			public ProgressBarStyle? ProgressBarStyle { get; set; }
 
+			/// <summary>Text to display on the progress bar</summary>
+			public string ProgressBarText { get; set; }
+
 			/// <summary>Dialog icon. Null means don't change</summary>
 			public Icon Icon { get; set; }
 
@@ -264,6 +267,9 @@ namespace pr.gui
 
 			if (us.ProgressBarStyle != null)
 				m_progress.Style = us.ProgressBarStyle.Value;
+
+			if (us.ProgressBarText != null)
+				m_progress.Text = us.ProgressBarText;
 
 			if (do_layout)
 				DoLayout();

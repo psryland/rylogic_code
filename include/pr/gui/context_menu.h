@@ -478,14 +478,15 @@ namespace pr
 			{
 				// Show the context menu as a modal dialog because the menu closes when this function returns
 				if (m_items.empty()) return;
-				Form::ShowDialog(parent, (void*)MakeLParam(x, y));
+				cp().m_init_param = (void*)MakeLParam(x, y);
+				Form::ShowDialog(parent);
 			}
 
 			// Result of a high test on the menu
 			struct HitTestResult
 			{
 				// Note, menu's have a margin
-				// The topleft of the first item is at (MenuMargin,MenuMargin)
+				// The top left of the first item is at (MenuMargin,MenuMargin)
 				ContextMenuItem* m_item;   // The item under the hit point
 				int              m_index;  // Index of the hit item
 				Point            m_point;  // The point at which the hit test was performed (in menu client space)

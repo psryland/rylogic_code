@@ -127,8 +127,8 @@ namespace pr
 				:m_info((int)light.m_type,0,0,0)
 				,m_ws_direction(light.m_direction)
 				,m_ws_position(light.m_position)
-				,m_ambient(To<Colour>(light.m_ambient))
-				,m_colour(To<Colour>(light.m_diffuse))
+				,m_ambient(To<Colour>(light.m_ambient).rgba)
+				,m_colour(To<Colour>(light.m_diffuse).rgba)
 				,m_specular(v4(To<Colour>(light.m_specular).rgb, light.m_specular_power))
 				,m_range(light.m_range, light.m_falloff, light.m_inner_cos_angle, light.m_outer_cos_angle)
 			{}

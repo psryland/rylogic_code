@@ -206,9 +206,9 @@ static UINT TypeOrMethodDefIndex[]     = {ETableTypes::TypeDef,ETableTypes::Meth
 			TABLE_COLUMN map[] =\
 			{
 #define COLUMN_ENTRY(name, size)\
-				{size, _T(name), 0},
+				{UINT(size), _T(name), 0},
 #define END_COLUMN_MAP()\
-				{ 0, NULL }\
+				{ 0U, NULL, 0 }\
 			};\
 			auto p = new TABLE_COLUMN[sizeof(map) / sizeof(TABLE_COLUMN)];\
 			CopyMemory(p, map, sizeof(map));\

@@ -94,6 +94,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mergebin", "mergebin.vcxpro
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scintilla", "..\sdk\scintilla\scintilla.vcxproj", "{599D9118-2445-476A-9877-060417FE5FA5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CppPad", "..\projects\CppPad\CppPad.csproj", "{9850EC57-88A8-4290-A50B-486A2F151260}"
+	ProjectSection(ProjectDependencies) = postProject
+		{599D9118-2445-476A-9877-060417FE5FA5} = {599D9118-2445-476A-9877-060417FE5FA5}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -396,6 +401,18 @@ Global
 		{599D9118-2445-476A-9877-060417FE5FA5}.Release|x64.Build.0 = Release|x64
 		{599D9118-2445-476A-9877-060417FE5FA5}.Release|x86.ActiveCfg = Release|Win32
 		{599D9118-2445-476A-9877-060417FE5FA5}.Release|x86.Build.0 = Release|Win32
+		{9850EC57-88A8-4290-A50B-486A2F151260}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9850EC57-88A8-4290-A50B-486A2F151260}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9850EC57-88A8-4290-A50B-486A2F151260}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{9850EC57-88A8-4290-A50B-486A2F151260}.Debug|x64.Build.0 = Debug|Any CPU
+		{9850EC57-88A8-4290-A50B-486A2F151260}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9850EC57-88A8-4290-A50B-486A2F151260}.Debug|x86.Build.0 = Debug|Any CPU
+		{9850EC57-88A8-4290-A50B-486A2F151260}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9850EC57-88A8-4290-A50B-486A2F151260}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9850EC57-88A8-4290-A50B-486A2F151260}.Release|x64.ActiveCfg = Release|Any CPU
+		{9850EC57-88A8-4290-A50B-486A2F151260}.Release|x64.Build.0 = Release|Any CPU
+		{9850EC57-88A8-4290-A50B-486A2F151260}.Release|x86.ActiveCfg = Release|Any CPU
+		{9850EC57-88A8-4290-A50B-486A2F151260}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

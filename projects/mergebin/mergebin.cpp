@@ -105,7 +105,7 @@ void DumpCLRInfo(TCHAR const* pszFile)
 	if (!GetMinMaxCOR20RVA(peFile, dwMinRVA, dwMaxRVA))
 		_tprintf(_T("Unable to retrieve .NET assembly information for file %s\n"), pszFile);
 	else
-		_tprintf(_T("%d Bytes required to merge %s\n"), (dwMaxRVA - dwMinRVA) + ((PIMAGE_COR20_HEADER)peFile)->cb + sizeof(EXTRA_STUFF), pszFile);
+		_tprintf(_T("%d Bytes required to merge %s\n"), int((dwMaxRVA - dwMinRVA) + ((PIMAGE_COR20_HEADER)peFile)->cb + sizeof(EXTRA_STUFF)), pszFile);
 }
 
 // Output the generated code for including in the native dll
@@ -156,7 +156,7 @@ __declspec(dllexport) BOOL WINAPI _CorDllMainStub(HANDLE hModule, DWORD dwReason
 			,assembly_filepath
 			,section_name
 			,section_name
-			,(dwMaxRVA - dwMinRVA) + ((PIMAGE_COR20_HEADER)peFile)->cb + sizeof(EXTRA_STUFF));
+			,int((dwMaxRVA - dwMinRVA) + ((PIMAGE_COR20_HEADER)peFile)->cb + sizeof(EXTRA_STUFF)));
 }
 
 // When merged, the native DLL's entrypoint must go to _CorDllMain in MSCOREE.DLL.
@@ -169,15 +169,15 @@ __declspec(dllexport) BOOL WINAPI _CorDllMainStub(HANDLE hModule, DWORD dwReason
 DWORD GetExportedCorDllMainRVA(pr::PEFile& file)
 {
 	DWORD exports_rva_beg, exports_rva_end;
-	if (IMAGE_NT_HEADERS32* hdr = file)
+	if (IMAGE_NT_HEADERS32* hdr32 = file)
 	{
-		exports_rva_beg = hdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
-		exports_rva_end = hdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size + exports_rva_beg;
+		exports_rva_beg = hdr32->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
+		exports_rva_end = hdr32->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size + exports_rva_beg;
 	}
-	else if (IMAGE_NT_HEADERS64* hdr = file)
+	else if (IMAGE_NT_HEADERS64* hdr64 = file)
 	{
-		exports_rva_beg = hdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
-		exports_rva_end = hdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size + exports_rva_beg;
+		exports_rva_beg = hdr64->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
+		exports_rva_end = hdr64->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size + exports_rva_beg;
 	}
 	else
 	{
@@ -245,7 +245,7 @@ void MergeModules(LPCTSTR assembly_filepath, LPCTSTR native_filepath, LPCTSTR se
 	// If the section isn't large enough, tell the user how large it needs to be
 	if (pSection->Misc.VirtualSize < dwSize + sizeof(EXTRA_STUFF))
 	{
-		printf("Not enough room in section for data.  Need %d bytes\n", dwSize + sizeof(EXTRA_STUFF));
+		printf("Not enough room in section for data.  Need %d bytes\n", int(dwSize + sizeof(EXTRA_STUFF)));
 		return;
 	}
 
@@ -270,8 +270,8 @@ void MergeModules(LPCTSTR assembly_filepath, LPCTSTR native_filepath, LPCTSTR se
 	{
 		if (pCor->Flags & 0x10)
 		{
-			if      (IMAGE_NT_HEADERS32* hdr = peDest) hdr->OptionalHeader.AddressOfEntryPoint = pCor->EntryPointToken;
-			else if (IMAGE_NT_HEADERS64* hdr = peDest) hdr->OptionalHeader.AddressOfEntryPoint = pCor->EntryPointToken;
+			if      (IMAGE_NT_HEADERS32* hdr32 = peDest) hdr32->OptionalHeader.AddressOfEntryPoint = pCor->EntryPointToken;
+			else if (IMAGE_NT_HEADERS64* hdr64 = peDest) hdr64->OptionalHeader.AddressOfEntryPoint = pCor->EntryPointToken;
 			else throw std::exception("NT image header missing");
 		}
 	}
@@ -283,17 +283,17 @@ void MergeModules(LPCTSTR assembly_filepath, LPCTSTR native_filepath, LPCTSTR se
 	memcpy(pDest, pSrc, dwSize);
 
 	// Fixup the NT header on the native DLL to include the new .NET header
-	if (IMAGE_NT_HEADERS32* hdr = peDest)
+	if (IMAGE_NT_HEADERS32* hdr32 = peDest)
 	{
-		pExtra->dwNativeEntryPoint = hdr->OptionalHeader.AddressOfEntryPoint;
-		hdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR].VirtualAddress = dwDestRVA;
-		hdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR].Size = dwSize;
+		pExtra->dwNativeEntryPoint = hdr32->OptionalHeader.AddressOfEntryPoint;
+		hdr32->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR].VirtualAddress = dwDestRVA;
+		hdr32->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR].Size = dwSize;
 	}
-	else if (IMAGE_NT_HEADERS64* hdr = peDest)
+	else if (IMAGE_NT_HEADERS64* hdr64 = peDest)
 	{
-		pExtra->dwNativeEntryPoint = hdr->OptionalHeader.AddressOfEntryPoint;
-		hdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR].VirtualAddress = dwDestRVA;
-		hdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR].Size = dwSize;
+		pExtra->dwNativeEntryPoint = hdr64->OptionalHeader.AddressOfEntryPoint;
+		hdr64->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR].VirtualAddress = dwDestRVA;
+		hdr64->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR].Size = dwSize;
 	}
 	dwDestRVA += dwSize;
 	if (dwDestRVA % 4) dwDestRVA += (4 - (dwDestRVA % 4));
@@ -309,22 +309,22 @@ void MergeModules(LPCTSTR assembly_filepath, LPCTSTR native_filepath, LPCTSTR se
 	pCor = (IMAGE_COR20_HEADER*)peDest;
 
 	// Fixup the DLL entrypoints
-	if (IMAGE_NT_HEADERS32* hdr = peDest)
+	if (IMAGE_NT_HEADERS32* hdr32 = peDest)
 	{
-		hdr->OptionalHeader.MajorOperatingSystemVersion = 4;
-		hdr->OptionalHeader.MajorSubsystemVersion       = 4;
-		if (hdr->OptionalHeader.AddressOfEntryPoint != dwNewEntrypoint)
+		hdr32->OptionalHeader.MajorOperatingSystemVersion = 4;
+		hdr32->OptionalHeader.MajorSubsystemVersion       = 4;
+		if (hdr32->OptionalHeader.AddressOfEntryPoint != dwNewEntrypoint)
 		{
-			pCor->EntryPointToken = hdr->OptionalHeader.AddressOfEntryPoint;
-			hdr->OptionalHeader.AddressOfEntryPoint = dwNewEntrypoint;
+			pCor->EntryPointToken = hdr32->OptionalHeader.AddressOfEntryPoint;
+			hdr32->OptionalHeader.AddressOfEntryPoint = dwNewEntrypoint;
 		}
 	}
-	else if (IMAGE_NT_HEADERS64* hdr = peDest)
+	else if (IMAGE_NT_HEADERS64* hdr64 = peDest)
 	{
-		if (hdr->OptionalHeader.AddressOfEntryPoint != dwNewEntrypoint)
+		if (hdr64->OptionalHeader.AddressOfEntryPoint != dwNewEntrypoint)
 		{
-			pCor->EntryPointToken = hdr->OptionalHeader.AddressOfEntryPoint;
-			hdr->OptionalHeader.AddressOfEntryPoint = dwNewEntrypoint;
+			pCor->EntryPointToken = hdr64->OptionalHeader.AddressOfEntryPoint;
+			hdr64->OptionalHeader.AddressOfEntryPoint = dwNewEntrypoint;
 		}
 	}
 

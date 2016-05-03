@@ -165,7 +165,7 @@ namespace pr
 			// Clear the smap depth buffer.
 			// The depth data is the fractional distance between the frustum plane (0) and the light (1).
 			// We only care about points in front of the frustum faces => reset depths to zero.
-			dc->ClearRenderTargetView(m_rtv.m_ptr, pr::ColourZero);
+			dc->ClearRenderTargetView(m_rtv.m_ptr, pr::ColourZero.arr);
 
 			// Viewport = the whole smap
 			Viewport vp(UINT(m_smap_size.x), UINT(m_smap_size.y));

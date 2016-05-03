@@ -1197,11 +1197,12 @@ namespace pr.gui
 				private void HandleResized(object sender, EventArgs e)
 				{
 					var hw = Split.BarWidth / 2f;
+					var split = Split.Position + hw;
 					switch (DockSite) { // Preserve the proportional or absolute size values
-					case EDockSite.Left:   This.DockSizes[DockSite] =     (Split.Position + hw) / (This.DockSizes[DockSite] <= 1 ? Split.Area.Width  : 1); break;
-					case EDockSite.Right:  This.DockSizes[DockSite] = 1 - (Split.Position - hw) / (This.DockSizes[DockSite] <= 1 ? Split.Area.Width  : 1); break;
-					case EDockSite.Top:    This.DockSizes[DockSite] =     (Split.Position + hw) / (This.DockSizes[DockSite] <= 1 ? Split.Area.Height : 1); break;
-					case EDockSite.Bottom: This.DockSizes[DockSite] = 1 - (Split.Position - hw) / (This.DockSizes[DockSite] <= 1 ? Split.Area.Height : 1); break;
+					case EDockSite.Left:   This.DockSizes[DockSite] = (                    split) / (This.DockSizes[DockSite] <= 1 ? Split.Area.Width  : 1); break;
+					case EDockSite.Right:  This.DockSizes[DockSite] = (Split.Area.Width  - split) / (This.DockSizes[DockSite] <= 1 ? Split.Area.Width  : 1); break;
+					case EDockSite.Top:    This.DockSizes[DockSite] = (                    split) / (This.DockSizes[DockSite] <= 1 ? Split.Area.Height : 1); break;
+					case EDockSite.Bottom: This.DockSizes[DockSite] = (Split.Area.Height - split) / (This.DockSizes[DockSite] <= 1 ? Split.Area.Height : 1); break;
 					}
 					This.PerformLayout();
 				}
@@ -2798,7 +2799,12 @@ namespace pr.gui
 			public string TabText
 			{
 				get { return m_impl_tab_text ?? Owner.Text; }
-				set { m_impl_tab_text = value; }
+				set
+				{
+					if (m_impl_tab_text == value) return;
+					m_impl_tab_text = value;
+					DockPane?.TabStripCtrl.Invalidate();
+				}
 			}
 			private string m_impl_tab_text;
 
@@ -2825,7 +2831,12 @@ namespace pr.gui
 					// Otherwise, no icon
 					return null;
 				}
-				set { m_impl_icon = value; }
+				set
+				{
+					if (m_impl_icon == value) return;
+					m_impl_icon = value;
+					DockPane?.TabStripCtrl.Invalidate();
+				}
 			}
 			private Image m_impl_icon;
 			private Icon m_impl_form_icon;
@@ -2972,6 +2983,8 @@ namespace pr.gui
 			{
 				public TabStripData()
 				{
+					AlwaysShowTabs = false;
+
 					ActiveStrip = new ColourSet(
 						text: SystemColors.ActiveCaptionText,
 						beg: SystemColors.Control.Lerp(Color.Black, 0.1f),
@@ -3003,6 +3016,9 @@ namespace pr.gui
 					StripPadding      = new Padding(2, 2, 2, 0);
 					TabPadding        = new Padding(3, 3, 3, 3);
 				}
+
+				/// <summary>True to always show the tabs, even if there's only one</summary>
+				public bool AlwaysShowTabs { get; set; }
 
 				///<summary>Colour gradient for the tab strip background in an active DockPane</summary>
 				public ColourSet ActiveStrip { get; private set; }
@@ -3220,9 +3236,10 @@ namespace pr.gui
 			internal Branch Owner { get; set; }
 
 			/// <summary>Update a property and raise an event if different</summary>
-			private void SetProp<T>(ref T prop, T value)
+			private void SetProp(ref float prop, float value)
 			{
 				if (Equals(prop,value)) return;
+				Debug.Assert(value >= 0);
 				prop = value;
 				Owner?.PerformLayout();
 			}
@@ -3521,7 +3538,7 @@ namespace pr.gui
 				var max = Orientation == Orientation.Vertical ? rc.Width : rc.Height;
 				var pos = Orientation == Orientation.Vertical ? pt.X - rc.Left : pt.Y - rc.Top;
 
-				// Don't the user drag less than the min size
+				// Don't let the user drag less than the min size
 				if (max > 2 * MinPaneSize)
 					Position = Maths.Clamp(pos, MinPaneSize, max - MinPaneSize);
 			}
@@ -3767,19 +3784,28 @@ namespace pr.gui
 			}
 
 			/// <summary>True if the tab strip is 'activated'</summary>
-			protected virtual bool IsActivated { get { return false; } }
+			protected virtual bool IsActivated
+			{
+				get { return false; }
+			}
 
 			/// <summary>The number of tabs</summary>
-			public virtual int TabCount { get { return Content.Count(); } }
+			public virtual int TabCount
+			{
+				get { return Content.Count(); }
+			}
 
 			/// <summary>Get the content that we're showing tabs for</summary>
-			public virtual IEnumerable<DockControl> Content { get { yield break; } }
+			public virtual IEnumerable<DockControl> Content
+			{
+				get { yield break; }
+			}
 
 			/// <summary>Returns the size of the tab strip control given the available 'display_area' and strip location</summary>
 			public virtual Rectangle CalcBounds(Rectangle display_area)
 			{
 				// No tab strip if there is only one item in the pane
-				if (TabCount <= 1)
+				if (TabCount == 0 || (TabCount == 1 && !TabStripOpts.AlwaysShowTabs))
 					return Rectangle.Empty;
 
 				var r = new RectangleRef(display_area);

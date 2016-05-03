@@ -107,7 +107,7 @@ namespace pr.util
 		}
 		[DebuggerStepThrough] public static void DisposeAll<T>(this IEnumerable<T> doomed) where T:class, IDisposable
 		{
-			foreach (var d in doomed.Where(x => x != null))
+			foreach (var d in doomed.Where(x => x != null).ToArray())
 				Dispose(d);
 		}
 		[DebuggerStepThrough] public static T[] DisposeAll<T>(T[] doomed) where T:class, IDisposable

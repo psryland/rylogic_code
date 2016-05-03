@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Windows.Forms;
 using pr.common;
 using pr.extn;
+using pr.util;
 
 namespace pr.gui
 {
@@ -78,7 +79,7 @@ namespace pr.gui
 			set
 			{
 				if (PreserveSelectionThruFocusChange && !Focused)
-					RestoreSelection();
+					RestoreSelection(m_selection);
 
 				base.SelectedText = value;
 			}
@@ -92,7 +93,7 @@ namespace pr.gui
 			{
 				base.SelectionStart = value;
 				if (PreserveSelectionThruFocusChange)
-					SaveSelection();
+					m_selection = SaveSelection();
 			}
 		}
 
@@ -104,7 +105,7 @@ namespace pr.gui
 			{
 				base.SelectionLength = value;
 				if (PreserveSelectionThruFocusChange)
-					SaveSelection();
+					m_selection = SaveSelection();
 			}
 		}
 
@@ -112,7 +113,7 @@ namespace pr.gui
 		public void SetText(string text)
 		{
 			if (PreserveSelectionThruFocusChange)
-				RestoreSelection();
+				RestoreSelection(m_selection);
 
 			var idx = SelectionStart;
 			SelectedText = text;
@@ -123,7 +124,7 @@ namespace pr.gui
 		public void AppendText(string text)
 		{
 			if (PreserveSelectionThruFocusChange)
-				RestoreSelection();
+				RestoreSelection(m_selection);
 
 			var carot_at_end = SelectionStart == Text.Length && SelectionLength == 0;
 			if (carot_at_end)
@@ -139,7 +140,17 @@ namespace pr.gui
 		}
 
 		/// <summary>Set to true to have the text selection preserved while the combo doesn't have focus</summary>
-		public bool PreserveSelectionThruFocusChange { get; set; }
+		public bool PreserveSelectionThruFocusChange
+		{
+			get { return m_preserve_selection && DropDownStyle != ComboBoxStyle.DropDownList; }
+			set
+			{
+				if (m_preserve_selection == value) return;
+				m_preserve_selection = value;
+			}
+		}
+		private bool m_preserve_selection;
+		private Range m_selection; // don't use a Scope for this. We save selection more than restoring it and disposed old scopes will restore the selection.
 
 		/// <summary>The property of the data bound items to display</summary>
 		public string DisplayProperty
@@ -177,7 +188,7 @@ namespace pr.gui
 		{
 			// Note, don't save on lost focus, the selection has already been reset to 0,0 by then
 			if (PreserveSelectionThruFocusChange)
-				RestoreSelection();
+				RestoreSelection(m_selection);
 	
 			base.OnGotFocus(e);
 		}
@@ -188,7 +199,7 @@ namespace pr.gui
 			Modified = true;
 			base.OnTextUpdate(e);
 			if (PreserveSelectionThruFocusChange)
-				SaveSelection();
+				m_selection = SaveSelection();
 		}
 
 		/// <summary>Clear the Modified flag after text changed</summary>
@@ -203,7 +214,7 @@ namespace pr.gui
 		{
 			base.OnMouseUp(e);
 			if (PreserveSelectionThruFocusChange)
-				SaveSelection();
+				m_selection = SaveSelection();
 		}
 
 		/// <summary>Save the selection after it has been changed by key presses</summary>
@@ -211,35 +222,37 @@ namespace pr.gui
 		{
 			base.OnKeyUp(e);
 			if (PreserveSelectionThruFocusChange)
-				SaveSelection();
+				m_selection = SaveSelection();
+		}
+
+		/// <summary>Preserve the selection in the combo</summary>
+		public Scope PreserveSelection()
+		{
+			return Scope.Create(
+				() => SaveSelection(),
+				sr => RestoreSelection(sr));
 		}
 
 		/// <summary>Restore the selection</summary>
-		public void RestoreSelection()
+		public void RestoreSelection(Range selection)
 		{
 			// Only allow selection setting for editable combo box styles
-			if (DropDownStyle != ComboBoxStyle.DropDownList && m_selection != null)
+			if (DropDownStyle != ComboBoxStyle.DropDownList)
 			{
-				//System.Diagnostics.Trace.WriteLine("Restoring Selection: [{0},{1}]".Fmt(m_selection.Value.Begini, m_selection.Value.Sizei));
-				Select(m_selection.Value.Begini, m_selection.Value.Sizei);
-				m_selection = null;
+				//System.Diagnostics.Trace.WriteLine("Restoring Selection: [{0},{1}]".Fmt(selection.Begini, selection.Sizei));
+				Select(selection.Begini, selection.Sizei);
 				//System.Diagnostics.Trace.WriteLine("Selection is now: [{0},{1}]".Fmt(SelectionStart, SelectionLength));
 			}
 		}
 
 		/// <summary>Save the current selection</summary>
-		public void SaveSelection()
+		public Range SaveSelection()
 		{
-			// Only allow selection setting for editable combo box styles
-			if (DropDownStyle != ComboBoxStyle.DropDownList)
-			{
-				m_selection = Range.FromStartLength(SelectionStart, SelectionLength);
-				//System.Diagnostics.Trace.WriteLine("Selection Saved: [{0},{1}]\n\t{2}".Fmt(m_selection.Value.Begini, m_selection.Value.Sizei,
-				//	string.Join("\n\t", new System.Diagnostics.StackTrace().GetFrames().Take(5).Select(x => x.GetMethod()))));
-			}
+			var selection = Range.FromStartLength(SelectionStart, SelectionLength);
+			//System.Diagnostics.Trace.WriteLine("Selection Saved: [{0},{1}]\n\t{2}"
+			//	.Fmt(selection.Value.Begini, selection.Value.Sizei,
+			//	string.Join("\n\t", new System.Diagnostics.StackTrace().GetFrames().Take(5).Select(x => x.GetMethod()))));
+			return selection;
 		}
-
-		/// <summary>Used to preserve the selection while the control doesn't have focus</summary>
-		private Range? m_selection; // don't use a scope, because we save selection more than restoring it and disposed old scope will restore the selection.
 	}
 }

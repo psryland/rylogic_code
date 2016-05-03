@@ -62,83 +62,177 @@ namespace pr
 			std::condition_variable_any m_cv;        // Sync for flags
 			std::thread                 m_worker;    // The worker thread
 
-			// A dialog layout description used for this indirect dialog
-			static DlgTemplate const& Templ()
+		public:
+
+			struct ProgressParams :FormParams
 			{
-				static auto templ =
-					DlgTemplate(MakeDlgParams<>().xy(0,0).wh(240,100))
-					.Add(Label::Params<>().id(IDC_TEXT_DESC))
-					.Add(ProgressBar::Params<>().id(IDC_PROGRESS_BAR))
-					.Add(Button::Params<>().id(IDCANCEL).text(L"Cancel").def_btn());
-				return templ;
+				wchar_t const* m_desc;
+				ProgressParams() :m_desc() {}
+				ProgressParams* clone() const override { return new ProgressParams(*this); }
+			};
+			template <typename TParams = ProgressParams, typename Derived = void> struct Params :MakeDlgParams<TParams, choose_non_void<Derived, Params<>>>
+			{
+				using base = MakeDlgParams<TParams, choose_non_void<Derived, Params<>>>;
+				Params()
+				{
+					wndclass(RegisterWndClass<ProgressUI>()).name("progress-ui").wh(240,100);
+				}
+				operator ProgressParams const&() const
+				{
+					return params;
+				}
+				This& desc(wchar_t const* d)
+				{
+					params.m_desc = d;
+					return me();
+				}
+			};
+
+			ProgressUI() :ProgressUI(Params<>()) {}
+			ProgressUI(ProgressParams const& p)
+				:Form(p)
+				,m_lbl_desc(Label      ::Params<>().parent(this_).name("desc"  ).id(IDC_TEXT_DESC).text(p.m_desc))
+				,m_bar     (ProgressBar::Params<>().parent(this_).name("bar"   ).id(IDC_PROGRESS_BAR))
+				,m_btn     (Button     ::Params<>().parent(this_).name("cancel").id(IDCANCEL).text(L"Cancel").def_btn())
+				,m_state(nullptr, p.m_text, p.m_desc, 0.0f)
+				,m_done(false)
+				,m_cancel(false)
+				,m_exception()
+				,m_shown()
+				,m_mutex()
+				,m_cv()
+				,m_worker()
+			{
+				m_dialog_result = EDialogResult::Ok;
+				m_btn.Click += [&](Button&,EmptyArgs const&)
+				{
+					if (Cancel(OptionalCancel|BlockTillCancelled))
+						Close();
+				};
 			}
+
+			// Construct the dialog starting the worker thread immediately.
+			// 'func' should have 'ProgressUI*' as the first parameter
+			template <typename Func, typename... Args>
+			ProgressUI(wchar_t const* title, wchar_t const* desc, Func&& func, Args&&... args)
+				:ProgressUI()
+			{
+				StartWorker(title, desc, std::forward<Func>(func), std::forward<Args>(args)...);
+			}
+			~ProgressUI()
+			{
+				Close();
+			}
+
+			// Execute a work function in a different thread while displaying a non-modal dialog.
+			// 'func' should have 'ProgressUI*' as the first parameter
+			template <typename Func, typename... Args>
+			void Show(wchar_t const* title, wchar_t const* desc, Func&& func, Args&&... args)
+			{
+				StartWorker(title, desc, std::forward<Func>(func), std::forward<Args>(args)...);
+				Form::ShowInternal(SW_SHOW);
+			}
+
+			// Execute a work function in a different thread while displaying the modal dialog
+			// Returns IDOK if the dialog completed, IDCANCEL if the operation was cancelled
+			EDialogResult ShowDialog(WndRefC parent, int delay_ms)
+			{
+				// Wait for up to 'delay_ms' in case no dialog is needed
+				auto done = false;
+				{
+					Lock lock(m_mutex);
+					done = m_cv.wait_for(lock, std::chrono::milliseconds(delay_ms), [&]{ return m_done; });
+				}
+
+				// If not done yet, show the dialog
+				if (!done)
+					Form::ShowDialogInternal(parent);
+
+				// Ensure the thread has ended
+				BlockTillWorkerDone();
+
+				// Return the result
+				if (m_dialog_result == EDialogResult::Abort)
+					std::rethrow_exception(m_exception);
+
+				return m_dialog_result;
+			}
+			EDialogResult ShowDialog(WndRefC parent) override
+			{
+				return ShowDialog(parent, 0);
+			}
+
+			// Called by the worker thread to update the UI or by callers to set the progress state
+			bool Progress(float pc = -1.0f, wchar_t const* desc = nullptr, wchar_t const* title = nullptr)
+			{
+				// Try to lock to update the state, skip if can't lock
+				Lock lock(m_mutex, std::chrono::milliseconds::zero());
+				if (!lock.owns_lock())
+					return true;
+
+				// Update the state
+				m_state = State(m_state.m_hwnd, title, desc, pc);
+
+				// If the owner window is visible, send progress update
+				if (m_state.m_hwnd)
+					::PostMessageW(m_state.m_hwnd, WM_PROGRESS_UPDATE, 0, 0);
+
+				return !m_cancel;
+			}
+
+			enum ECancelFlags
+			{
+				NonBlocking        = 0,
+				BlockTillCancelled = 1 << 0,
+				OptionalCancel     = 1 << 1,
+				_bitops_allowed
+			};
+
+			// Cancel the background thread, with optional cancel-the-cancel event
+			bool Cancel(ECancelFlags flags = NonBlocking)
+			{
+				// Query to cancel the 'cancel'
+				if (flags & ECancelFlags::OptionalCancel)
+				{
+					CancelEventArgs args;
+					OnCancelling(args);
+					if (args.m_cancel)
+						return false;
+				}
+
+				// Cancelling was not cancelled, so cancel...
+				{
+					Lock lock(m_mutex);
+					m_cancel = true;
+					m_cv.notify_all();
+				}
+
+				// Wait till the thread exits
+				if (flags & ECancelFlags::BlockTillCancelled)
+					BlockTillWorkerDone();
+
+				return true;
+			}
+
+			// Close the form, cancelling the worker thread if necessary
+			bool Close()
+			{
+				// Don't close the window until the task has exited
+				Cancel(BlockTillCancelled);
+				if (m_hwnd) ::KillTimer(m_hwnd, ID_POLL_WORKER_COMPLETE);
+				return Form::Close(m_dialog_result);
+			}
+
+			// An event raised when the cancel button is hit. Handlers can opt to not cancel.
+			EventHandler<ProgressUI&, CancelEventArgs&> Cancelling;
+
+		protected:
 
 			// Message map function
 			bool ProcessWindowMessage(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
 			{
 				switch (message)
 				{
-				case WM_INITDIALOG:
-					#pragma region
-					{
-						auto r = Form::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
-						{
-							Lock lock(m_mutex);
-							m_state.m_hwnd = m_hwnd;
-							Text(m_state.m_title);
-							m_lbl_desc.Text(m_state.m_desc);
-						}
-
-						// Ensure the timer is running that polls for the thread being complete
-						::SetTimer(m_hwnd, ID_POLL_WORKER_COMPLETE, 100, nullptr);
-						return r;
-					}
-					#pragma endregion
-				case WM_DESTROY:
-					#pragma region
-					{
-						// In case of abnormal shutdown, don't close the window until the task has exited
-						Cancel(BlockTillCancelled);
-						break;
-					}
-					#pragma endregion
-				case WM_WINDOWPOSCHANGED:
-					#pragma region
-					{
-						if (IsIconic(m_hwnd)) break;
-						
-						const int btn_w = 80, btn_h = 24, prog_h = 18, bp = (btn_h-prog_h)/2, sp = 2, bdr = 5;
-						auto Clamp = [](Rect& rect)
-							{
-								if (rect.right  < rect.left) rect.right  = rect.left;
-								if (rect.bottom < rect.top ) rect.bottom = rect.top;
-								return rect;
-							};
-
-						auto client = ClientRect().Adjust(bdr,bdr,-bdr,-bdr);
-						Rect r;
-						r = client;
-						r.top += bdr;
-						r.left += bdr;
-						r.right -= bdr;
-						r.bottom -= (btn_h + sp);
-						m_lbl_desc.ParentRect(Clamp(r));
-
-						r = client;
-						r.bottom -= bp;
-						r.top = r.bottom - prog_h;
-						r.right -= btn_w + sp;
-						m_bar.ParentRect(Clamp(r));
-
-						r = client;
-						r.top = r.bottom - btn_h;
-						r.left = r.right - btn_w;
-						m_btn.ParentRect(Clamp(r));
-
-						Invalidate();
-						break;
-					}
-					#pragma endregion
 				case WM_PROGRESS_UPDATE:
 					#pragma region
 					{
@@ -209,162 +303,73 @@ namespace pr
 				return Form::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
 			}
 
-		public:
-
-			enum ECancelFlags
-			{
-				NonBlocking        = 0,
-				BlockTillCancelled = 1 << 0,
-				OptionalCancel     = 1 << 1,
-				_bitops_allowed
-			};
-			struct ProgressParams :FormParams
-			{
-				wchar_t const* m_desc;
-				ProgressParams() :m_desc() {}
-				ProgressParams* clone() const override { return new ProgressParams(*this); }
-			};
-			template <typename TParams = ProgressParams, typename Derived = void> struct Params :MakeFormParams<TParams, choose_non_void<Derived, Params<>>>
-			{
-				using base = MakeFormParams<TParams, choose_non_void<Derived, Params<>>>;
-				Params() { templ(Templ()).name("progress-ui"); }
-				operator ProgressParams const&() const { return params; }
-				This& desc(wchar_t const* d)
-				{
-					params.m_desc = d;
-					return me();
-				}
-			};
-
-			ProgressUI() :ProgressUI(Params<>()) {}
-			ProgressUI(ProgressParams const& p)
-				:Form(p)
-				,m_lbl_desc(Label      ::Params<>().parent(this_).name("desc"  ).text(p.m_desc).id(IDC_TEXT_DESC).anchor(EAnchor::All))
-				,m_bar     (ProgressBar::Params<>().parent(this_).name("bar"   ).id(IDC_PROGRESS_BAR).anchor(EAnchor::LeftTopRight))
-				,m_btn     (Button     ::Params<>().parent(this_).name("cancel").id(IDCANCEL).anchor(EAnchor::Bottom))
-				,m_state(nullptr, p.m_text, p.m_desc, 0.0f)
-				,m_done(false)
-				,m_cancel(false)
-				,m_exception()
-				,m_shown()
-				,m_mutex()
-				,m_cv()
-				,m_worker()
-			{
-				m_dialog_result = EDialogResult::Ok;
-				m_btn.Click += [&](Button&,EmptyArgs const&)
-				{
-					if (Cancel(OptionalCancel|BlockTillCancelled))
-						Close();
-				};
-			}
-
-			// Construct the dialog starting the worker thread immediately.
-			// 'func' should have 'ProgressUI*' as the first parameter
-			template <typename Func, typename... Args>
-			ProgressUI(wchar_t const* title, wchar_t const* desc, Func&& func, Args&&... args) :ProgressUI()
-			{
-				StartWorker(title, desc, std::forward<Func>(func), std::forward<Args>(args)...);
-			}
-			~ProgressUI()
-			{
-				Close();
-			}
-
-			// Execute a work function in a different thread while displaying a non-modal dialog.
-			// 'func' should have 'ProgressUI*' as the first parameter
-			template <typename Func, typename... Args>
-			void Show(wchar_t const* title, wchar_t const* desc, Func&& func, Args&&... args)
-			{
-				StartWorker(title, desc, std::forward<Func>(func), std::forward<Args>(args)...);
-				Show(SW_SHOW); // Remember to call Create() first
-			}
-
-			// Execute a work function in a different thread while displaying the modal dialog
-			// Returns IDOK if the dialog completed, IDCANCEL if the operation was cancelled
-			EDialogResult ShowDialog(WndRef parent = nullptr, int delay_ms = 0)
-			{
-				// Wait for up to 'delay_ms' in case no dialog is needed
-				auto done = false;
-				{
-					Lock lock(m_mutex);
-					done = m_cv.wait_for(lock, std::chrono::milliseconds(delay_ms), [&]{ return m_done; });
-				}
-
-				// If not done yet, show the dialog
-				if (!done)
-					ShowDialog(parent, nullptr);
-
-				// Ensure the thread has ended
-				BlockTillWorkerDone();
-
-				// Return the result
-				if (m_dialog_result == EDialogResult::Abort)
-					std::rethrow_exception(m_exception);
-
-				return m_dialog_result;
-			}
-
-			// Called by the worker thread to update the UI or by callers to set the progress state
-			bool Progress(float pc = -1.0f, wchar_t const* desc = nullptr, wchar_t const* title = nullptr)
-			{
-				// Try to lock to update the state, skip if can't lock
-				Lock lock(m_mutex, std::chrono::milliseconds::zero());
-				if (!lock.owns_lock())
-					return true;
-
-				// Update the state
-				m_state = State(m_state.m_hwnd, title, desc, pc);
-
-				// If the owner window is visible, send progress update
-				if (m_state.m_hwnd)
-					::PostMessageW(m_state.m_hwnd, WM_PROGRESS_UPDATE, 0, 0);
-
-				return !m_cancel;
-			}
-
-			// Cancel the background thread, with optional cancel-the-cancel event
-			bool Cancel(ECancelFlags flags = NonBlocking)
-			{
-				// Query to cancel the 'cancel'
-				if (flags & ECancelFlags::OptionalCancel)
-				{
-					CancelEventArgs args;
-					OnCancelling(args);
-					if (args.m_cancel)
-						return false;
-				}
-
-				// Cancelling was not cancelled, so cancel...
-				{
-					Lock lock(m_mutex);
-					m_cancel = true;
-					m_cv.notify_all();
-				}
-
-				// Wait till the thread exits
-				if (flags & ECancelFlags::BlockTillCancelled)
-					BlockTillWorkerDone();
-
-				return true;
-			}
-
-			// Close the form, cancelling the worker thread if necessary
-			bool Close()
-			{
-				// Don't close the window until the task has exited
-				Cancel(BlockTillCancelled);
-				if (m_hwnd) ::KillTimer(m_hwnd, ID_POLL_WORKER_COMPLETE);
-				return Close(m_dialog_result);
-			}
-
-			// An event raised when the cancel button is hit
-			// Handlers can opt to not cancel.
-			EventHandler<ProgressUI&, CancelEventArgs&> Cancelling;
-
-		protected:
-
 			// Handlers
+			virtual void OnCreate() override
+			{
+				{
+					Lock lock(m_mutex);
+					m_state.m_hwnd = m_hwnd;
+					Text(m_state.m_title);
+					m_lbl_desc.Text(m_state.m_desc);
+				}
+
+				// Layout the dialog
+				OnLayout(ClientRect());
+
+				// Ensure the timer is running that polls for the thread being complete
+				::SetTimer(m_hwnd, ID_POLL_WORKER_COMPLETE, 100, nullptr);
+			}
+			virtual void OnDestroy() override
+			{
+				// In case of abnormal shutdown, don't close the window until the task has exited
+				Cancel(BlockTillCancelled);
+			}
+			virtual void OnLayout(Rect const& client_rect)
+			{
+				const int btn_w = 80, btn_h = 24, prog_h = 18, bp = (btn_h-prog_h)/2, sp = 2, bdr = 5;
+				auto Clamp = [](Rect& rect)
+				{
+					if (rect.right  < rect.left) rect.right  = rect.left;
+					if (rect.bottom < rect.top ) rect.bottom = rect.top;
+					return rect;
+				};
+
+				auto client = client_rect.Adjust(bdr,bdr,-bdr,-bdr);
+				Rect r;
+
+				// Position the description
+				r = client;
+				r.top += bdr;
+				r.left += bdr;
+				r.right -= bdr;
+				r.bottom -= (btn_h + sp);
+				m_lbl_desc.ParentRect(Clamp(r));
+
+				// Position the progress bar
+				r = client;
+				r.bottom -= bp;
+				r.top = r.bottom - prog_h;
+				r.right -= btn_w + sp;
+				m_bar.ParentRect(Clamp(r));
+
+				// Position the cancel button
+				r = client;
+				r.top = r.bottom - btn_h;
+				r.left = r.right - btn_w;
+				m_btn.ParentRect(Clamp(r));
+
+				Invalidate();
+			}
+			virtual void OnWindowPosChange(WindowPosEventArgs const& args) override
+			{
+				// Layout the dialog whenever it resizes
+				if (args.m_before && args.IsResize() && !args.Iconic())
+				{
+					auto c = ClientRect();
+					c.size(args.Size());
+					OnLayout(c);
+				}
+			}
 			virtual void OnCancelling(CancelEventArgs& args)
 			{
 				Cancelling(*this, args);
@@ -419,20 +424,6 @@ namespace pr
 			{
 				if (m_worker.joinable())
 					m_worker.join();
-			}
-
-			// Hide the inherited Show()/ShowDialog()
-			void Show(int show) override
-			{
-				return Form::Show(show);
-			}
-			EDialogResult ShowDialog(WndRefC parent, void* init_param) override
-			{
-				return Form::ShowDialog(parent, init_param);
-			}
-			bool Close(EDialogResult dialog_result) override
-			{
-				return Form::Close(dialog_result);
 			}
 		};
 	}

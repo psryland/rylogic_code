@@ -51,7 +51,7 @@ namespace pr
 
 			// Colour iterator wrapper
 			auto col = pr::CreateRepeater(colours, num_colours, vcount, pr::Colour32White);
-			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a() != 0xff; return c; };
+			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a != 0xff; return c; };
 
 			float z  = -height * 0.5f;
 			float dz = height / layers;

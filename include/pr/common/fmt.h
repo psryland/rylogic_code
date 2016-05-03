@@ -16,8 +16,10 @@
 #include <thread>
 
 // C++11's thread_local
-#ifndef thread_local
-#define thread_local __declspec(thread)
+#if _MSC_VER < 1900
+#  ifndef thread_local
+#    define thread_local __declspec(thread)
+#  endif
 #endif
 
 #ifdef __cplusplus

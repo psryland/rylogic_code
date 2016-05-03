@@ -5,24 +5,18 @@
 #pragma once
 
 #include <string>
-#include <memory.h>
+#include <type_traits>
 #include "pr/maths/maths.h"
 #include "pr/macros/enum.h"
 #include "pr/common/to.h"
 #include "pr/common/interpolate.h"
 #include "pr/str/to_string.h"
 
-#if defined(_WINGDI_) && !defined(NOGDI)
-#  define PR_SUPPORT_WINGDI(exp) exp
-#else
-#  define PR_SUPPORT_WINGDI(exp)
-#endif
-
 namespace pr
 {
-	// Forward declaration
-	struct Colour;
-	struct Colour32;
+	// Colour type traits
+	template <typename T> struct is_colour :std::false_type {};
+	template <typename T> using enable_if_col = typename std::enable_if<is_colour<T>::value>::type;
 
 	#pragma region Predefined Windows Colours
 	#define PR_ENUM(x)\
@@ -168,56 +162,110 @@ namespace pr
 	#undef PR_ENUM
 	#pragma endregion
 
+	#pragma region Colour32
+
 	// Equivalent to D3DCOLOR
 	struct Colour32
 	{
-		uint32 m_aarrggbb;
+		#pragma warning(push)
+		#pragma warning(disable:4201) // nameless struct
+		union
+		{	// Note: 'argb' is little endian
+			struct { uint32 argb; };
+			struct { uint16 gb,ar; };
+			struct { uint8 b,g,r,a; };
+			// struct { uint8 arr[4]; }; - Removed because endian order causes this to be confusing
+		};
+		#pragma warning(pop)
 
-		static Colour32 make(EColours::Enum_ col)               { Colour32 c; return c.set(col); }
-		static Colour32 make(uint32 aarrggbb)                   { Colour32 c; return c.set(aarrggbb); }
-		static Colour32 make(float r, float g, float b, float a){ Colour32 c; return c.set(r,g,b,a); }
-		static Colour32 make(int r, int g, int b, int a)        { Colour32 c; return c.set(r,g,b,a); }
+		// Construct
+		Colour32() = default;
+		Colour32(uint32 aarrggbb)
+			:argb(aarrggbb)
+		{}
+		Colour32(int aarrggbb)
+			:Colour32(static_cast<uint32>(aarrggbb))
+		{}
+		Colour32(EColours::Enum_ col)
+			:Colour32(static_cast<uint32>(col))
+		{}
+		Colour32(uint8 r_, uint8 g_, uint8 b_, uint8 a_)
+			:Colour32(uint32((a_ << 24) | (r_ << 16) | (g_ << 8) | (b_)))
+		{}
+		Colour32(int r_, int g_, int b_, int a_)
+			:Colour32(
+				uint8(Clamp(r_, 0, 255)),
+				uint8(Clamp(g_, 0, 255)),
+				uint8(Clamp(b_, 0, 255)),
+				uint8(Clamp(a_, 0, 255)))
+		{}
+		Colour32(float r_, float g_, float b_, float a_)
+			:Colour32(
+				uint8(Clamp(r_ * 255.0f + 0.5f, 0.0f, 255.0f)),
+				uint8(Clamp(g_ * 255.0f + 0.5f, 0.0f, 255.0f)),
+				uint8(Clamp(b_ * 255.0f + 0.5f, 0.0f, 255.0f)),
+				uint8(Clamp(a_ * 255.0f + 0.5f, 0.0f, 255.0f)))
+		{}
+		template <typename T, typename = enable_if_col<T>> Colour32(T const& c)
+			:Colour32(r_cp(c), g_cp(c), b_cp(c), a_cp(c))
+		{}
 
-		Colour32& operator = (Colour const& c);
-		Colour32& operator = (uint32 i)                         { m_aarrggbb = i; return *this; }
-		Colour32& operator = (int i)                            { m_aarrggbb = uint32(i); return *this; }
-		Colour32  operator !() const                            { return make((m_aarrggbb&0xFF000000) | (m_aarrggbb^0xFFFFFFFF)); }
-		operator uint32() const                                 { return m_aarrggbb; }
-		operator Colour() const;
-		PR_SUPPORT_WINGDI(Colour32& operator = (const COLORREF& c) { set(GetRValue(c), GetGValue(c), GetBValue(c), uint8(255)); return *this; })
+		// Operators
+		Colour32& operator = (int i)
+		{
+			argb = uint32(i);
+			return *this;
+		}
+		Colour32& operator = (uint32 i)
+		{
+			argb = i;
+			return *this;
+		}
+		template <typename T, typename = enable_if_col<T>> Colour32& operator = (T const& c)
+		{
+			return *this = Colour32(r_cp(c), g_cp(c), b_cp(c), a_cp(c));
+		}
+		Colour32 operator ~() const
+		{
+			return Colour32((argb & 0xFF000000) | (argb ^ 0xFFFFFFFF));
+		}
+		operator uint32() const
+		{
+			return argb;
+		}
 
-		Colour32& zero()                                        { m_aarrggbb = 0; return *this; }
-		Colour32& set(EColours::Enum_ col)                      { m_aarrggbb = static_cast<uint32>(col); return *this; }
-		Colour32& set(uint32 aarrggbb)                          { m_aarrggbb = aarrggbb; return *this; }
-		Colour32& set(uint8 r_, uint8 g_, uint8 b_, uint8 a_)   { m_aarrggbb = (a_<<24) | (r_<<16) | (g_<<8) | (b_); return *this; }
-		Colour32& set(int   r_, int   g_, int   b_, int   a_)   { return set(uint8(r_&0xff),   uint8(g_&0xff),   uint8(b_&0xff),   uint8(a_&0xff)); }
-		Colour32& set(float r_, float g_, float b_, float a_)   { return set(uint8(r_*255.0f), uint8(g_*255.0f), uint8(b_*255.0f), uint8(a_*255.0f)); }
+		// Component accessors
+		Colour32 rgba() const
+		{
+			return Colour32(((argb & 0x00ffffff) << 8) | (argb >> 24));
+		}
 
-		Colour32 rgba() const                                   { return Colour32::make(((m_aarrggbb&0x00ffffff)<<8)|(m_aarrggbb>>24)); }
-		Colour32 aooo() const                                   { return Colour32::make(m_aarrggbb & 0xFF000000); }
-		Colour32 oroo() const                                   { return Colour32::make(m_aarrggbb & 0x00FF0000); }
-		Colour32 oogo() const                                   { return Colour32::make(m_aarrggbb & 0x0000FF00); }
-		Colour32 ooob() const                                   { return Colour32::make(m_aarrggbb & 0x000000FF); }
-		Colour32 orgb() const                                   { return Colour32::make(m_aarrggbb & 0x00FFFFFF); }
-		uint8&   a()                                            { return reinterpret_cast<uint8*>(&m_aarrggbb)[3]; }
-		uint8&   r()                                            { return reinterpret_cast<uint8*>(&m_aarrggbb)[2]; }
-		uint8&   g()                                            { return reinterpret_cast<uint8*>(&m_aarrggbb)[1]; }
-		uint8&   b()                                            { return reinterpret_cast<uint8*>(&m_aarrggbb)[0]; }
-		uint8    a() const                                      { return uint8((m_aarrggbb >> 24) & 0xFF); }
-		uint8    r() const                                      { return uint8((m_aarrggbb >> 16) & 0xFF); }
-		uint8    g() const                                      { return uint8((m_aarrggbb >>  8) & 0xFF); }
-		uint8    b() const                                      { return uint8((m_aarrggbb >>  0) & 0xFF); }
-
-		Colour32 a0() const                                     { return Colour32::make(m_aarrggbb & 0x00FFFFFF); }
-		Colour32 a1() const                                     { return Colour32::make(m_aarrggbb | 0xFF000000); }
-
-		PR_SUPPORT_WINGDI(COLORREF GetColorRef() const          { return RGB(r(), g(), b()); })
-		inline uint8 const* ToArray() const                     { return reinterpret_cast<uint8 const*>(this); }
-		inline uint8*       ToArray()                           { return reinterpret_cast<uint8*>      (this); }
-		inline uint8 const& operator [] (std::size_t i) const   { assert(i < 4); return ToArray()[i]; }
-		inline uint8&       operator [] (std::size_t i)         { assert(i < 4); return ToArray()[i]; }
+		// Set alpha channel
+		Colour32 a0() const
+		{
+			return Colour32(argb & 0x00FFFFFF);
+		}
+		Colour32 a1() const
+		{
+			return Colour32(argb | 0xFF000000);
+		}
 	};
 
+	// Define component accessors
+	inline float r_cp(Colour32 v) { return v.r / 255.0f; }
+	inline float g_cp(Colour32 v) { return v.g / 255.0f; }
+	inline float b_cp(Colour32 v) { return v.b / 255.0f; }
+	inline float a_cp(Colour32 v) { return v.a / 255.0f; }
+
+	#pragma region Traits
+	template <> struct is_colour<Colour32> :std::true_type
+	{
+		using elem_type = uint8;
+	};
+	static_assert(is_colour<Colour32>::value, "");
+	#pragma endregion
+
+	#pragma region Constants
 	Colour32 const Colour32Zero   = { 0x00000000 };
 	Colour32 const Colour32One    = { 0xFFFFFFFF };
 	Colour32 const Colour32White  = { 0xFFFFFFFF };
@@ -228,89 +276,250 @@ namespace pr
 	Colour32 const Colour32Yellow = { 0xFFFFFF00 };
 	Colour32 const Colour32Purple = { 0xFFFF00FF };
 	Colour32 const Colour32Gray   = { 0xFF808080 };
+	#pragma endregion
 
-	// Equality operators
-	inline bool operator == (Colour32 lhs, Colour32 rhs) { return lhs.m_aarrggbb == rhs.m_aarrggbb; }
-	inline bool operator != (Colour32 lhs, Colour32 rhs) { return !(lhs == rhs); }
-	inline bool operator <  (Colour32 lhs, Colour32 rhs) { return lhs.m_aarrggbb <  rhs.m_aarrggbb; }
-	inline bool operator >  (Colour32 lhs, Colour32 rhs) { return lhs.m_aarrggbb >  rhs.m_aarrggbb; }
-	inline bool operator <= (Colour32 lhs, Colour32 rhs) { return lhs.m_aarrggbb <= rhs.m_aarrggbb; }
-	inline bool operator >= (Colour32 lhs, Colour32 rhs) { return lhs.m_aarrggbb >= rhs.m_aarrggbb; }
-	inline bool EqualNoA    (Colour32 lhs, Colour32 rhs) { return lhs.orgb() == rhs.orgb(); }
+	#pragma region Operators
+	inline bool operator == (Colour32 lhs, Colour32 rhs) { return lhs.argb == rhs.argb; }
+	inline bool operator != (Colour32 lhs, Colour32 rhs) { return lhs.argb != rhs.argb; }
+	inline bool operator <  (Colour32 lhs, Colour32 rhs) { return lhs.argb <  rhs.argb; }
+	inline bool operator >  (Colour32 lhs, Colour32 rhs) { return lhs.argb >  rhs.argb; }
+	inline bool operator <= (Colour32 lhs, Colour32 rhs) { return lhs.argb <= rhs.argb; }
+	inline bool operator >= (Colour32 lhs, Colour32 rhs) { return lhs.argb >= rhs.argb; }
+	inline bool EqualNoA    (Colour32 lhs, Colour32 rhs)
+	{
+		return lhs.a0() == rhs.a0();
+	}
+	inline Colour32 operator + (Colour32 lhs, Colour32 rhs)
+	{
+		return Colour32(
+			lhs.r + rhs.r,
+			lhs.g + rhs.g,
+			lhs.b + rhs.b,
+			lhs.a + rhs.a);
+	}
+	inline Colour32 operator - (Colour32 lhs, Colour32 rhs)
+	{
+		return Colour32(
+			lhs.r - rhs.r,
+			lhs.g - rhs.g,
+			lhs.b - rhs.b,
+			lhs.a - rhs.a);
+	}
+	inline Colour32 operator * (Colour32 lhs, float s)
+	{
+		return Colour32(
+			lhs.r * s,
+			lhs.g * s,
+			lhs.b * s,
+			lhs.a * s);
+	}
+	inline Colour32 operator * (float s, Colour32 rhs)
+	{
+		return rhs * s;
+	}
+	inline Colour32 operator * (Colour32 lhs, Colour32 rhs)
+	{
+		return Colour32(
+			lhs.r * rhs.r / 255,
+			lhs.g * rhs.g / 255,
+			lhs.b * rhs.b / 255,
+			lhs.a * rhs.a / 255);
+	}
+	inline Colour32 operator / (Colour32 lhs, float s)
+	{
+		assert("divide by zero" && s != 0);
+		return lhs * 1.0f/s;
+	}
+	inline Colour32 operator % (Colour32 lhs, int s)
+	{
+		assert("divide by zero" && s != 0);
+		return Colour32(
+			lhs.r % s,
+			lhs.g % s,
+			lhs.b % s,
+			lhs.a % s);
+	}
+	inline Colour32& operator += (Colour32& lhs, Colour32 rhs)
+	{
+		return lhs = lhs + rhs;
+	}
+	inline Colour32& operator -= (Colour32& lhs, Colour32 rhs)
+	{
+		return lhs = lhs - rhs;
+	}
+	inline Colour32& operator *= (Colour32& lhs, float s)
+	{
+		return lhs = lhs * s;
+	}
+	inline Colour32& operator *= (Colour32& lhs, Colour32 rhs)
+	{
+		return lhs = lhs * rhs;
+	}
+	inline Colour32& operator /= (Colour32& lhs, float s)
+	{
+		return lhs = lhs / s;
+	}
+	inline Colour32& operator %= (Colour32& lhs, int s)
+	{
+		return lhs = lhs % s;
+	}
+	#pragma endregion
 
-	// Binary operators
-	inline Colour32 operator + (Colour32 lhs, Colour32 rhs) { Colour32 c; return c.set(Clamp(lhs.r() + rhs.r()  ,0  ,255  ) ,Clamp(lhs.g() + rhs.g()  ,0  ,255  ) ,Clamp(lhs.b() + rhs.b()  ,0  ,255  ) ,Clamp(lhs.a() + rhs.a()  ,0  ,255  )); }
-	inline Colour32 operator - (Colour32 lhs, Colour32 rhs) { Colour32 c; return c.set(Clamp(lhs.r() - rhs.r()  ,0  ,255  ) ,Clamp(lhs.g() - rhs.g()  ,0  ,255  ) ,Clamp(lhs.b() - rhs.b()  ,0  ,255  ) ,Clamp(lhs.a() - rhs.a()  ,0  ,255  )); }
-	inline Colour32 operator * (Colour32 lhs, float s)      { Colour32 c; return c.set(Clamp(lhs.r() * s        ,0.f,255.f) ,Clamp(lhs.g() * s        ,0.f,255.f) ,Clamp(lhs.b() * s        ,0.f,255.f) ,Clamp(lhs.a() * s        ,0.f,255.f)); }
-	inline Colour32 operator * (float s, Colour32 rhs)      { Colour32 c; return c.set(Clamp(rhs.r() * s        ,0.f,255.f) ,Clamp(rhs.g() * s        ,0.f,255.f) ,Clamp(rhs.b() * s        ,0.f,255.f) ,Clamp(rhs.a() * s        ,0.f,255.f)); }
-	inline Colour32 operator * (Colour32 lhs, Colour32 rhs) { Colour32 c; return c.set(Clamp(lhs.r()*rhs.r()/255,0  ,255  ) ,Clamp(lhs.g()*rhs.g()/255,0  ,255  ) ,Clamp(lhs.b()*rhs.b()/255,0  ,255  ) ,Clamp(lhs.a()*rhs.a()/255,0  ,255  )); }
-	inline Colour32 operator / (Colour32 lhs, float s)      { Colour32 c; return c.set(Clamp(lhs.r() / s        ,0.f,255.f) ,Clamp(lhs.g() / s        ,0.f,255.f) ,Clamp(lhs.b() / s        ,0.f,255.f) ,Clamp(lhs.a() / s        ,0.f,255.f)); }
+	#pragma region Functions
+	// Find the 4D distance squared between two colours
+	inline int DistanceSq(Colour32 lhs, Colour32 rhs)
+	{
+		return
+			Sqr(lhs.r - rhs.r) +
+			Sqr(lhs.g - rhs.g) +
+			Sqr(lhs.b - rhs.b) +
+			Sqr(lhs.a - rhs.a);
+	}
 
-	// Assignment operators
-	inline Colour32& operator += (Colour32& lhs, Colour32 rhs) { lhs = lhs + rhs; return lhs; }
-	inline Colour32& operator -= (Colour32& lhs, Colour32 rhs) { lhs = lhs - rhs; return lhs; }
-	inline Colour32& operator *= (Colour32& lhs, float s)      { lhs = lhs * s;   return lhs; }
-	inline Colour32& operator *= (Colour32& lhs, Colour32 rhs) { lhs = lhs * rhs; return lhs; }
-	inline Colour32& operator /= (Colour32& lhs, float s)      { lhs = lhs / s;   return lhs; }
+	// Linearly interpolate between colours
+	inline Colour32 Lerp(Colour32 lhs, Colour32 rhs, float frac)
+	{
+		return Colour32(
+			lhs.r * (1.0f - frac) + rhs.r * frac,
+			lhs.g * (1.0f - frac) + rhs.g * frac,
+			lhs.b * (1.0f - frac) + rhs.b * frac,
+			lhs.a * (1.0f - frac) + rhs.a * frac);
+	}
 
-	// Random colours
+	// Create a random colour
 	inline Colour32 RandomRGB(Rand& rnd, float a)
 	{
-		return Colour32::make(rnd.u8(), rnd.u8(), rnd.u8(), uint8(a*255.0f));
+		return Colour32(rnd.flt(), rnd.flt(), rnd.flt(), a);
 	}
+
+	// Create a random colour
 	inline Colour32 RandomRGB(Rand& rnd)
 	{
 		return RandomRGB(rnd, 1.0f);
 	}
+	#pragma endregion
+
+	#pragma endregion
+
+	#pragma region Colour
 
 	// Equivalent to pr::v4, XMVECTOR, D3DCOLORVALUE, etc
-	struct alignas(16) Colour
+	template <typename real> struct alignas(16) Colour4
 	{
+		using Vec4 = Vec4<real>;
+		using Vec3 = Vec3<real>;
+
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct/union
-		union {
-			struct { float r,g,b,a; };
-			struct { v4 rgba; };
-			struct { v2 rg, ba; };
-			struct { v3 rgb; };
-			#if PR_MATHS_USE_DIRECTMATH
-			DirectX::XMVECTOR vec;
-			#elif PR_MATHS_USE_INTRINSICS
+		union
+		{
+			struct { real r,g,b,a; };
+			struct { Vec4 rgba; };
+			struct { Vec3 rgb; real a; };
+			struct { real arr[4]; };
+			#if PR_MATHS_USE_INTRINSICS
 			__m128 vec;
-			#else
-			std::aligned_storage_t<16,16>::type vec;
 			#endif
 		};
 		#pragma warning(pop)
 
-		static Colour make(float r, float g, float b, float a)   { Colour c; return c.set(r,g,b,a); }
-		static Colour make(uint8 r, uint8 g, uint8 b, uint8 a)   { Colour c; return c.set(r,g,b,a); }
-		static Colour make(Colour32 c32)                         { Colour c; return c.set(c32); }
-		static Colour make(Colour32 c32, float alpha)            { Colour c; return c.set(c32, alpha); }
+		Colour4() = default;
+		Colour4(real r_, real g_, real b_, real a_)
+		#if PR_MATHS_USE_INTRINSICS
+			:vec(_mm_set_ps(a_,b_,g_,r_))
+		#else
+			:r(r_)
+			,g(g_)
+			,b(b_)
+			,a(a_)
+		#endif
+		{
+			// Note: Do not clamp values, use 'Clamp' if that's what you want
+			assert(maths::is_aligned(this));
+		}
+		Colour4(uint8 r_, uint8 g_, uint8 b_, uint8 a_)
+			:Colour4(r_/255.0f, g_/255.0f, b_/255.0f, a_/255.0f)
+		{}
+		Colour4(Colour32 c32)
+			:Colour4(c32.r, c32.g, c32.b, c32.a)
+		{}
+		Colour4(Colour32 c32, real alpha)
+			:Colour4(c32.r/255.0f, c32.g/255.0f, c32.b/255.0f, alpha)
+		{}
+		template <typename T, typename = enable_if_col<T>> Colour4(T const& v)
+			:Colour4(r_cp(v), g_cp(v), b_cp(v), a_cp(v))
+		{}
+		#if PR_MATHS_USE_INTRINSICS
+		Colour4(__m128 v)
+			:vec(v)
+		{
+			assert(maths::is_aligned(this));
+		}
+		#endif
 
-		Colour&      set(float r_, float g_, float b_, float a_) { r = r_; g = g_; b = b_; a = a_; return *this; }
-		Colour&      set(uint8 r_, uint8 g_, uint8 b_, uint8 a_) { return set(r_/255.0f, g_/255.0f, b_/255.0f, a_/255.0f); }
-		Colour&      set(Colour32 c32)                           { return set(c32.r(), c32.g(), c32.b(), c32.a()); }
-		Colour&      set(Colour32 c32, float alpha)              { return set(c32.r()/255.0f, c32.g()/255.0f, c32.b()/255.0f, alpha); }
-		Colour&      zero()                                      { r = g = b = a = 0.0f; return *this; }
-		Colour&      one()                                       { r = g = b = a = 1.0f; return *this; }
-		Colour32     argb() const	                             { return Colour32::make(r,g,b,a); }
-		float const* ToArray() const                             { return reinterpret_cast<float const*>(this); }
-		float*       ToArray()                                   { return reinterpret_cast<float*>      (this); }
+		// Array access
+		real const& operator [] (int i) const
+		{
+			assert("index out of range" && i >= 0 && i < _countof(arr));
+			return arr[i];
+		}
+		real& operator [] (int i)
+		{
+			assert("index out of range" && i >= 0 && i < _countof(arr));
+			return arr[i];
+		}
 
-		Colour& operator = (Colour32 c32)                        { return set(c32); }
-		operator Colour32() const;
-		operator v4() const;
+		// Operators
+		Colour4& operator = (Colour32 c32)
+		{
+			return *this = Colour4(c32);
+		}
+		template <typename T, typename = enable_if_col<T>> Colour4& operator = (T const& c)
+		{
+			return *this = Colour4(r_cp(c), g_cp(c), b_cp(c), a_cp(c));
+		}
 
-		typedef float const (&array_ref)[4];
-		operator array_ref() const                               { return reinterpret_cast<array_ref>(*this); }
+		// Component accessors
+		Colour32 argb() const
+		{
+			return Colour32(r,g,b,a);
+		}
 
-		PR_SUPPORT_WINGDI(Colour& operator = (const COLORREF& c)    { set(GetRValue(c), GetGValue(c), GetBValue(c), 255); return *this; })
-		PR_SUPPORT_WINGDI(COLORREF GetColorRef() const              { return RGB(r*255.0f, g*255.0f, b*255.0f); })
+		// Set alpha channel
+		Colour4 a0() const
+		{
+			return Colour4(r,g,b,0.0f);
+		}
+		Colour4 a1() const
+		{
+			return Colour4(r,g,b,1.0f);
+		}
 	};
-	static_assert(std::alignment_of<Colour>::value == 16, "Colour should have 16 byte alignment");
-	static_assert(std::is_pod<Colour>::value, "Should be a pod type");
 
+	using Colour = Colour4<float>;
+	static_assert(std::is_pod<Colour>::value || _MSC_VER < 1900, "Colour should be a pod type");
+	static_assert(std::alignment_of<Colour>::value == 16, "Colour should have 16 byte alignment");
+	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
+	using Colour_cref = Colour const;
+	#else
+	using Colour_cref = Colour const&;
+	#endif
+
+	// Define component accessors
+	inline float pr_vectorcall r_cp(Colour_cref v) { return v.r; }
+	inline float pr_vectorcall g_cp(Colour_cref v) { return v.g; }
+	inline float pr_vectorcall b_cp(Colour_cref v) { return v.b; }
+	inline float pr_vectorcall a_cp(Colour_cref v) { return v.a; }
+
+	#pragma region Traits
+	template <> struct is_colour<Colour> :std::true_type
+	{
+		using elem_type = float;
+	};
+	static_assert(is_colour<Colour>::value, "");
+	#pragma endregion
+
+	#pragma region Constants
 	Colour const ColourZero   = {0.0f, 0.0f, 0.0f, 0.0f};
 	Colour const ColourOne    = {1.0f, 1.0f, 1.0f, 1.0f};
 	Colour const ColourWhite  = {1.0f, 1.0f, 1.0f, 1.0f};
@@ -318,65 +527,136 @@ namespace pr
 	Colour const ColourRed    = {1.0f, 0.0f, 0.0f, 1.0f};
 	Colour const ColourGreen  = {0.0f, 1.0f, 0.0f, 1.0f};
 	Colour const ColourBlue   = {0.0f, 0.0f, 1.0f, 1.0f};
+	#pragma endregion
 
-	// DirectXMath conversion functions
-	#if PR_MATHS_USE_DIRECTMATH
-	inline DirectX::XMVECTOR const& dxcv(Colour const& c) { return c.vec; }
-	inline DirectX::XMVECTOR&       dxcv(Colour&       c) { return c.vec; }
-	#endif
-
-	inline Colour32& Colour32::operator = (Colour const& c)             { return set(c.r, c.g, c.b, c.a); }
-
-	// Binary operators
-	inline Colour operator + (Colour const& lhs, Colour const& rhs)     { Colour c = {Clamp(lhs.r+rhs.r,0.0f,1.0f), Clamp(lhs.g+rhs.g,0.0f,1.0f), Clamp(lhs.b+rhs.b,0.0f,1.0f), Clamp(lhs.a+rhs.a,0.0f,1.0f)}; return c; }
-	inline Colour operator - (Colour const& lhs, Colour const& rhs)     { Colour c = {Clamp(lhs.r-rhs.r,0.0f,1.0f), Clamp(lhs.g-rhs.g,0.0f,1.0f), Clamp(lhs.b-rhs.b,0.0f,1.0f), Clamp(lhs.a-rhs.a,0.0f,1.0f)}; return c; }
-	inline Colour operator * (Colour const& lhs, float s)               { Colour c = {Clamp(lhs.r*s,    0.0f,1.0f), Clamp(lhs.g*s,    0.0f,1.0f), Clamp(lhs.b*s,    0.0f,1.0f), Clamp(lhs.a*s,    0.0f,1.0f)}; return c; }
-	inline Colour operator * (float s, Colour const& rhs)               { Colour c = {Clamp(s*rhs.r,    0.0f,1.0f), Clamp(s*rhs.g,    0.0f,1.0f), Clamp(s*rhs.b,    0.0f,1.0f), Clamp(s*rhs.a,    0.0f,1.0f)}; return c; }
-	inline Colour operator / (Colour const& lhs, float s)               { Colour c = {Clamp(lhs.r/s,    0.0f,1.0f), Clamp(lhs.g/s,    0.0f,1.0f), Clamp(lhs.b/s,    0.0f,1.0f), Clamp(lhs.a/s,    0.0f,1.0f)}; return c; }
-
-	// Equality operators
-	inline bool FEql        (Colour const& lhs, Colour const& rhs)      { return FEql(lhs.r, rhs.r) && FEql(lhs.g, rhs.g) && FEql(lhs.b, rhs.b) && FEql(lhs.a, rhs.a); }
-	inline bool FEqlNoA     (Colour const& lhs, Colour const& rhs)      { return FEql(lhs.r, rhs.r) && FEql(lhs.g, rhs.g) && FEql(lhs.b, rhs.b); }
-	inline bool	EqualNoA    (Colour const& lhs, Colour const& rhs)      { return lhs.r == rhs.r && lhs.g == rhs.g && lhs.b == rhs.b; }
+	#pragma region Operators
+	// Note: operators do not clamp values, use 'Clamp' if that's what you want
 	inline bool	operator == (Colour const& lhs, Colour const& rhs)      { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
 	inline bool	operator != (Colour const& lhs, Colour const& rhs)      { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
 	inline bool operator <  (Colour const& lhs, Colour const& rhs)      { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
 	inline bool operator >  (Colour const& lhs, Colour const& rhs)      { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
 	inline bool operator <= (Colour const& lhs, Colour const& rhs)      { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
 	inline bool operator >= (Colour const& lhs, Colour const& rhs)      { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
-
-	// Assignment operators
-	inline Colour& operator += (Colour& lhs, Colour const& rhs)         { lhs = lhs + rhs; return lhs; }
-	inline Colour& operator -= (Colour& lhs, Colour const& rhs)         { lhs = lhs - rhs; return lhs; }
-	inline Colour& operator *= (Colour& lhs, float s)                   { lhs = lhs * s; return lhs; }
-	inline Colour& operator /= (Colour& lhs, float s)                   { lhs = lhs / s; return lhs; }
-
-	// Conversion operators
-	inline Colour32::operator Colour() const { return Colour::make(*this); }
-	inline Colour::operator Colour32() const { return Colour32::make(r,g,b,a); }
-	inline Colour::operator v4() const { return v4(r,g,b,a); }
-
-	// Miscellaneous ******************************************************************************
-
-	// Find the 4D distance squared between two colours
-	inline int DistanceSq(Colour32 lhs, Colour32 rhs)
+	inline bool	EqualNoA    (Colour const& lhs, Colour const& rhs)
 	{
-		return  Sqr((int)lhs.r() - (int)rhs.r()) +
-				Sqr((int)lhs.g() - (int)rhs.g()) +
-				Sqr((int)lhs.b() - (int)rhs.b()) +
-				Sqr((int)lhs.a() - (int)rhs.a());
+		return lhs.r == rhs.r && lhs.g == rhs.g && lhs.b == rhs.b;
+	}
+	inline Colour pr_vectorcall operator + (Colour const& lhs, Colour_cref rhs)
+	{
+		return Colour(
+			lhs.r + rhs.r,
+			lhs.g + rhs.g,
+			lhs.b + rhs.b,
+			lhs.a + rhs.a);
+	}
+	inline Colour pr_vectorcall operator - (Colour const& lhs, Colour_cref rhs)
+	{
+		return Colour(
+			lhs.r - rhs.r,
+			lhs.g - rhs.g,
+			lhs.b - rhs.b,
+			lhs.a - rhs.a);
+	}
+	inline Colour pr_vectorcall operator * (Colour_cref lhs, float s)
+	{
+		return Colour(
+			lhs.r * s,
+			lhs.g * s,
+			lhs.b * s,
+			lhs.a * s);
+	}
+	inline Colour pr_vectorcall operator * (float s, Colour_cref rhs)
+	{
+		return rhs * s;
+	}
+	inline Colour pr_vectorcall operator / (Colour_cref lhs, float s)
+	{
+		assert("divide by zero" && s != 0);
+		return Colour(
+			lhs.r / s,
+			lhs.g / s,
+			lhs.b / s,
+			lhs.a / s);
+	}
+	inline Colour& pr_vectorcall operator += (Colour& lhs, Colour_cref rhs)
+	{
+		return lhs = lhs + rhs;
+	}
+	inline Colour& pr_vectorcall operator -= (Colour& lhs, Colour_cref rhs)
+	{
+		return lhs = lhs - rhs;
+	}
+	inline Colour& pr_vectorcall operator *= (Colour& lhs, float s)
+	{
+		return lhs = lhs * s;
+	}
+	inline Colour& pr_vectorcall operator /= (Colour& lhs, float s)
+	{
+		return lhs = lhs / s;
+	}
+	#pragma endregion
+
+	#pragma region Functions
+	// Colour FEql
+	inline bool pr_vectorcall FEql(Colour_cref lhs, Colour_cref rhs, float tol = maths::tiny)
+	{
+		#if PR_MATHS_USE_INTRINSICS
+		const __m128 zero = {tol, tol, tol, tol};
+		auto d = _mm_sub_ps(lhs.vec, rhs.vec);                         /// d = lhs - rhs
+		auto r = _mm_cmple_ps(_mm_mul_ps(d,d), _mm_mul_ps(zero,zero)); /// r = sqr(d) <= sqr(zero)
+		return (_mm_movemask_ps(r) & 0x0f) == 0x0f;
+		#else
+		return
+			FEql(lhs.r, rhs.r, tol) &&
+			FEql(lhs.g, rhs.g, tol) &&
+			FEql(lhs.b, rhs.b, tol) &&
+			FEql(lhs.a, rhs.a, tol);
+		#endif
+	}
+	inline bool pr_vectorcall FEqlNoA(Colour_cref lhs, Colour_cref rhs)
+	{
+		return FEql(lhs.a0(), rhs.a0());
 	}
 
-	// Linear interpolate between colours
-	inline Colour32 Lerp(Colour32 lhs, Colour32 rhs, float frac)
+	// Clamp colour values to the interval [mn,mx]
+	inline Colour Clamp(Colour_cref c, float mn, float mx)
 	{
-		Colour32 col = Colour32Zero;
-		for (int i = 0; i != 4; ++i)
-			col[i] = uint8(lhs[i] * (1.0f - frac) + rhs[i] * frac);
-		return col;
+		return Colour(
+			Clamp(c.r, mn, mx),
+			Clamp(c.g, mn, mx),
+			Clamp(c.b, mn, mx),
+			Clamp(c.a, mn, mx));
 	}
 
-	// Conversion *********************************************************************************
+	// Normalise all components of 'v'
+	inline Colour pr_vectorcall Normalise(Colour_cref v)
+	{
+		#if PR_MATHS_USE_INTRINSICS
+		return Colour(_mm_div_ps(v.vec, _mm_sqrt_ps(_mm_dp_ps(v.vec, v.vec, 0xFF))));
+		#else
+		return v / Length4(v);
+		#endif
+	}
+	#pragma endregion
+
+	#pragma endregion
+
+	#pragma region COLORREF
+	#if defined(_WINGDI_) && !defined(NOGDI)
+	inline float r_cp(COLORREF v) { return GetRValue(v) / 255.0f; }
+	inline float g_cp(COLORREF v) { return GetGValue(v) / 255.0f; }
+	inline float b_cp(COLORREF v) { return GetBValue(v) / 255.0f; }
+	inline float a_cp(COLORREF)   { return 1.0f; }
+
+	// Treat COLORREF as a colour type
+	template <> struct is_colour<COLORREF> :std::true_type
+	{
+		using elem_type = uint8;
+	};
+	#endif
+	#pragma endregion
+
+	#pragma region Conversion
 	namespace convert
 	{
 		template <typename Str, typename Char = typename Str::value_type>
@@ -384,7 +664,7 @@ namespace pr
 		{
 			static Str To(Colour32 c)
 			{
-				return pr::To<Str>(c.m_aarrggbb, 16);
+				return pr::To<Str>(c.argb, 16);
 			}
 			static Str To(Colour const& c)
 			{
@@ -395,7 +675,7 @@ namespace pr
 		{
 			template <typename Char> static Colour32 To(Char const* s, Char** end = nullptr)
 			{
-				return Colour32::make(pr::To<uint32>(s, 16, end));
+				return Colour32(pr::To<uint32>(s, 16, end));
 			}
 			template <typename Str, typename Char = Str::value_type, typename = enable_if_str_class<Str>> static Colour32 To(Str const& s, Char** end = nullptr)
 			{
@@ -403,7 +683,7 @@ namespace pr
 			}
 			static Colour32 To(Colour const& c)
 			{
-				return static_cast<Colour32>(c);
+				return Colour32(c);
 			}
 		};
 		struct ToColour
@@ -442,16 +722,25 @@ namespace pr
 		#endif
 	}
 	template <typename Char>                struct Convert<std::basic_string<Char>, Colour32> :convert::ColourToString<std::basic_string<Char>> {};
-	template <typename Char, int L, bool F> struct Convert<pr::string<Char,L,F>,    Colour32> :convert::ColourToString<pr::string<Char,L,F>> {};
 	template <typename Char>                struct Convert<std::basic_string<Char>, Colour>   :convert::ColourToString<std::basic_string<Char>> {};
+	template <typename Char, int L, bool F> struct Convert<pr::string<Char,L,F>,    Colour32> :convert::ColourToString<pr::string<Char,L,F>> {};
 	template <typename Char, int L, bool F> struct Convert<pr::string<Char,L,F>,    Colour>   :convert::ColourToString<pr::string<Char,L,F>> {};
-	template <typename TFrom> struct Convert<Colour32     , TFrom> :convert::ToColour32 {};
-	template <typename TFrom> struct Convert<Colour       , TFrom> :convert::ToColour {};
+	template <typename TFrom> struct Convert<Colour32, TFrom> :convert::ToColour32 {};
+	template <typename TFrom> struct Convert<Colour,   TFrom> :convert::ToColour {};
 	#ifdef D3DCOLORVALUE_DEFINED
 	template <typename TFrom> struct Convert<D3DCOLORVALUE, TFrom> :convert::ToD3DCOLORVALUE {};
 	#endif
 
-	// Interpolate<Colour32>
+	// Write a colour to a stream
+	template <typename TColour, typename Char, typename = enable_if_col<TColour>>
+	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, TColour const& col)
+	{
+		auto str = To<std::basic_string<Char>>(Colour32(col));
+		return out << str.c_str();
+	}
+	#pragma endregion
+
+	#pragma region Interpolate
 	template <> struct Interpolate<Colour32>
 	{
 		struct Point
@@ -470,7 +759,5 @@ namespace pr
 			}
 		};
 	};
+	#pragma endregion
 }
-
-#undef PR_SUPPORT_WINGDI
-#undef PR_SUPPORT_DX

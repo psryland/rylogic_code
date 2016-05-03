@@ -36,6 +36,7 @@
 #include "pr/common/prtypes.h"
 #include "pr/common/fmt.h"
 #include "pr/common/cast.h"
+#include "pr/common/flags_enum.h"
 #include "pr/common/stackdump.h"
 #include "pr/common/refcount.h"
 #include "pr/common/log.h"

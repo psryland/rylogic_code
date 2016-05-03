@@ -2,8 +2,9 @@
 // AllocA macro
 //  Copyright (c) March 2008 Paul Ryland
 //******************************************
-
 #pragma once
+
+#include <new>
 
 namespace pr
 {

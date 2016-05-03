@@ -137,7 +137,7 @@ namespace pr
 	using v4_cref = v4 const&;
 	#endif
 
-	// Define component accessors for pointer types
+	// Define component accessors
 	inline float x_cp(v4_cref v) { return v.x; }
 	inline float y_cp(v4_cref v) { return v.y; }
 	inline float z_cp(v4_cref v) { return v.z; }

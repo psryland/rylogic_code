@@ -56,16 +56,39 @@ namespace pr.extn
 			return initial;
 		}
 
-		/// <summary>Compare sub-ranges within arrays for value equality</summary>
-		public static bool SequenceEqual<TSource>(this IEnumerable<TSource> lhs, IEnumerable<TSource> rhs, int len)
+		/// <summary>Compare sub-ranges within collections for value equality</summary>
+		public static bool SequenceEqual<TSource>(this IEnumerable<TSource> lhs, IEnumerable<TSource> rhs, int len, IEqualityComparer<TSource> comparer = null)
 		{
-			return SequenceEqual(lhs,rhs,0,0,len);
+			return SequenceEqual(lhs,rhs,0,0,len,comparer);
 		}
 
-		/// <summary>Compare sub-ranges within arrays for value equality</summary>
-		public static bool SequenceEqual<TSource>(this IEnumerable<TSource> lhs, IEnumerable<TSource> rhs, int ofs0, int ofs1, int len)
+		/// <summary>Compare sub-ranges within collections for value equality</summary>
+		public static bool SequenceEqual<TSource>(this IEnumerable<TSource> lhs, IEnumerable<TSource> rhs, int ofs0, int ofs1, int len, IEqualityComparer<TSource> comparer = null)
 		{
-			return Enumerable.SequenceEqual(lhs.Skip(ofs0).Take(len), rhs.Skip(ofs1).Take(len));
+			comparer = comparer ?? EqualityComparer<TSource>.Default;
+			return Enumerable.SequenceEqual(lhs.Skip(ofs0).Take(len), rhs.Skip(ofs1).Take(len), comparer);
+		}
+
+		/// <summary>Compare two collections for value equality ignoring order</summary>
+		public static bool SequenceEqualUnordered<TSource>(this IEnumerable<TSource> lhs, IEnumerable<TSource> rhs)
+		{
+			if (lhs == rhs) return true;
+			if (lhs == null || rhs == null) return false;
+
+			// A map from elements in 'lhs' to their counts
+			var lookup = new Dictionary<TSource, int>();
+			foreach (var x in lhs)
+				lookup[x] = lookup.GetOrAdd(x) + 1;
+
+			// Match each element in 'rhs' to the elements in 'lhs'
+			foreach (var x in rhs)
+			{
+				int count;
+				if (!lookup.TryGetValue(x, out count)) return false;
+				if (count > 1) lookup[x] = count - 1;
+				else lookup.Remove(x);
+			}
+			return lookup.Count == 0;
 		}
 
 		/// <summary>Exactly the same as 'Reverse' but doesn't clash with List.Reverse()</summary>
@@ -75,7 +98,7 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns elements from this collection that aren't also in 'rhs'. Note: The MS version of this function doesn't work</summary>
-		public static IEnumerable<TSource> ExceptBy<TSource>(this IEnumerable<TSource> source, IEnumerable<TSource> rhs, Eql<TSource> comparer = null)
+		public static IEnumerable<TSource> ExceptBy<TSource>(this IEnumerable<TSource> source, IEnumerable<TSource> rhs, IEqualityComparer<TSource> comparer = null)
 		{
 			comparer = comparer ?? Eql<TSource>.Default;
 			var exclude = rhs.ToHashSet();
@@ -83,7 +106,7 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns elements from this collection that aren't also in 'rhs'. Note: The MS version of this function doesn't work</summary>
-		public static IEnumerable<TSource> Except<TSource>(this IEnumerable<TSource> source, Eql<TSource> comparer, params TSource[] rhs)
+		public static IEnumerable<TSource> Except<TSource>(this IEnumerable<TSource> source, IEqualityComparer<TSource> comparer, params TSource[] rhs)
 		{
 			comparer = comparer ?? Eql<TSource>.Default;
 			var exclude = rhs.ToHashSet();
@@ -108,7 +131,7 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns the indices of 'element' within this collection</summary>
-		public static IEnumerable<int> IndicesOf<TSource>(this IEnumerable<TSource> source, TSource element, Eql<TSource> comparer = null)
+		public static IEnumerable<int> IndicesOf<TSource>(this IEnumerable<TSource> source, TSource element, IEqualityComparer<TSource> comparer = null)
 		{
 			comparer = comparer ?? Eql<TSource>.Default;
 			var i = 0;
@@ -131,7 +154,7 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns true if all elements this collection result in the same result from 'selector'</summary>
-		public static bool AllSame<TSource, TRet>(this IEnumerable<TSource> source, Func<TSource,TRet> selector, Eql<TRet> comparer = null)
+		public static bool AllSame<TSource, TRet>(this IEnumerable<TSource> source, Func<TSource,TRet> selector, IEqualityComparer<TRet> comparer = null)
 		{
 			comparer = comparer ?? Eql<TRet>.Default;
 
@@ -141,7 +164,7 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns the maximum element based on 'selector', with comparisons of the selector type made by 'comparer'</summary>
-		public static TSource MaxBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, Cmp<TKey> comparer = null)
+		public static TSource MaxBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey> comparer = null)
 		{
 			if (source   == null) throw new ArgumentNullException("source");
 			if (selector == null) throw new ArgumentNullException("selector");
@@ -167,7 +190,7 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns the minimum element based on 'selector', with comparisons of the selector type made by 'comparer'</summary>
-		public static TSource MinBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, Cmp<TKey> comparer = null)
+		public static TSource MinBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey> comparer = null)
 		{
 			if (source   == null) throw new ArgumentNullException("source");
 			if (selector == null) throw new ArgumentNullException("selector");
@@ -193,7 +216,7 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns one of the items that occur most frequently within a sequence</summary>
-		public static Freq<TSource> MaxFrequency<TSource>(this IEnumerable<TSource> source, Cmp<TSource> comparer = null)
+		public static Freq<TSource> MaxFrequency<TSource>(this IEnumerable<TSource> source, IComparer<TSource> comparer = null)
 		{
 			comparer = comparer ?? Cmp<TSource>.Default;
 			var dic = new Dictionary<TSource, int>();
@@ -215,7 +238,7 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns the index of the maximum element based on 'selector', with comparisons of the selector type made by 'comparer'</summary>
-		public static int IndexOfMaxBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, Cmp<TKey> comparer = null)
+		public static int IndexOfMaxBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey> comparer = null)
 		{
 			if (source   == null) throw new ArgumentNullException("source");
 			if (selector == null) throw new ArgumentNullException("selector");
@@ -243,7 +266,7 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns the index of the minimum element based on 'selector', with comparisons of the selector type made by 'comparer'</summary>
-		public static int IndexOfMinBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, Cmp<TKey> comparer = null)
+		public static int IndexOfMinBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey> comparer = null)
 		{
 			if (source   == null) throw new ArgumentNullException("source");
 			if (selector == null) throw new ArgumentNullException("selector");
@@ -323,7 +346,7 @@ namespace pr.extn
 		}
 
 		/// <summary>Zip two collections together in order defined by 'comparer'</summary>
-		public static IEnumerable<TSource> Zip<TSource>(this IEnumerable<TSource> source, IEnumerable<TSource> other, Cmp<TSource> comparer)
+		public static IEnumerable<TSource> Zip<TSource>(this IEnumerable<TSource> source, IEnumerable<TSource> other, IComparer<TSource> comparer)
 		{
 			comparer = comparer ?? Cmp<TSource>.Default;
 
@@ -353,7 +376,7 @@ namespace pr.extn
 		}
 	
 		/// <summary>Compare elements with 'other' returning pairs where the elements are not equal</summary>
-		public static IEnumerable<Tuple<TSource,TSource>> Differences<TSource>(this IEnumerable<TSource> source, IEnumerable<TSource> other, Eql<TSource> comparer = null)
+		public static IEnumerable<Tuple<TSource,TSource>> Differences<TSource>(this IEnumerable<TSource> source, IEnumerable<TSource> other, IEqualityComparer<TSource> comparer = null)
 		{
 			comparer = comparer ?? Eql<TSource>.Default;
 
@@ -475,6 +498,19 @@ namespace pr.unittests
 			var i0 = new int[]{1,2,3,4,5,6,7};
 			var res = i0.ConvertTo<byte>().ToArray();
 			Assert.True(res.SequenceEqual(new byte[]{1,2,3,4,5,6,7}));
+		}
+		[Test] public void SequenceEqual()
+		{
+			var s0 = new[] { 1,1,2,2,3,4,6,8,10 };
+			var s1 = new[] { 1,1,2,2,3,4,5,7,9 };
+			var s2 = new[] { 2,2,3,4,5,7,9,1,1 };
+			var s3 = new[] { 2,2,3,4,5,7,9,1,1,1 };
+
+			Assert.True(s0.SequenceEqual(s1, 6));
+			Assert.True(!s0.SequenceEqual(s1));
+			Assert.True(s1.SequenceEqualUnordered(s2));
+			Assert.True(!s1.SequenceEqualUnordered(s3));
+			Assert.True(!s3.SequenceEqualUnordered(s1));
 		}
 	}
 }

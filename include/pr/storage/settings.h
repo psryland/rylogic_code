@@ -58,7 +58,7 @@ namespace pr
 		inline string Write(unsigned __int64 t)    { return pr::FmtS(L"%u", t); }
 		inline string Write(pr::v2 const& t)       { return pr::FmtS(L"%f %f", t.x, t.y); }
 		inline string Write(pr::v4 const& t)       { return pr::FmtS(L"%f %f %f %f", t.x, t.y, t.z, t.w); }
-		inline string Write(pr::Colour32 t)        { return pr::FmtS(L"%08X", t.m_aarrggbb); }
+		inline string Write(pr::Colour32 t)        { return pr::FmtS(L"%08X", t.argb); }
 		inline string Write(std::string const& t)  { return pr::filesys::AddQuotesC(pr::str::StringToCString(string(Widen(t)))); }
 		inline string Write(std::wstring const& t) { return pr::filesys::AddQuotesC(pr::str::StringToCString(string(Widen(t)))); }
 		template <typename TEnum, typename = std::enable_if_t<pr::is_enum<TEnum>::value>>
@@ -72,7 +72,7 @@ namespace pr
 		inline bool Read(pr::script::Reader& reader, unsigned __int64& t) { return reader.IntS(t, 10); }
 		inline bool Read(pr::script::Reader& reader, pr::v2& t)           { return reader.Vector2S(t); }
 		inline bool Read(pr::script::Reader& reader, pr::v4& t)           { return reader.Vector4S(t); }
-		inline bool Read(pr::script::Reader& reader, pr::Colour32& t)     { return reader.IntS(t.m_aarrggbb, 16); }
+		inline bool Read(pr::script::Reader& reader, pr::Colour32& t)     { return reader.IntS(t.argb, 16); }
 		inline bool Read(pr::script::Reader& reader, std::string& t)      { return reader.CStringS(t); }
 		inline bool Read(pr::script::Reader& reader, std::wstring& t)     { return reader.CStringS(t); }
 		template <typename TEnum, typename = std::enable_if_t<pr::is_enum<TEnum>::value>>

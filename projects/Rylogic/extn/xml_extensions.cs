@@ -37,7 +37,7 @@ namespace pr.extn
 	//         +- XCData
 
 	/// <summary>XML helper methods</summary>
-	public static class XmlExtensions
+	public static class Xml_
 	{
 		private const string TypeAttr = "ty";
 
@@ -183,6 +183,37 @@ namespace pr.extn
 						mat.w.ToXml(nameof(m4x4.w), false));
 					return node;
 				};
+				this[typeof(KeyValuePair<,>)] = (obj, node) =>
+				{
+					var ty = obj.GetType();
+					node.Add2("k", ty.GetProperty(nameof(KeyValuePair<int,int>.Key  )).GetValue(obj), false);
+					node.Add2("v", ty.GetProperty(nameof(KeyValuePair<int,int>.Value)).GetValue(obj), false);
+					return node;
+				};
+				this[typeof(List<>)] = (obj, node) =>
+				{
+					foreach (var x in (IEnumerable)obj)
+						node.Add2("_", x, false);
+					if (!node.HasElements)
+						node.SetValue(string.Empty);
+					return node;
+				};
+				this[typeof(Dictionary<,>)] = (obj, node) =>
+				{
+					foreach (var x in (IEnumerable)obj)
+						node.Add2("_", x, false);
+					if (!node.HasElements)
+						node.SetValue(string.Empty);
+					return node;
+				};
+				this[typeof(HashSet<>)] = (obj, node) =>
+				{
+					foreach (var x in (IEnumerable)obj)
+						node.Add2("_", x, false);
+					if (!node.HasElements)
+						node.SetValue(string.Empty);
+					return node;
+				};
 			}
 
 			/// <summary>
@@ -202,23 +233,38 @@ namespace pr.extn
 				type = Nullable.GetUnderlyingType(type) ?? type;
 				if (type_attr) node.SetAttributeValue(TypeAttr, type.FullName);
 
+				// Get the generic type if generic
+				var gen_type = type.IsGenericType ? type.GetGenericTypeDefinition() : type;
+
 				// Handle strings here because they are IEnumerable and
 				// enums because the type will not be in the map
 				if (type == typeof(string) || type.IsEnum)
 					return ToXmlDefault(obj, node);
 
-				// Enumerable objects convert to arrays
-				var obj_enum = obj as IEnumerable;
-				if (obj_enum != null)
+				// Handle unknown collections as arrays
+				if (obj is IEnumerable &&
+					gen_type != typeof(List<>) &&
+					gen_type != typeof(Dictionary<,>) &&
+					gen_type != typeof(HashSet<>))
 				{
+					// Derive an element name from the singular of the array name
 					var name = node.Name.LocalName;
 					var elem_name = name.Length > 1 && name.EndsWith("s") ? name.Substring(0,name.Length-1) : "_";
-					foreach (var i in obj_enum) node.Add(Convert(i, new XElement(elem_name), type_attr));
+
+					// Add each element from the collection
+					foreach (var i in (IEnumerable)obj)
+						node.Add(Convert(i, new XElement(elem_name), type_attr));
+					if (!node.HasElements)
+						node.SetValue(string.Empty);
+
 					return node;
 				}
 
+				// Use the generalised generic type if generic
+				var lookup_type = type.IsGenericType ? gen_type : type;
+
 				// Otherwise, use the bound ToXml function
-				ToFunc func = TryGetValue(type, out func) ? func : null;
+				ToFunc func = TryGetValue(lookup_type, out func) ? func : null;
 				for (;func == null;)
 				{
 					// See if 'obj' has a native 'ToXml' method
@@ -490,6 +536,54 @@ namespace pr.extn
 					var w = elem.Element(nameof(m4x4.w)).As<v4>();
 					return new m4x4(x,y,z,w);
 				};
+				this[typeof(KeyValuePair<,>)] = (elem, type, instance) =>
+				{
+					var ty_args = type.GetGenericArguments();
+					var key = elem.Element("k").As(ty_args[0]);
+					var val = elem.Element("v").As(ty_args[1]);
+					return Activator.CreateInstance(type, key, val);
+				};
+				this[typeof(List<>)] = (elem, type, instance) =>
+				{
+					var ty_args = type.GetGenericArguments();
+					var list = Activator.CreateInstance(type);
+					var mi_add = type.GetMethod(nameof(List<int>.Add));
+
+					foreach (var li_elem in elem.Elements())
+					{
+						var li = li_elem.As(ty_args[0]);
+						mi_add.Invoke(list, new object[] { li });
+					}
+					return list;
+				};
+				this[typeof(Dictionary<,>)] = (elem, type, instance) =>
+				{
+					var ty_args = type.GetGenericArguments();
+					var kv_type = typeof(KeyValuePair<,>).MakeGenericType(ty_args);
+					var mi_add = type.GetMethod(nameof(Dictionary<int,int>.Add));
+
+					var dic = Activator.CreateInstance(type);
+					foreach (var kv_elem in elem.Elements())
+					{
+						var key = kv_elem.Element("k").As(ty_args[0]);
+						var val = kv_elem.Element("v").As(ty_args[1]);
+						mi_add.Invoke(dic, new object[] { key, val });
+					}
+					return dic;
+				};
+				this[typeof(HashSet<>)] = (elem, type, instance) =>
+				{
+					var ty_args = type.GetGenericArguments();
+					var set = Activator.CreateInstance(type);
+					var mi_add = type.GetMethod(nameof(HashSet<int>.Add));
+
+					foreach (var si_elem in elem.Elements())
+					{
+						var si = si_elem.As(ty_args[0]);
+						mi_add.Invoke(set, new object[] { si });
+					}
+					return set;
+				};
 			}
 
 			/// <summary>
@@ -539,7 +633,7 @@ namespace pr.extn
 					{
 						return string.Empty;
 					}
-					if (typeof(IEnumerable).IsAssignableFrom(type))
+					if (type.IsArray)
 					{
 						var child_type = type.GetElementType();
 						return Array.CreateInstance(child_type, 0);
@@ -560,18 +654,24 @@ namespace pr.extn
 				// If 'type' is an array...
 				if (type.IsArray)
 				{
-					var child_type = type.GetElementType();
+					// Create an array of the correct type and length
+					var ty_child = type.GetElementType();
 					var children = elem.Elements().ToList();
-					var array = Array.CreateInstance(child_type, children.Count);
+					var array = Array.CreateInstance(ty_child, children.Count);
+
 					for (int i = 0; i != array.Length; ++i)
-						array.SetValue(Convert(children[i], child_type, factory), i); // The 'factory' must handle both the array type and the element types
+						array.SetValue(children[i].As(ty_child, factory), i); // The 'factory' must handle both the array type and the element types
+
 					return array;
 				}
+
+				// Use the generalised generic type if generic
+				var lookup_type = type.IsGenericType ? type.GetGenericTypeDefinition() : type;
 
 				AsFunc func;
 
 				// Find the function that converts the string to 'type'
-				func = TryGetValue(type, out func) ? func : null;
+				func = TryGetValue(lookup_type, out func) ? func : null;
 				for (;func == null;) // There is no 'As' binding for this type, try a few possibilities
 				{
 					// Try a constructor that takes a single XElement parameter
@@ -1726,6 +1826,43 @@ namespace pr.unittests
 			var node = rc.ToXml("rect", false);
 			var RC = node.As<RectangleF>();
 			Assert.True(Equals(rc, RC));
+		}
+		[Test] public void ToXml20()
+		{
+			var kv = new KeyValuePair<int, string>(42, "fortytwo");
+			var node = kv.ToXml("kv", false);
+			var KV = node.As<KeyValuePair<int, string>>();
+			Assert.True(Equals(kv, KV));
+		}
+		[Test] public void ToXml21()
+		{
+			var list = new List<string>();
+			list.Add("one");
+			list.Add("two");
+			var node = list.ToXml("list", false);
+			var LIST = node.As<List<string>>();
+			Assert.True(list.SequenceEqual(LIST));
+		}
+		[Test] public void ToXml22()
+		{
+			var dic = new Dictionary<int, float>();
+			dic[1] = 1.1f;
+			dic[2] = 2.2f;
+			var node = dic.ToXml("dic", false);
+			var DIC = node.As<Dictionary<int,float>>();
+			Assert.True(dic.SequenceEqualUnordered(DIC));
+
+		}
+		[Test] public void ToXml23()
+		{
+			var seq = new[] {1,2,3,4,5,6,7,8,9 }.Where(x => x % 2 == 1);
+			var node = seq.ToXml("seq", false);
+			var SEQ0 = node.As<int[]>();
+			var SEQ1 = node.As<List<int>>();
+			var SEQ2 = node.As<HashSet<int>>();
+			Assert.True(seq.SequenceEqual(SEQ0));
+			Assert.True(seq.SequenceEqual(SEQ1));
+			Assert.True(seq.SequenceEqualUnordered(SEQ2));
 		}
 		[Test] public void XmlAs()
 		{

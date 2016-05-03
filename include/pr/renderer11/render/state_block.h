@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
-#ifndef PR_RDR_RENDER_STATE_BLOCK_H
-#define PR_RDR_RENDER_STATE_BLOCK_H
 
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/util/lookup.h"
@@ -32,12 +30,14 @@ namespace pr
 			//  m_mask[2] would have a bit for 'weight[2]' (at the same bit index as weight[0])
 			// The bit indices in 'm_mask[1..2]' for 'awesome' are not used and should never be set.
 			// This way 'm_mask' indicates which members, including those in arrays, have been changed.
+			using FieldEnum = TFieldEnum;
+			static_assert(has_bitwise_operators_allowed<FieldEnum>::value, "");
 
-			// Cached crc of the state desc
+			// Cached CRC of the state desc
 			mutable pr::hash::HashValue m_crc;
 
 			// A bit field of the members in 'TStateDesc' that have had a value set.
-			TFieldEnum m_mask[N];
+			FieldEnum m_mask[N];
 
 			StateBlock()
 				:TStateDesc()
@@ -53,42 +53,48 @@ namespace pr
 			pr::hash::HashValue Hash() const { return m_crc != 0 ? m_crc : (m_crc = pr::hash::HashObj(*this)); }
 
 			// Clear a field in the state description
-			void Clear(TFieldEnum field)
+			void Clear(FieldEnum field)
 			{
 				m_mask[0] = pr::SetBits(m_mask[0], field, false);
 				m_crc = 0;
 			}
-			void Clear(TFieldEnum field, int n)
+			void Clear(FieldEnum field, int n)
 			{
 				m_mask[n] = pr::SetBits(m_mask[n], field, false);
 				m_crc = 0;
 			}
 
 			// Set the value of a field in the state description
-			void Set(TFieldEnum field)
+			void Set(FieldEnum field)
 			{
 				m_mask[0] = pr::SetBits(m_mask[0], field, true);
 				m_crc = 0;
 			}
-			void Set(TFieldEnum field, int n)
+			void Set(FieldEnum field, int n)
 			{
 				m_mask[n] = pr::SetBits(m_mask[n], field, true);
 				m_crc = 0;
 			}
 
 			// Combine two states into one. 'rhs' has priority over 'this'
-			template <typename MergeFunc>
-			void Merge(StateBlock const& rhs, MergeFunc merge)
+			template <typename MergeFunc> void Merge(StateBlock const& rhs, MergeFunc merge)
 			{
 				// If no values in 'this' have been set, we can just copy 'rhs' wholesale
-				TFieldEnum mask = m_mask[0];
-				for (int i = 1; i < N; ++i) mask |= m_mask[i];
-				if (mask == 0) { *this = rhs; return; }
+				auto mask = m_mask[0];
+				for (int i = 1; i < N; ++i) mask = mask | m_mask[i];
+				if (mask == FieldEnum())
+				{
+					*this = rhs;
+					return;
+				}
 
 				// If no values in 'rhs' have been set, we can ignore it
 				mask = rhs.m_mask[0];
-				for (int i = 1; i < N; ++i) mask |= rhs.m_mask[i];
-				if (mask == 0) { return; }
+				for (int i = 1; i < N; ++i) mask = mask | rhs.m_mask[i];
+				if (mask == FieldEnum())
+				{
+					return;
+				}
 
 				// Otherwise, we have to through field-by-field copying those
 				// that are set in 'rhs' over to 'this'
@@ -96,7 +102,7 @@ namespace pr
 				{
 					for (auto field : pr::EnumerateBits(rhs.m_mask[i]))
 					{
-						merge((TFieldEnum)field, i, rhs);
+						merge((FieldEnum)field, i, rhs);
 						m_crc = 0;
 					}
 				}
@@ -168,5 +174,3 @@ namespace pr
 		}
 	}
 }
-
-#endif

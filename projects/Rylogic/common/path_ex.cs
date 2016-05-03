@@ -441,7 +441,9 @@ namespace pr.common
 		/// to check each file in a directory to see if it was modified after a specific date).
 		/// </remarks>
 
-		/// <summary>Gets FileData for all files/directories in a directory that match a specific filter including all sub directories.</summary>
+		/// <summary>
+		/// Gets FileData for all files/directories in a directory that match a specific filter including all sub directories.
+		/// 'regex_filter' is a filter on the filename, not the full path</summary>
 		[SuppressUnmanagedCodeSecurity]
 		public static IEnumerable<FileData> EnumFileSystem(string path, SearchOption search_flags = SearchOption.TopDirectoryOnly, string regex_filter = null, RegexOptions regex_options = RegexOptions.None, FileAttributes exclude = FileAttributes.Hidden, Func<string,bool> progress = null)
 		{

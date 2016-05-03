@@ -69,11 +69,11 @@ namespace pr
 	template <size_t Alignment> struct AlignTo
 	{
 		// Overload operator new/delete to ensure alignment
-		void* __cdecl operator new(size_t count)
+		static void* __cdecl operator new(size_t count)
 		{
 			return pr::impl::AlignedAlloc<Alignment>(count);
 		}
-		void __cdecl operator delete (void* obj)
+		static void __cdecl operator delete (void* obj)
 		{
 			pr::impl::AlignedFree<Alignment>(obj);
 		}

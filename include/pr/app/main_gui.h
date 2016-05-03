@@ -170,7 +170,7 @@ namespace pr
 			}
 
 			// Resizing handlers
-			virtual void OnWindowPosChange(pr::gui::SizeEventArgs const& args) override
+			virtual void OnWindowPosChange(pr::gui::WindowPosEventArgs const& args) override
 			{
 				if (args.m_before)
 				{
