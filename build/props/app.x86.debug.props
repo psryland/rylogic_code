@@ -42,7 +42,7 @@
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
     <ResourceCompile>
-      <AdditionalIncludeDirectories>..\..\sdk\wtl\v9.0\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <PostBuildEvent>
       <Command>..\script\DeployBin.py $(TargetPath) $(PlatformTarget) $(ConfigurationName)</Command>

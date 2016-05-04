@@ -36,7 +36,7 @@
     <ClCompile>
       <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
       <PreprocessorDefinitions>_DEBUG;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;NOMINMAX;WIN32_LEAN_AND_MEAN;_WIN32_WINNT=_WIN32_WINNT_WIN7;GDIPVER=0x0110</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\projects;..\include;..\sdk;..\sdk\wtl\v9.0\include;..\sdk\sqlite;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\projects;..\include;..\sdk;..\sdk\sqlite;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level4</WarningLevel>
       <ProgramDataBaseFileName>$(TargetDir)$(TargetName).pdb</ProgramDataBaseFileName>
       <Optimization>Disabled</Optimization>
@@ -68,7 +68,7 @@
     <CustomBuildStep />
     <CustomBuildStep />
     <ResourceCompile>
-      <AdditionalIncludeDirectories>..\..\sdk\wtl\v9.0\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
   </ItemDefinitionGroup>
 </Project>
