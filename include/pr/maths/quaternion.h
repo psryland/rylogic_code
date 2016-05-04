@@ -10,24 +10,21 @@
 #include "pr/maths/vector2.h"
 #include "pr/maths/vector3.h"
 #include "pr/maths/vector4.h"
+#include "pr/maths/matrix3x3.h"
+#include "pr/maths/matrix4x4.h"
 
 namespace pr
 {
-	template <typename real = float> struct alignas(16) Quat
+	struct alignas(16) quat
 	{
-		using Vec3   = Vec3<real>;
-		using Vec4   = Vec4<real>;
-		using Mat3x4 = Mat3x4<Vec4,real>;
-		using Mat4x4 = Mat4x4<Vec4,real>;
-
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
 		union
 		{
-			struct { real x,y,z,w; };
-			struct { Vec4 xyzw; };
-			struct { Vec3 xyz; };
-			struct { real arr[4]; };
+			struct { float x,y,z,w; };
+			struct { v4 xyzw; };
+			struct { v3 xyz; };
+			struct { float arr[4]; };
 			#if PR_MATHS_USE_INTRINSICS
 			__m128 vec;
 			#endif
@@ -35,8 +32,8 @@ namespace pr
 		#pragma warning(pop)
 
 		// Construct
-		Quat() = default;
-		Quat(real x_, real y_, real z_, real w_)
+		quat() = default;
+		quat(float x_, float y_, float z_, float w_)
 		#if PR_MATHS_USE_INTRINSICS
 			:vec(_mm_set_ps(w_,z_,y_,x_))
 		#else
@@ -48,9 +45,9 @@ namespace pr
 		{
 			assert(maths::is_aligned(this));
 		}
-		explicit Quat(real x_)
+		explicit quat(float x_)
 		#if PR_MATHS_USE_INTRINSICS
-			:vec(_mm_set_ps1(x_,x_,x_,x_))
+			:vec(_mm_set_ps1(x_))
 		#else
 			:x(x_)
 			,y(x_)
@@ -60,14 +57,14 @@ namespace pr
 		{
 			assert(maths::is_aligned(this));
 		}
-		template <typename T, typename = maths::enable_if_v4<T>> explicit Quat(T const& v)
-			:Quat(x_as<real>(v), y_as<real>(v), z_as<real>(v), w_as<real>(v))
+		template <typename T, typename = maths::enable_if_v4<T>> explicit quat(T const& v)
+			:quat(x_as<float>(v), y_as<float>(v), z_as<float>(v), w_as<float>(v))
 		{}
-		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit Quat(T const* v)
-			:Quat(x_as<real>(v), y_as<real>(v), z_as<real>(v), w_as<real>(v))
+		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit quat(T const* v)
+			:quat(x_as<float>(v), y_as<float>(v), z_as<float>(v), w_as<float>(v))
 		{}
 		#if PR_MATHS_USE_INTRINSICS
-		Quat(__m128 v)
+		quat(__m128 v)
 			:vec(v)
 		{
 			assert(maths::is_aligned(this));
@@ -75,19 +72,19 @@ namespace pr
 		#endif
 
 		// Array access
-		real const& operator [] (int i) const
+		float const& operator [] (int i) const
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
-		real& operator [] (int i)
+		float& operator [] (int i)
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 
 		// Create a quaternion from an axis and an angle
-		Quat(Vec4 const& axis, real angle)
+		quat(v4 const& axis, float angle)
 		{
 			auto s = Sin(0.5f * angle);
 			x = axis.x * s;
@@ -97,7 +94,7 @@ namespace pr
 		}
 
 		// Create a quaternion from Euler angles. Order is roll, pitch, yaw
-		Quat(real pitch, real yaw, real roll)
+		quat(float pitch, float yaw, float roll)
 		{
 			#if PR_MATHS_USE_DIRECTMATH
 			vec = DirectX::XMQuaternionRotationRollPitchYaw(pitch, yaw, roll);
@@ -114,7 +111,7 @@ namespace pr
 		}
 
 		// Create a quaternion from a rotation matrix
-		explicit Quat(Mat3x4 const& m)
+		explicit quat(m3x4 const& m)
 		{
 			auto trace = m.x.x + m.y.y + m.z.z;
 			if (trace >= 0.0f)
@@ -152,16 +149,16 @@ namespace pr
 		}
 
 		// Create a quaternion from a rotation matrix
-		explicit Quat(Mat4x4 const& m)
+		explicit quat(m4x4 const& m)
 			#if PR_MATHS_USE_DIRECTMATH
-			:vec(DirectX::XMQuaternionRotationMatrix(dxm4(m)))
+			:vec(DirectX::XMQuaternionRotationMatrix(m))
 			#else
-			:this(m.rot)
+			:quat(m.rot)
 			#endif
 		{}
 
 		// Construct a quaternion from two vectors represent start and end orientations
-		Quat(Vec4 const& from, Vec4 const& to)
+		quat(v4 const& from, v4 const& to)
 		{
 			auto d = Dot3(from, to);
 			auto axis = Cross3(from, to);
@@ -172,12 +169,11 @@ namespace pr
 				axis = Perpendicular3(to);
 				s = 0.0f;
 			}
-			xyzw = Normalise4(Vec4(axis.x, axis.y, axis.z, s));
+			xyzw = Normalise4(v4(axis.x, axis.y, axis.z, s));
 		}
 	};
-
-	using quat = Quat<>;
-	static_assert(std::is_pod<quat>::value || _MSC_VER < 1900, "Should be a pod type");
+	static_assert(maths::is_vec4<quat>::value, "");
+	static_assert(std::is_pod<quat>::value, "Should be a pod type");
 	static_assert(std::alignment_of<quat>::value == 16, "Should have 16 byte alignment");
 	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
 	using quat_cref = quat const;
@@ -190,19 +186,6 @@ namespace pr
 	inline float y_cp(quat_cref v) { return v.y; }
 	inline float z_cp(quat_cref v) { return v.z; }
 	inline float w_cp(quat_cref v) { return v.w; }
-
-	#pragma region Traits
-	namespace maths
-	{
-		// Specialise marker traits
-		template <> struct is_vec<quat> :std::true_type
-		{
-			using elem_type = float;
-			using cp_type = float;
-			static int const dim = 4;
-		};
-	}
-	#pragma endregion
 
 	#pragma region Constants
 	static quat const quatZero     = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -364,7 +347,7 @@ namespace pr
 	}
 
 	// Rotate a vector by a quaternion
-	// This is an optimised version of: r = q*v*conj(q) for when v.w == 0
+	// This is an optimised version of: 'r = q*v*conj(q) for when v.w == 0'
 	inline v4 Rotate(quat const& lhs, v4 const& rhs)
 	{
 		float xx = lhs.x*lhs.x, xy = lhs.x*lhs.y, xz = lhs.x*lhs.z, xw = lhs.x*lhs.w;

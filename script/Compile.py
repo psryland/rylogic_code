@@ -30,18 +30,18 @@ def SetupVCEnvironment():
 	os.environ["INCLUDE"] = (
 		UserVars.vs_dir + "\\VC\\INCLUDE;" +
 		UserVars.vs_dir + "\\VC\\ATLMFC\\INCLUDE;" +
-		UserVars.winsdk + "\\include\\" + UserVars.winkitvers + "\\ucrt;" +
-		UserVars.winsdk + "\\include\\" + UserVars.winkitvers + "\\shared;" +
-		UserVars.winsdk + "\\include\\" + UserVars.winkitvers + "\\um;" +
-		UserVars.winsdk + "\\include\\" + UserVars.winkitvers + "\\winrt;" +
-		UserVars.winkit + "\\NETFXSDK\\4.6\\include\\um;" +
+		UserVars.winsdk + "\\include\\" + UserVars.winsdkvers + "\\ucrt;" +
+		UserVars.winsdk + "\\include\\" + UserVars.winsdkvers + "\\shared;" +
+		UserVars.winsdk + "\\include\\" + UserVars.winsdkvers + "\\um;" +
+		UserVars.winsdk + "\\include\\" + UserVars.winsdkvers + "\\winrt;" +
+		UserVars.winsdk + "\\..\\NETFXSDK\\4.6\\include\\um;" +
 		"")
 	os.environ["LIB"] = (
 		UserVars.vs_dir + "\\VC\\LIB;" +
 		UserVars.vs_dir + "\\VC\\ATLMFC\\LIB;" +
-		UserVars.winsdk + "\\lib\\" + UserVars.winkitvers + "\\ucrt\\x86;" +
-		UserVars.winsdk + "\\lib\\" + UserVars.winkitvers + "\\um\\x86;" +
-		UserVars.winkit + "\\NETFXSDK\\4.6\\lib\\um\\x86;" +
+		UserVars.winsdk + "\\lib\\" + UserVars.winsdkvers + "\\ucrt\\x86;" +
+		UserVars.winsdk + "\\lib\\" + UserVars.winsdkvers + "\\um\\x86;" +
+		UserVars.winsdk + "\\..\\NETFXSDK\\4.6\\lib\\um\\x86;" +
 		"")
 	os.environ["LIBPATH"] = (
 		UserVars.dotnet + ";" +
@@ -54,9 +54,8 @@ def SetupVCEnvironment():
 		UserVars.winsdk + "\\References\\Windows.Networking.Connectivity.WwanContract\\1.0.0.0;" +
 		UserVars.winsdk + "\\ExtensionSDKs\\Microsoft.VCLibs\\14.0\\References\\CommonConfiguration\\neutral;" +
 		"")
-	os.environ["NETFXSDKDir"]        = UserVars.winkit + "\\NETFXSDK\\4.6\\"
-	#Path                            =C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\CommonExtensions\Microsoft\TestWindow;C:\Program Files (x86)\Microsoft SDKs\TypeScript\1.5;C:\Program Files (x86)\MSBuild\14.0\bin;C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\;C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\BIN;C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\Tools;C:\WINDOWS\Microsoft.NET\Framework\v4.0.30319;C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\VCPackages;C:\Program Files (x86)\HTML Help Workshop;C:\Program Files (x86)\Microsoft Visual Studio 14.0\Team Tools\Performance Tools;C:\Program Files (x86)\Windows Kits\10\bin\x86;C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.6 Tools\;D:\Program Files\PlasticSCM5\client;D:\Program Files\PlasticSCM5\server;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;D:\Program Files (x86)\Skype\Phone\;D:\Program Files\TortoiseHg\;C:\Program Files\Microsoft SQL Server\110\Tools\Binn\;C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\;D:\Program Files\010 Editor;D:\Program Files\TortoiseSVN\bin;C:\WINDOWS\system32\config\systemprofile\.dnx\bin;C:\Program Files\Microsoft DNX\Dnvm\;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit\;C:\Program Files\Intel\WiFi\bin\;C:\Program Files\Common Files\Intel\WirelessCommon\;C:\Program Files (x86)\Microsoft SDKs\TypeScript\1.0\;C:\Users\Paul\.dnx\bin;C:\Program Files\Intel\WiFi\bin\;C:\Program Files\Common Files\Intel\WirelessCommon\
-	os.environ["UCRTVersion"        ] = UserVars.winkitvers
+	os.environ["NETFXSDKDir"]        = UserVars.winsdk + "\\..\\NETFXSDK\\4.6\\"
+	os.environ["UCRTVersion"        ] = UserVars.winsdkvers
 	os.environ["UniversalCRTSdkDir" ] = UserVars.winsdk + "\\"
 	os.environ["VCINSTALLDIR"       ] = UserVars.vs_dir + "\\VC\\"
 	os.environ["VisualStudioVersion"] = UserVars.vs_vers
@@ -124,7 +123,7 @@ def CompileCPP(filepath:str, outdir = "", sw = [], includes = [], defines = []):
 # Compile a C++ source file using standard pr includes, compiler switches
 def CompileCPP_PR(filepath:str, outdir:str):
 	sw = [
-		"/nologo"             ,# no MS logo
+		#"/nologo"             ,# no MS logo
 		"/Gd"                 ,# __cdecl default calling convention
 		"/GF"                 ,# enable readonly string pooling
 		"/GS"                 ,# enable security checks
@@ -154,15 +153,14 @@ def CompileCPP_PR(filepath:str, outdir:str):
 		UserVars.root+"\\projects",
 		UserVars.root+"\\include",
 		UserVars.root+"\\sdk",
-		UserVars.root+"\\sdk\\wtl\\v9.0\\include",
 		UserVars.root+"\\sdk\\sqlite\\include",
 		UserVars.root+"\\sdk\\lua\\lua\\src",
 		UserVars.root+"\\sdk\\lua",
 		];
 	defines = [
 		"PR_UNITTESTS=1",
-		"_WIN32_WINNT=0x0600",
-		"PR_MATHS_USE_DIRECTMATH=1",
+		"_WIN32_WINNT=_WIN32_WINNT_WIN7",
+		"PR_MATHS_USE_INTRINSICS=1",
 		"_DEBUG",
 		"_CRT_SECURE_NO_WARNINGS",
 		"_SCL_SECURE_NO_WARNINGS",
@@ -176,7 +174,7 @@ def CompileCPP_PR(filepath:str, outdir:str):
 # comments before the first preprocessor command
 # Returns the name of the executable file
 def CompileToExe(filepath:str, outdir="",
-	sw       = ["/nologo","/EHsc"],
+	sw       = ["/nologo","/EHsc","/Zc:forScope","/Zc:auto"],
 	includes = [UserVars.root+"\\include", UserVars.root+"\\projects"],
 	defines  = []):
 

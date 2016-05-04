@@ -180,7 +180,7 @@ namespace pr
 				}
 				template <typename T> operator pr::Range<T> () const
 				{
-					return pr::Range<T>::make(checked_cast<T>(first), checked_cast<T>(first + count));
+					return pr::Range<T>(checked_cast<T>(first), checked_cast<T>(first + count));
 				}
 				u32 begin() const { return first; }
 				u32 end() const   { return first + count; }
@@ -1051,9 +1051,9 @@ namespace pr
 			{
 				auto& m0 = cmp.m_scene.m_materials[i];
 				auto& m1 = file.m_scene.m_materials[i];
-				PR_CHECK(m0.m_id.str             , m1.m_id.str);
-				PR_CHECK(m0.m_diffuse            , m1.m_diffuse);
-				PR_CHECK(m0.m_tex_diffuse.size() , m1.m_tex_diffuse.size());
+				PR_CHECK(pr::str::Equal(m0.m_id.str, m1.m_id.str), true);
+				PR_CHECK(m0.m_diffuse == m1.m_diffuse, true);
+				PR_CHECK(m0.m_tex_diffuse.size() == m1.m_tex_diffuse.size(), true);
 				for (size_t j = 0; j != m1.m_tex_diffuse.size(); ++j)
 				{
 					auto& t0 = m0.m_tex_diffuse[j];

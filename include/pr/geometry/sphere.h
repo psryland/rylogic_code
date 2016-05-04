@@ -216,7 +216,7 @@ namespace pr
 		template <typename TVertIter, typename TIdxIter>
 		Props Geosphere(float radius, std::size_t divisions, Colour32 colour, TVertIter out_verts, TIdxIter out_indices)
 		{
-			return Geosphere(v4::make(radius, radius, radius, 0.0f), divisions, colour, out_verts, out_indices);
+			return Geosphere(v4(radius, radius, radius, 0.0f), divisions, colour, out_verts, out_indices);
 		}
 
 		// Returns the number of verts and number of indices needed to hold geometry for a sphere
@@ -234,7 +234,7 @@ namespace pr
 		Props Sphere(v4 const& radius, std::size_t wedges, std::size_t layers, Colour32 colour, TVertIter out_verts, TIdxIter out_indices)
 		{
 			Props props;
-			props.m_bbox = BBox::make(pr::v4Origin, radius);
+			props.m_bbox = BBox(pr::v4Origin, radius);
 			props.m_has_alpha = colour.a() != 0xFF;
 
 			if (wedges < 3) wedges = 3;
@@ -244,20 +244,20 @@ namespace pr
 			for (std::size_t w = 0; w <= wedges; ++w)
 			{
 				v4 norm = v4ZAxis;
-				v2 uv   = v2::make(float(w + 0.5f) / wedges, 0.0f);
+				v2 uv   = v2(float(w + 0.5f) / wedges, 0.0f);
 				SetPCNT(*out_verts++, (radius * norm).w1(), colour, norm, uv);
 
 				for (std::size_t l = 1; l < layers; ++l)
 				{
 					float a = maths::tau * w / wedges;
 					float b = maths::tau_by_2 * l / layers;
-					norm = v4::make(Cos(a) * Sin(b), Sin(a) * Sin(b), Cos(b), 0.0f);
-					uv   = v2::make(float(w) / wedges, (1.0f - norm.z) * 0.5f);
+					norm = v4(Cos(a) * Sin(b), Sin(a) * Sin(b), Cos(b), 0.0f);
+					uv   = v2(float(w) / wedges, (1.0f - norm.z) * 0.5f);
 					SetPCNT(*out_verts++, (radius * norm).w1(), colour, norm, uv);
 				}
 
 				norm = -v4ZAxis;
-				uv   = v2::make(float(w + 0.5f) / wedges, 1.0f);
+				uv   = v2(float(w + 0.5f) / wedges, 1.0f);
 				SetPCNT(*out_verts++, (radius * norm).w1(), colour, norm, uv);
 			}
 

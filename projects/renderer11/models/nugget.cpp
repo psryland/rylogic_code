@@ -50,7 +50,7 @@ namespace pr
 				m_model_buffer->m_mdl_mgr->Delete(&m_nuggets.front());
 		}
 
-		// Return the sortkey composed from the base 'm_sort_key' plus any shaders in 'm_smap'
+		// Return the sort key composed from the base 'm_sort_key' plus any shaders in 'm_smap'
 		SortKey Nugget::SortKey(ERenderStep rstep) const
 		{
 			auto sk = m_sort_key;

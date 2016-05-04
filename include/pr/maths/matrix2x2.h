@@ -10,85 +10,72 @@
 
 namespace pr
 {
-	template <typename Vec2 = v2, typename real = maths::is_vec<Vec2>::elem_type> struct Mat2x2
+	struct m2x2
 	{
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
 		union
 		{
-			struct { Vec2 x, y; };
-			struct { Vec2 arr[2]; };
+			struct { v2 x, y; };
+			struct { v2 arr[2]; };
 		};
 		#pragma warning(pop)
 
 		// Construct
-		Mat2x2() = default;
-		Mat2x2(real xx, real xy, real yx, real yy)
+		m2x2() = default;
+		m2x2(float xx, float xy, float yx, float yy)
 			:x(xx, xy)
 			,y(yx, yy)
 		{}
-		Mat2x2(Vec2 const& x_, Vec2 const& y_)
+		m2x2(v2 const& x_, v2 const& y_)
 			:x(x_)
 			,y(y_)
 		{}
-		explicit Mat2x2(real x_)
+		explicit m2x2(float x_)
 			:x(x_)
 			,y(x_)
 		{}
-		template <typename T, typename = maths::enable_if_v2<T>> Mat2x2(T const& v)
-			:Mat2x2(x_as<Vec2>(v), y_as<Vec2>(v))
+		template <typename T, typename = maths::enable_if_v2<T>> m2x2(T const& v)
+			:m2x2(x_as<v2>(v), y_as<v2>(v))
 		{}
-		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit Mat2x2(T const* v)
-			:Mat2x3(x_as<Vec2>(v), y_as<Vec2>(v))
+		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit m2x2(T const* v)
+			:Mat2x3(x_as<v2>(v), y_as<v2>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v2<T>> Mat2x2& operator = (T const& rhs)
+		template <typename T, typename = maths::enable_if_v2<T>> m2x2& operator = (T const& rhs)
 		{
-			x = x_as<Vec2>(rhs);
-			y = y_as<Vec2>(rhs);
+			x = x_as<v2>(rhs);
+			y = y_as<v2>(rhs);
 			return *this;
 		}
 
 		// Array access
-		Vec2 const& operator [](int i) const
+		v2 const& operator [](int i) const
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
-		Vec2& operator [](int i)
+		v2& operator [](int i)
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 
 		// Create a rotation matrix
-		static Mat2x2 Rotation(real angle)
+		static m2x2 Rotation(float angle)
 		{
-			return Mat2x2(
-				Vec2(+Cos(angle), +Sin(angle)),
-				Vec2(-Sin(angle), +Cos(angle)));
+			return m2x2(
+				v2(+Cos(angle), +Sin(angle)),
+				v2(-Sin(angle), +Cos(angle)));
 		}
 	};
-
-	using m2x2 = Mat2x2<>;
-	static_assert(std::is_pod<m2x2>::value || _MSC_VER < 1900, "m2x2 must be a pod type");
+	static_assert(maths::is_mat2<m2x2>::value, "");
+	static_assert(std::is_pod<m2x2>::value, "m2x2 must be a pod type");
 
 	// Define component accessors
 	inline v2 const& x_cp(m2x2 const& v) { return v.x; }
 	inline v2 const& y_cp(m2x2 const& v) { return v.y; }
 	inline v2 const& z_cp(m2x2 const&) { return v2Zero; }
 	inline v2 const& w_cp(m2x2 const&) { return v2Zero; }
-
-	#pragma region Traits
-	namespace maths
-	{
-		// Specialise marker traits
-		template <> struct is_vec<m2x2> :std::true_type
-		{
-			using elem_type = v2;
-			static int const dim = 2;
-		};
-	}
-	#pragma endregion
 
 	#pragma region Constants
 	static m2x2 const m2x2Zero     = {v2Zero, v2Zero};

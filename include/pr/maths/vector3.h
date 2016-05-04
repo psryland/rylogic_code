@@ -11,102 +11,85 @@
 
 namespace pr
 {
-	template <typename real = float> struct Vec3
+	struct v3
 	{
-		using Vec2 = Vec2<real>;
-		using Vec4 = Vec4<real>;
-
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
 		union
 		{
-			struct { real x, y, z; };
-			struct { Vec2 xy; };
-			struct { real arr[3]; };
+			struct { float x, y, z; };
+			struct { v2 xy; };
+			struct { float arr[3]; };
 		};
 		#pragma warning(pop)
 
 		// Construct
-		Vec3() = default;
-		Vec3(real x_, real y_, real z_)
+		v3() = default;
+		v3(float x_, float y_, float z_)
 			:x(x_)
 			,y(y_)
 			,z(z_)
 		{}
-		explicit Vec3(real x_)
-			:Vec3(x_, x_, x_)
+		explicit v3(float x_)
+			:v3(x_, x_, x_)
 		{}
-		template <typename T, typename = maths::enable_if_v3<T>> Vec3(T const& v)
-			:Vec3(x_as<real>(v), y_as<real>(v), z_as<real>(v))
+		template <typename T, typename = maths::enable_if_v3<T>> v3(T const& v)
+			:v3(x_as<float>(v), y_as<float>(v), z_as<float>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v2<T>> Vec3(T const& v, real z_)
-			:Vec3(x_as<real>(v), y_as<real>(v), z_)
+		template <typename T, typename = maths::enable_if_v2<T>> v3(T const& v, float z_)
+			:v3(x_as<float>(v), y_as<float>(v), z_)
 		{}
-		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit Vec3(T const* v)
-			:Vec3(x_as<real>(v), y_as<real>(v), z_as<real>(v))
+		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit v3(T const* v)
+			:v3(x_as<float>(v), y_as<float>(v), z_as<float>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v3<T>> Vec3& operator = (T const& rhs)
+		template <typename T, typename = maths::enable_if_v3<T>> v3& operator = (T const& rhs)
 		{
-			x = x_as<real>(rhs);
-			y = y_as<real>(rhs);
-			z = z_as<real>(rhs);
+			x = x_as<float>(rhs);
+			y = y_as<float>(rhs);
+			z = z_as<float>(rhs);
 			return *this;
 		}
 
 		// Array access
-		real const& operator [] (int i) const
+		float const& operator [] (int i) const
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
-		real& operator [] (int i)
+		float& operator [] (int i)
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 
 		// Create other vector types
-		Vec4 w0() const
+		template <typename V4 = v4, typename = maths::enable_if_v4<V4>> V4 w0() const
 		{
-			return Vec4(x, y, z, 0);
+			return V4(x, y, z, 0);
 		}
-		Vec4 w1() const
+		template <typename V4 = v4, typename = maths::enable_if_v4<V4>> V4 w1() const
 		{
-			return Vec4(x, y, z, 1);
+			return V4(x, y, z, 1);
 		}
-		Vec2 vec2(int i0, int i1) const
+		v2 vec2(int i0, int i1) const
 		{
-			return Vec2(arr[i0], arr[i1]);
+			return v2(arr[i0], arr[i1]);
 		}
 
 		// Construct normalised
-		static Vec3 Normal3(real x, real y, real z)
+		template <typename V3, typename = maths::enable_if_v3<V3>> static V3 Normal3(float x, float y, float z)
 		{
-			return Normalise3(Vec3(x,y,z));
+			return Normalise3(V3(x,y,z));
 		}
 	};
-
-	using v3 = Vec3<>;
-	static_assert(std::is_pod<v3>::value || _MSC_VER < 1900, "v3 must be a pod type");
+	static_assert(maths::is_vec3<v3>::value, "");
+	static_assert(std::is_pod<v3>::value, "v3 must be a pod type");
 
 	// Define component accessors for pointer types
 	inline float x_cp(v3 const& v) { return v.x; }
 	inline float y_cp(v3 const& v) { return v.y; }
 	inline float z_cp(v3 const& v) { return v.z; }
 	inline float w_cp(v3 const&)   { return 0; }
-
-	#pragma region Traits
-	namespace maths
-	{
-		// Specialise marker traits
-		template <> struct is_vec<v3> :std::true_type
-		{
-			using elem_type = float;
-			using cp_type = float;
-			static int const dim = 3;
-		};
-	}
-	#pragma endregion
 
 	#pragma region Constants
 	static v3 const v3Zero    = {0.0f, 0.0f, 0.0f};

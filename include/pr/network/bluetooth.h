@@ -340,7 +340,9 @@ namespace pr
 					CreateSocket();
 
 				SOCKADDR_BTH addr = {};
-				pr::network::DeviceNameToBluetoothAddr(device_name, addr);
+				if (!pr::network::DeviceNameToBluetoothAddr(device_name, addr))
+					return false;
+
 				addr.serviceClassId = service_or_port.m_service;
 				addr.port = service_or_port.m_port;
 				return ConnectToHost(addr, timeout_ms);

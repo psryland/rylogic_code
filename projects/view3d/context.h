@@ -35,7 +35,6 @@ namespace view3d
 			,m_mutex()
 		{
 			PR_ASSERT(PR_DBG, pr::meta::is_aligned_to<16>(this), "dll data not aligned");
-			AtlInitCommonControls(ICC_WIN95_CLASSES); // add flags to support other controls
 		}
 		~Context()
 		{

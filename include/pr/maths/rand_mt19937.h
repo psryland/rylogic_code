@@ -61,8 +61,11 @@ namespace pr
 		unsigned long m_state[Len];    // the array for the state vector
 		int m_index;                   // m_index == Len+1 means m_state[Len] is not initialized
 		
-		MersenneTwister() : m_index(Len + 1) {}
-		explicit MersenneTwister(unsigned long s) : m_index(Len + 1)
+		MersenneTwister()
+			:MersenneTwister(0UL)
+		{}
+		explicit MersenneTwister(unsigned long s)
+			:m_index(Len + 1)
 		{
 			seed(s);
 		}

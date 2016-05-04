@@ -15,7 +15,7 @@ namespace pr
 	{
 		v4 m_point;
 		v4 m_line;
-		
+
 		Line3() = default;
 		Line3(v4 const& point, v4 const& line)
 			:m_point(point)

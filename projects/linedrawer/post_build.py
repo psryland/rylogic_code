@@ -11,13 +11,13 @@ try:
 	Tools.AssertVersion(1)
 
 	appname = "LineDrawer"
-	targetdir = sys.argv[1] if len(sys.argv) > 1 else "P:\\obj\\v120\\linedrawer\\x64\\Debug\\"
+	targetdir = sys.argv[1] if len(sys.argv) > 1 else "P:\\obj\\v140\\linedrawer\\x64\\Debug\\"
 	platform  = sys.argv[2] if len(sys.argv) > 2 else "x64"
 	config    = sys.argv[3] if len(sys.argv) > 3 else "release"
 	if platform.lower() == "win32": platform = "x86"
 
 	# Copy dependencies to targetdir
-	Tools.Copy(UserVars.root+"\\obj\\v120\\scintilla\\"+platform+"\\"+config+"\\scintilla.dll", targetdir)
+	Tools.Copy(UserVars.root+"\\lib\\"+platform+"\\"+config+"\\scintilla.dll", targetdir)
 
 except Exception as ex:
 	Tools.OnException(ex)

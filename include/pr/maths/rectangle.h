@@ -187,24 +187,6 @@ namespace pr
 			m_max = rhs.m_max;
 			return *this;
 		}
-
-		//// Offset the position of this rectangle
-		//FRect& Shift(float dx, float dy)
-		//{
-		//	m_min.x += dx;
-		//	m_max.x += dx;
-		//	m_min.y += dy;
-		//	m_max.y += dy;
-		//	return *this;
-		//}
-
-		//// Expand/Contract the size of the rectangle
-		//FRect& Inflate(float dx, float dy, int anchorX, int anchorY)
-		//{
-		//	SizeX(SizeX() + dx, anchorX);
-		//	SizeY(SizeY() + dy, anchorY);
-		//	return *this;
-		//}
 	};
 
 	using FRect = Rectangle<v2>;

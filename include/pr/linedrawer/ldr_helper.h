@@ -297,7 +297,7 @@ namespace pr
 		}
 		template <typename TStr> inline TStr& Axis(TStr& str, typename TStr::value_type const* name, Col colour, m3x4 const& basis)
 		{
-			return Axis(str, name, colour, pr::m4x4::make(basis, pr::v4Origin));
+			return Axis(str, name, colour, pr::m4x4(basis, pr::v4Origin));
 		}
 		template <typename TStr, typename VCont, typename ICont> inline TStr& Mesh(TStr& str, typename TStr::value_type const* name, Col colour, VCont const& verts, ICont const& indices, int indices_per_prim, pr::m4x4 const& o2w)
 		{

@@ -803,9 +803,9 @@ namespace pr
 			// Get/Set a socket option
 			// 'level' - The level at which the option is defined. Example: SOL_SOCKET.
 			// 'optname' - The socket option for which the value is to be retrieved. Example: SO_ACCEPTCONN.
-			//  The optname value must be a socket option defined within the specified level, or behavior is undefined.
+			//  The 'optname' value must be a socket option defined within the specified level, or behaviour is undefined.
 			// 'optval' [out] - A pointer to the buffer in which the value for the requested option is to be returned.
-			// 'optlen' [in, out] - The size, in bytes, of the optval buffer.
+			// 'optlen' [in, out] - The size, in bytes, of the 'optval' buffer.
 			void GetSocketOption(int level, int optname, char* optval, int& optlen) const
 			{
 				if (::getsockopt(m_socket, level, optname, optval, &optlen) == SOCKET_ERROR)

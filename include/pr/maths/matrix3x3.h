@@ -8,80 +8,76 @@
 #include "pr/maths/constants.h"
 #include "pr/maths/maths_core.h"
 #include "pr/maths/vector4.h"
-#include "pr/maths/quaternion.h"
 #include "pr/maths/axis_id.h"
 
 namespace pr
 {
-	template <typename Vec4 = v4, typename real = maths::is_vec<Vec4>::elem_type> struct alignas(16) Mat3x4
+	struct alignas(16) m3x4
 	{
-		using Quat = Quat<real>;
-		using Mat4x4 = Mat4x4<Vec4, real>;
-
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
 		union {
-		struct { Vec4 x, y, z; };
-		struct { Vec4 arr[3]; };
+		struct { v4 x, y, z; };
+		struct { v4 arr[3]; };
 		};
 		#pragma warning(pop)
 
 		// Construct
-		Mat3x4() = default;
-		Mat3x4(Vec4 const& x_, Vec4 const& y_, Vec4 const& z_)
+		m3x4() = default;
+		m3x4(v4 const& x_, v4 const& y_, v4 const& z_)
 			:x(x_)
 			,y(y_)
 			,z(z_)
 		{
 			assert(maths::is_aligned(this));
 		}
-		explicit Mat3x4(real x_)
+		explicit m3x4(float x_)
 			:x(x_)
 			,y(x_)
 			,z(x_)
 		{
 			assert(maths::is_aligned(this));
 		}
-		template <typename T, typename = maths::enable_if_v3<T>> Mat3x4(T const& v)
-			:Mat3x4(x_as<Vec4>(v), y_as<Vec4>(v), z_as<Vec4>(v))
+		template <typename T, typename = maths::enable_if_v3<T>> m3x4(T const& v)
+			:m3x4(x_as<v4>(v), y_as<v4>(v), z_as<v4>(v))
 		{}
-		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit Mat3x4(T const* v)
-			:Mat3x4(x_as<Vec4>(v), y_as<Vec4>(v), z_as<Vec4>(v))
+		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit m3x4(T const* v)
+			:m3x4(x_as<v4>(v), y_as<v4>(v), z_as<v4>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v3<T>> Mat3x4& operator = (T const& rhs)
+		template <typename T, typename = maths::enable_if_v3<T>> m3x4& operator = (T const& rhs)
 		{
-			x = x_as<Vec4>(rhs);
-			y = y_as<Vec4>(rhs);
-			z = z_as<Vec4>(rhs);
+			x = x_as<v4>(rhs);
+			y = y_as<v4>(rhs);
+			z = z_as<v4>(rhs);
 			return *this;
 		}
 
 		// Array access
-		Vec4 const& operator [](int i) const
+		v4 const& operator [](int i) const
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
-		Vec4& operator [](int i)
+		v4& operator [](int i)
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 
 		// Get/Set by row or column. Note: x,y,z are column vectors
-		Vec4 col(int i) const
+		v4 col(int i) const
 		{
 			return arr[i];
 		}
-		Vec4 row(int i) const
+		v4 row(int i) const
 		{
-			return Vec4(x[i], y[i], z[i], 0.0f);
+			return v4(x[i], y[i], z[i], 0.0f);
 		}
-		void col(int i, Vec4 const& col)
+		void col(int i, v4 const& col)
 		{
 			arr[i] = col;
 		}
-		void row(int i, Vec4 const& row)
+		void row(int i, v4 const& row)
 		{
 			x[i] = row.x;
 			y[i] = row.y;
@@ -89,38 +85,39 @@ namespace pr
 		}
 
 		// Create a 4x4 matrix with this matrix as the rotation part
-		template <typename = void> Mat4x4 w0() const
+		template <typename M4x4, typename = maths::enable_if_m4<M4x4>> M4x4 w0() const
 		{
-			return Mat4x4(*this, v4Origin);
+			return M4x4(*this, v4Origin);
 		}
-		template <typename = void> Mat4x4 w1(Vec4 const& pos) const
+		template <typename M4x4, typename = maths::enable_if_m4<M4x4>> M4x4 w1(v4 const& pos) const
 		{
 			assert("'pos' must be a position vector" && pos.w == 1);
-			return Mat4x4(*this, pos);
+			return M4x4(*this, pos);
 		}
 
 		// Construct a rotation matrix. Order is: roll, pitch, yaw (to match DirectX)
-		static Mat3x4 Rotation(real pitch, real yaw, real roll)
+		static m3x4 Rotation(float pitch, float yaw, float roll)
 		{
 			#if PR_MATHS_USE_DIRECTMATH
-			return m4x4(DirectX::XMMatrixRotationRollPitchYaw(pitch, yaw, roll)).rot;
+			auto m = DirectX::XMMatrixRotationRollPitchYaw(pitch, yaw, roll);
+			return m3x4(m.r[0], m.r[1], m.r[2]);
 			#else
-			real cos_p = Cos(pitch), sin_p = Sin(pitch);
-			real cos_y = Cos(yaw  ), sin_y = Sin(yaw  );
-			real cos_r = Cos(roll ), sin_r = Sin(roll );
-			return Mat3x4(
-				Vec4( cos_y*cos_r + sin_y*sin_p*sin_r , cos_p*sin_r , -sin_y*cos_r + cos_y*sin_p*sin_r , 0.0f),
-				Vec4(-cos_y*sin_r + sin_y*sin_p*cos_r , cos_p*cos_r ,  sin_y*sin_r + cos_y*sin_p*cos_r , 0.0f),
-				Vec4( sin_y*cos_p                     ,      -sin_p ,                      cos_y*cos_p , 0.0f));
+			float cos_p = Cos(pitch), sin_p = Sin(pitch);
+			float cos_y = Cos(yaw  ), sin_y = Sin(yaw  );
+			float cos_r = Cos(roll ), sin_r = Sin(roll );
+			return m3x4(
+				v4( cos_y*cos_r + sin_y*sin_p*sin_r , cos_p*sin_r , -sin_y*cos_r + cos_y*sin_p*sin_r , 0.0f),
+				v4(-cos_y*sin_r + sin_y*sin_p*cos_r , cos_p*cos_r ,  sin_y*sin_r + cos_y*sin_p*cos_r , 0.0f),
+				v4( sin_y*cos_p                     ,      -sin_p ,                      cos_y*cos_p , 0.0f));
 			#endif
 		}
 
 		// Create from an axis, angle
-		static Mat3x4 Rotation(Vec4 const& axis_norm, Vec4 const& axis_sine_angle, real cos_angle)
+		static m3x4 Rotation(v4 const& axis_norm, v4 const& axis_sine_angle, float cos_angle)
 		{
 			assert("'axis_norm' should be normalised" && IsNormal3(axis_norm));
 
-			auto m = Mat3x4{};
+			auto m = m3x4{};
 			auto trace_vec = axis_norm * (1.0f - cos_angle);
 
 			m.x.x = trace_vec.x * axis_norm.x + cos_angle;
@@ -145,45 +142,45 @@ namespace pr
 		}
 
 		// Create from an axis and angle. 'axis' should be normalised
-		static Mat3x4 Rotation(Vec4 const& axis_norm, real angle)
+		static m3x4 Rotation(v4 const& axis_norm, float angle)
 		{
 			return Rotation(axis_norm, axis_norm * pr::Sin(angle), pr::Cos(angle));
 		}
 
 		// Create from an angular displacement vector. length = angle(rad), direction = axis
-		static Mat3x4 Rotation(Vec4 const& angular_displacement)
+		static m3x4 Rotation(v4 const& angular_displacement)
 		{
 			assert("'angular_displacement' should be a scaled direction vector" && FEql(angular_displacement.w, 0.0f));
 			auto len = Length3(angular_displacement);
-			return len > maths::tiny ? Mat3x4::Rotation(angular_displacement/len, len) : Mat3x4(v4XAxis, v4YAxis, v4ZAxis);
+			return len > maths::tiny ? m3x4::Rotation(angular_displacement/len, len) : m3x4(v4XAxis, v4YAxis, v4ZAxis);
 		}
 
 		// Create from quaternion
-		static Mat3x4 Rotation(Quat const& q)
+		template <typename Quat, typename = maths::enable_if_v4<Quat>> static m3x4 Rotation(Quat const& q)
 		{
 			assert("'quat' is a zero quaternion" && !IsZero(q));
 			auto s = 2.0f / Length4Sq(q);
 
-			real xs = q.x *  s, ys = q.y *  s, zs = q.z *  s;
-			real wx = q.w * xs, wy = q.w * ys, wz = q.w * zs;
-			real xx = q.x * xs, xy = q.x * ys, xz = q.x * zs;
-			real yy = q.y * ys, yz = q.y * zs, zz = q.z * zs;
-			return Mat3x4(
-				Vec4(1.0f - (yy + zz), xy + wz, xz - wy, 0),
-				Vec4(xy - wz, 1.0f - (xx + zz), yz + wx, 0),
-				Vec4(xz + wy, yz - wx, 1.0f - (xx + yy), 0));
+			float xs = q.x *  s, ys = q.y *  s, zs = q.z *  s;
+			float wx = q.w * xs, wy = q.w * ys, wz = q.w * zs;
+			float xx = q.x * xs, xy = q.x * ys, xz = q.x * zs;
+			float yy = q.y * ys, yz = q.y * zs, zz = q.z * zs;
+			return m3x4(
+				v4(1.0f - (yy + zz), xy + wz, xz - wy, 0),
+				v4(xy - wz, 1.0f - (xx + zz), yz + wx, 0),
+				v4(xz + wy, yz - wx, 1.0f - (xx + yy), 0));
 		}
 
 		// Create a transform representing the rotation from one vector to another.
-		static Mat3x4 Rotation(Vec4 const& from, Vec4 const& to)
+		static m3x4 Rotation(v4 const& from, v4 const& to)
 		{
 			assert("'from' and 'to' should be normalised" && IsNormal3(from) && IsNormal3(to));
 
 			auto cos_angle = Dot3(from, to);
 			if (cos_angle >= 1.0f - maths::tiny)
-				return Mat3x4(v4XAxis, v4YAxis, v4ZAxis);
+				return m3x4(v4XAxis, v4YAxis, v4ZAxis);
 			if (cos_angle <= maths::tiny - 1.0f)
-				return Mat3x4(-v4XAxis, -v4YAxis, -v4ZAxis);
+				return m3x4(-v4XAxis, -v4YAxis, -v4ZAxis);
 
 			auto axis_size_angle = Cross3(from, to);
 			auto axis_norm = Normalise3(axis_size_angle);
@@ -191,45 +188,45 @@ namespace pr
 		}
 
 		// Create a transform from one basis axis to another
-		static Mat3x4 Rotation(AxisId from_axis, AxisId to_axis)
+		template <typename = void> static m3x4 Rotation(AxisId from_axis, AxisId to_axis)
 		{
 			// Get the rotation from Z to 'from_axis' = o2f
 			// Get the rotation from Z to 'to_axis' = o2t
 			// 'f2t' = o2t * Invert(o2f)
-			Mat3x4 o2f, o2t;
+			m3x4 o2f, o2t;
 			switch (from_axis)
 			{
 			default: assert(false && "axis_id must one of ±1, ±2, ±3"); o2f = m3x4Identity; break;
-			case -1: o2f = Mat3x4::Rotation(0.0f, +maths::tau_by_4, 0.0f); break;
-			case +1: o2f = Mat3x4::Rotation(0.0f, -maths::tau_by_4, 0.0f); break;
-			case -2: o2f = Mat3x4::Rotation(+maths::tau_by_4, 0.0f, 0.0f); break;
-			case +2: o2f = Mat3x4::Rotation(-maths::tau_by_4, 0.0f, 0.0f); break;
-			case -3: o2f = Mat3x4::Rotation(0.0f, +maths::tau_by_2, 0.0f); break;
+			case -1: o2f = m3x4::Rotation(0.0f, +maths::tau_by_4, 0.0f); break;
+			case +1: o2f = m3x4::Rotation(0.0f, -maths::tau_by_4, 0.0f); break;
+			case -2: o2f = m3x4::Rotation(+maths::tau_by_4, 0.0f, 0.0f); break;
+			case +2: o2f = m3x4::Rotation(-maths::tau_by_4, 0.0f, 0.0f); break;
+			case -3: o2f = m3x4::Rotation(0.0f, +maths::tau_by_2, 0.0f); break;
 			case +3: o2f = m3x4Identity; break;
 			}
 			switch (to_axis)
 			{
 			default: assert(false && "axis_id must one of ±1, ±2, ±3"); o2t = m3x4Identity; break;
-			case -1: o2t = Mat3x4::Rotation(0.0f, -maths::tau_by_4, 0.0f); break; // I know this sign looks wrong, but it isn't. Must be something to do with signs passed to cos()/sin()
-			case +1: o2t = Mat3x4::Rotation(0.0f, +maths::tau_by_4, 0.0f); break;
-			case -2: o2t = Mat3x4::Rotation(+maths::tau_by_4, 0.0f, 0.0f); break;
-			case +2: o2t = Mat3x4::Rotation(-maths::tau_by_4, 0.0f, 0.0f); break;
-			case -3: o2t = Mat3x4::Rotation(0.0f, +maths::tau_by_2, 0.0f); break;
+			case -1: o2t = m3x4::Rotation(0.0f, -maths::tau_by_4, 0.0f); break; // I know this sign looks wrong, but it isn't. Must be something to do with signs passed to cos()/sin()
+			case +1: o2t = m3x4::Rotation(0.0f, +maths::tau_by_4, 0.0f); break;
+			case -2: o2t = m3x4::Rotation(+maths::tau_by_4, 0.0f, 0.0f); break;
+			case +2: o2t = m3x4::Rotation(-maths::tau_by_4, 0.0f, 0.0f); break;
+			case -3: o2t = m3x4::Rotation(0.0f, +maths::tau_by_2, 0.0f); break;
 			case +3: o2t = m3x4Identity; break;
 			}
 			return o2t * InvertFast(o2f);
 		}
 
 		// Create a scale matrix
-		static Mat3x4 Scale(real scale)
+		static m3x4 Scale(float scale)
 		{
-			Mat3x4 mat = {};
+			m3x4 mat = {};
 			mat.x.x = mat.y.y = mat.z.z = scale;
 			return mat;
 		}
-		static Mat3x4 Scale(real sx, real sy, real sz)
+		static m3x4 Scale(float sx, float sy, float sz)
 		{
-			Mat3x4 mat = {};
+			m3x4 mat = {};
 			mat.x.x = sx;
 			mat.y.y = sy;
 			mat.z.z = sz;
@@ -237,28 +234,27 @@ namespace pr
 		}
 
 		// Create a shear matrix
-		static Mat3x4 Shear(real sxy, real sxz, real syx, real syz, real szx, real szy)
+		static m3x4 Shear(float sxy, float sxz, float syx, float syz, float szx, float szy)
 		{
-			Mat3x4 mat = {};
-			mat.x = Vec4(1.0f, sxy, sxz, 0.0f);
-			mat.y = Vec4(syx, 1.0f, syz, 0.0f);
-			mat.z = Vec4(szx, szy, 1.0f, 0.0f);
+			m3x4 mat = {};
+			mat.x = v4(1.0f, sxy, sxz, 0.0f);
+			mat.y = v4(syx, 1.0f, syz, 0.0f);
+			mat.z = v4(szx, szy, 1.0f, 0.0f);
 			return mat;
 		}
 
 		// Create a cross product matrix for 'vec'.
-		static Mat3x4 CrossProductMatrix(Vec4 const& vec)
+		static m3x4 CrossProductMatrix(v4 const& vec)
 		{
 			// This matrix can be used to take the cross product of another vector: e.g. Cross(v1, v2) == CrossProductMatrix(v1) * v2
-			return Mat3x4(
-				Vec4(     0,  vec.z, -vec.y, 0),
-				Vec4(-vec.z,      0,  vec.x, 0),
-				Vec4( vec.y, -vec.x,      0, 0));
+			return m3x4(
+				v4(     0,  vec.z, -vec.y, 0),
+				v4(-vec.z,      0,  vec.x, 0),
+				v4( vec.y, -vec.x,      0, 0));
 		}
 	};
-
-	using m3x4 = Mat3x4<>;
-	static_assert(std::is_pod<m3x4>::value || _MSC_VER < 1900, "Should be a pod type");
+	static_assert(maths::is_mat3<m3x4>::value, "");
+	static_assert(std::is_pod<m3x4>::value, "Should be a pod type");
 	static_assert(std::alignment_of<m3x4>::value == 16, "Should be 16 byte aligned");
 	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
 	using m3x4_cref = m3x4 const;
@@ -271,19 +267,6 @@ namespace pr
 	inline v4 const& y_cp(m3x4_cref v) { return v.y; }
 	inline v4 const& z_cp(m3x4_cref v) { return v.z; }
 	inline v4 const& w_cp(m3x4_cref)   { return v4Origin; }
-
-	#pragma region Traits
-	namespace maths
-	{
-		// Specialise marker traits
-		template <> struct is_vec<m3x4> :std::true_type
-		{
-			using elem_type = v4;
-			using cp_type = float;
-			static int const dim = 3;
-		};
-	}
-	#pragma endregion
 
 	#pragma region Constants
 	static m3x4 const m3x4Zero     = {v4Zero, v4Zero, v4Zero};

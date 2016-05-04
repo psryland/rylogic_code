@@ -12,19 +12,16 @@
 
 namespace pr
 {
-	template <typename real> struct alignas(16) Vec4
+	struct alignas(16) v4
 	{
-		using Vec2 = Vec2<real>;
-		using Vec3 = Vec3<real>;
-
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
 		union
 		{
-			struct { real x,y,z,w; };
-			struct { Vec2 xy, zw; };
-			struct { Vec3 xyz; real w; };
-			struct { real arr[4]; };
+			struct { float x,y,z,w; };
+			struct { v2 xy, zw; };
+			struct { v3 xyz; float w; };
+			struct { float arr[4]; };
 			#if PR_MATHS_USE_INTRINSICS
 			__m128 vec;
 			#endif
@@ -32,8 +29,8 @@ namespace pr
 		#pragma warning(pop)
 
 		// Construct
-		Vec4() = default;
-		Vec4(real x_, real y_, real z_, real w_)
+		v4() = default;
+		v4(float x_, float y_, float z_, float w_)
 		#if PR_MATHS_USE_INTRINSICS
 			:vec(_mm_set_ps(w_,z_,y_,x_))
 		#else
@@ -45,7 +42,7 @@ namespace pr
 		{
 			assert(maths::is_aligned(this));
 		}
-		explicit Vec4(real x_)
+		explicit v4(float x_)
 		#if PR_MATHS_USE_INTRINSICS
 			:vec(_mm_set_ps1(x_))
 		#else
@@ -57,28 +54,28 @@ namespace pr
 		{
 			assert(maths::is_aligned(this));
 		}
-		template <typename T, typename = maths::enable_if_v4<T>> Vec4(T const& v)
-			:Vec4(x_as<real>(v), y_as<real>(v), z_as<real>(v), w_as<real>(v))
+		template <typename T, typename = maths::enable_if_v4<T>> v4(T const& v)
+			:v4(x_as<float>(v), y_as<float>(v), z_as<float>(v), w_as<float>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v3<T>> Vec4(T const& v, real w_)
-			:Vec4(x_as<real>(v), y_as<real>(v), z_as<real>(v), w_)
+		template <typename T, typename = maths::enable_if_v3<T>> v4(T const& v, float w_)
+			:v4(x_as<float>(v), y_as<float>(v), z_as<float>(v), w_)
 		{}
-		template <typename T, typename = maths::enable_if_v2<T>> Vec4(T const& v, real z_, real w_)
-			:Vec4(x_as<real>(v), y_as<real>(v), z_, w_)
+		template <typename T, typename = maths::enable_if_v2<T>> v4(T const& v, float z_, float w_)
+			:v4(x_as<float>(v), y_as<float>(v), z_, w_)
 		{}
-		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit Vec4(T const* v)
-			:Vec4(x_as<real>(v), y_as<real>(v), z_as<real>(v), w_as<real>(v))
+		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit v4(T const* v)
+			:v4(x_as<float>(v), y_as<float>(v), z_as<float>(v), w_as<float>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v4<T>> Vec4& operator = (T const& rhs)
+		template <typename T, typename = maths::enable_if_v4<T>> v4& operator = (T const& rhs)
 		{
-			x = x_as<real>(rhs);
-			y = y_as<real>(rhs);
-			z = z_as<real>(rhs);
-			w = w_as<real>(rhs);
+			x = x_as<float>(rhs);
+			y = y_as<float>(rhs);
+			z = z_as<float>(rhs);
+			w = w_as<float>(rhs);
 			return *this;
 		}
 		#if PR_MATHS_USE_INTRINSICS
-		Vec4(__m128 v)
+		v4(__m128 v)
 			:vec(v)
 		{
 			assert(maths::is_aligned(this));
@@ -86,50 +83,49 @@ namespace pr
 		#endif
 
 		// Array access
-		real const& operator [] (int i) const
+		float const& operator [] (int i) const
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
-		real& operator [] (int i)
+		float& operator [] (int i)
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 
 		// Create other vector types
-		Vec4 w0() const
+		v4 w0() const
 		{
-			Vec4 r(x,y,z,0); // lvalue because of alignment
+			v4 r(x,y,z,0); // LValue because of alignment
 			return r;
 		}
-		Vec4 w1() const
+		v4 w1() const
 		{
-			Vec4 r(x,y,z,1); // lvalue because of alignment
+			v4 r(x,y,z,1); // LValue because of alignment
 			return r;
 		}
-		Vec2 vec2(int i0, int i1) const
+		v2 vec2(int i0, int i1) const
 		{
-			return Vec2(arr[i0], arr[i1]);
+			return v2(arr[i0], arr[i1]);
 		}
-		Vec3 vec3(int i0, int i1, int i2) const
+		v3 vec3(int i0, int i1, int i2) const
 		{
-			return Vec3(arr[i0], arr[i1], arr[i2]);
+			return v3(arr[i0], arr[i1], arr[i2]);
 		}
 
 		// Construct normalised
-		template <typename = void> static Vec4 Normal3(real x, real y, real z, real w)
+		template <typename = void> static v4 Normal3(float x, float y, float z, float w)
 		{
-			return Normalise3(Vec4(x, y, z, w));
+			return Normalise3(v4(x, y, z, w));
 		}
-		template <typename = void> static Vec4 Normal4(real x, real y, real z, real w)
+		template <typename = void> static v4 Normal4(float x, float y, float z, float w)
 		{
-			return Normalise4(Vec4(x, y, z, w));
+			return Normalise4(v4(x, y, z, w));
 		}
 	};
-
-	using v4 = Vec4<float>;
-	static_assert(std::is_pod<v4>::value || _MSC_VER < 1900, "v4 must be a pod type");
+	static_assert(maths::is_vec4<v4>::value, "");
+	static_assert(std::is_pod<v4>::value, "v4 must be a pod type");
 	static_assert(std::alignment_of<v4>::value == 16, "v4 should have 16 byte alignment");
 	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
 	using v4_cref = v4 const;
@@ -142,19 +138,6 @@ namespace pr
 	inline float y_cp(v4_cref v) { return v.y; }
 	inline float z_cp(v4_cref v) { return v.z; }
 	inline float w_cp(v4_cref v) { return v.w; }
-
-	#pragma region Traits
-	namespace maths
-	{
-		// Specialise marker traits
-		template <> struct is_vec<v4> :std::true_type
-		{
-			using elem_type = float;
-			using cp_type = float;
-			static int const dim = 4;
-		};
-	}
-	#pragma endregion
 
 	#pragma region Constants
 	static v4 const v4Zero    = {0.0f, 0.0f, 0.0f, 0.0f};

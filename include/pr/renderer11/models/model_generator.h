@@ -361,7 +361,7 @@ namespace pr
 			}
 			static ModelPtr Sphere(Renderer& rdr, float radius, std::size_t wedges = 20, std::size_t layers = 5, Colour32 colour = Colour32White, NuggetProps const* mat = nullptr)
 			{
-				return Sphere(rdr, v4::make(radius, 0.0f), wedges, layers, colour, mat);
+				return Sphere(rdr, v4(radius, 0.0f), wedges, layers, colour, mat);
 			}
 
 			// Cylinder ***************************************************************************

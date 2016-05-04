@@ -66,7 +66,7 @@ namespace pr
 			return 2.0f * m_ctr_rad.w;
 		}
 	};
-	static_assert(std::is_pod<BSphere>::value || _MSC_VER < 1900, "Should be a pod type");
+	static_assert(std::is_pod<BSphere>::value, "Should be a pod type");
 	static_assert(std::alignment_of<BSphere>::value == 16, "Should be 16 byte aligned");
 	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
 	using BSphere_cref = BSphere const;

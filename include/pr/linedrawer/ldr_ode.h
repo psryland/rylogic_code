@@ -33,14 +33,14 @@ namespace pr
 			case dSphereClass:
 				{
 					float rad = dGeomSphereGetRadius(geom);
-					pr::v4 pos = pr::v4::make(dGeomGetOffsetPosition(geom), 1.0f);
+					pr::v4 pos = pr::v4(pr::v3(dGeomGetOffsetPosition(geom)), 1.0f);
 					pr::variant v = { dGeomGetData(geom) };
 					Sphere(str, PR_STRLITERAL(Char, "sphere"), v.ptr != nullptr ? v.ui : 0xFFFFFFFF, pos, rad);
 				}break;
 			case dBoxClass:
 				{
 					dVector3 box_size; dGeomBoxGetLengths(geom, box_size);
-					pr::v4 dim = pr::v4::make(box_size, 0.0f);
+					pr::v4 dim = pr::v4(box_size, 0.0f);
 					pr::m4x4 o2p = pr::ode(dGeomGetOffsetPosition(geom), dGeomGetOffsetRotation(geom));
 					pr::variant v = { dGeomGetData(geom) };
 					Box(str, PR_STRLITERAL(Char, "box"), v.ptr != nullptr ? v.ui : 0xFFFFFFFF, o2p, dim);

@@ -69,19 +69,19 @@ namespace pr
 			return desc;
 		}
 
-		// Set a new texture description and re-create/reinitialise the texture and the srv.
+		// Set a new texture description and re-create/reinitialise the texture and the src.
 		// 'all_instances' - if true, all Texture2D objects that refer to the same underlying
 		//  dx texture get updated as well. If false, then this texture becomes a unique instance
 		//  and 'm_id' is changed.
-		// 'perserve' - if true, the content of the current texture is stretch blted to the new texture
+		// 'perserve' - if true, the content of the current texture is stretched on to the new texture
 		//  if possible. If not possible, an exception is thrown
-		// 'srvdesc' - if not null, causes the new shader resourve view to be created using this description
+		// 'srvdesc' - if not null, causes the new shader resource view to be created using this description
 		void Texture2D::TexDesc(Image const& src, TextureDesc const& tdesc, bool all_instances, bool preserve, ShaderResViewDesc const* srvdesc)
 		{
 			D3DPtr<ID3D11Texture2D> tex;
 			D3DPtr<ID3D11ShaderResourceView> srv;
 
-			// If initialisation data is provided, see if we need to generate mip maps
+			// If initialisation data is provided, see if we need to generate mip-maps
 			if (src.m_pixels != nullptr)
 			{
 				DirectX::Image img;
@@ -126,7 +126,7 @@ namespace pr
 				//  - Make a render target texture of the same format as the new texture,
 				//  - Use a shader set up for rendering one texture into another,
 				//  - Push render states,
-				//  - call dc->Draw()
+				//  - call 'dc->Draw()'
 				//  - Restore render states
 				TextureDesc existing_desc; m_tex->GetDesc(&existing_desc);
 				if (existing_desc.Width != tdesc.Width || existing_desc.Height != tdesc.Height)
@@ -142,9 +142,9 @@ namespace pr
 				else
 				{
 					throw std::exception("not implemented");
-					//for (UINT slice = 0; slice != existing_desc.MipLevels; ++slice)
-					//	for (UINT arr = 0; arr != existing_desc.ArraySize; ++arr)
-					//		dc->ResolveSubresource(tex.m_ptr, D3D11CalcSubresource(slice, arr, existing_desc.MipLevels);
+					///for (UINT slice = 0; slice != existing_desc.MipLevels; ++slice)
+					///	for (UINT arr = 0; arr != existing_desc.ArraySize; ++arr)
+					///		dc->ResolveSubresource(tex.m_ptr, D3D11CalcSubresource(slice, arr, existing_desc.MipLevels);
 					
 				}
 			}
@@ -176,10 +176,10 @@ namespace pr
 			m_tex->GetDesc(&tdesc);
 			tdesc.Width = checked_cast<UINT>(width);
 			tdesc.Height = checked_cast<UINT>(height);
-			TexDesc(Image(), tdesc, all_instances, preserve);
+			TexDesc(Image(0,0), tdesc, all_instances, preserve);
 		}
 
-		// Get the GDI dc from the surface
+		// Get the GDI DC from the surface
 		HDC Texture2D::GetDC()
 		{
 			HDC dc;
@@ -189,7 +189,7 @@ namespace pr
 			return dc;
 		}
 
-		// Release the GDI dc from the surface
+		// Release the GDI DC from the surface
 		void Texture2D::ReleaseDC()
 		{
 			D3DPtr<IDXGISurface1> surf;
@@ -198,7 +198,7 @@ namespace pr
 			// Note: the main RT must be restored once all ReleaseDC's have been called
 		}
 
-		// Refcounting cleanup function
+		// Ref counting clean up function
 		void Texture2D::RefCountZero(pr::RefCount<Texture2D>* doomed)
 		{
 			Texture2D* tex = static_cast<Texture2D*>(doomed);

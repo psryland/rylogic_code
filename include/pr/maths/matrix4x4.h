@@ -8,23 +8,20 @@
 #include "pr/maths/constants.h"
 #include "pr/maths/maths_core.h"
 #include "pr/maths/vector4.h"
-#include "pr/maths/quaternion.h"
 #include "pr/maths/matrix3x3.h"
 #include "pr/maths/axis_id.h"
 
 namespace pr
 {
-	template <typename Vec4 = v4, typename real = maths::is_vec<Vec4>::elem_type> struct alignas(16) Mat4x4
+	struct alignas(16) m4x4
 	{
-		using Mat3x4 = Mat3x4<Vec4, real>;
-
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
 		union
 		{
-			struct { Vec4 x, y, z, w; };
-			struct { Mat3x4 rot; Vec4 pos; };
-			struct { Vec4 arr[4]; };
+			struct { v4 x, y, z, w; };
+			struct { m3x4 rot; v4 pos; };
+			struct { v4 arr[4]; };
 			#if PR_MATHS_USE_INTRINSICS
 			__m128 vec[4];
 			#endif
@@ -32,8 +29,8 @@ namespace pr
 		#pragma warning(pop)
 
 		// Construct
-		Mat4x4() = default;
-		Mat4x4(Vec4 const& x_, Vec4 const& y_, Vec4 const& z_, Vec4 const& w_)
+		m4x4() = default;
+		m4x4(v4 const& x_, v4 const& y_, v4 const& z_, v4 const& w_)
 			:x(x_)
 			,y(y_)
 			,z(z_)
@@ -41,14 +38,14 @@ namespace pr
 		{
 			assert(maths::is_aligned(this));
 		}
-		Mat4x4(Mat3x4 const& rot_, Vec4 const& pos_)
+		m4x4(m3x4 const& rot_, v4 const& pos_)
 			:rot(rot_)
 			,pos(pos_)
 		{
 			assert(maths::is_aligned(this));
 			assert("'pos' must be a position vector" && pos.w == 1);
 		}
-		explicit Mat4x4(real x_)
+		explicit m4x4(float x_)
 			:x(x_)
 			,y(x_)
 			,z(x_)
@@ -56,22 +53,22 @@ namespace pr
 		{
 			assert(maths::is_aligned(this));
 		}
-		template <typename T, typename = maths::enable_if_v4<T>> Mat4x4(T const& v)
-			:Mat4x4(x_as<Vec4>(v), y_as<Vec4>(v), z_as<Vec4>(v), w_as<Vec4>(v))
+		template <typename T, typename = maths::enable_if_v4<T>> m4x4(T const& v)
+			:m4x4(x_as<v4>(v), y_as<v4>(v), z_as<v4>(v), w_as<v4>(v))
 		{}
-		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit Mat4x4(T const* v)
-			:Mat4x4(x_as<Vec4>(v), y_as<Vec4>(v), z_as<Vec4>(v), w_as<Vec4>(v))
+		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit m4x4(T const* v)
+			:m4x4(x_as<v4>(v), y_as<v4>(v), z_as<v4>(v), w_as<v4>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v4<T>> Mat4x4& operator = (T const& rhs)
+		template <typename T, typename = maths::enable_if_v4<T>> m4x4& operator = (T const& rhs)
 		{
-			x = x_as<Vec4>(rhs);
-			y = y_as<Vec4>(rhs);
-			z = z_as<Vec4>(rhs);
-			w = w_as<Vec4>(rhs);
+			x = x_as<v4>(rhs);
+			y = y_as<v4>(rhs);
+			z = z_as<v4>(rhs);
+			w = w_as<v4>(rhs);
 			return *this;
 		}
 		#if PR_MATHS_USE_INTRINSICS
-		Mat4x4(__m128 const (&mat)[4])
+		m4x4(__m128 const (&mat)[4])
 		{
 			vec[0] = mat[0];
 			vec[1] = mat[1];
@@ -81,14 +78,14 @@ namespace pr
 		#endif
 
 		// Construct from DirectX::XMMATRIX (if defined)
-		template <typename T, typename = maths::enable_if_dx_mat<T>> Mat4x4(T const& mat, int = 0)
+		template <typename T, typename = maths::enable_if_dx_mat<T>> m4x4(T const& mat, int = 0)
 		{
 			vec[0] = mat.r[0];
 			vec[1] = mat.r[1];
 			vec[2] = mat.r[2];
 			vec[3] = mat.r[3];
 		}
-		template <typename T, typename = maths::enable_if_dx_mat<T>> Mat4x4(T const& mat, Vec4 const& pos_, int = 0)
+		template <typename T, typename = maths::enable_if_dx_mat<T>> m4x4(T const& mat, v4 const& pos_, int = 0)
 		{
 			vec[0] = mat.r[0];
 			vec[1] = mat.r[1];
@@ -107,31 +104,31 @@ namespace pr
 		}
 
 		// Array access
-		Vec4 const& operator [](int i) const
+		v4 const& operator [](int i) const
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
-		Vec4& operator [](int i)
+		v4& operator [](int i)
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 
 		// Get/Set by row or column. Note: x,y,z are column vectors
-		Vec4 col(int i) const
+		v4 col(int i) const
 		{
 			return arr[i];
 		}
-		Vec4 row(int i) const
+		v4 row(int i) const
 		{
-			return Vec4(x[i], y[i], z[i], w[i]);
+			return v4(x[i], y[i], z[i], w[i]);
 		}
-		void col(int i, Vec4 const& col)
+		void col(int i, v4 const& col)
 		{
 			arr[i] = col;
 		}
-		void row(int i, Vec4 const& row)
+		void row(int i, v4 const& row)
 		{
 			x[i] = row.x;
 			y[i] = row.y;
@@ -140,95 +137,95 @@ namespace pr
 		}
 
 		// Create a 4x4 matrix with this matrix as the rotation part
-		Mat4x4 w0() const
+		m4x4 w0() const
 		{
-			return Mat4x4(rot, v4Origin);
+			return m4x4(rot, v4Origin);
 		}
-		Mat4x4 w1(Vec4 const& pos) const
+		m4x4 w1(v4 const& xyz) const
 		{
-			assert("'pos' must be a position vector" && pos.w == 1);
-			return Mat4x4(rot, pos);
+			assert("'pos' must be a position vector" && xyz.w == 1);
+			return m4x4(rot, xyz);
 		}
 
 		// Create a translation matrix
-		static Mat4x4 Translation(Vec4 const& xyz)
+		static m4x4 Translation(v4 const& xyz)
 		{
 			assert("translation should be a position vector" && xyz.w == 1.0f);
-			return Mat4x4(m3x4Identity, xyz);
+			return m4x4(m3x4Identity, xyz);
 		}
-		static Mat4x4 Translation(float x, float y, float z)
+		static m4x4 Translation(float x, float y, float z)
 		{
-			return Translation(Vec4(x,y,z,1));
+			return Translation(v4(x,y,z,1));
 		}
 
 		// Create a rotation matrix from Euler angles.  Order is: roll, pitch, yaw (to match DirectX)
-		static Mat4x4 Rotation(float pitch, float yaw, float roll, Vec4 const& pos)
+		static m4x4 Rotation(float pitch, float yaw, float roll, v4 const& pos)
 		{
-			return Mat4x4(Mat3x4::Rotation(pitch, yaw, roll), pos);
+			return m4x4(m3x4::Rotation(pitch, yaw, roll), pos);
 		}
 
 		// Create from an axis and angle. 'axis' should be normalised
-		static Mat4x4 Rotation(Vec4 const& axis, float angle, Vec4 const& pos)
+		static m4x4 Rotation(v4 const& axis, float angle, v4 const& pos)
 		{
 			assert("'axis' should be normalised" && IsNormal3(axis));
 			#if PR_MATHS_USE_DIRECTMATH
-			return Mat4x4(DirectX::XMMatrixRotationNormal(axis.vec, angle), pos);
+			return m4x4(DirectX::XMMatrixRotationNormal(axis.vec, angle), pos);
 			#else
-			return Mat4x4(Mat3x4::Rotation(axis, angle), pos);
+			return m4x4(m3x4::Rotation(axis, angle), pos);
 			#endif
 		}
 
 		// Create from an angular displacement vector. length = angle(rad), direction = axis
-		static Mat4x4 Rotation(Vec4 const& angular_displacement, Vec4 const& pos)
+		static m4x4 Rotation(v4 const& angular_displacement, v4 const& pos)
 		{
-			return Mat4x4(Mat3x4::Rotation(angular_displacement), pos);
+			return m4x4(m3x4::Rotation(angular_displacement), pos);
 		}
 
 		// Create from quaternion
-		static Mat4x4 Rotation(quat const& q, Vec4 const& pos)
+		template <typename Quat, typename = maths::enable_if_v4<Quat>> static m4x4 Rotation(Quat const& q, v4 const& pos)
 		{
 			assert("'q' should be a normalised quaternion" && IsNormal4(q));
 			#if PR_MATHS_USE_DIRECTMATH
-			return Mat4x4(DirectX::XMMatrixRotationQuaternion(q.vec), pos);
+			return m4x4(DirectX::XMMatrixRotationQuaternion(q.vec), pos);
 			#else
-			return Mat4x4(Mat3x4::Rotation(q), pos);
+			return m4x4(m3x4::Rotation(q), pos);
 			#endif
 		}
 
 		// Create a transform representing the rotation from one vector to another.
-		static Mat4x4 Rotation(Vec4 const& from, Vec4 const& to, Vec4 const& pos)
+		static m4x4 Rotation(v4 const& from, v4 const& to, v4 const& pos)
 		{
-			return Mat4x4(Mat3x4::Rotation(from, to), pos);
+			return m4x4(m3x4::Rotation(from, to), pos);
 		}
 
 		// Create a transform from one basis axis to another
-		static Mat4x4 Rotation(AxisId from_axis, AxisId to_axis, v4 const& pos)
+		static m4x4 Rotation(AxisId from_axis, AxisId to_axis, v4 const& pos)
 		{
-			return Mat4x4(Mat3x4::Rotation(from_axis, to_axis), pos);
+			return m4x4(m3x4::Rotation(from_axis, to_axis), pos);
 		}
 
 		// Create a scale matrix
-		static Mat4x4 Scale(float scale, Vec4 const& pos)
+		static m4x4 Scale(float scale, v4 const& pos)
 		{
-			return Mat4x4(Mat3x4::Scale(scale), pos);
+			return m4x4(m3x4::Scale(scale), pos);
 		}
-		static Mat4x4 Scale(float sx, float sy, float sz, Vec4 const& pos)
+		static m4x4 Scale(float sx, float sy, float sz, v4 const& pos)
 		{
-			return Mat4x4(Mat3x4::Scale(sx, sy, sz), pos);
+			return m4x4(m3x4::Scale(sx, sy, sz), pos);
 		}
 
 		// Create a shear matrix
-		static Mat4x4 Shear(float sxy, float sxz, float syx, float syz, float szx, float szy, Vec4 const& pos)
+		static m4x4 Shear(float sxy, float sxz, float syx, float syz, float szx, float szy, v4 const& pos)
 		{
-			return Mat4x4(Mat3x4::Shear(sxy, sxz, syx, syz, szx, szy), pos);
+			return m4x4(m3x4::Shear(sxy, sxz, syx, syz, szx, szy), pos);
 		}
 
 		// Orientation matrix to "look" at a point
-		static Mat4x4 LookAt(Vec4 const& eye, Vec4 const& at, Vec4 const& up)
+		static m4x4 LookAt(v4 const& eye, v4 const& at, v4 const& up)
 		{
 			assert("Invalid position/direction vectors passed to LookAt" && eye.w == 1.0f && at.w == 1.0f && up.w == 0.0f);
 			assert("LookAt point and up axis are aligned" && !pr::Parallel3(at - eye, up));
-			auto mat = Mat4x4{};
+			auto mat = m4x4{};
 			mat.z = Normalise3(eye - at);
 			mat.x = Normalise3(Cross3(up, mat.z));
 			mat.y = Cross3(mat.z, mat.x);
@@ -237,10 +234,10 @@ namespace pr
 		}
 
 		// Construct an orthographic projection matrix
-		static Mat4x4 ProjectionOrthographic(float w, float h, float zn, float zf, bool righthanded)
+		static m4x4 ProjectionOrthographic(float w, float h, float zn, float zf, bool righthanded)
 		{
 			auto rh = Sign<float>(righthanded);
-			auto mat = Mat4x4{};
+			auto mat = m4x4{};
 			mat.x.x = 2.0f / w;
 			mat.y.y = 2.0f / h;
 			mat.z.z = rh / (zn - zf);
@@ -250,10 +247,10 @@ namespace pr
 		}
 
 		// Construct a perspective projection matrix
-		static Mat4x4 ProjectionPerspective(float w, float h, float zn, float zf, bool righthanded)
+		static m4x4 ProjectionPerspective(float w, float h, float zn, float zf, bool righthanded)
 		{
 			auto rh = Sign<float>(righthanded);
-			auto mat = Mat4x4{};
+			auto mat = m4x4{};
 			mat.x.x = 2.0f * zn / w;
 			mat.y.y = 2.0f * zn / h;
 			mat.z.w = -rh;
@@ -263,10 +260,10 @@ namespace pr
 		}
 
 		// Construct a perspective projection matrix offset from the centre
-		static Mat4x4 ProjectionPerspective(float l, float r, float t, float b, float zn, float zf, bool righthanded)
+		static m4x4 ProjectionPerspective(float l, float r, float t, float b, float zn, float zf, bool righthanded)
 		{
 			auto rh = Sign<float>(righthanded);
-			auto mat = Mat4x4{};
+			auto mat = m4x4{};
 			mat.x.x = 2.0f * zn / (r - l);
 			mat.y.y = 2.0f * zn / (t - b);
 			mat.z.x = rh * (r + l) / (r - l);
@@ -278,10 +275,10 @@ namespace pr
 		}
 
 		// Construct a perspective projection matrix using field of view
-		static Mat4x4 ProjectionPerspectiveFOV(float fovY, float aspect, float zn, float zf, bool righthanded)
+		static m4x4 ProjectionPerspectiveFOV(float fovY, float aspect, float zn, float zf, bool righthanded)
 		{
 			auto rh = Sign<float>(righthanded);
-			auto mat = Mat4x4{};
+			auto mat = m4x4{};
 			mat.y.y = 1.0f / pr::Tan(fovY/2);
 			mat.x.x = mat.y.y / aspect;
 			mat.z.w = -rh;
@@ -291,15 +288,14 @@ namespace pr
 		}
 
 		// Return the cross product matrix for 'vec'.
-		static Mat4x4 CrossProductMatrix(Vec4 const& vec)
+		static m4x4 CrossProductMatrix(v4 const& vec)
 		{
 			// This matrix can be used to take the cross product of another vector: e.g. Cross(v1, v2) == CrossProductMatrix4x4(v1) * v2
-			return Mat4x4(Mat3x4::CrossProductMatrix(vec), v4Origin);
+			return m4x4(m3x4::CrossProductMatrix(vec), v4Origin);
 		}
 	};
-
-	using m4x4 = Mat4x4<>;
-	static_assert(std::is_pod<m4x4>::value || _MSC_VER < 1900, "Should be a pod type");
+	static_assert(maths::is_mat4<m4x4>::value, "");
+	static_assert(std::is_pod<m4x4>::value, "Should be a pod type");
 	static_assert(std::alignment_of<m4x4>::value == 16, "Should be 16 byte aligned");
 	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
 	using m4x4_cref = m4x4 const;
@@ -312,19 +308,6 @@ namespace pr
 	inline v4 const& y_cp(m4x4 const& v) { return v.y; }
 	inline v4 const& z_cp(m4x4 const& v) { return v.z; }
 	inline v4 const& w_cp(m4x4 const& v) { return v.w; }
-
-	#pragma region Traits
-	namespace maths
-	{
-		// Specialise marker traits
-		template <> struct is_vec<m4x4> :std::true_type
-		{
-			using elem_type = v4;
-			using cp_type = float;
-			static int const dim = 4;
-		};
-	}
-	#pragma endregion
 
 	#pragma region Constants
 	static m4x4 const m4x4Zero     = {v4Zero, v4Zero, v4Zero, v4Zero};

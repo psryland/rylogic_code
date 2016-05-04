@@ -144,7 +144,7 @@ namespace pr
 			return bbox;
 		}
 	};
-	static_assert(std::is_pod<BBox>::value || _MSC_VER < 1900, "Should be a pod type");
+	static_assert(std::is_pod<BBox>::value, "Should be a pod type");
 	static_assert(std::alignment_of<BBox>::value == 16, "Should be 16 byte aligned");
 	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
 	using BBox_cref = BBox const;

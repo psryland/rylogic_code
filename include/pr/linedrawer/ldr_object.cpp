@@ -1112,12 +1112,12 @@ namespace pr
 
 				// Create nuggets
 				NuggetProps nug;
-				pr::rdr::Range vrange = {};
-				pr::rdr::Range irange = {};
+				pr::rdr::Range vrange(0,0);
+				pr::rdr::Range irange(0,0);
 				if (m_type & EArrowType::Back)
 				{
-					vrange.set(0, 1);
-					irange.set(0, 1);
+					vrange = pr::rdr::Range(0, 1);
+					irange = pr::rdr::Range(0, 1);
 					nug.m_topo = EPrim::PointList;
 					nug.m_geom = EGeom::Vert|EGeom::Colr;
 					nug.m_smap[ERenderStep::ForwardRender].m_gs = arw_shdr;
@@ -1127,8 +1127,8 @@ namespace pr
 					obj->m_model->CreateNugget(nug);
 				}
 				{
-					vrange.set(vrange.m_end, vrange.m_end + m_point.size());
-					irange.set(irange.m_end, irange.m_end + m_point.size());
+					vrange = pr::rdr::Range(vrange.m_end, vrange.m_end + m_point.size());
+					irange = pr::rdr::Range(irange.m_end, irange.m_end + m_point.size());
 					nug.m_topo = EPrim::LineStrip;
 					nug.m_geom = EGeom::Vert|EGeom::Colr;
 					nug.m_smap[ERenderStep::ForwardRender].m_gs = m_line_width != 0 ? static_cast<ShaderPtr>(thk_shdr) : ShaderPtr();
@@ -1139,8 +1139,8 @@ namespace pr
 				}
 				if (m_type & EArrowType::Fwd)
 				{
-					vrange.set(vrange.m_end, vrange.m_end + 1);
-					irange.set(irange.m_end, irange.m_end + 1);
+					vrange = pr::rdr::Range(vrange.m_end, vrange.m_end + 1);
+					irange = pr::rdr::Range(irange.m_end, irange.m_end + 1);
 					nug.m_topo = EPrim::PointList;
 					nug.m_geom = EGeom::Vert|EGeom::Colr;
 					nug.m_smap[ERenderStep::ForwardRender].m_gs = arw_shdr;

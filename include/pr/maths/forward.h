@@ -20,6 +20,8 @@
 // that don't use DirectXMath because all of the maths types have the same
 // size/alignment requirements regardless.
 
+static_assert(_MSC_VER >= 1900, "VS v140 is required due to a value initialisation bug in v120");
+
 // Use intrinsics by default
 #ifndef PR_MATHS_USE_INTRINSICS
 #define PR_MATHS_USE_INTRINSICS 1
@@ -88,15 +90,15 @@ namespace pr
 	typedef float            real32;
 	typedef double           real64;
 
-	template <typename real> struct Vec2;
-	template <typename real> struct Vec3;
-	template <typename real> struct Vec4;
-	template <typename intg> struct IVec2;
-	template <typename intg> struct IVec4;
-	template <typename real> struct Quat;
-	template <typename Vec2, typename real> struct Mat2x2;
-	template <typename Vec4, typename real> struct Mat3x4;
-	template <typename Vec4, typename real> struct Mat4x4;
+	struct v2;
+	struct v3;
+	struct v4;
+	struct iv2;
+	struct iv4;
+	struct quat;
+	struct m2x2;
+	struct m3x4;
+	struct m4x4;
 	struct BBox;
 	struct BSphere;
 	struct OBox;
@@ -126,17 +128,32 @@ namespace pr
 		// If true, 'x_cp', 'y_cp', 'z_cp', 'w_cp' is expected to be defined for that type.
 		// Notes:
 		//  Don't specialise this for scalars because that could lead to accidental use of vectors in scalar functions.
-		template <typename T> struct is_vec :std::false_type {};
+		template <typename T> struct is_vec :std::false_type
+		{
+			using elem_type = void;
+			using cp_type = void;
+			static int const dim = 0;
+		};
+		template <typename T> struct is_vec2 :std::integral_constant<bool, is_vec<T>::dim >= 2> {};
+		template <typename T> struct is_vec3 :std::integral_constant<bool, is_vec<T>::dim >= 3> {};
+		template <typename T> struct is_vec4 :std::integral_constant<bool, is_vec<T>::dim >= 4> {};
+		template <typename T> struct is_mat2 :std::integral_constant<bool, is_vec2<T>::value && is_vec2<typename is_vec<T>::elem_type>::value> {};
+		template <typename T> struct is_mat3 :std::integral_constant<bool, is_vec3<T>::value && is_vec4<typename is_vec<T>::elem_type>::value> {};
+		template <typename T> struct is_mat4 :std::integral_constant<bool, is_vec4<T>::value && is_vec4<typename is_vec<T>::elem_type>::value> {};
 
 		// Helper meta functions
 		template <typename T> using enable_if_vec_cp = typename std::enable_if<is_vec_cp<T>::value>::type;
 		template <typename T> using enable_if_vN = typename std::enable_if<is_vec<T>::value>::type;
-		template <typename T> using enable_if_v2 = typename std::enable_if<is_vec<T>::value && is_vec<T>::dim >= 2>::type;
-		template <typename T> using enable_if_v3 = typename std::enable_if<is_vec<T>::value && is_vec<T>::dim >= 3>::type;
-		template <typename T> using enable_if_v4 = typename std::enable_if<is_vec<T>::value && is_vec<T>::dim >= 4>::type;
+		template <typename T> using enable_if_v2 = typename std::enable_if<is_vec2<T>::value>::type;
+		template <typename T> using enable_if_v3 = typename std::enable_if<is_vec3<T>::value>::type;
+		template <typename T> using enable_if_v4 = typename std::enable_if<is_vec4<T>::value>::type;
+		template <typename T> using enable_if_m2 = typename std::enable_if<is_mat2<T>::value>::type;
+		template <typename T> using enable_if_m3 = typename std::enable_if<is_mat3<T>::value>::type;
+		template <typename T> using enable_if_m4 = typename std::enable_if<is_mat4<T>::value>::type;
 		template <typename T> using enable_if_fp_vec = typename std::enable_if<is_vec<T>::value && std::is_floating_point<typename is_vec<T>::elem_type>::value>::type;
 		template <typename T> using enable_if_ig_vec = typename std::enable_if<is_vec<T>::value && std::is_integral      <typename is_vec<T>::elem_type>::value>::type;
 		template <typename T> using enable_if_dx_mat = typename std::enable_if<std::is_same<T, DirectX::XMMATRIX>::value>::type;
+		template <typename T> using enable_if_not_vN = typename std::enable_if<!is_vec<T>::value>::type;
 
 		// Test alignment of 't'
 		template <typename T, int A> inline bool is_aligned(T const* t)
@@ -147,5 +164,62 @@ namespace pr
 		{
 			return is_aligned<T, std::alignment_of<T>::value>(t);
 		}
+
+		#pragma region Traits
+		template <> struct is_vec<v2> :std::true_type
+		{
+			using elem_type = float;
+			using cp_type = float;
+			static int const dim = 2;
+		};
+		template <> struct is_vec<v3> :std::true_type
+		{
+			using elem_type = float;
+			using cp_type = float;
+			static int const dim = 3;
+		};
+		template <> struct is_vec<v4> :std::true_type
+		{
+			using elem_type = float;
+			using cp_type = float;
+			static int const dim = 4;
+		};
+		template <> struct is_vec<iv2> :std::true_type
+		{
+			using elem_type = int;
+			using cp_type = int;
+			static int const dim = 2;
+		};
+		template <> struct is_vec<iv4> :std::true_type
+		{
+			using elem_type = int;
+			using cp_type = int;
+			static int const dim = 4;
+		};
+		template <> struct is_vec<m2x2> :std::true_type
+		{
+			using elem_type = v2;
+			using cp_type = float;
+			static int const dim = 2;
+		};
+		template <> struct is_vec<m3x4> :std::true_type
+		{
+			using elem_type = v4;
+			using cp_type = float;
+			static int const dim = 3;
+		};
+		template <> struct is_vec<m4x4> :std::true_type
+		{
+			using elem_type = v4;
+			using cp_type = float;
+			static int const dim = 4;
+		};
+		template <> struct is_vec<quat> :std::true_type
+		{
+			using elem_type = float;
+			using cp_type = float;
+			static int const dim = 4;
+		};
+		#pragma endregion
 	}
 }

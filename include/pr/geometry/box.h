@@ -146,7 +146,7 @@ namespace pr
 		template <typename TVertIter, typename TIdxIter>
 		Props Box(v4 const& rad, m4x4 const& o2w, Colour32 colour, TVertIter out_verts, TIdxIter out_indices)
 		{
-			v4 const alignas(16) pt[8] =
+			v4 const pt[8] =
 			{
 				{-rad.x, -rad.y, -rad.z, 1.0f},
 				{+rad.x, -rad.y, -rad.z, 1.0f},

@@ -56,7 +56,7 @@ namespace pr.extn
 		}
 
 		/// <summary>True if 'index' >= 0 && 'index' < list.Count</summary>
-		public static bool Within<T>(this IList<T> list, int index)
+		public static bool Within(this ICollection list, int index)
 		{
 			return index >= 0 && index < list.Count;
 		}

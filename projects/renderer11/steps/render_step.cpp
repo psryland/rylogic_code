@@ -47,7 +47,7 @@ namespace pr
 		// that the instance is in the drawlist, i.e. until 'RemoveInstance' or 'ClearDrawlist' is called.
 		void RenderStep::AddInstance(BaseInstance const& inst)
 		{
-			// Get the model associated with the isntance
+			// Get the model associated with the instance
 			ModelPtr const& model = GetModel(inst);
 			PR_ASSERT(PR_DBG_RDR, model != nullptr, "Null model pointer");
 

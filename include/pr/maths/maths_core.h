@@ -600,19 +600,16 @@ namespace pr
 	}
 
 	// Min/Max/Clamp
-	template <typename T, typename = std::enable_if<std::is_arithmetic<T>::value>::type> inline T Min(T x, T y)
+	template <typename T, typename = maths::enable_if_not_vN<T>> inline T Min(T x, T y)
 	{
-		assert(IsFinite(x) && IsFinite(y));
 		return (x > y) ? y : x;
 	}
-	template <typename T, typename = std::enable_if<std::is_arithmetic<T>::value>::type> inline T Max(T x, T y)
+	template <typename T, typename = maths::enable_if_not_vN<T>> inline T Max(T x, T y)
 	{
-		assert(IsFinite(x) && IsFinite(y));
 		return (x > y) ? x : y;
 	}
-	template <typename T, typename = std::enable_if<std::is_arithmetic<T>::value>::type> inline T Clamp(T x, T mn, T mx)
+	template <typename T, typename = maths::enable_if_not_vN<T>> inline T Clamp(T x, T mn, T mx)
 	{
-		assert(IsFinite(x) && IsFinite(mn) && IsFinite(mx));
 		assert("[min,max] must be a positive range" && mn <= mx);
 		return (mx < x) ? mx : (x < mn) ? mn : x;
 	}
@@ -634,7 +631,7 @@ namespace pr
 		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Clamp(x[i], mn[i], mx[i]);
 		return r;
 	}
-	template <typename T, typename V = maths::is_vec<T>::elem_type, typename = maths::enable_if_vN<T>> inline T Clamp(T const& x, V mn, V mx)
+	template <typename T, typename = maths::enable_if_vN<T>> inline T Clamp(T const& x, typename maths::is_vec<T>::cp_type mn, typename maths::is_vec<T>::cp_type mx)
 	{
 		auto r = T{};
 		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Clamp(x[i], mn, mx);
@@ -699,22 +696,22 @@ namespace pr
 		auto v = lhs;
 		return v %= rhs;
 	}
-	template <typename T, typename V = maths::is_vec<T>::elem_type, typename = maths::enable_if_vN<T>> inline T operator * (T const& lhs, V rhs)
+	template <typename T, typename = maths::enable_if_vN<T>> inline T operator * (T const& lhs, typename maths::is_vec<T>::cp_type rhs)
 	{
 		auto v = lhs;
 		return v *= rhs;
 	}
-	template <typename T, typename V = maths::is_vec<T>::elem_type, typename = maths::enable_if_vN<T>> inline T operator / (T const& lhs, V rhs)
+	template <typename T, typename = maths::enable_if_vN<T>> inline T operator / (T const& lhs, typename maths::is_vec<T>::cp_type rhs)
 	{
 		auto v = lhs;
 		return v /= rhs;
 	}
-	template <typename T, typename V = maths::is_vec<T>::elem_type, typename = maths::enable_if_vN<T>> inline T operator % (T const& lhs, V rhs)
+	template <typename T, typename = maths::enable_if_vN<T>> inline T operator % (T const& lhs, typename maths::is_vec<T>::cp_type rhs)
 	{
 		auto v = lhs;
 		return v %= rhs;
 	}
-	template <typename T, typename V = maths::is_vec<T>::elem_type, typename = maths::enable_if_vN<T>> inline T operator * (V lhs, T const& rhs)
+	template <typename T, typename = maths::enable_if_vN<T>> inline T operator * (typename maths::is_vec<T>::cp_type lhs, T const& rhs)
 	{
 		return rhs * lhs;
 	}

@@ -16,8 +16,8 @@ namespace pr
 		// Functions the client provides to the renderer
 		struct MemFuncs
 		{
-			typedef void* (_cdecl *AllocFunc  )(size_t size_in_bytes, size_t alignment);
-			typedef void  (_cdecl *DeallocFunc)(void* mem);
+			typedef void* (__cdecl *AllocFunc  )(size_t size_in_bytes, size_t alignment);
+			typedef void  (__cdecl *DeallocFunc)(void* mem);
 
 			AllocFunc   m_alloc;
 			DeallocFunc m_dealloc;
@@ -43,7 +43,7 @@ namespace pr
 				value_alignment = std::alignment_of<T>::value
 			};
 
-			// Constructers
+			// Constructors
 			Allocator(MemFuncs funcs) :MemFuncs(funcs) {}
 			Allocator(Allocator const& rhs) :MemFuncs(rhs) {}
 			template <typename U> Allocator(Allocator<U> const& rhs) :MemFuncs(rhs) {}

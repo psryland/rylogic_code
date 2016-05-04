@@ -14,9 +14,25 @@
 
 namespace pr
 {
+	struct Colour32;
+	struct Colour;
+
 	// Colour type traits
-	template <typename T> struct is_colour :std::false_type {};
+	#pragma region Traits
+	template <typename T> struct is_colour :std::false_type
+	{
+		using elem_type = void;
+	};
 	template <typename T> using enable_if_col = typename std::enable_if<is_colour<T>::value>::type;
+	template <> struct is_colour<Colour32> :std::true_type
+	{
+		using elem_type = uint8;
+	};
+	template <> struct is_colour<Colour> :std::true_type
+	{
+		using elem_type = float;
+	};
+	#pragma endregion
 
 	#pragma region Predefined Windows Colours
 	#define PR_ENUM(x)\
@@ -250,20 +266,14 @@ namespace pr
 			return Colour32(argb | 0xFF000000);
 		}
 	};
+	static_assert(std::is_pod<Colour32>::value, "Colour32 should be a pod type");
+	static_assert(is_colour<Colour32>::value, "");
 
 	// Define component accessors
 	inline float r_cp(Colour32 v) { return v.r / 255.0f; }
 	inline float g_cp(Colour32 v) { return v.g / 255.0f; }
 	inline float b_cp(Colour32 v) { return v.b / 255.0f; }
 	inline float a_cp(Colour32 v) { return v.a / 255.0f; }
-
-	#pragma region Traits
-	template <> struct is_colour<Colour32> :std::true_type
-	{
-		using elem_type = uint8;
-	};
-	static_assert(is_colour<Colour32>::value, "");
-	#pragma endregion
 
 	#pragma region Constants
 	Colour32 const Colour32Zero   = { 0x00000000 };
@@ -404,27 +414,24 @@ namespace pr
 	#pragma region Colour
 
 	// Equivalent to pr::v4, XMVECTOR, D3DCOLORVALUE, etc
-	template <typename real> struct alignas(16) Colour4
+	struct alignas(16) Colour
 	{
-		using Vec4 = Vec4<real>;
-		using Vec3 = Vec3<real>;
-
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct/union
 		union
 		{
-			struct { real r,g,b,a; };
-			struct { Vec4 rgba; };
-			struct { Vec3 rgb; real a; };
-			struct { real arr[4]; };
+			struct { float r,g,b,a; };
+			struct { v4 rgba; };
+			struct { v3 rgb; float a; };
+			struct { float arr[4]; };
 			#if PR_MATHS_USE_INTRINSICS
 			__m128 vec;
 			#endif
 		};
 		#pragma warning(pop)
 
-		Colour4() = default;
-		Colour4(real r_, real g_, real b_, real a_)
+		Colour() = default;
+		Colour(float r_, float g_, float b_, float a_)
 		#if PR_MATHS_USE_INTRINSICS
 			:vec(_mm_set_ps(a_,b_,g_,r_))
 		#else
@@ -437,20 +444,20 @@ namespace pr
 			// Note: Do not clamp values, use 'Clamp' if that's what you want
 			assert(maths::is_aligned(this));
 		}
-		Colour4(uint8 r_, uint8 g_, uint8 b_, uint8 a_)
-			:Colour4(r_/255.0f, g_/255.0f, b_/255.0f, a_/255.0f)
+		Colour(uint8 r_, uint8 g_, uint8 b_, uint8 a_)
+			:Colour(r_/255.0f, g_/255.0f, b_/255.0f, a_/255.0f)
 		{}
-		Colour4(Colour32 c32)
-			:Colour4(c32.r, c32.g, c32.b, c32.a)
+		Colour(Colour32 c32)
+			:Colour(c32.r, c32.g, c32.b, c32.a)
 		{}
-		Colour4(Colour32 c32, real alpha)
-			:Colour4(c32.r/255.0f, c32.g/255.0f, c32.b/255.0f, alpha)
+		Colour(Colour32 c32, float alpha)
+			:Colour(c32.r/255.0f, c32.g/255.0f, c32.b/255.0f, alpha)
 		{}
-		template <typename T, typename = enable_if_col<T>> Colour4(T const& v)
-			:Colour4(r_cp(v), g_cp(v), b_cp(v), a_cp(v))
+		template <typename T, typename = enable_if_col<T>> Colour(T const& v)
+			:Colour(r_cp(v), g_cp(v), b_cp(v), a_cp(v))
 		{}
 		#if PR_MATHS_USE_INTRINSICS
-		Colour4(__m128 v)
+		Colour(__m128 v)
 			:vec(v)
 		{
 			assert(maths::is_aligned(this));
@@ -458,25 +465,25 @@ namespace pr
 		#endif
 
 		// Array access
-		real const& operator [] (int i) const
+		float const& operator [] (int i) const
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
-		real& operator [] (int i)
+		float& operator [] (int i)
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 
 		// Operators
-		Colour4& operator = (Colour32 c32)
+		Colour& operator = (Colour32 c32)
 		{
-			return *this = Colour4(c32);
+			return *this = Colour(c32);
 		}
-		template <typename T, typename = enable_if_col<T>> Colour4& operator = (T const& c)
+		template <typename T, typename = enable_if_col<T>> Colour& operator = (T const& c)
 		{
-			return *this = Colour4(r_cp(c), g_cp(c), b_cp(c), a_cp(c));
+			return *this = Colour(r_cp(c), g_cp(c), b_cp(c), a_cp(c));
 		}
 
 		// Component accessors
@@ -486,18 +493,17 @@ namespace pr
 		}
 
 		// Set alpha channel
-		Colour4 a0() const
+		Colour a0() const
 		{
-			return Colour4(r,g,b,0.0f);
+			return Colour(r,g,b,0.0f);
 		}
-		Colour4 a1() const
+		Colour a1() const
 		{
-			return Colour4(r,g,b,1.0f);
+			return Colour(r,g,b,1.0f);
 		}
 	};
-
-	using Colour = Colour4<float>;
-	static_assert(std::is_pod<Colour>::value || _MSC_VER < 1900, "Colour should be a pod type");
+	static_assert(is_colour<Colour>::value, "");
+	static_assert(std::is_pod<Colour>::value, "Colour should be a pod type");
 	static_assert(std::alignment_of<Colour>::value == 16, "Colour should have 16 byte alignment");
 	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
 	using Colour_cref = Colour const;
@@ -510,14 +516,6 @@ namespace pr
 	inline float pr_vectorcall g_cp(Colour_cref v) { return v.g; }
 	inline float pr_vectorcall b_cp(Colour_cref v) { return v.b; }
 	inline float pr_vectorcall a_cp(Colour_cref v) { return v.a; }
-
-	#pragma region Traits
-	template <> struct is_colour<Colour> :std::true_type
-	{
-		using elem_type = float;
-	};
-	static_assert(is_colour<Colour>::value, "");
-	#pragma endregion
 
 	#pragma region Constants
 	Colour const ColourZero   = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -683,7 +681,7 @@ namespace pr
 			}
 			static Colour32 To(Colour const& c)
 			{
-				return Colour32(c);
+				return c.argb();
 			}
 		};
 		struct ToColour
@@ -696,7 +694,7 @@ namespace pr
 				auto b = To<float>(e, &e);
 				auto a = To<float>(e, &e);
 				if (end) *end = e;
-				return Colour::make(r,g,b,a);
+				return Colour(r,g,b,a);
 			}
 			template <typename Str, typename Char = Str::value_type, typename = enable_if_str_class<Str>> static Colour To(Str const& s, Char** end = nullptr)
 			{
@@ -732,7 +730,13 @@ namespace pr
 	#endif
 
 	// Write a colour to a stream
-	template <typename TColour, typename Char, typename = enable_if_col<TColour>>
+	template <typename Char>
+	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Colour32 col)
+	{
+		auto str = To<std::basic_string<Char>>(col);
+		return out << str.c_str();
+	}
+	template <typename Char, typename TColour, typename = enable_if_col<TColour>>
 	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, TColour const& col)
 	{
 		auto str = To<std::basic_string<Char>>(Colour32(col));

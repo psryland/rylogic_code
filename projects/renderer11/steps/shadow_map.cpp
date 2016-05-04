@@ -231,7 +231,7 @@ namespace pr
 				v4 br = br_ / br_.w;
 				std::string str;
 				// This is the screen space view volume for a light-camera looking at 'face' of the frustum
-				pr::ldr::LineBox("view_volume", 0xFFFFFFFF, pr::v4::make(0,0,0.5f,1), pr::v4::make(2,2,1,0), str);
+				pr::ldr::LineBox("view_volume", 0xFFFFFFFF, pr::v4(0,0,0.5f,1), pr::v4(2,2,1,0), str);
 				pr::ldr::Box("tl", 0xFFFF0000, tl, 0.04f, str);
 				pr::ldr::Box("tr", 0xFF00FF00, tr, 0.04f, str);
 				pr::ldr::Box("bl", 0xFF0000FF, bl, 0.04f, str);
@@ -437,16 +437,16 @@ namespace pr
 						Vert verts[4] =
 						{
 							// Encode the view frustum corner index in 'pos.x', biased for the float to int cast
-							{pr::v4::make(-1.0f, -1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2::make(t0,t1)},
-							{pr::v4::make( 1.0f, -1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2::make(t1,t1)},
-							{pr::v4::make( 1.0f,  1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2::make(t1,t0)},
-							{pr::v4::make(-1.0f,  1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2::make(t0,t0)},
+							{pr::v4(-1.0f, -1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2(t0,t1)},
+							{pr::v4( 1.0f, -1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2(t1,t1)},
+							{pr::v4( 1.0f,  1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2(t1,t0)},
+							{pr::v4(-1.0f,  1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2(t0,t0)},
 						};
 						pr::uint16 idxs[] =
 						{
 							0, 1, 2, 0, 2, 3
 						};
-						auto bbox = pr::BBox::make(pr::v4Origin, pr::v4::make(1,1,0,0));
+						auto bbox = pr::BBox(pr::v4Origin, pr::v4(1,1,0,0));
 
 						MdlSettings s(verts, idxs, bbox, "smap quad");
 						m_model = e.m_scene.m_rdr->m_mdl_mgr.CreateModel(s);
@@ -501,7 +501,7 @@ namespace pr
 		{
 			float2 Sample(SSampler const& s, float2 const& uv)
 			{
-				return float2::make(0.6f,0.4f);
+				return float2(0.6f,0.4f);
 			}
 		} m_smap_texture[1];
 
@@ -516,7 +516,7 @@ namespace pr
 		};
 		v4 step(v4 const& lo, v4 const& hi)
 		{
-			return v4::make(
+			return v4(
 				hi.x >= lo.x ? 1.0f : 0.0f,
 				hi.y >= lo.y ? 1.0f : 0.0f,
 				hi.z >= lo.z ? 1.0f : 0.0f,
@@ -550,7 +550,7 @@ namespace pr
 		// Assumes 's' is within the frustum to start with
 		float IntersectFrustum(uniform SShadow const& shadow, float4 const& s, float4 const& e)
 		{
-			const float4 T = float4::make(1e10f);
+			const float4 T = float4(1e10f);
 	
 			// Find the distance from each frustum face for 's' and 'e'
 			float4 d0 = mul(s, shadow.m_frust);
@@ -587,7 +587,7 @@ namespace pr
 			float4 intercept = lerp(fs_pos0, fs_pos1, t);
 
 			// Convert the intersection to texture space
-			float2 uv = float2::make(0.5f + 0.5f*intercept.x/shadow.m_frust_dim.x, 0.5f - 0.5f*intercept.y/shadow.m_frust_dim.y);
+			float2 uv = float2(0.5f + 0.5f*intercept.x/shadow.m_frust_dim.x, 0.5f - 0.5f*intercept.y/shadow.m_frust_dim.y);
 
 			// Find the distance from the frustum to 'ws_pos'
 			float dist = saturate(t * length(ws_ray) / shadow.m_frust_dim.w) + TINY;
@@ -604,26 +604,26 @@ namespace pr
 		{
 			auto shadow_frustum = m_scene->m_view.ShadowFrustum();
 			SShadow shadow = {};
-			shadow.m_info = pr::iv4::make(1,0,0,0);
+			shadow.m_info = pr::iv4(1,0,0,0);
 			shadow.m_frust = shadow_frustum.m_Tnorms;
 			shadow.m_frust_dim = shadow_frustum.Dim();
 			shadow.m_frust_dim.w = m_scene->m_view.m_shadow_max_caster_dist;
 
 			SLight light = {};
-			light.m_info = pr::iv4::make(1,0,0,0);
+			light.m_info = pr::iv4(1,0,0,0);
 			light.m_ws_direction = m_scene->m_global_light.m_direction;
 			light.m_ws_position  = m_scene->m_global_light.m_position;
 
-			LightVisibility(shadow, 0, light, InvertFast(m_scene->m_view.m_c2w), pr::v4::make(0,0,0,1));
+			LightVisibility(shadow, 0, light, InvertFast(m_scene->m_view.m_c2w), pr::v4(0,0,0,1));
 
 			/*
 			Vert verts[4] =
 			{
 				// Encode the view frustum corner index in 'pos.x', biased for the float to int cast
-				{pr::v4::make(-1.0f, -1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2::make(0.0f,0.999f)},
-				{pr::v4::make( 1.0f, -1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2::make(0.999f,0.999f)},
-				{pr::v4::make( 1.0f,  1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2::make(0.999f,0.0f)},
-				{pr::v4::make(-1.0f,  1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2::make(0.0f,0.0f)},
+				{pr::v4(-1.0f, -1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2(0.0f,0.999f)},
+				{pr::v4( 1.0f, -1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2(0.999f,0.999f)},
+				{pr::v4( 1.0f,  1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2(0.999f,0.0f)},
+				{pr::v4(-1.0f,  1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2(0.0f,0.0f)},
 			};
 			struct
 			{
@@ -664,7 +664,7 @@ namespace pr
 				rt[i].clipped |= clip(face_sign0[face] * (px.y - px.x));
 				rt[i].clipped |= clip(face_sign1[face] * (px.y + px.x));
 
-				rt[i].depth = v2::make((face != 4) * px.z, (face == 4) * px.z);
+				rt[i].depth = v2((face != 4) * px.z, (face == 4) * px.z);
 			}
 			*/
 		}

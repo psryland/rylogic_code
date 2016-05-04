@@ -11,17 +11,15 @@
 
 namespace pr
 {
-	template <typename intg> struct alignas(16) IVec4
+	struct alignas(16) iv4
 	{
-		using IVec2 = IVec2<intg>;
-
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
 		union
 		{
-			struct { intg x, y, z, w; };
-			struct { IVec2 xy, zw; };
-			struct { intg arr[4]; };
+			struct { int x, y, z, w; };
+			struct { iv2 xy, zw; };
+			struct { int arr[4]; };
 			#if PR_MATHS_USE_INTRINSICS
 			__m128i vec;
 			#endif
@@ -29,8 +27,8 @@ namespace pr
 		#pragma warning(pop)
 
 		// Construct
-		IVec4() = default;
-		IVec4(intg x_, intg y_, intg z_, intg w_)
+		iv4() = default;
+		iv4(int x_, int y_, int z_, int w_)
 		#if PR_MATHS_USE_INTRINSICS
 			:vec(_mm_set_epi32(w_,z_,y_,x_))
 		#else
@@ -42,7 +40,7 @@ namespace pr
 		{
 			assert(maths::is_aligned(this));
 		}
-		explicit IVec4(intg x_)
+		explicit iv4(int x_)
 		#if PR_MATHS_USE_INTRINSICS
 			:vec(_mm_set1_epi32(x_))
 		#else
@@ -54,61 +52,47 @@ namespace pr
 		{
 			assert(maths::is_aligned(this));
 		}
-		template <typename T, typename = maths::enable_if_v4<T>> IVec4(T const& v)
-			:IVec4(x_as<intg>(v), y_as<intg>(v), z_as<intg>(v), w_as<intg>(v))
+		template <typename T, typename = maths::enable_if_v4<T>> iv4(T const& v)
+			:iv4(x_as<int>(v), y_as<int>(v), z_as<int>(v), w_as<int>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v3<T>> IVec4(T const& v, intg w_)
-			:IVec4(x_as<intg>(v), y_as<intg>(v), z_as<intg>(v), w_)
+		template <typename T, typename = maths::enable_if_v3<T>> iv4(T const& v, int w_)
+			:iv4(x_as<int>(v), y_as<int>(v), z_as<int>(v), w_)
 		{}
-		template <typename T, typename = maths::enable_if_v2<T>> IVec4(T const& v, intg z_, intg w_)
-			:IVec4(x_as<intg>(v), y_as<intg>(v), z_, w_)
+		template <typename T, typename = maths::enable_if_v2<T>> iv4(T const& v, int z_, int w_)
+			:iv4(x_as<int>(v), y_as<int>(v), z_, w_)
 		{}
-		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit IVec4(T const* v)
-			:IVec4(x_as<intg>(v), y_as<intg>(v), z_as<intg>(v), w_as<intg>(v))
+		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit iv4(T const* v)
+			:iv4(x_as<int>(v), y_as<int>(v), z_as<int>(v), w_as<int>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v4<T>> IVec4& operator = (T const& rhs)
+		template <typename T, typename = maths::enable_if_v4<T>> iv4& operator = (T const& rhs)
 		{
-			x = x_as<intg>(rhs);
-			y = y_as<intg>(rhs);
-			z = z_as<intg>(rhs);
-			w = w_as<intg>(rhs);
+			x = x_as<int>(rhs);
+			y = y_as<int>(rhs);
+			z = z_as<int>(rhs);
+			w = w_as<int>(rhs);
 			return *this;
 		}
 
 		// Array access
-		intg const& operator [] (int i) const
+		int const& operator [] (int i) const
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
-		intg& operator [] (int i)
+		int& operator [] (int i)
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 	};
-
-	using iv4 = IVec4<int>;
-	static_assert(std::is_pod<iv4>::value || _MSC_VER < 1900, "iv4 must be a pod type");
+	static_assert(maths::is_vec4<iv4>::value, "");
+	static_assert(std::is_pod<iv4>::value, "iv4 must be a pod type");
 
 	// Define component accessors for pointer types
 	inline int x_cp(iv4 const& v) { return v.x; }
 	inline int y_cp(iv4 const& v) { return v.y; }
 	inline int z_cp(iv4 const& v) { return v.z; }
 	inline int w_cp(iv4 const& v) { return v.w; }
-
-	#pragma region Traits
-	namespace maths
-	{
-		// Specialise marker traits
-		template <> struct is_vec<iv4> :std::true_type
-		{
-			using elem_type = int;
-			using cp_type = int;
-			static int const dim = 4;
-		};
-	}
-	#pragma endregion
 
 	#pragma region Constants
 	static iv4 const iv4Zero   = {0, 0, 0, 0};

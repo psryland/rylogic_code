@@ -18,6 +18,13 @@
 #include <unordered_map>
 #include <new>
 
+#if _MSC_VER < 1900
+#  include <type_traits>
+#  ifndef alignof
+#    define alignof(T) std::alignment_of<T>::value
+#  endif
+#endif
+
 namespace pr
 {
 	class UserData
@@ -111,7 +118,7 @@ namespace pr
 	public:
 
 		// True if this object contains user data of type 'TData' and associated with 'id'
-		template <typename Data, typename InstId = intptr_t> bool has(InstId id = InstId()) const
+		template <typename Data, typename InstId = int> bool has(InstId id = InstId()) const
 		{
 			auto map = find_map<InstId, Data>(TypeId<Data>());
 			if (map == nullptr) return false;
@@ -122,7 +129,7 @@ namespace pr
 		// 'id' is an instance id. If not given, then the first instance is assumed.
 		// 'id' can be any type used as a key to lookup data, e.g. Guid, or int typically.
 		// e.g.  auto value = UserData.get<MyThing>(Guid(..)).Value;
-		template <typename Data, typename InstId = intptr_t> Data const& get(InstId id = InstId()) const
+		template <typename Data, typename InstId = int> Data const& get(InstId id = InstId()) const
 		{
 			auto map = find_map<InstId, Data>(TypeId<Data>());
 			if (map == nullptr) throw std::exception("User data not found");
@@ -133,14 +140,14 @@ namespace pr
 		// 'id' is an instance id. If not given, then the first instance is assumed.
 		// 'id' can be any type used as a key to lookup data, e.g. Guid, or int typically.
 		// e.g.  UserData.get<MyThing>(Guid(..)) = my_thing;
-		template <typename Data, typename InstId = intptr_t> Data& get(InstId id = InstId())
+		template <typename Data, typename InstId = int> Data& get(InstId id = InstId())
 		{
 			auto map = find_map<InstId, Data>(TypeId<Data>(), true);
 			return map->get(id, true);
 		}
 
 		// Remove user data
-		template <typename Data, typename InstId = intptr_t> void erase(InstId id = InstId())
+		template <typename Data, typename InstId = int> void erase(InstId id = InstId())
 		{
 			auto map = find_map<InstId, Data>(TypeId<Data>(), false);
 			if (map == nullptr) return;

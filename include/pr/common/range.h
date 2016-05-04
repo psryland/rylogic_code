@@ -11,29 +11,35 @@
 namespace pr
 {
 	// A range representation  (intended for numeric types only, might partially work for iterators)
-	template <typename T = int> struct Range
+	// Assume integral by default (so that iterators etc work)
+	template <typename T = int, bool Integral = !std::is_floating_point<T>::value> struct Range
 	{
-		// By default assume integral type traits
-		template <typename U> struct traits_impl         { enum { is_integral = true }; };
-		template <>           struct traits_impl<double> { enum { is_integral = false }; };
-		template <>           struct traits_impl<float>  { enum { is_integral = false }; };
-		struct traits :traits_impl<T> {};
+		struct traits
+		{
+			static bool const is_integral = Integral;
+		};
 
 		T m_begin; // The first in the range
 		T m_end;   // One past the last in the range
 
-		/// <summary>The default empty range</summary>
-		static Range Zero() { return Range::make(0,0); }
+		// The default empty range
+		static Range Zero()
+		{
+			return Range(0,0);
+		}
 
-		/// <summary>An invalid range. Used as an initialiser when finding a bounding range</summary>
-		static Range Reset() { return Range::make(std::numeric_limits<T>::max(), std::numeric_limits<T>::lowest()); }
+		// An invalid range. Used as an initialiser when finding a bounding range
+		static Range Reset()
+		{
+			return Range(std::numeric_limits<T>::max(), std::numeric_limits<T>::lowest());
+		}
 
 		// Construct a range
-		static Range make(T begin, T end)
-		{
-			Range r = {begin, end};
-			return r;
-		}
+		Range() = default;
+		Range(T begin, T end)
+			:m_begin(begin)
+			,m_end(end)
+		{}
 
 		// True if this is an empty range
 		bool empty() const
@@ -141,17 +147,23 @@ namespace pr
 			return *this;
 		}
 
-		// Implicit conversion to a Range<U> if T is convertable to U
+		// Implicit conversion to a Range<U> if T is convertible to U
 		template <typename U, typename = typename std::enable_if<std::is_convertible<T,U>::value>::type>
 		operator Range<U>()
 		{
-			return Range<U>::make(m_begin, m_end);
+			return Range<U>(m_begin, m_end);
 		}
 	};
 
 	// Operators
-	template <typename T, typename U> inline bool operator == (Range<T> const& lhs, Range<U> const& rhs) { return lhs.m_begin == rhs.m_begin && lhs.m_end == rhs.m_end; }
-	template <typename T, typename U> inline bool operator != (Range<T> const& lhs, Range<U> const& rhs) { return !(lhs == rhs); }
+	template <typename T, typename U> inline bool operator == (Range<T> const& lhs, Range<U> const& rhs)
+	{
+		return lhs.m_begin == rhs.m_begin && lhs.m_end == rhs.m_end;
+	}
+	template <typename T, typename U> inline bool operator != (Range<T> const& lhs, Range<U> const& rhs)
+	{
+		return !(lhs == rhs);
+	}
 
 	// Returns true if 'rhs' is with 'range'
 	template <typename T, typename U> inline bool IsWithin(Range<T> const& range, U rhs)
@@ -231,10 +243,10 @@ namespace pr
 			using namespace pr;
 			{
 				typedef pr::Range<int> IRange;
-				IRange r0 = IRange::make(0,5);
-				IRange r1 = IRange::make(5,10);
-				IRange r2 = IRange::make(3,7);
-				IRange r3 = IRange::make(0,10);
+				IRange r0(0,5);
+				IRange r1(5,10);
+				IRange r2(3,7);
+				IRange r3(0,10);
 
 				PR_CHECK(r0.empty(), false);
 				PR_CHECK(r0.size() , 5);
@@ -285,10 +297,10 @@ namespace pr
 				typedef pr::Range<Vec::const_iterator> IRange;
 				Vec vec; for (int i = 0; i != 10; ++i) vec.push_back(i);
 
-				IRange r0 = IRange::make(vec.begin(),vec.begin()+5);
-				IRange r1 = IRange::make(vec.begin()+5,vec.end());
-				IRange r2 = IRange::make(vec.begin()+3,vec.begin()+7);
-				IRange r3 = IRange::make(vec.begin(),vec.end());
+				IRange r0(vec.begin(),vec.begin()+5);
+				IRange r1(vec.begin()+5,vec.end());
+				IRange r2(vec.begin()+3,vec.begin()+7);
+				IRange r3(vec.begin(),vec.end());
 
 				PR_CHECK(r0.empty() ,false);
 				PR_CHECK(r0.size()  ,5);
@@ -326,7 +338,7 @@ namespace pr
 				r0.resize(3);
 				PR_CHECK(r0.size(), 3);
 
-				IRange r4 = IRange::make(vec.end(),vec.begin());
+				IRange r4(vec.end(),vec.begin());
 				Encompass(r4, vec.begin() + 4);
 				PR_CHECK(vec.begin() + 4 == r4.m_begin, true);
 				PR_CHECK(vec.begin() + 5 == r4.m_end  , true);
@@ -334,12 +346,11 @@ namespace pr
 				PR_CHECK(IsWithin(r4, vec.begin() + 4), true);
 			}
 			{// Floating point range
-				typedef pr::Range<float> FRange;
-
-				auto r0 = FRange::make(0.0f, 5.0f);
-				auto r1 = FRange::make(5.0f, 10.0f);
-				auto r2 = FRange::make(3.0f, 7.0f);
-				auto r3 = FRange::make(0.0f, 10.0f);
+				using FRange = pr::Range<float>;
+				FRange r0(0.0f, 5.0f);
+				FRange r1(5.0f, 10.0f);
+				FRange r2(3.0f, 7.0f);
+				FRange r3(0.0f, 10.0f);
 
 				PR_CHECK(r0.empty(), false);
 				PR_CHECK(r0.size() , 5.0f);
@@ -386,10 +397,10 @@ namespace pr
 				PR_CHECK(IsWithin(r4, 4.0f), true);
 			}
 			{ // Implicit conversion
-				Range<uint16> r0 = Range<uint16>::make(0, 65535);
+				Range<uint16> r0(0, 65535);
 				Range<uint> r1;
 				r1 = r0;
-				PR_CHECK(r1 == Range<uint>::make(0, 65535), true);
+				PR_CHECK(r1 == Range<uint>(0, 65535), true);
 			}
 		}
 	}

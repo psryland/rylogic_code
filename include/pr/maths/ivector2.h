@@ -10,73 +10,59 @@
 
 namespace pr
 {
-	template <typename intg = int> struct IVec2
+	struct iv2
 	{
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
 		union
 		{
-			struct { intg x, y; };
-			struct { intg arr[2]; };
+			struct { int x, y; };
+			struct { int arr[2]; };
 		};
 		#pragma warning(pop)
 
 		// Construct
-		IVec2() = default;
-		IVec2(intg x_, intg y_)
+		iv2() = default;
+		iv2(int x_, int y_)
 			:x(x_)
 			,y(y_)
 		{}
-		explicit IVec2(intg x_)
-			:IVec2(x_, x_)
+		explicit iv2(int x_)
+			:iv2(x_, x_)
 		{}
-		template <typename T, typename = maths::enable_if_v2<T>> IVec2(T const& v)
-			:IVec2(x_as<intg>(v), y_as<intg>(v))
+		template <typename T, typename = maths::enable_if_v2<T>> iv2(T const& v)
+			:iv2(x_as<int>(v), y_as<int>(v))
 		{}
-		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit IVec2(T const* v)
-			:IVec2(x_as<intg>(v), y_as<intg>(v))
+		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit iv2(T const* v)
+			:iv2(x_as<int>(v), y_as<int>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v2<T>> IVec2& operator = (T const& rhs)
+		template <typename T, typename = maths::enable_if_v2<T>> iv2& operator = (T const& rhs)
 		{
-			x = x_as<intg>(rhs);
-			y = y_as<intg>(rhs);
+			x = x_as<int>(rhs);
+			y = y_as<int>(rhs);
 			return *this;
 		}
 
 		// Array access
-		intg const& operator [] (int i) const
+		int const& operator [] (int i) const
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
-		intg& operator [] (int i)
+		int& operator [] (int i)
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 	};
-
-	using iv2 = IVec2<>;
-	static_assert(std::is_pod<iv2>::value || _MSC_VER < 1900, "iv2 must be a pod type");
+	static_assert(maths::is_vec2<iv2>::value, "");
+	static_assert(std::is_pod<iv2>::value, "iv2 must be a pod type");
 
 	// Define component accessors for pointer types
 	inline int x_cp(iv2 const& v) { return v.x; }
 	inline int y_cp(iv2 const& v) { return v.y; }
 	inline int z_cp(iv2 const&)   { return 0; }
 	inline int w_cp(iv2 const&)   { return 0; }
-
-	#pragma region Traits
-	namespace maths
-	{
-		// Specialise marker traits
-		template <> struct is_vec<iv2> :std::true_type
-		{
-			using elem_type = int;
-			using cp_type = int;
-			static int const dim = 2;
-		};
-	}
-	#pragma endregion
 
 	#pragma region Constants
 	static iv2 const iv2Zero    = {0, 0};

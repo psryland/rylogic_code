@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
-#ifndef PR_RDR_INSTANCE_H
-#define PR_RDR_INSTANCE_H
 
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/instances/instance.h"
@@ -42,5 +40,3 @@
 			fields(PR_RDR_INST_INIT_COMPONENTS)\
 		}\
 	};
-
-#endif

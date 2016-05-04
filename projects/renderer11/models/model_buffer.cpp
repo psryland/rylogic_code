@@ -46,8 +46,8 @@ namespace pr
 		// Reserve vertices from this model buffer
 		Range ModelBuffer::ReserveVerts(size_t vcount)
 		{
-			PR_ASSERT(PR_DBG_RDR, IsRoomFor(vcount, 0), "Insufficent vertex space in this model buffer");
-			Range range = Range::make(m_vb.m_used.size(), m_vb.m_used.size() + vcount);
+			PR_ASSERT(PR_DBG_RDR, IsRoomFor(vcount, 0), "Insufficient vertex space in this model buffer");
+			Range range(m_vb.m_used.size(), m_vb.m_used.size() + vcount);
 			m_vb.m_used.m_end += vcount;
 			return range;
 		}
@@ -55,8 +55,8 @@ namespace pr
 		// Reserve indices from this model buffer
 		Range ModelBuffer::ReserveIndices(size_t icount)
 		{
-			PR_ASSERT(PR_DBG_RDR, IsRoomFor(0, icount), "Insufficent index space in this model buffer");
-			Range range = Range::make(m_ib.m_used.size(), m_ib.m_used.size() + icount);
+			PR_ASSERT(PR_DBG_RDR, IsRoomFor(0, icount), "Insufficient index space in this model buffer");
+			Range range(m_ib.m_used.size(), m_ib.m_used.size() + icount);
 			m_ib.m_used.m_end += icount;
 			return range;
 		}
@@ -68,7 +68,7 @@ namespace pr
 			PR_ASSERT(PR_DBG_RDR, m_vb, "This model buffer has not been created");
 			PR_ASSERT(PR_DBG_RDR, lock.m_res == 0, "This lock has already been used, make a new one");
 
-			// If no subrange is given, use the entire buffer
+			// If no sub range is given, use the entire buffer
 			if (vrange == RangeZero) vrange = m_vb.m_used;
 
 			D3DPtr<ID3D11DeviceContext> dc = ImmediateDC(m_mdl_mgr->m_device);
@@ -80,7 +80,7 @@ namespace pr
 			PR_ASSERT(PR_DBG_RDR, m_ib, "This model buffer has not been created");
 			PR_ASSERT(PR_DBG_RDR, lock.m_res == 0, "This lock has already been used, make a new one");
 
-			// If no subrange is given, use the entire buffer
+			// If no sub range is given, use the entire buffer
 			if (irange == RangeZero) irange = m_ib.m_used;
 
 			D3DPtr<ID3D11DeviceContext> dc = ImmediateDC(m_mdl_mgr->m_device);
@@ -88,7 +88,7 @@ namespace pr
 			return lock.Map(dc, res, 0, map_type, flags, BytesPerPixel(m_ib.m_format), irange);
 		}
 
-		// Refcounting cleanup function
+		// Ref counting clean up function
 		void ModelBuffer::RefCountZero(pr::RefCount<ModelBuffer>* doomed)
 		{
 			ModelBuffer* mb = static_cast<ModelBuffer*>(doomed);

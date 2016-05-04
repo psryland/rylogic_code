@@ -212,7 +212,7 @@ namespace pr
 		template <typename TVertIter, typename TIdxIter>
 		Props Quad(float width, float height, iv2 const& divisions, Colour32 colour, TVertIter v_out, TIdxIter i_out)
 		{
-			v4 origin = v4::make(-0.5f * width, 0.f, -0.5f * height, 1.0f);
+			v4 origin = v4(-0.5f * width, 0.f, -0.5f * height, 1.0f);
 			v4 quad_x = width  * v4XAxis;
 			v4 quad_z = height * v4ZAxis;
 			return Quad(origin, quad_x, quad_z, divisions, colour, m4x4Identity, v_out, i_out);

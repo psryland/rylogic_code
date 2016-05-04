@@ -84,9 +84,9 @@ namespace pr
 	// Camera matrix with 3D trackball-like control
 	// Note:
 	// All points are in normalised screen space regardless of aspect ratio,
-	//  i.e. x=[-1, -1], y=[-1,1] with (-1,-1) = (left,bottom), i.e. normal cartesian axes.
+	//  i.e. x=[-1, -1], y=[-1,1] with (-1,-1) = (left,bottom), i.e. normal Cartesian axes.
 	// Use:
-	//  point = pr::v2::make(2.0f * pt.x / float(Width) - 1.0f, 1.0f - 2.0f * pt.y / float(Height));
+	//  point = pr::v2(2.0f * pt.x / float(Width) - 1.0f, 1.0f - 2.0f * pt.y / float(Height));
 	struct Camera
 	{
 		pr::m4x4               m_base_c2w;          // The starting position during a mouse movement

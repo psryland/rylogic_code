@@ -10,79 +10,65 @@
 
 namespace pr
 {
-	template <typename real = float> struct Vec2
+	struct v2
 	{
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
 		union
 		{
-			struct { real x, y; };
-			struct { real arr[2]; };
+			struct { float x, y; };
+			struct { float arr[2]; };
 		};
 		#pragma warning(pop)
 
 		// Construct
-		Vec2() = default;
-		Vec2(real x_, real y_)
+		v2() = default;
+		v2(float x_, float y_)
 			:x(x_)
 			,y(y_)
 		{}
-		explicit Vec2(real x_)
-			:Vec2(x_, x_)
+		explicit v2(float x_)
+			:v2(x_, x_)
 		{}
-		template <typename T, typename = maths::enable_if_v2<T>> Vec2(T const& v)
-			:Vec2(x_as<real>(v), y_as<real>(v))
+		template <typename T, typename = maths::enable_if_v2<T>> v2(T const& v)
+			:v2(x_as<float>(v), y_as<float>(v))
 		{}
-		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit Vec2(T const* v)
-			:Vec2(x_as<real>(v), y_as<real>(v))
+		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit v2(T const* v)
+			:v2(x_as<float>(v), y_as<float>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v2<T>> Vec2& operator = (T const& rhs)
+		template <typename T, typename = maths::enable_if_v2<T>> v2& operator = (T const& rhs)
 		{
-			x = x_as<real>(rhs);
-			y = y_as<real>(rhs);
+			x = x_as<float>(rhs);
+			y = y_as<float>(rhs);
 			return *this;
 		}
 
 		// Array access
-		real const& operator [] (int i) const
+		float const& operator [] (int i) const
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
-		real& operator [] (int i)
+		float& operator [] (int i)
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 
 		// Construct normalised
-		template <typename = void> static Vec2 Normal2(real x, real y)
+		template <typename = void> static v2 Normal2(float x, float y)
 		{
 			return Normalise2(v2(x,y));
 		}
 	};
-
-	using v2 = Vec2<>;
-	static_assert(std::is_pod<v2>::value || _MSC_VER < 1900, "v2 must be a pod type");
+	static_assert(maths::is_vec2<v2>::value, "");
+	static_assert(std::is_pod<v2>::value, "v2 must be a pod type");
 
 	// Define component accessors
 	inline float x_cp(v2 const& v) { return v.x; }
 	inline float y_cp(v2 const& v) { return v.y; }
 	inline float z_cp(v2 const&)   { return 0; }
 	inline float w_cp(v2 const&)   { return 0; }
-
-	#pragma region Traits
-	namespace maths
-	{
-		// Specialise marker traits
-		template <> struct is_vec<v2> :std::true_type
-		{
-			using elem_type = float;
-			using cp_type = float;
-			static int const dim = 2;
-		};
-	}
-	#pragma endregion
 
 	#pragma region Constants
 	static v2 const v2Zero    = {0.0f, 0.0f};

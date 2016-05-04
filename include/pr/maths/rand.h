@@ -13,7 +13,9 @@ namespace pr
 	struct Rand :private MersenneTwister
 	{
 		// 'r' stands for 'range', 'c' stands for 'centred'
-		Rand() = default;
+		Rand()
+			:MersenneTwister()
+		{}
 		explicit Rand(ulong s)
 			:MersenneTwister(s)
 		{}

@@ -44,30 +44,30 @@ namespace pr
 	//                                = D(k)² + 2*D(k)*avr(k-1) + avr(k-1)² - k*avr(k-1)² - 2*D(k)*avr(k-1) - D(k)²/k      + k*avr(k-1)² - avr(k-1)²
 	//                                = D(k)² - D(k)²/k
 	//                                = ((k-1)/k) * D(k)²
-	// 'real' is typically a floating point type, although this does
+	// 'Type' is typically a floating point type, although this does
 	// work for any type that defines the necessary operators.
-	template <typename real = double> class Stat
+	template <typename Type = double, typename Scaler = double> class Stat
 	{
 		typedef unsigned int uint;
-		real  m_mean;
-		real  m_var;
-		real  m_min;
-		real  m_max;
+		Type  m_mean;
+		Type  m_var;
+		Type  m_min;
+		Type  m_max;
 		uint  m_count;
 
 	public:
 		uint Count() const     { return m_count; }
-		real Mean() const      { return m_mean; }
-		real Sum() const       { return m_mean * m_count; }
-		real Minimum() const   { return m_min; }
-		real Maximum() const   { return m_max; }
+		Type Mean() const      { return m_mean; }
+		Type Sum() const       { return m_mean * m_count; }
+		Type Minimum() const   { return m_min; }
+		Type Maximum() const   { return m_max; }
 
 		// Use the population standard deviation when all data values in a set have been considered.
 		// Use the sample standard deviation when the data values used are only a sample of the total population
-		real PopStdDev() const { return static_cast<real>(sqrt(PopStdVar())); }
-		real SamStdDev() const { return static_cast<real>(sqrt(SamStdVar())); }
-		real PopStdVar() const { return static_cast<real>(m_var * (1.0 / (m_count + (m_count == 0)))); }
-		real SamStdVar() const { return static_cast<real>(m_var * (1.0 / (m_count - (m_count != 1)))); }
+		Type PopStdDev() const { return static_cast<Type>(sqrt(PopStdVar())); }
+		Type SamStdDev() const { return static_cast<Type>(sqrt(SamStdVar())); }
+		Type PopStdVar() const { return static_cast<Type>(m_var * (1.0 / (m_count + (m_count == 0)))); }
+		Type SamStdVar() const { return static_cast<Type>(m_var * (1.0 / (m_count - (m_count != 1)))); }
 
 		Stat()
 		{
@@ -78,33 +78,33 @@ namespace pr
 		void Reset()
 		{
 			m_count = 0;
-			m_mean  = real();
-			m_var   = real();
-			m_min   = std::numeric_limits<real>::max();
-			m_max   = std::numeric_limits<real>::lowest();
+			m_mean  = Type();
+			m_var   = Type();
+			m_min   = std::numeric_limits<Type>::max();
+			m_max   = std::numeric_limits<Type>::lowest();
 		}
 
 		// Accumulate statistics for 'value' in a single pass.
 		// Note, this method is more accurate than the sum of squares, square of sums approach.
-		template <typename MinFunc, typename MaxFunc> void Add(real const& value, MinFunc min_of, MaxFunc max_of)
+		template <typename MinFunc, typename MaxFunc> void Add(Type const& value, MinFunc min_of, MaxFunc max_of)
 		{
 			++m_count;
 			auto diff = value - m_mean;
-			auto inv_count = 1.0 / m_count;
+			auto inv_count = static_cast<Scaler>(1.0 / m_count);
 			m_mean += diff * inv_count;
 			m_var  += diff * diff * ((m_count - 1) * inv_count);
 			m_min = min_of(value, m_min);
 			m_max = max_of(value, m_max);
 		}
-		void Add(real const& value)
+		void Add(Type const& value)
 		{
 			Add(value
-				,[](real const& l, real const& r){ return std::min(l,r); }
-				,[](real const& l, real const& r){ return std::max(l,r); });
+				,[](Type const& l, Type const& r){ return std::min(l,r); }
+				,[](Type const& l, Type const& r){ return std::max(l,r); });
 		}
 	};
 
-	// Exponental moving average:
+	// Exponential moving average:
 	//   avr(k) = a * X(k) + (1 - a) * avr(k-1)
 	//          = a * X(k) + avr(k-1) - a * avr(k-1)
 	//          = avr(k-1) + a * X(k) - a * avr(k-1)
@@ -140,27 +140,27 @@ namespace pr
 	//             = a*k*(1-a)²*D(k)² + (1-a)*(k/(k-1)) * (k-2)var(k-1)
 	//             = a*k*b²*D(k)² + (b*k/(k-1)) * (k-2)var(k-1)         where: b = (1-a)
 	//             = (b*k/(k-1))*((a*b*(k-1)*D(k)² + (k-2)var(k-1))
-	// 'real' is typically a floating point type, although this does
+	// 'Type' is typically a floating point type, although this does
 	// work for any type that defines the necessary operators.
-	template <typename real = double> struct ExpMovingAvr
+	template <typename Type = double, typename Scaler = double> struct ExpMovingAvr
 	{
 		typedef unsigned int uint;
-		real m_mean;
-		real m_var;
+		Type m_mean;
+		Type m_var;
 		uint m_size;
 		uint m_count;
 
 	public:
 		uint Count() const { return m_count; }
-		real Mean() const { return m_mean; }
+		Type Mean() const { return m_mean; }
 
 		// Use the population standard deviation when all data values in a set have been considered.
 		// Use the sample standard deviation when the data values used are only a sample of the total population
 		// Note: for a moving variance the choice between population/sample sd is a bit arbitrary
-		real PopStdDev() const { return static_cast<real>(sqrt(PopStdVar())); }
-		real SamStdDev() const { return static_cast<real>(sqrt(SamStdVar())); }
-		real PopStdVar() const { return m_var * (1.0 / (m_count + (m_count == 0))); }
-		real SamStdVar() const { return m_var * (1.0 / (m_count - (m_count != 1))); }
+		Type PopStdDev() const { return static_cast<Type>(sqrt(PopStdVar())); }
+		Type SamStdDev() const { return static_cast<Type>(sqrt(SamStdVar())); }
+		Type PopStdVar() const { return m_var * (1.0 / (m_count + (m_count == 0))); }
+		Type SamStdVar() const { return m_var * (1.0 / (m_count - (m_count != 1))); }
 
 		ExpMovingAvr(uint window_size)
 		{
@@ -170,27 +170,27 @@ namespace pr
 		{
 			m_size  = window_size;
 			m_count = 0;
-			m_mean  = real();
-			m_var   = real();
+			m_mean  = Type();
+			m_var   = Type();
 		}
-		void Add(real const& value)
+		void Add(Type const& value)
 		{
 			if (m_count >= m_size)
 			{
 				++m_count;
 				auto diff = value - m_mean;
-				auto a = 2.0 / (m_size + 1.0);
-				auto b = 1 - a;
-				m_mean = static_cast<real>(m_mean + diff * a);
-				m_var  = static_cast<real>((b*m_count/(m_count-1)) * (a*b*(m_count-1)*diff*diff + m_var));
+				auto a = static_cast<Scaler>(2.0 / (m_size + 1.0));
+				auto b = static_cast<Scaler>(1.0 - a);
+				m_mean = static_cast<Type>(m_mean + diff * a);
+				m_var  = static_cast<Type>((b*m_count/(m_count-1)) * (a*b*(m_count-1)*diff*diff + m_var));
 			}
 			else // use standard mean/var until 'm_size' is reached
 			{
 				++m_count;
 				auto diff = value - m_mean;
-				auto inv_count = 1.0f / m_count;
-				m_mean += static_cast<real>(diff * inv_count);
-				m_var  += static_cast<real>(diff * diff * ((m_count - 1) * inv_count));
+				auto inv_count = static_cast<Scaler>(1.0 / m_count);
+				m_mean += static_cast<Type>(diff * inv_count);
+				m_var  += static_cast<Type>(diff * diff * ((m_count - 1) * inv_count));
 			}
 		}
 	};
@@ -200,19 +200,19 @@ namespace pr
 	// Average:
 	//   avr(k) = avr(k-1) + (X(k) - X(k-N)) / N
 	//          = avr(k-1) + D(k) / N
-	// 'real' is typically a floating point type, although this does
+	// 'Type' is typically a floating point type, although this does
 	// work for any type that defines the necessary operators.
-	template <uint MaxWindowSize, typename real = double> class MovingAvr
+	template <uint MaxWindowSize, typename Type = double, typename Scaler = double> class MovingAvr
 	{
 		typedef unsigned int uint;
-		real m_window[MaxWindowSize], *m_in;
-		real m_mean;
+		Type m_window[MaxWindowSize], *m_in;
+		Type m_mean;
 		uint m_count;
 		uint m_size;
 
-		real Var() const
+		Type Var() const
 		{
-			auto var = real();
+			auto var = Type();
 			auto count = m_count;
 			auto const* end = &m_window[0] + m_size;
 			for (auto i = m_in; i-- != m_window && count; --count) { auto diff = *i - m_mean; var += diff * diff; }
@@ -222,16 +222,16 @@ namespace pr
 
 	public:
 		uint Count() const { return m_count; }
-		real Mean() const { return m_mean; }
+		Type Mean() const { return m_mean; }
 
 		// NOTE: no recursive variance because we would need to buffer the averages as well
 		// so that we could remove (X(k-N) - avr(k-N))² at each iteration
 		// Use the population standard deviation when all data values in a set have been considered.
 		// Use the sample standard deviation when the data values used are only a sample of the total population
-		real PopStdDev() const { return static_cast<real>(sqrt(PopStdVar())); }
-		real SamStdDev() const { return static_cast<real>(sqrt(SamStdVar())); }
-		real PopStdVar() const { return Var() * (1.0 / (m_count + (m_count == 0))); }
-		real SamStdVar() const { return Var() * (1.0 / (m_count - (m_count != 1))); }
+		Type PopStdDev() const { return static_cast<Type>(sqrt(PopStdVar())); }
+		Type SamStdDev() const { return static_cast<Type>(sqrt(SamStdVar())); }
+		Type PopStdVar() const { return Var() * (1.0 / (m_count + (m_count == 0))); }
+		Type SamStdVar() const { return Var() * (1.0 / (m_count - (m_count != 1))); }
 
 		MovingAvr(uint window_size = MaxWindowSize)
 		{
@@ -242,16 +242,16 @@ namespace pr
 			assert(window_size <= MaxWindowSize);
 			m_in    = &m_window[0];
 			m_size  = window_size;
-			m_mean  = real();
+			m_mean  = Type();
 			m_count = 0;
 		}
-		void Add(real const& value)
+		void Add(Type const& value)
 		{
 			if (m_count == m_size)
 			{
 				if (m_in == m_window + m_size) m_in = &m_window[0];
 				auto diff = value - *m_in;
-				auto inv_count = 1.0 / m_size;
+				auto inv_count = static_cast<Scaler>(1.0 / m_size);
 				m_mean += diff * inv_count;
 				*m_in++ = value;
 			}
@@ -259,7 +259,7 @@ namespace pr
 			{
 				++m_count;
 				auto diff = value - m_mean;
-				auto inv_count = 1.0 / m_count;
+				auto inv_count = static_cast<Scaler>(1.0 / m_count);
 				m_mean += diff * inv_count;
 				*m_in++ = value;
 			}

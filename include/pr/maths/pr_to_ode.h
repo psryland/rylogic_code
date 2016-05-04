@@ -41,15 +41,15 @@ namespace pr
 	// Convert a dVector3 to a pr::v4
 	inline pr::v4 ode(dVector3 const& vec, float w)
 	{
-		return pr::v4::make(vec[0], vec[1], vec[2], w);
+		return pr::v4(vec[0], vec[1], vec[2], w);
 	}
 	
 	// Convert a pr::m4x4 to a dM4x4
 	inline dM4x4 ode(pr::m4x4 const& o2w)
 	{
 		dM4x4 m;
-		impl::copy(m.m_rot, Transpose3x3_(o2w).x.ToArray(), 12);
-		impl::copy(m.m_pos, o2w.pos.ToArray(), 4);
+		impl::copy(m.m_rot, Transpose3x3_(o2w).x.arr, 12);
+		impl::copy(m.m_pos, o2w.pos.arr, 4);
 		return m;
 	}
 	
@@ -57,8 +57,8 @@ namespace pr
 	inline pr::m4x4 ode(dReal const* pos, dReal const* rot)
 	{
 		pr::m4x4 o2w;
-		impl::copy(o2w.x.ToArray(), rot, 12);
-		impl::copy(o2w.pos.ToArray(), pos, 4);
+		impl::copy(o2w.x.arr, rot, 12);
+		impl::copy(o2w.pos.arr, pos, 4);
 		o2w.x.w = o2w.y.w = o2w.z.w = 0.0f; o2w.w.w = 1.0f;
 		return pr::Transpose3x3_(o2w);
 	}
@@ -76,7 +76,7 @@ namespace pr
 		static pr::BSphere make(dGeomID geom, pr::m4x4 const& o2w)
 		{
 			auto radius = dGeomSphereGetRadius(geom);
-			return pr::BSphere::make(o2w.pos, radius);
+			return pr::BSphere(o2w.pos, radius);
 		}
 	};
 	template <> struct OdeShape<dBoxClass>
@@ -85,7 +85,7 @@ namespace pr
 		{
 			dVector3 d;
 			auto radius = (dGeomBoxGetLengths(geom, d), ode(d,0.0f));
-			return pr::OBox::make(o2w.pos, radius, o2w.rot);
+			return pr::OBox(o2w.pos, radius, o2w.rot);
 		}
 	};
 }

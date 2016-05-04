@@ -48,7 +48,7 @@ namespace pr
 		// Remember you might need to delete render nuggets first
 		void Model::CreateNugget(NuggetProps props)
 		{
-			PR_ASSERT(PR_DBG_RDR, props.m_irange.empty() == props.m_vrange.empty(), "Illogical combination of Irange and Vrange");
+			PR_ASSERT(PR_DBG_RDR, props.m_irange.empty() == props.m_vrange.empty(), "Illogical combination of I-Range and V-Range");
 
 			// Empty ranges are assumed to mean the entire model
 			if (props.m_vrange.empty()) props.m_vrange = m_vrange;
