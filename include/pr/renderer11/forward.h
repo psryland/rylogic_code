@@ -77,6 +77,7 @@
 #include "pr/geometry/model_file.h"
 #include "pr/geometry/utility.h"
 #include "pr/gui/gdiplus.h"
+#include "pr/win32/windows_com.h"
 #include "pr/script/reader.h"
 #include "pr/linedrawer/ldr_helper.h"
 

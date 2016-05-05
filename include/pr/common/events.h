@@ -203,7 +203,7 @@ namespace pr
 		//   Use 'same_thread()' to test for this case if necessary
 		template <typename EventType> inline void Send(EventType const& e, bool forward = true)
 		{
-			// Prevent any re-entrancy or modification to the EventType receivers chain
+			// Prevent any reentrancy or modification to the EventType receivers chain
 			std::lock_guard<std::recursive_mutex> lock(IRecv<EventType>::Mutex());
 
 			// Scope object for restoring chain flags

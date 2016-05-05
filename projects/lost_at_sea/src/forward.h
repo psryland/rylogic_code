@@ -25,7 +25,6 @@
 #include "pr/app/skybox.h"
 #include "pr/gui/wingui.h"
 #include "pr/gui/sim_message_loop.h"
-#include "pr/gui/windows_com.h"
 //#include "pr/macros/link.h"
 #include "pr/macros/enum.h"
 #include "pr/common/assert.h"
@@ -54,6 +53,7 @@
 #include "pr/sound/player.h"
 #include "pr/sound/ogg/ogg_stream.h"
 //#include "pr/gui/misc.h"
+#include "pr/win32/windows_com.h"
 
 #define DBG PR_DBG_COMMON
 

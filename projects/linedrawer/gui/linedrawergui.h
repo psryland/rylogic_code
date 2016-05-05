@@ -62,7 +62,7 @@ namespace ldr
 		// Close this form
 		bool Close(EDialogResult dialog_result) override;
 
-		bool OnPaint(PaintEventArgs const& args) override;
+		bool OnPaint(PaintEventArgs& args) override;
 		void OnDropFiles(DropFilesEventArgs const& drop) override;
 		bool OnKey(KeyEventArgs const& args) override;
 		bool OnMouseButton(MouseEventArgs const& args) override;

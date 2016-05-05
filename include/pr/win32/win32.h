@@ -245,6 +245,7 @@ namespace pr
 
 		// Load a dependent dll
 		// 'dir' can use substitution values L".\\lib\\$(platform)\\$(config)\\"
+		// 'Context' is used to ensure the module handle for the dll only exists once for each dll
 		template <typename Context> inline HMODULE LoadDll(std::wstring const& dllname, std::wstring dir)
 		{
 			using namespace pr::filesys;

@@ -29,12 +29,11 @@ msbuild = msbuild_dir + r"\Bin\MSBuild.exe"
 msbuild_props = "" #r"/p:VCTargetsPath=C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120"
 
 # The build system version. VS2013 == v120, VS2012 = v110, etc
-platform_toolset = "v120"
+platform_toolset = "v140"
 
 # The full path to the windows sdk
-winkit = r"C:\Program Files (x86)\Windows Kits"
-winsdk = winkit + "\\10"
-winkitvers = "10.0.10240.0"
+winsdk =r"C:\Program Files (x86)\Windows Kits\10"
+winsdkvers = "10.0.10586.0"
 
 # The root of the .NET framework directory
 dotnetdir = r"C:\Windows\Microsoft.NET\Framework"
@@ -53,7 +52,7 @@ java_sdkdir = r"D:\Program Files\Java\jdk1.8.0_20"
 
 # Text editor path
 # Note: scripts expect notepad++, so they probably won't work if you use a different tool
-textedit  = r"C:\Program Files (x86)\Notepad++\notepad++.exe"
+textedit = r"C:\Program Files (x86)\Notepad++\notepad++.exe"
 
 # Merge tool path
 # Note: scripts expect araxis merge, so they probably won't work if you use a different tool

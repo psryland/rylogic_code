@@ -182,7 +182,7 @@ namespace ldr
 	}
 
 	// Paint the window
-	bool MainGUI::OnPaint(PaintEventArgs const& args)
+	bool MainGUI::OnPaint(PaintEventArgs& args)
 	{
 		if (m_suspend_render) return false;
 		return base::OnPaint(args);

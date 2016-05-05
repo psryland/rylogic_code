@@ -32,10 +32,10 @@ namespace pr
 		// Initialise the renderer state variables and creates the DX device and swap chain.
 		RdrState::RdrState(RdrSettings const& settings)
 			:m_settings(settings)
+			,m_feature_level()
 			,m_device()
 			,m_immediate()
 			,m_d2dfactory()
-			,m_feature_level()
 		{
 			PR_INFO_IF(PR_DBG_RDR, (m_settings.m_device_layers & D3D11_CREATE_DEVICE_DEBUG       ) != 0, "D3D11_CREATE_DEVICE_DEBUG is enabled");
 			PR_INFO_IF(PR_DBG_RDR, (m_settings.m_device_layers & D3D11_CREATE_DEVICE_BGRA_SUPPORT) != 0, "D3D11_CREATE_DEVICE_BGRA_SUPPORT is enabled");

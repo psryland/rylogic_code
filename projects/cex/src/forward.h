@@ -35,7 +35,6 @@
 #include "pr/common/guid.h"
 #include "pr/common/command_line.h"
 #include "pr/common/algorithm.h"
-#include "pr/gui/windows_com.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/conversion.h"
 #include "pr/str/extract.h"
@@ -47,6 +46,7 @@
 #include "pr/storage/xml.h"
 #include "pr/threads/process.h"
 #include "pr/win32/win32.h"
+#include "pr/win32/windows_com.h"
 
 namespace cex
 {

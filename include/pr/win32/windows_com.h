@@ -2,7 +2,6 @@
 // A collection of window related functions
 //  Copyright (c) Rylogic Ltd 2008
 //*******************************************************************
-
 #pragma once
 
 #include <windows.h>
@@ -28,4 +27,14 @@ namespace pr
 		InitComEx(EFlag, DWORD dwCoInit = COINIT_MULTITHREADED) { m_res = ::CoInitializeEx(0, dwCoInit); }
 		~InitComEx()                                            { ::CoUninitialize(); }
 	};
+
+	// Tests whether CoInitialize has been called
+	inline bool CoInitializeCalled()
+	{
+		// If 'CoInitialize' has already been called, this returns S_FALSE
+		// All successful calls need to be matched with 'CoUninitialize'
+		auto r = ::CoInitialize(nullptr);
+		::CoUninitialize();
+		return r == S_FALSE;
+	}
 }

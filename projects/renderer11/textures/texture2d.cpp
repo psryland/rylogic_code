@@ -95,6 +95,7 @@ namespace pr
 				DirectX::ScratchImage scratch;
 				if (tdesc.MipLevels != 1)
 				{
+					PR_ASSERT(PR_DBG_RDR, pr::CoInitializeCalled(), "'CoInitialize' has not been called.");
 					pr::Throw(DirectX::GenerateMipMaps(img, DirectX::TEX_FILTER_FANT, tdesc.MipLevels, scratch));
 				}
 				else

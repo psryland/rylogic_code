@@ -318,3 +318,4 @@
 #include "pr\view3d\prmaths.h"
 #include "pr\view3d\view3d.h"
 #include "pr\win32\win32.h"
+#include "pr\win32\windows_com.h"

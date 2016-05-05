@@ -51,7 +51,6 @@
 #include "pr/common/new.h"
 #include "pr/common/console.h"
 #include "pr/maths/maths.h"
-//#include "pr/str/prstring.h"
 #include "pr/filesys/fileex.h"
 #include "pr/filesys/filesys.h"
 #include "pr/camera/camera.h"
@@ -60,7 +59,7 @@
 #include "pr/gui/menu_list.h"
 #include "pr/gui/recent_files.h"
 #include "pr/gui/messagemap_dbg.h"
-#include "pr/gui/windows_com.h"
+#include "pr/win32/windows_com.h"
 #include "pr/script/forward.h"
 #include "pr/renderer11/renderer.h"
 

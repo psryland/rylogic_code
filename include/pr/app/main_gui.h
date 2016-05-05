@@ -123,9 +123,10 @@ namespace pr
 			}
 
 			// Rendering the window
-			virtual bool OnPaint(pr::gui::PaintEventArgs const& args) override
+			virtual bool OnPaint(pr::gui::PaintEventArgs& args) override
 			{
-				// Render the scene
+				// Render the scene before raising the event, so that handlers
+				// have the option of drawing over the top of the 3D scene
 				if (m_main)
 				{
 					m_main->DoRender(true); // We've been asked to paint, so paint, regardless of RenderNeeded()
@@ -181,7 +182,7 @@ namespace pr
 					m_resizing = false;
 
 					// Find the new client area
-					auto area = ClientRect();//ClientRect(*this, true);
+					auto area = ClientRect(ERectFlags::ExcludeDockedChildren);
 					if (m_main && area.width() > 0 && area.height() > 0)
 					{
 						m_main->Resize(pr::To<IRect>(area));

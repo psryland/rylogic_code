@@ -18,6 +18,9 @@
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT _WIN32_WINNT_WIN7
 #endif
+#ifdef NOGDI
+#error The GDI is required for wingui.h
+#endif
 
 #include <vector>
 #include <string>
@@ -380,6 +383,10 @@ namespace pr
 		template <typename T> byte*       bptr(T*       t) { return reinterpret_cast<byte*      >(t); }
 
 		// Enum bitwise operators
+		template <typename TEnum, typename UT = std::underlying_type<TEnum>::type, typename = enable_if_bitops_allowed<TEnum>> inline TEnum operator ~(TEnum lhs)
+		{
+			return TEnum(~UT(lhs));
+		}
 		template <typename TEnum, typename UT = std::underlying_type<TEnum>::type, typename = enable_if_bitops_allowed<TEnum>> inline bool operator == (TEnum lhs, UT rhs)
 		{
 			return UT(lhs) == rhs;
@@ -779,7 +786,7 @@ namespace pr
 			HDC  m_hdc;
 			bool m_owned;
 			DC(HDC hdc, bool owned = false) :m_hdc(hdc) ,m_owned(owned) {}
-			~DC() { if (m_owned) ::DeleteDC(m_hdc); }
+			~DC() { if (m_owned && m_hdc) ::DeleteDC(m_hdc); }
 			operator HDC() const { return m_hdc; }
 		};
 		struct MemDC :DC
@@ -815,7 +822,7 @@ namespace pr
 			// clipping region set to the update region.
 			HWND m_hwnd;
 			ClientDC(HWND hwnd) :DC(::GetDC(hwnd), false) ,m_hwnd(hwnd) {}
-			~ClientDC() { ::ReleaseDC(m_hwnd, m_hdc); }
+			~ClientDC() { if (m_hwnd && m_hdc) ::ReleaseDC(m_hwnd, m_hdc); }
 		};
 		struct WindowDC :DC
 		{
@@ -1563,12 +1570,29 @@ namespace pr
 		// Event args for paint events
 		struct PaintEventArgs :EmptyArgs
 		{
-			HWND m_hwnd;          // The window being painted
-			HDC  m_alternate_hdc; // If non-null, then paint onto this device context
-			PaintEventArgs(HWND hwnd, HDC alternate_hdc)
-				:m_hwnd(hwnd)
-				,m_alternate_hdc(alternate_hdc)
+			enum class EParts
+			{
+				Background = 1 << 0,
+				Foreground = 1 << 1,
+				All = Background | Foreground,
+				_bitops_allowed,
+			};
+
+			EParts m_parts; // The parts to be painted
+			HWND   m_hwnd;  // The window being painted. Null if 'm_dc' is not the ClientDC for the control
+			DC     m_dc;    // The device context to draw on
+			Brush  m_bsh_back;
+
+			PaintEventArgs(HWND hwnd, HDC alternate_hdc, Brush const& bsh_back)
+				:m_parts(EParts::All)
+				,m_hwnd(!alternate_hdc ? hwnd : nullptr)
+				,m_dc(!alternate_hdc ? ::GetDC(hwnd) : alternate_hdc)
+				,m_bsh_back(bsh_back)
 			{}
+			~PaintEventArgs()
+			{
+				if (m_hwnd) ::ReleaseDC(m_hwnd, m_dc);
+			}
 
 			// Returns the area the needs painting
 			// Using 'erase' == true, causes a WM_ERASEBKGND message to be sent.
@@ -1576,8 +1600,21 @@ namespace pr
 			Rect UpdateRect(BOOL erase = false) const
 			{
 				Rect rect;
-				return ::GetUpdateRect(m_hwnd, &rect, erase) != 0
-					? rect : Rect();
+				return ::GetUpdateRect(m_hwnd, &rect, erase) != 0 ? rect : Rect();
+			}
+
+			// Fill the update rect using the background brush, without validating the region
+			void PaintBackground()
+			{
+				if (m_hwnd == nullptr || m_bsh_back == nullptr)
+					return;
+
+				// Fill the client area of 'm_hwnd' with the background colour
+				Rect r; ::GetUpdateRect(m_hwnd, &r, FALSE);
+				Rect cr; ::GetClientRect(m_hwnd, &cr);
+				if (!r.empty())
+					::FillRect(m_dc, &r, m_bsh_back);
+				m_parts = SetBits(m_parts, EParts::Background, false);
 			}
 		};
 
@@ -1690,13 +1727,13 @@ namespace pr
 		// Event args for mouse wheel events
 		struct MouseWheelArgs :EmptyArgs
 		{
-			short     m_delta;    // The amount the mouse wheel has turned
-			Point     m_point;    // The screen location of the mouse at the time of the event
-			EMouseKey m_keystate; // The state of all mouse buttons and control keys
-			MouseWheelArgs(short delta, Point point, EMouseKey keystate)
+			short     m_delta;  // The amount the mouse wheel has turned
+			Point     m_point;  // The screen location of the mouse at the time of the event
+			EMouseKey m_button; // The state of all mouse buttons and control keys
+			MouseWheelArgs(short delta, Point point, EMouseKey button)
 				:m_delta(delta)
 				,m_point(point)
-				,m_keystate(keystate)
+				,m_button(button)
 			{}
 		};
 
@@ -2780,6 +2817,7 @@ namespace pr
 			using EDock          = pr::gui::EDock;
 			using EDialogResult  = pr::gui::EDialogResult;
 			using EStartPosition = pr::gui::EStartPosition;
+			using ERectFlags     = pr::gui::ERectFlags;
 			using Controls       = std::vector<Control*>;
 			using WndRef         = pr::gui::WndRef;
 			using CtrlParams     = pr::gui::CtrlParams;
@@ -3753,7 +3791,7 @@ namespace pr
 			}
 
 			// Handle the Paint event. Return true, to prevent anything else handling the event
-			virtual bool OnPaint(PaintEventArgs const& args)
+			virtual bool OnPaint(PaintEventArgs& args)
 			{
 				Paint(*this, args);
 				return false;
@@ -3783,9 +3821,10 @@ namespace pr
 			}
 
 			// Handle mouse move events
-			virtual void OnMouseMove(MouseEventArgs const& args)
+			virtual bool OnMouseMove(MouseEventArgs const& args)
 			{
 				MouseMove(*this, args);
+				return false;
 			}
 
 			// Handle mouse wheel events. Return true, to prevent anything else handling the event
@@ -3816,7 +3855,7 @@ namespace pr
 			// WndProc is called by windows, Forms forward messages to their child controls using 'ProcessWindowMessage'
 			virtual LRESULT WndProc(UINT message, WPARAM wparam, LPARAM lparam)
 			{
-				WndProcDebug(m_hwnd, message, wparam, lparam, FmtS("CtrlWPMsg: %s",cp().m_name));
+				//WndProcDebug(m_hwnd, message, wparam, lparam, FmtS("CtrlWPMsg: %s",cp().m_name));
 				switch (message)
 				{
 				case WM_GETCTRLPTR:
@@ -3870,7 +3909,7 @@ namespace pr
 					#pragma region
 					{
 						// Notes:
-						//  Only create a pr::gui::PaintStruct if you intend to do the painting yourself,
+						//  Only create a pr::gui::PaintStruct if you intend to do all the painting yourself,
 						//  otherwise DefWndProc will do it (i.e. most controls are drawn by DefWndProc).
 						//  The update rect in the paint args is the area needing painting.
 						//  Typical behaviour is to create a PaintStruct, however you can not do this and
@@ -3880,47 +3919,55 @@ namespace pr
 						//    Validate(&r); <- tell windows the update rect has been updated,
 						//  Non-client window parts are drawn in DefWndProc
 
-						// The alternative DC to draw into
-						auto alt_dc = HDC(wparam);
+						// Create arguments for the paint event
+						PaintEventArgs args(m_hwnd, HDC(wparam), m_brush_back != nullptr ? m_brush_back : m_wci.hbrBackground);
 
-						// If double buffering is enabled and we're not drawing to
-						// an alternate device (e.g. printer), draw into the double buffer.
-						if (DoubleBuffered() && alt_dc == nullptr)
+						// If double buffering, do all drawing in a memory DC
+						if (DoubleBuffered())
 						{
+							// Create a memory DC the same size as then client area using the double buffer bitmap
 							auto dc = ClientDC(m_hwnd);
 							auto client_rect = ClientRect();
 							MemDC mem(dc, client_rect, m_dbl_buffer);
+							
+							// Replace the DC in 'args' (and make sure it doesn't get released)
+							assert(args.m_dc.m_owned == false);
+							args.m_dc.m_hdc = mem.m_hdc;
+							args.m_hwnd = nullptr;
 
-							// Fill with the window background colour
-							auto bsh =
-								m_brush_back ? (HBRUSH)m_brush_back :
-								m_wci.hbrBackground ? m_wci.hbrBackground :
-								::GetSysColorBrush(DC_BRUSH);
-							::FillRect(mem.m_hdc, &mem.m_rect, bsh);
+							// Allow sub-classes to handle painting
+							if (OnPaint(args))
+								return S_OK;
+
+							// If the sub-class hasn't totally handled the paint, paint the remaining parts.
+							// Manually draw the background, since we're swallowing WM_ERASEBKGND.
+							if (AllSet(args.m_parts, PaintEventArgs::EParts::Background))
+								args.PaintBackground();
 
 							// Render the window into the memory DC
-							if (!OnPaint(PaintEventArgs(m_hwnd, mem.m_hdc)))
+							if (AllSet(args.m_parts, PaintEventArgs::EParts::Foreground))
 								DefWndProc(WM_PRINTCLIENT, (WPARAM)mem.m_hdc, LPARAM(PRF_CHECKVISIBLE|PRF_NONCLIENT|PRF_CLIENT));
 
-							// Bitblt to the screen
+							// Copy to the screen buffer
 							Throw(::BitBlt(dc, 0, 0, client_rect.width(), client_rect.height(), mem.m_hdc, 0, 0, SRCCOPY), "Bitblt failed");
 
-							// Clear the update rect
+							// Mark the update rect as updated
 							Validate();
+
+							// Painting is done, don't fall through to DefWndProc
 							return S_OK;
 						}
-
-						// Allow sub-classes to handle painting
-						if (OnPaint(PaintEventArgs(m_hwnd, alt_dc)))
-							return S_OK;
-
-						// Since we aren't erasing the background, paint the background before
-						// letting DefWndProc handle the rest of the painting.
-						if (m_brush_back != nullptr || m_wci.hbrBackground != nullptr)
+						// Otherwise, draw in the given DC
+						else
 						{
-							PaintStruct ps(m_hwnd);
-							auto dc = alt_dc ? alt_dc : ps.hdc;
-							::FillRect(dc, &ps.rcPaint, m_brush_back != nullptr ? m_brush_back : m_wci.hbrBackground);
+							// Allow sub-classes to handle painting
+							if (OnPaint(args))
+								return S_OK;
+
+							// If the sub-class hasn't totally handled the paint, paint the remaining parts.
+							// Manually draw the background, since we're swallowing WM_ERASEBKGND.
+							if (AllSet(args.m_parts, PaintEventArgs::EParts::Background))
+								args.PaintBackground();
 						}
 						break;
 					}
@@ -4035,7 +4082,8 @@ namespace pr
 					{
 						auto pt = Point(lparam);
 						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey()); 
-						OnMouseMove(MouseEventArgs(keystate, false, pt, keystate));
+						if (OnMouseMove(MouseEventArgs(keystate, false, pt, keystate)))
+							return true;
 						break;
 					}
 					#pragma endregion
@@ -4883,6 +4931,8 @@ namespace pr
 				// If the window does not yet exist, create it
 				if (m_hwnd == nullptr)
 					Create(cp());
+				else
+					Parent(cp().m_parent);
 
 				// Create a message loop for this dialog
 				struct ModalLoop :MessageLoop
@@ -6244,24 +6294,13 @@ namespace pr
 			template <typename TParams = CtrlParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
-				Params() { create(ECreate::Defer).wndclass(WndClassName()).name("status").style('=',DefaultStyle).style_ex('=',DefaultStyleEx).anchor(EAnchor::LeftBottomRight).dock(EDock::Bottom); }
+				Params() { wndclass(WndClassName()).name("status").style('=',DefaultStyle).style_ex('=',DefaultStyleEx).anchor(EAnchor::LeftBottomRight).dock(EDock::Bottom); }
 			};
 
 			StatusBar() :StatusBar(Params<>()) {}
 			StatusBar(CtrlParams const& p)
 				:Control(p)
-			{
-				Attach(::CreateStatusWindowW(p.m_style, p.m_text, p.m_parent, p.m_id));
-				Throw(IsWindow(m_hwnd), "Failed to create the status bar");
-
-				// Don't set the parent until we have an hwnd
-				Parent(p.m_parent);
-				Dock(p.m_dock);
-			}
-			~StatusBar()
-			{
-				Detach();
-			}
+			{}
 
 			// Get/Set the parts of the status bar
 			int Parts(int count, int* parts) const
@@ -7000,19 +7039,22 @@ namespace pr
 			}
 
 			// Handle the Paint event. Return true, to prevent anything else handling the event
-			bool OnPaint(PaintEventArgs const& args) override
+			bool OnPaint(PaintEventArgs& args) override
 			{
-				Control::OnPaint(args);
+				if (Control::OnPaint(args))
+					return true;
 
+				// Paint the splitter
 				PaintStruct p(m_hwnd);
-				auto hdc = args.m_alternate_hdc != nullptr ? args.m_alternate_hdc : p.hdc;
 
 				// Draw the splitter bar
 				if (BarPos() != 0.0f && BarPos() != 1.0f)
 				{
 					auto rect = BarRect();
-					::FillRect(hdc, &rect, ::GetSysColorBrush(COLOR_3DFACE));
+					::FillRect(args.m_dc, &rect, args.m_bsh_back ? args.m_bsh_back : WndBackground());
 				}
+
+				// Painting is done
 				return true;
 			}
 
@@ -7050,9 +7092,10 @@ namespace pr
 			}
 
 			// Handle mouse move events
-			void OnMouseMove(MouseEventArgs const& args) override
+			bool OnMouseMove(MouseEventArgs const& args) override
 			{
-				Control::OnMouseMove(args);
+				if (Control::OnMouseMove(args))
+					return true;
 
 				auto pt = args.m_point;
 				auto bar_rect = BarRect();
@@ -7082,6 +7125,7 @@ namespace pr
 					if (bar_rect.Contains(pt))
 						::SetCursor(m_cursor);
 				}
+				return true;
 			}
 		};
 		struct ToolTip :Control

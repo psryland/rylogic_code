@@ -1582,10 +1582,10 @@ namespace pr
 				Dirty(true);
 				Control::OnWindowPosChange(args);
 			}
-			bool OnPaint(PaintEventArgs const& args) override
+			bool OnPaint(PaintEventArgs& args) override
 			{
-				if (args.m_alternate_hdc) { DoPaint(args.m_alternate_hdc, ClientRect()); }
-				else                      { PaintStruct ps(m_hwnd); DoPaint(ps.hdc, ClientRect()); }
+				PaintStruct ps(m_hwnd);
+				DoPaint(args.m_dc, ClientRect());
 				return Control::OnPaint(args);
 			}
 		};

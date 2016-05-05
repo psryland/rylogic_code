@@ -13,8 +13,8 @@
 #include "pr/common/hash.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/convex_hull.h"
-#include "pr/gui/windows_com.h"
 #include "pr/gui/progress_ui.h"
+#include "pr/win32/windows_com.h"
 #include "pr/renderer11/renderer.h"
 
 using namespace pr::rdr;

@@ -415,7 +415,7 @@ namespace view3d
 {
 	// View3D to custom type conversion.
 	// Specialise this to convert to/from View3D types to a custom type
-	// Include "pr/view3d/prmaths.h" if using pr maths types
+	// Include "pr/view3d/pr_conv.h" if using pr types
 	template <typename TTo, typename TFrom> struct Convert
 	{
 		static TTo To(TFrom const&) { static_assert(false, "No conversion from this type available"); }

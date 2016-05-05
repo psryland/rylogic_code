@@ -57,7 +57,6 @@
 #include "pr/gui/recent_files.h"
 #include "pr/gui/progress_ui.h"
 #include "pr/gui/scintilla_ctrl.h"
-#include "pr/gui/windows_com.h"
 #include "pr/renderer11/renderer.h"
 #include "pr/renderer11/lights/light_dlg.h"
 #include "pr/script/forward.h"
@@ -69,6 +68,7 @@
 #include "pr/network/web_get.h"
 #include "pr/storage/xml.h"
 #include "pr/win32/win32.h"
+#include "pr/win32/windows_com.h"
 
 #define LDR_EXPORTS 1
 #include "pr/linedrawer/ldr_plugin_interface.h"
