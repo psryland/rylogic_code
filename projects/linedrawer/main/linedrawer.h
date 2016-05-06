@@ -11,7 +11,6 @@
 #include "linedrawer/main/manipulator.h"
 #include "linedrawer/main/script_sources.h"
 #include "linedrawer/main/lua_source.h"
-#include "linedrawer/plugin/plugin_manager.h"
 #include "linedrawer/utility/misc.h"
 
 namespace ldr
@@ -26,7 +25,6 @@ namespace ldr
 		pr::ldr::ObjectCont m_store;          // A container of all ldr objects created
 		Navigation          m_nav;            // Implements camera navigation from user input
 		Manipulator         m_manip;          // Implements object manipulation from user input
-		PluginManager       m_plugin_mgr;     // The container of loaded plugins
 		LuaSource           m_lua_src;        // An object for processing lua files
 		ScriptSources       m_sources;        // Manages source scripts
 		mutable pr::BBox    m_bbox_scene;     // Bounding box for all objects in the scene (Lazy updated)

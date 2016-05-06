@@ -894,6 +894,9 @@
     <ClInclude Include="..\include\pr\maths\bit_fields.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\win32\windows_com.h">
+      <Filter>pr\win32</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

@@ -24,7 +24,7 @@ namespace ldr
 
 	private:
 
-		// Called when input focus is given or removed. Implementors should use
+		// Called when input focus is given or removed. Implementers should use
 		// LostInputFocus() to abort any control operations in progress.
 		void IInputHandler::GainInputFocus(IInputHandler* gained_from) override;
 		void IInputHandler::LostInputFocus(IInputHandler* lost_to) override;
@@ -36,7 +36,7 @@ namespace ldr
 
 		// Mouse input.
 		// 'pos_ns' is the normalised screen space position of the mouse
-		//   i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal cartesian axes
+		//   i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal Cartesian axes
 		// 'button_state' is the state of the mouse buttons (pr::camera::ENavKey)
 		// 'start_or_end' is true on mouse down/up
 		// Returns true if the camera has moved or objects in the scene have moved

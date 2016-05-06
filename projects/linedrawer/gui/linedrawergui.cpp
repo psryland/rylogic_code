@@ -8,7 +8,6 @@
 #include "linedrawer/gui/about_ui.h"
 #include "linedrawer/gui/text_panel_ui.h"
 #include "linedrawer/main/ldrexception.h"
-#include "linedrawer/plugin/plugin_manager_dlg.h"
 #include "linedrawer/utility/misc.h"
 #include "linedrawer/utility/debug.h"
 
@@ -23,7 +22,7 @@ namespace ldr
 {
 	char const* StepRdrMainLoop = "renderer main loop";
 	char const* StepWatchFiles = "watch files";
-	char const* StepPlugin = "plugin step";
+	char const* Step30hz = "step 30hz";
 
 	// Callback function for reading a point in world space
 	// Used by the tool UIs to measure distances and angles
@@ -111,7 +110,7 @@ namespace ldr
 		}, 60.0f, false);
 
 		// Add a step context for 30Hz stepping
-		m_msg_loop.AddStepContext(StepPlugin, [this](double s)
+		m_msg_loop.AddStepContext(Step30hz, [this](double s)
 		{
 			Step30Hz(s);
 		}, 30.0f, true);
@@ -146,10 +145,6 @@ namespace ldr
 	// Message map function
 	bool MainGUI::ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result)
 	{
-		//// Remove contexts from the msg loop on shutdown
-		//if (message == WM_DESTROY)
-		//	m_msg_loop.RemoveStepContext("rdr main loop");
-
 		return
 			m_recent_files.ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result) ||
 			m_saved_views .ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result) ||
@@ -161,7 +156,7 @@ namespace ldr
 	{
 		// Remove the step contexts before destroying windows
 		m_msg_loop.RemoveStepContext(StepRdrMainLoop);
-		m_msg_loop.RemoveStepContext(StepPlugin);
+		m_msg_loop.RemoveStepContext(Step30hz);
 		m_msg_loop.RemoveStepContext(StepWatchFiles);
 		return base::Close(dialog_result);
 	}
@@ -169,11 +164,8 @@ namespace ldr
 	// Handler timer messages
 	void MainGUI::Step30Hz(double elapsed_seconds)
 	{
-		// Poll plugins
-		if (m_main)
-			m_main->m_plugin_mgr.Poll(elapsed_seconds);
-
 		// Orbit the camera if enabled
+		(void)elapsed_seconds;
 		if (m_main->m_settings.m_CameraOrbit)
 		{
 			m_main->m_nav.OrbitCamera(m_main->m_settings.m_CameraOrbitSpeed);
@@ -285,7 +277,7 @@ namespace ldr
 		MouseStatusUpdate(mouse_loc);
 		return false;
 	}
-	void MainGUI::OnMouseMove(MouseEventArgs const& args)
+	bool MainGUI::OnMouseMove(MouseEventArgs const& args)
 	{
 		auto btn = static_cast<pr::camera::ENavBtn::Enum_>(args.m_button);
 		auto mouse_loc = pr::To<pr::v2>(args.m_point);
@@ -294,6 +286,7 @@ namespace ldr
 			pr::events::Send(Event_Refresh());
 
 		MouseStatusUpdate(mouse_loc);
+		return false;
 	}
 	bool MainGUI::OnMouseClick(MouseEventArgs const& args)
 	{
@@ -331,7 +324,6 @@ namespace ldr
 		case ID_ACCELERATOR_WIREFRAME        : OnToggleFillMode(); break;
 		case ID_ACCELERATOR_EDITOR           : OnEditSourceFiles(); break;
 		case ID_ACCELERATOR_CAMERAPOS        : OnSetCameraPosition(); break;
-		case ID_ACCELERATOR_PLUGINMGR        : OnShowPluginMgr(); break;
 		case ID_ACCELERATOR_LIGHTING_DLG     : OnShowLightingDlg(); break;
 		case ID_FILE_NEW1                    : OnFileNew(); break;
 		case ID_FILE_NEWSCRIPT               : OnFileNewScript(); break;
@@ -376,7 +368,6 @@ namespace ldr
 		case ID_TOOLS_ANGLE                  : OnShowToolDlg(ID_TOOLS_ANGLE); break;
 		case ID_TOOLS_MOVE                   : OnManipulateMode(); break;
 		case ID_TOOLS_OPTIONS                : OnShowOptions(); break;
-		case ID_TOOLS_PLUGINMGR              : OnShowPluginMgr(); break;
 		case ID_WINDOW_ALWAYSONTOP           : OnWindowAlwaysOnTop(); break;
 		case ID_WINDOW_BACKGROUNDCOLOUR      : OnWindowBackgroundColour(); break;
 		case ID_WINDOW_EXAMPLESCRIPT         : OnWindowExampleScript(); break;
@@ -661,20 +652,6 @@ namespace ldr
 	void MainGUI::OnShowOptions()
 	{
 		m_options_ui.Show(SW_SHOW);
-#if 0
-		COptionsDlg dlg(m_main->m_settings, *this);
-		if (dlg.DoModal() != IDOK) return;
-		dlg.GetSettings(m_main->m_settings);
-		m_main->RenderNeeded();
-#endif
-	}
-
-	// Display the plugin manager dialog
-	void MainGUI::OnShowPluginMgr()
-	{
-		PluginManagerUI dlg(m_main->m_plugin_mgr, *this);
-		if (dlg.ShowDialog(this) != EDialogResult::Ok)
-			return;
 	}
 
 	// Set the window draw order so that the line drawer window is always on top
@@ -989,79 +966,4 @@ namespace ldr
 	{
 		MessageBoxA(*this, e.m_msg.c_str(), "Settings Error", MB_OK);
 	}
-
-	// Parse command line options
-	bool MainGUI::CmdLineOption(OptionString const& option, TArgIter& arg, TArgIter arg_end)
-	{
-		// Syntax: LineDrawer -plugin "c:\myplugin.dll" arg1 arg2
-		if (pr::str::EqualI(option, L"-plugin") && arg != arg_end)
-		{
-			// Forward the rest of the args to the plugin
-			auto plugin_name = *arg;
-			OptionString plugin_args;
-			for (++arg; arg != arg_end && !pr::cmdline::IsOption(*arg); ++arg)
-				plugin_args.append(*arg).append(1, ' ');
-
-			try { m_main->m_plugin_mgr.Add(plugin_name.c_str(), plugin_args.c_str()); }
-			catch (LdrException const& e) { pr::events::Send(Event_Error(pr::Fmt("Failed to load plugin %s.\nReason: %s", plugin_name.c_str(), e.what()))); }
-			return true;
-		}
-		return false;
-	}
 }
-/*
-
-// Clear the background during resize
-BOOL ldr::MainGUI::OnEraseBkgnd(CDCHandle dc)
-{
-	SetMsgHandled(FALSE);
-	if (m_sizing)
-	{
-		CBrush brush; brush.CreateSolidBrush(m_main->m_settings.m_BackgroundColour.GetColorRef());
-		CRect r; GetClientRect(&r);
-		CPoint ctr = r.CenterPoint();
-		dc.FillRect(&r, brush);
-		dc.SetTextAlign(TA_CENTER|TA_BASELINE);
-		dc.SetBkMode(TRANSPARENT);
-		dc.TextOutA(ctr.x, ctr.y, "...resizing...");
-	}
-	return TRUE;
-}
-
-// Pre translate windows messages
-BOOL ldr::MainGUI::PreTranslateMessage(MSG* pMsg)
-{
-	//pr::debug_wm::DebugMessage(pMsg,[](int wm){ return wm != WM_TIMER; });
-
-	// Forward messages for the store ui to that dialog
-	if (m_ldr != 0 && m_main->m_store_ui.IsChild(pMsg->hwnd))
-		return IsDialogMessage(pMsg);
-
-	// Handle key accelerators
-	if (::TranslateAccelerator(m_hWnd, m_haccel, pMsg) != 0)
-		return TRUE;
-
-	// Intercept key presses
-	if (pMsg->message == WM_KEYDOWN)
-	{
-		LRESULT result;
-		ProcessWindowMessage(pMsg->hwnd, pMsg->message, pMsg->wParam, pMsg->lParam, result);
-		return TRUE; // has been translated and dispatched
-	}
-
-	// Don't call IsDialogMessage(pMsg) because we don't want typical
-	// dialog window-like keyboard behaviour (e.g. tab or arrow keys
-	// to switch focus between controls, etc)
-	return FALSE;
-}
-
-// Idle processing
-BOOL ldr::MainGUI::OnIdle(int)
-{
-	// If the settings have changed, save them
-	if (m_main->m_settings.SaveRequired())
-		m_main->m_settings.Save();
-
-	return FALSE;
-}
-*/

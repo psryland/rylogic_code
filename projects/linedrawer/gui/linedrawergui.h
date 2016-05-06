@@ -67,7 +67,7 @@ namespace ldr
 		bool OnKey(KeyEventArgs const& args) override;
 		bool OnMouseButton(MouseEventArgs const& args) override;
 		bool OnMouseClick(MouseEventArgs const& args) override;
-		void OnMouseMove(MouseEventArgs const& args) override;
+		bool OnMouseMove(MouseEventArgs const& args) override;
 		bool OnMouseWheel(MouseWheelArgs const& args) override;
 		void OnFullScreenToggle(bool is_fullscreen) override;
 
@@ -98,7 +98,6 @@ namespace ldr
 		void OnShowToolDlg(int tool);
 		void OnManipulateMode();
 		void OnShowOptions();
-		void OnShowPluginMgr();
 		void OnWindowAlwaysOnTop();
 		void OnWindowBackgroundColour();
 		void OnWindowExampleScript();
@@ -128,8 +127,5 @@ namespace ldr
 		void OnEvent(pr::rdr::Evt_UpdateScene const&) override;
 		void OnEvent(pr::ldr::Evt_Refresh const& e) override;
 		void OnEvent(pr::settings::Evt<UserSettings> const&) override;
-
-		// Command line
-		bool CmdLineOption(OptionString const& option, TArgIter& arg, TArgIter arg_end);
 	};
 }

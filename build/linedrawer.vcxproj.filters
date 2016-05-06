@@ -24,9 +24,6 @@
     <Filter Include="objects">
       <UniqueIdentifier>{48eb4bae-1d23-493d-9fc3-29ae51fd204e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="plugin">
-      <UniqueIdentifier>{e855530b-0f40-4d70-aac2-321bb7a57748}</UniqueIdentifier>
-    </Filter>
     <Filter Include="lights">
       <UniqueIdentifier>{9e92bc4a-8f6e-4c23-94a9-d05d01f835eb}</UniqueIdentifier>
     </Filter>
@@ -47,17 +44,8 @@
     <ClCompile Include="..\projects\linedrawer\main\stdafx.cpp">
       <Filter>main</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\linedrawer\plugin\plugin_manager_dlg.cpp">
-      <Filter>gui</Filter>
-    </ClCompile>
     <ClCompile Include="..\include\pr\linedrawer\ldr_object.cpp">
       <Filter>objects</Filter>
-    </ClCompile>
-    <ClCompile Include="..\projects\linedrawer\plugin\plugin.cpp">
-      <Filter>plugin</Filter>
-    </ClCompile>
-    <ClCompile Include="..\projects\linedrawer\plugin\plugin_manager.cpp">
-      <Filter>plugin</Filter>
     </ClCompile>
     <ClCompile Include="..\include\pr\lua\lua_core.c">
       <Filter>lua</Filter>
@@ -103,9 +91,6 @@
     <ClInclude Include="..\projects\linedrawer\gui\options_dlg.h">
       <Filter>gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\linedrawer\plugin\plugin_manager_dlg.h">
-      <Filter>gui</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\gui\recent_files.h">
       <Filter>gui</Filter>
     </ClInclude>
@@ -120,15 +105,6 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\linedrawer\ldr_object.h">
       <Filter>objects</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\linedrawer\ldr_plugin_interface.h">
-      <Filter>plugin</Filter>
-    </ClInclude>
-    <ClInclude Include="..\projects\linedrawer\plugin\plugin.h">
-      <Filter>plugin</Filter>
-    </ClInclude>
-    <ClInclude Include="..\projects\linedrawer\plugin\plugin_manager.h">
-      <Filter>plugin</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\lua\lua.h">
       <Filter>lua</Filter>

@@ -180,7 +180,7 @@
     <ClInclude Include="..\include\pr\script\script_core.h" />
     <ClInclude Include="..\include\pr\script\token.h" />
     <ClInclude Include="..\include\pr\script\tokeniser.h" />
-    <ClInclude Include="..\include\pr\view3d\prmaths.h" />
+    <ClInclude Include="..\include\pr\view3d\pr_conv.h" />
     <ClInclude Include="..\include\pr\win32\win32.h" />
     <ClInclude Include="..\projects\view3d\context.h" />
     <ClInclude Include="..\projects\view3d\forward.h" />

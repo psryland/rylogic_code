@@ -81,7 +81,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "elements", "elements.vcxpro
 EndProject
 Project("{002A2DE9-8BB6-484D-9802-7E4AD4084715}") = "prd", "prd.visualdproj", "{6007370B-6DE7-4F0A-BFC1-FD17127AF9E9}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestWingui", "TestWingui.vcxproj", "{87A78A7C-5B8D-4816-ABB2-CCEB41214529}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gui", "gui.vcxproj", "{87A78A7C-5B8D-4816-ABB2-CCEB41214529}"
 	ProjectSection(ProjectDependencies) = postProject
 		{599D9118-2445-476A-9877-060417FE5FA5} = {599D9118-2445-476A-9877-060417FE5FA5}
 	EndProjectSection

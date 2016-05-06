@@ -60,7 +60,6 @@ namespace ldr
 		,m_store()
 		,m_nav(m_cam, m_window.RenderTargetSize(), m_settings.m_CameraAlignAxis)
 		,m_manip(m_cam, m_rdr)
-		,m_plugin_mgr(this)
 		,m_lua_src()
 		,m_sources(m_settings, m_rdr, m_store, m_lua_src)
 		,m_bbox_scene(pr::BBoxReset)

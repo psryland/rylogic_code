@@ -654,7 +654,8 @@ namespace pr
 			// Mouse Navigation
 			bool OnMouseButton(MouseEventArgs const& args) override
 			{
-				Control::OnMouseButton(args);
+				if (Control::OnMouseButton(args))
+					return true;
 
 				if (args.m_down)
 				{
@@ -711,9 +712,11 @@ namespace pr
 				}
 				return true;
 			}
-			void OnMouseMove(MouseEventArgs const& args) override
+			bool OnMouseMove(MouseEventArgs const& args) override
 			{
-				Control::OnMouseMove(args);
+				if (Control::OnMouseMove(args))
+					return true;
+
 				if (int(args.m_button & EMouseKey::Left) != 0 && m_dragging)
 				{
 					auto grab_loc = GraphToPoint(m_pt_grab);
@@ -736,10 +739,12 @@ namespace pr
 					auto pt = PointToGraph(Point(float(args.m_point.x), float(args.m_point.y)));
 					m_tt.SetTipText(args.m_point.x, args.m_point.y - 40, pr::FmtS(L"%f %f", pt.x, pt.y));
 				}
+				return true;
 			}
 			bool OnMouseWheel(MouseWheelArgs const& args) override
 			{
-				Control::OnMouseWheel(args);
+				if (Control::OnMouseWheel(args))
+					return true;
 
 				auto point = args.m_point;
 				::ScreenToClient(m_hwnd, &point);

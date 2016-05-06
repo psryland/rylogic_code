@@ -82,7 +82,6 @@
 #define ID_TOOLS_MEASURE                        40401
 #define ID_TOOLS_ANGLE                          40402
 #define ID_TOOLS_MOVE                           40403
-#define ID_TOOLS_PLUGINMGR                      40404
 #define ID_TOOLS_OPTIONS                        40405
 #define ID_WINDOW_ALWAYSONTOP                   40501
 #define ID_WINDOW_BACKGROUNDCOLOUR              40502
@@ -95,7 +94,6 @@
 #define ID_ACCELERATOR_FILEOPEN_ADDITIVE        40604
 #define ID_ACCELERATOR_EDITOR                   40605
 #define ID_ACCELERATOR_CAMERAPOS                40606
-#define ID_ACCELERATOR_PLUGINMGR                40607
 #define ID_ACCELERATOR_WIREFRAME                40608
 #define ID_ACCELERATOR_LIGHTING_DLG             40609
 #define ID_ACCELERATOR_UNDO                     40610

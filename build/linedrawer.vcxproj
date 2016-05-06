@@ -191,7 +191,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\projects\linedrawer\plugin\plugin_manager_dlg.cpp" />
     <ClCompile Include="..\include\pr\linedrawer\ldr_object.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
       </PrecompiledHeader>
@@ -202,8 +201,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\projects\linedrawer\plugin\plugin.cpp" />
-    <ClCompile Include="..\projects\linedrawer\plugin\plugin_manager.cpp" />
     <ClCompile Include="..\include\pr\lua\lua_core.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
       </PrecompiledHeader>
@@ -253,7 +250,6 @@
     <ClInclude Include="..\projects\linedrawer\gui\about_ui.h" />
     <ClInclude Include="..\projects\linedrawer\gui\options_dlg.h" />
     <ClInclude Include="..\projects\linedrawer\main\user_settings.h" />
-    <ClInclude Include="..\projects\linedrawer\plugin\plugin_manager_dlg.h" />
     <ClInclude Include="..\include\pr\gui\progress_ui.h" />
     <ClInclude Include="..\include\pr\gui\recent_files.h" />
     <ClInclude Include="..\projects\linedrawer\gui\text_panel_ui.h" />
@@ -262,9 +258,6 @@
     <ClInclude Include="..\projects\linedrawer\utility\misc.h" />
     <ClInclude Include="..\projects\linedrawer\input\keybindings.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_object.h" />
-    <ClInclude Include="..\include\pr\linedrawer\ldr_plugin_interface.h" />
-    <ClInclude Include="..\projects\linedrawer\plugin\plugin.h" />
-    <ClInclude Include="..\projects\linedrawer\plugin\plugin_manager.h" />
     <ClInclude Include="..\include\pr\lua\lua.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_tools.h" />
   </ItemGroup>

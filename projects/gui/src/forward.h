@@ -1,7 +1,7 @@
 #pragma once
 
 #include <sdkddkver.h>
-#include "testwingui/res/resource.h"
+#include "gui/res/resource.h"
 #include "pr/common/min_max_fix.h"
 #include "pr/gui/wingui.h"
 #include "pr/win32/windows_com.h"

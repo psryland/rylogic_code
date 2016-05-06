@@ -20,8 +20,9 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{87A78A7C-5B8D-4816-ABB2-CCEB41214529}</ProjectGuid>
-    <RootNamespace>TestWingui</RootNamespace>
+    <RootNamespace>gui</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.10586.0</WindowsTargetPlatformVersion>
+    <ProjectName>gui</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -67,7 +68,7 @@
     <Link />
     <ClCompile />
     <PostBuildEvent>
-      <Command>py.exe $(ProjectDir)..\projects\testwingui\post_build.py $(ProjectDir) $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
+      <Command>py.exe $(ProjectDir)..\projects\gui\post_build.py $(ProjectDir) $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
     </PostBuildEvent>
     <ClCompile>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
@@ -84,7 +85,7 @@
     <Link />
     <ClCompile />
     <PostBuildEvent>
-      <Command>py.exe $(ProjectDir)..\projects\testwingui\post_build.py $(ProjectDir) $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
+      <Command>py.exe $(ProjectDir)..\projects\gui\post_build.py $(ProjectDir) $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
     </PostBuildEvent>
     <ClCompile>
       <AdditionalIncludeDirectories>..\projects;..\include;..\sdk;..\sdk\WTL\v9.0\include;..\sdk\sqlite\include;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -100,7 +101,7 @@
     <Link />
     <ClCompile />
     <PostBuildEvent>
-      <Command>py.exe $(ProjectDir)..\projects\testwingui\post_build.py $(ProjectDir) $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
+      <Command>py.exe $(ProjectDir)..\projects\gui\post_build.py $(ProjectDir) $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
     </PostBuildEvent>
     <ClCompile>
       <AdditionalIncludeDirectories>..\projects;..\include;..\sdk;..\sdk\WTL\v9.0\include;..\sdk\sqlite\include;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -116,7 +117,7 @@
     <Link />
     <ClCompile />
     <PostBuildEvent>
-      <Command>py.exe $(ProjectDir)..\projects\testwingui\post_build.py $(ProjectDir) $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
+      <Command>py.exe $(ProjectDir)..\projects\gui\post_build.py $(ProjectDir) $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
     </PostBuildEvent>
     <ClCompile>
       <AdditionalIncludeDirectories>..\projects;..\include;..\sdk;..\sdk\WTL\v9.0\include;..\sdk\sqlite\include;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -128,28 +129,31 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\pr\gui\colour_ctrl.h" />
     <ClInclude Include="..\include\pr\gui\context_menu.h" />
+    <ClInclude Include="..\include\pr\gui\gdiplus.h" />
+    <ClInclude Include="..\include\pr\gui\graph_ctrl.h" />
     <ClInclude Include="..\include\pr\gui\progress_ui.h" />
     <ClInclude Include="..\include\pr\gui\scintilla_ctrl.h" />
+    <ClInclude Include="..\include\pr\gui\vt100.h" />
     <ClInclude Include="..\include\pr\gui\wingui.h" />
-    <ClInclude Include="..\projects\TestWingui\res\resource.h" />
-    <ClInclude Include="..\projects\TestWingui\src\about.h" />
-    <ClInclude Include="..\projects\TestWingui\src\forward.h" />
-    <ClInclude Include="..\projects\TestWingui\src\modeless.h" />
+    <ClInclude Include="..\projects\gui\res\resource.h" />
+    <ClInclude Include="..\projects\gui\src\about.h" />
+    <ClInclude Include="..\projects\gui\src\forward.h" />
+    <ClInclude Include="..\projects\gui\src\modeless.h" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="..\projects\TestWingui\res\resource.rc" />
+    <ResourceCompile Include="..\projects\gui\res\resource.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\projects\TestWingui\src\graph.h" />
-    <ClCompile Include="..\projects\TestWingui\src\main.cpp" />
+    <ClCompile Include="..\projects\gui\src\graph.h" />
+    <ClCompile Include="..\projects\gui\src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\projects\TestWingui\post_build.py" />
+    <None Include="..\projects\gui\post_build.py" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\projects\TestWingui\res\icon1.ico" />
-    <Image Include="..\projects\TestWingui\res\Smiling gekko 140x110.ico" />
+    <Image Include="..\projects\gui\res\Smiling gekko 140x110.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -154,7 +154,7 @@ namespace pr
 				Invalidate();
 				return base::OnMouseClick(args);
 			}
-			virtual void OnMouseMove(pr::gui::MouseEventArgs const& args) override
+			virtual bool OnMouseMove(pr::gui::MouseEventArgs const& args) override
 			{
 				if (m_nav_enabled)
 				{

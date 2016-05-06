@@ -96,9 +96,18 @@ namespace pr.gui
 		{
 			var gfx = e.Graphics;
 			var rect = ClientRectangle;
+			var visual_styles_enabled = ProgressBarRenderer.IsSupported;
 
 			// Draw the background
-			ProgressBarRenderer.DrawHorizontalBar(gfx, rect);
+			if (visual_styles_enabled)
+			{
+				ProgressBarRenderer.DrawHorizontalBar(gfx, rect);
+			}
+			else
+			{
+				gfx.FillRectangle(SystemBrushes.Control, rect);
+				gfx.DrawRectangle(SystemPens.ControlDark, rect);
+			}
 
 			// Fill with chunks
 			if (Value != Minimum)
@@ -106,9 +115,12 @@ namespace pr.gui
 				const int pad = 3;
 				var frac = Maths.Frac(Minimum, Value, Maximum);
 				var clip = new Rectangle(rect.X + pad, rect.Y + pad, (int)(frac * (rect.Width - 2*pad)), rect.Height - 2*pad);
-				ProgressBarRenderer.DrawHorizontalChunks(gfx, clip);
+				if (visual_styles_enabled)
+					ProgressBarRenderer.DrawHorizontalChunks(gfx, clip);
+				else
+					gfx.FillRectangle(SystemBrushes.Highlight, clip);
 			}
-
+			
 			// Draw the text
 			using (var b = new SolidBrush(ForeColor))
 			{

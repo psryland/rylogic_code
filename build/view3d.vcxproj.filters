@@ -63,9 +63,6 @@
     <ClInclude Include="..\projects\view3d\forward.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\view3d\prmaths.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\script\reader.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -98,6 +95,9 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\gui\wingui.h">
       <Filter>src\pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\pr_conv.h">
+      <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
