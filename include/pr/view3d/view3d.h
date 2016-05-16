@@ -320,6 +320,7 @@ extern "C"
 	VIEW3D_API View3DObject            __stdcall View3D_ObjectCreate             (char const* name, View3DColour colour, int icount, int vcount, View3D_EditObjectCB edit_cb, void* ctx, GUID const& context_id);
 	VIEW3D_API void                    __stdcall View3D_ObjectUpdate             (View3DObject object, char const* ldr_script, EView3DUpdateObject flags);
 	VIEW3D_API void                    __stdcall View3D_ObjectEdit               (View3DObject object, View3D_EditObjectCB edit_cb, void* ctx);
+	VIEW3D_API void                    __stdcall View3D_ObjectsDeleteAll         ();
 	VIEW3D_API void                    __stdcall View3D_ObjectsDeleteById        (GUID const& context_id);
 	VIEW3D_API void                    __stdcall View3D_ObjectDelete             (View3DObject object);
 	VIEW3D_API View3DObject            __stdcall View3D_ObjectGetParent          (View3DObject object);
@@ -389,6 +390,7 @@ extern "C"
 	VIEW3D_API BOOL                    __stdcall View3D_GizmoManipulating        (View3DGizmo gizmo);
 
 	// Miscellaneous
+	VIEW3D_API BOOL                    __stdcall View3D_TranslateKey             (View3DWindow window, int key_code);
 	VIEW3D_API void                    __stdcall View3D_RestoreMainRT            (View3DWindow window);
 	VIEW3D_API BOOL                    __stdcall View3D_DepthBufferEnabled       (View3DWindow window);
 	VIEW3D_API void                    __stdcall View3D_SetDepthBufferEnabled    (View3DWindow window, BOOL enabled);
@@ -399,6 +401,7 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_ShowOrigin               (View3DWindow window, BOOL show);
 	VIEW3D_API void                    __stdcall View3D_SetOriginSize            (View3DWindow window, float size);
 	VIEW3D_API void                    __stdcall View3D_CreateDemoScene          (View3DWindow window);
+	VIEW3D_API void                    __stdcall View3D_DeleteDemoScene          ();
 	VIEW3D_API void                    __stdcall View3D_ShowDemoScript           (View3DWindow window);
 	VIEW3D_API void                    __stdcall View3D_ShowObjectManager        (View3DWindow window, BOOL show);
 	VIEW3D_API View3DM4x4              __stdcall View3D_ParseLdrTransform        (char const* ldr_script);

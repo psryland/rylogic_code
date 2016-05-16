@@ -1,0 +1,100 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="pr">
+      <UniqueIdentifier>{9b98bf3f-1fe2-4e94-a95f-ee30b710460e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\gui">
+      <UniqueIdentifier>{f93c8840-14ce-4f4d-bed0-12c39a12a788}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\view3d">
+      <UniqueIdentifier>{d3b2ebbe-77b8-405b-9293-51656cdbbd59}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\physics">
+      <UniqueIdentifier>{78622bd9-4d31-458b-ae9a-6184a0c7fe57}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\physics\rigid_body">
+      <UniqueIdentifier>{6a2a017e-f413-465f-b0c5-3107ac87a61c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\physics\integrater">
+      <UniqueIdentifier>{29bd319b-df3b-4080-a7e8-32306a556ab9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\physics\shape">
+      <UniqueIdentifier>{8f1b6011-8ac1-487d-a76c-189d839ec5ed}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\projects\physics2/src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\pr\gui\view3d_panel.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\wingui.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\view3d.h">
+      <Filter>pr\view3d</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\constants.h">
+      <Filter>pr\physics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\forward.h">
+      <Filter>pr\physics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\rigid_body\rigid_body.h">
+      <Filter>pr\physics\rigid_body</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\integrater\integrater.h">
+      <Filter>pr\physics\integrater</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\integrater\jacobian.h">
+      <Filter>pr\physics\integrater</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\physics2/src\body.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\physics2/src\forward.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\shape\shape.h">
+      <Filter>pr\physics\shape</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\shape\mass.h">
+      <Filter>pr\physics\shape</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\shape\shape_box.h">
+      <Filter>pr\physics\shape</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\shape\shape_array.h">
+      <Filter>pr\physics\shape</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\shape\shape_builder.h">
+      <Filter>pr\physics\shape</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\shape\material.h">
+      <Filter>pr\physics\shape</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\physics.h">
+      <Filter>pr\physics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\shape\ldr_helper.h">
+      <Filter>pr\physics\shape</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\shape\shape_sphere.h">
+      <Filter>pr\physics\shape</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\shape\shape_triangle.h">
+      <Filter>pr\physics\shape</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\projects\physics2/post_build.py" />
+  </ItemGroup>
+</Project>

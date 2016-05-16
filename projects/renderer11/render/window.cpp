@@ -351,6 +351,12 @@ namespace pr
 			// Pass 0 for width and height, DirectX gets them from the associated window
 			pr::Throw(m_swap_chain->ResizeBuffers(0, checked_cast<UINT>(size.x), checked_cast<UINT>(size.y), DXGI_FORMAT_UNKNOWN, m_swap_chain_flags));
 
+			//// Only set the width/height, leave the other options unchanged
+			//DXGI_MODE_DESC target_mode = {};
+			//target_mode.Width = area.x;
+			//target_mode.Height = area.y;
+			//pr::Throw(m_swap_chain->ResizeTarget(&target_mode));
+
 			// Set up the render targets again
 			InitRT();
 			RestoreRT();

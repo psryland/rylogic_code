@@ -236,6 +236,8 @@ namespace pr
 		// Construct an orthographic projection matrix
 		static m4x4 ProjectionOrthographic(float w, float h, float zn, float zf, bool righthanded)
 		{
+			assert("invalid view rect" && IsFinite(w) && IsFinite(h) && w > 0 && h > 0);
+			assert("invalid near/far planes" && IsFinite(zn) && IsFinite(zf) && zn > 0 && zf > 0 && (zn - zf) != 0);
 			auto rh = Sign<float>(righthanded);
 			auto mat = m4x4{};
 			mat.x.x = 2.0f / w;
@@ -249,6 +251,8 @@ namespace pr
 		// Construct a perspective projection matrix
 		static m4x4 ProjectionPerspective(float w, float h, float zn, float zf, bool righthanded)
 		{
+			assert("invalid view rect" && IsFinite(w) && IsFinite(h) && w > 0 && h > 0);
+			assert("invalid near/far planes" && IsFinite(zn) && IsFinite(zf) && zn > 0 && zf > 0 && (zn - zf) != 0);
 			auto rh = Sign<float>(righthanded);
 			auto mat = m4x4{};
 			mat.x.x = 2.0f * zn / w;
@@ -262,6 +266,8 @@ namespace pr
 		// Construct a perspective projection matrix offset from the centre
 		static m4x4 ProjectionPerspective(float l, float r, float t, float b, float zn, float zf, bool righthanded)
 		{
+			assert("invalid view rect" && IsFinite(l)  && IsFinite(r) && IsFinite(t) && IsFinite(b) && (r - l) > 0 && (t - b) > 0);
+			assert("invalid near/far planes" && IsFinite(zn) && IsFinite(zf) && zn > 0 && zf > 0 && (zn - zf) != 0);
 			auto rh = Sign<float>(righthanded);
 			auto mat = m4x4{};
 			mat.x.x = 2.0f * zn / (r - l);
@@ -277,6 +283,8 @@ namespace pr
 		// Construct a perspective projection matrix using field of view
 		static m4x4 ProjectionPerspectiveFOV(float fovY, float aspect, float zn, float zf, bool righthanded)
 		{
+			assert("invalid aspect ratio" && IsFinite(aspect) && aspect > 0);
+			assert("invalid near/far planes" && IsFinite(zn) && IsFinite(zf) && zn > 0 && zf > 0 && (zn - zf) != 0);
 			auto rh = Sign<float>(righthanded);
 			auto mat = m4x4{};
 			mat.y.y = 1.0f / pr::Tan(fovY/2);

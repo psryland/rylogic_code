@@ -2,10 +2,7 @@
 // Physics engine
 //  Copyright (c) Rylogic Ltd 2006
 //*********************************************
-
 #pragma once
-#ifndef PR_PHYSICS_H
-#define PR_PHYSICS_H
 
 #define PR_PHYSICS_INTERFACE_INCLUDE 1
 
@@ -20,7 +17,7 @@
 #include "pr/physics/engine/engine.h"
 #include "pr/physics/engine/igravity.h"
 
-// Broadphase
+// Broad Phase
 #include "pr/physics/broadphase/ibroadphase.h"
 #include "pr/physics/broadphase/broadphasebrute.h"
 #include "pr/physics/broadphase/broadphasesnp.h"
@@ -57,4 +54,3 @@
 #pragma warning (pop)
 
 #undef PR_PHYSICS_INTERFACE_INCLUDE
-#endif

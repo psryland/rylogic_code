@@ -79,11 +79,11 @@ namespace pr
 				// The function to call to step the context
 				StepFunc m_step;
 
-				// The number of rtc ticks per frame. For fixed step rate contexts, this is the interval
+				// The number of RTC ticks per frame. For fixed step rate contexts, this is the interval
 				// used for each step. For non-fixed step rate contexts, this is the minimum time between steps
 				duration_t m_ticks_per_frame;
 
-				// The rtc time last time the context was stepped
+				// The RTC time last time the context was stepped
 				duration_t m_last_time;
 
 				// True if this context should always be stepped with the same elapsed time
@@ -106,7 +106,7 @@ namespace pr
 					PR_INFO(PR_LOOP_TIMING, m_stats.ToString().c_str());
 				}
 
-				// Returns the rtc value of when this context would ideally be stepped next
+				// Returns the RTC value of when this context would ideally be stepped next
 				duration_t next_step_time() const { return m_last_time + m_ticks_per_frame; }
 
 				// A sorting predicate

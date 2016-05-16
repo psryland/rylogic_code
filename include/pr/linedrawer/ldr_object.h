@@ -294,15 +294,6 @@ namespace pr
 			bool              m_wireframe;     // True if this object is drawn in wireframe
 			pr::UserData      m_user_data;     // User data
 
-			// Predicate for matching this object by context id
-			struct MatchId
-			{
-				GUID m_id;
-				MatchId(GUID const& id) :m_id(id) {}
-				bool operator()(LdrObject const& obj) const { return obj.m_context_id == m_id; }
-				bool operator()(LdrObject const* obj) const { return obj && obj->m_context_id == m_id; }
-			};
-
 			LdrObject(ObjectAttributes const& attr, pr::ldr::LdrObject* parent, GUID const& context_id);
 			~LdrObject();
 
@@ -445,6 +436,15 @@ namespace pr
 			LdrObjectPtr RemoveChild(LdrObjectPtr& child);
 			LdrObjectPtr RemoveChild(size_t i);
 			void RemoveAllChildren();
+
+			// Predicate for matching this object by context id
+			struct MatchId
+			{
+				GUID m_id;
+				MatchId(GUID const& id) :m_id(id) {}
+				bool operator()(LdrObject const& obj) const { return obj.m_context_id == m_id; }
+				bool operator()(LdrObject const* obj) const { return obj && obj->m_context_id == m_id; }
+			};
 
 			// Called when there are no more references to this object
 			static void RefCountZero(RefCount<LdrObject>* doomed);

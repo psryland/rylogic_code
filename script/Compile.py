@@ -5,6 +5,7 @@
 # Specify command line options using special comments: //@
 # e.g.
 #    //@ /I"P:\include" /W4 /DPR_DBG=0
+#    //Copy lib.dll dst_path\
 #    #include <iostream>
 #    #include "pr/common/expr_eval.h"
 #    void main()
@@ -164,18 +165,23 @@ def SetupVCEnvironment(_32bit = True):
 	os.environ["WindowsSDK_ExecutablePath_x64"] = r"C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v10.0A\\bin\\NETFX 4.6 Tools\\x64\\"
 	os.environ["WindowsSDK_ExecutablePath_x86"] = r"C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v10.0A\\bin\\NETFX 4.6 Tools\\"
 
-# Opens a C++ source file and scans for lines beginning with //@
+# Opens a C++ source file and scans for lines beginning with:
+#  //@ = cl.exe command line option
+#  //Copy <src> <dst> = Post build copy file
 # Stops scanning at the first line that begins with '#'
 # Returns the text on those lines as command line options that can be passed to cl.exe
-def ExtractSwitches(filepath:str):
-	args = []
+def ExtractFileOptions(filepath:str):
+	sw   = [] # Addition compiler switches
+	copy = [] # Post-build copy pairs
 	with open(filepath, encoding="utf-8") as f:
 		for line in f:
 			if len(line) == 0: continue;
 			if line[0] == '#': break;
 			if line.startswith("//@"):
-				args += shlex.split(line[3:])
-	return args;
+				sw += shlex.split(line[3:])
+			if line.startswith("//Copy"):
+				copy += [shlex.split(line[6:])]
+	return sw, copy;
 
 # Compile the given C++ file
 # The source file can specify additional compiler switches by having special
@@ -211,9 +217,12 @@ def Compile(
 	if not os.path.exists(outdir): os.mkdir(outdir)
 	os.chdir(outdir)
 
+	# Extract info from the file 
+	additional_sw, copy = ExtractFileOptions(src_file);
+	
 	# Generate the command line switches
 	args = []
-	args += sw + ExtractSwitches(src_file)
+	args += sw + additional_sw
 	args += [] if create_exe else ["/c"]
 	args += ["/I"+inc+"" for inc in includes]
 	args += ["/D"+deph for deph in defines]
@@ -222,14 +231,17 @@ def Compile(
 	args += ["/Fe" + outdir + "\\"]
 	args = list(set(args))
 	args.sort()
-	print(args)
-	
+
 	# Set up the VC environment variables
 	SetupVCEnvironment(_32bit)
 
 	# Compile 
 	Tools.Exec([cl] + args + [filepath])
 
+	# Post-build copy commands
+	for cp in copy:
+		Tools.Copy(cp[0], cp[1])
+		
 	# If the /c switch is given, then no exe is produced
 	if "/c" in args:
 		return ""

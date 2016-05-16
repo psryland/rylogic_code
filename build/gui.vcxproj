@@ -21,7 +21,6 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{87A78A7C-5B8D-4816-ABB2-CCEB41214529}</ProjectGuid>
     <RootNamespace>gui</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.10586.0</WindowsTargetPlatformVersion>
     <ProjectName>gui</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -68,7 +67,7 @@
     <Link />
     <ClCompile />
     <PostBuildEvent>
-      <Command>py.exe $(ProjectDir)..\projects\gui\post_build.py $(ProjectDir) $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
+      <Command>$(ProjectDir)..\projects\gui\post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
     </PostBuildEvent>
     <ClCompile>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
@@ -85,7 +84,7 @@
     <Link />
     <ClCompile />
     <PostBuildEvent>
-      <Command>py.exe $(ProjectDir)..\projects\gui\post_build.py $(ProjectDir) $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
+      <Command>$(ProjectDir)..\projects\gui\post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
     </PostBuildEvent>
     <ClCompile>
       <AdditionalIncludeDirectories>..\projects;..\include;..\sdk;..\sdk\WTL\v9.0\include;..\sdk\sqlite\include;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -101,7 +100,7 @@
     <Link />
     <ClCompile />
     <PostBuildEvent>
-      <Command>py.exe $(ProjectDir)..\projects\gui\post_build.py $(ProjectDir) $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
+      <Command>$(ProjectDir)..\projects\gui\post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
     </PostBuildEvent>
     <ClCompile>
       <AdditionalIncludeDirectories>..\projects;..\include;..\sdk;..\sdk\WTL\v9.0\include;..\sdk\sqlite\include;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -117,7 +116,7 @@
     <Link />
     <ClCompile />
     <PostBuildEvent>
-      <Command>py.exe $(ProjectDir)..\projects\gui\post_build.py $(ProjectDir) $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
+      <Command>$(ProjectDir)..\projects\gui\post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
     </PostBuildEvent>
     <ClCompile>
       <AdditionalIncludeDirectories>..\projects;..\include;..\sdk;..\sdk\WTL\v9.0\include;..\sdk\sqlite\include;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -135,6 +134,7 @@
     <ClInclude Include="..\include\pr\gui\graph_ctrl.h" />
     <ClInclude Include="..\include\pr\gui\progress_ui.h" />
     <ClInclude Include="..\include\pr\gui\scintilla_ctrl.h" />
+    <ClInclude Include="..\include\pr\gui\view3d_panel.h" />
     <ClInclude Include="..\include\pr\gui\vt100.h" />
     <ClInclude Include="..\include\pr\gui\wingui.h" />
     <ClInclude Include="..\projects\gui\res\resource.h" />

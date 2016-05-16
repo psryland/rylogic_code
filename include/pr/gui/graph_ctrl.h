@@ -35,7 +35,7 @@ namespace pr
 			real& operator = (real value) { return m_value = value; }
 			} x, y;
 
-			// Place holder for impersonating a realonly member
+			// Place holder for impersonating a readonly member
 			struct {
 			operator real () const { return 0; }
 			} ylo, yhi;
@@ -652,10 +652,10 @@ namespace pr
 		protected:
 
 			// Mouse Navigation
-			bool OnMouseButton(MouseEventArgs const& args) override
+			void OnMouseButton(MouseEventArgs& args) override
 			{
-				if (Control::OnMouseButton(args))
-					return true;
+				Control::OnMouseButton(args);
+				if (args.m_handled) return;
 
 				if (args.m_down)
 				{
@@ -710,12 +710,12 @@ namespace pr
 					}
 					::ReleaseCapture();
 				}
-				return true;
+				args.m_handled = true;
 			}
-			bool OnMouseMove(MouseEventArgs const& args) override
+			void OnMouseMove(MouseEventArgs& args) override
 			{
-				if (Control::OnMouseMove(args))
-					return true;
+				Control::OnMouseMove(args);
+				if (args.m_handled) return;
 
 				if (int(args.m_button & EMouseKey::Left) != 0 && m_dragging)
 				{
@@ -739,24 +739,24 @@ namespace pr
 					auto pt = PointToGraph(Point(float(args.m_point.x), float(args.m_point.y)));
 					m_tt.SetTipText(args.m_point.x, args.m_point.y - 40, pr::FmtS(L"%f %f", pt.x, pt.y));
 				}
-				return true;
+				args.m_handled = true;
 			}
-			bool OnMouseWheel(MouseWheelArgs const& args) override
+			void OnMouseWheel(MouseWheelArgs& args) override
 			{
-				if (Control::OnMouseWheel(args))
-					return true;
+				Control::OnMouseWheel(args);
+				if (args.m_handled) return;
 
+				args.m_handled = true;
 				auto point = args.m_point;
 				::ScreenToClient(m_hwnd, &point);
 				if (!m_plot_area.Contains(point))
-					return true;
+					return;
 
 				auto pt = PointToGraph(point);
 				int delta = pr::Clamp<short>(args.m_delta, -999, 999);
 				Zoom(Zoom() * (1.0f - delta * 0.001f));
 				PositionGraph(Point(point), pt);
 				Dirty(true);
-				return true;
 			}
 
 			#pragma endregion
@@ -1587,11 +1587,11 @@ namespace pr
 				Dirty(true);
 				Control::OnWindowPosChange(args);
 			}
-			bool OnPaint(PaintEventArgs& args) override
+			void OnPaint(PaintEventArgs& args) override
 			{
 				PaintStruct ps(m_hwnd);
 				DoPaint(args.m_dc, ClientRect());
-				return Control::OnPaint(args);
+				Control::OnPaint(args);
 			}
 		};
 	}

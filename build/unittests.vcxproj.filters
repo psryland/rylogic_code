@@ -80,6 +80,15 @@
     <Filter Include="pr\win32">
       <UniqueIdentifier>{b6668ec9-a6d0-42ad-a1a4-ea4e939ba9e2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\physics">
+      <UniqueIdentifier>{460e346e-5f9f-4555-8e7b-07e726c354e2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\physics\rigid_body">
+      <UniqueIdentifier>{d3b02367-ac21-4c5f-b356-01f37e711449}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\physics\integrater">
+      <UniqueIdentifier>{5a67892b-86d2-49ad-b7a9-63d81a2eb9b3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\unittests\unittests.cpp">
@@ -372,9 +381,6 @@
     <ClInclude Include="..\include\pr\linedrawer\ldr_objects_dlg.h">
       <Filter>pr\linedrawer</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\linedrawer\ldr_plugin_interface.h">
-      <Filter>pr\linedrawer</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\linedrawer\ldr_script_editor_dlg.h">
       <Filter>pr\linedrawer</Filter>
     </ClInclude>
@@ -581,9 +587,6 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\threads\sim_message_pump.h">
       <Filter>pr\threads</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\maths\spatial.h">
-      <Filter>pr\maths</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\storage\sqlite.h">
       <Filter>pr\storage</Filter>
@@ -896,6 +899,18 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\win32\windows_com.h">
       <Filter>pr\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\spatial.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\integrater\integrater.h">
+      <Filter>pr\physics\integrater</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\forward.h">
+      <Filter>pr\physics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\rigid_body\rigid_body.h">
+      <Filter>pr\physics\rigid_body</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

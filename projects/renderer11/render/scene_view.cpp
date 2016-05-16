@@ -54,7 +54,11 @@ namespace pr
 			,m_shadow_max_caster_dist(cam.FocusRelativeDistance(4.0f))
 			,m_orthographic(cam.m_orthographic)
 		{
-			PR_ASSERT(PR_DBG_RDR, pr::IsFinite(m_c2w) && pr::IsFinite(m_c2s) && pr::IsFinite(m_fovY) && pr::IsFinite(m_aspect) && pr::IsFinite(m_centre_dist), "invalid scene view parameters");
+			PR_ASSERT(PR_DBG_RDR, pr::IsFinite(m_c2w), "invalid scene view parameters");
+			PR_ASSERT(PR_DBG_RDR, pr::IsFinite(m_c2s), "invalid scene view parameters");
+			PR_ASSERT(PR_DBG_RDR, pr::IsFinite(m_fovY), "invalid scene view parameters");
+			PR_ASSERT(PR_DBG_RDR, pr::IsFinite(m_aspect), "invalid scene view parameters");
+			PR_ASSERT(PR_DBG_RDR, pr::IsFinite(m_centre_dist), "invalid scene view parameters");
 		}
 
 		// Set the camera to screen transform based on the other view properties

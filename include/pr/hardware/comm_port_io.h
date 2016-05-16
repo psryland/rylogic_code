@@ -79,6 +79,12 @@ namespace pr
 			Close();
 		}
 
+		// Return the handle associated with the comm port
+		HANDLE Handle() const
+		{
+			return m_handle;
+		}
+
 		// Return the last error received
 		DWORD LastError(std::string* error_desc = nullptr) const
 		{
@@ -402,7 +408,7 @@ namespace pr
 			return ComStat.cbInQue;
 		}
 
-		// Enumerate the comm port names on the current machine
+		// Enumerate the comm port names on the current machine. 'Func(char const* port_name)'
 		template <typename Func> static void EnumPortNames(Func func)
 		{
 			struct HKey

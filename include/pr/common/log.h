@@ -128,7 +128,7 @@ namespace pr
 		// Producer/Consumer queue for log events
 		typedef pr::threads::ConcurrentQueue<log::Event> LogQueue;
 
-		// Helper object for writing log output to a stdout
+		// Helper object for writing log output to a 'stdout'
 		struct ToStdout
 		{
 			void operator ()(Event const& ev)
@@ -147,9 +147,9 @@ namespace pr
 		// Helper object for writing log output to a file
 		struct ToFile
 		{
-			std::shared_ptr<std::ofstream> m_outf;
-			ToFile(string filepath, std::ios_base::openmode mode = std::ios_base::out)
-				:m_outf(std::make_shared<std::ofstream>(filepath, mode))
+			std::shared_ptr<std::wofstream> m_outf;
+			ToFile(std::wstring filepath, std::ios_base::openmode mode = std::ios_base::out)
+				:m_outf(std::make_shared<std::wofstream>(filepath, mode))
 			{}
 			void operator ()(Event const& ev)
 			{

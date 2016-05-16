@@ -102,7 +102,7 @@ namespace pr
 			MainGUI&        m_gui;         // The GUI that owns this app logic class
 			bool            m_rdr_pending; // Render call batching, true if render has been called at least once
 
-			// Construct using a template setup object.
+			// Construct using a template set up object.
 			template <typename Setup>
 			Main(Setup setup, MainGUI& gui)
 				:m_settings(setup.UserSettings())

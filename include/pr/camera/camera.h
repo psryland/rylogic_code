@@ -329,12 +329,34 @@ namespace pr
 			return m_focus_dist;
 		}
 
+		// Return the maximum allowed distance for 'FocusDist'
+		float FocusDistMax() const
+		{
+			// Clamp so that Near*Far is finite
+			// N*F == (m_near * dist) * (m_far * dist) < float_max
+			//     == m_near * m_far * dist^2 < float_max
+			// => dist < sqrt(float_max) / (m_near * m_far)
+			PR_ASSERT(PR_DBG, m_near * m_far > 0, "");
+			return Sqrt(maths::float_max) / (m_near * m_far);
+		}
+
+		// Return the minimum allowed value for 'FocusDist'
+		float FocusDistMin() const
+		{
+			// Clamp so that N - F is non-zero
+			// Abs(N - F) == Abs((m_near * dist) - (m_far * dist)) > float_min
+			//       == dist * Abs(m_near - m_far) > float_min
+			//       == dist > float_min / Abs(m_near - m_far);
+			PR_ASSERT(PR_DBG, m_near < m_far, "");
+			return maths::float_min / Min(Abs(m_near - m_far), 1.0f);
+		}
+
 		// Set the distance to the focus point
 		void FocusDist(float dist)
 		{
-			PR_ASSERT(PR_DBG, pr::IsFinite(dist), "");
+			PR_ASSERT(PR_DBG, pr::IsFinite(dist) && dist >= 0.0f, "'dist' should not be negative");
 			m_moved = dist != m_focus_dist;
-			m_base_focus_dist = m_focus_dist = dist;
+			m_base_focus_dist = m_focus_dist = Clamp(dist, FocusDistMin(), FocusDistMax());
 		}
 
 		// Modify the camera position based on mouse movement.
@@ -413,7 +435,7 @@ namespace pr
 			// Move in a fraction of the focus distance
 			dz = -m_base_focus_dist * dz * 0.1f;
 			if (!KeyDown(m_key[camera::ENavKey::TranslateZ]))
-				m_focus_dist = m_base_focus_dist + dz;
+				m_focus_dist = Clamp(m_base_focus_dist + dz, FocusDistMin(), FocusDistMax());
 
 			// Translate
 			auto pos = m_base_c2w.pos + m_base_c2w.rot * pr::v4(dx, dy, dz, 0.0f);
@@ -557,7 +579,7 @@ namespace pr
 		void LookAt(pr::v4 const& position, pr::v4 const& lookat, pr::v4 const& up, bool commit = true)
 		{
 			m_c2w = m4x4::LookAt(position, lookat, up);
-			m_focus_dist = Length3(lookat - position);
+			m_focus_dist = Clamp(Length3(lookat - position), FocusDistMin(), FocusDistMax());
 
 			// Set the base values
 			if (commit) Commit();

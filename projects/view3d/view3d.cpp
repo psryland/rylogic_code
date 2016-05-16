@@ -67,6 +67,32 @@ inline void ReportError(char const* func_name, View3DWindow wnd, std::exception 
 	error_cb(msg.c_str());
 }
 
+// Maths type traits
+namespace pr
+{
+	namespace maths
+	{
+		template <> struct is_vec<View3DV2> :std::true_type
+		{
+			using elem_type = float;
+			using cp_type = float;
+			static int const dim = 2;
+		};
+		template <> struct is_vec<View3DV4> :std::true_type
+		{
+			using elem_type = float;
+			using cp_type = float;
+			static int const dim = 4;
+		};
+		template <> struct is_vec<View3DM4x4> :std::true_type
+		{
+			using elem_type = View3DV4;
+			using cp_type = typename is_vec<View3DV4>::cp_type;
+			static int const dim = 4;
+		};
+	}
+}
+
 #define DllLockGuard LockGuard lock(Dll().m_mutex)
 #define CatchAndReport(func_name, wnd, ret)\
 	catch (std::exception const& ex) { ReportError(#func_name, View3DWindow(wnd), &ex); }\
@@ -340,10 +366,7 @@ VIEW3D_API void __stdcall View3D_RemoveObjectsById(View3DWindow window, GUID con
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		pr::ldr::LdrObject::MatchId in_this_context(context_id);
-		for (auto obj : window->m_objects)
-			if (obj->m_context_id == context_id)
-				window->m_objects.erase(obj);
+		pr::erase_if(window->m_objects, [&](View3DObject obj){ return obj->m_context_id == context_id; });
 	}
 	CatchAndReport(View3D_RemoveObjectsById, window,);
 }
@@ -639,7 +662,9 @@ VIEW3D_API void __stdcall View3D_ResetView(View3DWindow window, View3DV4 forward
 		auto bbox = pr::BBoxReset;
 		for (auto obj : window->m_objects)
 			pr::Encompass(bbox, obj->BBoxWS(true));
-		if (bbox == pr::BBoxReset) bbox = pr::BBoxUnit;
+		if (bbox == pr::BBoxReset)
+			bbox = pr::BBoxUnit;
+
 		window->m_camera.View(bbox, view3d::To<pr::v4>(forward), view3d::To<pr::v4>(up), true);
 	}
 	CatchAndReport(View3D_ResetView, window,);
@@ -1056,6 +1081,23 @@ VIEW3D_API void __stdcall View3D_ObjectEdit(View3DObject object, View3D_EditObje
 	CatchAndReport(View3D_ObjectEdit, ,);
 }
 
+// Delete all objects
+VIEW3D_API void __stdcall View3D_ObjectsDeleteAll()
+{
+	try
+	{
+		DllLockGuard;
+
+		// Remove the objects from any windows they're in
+		for (auto wnd : Dll().m_wnd_cont)
+			View3D_RemoveAllObjects(wnd);
+		
+		// Clear the object container. The unique pointers should delete the objects
+		Dll().m_obj_cont.clear();
+	}
+	CatchAndReport(View3D_ObjectDeleteAll, ,);
+}
+
 // Delete all objects matching a context id
 VIEW3D_API void __stdcall View3D_ObjectsDeleteById(GUID const& context_id)
 {
@@ -1121,7 +1163,7 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectGetChild(View3DObject object, cha
 // Get/Set the object to world transform for this object or the first child object that matches 'name'.
 // If 'name' is null, then the state of the root object is returned
 // If 'name' begins with '#' then the remainder of the name is treated as a regular expression
-/// Note, setting the o2w for a child object results in a transform that is relative to it's immediate parent
+// Note, setting the o2w for a child object results in a transform that is relative to it's immediate parent
 VIEW3D_API View3DM4x4 __stdcall View3D_ObjectGetO2W(View3DObject object, char const* name)
 {
 	try
@@ -2021,6 +2063,53 @@ VIEW3D_API BOOL __stdcall View3D_GizmoManipulating(View3DGizmo gizmo)
 
 // Miscellaneous **********************************************************************
 
+// Handle standard keyboard shortcuts
+VIEW3D_API BOOL __stdcall View3D_TranslateKey(View3DWindow window, int key_code)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		switch (key_code)
+		{
+		case VK_F7:
+			{
+				View3DV4 up;
+				View3D_CameraAlignAxis(window, up);
+				if (pr::Length3Sq(up) == 0)
+					up = {0.0f, 1.0f, 0.0f, 0.0f};
+
+				auto forward = up.z > up.y ? View3DV4{0.0f, 1.0f, 0.0f, 0.0f} : View3DV4{0.0f, 0.0f, 1.0f, 0.0f};
+
+				View3D_ResetView(window, forward, up);
+				View3D_Render(window);
+				return TRUE;
+			}
+		case VK_SPACE:
+			{
+				View3D_ShowObjectManager(window, true);
+				return TRUE;
+			}
+		case 'W':
+			{
+				if (pr::KeyDown(VK_CONTROL))
+				{
+					switch (View3D_FillMode(window)) {
+					case EView3DFillMode::Solid:     View3D_SetFillMode(window, EView3DFillMode::Wireframe); break;
+					case EView3DFillMode::Wireframe: View3D_SetFillMode(window, EView3DFillMode::SolidWire); break;
+					case EView3DFillMode::SolidWire: View3D_SetFillMode(window, EView3DFillMode::Solid); break;
+					}
+					View3D_Render(window);
+				}
+				return TRUE;
+			}
+		}
+		return FALSE;
+	}
+	CatchAndReport(View3D_TranslateKey, window, FALSE);
+}
+
 // Restore the main render target and depth buffer
 VIEW3D_API void __stdcall View3D_RestoreMainRT(View3DWindow window)
 {
@@ -2138,6 +2227,8 @@ VIEW3D_API void __stdcall View3D_SetOriginSize(View3DWindow window, float size)
 	CatchAndReport(View3D_SetOriginSize, window,);
 }
 
+pr::Guid const GuidDemoSceneObjects = { 0xFE51C164, 0x9E57, 0x456F, 0x9D, 0x8D, 0x39, 0xE3, 0xFA, 0xAF, 0xD3, 0xE7 };
+
 // Create a scene showing the capabilities of view3d (actually of ldr_object_manager)
 VIEW3D_API void __stdcall View3D_CreateDemoScene(View3DWindow window)
 {
@@ -2146,17 +2237,36 @@ VIEW3D_API void __stdcall View3D_CreateDemoScene(View3DWindow window)
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		
+
+		// Get the string of all LDR objects
 		auto scene = pr::ldr::CreateDemoScene();
 		pr::script::PtrW<> src(scene.c_str());
 		pr::script::Reader reader(src, false, nullptr, nullptr, &Dll().m_lua);
 
+		// Parse the string, and add all objects to the window
 		pr::ldr::ParseResult out;
-		pr::ldr::Parse(Dll().m_rdr, reader, out, true, pr::GuidZero);
+		pr::ldr::Parse(Dll().m_rdr, reader, out, true, GuidDemoSceneObjects);
 		for (auto& obj : out.m_objects)
+		{
+			Dll().m_obj_cont.push_back(obj);
 			View3D_AddObject(window, obj.m_ptr);
+		}
+
+		// Position the camera to look at the scene
+		View3D_ResetView(window, View3DV4{0.0f, 0.0f, -1.0f, 0.0f}, View3DV4{0.0f, 1.0f, 0.0f, 0.0f});
 	}
 	CatchAndReport(View3D_CreateDemoScene, window,);
+}
+
+// Delete all objects belonging to the demo scene
+VIEW3D_API void __stdcall View3D_DeleteDemoScene()
+{
+	try
+	{
+		DllLockGuard;
+		View3D_ObjectsDeleteById(GuidDemoSceneObjects);
+	}
+	CatchAndReport(View3D_DeleteDemoScene,,);
 }
 
 // Show a window containing the demo scene script

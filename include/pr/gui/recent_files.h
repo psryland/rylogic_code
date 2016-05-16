@@ -30,7 +30,7 @@ namespace pr
 			template <typename Char> void Add(Char const* file, bool update_menu)
 			{
 				auto fpath = pr::Widen(file);
-				fpath = pr::filesys::StandardiseC(fpath);
+				fpath = pr::filesys::CanonicaliseC(fpath);
 				MenuList::Add(fpath.c_str(), 0, false, update_menu);
 			}
 			template <typename Char> void Add(Char const* file)

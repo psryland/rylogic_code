@@ -386,16 +386,18 @@ namespace pr
 			}
 
 			// Handle a key press in either the list or tree view controls
-			bool OnKey(pr::gui::KeyEventArgs const& args) override
+			void OnKey(pr::gui::KeyEventArgs& args) override
 			{
-				if (Form::OnKey(args)) return true;
-				if (!args.m_down) return false;
+				Form::OnKey(args);
+				if (args.m_handled) return;
+				if (!args.m_down) return;
 				switch (tolower(args.m_vk_key))
 				{
 				case VK_ESCAPE:
 					{
 						Close();
-						return true;
+						args.m_handled = true;
+						return;
 					}
 				case 'a':
 					{
@@ -403,7 +405,8 @@ namespace pr
 						{
 							SelectNone();
 							InvSelection();
-							return true;
+							args.m_handled = true;
+							return;
 						}
 						//else OnBnClickedButtonToggleAlpha();
 						break;
@@ -411,12 +414,14 @@ namespace pr
 				case 'w':
 					{
 						SetWireframe(ETriState::Toggle, !pr::KeyDown(VK_SHIFT));
-						return true;
+						args.m_handled = true;
+						return;
 					}
 				case ' ':
 					{
 						SetVisibilty(ETriState::Toggle, !pr::KeyDown(VK_SHIFT));
-						return true;
+						args.m_handled = true;
+						return;
 					}
 				case VK_DELETE:
 					{
@@ -427,10 +432,11 @@ namespace pr
 					{
 						::SetFocus(m_tb_filter);
 						m_tb_filter.SelectAll();
-						return true;
+						args.m_handled = true;
+						return;
 					}
 				}
-				return false;
+				return;
 			}
 
 			// Add/Remove items from the list view based on the filter

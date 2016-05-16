@@ -32,8 +32,8 @@ namespace ldr
 	}
 
 	MainGUI::MainGUI(wchar_t const* cmdline, int showwnd)
-		:base(Params().name("ldr_main").title(AppTitleW()).xy(Centre|CentreOf,Centre|CentreOf).menu(IDR_MENU_MAIN).accel(IDR_ACCELERATOR).icon(IDI_ICON_MAIN).size_min(320,200))
-		,m_status(StatusBar::Params<>().name("status bar").id(IDC_STATUSBAR_MAIN).parent(this).text(L"Ready"))
+		:base(Params().name("ldr_main").title(AppTitleW()).start_pos(EStartPosition::CentreParent).menu(IDR_MENU_MAIN).accel(IDR_ACCELERATOR).icon(IDI_ICON_MAIN).size_min(320,200))
+		,m_status(StatusBar::Params<>().name("status bar").id(IDC_STATUSBAR_MAIN).parent(this).text(L"Ready").dock(EDock::Bottom))
 		,m_recent_files()
 		,m_saved_views()
 		,m_store_ui(*this)
@@ -45,8 +45,6 @@ namespace ldr
 		,m_suspend_render(false)
 		,m_status_pri()
 	{
-		CenterWindow();
-
 		// Parse the command line
 		pr::EnumCommandLine(cmdline, *this);
 
@@ -174,10 +172,10 @@ namespace ldr
 	}
 
 	// Paint the window
-	bool MainGUI::OnPaint(PaintEventArgs& args)
+	void MainGUI::OnPaint(PaintEventArgs& args)
 	{
-		if (m_suspend_render) return false;
-		return base::OnPaint(args);
+		args.m_handled = m_suspend_render;
+		base::OnPaint(args);
 	}
 
 	// Handle files dropped onto the main window
@@ -227,7 +225,7 @@ namespace ldr
 	}
 
 	// Handle key presses
-	bool MainGUI::OnKey(KeyEventArgs const& args)
+	void MainGUI::OnKey(KeyEventArgs& args)
 	{
 		switch (args.m_vk_key)
 		{
@@ -247,9 +245,9 @@ namespace ldr
 
 		// Forward key presses to the input handler
 		if (m_main->m_input->KeyInput(args.m_vk_key, args.m_down, args.m_flags, args.m_repeats))
-			return true;
+			args.m_handled = true;
 
-		return base::OnKey(args);
+		base::OnKey(args);
 	}
 
 	// Convert screen space to normalised screen space
@@ -260,7 +258,7 @@ namespace ldr
 	}
 
 	// Override mouse navigation
-	bool MainGUI::OnMouseButton(MouseEventArgs const& args)
+	void MainGUI::OnMouseButton(MouseEventArgs& args)
 	{
 		if (args.m_down)
 			::SetCapture(*this);
@@ -272,43 +270,51 @@ namespace ldr
 
 		// Forward to the input handler
 		if (m_main->m_input->MouseInput(ToNormSS(mouse_loc), args.m_down ? btn : 0, true))
+		{
 			pr::events::Send(Event_Refresh());
+			args.m_handled = true;
+		}
 
 		MouseStatusUpdate(mouse_loc);
-		return false;
 	}
-	bool MainGUI::OnMouseMove(MouseEventArgs const& args)
+	void MainGUI::OnMouseMove(MouseEventArgs& args)
 	{
 		auto btn = static_cast<pr::camera::ENavBtn::Enum_>(args.m_button);
 		auto mouse_loc = pr::To<pr::v2>(args.m_point);
 
 		if (m_main->m_input->MouseInput(ToNormSS(mouse_loc), btn, false))
+		{
 			pr::events::Send(Event_Refresh());
+			args.m_handled = true;
+		}
 
 		MouseStatusUpdate(mouse_loc);
-		return false;
 	}
-	bool MainGUI::OnMouseClick(MouseEventArgs const& args)
+	void MainGUI::OnMouseClick(MouseEventArgs& args)
 	{
 		auto btn = static_cast<pr::camera::ENavBtn::Enum_>(args.m_button);
 		auto mouse_loc = pr::To<pr::v2>(args.m_point);
 		
 		if (m_main->m_input->MouseClick(ToNormSS(mouse_loc), btn))
+		{
 			pr::events::Send(Event_Refresh());
+			args.m_handled = true;
+		}
 
 		MouseStatusUpdate(mouse_loc);
-		return false;
 	}
-	bool MainGUI::OnMouseWheel(MouseWheelArgs const& args)
+	void MainGUI::OnMouseWheel(MouseWheelArgs& args)
 	{
 		pr::v2 mouse_loc = pr::To<pr::v2>(args.m_point);
 
 		// delta is '1.0f' for a single wheel click
 		if (m_main->m_input->MouseWheel(ToNormSS(mouse_loc), args.m_delta/120.0f))
+		{
 			pr::events::Send(Event_Refresh());
+			args.m_handled = true;
+		}
 
 		MouseStatusUpdate(mouse_loc);
-		return false;
 	}
 
 	// Handle the main menu

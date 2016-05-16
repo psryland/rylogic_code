@@ -911,29 +911,8 @@ namespace pr.gfx
 			/// <summary>Standard keyboard shortcuts</summary>
 			public void TranslateKey(object sender, KeyEventArgs e)
 			{
-				switch (e.KeyCode)
-				{
-				case Keys.F7:
-					{
-						Camera.ResetView();
-						Render();
-						break;
-					}
-				case Keys.Space:
-					{
-						ShowObjectManager(true);
-						break;
-					}
-				case Keys.W:
-					{
-						if ((e.Modifiers & Keys.Control) != 0)
-						{
-							FillMode = Enum<EFillMode>.Cycle(FillMode);
-							Render();
-						}
-						break;
-					}
-				}
+				if (View3D_TranslateKey(Handle, (int)e.KeyCode))
+					e.Handled = true;
 			}
 
 			/// <summary>Example for creating objects</summary>
@@ -1936,6 +1915,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreate             (string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, IntPtr ctx, ref Guid context_id);
 		[DllImport(Dll)] private static extern void              View3D_ObjectUpdate             (HObject obj, string ldr_script, EUpdateObject flags);
 		[DllImport(Dll)] private static extern void              View3D_ObjectEdit               (HObject obj, EditObjectCB edit_cb, IntPtr ctx);
+		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteAll         ();
 		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteById        (ref Guid context_id);
 		[DllImport(Dll)] private static extern void              View3D_ObjectDelete             (HObject obj);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectGetParent          (HObject obj);
@@ -2005,6 +1985,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern bool              View3D_GizmoManipulating        (HGizmo gizmo);
 
 		// Miscellaneous
+		[DllImport(Dll)] private static extern bool              View3D_TranslateKey             (HWindow window, int key_code);
 		[DllImport(Dll)] private static extern void              View3D_RestoreMainRT            (HWindow window);
 		[DllImport(Dll)] private static extern bool              View3D_DepthBufferEnabled       (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_SetDepthBufferEnabled    (HWindow window, bool enabled);
@@ -2015,6 +1996,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_ShowOrigin               (HWindow window, bool show);
 		[DllImport(Dll)] private static extern void              View3D_SetOriginSize            (HWindow window, float size);
 		[DllImport(Dll)] private static extern void              View3D_CreateDemoScene          (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_DeleteDemoScene          ();
 		[DllImport(Dll)] private static extern void              View3D_ShowDemoScript           (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_ShowObjectManager        (HWindow window, bool show);
 		[DllImport(Dll)] private static extern m4x4              View3D_ParseLdrTransform        (string ldr_script);

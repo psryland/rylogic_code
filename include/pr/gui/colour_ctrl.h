@@ -55,16 +55,17 @@ namespace pr
 			}
 
 			// Handlers
-			bool OnPaint(PaintEventArgs& args) override
+			void OnPaint(PaintEventArgs& args) override
 			{
-				if (Control::OnPaint(args))
-					return true;
+				Control::OnPaint(args);
+				if (args.m_handled)
+					return;
 
 				// All painting handled
 				PaintStruct ps(m_hwnd);
 				args.PaintBackground();
 				DoPaint(args.m_dc, ClientRect());
-				return true;
+				args.m_handled = true;
 			}
 		};
 

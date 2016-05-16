@@ -52,6 +52,9 @@
     <ClInclude Include="..\include\pr\gui\context_menu.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\gui\view3d_panel.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\projects\gui\res\resource.rc">

@@ -92,8 +92,19 @@ namespace pr
 		// with flags and the control id.
 		static int const ID_UNUSED = 0x0000FFFF;
 
-		// A user windows message the returns the Control* associated with a given hwnd
-		static int const WM_GETCTRLPTR = WM_USER + 0x6569;
+		// Addition message ids
+		enum
+		{
+			// A user windows message that returns the Control* associated with a given hwnd
+			WM_GETCTRLPTR = WM_USER,
+
+			// Posted to the message queue during handling of WM_CREATE.
+			// Used so that derived types get notification of when the HWND is created
+			WM_CREATED,
+
+			// The first windows message not reserved by pr::gui
+			WM_USER_BASE,
+		};
 		#pragma endregion
 
 		#pragma region Enumerations
@@ -258,6 +269,9 @@ namespace pr
 			Toggle,
 		};
 
+		enum :DWORD { DefaultControlStyle = WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS };
+		enum :DWORD { DefaultControlStyleEx = 0 };
+
 		// Don't add WS_VISIBLE to the default style. Derived forms should choose when to be visible at the end of their constructors
 		// WS_OVERLAPPEDWINDOW = (WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_THICKFRAME|WS_MINIMIZEBOX|WS_MAXIMIZEBOX)
 		// WS_POPUPWINDOW = (WS_POPUP|WS_BORDER|WS_SYSMENU)
@@ -268,22 +282,12 @@ namespace pr
 		enum :DWORD { DefaultDialogStyle = (DefaultFormStyle & ~WS_OVERLAPPED) | DS_MODALFRAME | WS_POPUPWINDOW };
 		enum :DWORD { DefaultDialogStyleEx = (DefaultFormStyleEx & ~WS_EX_APPWINDOW) };
 
-		enum :DWORD { DefaultControlStyle = WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS };
-		enum :DWORD { DefaultControlStyleEx = 0 };
-
 		// Construction window creation flag
 		enum class ECreate
 		{
 			Create, // Create the hwnd during construction
 			Defer,  // Don't create the hwnd
 			Auto
-		};
-
-		// Flags for Control Rect methods
-		enum class ERectFlags
-		{
-			ExcludeDockedChildren = 1 << 0,
-			_bitops_allowed,
 		};
 		#pragma endregion
 
@@ -627,6 +631,12 @@ namespace pr
 				::OffsetRect(&r, dx, dy);
 				return r;
 			}
+			Rect Shifted(Size const& dxy) const
+			{
+				auto r = *this;
+				::OffsetRect(&r, dxy.cx, dxy.cy);
+				return r;
+			}
 			Rect Inflate(int dx, int dy) const
 			{
 				auto r = *this;
@@ -666,9 +676,46 @@ namespace pr
 			}
 			Rect Subtract(Rect const& rhs) const
 			{
-				auto r = *this;
-				::SubtractRect(&r, this, &rhs);
-				return r;
+				// Reduces the size of this rectangle by excluding the area 'rhs'.
+				// The result must be a rectangle or an exception is thrown.
+				// Note: "::SubtractRect" doesn't work how I'd expect
+				auto lhs = *this;
+
+				// If 'x' has no area, then subtraction is identity
+				if (rhs.empty())
+					return lhs;
+
+				// If the rectangles do not overlap. Right/Bottom is not considered 'in' the rectangle
+				if (lhs.left >= rhs.right || lhs.right <= rhs.left || lhs.top >= rhs.bottom || lhs.bottom <= rhs.top)
+					return lhs;
+
+				// If 'x' completely covers 'r' then the result is empty
+				if (rhs.left <= lhs.left && rhs.right >= lhs.right && rhs.top <= lhs.top && rhs.bottom >= lhs.bottom)
+				{
+					lhs.right = lhs.left;
+					lhs.bottom = lhs.top;
+					return lhs;
+				}
+
+				// If 'x' spans 'r' horizontally
+				if (rhs.left <= lhs.left && rhs.right >= lhs.right)
+				{
+					// If the top edge of 'lhs' is aligned with the top edge of 'rhs', or within 'rhs'
+					// then the top edge of the resulting rectangle is 'rhs.bottom'.
+					if (rhs.top    <= lhs.top)    return Rect(lhs.left, rhs.bottom, lhs.right, lhs.bottom);
+					if (rhs.bottom >= lhs.bottom) return Rect(lhs.left, lhs.top, lhs.right, rhs.top);
+					throw std::exception("The result of subtracting rectangle 'rhs' does not result in a rectangle");
+				}
+
+				// If 'rhs' spans 'lhs' vertically
+				if (rhs.top <= lhs.top && rhs.bottom >= lhs.bottom)
+				{
+					if (rhs.left  <= lhs.left)  return Rect(rhs.right, lhs.top, lhs.right, lhs.bottom);
+					if (rhs.right >= lhs.right) return Rect(lhs.left, lhs.top, rhs.left, lhs.bottom);
+					throw std::exception("The result of subtracting rectangle 'rhs' does not result in a rectangle");
+				}
+
+				throw std::exception("The result of subtracting rectangle 'rhs' does not result in a rectangle");
 			}
 			Rect NormalizeRect() const
 			{
@@ -1567,6 +1614,18 @@ namespace pr
 			{}
 		};
 
+		// Event args used when an index has changed
+		struct SelectedIndexEventArgs :EmptyArgs
+		{
+			int m_index;
+			int m_prev_index;
+
+			SelectedIndexEventArgs(int index, int prev_index)
+				:m_index(index)
+				,m_prev_index(prev_index)
+			{}
+		};
+
 		// Event args for paint events
 		struct PaintEventArgs :EmptyArgs
 		{
@@ -1578,16 +1637,18 @@ namespace pr
 				_bitops_allowed,
 			};
 
-			EParts m_parts; // The parts to be painted
-			HWND   m_hwnd;  // The window being painted. Null if 'm_dc' is not the ClientDC for the control
-			DC     m_dc;    // The device context to draw on
-			Brush  m_bsh_back;
+			EParts m_parts;    // The parts to be painted
+			HWND   m_hwnd;     // The window being painted. Null if 'm_dc' is not the ClientDC for the control
+			DC     m_dc;       // The device context to draw on
+			Brush  m_bsh_back; // The back colour brush
+			bool   m_handled;  // True to prevent any further painting
 
 			PaintEventArgs(HWND hwnd, HDC alternate_hdc, Brush const& bsh_back)
 				:m_parts(EParts::All)
 				,m_hwnd(!alternate_hdc ? hwnd : nullptr)
 				,m_dc(!alternate_hdc ? ::GetDC(hwnd) : alternate_hdc)
 				,m_bsh_back(bsh_back)
+				,m_handled(false)
 			{}
 			~PaintEventArgs()
 			{
@@ -1697,15 +1758,20 @@ namespace pr
 		// Event args for keyboard key events
 		struct KeyEventArgs :EmptyArgs
 		{
-			UINT m_vk_key;
-			bool m_down; // True if this is a key down event, false if key up
-			UINT m_repeats;
-			UINT m_flags;
-			KeyEventArgs(UINT vk_key, bool down, UINT repeats, UINT flags)
+			UINT m_vk_key;  // The VK_ key that was pressed
+			UINT m_repeats; // Repeat count
+			UINT m_flags;   //
+			HWND m_hwnd;    // The handle of the window that the key event is for
+			bool m_down;    // True if this is a key down event, false if key up
+			bool m_handled; // Set to true to prevent further handling of this key event
+
+			KeyEventArgs(UINT vk_key, bool down, HWND hwnd, UINT repeats, UINT flags)
 				:m_vk_key(vk_key)
-				,m_down(down)
 				,m_repeats(repeats)
 				,m_flags(flags)
+				,m_hwnd(hwnd)
+				,m_down(down)
+				,m_handled(false)
 			{}
 		};
 
@@ -1716,24 +1782,30 @@ namespace pr
 			EMouseKey m_button;   // The button that triggered the event
 			EMouseKey m_keystate; // The state of all mouse buttons and control keys
 			bool      m_down;     // True if the button was a down event, false if an up event
+			bool      m_handled;  // Set to true to prevent further handling of this key event
+
 			MouseEventArgs(EMouseKey btn, bool down, Point point, EMouseKey keystate)
 				:m_point(point)
 				,m_button(btn)
 				,m_keystate(keystate)
 				,m_down(down)
+				,m_handled(false)
 			{}
 		};
 
 		// Event args for mouse wheel events
 		struct MouseWheelArgs :EmptyArgs
 		{
-			short     m_delta;  // The amount the mouse wheel has turned
-			Point     m_point;  // The screen location of the mouse at the time of the event
-			EMouseKey m_button; // The state of all mouse buttons and control keys
+			short     m_delta;   // The amount the mouse wheel has turned
+			Point     m_point;   // The screen location of the mouse at the time of the event
+			EMouseKey m_button;  // The state of all mouse buttons and control keys
+			bool      m_handled; // Set to true to prevent further handling of this key event
+
 			MouseWheelArgs(short delta, Point point, EMouseKey button)
 				:m_delta(delta)
 				,m_point(point)
 				,m_button(button)
+				,m_handled(false)
 			{}
 		};
 
@@ -2054,7 +2126,7 @@ namespace pr
 					}
 					if (X & AutoPosMask)
 					{
-						// Get the ref point on the parent. Note, order is important here
+						// Get the ref point on the parent. Note, order is important here because Centre = Left|Right
 						// If the top 4 bits are not '0b1000' then 'X' is just a negative number.
 						// Otherwise, the top 8 bits are the auto position bits and the lower 24
 						// are the id of the control to position relative to.
@@ -2065,19 +2137,19 @@ namespace pr
 							auto b = relto(0);
 							ref = b.bottomright()[i];
 						}
-						else if ((X & CentreOf) == CentreOf)
+						else if (AllSet(X, CentreOf))
 						{
 							// Position relative to the centre of 'b' (including margin)
 							auto b = relto(X & IdMask);
 							ref = b.centre()[i];
 						}
-						else if ((X & LeftOf) == LeftOf)
+						else if (AllSet(X, LeftOf))
 						{
 							// Position relative to the left edge of 'b' (including margin)
 							auto b = relto(X & IdMask);
 							ref = b.topleft()[i];
 						}
-						else if ((X & RightOf) == RightOf)
+						else if (AllSet(X, RightOf))
 						{
 							// Position relative to the right edge of 'b' (including margin)
 							auto b = relto(X & IdMask);
@@ -2090,19 +2162,19 @@ namespace pr
 							// Position relative to the BR (X is negative)
 							X = ref - (W+L+R) + (X+1) + L;
 						}
-						else if ((X & Left) == Left)
-						{
-							// If 'fill', fill from X to the right edge
-							X = ref + L;
-							if (fill) W -= ref;
-						}
-						else if ((X & Centre) == Centre)
+						else if (AllSet(X, Centre))
 						{
 							// If 'fill', fill to left/right edges (ignore X)
 							if (fill) X = L;
 							else X = ref - (W+L+R)/2 + L;
 						}
-						else if ((X & Right ) == Right)
+						else if (AllSet(X, Left))
+						{
+							// If 'fill', fill from X to the right edge
+							X = ref + L;
+							if (fill) W -= ref;
+						}
+						else if (AllSet(X, Right))
 						{
 							// If 'fill', fill to the left edge
 							if (fill) { X = L; W = ref - (L+R); }
@@ -2395,10 +2467,12 @@ namespace pr
 		// Notes:
 		//  All controls should be designed for 96x96 DPI, controls auto scale to the system DPI (no per-monitor support yet)
 		//  All controls use the DEFAULT_GUI_FONT, this ensures auto scaling works properly.
-
-		// Select 'Lhs' if not void, otherwise 'Rhs'
-		template <typename Lhs, typename Rhs> using choose_non_void
-			= typename std::conditional<!std::is_same<Lhs,void>::value, Lhs, Rhs>::type;
+		//
+		// 'ThisParams' types should use simple class inheritance of 'BaseParams'
+		// 'MakeThisParams' types should inherit the associated base 'MakeBaseParams'
+		// 'TParams' is the 'ThisParams' type
+		// 'Derived' should be left as void
+		// The inherited base class should be: MakeBaseParams<TParams, choose_non_void<Derived, MakeThisParams<>>>
 
 		// Control parameters
 		struct CtrlParams
@@ -2423,6 +2497,7 @@ namespace pr
 			COLORREF          m_colour_fore;    // The foreground colour of the control
 			COLORREF          m_colour_back;    // The background colour of the control
 			bool              m_client_wh;      // True if width and height parameters are desired client width/height, rather than screen bounds
+			bool              m_selectable;     // True if the control gains keyboard input focus when selected
 			bool              m_top_level;      // True for forms, false for WS_CHILD controls
 			void*             m_init_param;     // The initialisation data to pass through to WM_CREATE
 			gdi::PointF       m_dpi;            // The design-time DPI of the control's size and position.
@@ -2453,6 +2528,7 @@ namespace pr
 				,m_colour_fore(CLR_INVALID)
 				,m_colour_back(CLR_INVALID)
 				,m_client_wh(false)
+				,m_selectable(false)
 				,m_top_level(false)
 				,m_init_param()
 				,m_dpi(96,96)
@@ -2509,7 +2585,20 @@ namespace pr
 				,m_dlg_behaviour(false)
 				,m_hide_on_close(false)
 				,m_pin_window   (false)
-			{}
+			{
+				m_style = DefaultFormStyle;
+				m_style_ex = DefaultFormStyleEx;
+
+				// Default start position and size
+				m_x = CW_USEDEFAULT;
+				m_y = CW_USEDEFAULT;
+				m_w = CW_USEDEFAULT;
+				m_h = CW_USEDEFAULT;
+
+				m_text = L"Form";
+				m_main_wnd = true;
+				m_padding = Rect(8,8,-8,-8);
+			}
 
 			// Allocate a new copy of these parameters
 			FormParams* clone() const override
@@ -2517,6 +2606,9 @@ namespace pr
 				return new FormParams(*this);
 			}
 		};
+
+		// Select 'Lhs' if not void, otherwise 'Rhs'
+		template <typename Lhs, typename Rhs> using choose_non_void = typename std::conditional<!std::is_same<Lhs,void>::value, Lhs, Rhs>::type;
 
 		// Helper wrapper for creating CtrlParams
 		template <typename TParams = CtrlParams, typename Derived = void> struct MakeCtrlParams
@@ -2668,6 +2760,11 @@ namespace pr
 				params.m_colour_back = c;
 				return me();
 			}
+			This& selectable(bool on = true)
+			{
+				params.m_selectable = on;
+				return me();
+			}
 			This& border(bool on = true)
 			{
 				return style(on?'+':'-', WS_BORDER);
@@ -2733,8 +2830,13 @@ namespace pr
 		{
 			using base = MakeCtrlParams<TParams, choose_non_void<Derived, MakeFormParams<>>>;
 
-			MakeFormParams() { create(ECreate::Create).wh(800, 600).style('=',DefaultFormStyle).style_ex('=',DefaultFormStyleEx).top_level(); }
-			MakeFormParams(TParams const& p) :base(p) {}
+			MakeFormParams()
+			{
+				create(ECreate::Create).wh(800, 600).style('=',DefaultFormStyle).style_ex('=',DefaultFormStyleEx).top_level();
+			}
+			MakeFormParams(TParams const& p)
+				:base(p)
+			{}
 			operator FormParams const&() const
 			{
 				return params;
@@ -2802,8 +2904,13 @@ namespace pr
 		template <typename TParams = FormParams, typename Derived = void> struct MakeDlgParams :MakeFormParams<TParams, choose_non_void<Derived, MakeDlgParams<>>>
 		{
 			using base = MakeFormParams<TParams, choose_non_void<Derived, MakeDlgParams<>>>;
-			MakeDlgParams() { create(ECreate::Defer).wh(640, 480).style('=',DefaultDialogStyle).style_ex('=',DefaultDialogStyleEx).dlg_behaviour(); }
-			MakeDlgParams(TParams const& p) :base(p) {}
+			MakeDlgParams()
+			{
+				create(ECreate::Defer).wh(640, 480).style('=',DefaultDialogStyle).style_ex('=',DefaultDialogStyleEx).dlg_behaviour().main_wnd(false);
+			}
+			MakeDlgParams(TParams const& p)
+				:base(p)
+			{}
 		};
 
 		#pragma endregion
@@ -2817,11 +2924,10 @@ namespace pr
 			using EDock          = pr::gui::EDock;
 			using EDialogResult  = pr::gui::EDialogResult;
 			using EStartPosition = pr::gui::EStartPosition;
-			using ERectFlags     = pr::gui::ERectFlags;
 			using Controls       = std::vector<Control*>;
 			using WndRef         = pr::gui::WndRef;
 			using CtrlParams     = pr::gui::CtrlParams;
-			using FormParams     = pr::gui::FormParams;
+			using Params         = pr::gui::MakeCtrlParams<>;
 
 			template <typename P = CtrlParams, typename D = void> using MakeCtrlParams = pr::gui::MakeCtrlParams<P, D>;
 			template <typename P = FormParams, typename D = void> using MakeFormParams = pr::gui::MakeFormParams<P, D>;
@@ -3067,7 +3173,7 @@ namespace pr
 				if (m_hwnd == nullptr)
 				{
 					Attach(hwnd);
-					OnCreate();
+					PostMessageW(m_hwnd, WM_CREATED, 0, 0);
 				}
 
 				// Set the parent control or owning window. Note: the HWND parent is already set by
@@ -3171,9 +3277,7 @@ namespace pr
 					{
 						// If this is a WS_CHILD control, add it to 'm_parent'
 						if (!cp().m_top_level)
-						{
 							m_parent->m_child.push_back(this);
-						}
 					}
 				}
 
@@ -3215,6 +3319,21 @@ namespace pr
 			WndRef Child(int i) const
 			{
 				return m_child[i];
+			}
+
+			// Get/Set the index of this control within it's parent
+			int Index() const
+			{
+				assert("Control is not parented" && m_parent != nullptr);
+				assert("Control's parent does not contain a reference to this control" && std::find(std::begin(m_parent->m_child), std::end(m_parent->m_child), this) != std::end(m_parent->m_child));
+				return cast<int>(std::find(std::begin(m_parent->m_child), std::end(m_parent->m_child), this) - std::begin(m_parent->m_child));
+			}
+			void Index(int idx)
+			{
+				assert("Control is not parented" && m_parent != nullptr);
+				assert("Control's parent does not contain a reference to this control" && std::find(std::begin(m_parent->m_child), std::end(m_parent->m_child), this) != std::end(m_parent->m_child));
+				m_parent->m_child.erase(std::find(std::begin(m_parent->m_child), std::end(m_parent->m_child), this));
+				m_parent->m_child.insert(std::begin(m_parent->m_child) + idx, this);
 			}
 
 			// Get the collection of child controls
@@ -3284,7 +3403,22 @@ namespace pr
 				if (!s.empty()) s.resize(::GetWindowTextW(m_hwnd, &s[0], int(s.size())));
 				return s;
 			}
-			void Text(string const& text)
+			void Text(wchar_t const* text)
+			{
+				CreateHandle();//assert(::IsWindow(m_hwnd));
+				::SetWindowTextW(m_hwnd, text);
+			}
+			void Text(char const* text)
+			{
+				CreateHandle();//assert(::IsWindow(m_hwnd));
+				::SetWindowTextA(m_hwnd, text);
+			}
+			void Text(std::string const& text)
+			{
+				CreateHandle();//assert(::IsWindow(m_hwnd));
+				::SetWindowTextA(m_hwnd, text.c_str());
+			}
+			void Text(std::wstring const& text)
 			{
 				CreateHandle();//assert(::IsWindow(m_hwnd));
 				::SetWindowTextW(m_hwnd, text.c_str());
@@ -3476,18 +3610,51 @@ namespace pr
 				return ParentRect().height();
 			}
 
-			// Returns a copy of 'rect' increased by the non-client areas of the window
+			// If 'grow' is true, returns 'rect' increased by the non-client areas of the window.
+			// If false, then a rect reduced by the non-client areas is returned.
 			// Remember, ClientRect is [inclusive,inclusive] (if 'rect' is the client rect)
-			Rect AdjRect(Rect const& rect = Rect()) const
+			Rect AdjRect(Rect const& rect = Rect(), bool grow = true) const
 			{
-				auto r = rect;
-				Throw(::AdjustWindowRectEx(&r, DWORD(Style()), BOOL(::GetMenu(m_hwnd) != nullptr), DWORD(StyleEx())), "AdjustWindowRectEx failed.");
+				Rect r;
+				if (grow)
+				{
+					r = rect;
+					Throw(::AdjustWindowRectEx(&r, DWORD(Style()), BOOL(::GetMenu(m_hwnd) != nullptr), DWORD(StyleEx())), "AdjustWindowRectEx failed.");
+				}
+				else
+				{
+					r = Rect();
+					Throw(::AdjustWindowRectEx(&r, DWORD(Style()), BOOL(::GetMenu(m_hwnd) != nullptr), DWORD(StyleEx())), "AdjustWindowRectEx failed.");
+					r = rect.Adjust(-r.left, -r.top, -r.right, -r.bottom);
+				}
 				return r;
 			}
 
+			// Return 'rect' with areas removed that correspond to docked child controls (up to but excluding 'end_child')
+			Rect ExcludeDockedChildren(Rect rect, int end_child = -1) const
+			{
+				int idx = -1;
+				for (auto& child : m_child)
+				{
+					if (++idx == end_child) break;
+					if (!child->Visible()) continue;
+					if (child->cp().m_dock == EDock::None) continue;
+					auto child_rect = child->ParentRect().Adjust(child->cp().m_margin);
+					switch (child->cp().m_dock)
+					{
+					default: throw std::exception("Unknown dock style");
+					case EDock::Fill:   return Rect();
+					case EDock::Left:   rect.left   += child_rect.width(); break;
+					case EDock::Right:  rect.right  -= child_rect.width(); break;
+					case EDock::Top:    rect.top    += child_rect.height(); break;
+					case EDock::Bottom: rect.bottom -= child_rect.height(); break;
+					}
+				}
+				return rect;
+			}
+
 			// Get the client rect [TL,BR) for the window in this controls client space.
-			// Note: Menus are part of the non-client area, you don't need to offset
-			// the client rect for the menu.
+			// Note: Menus are part of the non-client area, you don't need to offset the client rect for the menu.
 			virtual Rect ClientRect() const
 			{
 				assert(::IsWindow(m_hwnd));
@@ -3495,20 +3662,6 @@ namespace pr
 				Throw(::GetClientRect(m_hwnd, &rect), "GetClientRect failed.");
 				rect = rect.Adjust(cp().m_padding);
 				return rect;
-			}
-			Rect ClientRect(ERectFlags flags) const
-			{
-				auto r = ClientRect();
-				if ((flags & ERectFlags::ExcludeDockedChildren) != 0)
-				{
-					for (auto& child : m_child)
-					{
-						if (child->cp().m_dock == EDock::None) continue;
-						if (!child->Visible()) continue;
-						r = r.Subtract(child->ParentRect());
-					}
-				}
-				return r;
 			}
 
 			// Get/Set the control bounds [TL,BR) in screen space
@@ -3746,19 +3899,20 @@ namespace pr
 			EventHandler<Control&, VisibleEventArgs const&> VisibilityChanged;
 
 			// Key down/up
-			EventHandler<Control&, KeyEventArgs const&> Key;
+			EventHandler<Control&, KeyEventArgs&> KeyPreview;
+			EventHandler<Control&, KeyEventArgs&> Key;
 
 			// Mouse button down/up
-			EventHandler<Control&, MouseEventArgs const&> MouseButton;
+			EventHandler<Control&, MouseEventArgs&> MouseButton;
 
 			// Mouse button single click
-			EventHandler<Control&, MouseEventArgs const&> MouseClick;
+			EventHandler<Control&, MouseEventArgs&> MouseClick;
 
 			// Mouse move
-			EventHandler<Control&, MouseEventArgs const&> MouseMove;
+			EventHandler<Control&, MouseEventArgs&> MouseMove;
 
 			// Mouse wheel events
-			EventHandler<Control&, MouseWheelArgs const&> MouseWheel;
+			EventHandler<Control&, MouseWheelArgs&> MouseWheel;
 
 			// Timer events
 			EventHandler<Control&, TimerEventArgs const&> Timer;
@@ -3770,7 +3924,9 @@ namespace pr
 
 			#pragma region Handlers
 
-			// Called when this control is created
+			// Called after the window handle is created. Note: this is *not* called during
+			// WM_CREATE because controls are often created during construction which means
+			// overrides of OnCreate() in derived types would never called.
 			virtual void OnCreate()
 			{}
 
@@ -3791,47 +3947,51 @@ namespace pr
 			}
 
 			// Handle the Paint event. Return true, to prevent anything else handling the event
-			virtual bool OnPaint(PaintEventArgs& args)
+			virtual void OnPaint(PaintEventArgs& args)
 			{
 				Paint(*this, args);
-				return false;
 			}
 
-			// Handle keyboard key down/up events. Return true, to prevent anything else handling the event
-			virtual bool OnKey(KeyEventArgs const& args)
+			// Called on parent controls (from root down) when a key down/up event is received
+			virtual void OnKeyPreview(KeyEventArgs& args)
+			{
+				if (m_parent != nullptr)
+				{
+					m_parent->OnKeyPreview(args);
+					if (args.m_handled) return;
+				}
+				KeyPreview(*this, args);
+			}
+
+			// Handle keyboard key down/up events.
+			virtual void OnKey(KeyEventArgs& args)
 			{
 				Key(*this, args);
-				return false;
 			}
 
-			// Handle mouse button down/up events. Return true, to prevent anything else handling the event
-			virtual bool OnMouseButton(MouseEventArgs const& args)
+			// Handle mouse button down/up events.
+			virtual void OnMouseButton(MouseEventArgs& args)
 			{
 				MouseButton(*this, args);
-				return false;
 			}
 
 			// Handle mouse button single click events
 			// Single clicks occur between down and up events
-			// Return true, to prevent anything else handling the event
-			virtual bool OnMouseClick(MouseEventArgs const& args)
+			virtual void OnMouseClick(MouseEventArgs& args)
 			{
 				MouseClick(*this, args);
-				return false;
 			}
 
 			// Handle mouse move events
-			virtual bool OnMouseMove(MouseEventArgs const& args)
+			virtual void OnMouseMove(MouseEventArgs& args)
 			{
 				MouseMove(*this, args);
-				return false;
 			}
 
-			// Handle mouse wheel events. Return true, to prevent anything else handling the event
-			virtual bool OnMouseWheel(MouseWheelArgs const& args)
+			// Handle mouse wheel events
+			virtual void OnMouseWheel(MouseWheelArgs& args)
 			{
 				MouseWheel(*this, args);
-				return false;
 			}
 
 			// Handle timer events
@@ -3864,6 +4024,13 @@ namespace pr
 						return LRESULT(this);
 					}
 					#pragma endregion
+				case WM_CREATED:
+					#pragma region
+					{
+						OnCreate();
+						return S_OK;
+					}
+					#pragma endregion
 				case WM_CREATE:
 					#pragma region
 					{
@@ -3879,7 +4046,11 @@ namespace pr
 							else
 								c->Parent(this);
 						}
-						OnCreate();
+
+						// Do not call OnCreate() directly here because 'WM_CREATE' is sent during construction
+						// of the Control base class. Derived overrides of OnCreate would not be called.
+						// Post a message that will be handled after construction is complete.
+						PostMessageW(m_hwnd, WM_CREATED, 0, 0);
 						break;
 					}
 					#pragma endregion
@@ -3936,7 +4107,8 @@ namespace pr
 							args.m_hwnd = nullptr;
 
 							// Allow sub-classes to handle painting
-							if (OnPaint(args))
+							OnPaint(args);
+							if (args.m_handled)
 								return S_OK;
 
 							// If the sub-class hasn't totally handled the paint, paint the remaining parts.
@@ -3961,7 +4133,8 @@ namespace pr
 						else
 						{
 							// Allow sub-classes to handle painting
-							if (OnPaint(args))
+							OnPaint(args);
+							if (args.m_handled)
 								return S_OK;
 
 							// If the sub-class hasn't totally handled the paint, paint the remaining parts.
@@ -3976,8 +4149,10 @@ namespace pr
 				case WM_WINDOWPOSCHANGED:
 					#pragma region
 					{
-						// WM_WINDOWPOSCHANGED supersedes WM_SHOWWINDOW, WM_SIZE, WM_MOVE. These older messages
-						// are only sent if WM_WINDOWPOSCHANGED is handled by DefWndProc.
+						// -WM_WINDOWPOSCHANGED supersedes WM_SHOWWINDOW, WM_SIZE, WM_MOVE. These older messages
+						//  are only sent if WM_WINDOWPOSCHANGED is handled by DefWndProc.
+						// -Don't resize child controls during 'WM_WINDOWPOSCHANGING' because the 'm_pos_offset'
+						//  gets recorded relative to the old client area.
 						auto& wp = *reinterpret_cast<WindowPos*>(lparam);
 						auto before = message == WM_WINDOWPOSCHANGING;
 						if (!before)
@@ -4003,7 +4178,9 @@ namespace pr
 							if ((wp.flags & SWP_HIDEWINDOW) != 0)
 								OnVisibilityChanged(VisibleEventArgs(false));
 						}
-						break;
+
+						// It's more efficient to suppress the old WM_SIZE, WM_MOVE events
+						return true;
 					}
 					#pragma endregion
 				case WM_GETMINMAXINFO:
@@ -4022,11 +4199,28 @@ namespace pr
 				case WM_KEYUP:
 					#pragma region
 					{
+						// Key down/up is sent to the window that has keyboard focus. Typically this is a text
+						// box, etc. However, if the window has focus but no controls with keyboard focus, the
+						// key down/up messages are sent to the parent window instead.
+						// Note: if your control is not getting key events, check whether 'selectable()' has been
+						// set in the creation parameters.
+
+						// Handle the key down/up event
 						auto vk_key = UINT(wparam);
 						auto repeats = UINT(lparam & 0xFFFF);
 						auto flags = UINT((lparam & 0xFFFF0000) >> 16);
-						if (OnKey(KeyEventArgs(vk_key, message == WM_KEYDOWN, repeats, flags)))
+						auto args = KeyEventArgs(vk_key, message == WM_KEYDOWN, m_hwnd, repeats, flags);
+
+						// Allow parent controls to filter the key events
+						OnKeyPreview(args);
+						if (args.m_handled)
 							return true;
+
+						// Process the key event
+						OnKey(args);
+						if (args.m_handled)
+							return true;
+
 						break;
 					}
 					#pragma endregion
@@ -4044,7 +4238,7 @@ namespace pr
 						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey());
 						auto down =
 							message == WM_LBUTTONDOWN ||
-							message ==  WM_RBUTTONDOWN ||
+							message == WM_RBUTTONDOWN ||
 							message == WM_MBUTTONDOWN ||
 							message == WM_XBUTTONDOWN;
 						auto btn =
@@ -4054,15 +4248,17 @@ namespace pr
 							(message == WM_XBUTTONDOWN || message == WM_XBUTTONUP) ? EMouseKey::XButton1|EMouseKey::XButton2 :
 							EMouseKey();
 
-						// Event order is down, click, up
-						bool handled = false;
+						// Event order is: down, click, up
+						MouseEventArgs args(btn, down || IsClick(btn,down), pt, keystate);
 						if (down)
-							handled |= OnMouseButton(MouseEventArgs(btn, true, pt, keystate));
+							OnMouseButton(args);
 						if (IsClick(btn, down))
-							handled |= OnMouseClick(MouseEventArgs(btn, true, pt, keystate));
+							OnMouseClick(args);
 						if (!down)
-							handled |= OnMouseButton(MouseEventArgs(btn, false, pt, keystate));
-						if (handled) return true;
+							OnMouseButton(args);
+						if (args.m_handled)
+							return true;
+
 						break;
 					}
 					#pragma endregion
@@ -4072,8 +4268,11 @@ namespace pr
 						auto delta = GET_WHEEL_DELTA_WPARAM(wparam);
 						auto pt = Point(lparam);
 						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey()); 
-						if (OnMouseWheel(MouseWheelArgs(delta, pt, keystate)))
+						MouseWheelArgs args(delta, pt, keystate);
+						OnMouseWheel(args);
+						if (args.m_handled)
 							return true;
+
 						break;
 					}
 					#pragma endregion
@@ -4082,8 +4281,22 @@ namespace pr
 					{
 						auto pt = Point(lparam);
 						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey()); 
-						if (OnMouseMove(MouseEventArgs(keystate, false, pt, keystate)))
+						MouseEventArgs args(keystate, false, pt, keystate);
+						OnMouseMove(args);
+						if (args.m_handled)
 							return true;
+
+						break;
+					}
+					#pragma endregion
+				case WM_MOUSEACTIVATE:
+					#pragma region
+					{
+						if (cp().m_selectable)
+						{
+							SetFocus(m_hwnd);
+							return MA_ACTIVATE;
+						}
 						break;
 					}
 					#pragma endregion
@@ -4170,6 +4383,7 @@ namespace pr
 						if (m_parent != nullptr && !AllSet(new_size.flags, SWP_NOSIZE))
 						{
 							// Get the new size of the parent's client area.
+							// Note: this is before the resize happens so ClientRect() still returns the old client rect.
 							Rect rect;
 							if (new_size.hwnd == m_parent->m_hwnd)
 							{
@@ -4182,8 +4396,7 @@ namespace pr
 							}
 							else
 							{
-								// If our parent is not the window being resized, we can assume our
-								// parent already has the correct new size
+								// If our parent is not the window being resized, we can assume our parent already has the correct new size
 								rect = m_parent->ClientRect();
 							}
 							ResizeToParent(rect);
@@ -4271,10 +4484,23 @@ namespace pr
 						auto delta = GET_WHEEL_DELTA_WPARAM(wparam);
 						auto pt = Point(lparam);
 						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey()); 
-						if (OnMouseWheel(MouseWheelArgs(delta, pt, keystate)))
+						MouseWheelArgs args(delta, pt, keystate);
+						OnMouseWheel(args);
+						if (args.m_handled)
 							return true;
 
 						// Pass to WndProc, I don't think it does anything, but doesn't hurt either
+						return false;
+					}
+					#pragma endregion
+				case WM_KEYDOWN:
+				case WM_KEYUP:
+					#pragma region
+					{
+						// Don't forward key events to child controls. (see the notes in WndProc)
+						// Key events are sent directly to the window with keyboard focus. This may
+						// be the parent window if no child controls have input focus. The control that
+						// receives the events can choose to forward it to child controls
 						return false;
 					}
 					#pragma endregion
@@ -4516,7 +4742,8 @@ namespace pr
 				WndRef phwnd = ::GetParent(m_hwnd);
 				if (phwnd == nullptr)
 					return;
-				
+
+				// Record relative to the parent client area (including padding and, but ignoring docked children)
 				auto p = phwnd->ClientRect();
 				auto c = ParentRect().Adjust(cp().m_margin);
 				m_pos_offset = Rect(c.left - p.left, c.top - p.top, c.right - p.right, c.bottom - p.bottom);
@@ -4540,33 +4767,36 @@ namespace pr
 				auto h = c.height();
 				if (cp().m_dock == EDock::None)
 				{
-					if (int(cp().m_anchor & EAnchor::Left) != 0)
+					// Note: m_pos_offset = [c.left-p.left, c.top-p.top, c.right-p.right, c.bottom-p.bottom]
+					if (AllSet(cp().m_anchor, EAnchor::Left))
 					{
 						c.left = p.left + m_pos_offset.left;
-						if (int(cp().m_anchor & EAnchor::Right) == 0)
+						if (!AllSet(cp().m_anchor, EAnchor::Right))
 							c.right = c.left + w;
 					}
-					if (int(cp().m_anchor & EAnchor::Top) != 0)
+					if (AllSet(cp().m_anchor, EAnchor::Top))
 					{
 						c.top = p.top + m_pos_offset.top;
-						if (int(cp().m_anchor & EAnchor::Bottom) == 0)
+						if (!AllSet(cp().m_anchor, EAnchor::Bottom))
 							c.bottom = c.top + h;
 					}
-					if (int(cp().m_anchor & EAnchor::Right) != 0)
+					if (AllSet(cp().m_anchor, EAnchor::Right))
 					{
 						c.right = p.right + m_pos_offset.right;
-						if (int(cp().m_anchor & EAnchor::Left) == 0)
+						if (!AllSet(cp().m_anchor, EAnchor::Left))
 							c.left = c.right - w;
 					}
-					if (int(cp().m_anchor & EAnchor::Bottom) != 0)
+					if (AllSet(cp().m_anchor, EAnchor::Bottom))
 					{
 						c.bottom = p.bottom + m_pos_offset.bottom;
-						if (int(cp().m_anchor & EAnchor::Top) == 0)
+						if (!AllSet(cp().m_anchor, EAnchor::Top))
 							c.top = c.bottom - h;
 					}
 				}
 				else
 				{
+					// Find the region remaining after earlier children have been docked.
+					p = m_parent != nullptr ? m_parent->ExcludeDockedChildren(p, Index()) : p;
 					switch (cp().m_dock)
 					{
 					default: throw std::exception("Unknown dock style");
@@ -4594,7 +4824,12 @@ namespace pr
 				{
 					assert("Sibling control id given without a parent" && (id == 0 || parent != nullptr));
 					if (parent == nullptr) return MinMaxInfo().Bounds();
-					if (id == 0) return parent->ClientRect(ERectFlags::ExcludeDockedChildren); // Includes padding in the parent
+					if (id == 0)
+					{
+						auto r = parent->ClientRect(); // Includes padding in the parent
+						r = parent->ExcludeDockedChildren(r);
+						return r;
+					}
 
 					// Find the child 'id' and return it's parent space rect including margins
 					for (auto c : parent->m_child)
@@ -4657,6 +4892,10 @@ namespace pr
 		// A common, non-template, base class for all forms
 		struct Form :Control ,IMessageFilter
 		{
+			using FormParams = pr::gui::FormParams;
+			using ParamsForm = MakeFormParams<>;
+			using ParamsDlg  = MakeDlgParams<>;
+
 		protected:
 			// Notes:
 			// Neither Form or Control define a load of OnXYZ handlers. This is because it adds a
@@ -4722,13 +4961,19 @@ namespace pr
 			{
 				// Sanity check form parameters
 				assert("window already created" && m_hwnd == nullptr);
-				assert("Use EStartPosition::Manual when specifying screen X,Y coordinates for a window" && ((p_.m_x == 0 && p_.m_y == 0) || p_.m_start_pos == EStartPosition::Manual));
 				assert("'m_main_wnd' should not be set to false after first being set to true. A main window can't become not the main window" && (cp().m_main_wnd == p_.m_main_wnd));
+				assert("Use EStartPosition::Manual when specifying screen X,Y coordinates for a window" && (
+					((p_.m_x == 0 || p_.m_x == CW_USEDEFAULT) && (p_.m_y == 0 || p_.m_y == CW_USEDEFAULT)) || p_.m_start_pos == EStartPosition::Manual));
 
 				// Save the creation data
 				SaveParams(p_);
 				auto& p = cp();
 				{
+					// If no window class is given, register this Form
+					if (p.m_wcn == nullptr && p.m_wci == nullptr)
+						p.m_wci = &RegisterWndClass<Form>();
+
+					// Load accelerators
 					m_accel = std::move(
 						p.m_accel.m_handle != nullptr ? Accel(p.m_accel.m_handle, true) :
 						p.m_accel.m_id != ID_UNUSED ? Accel(::LoadAcceleratorsW(p.m_hinst, MakeIntResourceW(p.m_accel.m_id))) :
@@ -4948,7 +5193,7 @@ namespace pr
 						for (int result; m_dialog->m_hwnd != nullptr && (result = ::GetMessageW(&msg, nullptr, 0, 0)) != 0; )
 						{
 							Throw(result > 0, "GetMessage failed"); // GetMessage returns negative values for errors
-							WndProcDebug(msg, "ModalLoop");
+							//WndProcDebug(msg, "ModalLoop");
 
 							// If the message is handled as a dialog message, don't translate it
 							if (!m_dialog->cp().m_dlg_behaviour || !::IsDialogMessageW(m_dialog->m_hwnd, &msg))
@@ -5013,7 +5258,7 @@ namespace pr
 				//     Control::WndProc() - otherwise the WndProc for the window handles it (in the base class)
 				//  Some events in Control::WndProc() have handler virtual functions
 
-				//WndProcDebug(hwnd, message, wparam, lparam, FmtS("FormMsg: %s",m_name.c_str()));
+				//WndProcDebug(hwnd, message, wparam, lparam, FmtS("FormMsg: %s", cp().m_name));
 				switch (message)
 				{
 				case WM_CREATE:
@@ -5152,21 +5397,11 @@ namespace pr
 						{
 							// If shown for the first time, apply the start position
 							// This will recursively call WM_WINDOWPOSCHANGED
-							switch (cp().m_start_pos)
+							if (cp().m_start_pos == EStartPosition::CentreParent)
 							{
-							case EStartPosition::Default:
-								{
-									cp().m_start_pos = EStartPosition::Manual;
-									auto pt = m_parent != nullptr ? m_parent->loc() : Point();
-									PositionWindow(pt.x + 50, pt.y + 50);
-									return true;
-								}
-							case EStartPosition::CentreParent:
-								{
-									cp().m_start_pos = EStartPosition::Manual;
-									CenterWindow(m_parent.hwnd());
-									return true;
-								}
+								cp().m_start_pos = EStartPosition::Manual;
+								CenterWindow(m_parent.hwnd());
+								return true;
 							}
 						}
 
@@ -5255,29 +5490,40 @@ namespace pr
 			enum :DWORD { DefaultStyle   = (DefaultControlStyle | WS_GROUP | SS_LEFT | SS_NOPREFIX) & ~WS_TABSTOP };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"STATIC"; }
-			template <typename TParams = CtrlParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
+			using LabelParams = CtrlParams;
+			template <typename TParams = LabelParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(WndClassName()).name("lbl").wh(DefW,DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
 				Params(TParams const& p) :base(p)  {}
+				This& align(int ss)
+				{
+					// use one of SS_LEFT, SS_RIGHT, SS_CENTER, SS_LEFTNOWORDWRAP
+					return style('-', SS_TYPEMASK).style('+', ss);
+				}
+				This& centre_v(bool on = true)
+				{
+					return style(on?'+':'-',SS_CENTERIMAGE);
+				}
 			};
 
 			// Construct
 			Label() :Label(Params<>()) {}
-			Label(CtrlParams const& p)
+			Label(LabelParams const& p)
 				:Control(p)
 			{}
 		};
 		struct Button :Control
 		{
 			enum { DefW = 75, DefH = 23 };
-			enum :DWORD { DefaultStyle       = DefaultControlStyle | WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_TEXT};
-			enum :DWORD { DefaultStyleEx     = DefaultControlStyleEx};
+			enum :DWORD { DefaultStyle   = DefaultControlStyle | WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_TEXT };
+			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"BUTTON"; }
-			template <typename TParams = CtrlParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
+			using ButtonParams = CtrlParams;
+			template <typename TParams = ButtonParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
-				Params() { wndclass(WndClassName()).name("btn").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
+				Params() { wndclass(WndClassName()).name("btn").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx).margin(3,3,3,3); }
 				This& def_btn(bool on = true) { return style(on?'+':'-', BS_DEFPUSHBUTTON); }
 				This& chk_box(bool on = true) { return style(on?'+':'-', BS_AUTOCHECKBOX); }
 				This& radio(bool on = true)   { return style(on?'+':'-', BS_RADIOBUTTON); }
@@ -5285,7 +5531,7 @@ namespace pr
 
 			// Construct
 			Button() :Button(Params<>()) {}
-			Button(CtrlParams const& p) :Control(p) {}
+			Button(ButtonParams const& p) :Control(p) {}
 
 			// Get/Set the checked state
 			bool Checked() const
@@ -5356,10 +5602,12 @@ namespace pr
 			enum :DWORD { DefaultStyle = DefaultControlStyle | WS_TABSTOP | WS_BORDER | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_LEFT };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"EDIT"; }
-			template <typename TParams = CtrlParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
+			using TextBoxParams = CtrlParams;
+			template <typename TParams = TextBoxParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
-				Params() { wndclass(WndClassName()).name("edit").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
+				Params() { wndclass(WndClassName()).name("edit").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx).margin(3,3,3,3); }
+				This& align(int ss)               { return style('-', ES_LEFT|ES_CENTER|ES_RIGHT).style('+', ss); }
 				This& multiline(bool on = true)   { return style(on?'+':'-', ES_MULTILINE); }
 				This& upper_case(bool on = true)  { return style(on?'+':'-', ES_UPPERCASE).style(on?'-':'+',ES_LOWERCASE); }
 				This& lower_case(bool on = true)  { return style(on?'+':'-', ES_LOWERCASE).style(on?'-':'+',ES_UPPERCASE); }
@@ -5372,7 +5620,7 @@ namespace pr
 
 			// Construct
 			TextBox() :TextBox(Params<>()) {}
-			TextBox(CtrlParams const& p)
+			TextBox(TextBoxParams const& p)
 				:Control(p)
 			{}
 
@@ -5463,37 +5711,169 @@ namespace pr
 				switch (message)
 				{
 				case WM_COMMAND:
+					#pragma region
 					{
 						// If the command came from this button
 						auto ctrl_hwnd = HWND(lparam);
 						if (ctrl_hwnd == m_hwnd)
 						{
 							switch (HiWord(wparam)) {
-							case EN_CHANGE: OnTextChanged(); return true;
+							case EN_CHANGE:
+								OnTextChanged();
+								return true;
 							}
 						}
 						break;
 					}
+					#pragma endregion
 				}
 				return Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
+			}
+		};
+		struct NumberBox :TextBox
+		{
+			enum class ENumberStyle { Integer, FloatingPoint, };
+			struct NumberBoxParams :TextBoxParams
+			{
+				ENumberStyle m_num_style;
+				int          m_radix;
+				bool         m_lower_case;
+				NumberBoxParams()
+					:m_num_style(ENumberStyle::Integer)
+					,m_radix(10)
+					,m_lower_case(false)
+				{}
+				NumberBoxParams* clone() const override
+				{
+					return new NumberBoxParams(*this);
+				}
+			};
+			template <typename TParams = NumberBoxParams, typename Derived = void> struct Params :TextBox::Params<TParams, choose_non_void<Derived, Params<>>>
+			{
+				using base = TextBox::Params<TParams, choose_non_void<Derived, Params<>>>;
+				Params()
+				{}
+				operator NumberBoxParams const&() const
+				{
+					return params;
+				}
+				This& number_style(ENumberStyle style)
+				{
+					params.m_num_style = style;
+					return me();
+				}
+				This& radix(int r)
+				{
+					params.m_radix = r;
+					return me();
+				}
+				This& upper_case(bool on = true)
+				{
+					params.m_lower_case = on;
+					return me();
+				}
+			};
+
+			NumberBox() :NumberBox(NumberBoxParams()) {}
+			NumberBox(NumberBoxParams const& p)
+				:TextBox(p)
+			{
+				assert(p.m_num_style == ENumberStyle::Integer && "not supported");
+			}
+
+			// The parameters used to create this control (but updated to the current state)
+			NumberBoxParams& cp() const
+			{
+				return static_cast<NumberBoxParams&>(*m_cp);
+			}
+
+			// Get/Set the text content as an integer
+			long long Value() const
+			{
+				auto text = Text();
+				if (text.empty())
+					return 0;
+
+				errno = 0;
+				auto val = ::wcstoll(text.c_str(), nullptr, cp().m_radix);
+				if (errno == ERANGE) throw std::exception("Value is out of range");
+				if (errno != 0) throw std::exception("Value is not a number");
+				return val;
+			}
+			void Value(long long value)
+			{
+				wchar_t buf[128] = {};
+				if (::_i64tow_s(value, buf, _countof(buf), cp().m_radix) != 0) throw std::exception("Failed to convert number to text");
+				if (cp().m_lower_case) _wcslwr(buf); else _wcsupr(buf);
+				Text(buf);
+			}
+
+			// Get/Set the radix of the number field
+			int Radix() const
+			{
+				return cp().m_radix;
+			}
+			void Radix(int radix)
+			{
+				if (radix == cp().m_radix) return;
+				auto val = Value();
+				cp().m_radix = radix;
+				Value(val);
+			}
+
+			// Message map function
+			LRESULT WndProc(UINT message, WPARAM wparam, LPARAM lparam) override
+			{
+				if (message == WM_CHAR)
+				{
+					auto radix = cp().m_radix;
+					if (wparam == '-' || wparam == '+' || wparam == '.')
+						{}
+					else if (radix <= 10 &&
+						!(wparam >= '0' && wparam < WPARAM('0'+radix)))
+						return 0;
+					else if (radix <= 36 &&
+						!(wparam >= '0' && wparam <= '9') &&
+						!(wparam >= 'a' && wparam < WPARAM('a'+radix-10)) &&
+						!(wparam >= 'A' && wparam < WPARAM('A'+radix-10)))
+						return 0;
+
+					if (cp().m_lower_case)
+						wparam = tolower(int(wparam));
+					else
+						wparam = toupper(int(wparam));
+				}
+				return TextBox::WndProc(message, wparam, lparam);
 			}
 		};
 		struct ComboBox :Control
 		{
 			enum { DefW = 121, DefH = 21 };
-			enum :DWORD { DefaultStyle   = DefaultControlStyle | WS_TABSTOP | CBS_DROPDOWN | CBS_AUTOHSCROLL };
+			enum :DWORD { DefaultStyle   = DefaultControlStyle | WS_TABSTOP | CBS_DROPDOWNLIST | CBS_AUTOHSCROLL };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"COMBOBOX"; }
-			template <typename TParams = CtrlParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
+			using ComboBoxParams = CtrlParams;
+			template <typename TParams = ComboBoxParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
-				Params() { wndclass(WndClassName()).name("combo").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
+				Params() { wndclass(WndClassName()).name("combo").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx).margin(3,3,3,3); }
+				This& editable(bool on = true)
+				{
+					return style('-',CBS_SIMPLE|CBS_DROPDOWN|CBS_DROPDOWNLIST).style('+',on?CBS_DROPDOWN:CBS_DROPDOWNLIST);
+				}
+				This& sorted(bool on = true)
+				{
+					return style(on?'+':'-', CBS_SORT);
+				}
 			};
+
+			int m_prev_sel_index;
 
 			// Construct
 			ComboBox() :ComboBox(Params<>()) {}
-			ComboBox(CtrlParams const& p)
+			ComboBox(ComboBoxParams const& p)
 				:Control(p)
+				,m_prev_sel_index(-1)
 			{}
 
 			// Get the number of items in the combo box
@@ -5560,9 +5940,14 @@ namespace pr
 
 			// Events
 			EventHandler<ComboBox&, EmptyArgs const&> DropDown;
-			EventHandler<ComboBox&, EmptyArgs const&> SelectedIndexChanged;
+			EventHandler<ComboBox&, SelectedIndexEventArgs const&> SelectedIndexChanged;
 
 			// Handlers
+			void OnCreate() override
+			{
+				m_prev_sel_index = SelectedIndex();
+				Control::OnCreate();
+			}
 			LRESULT OnDropDown()
 			{
 				DropDown(*this, EmptyArgs());
@@ -5570,7 +5955,7 @@ namespace pr
 			}
 			LRESULT OnSelectedIndexChanged()
 			{
-				SelectedIndexChanged(*this, EmptyArgs());
+				SelectedIndexChanged(*this, SelectedIndexEventArgs(SelectedIndex(), m_prev_sel_index));
 				return S_OK;
 			}
 
@@ -5585,9 +5970,15 @@ namespace pr
 						auto ctrl_hwnd = HWND(lparam);
 						if (ctrl_hwnd == m_hwnd)
 						{
-							switch (HiWord(wparam)) {
-							case CBN_DROPDOWN: result = OnDropDown(); return true;
-							case CBN_SELCHANGE: result = OnSelectedIndexChanged(); return true;
+							switch (HiWord(wparam))
+							{
+							case CBN_DROPDOWN:
+								result = OnDropDown();
+								return true;
+							case CBN_SELCHANGE:
+								result = OnSelectedIndexChanged();
+								m_prev_sel_index = SelectedIndex();
+								return true;
 							}
 						}
 						break;
@@ -5644,7 +6035,8 @@ namespace pr
 			};
 
 			// ListView parameters
-			template <typename TParams = CtrlParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
+			using ListViewParams = CtrlParams;
+			template <typename TParams = ListViewParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(WndClassName()).name("listview").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx).mode(EViewType::Report); }
@@ -5655,7 +6047,7 @@ namespace pr
 
 			// Construct
 			ListView() :ListView(Params<>()) {}
-			ListView(CtrlParams const& p)
+			ListView(ListViewParams const& p)
 				:Control(p)
 			{
 				DoubleBuffered(true);
@@ -5887,7 +6279,8 @@ namespace pr
 			enum :DWORD { DefaultStyle   = DefaultControlStyle | TVS_EDITLABELS | TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_DISABLEDRAGDROP | TVS_SHOWSELALWAYS | TVS_FULLROWSELECT | TVS_NOSCROLL };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"SysTreeView32"; }
-			template <typename TParams = CtrlParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
+			using TreeViewParams = CtrlParams;
+			template <typename TParams = TreeViewParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(WndClassName()).name("treeview").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
@@ -5940,7 +6333,7 @@ namespace pr
 
 			// Construct
 			TreeView() :TreeView(Params<>()) {}
-			TreeView(CtrlParams const& p)
+			TreeView(TreeViewParams const& p)
 				:Control(p)
 			{}
 
@@ -6046,14 +6439,15 @@ namespace pr
 			enum :DWORD { DefaultStyle   = (DefaultControlStyle | PBS_SMOOTH) & ~WS_TABSTOP };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"msctls_progress32"; }
-			template <typename TParams = CtrlParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
+			using ProgressBarParams = CtrlParams;
+			template <typename TParams = ProgressBarParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(WndClassName()).name("progress").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
 			};
 
 			ProgressBar() :ProgressBar(Params<>()) {}
-			ProgressBar(CtrlParams const& p)
+			ProgressBar(ProgressBarParams const& p)
 				:Control(p)
 			{}
 
@@ -6191,68 +6585,50 @@ namespace pr
 		{
 			enum { DefW = 80, DefH = 80 };
 			enum :DWORD { DefaultStyle   = DefaultControlStyle };
-			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
+			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx | WS_EX_CONTROLPARENT };
 			static wchar_t const* WndClassName() { return L"pr::gui::Panel"; }
-			template <typename TParams = CtrlParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
+			using PanelParams = CtrlParams;
+			template <typename TParams = PanelParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(RegisterWndClass<Panel>()).name("panel").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
 			};
 
 			Panel() :Panel(Params<>()) {}
-			Panel(CtrlParams const& p)
+			Panel(PanelParams const& p)
 				:Control(p)
 			{}
-
-			//// Handle the Paint event. Return true, to prevent anything else handling the event
-			//bool OnPaint(PaintEventArgs const& args) override
-			//{
-			//	//auto r = Rect{};
-			//	//::GetUpdateRect(m_hwnd, &r, FALSE);
-
-			//	HRGN rgn = ::CreateRectRgn(0,0,0,0);
-			//	::GetUpdateRgn(m_hwnd, rgn, FALSE);
-
-			//	auto res = Control::OnPaint(args);
-
-			//	{
-			//		ClientDC dc(m_hwnd);
-			//		Brush b(0x00FFFF);
-			//		auto cr = ClientRect();
-			//		::FrameRgn(dc, rgn, b, cr.width(), cr.height());
-			//	}
-
-			//	return res;
-			//}
 		};
 		struct GroupBox :Control
 		{
 			enum { DefW = 80, DefH = 80 };
 			enum :DWORD { DefaultStyle   = DefaultControlStyle | BS_GROUPBOX };
-			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
+			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx | WS_EX_CONTROLPARENT };
 			static wchar_t const* WndClassName() { return L"BUTTON"; } // yes, group-box's use the button window class
-			template <typename TParams = CtrlParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
+			using GroupBoxParams = CtrlParams;
+			template <typename TParams = GroupBoxParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(WndClassName()).name("grp").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
 			};
 
 			GroupBox() :GroupBox(Params<>()) {}
-			GroupBox(CtrlParams const& p)
+			GroupBox(GroupBoxParams const& p)
 				:Control(p)
 			{}
 		};
 		struct RichTextBox :TextBox
 		{
 			static wchar_t const* WndClassName() { return ::LoadLibraryW(L"msftedit.dll") ? L"RICHEDIT50W" : L"RICHEDIT20W"; }
-			template <typename TParams = CtrlParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
+			using RichTextBoxParams = CtrlParams;
+			template <typename TParams = RichTextBoxParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(WndClassName()).name("richedit"); }
 			};
 
 			RichTextBox() :RichTextBox(Params<>()) {}
-			RichTextBox(CtrlParams const& p)
+			RichTextBox(RichTextBoxParams const& p)
 				:TextBox(p)
 			{}
 		};
@@ -6262,7 +6638,8 @@ namespace pr
 			enum :DWORD { DefaultStyle   = DefaultControlStyle | SS_ICON | SS_CENTERIMAGE };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"STATIC"; }
-			template <typename TParams = CtrlParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
+			using ImageBoxParams = CtrlParams;
+			template <typename TParams = ImageBoxParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(WndClassName()).name("img").wh(DefW,DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
@@ -6270,7 +6647,7 @@ namespace pr
 
 			// Construct
 			ImageBox() :ImageBox(Params<>()) {}
-			ImageBox(CtrlParams const& p)
+			ImageBox(ImageBoxParams const& p)
 				:Control(p)
 			{}
 
@@ -6291,14 +6668,15 @@ namespace pr
 			enum :DWORD { DefaultStyle   = DefaultControlStyle | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return STATUSCLASSNAMEW; }
-			template <typename TParams = CtrlParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
+			using StatusBarParams = CtrlParams;
+			template <typename TParams = StatusBarParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(WndClassName()).name("status").style('=',DefaultStyle).style_ex('=',DefaultStyleEx).anchor(EAnchor::LeftBottomRight).dock(EDock::Bottom); }
 			};
 
 			StatusBar() :StatusBar(Params<>()) {}
-			StatusBar(CtrlParams const& p)
+			StatusBar(StatusBarParams const& p)
 				:Control(p)
 			{}
 
@@ -6344,91 +6722,14 @@ namespace pr
 				return rect;
 			}
 
-			#if 0 // todo
-			BOOL GetBorders(int* pBorders) const
+			// 
+			void ResizeToParent(pr::gui::Rect const& parent_client, bool repaint = false) override
 			{
-				assert(::IsWindow(m_hwnd));
-				return (BOOL)::SendMessageW(m_hwnd, SB_GETBORDERS, 0, (LPARAM)pBorders);
+				// Ignore padding in the parent
+				auto rect = parent_client;
+				if (m_parent != nullptr) rect = rect.Adjust(-m_parent->cp().m_padding);
+				Control::ResizeToParent(rect, repaint);
 			}
-
-			BOOL GetBorders(int& nHorz, int& nVert, int& nSpacing) const
-			{
-				assert(::IsWindow(m_hwnd));
-				int borders[3] = { 0, 0, 0 };
-				BOOL bResult = (BOOL)::SendMessageW(m_hwnd, SB_GETBORDERS, 0, (LPARAM)&borders);
-				if(bResult)
-				{
-					nHorz = borders[0];
-					nVert = borders[1];
-					nSpacing = borders[2];
-				}
-				return bResult;
-			}
-
-			void SetMinHeight(int nMin)
-			{
-				assert(::IsWindow(m_hwnd));
-				::SendMessageW(m_hwnd, SB_SETMINHEIGHT, nMin, 0L);
-			}
-
-			BOOL SetSimple(BOOL bSimple = TRUE)
-			{
-				assert(::IsWindow(m_hwnd));
-				return (BOOL)::SendMessageW(m_hwnd, SB_SIMPLE, bSimple, 0L);
-			}
-
-			BOOL IsSimple() const
-			{
-				assert(::IsWindow(m_hwnd));
-				return (BOOL)::SendMessageW(m_hwnd, SB_ISSIMPLE, 0, 0L);
-			}
-
-			BOOL GetUnicodeFormat() const
-			{
-				assert(::IsWindow(m_hwnd));
-				return (BOOL)::SendMessageW(m_hwnd, SB_GETUNICODEFORMAT, 0, 0L);
-			}
-
-			BOOL SetUnicodeFormat(BOOL bUnicode = TRUE)
-			{
-				assert(::IsWindow(m_hwnd));
-				return (BOOL)::SendMessageW(m_hwnd, SB_SETUNICODEFORMAT, bUnicode, 0L);
-			}
-
-			void GetTipText(int nPane, LPTSTR lpstrText, int nSize) const
-			{
-				assert(::IsWindow(m_hwnd));
-				assert(nPane < 256);
-				::SendMessageW(m_hwnd, SB_GETTIPTEXT, MAKEWPARAM(nPane, nSize), (LPARAM)lpstrText);
-			}
-
-			void SetTipText(int nPane, LPCTSTR lpstrText)
-			{
-				assert(::IsWindow(m_hwnd));
-				assert(nPane < 256);
-				::SendMessageW(m_hwnd, SB_SETTIPTEXT, nPane, (LPARAM)lpstrText);
-			}
-
-			COLORREF SetBkColor(COLORREF clrBk)
-			{
-				assert(::IsWindow(m_hwnd));
-				return (COLORREF)::SendMessageW(m_hwnd, SB_SETBKCOLOR, 0, (LPARAM)clrBk);
-			}
-
-			HICON GetIcon(int nPane) const
-			{
-				assert(::IsWindow(m_hwnd));
-				assert(nPane < 256);
-				return (HICON)::SendMessageW(m_hwnd, SB_GETICON, nPane, 0L);
-			}
-
-			BOOL SetIcon(int nPane, HICON hIcon)
-			{
-				assert(::IsWindow(m_hwnd));
-				assert(nPane < 256);
-				return (BOOL)::SendMessageW(m_hwnd, SB_SETICON, nPane, (LPARAM)hIcon);
-			}
-			#endif
 		};
 		struct TabControl :Control
 		{
@@ -6471,7 +6772,8 @@ namespace pr
 			enum :DWORD { DefaultStyle   = DefaultControlStyle }; // TCS_VERTICAL | TCS_RIGHT | TCS_BOTTOM
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"SysTabControl32"; }
-			template <typename TParams = CtrlParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
+			using TabControlParams = CtrlParams;
+			template <typename TParams = TabControlParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(WndClassName()).name("tabctrl").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
@@ -6481,7 +6783,7 @@ namespace pr
 			std::vector<Control*> m_tabs;
 
 			TabControl() :TabControl(Params<>()) {}
-			TabControl(CtrlParams const& p)
+			TabControl(TabControlParams const& p)
 				:Control(p)
 				,m_tabs()
 			{}
@@ -6796,20 +7098,9 @@ namespace pr
 			// Handle window size changing starting or stopping
 			void OnWindowPosChange(WindowPosEventArgs const& args) override
 			{
-				if (args.m_before && args.IsResize())
-				{
-					auto c = ClientRect();
-					c.size(args.Size());
-					UpdateLayout(c);
-				}
-				//{
-				//	// This control is about to resize, resize the child windows to the new size
-				//	auto& new_size = args.m_pos;
-				//	auto b = ParentRect();
-				//	auto c = ClientRect();
-				//	auto rect = Rect(c.left, c.top, c.right + (new_size.cx - b.width()), c.bottom + (new_size.cy - b.height()));
-				//	UpdateLayout(rect);
-				//}
+				if (!args.m_before && args.IsResize() && !args.Iconic())
+					UpdateLayout(ClientRect());
+
 				Control::OnWindowPosChange(args);
 			}
 		};
@@ -6844,8 +7135,14 @@ namespace pr
 			template <typename TParams = SplitterParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
-				Params() { wndclass(RegisterWndClass<Splitter>()).name("split").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
-				operator SplitterParams const&() const { return params; }
+				Params()
+				{
+					wndclass(RegisterWndClass<Splitter>()).name("split").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx);
+				}
+				operator SplitterParams const&() const
+				{
+					return params;
+				}
 				This& width(int w)
 				{
 					params.m_bar_width = w;
@@ -7021,28 +7318,18 @@ namespace pr
 			// Handle window size changing starting or stopping
 			void OnWindowPosChange(WindowPosEventArgs const& args) override
 			{
-				if (args.m_before && args.IsResize())
-				{
-					auto c = ClientRect();
-					c.size(args.Size());
-					UpdateLayout(c);
-				}
-				//{
-				//	// This control is about to resize, resize the child windows to the new size
-				//	auto& new_size = args.m_pos;
-				//	auto b = ParentRect();
-				//	auto c = ClientRect();
-				//	auto rect = Rect(c.left, c.top, c.right + (new_size.cx - b.width()), c.bottom + (new_size.cy - b.height()));
-				//	UpdateLayout(rect);
-				//}
+				if (!args.m_before && args.IsResize() && !args.Iconic())
+					UpdateLayout(ClientRect());
+
 				Control::OnWindowPosChange(args);
 			}
 
 			// Handle the Paint event. Return true, to prevent anything else handling the event
-			bool OnPaint(PaintEventArgs& args) override
+			void OnPaint(PaintEventArgs& args) override
 			{
-				if (Control::OnPaint(args))
-					return true;
+				Control::OnPaint(args);
+				if (args.m_handled)
+					return;
 
 				// Paint the splitter
 				PaintStruct p(m_hwnd);
@@ -7055,19 +7342,23 @@ namespace pr
 				}
 
 				// Painting is done
-				return true;
+				args.m_handled = true;
 			}
 
 			// Handle mouse button down/up events. Return true, to prevent anything else handling the event
-			bool OnMouseButton(MouseEventArgs const& args) override
+			void OnMouseButton(MouseEventArgs& args) override
 			{
 				Control::OnMouseButton(args);
+				if (args.m_handled)
+					return;
+
 				if (args.m_down)
 				{
 					auto pt = args.m_point;
 					auto bar_rect = BarRect();
 					if (::GetCapture() != m_hwnd && bar_rect.Contains(pt))
 					{
+						args.m_handled = true;
 						::SetCapture(m_hwnd);
 						::SetCursor(m_cursor);
 
@@ -7080,6 +7371,7 @@ namespace pr
 					{
 						// If we have capture but are not over the splitter, this is
 						// the case where we alt-tab during a splitter bar drag.
+						args.m_handled = true;
 						::ReleaseCapture();
 					}
 				}
@@ -7088,19 +7380,20 @@ namespace pr
 					if (::GetCapture() == m_hwnd)
 						::ReleaseCapture();
 				}
-				return false;
 			}
 
 			// Handle mouse move events
-			bool OnMouseMove(MouseEventArgs const& args) override
+			void OnMouseMove(MouseEventArgs& args) override
 			{
-				if (Control::OnMouseMove(args))
-					return true;
+				Control::OnMouseMove(args);
+				if (args.m_handled)
+					return;
 
 				auto pt = args.m_point;
 				auto bar_rect = BarRect();
 				if (::GetCapture() == m_hwnd)
 				{
+					args.m_handled = true;
 					auto client = ClientRect();
 					auto pos = m_vertical
 						? float(pt.x - client.left) / client.width()
@@ -7125,7 +7418,6 @@ namespace pr
 					if (bar_rect.Contains(pt))
 						::SetCursor(m_cursor);
 				}
-				return true;
 			}
 		};
 		struct ToolTip :Control
@@ -7134,7 +7426,8 @@ namespace pr
 			enum :DWORD { DefaultStyle   = (DefaultControlStyle | WS_GROUP | SS_LEFT) & ~WS_TABSTOP };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"tooltips_class32"; }
-			template <typename TParams = CtrlParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
+			using ToolTipParams = CtrlParams;
+			template <typename TParams = ToolTipParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(WndClassName()).name("tt").wh(DefW,DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
@@ -7143,7 +7436,7 @@ namespace pr
 
 			// Construct
 			ToolTip() :ToolTip(Params<>()) {}
-			ToolTip(CtrlParams const& p)
+			ToolTip(ToolTipParams const& p)
 				:Control(p)
 			{}
 		};

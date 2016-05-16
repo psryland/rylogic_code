@@ -109,7 +109,7 @@ namespace pr
 		{
 			return m_size == 0;
 		}
-		
+
 		// Return the size of the data in the container in multiples of 'Type'
 		template <typename Type> std::size_t size() const
 		{
@@ -139,6 +139,12 @@ namespace pr
 				memset(begin() + old_size, fill, new_size - old_size);
 		}
 
+		// Append the contents of 'rhs' to this container
+		void append(ByteData const& rhs)
+		{
+			push_back(rhs.data(), rhs.size());
+		}
+
 		// Add 'type' to the end of the container
 		template <typename Type> void push_back()
 		{
@@ -150,9 +156,9 @@ namespace pr
 		}
 		void push_back(void const* data, std::size_t size)
 		{
-			if( m_capacity < m_size + size )
+			if (m_capacity < m_size + size)
 				grow(((m_size + size) * 3) / 2);
-			
+
 			memcpy(static_cast<unsigned char*>(m_ptr) + m_size, data, size);
 			m_size += size;
 		}
@@ -194,21 +200,21 @@ namespace pr
 		}
 
 		// Return a const pointer to the start of the contained range
-		template <typename Type> Type const* cbegin()
+		template <typename Type> Type const* cbegin() const
 		{
 			return static_cast<Type const*>(m_ptr);
 		}
-		unsigned char const* cbegin()
+		unsigned char const* cbegin() const
 		{
 			return static_cast<unsigned char const*>(m_ptr);
 		}
 
 		// Return a const pointer to the end of the contained range
-		template <typename Type> Type const* cend()
+		template <typename Type> Type const* cend() const
 		{
 			return cbegin<Type>() + size<Type>(); // note: end() - begin() is always an integer multiple of 'Type'
 		}
-		unsigned char const* cend()
+		unsigned char const* cend() const
 		{
 			return cbegin() + size();
 		}
@@ -249,6 +255,16 @@ namespace pr
 			return begin()[index];
 		}
 
+		// Return a reference to 'Type' at a byte offset into the container
+		template <typename Type> Type const& at_byte_ofs(std::size_t index) const
+		{
+			return *reinterpret_cast<Type const*>(begin()[index]);
+		}
+		template <typename Type> Type& at_byte_ofs(std::size_t index)
+		{
+			return *reinterpret_cast<Type*>(begin()[index]);
+		}
+
 		// Array access to bytes
 		unsigned char const& operator[](std::size_t index) const
 		{
@@ -267,20 +283,20 @@ namespace pr
 		void grow(std::size_t capacity)
 		{
 			void* ptr = 0;
-			if( capacity > 0 )
+			if (capacity > 0)
 			{
 				ptr = _aligned_malloc(capacity, Alignment);
 			}
 			m_capacity = capacity;
-			if( m_size > m_capacity )
+			if (m_size > m_capacity)
 			{
 				m_size = m_capacity;
 			}
-			if( ptr )
+			if (ptr)
 			{
 				memcpy(ptr, m_ptr, m_size);
 			}
-			if( m_ptr )
+			if (m_ptr)
 			{
 				_aligned_free(m_ptr);
 			}

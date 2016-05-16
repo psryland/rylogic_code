@@ -62,13 +62,13 @@ namespace ldr
 		// Close this form
 		bool Close(EDialogResult dialog_result) override;
 
-		bool OnPaint(PaintEventArgs& args) override;
+		void OnPaint(PaintEventArgs& args) override;
 		void OnDropFiles(DropFilesEventArgs const& drop) override;
-		bool OnKey(KeyEventArgs const& args) override;
-		bool OnMouseButton(MouseEventArgs const& args) override;
-		bool OnMouseClick(MouseEventArgs const& args) override;
-		bool OnMouseMove(MouseEventArgs const& args) override;
-		bool OnMouseWheel(MouseWheelArgs const& args) override;
+		void OnKey(KeyEventArgs& args) override;
+		void OnMouseButton(MouseEventArgs& args) override;
+		void OnMouseClick(MouseEventArgs& args) override;
+		void OnMouseMove(MouseEventArgs& args) override;
+		void OnMouseWheel(MouseWheelArgs& args) override;
 		void OnFullScreenToggle(bool is_fullscreen) override;
 
 		bool HandleMenu(UINT item_id, UINT event_source, HWND ctrl_hwnd) override;

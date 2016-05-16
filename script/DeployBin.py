@@ -8,14 +8,12 @@ import sys, os
 import Rylogic as Tools
 import UserVars
 
-try:
+# Deploy a single binary to the \Bin folder
+def DeployBin(targetpath:str, platform:str, config:str, dstsubdir:str):
+
 	Tools.AssertVersion(1)
 	Tools.AssertPathsExist([UserVars.root])
 
-	targetpath = sys.argv[1] if len(sys.argv) > 1 else input("TargetPath? ")
-	platform   = sys.argv[2] if len(sys.argv) > 2 else input("Platform (x86,x64)? ")
-	config     = sys.argv[3] if len(sys.argv) > 3 else input("Configuration (debug,release)? ")
-	dstsubdir  = sys.argv[4] if len(sys.argv) > 4 else ""
 	if platform.lower() == "win32": platform = "x86"
 
 	targetpath  = targetpath.lower()
@@ -25,7 +23,7 @@ try:
 	srcdir,file = os.path.split(targetpath)
 	fname,extn  = os.path.splitext(file)
 
-	# Default to a subdir matching the target filename
+	# Default to a sub directory matching the target filename
 	if dstsubdir == "":
 		dstsubdir = fname
 
@@ -38,10 +36,21 @@ try:
 	if config == "release":
 		# Copy the binary to the bin folder
 		Tools.Copy(targetpath, dstdir + "\\" + file)
-		
-		# If the system architecture matches this release, copy to the root dstdir
+	
+		# If the system architecture matches this release, copy to the root 'dstdir'
 		if platform == UserVars.arch:
 			Tools.Copy(dstdir + "\\" + file, dstdirroot + "\\" + file)
 
-except Exception as ex:
-	Tools.OnException(ex)
+# Run as standalone script
+if __name__ == "__main__":
+	try:
+		targetpath = sys.argv[1] if len(sys.argv) > 1 else input("TargetPath? ")
+		platform   = sys.argv[2] if len(sys.argv) > 2 else input("Platform (x86,x64)? ")
+		config     = sys.argv[3] if len(sys.argv) > 3 else input("Configuration (debug,release)? ")
+		dstsubdir  = sys.argv[4] if len(sys.argv) > 4 else ""
+
+		DeployBin(targetpath, platform, config, dstsubdir)
+		Tools.OnSuccess()
+
+	except Exception as ex:
+		Tools.OnException(ex)

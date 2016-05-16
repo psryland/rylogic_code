@@ -2,7 +2,6 @@
 // Menu Helper
 //  Copyright (c) Rylogic Ltd 2009
 //*****************************************
-
 #pragma once
 
 #include <string>
@@ -16,9 +15,9 @@ namespace pr
 	{
 		// A class for managing a dynamic list of menu options.
 		// Usage:
-		//  Add an instance of MenuList to a gui class
-		//  'Attach' to the popup menu for which the list should be added
-		//  (you need to create a dummy element in the popup menu and attach to that)
+		//  Add an instance of MenuList to a GUI class
+		//  'Attach' to the pop-up menu for which the list should be added
+		//  (you need to create a dummy element in the pop-up menu and attach to that)
 		//  Export/Import a string containing the items
 		//  Add "CHAIN_MSG_MAP_MEMBER(m_menu_list)" to the message map for the GUI class
 		//  Inherit MenuList::IHandler in the GUI class
@@ -75,7 +74,7 @@ namespace pr
 				return m_menu_items;
 			}
 
-			// Attach this list to a popup menu
+			// Attach this list to a pop-up menu
 			void Attach(HMENU menu, UINT base_id = 0, size_t max_length = ~size_t(), IHandler* handler = nullptr)
 			{
 				if (m_menu)
@@ -164,7 +163,7 @@ namespace pr
 				// Add the items to the menu
 				unsigned int j = 0;
 				for (auto& item : m_menu_items)
-					::AppendMenuA(m_menu, MF_STRING, m_base_id + j++, (LPCTSTR)item.m_name.c_str());
+					::AppendMenuW(m_menu, MF_STRING, m_base_id + j++, item.m_name.c_str());
 			}
 
 			// Export a string representation of all of the items in the menu list
@@ -216,7 +215,7 @@ namespace pr
 						auto i = std::begin(m_menu_items);
 						std::advance(i, LOWORD(wParam) - m_base_id);
 
-						// Use a copy to prevent reentracy issues
+						// Use a copy to prevent reentrancy issues
 						Item item = *i;
 						m_handler->MenuList_OnClick(this, item);
 					}

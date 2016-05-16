@@ -15,21 +15,16 @@ import sys, os
 import Rylogic as Tools
 import UserVars
 
-try:
+# Deploy a single binary to the \PC\Lib folder
+def DeployLib(targetpath:str, platform:str, config:str, dstdir:str=""):
+
 	Tools.AssertVersion(1)
 	Tools.AssertPathsExist([UserVars.root])
 
-	trace = False
-	if trace:
-		print("Args: " + str(sys.argv))
-
-	targetpath = sys.argv[1] if len(sys.argv) > 1 else input("TargetPath? ")
-	platform   = sys.argv[2] if len(sys.argv) > 2 else input("Platform (x86,x64)? ")
-	config     = sys.argv[3] if len(sys.argv) > 3 else input("Configuration (debug,release)? ")
-	dstdir     = sys.argv[4] if len(sys.argv) > 4 else UserVars.root + "\\lib"
+	dstdir = dstdir if dstdir != "" else UserVars.root + "\\lib"
 	if platform.lower() == "win32": platform = "x86"
 
-	targetpath  = targetpath.lower()
+	#'targetpath  = targetpath.lower() don't change the filename case
 	platform    = platform.lower()
 	config      = config.lower()
 	dstdir      = dstdir.lower().rstrip("/\\") + "\\" + platform + "\\" + config
@@ -39,28 +34,31 @@ try:
 
 	srcfname = srcdir + "\\" + fname
 	dstfname = dstdir + "\\" + fname
-	if trace:
-		print("SrcFName: " + srcfname)
-		print("DstFName: " + dstfname)
 
-	#Copy the library file to the lib folder
+	# Copy the library file to the lib folder
 	Tools.Copy(targetpath, dstfname + extn)
 
-	#If there's an associated pdb file copy that too
-	#Also, copy it to the symbols folder
+	# If there's an associated PDB file copy that too
 	if os.path.exists(srcfname + ".pdb"):
 		Tools.Copy(srcfname + ".pdb", dstfname + ".pdb")
 		if not os.path.exists(symdir): os.makedirs(symdir)
 		Tools.Copy(srcfname + ".pdb", symdir)
 
-	#If the lib is a dll, look for an import library and copy that too, if it exists
+	# If the lib is a dll, look for an import library and copy that too, if it exists
 	if extn == ".dll":
 		if os.path.exists(srcfname + ".lib"):
 			Tools.Copy(srcfname + ".lib", dstfname + ".lib")
 
-	#Produce a OMF version of the lib
-	#wordsize = 64 if platform == "x64" else 32
-	#q:\tools\objconv -fOMF%wordsize% "%dstdir%\%file%.%platform%.%config%.%extn%" "%dstdir%\%file%.%platform%.%config%.omf.%extn%"
+# Run as standalone script
+if __name__ == "__main__":
+	try:
+		targetpath = sys.argv[1] if len(sys.argv) > 1 else input("TargetPath? ")
+		platform   = sys.argv[2] if len(sys.argv) > 2 else input("Platform (x86,x64)? ")
+		config     = sys.argv[3] if len(sys.argv) > 3 else input("Configuration (debug,release)? ")
+		dstdir     = sys.argv[4] if len(sys.argv) > 4 else ""
 
-except Exception as ex:
-	Tools.OnException(ex)
+		DeployLib(targetpath, platform, config, dstdir)
+		Tools.OnSuccess()
+
+	except Exception as ex:
+		Tools.OnException(ex)

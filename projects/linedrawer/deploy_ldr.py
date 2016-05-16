@@ -9,7 +9,7 @@ try:
 	print(
 		"*************************************************************************\n"
 		"LineDrawer Deploy\n"
-		"Copyright © Rylogic Limited 2014\n"
+		"Copyright (C) Rylogic Limited 2014\n"
 		"*************************************************************************")
 
 	Tools.AssertVersion(1)
@@ -33,11 +33,11 @@ try:
 		Tools.OnError("Errors occurred")
 
 	# Deploy
-	files = [
-		"linedrawer.exe",
-		"scintilla.dll",
-		]
-	Tools.DeployToBin("linedrawer", files, platforms, "release", CopyForArch=False)
+	objdir = UserVars.root + "\\obj\\" + UserVars.platform_toolset + "\\linedrawer"
+	outdir = UserVars.root + "\\bin"
+	for p in platforms:
+		Tools.Copy(objdir+"\\"+p+"\\release\\LineDrawer.exe", outdir+"\\linedrawer\\"+p+"\\")
+		Tools.Copy(objdir+"\\"+p+"\\release\\scintilla.dll" , outdir+"\\linedrawer\\"+p+"\\")
 
 	Tools.OnSuccess()
 

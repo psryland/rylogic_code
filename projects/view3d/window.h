@@ -9,9 +9,6 @@
 namespace view3d
 {
 	struct Window :pr::AlignTo<16>
-		//,pr::events::IRecv<pr::ldr::Evt_Refresh>
-		//,pr::events::IRecv<pr::ldr::Evt_LdrMeasureUpdate>
-		//,pr::events::IRecv<pr::ldr::Evt_LdrAngleDlgUpdate>
 	{
 		ErrorCBStack                m_error_cb;                 // Stack of error callback functions for the dll
 		HWND                        m_hwnd;                     // The associated window handle

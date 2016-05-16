@@ -222,4 +222,10 @@ namespace pr
 		};
 		#pragma endregion
 	}
+
+	// Default implementations of the component accessors
+	template <typename T, typename = maths::enable_if_v2<T>> inline typename maths::is_vec<T>::elem_type x_cp(T const& v) { return v.x; }
+	template <typename T, typename = maths::enable_if_v2<T>> inline typename maths::is_vec<T>::elem_type y_cp(T const& v) { return v.y; }
+	template <typename T, typename = maths::enable_if_v3<T>> inline typename maths::is_vec<T>::elem_type z_cp(T const& v) { return v.z; }
+	template <typename T, typename = maths::enable_if_v4<T>> inline typename maths::is_vec<T>::elem_type w_cp(T const& v) { return v.w; }
 }

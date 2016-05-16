@@ -13,7 +13,6 @@
 #include <locale>
 #include <vector>
 #include "pr/common/to.h"
-#include "pr/common/hresult.h"
 #include "pr/str/string.h"
 
 namespace pr

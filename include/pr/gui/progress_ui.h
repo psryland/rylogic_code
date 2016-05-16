@@ -48,7 +48,8 @@ namespace pr
 					return *this;
 				}
 			};
-			enum { IDC_TEXT_DESC=1000, IDC_PROGRESS_BAR, WM_PROGRESS_UPDATE=WM_USER+1, ID_POLL_WORKER_COMPLETE=1, DefW=480, DefH=180};
+			enum { IDC_TEXT_DESC=1000, IDC_PROGRESS_BAR, DefW=480, DefH=180};
+			enum { WM_PROGRESS_UPDATE = WM_USER_BASE+1, WM_WORKER_COMPLETE, };
 
 			Label                       m_lbl_desc;  // The progress description
 			ProgressBar                 m_bar;       // The progress bar
@@ -64,6 +65,14 @@ namespace pr
 
 		public:
 
+			enum ECancelFlags
+			{
+				NonBlocking        = 0,
+				BlockTillCancelled = 1 << 0,
+				OptionalCancel     = 1 << 1,
+				_bitops_allowed
+			};
+
 			struct ProgressParams :FormParams
 			{
 				wchar_t const* m_desc;
@@ -75,7 +84,7 @@ namespace pr
 				using base = MakeDlgParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params()
 				{
-					wndclass(RegisterWndClass<ProgressUI>()).name("progress-ui").wh(240,100);
+					wndclass(RegisterWndClass<ProgressUI>()).name("progress-ui").wh(360,200).start_pos(EStartPosition::CentreParent);
 				}
 				operator ProgressParams const&() const
 				{
@@ -110,6 +119,10 @@ namespace pr
 						Close();
 				};
 			}
+			~ProgressUI()
+			{
+				Close();
+			}
 
 			// Construct the dialog starting the worker thread immediately.
 			// 'func' should have 'ProgressUI*' as the first parameter
@@ -118,10 +131,6 @@ namespace pr
 				:ProgressUI()
 			{
 				StartWorker(title, desc, std::forward<Func>(func), std::forward<Args>(args)...);
-			}
-			~ProgressUI()
-			{
-				Close();
 			}
 
 			// Execute a work function in a different thread while displaying a non-modal dialog.
@@ -180,14 +189,6 @@ namespace pr
 				return !m_cancel;
 			}
 
-			enum ECancelFlags
-			{
-				NonBlocking        = 0,
-				BlockTillCancelled = 1 << 0,
-				OptionalCancel     = 1 << 1,
-				_bitops_allowed
-			};
-
 			// Cancel the background thread, with optional cancel-the-cancel event
 			bool Cancel(ECancelFlags flags = NonBlocking)
 			{
@@ -219,7 +220,6 @@ namespace pr
 			{
 				// Don't close the window until the task has exited
 				Cancel(BlockTillCancelled);
-				if (m_hwnd) ::KillTimer(m_hwnd, ID_POLL_WORKER_COMPLETE);
 				return Form::Close(m_dialog_result);
 			}
 
@@ -283,20 +283,11 @@ namespace pr
 						break;
 					}
 					#pragma endregion
-				case WM_TIMER:
+				case WM_WORKER_COMPLETE:
 					#pragma region
 					{
-						if (wparam == ID_POLL_WORKER_COMPLETE)
-						{
-							Lock lock(m_mutex);
-							if (m_done)
-							{
-								::PostMessageW(m_hwnd, WM_CLOSE, 0, 0L);
-								::KillTimer(m_hwnd, ID_POLL_WORKER_COMPLETE);
-							}
-							return true;
-						}
-						break;
+						Close();
+						return true;
 					}
 					#pragma endregion
 				}
@@ -315,18 +306,14 @@ namespace pr
 
 				// Layout the dialog
 				OnLayout(ClientRect());
-
-				// Ensure the timer is running that polls for the thread being complete
-				::SetTimer(m_hwnd, ID_POLL_WORKER_COMPLETE, 100, nullptr);
 			}
 			virtual void OnDestroy() override
 			{
 				// In case of abnormal shutdown, don't close the window until the task has exited
 				Cancel(BlockTillCancelled);
 			}
-			virtual void OnLayout(Rect const& client_rect)
+			virtual void OnLayout(Rect const& client)
 			{
-				const int btn_w = 80, btn_h = 24, prog_h = 18, bp = (btn_h-prog_h)/2, sp = 2, bdr = 5;
 				auto Clamp = [](Rect& rect)
 				{
 					if (rect.right  < rect.left) rect.right  = rect.left;
@@ -334,41 +321,26 @@ namespace pr
 					return rect;
 				};
 
-				auto client = client_rect.Adjust(bdr,bdr,-bdr,-bdr);
 				Rect r;
+				const int btn_w = 80, btn_h = 24, prog_h = 18, sp = 2;
 
 				// Position the description
-				r = client;
-				r.top += bdr;
-				r.left += bdr;
-				r.right -= bdr;
-				r.bottom -= (btn_h + sp);
+				r = Rect(client.left, client.top, client.right, client.bottom - std::max(btn_h, prog_h) - sp);
 				m_lbl_desc.ParentRect(Clamp(r));
 
 				// Position the progress bar
-				r = client;
-				r.bottom -= bp;
-				r.top = r.bottom - prog_h;
-				r.right -= btn_w + sp;
+				r = Rect(client.left, client.bottom - abs(btn_h-prog_h)/2 - prog_h, client.right - btn_w - sp, client.bottom - abs(btn_h-prog_h)/2);
 				m_bar.ParentRect(Clamp(r));
 
 				// Position the cancel button
-				r = client;
-				r.top = r.bottom - btn_h;
-				r.left = r.right - btn_w;
+				r = Rect(client.right - btn_w, client.bottom - btn_h, client.right, client.bottom);
 				m_btn.ParentRect(Clamp(r));
-
-				Invalidate();
 			}
 			virtual void OnWindowPosChange(WindowPosEventArgs const& args) override
 			{
 				// Layout the dialog whenever it resizes
-				if (args.m_before && args.IsResize() && !args.Iconic())
-				{
-					auto c = ClientRect();
-					c.size(args.Size());
-					OnLayout(c);
-				}
+				if (!args.m_before && args.IsResize() && !args.Iconic())
+					OnLayout(ClientRect());
 			}
 			virtual void OnCancelling(CancelEventArgs& args)
 			{
@@ -386,10 +358,6 @@ namespace pr
 				m_done = false;
 				m_cancel = false;
 				m_state = State(m_hwnd, title, desc);
-
-				// Start a timer to poll for the thread being complete
-				if (m_hwnd)
-					::SetTimer(m_hwnd, ID_POLL_WORKER_COMPLETE, 100, nullptr);
 
 				// Start the worker
 				m_worker = std::thread([&]
@@ -416,6 +384,7 @@ namespace pr
 						m_cv.notify_all();
 					}
 					Progress(1.0f);
+					::PostMessageW(m_hwnd, WM_WORKER_COMPLETE, 0, 0);
 				});
 			}
 

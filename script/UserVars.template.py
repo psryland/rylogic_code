@@ -32,8 +32,8 @@ msbuild_props = "" #r"/p:VCTargetsPath=C:\Program Files (x86)\MSBuild\Microsoft.
 platform_toolset = "v140"
 
 # The full path to the windows sdk
-winsdk =r"C:\Program Files (x86)\Windows Kits\10"
-winsdkvers = "10.0.10586.0"
+winsdk =r"C:\Program Files (x86)\Windows Kits\8.1"
+winsdkvers = "8.1"
 
 # The root of the .NET framework directory
 dotnetdir = r"C:\Windows\Microsoft.NET\Framework"

@@ -26,8 +26,8 @@ namespace ldr
 
 		// Called when input focus is given or removed. Implementers should use
 		// LostInputFocus() to abort any control operations in progress.
-		void IInputHandler::GainInputFocus(IInputHandler* gained_from) override;
-		void IInputHandler::LostInputFocus(IInputHandler* lost_to) override;
+		void GainInputFocus(IInputHandler* gained_from) override;
+		void LostInputFocus(IInputHandler* lost_to) override;
 
 		// Keyboard input.
 		// Return true if the key was handled and should not be
@@ -40,9 +40,9 @@ namespace ldr
 		// 'button_state' is the state of the mouse buttons (pr::camera::ENavKey)
 		// 'start_or_end' is true on mouse down/up
 		// Returns true if the camera has moved or objects in the scene have moved
-		bool IInputHandler::MouseInput(pr::v2 const& pos_ns, int button_state, bool start_or_end) override;
-		bool IInputHandler::MouseClick(pr::v2 const& pos_ns, int button_state) override;
-		bool IInputHandler::MouseWheel(pr::v2 const& pos_ns, float delta) override;
+		bool MouseInput(pr::v2 const& pos_ns, int button_state, bool start_or_end) override;
+		bool MouseClick(pr::v2 const& pos_ns, int button_state) override;
+		bool MouseWheel(pr::v2 const& pos_ns, float delta) override;
 
 		// Event handlers
 		void OnEvent(pr::ldr::Evt_LdrObjectSelectionChanged const&) override;

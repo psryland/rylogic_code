@@ -2,10 +2,7 @@
 // Physics engine
 //  Copyright (c) Rylogic Ltd 2006
 //*********************************************
-
 #pragma once
-#ifndef PR_PHYSICS_RIGID_BODY_H
-#define PR_PHYSICS_RIGID_BODY_H
 
 #include "pr/physics/types/forward.h"
 #include "pr/physics/shape/shape.h"
@@ -201,6 +198,4 @@ namespace pr
 #ifdef PR_EXPAND_DEFINED
 #   undef PR_EXPAND_DEFINED
 #   undef PR_EXPAND
-#endif
-
 #endif

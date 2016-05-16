@@ -54,7 +54,7 @@ namespace pr
 			MainGUI() :MainGUI(Params()) {}
 			MainGUI(FormParams const& p)
 				:Form(p)
-				,m_log(DerivedGUI::AppName(), pr::log::ToFile(FmtS("%s.log", DerivedGUI::AppName())), 0)
+				,m_log(DerivedGUI::AppName(), pr::log::ToFile(FmtS(L"%S.log", DerivedGUI::AppName())), 0)
 				,m_msg_loop()
 				,m_main(std::make_unique<Main>(*static_cast<DerivedGUI*>(this)))
 				,m_resizing(false)
@@ -123,72 +123,83 @@ namespace pr
 			}
 
 			// Rendering the window
-			virtual bool OnPaint(pr::gui::PaintEventArgs& args) override
+			virtual void OnPaint(pr::gui::PaintEventArgs& args) override
 			{
 				// Render the scene before raising the event, so that handlers
 				// have the option of drawing over the top of the 3D scene
 				if (m_main)
 				{
 					m_main->DoRender(true); // We've been asked to paint, so paint, regardless of RenderNeeded()
+					args.m_handled = true;
 
-					// Tell windows we're drawn the viewport area
+					// Tell windows we've drawn the viewport area
 					pr::gui::Rect cr = m_main->m_scene.m_viewport.AsRECT();
 					Validate(&cr);
+					return;
 				}
 
 				// Call the base to raise the paint event
-				return base::OnPaint(args);
+				base::OnPaint(args);
 			}
 
 			// Default mouse navigation behaviour
-			virtual bool OnMouseButton(pr::gui::MouseEventArgs const& args) override
+			virtual void OnMouseButton(pr::gui::MouseEventArgs& args) override
 			{
+				base::OnMouseButton(args);
+				if (args.m_handled) return;
+
 				m_nav_enabled = args.m_down;
 				m_main->Nav(pr::NormalisePoint(*this, args.m_point), args.m_down ? args.m_button : pr::gui::EMouseKey::None, true);
 				Invalidate();
-				return base::OnMouseButton(args);
 			}
-			virtual bool OnMouseClick(pr::gui::MouseEventArgs const& args) override
+			virtual void OnMouseClick(pr::gui::MouseEventArgs& args) override
 			{
+				base::OnMouseClick(args);
+				if (args.m_handled) return;
+
 				m_main->NavRevert(); // If a mouse single click is detected, revert any navigation
 				Invalidate();
-				return base::OnMouseClick(args);
 			}
-			virtual bool OnMouseMove(pr::gui::MouseEventArgs const& args) override
+			virtual void OnMouseMove(pr::gui::MouseEventArgs& args) override
 			{
+				base::OnMouseMove(args);
+				if (args.m_handled) return;
+
 				if (m_nav_enabled)
 				{
 					m_main->Nav(pr::NormalisePoint(*this, args.m_point), args.m_keystate, false);
 					Invalidate();
 				}
-				return base::OnMouseMove(args);
 			}
-			virtual bool OnMouseWheel(pr::gui::MouseWheelArgs const& args) override
+			virtual void OnMouseWheel(pr::gui::MouseWheelArgs& args) override
 			{
+				base::OnMouseWheel(args);
+				if (args.m_handled) return;
+
 				m_main->NavZ(args.m_delta / (float)WHEEL_DELTA);
 				Invalidate();
-				return base::OnMouseWheel(args);
 			}
 
 			// Resizing handlers
 			virtual void OnWindowPosChange(pr::gui::WindowPosEventArgs const& args) override
 			{
-				if (args.m_before)
+				if (args.IsResize() && !args.Iconic())
 				{
-					m_resizing = true;
-				}
-				else
-				{
-					m_resizing = false;
-
-					// Find the new client area
-					auto area = ClientRect(ERectFlags::ExcludeDockedChildren);
-					if (m_main && area.width() > 0 && area.height() > 0)
+					m_resizing = args.m_before;
+					if (!args.m_before)
 					{
-						m_main->Resize(pr::To<IRect>(area));
-						m_main->RenderNeeded();
+						// Find the new client area
+						auto area = ExcludeDockedChildren(ClientRect());
+						if (m_main && area.width() > 0 && area.height() > 0)
+						{
+	//	area = pr::gui::Rect(20,20, 50,50);//hack
+							m_main->Resize(pr::To<IRect>(area));
+							m_main->RenderNeeded();
+						}
 					}
 				}
+
+				// Raise the event after the render target has been resized
 				base::OnWindowPosChange(args);
 			}
 

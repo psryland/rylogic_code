@@ -70,9 +70,6 @@
 #include "pr/win32/win32.h"
 #include "pr/win32/windows_com.h"
 
-#define LDR_EXPORTS 1
-#include "pr/linedrawer/ldr_plugin_interface.h"
-
 namespace ldr
 {
 	using namespace pr::gui;
