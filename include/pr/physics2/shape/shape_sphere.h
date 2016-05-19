@@ -24,9 +24,7 @@ namespace pr
 				:m_base(EShape::Sphere, sizeof(ShapeSphere), shape_to_model, material_id, flags)
 				,m_radius(radius)
 				,m_hollow(hollow)
-			{
-				m_base.m_bbox = CalcBBox(*this);
-			}
+			{}
 			operator Shape const&() const
 			{
 				return m_base;
@@ -39,7 +37,7 @@ namespace pr
 		static_assert(is_shape<ShapeSphere>::value, "");
 
 		// Return the bounding box for a sphere shape
-		inline BBox& CalcBBox(ShapeSphere const& shape)
+		inline BBox CalcBBox(ShapeSphere const& shape)
 		{
 			return BBox(v4Origin, v4(shape.m_radius, shape.m_radius, shape.m_radius, 0.0f));
 		}

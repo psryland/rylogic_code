@@ -23,7 +23,7 @@ namespace pr
 				:m_base(EShape::Box, sizeof(ShapeBox), shape_to_model, material_id, flags)
 				,m_radius(dim * 0.5f)
 			{
-				m_base.m_bbox = CalcBBox(*this);
+				assert(dim.w == 0.0f);
 			}
 			operator Shape const&() const
 			{

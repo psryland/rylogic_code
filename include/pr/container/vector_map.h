@@ -19,11 +19,13 @@ namespace pr
 	template <typename Key, typename Type, typename Vec = std::vector<std::pair<Key,Type>>>
 	struct vector_map
 	{
-		typedef typename vector_map<Key,Type,Vec> this_type;
-		typedef typename std::pair<Key, Type> value_type;
-		typedef Vec cont_type;
-		typedef Key key_type;
-		typedef Type mapped_type;
+		using this_type   = typename vector_map<Key,Type,Vec>;
+		using value_type  = typename std::pair<Key, Type>;
+		using citer       = typename Vec::const_iterator;
+		using miter       = typename Vec::iterator;
+		using cont_type   = Vec;
+		using key_type    = Key;
+		using mapped_type = Type;
 
 		Vec m_cont;
 
@@ -34,13 +36,30 @@ namespace pr
 			bool operator()(key_type const& lhs, value_type const& rhs) const   { return lhs       < rhs.first; }
 		};
 
-		bool        empty() const                                 { return size() == 0; }
-		std::size_t size() const                                  { return end() - begin(); }
-		auto        begin() const -> decltype(std::begin(m_cont)) { return std::begin(m_cont); }
-		auto        begin()       -> decltype(std::begin(m_cont)) { return std::begin(m_cont); }
-		auto        end() const   -> decltype(std::end(m_cont))   { return std::end(m_cont); }
-		auto        end()         -> decltype(std::end(m_cont))   { return std::end(m_cont); }
-		
+		bool empty() const
+		{
+			return size() == 0;
+		}
+		std::size_t size() const
+		{
+			return end() - begin();
+		}
+		citer begin() const
+		{
+			return std::begin(m_cont);
+		}
+		miter begin()
+		{
+			return std::begin(m_cont);
+		}
+		citer end() const
+		{
+			return std::end(m_cont);
+		}
+		miter end()
+		{
+			return std::end(m_cont);
+		}
 		void clear()
 		{
 			m_cont.clear();

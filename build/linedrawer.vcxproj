@@ -265,7 +265,7 @@
     <ResourceCompile Include="..\projects\linedrawer\resources\linedrawer.rc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\projects\linedrawer\deploy.py" />
+    <None Include="..\projects\linedrawer\deploy_ldr.py" />
     <None Include="..\projects\linedrawer\post_build.py" />
     <None Include="..\projects\linedrawer\ThingsToGetRight.txt" />
   </ItemGroup>

@@ -1,19 +1,20 @@
 //*****************************************
 // XmlLite wrapper
-//	(c)opyright Paul Ryland 2009
+//	Copyright (C) Paul Ryland 2009
 //*****************************************
 // Required lib: xmllite.lib
 
 #pragma once
 
-#include <atlbase.h>
-#include <xmllite.h> // import xmllite.lib shlwapi.lib
 #include <vector>
 #include <string>
 #include <locale>
 #include <sstream>
 #include <exception>
 #include <algorithm>
+
+#include <atlbase.h>
+#include <xmllite.h> // import xmllite.lib shlwapi.lib
 
 #pragma comment(lib, "xmllite.lib")
 #pragma comment(lib, "shlwapi.lib")
@@ -59,7 +60,7 @@ namespace pr
 			return reinterpret_cast<HashValue const&>(crc);
 		}
 
-		// helpers for converting things to std::wstring
+		// helpers for converting things to 'std::wstring'
 		inline std::wstring const& str(std::wstring const& s) { return s; }
 		inline std::wstring str(std::string const& s)         { return std::wstring(s.begin(), s.end()); }
 		inline std::wstring str(char const* s)                { return std::wstring(s, s + strlen(s)); }
@@ -110,6 +111,7 @@ namespace pr
 				,m_cdata(cdata)
 			{}
 
+			// Convert the contained value to a type
 			template <typename Type> Type as() const;
 			template <> bool              as() const { return _wcsicmp(m_value.c_str(), L"true") == 0 || _wtoi(m_value.c_str()) != 0; }
 			template <> char              as() const { return static_cast<char>(as<int>()); }
@@ -123,15 +125,42 @@ namespace pr
 			template <> std::string       as() const { return std::string(m_value.begin(), m_value.end()); }
 			template <> std::wstring      as() const { return m_value; }
 
+			// Child node access
 			NodeVec::const_iterator begin() const { return m_child.begin(); }
 			NodeVec::const_iterator end() const   { return m_child.end(); }
 			NodeVec::iterator begin()             { return m_child.begin(); }
 			NodeVec::iterator end()               { return m_child.end(); }
 
-			std::wstring tag() const  { return m_prefix + (m_prefix.empty() ? L"" : L":") + m_tag; }
-			HashValue    hash() const { return Hash(tag()); }
+			// Return the tag name for this node
+			std::wstring tag() const
+			{
+				return m_prefix + (m_prefix.empty() ? L"" : L":") + m_tag;
+			}
 
-			Node& add(Node const& node) { m_child.push_back(node); return m_child.back(); }
+			// Return a hash value for the name of this node
+			HashValue hash() const
+			{
+				return Hash(tag());
+			}
+
+			// Add a child node to this node. Returns the added child.
+			Node& add(Node const& node)
+			{
+				m_child.push_back(node);
+				return m_child.back();
+			}
+
+			// Return the first element with a name matching 'name'
+			Node const* element(std::wstring const& tag) const
+			{
+				auto iter = std::find_if(std::begin(m_child), std::end(m_child), [&](Node const& n){ return n.tag() == tag; });
+				return iter != std::end(m_child) ? &*iter : nullptr;
+			}
+			Node* element(std::wstring const& tag)
+			{
+				auto iter = std::find_if(std::begin(m_child), std::end(m_child), [&](Node const& n){ return n.tag() == tag; });
+				return iter != std::end(m_child) ? &*iter : nullptr;
+			}
 		};
 
 		namespace impl
@@ -142,7 +171,7 @@ namespace pr
 				if (!FAILED(hr)) return;
 
 				std::stringstream ss;
-				ss << "Xml exception - ";
+				ss << "XML exception - ";
 
 				#pragma region Xml Error Codes
 				switch (hr)
@@ -242,7 +271,7 @@ namespace pr
 				throw std::exception(ss.str().c_str());
 			}
 
-			// Parse xml tag attributes
+			// Parse XML tag attributes
 			template <typename Node>
 			void ParseAttributes(ATL::CComPtr<IXmlReader>& reader, Node& node)
 			{
@@ -262,7 +291,7 @@ namespace pr
 				}
 			}
 
-			// Parse an ending xml tag
+			// Parse an ending XML tag
 			template <typename Node>
 			void ParseEndElement(ATL::CComPtr<IXmlReader>& reader, Node& node)
 			{
@@ -292,7 +321,7 @@ namespace pr
 				node.m_proc_instr.push_back(Attr(L"", localname, value));
 			}
 
-			// Parse an xml element 
+			// Parse an XML element 
 			template <typename Node>
 			void ParseComment(ATL::CComPtr<IXmlReader>& reader, Node& node)
 			{
@@ -301,7 +330,7 @@ namespace pr
 				node.m_comments.push_back(value);
 			}
 
-			// Parse an xml element 
+			// Parse an XML element 
 			template <typename Node>
 			void ParseElement(ATL::CComPtr<IXmlReader>& reader, Node& node, bool top_level)
 			{
@@ -352,7 +381,7 @@ namespace pr
 					Check(hr);
 			}
 
-			// Write an xml element 
+			// Write an XML element 
 			template <typename Node>
 			void WriteElement(ATL::CComPtr<IXmlWriter>& writer, Node& node)
 			{
@@ -391,13 +420,18 @@ namespace pr
 			}
 		}
 
-		// Parse xml data from a stream generating a 'Node' tree
-		inline void Load(ATL::CComPtr<IStream>& stream, Node& out)
+		// Parse XML data from a stream generating a 'Node' tree
+		inline Node Load(ATL::CComPtr<IStream>& stream)
 		{
+			Node out;
 			ATL::CComPtr<IXmlReader> reader;
 			impl::Check(CreateXmlReader(__uuidof(IXmlReader), (void**)&reader, 0));
 			impl::Check(reader->SetInput(stream)); // Set it as the stream source for the reader
-			try { impl::ParseElement(reader, out, true); }
+			try
+			{
+				impl::ParseElement(reader, out, true);
+				return out;
+			}
 			catch (std::exception& ex)
 			{
 				UINT line_num, line_pos;
@@ -413,28 +447,28 @@ namespace pr
 				throw;
 			}
 		}
-		inline void Load(char const* filename, Node& out)
+		inline Node Load(char const* filename)
 		{
 			// Create an 'IStream' from a file
 			ATL::CComPtr<IStream> stream;
 			impl::Check(SHCreateStreamOnFileA(filename, STGM_READ, &stream));
-			Load(stream, out);
+			return Load(stream);
 		}
-		inline void Load(wchar_t const* filename, Node& out)
+		inline Node Load(wchar_t const* filename)
 		{
 			// Create an 'IStream' from a file
 			ATL::CComPtr<IStream> stream;
 			impl::Check(SHCreateStreamOnFileW(filename, STGM_READ, &stream));
-			Load(stream, out);
+			return Load(stream);
 		}
-		inline void Load(char const* xml_string, std::size_t length, Node& out)
+		inline Node Load(char const* xml_string, std::size_t length)
 		{
 			// Create an 'IStream' from a string
 			ATL::CComPtr<IStream> stream = SHCreateMemStream((BYTE const*)xml_string, (UINT)length);
-			Load(stream, out);
+			return Load(stream);
 		}
 
-		// Save data in an xml format
+		// Save data in an XML format
 		// 'properties' is a bitwise combination of 'EProperty' (note, only some supported)
 		inline void Save(ATL::CComPtr<IStream>& stream, Node const& in, int properties = EProperty_Indent)
 		{
@@ -517,7 +551,6 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-//#include "pr/str/prstring.h"
 
 namespace pr
 {
@@ -535,17 +568,20 @@ R"(
 </root>
 )";
 			
-			// xml doesn't except accept \0 in the string
-			pr::xml::Node root;
-			pr::xml::Load(xml, sizeof(xml) - 1, root);
+			// XML doesn't accept \0 in the string
+			pr::xml::Node root = pr::xml::Load(xml, sizeof(xml) - 1);
 			PR_CHECK(root.m_child.size(), 2U);
-			
+			PR_CHECK(root.element(L"node0") != nullptr, true);
+			PR_CHECK(root.element(L"child") != nullptr, true);
+			PR_CHECK(root.element(L"boris") == nullptr, true);
+
 			auto& node0 = root.m_child[0];
 			PR_CHECK(node0.m_child.size(), 0U);
 			PR_CHECK(node0.as<int>(), 1);
 
 			auto& child = root.m_child[1];
 			PR_CHECK(child.m_child.size(), 1U);
+			PR_CHECK(child.element(L"node1") != nullptr, true);
 
 			auto& node1 = child.m_child[0];
 			PR_CHECK(node1.m_child.size(), 0U);

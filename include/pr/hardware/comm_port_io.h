@@ -30,10 +30,11 @@ namespace pr
 	// RS232 communication interface
 	class CommPortIO
 	{
-		CommPortSettings m_settings;    // Port settings
-		HANDLE           m_handle;      // File handle
-		HANDLE           m_io_complete; // Manual reset event for overlapped i/o operations
-		mutable DWORD    m_last_error;  // The last error returned from a call to ::GetLastError()
+		CommPortSettings m_settings;      // Port settings
+		HANDLE           m_handle;        // File handle
+		HANDLE           m_io_complete;   // Manual reset event for overlapped i/o operations
+		DWORD            m_read_interval; // The maximum time between data characters arriving
+		mutable DWORD    m_last_error;    // The last error returned from a call to ::GetLastError()
 
 		void ApplyConfig()
 		{
@@ -49,7 +50,7 @@ namespace pr
 		}
 
 		// Throws if 'res' is not TRUE
-		void Throw(BOOL res, char const* msg)
+		void Throw(BOOL res, char const* msg) const
 		{
 			if (res) return;
 			std::string error_desc;
@@ -72,6 +73,7 @@ namespace pr
 			:m_settings()
 			,m_handle(INVALID_HANDLE_VALUE)
 			,m_io_complete(0)
+			,m_read_interval(1)
 			,m_last_error(0)
 		{}
 		~CommPortIO()
@@ -122,8 +124,7 @@ namespace pr
 		}
 
 		// Open the serial IO connection
-		void Open(int port_number) { Open(port_number, 0, 0); }
-		void Open(int port_number, size_t ibuf_size, size_t obuf_size)
+		void Open(int port_number, size_t ibuf_size = 0, size_t obuf_size = 0, size_t file_flags = FILE_FLAG_NO_BUFFERING|FILE_FLAG_WRITE_THROUGH)
 		{
 			if (IsOpen())
 			{
@@ -135,7 +136,7 @@ namespace pr
 			{
 				// Open for overlapped I/O
 				port_name name(port_number);
-				m_handle = ::CreateFileW(name, GENERIC_READ|GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED|FILE_FLAG_NO_BUFFERING|FILE_FLAG_WRITE_THROUGH, 0);
+				m_handle = ::CreateFileW(name, GENERIC_READ|GENERIC_WRITE, 0, 0, OPEN_EXISTING, DWORD(FILE_FLAG_OVERLAPPED|file_flags), 0);
 				Throw(m_handle != INVALID_HANDLE_VALUE, pr::FmtS("Could not open 'COM%d'", port_number));
 
 				// Create a manual reset event for the overlapped i/o calls
@@ -150,8 +151,11 @@ namespace pr
 					Throw(::SetupComm(m_handle, DWORD(ibuf_size), DWORD(obuf_size)), "Failed to set comm port i/o buffering");
 				}
 
-				// Set non-blocking reads/writes as default
-				SetBlockingReads(false);
+				// Set the data read interval to the minimum. This means calls to Read() will block for up to the 
+				// given timeout period but will return as soon as the interval between data arriving exceeds 1ms.
+				// Note: not using 0, because 0 causes the ReadFile() function to return immediately, regardless of
+				// the timeout value used in our Read() call.
+				SetReadIntervalTimeout(1);
 
 				// Try to set up the device with default settings
 				COMMCONFIG config = {sizeof(COMMCONFIG)};
@@ -206,6 +210,48 @@ namespace pr
 			}
 		}
 
+		// Get/Set the current values for the comm read/write timeouts
+		COMMTIMEOUTS CommTimeouts() const
+		{
+			COMMTIMEOUTS cto = {};
+			Throw(::GetCommTimeouts(m_handle, &cto), "Failed to read comm port timeouts");
+			return cto;
+		}
+		void CommTimeouts(COMMTIMEOUTS cto)
+		{
+			Throw(::SetCommTimeouts(m_handle, &cto), "Failed to set comm port timeouts");
+		}
+
+		// Set the maximum time allowed to elapse before the arrival of the next byte on the communications line, in milliseconds.
+		// If the interval between the arrival of any two bytes exceeds this amount, the ReadFile operation is completed and any
+		// buffered data is returned.
+		// 0        = return immediately with the bytes that have already been received, even if no bytes have been received.
+		// INFINITE = block until the requested number of bytes have been received, or a 'total' timeout occurs.
+		void SetReadIntervalTimeout(unsigned int timeout_ms)
+		{
+			auto cto = CommTimeouts();
+			if (timeout_ms == 0)
+			{
+				// A value of MAXDWORD, combined with zero values for both the ReadTotalTimeoutConstant and ReadTotalTimeoutMultiplier members,
+				// specifies that the read operation is to return immediately with the bytes that have already been received, even if no bytes
+				// have been received.
+				cto.ReadIntervalTimeout        = m_read_interval = MAXDWORD;
+				cto.ReadTotalTimeoutMultiplier = 0;
+				cto.ReadTotalTimeoutConstant   = 0;
+			}
+			else if (timeout_ms == INFINITE)
+			{
+				cto.ReadIntervalTimeout        = m_read_interval = 0;
+				cto.ReadTotalTimeoutMultiplier = 0;
+				cto.ReadTotalTimeoutConstant   = 0;
+			}
+			else
+			{
+				cto.ReadIntervalTimeout        = m_read_interval = timeout_ms;
+			}
+			CommTimeouts(cto);
+		}
+
 		// Set the mask for comm events to watch for
 		void SetCommMask(DWORD mask) // EV_TXEMPTY etc
 		{
@@ -217,7 +263,7 @@ namespace pr
 		{
 			// Write the data and wait for the overlapped operation to complete
 			OVERLAPPED ovrlap = {}; ovrlap.hEvent = m_io_complete;
-			Throw(::WaitCommEvent(m_handle, &mask, &ovrlap) || GetLastError() == ERROR_IO_PENDING, "");
+			Throw(::WaitCommEvent(m_handle, &mask, &ovrlap) || GetLastError() == ERROR_IO_PENDING, "WaitCommEvent failed");
 
 			DWORD bytes_sent;
 			switch (::WaitForSingleObject(ovrlap.hEvent, timeout))
@@ -301,30 +347,6 @@ namespace pr
 			set ? SetCommBreak(m_handle) : ClearCommBreak(m_handle);
 		}
 
-		// Set the read timeout behaviour
-		// If 'blocking' is true, the read functions will block until the requested data is available or a timeout occurs
-		void SetBlockingReads(bool blocking)
-		{
-			COMMTIMEOUTS cto;
-			Throw(::GetCommTimeouts(m_handle, &cto), "Failed to read comm port timeouts");
-			cto.ReadIntervalTimeout = blocking ? 0 : MAXDWORD;
-			cto.ReadTotalTimeoutConstant = 0;
-			cto.ReadTotalTimeoutMultiplier = 0;
-			Throw(::SetCommTimeouts(m_handle, &cto), "Failed to set comm port timeouts");
-		}
-
-		// Set the read/write timeout values
-		void SetCommTimeouts(DWORD read_timeout, DWORD read_multiplier, DWORD read_constant, DWORD write_multiplier, DWORD write_constant)
-		{
-			COMMTIMEOUTS cto = {};
-			cto.ReadIntervalTimeout         = read_timeout;     // Maximum time between read chars.
-			cto.ReadTotalTimeoutMultiplier  = read_multiplier;  // Multiplier of characters.
-			cto.ReadTotalTimeoutConstant    = read_constant;    // Constant in milliseconds.
-			cto.WriteTotalTimeoutMultiplier = write_multiplier; // Multiplier of characters.
-			cto.WriteTotalTimeoutConstant   = write_constant;   // Constant in milliseconds.
-			Throw(::SetCommTimeouts(m_handle, &cto), "Failed to set comm port timeouts");
-		}
-
 		// Read buffered data from the IO connection.
 		// 'buffer' is the buffer to copy data into
 		// 'size' is the length of 'buffer'
@@ -340,11 +362,16 @@ namespace pr
 				return false;
 			}
 
-			// Block for up to 'timeout' while reading data
+			// Set the timeout
+			auto cto = CommTimeouts();
+			cto.ReadIntervalTimeout = timeout != 0 ? m_read_interval : MAXDWORD;
+			CommTimeouts(cto);
+
 			OVERLAPPED ovrlap = {}; ovrlap.hEvent = m_io_complete;
 			if (!::ReadFile(m_handle, buffer, DWORD(size), 0, &ovrlap) && GetLastError() != ERROR_IO_PENDING)
 				return false;
 
+			// Block for up to 'timeout' while reading data
 			switch (::WaitForSingleObject(ovrlap.hEvent, timeout))
 			{
 			default:
@@ -386,16 +413,6 @@ namespace pr
 			Throw(::ClearCommError(m_handle, &errors, &stat), "Failed to clear comm errors");
 		}
 
-		//// Set the timeouts
-		//bool SetReadTimeout(DWORD timeout)
-		//{
-		//	if (!IsOpen()) return false;
-		//
-		//	COMMTIMEOUTS cto;
-		//	if (!::GetCommTimeouts(m_handle, &cto)) return false;
-		//	cto.ReadTotalTimeoutConstant = timeout;
-		//	return ::SetCommTimeouts(m_handle, &cto) != 0;
-		//}
 
 		// Return the number of bytes available for reading by the serial port
 		size_t BytesAvailable() const
@@ -408,7 +425,7 @@ namespace pr
 			return ComStat.cbInQue;
 		}
 
-		// Enumerate the comm port names on the current machine. 'Func(char const* port_name)'
+		// Enumerate the comm port names on the current machine. Func = 'Func(char const* port_name)'
 		template <typename Func> static void EnumPortNames(Func func)
 		{
 			struct HKey
@@ -438,6 +455,13 @@ namespace pr
 				data[datalen] = 0;
 				func(data);
 			}
+		}
+
+		// Enumerate the standard baud rates. Func = 'Func(int baud_rate)'
+		template <typename Func> static void EnumBaudRates(Func func)
+		{
+			for (auto br : {921600, 460800, 230400, 115200, 57600, 38400, 19200, 9600})
+				func(br);
 		}
 	};
 }

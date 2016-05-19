@@ -24,7 +24,6 @@ namespace pr
 				,m_v(a, b, c, Normalise3(Cross3(b-a,c-b)))
 			{
 				assert(a.w == 0.0f && b.w == 0.0f && c.w == 0.0f);
-				m_base.m_bbox = CalcBBox(*this);
 			}
 			operator Shape const&() const
 			{
@@ -74,7 +73,7 @@ namespace pr
 		inline MassProperties CalcMassProperties(ShapeTriangle const& shape, float density)
 		{
 			MassProperties mp;
-			mp.m_centre_of_mass = (1.0 / 3.0f) * (shape.m_v.x + shape.m_v.y + shape.m_v.z).w0();
+			mp.m_centre_of_mass = (1.0f / 3.0f) * (shape.m_v.x + shape.m_v.y + shape.m_v.z).w0();
 			mp.m_mass = Length3(Cross3(shape.m_v.y-shape.m_v.x, shape.m_v.z-shape.m_v.y)) * 0.5f * density;
 			mp.m_os_inertia_tensor = CalcInertiaTensor(shape);
 			return mp;
@@ -103,7 +102,7 @@ namespace pr
 		// Find the nearest point and distance from a point to a shape. 'shape' and 'point' are in the same space
 		inline void ClosestPoint(ShapeTriangle const& shape, v4_cref point, float& distance, v4& closest)
 		{
-			closest = ClosestPoint_PointToTriangle(point, shape.m_v.x, shape.m_v.y, shape.m_v.z);
+			closest = pr::ClosestPoint_PointToTriangle(point, shape.m_v.x, shape.m_v.y, shape.m_v.z);
 			distance = Length3(point - closest);
 		}
 	}

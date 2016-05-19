@@ -76,7 +76,7 @@ namespace pr
 	namespace gdi { using namespace Gdiplus; }
 	namespace gui
 	{
-		static_assert(_WIN32_WINNT >= _WIN32_WINNT_WIN7, "Windows version not >= win7");
+		static_assert(_WIN32_WINNT >= _WIN32_WINNT_WIN6, "Windows version not >= win6");
 
 		// Forwards
 		struct CtrlParams;

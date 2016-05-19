@@ -16,7 +16,7 @@ def DeployBin(targetpath:str, platform:str, config:str, dstsubdir:str):
 
 	if platform.lower() == "win32": platform = "x86"
 
-	targetpath  = targetpath.lower()
+	targetpath  = os.path.abspath(targetpath) # don't change the filename case
 	platform    = platform.lower()
 	config      = config.lower()
 	dstsubdir   = dstsubdir.lower()
@@ -50,7 +50,6 @@ if __name__ == "__main__":
 		dstsubdir  = sys.argv[4] if len(sys.argv) > 4 else ""
 
 		DeployBin(targetpath, platform, config, dstsubdir)
-		Tools.OnSuccess()
 
 	except Exception as ex:
 		Tools.OnException(ex)

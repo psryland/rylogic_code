@@ -151,6 +151,7 @@ namespace pr
 	// e.g Dot(force, velocity) == power delivered
 	inline float Dot(v8m const& lhs, v8f const& rhs)
 	{
+		(void)lhs,rhs;
 	}
 	inline float Dot(v8f const& lhs, v8m const& rhs)
 	{

@@ -24,7 +24,7 @@ def DeployLib(targetpath:str, platform:str, config:str, dstdir:str=""):
 	dstdir = dstdir if dstdir != "" else UserVars.root + "\\lib"
 	if platform.lower() == "win32": platform = "x86"
 
-	#'targetpath  = targetpath.lower() don't change the filename case
+	targetpath  = os.path.abspath(targetpath) # don't change the filename case
 	platform    = platform.lower()
 	config      = config.lower()
 	dstdir      = dstdir.lower().rstrip("/\\") + "\\" + platform + "\\" + config
@@ -58,7 +58,6 @@ if __name__ == "__main__":
 		dstdir     = sys.argv[4] if len(sys.argv) > 4 else ""
 
 		DeployLib(targetpath, platform, config, dstdir)
-		Tools.OnSuccess()
 
 	except Exception as ex:
 		Tools.OnException(ex)

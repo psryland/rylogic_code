@@ -25,8 +25,8 @@ try:
 	
 	# Copy the support dlls
 	# These are the native dlls that visual studio doesn't automatically handle
-	Tools.Copy(UserVars.root + "\\lib\\x86\\"+config+"\\scintilla.dll", targetdir+"lib\\x86\\"+config+"\\", only_if_modified=True)
-	Tools.Copy(UserVars.root + "\\lib\\x64\\"+config+"\\scintilla.dll", targetdir+"lib\\x64\\"+config+"\\", only_if_modified=True)
+	Tools.Copy(UserVars.root + "\\lib\\x86\\"+config+"\\scintilla.dll", targetdir+"lib\\x86\\"+config+"\\")
+	Tools.Copy(UserVars.root + "\\lib\\x64\\"+config+"\\scintilla.dll", targetdir+"lib\\x64\\"+config+"\\")
 
 except Exception as ex:
 	Tools.OnError("ERROR: " + str(ex))

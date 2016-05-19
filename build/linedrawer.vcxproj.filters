@@ -201,7 +201,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\linedrawer\ThingsToGetRight.txt" />
-    <None Include="..\projects\linedrawer\deploy.py" />
     <None Include="..\projects\linedrawer\post_build.py" />
+    <None Include="..\projects\linedrawer\deploy_ldr.py" />
   </ItemGroup>
 </Project>

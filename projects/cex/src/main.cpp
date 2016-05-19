@@ -188,7 +188,7 @@ namespace cex
 		{
 			// Load the XML file
 			pr::xml::Node root;
-			try { pr::xml::Load(config.c_str(), root); }
+			try { root = pr::xml::Load(config.c_str()); }
 			catch (std::exception const& ex)
 			{
 				std::wcout << "Failed to load " << config << std::endl << ex.what() << std::endl;

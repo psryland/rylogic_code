@@ -1,0 +1,10 @@
+Usually because of a header file that doesn't exist on disk
+
+Turn on: Options -> Projects and Solutions -> Build and Run -> MSBuild project build output verbosity = Diagnostic
+Build the project (twice, the first build is a legitimate change)
+Scroll to the top, the reason for the rebuild should be shown.
+
+Note:
+  The line "'unsuccessfulbuild' because "AlwaysCreate" was specified" (or similar) happens when
+  MSBuild has detected a change. MSBuild creates the unsuccessfulbuild file as part of the build
+  process to force a rebuild. It is not the original cause of the rebuild.

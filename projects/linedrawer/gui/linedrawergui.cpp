@@ -690,8 +690,11 @@ namespace ldr
 		std::string version;
 		pr::network::WebGet("http://www.rylogic.co.nz/latest_versions.html", version);
 
-		pr::xml::Node root;
-		try { pr::xml::Load(version.c_str(), version.size(), root); }
+		try
+		{
+			auto root = pr::xml::Load(version.c_str(), version.size());
+			(void)root;
+		}
 		catch (std::exception const&)
 		{
 			::MessageBoxA(*this, "Version information invalid", "Check For Updates", MB_OK|MB_ICONERROR);

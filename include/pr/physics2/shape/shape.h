@@ -172,8 +172,7 @@ namespace pr
 		}
 
 		// Calculate the bounding box for a shape.
-		template <typename TShape, typename = enable_if_shape<TShape>> BBox CalcBBox(TShape const& shape);
-		inline BBox CalcBBox(Shape const& shape)
+		template <typename = void> inline BBox CalcBBox(Shape const& shape)
 		{
 			switch (shape.m_type)
 			{
@@ -185,8 +184,7 @@ namespace pr
 		}
 
 		// Calculate the mass properties of a shape
-		template <typename TShape, typename = enable_if_shape<TShape>> MassProperties CalcMassProperties(TShape const& shape, float density);
-		inline MassProperties CalcMassProperties(Shape const& shape, float density)
+		template <typename = void> inline MassProperties CalcMassProperties(Shape const& shape, float density)
 		{
 			switch (shape.m_type)
 			{
@@ -197,8 +195,7 @@ namespace pr
 		}
 
 		// Shift the centre a shape. Updates 'shape.m_shape_to_model' and 'shift'
-		template <typename TShape, typename = enable_if_shape<TShape>> void ShiftCentre(TShape& shape, v4& shift);
-		inline void ShiftCentre(Shape& shape, v4& shift)
+		template <typename = void> inline void ShiftCentre(Shape& shape, v4& shift)
 		{
 			switch (shape.m_type)
 			{
@@ -210,8 +207,7 @@ namespace pr
 		}
 
 		// Returns the support vertex for 'shape' in 'direction'. 'direction' is in shape space
-		template <typename TShape, typename = enable_if_shape<TShape>> v4 SupportVertex(TShape const& shape, v4_cref direction, size_t hint_vert_id, size_t& sup_vert_id);
-		inline v4 SupportVertex(Shape const& shape, v4_cref direction, size_t hint_vert_id, size_t& sup_vert_id)
+		template <typename = void> inline v4 SupportVertex(Shape const& shape, v4_cref direction, size_t hint_vert_id, size_t& sup_vert_id)
 		{
 			switch (shape.m_type)
 			{
@@ -224,8 +220,7 @@ namespace pr
 		}
 
 		// Returns the closest point on 'shape' to 'point'. 'shape' and 'point' are in the same space
-		template <typename TShape, typename = enable_if_shape<TShape>> void ClosestPoint(TShape const& shape, v4_cref point, float& distance, v4& closest);
-		void ClosestPoint(Shape const& shape, v4 const& point, float& distance, v4& closest)
+		template <typename = void> inline void ClosestPoint(Shape const& shape, v4_cref point, float& distance, v4& closest)
 		{
 			switch (shape.m_type)
 			{

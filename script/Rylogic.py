@@ -119,6 +119,8 @@ def DiffContent(src,dst,trace=False):
 # Copy 'src' to 'dst' optionally if 'src' is newer than 'dst'
 def Copy(src, dst, only_if_modified=True, show_unchanged=False, ignore_non_existing=False, quiet=False):
 
+	src = os.path.abspath(src)
+	dst = os.path.abspath(dst)
 	src_is_dir = os.path.isdir(src)
 	dst_is_dir = os.path.isdir(dst) or dst.endswith("/") or dst.endswith("\\") or src_is_dir
 
