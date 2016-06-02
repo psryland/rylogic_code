@@ -1145,7 +1145,10 @@ namespace pr.win32
 						return module;
 				
 					var msg = GetLastErrorString();
-					throw new Exception("Found dependent library '{0}' but it failed to load.\r\nLast Error: {1}".Fmt(path, msg));
+					throw new Exception(
+						"Found dependent library '{0}' but it failed to load.\r\n".Fmt(path)+
+						"This is likely to be because a library that '{0}' is dependent on failed to load.\r\n".Fmt(path)+
+						"Last Error: {0}".Fmt(msg));
 				};
 
 			var searched = new List<string>();

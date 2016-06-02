@@ -560,4 +560,14 @@ namespace pr.extn
 			return "{0} (child count: {1})".Fmt(m_name, m_children.Count);
 		}
 	}
+
+	/// <summary>Track bar extensions</summary>
+	public static class TrackBar_
+	{
+		/// <summary>Set the value of track bar, clamping it to the min/max range</summary>
+		public static int ValueClamped(this TrackBar tb, int value)
+		{
+			return tb.Value = Maths.Clamp(value, tb.Minimum, tb.Maximum);
+		}
+	}
 }

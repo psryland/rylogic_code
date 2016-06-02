@@ -117,12 +117,10 @@ namespace pr
 				m_dsb.Clear(EDS::DepthWriteMask);
 				m_rsb.Clear(ERS::CullMode);
 
-				// Delete the dependent nugget
-				for (auto& nug : m_nuggets)
-				{
-					if (nug.m_sort_key.Group() != ESortGroup::AlphaBack) continue;
-					m_model_buffer->m_mdl_mgr->Delete(&nug);
-				}
+				// Find and delete the dependent nugget
+				auto iter = pr::find_if(m_nuggets, [](auto& nug){ return nug.m_sort_key.Group() == ESortGroup::AlphaBack; });
+				if (iter != m_nuggets.end())
+					m_model_buffer->m_mdl_mgr->Delete(&*iter);
 			}
 		}
 	}

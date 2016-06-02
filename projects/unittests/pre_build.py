@@ -6,8 +6,8 @@
 # Use:
 #   pre_build.py $(ProjectDir)..\unittests $(PlatformTarget) $(Configuration)
 
-import sys, os, tempfile
-sys.path.append(os.path.realpath(os.path.dirname(__file__) + "\\..\\..\\script"))
+import sys, os, tempfile, re
+sys.path.append(re.sub(r"^(.:[\\/]).*", r"\1script", sys.path[0]))
 import Rylogic as Tools
 import UserVars
 

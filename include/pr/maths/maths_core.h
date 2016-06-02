@@ -170,14 +170,42 @@ namespace pr
 		return x_cp(v) == 0 && y_cp(v) == 0 && z_cp(v) == 0 && w_cp(v) == 0;
 	}
 
+	// NaN test
+	inline bool IsNaN(float value)
+	{
+		return isnan(value);
+	}
+	inline bool IsNaN(double value)
+	{
+		return isnan(value);
+	}
+	template <typename T, typename = std::enable_if<std::is_arithmetic<T>::value>::type> inline bool IsNaN(T value)
+	{
+		return false;
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> inline bool IsNaN(T const& value, bool any = true) // false = all
+	{
+		int i = 0, iend = maths::is_vec<T>::dim;
+		if (any)
+		{
+			for (; i != iend && !IsNaN(value[i]); ++i) {}
+			return i != iend;
+		}
+		else
+		{
+			for (; i != iend && IsNaN(value[i]); ++i) {}
+			return i == iend;
+		}
+	}
+
 	// Finite test
 	inline bool IsFinite(float value)
 	{
-		return _finite(value) != 0;
+		return isfinite(value);
 	}
 	inline bool IsFinite(double value)
 	{
-		return _finite(value) != 0;
+		return isfinite(value);
 	}
 	inline bool IsFinite(float value, float max_value)
 	{
@@ -195,17 +223,33 @@ namespace pr
 	{
 		return IsFinite(value) && Abs(value) < max_value;
 	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline bool IsFinite(T const& value)
+	template <typename T, typename = maths::enable_if_vN<T>> inline bool IsFinite(T const& value, bool any = false) // true = all
 	{
 		int i = 0, iend = maths::is_vec<T>::dim;
-		for (; i != iend && IsFinite(value[i]); ++i) {}
-		return i == iend;
+		if (any)
+		{
+			for (; i != iend && !IsFinite(value[i]); ++i) {}
+			return i != iend;
+		}
+		else
+		{
+			for (; i != iend && IsFinite(value[i]); ++i) {}
+			return i == iend;
+		}
 	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline bool IsFinite(T const& value, typename maths::is_vec<T>::cp_type max_value)
+	template <typename T, typename = maths::enable_if_vN<T>> inline bool IsFinite(T const& value, typename maths::is_vec<T>::cp_type max_value, bool any = false) // true = all
 	{
 		int i = 0, iend = maths::is_vec<T>::dim;
-		for (; i != iend && IsFinite(value[i], max_value); ++i) {}
-		return i == iend;
+		if (any)
+		{
+			for (; i != iend && !IsFinite(value[i], max_value); ++i) {}
+			return i != iend;
+		}
+		else
+		{
+			for (; i != iend && IsFinite(value[i], max_value); ++i) {}
+			return i == iend;
+		}
 	}
 
 	// Absolute value
@@ -495,7 +539,17 @@ namespace pr
 		return logf(x);
 	}
 
-	// Test all components pass 'Pred'
+	// Test any or all components pass 'Pred'
+	template <typename T, typename Pred, typename = std::enable_if<std::is_arithmetic<T>::value>::type> inline bool Any(T value, Pred pred)
+	{
+		return pred(value);
+	}
+	template <typename T, typename Pred, typename = maths::enable_if_vN<T>> inline bool Any(T const& v, Pred pred)
+	{
+		int i = 0, iend = maths::is_vec<T>::dim;
+		for (; i != iend && !Any(v[i], pred); ++i) {}
+		return i != iend;
+	}
 	template <typename T, typename Pred, typename = maths::enable_if_v2<T>> inline bool Any2(T const& v, Pred pred)
 	{
 		return
@@ -516,6 +570,16 @@ namespace pr
 			pred(y_cp(v)) ||
 			pred(z_cp(v)) ||
 			pred(w_cp(v));
+	}
+	template <typename T, typename Pred, typename = std::enable_if<std::is_arithmetic<T>::value>::type> inline bool All(T value, Pred pred)
+	{
+		return pred(value);
+	}
+	template <typename T, typename Pred, typename = maths::enable_if_vN<T>> inline bool All(T const& v, Pred pred)
+	{
+		int i = 0, iend = maths::is_vec<T>::dim;
+		for (; i != iend && All(v[i], pred); ++i) {}
+		return i == iend;
 	}
 	template <typename T, typename Pred, typename = maths::enable_if_v2<T>> inline bool All2(T const& v, Pred pred)
 	{
@@ -646,6 +710,14 @@ namespace pr
 		return Max(Max(x,y), std::forward<A>(a)...);
 	}
 
+	// Sum
+	template <typename T, typename V = maths::is_vec<T>::elem_type, typename = maths::enable_if_vN<T>> inline V Sum(T const& v)
+	{
+		auto r = V{};
+		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r += v[i];
+		return r;
+	}
+	
 	// Operators
 	template <typename T, typename = maths::enable_if_vN<T>> inline bool operator == (T const& lhs, T const& rhs)
 	{

@@ -4,8 +4,8 @@
 # Post build step
 # Use:
 #  post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)
-import sys, os, string
-sys.path.append(r"P:\script")
+import sys, os, string, re
+sys.path.append(re.sub(r"^(.:[\\/]).*", r"\1script", sys.path[0]))
 import Rylogic as Tools
 import UserVars
 

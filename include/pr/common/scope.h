@@ -37,14 +37,22 @@ namespace pr
 		{
 			rhs.m_do_undo = false;
 		}
-
-	private:
-		Scope(Scope const&);
-		Scope& operator=(Scope const&);
+		Scope& operator = (Scope&& rhs)
+		{
+			if (this != &rhs)
+			{
+				std::swap(m_doit, rhs.m_doit);
+				std::swap(m_undo, rhs.m_undo);
+				std::swap(m_do_undo, rhs.m_do_undo);
+			}
+			return *this;
+		}
+		Scope(Scope const&) = delete;
+		Scope& operator = (Scope const&) = delete;
 	};
 
 	// Create a scope object from two lambda functions
-	template <typename Doit, typename Undo> auto CreateScope(Doit doit, Undo undo) -> Scope<Doit,Undo>
+	template <typename Doit, typename Undo> Scope<Doit,Undo> CreateScope(Doit doit, Undo undo)
 	{
 		return std::move(Scope<Doit,Undo>(doit,undo));
 	}
@@ -76,10 +84,19 @@ namespace pr
 		{
 			rhs.m_do_undo = false;
 		}
-
-	private:
-		StateScope(StateScope const&);
-		StateScope& operator=(StateScope const&);
+		StateScope& operator = (StateScope&& rhs)
+		{
+			if (this != &rhs)
+			{
+				std::swap(m_doit, rhs.m_doit);
+				std::swap(m_undo, rhs.m_undo);
+				std::swap(m_do_undo, rhs.m_do_undo);
+				std::swap(m_state, rhs.m_state);
+			}
+			return *this;
+		}
+		StateScope(StateScope const&) = delete;
+		StateScope& operator = (StateScope const&) = delete;
 	};
 
 	// Create a state scope object from two lambda functions
@@ -87,7 +104,6 @@ namespace pr
 	{
 		return StateScope<decltype(doit()),Doit,Undo>(doit,undo);
 	}
-
 }
 
 #if PR_UNITTESTS

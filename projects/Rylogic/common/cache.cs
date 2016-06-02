@@ -126,7 +126,10 @@ namespace pr.common
 		public bool ThreadSafe { get; set; }
 
 		/// <summary>The number of items in the cache</summary>
-		public int Count { get { return m_cache.Count; } }
+		public int Count
+		{
+			get { return m_cache.Count; }
+		}
 
 		/// <summary>Enumerate over the items in the cache</summary>
 		public IEnumerable<TItem> CachedItems
@@ -150,11 +153,18 @@ namespace pr.common
 		private int m_capacity;
 
 		/// <summary>Return performance data for the cache</summary>
-		public CacheStats Stats { get { return m_stats; } }
+		public CacheStats Stats
+		{
+			get { return m_stats; }
+		}
 		private CacheStats m_stats;
 
 		/// <summary>Returns true if an object with a key matching 'key' is currently in the cache</summary>
-		public bool IsCached(TKey key) { return m_lookup.ContainsKey(key); }
+		public bool IsCached(TKey key)
+		{
+			using (Lock)
+				return m_lookup.ContainsKey(key);
+		}
 
 		/// <summary>Pre-load the cache with an item</summary>
 		public void Add(TKey key, TItem item)
@@ -196,8 +206,8 @@ namespace pr.common
 		{
 			// Use the lookup map to find the node in the cache
 			LinkedListNode<Entry> node;
-			if (!m_lookup.TryGetValue(key, out node))
-				return false;
+			using (Lock) m_lookup.TryGetValue(key, out node);
+			if (node == null) return false;
 
 			using (Lock)
 				DeleteCachedItem(node, false);
@@ -217,8 +227,9 @@ namespace pr.common
 				return on_miss(key);
 
 			// Use the lookup map to find the node in the cache
-			LinkedListNode<Entry> node;
-			if (m_lookup.TryGetValue(key, out node))
+			LinkedListNode<Entry> node = null;
+			using (Lock) m_lookup.TryGetValue(key, out node);
+			if (node != null)
 			{
 				// Found!
 				Interlocked.Increment(ref m_stats.Hits);
@@ -227,7 +238,8 @@ namespace pr.common
 				// For object pools, remove the item from the cache before returning it.
 				using (Lock)
 				{
-					switch (Mode) {
+					switch (Mode)
+					{
 					default: throw new Exception("Unknown cache mode");
 					case CacheMode.StandardCache:
 						m_cache.Remove(node);
@@ -255,7 +267,8 @@ namespace pr.common
 
 				// For standard caches, store the new item in the cache before returning it.
 				// For object pools, do nothing, the user will put it in the cache when finished with it.
-				switch (Mode) {
+				switch (Mode)
+				{
 				default: throw new Exception("Unknown cache mode");
 				case CacheMode.StandardCache:
 					using (Lock)
@@ -265,14 +278,14 @@ namespace pr.common
 						if (!m_lookup.TryGetValue(key, out node))
 						{
 							// Create a new node and add to the cache
-							node = m_cache.AddFirst(new Entry{Key = key, Item = item});
+							node = m_cache.AddFirst(new Entry { Key = key, Item = item });
 							m_lookup[key] = node;
 							LimitCacheSize();
 						}
 					}
 					break;
 				case CacheMode.ObjectPool:
-					node = new LinkedListNode<Entry>(new Entry{Key = key, Item = item});
+					node = new LinkedListNode<Entry>(new Entry { Key = key, Item = item });
 					break;
 				}
 			}

@@ -29,9 +29,8 @@ namespace pr
 				:m_base(EShape::Array, size_in_bytes, shape_to_model, material_id, flags)
 				,m_num_shapes(num_shapes)
 			{
-				// Can't calculate the bbox here because we can't be sure of what follows this
-				// object in memory. The shapes that belong to this array may not be there yet.
-				// m_base.m_bbox = CalcBBox(*this);
+				// Careful: We can't be sure of what follows this object in memory.
+				// The shapes that belong to this array may not be there yet.
 			}
 			operator Shape const&() const
 			{

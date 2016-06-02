@@ -18,6 +18,10 @@ namespace TestCS
 				BackgroundImage = SystemIcons.Error.ToBitmap();
 				BackgroundImageLayout = ImageLayout.Stretch;
 				DockControl = new DockControl(this, text) {TabIcon = SystemIcons.Exclamation.ToBitmap()};
+
+				Controls.Add2(new TextBox {Location = new Point(0, 0) });
+				Controls.Add2(new TextBox {Location = new Point(0, 24) });
+				Controls.Add2(new TextBox {Location = new Point(0, 48) });
 			}
 
 			/// <summary>Implements docking functionality</summary>

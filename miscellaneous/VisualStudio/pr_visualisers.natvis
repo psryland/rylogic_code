@@ -56,10 +56,11 @@
 
 	<!-- Chain -->
 	<Type Name="pr::chain::head&lt;*,*&gt;">
-		<DisplayString>{m_next->m_obj}</DisplayString>
+		<DisplayString>count={size()} first={*m_next->m_obj}</DisplayString>
 	</Type>
 	<Type Name="pr::chain::link&lt;*,*&gt;">
-		<DisplayString>{m_obj}</DisplayString>
+		<DisplayString Condition="m_obj == 0">empty</DisplayString>
+		<DisplayString>{*m_obj}</DisplayString>
 	</Type>
 
 	<!-- Maths -->

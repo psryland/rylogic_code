@@ -63,23 +63,23 @@ namespace pr
 				m_edit.InitLdrStyle();
 				m_edit.SetSel(-1, 0);
 				m_edit.Key += [this](Control&, KeyEventArgs const& args)
-					{
-						if (!args.m_down) return;
-						if (args.m_vk_key == VK_F5)
-							m_btn_render.OnClick();
-					};
+				{
+					if (!args.m_down) return;
+					if (args.m_vk_key == VK_F5)
+						m_btn_render.OnClick();
+				};
 
 				// Hook up button handlers
 				m_btn_render.Click += [this](Button&, EmptyArgs const&)
-					{
-						if (!m_render) return;
-						auto text = m_edit.Text();
-						m_render(pr::Widen(text));
-					};
+				{
+					if (!m_render) return;
+					auto text = m_edit.Text();
+					m_render(pr::Widen(text));
+				};
 				m_btn_close.Click += [this](Button&, EmptyArgs const&)
-					{
-						Close(EDialogResult::Close);
-					};
+				{
+					Close(EDialogResult::Close);
+				};
 
 				m_btn_render.Visible(m_render != nullptr);
 			}

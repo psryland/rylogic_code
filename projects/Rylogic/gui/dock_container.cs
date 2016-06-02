@@ -1519,6 +1519,9 @@ namespace pr.gui
 						{
 							if (m_impl_visible_content != null)
 							{
+								// Save the control that had input focus at the time this content became inactive
+								m_impl_visible_content.SaveFocus();
+
 								// Remove from the child controls collection
 								// Note: don't dispose the content, we don't own it
 								Controls.Remove(m_impl_visible_content.Owner);
@@ -1537,6 +1540,9 @@ namespace pr.gui
 								// When content becomes active, add it as a child control of the pane
 								Controls.Add(m_impl_visible_content.Owner);
 								Controls.SetChildIndex(m_impl_visible_content.Owner, 0);
+
+								// Restore the input focus for this content
+								m_impl_visible_content.RestoreFocus();
 							}
 						}
 
@@ -2537,6 +2543,7 @@ namespace pr.gui
 			}
 			public void Dispose()
 			{
+				LastInputFocus = null;
 				DockPane = null;
 				DockContainer = null;
 			}
@@ -2868,6 +2875,21 @@ namespace pr.gui
 			{
 				get { return DockPane?.Content.Current == this; }
 			}
+
+			/// <summary>Save/Restore the control (possibly child control) that had input focus when the content was last active</summary>
+			internal void SaveFocus()
+			{
+				LastInputFocus = Owner.ContainsFocus ? FromHandle(Win32.GetFocus()) : null;
+			}
+			internal void RestoreFocus()
+			{
+				if (LastInputFocus == null) return;
+				if (LastInputFocus == Owner) Owner.Focus();
+				if (LastInputFocus.Parents().Contains(Owner))
+					LastInputFocus.Focus();
+				LastInputFocus = null;
+			}
+			private Control LastInputFocus { get; set; }
 
 			/// <summary>Save to XML</summary>
 			public XElement ToXml(XElement node)
@@ -5619,11 +5641,13 @@ namespace pr.gui
 					if (m_impl_active_pane != null)
 					{
 						m_impl_active_pane.VisibleContentChanged -= HandleActiveContentChanged;
+						m_impl_active_pane.VisibleContent?.SaveFocus();
 					}
 					m_impl_prev_pane = new WeakReference<DockPane>(m_impl_active_pane);
 					m_impl_active_pane = value;
 					if (m_impl_active_pane != null)
 					{
+						m_impl_active_pane.VisibleContent?.RestoreFocus();
 						m_impl_active_pane.VisibleContentChanged += HandleActiveContentChanged;
 					}
 

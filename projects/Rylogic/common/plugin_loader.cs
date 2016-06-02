@@ -65,8 +65,10 @@ namespace pr.common
 						try
 						{
 							// An exception here means the constructor for the type being created has thrown.
-							Plugins.Add((TInterface)Activator.CreateInstance(ty, args));
+							var cmp = (TInterface)Activator.CreateInstance(ty, args);
 							Log.Debug(this, "   Found implementation: {0} from {1}".Fmt(ty.Name, lib));
+
+							Plugins.Add(cmp);
 						}
 						catch (Exception ex)
 						{

@@ -390,6 +390,12 @@ namespace pr
 		return v4(mat.y.y*mat.z.z - mat.y.z*mat.z.y, -mat.y.x*mat.z.z + mat.y.z*mat.z.x, mat.y.x*mat.z.y - mat.y.y*mat.z.x, 0.0f);
 	}
 
+	// Return the diagonal elements of 'mat'
+	inline v4 Diagonal(m3x4 const& mat)
+	{
+		return v4(mat.x.x, mat.y.y, mat.z.z, 0);
+	}
+
 	// Return the transpose of 'mat'
 	inline m3x4 Transpose3x3(m3x4 const& mat)
 	{

@@ -50,6 +50,22 @@ namespace pr.extn
 			return items.AddOrdered(item, AlphabeticalOrder);
 		}
 
+		/// <summary>Add a separator if the previous item is not a separator</summary>
+		public static void AddSeparator(this ToolStripItemCollection items)
+		{
+			if (items.Count == 0) return;
+			if (items[items.Count - 1] is ToolStripSeparator) return;
+			items.Add(new ToolStripSeparator());
+		}
+
+		/// <summary>Make sure a separator is not the last item</summary>
+		public static void TrimSeparator(this ToolStripItemCollection items)
+		{
+			if (items.Count == 0) return;
+			if (!(items[items.Count - 1] is ToolStripSeparator)) return;
+			items.RemoveAt(items.Count - 1);
+		}
+
 		/// <summary>ToolStripMenuItem comparer for alphabetical order</summary>
 		public static readonly Cmp<ToolStripMenuItem> AlphabeticalOrder = Cmp<ToolStripMenuItem>.From((l,r) => string.Compare(l.Text, r.Text, true));
 

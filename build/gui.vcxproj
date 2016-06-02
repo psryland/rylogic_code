@@ -152,9 +152,6 @@
   <ItemGroup>
     <None Include="..\projects\gui\post_build.py" />
   </ItemGroup>
-  <ItemGroup>
-    <Image Include="..\projects\gui\res\Smiling gekko 140x110.ico" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

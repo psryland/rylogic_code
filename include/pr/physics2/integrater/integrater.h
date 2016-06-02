@@ -19,12 +19,18 @@ namespace pr
 		void Evolve(RB& rb, double elapsed_seconds)
 		{
 			// Equation of Motion: f = d(Iv)/dt = I*a + v x Iv
-			// f = net force acting
-			// I = inertia tensor
-			// v = velocity
+			// f = net spatial force acting
+			// I = spatial inertia tensor
+			// v = spatial velocity
 			// Iv = momentum
-			// a = acceleration
+			// a = spatial acceleration
+			//
+			// f = I*a + v x Iv
+
 			(void)rb,elapsed_seconds;
+
+			// Reset the forces on the body to zero
+			rb.m_force = v8f();
 		}
 	}
 }

@@ -21,29 +21,10 @@ namespace pr.gui
 			InitializeComponent();
 
 			InputType = EInputType.Anything;
+			ValidateValue = null;
 
-			m_edit.KeyPress += (s,a)=>
-			{
-				bool valid;
-				switch (InputType)
-				{
-				default: throw new ArgumentException("Unknown input type for prompt dialog");
-				case EInputType.Anything:
-					valid = true;
-					break;
-				case EInputType.Identifer:
-					valid = a.KeyChar == '_' || char.IsLetter(a.KeyChar) || (Value.Length != 0 && char.IsDigit(a.KeyChar));
-					break;
-				case EInputType.Number:
-					valid = char.IsDigit(a.KeyChar);
-					break;
-				case EInputType.Filename:
-					valid = Path.GetInvalidFileNameChars().IndexOf(a.KeyChar) == -1;
-					break;
-				}
-				a.Handled = !valid;
-				if (!valid) m_tt.Show("Invalid character. Expecting "+InputType.ToString()+" characters", this);
-			};
+			m_edit.TextChanged += HandleValueChanged;
+			m_edit.KeyPress += HandleKeyPress;
 		}
 
 		/// <summary>Limit user input to specific categories</summary>
@@ -75,6 +56,72 @@ namespace pr.gui
 		{
 			get { return m_edit.Text; }
 			set { m_edit.Text = value; }
+		}
+
+		/// <summary>Access to the edit control used to set the value</summary>
+		public TextBox ValueCtrl
+		{
+			get { return m_edit; }
+		}
+
+		/// <summary>A predicate for validating the input prompt</summary>
+		public Func<string,bool> ValidateValue
+		{
+			get { return m_validate; }
+			set
+			{
+				if (m_validate == value) return;
+				m_validate = value;
+				UpdateValueHintState();
+			}
+		}
+		private Func<string,bool> m_validate;
+
+		/// <summary>Update the hint state of the value text box</summary>
+		public void UpdateValueHintState()
+		{
+			if (ValidateValue != null)
+			{
+				var valid = ValidateValue(m_edit.Text);
+				m_edit.HintState(valid);
+				m_btn_ok.Enabled = valid;
+			}
+			else
+			{
+				m_edit.HintState(TextBoxExtensions.EHintState.Uninitialised);
+				m_btn_ok.Enabled = true;
+			}
+		}
+
+		/// <summary>Validate key presses based on the input type</summary>
+		private void HandleKeyPress(object sender, KeyPressEventArgs a)
+		{
+			bool valid;
+			switch (InputType)
+			{
+			default: throw new ArgumentException("Unknown input type for prompt dialog");
+			case EInputType.Anything:
+				valid = true;
+				break;
+			case EInputType.Identifer:
+				valid = a.KeyChar == '_' || char.IsLetter(a.KeyChar) || (Value.Length != 0 && char.IsDigit(a.KeyChar));
+				break;
+			case EInputType.Number:
+				valid = char.IsDigit(a.KeyChar);
+				break;
+			case EInputType.Filename:
+				valid = Path.GetInvalidFileNameChars().IndexOf(a.KeyChar) == -1;
+				break;
+			}
+			a.Handled = !valid;
+			if (!valid)
+				m_tt.Show("Invalid character. Expecting "+InputType.ToString()+" characters", this);
+		}
+
+		/// <summary>Validate the input value based on the 'ValidateValue' predicate</summary>
+		private void HandleValueChanged(object sender, EventArgs e)
+		{
+			UpdateValueHintState();
 		}
 
 		#region Windows Form Designer generated code

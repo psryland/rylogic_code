@@ -11,6 +11,8 @@ namespace pr
 	namespace threads
 	{
 		// Mix-in class for pause thread functionality
+		// Note: this is not a suspend/resume mechanism. The class that inherits this functionality
+		// needs to call 'TestPause()' from a main loop in order for the pause to occur.
 		struct PauseThread
 		{
 			// Notes:
@@ -29,7 +31,7 @@ namespace pr
 			// pause/unpause calls has to be: (ignoring timeouts)
 			//   pause()   -> thread pauses, returns true
 			//   pause()   -> returns true, already paused
-			//   unpause() -> thread unpauses, return true
+			//   unpause() -> thread un-pauses, return true
 			//   unpause() -> returns true, already unpaused
 
 			mutable std::mutex      m_mutex_pause;
@@ -105,6 +107,14 @@ namespace pr
 				m_force_unpause = true;
 				m_pause_request = false;
 				m_cv_pause.notify_all();
+			}
+
+			// Returns true if the thread has been signalled to pause
+			// This method would typically be called from the thread context that is to be paused
+			bool IsPauseRequested() const
+			{
+				std::unique_lock<std::mutex> lock(m_mutex_pause);
+				return m_pause_request;
 			}
 
 			// Checks for pause requests and pauses the current thread until the requests == 0

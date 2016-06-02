@@ -16,7 +16,8 @@ namespace pr
 		// do not have a defined construction order. If you're using
 		// them in other global objects they mightn't be initialised
 		constexpr float const tiny       = 1.00000002e-4F; // Can't go lower than this cos DX uses less precision
-		constexpr float const tiny_sq    = 1.00000008e-8F; // Can't go lower than this cos DX uses less precision
+		constexpr float const tiny_sq    = 1.00000008e-8F;
+		constexpr float const tiny_sqrt  = 1.00000008e-2F;
 		constexpr float const phi        = 1.618034e+0F; // "Golden Ratio"
 		constexpr float const tau        = 6.283185e+0F; // circle constant
 		constexpr float const inv_tau    = 1.591549e-1F;
@@ -29,27 +30,30 @@ namespace pr
 		constexpr float const inv_root2  = 7.071069e-1F;
 		constexpr double const dbl_tiny = 1.000000e-12;
 
-		char const    char_min     = limits<char>::min();
-		char const    char_max     = limits<char>::max();
-		uint8 const   uint8_min    = limits<uint8>::min();
-		uint8 const   uint8_max    = limits<uint8>::max();
-		short const   short_min    = limits<short>::min();
-		short const   short_max    = limits<short>::max();
-		uint16 const  uint16_min   = limits<uint16>::min();
-		uint16 const  uint16_max   = limits<uint16>::max();
-		int const     int_min      = limits<int>::min();
-		int const     int_max      = limits<int>::max();
-		uint const    uint_min     = limits<uint>::min();
-		uint const    uint_max     = limits<uint>::max();
-		int64 const   int64_min    = limits<int64>::min();
-		int64 const   int64_max    = limits<int64>::max();
-		uint64 const  uint64_min   = limits<uint64>::min();
-		uint64 const  uint64_max   = limits<uint64>::max();
-		float const   float_min    = limits<float>::min();
-		float const   float_max    = limits<float>::max();
-		float const   float_eps    = limits<float>::epsilon();
-		double const  double_min   = limits<double>::min();
-		double const  double_max   = limits<double>::max();
-		double const  double_eps   = limits<double>::epsilon();
+		constexpr char const    char_min     = limits<char>::min();
+		constexpr char const    char_max     = limits<char>::max();
+		constexpr uint8 const   uint8_min    = limits<uint8>::min();
+		constexpr uint8 const   uint8_max    = limits<uint8>::max();
+		constexpr short const   short_min    = limits<short>::min();
+		constexpr short const   short_max    = limits<short>::max();
+		constexpr uint16 const  uint16_min   = limits<uint16>::min();
+		constexpr uint16 const  uint16_max   = limits<uint16>::max();
+		constexpr int const     int_min      = limits<int>::min();
+		constexpr int const     int_max      = limits<int>::max();
+		constexpr uint const    uint_min     = limits<uint>::min();
+		constexpr uint const    uint_max     = limits<uint>::max();
+		constexpr int64 const   int64_min    = limits<int64>::min();
+		constexpr int64 const   int64_max    = limits<int64>::max();
+		constexpr uint64 const  uint64_min   = limits<uint64>::min();
+		constexpr uint64 const  uint64_max   = limits<uint64>::max();
+		constexpr float const   float_min    = limits<float>::min();
+		constexpr float const   float_max    = limits<float>::max();
+		constexpr float const   float_eps    = limits<float>::epsilon();
+		constexpr double const  double_min   = limits<double>::min();
+		constexpr double const  double_max   = limits<double>::max();
+		constexpr double const  double_eps   = limits<double>::epsilon();
+
+		constexpr float const   float_nan    = limits<float>::quiet_NaN();
+		constexpr double const  double_nan   = limits<double>::quiet_NaN();
 	}
 }

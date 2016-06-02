@@ -89,6 +89,7 @@
     <ClInclude Include="..\include\pr\common\istream.h" />
     <ClInclude Include="..\include\pr\common\keystate.h" />
     <ClInclude Include="..\include\pr\common\interpolate.h" />
+    <ClInclude Include="..\include\pr\common\linq.h" />
     <ClInclude Include="..\include\pr\common\log.h" />
     <ClInclude Include="..\include\pr\common\mempool.h" />
     <ClInclude Include="..\include\pr\common\memstream.h" />

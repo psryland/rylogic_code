@@ -207,7 +207,7 @@ namespace pr
 		}
 
 		// Returns the support vertex for 'shape' in 'direction'. 'direction' is in shape space
-		template <typename = void> inline v4 SupportVertex(Shape const& shape, v4_cref direction, size_t hint_vert_id, size_t& sup_vert_id)
+		template <typename = void> inline v4 SupportVertex(Shape const& shape, v4_cref direction, int hint_vert_id, int& sup_vert_id)
 		{
 			switch (shape.m_type)
 			{

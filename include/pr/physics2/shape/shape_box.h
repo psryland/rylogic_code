@@ -48,12 +48,9 @@ namespace pr
 			auto volume = 8.0f * shape.m_radius.x * shape.m_radius.y * shape.m_radius.z;
 
 			MassProperties mp;
-			mp.m_centre_of_mass        = v4Zero;
-			mp.m_mass                  = volume * density;
-			mp.m_os_inertia_tensor     = m3x4Identity;
-			mp.m_os_inertia_tensor.x.x = (1.0f / 3.0f) * (shape.m_radius.y * shape.m_radius.y + shape.m_radius.z * shape.m_radius.z); // (1/12)m(Y^2 + Z^2)
-			mp.m_os_inertia_tensor.y.y = (1.0f / 3.0f) * (shape.m_radius.x * shape.m_radius.x + shape.m_radius.z * shape.m_radius.z); // (1/12)m(X^2 + Z^2)
-			mp.m_os_inertia_tensor.z.z = (1.0f / 3.0f) * (shape.m_radius.y * shape.m_radius.y + shape.m_radius.x * shape.m_radius.x); // (1/12)m(Y^2 + Z^2)
+			mp.m_centre_of_mass    = v4Zero;
+			mp.m_mass              = volume * density;
+			mp.m_os_inertia_tensor = Inertia((1.0f / 3.0f) * (Sqr(shape.m_radius.y) + Sqr(shape.m_radius.z))); // (1/12)m(Y^2 + Z^2)
 			return mp;
 		}
 
@@ -65,7 +62,7 @@ namespace pr
 		}
 
 		// Return a support vertex for a box shape
-		inline v4 SupportVertex(ShapeBox const& shape, v4_cref direction, size_t, size_t& sup_vert_id)
+		inline v4 SupportVertex(ShapeBox const& shape, v4_cref direction, int, int& sup_vert_id)
 		{
 			int sign_x = (direction.x > 0.0f);
 			int sign_y = (direction.y > 0.0f);

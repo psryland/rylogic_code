@@ -3804,40 +3804,48 @@ namespace pr.gui
 		public DiagramControl() :this(new DiagramOptions()) {}
 		public DiagramControl(DiagramOptions options)
 		{
-			Elements              = new BindingListEx<Element> { PerItemClear = true, UseHashSet = true };
-			Selected              = new BindingListEx<Element> { PerItemClear = true };
-			m_impl_options        = options ?? new DiagramOptions();
-			m_hoverscroll         = new HoverScroll(Handle);
-			m_node_styles         = new StyleCache<NodeStyle>();
-			m_connector_styles    = new StyleCache<ConnectorStyle>();
-			m_mouse_op            = new MouseOps();
-			m_toolstrip_edit      = new ToolStrip{Name = "m_diagram_edit_tools", Visible = false, Dock = DockStyle.Right};
-			m_dirty               = new DirtyElements(this);
+			try
+			{
+				Elements              = new BindingListEx<Element> { PerItemClear = true, UseHashSet = true };
+				Selected              = new BindingListEx<Element> { PerItemClear = true };
+				m_impl_options        = options ?? new DiagramOptions();
+				m_hoverscroll         = new HoverScroll(Handle);
+				m_node_styles         = new StyleCache<NodeStyle>();
+				m_connector_styles    = new StyleCache<ConnectorStyle>();
+				m_mouse_op            = new MouseOps();
+				m_toolstrip_edit      = new ToolStrip{Name = "m_diagram_edit_tools", Visible = false, Dock = DockStyle.Right};
+				m_dirty               = new DirtyElements(this);
 
-			if (this.IsInDesignMode()) return;
+				if (this.IsInDesignMode()) return;
 
-			m_view3d = new View3d();
-			m_window = new View3d.Window(m_view3d, Handle, new View3d.WindowOptions(false, null, IntPtr.Zero) { DbgName = "Diagram" });
-			m_tools  = new Tools();
-			m_camera = m_window.Camera;
-			m_camera.SetClipPlanes(0.5f, 1.1f, true);
-			m_window.LightProperties = View3d.Light.Directional(-v4.ZAxis, Colour32.Zero, Colour32.Gray, Colour32.Zero, 0f, 0f);
-			m_window.FocusPointVisible = false;
-			m_window.OriginVisible = false;
-			m_window.Orthographic = false;
+				m_view3d = new View3d();
+				m_window = new View3d.Window(m_view3d, Handle, new View3d.WindowOptions(false, null, IntPtr.Zero) { DbgName = "Diagram" });
+				m_tools  = new Tools();
+				m_camera = m_window.Camera;
+				m_camera.SetClipPlanes(0.5f, 1.1f, true);
+				m_window.LightProperties = View3d.Light.Directional(-v4.ZAxis, Colour32.Zero, Colour32.Gray, Colour32.Zero, 0f, 0f);
+				m_window.FocusPointVisible = false;
+				m_window.OriginVisible = false;
+				m_window.Orthographic = false;
 
-			InitializeComponent();
-			SetupEditToolstrip();
+				InitializeComponent();
+				SetupEditToolstrip();
 
-			Elements.ListChanging += (s,a) => OnElementListChanging(a);
-			Selected.ListChanging += (s,a) => OnSelectListChanging(a);
+				Elements.ListChanging += (s,a) => OnElementListChanging(a);
+				Selected.ListChanging += (s,a) => OnSelectListChanging(a);
 
-			SetCursor();
-			ResetView();
-			DefaultKeyboardShortcuts = true;
-			DefaultMouseControl = true;
-			AllowEditing = true;
-			AllowSelection = true;
+				SetCursor();
+				ResetView();
+				DefaultKeyboardShortcuts = true;
+				DefaultMouseControl = true;
+				AllowEditing = true;
+				AllowSelection = true;
+			}
+			catch
+			{
+				Dispose();
+				throw;
+			}
 		}
 		protected override void Dispose(bool disposing)
 		{

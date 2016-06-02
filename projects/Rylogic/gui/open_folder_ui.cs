@@ -50,7 +50,10 @@ namespace pr.gui
 		}
 		private Environment.SpecialFolder m_initial_dir;
 
-		/// <summary>Get/Set the path selected by the user and first selected in the dialog when opened.</summary>
+		/// <summary>
+		/// Get/Set the path selected by the user and first selected in the dialog when opened.
+		/// Note: Setting 'SelectedPath = "C:\\windows" will cause the dialog to open with 'C:\' selected in the tree and 'Windows' selected in the list
+		/// Setting 'SelectedPath = "C:\\windows\\" will cause the dialog to open with 'C:\Windows' selected in the tree and nothing selected in the list</summary>
 		public string SelectedPath
 		{
 			get { return m_old_browse_folder_dlg != null ? m_old_browse_folder_dlg.SelectedPath : m_selected_path; }

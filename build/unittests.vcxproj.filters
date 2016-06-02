@@ -912,6 +912,9 @@
     <ClInclude Include="..\include\pr\physics2\rigid_body\rigid_body.h">
       <Filter>pr\physics\rigid_body</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\common\linq.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

@@ -65,6 +65,7 @@ struct Main :Form
 	Button        m_btn_cmenu;
 	Button        m_btn;
 	Button        m_btn_about;
+	Button        m_btn_msgbox;
 	ScintillaCtrl m_scint;
 	Tab           m_tab1;
 	Tab           m_tab2;
@@ -76,17 +77,25 @@ struct Main :Form
 	ProgressUI    m_nm_progress;
 
 	enum { ID_FILE, ID_FILE_EXIT };
-	enum { IDC_PROGRESS = 100, IDC_NM_PROGRESS, IDC_MODELESS, IDC_CONTEXTMENU, IDC_POSTEST, IDC_ABOUT, IDC_SCINT, IDC_TAB, IDC_TAB1, IDC_TAB2, IDC_SPLITL, IDC_SPLITR };
+	enum { IDC_PROGRESS = 100, IDC_NM_PROGRESS, IDC_MODELESS, IDC_CONTEXTMENU, IDC_POSTEST, IDC_ABOUT, IDC_MSGBOX, IDC_SCINT, IDC_TAB, IDC_TAB1, IDC_TAB2, IDC_SPLITL, IDC_SPLITR };
 
 	Main()
-		:Form          (MakeFormParams<>().name("main").title(L"Pauls Window").xy(2000,100).wh(800,600).menu({{L"&File", Menu(Menu::EKind::Popup, {MenuItem(L"E&xit", IDCLOSE)})}}).main_wnd(true).wndclass(RegisterWndClass<Main>()))
+		:Form(MakeFormParams<>()
+			.name("main")
+			.title(L"Pauls Window")
+			.icon(IDR_MAINFRAME)
+			.xy(2000,100).wh(800,600)
+			.menu({{L"&File", Menu(Menu::EKind::Popup, {MenuItem(L"E&xit", IDCLOSE)})}})
+			.main_wnd(true)
+			.wndclass(RegisterWndClass<Main>()))
 		,m_lbl         (Label::Params<>()        .parent(this_).name("m_lbl")         .text(L"hello world")       .xy(10,10)                          .wh(60,16)                      )
 		,m_btn_progress(Button::Params<>()       .parent(this_).name("m_btn_progress").text(L"progress")          .xy(10,30)                          .wh(100,20) .id(IDC_PROGRESS)   )
 		,m_btn_nm_prog (Button::Params<>()       .parent(this_).name("m_btn_nm_prog") .text(L"non-modal progress").xy(10,Top|BottomOf|IDC_PROGRESS)   .wh(100,20) .id(IDC_NM_PROGRESS))
 		,m_btn_modeless(Button::Params<>()       .parent(this_).name("m_btn_modeless").text(L"show modeless")     .xy(10,Top|BottomOf|IDC_NM_PROGRESS).wh(100,20) .id(IDC_MODELESS)   )
 		,m_btn_cmenu   (Button::Params<>()       .parent(this_).name("m_btn_cmenu")   .text(L"context menu")      .xy(10,Top|BottomOf|IDC_MODELESS)   .wh(100,20) .id(IDC_CONTEXTMENU))
-		,m_btn         (Button::Params<>()       .parent(this_).name("btn")           .text(L"BOOBS")             .xy(10,Top|BottomOf|IDC_CONTEXTMENU).wh(100,20) .id(IDC_POSTEST)    )
-		,m_btn_about   (Button::Params<>()       .parent(this_).name("m_btn_about")   .text(L"About")             .xy(-10,-10)                        .wh(100,20) .id(IDC_ABOUT)      .anchor(EAnchor::BottomRight)) 
+		,m_btn         (Button::Params<>()       .parent(this_).name("btn")           .text(L"BOOBS")             .xy(10,Top|BottomOf|IDC_CONTEXTMENU).wh(100,40) .id(IDC_POSTEST)    .image(L"refresh", pr::gui::Image::EType::Png))
+		,m_btn_about   (Button::Params<>()       .parent(this_).name("m_btn_about")   .text(L"About")             .xy(-10,-10)                        .wh(100,32) .id(IDC_ABOUT)      .anchor(EAnchor::BottomRight)) 
+		,m_btn_msgbox  (Button::Params<>()       .parent(this_).name("m_btn_msgbox")  .text(L"MsgBox")            .xy(-10,Bottom|TopOf|IDC_ABOUT)     .wh(100,32) .id(IDC_MSGBOX)     .anchor(EAnchor::BottomRight)) 
 		,m_scint       (ScintillaCtrl::Params<>().parent(this_).name("m_scint")                                   .xy(0,0)                            .wh(100,100).id(IDC_SCINT)      )
 		,m_tab1        (L"hi from tab1", IDC_TAB1, this_)
 		,m_tab2        (L"hi from tab2", IDC_TAB2, this_)
@@ -150,12 +159,21 @@ struct Main :Form
 				menu.Show(this, pt.x, pt.y);
 			}
 		};
-		m_btn.Click += std::bind(&Main::RunBoobs, this, _1, _2);
 		m_btn_about.Click += [&](Button&,EmptyArgs const&)
 		{
 			//About().ShowDialog(this);
 			About2().ShowDialog(this);
 		};
+		m_btn_msgbox.Click += [&](Button&, EmptyArgs const&)
+		{
+			MsgBox::Show(*this,
+				L"This is a test message box. It has loads of text in it to test how the re-flow thing works.\r\n"
+				L"Hopefully, it will work well, although if it does the first time I try it, I'll be amazed.\r\n"
+				L"\r\n"
+				L"Here's hoping...",
+				L"Message Title", MsgBox::EButtons::YesNo, MsgBox::EIcon::Question);
+		};
+		m_btn.Click += std::bind(&Main::RunBoobs, this, _1, _2);
 
 		if ((HWND)m_tc != nullptr)
 		{
@@ -195,8 +213,8 @@ struct Test :Form
 		:Form(MakeFormParams<>().name("test").title(L"Paul's Window").xy(2000,100).wh(800,600).menu({{L"&File", Menu(Menu::EKind::Popup, {MenuItem(L"E&xit", IDCLOSE)})}}).main_wnd(true).wndclass(RegisterWndClass<Test>()))
 		,m_split(Splitter::Params<>().vertical().name("split").parent(this).dock(EDock::Fill))
 	{
-		m_split.Pane0.Style(EStyleOp::Add, WS_BORDER);
-		m_split.Pane1.Style(EStyleOp::Add, WS_BORDER);
+		m_split.Pane0.Style('+', WS_BORDER);
+		m_split.Pane1.Style('+', WS_BORDER);
 	}
 };
 

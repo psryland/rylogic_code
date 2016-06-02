@@ -659,8 +659,53 @@ namespace pr.common
 			FilesOnly = 1 << 2,
 		}
 
+		/// <summary>Flags for shell file operations</summary>
+		[Flags] public enum EFileOpFlags
+		{
+			None = 0,
+
+			/// <summary>Don't display progress UI (confirm prompts may be displayed still)</summary>
+			Silent = Win32.FOF_SILENT,
+
+			/// <summary>Automatically rename the source files to avoid the collisions</summary>
+			RenameOnCollision = Win32.FOF_RENAMEONCOLLISION,
+
+			/// <summary>Don't display confirmation UI, assume "yes" for cases that can be bypassed, "no" for those that can not</summary>
+			NoConfirmation = Win32.FOF_NOCONFIRMATION,
+
+			/// <summary>Enable undo including Recycle behaviour for IFileOperation::Delete()</summary>
+			AllowUndo = Win32.FOF_ALLOWUNDO,
+
+			/// <summary>Only operate on the files (non folders), both files and folders are assumed without this</summary>
+			FilesOnly = Win32.FOF_FILESONLY,
+
+			/// <summary>Means don't show names of files</summary>
+			SimpleProgress = Win32.FOF_SIMPLEPROGRESS,
+
+			/// <summary>Don't display confirmation UI before making any needed directories, assume "Yes" in these cases</summary>
+			NoConfirmMakeDir = Win32.FOF_NOCONFIRMMKDIR,
+
+			/// <summary>Don't put up error UI, other UI may be displayed, progress, confirmations</summary>
+			NoErrorUI = Win32.FOF_NOERRORUI,
+
+			/// <summary>Don't copy file security attributes (ACLs)</summary>
+			NoCopySecurityAttribs = Win32.FOF_NOCOPYSECURITYATTRIBS,
+
+			/// <summary>Don't recurse into directories for operations that would recurse</summary>
+			NoRecursion = Win32.FOF_NORECURSION,
+
+			/// <summary>Don't operate on connected elements ("xxx_files" folders that go with .htm files)</summary>
+			NoConnectedElements = Win32.FOF_NO_CONNECTED_ELEMENTS,
+
+			/// <summary>During delete operation, warn if object is being permanently destroyed instead of recycling (partially overrides FOF_NOCONFIRMATION)</summary>
+			WantNukeWarning = Win32.FOF_WANTNUKEWARNING,
+
+			/// <summary>Don't display any UI at all</summary>
+			NoUI = Win32.FOF_NO_UI,
+		}
+
 		/// <summary>Copy a file using a Shell file operation</summary>
-		public static bool ShellCopy(string src, string dst, int flags  = Win32.FOF_SIMPLEPROGRESS, string title = "Copying Files...")
+		public static bool ShellCopy(string src, string dst, EFileOpFlags flags = EFileOpFlags.None, string title = "Copying Files...")
 		{
 			var shf = new Win32.SHFILEOPSTRUCT(); 
 			shf.wFunc = Win32.FO_COPY;
@@ -672,13 +717,25 @@ namespace pr.common
 			return !shf.fAnyOperationsAborted;
 		}
 
-		/// <summary>Delete a file to the recycle bin. 'flags' should be Win32.FOF_??? flags</summary>
-		public static bool ShellDelete(string filepath, int flags = Win32.FOF_SIMPLEPROGRESS, string title = "Deleting Files...")
+		/// <summary>Move a file using a Shell file operation</summary>
+		public static bool ShellMove(string src, string dst, EFileOpFlags flags = EFileOpFlags.None, string title = "Moving Files...")
 		{
+			var shf = new Win32.SHFILEOPSTRUCT(); 
+			shf.wFunc = Win32.FO_MOVE;
+			shf.fFlags = unchecked((short)flags);
+			shf.pFrom = src + "\0\0";// ensure double null termination
+			shf.pTo = dst + "\0\0";// ensure double null termination
+			shf.lpszProgressTitle = title;
+			Win32.SHFileOperation(ref shf);
+			return !shf.fAnyOperationsAborted;
+		}
 
+		/// <summary>Delete a file to the recycle bin. 'flags' should be Win32.FOF_??? flags</summary>
+		public static bool ShellDelete(string filepath, EFileOpFlags flags = EFileOpFlags.AllowUndo, string title = "Deleting Files...")
+		{
 			var shf = new Win32.SHFILEOPSTRUCT(); 
 			shf.wFunc = Win32.FO_DELETE;
-			shf.fFlags = unchecked((short)flags);//((to_recycle_bin ? Win32.FOF_ALLOWUNDO : 0) | (confirm ? Win32.FOF_NOCONFIRMATION : 0)));
+			shf.fFlags = unchecked((short)flags);
 			shf.pFrom = filepath + "\0\0";// ensure double null termination
 			shf.lpszProgressTitle = title;
 			Win32.SHFileOperation(ref shf);

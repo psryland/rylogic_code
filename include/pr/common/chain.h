@@ -189,11 +189,12 @@ namespace pr
 		//    {
 		//        i->DoSomething();
 		//    }
+
 		// Forward declarations
 		template <typename Type, typename GroupId> struct head;
 		template <typename Type, typename GroupId> struct link;
 		template <typename Type, typename GroupId> void insert(link<Type, GroupId> const& where ,link<Type, GroupId>& what);
-		template <typename Type, typename GroupId> void unlink(                                  link<Type, GroupId>& what);
+		template <typename Type, typename GroupId> void unlink(link<Type, GroupId>& what);
 		namespace impl
 		{
 			struct DefaultGroupId;
@@ -205,7 +206,6 @@ namespace pr
 		// A node in the chain
 		template <typename Type, typename GroupId = impl::DefaultGroupId> struct link
 		{
-		//private:
 			mutable link<Type, GroupId>* m_next;
 			mutable link<Type, GroupId>* m_prev;
 			Type* m_obj; // only used for debugging but not conditional due to the one definition rule
@@ -214,13 +214,30 @@ namespace pr
 			friend struct impl::iter_common<Type ,Type const ,link<Type, GroupId> const>;
 			friend struct impl::iter_common<Type ,Type       ,link<Type, GroupId>      >;
 			friend void   insert<Type, GroupId>(link<Type, GroupId> const& where ,link<Type, GroupId>& what);
-			friend void   unlink<Type, GroupId>(                                  link<Type, GroupId>& what);
+			friend void   unlink<Type, GroupId>(link<Type, GroupId>& what);
 
 		protected:
-			link()                                            { m_next = m_prev = this; m_obj = static_cast<Type*>(this); }
-			link(link<Type, GroupId> const& rhs)              { m_next = m_prev = this; m_obj = static_cast<Type*>(this); insert(rhs, *this); }
-			~link()                                           { unlink(*this); }
-			link& operator = (link<Type, GroupId> const& rhs) { if (this != &rhs) {insert(rhs, *this);} return *this; }
+			link()
+			{
+				m_next = m_prev = this;
+				m_obj = static_cast<Type*>(this);
+			}
+			link(link<Type, GroupId> const& rhs)
+			{
+				m_next = m_prev = this;
+				m_obj = static_cast<Type*>(this);
+				insert(rhs, *this);
+			}
+			~link()
+			{
+				unlink(*this);
+			}
+			link& operator = (link<Type, GroupId> const& rhs)
+			{
+				if (this != &rhs)
+					insert(rhs, *this);
+				return *this;
+			}
 		};
 
 		// Iterator implementation
@@ -283,14 +300,14 @@ namespace pr
 			typedef std::size_t                size_type;
 			typedef link<Type, GroupId>        link_type;
 
-			const_iterator  begin() const      { return const_iterator(m_next); }
-			iterator        begin()            { return iterator(m_next); }
-			const_iterator  end	 () const      { return const_iterator(this); }
-			iterator        end	 ()            { return iterator(this); }
-			const_reference front() const      { return *static_cast<Type*>(m_next); }
-			reference       front()            { return *static_cast<Type*>(m_next); }
-			const_reference back () const      { return *static_cast<Type*>(m_prev); }
-			reference       back ()            { return *static_cast<Type*>(m_prev); }
+			const_iterator  begin() const { return const_iterator(m_next); }
+			iterator        begin()       { return iterator(m_next); }
+			const_iterator  end() const   { return const_iterator(this); }
+			iterator        end()         { return iterator(this); }
+			const_reference front() const { return *static_cast<Type*>(m_next); }
+			reference       front()       { return *static_cast<Type*>(m_next); }
+			const_reference back () const { return *static_cast<Type*>(m_prev); }
+			reference       back ()       { return *static_cast<Type*>(m_prev); }
 
 			bool            empty()    const                                   { return m_next == static_cast<const link_type*>(this) && m_prev == static_cast<const link_type*>(this); }
 			void            clear()                                            { m_next = m_prev = this; }

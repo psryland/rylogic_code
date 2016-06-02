@@ -93,6 +93,12 @@
     <ClInclude Include="..\include\pr\physics2\shape\shape_triangle.h">
       <Filter>pr\physics\shape</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\shape\inertia.h">
+      <Filter>pr\physics\shape</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\shape\shape_polytope.h">
+      <Filter>pr\physics\shape</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\physics2/post_build.py" />

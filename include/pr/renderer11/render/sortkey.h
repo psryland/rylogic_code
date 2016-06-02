@@ -19,9 +19,9 @@ namespace pr
 		//
 		// General sorting notes: From the word of Al:
 		// Z Buffering:
-		//   Always try to maintain the z buffer (i.e. writeenable) even for huds etc
+		//   Always try to maintain the z buffer (i.e. write enable) even for HUDs etc
 		//   Stereoscopic rendering requires everything to have correct depth
-		//   Render the skybox after all opaques to reduce overdraw
+		//   Render the sky box after all opaques to reduce overdraw
 		// Alpha:
 		//   Two sided objects should be rendered twice, 1st with front face
 		//   culling, 2nd with back face culling
@@ -42,14 +42,15 @@ namespace pr
 		// The sort key type (wraps a uint32)
 		struct SortKey
 		{
-			typedef pr::uint32 value_type;
+			using value_type = unsigned int;
 			static value_type const Bits   = 32U;
 
+			// GGGGGGGA SSSSSSSS SSTTTTTT TTTTTTTT
 			static value_type const TextureIdBits = 14U;
 			static value_type const ShaderIdBits  = 10U;
 			static value_type const AlphaBits     = 1U ;
 			static value_type const SortGroupBits = Bits - (AlphaBits + ShaderIdBits + TextureIdBits);
-			static_assert(Bits > AlphaBits + ShaderIdBits + TextureIdBits, "Sortkey is not large enough");
+			static_assert(Bits > AlphaBits + ShaderIdBits + TextureIdBits, "Sort key is not large enough");
 
 			static value_type const MaxTextureId  = 1U << TextureIdBits;
 			static value_type const MaxShaderId   = 1U << ShaderIdBits ;
@@ -67,13 +68,19 @@ namespace pr
 
 			value_type m_value;
 
-			static SortKey make(value_type value) { return SortKey{value}; }
-			operator value_type() const           { return m_value; }
+			SortKey() = default;
+			SortKey(value_type value)
+				:m_value(value)
+			{}
+			operator value_type() const
+			{
+				return m_value;
+			}
 
 			// Get/Set the sort group
 			ESortGroup Group() const
 			{
-				return static_cast<ESortGroup>(m_value & SortGroupMask);
+				return static_cast<ESortGroup>((m_value & SortGroupMask) >> SortGroupOfs);
 			}
 			void Group(ESortGroup group)
 			{
@@ -86,8 +93,17 @@ namespace pr
 		static_assert(std::is_pod<SortKey>::value, "SortKey must be a pod type");
 		static_assert(8U * sizeof(SortKey) == SortKey::Bits, "8 * sizeof(Sortkey) != SortKey::Bits");
 		static_assert(uint32(ESortGroup::Default) == SortKey::MaxSortGroups/2, "ESortGroup::Default should be the middle");
-		inline SortKey& operator |= (SortKey& lhs, SortKey::value_type rhs) { lhs.m_value |= rhs; return lhs; }
-		inline SortKey& operator &= (SortKey& lhs, SortKey::value_type rhs) { lhs.m_value &= rhs; return lhs; }
+
+		inline SortKey& operator |= (SortKey& lhs, SortKey::value_type rhs)
+		{
+			lhs.m_value |= rhs;
+			return lhs;
+		}
+		inline SortKey& operator &= (SortKey& lhs, SortKey::value_type rhs)
+		{ 
+			lhs.m_value &= rhs;
+			return lhs;
+		}
 
 		// A sort key override is a mask that is applied to a sort key
 		// to override specific parts of the sort key.

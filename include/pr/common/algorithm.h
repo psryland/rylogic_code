@@ -35,6 +35,12 @@ namespace pr
 		return std::max(a, pr::max(std::forward<Args>(args)...));
 	}
 
+	// Returns true if all in 'cont' pass 'pred'
+	template <typename TCont, typename Pred> inline bool all(TCont const& cont, Pred pred)
+	{
+		return std::all_of(std::begin(cont), std::end(cont), pred);
+	}
+
 	// True if 'func' returns true for any element in 'cont'
 	template <typename TCont> inline bool contains(TCont const& cont, decltype(cont[0]) const& item)
 	{
@@ -73,6 +79,12 @@ namespace pr
 		auto iter = find_if(cont, pred);
 		if (iter == std::end(cont)) throw std::exception("get_if() - no match found");
 		return *iter;
+	}
+
+	// Return the number of elements in 'cont' that match 'pred'
+	template <typename TCont, typename Pred> inline typename TCont::difference_type count_if(TCont const& cont, Pred pred)
+	{
+		return std::count_if(std::begin(cont), std::end(cont), pred);
 	}
 
 	// Insert 'val' into 'cont' if there is no element in 'cont' equal to 'val'

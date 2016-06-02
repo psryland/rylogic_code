@@ -491,7 +491,7 @@ namespace pr
 		// return maximum possible length of sequence
 		size_type max_size() const
 		{
-			return 0xFFFFFFFF;
+			return Fixed ? m_capacity : 0xFFFFFFFF;
 		}
 
 		// indexed access

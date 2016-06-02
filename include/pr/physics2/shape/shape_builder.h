@@ -206,20 +206,20 @@ namespace pr
 			// Calculates the inertia tensor for 'm_model'
 			void CalculateInertiaTensor()
 			{
-				m_model.m_mp.m_os_inertia_tensor = m3x4Zero;
+				m_model.m_mp.m_os_inertia_tensor = Inertia{};
 				for (auto& p : m_model.m_prim_list)
 				{
 					auto& prim = *p;
 					assert("All primitives should be in centre of mass frame" && FEql3(prim.m_mp.m_centre_of_mass, v4Zero));
 
-					m3x4 primitive_inertia  = prim.m_mp.m_mass * prim.m_mp.m_os_inertia_tensor;
+					auto primitive_inertia  = prim.m_mp.m_mass * prim.m_mp.m_os_inertia_tensor;
 
 					// Rotate the inertia tensor into object space
-					m3x4 prim_to_model = prim.shape().m_shape_to_model.rot;
-					primitive_inertia  = prim_to_model * primitive_inertia * Transpose3x3(prim_to_model);
+					auto prim_to_model = prim.shape().m_shape_to_model.rot;
+					primitive_inertia  = primitive_inertia.Rotate(prim_to_model);
 
 					// Translate the inertia tensor using the parallel axis theorem
-					ParallelAxisTranslateInertia(primitive_inertia, prim.shape().m_shape_to_model.pos, prim.m_mp.m_mass, ETranslateType::AwayFromCoM);
+					primitive_inertia = primitive_inertia.Translate(prim.shape().m_shape_to_model.pos, prim.m_mp.m_mass, Inertia::AwayFromCoM);
 
 					// Add the inertia to the object inertia tensor
 					m_model.m_mp.m_os_inertia_tensor += primitive_inertia;

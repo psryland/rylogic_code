@@ -118,6 +118,11 @@ namespace pr
 		return lhs = lhs * rhs;
 	}
 
+	// Transforms for vectors belonging to dual spaces M and F are related like this:
+	//  if   X  takes a vector m to m' in space M
+	//  then X* takes a vector f to f' in space F
+	//  X* = transpose(inverse(X))
+
 	// Transform a spatial motion vector by an affine transform
 	v8m pr_vectorcall operator * (m4x4_cref lhs, v8m const& rhs)
 	{
@@ -151,7 +156,9 @@ namespace pr
 	// e.g Dot(force, velocity) == power delivered
 	inline float Dot(v8m const& lhs, v8f const& rhs)
 	{
-		(void)lhs,rhs;
+		// v8m and v8f are vectors in the dual spaces M and F
+		// A property of dual spaces is dot(m,f) = transpose(m)*f
+		return Dot3(lhs.lin, rhs.ang) + Dot3(lhs.ang, rhs.lin);
 	}
 	inline float Dot(v8f const& lhs, v8m const& rhs)
 	{
@@ -179,9 +186,18 @@ namespace pr
 		m3x4 m21, m22;
 
 		Mat6x8() = default;
+		Mat6x8(m3x4_cref m11_, m3x4_cref m12_, m3x4_cref m21_, m3x4_cref m22_)
+			:m11(m11_)
+			,m12(m12_)
+			,m21(m21_)
+			,m22(m22_)
+		{}
 	};
-	using m6x8m = Mat6x8<struct Motion>;
-	using m6x8f = Mat6x8<struct Force>;
+	using m6x8_m2f = Mat6x8<struct Motion>;
+	using m6x8_f2m = Mat6x8<struct Force>;
+
+	#pragma region Operators
+	#pragma endregion
 }
 
 #if PR_UNITTESTS
@@ -200,31 +216,4 @@ namespace pr
 	}
 }
 #endif
-
-//// Accessor functions
-//void		maSetValueVs(MAv6& v, MAint i, MAreal value);
-//bool		maIsZeroVs(const MAv6& v);
-//MAreal		maValueVs(const MAv6& v, MAint i);
-//const MAv4&	maValueV4Vs(const MAv6& v, MAint i);
-//      MAv4&	maValueV4Vs(      MAv6& v, MAint i);
-//
-//// Manipulation functions
-//void		maGetSumVs(MAv6& sum, const MAv6& v1, const MAv6& v2);
-//void		maGetScalarMulVs(MAv6& mul, MAreal s, const MAv6& v);
-//MAreal		maInnerVs(const MAv6& v1, const MAv6& v2);
-//
-//
-//// Spatial matrix data types and access functions
-//// _       _
-//// | m1 m2 |
-//// |       |
-//// | m3 m4 |
-//// ¬       ¬
-//struct MAm6
-//{
-//	MAm3 m1;
-//	MAm3 m2;
-//	MAm3 m3;
-//	MAm3 m4;
-//};
 

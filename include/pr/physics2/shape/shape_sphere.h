@@ -51,12 +51,9 @@ namespace pr
 			auto volume = (2.0f/3.0f) * maths::tau * shape.m_radius * shape.m_radius * shape.m_radius;
 
 			MassProperties mp;
-			mp.m_centre_of_mass        = v4Zero;
-			mp.m_mass                  = volume * density;
-			mp.m_os_inertia_tensor     = m3x4Identity;
-			mp.m_os_inertia_tensor.x.x = scale * (shape.m_radius * shape.m_radius);
-			mp.m_os_inertia_tensor.y.y = mp.m_os_inertia_tensor.x.x;
-			mp.m_os_inertia_tensor.z.z = mp.m_os_inertia_tensor.x.x;
+			mp.m_centre_of_mass    = v4Zero;
+			mp.m_mass              = volume * density;
+			mp.m_os_inertia_tensor = Inertia(scale * Sqr(shape.m_radius));
 			return mp;
 		}
 
@@ -68,7 +65,7 @@ namespace pr
 		}
 
 		// Return a support vertex for a sphere
-		inline v4 SupportVertex(ShapeSphere const& shape, v4_cref direction, size_t, size_t& sup_vert_id)
+		inline v4 SupportVertex(ShapeSphere const& shape, v4_cref direction, int, int& sup_vert_id)
 		{
 			// We need to quantise the normal otherwise the iterative algorithms perform badly
 			auto dir = Normalise3(direction);
@@ -83,7 +80,7 @@ namespace pr
 		}
 
 		// Find the nearest point and distance from a point to a shape. 'shape' and 'point' are in the same space
-		inline void ClosestPoint(ShapeSphere const& shape, v4 const& point, float& distance, v4& closest)
+		inline void ClosestPoint(ShapeSphere const& shape, v4_cref point, float& distance, v4& closest)
 		{
 			distance  = Length3(point);
 			closest   = ((shape.m_radius / distance) * point).w1();

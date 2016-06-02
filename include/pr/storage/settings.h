@@ -19,6 +19,7 @@
 #include "pr/common/fmt.h"
 #include "pr/common/events.h"
 #include "pr/common/colour.h"
+#include "pr/common/hash.h"
 #include "pr/filesys/file.h"
 #include "pr/filesys/filesys.h"
 #include "pr/maths/maths.h"
@@ -83,7 +84,7 @@ namespace pr
 	template<typename TSettings> struct SettingsBase
 	{
 		// Create an event for this settings type
-		typedef typename pr::settings::Evt<TSettings> Evt;
+		using Evt = typename pr::settings::Evt<TSettings>;
 
 		std::string m_filepath;    // The file path to save the settings
 		pr::hash::HashValue m_crc; // The crc of the settings last time they were saved

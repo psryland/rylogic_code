@@ -3738,6 +3738,12 @@ namespace pr.common
 			NativeDll.LoadDll(dir);
 		}
 
+		/// <summary>True if the sqlite dll has been loaded</summary>
+		public static bool ModuleLoaded
+		{
+			get { return NativeDll.ModuleLoaded; }
+		}
+
 		private static class NativeDll
 		{
 			private const string Dll =  "sqlite3";

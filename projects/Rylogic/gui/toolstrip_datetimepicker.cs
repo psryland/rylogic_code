@@ -6,8 +6,12 @@ namespace pr.gui
 {
 	public class ToolStripDateTimePicker :ToolStripControlHost
 	{
-		public ToolStripDateTimePicker() :base(new DateTimePicker()) {}
-		public ToolStripDateTimePicker(string name) :base(new DateTimePicker{Name = name + "_hosted"}, name) {}
+		public ToolStripDateTimePicker()
+			:this(string.Empty)
+		{}
+		public ToolStripDateTimePicker(string name)
+			:base(new DateTimePicker{Name = name + "_hosted"}, name)
+		{}
 
 		/// <summary>The hosted control</summary>
 		public DateTimePicker DateTimePicker { get { return Control.As<DateTimePicker>(); } }

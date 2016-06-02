@@ -47,7 +47,7 @@ namespace pr
 		}
 
 		// Return the inertia tensor for the triangle
-		inline m3x4 CalcInertiaTensor(ShapeTriangle const& shape)
+		inline Inertia CalcInertiaTensor(ShapeTriangle const& shape)
 		{
 			m3x4 inertia = m3x4Zero;
 			for (int i = 0; i != 3; ++i)
@@ -66,7 +66,7 @@ namespace pr
 			inertia.y.x = inertia.x.y;
 			inertia.z.x = inertia.x.z;
 			inertia.z.y = inertia.y.z;
-			return inertia;
+			return Inertia(inertia);
 		}
 
 		// Return the mass properties
@@ -92,7 +92,7 @@ namespace pr
 		}
 
 		// Return a support vertex for a triangle
-		inline v4 SupportVertex(ShapeTriangle const& shape, v4_cref direction, size_t, size_t& sup_vert_id)
+		inline v4 SupportVertex(ShapeTriangle const& shape, v4_cref direction, int, int& sup_vert_id)
 		{
 			v4 d(Dot3(direction, shape.m_v.x), Dot3(direction, shape.m_v.y), Dot3(direction, shape.m_v.z), 0.0f);
 			sup_vert_id = LargestElement3(d);

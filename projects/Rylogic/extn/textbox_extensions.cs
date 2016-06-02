@@ -74,13 +74,15 @@ namespace pr.extn
 
 			if (text.HasValue() || !only_if_has_value)
 			{
+				// Insert at position 0
 				cb.Items.Remove(text);
 				cb.Items.Insert(0, text);
 
 				while (cb.Items.Count > max_history)
 					cb.Items.RemoveAt(cb.Items.Count - 1);
 
-				cb.SelectedIndex = 0;
+				// Don't set SelectedIndex = 0 here because that causes 'OnTextChanged'
+				// It's likely that 'AddTextToDropDownList' is being called from a TextChanged handler
 			}
 
 			cb.Select(selection.Begini, selection.Sizei);

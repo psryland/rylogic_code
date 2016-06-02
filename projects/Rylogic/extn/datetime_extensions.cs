@@ -6,57 +6,65 @@ namespace pr.extn
 {
 	public static class DateTimeEx
 	{
-		/// <summary>Set the MinDate, MaxDate, and Value members all at once, avoiding out of range exceptions.</summary>
-		public static void Set(this DateTimePicker dtp, DateTime value, DateTime min, DateTime max)
+		/// <summary>
+		/// Set the MinDate, MaxDate, and Value members all at once, avoiding out of range exceptions.
+		/// val, min, max must all have a specified 'Kind' value.
+		/// Values are clamped to the valid range for a DateTimePicker</summary>
+		public static void Set(this DateTimePicker dtp, DateTime val, DateTime min, DateTime max)
 		{
+			if (val.Kind == DateTimeKind.Unspecified) throw new Exception("DateTimePicker Value has an unspecified time-zone");
+			if (min.Kind == DateTimeKind.Unspecified) throw new Exception("DateTimePicker Minimum Value has an unspecified time-zone");
+			if (max.Kind == DateTimeKind.Unspecified) throw new Exception("DateTimePicker Maximum Value has an unspecified time-zone");
 			if (min > max)
 				throw new Exception("Minimum date/time value is greater than the maximum date/time value");
-			if (value != value.Clamp(min,max))
+			if (val != val.Clamp(min,max))
 				throw new Exception("Date/time value is not within the given range of date/time values");
-			if (value.Kind == DateTimeKind.Unspecified)
-				throw new Exception("DateTimePicker Value has an unspecified time-zone");
-			if (min.Kind == DateTimeKind.Unspecified)
-				throw new Exception("DateTimePicker Minimum Value has an unspecified time-zone");
-			if (max.Kind == DateTimeKind.Unspecified)
-				throw new Exception("DateTimePicker Maximum Value has an unspecified time-zone");
 
-			// Setting to MinimumDateTime/MaximumDateTime first avoids problems if min > MaxDate or max < MinDate
-			dtp.MinDate = DateTimePicker.MinimumDateTime;
-			dtp.MaxDate = DateTimePicker.MaximumDateTime;
-
+			// Clamp the values to the valid range for 'DateTimePicker'
+			val = val.Clamp(DateTimePicker.MinimumDateTime, DateTimePicker.MaximumDateTime);
 			min = min.Clamp(DateTimePicker.MinimumDateTime, DateTimePicker.MaximumDateTime);
 			max = max.Clamp(DateTimePicker.MinimumDateTime, DateTimePicker.MaximumDateTime);
 
-			// Setting Value before MinDate/MaxDate avoids setting Value twice when Value < MinDate or Value > MaxDate
-			dtp.Value = value.Clamp(min, max);
+			// Setting to MinimumDateTime/MaximumDateTime first avoids problems if min > MaxDate or max < MinDate
+			dtp.MinDate = DateTimePicker.MinimumDateTime.As(val.Kind);
+			dtp.MaxDate = DateTimePicker.MaximumDateTime.As(val.Kind);
 
+			// Setting Value before MinDate/MaxDate avoids setting Value twice when Value < MinDate or Value > MaxDate
+			dtp.Value = val;
 			dtp.MinDate = min;
 			dtp.MaxDate = max;
 		}
 
-		/// <summary>Sets the MinDate, MaxDate, and Value members all to Universal time.</summary>
-		public static void ToUniversalTime(this DateTimePicker dtp)
+		/// <summary>Sets the MinDate, MaxDate, and Value members all to 'kind'.</summary>
+		public static void To(this DateTimePicker dtp, DateTimeKind kind)
 		{
-			var min = dtp.MinDate.ToUniversalTime();
-			var max = dtp.MaxDate.ToUniversalTime();
-			var val = dtp.Value.ToUniversalTime();
-			if (dtp is pr.gui.DateTimePicker) ((pr.gui.DateTimePicker)dtp).Kind = DateTimeKind.Utc;
-			dtp.Set(val, min, max);
-		}
-
-		/// <summary>Sets the MinDate, MaxDate, and Value members all to Local time.</summary>
-		public static void ToLocalTime(this DateTimePicker dtp)
-		{
-			var min = dtp.MinDate.ToLocalTime();
-			var max = dtp.MaxDate.ToLocalTime();
-			var val = dtp.Value.ToLocalTime();
-			if (dtp is pr.gui.DateTimePicker) ((pr.gui.DateTimePicker)dtp).Kind = DateTimeKind.Local;
+			var min = dtp.MinDate.To(kind);
+			var max = dtp.MaxDate.To(kind);
+			var val = dtp.Value.To(kind);
+			if (dtp is pr.gui.DateTimePicker) ((pr.gui.DateTimePicker)dtp).Kind = kind;
 			dtp.Set(val, min, max);
 		}
 	}
 	
 	public static class DateTime_
 	{
+		// Notes:
+		//  If a DateTime has kind == unspecified, calling ToUniversalTime() causes it to assume that the time is
+		//  local and returns the time converted to UTC. Calling ToLocalTime() causes it to assume that the time
+		//  is UTC and returns the time converted to Local.
+		//
+		// Rule of thumb: Don't use 'ToLocalTime' or 'ToUniversalTime', use 'To' instead
+
+		/// <summary>Converts this date time to 'kind'. Note: throws if Kind == Unspecified</summary>
+		public static DateTime To(this DateTime dt, DateTimeKind kind)
+		{
+			// Prefer calling this method instead of 'ToLocalTime' or 'ToUniversalTime' directly
+			if (dt.Kind == DateTimeKind.Unspecified) throw new Exception("Cannot convert an unspecified DateTime to {0}".Fmt(kind));
+			if (kind == DateTimeKind.Local) return dt.ToLocalTime();
+			if (kind == DateTimeKind.Utc) return dt.ToUniversalTime();
+			return dt.As(DateTimeKind.Unspecified);
+		}
+
 		/// <summary>
 		/// Return a date time reinterpreted as 'kind'.
 		/// If the datetime already has a known kind that is different to 'kind' then an exception is raised.</summary>
@@ -65,16 +73,19 @@ namespace pr.extn
 			if (kind == dt.Kind)
 				return dt;
 			if (kind == DateTimeKind.Unspecified)
-				return System.DateTime.SpecifyKind(dt, DateTimeKind.Unspecified);
+				return DateTime.SpecifyKind(dt, DateTimeKind.Unspecified);
 			if (dt.Kind == DateTimeKind.Unspecified)
-				return System.DateTime.SpecifyKind(dt, kind);
+				return DateTime.SpecifyKind(dt, kind);
 			else
 				throw new Exception("Reinterpret between UTC/Local, convert to Unspecified first");
 		}
 
-		/// <summary>Returns a new DateTimeOffset object clamped to within the given range</summary>
+		/// <summary>Returns a new DateTime object clamped to within the given range</summary>
 		public static DateTime Clamp(this DateTime time, DateTime min, DateTime max)
 		{
+			// Convert 'min'/'max' to the same kind as 'time'
+			min = min.Kind == DateTimeKind.Unspecified ? min.As(time.Kind) : min.To(time.Kind);
+			max = max.Kind == DateTimeKind.Unspecified ? max.As(time.Kind) : max.To(time.Kind);
 			if (time < min) return min;
 			if (time > max) return max;
 			return time;
