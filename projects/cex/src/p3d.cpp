@@ -64,7 +64,7 @@ namespace cex
 			}
 
 			// Get the infile file extension
-			m_infile = pr::filesys::StandardiseC(m_infile);
+			m_infile = pr::filesys::Standardise(m_infile);
 			auto extn = pr::filesys::GetExtension(m_infile);
 
 			// Populate the p3d object from 'm_infile'

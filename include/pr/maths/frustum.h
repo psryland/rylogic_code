@@ -35,7 +35,7 @@ namespace pr
 			f.m_Tnorms.y = Normalise3(f.m_Tnorms.y);
 			f.m_Tnorms.z = Normalise3(f.m_Tnorms.z);
 			f.m_Tnorms.w = Normalise3(f.m_Tnorms.w);
-			f.m_Tnorms = Transpose4x4_(f.m_Tnorms);
+			f.m_Tnorms = Transpose4x4(f.m_Tnorms);
 			f.ZDist(zfar);
 			return f;
 		}
@@ -116,7 +116,7 @@ namespace pr
 		// Return a matrix containing the inward pointing normals as the x,y,z,w vectors, where: x=left, y=right, z=top, w=bottom
 		m4x4 Normals() const
 		{
-			return Transpose4x4_(m_Tnorms);
+			return Transpose4x4(m_Tnorms);
 		}
 
 		// Return the (inward pointing) plane vector for a face of the frustum [0,5)
@@ -135,7 +135,7 @@ namespace pr
 	inline bool operator >= (Frustum const& lhs, Frustum const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
 	inline Frustum operator * (m4x4 const& m, Frustum const& rhs)
 	{
-		Frustum f = {rhs.m_Tnorms * Transpose4x4_(m)}; // = Transpose(m * Transpose(rhs))
+		Frustum f = {rhs.m_Tnorms * Transpose4x4(m)}; // = Transpose(m * Transpose(rhs))
 		return f;
 	}
 	#pragma endregion

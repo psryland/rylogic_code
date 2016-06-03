@@ -4,7 +4,7 @@
 //*************************************************************************
 // Usage:
 //	Create an instance of RecentFiles in a GUI class
-//	'Attach' to the popup menu for which recent files should be added
+//	'Attach' to the pop up menu for which recent files should be added
 //	Export/Import a string containing the recent file list for saving
 //	Add "CHAIN_MSG_MAP_MEMBER(m_recent_files)" to the message map for the GUI class
 //	Inherit pr::RecentFiles::IHandler  in the GUI class
@@ -30,7 +30,7 @@ namespace pr
 			template <typename Char> void Add(Char const* file, bool update_menu)
 			{
 				auto fpath = pr::Widen(file);
-				fpath = pr::filesys::CanonicaliseC(fpath);
+				fpath = pr::filesys::Canonicalise(fpath);
 				MenuList::Add(fpath.c_str(), 0, false, update_menu);
 			}
 			template <typename Char> void Add(Char const* file)

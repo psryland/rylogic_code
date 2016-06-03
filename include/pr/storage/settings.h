@@ -6,9 +6,9 @@
 // #include "pr/storage/settings.h"
 //
 // #define PR_SETTING(x)\
-//   x(type, name, default_value, hashvalue, description)\
-//   x(type, name, default_value, hashvalue, description)\
-//   x(type, name, default_value, hashvalue, description)
+//   x(type, name, default_value, hash-value, description)\
+//   x(type, name, default_value, hash-value, description)\
+//   x(type, name, default_value, hash-value, description)
 // PR_DEFINE_SETTINGS(MySettings, PR_SETTING);
 // #undef PR_SETTING
 
@@ -60,8 +60,8 @@ namespace pr
 		inline string Write(pr::v2 const& t)       { return pr::FmtS(L"%f %f", t.x, t.y); }
 		inline string Write(pr::v4 const& t)       { return pr::FmtS(L"%f %f %f %f", t.x, t.y, t.z, t.w); }
 		inline string Write(pr::Colour32 t)        { return pr::FmtS(L"%08X", t.argb); }
-		inline string Write(std::string const& t)  { return pr::filesys::AddQuotesC(pr::str::StringToCString(string(Widen(t)))); }
-		inline string Write(std::wstring const& t) { return pr::filesys::AddQuotesC(pr::str::StringToCString(string(Widen(t)))); }
+		inline string Write(std::string const& t)  { return pr::filesys::AddQuotes(pr::str::StringToCString(string(Widen(t)))); }
+		inline string Write(std::wstring const& t) { return pr::filesys::AddQuotes(pr::str::StringToCString(string(Widen(t)))); }
 		template <typename TEnum, typename = std::enable_if_t<pr::is_enum<TEnum>::value>>
 		inline string Write(TEnum t) { return TEnum::ToStringW(t); }
 
@@ -87,7 +87,7 @@ namespace pr
 		using Evt = typename pr::settings::Evt<TSettings>;
 
 		std::string m_filepath;    // The file path to save the settings
-		pr::hash::HashValue m_crc; // The crc of the settings last time they were saved
+		pr::hash::HashValue m_crc; // The CRC of the settings last time they were saved
 		std::string m_comments;    // Comments to add to the head of the exported settings
 
 		// Settings constructor
@@ -213,7 +213,7 @@ namespace pr
 
 	protected:
 
-		// Returns the crc of 'settings'
+		// Returns the CRC of 'settings'
 		pr::hash::HashValue Crc(std::string const& settings) const
 		{
 			return pr::hash::FastHash(settings.c_str(), settings.size());

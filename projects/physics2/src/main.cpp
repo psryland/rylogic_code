@@ -14,7 +14,7 @@ struct MainUI :Form
 	Body m_body1;
 
 	MainUI()
-		:Form(MakeFormParams<>().name("main-ui").title(L"Rylogic Physics").padding(0))
+		:Form(MakeFormParams<>().name("main-ui").title(L"Rylogic Physics").padding(0).wndclass(RegisterWndClass<MainUI>()))
 		,m_status(StatusBar::Params<>().parent(this_).dock(EDock::Bottom))
 		,m_view3d(View3DPanel::Params<>().parent(this_).error_cb(ReportErrorCB, this_).dock(EDock::Fill).border().show_focus_point())
 		,m_body0()

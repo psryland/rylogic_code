@@ -38,7 +38,7 @@
 #include "pr/camera/camera.h"
 #include "pr/gui/scintilla_ctrl.h"
 #include "pr/renderer11/renderer.h"
-#include "pr/renderer11/lights/light_dlg.h"
+#include "pr/renderer11/lights/light_ui.h"
 #include "pr/linedrawer/ldr_object.h"
 #include "pr/linedrawer/ldr_objects_dlg.h"
 #include "pr/linedrawer/ldr_gizmo.h"

@@ -206,7 +206,7 @@ v4 pr::ph::SupportVertex(ShapePolytope const& shape, v4 const& direction, std::s
 				nbrs.y = shape.vertex(*(n + 1));
 				nbrs.z = shape.vertex(*(n + 2));
 				nbrs.w = shape.vertex(*(n + 3));
-				nbrs = Transpose4x4_(nbrs);
+				nbrs = Transpose4x4(nbrs);
 				v4 dots = nbrs * direction;
 
 				std::size_t id = sup_vert_id;

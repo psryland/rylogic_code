@@ -248,7 +248,7 @@
 #include "pr\renderer11\config\config.h"
 #include "pr\renderer11\instances\instance.h"
 #include "pr\renderer11\lights\light.h"
-#include "pr\renderer11\lights\light_dlg.h"
+#include "pr\renderer11\lights\light_ui.h"
 #include "pr\renderer11\models\model.h"
 #include "pr\renderer11\models\model_buffer.h"
 #include "pr\renderer11\models\model_generator.h"

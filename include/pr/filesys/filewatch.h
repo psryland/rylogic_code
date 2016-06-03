@@ -49,7 +49,7 @@ namespace pr
 		
 			File(pr::string<wchar_t> const& filepath, IFileChangedHandler* onchanged, pr::Guid const& id, void* user_data)
 				:m_filepath(filepath)
-				,m_time(pr::filesys::GetFileTimeStats(filepath))
+				,m_time(pr::filesys::FileTimeStats(filepath))
 				,m_onchanged(onchanged)
 				,m_id(id)
 				,m_user_data(user_data)
@@ -71,14 +71,14 @@ namespace pr
 		void Add(wchar_t const* filepath, IFileChangedHandler* onchanged, pr::Guid const& id, void* user_data)
 		{
 			Remove(filepath);
-			auto fpath = pr::filesys::StandardiseC<string>(filepath);
+			auto fpath = pr::filesys::Standardise<string>(filepath);
 			m_files.emplace_back(fpath, onchanged, id, user_data);
 		}
 
 		// Remove a watched file
 		void Remove(wchar_t const* filepath)
 		{
-			auto fpath = pr::filesys::StandardiseC<string>(filepath);
+			auto fpath = pr::filesys::Standardise<string>(filepath);
 			auto i = std::find(std::begin(m_files), std::end(m_files), fpath);
 			if (i != std::end(m_files)) m_files.erase(i);
 		}
@@ -97,7 +97,7 @@ namespace pr
 			FileCont changed_files;
 			for (auto& file : m_files)
 			{
-				auto stamp = pr::filesys::GetFileTimeStats(file.m_filepath);
+				auto stamp = pr::filesys::FileTimeStats(file.m_filepath);
 				if (file.m_time.m_last_modified != stamp.m_last_modified) changed_files.push_back(file);
 				file.m_time = stamp;
 			}

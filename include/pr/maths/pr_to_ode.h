@@ -48,7 +48,7 @@ namespace pr
 	inline dM4x4 ode(pr::m4x4 const& o2w)
 	{
 		dM4x4 m;
-		impl::copy(m.m_rot, Transpose3x3_(o2w).x.arr, 12);
+		impl::copy(m.m_rot, Transpose3x3(o2w).x.arr, 12);
 		impl::copy(m.m_pos, o2w.pos.arr, 4);
 		return m;
 	}
@@ -60,7 +60,7 @@ namespace pr
 		impl::copy(o2w.x.arr, rot, 12);
 		impl::copy(o2w.pos.arr, pos, 4);
 		o2w.x.w = o2w.y.w = o2w.z.w = 0.0f; o2w.w.w = 1.0f;
-		return pr::Transpose3x3_(o2w);
+		return pr::Transpose3x3(o2w);
 	}
 	
 	// Convert a dM4x4 to a pr::m4x4

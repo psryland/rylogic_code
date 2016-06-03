@@ -286,7 +286,7 @@ namespace pr
 						nbrs.y = shape.vertex(*(n + 1));
 						nbrs.z = shape.vertex(*(n + 2));
 						nbrs.w = shape.vertex(*(n + 3));
-						nbrs = Transpose4x4_(nbrs);
+						nbrs = Transpose4x4(nbrs);
 						v4 dots = nbrs * direction;
 
 						auto id = sup_vert_id;
@@ -431,7 +431,7 @@ namespace pr
 			// generate less faces than 'faces_end - faces'
 			auto s = CreateScope(
 				[&]{ if (faces != faces_end) *faces = 0; },
-				[&]{ face_count = faces - faces_start; while (faces != faces_end) *faces++ = 0; });
+				[&]{ face_count = int(faces - faces_start); while (faces != faces_end) *faces++ = 0; });
 
 			// Create the starting faces and handle cases for polytopes with less than 3 verts
 			for (auto i = 0; i != 3; ++i)

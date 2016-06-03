@@ -2428,10 +2428,12 @@ namespace pr
 					else if (X < 0)
 					{
 						// Position relative to the BR
+						if (fill) W += (X+1);
 						X = measure(0).bottomright()[i] - (W+L+R) + (X+1) + L;
 					}
 					else
 					{
+						if (fill) W -= X;
 						X += L;
 					}
 				};
@@ -3827,6 +3829,10 @@ namespace pr
 				}
 				return font;
 			}
+			static HFONT DefaultGuiFont()
+			{
+				return HFONT(GetStockObject(DEFAULT_GUI_FONT));
+			}
 			static HFONT DefaultMessageFont(bool refresh = false)
 			{
 				return DefaultFontImpl<struct DefMessageFont>(&NonClientMetrics::lfMessageFont, refresh);
@@ -4298,7 +4304,7 @@ namespace pr
 				}
 
 				// Initialise with a default true type font.
-				Font(HFONT(GetStockObject(DEFAULT_GUI_FONT)));
+				Font(DefaultGuiFont());
 			}
 
 			// Called when this control is about to be destroyed
@@ -4534,7 +4540,8 @@ namespace pr
 						}
 
 						// It's more efficient to suppress the old WM_SIZE, WM_MOVE events
-						return true;
+						// ...but scintilla control needs them. Probably other controls too
+						break;
 					}
 					#pragma endregion
 				case WM_GETMINMAXINFO:
@@ -5193,10 +5200,10 @@ namespace pr
 					{
 					default: throw std::exception("Unknown dock style");
 					case EDock::Fill:   c = p; break;
-					case EDock::Top:    c.left = p.left; c.right  = p.right;  c.top    = 0;        c.bottom = p.top    + h; break;
-					case EDock::Bottom: c.left = p.left; c.right  = p.right;  c.bottom = p.bottom; c.top    = c.bottom - h; break;
-					case EDock::Left:   c.top  = p.top;  c.bottom = p.bottom; c.left   = 0;        c.right  = c.left   + w; break;
-					case EDock::Right:  c.top  = p.top;  c.bottom = p.bottom; c.right  = p.right;  c.left   = c.right  - w; break;
+					case EDock::Top:    c = Rect(p.left      , p.top        , p.right    , p.top + h); break;
+					case EDock::Bottom: c = Rect(p.left      , p.bottom - h , p.right    , p.bottom ); break;
+					case EDock::Left:   c = Rect(p.left      , p.top        , p.left + w , p.bottom ); break;
+					case EDock::Right:  c = Rect(p.right - w , p.top        , p.right    , p.bottom ); break;
 					}
 				}
 				RAII<bool> no_save_ofs(m_pos_ofs_suspend, true);
@@ -5282,13 +5289,12 @@ namespace pr
 			// Measure 'text' using the font in this control
 			Size MeasureString(string const& text, int max_width = 0, UINT flags = 0) const
 			{
+				if (text.empty())
+					return Size();
+
 				// If the window exists, measure using it's DC. If not, create a dummy window and use that
 				auto hwnd = m_hwnd;
-				if (!hwnd)
-				{
-					Throw((hwnd = ::CreateWindowExW(0, L"STATIC", L"", 0, 0, 0, 0, 0, nullptr, nullptr, nullptr, nullptr)) != 0, "Create dummy window in MeasureString failed");
-					::SendMessageW(hwnd, WM_SETFONT, WPARAM(DefaultMessageFont()), LPARAM(FALSE));
-				}
+				if (!hwnd) Throw((hwnd = ::CreateWindowExW(0, L"STATIC", L"", 0, 0, 0, 0, 0, nullptr, nullptr, nullptr, nullptr)) != 0, "Create dummy window in MeasureString failed");
 				auto cleanup = OnScopeExit([=]
 				{
 					if (hwnd == m_hwnd) return;
@@ -5297,8 +5303,10 @@ namespace pr
 
 				assert(::IsWindow(hwnd));
 				ClientDC dc(hwnd);
+				SelectObject sel_font(dc, DefaultGuiFont());
 
 				Rect sz(0,0,max_width,0);
+				if (max_width != 0) flags |= DT_WORDBREAK;
 				Throw(DrawTextW(dc, text.c_str(), int(text.size()), &sz, flags | DT_CALCRECT), "DrawTextW failed");
 				return sz.size();
 			}
@@ -5921,12 +5929,24 @@ namespace pr
 			enum :DWORD { DefaultStyle   = (DefaultControlStyle | WS_GROUP | SS_LEFT | SS_NOPREFIX) & ~(WS_TABSTOP | WS_CLIPSIBLINGS) };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"STATIC"; }
-			using LabelParams = CtrlParams;
+			struct LabelParams :CtrlParams
+			{
+				LabelParams()
+					:CtrlParams()
+				{}
+				LabelParams* clone() const override
+				{
+					return new LabelParams(*this);
+				}
+			};
 			template <typename TParams = LabelParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(WndClassName()).name("lbl").wh(Auto,Auto).style('=',DefaultStyle).style_ex('=',DefaultStyleEx).margin(3); }
-				Params(TParams const& p) :base(p)  {}
+				operator LabelParams const&() const
+				{
+					return params;
+				}
 				This& align(int ss)
 				{
 					// use one of SS_LEFT, SS_RIGHT, SS_CENTER, SS_LEFTNOWORDWRAP
@@ -6134,11 +6154,24 @@ namespace pr
 			enum :DWORD { DefaultStyle = DefaultControlStyle | WS_BORDER | WS_TABSTOP | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_LEFT };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"EDIT"; }
-			using TextBoxParams = CtrlParams;
+			struct TextBoxParams :CtrlParams
+			{
+				TextBoxParams()
+					:CtrlParams()
+				{}
+				TextBoxParams* clone() const override
+				{
+					return new TextBoxParams(*this);
+				}
+			};
 			template <typename TParams = TextBoxParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(WndClassName()).name("edit").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx).margin(3); }
+				operator TextBoxParams const&() const
+				{
+					return params;
+				}
 				This& align(int ss)               { return style('-', ES_LEFT|ES_CENTER|ES_RIGHT).style('+', ss); }
 				This& multiline(bool on = true)   { return style(on?'+':'-', ES_MULTILINE); }
 				This& upper_case(bool on = true)  { return style(on?'+':'-', ES_UPPERCASE).style(on?'-':'+',ES_LOWERCASE); }
@@ -6222,7 +6255,7 @@ namespace pr
 
 				// There is a bug that means scrolling only works if the control has focus
 				// There is a workaround however, using hide selection
-				auto nohidesel = AllSet(Style(), ES_NOHIDESEL); // save the old state of no-hide-sel
+				auto nohidesel = AllSet(Style(), ES_NOHIDESEL); // save the old state of ES_NOHIDESEL
 				Style('+', ES_NOHIDESEL);                       // temporarily turn it on
 				::SendMessageW(m_hwnd, EM_SCROLLCARET, 0, 0);   // scroll the caret
 				Style(nohidesel ? '+' : '-', ES_NOHIDESEL);     // restore the setting
@@ -6283,8 +6316,10 @@ namespace pr
 				ENumberStyle m_num_style;
 				int          m_radix;
 				bool         m_lower_case;
+
 				NumberBoxParams()
-					:m_num_style(ENumberStyle::Integer)
+					:TextBoxParams()
+					,m_num_style(ENumberStyle::Integer)
 					,m_radix(10)
 					,m_lower_case(false)
 				{}
@@ -6397,11 +6432,24 @@ namespace pr
 			enum :DWORD { DefaultStyle   = DefaultControlStyle | WS_TABSTOP | CBS_DROPDOWNLIST | CBS_AUTOHSCROLL };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"COMBOBOX"; }
-			using ComboBoxParams = CtrlParams;
+			struct ComboBoxParams :CtrlParams
+			{
+				ComboBoxParams()
+					:CtrlParams()
+				{}
+				ComboBoxParams* clone() const override
+				{
+					return new ComboBoxParams(*this);
+				}
+			};
 			template <typename TParams = ComboBoxParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(WndClassName()).name("combo").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx).margin(3,3,3,3); }
+				operator ComboBoxParams const&() const
+				{
+					return params;
+				}
 				This& editable(bool on = true)
 				{
 					return style('-',CBS_SIMPLE|CBS_DROPDOWN|CBS_DROPDOWNLIST).style('+',on?CBS_DROPDOWN:CBS_DROPDOWNLIST);
@@ -6574,12 +6622,25 @@ namespace pr
 				ColumnInfo& ideal_width(int w)         { mask |= LVCF_IDEALWIDTH; cxIdeal = w; return *this; }
 			};
 
-			// ListView parameters
-			using ListViewParams = CtrlParams;
+			// Creation parameters
+			struct ListViewParams :CtrlParams
+			{
+				ListViewParams()
+					:CtrlParams()
+				{}
+				ListViewParams* clone() const override
+				{
+					return new ListViewParams(*this);
+				}
+			};
 			template <typename TParams = ListViewParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(WndClassName()).name("listview").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx).mode(EViewType::Report).dbl_buffer(); }
+				operator ListViewParams const&() const
+				{
+					return params;
+				}
 				This& mode(EViewType mode) { return style('-',LVS_TYPEMASK).style('+', DWORD(mode) & LVS_TYPEMASK); }
 				This& report()             { return style('+',LVS_REPORT); }
 				This& no_hdr_sort()        { return style('+',LVS_NOSORTHEADER); }
@@ -6817,11 +6878,24 @@ namespace pr
 			enum :DWORD { DefaultStyle   = DefaultControlStyle | TVS_EDITLABELS | TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_DISABLEDRAGDROP | TVS_SHOWSELALWAYS | TVS_FULLROWSELECT | TVS_NOSCROLL };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"SysTreeView32"; }
-			using TreeViewParams = CtrlParams;
+			struct TreeViewParams :CtrlParams
+			{
+				TreeViewParams()
+					:CtrlParams()
+				{}
+				TreeViewParams* clone() const override
+				{
+					return new TreeViewParams(*this);
+				}
+			};
 			template <typename TParams = TreeViewParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
-				Params() { wndclass(WndClassName()).name("treeview").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
+				Params() { wndclass(WndClassName()).name("tree-view").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
+				operator TreeViewParams const&() const
+				{
+					return params;
+				}
 			};
 
 			// Invalid item handle
@@ -6977,11 +7051,24 @@ namespace pr
 			enum :DWORD { DefaultStyle   = (DefaultControlStyle | PBS_SMOOTH) & ~WS_TABSTOP };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"msctls_progress32"; }
-			using ProgressBarParams = CtrlParams;
+			struct ProgressBarParams :CtrlParams
+			{
+				ProgressBarParams()
+					:CtrlParams()
+				{}
+				ProgressBarParams* clone() const override
+				{
+					return new ProgressBarParams(*this);
+				}
+			};
 			template <typename TParams = ProgressBarParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(WndClassName()).name("progress").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
+				operator ProgressBarParams const&() const
+				{
+					return params;
+				}
 			};
 
 			ProgressBar() :ProgressBar(Params<>()) {}
@@ -7125,11 +7212,25 @@ namespace pr
 			enum :DWORD { DefaultStyle   = DefaultControlStyle & ~(WS_CLIPCHILDREN) };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx | WS_EX_CONTROLPARENT };
 			static wchar_t const* WndClassName() { return L"pr::gui::Panel"; }
-			using PanelParams = CtrlParams;
+
+			struct PanelParams :CtrlParams
+			{
+				PanelParams()
+					:CtrlParams()
+				{}
+				PanelParams* clone() const override
+				{
+					return new PanelParams(*this);
+				}
+			};
 			template <typename TParams = PanelParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(RegisterWndClass<Panel>()).name("panel").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
+				operator PanelParams const&() const
+				{
+					return params;
+				}
 			};
 
 			Panel() :Panel(Params<>()) {}
@@ -7143,11 +7244,24 @@ namespace pr
 			enum :DWORD { DefaultStyle   = DefaultControlStyle | BS_GROUPBOX };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx | WS_EX_CONTROLPARENT };
 			static wchar_t const* WndClassName() { return L"BUTTON"; } // yes, group-box's use the button window class
-			using GroupBoxParams = CtrlParams;
+			struct GroupBoxParams :CtrlParams
+			{
+				GroupBoxParams()
+					:CtrlParams()
+				{}
+				GroupBoxParams* clone() const override
+				{
+					return new GroupBoxParams(*this);
+				}
+			};
 			template <typename TParams = GroupBoxParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(WndClassName()).name("grp").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
+				operator GroupBoxParams const&() const
+				{
+					return params;
+				}
 			};
 
 			GroupBox() :GroupBox(Params<>()) {}
@@ -7157,23 +7271,53 @@ namespace pr
 		};
 		struct RichTextBox :TextBox
 		{
+			enum :DWORD { DefaultStyle   = (TextBox::DefaultStyle | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_WANTRETURN) & ~(WS_BORDER) };
+			enum :DWORD { DefaultStyleEx = (TextBox::DefaultStyleEx) & ~(WS_EX_STATICEDGE | WS_EX_CLIENTEDGE) };
 			static wchar_t const* WndClassName()
 			{
 				// LoadLibrary is reference counted, so only call it once
 				static HMODULE richedit_lib = ::LoadLibraryW(L"msftedit.dll");
 				return richedit_lib ? L"RICHEDIT50W" : L"RICHEDIT20W";
 			}
-			enum :DWORD { DefaultStyle   = (TextBox::DefaultStyle | ES_MULTILINE| WS_VSCROLL | WS_HSCROLL) & ~(WS_BORDER) };
-			enum :DWORD { DefaultStyleEx = (TextBox::DefaultStyleEx) & ~(WS_EX_STATICEDGE | WS_EX_CLIENTEDGE) };
-			using RichTextBoxParams = TextBoxParams;
+
+			struct RichTextBoxParams :TextBoxParams
+			{
+				bool m_word_wrap;
+				bool m_detect_urls;
+
+				RichTextBoxParams()
+					:TextBoxParams()
+					,m_detect_urls(false)
+					,m_word_wrap(false)
+				{}
+				RichTextBoxParams* clone() const override
+				{
+					return new RichTextBoxParams(*this);
+				}
+			};
 			template <typename TParams = RichTextBoxParams, typename Derived = void> struct Params :TextBox::Params<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = TextBox::Params<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(WndClassName()).name("rtb").style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
+				operator RichTextBoxParams const&() const
+				{
+					return params;
+				}
 				This& border(bool on = true)
 				{
 					return style_ex(on?'+':'-', WS_EX_STATICEDGE);
 				}
+				This& word_wrap(bool on = true)
+				{
+					params.m_word_wrap = on;
+					return me();
+				}
+				This& detect_urls(bool on = true)
+				{
+					params.m_detect_urls = on;
+					return me();
+				}
+
 			};
 
 			RichTextBox() :RichTextBox(Params<>()) {}
@@ -7190,6 +7334,24 @@ namespace pr
 				}
 			};
 			#endif
+			#pragma region Handlers
+			LRESULT WndProc(UINT message, WPARAM wparam, LPARAM lparam) override
+			{
+				switch (message)
+				{
+				case WM_CREATE:
+					#pragma region
+					{
+						auto& p = cp<RichTextBoxParams>();
+						if (p.m_detect_urls) SendMsg<int>(EM_AUTOURLDETECT, AURL_ENABLEURL, 0);
+						if (p.m_word_wrap)   SendMsg<int>(EM_SETTARGETDEVICE, 0, 0);
+						break;
+					}
+					#pragma endregion
+				}
+				return TextBox::WndProc(message, wparam, lparam);
+			}
+			#pragma endregion
 		};
 		struct ImageBox :Control
 		{
@@ -7296,11 +7458,24 @@ namespace pr
 			enum :DWORD { DefaultStyle   = DefaultControlStyle | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return STATUSCLASSNAMEW; }
-			using StatusBarParams = CtrlParams;
+			struct StatusBarParams :CtrlParams
+			{
+				StatusBarParams()
+					:CtrlParams()
+				{}
+				StatusBarParams* clone() const override
+				{
+					return new StatusBarParams(*this);
+				}
+			};
 			template <typename TParams = StatusBarParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(WndClassName()).name("status").style('=',DefaultStyle).style_ex('=',DefaultStyleEx).anchor(EAnchor::LeftBottomRight).dock(EDock::Bottom); }
+				operator StatusBarParams const&() const
+				{
+					return params;
+				}
 			};
 
 			StatusBar() :StatusBar(Params<>()) {}
@@ -7361,6 +7536,11 @@ namespace pr
 		};
 		struct TabControl :Control
 		{
+			enum { DefW = 80, DefH = 80 };
+			enum :DWORD { DefaultStyle   = DefaultControlStyle }; // TCS_VERTICAL | TCS_RIGHT | TCS_BOTTOM
+			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
+			static wchar_t const* WndClassName() { return L"SysTabControl32"; }
+
 			struct Item :TCITEMW
 			{
 				Item() :TCITEMW() {}
@@ -7396,15 +7576,24 @@ namespace pr
 				{}
 			};
 
-			enum { DefW = 80, DefH = 80 };
-			enum :DWORD { DefaultStyle   = DefaultControlStyle }; // TCS_VERTICAL | TCS_RIGHT | TCS_BOTTOM
-			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
-			static wchar_t const* WndClassName() { return L"SysTabControl32"; }
-			using TabControlParams = CtrlParams;
+			struct TabControlParams :CtrlParams
+			{
+				TabControlParams()
+					:CtrlParams()
+				{}
+				TabControlParams* clone() const override
+				{
+					return new TabControlParams(*this);
+				}
+			};
 			template <typename TParams = TabControlParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
-				Params() { wndclass(WndClassName()).name("tabctrl").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
+				Params() { wndclass(WndClassName()).name("tab-ctrl").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
+				operator TabControlParams const&() const
+				{
+					return params;
+				}
 			};
 
 			// The tab pages. Owned externally
@@ -7675,6 +7864,15 @@ namespace pr
 				return Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
 			}
 
+			// Handle window size changing starting or stopping
+			void OnWindowPosChange(WindowPosEventArgs const& args) override
+			{
+				if (!args.m_before && args.IsResize() && !args.Iconic())
+					UpdateLayout(ClientRect());
+
+				Control::OnWindowPosChange(args);
+			}
+
 			// Resize a tab to fit this control
 			void LayoutTab(Control& tab, Rect const& client_rect, bool repaint = false)
 			{
@@ -7722,15 +7920,6 @@ namespace pr
 					::SendMessageW(m_hwnd, TCM_SETCURSEL, neu, 0);
 				}
 			}
-
-			// Handle window size changing starting or stopping
-			void OnWindowPosChange(WindowPosEventArgs const& args) override
-			{
-				if (!args.m_before && args.IsResize() && !args.Iconic())
-					UpdateLayout(ClientRect());
-
-				Control::OnWindowPosChange(args);
-			}
 		};
 		struct Splitter :Control
 		{
@@ -7738,6 +7927,7 @@ namespace pr
 			enum :DWORD { DefaultStyle   = DefaultControlStyle };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"pr::gui::Splitter"; }
+
 			struct SplitterParams :CtrlParams
 			{
 				int   m_bar_width;
@@ -8054,11 +8244,24 @@ namespace pr
 			enum :DWORD { DefaultStyle   = (DefaultControlStyle | WS_GROUP | SS_LEFT) & ~WS_TABSTOP };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"tooltips_class32"; }
-			using ToolTipParams = CtrlParams;
+			struct ToolTipParams :CtrlParams
+			{
+				ToolTipParams()
+					:CtrlParams()
+				{}
+				ToolTipParams* clone() const override
+				{
+					return new ToolTipParams(*this);
+				}
+			};
 			template <typename TParams = ToolTipParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				Params() { wndclass(WndClassName()).name("tt").wh(DefW,DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
+				operator ToolTipParams const&() const
+				{
+					return params;
+				}
 				This& show_always(bool on = true) { style('+',TTS_ALWAYSTIP); return *me; }
 			};
 
@@ -8311,7 +8514,8 @@ namespace pr
 				,m_btn_positive(Button     ::Params<>().name("btn-pos"   ).parent(&m_panel_btns).wh(86,23).dock(EDock::Right).margin(8,12,8,12).def_btn(def_btn==2))
 				,m_panel_msg   (Panel      ::Params<>().name("panel-msg" ).parent(this_        ).dock(EDock::Fill).bk_col(0xFFFFFF))
 				,m_image       (ImageBox   ::Params<>().name("img-icon"  ).parent(&m_panel_msg ).wh(48,48).xy(25,25).margin(8,0,8,0).visible(icon != EIcon::None).id(ID_IMAGE))
-				,m_message     (RichTextBox::Params<>().name("tb-msg"    ).parent(&m_panel_msg ).wh(Fill,Fill).xy(Left|RightOf|ID_IMAGE,Top|TopOf|ID_IMAGE).margin(0,0,8,12).read_only().anchor(EAnchor::All))
+				,m_message     (RichTextBox::Params<>().name("tb-msg"    ).parent(&m_panel_msg ).wh(Fill,Fill).xy(Left|RightOf|ID_IMAGE,Top|TopOf|ID_IMAGE).margin(0,0,8,12)
+					.style('-',WS_HSCROLL).word_wrap().detect_urls().read_only().anchor(EAnchor::All))
 				,m_accept_button()
 				,m_cancel_button()
 				,m_reflow(reflow)

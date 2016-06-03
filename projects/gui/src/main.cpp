@@ -52,7 +52,7 @@ struct Main :Form
 	{
 		Label m_lbl;
 		Tab() {}
-		Tab(wchar_t const* msg, int id, Control* parent)
+		Tab(Control* parent, wchar_t const* msg, int id)
 			:Panel(Panel::Params<>().id(id).parent(parent).dock(EDock::Fill).style('+',WS_BORDER))
 			,m_lbl(Label::Params<>().text(msg).xy(10,10).wh(60,16).parent(this))
 		{}
@@ -66,13 +66,15 @@ struct Main :Form
 	Button        m_btn;
 	Button        m_btn_about;
 	Button        m_btn_msgbox;
-	ScintillaCtrl m_scint;
-	Tab           m_tab1;
-	Tab           m_tab2;
+
+	TabControl    m_tc;
 	Splitter      m_split;
 	Tab           m_split_l;
 	Tab           m_split_r;
-	TabControl    m_tc;
+	Tab           m_tab1;
+	Tab           m_tab2;
+	ScintillaCtrl m_scint;
+
 	Modeless      m_modeless;
 	ProgressUI    m_nm_progress;
 
@@ -88,21 +90,23 @@ struct Main :Form
 			.menu({{L"&File", Menu(Menu::EKind::Popup, {MenuItem(L"E&xit", IDCLOSE)})}})
 			.main_wnd(true)
 			.wndclass(RegisterWndClass<Main>()))
-		,m_lbl         (Label::Params<>()        .parent(this_).name("m_lbl")         .text(L"hello world")       .xy(10,10)                          .wh(60,16)                      )
-		,m_btn_progress(Button::Params<>()       .parent(this_).name("m_btn_progress").text(L"progress")          .xy(10,30)                          .wh(100,20) .id(IDC_PROGRESS)   )
-		,m_btn_nm_prog (Button::Params<>()       .parent(this_).name("m_btn_nm_prog") .text(L"non-modal progress").xy(10,Top|BottomOf|IDC_PROGRESS)   .wh(100,20) .id(IDC_NM_PROGRESS))
-		,m_btn_modeless(Button::Params<>()       .parent(this_).name("m_btn_modeless").text(L"show modeless")     .xy(10,Top|BottomOf|IDC_NM_PROGRESS).wh(100,20) .id(IDC_MODELESS)   )
-		,m_btn_cmenu   (Button::Params<>()       .parent(this_).name("m_btn_cmenu")   .text(L"context menu")      .xy(10,Top|BottomOf|IDC_MODELESS)   .wh(100,20) .id(IDC_CONTEXTMENU))
-		,m_btn         (Button::Params<>()       .parent(this_).name("btn")           .text(L"BOOBS")             .xy(10,Top|BottomOf|IDC_CONTEXTMENU).wh(100,40) .id(IDC_POSTEST)    .image(L"refresh", pr::gui::Image::EType::Png))
-		,m_btn_about   (Button::Params<>()       .parent(this_).name("m_btn_about")   .text(L"About")             .xy(-10,-10)                        .wh(100,32) .id(IDC_ABOUT)      .anchor(EAnchor::BottomRight)) 
-		,m_btn_msgbox  (Button::Params<>()       .parent(this_).name("m_btn_msgbox")  .text(L"MsgBox")            .xy(-10,Bottom|TopOf|IDC_ABOUT)     .wh(100,32) .id(IDC_MSGBOX)     .anchor(EAnchor::BottomRight)) 
-		,m_scint       (ScintillaCtrl::Params<>().parent(this_).name("m_scint")                                   .xy(0,0)                            .wh(100,100).id(IDC_SCINT)      )
-		,m_tab1        (L"hi from tab1", IDC_TAB1, this_)
-		,m_tab2        (L"hi from tab2", IDC_TAB2, this_)
-		,m_split       (Splitter::Params<>().parent(this_).name("split").vertical().visible(false))
-		,m_split_l     (L"Left panel" , IDC_SPLITL, &m_split.Pane0)
-		,m_split_r     (L"Right panel", IDC_SPLITR, &m_split.Pane1)
-		,m_tc          (TabControl::Params<>().parent(this_).name("m_tc").text(L"tabctrl").xy(120,10).wh(500,500).id(IDC_TAB).anchor(EAnchor::All).style_ex('=',0).padding(0))
+		,m_lbl         (Label::Params<>() .name("m_lbl")         .parent(this_).text(L"hello world")       .xy(10,10)                          .wh(Auto,Auto))
+		,m_btn_progress(Button::Params<>().name("m_btn_progress").parent(this_).text(L"progress")          .xy(10,30)                          .wh(100,20) .id(IDC_PROGRESS)   )
+		,m_btn_nm_prog (Button::Params<>().name("m_btn_nm_prog") .parent(this_).text(L"non-modal progress").xy(10,Top|BottomOf|IDC_PROGRESS)   .wh(100,20) .id(IDC_NM_PROGRESS))
+		,m_btn_modeless(Button::Params<>().name("m_btn_modeless").parent(this_).text(L"show modeless")     .xy(10,Top|BottomOf|IDC_NM_PROGRESS).wh(100,20) .id(IDC_MODELESS)   )
+		,m_btn_cmenu   (Button::Params<>().name("m_btn_cmenu")   .parent(this_).text(L"context menu")      .xy(10,Top|BottomOf|IDC_MODELESS)   .wh(100,20) .id(IDC_CONTEXTMENU))
+		,m_btn         (Button::Params<>().name("btn")           .parent(this_).text(L"BOOBS")             .xy(10,Top|BottomOf|IDC_CONTEXTMENU).wh(100,40) .id(IDC_POSTEST)    .image(L"refresh", pr::gui::Image::EType::Png))
+		,m_btn_about   (Button::Params<>().name("m_btn_about")   .parent(this_).text(L"About")             .xy(-10,-10)                        .wh(100,32) .id(IDC_ABOUT)      .anchor(EAnchor::BottomRight)) 
+		,m_btn_msgbox  (Button::Params<>().name("m_btn_msgbox")  .parent(this_).text(L"MsgBox")            .xy(-10,Bottom|TopOf|IDC_ABOUT)     .wh(100,32) .id(IDC_MSGBOX)     .anchor(EAnchor::BottomRight)) 
+
+		,m_tc          (TabControl::Params<>().name("m_tc").parent(this_).xy(120,10).wh(500,500).id(IDC_TAB).anchor(EAnchor::All).style_ex('=',0).padding(0))
+		,m_split       (Splitter  ::Params<>().name("split").parent(&m_tc))
+		,m_split_l     (&m_split.Pane0, L"Left panel" , IDC_SPLITL)
+		,m_split_r     (&m_split.Pane1, L"Right panel", IDC_SPLITR)
+		,m_tab1        (&m_tc, L"hi from tab1", IDC_TAB1)
+		,m_tab2        (&m_tc, L"hi from tab2", IDC_TAB2)
+		,m_scint       (ScintillaCtrl::Params<>().name("m_scint").parent(&m_tc).dock(EDock::Fill).id(IDC_SCINT))
+
 		,m_modeless    (this_)
 		,m_nm_progress (ProgressUI::Params<>().parent(this_).hide_on_close())
 	{
@@ -169,7 +173,7 @@ struct Main :Form
 		m_btn_msgbox.Click += [&](Button&, EmptyArgs const&)
 		{
 			MsgBox::Show(*this,
-				L"This is a test message box. It has loads of text in it to test how the re-flow thing works.\r\n"
+				L"This is a test message box. It has loads of text in it to test how the re-flow thing works. "
 				L"Hopefully, it will work well, although if it does the first time I try it, I'll be amazed.\r\n"
 				L"\r\n"
 				L"Here's hoping...",
@@ -181,8 +185,8 @@ struct Main :Form
 		{
 			m_tc.Insert(L"Tab0", m_split);
 			m_tc.Insert(L"Tab1", m_tab1);
-			m_tc.Insert(L"Tab2", m_scint);
-			m_tc.Insert(L"Tab3", m_tab2);
+			m_tc.Insert(L"Tab2", m_tab2);
+			m_tc.Insert(L"Tab3", m_scint);
 			m_tc.SelectedIndex(0);
 		}
 
@@ -205,71 +209,44 @@ struct Main :Form
 		m_tc.ParentRect(tpr);
 	}
 };
-
-// Form for testing specific controls
 struct Test :Form
 {
 	enum { IDC_SPLIT = 100, IDC_LEFT, IDC_RITE,};
+	Panel    m_panel;
 	Splitter m_split;
 	Test()
-		:Form(MakeFormParams<>().name("test").title(L"Paul's Window").xy(2000,100).wh(800,600).menu({{L"&File", Menu(Menu::EKind::Popup, {MenuItem(L"E&xit", IDCLOSE)})}}).main_wnd(true).wndclass(RegisterWndClass<Test>()))
-		,m_split(Splitter::Params<>().vertical().name("split").parent(this).dock(EDock::Fill))
+		:Form(MakeFormParams<>()
+			.name("test")
+			.title(L"Paul's Window")
+			.xy(2000,100)
+			.wh(800,600)
+			.menu({{L"&File", Menu(Menu::EKind::Popup, {MenuItem(L"E&xit", IDCLOSE)})}})
+			.main_wnd(true)
+			.wndclass(RegisterWndClass<Test>()))
+		,m_panel(Panel   ::Params<>().parent(this_   ).xy(50,50).wh(Fill,Fill).anchor(EAnchor::All))
+		,m_split(Splitter::Params<>().parent(&m_panel).dock(EDock::Fill))
 	{
 		m_split.Pane0.Style('+', WS_BORDER);
 		m_split.Pane1.Style('+', WS_BORDER);
 	}
 };
-
 struct Test2 :Form
 {
-	Label m_lbl;
-	Button m_btn;
+	TabControl m_tc;
+	ScintillaCtrl m_scint;
 
 	Test2()
-		:Form(MakeFormParams<>().name("test").title(L"Paul's Window").start_pos(EStartPosition::CentreParent).wh(320,256).main_wnd(true).wndclass(RegisterWndClass<Test2>()))
-		,m_lbl(Label::Params<>().parent(this_).name("lbl").text(L"BOOBS!"))
-		,m_btn(Button::Params<>().parent(this_).name("btn").text(L"Wahoo!").xy(50,50).wh(80,20))
-	{}
-
-	bool ProcessWindowMessage(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
+		:Form(MakeFormParams<>().name("test").title(L"Paul's Window").start_pos(EStartPosition::CentreParent).wh(320,256).wndclass(RegisterWndClass<Test2>()))
+		,m_tc(TabControl::Params<>().parent(this_).dock(EDock::Fill))
+		,m_scint(ScintillaCtrl::Params<>().parent(&m_tc).dock(EDock::Fill))
 	{
-		//WndProcDebug(hwnd, message, wparam, lparam, FmtS("FormMsg: %s",m_name.c_str()));
-		switch (message)
+		if ((HWND)m_tc != nullptr)
 		{
-		default:
-			return Form::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
-		case WM_PAINT:
-			{
-				using namespace pr::gdi;
-				PaintStruct ps(hwnd);
-
-				std::wstring str = pr::FmtS(L"DPI: %d x %d", m_metrics.m_rt_dpi.X, m_metrics.m_rt_dpi.Y);
-
-				Graphics gfx(ps.hdc);
-				
-				SolidBrush bsh_back(0xFFC0C0C0);
-				gfx.FillRectangle(&bsh_back, pr::To<pr::gdi::Rect>(ps.rcPaint));
-
-				Pen pen(0xFF0000FF);
-				gfx.DrawEllipse(&pen, m_metrics.X(10), m_metrics.Y(20), m_metrics.X(50), m_metrics.Y(70));
-
-				SolidBrush bsh_text(0xFF00A000);
-				pr::gdi::Font font(FontFamily::GenericSansSerif(), m_metrics.Y(12.0f));
-				pr::gdi::PointF pt = {m_metrics.X(100.0f), m_metrics.Y(100.0f)};
-				gfx.DrawString(str.c_str(), int(str.size()), &font, pt, &bsh_text);
-				return Form::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
-			}
-
-		//#if(WINVER >= 0x0601)
-		//case WM_DPICHANGED:
-		//	break;
-		//#endif
+			m_tc.Insert(L"Tab0", m_scint);
+			m_tc.SelectedIndex(0);
 		}
 	}
-
 };
-
-
 
 // Entry point
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
@@ -301,7 +278,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 		//return main.ShowDialog();
 
 		Main main; main.Show();
-		//Test test1; auto& main = test1;
+		//Test test1; auto& main = test1; test1.Show();
 		//Test2 test2; auto& main = test2; test2.Show();
 
 		MessageLoop loop;

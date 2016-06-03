@@ -106,7 +106,7 @@ namespace pr
 			D3DPtr<ID3D11ShaderResourceView> srv;
 
 			// Look for an existing dx texture corresponding to 'filepath'
-			RdrId texfile_id = MakeId(pr::filesys::StandardiseC<wstring256>(filepath).c_str());
+			RdrId texfile_id = MakeId(pr::filesys::Standardise<wstring256>(filepath).c_str());
 			auto iter = m_lookup_fname.find(texfile_id);
 			if (iter != m_lookup_fname.end())
 			{

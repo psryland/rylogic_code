@@ -22,7 +22,7 @@ namespace ldr
 		,m_context_id(pr::GuidZero)
 	{}
 	ScriptSources::File::File(pr::string<wchar_t> const& filepath, pr::Guid const* context_id)
-		:m_filepath(pr::filesys::StandardiseC<pr::string<wchar_t>>(filepath))
+		:m_filepath(pr::filesys::Standardise<pr::string<wchar_t>>(filepath))
 		,m_context_id(context_id ? *context_id : pr::GenerateGUID())
 	{}
 

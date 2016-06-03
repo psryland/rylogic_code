@@ -101,6 +101,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CppPad", "..\projects\CppPa
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "physics2", "physics2.vcxproj", "{D40BFF46-FB1F-4452-B71C-57DC0AC0180C}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sqlite3", "..\sdk\sqlite\sqlite.vcxproj", "{F4A1B209-47CA-4F5D-A80E-87004C91D52E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -425,6 +427,16 @@ Global
 		{D40BFF46-FB1F-4452-B71C-57DC0AC0180C}.Release|x64.Build.0 = Release|x64
 		{D40BFF46-FB1F-4452-B71C-57DC0AC0180C}.Release|x86.ActiveCfg = Release|Win32
 		{D40BFF46-FB1F-4452-B71C-57DC0AC0180C}.Release|x86.Build.0 = Release|Win32
+		{F4A1B209-47CA-4F5D-A80E-87004C91D52E}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{F4A1B209-47CA-4F5D-A80E-87004C91D52E}.Debug|x64.ActiveCfg = Debug|x64
+		{F4A1B209-47CA-4F5D-A80E-87004C91D52E}.Debug|x64.Build.0 = Debug|x64
+		{F4A1B209-47CA-4F5D-A80E-87004C91D52E}.Debug|x86.ActiveCfg = Debug|Win32
+		{F4A1B209-47CA-4F5D-A80E-87004C91D52E}.Debug|x86.Build.0 = Debug|Win32
+		{F4A1B209-47CA-4F5D-A80E-87004C91D52E}.Release|Any CPU.ActiveCfg = Release|Win32
+		{F4A1B209-47CA-4F5D-A80E-87004C91D52E}.Release|x64.ActiveCfg = Release|x64
+		{F4A1B209-47CA-4F5D-A80E-87004C91D52E}.Release|x64.Build.0 = Release|x64
+		{F4A1B209-47CA-4F5D-A80E-87004C91D52E}.Release|x86.ActiveCfg = Release|Win32
+		{F4A1B209-47CA-4F5D-A80E-87004C91D52E}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

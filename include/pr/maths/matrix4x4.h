@@ -433,7 +433,7 @@ namespace pr
 		return m4x4(DirectX::XMMatrixMultiply(rhs, lhs));
 		#else
 		auto ans = m4x4{};
-		auto lhsT = Transpose4x4_(lhs);
+		auto lhsT = Transpose4x4(lhs);
 		ans.x = v4(Dot4(lhsT.x, rhs.x), Dot4(lhsT.y, rhs.x), Dot4(lhsT.z, rhs.x), Dot4(lhsT.w, rhs.x));
 		ans.y = v4(Dot4(lhsT.x, rhs.y), Dot4(lhsT.y, rhs.y), Dot4(lhsT.z, rhs.y), Dot4(lhsT.w, rhs.y));
 		ans.z = v4(Dot4(lhsT.x, rhs.z), Dot4(lhsT.y, rhs.z), Dot4(lhsT.z, rhs.z), Dot4(lhsT.w, rhs.z));
@@ -446,7 +446,7 @@ namespace pr
 		#if PR_MATHS_USE_DIRECTMATH
 		return v4(DirectX::XMVector4Transform(rhs.vec, lhs));
 		#else
-		auto lhsT = Transpose4x4_(lhs);
+		auto lhsT = Transpose4x4(lhs);
 		return v4(Dot4(lhsT.x, rhs), Dot4(lhsT.y, rhs), Dot4(lhsT.z, rhs), Dot4(lhsT.w, rhs));
 		#endif
 	}
@@ -522,7 +522,7 @@ namespace pr
 	}
 
 	// Return the 4x4 transpose of 'mat'
-	inline m4x4 Transpose4x4_(m4x4 const& mat)
+	inline m4x4 Transpose4x4(m4x4 const& mat)
 	{
 		#if PR_MATHS_USE_DIRECTMATH && 0
 		return m4x4(DirectX::XMMatrixTranspose(mat.vec));
@@ -543,7 +543,7 @@ namespace pr
 	}
 
 	// Return the 3x3 transpose of 'mat'
-	inline m4x4 Transpose3x3_(m4x4 const& mat)
+	inline m4x4 Transpose3x3(m4x4 const& mat)
 	{
 		auto m = mat;
 		std::swap(m.x.y, m.y.x);
@@ -572,7 +572,7 @@ namespace pr
 	inline m4x4 InvertFast(m4x4 const& mat)
 	{
 		assert("Matrix is not orthonormal" && IsOrthonormal(mat));
-		auto m = Transpose3x3_(mat);
+		auto m = Transpose3x3(mat);
 		m.pos.x = -Dot3(mat.x, mat.pos);
 		m.pos.y = -Dot3(mat.y, mat.pos);
 		m.pos.z = -Dot3(mat.z, mat.pos);
@@ -589,7 +589,7 @@ namespace pr
 		return m;
 		#else
 
-		m4x4 A = Transpose4x4_(mat); // Take the transpose so that row operations are faster
+		m4x4 A = Transpose4x4(mat); // Take the transpose so that row operations are faster
 		m4x4 B = m4x4Identity;
 
 		// Loop through columns of 'A'
@@ -628,7 +628,7 @@ namespace pr
 
 		// When these operations have been completed, A should have been transformed to the identity matrix
 		// and B should have been transformed into the inverse of the original A
-		B = Transpose4x4_(B);
+		B = Transpose4x4(B);
 		return B;
 		#endif
 	}
@@ -688,7 +688,7 @@ namespace pr
 		assert(IsOrthonormal(from) && IsOrthonormal(to) && "This only works for orthonormal matrices");
 
 		m4x4 cpm_x_i2wR = to - from;
-		m4x4 w2iR = Transpose3x3_(from).w0();
+		m4x4 w2iR = Transpose3x3(from).w0();
 		m4x4 cpm = cpm_x_i2wR * w2iR;
 		return v4(cpm.y.z, cpm.z.x, cpm.x.y, 0.0f);
 	}

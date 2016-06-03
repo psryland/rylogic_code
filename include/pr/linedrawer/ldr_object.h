@@ -785,7 +785,7 @@ namespace pr
 					}
 				case EKeyword::Transpose:
 					{
-						p2w = pr::Transpose4x4_(p2w);
+						p2w = pr::Transpose4x4(p2w);
 						break;
 					}
 				case EKeyword::Inverse:

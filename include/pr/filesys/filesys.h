@@ -9,7 +9,7 @@
 // Extension = the last string following a '.'
 // Filename  = file name including extension
 // FileTitle = file name not including extension
-// A full pathname = drive + ":/" + path + "/" + filetitle + "." + extension
+// A full pathname = drive + ":/" + path + "/" + file-title + "." + extension
 //
 #pragma once
 
@@ -22,6 +22,7 @@
 #include <ctime>
 #include <string>
 #include <algorithm>
+#include <type_traits>
 #include <cassert>
 
 namespace pr
@@ -51,7 +52,7 @@ namespace pr
 		// Unix Time = seconds since midnight January 1, 1970 UTC
 		// FILETIME = 100-nanosecond intervals since January 1, 1601 UTC
 		// File timestamp data for a file.
-		// Note: these timestamps are in UTC unix time
+		// Note: these timestamps are in UTC Unix time
 		struct FileTime
 		{
 			time_t m_last_access;   // Note: time_t is 64bit
@@ -59,78 +60,102 @@ namespace pr
 			time_t m_created;
 		};
 
-		// Convert a UTC unix time to a local timezone unix time
+		// Convert a UTC Unix time to a local time zone Unix time
 		inline time_t UTCtoLocal(time_t t)
 		{
 			struct tm utc,local;
-			if (gmtime_s(&utc, &t) != 0 || localtime_s(&local, &t) != 0) throw std::exception("failed to convert utc time to local time");
+			if (gmtime_s(&utc, &t) != 0 || localtime_s(&local, &t) != 0) throw std::exception("failed to convert UTC time to local time");
 			return t + (mktime(&local) - mktime(&utc));
 		}
 
-		// Convert local timezone unix time to UTC unix time
+		// Convert local time-zone Unix time to UTC Unix time
 		inline time_t LocaltoUTC(time_t t)
 		{
 			struct tm utc,local;
-			if (gmtime_s(&utc, &t) != 0 || localtime_s(&local, &t) != 0) throw std::exception("failed to convert local time to utc time");
+			if (gmtime_s(&utc, &t) != 0 || localtime_s(&local, &t) != 0) throw std::exception("failed to convert local time to UTC time");
 			return t - (mktime(&local) - mktime(&utc));
 		}
 
-		// Convert between unix time and i64. The resulting i64 can then be converted to FILETIME, SYSTEMTIME, etc
+		// Convert between Unix time and i64. The resulting i64 can then be converted to FILETIME, SYSTEMTIME, etc
 		inline __int64 UnixTimetoI64(time_t  t) { return t * 10000000LL + 116444736000000000LL; }
 		inline time_t  I64toUnixTime(__int64 t) { return (t - 116444736000000000LL) / 10000000LL; }
 
 		// Conversions between __int64, FILETIME, and SYSTEMTIME
 		// Requires <windows.h> to be included
 		// Note: the '__int64's here are not the same as the timestamps in 'FileTime'
-		// those values are in unix time. Use 'UnixTimetoI64()'
-#ifdef _FILETIME_
-		inline __int64 FTtoI64(FILETIME ft)
+		// those values are in Unix time. Use 'UnixTimetoI64()'
+		struct FILETIME;
+		struct SYSTEMTIME;
+		template <typename = void> inline __int64 FTtoI64(FILETIME ft)
 		{
 			__int64  n  = __int64(ft.dwHighDateTime) << 32 | __int64(ft.dwLowDateTime);
 			return n;
 		}
-		inline FILETIME I64toFT(__int64 n)
+		template <typename = void> inline FILETIME I64toFT(__int64 n)
 		{
 			FILETIME ft = {DWORD(n&0xFFFFFFFFULL), DWORD((n>>32)&0xFFFFFFFFULL)};
 			return ft;
 		}
-#ifdef _WINBASE_
-		inline SYSTEMTIME FTtoST(FILETIME const& ft)
+		template <typename = void> inline SYSTEMTIME FTtoST(FILETIME const& ft)
 		{
 			SYSTEMTIME st = {};
 			if (!::FileTimeToSystemTime(&ft, &st)) throw std::exception("FileTimeToSystemTime failed");
 			return st;
 		}
-		inline FILETIME STtoFT(SYSTEMTIME const& st)
+		template <typename = void> inline FILETIME STtoFT(SYSTEMTIME const& st)
 		{
 			FILETIME ft = {};
 			if (!::SystemTimeToFileTime(&st, &ft)) throw std::exception("SystemTimeToFileTime failed");
 			return ft;
 		}
-		inline __int64 STtoI64(SYSTEMTIME const& st)
+		template <typename = void> inline __int64 STtoI64(SYSTEMTIME const& st)
 		{
 			return FTtoI64(STtoFT(st));
 		}
-		inline SYSTEMTIME I64toST(__int64 n)
+		template <typename = void> inline SYSTEMTIME I64toST(__int64 n)
 		{
 			return FTtoST(I64toFT(n));
 		}
-#endif
-#endif
 
-		// Convert string types to char*
-		template <typename String, typename = String::value_type> inline typename String::const_pointer c_str(String const& s)
-		{
-			return s.c_str();
-		}
-		template <typename Char> inline typename Char const* c_str(Char const* s)
+		#pragma region Traits
+		template <typename C> struct is_char :std::false_type {};
+		template <>           struct is_char<char> :std::true_type {};
+		template <>           struct is_char<wchar_t> :std::true_type {};
+		template <typename Char> using enable_if_char = typename std::enable_if<is_char<Char>::value>::type;
+		#pragma endregion
+
+		#pragma region String helpers
+		template <typename Char, typename = enable_if_char<Char>> inline Char const* c_str(Char const* s)
 		{
 			return s;
 		}
 
+		template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Char const* c_str(Str const& s)
+		{
+			return s.c_str();
+		}
+
+		// Returns a pointer in 's' of the first instance of 'x' or the null terminator
+		template <typename Char, typename = enable_if_char<Char>> inline Char const* find(Char const* s, Char x)
+		{
+			for (; *s != 0 && *s != x; ++s) {}
+			return s;
+		}
+
+		// Returns a pointer into 's' of the first instance of any character in 'x'
+		template <typename Char, typename = enable_if_char<Char>> inline Char const* find_first(Char const* s, Char const* x)
+		{
+			for (; *s != 0 && *find(x,*s) == 0; ++s) {}
+			return s;
+		}
+		#pragma endregion
+
+		#pragma region wchar_t/ char handling
 		namespace impl
 		{
-			// Unicode handling
+			inline int strlen(char    const* s) { return int(::strlen(s)); }
+			inline int strlen(wchar_t const* s) { return int(::wcslen(s)); }
+
 			inline int access(char    const* filename, Access access_mode) { return ::_access (filename, int(access_mode)); }
 			inline int access(wchar_t const* filename, Access access_mode) { return ::_waccess(filename, int(access_mode)); }
 
@@ -146,88 +171,75 @@ namespace pr
 			inline int rmdir(char    const* dirname) { return ::_rmdir (dirname); }
 			inline int rmdir(wchar_t const* dirname) { return ::_wrmdir(dirname); }
 
-			inline char*    getdcwd(int drive, char* buf, size_t buf_size)    { return ::_getdcwd(drive, buf, int(buf_size)); }
+			inline char*    getdcwd(int drive, char*    buf, size_t buf_size)    { return ::_getdcwd(drive, buf, int(buf_size)); }
 			inline wchar_t* getdcwd(int drive, wchar_t* buf, size_t buf_size) { return ::_wgetdcwd(drive, buf, int(buf_size)); }
 
 			inline char*    fullpath(char*    abs_path, char    const* rel_path, size_t max_length) { return ::_fullpath (abs_path, rel_path, max_length); }
 			inline wchar_t* fullpath(wchar_t* abs_path, wchar_t const* rel_path, size_t max_length) { return ::_wfullpath(abs_path, rel_path, max_length); }
 
-			inline int stat64(char const* filepath, struct __stat64* info)    { return _stat64(filepath, info); }
+			inline int stat64(char    const* filepath, struct __stat64* info) { return _stat64(filepath, info); }
 			inline int stat64(wchar_t const* filepath, struct __stat64* info) { return _wstat64(filepath, info); }
+
+			inline int chmod(char    const* filepath, int mode) { return _chmod(filepath, mode); }
+			inline int chmod(wchar_t const* filepath, int mode) { return _wchmod(filepath, mode); }
+
+			inline errno_t mktemp(char*    templ, int length) { return _mktemp_s(templ, length); }
+			inline errno_t mktemp(wchar_t* templ, int length) { return _wmktemp_s(templ, length); }
 		}
+		#pragma endregion
 
 		// Return true if 'ch' is a directory marker
-		template <typename Char> inline bool DirMark(Char ch)
+		template <typename Char, typename = enable_if_char<Char>> inline bool DirMark(Char ch)
 		{
-			return ch == Char('\\') || ch == Char('/');
+			return ch == '\\' || ch == '/';
 		}
 
 		// Return true if two characters are the same as far as a path is concerned
-		template <typename Char> inline bool EqualPathChar(Char lhs, Char rhs)
+		template <typename Char, typename = enable_if_char<Char>> inline bool EqualPathChar(Char lhs, Char rhs)
 		{
 			return tolower(lhs) == tolower(rhs) || (DirMark(lhs) && DirMark(rhs));
 		}
 
 		// Return true if 'path' contains a drive, i.e. is a full path
-		template <typename String, typename Char = String::value_type> inline bool IsFullPath(String const& path)
+		template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline bool IsFullPath(Str const& path)
 		{
-			Char const colon[] = {Char(':')}; // no null, because 'find' is templated on array len, and so tries to match the string ":\0" (i.e. length 2)
-			return path.find(colon) != String::npos;
+			Char const colon[] = {Char(':')}; // no null, because 'find' is templated on array length, and so tries to match the string ":\0" (i.e. length 2)
+			return path.find(colon) != Str::npos;
 		}
 
 		// Add quotes to the str if it doesn't already have them
-		template <typename String, typename Char = String::value_type> inline String& AddQuotes(String& str)
+		template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str AddQuotes(Str str)
 		{
-			if (str.size() > 1 && str[0] == Char('"') && str[str.size()-1] == Char('"')) return str;
-			str.insert(str.begin(), Char('"'));
-			str.insert(str.end  (), Char('"'));
+			if (str.size() > 1 && str[0] == '"' && str[str.size()-1] == '"') return str;
+			str.insert(str.begin(), '"');
+			str.insert(str.end  (), '"');
 			return str;
-		}
-		template <typename String> inline String AddQuotesC(String const& str)
-		{
-			String s = str;
-			return AddQuotes(s);
 		}
 
 		// Remove quotes from 'str' if it has them
-		template <typename String, typename Char = String::value_type> inline String& RemoveQuotes(String& str)
+		template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str RemoveQuotes(Str str)
 		{
-			if (str.size() < 2 || str[0] != Char('"') || str[str.size()-1] != Char('"')) return str;
+			if (str.size() < 2 || str[0] != '"' || str[str.size()-1] != '"') return str;
 			str = str.substr(1, str.size()-2);
 			return str;
 		}
-		template <typename String> inline String RemoveQuotesC(String const& str)
-		{
-			String s = str;
-			return RemoveQuotes(s);
-		}
 
 		// Remove the leading back slash from 'str' if it exists
-		template <typename String, typename Char = String::value_type> inline String& RemoveLeadingBackSlash(String& str)
+		template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str RemoveLeadingBackSlash(Str str)
 		{
-			if (!str.empty() && (str[0] == Char('\\') || str[0] == Char('/'))) str.erase(0,1);
+			if (!str.empty() && (str[0] == '\\' || str[0] == '/')) str.erase(0,1);
 			return str;
-		}
-		template <typename String> inline String RemoveLeadingBackSlashC(String const& str)
-		{
-			String s = str;
-			return RemoveLeadingBackSlash(s);
 		}
 
 		// Remove the last back slash from 'str' if it exists
-		template <typename String, typename Char = String::value_type> inline String& RemoveLastBackSlash(String& str)
+		template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str RemoveLastBackSlash(Str str)
 		{
-			if (!str.empty() && (str[str.size()-1] == Char('\\') || str[str.size()-1] == Char('/'))) str.erase(str.size()-1, 1);
+			if (!str.empty() && (str[str.size()-1] == '\\' || str[str.size()-1] == '/')) str.erase(str.size()-1, 1);
 			return str;
-		}
-		template <typename String> inline String RemoveLastBackSlashC(String const& str)
-		{
-			String s = str;
-			return RemoveLastBackSlash(s);
 		}
 
 		// Convert 'C:\path0\.\path1\../path2\file.ext' into 'C:\path0\path2\file.ext'
-		template <typename String, typename Char = String::value_type> inline String& Canonicalise(String& str)
+		template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str Canonicalise(Str str)
 		{
 			Char const dir_marks[] = {Char('\\'),Char('/'),0};
 
@@ -235,17 +247,17 @@ namespace pr
 			for (;;)
 			{
 				d1 = str.find_first_of(dir_marks, d0);
-				if (d1 == String::npos)                                    { return str; }
+				if (d1 == Str::npos)                                    { return str; }
 				if (str[d1] == Char('/'))                                  { str[d1] = Char('\\'); }
 				if (d1 == 1 && str[0] == Char('.'))                        { str.erase(0, 2); d0 = 0; continue; }
 
 				d2 = str.find_first_of(dir_marks, d1+1);
-				if (d2 == String::npos)                                    { return str; }
+				if (d2 == Str::npos)                                    { return str; }
 				if (str[d2] == Char('/'))                                  { str[d2] = Char('\\'); }
 				if (d2-d1 == 2 && str[d1+1] == Char('.'))                  { str.erase(d1+1, 2); d0 = 0; continue; }
 
 				d3 = str.find_first_of(dir_marks, d2+1);
-				if (d3 == String::npos)                                    { return str; }
+				if (d3 == Str::npos)                                    { return str; }
 				if (str[d3] == Char('/'))                                  { str[d3] = Char('\\'); }
 				if (d3-d2 == 2 && str[d2+1] == Char('.'))                  { str.erase(d2+1, 2); d0 = 0; continue; }
 				if (d3-d2 == 3 && str[d2+1] == Char('.') && str[d2+2] == Char('.') &&
@@ -254,101 +266,91 @@ namespace pr
 				d0 = d1 + 1;
 			}
 		}
-		template <typename String> inline String CanonicaliseC(String const& str)
-		{
-			String s = str;
-			return Canonicalise(s);
-		}
 
 		// Convert a path name into a standard format of "c:\dir\dir\filename.ext" i.e. back slashes, and lower case
-		template <typename String, typename Char = String::value_type> inline String& Standardise(String& str)
+		template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str Standardise(Str str)
 		{
-			RemoveQuotes(str);
-			RemoveLastBackSlash(str);
-			Canonicalise(str);
-			for (String::iterator i = str.begin(), iend = str.end(); i != iend; ++i) {*i = static_cast<String::value_type>(tolower(*i));}
+			str = RemoveQuotes(str);
+			str = RemoveLastBackSlash(str);
+			str = Canonicalise(str);
+			for (auto& i : str) i = static_cast<Char>(tolower(i));
 			std::replace(str.begin(), str.end(), Char('/'), Char('\\'));
 			return str;
 		}
-		template <typename String> inline String StandardiseC(String const& str)
-		{
-			String s = str;
-			return Standardise(s);
-		}
 
 		// Get the drive letter from a full path description.
-		template <typename String, typename Char = String::value_type> inline String GetDrive(String const& str)
+		template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str GetDrive(Str const& str)
 		{
 			Char const colon[] = {Char(':'),0};
 
-			size_t pos = str.find(colon);
-			if (pos == String::npos) return String();
+			auto pos = str.find(colon);
+			if (pos == Str::npos) return Str();
 			return str.substr(0, pos);
 		}
 
 		// Get the path from a full path description
-		template <typename String, typename Char = String::value_type> inline String GetPath(String const& str)
+		template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str GetPath(Str const& str)
 		{
 			Char const colon[] = {Char(':'),0}, dir_marks[] = {Char('\\'),Char('/'),0};
 			size_t p, first = 0, last = str.size();
 
 			// Find the start of the path
 			p = str.find(colon);
-			if (p != String::npos) first = p + 1;
+			if (p != Str::npos) first = p + 1;
 			if (first != last && (str[first] == Char('\\') || str[first] == Char('/'))) ++first;
 
 			// Find the end of the path
 			p = str.find_last_of(dir_marks);
-			if (p == String::npos || p <= first) return String();
+			if (p == Str::npos || p <= first) return Str();
 			last = p;
 
 			return str.substr(first, last - first);
 		}
 
 		// Get the directory including drive letter from a full path description
-		template <typename String, typename Char = String::value_type> inline String GetDirectory(String const& str)
+		template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str GetDirectory(Str const& str)
 		{
 			Char const dir_marks[] = {Char('\\'),Char('/'),0};
 
 			// Find the end of the path
-			size_t p = str.find_last_of(dir_marks);
-			if (p == String::npos) return String();
+			auto p = str.find_last_of(dir_marks);
+			if (p == Str::npos) return Str();
 			return str.substr(0, p);
 		}
 
 		// Get the extension from a full path description (does not include the '.')
-		template <typename String, typename Char = String::value_type> inline String GetExtension(String const& str)
+		template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str GetExtension(Str const& str)
 		{
 			Char const dot[] = {Char('.'),0};
 
-			size_t p = str.find_last_of(dot);
-			if (p == String::npos) return String();
+			auto p = str.find_last_of(dot);
+			if (p == Str::npos) return Str();
 			return str.substr(p+1);
 		}
 
 		// Returns a pointer to the extension part of a filepath (does not include the '.')
-		template <typename Char> inline Char const* GetExtensionInPlace(Char const* str)
+		template <typename Char, typename = enable_if_char<Char>> inline Char const* GetExtensionInPlace(Char const* str)
 		{
 			Char const* extn = 0, *p;
 			for (p = str; *p; ++p)
-				if (*p == Char('.')) extn = p + 1;
+				if (*p == '.') extn = p + 1;
 
 			return extn ? extn : p;
 		}
 
 		// Get the filename including extension from a full path description
-		template <typename String, typename Char = String::value_type> inline String GetFilename(String const& str)
+		template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str GetFilename(Str const& str)
 		{
 			Char const dir_marks[] = {Char('\\'),Char('/'),0};
 
 			// Find the end of the path
-			size_t p = str.find_last_of(dir_marks);
-			if (p == String::npos) return str;
+			auto p = str.find_last_of(dir_marks);
+			if (p == Str::npos) return str;
 			return str.substr(p+1);
 		}
 
 		// Get the file title from a full path description
-		template <typename String, typename Char = String::value_type> inline String GetFiletitle(String const& str)
+		template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str GetFiletitle(Str const& str)
 		{
 			Char const dot[] = {Char('.'),0}, dir_marks[] = {Char('\\'),Char('/'),0};
 
@@ -356,28 +358,28 @@ namespace pr
 
 			// Find the start of the file title
 			p = str.find_last_of(dir_marks);
-			if (p != String::npos) first = p + 1;
+			if (p != Str::npos) first = p + 1;
 
 			// Find the end of the file title
 			p = str.find_last_of(dot);
-			if (p != String::npos && p > first) last = p;
+			if (p != Str::npos && p > first) last = p;
 
 			return str.substr(first, last - first);
 		}
 
 		// Remove the drive from 'str'
-		template <typename String, typename Char = String::value_type> inline String& RmvDrive(String& str)
+		template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str& RmvDrive(Str& str)
 		{
 			Char const colon[] = {Char(':'),0}, dir_marks[] = {Char('\\'),Char('/'),0};
 
-			size_t p = str.find(colon);
-			if (p == String::npos) return str;
+			auto p = str.find(colon);
+			if (p == Str::npos) return str;
 			p = str.find_first_not_of(dir_marks, p+1);
 			return str.erase(0, p);
 		}
 
 		// Remove the path from 'str'
-		template <typename String, typename Char = String::value_type> inline String& RmvPath(String& str)
+		template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str& RmvPath(Str& str)
 		{
 			Char const colon[] = {Char(':'),0}, dir_marks[] = {Char('\\'),Char('/'),0};
 
@@ -385,54 +387,54 @@ namespace pr
 
 			// Find the start of the path
 			p = str.find(colon);
-			if (p != String::npos) first = p + 1;
+			if (p != Str::npos) first = p + 1;
 			if (first != last && (str[first] == Char('\\') || str[first] == Char('/'))) ++first;
 
 			// Find the end of the path
 			p = str.find_last_of(dir_marks);
-			if (p == String::npos || p <= first) return str;
+			if (p == Str::npos || p <= first) return str;
 			last = p + 1;
 			str.erase(first, last - first);
 			return str;
 		}
 
 		// Remove the directory from 'str'
-		template <typename String, typename Char = String::value_type> inline String& RmvDirectory(String& str)
+		template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str& RmvDirectory(Str& str)
 		{
 			Char const dir_marks[] = {Char('\\'),Char('/'),0};
 
 			// Find the end of the path
 			size_t p = str.find_last_of(dir_marks);
-			if (p == String::npos) return str;
+			if (p == Str::npos) return str;
 			str.erase(0, p + 1);
 			return str;
 		}
 
 		// Remove the extension from 'str'
-		template <typename String, typename Char = String::value_type> inline String& RmvExtension(String& str)
+		template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str& RmvExtension(Str& str)
 		{
 			Char const dot[] = {Char('.'),0};
 
 			size_t p = str.find_last_of(dot);
-			if (p == String::npos) return str;
+			if (p == Str::npos) return str;
 			str.erase(p);
 			return str;
 		}
 
 		// Remove the filename from 'str'
-		template <typename String, typename Char = String::value_type> inline String& RmvFilename(String& str)
+		template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str& RmvFilename(Str& str)
 		{
 			Char const dir_marks[] = {Char('\\'),Char('/'),0};
 
 			// Find the end of the path
 			size_t p = str.find_last_of(dir_marks);
-			if (p == String::npos) return str;
+			if (p == Str::npos) return str;
 			str.erase(p);
 			return str;
 		}
 
 		// Remove the file title from 'str'
-		template <typename String, typename Char = String::value_type> inline String& RmvFiletitle(String& str)
+		template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str& RmvFiletitle(Str& str)
 		{
 			Char const dot[] = {Char('.'),0}, dir_marks[] = {Char('\\'),Char('/'),0};
 
@@ -440,75 +442,42 @@ namespace pr
 
 			// Find the start of the file title
 			p = str.find_last_of(dir_marks);
-			if (p != String::npos) first = p + 1;
+			if (p != Str::npos) first = p + 1;
 
 			// Find the end of the file title
 			p = str.find_last_of(dot);
-			if (p != String::npos && p > first) last = p;
+			if (p != Str::npos && p > first) last = p;
 
 			str.erase(first, last - first);
 			return str;
 		}
 
-		// Make a pathname out of bits
-		template <typename String, typename Char = String::value_type> inline String Make(String const& directory, String const& filename)
-		{
-			String pathname;
-			pathname  = RemoveLastBackSlashC(directory);
-			pathname += Char('/');
-			pathname += filename;
-			return Standardise(pathname);
-		}
-		template <typename String, typename Char = String::value_type> inline String Make(String const& directory, String const& filetitle, String const& extension)
-		{
-			String pathname;
-			pathname  = RemoveLastBackSlashC(directory);
-			pathname += Char('/');
-			pathname += filetitle;
-			pathname += Char('.');
-			pathname += extension;
-			return Standardise(pathname);
-		}
-		template <typename String, typename Char = String::value_type> inline String Make(String const& drive, String const& path, String const& filetitle, String const& extension)
-		{
-			String pathname;
-			pathname  = GetDrive(drive);
-			pathname += Char(':');
-			pathname += Char('/');
-			pathname += RemoveLeadingBackSlashC(RemoveLastBackSlashC(path));
-			pathname += Char('/');
-			pathname += filetitle;
-			pathname += Char('.');
-			pathname += extension;
-			return Standardise(pathname);
-		}
-
 		// Delete a file
-		template <typename String> inline bool EraseFile(String const& filepath)
+		template <typename Str> inline bool EraseFile(Str const& filepath)
 		{
 			return impl::remove(c_str(filepath)) == 0;
 		}
 
 		// Delete an empty directory
-		template <typename String> inline bool EraseDir(String const& path)
+		template <typename Str> inline bool EraseDir(Str const& path)
 		{
 			return impl::rmdir(c_str(path)) == 0;
 		}
 
 		// Delete a file or empty directory
-		template <typename String> inline bool Erase(String const& path)
+		template <typename Str> inline bool Erase(Str const& path)
 		{
 			return EraseFile(path) || EraseDir(path);
 		}
 
 		// Rename a file
-		template <typename String> inline bool RenameFile(String const& old_filepath, String const& new_filepath)
+		template <typename Str1, typename Str2> inline bool RenameFile(Str1 const& old_filepath, Str2 const& new_filepath)
 		{
 			return impl::rename(c_str(old_filepath), c_str(new_filepath)) == 0;
 		}
 
 		// Copy a file
-		template <typename String> inline bool CpyFile(String const& src_filepath, String const& dst_filepath)
+		template <typename Str1, typename Str2> inline bool CpyFile(Str1 const& src_filepath, Str2 const& dst_filepath)
 		{
 			std::ifstream src (c_str(src_filepath), std::ios::binary);
 			std::ofstream dest(c_str(dst_filepath), std::ios::binary);
@@ -519,7 +488,7 @@ namespace pr
 
 		// Compare the contents of two files and return true if they are the same.
 		// Returns true if both files doesn't exist, or false if only one file exists.
-		template <typename String> inline bool EqualContents(String const& lhs, String const& rhs)
+		template <typename Str> inline bool EqualContents(Str const& lhs, Str const& rhs)
 		{
 			auto e0 = FileExists(lhs);
 			auto e1 = FileExists(rhs);
@@ -545,18 +514,18 @@ namespace pr
 				if (r0 != r1) return false;
 				if (memcmp(buf0, buf1, r1) != 0) return false;
 			}
-			return f0.eof() == f1.eof(); // both files reached eof at the same time
+			return f0.eof() == f1.eof(); // both files reached EOF at the same time
 		}
 
 		// Move 'src' to 'dst' replacing 'dst' if it already exists
-		template <typename String> inline bool RepFile(String const& src, String const& dst)
+		template <typename Str> inline bool RepFile(Str const& src, Str const& dst)
 		{
 			if (FileExists(dst)) EraseFile(dst);
 			return RenameFile(src, dst);
 		}
 
 		// Return the length of a file, without opening it
-		template <typename String> inline __int64 FileLength(String const& filepath)
+		template <typename Str> inline __int64 FileLength(Str const& filepath)
 		{
 			struct __stat64 info;
 			if (impl::stat64(c_str(filepath), &info) != 0) return 0;
@@ -589,8 +558,8 @@ namespace pr
 			return size;
 		}
 
-		// Return a bitwise combination of Attribs for 'str'
-		template <typename String> inline EAttrib GetAttribs(String const& str)
+		// Return a bitwise combination of Attributes for 'str'
+		template <typename Str> inline EAttrib GetAttribs(Str const& str)
 		{
 			struct __stat64 info;
 			if (impl::stat64(c_str(str), &info) != 0)
@@ -609,42 +578,38 @@ namespace pr
 		}
 
 		// Return the creation, last modified, and last access time of a file
-		// Note: these timestamps are in UTC unix time
-		template <typename tchar> inline FileTime FileTimeStats(tchar const* str)
+		// Note: these timestamps are in UTC Unix time
+		template <typename Str> inline FileTime FileTimeStats(Str const& str)
 		{
 			FileTime file_time = {0, 0, 0};
 
 			struct __stat64 info;
-			if (impl::stat64(str, &info) != 0) return file_time;
+			if (impl::stat64(c_str(str), &info) != 0) return file_time;
 			file_time.m_created       = info.st_ctime;
 			file_time.m_last_modified = info.st_mtime;
 			file_time.m_last_access   = info.st_atime;
 			return file_time;
 		}
-		template <typename String> inline FileTime GetFileTimeStats(String const& str)
-		{
-			return FileTimeStats(c_str(str));
-		}
 
 		// Return true if 'filepath' is a file that exists
-		template <typename String> inline bool FileExists(String const& filepath)
+		template <typename Str> inline bool FileExists(Str const& filepath)
 		{
-			return impl::access(&filepath[0], Access::Exists) == 0;
+			return impl::access(c_str(filepath), Access::Exists) == 0;
 		}
 
 		// Return true if 'directory' exists
-		template <typename String> inline bool DirectoryExists(String const& directory)
+		template <typename Str> inline bool DirectoryExists(Str const& directory)
 		{
-			return impl::access(&directory[0], Access::Exists) == 0;
+			return impl::access(c_str(directory), Access::Exists) == 0;
 		}
 
 		// Recursively create 'directory'
-		template <typename String, typename Char = String::value_type> inline bool CreateDir(String const& directory)
+		template <typename Str, typename Char = Str::value_type> inline bool CreateDir(Str const& directory)
 		{
 			Char const dir_marks[] = {Char('\\'),Char('/'),0};
 
-			String dir = CanonicaliseC(directory);
-			for (size_t n = dir.find_first_of(dir_marks); n != String::npos; n = dir.find_first_of(dir_marks, n+1))
+			auto dir = Canonicalise(directory);
+			for (size_t n = dir.find_first_of(dir_marks); n != Str::npos; n = dir.find_first_of(dir_marks, n+1))
 			{
 				if (n < 1 || dir[n-1] == Char(':')) continue;
 				if (impl::mkdir(dir.substr(0, n).c_str()) < 0 && errno != EEXIST)
@@ -654,7 +619,7 @@ namespace pr
 		}
 
 		// Check the access on a file
-		template <typename String> inline Access GetAccess(String const& str)
+		template <typename Str> inline Access GetAccess(Str const& str)
 		{
 			int acc = 0;
 			if (impl::access(c_str(str), Read ) == 0) acc |= Read;
@@ -663,33 +628,33 @@ namespace pr
 		}
 
 		// Set the attributes on a file
-		template <typename String> inline bool SetAccess(String const& str, Access state)
+		template <typename Str> inline bool SetAccess(Str const& str, Access state)
 		{
 			int mode = 0;
 			if (state & Read ) mode |= _S_IREAD;
 			if (state & Write) mode |= _S_IWRITE;
-			return _chmod(c_str(str), mode) == 0;
+			return impl::chmod(c_str(str), mode) == 0;
 		}
 
 		// Make a unique filename. Template should have the form: "FilenameXXXXXX". X's are replaced. Note, no extension
-		template <typename String> inline String MakeUniqueFilename(String const& tmplate)
+		template <typename Str> inline Str MakeUniqueFilename(Str const& tmplate)
 		{
-			String str = tmplate;
-			return _mktemp_s(&str[0], str.size() + 1) == 0 ? str : String();
+			auto str = tmplate;
+			return impl::mktemp(&str[0], impl::strlen(&str[0]) + 1) == 0 ? str : Str();
 		}
 
 		// Return the current directory
-		template <typename String, typename Char = String::value_type> inline String CurrentDirectory()
+		template <typename Str, typename Char = Str::value_type> inline Str CurrentDirectory()
 		{
 			Char buf[_MAX_PATH];
-			String path = impl::getdcwd(_getdrive(), buf, _countof(buf));
-			return Standardise(path);
+			auto path = impl::getdcwd(_getdrive(), buf, _countof(buf));
+			return Standardise<Str>(path);
 		}
 
 		// Replaces the extension of 'path' with 'new_extn'
-		template <typename String, typename Char = String::value_type> inline String ChangeExtn(String const& path, String const& new_extn)
+		template <typename Str, typename Char = Str::value_type> inline Str ChangeExtn(Str const& path, decltype(path) new_extn)
 		{
-			String s = path;
+			auto s = path;
 			RmvExtension(s);
 			s += Char('.');
 			s += new_extn;
@@ -697,9 +662,9 @@ namespace pr
 		}
 
 		// Insert 'prefix' before, and 'postfix' after the file title in 'path', without modifying the extension
-		template <typename String, typename Char = String::value_type> inline String ChangeFilename(String const& path, decltype(path) prefix, decltype(path) postfix)
+		template <typename Str, typename Char = Str::value_type> inline Str ChangeFilename(Str const& path, decltype(path) prefix, decltype(path) postfix)
 		{
-			String s = path;
+			auto s = path;
 			RmvFilename(s);
 			s += Char('\\');
 			s += prefix;
@@ -711,33 +676,32 @@ namespace pr
 		}
 
 		// Combine two path fragments into a combined path
-		template <typename String> inline String CombinePath(String const& lhs, decltype(lhs) rhs)
+		template <typename Str> inline Str CombinePath(Str const& lhs, decltype(lhs) rhs)
 		{
 			if (IsFullPath(rhs)) return rhs;
-			return CanonicaliseC(RemoveLastBackSlashC(lhs).append(1,'\\').append(RemoveLeadingBackSlashC(rhs)));
+			return Canonicalise(RemoveLastBackSlash(lhs).append(1,'\\').append(RemoveLeadingBackSlash(rhs)));
 		}
-		template <typename String, typename... Parts> inline String CombinePath(String const& lhs, decltype(lhs) rhs, Parts&&... rest)
+		template <typename Str, typename... Parts> inline Str CombinePath(Str const& lhs, decltype(lhs) rhs, Parts&&... rest)
 		{
 			return CombinePath(CombinePath(lhs, rhs), rest...);
 		}
 
 		// Convert a relative path into a full path
-		template <typename String, typename Char = String::value_type> inline String GetFullPath(String const& str)
+		template <typename Str, typename Char = Str::value_type> inline Str GetFullPath(Str const& str)
 		{
 			Char buf[_MAX_PATH];
-			String path(const_cast<Char const*>(impl::fullpath(buf, c_str(str), _MAX_PATH)));
-			return Standardise<String>(path);
+			Str path(const_cast<Char const*>(impl::fullpath(buf, c_str(str), _MAX_PATH)));
+			return Standardise<Str>(path);
 		}
 
 		// Make 'full_path' relative to 'relative_to'.  e.g.  C:/path1/path2/file relative to C:/path1/path3/ = ../path2/file
-		template <typename String, typename Char = String::value_type> inline String GetRelativePath(String const& full_path, String const& relative_to)
+		template <typename Str, typename Char = Str::value_type> inline Str GetRelativePath(Str const& full_path, Str const& relative_to)
 		{
-			Char const colon[]     = {':',0};
 			Char const prev_dir[]  = {'.','.','/',0};
 			Char const dir_marks[] = {'\\','/',0};
 
 			// Find where the paths differ, recording the last common directory marker
-			size_t i, d = String::npos;
+			int i, d = -1;
 			auto fpath = c_str(full_path);
 			auto rpath = c_str(relative_to);
 			for (i = 0; EqualPathChar(fpath[i], rpath[i]); ++i)
@@ -746,30 +710,30 @@ namespace pr
 					d = i;
 			}
 
-			// If the paths match for all of 'relative_to' just return the remander of 'full_path'
+			// If the paths match for all of 'relative_to' just return the remainder of 'full_path'
 			if (DirMark(fpath[i]) && rpath[i] == 0)
 				return full_path.substr(i + 1);
 
-			// If d==npos then none of the paths matched.
+			// If 'd==-1' then none of the paths matched.
 			// If either path contains a drive then return 'full_path'
-			if (d == String::npos && (full_path.find(colon) != String::npos || relative_to.find(colon) != String::npos))
+			if (d == -1 && (*find(fpath, Char(':')) != 0 || *find(rpath, Char(':')) != 0))
 				return full_path;
 
-			// Otherwise, assuming they match before the first path
-			auto path = full_path.substr(d + 1);
-			do
+			// Otherwise, the part of the path up to and including 'd' matches, so it's not part of the relative path
+			Str path(fpath + d + 1);
+			for (Char const *end = rpath + d + 1; *end; end += *end != 0)
 			{
-				d = relative_to.find_first_of(dir_marks, d + 1);
+				auto ptr = end;
+				end = find_first(ptr, dir_marks);
 				path.insert(0, prev_dir);
 			}
-			while (d != String::npos);
 			return path;
 		}
 
 		// Attempt to resolve a partial filepath given a list of directories to search
-		template <typename String, typename Cont = std::vector<String>> inline String ResolvePath(String const& partial_path, Cont const& search_paths = Cont(), String const* current_dir = nullptr, bool check_working_dir = true, String* searched_paths = nullptr)
+		template <typename Str, typename Cont = std::vector<Str>> inline Str ResolvePath(Str const& partial_path, Cont const& search_paths = Cont(), Str const* current_dir = nullptr, bool check_working_dir = true, Str* searched_paths = nullptr)
 		{
-			String path;
+			Str path;
 
 			// If the partial path is actually a full path
 			if (IsFullPath(partial_path))
@@ -803,7 +767,7 @@ namespace pr
 			// Search the search paths
 			for (auto& dir : search_paths)
 			{
-				path = CombinePath<String>(dir, partial_path);
+				path = CombinePath<Str>(dir, partial_path);
 				if (FileExists(path))
 					return path;
 
@@ -812,7 +776,7 @@ namespace pr
 			}
 
 			// Return an empty string for unresolved
-			return String();
+			return Str();
 		}
 	}
 }
@@ -833,9 +797,9 @@ namespace pr
 				std::string no_quotes = "path\\path\\file.extn";
 				std::string has_quotes = "\"path\\path\\file.extn\"";
 				std::string p = no_quotes;
-				RemoveQuotes(p); PR_CHECK(no_quotes , p);
-				AddQuotes(p);    PR_CHECK(has_quotes, p);
-				AddQuotes(p);    PR_CHECK(has_quotes, p);
+				p = RemoveQuotes(p); PR_CHECK(no_quotes , p);
+				p = AddQuotes(p);    PR_CHECK(has_quotes, p);
+				p = AddQuotes(p);    PR_CHECK(has_quotes, p);
 			}
 			{//Slashes
 				std::string has_slashes1 = "\\path\\path\\";
@@ -843,43 +807,30 @@ namespace pr
 				std::string no_slashes1 = "path\\path";
 				std::string no_slashes2 = "path/path";
 
-				RemoveLeadingBackSlash(has_slashes1);
-				RemoveLastBackSlash(has_slashes1);
+				has_slashes1 = RemoveLeadingBackSlash(has_slashes1);
+				has_slashes1 = RemoveLastBackSlash(has_slashes1);
 				PR_CHECK(no_slashes1, has_slashes1);
 
-				RemoveLeadingBackSlash(has_slashes2);
-				RemoveLastBackSlash(has_slashes2);
+				has_slashes2 = RemoveLeadingBackSlash(has_slashes2);
+				has_slashes2 = RemoveLastBackSlash(has_slashes2);
 				PR_CHECK(no_slashes2, has_slashes2);
 			}
 			{//Canonicalise
 				std::string p0 = "C:\\path/.././path\\path\\path\\../../../file.ext";
 				std::string P0 = "C:\\file.ext";
-				Canonicalise(p0);
+				p0 = Canonicalise(p0);
 				PR_CHECK(P0, p0);
 
 				std::string p1 = ".././path\\path\\path\\../../../file.ext";
 				std::string P1 = "..\\file.ext";
-				Canonicalise(p1);
+				p1 = Canonicalise(p1);
 				PR_CHECK(P1, p1);
 			}
 			{//Standardise
 				std::string p0 = "c:\\path/.././Path\\PATH\\path\\../../../PaTH\\File.EXT";
 				std::string P0 = "c:\\path\\file.ext";
-				Standardise(p0);
+				p0 = Standardise(p0);
 				PR_CHECK(P0, p0);
-			}
-			{//Make
-				std::string p0 = Make<std::string>("c:\\", "/./path0/path1/path2\\../", "./path3/file", "extn");
-				std::string P0 = "c:\\path0\\path1\\path3\\file.extn";
-				PR_CHECK(P0, p0);
-
-				std::string p1 = Make<std::string>("c:\\./path0/path1/path2\\../", "./path3/file", "extn");
-				std::string P1 = "c:\\path0\\path1\\path3\\file.extn";
-				PR_CHECK(P1, p1);
-
-				std::string p2 = Make<std::string>("c:\\./path0/path1/path2\\..", "./path3/file.extn");
-				std::string P2 = "c:\\path0\\path1\\path3\\file.extn";
-				PR_CHECK(P2, p2);
 			}
 			{//GetDrive
 				std::string p0 = GetDrive<std::string>("drive:/path");
@@ -954,7 +905,7 @@ namespace pr
 				std::string fn = MakeUniqueFilename<std::string>("test_fileXXXXXX");
 				PR_CHECK(FileExists(fn), false);
 
-				std::string path = Make(dir, fn);
+				std::string path = CombinePath(dir, fn);
 
 				std::ofstream f(path.c_str());
 				f << "Hello World";

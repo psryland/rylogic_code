@@ -199,7 +199,7 @@ namespace pr
 		assert("Transforming an invalid bounding box" && !rhs.empty());
 
 		BBox bb(m.pos, v4Zero);
-		m4x4 mat = Transpose3x3_(m);
+		m4x4 mat = Transpose3x3(m);
 		for (int i = 0; i != 3; ++i)
 		{
 			bb.m_centre[i] += Dot4(    mat[i] , rhs.m_centre);

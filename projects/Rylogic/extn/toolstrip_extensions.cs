@@ -66,6 +66,26 @@ namespace pr.extn
 			items.RemoveAt(items.Count - 1);
 		}
 
+		/// <summary>Hide successive or start/end separators</summary>
+		public static void TidySeparators(this ToolStripItemCollection items)
+		{
+			// Hide starting separators
+			for (int i = 0; i != items.Count && items[i] is ToolStripSeparator; ++i)
+				items[i].Visible = false;
+
+			// Hide ending separators
+			for (int i = items.Count; i-- != 0 && items[i] is ToolStripSeparator;)
+				items[i].Visible = false;
+
+			// Hide successive separators
+			for (int i = 0; i < items.Count - 1; ++i)
+			{
+				if (!(items[i] is ToolStripSeparator)) continue;
+				for (int j = i + 1; j < items.Count && items[j] is ToolStripSeparator; i = j, ++j)
+					items[j].Visible = false;
+			}
+		}
+
 		/// <summary>ToolStripMenuItem comparer for alphabetical order</summary>
 		public static readonly Cmp<ToolStripMenuItem> AlphabeticalOrder = Cmp<ToolStripMenuItem>.From((l,r) => string.Compare(l.Text, r.Text, true));
 

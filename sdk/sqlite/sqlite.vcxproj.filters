@@ -18,12 +18,8 @@
     <None Include="deploy.py" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\sqlite3.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\sqlite3ext.h">
-      <Filter>src</Filter>
-    </ClInclude>
+    <ClInclude Include="include\sqlite3.h" />
+    <ClInclude Include="include\sqlite3ext.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="readme.txt" />
