@@ -56,7 +56,7 @@ namespace pr
 				:Form(p)
 				,m_log(DerivedGUI::AppName(), pr::log::ToFile(FmtS(L"%S.log", DerivedGUI::AppName())), 0)
 				,m_msg_loop()
-				,m_main(std::make_unique<Main>(*static_cast<DerivedGUI*>(this)))
+				,m_main(std::make_unique<Main>(*static_cast<DerivedGUI*>(&CreateHandle())))
 				,m_resizing(false)
 				,m_nav_enabled(false)
 				,m_fullscreen_toggle_enabled(true)

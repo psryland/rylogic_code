@@ -52,6 +52,7 @@ namespace pr
 				,m_point0(pr::v4Origin)
 				,m_point1(pr::v4Origin)
 			{
+				CreateHandle();
 				m_btn_set0.Click += std::bind(&LdrMeasureUI::HandleSetPoint, this, _1, _2);
 				m_btn_set1.Click += std::bind(&LdrMeasureUI::HandleSetPoint, this, _1, _2);
 				UpdateMeasurementInfo();
@@ -186,6 +187,7 @@ namespace pr
 				,m_point0(pr::v4Origin)
 				,m_point1(pr::v4Origin)
 			{
+				CreateHandle();
 				m_btn_orig.Click += std::bind(&LdrAngleUI::HandleSetPoint, this, _1, _2);
 				m_btn_set0.Click += std::bind(&LdrAngleUI::HandleSetPoint, this, _1, _2);
 				m_btn_set1.Click += std::bind(&LdrAngleUI::HandleSetPoint, this, _1, _2);

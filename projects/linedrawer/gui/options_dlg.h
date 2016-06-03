@@ -52,6 +52,7 @@ namespace ldr
 			,m_tab_navigation(&m_tc)
 			,m_settings(&settings)
 		{
+			CreateHandle();
 			m_tc.Insert(L"General", m_tab_general);
 			m_tc.Insert(L"Navigation", m_tab_navigation);
 			m_tc.SelectedIndex(0);

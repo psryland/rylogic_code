@@ -106,6 +106,8 @@ struct Main :Form
 		,m_modeless    (this_)
 		,m_nm_progress (ProgressUI::Params<>().parent(this_).hide_on_close())
 	{
+		CreateHandle();
+
 		auto busy_work = [](ProgressUI* dlg)
 		{
 			for (int i = 0, iend = 500; dlg->Progress(i*1.f/iend) && i != iend; ++i)

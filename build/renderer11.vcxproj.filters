@@ -255,6 +255,9 @@
     <ClInclude Include="..\include\pr\geometry\p3d.h">
       <Filter>geometry</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\lights\light_ui.h">
+      <Filter>lights</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\renderer11\util\stdafx.cpp">

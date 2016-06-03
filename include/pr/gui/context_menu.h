@@ -639,7 +639,7 @@ namespace pr
 			}
 			static DlgTemplate const& Templ()
 			{
-				static DlgTemplate cmenu_templ(MakeDlgParams<>().wndclass(RegWndClass()).name("ctx-menu").style('=',WS_POPUP|WS_BORDER).style_ex('=',0));
+				static DlgTemplate cmenu_templ(MakeDlgParams<>().wndclass(RegWndClass()).xy(0,0).wh(50,50).name("ctx-menu").style('=',WS_POPUP|WS_BORDER).style_ex('=',0));
 				return cmenu_templ;
 			}
 

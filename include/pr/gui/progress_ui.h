@@ -25,26 +25,39 @@ namespace pr
 			using Lock = std::unique_lock<std::timed_mutex>;
 			struct State
 			{
+				enum class EMask
+				{
+					None  = 0,
+					Title = 1 << 0,
+					Desc  = 1 << 1,
+					PC    = 1 << 2,
+					_bitops_allowed,
+				};
 				HWND         m_hwnd;   // The hwnd of this progress window
 				std::wstring m_title;  // The title bar text
 				std::wstring m_desc;   // The description text
 				float        m_pc;     // Percent complete
-				bool         m_has_title;
-				bool         m_has_desc;
+				EMask        m_mask;
 
-				State(HWND hwnd, wchar_t const* title = nullptr, wchar_t const* desc = nullptr, float pc = 0.0f)
+				State(HWND hwnd, wchar_t const* title = nullptr, wchar_t const* desc = nullptr, float pc = -1.0f)
 					:m_hwnd(hwnd)
 					,m_title(title ? title : L"")
 					,m_desc(desc ? desc : L"")
 					,m_pc(pc)
-					,m_has_title(title != nullptr)
-					,m_has_desc(desc != nullptr)
+					,m_mask(
+						(title ? EMask::Title : EMask::None) |
+						(desc  ? EMask::Desc  : EMask::None) |
+						(pc!=-1? EMask::PC    : EMask::None))
 				{}
 				State& operator = (State const& rhs)
 				{
-					if (rhs.m_has_title) m_title = rhs.m_title;
-					if (rhs.m_has_desc ) m_desc  = rhs.m_desc;
-					m_pc = rhs.m_pc;
+					if (this != &rhs)
+					{
+						if (AllSet(rhs.m_mask, EMask::Title)) m_title = rhs.m_title;
+						if (AllSet(rhs.m_mask, EMask::Desc )) m_desc  = rhs.m_desc;
+						if (AllSet(rhs.m_mask, EMask::PC   )) m_pc    = rhs.m_pc;
+						m_mask |= rhs.m_mask;
+					}
 					return *this;
 				}
 			};
@@ -112,6 +125,8 @@ namespace pr
 				,m_cv()
 				,m_worker()
 			{
+				CreateHandle();
+
 				m_dialog_result = EDialogResult::Ok;
 				m_btn.Click += [&](Button&,EmptyArgs const&)
 				{
@@ -128,7 +143,7 @@ namespace pr
 			// 'func' should have 'ProgressUI*' as the first parameter
 			template <typename Func, typename... Args>
 			ProgressUI(wchar_t const* title, wchar_t const* desc, Func&& func, Args&&... args)
-				:ProgressUI()
+				:ProgressUI(Params<>().title(title).desc(desc))
 			{
 				StartWorker(title, desc, std::forward<Func>(func), std::forward<Args>(args)...);
 			}
@@ -138,6 +153,8 @@ namespace pr
 			template <typename Func, typename... Args>
 			void Show(wchar_t const* title, wchar_t const* desc, Func&& func, Args&&... args)
 			{
+				Text(title);
+				m_lbl_desc.Text(desc);
 				StartWorker(title, desc, std::forward<Func>(func), std::forward<Args>(args)...);
 				Form::ShowInternal(SW_SHOW);
 			}
@@ -252,32 +269,36 @@ namespace pr
 						}
 
 						// Update the title
-						if (m_state.m_has_title)
+						if (AllSet(m_state.m_mask, State::EMask::Title))
 							::SetWindowTextW(m_hwnd, m_state.m_title.c_str());
 
 						// Update the description text
-						if (m_state.m_has_desc)
+						if (AllSet(m_state.m_mask, State::EMask::Desc))
 							::SetWindowTextW(m_lbl_desc, m_state.m_desc.c_str());
 
-						// Use marquee style if pc is out of range
-						auto bar_style = ::GetWindowLongPtrW(m_bar, GWL_STYLE);
-						if (m_state.m_pc < 0 || m_state.m_pc > 1.0f)
+						// Update the percent complete
+						if (AllSet(m_state.m_mask, State::EMask::PC))
 						{
-							if ((bar_style & PBS_MARQUEE) == 0)
+							// Use marquee style if pc is out of range
+							auto bar_style = ::GetWindowLongPtrW(m_bar, GWL_STYLE);
+							if (m_state.m_pc <= 0 || m_state.m_pc > 1.0f)
 							{
-								::SetWindowLongPtrW(m_bar, GWL_STYLE, bar_style|PBS_MARQUEE);
-								m_bar.Marquee(true, 30);
+								if ((bar_style & PBS_MARQUEE) == 0)
+								{
+									::SetWindowLongPtrW(m_bar, GWL_STYLE, bar_style|PBS_MARQUEE);
+									m_bar.Marquee(true, 30);
+								}
 							}
-						}
-						else
-						{
-							if ((bar_style & PBS_MARQUEE) != 0)
+							else
 							{
-								::SetWindowLongPtrW(m_bar, GWL_STYLE, bar_style & ~PBS_MARQUEE);
-								m_bar.Marquee(false);
+								if ((bar_style & PBS_MARQUEE) != 0)
+								{
+									::SetWindowLongPtrW(m_bar, GWL_STYLE, bar_style & ~PBS_MARQUEE);
+									m_bar.Marquee(false);
+								}
+								m_bar.Range(0, 100);
+								m_bar.Pos(static_cast<int>(m_state.m_pc * 100));
 							}
-							m_bar.Range(0, 100);
-							m_bar.Pos(static_cast<int>(m_state.m_pc * 100));
 						}
 						Invalidate();
 						break;
@@ -295,8 +316,10 @@ namespace pr
 			}
 
 			// Handlers
-			virtual void OnCreate() override
+			virtual void OnCreate(CreateStruct const& cs) override
 			{
+				Form::OnCreate(cs);
+
 				{
 					Lock lock(m_mutex);
 					m_state.m_hwnd = m_hwnd;

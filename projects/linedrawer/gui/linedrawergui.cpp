@@ -45,6 +45,8 @@ namespace ldr
 		,m_suspend_render(false)
 		,m_status_pri()
 	{
+		CreateHandle();
+
 		// Parse the command line
 		pr::EnumCommandLine(cmdline, *this);
 

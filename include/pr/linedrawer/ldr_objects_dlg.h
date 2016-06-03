@@ -52,11 +52,11 @@ namespace pr
 		// Note: this object does not add references to LdrObjects
 		class LdrObjectManagerUI :public pr::gui::Form
 		{
+			pr::gui::StatusBar m_status;
 			pr::gui::Button    m_btn_expand;
 			pr::gui::Button    m_btn_collapse;
 			pr::gui::Button    m_btn_filter;
 			pr::gui::TextBox   m_tb_filter;
-			pr::gui::StatusBar m_status;
 			pr::gui::Splitter  m_split;
 			pr::gui::TreeView  m_tree;
 			pr::gui::ListView  m_list;
@@ -114,18 +114,18 @@ namespace pr
 				,m_split       (pr::gui::Splitter ::Params<>().parent(this_         ).name("split"       ).xy(0,Top|BottomOf|ID_TB_FILTER).wh(Fill,Fill).margin(3).anchor(EAnchor::All).vertical())
 				,m_tree        (pr::gui::TreeView ::Params<>().parent(&m_split.Pane0).name("tree"        ).margin(0).border().dock(EDock::Fill))
 				,m_list        (pr::gui::ListView ::Params<>().parent(&m_split.Pane1).name("list"        ).margin(0).border().dock(EDock::Fill).mode(pr::gui::ListView::EViewType::Report))
-				
 				,m_expanding(false)
 				,m_selection_changed(true)
 				,m_suspend_layout(false)
 			{
-					m_list.InsertColumn((int)EColumn::Name     , pr::gui::ListView::ColumnInfo(L"Name"       ).width(100));
-					m_list.InsertColumn((int)EColumn::LdrType  , pr::gui::ListView::ColumnInfo(L"Object Type").width(100));
-					m_list.InsertColumn((int)EColumn::Colour   , pr::gui::ListView::ColumnInfo(L"Colour"     ).width(100));
-					m_list.InsertColumn((int)EColumn::Visible  , pr::gui::ListView::ColumnInfo(L"Visible"    ).width(100));
-					m_list.InsertColumn((int)EColumn::Wireframe, pr::gui::ListView::ColumnInfo(L"Wireframe"  ).width(100));
-					m_list.InsertColumn((int)EColumn::Volume   , pr::gui::ListView::ColumnInfo(L"Volume"     ).width(100));
-					m_list.InsertColumn((int)EColumn::CtxtId   , pr::gui::ListView::ColumnInfo(L"CtxtId"     ).width(100));
+				CreateHandle();
+				m_list.InsertColumn((int)EColumn::Name     , pr::gui::ListView::ColumnInfo(L"Name"       ).width(100));
+				m_list.InsertColumn((int)EColumn::LdrType  , pr::gui::ListView::ColumnInfo(L"Object Type").width(100));
+				m_list.InsertColumn((int)EColumn::Colour   , pr::gui::ListView::ColumnInfo(L"Colour"     ).width(100));
+				m_list.InsertColumn((int)EColumn::Visible  , pr::gui::ListView::ColumnInfo(L"Visible"    ).width(100));
+				m_list.InsertColumn((int)EColumn::Wireframe, pr::gui::ListView::ColumnInfo(L"Wireframe"  ).width(100));
+				m_list.InsertColumn((int)EColumn::Volume   , pr::gui::ListView::ColumnInfo(L"Volume"     ).width(100));
+				m_list.InsertColumn((int)EColumn::CtxtId   , pr::gui::ListView::ColumnInfo(L"CtxtId"     ).width(100));
 			}
 			LdrObjectManagerUI(LdrObjectManagerUI const&) = delete;
 			LdrObjectManagerUI& operator=(LdrObjectManagerUI const&) = delete;

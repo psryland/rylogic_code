@@ -236,7 +236,7 @@
     <ClInclude Include="..\include\pr\linedrawer\ldr_objects_dlg.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_script_editor_dlg.h" />
     <ClInclude Include="..\include\pr\network\web_get.h" />
-    <ClInclude Include="..\include\pr\renderer11\lights\light_dlg.h" />
+    <ClInclude Include="..\include\pr\renderer11\lights\light_ui.h" />
     <ClInclude Include="..\projects\linedrawer\gui\linedrawergui.h" />
     <ClInclude Include="..\projects\linedrawer\main\manipulator.h" />
     <ClInclude Include="..\projects\linedrawer\main\script_sources.h" />

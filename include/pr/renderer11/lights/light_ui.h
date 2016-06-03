@@ -25,14 +25,20 @@ namespace pr
 				ID_EDIT_INNER_ANGLE, ID_EDIT_OUTER_ANGLE,
 			};
 
+			pr::gui::Panel       m_panel_btns;
+			pr::gui::Button      m_btn_preview;
+			pr::gui::Button      m_btn_cancel;
+			pr::gui::Button      m_btn_ok;
+
 			pr::gui::GroupBox    m_grp_light_type;
 			pr::gui::Button      m_rdo_ambient;
 			pr::gui::Button      m_rdo_directional;
 			pr::gui::Button      m_rdo_point;
 			pr::gui::Button      m_rdo_spot;
-			pr::gui::Button      m_chk_cam_rel;
+
 			pr::gui::TextBox     m_tb_position;
 			pr::gui::TextBox     m_tb_direction;
+			pr::gui::Button      m_chk_cam_rel;
 			pr::gui::TextBox     m_tb_range;
 			pr::gui::TextBox     m_tb_falloff;
 			pr::gui::TextBox     m_tb_shadow_range;
@@ -42,21 +48,19 @@ namespace pr
 			pr::gui::TextBox     m_tb_spec_power;
 			pr::gui::TextBox     m_tb_spot_inner;
 			pr::gui::TextBox     m_tb_spot_outer;
+
 			pr::gui::Label       m_lbl_position;
+			pr::gui::Label       m_lbl_direction;
+			pr::gui::Label       m_lbl_range;
+			pr::gui::Label       m_lbl_falloff;
+			pr::gui::Label       m_lbl_shadow_range;
 			pr::gui::Label       m_lbl_ambient;
 			pr::gui::Label       m_lbl_diffuse;
 			pr::gui::Label       m_lbl_specular;
 			pr::gui::Label       m_lbl_spec_power;
-			pr::gui::Label       m_lbl_range;
-			pr::gui::Label       m_lbl_shadow_range;
-			pr::gui::Label       m_lbl_falloff;
-			pr::gui::Label       m_lbl_direction;
-			pr::gui::Label       m_lbl_spot_angles;
 			pr::gui::Label       m_lbl_inner;
 			pr::gui::Label       m_lbl_outer;
-			pr::gui::Button      m_btn_preview;
-			pr::gui::Button      m_btn_cancel;
-			pr::gui::Button      m_btn_ok;
+
 			pr::gui::ToolTip     m_tt;
 			Preview              m_preview;
 
@@ -67,44 +71,51 @@ namespace pr
 			bool m_camera_relative;
 
 			LightingUI(HWND parent, Preview const& preview)
-				:Form(MakeDlgParams<>().name("rdr-lighting-ui").title(L"Lighting Options").wh(218,190).style_ex('+',WS_EX_TOOLWINDOW).start_pos(EStartPosition::CentreParent).parent(parent).wndclass(RegisterWndClass<LightingUI>()))
-				,m_grp_light_type    (pr::gui::GroupBox::Params<>().parent(this_).text(L"Light Type").xy(3, 4).wh(56, 67))
+				:Form(MakeDlgParams<>()
+					.parent(parent)
+					.name("rdr-lighting-ui")
+					.title(L"Lighting Options")
+					.wh(300,400)
+					.resizeable(false)
+					.style_ex('+',WS_EX_TOOLWINDOW)
+					.start_pos(EStartPosition::CentreParent)
+					.wndclass(RegisterWndClass<LightingUI>()))
 
-				,m_rdo_ambient       (pr::gui::Button::Params<>().parent(this_).text(L"Ambient"    ).id(ID_RADIO_AMBIENT    ).xy(9, 17).wh(41, 8).radio())
-				,m_rdo_directional   (pr::gui::Button::Params<>().parent(this_).text(L"Directional").id(ID_RADIO_DIRECTIONAL).xy(9, 30).wh(49, 8).radio())
-				,m_rdo_point         (pr::gui::Button::Params<>().parent(this_).text(L"Point"      ).id(ID_RADIO_POINT      ).xy(9, 43).wh(32, 8).radio())
-				,m_rdo_spot          (pr::gui::Button::Params<>().parent(this_).text(L"Spot"       ).id(ID_RADIO_SPOT       ).xy(9, 56).wh(31, 8).radio())
+				,m_panel_btns        (pr::gui::Panel ::Params<>().parent(this_).wh(Fill, pr::gui::Button::DefH*3/2).dock(EDock::Bottom))
+				,m_btn_preview       (pr::gui::Button::Params<>().parent(&m_panel_btns).text(L"Preview").id(IDRETRY ).dock(EDock::Left))
+				,m_btn_cancel        (pr::gui::Button::Params<>().parent(&m_panel_btns).text(L"Cancel" ).id(IDCANCEL).dock(EDock::Right))
+				,m_btn_ok            (pr::gui::Button::Params<>().parent(&m_panel_btns).text(L"OK"     ).id(IDOK    ).dock(EDock::Right))
 
-				,m_chk_cam_rel       (pr::gui::Button::Params<>().parent(this_).text(L"Camera Relative:").id(ID_CHECK_CAMERA_RELATIVE).xy(138, 38).wh(70, 8).chk_box().style('+',BS_LEFTTEXT))
+				,m_grp_light_type    (pr::gui::GroupBox::Params<>().parent(this_)          .text(L"Light Type" ).wh(84, 128).xy(3, 3))
+				,m_rdo_ambient       (pr::gui::Button::Params<>().parent(&m_grp_light_type).text(L"Ambient"    ).xy(0, 12                               ).radio().id(ID_RADIO_AMBIENT    ))
+				,m_rdo_directional   (pr::gui::Button::Params<>().parent(&m_grp_light_type).text(L"Directional").xy(0, Top|BottomOf|ID_RADIO_AMBIENT    ).radio().id(ID_RADIO_DIRECTIONAL))
+				,m_rdo_point         (pr::gui::Button::Params<>().parent(&m_grp_light_type).text(L"Point"      ).xy(0, Top|BottomOf|ID_RADIO_DIRECTIONAL).radio().id(ID_RADIO_POINT      ))
+				,m_rdo_spot          (pr::gui::Button::Params<>().parent(&m_grp_light_type).text(L"Spot"       ).xy(0, Top|BottomOf|ID_RADIO_POINT      ).radio().id(ID_RADIO_SPOT       ))
 
-				,m_tb_position       (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_POSITION      ).xy(94, 4)   .wh(119, 14))
-				,m_tb_direction      (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_DIRECTION     ).xy(94, 20)  .wh(119, 14))
-				,m_tb_range          (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_RANGE         ).xy(94, 50)  .wh(39, 14 ))
-				,m_tb_falloff        (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_FALLOFF       ).xy(174, 50) .wh(39, 14 ))
-				,m_tb_shadow_range   (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_SHADOW_RANGE  ).xy(138, 66) .wh(75, 14 ))
-				,m_tb_ambient        (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_AMBIENT       ).xy(94, 85)  .wh(119, 14))
-				,m_tb_diffuse        (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_DIFFUSE       ).xy(94, 101) .wh(119, 14))
-				,m_tb_specular       (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_SPECULAR      ).xy(94, 117) .wh(119, 14))
-				,m_tb_spec_power     (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_SPECULAR_POWER).xy(138, 133).wh(75, 14 ))
-				,m_tb_spot_inner     (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_INNER_ANGLE   ).xy(94, 149) .wh(39, 14 ))
-				,m_tb_spot_outer     (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_OUTER_ANGLE   ).xy(174, 149).wh(39, 14 ))
+				,m_tb_position       (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_POSITION        ).w(119 ).xy(-1, 0                                    ).anchor(EAnchor::TopRight))
+				,m_tb_direction      (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_DIRECTION       ).w(119 ).xy(-1, Top|BottomOf|ID_EDIT_POSITION        ).anchor(EAnchor::TopRight))
+				,m_chk_cam_rel       (pr::gui::Button ::Params<>().parent(this_).id(ID_CHECK_CAMERA_RELATIVE).w(Auto).xy(-1, Top|BottomOf|ID_EDIT_DIRECTION       ).anchor(EAnchor::TopRight).text(L"Camera Relative:").chk_box().style('+',BS_LEFTTEXT))
+				,m_tb_range          (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_RANGE           ).w(75  ).xy(-1, Top|BottomOf|ID_CHECK_CAMERA_RELATIVE).anchor(EAnchor::TopRight))
+				,m_tb_falloff        (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_FALLOFF         ).w(75  ).xy(-1, Top|BottomOf|ID_EDIT_RANGE           ).anchor(EAnchor::TopRight))
+				,m_tb_shadow_range   (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_SHADOW_RANGE    ).w(75  ).xy(-1, Top|BottomOf|ID_EDIT_FALLOFF         ).anchor(EAnchor::TopRight))
+				,m_tb_ambient        (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_AMBIENT         ).w(119 ).xy(-1, Top|BottomOf|ID_EDIT_SHADOW_RANGE    ).anchor(EAnchor::TopRight))
+				,m_tb_diffuse        (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_DIFFUSE         ).w(119 ).xy(-1, Top|BottomOf|ID_EDIT_AMBIENT         ).anchor(EAnchor::TopRight))
+				,m_tb_specular       (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_SPECULAR        ).w(119 ).xy(-1, Top|BottomOf|ID_EDIT_DIFFUSE         ).anchor(EAnchor::TopRight))
+				,m_tb_spec_power     (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_SPECULAR_POWER  ).w(75  ).xy(-1, Top|BottomOf|ID_EDIT_SPECULAR        ).anchor(EAnchor::TopRight))
+				,m_tb_spot_inner     (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_INNER_ANGLE     ).w(39  ).xy(-1, Top|BottomOf|ID_EDIT_SPECULAR_POWER  ).anchor(EAnchor::TopRight))
+				,m_tb_spot_outer     (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_OUTER_ANGLE     ).w(39  ).xy(-1, Top|BottomOf|ID_EDIT_INNER_ANGLE     ).anchor(EAnchor::TopRight))
 
-				,m_lbl_position      (pr::gui::Label::Params<>().parent(this_).text(L"Position:"         ).xy(64 , 7  ).wh(28, 8).style('+', SS_LEFT).style_ex('+',WS_EX_RIGHT))
-				,m_lbl_ambient       (pr::gui::Label::Params<>().parent(this_).text(L"Ambient (RRGGBB):" ).xy(27 , 88 ).wh(65, 8).style('+', SS_LEFT).style_ex('+',WS_EX_RIGHT))
-				,m_lbl_diffuse       (pr::gui::Label::Params<>().parent(this_).text(L"Diffuse (RRGGBB):" ).xy(30 , 104).wh(62, 8).style('+', SS_LEFT).style_ex('+',WS_EX_RIGHT))
-				,m_lbl_specular      (pr::gui::Label::Params<>().parent(this_).text(L"Specular (RRGGBB):").xy(24 , 120).wh(68, 8).style('+', SS_LEFT).style_ex('+',WS_EX_RIGHT))
-				,m_lbl_spec_power    (pr::gui::Label::Params<>().parent(this_).text(L"Specular Power:"   ).xy(80 , 136).wh(53, 8).style('+', SS_LEFT).style_ex('+',WS_EX_RIGHT))
-				,m_lbl_range         (pr::gui::Label::Params<>().parent(this_).text(L"Range:"            ).xy(68 , 53 ).wh(24, 8).style('+', SS_LEFT).style_ex('+',WS_EX_RIGHT))
-				,m_lbl_shadow_range  (pr::gui::Label::Params<>().parent(this_).text(L"Shadow Range:"     ).xy(84 , 69 ).wh(52, 8).style('+', SS_LEFT).style_ex('+',WS_EX_RIGHT))
-				,m_lbl_falloff       (pr::gui::Label::Params<>().parent(this_).text(L"Falloff:"          ).xy(138, 53 ).wh(31, 8).style('+', SS_LEFT).style_ex('+',WS_EX_RIGHT))
-				,m_lbl_direction     (pr::gui::Label::Params<>().parent(this_).text(L"Direction:"        ).xy(61 , 23 ).wh(31, 8).style('+', SS_LEFT).style_ex('+',WS_EX_RIGHT))
-				,m_lbl_spot_angles   (pr::gui::Label::Params<>().parent(this_).text(L"Spot Angles:"      ).xy(13 , 152).wh(41, 8).style('+', SS_LEFT).style_ex('+',WS_EX_RIGHT))
-				,m_lbl_inner         (pr::gui::Label::Params<>().parent(this_).text(L"Inner:"            ).xy(68 , 152).wh(24, 8).style('+', SS_LEFT).style_ex('+',WS_EX_RIGHT))
-				,m_lbl_outer         (pr::gui::Label::Params<>().parent(this_).text(L"Outer:"            ).xy(138, 152).wh(34, 8).style('+', SS_LEFT).style_ex('+',WS_EX_RIGHT))
-
-				,m_btn_preview       (pr::gui::Button::Params<>().parent(this_).text(L"Preview").id(IDRETRY ).xy(  5, 170).wh(50, 14))
-				,m_btn_cancel        (pr::gui::Button::Params<>().parent(this_).text(L"Cancel" ).id(IDCANCEL).xy(163, 170).wh(50, 14))
-				,m_btn_ok            (pr::gui::Button::Params<>().parent(this_).text(L"OK"     ).id(IDOK    ).xy(111, 170).wh(50, 14))
+				,m_lbl_position      (pr::gui::Label::Params<>().parent(this_).text(L"Position:"          ).xy(Right|LeftOf|ID_EDIT_POSITION      , Centre|CentreOf|ID_EDIT_POSITION      ).style('+', SS_LEFT).style_ex('+',WS_EX_RIGHT).anchor(EAnchor::TopRight))
+				,m_lbl_direction     (pr::gui::Label::Params<>().parent(this_).text(L"Direction:"         ).xy(Right|LeftOf|ID_EDIT_DIRECTION     , Centre|CentreOf|ID_EDIT_DIRECTION     ).style('+', SS_LEFT).style_ex('+',WS_EX_RIGHT).anchor(EAnchor::TopRight))
+				,m_lbl_range         (pr::gui::Label::Params<>().parent(this_).text(L"Range:"             ).xy(Right|LeftOf|ID_EDIT_RANGE         , Centre|CentreOf|ID_EDIT_RANGE         ).style('+', SS_LEFT).style_ex('+',WS_EX_RIGHT).anchor(EAnchor::TopRight))
+				,m_lbl_falloff       (pr::gui::Label::Params<>().parent(this_).text(L"Falloff:"           ).xy(Right|LeftOf|ID_EDIT_FALLOFF       , Centre|CentreOf|ID_EDIT_FALLOFF       ).style('+', SS_LEFT).style_ex('+',WS_EX_RIGHT).anchor(EAnchor::TopRight))
+				,m_lbl_shadow_range  (pr::gui::Label::Params<>().parent(this_).text(L"Shadow Range:"      ).xy(Right|LeftOf|ID_EDIT_SHADOW_RANGE  , Centre|CentreOf|ID_EDIT_SHADOW_RANGE  ).style('+', SS_LEFT).style_ex('+',WS_EX_RIGHT).anchor(EAnchor::TopRight))
+				,m_lbl_ambient       (pr::gui::Label::Params<>().parent(this_).text(L"Ambient (RRGGBB):"  ).xy(Right|LeftOf|ID_EDIT_AMBIENT       , Centre|CentreOf|ID_EDIT_AMBIENT       ).style('+', SS_LEFT).style_ex('+',WS_EX_RIGHT).anchor(EAnchor::TopRight))
+				,m_lbl_diffuse       (pr::gui::Label::Params<>().parent(this_).text(L"Diffuse (RRGGBB):"  ).xy(Right|LeftOf|ID_EDIT_DIFFUSE       , Centre|CentreOf|ID_EDIT_DIFFUSE       ).style('+', SS_LEFT).style_ex('+',WS_EX_RIGHT).anchor(EAnchor::TopRight))
+				,m_lbl_specular      (pr::gui::Label::Params<>().parent(this_).text(L"Specular (RRGGBB):" ).xy(Right|LeftOf|ID_EDIT_SPECULAR      , Centre|CentreOf|ID_EDIT_SPECULAR      ).style('+', SS_LEFT).style_ex('+',WS_EX_RIGHT).anchor(EAnchor::TopRight))
+				,m_lbl_spec_power    (pr::gui::Label::Params<>().parent(this_).text(L"Specular Power:"    ).xy(Right|LeftOf|ID_EDIT_SPECULAR_POWER, Centre|CentreOf|ID_EDIT_SPECULAR_POWER).style('+', SS_LEFT).style_ex('+',WS_EX_RIGHT).anchor(EAnchor::TopRight))
+				,m_lbl_inner         (pr::gui::Label::Params<>().parent(this_).text(L"Spot Angles: Inner:").xy(Right|LeftOf|ID_EDIT_INNER_ANGLE   , Centre|CentreOf|ID_EDIT_INNER_ANGLE   ).style('+', SS_LEFT).style_ex('+',WS_EX_RIGHT).anchor(EAnchor::TopRight))
+				,m_lbl_outer         (pr::gui::Label::Params<>().parent(this_).text(L"Outer:"             ).xy(Right|LeftOf|ID_EDIT_OUTER_ANGLE   , Centre|CentreOf|ID_EDIT_OUTER_ANGLE   ).style('+', SS_LEFT).style_ex('+',WS_EX_RIGHT).anchor(EAnchor::TopRight))
 
 				,m_tt                (pr::gui::ToolTip::Params<>().parent(this_))
 
@@ -112,6 +123,8 @@ namespace pr
 				,m_light()
 				,m_camera_relative(true)
 			{
+				CreateHandle();
+
 				auto update_ui = [&](pr::gui::Button&, pr::gui::EmptyArgs const&) { UpdateUI(); };
 				m_rdo_ambient.Click += update_ui;
 				m_rdo_directional.Click += update_ui;

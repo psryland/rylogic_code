@@ -24,6 +24,8 @@ namespace ldr
 			,m_font(L"Courier New", 80)
 			,m_body(body)
 		{
+			CreateHandle();
+
 			int tab_stop_size = 12;
 			Throw(m_tb.SendMsg<bool>(LB_SETTABSTOPS, 1, &tab_stop_size), "Failed to set tab stop size");
 			m_tb.Font(m_font);

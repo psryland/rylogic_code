@@ -144,6 +144,7 @@
     <ClInclude Include="..\include\pr\renderer11\instance.h" />
     <ClInclude Include="..\include\pr\renderer11\instances\instance.h" />
     <ClInclude Include="..\include\pr\renderer11\lights\light.h" />
+    <ClInclude Include="..\include\pr\renderer11\lights\light_ui.h" />
     <ClInclude Include="..\include\pr\renderer11\render\blend_state.h" />
     <ClInclude Include="..\include\pr\renderer11\render\depth_state.h" />
     <ClInclude Include="..\include\pr\renderer11\render\state_block.h" />

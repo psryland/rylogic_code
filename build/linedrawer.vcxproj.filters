@@ -154,9 +154,6 @@
     <ClInclude Include="..\projects\linedrawer\resources\linedrawer.res.h">
       <Filter>resources</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\renderer11\lights\light_dlg.h">
-      <Filter>lights</Filter>
-    </ClInclude>
     <ClInclude Include="..\projects\linedrawer\main\script_sources.h">
       <Filter>main</Filter>
     </ClInclude>
@@ -192,6 +189,9 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\gui\progress_ui.h">
       <Filter>gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\lights\light_ui.h">
+      <Filter>lights</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

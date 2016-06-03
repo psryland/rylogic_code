@@ -56,6 +56,8 @@ namespace pr
 				,m_allow_preview(allow_preview)
 				,m_cam(cam)
 			{
+				CreateHandle();
+
 				m_btn_cancel.Click += [&](pr::gui::Button&, pr::gui::EmptyArgs const&)
 				{
 					ReadValues();

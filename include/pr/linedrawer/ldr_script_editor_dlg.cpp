@@ -54,6 +54,8 @@ namespace pr
 				,m_btn_close (Button       ::Params<>().parent(this_).id(IDC_BTN_CLOSE ).name("m_btn_close" ).xy(-12, -12).text(L"&Close").anchor(EAnchor::BottomRight))
 				,m_render(render_cb)
 			{
+				CreateHandle();
+
 				// Set up the menu
 				auto menu_file = Menu(Menu::EKind::Popup, {{L"&Load", ID_LOAD}, {L"&Save", ID_SAVE}, {MenuItem::Separator}, {L"&Close", IDCANCEL}}, false);
 				MenuStrip().Set(L"&File", menu_file);

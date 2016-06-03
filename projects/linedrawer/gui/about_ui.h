@@ -21,6 +21,8 @@ namespace ldr
 			,m_tb_info (pr::gui::TextBox ::Params<>().parent(this_).id(ID_INFO).xy(33, 7).wh(147, 33).dlu().multiline().read_only().anchor(EAnchor::All))
 			,m_img_icon(pr::gui::ImageBox::Params<>().parent(this_).id(ID_ICON).xy(7,7).wh(21,20).dlu().icon(IDI_ICON_MAIN).anchor(EAnchor::TopLeft))
 		{
+			CreateHandle();
+
 			m_tb_info.Text(pr::Widen(AppString()));
 			m_btn_ok.Click += [&](pr::gui::Button&, EmptyArgs const&){ Close(); };
 		}
