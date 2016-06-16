@@ -53,6 +53,9 @@ namespace pr
 		constexpr double const  double_max   = limits<double>::max();
 		constexpr double const  double_eps   = limits<double>::epsilon();
 
+		constexpr float const   float_inf    = limits<float>::infinity();
+		constexpr double const  double_inf   = limits<double>::infinity();
+
 		constexpr float const   float_nan    = limits<float>::quiet_NaN();
 		constexpr double const  double_nan   = limits<double>::quiet_NaN();
 	}

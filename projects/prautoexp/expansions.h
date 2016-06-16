@@ -2,9 +2,8 @@
 // PR AutoExp
 // Copyright (c) Rylogic Ltd 2002
 //***********************************************************
-
-#ifndef PR_EXPANSIONS_H
-#define PR_EXPANSIONS_H
+#pragma once
+#define ADDIN_API __declspec(dllexport)
 
 struct DbgHelper
 {
@@ -44,7 +43,6 @@ struct DbgHelper
 	template <>              HRESULT Read(std::wstring& str, size_t ofs);
 };
 
-#define ADDIN_API __declspec(dllexport)
 typedef HRESULT (WINAPI *AddIn_Function)(DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
 
 #if 0
@@ -53,26 +51,32 @@ typedef HRESULT (WINAPI *AddIn_Function)(DWORD dwAddress, DbgHelper* pHelper, in
 template =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_template)
 #endif
 
-	// Exported expansion functions
-extern "C" ADDIN_API HRESULT WINAPI AddIn_v2                 (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
-extern "C" ADDIN_API HRESULT WINAPI AddIn_v3                 (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
-extern "C" ADDIN_API HRESULT WINAPI AddIn_v4                 (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
-extern "C" ADDIN_API HRESULT WINAPI AddIn_iv4                (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
-extern "C" ADDIN_API HRESULT WINAPI AddIn_i64v4              (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
-extern "C" ADDIN_API HRESULT WINAPI AddIn_m3x4               (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
-extern "C" ADDIN_API HRESULT WINAPI AddIn_m4x4               (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
-extern "C" ADDIN_API HRESULT WINAPI AddIn_MAXMatrix3         (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
-extern "C" ADDIN_API HRESULT WINAPI AddIn_stdvector          (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
-extern "C" ADDIN_API HRESULT WINAPI AddIn_stdstring          (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
-extern "C" ADDIN_API HRESULT WINAPI AddIn_stdstringstream    (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
-extern "C" ADDIN_API HRESULT WINAPI AddIn_stdifstream        (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
-extern "C" ADDIN_API HRESULT WINAPI AddIn_stdofstream        (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
-extern "C" ADDIN_API HRESULT WINAPI AddIn_Quaternion         (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
-extern "C" ADDIN_API HRESULT WINAPI AddIn_MD5                (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
-extern "C" ADDIN_API HRESULT WINAPI AddIn_LargeInt           (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
-extern "C" ADDIN_API HRESULT WINAPI AddIn_QuaternionAsMatrix (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
-extern "C" ADDIN_API HRESULT WINAPI AddIn_phShape            (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
-extern "C" ADDIN_API HRESULT WINAPI AddIn_LuaState           (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
-extern "C" ADDIN_API HRESULT WINAPI AddIn_DateTime           (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+// Exported expansion functions
+extern "C"
+{
+	ADDIN_API HRESULT WINAPI AddIn_v2                 (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_v3                 (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_v4                 (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_v8                 (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_iv2                (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_iv4                (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_i64v4              (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_m2x2               (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_m3x4               (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_m4x4               (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_m6x8               (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_MAXMatrix3         (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_stdvector          (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_stdstring          (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_stdstringstream    (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_stdifstream        (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_stdofstream        (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_Quaternion         (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_MD5                (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_LargeInt           (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_QuaternionAsMatrix (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_phShape            (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_LuaState           (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_DateTime           (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+}
 
-#endif

@@ -1,13 +1,10 @@
 //*********************************************
-// Physics Engine
+// Collision
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
 #pragma once
-
 #include "pr/physics2/forward.h"
-#include "pr/physics2/shape/shape.h"
-#include "pr/physics2/shape/shape_box.h"
-#include "pr/physics2/shape/shape_array.h"
+#include "pr/physics2/shape/mass.h"
 #include "pr/physics2/shape/material.h"
 
 namespace pr
@@ -20,8 +17,8 @@ namespace pr
 			// Settings for the shape builder
 			struct Settings
 			{
-				kg_t      m_min_mass;   // The minimum mass a primitive may have (kg)
-				metres³_t m_min_volume; // The minimum volume a primitive may have (m^3)
+				float m_min_mass;   // The minimum mass a primitive may have (kg)
+				float m_min_volume; // The minimum volume a primitive may have (m^3)
 				std::function<Material const&(MaterialId)> m_mat_lookup;
 
 				Settings()
@@ -173,7 +170,7 @@ namespace pr
 
 					// Accumulate mass and centre of mass
 					m_model.m_mp.m_mass           += prim.m_mp.m_mass;
-					m_model.m_mp.m_centre_of_mass += prim.m_mp.m_mass * prim.shape().m_shape_to_model.pos;
+					m_model.m_mp.m_centre_of_mass += prim.m_mp.m_mass * prim.shape().m_s2p.pos;
 				}
 
 				// Find the centre of mass position
@@ -189,7 +186,7 @@ namespace pr
 
 				// Now move all of the models so that they are centred around the centre of mass
 				for (auto& prim : m_model.m_prim_list)
-					prim->shape().m_shape_to_model.pos -= m_model.m_mp.m_centre_of_mass;
+					prim->shape().m_s2p.pos -= m_model.m_mp.m_centre_of_mass;
 
 				// The offset to the centre of mass is now zero
 				m_model.m_mp.m_centre_of_mass = v4Zero;
@@ -200,7 +197,7 @@ namespace pr
 			{
 				m_model.m_bbox = BBoxReset;
 				for (auto& prim : m_model.m_prim_list)
-					Encompass(m_model.m_bbox, prim->shape().m_shape_to_model * prim->m_bbox);
+					Encompass(m_model.m_bbox, prim->shape().m_s2p * prim->m_bbox);
 			}
 
 			// Calculates the inertia tensor for 'm_model'
@@ -215,11 +212,11 @@ namespace pr
 					auto primitive_inertia  = prim.m_mp.m_mass * prim.m_mp.m_os_inertia_tensor;
 
 					// Rotate the inertia tensor into object space
-					auto prim_to_model = prim.shape().m_shape_to_model.rot;
+					auto prim_to_model = prim.shape().m_s2p.rot;
 					primitive_inertia  = primitive_inertia.Rotate(prim_to_model);
 
 					// Translate the inertia tensor using the parallel axis theorem
-					primitive_inertia = primitive_inertia.Translate(prim.shape().m_shape_to_model.pos, prim.m_mp.m_mass, Inertia::AwayFromCoM);
+					primitive_inertia = primitive_inertia.Translate(prim.shape().m_s2p.pos, prim.m_mp.m_mass, Inertia::AwayFromCoM);
 
 					// Add the inertia to the object inertia tensor
 					m_model.m_mp.m_os_inertia_tensor += primitive_inertia;

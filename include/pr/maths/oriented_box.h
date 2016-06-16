@@ -64,6 +64,13 @@ namespace pr
 			return Sqrt(DiametreSq());
 		}
 	};
+	static_assert(std::is_pod<OBox>::value, "Should be a pod type");
+	static_assert(std::alignment_of<OBox>::value == 16, "Should be 16 byte aligned");
+	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
+	using OBox_cref = OBox const;
+	#else
+	using OBox_cref = OBox const&;
+	#endif
 
 	#pragma region Constants
 	static OBox const OBoxZero  = {m4x4Identity, v4Zero};

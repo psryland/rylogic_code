@@ -13,7 +13,7 @@
 
 namespace pr
 {
-	struct alignas(16) BBox
+	struct BBox
 	{
 		enum class EPlane
 		{

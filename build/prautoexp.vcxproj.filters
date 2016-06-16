@@ -35,5 +35,6 @@
     <None Include="..\projects\prautoexp\prautoexp.def">
       <Filter>src</Filter>
     </None>
+    <None Include="..\projects\prautoexp\deploy_autoexp.py" />
   </ItemGroup>
 </Project>

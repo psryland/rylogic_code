@@ -11,7 +11,7 @@
 
 namespace pr
 {
-	struct v3
+	template <typename T> struct Vec3
 	{
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
@@ -24,25 +24,25 @@ namespace pr
 		#pragma warning(pop)
 
 		// Construct
-		v3() = default;
-		v3(float x_, float y_, float z_)
+		Vec3() = default;
+		Vec3(float x_, float y_, float z_)
 			:x(x_)
 			,y(y_)
 			,z(z_)
 		{}
-		explicit v3(float x_)
-			:v3(x_, x_, x_)
+		explicit Vec3(float x_)
+			:Vec3(x_, x_, x_)
 		{}
-		template <typename T, typename = maths::enable_if_v3<T>> v3(T const& v)
-			:v3(x_as<float>(v), y_as<float>(v), z_as<float>(v))
+		template <typename T, typename = maths::enable_if_v3<T>> Vec3(T const& v)
+			:Vec3(x_as<float>(v), y_as<float>(v), z_as<float>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v2<T>> v3(T const& v, float z_)
-			:v3(x_as<float>(v), y_as<float>(v), z_)
+		template <typename T, typename = maths::enable_if_v2<T>> Vec3(T const& v, float z_)
+			:Vec3(x_as<float>(v), y_as<float>(v), z_)
 		{}
-		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit v3(T const* v)
-			:v3(x_as<float>(v), y_as<float>(v), z_as<float>(v))
+		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit Vec3(T const* v)
+			:Vec3(x_as<float>(v), y_as<float>(v), z_as<float>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v3<T>> v3& operator = (T const& rhs)
+		template <typename T, typename = maths::enable_if_v3<T>> Vec3& operator = (T const& rhs)
 		{
 			x = x_as<float>(rhs);
 			y = y_as<float>(rhs);
@@ -82,6 +82,7 @@ namespace pr
 			return Normalise3(V3(x,y,z));
 		}
 	};
+	using v3 = Vec3<void>;
 	static_assert(maths::is_vec3<v3>::value, "");
 	static_assert(std::is_pod<v3>::value, "v3 must be a pod type");
 

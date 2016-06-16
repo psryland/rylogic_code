@@ -42,19 +42,15 @@ namespace pr
 		// coordinates use:
 		//    I_frameB = b2a * I_frameA * a2b
 		//
-		// A Inertia is a symmetric matrix and is positive definite for non-singular bodies
+		// An Inertia is a symmetric matrix and is positive definite for non-singular bodies
 		// (that is, a body composed of at least three non-collinear point masses).
 		//
-		// Note that inertia scales linearly with mass. This means typically inertia is stored
+		// Note: inertia scales linearly with mass. This means typically inertia is stored
 		// for a unit mass (=1kg) and scaled when needed.
 		struct Inertia
 		{
 			// Direction for translating an inertia tensor
-			enum ETranslateType
-			{
-				TowardCoM,
-				AwayFromCoM 
-			};
+			enum ETranslateType { TowardCoM, AwayFromCoM };
 
 			m3x4 m;
 
@@ -93,12 +89,13 @@ namespace pr
 			// Returns an Inertia, assumed to be in frame A, rotated to frame B using rotation 'a2b'
 			Inertia Rotate(m3x4_cref a2b) const 
 			{
-				return Inertia(a2b * m * Transpose3x3(a2b));
+				return Inertia(a2b * m * Transpose(a2b));
 			}
 
 			// Returns an inertia tensor transformed using the parallel axis theorem.
 			// 'offset' is the distance from (or toward) the centre of mass (determined
 			// by 'translate_type'). 'inertia' and 'offset' must be in the same frame.
+			// Note: If this is a unit inertia, remember to translate with 'mass = 1.0'.
 			Inertia Translate(v4_cref offset, float mass, ETranslateType translate_type)
 			{
 				// This is basically: I +=/-= PointMassAt(offset)
@@ -113,8 +110,8 @@ namespace pr
 						if (i == j)
 						{
 							// For the diagonal elements:
-							///  I = Io + md^2 (away from CoM), Io = I - md^2 (toward CoM)
-							/// 'd' is the perpendicular component of 'offset'
+							//'  I = Io + md^2 (away from CoM), Io = I - md^2 (toward CoM)
+							//' 'd' is the perpendicular component of 'offset'
 							auto i1 = (i + 1) % 3;
 							auto i2 = (i + 2) % 3;
 							inertia[i][i] += mass * (offset[i1] * offset[i1] + offset[i2] * offset[i2]);
@@ -122,9 +119,9 @@ namespace pr
 						else
 						{
 							// For off diagonal elements:
-							///  Ixy = Ioxy + mdxdy  (away from CoM), Io = I - mdxdy (toward CoM)
-							///  Ixz = Ioxz + mdxdz  (away from CoM), Io = I - mdxdz (toward CoM)
-							///  Iyz = Ioyz + mdydz  (away from CoM), Io = I - mdydz (toward CoM)
+							//'  Ixy = Ioxy + mdxdy  (away from CoM), Io = I - mdxdy (toward CoM)
+							//'  Ixz = Ioxz + mdxdz  (away from CoM), Io = I - mdxdz (toward CoM)
+							//'  Iyz = Ioyz + mdydz  (away from CoM), Io = I - mdydz (toward CoM)
 							auto delta = mass * (offset[i] * offset[j]);
 							inertia[i][j] += delta;
 							inertia[j][i] += delta;
@@ -180,10 +177,12 @@ namespace pr
 		#pragma region Inertia Operators
 		inline Inertia operator + (Inertia const& lhs, Inertia const& rhs)
 		{
+			// These two inertia matrices must be in the same space
 			return Inertia(lhs.m + rhs.m);
 		}
 		inline Inertia operator - (Inertia const& lhs, Inertia const& rhs)
 		{
+			// These two inertia matrices must be in the same space
 			return Inertia(lhs.m - rhs.m);
 		}
 		inline Inertia operator * (float lhs, Inertia const& rhs)
@@ -221,67 +220,56 @@ namespace pr
 		#pragma endregion
 
 		// Spatial Inertia
-		// A spatial inertia matrix contains the mass, centre of mass point, and inertia
-		// matrix for a rigid body. This is 10 independent quantities altogether; however,
-		// inertia is mass-scaled making it linearly dependent on the mass. Here instead 
-		// we represent inertia using a unit inertia matrix, which is equivalent to the 
-		// inertia a body would have if it had unit mass. Then the actual inertia is 
-		// given by mass * unit_inertia. In this manner the mass, centre of mass location,
-		// and inertia are completely independent so can be changed separately.
-		// 
 		// Spatial inertia may be usefully viewed as a symmetric spatial matrix, that is, 
-		// a 6x6 symmetric matrix arranged as 2x2 blocks of 3x3 matrices. Although this 
-		// type represents the spatial inertia in compact form, it supports methods and
-		// operators that allow it to behave as though it were a spatial matrix (except
-		// faster to work with). In spatial matrix form, the matrix has the following
+		// a 6x6 symmetric matrix arranged as 2x2 blocks of 3x3 matrices. This type represents
+		// the spatial inertia in compact form. In spatial matrix form, the matrix has the following
 		// interpretation:
-		//'                [  I   cx ]
-		//'     M = mass * [         ]
-		//'                [ -cx  1  ]
-		// where 'cx' is the cross product matrix for the vector from the body origin to the
-		// centre of mass, 'I' is the 3x3 symmetric unit inertia (gyration) matrix,
-		// and '1' is a 3x3 identity matrix. 'cx' is skew symmetric, so: '-cx = Transpose(cx)'.
+		//'     M = mass * [ Io cx ]
+		//'                [ -cx 1 ]
+		//   where 'c' is the vector from the centre of mass to the point where 'Io' is measured,
+		//   'cx' is the cross product matrix formed from 'c'. (note: '-cx == Transpose(cx)')
+		//   'Io' is the inertia of the body measured at point 'c'.
+		// Notes:
+		//  Mass is included in SpatialInertia so that they can be combined with other Spatial inertias.
 		struct SpatialInertia
 		{
-			Inertia m_unit_inertia; // Mass distribution matrix for a normalised mass
-			v4      m_com;          // Offset from the body origin to the COM in body space
-			float   m_mass;         // Mass of the associated rigid body
+			Inertia m_inertia; // Mass distribution matrix at 'm_ofs' in body space for a unit mass object.
+			v4      m_com;     // Location of the object centre of mass in the frame that 'm_inertia' is measured in.
+			kg_t    m_mass;    // The body mass
 
 			SpatialInertia() = default;
-			SpatialInertia(Inertia const& unit_inertia, v4_cref com, float mass)
-				:m_unit_inertia(unit_inertia)
+			SpatialInertia(Inertia const& inertia, v4_cref com, float mass)
+				:m_inertia(inertia)
 				,m_com(com)
 				,m_mass(mass)
 			{
 				assert(Check());
 			}
 
-			// Return the first mass moment (mass-weighted COM location)
+			// The mass weighted distance to the centre of mass
 			v4 MassMoment() const
 			{
 				return m_mass * m_com;
 			}
 
-			// Return the inertia matrix (second mass moment, mass-weighted gyration matrix)
+			// The mass-scaled inertia matrix
 			Inertia Inertia() const
 			{
-				return m_mass * m_unit_inertia;
+				return m_mass * m_inertia;
 			}
 
 			// Return the inertia matrix as a full spatial matrix
 			m6x8_m2f ToSpatialMatrix() const
 			{
-				auto off_diag = m3x4::CrossProductMatrix(m_mass * m_com);
-				return m6x8_m2f(
-					m_mass * m_unit_inertia.m, off_diag,
-					-off_diag, m_mass * m3x4Identity);
+				auto cx = CPM(m_mass * m_com);
+				return m6x8_m2f(m_mass * m_inertia.m, cx, -cx, m3x4::Scale(m_mass));
 			}
 
 			// Sanity check
 			bool Check() const
 			{
 				// Check the inertia matrix
-				if (!m_unit_inertia.Check())
+				if (!m_inertia.Check())
 					return false;
 
 				// Check for any value == NaN
@@ -298,28 +286,25 @@ namespace pr
 			// When two rigid bodies are joined, you can just add the spatial inertia directly.
 			assert("The combined mass cannot be zero." && !FEql(lhs.m_mass + rhs.m_mass, 0));
 
-			auto mass         = lhs.m_mass + rhs.m_mass;
-			auto com          = (lhs.MassMoment() + rhs.MassMoment()) / mass;
-			auto unit_inertia = (lhs.Inertia()    + rhs.Inertia()   ) / mass;
-			return SpatialInertia(unit_inertia, com, mass);
+			// Find the combined mass, combined centre of mass, and unit inertia
+			auto mass    = lhs.m_mass + rhs.m_mass;
+			auto fracL   = lhs.m_mass / mass;
+			auto fracR   = rhs.m_mass / mass;
+			auto com     = fracL*lhs.m_com     + fracR*rhs.m_com;
+			auto inertia = fracL*lhs.m_inertia + fracR*rhs.m_inertia;
+			return SpatialInertia(inertia, com, mass);
 		}
 		inline v8f operator * (SpatialInertia const& lhs, v8m const& rhs)
 		{
 			// Multiply a spatial motion vector by a spatial inertia matrix.
 			//   I = lhs = spatial inertia
 			//   v = rhs = spatial velocity
-			//   h = spatial momentum = [ang_mom] = I * v
-			//                          [lin_mom]
+			//   h = spatial momentum = I * v
 			//   T = kinetic energy = 0.5 * Dot(v, I*v)
 			
-			//' m * [I + cx*transpose(cx), cx] * [ang]
-			//'     [ transpose(cx)      ,  1]   [lin]
-			//' m * [(I + cx*transpose(cx))*ang + cx*lin]
-			//'     [ transpose(cx)*ang + lin           ]
-			//' m * [(I*ang + Cross(com, -Cross(com, ang)) + Cross(com,lin)]
-			//'     [-Cross(com,ang) + lin                         ]
-
-			return lhs.m_mass * v8f(lhs.m_unit_inertia.m * rhs.ang + Cross3(lhs.m_com, rhs.lin), rhs.lin - Cross3(lhs.m_com, rhs.ang));
+			//' m * [  I  cx ] * [ang]
+			//'     [ -cx  1 ]   [lin]
+			return lhs.m_mass * v8f(lhs.m_inertia.m * rhs.ang + Cross3(lhs.m_com, rhs.lin), rhs.lin - Cross3(lhs.m_com, rhs.ang));
 		}
 		#pragma endregion
 	}
@@ -335,23 +320,42 @@ namespace pr
 		{
 			using namespace pr::physics;
 
-			auto I = Inertia(5.0f);
-			auto lvel = v4(+1,+2,+3,0);
 			auto avel = v4(-1,-2,-3,0);
+			auto lvel = v4(+1,+2,+3,0);
+			auto vel = v8m(avel, lvel);
 
-			auto lmom = I * lvel;
-			auto amom = I * avel;
+			auto mass = 10.0f;
+			auto Ic   = Inertia(5.0f);
 
-			auto s_I = SpatialInertia(I, v4Zero, 1.0f);
-			auto s_vel = v8m(avel, lvel);
-			auto s_mom = s_I * s_vel;
+			// Use traditional inertia
+			auto amom = mass * Ic * avel; // Iw
+			auto lmom = mass * lvel;      // Mv
 
-//			auto s_I2 = s_I.ToSpatialMatrix();
-//			auto s_mom2 = s_I2 * s_vel;
+			// Use spatial inertia
+			auto sIc = SpatialInertia(Ic, v4Zero, mass);
+			auto mom = sIc * vel;
+			PR_CHECK(FEql(mom.ang, amom), true);
+			PR_CHECK(FEql(mom.lin, lmom), true);
 
-//			PR_CHECK(FEql(s_mom.ang, amom), true);
-//			PR_CHECK(FEql(s_mom.lin, lmom), true);
-//			PR_CHECK(FEql(s_mom, s_mom2), true);
+			// Use full spatial matrix multiply
+			auto sIc2 = sIc.ToSpatialMatrix();
+			auto mom2 = sIc2 * vel;
+			PR_CHECK(FEql(mom, mom2), true);
+
+			// Change to an arbitrary frame 'o'
+			auto com  = v4(1, 0, 0, 0);
+			auto Io = Ic.Translate(com, 1.0f, Inertia::ETranslateType::AwayFromCoM);
+			amom = mass * Io * avel;
+			lmom = mass * lvel;
+
+	//todo		auto sIo = SpatialInertia(Io, com, mass);
+	//todo		mom = sIo * vel;
+	//todo		PR_CHECK(FEql(mom.ang, amom), true);
+	//todo		PR_CHECK(FEql(mom.lin, lmom), true);
+
+	//todo		auto sIo2 = sIo.ToSpatialMatrix();
+	//todo		mom2 = sIo2 * vel;
+	//todo		PR_CHECK(FEql(mom, mom2), true);
 		}
 	}
 }

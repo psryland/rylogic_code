@@ -17,7 +17,7 @@ namespace pr
 	{
 		// Test for overlap between two oriented boxes, with generic penetration collection
 		template <typename Penetration>
-		bool BoxVsBox(Shape const& lhs_, pr::m4x4 const& l2w_, Shape const& rhs_, pr::m4x4 const& r2w_, Penetration& pen)
+		void BoxVsBox(Shape const& lhs_, pr::m4x4 const& l2w_, Shape const& rhs_, pr::m4x4 const& r2w_, Penetration& pen)
 		{
 			auto& lhs = shape_cast<ShapeBox>(lhs_);
 			auto& rhs = shape_cast<ShapeBox>(rhs_);
@@ -31,6 +31,9 @@ namespace pr
 			// errors when two edges are parallel and their cross product is (near) 0
 			auto r2l_abs = Abs(r2l.rot) + m3x4(maths::tiny);
 
+			// Lambda for returning a separating axis with the correct sign
+			auto sep_axis = [&](v4_cref sa) { return Sign(Dot(r2l.pos, sa)) * sa; };
+
 			float ra, rb, sp;
 
 			// Test axes L = lhs.x, L = lhs.y, L = lhs.z
@@ -39,8 +42,8 @@ namespace pr
 				ra = lhs.m_radius[i];
 				rb = rhs.m_radius.x * r2l_abs.x[i] + rhs.m_radius.y * r2l_abs.y[i] + rhs.m_radius.z * r2l_abs.z[i];
 				sp = Abs(r2l.pos[i]);
-				if (sp > ra + rb) return false;
-				pen(l2w[i], ra + rb - sp);
+				if (!pen(ra + rb - sp, [&]{ return sep_axis(l2w[i]); }))
+					return;
 			}
 
 			// Test axes L = rhs.x, L = rhs.y, L = rhs.z
@@ -49,82 +52,80 @@ namespace pr
 				ra = Dot3(lhs.m_radius, r2l_abs[i]);
 				rb = rhs.m_radius[i];
 				sp = Abs(Dot3(r2l.pos, r2l[i]));
-				if (sp > ra + rb) return false;
-				pen(r2w[i], ra + rb - sp);
+				if (!pen(ra + rb - sp, [&]{ return sep_axis(r2w[i]); }))
+					return;
 			}
 
 			// Test axis L = lhs.x X rhs.x
 			ra = lhs.m_radius.y * r2l_abs.x.z + lhs.m_radius.z * r2l_abs.x.y;
 			rb = rhs.m_radius.y * r2l_abs.z.x + rhs.m_radius.z * r2l_abs.y.x;
 			sp = Abs(r2l.pos.z * r2l.x.y - r2l.pos.y * r2l.x.z);
-			if (sp > ra + rb) return false;
-			pen(Cross3(l2w.x, r2w.x), ra + rb - sp);
+			if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.x, r2w.x)); }))
+				return;
 
 			// Test axis L = lhs.x X rhs.y
 			ra = lhs.m_radius.y * r2l_abs.y.z + lhs.m_radius.z * r2l_abs.y.y;
 			rb = rhs.m_radius.x * r2l_abs.z.x + rhs.m_radius.z * r2l_abs.x.x;
 			sp = Abs(r2l.pos.z * r2l.y.y - r2l.pos.y * r2l.y.z);
-			if (sp > ra + rb) return false;
-			pen(Cross3(l2w.x, r2w.y), ra + rb - sp);
+			if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.x, r2w.y)); }))
+				return;
 
 			// Test axis L = lhs.x X rhs.z
 			ra = lhs.m_radius.y * r2l_abs.z.z + lhs.m_radius.z * r2l_abs.z.y;
 			rb = rhs.m_radius.x * r2l_abs.y.x + rhs.m_radius.y * r2l_abs.x.x;
 			sp = Abs(r2l.pos.z * r2l.z.y - r2l.pos.y * r2l.z.z);
-			if (sp > ra + rb) return false;
-			pen(Cross3(l2w.x, r2w.z), ra + rb - sp);
+			if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.x, r2w.z)); }))
+				return;
 
 			// Test axis L = lhs.y X rhs.x
 			ra = lhs.m_radius.x * r2l_abs.x.z + lhs.m_radius.z * r2l_abs.x.x;
 			rb = rhs.m_radius.y * r2l_abs.z.y + rhs.m_radius.z * r2l_abs.y.y;
 			sp = Abs(r2l.pos.x * r2l.x.z - r2l.pos.z * r2l.x.x);
-			if (sp > ra + rb) return false;
-			pen(Cross3(l2w.y, r2w.x), ra + rb - sp);
+			if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.y, r2w.x)); }))
+				return;
 
 			// Test axis L = lhs.y X rhs.y
 			ra = lhs.m_radius.x * r2l_abs.y.z + lhs.m_radius.z * r2l_abs.y.x;
 			rb = rhs.m_radius.x * r2l_abs.z.y + rhs.m_radius.z * r2l_abs.x.y;
 			sp = Abs(r2l.pos.x * r2l.y.z - r2l.pos.z * r2l.y.x);
-			if (sp > ra + rb) return false;
-			pen(Cross3(l2w.y, r2w.y), ra + rb - sp);
+			if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.y, r2w.y)); }))
+				return;
 
 			// Test axis L = lhs.y X rhs.z
 			ra = lhs.m_radius.x * r2l_abs.z.z + lhs.m_radius.z * r2l_abs.z.x;
 			rb = rhs.m_radius.x * r2l_abs.y.y + rhs.m_radius.y * r2l_abs.x.y;
 			sp = Abs(r2l.pos.x * r2l.z.z - r2l.pos.z * r2l.z.x);
-			if (sp > ra + rb) return false;
-			pen(Cross3(l2w.y, r2w.z), ra + rb - sp);
+			if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.y, r2w.z)); }))
+				return;
 
 			// Test axis L = lhs.z X rhs.x
 			ra = lhs.m_radius.x * r2l_abs.x.y + lhs.m_radius.y * r2l_abs.x.x;
 			rb = rhs.m_radius.y * r2l_abs.z.z + rhs.m_radius.z * r2l_abs.y.z;
 			sp = Abs(r2l.pos.y * r2l.x.x - r2l.pos.x * r2l.x.y);
-			if (sp > ra + rb) return false;
-			pen(Cross3(l2w.z, r2w.x), ra + rb - sp);
+			if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.z, r2w.x)); }))
+				return;
 
 			// Test axis L = lhs.z X rhs.y
 			ra = lhs.m_radius.x * r2l_abs.y.y + lhs.m_radius.y * r2l_abs.y.x;
 			rb = rhs.m_radius.x * r2l_abs.z.z + rhs.m_radius.z * r2l_abs.x.z;
 			sp = Abs(r2l.pos.y * r2l.y.x - r2l.pos.x * r2l.y.y);
-			if (sp > ra + rb) return false;
-			pen(Cross3(l2w.z, r2w.y), ra + rb - sp);
+			if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.z, r2w.y)); }))
+				return;
 
 			// Test axis L = lhs.z X rhs.z
 			ra = lhs.m_radius.x * r2l_abs.z.y + lhs.m_radius.y * r2l_abs.z.x;
 			rb = rhs.m_radius.x * r2l_abs.y.z + rhs.m_radius.y * r2l_abs.x.z;
 			sp = Abs(r2l.pos.y * r2l.z.x - r2l.pos.x * r2l.z.y);
-			if (sp > ra + rb) return false;
-			pen(Cross3(l2w.z, r2w.z), ra + rb - sp);
-
-			// Since no separating axis is found, the boxes intersect
-			return true;
+			if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.z, r2w.z)); }))
+				return;
 		}
 
 		// Returns true if orientated boxes 'lhs' and 'rhs' are intersecting.
 		inline bool BoxVsBox(Shape const& lhs, pr::m4x4 const& l2w, Shape const& rhs, pr::m4x4 const& r2w)
 		{
-			IgnorePenetration p;
-			return BoxVsBox(lhs, l2w, rhs, r2w, p);
+			TestPenetration p;
+			BoxVsBox(lhs, l2w, rhs, r2w, p);
+			return p.Contact();
 		}
 
 		// Returns true if 'lhs' and 'rhs' are intersecting.
@@ -132,17 +133,19 @@ namespace pr
 		// 'penetration' is the depth of penetration between the boxes
 		inline bool BoxVsBox(Shape const& lhs, pr::m4x4 const& l2w, Shape const& rhs, pr::m4x4 const& r2w, v4& axis, float& penetration)
 		{
-			MinPenetration p;
-			if (!BoxVsBox(lhs, l2w, rhs, r2w, p))
+			ContactPenetration p;
+			BoxVsBox(lhs, l2w, rhs, r2w, p);
+			if (!p.Contact())
 				return false;
 
 			// Determine the sign of the separating axis to make it the normal from 'lhs' to 'rhs'
-			auto p0 = Dot3(p.m_sep_axis, (l2w * lhs.m_s2p).pos);
-			auto p1 = Dot3(p.m_sep_axis, (r2w * rhs.m_s2p).pos);
+			auto sep_axis = p.SeparatingAxis();
+			auto p0 = Dot3(sep_axis, (l2w * lhs.m_s2p).pos);
+			auto p1 = Dot3(sep_axis, (r2w * rhs.m_s2p).pos);
 			auto sign = Sign<float>(p0 < p1);
 
-			penetration = p.m_penetration;
-			axis        = sign * p.m_sep_axis;
+			penetration = p.Depth();
+			axis        = sign * sep_axis;
 			return true;
 		}
 

@@ -8,27 +8,38 @@
 
 namespace ldr
 {
-	struct TextEntryUI :pr::gui::Form
+	struct TextEntryUI :Form
 	{
-		pr::gui::TextBox m_tb;
-		pr::gui::Button m_btn_cancel;
-		pr::gui::Button m_btn_ok;
+		Panel m_panel_btns;
+		Button m_btn_cancel;
+		Button m_btn_ok;
+		TextBox m_tb;
 		pr::gui::Font m_font;
 		std::wstring m_body;
 
 		TextEntryUI(HWND parent, wchar_t const* title, wchar_t const* body, bool multiline)
-			:Form(MakeDlgParams<>().parent(parent).title(title).wh(132,46).start_pos(pr::gui::EStartPosition::CentreParent).tool_window().style(multiline?'-':'+',DS_MODALFRAME).style(multiline?'+':'-',WS_THICKFRAME))
-			,m_tb        (pr::gui::TextBox::Params<>().parent(this_).xy(6, 7).wh(119, 15).multiline(multiline).want_return(multiline).style(multiline?'+':'-',WS_HSCROLL|WS_VSCROLL))
-			,m_btn_cancel(pr::gui::Button ::Params<>().parent(this_).text(L"Cancel").id(IDCANCEL).xy(75, 27).wh(50, 14))
-			,m_btn_ok    (pr::gui::Button ::Params<>().parent(this_).text(L"OK").id(IDOK).xy(20, 27).wh(50, 14).def_btn())
+			:Form(MakeDlgParams<>()
+				.parent(parent).name("text-entry-ui")
+				.title(title).start_pos(EStartPosition::CentreParent).wh(280, multiline ? 400 : 140)
+				.style('-',WS_MINIMIZEBOX|WS_MAXIMIZEBOX)
+				.style(multiline?'-':'+',DS_MODALFRAME)
+				.style(multiline?'+':'-',WS_THICKFRAME)
+				.tool_window())
+			,m_panel_btns(Panel  ::Params<>().parent(this_).dock(EDock::Bottom).wh(Fill,32))
+			,m_btn_cancel(Button ::Params<>().parent(&m_panel_btns).dock(EDock::Right).text(L"Cancel").dlg_result(EDialogResult::Cancel))
+			,m_btn_ok    (Button ::Params<>().parent(&m_panel_btns).dock(EDock::Right).text(L"OK").dlg_result(EDialogResult::Ok).def_btn())
+			,m_tb        (TextBox::Params<>().parent(this_).dock(EDock::Fill).multiline(multiline).want_return(multiline).style(multiline?'+':'-',WS_HSCROLL|WS_VSCROLL))
 			,m_font(L"Courier New", 80)
 			,m_body(body)
 		{
 			CreateHandle();
 
-			int tab_stop_size = 12;
-			Throw(m_tb.SendMsg<bool>(LB_SETTABSTOPS, 1, &tab_stop_size), "Failed to set tab stop size");
-			m_tb.Font(m_font);
+			if (multiline)
+			{
+				int tab_stop_size = 12;
+				Throw(m_tb.SendMsg<bool>(EM_SETTABSTOPS, 1, &tab_stop_size), "Failed to set tab stop size");
+			}
+			//m_tb.Font(m_font);
 			m_tb.Text(m_body);
 			m_tb.Selection(pr::gui::RangeI(0, -1));
 			m_tb.Focus();

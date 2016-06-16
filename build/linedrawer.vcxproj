@@ -31,19 +31,23 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <UseOfAtl>Static</UseOfAtl>
     <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <UseOfAtl>Static</UseOfAtl>
     <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <UseOfAtl>Static</UseOfAtl>
     <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <UseOfAtl>Static</UseOfAtl>
     <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -80,7 +84,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>linedrawer\main\stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>linedrawer/main/forward.h</PrecompiledHeaderFile>
       <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -98,7 +102,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>linedrawer\main\stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>linedrawer/main/forward.h</PrecompiledHeaderFile>
       <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -118,7 +122,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>linedrawer\main\stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>linedrawer/main/forward.h</PrecompiledHeaderFile>
       <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -137,7 +141,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>linedrawer\main\stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>linedrawer/main/forward.h</PrecompiledHeaderFile>
       <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -155,12 +159,6 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\include\pr\app\entry_point.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="..\include\pr\linedrawer\ldr_gizmo.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
@@ -173,62 +171,45 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\include\pr\linedrawer\ldr_script_editor_dlg.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    <ClCompile Include="..\projects\linedrawer\main\main.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Use</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Use</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\projects\linedrawer\gui\linedrawergui.cpp" />
     <ClCompile Include="..\projects\linedrawer\main\manipulator.cpp" />
-    <ClCompile Include="..\projects\linedrawer\main\script_sources.cpp" />
-    <ClCompile Include="..\projects\linedrawer\main\linedrawer.cpp" />
-    <ClCompile Include="..\projects\linedrawer\main\lua_source.cpp" />
-    <ClCompile Include="..\projects\linedrawer\main\navigation.cpp" />
-    <ClCompile Include="..\projects\linedrawer\main\stdafx.cpp">
+    <ClCompile Include="..\projects\linedrawer\main\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\projects\linedrawer\main\script_sources.cpp" />
+    <ClCompile Include="..\projects\linedrawer\main\lua_source.cpp" />
+    <ClCompile Include="..\projects\linedrawer\main\navigation.cpp" />
     <ClCompile Include="..\include\pr\linedrawer\ldr_object.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-      </PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-      </PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\include\pr\lua\lua_core.c">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-      </PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-      </PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\include\pr\lua\lua_lib.c">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-      </PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-      </PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\pr\app\forward.h" />
-    <ClInclude Include="..\include\pr\app\main.h" />
-    <ClInclude Include="..\include\pr\app\main_gui.h" />
     <ClInclude Include="..\include\pr\camera\camera.h" />
     <ClInclude Include="..\include\pr\camera\camera_ui.h" />
-    <ClInclude Include="..\include\pr\gui\messagemap_dbg.h" />
+    <ClInclude Include="..\include\pr\gui\menu_list.h" />
     <ClInclude Include="..\include\pr\gui\sim_message_loop.h" />
     <ClInclude Include="..\include\pr\gui\wingui.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_gizmo.h" />
@@ -237,16 +218,13 @@
     <ClInclude Include="..\include\pr\linedrawer\ldr_script_editor_dlg.h" />
     <ClInclude Include="..\include\pr\network\web_get.h" />
     <ClInclude Include="..\include\pr\renderer11\lights\light_ui.h" />
-    <ClInclude Include="..\projects\linedrawer\gui\linedrawergui.h" />
+    <ClInclude Include="..\projects\linedrawer\input\input_handler.h" />
+    <ClInclude Include="..\projects\linedrawer\main\main.h" />
     <ClInclude Include="..\projects\linedrawer\main\manipulator.h" />
     <ClInclude Include="..\projects\linedrawer\main\script_sources.h" />
     <ClInclude Include="..\projects\linedrawer\main\forward.h" />
-    <ClInclude Include="..\projects\linedrawer\main\ldrevent.h" />
-    <ClInclude Include="..\projects\linedrawer\main\ldrexception.h" />
-    <ClInclude Include="..\projects\linedrawer\main\linedrawer.h" />
     <ClInclude Include="..\projects\linedrawer\main\lua_source.h" />
     <ClInclude Include="..\projects\linedrawer\main\navigation.h" />
-    <ClInclude Include="..\projects\linedrawer\main\stdafx.h" />
     <ClInclude Include="..\projects\linedrawer\gui\about_ui.h" />
     <ClInclude Include="..\projects\linedrawer\gui\options_dlg.h" />
     <ClInclude Include="..\projects\linedrawer\main\user_settings.h" />

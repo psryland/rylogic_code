@@ -26,7 +26,7 @@ namespace pr
 		// 'height' is the length of the cylinder along the z axis
 		// 'xscale'/'yscale' are scaling factors that can be used to make the cylinder ellipsoidal
 		// 'wedges' is the number of divisions around the z axis
-		// 'layers' is the number of sections along the zaxis, must be >= 1
+		// 'layers' is the number of sections along the ZAxis, must be >= 1
 		// 'num_colours' should be either, 0, 1, num_boxes, num_boxes*8 representing; no colour, 1 colour for all, 1 colour per box, or 1 colour per box vertex
 		// 'colours' is an input array of colour values, a pointer to a single colour, or null.
 		// The texture coords assigned to the cylinder map a quad around the 'barrel' of the cylinder and a circle
@@ -34,7 +34,7 @@ namespace pr
 		template <typename TVertIter, typename TIdxIter>
 		Props Cylinder(float radius0, float radius1, float height, float xscale ,float yscale ,std::size_t wedges, std::size_t layers, std::size_t num_colours, Colour32 const* colours, TVertIter v_out, TIdxIter i_out)
 		{
-			typedef decltype(impl::remove_ref(*i_out)) VIdx;
+			using VIdx = typename std::remove_reference<decltype(*i_out)>::type;
 			
 			std::size_t vcount,icount;
 			if (wedges < 3) wedges = 3;
@@ -42,7 +42,7 @@ namespace pr
 			CylinderSize(wedges, layers, vcount, icount);
 
 			Props props;
-			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | EGeom::Norm | EGeom::Tex0;
+			props.m_geom = EGeom::Vert | (colours ? EGeom::Colr : EGeom::None) | EGeom::Norm | EGeom::Tex0;
 
 			// Bounding box
 			float max_radius = std::max(radius0, radius1);

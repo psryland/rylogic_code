@@ -18,7 +18,7 @@ namespace pr
 	{
 		// Test for overlap between an orientated box and a sphere, with generic penetration collection
 		template <typename Penetration>
-		bool SphereVsBox(Shape const& lhs, m4x4 const& l2w_, Shape const& rhs, m4x4 const& r2w_, Penetration& pen)
+		void SphereVsBox(Shape const& lhs, m4x4 const& l2w_, Shape const& rhs, m4x4 const& r2w_, Penetration& pen)
 		{
 			auto& sph = shape_cast<ShapeSphere>(lhs);
 			auto& box = shape_cast<ShapeBox   >(rhs);
@@ -26,89 +26,87 @@ namespace pr
 			auto r2w = r2w_ * rhs.m_s2p;
 
 			// Convert into box space
-			auto b2s = pr::InvertFast(r2w) * l2w.pos - pr::v4Origin; // Box to sphere vector in box space
+			// Box centre to sphere centre vector in box space
+			auto l2r = pr::InvertFast(r2w) * l2w.pos - pr::v4Origin;
 	
 			// Get a vector from the sphere to the nearest point on the box
 			auto closest = pr::v4Zero;
 			auto dist_sq = 0.0f;
 			for (int i = 0; i != 3; ++i)
 			{
-				if (b2s[i] > box.m_radius[i])
+				if (l2r[i] > box.m_radius[i])
 				{
-					dist_sq += pr::Sqr(b2s[i] - box.m_radius[i]);
+					dist_sq += pr::Sqr(l2r[i] - box.m_radius[i]);
 					closest[i] = box.m_radius[i];
 				}
-				else if (b2s[i] < -box.m_radius[i])
+				else if (l2r[i] < -box.m_radius[i])
 				{
-					dist_sq += pr::Sqr(b2s[i] + box.m_radius[i]);
+					dist_sq += pr::Sqr(l2r[i] + box.m_radius[i]);
 					closest[i] = -box.m_radius[i];
 				}
 				else
 				{
-					closest[i] = b2s[i];
+					closest[i] = l2r[i];
 				}
 			}
 	
-			// If the separation is greater than the radius of the sphere then no collision
-			if (dist_sq > pr::Sqr(sph.m_radius))
-				return false;
-
 			// If 'dist_sq' is zero then the centre of the sphere is inside the box
 			// The separating axis is in one of the box axis directions
 			if (dist_sq < pr::maths::tiny)
 			{
-				auto i = pr::LargestElement3(pr::Abs(b2s));
-
-				// Find the separating axis
-				auto norm = pr::v4Zero;
-				norm[i] = pr::Sign<float>(b2s[i] > 0.0f);
-				norm = r2w * norm;
+				auto i = pr::LargestElement3(pr::Abs(l2r));
 
 				// Find the penetration depth
-				auto depth = sph.m_radius + box.m_radius[i] - pr::Abs(b2s[i]);
-
-				pen(norm, depth);
+				auto depth = sph.m_radius + box.m_radius[i] - Abs(l2r[i]);
+				pen(depth, [&]
+				{
+					// Find the separating axis
+					auto norm = v4Zero;
+					norm[i] = Sign(l2r[i]);
+					return r2w * norm;
+				});
 			}
 
 			// Otherwise the centre of the sphere is outside of the box
 			else
 			{
-				auto dist = Sqrt(dist_sq);
-
-				// Find the separating axis
-				auto norm = r2w * ((b2s - closest) / dist);
-				
 				// Find the penetration depth
+				auto dist = Sqrt(dist_sq);
 				auto depth = sph.m_radius - dist;
-
-				pen(norm, depth);
+				pen(depth, [&]
+				{
+					// Find the separating axis
+					return r2w * ((l2r - closest) / dist);
+				});
 			}
-			return true;
 		}
 
 		// Returns true if the sphere  'lhs' intersects the orientated box 'rhs'
-		inline bool SphereVsBox(Shape const& lhs, pr::m4x4 const& l2w, Shape const& rhs, pr::m4x4 const& r2w)
+		inline bool SphereVsBox(Shape const& lhs, m4x4 const& l2w, Shape const& rhs, m4x4 const& r2w)
 		{
-			IgnorePenetration p;
-			return SphereVsBox(lhs, l2w, rhs, r2w, p);
+			TestPenetration p;
+			SphereVsBox(lhs, l2w, rhs, r2w, p);
+			return p.Contact();
 		}
 
 		// Returns true if 'lhs' and 'rhs' are intersecting.
 		// 'axis' is the collision normal from 'lhs' to 'rhs'
 		// 'penetration' is the depth of penetration between the shapes
-		inline bool SphereVsBox(Shape const& lhs, pr::m4x4 const& l2w, Shape const& rhs, pr::m4x4 const& r2w, v4& axis, float& penetration)
+		inline bool SphereVsBox(Shape const& lhs, m4x4 const& l2w, Shape const& rhs, m4x4 const& r2w, v4& axis, float& penetration)
 		{
-			MinPenetration p;
-			if (!SphereVsBox(lhs, l2w, rhs, r2w, p))
+			ContactPenetration p;
+			SphereVsBox(lhs, l2w, rhs, r2w, p);
+			if (!p.Contact())
 				return false;
 
 			// Determine the sign of the separating axis to make it the normal from 'lhs' to 'rhs'
-			auto p0 = Dot3(p.m_sep_axis, (l2w * lhs.m_s2p).pos);
-			auto p1 = Dot3(p.m_sep_axis, (r2w * rhs.m_s2p).pos);
+			auto sep_axis = p.SeparatingAxis();
+			auto p0 = Dot3(sep_axis, (l2w * lhs.m_s2p).pos);
+			auto p1 = Dot3(sep_axis, (r2w * rhs.m_s2p).pos);
 			auto sign = Sign<float>(p0 < p1);
 
-			penetration = p.m_penetration;
-			axis        = sign * p.m_sep_axis;
+			penetration = p.Depth();
+			axis        = sign * sep_axis;
 			return true;
 		}
 
@@ -118,7 +116,7 @@ namespace pr
 		// 'point' is the world space contact point between 'lhs','rhs' (Only valid when true is returned)
 		// To find the deepest points on 'lhs','rhs' add/subtract half the 'penetration' depth along 'axis'.
 		// Note: that applied impulses should be equal and opposite, and applied at the same point in space (hence one contact point).
-		inline bool SphereVsBox(Shape const& lhs, pr::m4x4 const& l2w, Shape const& rhs, pr::m4x4 const& r2w, v4& axis, float& penetration, v4& point)
+		inline bool SphereVsBox(Shape const& lhs, m4x4 const& l2w, Shape const& rhs, m4x4 const& r2w, v4& axis, float& penetration, v4& point)
 		{
 			if (!SphereVsBox(lhs, l2w, rhs, r2w, axis, penetration))
 				return false;
@@ -131,7 +129,6 @@ namespace pr
 
 #if PR_UNITTESTS&&0
 #include "pr/common/unittests.h"
-//#include "pr/str/prstring.h"
 #include "pr/linedrawer/ldr_helper.h"
 namespace pr
 {

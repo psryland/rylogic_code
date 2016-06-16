@@ -25,7 +25,7 @@ namespace pr
 		{
 			// This allows code templated on vertex type to ask what geometry components are supported
 			// In many cases, an model will have nuggets with a subset of these geom flags.
-			static EGeom::Enum_ const GeomMask = static_cast<EGeom::Enum_>(EGeom::Vert | EGeom::Colr | EGeom::Norm | EGeom::Tex0);
+			static EGeom const GeomMask = EGeom::Vert | EGeom::Colr | EGeom::Norm | EGeom::Tex0;
 
 			v4     m_vert;
 			Colour m_diff;

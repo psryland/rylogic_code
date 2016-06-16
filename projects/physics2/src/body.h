@@ -2,17 +2,13 @@
 
 #include "physics2/src/forward.h"
 
-struct Body
+struct Body :pr::physics::RigidBody
 {
-	// Collision shape
+	// Collision shape instance
 	pr::physics::ShapeBox m_shape;
-
-	// The rigid body for physics simulation
-	pr::physics::RigidBody m_rb;
 
 	// Graphics for the object
 	View3DObject m_gfx;
-
 
 	static pr::Rand& rng()
 	{
@@ -25,12 +21,11 @@ struct Body
 	}
 
 	Body()
-		:m_shape(pr::v4(1,1,1,0))
-		,m_rb(&m_shape)
+		:pr::physics::RigidBody(&m_shape)
+		,m_shape(pr::v4(1,1,1,0))
 		,m_gfx(View3D_ObjectCreateLdr(Desc(), false, pr::GuidZero, false, nullptr))
-
 	{
-		m_rb.m_o2w = pr::Random4x4(rng(), pr::v4Origin, 10.0f); 
+		O2W(pr::Random4x4(rng(), pr::v4Origin, 10.0f));
 	}
 	~Body()
 	{
@@ -41,26 +36,6 @@ struct Body
 	// Position the graphics at the rigid body location
 	void UpdateGfx()
 	{
-		View3D_ObjectSetO2W(m_gfx, view3d::To<View3DM4x4>(m_rb.m_o2w), nullptr);
-	}
-
-	// Get/Set the body position
-	pr::m4x4 const& O2W() const
-	{
-		return m_rb.m_o2w;
-	}
-	void O2W(pr::m4x4_cref o2w)
-	{
-		m_rb.m_o2w = o2w;
-	}
-
-	// Get/set mass
-	float Mass() const
-	{
-		return m_rb.m_mass;
-	}
-	void Mass(float mass)
-	{
-		m_rb.m_mass = mass;
+		View3D_ObjectSetO2W(m_gfx, view3d::To<View3DM4x4>(m_o2w), nullptr);
 	}
 };

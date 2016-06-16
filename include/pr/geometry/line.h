@@ -35,9 +35,9 @@ namespace pr
 		template <typename TVertIter, typename TIdxIter>
 		Props Lines(std::size_t num_lines, v4 const* points, std::size_t num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices)
 		{
-			typedef decltype(impl::remove_ref(*out_indices)) VIdx;
+			using VIdx = typename std::remove_reference<decltype(*out_indices)>::type;
 			Props props;
-			props.m_geom = EGeom::Vert | (num_colours != 0 ? EGeom::Colr : 0);
+			props.m_geom = EGeom::Vert | (num_colours ? EGeom::Colr : EGeom::None);
 
 			// Colour iterator
 			auto col = pr::CreateRepeater(colours, num_colours, 2*num_lines, Colour32White);
@@ -78,9 +78,9 @@ namespace pr
 		template <typename TVertCIter, typename TColCIter, typename TVertIter, typename TIdxIter>
 		inline Props LinesStrip(std::size_t num_lines, TVertCIter points, std::size_t num_colours, TColCIter colours, TVertIter out_verts, TIdxIter out_indices)
 		{
-			typedef decltype(impl::remove_ref(*out_indices)) VIdx;
+			using VIdx = typename std::remove_reference<decltype(*out_indices)>::type;
 			Props props;
-			props.m_geom = EGeom::Vert | (num_colours != 0 ? EGeom::Colr : 0);
+			props.m_geom = EGeom::Vert | (num_colours ? EGeom::Colr : EGeom::None);
 
 			// Colour iterator
 			auto col = pr::CreateLerpRepeater(colours, num_colours, 1+num_lines, Colour32White);

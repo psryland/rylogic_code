@@ -17,7 +17,9 @@
 #include "pr/container/byte_data.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/spatial.h"
+#include "pr/collision/shapes.h"
 #include "pr/geometry/closest_point.h"
+
 
 namespace pr
 {
@@ -28,10 +30,11 @@ namespace pr
 		using metres³_t  = float;
 		using kg_p_m³_t  = float;
 		using kg_t       = float;
-		using MaterialId = unsigned int;
+
+		// Import collision into the physics namespace
+		using namespace ::pr::collision;
 
 		// Forwards
-		struct Shape;
 		struct Material;
 		struct RigidBody;
 

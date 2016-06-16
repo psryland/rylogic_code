@@ -21,21 +21,13 @@ namespace pr
 {
 	namespace gui
 	{
+		// Extends menu-list with a method for adding filenames
 		struct RecentFiles :MenuList
 		{
-			RecentFiles()
-				:MenuList()
-			{}
-
-			template <typename Char> void Add(Char const* file, bool update_menu)
+			template <typename Char> void Add(Char const* file, bool update_menu = true)
 			{
-				auto fpath = pr::Widen(file);
-				fpath = pr::filesys::Canonicalise(fpath);
-				MenuList::Add(fpath.c_str(), 0, false, update_menu);
-			}
-			template <typename Char> void Add(Char const* file)
-			{
-				Add(file, true);
+				auto fpath = pr::filesys::Canonicalise(pr::Widen(file));
+				MenuList::Add(fpath.c_str(), nullptr, false, update_menu);
 			}
 		};
 	}

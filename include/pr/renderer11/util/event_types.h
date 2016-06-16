@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
-#ifndef PR_RDR_UTIL_EVENT_TYPES_H
-#define PR_RDR_UTIL_EVENT_TYPES_H
 
 #include "pr/renderer11/forward.h"
 
@@ -13,7 +11,7 @@ namespace pr
 	namespace rdr
 	{
 		// Raised by the calling SetRenderTargetSize on the renderer
-		// Called twice, once before resizing, and once afterward
+		// Called twice, once before resizing, and once afterwards
 		struct Evt_Resize
 		{
 			Window* m_window; // The renderer window that is resizing
@@ -75,5 +73,3 @@ namespace pr
 		};
 	}
 }
-
-#endif

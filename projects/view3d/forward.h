@@ -51,7 +51,7 @@
 
 namespace view3d
 {
-	typedef std::unique_ptr<pr::ldr::ScriptEditorDlg> EditorPtr;
+	typedef std::unique_ptr<pr::ldr::ScriptEditorUI> EditorPtr;
 	typedef std::set<View3DObject>  ObjectCont;
 	typedef std::set<View3DGizmo>   GizmoCont;
 	typedef std::set<View3DWindow>  WindowCont;

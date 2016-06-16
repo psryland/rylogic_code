@@ -27,12 +27,12 @@ namespace pr
 		template <typename TVertIter, typename TIdxIter>
 		Props Ellipse(float dimx, float dimy, bool solid, int facets, Colour32 colour, TVertIter v_out, TIdxIter i_out)
 		{
-			typedef decltype(impl::remove_ref(*i_out)) VIdx;
+			using VIdx = typename std::remove_reference<decltype(*i_out)>::type;
 
 			facets = std::max(facets, 3);
 
 			Props props;
-			props.m_geom = EGeom::Vert | EGeom::Colr | (solid ? EGeom::Norm : 0) | (solid ? EGeom::Tex0 : 0);
+			props.m_geom = EGeom::Vert | EGeom::Colr | (solid ? EGeom::Norm : EGeom::None) | (solid ? EGeom::Tex0 : EGeom::None);
 			props.m_bbox = BBox(v4Origin, v4(dimx, dimy, 0, 0));
 
 			// Set Verts
@@ -86,7 +86,7 @@ namespace pr
 		template <typename TVertIter, typename TIdxIter>
 		Props Pie(float dimx, float dimy, float ang0, float ang1, float radius0, float radius1, bool solid, int facets, Colour32 colour, TVertIter v_out, TIdxIter i_out)
 		{
-			typedef decltype(impl::remove_ref(*i_out)) VIdx;
+			using VIdx = typename std::remove_reference<decltype(*i_out)>::type;
 
 			auto scale = abs(ang1 - ang0) / pr::maths::tau;
 			facets = std::max(int(scale * facets + 0.5f), 3);
@@ -94,7 +94,7 @@ namespace pr
 			radius1 = std::max(radius0, radius1);
 			
 			Props props;
-			props.m_geom = EGeom::Vert | EGeom::Colr | (solid ? EGeom::Norm : 0) | (solid ? EGeom::Tex0 : 0);
+			props.m_geom = EGeom::Vert | EGeom::Colr | (solid ? EGeom::Norm : EGeom::None) | (solid ? EGeom::Tex0 : EGeom::None);
 
 			// Bounding box
 			auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
@@ -147,14 +147,14 @@ namespace pr
 		}
 
 		// Generate a Rectangle shape with rounded corners
-		// 'solid' - true = tristrip model, false = linestrip model
+		//' 'solid' - true = tristrip model, false = linestrip model
 		template <typename TVertIter, typename TIdxIter>
 		Props RoundedRectangle(float dimx, float dimy, bool solid, float corner_radius, int facets, Colour32 colour, TVertIter v_out, TIdxIter i_out)
 		{
-			typedef decltype(impl::remove_ref(*i_out)) VIdx;
+			using VIdx = std::remove_reference<decltype(*i_out)>::type;
 
 			Props props;
-			props.m_geom = EGeom::Vert | EGeom::Colr | (solid ? EGeom::Norm : 0) | (solid ? EGeom::Tex0 : 0);
+			props.m_geom = EGeom::Vert | EGeom::Colr | (solid ? EGeom::Norm : EGeom::None) | (solid ? EGeom::Tex0 : EGeom::None);
 			props.m_bbox = BBox(v4Origin, v4(dimx, dimy, 0, 0));
 
 			// Limit the rounding to half the smallest rectangle side length

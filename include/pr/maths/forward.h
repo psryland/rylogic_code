@@ -90,15 +90,15 @@ namespace pr
 	typedef float            real32;
 	typedef double           real64;
 
-	struct v2;
-	struct v3;
-	struct v4;
-	struct iv2;
-	struct iv4;
-	struct quat;
-	struct m2x2;
-	struct m3x4;
-	struct m4x4;
+	template <typename T> struct Vec2;
+	template <typename T> struct Vec3;
+	struct Vec4;
+	template <typename T> struct IVec2;
+	struct IVec4;
+	struct Quat;
+	template <typename T> struct Mat2x2;
+	struct Mat3x4;
+	struct Mat4x4;
 	struct BBox;
 	struct BSphere;
 	struct OBox;
@@ -166,55 +166,55 @@ namespace pr
 		}
 
 		#pragma region Traits
-		template <> struct is_vec<v2> :std::true_type
+		template <typename T> struct is_vec<Vec2<T>> :std::true_type
 		{
 			using elem_type = float;
 			using cp_type = float;
 			static int const dim = 2;
 		};
-		template <> struct is_vec<v3> :std::true_type
+		template <typename T> struct is_vec<Vec3<T>> :std::true_type
 		{
 			using elem_type = float;
 			using cp_type = float;
 			static int const dim = 3;
 		};
-		template <> struct is_vec<v4> :std::true_type
+		template <> struct is_vec<Vec4> :std::true_type
 		{
 			using elem_type = float;
 			using cp_type = float;
 			static int const dim = 4;
 		};
-		template <> struct is_vec<iv2> :std::true_type
+		template <typename T> struct is_vec<IVec2<T>> :std::true_type
 		{
 			using elem_type = int;
 			using cp_type = int;
 			static int const dim = 2;
 		};
-		template <> struct is_vec<iv4> :std::true_type
+		template <> struct is_vec<IVec4> :std::true_type
 		{
 			using elem_type = int;
 			using cp_type = int;
 			static int const dim = 4;
 		};
-		template <> struct is_vec<m2x2> :std::true_type
+		template <typename T> struct is_vec<Mat2x2<T>> :std::true_type
 		{
-			using elem_type = v2;
+			using elem_type = Vec2<void>;
 			using cp_type = float;
 			static int const dim = 2;
 		};
-		template <> struct is_vec<m3x4> :std::true_type
+		template <> struct is_vec<Mat3x4> :std::true_type
 		{
-			using elem_type = v4;
+			using elem_type = Vec4;
 			using cp_type = float;
 			static int const dim = 3;
 		};
-		template <> struct is_vec<m4x4> :std::true_type
+		template <> struct is_vec<Mat4x4> :std::true_type
 		{
-			using elem_type = v4;
+			using elem_type = Vec4;
 			using cp_type = float;
 			static int const dim = 4;
 		};
-		template <> struct is_vec<quat> :std::true_type
+		template <> struct is_vec<Quat> :std::true_type
 		{
 			using elem_type = float;
 			using cp_type = float;

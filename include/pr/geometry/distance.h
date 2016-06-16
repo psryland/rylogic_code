@@ -5,25 +5,26 @@
 #pragma once
 
 #include "pr/maths/maths.h"
+#include "pr/geometry/closest_point.h"
 
 namespace pr
 {
 	// Return the distance that 'point' is from the infinite plane: 'plane'
-	inline float Distance_PointToPlane(v4 const& point, v4 const& a, v4 const& b, v4 const& c)
+	template <typename = void> inline float pr_vectorcall Distance_PointToPlane(v4_cref point, v4_cref a, v4_cref b, v4_cref c)
 	{
 		assert(point.w == 1.0f);
 		v4 plane = Normalise3(Cross3(b - a, c - a));
 		plane.w = -Dot3(plane, a);
 		return Dot4(plane, point);
 	}
-	inline float Distance_PointToPlane(v4 const& point, Plane const& plane)
+	template <typename = void> inline float pr_vectorcall Distance_PointToPlane(v4_cref point, Plane const& plane)
 	{
 		assert(point.w == 1.0f);
 		return Dot4(plane, point);
 	}
 
 	// Return the distance that 'point' is from the infinite line: 'line'
-	inline float Distance_PointToInfiniteLine(v4 const& point, v4 const& start, v4 const& end)
+	template <typename = void> inline float pr_vectorcall Distance_PointToInfiniteLine(v4_cref point, v4_cref start, v4_cref end)
 	{
 		v4 line     = end   - start;
 		v4 to_point = point - start;
@@ -32,7 +33,7 @@ namespace pr
 	}
 
 	// Return the minimum distance between two infinite lines
-	inline float Distance_InfiniteLineToInfiniteLine(v4 const& s0, v4 const& line0, v4 const& s1, v4 const& line1)
+	template <typename = void> inline float pr_vectorcall Distance_InfiniteLineToInfiniteLine(v4_cref s0, v4_cref line0, v4_cref s1, v4_cref line1)
 	{
 		v4 a = s1 - s0;
 		float a_len_sq = Length3Sq(a);
@@ -47,7 +48,7 @@ namespace pr
 	}
 
 	// Returns the squared distance from 'point' to 'line'
-	inline float DistanceSq_PointToInfiniteLine(v4 const& point, v4 const& s, v4 const& d)
+	template <typename = void> inline float pr_vectorcall DistanceSq_PointToInfiniteLine(v4_cref point, v4_cref s, v4_cref d)
 	{
 		auto sp   = point - s;
 		auto d_sq = Dot3(d,d);
@@ -56,7 +57,7 @@ namespace pr
 	}
 
 	// Returns the squared distance from 'point' to 'line'
-	inline float DistanceSq_PointToLineSegment(v4 const& point, v4 const& s, v4 const& e)
+	template <typename = void> inline float pr_vectorcall DistanceSq_PointToLineSegment(v4_cref point, v4_cref s, v4_cref e)
 	{
 		auto a = point - s;
 		auto d = e - s;
@@ -73,7 +74,7 @@ namespace pr
 	}
 
 	// Returns the squared distance from 'point' to 'bbox'
-	inline float DistanceSq_PointToBoundingBox(v4 const& point, BBox const& bbox)
+	template <typename = void> inline float pr_vectorcall DistanceSq_PointToBoundingBox(v4_cref point, BBox const& bbox)
 	{
 		float dist_sq = 0.0f;
 		v4 lower = bbox.Lower();
@@ -85,6 +86,14 @@ namespace pr
 		if      (point.z < lower.z) dist_sq += Sqr(lower.z - point.z);
 		else if (point.z > upper.z) dist_sq += Sqr(point.z - upper.z);
 		return dist_sq;
+	}
+
+	// Returns the signed minimum distance between a line segment '(s,e)' and an AABB 'bbox'.
+	// 's' and 'e' must be in the same space as 'bbox'. A negative value means the line segment intersects the AABB.
+	template <typename = void> inline float pr_vectorcall Distance_LineSegmentToBBox(v4_cref s, v4_cref e, BBox_cref bbox)
+	{
+		auto pen = ClosestPoint_LineSegmentToBBox(s, e, bbox);
+		return -pen.depth(); // pen.depth() is positive for penetration, in this case we want the opposite.
 	}
 }
 

@@ -6,7 +6,6 @@
 #pragma once
 
 #include "linedrawer/main/forward.h"
-#include "pr/storage/settings.h"
 
 namespace pr
 {

@@ -8,57 +8,60 @@
 #pragma once
 
 #include <bitset>
-#include "pr/macros/enum.h"
 #include "pr/maths/maths.h"
 #include "pr/common/assert.h"
 #include "pr/common/keystate.h"
+#include "pr/common/flags_enum.h"
 
 namespace pr
 {
 	namespace camera
 	{
-		#define PR_ENUM(x)/*
-			*/x(Left     ,= 1 << 0)/* // MK_LBUTTON
-			*/x(Right    ,= 1 << 1)/* // MK_RBUTTON
-			*/x(Shift    ,= 1 << 2)/* // MK_SHIFT
-			*/x(Ctrl     ,= 1 << 3)/* // MK_CONTROL
-			*/x(Middle   ,= 1 << 4)/* // MK_MBUTTON
-			*/x(XButton1 ,= 1 << 5)/* // MK_XBUTTON1
-			*/x(XButton2 ,= 1 << 6)   // MK_XBUTTON2
-		PR_DEFINE_ENUM2_FLAGS(ENavBtn, PR_ENUM);
-		#undef PR_ENUM
+		enum class ENavBtn
+		{
+			None     = 0,
+			Left     = 1 << 0, // MK_LBUTTON
+			Right    = 1 << 1, // MK_RBUTTON
+			Shift    = 1 << 2, // MK_SHIFT
+			Ctrl     = 1 << 3, // MK_CONTROL
+			Middle   = 1 << 4, // MK_MBUTTON
+			XButton1 = 1 << 5, // MK_XBUTTON1
+			XButton2 = 1 << 6, // MK_XBUTTON2
+			_bitwise_operators_allowed,
+		};
 
-		#define PR_ENUM(x)/*
-			*/x(Left         )/*
-			*/x(Up           )/*
-			*/x(Right        )/*
-			*/x(Down         )/*
-			*/x(In           )/*
-			*/x(Out          )/*
-			*/x(Rotate       )/* // Key to enable camera rotations, maps translation keys to rotations
-			*/x(TranslateZ   )/* // Key to set In/Out to be z translations rather than zoom
-			*/x(Accurate     )/*
-			*/x(SuperAccurate)
-		PR_DEFINE_ENUM1(ENavKey, PR_ENUM);
-		#undef PR_ENUM
+		enum class ENavKey
+		{
+			Left,
+			Up,
+			Right,
+			Down,
+			In,
+			Out,
+			Rotate,     // Key to enable camera rotations, maps translation keys to rotations
+			TranslateZ, // Key to set In/Out to be z translations rather than zoom
+			Accurate,
+			SuperAccurate,
+			NumberOf,
+		};
 
 		// Map keys to the basic camera controls
 		struct NavKeyBindings
 		{
-			int m_bindings[ENavKey::NumberOf];
-			int operator[](ENavKey key) const { return m_bindings[key]; }
+			int m_bindings[int(ENavKey::NumberOf)];
+			int operator[](ENavKey key) const { return m_bindings[int(key)]; }
 			NavKeyBindings()
 			{
-				m_bindings[ENavKey::Left         ] = VK_LEFT;
-				m_bindings[ENavKey::Up           ] = VK_UP;
-				m_bindings[ENavKey::Right        ] = VK_RIGHT;
-				m_bindings[ENavKey::Down         ] = VK_DOWN;
-				m_bindings[ENavKey::In           ] = VK_HOME;
-				m_bindings[ENavKey::Out          ] = VK_END;
-				m_bindings[ENavKey::Rotate       ] = VK_SHIFT;
-				m_bindings[ENavKey::TranslateZ   ] = VK_CONTROL;
-				m_bindings[ENavKey::Accurate     ] = VK_SHIFT;
-				m_bindings[ENavKey::SuperAccurate] = VK_CONTROL;
+				m_bindings[int(ENavKey::Left         )] = VK_LEFT;
+				m_bindings[int(ENavKey::Up           )] = VK_UP;
+				m_bindings[int(ENavKey::Right        )] = VK_RIGHT;
+				m_bindings[int(ENavKey::Down         )] = VK_DOWN;
+				m_bindings[int(ENavKey::In           )] = VK_HOME;
+				m_bindings[int(ENavKey::Out          )] = VK_END;
+				m_bindings[int(ENavKey::Rotate       )] = VK_SHIFT;
+				m_bindings[int(ENavKey::TranslateZ   )] = VK_CONTROL;
+				m_bindings[int(ENavKey::Accurate     )] = VK_SHIFT;
+				m_bindings[int(ENavKey::SuperAccurate)] = VK_CONTROL;
 			}
 		};
 
@@ -86,17 +89,17 @@ namespace pr
 	// All points are in normalised screen space regardless of aspect ratio,
 	//  i.e. x=[-1, -1], y=[-1,1] with (-1,-1) = (left,bottom), i.e. normal Cartesian axes.
 	// Use:
-	//  point = pr::v2(2.0f * pt.x / float(Width) - 1.0f, 1.0f - 2.0f * pt.y / float(Height));
+	//  point = v2(2.0f * pt.x / float(Width) - 1.0f, 1.0f - 2.0f * pt.y / float(Height));
 	struct Camera
 	{
-		pr::m4x4               m_base_c2w;          // The starting position during a mouse movement
-		pr::m4x4               m_c2w;               // Camera to world transform
+		m4x4                   m_base_c2w;          // The starting position during a mouse movement
+		m4x4                   m_c2w;               // Camera to world transform
 		camera::NavKeyBindings m_key;               // Key bindings
 		float                  m_default_fovY;      // The default field of view
-		pr::v4                 m_align;             // The directon to align 'up' to, or v4Zero
+		v4                     m_align;             // The direction to align 'up' to, or v4Zero
 		camera::LockMask       m_lock_mask;         // Locks on the allowed motion
 		bool                   m_orthographic;      // True for orthographic camera to screen transforms, false for perspective
-		float                  m_base_fovY;         // The starting fov during a mouse movement
+		float                  m_base_fovY;         // The starting FOV during a mouse movement
 		float                  m_fovY;              // Field of view in the Y direction
 		float                  m_base_focus_dist;   // The starting focus distance during a mouse movement
 		float                  m_focus_dist;        // Distance from the c2w position to the focus, down the z axis
@@ -104,9 +107,9 @@ namespace pr
 		float                  m_near;              // The near plane as a multiple of the focus distance
 		float                  m_far;               // The near plane as a multiple of the focus distance
 		float                  m_accuracy_scale;    // Scale factor for high accuracy control
-		pr::v2                 m_Lref;              // Movement start reference point for the left button
-		pr::v2                 m_Rref;              // Movement start reference point for the right button
-		pr::v2                 m_Mref;              // Movement start reference point for the middle button
+		v2                     m_Lref;              // Movement start reference point for the left button
+		v2                     m_Rref;              // Movement start reference point for the right button
+		v2                     m_Mref;              // Movement start reference point for the middle button
 		bool                   m_moved;             // Dirty flag for when the camera moves
 		bool                   m_focus_rel_clip;    // True if the near/far clip planes should be relative to the focus point
 
@@ -132,6 +135,11 @@ namespace pr
 			,m_moved(false)
 			,m_focus_rel_clip(true)
 		{}
+		Camera(v4_cref eye, v4_cref pt, v4_cref up, float fovY = maths::tau_by_8, float aspect = 1.0f)
+			:Camera(fovY, aspect)
+		{
+			LookAt(eye, pt, up, true);
+		}
 
 		// Return the camera to world transform
 		void CameraToWorld(pr::m4x4 const& c2w, bool commit = true)
@@ -210,7 +218,7 @@ namespace pr
 			return point;
 		}
 
-		// Return a point and direction in world space corresponding to a normalised sceen space point.
+		// Return a point and direction in world space corresponding to a normalised screen space point.
 		// The x,y components of 'nss_point' should be in normalised screen space, i.e. (-1,-1)->(1,1)
 		// The z component should be the world space distance from the camera
 		void NSSPointToWSRay(pr::v4 const& nss_point, pr::v4& ws_point, pr::v4& ws_direction) const
@@ -360,7 +368,7 @@ namespace pr
 		}
 
 		// Modify the camera position based on mouse movement.
-		// 'point' should be normalised. i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal cartesian axes
+		// 'point' should be normalised. i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal Cartesian axes
 		// The start of a mouse movement is indicated by 'btn_state' being non-zero
 		// The end of the mouse movement is indicated by 'btn_state' being zero
 		// 'ref_point' should be true on the mouse down/up event, false while dragging
@@ -368,15 +376,15 @@ namespace pr
 		bool MouseControl(pr::v2 const& point, camera::ENavBtn btn_state, bool ref_point)
 		{
 			// Button states
-			bool lbtn = (btn_state & camera::ENavBtn::Left) != 0;
-			bool rbtn = (btn_state & camera::ENavBtn::Right) != 0;
-			bool mbtn = (btn_state & camera::ENavBtn::Middle) != 0;
+			bool lbtn = int(btn_state & camera::ENavBtn::Left  ) != 0;
+			bool rbtn = int(btn_state & camera::ENavBtn::Right ) != 0;
+			bool mbtn = int(btn_state & camera::ENavBtn::Middle) != 0;
 
 			if (ref_point)
 			{
-				if (btn_state & camera::ENavBtn::Left)   m_Lref = point;
-				if (btn_state & camera::ENavBtn::Right)  m_Rref = point;
-				if (btn_state & camera::ENavBtn::Middle) m_Mref = point;
+				if (int(btn_state & camera::ENavBtn::Left  ) != 0) m_Lref = point;
+				if (int(btn_state & camera::ENavBtn::Right ) != 0) m_Rref = point;
+				if (int(btn_state & camera::ENavBtn::Middle) != 0) m_Mref = point;
 				Commit();
 			}
 			if (mbtn || (lbtn && rbtn))
@@ -525,7 +533,7 @@ namespace pr
 			return m_moved;
 		}
 
-		// Set the current position, fov, and focus distance as the position reference
+		// Set the current position, FOV, and focus distance as the position reference
 		void Commit()
 		{
 			m_base_c2w  = m_c2w;
@@ -549,7 +557,7 @@ namespace pr
 			return m_default_fovY / m_fovY;
 		}
 
-		// Reset the fov to the default
+		// Reset the FOV to the default
 		void ResetZoom()
 		{
 			m_moved = true;

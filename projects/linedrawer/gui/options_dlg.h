@@ -45,8 +45,8 @@ namespace ldr
 		Navigation m_tab_navigation;
 		UserSettings* m_settings;
 
-		OptionsUI(Control* main_ui, UserSettings& settings)
-			:Form(MakeFormParams<>().name("options").title(L"Options").parent(main_ui).xy(CentreP,CentreP).wh(480,360).icon(IDI_ICON_MAIN).wndclass(RegisterWndClass<Form>()).hide_on_close().pin_window())
+		OptionsUI(Form* main_ui, UserSettings& settings)
+			:Form(MakeFormParams<>().name("options").title(L"Options").parent(main_ui).xy(CentreP,CentreP).wh(480,360).icon(main_ui->Icon(false)).wndclass(RegisterWndClass<Form>()).hide_on_close().pin_window())
 			,m_tc(TabControl::Params<>().name("m_tc").text(L"tabctrl").wh(Fill,Fill).id(ID_TABCTRL).margin(10).parent(this).anchor(EAnchor::All))//, DefaultControlStyle, 0UL)
 			,m_tab_general(&m_tc)
 			,m_tab_navigation(&m_tc)

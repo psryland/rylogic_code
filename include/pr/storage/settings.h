@@ -15,6 +15,7 @@
 #pragma once
 
 #include <string>
+#include <type_traits>
 #include "pr/common/assert.h"
 #include "pr/common/fmt.h"
 #include "pr/common/events.h"
@@ -39,45 +40,122 @@ namespace pr
 {
 	namespace settings
 	{
-		// An event generated if there is an error parsing the settings
-		// Specialised by each settings type
-		template <typename TSettings> struct Evt
-		{
-			enum ELevel { Info, Warning, Error };
-			std::string m_msg;
-			ELevel m_level;
-			Evt(std::string msg, ELevel level) :m_msg(msg) ,m_level(level) {}
-		};
-
 		using string = pr::string<wchar_t>;
+		using Reader = pr::script::Reader;
 
 		// Export function overloads
-		inline string Write(bool t)                { return t ? L"true" : L"false"; }
-		inline string Write(float t)               { return pr::FmtS(L"%g", t); }
-		inline string Write(int t)                 { return pr::FmtS(L"%d", t); }
-		inline string Write(unsigned int t)        { return pr::FmtS(L"%u", t); }
-		inline string Write(unsigned __int64 t)    { return pr::FmtS(L"%u", t); }
-		inline string Write(pr::v2 const& t)       { return pr::FmtS(L"%f %f", t.x, t.y); }
-		inline string Write(pr::v4 const& t)       { return pr::FmtS(L"%f %f %f %f", t.x, t.y, t.z, t.w); }
-		inline string Write(pr::Colour32 t)        { return pr::FmtS(L"%08X", t.argb); }
-		inline string Write(std::string const& t)  { return pr::filesys::AddQuotes(pr::str::StringToCString(string(Widen(t)))); }
-		inline string Write(std::wstring const& t) { return pr::filesys::AddQuotes(pr::str::StringToCString(string(Widen(t)))); }
-		template <typename TEnum, typename = std::enable_if_t<pr::is_enum<TEnum>::value>>
-		inline string Write(TEnum t) { return TEnum::ToStringW(t); }
+		inline string Write(bool t)
+		{
+			return t ? L"true" : L"false";
+		}
+		inline string Write(float t)
+		{
+			return pr::FmtS(L"%g", t);
+		}
+		inline string Write(int t)
+		{
+			return pr::FmtS(L"%d", t);
+		}
+		inline string Write(unsigned int t)
+		{
+			return pr::FmtS(L"%u", t);
+		}
+		inline string Write(unsigned __int64 t)
+		{
+			return pr::FmtS(L"%u", t);
+		}
+		inline string Write(pr::v2 const& t)
+		{
+			return pr::FmtS(L"%f %f", t.x, t.y);
+		}
+		inline string Write(pr::v4 const& t)
+		{
+			return pr::FmtS(L"%f %f %f %f", t.x, t.y, t.z, t.w);
+		}
+		inline string Write(pr::Colour32 t)
+		{
+			return pr::FmtS(L"%08X", t.argb);
+		}
+		template <typename Char> inline string Write(std::basic_string<Char> const& t)
+		{
+			auto s = string(Widen(t));
+			s = pr::str::StringToCString(s);
+			s = pr::filesys::AddQuotes(s);
+			return s;
+		}
+		template <typename TEnum, typename = std::enable_if_t<std::is_enum<TEnum>::value>> inline string Write(TEnum x, struct StdEnum* = nullptr)
+		{
+			using ut = typename std::underlying_type<TEnum>::type;
+			return Write(ut(x));
+		}
+		template <typename TEnum, typename = std::enable_if_t<pr::is_enum<TEnum>::value>> inline string Write(TEnum t, struct PrEnum* = nullptr)
+		{
+			return TEnum::ToStringW(t);
+		}
 
 		// Import function helper overloads
-		inline bool Read(pr::script::Reader& reader, bool& t)             { return reader.BoolS(t); }
-		inline bool Read(pr::script::Reader& reader, float& t)            { return reader.RealS(t); }
-		inline bool Read(pr::script::Reader& reader, int& t)              { return reader.IntS(t, 10); }
-		inline bool Read(pr::script::Reader& reader, unsigned int& t)     { return reader.IntS(t, 10); }
-		inline bool Read(pr::script::Reader& reader, unsigned __int64& t) { return reader.IntS(t, 10); }
-		inline bool Read(pr::script::Reader& reader, pr::v2& t)           { return reader.Vector2S(t); }
-		inline bool Read(pr::script::Reader& reader, pr::v4& t)           { return reader.Vector4S(t); }
-		inline bool Read(pr::script::Reader& reader, pr::Colour32& t)     { return reader.IntS(t.argb, 16); }
-		inline bool Read(pr::script::Reader& reader, std::string& t)      { return reader.CStringS(t); }
-		inline bool Read(pr::script::Reader& reader, std::wstring& t)     { return reader.CStringS(t); }
-		template <typename TEnum, typename = std::enable_if_t<pr::is_enum<TEnum>::value>>
-		inline bool Read(pr::script::Reader& reader, TEnum& t) { return reader.EnumS(t); }
+		inline bool Read(Reader& reader, bool& t)
+		{
+			return reader.BoolS(t);
+		}
+		inline bool Read(Reader& reader, float& t)
+		{
+			return reader.RealS(t);
+		}
+		inline bool Read(Reader& reader, int& t)
+		{
+			return reader.IntS(t, 10);
+		}
+		inline bool Read(Reader& reader, unsigned int& t)
+		{
+			return reader.IntS(t, 10);
+		}
+		inline bool Read(Reader& reader, unsigned __int64& t)
+		{
+			return reader.IntS(t, 10);
+		}
+		inline bool Read(Reader& reader, pr::v2& t)
+		{
+			return reader.Vector2S(t);
+		}
+		inline bool Read(Reader& reader, pr::v4& t)
+		{
+			return reader.Vector4S(t);
+		}
+		inline bool Read(Reader& reader, pr::Colour32& t)
+		{
+			return reader.IntS(t.argb, 16);
+		}
+		inline bool Read(Reader& reader, std::string& t)
+		{
+			return reader.CStringS(t);
+		}
+		inline bool Read(Reader& reader, std::wstring& t)
+		{
+			return reader.CStringS(t);
+		}
+		template <typename TEnum, typename = std::enable_if_t<std::is_enum<TEnum>::value>> inline bool Read(Reader& reader, TEnum& x, struct StdEnum* = nullptr)
+		{
+			using ut = typename std::underlying_type<TEnum>::type;
+			return reader.IntS(reinterpret_cast<ut&>(x), 10);
+		}
+		template <typename TEnum, typename = std::enable_if_t<pr::is_enum<TEnum>::value>> inline bool Read(Reader& reader, TEnum& t, struct PrEnum* = nullptr)
+		{
+			return reader.EnumS(t);
+		}
+
+		// An event generated if there is an error parsing the settings
+		// Specialised by each settings type.
+		template <typename TSettings> struct Evt
+		{
+			enum ELevel { Warning, Error };
+			std::string m_msg;
+			ELevel m_level;
+			Evt(std::string msg, ELevel level)
+				:m_msg(msg)
+				,m_level(level)
+			{}
+		};
 	}
 
 	// A base class for settings types
@@ -310,12 +388,21 @@ namespace pr
 	{
 		namespace settings
 		{
+			// pr enum
 			#define PR_ENUM(x)\
 			x(One)\
 			x(Two)\
 			x(Three)
-			PR_DEFINE_ENUM1(TestEnum, PR_ENUM);
+			PR_DEFINE_ENUM1(Enum1, PR_ENUM);
 			#undef PR_ENUM
+
+			// standard enum
+			enum class Enum2
+			{
+				Won,
+				Too,
+				Free,
+			};
 
 			//x(type, name, default_value, hashvalue, description)
 			#define PR_SETTING(x)\
@@ -326,7 +413,8 @@ namespace pr
 				x(pr::v2       , area     , pr::v2(1,2)       , 0x1C6B5612, "")\
 				x(pr::v4       , position , pr::v4(1,2,3,1)   , 0x6B614A7C, "")\
 				x(std::string  , name     , "hello settings"  , 0xC30D43FC, "")\
-				x(TestEnum     , emun     , TestEnum::Two     , 0xBC21407E, "")
+				x(Enum1        , emun     , Enum1::Two        , 0xBC21407E, "")\
+				x(Enum2        , emun2    , Enum2::Free       , 0x745837A4, "")
 			PR_DEFINE_SETTINGS(Settings, PR_SETTING);
 			#undef PR_SETTING
 		}
@@ -342,9 +430,10 @@ namespace pr
 			PR_CHECK(s.m_colour   , pr::Colour32Green );
 			PR_CHECK(s.m_area     , pr::v2(1,2)       );
 			PR_CHECK(s.m_position , pr::v4(1,2,3,1)   );
-			PR_CHECK(s.m_name     , "hello settings"  );
-			PR_CHECK(s.m_emun     , TestEnum::Two     );
-			PR_CHECK(s.SaveRequired(), false          );
+			PR_CHECK(s.m_name == "hello settings" , true);
+			PR_CHECK(s.m_emun == Enum1::Two    , true);
+			PR_CHECK(s.m_emun2 == Enum2::Free , true);
+			PR_CHECK(s.SaveRequired(), false);
 
 			s.m_count    = 4;
 			s.m_scale    = 1.6f;
@@ -353,7 +442,8 @@ namespace pr
 			s.m_area     = pr::v2One;
 			s.m_position = pr::v4(3, 2, 1, 1);
 			s.m_name     = "renamed";
-			s.m_emun     = TestEnum::Three;
+			s.m_emun     = Enum1::Three;
+			s.m_emun2    = Enum2::Won;
 			PR_CHECK(s.SaveRequired(), true         );
 			PR_CHECK(s.m_count    , 4               );
 			PR_CHECK(s.m_scale    , 1.6f            );
@@ -361,8 +451,9 @@ namespace pr
 			PR_CHECK(s.m_colour   , pr::Colour32Blue);
 			PR_CHECK(s.m_area     , pr::v2One       );
 			PR_CHECK(s.m_position , pr::v4(3,2,1,1) );
-			PR_CHECK(s.m_name     , "renamed"       );
-			PR_CHECK(s.m_emun     , TestEnum::Three );
+			PR_CHECK(s.m_name == "renamed"       , true);
+			PR_CHECK(s.m_emun == Enum1::Three , true);
+			PR_CHECK(s.m_emun2 == Enum2::Won  , true);
 
 			std::string settings = s.Export();
 			PR_CHECK(settings,
@@ -373,7 +464,9 @@ namespace pr
 				"*area {1.000000 1.000000}\r\n"
 				"*position {3.000000 2.000000 1.000000 1.000000}\r\n"
 				"*name {\"renamed\"}\r\n"
-				"*emun {Three}\r\n");
+				"*emun {Three}\r\n"
+				"*emun2 {0}\r\n"
+				);
 
 			Settings s2;
 			s2.Import(settings                       );
@@ -383,9 +476,10 @@ namespace pr
 			PR_CHECK(s2.m_colour   , pr::Colour32Blue);
 			PR_CHECK(s2.m_area     , pr::v2One       );
 			PR_CHECK(s2.m_position , pr::v4(3,2,1,1) );
-			PR_CHECK(s2.m_name     , "renamed"       );
-			PR_CHECK(s2.m_emun     , TestEnum::Three );
-			PR_CHECK(s2.SaveRequired(), false        );
+			PR_CHECK(s2.m_name == "renamed"       , true);
+			PR_CHECK(s2.m_emun == Enum1::Three , true);
+			PR_CHECK(s2.m_emun2 == Enum2::Won , true);
+			PR_CHECK(s2.SaveRequired(), false);
 		}
 	}
 }

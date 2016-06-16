@@ -27,7 +27,8 @@ namespace pr
 			LdrObjectManagerUI* m_ui;  // The sender of the event
 			LdrObjectPtr        m_obj; // The object that has changed. If null, then more than one object has changed
 
-			Evt_Refresh(LdrObjectManagerUI* sender) :m_ui(sender) ,m_obj(0) {}
+			Evt_Refresh() :m_ui() ,m_obj() {}
+			Evt_Refresh(LdrObjectManagerUI* sender) :m_ui(sender) ,m_obj() {}
 			Evt_Refresh(LdrObjectManagerUI* sender, LdrObjectPtr obj) :m_ui(sender) ,m_obj(obj) {}
 		};
 

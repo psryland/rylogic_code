@@ -35,13 +35,13 @@
 #define IDC_TAB_MAIN                            1022
 #define IDC_STATIC_TEXT_EDITOR_CMD              40000
 #define IDC_GROUP_CAMERA                        40001
-#define ID_FILE_NEW1                            40001
+#define ID_FILE_NEW                             40001
 #define IDC_STATIC_FOCUS_POINT_SCALE            40002
 #define ID_FILE_NEWSCRIPT                       40002
 #define IDC_GROUP_ERROR_OUTPUT                  40003
-#define ID_FILE_OPEN1                           40003
+#define ID_FILE_OPEN                            40003
 #define ID_FILE_ADDITIVEOPEN                    40004
-#define ID_FILE_SAVE1                           40005
+#define ID_FILE_SAVE                            40005
 #define ID_FILE_SAVEAS                          40006
 #define ID_FILE_RECENTFILES                     40007
 #define ID_FILE_EXIT                            40018
@@ -98,3 +98,6 @@
 #define ID_ACCELERATOR_LIGHTING_DLG             40609
 #define ID_ACCELERATOR_UNDO                     40610
 #define ID_ACCELERATOR_REDO                     40611
+#define ID_ACCELERATOR_RELOAD                   40612
+#define ID_ACCELERATOR_RESETVIEW                40613
+#define ID_ACCELERATOR_SHOWOBJECTSUI            40614

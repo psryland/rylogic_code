@@ -64,14 +64,26 @@
 	</Type>
 
 	<!-- Maths -->
-	<Type Name="pr::v2">
+	<Type Name="pr::Vec2&lt;*&gt;">
 		<DisplayString LegacyAddin="p:\lib\x86\release\prautoexp.dll" Export="AddIn_v2"></DisplayString>
 	</Type>
-	<Type Name="pr::v3">
+	<Type Name="pr::Vec3&lt;*&gt;">
 		<DisplayString LegacyAddin="p:\lib\x86\release\prautoexp.dll" Export="AddIn_v3"></DisplayString>
 	</Type>
-	<Type Name="pr::v4">
+	<Type Name="pr::Vec4">
 		<DisplayString LegacyAddin="p:\lib\x86\release\prautoexp.dll" Export="AddIn_v4"></DisplayString>
+	</Type>
+	<Type Name="pr::Vec8&lt;*&gt;">
+		<DisplayString LegacyAddin="p:\lib\x86\release\prautoexp.dll" Export="AddIn_v8"></DisplayString>
+	</Type>
+	<Type Name="pr::IVec2&lt;*&gt;">
+		<DisplayString LegacyAddin="p:\lib\x86\release\prautoexp.dll" Export="AddIn_iv2"></DisplayString>
+	</Type>
+	<Type Name="pr::IVec4">
+		<DisplayString LegacyAddin="p:\lib\x86\release\prautoexp.dll" Export="AddIn_iv4"></DisplayString>
+	</Type>
+	<Type Name="pr::Mat2x2&lt;*&gt;">
+		<DisplayString LegacyAddin="p:\lib\x86\release\prautoexp.dll" Export="AddIn_m2x2"></DisplayString>
 	</Type>
 	<Type Name="pr::m3x3">
 		<DisplayString LegacyAddin="p:\lib\x86\release\prautoexp.dll" Export="AddIn_m3x3"></DisplayString>
@@ -79,14 +91,14 @@
 	<Type Name="pr::m4x4">
 		<DisplayString LegacyAddin="p:\lib\x86\release\prautoexp.dll" Export="AddIn_m4x4"></DisplayString>
 	</Type>
+	<Type Name="pr::Mat6x8&lt;*,*&gt;">
+		<DisplayString LegacyAddin="p:\lib\x86\release\prautoexp.dll" Export="AddIn_m6x8"></DisplayString>
+	</Type>
 	<Type Name="pr::Quat">
 		<DisplayString LegacyAddin="p:\lib\x86\release\prautoexp.dll" Export="AddIn_Quaternion"></DisplayString>
 	</Type>
-	<Type Name="pr::iv2">
-		<DisplayString>{x} {y}</DisplayString>
-	</Type>
-	<Type Name="pr::iv4">
-		<DisplayString LegacyAddin="p:\lib\x86\release\prautoexp.dll" Export="AddIn_iv4"></DisplayString>
+	<Type Name="pr::LargeInt">
+		<DisplayString LegacyAddin="p:\lib\x86\release\prautoexp.dll" Export="AddIn_LargeInt"></DisplayString>
 	</Type>
 	<Type Name="pr::BoundingBox">
 		<DisplayString>radius={m_radius.x} {m_radius.y} {m_radius.z} {m_radius.w} centre={m_centre.x} {m_centre.y} {m_centre.z} {m_centre.w}</DisplayString>
@@ -100,10 +112,7 @@
 	<Type Name="pr::Line3">
 		<DisplayString>Pt:{m_point} Dir:{m_line}</DisplayString>
 	</Type>
-	<Type Name="pr::FRect">
-		<DisplayString>{m_left} {m_top} {m_right} {m_bottom}</DisplayString>
-	</Type>
-	<Type Name="pr::IRect">
+	<Type Name="pr::Rectangle&lt;*&gt;">
 		<DisplayString>{m_min.x} {m_min.y} {m_max.x} {m_max.y}</DisplayString>
 	</Type>
 	<Type Name="pr::Spline">
@@ -111,9 +120,6 @@
 	</Type>
 	<Type Name="pr::Frustum">
 		<DisplayString>{m_frustum}</DisplayString>
-	</Type>
-	<Type Name="pr::LargeInt">
-		<DisplayString LegacyAddin="p:\lib\x86\release\prautoexp.dll" Export="AddIn_LargeInt"></DisplayString>
 	</Type>
 	<Type Name="pr::Rand">
 		<DisplayString>{m_value}</DisplayString>

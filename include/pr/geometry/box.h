@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2013
 //********************************
 #pragma once
-#ifndef PR_GEOMETRY_BOX_H
-#define PR_GEOMETRY_BOX_H
 
 #include "pr/geometry/common.h"
 
@@ -44,7 +42,7 @@ namespace pr
 		template <typename TVertCIter, typename TVertIter, typename TIdxIter>
 		Props Boxes(std::size_t num_boxes, TVertCIter points, std::size_t num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices)
 		{
-			typedef decltype(impl::remove_ref(*out_indices)) VIdx;
+			using VIdx = typename std::remove_reference<decltype(*out_indices)>::type;
 
 			int const vidx[] =
 			{
@@ -74,7 +72,7 @@ namespace pr
 			v2 const t11 = v2(1.0f, 1.0f);
 
 			Props props;
-			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | EGeom::Norm | EGeom::Tex0;
+			props.m_geom = EGeom::Vert | (colours ? EGeom::Colr : EGeom::None) | EGeom::Norm | EGeom::Tex0;
 
 			// Helper function for generating normals
 			auto norm = [](v4 const& a, v4 const& b, v4 const& c) { return Normalise3(Cross3(c - b, a - b), v4Zero); };
@@ -183,5 +181,3 @@ namespace pr
 		}
 	}
 }
-
-#endif

@@ -224,6 +224,9 @@ namespace pr
 			NoReposition   = SWP_NOREPOSITION  ,
 			DeferErase     = SWP_DEFERERASE    ,
 			AsyncWindowpos = SWP_ASYNCWINDOWPOS,
+			NoClientSize   = 0x0800, // SWP_NOCLIENTSIZE (don't send WM_SIZE)
+			NoClientMove   = 0x1000, // SWP_NOCLIENTMOVE (don't send WM_MOVE)
+			StateChange    = 0x8000, // SWP_STATECHANGED (minimized, maximised, etc)
 			_bitops_allowed,
 		};
 
@@ -494,7 +497,8 @@ namespace pr
 		inline BYTE LoByte(DWORD_PTR w)                  { return BYTE(w &   0xff); }
 		inline int GetXLParam(LPARAM lparam)             { return int(short(LoWord(lparam))); } // GET_X_LPARAM
 		inline int GetYLParam(LPARAM lparam)             { return int(short(HiWord(lparam))); } // GET_Y_LPARAM
-		inline LPARAM MakeLParam(int x, int y)           { return LPARAM(short(x) | short(y) << 16); }
+		inline WPARAM MakeWParam(int lo, int hi)         { return WPARAM(MakeLong(lo, hi)); }
+		inline LPARAM MakeLParam(int lo, int hi)         { return LPARAM(MakeLong(lo, hi)); }
 		inline LPCWSTR MakeIntResourceW(int i)           { return rcast<LPCWSTR>(cast<WORD>(i)    + (LPCSTR)0); } // MAKEINTRESOURCEW
 		inline LPCWSTR MakeIntAtomW(ATOM atom)           { return rcast<LPCWSTR>(cast<WORD>(atom) + (LPCSTR)0); } // MAKEINTATOM
 		inline bool IsIntResource(LPCWSTR res_id)        { return res_id != nullptr && HiWord(rcast<LPCSTR>(res_id) - (LPCSTR)0) == 0; } // IS_INTRESOURCE
@@ -657,6 +661,7 @@ namespace pr
 			Rect(int l, int t, int r, int b)              { left = l; top = t; right = r; bottom = b; }
 			explicit Rect(Size s)                         { left = top = 0; right = s.cx; bottom = s.cy; }
 			bool empty() const                            { return left == right && top == bottom; }
+			long area() const                             { return width() * height(); }
 			long width() const                            { return right - left; }
 			void width(long w)                            { right = left + w; }
 			long height() const                           { return bottom - top; }
@@ -1819,6 +1824,42 @@ namespace pr
 				auto info = MenuItem().text(text).submenu(submenu);
 				Throw(::SetMenuItemInfoW(m_menu, index, TRUE, &info), "Set menu item failed");
 			}
+
+			// Return a sub menu by address
+			// Use: auto menu = menu.SubMenuByName("&File,&Recent Files");
+			// Returns Menu() if the sub menu isn't found
+			template <typename Char> static Menu ByName(HMENU root, Char const* address)
+			{
+				assert(root != nullptr);
+				for (auto addr = address; *addr != 0 && *addr != ',';)
+				{
+					// Find the next ',' in 'address'
+					auto end = addr;
+					for (; *end != 0 && *end != ','; ++end) {}
+
+					// Look for the first part of the address in the items of 'root'
+					for (int i = 0, iend = ::GetMenuItemCount(root); i != iend; ++i)
+					{
+						// Get the menu item name and length
+						// Check the item name matches the first part of the address
+						Char item_name[256] = {};
+						auto item_name_len = Win32<Char>::MenuString(root, UINT(i), item_name, _countof(item_name), MF_BYPOSITION);
+						if (item_name_len != end - addr || std::char_traits<Char>::compare(addr, item_name, item_name_len) != 0)
+							continue;
+
+						// If this is the last part of the address, then return the sub-menu
+						// Note, if the menu is not a sub-menu then you'll get 0, turn it into a pop-up menu before here
+						auto sub_menu = ::GetSubMenu(root, i);
+						if (*end == 0 || sub_menu == 0)
+							return Menu(sub_menu, false);
+
+						root = sub_menu;
+						addr = end + 1;
+						break;
+					}
+				}
+				return Menu();
+			}
 		};
 		#pragma endregion
 
@@ -2074,7 +2115,10 @@ namespace pr
 			{
 				Delegate m_delegate;
 				EventHandlerId m_id;
-				Func(Delegate delegate, EventHandlerId id) :m_delegate(delegate) ,m_id(id) {}
+				Func(Delegate delegate, EventHandlerId id)
+					:m_delegate(delegate)
+					,m_id(id)
+				{}
 			};
 			std::vector<Func> m_handlers;
 
@@ -2363,6 +2407,8 @@ namespace pr
 			// All aligning is done after margins have been added. 'measure' should return bounds that include margins.
 			template <typename Measure> void CalcPosSize(int& x, int& y, int& w, int& h, Rect const& margin, Measure const& measure)
 			{
+				auto parent_area = measure(0);
+
 				// Set the width/height and x/y position
 				// 'X' is the x position, 'W' is the width, 'L' is the left margin, 'R' is the right margin
 				// 'i' is 0 for the X-axis, 1 for the Y-axis (i.e. Y, height positioning)
@@ -2376,7 +2422,7 @@ namespace pr
 						if ((W & AutoSizeMask) == Fill)
 						{
 							// Get the parent control client area (in parent space, including padding)
-							W = measure(0).size(i) - (L+R);
+							W = parent_area.size(i) - (L+R);
 							fill = true;
 						}
 					}
@@ -2429,12 +2475,13 @@ namespace pr
 					{
 						// Position relative to the BR
 						if (fill) W += (X+1);
-						X = measure(0).bottomright()[i] - (W+L+R) + (X+1) + L;
+						X = parent_area.bottomright()[i] - (W+L+R) + (X+1) + L;
 					}
 					else
 					{
+						// Position relative to the TL
 						if (fill) W -= X;
-						X += L;
+						X = parent_area.topleft()[i] + X + L;
 					}
 				};
 
@@ -3184,6 +3231,7 @@ namespace pr
 			This& pin_window(bool p = true)
 			{
 				params.m_pin_window = p;
+				params.m_anchor = p ? EAnchor::TopLeft : EAnchor::None;
 				return me();
 			}
 		};
@@ -3395,7 +3443,7 @@ namespace pr
 			}
 
 			// Create the hwnd for this control.
-			void Create(CtrlParams const& p_)
+			virtual void Create(CtrlParams const& p_)
 			{
 				assert("Window handle already exists" && m_hwnd == nullptr);
 				assert("No window class given. Called p.wndclass(RegisterWndClass<>()) before create" && p_.atom() != nullptr);
@@ -3419,10 +3467,12 @@ namespace pr
 						Brush());
 					m_brush_back = std::move(
 						p.m_colour_back != CLR_INVALID ? Brush(p.m_colour_back) :
+						WndBackground() != nullptr ? Brush(WndBackground()) :
 						Brush());
 					m_wci = std::move(
-						p.m_wci ? *p.m_wci : p.m_wcn
-						? WndClassEx(p.m_wcn, p.m_hinst) : WndClassEx());
+						p.m_wci ? *p.m_wci :
+						p.m_wcn ? WndClassEx(p.m_wcn, p.m_hinst) :
+						WndClassEx());
 					m_menu = std::move(
 						p.m_menu.m_handle != nullptr ? Menu(p.m_menu.m_handle, true) :
 						p.m_menu.m_res_id != nullptr ? Menu(::LoadMenuW(p.m_hinst, p.m_menu.m_res_id)) :
@@ -3529,7 +3579,7 @@ namespace pr
 				{
 					if (m_parent != nullptr)
 					{
-						// Remove from existing parent. Do this even if 'cp().top_level()' is true
+						// Remove from existing parent. Do this for all WS_CHILD and owned windows
 						// because it may have changed just prior to the parent being changed.
 						auto& c = m_parent->m_child;
 						c.erase(std::remove(c.begin(), c.end(), this), c.end());
@@ -3554,9 +3604,8 @@ namespace pr
 
 					if (m_parent != nullptr)
 					{
-						// If this is a WS_CHILD control, add it to 'm_parent'
-						if (!cp().top_level())
-							m_parent->m_child.push_back(this);
+						// Add to the children of 'm_parent' (for WS_CHILD and owned windows)
+						m_parent->m_child.push_back(this);
 					}
 				}
 
@@ -3627,6 +3676,24 @@ namespace pr
 				auto p = this;
 				for (;!p->cp().top_level() && p->m_parent != nullptr; p = p->m_parent) {}
 				return p;
+			}
+			Control* TopLevelControl()
+			{
+				auto p = this;
+				for (;!p->cp().top_level() && p->m_parent != nullptr; p = p->m_parent) {}
+				return p;
+			}
+
+			// Get the top level control as a form.
+			template <typename = void> Form const* TopLevelForm() const
+			{
+				auto top = TopLevelControl();
+				return top && top->cp().top_level() ? static_cast<Form const*>(top) : nullptr;
+			}
+			template <typename = void> Form* TopLevelForm()
+			{
+				auto top = TopLevelControl();
+				return top && top->cp().top_level() ? static_cast<Form*>(top) : nullptr;
 			}
 
 			// Get/Set the window style
@@ -4226,6 +4293,16 @@ namespace pr
 				PositionWindow(x, y, 0, 0, EWindowPos::NoSize);
 			}
 
+			// Get/Set whether this window is above other windows
+			bool TopMost() const
+			{
+				return AllSet(StyleEx(), WS_EX_TOPMOST);
+			}
+			void TopMost(bool yes)
+			{
+				::SetWindowPos(m_hwnd, yes ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE);
+			}
+
 			// Return the mouse location at the time of the last message
 			Point MousePosition() const
 			{
@@ -4255,7 +4332,7 @@ namespace pr
 			#pragma region Events
 
 			// Paint event - note: all erase background events are ignored
-			EventHandler<Control&, PaintEventArgs const&> Paint;
+			EventHandler<Control&, PaintEventArgs&> Paint;
 
 			// Window position changing or changed
 			EventHandler<Control&, WindowPosEventArgs const&> WindowPosChange;
@@ -4695,7 +4772,6 @@ namespace pr
 				//   - Forms can be parented to other forms, remember to check 'm_hwnd == toplevel_hwnd'
 				//     to detect messages received by this form as opposed to messages received
 				//     by a parent form and then forwarded on to this form.
-
 				// Remember:
 				//   - This control is not necessarily a child control, it can be the Form using
 				//     the default implementation, or an owned form.
@@ -4726,7 +4802,7 @@ namespace pr
 							RecordPosOffset();
 							ResizeToParent(); // Resize to the parent (only moves the control if Dock/Anchors are used since we just set the offset)
 						}
-						return ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result);
+						return ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result, AllChildren);
 					}
 					#pragma endregion
 				case WM_DESTROY:
@@ -4734,7 +4810,7 @@ namespace pr
 					{
 						// Notify children of the WM_DESTROY before destroying this window so that destruction
 						// occurs from leaves to root of the control tree
-						if (ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result))
+						if (ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result, AllChildren))
 							return true;
 
 						// Parent window is being destroy, destroy this window to
@@ -4745,38 +4821,33 @@ namespace pr
 						return false;
 					}
 					#pragma endregion
-				case WM_WINDOWPOSCHANGING:
+				case WM_WINDOWPOSCHANGED:
 					#pragma region
 					{
-						// The parent window is about to resize.
-						// Resizing this window will cause WM_WINDOWPOSCHANGING/ED to be sent to this
-						// window's WndProc which then calls OnWindowPosChange.
-						auto& new_size = *(WindowPos*)lparam;
-
-						// If the parent window is actually resizing (don't care about anything else)
-						if (m_parent != nullptr && !AllSet(new_size.flags, SWP_NOSIZE))
+						// An ancestor/parent window has resized or moved.
+						// Resizing this window will cause WM_WINDOWPOSCHANGING/ED to
+						// be sent to this window's WndProc which then calls OnWindowPosChange.
+						// If this control/window has a parent, reposition relative to it using the anchor/docking mechanism.
+						if (m_parent != nullptr && m_parent->m_hwnd == toplevel_hwnd)
 						{
-							// Get the new size of the parent's client area.
-							// Note: this is before the resize happens so ClientRect() still returns the old client rect.
-							Rect rect;
-							if (new_size.hwnd == m_parent->m_hwnd)
-							{
-								// If the window being resized is our immediate parent, then compare
-								// the current parent bounds to the new size to figure out how
-								// the client area will be changed.
-								auto b = m_parent->ParentRect();
-								auto c = m_parent->ClientRect();
-								rect = Rect(c.left, c.top, c.right + (new_size.cx - b.width()), c.bottom + (new_size.cy - b.height()));
-							}
-							else
-							{
-								// If our parent is not the window being resized, we can assume our parent already has the correct new size
-								rect = m_parent->ClientRect();
-							}
-							ResizeToParent(rect);
+							auto& wp = *rcast<WindowPos*>(lparam);
+							auto is_form   = cp().top_level();
+							auto is_resize = !AllSet(wp.flags, int(EWindowPos::NoSize));
+							auto is_move   = !AllSet(wp.flags, int(EWindowPos::NoMove));
+
+							// If this is a child control and our parent has resized, reposition within the parent
+							if (!is_form && is_resize)
+								ResizeToParent(m_parent->ClientRect());
+
+							// If this is a pinned form and our parent has moved, move with the parent
+							if (is_form && is_move)
+								ResizeToParent(m_parent->ScreenRect());
+
+							// Hmm, should I recurse down the child tree here resizing all children?
+							// Relying on WM_WINDOWPOSCHANGED messages allows WM_PAINT's to occur in between...
 						}
 
-						return ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result);
+						return ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result, [](Control* c) { return IsChild(c) || IsPinnedForm(c); });
 					}
 					#pragma endregion
 				case WM_TIMER:
@@ -4785,7 +4856,7 @@ namespace pr
 						// Timer event, forwarded to all child controls
 						auto event_id = UINT_PTR(wparam);
 						OnTimer(TimerEventArgs(event_id));
-						return ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result);
+						return ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result, AllChildren);
 					}
 					#pragma endregion
 				case WM_CTLCOLORSTATIC:
@@ -4804,14 +4875,18 @@ namespace pr
 							auto hdc = HDC(wparam); // The DC to set colours in
 							if (m_brush_fore != nullptr)
 							{
+								auto col = m_brush_fore.colour();
+
 								// If we have a fore colour, set it, otherwise leave it as the default
-								Throw(::SetTextColor(hdc, cp().m_colour_fore) != CLR_INVALID, "Set text fore colour failed");
+								Throw(::SetTextColor(hdc, col) != CLR_INVALID, "Set text fore colour failed");
 							}
 							if (m_brush_back != nullptr)
 							{
+								auto col = m_brush_back.colour();
+
 								// If we have a background colour, set it and return the background brush
 								Throw(::SetBkMode(hdc, OPAQUE) != 0, "Set back colour mode failed");
-								Throw(::SetBkColor(hdc, cp().m_colour_back) != CLR_INVALID, "Set text back colour failed");
+								Throw(::SetBkColor(hdc, col) != CLR_INVALID, "Set text back colour failed");
 								result = LRESULT(static_cast<HBRUSH>(m_brush_back));
 								return true;
 							}
@@ -4820,7 +4895,7 @@ namespace pr
 						}
 
 						// Not for this control, forward to children
-						return ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result);
+						return ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result, IsChild);
 					}
 					#pragma endregion
 				case WM_DROPFILES:
@@ -4852,7 +4927,7 @@ namespace pr
 						// button/move messages which are sent to the control with focus.
 
 						// Forward to the leaf controls first
-						if (ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result))
+						if (ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result, IsChild))
 							return true;
 
 						auto delta = GET_WHEEL_DELTA_WPARAM(wparam);
@@ -4881,54 +4956,56 @@ namespace pr
 				default:
 					#pragma region
 					{
-						// By default, forward the parent window message to the children of this control
-						return ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result);
+						// By default, forward the parent window message to the child controls only
+						return ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result, IsChild);
 					}
 					#pragma endregion
 				}
 			}
 
-			// Forward a window message to child controls
-			bool ForwardToChildren(HWND toplevel_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result, bool exclude_owned_windows = true)
+			// Forward a message to child controls or owned windows based on 'pred'
+			template <typename Pred> bool ForwardToChildren(HWND toplevel_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result, Pred pred)
 			{
-				// Should we be forwarding all messages to all child controls all the time?
-				// Answer: yes, because all child controls need to know about the parent window
-				// resizing, closing, etc. Also, container controls don't know what the requirements
-				// of their contained controls are.
-				size_t const LocalBufCount = 256;
-				auto child_count = m_child.size();
-				if (child_count == 0)
-				{}
-				else if (child_count < LocalBufCount)
+				// Message handling can cause children to be added/removed.
+				// We need to locally buffer pointers to the child controls.
+				// Buffer on the stack unless there are a large number of child controls
+				struct ChildBuf
 				{
-					// Make a copy of the child control pointers since ProcessWindowMessage
-					// can cause child controls to be added or removed.
-					Control* children[LocalBufCount];
-					memcpy(children, &m_child[0], sizeof(Control*) * child_count);
+					size_t    m_count;
+					Control*  m_stack[256];
+					Controls  m_heap;
+					Control** m_buf;
 
-					// Forward the message to each child
-					for (size_t i = 0; i != child_count; ++i)
+					ChildBuf(Controls const& children)
+						:m_count(children.size())
+						,m_heap(m_count > _countof(m_stack) ? m_count    : 0U)
+						,m_buf (m_count > _countof(m_stack) ? &m_heap[0] : &m_stack[0])
 					{
-						if (exclude_owned_windows && children[i]->cp().top_level()) continue;
-						if (children[i]->ProcessWindowMessage(toplevel_hwnd, message, wparam, lparam, result))
-							return true;
+						std::copy(children.begin(), children.end(), m_buf);
 					}
-				}
-				else
+					Control** begin() const
+					{
+						return &m_buf[0];
+					}
+					Control** end() const
+					{
+						return begin() + m_count;
+					}
+				} children(m_child);
+
+				// Forward the message to each child
+				for (auto child : children)
 				{
-					// Make a copy
-					auto children = m_child;
-
-					// Forward the message to each child
-					for (size_t i = 0; i != child_count; ++i)
-					{
-						if (exclude_owned_windows && children[i]->cp().top_level()) continue;
-						if (children[i]->ProcessWindowMessage(toplevel_hwnd, message, wparam, lparam, result))
-							return true;
-					}
+					if (!pred(child)) continue;
+					if (child->ProcessWindowMessage(toplevel_hwnd, message, wparam, lparam, result))
+						return true;
 				}
 				return false;
 			}
+			static bool AllChildren(Control const*) { return true; }
+			static bool IsForm (Control const* c) { assert(c != nullptr); return c->cp().top_level(); }
+			static bool IsChild(Control const* c) { return !IsForm(c); }
+			static bool IsPinnedForm(Control const* c) { return IsForm(c) && c->cp<FormParams>().m_pin_window; }
 
 			// Save a copy of 'p' to 'm_cp'
 			void SaveParams(CtrlParams const& p)
@@ -5273,15 +5350,11 @@ namespace pr
 				// Store distances so that this control's position equals
 				// parent.left + m_pos_offset.left, parent.right + m_pos_offset.right, etc..
 				// (i.e. right and bottom offsets are typically negative)
-				if (!m_hwnd || m_pos_ofs_suspend)
+				if (!m_hwnd || m_pos_ofs_suspend || m_parent == nullptr)
 					return;
 
-				WndRef phwnd = ::GetParent(m_hwnd);
-				if (phwnd == nullptr)
-					return;
-
-				// Record relative to the parent client area (including padding and, but ignoring docked children)
-				auto p = phwnd->ClientRect();
+				// Record the offset relative to the parent
+				auto p = cp().top_level() ? m_parent->ScreenRect() : m_parent->ClientRect();
 				auto c = ParentRect().Adjust(cp().m_margin);
 				m_pos_offset = Rect(c.left - p.left, c.top - p.top, c.right - p.right, c.bottom - p.bottom);
 			}
@@ -5347,7 +5420,7 @@ namespace pr
 		{
 			using FormParams = pr::gui::FormParams;
 			using ParamsForm = MakeFormParams<>;
-			using ParamsDlg  = MakeDlgParams<>;
+			using ParamsDlg = MakeDlgParams<>;
 
 		protected:
 			// Notes:
@@ -5402,18 +5475,17 @@ namespace pr
 			// Create the HWND for this window
 			// After calling this, only 'Show()' can be used.
 			// This function should be called after construction with m_create == ECreate::Defer
-			void Create(FormParams const& p_)
+			void Create(CtrlParams const& p_) override
 			{
-				// Sanity check form parameters
-				assert("window already created" && m_hwnd == nullptr);
-				assert("'m_main_wnd' should not be set to false after first being set to true. A main window can't become not the main window" && (cp().m_main_wnd == p_.m_main_wnd));
-				assert("Use EStartPosition::Manual when specifying screen X,Y coordinates for a window" && (
-					((p_.m_x == 0 || p_.m_x == CW_USEDEFAULT) && (p_.m_y == 0 || p_.m_y == CW_USEDEFAULT)) || p_.m_start_pos == EStartPosition::Manual));
-
 				// Save the creation data
 				SaveParams(p_);
 				auto& p = cp();
 				{
+					// Sanity check form parameters
+					assert("window already created" && m_hwnd == nullptr);
+					assert("Use EStartPosition::Manual when specifying screen X,Y coordinates for a window" && (
+						((p.m_x == 0 || p.m_x == CW_USEDEFAULT) && (p.m_y == 0 || p.m_y == CW_USEDEFAULT)) || p.m_start_pos == EStartPosition::Manual));
+
 					// If no window class is given, register this Form
 					if (p.m_wcn == nullptr && p.m_wci == nullptr)
 						p.m_wci = &RegisterWndClass<Form>();
@@ -5445,6 +5517,10 @@ namespace pr
 				{
 					Control::Create(p);
 				}
+
+				// Initialise the offset an menu state for pinned windows
+				if (PinWindow())
+					PinWindow(true);
 			}
 
 			// Display as a modeless form, creating the window first if necessary
@@ -5483,8 +5559,11 @@ namespace pr
 			bool PinWindow() const { return cp().m_pin_window; }
 			void PinWindow(bool pin)
 			{
+				assert("Pinned window does not have a parent" && (!pin || m_parent != nullptr));
 				cp().m_pin_window = pin;
-				if (pin) RecordPosOffset();
+				cp().m_anchor = pin ? EAnchor::TopLeft : EAnchor::None;
+				::CheckMenuItem(::GetSystemMenu(m_hwnd, FALSE), IDC_PINWINDOW_OPT, MF_BYCOMMAND|(pin ? MF_CHECKED : MF_UNCHECKED));
+				RecordPosOffset();
 			}
 
 			// Get/Set the parent of this form
@@ -5513,7 +5592,7 @@ namespace pr
 					{
 						auto idx = ::GetMenuItemCount(sysmenu) - 2;
 						Throw(::InsertMenuW(sysmenu, idx++, MF_BYPOSITION|MF_SEPARATOR, IDC_PINWINDOW_SEP, 0), "InsertMenu failed");
-						Throw(::InsertMenuW(sysmenu, idx++, MF_BYPOSITION|MF_STRING, IDC_PINWINDOW_OPT, L"Pin Window"), "InsertMenu failed");
+						Throw(::InsertMenuW(sysmenu, idx++, MF_BYPOSITION|MF_STRING|(PinWindow()?MF_CHECKED:MF_UNCHECKED), IDC_PINWINDOW_OPT, L"Pin Window"), "InsertMenu failed");
 					}
 				}
 			}
@@ -5704,6 +5783,13 @@ namespace pr
 				//WndProcDebug(hwnd, message, wparam, lparam, FmtS("FormMsg: %s", cp().m_name));
 				switch (message)
 				{
+				case WM_CREATE:
+					#pragma region
+					{
+						// Pass WM_CREATE to WndProc
+						return false;
+					}
+					#pragma endregion
 				case WM_INITDIALOG:
 					#pragma region
 					{
@@ -5724,7 +5810,7 @@ namespace pr
 						// Note: typically sub-classed forms will call base::ProcessWindowMessage()
 						// before doing whatever they need to do in WM_INITDIALOG.
 						// This is so that child controls get attached.
-						if (ForwardToChildren(hwnd, message, wparam, lparam, result))
+						if (ForwardToChildren(hwnd, message, wparam, lparam, result, AllChildren))
 							return true;
 
 						// Return false so that WM_INITDIALOG is passed to the WndProc
@@ -5757,7 +5843,7 @@ namespace pr
 					#pragma region
 					{
 						// Let children know the parent is destroying
-						if (ForwardToChildren(hwnd, message, wparam, lparam, result))
+						if (ForwardToChildren(hwnd, message, wparam, lparam, result, AllChildren))
 							return true;
 
 						// Remove this window from its parent.
@@ -5804,7 +5890,6 @@ namespace pr
 						if (id == IDC_PINWINDOW_OPT)
 						{
 							PinWindow(!PinWindow());
-							::CheckMenuItem(::GetSystemMenu(m_hwnd, FALSE), IDC_PINWINDOW_OPT, MF_BYCOMMAND|(PinWindow()? MF_CHECKED : MF_UNCHECKED));
 							return true;
 						}
 						if (id == SC_CLOSE)
@@ -5818,9 +5903,9 @@ namespace pr
 				case WM_WINDOWPOSCHANGED:
 					#pragma region
 					{
-						auto& wp = *reinterpret_cast<WindowPos*>(lparam);
+						auto& wp = *rcast<WindowPos*>(lparam);
 
-						if (AllSet(wp.flags, SWP_SHOWWINDOW))
+						if (AllSet(wp.flags, int(EWindowPos::ShowWindow)))
 						{
 							// If shown for the first time, apply the start position
 							// This will recursively call WM_WINDOWPOSCHANGED
@@ -5833,11 +5918,11 @@ namespace pr
 						}
 
 						// If we're a pinned window, record our offset from our target
-						if (PinWindow())
+						if (hwnd == m_hwnd && PinWindow())
 							RecordPosOffset();
 
-						// Resize child controls and child windows (if pinned)
-						RAII<bool> unpin(cp().m_pin_window, false);
+						// Resize child controls and pinned child windows
+						//RAII<bool> unpin(cp().m_pin_window, false);
 						return Control::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
 					}
 					#pragma endregion
@@ -5849,7 +5934,6 @@ namespace pr
 				case WM_TIMER:
 				case WM_ENTERSIZEMOVE:
 				case WM_EXITSIZEMOVE:
-				case WM_WINDOWPOSCHANGING:
 				case WM_CTLCOLORSTATIC:
 				case WM_CTLCOLORBTN:
 				case WM_CTLCOLOREDIT:
@@ -6090,6 +6174,14 @@ namespace pr
 			virtual void OnClick()
 			{
 				Click(*this, EmptyArgs());
+
+				// If this button as a non-None dialog result, send a WM_CLOSE to the top level control
+				auto dlg_result = cp<ButtonParams>().m_dlg_result;
+				if (dlg_result != EDialogResult::None)
+				{
+					auto top = TopLevelForm();
+					if (top) top->Close(dlg_result);
+				}
 			}
 			virtual void OnCheckedChanged()
 			{
@@ -6099,7 +6191,7 @@ namespace pr
 			// Perform the action as though the button was clicked
 			void PerformClick()
 			{
-				OnClick();
+				SendMsg<int>(WM_COMMAND, MakeWParam(BN_CLICKED, cp().m_id), m_hwnd);
 			}
 
 			// Return the ideal size for this control. Includes padding, excludes margin
@@ -6154,6 +6246,8 @@ namespace pr
 			enum :DWORD { DefaultStyle = DefaultControlStyle | WS_BORDER | WS_TABSTOP | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_LEFT };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"EDIT"; }
+			static HBRUSH WndBackground() { return ::GetSysColorBrush(COLOR_WINDOW); }
+
 			struct TextBoxParams :CtrlParams
 			{
 				TextBoxParams()
@@ -7343,7 +7437,9 @@ namespace pr
 					#pragma region
 					{
 						auto& p = cp<RichTextBoxParams>();
+						#if _RICHEDIT_VER >= 0x0800
 						if (p.m_detect_urls) SendMsg<int>(EM_AUTOURLDETECT, AURL_ENABLEURL, 0);
+						#endif
 						if (p.m_word_wrap)   SendMsg<int>(EM_SETTARGETDEVICE, 0, 0);
 						break;
 					}
@@ -7460,8 +7556,11 @@ namespace pr
 			static wchar_t const* WndClassName() { return STATUSCLASSNAMEW; }
 			struct StatusBarParams :CtrlParams
 			{
+				std::initializer_list<int> m_parts;
+
 				StatusBarParams()
 					:CtrlParams()
+					,m_parts()
 				{}
 				StatusBarParams* clone() const override
 				{
@@ -7476,6 +7575,11 @@ namespace pr
 				{
 					return params;
 				}
+				This& parts(std::initializer_list<int> p)
+				{
+					params.m_parts = p;
+					return me();
+				}
 			};
 
 			StatusBar() :StatusBar(Params<>()) {}
@@ -7489,7 +7593,7 @@ namespace pr
 				assert(::IsWindow(m_hwnd));
 				return (int)::SendMessageW(m_hwnd, SB_GETPARTS, WPARAM(count), LPARAM(parts));
 			}
-			bool Parts(int count, int* widths)
+			bool Parts(int count, int const* widths)
 			{
 				assert(::IsWindow(m_hwnd));
 				return ::SendMessageW(m_hwnd, SB_SETPARTS, WPARAM(count), LPARAM(widths)) != 0;
@@ -7533,6 +7637,23 @@ namespace pr
 				if (m_parent != nullptr) rect = rect.Adjust(-m_parent->cp().m_padding);
 				Control::ResizeToParent(rect, repaint);
 			}
+
+			#pragma region Handlers
+			LRESULT WndProc(UINT message, WPARAM wparam, LPARAM lparam) override
+			{
+				switch (message)
+				{
+				case WM_CREATE:
+					{
+						auto& p = cp<StatusBarParams>();
+						if (p.m_parts.size() != 0)
+							Parts(int(p.m_parts.size()), std::begin(p.m_parts));
+						break;
+					}
+				}
+				return Control::WndProc(message, wparam, lparam);
+			}
+			#pragma endregion
 		};
 		struct TabControl :Control
 		{
@@ -8392,8 +8513,7 @@ namespace pr
 
 				// Obtain the results once the user clicks the 'Open' button. The result is an IShellItem object.
 				CComPtr<IShellItemArray> items;
-				Throw(fod->GetResults(&items), "Failed to retrieve the array of results from the file open dialog result");
-				if (items != nullptr)
+				if (SUCCEEDED(fod->GetResults(&items)) && items != nullptr)
 				{
 					DWORD count;
 					Throw(items->GetCount(&count), "Failed to read the number of results from the file open dialog result");

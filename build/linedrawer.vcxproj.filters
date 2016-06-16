@@ -33,15 +33,9 @@
     <Filter Include="tools">
       <UniqueIdentifier>{a97bcce8-34b3-47d2-9c2a-1113b27b9756}</UniqueIdentifier>
     </Filter>
-    <Filter Include="app">
-      <UniqueIdentifier>{824051ef-3b2a-46ed-b82c-893721fd0f70}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\linedrawer\main\lua_source.cpp">
-      <Filter>main</Filter>
-    </ClCompile>
-    <ClCompile Include="..\projects\linedrawer\main\stdafx.cpp">
       <Filter>main</Filter>
     </ClCompile>
     <ClCompile Include="..\include\pr\linedrawer\ldr_object.cpp">
@@ -56,20 +50,8 @@
     <ClCompile Include="..\include\pr\linedrawer\ldr_objects_dlg.cpp">
       <Filter>objects</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\linedrawer\main\linedrawer.cpp">
-      <Filter>main</Filter>
-    </ClCompile>
-    <ClCompile Include="..\projects\linedrawer\gui\linedrawergui.cpp">
-      <Filter>gui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\include\pr\app\entry_point.cpp">
-      <Filter>app</Filter>
-    </ClCompile>
     <ClCompile Include="..\projects\linedrawer\main\script_sources.cpp">
       <Filter>main</Filter>
-    </ClCompile>
-    <ClCompile Include="..\include\pr\linedrawer\ldr_script_editor_dlg.cpp">
-      <Filter>objects</Filter>
     </ClCompile>
     <ClCompile Include="..\include\pr\linedrawer\ldr_gizmo.cpp">
       <Filter>tools</Filter>
@@ -80,12 +62,15 @@
     <ClCompile Include="..\projects\linedrawer\main\manipulator.cpp">
       <Filter>main</Filter>
     </ClCompile>
+    <ClCompile Include="..\projects\linedrawer\main\main.cpp">
+      <Filter>main</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\linedrawer\main\pch.cpp">
+      <Filter>main</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\projects\linedrawer\main\lua_source.h">
-      <Filter>main</Filter>
-    </ClInclude>
-    <ClInclude Include="..\projects\linedrawer\main\stdafx.h">
       <Filter>main</Filter>
     </ClInclude>
     <ClInclude Include="..\projects\linedrawer\gui\options_dlg.h">
@@ -127,28 +112,7 @@
     <ClInclude Include="..\projects\linedrawer\main\user_settings.h">
       <Filter>main</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\linedrawer\main\linedrawer.h">
-      <Filter>main</Filter>
-    </ClInclude>
-    <ClInclude Include="..\projects\linedrawer\gui\linedrawergui.h">
-      <Filter>gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\app\forward.h">
-      <Filter>app</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\app\main.h">
-      <Filter>app</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\app\main_gui.h">
-      <Filter>app</Filter>
-    </ClInclude>
     <ClInclude Include="..\projects\linedrawer\main\forward.h">
-      <Filter>main</Filter>
-    </ClInclude>
-    <ClInclude Include="..\projects\linedrawer\main\ldrevent.h">
-      <Filter>main</Filter>
-    </ClInclude>
-    <ClInclude Include="..\projects\linedrawer\main\ldrexception.h">
       <Filter>main</Filter>
     </ClInclude>
     <ClInclude Include="..\projects\linedrawer\resources\linedrawer.res.h">
@@ -160,23 +124,14 @@
     <ClInclude Include="..\include\pr\linedrawer\ldr_script_editor_dlg.h">
       <Filter>objects</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\gui\messagemap_dbg.h">
-      <Filter>app</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\linedrawer\ldr_gizmo.h">
       <Filter>tools</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\gui\wingui.h">
-      <Filter>app</Filter>
     </ClInclude>
     <ClInclude Include="..\projects\linedrawer\main\manipulator.h">
       <Filter>main</Filter>
     </ClInclude>
     <ClInclude Include="..\projects\linedrawer\main\navigation.h">
       <Filter>main</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\gui\sim_message_loop.h">
-      <Filter>app</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\camera\camera_ui.h">
       <Filter>camera</Filter>
@@ -192,6 +147,21 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\renderer11\lights\light_ui.h">
       <Filter>lights</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\linedrawer\main\main.h">
+      <Filter>main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\sim_message_loop.h">
+      <Filter>gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\wingui.h">
+      <Filter>gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\linedrawer\input\input_handler.h">
+      <Filter>input</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\menu_list.h">
+      <Filter>gui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -2,7 +2,7 @@
 // LineDrawer
 //  Copyright (c) Rylogic Ltd 2009
 //*****************************************************************************************
-#include "linedrawer/main/stdafx.h"
+#include "linedrawer/main/forward.h"
 #include "linedrawer/main/lua_source.h"
 #include "linedrawer/utility/debug.h"
 #include "pr/linedrawer/ldr_object.h"

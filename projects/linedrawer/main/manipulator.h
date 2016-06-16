@@ -5,13 +5,12 @@
 #pragma once
 
 #include "linedrawer/main/forward.h"
-#include "linedrawer/utility/misc.h"
+#include "linedrawer/input/input_handler.h"
 
 namespace ldr
 {
 	// This object implements manipulation of selected objects
-	struct Manipulator
-		:IInputHandler
+	struct Manipulator :IInputHandler
 		,pr::events::IRecv<pr::ldr::Evt_LdrObjectSelectionChanged>
 		,pr::events::IRecv<pr::rdr::Evt_UpdateScene>
 	{
@@ -40,8 +39,8 @@ namespace ldr
 		// 'button_state' is the state of the mouse buttons (pr::camera::ENavKey)
 		// 'start_or_end' is true on mouse down/up
 		// Returns true if the camera has moved or objects in the scene have moved
-		bool MouseInput(pr::v2 const& pos_ns, int button_state, bool start_or_end) override;
-		bool MouseClick(pr::v2 const& pos_ns, int button_state) override;
+		bool MouseInput(pr::v2 const& pos_ns, ENavBtn button_state, bool start_or_end) override;
+		bool MouseClick(pr::v2 const& pos_ns, ENavBtn button_state) override;
 		bool MouseWheel(pr::v2 const& pos_ns, float delta) override;
 
 		// Event handlers

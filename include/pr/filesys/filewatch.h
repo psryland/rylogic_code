@@ -2,7 +2,6 @@
 // FileWatch
 //  Copyright (c) Rylogic Ltd 2010
 //****************************************************************
-
 #pragma once
 
 #include <vector>
@@ -47,6 +46,7 @@ namespace pr
 			pr::Guid              m_id;        // A user provided id used to identify groups of watched files
 			void*                 m_user_data; // User data to provide in the callback
 		
+			File() = default;
 			File(pr::string<wchar_t> const& filepath, IFileChangedHandler* onchanged, pr::Guid const& id, void* user_data)
 				:m_filepath(filepath)
 				,m_time(pr::filesys::FileTimeStats(filepath))
@@ -83,11 +83,17 @@ namespace pr
 			if (i != std::end(m_files)) m_files.erase(i);
 		}
 
-		// Remove all watches matching 'user_data'
+		// Remove all watches where 'm_id == id'
 		void RemoveAll(pr::Guid const& id)
 		{
 			auto end = std::remove_if(std::begin(m_files), std::end(m_files), [&](File const& file) { return file.m_id == id; });
 			m_files.erase(end, std::end(m_files));
+		}
+
+		// Remove all watches
+		void RemoveAll()
+		{
+			m_files.resize(0);
 		}
 
 		// Check the timestamps of all watched files and call the callback for those that have changed.

@@ -713,7 +713,7 @@ namespace pr
 			CCont& m_colours;
 			TCont& m_texs;
 			ICont& m_indices;
-			EPrim::Enum_ m_prim_type;
+			EPrim  m_prim_type;
 			float m_gen_normals;
 
 			IObjectCreatorMesh() :m_verts(Point()), m_normals(Norms()), m_colours(Color()), m_texs(Texts()), m_indices(Index()), m_prim_type(), m_gen_normals(-1.0f) {}
@@ -2070,10 +2070,10 @@ namespace pr
 		{
 			LdrObjectPtr obj(new LdrObject(attr, 0, context_id));
 
-			EGeom  geom_type = EGeom::Vert;
-			if (normals)    geom_type |= EGeom::Norm;
-			if (colours)    geom_type |= EGeom::Colr;
-			if (tex_coords) geom_type |= EGeom::Tex0;
+			EGeom geom_type = EGeom::Vert;
+			if (normals)    geom_type = geom_type | EGeom::Norm;
+			if (colours)    geom_type = geom_type | EGeom::Colr;
+			if (tex_coords) geom_type = geom_type | EGeom::Tex0;
 
 			// Create the model
 			NuggetProps mat(topo, geom_type);

@@ -30,7 +30,7 @@
 //              [-CPM(o2w.pos)*o2w.rot  o2w.rot] (CPM = cross product matrix)
 // A spatial transform from A to B for motion vectors = bXa.
 // A spatial transform from A to B for force vectors = bX*a.
-//  bX*a == bXa^-T (inverse transpose)
+//  bX*a == bXa^-T (invert then transpose)
 // 
 #pragma once
 
@@ -44,26 +44,43 @@
 namespace pr
 {
 	// An Affine spatial vector
-	template <typename T = void> struct alignas(16) Vec8
+	template <typename T> struct alignas(16) Vec8
 	{
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
 		union
 		{
 			struct { v4 ang, lin; };
+			struct { v4 v0, v1; };
 			struct { float arr[8]; };
 		};
 		#pragma warning(pop)
 
 		Vec8() = default;
-		Vec8(v4_cref ang_, v4_cref lin_)
-			:ang(ang_)
-			,lin(lin_)
+		Vec8(v4_cref v0_, v4_cref v1_)
+			:v0(v0_)
+			,v1(v1_)
 		{}
+		Vec8(float _00, float _01, float _02, float _10, float _11, float _12)
+			:ang(_00, _01, _02, 0)
+			,lin(_10, _11, _12, 0)
+		{}
+
+		// Array access
+		float const& operator [] (int i) const
+		{
+			assert("index out of range" && i >= 0 && i < _countof(arr));
+			return arr[i];
+		}
+		float& operator [] (int i)
+		{
+			assert("index out of range" && i >= 0 && i < _countof(arr));
+			return arr[i];
+		}
 	};
-	static_assert(std::is_pod<Vec8<>>::value, "v8 must be a pod type");
-	static_assert(std::alignment_of<Vec8<>>::value == 16, "v8 should have 16 byte alignment");
-	using v8  = Vec8<void>;
+	using v8 = Vec8<void>;
+	static_assert(std::is_pod<v8>::value, "v8 must be a pod type");
+	static_assert(std::alignment_of<v8>::value == 16, "v8 should have 16 byte alignment");
 
 	// Spatial motion vector. Used for: velocity, acceleration, infinitesimal displacement, directions of motion freedom and constraint
 	using v8m = Vec8<struct Motion>;
@@ -89,17 +106,21 @@ namespace pr
 	template <typename T> inline float w_cp(Vec8<T> const& v) { return v.lin.w; }
 
 	#pragma region Operators
+	template <typename T> Vec8<T> operator - (Vec8<T> const& lhs)
+	{
+		return Vec8<T>(-lhs.v0, -lhs.v1);
+	}
 	template <typename T> Vec8<T> operator + (Vec8<T> const& lhs, Vec8<T> const& rhs)
 	{
-		return Vec8<T>(lhs.ang + rhs.ang, lhs.lin + rhs.lin);
+		return Vec8<T>(lhs.v0 + rhs.v0, lhs.v1 + rhs.v1);
 	}
 	template <typename T> Vec8<T> operator - (Vec8<T> const& lhs, Vec8<T> const& rhs)
 	{
-		return Vec8<T>(lhs.ang - rhs.ang, lhs.lin - rhs.lin);
+		return lhs + -rhs;
 	}
 	template <typename T> Vec8<T> operator * (Vec8<T> const& lhs, float rhs)
 	{
-		return Vec8<T>(lhs.ang * rhs, lhs.lin * rhs);
+		return Vec8<T>(lhs.v0 * rhs, lhs.v1 * rhs);
 	}
 	template <typename T> Vec8<T> operator * (float lhs, Vec8<T> const& rhs)
 	{
@@ -152,13 +173,14 @@ namespace pr
 	#pragma region Functions
 	
 	// Spatial dot product
-	// The dot product is only defined for Dot(v8m,v8f) or Dot(v8f,v8m)
+	// The dot product is only defined for Dot(v8m,v8f) and Dot(v8f,v8m)
 	// e.g Dot(force, velocity) == power delivered
 	inline float Dot(v8m const& lhs, v8f const& rhs)
 	{
 		// v8m and v8f are vectors in the dual spaces M and F
 		// A property of dual spaces is dot(m,f) = transpose(m)*f
-		return Dot3(lhs.lin, rhs.ang) + Dot3(lhs.ang, rhs.lin);
+		return Dot3(lhs.ang, rhs.ang) + Dot3(lhs.lin, rhs.lin);
+		// This can't be right: return Dot3(lhs.lin, rhs.ang) + Dot3(lhs.ang, rhs.lin);
 	}
 	inline float Dot(v8f const& lhs, v8m const& rhs)
 	{
@@ -167,20 +189,38 @@ namespace pr
 
 	// Spatial cross product.
 	// There are two cross product operations, one for motion vectors and one for forces
-	inline v8m Cross(v8m const& lhs, v8m const& rhs)
+	template <typename T> inline v8m Cross(Vec8<T> const& lhs, v8m const& rhs)
 	{
 		return v8m(Cross3(lhs.ang, rhs.ang), Cross3(lhs.ang, rhs.lin) + Cross3(lhs.lin, rhs.ang));
 	}
-	inline v8f Cross(v8m const& lhs, v8f const& rhs)
+	template <typename T> inline v8f Cross(Vec8<T> const& lhs, v8f const& rhs)
 	{
 		return v8f(Cross3(lhs.ang, rhs.ang) + Cross3(lhs.lin, rhs.lin), Cross3(lhs.ang, rhs.lin));
 	}
 
+	// Shift a spatial velocity measured at some point to that same spatial
+	// quantity but measured at a new point given by an offset from the old one.
+	inline v8m ShiftVelocityBy(v8m const& vel, v4_cref ofs)
+	{
+		return v8m(vel.ang, vel.lin + Cross(vel.ang, ofs));
+	}
+
+	// Shift a spatial acceleration measured at some point to that same spatial
+	// quantity but measured at a new point given by an offset from the old one.
+	// The shift in location leaves the angular acceleration the same
+	// but results in the linear acceleration changing by: a X r + w X (w X r).
+	// 'acc' is the spatial acceleration to shift
+	// 'avel' is the angular velocity of the frame in which 'acc' is being shifted
+	// 'ofs' is the offset from the last position that 'acc' was measured at.
+	inline v8m ShiftAccelerationBy(v8m const& acc, v4_cref avel, v4_cref ofs)
+	{
+		return v8m(acc.ang, acc.lin + Cross(acc.ang, ofs) + Cross(avel, Cross(avel, ofs)));
+	}
+
 	#pragma endregion
 
-
-	// Spatial matrix
-	template <typename T> struct Mat6x8
+	// Spatial matrix. Transforms from 'A' to 'B'
+	template <typename A, typename B> struct Mat6x8
 	{
 		m3x4 m11, m12;
 		m3x4 m21, m22;
@@ -192,11 +232,147 @@ namespace pr
 			,m21(m21_)
 			,m22(m22_)
 		{}
+
+		// Reinterpret as a different matrix type
+		template <typename A2, typename B2> explicit operator Mat6x8<A2,B2>() const
+		{
+			return reinterpret_cast<Mat6x8<A2,B2> const&>(*this);
+		}
 	};
-	using m6x8_m2f = Mat6x8<struct Motion>;
-	using m6x8_f2m = Mat6x8<struct Force>;
+	using m6x8 = Mat6x8<void, void>;
+	using m6x8_m2m = Mat6x8<struct Motion, struct Motion>;
+	using m6x8_f2f = Mat6x8<struct Force , struct Force >;
+	using m6x8_m2f = Mat6x8<struct Motion, struct Force >;
+	using m6x8_f2m = Mat6x8<struct Force , struct Motion>;
+
+	// Spatial transforms are a special case of a spatial matrix.
+	// They allow a more compact representation.
+	template <typename A, typename B> struct Txfm6x8
+	{
+		m4x4 m_a2b; // Affine transform
+
+		Txfm6x8() = delete;
+		Txfm6x8(m4x4 const& a2b)
+			:m_a2b(a2b)
+		{
+			assert(Check());
+		}
+
+		// Sanity check
+		bool Check() const
+		{
+			// Check the inertia matrix
+			if (!IsAffine(m_a2b))
+				return false;
+
+			// Check for any value == NaN
+			if (IsNaN(m_a2b))
+				return false;
+
+			return true;
+		}
+	};
+	using txfm6x8 = Txfm6x8<void,void>;
+	using txfm6x8_m2m = Txfm6x8<struct Motion, struct Motion>;
+	using txfm6x8_f2f = Txfm6x8<struct Force,  struct Force>;
+
+	#pragma region Constants
+	static m6x8 const m6x8Zero     = {m3x4Zero, m3x4Zero, m3x4Zero, m3x4Zero};
+	static m6x8 const m6x8Identity = {m3x4Identity, m3x4Zero, m3x4Zero, m3x4Identity};
+	#pragma endregion
 
 	#pragma region Operators
+	template <typename A, typename B> inline bool operator == (Mat6x8<A,B> const& lhs, Mat6x8<A,B> const& rhs)
+	{
+		return memcmp(&lhs, &rhs, sizeof(lhs)) == 0;
+	}
+	template <typename A, typename B> inline bool operator != (Mat6x8<A,B> const& lhs, Mat6x8<A,B> const& rhs)
+	{
+		return !(lhs == rhs);
+	}
+	template <typename A, typename B> inline Mat6x8<A,B> operator - (Mat6x8<A,B> const& m)
+	{
+		return Mat6x8<A,B>(-m.m11, -m.m12, -m.m21, -m.m22);
+	}
+	template <typename A, typename B> inline Vec8<B> operator * (Mat6x8<A,B> const& lhs, Vec8<A> const& rhs)
+	{
+		// [m11*a + m12*b] = [m11 m12] [a]
+		// [m21*a + m22*b]   [m21 m22] [b]
+		return Vec8<B>(
+			lhs.m11 * rhs.ang + lhs.m12 * rhs.lin,
+			lhs.m21 * rhs.ang + lhs.m22 * rhs.lin);
+	}
+	template <typename A, typename B, typename C> inline Mat6x8<A,C> operator * (Mat6x8<A,B> const& lhs, Mat6x8<B,C> const& rhs)
+	{
+		//' [a11 a12] [b11 b12] = [a11*b11 + a12*b21 a11*b12 + a12*b22]
+		//' [a21 a22] [b21 b22]   [a21*b11 + a22*b21 a21*b12 + a22*b22]
+		return Mat6x8<A,C>(
+			lhs.m11*rhs.m11 + lhs.m12*rhs.m21 , lhs.m11*rhs.m12 + lhs.m12*rhs.m22,
+			lhs.m21*rhs.m11 + lhs.m22*rhs.m21 , lhs.m21*rhs.m12 + lhs.m22*rhs.m22);
+	}
+	inline v8m operator * (txfm6x8_m2m const& lhs, v8m const& rhs)
+	{
+		// Spatial transform for motion vectors:
+		//' a2b = [rot 0] * [ 1  0] = [ rot     0 ]
+		//'       [0 rot]   [-rx 1]   [-rot*rx rot]
+		// So:
+		//  a2b * v = [ rot     0 ] * [v.ang] = [rot*v.ang               ]
+		//            [-rot*rx rot]   [v.lin]   [rot*v.lin - rot*rx*v.ang]
+		return v8m(
+			lhs.m_a2b.rot * rhs.ang,
+			lhs.m_a2b.rot * rhs.lin - lhs.m_a2b.rot * Cross3(lhs.m_a2b.pos, rhs.ang));
+	}
+	inline v8f operator * (txfm6x8_f2f const& lhs, v8f const& rhs)
+	{
+		// Spatial transform for force vectors:
+		//' a2b = [rot 0] * [1 -rx] = [rot -rot*rx]
+		//'       [0 rot]   [0  1 ]   [ 0    rot  ]
+		// So:
+		//  a2b * v = [rot -rot*rx] * [v.ang] = [rot*v.ang - rot*rx*v.lin]
+		//            [ 0    rot  ]   [v.lin]   [rot*v.lin               ]
+		return v8f(
+			lhs.m_a2b.rot * rhs.ang - lhs.m_a2b.rot * Cross3(lhs.m_a2b.pos, rhs.lin),
+			lhs.m_a2b.rot * rhs.lin);
+	}
+	#pragma endregion
+
+	#pragma region Functions
+
+	// Compare matrices for floating point equality
+	template <typename A, typename B> inline bool FEql(Mat6x8<A,B> const& lhs, Mat6x8<A,B> const& rhs)
+	{
+		return
+			FEql(lhs.m11, rhs.m11) &&
+			FEql(lhs.m12, rhs.m12) &&
+			FEql(lhs.m21, rhs.m21) &&
+			FEql(lhs.m22, rhs.m22);
+	}
+
+	// Returns the spatial cross product matrix for 'a', for use with motion vectors.
+	//' i.e. b = a x m = cpmM(a) * m, where m is a motion vector
+	template <typename T> inline m6x8_m2m CrossM(Vec8<T> const& a)
+	{
+		auto cx_ang = CPM(a.ang);
+		auto cx_lin = CPM(a.lin);
+		return m6x8_m2m(cx_ang, m3x4Zero, cx_lin, cx_ang);
+	}
+
+	// Returns the spatial cross product matrix for 'a', for use with force vectors.
+	// i.e. b = a x* f = cpmF(a) * f, where f is a force vector
+	template <typename T> inline m6x8_f2f CrossF(Vec8<T> const& a)
+	{
+		auto cx_ang = CPM(a.ang);
+		auto cx_lin = CPM(a.lin);
+		return m6x8_f2f(cx_ang, cx_lin, m3x4Zero, cx_ang);
+	}
+
+	// Return the transpose of a spatial matrix
+	template <typename A, typename B> inline Mat6x8<A,B> Transpose(Mat6x8<A,B> const& m)
+	{
+		return Mat6x8<A,B>(
+			Transpose(m.m11), Transpose(m.m21),
+			Transpose(m.m12), Transpose(m.m22));
+	}
 	#pragma endregion
 }
 
@@ -209,9 +385,30 @@ namespace pr
 	{
 		PRUnitTest(pr_maths_spatial)
 		{
-			v4 vel(1,2,3,0);
-			v4 ang(4,3,2,0);
-			auto o2w = m4x4::Rotation(v4ZAxis, maths::tau_by_4, v4(1,1,1,1));
+			{
+				v4 vel(1,2,3,0);
+				v4 ang(4,3,2,0);
+				auto o2w = m4x4::Rotation(v4ZAxis, maths::tau_by_4, v4(1,1,1,1));
+			}
+			{// Cross Products
+				auto v  =  v8( 1, 1, 1, 2, 2, 2);
+				auto vm = v8m(+1,+2,+3,+4,+5,+6);
+				auto vf = v8f(-1,-2,-3,-4,-5,-6);
+				
+				{
+					auto r0 = Cross(vm, vf);
+					auto r1 = CrossF(vm) * vf;
+					PR_CHECK(FEql(r0, r1), true);
+				}
+				{
+					// vx* == -Transpose(vx)
+					auto m0 = CrossM(v); // vx
+					auto m1 = CrossF(v); // vx*
+					auto m2 = Transpose(m1);
+					auto m3 = static_cast<m6x8_m2m>(-m2);
+					PR_CHECK(FEql(m0, m3), true);
+				}
+			}
 		}
 	}
 }

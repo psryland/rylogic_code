@@ -2,11 +2,9 @@
 // LineDrawer
 //  Copyright (c) Rylogic Ltd 2009
 //*****************************************************************************************
-#include "linedrawer/main/stdafx.h"
+#include "linedrawer/main/forward.h"
 #include "linedrawer/main/script_sources.h"
 #include "linedrawer/main/user_settings.h"
-#include "linedrawer/main/ldrexception.h"
-#include "linedrawer/main/ldrevent.h"
 #include "pr/linedrawer/ldr_object.h"
 #include "pr/linedrawer/ldr_objects_dlg.h"
 #include "pr/common/events.h"
@@ -21,8 +19,8 @@ namespace ldr
 		:m_filepath()
 		,m_context_id(pr::GuidZero)
 	{}
-	ScriptSources::File::File(pr::string<wchar_t> const& filepath, pr::Guid const* context_id)
-		:m_filepath(pr::filesys::Standardise<pr::string<wchar_t>>(filepath))
+	ScriptSources::File::File(filepath_t const& filepath, id_t const* context_id)
+		:m_filepath(filepath)
 		,m_context_id(context_id ? *context_id : pr::GenerateGUID())
 	{}
 
@@ -40,9 +38,11 @@ namespace ldr
 	{
 		// Delete all objects belonging to the files
 		for (auto& file : m_files)
-			pr::ldr::Remove(m_store, &file.m_context_id, 1, 0, 0);
+			pr::ldr::Remove(m_store, &file.second.m_context_id, 1, 0, 0);
 
-		m_files.resize(0);
+		// Remove all file watches
+		m_watcher.RemoveAll();
+		m_files.clear();
 	}
 
 	// Reload all files
@@ -50,15 +50,13 @@ namespace ldr
 	{
 		// Make a copy of the file list
 		auto files = m_files;
-		m_files.clear();
 
-		// Delete all objects belonging to these files
-		for (auto& file : files)
-			pr::ldr::Remove(m_store, &file.m_context_id, 1, 0, 0);
+		// Reset the sources
+		Clear();
 
 		// Add each file again
 		for (auto& file : files)
-			AddFile(file.m_filepath.c_str(), Event_StoreChanged::EReason::Reload);
+			AddFile(file.second.m_filepath.c_str(), Evt_StoreChanged::EReason::Reload);
 	}
 
 	// Add a string source
@@ -75,36 +73,35 @@ namespace ldr
 			Reader reader(src, false, nullptr, nullptr, &m_lua_src);
 			Parse(m_rdr, reader, out, false);
 
-			pr::events::Send(Event_StoreChanged(m_store, m_store.size() - bcount, out, Event_StoreChanged::EReason::NewData));
-			pr::events::Send(Event_Refresh());
+			pr::events::Send(Evt_StoreChanged(m_store, m_store.size() - bcount, out, Evt_StoreChanged::EReason::NewData));
+			pr::events::Send(Evt_Refresh());
 		}
-		catch (pr::script::Exception const& e)
+		catch (std::exception const& ex)
 		{
-			auto msg = pr::FmtS("Script error found while parsing source string.\n%s", e.what());
-			pr::events::Send(Event_Error(msg));
-		}
-		catch (std::exception const& e)
-		{
-			auto msg = pr::FmtS("Error encountered while parsing source string.\n%s", e.what());
-			pr::events::Send(Event_Error(msg));
+			auto msg = pr::FmtS(L"Script error found while parsing source string.\r\n%S", ex.what());
+			pr::events::Send(Evt_AppMsg(Evt_AppMsg::EType::Error, msg, L"Add Script String"));
 		}
 	}
 
 	// Add a file source
 	void ScriptSources::AddFile(wchar_t const* filepath)
 	{
-		AddFile(filepath, Event_StoreChanged::EReason::NewData);
+		AddFile(filepath, Evt_StoreChanged::EReason::NewData);
 	}
 
 	// Internal add file
-	void ScriptSources::AddFile(wchar_t const* filepath, Event_StoreChanged::EReason reason)
+	void ScriptSources::AddFile(wchar_t const* filepath, Evt_StoreChanged::EReason reason)
 	{
+		// Get the normalised filepath (before Remove() because it might be an existing file)
+		auto fpath = pr::filesys::Standardise<filepath_t>(filepath);
+
 		// Ensure the same file is not added twice
-		Remove(filepath);
+		// Don't use 'filepath', Remove() may invalidate this
+		Remove(fpath.c_str());
+		filepath = nullptr;
 
 		// Add the filepath to the source files collection
-		m_files.push_back(File(filepath));
-		auto& file = m_files.back();
+		auto& file = m_files[fpath] = File(fpath, nullptr);
 
 		try
 		{
@@ -112,19 +109,18 @@ namespace ldr
 			auto bcount = m_store.size();
 
 			// Add file watchers for the file and everything it includes
-			m_watcher.Add(filepath, this, file.m_context_id, &file);
-			auto add_watch = [&](pr::script::string const& fpath)
+			m_watcher.Add(fpath.c_str(), this, file.m_context_id, &file);
+			auto add_watch = [&](pr::script::string const& fp)
 			{
 				// Use the same ID for all included files as well
-				auto f = File(fpath, &file.m_context_id);
-				m_watcher.Add(f.m_filepath.c_str(), this, f.m_context_id, &file);
+				m_watcher.Add(pr::filesys::Standardise(fp).c_str(), this, file.m_context_id, &file);
 			};
 
 			// Add the file based on it's file type
 			auto extn = pr::filesys::GetExtension(file.m_filepath);
 			if (pr::str::EqualI(extn, "lua"))
 			{
-				m_lua_src.Add(filepath);
+				m_lua_src.Add(fpath.c_str());
 			}
 			else if (pr::str::EqualI(extn, "p3d"))
 			{
@@ -132,7 +128,7 @@ namespace ldr
 				inc.FileOpened += add_watch;
 				inc.m_ignore_missing_includes = m_settings.m_IgnoreMissingIncludes;
 
-				Buffer<> src(ESrcType::Buffered, pr::FmtS("*Model {\"%s\"}", filepath));
+				Buffer<> src(ESrcType::Buffered, pr::FmtS("*Model {\"%s\"}", fpath.c_str()));
 				Reader reader(src, false, &inc, nullptr, &m_lua_src);
 
 				Parse(m_rdr, reader, out, true, file.m_context_id);
@@ -149,26 +145,28 @@ namespace ldr
 				Parse(m_rdr, reader, out, true, file.m_context_id);
 			}
 
-			pr::events::Send(Event_StoreChanged(m_store, m_store.size() - bcount, out, reason));
-			pr::events::Send(Event_Refresh());
+			pr::events::Send(Evt_StoreChanged(m_store, m_store.size() - bcount, out, reason));
+			pr::events::Send(Evt_Refresh());
 		}
-		catch (pr::script::Exception const& e)
+		catch (pr::script::Exception const& ex)
 		{
-			auto msg = pr::FmtS("Script error found while parsing source file '%s'.\n%s", filepath, e.what());
-			pr::events::Send(Event_Error(msg));
+			auto msg = pr::FmtS(L"Script error found while parsing source file '%s'.\r\n%S", fpath.c_str(), ex.what());
+			pr::events::Send(Evt_AppMsg(Evt_AppMsg::EType::Error, msg, L"Add Script File"));
 		}
 		catch (LdrException const& e)
 		{
+			std::wstring msg;
 			switch (e.code())
 			{
 			default: throw;
 			case ELdrException::FileNotFound:
-				pr::events::Send(Event_Error(pr::FmtS("Source file '%s' not found", filepath)));
+				msg = pr::FmtS(L"Source file '%s' not found.", fpath.c_str());
 				break;
 			case ELdrException::FailedToLoad:
-				pr::events::Send(Event_Error(pr::FmtS("Failed to load source file '%s'", filepath)));
+				msg = pr::FmtS(L"Failed to load source file '%s'", fpath.c_str());
 				break;
 			}
+			pr::events::Send(Evt_AppMsg(Evt_AppMsg::EType::Error, msg, L"Add Script File"));
 		}
 	}
 
@@ -176,19 +174,20 @@ namespace ldr
 	void ScriptSources::Remove(wchar_t const* filepath)
 	{
 		// Find the file in the file list
-		File file(filepath);
-		auto iter = std::find_if(std::begin(m_files), std::end(m_files), [&](File const& f){ return f.m_filepath == file.m_filepath; });
-		if (iter == std::end(m_files)) return;
-		file = *iter;
+		auto iter = m_files.find(pr::filesys::Standardise<filepath_t>(filepath));
+		if (iter == std::end(m_files))
+			return;
 
-		// Remove it from the file list
-		m_files.erase(iter);
+		auto& file = iter->second;
 
 		// Delete all objects belonging to this file
 		pr::ldr::Remove(m_store, &file.m_context_id, 1, 0, 0);
 
 		// Delete all associated file watches
 		m_watcher.RemoveAll(file.m_context_id);
+
+		// Remove it from the file list
+		m_files.erase(iter);
 	}
 
 	// Check all file sources for modifications and reload any that have changed
@@ -204,7 +203,8 @@ namespace ldr
 		// Get the filepath of the root file and add it as though it is a new file.
 		// The changed file may have been included from other files.
 		// We want to reload from the root of the file hierarchy
-		auto filepath = static_cast<wchar_t const*>(user_data);
-		AddFile(filepath);
+		auto& file = *static_cast<File const*>(user_data);
+		AddFile(file.m_filepath.c_str());
+		pr::events::Send(Evt_Refresh());
 	}
 }

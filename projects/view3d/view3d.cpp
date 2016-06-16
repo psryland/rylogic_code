@@ -589,7 +589,7 @@ VIEW3D_API BOOL __stdcall View3D_MouseNavigate(View3DWindow window, View3DV2 ss_
 		// If no gizmos are using the mouse, use standard mouse control
 		if (!gizmo_in_use)
 		{
-			if (window->m_camera.MouseControl(nss_point, button_state, nav_start_or_end != 0))
+			if (window->m_camera.MouseControl(nss_point, pr::camera::ENavBtn(button_state), nav_start_or_end != 0))
 				refresh |= true;
 		}
 
@@ -837,25 +837,6 @@ VIEW3D_API void __stdcall View3D_LightSource(View3DWindow window, View3DV4 posit
 }
 
 // Show the lighting UI
-struct PreviewLighting
-{
-	View3DWindow m_window;
-	PreviewLighting(View3DWindow window) :m_window(window) {}
-	void operator()(Light const& light, bool camera_relative)
-	{
-		Light prev_light          = m_window->m_light;
-		bool prev_camera_relative = m_window->m_light_is_camera_relative;
-
-		m_window->m_light                    = light;
-		m_window->m_light_is_camera_relative = camera_relative;
-
-		View3D_Render(m_window);
-		View3D_Present(m_window);
-
-		m_window->m_light                    = prev_light;
-		m_window->m_light_is_camera_relative = prev_camera_relative;
-	}
-};
 VIEW3D_API void __stdcall View3D_ShowLightingDlg(View3DWindow window)
 {
 	try
@@ -863,14 +844,29 @@ VIEW3D_API void __stdcall View3D_ShowLightingDlg(View3DWindow window)
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		PreviewLighting pv(window);
-		LightingUI<PreviewLighting> dlg(window->m_hwnd, pv);
-		dlg.m_light           = window->m_light;
-		dlg.m_camera_relative = window->m_light_is_camera_relative;
-		if (dlg.ShowDialog(window->m_wnd.m_hwnd) != pr::gui::EDialogResult::Ok) return;
+
+		auto pv = [&](Light const& light, bool cam_rel)
+		{
+			auto prev_light   = window->m_light;
+			auto prev_cam_rel = window->m_light_is_camera_relative;
+
+			window->m_light                    = light;
+			window->m_light_is_camera_relative = cam_rel;
+
+			View3D_Render(window);
+			View3D_Present(window);
+
+			window->m_light                    = prev_light;
+			window->m_light_is_camera_relative = prev_cam_rel;
+		};
+
+		LightingUI dlg(window->m_hwnd, window->m_light, window->m_light_is_camera_relative, pv);
+		if (dlg.ShowDialog(window->m_wnd.m_hwnd) != pr::gui::EDialogResult::Ok)
+			return;
+
 		window->m_light                    = dlg.m_light;
 		window->m_light_is_camera_relative = dlg.m_camera_relative;
-		
+
 		View3D_Render(window);
 		View3D_Present(window);
 
@@ -986,9 +982,9 @@ void __stdcall ObjectEditCB(ModelPtr model, void* ctx, pr::Renderer&)
 	// If the model already has nuggets grab some defaults from it
 	if (!model->m_nuggets.empty())
 	{
-		auto nug = model->m_nuggets.front();
-		model_type = static_cast<EView3DPrim>(nug.m_topo.value);
-		geom_type  = static_cast<EView3DGeom>(nug.m_geom.value);
+		auto& nug = model->m_nuggets.front();
+		model_type = static_cast<EView3DPrim>(nug.m_topo);
+		geom_type  = static_cast<EView3DGeom>(nug.m_geom);
 		v3dmat.m_diff_tex = nug.m_tex_diffuse.m_ptr;
 		v3dmat.m_env_map  = nullptr;
 	}
@@ -1003,8 +999,8 @@ void __stdcall ObjectEditCB(ModelPtr model, void* ctx, pr::Renderer&)
 
 	// Update the material
 	NuggetProps mat;
-	mat.m_topo = static_cast<EPrim::Enum_>(model_type);
-	mat.m_geom = static_cast<EGeom::Enum_>(geom_type);
+	mat.m_topo = static_cast<EPrim>(model_type);
+	mat.m_geom = static_cast<EGeom>(geom_type);
 	mat.m_tex_diffuse = v3dmat.m_diff_tex;
 	mat.m_vrange = vrange;
 	mat.m_irange = irange;
@@ -2277,9 +2273,8 @@ VIEW3D_API void __stdcall View3D_ShowDemoScript(View3DWindow window)
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		auto& ui = window->m_editor_ui;
-		ui.Show(window->m_hwnd);
-		ui.Text(pr::ldr::CreateDemoScene().c_str());
+		window->m_editor_ui.Show();
+		window->m_editor_ui.Text(pr::ldr::CreateDemoScene().c_str());
 	}
 	CatchAndReport(View3D_ShowDemoScript, window,);
 }
@@ -2322,7 +2317,7 @@ VIEW3D_API HWND __stdcall View3D_LdrEditorCreate(HWND parent)
 		// effectively a handle for the allocated window.
 		// Do nothing other than create the window here, callers can
 		// then restyle, move, show/hide, etc the window as they want.
-		auto editor = std::make_unique<pr::ldr::ScriptEditorDlg>(parent);
+		auto editor = std::make_unique<pr::ldr::ScriptEditorUI>(parent);
 		HWND hwnd = *editor;
 		::SetLastError(0);
 		auto prev = ::SetWindowLongPtrA(hwnd, GWLP_USERDATA, LONG_PTR(editor.get()));
@@ -2338,7 +2333,7 @@ VIEW3D_API void __stdcall View3D_LdrEditorDestroy(HWND hwnd)
 	{
 		if (hwnd == 0) return;
 
-		EditorPtr edt(reinterpret_cast<pr::ldr::ScriptEditorDlg*>(::GetWindowLongPtrA(hwnd, GWLP_USERDATA)));
+		EditorPtr edt(reinterpret_cast<pr::ldr::ScriptEditorUI*>(::GetWindowLongPtrA(hwnd, GWLP_USERDATA)));
 		if (!edt) throw std::exception("No back reference pointer found for this window");
 		::SetWindowLongPtrA(hwnd, GWLP_USERDATA, 0);
 		// 'edt' going out of scope should delete it

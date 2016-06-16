@@ -27,21 +27,23 @@ struct MainUI :Form
 	// Step by the main loop at 120Hz
 	void Step(double elapsed_seconds)
 	{
-		// Apply gravity: GMm/r^2
-		float const G = 1.0f;
-		auto sep = m_body0.O2W().pos - m_body1.O2W().pos;
-		auto r_sq = Length3Sq(sep);
-		if (r_sq > 0.1_m)
-		{
-			auto force_mag = G * m_body0.Mass() * m_body1.Mass() / r_sq;
-			auto force = v8f(v4Zero, force_mag * sep / Sqrt(r_sq));
-			m_body0.m_rb.m_force += force;
-			m_body1.m_rb.m_force -= force;
-		}
+		//  // Apply gravity: GMm/r^2
+		//  float const G = 1.0f;
+		//  auto sep = m_body0.O2W().pos - m_body1.O2W().pos;
+		//  auto r_sq = Length3Sq(sep);
+		//  if (r_sq > 0.1_m)
+		//  {
+		//  	auto force_mag = G * m_body0.Mass() * m_body1.Mass() / r_sq;
+		//  	auto force = v8f(v4Zero, force_mag * sep / Sqrt(r_sq));
+		//  	m_body0.m_rb.m_force += force;
+		//  	m_body1.m_rb.m_force -= force;
+		//  }
+
+		m_body0.ApplyForceWS(v4XAxis, v4XAxis, v4Zero);
 
 		// Evolve the bodies
 		for (auto body : {&m_body0, &m_body1})
-			Evolve(body->m_rb, elapsed_seconds);
+			Evolve(*body, elapsed_seconds);
 	}
 
 	// Render a frame
@@ -76,7 +78,7 @@ int __stdcall WinMain(HINSTANCE, HINSTANCE, LPTSTR, int)
 		main.Show();
 
 		SimMsgLoop loop;
-		loop.AddStepContext("step", std::bind(&MainUI::Step, &main, std::placeholders::_1), 120.0f, true);
+		loop.AddStepContext("step", std::bind(&MainUI::Step, &main, std::placeholders::_1), 100.0f, true);
 		loop.AddStepContext("rdr" , std::bind(&MainUI::Render, &main, std::placeholders::_1), 60.0f, true);
 		loop.AddMessageFilter(main);
 		return loop.Run();

@@ -24,7 +24,7 @@
       <UniqueIdentifier>{29bd319b-df3b-4080-a7e8-32306a556ab9}</UniqueIdentifier>
     </Filter>
     <Filter Include="pr\physics\shape">
-      <UniqueIdentifier>{8f1b6011-8ac1-487d-a76c-189d839ec5ed}</UniqueIdentifier>
+      <UniqueIdentifier>{c5c98060-1da1-4e1b-b6bb-676deefe27ed}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -63,40 +63,22 @@
     <ClInclude Include="..\projects\physics2/src\forward.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\physics2\shape\shape.h">
+    <ClInclude Include="..\include\pr\physics2\physics.h">
+      <Filter>pr\physics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\shape\inertia.h">
       <Filter>pr\physics\shape</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\physics2\shape\mass.h">
       <Filter>pr\physics\shape</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\physics2\shape\shape_box.h">
-      <Filter>pr\physics\shape</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\physics2\shape\shape_array.h">
-      <Filter>pr\physics\shape</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\physics2\shape\shape_builder.h">
-      <Filter>pr\physics\shape</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\physics2\shape\material.h">
       <Filter>pr\physics\shape</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\physics2\physics.h">
-      <Filter>pr\physics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\physics2\shape\ldr_helper.h">
+    <ClInclude Include="..\include\pr\physics2\shape\shape_mass.h">
       <Filter>pr\physics\shape</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\physics2\shape\shape_sphere.h">
-      <Filter>pr\physics\shape</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\physics2\shape\shape_triangle.h">
-      <Filter>pr\physics\shape</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\physics2\shape\inertia.h">
-      <Filter>pr\physics\shape</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\physics2\shape\shape_polytope.h">
+    <ClInclude Include="..\include\pr\physics2\shape\shape_builder.h">
       <Filter>pr\physics\shape</Filter>
     </ClInclude>
   </ItemGroup>

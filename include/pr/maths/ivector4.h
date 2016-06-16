@@ -11,7 +11,8 @@
 
 namespace pr
 {
-	struct alignas(16) iv4
+	// template <typename T> - todo: when MS fix the alignment bug for templates
+	struct alignas(16) IVec4
 	{
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
@@ -27,8 +28,8 @@ namespace pr
 		#pragma warning(pop)
 
 		// Construct
-		iv4() = default;
-		iv4(int x_, int y_, int z_, int w_)
+		IVec4() = default;
+		IVec4(int x_, int y_, int z_, int w_)
 		#if PR_MATHS_USE_INTRINSICS
 			:vec(_mm_set_epi32(w_,z_,y_,x_))
 		#else
@@ -40,7 +41,7 @@ namespace pr
 		{
 			assert(maths::is_aligned(this));
 		}
-		explicit iv4(int x_)
+		explicit IVec4(int x_)
 		#if PR_MATHS_USE_INTRINSICS
 			:vec(_mm_set1_epi32(x_))
 		#else
@@ -52,19 +53,19 @@ namespace pr
 		{
 			assert(maths::is_aligned(this));
 		}
-		template <typename T, typename = maths::enable_if_v4<T>> iv4(T const& v)
-			:iv4(x_as<int>(v), y_as<int>(v), z_as<int>(v), w_as<int>(v))
+		template <typename T, typename = maths::enable_if_v4<T>> IVec4(T const& v)
+			:IVec4(x_as<int>(v), y_as<int>(v), z_as<int>(v), w_as<int>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v3<T>> iv4(T const& v, int w_)
-			:iv4(x_as<int>(v), y_as<int>(v), z_as<int>(v), w_)
+		template <typename T, typename = maths::enable_if_v3<T>> IVec4(T const& v, int w_)
+			:IVec4(x_as<int>(v), y_as<int>(v), z_as<int>(v), w_)
 		{}
-		template <typename T, typename = maths::enable_if_v2<T>> iv4(T const& v, int z_, int w_)
-			:iv4(x_as<int>(v), y_as<int>(v), z_, w_)
+		template <typename T, typename = maths::enable_if_v2<T>> IVec4(T const& v, int z_, int w_)
+			:IVec4(x_as<int>(v), y_as<int>(v), z_, w_)
 		{}
-		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit iv4(T const* v)
-			:iv4(x_as<int>(v), y_as<int>(v), z_as<int>(v), w_as<int>(v))
+		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit IVec4(T const* v)
+			:IVec4(x_as<int>(v), y_as<int>(v), z_as<int>(v), w_as<int>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v4<T>> iv4& operator = (T const& rhs)
+		template <typename T, typename = maths::enable_if_v4<T>> IVec4& operator = (T const& rhs)
 		{
 			x = x_as<int>(rhs);
 			y = y_as<int>(rhs);
@@ -85,6 +86,7 @@ namespace pr
 			return arr[i];
 		}
 	};
+	using iv4 = IVec4;
 	static_assert(maths::is_vec4<iv4>::value, "");
 	static_assert(std::is_pod<iv4>::value, "iv4 must be a pod type");
 

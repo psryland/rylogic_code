@@ -10,7 +10,7 @@
 
 namespace pr
 {
-	struct iv2
+	template <typename T> struct IVec2
 	{
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
@@ -22,21 +22,21 @@ namespace pr
 		#pragma warning(pop)
 
 		// Construct
-		iv2() = default;
-		iv2(int x_, int y_)
+		IVec2() = default;
+		IVec2(int x_, int y_)
 			:x(x_)
 			,y(y_)
 		{}
-		explicit iv2(int x_)
-			:iv2(x_, x_)
+		explicit IVec2(int x_)
+			:IVec2(x_, x_)
 		{}
-		template <typename T, typename = maths::enable_if_v2<T>> iv2(T const& v)
-			:iv2(x_as<int>(v), y_as<int>(v))
+		template <typename T, typename = maths::enable_if_v2<T>> IVec2(T const& v)
+			:IVec2(x_as<int>(v), y_as<int>(v))
 		{}
-		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit iv2(T const* v)
-			:iv2(x_as<int>(v), y_as<int>(v))
+		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit IVec2(T const* v)
+			:IVec2(x_as<int>(v), y_as<int>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v2<T>> iv2& operator = (T const& rhs)
+		template <typename T, typename = maths::enable_if_v2<T>> IVec2& operator = (T const& rhs)
 		{
 			x = x_as<int>(rhs);
 			y = y_as<int>(rhs);
@@ -55,6 +55,7 @@ namespace pr
 			return arr[i];
 		}
 	};
+	using iv2 = IVec2<void>;
 	static_assert(maths::is_vec2<iv2>::value, "");
 	static_assert(std::is_pod<iv2>::value, "iv2 must be a pod type");
 

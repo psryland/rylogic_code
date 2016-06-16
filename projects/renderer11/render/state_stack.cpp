@@ -92,10 +92,10 @@ namespace pr
 
 			// Tell the IA what sort of primitives to expect
 			if (current.m_topo != pending.m_topo || force)
-				m_dc->IASetPrimitiveTopology((D3D11_PRIMITIVE_TOPOLOGY)pending.m_topo.value);
+				m_dc->IASetPrimitiveTopology((D3D11_PRIMITIVE_TOPOLOGY)pending.m_topo);
 		}
 
-		// Setup render states
+		// Set up render states
 		void StateStack::SetupRS(DeviceState& current, DeviceState& pending, bool force)
 		{
 			// Combine states in priority order

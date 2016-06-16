@@ -6,57 +6,140 @@
 
 #include <memory>
 #include <functional>
-#include <windows.h>
+#include "pr/gui/wingui.h"
+#include "pr/gui/scintilla_ctrl.h"
 
 namespace pr
 {
 	namespace ldr
 	{
 		// Script editor interface
-		struct ScriptEditorDlg
+		struct ScriptEditorUI :pr::gui::Form
 		{
-			// Callback function for rendering the script
-			typedef std::function<void(std::wstring&& script)> RenderCB;
+			pr::gui::ScintillaCtrl m_edit;
+			pr::gui::Button m_btn_render;
+			pr::gui::Button m_btn_close;
 
-			virtual ~ScriptEditorDlg() {}
-			ScriptEditorDlg(HWND parent, RenderCB render_cb = nullptr);
-			ScriptEditorDlg(ScriptEditorDlg const&) = delete;
-			ScriptEditorDlg& operator=(ScriptEditorDlg const&) = delete;
+			enum
+			{
+				IDC_TEXT = 1000, IDC_BTN_RENDER, IDC_BTN_CLOSE,
+				ID_LOAD, ID_SAVE, ID_CLOSE,
+				ID_UNDO, ID_REDO, ID_CUT, ID_COPY, ID_PASTE,
+			};
 
-			// Implicitly convertible to HWND
-			virtual operator HWND() const { return m_dlg->operator HWND(); }
+			// This code expects the scintilla.dll to be loaded already
+			ScriptEditorUI(HWND parent)
+				:Form(MakeFormParams<>()
+					.name("ldr-script-editor").title(L"Script Editor").wh(430, 380).start_pos(EStartPosition::CentreParent)
+					.menu({{L"&File", pr::gui::Menu(pr::gui::Menu::EKind::Popup, {{L"&Load", ID_LOAD}, {L"&Save", ID_SAVE}, {pr::gui::MenuItem::Separator}, {L"&Close", IDCANCEL}})}})
+					.icon_bg((HICON)::SendMessageW(parent, WM_GETICON, ICON_BIG, 0))
+					.icon_sm((HICON)::SendMessageW(parent, WM_GETICON, ICON_SMALL, 0))
+					.parent(parent).hide_on_close(true).pin_window(true).visible(false)
+					.wndclass(RegisterWndClass<ScriptEditorUI>()))
+				,m_edit      (pr::gui::ScintillaCtrl::Params<>().parent(this_).name("edit"      ).wh(Fill,Fill).margin(3,3,3,32).anchor(EAnchor::All))
+				,m_btn_close (pr::gui::Button       ::Params<>().parent(this_).name("btn-close" ).xy(-1, -1).text(L"&Close"      ).anchor(EAnchor::BottomRight))
+				,m_btn_render(pr::gui::Button       ::Params<>().parent(this_).name("btn-render").xy(+1, -1).text(L"&Render (F5)").anchor(EAnchor::BottomLeft))
+			{
+				CreateHandle();
 
-			// Hide the window instead of closing
-			virtual bool HideOnClose() const { return m_dlg->HideOnClose(); }
-			virtual void HideOnClose(bool enable) { m_dlg->HideOnClose(enable); }
+				// Initialise the edit control
+				// Note: don't grab input focus until the editor is actually visible
+				m_edit.InitLdrStyle();
+				m_edit.SetSel(-1, 0);
+				m_edit.Key += [this](Control&, pr::gui::KeyEventArgs const& args)
+				{
+					if (!args.m_down) return;
+					if (args.m_vk_key == VK_F5)
+						m_btn_render.OnClick();
+				};
 
-			// Show the window as a non-modal window
-			virtual void Show(HWND parent = 0) { m_dlg->Show(parent); }
+				// Hook up button handlers
+				m_btn_render.Click += [this](pr::gui::Button&, pr::gui::EmptyArgs const&)
+				{
+					auto text = m_edit.Text();
+					Render(*this, pr::Widen(text));
+				};
+				m_btn_close.Click += [this](pr::gui::Button&, pr::gui::EmptyArgs const&)
+				{
+					Close(EDialogResult::Close);
+				};
+			}
 
-			// Show the window as a modal dialog
-			virtual INT_PTR ShowDialog(HWND parent = 0) { return m_dlg->ShowDialog(parent); }
-
-			// Position the window relative to the owner window
-			virtual void PositionWindow(int x, int y, int w, int h) { return m_dlg->PositionWindow(x,y,w,h); }
-
-			// Get/Set the visibility of the window
-			virtual bool Visible() const { return m_dlg->Visible(); }
-			virtual void Visible(bool show) { m_dlg->Visible(show); }
+			// An event raised when the render button is clicked
+			pr::gui::EventHandler<ScriptEditorUI&, std::wstring const&> Render;
 
 			// Get/Set the text in the dialog
-			virtual std::wstring Text() const { return m_dlg->Text(); }
-			virtual void Text(wchar_t const* text) { m_dlg->Text(text); }
-
-			// Get/Set the script render callback function
-			virtual RenderCB Render() const { return m_dlg->Render(); }
-			virtual void Render(RenderCB cb) { m_dlg->Render(cb); }
+			virtual std::wstring Text() const
+			{
+				return pr::Widen(m_edit.Text());
+			}
+			virtual void Text(wchar_t const* text)
+			{
+				m_edit.Text(pr::Narrow(text).c_str());
+			}
 
 		protected:
-			// pImpl pattern to hide window implementation
-			std::unique_ptr<ScriptEditorDlg> m_dlg;
 
-			struct Internal {};
-			ScriptEditorDlg(Internal) {}
+			// Message handler
+			bool ProcessWindowMessage(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
+			{
+				using namespace pr::gui;
+
+				switch (message)
+				{
+				case WM_COMMAND:
+					#pragma region
+					{
+						auto id = LoWord(wparam);
+						switch (id)
+						{
+						case IDCANCEL:
+							{
+								Form::Close(EDialogResult::Cancel);
+								return true;
+							}
+						case ID_LOAD:
+							{
+								COMDLG_FILTERSPEC filters[] = {{L"Ldr Script (*.ldr)",L"*.ldr"}};//,{L"All Files",L"*.*"}};
+								auto filename = OpenFileUI(nullptr, FileUIOptions(L"ldr", &filters[0], _countof(filters)));
+								if (!filename.empty())
+								{
+									std::ifstream infile(filename[0]);
+									if (!infile) MessageBoxW(m_hwnd, L"Failed to open file", L"Load Failed", MB_OK|MB_ICONERROR);
+									else m_edit.Load(infile);
+								}
+								return true;
+							}
+						case ID_SAVE:
+							{
+								COMDLG_FILTERSPEC filters[] = {{L"Ldr Script (*.ldr)",L"*.ldr"}};//,{L"All Files",L"*.*"}};
+								auto filename = SaveFileUI(m_hwnd, FileUIOptions(L"ldr", &filters[0], _countof(filters)));
+								if (!filename.empty())
+								{
+									std::ofstream outfile(filename);
+									if (!outfile) MessageBoxW(m_hwnd, L"Failed to open file for writing", L"Save Failed", MB_OK|MB_ICONERROR);
+									else m_edit.Save(outfile);
+								}
+								return true;
+							}
+						}
+						break;
+					}
+					#pragma endregion
+				}
+				return Form::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
+			}
 		};
 	}
 }
+
+// Add a manifest dependency on common controls version 6
+#if defined _M_IX86
+#   pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#elif defined _M_IA64
+#   pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='ia64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#elif defined _M_X64
+#   pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='amd64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#else
+#   pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#endif

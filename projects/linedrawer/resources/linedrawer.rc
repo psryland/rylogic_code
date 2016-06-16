@@ -30,12 +30,12 @@ IDR_MENU_MAIN MENU
 {
     POPUP "&File"
     {
-        MENUITEM "&New\tCtrl+N", ID_FILE_NEW1
+        MENUITEM "&New\tCtrl+N", ID_FILE_NEW
         MENUITEM "&New Script\tCtrl+Shift+N", ID_FILE_NEWSCRIPT
         MENUITEM SEPARATOR
-        MENUITEM "&Open\tCtrl+O", ID_FILE_OPEN1
+        MENUITEM "&Open\tCtrl+O", ID_FILE_OPEN
         MENUITEM "A&dditive Open\tCtrl+Shift+O", ID_FILE_ADDITIVEOPEN
-        MENUITEM "&Save\t Ctrl+S", ID_FILE_SAVE1
+        MENUITEM "&Save\t Ctrl+S", ID_FILE_SAVE
         MENUITEM "Save &As\tCtrl+A", ID_FILE_SAVEAS
         MENUITEM SEPARATOR
         POPUP "&Recent Files"
@@ -44,7 +44,7 @@ IDR_MENU_MAIN MENU
             MENUITEM "Recent Files", ID_FILE_RECENTFILES
         }
         MENUITEM SEPARATOR
-        MENUITEM "E&xit", ID_FILE_EXIT
+        MENUITEM "E&xit", IDCLOSE
     }
     POPUP "&Navigation"
     {
@@ -248,6 +248,9 @@ IDR_ACCELERATOR ACCELERATORS
     "L",            ID_ACCELERATOR_LIGHTING_DLG, VIRTKEY, CONTROL
     "Z",            ID_ACCELERATOR_UNDO, VIRTKEY, CONTROL
     "Y",            ID_ACCELERATOR_REDO, VIRTKEY, CONTROL
+	VK_F5,          ID_ACCELERATOR_RELOAD, VIRTKEY
+	VK_F7,          ID_ACCELERATOR_RESETVIEW, VIRTKEY
+	VK_SPACE,       ID_ACCELERATOR_SHOWOBJECTSUI, VIRTKEY
 }
 
 

@@ -28,7 +28,7 @@ namespace view3d
 		float                       m_origin_point_size;        // The base size of the origin instance
 		bool                        m_focus_point_visible;      // True if we should draw the focus point
 		bool                        m_origin_point_visible;     // True if we should draw the origin point
-		pr::ldr::ScriptEditorDlg    m_editor_ui;                // Object manager for objects added to this window
+		pr::ldr::ScriptEditorUI     m_editor_ui;                // Object manager for objects added to this window
 		pr::ldr::LdrObjectManagerUI m_obj_cont_ui;              // Object manager for objects added to this window
 		pr::ldr::LdrMeasureUI       m_measure_tool_ui;
 		pr::ldr::LdrAngleUI         m_angle_tool_ui;

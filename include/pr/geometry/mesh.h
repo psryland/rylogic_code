@@ -44,7 +44,7 @@ namespace pr
 			TVertIter v_out, TIdxIter i_out)
 		{
 			Props props;
-			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | (normals != 0 ? EGeom::Norm : 0) | (tex_coords != 0 ? EGeom::Tex0 : 0);
+			props.m_geom = EGeom::Vert | (colours ? EGeom::Colr : EGeom::None) | (normals ? EGeom::Norm : EGeom::None) | (tex_coords ? EGeom::Tex0 : EGeom::None);
 
 			// Colour iterator wrapper
 			auto col = pr::CreateRepeater(colours, num_colours, num_verts, pr::Colour32White);

@@ -6,8 +6,7 @@
 
 #include <string>
 #include <list>
-#include <windows.h>
-#include "pr/common/scope.h"
+#include "pr/gui/wingui.h"
 
 namespace pr
 {
@@ -39,54 +38,43 @@ namespace pr
 			};
 			using ItemList = std::list<Item>;
 
-			// Menu event handler
-			struct IHandler
-			{
-				virtual ~IHandler() {}
-				virtual void MenuList_OnClick(MenuList* sender, Item const& item) = 0;
-				virtual void MenuList_ListChanged(MenuList*) {}
-			};
-
 		private:
 
-			ItemList  m_menu_items;  // A container of recent filenames
-			HMENU     m_menu;        // The menu we're adding items to
-			UINT      m_base_id;     // The resource id of the first entry in the recent files menu
-			size_t    m_max_length;  // The maximum number of entries to allow in the menu
-			IHandler* m_handler;     // Interface that handles events
+			HMENU     m_menu;       // The menu we're adding items to
+			UINT      m_base_id;    // The resource id of the first entry in the recent files menu
+			size_t    m_max_length; // The maximum number of entries to allow in the menu
+			ItemList  m_items;      // A container of recent filenames
 
 		public:
 
 			MenuList()
-				:MenuList(nullptr, 0, ~size_t(), nullptr)
+				:MenuList(nullptr, 0, 0)
 			{}
-			MenuList(HMENU menu, UINT base_id, size_t max_length, IHandler* handler)
-				:m_menu_items()
-				,m_menu(menu)
+			MenuList(HMENU menu, UINT base_id, size_t max_length)
+				:m_menu(menu)
 				,m_base_id(base_id)
 				,m_max_length(max_length)
-				,m_handler(handler)
+				,m_items()
 			{}
 
-			// Access the items of the menu list
-			ItemList const& Items() const
-			{
-				return m_menu_items;
-			}
+			// Raised when a menu item is selected
+			EventHandler<MenuList&, Item const&> ItemClicked;
+
+			// Raised when the contents of this menu list changes
+			EventHandler<MenuList&, EmptyArgs const&> ListChanged;
 
 			// Attach this list to a pop-up menu
-			void Attach(HMENU menu, UINT base_id = 0, size_t max_length = ~size_t(), IHandler* handler = nullptr)
+			void Attach(HMENU menu, UINT base_id = 0, size_t max_length = ~size_t())
 			{
-				if (m_menu)
-				{
-					for (; ::RemoveMenu(m_menu, 0, MF_BYPOSITION); ) {}
-				}
+				// Remove any old menu items
+				for (; m_menu && ::RemoveMenu(m_menu, 0, MF_BYPOSITION); ) {}
 
+				// Bind to the new menu
 				m_menu       = menu;
 				m_base_id    = base_id;
 				m_max_length = max_length;
-				m_handler    = handler;
 
+				// Update
 				UpdateMenu();
 			}
 
@@ -98,25 +86,32 @@ namespace pr
 			void MaxLength(size_t max_length)
 			{
 				m_max_length = max_length;
-				if (m_menu_items.size() <= m_max_length)
+				if (m_items.size() <= m_max_length)
 					return;
 
-				for (; m_menu_items.size() > m_max_length; m_menu_items.pop_back()) {}
+				// Reduce the number of items if currently too large
+				for (;m_items.size() > m_max_length;)
+					m_items.pop_back();
 
 				UpdateMenu();
-				if (m_handler)
-					m_handler->MenuList_ListChanged(this);
+				ListChanged(*this, EmptyArgs());
 			}
 
 			// Remove all items from the menu list
 			void Clear()
 			{
-				auto list_changed = !m_menu_items.empty();
-				m_menu_items.clear();
+				auto list_changed = !m_items.empty();
+				m_items.clear();
 
 				UpdateMenu();
-				if (m_handler && list_changed)
-					m_handler->MenuList_ListChanged(this);
+				if (list_changed)
+					ListChanged(*this, EmptyArgs());
+			}
+
+			// Access to the items in the menu list
+			ItemList const& Items() const
+			{
+				return m_items;
 			}
 
 			// Add a menu item or sub menu
@@ -124,32 +119,33 @@ namespace pr
 			// 'user_data' is context data associated with the menu item
 			// 'allow_duplicates' if true allows menu items with the same string name to be added
 			// 'update_menu' if true will cause the items in the menu to be refreshed
-			void Add(wchar_t const* item, void* user_data, bool allow_duplicates, bool update_menu)
+			void Add(wchar_t const* item, void* user_data, bool allow_duplicates, bool update_menu, bool raise_list_changed = true)
 			{
 				// Remove duplicates of 'item'
 				if (!allow_duplicates)
 				{
-					auto iter = std::find(std::begin(m_menu_items), std::end(m_menu_items), item);
-					if (iter != std::end(m_menu_items)) m_menu_items.erase(iter);
+					auto iter = std::find(std::begin(m_items), std::end(m_items), item);
+					if (iter != std::end(m_items))
+						m_items.erase(iter);
 				}
 
 				// Trim the number of items to the maximum
-				for (; m_menu_items.size() >= m_max_length; )
-					m_menu_items.pop_back();
+				for (; m_items.size() >= m_max_length;)
+					m_items.pop_back();
 
 				// Insert the new item at the front
-				m_menu_items.emplace_front(item, user_data);
+				m_items.emplace_front(item, user_data);
 				if (update_menu) UpdateMenu();
-				if (m_handler) m_handler->MenuList_ListChanged(this);
+				if (raise_list_changed) ListChanged(*this, EmptyArgs());
 			}
 
 			// Remove a single item from the menu list
 			// Use 'Items()' to find an iterator to the item to be removed
 			void Remove(ItemList::const_iterator item, bool update_menu)
 			{
-				m_menu_items.erase(item);
+				m_items.erase(item);
 				if (update_menu) UpdateMenu();
-				if (m_handler) m_handler->MenuList_ListChanged(this);
+				ListChanged(*this, EmptyArgs());
 			}
 
 			// Repopulate the menu from the items in this list
@@ -158,11 +154,11 @@ namespace pr
 				if (!m_menu) return;
 
 				// Empty the menu
-				for (; ::RemoveMenu(m_menu, 0, MF_BYPOSITION); ) {}
+				for (; ::RemoveMenu(m_menu, 0, MF_BYPOSITION);) {}
 				
 				// Add the items to the menu
 				unsigned int j = 0;
-				for (auto& item : m_menu_items)
+				for (auto& item : m_items)
 					::AppendMenuW(m_menu, MF_STRING, m_base_id + j++, item.m_name.c_str());
 			}
 
@@ -170,7 +166,7 @@ namespace pr
 			std::wstring Export(wchar_t delimiter = L',') const
 			{
 				std::wstring s;
-				for (auto& item : m_menu_items)
+				for (auto& item : m_items)
 				{
 					s.append(item.m_name);
 					s.append(1, delimiter);
@@ -182,10 +178,6 @@ namespace pr
 			// Import a string of the items in the menu list
 			void Import(std::wstring s)
 			{
-				// Prevent call backs while we import
-				auto handler = m_handler;
-				auto disable_handler = pr::CreateScope([&]{ m_handler = nullptr; }, [&]{ m_handler = handler; });
-
 				// Import the menu items
 				auto beg = std::begin(s);
 				auto end = std::end(s);
@@ -195,9 +187,9 @@ namespace pr
 					for (last = beg; last != end && *last != ','; ++last) {}
 					if (last == beg) break;
 					std::wstring name(beg, last);
-					Add(name.c_str(), 0, true, false);
+					Add(name.c_str(), 0, true, false, false);
 				}
-				m_menu_items.reverse();
+				m_items.reverse();
 				UpdateMenu();
 			}
 
@@ -208,16 +200,16 @@ namespace pr
 				// Message Source  wParam (high word)   wParam (low word)       lParam 
 				//    Menu               0              Menu identifier        (IDM_*)0 
 				//  Accelerator          1           Accelerator identifier    (IDM_*)0 
-				if (uMsg == WM_COMMAND && LOWORD(wParam) >= m_base_id && LOWORD(wParam) < m_base_id + m_menu_items.size())
+				if (uMsg == WM_COMMAND && LOWORD(wParam) >= m_base_id && LOWORD(wParam) < m_base_id + m_items.size())
 				{
-					if (m_handler)
+					if (ItemClicked.count())
 					{
-						auto i = std::begin(m_menu_items);
+						auto i = std::begin(m_items);
 						std::advance(i, LOWORD(wParam) - m_base_id);
 
 						// Use a copy to prevent reentrancy issues
 						Item item = *i;
-						m_handler->MenuList_OnClick(this, item);
+						ItemClicked(*this, item);
 					}
 					lResult = 0;
 					return TRUE;

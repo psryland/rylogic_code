@@ -2,9 +2,8 @@
 // LineDrawer
 //  Copyright (c) Rylogic Ltd 2009
 //*****************************************************************************************
-#include "linedrawer/main/stdafx.h"
+#include "linedrawer/main/forward.h"
 #include "linedrawer/main/navigation.h"
-#include "linedrawer/main/ldrevent.h"
 #include "linedrawer/utility/misc.h"
 #include "linedrawer/utility/debug.h"
 
@@ -74,7 +73,7 @@ namespace ldr
 	{
 	}
 
-	// Called when input focus is given or removed. Implementors should use
+	// Called when input focus is given or removed. Implementers should use
 	// LostInputFocus() to abort any control operations in progress.
 	void Navigation::GainInputFocus(IInputHandler*)
 	{}
@@ -97,7 +96,7 @@ namespace ldr
 	// 'button_state' is the state of the mouse buttons (pr::camera::ENavKey)
 	// 'start_or_end' is true on mouse down/up
 	// Returns true if the camera has moved or objects in the scene have moved
-	bool Navigation::MouseInput(pr::v2 const& pt_ns, int button_state, bool start_or_end)
+	bool Navigation::MouseInput(pr::v2 const& pt_ns, ENavBtn button_state, bool start_or_end)
 	{
 		// Ignore mouse movement unless a button is pressed
 		if (button_state == 0 && !start_or_end)
@@ -105,7 +104,7 @@ namespace ldr
 
 		return m_camera.MouseControl(pt_ns, button_state, start_or_end);
 	}
-	bool Navigation::MouseClick(pr::v2 const&, int button_state)
+	bool Navigation::MouseClick(pr::v2 const&, ENavBtn button_state)
 	{
 		if (!pr::AllSet(button_state, pr::camera::ENavBtn::Middle) &&
 			!pr::AllSet(button_state, pr::camera::ENavBtn::Left|pr::camera::ENavBtn::Right))

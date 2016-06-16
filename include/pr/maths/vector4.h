@@ -12,7 +12,8 @@
 
 namespace pr
 {
-	struct alignas(16) v4
+	// template <typename T> - todo: when MS fix the alignment bug for templates
+	struct alignas(16) Vec4
 	{
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
@@ -29,8 +30,8 @@ namespace pr
 		#pragma warning(pop)
 
 		// Construct
-		v4() = default;
-		v4(float x_, float y_, float z_, float w_)
+		Vec4() = default;
+		Vec4(float x_, float y_, float z_, float w_)
 		#if PR_MATHS_USE_INTRINSICS
 			:vec(_mm_set_ps(w_,z_,y_,x_))
 		#else
@@ -42,7 +43,7 @@ namespace pr
 		{
 			assert(maths::is_aligned(this));
 		}
-		explicit v4(float x_)
+		explicit Vec4(float x_)
 		#if PR_MATHS_USE_INTRINSICS
 			:vec(_mm_set_ps1(x_))
 		#else
@@ -54,19 +55,19 @@ namespace pr
 		{
 			assert(maths::is_aligned(this));
 		}
-		template <typename T, typename = maths::enable_if_v4<T>> v4(T const& v)
-			:v4(x_as<float>(v), y_as<float>(v), z_as<float>(v), w_as<float>(v))
+		template <typename T, typename = maths::enable_if_v4<T>> Vec4(T const& v)
+			:Vec4(x_as<float>(v), y_as<float>(v), z_as<float>(v), w_as<float>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v3<T>> v4(T const& v, float w_)
-			:v4(x_as<float>(v), y_as<float>(v), z_as<float>(v), w_)
+		template <typename T, typename = maths::enable_if_v3<T>> Vec4(T const& v, float w_)
+			:Vec4(x_as<float>(v), y_as<float>(v), z_as<float>(v), w_)
 		{}
-		template <typename T, typename = maths::enable_if_v2<T>> v4(T const& v, float z_, float w_)
-			:v4(x_as<float>(v), y_as<float>(v), z_, w_)
+		template <typename T, typename = maths::enable_if_v2<T>> Vec4(T const& v, float z_, float w_)
+			:Vec4(x_as<float>(v), y_as<float>(v), z_, w_)
 		{}
-		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit v4(T const* v)
-			:v4(x_as<float>(v), y_as<float>(v), z_as<float>(v), w_as<float>(v))
+		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit Vec4(T const* v)
+			:Vec4(x_as<float>(v), y_as<float>(v), z_as<float>(v), w_as<float>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v4<T>> v4& operator = (T const& rhs)
+		template <typename T, typename = maths::enable_if_v4<T>> Vec4& operator = (T const& rhs)
 		{
 			x = x_as<float>(rhs);
 			y = y_as<float>(rhs);
@@ -75,7 +76,7 @@ namespace pr
 			return *this;
 		}
 		#if PR_MATHS_USE_INTRINSICS
-		v4(__m128 v)
+		Vec4(__m128 v)
 			:vec(v)
 		{
 			assert(maths::is_aligned(this));
@@ -95,14 +96,14 @@ namespace pr
 		}
 
 		// Create other vector types
-		v4 w0() const
+		Vec4 w0() const
 		{
-			v4 r(x,y,z,0); // LValue because of alignment
+			Vec4 r(x,y,z,0); // LValue because of alignment
 			return r;
 		}
-		v4 w1() const
+		Vec4 w1() const
 		{
-			v4 r(x,y,z,1); // LValue because of alignment
+			Vec4 r(x,y,z,1); // LValue because of alignment
 			return r;
 		}
 		v2 vec2(int i0, int i1) const
@@ -115,15 +116,16 @@ namespace pr
 		}
 
 		// Construct normalised
-		template <typename = void> static v4 Normal3(float x, float y, float z, float w)
+		template <typename = void> static Vec4 Normal3(float x, float y, float z, float w)
 		{
-			return Normalise3(v4(x, y, z, w));
+			return Normalise3(Vec4(x, y, z, w));
 		}
-		template <typename = void> static v4 Normal4(float x, float y, float z, float w)
+		template <typename = void> static Vec4 Normal4(float x, float y, float z, float w)
 		{
-			return Normalise4(v4(x, y, z, w));
+			return Normalise4(Vec4(x, y, z, w));
 		}
 	};
+	using v4 = Vec4;
 	static_assert(maths::is_vec4<v4>::value, "");
 	static_assert(std::is_pod<v4>::value, "v4 must be a pod type");
 	static_assert(std::alignment_of<v4>::value == 16, "v4 should have 16 byte alignment");
@@ -351,7 +353,7 @@ namespace pr
 	}
 
 	// Square: v * v
-	inline v4 Sqr(v4 const& v)
+	inline v4 pr_vectorcall Sqr(v4_cref v)
 	{
 		#if PR_MATHS_USE_INTRINSICS
 		return v4(_mm_mul_ps(v.vec, v.vec));
@@ -370,7 +372,7 @@ namespace pr
 		return a.x * b.x + a.y * b.y + a.z * b.z;
 		#endif
 	}
-	inline float Dot4(v4_cref a, v4_cref b)
+	inline float pr_vectorcall Dot4(v4_cref a, v4_cref b)
 	{
 		#if PR_MATHS_USE_INTRINSICS
 		return _mm_dp_ps(a.vec, b.vec, 0xF1).m128_f32[0];
@@ -394,6 +396,10 @@ namespace pr
 		#else
 		return v4(a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x, 0);
 		#endif
+	}
+	inline v4 pr_vectorcall Cross(v4_cref a, v4_cref b)
+	{
+		return Cross3(a,b);
 	}
 
 	// Triple product: a . b x c
@@ -554,7 +560,7 @@ namespace pr
 			{
 				v4 a = {-2,  4,  2,  6};
 				v4 b = { 3, -5,  2, -4};
-				m4x4 a2b = m4x4::CrossProductMatrix(a);
+				auto a2b = CPM(a, v4Origin);
 
 				v4 c = Cross3(a,b);
 				v4 d = a2b * b;

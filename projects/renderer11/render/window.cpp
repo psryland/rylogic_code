@@ -187,6 +187,9 @@ namespace pr
 			dsv_desc.ViewDimension      = bbdesc.SampleDesc.Count == 1 ? D3D11_DSV_DIMENSION_TEXTURE2D : D3D11_DSV_DIMENSION_TEXTURE2DMS;
 			dsv_desc.Texture2D.MipSlice = 0;
 			pr::Throw(device->CreateDepthStencilView(depth_stencil.m_ptr, &dsv_desc, &m_main_dsv.m_ptr));
+
+			// Bind the main render target and depth buffer to the OM
+			RestoreRT();
 		}
 
 		// Binds the main render target and depth buffer to the OM

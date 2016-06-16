@@ -18,6 +18,7 @@
 #include "pr/common/imposter.h"
 #include "pr/macros/link.h"
 #include "pr/maths/maths.h"
+#include "pr/maths/spatial.h"
 #include "pr/maths/large_int.h"
 #include "pr/physics/physics.h"
 #include "pr/lua/lua.h"
@@ -83,7 +84,7 @@ ADDIN_API HRESULT WINAPI AddIn_v2(DWORD, DbgHelper* pHelper, int, BOOL, char *pR
 	ReentryGuard guard;
 	pr::v2 vec;
 	if (FAILED(pHelper->Read(vec))) return E_FAIL;
-	_snprintf(pResult, max, "(%+.6ff, %+.6ff); //Len2: %f", vec.x, vec.y, pr::Length2(vec));
+	_snprintf(pResult, max, "{%+g %+g} Len2=%g", vec.x, vec.y, pr::Length2(vec));
 	return S_OK;
 }
 
@@ -93,7 +94,7 @@ ADDIN_API HRESULT WINAPI AddIn_v3(DWORD, DbgHelper* pHelper, int, BOOL, char *pR
 	ReentryGuard guard;
 	pr::v3 vec;
 	if (FAILED(pHelper->Read(vec))) return E_FAIL;
-	_snprintf(pResult, max, "(%+.6ff, %+.6ff, %+.6ff); //Len3: %f", vec.x, vec.y, vec.z, Length3(vec));
+	_snprintf(pResult, max, "{%+g %+g %+g} Len3=%g", vec.x, vec.y, vec.z, Length3(vec));
 	return S_OK;
 }
 
@@ -103,7 +104,27 @@ ADDIN_API HRESULT WINAPI AddIn_v4(DWORD, DbgHelper* pHelper, int, BOOL, char *pR
 	ReentryGuard guard;
 	pr::v4 vec;
 	if (FAILED(pHelper->Read(vec))) return E_FAIL;
-	_snprintf(pResult, max, "(%+.6ff, %+.6ff, %+.6ff, %+.6ff); //Len3: %f Len4: %f", vec.x, vec.y, vec.z, vec.w, Length3(vec), Length4(vec));
+	_snprintf(pResult, max, "{%+g %+g %+g %+g} Len3=%g Len4=%g", vec.x, vec.y, vec.z, vec.w, Length3(vec), Length4(vec));
+	return S_OK;
+}
+
+// Expand a v8
+ADDIN_API HRESULT WINAPI AddIn_v8(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
+{
+	ReentryGuard guard;
+	pr::v8 vec;
+	if (FAILED(pHelper->Read(vec))) return E_FAIL;
+	_snprintf(pResult, max, "{{%+g %+g %+g}  {%+g %+g %+g}}", vec.ang.x, vec.ang.y, vec.ang.z, vec.lin.x, vec.lin.y, vec.lin.z);
+	return S_OK;
+}
+
+// Expand an iv2
+ADDIN_API HRESULT WINAPI AddIn_iv2(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
+{
+	ReentryGuard guard;
+	pr::iv2 vec;
+	if (FAILED(pHelper->Read(vec))) return E_FAIL;
+	_snprintf(pResult, max, "{%+d %+d} Len2=%g", vec.x, vec.y, Length2(vec));
 	return S_OK;
 }
 
@@ -113,7 +134,7 @@ ADDIN_API HRESULT WINAPI AddIn_iv4(DWORD, DbgHelper* pHelper, int, BOOL, char *p
 	ReentryGuard guard;
 	pr::iv4 vec;
 	if (FAILED(pHelper->Read(vec))) return E_FAIL;
-	_snprintf(pResult, max, "(%+d, %+d, %+d, %+d); //Len3: %f Len4: %f", vec.x, vec.y, vec.z, vec.w, Length3(vec), Length4(vec));
+	_snprintf(pResult, max, "{%+d %+d %+d %+d} Len3=%g Len4=%g", vec.x, vec.y, vec.z, vec.w, Length3(vec), Length4(vec));
 	return S_OK;
 }
 
@@ -125,7 +146,29 @@ ADDIN_API HRESULT WINAPI AddIn_i64v4(DWORD, DbgHelper* pHelper, int, BOOL, char 
 	if (FAILED(pHelper->Read(vec))) return E_FAIL;
 	auto len3 = static_cast<double>(pr::Len3(vec[0], vec[1], vec[2]));
 	auto len4 = static_cast<double>(pr::Len4(vec[0], vec[1], vec[2], vec[3]));
-	_snprintf(pResult, max, "(%+lld, %+lld, %+lld, %+lld); //Len3: %f Len4: %f", vec[0], vec[1], vec[2], vec[3], len3, len4);
+	_snprintf(pResult, max, "{%+lld %+lld %+lld %+lld} Len3=%g Len4=%g", vec[0], vec[1], vec[2], vec[3], len3, len4);
+	return S_OK;
+}
+
+// Expand a m2x2
+ADDIN_API HRESULT WINAPI AddIn_m2x2(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
+{
+	ReentryGuard guard;
+	pr::m2x2 mat;
+	if (FAILED(pHelper->Read(mat))) return E_FAIL;
+	float ortho = Cross2(Normalise2(mat.x), Normalise2(mat.y));
+	if (mat == pr::m2x2Identity)
+		_snprintf(pResult, max, "identity 2x2");
+	else
+		_snprintf(pResult, max,
+			"{%+g %+g} \n"
+			"{%+g %+g} \n"
+			"Len={%+g %+g} \n"
+			"Ortho=%g Det=%g \n"
+			,mat.x.x ,mat.x.y
+			,mat.y.x ,mat.y.y
+			,Length2(mat.x), Length2(mat.y)
+			,ortho, Determinant(mat));
 	return S_OK;
 }
 
@@ -140,17 +183,16 @@ ADDIN_API HRESULT WINAPI AddIn_m3x4(DWORD, DbgHelper* pHelper, int, BOOL, char *
 		_snprintf(pResult, max, "identity 3x4");
 	else
 		_snprintf(pResult, max,
-			"auto m = pr::m3x4 {\n"
-			"\t{%+.6ff, %+.6ff, %+.6ff},\n"
-			"\t{%+.6ff, %+.6ff, %+.6ff},\n"
-			"\t{%+.6ff, %+.6ff, %+.6ff}};\n"
-			"//L:\t %+.6ff  %+.6ff  %+.6ff\n"
-			"//Ortho: %f Det: %f\n"
+			"{%+g %+g %+g} \n"
+			"{%+g %+g %+g} \n"
+			"{%+g %+g %+g} \n"
+			"Len={%+g %+g %+g} \n"
+			"Ortho=%g Det=%g \n"
 			,mat.x.x ,mat.x.y ,mat.x.z
 			,mat.y.x ,mat.y.y ,mat.y.z
 			,mat.z.x ,mat.z.y ,mat.z.z
 			,Length3(mat.x), Length3(mat.y), Length3(mat.z)
-			,ortho, Determinant3(mat));
+			,ortho, Determinant(mat));
 	return S_OK;
 }
 
@@ -165,19 +207,44 @@ ADDIN_API HRESULT WINAPI AddIn_m4x4(DWORD, DbgHelper* pHelper, int, BOOL, char *
 		_snprintf(pResult, max, "identity 4x4");
 	else
 		_snprintf(pResult, max,
-			"auto m = pr::m4x4 {\n"
-			"\t{%+.6ff, %+.6ff, %+.6ff, %+.6ff},\n"
-			"\t{%+.6ff, %+.6ff, %+.6ff, %+.6ff},\n"
-			"\t{%+.6ff, %+.6ff, %+.6ff, %+.6ff},\n"
-			"\t{%+.6ff, %+.6ff, %+.6ff, %+.6ff}};\n"
-			"//L:\t %+.6ff  %+.6ff  %+.6ff  %+.6ff\n"
-			"//Ortho: %f Det: %f\n"
+			"{%+g %+g %+g %+g} \n"
+			"{%+g %+g %+g %+g} \n"
+			"{%+g %+g %+g %+g} \n"
+			"{%+g %+g %+g %+g} \n"
+			"Len={%+g %+g %+g %+g} \n"
+			"Ortho=%g Det=%g \n"
 			,mat.x.x ,mat.x.y ,mat.x.z ,mat.x.w
 			,mat.y.x ,mat.y.y ,mat.y.z ,mat.y.w
 			,mat.z.x ,mat.z.y ,mat.z.z ,mat.z.w
 			,mat.w.x ,mat.w.y ,mat.w.z ,mat.w.w
 			,Length3(mat.x), Length3(mat.y), Length3(mat.z) ,Length3(mat.w)
 			,ortho ,Determinant4(mat));
+	return S_OK;
+}
+
+// Expand a m6x8
+ADDIN_API HRESULT WINAPI AddIn_m6x8(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
+{
+	ReentryGuard guard;
+	pr::m6x8 mat;
+	if (FAILED(pHelper->Read(mat))) return E_FAIL;
+	if (mat == m6x8Identity)
+		_snprintf(pResult, max, "identity 6x8");
+	else
+		_snprintf(pResult, max,
+			"{%+g %+g %+g  %+g %+g %+g} \n"
+			"{%+g %+g %+g  %+g %+g %+g} \n"
+			"{%+g %+g %+g  %+g %+g %+g} \n"
+			"{%+g %+g %+g  %+g %+g %+g} \n"
+			"{%+g %+g %+g  %+g %+g %+g} \n"
+			"{%+g %+g %+g  %+g %+g %+g} \n"
+			,mat.m11.x.x ,mat.m11.x.y ,mat.m11.x.z ,mat.m12.x.x ,mat.m12.x.y ,mat.m12.x.z
+			,mat.m11.y.x ,mat.m11.y.y ,mat.m11.y.z ,mat.m12.y.x ,mat.m12.y.y ,mat.m12.y.z
+			,mat.m11.z.x ,mat.m11.z.y ,mat.m11.z.z ,mat.m12.z.x ,mat.m12.z.y ,mat.m12.z.z
+			,mat.m21.x.x ,mat.m21.x.y ,mat.m21.x.z ,mat.m22.x.x ,mat.m22.x.y ,mat.m22.x.z
+			,mat.m21.y.x ,mat.m21.y.y ,mat.m21.y.z ,mat.m22.y.x ,mat.m22.y.y ,mat.m22.y.z
+			,mat.m21.z.x ,mat.m21.z.y ,mat.m21.z.z ,mat.m22.z.x ,mat.m22.z.y ,mat.m22.z.z
+			);
 	return S_OK;
 }
 

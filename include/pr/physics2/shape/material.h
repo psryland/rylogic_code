@@ -4,15 +4,13 @@
 //*********************************************
 #pragma once
 
-#include "pr/physics2/forward.h"
-
 namespace pr
 {
 	namespace physics
 	{
 		struct Material
 		{
-			kg_p_m³_t m_density;           // Material density in kg/m^3
+			float m_density;               // Material density in kg/m^3
 			float m_static_friction;       // Co-efficient of static friction: 0 = no friction, 1 = infinite friction
 			float m_dynamic_friction;      // Co-efficient of dynamic friction: 0 = no friction, 1 = infinite friction
 			float m_rolling_friction;      // Co-efficient of rolling friction: 0 = no friction, 1 = infinite friction 
@@ -21,7 +19,7 @@ namespace pr
 			float m_torsional_elasticity;  // Co-efficient of torsional elasticity: -1.0f = normal ang momentum unchanged (frictionless), 0.0f = normal ang momentum goes to zero, 1.0f = normal ang momentum reversed
 
 			Material(
-				kg_p_m³_t density           = 1000.0f,
+				float density               = 1000.0f,
 				float static_friction       = 0.5f,
 				float dynamic_friction      = 0.5f,
 				float rolling_friction      = 0.5f,

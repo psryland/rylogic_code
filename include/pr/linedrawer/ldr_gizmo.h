@@ -1,11 +1,11 @@
 //***************************************************************************************************
-// Ldr Manipulaion Gizmos
+// Ldr Manipulation Gizmos
 //  Copyright (c) Rylogic Ltd 2015
 //***************************************************************************************************
 // Use:
 //  Place a gizmo in the scene where you want it and with whatever scale you want.
 //  Attach matrices directly to the gizmo, these get updated as the gizmo is used,
-//  or, watch for gimzo events, and read
+//  or, watch for gizmo events, and read
 //  Forward mouse events to the gizmo to enable interaction
 //  Call AddToScene to make the gizmo visible
 #pragma once
@@ -104,8 +104,8 @@ namespace pr
 			Gfx              m_gfx;          // The graphics object for the gizmo
 			pr::m4x4         m_offset;       // The world-space offset transform between when manipulation began and now
 			pr::v2           m_ref_pt;       // The normalised screen space location of where manipulation began
-			pr::Colour32     m_col_hover;    // The colour the component axis has duing hover
-			pr::Colour32     m_col_manip;    // The colour the component axis has duing manipulation
+			pr::Colour32     m_col_hover;    // The colour the component axis has doing hover
+			pr::Colour32     m_col_manip;    // The colour the component axis has doing manipulation
 			EComponent       m_last_hit;     // The axis component last hit with the mouse
 			EComponent       m_component;    // The axis component being manipulated
 			bool             m_manipulating; // True while a manipulation is in progress
@@ -156,7 +156,7 @@ namespace pr
 			pr::m4x4 Offset() const;
 
 			// Interact with the gizmo based on mouse movement.
-			// 'nss_point' should be normalised. i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal cartesian axes
+			// 'nss_point' should be normalised. i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal Cartesian axes
 			// The start of a mouse movement is indicated by 'btn_state' being non-zero
 			// The end of the mouse movement is indicated by 'btn_state' being zero
 			// 'btn_state' is one of the MK_LBUTTON, MK_RBUTTON, values

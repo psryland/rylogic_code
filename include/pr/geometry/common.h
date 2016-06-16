@@ -4,13 +4,14 @@
 //********************************
 #pragma once
 
-#include "pr/macros/enum.h"
+#include <type_traits>
 #include "pr/common/cast.h"
 #include "pr/common/colour.h"
 #include "pr/common/range.h"
 #include "pr/common/fmt.h"
 #include "pr/common/repeater.h"
 #include "pr/common/interpolate.h"
+#include "pr/common/flags_enum.h"
 #include "pr/container/vector.h"
 #include "pr/container/deque.h"
 #include "pr/maths/maths.h"
@@ -21,34 +22,37 @@ namespace pr
 	namespace geometry
 	{
 		// EGeom
-		#define PR_ENUM(x) /*
-			*/x(Invalid ,= 0     ) /*
-			*/x(Vert    ,= 1 << 0) /* Object space 3D position
-			*/x(Colr    ,= 1 << 1) /* Diffuse base colour
-			*/x(Norm    ,= 1 << 2) /* Object space 3D normal
-			*/x(Tex0    ,= 1 << 3) // Diffuse texture
-		PR_DEFINE_ENUM2_FLAGS(EGeom, PR_ENUM);
-		#undef PR_ENUM
+		enum class EGeom
+		{
+			Invalid = 0,
+			None    = 0,
+			Vert    = 1 << 0, // Object space 3D position
+			Colr    = 1 << 1, // Diffuse base colour
+			Norm    = 1 << 2, // Object space 3D normal
+			Tex0    = 1 << 3, // Diffuse texture
+			_bitwise_operators_allowed
+		};
 
 		// EPrim
-		#define PR_ENUM(x)\
-			x(Invalid   ,= 0)\
-			x(PointList ,= 1)\
-			x(LineList  ,= 2)\
-			x(LineStrip ,= 3)\
-			x(TriList   ,= 4)\
-			x(TriStrip  ,= 5)
-		PR_DEFINE_ENUM2(EPrim, PR_ENUM);
-		#undef PR_ENUM
+		enum class EPrim
+		{
+			Invalid   = 0,
+			None      = 0,
+			PointList = 1,
+			LineList  = 2,
+			LineStrip = 3,
+			TriList   = 4,
+			TriStrip  = 5,
+		};
 
 		struct Props
 		{
-			pr::BBox m_bbox;  // Bounding box in model space of the generated model
+			BBox m_bbox;  // Bounding box in model space of the generated model
 			EGeom m_geom;     // The components of the generated geometry
 			bool m_has_alpha; // True if the model contains any alpha
 
 			Props()
-				:m_bbox(pr::BBoxReset)
+				:m_bbox(BBoxReset)
 				,m_geom(EGeom::Vert)
 				,m_has_alpha(false)
 			{}
@@ -65,11 +69,5 @@ namespace pr
 			Transformer& operator ++()   { ++m_pt; return *this; }
 			Transformer operator ++(int) { auto x = *this; ++(*this); return x; }
 		};
-
-		namespace impl
-		{
-			// meta code helper
-			template <typename T> T remove_ref(T&);
-		}
 	}
 }

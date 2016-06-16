@@ -17,12 +17,12 @@ namespace pr
 	namespace rdr
 	{
 		// Check enumerations agree with dx11
-		static_assert(EPrim::Invalid   == D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED    , "EPrim::Invalid   value out of sync with dx11");
-		static_assert(EPrim::PointList == D3D11_PRIMITIVE_TOPOLOGY_POINTLIST    , "EPrim::PointList value out of sync with dx11");
-		static_assert(EPrim::LineList  == D3D11_PRIMITIVE_TOPOLOGY_LINELIST     , "EPrim::LineList  value out of sync with dx11");
-		static_assert(EPrim::LineStrip == D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP    , "EPrim::LineStrip value out of sync with dx11");
-		static_assert(EPrim::TriList   == D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST , "EPrim::TriList   value out of sync with dx11");
-		static_assert(EPrim::TriStrip  == D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP, "EPrim::TriStrip  value out of sync with dx11");
+		static_assert(int(EPrim::Invalid  ) == int(D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED    ), "EPrim::Invalid   value out of sync with dx11");
+		static_assert(int(EPrim::PointList) == int(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST    ), "EPrim::PointList value out of sync with dx11");
+		static_assert(int(EPrim::LineList ) == int(D3D11_PRIMITIVE_TOPOLOGY_LINELIST     ), "EPrim::LineList  value out of sync with dx11");
+		static_assert(int(EPrim::LineStrip) == int(D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP    ), "EPrim::LineStrip value out of sync with dx11");
+		static_assert(int(EPrim::TriList  ) == int(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST ), "EPrim::TriList   value out of sync with dx11");
+		static_assert(int(EPrim::TriStrip ) == int(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP), "EPrim::TriStrip  value out of sync with dx11");
 		
 		// The number of supported quality levels for the given format and sample count
 		UINT MultisampleQualityLevels(D3DPtr<ID3D11Device>& device, DXGI_FORMAT format, UINT sample_count)
@@ -39,10 +39,10 @@ namespace pr
 			{
 			default: PR_ASSERT(PR_DBG_RDR, false, "Unknown primitive type"); return 0;
 			case EPrim::PointList: return icount;
-			case EPrim::LineList:  PR_ASSERT(PR_DBG_RDR, (icount%2) == 0, "Incomplete primitive implied by icount"); return icount / 2;
-			case EPrim::LineStrip: PR_ASSERT(PR_DBG_RDR,  icount    >= 2, "Incomplete primitive implied by icount"); return icount - 1;
-			case EPrim::TriList:   PR_ASSERT(PR_DBG_RDR, (icount%3) == 0, "Incomplete primitive implied by icount"); return icount / 3;
-			case EPrim::TriStrip:  PR_ASSERT(PR_DBG_RDR,  icount    >= 3, "Incomplete primitive implied by icount"); return icount - 2;
+			case EPrim::LineList:  PR_ASSERT(PR_DBG_RDR, (icount%2) == 0, "Incomplete primitive implied by i-count"); return icount / 2;
+			case EPrim::LineStrip: PR_ASSERT(PR_DBG_RDR,  icount    >= 2, "Incomplete primitive implied by i-count"); return icount - 1;
+			case EPrim::TriList:   PR_ASSERT(PR_DBG_RDR, (icount%3) == 0, "Incomplete primitive implied by i-count"); return icount / 3;
+			case EPrim::TriStrip:  PR_ASSERT(PR_DBG_RDR,  icount    >= 3, "Incomplete primitive implied by i-count"); return icount - 2;
 			}
 		}
 

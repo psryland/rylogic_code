@@ -10,7 +10,7 @@
 
 namespace pr
 {
-	struct m2x2
+	template <typename T> struct Mat2x2
 	{
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
@@ -22,26 +22,26 @@ namespace pr
 		#pragma warning(pop)
 
 		// Construct
-		m2x2() = default;
-		m2x2(float xx, float xy, float yx, float yy)
+		Mat2x2() = default;
+		Mat2x2(float xx, float xy, float yx, float yy)
 			:x(xx, xy)
 			,y(yx, yy)
 		{}
-		m2x2(v2 const& x_, v2 const& y_)
+		Mat2x2(v2 const& x_, v2 const& y_)
 			:x(x_)
 			,y(y_)
 		{}
-		explicit m2x2(float x_)
+		explicit Mat2x2(float x_)
 			:x(x_)
 			,y(x_)
 		{}
-		template <typename T, typename = maths::enable_if_v2<T>> m2x2(T const& v)
-			:m2x2(x_as<v2>(v), y_as<v2>(v))
+		template <typename T, typename = maths::enable_if_v2<T>> Mat2x2(T const& v)
+			:Mat2x2(x_as<v2>(v), y_as<v2>(v))
 		{}
-		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit m2x2(T const* v)
+		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit Mat2x2(T const* v)
 			:Mat2x3(x_as<v2>(v), y_as<v2>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v2<T>> m2x2& operator = (T const& rhs)
+		template <typename T, typename = maths::enable_if_v2<T>> Mat2x2& operator = (T const& rhs)
 		{
 			x = x_as<v2>(rhs);
 			y = y_as<v2>(rhs);
@@ -61,13 +61,14 @@ namespace pr
 		}
 
 		// Create a rotation matrix
-		static m2x2 Rotation(float angle)
+		static Mat2x2 Rotation(float angle)
 		{
-			return m2x2(
+			return Mat2x2(
 				v2(+Cos(angle), +Sin(angle)),
 				v2(-Sin(angle), +Cos(angle)));
 		}
 	};
+	using m2x2 = Mat2x2<void>;
 	static_assert(maths::is_mat2<m2x2>::value, "");
 	static_assert(std::is_pod<m2x2>::value, "m2x2 must be a pod type");
 
@@ -131,7 +132,7 @@ namespace pr
 	template <typename = void> inline m2x2 operator * (m2x2 const& lhs, m2x2 const& rhs)
 	{
 		auto ans = m2x2{};
-		auto lhsT = Transpose_(lhs);
+		auto lhsT = Transpose(lhs);
 		ans.x.x = Dot2(lhsT.x, rhs.x);
 		ans.x.y = Dot2(lhsT.y, rhs.x);
 		ans.y.x = Dot2(lhsT.x, rhs.y);
@@ -157,7 +158,7 @@ namespace pr
 	}
 
 	// 2x2 matrix transpose
-	inline m2x2 Transpose_(m2x2 const& mat)
+	inline m2x2 Transpose(m2x2 const& mat)
 	{
 		auto m = mat;
 		std::swap(m.x.y, m.y.x);

@@ -208,8 +208,8 @@ namespace pr
 			inline bool operator != (Str16 const& lhs, Str16 const& rhs) { return !(lhs == rhs); }
 			struct Nugget
 			{
-				u32 m_topo;       // EPrim
-				u32 m_geom;       // EGeom 
+				EPrim m_topo;
+				EGeom m_geom; 
 				Range m_vrange;
 				Range m_irange;
 				Str16 m_mat;

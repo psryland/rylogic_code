@@ -12,7 +12,8 @@
 
 namespace pr
 {
-	struct alignas(16) m3x4
+	// template <typename T> - todo: when MS fix the alignment bug for templates
+	struct alignas(16) Mat3x4
 	{
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
@@ -23,28 +24,28 @@ namespace pr
 		#pragma warning(pop)
 
 		// Construct
-		m3x4() = default;
-		m3x4(v4 const& x_, v4 const& y_, v4 const& z_)
+		Mat3x4() = default;
+		Mat3x4(v4 const& x_, v4 const& y_, v4 const& z_)
 			:x(x_)
 			,y(y_)
 			,z(z_)
 		{
 			assert(maths::is_aligned(this));
 		}
-		explicit m3x4(float x_)
+		explicit Mat3x4(float x_)
 			:x(x_)
 			,y(x_)
 			,z(x_)
 		{
 			assert(maths::is_aligned(this));
 		}
-		template <typename T, typename = maths::enable_if_v3<T>> m3x4(T const& v)
-			:m3x4(x_as<v4>(v), y_as<v4>(v), z_as<v4>(v))
+		template <typename T, typename = maths::enable_if_v3<T>> Mat3x4(T const& v)
+			:Mat3x4(x_as<v4>(v), y_as<v4>(v), z_as<v4>(v))
 		{}
-		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit m3x4(T const* v)
-			:m3x4(x_as<v4>(v), y_as<v4>(v), z_as<v4>(v))
+		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit Mat3x4(T const* v)
+			:Mat3x4(x_as<v4>(v), y_as<v4>(v), z_as<v4>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v3<T>> m3x4& operator = (T const& rhs)
+		template <typename T, typename = maths::enable_if_v3<T>> Mat3x4& operator = (T const& rhs)
 		{
 			x = x_as<v4>(rhs);
 			y = y_as<v4>(rhs);
@@ -96,16 +97,16 @@ namespace pr
 		}
 
 		// Construct a rotation matrix. Order is: roll, pitch, yaw (to match DirectX)
-		static m3x4 Rotation(float pitch, float yaw, float roll)
+		static Mat3x4 Rotation(float pitch, float yaw, float roll)
 		{
 			#if PR_MATHS_USE_DIRECTMATH
 			auto m = DirectX::XMMatrixRotationRollPitchYaw(pitch, yaw, roll);
-			return m3x4(m.r[0], m.r[1], m.r[2]);
+			return Mat3x4(m.r[0], m.r[1], m.r[2]);
 			#else
 			float cos_p = Cos(pitch), sin_p = Sin(pitch);
 			float cos_y = Cos(yaw  ), sin_y = Sin(yaw  );
 			float cos_r = Cos(roll ), sin_r = Sin(roll );
-			return m3x4(
+			return Mat3x4(
 				v4( cos_y*cos_r + sin_y*sin_p*sin_r , cos_p*sin_r , -sin_y*cos_r + cos_y*sin_p*sin_r , 0.0f),
 				v4(-cos_y*sin_r + sin_y*sin_p*cos_r , cos_p*cos_r ,  sin_y*sin_r + cos_y*sin_p*cos_r , 0.0f),
 				v4( sin_y*cos_p                     ,      -sin_p ,                      cos_y*cos_p , 0.0f));
@@ -113,11 +114,11 @@ namespace pr
 		}
 
 		// Create from an axis, angle
-		static m3x4 Rotation(v4 const& axis_norm, v4 const& axis_sine_angle, float cos_angle)
+		static Mat3x4 Rotation(v4 const& axis_norm, v4 const& axis_sine_angle, float cos_angle)
 		{
 			assert("'axis_norm' should be normalised" && IsNormal3(axis_norm));
 
-			auto m = m3x4{};
+			auto m = Mat3x4{};
 			auto trace_vec = axis_norm * (1.0f - cos_angle);
 
 			m.x.x = trace_vec.x * axis_norm.x + cos_angle;
@@ -142,21 +143,21 @@ namespace pr
 		}
 
 		// Create from an axis and angle. 'axis' should be normalised
-		static m3x4 Rotation(v4 const& axis_norm, float angle)
+		static Mat3x4 Rotation(v4 const& axis_norm, float angle)
 		{
 			return Rotation(axis_norm, axis_norm * pr::Sin(angle), pr::Cos(angle));
 		}
 
 		// Create from an angular displacement vector. length = angle(rad), direction = axis
-		static m3x4 Rotation(v4 const& angular_displacement)
+		static Mat3x4 Rotation(v4 const& angular_displacement)
 		{
 			assert("'angular_displacement' should be a scaled direction vector" && FEql(angular_displacement.w, 0.0f));
 			auto len = Length3(angular_displacement);
-			return len > maths::tiny ? m3x4::Rotation(angular_displacement/len, len) : m3x4(v4XAxis, v4YAxis, v4ZAxis);
+			return len > maths::tiny ? Mat3x4::Rotation(angular_displacement/len, len) : Mat3x4(v4XAxis, v4YAxis, v4ZAxis);
 		}
 
 		// Create from quaternion
-		template <typename Quat, typename = maths::enable_if_v4<Quat>> static m3x4 Rotation(Quat const& q)
+		template <typename Quat, typename = maths::enable_if_v4<Quat>> static Mat3x4 Rotation(Quat const& q)
 		{
 			assert("'quat' is a zero quaternion" && !IsZero(q));
 			auto s = 2.0f / Length4Sq(q);
@@ -165,22 +166,22 @@ namespace pr
 			float wx = q.w * xs, wy = q.w * ys, wz = q.w * zs;
 			float xx = q.x * xs, xy = q.x * ys, xz = q.x * zs;
 			float yy = q.y * ys, yz = q.y * zs, zz = q.z * zs;
-			return m3x4(
+			return Mat3x4(
 				v4(1.0f - (yy + zz), xy + wz, xz - wy, 0),
 				v4(xy - wz, 1.0f - (xx + zz), yz + wx, 0),
 				v4(xz + wy, yz - wx, 1.0f - (xx + yy), 0));
 		}
 
 		// Create a transform representing the rotation from one vector to another.
-		static m3x4 Rotation(v4 const& from, v4 const& to)
+		static Mat3x4 Rotation(v4 const& from, v4 const& to)
 		{
 			assert("'from' and 'to' should be normalised" && IsNormal3(from) && IsNormal3(to));
 
 			auto cos_angle = Dot3(from, to);
 			if (cos_angle >= 1.0f - maths::tiny)
-				return m3x4(v4XAxis, v4YAxis, v4ZAxis);
+				return Mat3x4(v4XAxis, v4YAxis, v4ZAxis);
 			if (cos_angle <= maths::tiny - 1.0f)
-				return m3x4(-v4XAxis, -v4YAxis, -v4ZAxis);
+				return Mat3x4(-v4XAxis, -v4YAxis, -v4ZAxis);
 
 			auto axis_size_angle = Cross3(from, to);
 			auto axis_norm = Normalise3(axis_size_angle);
@@ -188,45 +189,45 @@ namespace pr
 		}
 
 		// Create a transform from one basis axis to another
-		template <typename = void> static m3x4 Rotation(AxisId from_axis, AxisId to_axis)
+		template <typename = void> static Mat3x4 Rotation(AxisId from_axis, AxisId to_axis)
 		{
 			// Get the rotation from Z to 'from_axis' = o2f
 			// Get the rotation from Z to 'to_axis' = o2t
 			// 'f2t' = o2t * Invert(o2f)
-			m3x4 o2f, o2t;
+			Mat3x4 o2f, o2t;
 			switch (from_axis)
 			{
 			default: assert(false && "axis_id must one of ±1, ±2, ±3"); o2f = m3x4Identity; break;
-			case -1: o2f = m3x4::Rotation(0.0f, +maths::tau_by_4, 0.0f); break;
-			case +1: o2f = m3x4::Rotation(0.0f, -maths::tau_by_4, 0.0f); break;
-			case -2: o2f = m3x4::Rotation(+maths::tau_by_4, 0.0f, 0.0f); break;
-			case +2: o2f = m3x4::Rotation(-maths::tau_by_4, 0.0f, 0.0f); break;
-			case -3: o2f = m3x4::Rotation(0.0f, +maths::tau_by_2, 0.0f); break;
+			case -1: o2f = Mat3x4::Rotation(0.0f, +maths::tau_by_4, 0.0f); break;
+			case +1: o2f = Mat3x4::Rotation(0.0f, -maths::tau_by_4, 0.0f); break;
+			case -2: o2f = Mat3x4::Rotation(+maths::tau_by_4, 0.0f, 0.0f); break;
+			case +2: o2f = Mat3x4::Rotation(-maths::tau_by_4, 0.0f, 0.0f); break;
+			case -3: o2f = Mat3x4::Rotation(0.0f, +maths::tau_by_2, 0.0f); break;
 			case +3: o2f = m3x4Identity; break;
 			}
 			switch (to_axis)
 			{
 			default: assert(false && "axis_id must one of ±1, ±2, ±3"); o2t = m3x4Identity; break;
-			case -1: o2t = m3x4::Rotation(0.0f, -maths::tau_by_4, 0.0f); break; // I know this sign looks wrong, but it isn't. Must be something to do with signs passed to cos()/sin()
-			case +1: o2t = m3x4::Rotation(0.0f, +maths::tau_by_4, 0.0f); break;
-			case -2: o2t = m3x4::Rotation(+maths::tau_by_4, 0.0f, 0.0f); break;
-			case +2: o2t = m3x4::Rotation(-maths::tau_by_4, 0.0f, 0.0f); break;
-			case -3: o2t = m3x4::Rotation(0.0f, +maths::tau_by_2, 0.0f); break;
+			case -1: o2t = Mat3x4::Rotation(0.0f, -maths::tau_by_4, 0.0f); break; // I know this sign looks wrong, but it isn't. Must be something to do with signs passed to cos()/sin()
+			case +1: o2t = Mat3x4::Rotation(0.0f, +maths::tau_by_4, 0.0f); break;
+			case -2: o2t = Mat3x4::Rotation(+maths::tau_by_4, 0.0f, 0.0f); break;
+			case +2: o2t = Mat3x4::Rotation(-maths::tau_by_4, 0.0f, 0.0f); break;
+			case -3: o2t = Mat3x4::Rotation(0.0f, +maths::tau_by_2, 0.0f); break;
 			case +3: o2t = m3x4Identity; break;
 			}
 			return o2t * InvertFast(o2f);
 		}
 
 		// Create a scale matrix
-		static m3x4 Scale(float scale)
+		static Mat3x4 Scale(float scale)
 		{
-			m3x4 mat = {};
+			Mat3x4 mat = {};
 			mat.x.x = mat.y.y = mat.z.z = scale;
 			return mat;
 		}
-		static m3x4 Scale(float sx, float sy, float sz)
+		static Mat3x4 Scale(float sx, float sy, float sz)
 		{
-			m3x4 mat = {};
+			Mat3x4 mat = {};
 			mat.x.x = sx;
 			mat.y.y = sy;
 			mat.z.z = sz;
@@ -234,25 +235,16 @@ namespace pr
 		}
 
 		// Create a shear matrix
-		static m3x4 Shear(float sxy, float sxz, float syx, float syz, float szx, float szy)
+		static Mat3x4 Shear(float sxy, float sxz, float syx, float syz, float szx, float szy)
 		{
-			m3x4 mat = {};
+			Mat3x4 mat = {};
 			mat.x = v4(1.0f, sxy, sxz, 0.0f);
 			mat.y = v4(syx, 1.0f, syz, 0.0f);
 			mat.z = v4(szx, szy, 1.0f, 0.0f);
 			return mat;
 		}
-
-		// Create a cross product matrix for 'vec'.
-		static m3x4 CrossProductMatrix(v4 const& vec)
-		{
-			// This matrix can be used to take the cross product of another vector: e.g. Cross(v1, v2) == CrossProductMatrix(v1) * v2
-			return m3x4(
-				v4(     0,  vec.z, -vec.y, 0),
-				v4(-vec.z,      0,  vec.x, 0),
-				v4( vec.y, -vec.x,      0, 0));
-		}
 	};
+	using m3x4 = Mat3x4;
 	static_assert(maths::is_mat3<m3x4>::value, "");
 	static_assert(std::is_pod<m3x4>::value, "Should be a pod type");
 	static_assert(std::alignment_of<m3x4>::value == 16, "Should be 16 byte aligned");
@@ -352,7 +344,7 @@ namespace pr
 	template <typename = void> inline m3x4 pr_vectorcall operator * (m3x4_cref lhs, m3x4_cref rhs)
 	{
 		auto ans = m3x4{};
-		auto lhsT = Transpose3x3(lhs);
+		auto lhsT = Transpose(lhs);
 		ans.x = v4(Dot3(lhsT.x, rhs.x), Dot3(lhsT.y, rhs.x), Dot3(lhsT.z, rhs.x), 0);
 		ans.y = v4(Dot3(lhsT.x, rhs.y), Dot3(lhsT.y, rhs.y), Dot3(lhsT.z, rhs.y), 0);
 		ans.z = v4(Dot3(lhsT.x, rhs.z), Dot3(lhsT.y, rhs.z), Dot3(lhsT.z, rhs.z), 0);
@@ -360,7 +352,7 @@ namespace pr
 	}
 	template <typename = void> inline v4 pr_vectorcall operator * (m3x4_cref lhs, v4_cref rhs)
 	{
-		auto lhsT = Transpose3x3(lhs);
+		auto lhsT = Transpose(lhs);
 		return v4(Dot3(lhsT.x, rhs), Dot3(lhsT.y, rhs), Dot3(lhsT.z, rhs), rhs.w);
 	}
 	template <typename = void> inline v3 pr_vectorcall operator * (m3x4_cref lhs, v3 const& rhs)
@@ -373,13 +365,13 @@ namespace pr
 	#pragma region Functions
 
 	// Return the determinant of 'mat'
-	inline float Determinant3(m3x4 const& mat)
+	inline float Determinant(m3x4 const& mat)
 	{
 		return Triple3(mat.x, mat.y, mat.z);
 	}
 
 	// Return the trace of 'mat'
-	inline float Trace3(m3x4 const& mat)
+	inline float Trace(m3x4 const& mat)
 	{
 		return mat.x.x + mat.y.y + mat.z.z;
 	}
@@ -396,8 +388,19 @@ namespace pr
 		return v4(mat.x.x, mat.y.y, mat.z.z, 0);
 	}
 
+	// Create a cross product matrix for 'vec'.
+	inline m3x4 CPM(v4 const& vec)
+	{
+		// This matrix can be used to calculate the cross product with
+		// another vector: e.g. Cross3(v1, v2) == CPM(v1) * v2
+		return m3x4(
+			v4(     0,  vec.z, -vec.y, 0),
+			v4(-vec.z,      0,  vec.x, 0),
+			v4( vec.y, -vec.x,      0, 0));
+	}
+
 	// Return the transpose of 'mat'
-	inline m3x4 Transpose3x3(m3x4 const& mat)
+	inline m3x4 Transpose(m3x4 const& mat)
 	{
 		auto m = mat;
 		std::swap(m.x.y, m.y.x);
@@ -413,32 +416,32 @@ namespace pr
 			FEql(Length3Sq(mat.x), 1.0f) &&
 			FEql(Length3Sq(mat.y), 1.0f) &&
 			FEql(Length3Sq(mat.z), 1.0f) &&
-			FEql(Abs(Determinant3(mat)), 1.0f);
+			FEql(Abs(Determinant(mat)), 1.0f);
 	}
 
 	// True if 'mat' can be inverted
 	inline bool IsInvertable(m3x4 const& mat)
 	{
-		return !FEql(Determinant3(mat), 0.0f);
+		return !FEql(Determinant(mat), 0.0f);
 	}
 
 	// Invert the orthonormal matrix 'mat'
 	inline m3x4 InvertFast(m3x4 const& mat)
 	{
 		assert("Matrix is not orthonormal" && IsOrthonormal(mat));
-		return Transpose3x3(mat);
+		return Transpose(mat);
 	}
 
 	// Invert the matrix 'mat'
 	inline m3x4 Invert(m3x4 const& mat)
 	{
 		assert("Matrix has no inverse" && IsInvertable(mat));
-		auto det = Determinant3(mat);
+		auto det = Determinant(mat);
 		m3x4 tmp = {};
 		tmp.x = Cross3(mat.y, mat.z) / det;
 		tmp.y = Cross3(mat.z, mat.x) / det;
 		tmp.z = Cross3(mat.x, mat.y) / det;
-		return Transpose3x3(tmp);
+		return Transpose(tmp);
 	}
 
 	// Return the square root of a matrix. The square root is the matrix B where B.B = mat.
@@ -472,7 +475,7 @@ namespace pr
 	{
 		assert("Matrix is not a pure rotation matrix" && IsOrthonormal(mat));
 
-		angle = ACos(0.5f * (Trace3(mat) - 1.0f));
+		angle = ACos(0.5f * (Trace(mat) - 1.0f));
 		axis = 1000.0f * Kernel(m3x4Identity - mat);
 		if (IsZero3(axis))
 		{
@@ -692,7 +695,7 @@ namespace pr
 		assert("This only works for orthonormal matrices" && IsOrthonormal(from) && IsOrthonormal(to));
 		
 		auto cpm_x_i2wR = to - from;
-		auto w2iR = Transpose3x3(from);
+		auto w2iR = Transpose(from);
 		auto cpm = cpm_x_i2wR * w2iR;
 		return v4(cpm.y.z, cpm.z.x, cpm.x.y, 0.0f);
 	}

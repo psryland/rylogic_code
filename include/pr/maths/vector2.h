@@ -10,7 +10,7 @@
 
 namespace pr
 {
-	struct v2
+	template <typename T> struct Vec2
 	{
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
@@ -22,21 +22,21 @@ namespace pr
 		#pragma warning(pop)
 
 		// Construct
-		v2() = default;
-		v2(float x_, float y_)
+		Vec2() = default;
+		Vec2(float x_, float y_)
 			:x(x_)
 			,y(y_)
 		{}
-		explicit v2(float x_)
-			:v2(x_, x_)
+		explicit Vec2(float x_)
+			:Vec2(x_, x_)
 		{}
-		template <typename T, typename = maths::enable_if_v2<T>> v2(T const& v)
-			:v2(x_as<float>(v), y_as<float>(v))
+		template <typename T, typename = maths::enable_if_v2<T>> Vec2(T const& v)
+			:Vec2(x_as<float>(v), y_as<float>(v))
 		{}
-		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit v2(T const* v)
-			:v2(x_as<float>(v), y_as<float>(v))
+		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit Vec2(T const* v)
+			:Vec2(x_as<float>(v), y_as<float>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v2<T>> v2& operator = (T const& rhs)
+		template <typename T, typename = maths::enable_if_v2<T>> Vec2& operator = (T const& rhs)
 		{
 			x = x_as<float>(rhs);
 			y = y_as<float>(rhs);
@@ -56,11 +56,12 @@ namespace pr
 		}
 
 		// Construct normalised
-		template <typename = void> static v2 Normal2(float x, float y)
+		template <typename = void> static Vec2 Normal2(float x, float y)
 		{
-			return Normalise2(v2(x,y));
+			return Normalise2(Vec2(x,y));
 		}
 	};
+	using v2 = Vec2<void>;
 	static_assert(maths::is_vec2<v2>::value, "");
 	static_assert(std::is_pod<v2>::value, "v2 must be a pod type");
 

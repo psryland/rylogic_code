@@ -136,7 +136,7 @@ namespace pr
 			virtual void Nav(pr::v2 const& pt, pr::gui::EMouseKey btn_state, bool nav_start_stop)
 			{
 				// EMouseKey and ENavBtn are both enums based on the MK_ macros
-				auto btnstate = static_cast<pr::camera::ENavBtn::Enum_>(btn_state);
+				auto btnstate = static_cast<pr::camera::ENavBtn>(btn_state);
 				m_cam.MouseControl(pt, btnstate, nav_start_stop);
 				RenderNeeded();
 			}

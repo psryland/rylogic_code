@@ -64,7 +64,7 @@ void pr::ph::Evolve(Rigidbody& rb, float elapsed_seconds)
 		// Decide which integrator to use based on the step size and the angular velocity
 		float h = elapsed_seconds; // Keep powers of time in 'h'
 		
-		// Eular step
+		// Euler step
 		if (h * ang_vel < Runge2Threshold)
 		{
 			PR_EXPAND(PR_PH_TEST_ANGULAR, stepper_used = 1; thres = h * ang_vel;)
@@ -116,7 +116,7 @@ void pr::ph::Evolve(Rigidbody& rb, float elapsed_seconds)
 	rb.m_ws_inv_inertia_tensor  = InvInertiaTensorWS(rb.Orientation(), rb.m_os_inv_inertia_tensor); //Iw = (o2w * Io * w2o)^-1  =  w2o^-1 * Io^-1 * o2w^-1  =  o2w * Io^-1 * w2o
 	rb.m_micro_mom_sq           = CalcMicroMomentum(gravity, rb.m_mass, elapsed_seconds);
 	
-	// Update the broadphase now that the rigid body has moved
+	// Update the broad phase now that the rigid body has moved
 	rb.m_bp_entity.Update();
 }
 
@@ -125,7 +125,7 @@ void EvolveAngularOrder1(Rigidbody& rb, float elapsed_seconds)
 {
 	// Rotate the object_to_world by the change in orientation for this time step
 	// 'dorientation/dt = cross_product_matrix(ang_velocity) * orientation * elapsed_seconds'
-	rb.m_object_to_world.rot += m3x4::CrossProductMatrix(rb.AngVelocity() * elapsed_seconds) * rb.Orientation();
+	rb.m_object_to_world.rot += CPM(rb.AngVelocity() * elapsed_seconds) * rb.Orientation();
 }
 
 //*****
@@ -134,13 +134,13 @@ void EvolveAngularOrder2(Rigidbody& rb, float elapsed_seconds)
 {
 	// Calculate mid-point values
 	float half_dt = elapsed_seconds * 0.5f;
-	m3x4 mid_orientation            = rb.Orientation() + m3x4::CrossProductMatrix(rb.AngVelocity() * half_dt) * rb.Orientation();
-	m3x4 mid_ws_inv_inertia_tensor  = mid_orientation * rb.m_os_inv_inertia_tensor * Transpose3x3(mid_orientation);
+	m3x4 mid_orientation            = rb.Orientation() + CPM(rb.AngVelocity() * half_dt) * rb.Orientation();
+	m3x4 mid_ws_inv_inertia_tensor  = mid_orientation * rb.m_os_inv_inertia_tensor * Transpose(mid_orientation);
 	v4   mid_ang_momentum           = rb.m_ang_momentum + rb.m_torque * half_dt;
 	v4   mid_ang_velocity           = mid_ws_inv_inertia_tensor * rb.m_inv_mass * mid_ang_momentum;
 	
 	// Perform step using mid-point angular velocity
-	rb.m_object_to_world.rot += m3x4::CrossProductMatrix(mid_ang_velocity * elapsed_seconds) * rb.Orientation();
+	rb.m_object_to_world.rot += CPM(mid_ang_velocity * elapsed_seconds) * rb.Orientation();
 }
 
 //*****
@@ -180,24 +180,24 @@ void EvolveAngularOrder5(Rigidbody& rb, float elapsed_seconds)
 	// Get the orientation, angular velocity, and derivative of orientation at t0
 	v4      ang_velocity_0 = rb.AngVelocity();
 	m3x4    orientation_0  = rb.Orientation();
-	m3x4    dorientation_0 = m3x4::CrossProductMatrix(ang_velocity_0) * orientation_0;
+	m3x4    dorientation_0 = CPM(ang_velocity_0) * orientation_0;
 	
 	// Step 0
 	step0                       = elapsed_seconds * b00;
 	step_orientation            = orientation_0 + dorientation_0*step0;
 	step_ang_momentum           = rb.m_ang_momentum + rb.m_torque*step0;
-	step_ws_inv_inertia_tensor  = rb.Orientation() * rb.m_os_inv_inertia_tensor * Transpose3x3(rb.Orientation());
+	step_ws_inv_inertia_tensor  = rb.Orientation() * rb.m_os_inv_inertia_tensor * Transpose(rb.Orientation());
 	step_ang_velocity           = step_ws_inv_inertia_tensor * rb.m_inv_mass * step_ang_momentum;
-	m3x4 dorientation_1         = m3x4::CrossProductMatrix(step_ang_velocity) * step_orientation;
+	m3x4 dorientation_1         = CPM(step_ang_velocity) * step_orientation;
 	
 	// Step 1
 	step0                       = elapsed_seconds * b10;
 	step1                       = elapsed_seconds * b11;
 	step_orientation            = orientation_0 + dorientation_0*step0 + dorientation_1*step1;
 	step_ang_momentum           = rb.m_ang_momentum + rb.m_torque*(step0 + step1);
-	step_ws_inv_inertia_tensor  = rb.Orientation() * rb.m_os_inv_inertia_tensor * Transpose3x3(rb.Orientation());
+	step_ws_inv_inertia_tensor  = rb.Orientation() * rb.m_os_inv_inertia_tensor * Transpose(rb.Orientation());
 	step_ang_velocity           = step_ws_inv_inertia_tensor * rb.m_inv_mass * step_ang_momentum;
-	m3x4 dorientation_2         = m3x4::CrossProductMatrix(step_ang_velocity) * step_orientation;
+	m3x4 dorientation_2         = CPM(step_ang_velocity) * step_orientation;
 	
 	// Step 2
 	step0                       = elapsed_seconds * b20;
@@ -205,9 +205,9 @@ void EvolveAngularOrder5(Rigidbody& rb, float elapsed_seconds)
 	step2                       = elapsed_seconds * b22;
 	step_orientation            = orientation_0 + dorientation_0*step0 + dorientation_1*step1 + dorientation_2*step2;
 	step_ang_momentum           = rb.m_ang_momentum + rb.m_torque*(step0 + step1 + step2);
-	step_ws_inv_inertia_tensor  = rb.Orientation() * rb.m_os_inv_inertia_tensor * Transpose3x3(rb.Orientation());
+	step_ws_inv_inertia_tensor  = rb.Orientation() * rb.m_os_inv_inertia_tensor * Transpose(rb.Orientation());
 	step_ang_velocity           = step_ws_inv_inertia_tensor * rb.m_inv_mass * step_ang_momentum;
-	m3x4 dorientation_3         = m3x4::CrossProductMatrix(step_ang_velocity) * step_orientation;
+	m3x4 dorientation_3         = CPM(step_ang_velocity) * step_orientation;
 	
 	// Step 3
 	step0                       = elapsed_seconds * b30;
@@ -216,9 +216,9 @@ void EvolveAngularOrder5(Rigidbody& rb, float elapsed_seconds)
 	step3                       = elapsed_seconds * b33;
 	step_orientation            = orientation_0 + dorientation_0*step0 + dorientation_1*step1 + dorientation_2*step2 + dorientation_3*step3;
 	step_ang_momentum           = rb.m_ang_momentum + rb.m_torque*(step0 + step1 + step2 + step3);
-	step_ws_inv_inertia_tensor  = rb.Orientation() * rb.m_os_inv_inertia_tensor * Transpose3x3(rb.Orientation());
+	step_ws_inv_inertia_tensor  = rb.Orientation() * rb.m_os_inv_inertia_tensor * Transpose(rb.Orientation());
 	step_ang_velocity           = step_ws_inv_inertia_tensor * rb.m_inv_mass * step_ang_momentum;
-	m3x4 dorientation_4         = m3x4::CrossProductMatrix(step_ang_velocity) * step_orientation;
+	m3x4 dorientation_4         = CPM(step_ang_velocity) * step_orientation;
 	
 	// Step 4
 	step0                       = elapsed_seconds * b40;
@@ -228,9 +228,9 @@ void EvolveAngularOrder5(Rigidbody& rb, float elapsed_seconds)
 	step4                       = elapsed_seconds * b44;
 	step_orientation            = orientation_0 + dorientation_0*step0 + dorientation_1*step1 + dorientation_2*step2 + dorientation_3*step3 + dorientation_4*step4;
 	step_ang_momentum           = rb.m_ang_momentum + rb.m_torque*(step0 + step1 + step2 + step3 + step4);
-	step_ws_inv_inertia_tensor  = rb.Orientation() * rb.m_os_inv_inertia_tensor * Transpose3x3(rb.Orientation());
+	step_ws_inv_inertia_tensor  = rb.Orientation() * rb.m_os_inv_inertia_tensor * Transpose(rb.Orientation());
 	step_ang_velocity           = step_ws_inv_inertia_tensor * rb.m_inv_mass * step_ang_momentum;
-	m3x4 dorientation_5         = m3x4::CrossProductMatrix(step_ang_velocity) * step_orientation;
+	m3x4 dorientation_5         = CPM(step_ang_velocity) * step_orientation;
 	
 	// Step 5
 	// ori(t1) = ori(t0) + c0*elapsed_seconds*dori_0 + c1*elapsed_seconds*dori_1 + c2*elapsed_seconds*dori_2

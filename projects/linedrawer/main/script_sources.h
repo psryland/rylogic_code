@@ -8,7 +8,6 @@
 #include "pr/filesys/filewatch.h"
 #include "pr/script/forward.h"
 #include "linedrawer/main/lua_source.h"
-#include "linedrawer/main/ldrevent.h"
 
 namespace ldr
 {
@@ -16,15 +15,21 @@ namespace ldr
 	class ScriptSources :pr::IFileChangedHandler
 	{
 	public:
+		using filepath_t = pr::string<wchar_t>;
+		using id_t = pr::Guid;
+
 		struct File
 		{
-			pr::string<wchar_t> m_filepath;
-			pr::Guid m_context_id;
-			
+			filepath_t m_filepath;   // The file to watch
+			id_t       m_context_id; // Context id for files
+
 			File();
-			File(pr::string<wchar_t> const& filepath, pr::Guid const* context_id = nullptr);
+			File(filepath_t const& filepath, id_t const* context_id);
 		};
-		using FileCont = pr::vector<File>;
+
+		// A container that doesn't invalidate on add/remove is needed because
+		// the file watcher contains a pointer to 'File' objects.
+		using FileCont = std::unordered_map<filepath_t, File>;
 
 	private:
 
@@ -40,17 +45,15 @@ namespace ldr
 		void FileWatch_OnFileChanged(wchar_t const* filepath, void* user_data, bool& handled);
 
 		// Internal add file
-		void AddFile(wchar_t const* filepath, Event_StoreChanged::EReason reason);
+		void AddFile(wchar_t const* filepath, Evt_StoreChanged::EReason reason);
 
 	public:
 		ScriptSources(UserSettings& settings, pr::Renderer& rdr, pr::ldr::ObjectCont& store, LuaSource& lua_src);
 
 		// Return const access to the source files
-		StrList List() const
+		FileCont const& List() const
 		{
-			StrList files;
-			for (auto& file : m_files) files.push_back(file.m_filepath);
-			return files;
+			return m_files;
 		}
 
 		// Remove all file sources

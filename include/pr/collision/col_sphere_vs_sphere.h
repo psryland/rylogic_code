@@ -15,48 +15,48 @@ namespace pr
 {
 	namespace collision
 	{
-		// Test for overlap between two spheres, with generic penetration collection
+		// Test for collision between two spheres
 		template <typename Penetration>
-		bool SphereVsSphere(Shape const& lhs_, m4x4 const& l2w_, Shape const& rhs_, m4x4 const& r2w_, Penetration& pen)
+		void SphereVsSphere(Shape const& lhs_, m4x4 const& l2w_, Shape const& rhs_, m4x4 const& r2w_, Penetration& pen)
 		{
 			auto& lhs = shape_cast<ShapeSphere>(lhs_);
 			auto& rhs = shape_cast<ShapeSphere>(rhs_);
 			auto l2w = l2w_ * lhs_.m_s2p;
 			auto r2w = r2w_ * rhs_.m_s2p;
 
+			// Distance between centres
 			auto r2l = r2w.pos - l2w.pos;
 			auto len = pr::Length3(r2l);
-			float sep = len - lhs.m_radius - rhs.m_radius;
-			if (sep > 0.0f)
-				return false;
-
-			pen(r2l/len, -sep);
-			return true;
+			auto sep = lhs.m_radius + rhs.m_radius - len;
+			pen(sep, [&]{ return r2l/len; });
 		}
 
-		// Returns true if the sphere  'lhs' intersects the orientated box 'rhs'
+		// Returns true if 'lhs' intersects 'rhs'
 		inline bool SphereVsSphere(Shape const& lhs, pr::m4x4 const& l2w, Shape const& rhs, pr::m4x4 const& r2w)
 		{
-			IgnorePenetration p;
-			return SphereVsSphere(lhs, l2w, rhs, r2w, p);
+			TestPenetration p;
+			SphereVsSphere(lhs, l2w, rhs, r2w, p);
+			return p.Contact();
 		}
 
 		// Returns true if 'lhs' and 'rhs' are intersecting.
 		// 'axis' is the collision normal from 'lhs' to 'rhs'
-		// 'penetration' is the depth of penetration between the shapes
+		// 'penetration' is the depth of penetration between the shapes (positive for contact)
 		inline bool SphereVsSphere(Shape const& lhs, pr::m4x4 const& l2w, Shape const& rhs, pr::m4x4 const& r2w, v4& axis, float& penetration)
 		{
-			MinPenetration p;
-			if (!SphereVsSphere(lhs, l2w, rhs, r2w, p))
+			ContactPenetration p;
+			SphereVsSphere(lhs, l2w, rhs, r2w, p);
+			if (!p.Contact())
 				return false;
 
 			// Determine the sign of the separating axis to make it the normal from 'lhs' to 'rhs'
-			auto p0 = Dot3(p.m_sep_axis, (l2w * lhs.m_s2p).pos);
-			auto p1 = Dot3(p.m_sep_axis, (r2w * rhs.m_s2p).pos);
+			auto sep_axis = p.SeparatingAxis();
+			auto p0 = Dot3(sep_axis, (l2w * lhs.m_s2p).pos);
+			auto p1 = Dot3(sep_axis, (r2w * rhs.m_s2p).pos);
 			auto sign = Sign<float>(p0 < p1);
 
-			penetration = p.m_penetration;
-			axis        = sign * p.m_sep_axis;
+			penetration = p.Depth();
+			axis        = sign * sep_axis;
 			return true;
 		}
 
@@ -79,7 +79,6 @@ namespace pr
 
 #if PR_UNITTESTS&&0
 #include "pr/common/unittests.h"
-//#include "pr/str/prstring.h"
 #include "pr/linedrawer/ldr_helper.h"
 namespace pr
 {

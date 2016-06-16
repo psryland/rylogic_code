@@ -29,7 +29,7 @@ namespace pr
 
 	// Find the region of intersection between two convex polygons.
 	// 'out' receives the vertices of the intersection polygon, in winding order
-	template <typename Out> bool Intersect_ConvexPolygonToConvexPolygon(v4 const* poly0, int count0, v4 const* poly1, int count1, v4 const& norm, Out& out)
+	template <typename Out> bool pr_vectorcall Intersect_ConvexPolygonToConvexPolygon(v4 const* poly0, int count0, v4 const* poly1, int count1, v4_cref norm, Out& out)
 	{
 		#if 0
 		pr::v4 last_out;
@@ -78,7 +78,7 @@ namespace pr
 	// Return true if the line intersects the triangle and if so, also
 	// return the barycentric coordinates 'u,v,w' and parametric value 't'
 	// of the intersection point
-	inline bool Intersect_LineToTriangle(v4 const& s, v4 const& e, v4 const& a, v4 const& b, v4 const& c, float* t = nullptr, v4* bary = nullptr, float* f2b = nullptr, float tmin = 0.0f, float tmax = 1.0f)
+	inline bool pr_vectorcall Intersect_LineToTriangle(v4_cref s, v4_cref e, v4_cref a, v4_cref b, v4_cref c, float* t = nullptr, v4* bary = nullptr, float* f2b = nullptr, float tmin = 0.0f, float tmax = 1.0f)
 	{
 		v4 ab = b - a;
 		v4 ac = c - a;
@@ -117,7 +117,7 @@ namespace pr
 		return true;
 	}
 
-	// Given a line passing through 's' and 'e' and a ccw triangle 'a', 'b', 'c',
+	// Given a line passing through 's' and 'e' and a CCW triangle 'a', 'b', 'c',
 	// Returns true if the line pierces triangle.
 	// Returns the barycentric coordinates (u,v,w) of the intersection point.
 	// If the line pierces from front to back then 'front_to_back' will be 1.0f
@@ -125,7 +125,7 @@ namespace pr
 	// Note about floating point accuracy: always ensure that the line direction and
 	// the triangle edges provided to this function have the same direction each time.
 	// This ensures the returned results are consistent
-	inline bool Intersect_LineToTriangle(v4 const& s, v4 const& e, v4 const& a, v4 const& b, v4 const& c, float& front_to_back, v4& bary)
+	inline bool pr_vectorcall Intersect_LineToTriangle(v4_cref s, v4_cref e, v4_cref a, v4_cref b, v4_cref c, float& front_to_back, v4& bary)
 	{
 		v4 line = e - s;
 		v4 sa   = a - s;
@@ -153,12 +153,12 @@ namespace pr
 		return bary.x > -maths::tiny && bary.y > -maths::tiny && bary.z > -maths::tiny;
 	}
 
-	// Given a line passing through 's' with direction 'd', and initial parametric range [tmin,tmax],
+	// Given a line passing through 's' with direction 'd', and initial parametric range '[tmin,tmax]',
 	// returns true if the line pierces the sphere within the initial range.
 	// The sphere is centred on the origin, 's' and 'd' should be in sphere space
 	// 'tmin' and 'tmax' should be initialised to -FLT_MAX and FLT_MAX respectively for infinite line intersection.
 	// Returns the parametric values of the intersection points.
-	inline bool Intersect_LineToSphere(v4 const& s, v4 const& d, float radius, float& tmin, float& tmax)
+	inline bool pr_vectorcall Intersect_LineToSphere(v4_cref s, v4_cref d, float radius, float& tmin, float& tmax)
 	{
 		auto d_sq = Dot3(d,d);
 		if (d_sq < maths::tiny)
@@ -185,11 +185,11 @@ namespace pr
 		return true;
 	}
 
-	// Given a line passing through 's' with direction 'd', and initial parametric range [tmin,tmax],
+	// Given a line passing through 's' with direction 'd', and initial parametric range '[tmin,tmax]',
 	// returns true if the line pierces the axis aligned box within the initial range.
 	// 'tmin' and 'tmax' should be initialised to -FLT_MAX and FLT_MAX respectively for infinite line intersection.
 	// Returns the parametric values of the intersection points.
-	inline bool Intersect_LineToBBox(v4 const& s, v4 const& d, BBox const& box, float& tmin, float& tmax)
+	inline bool pr_vectorcall Intersect_LineToBBox(v4_cref s, v4_cref d, BBox_cref box, float& tmin, float& tmax)
 	{
 		auto bb_min = box.Lower();
 		auto bb_max = box.Upper();
@@ -228,9 +228,9 @@ namespace pr
 	// Test if the line segment starting at 's' and ending at 'e' with initial
 	// parametric values 't0' and 't1' to the infinite plane described by 'plane'.
 	// The portion of the line on the positive side of the plane is returned, described
-	// by updated 't0' and 't1' values. 'plane' can be a normalised or unnormalised plane.
+	// by updated 't0' and 't1' values. 'plane' does not have to be a normalised plane.
 	// Returns true if the interval [t0,t1] is not zero.
-	inline bool Intersect_LineSegmentToPlane(Plane const& plane, v4 const& s, v4 const& e, float& t0, float& t1)
+	inline bool pr_vectorcall Intersect_LineSegmentToPlane(Plane const& plane, v4_cref s, v4_cref e, float& t0, float& t1)
 	{
 		// Find the distances to the plane for the start and end of the line
 		float d0 = Distance_PointToPlane(s, plane);
@@ -248,7 +248,7 @@ namespace pr
 	// Test if the line segment starting at 's' and ending at 'e' intersects the infinite plane 'plane'.
 	// Returns true if any part of the line is on the positive side of the plane.
 	// Parameter aliasing is allowed, i.e. &s_out == &s is allowed
-	inline bool Intersect_LineSegmentToPlane(Plane const& plane, v4 const& s, v4 const& e, v4& s_out, v4& e_out)
+	inline bool pr_vectorcall Intersect_LineSegmentToPlane(Plane const& plane, v4_cref s, v4_cref e, v4& s_out, v4& e_out)
 	{
 		float d0 = Distance_PointToPlane(s, plane);
 		float d1 = Distance_PointToPlane(e, plane);
@@ -263,16 +263,16 @@ namespace pr
 	}
 
 	// Test if a line segment specified by points 's' and 'e' intersects AABB b
-	inline bool Intersect_LineSegmentToBoundingBox(v4 const& s, v4 const& e, BBox const& bbox)
+	inline bool pr_vectorcall Intersect_LineSegmentToBoundingBox(v4_cref s, v4_cref e, BBox_cref bbox)
 	{
-		v4 lineM = (s + e) * 0.5f;	// Line segment midpoint
-		v4 lineH  = e - lineM;			// Line segment halflength vector
-		lineM = lineM - bbox.m_centre;		// Translate box and segment to origin
+		v4 lineM = (s + e) * 0.5f;     // Line segment midpoint
+		v4 lineH = e - lineM;          // Line segment half length vector
+		lineM = lineM - bbox.m_centre; // Translate box and segment to origin
 
 		// Try world coordinate axes as separating axes
-		float adx = Abs(lineH.x);	if (Abs(lineM.x) > bbox.m_radius.x + adx) return false;
-		float ady = Abs(lineH.y);	if (Abs(lineM.y) > bbox.m_radius.y + ady) return false;
-		float adz = Abs(lineH.z);	if (Abs(lineM.z) > bbox.m_radius.z + adz) return false;
+		float adx = Abs(lineH.x); if (Abs(lineM.x) > bbox.m_radius.x + adx) return false;
+		float ady = Abs(lineH.y); if (Abs(lineM.y) > bbox.m_radius.y + ady) return false;
+		float adz = Abs(lineH.z); if (Abs(lineM.z) > bbox.m_radius.z + adz) return false;
 
 		// Add in an epsilon term to counteract arithmetic errors when segment is
 		// (near) parallel to a coordinate axis
@@ -281,9 +281,10 @@ namespace pr
 		adz += maths::tiny;
 
 		// Try cross products of segment direction vector with coordinate axes
-		if( Abs(lineM.y * lineH.z - lineM.z * lineH.y) > bbox.m_radius.y * adz + bbox.m_radius.z * ady) return false;
-		if( Abs(lineM.z * lineH.x - lineM.x * lineH.z) > bbox.m_radius.x * adz + bbox.m_radius.z * adx) return false;
-		if( Abs(lineM.x * lineH.y - lineM.y * lineH.x) > bbox.m_radius.x * ady + bbox.m_radius.y * adx) return false;
+		// This might be wrong. Compare with 'ClosestPoint_LineSegmentToBBox'
+		if (Abs(lineM.y * lineH.z - lineM.z * lineH.y) > bbox.m_radius.y * adz + bbox.m_radius.z * ady) return false;
+		if (Abs(lineM.z * lineH.x - lineM.x * lineH.z) > bbox.m_radius.x * adz + bbox.m_radius.z * adx) return false;
+		if (Abs(lineM.x * lineH.y - lineM.y * lineH.x) > bbox.m_radius.x * ady + bbox.m_radius.y * adx) return false;
 
 		// No separating axis found; segment must be overlapping AABB
 		return true;
@@ -293,7 +294,7 @@ namespace pr
 	// through the infinite plane 'plane' (i.e. returns false if the line and plane are
 	// parallel but not coincident). Also returns the parametric value of the intercept 't'.
 	// 'plane' does not have to be a normalised plane.
-	inline bool Intersect_LineToPlane(Plane const& plane, v4 const& s, v4 const& e, float* t, float tmin, float tmax)
+	inline bool pr_vectorcall Intersect_LineToPlane(Plane const& plane, v4_cref s, v4_cref e, float* t, float tmin, float tmax)
 	{
 		// Find the distances to the plane for the start and end of the line
 		float d0 = Distance_PointToPlane(s, plane);
@@ -313,7 +314,7 @@ namespace pr
 	// 'dist1' is the near plane distance, 'dist2' is the far plane distance
 	// Returns true if any part of the line segment is within the slab
 	// Parameter aliasing is allowed, i.e. &s_out == &s is allowed
-	inline bool Intersect_LineToSlab(v4 const& norm, float dist1, float dist2, v4 const& s, v4 const& e, v4& s_out, v4& e_out)
+	inline bool pr_vectorcall Intersect_LineToSlab(v4_cref norm, float dist1, float dist2, v4_cref s, v4_cref e, v4& s_out, v4& e_out)
 	{
 		assert(dist1 <= dist2);
 		auto plane = plane::make(norm, dist1);
@@ -335,7 +336,7 @@ namespace pr
 	}
 
 	// Returns true if 'bbox' intersects 'plane'
-	inline bool Intersect_BBoxToPlane(BBox const& bbox, Plane const& plane)
+	inline bool pr_vectorcall Intersect_BBoxToPlane(BBox_cref bbox, Plane const& plane)
 	{
 		// If the eight corners of the box are on the same side of the plane then there's no intersect
 		bool first_side = Dot4(GetCorner(bbox, 0), plane) > 0.0f;
@@ -349,7 +350,7 @@ namespace pr
 	}
 
 	// Returns true if 'lhs' and 'rhs' intersect
-	inline bool Intersect_BBoxToBBox(BBox const& lhs, BBox const& rhs)
+	inline bool pr_vectorcall Intersect_BBoxToBBox(BBox_cref lhs, BBox_cref rhs)
 	{
 		return	Abs(lhs.m_centre.x - rhs.m_centre.x) <= (lhs.m_radius.x + rhs.m_radius.x) &&
 				Abs(lhs.m_centre.y - rhs.m_centre.y) <= (lhs.m_radius.y + rhs.m_radius.y) &&
@@ -357,11 +358,11 @@ namespace pr
 	}
 
 	// Returns true if 'lhs' and 'rhs' intersect
-	inline bool Intersect_OBoxToOBox(OBox const& lhs, OBox const& rhs)
+	inline bool pr_vectorcall Intersect_OBoxToOBox(OBox const& lhs, OBox const& rhs)
 	{
 		using namespace pr::collision;
-		auto b0 = ShapeBox::make(lhs);
-		auto b1 = ShapeBox::make(rhs);
+		ShapeBox b0(lhs.m_radius);
+		ShapeBox b1(rhs.m_radius);
 		return BoxVsBox(b0, lhs.m_box_to_world, b1, rhs.m_box_to_world);
 	}
 }

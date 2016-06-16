@@ -122,6 +122,7 @@
     <ClInclude Include="..\include\pr\lua\lua.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\projects\prautoexp\deploy_autoexp.py" />
     <None Include="..\projects\prautoexp\prautoexp.def" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -102,8 +102,8 @@ namespace pr
 		typedef pr::Range<size_t> Range;
 		const Range RangeZero = {0,0};
 
-		typedef pr::geometry::EGeom EGeom;
-		typedef pr::geometry::EPrim EPrim;
+		using EGeom = pr::geometry::EGeom;
+		using EPrim = pr::geometry::EPrim;
 
 		// Render
 		struct Window;

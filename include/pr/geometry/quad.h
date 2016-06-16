@@ -77,10 +77,10 @@ namespace pr
 		template <typename TVertCIter, typename TVertIter, typename TIdxIter>
 		Props Quad(size_t num_quads, TVertCIter verts, size_t num_colours, Colour32 const* colours, m4x4 const& t2q, TVertIter v_out, TIdxIter i_out)
 		{
-			typedef decltype(impl::remove_ref(*i_out)) VIdx;
+			using VIdx = typename std::remove_reference<decltype(*i_out)>::type;
 
 			Props props;
-			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | EGeom::Norm | EGeom::Tex0;
+			props.m_geom = EGeom::Vert | (colours ? EGeom::Colr : EGeom::None) | EGeom::Norm | EGeom::Tex0;
 
 			// Helper function for generating normals
 			auto norm = [](v4 const& a, v4 const& b, v4 const& c) { return Normalise3(Cross3(a - b, c - b), v4Zero); };
@@ -248,10 +248,10 @@ namespace pr
 		template <typename TVertCIter, typename TNormCIter, typename TVertIter, typename TIdxIter>
 		Props QuadStrip(size_t num_quads, TVertCIter verts, float width, size_t num_normals, TNormCIter normals, size_t num_colours, Colour32 const* colours, TVertIter v_out, TIdxIter i_out)
 		{
-			typedef decltype(impl::remove_ref(*i_out)) VIdx;
+			using VIdx = typename std::remove_reference<decltype(*i_out)>::type;
 
 			Props props;
-			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | EGeom::Norm | EGeom::Tex0;
+			props.m_geom = EGeom::Vert | (colours ? EGeom::Colr : EGeom::None) | EGeom::Norm | EGeom::Tex0;
 
 			if (num_quads < 1) return Props();
 			auto num_verts = num_quads + 1;

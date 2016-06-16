@@ -2,10 +2,8 @@
 // LineDrawer
 //  Copyright (c) Rylogic Ltd 2015
 //*****************************************************************************************
-
-#include "linedrawer/main/stdafx.h"
+#include "linedrawer/main/forward.h"
 #include "linedrawer/main/manipulator.h"
-#include "linedrawer/main/ldrevent.h"
 
 namespace ldr
 {
@@ -17,19 +15,19 @@ namespace ldr
 		,m_fwd_input()
 	{}
 
-	// Called when input focus is given or removed. Implementors should use
+	// Called when input focus is given or removed. Implementers should use
 	// LostInputFocus() to abort any control operations in progress.
 	void Manipulator::GainInputFocus(IInputHandler* gained_from)
 	{
 		m_gizmo = pr::ldr::LdrGizmoPtr(new pr::ldr::LdrGizmo(m_rdr, pr::ldr::LdrGizmo::EMode::Scale, pr::m4x4Identity));
 		m_fwd_input = gained_from;
-		pr::events::Send(Event_Refresh());
+		pr::events::Send(Evt_Refresh());
 	}
 	void Manipulator::LostInputFocus(IInputHandler*)
 	{
 		m_gizmo = nullptr;
 		m_fwd_input = nullptr;
-		pr::events::Send(Event_Refresh());
+		pr::events::Send(Evt_Refresh());
 	}
 
 	// Keyboard input.
@@ -42,19 +40,19 @@ namespace ldr
 
 	// Mouse input.
 	// 'pos_ns' is the normalised screen space position of the mouse
-	//   i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal cartesian axes
+	//   i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal Cartesian axes
 	// 'button_state' is the state of the mouse buttons (pr::camera::ENavKey)
 	// 'start_or_end' is true on mouse down/up
 	// Returns true if the camera has moved or objects in the scene have moved
-	bool Manipulator::MouseInput(pr::v2 const& pos_ns, int btn_state, bool start_or_end)
+	bool Manipulator::MouseInput(pr::v2 const& pos_ns, ENavBtn btn_state, bool start_or_end)
 	{
-		auto refresh = m_gizmo->MouseControl(m_cam, pos_ns, btn_state, start_or_end);
+		auto refresh = m_gizmo->MouseControl(m_cam, pos_ns, int(btn_state), start_or_end);
 		if (!m_gizmo->m_manipulating)
 			refresh |= m_fwd_input->MouseInput(pos_ns, btn_state, start_or_end);
 		
 		return refresh;
 	}
-	bool Manipulator::MouseClick(pr::v2 const& pos_ns, int btn_state)
+	bool Manipulator::MouseClick(pr::v2 const& pos_ns, ENavBtn btn_state)
 	{
 		return m_fwd_input->MouseClick(pos_ns, btn_state);
 	}

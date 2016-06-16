@@ -35,7 +35,7 @@ namespace pr
 				BBox  m_bbox;  // Model bounding box
 				EGeom m_geom;  // Geometry type
 
-				enum { GeomMask = VType::GeomMask };
+				static EGeom const GeomMask = VType::GeomMask;
 
 				Cont(std::size_t vcount = 0, std::size_t icount = 0, std::size_t ncount = 0)
 					:m_name()

@@ -3,10 +3,14 @@ EXPORTS
 	AddIn_v2
 	AddIn_v3
 	AddIn_v4
+	AddIn_v8
+	AddIn_iv2
 	AddIn_iv4
 	AddIn_i64v4
+	AddIn_m2x2
 	AddIn_m3x4
 	AddIn_m4x4
+	AddIn_m6x8
 	AddIn_MAXMatrix3
 	AddIn_stdvector
 	AddIn_stdstring

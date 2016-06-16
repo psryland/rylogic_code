@@ -13,7 +13,6 @@ namespace pr
 {
 	namespace rdr
 	{
-		template <typename Preview>
 		class LightingUI :public pr::gui::Form
 		{
 			enum
@@ -62,15 +61,16 @@ namespace pr
 			pr::gui::Label       m_lbl_outer;
 
 			pr::gui::ToolTip     m_tt;
-			Preview              m_preview;
 
 		public:
 
 			// The light we're displaying properties for
-			pr::rdr::Light m_light;
+			Light m_light;
 			bool m_camera_relative;
 
-			LightingUI(HWND parent, Preview const& preview)
+			// Show the lighting UI with preview callback: Preview(Light const& light, bool cam_rel);
+			template <typename Preview>
+			LightingUI(HWND parent, Light const& light, bool cam_rel, Preview preview)
 				:Form(MakeDlgParams<>()
 					.parent(parent)
 					.name("rdr-lighting-ui")
@@ -119,9 +119,8 @@ namespace pr
 
 				,m_tt                (pr::gui::ToolTip::Params<>().parent(this_))
 
-				,m_preview(preview)
-				,m_light()
-				,m_camera_relative(true)
+				,m_light(light)
+				,m_camera_relative(cam_rel)
 			{
 				CreateHandle();
 
@@ -131,10 +130,10 @@ namespace pr
 				m_rdo_point.Click += update_ui;
 				m_rdo_spot.Click += update_ui;
 
-				m_btn_preview.Click += [&](pr::gui::Button&, pr::gui::EmptyArgs const&)
+				m_btn_preview.Click += [&,preview](pr::gui::Button&, pr::gui::EmptyArgs const&)
 				{
 					ReadValues();
-					m_preview(m_light, m_camera_relative);
+					preview(m_light, m_camera_relative);
 				};
 				m_btn_cancel.Click += [&](pr::gui::Button&, pr::gui::EmptyArgs const&)
 				{

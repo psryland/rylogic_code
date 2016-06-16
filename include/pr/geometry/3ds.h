@@ -692,7 +692,7 @@ namespace pr
 					}
 
 					// Output a nugget for this material group
-					auto geom = EGeom::Vert | EGeom::Colr | EGeom::Norm | (!mat.m_textures.empty() ? EGeom::Tex0 : 0);
+					auto geom = EGeom::Vert | EGeom::Colr | EGeom::Norm | (!mat.m_textures.empty() ? EGeom::Tex0 : EGeom::None);
 					nugget_out(mat, geom, vrange, irange);
 				}
 

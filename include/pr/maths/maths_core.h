@@ -317,34 +317,43 @@ namespace pr
 		return r;
 	}
 
-	// Sign, returns +1 if positive, -1 if negative, 0 if zero or a mixture of +1,-1
-	template <typename T, typename = maths::enable_if_vec_cp<T>> inline T Sign(T x)
+	// Converts bool to +1,-1 (note: no 0 value)
+	template <typename T> inline T Sign(bool positive)
 	{
-		return x > 0 ? T(+1) : x < 0 ? T(-1) : T(0);
-	}
-	template <typename T, typename = maths::enable_if_v2<T>> inline int Sign2(T const& v)
-	{
-		int p = (x_cp(v) > 0) + (y_cp(v) > 0);
-		int n = (x_cp(v) < 0) + (y_cp(v) < 0);
-		return (p == 2) - (n == 2);
-	}
-	template <typename T, typename = maths::enable_if_v3<T>> inline int Sign3(T const& v)
-	{
-		int p = (x_cp(v) > 0) + (y_cp(v) > 0) + (z_cp(v) > 0);
-		int n = (x_cp(v) < 0) + (y_cp(v) < 0) + (z_cp(v) < 0);
-		return (p == 3) - (n == 3);
-	}
-	template <typename T, typename = maths::enable_if_v4<T>> inline int Sign4(T const& v)
-	{
-		int n = (x_cp(v) < 0) + (y_cp(v) < 0) + (z_cp(v) < 0) + (w_cp(v) < 0);
-		int p = (x_cp(v) > 0) + (y_cp(v) > 0) + (z_cp(v) > 0) + (w_cp(v) > 0);
-		return (p == 4) - (n == 4);
-	}
-	template <typename T> inline T Sign(bool positive) // Converts bool to +1,-1 (note: no 0 value)
-	{
-		return positive ? static_cast<T>(1) : static_cast<T>(-1);
+		return positive ? T(1) : T(-1);
 	}
 
+	// Sign, returns +1 if x >= 0 otherwise -1
+	template <typename T, typename = maths::enable_if_vec_cp<T>> inline T Sign(T x, bool zero_is_positive = true)
+	{
+		return x > 0 ? T(+1) : x < 0 ? T(-1) : T(zero_is_positive);
+	}
+	//template <typename T, typename = maths::enable_if_v2<T>> inline int Sign2(T const& v)
+	//{
+	//	int p = (x_cp(v) > 0) + (y_cp(v) > 0);
+	//	int n = (x_cp(v) < 0) + (y_cp(v) < 0);
+	//	return (p == 2) - (n == 2);
+	//}
+	//template <typename T, typename = maths::enable_if_v3<T>> inline int Sign3(T const& v)
+	//{
+	//	int p = (x_cp(v) > 0) + (y_cp(v) > 0) + (z_cp(v) > 0);
+	//	int n = (x_cp(v) < 0) + (y_cp(v) < 0) + (z_cp(v) < 0);
+	//	return (p == 3) - (n == 3);
+	//}
+	//template <typename T, typename = maths::enable_if_v4<T>> inline int Sign4(T const& v)
+	//{
+	//	int n = (x_cp(v) < 0) + (y_cp(v) < 0) + (z_cp(v) < 0) + (w_cp(v) < 0);
+	//	int p = (x_cp(v) > 0) + (y_cp(v) > 0) + (z_cp(v) > 0) + (w_cp(v) > 0);
+	//	return (p == 4) - (n == 4);
+	//}
+	template <typename T, typename = maths::enable_if_vN<T>> inline T Sign(T const& v, bool zero_is_positive = true)
+	{
+		T r = {};
+		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i)
+			r[i] = Sign(v[i], zero_is_positive);
+		return r;
+	}
+	
 	// Truncate value
 	enum class ETruncType { TowardZero, ToNearest };
 	inline float Trunc(float x, ETruncType ty = ETruncType::TowardZero)
@@ -435,7 +444,7 @@ namespace pr
 		assert("Sqrt of negative or undefined value" && x >= 0 && IsFinite(x));
 		return sqrt(x);
 	}
-	inline double Sqrt(int64 x)
+	inline double Sqrt(long long x)
 	{
 		return Sqrt(static_cast<double>(x));
 	}
@@ -450,6 +459,50 @@ namespace pr
 		T r = {};
 		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Sqrt(x[i]);
 		return r;
+	}
+
+	// Signed Sqr
+	inline float SignedSqr(float x)
+	{
+		return x >= 0 ? Sqr(x) : -Sqr(x);
+	}
+	inline double SignedSqr(double x)
+	{
+		return x >= 0 ? Sqr(x) : -Sqr(x);
+	}
+	inline long SignedSqr(long x)
+	{
+		return x >= 0 ? Sqr(x) : -Sqr(x);
+	}
+	inline long long SignedSqr(long long x)
+	{
+		return x >= 0 ? Sqr(x) : -Sqr(x);
+	}
+	template <typename T> inline T SignedSqr(T const& x)
+	{
+		return x >= 0 ? Sqr(x) : -Sqr(x);
+	}
+
+	// Signed Sqrt
+	inline float SignedSqrt(float x)
+	{
+		return x >= 0 ? Sqrt(x) : -Sqrt(-x);
+	}
+	inline double SignedSqrt(double x)
+	{
+		return x >= 0 ? Sqrt(x) : -Sqrt(-x);
+	}
+	inline float SignedSqrt(long x)
+	{
+		return x >= 0 ? Sqrt(x) : -Sqrt(-x);
+	}
+	inline double SignedSqrt(long long x)
+	{
+		return x >= 0 ? Sqrt(x) : -Sqrt(-x);
+	}
+	template <typename T> inline T SignedSqrt(T const& x)
+	{
+		return x >= T() ? Sqrt(x) : -Sqrt(-x);
 	}
 
 	// Scalar functions
@@ -710,14 +763,6 @@ namespace pr
 		return Max(Max(x,y), std::forward<A>(a)...);
 	}
 
-	// Sum
-	template <typename T, typename V = maths::is_vec<T>::elem_type, typename = maths::enable_if_vN<T>> inline V Sum(T const& v)
-	{
-		auto r = V{};
-		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r += v[i];
-		return r;
-	}
-	
 	// Operators
 	template <typename T, typename = maths::enable_if_vN<T>> inline bool operator == (T const& lhs, T const& rhs)
 	{
@@ -888,6 +933,22 @@ namespace pr
 		int i = (x_cp(v) < y_cp(v)) + 0;
 		int j = (z_cp(v) < w_cp(v)) + 2;
 		return (v[i] < v[j]) ? j : i;
+	}
+
+	// Sum the elements in a vector
+	template <typename T, typename V = maths::is_vec<T>::elem_type, typename = maths::enable_if_vN<T>> inline V Sum(T const& v)
+	{
+		auto r = V{};
+		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r += v[i];
+		return r;
+	}
+
+	// Sum the result of applying 'pred' to each element in a vector
+	template <typename T, typename Pred, typename V = maths::is_vec<T>::elem_type, typename = maths::enable_if_vN<T>> inline int Sum(T const& v, Pred pred)
+	{
+		auto r = 0;
+		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r += pred(v[i]);
+		return r;
 	}
 
 	// Dot product

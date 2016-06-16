@@ -4,34 +4,18 @@
 //*****************************************************************************************
 #pragma once
 
-////VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
-//// Until all dialogs using pr::gui::wingui
-//// Change these values to use different versions
-//#define _WTL_NO_CSTRING
-//// wtl
-//#include <atlbase.h>
-//#include <atlapp.h>
-//#include <atldwm.h>
-//#include <atlwin.h>
-//#include <atlctrls.h>
-//#include <atlcom.h>
-//#include <atlmisc.h>
-//#include <atlddx.h>
-//#include <atlframe.h>
-//#include <atlctrls.h>
-//#include <atldlgs.h>
-//#include <atlcrack.h>
-//#include <shellapi.h>
-//#include <atlctrlx.h>
-////^^^^^^
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <fstream>
+#include <vector>
+#include <list>
+#include <memory>
+#include <guiddef.h>
+#include <cguid.h>
+#include <thread>
 
 #include "pr/common/min_max_fix.h"
-
-#include "pr/app/forward.h"
-#include "pr/app/main.h"
-#include "pr/app/main_gui.h"
-
-// pr
 #include "pr/macros/count_of.h"
 #include "pr/macros/enum.h"
 #include "pr/common/assert.h"
@@ -44,6 +28,7 @@
 #include "pr/common/keystate.h"
 #include "pr/common/colour.h"
 #include "pr/common/scope.h"
+#include "pr/common/flags_enum.h"
 #include "pr/maths/maths.h"
 #include "pr/filesys/fileex.h"
 #include "pr/filesys/filesys.h"
@@ -67,82 +52,154 @@
 #include "pr/linedrawer/ldr_script_editor_dlg.h"
 #include "pr/network/web_get.h"
 #include "pr/storage/xml.h"
+#include "pr/storage/settings.h"
 #include "pr/win32/win32.h"
 #include "pr/win32/windows_com.h"
 
 namespace ldr
 {
 	using namespace pr::gui;
-	using namespace pr::app;
 
-	#define PR_ENUM(x)\
-		x(NotSpecified       )\
-		x(FileNotFound       )\
-		x(FailedToLoad       )\
-		x(IncorrectVersion   )\
-		x(InvalidUserSettings)\
-		x(SourceScriptError  )\
-		x(OperationCancelled )
-	PR_DEFINE_ENUM1(ELdrException, PR_ENUM);
-	#undef PR_ENUM
+	enum class ELdrException
+	{
+		NotSpecified,
+		FileNotFound,
+		FailedToLoad,
+		IncorrectVersion,
+		InvalidUserSettings,
+		SourceScriptError,
+		OperationCancelled,
+	};
 
-	// Fill mode
-	#define PR_ENUM(x)\
-		x(Solid)\
-		x(Wireframe)\
-		x(SolidAndWire)
-	PR_DEFINE_ENUM1(EFillMode, PR_ENUM);
-	#undef PR_ENUM
-
-	// Mouse buttons
-	#define PR_ENUM(x)\
-		x(Left   ,= 1 << 0)\
-		x(Right  ,= 1 << 1)\
-		x(Middle ,= 1 << 2)
-	PR_DEFINE_ENUM2_FLAGS(EMouseButton, PR_ENUM);
-	#undef PR_ENUM
+	enum class EFillMode
+	{
+		Solid,
+		Wireframe,
+		SolidAndWire,
+		NumberOf,
+	};
 
 	// Input control mode, Navigation or Manipulation
-	#define PR_ENUM(x)\
-		x(Navigation  )\
-		x(Manipulation)
-	PR_DEFINE_ENUM1(EControlMode, PR_ENUM);
-	#undef PR_ENUM
+	enum class EControlMode
+	{
+		Navigation,
+		Manipulation,
+	};
 
 	// Stereo view
-	#define PR_ENUM(x)\
-		x(Default)\
-		x(Stereo)
-	PR_DEFINE_ENUM1(EScreenView, PR_ENUM);
-	#undef PR_ENUM
+	enum class EScreenView
+	{
+		Default,
+		Stereo,
+	};
 
 	// Modes for bounding groups of objects
-	#define PR_ENUM(x)\
-		x(All)\
-		x(Selected)\
-		x(Visible)
-	PR_DEFINE_ENUM1(EObjectBounds, PR_ENUM);
-	#undef PR_ENUM
+	enum class EObjectBounds
+	{
+		All,
+		Selected,
+		Visible,
+	};
 
-	typedef pr::Exception<ELdrException> LdrException;
-	typedef std::vector<pr::Guid> ContextIdCont;
+	using LdrException  = pr::Exception<ELdrException>;
+	using ContextIdCont = std::vector<pr::Guid>;
+	using StrList       = std::list<pr::string<wchar_t>>;
 
-	wchar_t const* AppTitleW();
-	char const* AppTitleA();
-	char const* AppString();
-	char const* AppStringLine();
-
-	typedef pr::string<char> string;
-	typedef pr::string<wchar_t> wstring;
-	typedef std::istream istream;
-	typedef std::ostream ostream;
-	typedef std::stringstream sstream;
-	typedef std::list<pr::string<wchar_t>> StrList;
-
-	struct MainGUI;
-	struct Main;
+	struct MainUI;
 	struct UserSettings;
 	class  PluginManager;
 	struct Plugin;
 	struct NavManager;
+
+	// Application string constants
+	wchar_t const* AppTitleW();
+	char const*    AppTitleA();
+	char const*    AppVersion();
+	char const*    AppCopyright();
+	char const*    AppString();
+	char const*    AppStringLine();
+
+	#pragma region Events
+	
+	struct Evt_Base
+	{
+		Evt_Base() = default;
+		Evt_Base(Evt_Base const&) = delete;
+		Evt_Base& operator = (Evt_Base const&) = delete;
+	};
+
+	// Event to signal a refresh of the display
+	using Evt_Refresh = pr::ldr::Evt_Refresh;
+
+	// Event raised by the settings system when an error is detected
+	using Evt_SettingsError = pr::settings::Evt<UserSettings>;
+
+	// Event raised by the renderer when it's building a scene
+	using Evt_UpdateScene = pr::rdr::Evt_UpdateScene;
+
+	// Event to signal report an application message to the user
+	struct Evt_AppMsg :Evt_Base
+	{
+		enum class EType { Error, Status };
+
+		EType m_type;
+		std::wstring m_msg;
+		std::wstring m_title;
+
+		Evt_AppMsg(EType ty, std::wstring const& msg, std::wstring const& title)
+			:m_type(ty)
+			,m_msg(msg)
+			,m_title(title)
+		{}
+		Evt_AppMsg(Evt_AppMsg const&) = delete;
+		Evt_AppMsg& operator = (Evt_AppMsg const&) = delete;
+	};
+
+	// Raised just before parsing begins and 'm_store' is changed
+	struct Evt_StoreChanging :Evt_Base
+	{
+		// The store that will be added to
+		pr::ldr::ObjectCont const& m_store;
+
+		Evt_StoreChanging(pr::ldr::ObjectCont const& store)
+			:m_store(store)
+		{}
+	};
+
+	// Event raised when the store of ldr objects is added to or removed from
+	struct Evt_StoreChanged :Evt_Base
+	{
+		enum class EReason { NewData, Reload };
+
+		// The store that was added to
+		pr::ldr::ObjectCont const& m_store;
+
+		// Contains the results of parsing including the
+		// object container that the objects where added to
+		pr::ldr::ParseResult const& m_result;
+
+		// The number of objects added as a result of the parsing.
+		std::size_t m_count;
+
+		// The origin of the store change
+		EReason m_reason;
+
+		Evt_StoreChanged(pr::ldr::ObjectCont const& store, std::size_t count, pr::ldr::ParseResult const& result, EReason why)
+			:m_store(store)
+			,m_count(count)
+			,m_result(result)
+			,m_reason(why)
+		{}
+	};
+
+	// Event raised by the object manager whenever the object selection changes
+	using Evt_SelectionChanged = pr::ldr::Evt_LdrObjectSelectionChanged;
+
+	// Event raised when user settings change
+	using Evt_SettingsChanged = pr::ldr::Evt_SettingsChanged;
+
+	// Event raised by the renderer for each render step
+	using Evt_RenderStepExecute = pr::rdr::Evt_RenderStepExecute;
+
+	#pragma endregion
 }

@@ -31,16 +31,10 @@
     <ClInclude Include="..\include\pr\physics2\physics.h" />
     <ClInclude Include="..\include\pr\physics2\rigid_body\rigid_body.h" />
     <ClInclude Include="..\include\pr\physics2\shape\inertia.h" />
-    <ClInclude Include="..\include\pr\physics2\shape\ldr_helper.h" />
     <ClInclude Include="..\include\pr\physics2\shape\mass.h" />
     <ClInclude Include="..\include\pr\physics2\shape\material.h" />
-    <ClInclude Include="..\include\pr\physics2\shape\shape.h" />
-    <ClInclude Include="..\include\pr\physics2\shape\shape_array.h" />
-    <ClInclude Include="..\include\pr\physics2\shape\shape_box.h" />
     <ClInclude Include="..\include\pr\physics2\shape\shape_builder.h" />
-    <ClInclude Include="..\include\pr\physics2\shape\shape_polytope.h" />
-    <ClInclude Include="..\include\pr\physics2\shape\shape_sphere.h" />
-    <ClInclude Include="..\include\pr\physics2\shape\shape_triangle.h" />
+    <ClInclude Include="..\include\pr\physics2\shape\shape_mass.h" />
     <ClInclude Include="..\include\pr\view3d\view3d.h" />
     <ClInclude Include="..\projects\physics2/src\body.h" />
     <ClInclude Include="..\projects\physics2/src\forward.h" />

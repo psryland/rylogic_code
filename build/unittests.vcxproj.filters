@@ -89,6 +89,9 @@
     <Filter Include="pr\physics\integrater">
       <UniqueIdentifier>{5a67892b-86d2-49ad-b7a9-63d81a2eb9b3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\physics\shape">
+      <UniqueIdentifier>{dd869478-365f-47a5-82be-d217d2dc60bc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\unittests\unittests.cpp">
@@ -915,9 +918,50 @@
     <ClInclude Include="..\include\pr\common\linq.h">
       <Filter>pr\common</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\shape\inertia.h">
+      <Filter>pr\physics\shape</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\shape\mass.h">
+      <Filter>pr\physics\shape</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\shape\material.h">
+      <Filter>pr\physics\shape</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\constants.h">
+      <Filter>pr\physics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\physics.h">
+      <Filter>pr\physics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\shape_line.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\shape_array.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\shape_polytope.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\shape_triangle.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\shape\shape_mass.h">
+      <Filter>pr\physics\shape</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\shape\shape_builder.h">
+      <Filter>pr\physics\shape</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\col_box_vs_line.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />
     <None Include="..\projects\unittests\run_tests.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\include\pr\collision\_readme.txt">
+      <Filter>pr\collision</Filter>
+    </Text>
   </ItemGroup>
 </Project>

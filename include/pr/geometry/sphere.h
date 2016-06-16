@@ -203,7 +203,7 @@ namespace pr
 			}
 			for (auto i = std::begin(faces), iend = std::end(faces); i != iend; ++i)
 			{
-				typedef decltype(impl::remove_ref(*out_indices)) VIdx;
+				using VIdx = typename std::remove_reference<decltype(*out_indices)>::type;
 				*out_indices++ = checked_cast<VIdx>(i->m_vidx[0]);
 				*out_indices++ = checked_cast<VIdx>(i->m_vidx[1]);
 				*out_indices++ = checked_cast<VIdx>(i->m_vidx[2]);

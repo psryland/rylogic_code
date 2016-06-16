@@ -21,22 +21,22 @@
 	template <typename T> using enable_if_has_bitops = typename std::enable_if<has_bitwise_operators_allowed<T>::value>::type;
 
 	// Define the operators
-	template <typename TEnum, typename = enable_if_has_bitops<TEnum>> inline TEnum operator ~ (TEnum lhs)
+	template <typename TEnum, typename = enable_if_has_bitops<TEnum>> constexpr TEnum operator ~ (TEnum lhs)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
 		return TEnum(~static_cast<ut>(lhs));
 	}
-	template <typename TEnum, typename = enable_if_has_bitops<TEnum>> inline TEnum operator | (TEnum lhs, TEnum rhs)
+	template <typename TEnum, typename = enable_if_has_bitops<TEnum>> constexpr TEnum operator | (TEnum lhs, TEnum rhs)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
 		return TEnum(ut(lhs) | ut(rhs));
 	}
-	template <typename TEnum, typename = enable_if_has_bitops<TEnum>> inline TEnum operator & (TEnum lhs, TEnum rhs)
+	template <typename TEnum, typename = enable_if_has_bitops<TEnum>> constexpr TEnum operator & (TEnum lhs, TEnum rhs)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
 		return TEnum(ut(lhs) & ut(rhs));
 	}
-	template <typename TEnum, typename = enable_if_has_bitops<TEnum>> inline TEnum operator ^ (TEnum lhs, TEnum rhs)
+	template <typename TEnum, typename = enable_if_has_bitops<TEnum>> constexpr TEnum operator ^ (TEnum lhs, TEnum rhs)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
 		return TEnum(ut(lhs) ^ ut(rhs));
@@ -53,12 +53,12 @@
 	{
 		return lhs = (lhs ^ rhs);
 	}
-	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> inline TEnum operator << (TEnum lhs, T rhs)
+	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> constexpr TEnum operator << (TEnum lhs, T rhs)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
 		return TEnum(ut(lhs) << rhs);
 	}
-	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> inline TEnum operator >> (TEnum lhs, T rhs)
+	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> constexpr TEnum operator >> (TEnum lhs, T rhs)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
 		return TEnum(ut(lhs) >> rhs);
