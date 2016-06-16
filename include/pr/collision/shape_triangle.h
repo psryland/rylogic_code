@@ -1,17 +1,14 @@
 //*********************************************
-// Physics Engine
+// Collision
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
 #pragma once
-
-// A sphere collision shape
-
-#include "pr/physics2/forward.h"
-#include "pr/physics2/shape/shape.h"
+#include "pr/collision/shape.h"
+#include "pr/geometry/closest_point.h"
 
 namespace pr
 {
-	namespace physics
+	namespace collision
 	{
 		struct ShapeTriangle
 		{
@@ -46,39 +43,6 @@ namespace pr
 			return bbox;
 		}
 
-		// Return the inertia tensor for the triangle
-		inline Inertia CalcInertiaTensor(ShapeTriangle const& shape)
-		{
-			m3x4 inertia = m3x4Zero;
-			for (int i = 0; i != 3; ++i)
-			{
-				auto& vert = shape.m_v[i];
-				inertia.x.x += Sqr(vert.y) + Sqr(vert.z);
-				inertia.y.y += Sqr(vert.z) + Sqr(vert.x);
-				inertia.z.z += Sqr(vert.x) + Sqr(vert.y);
-				inertia.x.y += vert.x * vert.y;
-				inertia.x.z += vert.x * vert.z;
-				inertia.y.z += vert.y * vert.z;
-			}
-			inertia.x.y = -inertia.x.y;
-			inertia.x.z = -inertia.x.y;
-			inertia.y.z = -inertia.x.y;
-			inertia.y.x = inertia.x.y;
-			inertia.z.x = inertia.x.z;
-			inertia.z.y = inertia.y.z;
-			return Inertia(inertia);
-		}
-
-		// Return the mass properties
-		inline MassProperties CalcMassProperties(ShapeTriangle const& shape, float density)
-		{
-			MassProperties mp;
-			mp.m_centre_of_mass = (1.0f / 3.0f) * (shape.m_v.x + shape.m_v.y + shape.m_v.z).w0();
-			mp.m_mass = Length3(Cross3(shape.m_v.y-shape.m_v.x, shape.m_v.z-shape.m_v.y)) * 0.5f * density;
-			mp.m_os_inertia_tensor = CalcInertiaTensor(shape);
-			return mp;
-		}
-
 		// Shift the centre of a triangle
 		inline void ShiftCentre(ShapeTriangle& shape, v4& shift)
 		{
@@ -87,7 +51,7 @@ namespace pr
 			shape.m_v.x -= shift;
 			shape.m_v.y -= shift;
 			shape.m_v.z -= shift;
-			shape.m_base.m_shape_to_model.pos += shift;
+			shape.m_base.m_s2p.pos += shift;
 			shift = v4Zero;
 		}
 

@@ -1,17 +1,13 @@
 //*********************************************
-// Physics Engine
+// Collision
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
 #pragma once
-
-// A box collision shape
-
-#include "pr/physics2/forward.h"
-#include "pr/physics2/shape/shape.h"
+#include "pr/collision/shape.h"
 
 namespace pr
 {
-	namespace physics
+	namespace collision
 	{
 		// Shape array
 		struct ShapeArray
@@ -55,7 +51,7 @@ namespace pr
 		{
 			auto bb = BBoxReset;
 			for (Shape const* i = shape.begin(), *i_end = shape.end(); i != i_end; i = next(i))
-				Encompass(bb, i->m_shape_to_model * i->m_bbox);
+				Encompass(bb, i->m_s2p * i->m_bbox);
 			return bb;
 		}
 	}
