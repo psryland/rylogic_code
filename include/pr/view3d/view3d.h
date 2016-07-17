@@ -317,7 +317,8 @@ extern "C"
 	// Objects
 	VIEW3D_API int                     __stdcall View3D_ObjectsCreateFromFile    (char const* ldr_filepath, GUID const& context_id, BOOL async, View3DIncludes const* includes);
 	VIEW3D_API View3DObject            __stdcall View3D_ObjectCreateLdr          (char const* ldr_script, BOOL file, GUID const& context_id, BOOL async, View3DIncludes const* includes);
-	VIEW3D_API View3DObject            __stdcall View3D_ObjectCreate             (char const* name, View3DColour colour, int icount, int vcount, View3D_EditObjectCB edit_cb, void* ctx, GUID const& context_id);
+	VIEW3D_API View3DObject            __stdcall View3D_ObjectCreateCB           (char const* name, View3DColour colour, int icount, int vcount, View3D_EditObjectCB edit_cb, void* ctx, GUID const& context_id);
+	VIEW3D_API View3DObject            __stdcall View3D_ObjectCreate             (char const* name, View3DColour colour, int icount, int vcount, View3DVertex const* verts, UINT16 const* indices, EView3DPrim prim_type, EView3DGeom geom_type, GUID const& context_id);
 	VIEW3D_API void                    __stdcall View3D_ObjectUpdate             (View3DObject object, char const* ldr_script, EView3DUpdateObject flags);
 	VIEW3D_API void                    __stdcall View3D_ObjectEdit               (View3DObject object, View3D_EditObjectCB edit_cb, void* ctx);
 	VIEW3D_API void                    __stdcall View3D_ObjectsDeleteAll         ();

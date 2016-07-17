@@ -585,6 +585,26 @@ namespace pr.util
 		}
 		public static DateTime AssemblyTimestamp() { return AssemblyTimestamp(null); }
 
+		/// <summary>Return the copyright string from an assembly</summary>
+		public static string AssemblyCopyright(Assembly ass)
+		{
+			if (ass == null) ass = Assembly.GetEntryAssembly();
+			if (ass == null) ass = Assembly.GetExecutingAssembly();
+			return ass.CustomAttributes.First(x => x.AttributeType == typeof(AssemblyCopyrightAttribute)).ConstructorArguments[0].Value.ToString();
+		}
+		public static string AssemblyCopyright(Type type)
+		{
+			return AssemblyCopyright(Assembly.GetAssembly(type));
+		}
+		public static string AssemblyCopyright()
+		{
+			return AssemblyCopyright((Assembly)null);
+		}
+		public static string AppCopyright
+		{
+			get { return AssemblyCopyright(); }
+		}
+
 		/// <summary>Read a text file embedded resource returning it as a string</summary>
 		public static string TextResource(string resource_name, Assembly ass)
 		{

@@ -15,44 +15,38 @@
     {
         "Entry"
         {
-        "MsmKey" = "8:_0121F3455FE49230812DF3725B42BFDC"
-        "OwnerKey" = "8:_04A0C7E391E64EE3A031E3A4604683B9"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
         "MsmKey" = "8:_04A0C7E391E64EE3A031E3A4604683B9"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
         {
-        "MsmKey" = "8:_A7B425833F8BEED2C6D3B4DDF4468347"
+        "MsmKey" = "8:_538AD9BDC33E2504B3FAF1CCB261C5FE"
         "OwnerKey" = "8:_04A0C7E391E64EE3A031E3A4604683B9"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
         {
-        "MsmKey" = "8:_A7B425833F8BEED2C6D3B4DDF4468347"
-        "OwnerKey" = "8:_0121F3455FE49230812DF3725B42BFDC"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
-        "MsmKey" = "8:_UNDEFINED"
+        "MsmKey" = "8:_AD40026A47E6CABDAD3A4402A76965D5"
         "OwnerKey" = "8:_04A0C7E391E64EE3A031E3A4604683B9"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
         {
         "MsmKey" = "8:_UNDEFINED"
-        "OwnerKey" = "8:_0121F3455FE49230812DF3725B42BFDC"
+        "OwnerKey" = "8:_AD40026A47E6CABDAD3A4402A76965D5"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
         {
         "MsmKey" = "8:_UNDEFINED"
-        "OwnerKey" = "8:_A7B425833F8BEED2C6D3B4DDF4468347"
+        "OwnerKey" = "8:_538AD9BDC33E2504B3FAF1CCB261C5FE"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_UNDEFINED"
+        "OwnerKey" = "8:_04A0C7E391E64EE3A031E3A4604683B9"
         "MsmSig" = "8:_UNDEFINED"
         }
     }
@@ -152,7 +146,7 @@
                 {
                 "Name" = "8:.NET Framework"
                 "Message" = "8:[VSDNETMSG]"
-                "FrameworkVersion" = "8:.NETFramework,Version=v4.0,Profile=Client"
+                "FrameworkVersion" = "8:.NETFramework,Version=v4.5.2"
                 "AllowLaterVersions" = "11:FALSE"
                 "InstallUrl" = "8:http://go.microsoft.com/fwlink/?LinkId=395269"
                 }
@@ -160,14 +154,14 @@
         }
         "File"
         {
-            "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_0121F3455FE49230812DF3725B42BFDC"
+            "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_538AD9BDC33E2504B3FAF1CCB261C5FE"
             {
             "AssemblyRegister" = "3:1"
             "AssemblyIsInGAC" = "11:FALSE"
-            "AssemblyAsmDisplayName" = "8:Rylogic, Version=1.0.5226.26108, Culture=neutral, PublicKeyToken=d58190847d96b83d, processorArchitecture=MSIL"
+            "AssemblyAsmDisplayName" = "8:Rylogic, Version=1.1.0.0, Culture=neutral, processorArchitecture=MSIL"
                 "ScatterAssemblies"
                 {
-                    "_0121F3455FE49230812DF3725B42BFDC"
+                    "_538AD9BDC33E2504B3FAF1CCB261C5FE"
                     {
                     "Name" = "8:Rylogic.dll"
                     "Attributes" = "3:512"
@@ -191,20 +185,20 @@
             "IsDependency" = "11:TRUE"
             "IsolateTo" = "8:"
             }
-            "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_A7B425833F8BEED2C6D3B4DDF4468347"
+            "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_AD40026A47E6CABDAD3A4402A76965D5"
             {
             "AssemblyRegister" = "3:1"
             "AssemblyIsInGAC" = "11:FALSE"
-            "AssemblyAsmDisplayName" = "8:nunit.framework, Version=2.5.9.10348, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL"
+            "AssemblyAsmDisplayName" = "8:RyLogViewer.Extensions, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL"
                 "ScatterAssemblies"
                 {
-                    "_A7B425833F8BEED2C6D3B4DDF4468347"
+                    "_AD40026A47E6CABDAD3A4402A76965D5"
                     {
-                    "Name" = "8:nunit.framework.dll"
+                    "Name" = "8:RyLogViewer.Extensions.dll"
                     "Attributes" = "3:512"
                     }
                 }
-            "SourcePath" = "8:nunit.framework.dll"
+            "SourcePath" = "8:RyLogViewer.Extensions.dll"
             "TargetName" = "8:"
             "Tag" = "8:"
             "Folder" = "8:_285454047B8541239AE2CF34D41801A8"
@@ -218,7 +212,7 @@
             "SharedLegacy" = "11:FALSE"
             "PackageAs" = "3:1"
             "Register" = "3:1"
-            "Exclude" = "11:TRUE"
+            "Exclude" = "11:FALSE"
             "IsDependency" = "11:TRUE"
             "IsolateTo" = "8:"
             }
@@ -290,7 +284,7 @@
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:RyLogViewer"
         "ProductCode" = "8:{BE9D07B8-7FFF-4FC9-B506-22D9A129BD5B}"
-        "PackageCode" = "8:{476893E7-7F93-4353-BD9A-0B4F459A7DC3}"
+        "PackageCode" = "8:{146F9F8C-E4E6-48B9-9772-8656CEB97E21}"
         "UpgradeCode" = "8:{918DB4A8-D17F-4614-8BFE-E1B12B97DD88}"
         "AspNetVersion" = "8:4.0.30319.0"
         "RestartWWWService" = "11:FALSE"

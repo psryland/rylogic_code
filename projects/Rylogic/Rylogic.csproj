@@ -60,6 +60,7 @@
     <UseVSHostingProcess>false</UseVSHostingProcess>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <OutputPath>bin\Release\</OutputPath>
@@ -236,6 +237,9 @@
     <Compile Include="gfx\view3d.cs" />
     <Compile Include="gui\browse_path_ui.cs">
       <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="gui\chart_control.cs">
+      <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="gui\checked_groupbox.cs">
       <SubType>Component</SubType>

@@ -84,6 +84,12 @@ namespace pr.container
 		{
 			get { return !ChangeType.HasFlag(ListChg.Pre); }
 		}
+
+		/// <summary>True if data in the collection has possibly changed, not just the collection order</summary>
+		public bool IsDataChanged
+		{
+			get { return IsPostEvent && ChangeType != ListChg.Reordered; }
+		}
 	}
 
 	/// <summary>Event args for the event raised whenever an item in the list is changed</summary>

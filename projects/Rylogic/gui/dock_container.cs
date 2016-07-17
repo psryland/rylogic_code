@@ -102,8 +102,27 @@ namespace pr.gui
 		DockControl DockControl { get; }
 	}
 
+	/// <summary>Interface for classes that have a Root branch and active content</summary>
+	internal interface ITreeHost
+	{
+		/// <summary>The dock container that owns this instance</summary>
+		DockContainer DockContainer { get; }
+
+		/// <summary>The root of the tree of dock panes</summary>
+		DockContainer.Branch Root { get; }
+
+		/// <summary>The dockable that is active on the container</summary>
+		DockContainer.DockControl ActiveContent { get; set; }
+
+		/// <summary>The pane that contains the active content on the container</summary>
+		DockContainer.DockPane ActivePane { get; set; }
+
+		/// <summary>Add a dockable instance to this branch at the position described by 'location'.</summary>
+		DockContainer.DockPane Add(IDockable dockable, int index, params EDockSite[] location);
+	}
+
 	/// <summary>A dock container is the parent control that manages docking of controls that implement IDockable.</summary>
-	public class DockContainer :ContainerControl ,DockContainer.ITreeHost
+	public class DockContainer :ContainerControl ,ITreeHost
 	{
 		/// <summary>The number of valid dock sites</summary>
 		private const int DockSiteCount = 5;
@@ -640,6 +659,8 @@ namespace pr.gui
 				if (!docked_mask.HasFlag((EDockMask)(1 << (int)i))) continue;
 				var sub = DockSiteBounds(i, rect, docked_mask, dock_site_sizes);
 				r = r.Subtract(sub);
+				if (r.Width < 0) r.Width = 0;
+				if (r.Height < 0) r.Height = 0;
 			}
 
 			// Return the bounds of the dock zone for 'location'
@@ -760,25 +781,6 @@ namespace pr.gui
 		}
 
 		#region Custom Controls
-
-		/// <summary>Interface for classes that have a Root branch and active content</summary>
-		internal interface ITreeHost
-		{
-			/// <summary>The dock container that owns this instance</summary>
-			DockContainer DockContainer { get; }
-
-			/// <summary>The root of the tree of dock panes</summary>
-			Branch Root { get; }
-
-			/// <summary>The dockable that is active on the container</summary>
-			DockControl ActiveContent { get; set; }
-
-			/// <summary>The pane that contains the active content on the container</summary>
-			DockPane ActivePane { get; set; }
-
-			/// <summary>Add a dockable instance to this branch at the position described by 'location'.</summary>
-			DockPane Add(IDockable dockable, int index, params EDockSite[] location);
-		}
 
 		/// <summary>
 		/// Represents a node in the tree of dock panes.
@@ -1151,7 +1153,7 @@ namespace pr.gui
 
 					// Get the region for this child
 					var bounds = new RectangleRef(This.ChildBounds(DockSite));
-					var rect = This.DisplayRectangle;
+					var rect = This.DisplayRectangle.ClampPositive();
 
 					// Set the area over which the splitter can move, position the splitter,
 					// and resize the control to make room for the splitter
@@ -1296,7 +1298,7 @@ namespace pr.gui
 			/// <summary>Get the bounds of a dock site in parent (DockContainer or containing Branch) space</summary>
 			public Rectangle ChildBounds(EDockSite location)
 			{
-				return DockSiteBounds(location, DisplayRectangle, DockedMask, DockSizes);
+				return DockSiteBounds(location, DisplayRectangle.ClampPositive(), DockedMask, DockSizes);
 			}
 
 			/// <summary>Return the node relative to this sub-tree</summary>
@@ -5788,12 +5790,23 @@ namespace pr.gui
 		}
 		protected override void Dispose(bool disposing)
 		{
-			DockControl = Util.Dispose(DockControl);
+			DockControl = null;
 			base.Dispose(disposing);
 		}
 
-		/// <summary>Implements docking functionality</summary>
-		public DockControl DockControl { [DebuggerStepThrough] get; private set; }
+		/// <summary>Provides support for the DockContainer</summary>
+		[Browsable(false)]
+		public DockControl DockControl
+		{
+			get { return m_impl_dock_control; }
+			private set
+			{
+				if (m_impl_dock_control == value) return;
+				if (m_impl_dock_control != null) Util.Dispose(ref m_impl_dock_control);
+				m_impl_dock_control = value;
+			}
+		}
+		private DockControl m_impl_dock_control;
 	}
 
 	#region Event Args

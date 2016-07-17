@@ -104,50 +104,52 @@ namespace pr.gui
 			public DiagramControl Diagram
 			{
 				get { return m_impl_diag; }
-				set
+				set { SetDiagramInternal(value, true); }
+			}
+			internal void SetDiagramInternal(DiagramControl diag, bool update_diagram)
+			{
+				// An Element can be added to a diagram by assigning to the Diagram property
+				// or by adding it to the Elements collection. It can be removed by setting
+				// this property to null, by removing it from the Elements collection, or
+				// by Disposing the element. Note: the diagram does not own the elements, 
+				// elements should only be disposed by the caller.
+				if (m_impl_diag == diag) return;
+
+				// Detach from the old diagram
+				if (m_impl_diag != null && update_diagram)
 				{
-					// An Element can be added to a diagram by assigning to this property
-					// or by added it to the Elements collection. It can be removed by setting
-					// this property to null, by removing it from the Elements collection, or
-					// by Disposing the element. Note: the diagram does not own the elements, 
-					// elements should only be disposed by the caller.
-					if (m_impl_diag == value) return;
-
-					// Note: don't suspend events on m_diag.Elements.
-					// User code maybe watching for ListChanging events.
-					Debug.Assert(!Disposed);
-
-					// Remove this element from any selected collection on the outgoing diagram
-					Selected = false;
-
-					// Detach from the old diagram
-					if (m_impl_diag != null)
-					{
-						m_impl_diag.m_dirty.Remove(this);
-						m_impl_diag.Elements.Remove(this);
-					}
-
-					// Assign the new diagram
-					SetDiagramCore(value);
-
-					// Attach to the new diagram
-					if (m_impl_diag != null)
-					{
-						// If 'Diagram' is being set from the ListChg.Added handler,
-						// it will already be in the Elements collection. Don't add it twice.
-						if (!m_impl_diag.Elements.Contains(this))
-							m_impl_diag.Elements.Add(this);
-					}
-
-					Debug.Assert(CheckConsistency());
-					Invalidate();
+					m_impl_diag.Elements.Remove(this);
 				}
+
+				// Assign the new diagram
+				SetDiagramCore(diag);
+
+				// Attach to the new diagram
+				if (m_impl_diag != null && update_diagram)
+				{
+					m_impl_diag.Elements.Add(this);
+				}
+
+				Debug.Assert(CheckConsistency());
+				Invalidate();
 			}
 			private DiagramControl m_impl_diag;
 
 			/// <summary>Add or remove this element from 'diag'</summary>
 			public virtual void SetDiagramCore(DiagramControl diag)
 			{
+				// Note: don't suspend events on m_diag.Elements.
+				// User code maybe watching for ListChanging events.
+				Debug.Assert(!Disposed);
+
+				// Remove this element from any selected collection on the outgoing diagram
+				// This also clears the 'selected' state for the element
+				Selected = false;
+
+				// Ensure this element isn't in the dirty list on the out-going diagram
+				m_impl_diag?.m_dirty.Remove(this);
+
+				// Set the new diagram
 				m_impl_diag = diag;
 			}
 
@@ -212,7 +214,7 @@ namespace pr.gui
 
 			/// <summary>Raised whenever data associated with the element changes</summary>
 			public event EventHandler DataChanged;
-			protected virtual void RaiseDataChanged()
+			protected virtual void OnDataChanged()
 			{
 				DataChanged.Raise(this, EventArgs.Empty);
 				RaiseDiagramChanged();
@@ -220,7 +222,7 @@ namespace pr.gui
 
 			/// <summary>Raised whenever the element is moved</summary>
 			public event EventHandler PositionChanged;
-			protected void RaisePositionChanged()
+			protected void OnPositionChanged()
 			{
 				PositionChanged.Raise(this);
 				RaiseDiagramChanged();
@@ -228,7 +230,7 @@ namespace pr.gui
 
 			/// <summary>Raised whenever the element changes size</summary>
 			public event EventHandler SizeChanged;
-			protected void RaiseSizeChanged()
+			protected void OnSizeChanged()
 			{
 				SizeChanged.Raise(this, EventArgs.Empty);
 				RaiseDiagramChanged();
@@ -236,13 +238,13 @@ namespace pr.gui
 
 			/// <summary>Raised whenever the element is selected or deselected</summary>
 			public event EventHandler SelectedChanged;
-			protected virtual void RaiseSelectedChanged()
+			protected virtual void OnSelectedChanged()
 			{
 				SelectedChanged.Raise(this);
 			}
 
 			/// <summary>Signal that the diagram needs laying out</summary>
-			private void RaiseDiagramChanged()
+			protected virtual void RaiseDiagramChanged()
 			{
 				if (Diagram == null) return;
 				Diagram.RaiseDiagramChanged(new DiagramChangedEventArgs(EDiagramChangeType.Edited));
@@ -252,23 +254,30 @@ namespace pr.gui
 			public virtual bool Selected
 			{
 				get { return m_impl_selected; }
-				set
+				set { SetSelectedInternal(value, true); }
+			}
+			internal void SetSelectedInternal(bool selected, bool update_selected_collection)
+			{
+				// This allows the diagram to set the selected state without
+				// adding/removing from the diagrams 'Selected' collection.
+				if (m_impl_selected == selected) return;
+				if (m_impl_selected && update_selected_collection)
 				{
-					if (m_impl_selected == value) return;
-					if (m_impl_selected)
-					{
-						Diagram?.Selected.Remove(this);
-					}
-					m_impl_selected = value;
-					if (m_impl_selected)
-					{
-						Diagram?.Selected.Add(this);
-					}
-
-					// Notify observers about the selection change
-					RaiseSelectedChanged();
-					Invalidate();
+					Diagram?.Selected.Remove(this);
 				}
+
+				m_impl_selected = selected;
+
+				if (m_impl_selected && update_selected_collection)
+				{
+					// Selection state is changed by assigning to this property or by
+					// addition/removal from the diagram's 'Selected' collection.
+					Diagram?.Selected.Add(this);
+				}
+
+				// Notify observers about the selection change
+				OnSelectedChanged();
+				Invalidate();
 			}
 			private bool m_impl_selected;
 
@@ -380,7 +389,7 @@ namespace pr.gui
 			protected virtual void SetPosition(m4x4 pos)
 			{
 				m_impl_position = pos;
-				RaisePositionChanged();
+				OnPositionChanged();
 			}
 			private m4x4 m_impl_position;
 
@@ -529,8 +538,9 @@ namespace pr.gui
 				{
 					if (SizeMax.x != 0 && value.x > SizeMax.x) value.x = SizeMax.x;
 					if (SizeMax.y != 0 && value.y > SizeMax.y) value.y = SizeMax.y;
+					if (m_impl_size == value) return;
 					m_impl_size = value;
-					RaiseSizeChanged();
+					OnSizeChanged();
 					Invalidate();
 				}
 			}
@@ -658,7 +668,7 @@ namespace pr.gui
 					m_impl_text = value;
 
 					if (Style.AutoSize) PerformAutoSize();
-					RaiseDataChanged();
+					OnDataChanged();
 					Invalidate();
 				}
 			}
@@ -747,6 +757,7 @@ namespace pr.gui
 			}
 			private void HandleStyleChanged(object sender = null, EventArgs args = null)
 			{
+				// Reassign the size to cause an auto size (if necessary)
 				Size = m_impl_size;
 				Invalidate();
 			}
@@ -940,6 +951,12 @@ namespace pr.gui
 				}
 			}
 
+			/// <summary>Signal that the diagram needs laying out</summary>
+			protected override void RaiseDiagramChanged()
+			{
+				// Don't raise diagram changed for the proxy node.
+			}
+			
 			/// <summary>Return the preferred node size given the current text and upper size bounds</summary>
 			public override v2 PreferredSize(v2 layout)
 			{
@@ -1165,9 +1182,9 @@ namespace pr.gui
 			}
 
 			/// <summary>Raised whenever data associated with the element changes</summary>
-			protected override void RaiseDataChanged()
+			protected override void OnDataChanged()
 			{
-				base.RaiseDataChanged();
+				base.OnDataChanged();
 				UpdateNodeTexture();
 			}
 
@@ -1385,7 +1402,10 @@ namespace pr.gui
 
 		#region Connectors
 
-		/// <summary>A base class for connectors between elements</summary>
+		/// <summary>
+		/// A base class for connectors between elements.
+		/// Connectors have two ends (nodes), either of which is allowed to be null.
+		/// AnchorPoints are never null however.</summary>
 		public class Connector :Element ,IHasStyle
 		{
 			/// <summary>Connector type</summary>
@@ -1500,6 +1520,7 @@ namespace pr.gui
 				get { return m_anc0; }
 				set
 				{
+					Debug.Assert(value != null);
 					Node0 = value.Elem.As<Node>();
 					m_anc0.Location = value.Location;
 					m_anc0.Normal = value.Normal;
@@ -1513,6 +1534,7 @@ namespace pr.gui
 				get { return m_anc1; }
 				set
 				{
+					Debug.Assert(value != null);
 					Node1 = value.Elem.As<Node>();
 					m_anc1.Location = value.Location;
 					m_anc1.Normal = value.Normal;
@@ -1538,7 +1560,7 @@ namespace pr.gui
 					null;
 			}
 
-			/// <summary>The 'from' node</summary>
+			/// <summary>The 'from' node. Nodes can be null, implying the connector is connected to the diagram</summary>
 			public Node Node0
 			{
 				get { return Anc0.Elem.As<Node>(); }
@@ -1563,7 +1585,7 @@ namespace pr.gui
 				}
 			}
 
-			/// <summary>The 'to' node</summary>
+			/// <summary>The 'to' node. Nodes can be null, implying the connector is connected to the diagram</summary>
 			public Node Node1
 			{
 				get { return Anc1.Elem.As<Node>(); }
@@ -1585,6 +1607,16 @@ namespace pr.gui
 						Node1.PositionChanged += Invalidate;
 						Node1.SizeChanged += Relink;
 					}
+				}
+			}
+
+			/// <summary>The 'from' then 'to' nodes, as a sequence</summary>
+			public IEnumerable<Node> Nodes
+			{
+				get
+				{
+					if (Node0 != null) yield return Node0;
+					if (Node1 != null) yield return Node1;
 				}
 			}
 
@@ -1889,7 +1921,9 @@ namespace pr.gui
 					// Find the preferred 'anc0' position closest to the centre of element1,
 					// then update the position of 'anc1' given 'anc0's position,
 					// finally update 'anc0' again since 'anc1' has possibly changed.
-					m_anc0.Update(m_anc1.Elem.Position.pos.xy, false, this);
+					if (m_anc1.Elem != null)
+						m_anc0.Update(m_anc1.Elem.Position.pos.xy, false, this);
+
 					m_anc1.Update(m_anc0.LocationDS.xy, false, this);
 					m_anc0.Update(m_anc1.LocationDS.xy, false, this);
 				}
@@ -1917,8 +1951,10 @@ namespace pr.gui
 			/// <summary>Returns the nearest anchor points on two nodes</summary>
 			private static void AttachPoints(Node node0, Node node1, out AnchorPoint anc0, out AnchorPoint anc1)
 			{
-				anc0 = node0.NearestAnchor(node1.Centre, false, null);
-				anc1 = node1.NearestAnchor(node0.Centre, false, null);
+				var pt0 = node1?.Centre ?? node0?.Centre ?? v2.Zero;
+				var pt1 = node0?.Centre ?? node1?.Centre ?? v2.Zero;
+				anc0 = node0?.NearestAnchor(pt0, false, null) ?? new AnchorPoint(null, new v4(pt0, 0, 1f), v4.Zero);
+				anc1 = node1?.NearestAnchor(pt1, false, null) ?? new AnchorPoint(null, new v4(pt1, 0, 1f), v4.Zero);
 			}
 
 			/// <summary>Returns the corner points of the connector from Anc0 to Anc1</summary>
@@ -1962,10 +1998,8 @@ namespace pr.gui
 			/// <summary>Check the self consistency of this element</summary>
 			public override bool CheckConsistency()
 			{
-				// Allowing this now
-				//// Should be connected to different nodes
-				//if (Node0 == Node1 && Node0 != null)
-				//	throw new Exception("Connector {0} is connected to the same node at each end".Fmt(ToString()));
+				// Connections to the same node are allowed
+				// Null nodes are allowed.
 
 				// The connected nodes should contain a reference to this connector
 				if (Node0 != null && Node0.Connectors.FirstOrDefault(x => x.Id == Id) == null)
@@ -2547,7 +2581,7 @@ namespace pr.gui
 			}
 			private v4 m_impl_location;
 
-			/// <summary>Get/Set the node-relative anchor normal</summary>
+			/// <summary>Get/Set the node-relative anchor normal (can be zero)</summary>
 			public v4 Normal
 			{
 				get { return m_impl_normal; }
@@ -2562,7 +2596,7 @@ namespace pr.gui
 			/// <summary>Get the diagram space position of the anchor</summary>
 			public v4 LocationDS { get { return Elem != null ? Elem.Position * Location : Location; } }
 
-			/// <summary>Get the diagram space anchor normal</summary>
+			/// <summary>Get the diagram space anchor normal (can be zero)</summary>
 			public v4 NormalDS   { get { return Elem != null ? Elem.Position * Normal   : Normal  ; } }
 
 			/// <summary>Update this anchor point location after it has moved/resized</summary>
@@ -2961,8 +2995,15 @@ namespace pr.gui
 					// Notify the caller
 					var ty = m_is_add ? EDiagramChangeType.AddLinkEnd : EDiagramChangeType.MoveLinkEnd;
 					Cancelled = m_diag.RaiseDiagramChanged(new DiagramChangedLinkEventArgs(ty, m_conn, m_fixed, target)).Cancel;
-					if (Cancelled) Revert();
-					else           Commit();
+					if (Cancelled)
+					{
+						Revert();
+					}
+					else
+					{
+						Commit();
+						m_diag.RaiseDiagramChanged(new DiagramChangedEventArgs(EDiagramChangeType.Edited));
+					}
 				}
 				m_diag.Invalidate();
 			}
@@ -3042,7 +3083,9 @@ namespace pr.gui
 				if (m_forward) m_conn.Anc1 = m_proxy.Anchor;
 				else           m_conn.Anc0 = m_proxy.Anchor;
 			}
-			protected override void Commit() {}
+			protected override void Commit()
+			{
+			}
 			protected override void Revert()
 			{
 				if (m_forward) m_conn.Anc1 = m_prev;
@@ -3806,8 +3849,11 @@ namespace pr.gui
 		{
 			try
 			{
+				ConsistencyCheckSuspended = true;
+
 				Elements              = new BindingListEx<Element> { PerItemClear = true, UseHashSet = true };
-				Selected              = new BindingListEx<Element> { PerItemClear = true };
+				Selected              = new BindingListEx<Element> { PerItemClear = false };
+				ElemIds               = new Dictionary<Guid, Element>();
 				m_impl_options        = options ?? new DiagramOptions();
 				m_hoverscroll         = new HoverScroll(Handle);
 				m_node_styles         = new StyleCache<NodeStyle>();
@@ -3832,7 +3878,7 @@ namespace pr.gui
 				SetupEditToolstrip();
 
 				Elements.ListChanging += (s,a) => OnElementListChanging(a);
-				Selected.ListChanging += (s,a) => OnSelectListChanging(a);
+				Selected.ListChanging += (s,a) => OnDiagramSelectionListChanging(a);
 
 				SetCursor();
 				ResetView();
@@ -3840,6 +3886,9 @@ namespace pr.gui
 				DefaultMouseControl = true;
 				AllowEditing = true;
 				AllowSelection = true;
+
+				// Enable self-checking
+				ConsistencyCheckSuspended = false;
 			}
 			catch
 			{
@@ -3887,6 +3936,9 @@ namespace pr.gui
 
 		/// <summary>The set of selected diagram elements</summary>
 		public BindingListEx<Element> Selected { get; private set; }
+
+		/// <summary>Associative array from Element Ids to Elements</summary>
+		public Dictionary<Guid, Element> ElemIds { get; private set; }
 
 		/// <summary>Event allowing callers to add options to the context menu</summary>
 		public event EventHandler<AddUserMenuOptionsEventArgs> AddUserMenuOptions;
@@ -4005,9 +4057,10 @@ namespace pr.gui
 				{
 					if ((args.Modifiers & Keys.Control) != 0)
 					{
-						foreach (var elem in Elements.ToArray())
-							elem.Selected = true;
+						Selected.Clear();
+						Selected.AddRange(Elements);
 						Invalidate();
+						Debug.Assert(CheckConsistency());
 					}
 					break;
 				}
@@ -4016,8 +4069,6 @@ namespace pr.gui
 		}
 
 		/// <summary>Enable/Disable default keyboard shortcuts</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool DefaultKeyboardShortcuts
 		{
 			set
@@ -4029,8 +4080,6 @@ namespace pr.gui
 		}
 
 		/// <summary>Enable/Disable default mouse control</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool DefaultMouseControl { get; set; }
 
 		/// <summary>Get the default node style</summary>
@@ -4046,18 +4095,18 @@ namespace pr.gui
 		}
 
 		/// <summary>True if users are allowed to add/remove/edit nodes on the diagram</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool AllowEditing
 		{
 			get { return m_impl_allow_editing; }
-			set { m_impl_allow_editing = value; UpdateEditToolbar(); }
+			set
+			{
+				m_impl_allow_editing = value;
+				UpdateEditToolbar();
+			}
 		}
 		private bool m_impl_allow_editing;
 
 		/// <summary>True if users are allowed to select elements on the diagram</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool AllowSelection { get; set; }
 
 		protected override void OnMouseDown(MouseEventArgs e)
@@ -4292,24 +4341,31 @@ namespace pr.gui
 			{
 			case ListChg.Reset:
 				{
+					Elements.ForEach(x => x.SetDiagramInternal(this, false));
+					ElemIds.Clear();
+					Elements.ForEach(x => ElemIds.Add(x.Id, x));
 					Debug.Assert(CheckConsistency());
 					break;
 				}
 			case ListChg.ItemAdded:
 				{
-					elem.Diagram = this;
+					elem.SetDiagramInternal(this, false);
+					ElemIds.Add(elem.Id, elem);
+					Debug.Assert(CheckConsistency());
 					break;
 				}
 			case ListChg.ItemRemoved:
 				{
-					elem.Diagram = null;
+					elem.SetDiagramInternal(null, false);
+					ElemIds.Remove(elem.Id);
+					Debug.Assert(CheckConsistency());
 					break;
 				}
 			}
 		}
 
 		/// <summary>Handle elements added/removed from the selection list</summary>
-		protected virtual void OnSelectListChanging(ListChgEventArgs<Element> args)
+		protected virtual void OnDiagramSelectionListChanging(ListChgEventArgs<Element> args)
 		{
 			var elem = args.Item;
 			if (elem != null && (elem.Diagram != null && elem.Diagram != this))
@@ -4319,17 +4375,21 @@ namespace pr.gui
 			{
 			case ListChg.Reset:
 				{
+					Elements.ForEach(x => x.SetSelectedInternal(false, false));
+					Selected.ForEach(x => x.SetSelectedInternal(true, false));
 					Debug.Assert(CheckConsistency());
 					break;
 				}
 			case ListChg.ItemAdded:
 				{
-					elem.Selected = true;
+					elem.SetSelectedInternal(true, false);
+					Debug.Assert(CheckConsistency());
 					break;
 				}
 			case ListChg.ItemRemoved:
 				{
-					elem.Selected = false;
+					elem.SetSelectedInternal(false, false);
+					Debug.Assert(CheckConsistency());
 					break;
 				}
 			}
@@ -4607,9 +4667,7 @@ namespace pr.gui
 		/// <summary>The Z value of the lowest element in the diagram</summary>
 		private float LowestZ { get; set; }
 
-		/// <summary>
-		/// Set the Z value for all elements.
-		/// if 'temporary' is true, the change in Z order will not trigger a DiagramChanged event</summary>
+		/// <summary>Set the Z value for all elements.</summary>
 		private void UpdateElementZOrder()
 		{
 			LowestZ = 0f;
@@ -4660,30 +4718,6 @@ namespace pr.gui
 				}
 				return bounds;
 			}
-		}
-
-		/// <summary>Get the rectangular area of the diagram for a given client area.</summary>
-		public Rectangle DiagramRegion(Size target_size)
-		{
-			var marginL = 0;//(int)(target_size.Width  * Options.m_left_margin  );
-			var marginT = 0;//(int)(target_size.Height * Options.m_top_margin   );
-			var marginR = 0;//(int)(target_size.Width  * Options.m_right_margin );
-			var marginB = 0;//(int)(target_size.Height * Options.m_bottom_margin);
-
-			//if (m_title.Length != 0)       { marginT += TextRenderer.MeasureText(m_title      ,       RenderOptions.m_title_font).Height; }
-			//if (m_yaxis.Label.Length != 0) { marginL += TextRenderer.MeasureText(m_yaxis.Label, YAxis.RenderOptions.m_label_font).Height; }
-			//if (m_xaxis.Label.Length != 0) { marginB += TextRenderer.MeasureText(m_xaxis.Label, XAxis.RenderOptions.m_label_font).Height; }
-
-			//var sx = TextRenderer.MeasureText(YAxis.TickText(AestheticTickValue(9999999.9)), YAxis.RenderOptions.m_tick_font);
-			//var sy = TextRenderer.MeasureText(XAxis.TickText(AestheticTickValue(9999999.9)), XAxis.RenderOptions.m_tick_font);
-			//marginL += YAxis.RenderOptions.m_tick_length + sx.Width;
-			//marginB += XAxis.RenderOptions.m_tick_length + sy.Height;
-
-			var x      = Math.Max(0, marginL);
-			var y      = Math.Max(0, marginT);
-			var width  = Math.Max(0, target_size.Width  - (marginL + marginR));
-			var height = Math.Max(0, target_size.Height - (marginT + marginB));
-			return new Rectangle(x, y, width, height);
 		}
 
 		/// <summary>Resize the control</summary>
@@ -4738,7 +4772,6 @@ namespace pr.gui
 				while (m_dirty.Count != 0)
 				{
 					var elem = m_dirty.First();
-					Debug.Assert(elem.Diagram == this);
 					m_dirty.Remove(elem);
 					elem.UpdateGfx();
 				}
@@ -4808,6 +4841,35 @@ namespace pr.gui
 			/// <summary>Default XML export options</summary>
 			Default = AllElements | AllStyles,
 		}
+		[Flags] public enum EImportOptions
+		{
+			/// <summary>Import nodes</summary>
+			Nodes = 1 << 0,
+
+			/// <summary>Import connectors</summary>
+			Connectors = 1 << 1,
+
+			/// <summary>Import labels</summary>
+			Labels = 1 << 2,
+
+			/// <summary>Import all elements</summary>
+			AllElements = Nodes | Connectors | Labels,
+
+			/// <summary>Import node styles from XML data</summary>
+			NodeStyles = 1 << 3,
+
+			/// <summary>Import connector styles from XML Data</summary>
+			ConnectorStyles = 1 << 4,
+
+			/// <summary>Import all styles from XML data</summary>
+			AllStyles = NodeStyles | ConnectorStyles,
+
+			/// <summary>Default XML import options</summary>
+			Default = AllElements | AllStyles,
+
+			/// <summary>XML nodes that fail to import will be silently ignored</summary>
+			IgnoreImportFailures = 1 << 5,
+		}
 
 		/// <summary>Export the current diagram as XML</summary>
 		public XElement ExportXml(XElement node, EExportOptions opts = EExportOptions.Default)
@@ -4862,36 +4924,6 @@ namespace pr.gui
 			var node = xml.Add2(new XElement(XmlTag.Root));
 			ExportXml(node, opts);
 			return xml;
-		}
-
-		[Flags] public enum EImportOptions
-		{
-			/// <summary>Import nodes</summary>
-			Nodes = 1 << 0,
-
-			/// <summary>Import connectors</summary>
-			Connectors = 1 << 1,
-
-			/// <summary>Import labels</summary>
-			Labels = 1 << 2,
-
-			/// <summary>Import all elements</summary>
-			AllElements = Nodes | Connectors | Labels,
-
-			/// <summary>Import node styles from XML data</summary>
-			NodeStyles = 1 << 3,
-
-			/// <summary>Import connector styles from XML Data</summary>
-			ConnectorStyles = 1 << 4,
-
-			/// <summary>Import all styles from XML data</summary>
-			AllStyles = NodeStyles | ConnectorStyles,
-
-			/// <summary>Default XML import options</summary>
-			Default = AllElements | AllStyles,
-
-			/// <summary>XML nodes that fail to import will be silently ignored</summary>
-			IgnoreImportFailures = 1 << 5,
 		}
 
 		/// <summary>
@@ -5053,26 +5085,14 @@ namespace pr.gui
 		/// <summary>Create and display a context menu</summary>
 		public void ShowContextMenu(Point location)
 		{
-			// Helper for adding sections to the context menu
-			var section = 0;
-			Func<List<ToolStripItem>,int,ToolStripItem,ToolStripItem> add = (list,sect,item) =>
-				{
-					if (sect != section)
-					{
-						if (list.Count != 0) list.Add(new ToolStripSeparator());
-						section = sect;
-					}
-					return list.Add2(item);
-				};
-
 			var cmenu = new ContextMenuStrip { Renderer = new ContextMenuRenderer() };
 			using (cmenu.SuspendLayout(false))
 			{
 				#region Scatter
 				if (AllowEditing)
 				{
-					if (cmenu.Items.Count != 0) cmenu.Items.Add(new ToolStripSeparator());
-					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Scatter") { Name="Scatter" });
+					cmenu.Items.AddSeparator();
+					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Scatter") { Name = CMenuItems.Scatter });
 					opt.Click += (s,a) => ScatterNodes();
 				}
 				#endregion
@@ -5080,7 +5100,7 @@ namespace pr.gui
 				#region Re-link
 				if (AllowEditing)
 				{
-					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Re-link") { Name="Re-link" });
+					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Re-link") { Name = CMenuItems.ReLink });
 					opt.Click += (s,a) => RelinkNodes();
 				}
 				#endregion
@@ -5088,7 +5108,7 @@ namespace pr.gui
 				#region Bring to Front
 				if (Selected.Count != 0)
 				{
-					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Bring to Front") { Name="BringToFront" });
+					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Bring to Front") { Name = CMenuItems.BringToFront });
 					opt.Enabled = Selected.Count != 0;
 					opt.Click += (s,a) =>
 					{
@@ -5102,7 +5122,7 @@ namespace pr.gui
 				#region Send to Back
 				if (Selected.Count != 0)
 				{
-					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Send to Back") { Name="SendToBack" });
+					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Send to Back") { Name = CMenuItems.SendToBack });
 					opt.Enabled = Selected.Count != 0;
 					opt.Click += (s, a) =>
 					{
@@ -5116,8 +5136,8 @@ namespace pr.gui
 				#region Selection
 				if (AllowSelection && Selected.Count != 0)
 				{
-					if (cmenu.Items.Count != 0) cmenu.Items.Add(new ToolStripSeparator());
-					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Select Connected Nodes") { Name="SelectConnected" });
+					cmenu.Items.AddSeparator();
+					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Select Connected Nodes") { Name = CMenuItems.SelectConnected });
 					opt.Enabled = Selected.Any(x => x.Entity == Entity.Node);
 					opt.Click += (s, a) => SelectConnectedNodes();
 				}
@@ -5126,8 +5146,10 @@ namespace pr.gui
 				#region Properties
 				if (AllowEditing)
 				{
-					if (cmenu.Items.Count != 0) cmenu.Items.Add(new ToolStripSeparator());
-					var opt = cmenu.Items.Add2(new ToolStripMenuItem(Selected.Count != 0 ? "Properties" : "Default Properties") { Name="Props" });
+					cmenu.Items.AddSeparator();
+					var opt = Selected.Count != 0
+						? cmenu.Items.Add2(new ToolStripMenuItem("Properties") { Name = CMenuItems.Properties })
+						: cmenu.Items.Add2(new ToolStripMenuItem("Default Properties") { Name = CMenuItems.DefaultProps });
 					opt.Click += (s,a) => EditProperties();
 				}
 				#endregion
@@ -5135,7 +5157,7 @@ namespace pr.gui
 				#region Use Default Properties
 				if (AllowEditing && Selected.Count != 0)
 				{
-					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Use Default Properties") { Name="DefaultProps" });
+					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Use Default Properties") { Name = CMenuItems.UseDefaultProps });
 					opt.Click += (s,a) =>
 					{
 						foreach (var elem in Selected.ToArray())
@@ -5154,8 +5176,22 @@ namespace pr.gui
 			// Allow users to add/remove menu options
 			OnAddUserMenuOptions(new AddUserMenuOptionsEventArgs(cmenu));
 
+			cmenu.Items.TidySeparators();
 			cmenu.Closed += (s,a) => Invalidate();
 			cmenu.Show(this, location);
+		}
+
+		/// <summary>Names for items in the context menu</summary>
+		public static class CMenuItems
+		{
+			public const string Scatter         = "cmenu_scatter";
+			public const string ReLink          = "cmenu_relink";
+			public const string BringToFront    = "cmenu_bring_to_front";
+			public const string SendToBack      = "cmenu_send_to_back";
+			public const string SelectConnected = "cmenu_select_connected";
+			public const string Properties      = "cmenu_props";
+			public const string DefaultProps    = "cmenu_default_props";
+			public const string UseDefaultProps = "cmenu_use_default_props";
 		}
 
 		/// <summary>Gets the tool strip containing edit controls for the diagram</summary>
@@ -5185,110 +5221,125 @@ namespace pr.gui
 		/// <summary>Set up a tool strip with tools for editing the diagram</summary>
 		private void SetupEditToolstrip()
 		{
-			#region Create Edit Toolbar
-			m_toolstrip_edit.SuspendLayout();
-
-			var btn_node = new ToolStripSplitButtonCheckable
+			using (m_toolstrip_edit.SuspendLayout(true))
 			{
-				CheckOnClicked      = true,
-				DisplayStyle        = ToolStripItemDisplayStyle.Image,
-				Image               = pr.Resources.boxes,
-				Name                = EditTools.Node.Key,
-				AutoSize            = true,
-				ImageScaling        = ToolStripItemImageScaling.SizeToFit,
-				Text                = "Node",
-				ToolTipText         = "Add Node",
-			};
-			var btn_conn = new ToolStripSplitButtonCheckable
-			{
-				CheckOnClicked      = true,
-				DisplayStyle        = ToolStripItemDisplayStyle.Image,
-				Image               = pr.Resources.connector1,
-				Name                = EditTools.Conn.Key,
-				AutoSize            = true,
-				ImageScaling        = ToolStripItemImageScaling.SizeToFit,
-				Text                = "Connector",
-				ToolTipText         = "Add Connector",
-			};
-			var btn_node_boxnode = new ToolStripMenuItem
-			{
-				CheckOnClick = true,
-				Image        = global::pr.Resources.boxes,
-				Name         = EditTools.Node.BoxNode,
-				Size         = new Size(78, 22),
-				AutoSize     = true,
-				Text         = "Box Node",
-			};
-			var btn_conn_line = new ToolStripMenuItem
-			{
-				CheckOnClick = true,
-				Image        = global::pr.Resources.connector1,
-				Name         = EditTools.Conn.Line,
-				Size         = new Size(108, 22),
-				AutoSize     = true,
-				Text         = "Line Connector",
-			};
-			var btn_conn_fwd = new ToolStripMenuItem
-			{
-				CheckOnClick = true,
-				Image        = global::pr.Resources.connector2,
-				Name         = EditTools.Conn.Forward,
-				Size         = new Size(129, 22),
-				AutoSize     = true,
-				Text         = "Forward Connector",
-			};
-			var btn_conn_back = new ToolStripMenuItem
-			{
-				CheckOnClick = true,
-				Image        = global::pr.Resources.connector3,
-				Name         = EditTools.Conn.Back,
-				Size         = new Size(137, 22),
-				AutoSize     = true,
-				Text         = "Backward Connector",
-			};
-			var btn_conn_bidi = new ToolStripMenuItem
-			{
-				CheckOnClick = true,
-				Image        = global::pr.Resources.connector4,
-				Name         = EditTools.Conn.Bidir,
-				Size         = new Size(152, 22),
-				AutoSize            = true,
-				Text         = "Bidir Connector",
-			};
-
-			btn_node.DropDownItems.AddRange(new ToolStripItem[]{btn_node_boxnode});
-			btn_conn.DropDownItems.AddRange(new ToolStripItem[]{btn_conn_line, btn_conn_fwd, btn_conn_back, btn_conn_bidi});
-
-			btn_node.DefaultItem = btn_node_boxnode;
-			btn_conn.DefaultItem = btn_conn_line;
-
-			m_toolstrip_edit.Items.AddRange(new ToolStripItem[]{btn_node, btn_conn});
-			m_toolstrip_edit.ResumeLayout(false);
-			m_toolstrip_edit.PerformLayout();
-			#endregion
-
-			btn_node.ButtonClick += (s,a) =>
+				#region Node Split Button
 				{
-					var btn = s.As<ToolStripSplitButtonCheckable>();
-					switch (btn.DefaultItem.Name)
+					var btn = m_toolstrip_edit.Items.Add2(new ToolStripSplitButtonCheckable
 					{
-					case EditTools.Node.BoxNode:
-						m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateNode(this) : null);
-						break;
+						CheckOnClicked      = true,
+						DisplayStyle        = ToolStripItemDisplayStyle.Image,
+						Image               = Resources.boxes,
+						Name                = EditTools.Node.Key,
+						AutoSize            = true,
+						ImageScaling        = ToolStripItemImageScaling.SizeToFit,
+						Text                = "Node",
+						ToolTipText         = "Add Node",
+					});
+					btn.ButtonClick += (s,a) =>
+					{
+						switch (btn.DefaultItem.Name)
+						{
+						case EditTools.Node.BoxNode:
+							m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateNode(this) : null);
+							break;
+						}
+					};
+					#region Box Node
+					{
+						btn.DropDownItems.Add2(new ToolStripMenuItem
+						{
+							CheckOnClick = true,
+							Image        = global::pr.Resources.boxes,
+							Name         = EditTools.Node.BoxNode,
+							Size         = new Size(78, 22),
+							AutoSize     = true,
+							Text         = "Box Node",
+						});
 					}
-				};
-
-			btn_conn.ButtonClick += (s,a) =>
+					#endregion
+					btn.DefaultItem = btn.DropDownItems[0];
+				}
+				#endregion
+				#region Connector Split Button
 				{
-					var btn = s.As<ToolStripSplitButtonCheckable>();
-					switch (btn.DefaultItem.Name)
+					var btn = m_toolstrip_edit.Items.Add2(new ToolStripSplitButtonCheckable
 					{
-					case EditTools.Conn.Line:    m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.Line   ) : null); break;
-					case EditTools.Conn.Forward: m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.Forward) : null); break;
-					case EditTools.Conn.Back:    m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.Back   ) : null); break;
-					case EditTools.Conn.Bidir:   m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.BiDir  ) : null); break;
+						CheckOnClicked      = true,
+						DisplayStyle        = ToolStripItemDisplayStyle.Image,
+						Image               = pr.Resources.connector1,
+						Name                = EditTools.Conn.Key,
+						AutoSize            = true,
+						ImageScaling        = ToolStripItemImageScaling.SizeToFit,
+						Text                = "Connector",
+						ToolTipText         = "Add Connector",
+					});
+					btn.ButtonClick += (s,a) =>
+					{
+						switch (btn.DefaultItem.Name)
+						{
+						case EditTools.Conn.Line:    m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.Line   ) : null); break;
+						case EditTools.Conn.Forward: m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.Forward) : null); break;
+						case EditTools.Conn.Back:    m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.Back   ) : null); break;
+						case EditTools.Conn.Bidir:   m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.BiDir  ) : null); break;
+						}
+					};
+					#region Line Connector
+					{
+						btn.DropDownItems.Add2(new ToolStripMenuItem
+						{
+							CheckOnClick = true,
+							Image        = global::pr.Resources.connector1,
+							Name         = EditTools.Conn.Line,
+							Size         = new Size(108, 22),
+							AutoSize     = true,
+							Text         = "Line Connector",
+						});
 					}
-				};
+					#endregion
+					#region Line Forward Connector
+					{
+						btn.DropDownItems.Add2(new ToolStripMenuItem
+						{
+							CheckOnClick = true,
+							Image        = global::pr.Resources.connector2,
+							Name         = EditTools.Conn.Forward,
+							Size         = new Size(129, 22),
+							AutoSize     = true,
+							Text         = "Forward Connector",
+						});
+					}
+					#endregion
+					#region Line Backward Connector
+					{
+						btn.DropDownItems.Add2(new ToolStripMenuItem
+						{
+							CheckOnClick = true,
+							Image        = global::pr.Resources.connector3,
+							Name         = EditTools.Conn.Back,
+							Size         = new Size(137, 22),
+							AutoSize     = true,
+							Text         = "Backward Connector",
+						});
+					}
+					#endregion
+					#region Line Bi-Directional Connector
+					{
+						btn.DropDownItems.Add2(new ToolStripMenuItem
+						{
+							CheckOnClick = true,
+							Image        = global::pr.Resources.connector4,
+							Name         = EditTools.Conn.Bidir,
+							Size         = new Size(152, 22),
+							AutoSize            = true,
+							Text         = "Bidir Connector",
+						});
+					}
+					#endregion
+					btn.DefaultItem = btn.DropDownItems[0];
+				}
+				#endregion
+			}
 
 			UpdateEditToolbar();
 		}
@@ -5372,18 +5423,14 @@ namespace pr.gui
 		/// <summary>Check the self consistency of elements</summary>
 		public bool CheckConsistency()
 		{
-			try
+			if (ConsistencyCheckSuspended) return true;
+			try { CheckConsistencyInternal(); }
+			catch (Exception ex)
 			{
-				// Allow inconsistency while events are suspended
-				if (!DiagramChanged.IsSuspended())
-					CheckConsistencyInternal();
-				
-				return true;
-			}
-			catch
-			{
+				Debug.WriteLine(ex.MessageFull());
 				return false;
 			}
+			return true;
 		}
 
 		/// <summary>Check consistency of the diagram elements</summary>
@@ -5396,8 +5443,8 @@ namespace pr.gui
 			elements.Sort(ByGuid);
 			for (int i = 0; i < elements.Length - 1; ++i)
 			{
-				if (Equals(elements[i].Id, elements[i+1].Id))
-					throw new Exception("Element {0} is in the Elements collection more than once".Fmt(elements[i].ToString()));
+				if (!Equals(elements[i].Id, elements[i+1].Id)) continue;
+				throw new Exception("Element {0} is in the Elements collection more than once".Fmt(elements[i].ToString()));
 			}
 
 			// All elements in the diagram should have their Diagram property set to this diagram
@@ -5420,9 +5467,41 @@ namespace pr.gui
 			if (!selected0.SequenceEqual(selected1, ByGuid))
 				throw new Exception("Selected elements collection is inconsistent with the selected state of the elements");
 
+			// The 'ElemIds' should match the Elements collection
+			if (ElemIds.Count != Elements.Count)
+				throw new Exception("Elements collection and Element Id lookup table don't match");
+			foreach (var elem in Elements)
+				if (ElemIds.GetOrDefault(elem.Id) != elem)
+					throw new Exception("Element {0} is not in the Element Id lookup table".Fmt(elem.ToString()));
+
 			// Check the consistency of all elements
 			foreach (var elem in Elements)
 				elem.CheckConsistency();
+		}
+
+		/// <summary>True while consistency checks are suspended (Set calls are reference counted)</summary>
+		public bool ConsistencyCheckSuspended
+		{
+			get { return m_consistency_check_ref_count != 0; }
+			set
+			{
+				m_consistency_check_ref_count += value ? +1 : -1;
+				Debug.Assert(m_consistency_check_ref_count >= 0);
+			}
+		}
+		private int m_consistency_check_ref_count;
+
+		/// <summary>Temporarily disable the consistency check</summary>
+		public Scope SuspendConsistencyCheck(bool check_on_exit = true)
+		{
+			return Scope.Create(
+				() => ConsistencyCheckSuspended = true,
+				() =>
+				{
+					ConsistencyCheckSuspended = false;
+					if (check_on_exit && !ConsistencyCheckSuspended)
+						Debug.Assert(CheckConsistency());
+				});
 		}
 
 		/// <summary>Element sorting predicates</summary>

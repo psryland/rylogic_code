@@ -29,7 +29,7 @@ namespace ldr
 			,m_btn_cancel(Button ::Params<>().parent(&m_panel_btns).dock(EDock::Right).text(L"Cancel").dlg_result(EDialogResult::Cancel))
 			,m_btn_ok    (Button ::Params<>().parent(&m_panel_btns).dock(EDock::Right).text(L"OK").dlg_result(EDialogResult::Ok).def_btn())
 			,m_tb        (TextBox::Params<>().parent(this_).dock(EDock::Fill).multiline(multiline).want_return(multiline).style(multiline?'+':'-',WS_HSCROLL|WS_VSCROLL))
-			,m_font(L"Courier New", 80)
+			,m_font(L"Courier New", 80, nullptr)
 			,m_body(body)
 		{
 			CreateHandle();

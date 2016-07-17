@@ -956,7 +956,7 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(char const* ldr_script,
 	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
 }
 
-// Modify the geometry of an existing object
+// Create an object via callback
 struct ObjectEditCBData
 {
 	View3D_EditObjectCB edit_cb;
@@ -1031,9 +1031,7 @@ void __stdcall ObjectEditCB(ModelPtr model, void* ctx, pr::Renderer&)
 	model->DeleteNuggets();
 	model->CreateNugget(mat);
 }
-
-// Create an object via callback
-VIEW3D_API View3DObject __stdcall View3D_ObjectCreate(char const* name, View3DColour colour, int icount, int vcount, View3D_EditObjectCB edit_cb, void* ctx, GUID const& context_id)
+VIEW3D_API View3DObject __stdcall View3D_ObjectCreateCB(char const* name, View3DColour colour, int icount, int vcount, View3D_EditObjectCB edit_cb, void* ctx, GUID const& context_id)
 {
 	try
 	{
@@ -1041,6 +1039,31 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreate(char const* name, View3DCo
 		ObjectEditCBData cbdata = {edit_cb, ctx};
 		pr::ldr::ObjectAttributes attr(pr::ldr::ELdrObject::Custom, name, pr::Colour32(colour));
 		auto obj = pr::ldr::Add(Dll().m_rdr, attr, icount, vcount, ObjectEditCB, &cbdata, context_id);
+		if (obj) Dll().m_obj_cont.push_back(obj);
+		return obj.m_ptr;
+	}
+	CatchAndReport(View3D_ObjectCreate, , nullptr);
+}
+
+// Create an object from provided buffers
+struct CreateObjectData
+{
+	View3DVertex const* m_verts;
+	UINT16 const*       m_indices;
+	EView3DPrim         m_prim_type;
+	EView3DGeom         m_geom_type;
+};
+void __stdcall ObjectCreateCB(ModelPtr model, void* ctx, pr::Renderer&)
+{
+}
+VIEW3D_API View3DObject __stdcall View3D_ObjectCreate(char const* name, View3DColour colour, int icount, int vcount, View3DVertex const* verts, UINT16 const* indices, EView3DPrim prim_type, EView3DGeom geom_type, GUID const& context_id)
+{
+	try
+	{
+		DllLockGuard;
+		CreateObjectData cbdata = {verts, indices, prim_type, geom_type};
+		pr::ldr::ObjectAttributes attr(pr::ldr::ELdrObject::Custom, name, pr::Colour32(colour));
+		auto obj = pr::ldr::Add(Dll().m_rdr, attr, icount, vcount, ObjectCreateCB, &cbdata, context_id);
 		if (obj) Dll().m_obj_cont.push_back(obj);
 		return obj.m_ptr;
 	}

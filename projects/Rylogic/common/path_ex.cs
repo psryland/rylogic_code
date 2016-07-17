@@ -447,6 +447,8 @@ namespace pr.common
 		[SuppressUnmanagedCodeSecurity]
 		public static IEnumerable<FileData> EnumFileSystem(string path, SearchOption search_flags = SearchOption.TopDirectoryOnly, string regex_filter = null, RegexOptions regex_options = RegexOptions.None, FileAttributes exclude = FileAttributes.Hidden, Func<string,bool> progress = null)
 		{
+			Debug.Assert(DirExists(path), "Attempting to enumerate an invalid directory path");
+
 			// Default progress callback
 			if (progress == null)
 				progress = s => true;

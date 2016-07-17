@@ -32,6 +32,7 @@ namespace TestCS
 		private ToolStripMenuItem m_menu_tests_dock_panel;
 		private ToolStripMenuItem m_menu_tests_vt100;
 		private ToolStripMenuItem m_menu_tests_message_box;
+		private ToolStripMenuItem m_menu_tests_combo_box;
 		private ToolStripMenuItem m_menu_tests_graphcontrol;
 
 		/// <summary>The main entry point for the application.</summary>
@@ -78,6 +79,11 @@ namespace TestCS
 				new FormColourWheel().Show(this);
 			};
 
+			m_menu_tests_combo_box.Click += (s, a) =>
+			{
+				new ComboBoxUI().Show(this);
+			};
+
 			m_menu_tests_diagramcontrol.Click += (s, a) =>
 			{
 				new DiagramControlUI().Show(this);
@@ -114,7 +120,7 @@ namespace TestCS
 				{
 					dlg.Panel.BackColor = SystemColors.ControlLight;
 					dlg.TextBox.BorderStyle = BorderStyle.None;
-					dlg.NeutralBtnText = "";
+					dlg.NeutralBtnText = "NewTroll";
 					dlg.NeutralBtn.DialogResult = DialogResult.None;
 					dlg.ShowDialog();
 				}
@@ -201,6 +207,7 @@ namespace TestCS
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_exit = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tests_combo_box = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_checked_groupbox = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_checked_listbox = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_colourwheel = new System.Windows.Forms.ToolStripMenuItem();
@@ -210,6 +217,7 @@ namespace TestCS
 			this.m_menu_tests_graphcontrol = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_helpui = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_hintballoon = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tests_message_box = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_rtb = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_scintilla = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_subclassed_controls = new System.Windows.Forms.ToolStripMenuItem();
@@ -220,7 +228,6 @@ namespace TestCS
 			this.m_menu_tests_view3d_editor = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_vt100 = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_web_browser = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_tests_message_box = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -255,6 +262,7 @@ namespace TestCS
             this.m_menu_tests_checked_groupbox,
             this.m_menu_tests_checked_listbox,
             this.m_menu_tests_colourwheel,
+            this.m_menu_tests_combo_box,
             this.m_menu_tests_dgv,
             this.m_menu_tests_diagramcontrol,
             this.m_menu_tests_dock_panel,
@@ -275,6 +283,12 @@ namespace TestCS
 			this.m_menu_tests.Name = "m_menu_tests";
 			this.m_menu_tests.Size = new System.Drawing.Size(45, 20);
 			this.m_menu_tests.Text = "&Tests";
+			// 
+			// m_menu_tests_combo_box
+			// 
+			this.m_menu_tests_combo_box.Name = "m_menu_tests_combo_box";
+			this.m_menu_tests_combo_box.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_tests_combo_box.Text = "&ComboBox";
 			// 
 			// m_menu_tests_checked_groupbox
 			// 
@@ -329,6 +343,12 @@ namespace TestCS
 			this.m_menu_tests_hintballoon.Name = "m_menu_tests_hintballoon";
 			this.m_menu_tests_hintballoon.Size = new System.Drawing.Size(180, 22);
 			this.m_menu_tests_hintballoon.Text = "HintBalloon";
+			// 
+			// m_menu_tests_message_box
+			// 
+			this.m_menu_tests_message_box.Name = "m_menu_tests_message_box";
+			this.m_menu_tests_message_box.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_tests_message_box.Text = "&Message Box";
 			// 
 			// m_menu_tests_rtb
 			// 
@@ -390,20 +410,14 @@ namespace TestCS
 			this.m_menu_tests_web_browser.Size = new System.Drawing.Size(180, 22);
 			this.m_menu_tests_web_browser.Text = "&Web Browser";
 			// 
-			// m_menu_tests_message_box
-			// 
-			this.m_menu_tests_message_box.Name = "m_menu_tests_message_box";
-			this.m_menu_tests_message_box.Size = new System.Drawing.Size(180, 22);
-			this.m_menu_tests_message_box.Text = "&Message Box";
-			// 
-			// FormTestApp
+			// MainUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(219, 37);
 			this.Controls.Add(this.m_menu);
 			this.MainMenuStrip = this.m_menu;
-			this.Name = "FormTestApp";
+			this.Name = "MainUI";
 			this.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
 			this.Text = "TestApp";
 			this.m_menu.ResumeLayout(false);

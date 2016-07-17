@@ -146,12 +146,6 @@ namespace pr.extn
 			return ctrl;
 		}
 
-		/// <summary>Return 'Tag' for this control as type 'T'. Creates a new T if Tag is currently null</summary>
-		public static T TagAs<T>(this Control ctrl) where T:new()
-		{
-			return (T)(ctrl.Tag ?? (ctrl.Tag = new T()));
-		}
-
 		/// <summary>Get the tooltip associated with this control</summary>
 		public static string ToolTip(this Control ctrl, ToolTip tt)
 		{

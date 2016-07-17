@@ -82,9 +82,6 @@
     <ClInclude Include="..\projects\linedrawer\utility\debug.h">
       <Filter>utility</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\linedrawer\utility\misc.h">
-      <Filter>utility</Filter>
-    </ClInclude>
     <ClInclude Include="..\projects\linedrawer\input\keybindings.h">
       <Filter>input</Filter>
     </ClInclude>
@@ -162,6 +159,9 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\gui\menu_list.h">
       <Filter>gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\linedrawer\main\status_manager.h">
+      <Filter>main</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

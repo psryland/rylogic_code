@@ -104,12 +104,21 @@ namespace pr.gui
 			Controls.Add(m_button);
 		}
 
+		/// <summary>Progress function delegate</summary>
+		public delegate void WorkerFunc(ProgressForm form, object arg, Progress cb);
+
 		/// <summary>Creates a progress form starting a background thread immediately</summary>
-		public ProgressForm(string title, string desc, Icon icon, ProgressBarStyle style, Action<ProgressForm, object, Progress> func, object arg = null, ThreadPriority priority = ThreadPriority.Normal)
+		public ProgressForm(string title, string desc, Icon icon, ProgressBarStyle style, WorkerFunc func, object arg = null, ThreadPriority priority = ThreadPriority.Normal)
 			:this(title, desc, icon, style)
 		{
 			Done         = new ManualResetEvent(false);
 			CancelSignal = new ManualResetEvent(false);
+			func = func ?? ((f,o,p) =>
+			{
+				// Default worker function, just waits till Cancel is signalled
+				for (;!CancelPending; Thread.Sleep(100))
+					p(new UserState { });
+			});
 
 			// Start the task
 			var dispatcher = Dispatcher.CurrentDispatcher;

@@ -407,7 +407,7 @@ namespace pr.extn
 		public static void FormatValue(object sender, ListControlConvertEventArgs args)
 		{
 			// Use the description attribute if available
-			var desc = ((T)args.ListItem).Desc();
+			var desc = ((Enum)args.ListItem).Desc();
 			if (desc != null)
 			{
 				args.Value = desc;
@@ -443,18 +443,20 @@ namespace pr.extn
 		}
 	}
 
-	public static class EnumExtensions
+	public static class Enum_
 	{
 		/// <summary>Convert the enum value to a string containing spaces</summary>
-		public static string ToPrettyString<TEnum>(this TEnum e) where TEnum :struct ,IConvertible
+		public static string ToPrettyString(this Enum e)
 		{
 			return StrTxfm.Apply(e.ToStringFast(), StrTxfm.ECapitalise.UpperCase, StrTxfm.ECapitalise.DontChange, StrTxfm.ESeparate.Add, " ");
 		}
 
 		/// <summary>A faster overload of ToString</summary>
-		public static string ToStringFast<TEnum>(this TEnum e) where TEnum :struct ,IConvertible
+		public static string ToStringFast(this Enum e)
 		{
-			return Enum<TEnum>.ToString(e);
+			var ty  = typeof(Enum<>).MakeGenericType(e.GetType());
+			var str = (string)ty.InvokeMember(nameof(e.ToString), BindingFlags.InvokeMethod, null, null, new object[] { e });
+			return str;
 		}
 
 		/// <summary>Return the index of this enum value within the enum (for non-sequential enums)

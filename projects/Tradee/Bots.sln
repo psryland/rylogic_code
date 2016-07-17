@@ -12,6 +12,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TradeeService", "TradeeServ
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic", "..\Rylogic\Rylogic.csproj", "{1735C773-5477-45E6-9CBF-5F2B6DC707EF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tradee_AccountStatus", "Tradee_AccountStatus\Tradee_AccountStatus\Tradee_AccountStatus.csproj", "{8779314E-A4EB-4369-9BAB-48FE71800E8D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,6 +32,10 @@ Global
 		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8779314E-A4EB-4369-9BAB-48FE71800E8D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8779314E-A4EB-4369-9BAB-48FE71800E8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8779314E-A4EB-4369-9BAB-48FE71800E8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8779314E-A4EB-4369-9BAB-48FE71800E8D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

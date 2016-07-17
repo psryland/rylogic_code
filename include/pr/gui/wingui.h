@@ -620,6 +620,12 @@ namespace pr
 			return CComPtr<IStream>(SHCreateMemStream(static_cast<BYTE const*>(data), size));
 		}
 
+		// Convert a mouse key to an index
+		inline int MouseKeyToIndex(EMouseKey mk)
+		{
+			// Mouse keys are all single bit, so log2() returns the bit index
+			return int(log2(int(mk)) + 0.5f);
+		}
 		#pragma endregion
 
 		#pragma region Win32 Structure Wrappers
@@ -981,18 +987,20 @@ namespace pr
 				:m_obj(obj)
 				,m_owned(owned)
 			{}
-			Font(EFaceName face_name, int point_size, bool bold = false, bool italic = false)
-				:Font(FaceName(face_name), point_size, bold, italic)
+			Font(EFaceName face_name, int point_size, void*, int weight = FW_NORMAL, bool italic = false)
+				:Font(FaceName(face_name), point_size, nullptr, weight, italic)
 			{}
-			Font(wchar_t const* face_name, int point_size, bool bold = false, bool italic = false, HDC hdc = nullptr)
+			Font(wchar_t const* face_name, int point_size, void*, int weight = FW_NORMAL, bool italic = false, bool underline = false, bool strike_out = false, HDC hdc = nullptr)
 			{
 				ClientDC clientdc(nullptr);
 				auto hdc_ = hdc ? hdc : clientdc.m_hdc;
 
-				auto lf = LOGFONTW{};
-				lf.lfCharSet = DEFAULT_CHARSET;
-				lf.lfWeight = bold ? FW_BOLD : FW_NORMAL;
-				lf.lfItalic = BYTE(italic ? TRUE : FALSE);
+				LOGFONTW lf    = {};
+				lf.lfCharSet   = DEFAULT_CHARSET;
+				lf.lfWeight    = LONG(weight);
+				lf.lfItalic    = BYTE(italic ? TRUE : FALSE);
+				lf.lfUnderline = BYTE(underline ? TRUE : FALSE);
+				lf.lfStrikeOut = BYTE(strike_out ? TRUE : FALSE);
 				::wcsncpy_s(lf.lfFaceName, _countof(lf.lfFaceName), face_name, _TRUNCATE);
 
 				// convert point_size to logical units based on hDC
@@ -1005,12 +1013,60 @@ namespace pr
 				m_obj = ::CreateFontIndirectW(&lf);
 				m_owned = true;
 			}
+			Font(HFONT font, int weight)
+				:Font(font, nullptr, &weight, nullptr, nullptr, nullptr, nullptr)
+			{}
+			Font(HFONT font, int point_size, int weight)
+				:Font(font, &point_size, &weight, nullptr, nullptr, nullptr, nullptr)
+			{}
+			Font(HFONT font, int point_size, int weight, bool italic , bool underline, bool strike_out, HDC hdc = nullptr)
+				:Font(font, &point_size, &weight, &italic, &underline, &strike_out, hdc)
+			{}
+			Font(HFONT font, int* point_size, int* weight, bool* italic, bool* underline, bool* strike_out, HDC hdc)
+			{
+				LOGFONTW lf;
+				GetObjectW(font, sizeof(LOGFONTW), &lf);
+
+				if (point_size)
+				{
+					// convert point_size to logical units based on hDC
+					ClientDC clientdc(nullptr);
+					auto hdc_ = hdc ? hdc : clientdc.m_hdc;
+					auto pt = Point(0, ::MulDiv(::GetDeviceCaps(hdc_, LOGPIXELSY), *point_size, 720)); // 72 points/inch, 10 'decipoints'/point
+					auto ptOrg = Point{};
+					::DPtoLP(hdc_, &pt, 1);
+					::DPtoLP(hdc_, &ptOrg, 1);
+					lf.lfHeight = -abs(pt.y - ptOrg.y);
+					lf.lfWeight = 0;
+				}
+				if (weight)
+				{
+					lf.lfWeight = *weight;
+				}
+				if (italic)
+				{
+					lf.lfItalic = *italic;
+				}
+				if (underline)
+				{
+					lf.lfUnderline = *underline;
+				}
+				if (strike_out)
+				{
+					lf.lfStrikeOut = *strike_out;
+				}
+				m_obj = ::CreateFontIndirectW(&lf);
+				m_owned = true;
+			}
 			~Font()
 			{
 				if (m_owned)
 					::DeleteObject(m_obj);
 			}
-			operator HFONT() const { return m_obj; }
+			operator HFONT() const
+			{
+				return m_obj;
+			}
 		};
 		struct TextMetrics :TEXTMETRICW
 		{
@@ -2270,6 +2326,7 @@ namespace pr
 
 				TControl* ctrl() const { return m_ctrl; }
 				HWND      hwnd() const { return m_ctrl != nullptr ? HWND(*m_ctrl) : m_hwnd; }
+				TControl* operator -> () const { return m_ctrl; }
 
 				operator WndRef<TControl const>() { return WndRef<TControl const>(m_ctrl, m_hwnd); }
 				operator TControl*() const        { return ctrl(); }
@@ -2282,20 +2339,28 @@ namespace pr
 				// or m_ctrl->m_hwnd != nullptr,
 				operator bool() const = delete;
 
-				// Allow comparison to null.
-				// Not null implies m_ctrl != null
-				bool operator == (WndRef<TControl const> const& rhs) const  { return m_ctrl == rhs.m_ctrl; }
-				bool operator != (WndRef<TControl const> const& rhs) const  { return m_ctrl != rhs.m_ctrl; }
-				bool operator == (nullptr_t) const  { return m_ctrl == nullptr; }
-				bool operator != (nullptr_t) const  { return m_ctrl != nullptr; }
-				TControl* operator -> () const { return m_ctrl; }
-
 				// Attempts to get the Control* for 'hwnd'
 				static TControl* FindCtrl(HWND hwnd)
 				{
 					return hwnd != nullptr ? reinterpret_cast<TControl*>(::SendMessageW(hwnd, WM_GETCTRLPTR, 0, 0)) : nullptr;
 				}
 			};
+
+			// Equal if 'lhs' and 'rhs' represent the same window
+			template <typename TControl> inline bool operator == (impl::WndRef<TControl> lhs, impl::WndRef<TControl> rhs)
+			{
+				// Careful, if one has a ctrl pointer and the other doesn't, but the ctrl
+				// doesn't yet have an hwnd, then they're different windows.
+				auto lhs_ptr = lhs.ctrl() - (Control*)0;
+				auto rhs_ptr = rhs.ctrl() - (Control*)0;
+				return
+					(lhs_ptr ^ rhs_ptr) == 0 && // both the same (possibly null) control pointers
+					lhs.hwnd() == rhs.hwnd();   // both refer to the same window handle
+			}
+			template <typename TControl> inline bool operator != (impl::WndRef<TControl> lhs, impl::WndRef<TControl> rhs)
+			{
+				return !(lhs == rhs);
+			}
 		}
 		using WndRefC = impl::WndRef<Control const>;
 		using WndRef  = impl::WndRef<Control>;
@@ -2581,7 +2646,7 @@ namespace pr
 				// Auto size to the parent
 				auto_size_position::CalcPosSize(x, y, w, h, Rect(), [&](int id) -> Rect
 				{
-					if (id == 0) return p.m_parent != nullptr ? p.m_parent->ClientRect() : MinMaxInfo().Bounds();
+					if (id == 0) return p.m_parent.hwnd() != nullptr ? Control::ClientRect(p.m_parent) : MinMaxInfo().Bounds();
 					if (id == -1) throw std::exception("Auto size not supported for dialog templates");
 					throw std::exception("DlgTemplate can only be positioned related to the screen or owner window");
 				});
@@ -3306,6 +3371,7 @@ namespace pr
 			#pragma endregion
 
 		protected:
+			using BtnDownMap = std::unordered_map<EMouseKey, LONG>;
 
 			Ptr<CtrlParams>    m_cp;              // Initial creation parameters for the control
 			HWND               m_hwnd;            // Window handle for the control
@@ -3319,7 +3385,7 @@ namespace pr
 			Brush              m_brush_back;      // Background colour brush
 			Rect               m_pos_offset;      // Distances from this control to the edges of the parent client area
 			bool               m_pos_ofs_suspend; // Disables the saving of the position offset when the control is moved
-			LONG               m_down_at[4];      // Button down timestamp
+			BtnDownMap         m_down_at;         // Button down timestamp
 			bool               m_handle_only;     // True if this object does not own 'm_hwnd'
 			HBITMAP            m_dbl_buffer;      // Non-null if the control is double buffered
 			WndClassEx         m_wci;             // Window class info
@@ -3425,10 +3491,17 @@ namespace pr
 				if (m_hwnd == nullptr)
 				{
 					// If this control isn't yet created, create from the highest ancestor
-					if (!cp().top_level() && m_parent != nullptr)
+					if (!cp().top_level() && m_parent.ctrl() != nullptr)
+					{
 						m_parent->CreateHandle();
+					}
 					else
+					{
+						// Create this control, then ensure all children exist
 						Create(cp());
+						if (m_hwnd != nullptr)
+							CreateHandle();
+					}
 				}
 				else
 				{
@@ -3447,7 +3520,7 @@ namespace pr
 			{
 				assert("Window handle already exists" && m_hwnd == nullptr);
 				assert("No window class given. Called p.wndclass(RegisterWndClass<>()) before create" && p_.atom() != nullptr);
-				assert("Child controls can only be created after the parent has been created" && (p_.top_level() || (p_.m_parent != nullptr && ::IsWindow(p_.m_parent))));
+				assert("Child controls can only be created after the parent has been created" && (p_.top_level() || (p_.m_parent.hwnd() != nullptr && ::IsWindow(p_.m_parent.hwnd()))));
 
 				// Save creation properties, we need to set these, even tho they're
 				// set in the constructor, because 'p' might be newer than what was
@@ -3520,9 +3593,9 @@ namespace pr
 
 				// If the start location is manual, and this is a top level window but owned by
 				// another window, convert the (x,y) position to screen space. (i.e. assume its given as parent relative)
-				if (p.top_level() && p.m_parent != nullptr && ::IsWindow(p.m_parent))
+				if (p.top_level() && p.m_parent.hwnd() != nullptr && ::IsWindow(p.m_parent))
 				{
-					auto sr = p.m_parent->ScreenRect();
+					auto sr = ScreenRect(p.m_parent);
 					x += sr.left;
 					y += sr.top;
 				}
@@ -3577,7 +3650,7 @@ namespace pr
 				// Change the window that contains this control
 				if (m_parent != parent)
 				{
-					if (m_parent != nullptr)
+					if (m_parent.ctrl() != nullptr)
 					{
 						// Remove from existing parent. Do this for all WS_CHILD and owned windows
 						// because it may have changed just prior to the parent being changed.
@@ -3587,7 +3660,7 @@ namespace pr
 
 					// Check we're not parenting to ourself or a child
 					#ifndef NDEBUG
-					if (parent != nullptr)
+					if (parent.ctrl() != nullptr)
 					{
 						std::vector<Control*> stack;
 						for (stack.push_back(this); !stack.empty();)
@@ -3599,10 +3672,11 @@ namespace pr
 					}
 					#endif
 
-					m_parent = WndRef(parent.ctrl());
+					// Try to get the Control* from 'parent' if possible
+					m_parent = parent.ctrl() != nullptr ? parent : WndRef(parent.hwnd());
 					cp().m_parent = m_parent;
 
-					if (m_parent != nullptr)
+					if (m_parent.ctrl() != nullptr)
 					{
 						// Add to the children of 'm_parent' (for WS_CHILD and owned windows)
 						m_parent->m_child.push_back(this);
@@ -3624,10 +3698,8 @@ namespace pr
 					}
 
 					// Update the anchor position offset relative to the new parent
-					if (m_parent != nullptr && !cp().top_level())
+					if (m_parent.hwnd() != nullptr && !cp().top_level())
 					{
-						assert("If this is a child control, it's window shouldn't exist before the parent window exists" && m_parent.hwnd() != nullptr);
-
 						// Record the position of the control within the parent
 						RecordPosOffset();
 
@@ -3652,13 +3724,13 @@ namespace pr
 			// Get/Set the index of this control within it's parent
 			int Index() const
 			{
-				assert("Control is not parented" && m_parent != nullptr);
+				assert("Control is not parented" && m_parent.ctrl() != nullptr);
 				assert("Control's parent does not contain a reference to this control" && std::find(std::begin(m_parent->m_child), std::end(m_parent->m_child), this) != std::end(m_parent->m_child));
 				return cast<int>(std::find(std::begin(m_parent->m_child), std::end(m_parent->m_child), this) - std::begin(m_parent->m_child));
 			}
 			void Index(int idx)
 			{
-				assert("Control is not parented" && m_parent != nullptr);
+				assert("Control is not parented" && m_parent.ctrl() != nullptr);
 				assert("Control's parent does not contain a reference to this control" && std::find(std::begin(m_parent->m_child), std::end(m_parent->m_child), this) != std::end(m_parent->m_child));
 				m_parent->m_child.erase(std::find(std::begin(m_parent->m_child), std::end(m_parent->m_child), this));
 				m_parent->m_child.insert(std::begin(m_parent->m_child) + idx, this);
@@ -3674,13 +3746,13 @@ namespace pr
 			Control const* TopLevelControl() const
 			{
 				auto p = this;
-				for (;!p->cp().top_level() && p->m_parent != nullptr; p = p->m_parent) {}
+				for (;!p->cp().top_level() && p->m_parent.ctrl() != nullptr; p = p->m_parent) {}
 				return p;
 			}
 			Control* TopLevelControl()
 			{
 				auto p = this;
-				for (;!p->cp().top_level() && p->m_parent != nullptr; p = p->m_parent) {}
+				for (;!p->cp().top_level() && p->m_parent.ctrl() != nullptr; p = p->m_parent) {}
 				return p;
 			}
 
@@ -4088,19 +4160,32 @@ namespace pr
 			// Note: Menus are part of the non-client area, you don't need to offset the client rect for the menu.
 			virtual Rect ClientRect() const
 			{
-				assert(::IsWindow(m_hwnd));
-				Rect rect;
-				Throw(::GetClientRect(m_hwnd, &rect), "GetClientRect failed.");
-				rect = rect.Adjust(cp().m_padding);
-				return rect;
+				return ClientRect(m_hwnd);
+			}
+			static Rect ClientRect(HWND hwnd)
+			{
+				assert(::IsWindow(hwnd));
+				Rect r;
+				Throw(::GetClientRect(hwnd, &r), "GetClientRect failed.");
+				
+				// If 'hwnd' is a 'Control', adjust for it's padding
+				auto wr = WndRefC(hwnd);
+				if (wr.ctrl() != nullptr)
+					r = r.Adjust(wr->cp().m_padding);
+
+				return r;
 			}
 
 			// Get/Set the control bounds [TL,BR) in screen space
 			Rect ScreenRect() const
 			{
-				assert(::IsWindow(m_hwnd));
+				return ScreenRect(m_hwnd);
+			}
+			static Rect ScreenRect(HWND hwnd)
+			{
+				assert(::IsWindow(hwnd));
 				Rect r;
-				Throw(::GetWindowRect(m_hwnd, &r), "GetWindowRect failed.");
+				Throw(::GetWindowRect(hwnd, &r), "GetWindowRect failed.");
 				return r;
 			}
 			void ScreenRect(Rect r, bool repaint = true, HWND prev = nullptr, EWindowPos flags = EWindowPos::NoZorder)
@@ -4409,7 +4494,7 @@ namespace pr
 			// Called on parent controls (from root down) when a key down/up event is received
 			virtual void OnKeyPreview(KeyEventArgs& args)
 			{
-				if (m_parent != nullptr)
+				if (m_parent.ctrl() != nullptr)
 				{
 					m_parent->OnKeyPreview(args);
 					if (args.m_handled) return;
@@ -4696,17 +4781,14 @@ namespace pr
 							(message == WM_LBUTTONDOWN || message == WM_LBUTTONUP) ? EMouseKey::Left :
 							(message == WM_RBUTTONDOWN || message == WM_RBUTTONUP) ? EMouseKey::Right :
 							(message == WM_MBUTTONDOWN || message == WM_MBUTTONUP) ? EMouseKey::Middle :
-							(message == WM_XBUTTONDOWN || message == WM_XBUTTONUP) ? EMouseKey::XButton1|EMouseKey::XButton2 :
+							(message == WM_XBUTTONDOWN || message == WM_XBUTTONUP) ? (HiWord(wparam) == XBUTTON1 ? EMouseKey::XButton1 : EMouseKey::XButton2) :
 							EMouseKey();
 
 						// Event order is: down, click, up
-						MouseEventArgs args(btn, down || IsClick(btn,down), pt, keystate);
-						if (down)
-							OnMouseButton(args);
-						if (IsClick(btn, down))
-							OnMouseClick(args);
-						if (!down)
-							OnMouseButton(args);
+						MouseEventArgs args(btn, down, pt, keystate);
+						if ( down) OnMouseButton(args);
+						DetectSingleClicks(args);
+						if (!down) OnMouseButton(args);
 						if (args.m_handled)
 							return true;
 
@@ -4828,7 +4910,7 @@ namespace pr
 						// Resizing this window will cause WM_WINDOWPOSCHANGING/ED to
 						// be sent to this window's WndProc which then calls OnWindowPosChange.
 						// If this control/window has a parent, reposition relative to it using the anchor/docking mechanism.
-						if (m_parent != nullptr && m_parent->m_hwnd == toplevel_hwnd)
+						if (m_parent.hwnd() != nullptr && m_parent.hwnd() == toplevel_hwnd)
 						{
 							auto& wp = *rcast<WindowPos*>(lparam);
 							auto is_form   = cp().top_level();
@@ -5272,7 +5354,7 @@ namespace pr
 				else
 				{
 					// Find the region remaining after earlier children have been docked.
-					p = m_parent != nullptr ? m_parent->ExcludeDockedChildren(p, Index()) : p;
+					p = m_parent.ctrl() != nullptr ? m_parent->ExcludeDockedChildren(p, Index()) : p;
 					switch (cp().m_dock)
 					{
 					default: throw std::exception("Unknown dock style");
@@ -5288,8 +5370,8 @@ namespace pr
 			}
 			void ResizeToParent(bool repaint = false)
 			{
-				if (m_parent == nullptr) return;
-				ResizeToParent(m_parent->ClientRect(), repaint);
+				if (m_parent.hwnd() == nullptr) return;
+				ResizeToParent(ClientRect(m_parent), repaint);
 			}
 
 			// Handle auto position/size
@@ -5350,11 +5432,11 @@ namespace pr
 				// Store distances so that this control's position equals
 				// parent.left + m_pos_offset.left, parent.right + m_pos_offset.right, etc..
 				// (i.e. right and bottom offsets are typically negative)
-				if (!m_hwnd || m_pos_ofs_suspend || m_parent == nullptr)
+				if (!m_hwnd || m_pos_ofs_suspend || m_parent.hwnd() == nullptr)
 					return;
 
 				// Record the offset relative to the parent
-				auto p = cp().top_level() ? m_parent->ScreenRect() : m_parent->ClientRect();
+				auto p = cp().top_level() ? ScreenRect(m_parent) : ClientRect(m_parent);
 				auto c = ParentRect().Adjust(cp().m_margin);
 				m_pos_offset = Rect(c.left - p.left, c.top - p.top, c.right - p.right, c.bottom - p.bottom);
 			}
@@ -5386,30 +5468,31 @@ namespace pr
 
 		private:
 
-			// Mouse single click detection. Returns true on mouse up with within the click threshold.
-			bool IsClick(EMouseKey btn, bool down)
+			// Mouse single click detection.
+			void DetectSingleClicks(MouseEventArgs args)
 			{
-				int idx;
-				switch (btn)
+				// Get a reference to the 'down-at' time for the btn
+				auto now = ::GetMessageTime();
+				auto& down_at = m_down_at[args.m_button];
+
+				// If this is a click, call the OnMouseClick handler
+				auto const click_thres = 150;
+				if (!args.m_down && now - down_at < click_thres)
 				{
-				default: throw std::exception("unknown mouse key");
-				case EMouseKey::Left:     idx = 0; break;
-				case EMouseKey::Right:    idx = 1; break;
-				case EMouseKey::Middle:   idx = 2; break;
-				case EMouseKey::XButton1: idx = 3; break;
+					// Add all buttons that went down within the click
+					// threshold time. This allows for button click combos
+					for (auto& d : m_down_at)
+					{
+						if (now - d.second > click_thres) continue;
+						args.m_button |= d.first;
+					}
+
+					// Handle the click
+					OnMouseClick(args);
 				}
-				if (down)
-				{
-					m_down_at[idx] = ::GetMessageTime();
-					return false;
-				}
-				else
-				{
-					auto const click_thres = 150;
-					auto click = ::GetMessageTime() - m_down_at[idx] < click_thres;
-					m_down_at[idx] = 0;
-					return click;
-				}
+
+				// Reset the 'down-at' time
+				down_at = args.m_down ? now : 0;
 			}
 		};
 		#pragma endregion
@@ -5559,7 +5642,7 @@ namespace pr
 			bool PinWindow() const { return cp().m_pin_window; }
 			void PinWindow(bool pin)
 			{
-				assert("Pinned window does not have a parent" && (!pin || m_parent != nullptr));
+				assert("Pinned window does not have a parent" && (!pin || m_parent.hwnd() != nullptr));
 				cp().m_pin_window = pin;
 				cp().m_anchor = pin ? EAnchor::TopLeft : EAnchor::None;
 				::CheckMenuItem(::GetSystemMenu(m_hwnd, FALSE), IDC_PINWINDOW_OPT, MF_BYCOMMAND|(pin ? MF_CHECKED : MF_UNCHECKED));
@@ -5573,7 +5656,7 @@ namespace pr
 			}
 			void Parent(WndRef parent) override
 			{
-				if (m_parent != nullptr)
+				if (m_parent.hwnd() != nullptr)
 				{
 					auto sysmenu = ::GetSystemMenu(m_hwnd, FALSE);
 					if (sysmenu)
@@ -5585,7 +5668,7 @@ namespace pr
 
 				Control::Parent(parent);
 
-				if (m_parent != nullptr)
+				if (m_parent.hwnd() != nullptr)
 				{
 					auto sysmenu = ::GetSystemMenu(m_hwnd, FALSE);
 					if (sysmenu)
@@ -6246,7 +6329,7 @@ namespace pr
 			enum :DWORD { DefaultStyle = DefaultControlStyle | WS_BORDER | WS_TABSTOP | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_LEFT };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"EDIT"; }
-			static HBRUSH WndBackground() { return ::GetSysColorBrush(COLOR_WINDOW); }
+			static HBRUSH WndBackground() { return (HBRUSH)::GetStockObject(WHITE_BRUSH); }// ::GetSysColorBrush(COLOR_WINDOW); }
 
 			struct TextBoxParams :CtrlParams
 			{
@@ -7634,7 +7717,7 @@ namespace pr
 			{
 				// Ignore padding in the parent
 				auto rect = parent_client;
-				if (m_parent != nullptr) rect = rect.Adjust(-m_parent->cp().m_padding);
+				if (m_parent.ctrl() != nullptr) rect = rect.Adjust(-m_parent->cp().m_padding);
 				Control::ResizeToParent(rect, repaint);
 			}
 

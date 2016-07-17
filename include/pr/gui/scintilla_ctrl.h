@@ -59,8 +59,8 @@ namespace pr
 			ScintillaCtrl() :ScintillaCtrl(Params<>()) {}
 			ScintillaCtrl(Params<> const& p)
 				:Control(p)
-				,m_snd(m_hwnd != nullptr ? SciFnDirect(::SendMessageW(m_hwnd, SCI_GETDIRECTFUNCTION, 0, 0)) : nullptr)
-				,m_ptr(m_hwnd != nullptr ? sptr_t     (::SendMessageW(m_hwnd, SCI_GETDIRECTPOINTER , 0, 0)) : 0)
+				,m_snd()
+				,m_ptr()
 				,m_auto_indent(false)
 			{}
 
@@ -935,6 +935,26 @@ namespace pr
 			void Status  (int statusCode) { return Cmd<void>(SCI_SETSTATUS, statusCode, 0L); }
 			bool ReadOnly() const         { return Cmd<int >(SCI_GETREADONLY, 0, 0L) != 0; }
 			void ReadOnly(bool readOnly)  { return Cmd<void>(SCI_SETREADONLY, readOnly, 0L); }
+			#pragma endregion
+
+		private:
+
+			#pragma region Handlers
+			LRESULT WndProc(UINT message, WPARAM wparam, LPARAM lparam) override
+			{
+				switch (message)
+				{
+				case WM_CREATE:
+					#pragma region
+					{
+						m_snd = SciFnDirect(::SendMessageW(m_hwnd, SCI_GETDIRECTFUNCTION, 0, 0));
+						m_ptr = sptr_t     (::SendMessageW(m_hwnd, SCI_GETDIRECTPOINTER , 0, 0));
+						break;
+					}
+					#pragma endregion
+				}
+				return Control::WndProc(message, wparam, lparam);
+			}
 			#pragma endregion
 		};
 	}

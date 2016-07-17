@@ -203,7 +203,7 @@ namespace pr.gui
 			base.OnShown(e);
 		}
 
-		// Position the controls within the dialog
+		/// <summary>Position the controls within the dialog</summary>
 		public void InitialLayout()
 		{
 			using (this.SuspendLayout(true))
@@ -216,6 +216,7 @@ namespace pr.gui
 				var y_10px = (int)(10 * scale_y);
 				var x_30px = (int)(30 * scale_x);
 				var y_30px = (int)(30 * scale_y);
+				var dlg_size = MinimumSize;
 
 				// Position, show, hide, resize the buttons
 				{
@@ -241,6 +242,20 @@ namespace pr.gui
 						btn.Location = new Point(x - btn.Width, y);
 						x -= btn.Width + btn_h/2;
 					}
+
+					// Measure the distance from the buttons panel to the dialog edges
+					var btns_srect = m_panel_btns.RectangleToScreen(m_panel_btns.ClientRectangle);
+					var dist = new int[]
+					{
+						btns_srect.Left   - Bounds.Left,
+						btns_srect.Top    - Bounds.Top,
+						btns_srect.Right  - Bounds.Right,
+						btns_srect.Bottom - Bounds.Bottom,
+					};
+
+					// Set the minimum size for the dialog required by the buttons panel
+					dlg_size.Width = Math.Max(dlg_size.Width, m_panel_btns.ClientRectangle.Right - x + dist[0] - dist[2]);
+					dlg_size.Height = Math.Max(dlg_size.Height, m_panel_btns.Height);
 				}
 
 				// Show the image if set
@@ -292,11 +307,13 @@ namespace pr.gui
 						msg_srect.Bottom - Bounds.Bottom - m_message.Font.Height,
 					};
 
-					// Set the size of the dialog
-					Size = new Size(
-						(int)(text_area.Width  + dist[0] - dist[2]),
-						(int)(text_area.Height + dist[1] - dist[3]));
+					// Set the minimum size for the dialog required by the text area
+					dlg_size.Width  = Math.Max(dlg_size.Width , (int)(text_area.Width  + dist[0] - dist[2]));
+					dlg_size.Height = Math.Max(dlg_size.Height, (int)(text_area.Height + dist[1] - dist[3]));
 				}
+
+				// Set the size of the dialog
+				Size = dlg_size;
 			}
 		}
 

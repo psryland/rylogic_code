@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -10,7 +11,7 @@ namespace pr.extn
 	public static class ObjectExtensions
 	{
 		/// <summary>Static cast this object to type 'T'</summary>
-		[System.Diagnostics.DebuggerStepThrough] public static T As<T>(this object obj) where T : class
+		[DebuggerStepThrough] public static T As<T>(this object obj) where T : class
 		{
 			// Don't use 'To' because that implies conversion.
 			// Can't use 'Cast' because clashes with IEnumerable extensions
@@ -21,7 +22,7 @@ namespace pr.extn
 		}
 
 		/// <summary>Overload ToString with options for transforming the string</summary>
-		[System.Diagnostics.DebuggerStepThrough] public static string ToString(this object obj, StrTxfm.ECapitalise word_start, StrTxfm.ECapitalise word_case = StrTxfm.ECapitalise.DontChange, StrTxfm.ESeparate word_sep = StrTxfm.ESeparate.DontChange, string sep = " ")
+		[DebuggerStepThrough] public static string ToString(this object obj, StrTxfm.ECapitalise word_start, StrTxfm.ECapitalise word_case = StrTxfm.ECapitalise.DontChange, StrTxfm.ESeparate word_sep = StrTxfm.ESeparate.DontChange, string sep = " ")
 		{
 			return StrTxfm.Apply(obj.ToString(), word_start, word_case, word_sep, sep);
 		}

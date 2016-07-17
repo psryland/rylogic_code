@@ -15,6 +15,14 @@ namespace pr.extn
 	/// <summary>Extensions for IEnumerable</summary>
 	public static class EnumerableExtensions
 	{
+		/// <summary>Enumerate instances of a given type</summary>
+		public static IEnumerable OfType(this IEnumerable source, Type ty)
+		{
+			foreach (var x in source)
+				if (x.GetType().Inherits(ty))
+					yield return x;
+		}
+
 		/// <summary>Cast a collection to statically convertible type</summary>
 		public static IEnumerable<TResult> ConvertTo<TResult>(this IEnumerable source)
 		{
@@ -290,6 +298,14 @@ namespace pr.extn
 				}
 				return index_of_min;
 			}
+		}
+
+		/// <summary>Count the number of elements in a range</summary>
+		public static int Count(this IEnumerable source)
+		{
+			int i = 0;
+			foreach (var x in source) ++i;
+			return i;
 		}
 
 		/// <summary>Counts the number of items in a sequence up to a maximum of 'max_count'</summary>

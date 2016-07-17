@@ -4,7 +4,6 @@
 //*****************************************************************************************
 #include "linedrawer/main/forward.h"
 #include "linedrawer/main/navigation.h"
-#include "linedrawer/utility/misc.h"
 #include "linedrawer/utility/debug.h"
 
 namespace ldr

@@ -103,6 +103,14 @@ namespace pr.extn
 		{
 			return new RectangleF(0f, 0f, s.Width, s.Height);
 		}
+		public static Rectangle ToRect(this RectangleF r)
+		{
+			return new Rectangle(
+				(int)Math.Round(r.Left  , MidpointRounding.AwayFromZero),
+				(int)Math.Round(r.Top   , MidpointRounding.AwayFromZero),
+				(int)Math.Round(r.Width , MidpointRounding.AwayFromZero),
+				(int)Math.Round(r.Height, MidpointRounding.AwayFromZero));
+		}
 
 		/// <summary>Returns this size with X,Y multiplied by 'scale'</summary>
 		public static Size Scaled(this Size s, float scale)
@@ -314,6 +322,26 @@ namespace pr.extn
 				r.Height >= 0 ? r.Y : r.Y + r.Height,
 				(float)Math.Abs(r.Width),
 				(float)Math.Abs(r.Height));
+		}
+
+		/// <summary>Returns a rectangle with Width/Height clamped to >= 0</summary>
+		public static Rectangle ClampPositive(this Rectangle r)
+		{
+			return new Rectangle(r.X, r.Y, Math.Max(r.Width, 0), Math.Max(r.Height, 0)); 
+		}
+		public static RectangleF ClampPositive(this RectangleF r)
+		{
+			return new RectangleF(r.X, r.Y, Math.Max(r.Width, 0), Math.Max(r.Height, 0)); 
+		}
+
+		/// <summary>Returns a rectangle with Width/Height clamped to <= 0</summary>
+		public static Rectangle ClampNegative(this Rectangle r)
+		{
+			return new Rectangle(r.X, r.Y, Math.Min(r.Width, 0), Math.Min(r.Height, 0)); 
+		}
+		public static RectangleF ClampNegative(this RectangleF r)
+		{
+			return new RectangleF(r.X, r.Y, Math.Min(r.Width, 0), Math.Min(r.Height, 0)); 
 		}
 
 		/// <summary>Reduces the size of this rectangle by excluding the area 'x'. The result must be a rectangle or an exception is thrown</summary>

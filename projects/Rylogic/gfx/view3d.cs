@@ -1199,8 +1199,19 @@ namespace pr.gfx
 			public Object(string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, Guid context_id)
 			{
 				m_owned = true;
-				m_handle = View3D_ObjectCreate(name, colour, icount, vcount, edit_cb, IntPtr.Zero, ref context_id);
+				m_handle = View3D_ObjectCreateCB(name, colour, icount, vcount, edit_cb, IntPtr.Zero, ref context_id);
 				if (m_handle == HObject.Zero) throw new Exception("Failed to create object '{0}' via edit callback".Fmt(name));
+			}
+
+			/// <summary>Create from fixed buffer</summary>
+			unsafe public Object(string name, uint colour, int icount, int vcount, IntPtr verts, IntPtr indices, EPrim prim_type, EGeom geom_type)
+				:this(name, colour, icount, vcount, verts, indices, prim_type, geom_type, Guid.Empty)
+			{}
+			unsafe public Object(string name, uint colour, int icount, int vcount, IntPtr verts, IntPtr indices, EPrim prim_type, EGeom geom_type, Guid context_id)
+			{
+				m_owned = true;
+				m_handle = View3D_ObjectCreate(name, colour, icount, vcount, verts, indices, prim_type, geom_type, ref context_id);
+				if (m_handle == HObject.Zero) throw new System.Exception("Failed to create object '{0}' from provided buffers".Fmt(name));
 			}
 
 			/// <summary>Attach to an existing object handle</summary>
@@ -1912,7 +1923,9 @@ namespace pr.gfx
 		// Objects
 		[DllImport(Dll)] private static extern int               View3D_ObjectsCreateFromFile    (string ldr_filepath, ref Guid context_id, bool async, ref View3DIncludes includes);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          (string ldr_script, bool file, ref Guid context_id, bool async, ref View3DIncludes includes);
-		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreate             (string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, IntPtr ctx, ref Guid context_id);
+		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateCB           (string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, IntPtr ctx, ref Guid context_id);
+		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreate             (string name, uint colour, int icount, int vcount, IntPtr verts, IntPtr indices, EPrim prim_type, EGeom geom_type, ref Guid context_id);
+
 		[DllImport(Dll)] private static extern void              View3D_ObjectUpdate             (HObject obj, string ldr_script, EUpdateObject flags);
 		[DllImport(Dll)] private static extern void              View3D_ObjectEdit               (HObject obj, EditObjectCB edit_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteAll         ();

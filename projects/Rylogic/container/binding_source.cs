@@ -45,7 +45,7 @@ namespace pr.container
 		private void Init(BSource bs)
 		{
 			m_bs = bs;
-			AllowNoCurrent = true;
+			AllowNoCurrent = false;
 		}
 
 		/// <summary>The BindingSource providing the implementation</summary>
@@ -94,6 +94,11 @@ namespace pr.container
 					}
 				}
 			}
+			public new object Current
+			{
+				get { return Position >= 0 && Position < Count ? (TItem)base.Current : default(TItem); }
+			}
+
 			protected override void OnPositionChanged(EventArgs e)
 			{
 				// Set the previous position before calling the event
@@ -177,9 +182,26 @@ namespace pr.container
 		}
 		private bool m_impl_allow_sort;
 
-		/// <summary>Get/Set whether the Position can be set to -1 when the binding source contains items</summary>
+		/// <summary>
+		/// Get/Set whether the Position can be set to -1 when the binding source contains items.
+		/// Warning, this can causes exceptions in CurrencyManager when bound to a DGV.</summary>
 		[Browsable(false)]
-		public virtual bool AllowNoCurrent { get; set; }
+		public virtual bool AllowNoCurrent
+		{
+			get
+			{
+				var bs = m_bs.DataSource as BindingSource<TItem>;
+				if (bs != null) return bs.AllowNoCurrent;
+				return m_impl_allow_no_current;
+			}
+			set
+			{
+				m_impl_allow_no_current = value;
+				var bs = m_bs.DataSource as BindingSource<TItem>;
+				if (bs != null) { bs.AllowNoCurrent = value; return; }
+			}
+		}
+		private bool m_impl_allow_no_current;
 
 		/// <summary>Gets the total number of items in the underlying list, taking the current System.Windows.Forms.BindingSource.Filter value into consideration.</summary>
 		/// <returns>The total number of filtered items in the underlying list.</returns>
@@ -201,7 +223,7 @@ namespace pr.container
 		[Browsable(false)]
 		public TItem Current
 		{
-			get { return Position >= 0 && Position < Count ? (TItem)m_bs.Current : default(TItem); }
+			get { return (TItem)m_bs.Current; }
 			set
 			{
 				var idx = List.IndexOf(value);
@@ -1052,7 +1074,7 @@ namespace pr.container
 		{
 			// Create a view of this binding source
 			var view = new View(this, pred);
-			var bs = new BindingSource<TItem>{DataSource = view};
+			var bs = new BindingSource<TItem>{DataSource = view, AllowNoCurrent = AllowNoCurrent };
 
 			// When the underlying source position changes, if it corresponds to an item
 			// in the view, update the Position in the returned view. Note, using view.PositionChanged
@@ -1073,14 +1095,15 @@ namespace pr.container
 			// Clean up the view if the binding source is disposed
 			bs.Disposed += (s,a) =>
 			{
-				bs.DataSource = Util.Dispose((View)bs.DataSource);
+				if (bs != null) bs.DataSource = null;
+				Util.Dispose(ref view);
 			};
 
 			// Clean up the binding source if the view gets disposed
 			view.Disposed += (s,a) =>
 			{
-				bs.DataSource = null;
-				bs.Dispose();
+				if (bs != null) bs.DataSource = null;
+				Util.Dispose(ref bs);
 			};
 
 			return bs;
@@ -1130,6 +1153,7 @@ namespace pr.container
 						m_bl.ListChanging += HandleViewChanging;
 						m_bl.ListChanged += HandleViewChanged;
 						m_bl.ResetBindings();
+						UpdateView();
 					}
 				}
 			}
@@ -1227,6 +1251,18 @@ namespace pr.container
 				// See if the change to the binding source affects this view
 				switch (e.ChangeType)
 				{
+				default:
+					{
+						Debug.Assert(SanityCheck());
+						break;
+					}
+				case ListChg.PreReset:
+				case ListChg.PreReordered:
+					{
+						// Invalidate 'Index' before a reset/position changed
+						Index.Clear();
+						break;
+					}
 				case ListChg.Reset:
 				case ListChg.Reordered:
 					{
@@ -1240,6 +1276,19 @@ namespace pr.container
 						Debug.Assert(SanityCheck());
 						break;
 					}
+				case ListChg.ItemPreReset:
+					{
+						// Before an item is reset, retest whether it belongs in the view
+						var idx = SrcToViewIndex(e.Index);
+						if (idx >= 0 && !Predicate(e.Item)) Index.RemoveAt(idx);
+						if (idx <  0 &&  Predicate(e.Item)) Index.Insert(~idx, e.Index);
+						break;
+					}
+				case ListChg.ItemReset:
+					{
+						Debug.Assert(SanityCheck());
+						break;
+					}
 				case ListChg.ItemPreRemove:
 					{
 						// Before an item is removed from the source, remove it from the view
@@ -1250,6 +1299,11 @@ namespace pr.container
 						break;
 					}
 				case ListChg.ItemRemoved:
+					{
+						Debug.Assert(SanityCheck());
+						break;
+					}
+				case ListChg.ItemPreAdd:
 					{
 						Debug.Assert(SanityCheck());
 						break;
@@ -1602,7 +1656,10 @@ namespace pr.container
 			private bool SanityCheck()
 			{
 				var should_be = BindingSource.Where(Predicate).ToList();
-				return this.SequenceEqual(should_be);
+				if (!this.SequenceEqual(should_be))
+					return false;
+
+				return true;
 			}
 		}
 	}
@@ -1796,7 +1853,7 @@ namespace pr.unittests
 			var bl = new BindingListEx<int>();
 			bl.AddRange(new[]{1,2,3,4,5});
 
-			var bs = new BindingSource<int>{DataSource = bl};
+			var bs = new BindingSource<int>{DataSource = bl, AllowNoCurrent = true };
 			bs.PositionChanged += (s,a) =>
 				{
 					positions.Add(a.OldIndex);
@@ -1891,7 +1948,7 @@ namespace pr.unittests
 		[Test] public void BindingSourceView()
 		{
 			var bl = new BindingListEx<char>();
-			var bs = new BindingSource<char> { DataSource = bl };
+			var bs = new BindingSource<char> { DataSource = bl , AllowNoCurrent = true };
 			var bv = bs.CreateView(i => (i % 2) == 0);
 
 			bl.Add('a','b','c','d','e','f','g','h','i','j');

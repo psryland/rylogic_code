@@ -227,13 +227,13 @@
     <ClInclude Include="..\projects\linedrawer\main\navigation.h" />
     <ClInclude Include="..\projects\linedrawer\gui\about_ui.h" />
     <ClInclude Include="..\projects\linedrawer\gui\options_dlg.h" />
+    <ClInclude Include="..\projects\linedrawer\main\status_manager.h" />
     <ClInclude Include="..\projects\linedrawer\main\user_settings.h" />
     <ClInclude Include="..\include\pr\gui\progress_ui.h" />
     <ClInclude Include="..\include\pr\gui\recent_files.h" />
     <ClInclude Include="..\projects\linedrawer\gui\text_panel_ui.h" />
     <ClInclude Include="..\projects\linedrawer\resources\linedrawer.res.h" />
     <ClInclude Include="..\projects\linedrawer\utility\debug.h" />
-    <ClInclude Include="..\projects\linedrawer\utility\misc.h" />
     <ClInclude Include="..\projects\linedrawer\input\keybindings.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_object.h" />
     <ClInclude Include="..\include\pr\lua\lua.h" />

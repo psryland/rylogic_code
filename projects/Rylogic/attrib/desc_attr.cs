@@ -78,18 +78,18 @@ namespace pr.attrib
 		}
 
 		/// <summary>Return the associated description attribute for an enum value</summary>
-		public static string Desc<TEnum>(this TEnum enum_) where TEnum :struct ,IConvertible
+		public static string Desc(this Enum enum_)
 		{
 			return Desc(enum_.GetType(), enum_.ToStringFast());
 		}
 
 		/// <summary>Return an array of the description strings associated with an enum type</summary>
-		public static string[] AllDesc<TEnum>(this TEnum type) where TEnum :struct ,IConvertible
+		public static string[] AllDesc(this Enum type)
 		{
 			return (string[])m_str_cache.Get(Key(type), k =>
 				{
 					var strs = new List<string>();
-					foreach (var v in Enum<TEnum>.Values)
+					foreach (var v in Enum.GetValues(type.GetType()).OfType<Enum>())
 					{
 						strs.Add(v.Desc());
 					}
@@ -127,7 +127,7 @@ namespace pr.attrib
 		private static readonly Cache<string,object> m_str_cache  = new Cache<string,object>();
 
 		/// <summary>A cache key for an enum value</summary>
-		private static string Key<TEnum>(TEnum enum_) where TEnum :struct ,IConvertible
+		private static string Key(Enum enum_)
 		{
 			return enum_.GetType().Name + "." + enum_.ToStringFast();
 		}

@@ -7,7 +7,6 @@
 #include "linedrawer/gui/options_dlg.h"
 #include "linedrawer/gui/about_ui.h"
 #include "linedrawer/gui/text_panel_ui.h"
-#include "linedrawer/utility/misc.h"
 #include "linedrawer/utility/debug.h"
 
 using namespace pr::gui;
@@ -98,7 +97,7 @@ namespace ldr
 		,m_scene_rdr_pass(0)
 		,m_mouse_status_updates(true)
 		,m_suspend_render(false)
-		,m_status_pri()
+		,m_status_mgr(m_status)
 	{
 		// Create stock models such as the focus point, origin, selection box, etc
 		CreateStockModels();
@@ -141,7 +140,7 @@ namespace ldr
 			}
 			catch (std::exception const& ex)
 			{
-				pr::events::Send(Evt_AppMsg(Evt_AppMsg::EType::Error, pr::FmtS(L"Script error found while parsing source.\r\n%S", ex.what()), L"Render Script"));
+				pr::events::Send(Evt_AppMsg(pr::FmtS(L"Script error found while parsing source.\r\n%S", ex.what()), L"Render Script"));
 			}
 		};
 
@@ -157,6 +156,7 @@ namespace ldr
 		m_panel.MouseButton     += std::bind(&MainUI::MouseButton, this, _1, _2); 
 		m_panel.MouseMove       += std::bind(&MainUI::MouseMove, this, _1, _2);
 		m_panel.MouseWheel      += std::bind(&MainUI::MouseWheel, this, _1, _2);
+		m_panel.MouseClick      += std::bind(&MainUI::MouseClick, this, _1, _2);
 		m_panel.Key             += std::bind(&MainUI::KeyEvent, this, _1, _2);
 		m_panel.DropFiles       += std::bind(&MainUI::DropFiles, this, _1, _2);
 		m_panel.AllowDrop(true);
@@ -188,12 +188,6 @@ namespace ldr
 		pr::gui::SimMsgLoop loop;
 		loop.AddMessageFilter(*this);
 
-		// Add a step context for 30Hz stepping
-		loop.AddStepContext("step-30hz", [this](double s)
-		{
-			Step30Hz(s);
-		}, 30.0f, true);
-
 		// Add a step context for polling file state
 		loop.AddStepContext("watch-files", [this](double)
 		{
@@ -202,12 +196,11 @@ namespace ldr
 				m_sources.RefreshChangedFiles();
 		}, 10.0f, false);
 
+		// Add a step context for 30Hz stepping
+		loop.AddStepContext("step-30hz", [this](double s){ Step30Hz(s); }, 30.0f, true);
+
 		// Add a step context to refresh the view
-		loop.AddStepContext("refresh", [this](double)
-		{
-			m_panel.Invalidate();
-			UpdateWindow(m_panel);
-		}, 60.0f, true);
+		loop.AddStepContext("refresh", [this](double s){ Step60Hz(s); }, 60.0f, true);
 
 		#if 0
 		loop.AddStepContext("debug", [this](double)
@@ -231,16 +224,22 @@ namespace ldr
 	}
 
 	// Handler timer messages
-	void MainUI::Step30Hz(double elapsed_seconds)
+	void MainUI::Step30Hz(double)
 	{
-		(void)elapsed_seconds;
+		// Check if timed-status text should disappear
+		m_status_mgr.Update();
+	}
 
+	// Handler timer messages
+	void MainUI::Step60Hz(double)
+	{
 		// Orbit the camera if enabled
 		if (m_settings.m_CameraOrbit)
-		{
 			m_nav.OrbitCamera(m_settings.m_CameraOrbitSpeed);
-			RenderNeeded();
-		}
+
+		// Refresh at 60Hz
+		m_panel.Invalidate();
+		UpdateWindow(m_panel);
 	}
 
 	// Reset the camera to view all, selected, or visible objects
@@ -870,7 +869,7 @@ namespace ldr
 		}
 		catch (std::exception const& ex)
 		{
-			pr::events::Send(Evt_AppMsg(Evt_AppMsg::EType::Error, pr::FmtS(L"Creating a new script failed.\r\n%S", ex.what()), L"Create New Script"));
+			pr::events::Send(Evt_AppMsg(pr::FmtS(L"Creating a new script failed.\r\n%S", ex.what()), L"Create New Script"));
 		}
 	}
 
@@ -925,7 +924,7 @@ namespace ldr
 		}
 		catch (std::exception const& ex)
 		{
-			pr::events::Send(Evt_AppMsg(Evt_AppMsg::EType::Error, pr::FmtS(L"Script error found while parsing source.\r\n%S", ex.what()), L"Load Script"));
+			pr::events::Send(Evt_AppMsg(pr::FmtS(L"Script error found while parsing source.\r\n%S", ex.what()), L"Load Script"));
 		}
 	}
 
@@ -939,9 +938,9 @@ namespace ldr
 		catch (LdrException const& ex)
 		{
 			if (ex.code() == ELdrException::OperationCancelled)
-				pr::events::Send(Evt_AppMsg(Evt_AppMsg::EType::Status, L"Reloading data cancelled", L""));
+				pr::events::Send(Evt_Status(L"Reloading data cancelled", 2000));
 			else
-				pr::events::Send(Evt_AppMsg(Evt_AppMsg::EType::Error, pr::FmtS(L"Error found while reloading source data.\r\n%S", ex.what()), L"Reload Failed"));
+				pr::events::Send(Evt_AppMsg(pr::FmtS(L"Error found while reloading source data.\r\n%S", ex.what()), L"Reload Failed"));
 		}
 	}
 
@@ -980,7 +979,7 @@ namespace ldr
 		}
 		catch (std::exception const& ex)
 		{
-			pr::events::Send(Evt_AppMsg(Evt_AppMsg::EType::Error, pr::FmtS(L"No Text Editor available.\r\n%S", ex.what()), L"Open Editor Failed"));
+			pr::events::Send(Evt_AppMsg(pr::FmtS(L"No Text Editor available.\r\n%S", ex.what()), L"Open Editor Failed"));
 		}
 	}
 
@@ -1043,7 +1042,7 @@ namespace ldr
 		}
 		catch (std::exception const& ex)
 		{
-			pr::events::Send(Evt_AppMsg(Evt_AppMsg::EType::Error, pr::FmtS(L"Format incorrect. Focus point not set.\r\n%S", ex.what()), L"Set Focus Point"));
+			pr::events::Send(Evt_AppMsg(pr::FmtS(L"Format incorrect. Focus point not set.\r\n%S", ex.what()), L"Set Focus Point"));
 		}
 	}
 
@@ -1107,7 +1106,7 @@ namespace ldr
 		}
 		catch (std::exception const& ex)
 		{
-			pr::events::Send(Evt_AppMsg(Evt_AppMsg::EType::Error, pr::FmtS(L"Version information unavailable.\r\n%S", ex.what()), L"Check for Updates"));
+			pr::events::Send(Evt_AppMsg(pr::FmtS(L"Version information unavailable.\r\n%S", ex.what()), L"Check for Updates"));
 		}
 	}
 
@@ -1324,7 +1323,7 @@ namespace ldr
 		}
 		catch (std::exception const& ex)
 		{
-			pr::events::Send(Evt_AppMsg(Evt_AppMsg::EType::Error, pr::FmtS(L"Error found while parsing demo scene.\r\n%S", ex.what()), L"Script Error"));
+			pr::events::Send(Evt_AppMsg(pr::FmtS(L"Error found while parsing demo scene.\r\n%S", ex.what()), L"Script Error"));
 		}
 	}
 
@@ -1343,41 +1342,17 @@ namespace ldr
 			m_sources.AddFile(path.c_str());
 	}
 
-	// Ldr event handlers
+	// Application error message
 	void MainUI::OnEvent(Evt_AppMsg const& e)
 	{
-		switch (e.m_type)
-		{
-		default:
-			{
-				//PR_INFO(PR_DBG_LDR, e.m_msg.c_str());
-				assert(!"Unknown application message type");
-				break;
-			}
-		case Evt_AppMsg::EType::Error:
-			{
-				if (m_settings.m_ErrorOutputMsgBox)
-					pr::gui::MsgBox::Show(*this, e.m_msg.c_str(), AppTitleW(), pr::gui::MsgBox::EButtons::Ok, pr::gui::MsgBox::EIcon::Error);
-				else
-				{} // todo log?
-				break;
-			}
-		case Evt_AppMsg::EType::Status:
-			{
-		//		// Status text update
-		//		DWORD now = GetTickCount();
-		//		bool timed_out = now - m_status_pri.m_last_update > m_status_pri.m_min_display_time_ms;
-		//		if (timed_out || e.m_priority > m_status_pri.m_priority)
-		//		{
-		//			m_status_pri.m_last_update = now;
-		//			m_status_pri.m_priority = e.m_priority;
-		//			m_status_pri.m_min_display_time_ms = e.m_min_display_time_ms;
-		//			m_status.Text(0, pr::Widen(e.m_msg));
-		//			m_status.Font(e.m_bold ? m_status_pri.m_bold_font : m_status_pri.m_normal_font);
-		//		}
-				break;
-			}
-		}
+		if (m_settings.m_ErrorOutputMsgBox)
+			MsgBox::Show(*this, e.m_msg.c_str(), AppTitleW(), MsgBox::EButtons::Ok, e.m_icon);
+		else
+		{} // todo log?
+	}
+	void MainUI::OnEvent(Evt_Status const& e)
+	{
+		m_status_mgr.Apply(e);
 	}
 	void MainUI::OnEvent(Evt_Refresh const&)
 	{
@@ -1417,7 +1392,7 @@ namespace ldr
 	}
 	void MainUI::OnEvent(Evt_SettingsError const& e)
 	{
-		pr::events::Send(Evt_AppMsg(Evt_AppMsg::EType::Error, pr::Widen(e.m_msg), L"Settings Error"));
+		pr::events::Send(Evt_AppMsg(pr::Widen(e.m_msg), L"Settings Error"));
 	}
 	void MainUI::OnEvent(Evt_UpdateScene const& e)
 	{
@@ -1551,7 +1526,7 @@ namespace ldr
 			if (!pr::FEql(zoom, 1.0f, 0.001f))
 				status += pr::FmtS(L" Zoom: %3.3f", zoom);
 		}
-		pr::events::Send(Evt_AppMsg(Evt_AppMsg::EType::Status, status, L""));
+		pr::events::Send(Evt_Status(status));
 	}
 
 	// Message map function

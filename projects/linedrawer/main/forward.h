@@ -120,13 +120,6 @@ namespace ldr
 	char const*    AppStringLine();
 
 	#pragma region Events
-	
-	struct Evt_Base
-	{
-		Evt_Base() = default;
-		Evt_Base(Evt_Base const&) = delete;
-		Evt_Base& operator = (Evt_Base const&) = delete;
-	};
 
 	// Event to signal a refresh of the display
 	using Evt_Refresh = pr::ldr::Evt_Refresh;
@@ -138,25 +131,41 @@ namespace ldr
 	using Evt_UpdateScene = pr::rdr::Evt_UpdateScene;
 
 	// Event to signal report an application message to the user
-	struct Evt_AppMsg :Evt_Base
+	struct Evt_AppMsg
 	{
-		enum class EType { Error, Status };
-
-		EType m_type;
 		std::wstring m_msg;
 		std::wstring m_title;
+		MsgBox::EIcon m_icon;
 
-		Evt_AppMsg(EType ty, std::wstring const& msg, std::wstring const& title)
-			:m_type(ty)
-			,m_msg(msg)
+		Evt_AppMsg(std::wstring const& msg, std::wstring const& title, MsgBox::EIcon icon = MsgBox::EIcon::Error)
+			:m_msg(msg)
 			,m_title(title)
+			,m_icon(icon)
 		{}
-		Evt_AppMsg(Evt_AppMsg const&) = delete;
-		Evt_AppMsg& operator = (Evt_AppMsg const&) = delete;
+	};
+
+	// Event to update the status bar
+	struct Evt_Status
+	{
+		std::wstring m_msg;
+		DWORD        m_duration_ms;
+		bool         m_bold;
+		COLORREF     m_col;
+
+		Evt_Status(std::wstring const& msg, DWORD duration_ms = INFINITE, bool bold = false, COLORREF col = 0)
+			:m_msg(msg)
+			,m_duration_ms(duration_ms)
+			,m_bold(bold)
+			,m_col(col)
+		{}
+		bool IsTimed() const
+		{
+			return m_duration_ms != INFINITE;
+		}
 	};
 
 	// Raised just before parsing begins and 'm_store' is changed
-	struct Evt_StoreChanging :Evt_Base
+	struct Evt_StoreChanging
 	{
 		// The store that will be added to
 		pr::ldr::ObjectCont const& m_store;
@@ -164,10 +173,12 @@ namespace ldr
 		Evt_StoreChanging(pr::ldr::ObjectCont const& store)
 			:m_store(store)
 		{}
+		Evt_StoreChanging(Evt_StoreChanging const&) = delete;
+		Evt_StoreChanging& operator = (Evt_StoreChanging const&) = delete;
 	};
 
 	// Event raised when the store of ldr objects is added to or removed from
-	struct Evt_StoreChanged :Evt_Base
+	struct Evt_StoreChanged
 	{
 		enum class EReason { NewData, Reload };
 
@@ -190,6 +201,8 @@ namespace ldr
 			,m_result(result)
 			,m_reason(why)
 		{}
+		Evt_StoreChanged(Evt_StoreChanged const&) = delete;
+		Evt_StoreChanged& operator = (Evt_StoreChanged const&) = delete;
 	};
 
 	// Event raised by the object manager whenever the object selection changes

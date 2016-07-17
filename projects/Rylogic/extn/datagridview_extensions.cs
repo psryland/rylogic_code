@@ -1202,14 +1202,27 @@ namespace pr.extn
 
 		/// <summary>Live instances of ColumnFiltersData objects in use by grids</summary>
 		[ThreadStatic] private static Dictionary<DataGridView, ColumnFiltersData> m_column_filters = new Dictionary<DataGridView, ColumnFiltersData>();
+
+		/// <summary>Per-grid object for managing column filters</summary>
 		public class ColumnFiltersData :IMessageFilter ,IDisposable
 		{
+			/// <summary>The grid whose data is to be filtered</summary>
+			private DataGridView m_dgv;
+
+			/// <summary>Preserves the state of the DGV</summary>
+			private Dictionary<string, object> m_dgv_state;
+
+			/// <summary>The data source that the grid had before filters were used</summary>
+			private object m_original_src;
+
 			public ColumnFiltersData(DataGridView dgv)
 			{
-				m_dgv = dgv;
-				m_dgv_state = new Dictionary<string, object>();
-				m_header_cells = new FilterHeaderCell[m_dgv.ColumnCount];
-				ShortcutKey = Keys.F;
+				m_dgv          = dgv;
+				m_dgv_state    = new Dictionary<string, object>();
+				m_header_cells = new FilterHeaderCell[dgv.ColumnCount];
+				m_original_src = dgv.DataSource;
+				BSFilter       = null;
+				ShortcutKey    = Keys.F;
 
 				m_dgv.DataSourceChanged += HandleDataSourceChanged;
 				m_dgv.Disposed += HandleGridDisposed;
@@ -1222,24 +1235,26 @@ namespace pr.extn
 				m_dgv.DataSourceChanged -= HandleDataSourceChanged;
 				m_dgv.Disposed -= HandleGridDisposed;
 				m_header_cells = Util.DisposeAll(m_header_cells);
+				BSFilter = null;
 			}
-
-			/// <summary>The grid whose data is to be filtered</summary>
-			private DataGridView m_dgv;
-
-			/// <summary>Used to preserve the state of the DGV</summary>
-			private Dictionary<string, object> m_dgv_state;
-
-			/// <summary>The data source that the grid had before filters were used</summary>
-			private object m_original_src;
 
 			/// <summary>The column header cells corresponding to the columns in the associated grid</summary>
 			public FilterHeaderCell[] HeaderCells { get { return m_header_cells; } }
 			private FilterHeaderCell[] m_header_cells;
 
-			/// <summary>The binding source that provides the filtering</summary>
-			private RuntimeBindingSource m_bs;
-			private class RuntimeBindingSource
+			/// <summary>Contains a BindingSource<> (created from the given DGV) and creates 'Views' of the binding source based on filter predicates</summary>
+			private BindingSourceFilter BSFilter
+			{
+				get { return m_impl_bs_filter; }
+				set
+				{
+					if (m_impl_bs_filter == value) return;
+					if (m_impl_bs_filter != null) Util.Dispose(ref m_impl_bs_filter);
+					m_impl_bs_filter = value;
+				}
+			}
+			private BindingSourceFilter m_impl_bs_filter;
+			private class BindingSourceFilter :IDisposable
 			{
 				/// <summary>The bound data properties for the columns</summary>
 				private Dictionary<string,MethodInfo> m_elem_props;
@@ -1250,11 +1265,7 @@ namespace pr.extn
 				/// <summary>The binding source instance from which we create filtered views</summary>
 				private object m_bs;
 
-				/// <summary>The filtered view of the binding source</summary>
-				public object FilteredView { get { return m_view; } }
-				private object m_view;
-
-				public RuntimeBindingSource(DataGridView dgv)
+				public BindingSourceFilter(DataGridView dgv)
 				{
 					Debug.Assert(dgv.DataSource != null, "DGV requires a data source ");
 
@@ -1282,6 +1293,23 @@ namespace pr.extn
 					// Get the CreateView method on the binding source
 					m_create_view = bs_ty.GetMethod(nameof(BindingSource<int>.CreateView), new[] { typeof(Func<,>).MakeGenericType(elem_ty, typeof(bool)) });
 				}
+				public void Dispose()
+				{
+					FilteredView = null;
+				}
+
+				/// <summary>The filtered view of the binding source</summary>
+				public object FilteredView
+				{
+					get { return m_impl_view; }
+					set
+					{
+						if (m_impl_view == value) return;
+						if (m_impl_view != null) Util.Dispose((IDisposable)m_impl_view);
+						m_impl_view = value;
+					}
+				}
+				private object m_impl_view;
 
 				/// <summary>Get the element type from 'original_src'</summary>
 				private Type GetElementType(object original_src)
@@ -1310,10 +1338,9 @@ namespace pr.extn
 				}
 
 				/// <summary>Create a view of the data from the binding source using the given filter</summary>
-				public object DataSource(Func<object,bool> filter)
+				public void SetFilter(Func<object,bool> filter)
 				{
-					((IDisposable)m_view)?.Dispose();
-					return m_view = m_create_view.Invoke(m_bs, new object[] { filter });
+					FilteredView = m_create_view.Invoke(m_bs, new object[] { filter });
 				}
 
 				/// <summary>Return the value of property 'prop_name' on 'item' as a string</summary>
@@ -1361,6 +1388,10 @@ namespace pr.extn
 							m_header_cells[col.Index] = m_header_cells[col.Index] ?? new FilterHeaderCell(this, col.HeaderCell, OnPatternChanged);
 							col.HeaderCell = m_header_cells[col.Index];
 						}
+
+						// Shift focus to the filter for the current cell
+						if (m_dgv.CurrentCell != null)
+							m_header_cells[m_dgv.CurrentCell.ColumnIndex].EditFilter();
 
 						// Update the binding source for the grid to the filtered source
 						OnPatternChanged();
@@ -1452,7 +1483,7 @@ namespace pr.extn
 								if (patn == null || !patn.IsValid || !patn.Expr.HasValue()) continue;
 
 								// Read the value from the source
-								var val = m_bs.GetValue(item, m_header_cells[i].OwningColumn.DataPropertyName);
+								var val = BSFilter.GetValue(item, m_header_cells[i].OwningColumn.DataPropertyName);
 								var str = val.ToString();
 
 								// Filter out the item if it doesn't match the pattern
@@ -1463,7 +1494,8 @@ namespace pr.extn
 						};
 
 						// Set the view as the data source for the grid
-						m_dgv.DataSource = m_bs.DataSource(filter);
+						BSFilter.SetFilter(filter);
+						m_dgv.DataSource = BSFilter.FilteredView;
 					}
 					catch (Exception ex)
 					{
@@ -1483,20 +1515,20 @@ namespace pr.extn
 				Dispose();
 			}
 
-			/// <summary>If the data source on the DGV changes, we need to reset the RuntimeBindingSource</summary>
+			/// <summary>If the data source on the DGV changes, we need to reset the BSFilter</summary>
 			private void HandleDataSourceChanged(object sender = null, EventArgs e = null)
 			{
 				// Remember, while filtering is enabled the DGV's data source will be 'm_bs.FilteredView'
-				if (m_bs != null && m_dgv.DataSource == m_bs.FilteredView)
+				if (BSFilter != null && m_dgv.DataSource == BSFilter.FilteredView)
 				{}
 
-				// If we don't currently have a runtime data source, and the grid has a data source, then create one
-				else if (m_bs == null && m_dgv.DataSource != null)
-					m_bs = new RuntimeBindingSource(m_dgv);
+				// If we don't currently have a bs_filter, and the grid has a data source, then create one
+				else if (BSFilter == null && m_dgv.DataSource != null)
+					BSFilter = new BindingSourceFilter(m_dgv);
 
 				// Otherwise, if the grid no longer has a source, release our runtime data source
-				else if (m_bs != null && m_dgv.DataSource == null)
-					m_bs = null;
+				else if (BSFilter != null && m_dgv.DataSource == null)
+					BSFilter = null;
 			}
 
 			/// <summary>Custom column header cell for showing the filter string text box</summary>
@@ -1570,6 +1602,12 @@ namespace pr.extn
 				{
 					PatternChanged.Raise(this);
 					ToolTipText = Pattern != null && !Pattern.IsValid ? Pattern.ValidateExpr().Message : null;
+				}
+
+				/// <summary>The text box for the filter string in this cell</summary>
+				public TextBox FilterTextBox
+				{
+					get { return EditCtrl.TextBox; }
 				}
 
 				/// <summary>The control used to edit the filter field</summary>

@@ -67,22 +67,39 @@ namespace pr.extn
 		}
 
 		/// <summary>Hide successive or start/end separators</summary>
-		public static void TidySeparators(this ToolStripItemCollection items)
+		public static void TidySeparators(this ToolStripItemCollection items, bool recursive = true)
 		{
+			// Note: Not using ToolStripItem.Visible because that also includes the parent's
+			// visibility (which during construction is usually false).
+			int s, e;
+
+			// Returns true for menu items that should be considered as contiguous separators.
+			Func<ToolStripItem, bool> hide = item => item is ToolStripSeparator || !item.Available;
+
 			// Hide starting separators
-			for (int i = 0; i != items.Count && items[i] is ToolStripSeparator; ++i)
-				items[i].Visible = false;
+			for (s = 0; s != items.Count && hide(items[s]); ++s)
+				items[s].Available = false;
 
 			// Hide ending separators
-			for (int i = items.Count; i-- != 0 && items[i] is ToolStripSeparator;)
-				items[i].Visible = false;
+			for (e = items.Count; e-- != 0 && hide(items[e]); )
+				items[e].Available = false;
 
 			// Hide successive separators
-			for (int i = 0; i < items.Count - 1; ++i)
+			for (int i = s + 1; i < e; ++i)
 			{
 				if (!(items[i] is ToolStripSeparator)) continue;
-				for (int j = i + 1; j < items.Count && items[j] is ToolStripSeparator; i = j, ++j)
-					items[j].Visible = false;
+
+				// Make the first separator in the contiguous sequence visible
+				items[i].Available = true;
+				for (int j = i + 1; j < e && hide(items[j]); i = j, ++j)
+					items[j].Available = false;
+			}
+
+			// Tidy sub menus as well
+			if (recursive)
+			{
+				foreach (var item in items.OfType<ToolStripDropDownItem>())
+					item.DropDownItems.TidySeparators(recursive);
 			}
 		}
 

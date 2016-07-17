@@ -1,41 +1,61 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using cAlgo.API;
-using cAlgo.API.Indicators;
 using cAlgo.API.Internals;
-using cAlgo.Indicators;
 using pr.util;
 using Tradee;
 
 namespace cAlgo
 {
 	/// <summary>This bot streams market data to 'Tradee'</summary>
-	[Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.None)]
+	[Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.FullAccess)]
 	public class Tradee_StreamMarketData : Robot
 	{
-		/// <summary>The symbols to stream</summary>
-		[Parameter("Symbols", DefaultValue = "USDJPY;NZDUSD;GBPUSD")]
-		public string Symbols { get; set; }
-		private MarketSeries[] m_series;
-
 		#region Robot Implementation
 		protected override void OnStart()
 		{
 			// Connect to 'Tradee'
 			Tradee = new TradeeProxy();
 
-			// Get the symbols to stream
-			m_series = Symbols.Split(';').Select(x => MarketData.GetSeries(x, TimeFrame)).ToArray();
-			if (m_series.Length == 0)
+			// Send historical data to Tradee
+			var open_time = new List<long>  (MarketSeries.OpenTime.Count);
+			var open      = new List<double>(MarketSeries.Open.Count);
+			var high      = new List<double>(MarketSeries.High.Count);
+			var low       = new List<double>(MarketSeries.Low.Count);
+			var close     = new List<double>(MarketSeries.Close.Count);
+			var volume    = new List<double>(MarketSeries.TickVolume.Count);
+			for (int i = MarketSeries.OpenTime.Count; i-- != 0; )
 			{
-				Print("No data series given. 'Symbols' parameter should be a semi-colon separated list of symbols");
-				Stop();
+				open_time.Add(MarketSeries.OpenTime  .Last(i).Ticks);
+				open     .Add(MarketSeries.Open      .Last(i));
+				high     .Add(MarketSeries.High      .Last(i));
+				low      .Add(MarketSeries.Low       .Last(i));
+				close    .Add(MarketSeries.Close     .Last(i));
+				volume   .Add(MarketSeries.TickVolume.Last(i));
 			}
+
+			// Post to tradee
+			var data = new Candles(
+				Symbol.Code,
+				open_time.ToArray(),
+				open.ToArray(),
+				high.ToArray(),
+				low.ToArray(),
+				close.ToArray(),
+				volume.ToArray());
+			Tradee.Post(data);
 		}
 		protected override void OnTick()
 		{
-			Tradee.Post(new HelloMsg());
+			// Post the market data to Tradee
+			var data = new Candle(
+				Symbol.Code,
+				MarketSeries.OpenTime.LastValue.Ticks,
+				MarketSeries.Open.LastValue,
+				MarketSeries.High.LastValue,
+				MarketSeries.Low.LastValue,
+				MarketSeries.Close.LastValue,
+				MarketSeries.TickVolume.LastValue);
+			Tradee.Post(data);
 		}
 		protected override void OnStop()
 		{

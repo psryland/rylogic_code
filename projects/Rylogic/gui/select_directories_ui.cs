@@ -371,7 +371,7 @@ namespace pr.gui
 
 				// Get a node array for each child of 'e.Node'
 				var nodes = new List<TreeNode[]>();
-				Action<ProgressForm, object, ProgressForm.Progress> open_dir = (d,o,p) =>
+				ProgressForm.WorkerFunc open_dir = (d,o,p) =>
 					{
 						foreach (var n in e.Node.Nodes.Cast<TreeNode>())
 						{

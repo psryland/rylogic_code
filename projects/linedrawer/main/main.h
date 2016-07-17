@@ -10,7 +10,7 @@
 #include "linedrawer/main/manipulator.h"
 #include "linedrawer/main/script_sources.h"
 #include "linedrawer/main/user_settings.h"
-#include "linedrawer/utility/misc.h"
+#include "linedrawer/main/status_manager.h"
 #include "linedrawer/gui/options_dlg.h"
 #include "linedrawer/resources/linedrawer.res.h"
 
@@ -19,6 +19,7 @@ namespace ldr
 	struct MainUI
 		:pr::gui::Form
 		,pr::events::IRecv<Evt_AppMsg>
+		,pr::events::IRecv<Evt_Status>
 		,pr::events::IRecv<Evt_Refresh>
 		,pr::events::IRecv<Evt_StoreChanging>
 		,pr::events::IRecv<Evt_StoreChanged>
@@ -81,7 +82,7 @@ namespace ldr
 		int              m_scene_rdr_pass;       // Index of the current scene.Render() call
 		bool             m_mouse_status_updates; // Whether to show mouse position in the status bar (todo: more general system for this)
 		bool             m_suspend_render;       // True to prevent rendering
-		StatusPri        m_status_pri;           // Status priority buffer
+		StatusManager    m_status_mgr;           // Status priority buffer
 
 		// Construct
 		MainUI(wchar_t const* cmdline, int nCmdShow);
@@ -90,8 +91,9 @@ namespace ldr
 		// Run the application
 		int Run();
 
-		// 30Hz step function
+		// Step functions
 		void Step30Hz(double elapsed_seconds);
+		void Step60Hz(double elapsed_seconds);
 
 		// Reset the camera to view all, selected, or visible objects
 		void ResetView(EObjectBounds view_type);
@@ -170,6 +172,7 @@ namespace ldr
 		// Ldr event handlers
 		void OnEvent(Evt_Refresh const&) override;
 		void OnEvent(Evt_AppMsg const&) override;
+		void OnEvent(Evt_Status const& e) override;
 		void OnEvent(Evt_StoreChanging const&) override;
 		void OnEvent(Evt_StoreChanged const&) override;
 		void OnEvent(Evt_SettingsError const&) override;

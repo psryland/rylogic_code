@@ -1,7 +1,11 @@
 ﻿using System;
+using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using pr.extn;
+using pr.maths;
+using pr.util;
 
 namespace pr.gui
 {
@@ -25,6 +29,78 @@ namespace pr.gui
 
 			m_edit.TextChanged += HandleValueChanged;
 			m_edit.KeyPress += HandleKeyPress;
+		}
+		protected override void Dispose(bool disposing)
+		{
+			Util.Dispose(ref components);
+			base.Dispose(disposing);
+		}
+		protected override void OnShown(EventArgs e)
+		{
+			// Set the initial size
+			using (this.SuspendLayout(true))
+			using (var gfx = CreateGraphics())
+			{
+				// Get the scaling due to DPI
+				var cr = ClientRectangle;
+				var scale_x = gfx.DpiX / 96f;
+				var scale_y = gfx.DpiY / 96f;
+				var x_10px = (int)(10 * scale_x);
+				var y_10px = (int)(10 * scale_y);
+
+				// Minimum client size
+				var sz_client = RectangleToClient(RectangleToScreen(new Rectangle(Point.Empty, MinimumSize)));
+
+				// Minimum size needed for buttons
+				var btns = Controls.OfType<Button>().ToArray();
+				var w_btns = btns.Sum(x => x.Width) + (btns.Length-1)*x_10px;
+
+				// Minimum size needed for the text label
+				var sz_info = m_lbl_info.PreferredSize;
+
+				var w = Maths.Max(sz_client.Width, 2*x_10px + w_btns, 2*x_10px + sz_info.Width) ;
+				var h = Maths.Max(sz_client.Height, y_10px + sz_info.Height + y_10px + m_edit.Height + y_10px + btns[0].Height + y_10px);
+				ClientSize = new Size(w,h);
+			}
+			base.OnShown(e);
+		}
+		protected override void OnLayout(LayoutEventArgs levent)
+		{
+			using (this.SuspendLayout(false))
+			using (var gfx = CreateGraphics())
+			{
+				// Get the scaling due to DPI
+				var cr = ClientRectangle;
+				var scale_x = gfx.DpiX / 96f;
+				var scale_y = gfx.DpiY / 96f;
+				var x_10px = (int)(10 * scale_x);
+				var y_10px = (int)(10 * scale_y);
+
+				// Info string
+				m_lbl_info.Location = new Point(x_10px, y_10px);
+				m_lbl_info.Size     = m_lbl_info.GetPreferredSize(new Size(cr.Width - 2*x_10px, 0));
+
+				// Prompt field
+				m_edit.Location = new Point(m_lbl_info.Left, m_lbl_info.Bottom + y_10px);
+				m_edit.Size     = new Size(cr.Width - 2*x_10px, m_edit.Height);
+
+				// Buttons
+				m_btn_cancel.Location = new Point(cr.Right - x_10px - m_btn_cancel.Width, cr.Bottom - y_10px - m_btn_cancel.Height);
+				m_btn_cancel.Size     = m_btn_cancel.PreferredSize;
+				m_btn_ok.Location     = new Point(m_btn_cancel.Left - x_10px - m_btn_ok.Width, m_btn_cancel.Top);
+				m_btn_ok.Size         = m_btn_ok.PreferredSize;
+
+				// Any other buttons
+				var x = cr.Left;
+				var btns = Controls.OfType<Button>().Except(m_btn_cancel, m_btn_ok).ToArray();
+				foreach (var btn in btns)
+				{
+					btn.Location  = new Point(x += x_10px, m_btn_cancel.Top);
+					btn.Size      = btn.PreferredSize;
+					x += btn.Width;
+				}
+			}
+			base.OnLayout(levent);
 		}
 
 		/// <summary>Limit user input to specific categories</summary>
@@ -125,28 +201,7 @@ namespace pr.gui
 		}
 
 		#region Windows Form Designer generated code
-		/// <summary>
-		/// Required designer variable.
-		/// </summary>
 		private System.ComponentModel.IContainer components = null;
-
-		/// <summary>
-		/// Clean up any resources being used.
-		/// </summary>
-		/// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing && (components != null))
-			{
-				components.Dispose();
-			}
-			base.Dispose(disposing);
-		}
-
-		/// <summary>
-		/// Required method for Designer support - do not modify
-		/// the contents of this method with the code editor.
-		/// </summary>
 		private void InitializeComponent()
 		{
 			this.components = new System.ComponentModel.Container();
@@ -159,8 +214,7 @@ namespace pr.gui
 			// 
 			// m_edit
 			// 
-			this.m_edit.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
+			this.m_edit.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit.Location = new System.Drawing.Point(12, 26);
 			this.m_edit.Name = "m_edit";
@@ -178,6 +232,7 @@ namespace pr.gui
 			// 
 			// m_btn_ok
 			// 
+			this.m_btn_ok.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.OK;
 			this.m_btn_ok.Location = new System.Drawing.Point(127, 52);
 			this.m_btn_ok.Name = "m_btn_ok";
@@ -188,6 +243,7 @@ namespace pr.gui
 			// 
 			// m_btn_cancel
 			// 
+			this.m_btn_cancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_cancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
 			this.m_btn_cancel.Location = new System.Drawing.Point(208, 52);
 			this.m_btn_cancel.Name = "m_btn_cancel";
@@ -196,7 +252,7 @@ namespace pr.gui
 			this.m_btn_cancel.Text = "Cancel";
 			this.m_btn_cancel.UseVisualStyleBackColor = true;
 			// 
-			// toolTip1
+			// m_tt
 			// 
 			this.m_tt.ShowAlways = true;
 			// 
@@ -211,7 +267,7 @@ namespace pr.gui
 			this.Controls.Add(this.m_btn_ok);
 			this.Controls.Add(this.m_lbl_info);
 			this.Controls.Add(this.m_edit);
-			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
+			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.SizableToolWindow;
 			this.Name = "PromptForm";
 			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
 			this.Text = "Choose a Name";

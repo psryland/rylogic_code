@@ -78,8 +78,7 @@ namespace ldr
 		}
 		catch (std::exception const& ex)
 		{
-			auto msg = pr::FmtS(L"Script error found while parsing source string.\r\n%S", ex.what());
-			pr::events::Send(Evt_AppMsg(Evt_AppMsg::EType::Error, msg, L"Add Script String"));
+			pr::events::Send(Evt_AppMsg(pr::FmtS(L"Script error found while parsing source string.\r\n%S", ex.what()), L"Add Script String"));
 		}
 	}
 
@@ -150,8 +149,7 @@ namespace ldr
 		}
 		catch (pr::script::Exception const& ex)
 		{
-			auto msg = pr::FmtS(L"Script error found while parsing source file '%s'.\r\n%S", fpath.c_str(), ex.what());
-			pr::events::Send(Evt_AppMsg(Evt_AppMsg::EType::Error, msg, L"Add Script File"));
+			pr::events::Send(Evt_AppMsg(pr::FmtS(L"Script error found while parsing source file '%s'.\r\n%S", fpath.c_str(), ex.what()), L"Add Script File"));
 		}
 		catch (LdrException const& e)
 		{
@@ -166,7 +164,7 @@ namespace ldr
 				msg = pr::FmtS(L"Failed to load source file '%s'", fpath.c_str());
 				break;
 			}
-			pr::events::Send(Evt_AppMsg(Evt_AppMsg::EType::Error, msg, L"Add Script File"));
+			pr::events::Send(Evt_AppMsg(msg, L"Add Script File"));
 		}
 	}
 
