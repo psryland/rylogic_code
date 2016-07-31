@@ -49,13 +49,22 @@ namespace pr.extn
 		}
 
 		/// <summary>Creates a new instance of this object with all fields copied. Returns 'to' for method chaining</summary>
-		public static object ShallowCopy(this object from) { return ShallowCopy(from, Activator.CreateInstance(from.GetType(), true)); }
+		public static object ShallowCopy(this object from)
+		{
+			return ShallowCopy(from, Activator.CreateInstance(from.GetType(), true));
+		}
 
 		/// <summary>Copies all of the fields of this object into 'to'. Returns 'to' for method chaining</summary>
-		public static T ShallowCopy<T>(this T from, T to) { return (T)ShallowCopy((object)from, to); }
+		public static T ShallowCopy<T>(this T from, T to)
+		{
+			return (T)ShallowCopy((object)from, to);
+		}
 
 		/// <summary>Creates a new instance of this object with all fields copied. Returns 'to' for method chaining</summary>
-		public static T ShallowCopy<T>(this T from) { return ShallowCopy(from, (T)Activator.CreateInstance(from.GetType(), true)); }
+		public static T ShallowCopy<T>(this T from)
+		{
+			return ShallowCopy(from, (T)Activator.CreateInstance(from.GetType(), true));
+		}
 
 		/// <summary>
 		/// Recursively copies the fields of this object to 'to'. Returns 'to' for method chaining.
@@ -109,23 +118,34 @@ namespace pr.extn
 			return to;
 		}
 
-		/// <summary>Creates a new instance of this object with all fields copied (recursively). Returns 'to' for method chaining.<para/>
+		/// <summary>
+		/// Creates a new instance of this object with all fields copied (recursively).
+		/// Returns 'to' for method chaining.<para/>
 		/// Careful with this method, consider:<para/>
 		/// class C { object o1, o2; C() { o1 = o2 = new Thing(); } }<para/>
 		/// A deep copy of an instance of this class will cause o1 != o2</summary>
-		public static object DeepCopy(this object from) { return DeepCopy(from, Activator.CreateInstance(from.GetType(), true)); }
+		public static object DeepCopy(this object from)
+		{
+			return DeepCopy(from, Activator.CreateInstance(from.GetType(), true));
+		}
 
 		/// <summary>Copies all of the fields of this object into 'to' (recursively). Returns 'to' for method chaining.<para/>
 		/// Careful with this method, consider:<para/>
 		/// class C { object o1, o2; C() { o1 = o2 = new Thing(); } }<para/>
 		/// A deep copy of an instance of this class will cause o1 != o2</summary>
-		public static T DeepCopy<T>(this T from, T to) { return (T)DeepCopy((object)from, to); }
+		public static T DeepCopy<T>(this T from, T to)
+		{
+			return (T)DeepCopy((object)from, to);
+		}
 
 		/// <summary>Creates a new instance of this object with all fields copied (recursively). Returns 'to' for method chaining.<para/>
 		/// Careful with this method, consider:<para/>
 		/// class C { object o1, o2; C() { o1 = o2 = new Thing(); } }<para/>
 		/// A deep copy of an instance of this class will cause o1 != o2</summary>
-		public static T DeepCopy<T>(this T from) { return DeepCopy(from, (T)Activator.CreateInstance(from.GetType(), true)); }
+		public static T DeepCopy<T>(this T from)
+		{
+			return DeepCopy(from, (T)Activator.CreateInstance(from.GetType(), true));
+		}
 
 		/// <summary>Helper class for generating compiled lambda expressions</summary>
 		private static class MethodGenerator<T>

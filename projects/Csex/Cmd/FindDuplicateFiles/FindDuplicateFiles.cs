@@ -90,7 +90,7 @@ namespace Csex
 				// Ensure the duplicates directory exists
 				if (m_mv_dir != null)
 				{
-					if (!PathEx.DirExists(m_mv_dir))
+					if (!Path_.DirExists(m_mv_dir))
 						Directory.CreateDirectory(m_mv_dir);
 				}
 
@@ -100,7 +100,7 @@ namespace Csex
 				Console.WriteLine("Finding Duplicates");
 				foreach (var finfo in newfiles)
 				{
-					PathEx.FileData original;
+					Path_.FileData original;
 					if (existing.TryGetValue(finfo.Key, out original))
 					{
 						if (m_show_dups)
@@ -131,12 +131,12 @@ namespace Csex
 		}
 
 		/// <summary>Build a map of the files in 'root'</summary>
-		private Dictionary<string,PathEx.FileData> BuildMap(string root, string ignore_patn)
+		private Dictionary<string,Path_.FileData> BuildMap(string root, string ignore_patn)
 		{
 			var dir = root.ToLowerInvariant();
 
-			var map = new Dictionary<string,PathEx.FileData>();
-			foreach (var finfo in PathEx.EnumFileSystem(root, search_flags:SearchOption.AllDirectories))
+			var map = new Dictionary<string,Path_.FileData>();
+			foreach (var finfo in Path_.EnumFileSystem(root, search_flags:SearchOption.AllDirectories))
 			{
 				var d = (Path.GetDirectoryName(finfo.FullPath) ?? string.Empty).ToLowerInvariant();
 				if (d != dir)
@@ -153,7 +153,7 @@ namespace Csex
 				{
 					var k = MakeKey(finfo);
 
-					PathEx.FileData existing = map.TryGetValue(k, out existing) ? existing : null;
+					Path_.FileData existing = map.TryGetValue(k, out existing) ? existing : null;
 					if (existing != null)
 					{
 						Console.WriteLine("Existing duplicate found:\n  {0}\n  {1}\n".Fmt(finfo.FullPath, existing.FullPath));
@@ -173,7 +173,7 @@ namespace Csex
 			return map;
 		}
 
-		private string MakeKey(PathEx.FileData finfo)
+		private string MakeKey(Path_.FileData finfo)
 		{
 			var fname = finfo.FileName.ToLowerInvariant();
 

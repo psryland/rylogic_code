@@ -38,7 +38,7 @@ namespace pr.common
 			Log.Debug(this, "Loading plugins for interface: {0}".Fmt(typeof(TInterface).Name));
 
 			// Build a list of assemblies to check
-			var filepaths = PathEx.EnumFileSystem(directory, recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly, regex_pattern)
+			var filepaths = Path_.EnumFileSystem(directory, recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly, regex_pattern)
 				.Where(x => !x.IsDirectory)
 				.Select(x => x.FullPath)
 				.ToList();

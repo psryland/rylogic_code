@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Drawing;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Windows.Forms;
+using pr.common;
 using pr.extn;
 using pr.gfx;
 using pr.gui;
@@ -15,6 +19,7 @@ namespace TestCS
 		private View3d.Object m_obj0;
 		private View3d.Object m_obj1;
 		private View3d.Object m_obj2;
+		private View3d.Object m_obj3;
 		private View3d.Texture m_tex0;
 		private View3d.Texture m_tex2;
 		private View3d.Gizmo m_giz;
@@ -64,7 +69,7 @@ namespace TestCS
 			m_obj0.SetTexture(m_tex0);
 
 			// Create object via callback
-			m_obj1 = new View3d.Object("net", 0xFF0000FF, 20, 20, CreateOnlyCB);
+			m_obj1 = new View3d.Object("net", 0xFF0000FF, 20, 20, 1, CreateOnlyCB);
 			m_view3d.Window.AddObject(m_obj1);
 
 			// Create an object with a texture from a rendered scene
@@ -110,6 +115,26 @@ namespace TestCS
 			m_btn_rotate   .Click += (s,a) => m_giz.Mode = View3d.Gizmo.EMode.Rotate;
 			m_btn_scale    .Click += (s,a) => m_giz.Mode = View3d.Gizmo.EMode.Scale;
 
+			// Create an object from buffers created in C#
+			{
+				var verts = new View3d.Vertex[]
+				{
+					new View3d.Vertex(new v4(1f, 1f, 0f, 1f), 0xFFFF0000),
+					new View3d.Vertex(new v4(2f, 0f, 0f, 1f), 0xFF00FF00),
+					new View3d.Vertex(new v4(3f, 1f, 0f, 1f), 0xFF0000FF),
+				};
+				var indcs = new ushort[]
+				{
+					0, 1, 2
+				};
+				var nuggets = new View3d.Nugget[]
+				{
+					new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert|View3d.EGeom.Colr)
+				};
+				m_obj3 = new View3d.Object("Obj3", 0xFFFFFFFF, 3, 3, 1, verts, indcs, nuggets);
+				m_view3d.Window.AddObject(m_obj3);
+			}
+
 			//m_view3d.View3d.CreateDemoScene();
 		}
 		protected override void Dispose(bool disposing)
@@ -120,16 +145,18 @@ namespace TestCS
 			Util.Dispose(ref m_obj0  );
 			Util.Dispose(ref m_obj1  );
 			Util.Dispose(ref m_obj2  );
+			Util.Dispose(ref m_obj3  );
 			Util.Dispose(ref m_view3d);
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
 
 		/// <summary>Callback for creating the "net" object</summary>
-		private void CreateOnlyCB(int vcount, int icount, View3d.Vertex[] verts, ushort[] indices, out int new_vcount, out int new_icount, out View3d.EPrim prim_type, out View3d.EGeom geom_type, ref View3d.Material mat, IntPtr ctx)
+		private void CreateOnlyCB(int vcount, int icount, int ncount, View3d.Vertex[] verts, ushort[] indices, View3d.Nugget[] nuggets, out int new_vcount, out int new_icount, out int new_ncount, IntPtr ctx)
 		{
 			new_vcount = 0;
 			new_icount = 0;
+			new_ncount = 0;
 			for (int i = 0; i != 10; ++i)
 			{
 				verts[new_vcount++] = new View3d.Vertex(new v4(i,0,0,1f));
@@ -137,8 +164,7 @@ namespace TestCS
 				indices[new_icount++] = (ushort)(new_vcount - 2);
 				indices[new_icount++] = (ushort)(new_vcount - 1);
 			}
-			prim_type = View3d.EPrim.D3D_PRIMITIVE_TOPOLOGY_LINELIST;
-			geom_type = View3d.EGeom.Vert;
+			nuggets[new_ncount++] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert);
 		}
 
 		#region Windows Form Designer generated code

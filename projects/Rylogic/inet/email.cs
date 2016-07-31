@@ -53,13 +53,13 @@ namespace pr.inet
 		/// <summary>Calls the Mail api to send this email</summary>
 		public void Send(MAPISendMethod how = MAPISendMethod.Popup)
 		{
-			using (var recip_buf  = MarshalEx.AllocHGlobal(typeof(MAPI32.RecipDesc), m_recipients.Count))
-			using (var attach_buf = MarshalEx.AllocHGlobal(typeof(MAPI32.FileDesc), Attachments.Count))
+			using (var recip_buf  = Marshal_.AllocHGlobal(typeof(MAPI32.RecipDesc), m_recipients.Count))
+			using (var attach_buf = Marshal_.AllocHGlobal(typeof(MAPI32.FileDesc), Attachments.Count))
 			{
 				// Fill the recipient buffer
 				if (m_recipients.Count != 0)
 				{
-					var ptr = recip_buf.Value;
+					var ptr = recip_buf.Value.Ptr;
 					var size = Marshal.SizeOf(typeof(MAPI32.RecipDesc));
 					foreach (var r in m_recipients)
 					{
@@ -71,7 +71,7 @@ namespace pr.inet
 				// Fill the attachments buffer
 				if (Attachments.Count != 0)
 				{
-					var ptr = attach_buf.Value;
+					var ptr = attach_buf.Value.Ptr;
 					var size = Marshal.SizeOf(typeof(MAPI32.FileDesc));
 					foreach (var a in Attachments)
 					{
@@ -90,9 +90,9 @@ namespace pr.inet
 				msg.subject    = Subject ?? "";
 				msg.noteText   = Body ?? "";
 				msg.recipCount = m_recipients.Count;
-				msg.recips     = recip_buf.Value;
+				msg.recips     = recip_buf.Value.Ptr;
 				msg.fileCount  = Attachments.Count;
-				msg.files      = attach_buf.Value;
+				msg.files      = attach_buf.Value.Ptr;
 				var res = MAPI32.SendMail(IntPtr.Zero, IntPtr.Zero, msg, (int)how, 0);
 				if (res > 1) throw new Exception("MAPI32.SendMail failed. Result: " + MAPI32.ErrorString(res));
 			}

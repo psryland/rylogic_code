@@ -66,14 +66,66 @@ namespace pr
 					start();
 			}
 
-			void start(bool reset_first)  { if (reset_first) reset(); start(); }
-			void start()                  { m_start = RTC::now(); }
-			void stop()                   { m_stop  = RTC::now(); m_accum += m_stop - m_start; }
-			void reset()                  { m_accum = duration_t::zero(); }
-			duration_t now() const        { return RTC::now() - m_start; }
-			duration_t period() const     { return m_accum; }
-			double period_s() const       { return ToSec(period()); }
-			double period_ms() const      { return ToMSec(period()); }
+			// Reset the stop watch to 00:00
+			void reset()
+			{
+				m_accum = duration_t::zero();
+			}
+
+			// Start the stop watch
+			void start(bool reset_first)
+			{
+				if (reset_first) reset();
+				start();
+			}
+			void start()
+			{
+				m_start = RTC::now();
+			}
+
+			// Stop the stop watch. Measure time given by 'period' methods
+			void stop()
+			{
+				m_stop  = RTC::now();
+				m_accum += m_stop - m_start;
+			}
+
+			// Return the value recorded when 'stop()' was last called
+			duration_t period() const
+			{
+				return m_accum;
+			}
+			double period_s() const
+			{
+				return ToSec(period());
+			}
+			double period_ms() const
+			{
+				return ToMSec(period());
+			}
+
+			// Return the current 'running' time of the stop watch without stopping
+			duration_t now() const
+			{
+				return RTC::now() - m_start;
+			}
+
+			// Return a 'lap' time, resetting the stop watch to zero but leaving it running
+			duration_t lap()
+			{
+				stop();
+				auto p = period();
+				start(true);
+				return p;
+			}
+			double lap_s()
+			{
+				return ToSec(lap());
+			}
+			double lap_ms()
+			{
+				return ToMSec(lap());
+			}
 		};
 	}
 }

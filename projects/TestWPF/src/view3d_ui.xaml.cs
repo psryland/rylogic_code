@@ -44,11 +44,12 @@ namespace TestWPF
 			m_view3d.Window.AddObject(m_obj0);
 
 			// Create object via callback
-			m_obj1 = new View3d.Object("net", 0xFF0000FF, 20, 20,
-				(int vcount, int icount, View3d.Vertex[] verts, ushort[] indices, out int new_vcount, out int new_icount, out View3d.EPrim prim_type, out View3d.EGeom geom_type, ref View3d.Material mat, IntPtr ctx) =>
+			m_obj1 = new View3d.Object("net", 0xFF0000FF, 20, 20, 1,
+				(int vcount, int icount, int ncount, View3d.Vertex[] verts, ushort[] indices, View3d.Nugget[] nuggets, out int new_vcount, out int new_icount, out int new_ncount, IntPtr ctx) =>
 				{
 					new_vcount = 0;
 					new_icount = 0;
+					new_ncount = 0;
 					for (int i = 0; i != 10; ++i)
 					{
 						verts[new_vcount++] = new View3d.Vertex(new v4(i,0,0,1f));
@@ -56,8 +57,7 @@ namespace TestWPF
 						indices[new_icount++] = (ushort)(new_vcount - 2);
 						indices[new_icount++] = (ushort)(new_vcount - 1);
 					}
-					prim_type = View3d.EPrim.D3D_PRIMITIVE_TOPOLOGY_LINELIST;
-					geom_type = View3d.EGeom.Vert;
+					nuggets[new_ncount++] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert);
 				});
 			m_view3d.Window.AddObject(m_obj1);
 

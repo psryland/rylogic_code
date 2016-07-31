@@ -13,6 +13,11 @@ namespace pr.util
 		{
 			m_store = new Dictionary<Guid,object>();
 		}
+		public UserData(UserData rhs) :this()
+		{
+			foreach (var pair in rhs.m_store)
+				m_store.Add(pair.Key, pair.Value);
+		}
 
 		/// <summary>Access the user data by GUID</summary>
 		public object this[Guid id]

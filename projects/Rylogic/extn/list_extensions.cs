@@ -74,6 +74,13 @@ namespace pr.extn
 			list.AddRange(items.Cast<T>());
 		}
 
+		/// <summary>Insert and return the item added to this list</summary>
+		public static U Insert2<T,U>(this IList<T> list, int index, U item) where U:T
+		{
+			list.Insert(index, item);
+			return item;
+		}
+	
 		/// <summary>
 		/// Add 'item' to the list if it's not already there.
 		/// Uses 'are_equal(list[i],item)' to test for uniqueness.
@@ -380,7 +387,7 @@ namespace pr.extn
 			return list.Partition(0, list.Count, comparer);
 		}
 
-		/// <summary>Sort the list using a lamba</summary>
+		/// <summary>Sort the list using a lambda</summary>
 		public static IList<T> Sort<T>(this IList<T> list, Cmp<T> comparer = null)
 		{
 			return list.Sort(0, list.Count, comparer);

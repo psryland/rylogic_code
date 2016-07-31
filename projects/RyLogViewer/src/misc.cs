@@ -225,7 +225,7 @@ namespace RyLogViewer
 		{
 			// Check that the file exists, this can take ages if 'filepath' is a network file
 			bool file_exists = false;
-			var dlg = new ProgressForm("Open File", "Opening file...", null, ProgressBarStyle.Marquee, (s,a,cb) => file_exists = PathEx.FileExists(filepath));
+			var dlg = new ProgressForm("Open File", "Opening file...", null, ProgressBarStyle.Marquee, (s,a,cb) => file_exists = Path_.FileExists(filepath));
 			dlg.ShowDialog(parent, 500);
 			return file_exists;
 		}

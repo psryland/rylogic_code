@@ -457,7 +457,7 @@ namespace pr.inet
 			Reply reply;
 			
 			// Check the local filepath exists first
-			if (!PathEx.FileExists(local_filepath))
+			if (!Path_.FileExists(local_filepath))
 				throw new FileNotFoundException("Upload failed", local_filepath);
 			
 			// Upload the file

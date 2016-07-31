@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Windows.Forms;
-using pr.extn;
 using pr.gui;
 using pr.maths;
+using pr.util;
 
 namespace TestCS
 {
@@ -18,6 +17,7 @@ namespace TestCS
 
 			m_graph.SetLabels("Test Graph", "X Axis", "Y Axis");
 			m_graph.BorderStyle = BorderStyle.FixedSingle;
+
 			Add("Sine Wave", 1000
 				,i =>
 					{
@@ -27,8 +27,10 @@ namespace TestCS
 					}
 				,new GraphControl.Series.RdrOptions
 					{
+						PlotType = GraphControl.Series.RdrOptions.EPlotType.Line,
 						LineWidth = 2f,
 						LineColour = Color.Blue,
+						PointSize = 0,
 					});
 
 			Add("Cosine Wave", 1000
@@ -40,11 +42,13 @@ namespace TestCS
 					}
 				,new GraphControl.Series.RdrOptions
 					{
+						PlotType = GraphControl.Series.RdrOptions.EPlotType.Line,
 						LineWidth = 2f,
 						LineColour = Color.Red,
+						PointSize = 0,
 					});
 
-			Add("Thing", 1000
+			Add("Points", 1000
 				,i =>
 					{
 						var x = i * Maths.Tau / 1000.0;
@@ -55,29 +59,58 @@ namespace TestCS
 					}
 				,new GraphControl.Series.RdrOptions
 					{
-						LineWidth = 2f,
-						LineColour = Color.Green,
+						PlotType = GraphControl.Series.RdrOptions.EPlotType.Point,
+						PointColour = Color.Green,
+						PointSize = 2f,
 					});
-/*			*/
+
+			Add("Bars", 10
+				,i =>
+					{
+						var x = i + 10;
+						var y = i;// * Math.Sin(i * Maths.Tau / 1000.0);
+						return new { X = x, Y = y, ErrLo = 0, ErrHi = 0 };
+					}
+				,new GraphControl.Series.RdrOptions
+					{
+						PlotType = GraphControl.Series.RdrOptions.EPlotType.Bar,
+						PointSize = 0,
+						BarColour = Color.SteelBlue,
+					});
+
 			m_graph.FindDefaultRange();
 			m_graph.ResetToDefaultRange();
-			m_graph.AddOverlayOnPaint += DrawOverlays;
+			m_graph.AddOverlayOnPaint += OverlayOnPaint;
+			m_graph.AddOverlayOnRender += OverlayOnRender;
+		}
+		protected override void Dispose(bool disposing)
+		{
+			Util.Dispose(ref components);
+			base.Dispose(disposing);
 		}
 
-		private void DrawOverlays(object sender, GraphControl.OverlaysEventArgs args)
+		/// <summary>Draw graphics that float over the graph</summary>
+		private void OverlayOnPaint(object sender, GraphControl.OverlaysEventArgs args)
 		{
-			Matrix c2g; v2 scale;
-			sender.As<GraphControl>().ClientToGraphSpace(out c2g, out scale);
-			args.Gfx.Transform = c2g;
-			args.Gfx.DrawEllipse(Pens.Red, 0.25f * scale.x, 0.25f * scale.y, 0.5f * scale.x, 0.5f * scale.y);
-			args.Gfx.ResetTransform();
+			// Updated on every paint
+			var pt = args.G2C.TransformPoint(new PointF(5,5), 1);
+			args.Gfx.DrawString("Point (5,5)", SystemFonts.DefaultFont, Brushes.DarkGreen, pt);
+		}
+
+		/// <summary>Embed graphics into the graph</summary>
+		private void OverlayOnRender(object sender, GraphControl.OverlaysEventArgs args)
+		{
+			// A 20 pixel radius circle at 5,5 on the graph
+			// Only updated when the graph is rendered
+			var pt = args.G2C.TransformPoint(new PointF(5,5), 1);
+			args.Gfx.DrawEllipse(Pens.DarkGreen, pt.X - 20, pt.Y - 20, 40, 40);
 		}
 
 		/// <summary>Add a function as a series</summary>
 		private void Add(string title, int points, Func<int,dynamic> Func, GraphControl.Series.RdrOptions opts)
 		{
 			var series = new GraphControl.Series(title, points, opts);
-			for (var i = 0; i != 1000; ++i)
+			for (var i = 0; i != points; ++i)
 			{
 				var d = Func(i);
 				series.Add(new GraphControl.GraphValue(d.X,d.Y,d.ErrLo,d.ErrHi,null));
@@ -86,29 +119,7 @@ namespace TestCS
 		}
 
 		#region Windows Form Designer generated code
-
-		/// <summary>
-		/// Required designer variable.
-		/// </summary>
 		private System.ComponentModel.IContainer components = null;
-
-		/// <summary>
-		/// Clean up any resources being used.
-		/// </summary>
-		/// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing && (components != null))
-			{
-				components.Dispose();
-			}
-			base.Dispose(disposing);
-		}
-
-		/// <summary>
-		/// Required method for Designer support - do not modify
-		/// the contents of this method with the code editor.
-		/// </summary>
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(GraphControlUI));
@@ -138,7 +149,6 @@ namespace TestCS
 			this.Text = "GraphControl";
 			this.ResumeLayout(false);
 		}
-
 		#endregion
 	}
 }

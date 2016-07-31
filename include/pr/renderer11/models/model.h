@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
-#ifndef PR_RDR_MODELS_MODEL_H
-#define PR_RDR_MODELS_MODEL_H
 
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/models/nugget.h"
@@ -17,7 +15,7 @@ namespace pr
 		struct Model :pr::RefCount<Model>
 		{
 			ModelBufferPtr  m_model_buffer;  // The buffer that contains this model's vertex and index data
-			Range           m_vrange;        // The first and number of verties for this model within 'm_model_buffer'
+			Range           m_vrange;        // The first and number of vertices for this model within 'm_model_buffer'
 			Range           m_irange;        // The first and number of indices for this model within 'm_model_buffer'
 			TNuggetChain    m_nuggets;       // The nuggets for this model
 			pr::BBox        m_bbox;          // A bounding box for the model. Set by the client
@@ -46,7 +44,7 @@ namespace pr
 			Range VRange() const { return m_vrange; }
 			Range IRange() const { return m_irange; }
 
-			// Refcounting cleanup function
+			// Ref-counting clean up function
 			static void RefCountZero(pr::RefCount<Model>* doomed);
 
 		private:
@@ -56,5 +54,3 @@ namespace pr
 		};
 	}
 }
-
-#endif

@@ -32,9 +32,9 @@ namespace Csex
 		public Settings Settings { get; private set; }
 
 		/// <summary>Data for a file</summary>
-		public class FileInfo :PathEx.FileData
+		public class FileInfo :Path_.FileData
 		{
-			public FileInfo(PathEx.FileData fi) :base(fi)
+			public FileInfo(Path_.FileData fi) :base(fi)
 			{
 				Key = MakeKey(this);
 				Duplicates = new BindingListEx<FileInfo>();
@@ -103,7 +103,7 @@ namespace Csex
 			foreach (var path in Settings.SearchPaths)
 			{
 				if (dlg.CancelPending) break;
-				foreach (var fi in PathEx.EnumFileSystem(path, search_flags:SearchOption.AllDirectories).Where(x => !x.IsDirectory))
+				foreach (var fi in Path_.EnumFileSystem(path, search_flags:SearchOption.AllDirectories).Where(x => !x.IsDirectory))
 				{
 					if (dlg.CancelPending) break;
 

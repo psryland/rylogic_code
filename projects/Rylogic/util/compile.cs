@@ -22,7 +22,7 @@ namespace pr.util
 		/// to declare required assembly references </summary>
 		public static RuntimeAssembly FromFile(string inst_name, string file)
 		{
-			if (!PathEx.FileExists(file))
+			if (!Path_.FileExists(file))
 				throw new FileNotFoundException("File {0} not found".Fmt(file));
 
 			return FromString(inst_name, File.ReadAllText(file));
@@ -116,7 +116,7 @@ namespace pr.unittests
 	{
 		[Test] public void Test0()
 		{
-			var rylogic_dll = PathEx.FileName(Assembly.GetExecutingAssembly().Location);
+			var rylogic_dll = Path_.FileName(Assembly.GetExecutingAssembly().Location);
 
 			var source = @"
 			//Assembly: System.dll

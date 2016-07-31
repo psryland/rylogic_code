@@ -63,7 +63,7 @@ namespace RyLogViewer
 			app_dir = Path.Combine(app_dir, Application.ProductName);
 
 			// Determine whether to run the app in portable mode
-			PortableMode = PathEx.FileExists(Path.Combine(exe_dir, "portable"));
+			PortableMode = Path_.FileExists(Path.Combine(exe_dir, "portable"));
 
 			// Check the command line options
 			for (int i = 0, iend = args.Length; i != iend; ++i)

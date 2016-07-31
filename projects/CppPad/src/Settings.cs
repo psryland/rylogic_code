@@ -113,48 +113,48 @@ namespace CppPad
 			DotNetFrameworkVersion = @"v4.0.30319";
 			WinKitVersion          = "10.0.10240.0";
 
-			CompilerExePath = PathEx.CombinePath(VSDirectory, "\\VC\\bin\\cl.exe");
-			LinkerExePath   = PathEx.CombinePath(VSDirectory, "\\VC\\bin\\link.exe");
+			CompilerExePath = Path_.CombinePath(VSDirectory, "\\VC\\bin\\cl.exe");
+			LinkerExePath   = Path_.CombinePath(VSDirectory, "\\VC\\bin\\link.exe");
 
 			Switches .Add(new[] { "/nologo", "/EHsc" });
 			Defines  .Add(new[] { "NOMINMAX" });
 
 			#region EnvironmentIncludePaths
-			EnvironmentIncludePaths.Add(PathEx.CombinePath(VSDirectory, "\\vc\\include"));
-			EnvironmentIncludePaths.Add(PathEx.CombinePath(VSDirectory, "\\vc\\atlmfc\\include"));
-			EnvironmentIncludePaths.Add(PathEx.CombinePath(WinSDK, "\\include\\", WinKitVersion, "\\ucrt"));
-			EnvironmentIncludePaths.Add(PathEx.CombinePath(WinSDK, "\\include\\", WinKitVersion, "\\shared"));
-			EnvironmentIncludePaths.Add(PathEx.CombinePath(WinSDK, "\\include\\", WinKitVersion, "\\um"));
-			EnvironmentIncludePaths.Add(PathEx.CombinePath(WinSDK, "\\include\\", WinKitVersion, "\\winrt"));
-			EnvironmentIncludePaths.Add(PathEx.CombinePath(WinSDK, "\\..\\NETFXSDK\\4.6\\include\\um"));
+			EnvironmentIncludePaths.Add(Path_.CombinePath(VSDirectory, "\\vc\\include"));
+			EnvironmentIncludePaths.Add(Path_.CombinePath(VSDirectory, "\\vc\\atlmfc\\include"));
+			EnvironmentIncludePaths.Add(Path_.CombinePath(WinSDK, "\\include\\", WinKitVersion, "\\ucrt"));
+			EnvironmentIncludePaths.Add(Path_.CombinePath(WinSDK, "\\include\\", WinKitVersion, "\\shared"));
+			EnvironmentIncludePaths.Add(Path_.CombinePath(WinSDK, "\\include\\", WinKitVersion, "\\um"));
+			EnvironmentIncludePaths.Add(Path_.CombinePath(WinSDK, "\\include\\", WinKitVersion, "\\winrt"));
+			EnvironmentIncludePaths.Add(Path_.CombinePath(WinSDK, "\\..\\NETFXSDK\\4.6\\include\\um"));
 			#endregion
 
 			#region EnvironmentLibraryPaths
-			EnvironmentLibraryPaths.Add(PathEx.CombinePath(VSDirectory, "\\vc\\lib"));
-			EnvironmentLibraryPaths.Add(PathEx.CombinePath(VSDirectory, "\\vc\\atlmfc\\lib"));
-			EnvironmentLibraryPaths.Add(PathEx.CombinePath(WinSDK, "\\lib\\", WinKitVersion, "\\ucrt\\x86"));
-			EnvironmentLibraryPaths.Add(PathEx.CombinePath(WinSDK, "\\lib\\", WinKitVersion, "\\um\\x86"));
-			EnvironmentLibraryPaths.Add(PathEx.CombinePath(WinSDK, "\\..\\NETFXSDK\\4.6\\lib\\um\\x86"));
+			EnvironmentLibraryPaths.Add(Path_.CombinePath(VSDirectory, "\\vc\\lib"));
+			EnvironmentLibraryPaths.Add(Path_.CombinePath(VSDirectory, "\\vc\\atlmfc\\lib"));
+			EnvironmentLibraryPaths.Add(Path_.CombinePath(WinSDK, "\\lib\\", WinKitVersion, "\\ucrt\\x86"));
+			EnvironmentLibraryPaths.Add(Path_.CombinePath(WinSDK, "\\lib\\", WinKitVersion, "\\um\\x86"));
+			EnvironmentLibraryPaths.Add(Path_.CombinePath(WinSDK, "\\..\\NETFXSDK\\4.6\\lib\\um\\x86"));
 			#endregion
 
 			#region CompilerLibraryPaths
-			CompilerLibraryPaths.Add(PathEx.CombinePath(DotNetFramework));
-			CompilerLibraryPaths.Add(PathEx.CombinePath(VSDirectory, "\\vc\\lib"));
-			CompilerLibraryPaths.Add(PathEx.CombinePath(VSDirectory, "\\vc\\atlmfc\\lib"));
-			CompilerLibraryPaths.Add(PathEx.CombinePath(WinSDK, "\\UnionMetadata"));
-			CompilerLibraryPaths.Add(PathEx.CombinePath(WinSDK, "\\References"));
-			CompilerLibraryPaths.Add(PathEx.CombinePath(WinSDK, "\\References\\Windows.Foundation.UniversalApiContract\\1.0.0.0"));
-			CompilerLibraryPaths.Add(PathEx.CombinePath(WinSDK, "\\References\\Windows.Foundation.FoundationContract\\1.0.0.0"));
-			CompilerLibraryPaths.Add(PathEx.CombinePath(WinSDK, "\\References\\Windows.Networking.Connectivity.WwanContract\\1.0.0.0"));
-			CompilerLibraryPaths.Add(PathEx.CombinePath(WinSDK, "\\ExtensionSDKs\\Microsoft.VCLibs\\14.0\\References\\CommonConfiguration\\neutral"));
+			CompilerLibraryPaths.Add(Path_.CombinePath(DotNetFramework));
+			CompilerLibraryPaths.Add(Path_.CombinePath(VSDirectory, "\\vc\\lib"));
+			CompilerLibraryPaths.Add(Path_.CombinePath(VSDirectory, "\\vc\\atlmfc\\lib"));
+			CompilerLibraryPaths.Add(Path_.CombinePath(WinSDK, "\\UnionMetadata"));
+			CompilerLibraryPaths.Add(Path_.CombinePath(WinSDK, "\\References"));
+			CompilerLibraryPaths.Add(Path_.CombinePath(WinSDK, "\\References\\Windows.Foundation.UniversalApiContract\\1.0.0.0"));
+			CompilerLibraryPaths.Add(Path_.CombinePath(WinSDK, "\\References\\Windows.Foundation.FoundationContract\\1.0.0.0"));
+			CompilerLibraryPaths.Add(Path_.CombinePath(WinSDK, "\\References\\Windows.Networking.Connectivity.WwanContract\\1.0.0.0"));
+			CompilerLibraryPaths.Add(Path_.CombinePath(WinSDK, "\\ExtensionSDKs\\Microsoft.VCLibs\\14.0\\References\\CommonConfiguration\\neutral"));
 			#endregion
 
 			#region WindowsLibPaths
-			WindowsLibPaths.Add(PathEx.CombinePath(WinSDK, "\\UnionMetadata"));
-			WindowsLibPaths.Add(PathEx.CombinePath(WinSDK, "\\References"));
-			WindowsLibPaths.Add(PathEx.CombinePath(WinSDK, "\\References\\Windows.Foundation.UniversalApiContract\\1.0.0.0"));
-			WindowsLibPaths.Add(PathEx.CombinePath(WinSDK, "\\References\\Windows.Foundation.FoundationContract\\1.0.0.0"));
-			WindowsLibPaths.Add(PathEx.CombinePath(WinSDK, "\\References\\Windows.Networking.Connectivity.WwanContract\\1.0.0.0"));
+			WindowsLibPaths.Add(Path_.CombinePath(WinSDK, "\\UnionMetadata"));
+			WindowsLibPaths.Add(Path_.CombinePath(WinSDK, "\\References"));
+			WindowsLibPaths.Add(Path_.CombinePath(WinSDK, "\\References\\Windows.Foundation.UniversalApiContract\\1.0.0.0"));
+			WindowsLibPaths.Add(Path_.CombinePath(WinSDK, "\\References\\Windows.Foundation.FoundationContract\\1.0.0.0"));
+			WindowsLibPaths.Add(Path_.CombinePath(WinSDK, "\\References\\Windows.Networking.Connectivity.WwanContract\\1.0.0.0"));
 			#endregion
 
 			UpdateEnvironmentVars();
@@ -342,8 +342,8 @@ namespace CppPad
 		/// <summary>Populate the environment variables from the current settings</summary>
 		public void UpdateEnvironmentVars()
 		{
-			EnvironmentVars["DevEnvDir"         ] = PathEx.CombinePath(VSDirectory, "\\Common7\\IDE\\");
-			EnvironmentVars["ExtensionSdkDir"   ] = PathEx.CombinePath(WinSDK, "\\Extension SDKs");
+			EnvironmentVars["DevEnvDir"         ] = Path_.CombinePath(VSDirectory, "\\Common7\\IDE\\");
+			EnvironmentVars["ExtensionSdkDir"   ] = Path_.CombinePath(WinSDK, "\\Extension SDKs");
 			EnvironmentVars["Framework40Version"] = "v4.0";
 			EnvironmentVars["FrameworkDir"      ] = DotNetFramework + "\\";
 			EnvironmentVars["FrameworkDIR32"    ] = DotNetFramework + "\\";
@@ -353,21 +353,21 @@ namespace CppPad
 			EnvironmentVars["INCLUDE"    ] = string.Join(";", EnvironmentIncludePaths);
 			EnvironmentVars["LIB"        ] = string.Join(";", EnvironmentLibraryPaths);
 			EnvironmentVars["LIBPATH"    ] = string.Join(";", CompilerLibraryPaths);
-			EnvironmentVars["NETFXSDKDir"] = PathEx.CombinePath(WinSDK + "\\..\\NETFXSDK\\4.6\\");
+			EnvironmentVars["NETFXSDKDir"] = Path_.CombinePath(WinSDK + "\\..\\NETFXSDK\\4.6\\");
 
 			EnvironmentVars["UCRTVersion"        ] = WinKitVersion;
-			EnvironmentVars["UniversalCRTSdkDir" ] = PathEx.CombinePath(WinSDK, "\\");
-			EnvironmentVars["VCINSTALLDIR"       ] = PathEx.CombinePath(VSDirectory, "\\VC\\");
+			EnvironmentVars["UniversalCRTSdkDir" ] = Path_.CombinePath(WinSDK, "\\");
+			EnvironmentVars["VCINSTALLDIR"       ] = Path_.CombinePath(VSDirectory, "\\VC\\");
 			EnvironmentVars["VisualStudioVersion"] = VSVersion;
-			EnvironmentVars["VSINSTALLDIR"       ] = PathEx.CombinePath(VSDirectory, "\\");
+			EnvironmentVars["VSINSTALLDIR"       ] = Path_.CombinePath(VSDirectory, "\\");
 
 			EnvironmentVars["WindowsLibPath"] = string.Join(";", WindowsLibPaths);
 
-			EnvironmentVars["WindowsSdkDir"                ] = PathEx.CombinePath(WinSDK, "\\");
+			EnvironmentVars["WindowsSdkDir"                ] = Path_.CombinePath(WinSDK, "\\");
 			EnvironmentVars["WindowsSDKLibVersion"         ] = VSVersion + "\\";
 			EnvironmentVars["WindowsSDKVersion"            ] = VSVersion + "\\";
-			EnvironmentVars["WindowsSDK_ExecutablePath_x64"] = PathEx.CombinePath(DotNetTools, "\\x64\\");
-			EnvironmentVars["WindowsSDK_ExecutablePath_x86"] = PathEx.CombinePath(DotNetTools, "\\");
+			EnvironmentVars["WindowsSDK_ExecutablePath_x64"] = Path_.CombinePath(DotNetTools, "\\x64\\");
+			EnvironmentVars["WindowsSDK_ExecutablePath_x86"] = Path_.CombinePath(DotNetTools, "\\");
 		}
 
 		private class TyConv :GenericTypeConverter<MSVCCompilerSettings> {}

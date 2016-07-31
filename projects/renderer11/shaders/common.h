@@ -62,8 +62,8 @@ namespace pr
 		template <typename TCBuf> void SetTxfm(BaseInstance const& inst, SceneView const& view, TCBuf& cb)
 		{
 			pr::m4x4 o2w = GetO2W(inst);
-			pr::m4x4 w2c = pr::InvertFast(view.m_c2w);
-			pr::m4x4 c2s; if (!FindC2S(inst, c2s)) c2s = view.m_c2s;
+			pr::m4x4 w2c = pr::InvertFast(view.CameraToWorld());
+			pr::m4x4 c2s; if (!FindC2S(inst, c2s)) c2s = view.CameraToScreen();
 
 			cb.m_o2s = c2s * w2c * o2w;
 			cb.m_o2w = o2w;
@@ -94,8 +94,8 @@ namespace pr
 		// Helper for setting scene view constants
 		inline void SetViewConstants(SceneView const& view, hlsl::Camera& cb)
 		{
-			cb.m_c2w = view.m_c2w;
-			cb.m_c2s = view.m_c2s;
+			cb.m_c2w = view.CameraToWorld();
+			cb.m_c2s = view.CameraToScreen();
 			cb.m_w2c = pr::InvertFast(cb.m_c2w);
 			cb.m_w2s = cb.m_c2s * cb.m_w2c;
 		}

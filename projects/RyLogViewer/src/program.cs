@@ -98,7 +98,7 @@ namespace RyLogViewer
 				if (dg.ShowDialog() == DialogResult.OK)
 				{
 					string settings = "Settings filepath unknown";
-					if (StartupOptions != null && PathEx.FileExists(StartupOptions.SettingsPath))
+					if (StartupOptions != null && Path_.FileExists(StartupOptions.SettingsPath))
 						settings = File.ReadAllText(StartupOptions.SettingsPath);
 
 					var sb = new StringBuilder()

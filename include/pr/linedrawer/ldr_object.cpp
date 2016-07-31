@@ -470,10 +470,10 @@ namespace pr
 				case EKeyword::Video:    ParseVideo(p, m_texture); return true;
 				}
 			}
-			virtual NuggetProps* GetDrawData()
+			virtual NuggetProps* Material()
 			{
-				m_local_mat.m_topo = EPrim::Invalid;
-				m_local_mat.m_geom = EGeom::Invalid;
+				// This function is used to pass texture/shader data to the model generated
+				// Topo and Geom are not used, each model type knows what topo and geom it's using.
 				m_local_mat.m_tex_diffuse = m_texture;
 				//if (m_texture->m_video)
 				//	m_texture->m_video->Play(true);
@@ -590,9 +590,23 @@ namespace pr
 				}
 
 				// Create the model
-				if      (m_linemesh)  obj->m_model = ModelGenerator<>::Mesh(p.m_rdr, m_linestrip ? EPrim::LineStrip : EPrim::LineList, m_point.size(), m_index.size(), m_point.data(), m_index.data(), m_colour.size(), m_colour.data());
-				else if (m_linestrip) obj->m_model = ModelGenerator<>::LineStrip(p.m_rdr, m_point.size() - 1, m_point.data(), m_colour.size(), m_colour.data());
-				else                  obj->m_model = ModelGenerator<>::Lines(p.m_rdr, m_point.size() / 2, m_point.data(), m_colour.size(), m_colour.data());
+				if (m_linemesh)
+				{
+					auto cdata = MeshCreationData()
+						.verts(m_point.data(), m_point.size())
+						.indices(m_index.data(), m_index.size())
+						.nuggets({NuggetProps(m_linestrip ? EPrim::LineStrip : EPrim::LineList, EGeom::Vert|EGeom::Colr)})
+						.colours(m_colour.data(), m_colour.size());
+					obj->m_model = ModelGenerator<>::Mesh(p.m_rdr, cdata);
+				}
+				else if (m_linestrip)
+				{
+					obj->m_model = ModelGenerator<>::LineStrip(p.m_rdr, m_point.size() - 1, m_point.data(), m_colour.size(), m_colour.data());
+				}
+				else
+				{
+					obj->m_model = ModelGenerator<>::Lines(p.m_rdr, m_point.size() / 2, m_point.data(), m_colour.size(), m_colour.data());
+				}
 				obj->m_model->m_name = obj->TypeAndName();
 
 				// Use thick lines
@@ -653,7 +667,7 @@ namespace pr
 				}
 
 				// Create the model
-				obj->m_model = ModelGenerator<>::Quad(p.m_rdr, m_point.size() / 4, m_point.data(), m_colour.size(), m_colour.data(), pr::m4x4Identity, GetDrawData());
+				obj->m_model = ModelGenerator<>::Quad(p.m_rdr, m_point.size() / 4, m_point.data(), m_colour.size(), m_colour.data(), pr::m4x4Identity, Material());
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
@@ -667,7 +681,7 @@ namespace pr
 			IObjectCreatorCuboid() :m_pt(), m_b2w(pr::m4x4Identity) {}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
-				obj->m_model = ModelGenerator<>::Boxes(p.m_rdr, 1, m_pt, m_b2w, 0, 0, GetDrawData());
+				obj->m_model = ModelGenerator<>::Boxes(p.m_rdr, 1, m_pt, m_b2w, 0, 0, Material());
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
@@ -700,7 +714,7 @@ namespace pr
 				}
 
 				// Create the model
-				obj->m_model = ModelGenerator<>::Cylinder(p.m_rdr, m_dim.x, m_dim.y, m_dim.z, m_scale.x, m_scale.y, m_wedges, m_layers, 1, &pr::Colour32White, po2w, GetDrawData());
+				obj->m_model = ModelGenerator<>::Cylinder(p.m_rdr, m_dim.x, m_dim.y, m_dim.z, m_scale.x, m_scale.y, m_wedges, m_layers, 1, &pr::Colour32White, po2w, Material());
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
@@ -825,7 +839,10 @@ namespace pr
 					m_normals.resize(m_verts.size());
 
 					pr::geometry::GenerateNormals(m_indices.size(), m_indices.data(), m_gen_normals,
-						[&](pr::uint16 i){ return m_verts[i]; }, 0,
+						[&](pr::uint16 i)
+						{
+							return m_verts[i];
+						}, 0,
 						[&](pr::uint16 new_idx, pr::uint16 orig_idx, v4 const& norm)
 						{
 							if (new_idx >= m_verts.size())
@@ -843,20 +860,23 @@ namespace pr
 						});
 				}
 
+				// Create the nuggets
+				NuggetProps nug = *Material();
+				nug.m_topo = m_prim_type;
+				nug.m_geom = EGeom::Vert |
+					(!m_normals.empty() ? EGeom::Norm : EGeom::None) |
+					(!m_colours.empty() ? EGeom::Colr : EGeom::None) |
+					(!m_texs.empty()    ? EGeom::Tex0 : EGeom::None);
+
 				// Create the model
-				obj->m_model = ModelGenerator<>::Mesh(
-					p.m_rdr,
-					m_prim_type,
-					m_verts.size(),
-					m_indices.size(),
-					m_verts.data(),
-					m_indices.data(),
-					m_colours.size(),
-					m_colours.data(),
-					m_normals.size(),
-					m_normals.data(),
-					m_texs.data(),
-					GetDrawData());
+				auto cdata = MeshCreationData()
+					.verts(m_verts.data(), m_verts.size())
+					.indices(m_indices.data(), m_indices.size())
+					.nuggets(&nug, 1)
+					.colours(m_colours.data(), m_colours.size())
+					.normals(m_normals.data(), m_normals.size())
+					.tex(m_texs.data(), m_texs.size());
+				obj->m_model = ModelGenerator<>::Mesh(p.m_rdr, cdata);
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
@@ -1219,7 +1239,7 @@ namespace pr
 				}
 
 				// Create the model
-				obj->m_model = ModelGenerator<>::Ellipse(p.m_rdr, m_dim.x, m_dim.y, m_solid, m_facets, Colour32White, po2w, GetDrawData());
+				obj->m_model = ModelGenerator<>::Ellipse(p.m_rdr, m_dim.x, m_dim.y, m_solid, m_facets, Colour32White, po2w, Material());
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
@@ -1260,7 +1280,7 @@ namespace pr
 				}
 
 				// Create the model
-				obj->m_model = ModelGenerator<>::Pie(p.m_rdr, m_dim.x, m_dim.y, m_ang.x, m_ang.y, m_rad.x, m_rad.y, m_solid, m_facets, Colour32White, po2w, GetDrawData());
+				obj->m_model = ModelGenerator<>::Pie(p.m_rdr, m_dim.x, m_dim.y, m_ang.x, m_ang.y, m_rad.x, m_rad.y, m_solid, m_facets, Colour32White, po2w, Material());
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
@@ -1299,7 +1319,7 @@ namespace pr
 				}
 
 				// Create the model
-				obj->m_model = ModelGenerator<>::RoundedRectangle(p.m_rdr, m_dim.x, m_dim.y, m_corner_radius, m_solid, m_facets, Colour32White, po2w, GetDrawData());
+				obj->m_model = ModelGenerator<>::RoundedRectangle(p.m_rdr, m_dim.x, m_dim.y, m_corner_radius, m_solid, m_facets, Colour32White, po2w, Material());
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
@@ -1435,7 +1455,7 @@ namespace pr
 				}
 
 				pr::v4 normal = m_axis_id;
-				obj->m_model = ModelGenerator<>::QuadStrip(p.m_rdr, m_point.size() - 1, m_point.data(), m_width, 1, &normal, m_colour.size(), m_colour.data(), GetDrawData());
+				obj->m_model = ModelGenerator<>::QuadStrip(p.m_rdr, m_point.size() - 1, m_point.data(), m_width, 1, &normal, m_colour.size(), m_colour.data(), Material());
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
@@ -1460,7 +1480,7 @@ namespace pr
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
 				// Create the model
-				obj->m_model = ModelGenerator<>::Box(p.m_rdr, m_dim, pr::m4x4Identity, pr::Colour32White, GetDrawData());
+				obj->m_model = ModelGenerator<>::Box(p.m_rdr, m_dim, pr::m4x4Identity, pr::Colour32White, Material());
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
@@ -1492,7 +1512,7 @@ namespace pr
 			}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
-				obj->m_model = ModelGenerator<>::Box(p.m_rdr, m_dim, m_b2w, pr::Colour32White, GetDrawData());
+				obj->m_model = ModelGenerator<>::Box(p.m_rdr, m_dim, m_b2w, pr::Colour32White, Material());
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
@@ -1525,7 +1545,7 @@ namespace pr
 				m_dim *= 0.5f;
 
 				// Create the model
-				obj->m_model = ModelGenerator<>::BoxList(p.m_rdr, m_location.size(), m_location.data(), m_dim, 0, 0, GetDrawData());
+				obj->m_model = ModelGenerator<>::BoxList(p.m_rdr, m_location.size(), m_location.data(), m_dim, 0, 0, Material());
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
@@ -1647,7 +1667,7 @@ namespace pr
 			}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
-				obj->m_model = ModelGenerator<>::Geosphere(p.m_rdr, m_dim, m_divisions, pr::Colour32White, GetDrawData());
+				obj->m_model = ModelGenerator<>::Geosphere(p.m_rdr, m_dim, m_divisions, pr::Colour32White, Material());
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
@@ -2063,29 +2083,20 @@ namespace pr
 			}
 		}
 
-		// Add a custom object via callback
-		// Objects created by this method will have dynamic usage and are suitable for updating every frame
-		// They are intended to be used with the 'Edit' function.
-		LdrObjectPtr Add(pr::Renderer& rdr, ObjectAttributes attr, EPrim topo, int icount, int vcount, pr::uint16 const* indices, pr::v4 const* verts, int ccount, pr::Colour32 const* colours, int ncount, pr::v4 const* normals, pr::v2 const* tex_coords, pr::Guid const& context_id)
+		// Create an ldr object from creation data.
+		LdrObjectPtr Create(pr::Renderer& rdr, ObjectAttributes attr, MeshCreationData const& cdata, pr::Guid const& context_id)
 		{
 			LdrObjectPtr obj(new LdrObject(attr, 0, context_id));
 
-			EGeom geom_type = EGeom::Vert;
-			if (normals)    geom_type = geom_type | EGeom::Norm;
-			if (colours)    geom_type = geom_type | EGeom::Colr;
-			if (tex_coords) geom_type = geom_type | EGeom::Tex0;
-
 			// Create the model
-			NuggetProps mat(topo, geom_type);
-			obj->m_model = ModelGenerator<>::Mesh(rdr, topo, vcount, icount, verts, indices, ccount, colours, ncount, normals, tex_coords, &mat);
+			obj->m_model = ModelGenerator<>::Mesh(rdr, cdata);
 			obj->m_model->m_name = obj->TypeAndName();
 			return obj;
 		}
 
-		// Add a custom object via callback
-		// Objects created by this method will have dynamic usage and are suitable for updating every frame
-		// They are intended to be used with the 'Edit' function.
-		LdrObjectPtr Add(pr::Renderer& rdr, ObjectAttributes attr, int icount, int vcount, EditObjectCB edit_cb, void* ctx, pr::Guid const& context_id)
+		// Create an ldr object using a callback to populate the model data.
+		// Objects created by this method will have dynamic usage and are suitable for updating every frame via the 'Edit' function.
+		LdrObjectPtr CreateEditCB(pr::Renderer& rdr, ObjectAttributes attr, int vcount, int icount, int ncount, EditObjectCB edit_cb, void* ctx, pr::Guid const& context_id)
 		{
 			LdrObjectPtr obj(new LdrObject(attr, 0, context_id));
 
@@ -2097,6 +2108,12 @@ namespace pr
 			// Create the model
 			obj->m_model = rdr.m_mdl_mgr.CreateModel(settings);
 			obj->m_model->m_name = obj->TypeAndName();
+
+			// Create dummy nuggets
+			pr::rdr::NuggetProps nug(EPrim::PointList, EGeom::Vert);
+			nug.m_range_overlaps = true;
+			for (int i = ncount; i-- != 0;)
+				obj->m_model->CreateNugget(nug);
 
 			// Initialise it via the callback
 			edit_cb(obj->m_model, ctx, rdr);
@@ -2110,7 +2127,7 @@ namespace pr
 			pr::events::Send(Evt_LdrObjectChg(object));
 		}
 
-		// Update 'object' with info from 'reader'. 'keep' describes the properties of 'object' to update
+		// Update 'object' with info from 'reader'. 'flags' describes the properties of 'object' to update
 		void Update(pr::Renderer& rdr, LdrObjectPtr object, pr::script::Reader& reader, EUpdateObject flags)
 		{
 			// Parse 'readerdesc' for the new model
@@ -2125,7 +2142,6 @@ namespace pr
 				// Note: we can't swap everything then copy back the bits we want to keep
 				// because LdrObject is reference counted and isn't copyable. This is risky
 				// though, if new members are added I'm bound to forget to consider them here :-/
-				// Commented out parts are those deliberately kept
 
 				// RdrInstance
 				if (flags & EUpdateObject::Model)

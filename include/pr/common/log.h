@@ -12,8 +12,6 @@
 //  in VS2012. You have to define it in the project settings...
 //
 #pragma once
-#ifndef PR_COMMON_LOG_H
-#define PR_COMMON_LOG_H
 
 #include <string>
 #include <sstream>
@@ -51,30 +49,12 @@ namespace pr
 			Warn,
 			Error,
 		};
-	}
 
-	// Log level to string
-	template <typename Str, typename = enable_if_raw_str<Str>>
-	inline Str To(log::ELevel lvl)
-	{
-		using Char = pr::str::traits<Str>::value_type;
-		switch (lvl)
-		{
-		default: return FmtS(PR_STRLITERAL(Char, "%d"), (int)lvl);
-		case log::ELevel::Debug: return PR_STRLITERAL(Char, "Debug");
-		case log::ELevel::Info : return PR_STRLITERAL(Char, "Info" );
-		case log::ELevel::Warn : return PR_STRLITERAL(Char, "Warn" );
-		case log::ELevel::Error: return PR_STRLITERAL(Char, "Error");
-		}
-	}
-
-	namespace log
-	{
 		// String
-		typedef pr::string<char> string;
+		using string = pr::string<char>;
 
 		// Timer
-		typedef std::chrono::high_resolution_clock RTC;
+		using RTC = std::chrono::high_resolution_clock;
 
 		// An individual log event
 		struct Event
@@ -126,8 +106,27 @@ namespace pr
 		};
 
 		// Producer/Consumer queue for log events
-		typedef pr::threads::ConcurrentQueue<log::Event> LogQueue;
+		using LogQueue = pr::threads::ConcurrentQueue<log::Event>;
+	}
 
+	// Log level to string
+	template <typename Str, typename = enable_if_raw_str<Str>>
+	inline Str To(log::ELevel lvl)
+	{
+		using Char = pr::str::traits<Str>::value_type;
+		switch (lvl)
+		{
+		default: return FmtS(PR_STRLITERAL(Char, "%d"), (int)lvl);
+		case log::ELevel::Debug: return PR_STRLITERAL(Char, "Debug");
+		case log::ELevel::Info : return PR_STRLITERAL(Char, "Info" );
+		case log::ELevel::Warn : return PR_STRLITERAL(Char, "Warn" );
+		case log::ELevel::Error: return PR_STRLITERAL(Char, "Error");
+		}
+	}
+
+	// Log output functors
+	namespace log
+	{
 		// Helper object for writing log output to a 'stdout'
 		struct ToStdout
 		{
@@ -147,19 +146,48 @@ namespace pr
 		// Helper object for writing log output to a file
 		struct ToFile
 		{
+			std::wstring m_filepath;
 			std::shared_ptr<std::wofstream> m_outf;
+
 			ToFile(std::wstring filepath, std::ios_base::openmode mode = std::ios_base::out)
-				:m_outf(std::make_shared<std::wofstream>(filepath, mode))
+				:m_filepath(filepath)
+				,m_outf(std::make_shared<std::wofstream>(filepath, mode))
 			{}
 			void operator ()(Event const& ev)
 			{
+				auto& fp = *m_outf;
+				fp.seekp(0, std::ios_base::end);
+
 				char const* delim = "";
-				m_outf->seekp(std::ios::end, 0); // In case the file contents have been deleted externally
-				auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(ev.m_timestamp);
-				if (!ev.m_file.empty()) { *m_outf << ev.m_file.c_str(); delim = " "; }
-				if (ev.m_line != -1)    { *m_outf << "(" << ev.m_line << "):"; delim = " "; }
-				auto s = FmtS("%s%8s|%s|%s|%s\n", delim, ev.m_context.c_str(), To<char const*>(ev.m_level), To<std::string>(ev.m_timestamp, "%h:%mm:%ss:%fff").c_str(), ev.m_msg.c_str());
-				*m_outf << s;
+				if (!ev.m_file.empty()) { fp << ev.m_file.c_str(); delim = " "; }
+				if (ev.m_line != -1)    { fp << FmtS("(%d):", ev.m_line); delim = " "; }
+				fp << FmtS("%s%8s|%s|%s|%s\n", delim, ev.m_context.c_str(), To<char const*>(ev.m_level), To<std::string>(ev.m_timestamp, "%h:%mm:%ss:%fff").c_str(), ev.m_msg.c_str());
+				fp.flush();
+			}
+		};
+
+		// Helper object for writing log output to a file, synchronised by named mutex
+		struct ToFileIPC :ToFile
+		{
+			HANDLE m_ipc_mutex;
+
+			explicit ToFileIPC(std::wstring filepath, wchar_t const* mutex_name, std::ios_base::openmode mode = std::ios_base::out)
+				:ToFile(filepath, mode)
+				,m_ipc_mutex(CreateMutexW(nullptr, FALSE, mutex_name))
+			{}
+			void operator ()(Event const& ev)
+			{
+				// Lock the mutex before writing to the file
+				if (::WaitForSingleObject(m_ipc_mutex, INFINITE) == WAIT_OBJECT_0) try
+				{
+					ToFile::operator()(ev);
+					::ReleaseMutex(m_ipc_mutex);
+				}
+				catch (...)
+				{
+					::ReleaseMutex(m_ipc_mutex);
+					throw;
+				}
 			}
 		};
 	}
@@ -167,67 +195,30 @@ namespace pr
 	// Provides logging support
 	struct Logger
 	{
+		// Logger context. A single Context is shared by many instances of Logger
+		struct Context
+		{
 		private:
 
-			// Logger context. A single Context is shared by many instances of Logger
-			struct Context
-			{
-				// The time point when logging started
-				log::RTC::time_point const m_time_zero;
+			friend struct Logger;
 
-				// Queue of log events to report
-				log::LogQueue m_queue;
+			// The time point when logging started
+			log::RTC::time_point const m_time_zero;
 
-				// A flag to indicate when the logger is idle
-				std::condition_variable m_cv_idle;
-				bool m_idle;
+			// Queue of log events to report
+			log::LogQueue m_queue;
 
-				// The worker thread that forwards log events to the callback function
-				std::thread m_thread;
+			// A flag to indicate when the logger is idle
+			std::condition_variable m_cv_idle;
+			bool m_idle;
 
-				template <typename OutputCB>
-				Context(OutputCB log_cb, int occurrences_batch_size)
-					:m_time_zero(log::RTC::now())
-					,m_queue()
-					,m_cv_idle()
-					,m_idle()
-					,m_thread(LogConsumerThread<OutputCB>, std::ref(*this), log_cb, occurrences_batch_size)
-				{}
-				~Context()
-				{
-					m_queue.LastAdded();
-					m_thread.join();
-				}
-				void WaitTillIdle(bool idle)
-				{
-					log::LogQueue::MLock lock(m_queue.m_mutex);
-					m_cv_idle.wait(lock, [&]{ return m_idle == idle; });
-				}
-				bool Dequeue(log::Event& ev)
-				{
-					log::LogQueue::MLock lock(m_queue.m_mutex);
-					m_cv_idle.notify_all();
-					m_idle = true;
-					auto r = m_queue.Dequeue(ev, lock);
-					m_idle = false;
-					return r;
-				}
-				void Enqueue(log::Event&& ev)
-				{
-					log::LogQueue::MLock lock(m_queue.m_mutex);
-					m_cv_idle.notify_all();
-					m_idle = false;
-					m_queue.Enqueue(std::forward<log::Event>(ev), lock);
-				}
-			};
+			// A callback function use in immediate mode
+			std::function<void(log::Event const&)> m_log_cb;
 
-			// An id to use in log messages
-			log::string m_context_name;
+			// The worker thread that forwards log events to the callback function
+			std::thread m_thread;
 
-			// The logger that this instance references
-			std::shared_ptr<Context> m_context;
-
-			// Thread for consuming log events
+			// Thread entry point for consuming log events
 			template <typename OutputCB>
 			static void LogConsumerThread(Context& ctx, OutputCB log_cb, int const occurrences_batch_size = 0)
 			{
@@ -278,47 +269,119 @@ namespace pr
 
 		public:
 
-			//void OutputCB(pr::log::Event const& ev);
 			template <typename OutputCB>
-			Logger(log::string context_name, OutputCB log_cb, int occurrences_batch_size)
-				:m_context_name(context_name)
-				,m_context(new Context(log_cb, occurrences_batch_size))
-				,Enabled()
+			Context(OutputCB log_cb, int occurrences_batch_size)
+				:m_time_zero(log::RTC::now())
+				,m_queue()
+				,m_cv_idle()
+				,m_idle()
+				,m_log_cb()
+				,m_thread(LogConsumerThread<OutputCB>, std::ref(*this), log_cb, occurrences_batch_size)
+			{}
+			~Context()
 			{
-				Enabled = true;
-			}
-			Logger(Logger const& rhs, log::string context_name)
-				:m_context_name(context_name)
-				,m_context(rhs.m_context)
-				,Enabled()
-			{
-				Enabled = rhs.Enabled.load();
-			}
-
-			// On/Off switch for logging
-			std::atomic_bool Enabled;
-
-			// Log a message
-			void Write(log::ELevel level, log::string msg, char const* file = "", int line = -1)
-			{
-				if (!Enabled) return;
-				m_context->Enqueue(log::Event(level, m_context->m_time_zero, m_context_name, msg, file, line));
+				m_queue.LastAdded();
+				m_thread.join();
 			}
 
-			// Log an exception with message 'msg'
-			void Write(log::ELevel level, std::exception const& ex, log::string msg, char const* file = "", int line = -1)
+			// Enable/Disable immediate mode.
+			// In immediate mode, log events are written to 'log_cb' instead of being queued for processing
+			// by the background thread. Useful when you want the log to be written in sync with debugging.
+			template <typename OutputCB> void ImmediateWrite(OutputCB log_cb)
 			{
-				if (!Enabled) return;
-				m_context->Enqueue(log::Event(level, m_context->m_time_zero, m_context_name, msg + " - Exception: " + ex.what(), file, line));
+				m_log_cb = log_cb;
 			}
 
-			// Block the caller until the logger is idle
-			void Flush()
+			// Queue a log event for writing to the log callback function
+			void Enqueue(log::Event&& ev)
 			{
-				if (!Enabled) return;
-				m_context->WaitTillIdle(true);
+				log::LogQueue::MLock lock(m_queue.m_mutex);
+				if (m_log_cb == nullptr)
+				{
+					m_cv_idle.notify_all();
+					m_idle = false;
+					m_queue.Enqueue(std::forward<log::Event>(ev), lock);
+				}
+				else
+				{
+					m_log_cb(std::forward<log::Event>(ev));
+				}
+			}
+
+			// Pull an event from the queue of log events
+			bool Dequeue(log::Event& ev)
+			{
+				log::LogQueue::MLock lock(m_queue.m_mutex);
+				m_cv_idle.notify_all();
+				m_idle = true;
+				auto r = m_queue.Dequeue(ev, lock);
+				m_idle = false;
+				return r;
+			}
+
+			// Wait for the log event queue to become empty
+			void WaitTillIdle(bool idle)
+			{
+				log::LogQueue::MLock lock(m_queue.m_mutex);
+				m_cv_idle.wait(lock, [&]{ return m_idle == idle; });
 			}
 		};
+
+		// The shared Context that this instance references
+		std::shared_ptr<Context> m_context;
+
+		// An id to use in log messages
+		log::string Tag;
+
+		// On/Off switch for logging
+		std::atomic_bool Enabled;
+
+		//void OutputCB(pr::log::Event const& ev);
+		template <typename OutputCB>
+		Logger(log::string tag, OutputCB log_cb, int occurrences_batch_size)
+			:m_context(new Context(log_cb, occurrences_batch_size))
+			,Tag(tag)
+			,Enabled()
+		{
+			Enabled = true;
+		}
+		Logger(Logger const& rhs, log::string tag)
+			:m_context(rhs.m_context)
+			,Tag(tag)
+			,Enabled()
+		{
+			Enabled = rhs.Enabled.load();
+		}
+
+		// Access to the shared logger context
+		Context& SharedContext() const
+		{
+			return *m_context;
+		}
+
+		// Log a message
+		void Write(log::ELevel level, log::string msg, char const* file = "", int line = -1)
+		{
+			if (!Enabled) return;
+			log::Event evt(level, m_context->m_time_zero, Tag, msg, file, line);
+			m_context->Enqueue(std::move(evt));
+		}
+
+		// Log an exception with message 'msg'
+		void Write(log::ELevel level, std::exception const& ex, log::string msg, char const* file = "", int line = -1)
+		{
+			if (!Enabled) return;
+			log::Event evt(level, m_context->m_time_zero, Tag, msg + " - Exception: " + ex.what(), file, line);
+			m_context->Enqueue(std::move(evt));
+		}
+
+		// Block the caller until the logger is idle
+		void Flush()
+		{
+			if (!Enabled) return;
+			m_context->WaitTillIdle(true);
+		}
+	};
 }
 
 #if PR_UNITTESTS
@@ -369,6 +432,4 @@ namespace pr
 		}
 	}
 }
-#endif
-
 #endif

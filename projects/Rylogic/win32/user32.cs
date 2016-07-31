@@ -80,6 +80,7 @@ namespace pr.win32
 		[DllImport("User32.dll")]                                                                             public static extern bool   ReleaseDC(HWND hWnd, IntPtr hDC);
 		[DllImport("User32.dll")]                                                                             public static extern bool   ScreenToClient(HWND hwnd, ref POINT pt);
 		[DllImport("user32.dll", EntryPoint="SendMessage", SetLastError=true)]                                public static extern int    SendMessage(HWND hwnd, uint msg, int wparam, int lparam);
+		[DllImport("user32.dll", EntryPoint="SendMessage", SetLastError=true)]                                public static extern int    SendMessage(HWND hwnd, int msg, IntPtr wparam, IntPtr lparam);
 		[DllImport("user32.dll", EntryPoint="SendMessage", SetLastError=true)]                                public static extern int    SendMessage(HWND hwnd, uint msg, IntPtr wparam, IntPtr lparam);
 		[DllImport("user32.dll", EntryPoint="SendMessage", SetLastError=true)]                                public static extern int    SendMessage(HWND hwnd, uint msg, IntPtr wparam, ref POINT lparam);
 		[DllImport("user32.dll")]                                                                             public static extern IntPtr SetCursor(IntPtr cursor);

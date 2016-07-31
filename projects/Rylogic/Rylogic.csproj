@@ -60,7 +60,6 @@
     <UseVSHostingProcess>false</UseVSHostingProcess>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <Prefer32Bit>false</Prefer32Bit>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <OutputPath>bin\Release\</OutputPath>
@@ -91,6 +90,7 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows.Forms" />
@@ -388,6 +388,11 @@
     <Compile Include="maths\scalar.cs" />
     <Compile Include="maths\spline.cs" />
     <Compile Include="maths\stat.cs" />
+    <Compile Include="maths\vector.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>vector.tt</DependentUpon>
+    </Compile>
     <Compile Include="maths\vector2.cs" />
     <Compile Include="maths\vector4.cs" />
     <Compile Include="Program.cs" />
@@ -540,6 +545,7 @@
     <EmbeddedResource Include="SmilingGekko140x110.ico" />
   </ItemGroup>
   <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <ItemGroup>
@@ -549,6 +555,10 @@
     <None Include="resources\licence.txt" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="maths\vector.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>vector.cs</LastGenOutput>
+    </Content>
     <Content Include="run_tests.py" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

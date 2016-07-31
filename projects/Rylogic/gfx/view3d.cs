@@ -44,12 +44,12 @@ namespace pr.gfx
 		}
 		public enum EPrim :uint
 		{
-			D3D_PRIMITIVE_TOPOLOGY_UNDEFINED     = 0,
-			D3D_PRIMITIVE_TOPOLOGY_POINTLIST     = 1,
-			D3D_PRIMITIVE_TOPOLOGY_LINELIST      = 2,
-			D3D_PRIMITIVE_TOPOLOGY_LINESTRIP     = 3,
-			D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST  = 4,
-			D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP = 5,
+			Invalid   = 0,
+			PointList = 1,
+			LineList  = 2,
+			LineStrip = 3,
+			TriList   = 4,
+			TriStrip  = 5,
 		}
 		public enum EFormat :uint
 		{
@@ -309,6 +309,7 @@ namespace pr.gfx
 
 		#region Structs
 
+		[Serializable]
 		[StructLayout(LayoutKind.Sequential, Pack = 1)]
 		public struct Vertex
 		{
@@ -317,12 +318,50 @@ namespace pr.gfx
 			public v2   m_uv;
 			public uint m_col;
 			public uint pad;
+
 			public Vertex(v4 vert)                            { m_pos = vert; m_col = 0;   m_norm = v4.Zero; m_uv = v2.Zero; pad = 0; }
 			public Vertex(v4 vert, uint col)                  { m_pos = vert; m_col = col; m_norm = v4.Zero; m_uv = v2.Zero; pad = 0; }
 			public Vertex(v4 vert, v4 norm, uint col, v2 tex) { m_pos = vert; m_col = col; m_norm = norm;    m_uv = tex;     pad = 0; }
 			public override string ToString()                 { return "V:<{0}> C:<{1}>".Fmt(m_pos, m_col.ToString("X8")); }
 		}
 
+		[Serializable]
+		[StructLayout(LayoutKind.Sequential)]
+		public struct Material
+		{
+			public IntPtr m_diff_tex;
+			public IntPtr m_env_map;
+		}
+
+		[Serializable]
+		[StructLayout(LayoutKind.Sequential)]
+		public struct Nugget
+		{
+			public EPrim m_topo;
+			public EGeom m_geom;
+			public uint m_v0, m_v1;    // Vertex buffer range. Set to 0,0 to mean the whole buffer
+			public uint m_i0, m_i1;    // Index buffer range. Set to 0,0 to mean the whole buffer
+			public Material m_mat;
+
+			public Nugget(EPrim topo, EGeom geom)
+				:this(topo, geom, 0, 0, 0, 0)
+			{}
+			public Nugget(EPrim topo, EGeom geom, uint v0, uint v1, uint i0, uint i1)
+				:this(topo, geom, v1, v1, i0, i1, default(Material))
+			{}
+			public Nugget(EPrim topo, EGeom geom, uint v0, uint v1, uint i0, uint i1, Material mat)
+			{
+				m_topo = topo;
+				m_geom = geom;
+				m_v0   = v0;
+				m_v1   = v1;
+				m_i0   = i0;
+				m_i1   = i1;
+				m_mat  = mat;
+			}
+		}
+
+		[Serializable]
 		[StructLayout(LayoutKind.Sequential)]
 		public struct ImageInfo
 		{
@@ -335,6 +374,7 @@ namespace pr.gfx
 			public float   m_aspect { get {return (float)m_width / m_height;} }
 		}
 
+		[Serializable]
 		[StructLayout(LayoutKind.Sequential)]
 		public struct TextureOptions
 		{
@@ -366,6 +406,7 @@ namespace pr.gfx
 			}
 		}
 
+		[Serializable]
 		[StructLayout(LayoutKind.Sequential)]
 		public struct WindowOptions
 		{
@@ -382,14 +423,8 @@ namespace pr.gfx
 			}
 		}
 
-		[StructLayout(LayoutKind.Sequential)]
-		public struct Material
-		{
-			public IntPtr m_diff_tex;
-			public IntPtr m_env_map;
-		}
-
 		/// <summary>Light source properties</summary>
+		[Serializable]
 		[StructLayout(LayoutKind.Sequential)]
 		public struct Light
 		{
@@ -460,6 +495,7 @@ namespace pr.gfx
 		}
 
 		/// <summary>The viewport volume in render target space (i.e. screen coords, not normalised)</summary>
+		[Serializable]
 		[StructLayout(LayoutKind.Sequential)]
 		public struct Viewport
 		{
@@ -477,6 +513,7 @@ namespace pr.gfx
 			public RectangleF ToRectF() { return new RectangleF(m_x, m_y, m_width, m_height); }
 		}
 
+		[Serializable]
 		[StructLayout(LayoutKind.Sequential)]
 		public struct View3DIncludes
 		{
@@ -515,29 +552,34 @@ namespace pr.gfx
 			public Exception(string message, EResult code) :base(message) { m_code = code; }
 		}
 
-		/// <summary>Edit object callback function</summary>
+		/// <summary>Report errors callback</summary>
+		public delegate void ReportErrorCB(IntPtr ctx, string msg);
+
+		/// <summary>Report settings changed callback</summary>
+		public delegate void SettingsChangedCB(IntPtr ctx, HWindow wnd);
+
+		/// <summary>Edit object callback</summary>
 		public delegate void EditObjectCB(
-			int vcount, int icount,
+			int vcount,
+			int icount,
+			int ncount,
 			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=0)][Out] Vertex[] verts,
 			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=1)][Out] ushort[] indices,
+			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=2)][Out] Nugget[] nuggets,
 			out int new_vcount,
 			out int new_icount,
-			out EPrim prim_type,
-			out EGeom geom_type,
-			ref Material mat,
+			out int new_ncount,
 			IntPtr ctx);
-
-		//public delegate void OutputTerrainDataCB(IntPtr data, int size, IntPtr ctx);
-		
-		public delegate void ReportErrorCB(IntPtr ctx, string msg);
-		public delegate void SettingsChangedCB(IntPtr ctx, HWindow wnd);
 
 		private readonly List<Window>  m_windows;  // Groups of objects to render
 		private readonly HContext      m_context;  // Unique id per Initialise call
 
 		public View3d()
 		{
-			m_windows  = new List<Window>();
+			if (!ModuleLoaded)
+				throw new Exception("View3d.dll has not been loaded");
+
+			m_windows = new List<Window>();
 
 			// Initialise view3d
 			string init_error = null;
@@ -920,34 +962,36 @@ namespace pr.gfx
 			{
 				View3D_CreateDemoScene(Handle);
 
-				//{// Create an object using ldr script
-				//    HObject obj = ObjectCreate("*Box ldr_box FFFF00FF {1 2 3}");
-				//    DrawsetAddObject(obj);
-				//}
+				#if false
+				{// Create an object using ldr script
+				    HObject obj = ObjectCreate("*Box ldr_box FFFF00FF {1 2 3}");
+				    DrawsetAddObject(obj);
+				}
 
-				//{// Create a box model, an instance for it, and add it to the window
-				//    HModel model = CreateModelBox(new v4(0.3f, 0.2f, 0.4f, 0f), m4x4.Identity, 0xFFFF0000);
-				//    HInstance instance = CreateInstance(model, m4x4.Identity);
-				//    AddInstance(window, instance);
-				//}
+				{// Create a box model, an instance for it, and add it to the window
+				    HModel model = CreateModelBox(new v4(0.3f, 0.2f, 0.4f, 0f), m4x4.Identity, 0xFFFF0000);
+				    HInstance instance = CreateInstance(model, m4x4.Identity);
+				    AddInstance(window, instance);
+				}
 
-				//{// Create a mesh
-				//    // Mesh data
-				//    Vertex[] vert = new Vertex[]
-				//    {
-				//        new Vertex(new v4( 0f, 0f, 0f, 1f), v4.ZAxis, 0xFFFF0000, v2.Zero),
-				//        new Vertex(new v4( 0f, 1f, 0f, 1f), v4.ZAxis, 0xFF00FF00, v2.Zero),
-				//        new Vertex(new v4( 1f, 0f, 0f, 1f), v4.ZAxis, 0xFF0000FF, v2.Zero),
-				//    };
-				//    ushort[] face = new ushort[]
-				//    {
-				//        0, 1, 2
-				//    };
+				{// Create a mesh
+				    // Mesh data
+				    Vertex[] vert = new Vertex[]
+				    {
+				        new Vertex(new v4( 0f, 0f, 0f, 1f), v4.ZAxis, 0xFFFF0000, v2.Zero),
+				        new Vertex(new v4( 0f, 1f, 0f, 1f), v4.ZAxis, 0xFF00FF00, v2.Zero),
+				        new Vertex(new v4( 1f, 0f, 0f, 1f), v4.ZAxis, 0xFF0000FF, v2.Zero),
+				    };
+				    ushort[] face = new ushort[]
+				    {
+				        0, 1, 2
+				    };
 
-				//    HModel model = CreateModel(vert.Length, face.Length, vert, face, EPrimType.D3DPT_TRIANGLELIST);
-				//    HInstance instance = CreateInstance(model, m4x4.Identity);
-				//    AddInstance(window, instance);
-				//}
+				    HModel model = CreateModel(vert.Length, face.Length, vert, face, EPrimType.D3DPT_TRIANGLELIST);
+				    HInstance instance = CreateInstance(model, m4x4.Identity);
+				    AddInstance(window, instance);
+				}
+				#endif
 			}
 
 			/// <summary>Show a window containing and example ldr script file</summary>
@@ -970,6 +1014,13 @@ namespace pr.gfx
 			public CameraControls(Window window)
 			{
 				m_window = window;
+			}
+
+			/// <summary>Get/Set Orthographic projection mode</summary>
+			public bool Orthographic
+			{
+				get { return View3D_CameraOrthographic(m_window.Handle); }
+				set { View3D_CameraOrthographicSet(m_window.Handle, value); }
 			}
 
 			/// <summary>Return the world space size of the camera view area at 'dist' in front of the camera</summary>
@@ -1049,6 +1100,12 @@ namespace pr.gfx
 				var up = AlignAxis;
 				if (up.Length3Sq == 0f) up = v4.YAxis;
 				SetPosition(position, FocusPoint, up);
+			}
+
+			/// <summary>Set the camera fields of view (H and V) and focus distance such that a rectangle (w/h) exactly fills the view</summary>
+			public void SetView(float width, float height, float dist)
+			{
+				View3D_CameraSetViewRect(m_window.Handle, width, height, dist);
 			}
 
 			/// <summary>Move the camera to a position that can see the whole scene given camera directions 'forward' and 'up'</summary>
@@ -1192,26 +1249,33 @@ namespace pr.gfx
 					throw new Exception("Failed to create object from script\r\n{0}".Fmt(ldr_script.Summary(100)));
 			}
 
-			/// <summary>Create an object via callback</summary>
-			public Object(string name, uint colour, int icount, int vcount, EditObjectCB edit_cb)
-				:this(name, colour, icount, vcount, edit_cb, Guid.Empty)
+			/// <summary>Create from buffer</summary>
+			public Object(string name, uint colour, int vcount, int icount, int ncount, Vertex[] verts, ushort[] indices, Nugget[] nuggets)
+				:this(name, colour, vcount, icount, ncount, verts, indices, nuggets, Guid.Empty)
 			{}
-			public Object(string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, Guid context_id)
+			public Object(string name, uint colour, int vcount, int icount, int ncount, Vertex[] verts, ushort[] indices, Nugget[] nuggets, Guid context_id)
 			{
 				m_owned = true;
-				m_handle = View3D_ObjectCreateCB(name, colour, icount, vcount, edit_cb, IntPtr.Zero, ref context_id);
-				if (m_handle == HObject.Zero) throw new Exception("Failed to create object '{0}' via edit callback".Fmt(name));
+
+				// Serialise the verts/indices to a memory buffer
+				using (var vbuf = Marshal_.ArrayToPtr(verts))
+				using (var ibuf = Marshal_.ArrayToPtr(indices))
+				using (var nbuf = Marshal_.ArrayToPtr(nuggets))
+				{
+					m_handle = View3D_ObjectCreate(name, colour, vcount, icount, ncount, vbuf.Value.Ptr, ibuf.Value.Ptr, nbuf.Value.Ptr, ref context_id);
+					if (m_handle == HObject.Zero) throw new System.Exception("Failed to create object '{0}' from provided buffers".Fmt(name));
+				}
 			}
 
-			/// <summary>Create from fixed buffer</summary>
-			unsafe public Object(string name, uint colour, int icount, int vcount, IntPtr verts, IntPtr indices, EPrim prim_type, EGeom geom_type)
-				:this(name, colour, icount, vcount, verts, indices, prim_type, geom_type, Guid.Empty)
+			/// <summary>Create an object via callback</summary>
+			public Object(string name, uint colour, int vcount, int icount, int ncount, EditObjectCB edit_cb)
+				:this(name, colour, vcount, icount, ncount, edit_cb, Guid.Empty)
 			{}
-			unsafe public Object(string name, uint colour, int icount, int vcount, IntPtr verts, IntPtr indices, EPrim prim_type, EGeom geom_type, Guid context_id)
+			public Object(string name, uint colour, int vcount, int icount, int ncount, EditObjectCB edit_cb, Guid context_id)
 			{
 				m_owned = true;
-				m_handle = View3D_ObjectCreate(name, colour, icount, vcount, verts, indices, prim_type, geom_type, ref context_id);
-				if (m_handle == HObject.Zero) throw new System.Exception("Failed to create object '{0}' from provided buffers".Fmt(name));
+				m_handle = View3D_ObjectCreateEditCB(name, colour, vcount, icount, ncount, edit_cb, IntPtr.Zero, ref context_id);
+				if (m_handle == HObject.Zero) throw new Exception("Failed to create object '{0}' via edit callback".Fmt(name));
 			}
 
 			/// <summary>Attach to an existing object handle</summary>
@@ -1679,7 +1743,7 @@ namespace pr.gfx
 
 		/// <summary>
 		/// An ldr script editor control. A very lightweight wrapper of a scintilla control.
-		/// To use this in a winforms application, create a System.Windows.Forms.Integration.ElementHost
+		/// To use this in a WinForms application, create a System.Windows.Forms.Integration.ElementHost
 		/// and assign an instance of this class to it's 'Child' property</summary>
 		public class HostableEditor :HwndHost ,IKeyboardInputSink
 		{
@@ -1796,10 +1860,10 @@ namespace pr.gfx
 			private string GetText()
 			{
 				var len = TextLength;
-				using (var bytes = MarshalEx.AllocHGlobal(len + 1))
+				using (var bytes = Marshal_.AllocHGlobal(len + 1))
 				{
-					var num = Win32.SendMessage(m_ctrl, pr.gui.Sci.SCI_GETTEXT, (IntPtr)(len + 1), bytes);
-					return Marshal.PtrToStringAnsi(bytes, num);
+					var num = Win32.SendMessage(m_ctrl, pr.gui.Sci.SCI_GETTEXT, (IntPtr)(len + 1), bytes.Value.Ptr);
+					return Marshal.PtrToStringAnsi(bytes.Value.Ptr, num);
 				}
 			}
 
@@ -1810,7 +1874,7 @@ namespace pr.gfx
 					ClearAll();
 				else
 				{
-					using (var str = MarshalEx.AllocAnsiString(text))
+					using (var str = Marshal_.AllocAnsiString(text))
 						Win32.SendMessage(m_ctrl, pr.gui.Sci.SCI_SETTEXT, IntPtr.Zero, str);
 				}
 
@@ -1891,8 +1955,11 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_CameraToWorld          (HWindow window, out m4x4 c2w);
 		[DllImport(Dll)] private static extern void              View3D_SetCameraToWorld       (HWindow window, ref m4x4 c2w);
 		[DllImport(Dll)] private static extern void              View3D_PositionCamera         (HWindow window, v4 position, v4 lookat, v4 up);
+		[DllImport(Dll)] private static extern bool              View3D_CameraOrthographic     (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_CameraOrthographicSet  (HWindow window, bool on);
 		[DllImport(Dll)] private static extern float             View3D_CameraFocusDistance    (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_CameraSetFocusDistance (HWindow window, float dist);
+		[DllImport(Dll)] private static extern void              View3D_CameraSetViewRect      (HWindow window, float width, float height, float dist);
 		[DllImport(Dll)] private static extern float             View3D_CameraAspect           (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_CameraSetAspect        (HWindow window, float aspect);
 		[DllImport(Dll)] private static extern float             View3D_CameraFovX             (HWindow window);
@@ -1923,9 +1990,8 @@ namespace pr.gfx
 		// Objects
 		[DllImport(Dll)] private static extern int               View3D_ObjectsCreateFromFile    (string ldr_filepath, ref Guid context_id, bool async, ref View3DIncludes includes);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          (string ldr_script, bool file, ref Guid context_id, bool async, ref View3DIncludes includes);
-		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateCB           (string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, IntPtr ctx, ref Guid context_id);
-		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreate             (string name, uint colour, int icount, int vcount, IntPtr verts, IntPtr indices, EPrim prim_type, EGeom geom_type, ref Guid context_id);
-
+		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreate             (string name, uint colour, int vcount, int icount, int ncount, IntPtr verts, IntPtr indices, IntPtr nuggets, ref Guid context_id);
+		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateEditCB       (string name, uint colour, int vcount, int icount, int ncount, EditObjectCB edit_cb, IntPtr ctx, ref Guid context_id);
 		[DllImport(Dll)] private static extern void              View3D_ObjectUpdate             (HObject obj, string ldr_script, EUpdateObject flags);
 		[DllImport(Dll)] private static extern void              View3D_ObjectEdit               (HObject obj, EditObjectCB edit_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteAll         ();

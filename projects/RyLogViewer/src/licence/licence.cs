@@ -145,7 +145,7 @@ namespace RyLogViewer
 		{
 			try
 			{
-				if (PathEx.FileExists(lic_file))
+				if (Path_.FileExists(lic_file))
 				{
 					// Load the licence file
 					var root = XDocument.Load(lic_file, LoadOptions.None).Root;

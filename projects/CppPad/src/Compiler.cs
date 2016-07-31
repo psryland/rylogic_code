@@ -97,7 +97,7 @@ namespace CppPad
 				CreateNoWindow         = true,
 				FileName               = cl,
 				Arguments              = args.ToString(),
-				WorkingDirectory       = PathEx.Canonicalise(obj_dir),
+				WorkingDirectory       = Path_.Canonicalise(obj_dir),
 			};
 			return new Process { StartInfo = info };
 		}

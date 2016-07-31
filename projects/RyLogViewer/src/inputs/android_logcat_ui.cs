@@ -248,14 +248,14 @@ namespace RyLogViewer
 		/// <summary>True if the adb path appears valid</summary>
 		private bool ValidAdbPath
 		{
-			get { return PathEx.FileExists(m_edit_adb_fullpath.Text); }
+			get { return Path_.FileExists(m_edit_adb_fullpath.Text); }
 		}
 
 		/// <summary>Search for the full path of adb.exe</summary>
 		private void AutoDetectAdbPath()
 		{
 			// If the full path is saved in the settings, use that (if it's valid)
-			if (PathEx.FileExists(m_settings.AdbFullPath))
+			if (Path_.FileExists(m_settings.AdbFullPath))
 			{
 				SetAdbPath(m_settings.AdbFullPath);
 				return;
@@ -263,7 +263,7 @@ namespace RyLogViewer
 
 			// Quick check the most likely spot
 			var likely_path = Path.Combine(Environment.GetEnvironmentVariable("ANDROID_HOME") ?? string.Empty, @"platform-tools\adb.exe");
-			if (PathEx.FileExists(likely_path))
+			if (Path_.FileExists(likely_path))
 			{
 				SetAdbPath(likely_path);
 				return;
@@ -312,7 +312,7 @@ namespace RyLogViewer
 								return !s.CancelPending;
 							};
 
-						foreach (var fi in PathEx.EnumFileSystem(path, SearchOption.AllDirectories, regex_filter:@"adb\.exe", progress:progress))
+						foreach (var fi in Path_.EnumFileSystem(path, SearchOption.AllDirectories, regex_filter:@"adb\.exe", progress:progress))
 						{
 							// Found one!
 							adb_path = fi.FullPath;
@@ -339,7 +339,7 @@ namespace RyLogViewer
 		private void SetAdbPath(string path)
 		{
 			// Reject invalid paths
-			if (!PathEx.FileExists(path))
+			if (!Path_.FileExists(path))
 				return;
 
 			// If hint text is shown, clear it first

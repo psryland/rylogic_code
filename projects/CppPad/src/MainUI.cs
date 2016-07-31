@@ -61,12 +61,12 @@ namespace CppPad
 			Sci.LoadDll(".\\lib\\$(platform)\\$(config)");
 			InitializeComponent();
 
-			Settings = new Settings(PathEx.CombinePath(Util.AppDirectory, "settings.xml"));
+			Settings = new Settings(Path_.CombinePath(Util.AppDirectory, "settings.xml"));
 			Model    = new Model(Settings, this);
 
 			SetupUI();
 
-			if (PathEx.DirExists(Settings.LastProject))
+			if (Path_.DirExists(Settings.LastProject))
 				LoadProject(Settings.LastProject);
 			else
 				NewProject();
@@ -106,8 +106,8 @@ namespace CppPad
 			#region Menu
 			m_menu_file.DropDownOpening += (s,a) =>
 			{
-				m_menu_file_new_file.Enabled   = PathEx.DirExists(Model.ProjectDirectory);
-				m_menu_file_open_file.Enabled  = PathEx.DirExists(Model.ProjectDirectory);
+				m_menu_file_new_file.Enabled   = Path_.DirExists(Model.ProjectDirectory);
+				m_menu_file_open_file.Enabled  = Path_.DirExists(Model.ProjectDirectory);
 				m_menu_file_save.Enabled       = Model.Editors.Current?.SaveNeeded ?? false;
 				m_menu_file_close_file.Enabled = Model.Editors.Current != null;
 				m_menu_file_close_all.Enabled  = Model.Editors.Count != 0;
@@ -214,7 +214,7 @@ namespace CppPad
 			try
 			{
 				// A project directory must be set
-				if (!PathEx.DirExists(Model.ProjectDirectory))
+				if (!Path_.DirExists(Model.ProjectDirectory))
 					throw new Exception("No project directory set");
 
 				// If no file name is given, prompt for one
@@ -229,7 +229,7 @@ namespace CppPad
 				}
 
 				// Create a blank file
-				var filepath = PathEx.CombinePath(Model.ProjectDirectory, filename);
+				var filepath = Path_.CombinePath(Model.ProjectDirectory, filename);
 				using (new FileStream(filepath, FileMode.Create, FileAccess.Write, FileShare.Read)) { }
 
 				// Load it into the project
@@ -257,7 +257,7 @@ namespace CppPad
 				}
 
 				// If the project directory doesn't exist, prompt to create it
-				if (!PathEx.DirExists(proj_dir))
+				if (!Path_.DirExists(proj_dir))
 				{
 					if (prompt_to_create)
 					{
@@ -278,11 +278,11 @@ namespace CppPad
 				Model.ProjectDirectory = proj_dir;
 
 				{// Load main.cpp|main.c from the project directory if it exists
-					var main = PathEx.CombinePath(Model.ProjectDirectory, "main.cpp");
-					if (PathEx.FileExists(main)) LoadFile(main);
+					var main = Path_.CombinePath(Model.ProjectDirectory, "main.cpp");
+					if (Path_.FileExists(main)) LoadFile(main);
 				} {
-					var main = PathEx.CombinePath(Model.ProjectDirectory, "main.c");
-					if (PathEx.FileExists(main)) LoadFile(main);
+					var main = Path_.CombinePath(Model.ProjectDirectory, "main.c");
+					if (Path_.FileExists(main)) LoadFile(main);
 				}
 
 				// Update the UI
@@ -310,11 +310,11 @@ namespace CppPad
 				}
 
 				// If the file is not within the project directory, make a copy of it
-				if (!PathEx.IsSubPath(Model.ProjectDirectory, filepath))
+				if (!Path_.IsSubPath(Model.ProjectDirectory, filepath))
 				{
 					var old = filepath;
-					var nue = PathEx.CombinePath(Model.ProjectDirectory, PathEx.FileName(filepath));
-					PathEx.ShellCopy(old, nue);
+					var nue = Path_.CombinePath(Model.ProjectDirectory, Path_.FileName(filepath));
+					Path_.ShellCopy(old, nue);
 					filepath = nue;
 				}
 
@@ -322,7 +322,7 @@ namespace CppPad
 				m_recent_files.Add(filepath);
 
 				// Check whether the file is already open
-				var existing = Model.Editors.FirstOrDefault(x => PathEx.Compare(x.Filepath, filepath) == 0);
+				var existing = Model.Editors.FirstOrDefault(x => Path_.Compare(x.Filepath, filepath) == 0);
 				if (existing != null)
 				{
 					// Make the selected file the active one
@@ -369,7 +369,7 @@ namespace CppPad
 
 			//// Enable menu items
 			//m_menu_file_new_project.Enabled = true;
-			//m_menu_file_new_file.Enabled = PathEx.DirExists(Model.ProjectDirectory);
+			//m_menu_file_new_file.Enabled = Path_.DirExists(Model.ProjectDirectory);
 			//m_menu_file_open_project.Enabled = true;
 			//m_menu_file_save.Enabled = Model.Editors.Current?.SaveNeeded ?? false;
 			//m_menu_file_saveas.Enabled = true;

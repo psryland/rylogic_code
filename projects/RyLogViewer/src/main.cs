@@ -403,7 +403,7 @@ namespace RyLogViewer
 			{
 				OpenSingleLogFile(su.FileToLoad, true);
 			}
-			else if (Settings.LoadLastFile && PathEx.FileExists(Settings.LastLoadedFile))
+			else if (Settings.LoadLastFile && Path_.FileExists(Settings.LastLoadedFile))
 			{
 				OpenSingleLogFile(Settings.LastLoadedFile, true);
 			}

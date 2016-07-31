@@ -57,6 +57,7 @@ extern "C"
 	struct View3DViewport;
 	struct View3DGizmoEvent;
 	typedef unsigned int View3DColour;
+	typedef void (__stdcall *View3D_ReportErrorCB)(void* ctx, wchar_t const* msg);
 
 	enum class EView3DResult
 	{
@@ -129,22 +130,6 @@ extern "C"
 		Scale,
 	};
 
-	typedef void (__stdcall *View3D_SettingsChangedCB)(void* ctx, View3DWindow window);
-	typedef void (__stdcall *View3D_RenderCB)(void* ctx);
-	typedef void (__stdcall *View3D_ReportErrorCB)(void* ctx, char const* msg);
-	typedef void (__stdcall *View3D_GizmoMovedCB)(void* ctx, View3DGizmoEvent const& args);
-	typedef void (__stdcall *View3D_EditObjectCB)(
-		UINT32 vcount,           // The maximum size of 'verts'
-		UINT32 icount,           // The maximum size of 'indices'
-		View3DVertex* verts,     // The vert buffer to be filled
-		UINT16* indices,         // The index buffer to be filled
-		UINT32& new_vcount,      // The number of verts in the updated model
-		UINT32& new_icount,      // The number indices in the updated model
-		EView3DPrim& model_type, // The primitive type of the updated model
-		EView3DGeom& geom_type,  // The geometry type of the updated model (used to determine the appropriate shader)
-		View3DMaterial& mat,     // The material to use for the updated model
-		void* ctx);              // User context data
-
 	struct View3DV2
 	{
 		float x, y;
@@ -170,14 +155,27 @@ extern "C"
 		View3DColour col;
 		UINT32 pad;
 	};
+	struct View3DMaterial
+	{
+		View3DTexture m_diff_tex;
+		View3DTexture m_env_map;
+	};
+	struct View3DNugget
+	{
+		EView3DPrim    m_topo;
+		EView3DGeom    m_geom;
+		UINT32         m_v0, m_v1;    // Vertex buffer range. Set to 0,0 to mean the whole buffer
+		UINT32         m_i0, m_i1;    // Index buffer range. Set to 0,0 to mean the whole buffer
+		View3DMaterial m_mat;
+	};
 	struct View3DImageInfo
 	{
-		UINT32 m_width;
-		UINT32 m_height;
-		UINT32 m_depth;
-		UINT32 m_mips;
+		UINT32      m_width;
+		UINT32      m_height;
+		UINT32      m_depth;
+		UINT32      m_mips;
 		DXGI_FORMAT m_format;
-		UINT32 m_image_file_format;//D3DXIMAGE_FILEFORMAT
+		UINT32      m_image_file_format;//D3DXIMAGE_FILEFORMAT
 	};
 	struct View3DLight
 	{
@@ -230,11 +228,6 @@ extern "C"
 		BOOL m_step_data;
 		BOOL m_user_data;
 	};
-	struct View3DMaterial
-	{
-		View3DTexture m_diff_tex;
-		View3DTexture m_env_map;
-	};
 	struct View3DViewport
 	{
 		float m_x;
@@ -256,6 +249,21 @@ extern "C"
 		int            m_module_count;  // The number of valid module values in 'm_modules'
 		// (ToDo) A string lookup table
 	};
+
+	typedef void (__stdcall *View3D_SettingsChangedCB)(void* ctx, View3DWindow window);
+	typedef void (__stdcall *View3D_RenderCB)(void* ctx);
+	typedef void (__stdcall *View3D_GizmoMovedCB)(void* ctx, View3DGizmoEvent const& args);
+	typedef void (__stdcall *View3D_EditObjectCB)(
+		UINT32 vcount,           // The maximum size of 'verts'
+		UINT32 icount,           // The maximum size of 'indices'
+		UINT32 ncount,           // The maximum size of 'nuggets'
+		View3DVertex* verts,     // The vert buffer to be filled
+		UINT16* indices,         // The index buffer to be filled
+		View3DNugget* nuggets,   // The nugget buffer to be filled
+		UINT32& new_vcount,      // The number of verts in the updated model
+		UINT32& new_icount,      // The number indices in the updated model
+		UINT32& new_ncount,      // The number nuggets in the updated model
+		void* ctx);              // User context data
 
 	// Initialise/shutdown the dll
 	VIEW3D_API View3DContext           __stdcall View3D_Initialise       (View3D_ReportErrorCB initialise_error_cb, void* ctx);
@@ -285,8 +293,11 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_CameraToWorld          (View3DWindow window, View3DM4x4& c2w);
 	VIEW3D_API void                    __stdcall View3D_SetCameraToWorld       (View3DWindow window, View3DM4x4 const& c2w);
 	VIEW3D_API void                    __stdcall View3D_PositionCamera         (View3DWindow window, View3DV4 position, View3DV4 lookat, View3DV4 up);
+	VIEW3D_API BOOL                    __stdcall View3D_CameraOrthographic     (View3DWindow window);
+	VIEW3D_API void                    __stdcall View3D_CameraOrthographicSet  (View3DWindow window, BOOL on);
 	VIEW3D_API float                   __stdcall View3D_CameraFocusDistance    (View3DWindow window);
 	VIEW3D_API void                    __stdcall View3D_CameraSetFocusDistance (View3DWindow window, float dist);
+	VIEW3D_API void                    __stdcall View3D_CameraSetViewRect      (View3DWindow window, float width, float height, float dist);
 	VIEW3D_API float                   __stdcall View3D_CameraAspect           (View3DWindow window);
 	VIEW3D_API void                    __stdcall View3D_CameraSetAspect        (View3DWindow window, float aspect);
 	VIEW3D_API float                   __stdcall View3D_CameraFovX             (View3DWindow window);
@@ -317,10 +328,10 @@ extern "C"
 	// Objects
 	VIEW3D_API int                     __stdcall View3D_ObjectsCreateFromFile    (char const* ldr_filepath, GUID const& context_id, BOOL async, View3DIncludes const* includes);
 	VIEW3D_API View3DObject            __stdcall View3D_ObjectCreateLdr          (char const* ldr_script, BOOL file, GUID const& context_id, BOOL async, View3DIncludes const* includes);
-	VIEW3D_API View3DObject            __stdcall View3D_ObjectCreateCB           (char const* name, View3DColour colour, int icount, int vcount, View3D_EditObjectCB edit_cb, void* ctx, GUID const& context_id);
-	VIEW3D_API View3DObject            __stdcall View3D_ObjectCreate             (char const* name, View3DColour colour, int icount, int vcount, View3DVertex const* verts, UINT16 const* indices, EView3DPrim prim_type, EView3DGeom geom_type, GUID const& context_id);
-	VIEW3D_API void                    __stdcall View3D_ObjectUpdate             (View3DObject object, char const* ldr_script, EView3DUpdateObject flags);
+	VIEW3D_API View3DObject            __stdcall View3D_ObjectCreate             (char const* name, View3DColour colour, int vcount, int icount, int ncount, View3DVertex const* verts, UINT16 const* indices, View3DNugget const* nuggets, GUID const& context_id);
+	VIEW3D_API View3DObject            __stdcall View3D_ObjectCreateEditCB       (char const* name, View3DColour colour, int vcount, int icount, int ncount, View3D_EditObjectCB edit_cb, void* ctx, GUID const& context_id);
 	VIEW3D_API void                    __stdcall View3D_ObjectEdit               (View3DObject object, View3D_EditObjectCB edit_cb, void* ctx);
+	VIEW3D_API void                    __stdcall View3D_ObjectUpdate             (View3DObject object, char const* ldr_script, EView3DUpdateObject flags);
 	VIEW3D_API void                    __stdcall View3D_ObjectsDeleteAll         ();
 	VIEW3D_API void                    __stdcall View3D_ObjectsDeleteById        (GUID const& context_id);
 	VIEW3D_API void                    __stdcall View3D_ObjectDelete             (View3DObject object);

@@ -281,7 +281,11 @@ namespace pr
 					throw std::exception(FmtS("Unknown return code (%d) during Serial port Write command", r));
 				}
 			}
-			bytes_sent = sent;
+
+			// Condition here to allow break points when 'sent' != 0
+			if (sent != 0)
+				bytes_sent = sent;
+
 			return res;
 		}
 
@@ -323,9 +327,9 @@ namespace pr
 			DWORD read;
 			bool res;
 
-			// Sync read
 			if (!m_overlapped)
 			{
+				// Sync read
 				res = ::ReadFile(m_handle, buffer, DWORD(size), &read, nullptr) != 0;
 			}
 			else
@@ -353,7 +357,11 @@ namespace pr
 					throw std::exception(FmtS("Unknown return code (%d) during Serial port Read command", r));
 				}
 			}
-			bytes_read = read;
+
+			// Condition here to allow break points when 'read' != 0
+			if (read != 0)
+				bytes_read = read;
+
 			return res;
 		}
 

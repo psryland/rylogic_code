@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
-#ifndef PR_RDR_MODELS_MODEL_SETTINGS_H
-#define PR_RDR_MODELS_MODEL_SETTINGS_H
 
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/util/wrappers.h"
@@ -16,10 +14,10 @@ namespace pr
 		// Model buffer / Model creation settings
 		struct MdlSettings
 		{
-			VBufferDesc m_vb;        // The vertex buffer description plus initialisation data
-			IBufferDesc m_ib;        // The index buffer description plus initialisation data
-			BBox m_bbox;      // Model space bounding box
-			string32    m_name;      // Debugging name for the model
+			VBufferDesc m_vb;   // The vertex buffer description plus initialisation data
+			IBufferDesc m_ib;   // The index buffer description plus initialisation data
+			BBox m_bbox;        // Model space bounding box
+			string32    m_name; // Debugging name for the model
 
 			MdlSettings()
 				:m_vb()
@@ -59,4 +57,3 @@ namespace pr
 	}
 }
 
-#endif

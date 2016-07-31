@@ -21,10 +21,14 @@ namespace pr.gfx
 		public byte R                                       { get { return (byte)(m_argb >> 16); } set { m_argb = ((uint)value << 16) | (m_argb & 0xFF00FFFF); } }
 		public byte G                                       { get { return (byte)(m_argb >>  8); } set { m_argb = ((uint)value <<  8) | (m_argb & 0xFFFF00FF); } }
 		public byte B                                       { get { return (byte)(m_argb >>  0); } set { m_argb = ((uint)value <<  0) | (m_argb & 0xFFFFFF00); } }
+		public uint ARGB                                    { get { return m_argb; } }
 		public Color ToColor()                              { return Color.FromArgb(A,R,G,B); }
 		public Colour128 ToColour128()                      { return new Colour128(A/255f, R/255f, G/255f, B/255f); }
 		public override string ToString()                   { return string.Format("{0:X2}{1:X2}{2:X2}{3:X2}",A,R,G,B); }
 		public static implicit operator uint(Colour32 col)  { return col.m_argb; }
+		public static implicit operator Color(Colour32 col) { return Color.FromArgb(col.A,col.R,col.G,col.B); }
+		public static implicit operator Colour32(Color col) { return new Colour32(unchecked((uint)col.ToArgb())); }
+		public static implicit operator Colour32(uint col)  { return new Colour32(col); }
 
 		// Operators
 		public static Colour32 operator + (Colour32 lhs, Colour32 rhs)	{ return new Colour32(sat(lhs.A+rhs.A), sat(lhs.R+rhs.R), sat(lhs.G+rhs.G), sat(lhs.B+rhs.B)); }

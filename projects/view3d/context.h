@@ -41,6 +41,8 @@ namespace view3d
 			while (!m_wnd_cont.empty())
 				View3D_DestroyWindow(*m_wnd_cont.begin());
 		}
+		Context(Context const&) = delete;
+		Context& operator=(Context const&) = delete;
 
 		// Push/Pop error callbacks from the error callback stack
 		void PushErrorCB(View3D_ReportErrorCB cb, void* ctx)
@@ -56,10 +58,5 @@ namespace view3d
 
 			m_error_cb.pop_back();
 		}
-
-	private:
-		Context(Context const&);
-		Context& operator=(Context const&);
 	};
-
 }

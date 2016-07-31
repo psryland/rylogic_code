@@ -58,6 +58,42 @@ namespace pr.maths
 			get { return m_radius.x >= 0f && m_radius.y >= 0f && m_radius.z >= 0f; }
 		}
 
+		/// <summary>Minimum X bound</summary>
+		public float MinX
+		{
+			get { return m_centre.x - m_radius.x; }
+		}
+
+		/// <summary>Maximum X bound</summary>
+		public float MaxX
+		{
+			get { return m_centre.x + m_radius.x; }
+		}
+
+		/// <summary>Minimum Y bound</summary>
+		public float MinY
+		{
+			get { return m_centre.y - m_radius.y; }
+		}
+
+		/// <summary>Maximum Y bound</summary>
+		public float MaxY
+		{
+			get { return m_centre.y + m_radius.y; }
+		}
+
+		/// <summary>Minimum Z bound</summary>
+		public float MinZ
+		{
+			get { return m_centre.z - m_radius.z; }
+		}
+
+		/// <summary>Maximum Z bound</summary>
+		public float MaxZ
+		{
+			get { return m_centre.z + m_radius.z; }
+		}
+
 		/// <summary>Returns the lower corner of the bounding box</summary>
 		public v4 Lower()
 		{

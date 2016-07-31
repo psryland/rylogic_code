@@ -652,7 +652,7 @@ namespace pr
 				,m_selected()
 			{
 				// If no style is given and no parent to inherit the style from, create a default style
-				if (!m_style && m_parent == nullptr)
+				if (!m_style && m_parent.ctrl() == nullptr)
 					m_style = std::make_shared<ContextMenuStyle>();
 			}
 
@@ -707,7 +707,7 @@ namespace pr
 						m_mouse_hook = SetWindowsHookExW(WH_MOUSE, static_cast<HOOKPROC>(MouseHook), 0, thread_id);
 						Throw(m_mouse_hook != nullptr, "Failed to install mouse hook procedure");
 
-						return ForwardToChildren(hwnd, message, wparam, lparam, result);
+						return ForwardToChildren(hwnd, message, wparam, lparam, result, AllChildren);
 					}
 					#pragma endregion
 				case WM_DESTROY:

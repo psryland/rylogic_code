@@ -23,6 +23,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -59,15 +60,23 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="src\misc\SymbolMap.cs" />
+    <Compile Include="src\misc\Misc.cs" />
+    <Compile Include="src\misc\InstrumentMap.cs" />
+    <Compile Include="src\misc\Settings.cs" />
+    <Compile Include="src\misc\TFTime.cs" />
     <Compile Include="src\model\AlarmModel.cs" />
+    <Compile Include="src\model\CurrentPrice.cs" />
+    <Compile Include="src\model\Instrument.cs" />
     <Compile Include="src\model\MainModel.cs" />
+    <Compile Include="src\model\Order.cs" />
+    <Compile Include="src\model\Trade.cs" />
+    <Compile Include="src\model\TradeEvent.cs" />
+    <Compile Include="src\model\TradeChartElement.cs" />
     <Compile Include="src\model\SupportResist.cs" />
     <Compile Include="src\ui\AlarmClockUI.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="src\model\MarketDataDB.cs" />
-    <Compile Include="src\model\TradeeSrv.cs" />
+    <Compile Include="src\model\MarketData.cs" />
     <Compile Include="src\MainUI.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -76,6 +85,12 @@
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="src\ui\ChartUI.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="src\ui\InstrumentsUI.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="src\ui\TradesUI.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="src\ui\StatusUI.cs">
@@ -95,18 +110,15 @@
     <EmbeddedResource Include="src\ui\ChartUI.resx">
       <DependentUpon>ChartUI.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="src\ui\InstrumentsUI.resx">
+      <DependentUpon>InstrumentsUI.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\ui\TradesUI.resx">
+      <DependentUpon>TradesUI.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="src\ui\StatusUI.resx">
       <DependentUpon>StatusUI.cs</DependentUpon>
     </EmbeddedResource>
-    <None Include="Properties\Settings.settings">
-      <Generator>SettingsSingleFileGenerator</Generator>
-      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
-    </None>
-    <Compile Include="Properties\Settings.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Settings.settings</DependentUpon>
-      <DesignTimeSharedInput>True</DesignTimeSharedInput>
-    </Compile>
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

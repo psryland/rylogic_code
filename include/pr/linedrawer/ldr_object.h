@@ -20,6 +20,7 @@
 #include "pr/str/string.h"
 #include "pr/script/reader.h"
 #include "pr/renderer11/instance.h"
+#include "pr/renderer11/models/model_generator.h"
 
 namespace pr
 {
@@ -222,6 +223,9 @@ namespace pr
 			ObjectAttributes(ELdrObject type, char const* name, pr::Colour32 colour) :m_type(type), m_name(name) ,m_colour(colour) ,m_instance(true) {}
 			ObjectAttributes(ELdrObject type, char const* name, pr::Colour32 colour, bool instance) :m_type(type), m_name(name) ,m_colour(colour) ,m_instance(instance) {}
 		};
+
+		// Mesh creation data
+		using MeshCreationData = pr::rdr::MeshCreationData;
 
 		// Info on how to animate a ldr object
 		struct Animation
@@ -623,31 +627,29 @@ namespace pr
 			Parse(rdr, reader, out, async, context_id);
 		}
 
-		// Add a custom object
-		LdrObjectPtr Add(
-			pr::Renderer& rdr,                      // The reader to create models for
-			ObjectAttributes attr,                  // Object attributes to use with the created object
-			pr::rdr::EPrim prim_type,               // The topology of the index data
-			int icount,                             // The length of the 'indices' array
-			int vcount,                             // The length of the 'verts' array
-			pr::uint16 const* indices,              // The index data for the model
-			pr::v4 const* verts,                    // The vertex data for the model
-			int ccount = 0,                         // The length of the 'colours' array. 0, 1, or 'vcount'
-			pr::Colour32 const* colours = nullptr,  // The colour data for the model. nullptr, 1, or 'vcount' colours
-			int ncount = 0,                         // The length of the 'normals' array. 0, 1, or 'vcount'
-			pr::v4 const* normals = nullptr,        // The normal data for the model. nullptr or a pointer to 'vcount' normals
-			pr::v2 const* tex_coords = nullptr,     // The texture coordinates data for the model. nullptr or a pointer to 'vcount' texture coords
-			pr::Guid const& context_id = GuidZero); // The context id to assign to each created object
-
 		// Callback function for editing a dynamic model
 		// This callback is intentionally low level, providing the whole model for editing.
 		// Remember to update the bounding box, vertex and index ranges, and regenerate nuggets.
 		typedef void (__stdcall *EditObjectCB)(pr::rdr::ModelPtr model, void* ctx, pr::Renderer& rdr);
 
-		// Add a custom object via callback
-		// Objects created by this method will have dynamic usage and are suitable for updating every frame
-		// They are intended to be used with the 'Edit' function.
-		LdrObjectPtr Add(pr::Renderer& rdr, ObjectAttributes attr, int icount, int vcount, EditObjectCB edit_cb, void* ctx, pr::Guid const& context_id = GuidZero);
+		// Create an ldr object from creation data.
+		LdrObjectPtr Create(
+			pr::Renderer& rdr,                      // The reader to create models for
+			ObjectAttributes attr,                  // Object attributes to use with the created object
+			MeshCreationData const& cdata,          // Model creation data
+			pr::Guid const& context_id = GuidZero); // The context id to assign to the object
+
+		// Create an ldr object using a callback to populate the model data.
+		// Objects created by this method will have dynamic usage and are suitable for updating every frame via the 'Edit' function.
+		LdrObjectPtr CreateEditCB(
+			pr::Renderer& rdr,                      // The reader to create models for
+			ObjectAttributes attr,                  // Object attributes to use with the created object
+			int vcount,                             // The number of verts to create the model with
+			int icount,                             // The number of indices to create the model with
+			int ncount,                             // The number of nuggets to create the model with
+			EditObjectCB edit_cb,                   // The callback function, called after the model is created, to populate the model data
+			void* ctx,                              // Callback user context
+			pr::Guid const& context_id = GuidZero); // The context id to assign to the object
 
 		// Modify the geometry of an LdrObject
 		void Edit(pr::Renderer& rdr, LdrObjectPtr object, EditObjectCB edit_cb, void* ctx);

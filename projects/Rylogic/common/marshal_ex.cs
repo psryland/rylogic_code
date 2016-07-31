@@ -4,10 +4,34 @@ using pr.util;
 
 namespace pr.common
 {
+	/// <summary>Unmanaged memory buffer</summary>
+	public struct UnmanagedBuffer
+	{
+		public int Length;
+		public IntPtr Ptr;
+
+		public UnmanagedBuffer(Type ty, int count)
+		{
+			Length = Marshal.SizeOf(ty) * count;
+			Ptr = Marshal.AllocHGlobal(Length);
+		}
+		public void Release()
+		{
+			Marshal.FreeHGlobal(Ptr);
+			Ptr = IntPtr.Zero;
+			Length = 0;
+		}
+	}
+
 	/// <summary>Extra methods related to Marshal</summary>
-	public static class MarshalEx
+	public static class Marshal_
 	{
 		// Notes:
+		// HGlobal vs. CoTaskMem:
+		//  HGlobal is allocated from the process heap (i.e. same place a malloc, new, etc)
+		//  CoTaskMem is allocated from the heap used for COM
+		//
+		// Alignment:
 		//  C# does not support structure alignment (as of 2015)
 		//  If you need to pass an aligned structure to a native API it's
 		//  probably better if the native API can be made to handle unaligned
@@ -24,43 +48,35 @@ namespace pr.common
 		}
 
 		/// <summary>RAII scope for allocated global memory</summary>
-		public static Scope<IntPtr> AllocHGlobal(int size_in_bytes)
+		public static Scope<UnmanagedBuffer> AllocHGlobal(int size_in_bytes)
 		{
-			return Scope.Create(
-				() => Marshal.AllocHGlobal(size_in_bytes),
-				ptr => Marshal.FreeHGlobal(ptr));
+			return AllocHGlobal(typeof(byte), size_in_bytes);
 		}
-
-		/// <summary>RAII scope for allocated global memory</summary>
-		public static Scope<IntPtr> AllocHGlobal(Type type, int count)
-		{
-			return Scope.Create(
-				() => Marshal.AllocHGlobal(Marshal.SizeOf(type) * count),
-				ptr => Marshal.FreeHGlobal(ptr));
-		}
-		public static Scope<IntPtr> AllocHGlobal<TStruct>(int count = 1) where TStruct:struct
+		public static Scope<UnmanagedBuffer> AllocHGlobal<TStruct>(int count = 1) where TStruct:struct
 		{
 			return AllocHGlobal(typeof(TStruct), count);
+		}
+		public static Scope<UnmanagedBuffer> AllocHGlobal(Type type, int count)
+		{
+			return Scope.Create(
+				() => new UnmanagedBuffer(type, count),
+				buf => buf.Release());
 		}
 
 		/// <summary>RAII scope for allocated co-task memory</summary>
 		public static Scope<IntPtr> AllocCoTaskMem(int size_in_bytes)
 		{
-			return Scope.Create(
-				() => Marshal.AllocCoTaskMem(size_in_bytes),
-				ptr => Marshal.FreeCoTaskMem(ptr));
+			return AllocCoTaskMem(typeof(byte), size_in_bytes);
 		}
-
-		/// <summary>RAII scope for allocated co-task memory</summary>
+		public static Scope<IntPtr> AllocCoTaskMem<TStruct>(int count = 1) where TStruct:struct
+		{
+			return AllocCoTaskMem(typeof(TStruct), count);
+		}
 		public static Scope<IntPtr> AllocCoTaskMem(Type type, int count)
 		{
 			return Scope.Create(
 				() => Marshal.AllocCoTaskMem(Marshal.SizeOf(type) * count),
 				ptr => Marshal.FreeCoTaskMem(ptr));
-		}
-		public static Scope<IntPtr> AllocCoTaskMem<TStruct>(int count = 1) where TStruct:struct
-		{
-			return AllocCoTaskMem(typeof(TStruct), count);
 		}
 
 		/// <summary>Copy a managed string into unmanaged memory, converting to ANSI format if required</summary>
@@ -88,19 +104,19 @@ namespace pr.common
 		}
 
 		/// <summary>Copy an array into non-GC memory. Freeing on dispose</summary>
-		public static Scope<IntPtr> ArrayToPtr<T>(T[] arr) where T:struct
+		public static Scope<UnmanagedBuffer> ArrayToPtr<T>(T[] arr) where T:struct
 		{
+			var scope = AllocHGlobal<T>(arr.Length);
 			var elem_sz = Marshal.SizeOf(typeof(T));
-			var s = AllocHGlobal(elem_sz * arr.Length);
 
-			var ptr = s.Value;
+			var ptr = scope.Value.Ptr;
 			foreach (var elem in arr)
 			{
 				Marshal.StructureToPtr(elem, ptr, false);
 				ptr += elem_sz;
 			}
 
-			return s;
+			return scope;
 		}
 
 		/// <summary>Convert an IntPtr to a 'TStruct'</summary>

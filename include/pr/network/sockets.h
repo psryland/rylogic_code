@@ -388,9 +388,6 @@ namespace pr
 			std::condition_variable m_cv_clients;      // Sync
 			std::thread             m_listen_thread;   // Thread that listens for incoming connections
 
-			ServerSocket(ServerSocket const&); // no copying
-			ServerSocket& operator =(ServerSocket const&);
-
 			// Thread for listening for incoming connections
 			template <typename ConnectionCB> void ListenThread(ConnectionCB connect_cb)
 			{
@@ -564,6 +561,8 @@ namespace pr
 				,m_cv_clients()
 				,m_listen_thread()
 			{}
+			ServerSocket(ServerSocket const&) = delete;
+			ServerSocket& operator =(ServerSocket const&) = delete;
 			~ServerSocket()
 			{
 				StopConnections();
@@ -737,9 +736,6 @@ namespace pr
 			uint16         m_port;            // The port we're connected to
 			size_t         m_max_packet_size; // The maximum size of a single packet that the underlying provider supports
 
-			ClientSocket(ClientSocket const&); // no copying
-			ClientSocket& operator =(ClientSocket const&);
-
 		public:
 
 			explicit ClientSocket(Winsock const& winsock)
@@ -748,6 +744,8 @@ namespace pr
 				,m_port()
 				,m_max_packet_size(~size_t())
 			{}
+			ClientSocket(ClientSocket const&) = delete;
+			ClientSocket& operator =(ClientSocket const&) = delete;
 			~ClientSocket()
 			{
 				Disconnect();

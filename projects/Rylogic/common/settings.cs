@@ -241,7 +241,8 @@ namespace pr.common
 			// Default to off so users can enable after startup completes
 			AutoSaveOnChanges = false;
 		}
-		protected SettingsBase(SettingsBase<T> rhs, bool read_only = false) :this(rhs.ToXml(new XElement("root")), read_only)
+		protected SettingsBase(SettingsBase<T> rhs, bool read_only = false)
+			:this(rhs.ToXml(new XElement("root")), read_only)
 		{}
 		protected SettingsBase(XElement node, bool read_only = false) :this()
 		{
@@ -408,7 +409,7 @@ namespace pr.common
 		/// After load, the settings is the union of Default.Data and those in the given file.</summary>
 		public void Load(string filepath, bool read_only = false)
 		{
-			if (!PathEx.FileExists(filepath))
+			if (!Path_.FileExists(filepath))
 			{
 				SettingsEvent(ESettingsEvent.FileNotFound, null, "Settings file {0} not found, using defaults".Fmt(filepath));
 				Reset();
@@ -481,7 +482,7 @@ namespace pr.common
 				// Ensure the save directory exists
 				filepath = Path.GetFullPath(filepath);
 				var path = Path.GetDirectoryName(filepath);
-				if (!PathEx.DirExists(path))
+				if (!Path_.DirExists(path))
 					Directory.CreateDirectory(path);
 
 				try
@@ -536,7 +537,7 @@ namespace pr.common
 		/// <summary>Remove the settings file from persistent storage</summary>
 		public void Delete()
 		{
-			if (PathEx.FileExists(Filepath))
+			if (Path_.FileExists(Filepath))
 				File.Delete(Filepath);
 		}
 

@@ -117,4 +117,22 @@
 	<data name="bell" type="System.Resources.ResXFileRef, System.Windows.Forms">
 		<value>..\res\bell.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
 	</data>
+	<data name="clock" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\clock.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="trade_long" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\trade_long.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="trade_short" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\trade_short.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="find_search" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\find_search.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="graph" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\graph.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="recycle" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\recycle bin2 clean.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
 </root>

@@ -94,11 +94,8 @@ namespace pr
 	{
 		m4x4                   m_base_c2w;          // The starting position during a mouse movement
 		m4x4                   m_c2w;               // Camera to world transform
-		camera::NavKeyBindings m_key;               // Key bindings
-		float                  m_default_fovY;      // The default field of view
 		v4                     m_align;             // The direction to align 'up' to, or v4Zero
-		camera::LockMask       m_lock_mask;         // Locks on the allowed motion
-		bool                   m_orthographic;      // True for orthographic camera to screen transforms, false for perspective
+		float                  m_default_fovY;      // The default field of view
 		float                  m_base_fovY;         // The starting FOV during a mouse movement
 		float                  m_fovY;              // Field of view in the Y direction
 		float                  m_base_focus_dist;   // The starting focus distance during a mouse movement
@@ -110,33 +107,47 @@ namespace pr
 		v2                     m_Lref;              // Movement start reference point for the left button
 		v2                     m_Rref;              // Movement start reference point for the right button
 		v2                     m_Mref;              // Movement start reference point for the middle button
+		camera::NavKeyBindings m_key;               // Key bindings
+		camera::LockMask       m_lock_mask;         // Locks on the allowed motion
+		bool                   m_orthographic;      // True for orthographic camera to screen transforms, false for perspective
 		bool                   m_moved;             // Dirty flag for when the camera moves
 		bool                   m_focus_rel_clip;    // True if the near/far clip planes should be relative to the focus point
 
-		Camera(float fovY = pr::maths::tau_by_8, float aspect = 1.0f)
-			:m_base_c2w(pr::m4x4Identity)
-			,m_c2w(pr::m4x4Identity)
-			,m_key()
-			,m_default_fovY(fovY)
+		Camera()
+			:Camera(pr::m4x4Identity)
+		{}
+		Camera(m4x4 const& c2w, float fovY = pr::maths::tau_by_8, float aspect = 1.0f, float focus_dist = 1.0f)
+			:Camera(c2w, fovY, aspect, focus_dist, false, 0.01f, 100.0f)
+		{}
+		Camera(m4x4 const& c2w, float fovY, float aspect, float focus_dist, bool orthographic, float near_, float far_)
+			:m_base_c2w(c2w)
+			,m_c2w(m_base_c2w)
 			,m_align(v4Zero)
-			,m_lock_mask()
-			,m_orthographic(false)
+			,m_default_fovY(fovY)
 			,m_base_fovY(m_default_fovY)
 			,m_fovY(m_base_fovY)
-			,m_base_focus_dist(1.0f)
+			,m_base_focus_dist(focus_dist)
 			,m_focus_dist(m_base_focus_dist)
 			,m_aspect(aspect)
-			,m_near(0.01f)
-			,m_far(100.0f)
+			,m_near(near_)
+			,m_far(far_)
 			,m_accuracy_scale(0.1f)
 			,m_Lref(v2Zero)
 			,m_Rref(v2Zero)
 			,m_Mref(v2Zero)
+			,m_key()
+			,m_lock_mask()
+			,m_orthographic(orthographic)
 			,m_moved(false)
 			,m_focus_rel_clip(true)
-		{}
+		{
+			PR_ASSERT(PR_DBG, pr::IsFinite(m_c2w), "invalid scene view parameters");
+			PR_ASSERT(PR_DBG, pr::IsFinite(m_fovY), "invalid scene view parameters");
+			PR_ASSERT(PR_DBG, pr::IsFinite(m_aspect), "invalid scene view parameters");
+			PR_ASSERT(PR_DBG, pr::IsFinite(m_focus_dist), "invalid scene view parameters");
+		}
 		Camera(v4_cref eye, v4_cref pt, v4_cref up, float fovY = maths::tau_by_8, float aspect = 1.0f)
-			:Camera(fovY, aspect)
+			:Camera(pr::m4x4Identity, fovY, aspect)
 		{
 			LookAt(eye, pt, up, true);
 		}
@@ -297,6 +308,8 @@ namespace pr
 		// Set both X and Y axis field of view. Implies aspect ratio
 		void Fov(float fovX, float fovY)
 		{
+			PR_ASSERT(PR_DBG, pr::IsFinite(fovX) && pr::IsFinite(fovY), "");
+			PR_ASSERT(PR_DBG, fovX < maths::tau_by_2 && fovY < maths::tau_by_2, "");
 			auto aspect = pr::Tan(fovX/2) / pr::Tan(fovY/2);
 			Aspect(aspect);
 			FovY(fovY);
@@ -312,9 +325,13 @@ namespace pr
 		}
 
 		// Return the view frustum for this camera
+		Frustum ViewFrustum(float zfar) const
+		{
+			return Frustum::makeFA(m_fovY, m_aspect, zfar);
+		}
 		Frustum ViewFrustum() const
 		{
-			return pr::Frustum::makeFA(m_fovY, m_aspect);
+			return ViewFrustum(m_far);
 		}
 
 		// Return the world space position of the focus point
@@ -616,6 +633,17 @@ namespace pr
 			float dist = sizexy / pr::Tan(fov * 0.5f);
 
 			LookAt(bbox_centre - forward * (sizez + dist), bbox_centre, up, update_base);
+		}
+
+		// Set the camera fields of view so that a rectangle with dimensions 'width'/'height' exactly fits the view at 'dist'.
+		void View(float width, float height, float dist)
+		{
+			PR_ASSERT(PR_DBG, width > 0 && height > 0 && dist > 0, "");
+
+			// This works for orthographic mode as well so long as we set 'm_fovY'
+			Aspect(width / height);
+			FovY(2.0f * pr::ATan(0.5f * height / dist));
+			FocusDist(dist);
 		}
 
 		// Orbit the camera about the focus point by 'angle_rad' radians

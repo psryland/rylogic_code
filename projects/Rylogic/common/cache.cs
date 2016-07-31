@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
@@ -7,7 +8,7 @@ using pr.util;
 
 namespace pr.common
 {
-	public interface ICache<TKey,TItem>
+	public interface ICache<TKey,TItem> :IDisposable
 	{
 		/// <summary>Get/Set whether the cache should use thread locking</summary>
 		bool ThreadSafe { get; set; }
@@ -24,11 +25,11 @@ namespace pr.common
 		/// <summary>Returns true if an object with a key matching 'key' is currently in the cache</summary>
 		bool IsCached(TKey key);
 
-		/// <summary>Preload the cache with an item</summary>
-		void Add(TKey key, TItem item);
+		/// <summary>Add an item to the cache. Returns true if the item was added</summary>
+		bool Add(TKey key, TItem item);
 
-		/// <summary>Preload the cache with a range of items.</summary>
-		void Add(IEnumerable<TKey> keys, IEnumerable<TItem> items);
+		/// <summary>Add multiple items to the cache. Returns true if all items were added</summary>
+		bool Add(IEnumerable<TKey> keys, IEnumerable<TItem> items);
 
 		/// <summary>Remove an item from the cache (does not delete/dispose it). Returns true if an item is removed</summary>
 		bool Remove(TKey key);
@@ -71,7 +72,7 @@ namespace pr.common
 	}
 
 	/// <summary>Generic, count limited, cache implementation</summary>
-	public class Cache<TKey,TItem> :ICache<TKey,TItem> ,IDisposable
+	public class Cache<TKey,TItem> :ICache<TKey,TItem>
 	{
 		// The cache is an ordered linked list and a map from keys to list nodes
 		// The order of items in the linked list is the order of last accessed.
@@ -93,15 +94,19 @@ namespace pr.common
 		/// <summary>A lock object for synchronisation</summary>
 		private readonly object m_lock;
 
+		/// <summary>The id of the thread the cache was created on (for debugging non-thread-safe use)</summary>
+		private int m_thread_id;
+
 		public Cache()
 		{
-			m_cache    = new LinkedList<Entry>();
-			m_lookup   = new Dictionary<TKey,LinkedListNode<Entry>>();
-			m_lock     = new object();
-			Mode       = CacheMode.StandardCache;
-			ThreadSafe = false;
-			m_capacity = 100;
-			m_stats    = new CacheStats();
+			m_cache     = new LinkedList<Entry>();
+			m_lookup    = new Dictionary<TKey,LinkedListNode<Entry>>();
+			m_lock      = new object();
+			m_thread_id = Thread.CurrentThread.ManagedThreadId;
+			Mode        = CacheMode.StandardCache;
+			ThreadSafe  = false;
+			m_capacity  = 100;
+			m_stats     = new CacheStats();
 		}
 
 		/// <summary>Calls Dispose() on all cached items</summary>
@@ -166,11 +171,11 @@ namespace pr.common
 				return m_lookup.ContainsKey(key);
 		}
 
-		/// <summary>Pre-load the cache with an item</summary>
-		public void Add(TKey key, TItem item)
+		/// <summary>Add an item to the cache. Returns true if the item was added</summary>
+		public bool Add(TKey key, TItem item)
 		{
 			if (Capacity == 0)
-				return;
+				return false;
 
 			using (Lock)
 			{
@@ -178,14 +183,15 @@ namespace pr.common
 				var node = m_cache.AddFirst(new Entry{Key = key, Item = item});
 				m_lookup[key] = node;
 				LimitCacheSize();
+				return true;
 			}
 		}
 
-		/// <summary>Pre-load the cache with a range of items.</summary>
-		public void Add(IEnumerable<TKey> keys, IEnumerable<TItem> items)
+		/// <summary>Add multiple items to the cache. Returns true if all items were added</summary>
+		public bool Add(IEnumerable<TKey> keys, IEnumerable<TItem> items)
 		{
 			if (Capacity == 0)
-				return;
+				return false;
 
 			using (Lock)
 			{
@@ -198,6 +204,7 @@ namespace pr.common
 					m_lookup[k.Current] = node;
 				}
 				LimitCacheSize();
+				return true;
 			}
 		}
 
@@ -225,6 +232,8 @@ namespace pr.common
 			// Special case 0 capacity caches
 			if (Capacity == 0)
 				return on_miss(key);
+
+			TItem item;
 
 			// Use the lookup map to find the node in the cache
 			LinkedListNode<Entry> node = null;
@@ -254,6 +263,9 @@ namespace pr.common
 				// Allow callers to do something on a cache hit
 				if (on_hit != null)
 					on_hit(key, node.Value.Item);
+
+				// Get the item to return
+				item = node.Value.Item;
 			}
 			else
 			{
@@ -261,9 +273,9 @@ namespace pr.common
 				Interlocked.Increment(ref m_stats.Misses);
 
 				// Cache miss, read it
-				var item = on_miss(key);
+				item = on_miss(key);
 				if (Equals(item, default(TItem)))
-					return default(TItem);
+					return item;
 
 				// For standard caches, store the new item in the cache before returning it.
 				// For object pools, do nothing, the user will put it in the cache when finished with it.
@@ -282,18 +294,20 @@ namespace pr.common
 							m_lookup[key] = node;
 							LimitCacheSize();
 						}
+
+						// Get the item to return
+						item = node.Value.Item;
 					}
 					break;
 				case CacheMode.ObjectPool:
-					node = new LinkedListNode<Entry>(new Entry { Key = key, Item = item });
-					break;
+					break; // Return 'item'
 				}
 			}
 
 			// Return the cached object.
 			// For standard caches this item should really be immutable
 			// For object pools, it doesn't matter because it's not in our cache now.
-			return node.Value.Item;
+			return item;
 		}
 
 		/// <summary>Deletes (i.e. Disposes) and removes any object associated with 'key' from the cache</summary>
@@ -351,6 +365,7 @@ namespace pr.common
 		{
 			get
 			{
+				Debug.Assert(ThreadSafe || m_thread_id == Thread.CurrentThread.ManagedThreadId, "Cross thread use of non-thread safe cache");
 				return ThreadSafe
 					? Scope.Create(() => Monitor.Enter(m_lock), () => Monitor.Exit(m_lock))
 					: Scope.Create(()=>{},()=>{});
@@ -361,6 +376,11 @@ namespace pr.common
 	/// <summary>A dummy cache that does no caching</summary>
 	public class PassThruCache<TKey,TItem> :ICache<TKey,TItem>
 	{
+		public PassThruCache()
+		{ }
+		public virtual void Dispose()
+		{ }
+
 		/// <summary>Get/Set whether the cache should use thread locking</summary>
 		public bool ThreadSafe { get; set; }
 
@@ -378,10 +398,10 @@ namespace pr.common
 		public bool IsCached(TKey key) { return false; }
 
 		/// <summary>Preload the cache with an item</summary>
-		public void Add(TKey key, TItem item) {}
+		public bool Add(TKey key, TItem item) { return false; }
 
 		/// <summary>Preload the cache with a range of items.</summary>
-		public void Add(IEnumerable<TKey> keys, IEnumerable<TItem> items) {}
+		public bool Add(IEnumerable<TKey> keys, IEnumerable<TItem> items) { return false; }
 
 		/// <summary>Remove an item from the cache (does not delete/dispose it). Returns true if an item is removed</summary>
 		public bool Remove(TKey key) { return false; }

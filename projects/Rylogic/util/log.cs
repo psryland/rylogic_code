@@ -43,9 +43,15 @@ namespace pr.util
 				}
 				public void WriteLog(string str)
 				{
-					if (Filepath == null) { System.Diagnostics.Debug.Write(str); return; }
-					using (StreamWriter f = new StreamWriter(File.Open(Filepath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)))
-						f.Write(str);
+					if (Filepath != null)
+					{
+						using (StreamWriter f = new StreamWriter(File.Open(Filepath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)))
+							f.Write(str);
+					}
+					else
+					{
+						System.Diagnostics.Debug.Write(str);
+					}
 				}
 				public string Filepath
 				{

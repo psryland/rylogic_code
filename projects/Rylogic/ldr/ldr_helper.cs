@@ -7,6 +7,7 @@ using System.Drawing;
 using System.IO;
 using System.Text;
 using pr.extn;
+using pr.gfx;
 using pr.maths;
 using pr.util;
 
@@ -25,9 +26,9 @@ namespace pr.ldr
 		{
 			return "*Group " + name + "\n{\n";
 		}
-		public static string GroupStart(string name, uint colour)
+		public static string GroupStart(string name, Colour32 colour)
 		{
-			return "*Group " + name + " " + colour.ToString("X") + "\n{\n";
+			return "*Group " + name + " " + colour + "\n{\n";
 		}
 		public static string GroupEnd()
 		{
@@ -67,6 +68,10 @@ namespace pr.ldr
 		{
 			return Colour(unchecked((uint)col.ToArgb()));
 		}
+		public static string Colour(Colour32 col)
+		{
+			return col.ARGB.ToString("X8");
+		}
 		public static string Solid(bool solid = true)
 		{
 			return solid ? "*Solid" : string.Empty;
@@ -79,37 +84,37 @@ namespace pr.ldr
 		{
 			return "*CornerRadius {" + rad + "}";
 		}
-		public static string Line(string name, uint colour, v4 start, v4 end)
+		public static string Line(string name, Colour32 colour, v4 start, v4 end)
 		{
-			return "*Line " + name + " " + colour.ToString("X") + " {" + Vec3(start) + " " + Vec3(end) + "}\n";
+			return "*Line " + name + " " + colour + " {" + Vec3(start) + " " + Vec3(end) + "}\n";
 		}
-		public static string LineD(string name, uint colour, v4 start, v4 direction)
+		public static string LineD(string name, Colour32 colour, v4 start, v4 direction)
 		{
-			return "*LineD " + name + " " + colour.ToString("X") + " {" + Vec3(start) + " " + Vec3(direction) + "}\n";
+			return "*LineD " + name + " " + colour + " {" + Vec3(start) + " " + Vec3(direction) + "}\n";
 		}
-		public static string Ellipse(string name, uint colour, int axis_id, float rx, float ry, v4 position)
+		public static string Ellipse(string name, Colour32 colour, int axis_id, float rx, float ry, v4 position)
 		{
-			return "*Ellipse " + name + " " + colour.ToString("X") + " {" + axis_id + " " + rx + " " + ry + " " + Position(position) + "}\n";
+			return "*Ellipse " + name + " " + colour + " {" + axis_id + " " + rx + " " + ry + " " + Position(position) + "}\n";
 		}
-		public static string Box(string name, uint colour, v4 position, float size)
+		public static string Box(string name, Colour32 colour, v4 position, float size)
 		{
-			return "*Box " + name + " " + colour.ToString("X") + " {" + size + " " + Position(position) + "}\n";
+			return "*Box " + name + " " + colour + " {" + size + " " + Position(position) + "}\n";
 		}
-		public static string Box(string name, uint colour, v4 position, v4 dim)
+		public static string Box(string name, Colour32 colour, v4 position, v4 dim)
 		{
-			return "*Box" + name + " " + colour.ToString("X") + " {" + dim.x + " " + dim.y + " " + dim.z + " " + Position(position) + "}\n";
+			return "*Box" + name + " " + colour + " {" + dim.x + " " + dim.y + " " + dim.z + " " + Position(position) + "}\n";
 		}
-		public static string Sphere(string name, uint colour, float radius)
+		public static string Sphere(string name, Colour32 colour, float radius)
 		{
 			return Sphere(name, colour, radius, v4.Origin);
 		}
-		public static string Sphere(string name, uint colour, float radius, v4 position)
+		public static string Sphere(string name, Colour32 colour, float radius, v4 position)
 		{
-			return "*Sphere " + name + " " + colour.ToString("X") + " {" + radius + " " + Position(position) + "}\n";
+			return "*Sphere " + name + " " + colour + " {" + radius + " " + Position(position) + "}\n";
 		}
-		public static string Grid(string name, uint colour, float dimx, float dimy, int divx, int divy, v4 position)
+		public static string Grid(string name, Colour32 colour, float dimx, float dimy, int divx, int divy, v4 position)
 		{
-			return "*GridWH " + name + " " + colour.ToString("X") + " {" + dimx + " " + dimy + " " + divx + " " + divy + " " + Position(position) + "}\n";
+			return "*GridWH " + name + " " + colour + " {" + dimx + " " + dimy + " " + divx + " " + divy + " " + Position(position) + "}\n";
 		}
 	}
 

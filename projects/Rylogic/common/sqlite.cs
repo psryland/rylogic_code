@@ -324,6 +324,10 @@ namespace pr.common
 		/// <summary>Returns the sql string for the insert command for type 'type'</summary>
 		public static string SqlInsertCmd(Type type, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
 		{
+			return SqlInsertCmd(TableMetaData.GetMetaData(type).Name, type, on_constraint);
+		}
+		public static string SqlInsertCmd(string table_name, Type type, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
+		{
 			string cons;
 			switch (on_constraint)
 			{
@@ -336,7 +340,7 @@ namespace pr.common
 			var meta = TableMetaData.GetMetaData(type);
 			if (meta.NonAutoIncs.Length == 0) throw Exception.New(Result.Misuse, "Cannot insert an item no fields (or with auto increment fields only)");
 			return Sql(
-				"insert ",cons," into ",meta.Name," (",
+				"insert ",cons," into ",table_name," (",
 				string.Join(",",meta.NonAutoIncs.Select(c => c.NameBracketed)),
 				") values (",
 				string.Join(",",meta.NonAutoIncs.Select(c => "?")),
@@ -404,7 +408,7 @@ namespace pr.common
 			void Debug(object sender, string message);
 		}
 
-		/// <summary>The logger that this orm writes to</summary>
+		/// <summary>The logger that this ORM writes to</summary>
 		public static ILog Log
 		{
 			get { return m_log ?? (m_log = new NullLog()); }
@@ -938,6 +942,10 @@ namespace pr.common
 				m_cache.Mode = CacheMode.StandardCache;
 				ThreadSafe   = thread_safe;
 			}
+			public virtual void Dispose()
+			{
+				m_cache.Dispose();
+			}
 
 			/// <summary>Get/Set whether the cache should use thread locking</summary>
 			public bool ThreadSafe
@@ -971,18 +979,16 @@ namespace pr.common
 				return m_cache.IsCached(Convert.ToInt64(key));
 			}
 
-			/// <summary>Preload the cache with an item</summary>
-			public void Add(object key, object item)
+			/// <summary>Add an item to the cache</summary>
+			public bool Add(object key, object item)
 			{
-				m_cache.Add(Convert.ToInt64(key), item);
+				return m_cache.Add(Convert.ToInt64(key), item);
 			}
 
-			/// <summary>
-			/// Preload the cache with a range of items.
-			/// 'keys.Count' must be greater or equal to 'items.Count'.</summary>
-			public void Add(IEnumerable<object> keys, IEnumerable<object> items)
+			/// <summary>Add multiple items to the cache. Returns true if all items were added</summary>
+			public bool Add(IEnumerable<object> keys, IEnumerable<object> items)
 			{
-				m_cache.Add(keys.Select(x => Convert.ToInt64(x)), items);
+				return m_cache.Add(keys.Select(x => Convert.ToInt64(x)), items);
 			}
 
 			/// <summary>Remove and item from the cache (does not delete/dispose it)</summary>
@@ -1042,6 +1048,9 @@ namespace pr.common
 				m_cache.Mode = CacheMode.ObjectPool;
 				ThreadSafe   = thread_safe;
 			}
+			public virtual void Dispose()
+			{
+			}
 
 			/// <summary>Get/Set whether the cache should use thread locking</summary>
 			public bool ThreadSafe
@@ -1081,16 +1090,16 @@ namespace pr.common
 				return m_cache.IsCached(key);
 			}
 
-			/// <summary>Pre-load the cache with an item</summary>
-			public void Add(string key, Query item)
+			/// <summary>Add an item to the cache</summary>
+			public bool Add(string key, Query item)
 			{
-				m_cache.Add(key, item);
+				return m_cache.Add(key, item);
 			}
 
-			/// <summary>Pre-load the cache with a range of items.</summary>
-			public void Add(IEnumerable<string> keys, IEnumerable<Query> items)
+			/// <summary>Add multiple items to the cache</summary>
+			public bool Add(IEnumerable<string> keys, IEnumerable<Query> items)
 			{
-				m_cache.Add(keys, items);
+				return m_cache.Add(keys, items);
 			}
 
 			/// <summary>Remove and item from the cache (does not delete/dispose it)</summary>
@@ -1121,8 +1130,8 @@ namespace pr.common
 				query.Closing -= ReturnToPool;
 
 				// Return the query to the cache on closing
-				m_cache.Add(query.SqlString, query);
-				args.Cancel = true;
+				// If stored in the cache, then cancel the closing (i.e. don't dispose it)
+				args.Cancel = m_cache.Add(query.SqlString, query);
 			}
 
 			/// <summary>Helper method for creating new queries when a query is not in the cache</summary>
@@ -1210,6 +1219,10 @@ namespace pr.common
 			private readonly QueryCache m_query_cache;
 			private readonly UpdateHookCB m_update_cb_handle;
 			private GCHandle m_this_handle;
+			#if SQLITE_HANDLES
+			public HashSet<int> m_queries = new HashSet<int>();
+			public int m_query_id = 0;
+			#endif
 
 			// The Id of the thread that created this db handle.
 			// For asynchronous access to the database, create 'Database' instances for each thread.
@@ -1333,13 +1346,13 @@ namespace pr.common
 				Trace.WriteLine(ETrace.Handles, string.Format("Closing database connection{0}", m_db.IsClosed ? " (already closed)" : ""));
 				if (m_db.IsClosed) return;
 
-				// Release the object cache
-				foreach (var x in m_caches)
-					x.Value.Capacity = 0;
+				// Release the object caches
+				foreach (var cache in m_caches.Values) cache.Dispose();
+				m_caches.Clear();
 
 				// Release the query cache
 				Debug.Assert(m_query_cache.CachedItems.All(x => pr.util.Sherlock.CountHandlers(x, "Closing") == 0));
-				m_query_cache.Capacity = 0;
+				m_query_cache.Flush();
 
 				// Release the db handle
 				m_db.Close();
@@ -1698,7 +1711,6 @@ namespace pr.common
 				}
 			}
 		}
-		// ReSharper restore MemberHidesStaticFromOuterClass
 		#endregion
 
 		#region Table
@@ -2590,9 +2602,15 @@ namespace pr.common
 		{
 			protected readonly Database m_db;
 			protected readonly sqlite3_stmt m_stmt; // sqlite managed memory for this query
+			private int m_query_id;
 
 			public Query(Database db, sqlite3_stmt stmt)
 			{
+				#if SQLITE_HANDLES
+				m_query_id = ++db.m_query_id;
+				db.m_queries.Add(m_query_id);
+				#endif
+
 				db.AssertCorrectThread();
 				if (stmt.IsInvalid) throw new ArgumentNullException("stmt", "Invalid sqlite prepared statement handle");
 				m_db = db;
@@ -2635,6 +2653,10 @@ namespace pr.common
 				var cancel = new QueryClosingEventArgs();
 				if (Closing != null) Closing(this, cancel);
 				if (cancel.Cancel) return;
+
+				#if SQLITE_HANDLES
+				m_db.m_queries.Remove(m_query_id);
+				#endif
 
 				// After 'sqlite3_finalize()', it is illegal to use m_stmt. So save 'db' here first
 				Reset(); // Call reset to clear any error code from failed queries.
@@ -2833,15 +2855,18 @@ namespace pr.common
 		/// <summary>A specialised query used for inserting objects into a table</summary>
 		public class InsertCmd :Query
 		{
-			/// <summary>The type metadata for this insert command</summary>
-			public TableMetaData MetaData { get; protected set; }
-
 			/// <summary>Creates a compiled query for inserting an object of type 'type' into a table.</summary>
 			public InsertCmd(Type type, Database db, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
-			:base(db, SqlInsertCmd(type, on_constraint))
+				:this(TableMetaData.GetMetaData(type).Name, type, db, on_constraint)
+			{}
+			public InsertCmd(string table_name, Type type, Database db, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
+				:base(db, SqlInsertCmd(table_name, type, on_constraint))
 			{
 				MetaData = db.TableMetaData(type);
 			}
+
+			/// <summary>The type meta data for this insert command</summary>
+			public TableMetaData MetaData { get; protected set; }
 
 			/// <summary>Bind the values in 'item' to this insert query making it ready for running</summary>
 			public void BindObj(object item)
@@ -2862,7 +2887,7 @@ namespace pr.common
 		/// <summary>A specialised query used for updating objects into a table</summary>
 		public class UpdateCmd :Query
 		{
-			/// <summary>The type metadata for this update command</summary>
+			/// <summary>The type meta-data for this update command</summary>
 			public TableMetaData MetaData { get; protected set; }
 
 			/// <summary>Creates a compiled query for updating an object of type 'type' into a table.</summary>
@@ -2892,7 +2917,7 @@ namespace pr.common
 		/// <summary>A specialised query used for getting objects from the db</summary>
 		public class GetCmd :Query
 		{
-			/// <summary>The type metadata for this insert command</summary>
+			/// <summary>The type meta-data for this insert command</summary>
 			public TableMetaData MetaData { get; protected set; }
 
 			/// <summary>
@@ -3767,6 +3792,8 @@ namespace pr.common
 
 				#if SQLITE_HANDLES
 				private StackTrace m_stack_at_creation;
+				private static int g_sqlite_handle_id;
+				private int m_sqlite_handle_id;
 				#endif
 
 				/// <summary>Default constructor contains an owned, but invalid handle</summary>
@@ -3780,7 +3807,8 @@ namespace pr.common
 					SetHandle(initial_ptr);
 
 					#if SQLITE_HANDLES
-					m_stack_at_creation = new StackTrace();
+					m_stack_at_creation = new StackTrace(true);
+					m_sqlite_handle_id = ++g_sqlite_handle_id;
 					#endif
 				}
 
@@ -3798,15 +3826,15 @@ namespace pr.common
 
 						#if SQLITE_HANDLES
 						// Create a stack dump of where this handle was allocated
-						var msg = "Sqlite handle released from a different thread to the one it was created on\r\n";
-						if (m_stack_at_creation != null) msg += m_stack_at_creation.ToString();
+						var msg = string.Format("Sqlite handle ({0}) released from a different thread to the one it was created on\r\n", m_sqlite_handle_id);
+						if (m_stack_at_creation != null) msg += "Handle was created here:\r\n" + m_stack_at_creation.ToString();
 
 						// Add the stack dump of where the owning db handle was created
 						// If this is the garbage collector thread, it's possible the owner has been disposed already
 						var stmt = this as NativeSqlite3StmtHandle;
 						if (stmt != null)
 						{
-							try { msg += "Owning DB handle was created:\r\n" + (stmt.m_db.m_stack_at_creation != null ? stmt.m_db.m_stack_at_creation.ToString() : string.Empty); }
+							try { msg += "\r\nThe DB that the handle is associated with was created:\r\n" + (stmt.m_db.m_stack_at_creation != null ? stmt.m_db.m_stack_at_creation.ToString() : string.Empty); }
 							catch (Exception ex) { msg += "Owning DB handle creation stack not available\r\n" + ex.Message; }
 						}
 

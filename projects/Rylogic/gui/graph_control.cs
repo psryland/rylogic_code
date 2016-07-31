@@ -1,5 +1,6 @@
 //***************************************************
-// Copyright (c) Rylogic Ltd 2008
+// Graph Control
+// Copyright (C) Rylogic Ltd 2008
 //***************************************************
 using System;
 using System.Collections.Generic;
@@ -24,8 +25,262 @@ namespace pr.gui
 	/// <summary>Custom control for rendering a graph</summary>
 	public class GraphControl :UserControl
 	{
+		// Constructors
+		public GraphControl()
+			:this(string.Empty, new RdrOptions())
+		{ }
+		public GraphControl(string title, RdrOptions options)
+		{
+			try
+			{
+				Options = options;
+				Title   = title;
+				Range           = new RangeData(this);
+				BaseRangeX      = new RangeF(0.0, 1.0);
+				BaseRangeY      = new RangeF(0.0, 1.0);
+				m_impl_zoom     = new RangeF(float.Epsilon, float.MaxValue);
+				MutexRendering  = new object();
+				Data            = new BindingListEx<Series>();
+				Notes           = new List<Note>();
+				m_snap          = new Snapshot();
+				m_tmp           = new Snapshot();
+				m_rdr_thread    = null;
+
+				m_grab_location = PointF.Empty;
+				m_selection     = Rectangle.Empty;
+				m_tooltip       = new ToolTip{ShowAlways = false, UseAnimation = false, UseFading = false, Tag = false};
+				m_mutex_snap    = new object();
+				m_plot_area     = Rectangle.Empty;
+
+				MouseNavigation = true;
+				Dirty           = true;
+				DoubleBuffered  = true;
+				Legend          = new LegendUI(this);
+			}
+			catch
+			{
+				Dispose();
+				throw;
+			}
+		}
+		public GraphControl(GraphControl rhs) :this()
+		{
+			Title              = rhs.Title;
+			Range              = new RangeData(rhs.Range);
+			BaseRangeX         = rhs.BaseRangeX;
+			BaseRangeY         = rhs.BaseRangeY;
+			Options            = new RdrOptions(rhs.Options);
+			AddOverlayOnRender = rhs.AddOverlayOnRender;
+			AddOverlayOnPaint  = rhs.AddOverlayOnPaint;
+		}
+		protected override void Dispose(bool disposing)
+		{
+			m_rdr_cancel = true;
+			if (m_rdr_thread != null)
+				m_rdr_thread.Join();
+
+			Legend = Util.Dispose(Legend);
+			Util.Dispose(ref m_tooltip);
+			base.Dispose(disposing);
+		}
+		protected override void OnSizeChanged(EventArgs e)
+		{
+			base.OnSizeChanged(e);
+			Dirty = true;
+		}
+		protected override void OnPaintBackground(PaintEventArgs e)
+		{
+		}
+		protected override void OnPaint(PaintEventArgs e)
+		{
+			base.OnPaint(e);
+			DoPaint(e.Graphics, ClientRectangle);
+		}
+
+		/// <summary>Rendering options for the graph</summary>
+		public RdrOptions Options { get; private set; }
+		public class RdrOptions
+		{
+			public RdrOptions()
+			{
+				BkColour        = SystemColors.Control;
+				PlotBkColour    = Color.White;
+				AxisColour      = Color.Black;
+				GridColour      = Color.FromArgb(230, 230, 230);
+				TitleColour     = Color.Black;
+				TitleFont       = new Font("tahoma", 12, FontStyle.Bold);
+				TitleTransform  = new Matrix(1f, 0f, 0f, 1f, 0f, 0f);
+				Margin          = new Padding(3);
+				NoteFont        = new Font("tahoma",  8, FontStyle.Regular);
+				SelectionColour = Color.DarkGray;
+			}
+			public RdrOptions(RdrOptions rhs)
+			{
+				rhs.ShallowCopy(this);
+			}
+
+			/// <summary>The fill colour of the background of the graph</summary>
+			public Color BkColour { get; set; }
+
+			/// <summary>The fill colour of the plot background</summary>
+			public Color PlotBkColour { get; set; }
+
+			/// <summary>The colour of the title text</summary>
+			public Color TitleColour { get; set; }
+
+			/// <summary>The colour of the axes</summary>
+			public Color AxisColour { get; set; }
+
+			/// <summary>The colour of the grid lines</summary>
+			public Color GridColour { get; set; }
+
+			/// <summary>Font to use for the title text</summary>
+			public Font TitleFont { get; set; }
+
+			/// <summary>Transform for position the graph title, offset from top centre</summary>
+			public Matrix TitleTransform { get; set; }
+
+			/// <summary>The distances from the edge of the control to the graph area</summary>
+			public Padding Margin { get; set; }
+
+			/// <summary>Font to use for graph notes</summary>
+			public Font NoteFont { get; set; }
+
+			/// <summary>Area selection colour</summary>
+			public Color SelectionColour { get; set; }
+		}
+
+		/// <summary>The graph title</summary>
+		public string Title
+		{
+			get { return m_impl_title; }
+			set
+			{
+				if (m_impl_title == value) return;
+				m_impl_title = value;
+				Dirty = true;
+			}
+		}
+		private string m_impl_title;
+
+		/// <summary>The current X/Y axis range of the chart</summary>
+		public RangeData Range
+		{
+			get { return m_range; }
+			private set
+			{
+				if (value == m_range) return;
+				Util.Dispose(ref m_range);
+				m_range = value;
+			}
+		}
+		private RangeData m_range;
+
+		/// <summary>Accessor to the current X axis</summary>
+		public RangeData.Axis XAxis
+		{
+			get { return Range.XAxis; }
+		}
+
+		/// <summary>Accessor to the current Y axis</summary>
+		public RangeData.Axis YAxis
+		{
+			get { return Range.YAxis; }
+		}
+
+		/// <summary>Default X axis range of the chart</summary>
+		public RangeF BaseRangeX
+		{
+			get;
+			set;
+		}
+
+		/// <summary>Default Y axis range of the chart</summary>
+		public RangeF BaseRangeY
+		{
+			get;
+			set;
+		}
+
+		/// <summary>Set the title and axis labels of the graph</summary>
+		public void SetLabels(string title, string xaxis_text, string yaxis_text)
+		{
+			Title = title;
+			XAxis.Label = xaxis_text;
+			YAxis.Label = yaxis_text;
+		}
+
+		/// <summary>
+		/// Find the appropriate range for all data in the graph.
+		/// Call ResetToDefaultRange() to zoom the graph to this range</summary>
+		public void FindDefaultRange(bool visible_only = true)
+		{
+			var xrange = FindRange(gv => gv.x, Data, visible_only:visible_only);
+			var yrange = FindRange(gv => gv.y, Data, visible_only:visible_only);
+
+			// Allow users to adjust the default range
+			var args = new FindingDefaultRangeEventArgs(xrange, yrange);
+			OnFindingDefaultRange(args);
+			xrange = args.XRange;
+			yrange = args.YRange;
+
+			// Scale up the ranges to leave a tasteful margin around the default range
+			if (xrange.Size > 0) xrange = xrange.Scale(1.05f); else xrange = new RangeF(0.0, 1.0);
+			if (yrange.Size > 0) yrange = yrange.Scale(1.05f); else yrange = new RangeF(0.0, 1.0);
+
+			// Save the default range
+			BaseRangeX = xrange;
+			BaseRangeY = yrange;
+		}
+
+		/// <summary>Find the appropriate range on a single axis</summary>
+		public static RangeF FindRange(Func<GraphValue,double> selector, IEnumerable<Series> data, bool visible_only)
+		{
+			var range = new RangeF(double.MaxValue, -double.MaxValue);
+			foreach (var series in data)
+			{
+				if (visible_only && !series.Options.Visible)
+					continue;
+
+				// note: series.Sorted doesn't help because we
+				// still need to scan all the Y values.
+				foreach (var value in series.Values())
+				{
+					var v = selector(value);
+					if (v < range.Begin) range.Begin = v;
+					if (v > range.End) range.End = v;
+				}
+			}
+
+			return range;
+		}
+
+		/// <summary>Raised when the default range is being found</summary>
+		public event EventHandler<FindingDefaultRangeEventArgs> FindingDefaultRange;
+		protected virtual void OnFindingDefaultRange(FindingDefaultRangeEventArgs args)
+		{
+			FindingDefaultRange.Raise(this, args);
+		}
+
+		/// <summary>
+		/// Reset the axis ranges to the default.
+		/// Call FindDefaultRange() to set the default range</summary>
+		public void ResetToDefaultRange()
+		{
+			if (!XAxis.LockRange) { XAxis.Set(BaseRangeX); }
+			if (!YAxis.LockRange) { YAxis.Set(BaseRangeY); }
+			Dirty = true;
+		}
+		/// <summary>Return the layout sizes of the graph</summary>
+		public GraphDims GraphDimensions
+		{
+			get { return new GraphDims(this); }
+		}
+
+		#region Data Series
+
 		/// <summary>Graph data points</summary>
-		public struct GraphValue
+		[Serializable] public struct GraphValue
 		{
 			/// <summary>Data point X value</summary>
 			public double x;
@@ -64,142 +319,33 @@ namespace pr.gui
 			}
 		}
 
-		/// <summary>Rendering options</summary>
-		public class RdrOptions
-		{
-			public RdrOptions()
-			{
-				BkColour        = SystemColors.Control;
-				PlotBkColour    = Color.White;
-				TitleColour     = Color.Black;
-				TitleFont       = new Font("tahoma", 12, FontStyle.Bold);
-				TitleTransform  = new Matrix(1f, 0f, 0f, 1f, 0f, 0f);
-				AxisColour      = Color.Black;
-				GridColour      = Color.FromArgb(230, 230, 230);
-				PixelsPerTick   = new v2(30f, 24f);
-				LeftMargin      = 3;
-				RightMargin     = 3;
-				TopMargin       = 3;
-				BottomMargin    = 3;
-				NoteFont        = new Font("tahoma",  8, FontStyle.Regular);
-				SelectionColour = Color.DarkGray;
-			}
-
-			/// <summary>The fill colour of the background of the graph</summary>
-			public Color BkColour { get; set; }
-
-			/// <summary>The fill colour of the plot background</summary>
-			public Color PlotBkColour { get; set; }
-
-			/// <summary>The colour of the title text</summary>
-			public Color TitleColour { get; set; }
-
-			/// <summary>Font to use for the title text</summary>
-			public Font TitleFont { get; set; }
-
-			/// <summary>Transform for position the graph title, offset from top centre</summary>
-			public Matrix TitleTransform { get; set; }
-
-			/// <summary>The colour of the axes</summary>
-			public Color AxisColour { get; set; }
-
-			/// <summary>The colour of the grid lines</summary>
-			public Color GridColour { get; set; }
-
-			/// <summary></summary>
-			public v2 PixelsPerTick { get; set; }
-
-			/// <summary>Graph margin in pixels</summary>
-			public int LeftMargin   { get; set; }
-
-			/// <summary>Graph margin in pixels</summary>
-			public int RightMargin  { get; set; }
-
-			/// <summary>Graph margin in pixels</summary>
-			public int TopMargin    { get; set; }
-
-			/// <summary>Graph margin in pixels</summary>
-			public int BottomMargin { get; set; }
-
-			/// <summary>Font to use for graph notes</summary>
-			public Font NoteFont { get; set; }
-
-			/// <summary>Area selection colour</summary>
-			public Color SelectionColour { get; set; }
-
-			/// <summary>Create a new copy</summary>
-			public RdrOptions Clone()
-			{
-				return (RdrOptions)MemberwiseClone();
-			}
-		}
-
 		/// <summary>Graph data series</summary>
-		[Serializable]
-		public class Series :List<GraphValue>
+		[Serializable] public class Series :List<GraphValue>
 		{
-			public class RdrOptions
-			{
-				public enum EPlotType { Point, Line, Bar }
-				public bool       Visible        { get; set; }
-				public bool       DrawData       { get; set; }
-				public bool       DrawErrorBars  { get; set; }
-				public EPlotType  PlotType       { get; set; }
-				public Color      PointColour    { get; set; }
-				public float      PointSize      { get; set; }
-				public Color      LineColour     { get; set; }
-				public float      LineWidth      { get; set; }
-				public Color      BarColour      { get; set; }
-				public float      BarWidth       { get; set; }
-				public Color      ErrorBarColour { get; set; }
-				public bool       DrawMovingAvr  { get; set; }
-				public int        MAWindowSize   { get; set; }
-				public Color      MALineColour   { get; set; }
-				public float      MALineWidth    { get; set; }
-
-				public RdrOptions()
-				{
-					Visible        = true;
-					DrawData       = true;
-					DrawErrorBars  = false;
-					PlotType       = EPlotType.Line;
-					PointColour    = Color.FromArgb(0xff, 0x80, 0, 0);
-					PointSize      = 5f;
-					LineColour     = Color.FromArgb(0xff, 0, 0, 0);
-					LineWidth      = 1f;
-					BarColour      = Color.FromArgb(0xff, 0x80, 0, 0);
-					BarWidth       = 0.8f;
-					ErrorBarColour = Color.FromArgb(0x80, 0xff, 0, 0);
-					DrawMovingAvr  = false;
-					MAWindowSize   = 10;
-					MALineColour   = Color.FromArgb(0xff, 0, 0, 0xFF);
-					MALineWidth    = 3f;
-				}
-				public RdrOptions Clone() { return (RdrOptions)MemberwiseClone(); }
-			}
-
 			public Series() :this(string.Empty) {}
 			public Series(string name) :this(string.Empty, 100) {}
 			public Series(string name, int capacity) :this(name, capacity, new RdrOptions()) {}
 			public Series(string name, int capacity, RdrOptions rdr_opts) :base(capacity)
 			{
 				Name          = name;
-				RenderOptions = rdr_opts;
+				Options = rdr_opts;
 				AllowDelete   = false;
 				Sorted        = true; // Assume sorted because this is more efficient for rendering
+				UserData      = new UserData();
 			}
-			public Series(Series src) :base(src)
+			public Series(Series rhs) :base(rhs)
 			{
-				Name          = src.Name;
-				RenderOptions = src.RenderOptions.Clone();
-				AllowDelete   = src.AllowDelete;
-				Sorted        = src.Sorted;
+				Name        = rhs.Name;
+				Options     = new RdrOptions(rhs.Options);
+				AllowDelete = rhs.AllowDelete;
+				Sorted      = rhs.Sorted;
+				UserData    = new UserData(rhs.UserData);
 			}
 
 			///<summary>
 			/// Return the range of indices that need to be considered when plotting from 'xmin' to 'xmax'
-			/// Note: in general, this range should include one point to the left of xmin and one to the right
-			/// of xmax so that line graphs plot a line up to the border of the plot area</summary>
+			/// Note: in general, this range should include one point to the left of 'xmin' and one to the right
+			/// of 'xmax' so that line graphs plot a line up to the border of the plot area</summary>
 			public void IndexRange(double xmin, double xmax, out int imin, out int imax)
 			{
 				var lwr = new GraphValue(xmin, 0.0f);
@@ -226,8 +372,8 @@ namespace pr.gui
 
 			/// <summary>
 			/// Returns the range of series data to consider when plotting from 'xmin' to 'xmax'
-			/// Note: in general, this range should include one point to the left of xmin and one to
-			/// the right of xmax so that line graphs plot a line up to the border of the plot area</summary>
+			/// Note: in general, this range should include one point to the left of 'xmin' and one to
+			/// the right of 'xmax' so that line graphs plot a line up to the border of the plot area</summary>
 			public IEnumerable<GraphValue> Values(double xmin, double xmax)
 			{
 				int i0,i1;
@@ -237,8 +383,8 @@ namespace pr.gui
 
 			/// <summary>
 			/// Returns the range of indices to consider when plotting from 'xmin' to 'xmax'
-			/// Note: in general, this range should include one point to the left of xmin and one to
-			/// the right of xmax so that line graphs plot a line up to the border of the plot area</summary>
+			/// Note: in general, this range should include one point to the left of 'xmin' and one to
+			/// the right of 'xmax' so that line graphs plot a line up to the border of the plot area</summary>
 			public IEnumerable<int> Indices(double xmin, double xmax)
 			{
 				int i0,i1;
@@ -254,32 +400,76 @@ namespace pr.gui
 			{
 				get
 				{
-					switch (RenderOptions.PlotType) {
+					switch (Options.PlotType) {
 					default: throw new Exception("Unknown plot type");
-					case RdrOptions.EPlotType.Point: return RenderOptions.PointColour;
-					case RdrOptions.EPlotType.Line:  return RenderOptions.LineColour;
-					case RdrOptions.EPlotType.Bar:   return RenderOptions.BarColour;
+					case RdrOptions.EPlotType.Point: return Options.PointColour;
+					case RdrOptions.EPlotType.Line:  return Options.LineColour;
+					case RdrOptions.EPlotType.Bar:   return Options.BarColour;
 					}
 				}
 				set
 				{
-					switch (RenderOptions.PlotType) {
+					switch (Options.PlotType) {
 					default: throw new Exception("Unknown plot type");
-					case RdrOptions.EPlotType.Point: RenderOptions.PointColour = value; break;
-					case RdrOptions.EPlotType.Line:  RenderOptions.LineColour  = value; break;
-					case RdrOptions.EPlotType.Bar:   RenderOptions.BarColour   = value; break;
+					case RdrOptions.EPlotType.Point: Options.PointColour = value; break;
+					case RdrOptions.EPlotType.Line:  Options.LineColour  = value; break;
+					case RdrOptions.EPlotType.Bar:   Options.BarColour   = value; break;
 					}
 				}
 			}
 
 			/// <summary>Options for rendering this series</summary>
-			public RdrOptions RenderOptions { get; set; }
+			public RdrOptions Options { get; set; }
+			public class RdrOptions
+			{
+				public RdrOptions()
+				{
+					Visible        = true;
+					DrawData       = true;
+					DrawErrorBars  = false;
+					PlotType       = EPlotType.Line;
+					PointColour    = Color.FromArgb(0xff, 0x80, 0, 0);
+					PointSize      = 5f;
+					LineColour     = Color.FromArgb(0xff, 0, 0, 0);
+					LineWidth      = 1f;
+					BarColour      = Color.FromArgb(0xff, 0x80, 0, 0);
+					BarWidth       = 0.8f;
+					ErrorBarColour = Color.FromArgb(0x80, 0xff, 0, 0);
+					DrawMovingAvr  = false;
+					MAWindowSize   = 10;
+					MALineColour   = Color.FromArgb(0xff, 0, 0, 0xFF);
+					MALineWidth    = 3f;
+				}
+				public RdrOptions(RdrOptions rhs)
+				{
+					rhs.ShallowCopy(this);
+				}
+				public enum EPlotType { Point, Line, Bar }
+				public bool       Visible        { get; set; }
+				public bool       DrawData       { get; set; }
+				public bool       DrawErrorBars  { get; set; }
+				public EPlotType  PlotType       { get; set; }
+				public Color      PointColour    { get; set; }
+				public float      PointSize      { get; set; }
+				public Color      LineColour     { get; set; }
+				public float      LineWidth      { get; set; }
+				public Color      BarColour      { get; set; }
+				public float      BarWidth       { get; set; }
+				public Color      ErrorBarColour { get; set; }
+				public bool       DrawMovingAvr  { get; set; }
+				public int        MAWindowSize   { get; set; }
+				public Color      MALineColour   { get; set; }
+				public float      MALineWidth    { get; set; }
+			}
 
 			/// <summary></summary>
 			public bool AllowDelete { get; set; }
 
 			/// <summary>True if this series can be considered sorted (on X)</summary>
 			public bool Sorted { get; set; }
+
+			/// <summary>Allow users to attach additional data to the series</summary>
+			public UserData UserData { get; private set; }
 
 			/// <summary>Sort the series by it's X value</summary>
 			public void SortX()
@@ -309,321 +499,6 @@ namespace pr.gui
 				Color.LightBlue , Color.LightSalmon , Color.LightGreen ,
 			};
 		}
-
-		/// <summary>Graph axis data</summary>
-		public class Axis
-		{
-			/// <summary>The range of values along this axis</summary>
-			public struct Range
-			{
-				/// <summary>The minimum value of the range</summary>
-				public double m_min;
-
-				/// <summary>The maximum value of the axis</summary>
-				public double m_max;
-
-				/// <summary>The length of the range (i.e. max - min)</summary>
-				public double m_span
-				{
-					get { return m_max - m_min; }
-					set
-					{
-						var c = m_centre;
-						m_min = c - 0.5*value;
-						m_max = c + 0.5*value;
-					}
-				}
-
-				/// <summary>The centre value of the range</summary>
-				public double m_centre
-				{
-					get { return m_min + m_span*0.5; }
-					set
-					{
-						var d = value - m_centre;
-						m_min += d;
-						m_max += d;
-					}
-				}
-
-				public static Range Default
-				{
-					get { return new Range(0.0, 1.0); }
-				}
-				public Range(double min, double max)
-				{
-					m_min = min;
-					m_max = max;
-				}
-				public Range(Range rhs)
-				{
-					m_min = rhs.m_min;
-					m_max = rhs.m_max;
-				}
-				public override string ToString()
-				{
-					return "[{0}:{1}]".Fmt(m_min, m_max);
-				}
-			}
-
-			/// <summary>Options related to rendering this axis</summary>
-			public class RdrOpts
-			{
-				public RdrOpts()
-				{
-					LabelFont      = new Font("tahoma", 10, FontStyle.Regular);
-					TickFont       = new Font("tahoma", 8, FontStyle.Regular);
-					AxisColour     = Color.Black;
-					LabelColour    = Color.Black;
-					TickColour     = Color.Black;
-					TickLength     = 5;
-					DrawTickMarks  = true;
-					DrawTickLabels = true;
-					LabelTransform = new Matrix(1f, 0f, 0f, 1f, 0f, 0f);
-				}
-
-				/// <summary>The font to use for the axis label</summary>
-				public Font LabelFont { get; set; }
-
-				/// <summary>The font to use for tick labels</summary>
-				public Font TickFont { get; set; }
-
-				/// <summary>The colour of the main axes</summary>
-				public Color AxisColour { get; set; }
-
-				/// <summary>The colour of the label text</summary>
-				public Color LabelColour { get; set; }
-
-				/// <summary>The colour of the tick text</summary>
-				public Color TickColour { get; set; }
-
-				/// <summary>The length of the tick marks</summary>
-				public int TickLength { get; set; }
-
-				/// <summary>True if tick marks should be drawn</summary>
-				public bool DrawTickMarks { get; set; }
-
-				/// <summary>True if tick labels should be drawn</summary>
-				public bool DrawTickLabels { get; set; }
-
-				/// <summary>Offset transform from default label position</summary>
-				public Matrix LabelTransform { get; set; }
-
-				/// <summary>Copy</summary>
-				public RdrOpts Clone()
-				{
-					return (RdrOpts)MemberwiseClone();
-				}
-			}
-
-			public Axis()
-			{
-				Label         = string.Empty;
-				Rng           = Range.Default;
-				RenderOptions = new RdrOpts();
-				AllowScroll   = true;
-				AllowZoom     = true;
-				LockRange     = false;
-				TickText      = x => Math.Round(x, 4, MidpointRounding.AwayFromZero).ToString("G4");
-			}
-			public Axis(Axis rhs)
-			{
-				Label         = rhs.Label         ;
-				Rng           = rhs.Rng           ;
-				RenderOptions = rhs.RenderOptions .Clone();
-				AllowScroll   = rhs.AllowScroll   ;
-				AllowZoom     = rhs.AllowZoom     ;
-				LockRange     = rhs.LockRange     ;
-				TickText      = rhs.TickText      ;
-			}
-
-			/// <summary>Axis label</summary>
-			public string Label { get; set; }
-
-			/// <summary>The range of values along this axis</summary>
-			public Range Rng
-			{
-				get { return m_impl_rng; }
-				set
-				{
-					Debug.Assert(value.m_span > 0, "Range must be positive and non-zero");
-					m_impl_rng = value;
-				}
-			}
-			private Range m_impl_rng;
-
-			/// <summary>The minimum axis value</summary>
-			public double Min
-			{
-				get { return Rng.m_min; }
-				set { Rng = new Range(value, Max); }
-			}
-
-			/// <summary>The maximum axis value</summary>
-			public double Max
-			{
-				get { return Rng.m_max; }
-				set { Rng = new Range(Min, value); }
-			}
-
-			/// <summary>The total range of this axis (max - min)</summary>
-			public double Span
-			{
-				get { return Rng.m_span; }
-				set { Rng = new Range(Rng){m_span = value}; }
-			}
-
-			/// <summary>Allow scrolling on this axis</summary>
-			public bool AllowScroll { get; set; }
-
-			/// <summary>Allow zooming on this axis</summary>
-			public bool AllowZoom { get; set; }
-
-			/// <summary>Get/Set whether the range can be changed by user input</summary>
-			public bool LockRange { get; set; }
-
-			/// <summary>Rendering options for this axis</summary>
-			public RdrOpts RenderOptions { get; private set; }
-
-			/// <summary>Convert the axis value to a string</summary>
-			public Func<double,string> TickText;
-
-			/// <summary>Scroll the axis by 'delta'</summary>
-			public void Shift(float delta)
-			{
-				if (!AllowScroll) return;
-				Rng = new Range(Min + delta, Max + delta);
-			}
-
-			public override string ToString()
-			{
-				return "{0} - [{1}:{2}]".Fmt(Label, Min, Max);
-			}
-		}
-
-		/// <summary>A snapshot of the current graph, used during dragging/zooming</summary>
-		private class Snapshot
-		{
-			public Bitmap     m_bm;
-			public Axis.Range m_xrange;
-			public Axis.Range m_yrange;
-			public Size Size
-			{
-				get { return new Size(m_bm != null ? m_bm.Width : 0, m_bm != null ? m_bm.Height : 0); }
-			}
-			public Rectangle Rect
-			{
-				get { return new Rectangle(Point.Empty, Size); }
-			}
-			public Snapshot()
-			{
-				m_bm = null;
-				m_xrange = new Axis.Range();
-				m_yrange = new Axis.Range();
-			}
-		}
-
-		/// <summary>A note to add to the graph</summary>
-		public class Note
-		{
-			public string m_msg;
-			public PointF m_loc;
-			public Color  m_colour;
-			public Note(string msg, PointF loc) :this(msg, loc,  Color.Black) {}
-			public Note(string msg, PointF loc, Color colour) {m_msg = msg; m_loc = loc; m_colour = colour;}
-		}
-
-		// Constructors
-		public GraphControl()
-			:this(string.Empty, Axis.Range.Default, Axis.Range.Default, new Axis(), new Axis(), new RdrOptions(), new BindingListEx<Series>())
-		{}
-		public GraphControl(GraphControl src)
-			:this(src.Title, src.BaseRangeX, src.BaseRangeY, new Axis(src.XAxis), new Axis(src.YAxis), src.RenderOptions.Clone(), new BindingListEx<Series>(src.Data))
-		{
-			AddOverlayOnRender = src.AddOverlayOnRender;
-			AddOverlayOnPaint = src.AddOverlayOnPaint;
-		}
-		private GraphControl(string title, Axis.Range base_xrange, Axis.Range base_yrange, Axis xaxis, Axis yaxis, RdrOptions rdr_options, BindingListEx<Series> data)
-		{
-			MutexRendering  = new object();
-			m_rdr_thread    = null;
-			m_snap          = new Snapshot();
-			m_tmp           = new Snapshot();
-			Title           = title;
-			XAxis           = xaxis;
-			YAxis           = yaxis;
-			RenderOptions   = rdr_options;
-			Data            = data;
-			Notes           = new List<Note>();
-			BaseRangeX      = base_xrange;
-			BaseRangeY      = base_yrange;
-			m_grab_location = PointF.Empty;
-			m_selection     = Rectangle.Empty;
-			m_impl_zoom     = new Axis.Range(float.Epsilon, float.MaxValue);
-			m_tooltip       = new ToolTip{ShowAlways = false, UseAnimation = false, UseFading = false, Tag = false};
-			m_mutex_snap    = new object();
-			m_plot_area     = Rectangle.Empty;
-			MouseNavigation = true;
-			Dirty           = true;
-			DoubleBuffered  = true;
-			Legend          = new LegendUI(this);
-		}
-		protected override void Dispose(bool disposing)
-		{
-			m_rdr_cancel = true;
-			if (m_rdr_thread != null)
-				m_rdr_thread.Join();
-
-			Legend = Util.Dispose(Legend);
-			Util.Dispose(ref m_tooltip);
-			base.Dispose(disposing);
-		}
-		protected override void OnSizeChanged(EventArgs e)
-		{
-			base.OnSizeChanged(e);
-			Dirty = true;
-		}
-		protected override void OnPaintBackground(PaintEventArgs e)
-		{
-		}
-		protected override void OnPaint(PaintEventArgs e)
-		{
-			base.OnPaint(e);
-			DoPaint(e.Graphics, ClientRectangle);
-		}
-
-		/// <summary>
-		/// A mutex that is locked by the control during rendering
-		/// This should be used to synchronise access to the source data with rendering</summary>
-		public readonly object MutexRendering;
-
-		/// <summary>A snapshot of the plot area, used as a temporary copy during drag/zoom operations</summary>
-		private Snapshot m_snap;
-
-		/// <summary>A temporary bitmap used for background thread rendering</summary>
-		private Snapshot m_tmp;
-
-		/// <summary>The graph title</summary>
-		public string Title
-		{
-			get { return m_impl_title; }
-			set
-			{
-				if (m_impl_title == value) return;
-				m_impl_title = value;
-				Dirty = true;
-			}
-		}
-		private string m_impl_title;
-
-		/// <summary>The graph X axis</summary>
-		public Axis XAxis { get; private set; }
-
-		/// <summary>The graph Y axis</summary>
-		public Axis YAxis { get; private set; }
-
-		/// <summary>Rendering options for the graph</summary>
-		public RdrOptions RenderOptions { get; private set; }
 
 		/// <summary>The collection of series' that make up the graph data</summary>
 		[Browsable(false)]
@@ -655,20 +530,6 @@ namespace pr.gui
 				Dirty = true;
 		}
 
-		/// <summary>Notes to add to the graph</summary>
-		[Browsable(false)]
-		public List<Note> Notes { get; private set; }
-
-		/// <summary>Set the title and axis labels of the graph</summary>
-		public void SetLabels(string title, string xaxis_text, string yaxis_text)
-		{
-			Title = title;
-			XAxis.Label = xaxis_text;
-			YAxis.Label = yaxis_text;
-		}
-
-		#region Data Access
-
 		/// <summary>Returns the 'Y' value for a given 'X' value in a series in the graph</summary>
 		public double GetValueAt(int series_index, double x)
 		{
@@ -680,7 +541,7 @@ namespace pr.gui
 			if (series.Count == 0)
 				return 0;
 
-			// Find the index range that cotnains 'x'
+			// Find the index range that contains 'x'
 			int i0,i1;
 			series.IndexRange(x, x, out i0, out i1);
 
@@ -729,71 +590,331 @@ namespace pr.gui
 
 		#endregion
 
-		#region Navigation
+		#region Range Data
 
-		/// <summary>Default range for the x axis</summary>
-		public Axis.Range BaseRangeX
+		/// <summary>The axes of the graph</summary>
+		public class RangeData :IDisposable
 		{
-			get { return m_base_range_x; }
-			set
+			public RangeData(GraphControl owner)
 			{
-				Debug.Assert(value.m_span > 0, "Range must be positive and non-zero");
-				m_base_range_x = value;
+				XAxis = new Axis(owner);
+				YAxis = new Axis(owner);
 			}
-		}
-		private Axis.Range m_base_range_x;
-
-		/// <summary>Default range for the y axis</summary>
-		public Axis.Range BaseRangeY
-		{
-			get { return m_base_range_y; }
-			set
+			public RangeData(RangeData rhs)
 			{
-				Debug.Assert(value.m_span > 0, "Range must be positive and non-zero");
-				m_base_range_y = value;
+				XAxis = new Axis(rhs.XAxis);
+				YAxis = new Axis(rhs.YAxis);
 			}
-		}
-		private Axis.Range m_base_range_y;
-
-		/// <summary>
-		/// Find the appropriate range for all data in the graph.
-		/// Call ResetToDefaultRange() to zoom the graph to this range</summary>
-		public void FindDefaultRange()
-		{
-			var xrng = new Axis.Range(double.MaxValue, -double.MaxValue);
-			var yrng = new Axis.Range(double.MaxValue, -double.MaxValue);
-			foreach (var series in Data)
+			public virtual void Dispose()
 			{
-				if (m_rdr_cancel)
-					break;
+				XAxis = null;
+				YAxis = null;
+			}
 
-				if (!series.RenderOptions.Visible)
-					continue;
-
-				// note: series.Sorted doesn't help because we
-				// still need to scan all the Y values.
-				foreach (var v in series.Values())
+			/// <summary>The graph X axis</summary>
+			public Axis XAxis
+			{
+				get { return m_xaxis; }
+				internal set
 				{
-					if (v.x < xrng.m_min) xrng.m_min = v.x;
-					if (v.x > xrng.m_max) xrng.m_max = v.x;
-					if (v.y < yrng.m_min) yrng.m_min = v.y;
-					if (v.y > yrng.m_max) yrng.m_max = v.y;
+					if (m_xaxis == value) return;
+					if (m_xaxis != null)
+					{
+						Util.Dispose(ref m_xaxis);
+					}
+					m_xaxis = value;
+					if (m_xaxis != null)
+					{}
 				}
 			}
-			if (xrng.m_span > 0) xrng.m_span = xrng.m_span * 1.05f; else xrng = Axis.Range.Default;
-			if (yrng.m_span > 0) yrng.m_span = yrng.m_span * 1.05f; else yrng = Axis.Range.Default;
-			BaseRangeX = xrng;
-			BaseRangeY = yrng;
+			private Axis m_xaxis;
+
+			/// <summary>The chart Y axis</summary>
+			public Axis YAxis
+			{
+				get { return m_yaxis; }
+				internal set
+				{
+					if (m_yaxis == value) return;
+					if (m_yaxis != null)
+					{
+						Util.Dispose(ref m_yaxis);
+					}
+					m_yaxis = value;
+					if (m_yaxis != null)
+					{}
+				}
+			}
+			private Axis m_yaxis;
+
+			/// <summary>Graph axis data</summary>
+			public class Axis :IDisposable
+			{
+				public Axis(GraphControl owner)
+					: this(owner, 0f, 1f)
+				{ }
+				public Axis(GraphControl owner, double min, double max)
+					: this(owner, min, max, new RdrOptions())
+				{ }
+				public Axis(GraphControl owner, double min, double max, RdrOptions options)
+				{
+					Debug.Assert(owner != null);
+					Set(min, max);
+					Options     = options;
+					Owner       = owner;
+					Label       = string.Empty;
+					AllowScroll = true;
+					AllowZoom   = true;
+					LockRange   = false;
+					TickText    = (x,step) => Math.Round(x, 4, MidpointRounding.AwayFromZero).ToString("F2");
+				}
+				public Axis(Axis rhs)
+				{
+					Set(rhs.Min, rhs.Max);
+					Options     = new RdrOptions(rhs.Options);
+					Owner       = rhs.Owner;
+					Label       = rhs.Label         ;
+					AllowScroll = rhs.AllowScroll   ;
+					AllowZoom   = rhs.AllowZoom     ;
+					LockRange   = rhs.LockRange     ;
+					TickText    = rhs.TickText      ;
+				}
+				public virtual void Dispose()
+				{}
+
+				/// <summary>Rendering options for this axis</summary>
+				public RdrOptions Options { get; private set; }
+				public class RdrOptions
+				{
+					public RdrOptions()
+					{
+						LabelFont      = new Font("tahoma", 10, FontStyle.Regular);
+						TickFont       = new Font("tahoma", 8, FontStyle.Regular);
+						AxisColour     = Color.Black;
+						LabelColour    = Color.Black;
+						TickColour     = Color.Black;
+						TickLength     = 5;
+						DrawTickMarks  = true;
+						DrawTickLabels = true;
+						LabelTransform = new Matrix(1f, 0f, 0f, 1f, 0f, 0f);
+						PixelsPerTick  = 30.0;
+					}
+					public RdrOptions(RdrOptions rhs)
+					{
+						rhs.ShallowCopy(this);
+					}
+
+					/// <summary>The font to use for the axis label</summary>
+					public Font LabelFont { get; set; }
+
+					/// <summary>The font to use for tick labels</summary>
+					public Font TickFont { get; set; }
+
+					/// <summary>The colour of the main axes</summary>
+					public Color AxisColour { get; set; }
+
+					/// <summary>The colour of the label text</summary>
+					public Color LabelColour { get; set; }
+
+					/// <summary>The colour of the tick text</summary>
+					public Color TickColour { get; set; }
+
+					/// <summary>The length of the tick marks</summary>
+					public int TickLength { get; set; }
+
+					/// <summary>True if tick marks should be drawn</summary>
+					public bool DrawTickMarks { get; set; }
+
+					/// <summary>True if tick labels should be drawn</summary>
+					public bool DrawTickLabels { get; set; }
+
+					/// <summary>Offset transform from default label position</summary>
+					public Matrix LabelTransform { get; set; }
+
+					/// <summary>The preferred number of pixels between each grid line</summary>
+					public double PixelsPerTick { get; set; }
+				}
+
+				/// <summary>The chart that owns this axis</summary>
+				public GraphControl Owner { get; private set; }
+
+				/// <summary>Axis label</summary>
+				public string Label
+				{
+					get { return m_label ?? string.Empty; }
+					set
+					{
+						if (m_label == value) return;
+						m_label = value;
+					}
+				}
+				private string m_label;
+
+				/// <summary>The minimum axis value</summary>
+				public double Min
+				{
+					get { return m_min; }
+					set
+					{
+						if (m_min == value) return;
+						Set(value, Max);
+					}
+				}
+				private double m_min;
+
+				/// <summary>The maximum axis value</summary>
+				public double Max
+				{
+					get { return m_max; }
+					set
+					{
+						if (m_max == value) return;
+						Set(Min, value);
+					}
+				}
+				private double m_max;
+
+				/// <summary>The total range of this axis (max - min)</summary>
+				public double Span
+				{
+					get { return Max - Min; }
+					set
+					{
+						if (Span == value) return;
+						Set(Centre - 0.5*value, Centre + 0.5*value);
+					}
+				}
+
+				/// <summary>The centre value of the range</summary>
+				public double Centre
+				{
+					get { return (Min + Max) * 0.5; }
+					set
+					{
+						if (Centre == value) return;
+						Set(m_min + value - Centre, m_max + value - Centre);
+					}
+				}
+
+				/// <summary>The min/max limits as a range</summary>
+				public RangeF Range
+				{
+					get { return new RangeF(Min, Max); }
+					set
+					{
+						if (Equals(Range, value)) return;
+						Set(value.Begin, value.End);
+					}
+				}
+
+				/// <summary>Allow scrolling on this axis</summary>
+				public bool AllowScroll { get; set; }
+
+				/// <summary>Allow zooming on this axis</summary>
+				public bool AllowZoom { get; set; }
+
+				/// <summary>Get/Set whether the range can be changed by user input</summary>
+				public bool LockRange { get; set; }
+
+				/// <summary>Convert the axis value to a string. "string TickText(double tick_value, double step_size)" </summary>
+				public Func<double, double, string> TickText;
+
+				/// <summary>Set the range without risk of an assert if 'min' is greater than 'Max' or visa versa</summary>
+				public void Set(double min, double max)
+				{
+					Debug.Assert(min < max, "Range must be positive and non-zero");
+					var zoomed = !Maths.FEql(max - min, m_max - m_min);
+					var scroll = !Maths.FEql((max + min)*0.5, (m_max + m_min)*0.5);
+
+					m_min = min;
+					m_max = max;
+
+					if (zoomed) OnZoomed();
+					if (scroll) OnScroll();
+				}
+				public void Set(RangeF range)
+				{
+					Set(range.Begin, range.End);
+				}
+
+				/// <summary>Raised whenever the range scales</summary>
+				public event EventHandler Zoomed;
+				protected virtual void OnZoomed()
+				{
+					Zoomed.Raise(this);
+				}
+
+				/// <summary>Raised whenever the range shifts</summary>
+				public event EventHandler Scroll;
+				protected virtual void OnScroll()
+				{
+					Scroll.Raise(this);
+				}
+
+				/// <summary>Scroll the axis by 'delta'</summary>
+				public void Shift(double delta)
+				{
+					if (!AllowScroll) return;
+					Centre += delta;
+				}
+
+				/// <summary>Return the position of the grid lines for this axis</summary>
+				public void GridLines(out double min, out double max, out double step)
+				{
+					var dims = Owner.GraphDimensions;
+					var axis_length = Owner.XAxis == this ? dims.ChartArea.Width : Owner.YAxis == this ? dims.ChartArea.Height : 0.0;
+					var max_ticks = axis_length / Options.PixelsPerTick;
+
+					// Choose step sizes
+					var span = Span;
+					double step_base = Math.Pow(10.0, (int)Math.Log10(Span)); step = step_base;
+					foreach (var s in new[] { 0.05f, 0.1f, 0.2f, 0.25f, 0.5f, 1.0f, 2.0f, 5.0f, 10.0f, 20.0f, 50.0f })
+					{
+						if (s * span > max_ticks * step_base) continue;
+						step = step_base / s;
+					}
+
+					min = (Min - Math.IEEERemainder(Min, step)) - Min;
+					max = Span * 1.0001;
+					if (min < 0.0) min += step;
+
+					// Protect against increments smaller than can be represented
+					if (min + step == min)
+						step = (max - min) * 0.01f;
+
+					// Protect against too many ticks along the axis
+					if (max - min > step*100)
+						step = (max - min) * 0.01f;
+				}
+
+				/// <summary>Friendly string view</summary>
+				public override string ToString()
+				{
+					return "{0} - [{1}:{2}]".Fmt(Label, Min, Max);
+				}
+			}
 		}
 
-		/// <summary>
-		/// Reset the axis ranges to the default.
-		/// Call FindDefaultRange() to set the default range</summary>
-		public void ResetToDefaultRange()
+		#endregion
+
+		#region Navigation
+
+		/// <summary>Enable/Disable default mouse control of the graph</summary>
+		[Browsable(false)]
+		public bool MouseNavigation
 		{
-			if (!XAxis.LockRange) { XAxis.Rng = BaseRangeX; }
-			if (!YAxis.LockRange) { YAxis.Rng = BaseRangeY; }
-			Dirty = true;
+			set
+			{
+				MouseDown  -= OnMouseDown;
+				MouseUp    -= OnMouseUp;
+				MouseWheel -= OnMouseWheel;
+				if (value)
+				{
+					MouseDown  += OnMouseDown;
+					MouseUp    += OnMouseUp;
+					MouseWheel += OnMouseWheel;
+				}
+			}
 		}
 
 		/// <summary>
@@ -835,64 +956,62 @@ namespace pr.gui
 			}
 		}
 
-		/// <summary>Zoom in/out on the graph. Remember to call refresh. Zoom is a floating point value where 1f = no zoom, 2f = 2x magnification</summary>
-		[Browsable(false)] public double Zoom
+		/// <summary>Zoom in/out on the chart. Remember to call refresh. Zoom is a floating point value where 1f = no zoom, 2f = 2x magnification</summary>
+		[Browsable(false)]
+		public double Zoom
 		{
 			get
 			{
 				return
-					XAxis.AllowZoom ? XAxis.Span / BaseRangeX.m_span :
-					YAxis.AllowZoom ? YAxis.Span / BaseRangeY.m_span : 1f;
+					XAxis.AllowZoom ? XAxis.Span / BaseRangeX.Size :
+					YAxis.AllowZoom ? YAxis.Span / BaseRangeY.Size : 1f;
 			}
 			set
 			{
-				var aspect = (YAxis.Span * BaseRangeX.m_span) / (BaseRangeY.m_span * XAxis.Span);
-				aspect = Maths.Clamp(Maths.IsFinite(aspect) ? aspect : 1.0, 0.001, 1000);
-				
-				value = Maths.Clamp(value, m_impl_zoom.m_min, m_impl_zoom.m_max);
-				if (XAxis.AllowZoom) XAxis.Span = BaseRangeX.m_span * value         ;
-				if (YAxis.AllowZoom) YAxis.Span = BaseRangeY.m_span * value * aspect;
+				// Limit zoom amount
+				value = Maths.Clamp(value, ZoomMin, ZoomMax);
+
+				// If both axes allow zoom, maintain the aspect ratio
+				if (XAxis.AllowZoom && YAxis.AllowZoom)
+				{
+					var aspect = (YAxis.Span * BaseRangeX.Size) / (BaseRangeY.Size * XAxis.Span);
+					aspect = Maths.Clamp(Maths.IsFinite(aspect) ? aspect : 1.0, 0.001, 1000);
+					XAxis.Span = BaseRangeX.Size * value         ;
+					YAxis.Span = BaseRangeY.Size * value * aspect;
+				}
+				else if (XAxis.AllowZoom)
+				{
+					XAxis.Span = BaseRangeX.Size * value;
+				}
+				else if (YAxis.AllowZoom)
+				{
+					YAxis.Span = BaseRangeY.Size * value;
+				}
 				Dirty = true;
+				Invalidate();
 			}
 		}
-		private Axis.Range m_impl_zoom;
+		private RangeF m_impl_zoom;
 
 		/// <summary>Minimum zoom limit</summary>
 		public double ZoomMin
 		{
-			get { return m_impl_zoom.m_min; }
+			get { return m_impl_zoom.Begin; }
 			set
 			{
 				Debug.Assert(value > 0f);
-				m_impl_zoom.m_min = value;
+				m_impl_zoom.Begin = value;
 			}
 		}
 
 		/// <summary>Maximum zoom limit</summary>
 		public double ZoomMax
 		{
-			get { return m_impl_zoom.m_max; }
+			get { return m_impl_zoom.End; }
 			set
 			{
 				Debug.Assert(value > 0f);
-				m_impl_zoom.m_max = value;
-			}
-		}
-
-		/// <summary>Enable/Disable default mouse control of the graph</summary>
-		[Browsable(false)] public bool MouseNavigation
-		{
-			set
-			{
-				MouseDown  -= OnMouseDown;
-				MouseUp    -= OnMouseUp;
-				MouseWheel -= OnMouseWheel;
-				if (value)
-				{
-					MouseDown  += OnMouseDown;
-					MouseUp    += OnMouseUp;
-					MouseWheel += OnMouseWheel;
-				}
+				m_impl_zoom.End = value;
 			}
 		}
 
@@ -945,10 +1064,10 @@ namespace pr.gui
 					// Rescale the graph
 					var lower = PointToGraph(new Point(sel.Left, sel.Bottom));
 					var upper = PointToGraph(new Point(sel.Right, sel.Top));
-					XAxis.Min = lower.X;
-					XAxis.Max = upper.X;
-					YAxis.Min = lower.Y;
-					YAxis.Max = upper.Y;
+					if (XAxis.AllowZoom) XAxis.Min = lower.X;
+					if (XAxis.AllowZoom) XAxis.Max = upper.X;
+					if (YAxis.AllowZoom) YAxis.Min = lower.Y;
+					if (YAxis.AllowZoom) YAxis.Max = upper.Y;
 					Dirty = true;
 
 					// Clear the selection
@@ -1001,6 +1120,119 @@ namespace pr.gui
 
 		#region Rendering
 
+		/// <summary>The calculated areas of the control</summary>
+		public struct GraphDims
+		{
+			public GraphDims(GraphControl graph)
+			{
+				Owner = graph;
+				using (var gfx = graph.CreateGraphics())
+				{
+					RectangleF rect = graph.ClientRectangle;
+					var r = SizeF.Empty;
+
+					Area = rect.ToRect();
+
+					// Add margins
+					rect.X      += graph.Options.Margin.Left;
+					rect.Y      += graph.Options.Margin.Top;
+					rect.Width  -= graph.Options.Margin.Left + graph.Options.Margin.Right;
+					rect.Height -= graph.Options.Margin.Top + graph.Options.Margin.Bottom;
+
+					// Add space for tick marks
+					if (graph.YAxis.Options.DrawTickMarks)
+					{
+						rect.X      += graph.YAxis.Options.TickLength;
+						rect.Width  -= graph.YAxis.Options.TickLength;
+					}
+					if (graph.XAxis.Options.DrawTickMarks)
+					{
+						rect.Height -= graph.XAxis.Options.TickLength;
+					}
+
+					// Add space for the title and axis labels
+					if (graph.Title.HasValue())
+					{
+						r = gfx.MeasureString(graph.Title, graph.Options.TitleFont);
+						rect.Y      += r.Height;
+						rect.Height -= r.Height;
+					}
+					if (graph.XAxis.Label.HasValue())
+					{
+						r = gfx.MeasureString(graph.XAxis.Label, graph.XAxis.Options.LabelFont);
+						rect.Height -= r.Height;
+					}
+					if (graph.YAxis.Label.HasValue())
+					{
+						r = gfx.MeasureString(graph.Range.YAxis.Label, graph.YAxis.Options.LabelFont);
+						rect.X     += r.Height; // will be rotated by 90deg
+						rect.Width -= r.Height;
+					}
+
+					// Add space for the tick labels
+					const string lbl = "9.999";
+					if (graph.XAxis.Options.DrawTickLabels)
+					{
+						r = gfx.MeasureString(lbl, graph.XAxis.Options.TickFont);
+						rect.Height -= r.Height;
+					}
+					if (graph.YAxis.Options.DrawTickLabels)
+					{
+						r = gfx.MeasureString(lbl, graph.YAxis.Options.TickFont);
+						rect.X     += r.Width;
+						rect.Width -= r.Width;
+					}
+
+					ChartArea = rect.ToRect();
+				}
+			}
+
+			/// <summary>The graph that these dimensions were calculated from</summary>
+			public GraphControl Owner { get; private set; }
+
+			/// <summary>The size of the control</summary>
+			public Rectangle Area { get; private set; }
+
+			/// <summary>The area of the view3d part of the chart</summary>
+			public Rectangle ChartArea { get; private set; }
+		}
+
+		/// <summary>A snapshot of the current graph, used during dragging/zooming</summary>
+		private class Snapshot
+		{
+			public Bitmap m_bm;
+			public RangeF m_xrange;
+			public RangeF m_yrange;
+
+			public Snapshot()
+			{
+				m_bm = null;
+				m_xrange = new RangeF(0.0, 1.0);
+				m_yrange = new RangeF(0.0, 1.0);
+			}
+
+			public Size Size
+			{
+				get { return new Size(m_bm != null ? m_bm.Width : 0, m_bm != null ? m_bm.Height : 0); }
+			}
+
+			public Rectangle Rect
+			{
+				get { return new Rectangle(Point.Empty, Size); }
+			}
+		}
+
+		/// <summary>
+		/// A mutex that is locked by the control during rendering.
+		/// This should be used to synchronise access to the source data with rendering</summary>
+		public readonly object MutexRendering;
+
+		/// <summary>A snapshot of the plot area, used as a temporary copy during drag/zoom operations</summary>
+		private Snapshot m_snap;
+
+		/// <summary>A temporary bitmap used for background thread rendering</summary>
+		private Snapshot m_tmp;
+
 		/// <summary>True when the bitmap needs to be regenerated</summary>
 		[Browsable(false)] public bool Dirty
 		{
@@ -1040,27 +1272,74 @@ namespace pr.gui
 			RenderGraph(gfx, area, out plot_area);
 		}
 
-		///<summary>
-		/// Get the transform from client space to graph space.
-		/// Returns the x/y scaling factor in 'scale'
-		/// Note: The returned transform has no scale because lines and
-		/// points would also be scaled turning them into elipses or caligraphy etc</summary>
-		public void ClientToGraphSpace(Rectangle plot_area, out Matrix c2g, out v2 scale)
+		/// <summary>
+		/// Get the scale and translation transform from graph space to client space.
+		/// e.g. g2c * Point(x_min, y_min) = plot_area.BottomLeft()
+		///      g2c * Point(x_max, y_max) = plot_area.TopRight()</summary>
+		public Matrix3x3 GraphToClientSpace(Rectangle plot_area)
 		{
-			var plot = plot_area.Shifted(1,1).Inflated(0, 0, -1,-1);
-			scale = new v2((float)(plot.Width / XAxis.Span), (float)(plot.Height / YAxis.Span));
-			if (!Maths.IsFinite(scale.x)) scale.x = scale.x >= 0 ? float.MaxValue : -float.MaxValue;
-			if (!Maths.IsFinite(scale.y)) scale.y = scale.y >= 0 ? float.MaxValue : -float.MaxValue;
-			c2g = new Matrix(1f, 0f, 0f, -1f, (float)(plot.Left - XAxis.Min * scale.x), (float)(plot.Bottom + YAxis.Min * scale.y));
+			var scale_x = +(plot_area.Width  / XAxis.Span);
+			var scale_y = -(plot_area.Height / YAxis.Span);
+			var offset_x = plot_area.Left   - XAxis.Min * scale_x;
+			var offset_y = plot_area.Bottom - YAxis.Min * scale_y;
+
+			var g2c = new Matrix3x3(
+				scale_x  , 0.0     , 
+				0.0      , scale_y ,
+				offset_x , offset_y);
+
+			#if false
+			// Check the XAxis corners map to the expected client space locations
+			var g_pt0 = new Vector3(XAxis.Min, YAxis.Min, 1.0);
+			var g_pt1 = new Vector3(XAxis.Max, YAxis.Max, 1.0);
+			var c_pt0 = g2c.TransformPoint(g_pt0);
+			var c_pt1 = g2c.TransformPoint(g_pt1);
+			Debug.Assert(Math.Abs(c_pt0.x - plot_area.Left  ) < 0.0001);
+			Debug.Assert(Math.Abs(c_pt0.y - plot_area.Bottom) < 0.0001);
+			Debug.Assert(Math.Abs(c_pt1.x - plot_area.Right ) < 0.0001);
+			Debug.Assert(Math.Abs(c_pt1.y - plot_area.Top   ) < 0.0001);
+			#endif
+
+			return g2c;
 		}
-		public void ClientToGraphSpace(out Matrix c2g, out v2 scale)
+		public Matrix3x3 GraphToClientSpace()
 		{
-			ClientToGraphSpace(m_plot_area, out c2g, out scale);
+			return GraphToClientSpace(m_plot_area);
 		}
-		public void ClientToGraphSpace(out Matrix c2g)
+
+		/// <summary>
+		/// Get the scale and translation transform from client space to graph space.
+		/// e.g. c2g * plot_area.BottomLeft() = Point(x_min, y_min)
+		///      c2g * plot_area.TopRight()   = Point(x_max, y_max)</summary>
+		public Matrix3x3 ClientToGraphSpace(Rectangle plot_area)
 		{
-			v2 scale;
-			ClientToGraphSpace(out c2g, out scale);
+			var scale_x = +(XAxis.Span / plot_area.Width );
+			var scale_y = -(YAxis.Span / plot_area.Height);
+			var offset_x = XAxis.Min - plot_area.Left   * scale_x;
+			var offset_y = YAxis.Min - plot_area.Bottom * scale_y;
+
+			var c2g = new Matrix3x3(
+				scale_x  , 0.0     , 
+				0.0      , scale_y ,
+				offset_x , offset_y);
+
+			#if false
+			// Check the plot_area corners map to the expected graph space locations
+			var c_pt0 = new Vector3(plot_area.Left , plot_area.Bottom, 1.0);
+			var c_pt1 = new Vector3(plot_area.Right, plot_area.Top   , 1.0);
+			var g_pt0 = c2g.TransformPoint(c_pt0);
+			var g_pt1 = c2g.TransformPoint(c_pt1);
+			Debug.Assert(Math.Abs(g_pt0.x - XAxis.Min) < 0.0001f);
+			Debug.Assert(Math.Abs(g_pt0.y - YAxis.Min) < 0.0001f);
+			Debug.Assert(Math.Abs(g_pt1.x - XAxis.Max) < 0.0001f);
+			Debug.Assert(Math.Abs(g_pt1.y - YAxis.Max) < 0.0001f);
+			#endif
+
+			return c2g;
+		}
+		public Matrix3x3 ClientToGraphSpace()
+		{
+			return ClientToGraphSpace(m_plot_area);
 		}
 
 		/// <summary>Render the graph control into 'gfx' within 'area'</summary>
@@ -1077,15 +1356,15 @@ namespace pr.gui
 					if (m_rdr_thread != null) m_rdr_thread.Join();
 					m_rdr_cancel = false;
 
-					// Make sure the temporary bitmap and the snapshot bitmp are the correct size
+					// Make sure the temporary bitmap and the snapshot bitmap are the correct size
 					var plot_size = m_plot_area.Size;
 					if (m_tmp.Size != plot_size)
 					{
 						Util.Dispose(ref m_tmp.m_bm);
 						m_tmp.m_bm = new Bitmap(plot_size.Width, plot_size.Height);
 					}
-					m_tmp.m_xrange = XAxis.Rng;
-					m_tmp.m_yrange = YAxis.Rng;
+					m_tmp.m_xrange = XAxis.Range;
+					m_tmp.m_yrange = YAxis.Range;
 
 					// Plot rendering (done in a background thread).
 					// This thread renders the plot into the bitmap in 'm_tmp' using readonly access to the series data.
@@ -1117,7 +1396,7 @@ namespace pr.gui
 				}
 
 				// In the mean time, compose the graph in 'm_bm' by rendering the frame
-				// synchronously and blt'ing the last snapshot into the plot area
+				// synchronously and copy the last snapshot into the plot area
 				RenderGraphFrame(gfx, area, m_plot_area);
 
 				gfx.SetClip(m_plot_area.Shifted(1,1).Inflated(0,0,-1,-1));
@@ -1126,8 +1405,8 @@ namespace pr.gui
 				{
 					if (m_snap.m_bm != null)
 					{
-						var tl = GraphToPoint(new PointF((float)m_snap.m_xrange.m_min, (float)m_snap.m_yrange.m_max));
-						var br = GraphToPoint(new PointF((float)m_snap.m_xrange.m_max, (float)m_snap.m_yrange.m_min));
+						var tl = GraphToPoint(new PointF((float)m_snap.m_xrange.Begin, (float)m_snap.m_yrange.End));
+						var br = GraphToPoint(new PointF((float)m_snap.m_xrange.End, (float)m_snap.m_yrange.Begin));
 						var dst_rect = Rectangle.FromLTRB((int)tl.X, (int)tl.Y, (int)br.X, (int)br.Y);
 						var src_rect = m_snap.Rect;
 						gfx.DrawImage(m_snap.m_bm, dst_rect, (int)src_rect.X, (int)src_rect.Y, (int)src_rect.Width, (int)src_rect.Height, GraphicsUnit.Pixel);
@@ -1135,13 +1414,14 @@ namespace pr.gui
 				}
 
 				// Allow clients to draw on the graph
-				OnAddOverlayOnPaint(new OverlaysEventArgs(gfx));
+				var g2c = GraphToClientSpace(m_plot_area);
+				OnAddOverlayOnPaint(new OverlaysEventArgs(gfx, g2c, m_plot_area));
 
 				// Draw the selection rubber band
 				if (m_selection.Width != 0 && m_selection.Height != 0)
 				{
 					var sel = m_selection.NormalizeRect();
-					using (var pen = new Pen(RenderOptions.SelectionColour))
+					using (var pen = new Pen(Options.SelectionColour))
 					{
 						pen.DashStyle = DashStyle.Dot;
 						gfx.DrawRectangle(pen, sel);
@@ -1154,7 +1434,7 @@ namespace pr.gui
 			{
 				// There is a problem in the .NET graphics object that can cause these exceptions if the range is extreme
 				using (var bsh = new SolidBrush(Color.FromArgb(0x80, Color.Black)))
-					gfx.DrawString("Rendering error within .NET", RenderOptions.TitleFont, bsh, PointF.Empty);
+					gfx.DrawString("Rendering error within .NET", Options.TitleFont, bsh, PointF.Empty);
 			}
 		}
 
@@ -1165,51 +1445,51 @@ namespace pr.gui
 			SizeF r;
 
 			// Add margins
-			rect.X      += RenderOptions.LeftMargin;
-			rect.Y      += RenderOptions.TopMargin;
-			rect.Width  -= RenderOptions.LeftMargin + RenderOptions.RightMargin;
-			rect.Height -= RenderOptions.TopMargin  + RenderOptions.BottomMargin;
+			rect.X      += Options.Margin.Left;
+			rect.Y      += Options.Margin.Top;
+			rect.Width  -= Options.Margin.Left + Options.Margin.Right;
+			rect.Height -= Options.Margin.Top + Options.Margin.Bottom;
 
 			// Add space for tick marks
-			if (YAxis.RenderOptions.DrawTickMarks)
+			if (YAxis.Options.DrawTickMarks)
 			{
-				rect.X      += YAxis.RenderOptions.TickLength;
-				rect.Width  -= YAxis.RenderOptions.TickLength;
+				rect.X      += YAxis.Options.TickLength;
+				rect.Width  -= YAxis.Options.TickLength;
 			}
-			if (XAxis.RenderOptions.DrawTickMarks)
+			if (XAxis.Options.DrawTickMarks)
 			{
-				rect.Height -= XAxis.RenderOptions.TickLength;
+				rect.Height -= XAxis.Options.TickLength;
 			}
 
 			// Add space for the title and axis labels
 			if (Title.HasValue())
 			{
-				r = gfx.MeasureString(Title, RenderOptions.TitleFont);
+				r = gfx.MeasureString(Title, Options.TitleFont);
 				rect.Y      += r.Height;
 				rect.Height -= r.Height;
 			}
 			if (XAxis.Label.HasValue())
 			{
-				r = gfx.MeasureString(XAxis.Label, XAxis.RenderOptions.LabelFont);
+				r = gfx.MeasureString(XAxis.Label, XAxis.Options.LabelFont);
 				rect.Height -= r.Height;
 			}
 			if (YAxis.Label.HasValue())
 			{
-				r = gfx.MeasureString(YAxis.Label, YAxis.RenderOptions.LabelFont);
+				r = gfx.MeasureString(YAxis.Label, YAxis.Options.LabelFont);
 				rect.X     += r.Height; // will be rotated by 90deg
 				rect.Width -= r.Height;
 			}
 
 			// Add space for the tick labels
 			const string lbl = "9.999";
-			if (XAxis.RenderOptions.DrawTickLabels)
+			if (XAxis.Options.DrawTickLabels)
 			{
-				r = gfx.MeasureString(lbl, XAxis.RenderOptions.TickFont);
+				r = gfx.MeasureString(lbl, XAxis.Options.TickFont);
 				rect.Height -= r.Height;
 			}
-			if (YAxis.RenderOptions.DrawTickLabels)
+			if (YAxis.Options.DrawTickLabels)
 			{
-				r = gfx.MeasureString(lbl, YAxis.RenderOptions.TickFont);
+				r = gfx.MeasureString(lbl, YAxis.Options.TickFont);
 				rect.X     += r.Width;
 				rect.Width -= r.Width;
 			}
@@ -1221,8 +1501,8 @@ namespace pr.gui
 		private void PlotGrid(Rectangle plot_area, out v2 min, out v2 max, out v2 step)
 		{
 			// Choose step sizes
-			var max_ticks_x = plot_area.Width  / RenderOptions.PixelsPerTick.x;
-			var max_ticks_y = plot_area.Height / RenderOptions.PixelsPerTick.y;
+			var max_ticks_x = plot_area.Width  / XAxis.Options.PixelsPerTick;
+			var max_ticks_y = plot_area.Height / YAxis.Options.PixelsPerTick;
 			var xspan = XAxis.Span;
 			var yspan = YAxis.Span;
 			var step_x = (float)Math.Pow(10.0, (int)Math.Log10(xspan)); step.x = step_x;
@@ -1257,54 +1537,54 @@ namespace pr.gui
 			Debug.Assert(YAxis.Span > 0, "Negative y range");
 
 			// Clear to the background colour
-			gfx.Clear(RenderOptions.BkColour);
+			gfx.Clear(Options.BkColour);
 
 			// Draw the graph title and labels
 			if (Title.HasValue())
 			{
-				using (var bsh = new SolidBrush(RenderOptions.TitleColour))
+				using (var bsh = new SolidBrush(Options.TitleColour))
 				{
-					var r = gfx.MeasureString(Title, RenderOptions.TitleFont);
+					var r = gfx.MeasureString(Title, Options.TitleFont);
 					var x = (float)(area.Width - r.Width) * 0.5f;
-					var y = (float)(area.Top + RenderOptions.TopMargin);
+					var y = (float)(area.Top + Options.Margin.Top);
 					gfx.TranslateTransform(x, y);
-					gfx.MultiplyTransform(RenderOptions.TitleTransform);
-					gfx.DrawString(Title, RenderOptions.TitleFont, bsh, PointF.Empty);
+					gfx.MultiplyTransform(Options.TitleTransform);
+					gfx.DrawString(Title, Options.TitleFont, bsh, PointF.Empty);
 					gfx.ResetTransform();
 				}
 			}
 			if (XAxis.Label.HasValue())
 			{
-				using (var bsh = new SolidBrush(XAxis.RenderOptions.LabelColour))
+				using (var bsh = new SolidBrush(XAxis.Options.LabelColour))
 				{
-					var r = gfx.MeasureString(XAxis.Label, XAxis.RenderOptions.LabelFont);
+					var r = gfx.MeasureString(XAxis.Label, XAxis.Options.LabelFont);
 					var x = (float)(area.Width - r.Width) * 0.5f;
-					var y = (float)(area.Bottom - RenderOptions.BottomMargin - r.Height);
+					var y = (float)(area.Bottom - Options.Margin.Bottom - r.Height);
 					gfx.TranslateTransform(x, y);
-					gfx.MultiplyTransform(XAxis.RenderOptions.LabelTransform);
-					gfx.DrawString(XAxis.Label, XAxis.RenderOptions.LabelFont, bsh, PointF.Empty);
+					gfx.MultiplyTransform(XAxis.Options.LabelTransform);
+					gfx.DrawString(XAxis.Label, XAxis.Options.LabelFont, bsh, PointF.Empty);
 					gfx.ResetTransform();
 				}
 			}
 			if (YAxis.Label.HasValue())
 			{
-				using (var bsh = new SolidBrush(YAxis.RenderOptions.LabelColour))
+				using (var bsh = new SolidBrush(YAxis.Options.LabelColour))
 				{
-					var r = gfx.MeasureString(YAxis.Label, YAxis.RenderOptions.LabelFont);
-					var x = (float)(area.Left + RenderOptions.LeftMargin);
+					var r = gfx.MeasureString(YAxis.Label, YAxis.Options.LabelFont);
+					var x = (float)(area.Left + Options.Margin.Left);
 					var y = (float)(area.Height + r.Width) * 0.5f;
 					gfx.TranslateTransform(x, y);
 					gfx.RotateTransform(-90.0f);
-					gfx.MultiplyTransform(YAxis.RenderOptions.LabelTransform);
-					gfx.DrawString(YAxis.Label, YAxis.RenderOptions.LabelFont, bsh, PointF.Empty);
+					gfx.MultiplyTransform(YAxis.Options.LabelTransform);
+					gfx.DrawString(YAxis.Label, YAxis.Options.LabelFont, bsh, PointF.Empty);
 					gfx.ResetTransform();
 				}
 			}
 
 			// Draw the graph frame and background
-			using (var bsh_bkgd = new SolidBrush(RenderOptions.BkColour))
-			using (var bsh_axis = new SolidBrush(RenderOptions.AxisColour))
-			using (var pen_axis = new Pen(RenderOptions.AxisColour, 0.0f))
+			using (var bsh_bkgd = new SolidBrush(Options.BkColour))
+			using (var bsh_axis = new SolidBrush(Options.AxisColour))
+			using (var pen_axis = new Pen(Options.AxisColour, 0.0f))
 			{
 				// Background
 				RenderPlotBkgd(gfx, plot_area);
@@ -1313,35 +1593,35 @@ namespace pr.gui
 				PlotGrid(plot_area, out min, out max, out step);
 
 				// Tick marks and labels
-				using (var bsh_xtick = new SolidBrush(XAxis.RenderOptions.TickColour))
-				using (var bsh_ytick = new SolidBrush(YAxis.RenderOptions.TickColour))
+				using (var bsh_xtick = new SolidBrush(XAxis.Options.TickColour))
+				using (var bsh_ytick = new SolidBrush(YAxis.Options.TickColour))
 				{
-					var lblx = (float)(plot_area.Left - YAxis.RenderOptions.TickLength - 1);
-					var lbly = (float)(plot_area.Top + plot_area.Height + XAxis.RenderOptions.TickLength + 1);
-					if (XAxis.RenderOptions.DrawTickLabels || XAxis.RenderOptions.DrawTickMarks)
+					var lblx = (float)(plot_area.Left - YAxis.Options.TickLength - 1);
+					var lbly = (float)(plot_area.Top + plot_area.Height + XAxis.Options.TickLength + 1);
+					if (XAxis.Options.DrawTickLabels || XAxis.Options.DrawTickMarks)
 					{
 						for (float x = min.x; x < max.x; x += step.x)
 						{
 							var X = (int)(plot_area.Left + x * plot_area.Width / XAxis.Span);
-							var s = XAxis.TickText(x + XAxis.Min);
-							var r = gfx.MeasureString(s, XAxis.RenderOptions.TickFont);
-							if (XAxis.RenderOptions.DrawTickLabels)
-								gfx.DrawString(s, XAxis.RenderOptions.TickFont, bsh_xtick, new PointF(X - r.Width*0.5f, lbly));
-							if (XAxis.RenderOptions.DrawTickMarks)
-								gfx.DrawLine(pen_axis, X, plot_area.Top + plot_area.Height, X, plot_area.Top + plot_area.Height + XAxis.RenderOptions.TickLength);
+							var s = XAxis.TickText(x + XAxis.Min, step.x);
+							var r = gfx.MeasureString(s, XAxis.Options.TickFont);
+							if (XAxis.Options.DrawTickLabels)
+								gfx.DrawString(s, XAxis.Options.TickFont, bsh_xtick, new PointF(X - r.Width*0.5f, lbly));
+							if (XAxis.Options.DrawTickMarks)
+								gfx.DrawLine(pen_axis, X, plot_area.Top + plot_area.Height, X, plot_area.Top + plot_area.Height + XAxis.Options.TickLength);
 						}
 					}
-					if (YAxis.RenderOptions.DrawTickLabels || YAxis.RenderOptions.DrawTickMarks)
+					if (YAxis.Options.DrawTickLabels || YAxis.Options.DrawTickMarks)
 					{
 						for (float y = min.y; y < max.y; y += step.y)
 						{
 							var Y = (int)(plot_area.Top + plot_area.Height - y * plot_area.Height / YAxis.Span);
-							var s = YAxis.TickText(y + YAxis.Min);
-							var r = gfx.MeasureString(s, YAxis.RenderOptions.TickFont);
-							if (YAxis.RenderOptions.DrawTickLabels)
-								gfx.DrawString(s, YAxis.RenderOptions.TickFont, bsh_ytick, new PointF(lblx - r.Width, Y - r.Height*0.5f));
-							if (YAxis.RenderOptions.DrawTickMarks)
-								gfx.DrawLine(pen_axis, plot_area.Left - YAxis.RenderOptions.TickLength, Y, plot_area.Left, Y);
+							var s = YAxis.TickText(y + YAxis.Min, step.y);
+							var r = gfx.MeasureString(s, YAxis.Options.TickFont);
+							if (YAxis.Options.DrawTickLabels)
+								gfx.DrawString(s, YAxis.Options.TickFont, bsh_ytick, new PointF(lblx - r.Width, Y - r.Height*0.5f));
+							if (YAxis.Options.DrawTickMarks)
+								gfx.DrawLine(pen_axis, plot_area.Left - YAxis.Options.TickLength, Y, plot_area.Left, Y);
 						}
 					}
 				}
@@ -1364,11 +1644,11 @@ namespace pr.gui
 			}
 		}
 
-		/// <summary>Render the plot background including gridlines</summary>
+		/// <summary>Render the plot background including grid lines</summary>
 		private void RenderPlotBkgd(Graphics gfx, Rectangle plot_area)
 		{
-			using (var bsh_plot = new SolidBrush(RenderOptions.PlotBkColour))
-			using (var pen_grid = new Pen(RenderOptions.GridColour, 0.0f))
+			using (var bsh_plot = new SolidBrush(Options.PlotBkColour))
+			using (var pen_grid = new Pen(Options.GridColour, 0.0f))
 			{
 				v2 min,max,step;
 				PlotGrid(plot_area, out min, out max, out step);
@@ -1393,160 +1673,254 @@ namespace pr.gui
 		/// <summary>Render the series data into the graph (within 'area')</summary>
 		private void RenderData(Graphics gfx, Rectangle plot_area)
 		{
-			var plot = plot_area.Shifted(1,1).Inflated(0, 0, -1,-1);
-			gfx.SetClip(plot);
-
-			RenderPlotBkgd(gfx, plot_area);
-
-			// Set the transform so that we can draw directly in graph space.
-			// Note: We can't use a scale transform here because the lines and
-			// points will also be scaled, into elipses or caligraphy etc
-			Matrix c2g; v2 scale;
-			ClientToGraphSpace(plot_area, out c2g, out scale);
-			gfx.Transform = c2g;
-
-			// Plot each series
-			foreach (var series in Data)
+			try
 			{
-				if (m_rdr_cancel)
-					break;
+				// Set clip bounds so we only draw in the graph area
+				gfx.SetClip(plot_area.Shifted(1,1).Inflated(0, 0, -1,-1));
 
-				var opts = series.RenderOptions;
-				if (!opts.Visible)
-					continue;
+				// Render the background colour and grid lines
+				RenderPlotBkgd(gfx, plot_area);
 
-				using (var bsh_pt   = new SolidBrush(opts.PointColour))
-				using (var bsh_bar  = new SolidBrush(opts.BarColour))
-				using (var bsh_err  = new SolidBrush(opts.ErrorBarColour))
-				using (var pen_line = new Pen(opts.LineColour, opts.LineWidth))
-				using (var pen_bar  = new Pen(opts.BarColour, 0.0f))
+				// Not setting 'gfx.Transform' because we use double precision for the graph
+				// data, but 'gfx.Transform' uses float which can cause overflow errors.
+				// Instead, provide a double precision matrix that callers can use to convert to client space
+				var g2c = GraphToClientSpace(plot_area);
+				var scale_x = g2c.x.x;
+
+				// Plot each series
+				foreach (var series in Data)
 				{
-					// Loop over data points
-					var indices = series.Indices(XAxis.Min, XAxis.Max);
-					for (var iter = indices.GetIterator(); !iter.AtEnd;)
+					if (m_rdr_cancel)
+						break;
+
+					var opts = series.Options;
+					if (!opts.Visible)
+						continue;
+
+					using (var bsh_pt   = new SolidBrush(opts.PointColour))
+					using (var bsh_bar  = new SolidBrush(opts.BarColour))
+					using (var bsh_err  = new SolidBrush(opts.ErrorBarColour))
+					using (var pen_line = new Pen(opts.LineColour, opts.LineWidth))
+					using (var pen_bar  = new Pen(opts.BarColour, 0.0f))
 					{
-						if (m_rdr_cancel)
-							break;
-
-						// Get the next data point
-						var pt = new ScreenPoint(series, plot_area, scale, iter);
-
-						// Render the data point
-						switch (opts.PlotType)
+						// Loop over data points
+						var indices = series.Indices(XAxis.Min, XAxis.Max);
+						for (var iter = indices.GetIterator(); !iter.AtEnd;)
 						{
-						// Draw the data point
-						case Series.RdrOptions.EPlotType.Point:
-							PlotPoint(gfx, pt, opts, bsh_pt, bsh_err);
-							break;
+							if (m_rdr_cancel)
+								break;
 
-						// Draw the data point and connect with a line
-						case Series.RdrOptions.EPlotType.Line:
-							PlotLine(gfx, pt, opts, bsh_pt, pen_line, bsh_err);
-							break;
+							// Get the next data point
+							var pt = new ScreenPoint(series, plot_area, g2c, iter);
 
-						// Draw the data as columns in a bar graph
-						case Series.RdrOptions.EPlotType.Bar:
-							PlotBar(gfx, pt, opts, bsh_bar, pen_bar, bsh_err);
-							break;
+							// Render the data point
+							switch (opts.PlotType)
+							{
+							// Draw the data point
+							case Series.RdrOptions.EPlotType.Point:
+								PlotPoint(gfx, pt, opts, bsh_pt, bsh_err);
+								break;
+
+							// Draw the data point and connect with a line
+							case Series.RdrOptions.EPlotType.Line:
+								PlotLine(gfx, pt, opts, bsh_pt, pen_line, bsh_err);
+								break;
+
+							// Draw the data as columns in a bar graph
+							case Series.RdrOptions.EPlotType.Bar:
+								PlotBar(gfx, pt, opts, bsh_bar, pen_bar, bsh_err);
+								break;
+							}
+						}
+
+						// Add a moving average line
+						if (opts.DrawMovingAvr)
+						{
+							int i0, i1;
+							series.IndexRange(XAxis.Min, XAxis.Max, out i0, out i1);
+							i0 = Math.Max(0           , i0 - opts.MAWindowSize);
+							i1 = Math.Min(series.Count, i1 + opts.MAWindowSize);
+							PlotMovingAverage(gfx, opts, g2c, series.Values(i0,i1).GetIterator());
 						}
 					}
-
-					// Add a moving average line
-					if (opts.DrawMovingAvr)
-					{
-						int i0, i1;
-						series.IndexRange(XAxis.Min, XAxis.Max, out i0, out i1);
-						i0 = Math.Max(0           , i0 - opts.MAWindowSize);
-						i1 = Math.Min(series.Count, i1 + opts.MAWindowSize);
-						PlotMovingAverage(gfx, opts, scale, series.Values(i0,i1).GetIterator());
-					}
 				}
+
+				// Allow clients to draw on the graph
+				OnAddOverlayOnRender(new OverlaysEventArgs(gfx, g2c, plot_area));
+
+				gfx.ResetClip();
+			}
+			catch (Exception)
+			{
+				gfx.Clear(Options.BkColour);
+				gfx.DrawString("Rendering failed, scale too extreme", Options.TitleFont, Brushes.Black, Point.Empty);
+			}
+		}
+
+		/// <summary>Double precision 2D affine vector/matrix</summary>
+		[DebuggerDisplay("{x} {y} {w}")]
+		public struct Vector3
+		{
+			public double x, y, w;
+			public Vector3(double x_, double y_, double w_)
+			{
+				Debug.Assert(w_ == 0.0 || w_ == 1);
+				x = x_;
+				y = y_;
+				w = w_;
+			}
+			public Vector3(Point pt, double w)
+				:this(pt.X, pt.Y, w)
+			{}
+			public Vector3(PointF pt, double w)
+				:this(pt.X, pt.Y, w)
+			{}
+			public Point ToPoint()
+			{
+				return new Point((int)x, (int)y);
+			}
+			public PointF ToPointF()
+			{
+				return new PointF((float)x, (float)y);
+			}
+		}
+		[DebuggerDisplay("{x} {y} {w}")]
+		public struct Matrix3x3
+		{
+			public Vector3 x, y, w;
+
+			public Matrix3x3(
+				double _xx, double _xy,
+				double _yx, double _yy,
+				double _wx, double _wy)
+			{
+				x.x = _xx;  x.y = _xy;  x.w = 0.0;
+				y.x = _yx;  y.y = _yy;  y.w = 0.0;
+				w.x = _wx;  w.y = _wy;  w.w = 1.0;
 			}
 
-			gfx.ResetTransform();
-
-			// Allow clients to draw on the graph
-			OnAddOverlayOnRender(new OverlaysEventArgs(gfx));
-
-			gfx.ResetClip();
+			/// <summary>Apply the transform to 'rhs'</summary>
+			public Vector3 TransformPoint(Vector3 rhs)
+			{
+				return new Vector3(
+					x.x*rhs.x + y.x*rhs.y + w.x*rhs.w,
+					x.y*rhs.x + y.y*rhs.y + w.y*rhs.w,
+					x.w*rhs.x + y.w*rhs.y + w.w*rhs.w);
+			}
+			public Vector3 TransformPoint(GraphValue rhs, double w)
+			{
+				return TransformPoint(new Vector3(rhs.x, rhs.y, w));
+			}
+			public PointF TransformPoint(PointF rhs, double w)
+			{
+				var pt = TransformPoint(new Vector3(rhs.X, rhs.Y, w));
+				return new PointF((float)pt.x, (float)pt.y);
+			}
 		}
 
 		/// <summary>A helper for rendering that finds the bounds of all points at the same screen space X position</summary>
 		private class ScreenPoint
 		{
-			public Series    m_series;    // The series that this point came from
-			public Rectangle m_plot_area; // The screen space area that the point must be within
-			public v2        m_scale;     // Graph space to screen space scaling factors
-			public int    m_imin, m_imax; // The index range of the data points included
-			public double m_xmin, m_xmax; // The range of data point X values
-			public double m_ymin, m_ymax; // The range of data point Y values
-			public double m_ylo , m_yhi ; // The bounds on the error bars of the Y values
+			public Series    m_series;       // The series that this point came from
+			public Rectangle m_plot_area;    // The screen space area that the point must be within
+			public Matrix3x3 m_g2c;          // Graph to client space transform
+			public int       m_imin, m_imax; // The index range in 'm_series' of the data points included
+			public double    m_xmin, m_xmax; // The graph-space X-range of data values that fall on the same client space X position
+			public double    m_ymin, m_ymax; // The graph-space Y-range of data values that fall on the same client space X position
+			public double    m_ylo , m_yhi ; // The graph-space bounds on the error bars of the Y values
 
-			/// <summary>Scan 'i' forward to the next data point that has a screen space X value not equal to that of the i'th data point</summary>
-			public ScreenPoint(Series series, Rectangle plot_area, v2 scale, Iterator<int> iter)
+			/// <summary>Scan 'iter' forward to the next data point that has a screen space X value not equal to that of the 'iter' data point</summary>
+			public ScreenPoint(Series series, Rectangle plot_area, Matrix3x3 g2c, Iterator<int> iter)
 			{
 				// Get the data point
-				var gv = series[iter.Current];
-				var sx = (int)(gv.x * scale.x);
+				var gv0 = series[iter.Current];
+				var cx0 = (long)(gv0.x * g2c.x.x);
 
 				// Init members
-				this.m_series    = series;
-				this.m_plot_area = plot_area;
-				this.m_scale     = scale;
-				this.m_imin     = this.m_imax = iter.Current;
-				this.m_xmin     = this.m_xmax = gv.x;
-				this.m_ymin     = this.m_ymax = gv.y;
-				this.m_ylo      = gv.y + gv.ylo;
-				this.m_yhi      = gv.y + gv.yhi;
+				m_series    = series;
+				m_plot_area = plot_area;
+				m_g2c       = g2c;
+				m_imin      = m_imax = iter.Current;
+				m_xmin      = m_xmax = gv0.x;
+				m_ymin      = m_ymax = gv0.y;
+				m_ylo       = gv0.y + gv0.ylo;
+				m_yhi       = gv0.y + gv0.yhi;
 
 				// While the data point still represents the same X coordinate on-screen
-				// scan forward until x != sx, finding the bounds on points that fall at this X
+				// scan forward until 'x != sx', finding the bounds on points that fall at this X.
 				for (iter.MoveNext(); !iter.AtEnd; iter.MoveNext())
 				{
-					gv = series[iter.Current];
-					var x = (int)(gv.x * scale.x);
-					if (x != sx) break;
+					// Get the next data value, and find it's client space X value
+					// If the client-space X value is not equal to 'cx0' then leave.
+					var gv1 = series[iter.Current];
+					var cx1 = (long)(gv1.x * g2c.x.x);
+					if (cx1 != cx0) break;
 
-					this.m_imax = iter.Current;
-					this.m_xmax = gv.x;
-					this.m_ymin = Math.Min(this.m_ymin , gv.y);
-					this.m_ymax = Math.Max(this.m_ymax , gv.y);
-					this.m_ylo  = Math.Min(this.m_ylo  , gv.y + gv.ylo);
-					this.m_yhi  = Math.Max(this.m_yhi  , gv.y + gv.yhi);
+					// Accumulate this graph data value
+					m_imax = iter.Current;
+					m_xmax = gv1.x;
+					m_ymin = Math.Min(m_ymin , gv1.y);
+					m_ymax = Math.Max(m_ymax , gv1.y);
+					m_ylo  = Math.Min(m_ylo  , gv1.y + gv1.ylo);
+					m_yhi  = Math.Max(m_yhi  , gv1.y + gv1.yhi);
 				}
 			}
 
 			/// <summary>True if this is a single point, false if it represents multiple points</summary>
-			public bool IsSingle { get { return m_imin == m_imax; } }
-
-			// Error bars/Bar graph width in screen space
-			public int lhs, rhs;
-			public void CalcBarWidth(float width_scale = 1.0f)
+			public bool IsSingle
 			{
-				// Calc the left and right side of the bar
-				if (m_imin != 0)
-				{
-					var prev_x = m_series[m_imin - 1].x;
-					lhs = (int)Math.Max(0, 0.5*(m_xmin - prev_x) * width_scale * m_scale.x);
-				}
-				if (m_imax+1 != m_series.Count)
-				{
-					var next_x = m_series[m_imax + 1].x;
-					rhs = (int)Math.Max(1, 0.5*(next_x - m_xmax) * width_scale * m_scale.x);
-				}
-				if (lhs == 0) lhs = rhs; // i_min == 0 case
-				if (rhs == 0) rhs = lhs; // i_max == Count-1 case
+				get { return m_imin == m_imax; }
 			}
-		}
 
-		/// <summary>Draw error bars. lhs/rhs are the screen space size of the bar</summary>
-		private void PlotErrorBars(Graphics gfx, ScreenPoint pt, int lhs, int rhs, SolidBrush bsh_err)
-		{
-			var x   = (int)(pt.m_xmin * pt.m_scale.x);
-			var ylo = (int)(pt.m_ylo * pt.m_scale.y);
-			var yhi = (int)(pt.m_yhi * pt.m_scale.y);
-			if (yhi - ylo > 0)
-				gfx.FillRectangle(bsh_err, new Rectangle(x - lhs, ylo, lhs + rhs, yhi - ylo));
+			/// <summary>
+			/// Get the graph data point in client space.
+			/// The graph data, compressed into a single X pixel, is a line.
+			/// The width of the returned rectangle</summary>
+			public RectangleF PointCS(bool error_bars = false, bool extend_to_zero = false, float width_scale = 0.0f)
+			{
+				// Get the graph space points as 'Vector3'
+				var gs_min = new Vector3(m_xmin, (error_bars ? m_ylo : m_ymin), 1.0);
+				var gs_max = new Vector3(m_xmin, (error_bars ? m_yhi : m_ymax), 1.0);
+				
+				// If returning a 'bar', extend the bar to the zero line
+				if (extend_to_zero)
+				{
+					gs_min.y = Math.Min(gs_min.y, 0.0);
+					gs_max.y = Math.Max(gs_max.y, 0.0f);
+				}
+
+				// Transform the graph space points to client space
+				var pt_min = m_g2c.TransformPoint(gs_min);
+				var pt_max = m_g2c.TransformPoint(gs_max);
+
+				// Calculate bar widths
+				float lhs = 0f, rhs = 0f;
+				if (width_scale != 0)
+				{
+					// Calc the left and right side of the bar
+					// Left side minimum size is 0, right side is 1. This is so that
+					// the display doesn't alias like crazy when zoomed right out.
+					if (m_imin != 0)
+					{
+						var prev_x = m_series[m_imin - 1].x;
+						lhs = (float)Math.Max(0, 0.5*(m_xmin - prev_x) * m_g2c.x.x * width_scale);
+					}
+					if (m_imax+1 != m_series.Count)
+					{
+						var next_x = m_series[m_imax + 1].x;
+						rhs = (float)Math.Max(1, 0.5*(next_x - m_xmax) * m_g2c.x.x * width_scale);
+					}
+					if (lhs == 0) lhs = rhs; // i_min == 0 case
+					if (rhs == 0) rhs = lhs; // i_max == Count-1 case
+				}
+
+				// Return a rectangle representing the point in client space
+				return RectangleF.FromLTRB(
+					(float)(pt_min.x - lhs),  // X position - left side bar width
+					(float)(pt_max.y      ),  // Y max position
+					(float)(pt_max.x + rhs),  // X position + right side bar width
+					(float)(pt_min.y      )); // Y min position
+			}
 		}
 
 		/// <summary>Plot a point on the graph</summary>
@@ -1554,18 +1928,20 @@ namespace pr.gui
 		{
 			// Draw error bars is on
 			if (opts.DrawErrorBars)
-			{
-				pt.CalcBarWidth();
-				PlotErrorBars(gfx, pt, pt.lhs, pt.rhs, bsh_err);
-			}
+				gfx.FillRectangle(bsh_err, pt.PointCS(error_bars:true, width_scale:1.0f));
 
-			// Plot the data point
-			if (opts.DrawData)
+			// Draw a vertical line if the screen point represents multiple points
+			var r = pt.PointCS();
+			if (!pt.IsSingle)
 			{
-				var x = (int)(pt.m_xmin * pt.m_scale.x);
-				var y = (int)(pt.m_ymin * pt.m_scale.y);
-				var h = (int)((pt.m_ymax - pt.m_ymin) * pt.m_scale.y);
-				gfx.FillEllipse(bsh_pt, new RectangleF(x - opts.PointSize*0.5f, y - opts.PointSize*0.5f, opts.PointSize, h + opts.PointSize));
+				// Draw the stretched out point
+				gfx.FillRectangle(bsh_pt, r.Left - opts.PointSize*0.5f, r.Top, opts.PointSize, r.Height);
+				gfx.FillEllipse(bsh_pt, r.Left - opts.PointSize*0.5f, r.Top    - opts.PointSize*0.5f, opts.PointSize, opts.PointSize);
+				gfx.FillEllipse(bsh_pt, r.Left - opts.PointSize*0.5f, r.Bottom - opts.PointSize*0.5f, opts.PointSize, opts.PointSize);
+			}
+			else
+			{
+				gfx.FillEllipse(bsh_pt, r.X - opts.PointSize*0.5f, r.Y - opts.PointSize*0.5f, opts.PointSize, opts.PointSize);
 			}
 		}
 
@@ -1574,40 +1950,39 @@ namespace pr.gui
 		{
 			// Draw error bars is on
 			if (opts.DrawErrorBars)
-			{
-				pt.CalcBarWidth();
-				PlotErrorBars(gfx, pt, pt.lhs, pt.rhs, bsh_err);
-			}
+				gfx.FillRectangle(bsh_err, pt.PointCS(error_bars:true, width_scale:1.0f));
 
 			// Plot the point and line
 			if (opts.DrawData)
 			{
+				var r = pt.PointCS();
+
 				// Draw the line from the previous point
 				if (pt.m_imin != 0) // if this is not the first point
 				{
-					var px = (int)(pt.m_series[pt.m_imin - 1].x * pt.m_scale.x);
-					var py = (int)(pt.m_series[pt.m_imin - 1].y * pt.m_scale.y);
-					var x  = (int)(pt.m_series[pt.m_imin    ].x * pt.m_scale.x);
-					var y  = (int)(pt.m_series[pt.m_imin    ].y * pt.m_scale.y);
-					gfx.DrawLine(pen_line, px, py, x, y);
+					var prev = pt.m_g2c.TransformPoint(pt.m_series[pt.m_imin - 1], 1.0).ToPointF();
+					var curr = pt.m_g2c.TransformPoint(pt.m_series[pt.m_imin    ], 1.0).ToPointF();
+					gfx.DrawLine(pen_line, prev.X, prev.Y, curr.X, curr.Y);
 				}
 
 				// Draw a vertical line if the screen point represents multiple points
 				if (!pt.IsSingle)
 				{
-					var x   = (int)(pt.m_xmin * pt.m_scale.x);
-					var ylo = (int)(pt.m_ymin * pt.m_scale.y);
-					var yhi = (int)(pt.m_ymax * pt.m_scale.y);
-					gfx.DrawLine(pen_line, x, ylo, x, yhi);
-				}
+					gfx.DrawLine(pen_line, r.Left, r.Top, r.Right, r.Bottom);
 
-				// Plot the point (if it's size is non-zero)
-				if (opts.PointSize > 0)
+					// Draw the stretched out point
+					if (opts.PointSize > 0)
+					{
+						gfx.FillRectangle(bsh_pt, r.Left - opts.PointSize*0.5f, r.Top, opts.PointSize, r.Height);
+						gfx.FillEllipse(bsh_pt, r.Left - opts.PointSize*0.5f, r.Top    - opts.PointSize*0.5f, opts.PointSize, opts.PointSize);
+						gfx.FillEllipse(bsh_pt, r.Left - opts.PointSize*0.5f, r.Bottom - opts.PointSize*0.5f, opts.PointSize, opts.PointSize);
+					}
+				}
+				else
 				{
-					var x = (int)(pt.m_xmin * pt.m_scale.x);
-					var y = (int)(pt.m_ymin * pt.m_scale.y);
-					var h = (int)((pt.m_ymax - pt.m_ymin) * pt.m_scale.y);
-					gfx.FillEllipse(bsh_pt, new RectangleF(x - opts.PointSize*0.5f, y - opts.PointSize*0.5f, opts.PointSize, h + opts.PointSize));
+					// Plot the point (if it's size is non-zero)
+					if (opts.PointSize > 0)
+						gfx.FillEllipse(bsh_pt, r.X - opts.PointSize*0.5f, r.Y - opts.PointSize*0.5f, opts.PointSize, opts.PointSize);
 				}
 			}
 		}
@@ -1615,59 +1990,66 @@ namespace pr.gui
 		/// <summary>Plot a single bar on the graph</summary>
 		private void PlotBar(Graphics gfx, ScreenPoint pt, Series.RdrOptions opts, SolidBrush bsh_bar, Pen pen_bar, SolidBrush bsh_err)
 		{
-			// Calc the left and right side of the bar
-			pt.CalcBarWidth(opts.BarWidth);
-
 			// Draw error bars is on
 			if (opts.DrawErrorBars)
-				PlotErrorBars(gfx, pt, pt.lhs, pt.rhs, bsh_err);
+				gfx.FillRectangle(bsh_err, pt.PointCS(error_bars:true, width_scale:opts.BarWidth));
 
 			// Plot the bar
 			if (opts.DrawData)
 			{
-				var x   = Maths.Clamp((int)( pt.m_xmin                       * pt.m_scale.x), pt.m_plot_area.Left, pt.m_plot_area.Right);
-				var ylo = Maths.Clamp((int)((pt.m_ymin > 0 ? 0.0 : pt.m_ymin) * pt.m_scale.y), pt.m_plot_area.Top, pt.m_plot_area.Bottom);
-				var yhi = Maths.Clamp((int)((pt.m_ymax < 0 ? 0.0 : pt.m_ymax) * pt.m_scale.y), pt.m_plot_area.Top, pt.m_plot_area.Bottom);
-				
-				if (yhi - ylo > 0)
-					gfx.FillRectangle(bsh_bar, new Rectangle(x - pt.lhs, ylo, Math.Max(1, pt.lhs + pt.rhs), yhi - ylo));
+				var r = pt.PointCS(extend_to_zero:true, width_scale:opts.BarWidth);
+				if (r.Height != 0)
+					gfx.FillRectangle(bsh_bar, r);
 				else 
-					gfx.DrawLine(pen_bar, x - pt.lhs, 0f, pt.lhs + pt.rhs, 0f);
+					gfx.DrawLine(pen_bar, r.Left, r.Top, r.Right, r.Bottom);
 			}
 		}
 
 		/// <summary>Plot a moving average curve over the data</summary>
-		private void PlotMovingAverage(Graphics gfx, Series.RdrOptions opts, v2 scale, Iterator<GraphValue> iter)
+		private void PlotMovingAverage(Graphics gfx, Series.RdrOptions opts, Matrix3x3 g2c, Iterator<GraphValue> iter)
 		{
-			var max = new ExpMovingAvr((uint)opts.MAWindowSize);
-			var may = new ExpMovingAvr((uint)opts.MAWindowSize);
+			var ema = new ExpMovingAvr((uint)opts.MAWindowSize);
 			using (var ma_pen = new Pen(opts.MALineColour, opts.MALineWidth))
 			{
 				bool first = true;
-				int px = 0, py = 0;
+				var prev = Point.Empty;
 				for (;!iter.AtEnd; iter.MoveNext())
 				{
 					var gv = iter.Current;
-					max.Add(gv.x);
-					may.Add(gv.y);
+					ema.Add(gv.y);
 
-					int x = (int)(max.Mean * scale.x);
-					int y = (int)(may.Mean * scale.y);
+					var curr = g2c.TransformPoint(new Vector3(gv.x, ema.Mean, 1.0)).ToPoint();
 					if (first)
 					{
 						first = false;
-						px = x;
-						py = y;
+						prev = curr;
 					}
-					else if (x != px)
+					else if (curr.X != prev.X)
 					{
-						gfx.DrawLine(ma_pen, px, py, x, y);
-						px = x;
-						py = y;
+						gfx.DrawLine(ma_pen, prev.X, prev.Y, curr.X, curr.Y);
+						prev = curr;
 					}
 				}
 			}
 		}
+		#endregion
+
+		#region Notes
+
+		/// <summary>A note to add to the graph</summary>
+		public class Note
+		{
+			public string m_msg;
+			public PointF m_loc;
+			public Color  m_colour;
+			public Note(string msg, PointF loc) :this(msg, loc,  Color.Black) {}
+			public Note(string msg, PointF loc, Color colour) {m_msg = msg; m_loc = loc; m_colour = colour;}
+		}
+
+		/// <summary>Notes to add to the graph</summary>
+		[Browsable(false)]
+		public List<Note> Notes { get; private set; }
+
 		#endregion
 
 		#region Show Value Tooltip
@@ -1851,13 +2233,13 @@ namespace pr.gui
 						var menu = cmenu.Items.Add2(new ToolStripMenuItem("Series: All"));
 						#region Visible
 						{
-							var state = Data.Aggregate(0, (x,s) => x | (s.RenderOptions.Visible ? 2 : 1));
+							var state = Data.Aggregate(0, (x,s) => x | (s.Options.Visible ? 2 : 1));
 							var option = menu.DropDownItems.Add2(new ToolStripMenuItem("Visible"));
 							option.CheckState = state == 2 ? CheckState.Checked : state == 1 ? CheckState.Unchecked : CheckState.Indeterminate;
 							option.Click += (s,a) =>
 							{
 								option.CheckState = option.CheckState == CheckState.Checked ? CheckState.Unchecked : CheckState.Checked;
-								foreach (var x in Data) x.RenderOptions.Visible = option.CheckState == CheckState.Checked;
+								foreach (var x in Data) x.Options.Visible = option.CheckState == CheckState.Checked;
 								Dirty = true;
 							};
 						}
@@ -1872,12 +2254,12 @@ namespace pr.gui
 						// Create a sub menu for each series
 						var menu = cmenu.Items.Add2(new ToolStripMenuItem("Series: " + series.Name));
 						menu.ForeColor = series.Colour;
-						menu.Checked = series.RenderOptions.Visible;
+						menu.Checked = series.Options.Visible;
 						menu.Tag = index;
 						menu.Click += (s,a) =>
 						{
-							series.RenderOptions.Visible = !series.RenderOptions.Visible;
-							menu.Checked = series.RenderOptions.Visible;
+							series.Options.Visible = !series.Options.Visible;
+							menu.Checked = series.Options.Visible;
 							Dirty = true;
 						};
 
@@ -1887,10 +2269,10 @@ namespace pr.gui
 							#region Draw main data
 							{
 								var opt = elements_menu.DropDownItems.Add2(new ToolStripMenuItem("Series data"));
-								opt.Checked = series.RenderOptions.DrawData;
+								opt.Checked = series.Options.DrawData;
 								opt.Click += (s,a) =>
 								{
-									series.RenderOptions.DrawData = !series.RenderOptions.DrawData;
+									series.Options.DrawData = !series.Options.DrawData;
 									Dirty = true;
 								};
 							}
@@ -1898,10 +2280,10 @@ namespace pr.gui
 							#region Draw error bars
 							{
 								var opt = elements_menu.DropDownItems.Add2(new ToolStripMenuItem("Error Bars"));
-								opt.Checked = series.RenderOptions.DrawErrorBars;
+								opt.Checked = series.Options.DrawErrorBars;
 								opt.Click += (s,a) =>
 								{
-									series.RenderOptions.DrawErrorBars = !series.RenderOptions.DrawErrorBars;
+									series.Options.DrawErrorBars = !series.Options.DrawErrorBars;
 									Dirty = true;
 								};
 							}
@@ -1912,12 +2294,12 @@ namespace pr.gui
 						{
 							var plot_type_menu = menu.DropDownItems.Add2(new ToolStripMenuItem("Plot Type"));
 							{
-								var opt = plot_type_menu.DropDownItems.Add2(new ToolStripComboBox());
+								var opt = plot_type_menu.DropDownItems.Add2(new ToolStripComboBox { DropDownStyle = ComboBoxStyle.DropDownList });
 								opt.Items.AddRange(Enum<Series.RdrOptions.EPlotType>.Names.Cast<object>().ToArray());
-								opt.SelectedIndex = (int)series.RenderOptions.PlotType;
+								opt.SelectedIndex = (int)series.Options.PlotType;
 								opt.SelectedIndexChanged += (s,a) =>
 								{
-									series.RenderOptions.PlotType = (Series.RdrOptions.EPlotType)opt.SelectedIndex;
+									series.Options.PlotType = (Series.RdrOptions.EPlotType)opt.SelectedIndex;
 									Dirty = true;
 								};
 								opt.KeyDown += (s,a) =>
@@ -1932,7 +2314,7 @@ namespace pr.gui
 						{
 							var appearance_menu = menu.DropDownItems.Add2(new ToolStripMenuItem("Appearance"));
 							#region Points
-							if (series.RenderOptions.PlotType == Series.RdrOptions.EPlotType.Point || series.RenderOptions.PlotType == Series.RdrOptions.EPlotType.Line)
+							if (series.Options.PlotType == Series.RdrOptions.EPlotType.Point || series.Options.PlotType == Series.RdrOptions.EPlotType.Line)
 							{
 								var point_menu = appearance_menu.DropDownItems.Add2(new ToolStripMenuItem("Points"));
 								#region Size
@@ -1940,12 +2322,12 @@ namespace pr.gui
 									var size_menu = point_menu.DropDownItems.Add2(new ToolStripMenuItem("Size"));
 									{
 										var opt = size_menu.DropDownItems.Add2(new ToolStripTextBox{AcceptsReturn = false});
-										opt.Text = series.RenderOptions.PointSize.ToString("0.00");
+										opt.Text = series.Options.PointSize.ToString("0.00");
 										opt.TextChanged += (s,a) =>
 										{
 											float size;
 											if (!float.TryParse(opt.Text,out size)) return;
-											series.RenderOptions.PointSize = size;
+											series.Options.PointSize = size;
 											Dirty = true;
 										};
 									}
@@ -1955,12 +2337,12 @@ namespace pr.gui
 								{
 									var colour_menu = point_menu.DropDownItems.Add2(new ToolStripMenuItem("Colour"));
 									{
-										var opt = colour_menu.DropDownItems.Add2(new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.PointColour});
+										var opt = colour_menu.DropDownItems.Add2(new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.Options.PointColour});
 										opt.Click += (s,a) =>
 										{
 											var cd = new ColourUI{InitialColour = opt.BackColor};
 											if (cd.ShowDialog() != DialogResult.OK) return;
-											series.RenderOptions.PointColour = cd.Colour;
+											series.Options.PointColour = cd.Colour;
 											Dirty = true;
 										};
 									}
@@ -1969,7 +2351,7 @@ namespace pr.gui
 							}
 							#endregion
 							#region Lines
-							if (series.RenderOptions.PlotType == Series.RdrOptions.EPlotType.Line)
+							if (series.Options.PlotType == Series.RdrOptions.EPlotType.Line)
 							{
 								var line_menu = appearance_menu.DropDownItems.Add2(new ToolStripMenuItem("Lines"));
 								#region Width
@@ -1977,12 +2359,12 @@ namespace pr.gui
 									var width_menu = line_menu.DropDownItems.Add2(new ToolStripMenuItem("Width"));
 									{
 										var opt = width_menu.DropDownItems.Add2(new ToolStripTextBox());
-										opt.Text = series.RenderOptions.LineWidth.ToString("0.00");
+										opt.Text = series.Options.LineWidth.ToString("0.00");
 										opt.TextChanged += (s,a) =>
 										{
 											float width;
 											if (!float.TryParse(opt.Text,out width)) return;
-											series.RenderOptions.LineWidth = width;
+											series.Options.LineWidth = width;
 											Dirty = true;
 										};
 									}
@@ -1992,12 +2374,12 @@ namespace pr.gui
 								{
 									var colour_menu = appearance_menu.DropDownItems.Add2(new ToolStripMenuItem("Colour"));
 									{
-										var opt = colour_menu.DropDownItems.Add2(new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.LineColour});
+										var opt = colour_menu.DropDownItems.Add2(new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.Options.LineColour});
 										opt.Click += (s,a) =>
 										{
 											var cd = new ColourUI{InitialColour = opt.BackColor};
 											if (cd.ShowDialog() != DialogResult.OK) return;
-											series.RenderOptions.LineColour = cd.Colour;
+											series.Options.LineColour = cd.Colour;
 											Dirty = true;
 										};
 									}
@@ -2006,7 +2388,7 @@ namespace pr.gui
 							}
 							#endregion
 							#region Bars
-							if (series.RenderOptions.PlotType == Series.RdrOptions.EPlotType.Bar)
+							if (series.Options.PlotType == Series.RdrOptions.EPlotType.Bar)
 							{
 								var bar_menu = menu.DropDownItems.Add2(new ToolStripMenuItem("Bars"));
 								#region Width
@@ -2014,12 +2396,12 @@ namespace pr.gui
 									var width_menu = bar_menu.DropDownItems.Add2(new ToolStripMenuItem("Width"));
 									{
 										var opt = width_menu.DropDownItems.Add2(new ToolStripTextBox());
-										opt.Text = series.RenderOptions.BarWidth.ToString("0.00");
+										opt.Text = series.Options.BarWidth.ToString("0.00");
 										opt.TextChanged += (s,a) =>
 										{
 											float width;
 											if (!float.TryParse(opt.Text,out width)) return;
-											series.RenderOptions.BarWidth = width;
+											series.Options.BarWidth = width;
 											Dirty = true;
 										};
 										opt.KeyDown += (s,a) =>
@@ -2034,12 +2416,12 @@ namespace pr.gui
 								{
 									var colour_menu = bar_menu.DropDownItems.Add2(new ToolStripMenuItem("Colour"));
 									{
-										var opt = colour_menu.DropDownItems.Add2(new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.BarColour});
+										var opt = colour_menu.DropDownItems.Add2(new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.Options.BarColour});
 										opt.Click += (s,a) =>
 										{
 											var cd = new ColourUI{InitialColour = opt.BackColor};
 											if (cd.ShowDialog() != DialogResult.OK) return;
-											series.RenderOptions.BarColour = cd.Colour;
+											series.Options.BarColour = cd.Colour;
 											Dirty = true;
 										};
 									}
@@ -2048,19 +2430,19 @@ namespace pr.gui
 							}
 							#endregion
 							#region Error Bars
-							if (series.RenderOptions.DrawErrorBars)
+							if (series.Options.DrawErrorBars)
 							{
 								var errorbar_menu = appearance_menu.DropDownItems.Add2(new ToolStripMenuItem("Error Bars"));
 								#region Colour
 								{
 									var colour_menu = errorbar_menu.DropDownItems.Add2(new ToolStripMenuItem("Colour"));
 									{
-										var opt = colour_menu.DropDownItems.Add2(new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.ErrorBarColour});
+										var opt = colour_menu.DropDownItems.Add2(new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.Options.ErrorBarColour});
 										opt.Click += (s,a) =>
 										{
 											var cd = new ColourUI{InitialColour = opt.BackColor};
 											if (cd.ShowDialog() != DialogResult.OK) return;
-											series.RenderOptions.ErrorBarColour = cd.Colour;
+											series.Options.ErrorBarColour = cd.Colour;
 											Dirty = true;
 										};
 									}
@@ -2076,10 +2458,10 @@ namespace pr.gui
 							#region Draw Moving Average
 							{
 								var opt = mv_avr_menu.DropDownItems.Add2(new ToolStripMenuItem("Draw Moving Average"));
-								opt.Checked = series.RenderOptions.DrawMovingAvr;
+								opt.Checked = series.Options.DrawMovingAvr;
 								opt.Click += (s,a) =>
 								{
-									series.RenderOptions.DrawMovingAvr = !series.RenderOptions.DrawMovingAvr;
+									series.Options.DrawMovingAvr = !series.Options.DrawMovingAvr;
 									Dirty = true;
 								};
 							}
@@ -2089,12 +2471,12 @@ namespace pr.gui
 								var win_size_menu = mv_avr_menu.DropDownItems.Add2(new ToolStripMenuItem("Window Size"));
 								{
 									var opt = win_size_menu.DropDownItems.Add2(new ToolStripTextBox());
-									opt.Text = series.RenderOptions.MAWindowSize.ToString(CultureInfo.InvariantCulture);
+									opt.Text = series.Options.MAWindowSize.ToString(CultureInfo.InvariantCulture);
 									opt.TextChanged += (s,a) =>
 									{
 										int size;
 										if (!int.TryParse(opt.Text,out size)) return;
-										series.RenderOptions.MAWindowSize = size;
+										series.Options.MAWindowSize = size;
 										Dirty = true;
 									};
 								}
@@ -2105,12 +2487,12 @@ namespace pr.gui
 								var line_width_menu = mv_avr_menu.DropDownItems.Add2(new ToolStripMenuItem("Line Width"));
 								{
 									var opt = line_width_menu.DropDownItems.Add2(new ToolStripTextBox());
-									opt.Text = series.RenderOptions.MALineWidth.ToString(CultureInfo.InvariantCulture);
+									opt.Text = series.Options.MALineWidth.ToString(CultureInfo.InvariantCulture);
 									opt.TextChanged += (s,a) =>
 									{
 										int size;
 										if (!int.TryParse(opt.Text,out size)) return;
-										series.RenderOptions.MALineWidth = size;
+										series.Options.MALineWidth = size;
 										Dirty = true;
 									};
 								}
@@ -2120,12 +2502,12 @@ namespace pr.gui
 							{
 								var line_colour_menu = mv_avr_menu.DropDownItems.Add2(new ToolStripMenuItem("Line Colour"));
 								{
-									var opt = line_colour_menu.DropDownItems.Add2(new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.MALineColour});
+									var opt = line_colour_menu.DropDownItems.Add2(new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.Options.MALineColour});
 									opt.Click += (s,a) =>
 									{
 										var cd = new ColourUI{InitialColour = opt.BackColor};
 										if (cd.ShowDialog() != DialogResult.OK) return;
-										series.RenderOptions.MALineColour = cd.Colour;
+										series.Options.MALineColour = cd.Colour;
 										Dirty = true;
 									};
 								}
@@ -2157,12 +2539,12 @@ namespace pr.gui
 					{
 						var fbc_menu = appearance_menu.DropDownItems.Add2(new ToolStripMenuItem("Frame Background Colour"));
 						{
-							var opt = fbc_menu.DropDownItems.Add2(new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = RenderOptions.BkColour});
+							var opt = fbc_menu.DropDownItems.Add2(new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = Options.BkColour});
 							opt.Click += (s,a) =>
 							{
 								var cd = new ColourUI{InitialColour = opt.BackColor};
 								if (cd.ShowDialog() != DialogResult.OK) return;
-								RenderOptions.BkColour = cd.Colour;
+								Options.BkColour = cd.Colour;
 								Dirty = true;
 							};
 						}
@@ -2172,12 +2554,12 @@ namespace pr.gui
 					{
 						var pbc_menu = appearance_menu.DropDownItems.Add2(new ToolStripMenuItem("Plot Background Colour"));
 						{
-							var opt = pbc_menu.DropDownItems.Add2(new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = RenderOptions.BkColour});
+							var opt = pbc_menu.DropDownItems.Add2(new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = Options.BkColour});
 							opt.Click += (s,a) =>
 							{
 								var cd = new ColourUI{InitialColour = opt.BackColor};
 								if (cd.ShowDialog() != DialogResult.OK) return;
-								RenderOptions.PlotBkColour = cd.Colour;
+								Options.PlotBkColour = cd.Colour;
 								Dirty = true;
 							};
 						}
@@ -2349,8 +2731,7 @@ namespace pr.gui
 
 		/// <summary>
 		/// Called during rendering of the graph to allow clients to add graphics to the cached bitmap.<para/>
-		/// Rendering is in screen space, use GraphToPoint()/PointToGraph()<para/>
-		/// Use ClientToGraphSpace() to get the transform and scale that allows drawing in graph space</summary>
+		/// Rendering is in client space, use 'g2c' to transform from graph to client space</summary>
 		public event EventHandler<OverlaysEventArgs> AddOverlayOnRender;
 		protected virtual void OnAddOverlayOnRender(OverlaysEventArgs args)
 		{
@@ -2360,8 +2741,7 @@ namespace pr.gui
 		/// <summary>
 		/// Called each time the cached plot bitmap is drawn to the control to allow clients to add graphics.<para/>
 		/// The overlays can change without affecting cached graph bitmap.<para/>
-		/// Rendering is in screen space, use GraphToPoint()/PointToGraph()<para/>
-		/// Use ClientToGraphSpace() to get the transform and scale that allows drawing in graph space</summary>
+		/// Rendering is in client space, use 'g2c' to transform from graph to client space</summary>
 		public event EventHandler<OverlaysEventArgs> AddOverlayOnPaint;
 		protected virtual void OnAddOverlayOnPaint(OverlaysEventArgs args)
 		{
@@ -2375,15 +2755,24 @@ namespace pr.gui
 			AddUserMenuOptions.Raise(this, args);
 		}
 
+		/// <summary>User overlay event args</summary>
 		public class OverlaysEventArgs :EventArgs
 		{
+			public OverlaysEventArgs(Graphics gfx, Matrix3x3 g2c, Rectangle plot_area)
+			{
+				Gfx = gfx;
+				G2C = g2c;
+				PlotArea = plot_area;
+			}
+
 			/// <summary>The graphics interface to use for drawing</summary>
 			public Graphics Gfx { get; private set; }
 
-			public OverlaysEventArgs(Graphics gfx)
-			{
-				Gfx = gfx;
-			}
+			/// <summary>The graph to client space transform</summary>
+			public Matrix3x3 G2C { get; private set; }
+
+			/// <summary>Client-space plot area of the graph</summary>
+			public Rectangle PlotArea { get; private set; }
 		}
 		public class AddUserMenuOptionsEventArgs :EventArgs
 		{
@@ -2394,6 +2783,22 @@ namespace pr.gui
 			{
 				Menu = menu;
 			}
+		}
+
+		/// <summary>Event args for FindingDefaultRange</summary>
+		public class FindingDefaultRangeEventArgs :EventArgs
+		{
+			public FindingDefaultRangeEventArgs(RangeF xrange, RangeF yrange)
+			{
+				XRange = xrange;
+				YRange = yrange;
+			}
+
+			/// <summary>The XAxis range calculated from known chart elements data</summary>
+			public RangeF XRange { get; set; }
+
+			/// <summary>The YAxis range calculated from known chart elements data</summary>
+			public RangeF YRange { get; set; }
 		}
 
 		#endregion

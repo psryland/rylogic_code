@@ -76,7 +76,7 @@ namespace CppPad
 		{
 			foreach (var edit in Editors.ToArray())
 			{
-				if (but_this != null && PathEx.Compare(edit.Filepath, but_this) == 0) continue;
+				if (but_this != null && Path_.Compare(edit.Filepath, but_this) == 0) continue;
 				edit.Dispose();
 			}
 		}
@@ -136,7 +136,7 @@ namespace CppPad
 			using (compiler)
 			{
 				// Read the source files from the project directory
-				var files = PathEx.EnumFileSystem(ProjectDirectory, SearchOption.TopDirectoryOnly, SourceFilePattern, RegexOptions.IgnoreCase)
+				var files = Path_.EnumFileSystem(ProjectDirectory, SearchOption.TopDirectoryOnly, SourceFilePattern, RegexOptions.IgnoreCase)
 					.Select(x => x.FullPath).ToArray();
 
 				// Nothing to build, done...
@@ -144,8 +144,8 @@ namespace CppPad
 					return false;
 
 				// Ensure a directory for the object files exists
-				var obj_dir = PathEx.CombinePath(proj_dir, "obj");
-				if (!PathEx.DirExists(obj_dir))
+				var obj_dir = Path_.CombinePath(proj_dir, "obj");
+				if (!Path_.DirExists(obj_dir))
 					Directory.CreateDirectory(obj_dir);
 
 				// Create the compiler's build process

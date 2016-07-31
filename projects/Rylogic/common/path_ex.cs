@@ -24,7 +24,7 @@ using pr.win32;
 
 namespace pr.common
 {
-	public static class PathEx
+	public static class Path_
 	{
 		/// <summary>True if 'filepath' is a valid filepath. The file doesn't have to exist</summary>
 		public static bool IsValidFilepath(string filepath, bool require_rooted)
@@ -445,7 +445,7 @@ namespace pr.common
 		/// Gets FileData for all files/directories in a directory that match a specific filter including all sub directories.
 		/// 'regex_filter' is a filter on the filename, not the full path</summary>
 		[SuppressUnmanagedCodeSecurity]
-		public static IEnumerable<FileData> EnumFileSystem(string path, SearchOption search_flags = SearchOption.TopDirectoryOnly, string regex_filter = null, RegexOptions regex_options = RegexOptions.None, FileAttributes exclude = FileAttributes.Hidden, Func<string,bool> progress = null)
+		public static IEnumerable<FileData> EnumFileSystem(string path, SearchOption search_flags = SearchOption.TopDirectoryOnly, string regex_filter = null, RegexOptions regex_options = RegexOptions.IgnoreCase, FileAttributes exclude = FileAttributes.Hidden, Func<string,bool> progress = null)
 		{
 			Debug.Assert(DirExists(path), "Attempting to enumerate an invalid directory path");
 
@@ -756,43 +756,43 @@ namespace pr.unittests
 	{
 		[Test] public void TestPathValidation()
 		{
-			Assert.True(PathEx.IsValidDirectory(@"A:\dir1\..\.\dir2", true));
-			Assert.True(PathEx.IsValidDirectory(@"A:\dir1\..\.\dir2", false));
-			Assert.True(PathEx.IsValidDirectory(@".\dir1\..\.\dir2", false));
-			Assert.True(PathEx.IsValidDirectory(@"A:\dir1\..\.\dir2\", true));
-			Assert.True(PathEx.IsValidDirectory(@"A:\dir1\..\.\dir2\", false));
-			Assert.True(PathEx.IsValidDirectory(@".\dir1\..\.\dir2\", false));
-			Assert.False(PathEx.IsValidDirectory(@".\dir1?\..\.\", false));
+			Assert.True(Path_.IsValidDirectory(@"A:\dir1\..\.\dir2", true));
+			Assert.True(Path_.IsValidDirectory(@"A:\dir1\..\.\dir2", false));
+			Assert.True(Path_.IsValidDirectory(@".\dir1\..\.\dir2", false));
+			Assert.True(Path_.IsValidDirectory(@"A:\dir1\..\.\dir2\", true));
+			Assert.True(Path_.IsValidDirectory(@"A:\dir1\..\.\dir2\", false));
+			Assert.True(Path_.IsValidDirectory(@".\dir1\..\.\dir2\", false));
+			Assert.False(Path_.IsValidDirectory(@".\dir1?\..\.\", false));
 
-			Assert.True(PathEx.IsValidFilepath(@"A:\dir1\..\.\dir2\file.txt", true));
-			Assert.True(PathEx.IsValidFilepath(@"A:\dir1\..\.\dir2\file", false));
-			Assert.True(PathEx.IsValidFilepath(@".\dir1\..\.\dir2\file", false));
-			Assert.False(PathEx.IsValidFilepath(@".\dir1\", false));
-			Assert.False(PathEx.IsValidFilepath(@".\dir1\file*.txt", false));
+			Assert.True(Path_.IsValidFilepath(@"A:\dir1\..\.\dir2\file.txt", true));
+			Assert.True(Path_.IsValidFilepath(@"A:\dir1\..\.\dir2\file", false));
+			Assert.True(Path_.IsValidFilepath(@".\dir1\..\.\dir2\file", false));
+			Assert.False(Path_.IsValidFilepath(@".\dir1\", false));
+			Assert.False(Path_.IsValidFilepath(@".\dir1\file*.txt", false));
 		}
 		[Test] public void TestPathNames()
 		{
 			string path;
 
-			path = PathEx.RelativePath(@"A:\dir\subdir\file.ext", @"A:\dir");
+			path = Path_.RelativePath(@"A:\dir\subdir\file.ext", @"A:\dir");
 			Assert.AreEqual(@".\subdir\file.ext", path);
 
-			path = PathEx.CombinePath(@"A:\", @".\dir\subdir2", @"..\subdir\", "file.ext");
+			path = Path_.CombinePath(@"A:\", @".\dir\subdir2", @"..\subdir\", "file.ext");
 			Assert.AreEqual(@"A:\dir\subdir\file.ext", path);
 
-			path = PathEx.SanitiseFileName("1_path@\"[{+\\!@#$%^^&*()\'/?", "@#$%", "A");
+			path = Path_.SanitiseFileName("1_path@\"[{+\\!@#$%^^&*()\'/?", "@#$%", "A");
 			Assert.AreEqual("1_pathAA[{+A!AAAA^^&A()'AA", path);
 
 			const string noquotes   = "C:\\a b\\path.ext";
 			const string withquotes = "\"C:\\a b\\path.ext\"";
-			Assert.AreEqual(withquotes ,PathEx.Quote(noquotes, true));
-			Assert.AreEqual(withquotes ,PathEx.Quote(withquotes, true));
-			Assert.AreEqual(noquotes   ,PathEx.Quote(noquotes, false));
-			Assert.AreEqual(noquotes   ,PathEx.Quote(withquotes, false));
+			Assert.AreEqual(withquotes ,Path_.Quote(noquotes, true));
+			Assert.AreEqual(withquotes ,Path_.Quote(withquotes, true));
+			Assert.AreEqual(noquotes   ,Path_.Quote(noquotes, false));
+			Assert.AreEqual(noquotes   ,Path_.Quote(withquotes, false));
 		}
 		[Test] public void TestEnumerateFiles()
 		{
-			var files = PathEx.EnumFileSystem(@"C:\Windows\System32", SearchOption.TopDirectoryOnly, @".*\.dll");
+			var files = Path_.EnumFileSystem(@"C:\Windows\System32", SearchOption.TopDirectoryOnly, @".*\.dll");
 			var dlls = files.ToList();
 			Assert.True(dlls.Count != 0);
 		}

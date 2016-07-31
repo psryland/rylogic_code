@@ -51,7 +51,7 @@ static Context& Dll()
 }
 
 // Default error callback
-void __stdcall DefaultErrorCB(void*, char const* msg) { std::cerr << msg << std::endl; }
+void __stdcall DefaultErrorCB(void*, wchar_t const* msg) { std::cerr << msg << std::endl; }
 
 // Report an error message via the window error callback
 inline void ReportError(char const* func_name, View3DWindow wnd, std::exception const* ex)
@@ -62,7 +62,7 @@ inline void ReportError(char const* func_name, View3DWindow wnd, std::exception 
 	if (wnd != nullptr && !wnd->m_error_cb.empty()) error_cb = wnd->m_error_cb.back();
 
 	// Report the error
-	pr::string<> msg = pr::FmtS("%s failed.\n%s", func_name, ex ? ex->what() : "Unknown exception occurred.");
+	pr::string<wchar_t> msg = pr::FmtS(L"%S failed.\n%S", func_name, ex ? ex->what() : "Unknown exception occurred.");
 	if (msg.last() != '\n') msg.push_back('\n');
 	error_cb(msg.c_str());
 }
@@ -118,12 +118,12 @@ VIEW3D_API View3DContext __stdcall View3D_Initialise(View3D_ReportErrorCB initia
 	}
 	catch (std::exception const& e)
 	{
-		if (initialise_error_cb) initialise_error_cb(ctx, pr::FmtS("Failed to initialise View3D.\nReason: %s\n", e.what()));
+		if (initialise_error_cb) initialise_error_cb(ctx, pr::FmtS(L"Failed to initialise View3D.\nReason: %S\n", e.what()));
 		return nullptr;
 	}
 	catch (...)
 	{
-		if (initialise_error_cb) initialise_error_cb(ctx, "Failed to initialise View3D.\nReason: An unknown exception occurred\n");
+		if (initialise_error_cb) initialise_error_cb(ctx, L"Failed to initialise View3D.\nReason: An unknown exception occurred\n");
 		return nullptr;
 	}
 }
@@ -171,12 +171,12 @@ VIEW3D_API View3DWindow __stdcall View3D_CreateWindow(HWND hwnd, View3DWindowOpt
 	}
 	catch (std::exception const& e)
 	{
-		if (opts.m_error_cb) opts.m_error_cb(opts.m_error_cb_ctx, pr::FmtS("Failed to create View3D Window.\n%s", e.what()));
+		if (opts.m_error_cb) opts.m_error_cb(opts.m_error_cb_ctx, pr::FmtS(L"Failed to create View3D Window.\n%S", e.what()));
 		return nullptr;
 	}
 	catch (...)
 	{
-		if (opts.m_error_cb) opts.m_error_cb(opts.m_error_cb_ctx, pr::FmtS("Failed to create View3D Window.\nUnknown reason"));
+		if (opts.m_error_cb) opts.m_error_cb(opts.m_error_cb_ctx, pr::FmtS(L"Failed to create View3D Window.\nUnknown reason"));
 		return nullptr;
 	}
 }
@@ -440,6 +440,30 @@ VIEW3D_API void __stdcall View3D_PositionCamera(View3DWindow window, View3DV4 po
 	CatchAndReport(View3D_PositionCamera, window,);
 }
 
+// Enable/Disable orthographic projection
+VIEW3D_API BOOL __stdcall View3D_CameraOrthographic(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return window->m_camera.m_orthographic;
+	}
+	CatchAndReport(View3D_CameraOrthographic, window, FALSE);
+}
+VIEW3D_API void __stdcall View3D_CameraOrthographicSet(View3DWindow window, BOOL on)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_camera.m_orthographic = on != 0;
+	}
+	CatchAndReport(View3D_CameraOrthographicSet, window,);
+}
+
 // Return the distance to the camera focus point
 VIEW3D_API float __stdcall View3D_CameraFocusDistance(View3DWindow window)
 {
@@ -464,6 +488,19 @@ VIEW3D_API void __stdcall View3D_CameraSetFocusDistance(View3DWindow window, flo
 		window->m_camera.FocusDist(dist);
 	}
 	CatchAndReport(View3D_CameraSetFocusDistance, window,);
+}
+
+// Set the camera distance and H/V field of view to exactly view a rectangle with dimensions 'width'/'height'
+VIEW3D_API void __stdcall View3D_CameraSetViewRect(View3DWindow window, float width, float height, float dist)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_camera.View(width, height, dist);
+	}
+	CatchAndReport(View3D_CameraSetViewRect, window,);
 }
 
 // Return the aspect ratio for the camera field of view
@@ -956,56 +993,128 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(char const* ldr_script,
 	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
 }
 
-// Create an object via callback
-struct ObjectEditCBData
+// Create an object from provided buffers
+VIEW3D_API View3DObject __stdcall View3D_ObjectCreate(char const* name, View3DColour colour, int vcount, int icount, int ncount, View3DVertex const* verts, UINT16 const* indices, View3DNugget const* nuggets, GUID const& context_id)
 {
-	View3D_EditObjectCB edit_cb;
-	void* ctx;
-};
+	try
+	{
+		DllLockGuard;
+
+		// Strata the vertex data
+		pr::vector<pr::rdr::NuggetProps> ngt;
+		pr::vector<pr::v4>       pos;
+		pr::vector<pr::Colour32> col;
+		pr::vector<pr::v4>       nrm;
+		pr::vector<pr::v2>       tex;
+		for (auto n = nuggets, nend = n + ncount; n != nend; ++n)
+		{
+			// Create the renderer nugget
+			NuggetProps nug;
+			nug.m_topo = static_cast<EPrim>(n->m_topo);
+			nug.m_geom = static_cast<EGeom>(n->m_geom);
+			nug.m_vrange = n->m_v0 != n->m_v1 ? Range(n->m_v0, n->m_v1) : Range(0, vcount);
+			nug.m_irange = n->m_i0 != n->m_i1 ? Range(n->m_i0, n->m_i1) : Range(0, icount);
+			nug.m_tex_diffuse = n->m_mat.m_diff_tex;
+			ngt.push_back(nug);
+
+			// Sanity check the nugget
+			PR_ASSERT(PR_DBG, nug.m_vrange.begin() <= nug.m_vrange.end() && int(nug.m_vrange.end()) <= vcount, "Invalid nugget V-range");
+			PR_ASSERT(PR_DBG, nug.m_irange.begin() <= nug.m_irange.end() && int(nug.m_irange.end()) <= icount, "Invalid nugget I-range");
+
+			// Vertex positions
+			{
+				size_t j = pos.size();
+				pos.resize(pos.size() + nug.m_vrange.size());
+				for (auto i = nug.m_vrange.begin(); i != nug.m_vrange.end(); ++i)
+					pos[j++] = verts[i].pos;
+			}
+			// Colours
+			if (pr::AllSet(nug.m_geom, EGeom::Colr))
+			{
+				size_t j = col.size();
+				col.resize(col.size() + nug.m_vrange.size());
+				for (auto i = nug.m_vrange.begin(); i != nug.m_vrange.end(); ++i)
+					col[j++] = verts[i].col;
+			}
+			// Normals
+			if (pr::AllSet(nug.m_geom, EGeom::Norm))
+			{
+				size_t j = nrm.size();
+				nrm.resize(nrm.size() + nug.m_vrange.size());
+				for (auto i = nug.m_vrange.begin(); i != nug.m_vrange.begin(); ++i)
+					nrm[j++] = verts[i].norm;
+			}
+			// Texture coords
+			if (pr::AllSet(nug.m_geom, EGeom::Tex0))
+			{
+				size_t j = tex.size();
+				tex.resize(tex.size() + nug.m_vrange.size());
+				for (auto i = nug.m_vrange.begin(); i != nug.m_vrange.end(); ++i)
+					tex[j++] = verts[i].tex;
+			}
+		}
+
+		// Create the model
+		auto attr  = pr::ldr::ObjectAttributes(pr::ldr::ELdrObject::Custom, name, pr::Colour32(colour));
+		auto cdata = pr::ldr::MeshCreationData()
+			.verts(pos.data(), pos.size())
+			.indices(indices, icount)
+			.nuggets(ngt.data(), ngt.size())
+			.colours(col.data(), col.size())
+			.normals(nrm.data(), nrm.size())
+			.tex(tex.data(), tex.size());
+		auto obj = pr::ldr::Create(Dll().m_rdr, attr, cdata, context_id);
+		if (obj) Dll().m_obj_cont.push_back(obj);
+		return obj.m_ptr;
+	}
+	CatchAndReport(View3D_ObjectCreate, , nullptr);
+}
+
+// Callback function called from pr::ldr::CreateEditCB to populate the model data
+struct ObjectEditCBData { View3D_EditObjectCB edit_cb; void* ctx; };
 void __stdcall ObjectEditCB(ModelPtr model, void* ctx, pr::Renderer&)
 {
-	PR_ASSERT(PR_DBG, model != 0, "");
+	PR_ASSERT(PR_DBG, model != nullptr, "");
 	if (!model) throw std::exception("model is null");
 	ObjectEditCBData& cbdata = *static_cast<ObjectEditCBData*>(ctx);
 
 	// Create buffers to be filled by the user callback
+	// Note: We can't fill the buffers with the existing model data because that requires
+	// reading from video memory (slow, or not possible for some model types).
 	auto vrange = model->m_vrange;
 	auto irange = model->m_irange;
 	pr::vector<View3DVertex> verts   (vrange.size());
 	pr::vector<pr::uint16>   indices (irange.size());
+	pr::vector<View3DNugget> nuggets;
 
-	// Get default values for the 'topo', 'geom', and 'material'
-	auto model_type = EView3DPrim::Invalid;
-	auto geom_type  = EView3DGeom::Vert;
-	View3DMaterial v3dmat = {0,0};
-
-	// If the model already has nuggets grab some defaults from it
+	// If the model already has nuggets, initialise 'nuggets' with them
 	if (!model->m_nuggets.empty())
 	{
-		auto& nug = model->m_nuggets.front();
-		model_type = static_cast<EView3DPrim>(nug.m_topo);
-		geom_type  = static_cast<EView3DGeom>(nug.m_geom);
-		v3dmat.m_diff_tex = nug.m_tex_diffuse.m_ptr;
-		v3dmat.m_env_map  = nullptr;
+		for (auto& nug : model->m_nuggets)
+		{
+			View3DNugget n = {};
+			n.m_topo = static_cast<EView3DPrim>(nug.m_topo);
+			n.m_geom = static_cast<EView3DGeom>(nug.m_geom);
+			n.m_v0 = nug.m_vrange.begin();
+			n.m_v1 = nug.m_vrange.end();
+			n.m_i0 = nug.m_irange.begin();
+			n.m_i1 = nug.m_irange.end();
+			n.m_mat.m_diff_tex = nug.m_tex_diffuse.m_ptr;
+			n.m_mat.m_env_map = nullptr;
+			nuggets.push_back(n);
+		}
+	}
+	else
+	{
+		nuggets.push_back(View3DNugget());
 	}
 
-	// Get the user to generate the model
-	UINT32 new_vcount, new_icount;
-	cbdata.edit_cb(UINT32(vrange.size()), UINT32(irange.size()), &verts[0], &indices[0], new_vcount, new_icount, model_type, geom_type, v3dmat, cbdata.ctx);
+	// Get the user to generate/update the model
+	UINT32 new_vcount, new_icount, new_ncount;
+	cbdata.edit_cb(UINT32(vrange.size()), UINT32(irange.size()), UINT32(nuggets.size()), &verts[0], &indices[0], &nuggets[0], new_vcount, new_icount, new_ncount, cbdata.ctx);
 	PR_ASSERT(PR_DBG, new_vcount <= vrange.size(), "");
 	PR_ASSERT(PR_DBG, new_icount <= irange.size(), "");
-	PR_ASSERT(PR_DBG, model_type != EView3DPrim::Invalid, "");
-	PR_ASSERT(PR_DBG, geom_type != EView3DGeom::Unknown, "");
-
-	// Update the material
-	NuggetProps mat;
-	mat.m_topo = static_cast<EPrim>(model_type);
-	mat.m_geom = static_cast<EGeom>(geom_type);
-	mat.m_tex_diffuse = v3dmat.m_diff_tex;
-	mat.m_vrange = vrange;
-	mat.m_irange = irange;
-	mat.m_vrange.resize(new_vcount);
-	mat.m_irange.resize(new_icount);
+	PR_ASSERT(PR_DBG, new_ncount <= nuggets.size(), "");
 
 	{// Lock and update the model
 		MLock mlock(model, D3D11_MAP_WRITE_DISCARD);
@@ -1026,48 +1135,51 @@ void __stdcall ObjectEditCB(ModelPtr model, void* ctx, pr::Renderer&)
 			*iout++ = *iin;
 		}
 	}
+	{// Update the model nuggets
+		model->DeleteNuggets();
 
-	// Re-create the render nuggets
-	model->DeleteNuggets();
-	model->CreateNugget(mat);
+		for (auto& nug : nuggets)
+		{
+			NuggetProps mat;
+			mat.m_topo = static_cast<EPrim>(nug.m_topo);
+			mat.m_geom = static_cast<EGeom>(nug.m_geom);
+			mat.m_vrange = vrange;
+			mat.m_irange = irange;
+			mat.m_vrange.resize(new_vcount);
+			mat.m_irange.resize(new_icount);
+			mat.m_tex_diffuse = nug.m_mat.m_diff_tex;
+			model->CreateNugget(mat);
+		}
+	}
 }
-VIEW3D_API View3DObject __stdcall View3D_ObjectCreateCB(char const* name, View3DColour colour, int icount, int vcount, View3D_EditObjectCB edit_cb, void* ctx, GUID const& context_id)
+
+// Create an object via callback
+VIEW3D_API View3DObject __stdcall View3D_ObjectCreateEditCB(char const* name, View3DColour colour, int vcount, int icount, int ncount, View3D_EditObjectCB edit_cb, void* ctx, GUID const& context_id)
 {
 	try
 	{
 		DllLockGuard;
 		ObjectEditCBData cbdata = {edit_cb, ctx};
 		pr::ldr::ObjectAttributes attr(pr::ldr::ELdrObject::Custom, name, pr::Colour32(colour));
-		auto obj = pr::ldr::Add(Dll().m_rdr, attr, icount, vcount, ObjectEditCB, &cbdata, context_id);
+		auto obj = pr::ldr::CreateEditCB(Dll().m_rdr, attr, vcount, icount, ncount, ObjectEditCB, &cbdata, context_id);
 		if (obj) Dll().m_obj_cont.push_back(obj);
 		return obj.m_ptr;
 	}
-	CatchAndReport(View3D_ObjectCreate, , nullptr);
+	CatchAndReport(View3D_ObjectCreateEditCB, , nullptr);
 }
 
-// Create an object from provided buffers
-struct CreateObjectData
-{
-	View3DVertex const* m_verts;
-	UINT16 const*       m_indices;
-	EView3DPrim         m_prim_type;
-	EView3DGeom         m_geom_type;
-};
-void __stdcall ObjectCreateCB(ModelPtr model, void* ctx, pr::Renderer&)
-{
-}
-VIEW3D_API View3DObject __stdcall View3D_ObjectCreate(char const* name, View3DColour colour, int icount, int vcount, View3DVertex const* verts, UINT16 const* indices, EView3DPrim prim_type, EView3DGeom geom_type, GUID const& context_id)
+// Edit an existing model
+VIEW3D_API void __stdcall View3D_ObjectEdit(View3DObject object, View3D_EditObjectCB edit_cb, void* ctx)
 {
 	try
 	{
+		if (!object) throw std::exception("Object is null");
+
 		DllLockGuard;
-		CreateObjectData cbdata = {verts, indices, prim_type, geom_type};
-		pr::ldr::ObjectAttributes attr(pr::ldr::ELdrObject::Custom, name, pr::Colour32(colour));
-		auto obj = pr::ldr::Add(Dll().m_rdr, attr, icount, vcount, ObjectCreateCB, &cbdata, context_id);
-		if (obj) Dll().m_obj_cont.push_back(obj);
-		return obj.m_ptr;
+		ObjectEditCBData cbdata = {edit_cb, ctx};
+		pr::ldr::Edit(Dll().m_rdr, object, ObjectEditCB, &cbdata);
 	}
-	CatchAndReport(View3D_ObjectCreate, , nullptr);
+	CatchAndReport(View3D_ObjectEdit, ,);
 }
 
 // Replace the model and all child objects of 'obj' with the results of 'ldr_script'
@@ -1084,20 +1196,6 @@ VIEW3D_API void __stdcall View3D_ObjectUpdate(View3DObject object, char const* l
 		pr::ldr::Update(Dll().m_rdr, object, reader, static_cast<pr::ldr::EUpdateObject::Enum_>(flags));
 	}
 	CatchAndReport(View3D_ObjectUpdate, ,);
-}
-
-// Edit an existing model
-VIEW3D_API void __stdcall View3D_ObjectEdit(View3DObject object, View3D_EditObjectCB edit_cb, void* ctx)
-{
-	try
-	{
-		if (!object) throw std::exception("Object is null");
-
-		DllLockGuard;
-		ObjectEditCBData cbdata = {edit_cb, ctx};
-		pr::ldr::Edit(Dll().m_rdr, object, ObjectEditCB, &cbdata);
-	}
-	CatchAndReport(View3D_ObjectEdit, ,);
 }
 
 // Delete all objects

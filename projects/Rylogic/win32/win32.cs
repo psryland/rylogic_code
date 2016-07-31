@@ -1159,8 +1159,8 @@ namespace pr.win32
 			
 			{// Try the working directory
 				var working_dir = Path.GetFullPath(dir);
-				var dll_path = searched.Add2(PathEx.CombinePath(working_dir, dllname));
-				if (PathEx.FileExists(dll_path))
+				var dll_path = searched.Add2(Path_.CombinePath(working_dir, dllname));
+				if (Path_.FileExists(dll_path))
 					return TryLoad(dll_path);
 			}
 
@@ -1170,9 +1170,9 @@ namespace pr.win32
 			if (ass != null)
 			{
 				var exe_path = ass.Location;
-				var exe_dir = PathEx.Directory(exe_path);
-				var dll_path = searched.Add2(PathEx.CombinePath(exe_dir, dir, dllname));
-				if (PathEx.FileExists(dll_path))
+				var exe_dir = Path_.Directory(exe_path);
+				var dll_path = searched.Add2(Path_.CombinePath(exe_dir, dir, dllname));
+				if (Path_.FileExists(dll_path))
 					return TryLoad(dll_path);
 			}
 
@@ -1180,9 +1180,9 @@ namespace pr.win32
 			if (ass != null)
 			{
 				var exe_path = ass.Location;
-				var exe_dir = PathEx.Directory(exe_path);
-				var dll_path = searched.Add2(PathEx.CombinePath(exe_dir, dllname));
-				if (PathEx.FileExists(dll_path))
+				var exe_dir = Path_.Directory(exe_path);
+				var dll_path = searched.Add2(Path_.CombinePath(exe_dir, dllname));
+				if (Path_.FileExists(dll_path))
 					return TryLoad(dll_path);
 			}
 
@@ -1475,7 +1475,7 @@ namespace pr.win32
 			case WM_WINDOWPOSCHANGING:
 			case WM_WINDOWPOSCHANGED:
 				{
-					var wpos = MarshalEx.PtrToStructure<WINDOWPOS>((IntPtr)lparam);
+					var wpos = Marshal_.PtrToStructure<WINDOWPOS>((IntPtr)lparam);
 					return "{0} x,y=({1},{2}) size=({3},{4}) after={5} flags={6}{7}{8}{9}{10}{11}{12}{13}{14}{15}{16}{17}{18}"
 						.Fmt(hdr
 						,wpos.x ,wpos.y
@@ -1500,7 +1500,7 @@ namespace pr.win32
 			case WM_NOTIFY:
 				{
 					var notify_type = "unknown";
-					var nmhdr = MarshalEx.PtrToStructure<NMHDR>((IntPtr)lparam);
+					var nmhdr = Marshal_.PtrToStructure<NMHDR>((IntPtr)lparam);
 					if      (NM_LAST   <= nmhdr.code) notify_type = "NM";
 					else if (LVN_LAST  <= nmhdr.code) notify_type = "LVN";
 					else if (HDN_LAST  <= nmhdr.code) notify_type = "HDN";

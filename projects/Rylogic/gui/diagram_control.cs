@@ -3878,7 +3878,7 @@ namespace pr.gui
 				SetupEditToolstrip();
 
 				Elements.ListChanging += (s,a) => OnElementListChanging(a);
-				Selected.ListChanging += (s,a) => OnDiagramSelectionListChanging(a);
+				Selected.ListChanging += (s,a) => OnSelectionListChanging(a);
 
 				SetCursor();
 				ResetView();
@@ -4365,7 +4365,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Handle elements added/removed from the selection list</summary>
-		protected virtual void OnDiagramSelectionListChanging(ListChgEventArgs<Element> args)
+		protected virtual void OnSelectionListChanging(ListChgEventArgs<Element> args)
 		{
 			var elem = args.Item;
 			if (elem != null && (elem.Diagram != null && elem.Diagram != this))

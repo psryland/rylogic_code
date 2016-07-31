@@ -423,10 +423,10 @@ namespace pr.util
 		{
 			var size = Marshal.SizeOf(structure);
 			var arr = new byte[size];
-			using (var ptr = MarshalEx.AllocHGlobal(size))
+			using (var ptr = Marshal_.AllocHGlobal(size))
 			{
-				Marshal.StructureToPtr(structure, ptr, true);
-				Marshal.Copy(ptr, arr, 0, size);
+				Marshal.StructureToPtr(structure, ptr.Value.Ptr, true);
+				Marshal.Copy(ptr.Value.Ptr, arr, 0, size);
 				return arr;
 			}
 		}
@@ -442,10 +442,10 @@ namespace pr.util
 		{
 			Debug.Assert(arr.Length - offset >= Marshal.SizeOf(typeof(T)), "FromBytes<T>: Insufficient data");
 			var sz = Marshal.SizeOf(typeof(T));
-			using (var ptr = MarshalEx.AllocHGlobal(sz))
+			using (var ptr = Marshal_.AllocHGlobal(sz))
 			{
-				Marshal.Copy(arr, offset, ptr, sz);
-				return (T)Marshal.PtrToStructure(ptr, typeof(T));
+				Marshal.Copy(arr, offset, ptr.Value.Ptr, sz);
+				return (T)Marshal.PtrToStructure(ptr.Value.Ptr, typeof(T));
 			}
 		}
 
@@ -618,15 +618,21 @@ namespace pr.util
 		/// <summary>The directory that this application executable is in</summary>
 		public static string AppDirectory
 		{
-			get { return PathEx.Directory(Application.ExecutablePath); }
+			get { return Path_.Directory(Application.ExecutablePath); }
 		}
 
 		/// <summary>Returns the full path to a file or directory relative to the app executable</summary>
 		public static string ResolveAppPath(string relative_path = "")
 		{
-			var dir = PathEx.Directory(Application.ExecutablePath);
-			var path = PathEx.CombinePath(dir, relative_path);
+			var dir = Path_.Directory(Application.ExecutablePath);
+			var path = Path_.CombinePath(dir, relative_path);
 			return path;
+		}
+
+		/// <summary>The application directory for a roaming user</summary>
+		public static string ResolveAppDataPath(string company, string application, string relative_path = "")
+		{
+			return Path_.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), company, application, relative_path);
 		}
 
 		/// <summary>
@@ -975,7 +981,7 @@ namespace pr.util
 
 			// Check if 'dst_filepath' already exists
 			dst_filepath = Path.GetFullPath(dst_filepath);
-			if (!overwrite && PathEx.FileExists(dst_filepath))
+			if (!overwrite && Path_.FileExists(dst_filepath))
 			{
 				Log.Info(null, "LibCopy: Not copying {0} as {1} already exists".Fmt(src_filepath, dst_filepath));
 				return ELibCopyResult.DestExists;
@@ -1059,8 +1065,8 @@ namespace pr.util
 				};
 				
 			return look_in
-				.Select(x => PathEx.CombinePath(x, relative_path))
-				.FirstOrDefault(PathEx.DirExists);
+				.Select(x => Path_.CombinePath(x, relative_path))
+				.FirstOrDefault(Path_.DirExists);
 		}
 
 		/// <summary>Returns a string showing the match results of 'pattern' used on 'str'</summary>

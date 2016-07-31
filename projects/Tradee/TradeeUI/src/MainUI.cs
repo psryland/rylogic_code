@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Drawing;
-using System.IO.Pipes;
-using System.Runtime.Serialization.Formatters.Binary;
+using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 using pr.common;
@@ -16,7 +14,7 @@ namespace Tradee
 {
 	public class MainUI :Form
 	{
-		#region App Entry Point
+		#region Entry Point
 		[STAThread] static void Main()
 		{
 			try
@@ -55,27 +53,32 @@ namespace Tradee
 		private StatusStrip m_ss;
 		private ToolStripStatusLabel m_status;
 		private ToolStripMenuItem m_menu_file_dump;
+		private ToolStripMenuItem m_menu_file_test_msg;
 		private ToolStripMenuItem m_menu_file_exit;
 		#endregion
 
 		public MainUI()
 		{
 			InitializeComponent();
-			Model = new MainModel(this);
+
+			Settings = new Settings(@"Settings.xml"){AutoSaveOnChanges = true};
+			Model = new MainModel(this, Settings);
 
 			SetupUI();
 			UpdateUI();
 		}
 		protected override void Dispose(bool disposing)
 		{
+			m_dc.Dispose();
 			Model = null;
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
-		protected override void OnShown(EventArgs e)
+		protected override void OnFormClosed(FormClosedEventArgs e)
 		{
-			Model.RunServer = true;
-			base.OnShown(e);
+			Settings.UI.UILayout = m_dc.SaveLayout();
+			Settings.Save();
+			base.OnFormClosed(e);
 		}
 
 		/// <summary>The app logic</summary>
@@ -85,11 +88,27 @@ namespace Tradee
 			private set
 			{
 				if (m_impl_model == value) return;
-				if (m_impl_model != null) Util.Dispose(ref m_impl_model);
+				if (m_impl_model != null)
+				{
+					m_impl_model.MarketData.InstrumentRemoved -= HandleInstrumentRemoved;
+					Util.Dispose(ref m_impl_model);
+				}
 				m_impl_model = value;
+				if (m_impl_model != null)
+				{
+					m_impl_model.MarketData.InstrumentRemoved += HandleInstrumentRemoved;
+				}
+				Update();
 			}
 		}
 		private MainModel m_impl_model;
+
+		/// <summary>App settings</summary>
+		public Settings Settings
+		{
+			get;
+			private set;
+		}
 
 		/// <summary>Main application status label</summary>
 		public ToolStripStatusLabel Status
@@ -97,10 +116,20 @@ namespace Tradee
 			get { return m_status; }
 		}
 
+		/// <summary>Add a chart to the dock container</summary>
+		public void AddChart(ChartUI chart)
+		{
+			m_dc.Add(chart);
+		}
+
 		/// <summary>Set up UI Elements</summary>
 		private void SetupUI()
 		{
-			// Menu
+			#region Menu
+			m_menu_file_test_msg.Click += (s,a) =>
+			{
+				Model.TradeDataSource.Post(new OutMsg.TestMsg { Text = "Hi From Tradee" });
+			};
 			m_menu_file_dump.Click += (s,a) =>
 			{
 				Model.Dump();
@@ -109,17 +138,45 @@ namespace Tradee
 			{
 				Close();
 			};
+			#endregion
 
 			// Add components
-			m_dc.Add2(new ChartUI(Model, null));
 			m_dc.Add2(new StatusUI(Model));
 			m_dc.Add2(new AlarmClockUI(Model));
-			m_menu.Items.Insert(1, m_dc.WindowsMenu());
+			m_dc.Add2(new TradesUI(Model));
+			m_dc.Add2(new InstrumentsUI(Model));
+			m_menu.Items.Add(m_dc.WindowsMenu());
+
+			// Restore the UI layout
+			if (Settings.UI.UILayout != null)
+			{
+				try { m_dc.LoadLayout(Settings.UI.UILayout); }
+				catch (Exception ex) { Debug.WriteLine("Failed to restore UI Layout: {0}".Fmt(ex.Message)); }
+			}
+			//else
+			//{
+			//	var sz = m_dc.GetDockSizes(EDockSite.Centre);
+			//	sz.Bottom = (int)(m_dc.Width * 0.33f);
+			//}
 		}
 
 		/// <summary>Update UI elements</summary>
 		private void UpdateUI(object sender = null, EventArgs args = null)
 		{
+			if (Model == null)
+				return;
+		}
+
+		/// <summary>Close charts that reference the out-going instrument</summary>
+		private void HandleInstrumentRemoved(object sender, DataEventArgs e)
+		{
+			// Remove any charts
+			var charts = m_dc.AllContent.OfType<ChartUI>().Where(x => x.Instrument == e.Instrument).ToArray();
+			foreach (var chart in charts)
+			{
+				chart.DockControl.DockPane = null;
+				chart.Dispose();
+			}
 		}
 
 		#region Windows Form Designer generated code
@@ -127,15 +184,16 @@ namespace Tradee
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainUI));
-			this.m_dc = new pr.gui.DockContainer();
 			this.m_tsc = new pr.gui.ToolStripContainer();
 			this.m_ss = new System.Windows.Forms.StatusStrip();
 			this.m_status = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_dc = new pr.gui.DockContainer();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_test_msg = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_dump = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_sep0 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_exit = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_file_dump = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.ContentPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
@@ -143,18 +201,6 @@ namespace Tradee
 			this.m_ss.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.SuspendLayout();
-			// 
-			// m_dc
-			// 
-			this.m_dc.ActiveContent = null;
-			this.m_dc.ActiveDockable = null;
-			this.m_dc.ActivePane = null;
-			this.m_dc.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_dc.Location = new System.Drawing.Point(0, 0);
-			this.m_dc.Name = "m_dc";
-			this.m_dc.Size = new System.Drawing.Size(520, 526);
-			this.m_dc.TabIndex = 2;
-			this.m_dc.Text = "dockContainer1";
 			// 
 			// m_tsc
 			// 
@@ -166,11 +212,11 @@ namespace Tradee
 			// m_tsc.ContentPanel
 			// 
 			this.m_tsc.ContentPanel.Controls.Add(this.m_dc);
-			this.m_tsc.ContentPanel.Size = new System.Drawing.Size(520, 526);
+			this.m_tsc.ContentPanel.Size = new System.Drawing.Size(906, 628);
 			this.m_tsc.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_tsc.Location = new System.Drawing.Point(0, 0);
 			this.m_tsc.Name = "m_tsc";
-			this.m_tsc.Size = new System.Drawing.Size(520, 572);
+			this.m_tsc.Size = new System.Drawing.Size(906, 674);
 			this.m_tsc.TabIndex = 3;
 			this.m_tsc.Text = "toolStripContainer1";
 			// 
@@ -185,7 +231,7 @@ namespace Tradee
             this.m_status});
 			this.m_ss.Location = new System.Drawing.Point(0, 0);
 			this.m_ss.Name = "m_ss";
-			this.m_ss.Size = new System.Drawing.Size(520, 22);
+			this.m_ss.Size = new System.Drawing.Size(906, 22);
 			this.m_ss.TabIndex = 0;
 			// 
 			// m_status
@@ -194,6 +240,17 @@ namespace Tradee
 			this.m_status.Size = new System.Drawing.Size(26, 17);
 			this.m_status.Text = "Idle";
 			// 
+			// m_dc
+			// 
+			this.m_dc.ActiveContent = null;
+			this.m_dc.ActiveDockable = null;
+			this.m_dc.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_dc.Location = new System.Drawing.Point(0, 0);
+			this.m_dc.Name = "m_dc";
+			this.m_dc.Size = new System.Drawing.Size(906, 628);
+			this.m_dc.TabIndex = 2;
+			this.m_dc.Text = "dockContainer1";
+			// 
 			// m_menu
 			// 
 			this.m_menu.Dock = System.Windows.Forms.DockStyle.None;
@@ -201,18 +258,31 @@ namespace Tradee
             this.m_menu_file});
 			this.m_menu.Location = new System.Drawing.Point(0, 0);
 			this.m_menu.Name = "m_menu";
-			this.m_menu.Size = new System.Drawing.Size(520, 24);
+			this.m_menu.Size = new System.Drawing.Size(906, 24);
 			this.m_menu.TabIndex = 0;
 			// 
 			// m_menu_file
 			// 
 			this.m_menu_file.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_file_test_msg,
             this.m_menu_file_dump,
             this.m_menu_file_sep0,
             this.m_menu_file_exit});
 			this.m_menu_file.Name = "m_menu_file";
 			this.m_menu_file.Size = new System.Drawing.Size(37, 20);
 			this.m_menu_file.Text = "&File";
+			// 
+			// m_menu_file_test_msg
+			// 
+			this.m_menu_file_test_msg.Name = "m_menu_file_test_msg";
+			this.m_menu_file_test_msg.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_file_test_msg.Text = "&Test Msg";
+			// 
+			// m_menu_file_dump
+			// 
+			this.m_menu_file_dump.Name = "m_menu_file_dump";
+			this.m_menu_file_dump.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_file_dump.Text = "&Dump";
 			// 
 			// m_menu_file_sep0
 			// 
@@ -225,17 +295,11 @@ namespace Tradee
 			this.m_menu_file_exit.Size = new System.Drawing.Size(152, 22);
 			this.m_menu_file_exit.Text = "E&xit";
 			// 
-			// m_menu_file_dump
-			// 
-			this.m_menu_file_dump.Name = "m_menu_file_dump";
-			this.m_menu_file_dump.Size = new System.Drawing.Size(152, 22);
-			this.m_menu_file_dump.Text = "&Dump";
-			// 
 			// MainUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(520, 572);
+			this.ClientSize = new System.Drawing.Size(906, 674);
 			this.Controls.Add(this.m_tsc);
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
 			this.MainMenuStrip = this.m_menu;

@@ -18,7 +18,7 @@ using pr.win32;
 
 namespace pr.extn
 {
-	public static class ControlExtensions
+	public static class Control_
 	{
 		/// <summary>Get the user data for this control associated with 'guid'. If not found, and 'make' != null then 'make' is called with the result added and returned</summary>
 		public static T UserData<T>(this Control ctrl, Guid guid, Func<T> make = null)
@@ -178,6 +178,22 @@ namespace pr.extn
 			}
 		}
 
+		/// <summary>Map a point from 'src' control's client space, to 'dst' control's client space</summary>
+		public static Point MapPoint(Control src, Control dst, Point pt)
+		{
+			pt = src != null ? src.PointToScreen(pt) : pt;
+			pt = dst != null ? dst.PointToClient(pt) : pt;
+			return pt;
+		}
+
+		/// <summary>Map a rectangle from 'src' control's client space, to 'dst' control's client space</summary>
+		public static Rectangle MapRectangle(Control src, Control dst, Rectangle rect)
+		{
+			rect = src != null ? src.RectangleToScreen(rect) : rect;
+			rect = dst != null ? dst.RectangleToClient(rect) : rect;
+			return rect;
+		}
+
 		/// <summary>Returns the location of this item in screen space</summary>
 		public static Point ScreenLocation(this Control item)
 		{
@@ -193,6 +209,13 @@ namespace pr.extn
 			var top    = item.TopLevelControl;
 			var srect  = parent == null ? item.Bounds : parent.RectangleToScreen(item.Bounds);
 			return top != null ? top.RectangleToClient(srect) : srect;
+		}
+
+		/// <summary>Computes the location of the specified client point into parent coordinates</summary>
+		public static Point PointToParent(this Control item, Point point)
+		{
+			var pt = item.PointToScreen(point);
+			return item.Parent != null ? item.Parent.PointToClient(pt) : pt;
 		}
 
 		/// <summary>Returns the bounds of this item in screen space</summary>

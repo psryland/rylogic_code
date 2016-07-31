@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using pr.extn;
+using pr.gfx;
 using pr.gui;
 
 namespace TestCS
@@ -33,6 +34,8 @@ namespace TestCS
 		private ToolStripMenuItem m_menu_tests_vt100;
 		private ToolStripMenuItem m_menu_tests_message_box;
 		private ToolStripMenuItem m_menu_tests_combo_box;
+		private ToolStripMenuItem m_menu_tests_chart;
+		private ToolStripMenuItem m_menu_tests_listbox;
 		private ToolStripMenuItem m_menu_tests_graphcontrol;
 
 		/// <summary>The main entry point for the application.</summary>
@@ -42,6 +45,9 @@ namespace TestCS
 			// Note! Running this in the debugger causes this to be run as a 32bit
 			// process regardless of the selected solution platform
 			Debug.WriteLine("\n    {0} is a {1}bit process\n".Fmt(Application.ExecutablePath, Environment.Is64BitProcess ? "64" : "32"));
+
+			View3d.LoadDll(".\\lib\\$(platform)\\$(config)");
+			Sci.LoadDll(".\\lib\\$(platform)\\$(config)");
 
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
@@ -62,6 +68,11 @@ namespace TestCS
 			m_menu_file_exit.Click += (s, a) =>
 			{
 				Close();
+			};
+
+			m_menu_tests_chart.Click += (s,a) =>
+			{
+				new ChartUI().Show(this);
 			};
 
 			m_menu_tests_checked_groupbox.Click += (s, a) =>
@@ -112,6 +123,11 @@ namespace TestCS
 			m_menu_tests_hintballoon.Click += (s, a) =>
 			{
 				new FormHintBalloon().Show(this);
+			};
+
+			m_menu_tests_listbox.Click += (s,a) =>
+			{
+				new ListBoxUI().Show(this);
 			};
 
 			m_menu_tests_message_box.Click += (s,a) =>
@@ -207,10 +223,11 @@ namespace TestCS
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_exit = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_tests_combo_box = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tests_chart = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_checked_groupbox = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_checked_listbox = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_colourwheel = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tests_combo_box = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_dgv = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_diagramcontrol = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_dock_panel = new System.Windows.Forms.ToolStripMenuItem();
@@ -228,6 +245,7 @@ namespace TestCS
 			this.m_menu_tests_view3d_editor = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_vt100 = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_web_browser = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tests_listbox = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -259,6 +277,7 @@ namespace TestCS
 			// m_menu_tests
 			// 
 			this.m_menu_tests.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_tests_chart,
             this.m_menu_tests_checked_groupbox,
             this.m_menu_tests_checked_listbox,
             this.m_menu_tests_colourwheel,
@@ -269,6 +288,7 @@ namespace TestCS
             this.m_menu_tests_graphcontrol,
             this.m_menu_tests_helpui,
             this.m_menu_tests_hintballoon,
+            this.m_menu_tests_listbox,
             this.m_menu_tests_message_box,
             this.m_menu_tests_rtb,
             this.m_menu_tests_scintilla,
@@ -284,11 +304,11 @@ namespace TestCS
 			this.m_menu_tests.Size = new System.Drawing.Size(45, 20);
 			this.m_menu_tests.Text = "&Tests";
 			// 
-			// m_menu_tests_combo_box
+			// m_menu_tests_chart
 			// 
-			this.m_menu_tests_combo_box.Name = "m_menu_tests_combo_box";
-			this.m_menu_tests_combo_box.Size = new System.Drawing.Size(180, 22);
-			this.m_menu_tests_combo_box.Text = "&ComboBox";
+			this.m_menu_tests_chart.Name = "m_menu_tests_chart";
+			this.m_menu_tests_chart.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_tests_chart.Text = "&Chart";
 			// 
 			// m_menu_tests_checked_groupbox
 			// 
@@ -307,6 +327,12 @@ namespace TestCS
 			this.m_menu_tests_colourwheel.Name = "m_menu_tests_colourwheel";
 			this.m_menu_tests_colourwheel.Size = new System.Drawing.Size(180, 22);
 			this.m_menu_tests_colourwheel.Text = "&ColourWheel";
+			// 
+			// m_menu_tests_combo_box
+			// 
+			this.m_menu_tests_combo_box.Name = "m_menu_tests_combo_box";
+			this.m_menu_tests_combo_box.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_tests_combo_box.Text = "&ComboBox";
 			// 
 			// m_menu_tests_dgv
 			// 
@@ -409,6 +435,12 @@ namespace TestCS
 			this.m_menu_tests_web_browser.Name = "m_menu_tests_web_browser";
 			this.m_menu_tests_web_browser.Size = new System.Drawing.Size(180, 22);
 			this.m_menu_tests_web_browser.Text = "&Web Browser";
+			// 
+			// m_menu_tests_listbox
+			// 
+			this.m_menu_tests_listbox.Name = "m_menu_tests_listbox";
+			this.m_menu_tests_listbox.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_tests_listbox.Text = "&ListBox";
 			// 
 			// MainUI
 			// 

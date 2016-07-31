@@ -838,7 +838,7 @@ namespace pr.gfx
 		/// <summary>Returns true if the file at 'filepath' contains the markers of a jpg file</summary>
 		public static bool IsJpgFile(string filepath)
 		{
-			if (!PathEx.FileExists(filepath)) return false;
+			if (!Path_.FileExists(filepath)) return false;
 			using (var fs = new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.Read))
 			{
 				if (fs.Length < 4) return false;

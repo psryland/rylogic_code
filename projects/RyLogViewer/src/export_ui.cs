@@ -98,7 +98,7 @@ namespace RyLogViewer
 			}
 
 			// Prompt if overwriting a file
-			if (PathEx.FileExists(OutputFilepath))
+			if (Path_.FileExists(OutputFilepath))
 			{
 				var res = MsgBox.Show(this, string.Format("{0} already exists. Overwrite it?", OutputFilepath), Resources.ConfirmOverwrite, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 				a.Cancel = res != DialogResult.Yes;
@@ -147,7 +147,7 @@ namespace RyLogViewer
 			m_btn_range_to_end  .Enabled = m_radio_range.Checked;
 			m_spinner_range_min .Enabled = m_radio_range.Checked;
 			m_spinner_range_max .Enabled = m_radio_range.Checked;
-			m_btn_ok.Enabled = PathEx.IsValidFilepath(OutputFilepath, false);
+			m_btn_ok.Enabled = Path_.IsValidFilepath(OutputFilepath, false);
 		}
 	}
 }

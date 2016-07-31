@@ -44,7 +44,8 @@ namespace pr.common
 		public bool Empty { get { return End == Begin; } }
 
 		/// <summary>Get/Set the number of elements in the range. Setting changes 'End' only</summary>
-		public long Size { get { return End - Begin; } set { End = Begin + value; } }
+		public long Count { get { return End - Begin; } set { End = Begin + value; } }
+		public long Size  { get { return Count; } set { Count = value; } }
 
 		/// <summary>Get/Set the middle of the range. Setting the middle point does not change 'Size', i.e. 'Begin' and 'End' are both potentially moved</summary>
 		public long Mid { get { return (Begin + End) / 2; } set { var count = Size; Begin = value - count/2; End = value + (count+1)/2; } }
@@ -55,6 +56,7 @@ namespace pr.common
 		// Casting helpers
 		public int Begini { get { return (int)Begin; } }
 		public int Endi   { get { return (int)End;   } }
+		public int Counti { get { return (int)Count; } }
 		public int Sizei  { get { return (int)Size;  } }
 		public int Midi   { get { return (int)Mid;   } }
 
@@ -200,19 +202,42 @@ namespace pr.common
 		public static readonly RangeF Invalid = new RangeF{Begin = double.MaxValue, End = double.MinValue};
 
 		/// <summary>Construct from a range</summary>
-		public RangeF(double begin, double end) { Begin = begin; End = end; }
+		public RangeF(double begin, double end)
+		{
+			Begin = begin;
+			End = end;
+		}
 
 		/// <summary>True if the range spans zero elements</summary>
-		public bool Empty { get { return Equals(Begin,End); } }
+		public bool Empty
+		{
+			get { return Equals(Begin,End); }
+		}
 
 		/// <summary>Get/Set the number of elements in the range. Setting changes 'End' only</summary>
-		public double Size { get { return End - Begin; } set { End = Begin + value; } }
+		public double Size
+		{
+			get { return End - Begin; }
+			set { End = Begin + value; }
+		}
 
 		/// <summary>Get/Set the middle of the range. Setting the middle point does not change 'Size', i.e. 'Begin' and 'End' are both potentially moved</summary>
-		public double Mid { get { return (Begin + End) * 0.5; } set { var hsize = Size*0.5; Begin = value - hsize; End = value + hsize; } }
+		public double Mid
+		{
+			get { return (Begin + End) * 0.5; }
+			set
+			{
+				var hsize = Size*0.5;
+				Begin = value - hsize;
+				End = value + hsize;
+			}
+		}
 
 		/// <summary>Empty the range and reset to [0,0)</summary>
-		public void Clear() { Begin = End = 0.0; }
+		public void Clear()
+		{
+			Begin = End = 0.0;
+		}
 
 		// Casting helpers
 		public float Beginf { get { return (float)Begin; } }

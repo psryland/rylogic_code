@@ -393,6 +393,10 @@ namespace pr.extn
 			m.TransformPoints(p);
 			return p[0];
 		}
+		public static v2 TransformPoint(this Matrix m, v2 pt)
+		{
+			return v2.From(m.TransformPoint(pt.ToPointF()));
+		}
 
 		/// <summary>Apply this transform to a rectangle</summary>
 		public static Rectangle TransformRect(this Matrix m, Rectangle rect)
@@ -432,6 +436,12 @@ namespace pr.extn
 		public static int ToAbgr(this Color col)
 		{
 			return unchecked((int)(((uint)col.A << 24) | ((uint)col.B << 16) | ((uint)col.G << 8) | ((uint)col.R << 0)));
+		}
+
+		/// <summary>Gets the 32-bit ARGB values of this Color structure as an unsigned int</summary>
+		public static uint ToArgbU(this Color col)
+		{
+			return unchecked((uint)col.ToArgb());
 		}
 
 		/// <summary>Convert this colour to it's associated grey-scale value</summary>

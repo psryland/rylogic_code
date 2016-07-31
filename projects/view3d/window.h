@@ -85,21 +85,23 @@ namespace view3d
 			m_light.m_direction      = -pr::v4ZAxis;
 
 			// Create the focus point/origin models
-			pr::v4 verts[] =
-			{
-				pr::v4( 0.0f,  0.0f,  0.0f, 1.0f),
-				pr::v4( 1.0f,  0.0f,  0.0f, 1.0f),
-				pr::v4( 0.0f,  0.0f,  0.0f, 1.0f),
-				pr::v4( 0.0f,  1.0f,  0.0f, 1.0f),
-				pr::v4( 0.0f,  0.0f,  0.0f, 1.0f),
-				pr::v4( 0.0f,  0.0f,  1.0f, 1.0f),
-			};
-			pr::Colour32 coloursFF[] = { 0xFFFF0000, 0xFFFF0000, 0xFF00FF00, 0xFF00FF00, 0xFF0000FF, 0xFF0000FF };
-			pr::Colour32 colours80[] = { 0xFF800000, 0xFF800000, 0xFF008000, 0xFF008000, 0xFF000080, 0xFF000080 };
-			pr::uint16 lines[]       = { 0, 1, 2, 3, 4, 5 };
-			m_focus_point .m_model = pr::rdr::ModelGenerator<>::Mesh(m_rdr, pr::rdr::EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, PR_COUNTOF(coloursFF), coloursFF, 0, 0);
+			auto cdata = pr::rdr::MeshCreationData()
+				.verts({
+					pr::v4( 0.0f,  0.0f,  0.0f, 1.0f),
+					pr::v4( 1.0f,  0.0f,  0.0f, 1.0f),
+					pr::v4( 0.0f,  0.0f,  0.0f, 1.0f),
+					pr::v4( 0.0f,  1.0f,  0.0f, 1.0f),
+					pr::v4( 0.0f,  0.0f,  0.0f, 1.0f),
+					pr::v4( 0.0f,  0.0f,  1.0f, 1.0f)})
+				.indices({ 0, 1, 2, 3, 4, 5 })
+				.nuggets({ pr::rdr::NuggetProps(pr::rdr::EPrim::LineList, pr::rdr::EGeom::Vert|pr::rdr::EGeom::Colr) });
+
+			cdata.colours({ 0xFFFF0000, 0xFFFF0000, 0xFF00FF00, 0xFF00FF00, 0xFF0000FF, 0xFF0000FF });
+			m_focus_point .m_model = pr::rdr::ModelGenerator<>::Mesh(m_rdr, cdata);
 			m_focus_point .m_i2w   = pr::m4x4Identity;
-			m_origin_point.m_model = pr::rdr::ModelGenerator<>::Mesh(m_rdr, pr::rdr::EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, PR_COUNTOF(colours80), colours80, 0, 0);
+			
+			cdata.colours({ 0xFF800000, 0xFF800000, 0xFF008000, 0xFF008000, 0xFF000080, 0xFF000080 });
+			m_origin_point.m_model = pr::rdr::ModelGenerator<>::Mesh(m_rdr, cdata);
 			m_origin_point.m_i2w   = pr::m4x4Identity;
 		}
 		Window(Window const&) = delete;

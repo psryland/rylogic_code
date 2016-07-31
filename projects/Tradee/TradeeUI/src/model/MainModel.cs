@@ -1,11 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO.Pipes;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading;
+using System.Windows.Threading;
 using pr.container;
 using pr.extn;
+using pr.gui;
+using pr.maths;
 using pr.util;
 
 namespace Tradee
@@ -13,28 +16,54 @@ namespace Tradee
 	/// <summary>Container object for the main app logic</summary>
 	public class MainModel :IDisposable
 	{
-		public MainModel(MainUI owner)
+		public MainModel(MainUI owner, Settings settings)
 		{
-			Owner      = owner;
-			MarketData = new MarketDataDB();
-			Alarms     = new AlarmModel();
-			SnR        = new SupportResist(MarketData);
+			Owner           = owner;
+			Settings        = settings;
+			Trades          = new BindingSource<Trade> { DataSource = new BindingListEx<Trade>() , PerItemClear = true };
+			TradeDataSource = new TradeeClient(DispatchMsg);
+			MarketData      = new MarketData(this);
+			Alarms          = new AlarmModel();
+			SnR             = new SupportResist(this);
 		}
 		public void Dispose()
 		{
-			RunServer  = false;
-			SnR        = null;
-			Alarms     = null;
-			MarketData = null;
+			TradeDataSource = null;
+			SnR             = null;
+			Alarms          = null;
+			MarketData      = null;
 		}
 
 		/// <summary>Owner window</summary>
 		public MainUI Owner { get; private set; }
 
-		/// <summary>The store of market data</summary>
-		public MarketDataDB MarketData
+		/// <summary>Application settings</summary>
+		public Settings Settings { get; private set; }
+
+		/// <summary>All trades, past, present, and future</summary>
+		public BindingSource<Trade> Trades
 		{
-			get { return m_market_data; }
+			[DebuggerStepThrough]get { return m_impl_trades; }
+			private set
+			{
+				if (m_impl_trades == value) return;
+				if (m_impl_trades != null)
+				{
+					m_impl_trades.ListChanging -= HandleTradesListChanging;
+				}
+				m_impl_trades = value;
+				if (m_impl_trades != null)
+				{
+					m_impl_trades.ListChanging += HandleTradesListChanging;
+				}
+			}
+		}
+		private BindingSource<Trade> m_impl_trades;
+
+		/// <summary>The store of market data</summary>
+		public MarketData MarketData
+		{
+			[DebuggerStepThrough] get { return m_market_data; }
 			private set
 			{
 				if (m_market_data == value) return;
@@ -42,12 +71,12 @@ namespace Tradee
 				m_market_data = value;
 			}
 		}
-		private MarketDataDB m_market_data;
+		private MarketData m_market_data;
 
 		/// <summary>Alarm app logic</summary>
 		public AlarmModel Alarms
 		{
-			get { return m_alarms; }
+			[DebuggerStepThrough] get { return m_alarms; }
 			private set
 			{
 				if (m_alarms == value) return;
@@ -60,7 +89,7 @@ namespace Tradee
 		/// <summary>Support and resistance detector</summary>
 		public SupportResist SnR
 		{
-			get { return m_snr; }
+			[DebuggerStepThrough] get { return m_snr; }
 			private set
 			{
 				if (m_snr == value) return;
@@ -70,105 +99,100 @@ namespace Tradee
 		}
 		private SupportResist m_snr;
 
-		/// <summary>True while the pipe server thread is running</summary>
-		public bool RunServer
+		/// <summary>Add a chart to the UI</summary>
+		public void AddChart(Instrument instr)
 		{
-			get { return m_srv != null; }
+			Owner.AddChart(new ChartUI(this, instr, null));
+		}
+
+		/// <summary>The connection to the trade data source</summary>
+		public TradeeClient TradeDataSource
+		{
+			[DebuggerStepThrough] get { return m_client; }
 			set
 			{
-				if (RunServer == value) return;
-				if (value)
-				{
-					// The background thread for servicing the clients
-					m_srv = new Thread(new ThreadStart(() =>
-					{
-						m_srv.Name = "Pipe Server";
-						for (;RunServer;)
-						{
-							try
-							{
-								//'use a semaphore
-								// Wait for the next client connection
-								var pipe = new NamedPipeServerStream("TradeePipeIn", PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Message, PipeOptions.None) { ReadMode = PipeTransmissionMode.Message };
-								pipe.WaitForConnection();
-								ThreadPool.QueueUserWorkItem(p =>
-								{
-									// Read and dispatch the message from the pipe
-									try
-									{
-										var pipe_ = (NamedPipeServerStream)p;
-										var obj = new BinaryFormatter().Deserialize(pipe_);
-										if (obj != null)
-											Owner.BeginInvoke(() => DispatchMsg(obj));
-									}
-									catch (Exception ex)
-									{
-										Debug.WriteLine("De-serialisation failed: {0}".Fmt(ex.MessageFull()));
-									}
-								}, pipe);
-							}
-							catch (Exception ex)
-							{
-								Debug.WriteLine("Pipe server failed: {0}".Fmt(ex.MessageFull()));
-							}
-						}
-					}));
-					m_srv.Start();
-				}
-				else
-				{
-					var srv = m_srv;
-					m_srv = null; // Signal thread exit
-					try { new NamedPipeClientStream(".", "TradeePipeIn").Connect(); } catch { } // Connect to wake up from WaitForConnection
-					srv.Join();
-				}
+				if (m_client == value) return;
+				Util.Dispose(ref m_client);
+				m_client = value;
 			}
 		}
-		private Thread m_srv;
+		private TradeeClient m_client;
 
-		/// <summary>Handle messages received on the pipe</summary>
-		private void DispatchMsg(object obj)
+		/// <summary>Handle messages received from clients</summary>
+		private void DispatchMsg(object msg)
 		{
+			// Ignore messages after dispose
+			if (TradeDataSource == null)
+				return;
+
 			// Dispatch received messages
-			switch (obj.GetType().Name)
+			switch (msg.GetType().Name)
 			{
 			default:
 				{
-					Owner.Status.SetStatusMessage(msg:"Unknown Message Type {0} received".Fmt(obj.GetType().Name), fr_color:Color.Red, display_time:TimeSpan.FromSeconds(5));
+					Owner.Status.SetStatusMessage(msg:"Unknown Message Type {0} received".Fmt(msg.GetType().Name), fr_color:Color.Red, display_time:TimeSpan.FromSeconds(5));
 					break;
 				}
-			case nameof(HelloMsg):
+			case nameof(InMsg.TestMsg):
 				{
-					Owner.Status.SetStatusMessage(msg:((HelloMsg)obj).Msg, display_time:TimeSpan.FromMilliseconds(500));
+					var m = (InMsg.TestMsg)msg;
+					MsgBox.Show(Owner, m.Text, "Test Msg Received");
 					break;
 				}
-			case nameof(Candles):
+			case nameof(InMsg.CandleData):
 				{
-					MarketData.Add((Candles)obj);
+					var cd = (InMsg.CandleData)msg;
+					if (cd.Candle  != null) MarketData[cd.Symbol].Add(cd.TimeFrame, cd.Candle);
+					if (cd.Candles != null) MarketData[cd.Symbol].Add(cd.TimeFrame, cd.Candles);
 					break;
 				}
-			case nameof(Candle):
+			case nameof(InMsg.AccountStatus):
 				{
-					MarketData.Add((Candle)obj);
 					break;
 				}
-			case nameof(AccountStatus):
+			case nameof(InMsg.SymbolData):
 				{
+					var sd = (InMsg.SymbolData)msg;
+					MarketData[sd.Symbol].PriceData = sd.Data;
 					break;
 				}
 			}
 		}
 
-		/// <summary>Debug dump</summary>
-		public void Dump()
+		/// <summary>Create a new order</summary>
+		public void CreateNewTrade(Instrument instrument, ETradeType tt, ChartUI chart = null)
 		{
-			foreach (var sym in SnR.Values)
+			Trades.Add(new Trade(this, instrument, tt, chart));
+		}
+
+		/// <summary>Ask the trade data source for an instrument by symbol name</summary>
+		public void RequestInstrument(string sym, ETimeFrame tf)
+		{
+			var msg = new OutMsg.ChangeInstrument(sym, tf);
+			TradeDataSource.Post(msg);
+		}
+
+		/// <summary>Handle trades added or removed from the Trades collection</summary>
+		private void HandleTradesListChanging(object sender, ListChgEventArgs<Trade> e)
+		{
+			var trade = e.Item;
+			switch (e.ChangeType)
 			{
-				var csv = new CSVData();
-				foreach (var lvl in sym.Levels)
-					csv.Add(lvl.Price, lvl.Volume);
-				csv.Save("P:\\dump\\dump.csv");
+			case ListChg.ItemAdded:
+				{
+					break;
+				}
+			case ListChg.ItemRemoved:
+				{
+					// Safety first...
+					if (Bit.AnySet(trade.State, Trade.EState.PendingOrder|Trade.EState.ActivePosition))
+						throw new Exception("Cannot delete a trade with active or pending orders");
+
+					trade.Dispose();
+					break;
+				}
 			}
 		}
 	}
 }
+

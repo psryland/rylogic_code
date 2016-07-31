@@ -457,7 +457,7 @@ namespace pr.gui
 				};
 
 				// Get the pointer to the FORMATRANGE structure in non-GC memory
-				using (var lparam = MarshalEx.StructureToPtr(fmt_range))
+				using (var lparam = Marshal_.StructureToPtr(fmt_range))
 				{
 					// Send the rendered data for printing, then release and cached info
 					var res = Win32.SendMessage(rtb_handle, (uint)Win32.EM_FORMATRANGE,  new IntPtr(1), lparam);
@@ -486,7 +486,7 @@ namespace pr.gui
 				m_text_document = IntPtr.Zero;
 
 				// Allocate the ptr that EM_GETOLEINTERFACE will fill in.
-				using (var ptr = MarshalEx.AllocCoTaskMem(typeof(IntPtr), 1))
+				using (var ptr = Marshal_.AllocCoTaskMem(typeof(IntPtr), 1))
 				{
 					//Marshal.WriteIntPtr(ptr, IntPtr.Zero);  // Clear it.
 					if (Win32.SendMessage(rtb.Handle, Win32.EM_GETOLEINTERFACE, IntPtr.Zero, ptr) == 0)
@@ -511,8 +511,8 @@ namespace pr.gui
 			}
 			public virtual void Dispose()
 			{
-				MarshalEx.Release(ref m_rich_edit_ole);
-				MarshalEx.Release(ref m_text_document);
+				Marshal_.Release(ref m_rich_edit_ole);
+				Marshal_.Release(ref m_text_document);
 			}
 
 			/// <summary>Get the IRichEditOle interface </summary>

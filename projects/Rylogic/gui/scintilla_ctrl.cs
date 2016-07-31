@@ -234,7 +234,7 @@ namespace pr.gui
 		}
 		protected override void OnHandleCreated(EventArgs e)
 		{
-			m_func = MarshalEx.PtrToDelegate<Sci.DirectFunction>((IntPtr)Win32.SendMessage(Handle, Sci.SCI_GETDIRECTFUNCTION, 0, 0));
+			m_func = Marshal_.PtrToDelegate<Sci.DirectFunction>((IntPtr)Win32.SendMessage(Handle, Sci.SCI_GETDIRECTFUNCTION, 0, 0));
 			m_ptr  = (IntPtr)Win32.SendMessage(Handle, Sci.SCI_GETDIRECTPOINTER, 0, 0);
 			Cmd(Sci.SCI_SETCODEPAGE, Sci.SC_CP_UTF8, 0);
 			Cmd(Sci.SCI_CLEARALL);
@@ -285,8 +285,8 @@ namespace pr.gui
 			case Win32.WM_REFLECT + Win32.WM_NOTIFY:
 				#region
 				{
-					var nmhdr = MarshalEx.PtrToStructure<Win32.NMHDR>(m.LParam);
-					var notif = MarshalEx.PtrToStructure<Sci.SCNotification>(m.LParam);
+					var nmhdr = Marshal_.PtrToStructure<Win32.NMHDR>(m.LParam);
+					var notif = Marshal_.PtrToStructure<Sci.SCNotification>(m.LParam);
 					HandleSCNotification(ref nmhdr, ref notif);
 					break;
 				}

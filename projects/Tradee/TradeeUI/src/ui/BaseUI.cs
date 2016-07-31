@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows.Forms;
 using pr.gui;
 using pr.util;
@@ -24,7 +25,7 @@ namespace Tradee
 		/// <summary>Provides support for the DockContainer</summary>
 		[Browsable(false)] public DockControl DockControl
 		{
-			get { return m_impl_dock_control; }
+			[DebuggerStepThrough] get { return m_impl_dock_control; }
 			private set
 			{
 				if (m_impl_dock_control == value) return;
@@ -37,23 +38,29 @@ namespace Tradee
 		/// <summary>The parent UI</summary>
 		protected MainModel Model
 		{
-			get { return m_model; }
+			[DebuggerStepThrough] get { return m_model; }
 			set
 			{
 				if (m_model == value) return;
 				if (m_model != null)
 				{
 				}
-				SetMainCore(value);
+				SetModelCore(value);
 				if (m_model != null)
 				{
 				}
 			}
 		}
-		protected void SetMainCore(MainModel model)
+		protected virtual void SetModelCore(MainModel model)
 		{
 			m_model = model;
 		}
 		private MainModel m_model;
+
+		/// <summary>Application settings</summary>
+		protected Settings Settings
+		{
+			get { return Model.Settings; }
+		}
 	}
 }

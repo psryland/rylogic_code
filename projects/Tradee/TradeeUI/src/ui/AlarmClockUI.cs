@@ -62,6 +62,7 @@ namespace Tradee
 		private void InitializeComponent()
 		{
 			this.components = new System.ComponentModel.Container();
+			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(AlarmClockUI));
 			this.m_tsc = new pr.gui.ToolStripContainer();
 			this.m_grid = new System.Windows.Forms.DataGridView();
@@ -96,10 +97,25 @@ namespace Tradee
 			// 
 			// m_grid
 			// 
+			this.m_grid.AllowUserToAddRows = false;
+			this.m_grid.AllowUserToResizeRows = false;
+			this.m_grid.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+			this.m_grid.AutoSizeRowsMode = System.Windows.Forms.DataGridViewAutoSizeRowsMode.AllCells;
 			this.m_grid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+			this.m_grid.ColumnHeadersVisible = false;
+			dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+			dataGridViewCellStyle1.BackColor = System.Drawing.SystemColors.Window;
+			dataGridViewCellStyle1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+			dataGridViewCellStyle1.ForeColor = System.Drawing.SystemColors.ControlText;
+			dataGridViewCellStyle1.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+			dataGridViewCellStyle1.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
+			dataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
+			this.m_grid.DefaultCellStyle = dataGridViewCellStyle1;
 			this.m_grid.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_grid.Location = new System.Drawing.Point(0, 0);
 			this.m_grid.Name = "m_grid";
+			this.m_grid.RowHeadersVisible = false;
+			this.m_grid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
 			this.m_grid.Size = new System.Drawing.Size(392, 362);
 			this.m_grid.TabIndex = 0;
 			// 
@@ -111,7 +127,7 @@ namespace Tradee
             this.m_btn_add_reminder});
 			this.m_ts.Location = new System.Drawing.Point(3, 0);
 			this.m_ts.Name = "m_ts";
-			this.m_ts.Size = new System.Drawing.Size(79, 39);
+			this.m_ts.Size = new System.Drawing.Size(48, 39);
 			this.m_ts.TabIndex = 0;
 			// 
 			// m_btn_add_reminder

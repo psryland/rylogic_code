@@ -231,7 +231,7 @@ namespace pr.gui
 			{
 				p.Length -= parts[i].Length + 1;
 				if (p.Length == 0 ||
-					!PathEx.EnumFileSystem(p.ToString(), SearchOption.TopDirectoryOnly)
+					!Path_.EnumFileSystem(p.ToString(), SearchOption.TopDirectoryOnly)
 					.Where(x => x.IsDirectory)
 					.All(x => Paths.BinarySearch(x.FullPath, Path.Compare) >= 0))
 					break; // Not all child paths of 'p' are in 'Paths'
@@ -287,7 +287,7 @@ namespace pr.gui
 				// Add the child paths for the ancestral siblings of 'path'
 				for (++part_idx; part_idx != parts.Length; ++part_idx)
 				{
-					foreach (var sib in PathEx.EnumFileSystem(path.Text.Substring(0, p.Length), SearchOption.TopDirectoryOnly).Where(x => x.IsDirectory))
+					foreach (var sib in Path_.EnumFileSystem(path.Text.Substring(0, p.Length), SearchOption.TopDirectoryOnly).Where(x => x.IsDirectory))
 					{
 						if (string.CompareOrdinal(parts[part_idx], sib.FileName.ToLowerInvariant()) == 0) continue;
 						Paths.AddOrdered(sib.FullPath, Path.Compare);
@@ -335,7 +335,7 @@ namespace pr.gui
 		private static IEnumerable<TreeNode> GetChildNodes(TreeNode node)
 		{
 			var path = new Path(node.FullPath);
-			return PathEx.EnumFileSystem(path.Name, SearchOption.TopDirectoryOnly)
+			return Path_.EnumFileSystem(path.Name, SearchOption.TopDirectoryOnly)
 				.Where(fi => fi.IsDirectory)
 				.Select(fi => new TreeNode(fi.FileName, node.TriState));
 		}

@@ -21,7 +21,7 @@ namespace RyLogViewer
 			try
 			{
 				// Copy the settings to a tmp file so that we don't trash the normal settings
-				if (PathEx.FileExists(startup_options.SettingsPath))
+				if (Path_.FileExists(startup_options.SettingsPath))
 					File.Copy(startup_options.SettingsPath, tmp_settings_path);
 				else
 					new Settings().Save(tmp_settings_path);
@@ -75,7 +75,7 @@ namespace RyLogViewer
 			}
 			finally
 			{
-				if (PathEx.FileExists(tmp_settings_path))
+				if (Path_.FileExists(tmp_settings_path))
 					File.Delete(tmp_settings_path);
 			}
 		}

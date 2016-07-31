@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Drawing;
 using System.Reflection;
 using System.Windows.Forms;
 using pr.common;
@@ -13,6 +14,58 @@ namespace pr.gui
 		{
 			m_last_hovered_item = null;
 		}
+
+		/// <summary>Set the draw mode for the list box</summary>
+		public override DrawMode DrawMode
+		{
+			get { return base.DrawMode; }
+			set
+			{
+				base.DrawMode = value;
+
+				// Set some control styles on owner drawn mode to fix the flicker problems
+				if (value == DrawMode.OwnerDrawFixed || value == DrawMode.OwnerDrawVariable)
+				{
+					SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
+					SetStyle(ControlStyles.ResizeRedraw, true);
+					SetStyle(ControlStyles.UserPaint, true);
+				}
+			}
+		}
+
+		/// <summary>Override OnPaint for owner drawn mode, to stop the flicker</summary>
+		protected override void OnPaint(PaintEventArgs e)  
+		{
+			// Fill the clip area
+			var region = new Region(e.ClipRectangle);  
+			e.Graphics.FillRegion(new SolidBrush(BackColor), region);
+
+			if (Items.Count == 0)
+			{
+				base.OnPaint(e);
+				return;
+			}
+
+			if (DrawMode == DrawMode.OwnerDrawFixed || DrawMode == DrawMode.OwnerDrawVariable)
+			{
+				// Owner-Draw each item
+				for (int i = 0; i < Items.Count; ++i)  
+				{
+					var rect = GetItemRectangle(i);  
+					if (!e.ClipRectangle.IntersectsWith(rect))
+						continue;
+
+					var state = 
+						(SelectionMode == SelectionMode.One && SelectedIndex == i) ||
+						(SelectionMode == SelectionMode.MultiSimple && SelectedIndices.Contains(i)) ||
+						(SelectionMode == SelectionMode.MultiExtended && SelectedIndices.Contains(i))
+						? DrawItemState.Selected : DrawItemState.Default;
+					OnDrawItem(new DrawItemEventArgs(e.Graphics, Font, rect, i, state, ForeColor, BackColor));  
+					region.Complement(rect);
+				}
+			}
+			base.OnPaint(e);
+		}  
 
 		/// <summary>The property of the data bound items to display</summary>
 		public string DisplayProperty

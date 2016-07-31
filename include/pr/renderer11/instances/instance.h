@@ -16,8 +16,6 @@
 //  component
 //  component
 #pragma once
-#ifndef PR_RDR_INSTANCES_INSTANCE_H
-#define PR_RDR_INSTANCES_INSTANCE_H
 
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/models/model.h"
@@ -141,5 +139,3 @@ namespace pr
 		}
 	}
 }
-
-#endif

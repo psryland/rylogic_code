@@ -66,3 +66,4 @@ tools/GrepWin/grepwin.ini
 *.log
 Rylogic/resources/*.html
 RylogicRB.sln
+build/*.ldr

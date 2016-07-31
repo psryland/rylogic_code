@@ -1116,7 +1116,7 @@ namespace ldr
 		using namespace pr::rdr;
 		{
 			// Create the focus point models
-			static pr::v4 const verts[] = // 'static' is a workaround to make 'pt' aligned in VS2015 update 2
+			static pr::v4 verts_[] = // Work around for VS2015 alignment bug
 			{
 				pr::v4(0.0f,  0.0f,  0.0f, 1.0f),
 				pr::v4(1.0f,  0.0f,  0.0f, 1.0f),
@@ -1125,22 +1125,24 @@ namespace ldr
 				pr::v4(0.0f,  0.0f,  0.0f, 1.0f),
 				pr::v4(0.0f,  0.0f,  1.0f, 1.0f),
 			};
-			pr::Colour32 const coloursFF[] = { 0xFFFF0000, 0xFFFF0000, 0xFF00FF00, 0xFF00FF00, 0xFF0000FF, 0xFF0000FF };
-			pr::Colour32 const colours80[] = { 0xFF800000, 0xFF800000, 0xFF008000, 0xFF008000, 0xFF000080, 0xFF000080 };
-			pr::uint16 const lines[]       = { 0, 1, 2, 3, 4, 5 };
-			assert(pr::maths::is_aligned(&verts[0]));
+			auto cdata = pr::rdr::MeshCreationData()
+				.verts(verts_, _countof(verts_))
+				.indices({ 0, 1, 2, 3, 4, 5 })
+				.nuggets({NuggetProps(EPrim::LineList, EGeom::Vert|EGeom::Colr)});
 
-			m_focus_point .m_model = ModelGenerator<>::Mesh(m_rdr, EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, PR_COUNTOF(coloursFF), coloursFF);
+			cdata.colours({ 0xFFFF0000, 0xFFFF0000, 0xFF00FF00, 0xFF00FF00, 0xFF0000FF, 0xFF0000FF });
+			m_focus_point .m_model = ModelGenerator<>::Mesh(m_rdr, cdata);
 			m_focus_point .m_model->m_name = "focus point";
 			m_focus_point .m_i2w   = pr::m4x4Identity;
 
-			m_origin_point.m_model = ModelGenerator<>::Mesh(m_rdr, EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, PR_COUNTOF(colours80), colours80);
+			cdata.colours({ 0xFF800000, 0xFF800000, 0xFF008000, 0xFF008000, 0xFF000080, 0xFF000080 });
+			m_origin_point.m_model = ModelGenerator<>::Mesh(m_rdr, cdata);
 			m_origin_point.m_model->m_name = "origin point";
 			m_origin_point.m_i2w   = pr::m4x4Identity;
 		}
 		{
 			// Create the selection box model
-			static pr::v4 const verts[] = // 'static' is a workaround to make 'pt' aligned in VS2015 update 2
+			static pr::v4 verts_[] = // Work around for VS2015 alignment bug
 			{
 				pr::v4(-0.5f, -0.5f, -0.5f, 1.0f), pr::v4(-0.4f, -0.5f, -0.5f, 1.0f), pr::v4(-0.5f, -0.4f, -0.5f, 1.0f), pr::v4(-0.5f, -0.5f, -0.4f, 1.0f),
 				pr::v4( 0.5f, -0.5f, -0.5f, 1.0f), pr::v4( 0.5f, -0.4f, -0.5f, 1.0f), pr::v4( 0.4f, -0.5f, -0.5f, 1.0f), pr::v4( 0.5f, -0.5f, -0.4f, 1.0f),
@@ -1151,43 +1153,46 @@ namespace ldr
 				pr::v4( 0.5f,  0.5f,  0.5f, 1.0f), pr::v4( 0.4f,  0.5f,  0.5f, 1.0f), pr::v4( 0.5f,  0.4f,  0.5f, 1.0f), pr::v4( 0.5f,  0.5f,  0.4f, 1.0f),
 				pr::v4(-0.5f,  0.5f,  0.5f, 1.0f), pr::v4(-0.5f,  0.4f,  0.5f, 1.0f), pr::v4(-0.4f,  0.5f,  0.5f, 1.0f), pr::v4(-0.5f,  0.5f,  0.4f, 1.0f),
 			};
-			pr::uint16 const lines[] =
-			{
-				0,  1,  0,  2,  0,  3,
-				4,  5,  4,  6,  4,  7,
-				8,  9,  8, 10,  8, 11,
-				12, 13, 12, 14, 12, 15,
-				16, 17, 16, 18, 16, 19,
-				20, 21, 20, 22, 20, 23,
-				24, 25, 24, 26, 24, 27,
-				28, 29, 28, 30, 28, 31,
-			};
-			assert(pr::maths::is_aligned(&verts[0]));
-			m_selection_box.m_model = ModelGenerator<>::Mesh(m_rdr, EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines);
+			auto cdata = pr::rdr::MeshCreationData()
+				.verts(verts_, _countof(verts_))
+				.indices({
+					0,  1,  0,  2,  0,  3,
+					4,  5,  4,  6,  4,  7,
+					8,  9,  8, 10,  8, 11,
+					12, 13, 12, 14, 12, 15,
+					16, 17, 16, 18, 16, 19,
+					20, 21, 20, 22, 20, 23,
+					24, 25, 24, 26, 24, 27,
+					28, 29, 28, 30, 28, 31})
+				.nuggets({NuggetProps(EPrim::LineList, EGeom::Vert)});
+
+			m_selection_box.m_model = ModelGenerator<>::Mesh(m_rdr, cdata);
 			m_selection_box.m_model->m_name = "selection box";
 			m_selection_box.m_i2w   = pr::m4x4Identity;
 		}
 		{
 			// Create a bounding box model
-			static pr::v4 const verts[] = // 'static' is a workaround to make 'pt' aligned in VS2015 update 2
+			static pr::v4 verts_[] = // Work around for VS2015 alignment bug
 			{
 				pr::v4(-0.5f, -0.5f, -0.5f, 1.0f),
-				pr::v4(0.5f, -0.5f, -0.5f, 1.0f),
-				pr::v4(0.5f,  0.5f, -0.5f, 1.0f),
-				pr::v4(-0.5f,  0.5f, -0.5f, 1.0f),
-				pr::v4(-0.5f, -0.5f,  0.5f, 1.0f),
-				pr::v4(0.5f, -0.5f,  0.5f, 1.0f),
-				pr::v4(0.5f,  0.5f,  0.5f, 1.0f),
-				pr::v4(-0.5f,  0.5f,  0.5f, 1.0f),
+				pr::v4(+0.5f, -0.5f, -0.5f, 1.0f),
+				pr::v4(+0.5f, +0.5f, -0.5f, 1.0f),
+				pr::v4(-0.5f, +0.5f, -0.5f, 1.0f),
+				pr::v4(-0.5f, -0.5f, +0.5f, 1.0f),
+				pr::v4(+0.5f, -0.5f, +0.5f, 1.0f),
+				pr::v4(+0.5f, +0.5f, +0.5f, 1.0f),
+				pr::v4(-0.5f, +0.5f, +0.5f, 1.0f),
 			};
-			pr::uint16 const lines[] =
-			{
-				0, 1, 1, 2, 2, 3, 3, 0,
-				4, 5, 5, 6, 6, 7, 7, 4,
-				0, 4, 1, 5, 2, 6, 3, 7
-			};
-			assert(pr::maths::is_aligned(&verts[0]));
-			m_bbox_model.m_model = ModelGenerator<>::Mesh(m_rdr, EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, 1, &pr::Colour32Blue);
+			auto cdata = pr::rdr::MeshCreationData()
+				.verts(verts_, _countof(verts_))
+				.indices({
+					0, 1, 1, 2, 2, 3, 3, 0,
+					4, 5, 5, 6, 6, 7, 7, 4,
+					0, 4, 1, 5, 2, 6, 3, 7})
+				.colours({pr::Colour32Blue})
+				.nuggets({NuggetProps(EPrim::LineList)});
+
+			m_bbox_model.m_model = ModelGenerator<>::Mesh(m_rdr, cdata);
 			m_bbox_model.m_model->m_name = "bbox";
 			m_bbox_model.m_i2w   = pr::m4x4Identity;
 		}

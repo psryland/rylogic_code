@@ -867,7 +867,7 @@ namespace pr.gui
 				foreach (var c in Child)
 				{
 					if (c.Ctrl is Branch) continue;
-					if (c.DockPane?.Content.Count == 0)
+					if (c.DockPane?.Content.Count == 0 && c.DockSite != EDockSite.Centre)
 					{
 						// Dispose the pane
 						var pane = c.DockPane;
@@ -2246,6 +2246,7 @@ namespace pr.gui
 					var cmenu = new ContextMenuStrip();
 					using (cmenu.SuspendLayout(true))
 					{
+						cmenu.Items.Add2(new ToolStripSeparator());
 						{ // Float the pane in a new window
 							var opt = cmenu.Items.Add2(new ToolStripMenuItem("Float"));
 							cmenu.Opening += (s,a) =>
@@ -2812,6 +2813,7 @@ namespace pr.gui
 				{
 					if (m_impl_tab_text == value) return;
 					m_impl_tab_text = value;
+					DockPane?.TitleCtrl.Invalidate();
 					DockPane?.TabStripCtrl.Invalidate();
 				}
 			}
