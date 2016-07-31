@@ -197,6 +197,12 @@ namespace Tradee
 			Volume = rhs.Volume;
 		}
 
+		/// <summary>The time stamp of this candle in local time zone time</summary>
+		public DateTime LocalTimestamp
+		{
+			get { return TimeZone.CurrentTimeZone.ToLocalTime(new DateTime(Timestamp, DateTimeKind.Utc)); }
+		}
+
 		/// <summary>Friendly print</summary>
 		public override string ToString()
 		{

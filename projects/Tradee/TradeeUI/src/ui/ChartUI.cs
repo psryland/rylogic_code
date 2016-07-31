@@ -537,30 +537,37 @@ namespace Tradee
 		/// <summary>Convert the XAxis values into pretty datetime strings</summary>
 		private string HandleChartXAxisLabels(double x, double step)
 		{
-			return x.ToString();
+			//return x.ToString();
 			if (Instrument == null)
 				return string.Empty;
 
-			// Get the index range of candles from the previous tick to the current tick
-			var range = Instrument.IndexRange((int)(Instrument.Count + x - step), (int)(Instrument.Count + x));
+			const string long_fmt  = "ddd dd-MMM-yy'\r\n'HH:mm";
+			const string short_fmt = "HH:mm";
 
-			// If the tick mark is before the start of the data or
-			// beyond the end of the data, return empty string.
-			if (x < range.Begini || x >= range.Endi)
+			// Get the index range from 'x-step' to 'x'
+			var i0 = (int)(Instrument.Count + x - step);
+			var i1 = (int)(Instrument.Count + x);
+			if (i1 < 0 || i1 >= Instrument.Count)
 				return string.Empty;
 
-			// Get the timestamps of the candles at each end of the range
-			var ticks0 = Instrument.PriceHistory[range.Begini].Timestamp;
-			var ticks1 = Instrument.PriceHistory[range.Endi-1].Timestamp;
-			if (ticks0 < 0 || ticks0 > DateTime.MaxValue.Ticks ||
-				ticks1 < 0 || ticks1 > DateTime.MaxValue.Ticks)
+			// Get the time stamp of the candle at the tick mark in local time
+			var dt_curr = TimeZone.CurrentTimeZone.ToLocalTime(new DateTime(Instrument.PriceHistory[i1].Timestamp, DateTimeKind.Utc));
+			if (i1 == 0 || x - step < m_chart.XAxis.Min) // First tick on the x axis
+				return dt_curr.ToString(long_fmt);
+
+			// If the current tick mark represents the same candle as the previous one, no text is required
+			if (i0 == i1)
 				return string.Empty;
 
-			// Return the time string "HH:mm", unless the previous axis tick mark is a
-			// different day, in which case, display the date instead.
-			var dt0 = TimeZone.CurrentTimeZone.ToLocalTime(new DateTime(ticks0, DateTimeKind.Utc));
-			var dt1 = TimeZone.CurrentTimeZone.ToLocalTime(new DateTime(ticks1, DateTimeKind.Utc));
-			return dt0.Date != dt1.Date ? dt0.ToString("dd-MMM-yy'\r\n'HH:mm") : dt0.ToString("HH:mm");
+			// Get the time stamp of the candle at the previous tick mark in local time
+			if (i0 >= 0 && i0 < Instrument.Count)
+			{
+				var dt_prev = TimeZone.CurrentTimeZone.ToLocalTime(new DateTime(Instrument.PriceHistory[i0].Timestamp, DateTimeKind.Utc));
+				if (dt_curr.Day != dt_prev.Day)
+					return dt_curr.ToString(long_fmt);
+			}
+
+			return dt_curr.ToString(short_fmt);
 		}
 
 		/// <summary>Convert the YAxis values into pretty price strings</summary>

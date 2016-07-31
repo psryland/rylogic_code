@@ -759,6 +759,24 @@ namespace pr.gui
 			public Rectangle ChartArea { get; private set; }
 		}
 
+		/// <summary>The client space area of the view3d part of the chart</summary>
+		private Rectangle ChartBounds
+		{
+			get { return Chart.Bounds; }
+		}
+
+		/// <summary>The client space area of the XAxis area of the chart</summary>
+		private Rectangle XAxisBounds
+		{
+			get { return Rectangle.FromLTRB(ChartBounds.Left, ChartBounds.Bottom, ChartBounds.Right, ClientSize.Height); }
+		}
+
+		/// <summary>The client space area of the YAxis area of the chart</summary>
+		private Rectangle YAxisBounds
+		{
+			get { return Rectangle.FromLTRB(0, ChartBounds.Top, ChartBounds.Left, ChartBounds.Bottom); }
+		}
+
 		#endregion
 
 		#region RdrOptions
@@ -1175,6 +1193,13 @@ namespace pr.gui
 
 		#region Navigation
 
+		[Flags] private enum EAxis
+		{
+			XAxis = 1 << 0,
+			YAxis = 1 << 1,
+			Both  = XAxis | YAxis,
+		}
+
 		/// <summary>Enable/Disable mouse navigation</summary>
 		[Browsable(false)]
 		public bool MouseNavigation
@@ -1203,6 +1228,9 @@ namespace pr.gui
 		/// <summary>The location in chart space of where the chart was "grabbed"</summary>
 		private PointF m_grab_location;
 
+		/// <summary>The allowed motion based on where the chart was grabbed</summary>
+		private EAxis m_drag_axis_allow;
+
 		/// <summary>Area selection, has width, height of zero when the user isn't selecting</summary>
 		private Rectangle m_selection;
 
@@ -1214,6 +1242,9 @@ namespace pr.gui
 			{
 			case MouseButtons.Left:
 				m_grab_location = ClientToChart(e.Location);
+				if (ChartBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.Both;
+				if (XAxisBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.XAxis;
+				if (YAxisBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.YAxis;
 				Cursor = Cursors.SizeAll;
 				MouseMove -= OnMouseChartDrag;
 				MouseMove += OnMouseChartDrag;
@@ -1314,10 +1345,17 @@ namespace pr.gui
 		private void OnMouseChartDrag(object sender, MouseEventArgs e)
 		{
 			var grab_loc = ChartToClient(m_grab_location);
-			var dx = e.Location.X - grab_loc.X;
-			var dy = e.Location.Y - grab_loc.Y;
-			if (dx*dx + dy*dy >= 25f) // must drag at least 5 pixels
-				PositionChart(e.Location, m_grab_location);
+			var drop_loc = e.Location;
+
+			// Limit the drag direction
+			if (!m_drag_axis_allow.HasFlag(EAxis.XAxis)) drop_loc.X = grab_loc.X;
+			if (!m_drag_axis_allow.HasFlag(EAxis.YAxis)) drop_loc.Y = grab_loc.Y;
+
+			// must drag at least 5 pixels
+			var dx = drop_loc.X - grab_loc.X;
+			var dy = drop_loc.Y - grab_loc.Y;
+			if (dx*dx + dy*dy >= 25f)
+				PositionChart(drop_loc, m_grab_location);
 		}
 
 		/// <summary>Handle mouse dragging to resize the area selection</summary>
