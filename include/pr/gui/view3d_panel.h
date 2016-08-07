@@ -21,7 +21,7 @@ namespace pr
 				bool                 m_show_focus_point; // True if the focus cross hair should be rendered
 
 				View3DPanelParams()
-					:m_error_cb([](void*, wchar_t const* msg){ throw std::exception(pr::Narrow(msg).c_str()); })
+					:m_error_cb([](void*, wchar_t const* msg){ throw std::exception(pr::gui::Narrow(msg).c_str()); })
 					,m_error_ctx()
 					,m_gdi_compat(false)
 					,m_show_focus_point(false)

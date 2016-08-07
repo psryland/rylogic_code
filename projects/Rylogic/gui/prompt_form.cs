@@ -164,7 +164,7 @@ namespace pr.gui
 			}
 			else
 			{
-				m_edit.HintState(TextBoxExtensions.EHintState.Uninitialised);
+				m_edit.HintState(TextBox_.EHintState.Uninitialised);
 				m_btn_ok.Enabled = true;
 			}
 		}

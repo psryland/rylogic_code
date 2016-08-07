@@ -28,6 +28,8 @@ namespace TestCS
 		private BindingSource<Thing> m_bs;
 		private BindingListEx<Thing> m_bl0;
 		private BrowsePathUI m_browse_path;
+		private ValueBox m_vb_value;
+		private Label m_lbl_vb_value;
 		private BindingListEx<Thing> m_bl1;
 
 		public SubclassedControlsUI()
@@ -111,6 +113,10 @@ namespace TestCS
 				m_timer.Enabled = true;
 			};
 
+			// Value Box
+			m_vb_value.ValueChanged += (s,a) => m_lbl_vb_value.Text = m_vb_value.Value.ToString();
+			m_vb_value.Value = 6.28;
+
 			// Init binding source
 			ChangeSource();
 		}
@@ -164,26 +170,21 @@ namespace TestCS
 		}
 
 		#region Windows Form Designer generated code
-
-		/// <summary>Required designer variable.</summary>
 		private System.ComponentModel.IContainer components = null;
-
-		/// <summary>
-		/// Required method for Designer support - do not modify
-		/// the contents of this method with the code editor.
-		/// </summary>
 		private void InitializeComponent()
 		{
 			this.components = new System.ComponentModel.Container();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
 			this.m_btn_test = new System.Windows.Forms.Button();
 			this.m_timer = new System.Windows.Forms.Timer(this.components);
+			this.m_browse_path = new pr.gui.BrowsePathUI();
 			this.m_pb = new pr.gui.TextProgressBar();
 			this.m_rtb = new pr.gui.RichTextBox();
 			this.m_lb = new pr.gui.ListBox();
 			this.m_dtp = new pr.gui.DateTimePicker();
 			this.m_cb = new pr.gui.ComboBox();
-			this.m_browse_path = new pr.gui.BrowsePathUI();
+			this.m_vb_value = new pr.gui.ValueBox();
+			this.m_lbl_vb_value = new System.Windows.Forms.Label();
 			this.SuspendLayout();
 			// 
 			// m_ts
@@ -197,17 +198,29 @@ namespace TestCS
 			// 
 			// m_btn_test
 			// 
-			this.m_btn_test.Location = new System.Drawing.Point(12, 224);
+			this.m_btn_test.Location = new System.Drawing.Point(12, 206);
 			this.m_btn_test.Name = "m_btn_test";
 			this.m_btn_test.Size = new System.Drawing.Size(75, 23);
 			this.m_btn_test.TabIndex = 5;
 			this.m_btn_test.Text = "Test";
 			this.m_btn_test.UseVisualStyleBackColor = true;
 			// 
+			// m_browse_path
+			// 
+			this.m_browse_path.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_browse_path.History = new string[0];
+			this.m_browse_path.Location = new System.Drawing.Point(12, 28);
+			this.m_browse_path.Name = "m_browse_path";
+			this.m_browse_path.Path = "";
+			this.m_browse_path.Size = new System.Drawing.Size(356, 40);
+			this.m_browse_path.TabIndex = 7;
+			this.m_browse_path.Type = pr.gui.BrowsePathUI.EType.File;
+			// 
 			// m_pb
 			// 
 			this.m_pb.ForeColor = System.Drawing.Color.Black;
-			this.m_pb.Location = new System.Drawing.Point(93, 224);
+			this.m_pb.Location = new System.Drawing.Point(93, 206);
 			this.m_pb.Name = "m_pb";
 			this.m_pb.Size = new System.Drawing.Size(246, 48);
 			this.m_pb.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
@@ -219,7 +232,7 @@ namespace TestCS
 			this.m_rtb.CurrentLineIndex = 0;
 			this.m_rtb.FirstVisibleLineIndex = 0;
 			this.m_rtb.LineCount = 0;
-			this.m_rtb.Location = new System.Drawing.Point(139, 110);
+			this.m_rtb.Location = new System.Drawing.Point(139, 92);
 			this.m_rtb.Name = "m_rtb";
 			this.m_rtb.Size = new System.Drawing.Size(200, 108);
 			this.m_rtb.TabIndex = 3;
@@ -229,7 +242,7 @@ namespace TestCS
 			// 
 			this.m_lb.DisplayProperty = null;
 			this.m_lb.FormattingEnabled = true;
-			this.m_lb.Location = new System.Drawing.Point(12, 110);
+			this.m_lb.Location = new System.Drawing.Point(12, 92);
 			this.m_lb.Name = "m_lb";
 			this.m_lb.Size = new System.Drawing.Size(121, 108);
 			this.m_lb.TabIndex = 2;
@@ -237,7 +250,7 @@ namespace TestCS
 			// m_dtp
 			// 
 			this.m_dtp.Kind = System.DateTimeKind.Unspecified;
-			this.m_dtp.Location = new System.Drawing.Point(139, 84);
+			this.m_dtp.Location = new System.Drawing.Point(139, 66);
 			this.m_dtp.MaxDate = new System.DateTime(9998, 12, 31, 0, 0, 0, 0);
 			this.m_dtp.MinDate = new System.DateTime(1753, 1, 1, 0, 0, 0, 0);
 			this.m_dtp.Name = "m_dtp";
@@ -249,27 +262,35 @@ namespace TestCS
 			// 
 			this.m_cb.DisplayProperty = null;
 			this.m_cb.FormattingEnabled = true;
-			this.m_cb.Location = new System.Drawing.Point(12, 83);
+			this.m_cb.Location = new System.Drawing.Point(12, 65);
 			this.m_cb.Name = "m_cb";
 			this.m_cb.PreserveSelectionThruFocusChange = false;
 			this.m_cb.Size = new System.Drawing.Size(121, 21);
 			this.m_cb.TabIndex = 0;
 			// 
-			// m_browse_path
+			// m_vb_value
 			// 
-			this.m_browse_path.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_browse_path.History = null;
-			this.m_browse_path.Location = new System.Drawing.Point(12, 28);
-			this.m_browse_path.Name = "m_browse_path";
-			this.m_browse_path.Size = new System.Drawing.Size(356, 40);
-			this.m_browse_path.TabIndex = 7;
+			this.m_vb_value.Location = new System.Drawing.Point(93, 260);
+			this.m_vb_value.Name = "m_vb_value";
+			this.m_vb_value.Size = new System.Drawing.Size(146, 20);
+			this.m_vb_value.TabIndex = 8;
+			// 
+			// m_lbl_vb_value
+			// 
+			this.m_lbl_vb_value.AutoSize = true;
+			this.m_lbl_vb_value.Location = new System.Drawing.Point(245, 263);
+			this.m_lbl_vb_value.Name = "m_lbl_vb_value";
+			this.m_lbl_vb_value.Size = new System.Drawing.Size(33, 13);
+			this.m_lbl_vb_value.TabIndex = 9;
+			this.m_lbl_vb_value.Text = "value";
 			// 
 			// SubclassedControlsUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(380, 360);
+			this.ClientSize = new System.Drawing.Size(380, 415);
+			this.Controls.Add(this.m_lbl_vb_value);
+			this.Controls.Add(this.m_vb_value);
 			this.Controls.Add(this.m_browse_path);
 			this.Controls.Add(this.m_pb);
 			this.Controls.Add(this.m_btn_test);

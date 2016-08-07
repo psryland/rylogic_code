@@ -359,14 +359,17 @@ VIEW3D_API void __stdcall View3D_AddObjectsById(View3DWindow window, GUID const&
 	}
 	CatchAndReport(View3D_AddObjectsById, window,);
 }
-VIEW3D_API void __stdcall View3D_RemoveObjectsById(View3DWindow window, GUID const& context_id)
+VIEW3D_API void __stdcall View3D_RemoveObjectsById(View3DWindow window, BOOL all_except, GUID const& context_id)
 {
 	try
 	{
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		pr::erase_if(window->m_objects, [&](View3DObject obj){ return obj->m_context_id == context_id; });
+		if (all_except)
+			pr::erase_if(window->m_objects, [&](View3DObject obj){ return obj->m_context_id != context_id; });
+		else
+			pr::erase_if(window->m_objects, [&](View3DObject obj){ return obj->m_context_id == context_id; });
 	}
 	CatchAndReport(View3D_RemoveObjectsById, window,);
 }
@@ -1057,12 +1060,12 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreate(char const* name, View3DCo
 		// Create the model
 		auto attr  = pr::ldr::ObjectAttributes(pr::ldr::ELdrObject::Custom, name, pr::Colour32(colour));
 		auto cdata = pr::ldr::MeshCreationData()
-			.verts(pos.data(), pos.size())
-			.indices(indices, icount)
+			.verts  (pos.data(), pos.size())
+			.indices(indices,    icount)
 			.nuggets(ngt.data(), ngt.size())
 			.colours(col.data(), col.size())
 			.normals(nrm.data(), nrm.size())
-			.tex(tex.data(), tex.size());
+			.tex    (tex.data(), tex.size());
 		auto obj = pr::ldr::Create(Dll().m_rdr, attr, cdata, context_id);
 		if (obj) Dll().m_obj_cont.push_back(obj);
 		return obj.m_ptr;
@@ -1095,10 +1098,10 @@ void __stdcall ObjectEditCB(ModelPtr model, void* ctx, pr::Renderer&)
 			View3DNugget n = {};
 			n.m_topo = static_cast<EView3DPrim>(nug.m_topo);
 			n.m_geom = static_cast<EView3DGeom>(nug.m_geom);
-			n.m_v0 = nug.m_vrange.begin();
-			n.m_v1 = nug.m_vrange.end();
-			n.m_i0 = nug.m_irange.begin();
-			n.m_i1 = nug.m_irange.end();
+			n.m_v0 = pr::s_cast<UINT32>(nug.m_vrange.begin());
+			n.m_v1 = pr::s_cast<UINT32>(nug.m_vrange.end());
+			n.m_i0 = pr::s_cast<UINT32>(nug.m_irange.begin());
+			n.m_i1 = pr::s_cast<UINT32>(nug.m_irange.end());
 			n.m_mat.m_diff_tex = nug.m_tex_diffuse.m_ptr;
 			n.m_mat.m_env_map = nullptr;
 			nuggets.push_back(n);
@@ -1224,7 +1227,7 @@ VIEW3D_API void __stdcall View3D_ObjectsDeleteById(GUID const& context_id)
 
 		// Remove objects from any windows they might be assigned to
 		for (auto wnd : Dll().m_wnd_cont)
-			View3D_RemoveObjectsById(wnd, context_id);
+			View3D_RemoveObjectsById(wnd, false, context_id);
 
 		pr::ldr::Remove(Dll().m_obj_cont, &context_id, 1, 0, 0);
 	}

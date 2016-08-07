@@ -281,7 +281,8 @@ namespace pr.common
 				type == typeof(Decimal))
 				return DataType.Text;
 			if (type == typeof(byte[])         ||
-				type == typeof(int[]))
+				type == typeof(int[])          ||
+				type == typeof(long[]))
 				return DataType.Blob;
 
 			throw new NotSupportedException(
@@ -331,14 +332,14 @@ namespace pr.common
 			string cons;
 			switch (on_constraint)
 			{
-			default: throw Exception.New(Result.Misuse, "Unknown OnInsertConstraint behaviour");
+			default: throw SqliteException.New(Result.Misuse, "Unknown OnInsertConstraint behaviour");
 			case OnInsertConstraint.Reject:  cons = ""; break;
 			case OnInsertConstraint.Ignore:  cons = "or ignore"; break;
 			case OnInsertConstraint.Replace: cons = "or replace"; break;
 			}
 
 			var meta = TableMetaData.GetMetaData(type);
-			if (meta.NonAutoIncs.Length == 0) throw Exception.New(Result.Misuse, "Cannot insert an item no fields (or with auto increment fields only)");
+			if (meta.NonAutoIncs.Length == 0) throw SqliteException.New(Result.Misuse, "Cannot insert an item no fields (or with auto increment fields only)");
 			return Sql(
 				"insert ",cons," into ",table_name," (",
 				string.Join(",",meta.NonAutoIncs.Select(c => c.NameBracketed)),
@@ -351,8 +352,8 @@ namespace pr.common
 		public static string SqlUpdateCmd(Type type)
 		{
 			var meta = TableMetaData.GetMetaData(type);
-			if (meta.Pks.Length    == 0) throw Exception.New(Result.Misuse, "Cannot update an item with no primary keys since it cannot be identified");
-			if (meta.NonPks.Length == 0) throw Exception.New(Result.Misuse, "Cannot update an item with no non-primary key fields since there are no fields to change");
+			if (meta.Pks.Length    == 0) throw SqliteException.New(Result.Misuse, "Cannot update an item with no primary keys since it cannot be identified");
+			if (meta.NonPks.Length == 0) throw SqliteException.New(Result.Misuse, "Cannot update an item with no non-primary key fields since there are no fields to change");
 			return Sql(
 				"update ",meta.Name," set ",
 				string.Join(",", meta.NonPks.Select(x => x.NameBracketed+" = ?")),
@@ -365,7 +366,7 @@ namespace pr.common
 		public static string SqlDeleteCmd(Type type)
 		{
 			var meta = TableMetaData.GetMetaData(type);
-			if (meta.Pks.Length == 0) throw Exception.New(Result.Misuse, "Cannot delete an item with no primary keys since it cannot be identified");
+			if (meta.Pks.Length == 0) throw SqliteException.New(Result.Misuse, "Cannot delete an item with no primary keys since it cannot be identified");
 			return Sql("delete from ",meta.Name," where ",meta.PkConstraints());
 		}
 
@@ -373,7 +374,7 @@ namespace pr.common
 		public static string SqlGetCmd(Type type)
 		{
 			var meta = TableMetaData.GetMetaData(type);
-			if (meta.Pks.Length == 0) throw Exception.New(Result.Misuse, "Cannot get an item with no primary keys since it cannot be identified");
+			if (meta.Pks.Length == 0) throw SqliteException.New(Result.Misuse, "Cannot get an item with no primary keys since it cannot be identified");
 			return Sql("select * from ",meta.Name," where ",meta.PkConstraints());
 		}
 
@@ -507,6 +508,17 @@ namespace pr.common
 					NativeDll.BindBlob(stmt, idx, barr, barr.Length);
 				}
 			}
+			public static void LongArray(sqlite3_stmt stmt, int idx, object value)
+			{
+				if (value == null) Null(stmt, idx);
+				else
+				{
+					var iarr = (long[])value;
+					var barr = new byte[Buffer.ByteLength(iarr)];
+					Buffer.BlockCopy(iarr, 0, barr, 0, barr.Length);
+					NativeDll.BindBlob(stmt, idx, barr, barr.Length);
+				}
+			}
 			public static void Guid(sqlite3_stmt stmt, int idx, object value)
 			{
 				if (value == null) Null(stmt, idx);
@@ -518,7 +530,7 @@ namespace pr.common
 				else
 				{
 					var dto = (DateTimeOffset)value;
-					if (dto.Offset != TimeSpan.Zero) throw new Exception("Only UTC DateTimeOffset values can be stored");
+					if (dto.Offset != TimeSpan.Zero) throw new SqliteException("Only UTC DateTimeOffset values can be stored");
 					Long(stmt, idx, dto.Ticks);
 				}
 			}
@@ -553,6 +565,7 @@ namespace pr.common
 					Add(typeof(string)         ,Text          );
 					Add(typeof(byte[])         ,ByteArray     );
 					Add(typeof(int[])          ,IntArray      );
+					Add(typeof(long[])         ,LongArray     );
 					Add(typeof(Guid)           ,Guid          );
 					Add(typeof(DateTimeOffset) ,DateTimeOffset); // Note: DateTime deliberately not supported, use DateTimeOffset instead
 					Add(typeof(Color)          ,Color         );
@@ -674,10 +687,22 @@ namespace pr.common
 				IntPtr ptr; int len;
 				NativeDll.ColumnBlob(stmt, idx, out ptr, out len);
 				if ((len % sizeof(int)) != 0)
-					throw Exception.New(Result.Corrupt, "Blob data is not an even multiple of Int32s");
+					throw SqliteException.New(Result.Corrupt, "Blob data is not an even multiple of Int32s");
 
 				// Copy the blob out of the db
 				int[] blob = new int[len / sizeof(int)];
+				if (len != 0) Marshal.Copy(ptr, blob, 0, blob.Length);
+				return blob;
+			}
+			public static object LongArray(sqlite3_stmt stmt, int idx)
+			{
+				IntPtr ptr; int len;
+				NativeDll.ColumnBlob(stmt, idx, out ptr, out len);
+				if ((len % sizeof(long)) != 0)
+					throw SqliteException.New(Result.Corrupt, "Blob data is not an even multiple of Int64s");
+
+				// Copy the blob out of the db
+				long[] blob = new long[len / sizeof(long)];
 				if (len != 0) Marshal.Copy(ptr, blob, 0, blob.Length);
 				return blob;
 			}
@@ -718,6 +743,7 @@ namespace pr.common
 					Add(typeof(string)         ,Text          );
 					Add(typeof(byte[])         ,ByteArray     );
 					Add(typeof(int[])          ,IntArray      );
+					Add(typeof(long[])         ,LongArray     );
 					Add(typeof(Guid)           ,Guid          );
 					Add(typeof(DateTimeOffset) ,DateTimeOffset); // Note: DateTime deliberately not supported, use DateTimeOffset instead
 					Add(typeof(Color)          ,Color         );
@@ -1359,11 +1385,11 @@ namespace pr.common
 				if (m_db.CloseResult == Result.Busy)
 				{
 					Trace.Dump(false);
-					throw Exception.New(m_db.CloseResult, "Could not close database handle, there are still prepared statements that haven't been 'finalized' or blob handles that haven't been closed.");
+					throw SqliteException.New(m_db.CloseResult, "Could not close database handle, there are still prepared statements that haven't been 'finalized' or blob handles that haven't been closed.");
 				}
 				if (m_db.CloseResult != Result.OK)
 				{
-					throw Exception.New(m_db.CloseResult, "Failed to close database connection");
+					throw SqliteException.New(m_db.CloseResult, "Failed to close database connection");
 				}
 			}
 
@@ -1383,9 +1409,9 @@ namespace pr.common
 				AssertCorrectThread();
 				using (var query = QueryCache.GetQuery(sql, first_idx, parms))
 				{
-					if (!query.Step()) throw Exception.New(Result.Error, "Scalar query returned no results");
+					if (!query.Step()) throw SqliteException.New(Result.Error, "Scalar query returned no results");
 					int value = (int)Read.Int(query.Stmt, 0);
-					if (query.Step()) throw Exception.New(Result.Error, "Scalar query returned more than one result");
+					if (query.Step()) throw SqliteException.New(Result.Error, "Scalar query returned more than one result");
 					return value;
 				}
 			}
@@ -1552,7 +1578,7 @@ namespace pr.common
 			/// <summary>Factory method for creating Sqlite.Transaction instances</summary>
 			public Transaction NewTransaction()
 			{
-				if (m_transaction_in_progress != null) throw new Exception("Nested transactions on a single db connection are not allowed");
+				if (m_transaction_in_progress != null) throw new SqliteException("Nested transactions on a single db connection are not allowed");
 				return m_transaction_in_progress = new Transaction(this, () => m_transaction_in_progress = null);
 			}
 			private Transaction m_transaction_in_progress;
@@ -1705,7 +1731,7 @@ namespace pr.common
 				// If ConfigOption.Serialized is used, it's open session for any threads
 				if (m_owning_thread_id != Thread.CurrentThread.ManagedThreadId && !NativeDll.ThreadSafe)
 				{
-					var ex = Exception.New(Result.Misuse, string.Format("Cross-thread use of Sqlite ORM.\n{0}", new StackTrace()));
+					var ex = SqliteException.New(Result.Misuse, string.Format("Cross-thread use of Sqlite ORM.\n{0}", new StackTrace()));
 					Log.Exception(this, ex, "Cross-thread use of Sqlite ORM");
 					throw ex;
 				}
@@ -1817,7 +1843,7 @@ namespace pr.common
 			public object Get(params object[] keys)
 			{
 				var item = Find(keys);
-				if (ReferenceEquals(item, null)) throw Exception.New(Result.NotFound, "Row not found for key(s): "+string.Join(",", keys.Select(x=>x.ToString())));
+				if (ReferenceEquals(item, null)) throw SqliteException.New(Result.NotFound, "Row not found for key(s): "+string.Join(",", keys.Select(x=>x.ToString())));
 				return item;
 			}
 			public T Get<T>(params object[] keys)
@@ -1829,7 +1855,7 @@ namespace pr.common
 			public object Get(object key1, object key2) // overload for performance
 			{
 				var item = Find(key1, key2);
-				if (ReferenceEquals(item, null)) throw Exception.New(Result.NotFound, "Row not found for keys: "+key1+","+key2);
+				if (ReferenceEquals(item, null)) throw SqliteException.New(Result.NotFound, "Row not found for keys: "+key1+","+key2);
 				return item;
 			}
 			public T Get<T>(object key1, object key2) // overload for performance
@@ -1841,7 +1867,7 @@ namespace pr.common
 			public object Get(object key1) // overload for performance
 			{
 				var item = Find(key1);
-				if (ReferenceEquals(item, null)) throw Exception.New(Result.NotFound, "Row not found for key: "+key1);
+				if (ReferenceEquals(item, null)) throw SqliteException.New(Result.NotFound, "Row not found for key: "+key1);
 				return item;
 			}
 			public T Get<T>(object key1) // overload for performance
@@ -1936,7 +1962,7 @@ namespace pr.common
 			{
 				Trace.WriteLine(ETrace.Query, string.Format("Updating column {0} in table {1} (key: {2})", column_name, m_meta.Name, string.Join(",",keys)));
 				var column_meta = m_meta.Column(column_name);
-				if (m_meta.Pks.Length == 0) throw Exception.New(Result.Misuse, "Cannot update an item with no primary keys since it cannot be identified");
+				if (m_meta.Pks.Length == 0) throw SqliteException.New(Result.Misuse, "Cannot update an item with no primary keys since it cannot be identified");
 				var sql = Sql("update ",m_meta.Name," set ",column_meta.NameBracketed," = ? where ",m_meta.PkConstraints());
 				using (var query = m_db.QueryCache.GetQuery(sql))
 				{
@@ -2602,7 +2628,9 @@ namespace pr.common
 		{
 			protected readonly Database m_db;
 			protected readonly sqlite3_stmt m_stmt; // sqlite managed memory for this query
-			private int m_query_id;
+			#if SQLITE_HANDLES
+			private int m_query_id {get;set;}
+			#endif
 
 			public Query(Database db, sqlite3_stmt stmt)
 			{
@@ -2662,7 +2690,7 @@ namespace pr.common
 				Reset(); // Call reset to clear any error code from failed queries.
 				m_stmt.Close();
 				if (m_stmt.CloseResult != Result.OK)
-					throw Exception.New(m_stmt.CloseResult, NativeDll.ErrorMsg(m_db.Handle));
+					throw SqliteException.New(m_stmt.CloseResult, NativeDll.ErrorMsg(m_db.Handle));
 
 				Trace.QueryClosed(this);
 			}
@@ -2685,7 +2713,7 @@ namespace pr.common
 			public int ParmIndex(string name)
 			{
 				int idx = NativeDll.BindParameterIndex(Stmt, name);
-				if (idx == 0) throw Exception.New(Result.Error, "Parameter name not found");
+				if (idx == 0) throw SqliteException.New(Result.Error, "Parameter name not found");
 				return idx;
 			}
 
@@ -2779,7 +2807,7 @@ namespace pr.common
 					var res = NativeDll.Step(Stmt);
 					switch (res)
 					{
-					default: throw Exception.New(res, NativeDll.ErrorMsg(m_db.Handle));
+					default: throw SqliteException.New(res, NativeDll.ErrorMsg(m_db.Handle));
 					case Result.Busy: Thread.Yield(); break;
 					case Result.Done: return false;
 					case Result.Row: return true;
@@ -3694,7 +3722,7 @@ namespace pr.common
 			public void Commit()
 			{
 				if (m_completed)
-					throw new Exception("Transaction already completed");
+					throw new SqliteException("Transaction already completed");
 
 				m_db.Execute("commit");
 				m_completed = true;
@@ -3702,7 +3730,7 @@ namespace pr.common
 			public void Rollback()
 			{
 				if (m_completed)
-					throw new Exception("Transaction already completed");
+					throw new SqliteException("Transaction already completed");
 
 				m_db.Execute("rollback");
 				m_completed = true;
@@ -3719,38 +3747,6 @@ namespace pr.common
 					m_disposed();
 				}
 			}
-		}
-
-		#endregion
-
-		#region Sqlite.Exception
-
-		/// <summary>An exception type specifically for sqlite exceptions</summary>
-		public class Exception :System.Exception
-		{
-			/// <summary>Helper for constructing new exceptions</summary>
-			public static Exception New(Result res, string message, string sql_error_msg = null)
-			{
-				// If tracing is enabled, append a list of the active query objects
-				#if SQLITE_TRACE
-				var sb = new StringBuilder();
-				Trace.Dump(sb, true);
-				message += sb.ToString();
-				#endif
-
-				return new Exception(message){Result = res, SqlErrMsg = sql_error_msg ?? string.Empty};
-			}
-
-			public Exception() {}
-			public Exception(string message) :base(message) {}
-			public Exception(string message, System.Exception inner_exception):base(message, inner_exception) {}
-			public override string ToString() { return string.Format("{0} - {1}" ,Result ,Message); }
-
-			/// <summary>The result code associated with this exception</summary>
-			public Result Result { get; private set; }
-
-			/// <summary>The sqlite error message</summary>
-			public string SqlErrMsg { get; private set; }
 		}
 
 		#endregion
@@ -3840,7 +3836,7 @@ namespace pr.common
 
 						throw new Exception(msg);
 						#else
-						throw new Exception("Sqlite handle released from a different thread to the one it was created on");
+						throw new SqliteException("Sqlite handle released from a different thread to the one it was created on");
 						#endif
 					}
 
@@ -3963,7 +3959,7 @@ namespace pr.common
 			public static Result Config(ConfigOption option)
 			{
 				if (sqlite3_threadsafe() == 0 && option != ConfigOption.SingleThread)
-					throw Exception.New(Result.Misuse, "sqlite3 dll compiled with SQLITE_THREADSAFE=0, multithreading cannot be used");
+					throw SqliteException.New(Result.Misuse, "sqlite3 dll compiled with SQLITE_THREADSAFE=0, multithreading cannot be used");
 
 				return sqlite3_config(m_config_option = option);
 			}
@@ -3978,11 +3974,11 @@ namespace pr.common
 			public static sqlite3 Open(string filepath, OpenFlags flags)
 			{
 				if ((flags & OpenFlags.FullMutex) != 0 && !ThreadSafe)
-					throw Exception.New(Result.Misuse, "sqlite3 dll compiled with SQLITE_THREADSAFE=0, multi threading cannot be used");
+					throw SqliteException.New(Result.Misuse, "sqlite3 dll compiled with SQLITE_THREADSAFE=0, multi threading cannot be used");
 
 				NativeSqlite3Handle db;
 				var res = sqlite3_open_v2(filepath, out db, (int)flags, IntPtr.Zero);
-				if (res != Result.OK) throw Exception.New(res, "Failed to open database connection to file "+filepath);
+				if (res != Result.OK) throw SqliteException.New(res, "Failed to open database connection to file "+filepath);
 				return db;
 			}
 			[DllImport(Dll, EntryPoint = "sqlite3_open_v2", CallingConvention=CallingConvention.Cdecl)]
@@ -3992,7 +3988,7 @@ namespace pr.common
 			public static void BusyTimeout(sqlite3 db, int milliseconds)
 			{
 				var r = sqlite3_busy_timeout((NativeSqlite3Handle)db, milliseconds);
-				if (r != Result.OK) throw Exception.New(r, "Failed to set the busy timeout to "+milliseconds+"ms");
+				if (r != Result.OK) throw SqliteException.New(r, "Failed to set the busy timeout to "+milliseconds+"ms");
 			}
 			[DllImport(Dll, EntryPoint = "sqlite3_busy_timeout", CallingConvention=CallingConvention.Cdecl)]
 			private static extern Result sqlite3_busy_timeout(NativeSqlite3Handle db, int milliseconds);
@@ -4008,7 +4004,7 @@ namespace pr.common
 					var err = ErrorMsg(db);
 					var msg = string.Format("Error compiling sql string '{0}'\n{1}" ,sql_string, err);
 					Log.Debug(null, msg);
-					throw Exception.New(res, msg, err);
+					throw SqliteException.New(res, msg, err);
 				}
 				#if SQLITE_HANDLES
 				stmt.m_db = (NativeSqlite3Handle)db;
@@ -4140,7 +4136,7 @@ namespace pr.common
 					// sqlite returns null if this column is null
 					ptr = sqlite3_column_blob((NativeSqlite3StmtHandle)stmt, index); // have to call this first
 					len = sqlite3_column_bytes((NativeSqlite3StmtHandle)stmt, index);
-					if (len < 0 || len > max_size) throw Exception.New(Result.Corrupt, "Blob data size exceeds database maximum size limit");
+					if (len < 0 || len > max_size) throw SqliteException.New(Result.Corrupt, "Blob data size exceeds database maximum size limit");
 				}
 			}
 			[DllImport(Dll, EntryPoint = "sqlite3_column_blob", CallingConvention=CallingConvention.Cdecl)]
@@ -4182,7 +4178,7 @@ namespace pr.common
 			public static void BindNull(sqlite3_stmt stmt, int index)
 			{
 				var r = sqlite3_bind_null((NativeSqlite3StmtHandle)stmt, index);
-				if (r != Result.OK) throw Exception.New(r, "Bind null failed");
+				if (r != Result.OK) throw SqliteException.New(r, "Bind null failed");
 			}
 			[DllImport(Dll, EntryPoint = "sqlite3_bind_null", CallingConvention=CallingConvention.Cdecl)]
 			private static extern Result sqlite3_bind_null(NativeSqlite3StmtHandle stmt, int index);
@@ -4191,7 +4187,7 @@ namespace pr.common
 			public static void BindInt(sqlite3_stmt stmt, int index, int val)
 			{
 				var r = sqlite3_bind_int((NativeSqlite3StmtHandle)stmt, index, val);
-				if (r != Result.OK) throw Exception.New(r, "Bind int failed");
+				if (r != Result.OK) throw SqliteException.New(r, "Bind int failed");
 			}
 			[DllImport(Dll, EntryPoint = "sqlite3_bind_int", CallingConvention=CallingConvention.Cdecl)]
 			private static extern Result sqlite3_bind_int(NativeSqlite3StmtHandle stmt, int index, int val);
@@ -4200,7 +4196,7 @@ namespace pr.common
 			public static void BindInt64(sqlite3_stmt stmt, int index, long val)
 			{
 				var r = sqlite3_bind_int64((NativeSqlite3StmtHandle)stmt, index, val);
-				if (r != Result.OK) throw Exception.New(r, "Bind int64 failed");
+				if (r != Result.OK) throw SqliteException.New(r, "Bind int64 failed");
 			}
 			[DllImport(Dll, EntryPoint = "sqlite3_bind_int64", CallingConvention=CallingConvention.Cdecl)]
 			private static extern Result sqlite3_bind_int64(NativeSqlite3StmtHandle stmt, int index, long val);
@@ -4209,7 +4205,7 @@ namespace pr.common
 			public static void BindDouble(sqlite3_stmt stmt, int index, double val)
 			{
 				var r = sqlite3_bind_double((NativeSqlite3StmtHandle)stmt, index, val);
-				if (r != Result.OK) throw Exception.New(r, "Bind double failed");
+				if (r != Result.OK) throw SqliteException.New(r, "Bind double failed");
 			}
 			[DllImport(Dll, EntryPoint = "sqlite3_bind_double", CallingConvention=CallingConvention.Cdecl)]
 			private static extern Result sqlite3_bind_double(NativeSqlite3StmtHandle stmt, int index, double val);
@@ -4218,7 +4214,7 @@ namespace pr.common
 			public static void BindText(sqlite3_stmt stmt, int index, string val)
 			{
 				var r = sqlite3_bind_text16((NativeSqlite3StmtHandle)stmt, index, val, -1, TransientData);
-				if (r != Result.OK) throw Exception.New(r, "Bind string failed");
+				if (r != Result.OK) throw SqliteException.New(r, "Bind string failed");
 			}
 			[DllImport(Dll, EntryPoint = "sqlite3_bind_text16", CallingConvention=CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
 			private static extern Result sqlite3_bind_text16(NativeSqlite3StmtHandle stmt, int index, string val, int n, IntPtr destructor_cb);
@@ -4227,7 +4223,7 @@ namespace pr.common
 			public static void BindBlob(sqlite3_stmt stmt, int index, byte[] val, int length)
 			{
 				var r = sqlite3_bind_blob((NativeSqlite3StmtHandle)stmt, index, val, length, TransientData);
-				if (r != Result.OK) throw Exception.New(r, "Bind blob failed");
+				if (r != Result.OK) throw SqliteException.New(r, "Bind blob failed");
 			}
 			[DllImport(Dll, EntryPoint = "sqlite3_bind_blob", CallingConvention=CallingConvention.Cdecl)]
 			private static extern Result sqlite3_bind_blob(NativeSqlite3StmtHandle stmt, int index, byte[] val, int n, IntPtr destructor_cb);
@@ -4319,6 +4315,38 @@ namespace pr.common
 		}
 		#endregion
 	}
+
+	#region SqliteException
+
+	/// <summary>An exception type specifically for sqlite exceptions</summary>
+	public class SqliteException :System.Exception
+	{
+		/// <summary>Helper for constructing new exceptions</summary>
+		public static SqliteException New(Sqlite.Result res, string message, string sql_error_msg = null)
+		{
+			// If tracing is enabled, append a list of the active query objects
+			#if SQLITE_TRACE
+			var sb = new StringBuilder();
+			Trace.Dump(sb, true);
+			message += sb.ToString();
+			#endif
+
+			return new SqliteException(message){Result = res, SqlErrMsg = sql_error_msg ?? string.Empty};
+		}
+
+		public SqliteException() {}
+		public SqliteException(string message) :base(message) {}
+		public SqliteException(string message, System.Exception inner_exception):base(message, inner_exception) {}
+		public override string ToString() { return string.Format("{0} - {1}" ,Result ,Message); }
+
+		/// <summary>The result code associated with this exception</summary>
+		public Sqlite.Result Result { get; private set; }
+
+		/// <summary>The sqlite error message</summary>
+		public string SqlErrMsg { get; private set; }
+	}
+
+	#endregion
 
 	#region SqliteLogger
 
@@ -4758,8 +4786,8 @@ namespace pr.unittests
 
 				// Check Get() throws and Find() returns null if not found
 				Assert.Null(table.Find(0));
-				Sqlite.Exception err = null;
-				try { table.Get(4); } catch (Sqlite.Exception ex) { err = ex; }
+				SqliteException err = null;
+				try { table.Get(4); } catch (SqliteException ex) { err = ex; }
 				Assert.True(err != null && err.Result == Sqlite.Result.NotFound);
 
 				// Get stuff and check it's the same
@@ -4902,24 +4930,24 @@ namespace pr.unittests
 				// Check insert collisions
 				obj1.Prop1 = "I've been modified";
 				{
-					Sqlite.Exception err = null;
-					try { table.Insert(obj1); } catch (Sqlite.Exception ex) { err = ex; }
+					SqliteException err = null;
+					try { table.Insert(obj1); } catch (SqliteException ex) { err = ex; }
 					Assert.True(err != null && err.Result == Sqlite.Result.Constraint);
 					OBJ1 = table.Get(obj1.Index, obj1.Key2, obj1.Key3);
 					Assert.NotNull(OBJ1);
 					Assert.False(obj1.Equals(OBJ1));
 				}
 				{
-					Sqlite.Exception err = null;
-					try { table.Insert(obj1, Sqlite.OnInsertConstraint.Ignore); } catch (Sqlite.Exception ex) { err = ex; }
+					SqliteException err = null;
+					try { table.Insert(obj1, Sqlite.OnInsertConstraint.Ignore); } catch (SqliteException ex) { err = ex; }
 					Assert.Null(err);
 					OBJ1 = table.Get(obj1.Index, obj1.Key2, obj1.Key3);
 					Assert.NotNull(OBJ1);
 					Assert.False(obj1.Equals(OBJ1));
 				}
 				{
-					Sqlite.Exception err = null;
-					try { table.Insert(obj1, Sqlite.OnInsertConstraint.Replace); } catch (Sqlite.Exception ex) { err = ex; }
+					SqliteException err = null;
+					try { table.Insert(obj1, Sqlite.OnInsertConstraint.Replace); } catch (SqliteException ex) { err = ex; }
 					Assert.Null(err);
 					OBJ1 = table.Get(obj1.Index, obj1.Key2, obj1.Key3);
 					Assert.NotNull(OBJ1);

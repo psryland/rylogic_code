@@ -3053,7 +3053,7 @@ namespace pr
 			This& dlu() // Dialog units
 			{
 				// Note: If you're transferring a resource dialog to code, this scaling factor assumes
-				// the dialog resource uses MS Shell Dlg (8). If not, then the scaling factor will be different
+				// the dialog resource uses 'MS Shell Dlg (8)'. If not, then the scaling factor will be different
 				params.m_client_wh = true;
 				return dpi(gdi::PointF(4*96/6.0f, 8*96/13.0f));
 			}
@@ -3240,6 +3240,11 @@ namespace pr
 			operator FormParams const&() const
 			{
 				return params;
+			}
+			This& parent(WndRef p)
+			{
+				params.m_main_wnd &= p.hwnd() == nullptr;
+				return base::parent(p);
 			}
 			This& xy(int x, int y)
 			{
@@ -8587,7 +8592,7 @@ namespace pr
 		}
 
 		// Present the Open file dialog and return the selected filepath
-		inline std::vector<std::wstring> OpenFileUI(HWND parent = nullptr, FileUIOptions const& opts = FileUIOptions())
+		template <typename = void> std::vector<std::wstring> OpenFileUI(HWND parent = nullptr, FileUIOptions const& opts = FileUIOptions())
 		{
 			std::vector<std::wstring> results;
 			FileUI(CLSID_FileOpenDialog, parent, opts, [&](IFileDialog* fd)

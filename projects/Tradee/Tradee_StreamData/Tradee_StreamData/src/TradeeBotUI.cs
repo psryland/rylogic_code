@@ -1,19 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using cAlgo.API;
-using cAlgo.API.Internals;
 using pr.attrib;
-using pr.common;
-using pr.container;
 using pr.extn;
 using pr.gui;
 using pr.maths;
@@ -28,6 +20,7 @@ namespace cAlgo
 		private pr.gui.ListBox m_lb_symbols;
 		private pr.gui.ComboBox m_cb_symbols;
 		private Panel m_panel_add;
+		private System.Windows.Forms.Timer m_timer;
 		private Button m_btn_add;
 		#endregion
 
@@ -43,6 +36,10 @@ namespace cAlgo
 
 			SetupUI();
 			UpdateUI();
+
+			m_timer.Interval = 500;
+			m_timer.Tick += (s,a) => Model.Step();
+			m_timer.Enabled = true;
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -84,7 +81,7 @@ namespace cAlgo
 		public void ShowTimeFrameSelection(Transmitter trans)
 		{
 			// Get the list of currently selected time frames
-			var existing = trans.TimeFrames.Select(x => x.ToTradeeTimeframe()).ToArray();
+			var existing = trans.TimeFrames;
 
 			// Show a dialog for selecting time frames
 			var dlg = new ToolForm
@@ -101,8 +98,8 @@ namespace cAlgo
 			dlg.ShowDialog();
 
 			// Update the list of time frames
-			var new_list = chklist.CheckedItems.OfType<ETimeFrame>().OrderBy(x => x).ToArray();
-			trans.TimeFrames = new_list.Select(x => x.ToCAlgoTimeframe()).ToArray();
+			var new_list = chklist.CheckedItems.OfType<ETimeFrame>().ToArray();
+			trans.TimeFrames = new_list;
 
 			// Make this list the new default set
 			Settings.DefaultTimeFrames = new_list;
@@ -127,9 +124,10 @@ namespace cAlgo
 			};
 
 			// Show current pairs
+			m_lb_symbols.BackColor = SystemColors.ControlDark;
 			m_lb_symbols.DrawMode = DrawMode.OwnerDrawFixed;
 			m_lb_symbols.DataSource = Model.Transmitters;
-			m_lb_symbols.ItemHeight = 48;
+			m_lb_symbols.ItemHeight = 58;
 			m_lb_symbols.DrawItem += (s,a) =>
 			{
 				if (a.Index < 0 || a.Index >= m_lb_symbols.Items.Count)
@@ -140,12 +138,12 @@ namespace cAlgo
 
 				var item = (Transmitter)m_lb_symbols.Items[a.Index];
 				var bnds = a.Bounds.Inflated(0, 0, -1, -1);
-				var col = Bit.AllSet(a.State, DrawItemState.Selected) ? Brushes.WhiteSmoke : SystemBrushes.ControlLightLight;
+				var col = Bit.AllSet(a.State, DrawItemState.Selected) ? Brushes.WhiteSmoke : !item.Enabled ? SystemBrushes.ControlLight : SystemBrushes.ControlLightLight;
 				var x = bnds.Left + 2f;
 				var y = bnds.Top + 2f;
 		
 				a.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-				a.Graphics.FillRectangle(Brushes.White, a.Bounds);
+				a.Graphics.FillRectangle(SystemBrushes.ControlDark, a.Bounds);
 				a.Graphics.FillRectangleRounded(col, bnds, 6f);
 				a.Graphics.DrawRectangleRounded(Pens.Black, bnds, 6f);
 
@@ -153,22 +151,29 @@ namespace cAlgo
 					var str = "{0} - {1}".Fmt(item.Pair, item.Pair.Desc());
 					var font = a.Font.Dup(FontStyle.Bold);
 					var sz = a.Graphics.MeasureString(str, font);
-					a.Graphics.DrawString(str, font, Brushes.Black, x, y);
+					a.Graphics.DrawString(str, font, !item.Enabled ? SystemBrushes.ControlDark : Brushes.Black, x, y);
 					y += sz.Height;
 				}
-
 				{// Paint the time frames
 					var tfs = item.Data.Keys.Select(t => t.ToTradeeTimeframe()).OrderBy(t => t).ToArray();
 					var str = "Time Frames: {0}".Fmt(string.Join(" ", tfs.Select(t => t.Desc())));
 					var sz = a.Graphics.MeasureString(str, a.Font);
-					a.Graphics.DrawString(str, a.Font, item.RequestingSeriesData ? Brushes.DarkRed : Brushes.Green, x, y);
+					a.Graphics.DrawString(str, a.Font, !item.Enabled ? SystemBrushes.ControlDark : item.RequestingSeriesData ? Brushes.DarkRed : Brushes.Green, x, y);
 					y += sz.Height;
 				}
-				{
-					var ts = item.Data.Values.Select(v => v.LastTransmit).ToArray();
-					var str = "Last Update: {0}".Fmt(ts.Length != 0 ? ts.MaxBy(t => t).ToString("yyyy/MM/dd HH:mm:ss") : string.Empty);
+				{// Paint the last update time
+					var tss = item.Data.Values.Select(v => v.LastTransmitUTC).ToArray();
+					var ts  = tss.Length != 0 ? tss.MaxBy(t => t) : DateTime.MinValue;
+					var str = "Last Update: {0}".Fmt(ts != DateTime.MinValue ? ts.ToString("yyyy/MM/dd HH:mm:ss") : "never");
 					var sz = a.Graphics.MeasureString(str, a.Font);
-					a.Graphics.DrawString(str, a.Font, Brushes.Blue, x, y);
+					a.Graphics.DrawString(str, a.Font, !item.Enabled ? SystemBrushes.ControlDark : Brushes.Blue, x, y);
+					y += sz.Height;
+				}
+				{// Paint the status
+					var msg = item.StatusMsg;
+					var str = "Status: {0}".Fmt(msg);
+					var sz = a.Graphics.MeasureString(str, a.Font);
+					a.Graphics.DrawString(str, a.Font, !item.Enabled ? SystemBrushes.ControlDark : SystemBrushes.ControlDarkDark, x, y);
 					y += sz.Height;
 				}
 			};
@@ -200,6 +205,13 @@ namespace cAlgo
 			using (cmenu.SuspendLayout(true))
 			{
 				{
+					var opt = cmenu.Items.Add2(new ToolStripMenuItem(item.Enabled ? "Disable" : "Enable"));
+					opt.Click += (s,a) =>
+					{
+						item.Enabled = !item.Enabled;
+					};
+				}
+				{
 					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Remove"));
 					opt.Click += (s,a) =>
 					{
@@ -230,10 +242,12 @@ namespace cAlgo
 		private System.ComponentModel.IContainer components = null;
 		private void InitializeComponent()
 		{
+			this.components = new System.ComponentModel.Container();
 			this.m_lb_symbols = new pr.gui.ListBox();
 			this.m_cb_symbols = new pr.gui.ComboBox();
 			this.m_panel_add = new System.Windows.Forms.Panel();
 			this.m_btn_add = new System.Windows.Forms.Button();
+			this.m_timer = new System.Windows.Forms.Timer(this.components);
 			this.m_panel_add.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -253,10 +267,12 @@ namespace cAlgo
 			// 
 			this.m_cb_symbols.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_cb_symbols.DisplayProperty = null;
 			this.m_cb_symbols.DropDownWidth = 160;
 			this.m_cb_symbols.FormattingEnabled = true;
 			this.m_cb_symbols.Location = new System.Drawing.Point(3, 4);
 			this.m_cb_symbols.Name = "m_cb_symbols";
+			this.m_cb_symbols.PreserveSelectionThruFocusChange = false;
 			this.m_cb_symbols.Size = new System.Drawing.Size(230, 21);
 			this.m_cb_symbols.TabIndex = 1;
 			// 

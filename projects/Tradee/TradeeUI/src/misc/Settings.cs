@@ -19,6 +19,7 @@ namespace Tradee
 		{
 			General = new GeneralSettings();
 			UI      = new UISettings();
+			Chart   = new ChartSettings();
 		}
 		public Settings(string filepath)
 			:base(filepath)
@@ -41,14 +42,25 @@ namespace Tradee
 			}
 		}
 
-		/// <summary>General application settings</summary>
+		/// <summary>UI settings</summary>
 		public UISettings UI
 		{
 			get { return get(x => x.UI); }
 			set
 			{
-				if (value == null) throw new ArgumentNullException("Setting '{0}' cannot be null".Fmt(nameof(Settings.UI)));
+				if (value == null) throw new ArgumentNullException("Setting '{0}' cannot be null".Fmt(nameof(UI)));
 				set(x => x.UI, value);
+			}
+		}
+
+		/// <summary>Default settings for charts</summary>
+		public ChartSettings Chart
+		{
+			get { return get(x => x.Chart); }
+			set
+			{
+				if (value == null) throw new ArgumentNullException("Setting '{0}' cannot be null".Fmt(nameof(Chart)));
+				set(x => x.Chart, value);
 			}
 		}
 	}
@@ -61,7 +73,6 @@ namespace Tradee
 		{
 			DefaultTimeFrame  = ETimeFrame.Hour12;
 			PriceDataCacheDir = Util.ResolveAppPath(".\\PriceDataCache");
-			TimeZone          = TimeSpan.Zero;
 		}
 
 		/// <summary>The time frame to open new charts at</summary>
@@ -78,13 +89,6 @@ namespace Tradee
 			set { set(x => x.PriceDataCacheDir, value); }
 		}
 
-		/// <summary>The local time zone</summary>
-		public TimeSpan TimeZone
-		{
-			get { return get(x => x.TimeZone); }
-			set { set(x => x.TimeZone, value); }
-		}
-
 		private class TyConv :GenericTypeConverter<GeneralSettings> {}
 	}
 
@@ -94,17 +98,11 @@ namespace Tradee
 	{
 		public UISettings()
 		{
-			UILayout       = null;
-			BullishColour  = Color.FromArgb(0xFF, 0xF1, 0x59, 0x23);
-			BearishColour  = Color.FromArgb(0xFF, 0x00, 0x84, 0x3B);
-			WindowPosition = Rectangle.Empty;
-
-			ChartStyle = new ChartControl.RdrOptions
-			{
-				ChartBkColour = Color.FromArgb(0x20,0x20,0x20),
-			};
-			ChartStyle.XAxis.GridColour = Color.FromArgb(0x40,0x40,0x40);
-			ChartStyle.YAxis.GridColour = Color.FromArgb(0x40,0x40,0x40);
+			UILayout        = null;
+			BullishColour   = Color.FromArgb(0xFF, 0x00, 0x84, 0x3B);
+			BearishColour   = Color.FromArgb(0xFF, 0xF1, 0x59, 0x23);
+			AggregateTrades = true;
+			WindowPosition  = Rectangle.Empty;
 		}
 
 		/// <summary>The dock panel layout</summary>
@@ -136,11 +134,11 @@ namespace Tradee
 			get { return BullishColour; }
 		}
 
-		/// <summary>Style options for charts</summary>
-		public ChartControl.RdrOptions ChartStyle
+		/// <summary>Combine trades of the same instrument into one</summary>
+		public bool AggregateTrades
 		{
-			get { return get(x => x.ChartStyle); }
-			set { set(x => x.ChartStyle, value); }
+			get { return get(x => x.AggregateTrades); }
+			set { set(x => x.AggregateTrades, value); }
 		}
 
 		/// <summary>The last position on screen</summary>
@@ -163,17 +161,26 @@ namespace Tradee
 
 		public ChartSettings()
 		{
-			Id              = Guid.NewGuid();
-			TimeFrame       = ETimeFrame.Hour12;
-			ViewCandleCount = 100;
-			TimeFrameBtns   = new [] { ETimeFrame.Min1, ETimeFrame.Hour1, ETimeFrame.Day1 };
+			Style                  = new ChartControl.RdrOptions();
+			Style.AntiAliasing     = false;
+			Style.ChartBkColour    = Color.FromArgb(0x00,0x00,0x00);
+			Style.XAxis.GridColour = Color.FromArgb(0x20,0x20,0x20);
+			Style.YAxis.GridColour = Color.FromArgb(0x20,0x20,0x20);
+
+			TimeFrame        = ETimeFrame.Hour12;
+			ViewCandleCount  = 100;
+			ViewCandlesAhead = 20;
+			TimeFrameBtns    = new [] { ETimeFrame.Min1, ETimeFrame.Hour1, ETimeFrame.Day1 };
+
+			TradeProfitColour = Color.FromArgb(0x80, 0xdf, 0xfe, 0xdf);
+			TradeLossColour   = Color.FromArgb(0x80, 0xfe, 0xe4, 0xe4);
 		}
 
-		/// <summary>The unique id of the chart these settings belong to</summary>
-		public Guid Id
+		/// <summary>Style options for charts</summary>
+		public ChartControl.RdrOptions Style
 		{
-			get { return get(x => x.Id); }
-			set { set(x => x.Id, value); }
+			get { return get(x => x.Style); }
+			set { set(x => x.Style, value); }
 		}
 
 		/// <summary>The time frame displayed</summary>
@@ -188,6 +195,27 @@ namespace Tradee
 		{
 			get { return get(x => x.ViewCandleCount); }
 			set { set(x => x.ViewCandleCount, value); }
+		}
+
+		/// <summary>The number of candles space ahead of the now position when default ranging</summary>
+		public int ViewCandlesAhead
+		{
+			get { return get(x => x.ViewCandlesAhead); }
+			set { set(x => x.ViewCandlesAhead, value); }
+		}
+
+		/// <summary>The colour of the profit region of a trade in the chart</summary>
+		public Color TradeProfitColour
+		{
+			get { return get(x => x.TradeProfitColour); }
+			set { set(x => x.TradeProfitColour, value); }
+		}
+
+		/// <summary>The colour of the profit region of a trade in the chart</summary>
+		public Color TradeLossColour
+		{
+			get { return get(x => x.TradeLossColour); }
+			set { set(x => x.TradeLossColour, value); }
 		}
 
 		/// <summary>The time frames that have buttons on the tool bar</summary>

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel;
 using pr.common;
 using pr.util;
 using Tradee;
@@ -34,7 +29,7 @@ namespace cAlgo
 			set { set(x => x.Transmitters, value); }
 		}
 
-		/// <summary>The time frame to open new charts at</summary>
+		/// <summary>The time frames that new transmitters start with</summary>
 		public ETimeFrame[] DefaultTimeFrames
 		{
 			get { return get(x => x.DefaultTimeFrames); }

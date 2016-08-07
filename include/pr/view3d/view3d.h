@@ -212,6 +212,7 @@ extern "C"
 		View3D_ReportErrorCB m_error_cb;
 		void*                m_error_cb_ctx;
 		BOOL                 m_gdi_compatible;
+		int                  m_multisampling;
 		char const*          m_dbg_name;
 	};
 	struct View3DUpdateModelKeep
@@ -285,7 +286,7 @@ extern "C"
 	VIEW3D_API BOOL                    __stdcall View3D_HasObject         (View3DWindow window, View3DObject object);
 	VIEW3D_API int                     __stdcall View3D_ObjectCount       (View3DWindow window);
 	VIEW3D_API void                    __stdcall View3D_AddObjectsById    (View3DWindow window, GUID const& context_id);
-	VIEW3D_API void                    __stdcall View3D_RemoveObjectsById (View3DWindow window, GUID const& context_id);
+	VIEW3D_API void                    __stdcall View3D_RemoveObjectsById (View3DWindow window, BOOL all_except, GUID const& context_id);
 	VIEW3D_API void                    __stdcall View3D_AddGizmo          (View3DWindow window, View3DGizmo giz);
 	VIEW3D_API void                    __stdcall View3D_RemoveGizmo       (View3DWindow window, View3DGizmo giz);
 

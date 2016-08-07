@@ -1217,6 +1217,8 @@ namespace pr.extn
 
 			public ColumnFiltersData(DataGridView dgv)
 			{
+				Debug.Assert(dgv.DataSource != null, "Column filters requires a data source");
+
 				m_dgv          = dgv;
 				m_dgv_state    = new Dictionary<string, object>();
 				m_header_cells = new FilterHeaderCell[dgv.ColumnCount];
@@ -1249,7 +1251,7 @@ namespace pr.extn
 				set
 				{
 					if (m_impl_bs_filter == value) return;
-					if (m_impl_bs_filter != null) Util.Dispose(ref m_impl_bs_filter);
+					Util.Dispose(ref m_impl_bs_filter);
 					m_impl_bs_filter = value;
 				}
 			}

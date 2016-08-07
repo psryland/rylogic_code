@@ -4,12 +4,13 @@
 //***************************************************
 
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using pr.extn;
 
 namespace pr.extn
 {
-	public static class StringBuilderExtensions
+	public static class StringBuilder_
 	{
 		/// <summary>Return the list element in the list</summary>
 		public static char Back(this StringBuilder sb)
@@ -110,243 +111,96 @@ namespace pr.extn
 			return sb;
 		}
 
-		///// <summary>Return a substring of the internal string</summary>
-		//public static string Substring(this StringBuilder sb, int startIndex, int length)
-		//{
-		//    return sb.ToString(startIndex, length);
-		//}
+		/// <summary>Return a substring of the internal string</summary>
+		public static string Substring(this StringBuilder sb, int start, int length)
+		{
+			return sb.ToString(start, length);
+		}
 
-		///// <summary>Remove all occurances of 'ch' from the internal string</summary>
-		//public static StringBuilder Remove(this StringBuilder sb, char ch)
-		//{
-		//    for (int i = 0; i < sb.Length; )
-		//    {
-		//        if (sb[i] == ch)
-		//            sb.Remove(i, 1);
-		//        else
-		//            i++;
-		//    }
-		//    return sb;
-		//}
+		/// <summary>Remove all occurrences of 'ch' from the internal string</summary>
+		public static StringBuilder Remove(this StringBuilder sb, char ch, out int removed_count)
+		{
+			removed_count = 0;
 
-		///// <summary>Truncate the string by 'num' characters</summary>
-		//public static StringBuilder RemoveFromEnd(this StringBuilder sb, int num)
-		//{
-		//    return sb.Remove(sb.Length - num, num);
-		//}
+			// Find the first occurrence
+			int i; for (i = 0; i != sb.Length && sb[i] != ch; ++i) {}
+			if (i == sb.Length) return sb;
 
-		///// <summary>Trim left spaces of string</summary>
-		//public static StringBuilder LTrim(this StringBuilder sb)
-		//{
-		//    if (sb.Length != 0)
-		//    {
-		//        int length = 0;
-		//        int num2 = sb.Length;
-		//        while ((sb[length] == ' ') && (length < num2))
-		//        {
-		//            length++;
-		//        }
-		//        if (length > 0)
-		//        {
-		//            sb.Remove(0, length);
-		//        }
-		//    }
-		//    return sb;
-		//}
+			// Copy backward removing 'ch's
+			int j; for (j = i; i != sb.Length; ++i)
+			{
+				if (sb[i] == ch) ++removed_count;
+				else sb[j++] = sb[i];
+			}
 
-		///// <summary>rim right spaces of string</summary>
-		//public static StringBuilder RTrim(this StringBuilder sb)
-		//{
-		//    if (sb.Length != 0)
-		//    {
-		//        int length = sb.Length;
-		//        int num2 = length - 1;
-		//        while ((sb[num2] == ' ') && (num2 > -1))
-		//        {
-		//            num2--;
-		//        }
-		//        if (num2 < (length - 1))
-		//        {
-		//            sb.Remove(num2 + 1, (length - num2) - 1);
-		//        }
-		//    }
-		//    return sb;
-		//}
+			// Resize 'sb'
+			sb.Length = j;
+			return sb;
+		}
+		public static StringBuilder Remove(this StringBuilder sb, char ch)
+		{
+			int removed_count;
+			return sb.Remove(ch, out removed_count);
+		}
 
-		///// <summary>
-		///// Get index of a char
-		///// </summary>
-		///// <param name="sb"></param>
-		///// <param name="c"></param>
-		///// <returns></returns>
-		//public static int IndexOf(this StringBuilder sb, char value)
-		//{
-		//    return IndexOf(sb, value, 0);
-		//}
+		/// <summary>True if the start of the contained string matches 'str'</summary>
+		public static bool StartsWith(this StringBuilder sb, string str, int start, bool ignore_case = false)
+		{
+			Debug.Assert(start >= 0 && start <= sb.Length);
 
-		///// <summary>
-		///// Get index of a char starting from a given index
-		///// </summary>
-		///// <param name="sb"></param>
-		///// <param name="c"></param>
-		///// <param name="startIndex"></param>
-		///// <returns></returns>
-		//public static int IndexOf(this StringBuilder sb, char value, int startIndex)
-		//{
-		//    for (int i = startIndex; i < sb.Length; i++)
-		//    {
-		//        if (sb[i] == value)
-		//        {
-		//            return i;
-		//        }
-		//    }
-		//    return -1;
-		//}
+			// Check for sub string match
+			int i = start, iend = i + str.Length;
+			if (ignore_case) for (; i != sb.Length && i != iend && char.ToLower(sb[i]) == char.ToLower(str[i - start]); ++i) {}
+			else             for (; i != sb.Length && i != iend && sb[i] == str[i - start]; ++i) {}
+			return i == iend;
+		}
+		public static bool StartsWith(this StringBuilder sb, string str, bool ignore_case = false)
+		{
+			return StartsWith(sb, str, 0, ignore_case);
+		}
 
-		///// <summary>
-		///// Get index of a string
-		///// </summary>
-		///// <param name="sb"></param>
-		///// <param name="text"></param>
-		///// <returns></returns>
-		//public static int IndexOf(this StringBuilder sb, string value)
-		//{
-		//    return IndexOf(sb, value, 0, false);
-		//}
+		/// <summary>Index of the first occurrence of 'ch'</summary>
+		public static int IndexOf(this StringBuilder sb, char ch, int start, int length, bool ignore_case = false)
+		{
+			Debug.Assert(start >= 0 && start <= sb.Length);
+			Debug.Assert(length >= 0 && start + length <= sb.Length);
 
-		///// <summary>
-		///// Get index of a string from a given index
-		///// </summary>
-		///// <param name="sb"></param>
-		///// <param name="text"></param>
-		///// <param name="startIndex"></param>
-		///// <returns></returns>
-		//public static int IndexOf(this StringBuilder sb, string value, int startIndex)
-		//{
-		//    return IndexOf(sb, value, startIndex, false);
-		//}
+			int i = start, iend = i + length;
+			if (ignore_case) for (; i != iend && char.ToLower(sb[i]) != char.ToLower(ch); ++i) { }
+			else             for (; i != iend && sb[i] != ch; ++i) { }
+			return i != iend ? i : -1;
+		}
+		public static int IndexOf(this StringBuilder sb, char value, bool ignore_case = false)
+		{
+			return IndexOf(sb, value, 0, sb.Length, ignore_case);
+		}
 
-		///// <summary>
-		///// Get index of a string with case option
-		///// </summary>
-		///// <param name="sb"></param>
-		///// <param name="text"></param>
-		///// <param name="ignoreCase"></param>
-		///// <returns></returns>
-		//public static int IndexOf(this StringBuilder sb, string value, bool ignoreCase)
-		//{
-		//    return IndexOf(sb, value, 0, ignoreCase);
-		//}
+		/// <summary>Index of the first occurrence of 'str'</summary>
+		public static int IndexOf(this StringBuilder sb, string str, int start, int length, bool ignore_case = false)
+		{
+			Debug.Assert(start >= 0 && start <= sb.Length);
+			Debug.Assert(length >= 0 && start + length <= sb.Length);
 
-		///// <summary>
-		///// Get index of a string from a given index with case option
-		///// </summary>
-		///// <param name="sb"></param>
-		///// <param name="text"></param>
-		///// <param name="startIndex"></param>
-		///// <param name="ignoreCase"></param>
-		///// <returns></returns>
-		//public static int IndexOf(this StringBuilder sb, string value, int startIndex, bool ignoreCase)
-		//{
-		//    int num3;
-		//    int length = value.Length;
-		//    int num2 = (sb.Length - length) + 1;
-		//    if (ignoreCase == false)
-		//    {
-		//        for (int i = startIndex; i < num2; i++)
-		//        {
-		//            if (sb[i] == value[0])
-		//            {
-		//                num3 = 1;
-		//                while ((num3 < length) && (sb[i + num3] == value[num3]))
-		//                {
-		//                    num3++;
-		//                }
-		//                if (num3 == length)
-		//                {
-		//                    return i;
-		//                }
-		//            }
-		//        }
-		//    }
-		//    else
-		//    {
-		//        for (int j = startIndex; j < num2; j++)
-		//        {
-		//            if (char.ToLower(sb[j]) == char.ToLower(value[0]))
-		//            {
-		//                num3 = 1;
-		//                while ((num3 < length) && (char.ToLower(sb[j + num3]) == char.ToLower(value[num3])))
-		//                {
-		//                    num3++;
-		//                }
-		//                if (num3 == length)
-		//                {
-		//                    return j;
-		//                }
-		//            }
-		//        }
-		//    }
-		//    return -1;
-		//}
+			// Empty strings match immediately
+			if (str.Length == 0)
+				return start;
 
-		///// <summary>
-		///// Determine whether a string starts with a given text
-		///// </summary>
-		///// <param name="sb"></param>
-		///// <param name="value"></param>
-		///// <returns></returns>
-		//public static bool StartsWith(this StringBuilder sb, string value)
-		//{
-		//    return StartsWith(sb, value, 0, false);
-		//}
+			for (int s = start, e = s + length; s != e; ++s)
+			{
+				// Find the index of the first character in 'str'
+				s = sb.IndexOf(str[0], s, e - s, ignore_case:ignore_case);
+				if (s == -1) return -1;
 
-		///// <summary>
-		///// Determine whether a string starts with a given text (with case option)
-		///// </summary>
-		///// <param name="sb"></param>
-		///// <param name="value"></param>
-		///// <param name="ignoreCase"></param>
-		///// <returns></returns>
-		//public static bool StartsWith(this StringBuilder sb, string value, bool ignoreCase)
-		//{
-		//    return StartsWith(sb, value, 0, ignoreCase);
-		//}
-
-		///// <summary>
-		///// Determine whether a string is begin with a given text
-		///// </summary>
-		///// <param name="sb"></param>
-		///// <param name="value"></param>
-		///// <param name="startIndex"></param>
-		///// <param name="ignoreCase"></param>
-		///// <returns></returns>
-		//public static bool StartsWith(this StringBuilder sb, string value, int startIndex, bool ignoreCase)
-		//{
-		//    int length = value.Length;
-		//    int num2 = startIndex + length;
-		//    if (ignoreCase == false)
-		//    {
-		//        for (int i = startIndex; i < num2; i++)
-		//        {
-		//            if (sb[i] != value[i - startIndex])
-		//            {
-		//                return false;
-		//            }
-		//        }
-		//    }
-		//    else
-		//    {
-		//        for (int j = startIndex; j < num2; j++)
-		//        {
-		//            if (char.ToLower(sb[j]) != char.ToLower(value[j - startIndex]))
-		//            {
-		//                return false;
-		//            }
-		//        }
-		//    }
-		//    return true;
-		//}
+				// Check for sub string match
+				if (sb.StartsWith(str, s, ignore_case))
+					return s;
+			}
+			return -1;
+		}
+		public static int IndexOf(this StringBuilder sb, string str, bool ignore_case = false)
+		{
+			return IndexOf(sb, str, 0, sb.Length, ignore_case);
+		}
 	}
 }
 
@@ -364,12 +218,47 @@ namespace pr.unittests
 				Assert.AreEqual(s.TrimStart(' ', '\t', '\n', 'X'), sb.TrimStart(' ', '\t', '\n', 'X').ToString());
 			}
 			{// Trim end
-				StringBuilder sb = new StringBuilder(s);
+				var sb = new StringBuilder(s);
 				Assert.AreEqual(s.TrimEnd(' ', '\t', '\n', 'X'), sb.TrimEnd(' ', '\t', '\n', 'X').ToString());
 			}
 			{// Trim
-				StringBuilder sb = new StringBuilder(s);
+				var sb = new StringBuilder(s);
 				Assert.AreEqual(s.Trim(' ', '\t', '\n', 'X'), sb.Trim(' ', '\t', '\n', 'X').ToString());
+			}
+			{// Substring
+				var sb = new StringBuilder(s);
+				Assert.AreEqual(sb.Substring(6, 6), "string");
+				Assert.AreEqual(sb.Substring(0, 3), "  \t");
+				Assert.AreEqual(sb.Substring(13, sb.Length - 13), "XXX\n  \t  ");
+			}
+			{// Remove
+				var sb = new StringBuilder(s);
+				int removed;
+				sb.Remove(' ', out removed);
+				Assert.AreEqual(sb.ToString(), "\t\nAstringXXX\n\t");
+				Assert.AreEqual(removed, 8);
+			}
+			{// StartsWith
+				var sb = new StringBuilder(s);
+				Assert.AreEqual(sb.StartsWith("  \t\n"), true);
+				Assert.AreEqual(sb.StartsWith("A string", 4), true);
+				Assert.AreEqual(sb.StartsWith("A string  ", 4), false);
+
+				sb.Length = 0;
+				Assert.AreEqual(sb.StartsWith("1"), false);
+				Assert.AreEqual(sb.StartsWith(""), true);
+			}
+			{// IndexOf
+				var sb = new StringBuilder(s);
+				Assert.AreEqual(sb.IndexOf('a', ignore_case:true), 4);
+				Assert.AreEqual(sb.IndexOf('X', 1, 4), -1);
+				Assert.AreEqual(sb.IndexOf("xx", ignore_case:true), 13);
+				Assert.AreEqual(sb.IndexOf("XXXX"), -1);
+				Assert.AreEqual(sb.IndexOf("XXX", 14, sb.Length - 14), -1);
+
+				sb.Length = 0;
+				Assert.AreEqual(sb.IndexOf("1"), -1);
+				Assert.AreEqual(sb.IndexOf(""), 0);
 			}
 		}
 	}

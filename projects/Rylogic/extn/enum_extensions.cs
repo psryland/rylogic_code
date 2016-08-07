@@ -241,26 +241,23 @@ namespace pr.extn
 		}
 
 		/// <summary>Convert a string into an enum value</summary>
-		public static bool TryParse(string value, bool ignoreCase, bool parseNumeric, out T result)
+		public static T? TryParse(string value, bool ignoreCase, bool parseNumeric)
 		{
 			long ir;
-			var b = Converter.TryParseInternal(value, ignoreCase, parseNumeric, out ir);
-			result = (T) Enum.ToObject(typeof(T), ir);
-			return b;
+			return Converter.TryParseInternal(value, ignoreCase, parseNumeric, out ir)
+				? (T?)Enum.ToObject(typeof(T), ir) : null;
 		}
-		public static bool TryParse(string value, bool ignoreCase, out T result)
+		public static T? TryParse(string value, bool ignoreCase)
 		{
 			long ir;
-			var b = Converter.TryParseInternal(value, ignoreCase, true, out ir);
-			result = (T)Enum.ToObject(typeof(T), ir);
-			return b;
+			return Converter.TryParseInternal(value, ignoreCase, true, out ir)
+				? (T?)Enum.ToObject(typeof(T), ir) : null;
 		}
-		public static bool TryParse(string value, out T result)
+		public static T? TryParse(string value)
 		{
 			long ir;
-			bool b = Converter.TryParseInternal(value, false, true, out ir);
-			result = (T)Enum.ToObject(typeof(T), ir);
-			return b;
+			return Converter.TryParseInternal(value, false, true, out ir)
+				? (T?)Enum.ToObject(typeof(T), ir) : null;
 		}
 
 		/// <summary>Returns an indication whether a constant with a specified value exists in a specified enumeration.</summary>

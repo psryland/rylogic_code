@@ -1,12 +1,14 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Drawing;
 using System.Windows.Forms;
 using pr.common;
+using pr.extn;
 using pr.util;
 using pr.win32;
 
 namespace pr.extn
 {
-	public static class TextBoxExtensions
+	public static class TextBox_
 	{
 		/// <summary>Returns a disposable object that preserves the current selection</summary>
 		public static Scope<Range> SelectionScope(this TextBoxBase edit)

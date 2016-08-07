@@ -287,6 +287,12 @@ namespace pr.gui
 				Close();
 		}
 
+		/// <summary>Set the exception, so that an exception is throw on closing the dialog</summary>
+		public void SetError(Exception ex)
+		{
+			m_error = ex;
+		}
+
 		/// <summary>Layout the form</summary>
 		private void DoLayout()
 		{

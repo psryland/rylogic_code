@@ -5,19 +5,21 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Drawing;
-using System.Windows.Forms;
-using pr.util;
-using pr.gfx;
-using pr.maths;
-using pr.extn;
-using pr.container;
-using System.Xml.Linq;
 using System.Diagnostics;
+using System.Drawing;
 using System.Drawing.Drawing2D;
-using pr.common;
-using pr.win32;
 using System.Linq;
+using System.Windows.Forms;
+using System.Xml.Linq;
+using pr.common;
+using pr.container;
+using pr.extn;
+using pr.gfx;
+using pr.ldr;
+using pr.maths;
+using pr.util;
+using pr.win32;
+using EBtnIdx = pr.gfx.View3d.EBtnIdx;
 
 namespace pr.gui
 {
@@ -44,7 +46,9 @@ namespace pr.gui
 				Range           = new RangeData(this);
 				BaseRangeX      = new RangeF(0.0, 1.0);
 				BaseRangeY      = new RangeF(0.0, 1.0);
-				Chart           = new ChartPanel(this); // Must come after 'Range'
+				Window          = new ChartPanel(this); // Must come after 'Range'
+				MouseOperations = new MouseOps();
+				Tools           = new ChartTools(Options);
 				m_impl_zoom     = new RangeF(float.Epsilon, float.MaxValue);
 				m_tt_show_value = new ToolTip { ShowAlways = false, UseAnimation = false, UseFading = false, Tag = false };
 
@@ -55,7 +59,9 @@ namespace pr.gui
 				Elements.ListChanging += (s,a) => OnElementListChanging(a);
 				Selected.ListChanging += (s,a) => OnSelectionListChanging(a);
 
-				MouseNavigation = true;
+				AllowEditing = false;
+				AllowSelection = false;
+				DefaultMouseControl = true;
 				FindDefaultRange(visible_only:false);
 			}
 			catch
@@ -66,18 +72,20 @@ namespace pr.gui
 		}
 		protected override void Dispose(bool disposing)
 		{
+			MouseOperations = null;
+			Tools = null;
 			Range = null;
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
 		protected override void OnLayout(LayoutEventArgs e)
 		{
-			if (Chart != null && !this.IsInDesignMode())
+			if (Window != null && !this.IsInDesignMode())
 			{
 				using (this.SuspendLayout(false))
 				{
 					var dims = ChartDimensions;
-					Chart.Bounds = dims.ChartArea;
+					Window.Bounds = dims.ChartArea;
 				}
 			}
 			base.OnLayout(e);
@@ -90,13 +98,13 @@ namespace pr.gui
 		protected override void OnInvalidated(InvalidateEventArgs e)
 		{
 			base.OnInvalidated(e);
-			Chart?.Invalidate();
+			Window?.Invalidate();
 		}
 
 		/// <summary>Rendering options for the chart</summary>
 		public RdrOptions Options
 		{
-			get { return m_rdr_options; }
+			[DebuggerStepThrough] get { return m_rdr_options; }
 			set
 			{
 				if (m_rdr_options == value) return;
@@ -169,9 +177,9 @@ namespace pr.gui
 		}
 
 		/// <summary>The view3d part of the chart</summary>
-		public ChartPanel Chart
+		public ChartPanel Window
 		{
-			get { return m_impl_chart; }
+			[DebuggerStepThrough] get { return m_impl_chart; }
 			set
 			{
 				if (m_impl_chart == value) return;
@@ -243,17 +251,21 @@ namespace pr.gui
 		/// <summary>Returns a point in chart space from a point in client space. Use to convert mouse (client-space) locations to chart coordinates</summary>
 		public PointF ClientToChart(Point client_point)
 		{
+			return ClientToChart(new PointF(client_point.X, client_point.Y));
+		}
+		public PointF ClientToChart(PointF client_point)
+		{
 			return new PointF(
-				(float)(XAxis.Min + (client_point.X - Chart.Bounds.Left) * XAxis.Span / Chart.Bounds.Width),
-				(float)(YAxis.Min - (client_point.Y - Chart.Bounds.Bottom) * YAxis.Span / Chart.Bounds.Height));
+				(float)(XAxis.Min + (client_point.X - Window.Bounds.Left  ) * XAxis.Span / Window.Bounds.Width ),
+				(float)(YAxis.Min - (client_point.Y - Window.Bounds.Bottom) * YAxis.Span / Window.Bounds.Height));
 		}
 
 		/// <summary>Returns a point in client space from a point in chart space. Inverse of PointToChart</summary>
 		public Point ChartToClient(PointF chart_point)
 		{
 			return new Point(
-				(int)(Chart.Bounds.Left   + (chart_point.X - XAxis.Min) * Chart.Bounds.Width  / XAxis.Span),
-				(int)(Chart.Bounds.Bottom - (chart_point.Y - YAxis.Min) * Chart.Bounds.Height / YAxis.Span));
+				(int)(Window.Bounds.Left   + (chart_point.X - XAxis.Min) * Window.Bounds.Width  / XAxis.Span),
+				(int)(Window.Bounds.Bottom - (chart_point.Y - YAxis.Min) * Window.Bounds.Height / YAxis.Span));
 		}
 
 		/// <summary>
@@ -290,7 +302,7 @@ namespace pr.gui
 		}
 		public m4x4 ChartToClientSpace()
 		{
-			return ChartToClientSpace(Chart.Bounds);
+			return ChartToClientSpace(Window.Bounds);
 		}
 
 		/// <summary>
@@ -327,7 +339,28 @@ namespace pr.gui
 		}
 		public m4x4 ClientToChartSpace()
 		{
-			return ClientToChartSpace(Chart.Bounds);
+			return ClientToChartSpace(Window.Bounds);
+		}
+
+		/// <summary>Perform a hit test on the chart</summary>
+		public HitTestResult HitTest(v2 ds_point, Func<Element, bool> pred)
+		{
+			var result = new HitTestResult(Window.Camera);
+			var elements = pred != null ? Elements.Where(pred) : Elements;
+			foreach (var elem in elements)
+			{
+				var hit = elem.HitTest(ds_point, Window.Camera);
+				if (hit != null)
+					result.Hits.Add(hit);
+			}
+
+			// Sort the results by type then z order
+			result.Hits.Sort((l,r) => -l.Element.PositionZ.CompareTo(r.Element.PositionZ));
+			return result;
+		}
+		public HitTestResult HitTestCS(Point cs_point, Func<Element, bool> pred)
+		{
+			return HitTest(ClientToChart(cs_point), pred);
 		}
 
 		/// <summary>
@@ -399,8 +432,8 @@ namespace pr.gui
 				var dims = ChartDimensions;
 
 				// Render the 3d scene
-				Chart.Bounds = dims.ChartArea;
-				Chart.DoPaint();
+				Window.Bounds = dims.ChartArea;
+				Window.DoPaint();
 
 				// Draw the chart frame
 				DoPaintFrame(gfx, dims);
@@ -547,13 +580,28 @@ namespace pr.gui
 			get { return new ChartDims(this); }
 		}
 
+		/// <summary>True if users are allowed to add/remove/edit elements on the diagram</summary>
+		public bool AllowEditing
+		{
+			get { return m_impl_allow_editing; }
+			set
+			{
+				if (m_impl_allow_editing == value) return;
+				m_impl_allow_editing = value;
+				//UpdateEditToolbar();
+			}
+		}
+		private bool m_impl_allow_editing;
+
+		/// <summary>True if users are allowed to select elements on the diagram</summary>
+		public bool AllowSelection { get; set; }
+
 		#region Chart Panel
 		public class ChartPanel :Control
 		{
 			private ChartControl          m_owner;         // The containing chart control
 			private View3d                m_view3d;        // Renderer
 			private View3d.Window         m_window;        // A view3d window for this control instance
-			private View3d.CameraControls m_camera;        // The virtual window over the diagram
 			private bool                  m_render_needed; // True when the scene needs rendering again
 
 			public ChartPanel(ChartControl owner)
@@ -564,9 +612,10 @@ namespace pr.gui
 
 				try
 				{
+					var opts = new View3d.WindowOptions(false, null, IntPtr.Zero) { DbgName = "Chart", Multisampling = owner.Options.AntiAliasing ? 4 : 1 };
 					m_owner = owner;
 					m_view3d = new View3d();
-					m_window = new View3d.Window(m_view3d, Handle, new View3d.WindowOptions(false, null, IntPtr.Zero) { DbgName = "Chart" });
+					m_window = new View3d.Window(m_view3d, Handle, opts);
 					m_window.LightProperties = View3d.Light.Directional(-v4.ZAxis, Colour32.Zero, Colour32.Gray, Colour32.Zero, 0f, 0f);
 					m_window.FocusPointVisible = false;
 					m_window.OriginVisible = false;
@@ -583,6 +632,7 @@ namespace pr.gui
 			}
 			protected override void Dispose(bool disposing)
 			{
+				Util.Dispose(ref m_window);
 				Util.Dispose(ref m_view3d);
 				base.Dispose(disposing);
 			}
@@ -620,6 +670,22 @@ namespace pr.gui
 				base.WndProc(ref m);
 			}
 
+			/// <summary>The view of the chart</summary>
+			public View3d.CameraControls Camera { [DebuggerStepThrough] get { return m_camera; } }
+			private View3d.CameraControls m_camera;
+
+			/// <summary>Add an object to the scene</summary>
+			public void AddObject(View3d.Object obj)
+			{
+				m_window.AddObject(obj);
+			}
+
+			/// <summary>Remove an object from the scene</summary>
+			public void RemoveObject(View3d.Object obj)
+			{
+				m_window.RemoveObject(obj);
+			}
+
 			/// <summary>Render the chart 3d scene</summary>
 			public void DoPaint()
 			{
@@ -627,7 +693,7 @@ namespace pr.gui
 					return;
 
 				// Clear the scene
-				m_window.RemoveAllObjects();
+				m_window.RemoveObjects(all_except:true, context_id:ChartTools.Id);
 
 				// Add axis graphics
 				m_owner.Range.AddToScene(m_window);
@@ -762,7 +828,7 @@ namespace pr.gui
 		/// <summary>The client space area of the view3d part of the chart</summary>
 		private Rectangle ChartBounds
 		{
-			get { return Chart.Bounds; }
+			get { return Window.Bounds; }
 		}
 
 		/// <summary>The client space area of the XAxis area of the chart</summary>
@@ -787,59 +853,72 @@ namespace pr.gui
 
 			public RdrOptions()
 			{
-				BkColour        = SystemColors.Control;
-				ChartBkColour   = Color.White;
-				TitleColour     = Color.Black;
-				TitleFont       = new Font("tahoma", 12, FontStyle.Bold);
-				TitleTransform  = new Matrix(1f, 0f, 0f, 1f, 0f, 0f);
-				Margin          = new Padding(3);
-				NoteFont        = new Font("tahoma", 8, FontStyle.Regular);
-				SelectionColour = Color.DarkGray;
-				ShowGridLines   = true;
-				XAxis           = new Axis();
-				YAxis           = new Axis();
+				BkColour             = SystemColors.Control;
+				ChartBkColour        = Color.White;
+				TitleColour          = Color.Black;
+				TitleFont            = new Font("tahoma", 12, FontStyle.Bold);
+				TitleTransform       = new Matrix(1f, 0f, 0f, 1f, 0f, 0f);
+				Margin               = new Padding(3);
+				NoteFont             = new Font("tahoma", 8, FontStyle.Regular);
+				SelectionColour      = Color.FromArgb(0x80, Color.DarkGray);
+				ShowGridLines        = true;
+				AntiAliasing         = true;
+				MinSelectionDistance = 10f;
+				MinDragPixelDistance = 5f;
+				XAxis                = new Axis();
+				YAxis                = new Axis();
+				// Don't forget to add new members to the other constructors!
 			}
 			public RdrOptions(RdrOptions rhs)
 			{
-				BkColour        = rhs.BkColour;
-				ChartBkColour   = rhs.ChartBkColour;
-				TitleColour     = rhs.TitleColour;
-				TitleFont       = (Font)rhs.TitleFont.Clone();
-				TitleTransform  = rhs.TitleTransform;
-				Margin          = rhs.Margin;
-				NoteFont        = (Font)rhs.NoteFont.Clone();
-				SelectionColour = rhs.SelectionColour;
-				ShowGridLines   = rhs.ShowGridLines;
-				XAxis           = new Axis(rhs.XAxis);
-				YAxis           = new Axis(rhs.YAxis);
+				BkColour             = rhs.BkColour;
+				ChartBkColour        = rhs.ChartBkColour;
+				TitleColour          = rhs.TitleColour;
+				TitleFont            = (Font)rhs.TitleFont.Clone();
+				TitleTransform       = rhs.TitleTransform;
+				Margin               = rhs.Margin;
+				NoteFont             = (Font)rhs.NoteFont.Clone();
+				SelectionColour      = rhs.SelectionColour;
+				ShowGridLines        = rhs.ShowGridLines;
+				AntiAliasing         = rhs.AntiAliasing;
+				MinSelectionDistance = rhs.MinSelectionDistance;
+				MinDragPixelDistance = rhs.MinDragPixelDistance;
+				XAxis                = new Axis(rhs.XAxis);
+				YAxis                = new Axis(rhs.YAxis);
 			}
 			public RdrOptions(XElement node) :this()
 			{
-				BkColour        = node.Element(XmlTag.BkColour       ).As(BkColour       );
-				ChartBkColour   = node.Element(XmlTag.ChartBkColour  ).As(ChartBkColour  );
-				TitleColour     = node.Element(XmlTag.TitleColour    ).As(TitleColour    );
-				TitleTransform  = node.Element(XmlTag.TitleTransform ).As(TitleTransform );
-				Margin          = node.Element(XmlTag.Margin         ).As(Margin         );
-				TitleFont       = node.Element(XmlTag.TitleFont      ).As(TitleFont      );
-				NoteFont        = node.Element(XmlTag.NoteFont       ).As(NoteFont       );
-				SelectionColour = node.Element(XmlTag.SelectionColour).As(SelectionColour);
-				ShowGridLines   = node.Element(XmlTag.ShowGridLines  ).As(ShowGridLines  );
-				XAxis           = node.Element(XmlTag.XAxis          ).As(XAxis          );
-				YAxis           = node.Element(XmlTag.YAxis          ).As(YAxis          );
+				BkColour             = node.Element(XmlTag.BkColour            ).As(BkColour            );
+				ChartBkColour        = node.Element(XmlTag.ChartBkColour       ).As(ChartBkColour       );
+				TitleColour          = node.Element(XmlTag.TitleColour         ).As(TitleColour         );
+				TitleTransform       = node.Element(XmlTag.TitleTransform      ).As(TitleTransform      );
+				Margin               = node.Element(XmlTag.Margin              ).As(Margin              );
+				TitleFont            = node.Element(XmlTag.TitleFont           ).As(TitleFont           );
+				NoteFont             = node.Element(XmlTag.NoteFont            ).As(NoteFont            );
+				SelectionColour      = node.Element(XmlTag.SelectionColour     ).As(SelectionColour     );
+				ShowGridLines        = node.Element(XmlTag.ShowGridLines       ).As(ShowGridLines       );
+				AntiAliasing         = node.Element(XmlTag.AntiAliasing        ).As(AntiAliasing        );
+				MinSelectionDistance = node.Element(XmlTag.MinSelectionDistance).As(MinSelectionDistance);
+				MinDragPixelDistance = node.Element(XmlTag.MinDragPixelDistance).As(MinDragPixelDistance);
+				XAxis                = node.Element(XmlTag.XAxis               ).As(XAxis               );
+				YAxis                = node.Element(XmlTag.YAxis               ).As(YAxis               );
 			}
 			public XElement ToXml(XElement node)
 			{
-				node.Add2(XmlTag.BkColour       , BkColour       , false);
-				node.Add2(XmlTag.ChartBkColour  , ChartBkColour  , false);
-				node.Add2(XmlTag.TitleColour    , TitleColour    , false);
-				node.Add2(XmlTag.TitleTransform , TitleTransform , false);
-				node.Add2(XmlTag.Margin         , Margin         , false);
-				node.Add2(XmlTag.TitleFont      , TitleFont      , false);
-				node.Add2(XmlTag.NoteFont       , NoteFont       , false);
-				node.Add2(XmlTag.SelectionColour, SelectionColour, false);
-				node.Add2(XmlTag.ShowGridLines  , ShowGridLines  , false);
-				node.Add2(XmlTag.XAxis          , XAxis          , false);
-				node.Add2(XmlTag.YAxis          , YAxis          , false);
+				node.Add2(XmlTag.BkColour             , BkColour             , false);
+				node.Add2(XmlTag.ChartBkColour        , ChartBkColour        , false);
+				node.Add2(XmlTag.TitleColour          , TitleColour          , false);
+				node.Add2(XmlTag.TitleTransform       , TitleTransform       , false);
+				node.Add2(XmlTag.Margin               , Margin               , false);
+				node.Add2(XmlTag.TitleFont            , TitleFont            , false);
+				node.Add2(XmlTag.NoteFont             , NoteFont             , false);
+				node.Add2(XmlTag.SelectionColour      , SelectionColour      , false);
+				node.Add2(XmlTag.ShowGridLines        , ShowGridLines        , false);
+				node.Add2(XmlTag.AntiAliasing         , AntiAliasing         , false);
+				node.Add2(XmlTag.MinSelectionDistance , MinSelectionDistance , false);
+				node.Add2(XmlTag.MinDragPixelDistance , MinDragPixelDistance , false);
+				node.Add2(XmlTag.XAxis                , XAxis                , false);
+				node.Add2(XmlTag.YAxis                , YAxis                , false);
 				return node;
 			}
 
@@ -923,6 +1002,30 @@ namespace pr.gui
 				set { SetProp(ref m_ShowGridLines, value, nameof(ShowGridLines)); }
 			}
 			private bool m_ShowGridLines;
+
+			/// <summary>Enable/Disable multi-sampling in the view3d view. Can only be changed before the view is created</summary>
+			public bool AntiAliasing
+			{
+				get { return m_AntiAliasing; }
+				set { SetProp(ref m_AntiAliasing, value, nameof(AntiAliasing)); }
+			}
+			private bool m_AntiAliasing;
+
+			/// <summary>How close a click has to be for selection to occur (in client space)</summary>
+			public float MinSelectionDistance
+			{
+				get { return m_MinSelectionDistance; }
+				set { SetProp(ref m_MinSelectionDistance, value, nameof(MinSelectionDistance)); }
+			}
+			private float m_MinSelectionDistance;
+
+			/// <summary>Minimum distance in pixels before the chart starts dragging</summary>
+			public float MinDragPixelDistance
+			{
+				get { return m_MinDragPixelDistance; }
+				set { SetProp(ref m_MinDragPixelDistance, value, nameof(MinDragPixelDistance)); }
+			}
+			private float m_MinDragPixelDistance;
 
 			/// <summary>XAxis rendering options</summary>
 			public Axis XAxis 
@@ -1189,258 +1292,6 @@ namespace pr.gui
 				};
 			}
 		}
-		#endregion
-
-		#region Navigation
-
-		[Flags] private enum EAxis
-		{
-			XAxis = 1 << 0,
-			YAxis = 1 << 1,
-			Both  = XAxis | YAxis,
-		}
-
-		/// <summary>Enable/Disable mouse navigation</summary>
-		[Browsable(false)]
-		public bool MouseNavigation
-		{
-			get { return m_mouse_nav; }
-			set
-			{
-				if (m_mouse_nav == value) return;
-				if (m_mouse_nav)
-				{
-					MouseDown  -= OnMouseDown;
-					MouseUp    -= OnMouseUp;
-					MouseWheel -= OnMouseWheel;
-				}
-				m_mouse_nav = value;
-				if (m_mouse_nav)
-				{
-					MouseDown  += OnMouseDown;
-					MouseUp    += OnMouseUp;
-					MouseWheel += OnMouseWheel;
-				}
-			}
-		}
-		private bool m_mouse_nav;
-
-		/// <summary>The location in chart space of where the chart was "grabbed"</summary>
-		private PointF m_grab_location;
-
-		/// <summary>The allowed motion based on where the chart was grabbed</summary>
-		private EAxis m_drag_axis_allow;
-
-		/// <summary>Area selection, has width, height of zero when the user isn't selecting</summary>
-		private Rectangle m_selection;
-
-		// Mouse navigation - public to allow users to forward mouse calls to us.
-		public void OnMouseDown(object sender, MouseEventArgs e)
-		{
-			m_selection = new Rectangle(e.Location, Size.Empty);
-			switch (e.Button)
-			{
-			case MouseButtons.Left:
-				m_grab_location = ClientToChart(e.Location);
-				if (ChartBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.Both;
-				if (XAxisBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.XAxis;
-				if (YAxisBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.YAxis;
-				Cursor = Cursors.SizeAll;
-				MouseMove -= OnMouseChartDrag;
-				MouseMove += OnMouseChartDrag;
-				Capture = true;
-				break;
-
-			case MouseButtons.Right:
-				MouseMove -= OnMouseAreaSelect;
-				MouseMove += OnMouseAreaSelect;
-				Capture = true;
-				break;
-			}
-		}
-		public void OnMouseUp(object sender, MouseEventArgs e)
-		{
-			switch (e.Button)
-			{
-			case MouseButtons.Left:
-				Cursor = Cursors.Default;
-				MouseMove -= OnMouseChartDrag;
-				Capture = false;
-				break;
-
-			case MouseButtons.Right:
-				MouseMove -= OnMouseAreaSelect;
-
-				// If the selection has area, rescale the chart
-				if (Math.Abs(m_selection.Width) > 0 && Math.Abs(m_selection.Height) > 0)
-				{
-					// Normalise the rectangle
-					var sel = m_selection.NormalizeRect();
-
-					// Rescale the chart
-					var lower = ClientToChart(new Point(sel.Left, sel.Bottom));
-					var upper = ClientToChart(new Point(sel.Right, sel.Top));
-					XAxis.Min = lower.X;
-					XAxis.Max = upper.X;
-					YAxis.Min = lower.Y;
-					YAxis.Max = upper.Y;
-					Invalidate();
-
-					// Clear the selection
-					m_selection.Width  = 0;
-					m_selection.Height = 0;
-				}
-				else
-				{
-					ShowContextMenu(e.Location);
-				}
-
-				Capture = false;
-				break;
-			}
-		}
-		public void OnMouseWheel(object sender, MouseEventArgs e)
-		{
-			var delta = Maths.Clamp(e.Delta, -999, 999);
-			var chart_bounds = Chart.Bounds;
-			if (chart_bounds.Contains(e.Location))
-			{
-				var point = ClientToChart(e.Location);
-				Zoom *= (1.0f - delta * 0.001f);
-				PositionChart(e.Location, point);
-				Invalidate();
-				return;
-			}
-			var xaxis_bounds = Rectangle.FromLTRB(chart_bounds.Left, chart_bounds.Bottom, chart_bounds.Right, ClientSize.Height);
-			if (xaxis_bounds.Contains(e.Location))
-			{
-				if (ModifierKeys == Keys.Control && XAxis.AllowScroll)
-				{
-					XAxis.Shift(XAxis.Span * delta * 0.001);
-					Invalidate();
-				}
-				if (ModifierKeys != Keys.Control && XAxis.AllowZoom)
-				{
-					XAxis.Span *= (1.0f - delta * 0.001);
-					Invalidate();
-				}
-			}
-			var yaxis_bounds = Rectangle.FromLTRB(0, chart_bounds.Top, chart_bounds.Left, chart_bounds.Bottom);
-			if (yaxis_bounds.Contains(e.Location))
-			{
-				if (ModifierKeys == Keys.Control && YAxis.AllowScroll)
-				{
-					YAxis.Shift(YAxis.Span * delta * 0.001);
-					Invalidate();
-				}
-				if (ModifierKeys != Keys.Control && YAxis.AllowZoom)
-				{
-					YAxis.Span *= (1.0f - delta * 0.001);
-					Invalidate();
-				}
-			}
-		}
-
-		/// <summary>Handle mouse dragging the chart around</summary>
-		private void OnMouseChartDrag(object sender, MouseEventArgs e)
-		{
-			var grab_loc = ChartToClient(m_grab_location);
-			var drop_loc = e.Location;
-
-			// Limit the drag direction
-			if (!m_drag_axis_allow.HasFlag(EAxis.XAxis)) drop_loc.X = grab_loc.X;
-			if (!m_drag_axis_allow.HasFlag(EAxis.YAxis)) drop_loc.Y = grab_loc.Y;
-
-			// must drag at least 5 pixels
-			var dx = drop_loc.X - grab_loc.X;
-			var dy = drop_loc.Y - grab_loc.Y;
-			if (dx*dx + dy*dy >= 25f)
-				PositionChart(drop_loc, m_grab_location);
-		}
-
-		/// <summary>Handle mouse dragging to resize the area selection</summary>
-		private void OnMouseAreaSelect(object sender, MouseEventArgs e)
-		{
-			const int MinAreaSelectDistance = 3;
-			m_selection.Width  = e.Location.X - m_selection.X;
-			m_selection.Height = e.Location.Y - m_selection.Y;
-			if (Math.Abs(m_selection.Width)  < MinAreaSelectDistance) m_selection.Width  = 0;
-			if (Math.Abs(m_selection.Height) < MinAreaSelectDistance) m_selection.Height = 0;
-			Invalidate();
-		}
-
-		/// <summary>Shifts the X and Y range of the chart so that chart space position 'gs_point' is at client space position 'cs_point'</summary>
-		public void PositionChart(Point cs_point, PointF gs_point)
-		{
-			var dst = ClientToChart(cs_point);
-			XAxis.Shift(gs_point.X - dst.X);
-			YAxis.Shift(gs_point.Y - dst.Y);
-			Invalidate();
-		}
-
-		/// <summary>Get/Set the centre of the chart</summary>
-		[Browsable(false)]
-		public PointF Centre
-		{
-			get { return new PointF((float)(XAxis.Min + XAxis.Span*0.5), (float)(YAxis.Min + YAxis.Span*0.5)); }
-			set
-			{
-				XAxis.Min = value.X - XAxis.Span*0.5;
-				YAxis.Min = value.Y - YAxis.Span*0.5;
-				Invalidate();
-			}
-		}
-
-		/// <summary>Zoom in/out on the chart. Remember to call refresh. Zoom is a floating point value where 1f = no zoom, 2f = 2x magnification</summary>
-		[Browsable(false)]
-		public double Zoom
-		{
-			get
-			{
-				return
-					XAxis.AllowZoom ? XAxis.Span / BaseRangeX.Size :
-					YAxis.AllowZoom ? YAxis.Span / BaseRangeY.Size : 1f;
-			}
-			set
-			{
-				// Limit zoom amount
-				value = Maths.Clamp(value, ZoomMin, ZoomMax);
-
-				// If both axes allow zoom, maintain the aspect ratio
-				if (XAxis.AllowZoom && YAxis.AllowZoom)
-				{
-					var aspect = (YAxis.Span * BaseRangeX.Size) / (BaseRangeY.Size * XAxis.Span);
-					aspect = Maths.Clamp(Maths.IsFinite(aspect) ? aspect : 1.0, 0.001, 1000);
-					XAxis.Span = BaseRangeX.Size * value         ;
-					YAxis.Span = BaseRangeY.Size * value * aspect;
-				}
-				else if (XAxis.AllowZoom)
-				{
-					XAxis.Span = BaseRangeX.Size * value;
-				}
-				else if (YAxis.AllowZoom)
-				{
-					YAxis.Span = BaseRangeY.Size * value;
-				}
-				Invalidate();
-			}
-		}
-		private RangeF m_impl_zoom;
-
-		/// <summary>Minimum zoom limit</summary>
-		public double ZoomMin
-		{
-			get { return m_impl_zoom.Begin; }
-			set { Debug.Assert(value > 0f); m_impl_zoom.Begin = value; }
-		}
-
-		/// <summary>Maximum zoom limit</summary>
-		public double ZoomMax
-		{
-			get { return m_impl_zoom.End; }
-			set { Debug.Assert(value > 0f); m_impl_zoom.End = value; }
-		}
-
 		#endregion
 
 		#region Range
@@ -1814,6 +1665,548 @@ namespace pr.gui
 				{
 					return "{0} - [{1}:{2}]".Fmt(Label, Min, Max);
 				}
+			}
+		}
+
+		#endregion
+
+		#region Navigation
+
+		[Flags] private enum EAxis
+		{
+			XAxis = 1 << 0,
+			YAxis = 1 << 1,
+			Both  = XAxis | YAxis,
+		}
+
+		/// <summary>Enable/Disable mouse navigation</summary>
+		[Browsable(false)]
+		public bool DefaultMouseControl
+		{
+			get { return m_default_mouse_control; }
+			set
+			{
+				if (m_default_mouse_control == value) return;
+				m_default_mouse_control = value;
+			}
+		}
+		private bool m_default_mouse_control;
+
+		protected override void OnMouseDown(MouseEventArgs e)
+		{
+			base.OnMouseDown(e);
+
+			// If a mouse op is already active, ignore mouse down
+			if (MouseOperations.Active != null)
+				return;
+
+			// Look for the mouse op to perform
+			var btn = View3d.ButtonIndex(e.Button);
+			if (MouseOperations.Pending(btn) == null && DefaultMouseControl)
+			{
+				switch (btn)
+				{
+				default: return;
+				case EBtnIdx.Left:  MouseOperations.SetPending(btn, new MouseOpDragOrClickElements(this)); break;
+				case EBtnIdx.Right: MouseOperations.SetPending(btn, new MouseOpDragOrClickChart(this)); break;
+				}
+			}
+
+			// Start the next mouse op
+			MouseOperations.BeginOp(btn);
+
+			// Get the mouse op, save mouse location and hit test data, then call op.MouseDown()
+			var op = MouseOperations.Active;
+			if (op != null && !op.Cancelled)
+			{
+				op.m_btn_down    = true;
+				op.m_grab_client = e.Location;
+				op.m_grab_chart  = ClientToChart(op.m_grab_client);
+				op.m_hit_result  = HitTest(op.m_grab_chart, null);
+				op.MouseDown(e);
+				Capture = true;
+			}
+		}
+		protected override void OnMouseMove(MouseEventArgs e)
+		{
+			base.OnMouseMove(e);
+
+			// Look for the mouse op to perform
+			var op = MouseOperations.Active;
+			if (op != null && !op.Cancelled)
+				op.MouseMove(e);
+		}
+		protected override void OnMouseUp(MouseEventArgs e)
+		{
+			base.OnMouseUp(e);
+
+			// Only release the mouse when all buttons are up
+			if (MouseButtons == MouseButtons.None)
+				Capture = false;
+
+			// Look for the mouse op to perform
+			var btn = View3d.ButtonIndex(e.Button);
+			var op = MouseOperations.Active;
+			if (op != null && !op.Cancelled)
+				op.MouseUp(e);
+			
+			MouseOperations.EndOp(btn);
+		}
+		protected override void OnMouseWheel(MouseEventArgs e)
+		{
+			base.OnMouseWheel(e);
+
+			var delta = Maths.Clamp(e.Delta, -999, 999);
+			var chart_bounds = Window.Bounds;
+			if (chart_bounds.Contains(e.Location))
+			{
+				var point = ClientToChart(e.Location);
+				Zoom *= (1.0f - delta * 0.001f);
+				PositionChart(e.Location, point);
+				Invalidate();
+				return;
+			}
+			var xaxis_bounds = Rectangle.FromLTRB(chart_bounds.Left, chart_bounds.Bottom, chart_bounds.Right, ClientSize.Height);
+			if (xaxis_bounds.Contains(e.Location))
+			{
+				if (ModifierKeys == Keys.Control && XAxis.AllowScroll)
+				{
+					XAxis.Shift(XAxis.Span * delta * 0.001);
+					Invalidate();
+				}
+				if (ModifierKeys != Keys.Control && XAxis.AllowZoom)
+				{
+					XAxis.Span *= (1.0f - delta * 0.001);
+					Invalidate();
+				}
+			}
+			var yaxis_bounds = Rectangle.FromLTRB(0, chart_bounds.Top, chart_bounds.Left, chart_bounds.Bottom);
+			if (yaxis_bounds.Contains(e.Location))
+			{
+				if (ModifierKeys == Keys.Control && YAxis.AllowScroll)
+				{
+					YAxis.Shift(YAxis.Span * delta * 0.001);
+					Invalidate();
+				}
+				if (ModifierKeys != Keys.Control && YAxis.AllowZoom)
+				{
+					YAxis.Span *= (1.0f - delta * 0.001);
+					Invalidate();
+				}
+			}
+		}
+		protected override void OnKeyDown(KeyEventArgs e)
+		{
+			base.OnKeyDown(e);
+			SetCursor();
+
+			var op = MouseOperations.Active;
+			if (op != null)
+				op.OnKeyDown(e);
+		}
+		protected override void OnKeyUp(KeyEventArgs e)
+		{
+			base.OnKeyUp(e);
+			SetCursor();
+
+			var op = MouseOperations.Active;
+			if (op != null)
+				op.OnKeyUp(e);
+		}
+
+		/// <summary>Set the mouse cursor based on key state</summary>
+		protected virtual void SetCursor()
+		{
+			// Sub class to do something like this:
+			// if (ModifierKeys.HasFlag(Keys.Shift))   Cursor = Cursors.ArrowPlus;
+			// if (ModifierKeys.HasFlag(Keys.Control)) Cursor = Cursors.ArrowMinus;
+			Cursor = Cursors.Default;
+		}
+
+		/// <summary>Raised when the chart is clicked with the mouse</summary>
+		public event EventHandler<ChartClickedEventArgs> ChartClicked;
+		protected virtual void OnChartClicked(ChartClickedEventArgs args)
+		{
+			ChartClicked.Raise(this, args);
+
+			// Show the context menu on right click
+			if (!args.Handled && args.Button == MouseButtons.Right)
+				ShowContextMenu(args.Location);
+		}
+
+		/// <summary>Raised when the chart is area selected</summary>
+		public event EventHandler<ChartAreaSelectEventArgs> ChartAreaSelect;
+		protected virtual void OnChartAreaSelect(ChartAreaSelectEventArgs args)
+		{
+			ChartAreaSelect.Raise(this, args);
+
+			// Select chart elements by default
+			if (!args.Handled)
+			{
+				var rect = new RectangleF(args.SelectionArea.MinX, args.SelectionArea.MinY, args.SelectionArea.SizeX, args.SelectionArea.SizeY);
+				SelectElements(rect, ModifierKeys);
+			}
+		}
+
+		/// <summary>Shifts the X and Y range of the chart so that chart space position 'gs_point' is at client space position 'cs_point'</summary>
+		public void PositionChart(Point cs_point, PointF gs_point)
+		{
+			var dst = ClientToChart(cs_point);
+			XAxis.Shift(gs_point.X - dst.X);
+			YAxis.Shift(gs_point.Y - dst.Y);
+			Invalidate();
+		}
+
+		/// <summary>Get/Set the centre of the chart</summary>
+		[Browsable(false)]
+		public PointF Centre
+		{
+			get { return new PointF((float)(XAxis.Min + XAxis.Span*0.5), (float)(YAxis.Min + YAxis.Span*0.5)); }
+			set
+			{
+				XAxis.Min = value.X - XAxis.Span*0.5;
+				YAxis.Min = value.Y - YAxis.Span*0.5;
+				Invalidate();
+			}
+		}
+
+		/// <summary>Zoom in/out on the chart. Remember to call refresh. Zoom is a floating point value where 1f = no zoom, 2f = 2x magnification</summary>
+		[Browsable(false)]
+		public double Zoom
+		{
+			get
+			{
+				return
+					XAxis.AllowZoom ? XAxis.Span / BaseRangeX.Size :
+					YAxis.AllowZoom ? YAxis.Span / BaseRangeY.Size : 1f;
+			}
+			set
+			{
+				// Limit zoom amount
+				value = Maths.Clamp(value, ZoomMin, ZoomMax);
+
+				// If both axes allow zoom, maintain the aspect ratio
+				if (XAxis.AllowZoom && YAxis.AllowZoom)
+				{
+					var aspect = (YAxis.Span * BaseRangeX.Size) / (BaseRangeY.Size * XAxis.Span);
+					aspect = Maths.Clamp(Maths.IsFinite(aspect) ? aspect : 1.0, 0.001, 1000);
+					XAxis.Span = BaseRangeX.Size * value         ;
+					YAxis.Span = BaseRangeY.Size * value * aspect;
+				}
+				else if (XAxis.AllowZoom)
+				{
+					XAxis.Span = BaseRangeX.Size * value;
+				}
+				else if (YAxis.AllowZoom)
+				{
+					YAxis.Span = BaseRangeY.Size * value;
+				}
+				Invalidate();
+			}
+		}
+		private RangeF m_impl_zoom;
+
+		/// <summary>Minimum zoom limit</summary>
+		public double ZoomMin
+		{
+			get { return m_impl_zoom.Begin; }
+			set { Debug.Assert(value > 0f); m_impl_zoom.Begin = value; }
+		}
+
+		/// <summary>Maximum zoom limit</summary>
+		public double ZoomMax
+		{
+			get { return m_impl_zoom.End; }
+			set { Debug.Assert(value > 0f); m_impl_zoom.End = value; }
+		}
+
+		/// <summary>Zoom the chart to an area in client space or chart space</summary>
+		public void ZoomArea(RectangleF area, bool client_space)
+		{
+			Debug.Assert(area.Width > 0 && area.Height > 0);
+
+			var lower = new PointF(area.X              , area.Y              );
+			var upper = new PointF(area.X + area.Width , area.Y + area.Height);
+			if (client_space)
+			{
+				lower = ClientToChart(lower);
+				upper = ClientToChart(upper);
+			}
+
+			XAxis.Set(lower.X, upper.X);
+			YAxis.Set(lower.Y, upper.Y);
+			Invalidate();
+		}
+
+		#endregion
+
+		#region Mouse Operations
+
+		/// <summary>Per button current mouse operation</summary>
+		public MouseOps MouseOperations
+		{
+			[DebuggerStepThrough] get;
+			private set;
+		}
+
+		/// <summary>Manages per-button mouse operations</summary>
+		public class MouseOps
+		{
+			/// <summary>The current mouse operation in effect for each mouse button</summary>
+			private readonly Dictionary<EBtnIdx, MouseOp> m_ops;
+
+			/// <summary>The next mouse operation for each mouse button</summary>
+			private readonly Dictionary<EBtnIdx, MouseOp> m_pending;
+
+			public MouseOps()
+			{
+				m_ops     = Enum<EBtnIdx>.Values.ToDictionary(k => k, k => (MouseOp)null);
+				m_pending = Enum<EBtnIdx>.Values.ToDictionary(k => k, k => (MouseOp)null);
+			}
+
+			/// <summary>The currently active mouse op</summary>
+			public MouseOp Active { get; private set; }
+
+			/// <summary>Return the op pending for button 'idx'</summary>
+			public MouseOp Pending(EBtnIdx idx)
+			{
+				return m_pending[idx];
+			}
+
+			/// <summary>Add a mouse op to be started on the next mouse down event for button 'idx'</summary>
+			public void SetPending(EBtnIdx idx, MouseOp op)
+			{
+				if (m_pending[idx] != null) m_pending[idx].Dispose();
+				m_pending[idx] = op;
+			}
+
+			/// <summary>Start/End the next mouse op for button 'idx'</summary>
+			public void BeginOp(EBtnIdx idx)
+			{
+				Active = m_pending[idx];
+				m_pending[idx] = null;
+
+				// If the op starts immediately without a mouse down, fake
+				// a mouse down event as soon as it becomes active.
+				if (Active != null)
+				{
+					if (!Active.StartOnMouseDown)
+						Active.MouseDown(null);
+				}
+			}
+			public void EndOp(EBtnIdx idx)
+			{
+				if (Active != null)
+				{
+					if (Active.Cancelled) Active.NotifyCancelled();
+					Active.Dispose();
+				}
+				Active = null;
+
+				// If the next op starts immediately, begin it now
+				if (m_pending[idx] != null && !m_pending[idx].StartOnMouseDown)
+					BeginOp(idx);
+			}
+		}
+
+		/// <summary>Base class for a mouse operation performed with the mouse 'down -> [drag] -> up' sequence</summary>
+		public abstract class MouseOp :IDisposable
+		{
+			// The general process goes:
+			//  A mouse op is created and set as the pending operation in 'MouseOps'.
+			//  MouseDown on the chart calls 'BeginOp' which moves the pending op to 'Active'.
+			//  Mouse events on the chart are forwarded to the active op
+			//  MouseUp ends the current Active op, if the pending op should start immediately
+			//  then mouse up causes the next op to start (with a faked MouseDown event).
+			//  If at any point a mouse op is cancelled, no further mouse events are forwarded
+			//  to the op. When EndOp is called, a notification can be sent by the op to indicate cancelled.
+
+			/// <summary>The owning chart</summary>
+			protected ChartControl m_chart;
+			protected Scope m_suspend_scope;
+
+			// Selection data for a mouse button
+			public bool          m_btn_down;    // True while the corresponding mouse button is down
+			public Point         m_grab_client; // The client space location of where the chart was "grabbed"
+			public PointF        m_grab_chart;  // The chart space location of where the chart was "grabbed"
+			public HitTestResult m_hit_result;  // The hit test result on mouse down
+
+			public MouseOp(ChartControl chart)
+			{
+				m_chart = chart;
+				StartOnMouseDown = true;
+				Cancelled = false;
+			}
+			public virtual void Dispose()
+			{
+				Util.Dispose(ref m_suspend_scope);
+			}
+
+			/// <summary>True if mouse down starts the op, false if the op should start as soon as possible</summary>
+			public bool StartOnMouseDown { get; set; }
+
+			/// <summary>True if the op was aborted</summary>
+			public bool Cancelled { get; protected set; }
+
+			/// <summary>True if the mouse down event should be treated as a click (so far)</summary>
+			protected bool IsClick(Point location)
+			{
+				var grab = v2.From(m_grab_client);
+				var diff = v2.From(location) - grab;
+				return diff.Length2Sq < Maths.Sqr(m_chart.Options.MinDragPixelDistance);
+			}
+
+			/// <summary>Called on mouse down</summary>
+			public abstract void MouseDown(MouseEventArgs e);
+
+			/// <summary>Called on mouse move</summary>
+			public abstract void MouseMove(MouseEventArgs e);
+
+			/// <summary>Called on mouse up</summary>
+			public abstract void MouseUp(MouseEventArgs e);
+
+			/// <summary>Called on key down</summary>
+			public virtual void OnKeyDown(KeyEventArgs e) { }
+
+			/// <summary>Called on key up</summary>
+			public virtual void OnKeyUp(KeyEventArgs e) { }
+
+			/// <summary>Called when the mouse operation is cancelled</summary>
+			public virtual void NotifyCancelled() {}
+		}
+
+		/// <summary>A mouse operation for dragging the chart around</summary>
+		public class MouseOpDragOrClickChart :MouseOp
+		{
+			/// <summary>The allowed motion based on where the chart was grabbed</summary>
+			private EAxis m_drag_axis_allow;
+
+			public MouseOpDragOrClickChart(ChartControl chart)
+				:base(chart)
+			{}
+			public override void MouseDown(MouseEventArgs e)
+			{
+				if (m_chart.ChartBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.Both;
+				if (m_chart.XAxisBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.XAxis;
+				if (m_chart.YAxisBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.YAxis;
+			}
+			public override void MouseMove(MouseEventArgs e)
+			{
+				// If we haven't dragged, treat it as a click instead (i.e. ignore till it's a drag operation)
+				if (IsClick(e.Location))
+					return;
+
+				// Change the cursor once dragging
+				m_chart.Cursor = Cursors.SizeAll;
+
+				// Limit the drag direction
+				var drop_loc = e.Location;
+				if (!m_drag_axis_allow.HasFlag(EAxis.XAxis)) drop_loc.X = m_grab_client.X;
+				if (!m_drag_axis_allow.HasFlag(EAxis.YAxis)) drop_loc.Y = m_grab_client.Y;
+
+				m_chart.PositionChart(drop_loc, m_grab_chart);
+			}
+			public override void MouseUp(MouseEventArgs e)
+			{
+				m_chart.Cursor = Cursors.Default;
+
+				// If we haven't dragged, treat it as a click instead
+				if (IsClick(e.Location))
+					m_chart.OnChartClicked(new ChartClickedEventArgs(m_hit_result, e));
+				else
+					m_chart.PositionChart(e.Location, m_grab_chart);
+
+				m_chart.Invalidate();
+			}
+		}
+
+		/// <summary>A mouse operation for dragging selected elements around</summary>
+		public class MouseOpDragOrClickElements :MouseOp
+		{
+			private HitTestResult.Hit m_hit_selected;
+			private bool m_selection_graphic_added;
+
+			public MouseOpDragOrClickElements(ChartControl chart) :base(chart)
+			{
+				m_selection_graphic_added = false;
+			}
+			public override void MouseDown(MouseEventArgs e)
+			{
+				// Look for a selected object that the mouse operation starts on
+				m_hit_selected = m_hit_result.Hits.FirstOrDefault(x => x.Element.Selected);
+
+				// Record the drag start positions for selected objects
+				foreach (var elem in m_chart.Selected)
+					elem.DragStartPosition = elem.Position;
+
+				// Prevent events while dragging the elements around
+				m_suspend_scope = m_chart.SuspendChartChanged(raise_on_resume:true);
+			}
+			public override void MouseMove(MouseEventArgs e)
+			{
+				// If we haven't dragged, treat it as a click instead (i.e. ignore till it's a drag operation)
+				if (IsClick(e.Location))
+					return;
+
+				var drag_selected = m_chart.AllowEditing && m_hit_selected != null;
+				if (drag_selected)
+				{
+					// If the drag operation started on a selected element then drag the
+					// selected elements within the diagram.
+					var delta = DrawingEx.Subtract(m_chart.ClientToChart(e.Location), m_grab_chart);
+					m_chart.DragSelected(v2.From(delta), false);
+				}
+				else
+				{
+					// Otherwise change the selection area
+					if (!m_selection_graphic_added)
+					{
+						m_chart.Window.AddObject(m_chart.Tools.AreaSelect);
+						m_selection_graphic_added = true;
+					}
+
+					// Position the selection graphic
+					var selection_area = BRect.FromBounds(m_grab_chart, m_chart.ClientToChart(e.Location));
+					m_chart.Tools.AreaSelect.O2P = m4x4.Scale(
+						selection_area.SizeX,
+						selection_area.SizeY,
+						1f,
+						new v4(selection_area.Centre, m_chart.HighestZ, 1));
+				}
+				m_chart.Invalidate();
+			}
+			public override void MouseUp(MouseEventArgs e)
+			{
+				Util.Dispose(ref m_suspend_scope);
+
+				// If this is a single click...
+				if (IsClick(e.Location))
+				{
+					// Check to see if the click is on an existing selected object
+					// If so, allow that object to handle the click, otherwise select elements.
+					if (m_hit_selected == null || !m_hit_selected.Element.HandleClicked(m_hit_selected, m_hit_result.Camera))
+					{
+						var selection_area = new BRect(m_grab_chart, v2.Zero);
+						m_chart.SelectElements(selection_area, ModifierKeys);
+					}
+				}
+				else if (m_hit_selected != null && m_chart.AllowEditing)
+				{
+					var delta = DrawingEx.Subtract(m_chart.ClientToChart(e.Location), m_grab_chart);
+					m_chart.DragSelected(delta, true);
+				}
+				else
+				{
+					var selection_area = BBox.From(new v4(m_grab_chart, 0, 1f), new v4(m_chart.ClientToChart(e.Location), 0f, 1f));
+					m_chart.OnChartAreaSelect(new ChartAreaSelectEventArgs(selection_area));
+				}
+
+				// Remove the area selection graphic
+				if (m_selection_graphic_added)
+					m_chart.Window.RemoveObject(m_chart.Tools.AreaSelect);
+
+				m_chart.Cursor = Cursors.Default;
+				m_chart.Invalidate();
 			}
 		}
 
@@ -2337,6 +2730,96 @@ namespace pr.gui
 			}
 		}
 
+		/// <summary>Move the selected elements by 'delta'</summary>
+		private void DragSelected(v2 delta, bool commit)
+		{
+			if (!AllowEditing) return;
+			foreach (var elem in Selected)
+				elem.Drag(delta, commit);
+		}
+
+		/// <summary>
+		/// Select elements that are wholly within 'rect'. (rect is in diagram space)
+		/// If no modifier keys are down, elements not in 'rect' are deselected.
+		/// If 'shift' is down, elements within 'rect' are selected in addition to the existing selection
+		/// If 'ctrl' is down, elements within 'rect' are removed from the existing selection.</summary>
+		public void SelectElements(RectangleF rect, Keys modifiers)
+		{
+			if (!AllowSelection)
+				return;
+
+			// Normalise the selection
+			var r = new BBox(new v4(rect.Centre(), 0f, 1f), new v4(v2.Abs(v2.From(rect.Size))*0.5f, 1f, 0f));
+
+			// If the area of selection is less than the min drag distance, assume click selection
+			var is_click = r.DiametreSq < Maths.Sqr(Options.MinDragPixelDistance);
+			if (is_click)
+			{
+				var hits = HitTest(rect.Location, x => x.Enabled);
+
+				// If control is down, deselect the first selected element in the hit list
+				if (Bit.AllSet((int)modifiers, (int)Keys.Control))
+				{
+					var first = hits.Hits.FirstOrDefault(x => x.Element.Selected);
+					if (first != null)
+						first.Element.Selected = false;
+				}
+				// If shift is down, select the first element not already selected in the hit list
+				else if (Bit.AllSet((int)modifiers, (int)Keys.Shift))
+				{
+					var first = hits.Hits.FirstOrDefault(x => !x.Element.Selected);
+					if (first != null)
+						first.Element.Selected = true;
+				}
+				// Otherwise select the next element below the current selection or the top
+				// element if nothing is selected. Clear all other selections
+				else
+				{
+					// Find the element to select
+					var to_select = hits.Hits.FirstOrDefault();
+					for (int i = 0; i < hits.Hits.Count - 1; ++i)
+					{
+						if (!hits.Hits[i].Element.Selected) continue;
+						to_select = hits.Hits[i+1];
+						break;
+					}
+
+					// Deselect all elements and select the next element
+					Selected.Clear();
+					if (to_select != null)
+						to_select.Element.Selected = true;
+				}
+			}
+			// Otherwise it's area selection
+			else
+			{
+				using (Selected.SuspendEvents(true))
+				{
+					// If control is down, those in the selection area become deselected
+					if (Bit.AllSet((int)modifiers, (int)Keys.Control))
+					{
+						// Only need to look in the selected list
+						foreach (var elem in Selected.Where(x => r.IsWithin(x.Bounds, 0f)).ToArray())
+							elem.Selected = false;
+					}
+					// If shift is down, those in the selection area become selected
+					else if (Bit.AllSet((int)modifiers, (int)Keys.Shift))
+					{
+						foreach (var elem in Elements.Where(x => !x.Selected && r.IsWithin(x.Bounds, 0f)))
+							elem.Selected = true;
+					}
+					// Otherwise, the existing selection is cleared, and those within the selection area become selected
+					else
+					{
+						foreach (var elem in Elements)
+							elem.Selected = r.IsWithin(elem.Bounds, 0f);
+					}
+				}
+			}
+
+			Invalidate();
+		}
+
 		#endregion
 
 		#region Context Menu
@@ -2415,7 +2898,7 @@ namespace pr.gui
 		/// <summary>Handle mouse move events while the tooltip is visible</summary>
 		private void OnMouseMoveTooltip(object sender, MouseEventArgs e)
 		{
-			if (Chart.Bounds.Contains(e.Location))
+			if (Window.Bounds.Contains(e.Location))
 			{
 				var pt = ClientToChart(e.Location);
 				var new_str = "{0} {1}".Fmt(XAxis.TickText(pt.X, 0.0), YAxis.TickText(pt.Y, 0.0));
@@ -2425,6 +2908,152 @@ namespace pr.gui
 			}
 			else
 				m_tt_show_value.Hide(this);
+		}
+
+		#endregion
+
+		#region Tools
+
+		/// <summary>Chart graphics</summary>
+		private ChartTools Tools
+		{
+			[DebuggerStepThrough] get { return m_tools; }
+			set
+			{
+				if (m_tools == value) return;
+				Util.Dispose(ref m_tools);
+				m_tools = value;
+			}
+		}
+		private ChartTools m_tools;
+
+		/// <summary>A collection of graphics used by the chart itself</summary>
+		public class ChartTools :IDisposable
+		{
+			public static readonly Guid Id = new Guid("62D495BB-36D1-4B52-A067-1B7DB4011831");
+
+			public ChartTools(RdrOptions opts)
+			{
+				Options    = opts;
+				AreaSelect = CreateAreaSelect();
+				Resizer    = Util.NewArray(8, i => new ResizeGrabber(i));
+			}
+			public void Dispose()
+			{
+				Options = null;
+				AreaSelect = null;
+				Resizer = null;
+			}
+
+			/// <summary>Chart options</summary>
+			private RdrOptions Options
+			{
+				[DebuggerStepThrough] get { return m_options; }
+				set
+				{
+					if (m_options == value) return;
+					if (m_options != null) m_options.PropertyChanged -= HandleOptionsChanged;
+					m_options = value;
+					if (m_options != null) m_options.PropertyChanged += HandleOptionsChanged;
+				}
+			}
+			private RdrOptions m_options;
+
+			/// <summary>Graphic for area selection</summary>
+			public View3d.Object AreaSelect
+			{
+				get { return m_area_select; }
+				private set
+				{
+					if (m_area_select == value) return;
+					Util.Dispose(ref m_area_select);
+					m_area_select = value;
+				}
+			}
+			private View3d.Object m_area_select;
+			private View3d.Object CreateAreaSelect()
+			{
+				var ldr = Ldr.Rect("selection", Options.SelectionColour, AxisId.PosZ, 1f, 1f, true, v4.Origin);
+				return new View3d.Object(ldr, false, Id, false, null);
+			}
+
+			/// <summary>Graphics for the resizing grab zones</summary>
+			public ResizeGrabber[] Resizer
+			{
+				get { return m_resizer; }
+				private set
+				{
+					if (m_resizer == value) return;
+					Util.DisposeAll(m_resizer);
+					m_resizer = value;
+				}
+			}
+			private ResizeGrabber[] m_resizer;
+			public class ResizeGrabber :View3d.Object
+			{
+				public ResizeGrabber(int corner) :base("*Box {5}", false, Id, false, null)
+				{
+					switch (corner)
+					{
+					case 0:
+						Cursor = Cursors.SizeNESW;
+						Direction = v2.Normalise2(new v2(-1,-1));
+						Update = (b,z) => O2P = m4x4.Translation(b.Lower.x, b.Lower.y, z);
+						break;
+					case 1:
+						Cursor = Cursors.SizeNESW;
+						Direction = v2.Normalise2(new v2(+1,+1));
+						Update = (b,z) => O2P = m4x4.Translation(b.Upper.x, b.Upper.y, z);
+						break;
+					case 2:
+						Cursor = Cursors.SizeNWSE;
+						Direction = v2.Normalise2(new v2(-1,+1));
+						Update = (b,z) => O2P = m4x4.Translation(b.Lower.x, b.Upper.y, z);
+						break;
+					case 3:
+						Cursor = Cursors.SizeNWSE;
+						Direction = v2.Normalise2(new v2(+1,-1));
+						Update = (b,z) => O2P = m4x4.Translation(b.Upper.x, b.Lower.y, z);
+						break;
+					case 4:
+						Direction = new v2(-1,0);
+						Cursor = Cursors.SizeWE;
+						Update = (b,z) => O2P = m4x4.Translation(b.Lower.x, b.Centre.y, z);
+						break;
+					case 5:
+						Direction = new v2(+1,0);
+						Cursor = Cursors.SizeWE;
+						Update = (b,z) => O2P = m4x4.Translation(b.Upper.x, b.Centre.y, z);
+						break;
+					case 6:
+						Direction = new v2(0,-1);
+						Cursor = Cursors.SizeNS;
+						Update = (b,z) => O2P = m4x4.Translation(b.Centre.x, b.Lower.y, z);
+						break;
+					case 7:
+						Direction = new v2(0,+1);
+						Cursor = Cursors.SizeNS;
+						Update = (b,z) => O2P = m4x4.Translation(b.Centre.x, b.Upper.y, z);
+						break;
+					}
+				}
+
+				/// <summary>The direction that this grabber can resize in </summary>
+				public v2 Direction { get; private set; }
+
+				/// <summary>The cursor to display when this grabber is used</summary>
+				public Cursor Cursor { get; set; }
+
+				/// <summary>Updates the position of the grabber</summary>
+				public Action<BRect,float> Update;
+			}
+
+			/// <summary>Update the chart tools when the options change</summary>
+			private void HandleOptionsChanged(object sender, PropertyChangedEventArgs e)
+			{
+				if (e.PropertyName == nameof(RdrOptions.SelectionColour))
+					AreaSelect.SetColour(Options.SelectionColour);
+			}
 		}
 
 		#endregion
@@ -2503,38 +3132,56 @@ namespace pr.gui
 			}
 		}
 
+		/// <summary>Cursors for the chart</summary>
+		public static class Cursors
+		{
+			public static readonly Cursor Default    = System.Windows.Forms.Cursors.Default;
+			public static readonly Cursor WaitCursor = System.Windows.Forms.Cursors.WaitCursor;
+			public static readonly Cursor SizeWE     = System.Windows.Forms.Cursors.SizeWE;
+			public static readonly Cursor SizeNS     = System.Windows.Forms.Cursors.SizeNS;
+			public static readonly Cursor SizeNESW   = System.Windows.Forms.Cursors.SizeNESW;
+			public static readonly Cursor SizeNWSE   = System.Windows.Forms.Cursors.SizeNWSE;
+			public static readonly Cursor SizeAll    = System.Windows.Forms.Cursors.SizeAll;
+			public static readonly Cursor Arrow      = Resources.cursor_arrow.ToCursor(Point.Empty);
+			public static readonly Cursor ArrowPlus  = Resources.cursor_arrow_plus.ToCursor(Point.Empty);
+			public static readonly Cursor ArrowMinus = Resources.cursor_arrow_minus.ToCursor(Point.Empty);
+		}
+
 		/// <summary>String constants used in XML export/import</summary>
 		public static class XmlTag
 		{
-			public const string Root            = "root";
-			public const string TypeAttribute   = "ty";
-			public const string Element         = "elem";
-			public const string Id              = "id";
-			public const string Position        = "pos";
-			public const string XAxis           = "xaxis";
-			public const string YAxis           = "yaxis";
-			public const string BkColour        = "bk_colour";
-			public const string ChartBkColour   = "chart_bk_colour";
-			public const string TitleColour     = "title_colour";
-			public const string TitleTransform  = "title_xform";
-			public const string Margin          = "margin";
-			public const string TitleFont       = "title_font";
-			public const string NoteFont        = "note_font";
-			public const string SelectionColour = "selection_colour";
-			public const string ShowGridLines   = "show_grid_lines";
-			public const string AxisColour      = "axis_colour";
-			public const string LabelColour     = "label_colour";
-			public const string GridColour      = "grid_colour";
-			public const string TickColour      = "tick_colour";
-			public const string LabelFont       = "label_font";
-			public const string TickFont        = "tick_font";
-			public const string DrawTickMarks   = "draw_tick_marks";
-			public const string DrawTickLabels  = "draw_tick_labels";
-			public const string TickLength      = "tick_length";
-			public const string MinTickSize     = "min_tick_size";
-			public const string LabelTransform  = "label_xform";
-			public const string AxisThickness   = "axis_thickness";
-			public const string PixelsPerTick   = "pixels_per_tick";
+			public const string Root                 = "root";
+			public const string TypeAttribute        = "ty";
+			public const string Element              = "elem";
+			public const string Id                   = "id";
+			public const string Position             = "pos";
+			public const string XAxis                = "xaxis";
+			public const string YAxis                = "yaxis";
+			public const string BkColour             = "bk_colour";
+			public const string ChartBkColour        = "chart_bk_colour";
+			public const string TitleColour          = "title_colour";
+			public const string TitleTransform       = "title_xform";
+			public const string Margin               = "margin";
+			public const string TitleFont            = "title_font";
+			public const string NoteFont             = "note_font";
+			public const string SelectionColour      = "selection_colour";
+			public const string ShowGridLines        = "show_grid_lines";
+			public const string AntiAliasing         = "antialiasing";
+			public const string MinSelectionDistance = "min_selection_distance";
+			public const string MinDragPixelDistance = "min_drag_pixel_distance";
+			public const string AxisColour           = "axis_colour";
+			public const string LabelColour          = "label_colour";
+			public const string GridColour           = "grid_colour";
+			public const string TickColour           = "tick_colour";
+			public const string LabelFont            = "label_font";
+			public const string TickFont             = "tick_font";
+			public const string DrawTickMarks        = "draw_tick_marks";
+			public const string DrawTickLabels       = "draw_tick_labels";
+			public const string TickLength           = "tick_length";
+			public const string MinTickSize          = "min_tick_size";
+			public const string LabelTransform       = "label_xform";
+			public const string AxisThickness        = "axis_thickness";
+			public const string PixelsPerTick        = "pixels_per_tick";
 		}
 
 		/// <summary>Names for context menu items to allow users to identify them</summary>
@@ -2613,6 +3260,39 @@ namespace pr.gui
 			{
 				m_window.AddObject(obj);
 			}
+		}
+
+		/// <summary>Event args for the ChartClicked event</summary>
+		public class ChartClickedEventArgs :MouseEventArgs
+		{
+			public ChartClickedEventArgs(HitTestResult hits, MouseEventArgs e)
+				:base(e.Button, e.Clicks, e.X, e.Y, e.Delta)
+			{
+				Hits = hits;
+				Handled = false;
+			}
+
+			/// <summary>Results of a hit test performed at the click location</summary>
+			public HitTestResult Hits { get; private set; }
+
+			/// <summary>Set to true to suppress default chart click behaviour</summary>
+			public bool Handled { get; set; }
+		}
+
+		/// <summary>Event args for area selection</summary>
+		public class ChartAreaSelectEventArgs :EventArgs
+		{
+			public ChartAreaSelectEventArgs(BBox selection_area)
+			{
+				SelectionArea = selection_area;
+				Handled = false;
+			}
+
+			/// <summary>The area (actually volume if you include Z) of the selection</summary>
+			public BBox SelectionArea { get; private set; }
+
+			/// <summary>Set to true to suppress default chart click behaviour</summary>
+			public bool Handled { get; set; }
 		}
 
 		/// <summary>Event args for FindingDefaultRange</summary>
@@ -2723,7 +3403,7 @@ namespace pr.gui
 		}
 
 		/// <summary>True while consistency checks are suspended (Set calls are reference counted)</summary>
-		public bool ConsistencyCheckSuspended
+		[Browsable(false)] public bool ConsistencyCheckSuspended
 		{
 			get { return m_consistency_check_ref_count != 0; }
 			set

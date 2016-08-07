@@ -22,6 +22,8 @@ namespace pr.maths
 		public void  set(v4 centre, v4 radius)   { m_centre = centre; m_radius = radius; }
 		public override string ToString()        { return "Centre=" + m_centre.ToString3() + " Radius=" + m_radius.ToString3(); }
 
+		public static BBox From(v4 min, v4 max)  { return new BBox((max + min) * 0.5f, v4.Abs(max - min) * 0.5f); }
+
 		// Static v4 types
 		private readonly static BBox m_unit = new BBox(v4.Origin, new v4(0.5f, 0.5f, 0.5f, 0));
 		private readonly static BBox m_reset = new BBox(v4.Origin, new v4(-1, -1, -1, 0));

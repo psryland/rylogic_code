@@ -90,7 +90,6 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
-    <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows.Forms" />
@@ -120,7 +119,6 @@
     </Compile>
     <Compile Include="common\cmdline.cs" />
     <Compile Include="common\console_indent.cs" />
-    <Compile Include="common\enum_ex.cs" />
     <Compile Include="common\events_snapshot.cs" />
     <Compile Include="common\gchandle_ex.cs" />
     <Compile Include="common\marshal_ex.cs" />
@@ -283,6 +281,9 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="gui\toolstrip_combobox.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="gui\value_text_box.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="gui\vt100.cs" />

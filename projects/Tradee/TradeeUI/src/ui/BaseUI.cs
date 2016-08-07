@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows.Forms;
+using pr.extn;
 using pr.gui;
 using pr.util;
 
@@ -14,6 +15,9 @@ namespace Tradee
 		{
 			DockControl = new DockControl(this, name) { TabText = name };
 			Model = model;
+
+			CreateHandle();
+			this.BeginInvoke(() => SetModelCore(model));
 		}
 		protected override void Dispose(bool disposing)
 		{

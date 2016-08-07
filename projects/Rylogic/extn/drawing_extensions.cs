@@ -432,6 +432,12 @@ namespace pr.extn
 				(int)Maths.Clamp(src.B * (1f - frac) + dst.B * frac, 0f, 255f));
 		}
 
+		/// <summary>Return this colour with the alpha value changed to 'alpha'</summary>
+		public static Color Alpha(this Color col, int alpha)
+		{
+			return Color.FromArgb(alpha, col);
+		}
+
 		/// <summary>Convert this colour to ABGR</summary>
 		public static int ToAbgr(this Color col)
 		{

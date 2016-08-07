@@ -82,6 +82,24 @@ namespace pr.extn
 				throw new Exception("Reinterpret between UTC/Local, convert to Unspecified first");
 		}
 
+		/// <summary>Returns the minimum of two DateTime objects</summary>
+		public static DateTime Min(DateTime lhs, DateTime rhs)
+		{
+			// Convert 'min'/'max' to the same kind as 'time'
+			lhs = lhs.Kind == DateTimeKind.Unspecified ? lhs.As(rhs.Kind) : lhs.To(rhs.Kind);
+			rhs = rhs.Kind == DateTimeKind.Unspecified ? rhs.As(lhs.Kind) : rhs.To(lhs.Kind);
+			return lhs <= rhs ? lhs : rhs;
+		}
+
+		/// <summary>Returns the maximum of two DateTime objects</summary>
+		public static DateTime Max(DateTime lhs, DateTime rhs)
+		{
+			// Convert 'min'/'max' to the same kind as 'time'
+			lhs = lhs.Kind == DateTimeKind.Unspecified ? lhs.As(rhs.Kind) : lhs.To(rhs.Kind);
+			rhs = rhs.Kind == DateTimeKind.Unspecified ? rhs.As(lhs.Kind) : rhs.To(lhs.Kind);
+			return lhs >= rhs ? lhs : rhs;
+		}
+
 		/// <summary>Returns a new DateTime object clamped to within the given range</summary>
 		public static DateTime Clamp(this DateTime time, DateTime min, DateTime max)
 		{

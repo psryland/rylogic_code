@@ -143,12 +143,9 @@ namespace pr
 		struct MultiSamp :DXGI_SAMPLE_DESC
 		{
 			MultiSamp()
-				:DXGI_SAMPLE_DESC()
-			{
-				Count   = 1;
-				Quality = 0;
-			}
-			MultiSamp(UINT count, UINT quality)
+				:MultiSamp(1, 0)
+			{}
+			MultiSamp(UINT count, UINT quality = ~UINT())
 				:DXGI_SAMPLE_DESC()
 			{
 				Count   = count;

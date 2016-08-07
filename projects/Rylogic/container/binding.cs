@@ -119,8 +119,8 @@ namespace pr.container
 		/// <summary>Enumerate the collection of objects attached to this binding</summary>
 		public IEnumerable<object> BoundObjects { get { return m_bound.Select(x => x.Target); } }
 
-		/// <summary>Connect 'obj.property_or_method_name' to the binding value</summary>
-		public void Add(object obj, string property_or_method_name, BindingFlags flags = BindingFlags.Public|BindingFlags.Instance)
+		/// <summary>Connect 'obj.property_or_method_name' to the binding value. Returns this binding for method chaining</summary>
+		public Binding<TSrc, TValue> Add(object obj, string property_or_method_name, BindingFlags flags = BindingFlags.Public|BindingFlags.Instance)
 		{
 			var ty = obj.GetType();
 
@@ -139,7 +139,7 @@ namespace pr.container
 
 				// Apply the current value to the newly bound object
 				bind.Set(Value);
-				return;
+				return this;
 			}
 
 			// Look for a method with the name 'property_or_method_name'
@@ -157,14 +157,14 @@ namespace pr.container
 
 				// Apply the current value to the newly bound object
 				bind.Set(Value);
-				return;
+				return this;
 			}
 
 			throw new Exception("Property or Method '{0}' not found on object type {1}".Fmt(property_or_method_name, ty.Name));
 		}
-		public void Add<U,Ret>(U obj, Expression<Func<U,Ret>> expression, BindingFlags flags = BindingFlags.Public|BindingFlags.Instance)
+		public Binding<TSrc, TValue> Add<U,Ret>(U obj, Expression<Func<U,Ret>> expression, BindingFlags flags = BindingFlags.Public|BindingFlags.Instance)
 		{
-			Add(obj, R<U>.Name(expression), flags);
+			return Add(obj, R<U>.Name(expression), flags);
 		}
 
 		/// <summary>Disconnect 'obj' from the binding value</summary>
@@ -187,6 +187,14 @@ namespace pr.container
 		/// then this event will be raised automatically when the bound value changes.
 		/// Note: 'sender' == this binding, not 'DataSource'</summary>
 		public event EventHandler ValueChanged;
+	}
+
+	public static class Binding
+	{
+		public static Binding<TSrc, TValue> Make<TSrc, TValue>(TSrc data_source, string member_name, TValue def_value = default(TValue), BindingFlags flags = BindingFlags.Public|BindingFlags.Instance) where TSrc:class
+		{
+			return new Binding<TSrc, TValue>(data_source, member_name, def_value, flags);
+		}
 	}
 }
 

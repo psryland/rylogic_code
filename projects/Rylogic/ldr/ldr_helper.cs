@@ -96,6 +96,10 @@ namespace pr.ldr
 		{
 			return "*Ellipse " + name + " " + colour + " {" + axis_id + " " + rx + " " + ry + " " + Position(position) + "}\n";
 		}
+		public static string Rect(string name, Colour32 colour, int axis_id, float w, float h, bool solid, v4 position)
+		{
+			return Str.Build("*Rect ",name," ",colour," {",axis_id," ",w," ",h," ",(solid?"*Solid ":""),Position(position),"}\n");
+		}
 		public static string Box(string name, Colour32 colour, v4 position, float size)
 		{
 			return "*Box " + name + " " + colour + " {" + size + " " + Position(position) + "}\n";
@@ -216,6 +220,12 @@ namespace pr.ldr
 		public void Pie(string name, Color colour, AxisId axis_id, bool solid, float ang0, float ang1, float rad0, float rad1, float sx, float sy, int facets, v4 position)
 		{
 			Append("*Pie ",name," ",colour," {",axis_id," ",ang0," ",ang1," ",rad0," ",rad1," ",Ldr.Solid(solid)," ",Ldr.Facets(facets)," *Scale ",sx," ",sy," ",Ldr.Position(position),"}\n");
+		}
+
+		public void Rect() { Rect(string.Empty, Color.White, 3, 1f, 1f, false, v4.Origin); }
+		public void Rect(string name, Color colour, AxisId axis_id, float width, float height, bool solid, v4 position)
+		{
+			Append("*Rect ",name," ",colour," {",axis_id," ",width," ",height," ",solid?"*Solid ":"",Ldr.Position(position),"}\n");
 		}
 
 		public void Quad()                                                      { Quad(string.Empty, Color.White); }

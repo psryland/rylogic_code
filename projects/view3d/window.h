@@ -38,10 +38,15 @@ namespace view3d
 		// Default window construction settings
 		static pr::rdr::WndSettings Settings(HWND hwnd, View3DWindowOptions const& opts)
 		{
-			if (hwnd == 0) throw pr::Exception<HRESULT>(E_FAIL, "Provided window handle is null");
-			RECT rect; ::GetClientRect(hwnd, &rect);
-			auto settings = pr::rdr::WndSettings(hwnd, true, opts.m_gdi_compatible != 0, pr::To<pr::iv2>(rect));
-			settings.m_name = opts.m_dbg_name;
+			if (hwnd == 0)
+				throw pr::Exception<HRESULT>(E_FAIL, "Provided window handle is null");
+
+			RECT rect;
+			::GetClientRect(hwnd, &rect);
+
+			auto settings        = pr::rdr::WndSettings(hwnd, true, opts.m_gdi_compatible != 0, pr::To<pr::iv2>(rect));
+			settings.m_multisamp = pr::rdr::MultiSamp(opts.m_multisampling);
+			settings.m_name      = opts.m_dbg_name;
 			return settings;
 		}
 		Window* this_() { return this; }

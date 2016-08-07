@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Threading;
 using cAlgo.API;
 using cAlgo.API.Internals;
 using pr.common;
@@ -20,53 +16,32 @@ namespace cAlgo
 	/// <summary>Handles sending data for a single symbol</summary>
 	public class Transmitter :IDisposable ,INotifyPropertyChanged
 	{
-		private ManualResetEvent m_quit;
-		private Thread m_work;
-		private object m_lock;
-
 		public Transmitter(TradeeBotModel model, ETradePairs pair, TransmitterSettings settings)
 		{
-			try
-			{
-				Settings = settings;
-				Model = model;
-				Data = new ConcurrentDictionary<TimeFrame, MarketSeriesData>();
-				Pair = pair;
-
-				m_lock = new object();
-				m_quit = new ManualResetEvent(false);
-				m_work = new Thread(Run){ Name = "{0} Transmitter".Fmt(SymbolCode) };
-				m_work.Start();
-			}
-			catch
-			{
-				Dispose();
-				throw;
-			}
+			Settings  = settings;
+			Model     = model;
+			Data      = new Dictionary<TimeFrame, MarketSeriesData>();
+			Pair      = pair;
+			Enabled   = true;
+			StatusMsg = "Active";
 		}
 		public virtual void Dispose()
 		{
-			if (m_work != null && m_work.ThreadState != System.Threading.ThreadState.Unstarted)
-			{
-				m_quit.Set();
-				if (!m_work.Join(1000))
-					Debug.Write("Failed to shutdown Transmitter thread for {0}".Fmt(Pair));
-			}
 			Model = null;
 		}
 
 		/// <summary>Settings for this transmitter</summary>
-		private TransmitterSettings Settings
+		public TransmitterSettings Settings
 		{
-			get;
-			set;
+			[DebuggerStepThrough] get;
+			private set;
 		}
 
 		/// <summary>Tradee bot app logic</summary>
-		private TradeeBotModel Model
+		public TradeeBotModel Model
 		{
-			get { return m_impl_model; }
-			set
+			[DebuggerStepThrough] get { return m_impl_model; }
+			private set
 			{
 				if (m_impl_model == value) return;
 				m_impl_model = value;
@@ -75,88 +50,99 @@ namespace cAlgo
 		private TradeeBotModel m_impl_model;
 
 		/// <summary>A map from time frame to data series</summary>
-		public ConcurrentDictionary<TimeFrame, MarketSeriesData> Data
+		public Dictionary<TimeFrame, MarketSeriesData> Data
 		{
-			get;
+			[DebuggerStepThrough] get;
 			private set;
-		}
-		public class MarketSeriesData
-		{
-			public MarketSeriesData(MarketSeries series)
-			{
-				Series          = series;
-				LastTransmit    = DateTime.MinValue;
-				LatestPriceData = PriceData.Default;
-				LatestCandle    = Candle.Default;
-			}
-			public MarketSeries Series { get; set; }
-			public DateTime  LastTransmit { get; set; }
-			public PriceData LatestPriceData { get; set; }
-			public Candle    LatestCandle { get; set; }
 		}
 
 		/// <summary>The trading pair</summary>
 		public ETradePairs Pair
 		{
-			get;
+			[DebuggerStepThrough] get;
 			private set;
 		}
 
 		/// <summary>The symbol code for the trading pair</summary>
 		public string SymbolCode
 		{
-			get { return Pair.ToString(); }
+			[DebuggerStepThrough] get { return Pair.ToString(); }
 		}
 
 		/// <summary>The symbol data</summary>
 		public Symbol Symbol
 		{
-			get { return Model.GetSymbol(SymbolCode); }
+			get { return m_symbol ?? (m_symbol = Model.GetSymbol(SymbolCode)); }
 		}
+		private Symbol m_symbol;
 
 		/// <summary>Get the list of time frames to transmit</summary>
-		public TimeFrame[] TimeFrames
+		public ETimeFrame[] TimeFrames
 		{
-			get
-			{
-				lock (m_lock)
-					return Settings.TimeFrames.OrderBy(x => x).Select(x => x.ToCAlgoTimeframe()).ToArray();
-			}
+			get { return Settings.TimeFrames; }
 			set
 			{
-				lock (m_lock)
-					Settings.TimeFrames = value.Select(x => x.ToTradeeTimeframe()).OrderBy(x => x).ToArray();
-				Model.RunOnMainThread(() => RaisePropertyChanged(new PropertyChangedEventArgs(R<Transmitter>.Name(x => x.TimeFrames))));
+				if (TimeFrames.SequenceEqual(value)) return;
+				Settings.TimeFrames = value.OrderBy(x => x).ToArray();
+				RaisePropertyChanged(new PropertyChangedEventArgs(R<Transmitter>.Name(x => x.TimeFrames)));
 			}
 		}
 
 		/// <summary>The time frames that are available</summary>
 		public TimeFrame[] AvailableTimeFrames
 		{
-			get
-			{
-				var keys = Data.Keys.ToArray();
-				keys.Sort(Cmp<TimeFrame>.From((l,r) => l < r));
-				return keys;
-			}
+			get { return Data.Keys.ToArray(); }
 		}
 
 		/// <summary>True while the transmitter is downloading time frame series data</summary>
 		public bool RequestingSeriesData
 		{
-			get
-			{
-				lock (m_lock)
-					return m_requesting_series_data;
-			}
+			get { return m_requesting_series_data; }
 			set
 			{
-				lock (m_lock)
-					m_requesting_series_data = value;
-				Model.RunOnMainThread(() => RaisePropertyChanged(new PropertyChangedEventArgs(R<Transmitter>.Name(x => x.RequestingSeriesData))));
+				if (m_requesting_series_data == value) return;
+				m_requesting_series_data = value;
+				RaisePropertyChanged(new PropertyChangedEventArgs(R<Transmitter>.Name(x => x.RequestingSeriesData)));
 			}
 		}
 		private bool m_requesting_series_data;
+
+		/// <summary>Enable/Disable the transmitter</summary>
+		public bool Enabled
+		{
+			[DebuggerStepThrough] get { return m_enabled; }
+			set
+			{
+				if (m_enabled == value) return;
+				m_enabled = value;
+				StatusMsg = Enabled ? "Active" : "Disabled";
+				RaisePropertyChanged(new PropertyChangedEventArgs(R<Transmitter>.Name(x => x.Enabled)));
+			}
+		}
+		private bool m_enabled;
+
+		/// <summary>A description of what this transmitter is doing</summary>
+		public string StatusMsg
+		{
+			[DebuggerStepThrough] get { return m_status; }
+			private set
+			{
+				if (m_status == value) return;
+				m_status = value;
+				RaisePropertyChanged(new PropertyChangedEventArgs(R<Transmitter>.Name(x => x.StatusMsg)));
+			}
+		}
+		private string m_status;
+
+		/// <summary>Ensure data is sent on the next Step(), even if unchanged</summary>
+		public void ForcePost()
+		{
+			foreach (var data in Data)
+			{
+				data.Value.LastTransmittedPriceData = PriceData.Default;
+				data.Value.LastTransmittedCandle = Candle.Default;
+			}
+		}
 
 		/// <summary>Property changed notification</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
@@ -166,124 +152,135 @@ namespace cAlgo
 			PropertyChanged(this, args);
 		}
 
-		/// <summary>Transmit thread entry</summary>
-		private void Run()
+		private TimeFrame m_pending;
+
+		/// <summary>Poll instrument state</summary>
+		public void Step()
 		{
-			try
+			var desired = TimeFrames.Select(x => x.ToCAlgoTimeframe()).ToArray();
+			var available = AvailableTimeFrames;
+
+			// Look for missing time frames. If missing, get
+			var to_get = desired.FirstOrDefault(x => !available.Contains(x));
+			if (m_pending == null && to_get != null)
 			{
-				// Transmit loop
-				var requested_time_frames = new TimeFrame[0];
-				for (;!m_quit.WaitOne(500);)
+				RequestingSeriesData = true;
+				m_pending = to_get;
+
+				// Get the missing time frame series
+				// This can take ages so do it in a background thread
+				StatusMsg = "Acquiring {0},{1}".Fmt(SymbolCode, m_pending.ToTradeeTimeframe());
+				ThreadPool.QueueUserWorkItem(x =>
 				{
-					// If the list of requested time frames has changed, get the new data series
-					RequestingSeriesData = !requested_time_frames.SequenceEqual(TimeFrames);
-					if (RequestingSeriesData)
+					var series = (MarketSeries)null;
+					var error = (Exception)null;
+					try
 					{
-						// Update the requested list
-						requested_time_frames = TimeFrames;
+						// Get the symbol
+						var sym = Symbol;
+						if (sym == null)
+							throw new Exception("Symbol {0} not available".Fmt(SymbolCode));
 
-						// Add time frames that aren't in 'Data'
-						var existing = Data.Keys.ToArray();
-						var tf_to_get = requested_time_frames.Where(x => !existing.Contains(x)).ToArray();
-						if (tf_to_get.Length != 0)
-						{
-							// Getting a market series takes ages..
-							ThreadPool.QueueUserWorkItem(_ =>
-							{
-								try
-								{
-									var sym = Symbol;
-									foreach (var tf in tf_to_get)
-									{
-										if (m_quit.WaitOne(0))
-											return;
-
-										// Get the series from the server
-										var data = new MarketSeriesData(Model.GetSeries(sym, tf));
-										Data.AddOrUpdate(tf, data, (k, v) => data);
-									}
-								}
-								catch (Exception ex)
-								{
-									Trace.WriteLine(ex.Message);
-								}
-							});
-						}
+						// Get the data series
+						series = Model.GetSeries(sym, (TimeFrame)x);
+					}
+					catch (Exception ex)
+					{
+						error = ex;
 					}
 
-					// Transmit data for each time frame
-					var time_frames = Data.Keys.ToArray();
-					foreach (var tf in time_frames)
+					// Add the received series to the collection
+					Model.RunOnMainThread(() =>
 					{
-						// Get the market series for this time frame
-						MarketSeriesData data;
-						if (!requested_time_frames.Contains(tf))
-							Data.TryRemove(tf, out data);
-						else if (Data.TryGetValue(tf, out data) && Model.Tradee.IsConnected)
-							SendMarketData(data);
-					}
-				}
+						var data = new MarketSeriesData(series);
+						Data.Add(m_pending, data);
+						m_pending = null;
+						RequestingSeriesData = false;
+						StatusMsg = error != null ? error.Message : "Active";
+					});
+				}, m_pending);
 			}
-			catch (Exception ex)
+
+			// Transmit data for each time frame
+			foreach (var tf in available)
 			{
-				Trace.WriteLine(ex.Message);
+				// If not needed any more, remove it from 'Data'
+				if (!desired.Contains(tf))
+				{
+					Data.Remove(tf);
+					continue;
+				}
+
+				// Get the market series for this time frame
+				MarketSeriesData data;
+				if (Data.TryGetValue(tf, out data))
+				{
+					// If this is the first send, send the historic data first
+					if (data.SendHistoricData)
+					{
+						SendHistoricMarketData(data.Series);
+						data.SendHistoricData = false;
+					}
+
+					// Send updated data
+					SendMarketData(data);
+				}
 			}
 		}
 
 		/// <summary>Send market data for all known symbols</summary>
 		private void SendMarketData(MarketSeriesData data)
 		{
-			var sym = Model.GetSymbol(SymbolCode);
-			var series = data.Series;
-
-			// If this is the first send, send the historic data too
-			if (data.LatestCandle == Candle.Default)
-				SendHistoricMarketData(data.Series);
+			// Get the latest symbol (price data) information
+			var sym = Symbol;
+			var post = DateTime.UtcNow - data.LastUpdateUTC > TimeSpan.FromSeconds(10);
 
 			// Post the symbol price data
-			{
-				var price_data = new PriceData(
-					sym.Ask,
-					sym.Bid,
-					sym.LotSize,
-					sym.PipSize,
-					sym.PipValue,
-					sym.VolumeMin,
-					sym.VolumeStep,
-					sym.VolumeMax);
+			var price_data = new PriceData(
+				sym.Ask,
+				sym.Bid,
+				sym.LotSize,
+				sym.PipSize,
+				sym.PipValue,
+				sym.VolumeMin,
+				sym.VolumeStep,
+				sym.VolumeMax);
 
-				// Only transmit if different
-				if (!data.LatestPriceData.Equals(price_data))
+			// Only transmit if different
+			if (post || !price_data.Equals(data.LastTransmittedPriceData))
+			{
+				if (Model.Post(new InMsg.SymbolData(sym.Code, price_data)))
 				{
-					if (Model.Tradee.Post(new InMsg.SymbolData(sym.Code, price_data)))
-					{
-						data.LatestPriceData = price_data;
-						data.LastTransmit = DateTime.Now;
-					}
+					data.LastTransmittedPriceData = price_data;
+					post = true;
 				}
 			}
 
-			// Post the latest data Tradee
-			if (series.Close.Count != 0)
+			// Post the latest candle data Tradee
+			if (data.Series.Close.Count != 0)
 			{
 				var candle = new Candle(
-					series.OpenTime.LastValue.Ticks,
-					series.Open.LastValue,
-					series.High.LastValue,
-					series.Low.LastValue,
-					series.Close.LastValue,
-					series.TickVolume.LastValue);
+					data.Series.OpenTime.LastValue.Ticks,
+					data.Series.Open.LastValue,
+					data.Series.High.LastValue,
+					data.Series.Low.LastValue,
+					data.Series.Close.LastValue,
+					data.Series.TickVolume.LastValue);
 
 				// Only transmit if different
-				if (!data.LatestCandle.Equals(candle))
+				if (post || !candle.Equals(data.LastTransmittedCandle))
 				{
-					if (Model.Tradee.Post(new InMsg.CandleData(sym.Code, series.TimeFrame.ToTradeeTimeframe(), candle)))
+					if (Model.Post(new InMsg.CandleData(sym.Code, data.Series.TimeFrame.ToTradeeTimeframe(), candle)))
 					{
-						data.LatestCandle = candle;
-						data.LastTransmit = DateTime.Now;
+						data.LastTransmittedCandle = candle;
+						post = true;
 					}
 				}
 			}
+
+			// Record this update attempt
+			data.LastUpdateUTC = DateTime.UtcNow;
+			data.LastTransmitUTC = post ? DateTime.UtcNow : data.LastTransmitUTC;
 		}
 
 		/// <summary>Send a range of data</summary>
@@ -305,32 +302,41 @@ namespace cAlgo
 			Debug.Assert(i_newest <= i_oldest);
 
 			// Send historical data to Tradee
-			var open_time = new List<long>  (series.OpenTime.Count);
-			var open      = new List<double>(series.Open.Count);
-			var high      = new List<double>(series.High.Count);
-			var low       = new List<double>(series.Low.Count);
-			var close     = new List<double>(series.Close.Count);
+			var open_time = new List<long  >(series.OpenTime  .Count);
+			var open      = new List<double>(series.Open      .Count);
+			var high      = new List<double>(series.High      .Count);
+			var low       = new List<double>(series.Low       .Count);
+			var close     = new List<double>(series.Close     .Count);
 			var volume    = new List<double>(series.TickVolume.Count);
 			for (int i = i_oldest; i-- != i_newest; )
 			{
-				open_time.Add(series.OpenTime  .Last(i).Ticks);
-				open     .Add(series.Open      .Last(i));
-				high     .Add(series.High      .Last(i));
-				low      .Add(series.Low       .Last(i));
-				close    .Add(series.Close     .Last(i));
-				volume   .Add(series.TickVolume.Last(i));
+				var t = series.OpenTime  .Last(i).Ticks;
+				var o = series.Open      .Last(i);
+				var h = series.High      .Last(i);
+				var l = series.Low       .Last(i);
+				var c = series.Close     .Last(i);
+				var v = series.TickVolume.Last(i);
+
+				open_time.Add(t);
+				open     .Add(o);
+				high     .Add(Math.Max(h, Math.Max(o,c)));
+				low      .Add(Math.Min(l, Math.Min(o,c)));
+				close    .Add(c);
+				volume   .Add(v);
 			}
 			if (close.Count != 0)
 			{
 				var data = new Candles(
 					open_time.ToArray(),
-					open.ToArray(),
-					high.ToArray(),
-					low.ToArray(),
-					close.ToArray(),
-					volume.ToArray());
-				Model.Tradee.Post(new InMsg.CandleData(SymbolCode, series.TimeFrame.ToTradeeTimeframe(), data));
-				Debug.WriteLine("Historic data for {0} send".Fmt(series.SymbolCode));
+					open     .ToArray(),
+					high     .ToArray(),
+					low      .ToArray(),
+					close    .ToArray(),
+					volume   .ToArray());
+				if (Model.Post(new InMsg.CandleData(SymbolCode, series.TimeFrame.ToTradeeTimeframe(), data)))
+				{
+					Debug.WriteLine("Historic data for {0},{1} sent".Fmt(series.SymbolCode, series.TimeFrame.ToTradeeTimeframe()));
+				}
 			}
 		}
 		private void SendHistoricMarketData(MarketSeries series)

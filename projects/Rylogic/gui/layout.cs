@@ -323,7 +323,7 @@ namespace pr.gui
 				return bool.TryParse(s, out visible) ? visible : def;
 			}
 
-			/// <summary>Read the enabledness</summary>
+			/// <summary>Read the 'enabledness'</summary>
 			protected static bool Enabled(IElemDescription desc, bool def)
 			{
 				bool enabled;
@@ -343,9 +343,8 @@ namespace pr.gui
 				}
 				else
 				{
-					KnownColor kc;
-					return Enum<KnownColor>.TryParse(col, true, out kc)
-						? System.Drawing.Color.FromKnownColor(kc) : def;
+					var kc = Enum<KnownColor>.TryParse(col, true);
+					return kc != null ? System.Drawing.Color.FromKnownColor(kc.Value) : def;
 				}
 			}
 
@@ -378,9 +377,8 @@ namespace pr.gui
 			/// <summary>Read the font style</summary>
 			protected static FontStyle FStyle(IElemDescription desc, FontStyle def)
 			{
-				FontStyle fstyle;
 				var s = desc.Attr(Tag.FontStyle, def.ToString());
-				return Enum<FontStyle>.TryParse(s, true, out fstyle) ? fstyle : def;
+				return Enum<FontStyle>.TryParse(s, true) ?? def;
 			}
 
 			/// <summary>Read a padding rectangle</summary>
@@ -417,25 +415,22 @@ namespace pr.gui
 			/// <summary>Border style</summary>
 			protected static BorderStyle Border(IElemDescription desc, BorderStyle def)
 			{
-				BorderStyle bstyle;
 				var s = desc.Attr(Tag.Border, def.ToString());
-				return Enum<BorderStyle>.TryParse(s, true, out bstyle) ? bstyle : def;
+				return Enum<BorderStyle>.TryParse(s, true) ?? def;
 			}
 
 			/// <summary>Text alignment</summary>
 			protected static HorizontalAlignment TextAlign(IElemDescription desc, HorizontalAlignment def)
 			{
-				HorizontalAlignment ta;
 				var s = desc.Attr(Tag.AlignText, def.ToString());
-				return Enum<HorizontalAlignment>.TryParse(s, true, out ta) ? ta : def;
+				return Enum<HorizontalAlignment>.TryParse(s, true) ?? def;
 			}
 
 			/// <summary>Content alignment</summary>
 			protected static ContentAlignment ContentAlign(IElemDescription desc, ContentAlignment def)
 			{
-				ContentAlignment ca;
 				var s = desc.Attr(Tag.AlignContent, def.ToString());
-				return Enum<ContentAlignment>.TryParse(s, true, out ca) ? ca : def;
+				return Enum<ContentAlignment>.TryParse(s, true) ?? def;
 			}
 
 			#endregion

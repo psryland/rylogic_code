@@ -4174,7 +4174,7 @@ namespace pr.gui
 		protected override void OnKeyDown(KeyEventArgs e)
 		{
 			base.OnKeyDown(e);
-			SetCursor();			
+			SetCursor();
 
 			var op = m_mouse_op.Active;
 			if (op != null)

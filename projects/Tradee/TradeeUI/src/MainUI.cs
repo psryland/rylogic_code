@@ -52,10 +52,13 @@ namespace Tradee
 		private ToolStripSeparator m_menu_file_sep0;
 		private StatusStrip m_ss;
 		private ToolStripStatusLabel m_status;
-		private ToolStripMenuItem m_menu_file_dump;
-		private ToolStripMenuItem m_menu_file_test_msg;
+		private ToolStripMenuItem m_menu_file_req_acct;
 		private ToolStripMenuItem m_menu_file_exit;
+		private System.Windows.Forms.Timer m_timer;
 		#endregion
+
+		/// <summary>A view3d context reference the lives for the lifetime of the application</summary>
+		private View3d m_view3d;
 
 		public MainUI()
 		{
@@ -63,6 +66,7 @@ namespace Tradee
 
 			Settings = new Settings(@"Settings.xml"){AutoSaveOnChanges = true};
 			Model = new MainModel(this, Settings);
+			m_view3d = new View3d();
 
 			SetupUI();
 			UpdateUI();
@@ -71,6 +75,7 @@ namespace Tradee
 		{
 			m_dc.Dispose();
 			Model = null;
+			Util.Dispose(ref m_view3d);
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
@@ -91,11 +96,13 @@ namespace Tradee
 				if (m_impl_model != null)
 				{
 					m_impl_model.MarketData.InstrumentRemoved -= HandleInstrumentRemoved;
+					m_impl_model.ConnectionChanged -= UpdateUI;
 					Util.Dispose(ref m_impl_model);
 				}
 				m_impl_model = value;
 				if (m_impl_model != null)
 				{
+					m_impl_model.ConnectionChanged += UpdateUI;
 					m_impl_model.MarketData.InstrumentRemoved += HandleInstrumentRemoved;
 				}
 				Update();
@@ -106,7 +113,7 @@ namespace Tradee
 		/// <summary>App settings</summary>
 		public Settings Settings
 		{
-			get;
+			[DebuggerStepThrough] get;
 			private set;
 		}
 
@@ -126,13 +133,9 @@ namespace Tradee
 		private void SetupUI()
 		{
 			#region Menu
-			m_menu_file_test_msg.Click += (s,a) =>
+			m_menu_file_req_acct.Click += (s,a) =>
 			{
-				Model.TradeDataSource.Post(new OutMsg.TestMsg { Text = "Hi From Tradee" });
-			};
-			m_menu_file_dump.Click += (s,a) =>
-			{
-				Model.Dump();
+				Model.RefreshAcctStatus();
 			};
 			m_menu_file_exit.Click += (s, a) =>
 			{
@@ -140,8 +143,14 @@ namespace Tradee
 			};
 			#endregion
 
+			#region Timer
+			m_timer.Interval = 1000;
+			m_timer.Tick += UpdateUI;
+			#endregion
+
 			// Add components
-			m_dc.Add2(new StatusUI(Model));
+			m_dc.Options.TabStrip.AlwaysShowTabs = true;
+			m_dc.Add2(new AccountUI(Model));
 			m_dc.Add2(new AlarmClockUI(Model));
 			m_dc.Add2(new TradesUI(Model));
 			m_dc.Add2(new InstrumentsUI(Model));
@@ -150,7 +159,16 @@ namespace Tradee
 			// Restore the UI layout
 			if (Settings.UI.UILayout != null)
 			{
-				try { m_dc.LoadLayout(Settings.UI.UILayout); }
+				try
+				{
+					// Load the layout, create charts on demand
+					m_dc.LoadLayout(Settings.UI.UILayout, name =>
+					{
+						var sym = ChartUI.ToSymbolCode(name);
+						var instr = Model.MarketData.GetOrCreateInstrument(sym);
+						return new ChartUI(Model, instr).DockControl;
+					});
+				}
 				catch (Exception ex) { Debug.WriteLine("Failed to restore UI Layout: {0}".Fmt(ex.Message)); }
 			}
 			//else
@@ -163,8 +181,13 @@ namespace Tradee
 		/// <summary>Update UI elements</summary>
 		private void UpdateUI(object sender = null, EventArgs args = null)
 		{
-			if (Model == null)
-				return;
+			var connected = Model != null && Model.IsConnected;
+
+			// Update the app title
+			Text = "Tradee - {0}".Fmt(connected ? "Connected" : "Disconnected");
+
+			// Update menu item state
+			m_menu_file_req_acct.Enabled = connected;
 		}
 
 		/// <summary>Close charts that reference the out-going instrument</summary>
@@ -183,6 +206,7 @@ namespace Tradee
 		private System.ComponentModel.IContainer components = null;
 		private void InitializeComponent()
 		{
+			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainUI));
 			this.m_tsc = new pr.gui.ToolStripContainer();
 			this.m_ss = new System.Windows.Forms.StatusStrip();
@@ -190,10 +214,10 @@ namespace Tradee
 			this.m_dc = new pr.gui.DockContainer();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_file_test_msg = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_file_dump = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_req_acct = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_sep0 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_exit = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_timer = new System.Windows.Forms.Timer(this.components);
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.ContentPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
@@ -264,35 +288,28 @@ namespace Tradee
 			// m_menu_file
 			// 
 			this.m_menu_file.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_menu_file_test_msg,
-            this.m_menu_file_dump,
+            this.m_menu_file_req_acct,
             this.m_menu_file_sep0,
             this.m_menu_file_exit});
 			this.m_menu_file.Name = "m_menu_file";
 			this.m_menu_file.Size = new System.Drawing.Size(37, 20);
 			this.m_menu_file.Text = "&File";
 			// 
-			// m_menu_file_test_msg
+			// m_menu_file_req_acct
 			// 
-			this.m_menu_file_test_msg.Name = "m_menu_file_test_msg";
-			this.m_menu_file_test_msg.Size = new System.Drawing.Size(152, 22);
-			this.m_menu_file_test_msg.Text = "&Test Msg";
-			// 
-			// m_menu_file_dump
-			// 
-			this.m_menu_file_dump.Name = "m_menu_file_dump";
-			this.m_menu_file_dump.Size = new System.Drawing.Size(152, 22);
-			this.m_menu_file_dump.Text = "&Dump";
+			this.m_menu_file_req_acct.Name = "m_menu_file_req_acct";
+			this.m_menu_file_req_acct.Size = new System.Drawing.Size(164, 22);
+			this.m_menu_file_req_acct.Text = "&Request Account";
 			// 
 			// m_menu_file_sep0
 			// 
 			this.m_menu_file_sep0.Name = "m_menu_file_sep0";
-			this.m_menu_file_sep0.Size = new System.Drawing.Size(149, 6);
+			this.m_menu_file_sep0.Size = new System.Drawing.Size(161, 6);
 			// 
 			// m_menu_file_exit
 			// 
 			this.m_menu_file_exit.Name = "m_menu_file_exit";
-			this.m_menu_file_exit.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_file_exit.Size = new System.Drawing.Size(164, 22);
 			this.m_menu_file_exit.Text = "E&xit";
 			// 
 			// MainUI

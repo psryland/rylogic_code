@@ -413,12 +413,14 @@ namespace pr.gfx
 			public ReportErrorCB ErrorCB;
 			public IntPtr ErrorCBCtx;
 			public bool GdiCompatible;
+			public int Multisampling;
 			public string DbgName;
 			public WindowOptions(bool gdi_compatible, ReportErrorCB error_cb, IntPtr error_cb_ctx)
 			{
 				ErrorCB       = error_cb;
 				ErrorCBCtx    = error_cb_ctx;
 				GdiCompatible = gdi_compatible;
+				Multisampling = 4;
 				DbgName       = string.Empty;
 			}
 		}
@@ -773,9 +775,9 @@ namespace pr.gfx
 			}
 
 			/// <summary>Remove multiple objects by context id</summary>
-			public void RemoveObjects(Guid context_id)
+			public void RemoveObjects(bool all_except, Guid context_id)
 			{
-				View3D_RemoveObjectsById(m_wnd, ref context_id);
+				View3D_RemoveObjectsById(m_wnd, all_except, ref context_id);
 			}
 
 			/// <summary>Remove a collection of objects from the window</summary>
@@ -1947,7 +1949,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern bool              View3D_HasObject              (HWindow window, HObject obj);
 		[DllImport(Dll)] private static extern int               View3D_ObjectCount            (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_AddObjectsById         (HWindow window, ref Guid context_id);
-		[DllImport(Dll)] private static extern void              View3D_RemoveObjectsById      (HWindow window, ref Guid context_id);
+		[DllImport(Dll)] private static extern void              View3D_RemoveObjectsById      (HWindow window, bool all_except, ref Guid context_id);
 		[DllImport(Dll)] private static extern void              View3D_AddGizmo               (HWindow window, HGizmo giz);
 		[DllImport(Dll)] private static extern void              View3D_RemoveGizmo            (HWindow window, HGizmo giz);
 

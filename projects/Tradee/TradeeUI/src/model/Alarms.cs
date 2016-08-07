@@ -1,15 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using pr.container;
 
 namespace Tradee
 {
-	public class AlarmModel :IDisposable
+	public class Alarms :IDisposable
 	{
-		public AlarmModel()
+		public Alarms()
 		{
 			AlarmList = new BindingSource<Alarm> { DataSource = new BindingListEx<Alarm>() };
 		}

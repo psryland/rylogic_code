@@ -124,7 +124,7 @@ namespace pr.attrib
 		}
 
 		// Reflecting on attributes is slow => caching
-		private static readonly Cache<string,object> m_str_cache  = new Cache<string,object>();
+		private static readonly Cache<string,object> m_str_cache  = new Cache<string,object> { ThreadSafe = true };
 
 		/// <summary>A cache key for an enum value</summary>
 		private static string Key(Enum enum_)

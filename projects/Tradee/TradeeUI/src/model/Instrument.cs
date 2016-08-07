@@ -54,10 +54,10 @@ namespace Tradee
 		}
 
 		/// <summary>The App logic</summary>
-		private MainModel Model
+		public MainModel Model
 		{
-			get;
-			set;
+			[DebuggerStepThrough] get;
+			private set;
 		}
 
 		/// <summary>The instrument name (symbol name)</summary>
@@ -84,20 +84,13 @@ namespace Tradee
 					// Populate the data with that last 1000 candles
 					var count = m_db.ExecuteScalar(Str.Build("select count(*) from ",TimeFrame));
 					m_price_history.AddRange(m_db.EnumRows<Candle>(Str.Build("select * from ",TimeFrame," limit ?,1000"), 1, new object[] { Math.Max(0, count - 1000) }));
+
+					// Set the last updated time to the timestamp of the last candle
+					LastUpdatedUTC = Latest.TimestampUTC;
 				}
 			}
 		}
 		private ETimeFrame m_time_frame;
-
-		/// <summary>The cached price data database file location</summary>
-		public string DBFilepath
-		{
-			get { return CacheDBFilePath(Model.Settings, SymbolCode); }
-		}
-		public static string CacheDBFilePath(Settings settings, string code)
-		{
-			return Path_.CombinePath(settings.General.PriceDataCacheDir, "PriceData_{0}.db".Fmt(code));
-		}
 
 		/// <summary>Information about the current price, spread, lot sizes, etc</summary>
 		public PriceData PriceData
@@ -111,9 +104,6 @@ namespace Tradee
 			}
 		}
 		private PriceData m_price_data;
-
-		/// <summary>Raised when 'PriceData' is updated</summary>
-		public event EventHandler PriceDataUpdated;
 
 		/// <summary>The raw data</summary>
 		public IReadOnlyList<Candle> PriceHistory { get { return m_price_history; } }
@@ -131,6 +121,29 @@ namespace Tradee
 			get { return Count != 0 ? m_price_history.Back() : Candle.Default; }
 		}
 
+		/// <summary>The timestamp of the last update (in UTC)</summary>
+		public DateTimeOffset LastUpdatedUTC
+		{
+			get;
+			private set;
+		}
+
+		/// <summary>The timestamp of the last update (in local time)</summary>
+		public DateTimeOffset LastUpdatedLocal
+		{
+			get { return TimeZone.CurrentTimeZone.ToLocalTime(LastUpdatedUTC.DateTime); }
+		}
+
+		/// <summary>The cached price data database file location</summary>
+		public string DBFilepath
+		{
+			get { return CacheDBFilePath(Model.Settings, SymbolCode); }
+		}
+		public static string CacheDBFilePath(Settings settings, string code)
+		{
+			return Path_.CombinePath(settings.General.PriceDataCacheDir, "PriceData_{0}.db".Fmt(code));
+		}
+
 		/// <summary>Add a candle value to the data</summary>
 		public void Add(ETimeFrame tf, Candle candle)
 		{
@@ -142,11 +155,19 @@ namespace Tradee
 			Debug.Assert(candle.Volume >= 0); // empty candles? cTrader sends them tho...
 			Debug.Assert(tf != ETimeFrame.None);
 
+			LastUpdatedUTC = DateTimeOffset.UtcNow;
+			var new_candle = false;
+
+			// Insert the candle in the appropriate database
+			using (var query = new Sqlite.InsertCmd(tf.ToString(), typeof(Candle), m_db, Sqlite.OnInsertConstraint.Replace))
+			{
+				query.BindObj(candle);
+				query.Run();
+			}
+
 			// If the candle is in the currently loaded time frame add it to the data
 			if (tf == TimeFrame)
 			{
-				var new_candle = false;
-
 				// Candles are stored in time order
 				if (candle.Timestamp > Latest.Timestamp)
 				{
@@ -174,17 +195,10 @@ namespace Tradee
 				// Limit the length of the data buffer
 				if (m_price_history.Count > MaxLength)
 					m_price_history.RemoveRange(0, ReduceSize);
-
-				// Notify data added
-				DataAdded.Raise(this, new DataEventArgs(this, Latest, new_candle));
 			}
 
-			// Insert the candle in the appropriate database
-			using (var query = new Sqlite.InsertCmd(tf.ToString(), typeof(Candle), m_db, Sqlite.OnInsertConstraint.Replace))
-			{
-				query.BindObj(candle);
-				query.Run();
-			}
+			// Notify data added
+			DataAdded.Raise(this, new DataEventArgs(this, tf, candle, new_candle));
 		}
 		public void Add(ETimeFrame tf, Candles candles)
 		{
@@ -195,6 +209,9 @@ namespace Tradee
 				t.Commit();
 			}
 		}
+
+		/// <summary>Raised when 'PriceData' is updated</summary>
+		public event EventHandler PriceDataUpdated;
 
 		/// <summary>Raised whenever data is added to this instrument</summary>
 		public event EventHandler<DataEventArgs> DataAdded;

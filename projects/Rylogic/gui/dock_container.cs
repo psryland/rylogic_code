@@ -715,8 +715,10 @@ namespace pr.gui
 			return ToXml(new XElement(XmlTag.DockContainerLayout));
 		}
 
-		/// <summary>Update the layout of this dock container using the data in 'node'</summary>
-		public virtual void LoadLayout(XElement node)
+		/// <summary>
+		/// Update the layout of this dock container using the data in 'node'
+		/// Use 'content_factory' to create content on demand during loading.</summary>
+		public virtual void LoadLayout(XElement node, Func<string,DockControl> content_factory = null)
 		{
 			if (node.Name != XmlTag.DockContainerLayout)
 				throw new Exception("XML data does not contain dock container layout information");
@@ -733,7 +735,8 @@ namespace pr.gui
 				{
 					// Find a content object with a matching persistence name
 					var name = content_node.Element(XmlTag.Name).As<string>();
-					if (all_content.TryGetValue(name, out content))
+					if (all_content.TryGetValue(name, out content) ||
+						content_factory != null && (content = content_factory(name)) != null)
 					{
 						var loc = new DockLocation(content_node);
 						if (loc.Address.First() != EDockSite.None)
@@ -2246,7 +2249,6 @@ namespace pr.gui
 					var cmenu = new ContextMenuStrip();
 					using (cmenu.SuspendLayout(true))
 					{
-						cmenu.Items.Add2(new ToolStripSeparator());
 						{ // Float the pane in a new window
 							var opt = cmenu.Items.Add2(new ToolStripMenuItem("Float"));
 							cmenu.Opening += (s,a) =>

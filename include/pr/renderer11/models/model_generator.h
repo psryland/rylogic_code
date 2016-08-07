@@ -14,11 +14,11 @@ namespace pr
 		// Parameters structure for creating mesh models
 		struct MeshCreationData
 		{
-			int m_vcount; // The length of the 'verts' array
-			int m_icount; // The length of the 'indices' array
-			int m_gcount; // The length of the 'nuggets' array
-			int m_ccount; // The length of the 'colours' array. 0, 1, or 'vcount'
-			int m_ncount; // The length of the 'normals' array. 0, 1, or 'vcount'
+			size_t m_vcount; // The length of the 'verts' array
+			size_t m_icount; // The length of the 'indices' array
+			size_t m_gcount; // The length of the 'nuggets' array
+			size_t m_ccount; // The length of the 'colours' array. 0, 1, or 'vcount'
+			size_t m_ncount; // The length of the 'normals' array. 0, 1, or 'vcount'
 			pr::v4               const* m_verts;      // The vertex data for the model
 			pr::uint16           const* m_indices;    // The index data for the model
 			pr::rdr::NuggetProps const* m_nuggets;    // The nugget data for the model
@@ -27,7 +27,7 @@ namespace pr
 			pr::v2               const* m_tex_coords; // The texture coordinates data for the model. nullptr or a pointer to 'vcount' texture coords
 
 			MeshCreationData() :m_vcount() ,m_icount() ,m_gcount() ,m_ccount() ,m_ncount() ,m_verts() ,m_indices() ,m_nuggets() ,m_colours() ,m_normals() ,m_tex_coords() {}
-			MeshCreationData& verts(pr::v4 const* vbuf, int count)
+			MeshCreationData& verts(pr::v4 const* vbuf, size_t count)
 			{
 				assert(count == 0 || vbuf != nullptr);
 				assert(pr::maths::is_aligned(vbuf));
@@ -42,7 +42,7 @@ namespace pr
 				m_verts = vbuf.begin();
 				return *this;
 			}
-			MeshCreationData& indices(pr::uint16 const* ibuf, int count)
+			MeshCreationData& indices(pr::uint16 const* ibuf, size_t count)
 			{
 				assert(count == 0 || ibuf != nullptr);
 				m_icount = count;
@@ -55,7 +55,7 @@ namespace pr
 				m_indices = ibuf.begin();
 				return *this;
 			}
-			MeshCreationData& nuggets(pr::rdr::NuggetProps const* gbuf, int count)
+			MeshCreationData& nuggets(pr::rdr::NuggetProps const* gbuf, size_t count)
 			{
 				assert(count == 0 || gbuf != nullptr);
 				m_gcount = count;
@@ -68,7 +68,7 @@ namespace pr
 				m_nuggets = gbuf.begin();
 				return *this;
 			}
-			MeshCreationData& colours(pr::Colour32 const* cbuf, int count)
+			MeshCreationData& colours(pr::Colour32 const* cbuf, size_t count)
 			{
 				assert(count == 0 || cbuf != nullptr);
 				assert(count == 0 || count == 1 || count == m_vcount);
@@ -82,7 +82,7 @@ namespace pr
 				m_colours = cbuf.begin();
 				return *this;
 			}
-			MeshCreationData& normals(pr::v4 const* nbuf, int count)
+			MeshCreationData& normals(pr::v4 const* nbuf, size_t count)
 			{
 				assert(count == 0 || nbuf != nullptr);
 				assert(count == 0 || count == m_vcount);
@@ -99,7 +99,7 @@ namespace pr
 				m_normals = nbuf.begin();
 				return *this;
 			}
-			MeshCreationData& tex(pr::v2 const* tbuf, int count)
+			MeshCreationData& tex(pr::v2 const* tbuf, size_t count)
 			{
 				assert(count == 0 || tbuf != nullptr);
 				assert(count == 0 || count == m_vcount);

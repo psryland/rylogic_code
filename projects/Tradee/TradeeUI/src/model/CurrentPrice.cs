@@ -10,12 +10,11 @@ namespace Tradee
 {
 	public class CurrentPrice :ChartControl.Element
 	{
-		public CurrentPrice(MainModel model, Instrument instrument, ChartSettings chart_settings)
+		public CurrentPrice(MainModel model, Instrument instrument)
 			:base(Guid.NewGuid(), m4x4.Identity)
 		{
 			Model = model;
 			Instrument = instrument;
-			ChartSettings = chart_settings;
 			VisibleToFindRange = false;
 		}
 		protected override void Dispose(bool disposing)
@@ -42,8 +41,8 @@ namespace Tradee
 		{
 			// Create lines that fit the chart
 			var w = (float)Chart.XAxis.Span;
-			GfxBid = new View3d.Object(Ldr.Line("BidPrice", Model.Settings.UI.BullishColour, v4.Origin, new v4(-w, 0, 0, 1)), file:false);
-			GfxAsk = new View3d.Object(Ldr.Line("AskPrice", Model.Settings.UI.BearishColour, v4.Origin, new v4(-w, 0, 0, 1)), file:false);
+			GfxBid = new View3d.Object(Ldr.Line("BidPrice", Model.Settings.UI.BidColour, v4.Origin, new v4(-w, 0, 0, 1)), file:false);
+			GfxAsk = new View3d.Object(Ldr.Line("AskPrice", Model.Settings.UI.AskColour, v4.Origin, new v4(-w, 0, 0, 1)), file:false);
 			base.UpdateGfxCore();
 		}
 		protected override void AddToSceneCore(View3d.Window window)
@@ -87,13 +86,6 @@ namespace Tradee
 			}
 		}
 		private Instrument m_instrument;
-
-		/// <summary>Settings for the owning chart</summary>
-		public ChartSettings ChartSettings
-		{
-			get;
-			private set;
-		}
 
 		/// <summary>The Ask price line</summary>
 		public View3d.Object GfxAsk

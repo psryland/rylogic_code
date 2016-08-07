@@ -58,10 +58,10 @@ namespace Tradee
 		}
 
 		/// <summary>The App logic</summary>
-		private MainModel Model
+		public MainModel Model
 		{
-			get;
-			set;
+			[DebuggerStepThrough] get;
+			private set;
 		}
 
 		/// <summary>Get/Create an instrument</summary>
@@ -73,13 +73,16 @@ namespace Tradee
 		/// <summary>Get/Create an instrument named 'sym'</summary>
 		public Instrument GetOrCreateInstrument(string sym)
 		{
-			// Return the existing instrument if it already exists
+			// Return the existing instrument if it already exists or create an empty instrument for now
 			var idx = Instruments.BinarySearch(x => x.SymbolCode.CompareTo(sym));
-			if (idx >= 0)
-				return Instruments[idx];
+			var instr = idx >= 0 ? Instruments[idx] : Instruments.Insert2(~idx, new Instrument(Model, sym));
 
-			// Otherwise create it
-			return Instruments.Insert2(~idx, new Instrument(Model, sym));
+			// Check when this instrument was last updated
+			// Request it again if the last update was too long ago
+			if (DateTime.UtcNow - instr.LastUpdatedUTC > TimeSpan.FromSeconds(30))
+				Model.RequestInstrument(sym, null);
+
+			return instr;
 		}
 
 		/// <summary>Delete the database file associated with 'code'</summary>
@@ -140,12 +143,12 @@ namespace Tradee
 			switch (e.ChangeType)
 			{
 			case ListChg.ItemAdded:
-				OnInstrumentAdded(new DataEventArgs(instrument, null, false));
+				OnInstrumentAdded(new DataEventArgs(instrument, ETimeFrame.None, null, false));
 				instrument.DataAdded += HandleInstrumentDataAdded;
 				break;
 
 			case ListChg.ItemRemoved:
-				OnInstrumentRemoved(new DataEventArgs(instrument, null, false));
+				OnInstrumentRemoved(new DataEventArgs(instrument, ETimeFrame.None, null, false));
 				instrument.DataAdded -= HandleInstrumentDataAdded;
 				instrument.Dispose();
 				break;
@@ -156,9 +159,10 @@ namespace Tradee
 	/// <summary>Event args for when data is changed</summary>
 	public class DataEventArgs :EventArgs
 	{
-		public DataEventArgs(Instrument instr, Candle candle, bool new_candle)
+		public DataEventArgs(Instrument instr, ETimeFrame tf, Candle candle, bool new_candle)
 		{
 			Instrument = instr;
+			TimeFrame  = tf;
 			Candle     = candle;
 			NewCandle  = new_candle;
 		}
@@ -170,10 +174,7 @@ namespace Tradee
 		}
 
 		/// <summary>The time frame that changed</summary>
-		public ETimeFrame TimeFrame
-		{
-			get { return Instrument.TimeFrame; }
-		}
+		public ETimeFrame TimeFrame { get; private set; }
 
 		/// <summary>The instrument containing the changes</summary>
 		public Instrument Instrument { get; private set; }

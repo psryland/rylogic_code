@@ -33,7 +33,7 @@ namespace pr.gui
 			ShowLines = true;
 
 			// Create the root of the tree
-			m_root = new TreeGridNode(this, is_root:true);
+			m_root = new TreeGridNode(this, is_root:true, item:null);
 
 			// Causes all rows to be unshared
 			base.Rows.CollectionChanged += (s,e)=>{};
@@ -61,14 +61,14 @@ namespace pr.gui
 			{
 				if (value == 0) Nodes.Clear();
 				for (int i = RowCount; i > value; --i) Nodes.RemoveAt(i-1);
-				for (int i = RowCount; i < value; ++i) Nodes.Add(new TreeGridNode(this, is_root:false));
+				for (int i = RowCount; i < value; ++i) Nodes.Add(new TreeGridNode(this, is_root:false, item:null));
 			}
 		}
 
 		/// <summary>The grid current node</summary>
 		public TreeGridNode CurrentNode
 		{
-			get { return CurrentRow; }
+			[DebuggerStepThrough] get { return CurrentRow; }
 		}
 		private new TreeGridNode CurrentRow
 		{
@@ -76,13 +76,16 @@ namespace pr.gui
 		}
 
 		/// <summary>The internal root of the tree. Note: not visible in the tree</summary>
-		public TreeGridNode RootNode { get { return m_root; } }
+		public TreeGridNode RootNode
+		{
+			[DebuggerStepThrough] get { return m_root; }
+		}
 		private readonly TreeGridNode  m_root;
 
 		/// <summary>Show/hide the tree lines</summary>
 		public bool ShowLines
 		{
-			get { return m_show_lines; }
+			[DebuggerStepThrough] get { return m_show_lines; }
 			set
 			{
 				if (m_show_lines == value) return;
@@ -372,13 +375,14 @@ namespace pr.gui
 	public class TreeGridNode :DataGridViewRow
 	{
 		/// <summary>Construct the node</summary>
-		internal TreeGridNode(TreeGridView grid, bool is_root)
+		internal TreeGridNode(TreeGridView grid, bool is_root, object item)
 		{
-			Grid            = grid;
-			Parent          = null;
-			ImageIndex      = -1;
-			IsExpanded      = is_root;
-			VirtualNodes    = false;
+			Grid          = grid;
+			Parent        = null;
+			ImageIndex    = -1;
+			IsExpanded    = is_root;
+			VirtualNodes  = false;
+			DataBoundItem = item;
 		}
 
 		/// <summary>A clone method must be provided for types derived from DataGridViewRow</summary>
@@ -400,13 +404,20 @@ namespace pr.gui
 		/// <summary>Removed from the interface</summary>
 		private new DataGridView DataGridView
 		{
-			get { return base.DataGridView; }
+			[DebuggerStepThrough] get { return base.DataGridView; }
+		}
+
+		/// <summary>An item that this row is bound to</summary>
+		public new object DataBoundItem
+		{
+			get;
+			private set;
 		}
 
 		/// <summary>Get/Set the grid that this node belongs to. Only root nodes can be assigned to a grid</summary>
 		public TreeGridView Grid
 		{
-			get { return m_impl_grid; }
+			[DebuggerStepThrough] get { return m_impl_grid; }
 			private set
 			{
 				// Setter is private because a node should never be moved to a different grid
@@ -643,7 +654,12 @@ namespace pr.gui
 		/// <summary>Return the tree cell in this row</summary>
 		public TreeGridCell TreeCell
 		{
-			get { return Cells.OfType<TreeGridCell>().FirstOrDefault(); }
+			get
+			{
+				var tree_cell = Cells.OfType<TreeGridCell>().FirstOrDefault();
+				Debug.Assert(tree_cell != null, "This grid does not have a 'TreeGridColumn'");
+				return tree_cell;
+			}
 		}
 
 		/// <summary>The collection of child nodes for this node</summary>
@@ -866,10 +882,16 @@ namespace pr.gui
 		public TreeGridNode Insert(int index, params object[] values)
 		{
 			Debug.Assert(m_owner.Grid != null, "Can only use this method after the owner node has been added to the tree grid");
-			TreeGridNode node = Insert(index, new TreeGridNode(m_owner.Grid, is_root:false));
+			TreeGridNode node = Insert(index, new TreeGridNode(m_owner.Grid, is_root:false, item:null));
 			int iend = Math.Min(values.Length, node.Cells.Count);
 			for (int i = 0; i != iend; ++i) node.Cells[i].Value = values[i];
 			return node;
+		}
+
+		/// <summary>Add a node based on an object that will provide the values for the columns in the grid (available as DataBoundItem)</summary>
+		public TreeGridNode Bind(object data)
+		{
+			return Insert(m_list.Count, new TreeGridNode(m_owner.Grid, is_root:false, item:data));
 		}
 
 		/// <summary>Remove node from this collection</summary>
@@ -1196,6 +1218,17 @@ namespace pr.unittests
 
 	[TestFixture] public class TestTreeGridView
 	{
+		private class Thing
+		{
+			public Thing(string one, int two)
+			{
+				One = one;
+				Two = two;
+			}
+			public string One { get; set; }
+			public int Two { get; set; }
+		}
+
 		[Test] public void TestTGV1()
 		{
 			var grid0 = new TreeGridView();
@@ -1298,6 +1331,17 @@ namespace pr.unittests
 		//    Assert.True(grid0.Nodes.Count == 0 && grid1.Nodes.Count == 0);
 		//    Assert.AreSame(null, a0.Grid);
 		//    Assert.AreSame(null, b0.Grid);
+		}
+		[Test] public void TestTGV3()
+		{
+			var grid0 = new TreeGridView();
+			grid0.Columns.Add(new TreeGridColumn{HeaderText="col0"});
+			grid0.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="col1", DataPropertyName = nameof(Thing.One)});
+			grid0.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="col2", DataPropertyName = nameof(Thing.Two)});
+
+			var a0 = grid0.Nodes.Bind(new Thing("ONE", 1));
+			a0.Nodes.Bind(new Thing("two", 2));
+			a0.Nodes.Bind(new Thing("too", 11));
 		}
 	}
 }

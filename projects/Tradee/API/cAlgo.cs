@@ -1,3 +1,4 @@
+using System;
 using cAlgo.API;
 
 namespace Tradee
@@ -69,5 +70,73 @@ namespace Tradee
 			case ETimeFrame.Monthly: return TimeFrame.Monthly ;
 			}
 		}
+
+		/// <summary>Convert a CAlgo trade type to a Tradee trade type</summary>
+		public static ETradeType ToTradeeTradeType(this TradeType tt)
+		{
+			switch (tt)
+			{
+			default:             return ETradeType.None;
+			case TradeType.Buy:  return ETradeType.Long;
+			case TradeType.Sell: return ETradeType.Short;
+			}
+		}
+
+		/// <summary>Convert a Tradee trade type to a CAlgo one</summary>
+		public static TradeType ToCAlgoTradeType(this ETradeType tt)
+		{
+			switch (tt)
+			{
+			default:              throw new Exception("Unknown trade type");
+			case ETradeType.None: throw new Exception("Unsupported trade type");
+			case ETradeType.Long: return TradeType.Buy;
+			case ETradeType.Short: return TradeType.Sell;
+			}
+		}
+
+		/// <summary>Return the stop loss as a signed price value relative to the entry price. 0 means no stop loss</summary>
+		public static double StopLossRel(this  cAlgo.API.Position pos)
+		{
+			switch (pos.TradeType)
+			{
+			default: throw new Exception("unknown trade type");
+			case TradeType.Buy:  return pos.EntryPrice - (pos.StopLoss ?? pos.EntryPrice);
+			case TradeType.Sell: return (pos.StopLoss ?? pos.EntryPrice) - pos.EntryPrice;
+			}
+		}
+
+		/// <summary>Return the take profit as a signed price value relative to the entry price. 0 means no take profit</summary>
+		public static double TakeProfitRel(this  cAlgo.API.Position pos)
+		{
+			switch (pos.TradeType)
+			{
+			default: throw new Exception("unknown trade type");
+			case TradeType.Buy:  return (pos.TakeProfit ?? pos.EntryPrice) - pos.EntryPrice;
+			case TradeType.Sell: return pos.EntryPrice - (pos.TakeProfit ?? pos.EntryPrice);
+			}
+		}
+
+		/// <summary>Return the stop loss as a signed price value relative to the entry price. 0 means no stop loss</summary>
+		public static double StopLossRel(this  cAlgo.API.PendingOrder pos)
+		{
+			switch (pos.TradeType)
+			{
+			default: throw new Exception("unknown trade type");
+			case TradeType.Buy:  return pos.TargetPrice - (pos.StopLoss ?? pos.TargetPrice);
+			case TradeType.Sell: return (pos.StopLoss ?? pos.TargetPrice) - pos.TargetPrice;
+			}
+		}
+
+		/// <summary>Return the take profit as a signed price value relative to the entry price. 0 means no take profit</summary>
+		public static double TakeProfitRel(this  cAlgo.API.PendingOrder pos)
+		{
+			switch (pos.TradeType)
+			{
+			default: throw new Exception("unknown trade type");
+			case TradeType.Buy:  return (pos.TakeProfit ?? pos.TargetPrice) - pos.TargetPrice;
+			case TradeType.Sell: return pos.TargetPrice - (pos.TakeProfit ?? pos.TargetPrice);
+			}
+		}
+
 	}
 }

@@ -39,14 +39,11 @@ namespace cAlgo
 		}
 		protected override void OnStop()
 		{
+			base.OnStop();
 			try
 			{
 				if (m_ui != null && !m_ui.IsDisposed && m_ui.IsHandleCreated)
-				{
 					m_ui.BeginInvoke(() => m_ui.Close());
-					if (m_thread != null)
-						m_thread.Join();
-				}
 			}
 			catch (Exception ex)
 			{

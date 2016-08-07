@@ -64,14 +64,16 @@
     <Compile Include="src\misc\InstrumentMap.cs" />
     <Compile Include="src\misc\Settings.cs" />
     <Compile Include="src\misc\TFTime.cs" />
-    <Compile Include="src\model\AlarmModel.cs" />
+    <Compile Include="src\model\AccountStatus.cs" />
+    <Compile Include="src\model\Alarms.cs" />
     <Compile Include="src\model\CurrentPrice.cs" />
     <Compile Include="src\model\Instrument.cs" />
     <Compile Include="src\model\MainModel.cs" />
     <Compile Include="src\model\Order.cs" />
+    <Compile Include="src\model\Positions.cs" />
     <Compile Include="src\model\Trade.cs" />
     <Compile Include="src\model\TradeEvent.cs" />
-    <Compile Include="src\model\TradeChartElement.cs" />
+    <Compile Include="src\model\OrderChartElement.cs" />
     <Compile Include="src\model\SupportResist.cs" />
     <Compile Include="src\ui\AlarmClockUI.cs">
       <SubType>UserControl</SubType>
@@ -93,7 +95,7 @@
     <Compile Include="src\ui\TradesUI.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="src\ui\StatusUI.cs">
+    <Compile Include="src\ui\AccountUI.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <EmbeddedResource Include="Properties\Resources.resx">
@@ -116,8 +118,8 @@
     <EmbeddedResource Include="src\ui\TradesUI.resx">
       <DependentUpon>TradesUI.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\ui\StatusUI.resx">
-      <DependentUpon>StatusUI.cs</DependentUpon>
+    <EmbeddedResource Include="src\ui\AccountUI.resx">
+      <DependentUpon>AccountUI.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>

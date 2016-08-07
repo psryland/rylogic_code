@@ -81,6 +81,8 @@ namespace Tradee
 				// the last received candle. We only want to add a level when the
 				// candle has stopped changing.
 				var candle = args.Candle;
+				if (candle == null)
+					return;
 
 				// When the time stamp changes, commit the last candle
 				if (m_last_candle.Timestamp != candle.Timestamp)

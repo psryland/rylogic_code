@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Windows.Threading;
 using cAlgo.API;
 using cAlgo.API.Internals;
+using pr.common;
 using pr.container;
 using pr.extn;
 using pr.util;
@@ -17,17 +18,19 @@ namespace cAlgo
 {
 	public class TradeeBotModel :IDisposable
 	{
-		/// <summary>The cAlgo connection</summary>
-		private readonly Robot m_calgo;
-
 		/// <summary>The main thread dispatcher</summary>
 		private Dispatcher m_main_thread;
 
+		/// <summary>A cache of symbol information interfaces</summary>
+		private Cache<string,Symbol> m_sym_cache;
+
+
 		public TradeeBotModel(Robot calgo, Settings settings)
 		{
-			m_calgo = calgo;
-			m_main_thread = Dispatcher.CurrentDispatcher;
+			CAlgo = calgo;
 			Settings = settings;
+			m_main_thread = Dispatcher.CurrentDispatcher;
+			m_sym_cache = new Cache<string, Symbol> { ThreadSafe = true , Mode = CacheMode.StandardCache };
 
 			// Connect to 'Tradee'
 			Tradee = new TradeeProxy(DispatchMsg);
@@ -37,33 +40,39 @@ namespace cAlgo
 			foreach (var trans in Settings.Transmitters)
 				Transmitters.Add(new Transmitter(this, trans.Pair, trans));
 
-			//try
-			//{
-			//	// Initial information
-			//	SendAccountStatus();
-			//}
-			//catch {}
+			// Initiate the connection by sending account data
+			SendAccountStatus();
 		}
 		public virtual void Dispose()
 		{
 			// Don't save the removed transmitters
 			Settings.AutoSaveOnChanges = false;
+
+			// Shutdown all transmitters
 			Util.DisposeAll(Transmitters);
+
+			// Kill the connection to tradee
 			Tradee = null;
+
+			Util.Dispose(ref m_sym_cache);
+			GC.SuppressFinalize(this);
 		}
+
+		/// <summary>The cAlgo connection</summary>
+		public Robot CAlgo { get; private set; }
 
 		/// <summary>App settings</summary>
 		public Settings Settings
 		{
-			get;
+			[DebuggerStepThrough] get;
 			private set;
 		}
 
 		/// <summary>The connection to the Tradee application</summary>
-		public TradeeProxy Tradee
+		private TradeeProxy Tradee
 		{
-			get { return m_tradee; }
-			private set
+			[DebuggerStepThrough] get { return m_tradee; }
+			set
 			{
 				if (m_tradee == value) return;
 				if (m_tradee != null)
@@ -85,8 +94,8 @@ namespace cAlgo
 		/// <summary>Worker threads for transmitting symbol data to Tradee</summary>
 		public BindingSource<Transmitter> Transmitters
 		{
-			get { return m_bs_transmitters; }
-			set
+			[DebuggerStepThrough] get { return m_bs_transmitters; }
+			private set
 			{
 				if (m_bs_transmitters == value) return;
 				if (m_bs_transmitters != null)
@@ -102,32 +111,40 @@ namespace cAlgo
 		}
 		private BindingSource<Transmitter> m_bs_transmitters;
 
-		/// <summary>Enumerate all time frames</summary>
-		public IEnumerable<TimeFrame> AllTimeFrames
+		/// <summary>Raised when data is sent to Tradee</summary>
+		public event EventHandler DataPosted;
+
+		/// <summary>Step each of the transmitters</summary>
+		public void Step()
 		{
-			get
+			// Send account information
+			SendAccountStatus();
+			SendCurrentPositions();
+			SendPendingPositions();
+
+			// Send price data
+			foreach (var trans in Transmitters.Where(x => x.Enabled))
 			{
-				foreach (var tf in Enum<ETimeFrame>.Values)
+				try
 				{
-					var time_frame = tf.ToCAlgoTimeframe();
-					if (time_frame == null) continue;
-					yield return time_frame;
+					trans.Step();
+				}
+				catch (Exception ex)
+				{
+					Debug.WriteLine(ex.Message);
 				}
 			}
 		}
 
-		/// <summary>Raised when data is sent to Tradee</summary>
-		public event EventHandler DataPosted;
-
 		/// <summary>Add a new transmitter (unless it already exists)</summary>
-		public void AddTransmitter(ETradePairs pair)
+		public Transmitter AddTransmitter(ETradePairs pair)
 		{
 			// If the pair is already in the list, set it as the current pair
 			var idx = Transmitters.IndexOf(x => x.Pair == pair);
 			if (idx != -1)
 			{
 				Transmitters.Position = idx;
-				return;
+				return Transmitters.Current;
 			}
 
 			// Look for settings for this pair
@@ -135,27 +152,55 @@ namespace cAlgo
 			if (s_idx == -1)
 			{
 				// If no settings exist, create some
-				var arr = Settings.Transmitters;
-				s_idx = Settings.Transmitters.Length;
-				Array.Resize(ref arr, s_idx + 1);
-				arr[s_idx] = new TransmitterSettings(pair) { TimeFrames = Settings.DefaultTimeFrames };
-				Settings.Transmitters = arr;
+				var list = Settings.Transmitters.ToList();
+				list.Add(new TransmitterSettings(pair) { TimeFrames = Settings.DefaultTimeFrames });
+				Settings.Transmitters = list.ToArray();
+				s_idx = list.Count - 1;
 			}
 
-			Transmitters.Add(new Transmitter(this, pair, Settings.Transmitters[s_idx]));
+			var trans = new Transmitter(this, pair, Settings.Transmitters[s_idx]);
+			return Transmitters.Add2(trans);
+		}
+
+		/// <summary>Get the latest account information</summary>
+		public IAccount GetAccount()
+		{
+			return CAlgo.Account;
 		}
 
 		/// <summary>Return the symbol for a given code</summary>
 		public Symbol GetSymbol(string code)
 		{
-			return m_calgo.MarketData.GetSymbol(code);
+			return m_sym_cache.Get(code, c =>
+				{
+					Symbol res = null;
+					using (var wait = new ManualResetEvent(false))
+					{
+						CAlgo.BeginInvokeOnMainThread(() =>
+						{
+							res = CAlgo.MarketData.GetSymbol(code);
+							wait.Set();
+						});
+						wait.WaitOne();
+						return res;
+					}
+				});
 		}
 
 		/// <summary>Return the series for a given symbol and time frame</summary>
 		public MarketSeries GetSeries(Symbol sym, TimeFrame tf)
 		{
-			using (Scope.Create(() => Environment.TickCount, s => Trace.WriteLine("Get Series {0},{1} took {2}".Fmt(sym.Code, tf, TimeSpan.FromMilliseconds(Environment.TickCount - s)))))
-				return m_calgo.MarketData.GetSeries(sym, tf);
+			MarketSeries res = null;
+			using (var wait = new ManualResetEvent(false))
+			{
+				CAlgo.BeginInvokeOnMainThread(() =>
+				{
+					res = CAlgo.MarketData.GetSeries(sym, tf);
+					wait.Set();
+				});
+				wait.WaitOne();
+				return res;
+			}
 		}
 
 		/// <summary>True if the pipe is connected</summary>
@@ -184,83 +229,152 @@ namespace cAlgo
 			{
 			case ListChg.ItemRemoved:
 				{
+					// Remove the settings for this transmitter
+					var list = Settings.Transmitters.ToList();
+					list.Remove(e.Item.Settings);
+					Settings.Transmitters = list.ToArray();
+
+					// Dispose the transmitter
 					e.Item.Dispose();
 					break;
 				}
 			}
 		}
 
-
-
-		/// <summary>Enumerate all trading pairs</summary>
-		private IEnumerable<Symbol> AllTradePairs
+		/// <summary>Handle messages from Tradee</summary>
+		private void DispatchMsg(object msg)
 		{
-			get
+			if (msg is OutMsg.HelloClient)
+			#region
 			{
-				foreach (var pair in Enum<ETradePairs>.Values)
-					yield return m_calgo.MarketData.GetSymbol(pair.ToString());
+			}
+			#endregion
+			else if (msg is OutMsg.RequestAccountStatus)
+			#region
+			{
+				// A request to send the account information
+				var req = (OutMsg.RequestAccountStatus)msg;
+
+				// Send the account info if the id matches.
+				var acct = GetAccount();
+				if (!req.AccountId.HasValue() || req.AccountId == acct.Number.ToString())
+				{
+					SendAccountStatus();
+					SendCurrentPositions();
+					SendPendingPositions();
+				}
+			}
+			#endregion
+			else if (msg is OutMsg.RequestInstrument)
+			#region
+			{
+				var req = (OutMsg.RequestInstrument)msg;
+
+				// Convert the symbol code to a known trading pair
+				var pair = Enum<ETradePairs>.TryParse(req.SymbolCode);
+				if (pair == null)
+					return; // Not a pair we know about
+
+				// Add or select the associated transmitter, and ensure the time frames are being sent
+				var trans = AddTransmitter(pair.Value);
+				trans.TimeFrames = trans.TimeFrames.Concat(req.TimeFrames).Distinct().ToArray();
+
+				// Ensure data is sent, even if it hasn't changed
+				trans.ForcePost();
+			}
+			#endregion
+			else
+			{
+				Debug.WriteLine("Unknown Message Type {0} received".Fmt(msg.GetType().Name));
 			}
 		}
 
 		/// <summary>Send details of the current account</summary>
 		private void SendAccountStatus()
 		{
-			var acct = new InMsg.AccountStatus();
-			acct.Number                = m_calgo.Account.Number                ;
-			acct.Balance               = m_calgo.Account.Balance               ;
-			acct.BrokerName            = m_calgo.Account.BrokerName            ;
-			acct.Currency              = m_calgo.Account.Currency              ;
-			acct.Equity                = m_calgo.Account.Equity                ;
-			acct.FreeMargin            = m_calgo.Account.FreeMargin            ;
-			acct.IsLive                = m_calgo.Account.IsLive                ;
-			acct.Leverage              = m_calgo.Account.Leverage              ;
-			acct.Margin                = m_calgo.Account.Margin                ;
-			acct.MarginLevel           = m_calgo.Account.MarginLevel           ;
-			acct.UnrealizedGrossProfit = m_calgo.Account.UnrealizedGrossProfit ;
-			acct.UnrealizedNetProfit   = m_calgo.Account.UnrealizedNetProfit   ;
+			var data = GetAccount();
+			var acct = new Account();
+			acct.AccountId             = data.Number.ToString();
+			acct.BrokerName            = data.BrokerName;
+			acct.Currency              = data.Currency;
+			acct.Balance               = data.Balance;
+			acct.Equity                = data.Equity;
+			acct.FreeMargin            = data.FreeMargin;
+			acct.IsLive                = data.IsLive;
+			acct.Leverage              = data.Leverage;
+			acct.Margin                = data.Margin;
+			acct.UnrealizedGrossProfit = data.UnrealizedGrossProfit;
+			acct.UnrealizedNetProfit   = data.UnrealizedNetProfit;
 
-			// Add up all the potential losses from current positions
-			foreach (var position in m_calgo.Positions)
+			// Only send differences
+			if (!acct.Equals(m_last_pending_orders))
 			{
-				var symbol = m_calgo.MarketData.GetSymbol(position.SymbolCode);
-				if (position.StopLoss == null)
-					continue;
-
-				var pips = (position.EntryPrice - position.StopLoss.Value) * position.Volume;
-				acct.PositionRisk += pips * symbol.PipValue / symbol.PipSize;
+				if (Tradee.Post(new InMsg.AccountUpdate(acct)))
+					m_last_account = acct;
 			}
-
-			// Add up all potential losses from orders
-			foreach (var order in m_calgo.PendingOrders)
-			{
-				var symbol = m_calgo.MarketData.GetSymbol(order.SymbolCode);
-				if (order.StopLoss == null)
-					continue;
-
-				var pips = order.TradeType == TradeType.Buy ? (order.TargetPrice - order.StopLoss.Value) * order.Volume : (order.StopLoss.Value - order.TargetPrice) * order.Volume;
-				acct.OrderRisk += pips * symbol.PipValue / symbol.PipSize;
-			}
-
-			Tradee.Post(acct);
 		}
+		private Tradee.Account m_last_account = new Account();
 
-
-		/// <summary>Handle messages from Tradee</summary>
-		private void DispatchMsg(object msg)
+		/// <summary>Send details about the currently active positions held</summary>
+		private void SendCurrentPositions()
 		{
-			switch (msg.GetType().Name)
+			// Collect the currently active positions
+			var list = CAlgo.Positions.Select(x => new Tradee.Position
 			{
-			default:
-				{
-					Trace.WriteLine("Unknown Message Type {0} received".Fmt(msg.GetType().Name));
-					break;
-				}
-			case "OutMsg.TestMsg":
-				{
-					break;
-				}
+				Id            = x.Id,
+				SymbolCode    = x.SymbolCode,
+				TradeType     = x.TradeType.ToTradeeTradeType(),
+				EntryTime     = x.EntryTime.ToUniversalTime().Ticks,
+				EntryPrice    = x.EntryPrice,
+				Pips          = x.Pips,
+				StopLossRel   = x.StopLossRel(),
+				TakeProfitRel = x.TakeProfitRel(),
+				Quantity      = x.Quantity,
+				Volume        = x.Volume,
+				GrossProfit   = x.GrossProfit,
+				NetProfit     = x.NetProfit,
+				Commissions   = x.Commissions,
+				Swap          = x.Swap,
+				Label         = x.Label,
+				Comment       = x.Comment,
+			}).ToArray();
+
+			// Only send differences
+			if (!list.SequenceEqual(m_last_positions))
+			{
+				if (Tradee.Post(new InMsg.PositionsUpdate(list)))
+					m_last_positions = list;
 			}
 		}
+		private Tradee.Position[] m_last_positions = new Tradee.Position[0];
+
+		/// <summary>Send details about pending orders</summary>
+		private void SendPendingPositions()
+		{
+			// Collect the pending orders
+			var list = CAlgo.PendingOrders.Select(x => new Tradee.PendingOrder
+			{
+				Id                         = x.Id,
+				SymbolCode                 = x.SymbolCode,
+				TradeType                  = x.TradeType.ToTradeeTradeType(),
+				ExpirationTime             = x.ExpirationTime != null ? x.ExpirationTime.Value.ToUniversalTime().Ticks : 0,
+				EntryPrice                 = x.TargetPrice,
+				StopLossRel                = x.StopLossRel(),
+				TakeProfitRel              = x.TakeProfitRel(),
+				Quantity                   = x.Quantity,
+				Volume                     = x.Volume,
+				Label                      = x.Label,
+				Comment                    = x.Comment,
+			}).ToArray();
+
+			// Only send differences
+			if (!list.SequenceEqual(m_last_pending_orders))
+			{
+				if (Tradee.Post(new InMsg.PendingOrdersUpdate(list)))
+					m_last_pending_orders = list;
+			}
+		}
+		private Tradee.PendingOrder[] m_last_pending_orders = new Tradee.PendingOrder[0];
 
 		/// <summary>Marshal a function call to the main thread</summary>
 		public void RunOnMainThread(Action action)
@@ -268,7 +382,33 @@ namespace cAlgo
 			if (m_main_thread.Thread == Thread.CurrentThread)
 				action();
 			else
-				m_main_thread.BeginInvoke(() => RunOnMainThread(action));
+				m_main_thread.BeginInvoke(action);
+		}
+		public void RunOnMainThread(Action<object> action, object arg)
+		{
+			if (m_main_thread.Thread == Thread.CurrentThread)
+				action(arg);
+			else
+				m_main_thread.BeginInvoke(action, arg);
+		}
+
+		/// <summary>Send a message to Tradee</summary>
+		public bool Post<T>(T msg) where T:ITradeeMsg
+		{
+			return Tradee != null && Tradee.Post(msg);
+		}
+
+		/// <summary>Return a scope that measures time until disposed</summary>
+		public Scope TimingScope(string msg)
+		{
+			var sw = new Stopwatch();
+			return Scope.Create(
+				() => sw.Start(),
+				() =>
+				{
+					sw.Stop();
+					Debug.WriteLine("{0}: {1}".Fmt(msg, TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds).ToPrettyString()));
+				});
 		}
 	}
 }

@@ -1,16 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Drawing;
-using System.Data;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using pr.util;
-using pr.gui;
 using pr.container;
 using pr.extn;
+using pr.gui;
+using pr.maths;
+using pr.util;
 using Tradee.Properties;
 
 namespace Tradee
@@ -19,9 +14,10 @@ namespace Tradee
 	{
 		#region UI Elements
 		private SplitContainer m_split;
-		private DataGridView m_grid_favs;
+		private DataGridView m_grid_fav;
 		private DataGridView m_grid_all;
 		#endregion
+		private DragDrop m_dd;
 
 		public InstrumentsUI(MainModel model)
 			:base(model, "Instruments")
@@ -39,7 +35,15 @@ namespace Tradee
 		}
 		protected override void SetModelCore(MainModel model)
 		{
+			if (Model != null)
+			{
+				Model.MarketData.DataAdded -= UpdateUI;
+			}
 			base.SetModelCore(model);
+			if (Model != null)
+			{
+				Model.MarketData.DataAdded += UpdateUI;
+			}
 		}
 
 		/// <summary>The collection of favourite instruments</summary>
@@ -52,27 +56,89 @@ namespace Tradee
 		/// <summary>Set up UI Elements</summary>
 		private void SetupUI()
 		{
-			// Favourites grid
-			m_grid_favs.AutoGenerateColumns = false;
-			m_grid_favs.Columns.Add(new DataGridViewTextBoxColumn
+			// Set up the favourites grid and the all instruments grid exactly the same
+			foreach (var grid in new[] {m_grid_all, m_grid_fav})
 			{
-				HeaderText = "Symbol Code",
-				DataPropertyName = nameof(Instrument.SymbolCode),
-			});
-			m_grid_favs.DataSource = Favourites;
-			m_grid_favs.CellMouseClick += HandleGridCellClick;
-			m_grid_favs.CellMouseDoubleClick += HandleCellDoubleClick;
+				grid.AutoGenerateColumns = false;
+				grid.Columns.Add(new DataGridViewTextBoxColumn
+				{
+					HeaderText = "Instrument",
+					DataPropertyName = nameof(Instrument.SymbolCode),
+					FillWeight = 1f,
+				});
+				grid.Columns.Add(new DataGridViewTextBoxColumn
+				{
+					HeaderText = "Last Updated",
+					DataPropertyName = nameof(Instrument.LastUpdatedLocal),
+					FillWeight = 2f,
+				});
+				grid.CellFormatting += HandleGridCellFormatting;
+				grid.CellMouseClick += HandleGridCellClick;
+				grid.CellMouseDoubleClick += HandleCellDoubleClick;
+			}
 
-			// All instruments
-			m_grid_all.AutoGenerateColumns = false;
-			m_grid_all.Columns.Add(new DataGridViewTextBoxColumn
-			{
-				HeaderText = "Symbol Code",
-				DataPropertyName = nameof(Instrument.SymbolCode),
-			});
+			// Set the data sources
 			m_grid_all.DataSource = Model.MarketData.Instruments;
-			m_grid_all.CellMouseClick += HandleGridCellClick;
-			m_grid_all.CellMouseDoubleClick += HandleCellDoubleClick;
+			m_grid_fav.DataSource = Favourites;
+			m_grid_all.ColumnFilters(true).Enabled = true;
+
+			// Support drag and drop from the 'all' to the favourites list
+			m_dd = new DragDrop(m_grid_fav);
+			m_dd.DoDrop += (s,a,m) =>
+			{
+				if (!a.Data.GetDataPresent(typeof(DataGridViewEx.DragDropData)))
+					return false;
+
+				// Set the drop effect to indicate what will happen if the item is dropped here
+				a.Effect = DragDropEffects.Copy;
+
+				// 'mode' == 'DragDrop.EDrop.Drop' when the item is actually dropped
+				if (m != pr.util.DragDrop.EDrop.Drop)
+					return true;
+
+				var ddd   = (DataGridViewEx.DragDropData)a.Data.GetData(typeof(DataGridViewEx.DragDropData));
+				var instr = ddd.Row.DataBoundItem as Instrument;
+				var pt    = m_grid_fav.PointToClient(new Point(a.X, a.Y));
+				var hit   = m_grid_fav.HitTestEx(pt);
+				Favourites.Insert(hit.RowIndex, instr);
+				return true;
+			};
+
+			m_grid_fav.AllowDrop = true;
+			m_grid_all.MouseDown += DataGridViewEx.DragDrop_DragRow;
+		}
+
+		/// <summary>Update the UI</summary>
+		private void UpdateUI(object sender = null, EventArgs args = null)
+		{
+			Invalidate(true);
+		}
+
+		/// <summary>Set the display style of the grid cells</summary>
+		private void HandleGridCellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+		{
+			var grid = (DataGridView)sender;
+			if (!grid.Within(e.ColumnIndex, e.RowIndex))
+				return;
+
+			var item = (Instrument)grid.Rows[e.RowIndex].DataBoundItem;
+			switch (e.ColumnIndex)
+			{
+			default: throw new Exception("Unknown column");
+			case 0:
+				{
+					// Todo
+					// Colour the cell based on bullish/bearish market
+					break;
+				}
+			case 1:
+				{
+					e.Value = item.LastUpdatedUTC != DateTimeOffset.MinValue ? item.LastUpdatedLocal.ToString("yyyy/MM/dd HH:mm:ss") : "never";
+					e.CellStyle.ForeColor = Color.Blue.Lerp(Color.DarkGray, (float)Maths.Clamp(Maths.Frac(0.0, (DateTime.UtcNow - item.LastUpdatedUTC).TotalSeconds, 10.0), 0.0, 1.0));
+					e.FormattingApplied = true;
+					break;
+				}
+			}
 		}
 
 		/// <summary>Handle a click within a grid</summary>
@@ -143,13 +209,13 @@ namespace Tradee
 		private void InitializeComponent()
 		{
 			this.m_split = new System.Windows.Forms.SplitContainer();
-			this.m_grid_favs = new System.Windows.Forms.DataGridView();
+			this.m_grid_fav = new System.Windows.Forms.DataGridView();
 			this.m_grid_all = new System.Windows.Forms.DataGridView();
 			((System.ComponentModel.ISupportInitialize)(this.m_split)).BeginInit();
 			this.m_split.Panel1.SuspendLayout();
 			this.m_split.Panel2.SuspendLayout();
 			this.m_split.SuspendLayout();
-			((System.ComponentModel.ISupportInitialize)(this.m_grid_favs)).BeginInit();
+			((System.ComponentModel.ISupportInitialize)(this.m_grid_fav)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_all)).BeginInit();
 			this.SuspendLayout();
 			// 
@@ -162,7 +228,7 @@ namespace Tradee
 			// 
 			// m_split.Panel1
 			// 
-			this.m_split.Panel1.Controls.Add(this.m_grid_favs);
+			this.m_split.Panel1.Controls.Add(this.m_grid_fav);
 			// 
 			// m_split.Panel2
 			// 
@@ -173,20 +239,20 @@ namespace Tradee
 			// 
 			// m_grid_favs
 			// 
-			this.m_grid_favs.AllowUserToAddRows = false;
-			this.m_grid_favs.AllowUserToDeleteRows = false;
-			this.m_grid_favs.AllowUserToResizeRows = false;
-			this.m_grid_favs.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
-			this.m_grid_favs.AutoSizeRowsMode = System.Windows.Forms.DataGridViewAutoSizeRowsMode.AllCells;
-			this.m_grid_favs.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-			this.m_grid_favs.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_grid_favs.Location = new System.Drawing.Point(0, 0);
-			this.m_grid_favs.Name = "m_grid_favs";
-			this.m_grid_favs.ReadOnly = true;
-			this.m_grid_favs.RowHeadersVisible = false;
-			this.m_grid_favs.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_favs.Size = new System.Drawing.Size(238, 283);
-			this.m_grid_favs.TabIndex = 0;
+			this.m_grid_fav.AllowUserToAddRows = false;
+			this.m_grid_fav.AllowUserToDeleteRows = false;
+			this.m_grid_fav.AllowUserToResizeRows = false;
+			this.m_grid_fav.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+			this.m_grid_fav.AutoSizeRowsMode = System.Windows.Forms.DataGridViewAutoSizeRowsMode.AllCells;
+			this.m_grid_fav.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+			this.m_grid_fav.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_grid_fav.Location = new System.Drawing.Point(0, 0);
+			this.m_grid_fav.Name = "m_grid_favs";
+			this.m_grid_fav.ReadOnly = true;
+			this.m_grid_fav.RowHeadersVisible = false;
+			this.m_grid_fav.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+			this.m_grid_fav.Size = new System.Drawing.Size(238, 283);
+			this.m_grid_fav.TabIndex = 0;
 			// 
 			// m_grid_all
 			// 
@@ -216,7 +282,7 @@ namespace Tradee
 			this.m_split.Panel2.ResumeLayout(false);
 			((System.ComponentModel.ISupportInitialize)(this.m_split)).EndInit();
 			this.m_split.ResumeLayout(false);
-			((System.ComponentModel.ISupportInitialize)(this.m_grid_favs)).EndInit();
+			((System.ComponentModel.ISupportInitialize)(this.m_grid_fav)).EndInit();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_all)).EndInit();
 			this.ResumeLayout(false);
 
