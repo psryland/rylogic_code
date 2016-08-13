@@ -1,9 +1,8 @@
 ﻿using System.ComponentModel;
 using pr.common;
 using pr.util;
-using Tradee;
 
-namespace cAlgo
+namespace Tradee
 {
 	public class Settings :SettingsBase<Settings>
 	{
@@ -47,7 +46,7 @@ namespace cAlgo
 		public TransmitterSettings(ETradePairs pair)
 		{
 			Pair       = pair;
-			TimeFrames = new [] {ETimeFrame.Min1, ETimeFrame.Hour1, ETimeFrame.Hour12};
+			TimeFrames = new [] {ETimeFrame.Min10, ETimeFrame.Hour1, ETimeFrame.Hour12};
 		}
 
 		/// <summary>The trading pair that these settings are for</summary>

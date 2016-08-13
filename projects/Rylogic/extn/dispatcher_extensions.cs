@@ -3,7 +3,7 @@ using System.Windows.Threading;
 
 namespace pr.extn
 {
-	public static class DispatcherExtensions
+	public static class Dispatcher_
 	{
 		/// <summary>Allow a lambda to be passed to Invoke</summary>
 		public static void Invoke(this Dispatcher dis, Action action)

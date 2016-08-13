@@ -19,7 +19,6 @@ using pr.ldr;
 using pr.maths;
 using pr.util;
 using pr.win32;
-using EBtnIdx = pr.gfx.View3d.EBtnIdx;
 
 namespace pr.gui
 {
@@ -54,10 +53,12 @@ namespace pr.gui
 
 				Elements = new BindingListEx<Element> { PerItemClear = true, UseHashSet = true };
 				Selected = new BindingListEx<Element> { PerItemClear = false };
+				Hovered  = new BindingListEx<Element> { PerItemClear = false };
 				ElemIds  = new Dictionary<Guid, Element>();
 
 				Elements.ListChanging += (s,a) => OnElementListChanging(a);
 				Selected.ListChanging += (s,a) => OnSelectionListChanging(a);
+				Hovered .ListChanging += (s,a) => OnHoveredListChanging(a);
 
 				AllowEditing = false;
 				AllowSelection = false;
@@ -140,7 +141,7 @@ namespace pr.gui
 		/// <summary>The current X/Y axis range of the chart</summary>
 		public RangeData Range
 		{
-			get { return m_range; }
+			[DebuggerStepThrough] get { return m_range; }
 			private set
 			{
 				if (value == m_range) return;
@@ -153,26 +154,26 @@ namespace pr.gui
 		/// <summary>Accessor to the current X axis</summary>
 		public RangeData.Axis XAxis
 		{
-			get { return Range.XAxis; }
+			[DebuggerStepThrough] get { return Range.XAxis; }
 		}
 
 		/// <summary>Accessor to the current Y axis</summary>
 		public RangeData.Axis YAxis
 		{
-			get { return Range.YAxis; }
+			[DebuggerStepThrough] get { return Range.YAxis; }
 		}
 
 		/// <summary>Default X axis range of the chart</summary>
 		public RangeF BaseRangeX
 		{
-			get;
+			[DebuggerStepThrough] get;
 			set;
 		}
 
 		/// <summary>Default Y axis range of the chart</summary>
 		public RangeF BaseRangeY
 		{
-			get;
+			[DebuggerStepThrough] get;
 			set;
 		}
 
@@ -202,6 +203,9 @@ namespace pr.gui
 
 		/// <summary>The set of selected chart elements</summary>
 		public BindingListEx<Element> Selected { get; private set; }
+
+		/// <summary>The set of hovered chart elements</summary>
+		public BindingListEx<Element> Hovered { get; private set; }
 
 		/// <summary>Associative array from Element Ids to Elements</summary>
 		public Dictionary<Guid, Element> ElemIds { get; private set; }
@@ -343,24 +347,32 @@ namespace pr.gui
 		}
 
 		/// <summary>Perform a hit test on the chart</summary>
-		public HitTestResult HitTest(v2 ds_point, Func<Element, bool> pred)
+		public HitTestResult HitTestCS(Point client_point, Func<Element, bool> pred)
 		{
-			var result = new HitTestResult(Window.Camera);
-			var elements = pred != null ? Elements.Where(pred) : Elements;
-			foreach (var elem in elements)
+			// Determine the hit zone of the control
+			var zone = HitTestResult.EZone.None;
+			if (ChartBounds.Contains(client_point)) zone |= HitTestResult.EZone.Chart;
+			if (XAxisBounds.Contains(client_point)) zone |= HitTestResult.EZone.XAxis;
+			if (YAxisBounds.Contains(client_point)) zone |= HitTestResult.EZone.YAxis;
+			if (TitleBounds.Contains(client_point)) zone |= HitTestResult.EZone.Title;
+
+			// Find elements that overlap 'client_point'
+			var hits = new List<HitTestResult.Hit>();
+			if (zone.HasFlag(HitTestResult.EZone.Chart))
 			{
-				var hit = elem.HitTest(ds_point, Window.Camera);
-				if (hit != null)
-					result.Hits.Add(hit);
+				var elements = pred != null ? Elements.Where(pred) : Elements;
+				foreach (var elem in elements)
+				{
+					var hit = elem.HitTest(client_point, Window.Camera);
+					if (hit != null)
+						hits.Add(hit);
+				}
+
+				// Sort the results by z order
+				hits.Sort((l,r) => -l.Element.PositionZ.CompareTo(r.Element.PositionZ));
 			}
 
-			// Sort the results by type then z order
-			result.Hits.Sort((l,r) => -l.Element.PositionZ.CompareTo(r.Element.PositionZ));
-			return result;
-		}
-		public HitTestResult HitTestCS(Point cs_point, Func<Element, bool> pred)
-		{
-			return HitTest(ClientToChart(cs_point), pred);
+			return new HitTestResult(zone, hits, Window.Camera);
 		}
 
 		/// <summary>
@@ -843,6 +855,12 @@ namespace pr.gui
 			get { return Rectangle.FromLTRB(0, ChartBounds.Top, ChartBounds.Left, ChartBounds.Bottom); }
 		}
 
+		/// <summary>The client space area of the chart title</summary>
+		private Rectangle TitleBounds
+		{
+			get { return Rectangle.FromLTRB(ChartBounds.Left, 0, ChartBounds.Right, ChartBounds.Top); }
+		}
+
 		#endregion
 
 		#region RdrOptions
@@ -1301,8 +1319,9 @@ namespace pr.gui
 		{
 			public RangeData(ChartControl owner)
 			{
-				XAxis = new Axis(owner);
-				YAxis = new Axis(owner);
+				Owner = owner;
+				XAxis = new Axis(EAxis.XAxis, owner);
+				YAxis = new Axis(EAxis.YAxis, owner);
 			}
 			public RangeData(RangeData rhs)
 			{
@@ -1315,6 +1334,12 @@ namespace pr.gui
 				YAxis = null;
 			}
 
+			/// <summary>Axis type</summary>
+			public enum EAxis { XAxis, YAxis }
+
+			/// <summary>The chart that owns this axis</summary>
+			public ChartControl Owner { get; private set; }
+
 			/// <summary>The chart X axis</summary>
 			public Axis XAxis
 			{
@@ -1324,6 +1349,7 @@ namespace pr.gui
 					if (m_xaxis == value) return;
 					if (m_xaxis != null)
 					{
+						m_xaxis.Scroll -= HandleAxisScrolled;
 						m_xaxis.Zoomed -= HandleAxisZoomed;
 						Util.Dispose(ref m_xaxis);
 					}
@@ -1331,6 +1357,7 @@ namespace pr.gui
 					if (m_xaxis != null)
 					{
 						m_xaxis.Zoomed += HandleAxisZoomed;
+						m_xaxis.Scroll += HandleAxisScrolled;
 					}
 				}
 			}
@@ -1345,6 +1372,7 @@ namespace pr.gui
 					if (m_yaxis == value) return;
 					if (m_yaxis != null)
 					{
+						m_yaxis.Scroll -= HandleAxisScrolled;
 						m_yaxis.Zoomed -= HandleAxisZoomed;
 						Util.Dispose(ref m_yaxis);
 					}
@@ -1352,6 +1380,7 @@ namespace pr.gui
 					if (m_yaxis != null)
 					{
 						m_yaxis.Zoomed += HandleAxisZoomed;
+						m_yaxis.Scroll += HandleAxisScrolled;
 					}
 				}
 			}
@@ -1382,39 +1411,71 @@ namespace pr.gui
 				}
 			}
 
-			/// <summary>Invalidate the cached grid line graphics on zoom (for both axes), since the model will need to change size</summary>
+			/// <summary>Notify of the axis zooming</summary>
 			private void HandleAxisZoomed(object sender, EventArgs e)
 			{
+				// Invalidate the cached grid line graphics on zoom (for both axes), since the model will need to change size
 				XAxis.GridLineGfx = null;
 				YAxis.GridLineGfx = null;
+
+				// If a moved event is pending, ensure zoomed is added to the args
+				if (m_moved_args == null)
+				{
+					m_moved_args = new ChartMovedEventArgs(EMoveType.None);
+					Owner.BeginInvoke(NotifyMoved);
+				}
+				if (sender == XAxis) m_moved_args.MoveType |= EMoveType.XZoomed;
+				if (sender == YAxis) m_moved_args.MoveType |= EMoveType.YZoomed;
 			}
+
+			/// <summary>Notify of the axis scrolled</summary>
+			private void HandleAxisScrolled(object sender, EventArgs e)
+			{
+				if (m_moved_args == null)
+				{
+					m_moved_args = new ChartMovedEventArgs(EMoveType.None);
+					Owner.BeginInvoke(NotifyMoved);
+				}
+				if (sender == XAxis) m_moved_args.MoveType |= EMoveType.XScrolled;
+				if (sender == YAxis) m_moved_args.MoveType |= EMoveType.YScrolled;
+			}
+
+			/// <summary>Raise the ChartMoved event on the chart</summary>
+			private void NotifyMoved()
+			{
+				Owner.OnChartMoved(m_moved_args);
+				m_moved_args = null;
+			}
+			private ChartMovedEventArgs m_moved_args;
 
 			/// <summary>A axis on the chart (typically X or Y)</summary>
 			public class Axis :IDisposable
 			{
-				public Axis(ChartControl owner)
-					: this(owner, 0f, 1f)
+				public Axis(EAxis axis, ChartControl owner)
+					:this(axis, owner, 0f, 1f)
 				{ }
-				public Axis(ChartControl owner, double min, double max)
+				public Axis(EAxis axis, ChartControl owner, double min, double max)
 				{
 					Debug.Assert(owner != null);
 					Set(min, max);
-					Owner         = owner;
-					Label         = string.Empty;
-					AllowScroll   = true;
-					AllowZoom     = true;
-					LockRange     = false;
-					TickText      = (x,step) => Math.Round(x, 4, MidpointRounding.AwayFromZero).ToString("G4");
+					AxisType    = axis;
+					Owner       = owner;
+					Label       = string.Empty;
+					AllowScroll = true;
+					AllowZoom   = true;
+					LockRange   = false;
+					TickText    = (x,step) => Math.Round(x, 4, MidpointRounding.AwayFromZero).ToString("G4");
 				}
 				public Axis(Axis rhs)
 				{
 					Set(rhs.Min, rhs.Max);
-					Owner         = rhs.Owner;
-					Label         = rhs.Label;
-					AllowScroll   = rhs.AllowScroll;
-					AllowZoom     = rhs.AllowZoom;
-					LockRange     = rhs.LockRange;
-					TickText      = rhs.TickText;
+					AxisType    = rhs.AxisType;
+					Owner       = rhs.Owner;
+					Label       = rhs.Label;
+					AllowScroll = rhs.AllowScroll;
+					AllowZoom   = rhs.AllowZoom;
+					LockRange   = rhs.LockRange;
+					TickText    = rhs.TickText;
 				}
 				public virtual void Dispose()
 				{
@@ -1432,13 +1493,16 @@ namespace pr.gui
 					}
 				}
 
+				/// <summary>Which axis this is</summary>
+				public EAxis AxisType { get; private set; }
+
 				/// <summary>The chart that owns this axis</summary>
 				public ChartControl Owner { get; private set; }
 
 				/// <summary>The axis label</summary>
 				public string Label
 				{
-					get { return m_label ?? string.Empty; }
+					[DebuggerStepThrough] get { return m_label ?? string.Empty; }
 					set
 					{
 						if (m_label == value) return;
@@ -1450,7 +1514,7 @@ namespace pr.gui
 				/// <summary>The minimum axis value</summary>
 				public double Min
 				{
-					get { return m_min; }
+					[DebuggerStepThrough] get { return m_min; }
 					set
 					{
 						if (m_min == value) return;
@@ -1462,7 +1526,7 @@ namespace pr.gui
 				/// <summary>The maximum axis value</summary>
 				public double Max
 				{
-					get { return m_max; }
+					[DebuggerStepThrough] get { return m_max; }
 					set
 					{
 						if (m_max == value) return;
@@ -1474,7 +1538,7 @@ namespace pr.gui
 				/// <summary>The total range of this axis (max - min)</summary>
 				public double Span
 				{
-					get { return Max - Min; }
+					[DebuggerStepThrough] get { return Max - Min; }
 					set
 					{
 						if (Span == value) return;
@@ -1485,7 +1549,7 @@ namespace pr.gui
 				/// <summary>The centre value of the range</summary>
 				public double Centre
 				{
-					get { return (Min + Max) * 0.5; }
+					[DebuggerStepThrough] get { return (Min + Max) * 0.5; }
 					set
 					{
 						if (Centre == value) return;
@@ -1496,7 +1560,7 @@ namespace pr.gui
 				/// <summary>The min/max limits as a range</summary>
 				public RangeF Range
 				{
-					get { return new RangeF(Min, Max); }
+					[DebuggerStepThrough] get { return new RangeF(Min, Max); }
 					set
 					{
 						if (Equals(Range, value)) return;
@@ -1660,12 +1724,41 @@ namespace pr.gui
 				}
 				private View3d.Object m_gridlines;
 
+				/// <summary>Show the axis context menu</summary>
+				public void ShowContextMenu(Point location)
+				{
+					var cmenu = new ContextMenuStrip();
+					using (cmenu.SuspendLayout(true))
+					{
+						{// Lock Range
+							var opt = cmenu.Items.Add2(new ToolStripMenuItem("Lock") { Checked = LockRange, CheckOnClick = true });
+							opt.CheckedChanged += (s,a) =>
+							{
+								LockRange = opt.Checked;
+							};
+						}
+
+						// Customise the menu
+						Owner.OnAddUserMenuOptions(new AddUserMenuOptionsEventArgs(AxisType == EAxis.XAxis ? AddUserMenuOptionsEventArgs.EType.XAxis : AddUserMenuOptionsEventArgs.EType.YAxis, cmenu));
+					}
+					cmenu.Items.TidySeparators();
+					if (cmenu.Items.Count != 0)
+						cmenu.Show(Owner, location);
+				}
+
 				/// <summary>Friendly string view</summary>
 				public override string ToString()
 				{
 					return "{0} - [{1}:{2}]".Fmt(Label, Min, Max);
 				}
 			}
+		}
+
+		/// <summary>Raised whenever the view3d area of the chart is scrolled or zoomed</summary>
+		public event EventHandler<ChartMovedEventArgs> ChartMoved;
+		protected virtual void OnChartMoved(ChartMovedEventArgs args)
+		{
+			ChartMoved.Raise(this, args);
 		}
 
 		#endregion
@@ -1701,19 +1794,18 @@ namespace pr.gui
 				return;
 
 			// Look for the mouse op to perform
-			var btn = View3d.ButtonIndex(e.Button);
-			if (MouseOperations.Pending(btn) == null && DefaultMouseControl)
+			if (MouseOperations.Pending(e.Button) == null && DefaultMouseControl)
 			{
-				switch (btn)
+				switch (e.Button)
 				{
 				default: return;
-				case EBtnIdx.Left:  MouseOperations.SetPending(btn, new MouseOpDragOrClickElements(this)); break;
-				case EBtnIdx.Right: MouseOperations.SetPending(btn, new MouseOpDragOrClickChart(this)); break;
+				case MouseButtons.Left:  MouseOperations.SetPending(e.Button, new MouseOpDefaultLButton(this)); break;
+				case MouseButtons.Right: MouseOperations.SetPending(e.Button, new MouseOpDefaultRButton(this)); break;
 				}
 			}
 
 			// Start the next mouse op
-			MouseOperations.BeginOp(btn);
+			MouseOperations.BeginOp(e.Button);
 
 			// Get the mouse op, save mouse location and hit test data, then call op.MouseDown()
 			var op = MouseOperations.Active;
@@ -1722,7 +1814,7 @@ namespace pr.gui
 				op.m_btn_down    = true;
 				op.m_grab_client = e.Location;
 				op.m_grab_chart  = ClientToChart(op.m_grab_client);
-				op.m_hit_result  = HitTest(op.m_grab_chart, null);
+				op.m_hit_result  = HitTestCS(op.m_grab_client, null);
 				op.MouseDown(e);
 				Capture = true;
 			}
@@ -1733,8 +1825,30 @@ namespace pr.gui
 
 			// Look for the mouse op to perform
 			var op = MouseOperations.Active;
-			if (op != null && !op.Cancelled)
-				op.MouseMove(e);
+			if (op != null)
+			{
+				if (!op.Cancelled)
+					op.MouseMove(e);
+			}
+			// Otherwise, provide mouse hover detection
+			else
+			{
+				var hit = HitTestCS(e.Location, null);
+				var hovered = hit.Hits.Select(x => x.Element).ToHashSet();
+
+				// Remove elements that are no longer hovered
+				// and remove existing hovered's from the set.
+				for (int i = Hovered.Count; i-- != 0;)
+				{
+					if (hovered.Contains(Hovered[i]))
+						hovered.Remove(Hovered[i]);
+					else
+						Hovered.RemoveAt(i);
+				}
+				
+				// Add elements that are now hovered
+				Hovered.AddRange(hovered);
+			}
 		}
 		protected override void OnMouseUp(MouseEventArgs e)
 		{
@@ -1745,12 +1859,11 @@ namespace pr.gui
 				Capture = false;
 
 			// Look for the mouse op to perform
-			var btn = View3d.ButtonIndex(e.Button);
 			var op = MouseOperations.Active;
 			if (op != null && !op.Cancelled)
 				op.MouseUp(e);
 			
-			MouseOperations.EndOp(btn);
+			MouseOperations.EndOp(e.Button);
 		}
 		protected override void OnMouseWheel(MouseEventArgs e)
 		{
@@ -1828,10 +1941,6 @@ namespace pr.gui
 		protected virtual void OnChartClicked(ChartClickedEventArgs args)
 		{
 			ChartClicked.Raise(this, args);
-
-			// Show the context menu on right click
-			if (!args.Handled && args.Button == MouseButtons.Right)
-				ShowContextMenu(args.Location);
 		}
 
 		/// <summary>Raised when the chart is area selected</summary>
@@ -1953,38 +2062,38 @@ namespace pr.gui
 		public class MouseOps
 		{
 			/// <summary>The current mouse operation in effect for each mouse button</summary>
-			private readonly Dictionary<EBtnIdx, MouseOp> m_ops;
+			private readonly Dictionary<MouseButtons, MouseOp> m_ops;
 
 			/// <summary>The next mouse operation for each mouse button</summary>
-			private readonly Dictionary<EBtnIdx, MouseOp> m_pending;
+			private readonly Dictionary<MouseButtons, MouseOp> m_pending;
 
 			public MouseOps()
 			{
-				m_ops     = Enum<EBtnIdx>.Values.ToDictionary(k => k, k => (MouseOp)null);
-				m_pending = Enum<EBtnIdx>.Values.ToDictionary(k => k, k => (MouseOp)null);
+				m_ops     = Enum<MouseButtons>.Values.ToDictionary(k => k, k => (MouseOp)null);
+				m_pending = Enum<MouseButtons>.Values.ToDictionary(k => k, k => (MouseOp)null);
 			}
 
 			/// <summary>The currently active mouse op</summary>
 			public MouseOp Active { get; private set; }
 
 			/// <summary>Return the op pending for button 'idx'</summary>
-			public MouseOp Pending(EBtnIdx idx)
+			public MouseOp Pending(MouseButtons btn)
 			{
-				return m_pending[idx];
+				return m_pending[btn];
 			}
 
 			/// <summary>Add a mouse op to be started on the next mouse down event for button 'idx'</summary>
-			public void SetPending(EBtnIdx idx, MouseOp op)
+			public void SetPending(MouseButtons btn, MouseOp op)
 			{
-				if (m_pending[idx] != null) m_pending[idx].Dispose();
-				m_pending[idx] = op;
+				if (m_pending[btn] != null) m_pending[btn].Dispose();
+				m_pending[btn] = op;
 			}
 
 			/// <summary>Start/End the next mouse op for button 'idx'</summary>
-			public void BeginOp(EBtnIdx idx)
+			public void BeginOp(MouseButtons btn)
 			{
-				Active = m_pending[idx];
-				m_pending[idx] = null;
+				Active = m_pending[btn];
+				m_pending[btn] = null;
 
 				// If the op starts immediately without a mouse down, fake
 				// a mouse down event as soon as it becomes active.
@@ -1994,7 +2103,7 @@ namespace pr.gui
 						Active.MouseDown(null);
 				}
 			}
-			public void EndOp(EBtnIdx idx)
+			public void EndOp(MouseButtons btn)
 			{
 				if (Active != null)
 				{
@@ -2004,8 +2113,8 @@ namespace pr.gui
 				Active = null;
 
 				// If the next op starts immediately, begin it now
-				if (m_pending[idx] != null && !m_pending[idx].StartOnMouseDown)
-					BeginOp(idx);
+				if (m_pending[btn] != null && !m_pending[btn].StartOnMouseDown)
+					BeginOp(btn);
 			}
 		}
 
@@ -2075,58 +2184,13 @@ namespace pr.gui
 			public virtual void NotifyCancelled() {}
 		}
 
-		/// <summary>A mouse operation for dragging the chart around</summary>
-		public class MouseOpDragOrClickChart :MouseOp
-		{
-			/// <summary>The allowed motion based on where the chart was grabbed</summary>
-			private EAxis m_drag_axis_allow;
-
-			public MouseOpDragOrClickChart(ChartControl chart)
-				:base(chart)
-			{}
-			public override void MouseDown(MouseEventArgs e)
-			{
-				if (m_chart.ChartBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.Both;
-				if (m_chart.XAxisBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.XAxis;
-				if (m_chart.YAxisBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.YAxis;
-			}
-			public override void MouseMove(MouseEventArgs e)
-			{
-				// If we haven't dragged, treat it as a click instead (i.e. ignore till it's a drag operation)
-				if (IsClick(e.Location))
-					return;
-
-				// Change the cursor once dragging
-				m_chart.Cursor = Cursors.SizeAll;
-
-				// Limit the drag direction
-				var drop_loc = e.Location;
-				if (!m_drag_axis_allow.HasFlag(EAxis.XAxis)) drop_loc.X = m_grab_client.X;
-				if (!m_drag_axis_allow.HasFlag(EAxis.YAxis)) drop_loc.Y = m_grab_client.Y;
-
-				m_chart.PositionChart(drop_loc, m_grab_chart);
-			}
-			public override void MouseUp(MouseEventArgs e)
-			{
-				m_chart.Cursor = Cursors.Default;
-
-				// If we haven't dragged, treat it as a click instead
-				if (IsClick(e.Location))
-					m_chart.OnChartClicked(new ChartClickedEventArgs(m_hit_result, e));
-				else
-					m_chart.PositionChart(e.Location, m_grab_chart);
-
-				m_chart.Invalidate();
-			}
-		}
-
-		/// <summary>A mouse operation for dragging selected elements around</summary>
-		public class MouseOpDragOrClickElements :MouseOp
+		/// <summary>A mouse operation for dragging selected elements around, area selecting, or left clicking (Left Button)</summary>
+		public class MouseOpDefaultLButton :MouseOp
 		{
 			private HitTestResult.Hit m_hit_selected;
 			private bool m_selection_graphic_added;
 
-			public MouseOpDragOrClickElements(ChartControl chart) :base(chart)
+			public MouseOpDefaultLButton(ChartControl chart) :base(chart)
 			{
 				m_selection_graphic_added = false;
 			}
@@ -2182,23 +2246,45 @@ namespace pr.gui
 				// If this is a single click...
 				if (IsClick(e.Location))
 				{
-					// Check to see if the click is on an existing selected object
-					// If so, allow that object to handle the click, otherwise select elements.
-					if (m_hit_selected == null || !m_hit_selected.Element.HandleClicked(m_hit_selected, m_hit_result.Camera))
+					// Pass the click event out to users first
+					var args = new ChartClickedEventArgs(m_hit_result, e);
+					m_chart.OnChartClicked(args);
+
+					// If a selected element was hit on mouse down, see if it handles the click
+					if (!args.Handled && m_hit_selected != null)
+					{
+						m_hit_selected.Element.HandleClicked(args);
+					}
+
+					// If no selected element was hit, try hovered elements
+					if (!args.Handled && m_hit_result.Hits.Count != 0)
+					{
+						for (int i = 0; i != m_hit_result.Hits.Count && !args.Handled; ++i)
+							m_hit_result.Hits[i].Element.HandleClicked(args);
+					}
+
+					// If the click is still unhandled, use the click to try to select something (if within the chart)
+					if (!args.Handled && m_hit_result.Zone.HasFlag(HitTestResult.EZone.Chart))
 					{
 						var selection_area = new BRect(m_grab_chart, v2.Zero);
 						m_chart.SelectElements(selection_area, ModifierKeys);
 					}
 				}
-				else if (m_hit_selected != null && m_chart.AllowEditing)
-				{
-					var delta = DrawingEx.Subtract(m_chart.ClientToChart(e.Location), m_grab_chart);
-					m_chart.DragSelected(delta, true);
-				}
+				// Otherwise this is a drag action
 				else
 				{
-					var selection_area = BBox.From(new v4(m_grab_chart, 0, 1f), new v4(m_chart.ClientToChart(e.Location), 0f, 1f));
-					m_chart.OnChartAreaSelect(new ChartAreaSelectEventArgs(selection_area));
+					// If an element was selected, drag it around
+					if (m_hit_selected != null && m_chart.AllowEditing)
+					{
+						var delta = DrawingEx.Subtract(m_chart.ClientToChart(e.Location), m_grab_chart);
+						m_chart.DragSelected(delta, true);
+					}
+					// Otherwise create an area selection if the click started within the chart
+					else if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.Chart))
+					{
+						var selection_area = BBox.From(new v4(m_grab_chart, 0, 1f), new v4(m_chart.ClientToChart(e.Location), 0f, 1f));
+						m_chart.OnChartAreaSelect(new ChartAreaSelectEventArgs(selection_area));
+					}
 				}
 
 				// Remove the area selection graphic
@@ -2210,20 +2296,90 @@ namespace pr.gui
 			}
 		}
 
+		/// <summary>A mouse operation for dragging the chart around or right clicking(Right Button)</summary>
+		public class MouseOpDefaultRButton :MouseOp
+		{
+			/// <summary>The allowed motion based on where the chart was grabbed</summary>
+			private EAxis m_drag_axis_allow;
+
+			public MouseOpDefaultRButton(ChartControl chart)
+				:base(chart)
+			{}
+			public override void MouseDown(MouseEventArgs e)
+			{
+				if (m_chart.ChartBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.Both;
+				if (m_chart.XAxisBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.XAxis;
+				if (m_chart.YAxisBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.YAxis;
+			}
+			public override void MouseMove(MouseEventArgs e)
+			{
+				// If we haven't dragged, treat it as a click instead (i.e. ignore till it's a drag operation)
+				if (IsClick(e.Location))
+					return;
+
+				// Change the cursor once dragging
+				m_chart.Cursor = Cursors.SizeAll;
+
+				// Limit the drag direction
+				var drop_loc = e.Location;
+				if (!m_drag_axis_allow.HasFlag(EAxis.XAxis)) drop_loc.X = m_grab_client.X;
+				if (!m_drag_axis_allow.HasFlag(EAxis.YAxis)) drop_loc.Y = m_grab_client.Y;
+
+				m_chart.PositionChart(drop_loc, m_grab_chart);
+			}
+			public override void MouseUp(MouseEventArgs e)
+			{
+				m_chart.Cursor = Cursors.Default;
+
+				// If we haven't dragged, treat it as a click instead
+				if (IsClick(e.Location))
+				{
+					var args = new ChartClickedEventArgs(m_hit_result, e);
+					m_chart.OnChartClicked(args);
+
+					if (!args.Handled)
+					{
+						// Show the context menu on right click
+						if (args.Button == MouseButtons.Right)
+						{
+							if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.Chart))
+								m_chart.ShowContextMenu(args.Location);
+							else if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.XAxis))
+								m_chart.XAxis.ShowContextMenu(args.Location);
+							else if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.YAxis))
+								m_chart.YAxis.ShowContextMenu(args.Location);
+						}
+					}
+				}
+				else
+				{
+					// Limit the drag direction
+					var drop_loc = e.Location;
+					if (!m_drag_axis_allow.HasFlag(EAxis.XAxis)) drop_loc.X = m_grab_client.X;
+					if (!m_drag_axis_allow.HasFlag(EAxis.YAxis)) drop_loc.Y = m_grab_client.Y;
+					m_chart.PositionChart(drop_loc, m_grab_chart);
+				}
+				m_chart.Invalidate();
+			}
+		}
+
 		#endregion
 
 		#region Elements
 
 		/// <summary>Base class for anything on a chart</summary>
-		public abstract class Element :IDisposable
+		[DebuggerDisplay("{Name} {Id} {GetType().Name}")]
+		public abstract class Element :INotifyPropertyChanged ,IDisposable
 		{
-			protected Element(Guid id, m4x4 position)
+			protected Element(Guid id, m4x4 position, string name)
 			{
 				Id                           = id;
+				Name                         = name;
 				m_impl_chart                 = null;
 				m_impl_position              = position;
 				m_impl_bounds                = new BBox(position.pos, v4.Zero);
 				m_impl_selected              = false;
+				m_impl_hovered               = false;
 				m_impl_visible               = true;
 				m_impl_visible_to_find_range = true;
 				m_impl_enabled               = true;
@@ -2231,12 +2387,13 @@ namespace pr.gui
 				UserData                     = new Dictionary<Guid, object>();
 			}
 			protected Element(XElement node)
-				:this(Guid.Empty, m4x4.Identity)
+				:this(Guid.Empty, m4x4.Identity, string.Empty)
 			{
 				// Note: Bounds, size, etc are not stored, the implementation
 				// of the element provides those (typically in UpdateGfx)
 				Id       = node.Element(XmlTag.Id).As(Id);
 				Position = node.Element(XmlTag.Position).As(Position);
+				Name     = node.Element(XmlTag.Name).As(Name);
 			}
 			public void Dispose()
 			{
@@ -2284,6 +2441,7 @@ namespace pr.gui
 				// Attach to the new chart
 				if (m_impl_chart != null && update)
 				{
+					Debug.Assert(!m_impl_chart.Elements.Contains(this), "Element already in the Chart's Elements collection");
 					m_impl_chart.Elements.Add(this);
 				}
 
@@ -2309,11 +2467,15 @@ namespace pr.gui
 			/// <summary>Unique id for this element</summary>
 			public Guid Id { get; private set; }
 
+			/// <summary>Debugging name for the element</summary>
+			public string Name { get; set; }
+
 			/// <summary>Export to XML</summary>
 			public virtual XElement ToXml(XElement node)
 			{
 				node.Add2(XmlTag.Id, Id, false);
 				node.Add2(XmlTag.Position, Position, false);
+				node.Add2(XmlTag.Name, Name, false);
 				return node;
 			}
 
@@ -2321,6 +2483,7 @@ namespace pr.gui
 			protected virtual void FromXml(XElement node)
 			{
 				Position = node.Element(XmlTag.Position).As(Position);
+				Name = node.Element(XmlTag.Name).As(Name);
 			}
 
 			/// <summary>Replace the contents of this element with data from 'node'</summary>
@@ -2352,6 +2515,21 @@ namespace pr.gui
 					{
 						Util.DisposeAll(arr);
 					});
+			}
+
+			/// <summary>Raised whenever a property of this Element changes</summary>
+			public event PropertyChangedEventHandler PropertyChanged;
+			protected virtual void OnPropertyChanged(PropertyChangedEventArgs args)
+			{
+				PropertyChanged.Raise(this, args);
+			}
+			protected void SetProp<T>(ref T prop, T value, string name, bool invalidate_graphics, bool invalidate_chart)
+			{
+				if (Equals(prop, value)) return;
+				prop = value;
+				OnPropertyChanged(new PropertyChangedEventArgs(name));
+				if (invalidate_graphics) Invalidate();
+				if (invalidate_chart) InvalidateChart();
 			}
 
 			/// <summary>Raised whenever the element needs to be redrawn</summary>
@@ -2396,6 +2574,13 @@ namespace pr.gui
 				SelectedChanged.Raise(this);
 			}
 
+			/// <summary>Raised whenever the element is hovered over with the mouse</summary>
+			public event EventHandler HoveredChanged;
+			protected virtual void OnHoveredChanged()
+			{
+				HoveredChanged.Raise(this);
+			}
+
 			/// <summary>Signal that the chart needs laying out</summary>
 			protected virtual void RaiseChartChanged()
 			{
@@ -2437,7 +2622,7 @@ namespace pr.gui
 					Chart?.Selected.Remove(this);
 				}
 
-				m_impl_selected = selected;
+				SetProp(ref m_impl_selected, selected, nameof(Selected), true, true);
 
 				if (m_impl_selected && update_selected_collection)
 				{
@@ -2451,19 +2636,44 @@ namespace pr.gui
 				Invalidate();
 			}
 
+			/// <summary>Get/Set the hovered state</summary>
+			public virtual bool Hovered
+			{
+				get { return m_impl_hovered; }
+				set { SetHoveredInternal(value, true); }
+			}
+			private bool m_impl_hovered;
+
+			/// <summary>Set the selected state of this element</summary>
+			internal void SetHoveredInternal(bool hovered, bool update_hovered_collection)
+			{
+				// This allows the chart to set the hovered state without
+				// adding/removing from the chart's 'Hovered' collection.
+				if (m_impl_hovered == hovered) return;
+				if (m_impl_hovered && update_hovered_collection)
+				{
+					Chart?.Hovered.Remove(this);
+				}
+
+				SetProp(ref m_impl_hovered, hovered, nameof(Hovered), true, true);
+
+				if (m_impl_hovered && update_hovered_collection)
+				{
+					// Hovered state is changed by assigning to this property or by
+					// addition/removal from the chart's 'Hovered' collection.
+					Chart?.Hovered.Add(this);
+				}
+
+				// Notify observers about the hovered change
+				OnHoveredChanged();
+				Invalidate();
+			}
+
 			/// <summary>Get/Set whether this element is visible in the chart</summary>
 			public bool Visible
 			{
 				get { return m_impl_visible; }
-				set
-				{
-					if (m_impl_visible == value) return;
-					m_impl_visible = value;
-
-					// Make an element visible/invisible, doesn't invalidate it,
-					// only the chart that is displaying it.
-					InvalidateChart();
-				}
+				set { SetProp(ref m_impl_visible, value, nameof(Visible), false, true); } // Make an element visible/invisible, doesn't invalidate it, only the chart that is displaying it.
 			}
 			private bool m_impl_visible;
 
@@ -2471,15 +2681,7 @@ namespace pr.gui
 			public bool Enabled
 			{
 				get { return m_impl_enabled; }
-				set
-				{
-					if (m_impl_enabled == value) return;
-					m_impl_enabled = value;
-
-					// Changing the enabled data of an element should result
-					// in the graphics changing in some way that implies 'Enabled/Disabled'
-					Invalidate();
-				}
+				set { SetProp(ref m_impl_enabled, value, nameof(Enabled), true, true); } // Changing the enabled data of an element should result in the graphics changing in some way that implies 'Enabled/Disabled'
 			}
 			private bool m_impl_enabled;
 
@@ -2487,15 +2689,7 @@ namespace pr.gui
 			public bool VisibleToFindRange
 			{
 				get { return m_impl_visible_to_find_range; }
-				set
-				{
-					if (m_impl_visible_to_find_range == value) return;
-					m_impl_visible_to_find_range = value;
-
-					// Make an element visible/invisible, doesn't invalidate it,
-					// only the chart that is displaying it.
-					InvalidateChart();
-				}
+				set { SetProp(ref m_impl_visible_to_find_range, value, nameof(VisibleToFindRange), false, true); } // Make an element visible/invisible, doesn't invalidate it, only the chart that is displaying it.
 			}
 			private bool m_impl_visible_to_find_range;
 
@@ -2561,6 +2755,7 @@ namespace pr.gui
 			{
 				m_impl_position = pos;
 				OnPositionChanged();
+				OnPropertyChanged(new PropertyChangedEventArgs(nameof(Position)));
 			}
 
 			/// <summary>Get/Set the XY position of the element</summary>
@@ -2590,12 +2785,7 @@ namespace pr.gui
 			public virtual BBox Bounds
 			{
 				get { return m_impl_bounds; }
-				protected set
-				{
-					if (m_impl_bounds == value) return;
-					m_impl_bounds = value;
-					Invalidate();
-				}
+				protected set { SetProp(ref m_impl_bounds, value, nameof(Bounds), false, true); } // Doesn't invalidate graphics because bounds is usually set after graphics have been created
 			}
 			private BBox m_impl_bounds;
 
@@ -2612,17 +2802,15 @@ namespace pr.gui
 				get { return false; }
 			}
 
-			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in chart space projected from the camera</summary>
-			public virtual HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam)
+			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in client space because typically hit testing uses pixel tolerances</summary>
+			public virtual HitTestResult.Hit HitTest(Point client_point, View3d.CameraControls cam)
 			{
 				return null;
 			}
 
 			/// <summary>Handle a click event on this element</summary>
-			internal virtual bool HandleClicked(HitTestResult.Hit hit, View3d.CameraControls cam)
-			{
-				return false;
-			}
+			public virtual void HandleClicked(ChartClickedEventArgs args)
+			{}
 
 			/// <summary>Drag the element 'delta' from the DragStartPosition</summary>
 			public virtual void Drag(v2 delta, bool commit)
@@ -2704,7 +2892,7 @@ namespace pr.gui
 		{
 			var elem = args.Item;
 			if (elem != null && (elem.Chart != null && elem.Chart != this))
-				throw new ArgumentException("element belongs to another diagram");
+				throw new ArgumentException("element belongs to another chart");
 
 			switch (args.ChangeType)
 			{
@@ -2730,6 +2918,40 @@ namespace pr.gui
 			}
 		}
 
+		/// <summary>Handle elements added/removed from the hovered list</summary>
+		protected virtual void OnHoveredListChanging(ListChgEventArgs<Element> args)
+		{
+			var elem = args.Item;
+			if (elem != null && (elem.Chart != null && elem.Chart != this))
+				throw new ArgumentException("element belongs to another chart");
+
+			switch (args.ChangeType)
+			{
+			case ListChg.Reset:
+				{
+					Elements.ForEach(x => x.SetHoveredInternal(false, false));
+					Hovered .ForEach(x => x.SetHoveredInternal(true, false));
+					Debug.Assert(CheckConsistency());
+					Invalidate();
+					break;
+				}
+			case ListChg.ItemAdded:
+				{
+					elem.SetHoveredInternal(true, false);
+					Debug.Assert(CheckConsistency());
+					Invalidate();
+					break;
+				}
+			case ListChg.ItemRemoved:
+				{
+					elem.SetHoveredInternal(false, false);
+					Debug.Assert(CheckConsistency());
+					Invalidate();
+					break;
+				}
+			}
+		}
+
 		/// <summary>Move the selected elements by 'delta'</summary>
 		private void DragSelected(v2 delta, bool commit)
 		{
@@ -2739,7 +2961,7 @@ namespace pr.gui
 		}
 
 		/// <summary>
-		/// Select elements that are wholly within 'rect'. (rect is in diagram space)
+		/// Select elements that are wholly within 'rect'. (rect is in chart space)
 		/// If no modifier keys are down, elements not in 'rect' are deselected.
 		/// If 'shift' is down, elements within 'rect' are selected in addition to the existing selection
 		/// If 'ctrl' is down, elements within 'rect' are removed from the existing selection.</summary>
@@ -2755,7 +2977,7 @@ namespace pr.gui
 			var is_click = r.DiametreSq < Maths.Sqr(Options.MinDragPixelDistance);
 			if (is_click)
 			{
-				var hits = HitTest(rect.Location, x => x.Enabled);
+				var hits = HitTestCS(ChartToClient(rect.Location), x => x.Enabled);
 
 				// If control is down, deselect the first selected element in the hit list
 				if (Bit.AllSet((int)modifiers, (int)Keys.Control))
@@ -2875,7 +3097,7 @@ namespace pr.gui
 				#endregion
 
 				// Allow users to add menu options
-				OnAddUserMenuOptions(new AddUserMenuOptionsEventArgs(cmenu));
+				OnAddUserMenuOptions(new AddUserMenuOptionsEventArgs(AddUserMenuOptionsEventArgs.EType.Chart, cmenu));
 			}
 			cmenu.Closed += (s, a) => Refresh();
 			cmenu.Show(this, location);
@@ -3074,11 +3296,53 @@ namespace pr.gui
 			RemovingElements,
 		}
 
+		/// <summary>Flags for how a chart was scrolled</summary>
+		[Flags] public enum EMoveType
+		{
+			None = 0,
+			XZoomed   = 1 << 0,
+			YZoomed   = 1 << 1,
+			XScrolled = 1 << 2,
+			YScrolled = 1 << 3,
+		}
+
 		/// <summary>Results collection for a hit test</summary>
 		public class HitTestResult
 		{
+			public HitTestResult(EZone zone, IEnumerable<Hit> hits, View3d.CameraControls cam)
+			{
+				Zone   = zone;
+				Hits   = hits.ToList();
+				Camera = cam;
+			}
+
+			/// <summary>The zone on the chart that was hit</summary>
+			public EZone Zone { get; private set; }
+			[Flags] public enum EZone
+			{
+				None,
+				Chart = 1 << 0,
+				XAxis = 1 << 1,
+				YAxis = 1 << 2,
+				Title = 1 << 3,
+			}
+
+			/// <summary>The collection of hit objects</summary>
+			public List<Hit> Hits { get; private set; }
+
+			/// <summary>The camera position when the hit test was performed (needed for chart to screen space conversion)</summary>
+			public View3d.CameraControls Camera { get; private set; }
+
 			public class Hit
 			{
+				public Hit(Element elem, PointF elem_point, object context)
+				{
+					Element  = elem;
+					Point    = elem_point;
+					Location = elem.Position;
+					Context  = context;
+				}
+
 				/// <summary>The element that was hit</summary>
 				public Element Element { get; private set; }
 
@@ -3088,28 +3352,13 @@ namespace pr.gui
 				/// <summary>The element's chart location at the time it was hit</summary>
 				public m4x4 Location { get; private set; }
 
-				public Hit(Element elem, PointF pt)
-				{
-					Element  = elem;
-					Point    = pt;
-					Location = elem.Position;
-				}
+				/// <summary>Optional context information collected during the hit test</summary>
+				public object Context { get; private set; }
+
 				public override string ToString()
 				{
 					return Element.ToString();
 				}
-			}
-
-			/// <summary>The collection of hit objects</summary>
-			public List<Hit> Hits { get; private set; }
-
-			/// <summary>The camera position when the hit test was performed (needed for chart to screen space conversion)</summary>
-			public View3d.CameraControls Camera { get; private set; }
-
-			public HitTestResult(View3d.CameraControls cam)
-			{
-				Hits = new List<Hit>();
-				Camera = cam;
 			}
 		}
 
@@ -3154,6 +3403,7 @@ namespace pr.gui
 			public const string TypeAttribute        = "ty";
 			public const string Element              = "elem";
 			public const string Id                   = "id";
+			public const string Name                 = "name";
 			public const string Position             = "pos";
 			public const string XAxis                = "xaxis";
 			public const string YAxis                = "yaxis";
@@ -3246,6 +3496,18 @@ namespace pr.gui
 			public bool Cancel { get; set; }
 		}
 
+		/// <summary>Event args for the ChartMoved event</summary>
+		public class ChartMovedEventArgs :EventArgs
+		{
+			public ChartMovedEventArgs(EMoveType move_type)
+			{
+				MoveType = move_type;
+			}
+
+			/// <summary>How the chart was moved</summary>
+			public EMoveType MoveType { get; internal set; }
+		}
+
 		/// <summary>Event args for the ChartRendering event</summary>
 		public class ChartRenderingEventArgs :EventArgs
 		{
@@ -3268,12 +3530,12 @@ namespace pr.gui
 			public ChartClickedEventArgs(HitTestResult hits, MouseEventArgs e)
 				:base(e.Button, e.Clicks, e.X, e.Y, e.Delta)
 			{
-				Hits = hits;
+				HitResult = hits;
 				Handled = false;
 			}
 
 			/// <summary>Results of a hit test performed at the click location</summary>
-			public HitTestResult Hits { get; private set; }
+			public HitTestResult HitResult { get; private set; }
 
 			/// <summary>Set to true to suppress default chart click behaviour</summary>
 			public bool Handled { get; set; }
@@ -3314,9 +3576,19 @@ namespace pr.gui
 		/// <summary>Customise context menu event args</summary>
 		public class AddUserMenuOptionsEventArgs :EventArgs
 		{
-			public AddUserMenuOptionsEventArgs(ContextMenuStrip menu)
+			public AddUserMenuOptionsEventArgs(EType type, ContextMenuStrip menu)
 			{
+				Type = type;
 				Menu = menu;
+			}
+
+			/// <summary>The context menu type</summary>
+			public EType Type { get; private set; }
+			public enum EType
+			{
+				Chart,
+				XAxis,
+				YAxis,
 			}
 
 			/// <summary>The menu to add menu items to</summary>

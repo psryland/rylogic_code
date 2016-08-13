@@ -14,16 +14,15 @@ using pr.extn;
 using pr.util;
 using Tradee;
 
-namespace cAlgo
+namespace Tradee
 {
-	public class TradeeBotModel :IDisposable
+	public partial class TradeeBotModel :IDisposable
 	{
 		/// <summary>The main thread dispatcher</summary>
 		private Dispatcher m_main_thread;
 
 		/// <summary>A cache of symbol information interfaces</summary>
 		private Cache<string,Symbol> m_sym_cache;
-
 
 		public TradeeBotModel(Robot calgo, Settings settings)
 		{
@@ -37,8 +36,8 @@ namespace cAlgo
 
 			// The collection of transmitters
 			Transmitters = new BindingSource<Transmitter> { DataSource = new BindingListEx<Transmitter>() };
-			foreach (var trans in Settings.Transmitters)
-				Transmitters.Add(new Transmitter(this, trans.Pair, trans));
+			Transmitters.AddRange(Settings.Transmitters.Select(trans => new Transmitter(this, trans.Pair, trans)));
+			Transmitters.Sort(BySymbolCode);
 
 			// Initiate the connection by sending account data
 			SendAccountStatus();
@@ -136,15 +135,23 @@ namespace cAlgo
 			}
 		}
 
+		/// <summary>Return the transmitter for 'pair' if it exists, otherwise null</summary>
+		public Transmitter FindTransmitter(ETradePairs pair)
+		{
+			// If the pair is already in the list, set it as the current pair
+			var idx = Transmitters.IndexOf(x => x.Pair == pair);
+			return idx != -1 ? Transmitters[idx] : null;
+		}
+
 		/// <summary>Add a new transmitter (unless it already exists)</summary>
 		public Transmitter AddTransmitter(ETradePairs pair)
 		{
 			// If the pair is already in the list, set it as the current pair
-			var idx = Transmitters.IndexOf(x => x.Pair == pair);
-			if (idx != -1)
+			var trans = FindTransmitter(pair);
+			if (trans != null)
 			{
-				Transmitters.Position = idx;
-				return Transmitters.Current;
+				Transmitters.Current = trans;
+				return trans;
 			}
 
 			// Look for settings for this pair
@@ -158,8 +165,9 @@ namespace cAlgo
 				s_idx = list.Count - 1;
 			}
 
-			var trans = new Transmitter(this, pair, Settings.Transmitters[s_idx]);
-			return Transmitters.Add2(trans);
+			trans = Transmitters.Add2(new Transmitter(this, pair, Settings.Transmitters[s_idx]));
+			Transmitters.Sort(BySymbolCode);
+			return trans;
 		}
 
 		/// <summary>Get the latest account information</summary>
@@ -203,10 +211,32 @@ namespace cAlgo
 			}
 		}
 
+		/// <summary>Return the account trade history</summary>
+		public History GetHistory()
+		{
+			History res = null;
+			using (var wait = new ManualResetEvent(false))
+			{
+				CAlgo.BeginInvokeOnMainThread(() =>
+				{
+					res = CAlgo.History;
+					wait.Set();
+				});
+				wait.WaitOne();
+				return res;
+			}
+		}
+
 		/// <summary>True if the pipe is connected</summary>
 		public bool IsConnected
 		{
 			get { return Tradee.IsConnected; }
+		}
+
+		/// <summary>Sort Predicate for sorting the transmitter list</summary>
+		public Cmp<Transmitter> BySymbolCode
+		{
+			get { return Cmp<Transmitter>.From((l,r) => l.SymbolCode.CompareTo(r.SymbolCode)); }
 		}
 
 		/// <summary>Raised when the pipe connection is established/broken</summary>
@@ -240,141 +270,6 @@ namespace cAlgo
 				}
 			}
 		}
-
-		/// <summary>Handle messages from Tradee</summary>
-		private void DispatchMsg(object msg)
-		{
-			if (msg is OutMsg.HelloClient)
-			#region
-			{
-			}
-			#endregion
-			else if (msg is OutMsg.RequestAccountStatus)
-			#region
-			{
-				// A request to send the account information
-				var req = (OutMsg.RequestAccountStatus)msg;
-
-				// Send the account info if the id matches.
-				var acct = GetAccount();
-				if (!req.AccountId.HasValue() || req.AccountId == acct.Number.ToString())
-				{
-					SendAccountStatus();
-					SendCurrentPositions();
-					SendPendingPositions();
-				}
-			}
-			#endregion
-			else if (msg is OutMsg.RequestInstrument)
-			#region
-			{
-				var req = (OutMsg.RequestInstrument)msg;
-
-				// Convert the symbol code to a known trading pair
-				var pair = Enum<ETradePairs>.TryParse(req.SymbolCode);
-				if (pair == null)
-					return; // Not a pair we know about
-
-				// Add or select the associated transmitter, and ensure the time frames are being sent
-				var trans = AddTransmitter(pair.Value);
-				trans.TimeFrames = trans.TimeFrames.Concat(req.TimeFrames).Distinct().ToArray();
-
-				// Ensure data is sent, even if it hasn't changed
-				trans.ForcePost();
-			}
-			#endregion
-			else
-			{
-				Debug.WriteLine("Unknown Message Type {0} received".Fmt(msg.GetType().Name));
-			}
-		}
-
-		/// <summary>Send details of the current account</summary>
-		private void SendAccountStatus()
-		{
-			var data = GetAccount();
-			var acct = new Account();
-			acct.AccountId             = data.Number.ToString();
-			acct.BrokerName            = data.BrokerName;
-			acct.Currency              = data.Currency;
-			acct.Balance               = data.Balance;
-			acct.Equity                = data.Equity;
-			acct.FreeMargin            = data.FreeMargin;
-			acct.IsLive                = data.IsLive;
-			acct.Leverage              = data.Leverage;
-			acct.Margin                = data.Margin;
-			acct.UnrealizedGrossProfit = data.UnrealizedGrossProfit;
-			acct.UnrealizedNetProfit   = data.UnrealizedNetProfit;
-
-			// Only send differences
-			if (!acct.Equals(m_last_pending_orders))
-			{
-				if (Tradee.Post(new InMsg.AccountUpdate(acct)))
-					m_last_account = acct;
-			}
-		}
-		private Tradee.Account m_last_account = new Account();
-
-		/// <summary>Send details about the currently active positions held</summary>
-		private void SendCurrentPositions()
-		{
-			// Collect the currently active positions
-			var list = CAlgo.Positions.Select(x => new Tradee.Position
-			{
-				Id            = x.Id,
-				SymbolCode    = x.SymbolCode,
-				TradeType     = x.TradeType.ToTradeeTradeType(),
-				EntryTime     = x.EntryTime.ToUniversalTime().Ticks,
-				EntryPrice    = x.EntryPrice,
-				Pips          = x.Pips,
-				StopLossRel   = x.StopLossRel(),
-				TakeProfitRel = x.TakeProfitRel(),
-				Quantity      = x.Quantity,
-				Volume        = x.Volume,
-				GrossProfit   = x.GrossProfit,
-				NetProfit     = x.NetProfit,
-				Commissions   = x.Commissions,
-				Swap          = x.Swap,
-				Label         = x.Label,
-				Comment       = x.Comment,
-			}).ToArray();
-
-			// Only send differences
-			if (!list.SequenceEqual(m_last_positions))
-			{
-				if (Tradee.Post(new InMsg.PositionsUpdate(list)))
-					m_last_positions = list;
-			}
-		}
-		private Tradee.Position[] m_last_positions = new Tradee.Position[0];
-
-		/// <summary>Send details about pending orders</summary>
-		private void SendPendingPositions()
-		{
-			// Collect the pending orders
-			var list = CAlgo.PendingOrders.Select(x => new Tradee.PendingOrder
-			{
-				Id                         = x.Id,
-				SymbolCode                 = x.SymbolCode,
-				TradeType                  = x.TradeType.ToTradeeTradeType(),
-				ExpirationTime             = x.ExpirationTime != null ? x.ExpirationTime.Value.ToUniversalTime().Ticks : 0,
-				EntryPrice                 = x.TargetPrice,
-				StopLossRel                = x.StopLossRel(),
-				TakeProfitRel              = x.TakeProfitRel(),
-				Quantity                   = x.Quantity,
-				Volume                     = x.Volume,
-				Label                      = x.Label,
-				Comment                    = x.Comment,
-			}).ToArray();
-
-			// Only send differences
-			if (!list.SequenceEqual(m_last_pending_orders))
-			{
-				if (Tradee.Post(new InMsg.PendingOrdersUpdate(list)))
-					m_last_pending_orders = list;
-			}
-		}
-		private Tradee.PendingOrder[] m_last_pending_orders = new Tradee.PendingOrder[0];
 
 		/// <summary>Marshal a function call to the main thread</summary>
 		public void RunOnMainThread(Action action)

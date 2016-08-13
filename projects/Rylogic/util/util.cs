@@ -368,19 +368,30 @@ namespace pr.util
 			return (T)ConvertTo(value, typeof(T), ignore_case);
 		}
 
-		/// <summary>Helper for allocating an array of default constructed classes</summary>
+		/// <summary>Helper for allocating an array of constructed classes</summary>
 		public static T[] NewArray<T>(int count) where T : new()
 		{
-			T[] arr = new T[count];
-			for (int i = 0; i != count; ++i) arr[i] = new T();
+			return NewArray<T>(count, i => new T());
+		}
+		public static T[] NewArray<T>(int count, Func<int, T> construct)
+		{
+			var arr = new T[count];
+			for (int i = 0; i != count; ++i) arr[i] = construct(i);
 			return arr;
 		}
 
 		/// <summary>Helper for allocating an array of constructed classes</summary>
-		public static T[] NewArray<T>(int count, Func<int, T> construct)
+		public static T[,] NewArray<T>(int col_count, int row_count) where T : new()
 		{
-			T[] arr = new T[count];
-			for (int i = 0; i != count; ++i) arr[i] = construct(i);
+			return NewArray<T>(col_count, row_count, (c,r) => new T());
+		}
+		public static T[,] NewArray<T>(int col_count, int row_count, Func<int,int,T> construct)
+		{
+			var arr = new T[col_count, row_count];
+			for (var c = 0; c != col_count; ++c)
+				for (var r = 0; r != row_count; ++r)
+					arr[c,r] = construct(c,r);
+
 			return arr;
 		}
 

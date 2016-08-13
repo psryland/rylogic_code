@@ -139,6 +139,18 @@ namespace pr.extn
 			return time.DateTime.As(kind);
 		}
 
+		/// <summary>Returns the minimum of two DateTime objects</summary>
+		public static DateTimeOffset Min(DateTimeOffset lhs, DateTimeOffset rhs)
+		{
+			return lhs <= rhs ? lhs : rhs;
+		}
+
+		/// <summary>Returns the maximum of two DateTime objects</summary>
+		public static DateTimeOffset Max(DateTimeOffset lhs, DateTimeOffset rhs)
+		{
+			return lhs >= rhs ? lhs : rhs;
+		}
+
 		/// <summary>Returns a new DateTimeOffset object clamped to within the given range</summary>
 		public static DateTimeOffset Clamp(this DateTimeOffset time, DateTimeOffset min, DateTimeOffset max)
 		{

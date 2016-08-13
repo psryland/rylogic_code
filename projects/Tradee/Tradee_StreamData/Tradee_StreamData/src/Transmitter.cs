@@ -6,24 +6,23 @@ using System.Linq;
 using System.Threading;
 using cAlgo.API;
 using cAlgo.API.Internals;
-using pr.common;
 using pr.extn;
 using pr.util;
-using Tradee;
 
-namespace cAlgo
+namespace Tradee
 {
 	/// <summary>Handles sending data for a single symbol</summary>
 	public class Transmitter :IDisposable ,INotifyPropertyChanged
 	{
 		public Transmitter(TradeeBotModel model, ETradePairs pair, TransmitterSettings settings)
 		{
-			Settings  = settings;
-			Model     = model;
-			Data      = new Dictionary<TimeFrame, MarketSeriesData>();
-			Pair      = pair;
-			Enabled   = true;
-			StatusMsg = "Active";
+			Settings             = settings;
+			Model                = model;
+			Data                 = new Dictionary<TimeFrame, MarketSeriesData>();
+			HistoricDataRequests = new List<HistoricDataRequest>();
+			Pair                 = pair;
+			Enabled              = true;
+			StatusMsg            = "Active";
 		}
 		public virtual void Dispose()
 		{
@@ -56,6 +55,9 @@ namespace cAlgo
 			private set;
 		}
 
+		/// <summary>A queue of requests for historic data to be sent</summary>
+		public List<HistoricDataRequest> HistoricDataRequests { get; private set; }
+
 		/// <summary>The trading pair</summary>
 		public ETradePairs Pair
 		{
@@ -84,7 +86,7 @@ namespace cAlgo
 			{
 				if (TimeFrames.SequenceEqual(value)) return;
 				Settings.TimeFrames = value.OrderBy(x => x).ToArray();
-				RaisePropertyChanged(new PropertyChangedEventArgs(R<Transmitter>.Name(x => x.TimeFrames)));
+				OnPropertyChanged(new PropertyChangedEventArgs(R<Transmitter>.Name(x => x.TimeFrames)));
 			}
 		}
 
@@ -97,12 +99,12 @@ namespace cAlgo
 		/// <summary>True while the transmitter is downloading time frame series data</summary>
 		public bool RequestingSeriesData
 		{
-			get { return m_requesting_series_data; }
+			[DebuggerStepThrough] get { return m_requesting_series_data; }
 			set
 			{
 				if (m_requesting_series_data == value) return;
 				m_requesting_series_data = value;
-				RaisePropertyChanged(new PropertyChangedEventArgs(R<Transmitter>.Name(x => x.RequestingSeriesData)));
+				OnPropertyChanged(new PropertyChangedEventArgs(R<Transmitter>.Name(x => x.RequestingSeriesData)));
 			}
 		}
 		private bool m_requesting_series_data;
@@ -116,7 +118,7 @@ namespace cAlgo
 				if (m_enabled == value) return;
 				m_enabled = value;
 				StatusMsg = Enabled ? "Active" : "Disabled";
-				RaisePropertyChanged(new PropertyChangedEventArgs(R<Transmitter>.Name(x => x.Enabled)));
+				OnPropertyChanged(new PropertyChangedEventArgs(R<Transmitter>.Name(x => x.Enabled)));
 			}
 		}
 		private bool m_enabled;
@@ -129,7 +131,7 @@ namespace cAlgo
 			{
 				if (m_status == value) return;
 				m_status = value;
-				RaisePropertyChanged(new PropertyChangedEventArgs(R<Transmitter>.Name(x => x.StatusMsg)));
+				OnPropertyChanged(new PropertyChangedEventArgs(R<Transmitter>.Name(x => x.StatusMsg)));
 			}
 		}
 		private string m_status;
@@ -146,30 +148,31 @@ namespace cAlgo
 
 		/// <summary>Property changed notification</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
-		private void RaisePropertyChanged(PropertyChangedEventArgs args)
+		private void OnPropertyChanged(PropertyChangedEventArgs args)
 		{
 			if (PropertyChanged == null) return;
 			PropertyChanged(this, args);
 		}
 
-		private TimeFrame m_pending;
-
 		/// <summary>Poll instrument state</summary>
 		public void Step()
 		{
+			// Get the time frames to send, and the time frames being sent
 			var desired = TimeFrames.Select(x => x.ToCAlgoTimeframe()).ToArray();
 			var available = AvailableTimeFrames;
 
-			// Look for missing time frames. If missing, get
+			// Look for any missing time frames
 			var to_get = desired.FirstOrDefault(x => !available.Contains(x));
 			if (m_pending == null && to_get != null)
 			{
 				RequestingSeriesData = true;
 				m_pending = to_get;
 
-				// Get the missing time frame series
+				// Get the missing time frame series.
 				// This can take ages so do it in a background thread
 				StatusMsg = "Acquiring {0},{1}".Fmt(SymbolCode, m_pending.ToTradeeTimeframe());
+
+				var model = Model;
 				ThreadPool.QueueUserWorkItem(x =>
 				{
 					var series = (MarketSeries)null;
@@ -177,27 +180,26 @@ namespace cAlgo
 					try
 					{
 						// Get the symbol
-						var sym = Symbol;
+						var sym = model.GetSymbol(SymbolCode);
 						if (sym == null)
 							throw new Exception("Symbol {0} not available".Fmt(SymbolCode));
 
 						// Get the data series
-						series = Model.GetSeries(sym, (TimeFrame)x);
+						series = model.GetSeries(sym, (TimeFrame)x);
 					}
-					catch (Exception ex)
+					catch (Exception ex) { error = ex; }
+					try
 					{
-						error = ex;
+						// Add the received series to the collection
+						model.RunOnMainThread(() =>
+						{
+							Data.Add(m_pending, new MarketSeriesData(series));
+							m_pending = null;
+							RequestingSeriesData = false;
+							StatusMsg = error != null ? error.Message : "Active";
+						});
 					}
-
-					// Add the received series to the collection
-					Model.RunOnMainThread(() =>
-					{
-						var data = new MarketSeriesData(series);
-						Data.Add(m_pending, data);
-						m_pending = null;
-						RequestingSeriesData = false;
-						StatusMsg = error != null ? error.Message : "Active";
-					});
+					catch { }
 				}, m_pending);
 			}
 
@@ -214,26 +216,43 @@ namespace cAlgo
 				// Get the market series for this time frame
 				MarketSeriesData data;
 				if (Data.TryGetValue(tf, out data))
-				{
-					// If this is the first send, send the historic data first
-					if (data.SendHistoricData)
-					{
-						SendHistoricMarketData(data.Series);
-						data.SendHistoricData = false;
-					}
-
-					// Send updated data
 					SendMarketData(data);
-				}
 			}
-		}
 
-		/// <summary>Send market data for all known symbols</summary>
+			// Service any historic data requests
+			var done = new HashSet<HistoricDataRequest>();
+			foreach (var req in HistoricDataRequests)
+			{
+				// Get the market series for the requested time frame
+				MarketSeriesData data;
+				if (!Data.TryGetValue(req.TimeFrame, out data))
+					continue;
+
+				try
+				{
+					// Get the index range for the request time range
+					var count = data.Series.OpenTime.Count;
+					var i_oldest = req.UseIndices ? req.OldestIndex : count - data.Series.OpenTime.GetIndexByTime(req.Beg.DateTime); // oldest (i.e. largest index)
+					var i_newest = req.UseIndices ? req.NewestIndex : count - data.Series.OpenTime.GetIndexByTime(req.End.DateTime); // newest (i.e. smallest index)
+					SendHistoricMarketData(data.Series, i_oldest, i_newest);
+				}
+				catch { } // ignore failures
+				done.Add(req);
+			}
+
+			// Remove the requests we've serviced
+			HistoricDataRequests.RemoveIf(x => done.Contains(x));
+		}
+		private TimeFrame m_pending;
+
+		/// <summary>Send market data</summary>
 		private void SendMarketData(MarketSeriesData data)
 		{
 			// Get the latest symbol (price data) information
 			var sym = Symbol;
-			var post = DateTime.UtcNow - data.LastUpdateUTC > TimeSpan.FromSeconds(10);
+
+			// Post at least every X seconds, changed or not
+			var post = DateTimeOffset.UtcNow - data.LastUpdateUTC > TimeSpan.FromSeconds(10);
 
 			// Post the symbol price data
 			var price_data = new PriceData(
@@ -256,7 +275,7 @@ namespace cAlgo
 				}
 			}
 
-			// Post the latest candle data Tradee
+			// Post the latest candle data
 			if (data.Series.Close.Count != 0)
 			{
 				var candle = new Candle(
@@ -279,28 +298,13 @@ namespace cAlgo
 			}
 
 			// Record this update attempt
-			data.LastUpdateUTC = DateTime.UtcNow;
-			data.LastTransmitUTC = post ? DateTime.UtcNow : data.LastTransmitUTC;
+			data.LastUpdateUTC = DateTimeOffset.UtcNow;
+			data.LastTransmitUTC = post ? DateTimeOffset.UtcNow : data.LastTransmitUTC;
 		}
 
-		/// <summary>Send a range of data</summary>
-		public void SendHistoricMarketData(TimeFrame tf, DateTime beg, DateTime end)
+		/// <summary>Send a range of market data.</summary>
+		private void SendHistoricMarketData(MarketSeries series, int i_oldest, int i_newest)
 		{
-			// Get the market series for this time frame
-			MarketSeriesData data;
-			if (Data.TryGetValue(tf, out data))
-			{
-				var i_oldest = data.Series.OpenTime.GetIndexByTime(beg);
-				var i_newest = data.Series.OpenTime.GetIndexByTime(end);
-				SendHistoricMarketData(data.Series, i_newest, i_oldest);
-			}
-		}
-
-		/// <summary>Send a range of market data. The index range is indices backwards in time, i.e. 0 = latest, 100 = 100 candles ago</summary>
-		private void SendHistoricMarketData(MarketSeries series, int i_newest, int i_oldest)
-		{
-			Debug.Assert(i_newest <= i_oldest);
-
 			// Send historical data to Tradee
 			var open_time = new List<long  >(series.OpenTime  .Count);
 			var open      = new List<double>(series.Open      .Count);
@@ -308,6 +312,8 @@ namespace cAlgo
 			var low       = new List<double>(series.Low       .Count);
 			var close     = new List<double>(series.Close     .Count);
 			var volume    = new List<double>(series.TickVolume.Count);
+
+			Debug.Assert(i_newest <= i_oldest);
 			for (int i = i_oldest; i-- != i_newest; )
 			{
 				var t = series.OpenTime  .Last(i).Ticks;
@@ -324,24 +330,25 @@ namespace cAlgo
 				close    .Add(c);
 				volume   .Add(v);
 			}
-			if (close.Count != 0)
-			{
-				var data = new Candles(
-					open_time.ToArray(),
-					open     .ToArray(),
-					high     .ToArray(),
-					low      .ToArray(),
-					close    .ToArray(),
-					volume   .ToArray());
-				if (Model.Post(new InMsg.CandleData(SymbolCode, series.TimeFrame.ToTradeeTimeframe(), data)))
-				{
-					Debug.WriteLine("Historic data for {0},{1} sent".Fmt(series.SymbolCode, series.TimeFrame.ToTradeeTimeframe()));
-				}
-			}
+
+			// Nothing available?
+			if (close.Count == 0)
+				return;
+
+			// Create a candle batch
+			var data = new Candles(
+				open_time.ToArray(),
+				open     .ToArray(),
+				high     .ToArray(),
+				low      .ToArray(),
+				close    .ToArray(),
+				volume   .ToArray());
+			if (Model.Post(new InMsg.CandleData(SymbolCode, series.TimeFrame.ToTradeeTimeframe(), data)))
+				Debug.WriteLine("Historic data for {0},{1} sent".Fmt(series.SymbolCode, series.TimeFrame.ToTradeeTimeframe()));
 		}
 		private void SendHistoricMarketData(MarketSeries series)
 		{
-			SendHistoricMarketData(series, 0, series.OpenTime.Count);
+			SendHistoricMarketData(series, series.OpenTime.Count, 0);
 		}
 
 		/// <summary></summary>
@@ -349,5 +356,40 @@ namespace cAlgo
 		{
 			return "Transmitter: {0} TimeFrames={1}".Fmt(SymbolCode, Data.Count);
 		}
+	}
+
+	/// <summary>A range of historic data that's needed</summary>
+	public class HistoricDataRequest
+	{
+		public HistoricDataRequest(TimeFrame tf, DateTimeOffset beg, DateTimeOffset end)
+		{
+			Debug.Assert(beg <= end, "Time range must be positive definite");
+			TimeFrame = tf;
+			Beg = beg;
+			End = end;
+			UseIndices = false;
+		}
+		public HistoricDataRequest(TimeFrame tf, int oldest, int newest)
+		{
+			Debug.Assert(oldest >= newest, "Candle data indices have 0 = newest, +ve = past");
+			TimeFrame = tf;
+			NewestIndex = newest;
+			OldestIndex = oldest;
+			UseIndices = true;
+		}
+
+		/// <summary>The time frame to get data for</summary>
+		public TimeFrame TimeFrame;
+
+		/// <summary>The time range into the candle data series</summary>
+		public DateTimeOffset Beg;
+		public DateTimeOffset End;
+
+		/// <summary>The index into the candle data series</summary>
+		public int NewestIndex;
+		public int OldestIndex;
+
+		/// <summary>True to use index values, false to use time range values</summary>
+		public bool UseIndices;
 	}
 }

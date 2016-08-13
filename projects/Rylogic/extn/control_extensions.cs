@@ -581,6 +581,15 @@ namespace pr.extn
 	/// <summary>Track bar extensions</summary>
 	public static class TrackBar_
 	{
+		/// <summary>Return the value of the track bar as a normalised fraction</summary>
+		public static double ValueFrac(this TrackBar tb)
+		{
+			var min = (double)tb.Minimum;
+			var max = (double)tb.Maximum;
+			var val = (double)tb.Value;
+			return Maths.Frac(min, val, max);
+		}
+
 		/// <summary>Set the value of track bar, clamping it to the min/max range</summary>
 		public static int ValueClamped(this TrackBar tb, int value)
 		{

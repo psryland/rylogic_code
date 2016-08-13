@@ -75,6 +75,7 @@ namespace pr.maths
 		public static void      Swap(ref int lhs, ref int rhs)                  { int tmp = lhs; lhs = rhs; rhs = tmp; }
 		public static void      Swap(ref float lhs, ref float rhs)              { float tmp = lhs; lhs = rhs; rhs = tmp; }
 		public static int       Lerp(int lhs, int rhs, float frac)              { return (int)Math.Round(Lerp((float)lhs, (float)rhs, frac), 0); }
+		public static long      Lerp(long lhs, long rhs, double frac)           { return (long)Math.Round(Lerp((double)lhs, (double)rhs, frac), 0); }
 		public static float     Lerp(float lhs, float rhs, float frac)          { return lhs * (1f - frac) + rhs * (frac); }
 		public static double    Lerp(double lhs, double rhs, double frac)       { return lhs * (1.0 - frac) + rhs * (frac); }
 		public static float     Frac(int min, int x, int max)                   { Debug.Assert(max != min); return (float)(x - min) / (max - min); }

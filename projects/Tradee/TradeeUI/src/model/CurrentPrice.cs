@@ -11,7 +11,7 @@ namespace Tradee
 	public class CurrentPrice :ChartControl.Element
 	{
 		public CurrentPrice(MainModel model, Instrument instrument)
-			:base(Guid.NewGuid(), m4x4.Identity)
+			:base(Guid.NewGuid(), m4x4.Identity, "Current Price")
 		{
 			Model = model;
 			Instrument = instrument;

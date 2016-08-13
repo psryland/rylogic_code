@@ -72,7 +72,9 @@ namespace Tradee
 		public GeneralSettings()
 		{
 			DefaultTimeFrame  = ETimeFrame.Hour12;
-			PriceDataCacheDir = Util.ResolveAppPath(".\\PriceDataCache");
+			AcctDataCacheDir  = Util.ResolveAppPath(".\\DataCacheAcct");
+			PriceDataCacheDir = Util.ResolveAppPath(".\\DataCachePrice");
+			HistoryLength     = 100000;
 		}
 
 		/// <summary>The time frame to open new charts at</summary>
@@ -82,11 +84,25 @@ namespace Tradee
 			set { set(x => x.DefaultTimeFrame, value); }
 		}
 
+		/// <summary>The directory for account database files</summary>
+		public string AcctDataCacheDir
+		{
+			get { return get(x => x.AcctDataCacheDir); }
+			set { set(x => x.AcctDataCacheDir, value); }
+		}
+
 		/// <summary>The directory for price database files</summary>
 		public string PriceDataCacheDir
 		{
 			get { return get(x => x.PriceDataCacheDir); }
 			set { set(x => x.PriceDataCacheDir, value); }
+		}
+
+		/// <summary>The number of historic candles to request from the trade data source</summary>
+		public int HistoryLength
+		{
+			get { return get(x => x.HistoryLength); }
+			set { set(x => x.HistoryLength, value); }
 		}
 
 		private class TyConv :GenericTypeConverter<GeneralSettings> {}
@@ -98,11 +114,15 @@ namespace Tradee
 	{
 		public UISettings()
 		{
-			UILayout        = null;
-			BullishColour   = Color.FromArgb(0xFF, 0x00, 0x84, 0x3B);
-			BearishColour   = Color.FromArgb(0xFF, 0xF1, 0x59, 0x23);
-			AggregateTrades = true;
-			WindowPosition  = Rectangle.Empty;
+			UILayout             = null;
+			BullishColour        = Color.FromArgb(0xff, 0x00, 0x84, 0x3b);
+			BearishColour        = Color.FromArgb(0xff, 0xf1, 0x59, 0x23);
+			VisualisingColour    = Color.FromArgb(0xff, 0xb7, 0xea, 0xff);
+			PendingOrderColour   = Color.FromArgb(0xff, 0x9e, 0xc0, 0xff);
+			ActivePositionColour = Color.FromArgb(0xff, 0xce, 0xb2, 0xff);
+			ClosedPositionColour = Color.FromArgb(0xff, 0xff, 0xe5, 0xdb);
+			AggregateTrades      = true;
+			WindowPosition       = Rectangle.Empty;
 		}
 
 		/// <summary>The dock panel layout</summary>
@@ -132,6 +152,34 @@ namespace Tradee
 		public Color BidColour
 		{
 			get { return BullishColour; }
+		}
+
+		/// <summary>The colour of trades/orders in the 'Visualising' state</summary>
+		public Color VisualisingColour
+		{
+			get { return get(x => x.VisualisingColour); }
+			set { set(x => x.VisualisingColour, value); }
+		}
+
+		/// <summary>The colour of trades/orders in the 'PendingOrder' state</summary>
+		public Color PendingOrderColour
+		{
+			get { return get(x => x.PendingOrderColour); }
+			set { set(x => x.PendingOrderColour, value); }
+		}
+
+		/// <summary>The colour of trades/orders in the 'ActivePosition' state</summary>
+		public Color ActivePositionColour
+		{
+			get { return get(x => x.ActivePositionColour); }
+			set { set(x => x.ActivePositionColour, value); }
+		}
+
+		/// <summary>The colour of trades/orders in the 'Closed' state</summary>
+		public Color ClosedPositionColour
+		{
+			get { return get(x => x.ClosedPositionColour); }
+			set { set(x => x.ClosedPositionColour, value); }
 		}
 
 		/// <summary>Combine trades of the same instrument into one</summary>
@@ -172,8 +220,8 @@ namespace Tradee
 			ViewCandlesAhead = 20;
 			TimeFrameBtns    = new [] { ETimeFrame.Min1, ETimeFrame.Hour1, ETimeFrame.Day1 };
 
-			TradeProfitColour = Color.FromArgb(0x80, 0xdf, 0xfe, 0xdf);
-			TradeLossColour   = Color.FromArgb(0x80, 0xfe, 0xe4, 0xe4);
+			TradeProfitColour = Color.FromArgb(0xFF, 0xaf, 0xfe, 0xaf);
+			TradeLossColour   = Color.FromArgb(0xFF, 0xfe, 0xb4, 0xb4);
 		}
 
 		/// <summary>Style options for charts</summary>

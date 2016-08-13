@@ -45,12 +45,14 @@ namespace Tradee
 		{
 			if (Model != null)
 			{
+				Model.Acct.AccountChanged -= UpdateUI;
 				Model.Acct.PropertyChanged -= UpdateUI;
 			}
 			base.SetModelCore(model);
 			if (Model != null)
 			{
 				Model.Acct.PropertyChanged += UpdateUI;
+				Model.Acct.AccountChanged += UpdateUI;
 			}
 		}
 

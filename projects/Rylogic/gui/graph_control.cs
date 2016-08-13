@@ -1481,17 +1481,26 @@ namespace pr.gui
 			}
 
 			// Add space for the tick labels
-			const string lbl = "9.999";
 			if (XAxis.Options.DrawTickLabels)
 			{
-				r = gfx.MeasureString(lbl, XAxis.Options.TickFont);
-				rect.Height -= r.Height;
+				var h = 0.0f;
+				foreach (var x in new[] { XAxis.Min, (XAxis.Min + XAxis.Max) / 2f, XAxis.Max })
+				{
+					var lbl = XAxis.TickText(x, 0.0);
+					h = Math.Max(h, gfx.MeasureString(lbl, XAxis.Options.TickFont).Height);
+				}
+				rect.Height -= h;
 			}
 			if (YAxis.Options.DrawTickLabels)
 			{
-				r = gfx.MeasureString(lbl, YAxis.Options.TickFont);
-				rect.X     += r.Width;
-				rect.Width -= r.Width;
+				var w = 0.0f;
+				foreach (var y in new[] { YAxis.Min, (YAxis.Min + YAxis.Max) / 2f, YAxis.Max })
+				{
+					var lbl = YAxis.TickText(y, 0.0);
+					w = Math.Max(w, gfx.MeasureString(lbl, YAxis.Options.TickFont).Width);
+				}
+				rect.X     += w;
+				rect.Width -= w;
 			}
 
 			return new Rectangle((int)rect.X, (int)rect.Y, (int)rect.Width, (int)rect.Height);

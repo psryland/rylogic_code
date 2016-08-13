@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Windows.Threading;
 using pr.container;
 using pr.extn;
 using pr.util;
@@ -9,9 +10,10 @@ using pr.util;
 namespace Tradee
 {
 	[DebuggerDisplay("{SymbolCode} {State}")]
-	public class Trade :INotifyPropertyChanged, IPosition, IDisposable
+	public class Trade :IPosition, IDisposable
 	{
 		// Notes:
+		// - A Trade is a set of Orders for an instrument that overlap in time.
 		// - A Trade is a complete history of everything that happened in a trade from
 		//   prep, to opening, to closing. The idea is to provide a decent diagnostic
 		//   review of how a trade went.
@@ -38,11 +40,12 @@ namespace Tradee
 			Closed = 1 << 3,
 		}
 
-		public Trade(MainModel model, Instrument instrument, ChartUI chart = null)
+		public Trade(MainModel model, Instrument instrument)
 		{
-			Model = model;
-			Instrument = instrument;
-			Orders = new BindingSource<Order> { DataSource = new BindingListEx<Order>() };
+			Id           = Guid.NewGuid();
+			Model        = model;
+			Instrument   = instrument;
+			Orders       = new BindingSource<Order>      { DataSource = new BindingListEx<Order>(), PerItemClear = true };
 			EventHistory = new BindingSource<TradeEvent> { DataSource = new BindingListEx<TradeEvent>() };
 
 			// Create the trade
@@ -52,6 +55,13 @@ namespace Tradee
 		{
 			Orders = null;
 			Model = null;
+		}
+
+		/// <summary>Unique ID for this trade</summary>
+		public Guid Id
+		{
+			[DebuggerStepThrough] get;
+			private set;
 		}
 
 		/// <summary>The App logic</summary>
@@ -86,6 +96,7 @@ namespace Tradee
 				if (m_orders == value) return;
 				if (m_orders != null)
 				{
+					m_orders.Clear();
 					m_orders.ListChanging -= HandleOrderListChanging;
 				}
 				m_orders = value;
@@ -138,6 +149,20 @@ namespace Tradee
 			}
 		}
 
+		/// <summary>The entry time of the earliest trade in the group (in UTC).</summary>
+		public DateTimeOffset EntryTimeUTC
+		{
+			[DebuggerStepThrough] get { return m_entry_time ?? (m_entry_time = Orders.Min(x => x.EntryTimeUTC)).Value; }
+		}
+		private DateTimeOffset? m_entry_time;
+
+		/// <summary>The exit time of the last trade in the group (in UTC)</summary>
+		public DateTimeOffset ExitTimeUTC
+		{
+			[DebuggerStepThrough] get { return m_exit_time ?? (m_exit_time = Orders.Max(x => x.ExitTimeUTC)). Value; }
+		}
+		private DateTimeOffset? m_exit_time;
+
 		/// <summary>Combined volume</summary>
 		public long Volume
 		{
@@ -184,26 +209,38 @@ namespace Tradee
 		}
 
 		/// <summary>Raised whenever the trade changes</summary>
-		public event PropertyChangedEventHandler PropertyChanged;
-		protected virtual void OnPropertyChanged(PropertyChangedEventArgs args)
+		public event EventHandler Changed;
+		protected virtual void OnChanged()
 		{
-			PropertyChanged.Raise(this, args);
+			m_sig_changed = false;
+			Changed.Raise(this);
 		}
-		private void SetProp<T>(ref T prop, T value, params string[] names)
+		private void SignalChanged(object sender = null, EventArgs e = null)
+		{
+			if (m_sig_changed) return;
+			m_sig_changed = true;
+			Dispatcher.CurrentDispatcher.BeginInvoke(OnChanged);
+		}
+		private bool m_sig_changed;
+
+		/// <summary>Set a property if different and raise 'Changed'</summary>
+		private void SetProp<T>(ref T prop, T value, string names)
 		{
 			if (Equals(prop, value)) return;
 			prop = value;
-			names.ForEach(x => OnPropertyChanged(new PropertyChangedEventArgs(x)));
-		}
-
-		/// <summary>Add an order/position to this trade</summary>
-		public void AddOrder(ETradeType tt)
-		{
+			SignalChanged();
 		}
 
 		/// <summary>Create the elements to display on the chart for this order</summary>
 		private void CreateChartElements()
 		{
+		}
+
+		/// <summary>Invalidate cache values that are based on Orders</summary>
+		public void Invalidate()
+		{
+			m_entry_time = null;
+			m_exit_time = null;
 		}
 
 		/// <summary>Handle orders being associated with this trade</summary>
@@ -215,28 +252,26 @@ namespace Tradee
 				{
 					foreach (var order in Orders)
 					{
-						order.PropertyChanged -= HandleOrderPropertyChanged;
-						order.PropertyChanged += HandleOrderPropertyChanged;
+						order.Changed -= SignalChanged;
+						order.Changed += SignalChanged;
 					}
 					break;
 				}
 			case ListChg.ItemAdded:
 				{
-					e.Item.PropertyChanged += HandleOrderPropertyChanged;
+					e.Item.Changed += SignalChanged;
 					break;
 				}
 			case ListChg.ItemRemoved:
 				{
-					e.Item.PropertyChanged -= HandleOrderPropertyChanged;
+					e.Item.Changed -= SignalChanged;
 					break;
 				}
 			}
-		}
 
-		/// <summary>Handle an order that belongs to this trade changing</summary>
-		private void HandleOrderPropertyChanged(object sender, PropertyChangedEventArgs e)
-		{
-			OnPropertyChanged(new PropertyChangedEventArgs(nameof(Orders)));
+			// Invalidate cached values based on Orders
+			if (e.IsPostEvent)
+				Invalidate();
 		}
 
 		/// <summary>Optimise the event history as it changes</summary>

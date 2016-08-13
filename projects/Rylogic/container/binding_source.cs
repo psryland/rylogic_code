@@ -7,6 +7,7 @@ using System.Drawing.Design;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
+using pr.common;
 using pr.extn;
 using pr.util;
 
@@ -405,7 +406,7 @@ namespace pr.container
 		/// <summary>Gets or sets the column names used for sorting, and the sort order for viewing the rows in the data source.</summary>
 		/// <returns>A case-sensitive string containing the column name followed by "ASC" (for ascending) or "DESC" (for descending). The default is null.</returns>
 		[DefaultValue(null)]
-		public string Sort
+		public string SortColumn
 		{
 			get { return m_bs.Sort; }
 			set { m_bs.Sort = value; }
@@ -545,12 +546,32 @@ namespace pr.container
 			return m_bs.Add(value);
 		}
 
+		/// <summary>Add a range of items</summary>
+		public virtual void AddRange(IEnumerable<TItem> values)
+		{
+			foreach (var value in values)
+				Add(value);
+		}
+
 		/// <summary>Adds a new item to the underlying list.</summary>
 		/// <returns>The System.Object that was created and added to the list.</returns>
 		/// <exception cref="InvalidOperationException">The System.Windows.Forms.BindingSource.AllowNew property is set to false. -or- A public default constructor could not be found for the current item type.</exception>
 		public virtual TItem AddNew()
 		{
 			return (TItem)m_bs.AddNew();
+		}
+
+		/// <summary>Sort the underlying data source</summary>
+		public void Sort(Cmp<TItem> comparer = null)
+		{
+			if (!AllowSort)
+				throw new NotSupportedException("Sorting is not supported for this collection");
+
+			// Suspend events, since this is just a reorder
+			using (this.SuspendEvents(false))
+				ListExtensions.Sort(this, comparer);
+
+			RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.Reordered, -1, default(TItem)));
 		}
 
 		/// <summary>Sorts the data source with the specified sort descriptions.</summary>

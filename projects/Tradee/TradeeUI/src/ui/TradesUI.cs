@@ -6,6 +6,9 @@ using pr.extn;
 using pr.maths;
 using pr.container;
 using System.Drawing;
+using System.Linq;
+using System.Collections.Generic;
+using System.Windows.Threading;
 
 namespace Tradee
 {
@@ -35,14 +38,16 @@ namespace Tradee
 		{
 			if (Model != null)
 			{
-				Model.Positions.Trades.ListChanging -= UpdateGrid;
-				Model.Positions.Orders.ListChanging -= UpdateGrid;
+				Model.Positions.Changed -= Invalidate;
+				Model.Positions.Trades.ListChanging -= SignalUpdateGrid;
+				Model.Positions.Orders.ListChanging -= SignalUpdateGrid;
 			}
 			base.SetModelCore(model);
 			if (Model != null)
 			{
-				Model.Positions.Trades.ListChanging += UpdateGrid;
-				Model.Positions.Orders.ListChanging += UpdateGrid;
+				Model.Positions.Trades.ListChanging += SignalUpdateGrid;
+				Model.Positions.Orders.ListChanging += SignalUpdateGrid;
+				Model.Positions.Changed += Invalidate;
 			}
 		}
 
@@ -111,6 +116,8 @@ namespace Tradee
 			});
 			m_grid.CellFormatting += HandleCellFormatting;
 			m_grid.MouseClick += HandleMouseClick;
+			m_grid.CellMouseDoubleClick += HandleCellDoubleClick;
+			m_grid.SelectionChanged += HandleOrderSelectionChanged;
 		}
 
 		/// <summary>Update UI elements</summary>
@@ -120,22 +127,46 @@ namespace Tradee
 		}
 
 		/// <summary>Repopulate the tree grid of trades</summary>
-		private void UpdateGrid(object sender = null, EventArgs args = null)
+		private void UpdateGrid()
 		{
+			m_sig_updated_grid = false;
+
+			// Update the tree grid using differences so that expanded/collapsed nodes are preserved
 			using (m_grid.SuspendLayout(true))
 			{
-				m_grid.RootNode.Nodes.Clear();
+				var trades = Trades.ToHashSet();
+
+				// Remove any root level nodes that aren't in the trades list
+				m_grid.RootNode.Nodes.RemoveIf(x => !trades.Contains(x.DataBoundItem));
+
+				// Update the trades
 				foreach (var trade in Trades)
 				{
-					// Add root level node for each trade
-					var node = m_grid.RootNode.Nodes.Bind(trade);
+					// Get the node for 'trade'. If the trade is not yet in the tree grid, add it
+					var node = m_grid.RootNode.Nodes.FirstOrDefault(x => trades.Contains(x.DataBoundItem));
+					if (node == null)
+						node = m_grid.RootNode.Nodes.Bind(trade);
 
-					// Add child nodes for each order
-					foreach (var order in trade.Orders)
+					var orders = trade.Orders.ToHashSet();
+
+					// Remove any orders not in the trade
+					node.Nodes.RemoveIf(x => !orders.Contains(x.DataBoundItem));
+
+					// Add any orders not yet in the grid
+					orders.RemoveWhere(x => node.Nodes.Any(n => n.DataBoundItem == x));
+					foreach (var order in orders)
 						node.Nodes.Bind(order);
 				}
 			}
+			m_grid.Invalidate();
 		}
+		private void SignalUpdateGrid(object sender = null, EventArgs args = null)
+		{
+			if (m_sig_updated_grid) return;
+			m_sig_updated_grid = true;
+			Dispatcher.CurrentDispatcher.BeginInvoke(UpdateGrid);
+		}
+		private bool m_sig_updated_grid;
 
 		/// <summary>Format the grid cell values</summary>
 		private void HandleCellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
@@ -148,6 +179,12 @@ namespace Tradee
 			var pos   = ((TreeGridNode)grid.Rows[e.RowIndex]).DataBoundItem as IPosition;
 			var trade = ((TreeGridNode)grid.Rows[e.RowIndex]).DataBoundItem as Trade;
 			var order = ((TreeGridNode)grid.Rows[e.RowIndex]).DataBoundItem as Order;
+
+			// Set the background colour (in precedence order)
+			if (pos.State.HasFlag(Trade.EState.Closed        )) e.CellStyle.BackColor = Settings.UI.ClosedPositionColour;
+			if (pos.State.HasFlag(Trade.EState.Visualising   )) e.CellStyle.BackColor = Settings.UI.VisualisingColour;
+			if (pos.State.HasFlag(Trade.EState.PendingOrder  )) e.CellStyle.BackColor = Settings.UI.PendingOrderColour;
+			if (pos.State.HasFlag(Trade.EState.ActivePosition)) e.CellStyle.BackColor = Settings.UI.ActivePositionColour;
 
 			switch (col.DataPropertyName)
 			{
@@ -194,20 +231,41 @@ namespace Tradee
 			case nameof(IPosition.GrossProfit):
 				{
 					e.Value = "{0:N2} {1}".Fmt(pos.GrossProfit, Model.Acct.Currency);
-					e.CellStyle.BackColor = pos.GrossProfit > 0 ? Settings.UI.BullishColour : pos.GrossProfit < 0 ? Settings.UI.BearishColour : System.Drawing.Color.Black;
+					e.CellStyle.BackColor = pos.GrossProfit > 0 ? Settings.UI.BullishColour : pos.GrossProfit < 0 ? Settings.UI.BearishColour : System.Drawing.Color.White;
 					e.CellStyle.ForeColor = pos.GrossProfit > 0 ? Color.White : pos.GrossProfit < 0 ? Color.Black : System.Drawing.Color.Black;
 					break;
 				}
 			case nameof(IPosition.NetProfit):
 				{
 					e.Value = "{0:N2} {1}".Fmt(pos.NetProfit, Model.Acct.Currency);
-					e.CellStyle.BackColor = pos.NetProfit > 0 ? Settings.UI.BullishColour : pos.NetProfit < 0 ? Settings.UI.BearishColour : System.Drawing.Color.Black;
+					e.CellStyle.BackColor = pos.NetProfit > 0 ? Settings.UI.BullishColour : pos.NetProfit < 0 ? Settings.UI.BearishColour : System.Drawing.Color.White;
 					e.CellStyle.ForeColor = pos.NetProfit > 0 ? Color.White : pos.NetProfit < 0 ? Color.Black : System.Drawing.Color.Black;
 					break;
 				}
 			}
 			e.CellStyle.SelectionForeColor = e.CellStyle.ForeColor;
 			e.CellStyle.SelectionBackColor = e.CellStyle.BackColor.Lerp(Color.Black, 0.2f);
+		}
+
+		/// <summary>Handle trades or orders being selected in the grid</summary>
+		private void HandleOrderSelectionChanged(object sender, EventArgs e)
+		{
+			// Get the set of selected orders
+			var sel = new HashSet<Order>();
+			foreach (var node in m_grid.SelectedRows.Cast<TreeGridNode>())
+			{
+				var trade = node.DataBoundItem as Trade;
+				if (trade != null)
+					trade.Orders.ForEach(x => sel.Add(x));
+
+				var order = node.DataBoundItem as Order;
+				if (order != null)
+					sel.Add(order);
+			}
+
+			// Set the highlighted state for all selected orders on all charts
+			foreach (var order_gfx in Model.Charts.SelectMany(x => x.Elements).OfType<OrderChartElement>())
+				order_gfx.Highlighted = sel.Contains(order_gfx.Order);
 		}
 
 		/// <summary>Handle mouse click within the trade grid</summary>
@@ -220,6 +278,21 @@ namespace Tradee
 			if (e.Button == MouseButtons.Right)
 			{
 				ShowContextMenu(hit, trade);
+			}
+		}
+
+		/// <summary>Handle double click within the grid</summary>
+		private void HandleCellDoubleClick(object sender, DataGridViewCellMouseEventArgs e)
+		{
+			var grid = (DataGridView)sender;
+			if (!grid.Within(e.ColumnIndex, e.RowIndex)) return;
+			var row = (TreeGridNode)grid.Rows[e.RowIndex];
+
+			// Open or select a chart for the associated instrument
+			if (e.Button == MouseButtons.Left)
+			{
+				var pos = row.DataBoundItem as IPosition;
+				Model.ShowChart(pos.SymbolCode);
 			}
 		}
 

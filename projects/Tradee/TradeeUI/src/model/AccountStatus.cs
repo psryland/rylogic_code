@@ -11,12 +11,15 @@ using pr.extn;
 
 namespace Tradee
 {
-	public class AccountStatus :INotifyPropertyChanged
+	public class AccountStatus :INotifyPropertyChanged ,IDisposable
 	{
-		public AccountStatus(MainModel model)
+		public AccountStatus(MainModel model, Account acct)
 		{
 			Model = model;
+			Update(acct);
 		}
+		public virtual void Dispose()
+		{}
 
 		/// <summary>The App logic</summary>
 		public MainModel Model
@@ -24,6 +27,12 @@ namespace Tradee
 			[DebuggerStepThrough] get;
 			private set;
 		}
+
+		/// <summary>Raised when the AccountId is about to change</summary>
+		public event EventHandler AccountChanging;
+
+		/// <summary>Raised after the AccountId has changed</summary>
+		public event EventHandler AccountChanged;
 
 		/// <summary>Raised on property changed</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
@@ -139,15 +148,21 @@ namespace Tradee
 			get { return 100.0 * PendingRisk / Balance; }
 		}
 
-
 		/// <summary>Update the state of the account from received account info</summary>
 		public void Update(Account acct)
 		{
+			var acct_change = AccountId != acct.AccountId;
+			if (acct_change)
+				AccountChanging.Raise(this);
+
 			AccountId = acct.AccountId;
 			IsLive    = acct.IsLive;
 			Currency  = acct.Currency;
 			Balance   = acct.Balance;
 			Equity    = acct.Equity;
+
+			if (acct_change)
+				AccountChanged.Raise(this);
 		}
 
 		/// <summary>Update the risk level from currently active positions</summary>

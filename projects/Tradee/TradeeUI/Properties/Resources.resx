@@ -138,4 +138,19 @@
 	<data name="aggregate" type="System.Resources.ResXFileRef, System.Windows.Forms">
 		<value>..\res\aggregate.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
 	</data>
+	<data name="play" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\media_player_play.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="pause" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\media_player_pause.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="reset" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\media_player_start.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="step_fwd" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\media_player_step_fwd.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="fast_fwd" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\media_player_fwd.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
 </root>

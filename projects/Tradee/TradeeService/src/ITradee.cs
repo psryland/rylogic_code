@@ -17,11 +17,16 @@ namespace Tradee
 		PendingOrdersUpdate,
 		CandleData,
 		SymbolData,
+		HistoryData,
 
 		// OutMsg - messages from Tradee to client
 		HelloClient,
 		RequestAccountStatus,
 		RequestInstrument,
+		RequestInstrumentStop,
+		RequestInstrumentHistory,
+		RequestTradeHistory,
+		//NEW_MSG_HERE
 	}
 	[Flags] public enum ETradeType
 	{
@@ -148,17 +153,32 @@ namespace Tradee
 	#endregion
 
 	/// <summary>Marker interface for messages sent between tradee and a client</summary>
-	public interface ITradeeMsg :ISerialise
-	{}
 	public interface ISerialise
 	{
 		void Serialise(BinaryWriter s);
 		void Deserialise(BinaryReader s);
 	}
+	public interface ITradeeMsg :ISerialise
+	{}
 
 	/// <summary>Account status and risk exposure</summary>
 	public class Account :ISerialise
 	{
+		public Account()
+		{
+			AccountId             = string.Empty;
+			BrokerName            = string.Empty;
+			Currency              = string.Empty;
+			Balance               = 0.0;
+			Equity                = 0.0;
+			FreeMargin            = 0.0;
+			IsLive                = false;
+			Leverage              = 0;
+			Margin                = 0.0;
+			UnrealizedGrossProfit = 0.0;
+			UnrealizedNetProfit   = 0.0;
+		}
+
 		/// <summary>The ID of the current account, e.g. 123456.</summary>
 		public string AccountId { get; set; }
 
@@ -531,13 +551,13 @@ namespace Tradee
 		/// <summary>True if this is a bullish candle</summary>
 		public bool Bullish
 		{
-			get { return Open > Close; }
+			get { return Close > Open; }
 		}
 
 		/// <summary>True if this is a bullish candle</summary>
 		public bool Bearish
 		{
-			get { return Open < Close; }
+			get { return Close < Open; }
 		}
 
 		/// <summary>Replace the data in this candle with 'rhs' (Must have a matching timestamp though)</summary>
@@ -549,6 +569,10 @@ namespace Tradee
 			Low    = rhs.Low   ;
 			Close  = rhs.Close ;
 			Volume = rhs.Volume;
+
+			// ToDo:
+			// Record the accumulative time for low-to-higher price level vs high-to-lower price level
+			// Record the average price gradient (try to get a quadratic for the way price moved during the period of the candle)
 		}
 
 		/// <summary>The time stamp of this candle (in UTC)</summary>
@@ -561,6 +585,17 @@ namespace Tradee
 		public DateTime TimestampLocal
 		{
 			get { return TimeZone.CurrentTimeZone.ToLocalTime(TimestampUTC.DateTime); }
+		}
+
+		/// <summary>Debugging check for self consistency</summary>
+		public bool Valid()
+		{
+			return
+				Timestamp <  (DateTimeOffset.UtcNow + TimeSpan.FromDays(100)).Ticks &&
+				High      >= Open && High >= Close &&
+				Low       <= Open && Low  <= Close &&
+				High      >= Low &&
+				Volume    >= 0.0; // empty candles? cTrader sends them tho...
 		}
 
 		/// <summary>Friendly print</summary>
@@ -712,6 +747,9 @@ namespace Tradee
 
 		/// <summary>The difference between Ask and Bid (in base currency)</summary>
 		public double Spread { get { return AskPrice - BidPrice; } }
+		
+		/// <summary>The spread for this instrument (in pips)</summary>
+		public double SpreadPips { get { return Spread / PipSize; } }
 
 		/// <summary>The size of 1 lot (in base currency)</summary>
 		public double LotSize { get; set; }
@@ -725,7 +763,7 @@ namespace Tradee
 		/// <summary>The minimum tradable amount</summary>
 		public double VolumeMin { get; set; }
 
-		/// <summary>The minimum tradable amount increment</summary>		
+		/// <summary>The minimum tradable amount increment</summary>
 		public double VolumeStep { get; set; }
 
 		/// <summary>The maximum tradable amount</summary>
@@ -790,9 +828,111 @@ namespace Tradee
 		#endregion
 	}
 
-	/// <summary>Messages from the trade data source to Tradee</summary>
+	/// <summary>A historic trade</summary>
+	public class ClosedOrder :ISerialise
+	{
+		/// <summary>The position/trade's unique id</summary>
+		public int Id { get; set; }
+		// The position's unique identifier.
+		//int PositionId { get; }
+
+		/// <summary>Symbol code of the Historical Trade.</summary>
+		public string SymbolCode { get; set; }
+
+		/// <summary>The TradeType of the Opening Deal</summary>
+		public ETradeType TradeType { get; set; }
+
+		/// <summary>Account balance after the Deal was filled</summary>
+		public double Balance { get; set; }
+
+		/// <summary>Time of the Opening Deal, or the time of the first Opening deal that was closed (in ticks UTC)</summary>
+		public long EntryTimeUTC { get; set; }
+
+		/// <summary>Time of the Closing Deal (in ticks UTC)</summary>
+		public long ExitTimeUTC { get; set; }
+
+		/// <summary>The distance from the entry price (in pips)</summary>
+		public double Pips { get; set; }
+
+		/// <summary>The VWAP (Volume Weighted Average Price) of the Opening Deals that are closed</summary>
+		public double EntryPrice { get; set; }
+
+		/// <summary>The execution price of the Closing Deal</summary>
+		public double ExitPrice { get; set; }
+
+		/// <summary>The Quantity (in lots) that was closed by the Closing Deal</summary>
+		public double Quantity { get; set; }
+
+		/// <summary>The Volume that was closed by the Closing Deal</summary>
+		public long Volume { get; set; }
+
+		/// <summary>Profit and loss before swaps and commission</summary>
+		public double GrossProfit { get; set; }
+
+		/// <summary>Profit and loss including swaps and commissions</summary>
+		public double NetProfit { get; set; }
+
+		/// <summary>Commission paid</summary>
+		public double Commissions { get; set; }
+
+		/// <summary>Swap is the overnight interest rate if any, accrued on the position.</summary>
+		public double Swap { get; set; }
+
+		/// <summary>User assigned identifier for the position</summary>
+		public string Label { get; set; }
+
+		/// <summary>Comments about the trade</summary>
+		public string Comment { get; set; }
+
+		#region Serialise
+		public void Serialise(BinaryWriter s)
+		{
+			s.Write(Id             );
+			s.Write(SymbolCode     );
+			s.Write((int)TradeType );
+			s.Write(Balance        );
+			s.Write(EntryTimeUTC   );
+			s.Write(ExitTimeUTC );
+			s.Write(Pips           );
+			s.Write(EntryPrice     );
+			s.Write(ExitPrice   );
+			s.Write(Quantity       );
+			s.Write(Volume         );
+			s.Write(GrossProfit    );
+			s.Write(NetProfit      );
+			s.Write(Commissions    );
+			s.Write(Swap           );
+			s.Write(Label          );
+			s.Write(Comment        );
+		}
+		public void Deserialise(BinaryReader s)
+		{
+			Id             = s.ReadInt32();
+			SymbolCode     = s.ReadString();
+			TradeType      = (ETradeType)s.ReadInt32();
+			Balance        = s.ReadDouble();
+			EntryTimeUTC   = s.ReadInt64();
+			ExitTimeUTC = s.ReadInt64();
+			Pips           = s.ReadDouble();
+			EntryPrice     = s.ReadDouble();
+			ExitPrice   = s.ReadDouble();
+			Quantity       = s.ReadDouble();
+			Volume         = s.ReadInt64();
+			GrossProfit    = s.ReadDouble();
+			NetProfit      = s.ReadDouble();
+			Commissions    = s.ReadDouble();
+			Swap           = s.ReadDouble();
+			Label          = s.ReadString();
+			Comment        = s.ReadString();
+		}
+		#endregion
+	}
+
+	/// <summary>Messages from the trade data source *in* to Tradee</summary>
 	public static class InMsg
 	{
+		// Search for '//NEW_MSG_HERE'
+
 		public class HelloTradee :ITradeeMsg
 		{
 			public HelloTradee()
@@ -986,11 +1126,43 @@ namespace Tradee
 			}
 			#endregion
 		}
+
+		/// <summary>The trade history of the current account</summary>
+		public class HistoryData :ITradeeMsg
+		{
+			public HistoryData()
+				:this(new ClosedOrder[0])
+			{}
+			public HistoryData(ClosedOrder[] orders)
+			{
+				Orders = orders;
+			}
+
+			/// <summary>The historical trades of this account</summary>
+			public ClosedOrder[] Orders { get; private set; }
+
+			#region Serialise
+			public void Serialise(BinaryWriter s)
+			{
+				s.Write(Orders.Length);
+				foreach (var x in Orders) x.Serialise(s);
+			}
+			public void Deserialise(BinaryReader s)
+			{
+				var len = s.ReadInt32();
+				Orders = new ClosedOrder[len];
+				for (int i = 0; i != len; ++i)
+					Orders[i] = new ClosedOrder().Deserialise2(s);
+			}
+			#endregion
+		}
 	}
 
 	/// <summary>Messages from the tradee to the trade data source</summary>
 	public static class OutMsg
 	{
+		// Search for '//NEW_MSG_HERE'
+
 		public class HelloClient :ITradeeMsg
 		{
 			public HelloClient()
@@ -1042,39 +1214,152 @@ namespace Tradee
 			#endregion
 		}
 
-		/// <summary>Request instrument data for the given symbol code</summary>
+		/// <summary>Request real time updates of the given instrument</summary>
 		public class RequestInstrument :ITradeeMsg
 		{
-			// A request instrument message means, "Make sure you're sending this info, and send me an update now".
 			public RequestInstrument()
-				:this(string.Empty, new ETimeFrame[0])
+				:this(string.Empty, ETimeFrame.None)
 			{}
-			public RequestInstrument(string sym,  ETimeFrame[] tf)
+			public RequestInstrument(string sym, ETimeFrame tf)
 			{
 				SymbolCode = sym;
-				TimeFrames = tf ?? new ETimeFrame[0];
+				TimeFrame = tf;
 			}
 
 			/// <summary>The symbol code to send data for</summary>
 			public string SymbolCode { get; private set; }
 
-			/// <summary>The time frames of data to send</summary>
-			public ETimeFrame[] TimeFrames { get; private set; }
+			/// <summary>The time frame to send (unioned with other time frames being sent already)</summary>
+			public ETimeFrame TimeFrame { get; private set; }
 
 			#region Serialise
 			public void Serialise(BinaryWriter s)
 			{
 				s.Write(SymbolCode);
-				s.Write(TimeFrames.Length);
-				foreach (var tf in TimeFrames)
-					s.Write((int)tf);
+				s.Write((int)TimeFrame);
 			}
 			public void Deserialise(BinaryReader s)
 			{
 				SymbolCode = s.ReadString();
-				TimeFrames = new ETimeFrame[s.ReadInt32()];
-				for (var i = 0; i != TimeFrames.Length; ++i)
-					TimeFrames[i] = (ETimeFrame)s.ReadInt32();
+				TimeFrame = (ETimeFrame)s.ReadInt32();
+			}
+			#endregion
+		}
+
+		/// <summary>Tell the trade data source that data for the given instrument is no longer needed</summary>
+		public class RequestInstrumentStop :ITradeeMsg
+		{
+			public RequestInstrumentStop()
+				:this(string.Empty, ETimeFrame.None)
+			{ }
+			public RequestInstrumentStop(string sym, ETimeFrame tf)
+			{
+				SymbolCode = sym;
+				TimeFrame = tf;
+			}
+
+			/// <summary>The symbol code to stop sending data for</summary>
+			public string SymbolCode { get; private set; }
+
+			/// <summary>The time frame to stop sending. 'None' means remove all time frames</summary>
+			public ETimeFrame TimeFrame { get; private set; }
+
+			#region Serialise
+			public void Serialise(BinaryWriter s)
+			{
+				s.Write(SymbolCode);
+			}
+			public void Deserialise(BinaryReader s)
+			{
+				SymbolCode = s.ReadString();
+			}
+			#endregion
+		}
+
+		/// <summary>Request a time range of history instrument data</summary>
+		public class RequestInstrumentHistory :ITradeeMsg
+		{
+			public RequestInstrumentHistory()
+				:this(string.Empty, ETimeFrame.None)
+			{}
+			public RequestInstrumentHistory(string sym, ETimeFrame tf)
+			{
+				SymbolCode = sym;
+				TimeFrame = tf;
+				TimeRanges = new List<long>();
+				IndexRanges = new List<int>();
+			}
+
+			/// <summary>The symbol code to send data for</summary>
+			public string SymbolCode { get; private set; }
+
+			/// <summary>The time frame to send</summary>
+			public ETimeFrame TimeFrame { get; private set; }
+
+			/// <summary>Pairs of start/end timestamps (in ticks UTC) to return</summary>
+			public List<long> TimeRanges { get; private set; }
+
+			/// <summary>Pairs of start/end indices in the instrument data to return</summary>
+			public List<int> IndexRanges { get; private set; }
+
+			#region Serialise
+			public void Serialise(BinaryWriter s)
+			{
+				s.Write(SymbolCode);
+				s.Write((int)TimeFrame);
+				s.Write(TimeRanges.Count);
+				foreach (var tr in TimeRanges) s.Write(tr);
+				s.Write(IndexRanges.Count);
+				foreach (var idx in IndexRanges) s.Write(idx);
+			}
+			public void Deserialise(BinaryReader s)
+			{
+				SymbolCode = s.ReadString();
+				TimeFrame = (ETimeFrame)s.ReadInt32();
+
+				var tr_count = s.ReadInt32();
+				TimeRanges.Clear();
+				TimeRanges.Capacity = tr_count;
+				for (var i = 0; i != tr_count; ++i)
+					TimeRanges.Add(s.ReadInt64());
+
+				var idx_count = s.ReadInt32();
+				IndexRanges.Clear();
+				IndexRanges.Capacity = idx_count;
+				for (var i = 0; i != idx_count; ++i)
+					IndexRanges.Add(s.ReadInt32());
+			}
+			#endregion
+		}
+
+		/// <summary>Request the historic trade data</summary>
+		public class RequestTradeHistory :ITradeeMsg
+		{
+			public RequestTradeHistory()
+				:this(DateTimeOffset.MinValue.Ticks, DateTimeOffset.MaxValue.Ticks)
+			{}
+			public RequestTradeHistory(long time_beg, long time_end)
+			{
+				TimeBegUTC = time_beg;
+				TimeEndUTC = time_end;
+			}
+
+			/// <summary>The beginning of the time range to get</summary>
+			public long TimeBegUTC { get; private set; }
+
+			/// <summary>The end of the time range to get</summary>
+			public long TimeEndUTC { get; private set; }
+
+			#region Serialise
+			public void Serialise(BinaryWriter s)
+			{
+				s.Write(TimeBegUTC);
+				s.Write(TimeEndUTC);
+			}
+			public void Deserialise(BinaryReader s)
+			{
+				TimeBegUTC = s.ReadInt64();
+				TimeEndUTC = s.ReadInt64();
 			}
 			#endregion
 		}
@@ -1102,26 +1387,36 @@ namespace Tradee
 			case EMsgType.PendingOrdersUpdate: return typeof(InMsg.PendingOrdersUpdate);
 			case EMsgType.CandleData:          return typeof(InMsg.CandleData);
 			case EMsgType.SymbolData:          return typeof(InMsg.SymbolData);
+			case EMsgType.HistoryData:         return typeof(InMsg.HistoryData);
 
-			case EMsgType.HelloClient:          return typeof(OutMsg.HelloClient);
-			case EMsgType.RequestAccountStatus: return typeof(OutMsg.RequestAccountStatus);
-			case EMsgType.RequestInstrument:    return typeof(OutMsg.RequestInstrument);
+			case EMsgType.HelloClient:              return typeof(OutMsg.HelloClient);
+			case EMsgType.RequestAccountStatus:     return typeof(OutMsg.RequestAccountStatus);
+			case EMsgType.RequestInstrument:        return typeof(OutMsg.RequestInstrument);
+			case EMsgType.RequestInstrumentStop:    return typeof(OutMsg.RequestInstrumentStop);
+			case EMsgType.RequestInstrumentHistory: return typeof(OutMsg.RequestInstrumentHistory);
+			case EMsgType.RequestTradeHistory:      return typeof(OutMsg.RequestTradeHistory);
+			//NEW_MSG_HERE
 			}
 		}
 
 		/// <summary>Convert a tradee message type to an EMsgType value</summary>
 		public static EMsgType ToMsgType(this ITradeeMsg msg)
 		{
-			if (msg is InMsg.HelloTradee          ) return EMsgType.HelloTradee;
-			if (msg is InMsg.AccountUpdate        ) return EMsgType.AccountUpdate;
-			if (msg is InMsg.PositionsUpdate      ) return EMsgType.PositionsUpdate;
-			if (msg is InMsg.PendingOrdersUpdate  ) return EMsgType.PendingOrdersUpdate;
-			if (msg is InMsg.CandleData           ) return EMsgType.CandleData;
-			if (msg is InMsg.SymbolData           ) return EMsgType.SymbolData;
-			if (msg is OutMsg.HelloClient         ) return EMsgType.HelloClient;
-			if (msg is OutMsg.RequestAccountStatus) return EMsgType.RequestAccountStatus;
-			if (msg is OutMsg.RequestInstrument   ) return EMsgType.RequestInstrument;
-			throw new Exception("Unknown tradee message type")                    ;
+			if (msg is InMsg.HelloTradee               ) return EMsgType.HelloTradee;
+			if (msg is InMsg.AccountUpdate             ) return EMsgType.AccountUpdate;
+			if (msg is InMsg.PositionsUpdate           ) return EMsgType.PositionsUpdate;
+			if (msg is InMsg.PendingOrdersUpdate       ) return EMsgType.PendingOrdersUpdate;
+			if (msg is InMsg.CandleData                ) return EMsgType.CandleData;
+			if (msg is InMsg.SymbolData                ) return EMsgType.SymbolData;
+			if (msg is InMsg.HistoryData               ) return EMsgType.HistoryData;
+			if (msg is OutMsg.HelloClient              ) return EMsgType.HelloClient;
+			if (msg is OutMsg.RequestAccountStatus     ) return EMsgType.RequestAccountStatus;
+			if (msg is OutMsg.RequestInstrument        ) return EMsgType.RequestInstrument;
+			if (msg is OutMsg.RequestInstrumentStop    ) return EMsgType.RequestInstrumentStop;
+			if (msg is OutMsg.RequestInstrumentHistory ) return EMsgType.RequestInstrumentHistory;
+			if (msg is OutMsg.RequestTradeHistory      ) return EMsgType.RequestTradeHistory;
+			//NEW_MSG_HERE
+			throw new Exception("Unknown tradee message type");
 		}
 
 		/// <summary>

@@ -10,9 +10,8 @@ using pr.extn;
 using pr.gui;
 using pr.maths;
 using pr.util;
-using Tradee;
 
-namespace cAlgo
+namespace Tradee
 {
 	public class TradeeBotUI :Form
 	{
@@ -63,6 +62,7 @@ namespace cAlgo
 				if (m_impl_model == value) return;
 				if (m_impl_model != null)
 				{
+					m_impl_model.Transmitters.ListChanging -= UpdateUI;
 					m_impl_model.ConnectionChanged -= UpdateUI;
 					m_impl_model.DataPosted -= UpdateUI;
 					Util.Dispose(ref m_impl_model);
@@ -72,6 +72,7 @@ namespace cAlgo
 				{
 					m_impl_model.DataPosted += UpdateUI;
 					m_impl_model.ConnectionChanged += UpdateUI;
+					m_impl_model.Transmitters.ListChanging += UpdateUI;
 				}
 			}
 		}
@@ -130,13 +131,13 @@ namespace cAlgo
 			m_lb_symbols.ItemHeight = 58;
 			m_lb_symbols.DrawItem += (s,a) =>
 			{
-				if (a.Index < 0 || a.Index >= m_lb_symbols.Items.Count)
+				if (Model == null || a.Index < 0 || a.Index >= Model.Transmitters.Count)
 				{
 					a.Graphics.FillRectangle(SystemBrushes.ControlLightLight, a.Bounds);
 					return;
 				}
 
-				var item = (Transmitter)m_lb_symbols.Items[a.Index];
+				var item = Model.Transmitters[a.Index];
 				var bnds = a.Bounds.Inflated(0, 0, -1, -1);
 				var col = Bit.AllSet(a.State, DrawItemState.Selected) ? Brushes.WhiteSmoke : !item.Enabled ? SystemBrushes.ControlLight : SystemBrushes.ControlLightLight;
 				var x = bnds.Left + 2f;
@@ -163,8 +164,8 @@ namespace cAlgo
 				}
 				{// Paint the last update time
 					var tss = item.Data.Values.Select(v => v.LastTransmitUTC).ToArray();
-					var ts  = tss.Length != 0 ? tss.MaxBy(t => t) : DateTime.MinValue;
-					var str = "Last Update: {0}".Fmt(ts != DateTime.MinValue ? ts.ToString("yyyy/MM/dd HH:mm:ss") : "never");
+					var ts  = tss.Length != 0 ? tss.MaxBy(t => t) : DateTimeOffset.MinValue;
+					var str = "Last Update: {0}".Fmt(ts != DateTimeOffset.MinValue ? ts.ToString("yyyy/MM/dd HH:mm:ss") : "never");
 					var sz = a.Graphics.MeasureString(str, a.Font);
 					a.Graphics.DrawString(str, a.Font, !item.Enabled ? SystemBrushes.ControlDark : Brushes.Blue, x, y);
 					y += sz.Height;

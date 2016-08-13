@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Windows.Threading;
 using pr.container;
 using pr.extn;
 using pr.maths;
@@ -16,6 +18,7 @@ namespace Tradee
 			Model  = model;
 			Trades = new BindingSource<Trade> { DataSource = new BindingListEx<Trade>() , PerItemClear = true };
 			Orders = new BindingSource<Order> { DataSource = new BindingListEx<Order>() , PerItemClear = true };
+			OrderLookup = new Dictionary<int, Order>();
 		}
 		public virtual void Dispose()
 		{
@@ -33,10 +36,12 @@ namespace Tradee
 				if (m_model == value) return;
 				if (m_model != null)
 				{
+					Model.Acct.AccountChanged -= HandleAcctChanged;
 				}
 				m_model = value;
 				if (m_model != null)
 				{
+					Model.Acct.AccountChanged += HandleAcctChanged;
 				}
 			}
 		}
@@ -62,40 +67,52 @@ namespace Tradee
 		}
 		private BindingSource<Trade> m_impl_trades;
 
-		/// <summary>All orders</summary>
+		/// <summary>All orders, visualising, pending, active, closed</summary>
 		public BindingSource<Order> Orders
 		{
-			[DebuggerStepThrough] get { return m_orders; }
+			[DebuggerStepThrough] get { return m_impl_orders; }
 			private set
 			{
-				if (m_orders == value) return;
-				if (m_orders != null)
+				if (m_impl_orders == value) return;
+				if (m_impl_orders != null)
 				{
-					m_orders.ListChanging -= HandleOrdersListChanging;
+					m_impl_orders.ListChanging -= HandleOrdersListChanging;
 				}
-				m_orders = value;
-				if (m_orders != null)
+				m_impl_orders = value;
+				if (m_impl_orders != null)
 				{
-					m_orders.ListChanging += HandleOrdersListChanging;
+					m_impl_orders.ListChanging += HandleOrdersListChanging;
 				}
 			}
 		}
-		private BindingSource<Order> m_orders;
+		private BindingSource<Order> m_impl_orders;
+
+		/// <summary>A map from order Id to order</summary>
+		public Dictionary<int, Order> OrderLookup
+		{
+			[DebuggerStepThrough] get { return m_order_lookup; }
+			private set
+			{
+				if (m_order_lookup == value) return;
+				m_order_lookup = value;
+			}
+		}
+		private Dictionary<int, Order> m_order_lookup;
 
 		/// <summary>Raised whenever a trade or order is added/removed/modified</summary>
-		public event EventHandler<PositionDataChangedEventArgs> DataChanged;
-		protected virtual void OnDataChanged(PositionDataChangedEventArgs args)
+		public event EventHandler Changed;
+		protected virtual void OnChanged()
 		{
-			DataChanged.Raise(this, args);
+			m_sig_changed = false;
+			Changed.Raise(this);
 		}
-
-		/// <summary>Create a new order</summary>
-		public Trade GetOrCreateTrade(Instrument instrument)
+		private void SignalChanged(object sender = null, EventArgs e = null)
 		{
-			var idx = Trades.IndexOf(x => x.SymbolCode == instrument.SymbolCode);
-			var trade = idx >= 0 ? Trades[idx] : Trades.Add2(new Trade(Model, instrument));
-			return trade;
+			if (m_sig_changed) return;
+			m_sig_changed = true;
+			Dispatcher.CurrentDispatcher.BeginInvoke(OnChanged);
 		}
+		private bool m_sig_changed;
 
 		/// <summary>Update the current active positions</summary>
 		public void Update(Position[] positions)
@@ -107,43 +124,185 @@ namespace Tradee
 				var order = idx >= 0 ? Orders[idx] : Orders.Add2(new Order(pos.Id, instr, pos.TradeType, Trade.EState.ActivePosition));
 				order.Update(pos);
 			}
+			InvalidateTrades();
 		}
 
 		/// <summary>Update the current active positions</summary>
 		public void Update(PendingOrder[] pending)
 		{
-			foreach (var pend in pending)
+			foreach (var pos in pending)
 			{
-				var idx = Orders.IndexOf(x => x.Id == pend.Id);
-				var instr = Model.MarketData[pend.SymbolCode];
-				var order = idx >= 0 ? Orders[idx] : Orders.Add2(new Order(pend.Id, instr, pend.TradeType, Trade.EState.PendingOrder));
-				order.Update(pend);
+				var idx = Orders.IndexOf(x => x.Id == pos.Id);
+				var instr = Model.MarketData[pos.SymbolCode];
+				var order = idx >= 0 ? Orders[idx] : Orders.Add2(new Order(pos.Id, instr, pos.TradeType, Trade.EState.PendingOrder));
+				order.Update(pos);
 			}
+			InvalidateTrades();
+		}
+
+		/// <summary>Update the closed positions</summary>
+		public void Update(ClosedOrder[] closed)
+		{
+			foreach (var pos in closed)
+			{
+				var idx = Orders.IndexOf(x => x.Id == pos.Id);
+				var instr = Model.MarketData[pos.SymbolCode];
+				var order = idx >= 0 ? Orders[idx] : Orders.Add2(new Order(pos.Id, instr, pos.TradeType, Trade.EState.Closed));
+				order.Update(pos);
+			}
+			InvalidateTrades();
+		}
+
+		/// <summary>Refresh the set of trades</summary>
+		private void UpdateTrades()
+		{
+			m_trades_invalidated = false;
+
+			// Create lists of trades per instrument.
+			// Once complete, go through existing trades looking for matches.
+			// Remove any trades not in 'trades', and any trades not in 'Trades'.
+			var trades_map = new Dictionary<Instrument, List<Trade>>();
+
+			// Remove orders from trades that are no longer in 'Orders'
+			foreach (var trade in Trades)
+				trade.Orders.RemoveIf(x => !OrderLookup.ContainsKey(x.Id));
+
+			// Remove trades that contain no orders
+			Trades.RemoveIf(x => x.Orders.Count == 0);
+
+			// Group the orders into instruments
+			foreach (var order_grp in Orders.GroupBy(x => x.Instrument))
+			{
+				// Create an ordered list of trades based on non-overlapping time ranges
+				var instr = order_grp.Key;
+				var trades = trades_map.GetOrAdd(instr, k => new List<Trade>());
+				foreach (var order in order_grp)
+				{
+					// Look for a trade in the list that intersects the time range
+					var idx = trades.BinarySearch(r =>
+						order.ExitTimeUTC  < r.EntryTimeUTC ? -1 :
+						order.EntryTimeUTC > r.ExitTimeUTC  ? +1 : 0);
+
+					// If index is positive, then it's the index of a trade that intersects the time range.
+					// If not, then there is no trade yet that covers this order so create one.
+					var trade = (idx >= 0) ? trades[idx] : trades.Insert2(idx = ~idx, new Trade(Model, instr));
+					trade.Orders.Add(order);
+
+					// Sanity check that the trade time range overlaps the order time range
+					Debug.Assert(
+						order.EntryTimeUTC >= trade.EntryTimeUTC &&
+						order.ExitTimeUTC  <= trade.ExitTimeUTC  &&
+						trade.Orders.Count(x => x == order) == 1);
+
+					// Merge adjacent trades if their time ranges overlap
+					for (int i = idx; i-- != 0 && trades[i].ExitTimeUTC >= trades[idx].ExitTimeUTC;)
+					{
+						// Trade automatically updates its Entry/Exit time when its 'Orders' collection is changed
+						trades[i].Orders.AddRange(trades[idx].Orders);
+						trades[idx].Dispose();
+						trades.RemoveAt(idx);
+						idx = i;
+					}
+					for (int i = idx; ++i != trades.Count && trades[idx].ExitTimeUTC >= trades[i].EntryTimeUTC;)
+					{
+						// Trade automatically updates its Entry/Exit time when its 'Orders' collection is changed
+						trades[idx].Orders.AddRange(trades[i].Orders);
+						trades[i].Dispose();
+						trades.RemoveAt(i);
+						i = idx;
+					}
+				}
+
+				// Check the ranges are non-overlapping
+				#if DEBUG
+				for (int i = 0; i != trades.Count; ++i)
+				{
+					Debug.Assert(trades[i].EntryTimeUTC <= trades[i].ExitTimeUTC);
+					Debug.Assert(i == 0 || trades[i-1].EntryTimeUTC < trades[i].EntryTimeUTC);
+					Debug.Assert(i == 0 || trades[i-1].ExitTimeUTC  < trades[i].EntryTimeUTC);
+				}
+				#endif
+			}
+
+			// Remove trades from the trades map that match existing trades.
+			// Want to avoid deleting existing trades where possible.
+			foreach (var existing in Trades)
+			{
+				// There shouldn't be any existing trades for instruments that aren't in 'trades_map'
+				var trades = trades_map[existing.Instrument];
+
+				// Try to find a match in trades for 'existing'
+				var idx = trades.IndexOf(trade => trade.Orders.SequenceEqualUnordered(existing.Orders));
+
+				// Matching existing trade found, remove from trades list in the map
+				if (idx != -1)
+				{
+					trades[idx].Dispose();
+					trades.RemoveAt(idx);
+				}
+
+				// No more trades for this instrument? Remove the entry from the map
+				if (trades.Count == 0)
+					trades_map.Remove(existing.Instrument);
+			}
+
+			// Add all trades left in the trades map to the current trades list
+			foreach (var trades in trades_map.Values)
+				Trades.AddRange(trades);
+		}
+
+		/// <summary>Signal that the trades collection is out of date, and queue up a refresh</summary>
+		private void InvalidateTrades()
+		{
+			if (m_trades_invalidated) return;
+			m_trades_invalidated = true;
+			Dispatcher.CurrentDispatcher.BeginInvoke(UpdateTrades);
+		}
+		private bool m_trades_invalidated;
+
+		/// <summary>When the account changes, flush all the position data</summary>
+		private void HandleAcctChanged(object sender, EventArgs e)
+		{
+			Orders.Clear();
+			Trades.Clear();
 		}
 
 		/// <summary>Handle trades added or removed from the Trades collection</summary>
 		private void HandleTradesListChanging(object sender, ListChgEventArgs<Trade> e)
 		{
-			var trade = e.Item;
 			switch (e.ChangeType)
 			{
+			case ListChg.Reset:
+				{
+					// Watch for order changed
+					foreach (var trade in Trades)
+					{
+						trade.Changed -= SignalChanged;
+						trade.Changed += SignalChanged;
+					}
+
+					SignalChanged();
+					break;
+				}
 			case ListChg.ItemAdded:
 				{
+					e.Item.Changed += SignalChanged;
+
+					SignalChanged();
 					break;
 				}
 			case ListChg.ItemRemoved:
 				{
 					// Safety first...
-					if (Bit.AnySet(trade.State, Trade.EState.PendingOrder|Trade.EState.ActivePosition))
+					if (Bit.AnySet(e.Item.State, Trade.EState.PendingOrder|Trade.EState.ActivePosition))
 						throw new Exception("Cannot delete a trade with active or pending orders");
 
-					trade.Dispose();
+					e.Item.Changed -= SignalChanged;
+
+					e.Item.Dispose();
+					SignalChanged();
 					break;
 				}
-			}
-			if (e.IsPostEvent)
-			{
-				OnDataChanged(new PositionDataChangedEventArgs(trade));
 			}
 		}
 
@@ -153,24 +312,42 @@ namespace Tradee
 			// Every Order should belong to a Trade, create trades if necessary
 			switch (e.ChangeType)
 			{
+			case ListChg.Reset:
+				{
+					// Refresh the order lookup map
+					OrderLookup.Clear();
+					foreach (var order in Orders)
+						OrderLookup.Add(order.Id, order);
+
+					// Watch for order changed
+					foreach (var order in Orders)
+					{
+						order.Changed -= SignalChanged;
+						order.Changed += SignalChanged;
+					}
+
+					InvalidateTrades();
+					SignalChanged();
+					break;
+				}
 			case ListChg.ItemAdded:
 				{
-					// When an order is added, add it to the appropriate trade
-					var trade = GetOrCreateTrade(e.Item.Instrument);
-					trade.Orders.AddIfUnique(e.Item);
+					OrderLookup[e.Item.Id] = e.Item;
+					e.Item.Changed += SignalChanged;
+
+					InvalidateTrades();
+					SignalChanged();
 					break;
 				}
 			case ListChg.ItemRemoved:
 				{
-					var trade = GetOrCreateTrade(e.Item.Instrument);
-					trade.Orders.Remove(e.Item);
+					OrderLookup.Remove(e.Item.Id);
+					e.Item.Changed -= SignalChanged;
+
+					InvalidateTrades();
+					SignalChanged();
 					break;
 				}
-			}
-			if (e.IsPostEvent)
-			{
-				var trade = GetOrCreateTrade(e.Item.Instrument);
-				OnDataChanged(new PositionDataChangedEventArgs(trade, e.Item));
 			}
 		}
 	}
@@ -178,6 +355,9 @@ namespace Tradee
 	/// <summary>Common interface for Trades and Orders</summary>
 	public interface IPosition
 	{
+		/// <summary>The symbol that this order is on</summary>
+		string SymbolCode { get; }
+
 		/// <summary>The type of trade</summary>
 		ETradeType TradeType { get; }
 
@@ -193,21 +373,4 @@ namespace Tradee
 		/// <summary>The state of this order</summary>
 		Trade.EState State { get; }
 	}
-
-	#region Event Args
-	public class PositionDataChangedEventArgs :EventArgs
-	{
-		public PositionDataChangedEventArgs(Trade trade = null, Order order = null)
-		{
-			Trade = trade;
-			Order = order;
-		}
-
-		/// <summary>The trade that changed</summary>
-		public Trade Trade { get; private set; }
-
-		/// <summary>The order that changed</summary>
-		public Order Order { get; private set; }
-	}
-	#endregion
 }

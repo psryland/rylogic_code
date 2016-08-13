@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Windows.Threading;
 using pr.extn;
 using pr.maths;
 using pr.util;
@@ -9,7 +10,7 @@ namespace Tradee
 {
 	/// <summary>A single order to buy or sell</summary>
 	[DebuggerDisplay("{SymbolCode} {State} {TradeType} {EntryPrice}")]
-	public class Order :INotifyPropertyChanged ,IPosition
+	public class Order :IPosition
 	{
 		// Notes:
 		// - Represents a single buy or sell order with the broker.
@@ -25,8 +26,9 @@ namespace Tradee
 			Instrument        = instr;
 			TradeType         = trade_type;
 			EntryPrice        = 0;
-			EntryTimeUTC      = instr.Latest.TimestampUTC;
-			ExpirationTimeUTC = instr.Latest.TimestampUTC + TimeSpan.FromDays(1);
+			ExitPrice         = 0;
+			EntryTimeUTC      = DefaultEntryTime;
+			ExitTimeUTC       = DefaultExitTime;
 			StopLossAbs       = 0;
 			TakeProfitAbs     = 0;
 			Volume            = 0;
@@ -79,6 +81,14 @@ namespace Tradee
 		}
 		private double m_entry_price;
 
+		/// <summary>The position exit price</summary>
+		public double ExitPrice
+		{
+			[DebuggerStepThrough] get { return m_exit_price; }
+			set { SetProp(ref m_exit_price, value, nameof(ExitPrice)); }
+		}
+		private double m_exit_price;
+
 		/// <summary>
 		/// The position entry time in UTC.
 		/// If the order is in EState Visualising or PendingOrder then this is the time that the server
@@ -92,15 +102,22 @@ namespace Tradee
 		private DateTimeOffset m_entry_time;
 
 		/// <summary>
-		/// The order Expiration time in UTC.
-		/// If the order is in EState Visualising, or PendingOrder then this is the time that the pending
-		/// order should be cancelled. If Active, then this value is ignored. If Closed, then this is the order close time</summary>
-		public DateTimeOffset ExpirationTimeUTC
+		/// The position exit time in UTC. 
+		/// In the Visualising and Pending states, this is the expiry time.
+		/// For Active orders this property always returns a time in the future (based on instrument time frame).
+		/// For Closed orders, this is the time that the position was closed.</summary>
+		public DateTimeOffset ExitTimeUTC
 		{
-			[DebuggerStepThrough] get { return m_expiry_time; }
-			set { SetProp(ref m_expiry_time, value, nameof(ExpirationTimeUTC)); }
+			[DebuggerStepThrough] get
+			{
+				if (State != Trade.EState.ActivePosition) return m_exit_time;
+				var latest = DateTimeOffset_.Max(Instrument.Latest.TimestampUTC, EntryTimeUTC);
+				var time_frame = Instrument.TimeFrame != ETimeFrame.None ? Instrument.TimeFrame : ETimeFrame.Hour1;
+				return latest + Misc.TimeFrameToTimeSpan(Settings.Chart.ViewCandlesAhead/2, time_frame);
+			}
+			set { SetProp(ref m_exit_time, value, nameof(ExitTimeUTC)); }
 		}
-		private DateTimeOffset m_expiry_time;
+		private DateTimeOffset m_exit_time;
 
 		/// <summary>The stop loss price (in base currency)</summary>
 		public double StopLossAbs
@@ -225,24 +242,53 @@ namespace Tradee
 		}
 		private Trade.EState m_impl_state;
 
-		/// <summary>Raised when a property changes</summary>
-		public event PropertyChangedEventHandler PropertyChanged;
-		private void SetProp<T>(ref T prop, T value, params string[] names)
+		/// <summary>Raised when the order changes</summary>
+		public event EventHandler Changed;
+		protected virtual void OnChanged()
+		{
+			m_sig_changed = false;
+			Changed.Raise(this);
+		}
+		protected void SignalChanged(object sender = null, EventArgs e = null)
+		{
+			if (m_sig_changed) return;
+			m_sig_changed = true;
+			Dispatcher.CurrentDispatcher.BeginInvoke(OnChanged);
+		}
+		private bool m_sig_changed;
+
+		/// <summary>Set a property if different and raise 'Changed'</summary>
+		private void SetProp<T>(ref T prop, T value, string name)
 		{
 			if (Equals(prop, value)) return;
 			prop = value;
-			foreach (var name in names)
-				PropertyChanged.Raise(this, new PropertyChangedEventArgs(name));
+			SignalChanged();
+		}
+
+		/// <summary>The default entry time for an order</summary>
+		private DateTimeOffset DefaultEntryTime
+		{
+			get { return Instrument.Latest.TimestampUTC; }
+		}
+
+		/// <summary>The default exit time for an order (at some point in the future)</summary>
+		private DateTimeOffset DefaultExitTime
+		{
+			get { return Instrument.Latest.TimestampUTC + Misc.TimeFrameToTimeSpan(Settings.Chart.ViewCandlesAhead/2, Instrument.TimeFrame != ETimeFrame.None ? Instrument.TimeFrame : ETimeFrame.Hour1); }
 		}
 
 		/// <summary>Update the state of this order from 'position'</summary>
 		public void Update(Position position)
 		{
+			if (m_updates_suspended != 0)
+				return;
+
 			Debug.Assert(Id == position.Id);
 			TradeType         = position.TradeType;
 			EntryPrice        = position.EntryPrice;
+			ExitPrice         = this.ExitPrice;
 			EntryTimeUTC      = new DateTimeOffset(position.EntryTime, TimeSpan.Zero);
-			ExpirationTimeUTC = ExpirationTimeUTC; // Don't change this for active positions
+			ExitTimeUTC       = this.ExitTimeUTC;
 			StopLossAbs       = position.StopLossAbs;
 			TakeProfitAbs     = position.TakeProfitAbs;
 			Volume            = position.Volume;
@@ -257,11 +303,15 @@ namespace Tradee
 		/// <summary>Update the state of this order from 'pending'</summary>
 		public void Update(PendingOrder pending)
 		{
+			if (m_updates_suspended != 0)
+				return;
+
 			Debug.Assert(Id == pending.Id);
 			TradeType         = pending.TradeType;
 			EntryPrice        = pending.EntryPrice;
-			EntryTimeUTC      = EntryTimeUTC; // Don't change this for pending orders
-			ExpirationTimeUTC = new DateTimeOffset(pending.ExpirationTime, TimeSpan.Zero);
+			ExitPrice         = this.ExitPrice;
+			EntryTimeUTC      = this.EntryTimeUTC;
+			ExitTimeUTC       = pending.ExpirationTime != 0 ? new DateTimeOffset(pending.ExpirationTime, TimeSpan.Zero) : DefaultExitTime;
 			StopLossAbs       = pending.StopLossAbs;
 			TakeProfitAbs     = pending.TakeProfitAbs;
 			Volume            = pending.Volume;
@@ -270,7 +320,65 @@ namespace Tradee
 			Commissions       = 0;
 			Swap              = 0;
 			Comment           = pending.Comment;
-			State = Trade.EState.PendingOrder;
+			State             = Trade.EState.PendingOrder;
+		}
+
+		/// <summary>Update the state of this order from 'closed'</summary>
+		public void Update(ClosedOrder closed)
+		{
+			if (m_updates_suspended != 0)
+				return;
+
+			Debug.Assert(Id == closed.Id);
+			TradeType         = closed.TradeType;
+			EntryPrice        = closed.EntryPrice;
+			ExitPrice         = closed.ExitPrice;
+			EntryTimeUTC      = new DateTimeOffset(closed.EntryTimeUTC, TimeSpan.Zero);
+			ExitTimeUTC       = new DateTimeOffset(closed.ExitTimeUTC , TimeSpan.Zero);
+			StopLossAbs       = this.StopLossAbs;       // unchanged
+			TakeProfitAbs     = this.TakeProfitAbs;     // unchanged
+			Volume            = closed.Volume;
+			GrossProfit       = closed.GrossProfit;
+			NetProfit         = closed.NetProfit; 
+			Commissions       = closed.Commissions;
+			Swap              = closed.Swap;
+			Comment           = closed.Comment;
+			State             = Trade.EState.Closed;
+		}
+
+		/// <summary>Block updates to the state of this order</summary>
+		public Scope SuspendUpdate()
+		{
+			return Scope.Create(() => ++m_updates_suspended, () => --m_updates_suspended);
+		}
+		private int m_updates_suspended;
+
+		/// <summary>
+		/// Push the state of this order to the trade data source.
+		/// Only applies to trades in the PendingOrder or ActivePosition states.</summary>
+		public void Commit()
+		{
+			switch (State)
+			{
+			case Trade.EState.None:
+			case Trade.EState.Visualising:
+			case Trade.EState.Closed:
+				{
+					// The Trade data source doesn't know about orders in this state
+					// or, the order cannot be changed.
+					break;
+				}
+			case Trade.EState.PendingOrder:
+				{
+					// Update the entry price, stop loss, take profit, expiry time
+					break;
+				}
+			case Trade.EState.ActivePosition:
+				{
+					// Update the stop loss, take profit
+					break;
+				}
+			}
 		}
 	}
 }

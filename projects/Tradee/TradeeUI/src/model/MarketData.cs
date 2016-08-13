@@ -1,15 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Text.RegularExpressions;
-using System.Windows.Forms;
 using pr.common;
 using pr.container;
 using pr.extn;
-using pr.gui;
-using pr.util;
 
 namespace Tradee
 {
@@ -36,33 +31,32 @@ namespace Tradee
 				var sym = fd.FileName.SubstringRegex(price_data_file_pattern, RegexOptions.IgnoreCase)[0];
 				GetOrCreateInstrument(sym);
 			}
-
-
-			{//HACK
-				Instruments.RemoveIf(x => x.SymbolCode == "Stairs");
-				var instr = GetOrCreateInstrument("Stairs");
-				var now = DateTime.UtcNow.Ticks;
-				var min = Misc.TimeFrameToTicks(1.0, ETimeFrame.Min1);
-				var hr  = Misc.TimeFrameToTicks(1.0, ETimeFrame.Hour1);
-				var pip = 0.0001;
-				for (int i = 0, j = 1; i != 100; ++i, ++j)
-					instr.Add(ETimeFrame.Min1, new Candle(now + i*min, i * pip, j * pip,  i * pip, j * pip, 10));
-				for (int i = 0, j = 1; i != 100; ++i, ++j)
-					instr.Add(ETimeFrame.Hour1, new Candle(now + i*hr, i * pip, j * pip,  i * pip, j * pip, 10));
-			}
-
 		}
 		public virtual void Dispose()
 		{
 			Instruments.Clear();
+			Model = null;
 		}
 
 		/// <summary>The App logic</summary>
 		public MainModel Model
 		{
-			[DebuggerStepThrough] get;
-			private set;
+			[DebuggerStepThrough] get { return m_model; }
+			private set
+			{
+				if (m_model == value) return;
+				if (m_model != null)
+				{
+					m_model.ConnectionChanged -= HandleConnectionChanged;
+				}
+				m_model = value;
+				if (m_model != null)
+				{
+					m_model.ConnectionChanged += HandleConnectionChanged;
+				}
+			}
 		}
+		private MainModel m_model;
 
 		/// <summary>Get/Create an instrument</summary>
 		public Instrument this[string sym]
@@ -73,15 +67,10 @@ namespace Tradee
 		/// <summary>Get/Create an instrument named 'sym'</summary>
 		public Instrument GetOrCreateInstrument(string sym)
 		{
-			// Return the existing instrument if it already exists or create an empty instrument for now
-			var idx = Instruments.BinarySearch(x => x.SymbolCode.CompareTo(sym));
-			var instr = idx >= 0 ? Instruments[idx] : Instruments.Insert2(~idx, new Instrument(Model, sym));
-
-			// Check when this instrument was last updated
-			// Request it again if the last update was too long ago
-			if (DateTime.UtcNow - instr.LastUpdatedUTC > TimeSpan.FromSeconds(30))
-				Model.RequestInstrument(sym, null);
-
+			// Don't request data for this instrument yet.
+			// The caller should add a reference to the instrument which will start the data flowing
+			var idx = Instruments.IndexOf(x => x.SymbolCode == sym);
+			var instr = idx >= 0 ? Instruments[idx] : Instruments.Add2(new Instrument(Model, sym));
 			return instr;
 		}
 
@@ -93,7 +82,7 @@ namespace Tradee
 			File.Delete(db_filepath);
 		}
 
-		/// <summary>The currency pairs (sorted alphabetically)</summary>
+		/// <summary>The currency pairs</summary>
 		public BindingSource<Instrument> Instruments
 		{
 			[DebuggerStepThrough] get { return m_bs_instruments; }
@@ -128,12 +117,21 @@ namespace Tradee
 		}
 
 		/// <summary>An event raised when data is added to any instrument</summary>
-		public event EventHandler<DataEventArgs> DataAdded;
+		public event EventHandler<DataEventArgs> DataChanged;
+		public void OnDataChanged(DataEventArgs args)
+		{
+			DataChanged.Raise(this, args);
+		}
+
+		/// <summary>Handle the connection to the trade data source changing</summary>
+		private void HandleConnectionChanged(object sender, EventArgs e)
+		{
+		}
 
 		/// <summary>Handle data changing in one of the instruments</summary>
-		private void HandleInstrumentDataAdded(object sender, DataEventArgs args)
+		private void HandleInstrumentDataChanged(object sender, DataEventArgs args)
 		{
-			DataAdded.Raise(this, args);
+			OnDataChanged(args);
 		}
 
 		/// <summary>Handle changes to the instruments collection</summary>
@@ -144,18 +142,19 @@ namespace Tradee
 			{
 			case ListChg.ItemAdded:
 				OnInstrumentAdded(new DataEventArgs(instrument, ETimeFrame.None, null, false));
-				instrument.DataAdded += HandleInstrumentDataAdded;
+				instrument.DataChanged += HandleInstrumentDataChanged;
 				break;
 
 			case ListChg.ItemRemoved:
 				OnInstrumentRemoved(new DataEventArgs(instrument, ETimeFrame.None, null, false));
-				instrument.DataAdded -= HandleInstrumentDataAdded;
+				instrument.DataChanged -= HandleInstrumentDataChanged;
 				instrument.Dispose();
 				break;
 			}
 		}
 	}
 
+	#region EventArgs
 	/// <summary>Event args for when data is changed</summary>
 	public class DataEventArgs :EventArgs
 	{
@@ -168,9 +167,9 @@ namespace Tradee
 		}
 
 		/// <summary>The symbol that changed</summary>
-		public string Symbol
+		public string SymbolCode
 		{
-			get { return Instrument.SymbolCode; }
+			get { return Instrument?.SymbolCode ?? string.Empty; }
 		}
 
 		/// <summary>The time frame that changed</summary>
@@ -185,4 +184,5 @@ namespace Tradee
 		/// <summary>True if 'Candle' is a new candle and the previous candle as just closed</summary>
 		public bool NewCandle { get; private set; }
 	}
+	#endregion
 }

@@ -37,12 +37,12 @@ namespace Tradee
 		{
 			if (Model != null)
 			{
-				Model.MarketData.DataAdded -= UpdateUI;
+				Model.MarketData.DataChanged -= UpdateUI;
 			}
 			base.SetModelCore(model);
 			if (Model != null)
 			{
-				Model.MarketData.DataAdded += UpdateUI;
+				Model.MarketData.DataChanged += UpdateUI;
 			}
 		}
 
@@ -64,6 +64,12 @@ namespace Tradee
 				{
 					HeaderText = "Instrument",
 					DataPropertyName = nameof(Instrument.SymbolCode),
+					FillWeight = 1f,
+				});
+				grid.Columns.Add(new DataGridViewTextBoxColumn
+				{
+					HeaderText = "Spread",
+					DataPropertyName = nameof(PriceData.Spread),
 					FillWeight = 1f,
 				});
 				grid.Columns.Add(new DataGridViewTextBoxColumn
@@ -121,24 +127,32 @@ namespace Tradee
 			if (!grid.Within(e.ColumnIndex, e.RowIndex))
 				return;
 
-			var item = (Instrument)grid.Rows[e.RowIndex].DataBoundItem;
-			switch (e.ColumnIndex)
+			var col = grid.Columns[e.ColumnIndex];
+			var row = grid.Rows[e.RowIndex];
+			var item = (Instrument)row.DataBoundItem;
+			switch (col.DataPropertyName)
 			{
 			default: throw new Exception("Unknown column");
-			case 0:
+			case nameof(Instrument.SymbolCode):
 				{
 					// Todo
 					// Colour the cell based on bullish/bearish market
 					break;
 				}
-			case 1:
+			case nameof(PriceData.Spread):
+				{
+					e.Value = "{0:N1}".Fmt(item.PriceData.SpreadPips);
+					break;
+				}
+			case nameof(Instrument.LastUpdatedLocal):
 				{
 					e.Value = item.LastUpdatedUTC != DateTimeOffset.MinValue ? item.LastUpdatedLocal.ToString("yyyy/MM/dd HH:mm:ss") : "never";
-					e.CellStyle.ForeColor = Color.Blue.Lerp(Color.DarkGray, (float)Maths.Clamp(Maths.Frac(0.0, (DateTime.UtcNow - item.LastUpdatedUTC).TotalSeconds, 10.0), 0.0, 1.0));
 					e.FormattingApplied = true;
 					break;
 				}
 			}
+
+			e.CellStyle.ForeColor = Color.Blue.Lerp(Color.DarkGray, (float)Maths.Clamp(Maths.Frac(0.0, (Model.UtcNow - item.LastUpdatedUTC).TotalSeconds, 10.0), 0.0, 1.0));
 		}
 
 		/// <summary>Handle a click within a grid</summary>
@@ -170,7 +184,7 @@ namespace Tradee
 			if (e.Button == MouseButtons.Left)
 			{
 				var instr = (Instrument)grid.Rows[e.RowIndex].DataBoundItem;
-				Model.AddChart(instr);
+				Model.ShowChart(instr.SymbolCode);
 			}
 		}
 
@@ -186,7 +200,7 @@ namespace Tradee
 					opt.ToolTipText = "Open a chart for this symbol";
 					opt.Click += (s,a) =>
 					{
-						Model.AddChart(instr);
+						Model.ShowChart(instr.SymbolCode);
 					};
 				}
 				{// Clear Cached Data

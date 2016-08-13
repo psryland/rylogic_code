@@ -4,8 +4,10 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using System.Windows.Threading;
 using pr.attrib;
 using pr.common;
+using pr.container;
 using pr.extn;
 using pr.gfx;
 using pr.gui;
@@ -14,19 +16,16 @@ using pr.util;
 
 namespace Tradee
 {
-	/// <summary>Base class for charts</summary>
+	/// <summary>The chart for an instrument</summary>
 	public class ChartUI :BaseUI
 	{
 		// Notes:
-		// XAxis x = 0 corresponds to the Latest candle in the instrument, prior candles are rendered
-		// at index positions back from the end. i.e. x = 0 = latest, x = -1 = latest-1, x = -2 = latest-2
+		// - XAxis x = 0 corresponds to the Latest candle in the instrument, prior candles are rendered
+		//   at index positions back from the end. i.e. x = 0 = latest, x = -1 = latest-1, x = -2 = latest-2
 
 		/// <summary>A cache of the candle graphics</summary>
 		private const int GfxModelBatchSize = 1024;
 		private Cache<int, CachedGfx> m_gfx_cache;
-
-		/// <summary>Chart elements for the orders displayed on this chart</summary>
-		private List<OrderChartElement> m_trade_chart_elements;
 
 		/// <summary>Buffers for creating the chart graphics</summary>
 		private List<View3d.Vertex> m_vbuf;
@@ -54,7 +53,6 @@ namespace Tradee
 			m_ibuf = new List<ushort>();
 			m_nbuf = new List<View3d.Nugget>();
 			m_gfx_cache = new Cache<int, CachedGfx>();
-			m_trade_chart_elements = new List<OrderChartElement>();
 
 			Instrument = instr;
 
@@ -68,7 +66,10 @@ namespace Tradee
 			CurrentPrice = new CurrentPrice(Model, Instrument);
 
 			// Create graphics for the related trades
-			UpdateTradeGraphics();
+			SignalUpdateTradeGraphics();
+
+			// Initialise the chart to the default range
+			ResetToDefaultRange();
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -82,14 +83,16 @@ namespace Tradee
 		{
 			if (Model != null)
 			{
+				Model.ConnectionChanged            -= HandleConnectionChanged;
 				Model.MarketData.InstrumentRemoved -= HandleInstrumentRemoved;
-				Model.Positions.DataChanged -= HandleTradesChanged;
+				Model.Positions.Changed            -= SignalUpdateTradeGraphics;
 			}
 			base.SetModelCore(model);
 			if (Model != null)
 			{
+				Model.Positions.Changed            += SignalUpdateTradeGraphics;
 				Model.MarketData.InstrumentRemoved += HandleInstrumentRemoved;
-				Model.Positions.DataChanged += HandleTradesChanged;
+				Model.ConnectionChanged            += HandleConnectionChanged;
 			}
 		}
 
@@ -102,12 +105,18 @@ namespace Tradee
 				if (m_impl_instr == value) return;
 				if (m_impl_instr != null)
 				{
-					m_impl_instr.DataAdded -= HandleDataAdded;
+					m_impl_instr.DataChanged -= HandleInstrumentDataChanged;
+					m_impl_instr.ReferenceCount--;
 				}
 				m_impl_instr = value;
 				if (m_impl_instr != null)
 				{
-					m_impl_instr.DataAdded += HandleDataAdded;
+					// Ensure a valid time frame is selected
+					if (m_impl_instr.TimeFrame == ETimeFrame.None)
+						m_impl_instr.TimeFrame = ETimeFrame.Hour12;
+
+					m_impl_instr.ReferenceCount++;
+					m_impl_instr.DataChanged += HandleInstrumentDataChanged;
 				}
 				m_chart?.Invalidate();
 			}
@@ -118,6 +127,12 @@ namespace Tradee
 		public IEnumerable<Trade> Trades
 		{
 			get { return Model.Positions.Trades.Where(x => x.SymbolCode == SymbolCode); }
+		}
+
+		/// <summary>Chart elements</summary>
+		public BindingListEx<ChartControl.Element> Elements
+		{
+			get { return m_chart.Elements; }
 		}
 
 		/// <summary>The symbol displayed on the chart (or empty string if none)</summary>
@@ -136,14 +151,13 @@ namespace Tradee
 				Instrument.TimeFrame = value;
 				DockControl.TabText = ChartTitle;
 				m_gfx_cache.Flush();
-				ChartCtrl.FindDefaultRange(false);
-				ChartCtrl.ResetToDefaultRange();
+				ResetToDefaultRange();
 				UpdateUI();
 			}
 		}
 
 		/// <summary>The tab text for the chart</summary>
-		private string ChartTitle
+		public string ChartTitle
 		{
 			get { return "{0},{1}".Fmt(SymbolCode, TimeFrame); }
 		}
@@ -164,7 +178,6 @@ namespace Tradee
 				if (m_current_price == value) return;
 				if (m_current_price != null)
 				{
-					m_chart.Elements.Remove(m_current_price);
 					Util.Dispose(m_current_price);
 				}
 				m_current_price = value;
@@ -176,16 +189,11 @@ namespace Tradee
 		}
 		private CurrentPrice m_current_price;
 
-		/// <summary>The underlying chart control</summary>
-		public ChartControl ChartCtrl
-		{
-			get { return m_chart; }
-		}
-
 		/// <summary>Set up UI Elements</summary>
 		private void SetupUI()
 		{
 			#region Docking
+			DockControl.TabText = ChartTitle;
 			DockControl.TabCMenu = CreateTabContextMenu();
 			#endregion
 
@@ -268,12 +276,12 @@ namespace Tradee
 			};
 			m_chart.ChartAreaSelect += (s,a) =>
 			{
+				// Area select zoom if control is held down
 				var rect = new RectangleF(a.SelectionArea.MinX, a.SelectionArea.MinY, a.SelectionArea.SizeX, a.SelectionArea.SizeY);
-				if (rect.Width > 0 && rect.Height > 0)
-				{
+				if (rect.Width > 0 && rect.Height > 0 && ModifierKeys == Keys.Control)
 					m_chart.ZoomArea(rect, false);
-					a.Handled = true;
-				}
+
+				a.Handled = true;
 			};
 			#endregion
 		}
@@ -286,6 +294,7 @@ namespace Tradee
 				item.Checked = (ETimeFrame)item.Tag == TimeFrame;
 
 			// Update the checked state of the items in the split button
+			m_splitbtn_timeframes.Text = TimeFrame.ToString();
 			foreach (var item in m_splitbtn_timeframes.DropDownItems.OfType<ToolStripMenuItem>())
 			{
 				if (item.Tag == null) continue;
@@ -293,6 +302,13 @@ namespace Tradee
 				item.BackColor = tf == TimeFrame ? Color.LightSteelBlue : Color.White;
 				item.Checked = Settings.Chart.TimeFrameBtns.Contains(tf);
 			}
+		}
+
+		/// <summary>Set the X,Y Axis to the default range</summary>
+		private void ResetToDefaultRange()
+		{
+			m_chart.FindDefaultRange(false);
+			m_chart.ResetToDefaultRange();
 		}
 
 		/// <summary>Create a new trade or add to the existing trade</summary>
@@ -349,8 +365,8 @@ namespace Tradee
 					var col = candle.Bullish ? Settings.UI.BullishColour.ToArgbU() : candle.Bearish ? Settings.UI.BearishColour.ToArgbU() : 0xFFA0A0A0;
 					var v = vert;
 
-					 // Prevent degenerate triangles
-					 if (o == c)
+					// Prevent degenerate triangles
+					if (o == c)
 					{
 						o *= 1.000005f;
 						c *= 0.999995f;
@@ -411,12 +427,10 @@ namespace Tradee
 					// When clicked switch to the associated time frame
 					var item = m_ts_timeframes.Items.Add2(new ToolStripButton(tf.Desc()) { Tag = tf });
 					item.Checked = tf == TimeFrame;
-					item.Click += (s,a) =>
-					{
-						TimeFrame = tf;
-					};
+					item.Click += (s,a) => TimeFrame = tf;
 				}
 
+				// Add the split button used for selecting time frame buttons
 				m_ts_timeframes.Items.Add(m_splitbtn_timeframes);
 			}
 		}
@@ -441,20 +455,52 @@ namespace Tradee
 		/// <summary>Repopulate the chart with graphics for the trades of the shown instrument</summary>
 		private void UpdateTradeGraphics()
 		{
-			// Release all existing graphics
-			Util.DisposeAll(m_trade_chart_elements);
-			m_trade_chart_elements.Clear();
+			m_sig_update_trade_graphics = false;
 
-			Debug.Assert(Model.Positions.Trades.Count(x => x.State != Trade.EState.Closed &&
-				x.SymbolCode == SymbolCode) <= 1, "Shouldn't be more than one open trade for the same instrument");
+			// Create a set of all orders that should be on this chart
+			var orders = Trades
+				.Where(x => x.State != Trade.EState.Closed || ShowHistoricTrades)
+				.SelectMany(x => x.Orders).ToHashSet();
 
-			// Create new graphics for each order in each trade
-			foreach (var trade in Trades)
+			// Remove graphics for orders not in the set
+			// Remove orders from the set that are already on the chart.
+			for (int i = Elements.Count; i-- != 0;)
 			{
-				if (!ShowHistoricTrades && trade.State == Trade.EState.Closed) continue;
-				foreach (var order in trade.Orders)
-					m_trade_chart_elements.Add(new OrderChartElement(order, ChartCtrl));
+				// If the element is not an OrderChartElement, skip
+				var order_gfx = Elements[i] as OrderChartElement;
+				if (order_gfx == null)
+					continue;
+
+				// If 'order_gfx' is in the set 'orders' then we can
+				// remove it from the set since it's on the chart already.
+				// If not in the set, then dispose it to remove it from the chart
+				if (orders.Contains(order_gfx.Order))
+					orders.Remove(order_gfx.Order);
+				else
+					order_gfx.Dispose();
 			}
+
+			// Create new graphics for orders not yet on the chart
+			foreach (var order in orders)
+				Elements.Add(new OrderChartElement(order));
+		}
+		private void SignalUpdateTradeGraphics(object sender = null, EventArgs e = null)
+		{
+			if (m_sig_update_trade_graphics) return;
+			m_sig_update_trade_graphics = true;
+			Dispatcher.CurrentDispatcher.BeginInvoke(UpdateTradeGraphics);
+		}
+		private bool m_sig_update_trade_graphics;
+
+		/// <summary>Handle the connection to the trade data source connecting/disconnecting</summary>
+		private void HandleConnectionChanged(object sender, EventArgs e)
+		{
+			// On disconnection, the trade data source will reset its list of time frames
+			// to send for the instrument this chart is based on. On reconnection, we want
+			// to start instrument data being sent again
+			Debug.Assert(Instrument.ReferenceCount != 0);
+			if (Model.IsConnected)
+				Instrument.StartDataRequest();
 		}
 
 		/// <summary>Handle instrument removed</summary>
@@ -465,44 +511,49 @@ namespace Tradee
 				Dispose();
 		}
 
-		/// <summary>Update the chart whenever the trade data changes</summary>
-		private void HandleTradesChanged(object sender, PositionDataChangedEventArgs e)
-		{
-			UpdateTradeGraphics();
-		}
-
 		/// <summary>Handle market data being added</summary>
-		private void HandleDataAdded(object sender, DataEventArgs e)
+		private void HandleInstrumentDataChanged(object sender, DataEventArgs e)
 		{
-			// Invalidate the cache value that contains 'idx'
-			var time_stamp = new TFTime(e.Candle.Timestamp, TimeFrame);
-			var idx = Instrument.IndexAt(time_stamp);
-			if (idx < 0) idx = ~idx;
-			m_gfx_cache.Invalidate(idx / GfxModelBatchSize);
-			m_chart.Invalidate();
+			// If the event is specific to one candle, invalidate the graphics object
+			// that contains the representation of that candle.
+			if (e.Candle != null)
+			{
+				// Invalidate the cache value that contains 'idx'
+				var idx = Instrument.IndexAt(new TFTime(e.Candle.Timestamp, TimeFrame));
+				m_gfx_cache.Invalidate(idx / GfxModelBatchSize);
+			}
+			else
+			{
+				// Otherwise, just invalidate the whole cache
+				m_gfx_cache.Flush();
+			}
 
 			// If 'e.Candle' is a new candle and 'x == 0' is not visible,
-			// move the camera back by one time frame unit so that view doesn't appear to move
+			// move the camera back by one index position so that view doesn't appear to move
 			if (e.NewCandle && m_chart.XAxis.Max < 0)
 				m_chart.XAxis.Set(m_chart.XAxis.Min - 1, m_chart.XAxis.Max - 1);
+
+			// Signal a refresh
+			m_chart.Invalidate();
 		}
 
 		/// <summary>Handle the chart about to render</summary>
 		private void HandleChartRendering(object sender, ChartControl.ChartRenderingEventArgs e)
 		{
-			var x0 = Instrument.Count;
-
-			// Add the graphics models in the visible time range
-			var range = Instrument.IndexRange(x0 + (int)m_chart.XAxis.Min, x0 + (int)(m_chart.XAxis.Max + 1.0));
+			// Convert the XAxis values into an index range.
+			// (indices, not time frame units, because of the gaps in the price data).
+			var range = Instrument.IndexRange((int)(m_chart.XAxis.Min - 1), (int)(m_chart.XAxis.Max + 1));
+			range.Begin = (range.Begin - GfxModelBatchSize + 1) / GfxModelBatchSize; // Round away from zero
+			range.End   = (range.End   - GfxModelBatchSize + 1) / GfxModelBatchSize;
 
 			// Add models from the cache
-			for (int i = range.Begini/GfxModelBatchSize, iend = range.Endi/GfxModelBatchSize; i <= iend;  ++i)
+			for (int i = range.Begini, iend = range.Endi; i <= iend;  ++i)
 			{
 				var gfx = GfxAt(i);
 				if (gfx.m_obj != null)
 				{
 					// Position the graphics object relative to 'x == 0'
-					gfx.m_obj.O2P = m4x4.Translation(new v4(gfx.m_idx_range.Begini - x0, 0.0f, 0.0f, 1.0f));
+					gfx.m_obj.O2P = m4x4.Translation(new v4(gfx.m_idx_range.Begini, 0.0f, 0.0f, 1.0f));
 					e.AddToScene(gfx.m_obj);
 				}
 			}
@@ -549,9 +600,7 @@ namespace Tradee
 			if (ahead > xmax) xmax = ahead;
 
 			// Find the bounds of the candle price data
-			var imin = (int)(Instrument.Count + xmin);
-			var imax = (int)(Instrument.Count + xmax);
-			foreach (var candle in Instrument.CandleRange(imin, imax))
+			foreach (var candle in Instrument.CandleRange((int)xmin, (int)xmax))
 			{
 				if (candle.Low  < ymin) ymin = candle.Low;
 				if (candle.High > ymax) ymax = candle.High;
@@ -592,38 +641,51 @@ namespace Tradee
 		/// <summary>Convert the XAxis values into pretty datetime strings</summary>
 		private string HandleChartXAxisLabels(double x, double step)
 		{
-			//return x.ToString();
+			// Note:
+			// The X axis is not a linear time axis because the markets are not online all the time.
+			// The X axis is actually an index into the 'Instrument' data where 0 = latest and negative
+			// values go further back in the history. Use 'Instrument.TimeToIndexRange' to convert time
+			// values to X Axis values.
+
+			// Draw the X Axis labels as indices instead of time stamps
+			if (m_xaxis_in_candle_indices)
+				return x.ToString();
+
 			if (Instrument == null)
 				return string.Empty;
 
 			const string long_fmt  = "ddd dd-MMM-yy'\r\n'HH:mm";
 			const string short_fmt = "HH:mm";
 
-			// Get the index range from 'x-step' to 'x'
-			var i0 = (int)(Instrument.Count + x - step);
-			var i1 = (int)(Instrument.Count + x);
-			if (i1 < 0 || i1 >= Instrument.Count)
+			// The range of indices
+			var first = -(Instrument.Count-1);
+			var last  = 1;
+
+			var prev = (int)(x - step);
+			var curr = (int)(x);
+			if (curr < first || curr >= last)
 				return string.Empty;
 
 			// Get the time stamp of the candle at the tick mark in local time
-			var dt_curr = TimeZone.CurrentTimeZone.ToLocalTime(new DateTime(Instrument.PriceHistory[i1].Timestamp, DateTimeKind.Utc));
-			if (i1 == 0 || i0 < 0 || x - step < m_chart.XAxis.Min) // First tick on the x axis
+			var dt_curr = TimeZone.CurrentTimeZone.ToLocalTime(new DateTimeOffset(Instrument[curr].Timestamp, TimeSpan.Zero).DateTime);
+			if (curr == first || prev < first || x - step < m_chart.XAxis.Min) // First tick on the x axis
 				return dt_curr.ToString(long_fmt);
 
 			// If the current tick mark represents the same candle as the previous one, no text is required
-			if (i0 == i1)
+			if (prev == curr)
 				return string.Empty;
 
 			// Get the time stamp of the candle at the previous tick mark in local time
-			if (i0 >= 0 && i0 < Instrument.Count)
+			if (prev >= first && prev < last)
 			{
-				var dt_prev = TimeZone.CurrentTimeZone.ToLocalTime(new DateTime(Instrument.PriceHistory[i0].Timestamp, DateTimeKind.Utc));
+				var dt_prev = TimeZone.CurrentTimeZone.ToLocalTime(new DateTime(Instrument[prev].Timestamp, DateTimeKind.Utc));
 				if (dt_curr.Day != dt_prev.Day)
 					return dt_curr.ToString(long_fmt);
 			}
 
 			return dt_curr.ToString(short_fmt);
 		}
+		private bool m_xaxis_in_candle_indices;
 
 		/// <summary>Convert the YAxis values into pretty price strings</summary>
 		private string HandleChartYAxisLabels(double x, double step)
@@ -637,7 +699,19 @@ namespace Tradee
 		/// <summary>Handle the chart context menu</summary>
 		private void HandleChartCMenu(object sender, ChartControl.AddUserMenuOptionsEventArgs e)
 		{
-			
+			switch (e.Type)
+			{
+			case ChartControl.AddUserMenuOptionsEventArgs.EType.XAxis:
+				{
+					var opt = e.Menu.Items.Add2(new ToolStripMenuItem(m_xaxis_in_candle_indices ? "Local Time" : "Candle Index"));
+					opt.Click += (s,a) =>
+					{
+						m_xaxis_in_candle_indices = !m_xaxis_in_candle_indices;
+						Invalidate(true);
+					};
+					break;
+				}
+			}
 		}
 
 		/// <summary>Convert between a chart name to a symbol code (or null)</summary>
@@ -665,16 +739,14 @@ namespace Tradee
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ChartUI));
-			System.Drawing.Drawing2D.Matrix matrix2 = new System.Drawing.Drawing2D.Matrix();
 			this.m_tsc = new pr.gui.ToolStripContainer();
 			this.m_ts_trades = new System.Windows.Forms.ToolStrip();
 			this.m_btn_trade_long = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_trade_short = new System.Windows.Forms.ToolStripButton();
-			this.m_ts_timeframes = new System.Windows.Forms.ToolStrip();
-			this.m_splitbtn_timeframes = new System.Windows.Forms.ToolStripSplitButton();
 			this.m_sep0 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_chk_show_historic = new System.Windows.Forms.ToolStripButton();
-			this.m_tsc.ContentPanel.SuspendLayout();
+			this.m_ts_timeframes = new System.Windows.Forms.ToolStrip();
+			this.m_splitbtn_timeframes = new System.Windows.Forms.ToolStripSplitButton();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
 			this.m_ts_trades.SuspendLayout();
@@ -710,7 +782,7 @@ namespace Tradee
             this.m_chk_show_historic});
 			this.m_ts_trades.Location = new System.Drawing.Point(5, 0);
 			this.m_ts_trades.Name = "m_ts_trades";
-			this.m_ts_trades.Size = new System.Drawing.Size(121, 27);
+			this.m_ts_trades.Size = new System.Drawing.Size(90, 27);
 			this.m_ts_trades.TabIndex = 1;
 			// 
 			// m_btn_trade_long
@@ -731,31 +803,9 @@ namespace Tradee
 			this.m_btn_trade_short.Size = new System.Drawing.Size(24, 24);
 			this.m_btn_trade_short.Text = "Trade Short";
 			// 
-			// m_ts_timeframes
+			// m_sep0
 			// 
-			this.m_ts_timeframes.Dock = System.Windows.Forms.DockStyle.None;
-			this.m_ts_timeframes.ImageScalingSize = new System.Drawing.Size(20, 20);
-			this.m_ts_timeframes.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_splitbtn_timeframes});
-			this.m_ts_timeframes.Location = new System.Drawing.Point(126, 0);
-			this.m_ts_timeframes.Name = "m_ts_timeframes";
-			this.m_ts_timeframes.RenderMode = System.Windows.Forms.ToolStripRenderMode.Professional;
-			this.m_ts_timeframes.Size = new System.Drawing.Size(48, 27);
-			this.m_ts_timeframes.TabIndex = 0;
-			// 
-			// m_splitbtn_timeframes
-			// 
-			this.m_splitbtn_timeframes.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_splitbtn_timeframes.Image = global::Tradee.Properties.Resources.clock;
-			this.m_splitbtn_timeframes.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_splitbtn_timeframes.Name = "m_splitbtn_timeframes";
-			this.m_splitbtn_timeframes.Size = new System.Drawing.Size(36, 24);
-			this.m_splitbtn_timeframes.Text = "Select Time Frames";
-			this.m_splitbtn_timeframes.ToolTipText = "Select Time Frames\r\nShift-Click to insert a tool bar button\r\n";
-			// 
-			// toolStripSeparator1
-			// 
-			this.m_sep0.Name = "toolStripSeparator1";
+			this.m_sep0.Name = "m_sep0";
 			this.m_sep0.Size = new System.Drawing.Size(6, 27);
 			// 
 			// m_chk_show_historic
@@ -769,6 +819,27 @@ namespace Tradee
 			this.m_chk_show_historic.Text = "Historic Trades";
 			this.m_chk_show_historic.ToolTipText = "Show/Hide historic trades on this chart";
 			// 
+			// m_ts_timeframes
+			// 
+			this.m_ts_timeframes.Dock = System.Windows.Forms.DockStyle.None;
+			this.m_ts_timeframes.ImageScalingSize = new System.Drawing.Size(20, 20);
+			this.m_ts_timeframes.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_splitbtn_timeframes});
+			this.m_ts_timeframes.Location = new System.Drawing.Point(102, 0);
+			this.m_ts_timeframes.Name = "m_ts_timeframes";
+			this.m_ts_timeframes.RenderMode = System.Windows.Forms.ToolStripRenderMode.Professional;
+			this.m_ts_timeframes.Size = new System.Drawing.Size(188, 27);
+			this.m_ts_timeframes.TabIndex = 0;
+			// 
+			// m_splitbtn_timeframes
+			// 
+			this.m_splitbtn_timeframes.Image = global::Tradee.Properties.Resources.clock;
+			this.m_splitbtn_timeframes.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_splitbtn_timeframes.Name = "m_splitbtn_timeframes";
+			this.m_splitbtn_timeframes.Size = new System.Drawing.Size(145, 24);
+			this.m_splitbtn_timeframes.Text = "Select Time Frames";
+			this.m_splitbtn_timeframes.ToolTipText = "Select Time Frames\r\nShift-Click to insert a tool bar button\r\n";
+			// 
 			// ChartUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -776,7 +847,6 @@ namespace Tradee
 			this.Controls.Add(this.m_tsc);
 			this.Name = "ChartUI";
 			this.Size = new System.Drawing.Size(668, 673);
-			this.m_tsc.ContentPanel.ResumeLayout(false);
 			this.m_tsc.TopToolStripPanel.ResumeLayout(false);
 			this.m_tsc.TopToolStripPanel.PerformLayout();
 			this.m_tsc.ResumeLayout(false);

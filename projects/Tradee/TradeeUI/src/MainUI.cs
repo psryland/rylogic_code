@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -49,12 +50,15 @@ namespace Tradee
 		private ToolStripContainer m_tsc;
 		private MenuStrip m_menu;
 		private ToolStripMenuItem m_menu_file;
-		private ToolStripSeparator m_menu_file_sep0;
 		private StatusStrip m_ss;
 		private ToolStripStatusLabel m_status;
-		private ToolStripMenuItem m_menu_file_req_acct;
 		private ToolStripMenuItem m_menu_file_exit;
 		private System.Windows.Forms.Timer m_timer;
+		private ToolStripMenuItem m_menu_tools;
+		private ToolStripMenuItem m_menu_tools_simulate;
+		private ToolStripSeparator toolStripSeparator1;
+		private ToolStripMenuItem m_menu_tools_req_acct_update;
+		private ToolStripMenuItem m_menu_tools_req_trade_history;
 		#endregion
 
 		/// <summary>A view3d context reference the lives for the lifetime of the application</summary>
@@ -75,6 +79,7 @@ namespace Tradee
 		{
 			m_dc.Dispose();
 			Model = null;
+			Util.Dispose(ref m_sim_ui);
 			Util.Dispose(ref m_view3d);
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
@@ -123,23 +128,47 @@ namespace Tradee
 			get { return m_status; }
 		}
 
-		/// <summary>Add a chart to the dock container</summary>
-		public void AddChart(ChartUI chart)
+		/// <summary>The currently open charts</summary>
+		public IEnumerable<ChartUI> Charts
 		{
-			m_dc.Add(chart);
+			get { return m_dc.AllContent.OfType<ChartUI>(); }
 		}
+
+		/// <summary>Add a new, or show an existing, chart in the UI</summary>
+		public void ShowChart(string sym)
+		{
+			var chart = Charts.FirstOrDefault(x => x.SymbolCode == sym);
+			if (chart == null) chart = m_dc.Add2(new ChartUI(Model, Model.MarketData[sym]));
+			m_dc.ActiveDockable = chart;
+		}
+
+		/// <summary>Open the simulator</summary>
+		private void ShowSimulateUI()
+		{
+			m_sim_ui = m_sim_ui ?? new SimulationUI(this, Model);
+			m_sim_ui.Show(this);
+		}
+		private SimulationUI m_sim_ui;
 
 		/// <summary>Set up UI Elements</summary>
 		private void SetupUI()
 		{
 			#region Menu
-			m_menu_file_req_acct.Click += (s,a) =>
-			{
-				Model.RefreshAcctStatus();
-			};
 			m_menu_file_exit.Click += (s, a) =>
 			{
 				Close();
+			};
+			m_menu_tools_simulate.Click += (s,a) =>
+			{
+				ShowSimulateUI();
+			};
+			m_menu_tools_req_acct_update.Click += (s,a) =>
+			{
+				Model.RefreshAcctStatus();
+			};
+			m_menu_tools_req_trade_history.Click += (s,a) =>
+			{
+				Model.RefreshTradeHistory();
 			};
 			#endregion
 
@@ -187,7 +216,8 @@ namespace Tradee
 			Text = "Tradee - {0}".Fmt(connected ? "Connected" : "Disconnected");
 
 			// Update menu item state
-			m_menu_file_req_acct.Enabled = connected;
+			m_menu_tools_req_acct_update.Enabled = connected;
+			m_menu_tools_req_trade_history.Enabled = connected;
 		}
 
 		/// <summary>Close charts that reference the out-going instrument</summary>
@@ -214,10 +244,13 @@ namespace Tradee
 			this.m_dc = new pr.gui.DockContainer();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_file_req_acct = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_file_sep0 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_exit = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_simulate = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_timer = new System.Windows.Forms.Timer(this.components);
+			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_tools_req_acct_update = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_req_trade_history = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.ContentPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
@@ -268,6 +301,7 @@ namespace Tradee
 			// 
 			this.m_dc.ActiveContent = null;
 			this.m_dc.ActiveDockable = null;
+			this.m_dc.ActivePane = null;
 			this.m_dc.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_dc.Location = new System.Drawing.Point(0, 0);
 			this.m_dc.Name = "m_dc";
@@ -279,7 +313,8 @@ namespace Tradee
 			// 
 			this.m_menu.Dock = System.Windows.Forms.DockStyle.None;
 			this.m_menu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_menu_file});
+            this.m_menu_file,
+            this.m_menu_tools});
 			this.m_menu.Location = new System.Drawing.Point(0, 0);
 			this.m_menu.Name = "m_menu";
 			this.m_menu.Size = new System.Drawing.Size(906, 24);
@@ -288,29 +323,50 @@ namespace Tradee
 			// m_menu_file
 			// 
 			this.m_menu_file.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_menu_file_req_acct,
-            this.m_menu_file_sep0,
             this.m_menu_file_exit});
 			this.m_menu_file.Name = "m_menu_file";
 			this.m_menu_file.Size = new System.Drawing.Size(37, 20);
 			this.m_menu_file.Text = "&File";
 			// 
-			// m_menu_file_req_acct
-			// 
-			this.m_menu_file_req_acct.Name = "m_menu_file_req_acct";
-			this.m_menu_file_req_acct.Size = new System.Drawing.Size(164, 22);
-			this.m_menu_file_req_acct.Text = "&Request Account";
-			// 
-			// m_menu_file_sep0
-			// 
-			this.m_menu_file_sep0.Name = "m_menu_file_sep0";
-			this.m_menu_file_sep0.Size = new System.Drawing.Size(161, 6);
-			// 
 			// m_menu_file_exit
 			// 
 			this.m_menu_file_exit.Name = "m_menu_file_exit";
-			this.m_menu_file_exit.Size = new System.Drawing.Size(164, 22);
+			this.m_menu_file_exit.Size = new System.Drawing.Size(152, 22);
 			this.m_menu_file_exit.Text = "E&xit";
+			// 
+			// m_menu_tools
+			// 
+			this.m_menu_tools.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_tools_simulate,
+            this.toolStripSeparator1,
+            this.m_menu_tools_req_acct_update,
+            this.m_menu_tools_req_trade_history});
+			this.m_menu_tools.Name = "m_menu_tools";
+			this.m_menu_tools.Size = new System.Drawing.Size(47, 20);
+			this.m_menu_tools.Text = "&Tools";
+			// 
+			// m_menu_tools_simulate
+			// 
+			this.m_menu_tools_simulate.Name = "m_menu_tools_simulate";
+			this.m_menu_tools_simulate.Size = new System.Drawing.Size(205, 22);
+			this.m_menu_tools_simulate.Text = "&Simulate";
+			// 
+			// toolStripSeparator1
+			// 
+			this.toolStripSeparator1.Name = "toolStripSeparator1";
+			this.toolStripSeparator1.Size = new System.Drawing.Size(202, 6);
+			// 
+			// m_menu_tools_req_acct_update
+			// 
+			this.m_menu_tools_req_acct_update.Name = "m_menu_tools_req_acct_update";
+			this.m_menu_tools_req_acct_update.Size = new System.Drawing.Size(205, 22);
+			this.m_menu_tools_req_acct_update.Text = "Request &Account Update";
+			// 
+			// m_menu_tools_req_trade_history
+			// 
+			this.m_menu_tools_req_trade_history.Name = "m_menu_tools_req_trade_history";
+			this.m_menu_tools_req_trade_history.Size = new System.Drawing.Size(205, 22);
+			this.m_menu_tools_req_trade_history.Text = "Request Trade &History";
 			// 
 			// MainUI
 			// 

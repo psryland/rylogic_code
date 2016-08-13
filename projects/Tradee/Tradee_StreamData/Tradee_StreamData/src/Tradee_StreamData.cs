@@ -1,18 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Windows.Forms;
-using System.Windows.Threading;
 using cAlgo.API;
-using cAlgo.API.Internals;
 using pr.extn;
-using pr.util;
-using Tradee;
 
-namespace cAlgo
+namespace Tradee
 {
 	/// <summary>This bot streams market data to 'Tradee'</summary>
 	[Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.FullAccess)]

@@ -64,6 +64,7 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="src\MarketDataSeries.cs" />
+    <Compile Include="src\MessageHandler.cs" />
     <Compile Include="src\Settings.cs" />
     <Compile Include="src\TradeeBotModel.cs" />
     <Compile Include="src\TradeeBotUI.cs">

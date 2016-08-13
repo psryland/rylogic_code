@@ -4,6 +4,8 @@
 # Compile and execute cpp files
 # Specify command line options using special comments: //@
 # e.g.
+#    //RELEASE = build in release mode
+#    //DEBUG = build in debug mode (default)
 #    //@ /I"P:\include" /W4 /DPR_DBG=0
 #    //Copy lib.dll dst_path\
 #    #include <iostream>
@@ -38,9 +40,6 @@ DefaultSwitches = [
 	"/Zc:forScope"        ,# language conformance: for loop scope
 	"/Zc:auto"            ,# language conformance: auto
 	"/Zc:inline"          ,# language conformance: inline
-	"/Od"                 ,# optimisation: disabled
-	"/Ob0"                ,# optimisation: inline expansion depth
-	"/Oy-"                ,# optimisation: disable frame pointer omission
 	"/MP"                 ,# multi processor compiling
 	"/MTd"                ,# link with LIBCMTD.LIB
 	"/openmp"             ,# enable OpenMP 2.0 language extensions
@@ -168,11 +167,14 @@ def SetupVCEnvironment(_32bit = True):
 # Opens a C++ source file and scans for lines beginning with:
 #  //@ = cl.exe command line option
 #  //Copy <src> <dst> = Post build copy file
+#  //RELEASE = build in release mode
+#  //DEBUG = build in debug mode (default)
 # Stops scanning at the first line that begins with '#'
 # Returns the text on those lines as command line options that can be passed to cl.exe
 def ExtractFileOptions(filepath:str):
-	sw   = [] # Addition compiler switches
-	copy = [] # Post-build copy pairs
+	sw    = []   # Addition compiler switches
+	copy  = []   # Post-build copy pairs
+	debug = None # Debug mode by default
 	with open(filepath, encoding="utf-8") as f:
 		for line in f:
 			if len(line) == 0: continue;
@@ -181,7 +183,11 @@ def ExtractFileOptions(filepath:str):
 				sw += shlex.split(line[3:])
 			if line.startswith("//Copy"):
 				copy += [shlex.split(line[6:])]
-	return sw, copy;
+			if line.startswith("//DEBUG"):
+				debug = True
+			if line.startswith("//RELEASE"):
+				debug = False
+	return sw, copy, debug;
 
 # Compile the given C++ file
 # The source file can specify additional compiler switches by having special
@@ -218,7 +224,27 @@ def Compile(
 	os.chdir(outdir)
 
 	# Extract info from the file 
-	additional_sw, copy = ExtractFileOptions(src_file);
+	additional_sw, copy, dbg = ExtractFileOptions(src_file)
+
+	# Adjust switches for debug/release
+	if dbg != None: debug = dbg
+	if debug:
+		sw += [
+			"/Od" , # optimisation: disabled
+			"/Ob0", # optimisation: inline expansion depth
+			"/Oy-", # optimisation: disable frame pointer omission
+			]	
+	else:
+		sw.remove("/RTC1")
+		sw += [
+			"/Ox" , # optimisation: full
+			"/Ob2", # optimisation: inline any suitable
+			"/Oi" , # optimisation: enable intrinsics
+			"/Ot" , # optimisation: favour fast code
+			"/Oy" , # optimisation: omit frame pointers
+			"/GT" , # optimisation: enable fiber safe optimisations
+			"/GL" , # optimisation: whole program optimisation
+			] 
 	
 	# Generate the command line switches
 	args = []

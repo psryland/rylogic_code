@@ -18,7 +18,7 @@ namespace Tradee
 		private MemoryStream m_ibuf;
 				
 		/// <summary>Base class for pipe connections between Tradee and a trade data source</summary>
-		protected TradeePipe(Action<object> dispatch_msg)
+		protected TradeePipe(Action<ITradeeMsg> dispatch_msg)
 		{
 			DispatchMsg = dispatch_msg;
 			m_main_thread = Dispatcher.CurrentDispatcher;
@@ -27,8 +27,10 @@ namespace Tradee
 		}
 		public virtual void Dispose()
 		{
+			m_disposed = true;
 			Disconnect();
 		}
+		protected bool m_disposed;
 
 		/// <summary>Run 'action' in the main thread context</summary>
 		protected void RunOnMainThread(Action action)
@@ -61,7 +63,7 @@ namespace Tradee
 				AssertMainThread();
 
 				// Try to reconnect the pipe on demand
-				if (m_pipe == null || !m_pipe.IsConnected)
+				if ((m_pipe == null || !m_pipe.IsConnected) && !m_disposed)
 				{
 					try
 					{
@@ -101,6 +103,7 @@ namespace Tradee
 				if (m_pipe != null)
 				{
 					Debug.WriteLine("TradeePipe connected");
+					Debug.Assert(!m_disposed);
 
 					// When a new pipe is assigned, start an async read call of zero bytes, to peek for data
 					var buf = new byte[1024];
@@ -235,8 +238,12 @@ namespace Tradee
 						if (crc != br.ReadInt32())
 							throw new InvalidDataException(string.Format("Checksum failure for message type {0}", msg_type));
 
-						// Handle the received message
-						RunOnMainThread(() => DispatchMsg(msg));
+						// Handle the received message (If we haven't been disposed in the meantime)
+						RunOnMainThread(() =>
+						{
+							if (Pipe == null) return;
+							DispatchMsg(msg);
+						});
 
 						// Consume bytes from the front of 'm_ibuf'
 						var remaining = (int)(m_ibuf.Length - m_ibuf.Position);
@@ -291,7 +298,7 @@ namespace Tradee
 		}
 
 		/// <summary>The callback function to send received messages to</summary>
-		protected Action<object> DispatchMsg
+		protected Action<ITradeeMsg> DispatchMsg
 		{
 			get;
 			private set;
@@ -312,13 +319,14 @@ namespace Tradee
 		/// Create a connection to the 'Tradee' application.
 		/// 'DispatchMsg' is a function provided by the trade data source to handle
 		/// requests sent out from 'Tradee'.</summary>
-		public TradeeProxy(Action<object> DispatchMsg)
+		public TradeeProxy(Action<ITradeeMsg> DispatchMsg)
 			:base(DispatchMsg)
 		{}
 
 		/// <summary>Connect to the server</summary>
 		protected override PipeStream ConnectPipe()
 		{
+			if (m_disposed) return null;
 			var pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
 			pipe.Connect(10);
 			return pipe;
@@ -328,7 +336,7 @@ namespace Tradee
 	/// <summary>Represents a connection from the 'Tradee' application to a trade data source</summary>
 	public class TradeeClient :TradeePipe
 	{
-		public TradeeClient(Action<object> dispatch_msg)
+		public TradeeClient(Action<ITradeeMsg> dispatch_msg)
 			:base(dispatch_msg)
 		{
 			ThreadPool.QueueUserWorkItem(ListenForConnections);
@@ -346,7 +354,11 @@ namespace Tradee
 				// Wait for connection
 				ar.AsyncWaitHandle.WaitOne();
 				pipe.EndWaitForConnection(ar);
-				RunOnMainThread(() => Pipe = pipe);
+				RunOnMainThread(() =>
+				{
+					if (m_disposed) return;
+					Pipe = pipe;
+				});
 			}
 			catch (Exception ex)
 			{

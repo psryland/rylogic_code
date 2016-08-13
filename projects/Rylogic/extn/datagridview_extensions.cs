@@ -32,6 +32,18 @@ namespace pr.extn
 	/// </summary>
 	public static class DataGridViewEx
 	{
+		[Flags] public enum EEditOptions
+		{
+			Copy      = 1 << 0,
+			Cut       = 1 << 1,
+			Paste     = 1 << 2,
+			Delete    = 1 << 3,
+			SelectAll = 1 << 4,
+
+			StdEdit = Copy | Cut | Paste | SelectAll,
+			All = StdEdit | Delete,
+		}
+
 		/// <summary>Grid select all implementation. (for consistency)</summary>
 		public static void SelectAll(DataGridView grid)
 		{
@@ -128,6 +140,18 @@ namespace pr.extn
 			}
 		}
 
+		/// <summary>Grid paste implementation that pastes over existing cells within the current size limits of the grid</summary>
+		public static bool Paste(DataGridView grid)
+		{
+			return PasteReplace(grid);
+		}
+
+		/// <summary>Grid paste implementation that pastes over existing cells within the current size limits of the grid</summary>
+		public static void Paste(object sender, EventArgs e)
+		{
+			PasteReplace(sender, e);
+		}
+
 		/// <summary>Grid delete implementation. Deletes selected items from the grid setting cell values to null</summary>
 		public static void Delete(DataGridView grid)
 		{
@@ -157,7 +181,7 @@ namespace pr.extn
 			}
 		}
 
-		/// <summary>Grid paste implementation that pastes over existing cells within the current size limits of the grid. Must be 1 cell selected only</summary>
+		/// <summary>Grid paste implementation that pastes over existing cells within the current size limits of the grid</summary>
 		public static bool PasteReplace(DataGridView grid)
 		{
 			if (grid.SelectedCells.Count == 1)
@@ -234,7 +258,7 @@ namespace pr.extn
 			return true;
 		}
 
-		/// <summary>Paste over existing cells within the current size limits of the grid. Must be 1 cell selected only. Attach to the KeyDown handler</summary>
+		/// <summary>Paste over existing cells within the current size limits of the grid. Attach to the KeyDown handler</summary>
 		public static void PasteReplace(object sender, EventArgs e)
 		{
 			var dgv = (DataGridView)sender;
@@ -325,6 +349,44 @@ namespace pr.extn
 			Cut         (sender, e);
 			Copy        (sender, e);
 			PasteReplace(sender, e);
+		}
+
+		/// <summary>Create a context menu with basic Copy,Cut,Paste,Delete options</summary>
+		public static ContextMenuStrip CMenu(DataGridView grid, EEditOptions edit_options)
+		{
+			var cmenu = new ContextMenuStrip();
+			using (cmenu.SuspendLayout(false))
+			{
+				if (edit_options.HasFlag(EEditOptions.Copy))
+				{
+					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Copy"));
+					opt.Click += (s,a) => Copy(grid);
+				}
+				if (edit_options.HasFlag(EEditOptions.Cut))
+				{
+					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Cut"));
+					opt.Click += (s,a) => Cut(grid);
+				}
+				if (edit_options.HasFlag(EEditOptions.Paste))
+				{
+					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Paste"));
+					opt.Click += (s,a) => Paste(grid);
+				}
+				cmenu.Items.AddSeparator();
+				if (edit_options.HasFlag(EEditOptions.Delete))
+				{
+					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Delete"));
+					opt.Click += (s,a) => Delete(grid);
+				}
+				cmenu.Items.AddSeparator();
+				if (edit_options.HasFlag(EEditOptions.SelectAll))
+				{
+					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Select All"));
+					opt.Click += (s,a) => SelectAll(grid);
+				}
+				cmenu.Items.TidySeparators();
+			}
+			return cmenu;
 		}
 
 		/// <summary>

@@ -157,8 +157,9 @@ namespace pr.gui
 		private Control m_pin_target;
 
 		/// <summary>Display the UI (even if already visible)</summary>
-		public new virtual void Show()
+		public new void Show()
 		{
+			// Not virtual, sub-classes should override the other overload
 			Show(Owner);
 		}
 		public new virtual void Show(IWin32Window owner)
@@ -194,36 +195,37 @@ namespace pr.gui
 			var accept = AcceptButton as Button;
 			if (accept != null)
 				accept.Click += (s,a) =>
-					{
-						if (s.As<Button>().DialogResult == DialogResult.None) return;
-						DialogResult = s.As<Button>().DialogResult;
-						Close();
-					};
+				{
+					if (s.As<Button>().DialogResult == DialogResult.None) return;
+					DialogResult = s.As<Button>().DialogResult;
+					Close();
+				};
 
 			// Close on cancel button
 			var cancel = CancelButton as Button;
 			if (cancel != null)
 				cancel.Click += (s,a) =>
-					{
-						if (s.As<Button>().DialogResult == DialogResult.None) return;
-						DialogResult = s.As<Button>().DialogResult;
-						Close();
-					};
+				{
+					if (s.As<Button>().DialogResult == DialogResult.None) return;
+					DialogResult = s.As<Button>().DialogResult;
+					Close();
+				};
 
+			// On first load, set the position of the form based on the pin location
 			if (m_ofs == Point.Empty)
 			{
 				switch (m_pin)
 				{
 				default: throw new Exception("Unknown pin location '%d'".Fmt(m_pin));
-				case EPin.TopLeft:      m_ofs = new Point(0             , 0); break;
+				case EPin.TopLeft:      m_ofs = new Point(-Size.Width   , 0); break;
 				case EPin.TopCentre:    m_ofs = new Point(-Size.Width/2 , 0); break;
-				case EPin.TopRight:     m_ofs = new Point(-Size.Width   , 0); break;
-				case EPin.BottomLeft:   m_ofs = new Point(0             , -Size.Height); break;
+				case EPin.TopRight:     m_ofs = new Point(0             , 0); break;
+				case EPin.BottomLeft:   m_ofs = new Point(-Size.Width   , -Size.Height); break;
 				case EPin.BottomCentre: m_ofs = new Point(-Size.Width/2 , -Size.Height); break;
-				case EPin.BottomRight:  m_ofs = new Point(-Size.Width   , -Size.Height); break;
-				case EPin.CentreLeft:   m_ofs = new Point(0             , -Size.Height/2); break;
+				case EPin.BottomRight:  m_ofs = new Point(0             , -Size.Height); break;
+				case EPin.CentreLeft:   m_ofs = new Point(-Size.Width   , -Size.Height/2); break;
 				case EPin.Centre:       m_ofs = new Point(-Size.Width/2 , -Size.Height/2); break;
-				case EPin.CentreRight:  m_ofs = new Point(-Size.Width   , -Size.Height/2); break;
+				case EPin.CentreRight:  m_ofs = new Point(0             , -Size.Height/2); break;
 				}
 			}
 			UpdateLocation();

@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows.Forms;
 using pr.extn;
@@ -65,6 +66,12 @@ namespace Tradee
 		protected Settings Settings
 		{
 			get { return Model.Settings; }
+		}
+
+		/// <summary>Invalidate this control and all children</summary>
+		protected void Invalidate(object sender, EventArgs e)
+		{
+			Invalidate(true);
 		}
 	}
 }

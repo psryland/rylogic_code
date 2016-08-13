@@ -792,7 +792,7 @@ namespace pr.gui
 		private int ReadValueAt(int x)
 		{
 			var frac = Maths.Clamp(Maths.Frac(m_btn_width/2, x, Width - m_btn_width/2), 0f, 1f);
-			return (int)Maths.Lerp(Range.Begin, Range.End, frac);
+			return Maths.Lerp(Range.Begini, Range.Endi, frac);
 		}
 
 		/// <summary>Paint the track bar</summary>
