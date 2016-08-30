@@ -116,40 +116,45 @@ namespace pr
 			return CompressDelimiters(str, Delim<traits<Str>::value_type>(nullptr), ws_char, preserve_newlines);
 		}
 
-		// Convert a string into an array of tokens
-		template <typename Str, typename StrCont, typename Char = traits<Str>::value_type> void Tokenise(Str const& str, StrCont& tokens, Char const* delim)
+		// Convert a string to tokens, returned each token via 'token_cb'.
+		// token_cb(char const* s, char const* e);
+		template <typename Str, typename TokenCB, typename Char = traits<Str>::value_type> void TokeniseCB(Str const& str, TokenCB token_cb, Char const* delim, bool remove_quotes = true)
 		{
-			using StrOut = StrCont::value_type;
-
-			auto i = BeginC(str);
-			auto iend = EndC(str);
-			for (; i != iend; ++i)
+			auto s = BeginC(str);
+			auto end = EndC(str);
+			for (; s != end; ++s)
 			{
-				if (*i == Char('"')) // Extract whole strings
+				// Extract whole strings
+				if (*s == '"')
 				{
-					StrOut tok;
-					for (++i; i != iend && *i != Char('"'); ++i)
-						Append(tok, *i);
-
-					tokens.push_back(tok);
-					if (i == iend)
-						return;
+					auto e = s;
+					if (remove_quotes) ++s;
+					for (++e; e != end && *e != '"'; ++e) {}
+					if (*e != '"') throw std::exception("Partial literal string");
+					token_cb(s, e + !remove_quotes);
+					s = ++e;
+					continue;
 				}
-				else if (*FindChar(delim, *i) == 0)
-				{
-					StrOut tok;
-					for (; i != iend && *FindChar(delim, *i) == 0; ++i)
-						Append(tok, *i);
 
-					tokens.push_back(tok);
-					if (i == iend)
-						return;
+				// Extract blocks of non-delimiters
+				if (*FindChar(delim, *s) == 0)
+				{
+					auto e = s;
+					for (; e != end && *FindChar(delim, *e) == 0; ++e) {}
+					token_cb(s, e);
+					s = --e;
+					continue;
 				}
 			}
 		}
-		template <typename Str, typename StrCont> inline void Tokenise(Str const& str, StrCont& tokens)
+		template <typename Str, typename StrCont, typename Char = traits<Str>::value_type> void Tokenise(Str const& str, StrCont& tokens, Char const* delim, bool remove_quotes = true)
 		{
-			return Tokenise(str, tokens, Delim<traits<Str>::value_type>());
+			using StrOut = StrCont::value_type;
+			TokeniseCB(str, [&](Char const* s, Char const* e){ tokens.push_back(StrOut(s, e)); }, delim, remove_quotes);
+		}
+		template <typename Str, typename StrCont> inline void Tokenise(Str const& str, StrCont& tokens, bool remove_quotes = true)
+		{
+			return Tokenise(str, tokens, Delim<traits<Str>::value_type>(), remove_quotes);
 		}
 
 		// Strip sections from a string
@@ -210,7 +215,7 @@ namespace pr
 			auto what_len = Length(what);
 			auto with_len = Length(with);
 
-			// This in an inplace substitution so we need to copy from the
+			// This in an in place substitution so we need to copy from the
 			// start or end depending on whether 'with' is longer or shorter than 'what'
 			auto count = size_t();
 			if (what_len >= with_len)

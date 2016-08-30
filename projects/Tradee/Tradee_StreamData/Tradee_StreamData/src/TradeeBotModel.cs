@@ -18,11 +18,6 @@ namespace Tradee
 {
 	public partial class TradeeBotModel :IDisposable
 	{
-		/// <summary>The main thread dispatcher</summary>
-		private Dispatcher m_main_thread;
-
-		/// <summary>A cache of symbol information interfaces</summary>
-		private Cache<string,Symbol> m_sym_cache;
 
 		public TradeeBotModel(Robot calgo, Settings settings)
 		{
@@ -36,7 +31,7 @@ namespace Tradee
 
 			// The collection of transmitters
 			Transmitters = new BindingSource<Transmitter> { DataSource = new BindingListEx<Transmitter>() };
-			Transmitters.AddRange(Settings.Transmitters.Select(trans => new Transmitter(this, trans.Pair, trans)));
+			Transmitters.AddRange(Settings.Transmitters.Select(trans => new Transmitter(this, trans.SymbolCode, trans)));
 			Transmitters.Sort(BySymbolCode);
 
 			// Initiate the connection by sending account data
@@ -133,21 +128,24 @@ namespace Tradee
 					Debug.WriteLine(ex.Message);
 				}
 			}
+
+			// Remove dead transmitters
+			Transmitters.RemoveIf(x => x.Invalid);
 		}
 
 		/// <summary>Return the transmitter for 'pair' if it exists, otherwise null</summary>
-		public Transmitter FindTransmitter(ETradePairs pair)
+		public Transmitter FindTransmitter(string sym)
 		{
 			// If the pair is already in the list, set it as the current pair
-			var idx = Transmitters.IndexOf(x => x.Pair == pair);
+			var idx = Transmitters.IndexOf(x => x.SymbolCode == sym);
 			return idx != -1 ? Transmitters[idx] : null;
 		}
 
 		/// <summary>Add a new transmitter (unless it already exists)</summary>
-		public Transmitter AddTransmitter(ETradePairs pair)
+		public Transmitter AddTransmitter(string sym)
 		{
 			// If the pair is already in the list, set it as the current pair
-			var trans = FindTransmitter(pair);
+			var trans = FindTransmitter(sym);
 			if (trans != null)
 			{
 				Transmitters.Current = trans;
@@ -155,17 +153,17 @@ namespace Tradee
 			}
 
 			// Look for settings for this pair
-			var s_idx = Settings.Transmitters.IndexOf(x => x.Pair == pair);
+			var s_idx = Settings.Transmitters.IndexOf(x => x.SymbolCode == sym);
 			if (s_idx == -1)
 			{
 				// If no settings exist, create some
 				var list = Settings.Transmitters.ToList();
-				list.Add(new TransmitterSettings(pair) { TimeFrames = Settings.DefaultTimeFrames });
+				list.Add(new TransmitterSettings(sym) { TimeFrames = Settings.DefaultTimeFrames });
 				Settings.Transmitters = list.ToArray();
 				s_idx = list.Count - 1;
 			}
 
-			trans = Transmitters.Add2(new Transmitter(this, pair, Settings.Transmitters[s_idx]));
+			trans = Transmitters.Add2(new Transmitter(this, sym, Settings.Transmitters[s_idx]));
 			Transmitters.Sort(BySymbolCode);
 			return trans;
 		}
@@ -180,20 +178,21 @@ namespace Tradee
 		public Symbol GetSymbol(string code)
 		{
 			return m_sym_cache.Get(code, c =>
+			{
+				Symbol res = null;
+				using (var wait = new ManualResetEvent(false))
 				{
-					Symbol res = null;
-					using (var wait = new ManualResetEvent(false))
+					CAlgo.BeginInvokeOnMainThread(() =>
 					{
-						CAlgo.BeginInvokeOnMainThread(() =>
-						{
-							res = CAlgo.MarketData.GetSymbol(code);
-							wait.Set();
-						});
-						wait.WaitOne();
-						return res;
-					}
-				});
+						res = CAlgo.MarketData.GetSymbol(code);
+						wait.Set();
+					});
+					wait.WaitOne();
+					return res;
+				}
+			});
 		}
+		private Cache<string,Symbol> m_sym_cache;
 
 		/// <summary>Return the series for a given symbol and time frame</summary>
 		public MarketSeries GetSeries(Symbol sym, TimeFrame tf)
@@ -286,6 +285,7 @@ namespace Tradee
 			else
 				m_main_thread.BeginInvoke(action, arg);
 		}
+		private Dispatcher m_main_thread;
 
 		/// <summary>Send a message to Tradee</summary>
 		public bool Post<T>(T msg) where T:ITradeeMsg

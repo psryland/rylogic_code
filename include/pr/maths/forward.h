@@ -107,6 +107,18 @@ namespace pr
 	struct ISize;
 	struct Frustum;
 
+	// Maths library build options
+	struct MathsBuildOptions
+	{
+		int PrMathsUseIntrinsics;
+		int PrMathsDirectMath;
+
+		MathsBuildOptions()
+			:PrMathsUseIntrinsics(PR_MATHS_USE_INTRINSICS)
+			,PrMathsDirectMath(PR_MATHS_USE_DIRECTMATH)
+		{}
+	};
+
 	namespace maths
 	{
 		// Allowed vector component types

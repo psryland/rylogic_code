@@ -9,6 +9,7 @@ struct MainUI :Form
 {
 	StatusBar   m_status;
 	View3DPanel m_view3d;
+	int m_steps;
 
 	Body m_body0;
 	Body m_body1;
@@ -22,11 +23,30 @@ struct MainUI :Form
 	{
 		View3D_AddObject(m_view3d.m_win, m_body0.m_gfx);
 		View3D_AddObject(m_view3d.m_win, m_body1.m_gfx);
+
+		//View3D_PositionCamera(m_view3d.m_win, View3DV4{1,1,-2,1}, View3DV4{1,1,0,1}, View3DV4{0,1,0,0});
+		Reset();
+
+		m_view3d.Key += [&](Control&, KeyEventArgs const& args)
+		{
+			if (args.m_down && args.m_vk_key == 'R')
+				Reset();
+			if (args.m_down && args.m_vk_key == 'S')
+				m_steps = 1;
+			if (args.m_down && args.m_vk_key == 'F')
+				m_steps = 0xFFFFFFFF;
+		};
+	}
+
+	void Reset()
+	{
+		m_steps = 0;
 	}
 
 	// Step by the main loop at 120Hz
 	void Step(double elapsed_seconds)
 	{
+		(void)elapsed_seconds;
 		//  // Apply gravity: GMm/r^2
 		//  float const G = 1.0f;
 		//  auto sep = m_body0.O2W().pos - m_body1.O2W().pos;
@@ -39,11 +59,11 @@ struct MainUI :Form
 		//  	m_body1.m_rb.m_force -= force;
 		//  }
 
-		m_body0.ApplyForceWS(v4XAxis, v4XAxis, v4Zero);
+//		m_body0.ApplyForceWS(v4XAxis, v4XAxis, v4Zero);
 
-		// Evolve the bodies
-		for (auto body : {&m_body0, &m_body1})
-			Evolve(*body, elapsed_seconds);
+//		// Evolve the bodies
+//		for (auto body : {&m_body0, &m_body1})
+//			Evolve(*body, elapsed_seconds);
 	}
 
 	// Render a frame

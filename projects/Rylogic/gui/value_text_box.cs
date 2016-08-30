@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 using pr.extn;
@@ -6,6 +7,7 @@ using pr.util;
 
 namespace pr.gui
 {
+	[Serializable]
 	public class ValueBox :TextBox
 	{
 		// Notes:
@@ -39,9 +41,13 @@ namespace pr.gui
 		}
 
 		/// <summary>The type of 'Value'</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public Type ValueType { get; set; }
 
 		/// <summary>Returns true if the text in the control represents a valid value</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public Func<string, bool> ValidateText
 		{
 			get { return m_validate_text ?? (x => { try { Convert.ChangeType(x, ValueType); return true; } catch { return false; } }); }
@@ -50,6 +56,8 @@ namespace pr.gui
 		private Func<string, bool> m_validate_text;
 
 		/// <summary>Convert a string to the value type</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public Func<string, object> TextToValue
 		{
 			get { return m_text_to_value ?? (x => { try { return Convert.ChangeType(x, ValueType); } catch { return null; } }); }
@@ -58,6 +66,8 @@ namespace pr.gui
 		private Func<string, object> m_text_to_value;
 
 		/// <summary>Convert the value type to a string</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public Func<object, string> ValueToText
 		{
 			get { return m_value_to_text ?? (x => { return x.ToString(); }); }

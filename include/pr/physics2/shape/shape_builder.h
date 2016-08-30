@@ -12,6 +12,9 @@ namespace pr
 	namespace physics
 	{
 		// An object for building collision shapes
+		// Note: the shape builder is part of the physics library, not the collision library
+		// because it's main job is to determine the inertia properties of the shape, which
+		// depends on physics materials, inertia matrices, etc.
 		struct ShapeBuilder
 		{
 			// Settings for the shape builder

@@ -159,7 +159,8 @@ namespace pr.gui
 		protected override void Dispose(bool disposing)
 		{
 			if (Options.DisposeContent)
-				Util.DisposeAll(m_all_content.Select(x => x.Owner));
+				using (this.SuspendLayout(false))
+					Util.DisposeAll(m_all_content.Select(x => x.Owner));
 
 			Root = null;
 			m_all_content.Clear();
@@ -1318,11 +1319,25 @@ namespace pr.gui
 
 			/// <summary>Raised whenever a child (pane or branch) is added to or removed from this sub tree</summary>
 			public event EventHandler<TreeChangedEventArgs> TreeChanged;
-			internal void OnTreeChanged(TreeChangedEventArgs args)
+			private void RaiseTreeChanged(TreeChangedEventArgs args)
 			{
+				m_sig_tree_changed = false;
 				TreeChanged.Raise(this, args);
 				(Parent as Branch)?.OnTreeChanged(args);
 			}
+			internal void OnTreeChanged(TreeChangedEventArgs args)
+			{
+				if (!IsHandleCreated)
+				{
+					RaiseTreeChanged(args);
+				}
+				else if (!m_sig_tree_changed)
+				{
+					m_sig_tree_changed = true;
+					this.BeginInvoke(() => RaiseTreeChanged(args));
+				}
+			}
+			private bool m_sig_tree_changed;
 
 			/// <summary>Position the child controls</summary>
 			protected override void OnLayout(LayoutEventArgs levent)
@@ -1439,22 +1454,22 @@ namespace pr.gui
 				if (owner == null)
 					throw new ArgumentNullException("The owning dock container cannot be null");
 
-				SetStyle(ControlStyles.Selectable, false);
-				SetStyle(ControlStyles.ContainerControl, true);
-				AutoScaleMode = AutoScaleMode.Inherit;
-				AutoScaleDimensions = new SizeF(6F, 13F);
-				AutoScroll = true;
-				Text = GetType().FullName;
-				DockContainer = owner;
-				ApplyToVisibleContentOnly = false;
-
-				// Create the collection that manages the content within this pane
-				Content = new BindingSource<DockControl>{DataSource = new BindingListEx<DockControl>{PerItemClear = true}};
-				Content.ListChanging += HandleContentListChanged;
-				Content.PositionChanged += HandleContentPositionChanged;
-
 				using (this.SuspendLayout(false))
 				{
+					SetStyle(ControlStyles.Selectable, false);
+					SetStyle(ControlStyles.ContainerControl, true);
+					AutoScaleMode = AutoScaleMode.Inherit;
+					AutoScaleDimensions = new SizeF(6F, 13F);
+					AutoScroll = true;
+					Text = GetType().FullName;
+					DockContainer = owner;
+					ApplyToVisibleContentOnly = false;
+
+					// Create the collection that manages the content within this pane
+					Content = new BindingSource<DockControl>{DataSource = new BindingListEx<DockControl>{PerItemClear = true}};
+					Content.ListChanging += HandleContentListChanged;
+					Content.PositionChanged += HandleContentPositionChanged;
+
 					TabStripCtrl = new TabStripControl(this);
 					TitleCtrl    = new PaneTitleControl(this);
 				}

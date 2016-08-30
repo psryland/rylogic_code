@@ -37,27 +37,4 @@ namespace Tradee
 			return state == Trade.EState.Visualising || state == Trade.EState.PendingOrder;
 		}
 	}
-
-	public static class SqlExpr
-	{
-		/// <summary>Insert or replace a candle in table 'time_frame'</summary>
-		public static string InsertCandle(ETimeFrame time_frame)
-		{
-			return Str.Build(
-				"insert or replace into ",time_frame," (",
-				"[",nameof(Candle.Timestamp),"],",
-				"[",nameof(Candle.Open     ),"],",
-				"[",nameof(Candle.High     ),"],",
-				"[",nameof(Candle.Low      ),"],",
-				"[",nameof(Candle.Close    ),"],",
-				"[",nameof(Candle.Volume   ),"]) ",
-				"values (?,?,?,?,?,?)");
-		}
-
-		/// <summary>Return the properties of a candle to match an InsertCandle sql statement</summary>
-		public static IEnumerable<object> InsertCandleParams(Candle candle)
-		{
-			return new object[] { candle.Timestamp, candle.Open, candle.High, candle.Low, candle.Close, candle.Volume };
-		}
-	}
 }

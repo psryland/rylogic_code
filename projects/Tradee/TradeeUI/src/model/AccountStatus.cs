@@ -86,13 +86,18 @@ namespace Tradee
 		}
 		private double m_equity;
 
+		/// <summary>The account leverage</summary>
+		public int Leverage
+		{
+			get { return m_leverage; }
+			set { SetProp(ref m_leverage, value, nameof(Leverage)); }
+		}
+		private int m_leverage;
 
 	
 			///// <summary>The free margin of the current account.</summary>
 			//public double FreeMargin { get; set; }
 
-			///// <summary>The account leverage</summary>
-			//public int Leverage { get; set; }
 
 			///// <summary>Represents the margin of the current account.</summary>
 			//public double Margin { get; set; }
@@ -160,6 +165,7 @@ namespace Tradee
 			Currency  = acct.Currency;
 			Balance   = acct.Balance;
 			Equity    = acct.Equity;
+			Leverage  = acct.Leverage;
 
 			if (acct_change)
 				AccountChanged.Raise(this);

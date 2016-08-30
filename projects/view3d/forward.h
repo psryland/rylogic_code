@@ -59,6 +59,7 @@ namespace view3d
 	typedef std::lock_guard<std::recursive_mutex> LockGuard;
 	typedef pr::StaticCB<void, wchar_t const*> ReportErrorCB;
 	typedef pr::StaticCB<void, Window*> SettingsChangedCB;
+	typedef pr::StaticCB<void, Window*> RenderingCB;
 	typedef std::vector<ReportErrorCB> ErrorCBStack;
 
 	#define PR_RDR_INST(x)\

@@ -26,6 +26,9 @@
     <Filter Include="pr\physics\shape">
       <UniqueIdentifier>{c5c98060-1da1-4e1b-b6bb-676deefe27ed}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\collision">
+      <UniqueIdentifier>{74f19a98-ec3e-4080-af50-742308ee4069}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\physics2/src\main.cpp">
@@ -80,6 +83,63 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\physics2\shape\shape_builder.h">
       <Filter>pr\physics\shape</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\col_box_vs_box.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\col_box_vs_line.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\col_sphere_vs_box.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\col_sphere_vs_sphere.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\collision.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\ldr_helper.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\penetration.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\ray.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\ray_cast.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\ray_cast_result.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\shape.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\shape_array.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\shape_box.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\shape_line.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\shape_polytope.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\shape_sphere.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\shape_triangle.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\shapes.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\support.h">
+      <Filter>pr\collision</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

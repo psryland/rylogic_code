@@ -304,6 +304,27 @@ namespace pr.extn
 					list.RemoveAt(i);
 		}
 
+		/// <summary>Remove elements from the start of this list that satisfy 'pred'</summary>
+		public static void TrimStart<T>(this IList<T> list, Func<T,bool> pred)
+		{
+			int i; for (i = 0; i != list.Count && pred(list[i]); ++i) { }
+			list.RemoveRange(0, i);
+		}
+
+		/// <summary>Remove elements from the end of this list that satisfy 'pred'</summary>
+		public static void TrimEnd<T>(this IList<T> list, Func<T,bool> pred)
+		{
+			int i; for (i = list.Count; i != 0 && pred(list[i-1]); --i) {}
+			list.RemoveRange(i, list.Count - i);
+		}
+
+		/// <summary>Remove elements from the start and end of this list that satisfy 'pred'</summary>
+		public static void Trim<T>(this IList<T> list, Func<T,bool> pred)
+		{
+			list.TrimEnd(pred);
+			list.TrimStart(pred);
+		}
+
 		/// <summary>
 		/// Binary search using for an element using only a predicate function.
 		/// Returns the index of the element if found or the 2s-complement of the first

@@ -13,6 +13,10 @@ namespace Tradee
 	/// <summary>A collection of all orders</summary>
 	public class Positions :IDisposable
 	{
+		// Notes:
+		// - Trades are basically containers of orders for the same instrument
+		// - Trades are created/destroyed by this class, clients should add/remove orders
+
 		public Positions(MainModel model)
 		{
 			Model  = model;
@@ -157,6 +161,7 @@ namespace Tradee
 		private void UpdateTrades()
 		{
 			m_trades_invalidated = false;
+			if (Model == null) return;
 
 			// Create lists of trades per instrument.
 			// Once complete, go through existing trades looking for matches.
@@ -280,25 +285,18 @@ namespace Tradee
 						trade.Changed -= SignalChanged;
 						trade.Changed += SignalChanged;
 					}
-
 					SignalChanged();
 					break;
 				}
 			case ListChg.ItemAdded:
 				{
 					e.Item.Changed += SignalChanged;
-
 					SignalChanged();
 					break;
 				}
 			case ListChg.ItemRemoved:
 				{
-					// Safety first...
-					if (Bit.AnySet(e.Item.State, Trade.EState.PendingOrder|Trade.EState.ActivePosition))
-						throw new Exception("Cannot delete a trade with active or pending orders");
-
 					e.Item.Changed -= SignalChanged;
-
 					e.Item.Dispose();
 					SignalChanged();
 					break;
@@ -355,11 +353,27 @@ namespace Tradee
 	/// <summary>Common interface for Trades and Orders</summary>
 	public interface IPosition
 	{
+		/// <summary>The instrument being traded</summary>
+		Instrument Instrument { get; }
+
 		/// <summary>The symbol that this order is on</summary>
 		string SymbolCode { get; }
 
 		/// <summary>The type of trade</summary>
 		ETradeType TradeType { get; }
+
+		/// <summary>
+		/// The position entry time in UTC.
+		/// If the order is in EState Visualising or PendingOrder then this is the time that the server
+		/// would become aware of the trade (i.e. a pending order would be submitted). If Active or Closed
+		/// then this is the time that the trade was triggered.</summary>
+		DateTimeOffset EntryTimeUTC { get; }
+
+		/// <summary>Get/Set the amount lost (in base currency) if the stop loss is hit</summary>
+		double StopLossValue { get; }
+
+		/// <summary>Get/Set the amount gained (in account currency) if the take profit is hit</summary>
+		double TakeProfitValue { get; }
 
 		/// <summary>The amount traded by the position</summary>
 		long Volume { get; }

@@ -85,6 +85,22 @@ namespace pr
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
+
+		// Create other vector types
+		IVec4 w0() const
+		{
+			IVec4 r(x,y,z,0); // LValue because of alignment
+			return r;
+		}
+		IVec4 w1() const
+		{
+			IVec4 r(x,y,z,1); // LValue because of alignment
+			return r;
+		}
+		iv2 vec2(int i0, int i1) const
+		{
+			return iv2(arr[i0], arr[i1]);
+		}
 	};
 	using iv4 = IVec4;
 	static_assert(maths::is_vec4<iv4>::value, "");

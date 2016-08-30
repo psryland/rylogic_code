@@ -25,6 +25,13 @@ namespace pr
 
 		// Construct
 		Mat3x4() = default;
+		explicit Mat3x4(float x_)
+			:x(x_)
+			,y(x_)
+			,z(x_)
+		{
+			assert(maths::is_aligned(this));
+		}
 		Mat3x4(v4 const& x_, v4 const& y_, v4 const& z_)
 			:x(x_)
 			,y(y_)
@@ -32,12 +39,18 @@ namespace pr
 		{
 			assert(maths::is_aligned(this));
 		}
-		explicit Mat3x4(float x_)
-			:x(x_)
-			,y(x_)
-			,z(x_)
+		template <typename = void> Mat3x4(Quat const& q)
 		{
-			assert(maths::is_aligned(this));
+			assert("'quat' is a zero quaternion" && !IsZero(q));
+			auto s = 2.0f / Length4Sq(q);
+
+			float xs = q.x *  s, ys = q.y *  s, zs = q.z *  s;
+			float wx = q.w * xs, wy = q.w * ys, wz = q.w * zs;
+			float xx = q.x * xs, xy = q.x * ys, xz = q.x * zs;
+			float yy = q.y * ys, yz = q.y * zs, zz = q.z * zs;
+			x = v4(1.0f - (yy + zz), xy + wz, xz - wy, 0);
+			y = v4(xy - wz, 1.0f - (xx + zz), yz + wx, 0);
+			z = v4(xz + wy, yz - wx, 1.0f - (xx + yy), 0);
 		}
 		template <typename T, typename = maths::enable_if_v3<T>> Mat3x4(T const& v)
 			:Mat3x4(x_as<v4>(v), y_as<v4>(v), z_as<v4>(v))
@@ -151,39 +164,25 @@ namespace pr
 		// Create from an angular displacement vector. length = angle(rad), direction = axis
 		static Mat3x4 Rotation(v4 const& angular_displacement)
 		{
-			assert("'angular_displacement' should be a scaled direction vector" && FEql(angular_displacement.w, 0.0f));
+			assert("'angular_displacement' should be a scaled direction vector" && angular_displacement.w == 0);
 			auto len = Length3(angular_displacement);
-			return len > maths::tiny ? Mat3x4::Rotation(angular_displacement/len, len) : Mat3x4(v4XAxis, v4YAxis, v4ZAxis);
-		}
-
-		// Create from quaternion
-		template <typename Quat, typename = maths::enable_if_v4<Quat>> static Mat3x4 Rotation(Quat const& q)
-		{
-			assert("'quat' is a zero quaternion" && !IsZero(q));
-			auto s = 2.0f / Length4Sq(q);
-
-			float xs = q.x *  s, ys = q.y *  s, zs = q.z *  s;
-			float wx = q.w * xs, wy = q.w * ys, wz = q.w * zs;
-			float xx = q.x * xs, xy = q.x * ys, xz = q.x * zs;
-			float yy = q.y * ys, yz = q.y * zs, zz = q.z * zs;
-			return Mat3x4(
-				v4(1.0f - (yy + zz), xy + wz, xz - wy, 0),
-				v4(xy - wz, 1.0f - (xx + zz), yz + wx, 0),
-				v4(xz + wy, yz - wx, 1.0f - (xx + yy), 0));
+			return len > maths::tiny
+				? Mat3x4::Rotation(angular_displacement/len, len)
+				: Mat3x4(v4XAxis, v4YAxis, v4ZAxis);
 		}
 
 		// Create a transform representing the rotation from one vector to another.
 		static Mat3x4 Rotation(v4 const& from, v4 const& to)
 		{
-			assert("'from' and 'to' should be normalised" && IsNormal3(from) && IsNormal3(to));
+			assert(!FEql(from, v4Zero));
+			assert(!FEql(to  , v4Zero));
+			auto len = Length3(from) * Length3(to);
 
-			auto cos_angle = Dot3(from, to);
-			if (cos_angle >= 1.0f - maths::tiny)
-				return Mat3x4(v4XAxis, v4YAxis, v4ZAxis);
-			if (cos_angle <= maths::tiny - 1.0f)
-				return Mat3x4(-v4XAxis, -v4YAxis, -v4ZAxis);
+			auto cos_angle = Dot3(from, to) / len;
+			if (cos_angle >= 1.0f - maths::tiny) return Mat3x4(v4XAxis, v4YAxis, v4ZAxis);
+			if (cos_angle <= maths::tiny - 1.0f) return Mat3x4(-v4XAxis, -v4YAxis, -v4ZAxis);
 
-			auto axis_size_angle = Cross3(from, to);
+			auto axis_size_angle = Cross3(from, to) / len;
 			auto axis_norm = Normalise3(axis_size_angle);
 			return Rotation(axis_norm, axis_size_angle, cos_angle);
 		}

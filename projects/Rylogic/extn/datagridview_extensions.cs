@@ -40,8 +40,9 @@ namespace pr.extn
 			Delete    = 1 << 3,
 			SelectAll = 1 << 4,
 
-			StdEdit = Copy | Cut | Paste | SelectAll,
-			All = StdEdit | Delete,
+			ReadOnly  = Copy | SelectAll,
+			ReadWrite = ReadOnly | Cut | Paste,
+			All       = ReadWrite | Delete,
 		}
 
 		/// <summary>Grid select all implementation. (for consistency)</summary>
@@ -72,13 +73,12 @@ namespace pr.extn
 			}
 		}
 
-		/// <summary>Grid copy implementation. Returns true if something was added to the clip board</summary>
+		/// <summary>Grid copy implementation. Returns true if something was added to the clipboard</summary>
 		public static bool Copy(DataGridView grid)
 		{
 			var d = grid.GetClipboardContent();
 			if (d == null) return false;
 			Clipboard.SetDataObject(d);
-			var fmts = Clipboard.GetDataObject().GetFormats();
 			return true;
 		}
 
@@ -206,10 +206,12 @@ namespace pr.extn
 						{
 							var val = Util.ConvertTo(cells[i].Trim(), cell.ValueType);
 							cell.Value = val;
+							grid.InvalidateCell(cell);
 						}
 						catch (FormatException)
 						{
 							cell.Value = cell.DefaultNewRowValue;
+							grid.InvalidateCell(cell);
 						}
 					}
 				}
@@ -247,11 +249,15 @@ namespace pr.extn
 						var row = Math.Min(cell.RowIndex    - min.Y, cells.Length      - 1);
 						var col = Math.Min(cell.ColumnIndex - min.X, cells[row].Length - 1);
 						if (cells[row][col].Length != 0)
+						{
 							cell.Value = Convert.ChangeType(cells[row][col], cell.ValueType);
+							grid.InvalidateCell(cell);
+						}
 					}
 					catch (FormatException)
 					{
 						cell.Value = cell.DefaultNewRowValue;
+						grid.InvalidateCell(cell);
 					}
 				}
 			}
@@ -1129,7 +1135,7 @@ namespace pr.extn
 		}
 
 		/// <summary>
-		/// Begin a row drag-drop operation on the grid.
+		/// Begin a row drag-drop operation on the grid. Works on RowHeaders.
 		/// Attach this method to the 'MouseDown' event on the grid.
 		/// Note: Do not attach to 'MouseMove' as well, DoDragDrop handles mouse move
 		/// Also, attach 'DragDrop_DoDropMoveRow' to the 'DoDrop' handler and set AllowDrop = true.

@@ -358,15 +358,18 @@ namespace Tradee
 				{
 					if (m_disposed) return;
 					Pipe = pipe;
+
+					// Wait for the next connection
+					ThreadPool.QueueUserWorkItem(ListenForConnections);
 				});
 			}
 			catch (Exception ex)
 			{
 				Debug.WriteLine(string.Format("ListenForConnections failed: {0}", ex.Message));
-			}
 
-			// Wait for the next connection
-			ThreadPool.QueueUserWorkItem(ListenForConnections);
+				// Wait for the next connection
+				ThreadPool.QueueUserWorkItem(ListenForConnections);
+			}
 		}
 	}
 }

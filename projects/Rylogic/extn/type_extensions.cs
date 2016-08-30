@@ -159,6 +159,19 @@ namespace pr.extn
 	/// <summary>'int' type extensions</summary>
 	public static class int_
 	{
+		/// <summary>Enumerate ints in the range [beg, end)</summary>
+		public static IEnumerable<int> Range(int beg, int end)
+		{
+			for (;beg != end;)
+				yield return beg++;
+		}
+
+		/// <summary>Enumerate ints in the range [0, count)</summary>
+		public static IEnumerable<int> Range(int count)
+		{
+			return Range(0, count);
+		}
+
 		public static int? TryParse(string val, NumberStyles style = NumberStyles.Integer)
 		{
 			int o;

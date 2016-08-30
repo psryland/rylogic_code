@@ -13,6 +13,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
+using System.Xml.Linq;
 using pr.common;
 using pr.container;
 using pr.extn;
@@ -99,56 +100,6 @@ namespace pr.gui
 
 		/// <summary>Rendering options for the graph</summary>
 		public RdrOptions Options { get; private set; }
-		public class RdrOptions
-		{
-			public RdrOptions()
-			{
-				BkColour        = SystemColors.Control;
-				PlotBkColour    = Color.White;
-				AxisColour      = Color.Black;
-				GridColour      = Color.FromArgb(230, 230, 230);
-				TitleColour     = Color.Black;
-				TitleFont       = new Font("tahoma", 12, FontStyle.Bold);
-				TitleTransform  = new Matrix(1f, 0f, 0f, 1f, 0f, 0f);
-				Margin          = new Padding(3);
-				NoteFont        = new Font("tahoma",  8, FontStyle.Regular);
-				SelectionColour = Color.DarkGray;
-			}
-			public RdrOptions(RdrOptions rhs)
-			{
-				rhs.ShallowCopy(this);
-			}
-
-			/// <summary>The fill colour of the background of the graph</summary>
-			public Color BkColour { get; set; }
-
-			/// <summary>The fill colour of the plot background</summary>
-			public Color PlotBkColour { get; set; }
-
-			/// <summary>The colour of the title text</summary>
-			public Color TitleColour { get; set; }
-
-			/// <summary>The colour of the axes</summary>
-			public Color AxisColour { get; set; }
-
-			/// <summary>The colour of the grid lines</summary>
-			public Color GridColour { get; set; }
-
-			/// <summary>Font to use for the title text</summary>
-			public Font TitleFont { get; set; }
-
-			/// <summary>Transform for position the graph title, offset from top centre</summary>
-			public Matrix TitleTransform { get; set; }
-
-			/// <summary>The distances from the edge of the control to the graph area</summary>
-			public Padding Margin { get; set; }
-
-			/// <summary>Font to use for graph notes</summary>
-			public Font NoteFont { get; set; }
-
-			/// <summary>Area selection colour</summary>
-			public Color SelectionColour { get; set; }
-		}
 
 		/// <summary>The graph title</summary>
 		public string Title
@@ -271,6 +222,7 @@ namespace pr.gui
 			if (!YAxis.LockRange) { YAxis.Set(BaseRangeY); }
 			Dirty = true;
 		}
+
 		/// <summary>Return the layout sizes of the graph</summary>
 		public GraphDims GraphDimensions
 		{
@@ -590,6 +542,392 @@ namespace pr.gui
 
 		#endregion
 
+		#region RdrOptions
+		[TypeConverter(typeof(TyConv))]
+		public class RdrOptions :INotifyPropertyChanged
+		{
+			private class TyConv :GenericTypeConverter<RdrOptions> {}
+
+			public RdrOptions()
+			{
+				BkColour        = SystemColors.Control;
+				PlotBkColour    = Color.White;
+				AxisColour      = Color.Black;
+				GridColour      = Color.FromArgb(230, 230, 230);
+				TitleColour     = Color.Black;
+				TitleFont       = new Font("tahoma", 12, FontStyle.Bold);
+				TitleTransform  = new Matrix(1f, 0f, 0f, 1f, 0f, 0f);
+				Margin          = new Padding(3);
+				NoteFont        = new Font("tahoma",  8, FontStyle.Regular);
+				SelectionColour = Color.DarkGray;
+				XAxis           = new Axis();
+				YAxis           = new Axis();
+			}
+			public RdrOptions(RdrOptions rhs)
+			{
+				BkColour        = rhs.BkColour;
+				PlotBkColour    = rhs.PlotBkColour;
+				AxisColour      = rhs.AxisColour;
+				GridColour      = rhs.GridColour;
+				TitleColour     = rhs.TitleColour;
+				TitleFont       = (Font)rhs.TitleFont.Clone();
+				TitleTransform  = rhs.TitleTransform;
+				Margin          = rhs.Margin;
+				NoteFont        = (Font)rhs.NoteFont.Clone();
+				SelectionColour = rhs.SelectionColour;
+				XAxis           = new Axis(rhs.XAxis);
+				YAxis           = new Axis(rhs.YAxis);
+			}
+			public RdrOptions(XElement node) :this()
+			{
+				BkColour        = node.Element(XmlTag.BkColour       ).As(BkColour       );
+				PlotBkColour    = node.Element(XmlTag.PlotBkColour   ).As(PlotBkColour   );
+				AxisColour      = node.Element(XmlTag.AxisColour     ).As(AxisColour     );
+				GridColour      = node.Element(XmlTag.GridColour     ).As(GridColour     );
+				TitleColour     = node.Element(XmlTag.TitleColour    ).As(TitleColour    );
+				TitleFont       = node.Element(XmlTag.TitleFont      ).As(TitleFont      );
+				TitleTransform  = node.Element(XmlTag.TitleTransform ).As(TitleTransform );
+				Margin          = node.Element(XmlTag.Margin         ).As(Margin         );
+				NoteFont        = node.Element(XmlTag.NoteFont       ).As(NoteFont       );
+				SelectionColour = node.Element(XmlTag.SelectionColour).As(SelectionColour);
+				XAxis           = node.Element(XmlTag.XAxis          ).As(XAxis          );
+				YAxis           = node.Element(XmlTag.YAxis          ).As(YAxis          );
+			}
+			public XElement ToXml(XElement node)
+			{
+				node.Add2(XmlTag.BkColour        , BkColour        , false);
+				node.Add2(XmlTag.PlotBkColour    , PlotBkColour    , false);
+				node.Add2(XmlTag.AxisColour      , AxisColour      , false);
+				node.Add2(XmlTag.GridColour      , GridColour      , false);
+				node.Add2(XmlTag.TitleColour     , TitleColour     , false);
+				node.Add2(XmlTag.TitleFont       , TitleFont       , false);
+				node.Add2(XmlTag.TitleTransform  , TitleTransform  , false);
+				node.Add2(XmlTag.Margin          , Margin          , false);
+				node.Add2(XmlTag.NoteFont        , NoteFont        , false);
+				node.Add2(XmlTag.SelectionColour , SelectionColour , false);
+				node.Add2(XmlTag.XAxis           , XAxis           , false);
+				node.Add2(XmlTag.YAxis           , YAxis           , false);
+				return node;
+			}
+
+			/// <summary>Property changed</summary>
+			public event PropertyChangedEventHandler PropertyChanged;
+			private void SetProp<T>(ref T prop, T value, string name)
+			{
+				if (Equals(prop, value)) return;
+				prop = value;
+				PropertyChanged.Raise(this, new PropertyChangedEventArgs(name));
+			}
+
+			/// <summary>The fill colour of the background of the chart</summary>
+			public Color BkColour
+			{
+				get { return m_BkColour; }
+				set { SetProp(ref m_BkColour, value, nameof(BkColour)); }
+			}
+			private Color m_BkColour;
+
+			/// <summary>The fill colour of the chart background</summary>
+			public Color PlotBkColour
+			{
+				get { return m_PlotBkColour; }
+				set { SetProp(ref m_PlotBkColour, value, nameof(PlotBkColour)); }
+			}
+			private Color m_PlotBkColour;
+
+			/// <summary>The colour of the title text</summary>
+			public Color TitleColour
+			{
+				get { return m_TitleColour; }
+				set { SetProp(ref m_TitleColour, value, nameof(TitleColour)); }
+			}
+			private Color m_TitleColour;
+
+			/// <summary>The colour of the axes</summary>
+			public Color AxisColour
+			{
+				get { return m_AxisColour; }
+				set { SetProp(ref m_AxisColour, value, nameof(AxisColour)); }
+			}
+			private Color m_AxisColour;
+
+			/// <summary>The colour of the grid lines</summary>
+			public Color GridColour
+			{
+				get { return m_GridColour; }
+				set { SetProp(ref m_GridColour, value, nameof(GridColour)); }
+			}
+			private Color m_GridColour;
+
+			/// <summary>Font to use for the title text</summary>
+			public Font TitleFont
+			{
+				get { return m_TitleFont; }
+				set { SetProp(ref m_TitleFont, value, nameof(TitleFont)); }
+			}
+			private Font m_TitleFont;
+
+			/// <summary>Transform for position the graph title, offset from top centre</summary>
+			public Matrix TitleTransform
+			{
+				get { return m_TitleTransform; }
+				set { SetProp(ref m_TitleTransform, value, nameof(TitleTransform)); }
+			}
+			private Matrix m_TitleTransform;
+
+			/// <summary>The distances from the edge of the control to the graph area</summary>
+			public Padding Margin
+			{
+				get { return m_Margin; }
+				set { SetProp(ref m_Margin, value, nameof(Margin)); }
+			}
+			private Padding m_Margin;
+
+			/// <summary>Font to use for graph notes</summary>
+			public Font NoteFont
+			{
+				get { return m_NoteFont; }
+				set { SetProp(ref m_NoteFont, value, nameof(NoteFont)); }
+			}
+			private Font m_NoteFont;
+
+			/// <summary>Area selection colour</summary>
+			public Color SelectionColour
+			{
+				get { return m_SelectionColour; }
+				set { SetProp(ref m_SelectionColour, value, nameof(SelectionColour)); }
+			}
+			private Color m_SelectionColour;
+
+			/// <summary>XAxis rendering options</summary>
+			public Axis XAxis 
+			{
+				get { return m_XAxis; }
+				private set
+				{
+					if (m_XAxis == value) return;
+					if (m_XAxis != null) m_XAxis.PropertyChanged -= HandleXAxisPropertyChanged;
+					m_XAxis = value;
+					if (m_XAxis != null) m_XAxis.PropertyChanged -= HandleXAxisPropertyChanged;
+				}
+			}
+			private Axis m_XAxis;
+			private void HandleXAxisPropertyChanged(object sender, PropertyChangedEventArgs e)
+			{
+				PropertyChanged.Raise(this, new PropertyChangedEventArgs(nameof(XAxis)));
+			}
+
+			/// <summary>YAxis rendering options</summary>
+			public Axis YAxis
+			{
+				get { return m_YAxis; }
+				private set
+				{
+					if (m_YAxis == value) return;
+					if (m_YAxis != null) m_YAxis.PropertyChanged -= HandleYAxisPropertyChanged;
+					m_YAxis = value;
+					if (m_YAxis != null) m_YAxis.PropertyChanged -= HandleYAxisPropertyChanged;
+				}
+			}
+			private Axis m_YAxis;
+			private void HandleYAxisPropertyChanged(object sender, PropertyChangedEventArgs e)
+			{
+				PropertyChanged.Raise(this, new PropertyChangedEventArgs(nameof(YAxis)));
+			}
+
+			[TypeConverter(typeof(TyConv))]
+			public class Axis
+			{
+				private class TyConv :GenericTypeConverter<Axis> {}
+
+				public Axis()
+				{
+					LabelFont      = new Font("tahoma", 10, FontStyle.Regular);
+					TickFont       = new Font("tahoma", 8, FontStyle.Regular);
+					AxisColour     = Color.Black;
+					LabelColour    = Color.Black;
+					TickColour     = Color.Black;
+					TickLength     = 5;
+					MinTickSize    = TickFont.Height * 1.2f;
+					DrawTickMarks  = true;
+					DrawTickLabels = true;
+					LabelTransform = new Matrix(1f, 0f, 0f, 1f, 0f, 0f);
+					PixelsPerTick  = 30.0;
+				}
+				public Axis(Axis rhs)
+				{
+					LabelFont      = (Font)rhs.LabelFont.Clone();
+					TickFont       = (Font)rhs.TickFont.Clone();
+					AxisColour     = rhs.AxisColour;
+					LabelColour    = rhs.LabelColour;
+					TickColour     = rhs.TickColour;
+					TickLength     = rhs.TickLength;
+					MinTickSize    = rhs.MinTickSize;
+					DrawTickMarks  = rhs.DrawTickMarks;
+					DrawTickLabels = rhs.DrawTickLabels;
+					LabelTransform = rhs.LabelTransform;
+					PixelsPerTick  = rhs.PixelsPerTick;
+				}
+				public Axis(XElement node) :this()
+				{
+					LabelFont      = node.Element(XmlTag.LabelFont     ).As(LabelFont     );
+					TickFont       = node.Element(XmlTag.TickFont      ).As(TickFont      );
+					AxisColour     = node.Element(XmlTag.AxisColour    ).As(AxisColour    );
+					LabelColour    = node.Element(XmlTag.LabelColour   ).As(LabelColour   );
+					TickColour     = node.Element(XmlTag.TickColour    ).As(TickColour    );
+					TickLength     = node.Element(XmlTag.TickLength    ).As(TickLength    );
+					MinTickSize    = node.Element(XmlTag.MinTickSize   ).As(MinTickSize   );
+					DrawTickMarks  = node.Element(XmlTag.DrawTickMarks ).As(DrawTickMarks );
+					DrawTickLabels = node.Element(XmlTag.DrawTickLabels).As(DrawTickLabels);
+					LabelTransform = node.Element(XmlTag.LabelTransform).As(LabelTransform);
+					PixelsPerTick  = node.Element(XmlTag.PixelsPerTick ).As(PixelsPerTick );
+				}
+				public XElement ToXml(XElement node)
+				{
+					node.Add2(XmlTag.LabelFont      , LabelFont      , false);
+					node.Add2(XmlTag.TickFont       , TickFont       , false);
+					node.Add2(XmlTag.AxisColour     , AxisColour     , false);
+					node.Add2(XmlTag.LabelColour    , LabelColour    , false);
+					node.Add2(XmlTag.TickColour     , TickColour     , false);
+					node.Add2(XmlTag.TickLength     , TickLength     , false);
+					node.Add2(XmlTag.MinTickSize   , MinTickSize   , false);
+					node.Add2(XmlTag.DrawTickMarks  , DrawTickMarks  , false);
+					node.Add2(XmlTag.DrawTickLabels , DrawTickLabels , false);
+					node.Add2(XmlTag.LabelTransform , LabelTransform , false);
+					node.Add2(XmlTag.PixelsPerTick  , PixelsPerTick  , false);
+					return node;
+				}
+
+				/// <summary>Property changed</summary>
+				public event PropertyChangedEventHandler PropertyChanged;
+				private void SetProp<T>(ref T prop, T value, string name)
+				{
+					if (Equals(prop, value)) return;
+					prop = value;
+					PropertyChanged.Raise(this, new PropertyChangedEventArgs(name));
+				}
+
+				/// <summary>The font to use for the axis label</summary>
+				public Font LabelFont
+				{
+					get { return m_LabelFont; }
+					set { SetProp(ref m_LabelFont, value, nameof(LabelFont)); }
+				}
+				private Font m_LabelFont;
+
+				/// <summary>The font to use for tick labels</summary>
+				public Font TickFont
+				{
+					get { return m_TickFont; }
+					set { SetProp(ref m_TickFont, value, nameof(TickFont)); }
+				}
+				private Font m_TickFont;
+
+				/// <summary>The colour of the main axes</summary>
+				public Color AxisColour
+				{
+					get { return m_AxisColour; }
+					set { SetProp(ref m_AxisColour, value, nameof(AxisColour)); }
+				}
+				private Color m_AxisColour;
+
+				/// <summary>The colour of the label text</summary>
+				public Color LabelColour
+				{
+					get { return m_LabelColour; }
+					set { SetProp(ref m_LabelColour, value, nameof(LabelColour)); }
+				}
+				private Color m_LabelColour;
+
+				/// <summary>The colour of the tick text</summary>
+				public Color TickColour
+				{
+					get { return m_TickColour; }
+					set { SetProp(ref m_TickColour, value, nameof(TickColour)); }
+				}
+				private Color m_TickColour;
+
+				/// <summary>The length of the tick marks</summary>
+				public int TickLength
+				{
+					get { return m_TickLength; }
+					set { SetProp(ref m_TickLength, value, nameof(TickLength)); }
+				}
+				private int m_TickLength;
+
+				/// <summary>The minimum space reserved for tick marks and labels</summary>
+				public float MinTickSize
+				{
+					get { return m_MinTickSize; }
+					set { SetProp(ref m_MinTickSize, value, nameof(MinTickSize)); }
+				}
+				private float m_MinTickSize;
+
+				/// <summary>True if tick marks should be drawn</summary>
+				public bool DrawTickMarks
+				{
+					get { return m_DrawTickMarks; }
+					set { SetProp(ref m_DrawTickMarks, value, nameof(DrawTickMarks)); }
+				}
+				private bool m_DrawTickMarks;
+
+				/// <summary>True if tick labels should be drawn</summary>
+				public bool DrawTickLabels
+				{
+					get { return m_DrawTickLabels; }
+					set { SetProp(ref m_DrawTickLabels, value, nameof(DrawTickLabels)); }
+				}
+				private bool m_DrawTickLabels;
+
+				/// <summary>Offset transform from default label position</summary>
+				public Matrix LabelTransform
+				{
+					get { return m_LabelTransform; }
+					set { SetProp(ref m_LabelTransform, value, nameof(LabelTransform)); }
+				}
+				private Matrix m_LabelTransform;
+
+				/// <summary>The preferred number of pixels between each grid line</summary>
+				public double PixelsPerTick
+				{
+					get { return m_PixelsPerTick; }
+					set { SetProp(ref m_PixelsPerTick, value, nameof(PixelsPerTick)); }
+				}
+				private double m_PixelsPerTick;
+			}
+		}
+
+		/// <summary>A UI for setting these rendering properties</summary>
+		public class RdrOptionsUI :ToolForm
+		{
+			private readonly GraphControl m_graph;
+			private readonly RdrOptions m_opts;
+
+			public RdrOptionsUI(GraphControl graph, RdrOptions opts)
+				:base(graph, EPin.Centre, Point.Empty, new Size(500,400), true)
+			{
+				m_graph  = graph;
+				m_opts   = opts;
+				ShowIcon = (graph.TopLevelControl as Form)?.ShowIcon ?? false;
+				Icon     = (graph.TopLevelControl as Form)?.Icon;
+				Text     = "Chart Properties";
+				SetupUI();
+			}
+			private void SetupUI()
+			{
+				var pg = Controls.Add2(new PropertyGrid
+				{
+					SelectedObject = m_opts,
+					Dock = DockStyle.Fill,
+				});
+				pg.PropertyValueChanged += (s,a) =>
+				{
+					m_graph.Invalidate();
+				};
+			}
+		}
+		#endregion
+
 		#region Range Data
 
 		/// <summary>The axes of the graph</summary>
@@ -597,8 +935,8 @@ namespace pr.gui
 		{
 			public RangeData(GraphControl owner)
 			{
-				XAxis = new Axis(owner);
-				YAxis = new Axis(owner);
+				XAxis = new Axis(EAxis.XAxis, owner);
+				YAxis = new Axis(EAxis.YAxis, owner);
 			}
 			public RangeData(RangeData rhs)
 			{
@@ -610,6 +948,12 @@ namespace pr.gui
 				XAxis = null;
 				YAxis = null;
 			}
+
+			/// <summary>Axis type</summary>
+			public enum EAxis { XAxis, YAxis }
+
+			/// <summary>The chart that owns this axis</summary>
+			public GraphControl Owner { [DebuggerStepThrough] get; private set; }
 
 			/// <summary>The graph X axis</summary>
 			public Axis XAxis
@@ -650,90 +994,53 @@ namespace pr.gui
 			/// <summary>Graph axis data</summary>
 			public class Axis :IDisposable
 			{
-				public Axis(GraphControl owner)
-					: this(owner, 0f, 1f)
+				public Axis(EAxis axis, GraphControl owner)
+					: this(axis, owner, 0f, 1f)
 				{ }
-				public Axis(GraphControl owner, double min, double max)
-					: this(owner, min, max, new RdrOptions())
+				public Axis(EAxis axis, GraphControl owner, double min, double max)
+					: this(axis, owner, min, max, new RdrOptions())
 				{ }
-				public Axis(GraphControl owner, double min, double max, RdrOptions options)
+				public Axis(EAxis axis, GraphControl owner, double min, double max, RdrOptions options)
 				{
 					Debug.Assert(owner != null);
 					Set(min, max);
-					Options     = options;
-					Owner       = owner;
-					Label       = string.Empty;
-					AllowScroll = true;
-					AllowZoom   = true;
-					LockRange   = false;
-					TickText    = (x,step) => Math.Round(x, 4, MidpointRounding.AwayFromZero).ToString("F2");
+					AxisType        = axis;
+					Owner           = owner;
+					Label           = string.Empty;
+					AllowScroll     = true;
+					AllowZoom       = true;
+					LockRange       = false;
+					TickText        = (x,step) => Math.Round(x, 4, MidpointRounding.AwayFromZero).ToString("F2");
+					MeasureTickText = (gfx,w)  => Options.MinTickSize;
 				}
 				public Axis(Axis rhs)
 				{
 					Set(rhs.Min, rhs.Max);
-					Options     = new RdrOptions(rhs.Options);
-					Owner       = rhs.Owner;
-					Label       = rhs.Label         ;
-					AllowScroll = rhs.AllowScroll   ;
-					AllowZoom   = rhs.AllowZoom     ;
-					LockRange   = rhs.LockRange     ;
-					TickText    = rhs.TickText      ;
+					AxisType        = rhs.AxisType;
+					Owner           = rhs.Owner;
+					Label           = rhs.Label;
+					AllowScroll     = rhs.AllowScroll;
+					AllowZoom       = rhs.AllowZoom;
+					LockRange       = rhs.LockRange;
+					TickText        = rhs.TickText;
+					MeasureTickText = rhs.MeasureTickText;
 				}
 				public virtual void Dispose()
 				{}
 
-				/// <summary>Rendering options for this axis</summary>
-				public RdrOptions Options { get; private set; }
-				public class RdrOptions
+				/// <summary>Render options for the axis</summary>
+				public RdrOptions.Axis Options
 				{
-					public RdrOptions()
+					get
 					{
-						LabelFont      = new Font("tahoma", 10, FontStyle.Regular);
-						TickFont       = new Font("tahoma", 8, FontStyle.Regular);
-						AxisColour     = Color.Black;
-						LabelColour    = Color.Black;
-						TickColour     = Color.Black;
-						TickLength     = 5;
-						DrawTickMarks  = true;
-						DrawTickLabels = true;
-						LabelTransform = new Matrix(1f, 0f, 0f, 1f, 0f, 0f);
-						PixelsPerTick  = 30.0;
+						if (Owner.XAxis == this) return Owner.Options.XAxis;
+						if (Owner.YAxis == this) return Owner.Options.YAxis;
+						throw new Exception("Owner is not the owner of this axis");
 					}
-					public RdrOptions(RdrOptions rhs)
-					{
-						rhs.ShallowCopy(this);
-					}
-
-					/// <summary>The font to use for the axis label</summary>
-					public Font LabelFont { get; set; }
-
-					/// <summary>The font to use for tick labels</summary>
-					public Font TickFont { get; set; }
-
-					/// <summary>The colour of the main axes</summary>
-					public Color AxisColour { get; set; }
-
-					/// <summary>The colour of the label text</summary>
-					public Color LabelColour { get; set; }
-
-					/// <summary>The colour of the tick text</summary>
-					public Color TickColour { get; set; }
-
-					/// <summary>The length of the tick marks</summary>
-					public int TickLength { get; set; }
-
-					/// <summary>True if tick marks should be drawn</summary>
-					public bool DrawTickMarks { get; set; }
-
-					/// <summary>True if tick labels should be drawn</summary>
-					public bool DrawTickLabels { get; set; }
-
-					/// <summary>Offset transform from default label position</summary>
-					public Matrix LabelTransform { get; set; }
-
-					/// <summary>The preferred number of pixels between each grid line</summary>
-					public double PixelsPerTick { get; set; }
 				}
+
+				/// <summary>Which axis this is</summary>
+				public EAxis AxisType { get; private set; }
 
 				/// <summary>The chart that owns this axis</summary>
 				public GraphControl Owner { get; private set; }
@@ -818,6 +1125,9 @@ namespace pr.gui
 
 				/// <summary>Convert the axis value to a string. "string TickText(double tick_value, double step_size)" </summary>
 				public Func<double, double, string> TickText;
+
+				/// <summary>Return the width/height to reserve for the tick text. "float MeasureTickText(Graphics gfx, bool width)"</summary>
+				public Func<Graphics, bool, float> MeasureTickText;
 
 				/// <summary>Set the range without risk of an assert if 'min' is greater than 'Max' or visa versa</summary>
 				public void Set(double min, double max)
@@ -1483,22 +1793,12 @@ namespace pr.gui
 			// Add space for the tick labels
 			if (XAxis.Options.DrawTickLabels)
 			{
-				var h = 0.0f;
-				foreach (var x in new[] { XAxis.Min, (XAxis.Min + XAxis.Max) / 2f, XAxis.Max })
-				{
-					var lbl = XAxis.TickText(x, 0.0);
-					h = Math.Max(h, gfx.MeasureString(lbl, XAxis.Options.TickFont).Height);
-				}
+				var h = Math.Max(XAxis.MeasureTickText(gfx, false), XAxis.Options.MinTickSize);
 				rect.Height -= h;
 			}
 			if (YAxis.Options.DrawTickLabels)
 			{
-				var w = 0.0f;
-				foreach (var y in new[] { YAxis.Min, (YAxis.Min + YAxis.Max) / 2f, YAxis.Max })
-				{
-					var lbl = YAxis.TickText(y, 0.0);
-					w = Math.Max(w, gfx.MeasureString(lbl, YAxis.Options.TickFont).Width);
-				}
+				var w = Maths.Max(YAxis.MeasureTickText(gfx, true), YAxis.Options.MinTickSize);
 				rect.X     += w;
 				rect.Width -= w;
 			}
@@ -3149,7 +3449,36 @@ namespace pr.gui
 				private Size? m_ofs;
 			}
 		}
-		
+
 		#endregion
+
+		#region Misc
+		private static class XmlTag
+		{
+			public const string BkColour        = "bk_colour";
+			public const string PlotBkColour    = "plot_bk_colour";
+			public const string AxisColour      = "axis_colour";
+			public const string GridColour      = "grid_colour";
+			public const string TitleColour     = "title_colour";
+			public const string TitleFont       = "title_font";
+			public const string TitleTransform  = "title_transform";
+			public const string Margin          = "margin";
+			public const string NoteFont        = "note_font";
+			public const string SelectionColour = "selection_colour";
+			public const string XAxis           = "x_axis";
+			public const string YAxis           = "y_axis";
+			public const string LabelFont       = "label_font";
+			public const string TickFont        = "tick_font";
+			public const string LabelColour     = "label_colour";
+			public const string TickColour      = "tick_colour";
+			public const string TickLength      = "tick_length";
+			public const string MinTickSize     = "min_tick_size";
+			public const string DrawTickMarks   = "draw_tick_marks";
+			public const string DrawTickLabels  = "draw_tick_labels";
+			public const string LabelTransform  = "label_transform";
+			public const string PixelsPerTick   = "pixels_per_tick";
+		}
+		#endregion
+
 	}
 }

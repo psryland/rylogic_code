@@ -41,19 +41,19 @@ namespace Tradee
 	public class TransmitterSettings :SettingsSet<TransmitterSettings>
 	{
 		public TransmitterSettings()
-			:this(ETradePairs.None)
+			:this(string.Empty)
 		{ }
-		public TransmitterSettings(ETradePairs pair)
+		public TransmitterSettings(string sym)
 		{
-			Pair       = pair;
+			SymbolCode = sym;
 			TimeFrames = new [] {ETimeFrame.Min10, ETimeFrame.Hour1, ETimeFrame.Hour12};
 		}
 
 		/// <summary>The trading pair that these settings are for</summary>
-		public ETradePairs Pair
+		public string SymbolCode
 		{
-			get { return get(x => x.Pair); }
-			set { set(x => x.Pair, value); }
+			get { return get(x => x.SymbolCode); }
+			set { set(x => x.SymbolCode, value); }
 		}
 
 		/// <summary>The time frame to open new charts at</summary>

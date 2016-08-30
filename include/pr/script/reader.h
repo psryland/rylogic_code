@@ -416,6 +416,14 @@ namespace pr
 			{
 				return SectionStart() && Vector2(vector) && SectionEnd();
 			}
+			bool Vector2(pr::iv2& vector)
+			{
+				return Int(vector.x, 10) && Int(vector.y, 10);
+			}
+			bool Vector2S(pr::iv2& vector)
+			{
+				return SectionStart() && Vector2(vector) && SectionEnd();
+			}
 
 			// Extract a vector from the source
 			bool Vector3(pr::v4& vector, float w)
@@ -427,6 +435,15 @@ namespace pr
 			{
 				return SectionStart() && Vector3(vector, w) && SectionEnd();
 			}
+			bool Vector3(pr::iv4& vector, int w)
+			{
+				vector.w = w;
+				return Int(vector.x, 10) && Int(vector.y, 10) && Int(vector.z, 10);
+			}
+			bool Vector3S(pr::iv4& vector, int w)
+			{
+				return SectionStart() && Vector3(vector, w) && SectionEnd();
+			}
 
 			// Extract a vector from the source
 			bool Vector4(pr::v4& vector)
@@ -434,6 +451,14 @@ namespace pr
 				return Real(vector.x) && Real(vector.y) && Real(vector.z) && Real(vector.w);
 			}
 			bool Vector4S(pr::v4& vector)
+			{
+				return SectionStart() && Vector4(vector) && SectionEnd();
+			}
+			bool Vector4(pr::iv4& vector)
+			{
+				return Int(vector.x, 10) && Int(vector.y, 10) && Int(vector.z, 10) && Int(vector.w, 10);
+			}
+			bool Vector4S(pr::iv4& vector)
 			{
 				return SectionStart() && Vector4(vector) && SectionEnd();
 			}
@@ -570,7 +595,7 @@ namespace pr
 			unsigned int uival = 0;
 			float fval = 0.0f, farray[4];
 			pr::v4 vec = pr::v4Zero;
-			pr::quat q = pr::quatIdentity;
+			pr::quat q = pr::QuatIdentity;
 			pr::m3x4 mat3;
 			pr::m4x4 mat4;
 

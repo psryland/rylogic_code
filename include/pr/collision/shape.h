@@ -92,6 +92,7 @@ namespace pr
 		struct ShapeTriangle;
 		struct ShapeLine;
 		struct ShapeArray;
+		struct Ray;
 
 		// Shape base. All shapes must have this as their first member
 		struct Shape
@@ -103,7 +104,7 @@ namespace pr
 				_bitwise_operators_allowed,
 			};
 
-			// Transform from shape space to physics model space (or parent shape space)
+			// Transform from shape space to parent shape space (or physics model space for root objects)
 			m4x4 m_s2p;
 
 			// A bounding box for the shape (and its children if it's a composite shape)
@@ -255,6 +256,7 @@ namespace pr
 		}
 
 		// Increment a shape pointer
+		// for (Shape const *s = shape.begin(), *s_end = shape.end(); s != s_end; s = next(s)) {}
 		template <typename TShape, typename = enable_if_shape<TShape>> inline TShape const* next(TShape const* p)
 		{
 			return reinterpret_cast<TShape const*>(byte_ptr(p) + p->m_base.m_size);

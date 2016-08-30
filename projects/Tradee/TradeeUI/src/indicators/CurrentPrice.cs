@@ -10,6 +10,9 @@ namespace Tradee
 {
 	public class CurrentPrice :ChartControl.Element
 	{
+		// Notes:
+		//  This is not an indicator, it is not saved with the chart settings
+
 		public CurrentPrice(MainModel model, Instrument instrument)
 			:base(Guid.NewGuid(), m4x4.Identity, "Current Price")
 		{
@@ -24,7 +27,7 @@ namespace Tradee
 			GfxBid = null;
 			base.Dispose(disposing);
 		}
-		public override void SetChartCore(ChartControl chart)
+		protected override void SetChartCore(ChartControl chart)
 		{
 			// Invalidate the graphics whenever the x axis zooms
 			if (Chart != null)

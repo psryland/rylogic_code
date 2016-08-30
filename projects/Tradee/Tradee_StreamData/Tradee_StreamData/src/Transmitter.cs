@@ -7,6 +7,7 @@ using System.Threading;
 using cAlgo.API;
 using cAlgo.API.Internals;
 using pr.extn;
+using pr.maths;
 using pr.util;
 
 namespace Tradee
@@ -14,15 +15,16 @@ namespace Tradee
 	/// <summary>Handles sending data for a single symbol</summary>
 	public class Transmitter :IDisposable ,INotifyPropertyChanged
 	{
-		public Transmitter(TradeeBotModel model, ETradePairs pair, TransmitterSettings settings)
+		public Transmitter(TradeeBotModel model, string sym, TransmitterSettings settings)
 		{
 			Settings             = settings;
 			Model                = model;
 			Data                 = new Dictionary<TimeFrame, MarketSeriesData>();
 			HistoricDataRequests = new List<HistoricDataRequest>();
-			Pair                 = pair;
+			SymbolCode           = sym;
 			Enabled              = true;
 			StatusMsg            = "Active";
+			AverageSpread        = new ExpMovingAvr(50);
 		}
 		public virtual void Dispose()
 		{
@@ -58,17 +60,17 @@ namespace Tradee
 		/// <summary>A queue of requests for historic data to be sent</summary>
 		public List<HistoricDataRequest> HistoricDataRequests { get; private set; }
 
-		/// <summary>The trading pair</summary>
-		public ETradePairs Pair
+		/// <summary>The symbol code for the trading pair</summary>
+		public string SymbolCode
 		{
 			[DebuggerStepThrough] get;
 			private set;
 		}
 
-		/// <summary>The symbol code for the trading pair</summary>
-		public string SymbolCode
+		/// <summary>The long description of the instrument</summary>
+		public SymbolInfo SymbolDescription
 		{
-			[DebuggerStepThrough] get { return Pair.ToString(); }
+			get { return Misc.KnownSymbols[SymbolCode]; }
 		}
 
 		/// <summary>The symbol data</summary>
@@ -94,6 +96,13 @@ namespace Tradee
 		public TimeFrame[] AvailableTimeFrames
 		{
 			get { return Data.Keys.ToArray(); }
+		}
+
+		/// <summary>The average spread between ask and bid price for this instrument</summary>
+		public ExpMovingAvr AverageSpread
+		{
+			get;
+			private set;
 		}
 
 		/// <summary>True while the transmitter is downloading time frame series data</summary>
@@ -142,7 +151,7 @@ namespace Tradee
 			foreach (var data in Data)
 			{
 				data.Value.LastTransmittedPriceData = PriceData.Default;
-				data.Value.LastTransmittedCandle = Candle.Default;
+				data.Value.LastTransmittedCandle = PriceCandle.Default;
 			}
 		}
 
@@ -154,9 +163,16 @@ namespace Tradee
 			PropertyChanged(this, args);
 		}
 
+		/// <summary>True when this transmitter cannot send the requested symbol and should be disposed</summary>
+		public bool Invalid { get; private set; }
+
 		/// <summary>Poll instrument state</summary>
 		public void Step()
 		{
+			// Don't run invalid transmitters, just wait for deletion
+			if (Invalid)
+				return;
+
 			// Get the time frames to send, and the time frames being sent
 			var desired = TimeFrames.Select(x => x.ToCAlgoTimeframe()).ToArray();
 			var available = AvailableTimeFrames;
@@ -172,35 +188,9 @@ namespace Tradee
 				// This can take ages so do it in a background thread
 				StatusMsg = "Acquiring {0},{1}".Fmt(SymbolCode, m_pending.ToTradeeTimeframe());
 
+				// Start a background thread task to get the series data
 				var model = Model;
-				ThreadPool.QueueUserWorkItem(x =>
-				{
-					var series = (MarketSeries)null;
-					var error = (Exception)null;
-					try
-					{
-						// Get the symbol
-						var sym = model.GetSymbol(SymbolCode);
-						if (sym == null)
-							throw new Exception("Symbol {0} not available".Fmt(SymbolCode));
-
-						// Get the data series
-						series = model.GetSeries(sym, (TimeFrame)x);
-					}
-					catch (Exception ex) { error = ex; }
-					try
-					{
-						// Add the received series to the collection
-						model.RunOnMainThread(() =>
-						{
-							Data.Add(m_pending, new MarketSeriesData(series));
-							m_pending = null;
-							RequestingSeriesData = false;
-							StatusMsg = error != null ? error.Message : "Active";
-						});
-					}
-					catch { }
-				}, m_pending);
+				ThreadPool.QueueUserWorkItem(x => AcquireSeries((TimeFrame)x, model), m_pending);
 			}
 
 			// Transmit data for each time frame
@@ -243,6 +233,51 @@ namespace Tradee
 			// Remove the requests we've serviced
 			HistoricDataRequests.RemoveIf(x => done.Contains(x));
 		}
+
+		/// <summary>Request a series from the server in a background thread</summary>
+		private void AcquireSeries(TimeFrame time_frame, TradeeBotModel model) // worker thread context
+		{
+			var symbol = (Symbol)null;
+			var series = (MarketSeries)null;
+			var error = (Exception)null;
+			try
+			{
+				// Get the symbol
+				symbol = model.GetSymbol(SymbolCode);
+				if (symbol == null)
+					throw new Exception("Symbol {0} not available".Fmt(SymbolCode));
+
+				// Get the data series
+				series = model.GetSeries(symbol, time_frame);
+			}
+			catch (Exception ex)
+			{
+				error = ex;
+			}
+			finally
+			{
+				// Add the received series to the collection
+				model.RunOnMainThread(() =>
+				{
+					// If the symbol was unavailable, then flag the transmitter for deletion
+					if (symbol == null)
+						Invalid = true;
+
+					// If the series is unavailable, remove it from the desired list
+					else if (series == null)
+						TimeFrames = TimeFrames.Except(time_frame.ToTradeeTimeframe()).ToArray();
+
+					// Otherwise add the acquired series to the available data
+					else
+						Data.Add(m_pending, new MarketSeriesData(series));
+
+					// Clear the pending flags
+					m_pending = null;
+					RequestingSeriesData = false;
+					StatusMsg = error != null ? error.Message : "Active";
+				});
+			}
+		}
 		private TimeFrame m_pending;
 
 		/// <summary>Send market data</summary>
@@ -250,6 +285,11 @@ namespace Tradee
 		{
 			// Get the latest symbol (price data) information
 			var sym = Symbol;
+			if (sym == null)
+				return;
+
+			// Collect additional stats
+			AverageSpread.Add(Math.Abs(sym.Bid - sym.Ask));
 
 			// Post at least every X seconds, changed or not
 			var post = DateTimeOffset.UtcNow - data.LastUpdateUTC > TimeSpan.FromSeconds(10);
@@ -258,6 +298,7 @@ namespace Tradee
 			var price_data = new PriceData(
 				sym.Ask,
 				sym.Bid,
+				AverageSpread.Mean,
 				sym.LotSize,
 				sym.PipSize,
 				sym.PipValue,
@@ -278,12 +319,13 @@ namespace Tradee
 			// Post the latest candle data
 			if (data.Series.Close.Count != 0)
 			{
-				var candle = new Candle(
+				var candle = new PriceCandle(
 					data.Series.OpenTime.LastValue.Ticks,
 					data.Series.Open.LastValue,
 					data.Series.High.LastValue,
 					data.Series.Low.LastValue,
 					data.Series.Close.LastValue,
+					data.Series.Median.LastValue,
 					data.Series.TickVolume.LastValue);
 
 				// Only transmit if different
@@ -311,6 +353,7 @@ namespace Tradee
 			var high      = new List<double>(series.High      .Count);
 			var low       = new List<double>(series.Low       .Count);
 			var close     = new List<double>(series.Close     .Count);
+			var median    = new List<double>(series.Median    .Count);
 			var volume    = new List<double>(series.TickVolume.Count);
 
 			Debug.Assert(i_newest <= i_oldest);
@@ -321,6 +364,7 @@ namespace Tradee
 				var h = series.High      .Last(i);
 				var l = series.Low       .Last(i);
 				var c = series.Close     .Last(i);
+				var m = series.Median    .Last(i);
 				var v = series.TickVolume.Last(i);
 
 				open_time.Add(t);
@@ -328,6 +372,7 @@ namespace Tradee
 				high     .Add(Math.Max(h, Math.Max(o,c)));
 				low      .Add(Math.Min(l, Math.Min(o,c)));
 				close    .Add(c);
+				median   .Add(m);
 				volume   .Add(v);
 			}
 
@@ -336,12 +381,13 @@ namespace Tradee
 				return;
 
 			// Create a candle batch
-			var data = new Candles(
+			var data = new PriceCandles(
 				open_time.ToArray(),
 				open     .ToArray(),
 				high     .ToArray(),
 				low      .ToArray(),
 				close    .ToArray(),
+				median   .ToArray(),
 				volume   .ToArray());
 			if (Model.Post(new InMsg.CandleData(SymbolCode, series.TimeFrame.ToTradeeTimeframe(), data)))
 				Debug.WriteLine("Historic data for {0},{1} sent".Fmt(series.SymbolCode, series.TimeFrame.ToTradeeTimeframe()));

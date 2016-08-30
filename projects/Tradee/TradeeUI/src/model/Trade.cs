@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows.Threading;
+using pr.common;
 using pr.container;
 using pr.extn;
 using pr.util;
@@ -19,7 +20,6 @@ namespace Tradee
 		//   review of how a trade went.
 		// - A trade can consist of multiple Orders/Positions (e.g hedged trades, etc).
 		// - A trade is closed once all Orders/Positions are closed or cancelled.
-		// - A trade has an associated chart, used to display everything about the trade
 		// - Trades are low level application objects, they don't know about charts, accounts,
 		//   etc. Only about orders.
 
@@ -38,6 +38,8 @@ namespace Tradee
 
 			/// <summary>Set if there are closed positions associated with this trade</summary>
 			Closed = 1 << 3,
+
+			All = Visualising|PendingOrder|ActivePosition|Closed,
 		}
 
 		public Trade(MainModel model, Instrument instrument)
@@ -162,6 +164,18 @@ namespace Tradee
 			[DebuggerStepThrough] get { return m_exit_time ?? (m_exit_time = Orders.Max(x => x.ExitTimeUTC)). Value; }
 		}
 		private DateTimeOffset? m_exit_time;
+
+		/// <summary>Combined loss (in base currency)</summary>
+		public double StopLossValue
+		{
+			get { return Orders.Sum(x => x.StopLossValue); }
+		}
+
+		/// <summary>Combined profit (in base currency)</summary>
+		public double TakeProfitValue
+		{
+			get { return Orders.Sum(x => x.TakeProfitValue); }
+		}
 
 		/// <summary>Combined volume</summary>
 		public long Volume

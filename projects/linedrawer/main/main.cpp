@@ -56,7 +56,7 @@ namespace ldr
 
 		// Main UI
 		,m_status(StatusBar::Params<>().name("status-bar").parent(this_).dock(EDock::Bottom).parts({-1}).text(L"Idle").id(IDC_STATUSBAR_MAIN))
-		,m_panel (Panel    ::Params<>().name("3d-scene")  .parent(this_).dock(EDock::Fill).margin(0))
+		,m_panel (Panel    ::Params<>().name("3d-scene")  .parent(this_).dock(EDock::Fill).margin(0).allow_drop())
 		,m_recent_files()
 		,m_saved_views()
 
@@ -1125,17 +1125,28 @@ namespace ldr
 				pr::v4(0.0f,  0.0f,  0.0f, 1.0f),
 				pr::v4(0.0f,  0.0f,  1.0f, 1.0f),
 			};
+			const unsigned short indices_[] =
+			{
+				0, 1, 2, 3, 4, 5,
+			};
+			const NuggetProps nuggets_[] =
+			{
+				NuggetProps(EPrim::LineList, EGeom::Vert|EGeom::Colr),
+			};
+			const pr::Colour32 fp_cols[] = { 0xFFFF0000, 0xFFFF0000, 0xFF00FF00, 0xFF00FF00, 0xFF0000FF, 0xFF0000FF };
+			const pr::Colour32 op_cols[] = { 0xFF800000, 0xFF800000, 0xFF008000, 0xFF008000, 0xFF000080, 0xFF000080 };
+			
 			auto cdata = pr::rdr::MeshCreationData()
 				.verts(verts_, _countof(verts_))
-				.indices({ 0, 1, 2, 3, 4, 5 })
-				.nuggets({NuggetProps(EPrim::LineList, EGeom::Vert|EGeom::Colr)});
+				.indices(indices_, _countof(indices_))
+				.nuggets(nuggets_, _countof(nuggets_));
 
-			cdata.colours({ 0xFFFF0000, 0xFFFF0000, 0xFF00FF00, 0xFF00FF00, 0xFF0000FF, 0xFF0000FF });
+			cdata.colours(fp_cols, _countof(fp_cols));
 			m_focus_point .m_model = ModelGenerator<>::Mesh(m_rdr, cdata);
 			m_focus_point .m_model->m_name = "focus point";
 			m_focus_point .m_i2w   = pr::m4x4Identity;
 
-			cdata.colours({ 0xFF800000, 0xFF800000, 0xFF008000, 0xFF008000, 0xFF000080, 0xFF000080 });
+			cdata.colours(op_cols, _countof(op_cols));
 			m_origin_point.m_model = ModelGenerator<>::Mesh(m_rdr, cdata);
 			m_origin_point.m_model->m_name = "origin point";
 			m_origin_point.m_i2w   = pr::m4x4Identity;
@@ -1153,19 +1164,25 @@ namespace ldr
 				pr::v4( 0.5f,  0.5f,  0.5f, 1.0f), pr::v4( 0.4f,  0.5f,  0.5f, 1.0f), pr::v4( 0.5f,  0.4f,  0.5f, 1.0f), pr::v4( 0.5f,  0.5f,  0.4f, 1.0f),
 				pr::v4(-0.5f,  0.5f,  0.5f, 1.0f), pr::v4(-0.5f,  0.4f,  0.5f, 1.0f), pr::v4(-0.4f,  0.5f,  0.5f, 1.0f), pr::v4(-0.5f,  0.5f,  0.4f, 1.0f),
 			};
+			const unsigned short indices_[] =
+			{
+				0,  1,  0,  2,  0,  3,
+				4,  5,  4,  6,  4,  7,
+				8,  9,  8, 10,  8, 11,
+				12, 13, 12, 14, 12, 15,
+				16, 17, 16, 18, 16, 19,
+				20, 21, 20, 22, 20, 23,
+				24, 25, 24, 26, 24, 27,
+				28, 29, 28, 30, 28, 31,
+			};
+			const NuggetProps nuggets_[] =
+			{
+				NuggetProps(EPrim::LineList, EGeom::Vert),
+			};
 			auto cdata = pr::rdr::MeshCreationData()
 				.verts(verts_, _countof(verts_))
-				.indices({
-					0,  1,  0,  2,  0,  3,
-					4,  5,  4,  6,  4,  7,
-					8,  9,  8, 10,  8, 11,
-					12, 13, 12, 14, 12, 15,
-					16, 17, 16, 18, 16, 19,
-					20, 21, 20, 22, 20, 23,
-					24, 25, 24, 26, 24, 27,
-					28, 29, 28, 30, 28, 31})
-				.nuggets({NuggetProps(EPrim::LineList, EGeom::Vert)});
-
+				.indices(indices_, _countof(indices_))
+				.nuggets(nuggets_, _countof(nuggets_));
 			m_selection_box.m_model = ModelGenerator<>::Mesh(m_rdr, cdata);
 			m_selection_box.m_model->m_name = "selection box";
 			m_selection_box.m_i2w   = pr::m4x4Identity;
@@ -1183,15 +1200,26 @@ namespace ldr
 				pr::v4(+0.5f, +0.5f, +0.5f, 1.0f),
 				pr::v4(-0.5f, +0.5f, +0.5f, 1.0f),
 			};
+			const unsigned short indices_[] =
+			{
+				0, 1, 1, 2, 2, 3, 3, 0,
+				4, 5, 5, 6, 6, 7, 7, 4,
+				0, 4, 1, 5, 2, 6, 3, 7,
+			};
+			const pr::Colour32 colours_[] =
+			{
+				pr::Colour32Blue,
+			};
+			const NuggetProps nuggets_[] =
+			{
+				NuggetProps(EPrim::LineList),
+			};
+
 			auto cdata = pr::rdr::MeshCreationData()
 				.verts(verts_, _countof(verts_))
-				.indices({
-					0, 1, 1, 2, 2, 3, 3, 0,
-					4, 5, 5, 6, 6, 7, 7, 4,
-					0, 4, 1, 5, 2, 6, 3, 7})
-				.colours({pr::Colour32Blue})
-				.nuggets({NuggetProps(EPrim::LineList)});
-
+				.indices(indices_, _countof(indices_))
+				.colours(colours_, _countof(colours_))
+				.nuggets(nuggets_, _countof(nuggets_));
 			m_bbox_model.m_model = ModelGenerator<>::Mesh(m_rdr, cdata);
 			m_bbox_model.m_model->m_name = "bbox";
 			m_bbox_model.m_i2w   = pr::m4x4Identity;
@@ -1338,13 +1366,8 @@ namespace ldr
 		if (drop.m_filepaths.empty())
 			return;
 
-		// Clear the data unless shift is held down
-		if (!pr::KeyDown(VK_SHIFT))
-			m_sources.Clear();
-
-		// Load the files
-		for (auto const& path : drop.m_filepaths)
-			m_sources.AddFile(path.c_str());
+		// Load the dropped files
+		LoadScripts(drop.m_filepaths, pr::KeyDown(VK_SHIFT));
 	}
 
 	// Application error message

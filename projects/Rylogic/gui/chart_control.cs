@@ -347,7 +347,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Perform a hit test on the chart</summary>
-		public HitTestResult HitTestCS(Point client_point, Func<Element, bool> pred)
+		public HitTestResult HitTestCS(Point client_point, Keys modifier_keys, Func<Element, bool> pred)
 		{
 			// Determine the hit zone of the control
 			var zone = HitTestResult.EZone.None;
@@ -356,6 +356,9 @@ namespace pr.gui
 			if (YAxisBounds.Contains(client_point)) zone |= HitTestResult.EZone.YAxis;
 			if (TitleBounds.Contains(client_point)) zone |= HitTestResult.EZone.Title;
 
+			// The hit test point in chart space
+			var chart_point = ClientToChart(client_point);
+
 			// Find elements that overlap 'client_point'
 			var hits = new List<HitTestResult.Hit>();
 			if (zone.HasFlag(HitTestResult.EZone.Chart))
@@ -363,7 +366,7 @@ namespace pr.gui
 				var elements = pred != null ? Elements.Where(pred) : Elements;
 				foreach (var elem in elements)
 				{
-					var hit = elem.HitTest(client_point, Window.Camera);
+					var hit = elem.HitTest(client_point, modifier_keys, Window.Camera);
 					if (hit != null)
 						hits.Add(hit);
 				}
@@ -372,7 +375,7 @@ namespace pr.gui
 				hits.Sort((l,r) => -l.Element.PositionZ.CompareTo(r.Element.PositionZ));
 			}
 
-			return new HitTestResult(zone, hits, Window.Camera);
+			return new HitTestResult(zone, client_point, chart_point, modifier_keys, hits, Window.Camera);
 		}
 
 		/// <summary>
@@ -802,23 +805,13 @@ namespace pr.gui
 					if (chart.XAxis.Options.DrawTickLabels)
 					{
 						// Measure the height of the tick text
-						var h = chart.XAxis.Options.MinTickSize;
-						for (double x = chart.XAxis.Min, step = chart.XAxis.Span/20; x < chart.XAxis.Max; x += step)
-						{
-							var s = chart.XAxis.TickText(x, step);
-							h = Math.Max(h, gfx.MeasureString(s, chart.XAxis.Options.TickFont).Height);
-						}
+						var h = Math.Max(chart.XAxis.MeasureTickText(gfx, false), chart.XAxis.Options.MinTickSize);
 						rect.Height -= h;
 					}
 					if (chart.YAxis.Options.DrawTickLabels)
 					{
 						// Measure the width of the tick text
-						var w = chart.XAxis.Options.MinTickSize;
-						for (double y = chart.YAxis.Min, step = chart.YAxis.Span/20; y < chart.YAxis.Max; y += step)
-						{
-							var s = chart.YAxis.TickText(y, step);
-							w = Math.Max(w, gfx.MeasureString(s, chart.YAxis.Options.TickFont).Width);
-						}
+						var w = Math.Max(chart.YAxis.MeasureTickText(gfx, true), chart.YAxis.Options.MinTickSize);
 						rect.X     += w;
 						rect.Width -= w;
 					}
@@ -1054,7 +1047,7 @@ namespace pr.gui
 					if (m_XAxis == value) return;
 					if (m_XAxis != null) m_XAxis.PropertyChanged -= HandleXAxisPropertyChanged;
 					m_XAxis = value;
-					if (m_XAxis != null) m_XAxis.PropertyChanged -= HandleXAxisPropertyChanged;
+					if (m_XAxis != null) m_XAxis.PropertyChanged += HandleXAxisPropertyChanged;
 				}
 			}
 			private Axis m_XAxis;
@@ -1072,7 +1065,7 @@ namespace pr.gui
 					if (m_YAxis == value) return;
 					if (m_YAxis != null) m_YAxis.PropertyChanged -= HandleYAxisPropertyChanged;
 					m_YAxis = value;
-					if (m_YAxis != null) m_YAxis.PropertyChanged -= HandleYAxisPropertyChanged;
+					if (m_YAxis != null) m_YAxis.PropertyChanged += HandleYAxisPropertyChanged;
 				}
 			}
 			private Axis m_YAxis;
@@ -1338,12 +1331,12 @@ namespace pr.gui
 			public enum EAxis { XAxis, YAxis }
 
 			/// <summary>The chart that owns this axis</summary>
-			public ChartControl Owner { get; private set; }
+			public ChartControl Owner { [DebuggerStepThrough] get; private set; }
 
 			/// <summary>The chart X axis</summary>
 			public Axis XAxis
 			{
-				get { return m_xaxis; }
+				[DebuggerStepThrough] get { return m_xaxis; }
 				internal set
 				{
 					if (m_xaxis == value) return;
@@ -1366,7 +1359,7 @@ namespace pr.gui
 			/// <summary>The chart Y axis</summary>
 			public Axis YAxis
 			{
-				get { return m_yaxis; }
+				[DebuggerStepThrough] get { return m_yaxis; }
 				internal set
 				{
 					if (m_yaxis == value) return;
@@ -1458,24 +1451,26 @@ namespace pr.gui
 				{
 					Debug.Assert(owner != null);
 					Set(min, max);
-					AxisType    = axis;
-					Owner       = owner;
-					Label       = string.Empty;
-					AllowScroll = true;
-					AllowZoom   = true;
-					LockRange   = false;
-					TickText    = (x,step) => Math.Round(x, 4, MidpointRounding.AwayFromZero).ToString("G4");
+					AxisType        = axis;
+					Owner           = owner;
+					Label           = string.Empty;
+					AllowScroll     = true;
+					AllowZoom       = true;
+					LockRange       = false;
+					TickText        = (x,step) => Math.Round(x, 4, MidpointRounding.AwayFromZero).ToString("G4");
+					MeasureTickText = (gfx,w)  => Options.MinTickSize;
 				}
 				public Axis(Axis rhs)
 				{
 					Set(rhs.Min, rhs.Max);
-					AxisType    = rhs.AxisType;
-					Owner       = rhs.Owner;
-					Label       = rhs.Label;
-					AllowScroll = rhs.AllowScroll;
-					AllowZoom   = rhs.AllowZoom;
-					LockRange   = rhs.LockRange;
-					TickText    = rhs.TickText;
+					AxisType        = rhs.AxisType;
+					Owner           = rhs.Owner;
+					Label           = rhs.Label;
+					AllowScroll     = rhs.AllowScroll;
+					AllowZoom       = rhs.AllowZoom;
+					LockRange       = rhs.LockRange;
+					TickText        = rhs.TickText;
+					MeasureTickText = rhs.MeasureTickText;
 				}
 				public virtual void Dispose()
 				{
@@ -1579,6 +1574,9 @@ namespace pr.gui
 
 				/// <summary>Convert the axis value to a string. "string TickText(double tick_value, double step_size)" </summary>
 				public Func<double, double, string> TickText;
+
+				/// <summary>Return the width/height to reserve for the tick text. "float MeasureTickText(Graphics gfx, bool width)"</summary>
+				public Func<Graphics, bool, float> MeasureTickText;
 
 				/// <summary>Set the range without risk of an assert if 'min' is greater than 'Max' or visa versa</summary>
 				public void Set(double min, double max)
@@ -1725,7 +1723,7 @@ namespace pr.gui
 				private View3d.Object m_gridlines;
 
 				/// <summary>Show the axis context menu</summary>
-				public void ShowContextMenu(Point location)
+				public void ShowContextMenu(Point location, HitTestResult hit_result)
 				{
 					var cmenu = new ContextMenuStrip();
 					using (cmenu.SuspendLayout(true))
@@ -1739,7 +1737,8 @@ namespace pr.gui
 						}
 
 						// Customise the menu
-						Owner.OnAddUserMenuOptions(new AddUserMenuOptionsEventArgs(AxisType == EAxis.XAxis ? AddUserMenuOptionsEventArgs.EType.XAxis : AddUserMenuOptionsEventArgs.EType.YAxis, cmenu));
+						var type = AxisType == EAxis.XAxis ? AddUserMenuOptionsEventArgs.EType.XAxis : AddUserMenuOptionsEventArgs.EType.YAxis;
+						Owner.OnAddUserMenuOptions(new AddUserMenuOptionsEventArgs(type, cmenu, hit_result));
 					}
 					cmenu.Items.TidySeparators();
 					if (cmenu.Items.Count != 0)
@@ -1785,6 +1784,7 @@ namespace pr.gui
 		}
 		private bool m_default_mouse_control;
 
+		/// <summary>Mouse events on the chart</summary>
 		protected override void OnMouseDown(MouseEventArgs e)
 		{
 			base.OnMouseDown(e);
@@ -1814,7 +1814,7 @@ namespace pr.gui
 				op.m_btn_down    = true;
 				op.m_grab_client = e.Location;
 				op.m_grab_chart  = ClientToChart(op.m_grab_client);
-				op.m_hit_result  = HitTestCS(op.m_grab_client, null);
+				op.m_hit_result  = HitTestCS(op.m_grab_client, ModifierKeys, null);
 				op.MouseDown(e);
 				Capture = true;
 			}
@@ -1833,7 +1833,7 @@ namespace pr.gui
 			// Otherwise, provide mouse hover detection
 			else
 			{
-				var hit = HitTestCS(e.Location, null);
+				var hit = HitTestCS(e.Location, ModifierKeys, null);
 				var hovered = hit.Hits.Select(x => x.Element).ToHashSet();
 
 				// Remove elements that are no longer hovered
@@ -2166,13 +2166,13 @@ namespace pr.gui
 			}
 
 			/// <summary>Called on mouse down</summary>
-			public abstract void MouseDown(MouseEventArgs e);
+			public virtual void MouseDown(MouseEventArgs e) { }
 
 			/// <summary>Called on mouse move</summary>
-			public abstract void MouseMove(MouseEventArgs e);
+			public virtual void MouseMove(MouseEventArgs e) { }
 
 			/// <summary>Called on mouse up</summary>
-			public abstract void MouseUp(MouseEventArgs e);
+			public virtual void MouseUp(MouseEventArgs e) { }
 
 			/// <summary>Called on key down</summary>
 			public virtual void OnKeyDown(KeyEventArgs e) { }
@@ -2343,11 +2343,11 @@ namespace pr.gui
 						if (args.Button == MouseButtons.Right)
 						{
 							if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.Chart))
-								m_chart.ShowContextMenu(args.Location);
+								m_chart.ShowContextMenu(args.Location, args.HitResult);
 							else if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.XAxis))
-								m_chart.XAxis.ShowContextMenu(args.Location);
+								m_chart.XAxis.ShowContextMenu(args.Location, args.HitResult);
 							else if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.YAxis))
-								m_chart.YAxis.ShowContextMenu(args.Location);
+								m_chart.YAxis.ShowContextMenu(args.Location, args.HitResult);
 						}
 					}
 				}
@@ -2450,7 +2450,7 @@ namespace pr.gui
 			}
 
 			/// <summary>Add or remove this element from 'chart'</summary>
-			public virtual void SetChartCore(ChartControl chart)
+			protected virtual void SetChartCore(ChartControl chart)
 			{
 				// Note: don't suspend events on Chart.Elements.
 				// User code maybe watching for ListChanging events.
@@ -2803,7 +2803,7 @@ namespace pr.gui
 			}
 
 			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in client space because typically hit testing uses pixel tolerances</summary>
-			public virtual HitTestResult.Hit HitTest(Point client_point, View3d.CameraControls cam)
+			public virtual HitTestResult.Hit HitTest(Point client_point, Keys modifier_keys, View3d.CameraControls cam)
 			{
 				return null;
 			}
@@ -2831,7 +2831,10 @@ namespace pr.gui
 			{
 				if (m_impl_updating_gfx != 0) return; // Protect against reentrancy
 				using (Scope.Create(() => ++m_impl_updating_gfx, () => --m_impl_updating_gfx))
+				{
 					UpdateGfxCore();
+					m_invalidated = false;
+				}
 			}
 			protected virtual void UpdateGfxCore() { }
 			private int m_impl_updating_gfx;
@@ -2965,7 +2968,7 @@ namespace pr.gui
 		/// If no modifier keys are down, elements not in 'rect' are deselected.
 		/// If 'shift' is down, elements within 'rect' are selected in addition to the existing selection
 		/// If 'ctrl' is down, elements within 'rect' are removed from the existing selection.</summary>
-		public void SelectElements(RectangleF rect, Keys modifiers)
+		public void SelectElements(RectangleF rect, Keys modifier_keys)
 		{
 			if (!AllowSelection)
 				return;
@@ -2977,17 +2980,17 @@ namespace pr.gui
 			var is_click = r.DiametreSq < Maths.Sqr(Options.MinDragPixelDistance);
 			if (is_click)
 			{
-				var hits = HitTestCS(ChartToClient(rect.Location), x => x.Enabled);
+				var hits = HitTestCS(ChartToClient(rect.Location), modifier_keys, x => x.Enabled);
 
 				// If control is down, deselect the first selected element in the hit list
-				if (Bit.AllSet((int)modifiers, (int)Keys.Control))
+				if (Bit.AllSet((int)modifier_keys, (int)Keys.Control))
 				{
 					var first = hits.Hits.FirstOrDefault(x => x.Element.Selected);
 					if (first != null)
 						first.Element.Selected = false;
 				}
 				// If shift is down, select the first element not already selected in the hit list
-				else if (Bit.AllSet((int)modifiers, (int)Keys.Shift))
+				else if (Bit.AllSet((int)modifier_keys, (int)Keys.Shift))
 				{
 					var first = hits.Hits.FirstOrDefault(x => !x.Element.Selected);
 					if (first != null)
@@ -3018,14 +3021,14 @@ namespace pr.gui
 				using (Selected.SuspendEvents(true))
 				{
 					// If control is down, those in the selection area become deselected
-					if (Bit.AllSet((int)modifiers, (int)Keys.Control))
+					if (Bit.AllSet((int)modifier_keys, (int)Keys.Control))
 					{
 						// Only need to look in the selected list
 						foreach (var elem in Selected.Where(x => r.IsWithin(x.Bounds, 0f)).ToArray())
 							elem.Selected = false;
 					}
 					// If shift is down, those in the selection area become selected
-					else if (Bit.AllSet((int)modifiers, (int)Keys.Shift))
+					else if (Bit.AllSet((int)modifier_keys, (int)Keys.Shift))
 					{
 						foreach (var elem in Elements.Where(x => !x.Selected && r.IsWithin(x.Bounds, 0f)))
 							elem.Selected = true;
@@ -3047,7 +3050,7 @@ namespace pr.gui
 		#region Context Menu
 
 		/// <summary>Create and display a context menu</summary>
-		public void ShowContextMenu(Point location)
+		public void ShowContextMenu(Point location, HitTestResult hit_result)
 		{
 			var cmenu = new ContextMenuStrip { Renderer = new ContextMenuRenderer() };
 
@@ -3097,8 +3100,9 @@ namespace pr.gui
 				#endregion
 
 				// Allow users to add menu options
-				OnAddUserMenuOptions(new AddUserMenuOptionsEventArgs(AddUserMenuOptionsEventArgs.EType.Chart, cmenu));
+				OnAddUserMenuOptions(new AddUserMenuOptionsEventArgs(AddUserMenuOptionsEventArgs.EType.Chart, cmenu, hit_result));
 			}
+			cmenu.Items.TidySeparators();
 			cmenu.Closed += (s, a) => Refresh();
 			cmenu.Show(this, location);
 		}
@@ -3309,11 +3313,14 @@ namespace pr.gui
 		/// <summary>Results collection for a hit test</summary>
 		public class HitTestResult
 		{
-			public HitTestResult(EZone zone, IEnumerable<Hit> hits, View3d.CameraControls cam)
+			public HitTestResult(EZone zone, Point client_point, PointF chart_point, Keys modifier_keys, IEnumerable<Hit> hits, View3d.CameraControls cam)
 			{
-				Zone   = zone;
-				Hits   = hits.ToList();
-				Camera = cam;
+				Zone         = zone;
+				ClientPoint  = client_point;
+				ChartPoint   = chart_point;
+				Hits         = hits.ToList();
+				ModifierKeys = modifier_keys;
+				Camera       = cam;
 			}
 
 			/// <summary>The zone on the chart that was hit</summary>
@@ -3327,8 +3334,17 @@ namespace pr.gui
 				Title = 1 << 3,
 			}
 
+			/// <summary>The client space location of where the hit test was performed</summary>
+			public Point ClientPoint { get; private set; }
+
+			/// <summary>The chart space location of where the hit test was performed (EZone.Chart only)</summary>
+			public PointF ChartPoint { get; private set; }
+
 			/// <summary>The collection of hit objects</summary>
 			public List<Hit> Hits { get; private set; }
+
+			/// <summary>Keys held down during the hit test</summary>
+			public Keys ModifierKeys { get; private set; }
 
 			/// <summary>The camera position when the hit test was performed (needed for chart to screen space conversion)</summary>
 			public View3d.CameraControls Camera { get; private set; }
@@ -3576,10 +3592,11 @@ namespace pr.gui
 		/// <summary>Customise context menu event args</summary>
 		public class AddUserMenuOptionsEventArgs :EventArgs
 		{
-			public AddUserMenuOptionsEventArgs(EType type, ContextMenuStrip menu)
+			public AddUserMenuOptionsEventArgs(EType type, ContextMenuStrip menu, HitTestResult hit_result)
 			{
-				Type = type;
-				Menu = menu;
+				Type      = type;
+				Menu      = menu;
+				HitResult = hit_result;
 			}
 
 			/// <summary>The context menu type</summary>
@@ -3593,6 +3610,9 @@ namespace pr.gui
 
 			/// <summary>The menu to add menu items to</summary>
 			public ContextMenuStrip Menu { get; private set; }
+
+			/// <summary>The hit test result at the click location</summary>
+			public HitTestResult HitResult { get; private set; }
 		}
 
 		/// <summary>Event args for the post-paint add overlays call</summary>

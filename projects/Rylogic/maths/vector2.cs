@@ -7,6 +7,7 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using pr.extn;
 
 namespace pr.maths
 {
@@ -94,11 +95,6 @@ namespace pr.maths
 		public static bool FEql2(v2 lhs, v2 rhs, float tol)   { return Maths.FEql(lhs.x, rhs.x, tol) && Maths.FEql(lhs.y, rhs.y, tol); }
 		public static bool FEql2(v2 lhs, v2 rhs)              { return FEql2(lhs, rhs, Maths.TinyF); }
 
-		public static v2 Random2(float min, float max, Rand r) { r = r ?? new Rand(); return new v2(r.Float(min,max)     ,r.Float(min,max)    ); }
-		public static v2 Random2(v2 min, v2 max, Rand r)       { r = r ?? new Rand(); return new v2(r.Float(min.x,max.x) ,r.Float(min.y,max.y)); }
-		public static v2 Random2(float rad, Rand r)            { r = r ?? new Rand(); var rad_sq = rad*rad; v2 v; for (; (v = Random2(-rad, rad, r)).Length2Sq > rad_sq; ){} return v; }
-		public static v2 Random2N(Rand r)                      { r = r ?? new Rand(); return v2.Random2(1.0f, r); }
-		
 		public static v2    Abs(v2 vec)                        { return new v2(Math.Abs(vec.x), Math.Abs(vec.y)); }
 		public static v2    Lerp(v2 lhs, v2 rhs, float t)      { return lhs * (1f - t) + rhs * t; }
 		public static v2    Normalise2(v2 vec)                 { return vec / vec.Length2; }
@@ -132,6 +128,26 @@ namespace pr.maths
 			string[] values = s.Split(new char[]{' ',',','\t'},2);
 			return values.Length == 2 && float.TryParse(values[0], out vec.x) && float.TryParse(values[1], out vec.y);
 		}
+
+		#region Random
+		public static v2 Random2(float min, float max, Random r)
+		{
+			return new v2(r.Float(min, max), r.Float(min, max));
+		}
+		public static v2 Random2(v2 min, v2 max, Random r)
+		{
+			return new v2(r.Float(min.x, max.x), r.Float(min.y, max.y));
+		}
+		public static v2 Random2(float rad, Random r)
+		{
+			var rad_sq = rad*rad; v2 v; for (; (v = Random2(-rad, rad, r)).Length2Sq > rad_sq;) { }
+			return v;
+		}
+		public static v2 Random2N(Random r)
+		{
+			return v2.Random2(1.0f, r);
+		}
+		#endregion
 	}
 
 	public static partial class Maths

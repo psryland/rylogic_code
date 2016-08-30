@@ -191,8 +191,8 @@ namespace pr
 	inline float w_cp(quat_cref v) { return v.w; }
 
 	#pragma region Constants
-	static quat const quatZero     = {0.0f, 0.0f, 0.0f, 0.0f};
-	static quat const quatIdentity = {0.0f, 0.0f, 0.0f, 1.0f};
+	static quat const QuatZero     = {0.0f, 0.0f, 0.0f, 0.0f};
+	static quat const QuatIdentity = {0.0f, 0.0f, 0.0f, 1.0f};
 	#pragma endregion
 
 	#pragma region Operators
@@ -292,18 +292,26 @@ namespace pr
 		return q;
 	}
 
+	// Quaternion rotate. i.e. 'r = q*v*conj(q)' the "sandwich product"
+	// This is not really correct, since it's actually two multiplies
+	// but it makes the code look nicer.
+	template <typename = void> inline v4 pr_vectorcall operator * (quat_cref lhs, v4_cref rhs)
+	{
+		return Rotate(lhs, rhs);
+	}
+
 	#pragma endregion
 
 	#pragma region Functions
 
 	// Return the conjugate of quaternion 'q'
-	inline quat Conjugate_(quat const& q)
+	inline quat pr_vectorcall Conjugate(quat_cref q)
 	{
 		return quat(-q.x, -q.y, -q.z, q.w);
 	}
 
 	// Return the axis and angle from a quaternion
-	inline void AxisAngle(quat const& q, v4& axis, float& angle)
+	inline void pr_vectorcall AxisAngle(quat_cref q, v4& axis, float& angle)
 	{
 		assert("quaternion isn't normalised" && IsNormal4(q));
 		float w = Clamp(q.w, -1.0f, 1.0f);
@@ -315,7 +323,7 @@ namespace pr
 	}
 
 	// Spherically interpolate between quaternions
-	inline quat Slerp(quat const& a, quat const& b, float frac)
+	inline quat pr_vectorcall Slerp(quat_cref a, quat_cref b, float frac)
 	{
 		if (frac <= 0.0f) return a;
 		if (frac >= 1.0f) return b;
@@ -342,16 +350,17 @@ namespace pr
 		}
 	}
 
-	// Rotate 'rotatee' by 'rotator'
-	inline quat Rotate(quat const& rotator, quat const& rotatee)
-	{
-		assert("Non-unit quaternion used for rotation" && FEql(Length4Sq(rotator), 1.0f));
-		return rotator * rotatee * Conjugate_(rotator);
-	}
+	// this is quaternion multiply
+	//// Rotate 'rotatee' by 'rotator'
+	//inline quat pr_vectorcall Rotate(quat_cref rotator, quat_cref rotatee)
+	//{
+	//	assert("Non-unit quaternion used for rotation" && FEql(Length4Sq(rotator), 1.0f));
+	//	return rotator * rotatee * Conjugate(rotator);
+	//}
 
 	// Rotate a vector by a quaternion
 	// This is an optimised version of: 'r = q*v*conj(q) for when v.w == 0'
-	inline v4 Rotate(quat const& lhs, v4 const& rhs)
+	inline v4 pr_vectorcall Rotate(quat_cref lhs, v4_cref rhs)
 	{
 		float xx = lhs.x*lhs.x, xy = lhs.x*lhs.y, xz = lhs.x*lhs.z, xw = lhs.x*lhs.w;
 		float                   yy = lhs.y*lhs.y, yz = lhs.y*lhs.z, yw = lhs.y*lhs.w;
@@ -365,10 +374,7 @@ namespace pr
 		r.w = rhs.w;
 		return r;
 	}
-	//inline v3 Rotate(quat const& lhs, v3 const& rhs)
-	//{
-	//	return Rotate(lhs, v4(rhs, 0.0f)).xyz;
-	//}
+
 	#pragma endregion
 }
 

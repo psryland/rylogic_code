@@ -4,6 +4,7 @@
 //***************************************************
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -43,6 +44,46 @@ namespace pr.extn
 			var idx = str.IndexOf(c => c == '\n' && --max_lines == 0);
 			return idx == -1 ? str : str.Substring(0, idx) + Environment.NewLine + "...";
 		}
+
+		/// <summary>Pluralise this string based on count.</summary>
+		public static string Plural(this string str, int count)
+		{
+			if (count == 1) return str;
+			if (!str.HasValue()) return str;
+
+			// Handle all caps
+			var caps = str.All(x => char.IsUpper(x));
+			if (caps) str = str.ToLower();
+
+			// Convert 'str' to it's plural form
+			var plural = (string)null;
+			if (m_mutated_plurals.TryGetValue(str, out plural))
+			{
+				// Test the special cases first, those that are exceptions to the following "rules"
+			}
+			if (str.EndsWith("ch") || str.EndsWith("x") || str.EndsWith("s"))
+			{
+				plural = str + "es";
+			}
+			else if (str.EndsWith("y"))
+			{
+				plural = str.Substring(0, str.Length-1) + "ies";
+			}
+			else
+			{
+				plural = str + "s";
+			}
+
+			// Convert back to caps
+			if (caps) plural = plural.ToUpper();
+			return plural;
+		}
+
+		// Add to this on demand... (*sigh*... English...)
+		private static Dictionary<string,string> m_mutated_plurals = new Dictionary<string, string>()
+			.Add2("barracks","barracks").Add2("child","children").Add2("goose","geese").Add2("man","men")
+			.Add2("mouse","mice").Add2("person","people").Add2("woman","women")
+			;
 
 		/// <summary>Transform this string into a "pretty" form</summary>
 		public static string MakePretty(this string str, StrTxfm.ECapitalise word_start, StrTxfm.ECapitalise word_case, StrTxfm.ESeparate word_sep, string sep, string delims = null)
@@ -396,6 +437,12 @@ namespace pr.extn
 			return Build(CachedSB, parts);
 		}
 
+		/// <summary>Append object.ToString()s to 'sb'</summary>
+		[DebuggerStepThrough] public static void Append(params object[] parts)
+		{
+			Append(CachedSB, parts);
+		}
+
 		/// <summary>A helper for gluing strings together</summary>
 		[DebuggerStepThrough] public static string Build(StringBuilder sb, params object[] parts)
 		{
@@ -405,10 +452,18 @@ namespace pr.extn
 		}
 
 		/// <summary>Append object.ToString()s to 'sb'</summary>
+		[DebuggerStepThrough] public static void Append(StringBuilder sb, object part)
+		{
+			// Do not change this to automatically add white space,
+			if      (part is string     ) sb.Append((string)part);
+			else if (part is IEnumerable) foreach (var x in (IEnumerable)part) Append(sb, x);
+			else if (part != null       ) sb.Append(part.ToString());
+		}
 		[DebuggerStepThrough] public static void Append(StringBuilder sb, params object[] parts)
 		{
 			// Do not change this to automatically add white space,
-			parts.ForEach(p => sb.Append(p));
+			foreach (var part in parts)
+				Append(sb, part);
 		}
 
 		/// <summary>A thread local string builder, cached for better memory performance</summary>

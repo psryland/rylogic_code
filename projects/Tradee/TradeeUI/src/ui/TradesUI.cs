@@ -16,7 +16,10 @@ namespace Tradee
 	{
 		#region UI Elements
 		private ToolStrip m_ts;
-		private ToolStripButton m_btn_aggregate;
+		private ToolStripButton m_btn_active_trades;
+		private ToolStripButton m_btn_pending_orders;
+		private ToolStripButton m_btn_visualising_orders;
+		private ToolStripButton m_btn_closed_orders;
 		private TreeGridView m_grid;
 		#endregion
 
@@ -39,14 +42,14 @@ namespace Tradee
 			if (Model != null)
 			{
 				Model.Positions.Changed -= Invalidate;
-				Model.Positions.Trades.ListChanging -= SignalUpdateGrid;
-				Model.Positions.Orders.ListChanging -= SignalUpdateGrid;
+				Model.Positions.Trades.ListChanging -= UpdateGrid;
+				Model.Positions.Orders.ListChanging -= UpdateGrid;
 			}
 			base.SetModelCore(model);
 			if (Model != null)
 			{
-				Model.Positions.Trades.ListChanging += SignalUpdateGrid;
-				Model.Positions.Orders.ListChanging += SignalUpdateGrid;
+				Model.Positions.Trades.ListChanging += UpdateGrid;
+				Model.Positions.Orders.ListChanging += UpdateGrid;
 				Model.Positions.Changed += Invalidate;
 			}
 		}
@@ -57,17 +60,43 @@ namespace Tradee
 			get { return Model.Positions.Trades; }
 		}
 
+		/// <summary>The collection of orders</summary>
+		public BindingSource<Order> Orders
+		{
+			get { return Model.Positions.Orders; }
+		}
+
 		/// <summary>Set up UI elements</summary>
 		private void SetupUI()
 		{
 			#region Tool bar
-			m_btn_aggregate.CheckedChanged += (s,a) =>
+			m_btn_active_trades.Checked = Bit.AllSet(Settings.UI.ShowTrades, Trade.EState.ActivePosition);
+			m_btn_active_trades.CheckedChanged += (s,a) =>
 			{
-				Settings.UI.AggregateTrades = m_btn_aggregate.Checked;
-				UpdateUI();
-			}; 
+				Settings.UI.ShowTrades = Bit.SetBits(Settings.UI.ShowTrades, Trade.EState.ActivePosition, m_btn_active_trades.Checked);
+				UpdateGrid();
+			};
+			m_btn_pending_orders.Checked = Bit.AllSet(Settings.UI.ShowTrades, Trade.EState.PendingOrder);
+			m_btn_pending_orders.CheckedChanged += (s,a) =>
+			{
+				Settings.UI.ShowTrades = Bit.SetBits(Settings.UI.ShowTrades, Trade.EState.PendingOrder, m_btn_pending_orders.Checked);
+				UpdateGrid();
+			};
+			m_btn_visualising_orders.Checked = Bit.AllSet(Settings.UI.ShowTrades, Trade.EState.Visualising);
+			m_btn_visualising_orders.CheckedChanged += (s,a) =>
+			{
+				Settings.UI.ShowTrades = Bit.SetBits(Settings.UI.ShowTrades, Trade.EState.Visualising, m_btn_visualising_orders.Checked);
+				UpdateGrid();
+			};
+			m_btn_closed_orders.Checked = Bit.AllSet(Settings.UI.ShowTrades, Trade.EState.Closed);
+			m_btn_closed_orders.CheckedChanged += (s,a) =>
+			{
+				Settings.UI.ShowTrades = Bit.SetBits(Settings.UI.ShowTrades, Trade.EState.Closed, m_btn_closed_orders.Checked);
+				UpdateGrid();
+			};
 			#endregion
 
+			#region Grid
 			m_grid.AutoGenerateColumns = false;
 			m_grid.Columns.Add(new TreeGridColumn
 			{
@@ -92,17 +121,17 @@ namespace Tradee
 			m_grid.Columns.Add(new DataGridViewTextBoxColumn
 			{
 				HeaderText = "Stop Loss",
-				DataPropertyName = nameof(Order.StopLossRel),
+				DataPropertyName = nameof(IPosition.StopLossValue),
 			});
 			m_grid.Columns.Add(new DataGridViewTextBoxColumn
 			{
 				HeaderText = "Take Profit",
-				DataPropertyName = nameof(Order.TakeProfitRel),
+				DataPropertyName = nameof(IPosition.TakeProfitValue),
 			});
 			m_grid.Columns.Add(new DataGridViewTextBoxColumn
 			{
 				HeaderText = "Entry Time",
-				DataPropertyName = nameof(Order.EntryTimeUTC),
+				DataPropertyName = nameof(IPosition.EntryTimeUTC),
 			});
 			m_grid.Columns.Add(new DataGridViewTextBoxColumn
 			{
@@ -118,55 +147,51 @@ namespace Tradee
 			m_grid.MouseClick += HandleMouseClick;
 			m_grid.CellMouseDoubleClick += HandleCellDoubleClick;
 			m_grid.SelectionChanged += HandleOrderSelectionChanged;
+			#endregion
 		}
 
 		/// <summary>Update UI elements</summary>
 		private void UpdateUI(object sender = null, EventArgs args = null)
 		{
+			m_btn_active_trades     .Checked = Bit.AllSet(Settings.UI.ShowTrades, Trade.EState.ActivePosition);
+			m_btn_pending_orders    .Checked = Bit.AllSet(Settings.UI.ShowTrades, Trade.EState.PendingOrder);
+			m_btn_visualising_orders.Checked = Bit.AllSet(Settings.UI.ShowTrades, Trade.EState.Visualising);
+			m_btn_closed_orders     .Checked = Bit.AllSet(Settings.UI.ShowTrades, Trade.EState.Closed);
+
 			m_grid.Invalidate();
 		}
 
 		/// <summary>Repopulate the tree grid of trades</summary>
-		private void UpdateGrid()
+		private void UpdateGrid(object sender = null, EventArgs args = null)
 		{
-			m_sig_updated_grid = false;
-
 			// Update the tree grid using differences so that expanded/collapsed nodes are preserved
 			using (m_grid.SuspendLayout(true))
 			{
-				var trades = Trades.ToHashSet();
+				var trades = Trades.Where(x => Bit.AllSet(x.State, Settings.UI.ShowTrades)).ToHashSet();
 
 				// Remove any root level nodes that aren't in the trades list
 				m_grid.RootNode.Nodes.RemoveIf(x => !trades.Contains(x.DataBoundItem));
 
 				// Update the trades
-				foreach (var trade in Trades)
+				foreach (var trade in Trades.Where(x => Bit.AllSet(x.State, Settings.UI.ShowTrades)))
 				{
 					// Get the node for 'trade'. If the trade is not yet in the tree grid, add it
-					var node = m_grid.RootNode.Nodes.FirstOrDefault(x => trades.Contains(x.DataBoundItem));
-					if (node == null)
-						node = m_grid.RootNode.Nodes.Bind(trade);
+					var node = m_grid.RootNode.Nodes.FirstOrDefault(x => x.DataBoundItem == trade)
+						?? m_grid.RootNode.Nodes.Bind(trade);
 
-					var orders = trade.Orders.ToHashSet();
+					var orders = trade.Orders.Where(x => Bit.AllSet(x.State, Settings.UI.ShowTrades)).ToHashSet();
 
 					// Remove any orders not in the trade
 					node.Nodes.RemoveIf(x => !orders.Contains(x.DataBoundItem));
 
 					// Add any orders not yet in the grid
 					orders.RemoveWhere(x => node.Nodes.Any(n => n.DataBoundItem == x));
-					foreach (var order in orders)
+					foreach (var order in orders.Where(x => Bit.AllSet(x.State, Settings.UI.ShowTrades)))
 						node.Nodes.Bind(order);
 				}
 			}
 			m_grid.Invalidate();
 		}
-		private void SignalUpdateGrid(object sender = null, EventArgs args = null)
-		{
-			if (m_sig_updated_grid) return;
-			m_sig_updated_grid = true;
-			Dispatcher.CurrentDispatcher.BeginInvoke(UpdateGrid);
-		}
-		private bool m_sig_updated_grid;
 
 		/// <summary>Format the grid cell values</summary>
 		private void HandleCellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
@@ -207,25 +232,27 @@ namespace Tradee
 				}
 			case nameof(IPosition.Volume):
 				{
-					e.Value = "{0} {1}".Fmt(pos.Volume, Model.Acct.Currency);
+					var info = Misc.KnownSymbols[pos.SymbolCode];
+					e.Value = info.FmtString.Fmt(pos.Volume);
 					break;
 				}
-			case nameof(Order.StopLossRel):
+			case nameof(IPosition.StopLossValue):
 				{
-					if (trade != null) e.Value = string.Empty;
-					if (order != null) e.Value = "{0:N2} {1}".Fmt(order.StopLossRel * order.Volume, Model.Acct.Currency);
+					var val = Misc.BaseToAcctCurrency(pos.StopLossValue, pos.Instrument.PriceData);
+					var pc = 100.0 * val / Model.Acct.Balance;
+					e.Value = "{0:N2}% [{1:N2} {2}]".Fmt(pc, -val, Model.Acct.Currency);
 					break;
 				}
-			case nameof(Order.TakeProfitRel):
+			case nameof(IPosition.TakeProfitValue):
 				{
-					if (trade != null) e.Value = string.Empty;
-					if (order != null) e.Value = "{0:N2} {1}".Fmt(order.TakeProfitRel * order.Volume, Model.Acct.Currency);
+					var val = Misc.BaseToAcctCurrency(pos.TakeProfitValue, pos.Instrument.PriceData);
+					var pc  = 100.0 * val / Model.Acct.Balance;
+					e.Value = "{0:N2}% [{1:N2} {2}]".Fmt(pc, +val, Model.Acct.Currency);
 					break;
 				}
-			case nameof(Order.EntryTimeUTC):
+			case nameof(IPosition.EntryTimeUTC):
 				{
-					if (trade != null) e.Value = string.Empty;
-					if (order != null) e.Value = TimeZone.CurrentTimeZone.ToLocalTime(order.EntryTimeUTC.DateTime).ToString("yyyy-MM-dd HH:mm:ss");
+					e.Value = TimeZone.CurrentTimeZone.ToLocalTime(pos.EntryTimeUTC.DateTime).ToString("yyyy-MM-dd HH:mm:ss");
 					break;
 				}
 			case nameof(IPosition.GrossProfit):
@@ -254,10 +281,7 @@ namespace Tradee
 			var sel = new HashSet<Order>();
 			foreach (var node in m_grid.SelectedRows.Cast<TreeGridNode>())
 			{
-				var trade = node.DataBoundItem as Trade;
-				if (trade != null)
-					trade.Orders.ForEach(x => sel.Add(x));
-
+				// Only add specifically selected orders, selecting the trade 'deselects' everything
 				var order = node.DataBoundItem as Order;
 				if (order != null)
 					sel.Add(order);
@@ -272,12 +296,24 @@ namespace Tradee
 		private void HandleMouseClick(object sender, MouseEventArgs e)
 		{
 			var hit = m_grid.HitTestEx(e.X, e.Y);
-			var trade = hit.RowIndex >= 0 && hit.RowIndex < m_grid.RowCount ? m_grid.Rows[hit.RowIndex].DataBoundItem as Trade : null;
+			if (!m_grid.Within(hit.ColumnIndex, hit.RowIndex))
+				return;
+
+			// Ensure the clicked row is selected
+			if (!m_grid.Rows[hit.RowIndex].Selected)
+			{
+				m_grid.ClearSelection();
+				m_grid.Rows[hit.RowIndex].Selected = true;
+			}
+
+			// Get the data bound item
+			var trade = ((TreeGridNode)m_grid.Rows[hit.RowIndex]).DataBoundItem as Trade;
+			var order = ((TreeGridNode)m_grid.Rows[hit.RowIndex]).DataBoundItem as Order;
 
 			// Show the context menu on right mouse click
 			if (e.Button == MouseButtons.Right)
 			{
-				ShowContextMenu(hit, trade);
+				ShowContextMenu(hit, trade, order);
 			}
 		}
 
@@ -297,22 +333,34 @@ namespace Tradee
 		}
 
 		/// <summary>Display the trades grid context menu</summary>
-		private void ShowContextMenu(DataGridViewEx.HitTestInfo hit, Trade trade)
+		private void ShowContextMenu(DataGridViewEx.HitTestInfo hit, Trade trade, Order order)
 		{
 			var cmenu = new ContextMenuStrip();
 			if (trade != null)
 			{
 				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Delete Trade"));
 				opt.Enabled =
-					trade != null &&
 					!Bit.AnySet(trade.State, Trade.EState.PendingOrder|Trade.EState.ActivePosition);
 				opt.ToolTipText =
-					trade == null ? "No trade selected" :
 					Bit.AnySet(trade.State, Trade.EState.PendingOrder|Trade.EState.ActivePosition) ? "Cannot delete trades with active or pending orders" :
 					string.Empty;
 				opt.Click += (s,a) =>
 				{
+					Orders.RemoveAll(trade.Orders);
 					Trades.Remove(trade);
+				};
+			}
+			if (order != null)
+			{
+				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Delete Order"));
+				opt.Enabled =
+					!Bit.AnySet(order.State, Trade.EState.PendingOrder|Trade.EState.ActivePosition);
+				opt.ToolTipText =
+					Bit.AnySet(order.State, Trade.EState.PendingOrder|Trade.EState.ActivePosition) ? "Cannot delete trades with active or pending orders" :
+					string.Empty;
+				opt.Click += (s,a) =>
+				{
+					Orders.Remove(order);
 				};
 			}
 			cmenu.Items.TidySeparators();
@@ -325,7 +373,10 @@ namespace Tradee
 		{
 			this.m_grid = new pr.gui.TreeGridView();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
-			this.m_btn_aggregate = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_active_trades = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_pending_orders = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_visualising_orders = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_closed_orders = new System.Windows.Forms.ToolStripButton();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).BeginInit();
 			this.m_ts.SuspendLayout();
 			this.SuspendLayout();
@@ -358,7 +409,10 @@ namespace Tradee
 			// 
 			this.m_ts.ImageScalingSize = new System.Drawing.Size(24, 24);
 			this.m_ts.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_btn_aggregate});
+            this.m_btn_active_trades,
+            this.m_btn_pending_orders,
+            this.m_btn_visualising_orders,
+            this.m_btn_closed_orders});
 			this.m_ts.Location = new System.Drawing.Point(0, 0);
 			this.m_ts.Name = "m_ts";
 			this.m_ts.Size = new System.Drawing.Size(659, 31);
@@ -366,16 +420,45 @@ namespace Tradee
 			this.m_ts.TabIndex = 1;
 			this.m_ts.Text = "toolStrip1";
 			// 
-			// m_btn_aggregate
+			// m_btn_active_trades
 			// 
-			this.m_btn_aggregate.CheckOnClick = true;
-			this.m_btn_aggregate.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_aggregate.Image = global::Tradee.Properties.Resources.aggregate;
-			this.m_btn_aggregate.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_btn_aggregate.Name = "m_btn_aggregate";
-			this.m_btn_aggregate.Size = new System.Drawing.Size(28, 28);
-			this.m_btn_aggregate.Text = "Aggregate";
-			this.m_btn_aggregate.ToolTipText = "Aggregate by instrument";
+			this.m_btn_active_trades.CheckOnClick = true;
+			this.m_btn_active_trades.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_active_trades.Image = global::Tradee.Properties.Resources.active_orders;
+			this.m_btn_active_trades.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_active_trades.Name = "m_btn_active_trades";
+			this.m_btn_active_trades.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_active_trades.Text = "toolStripButton1";
+			// 
+			// m_btn_pending_orders
+			// 
+			this.m_btn_pending_orders.CheckOnClick = true;
+			this.m_btn_pending_orders.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_pending_orders.Image = global::Tradee.Properties.Resources.pending_orders;
+			this.m_btn_pending_orders.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_pending_orders.Name = "m_btn_pending_orders";
+			this.m_btn_pending_orders.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_pending_orders.Text = "toolStripButton1";
+			// 
+			// m_btn_visualising_orders
+			// 
+			this.m_btn_visualising_orders.CheckOnClick = true;
+			this.m_btn_visualising_orders.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_visualising_orders.Image = global::Tradee.Properties.Resources.visualising_orders;
+			this.m_btn_visualising_orders.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_visualising_orders.Name = "m_btn_visualising_orders";
+			this.m_btn_visualising_orders.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_visualising_orders.Text = "toolStripButton1";
+			// 
+			// m_btn_closed_orders
+			// 
+			this.m_btn_closed_orders.CheckOnClick = true;
+			this.m_btn_closed_orders.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_closed_orders.Image = global::Tradee.Properties.Resources.closed_orders;
+			this.m_btn_closed_orders.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_closed_orders.Name = "m_btn_closed_orders";
+			this.m_btn_closed_orders.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_closed_orders.Text = "toolStripButton1";
 			// 
 			// TradesUI
 			// 

@@ -385,7 +385,6 @@
     <Compile Include="maths\matrix3x4.cs" />
     <Compile Include="maths\matrix4x4.cs" />
     <Compile Include="maths\quaternion.cs" />
-    <Compile Include="maths\rand.cs" />
     <Compile Include="maths\scalar.cs" />
     <Compile Include="maths\spline.cs" />
     <Compile Include="maths\stat.cs" />

@@ -1196,6 +1196,23 @@ namespace pr
 	};
 }
 
+// Specialise std
+namespace std
+{
+	template <typename T, typename = pr::maths::enable_if_vN<T>> inline T min(T const& lhs, T const& rhs)
+	{
+		T v;
+		for (int i = 0, iend = pr::maths::is_vec<T>::dim; i != iend; ++i) { v[i] = min(lhs[i], rhs[i]); }
+		return v;
+	}
+	template <typename T, typename = pr::maths::enable_if_vN<T>> inline T max(T const& lhs, T const& rhs)
+	{
+		T v;
+		for (int i = 0, iend = pr::maths::is_vec<T>::dim; i != iend; ++i) { v[i] = max(lhs[i], rhs[i]); }
+		return v;
+	}
+}
+
 #if PR_UNITTESTS
 #include "pr/maths/maths.h"
 #include "pr/common/unittests.h"

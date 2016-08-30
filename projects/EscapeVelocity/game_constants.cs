@@ -220,7 +220,7 @@ namespace EscapeVelocity
 				for (int i = 2; i != ValenceLevels.Length; ++i)
 				{
 					int v = 1 + ValenceLevels[i-1];
-					ValenceLevels[i] = (int)rnd.NextDouble(1.3*v, 2.9*v);
+					ValenceLevels[i] = (int)rnd.Double(1.3*v, 2.9*v);
 				}
 			}
 
@@ -238,12 +238,12 @@ namespace EscapeVelocity
 
 			// Pick a star mass approximately the same as the sun
 			const double suns_mass = 2.0e30;
-			StarMass = rnd.NextDoubleCentred(suns_mass, suns_mass * 0.25);
+			StarMass = rnd.DoubleC(suns_mass, suns_mass * 0.25);
 
 			// Pick a distance from the star, somewhere between mercury and mars
 			const double sun_to_mercury = 5.79e10;
 			const double sun_to_mars    = 2.279e11;
-			StarDistance = rnd.NextDouble(sun_to_mercury, sun_to_mars);
+			StarDistance = rnd.Double(sun_to_mercury, sun_to_mars);
 
 			// The acceleration due to the star's gravity at the given distance
 			m_star_gravitational_acceleration = m_gravitational_constant * StarMass / Maths.Sqr(StarDistance);
@@ -253,22 +253,22 @@ namespace EscapeVelocity
 			EscapeVelocity = Maths.Sqrt(2.0 * m_gravitational_constant * StarMass / StarDistance);
 
 			// Set up per passenger constants
-			AveragePassengerWeight = rnd.NextDoubleCentred(80.0, 10.0);
-			AveragePassengerPersonalSpace = rnd.NextDoubleCentred(2.0, 0.5);
+			AveragePassengerWeight = rnd.DoubleC(80.0, 10.0);
+			AveragePassengerPersonalSpace = rnd.DoubleC(2.0, 0.5);
 			CabinPressure = 1000;
 
 			// The total number of people available to work
-			m_total_man_power = rnd.NextCentred(10000, 0);
+			m_total_man_power = rnd.IntC(10000, 0);
 
 			// The ship is roughly 10% bigger than the volume of it's contents
-			ShipVolumeScaler = rnd.NextDoubleCentred(1.11,0.0);
-			ShipConstructionRate = rnd.NextDoubleCentred(0.1,0.0);
+			ShipVolumeScaler = rnd.DoubleC(1.11,0.0);
+			ShipConstructionRate = rnd.DoubleC(0.1,0.0);
 
 			// The total man days needed to discover the star mass
-			m_star_mass_discovery_effort = rnd.NextDoubleCentred(1000,0.0);
+			m_star_mass_discovery_effort = rnd.DoubleC(1000,0.0);
 
 			// The rate at which the star distance can be discovered proportional to the main hours assigned
-			m_star_distance_discovery_effort = rnd.NextDoubleCentred(1000,0.0);
+			m_star_distance_discovery_effort = rnd.DoubleC(1000,0.0);
 		}
 	}
 }

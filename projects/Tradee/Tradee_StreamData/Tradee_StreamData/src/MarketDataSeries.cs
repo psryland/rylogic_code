@@ -11,7 +11,7 @@ namespace Tradee
 			LastTransmitUTC          = DateTimeOffset.MinValue;
 			LastUpdateUTC            = DateTimeOffset.MinValue;
 			LastTransmittedPriceData = PriceData.Default;
-			LastTransmittedCandle    = Candle.Default;
+			LastTransmittedCandle    = PriceCandle.Default;
 		}
 
 		/// <summary>The price data</summary>
@@ -27,6 +27,6 @@ namespace Tradee
 		public PriceData LastTransmittedPriceData { get; set; }
 
 		/// <summary>The latest candle received from the server</summary>
-		public Candle LastTransmittedCandle { get; set; }
+		public PriceCandle LastTransmittedCandle { get; set; }
 	}
 }

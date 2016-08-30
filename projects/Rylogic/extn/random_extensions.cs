@@ -8,40 +8,12 @@ using System.Collections.Generic;
 
 namespace pr.extn
 {
-	public static class RandomExtensions
+	public static class Random_
 	{
-		#region Ints
-
-		/// <summary>Return a random number within a range centred on 'centre' with radius 'radius'</summary>
-		public static int NextCentred(this Random r, int centre, int radius)
-		{
-			return r.Next(centre - radius, centre + radius);
-		}
-
-		/// <summary>An endless stream of random numbers</summary>
-		public static IEnumerable<int> Ints(this Random r)
-		{
-			for (;;) yield return r.Next();
-		}
-
-		/// <summary>An endless stream of random numbers within the range [min,max)</summary>
-		public static IEnumerable<int> Ints(this Random r, int min, int max)
-		{
-			for (;;) yield return r.Next(min,max);
-		}
-
-		/// <summary>An endless stream of random numbers centred on 'centre' with radius 'radius'</summary>
-		public static IEnumerable<int> IntsCentred(this Random r, int centre, int radius)
-		{
-			for (;;) yield return r.NextCentred(centre,radius);
-		}
-
-		#endregion
-
 		#region Bytes
 
 		/// <summary>Return a random byte</summary>
-		public static byte NextByte(this Random r)
+		public static byte Byte(this Random r)
 		{
 			return (byte)r.Next(0,256);
 		}
@@ -49,21 +21,107 @@ namespace pr.extn
 		/// <summary>Return a random byte</summary>
 		public static IEnumerable<byte> Bytes(this Random r)
 		{
-			for (;;) yield return r.NextByte();
+			for (;;) yield return r.Byte();
+		}
+
+		#endregion
+
+		#region Ints
+
+		/// <summary>Return a random number within a range [0, int.MaxValue)</summary>
+		public static int Int(this Random r)
+		{
+			return r.Next();
+		}
+
+		/// <summary>Returns a random integer on [min,max)</summary>
+		public static int Int(this Random r, int min, int max)
+		{
+			return r.Next(min, max);
+		}
+
+		/// <summary>Return a random number within a range centred on 'centre' with radius 'radius'</summary>
+		public static int IntC(this Random r, int centre, int radius)
+		{
+			return r.Int(centre - radius, centre + radius);
+		}
+
+		/// <summary>An endless stream of random numbers</summary>
+		public static IEnumerable<int> Ints(this Random r)
+		{
+			for (;;) yield return r.Int();
+		}
+
+		/// <summary>An endless stream of random numbers within the range [min,max)</summary>
+		public static IEnumerable<int> Ints(this Random r, int min, int max)
+		{
+			for (;;) yield return r.Int(min, max);
+		}
+
+		/// <summary>An endless stream of random numbers centred on 'centre' with radius 'radius'</summary>
+		public static IEnumerable<int> IntsC(this Random r, int centre, int radius)
+		{
+			for (;;) yield return r.IntC(centre, radius);
+		}
+
+		#endregion
+
+		#region Floats
+
+		/// <summary>Returns a random number on [min,max)</summary>
+		public static float Float(this Random r)
+		{
+			return (float)r.Double();
+		}
+
+		/// <summary>Returns a random number on [min,max)</summary>
+		public static float Float(this Random r, float min, float max)
+		{
+			return (float)r.Double(min, max);
+		}
+		
+		/// <summary>Return a random number within a range centred on 'centre' with radius 'radius'</summary>
+		public static float FloatC(this Random r, float centre, float radius)
+		{
+			return (float)r.DoubleC(centre, radius);
+		}
+
+		/// <summary>An endless stream of random floats</summary>
+		public static IEnumerable<float> Floats(this Random r)
+		{
+			for (;;) yield return r.Float();
+		}
+
+		/// <summary>An endless stream of random doubles within the range [min,max)</summary>
+		public static IEnumerable<float> Floats(this Random r, float min, float max)
+		{
+			for (;;) yield return r.Float(min, max);
+		}
+
+		/// <summary>An endless stream of random doubles on [centre - radius, centre + radius)</summary>
+		public static IEnumerable<float> FloatsC(this Random r, float centre, float radius)
+		{
+			for (;;) yield return r.FloatC(centre, radius);
 		}
 
 		#endregion
 
 		#region Doubles
 
+		/// <summary>Return a random number within a range [0.0, 1.0)</summary>
+		public static double Double(this Random r)
+		{
+			return r.NextDouble();
+		}
+
 		/// <summary>Return a random number within a range [min, max)</summary>
-		public static double NextDouble(this Random r, double min, double max)
+		public static double Double(this Random r, double min, double max)
 		{
 			return min + (max - min) * r.NextDouble();
 		}
 
 		/// <summary>Return a random number within a range centred on 'centre' with radius 'radius'</summary>
-		public static double NextDoubleCentred(this Random r, double centre, double radius)
+		public static double DoubleC(this Random r, double centre, double radius)
 		{
 			return centre + radius * (2.0 * r.NextDouble() - 1.0);
 		}
@@ -71,19 +129,19 @@ namespace pr.extn
 		/// <summary>An endless stream of random doubles</summary>
 		public static IEnumerable<double> Doubles(this Random r)
 		{
-			for (;;) yield return r.NextDouble();
+			for (;;) yield return r.Double();
 		}
 
-		/// <summary>An endless stream of random numbers within the range [min,max)</summary>
+		/// <summary>An endless stream of random doubles within the range [min,max)</summary>
 		public static IEnumerable<double> Doubles(this Random r, double min, double max)
 		{
-			for (;;) yield return r.NextDouble(min, max);
+			for (;;) yield return r.Double(min, max);
 		}
 
-		/// <summary>An endless stream of random numbers within the range [min,max)</summary>
-		public static IEnumerable<double> DoublesCentred(this Random r, double centre, double radius)
+		/// <summary>An endless stream of random doubles on [centre - radius, centre + radius)</summary>
+		public static IEnumerable<double> DoublesC(this Random r, double centre, double radius)
 		{
-			for (;;) yield return r.NextDoubleCentred(centre, radius);
+			for (;;) yield return r.DoubleC(centre, radius);
 		}
 
 		#endregion

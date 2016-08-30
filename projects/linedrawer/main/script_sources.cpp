@@ -123,24 +123,26 @@ namespace ldr
 			}
 			else if (pr::str::EqualI(extn, "p3d"))
 			{
+				Buffer<> src(ESrcType::Buffered, pr::FmtS("*Model {\"%s\"}", fpath.c_str()));
+
 				Includes<> inc;
 				inc.FileOpened += add_watch;
 				inc.m_ignore_missing_includes = m_settings.m_IgnoreMissingIncludes;
+				inc.AddSearchPath(pr::filesys::GetDirectory(fpath));
 
-				Buffer<> src(ESrcType::Buffered, pr::FmtS("*Model {\"%s\"}", fpath.c_str()));
 				Reader reader(src, false, &inc, nullptr, &m_lua_src);
-
 				Parse(m_rdr, reader, out, true, file.m_context_id);
 			}
 			else // assume ldr script file
 			{
+				FileSrc<> src(file.m_filepath.c_str());
+
 				Includes<> inc;
 				inc.FileOpened += add_watch;
 				inc.m_ignore_missing_includes = m_settings.m_IgnoreMissingIncludes;
+				inc.AddSearchPath(pr::filesys::GetDirectory(fpath));
 
-				FileSrc<> src(file.m_filepath.c_str());
 				Reader reader(src, false, &inc, nullptr, &m_lua_src);
-
 				Parse(m_rdr, reader, out, true, file.m_context_id);
 			}
 

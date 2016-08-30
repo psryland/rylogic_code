@@ -15,10 +15,9 @@ namespace Tradee
 		// Notes:
 		// - Represents a single buy or sell order with the broker.
 		// - A trade can have more than one of these.
-		// - An order can be pending or active.
-		// - Orders don't have associated graphics because they may be part
-		//   of an more complex trade
 		// - Orders are low level application objects, they don't know about charts, accounts, etc.
+		// - Base currency is the currency of the first part of the instrument, e.g GBPNZD - base currency = GBP
+		// - Account currency is the currency of the account = base currency * price_data.PipValue / price_data.PipSize
 
 		public Order(int id, Instrument instr, ETradeType trade_type, Trade.EState state)
 		{
@@ -113,13 +112,19 @@ namespace Tradee
 				if (State != Trade.EState.ActivePosition) return m_exit_time;
 				var latest = DateTimeOffset_.Max(Instrument.Latest.TimestampUTC, EntryTimeUTC);
 				var time_frame = Instrument.TimeFrame != ETimeFrame.None ? Instrument.TimeFrame : ETimeFrame.Hour1;
-				return latest + Misc.TimeFrameToTimeSpan(Settings.Chart.ViewCandlesAhead/2, time_frame);
+				return latest + Misc.TimeFrameToTimeSpan(5f, time_frame);
 			}
-			set { SetProp(ref m_exit_time, value, nameof(ExitTimeUTC)); }
+			set
+			{
+				Debug.Assert(value >= EntryTimeUTC);
+				SetProp(ref m_exit_time, value, nameof(ExitTimeUTC));
+			}
 		}
 		private DateTimeOffset m_exit_time;
 
-		/// <summary>The stop loss price (in base currency)</summary>
+		/// <summary>
+		/// The stop loss price (in base currency).
+		/// Equals the entry price if there is no stop loss</summary>
 		public double StopLossAbs
 		{
 			[DebuggerStepThrough] get { return m_stop_loss; }
@@ -127,7 +132,9 @@ namespace Tradee
 		}
 		private double m_stop_loss;
 
-		/// <summary>The take profit price (in base currency)</summary>
+		/// <summary>
+		/// The take profit price (in base currency).
+		/// Equals the entry price if there is no take profit</summary>
 		public double TakeProfitAbs
 		{
 			[DebuggerStepThrough] get { return m_take_profit; }
@@ -179,6 +186,20 @@ namespace Tradee
 				case ETradeType.Short: TakeProfitAbs = EntryPrice - value; break;
 				}
 			}
+		}
+
+		/// <summary>Get/Set the amount lost (in base currency) if the stop loss is hit</summary>
+		public double StopLossValue
+		{
+			get { return StopLossRel * Volume; }
+			set { StopLossRel = value / Volume; }
+		}
+
+		/// <summary>Get/Set the amount gained (in account currency) if the take profit is hit</summary>
+		public double TakeProfitValue
+		{
+			get { return TakeProfitRel * Volume; }
+			set { TakeProfitRel = value / Volume; }
 		}
 
 		/// <summary>The amount traded by the position</summary>
@@ -277,6 +298,16 @@ namespace Tradee
 			get { return Instrument.Latest.TimestampUTC + Misc.TimeFrameToTimeSpan(Settings.Chart.ViewCandlesAhead/2, Instrument.TimeFrame != ETimeFrame.None ? Instrument.TimeFrame : ETimeFrame.Hour1); }
 		}
 
+		/// <summary>The default length of time that a pending order is valid for</summary>
+		private TimeSpan DefaultExpiry
+		{
+			get
+			{
+				var tf = Instrument.TimeFrame != ETimeFrame.None ? Instrument.TimeFrame : Settings.General.DefaultTimeFrame;
+				return Misc.TimeFrameToTimeSpan(Settings.Trade.DefaultExpiryTF, tf);
+			}
+		}
+
 		/// <summary>Update the state of this order from 'position'</summary>
 		public void Update(Position position)
 		{
@@ -311,7 +342,7 @@ namespace Tradee
 			EntryPrice        = pending.EntryPrice;
 			ExitPrice         = this.ExitPrice;
 			EntryTimeUTC      = this.EntryTimeUTC;
-			ExitTimeUTC       = pending.ExpirationTime != 0 ? new DateTimeOffset(pending.ExpirationTime, TimeSpan.Zero) : DefaultExitTime;
+			ExitTimeUTC       = DateTimeOffset_.Max(this.EntryTimeUTC, pending.ExpirationTime != 0 ? new DateTimeOffset(pending.ExpirationTime, TimeSpan.Zero) : this.EntryTimeUTC + DefaultExpiry);
 			StopLossAbs       = pending.StopLossAbs;
 			TakeProfitAbs     = pending.TakeProfitAbs;
 			Volume            = pending.Volume;
@@ -379,6 +410,24 @@ namespace Tradee
 					break;
 				}
 			}
+		}
+
+		/// <summary>Return the value (in base currency) of this order ('+'=profit, '-'=loss) at the given price level</summary>
+		public double ValueAt(double price)
+		{
+			if (TradeType == ETradeType.Long)
+			{
+				if (TakeProfitAbs != EntryPrice) price = Math.Min(price, TakeProfitAbs);
+				if (StopLossAbs   != EntryPrice) price = Math.Max(price, StopLossAbs);
+				return +(price - EntryPrice);
+			}
+			if (TradeType == ETradeType.Short)
+			{
+				if (TakeProfitAbs != EntryPrice) price = Math.Max(price, TakeProfitAbs);
+				if (StopLossAbs   != EntryPrice) price = Math.Min(price, StopLossAbs);
+				return -(price - EntryPrice);
+			}
+			return 0.0;
 		}
 	}
 }

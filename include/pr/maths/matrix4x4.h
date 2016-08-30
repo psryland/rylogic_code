@@ -43,8 +43,8 @@ namespace pr
 			:rot(rot_)
 			,pos(pos_)
 		{
+			// Don't assert 'pos.w == 1' here. Not all m4x4's are affine transforms
 			assert(maths::is_aligned(this));
-			assert("'pos' must be a position vector" && pos.w == 1);
 		}
 		explicit Mat4x4(float x_)
 			:x(x_)

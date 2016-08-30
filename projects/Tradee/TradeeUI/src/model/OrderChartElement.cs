@@ -125,19 +125,22 @@ namespace Tradee
 					using (ldr.Group("Order"))
 					{
 						var sign     = Order.TradeType == ETradeType.Long ? +1 : -1;
-						var line_col = Order.TradeType == ETradeType.Long ? Settings.UI.BullishColour.Alpha(0x60) : Settings.UI.BearishColour.Alpha(0x60);
-						var alpha    = Hovered || Highlighted ? 0x80 : 0x40;
+						var alpha    = (Hovered || Highlighted) ? 0.5f : 0.25f;
 						var sl_col   = Settings.Chart.TradeLossColour  .Alpha(alpha);
 						var tp_col   = Settings.Chart.TradeProfitColour.Alpha(alpha);
+						var ep_col   = Color.DarkBlue.Alpha(alpha);
+						var line_col = Order.TradeType == ETradeType.Long ? Settings.UI.BullishColour.Alpha(0x60) : Settings.UI.BearishColour.Alpha(0x60);
 
 						// Draw the TP and SL regions
 						ldr.Rect("take_profit", tp_col, AxisId.PosZ, w, Math.Abs(tp), true, new v4(x + w/2f, ep + sign*tp/2f, ChartUI.Z.Trades, 1));
 						ldr.Rect("stop_loss"  , sl_col, AxisId.PosZ, w, Math.Abs(sl), true, new v4(x + w/2f, ep - sign*sl/2f, ChartUI.Z.Trades, 1));
 
 						// Add lines for the EntryPrice, TP and SL levels
-						ldr.Line("entry_price", line_col, new v4((float)Chart.XAxis.Min, ep          , ChartUI.Z.Trades, 1), new v4((float)Chart.XAxis.Max, ep          , ChartUI.Z.Trades, 1));
-						ldr.Line("take_profit", line_col, new v4((float)Chart.XAxis.Min, ep + sign*tp, ChartUI.Z.Trades, 1), new v4((float)Chart.XAxis.Max, ep + sign*tp, ChartUI.Z.Trades, 1));
-						ldr.Line("stop_loss"  , line_col, new v4((float)Chart.XAxis.Min, ep - sign*sl, ChartUI.Z.Trades, 1), new v4((float)Chart.XAxis.Max, ep - sign*sl, ChartUI.Z.Trades, 1));
+						var xmin = (Hovered || Highlighted) ? (float)Chart.XAxis.Min : x - 0;
+						var xmax = (Hovered || Highlighted) ? (float)Chart.XAxis.Max : x + w;
+						ldr.Line("entry_price", ep_col          , new v4(xmin, ep          , ChartUI.Z.Trades, 1), new v4(xmax, ep          , ChartUI.Z.Trades, 1));
+						ldr.Line("take_profit", tp_col.Alpha(1f), new v4(xmin, ep + sign*tp, ChartUI.Z.Trades, 1), new v4(xmax, ep + sign*tp, ChartUI.Z.Trades, 1));
+						ldr.Line("stop_loss"  , sl_col.Alpha(1f), new v4(xmin, ep - sign*sl, ChartUI.Z.Trades, 1), new v4(xmax, ep - sign*sl, ChartUI.Z.Trades, 1));
 					}
 					Gfx = new View3d.Object(ldr.ToString(), file: false);
 					break;
@@ -154,8 +157,15 @@ namespace Tradee
 		}
 
 		/// <summary>Hit test this order</summary>
-		public override ChartControl.HitTestResult.Hit HitTest(Point client_point, View3d.CameraControls cam)
+		public override ChartControl.HitTestResult.Hit HitTest(Point client_point, Keys modifier_keys, View3d.CameraControls cam)
 		{
+			// Chart elements can only be modified when selected
+			// Chart elements can only be selected when control is held down
+
+			// Only visible to hit if selected
+			if (!Selected)
+				return null;
+
 			// This Order graphic is hit if the mouse is over one of the control lines.
 			// Hit testing is done in client space so we can use pixel tolerance
 			Func<EHitSite, ChartControl.HitTestResult.Hit> Hit = site =>
@@ -227,6 +237,18 @@ namespace Tradee
 					{
 						Chart.MouseOperations.SetPending(MouseButtons.Left, new MouseOpMovePriceLevel(Chart));
 					}
+					break;
+				}
+			case EHitSite.TakeProfit:
+				{
+					break;
+				}
+			case EHitSite.EntryTime:
+				{
+					break;
+				}
+			case EHitSite.Expiry:
+				{
 					break;
 				}
 			}

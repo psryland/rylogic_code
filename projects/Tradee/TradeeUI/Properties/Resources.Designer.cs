@@ -63,6 +63,16 @@ namespace Tradee.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap active_orders {
+            get {
+                object obj = ResourceManager.GetObject("active_orders", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap aggregate {
             get {
                 object obj = ResourceManager.GetObject("aggregate", resourceCulture);
@@ -86,6 +96,16 @@ namespace Tradee.Properties {
         internal static System.Drawing.Bitmap clock {
             get {
                 object obj = ResourceManager.GetObject("clock", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap closed_orders {
+            get {
+                object obj = ResourceManager.GetObject("closed_orders", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -126,6 +146,16 @@ namespace Tradee.Properties {
         internal static System.Drawing.Bitmap pause {
             get {
                 object obj = ResourceManager.GetObject("pause", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap pending_orders {
+            get {
+                object obj = ResourceManager.GetObject("pending_orders", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -186,6 +216,16 @@ namespace Tradee.Properties {
         internal static System.Drawing.Bitmap trade_short {
             get {
                 object obj = ResourceManager.GetObject("trade_short", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap visualising_orders {
+            get {
+                object obj = ResourceManager.GetObject("visualising_orders", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

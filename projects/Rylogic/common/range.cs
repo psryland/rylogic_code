@@ -4,6 +4,7 @@
 //***********************************************
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
@@ -20,7 +21,7 @@ namespace pr.common
 	// Note, there is no Range<T> because T cannot be constrained to value types with simple maths operators :-/
 
 	/// <summary>A range over [Begin,End)</summary>
-	public struct Range
+	public struct Range :IEnumerable<long>
 	{
 		/// <summary>The value of the first element in the range</summary>
 		public long Begin;
@@ -183,6 +184,16 @@ namespace pr.common
 		public override int GetHashCode()
 		{
 			unchecked { return (Begin.GetHashCode()*397) ^ End.GetHashCode(); }
+		}
+
+		public IEnumerator<long> GetEnumerator()
+		{
+			for (var i = Begin; i != End; ++i)
+				yield return i;
+		}
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return ((IEnumerable<long>)this).GetEnumerator();
 		}
 	}
 

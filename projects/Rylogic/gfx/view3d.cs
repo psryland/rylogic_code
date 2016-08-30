@@ -51,6 +51,11 @@ namespace pr.gfx
 			TriList   = 4,
 			TriStrip  = 5,
 		}
+		public enum EShader
+		{
+			Standard,
+			ThickLineListGS,
+		}
 		public enum EFormat :uint
 		{
 			DXGI_FORMAT_UNKNOWN	                    = 0,
@@ -319,7 +324,7 @@ namespace pr.gfx
 			public uint m_col;
 			public uint pad;
 
-			public Vertex(v4 vert)                            { m_pos = vert; m_col = 0;   m_norm = v4.Zero; m_uv = v2.Zero; pad = 0; }
+			public Vertex(v4 vert)                            { m_pos = vert; m_col = ~0U; m_norm = v4.Zero; m_uv = v2.Zero; pad = 0; }
 			public Vertex(v4 vert, uint col)                  { m_pos = vert; m_col = col; m_norm = v4.Zero; m_uv = v2.Zero; pad = 0; }
 			public Vertex(v4 vert, v4 norm, uint col, v2 tex) { m_pos = vert; m_col = col; m_norm = norm;    m_uv = tex;     pad = 0; }
 			public override string ToString()                 { return "V:<{0}> C:<{1}>".Fmt(m_pos, m_col.ToString("X8")); }
@@ -329,8 +334,19 @@ namespace pr.gfx
 		[StructLayout(LayoutKind.Sequential)]
 		public struct Material
 		{
-			public IntPtr m_diff_tex;
-			public IntPtr m_env_map;
+			public HTexture m_diff_tex;
+			public HTexture m_env_map;
+			public EShader  m_shader;
+			[MarshalAs(UnmanagedType.ByValArray, SizeConst=4)] public int[] m_shader_data;
+
+			public Material(HTexture? diff_tex = null, HTexture? env_map = null, EShader? shader = null, int[] shader_data = null)
+			{
+				m_diff_tex    = diff_tex ?? HTexture.Zero;
+				m_env_map     = env_map ?? HTexture.Zero;
+				m_shader      = shader ?? EShader.Standard;
+				m_shader_data = shader_data ?? new int[4];
+				Debug.Assert(m_shader_data.Length == 4);
+			}
 		}
 
 		[Serializable]
@@ -339,25 +355,33 @@ namespace pr.gfx
 		{
 			public EPrim m_topo;
 			public EGeom m_geom;
-			public uint m_v0, m_v1;    // Vertex buffer range. Set to 0,0 to mean the whole buffer
-			public uint m_i0, m_i1;    // Index buffer range. Set to 0,0 to mean the whole buffer
+			public uint m_v0, m_v1;  // Vertex buffer range. Set to 0,0 to mean the whole buffer
+			public uint m_i0, m_i1;  // Index buffer range. Set to 0,0 to mean the whole buffer
+			public bool m_has_alpha; // True of the nugget contains transparent elements
 			public Material m_mat;
 
 			public Nugget(EPrim topo, EGeom geom)
-				:this(topo, geom, 0, 0, 0, 0)
+				:this(topo, geom, false)
+			{}
+			public Nugget(EPrim topo, EGeom geom, bool has_alpha)
+				:this(topo, geom, 0, 0, 0, 0, has_alpha, default(Material))
 			{}
 			public Nugget(EPrim topo, EGeom geom, uint v0, uint v1, uint i0, uint i1)
-				:this(topo, geom, v1, v1, i0, i1, default(Material))
+				:this(topo, geom, v0, v1, i0, i1, false)
 			{}
-			public Nugget(EPrim topo, EGeom geom, uint v0, uint v1, uint i0, uint i1, Material mat)
+			public Nugget(EPrim topo, EGeom geom, uint v0, uint v1, uint i0, uint i1, bool has_alpha)
+				:this(topo, geom, v0, v1, i0, i1, has_alpha, default(Material))
+			{}
+			public Nugget(EPrim topo, EGeom geom, uint v0, uint v1, uint i0, uint i1, bool has_alpha, Material mat)
 			{
-				m_topo = topo;
-				m_geom = geom;
-				m_v0   = v0;
-				m_v1   = v1;
-				m_i0   = i0;
-				m_i1   = i1;
-				m_mat  = mat;
+				m_topo      = topo;
+				m_geom      = geom;
+				m_v0        = v0;
+				m_v1        = v1;
+				m_i0        = i0;
+				m_i1        = i1;
+				m_has_alpha = has_alpha;
+				m_mat       = mat;
 			}
 		}
 
@@ -560,6 +584,9 @@ namespace pr.gfx
 		/// <summary>Report settings changed callback</summary>
 		public delegate void SettingsChangedCB(IntPtr ctx, HWindow wnd);
 
+		/// <summary>Called just prior to rendering</summary>
+		public delegate void RenderCB(IntPtr ctx, HWindow wnd);
+
 		/// <summary>Edit object callback</summary>
 		public delegate void EditObjectCB(
 			int vcount,
@@ -635,6 +662,7 @@ namespace pr.gfx
 			private readonly View3d m_view;
 			private readonly ReportErrorCB m_error_cb;        // A reference to prevent the GC from getting it
 			private readonly SettingsChangedCB m_settings_cb; // A local reference to prevent the callback being garbage collected
+			private readonly RenderCB m_render_cb;            // A local reference to prevent the callback being garbage collected
 			private HWindow m_wnd;
 
 			public Window(View3d view, HWND hwnd, WindowOptions opts)
@@ -655,6 +683,10 @@ namespace pr.gfx
 				m_settings_cb = (c,w) => OnSettingsChanged.Raise(this, EventArgs.Empty);
 				View3D_SettingsChanged(m_wnd, m_settings_cb, IntPtr.Zero, true);
 
+				// Set up a callback for when a render is about to happen
+				m_render_cb = (c,w) => OnRendering.Raise(this, EventArgs.Empty);
+				View3D_RenderingCB(m_wnd, m_render_cb, IntPtr.Zero, true);
+
 				// Set up the light source
 				SetLightSource(v4.Origin, -v4.ZAxis, true);
 
@@ -670,6 +702,7 @@ namespace pr.gfx
 				if (m_wnd != HWindow.Zero)
 				{
 					View3D_SettingsChanged(m_wnd, m_settings_cb, IntPtr.Zero, false);
+					View3D_RenderingCB(m_wnd, m_render_cb, IntPtr.Zero, false);
 					View3D_DestroyWindow(m_wnd);
 					m_wnd = HWindow.Zero;
 				}
@@ -685,6 +718,9 @@ namespace pr.gfx
 
 			/// <summary>Event notifying whenever rendering settings have changed</summary>
 			public event EventHandler OnSettingsChanged;
+
+			/// <summary>Event notifying of a render about to happen</summary>
+			public event EventHandler OnRendering;
 
 			/// <summary>Cause a redraw to happen the near future. This method can be called multiple times</summary>
 			public void Invalidate()
@@ -1943,6 +1979,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern IntPtr            View3D_GetSettings            (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_SetSettings            (HWindow window, string settings);
 		[DllImport(Dll)] private static extern void              View3D_SettingsChanged        (HWindow window, SettingsChangedCB settings_changed_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)] private static extern void              View3D_RenderingCB            (HWindow window, RenderCB rendering_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern void              View3D_AddObject              (HWindow window, HObject obj);
 		[DllImport(Dll)] private static extern void              View3D_RemoveObject           (HWindow window, HObject obj);
 		[DllImport(Dll)] private static extern void              View3D_RemoveAllObjects       (HWindow window);

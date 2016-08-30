@@ -40,6 +40,12 @@ namespace Tradee
 		}
 		private DockControl m_impl_dock_control;
 
+		/// <summary>Application settings</summary>
+		protected Settings Settings
+		{
+			get { return Model.Settings; }
+		}
+
 		/// <summary>The parent UI</summary>
 		protected MainModel Model
 		{
@@ -47,25 +53,15 @@ namespace Tradee
 			set
 			{
 				if (m_model == value) return;
-				if (m_model != null)
-				{
-				}
 				SetModelCore(value);
-				if (m_model != null)
-				{
-				}
 			}
-		}
-		protected virtual void SetModelCore(MainModel model)
-		{
-			m_model = model;
 		}
 		private MainModel m_model;
 
-		/// <summary>Application settings</summary>
-		protected Settings Settings
+		/// <summary>Set/Change the Model property</summary>
+		protected virtual void SetModelCore(MainModel model)
 		{
-			get { return Model.Settings; }
+			m_model = model;
 		}
 
 		/// <summary>Invalidate this control and all children</summary>

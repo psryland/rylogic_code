@@ -6,10 +6,14 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using pr.extn;
 
 namespace pr.maths
 {
+	/// <summary>4x4 Matrix</summary>
+	[Serializable]
 	[StructLayout(LayoutKind.Explicit)]
+	[DebuggerDisplay("{x}  {y}  {z}  {w}")]
 	public struct m4x4
 	{
 		[FieldOffset( 0)] public v4   x;
@@ -20,80 +24,105 @@ namespace pr.maths
 		[FieldOffset( 0)] public m3x4 rot;
 		[FieldOffset(48)] public v4   pos;
 
-		public override string ToString() { return x + " \n" + y + " \n" + z + " \n" + w + " \n"; }
+		/// <summary>Constructors</summary>
+		public m4x4(v4 x, v4 y, v4 z, v4 w) :this()
+		{
+			this.x = x;
+			this.y = y;
+			this.z = z;
+			this.w = w;
+		}
+		public m4x4(m3x4 rot, v4 pos) :this()
+		{
+			this.rot = rot;
+			this.pos = pos;
+		}
+		public m4x4(quat q, v4 pos) :this()
+		{
+			this.rot = new m3x4(q);
+			this.pos = pos;
+		}
 
-		public m4x4(m3x4 rot_, v4 pos_) :this()                                                { rot = rot_; pos = pos_; }
-		public m4x4(v4 x_, v4 y_, v4 z_, v4 w_) :this()                                        { set(x_, y_, z_, w_); }
-		public m4x4(v4 axis_norm, v4 axis_sine_angle, float cos_angle, v4 translation) :this() { set(axis_norm, axis_sine_angle, cos_angle, translation); }
-		public m4x4(v4 axis_norm, float angle, v4 translation) :this()                         { set(axis_norm, angle, translation); }
-		public m4x4(v4 from, v4 to, v4 translation) :this()                                    { set(from, to, translation); }
-		public m4x4(float pitch, float yaw, float roll, v4 translation) :this()                { set(pitch, yaw, roll, translation); }
-		public m4x4(v4 quaternion, v4 translation) :this()                                     { set(quaternion, translation); }
-
+		/// <summary>Get/Set components by index</summary>
 		public v4 this[int i]
 		{
-			get { switch(i){case 0:return x;case 1:return y;case 2:return z;case 3:return w;default: throw new ArgumentException("index out of range", "i");} }
-			set { switch(i){case 0:x=value;break;case 1:y=value;break;case 2:z=value;break;case 3:w=value;break;default: throw new ArgumentException("index out of range", "i");} }
+			get
+			{
+				switch (i) {
+				case 0: return x;
+				case 1: return y;
+				case 2: return z;
+				case 3: return w;
+				}
+				throw new ArgumentException("index out of range", "i");
+			}
+			set
+			{
+				switch (i) {
+				case 0: x = value; return;
+				case 1: y = value; return;
+				case 2: z = value; return;
+				case 3: w = value; return;
+				}
+				throw new ArgumentException("index out of range", "i");
+			}
+		}
+		public v4 this[uint i]
+		{
+			get { return this[(int)i]; }
+			set { this[(int)i] = value; }
 		}
 
-		public void set(v4 x_, v4 y_, v4 z_, v4 w_)
+		/// <summary>ToString()</summary>
+		public override string ToString()
 		{
-			x = x_;
-			y = y_;
-			z = z_;
-			w = w_;
-		}
-		public void set(v4 axis_norm, v4 axis_sine_angle, float cos_angle, v4 translation)
-		{
-			Debug.Assert(Maths.FEql(translation.w, 1f), "'translation' must be a position vector");
-			rot.set(axis_norm, axis_sine_angle, cos_angle);
-			pos = translation;
-		}
-		public void set(v4 axis_norm, float angle, v4 translation)
-		{
-			Debug.Assert(Maths.FEql(translation.w, 1f), "'translation' must be a position vector");
-			set(axis_norm, axis_norm * (float)Math.Sin(angle), (float)Math.Cos(angle), translation);
-		}
-		public void set(v4 from, v4 to, v4 translation)
-		{
-			Debug.Assert(Maths.FEql(translation.w, 1f), "'translation' must be a position vector");
-			rot.set(from, to);
-			pos = translation;
-		}
-		public void set(float pitch, float yaw, float roll, v4 translation)
-		{
-			Debug.Assert(Maths.FEql(translation.w, 1f), "'translation' must be a position vector");
-			rot.set(pitch, yaw, roll);
-			pos = translation;
-		}
-		public void set(v4 quaternion, v4 translation)
-		{
-			rot.set(quaternion);
-			pos = translation;
+			return "{0} \n{1} \n{2} \n{3} \n".Fmt(x,y,z,w);
 		}
 
-		// Static m4x4 types
-		private readonly static m4x4 m_zero;
-		private readonly static m4x4 m_identity;
-		static m4x4()
+		/// <summary>Static m4x4 types</summary>
+		private readonly static m4x4 m_zero = new m4x4(v4.Zero, v4.Zero, v4.Zero, v4.Zero);
+		private readonly static m4x4 m_identity = new m4x4(v4.XAxis, v4.YAxis, v4.ZAxis, v4.Origin);
+		public static m4x4 Zero
 		{
-			m_zero = new m4x4(v4.Zero, v4.Zero, v4.Zero, v4.Zero);
-			m_identity = new m4x4(v4.XAxis, v4.YAxis, v4.ZAxis, v4.Origin);
+			get { return m_zero; }
 		}
-		public static m4x4 Zero                             { get { return m_zero; } }
-		public static m4x4 Identity                         { get { return m_identity; } }
+		public static m4x4 Identity
+		{
+			get { return m_identity; }
+		}
+
+		/// <summary>Compare matrices</summary>
+		public static bool FEql(m4x4 lhs, m4x4 rhs, float tol)
+		{
+			return v4.FEql4(lhs.x, rhs.x, tol) && v4.FEql4(lhs.y, rhs.y, tol) && v4.FEql4(lhs.z, rhs.z, tol) && v4.FEql4(lhs.w, rhs.w, tol);
+		}
+		public static bool FEql(m4x4 lhs, m4x4 rhs)
+		{
+			return FEql(lhs, rhs, Maths.TinyF);
+		}
 
 		// Functions
-		public override bool Equals(object o)               { return o is m4x4 && (m4x4)o == this; }
-		public override int GetHashCode()                   { unchecked { return x.GetHashCode() + y.GetHashCode() + z.GetHashCode() + w.GetHashCode(); } }
-		public static m4x4 operator + (m4x4 lhs, m4x4 rhs)  { return new m4x4(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w); }
-		public static m4x4 operator - (m4x4 lhs, m4x4 rhs)  { return new m4x4(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w); }
-		public static m4x4 operator * (m4x4 lhs, float rhs) { return new m4x4(lhs.x * rhs, lhs.y * rhs, lhs.z * rhs, lhs.w * rhs); }
-		public static m4x4 operator * (float lhs, m4x4 rhs) { return new m4x4(lhs * rhs.x, lhs * rhs.y, lhs * rhs.z, lhs * rhs.w); }
-		public static m4x4 operator / (m4x4 lhs, float rhs) { return new m4x4(lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs); }
-		public static bool operator ==(m4x4 lhs, m4x4 rhs)  { return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w; }
-		public static bool operator !=(m4x4 lhs, m4x4 rhs)  { return !(lhs == rhs); }
-		public static v4 operator * (m4x4 lhs, v4 rhs)
+		public static m4x4 operator + (m4x4 lhs, m4x4 rhs)
+		{
+			return new m4x4(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w);
+		}
+		public static m4x4 operator - (m4x4 lhs, m4x4 rhs)
+		{
+			return new m4x4(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w);
+		}
+		public static m4x4 operator * (m4x4 lhs, float rhs)
+		{
+			return new m4x4(lhs.x * rhs, lhs.y * rhs, lhs.z * rhs, lhs.w * rhs);
+		}
+		public static m4x4 operator * (float lhs, m4x4 rhs)
+		{
+			return new m4x4(lhs * rhs.x, lhs * rhs.y, lhs * rhs.z, lhs * rhs.w);
+		}
+		public static m4x4 operator / (m4x4 lhs, float rhs)
+		{
+			return new m4x4(lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs);
+		}
+		public static v4   operator * (m4x4 lhs, v4 rhs)
 		{
 			Transpose4x4(ref lhs);
 			return new v4(
@@ -112,55 +141,7 @@ namespace pr.maths
 				new v4(v4.Dot4(lhs.x, rhs.w), v4.Dot4(lhs.y, rhs.w), v4.Dot4(lhs.z, rhs.w), v4.Dot4(lhs.w, rhs.w)));
 		}
 
-		/// <summary>Create a translation matrix</summary>
-		public static m4x4 Translation(float dx, float dy, float dz)
-		{
-			return Translation(new v4(dx, dy, dz, 1f));
-		}
-		public static m4x4 Translation(v2 dxy, float dz)
-		{
-			return Translation(new v4(dxy, dz, 1f));
-		}
-		public static m4x4 Translation(v4 translation)
-		{
-			Debug.Assert(Maths.FEql(translation.w, 1f), "'translation' must be a position vector");
-			return new m4x4(m3x4.Identity, translation);
-		}
-
-		/// <summary>Create a rotation matrix</summary>
-		public static m4x4 Rotation(v4 axis_norm, float angle, v4 translation)
-		{
-			return new m4x4(axis_norm, angle, translation);
-		}
-		public static m4x4 Rotation(v4 from, v4 to, v4 translation)
-		{
-			return new m4x4(from, to, translation);
-		}
-		public static m4x4 Rotation(float pitch, float yaw, float roll, v4 translation)
-		{
-			return new m4x4(pitch, yaw, roll, translation);
-		}
-
-		/// <summary>Create a scale matrix</summary>
-		public static m4x4 Scale(float s, v4 translation)
-		{
-			return new m4x4(s*v4.XAxis, s*v4.YAxis, s*v4.ZAxis, translation);
-		}
-		public static m4x4 Scale(float sx, float sy, float sz, v4 translation)
-		{
-			return new m4x4(sx*v4.XAxis, sy*v4.YAxis, sz*v4.ZAxis, translation);
-		}
-
-		/// <summary>Compare matrices</summary>
-		public static bool FEql(m4x4 lhs, m4x4 rhs, float tol)
-		{
-			return v4.FEql4(lhs.x, rhs.x, tol) && v4.FEql4(lhs.y, rhs.y, tol) && v4.FEql4(lhs.z, rhs.z, tol) && v4.FEql4(lhs.w, rhs.w, tol);
-		}
-		public static bool FEql(m4x4 lhs, m4x4 rhs)
-		{
-			return FEql(lhs, rhs, Maths.TinyF);
-		}
-
+		/// <summary>Transpose the rotation part of an affine transform</summary>
 		public static void Transpose3x3(ref m4x4 m)
 		{
 			m3x4.Transpose3x3(ref m.rot);
@@ -170,6 +151,8 @@ namespace pr.maths
 			Transpose3x3(ref m);
 			return m;
 		}
+
+		/// <summary>Transpose the 4x4 matrix</summary>
 		public static void Transpose4x4(ref m4x4 m)
 		{
 			Maths.Swap(ref m.x.y, ref m.y.x);
@@ -185,6 +168,7 @@ namespace pr.maths
 			return m;
 		}
 
+		/// <summary>Orthonormalise the rotation part of an affine transform</summary>
 		public static void Orthonormalise(ref m4x4 m)
 		{
 			m3x4.Orthonormalise(ref m.rot);
@@ -194,6 +178,8 @@ namespace pr.maths
 			Orthonormalise(ref m);
 			return m;
 		}
+
+		/// <summary>True if the rotation part of this transform is orthonormal</summary>
 		public static bool IsOrthonormal(m4x4 m)
 		{
 			return	m3x4.IsOrthonormal(m.rot);
@@ -297,6 +283,104 @@ namespace pr.maths
 				new v4(+vec.y, -vec.x,   0.0f, 0.0f),
 				v4.Zero);
 		}
+
+		/// <summary>Create a translation matrix</summary>
+		public static m4x4 Translation(float dx, float dy, float dz)
+		{
+			return Translation(new v4(dx, dy, dz, 1f));
+		}
+		public static m4x4 Translation(v2 dxy, float dz)
+		{
+			return Translation(new v4(dxy, dz, 1f));
+		}
+		public static m4x4 Translation(v4 translation)
+		{
+			Debug.Assert(Maths.FEql(translation.w, 1f), "'translation' must be a position vector");
+			return new m4x4(m3x4.Identity, translation);
+		}
+
+		/// <summary>Create a rotation/translation matrix</summary>
+		public static m4x4 Transform(float pitch, float yaw, float roll, v4 translation)
+		{
+			return new m4x4(m3x4.Rotation(pitch, yaw, roll), translation);
+		}
+		public static m4x4 Transform(v4 axis_norm, float angle, v4 translation)
+		{
+			return new m4x4(m3x4.Rotation(axis_norm, angle), translation);
+		}
+		public static m4x4 Transform(v4 angular_displacement, v4 translation)
+		{
+			return new m4x4(m3x4.Rotation(angular_displacement), translation);
+		}
+		public static m4x4 Transform(v4 from, v4 to, v4 translation)
+		{
+			return new m4x4(m3x4.Rotation(from, to), translation);
+		}
+
+		/// <summary>Create a scale matrix</summary>
+		public static m4x4 Scale(float s, v4 translation)
+		{
+			return new m4x4(s*v4.XAxis, s*v4.YAxis, s*v4.ZAxis, translation);
+		}
+		public static m4x4 Scale(float sx, float sy, float sz, v4 translation)
+		{
+			return new m4x4(sx*v4.XAxis, sy*v4.YAxis, sz*v4.ZAxis, translation);
+		}
+
+		#region Random
+
+		// Create a random 4x4 matrix
+		public static m4x4 Random4x4(float min, float max, Random r)
+		{
+			return new m4x4(
+				v4.Random4(min, max, r),
+				v4.Random4(min, max, r),
+				v4.Random4(min, max, r),
+				v4.Random4(min, max, r));
+		}
+
+		// Create a random affine transform matrix
+		public static m4x4 Random4x4(v4 axis, float min_angle, float max_angle, v4 position, Random r)
+		{
+			return Transform(axis, r.Float(min_angle, max_angle), position);
+		}
+		public static m4x4 Random4x4(float min_angle, float max_angle, v4 position, Random r)
+		{
+			return Random4x4(v4.Random3N(0.0f, r), min_angle, max_angle, position, r);
+		}
+		public static m4x4 Random4x4(v4 axis, float min_angle, float max_angle, v4 centre, float radius, Random r)
+		{
+			return Random4x4(axis, min_angle, max_angle, centre + v4.Random3(0.0f, radius, 0.0f, r), r);
+		}
+		public static m4x4 Random4x4(float min_angle, float max_angle, v4 centre, float radius, Random r)
+		{
+			return Random4x4(v4.Random3N(0.0f, r), min_angle, max_angle, centre, radius, r);
+		}
+		public static m4x4 Random4x4(v4 centre, float radius, Random r)
+		{
+			return Random4x4(v4.Random3N(0.0f, r), 0.0f, Maths.Tau, centre, radius, r);
+		}
+
+		#endregion
+
+		#region Equals
+		public static bool operator == (m4x4 lhs, m4x4 rhs)
+		{
+			return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w;
+		}
+		public static bool operator != (m4x4 lhs, m4x4 rhs)
+		{
+			return !(lhs == rhs);
+		}
+		public override bool Equals(object o)
+		{
+			return o is m4x4 && (m4x4)o == this;
+		}
+		public override int GetHashCode()
+		{
+			return new { x, y, z, w }.GetHashCode();
+		}
+		#endregion
 	}
 }
 
@@ -322,10 +406,10 @@ namespace pr.unittests
 		}
 		[Test] public void CreateFrom()
 		{
-			var rnd = new Rand();
+			var rnd = new Random();
 			var V1 = v4.Random3(0.0f, 10.0f, 1.0f, rnd);
-			var a2b = new m4x4(v4.Random3N(0.0f, rnd), rnd.FloatC(0, Maths.TauBy2), v4.Random3(0.0f, 10.0f, 1.0f, rnd));
-			var b2c = new m4x4(v4.Random3N(0.0f, rnd), rnd.FloatC(0, Maths.TauBy2), v4.Random3(0.0f, 10.0f, 1.0f, rnd));
+			var a2b = m4x4.Transform(v4.Random3N(0.0f, rnd), rnd.FloatC(0, Maths.TauBy2), v4.Random3(0.0f, 10.0f, 1.0f, rnd));
+			var b2c = m4x4.Transform(v4.Random3N(0.0f, rnd), rnd.FloatC(0, Maths.TauBy2), v4.Random3(0.0f, 10.0f, 1.0f, rnd));
 			Assert.True(m4x4.IsOrthonormal(a2b));
 			Assert.True(m4x4.IsOrthonormal(b2c));
 
@@ -337,25 +421,25 @@ namespace pr.unittests
 		}
 		[Test] public void CreateFrom2()
 		{
-			var m1 = m4x4.Rotation(1.0f, 0.5f, 0.7f, v4.Origin);
-			var m2 = new m4x4(quat.Make(1.0f, 0.5f, 0.7f), v4.Origin);
+			var m1 = m4x4.Transform(1.0f, 0.5f, 0.7f, v4.Origin);
+			var m2 = new m4x4(new quat(1.0f, 0.5f, 0.7f), v4.Origin);
 			Assert.True(m4x4.IsOrthonormal(m1));
 			Assert.True(m4x4.IsOrthonormal(m2));
 			Assert.True(m4x4.FEql(m1, m2));
 
-			var rnd = new Rand();
-			var ang = rnd.FloatC(0.0f,1.0f);
-			var axis = v4.Random3N(0.0f, rnd);
-			m1 = m4x4.Rotation(axis, ang, v4.Origin);
-			m2 = new m4x4(quat.Make(axis, ang), v4.Origin);
+			var rng = new Random();
+			var ang = rng.FloatC(0.0f,1.0f);
+			var axis = v4.Random3N(0.0f, rng);
+			m1 = m4x4.Transform(axis, ang, v4.Origin);
+			m2 = new m4x4(new quat(axis, ang), v4.Origin);
 			Assert.True(m4x4.IsOrthonormal(m1));
 			Assert.True(m4x4.IsOrthonormal(m2));
 			Assert.True(m4x4.FEql(m1, m2));
 		}
 		[Test] public void CreateFrom3()
 		{
-			var rnd = new Rand();
-			var a2b = new m4x4(v4.Random3N(0.0f, rnd), rnd.FloatC(0.0f,1.0f), v4.Random3(0.0f, 10.0f, 1.0f, rnd));
+			var rng = new Random();
+			var a2b = m4x4.Transform(v4.Random3N(0.0f, rng), rng.FloatC(0.0f,1.0f), v4.Random3(0.0f, 10.0f, 1.0f, rng));
 
 			var b2a = m4x4.Invert(a2b);
 			var a2a = b2a * a2b;

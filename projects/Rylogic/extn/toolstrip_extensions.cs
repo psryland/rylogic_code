@@ -50,12 +50,18 @@ namespace pr.extn
 			return items.AddOrdered(item, AlphabeticalOrder);
 		}
 
+		/// <summary>Insert a separator if the previous item is not a separator</summary>
+		public static void InsertSeparator(this ToolStripItemCollection items, int index)
+		{
+			if (items.Count == 0 || index == 0) return;
+			if (items[index - 1] is ToolStripSeparator) return;
+			items.Insert(index, new ToolStripSeparator());
+		}
+
 		/// <summary>Add a separator if the previous item is not a separator</summary>
 		public static void AddSeparator(this ToolStripItemCollection items)
 		{
-			if (items.Count == 0) return;
-			if (items[items.Count - 1] is ToolStripSeparator) return;
-			items.Add(new ToolStripSeparator());
+			items.InsertSeparator(items.Count);
 		}
 
 		/// <summary>Make sure a separator is not the last item</summary>

@@ -437,6 +437,10 @@ namespace pr.extn
 		{
 			return Color.FromArgb(alpha, col);
 		}
+		public static Color Alpha(this Color col, float alpha)
+		{
+			return Color.FromArgb((int)(255.9999f * alpha), col);
+		}
 
 		/// <summary>Convert this colour to ABGR</summary>
 		public static int ToAbgr(this Color col)

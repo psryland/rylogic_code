@@ -54,7 +54,7 @@ namespace TestCS
 
 			// Simple create object
 			m_obj0 = new View3d.Object("*Box test FFFFFFFF {1 2 3}", false);
-			m_obj0.O2P = m4x4.Rotation(0.5f, -0.3f, 0.2f, new v4(-0.3f, 1.2f, 0.5f, 1f));
+			m_obj0.O2P = m4x4.Transform(0.5f, -0.3f, 0.2f, new v4(-0.3f, 1.2f, 0.5f, 1f));
 			m_view3d.Window.AddObject(m_obj0);
 
 			// Create a texture and assign it to an object
@@ -74,7 +74,7 @@ namespace TestCS
 
 			// Create an object with a texture from a rendered scene
 			m_obj2 = new View3d.Object("*Box Rt FFFFFFFF {0.7 0.9 0.4}", false);
-			m_obj2.O2P = m4x4.Rotation(-0.5f, 0.4f, 0.6f, new v4(0.5f, -0.2f, -0.3f, 1f));
+			m_obj2.O2P = m4x4.Transform(-0.5f, 0.4f, 0.6f, new v4(0.5f, -0.2f, -0.3f, 1f));
 			m_view3d.Window.AddObject(m_obj2);
 
 			// Create a texture and use it as a render target

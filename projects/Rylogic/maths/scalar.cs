@@ -92,6 +92,20 @@ namespace pr.maths
 		public static float     Len3Sq(float x, float y, float z)               { return Sqr(x) + Sqr(y) + Sqr(z); }
 		public static float     Len3(float x, float y, float z)                 { return Sqrt(Len3Sq(x,y,z)); }
 
+		/// <summary>Divide 'a' by 'b' if 'b' is not equal to zero, otherwise return 0</summary>
+		public static int Div(int a, int b, int def = 0)
+		{
+			return b != 0 ? a/b : def;
+		}
+		public static float Div(float a, float b, float def = 0)
+		{
+			return b != 0 ? a/b : def;
+		}
+		public static double Div(double a, double b, double def = 0)
+		{
+			return b != 0 ? a/b : def;
+		}
+
 		/// <summary>Minimum value</summary>
 		public static T Min<T>(T lhs, T rhs) where T :struct, IComparable<T>
 		{
@@ -162,13 +176,29 @@ namespace pr.maths
 			return CubeRoot(1.5 * volume / Tau);
 		}
 
-		/// <summary>Returns the angle of the corner in a triangle with side lengths a,b,c for the corner opposite 'c'.</summary>
-		public static double Angle(double a, double b, double c)
+		/// <summary>Returns the cosine of the angle of the corner in a triangle with side lengths a,b,c for the corner opposite 'c'.</summary>
+		public static double CosAngle(double a, double b, double c)
 		{
 			var numer = Sqr(a) + Sqr(b) - Sqr(c);
 			var denom = 2 * a * b;
 			var cos_angle = Clamp(denom != 0 ? numer / denom : 1, -1, 1);
-			return Math.Acos(cos_angle);
+			return cos_angle;
+		}
+
+		/// <summary>Returns the angle of the corner in a triangle with side lengths a,b,c for the corner opposite 'c'.</summary>
+		public static double Angle(double a, double b, double c)
+		{
+			return Math.Acos(CosAngle(a,b,c));
+		}
+
+		/// <summary>Round a number to 'digits' significant figures</summary>
+		public static double RoundSF(double d, int digits)
+		{
+			if (d == 0)
+				return 0;
+
+			var scale = (decimal)Math.Pow(10, Math.Floor(Math.Log10(Math.Abs(d))) + 1);
+			return (double)(scale * Math.Round((decimal)d / scale, digits));
 		}
 
 		/// <summary>Convert a series of floating point values into a series of integers, preserving the remainders such that the sum of integers is within 1.0 of the sum of the floats</summary>

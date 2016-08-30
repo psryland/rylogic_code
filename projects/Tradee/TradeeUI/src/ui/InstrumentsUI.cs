@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using pr.container;
 using pr.extn;
@@ -17,6 +18,10 @@ namespace Tradee
 		private DataGridView m_grid_fav;
 		private DataGridView m_grid_all;
 		#endregion
+
+		private Panel m_panel_add_instrument;
+		private Button m_btn_add_instrument;
+		private pr.gui.ComboBox m_cb_symbols;
 		private DragDrop m_dd;
 
 		public InstrumentsUI(MainModel model)
@@ -24,7 +29,6 @@ namespace Tradee
 		{
 			InitializeComponent();
 			DockControl.DefaultDockLocation = new DockContainer.DockLocation(auto_hide:EDockSite.Right);
-			Favourites = new BindingSource<Instrument> { DataSource = new BindingListEx<Instrument>() };
 
 			SetupUI();
 		}
@@ -44,13 +48,6 @@ namespace Tradee
 			{
 				Model.MarketData.DataChanged += UpdateUI;
 			}
-		}
-
-		/// <summary>The collection of favourite instruments</summary>
-		public BindingSource<Instrument> Favourites
-		{
-			get;
-			private set;
 		}
 
 		/// <summary>Set up UI Elements</summary>
@@ -85,7 +82,9 @@ namespace Tradee
 
 			// Set the data sources
 			m_grid_all.DataSource = Model.MarketData.Instruments;
-			m_grid_fav.DataSource = Favourites;
+			m_grid_fav.DataSource = Model.Favourites;
+
+			// Set the 'all instrument' grid properties
 			m_grid_all.ColumnFilters(true).Enabled = true;
 
 			// Support drag and drop from the 'all' to the favourites list
@@ -106,12 +105,31 @@ namespace Tradee
 				var instr = ddd.Row.DataBoundItem as Instrument;
 				var pt    = m_grid_fav.PointToClient(new Point(a.X, a.Y));
 				var hit   = m_grid_fav.HitTestEx(pt);
-				Favourites.Insert(hit.RowIndex, instr);
+				var idx   = (hit.RowIndex >= 0 && hit.RowIndex < Model.Favourites.Count) ? hit.RowIndex : Model.Favourites.Count;
+				Model.Favourites.Insert(idx, instr);
 				return true;
 			};
 
 			m_grid_fav.AllowDrop = true;
 			m_grid_all.MouseDown += DataGridViewEx.DragDrop_DragRow;
+
+			// Combo of instruments
+			m_cb_symbols.AutoCompleteMode = AutoCompleteMode.Suggest;
+			m_cb_symbols.AutoCompleteSource = AutoCompleteSource.ListItems;
+			m_cb_symbols.DataSource = Misc.KnownSymbols.Keys.ToArray();
+			m_cb_symbols.Format += (s,a) =>
+			{
+				var sym = (string)a.ListItem;
+				a.Value = "{0} - {1}".Fmt(sym, Misc.KnownSymbols[sym]);
+			};
+
+			// Add instrument
+			m_btn_add_instrument.Click += (s,a) =>
+			{
+				var symbol_code = (string)m_cb_symbols.SelectedItem ?? m_cb_symbols.Text;
+				if (symbol_code.HasValue())
+					Model.Post(new OutMsg.RequestInstrument(symbol_code, Settings.General.DefaultTimeFrame));
+			};
 		}
 
 		/// <summary>Update the UI</summary>
@@ -163,9 +181,11 @@ namespace Tradee
 			if (!grid.Within(e.ColumnIndex, e.RowIndex, out col))
 				return;
 
+			// Get the clicked instrument
 			var instr = (Instrument)grid.Rows[e.RowIndex].DataBoundItem;
 			grid.CurrentCell = grid[e.ColumnIndex, e.RowIndex];
-
+			
+			// Show a context menu on right click
 			if (e.Button == MouseButtons.Right)
 			{
 				var pt = Control_.MapPoint(null, this, MousePosition);
@@ -225,12 +245,16 @@ namespace Tradee
 			this.m_split = new System.Windows.Forms.SplitContainer();
 			this.m_grid_fav = new System.Windows.Forms.DataGridView();
 			this.m_grid_all = new System.Windows.Forms.DataGridView();
+			this.m_panel_add_instrument = new System.Windows.Forms.Panel();
+			this.m_cb_symbols = new pr.gui.ComboBox();
+			this.m_btn_add_instrument = new System.Windows.Forms.Button();
 			((System.ComponentModel.ISupportInitialize)(this.m_split)).BeginInit();
 			this.m_split.Panel1.SuspendLayout();
 			this.m_split.Panel2.SuspendLayout();
 			this.m_split.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_fav)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_all)).BeginInit();
+			this.m_panel_add_instrument.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// m_split
@@ -247,11 +271,12 @@ namespace Tradee
 			// m_split.Panel2
 			// 
 			this.m_split.Panel2.Controls.Add(this.m_grid_all);
+			this.m_split.Panel2.Controls.Add(this.m_panel_add_instrument);
 			this.m_split.Size = new System.Drawing.Size(238, 599);
 			this.m_split.SplitterDistance = 283;
 			this.m_split.TabIndex = 0;
 			// 
-			// m_grid_favs
+			// m_grid_fav
 			// 
 			this.m_grid_fav.AllowUserToAddRows = false;
 			this.m_grid_fav.AllowUserToDeleteRows = false;
@@ -261,7 +286,7 @@ namespace Tradee
 			this.m_grid_fav.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
 			this.m_grid_fav.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_grid_fav.Location = new System.Drawing.Point(0, 0);
-			this.m_grid_fav.Name = "m_grid_favs";
+			this.m_grid_fav.Name = "m_grid_fav";
 			this.m_grid_fav.ReadOnly = true;
 			this.m_grid_fav.RowHeadersVisible = false;
 			this.m_grid_fav.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
@@ -277,13 +302,45 @@ namespace Tradee
 			this.m_grid_all.AutoSizeRowsMode = System.Windows.Forms.DataGridViewAutoSizeRowsMode.AllCells;
 			this.m_grid_all.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
 			this.m_grid_all.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_grid_all.Location = new System.Drawing.Point(0, 0);
+			this.m_grid_all.Location = new System.Drawing.Point(0, 24);
 			this.m_grid_all.Name = "m_grid_all";
 			this.m_grid_all.ReadOnly = true;
-			this.m_grid_all.RowHeadersVisible = false;
+			this.m_grid_all.RowHeadersWidth = 20;
 			this.m_grid_all.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_all.Size = new System.Drawing.Size(238, 312);
+			this.m_grid_all.Size = new System.Drawing.Size(238, 288);
 			this.m_grid_all.TabIndex = 1;
+			// 
+			// m_panel_add_instrument
+			// 
+			this.m_panel_add_instrument.Controls.Add(this.m_cb_symbols);
+			this.m_panel_add_instrument.Controls.Add(this.m_btn_add_instrument);
+			this.m_panel_add_instrument.Dock = System.Windows.Forms.DockStyle.Top;
+			this.m_panel_add_instrument.Location = new System.Drawing.Point(0, 0);
+			this.m_panel_add_instrument.Name = "m_panel_add_instrument";
+			this.m_panel_add_instrument.Size = new System.Drawing.Size(238, 24);
+			this.m_panel_add_instrument.TabIndex = 2;
+			// 
+			// m_cb_symbols
+			// 
+			this.m_cb_symbols.DisplayProperty = null;
+			this.m_cb_symbols.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_cb_symbols.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+			this.m_cb_symbols.FormattingEnabled = true;
+			this.m_cb_symbols.Location = new System.Drawing.Point(0, 0);
+			this.m_cb_symbols.Name = "m_cb_symbols";
+			this.m_cb_symbols.PreserveSelectionThruFocusChange = false;
+			this.m_cb_symbols.Size = new System.Drawing.Size(203, 23);
+			this.m_cb_symbols.TabIndex = 1;
+			// 
+			// m_btn_add_instrument
+			// 
+			this.m_btn_add_instrument.Dock = System.Windows.Forms.DockStyle.Right;
+			this.m_btn_add_instrument.Location = new System.Drawing.Point(203, 0);
+			this.m_btn_add_instrument.Name = "m_btn_add_instrument";
+			this.m_btn_add_instrument.Size = new System.Drawing.Size(35, 24);
+			this.m_btn_add_instrument.TabIndex = 0;
+			this.m_btn_add_instrument.Text = "+";
+			this.m_btn_add_instrument.UseVisualStyleBackColor = true;
 			// 
 			// InstrumentsUI
 			// 
@@ -298,6 +355,7 @@ namespace Tradee
 			this.m_split.ResumeLayout(false);
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_fav)).EndInit();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_all)).EndInit();
+			this.m_panel_add_instrument.ResumeLayout(false);
 			this.ResumeLayout(false);
 
 		}

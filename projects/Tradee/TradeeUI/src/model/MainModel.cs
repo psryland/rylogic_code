@@ -25,19 +25,19 @@ namespace Tradee
 			Acct            = new AccountStatus(this, new Account());
 			History         = new History(this);
 			MarketData      = new MarketData(this);
+			Favourites      = new BindingSource<Instrument> { DataSource = new BindingListEx<Instrument>() };
 			Positions       = new Positions(this);
 			Sessions        = new Sessions(this);
 			Alarms          = new Alarms();
-			SnR             = new SupportResist(this);
 			Simulation      = new Simulation(this);
 		}
 		public void Dispose()
 		{
 			Simulation      = null;
-			SnR             = null;
 			Alarms          = null;
 			Sessions        = null;
 			Positions       = null;
+			Favourites      = null;
 			MarketData      = null;
 			History         = null;
 			Acct            = null;
@@ -97,6 +97,30 @@ namespace Tradee
 		}
 		private MarketData m_market_data;
 
+		/// <summary>The collection of favourite instruments</summary>
+		public BindingSource<Instrument> Favourites
+		{
+			get { return m_favs; }
+			private set
+			{
+				if (m_favs == value) return;
+				if (m_favs != null)
+				{
+					m_favs.ListChanging -= HandleFavouritesListChanging;
+				}
+				m_favs = value;
+				if (m_favs != null)
+				{
+					// Populate the favourites list from the settings
+					foreach (var sym in Settings.General.FavouriteInstruments)
+						Favourites.Add(MarketData[sym]);
+
+					m_favs.ListChanging += HandleFavouritesListChanging;
+				}
+			}
+		}
+		private BindingSource<Instrument> m_favs;
+
 		/// <summary>The store of all orders (visualising/pending/active/closed)</summary>
 		public Positions Positions
 		{
@@ -136,19 +160,6 @@ namespace Tradee
 		}
 		private Alarms m_alarms;
 
-		/// <summary>Support and resistance detector</summary>
-		public SupportResist SnR
-		{
-			[DebuggerStepThrough] get { return m_snr; }
-			private set
-			{
-				if (m_snr == value) return;
-				Util.Dispose(ref m_snr);
-				m_snr = value;
-			}
-		}
-		private SupportResist m_snr;
-
 		/// <summary>The connection to the trade data source</summary>
 		private TradeeClient TradeDataSource
 		{
@@ -180,13 +191,15 @@ namespace Tradee
 				if (m_sim == value) return;
 				if (m_sim != null)
 				{
-					m_sim.SimTimeChanged -= HandleSimSimTimeChanged;
+					//m_sim.SimReset       -= HandleSimReset;
+					//m_sim.SimTimeChanged -= HandleSimSimTimeChanged;
 					Util.Dispose(ref m_sim);
 				}
 				m_sim = value;
 				if (m_sim != null)
 				{
-					m_sim.SimTimeChanged += HandleSimSimTimeChanged;
+					//m_sim.SimTimeChanged += HandleSimSimTimeChanged;
+					//m_sim.SimReset       += HandleSimReset;
 				}
 			}
 		}
@@ -236,7 +249,7 @@ namespace Tradee
 		/// <summary>The current time (in UTC). Note: for simulations, this is a time in the past</summary>
 		public DateTimeOffset UtcNow
 		{
-			get { return Simulation.Running ? Simulation.UtcNow : DateTimeOffset.UtcNow; }
+			get { return SimActive ? Simulation.UtcNow : DateTimeOffset.UtcNow; }
 		}
 
 		/// <summary>Send a message to the trade data source</summary>
@@ -295,8 +308,8 @@ namespace Tradee
 				#region
 				{
 					var cd = (InMsg.CandleData)msg;
-					if (cd.Candle  != null) MarketData[cd.Symbol].Add(cd.TimeFrame, cd.Candle);
-					if (cd.Candles != null) MarketData[cd.Symbol].Add(cd.TimeFrame, cd.Candles);
+					if (cd.Candle  != null) MarketData[cd.SymbolCode].Add(cd.TimeFrame, cd.Candle);
+					if (cd.Candles != null) MarketData[cd.SymbolCode].Add(cd.TimeFrame, cd.Candles);
 					break;
 				}
 				#endregion
@@ -333,7 +346,7 @@ namespace Tradee
 					MarketData[sd.Symbol].PriceData = sd.Data;
 					break;
 				}
-			#endregion
+				#endregion
 			case EMsgType.HistoryData:
 				#region
 				{
@@ -349,6 +362,19 @@ namespace Tradee
 		public void ShowChart(string sym)
 		{
 			Owner.ShowChart(sym);
+		}
+
+		/// <summary></summary>
+		public PerChartSettings FindChartSettings(string symbol_code)
+		{
+			// If there aren't any for this symbol, create some
+			var chart_settings = Settings.Chart.PerChart.FirstOrDefault(x => x.SymbolCode == symbol_code);
+			if (chart_settings == null)
+			{
+				chart_settings = new PerChartSettings { SymbolCode = symbol_code };
+				Settings.Chart.PerChart = Settings.Chart.PerChart.Concat(chart_settings).ToArray();
+			}
+			return chart_settings;
 		}
 
 		/// <summary>All existing charts</summary>
@@ -375,6 +401,49 @@ namespace Tradee
 			return 0.01;
 		}
 
+		/// <summary>Choose a volume such that the 'distance' (in base currency) has a value approximately equal to 'balance_pc' percent of the current balance</summary>
+		public long CalculateVolume(Instrument instrument, double distance)
+		{
+			var pd = instrument.PriceData;
+
+			// The amount of base currency to base the volume on
+			var amount = Misc.AcctToBaseCurrency(Acct.Balance * Settings.Trade.RiskFracPerTrade, pd) * Acct.Leverage;
+
+			// The value is the change of 'distance' * volume.
+			// We want to choose volume such that abs(value - amount) is minimised
+
+			//volume = amount / distance;
+
+			//var pd = instrument.PriceData;
+			//var d = pd.PipValue * distance;
+			return 0;
+		}
+
+		/// <summary>Place an immediate market order</summary>
+		public void NewMarketImmediateOrder(Instrument instr, ETradeType trade_type, double? volume = null, double? stop_loss = null, double? take_profit = null)
+		{
+			// Choose a volume for the position based on the current balance and the stop loss distance
+			if (volume == null && stop_loss != null)
+				volume = CalculateVolume(instr, stop_loss.Value);
+			if (stop_loss == null && volume != null)
+				stop_loss = CalculateStopLoss(instr);
+
+			// Create the position we want to hold
+			var position = new Position
+			{
+				SymbolCode  = instr.SymbolCode,
+				TradeType   = trade_type,
+				EntryTime   = DateTimeOffset.UtcNow.Ticks,
+				EntryPrice  = trade_type == ETradeType.Long ? instr.PriceData.BidPrice : instr.PriceData.AskPrice,
+				StopLossRel = stop_loss == null ? 0 : 0,//todo
+				Volume      = 0,
+				Comment     = "Auto Trade test",
+			};
+
+			// Place the order
+			Post(new OutMsg.PlaceMarketOrder(position, Settings.Trade.MarketRangePips));
+		}
+
 		/// <summary>Handle connection/disconnection of the trade data source</summary>
 		private void HandleTradeeConnectionChanged(object sender, EventArgs e)
 		{
@@ -382,9 +451,16 @@ namespace Tradee
 			OnConnectionChanged();
 		}
 
-		/// <summary>Handle the simulation signally that time has advanced</summary>
-		private void HandleSimSimTimeChanged(object sender, EventArgs e)
+		/// <summary>Handle the list of favourite instruments changing</summary>
+		private void HandleFavouritesListChanging(object sender, ListChgEventArgs<Instrument> e)
 		{
+			switch (e.ChangeType)
+			{
+			case ListChg.ItemAdded:
+			case ListChg.ItemRemoved:
+				Settings.General.FavouriteInstruments = Favourites.Select(x => x.SymbolCode).ToArray();
+				break;
+			}
 		}
 	}
 }

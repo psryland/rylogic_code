@@ -46,7 +46,7 @@ namespace pr
 			{
 				Shape(str, collision::ToString(s->m_type), colour, *s, s->m_s2p);
 			}
-			Append(str, o2w);
+			Append(str, O2W(o2w));
 			GroupEnd(str);
 			return str;
 		}

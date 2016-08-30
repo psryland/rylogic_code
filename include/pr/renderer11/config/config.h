@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
-#ifndef PR_RDR_CONFIG_CONFIG_H
-#define PR_RDR_CONFIG_CONFIG_H
 
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/util/wrappers.h"
@@ -53,5 +51,3 @@ namespace pr
 		};
 	}
 }
-
-#endif

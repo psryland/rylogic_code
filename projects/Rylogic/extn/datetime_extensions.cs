@@ -133,6 +133,26 @@ namespace pr.extn
 
 	public static class DateTimeOffset_
 	{
+		/// <summary>Return the Date for the current time (in local time) with the TimeOfDay set to 00:00:00</summary>
+		public static DateTimeOffset Today
+		{
+			get
+			{
+				var now = DateTimeOffset.Now;
+				return now - now.TimeOfDay;
+			}
+		}
+
+		/// <summary>Return the Date for the current time (in UTC) with the TimeOfDay set to 00:00:00</summary>
+		public static DateTimeOffset UtcToday
+		{
+			get
+			{
+				var now = DateTimeOffset.UtcNow;
+				return now - now.TimeOfDay;
+			}
+		}
+
 		/// <summary>Returns a new DateTimeOffset object clamped to within the given range</summary>
 		public static DateTime DateTime(this DateTimeOffset time, DateTimeKind kind)
 		{

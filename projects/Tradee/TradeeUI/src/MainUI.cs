@@ -9,6 +9,7 @@ using pr.extn;
 using pr.gfx;
 using pr.gui;
 using pr.util;
+using pr.win32;
 using ToolStripContainer = pr.gui.ToolStripContainer;
 
 namespace Tradee
@@ -74,21 +75,45 @@ namespace Tradee
 
 			SetupUI();
 			UpdateUI();
+
+			// Restore the last window position
+			if (Settings.UI.WindowPosition.IsEmpty)
+			{
+				StartPosition = FormStartPosition.WindowsDefaultLocation;
+			}
+			else
+			{
+				StartPosition = FormStartPosition.Manual;
+				Bounds = Util.OnScreen(Settings.UI.WindowPosition);
+				WindowState = Settings.UI.WindowMaximised ? FormWindowState.Maximized : FormWindowState.Normal;
+			}
 		}
 		protected override void Dispose(bool disposing)
 		{
-			m_dc.Dispose();
-			Model = null;
 			Util.Dispose(ref m_sim_ui);
+			Util.Dispose(ref m_dc);
+
+			Model = null;
 			Util.Dispose(ref m_view3d);
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
 		protected override void OnFormClosed(FormClosedEventArgs e)
 		{
+			Settings.UI.WindowPosition = Bounds;
 			Settings.UI.UILayout = m_dc.SaveLayout();
 			Settings.Save();
 			base.OnFormClosed(e);
+		}
+		protected override void WndProc(ref Message m)
+		{
+			base.WndProc(ref m);
+			if (m.Msg == Win32.WM_SYSCOMMAND)
+			{
+				var wp = (uint)m.WParam & 0xFFF0;
+				if (wp == Win32.SC_MAXIMIZE || wp == Win32.SC_RESTORE || wp == Win32.SC_MINIMIZE)
+					Settings.UI.WindowMaximised = WindowState == FormWindowState.Maximized;
+			}
 		}
 
 		/// <summary>The app logic</summary>
@@ -180,6 +205,7 @@ namespace Tradee
 			// Add components
 			m_dc.Options.TabStrip.AlwaysShowTabs = true;
 			m_dc.Add2(new AccountUI(Model));
+			m_dc.Add2(new AutoTradeUI(Model));
 			m_dc.Add2(new AlarmClockUI(Model));
 			m_dc.Add2(new TradesUI(Model));
 			m_dc.Add2(new InstrumentsUI(Model));

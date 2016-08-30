@@ -50,7 +50,6 @@ namespace view3d
 			return settings;
 		}
 		Window* this_() { return this; }
-
 		Window(pr::Renderer& rdr, HWND hwnd, View3DWindowOptions const& opts)
 			:m_error_cb({pr::StaticCallBack(opts.m_error_cb, opts.m_error_cb_ctx)})
 			,m_hwnd(hwnd)
@@ -101,11 +100,14 @@ namespace view3d
 				.indices({ 0, 1, 2, 3, 4, 5 })
 				.nuggets({ pr::rdr::NuggetProps(pr::rdr::EPrim::LineList, pr::rdr::EGeom::Vert|pr::rdr::EGeom::Colr) });
 
-			cdata.colours({ 0xFFFF0000, 0xFFFF0000, 0xFF00FF00, 0xFF00FF00, 0xFF0000FF, 0xFF0000FF });
-			m_focus_point .m_model = pr::rdr::ModelGenerator<>::Mesh(m_rdr, cdata);
-			m_focus_point .m_i2w   = pr::m4x4Identity;
+			// Don't know why, but the optimiser buggers this up if I use initializer_list<>. Hence local array
+			pr::Colour32 focus_cols[] = { 0xFFFF0000, 0xFFFF0000, 0xFF00FF00, 0xFF00FF00, 0xFF0000FF, 0xFF0000FF };
+			cdata.colours(focus_cols, _countof(focus_cols));
+			m_focus_point.m_model = pr::rdr::ModelGenerator<>::Mesh(m_rdr, cdata);
+			m_focus_point.m_i2w   = pr::m4x4Identity;
 			
-			cdata.colours({ 0xFF800000, 0xFF800000, 0xFF008000, 0xFF008000, 0xFF000080, 0xFF000080 });
+			pr::Colour32 origin_cols[] = { 0xFF800000, 0xFF800000, 0xFF008000, 0xFF008000, 0xFF000080, 0xFF000080 };
+			cdata.colours(origin_cols, _countof(origin_cols));
 			m_origin_point.m_model = pr::rdr::ModelGenerator<>::Mesh(m_rdr, cdata);
 			m_origin_point.m_i2w   = pr::m4x4Identity;
 		}
@@ -120,6 +122,9 @@ namespace view3d
 
 		// Settings changed event
 		pr::MultiCast<SettingsChangedCB> OnSettingsChanged;
+
+		// Rendering event
+		pr::MultiCast<RenderingCB> OnRendering;
 
 		// Push/Pop error callbacks from the error callback stack
 		void PushErrorCB(View3D_ReportErrorCB cb, void* ctx)
@@ -166,6 +171,12 @@ namespace view3d
 		void NotifySettingsChanged()
 		{
 			OnSettingsChanged.Raise(this);
+		}
+
+		// Invoke the rendering event
+		void NotifyRendering()
+		{
+			OnRendering.Raise(this);
 		}
 
 		// Call InvalidateRect on the HWND associated with this window

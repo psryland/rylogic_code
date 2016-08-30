@@ -17,7 +17,7 @@ namespace TestClient
 		private Thread m_thread;
 		private object m_lock;
 		private Random m_rng;
-		private Candle m_candle;
+		private PriceCandle m_candle;
 		private double m_price;
 		private long m_now;
 
@@ -30,7 +30,7 @@ namespace TestClient
 			m_quit     = quit;
 			m_now      = new DateTime(2000,1,1,0,0,0).Ticks;
 			m_rng      = new Random(0);
-			m_candle   = new Candle(m_now, 0, 0, 0, 0, 0);
+			m_candle   = new PriceCandle(m_now, 0, 0, 0, 0, 0, 0);
 			m_price    = 1.0;
 
 			m_lock = new object();
@@ -106,7 +106,7 @@ namespace TestClient
 					Model.Post(new InMsg.CandleData(SymbolCode, tf, m_candle));
 
 					// Fake spread
-					var sym_data = new PriceData(m_price + spread, m_price, 10000, 0.0001, 1.0, 1000, 1000, 100000000);
+					var sym_data = new PriceData(m_price + spread, m_price, spread, 10000, 0.0001, 1.0, 1000, 1000, 100000000);
 					var data = new InMsg.SymbolData(SymbolCode, sym_data);
 					Model.Post(data);
 				}
@@ -120,11 +120,12 @@ namespace TestClient
 			foreach (var tf in TimeFrames)
 			{
 				var one = Misc.TimeFrameToTicks(1.0, tf);
-				var candles = new Candles(
+				var candles = new PriceCandles(
 					Enumerable.Range(0, Count).Select(i => m_now - (Count - i) * one).ToArray(),
 					Enumerable.Range(0, Count).Select(i => m_rng.NextDouble(0.5, 1.5)).ToArray(),
 					Enumerable.Range(0, Count).Select(i => m_rng.NextDouble(1.5, 2.0)).ToArray(),
 					Enumerable.Range(0, Count).Select(i => m_rng.NextDouble(0.0, 0.5)).ToArray(),
+					Enumerable.Range(0, Count).Select(i => m_rng.NextDouble(0.5, 1.5)).ToArray(),
 					Enumerable.Range(0, Count).Select(i => m_rng.NextDouble(0.5, 1.5)).ToArray(),
 					Enumerable.Range(0, Count).Select(i => (double)(int)m_rng.NextDouble(1, 100)).ToArray());
 

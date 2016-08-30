@@ -21,6 +21,15 @@ namespace pr
 		// Settings for constructing the renderer
 		struct RdrSettings
 		{
+			struct BuildOptions
+			{
+				StdBuildOptions   m_std;
+				MathsBuildOptions m_maths;
+				int RunTimeShaders;
+				BuildOptions() :m_std() ,m_maths() ,RunTimeShaders(PR_RDR_RUNTIME_SHADERS) {}
+			};
+			
+			BuildOptions                  m_build_options;         // The state of #defines. Used to check for incompatibilities
 			MemFuncs                      m_mem;                   // The manager of allocations/deallocations
 			D3DPtr<IDXGIAdapter>          m_adapter;               // The adapter to use. nullptr means use the default
 			D3D_DRIVER_TYPE               m_driver_type;           // HAL, REF, etc
@@ -28,7 +37,21 @@ namespace pr
 			pr::vector<D3D_FEATURE_LEVEL> m_feature_levels;        // Features to support. Empty implies 9.1 -> 11.0
 			bool                          m_fallback_to_sw_device; // True to use a software device if 'm_driver_type' fails
 
-			RdrSettings(BOOL gdi_compat);
+			// Keep this inline so that m_build_options can be verified.
+			RdrSettings(BOOL gdi_compat)
+				:m_build_options()
+				,m_mem()
+				,m_adapter()
+				,m_driver_type(D3D_DRIVER_TYPE_HARDWARE)
+				,m_device_layers(gdi_compat ? D3D11_CREATE_DEVICE_BGRA_SUPPORT : 0)
+				,m_feature_levels()
+				,m_fallback_to_sw_device(true)
+			{
+				// Add the debug layer in debug mode
+				// Note: this automatically disables multi-sampling as well
+				//PR_EXPAND(PR_DBG_RDR, m_device_layers |= D3D11_CREATE_DEVICE_DEBUG);
+				//#pragma message(PR_LINK "WARNING: ************************************************** D3D11_CREATE_DEVICE_DEBUG enabled")
+			}
 		};
 
 		// Renderer state variables

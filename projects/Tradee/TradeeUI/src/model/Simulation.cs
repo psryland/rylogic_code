@@ -6,9 +6,6 @@ using pr.common;
 using pr.extn;
 using pr.util;
 
-'get the simulation updating the charts in real time
-'Write AutoTrade to do simple candle follow
-
 namespace Tradee
 {
 	public class Simulation :IDisposable
@@ -20,25 +17,28 @@ namespace Tradee
 		// It emulates the Tradee_StreamData bot.
 		// This is so auto trading can work on multiple instruments at a time.
 
+		private Random m_rng;
+
 		public Simulation(MainModel model)
 		{
 			Model = model;
 
-			Acct = new Account();
-			Positions = new List<Position>();
-			Pending = new List<PendingOrder>();
-			Transmitters = new List<Transmitter>();
-
-			StartingBalance = 1000.0;
+			m_rng        = new Random();
+			Acct         = new Account();
+			Positions    = new List<Position>();
+			Pending      = new List<PendingOrder>();
+			Transmitters = new Dictionary<string, Transmitter>();
 
 			StartTime = DateTimeOffset.UtcNow.Date.As(DateTimeKind.Utc);
-			UtcNow = StartTime;
+			StartingBalance = 1000.0;
+			StepSize = Misc.TimeFrameToTimeSpan(1.0, Settings.General.DefaultTimeFrame);
+			StepRate = 1.0;
 
 			Reset();
 		}
 		public virtual void Dispose()
 		{
-			Util.DisposeAll(Transmitters);
+			Util.DisposeAll(Transmitters.Values);
 		}
 
 		/// <summary>Application settings</summary>
@@ -76,7 +76,7 @@ namespace Tradee
 		}
 
 		/// <summary>Instrument transmitters</summary>
-		private List<Transmitter> Transmitters
+		private Dictionary<string, Transmitter> Transmitters
 		{
 			[DebuggerStepThrough] get;
 			set;
@@ -90,7 +90,6 @@ namespace Tradee
 			{
 				if (m_running == value) return;
 				m_running = value;
-				UtcNow = StartTime;
 			}
 		}
 		private bool m_running;
@@ -100,6 +99,24 @@ namespace Tradee
 		private void OnSimTimeChanged()
 		{
 			SimTimeChanged.Raise(this);
+		}
+
+		/// <summary>Raised whenever the sim is reset</summary>
+		public event EventHandler SimReset;
+		private void OnSimReset()
+		{
+			// Invalidate all instruments
+			foreach (var instr in Model.MarketData.Instruments)
+				instr.InvalidateCachedData();
+
+			// Invalidate all charts
+			foreach (var chart in Model.Charts)
+			{
+				chart.InvalidateCachedGraphics();
+				chart.EnsureLatestPriceDisplayed();
+			}
+
+			SimReset.Raise(this);
 		}
 
 		/// <summary>The account balance at the start of the simulation</summary>
@@ -130,10 +147,7 @@ namespace Tradee
 			{
 				if (m_start_time == value) return;
 				m_start_time = value;
-
-				// If the sim isn't running, update 'now' to the sim start time
-				if (!Running)
-					UtcNow = m_start_time;
+				Reset();
 			}
 		}
 		private DateTimeOffset m_start_time;
@@ -145,7 +159,14 @@ namespace Tradee
 			set;
 		}
 
-		/// <summary>Reset the simulation but to the start time</summary>
+		/// <summary>The number of steps per second</summary>
+		public double StepRate
+		{
+			get;
+			set;
+		}
+
+		/// <summary>Reset the simulation back to the start time</summary>
 		public void Reset()
 		{
 			// Reset the account
@@ -167,6 +188,14 @@ namespace Tradee
 
 			// Reset the sim clock
 			UtcNow = StartTime;
+
+			// Update the simulated account status
+			SendAccountStatus();
+			SendCurrentPositions();
+			SendPendingPositions();
+
+			// Notify reset
+			OnSimReset();
 		}
 
 		/// <summary>Step the simulation by one 'StepSize'</summary>
@@ -176,19 +205,35 @@ namespace Tradee
 			var time1 = UtcNow + StepSize;
 
 			// Collect the candle data to send from each transmitter over the step period
-			var data = Transmitters.SelectMany(x => x.EnumCandleData(time0, time1)).OrderBy(x => x.Candle.Timestamp);
+			var data = Transmitters.SelectMany(x => x.Value.EnumCandleData(time0, time1)).OrderBy(x => x.Candle.Timestamp);
 
 			// "Post" the candle data to tradee
 			foreach (var d in data)
 			{
-				UtcNow = new DateTimeOffset(d.Candle.Timestamp, TimeSpan.Zero);
+				var candle = d.Candle as Candle;
+
+				// Fake the price data using the candle data
+				var trans = Transmitters[d.SymbolCode];
+				foreach (var price in new[] { candle.Open, candle.High, candle.Low, candle.Median, candle.Close })
+				{
+					var pd = new PriceData(trans.PriceData)
+					{
+						AskPrice = price,
+						BidPrice = price + trans.PriceData.AvrSpread,
+					};
+					Model.DispatchMsg(new InMsg.SymbolData(trans.SymbolCode, pd));
+				}
+
+				// Send the candle
 				Model.DispatchMsg(d);
 			}
 
 			UtcNow = time1;
 		}
 
-		/// <summary>Send a message over the pipe</summary>
+		/// <summary>
+		/// Pretends to send a message over the pipe to the trade data source.
+		/// Actually just handles the message in the simulation.</summary>
 		public bool Post<T>(T m) where T:ITradeeMsg
 		{
 			var msg = (ITradeeMsg)m;
@@ -200,6 +245,7 @@ namespace Tradee
 			case EMsgType.RequestInstrumentStop:    HandleMsg((OutMsg.RequestInstrumentStop   )msg); break;
 			case EMsgType.RequestInstrumentHistory: HandleMsg((OutMsg.RequestInstrumentHistory)msg); break;
 			case EMsgType.RequestTradeHistory:      HandleMsg((OutMsg.RequestTradeHistory     )msg); break;
+			case EMsgType.PlaceMarketOrder:         HandleMsg((OutMsg.PlaceMarketOrder        )msg); break;
 			}
 			return true;
 		}
@@ -213,30 +259,29 @@ namespace Tradee
 		private void HandleMsg(OutMsg.RequestAccountStatus req)
 		{
 			// Update the account status
-			Model.DispatchMsg(new InMsg.AccountUpdate(Acct));
+			SendAccountStatus();
 
 			// Update the current and pending trades
-			Model.DispatchMsg(new InMsg.PositionsUpdate(Positions.ToArray()));
-			Model.DispatchMsg(new InMsg.PendingOrdersUpdate(Pending.ToArray()));
+			SendCurrentPositions();
+			SendPendingPositions();
 		}
 
 		/// <summary>Handle the hello message</summary>
 		private void HandleMsg(OutMsg.RequestInstrument msg)
 		{
 			// Get or create a transmitter for the requested instrument
-			var idx = Transmitters.IndexOf(x => x.SymbolCode == msg.SymbolCode);
-			var trans = idx >= 0 ? Transmitters[idx] : Transmitters.Add2(new Transmitter(msg.SymbolCode, Instrument.CacheDBFilePath(Settings, msg.SymbolCode)));
+			var trans = Transmitters.GetOrAdd(msg.SymbolCode, k => new Transmitter(msg.SymbolCode, Instrument.CacheDBFilePath(Settings, msg.SymbolCode)));
 
 			// Add the requested time frame
-			trans.TimeFrames = trans.TimeFrames.Concat(msg.TimeFrame).ToArray();
+			trans.TimeFrames = trans.TimeFrames.Concat(msg.TimeFrame).Distinct().ToArray();
 		}
 
 		/// <summary>Handle the hello message</summary>
 		private void HandleMsg(OutMsg.RequestInstrumentStop msg)
 		{
 			// Remove the transmitter for the requested instrument
-			var trans = Transmitters.FirstOrDefault(x => x.SymbolCode == msg.SymbolCode);
-			if (trans == null)
+			Transmitter trans;
+			if (!Transmitters.TryGetValue(msg.SymbolCode, out trans))
 				return;
 
 			// Remove the unwanted time frame
@@ -248,7 +293,7 @@ namespace Tradee
 			// Remove transmitters containing no time frames
 			if (trans.TimeFrames.Length == 0)
 			{
-				Transmitters.Remove(trans);
+				Transmitters.Remove(msg.SymbolCode);
 				trans.Dispose();
 			}
 		}
@@ -263,6 +308,134 @@ namespace Tradee
 		{
 		}
 
+		/// <summary>Handle a request to place a market order</summary>
+		private void HandleMsg(OutMsg.PlaceMarketOrder msg)
+		{
+			var order = msg.Order;
+
+			// Find the transmitter of the instrument that the order is for
+			Transmitter trans;
+			if (!Transmitters.TryGetValue(order.SymbolCode, out trans))
+			{
+				Model.DispatchMsg(new InMsg.MarketOrderChangeResult(false, EErrorCode.Failed));
+				return;
+			}
+
+			// Check the volume is valid
+			if (order.Volume < trans.PriceData.VolumeMin ||
+				order.Volume > trans.PriceData.VolumeMax ||
+				order.Volume % trans.PriceData.VolumeStep != 0)
+			{
+				Model.DispatchMsg(new InMsg.MarketOrderChangeResult(false, EErrorCode.InvalidVolume));
+				return;
+			}
+
+			// Place an immediate order
+			if (msg.Position != null)
+			{
+				var res = ActionTrade(msg.Position);
+				if (res != EErrorCode.NoError)
+				{
+					Model.DispatchMsg(new InMsg.MarketOrderChangeResult(false, res));
+					return;
+				}
+			}
+
+			// Place a limit order
+			else if (msg.PendingLimit != null)
+			{
+				// Limit orders are rejected if the price is not on the profit side of the order
+				if (msg.PendingLimit.TradeType == ETradeType.Long && trans.PriceData.AskPrice < msg.PendingLimit.EntryPrice)
+				{
+					Model.DispatchMsg(new InMsg.MarketOrderChangeResult(false, EErrorCode.Failed));
+					return;
+				}
+				if (msg.PendingLimit.TradeType == ETradeType.Short && trans.PriceData.BidPrice > msg.PendingLimit.EntryPrice)
+				{
+					Model.DispatchMsg(new InMsg.MarketOrderChangeResult(false, EErrorCode.Failed));
+					return;
+				}
+
+				// Add the pending order
+				Pending.Add(msg.PendingLimit);
+			}
+
+			// Place a stop order
+			else if (msg.PendingStop != null)
+			{
+				// Stop orders are rejected if the price is not on the loss side of the order
+				if (msg.PendingStop.TradeType == ETradeType.Long && trans.PriceData.AskPrice > msg.PendingStop.EntryPrice)
+				{
+					Model.DispatchMsg(new InMsg.MarketOrderChangeResult(false, EErrorCode.Failed));
+					return;
+				}
+				if (msg.PendingStop.TradeType == ETradeType.Short && trans.PriceData.BidPrice < msg.PendingStop.EntryPrice)
+				{
+					Model.DispatchMsg(new InMsg.MarketOrderChangeResult(false, EErrorCode.Failed));
+					return;
+				}
+
+				// Add the pending order
+				Pending.Add(msg.PendingStop);
+			}
+
+			// Send an update of the current/pending positions
+			SendCurrentPositions();
+			SendPendingPositions();
+		}
+
+		/// <summary>Send details of the current account</summary>
+		private void SendAccountStatus()
+		{
+			// Only send differences
+			if (Acct.Equals(m_last_account))
+				return;
+
+			// Send the account status to Tradee
+			Model.DispatchMsg(new InMsg.AccountUpdate(Acct));
+			m_last_account = new Account(Acct);
+		}
+		private Account m_last_account = new Account();
+
+		/// <summary>Send details about the currently active positions held</summary>
+		private void SendCurrentPositions()
+		{
+			// Only send differences
+			if (Positions.SequenceEqual(m_last_positions))
+				return;
+
+			// Send Update
+			var list = Positions.ToArray();
+			if (Post(new InMsg.PositionsUpdate(list)))
+				m_last_positions = list;
+		}
+		private Position[] m_last_positions = new Position[0];
+
+		/// <summary>Send details about pending orders</summary>
+		private void SendPendingPositions()
+		{
+			// Only send differences
+			if (Pending.SequenceEqual(m_last_pending_orders))
+				return;
+
+			// Post update
+			var list = Pending.ToArray();
+			if (Post(new InMsg.PendingOrdersUpdate(list)))
+				m_last_pending_orders = list;
+		}
+		private PendingOrder[] m_last_pending_orders = new PendingOrder[0];
+
+		/// <summary>Make 'position' active</summary>
+		private EErrorCode ActionTrade(Position position)
+		{
+			// Check the funds are available
+			if (position.Volume / Acct.Leverage > Acct.Balance)
+				return EErrorCode.InsufficientFunds;
+
+			Positions.Add(position);
+			return EErrorCode.NoError;
+		}
+
 		/// <summary>Equivalent of the TradeeBot Transmitter</summary>
 		private class Transmitter :IDisposable
 		{
@@ -272,9 +445,11 @@ namespace Tradee
 				SymbolCode = sym;
 				TimeFrames = new ETimeFrame[0];
 
-				// Load the price data database
+				// Load the instrument candle database
 				m_db = new Sqlite.Database(db_filepath, Sqlite.OpenFlags.ReadOnly);
 
+				// Read the price data
+				PriceData = m_db.EnumRows<PriceData>("select * from PriceData").First();
 			}
 			public void Dispose()
 			{
@@ -295,11 +470,18 @@ namespace Tradee
 				set;
 			}
 
+			/// <summary>Instrument price data</summary>
+			public PriceData PriceData
+			{
+				get;
+				private set;
+			}
+
 			/// <summary>Return all the candles in the given time range</summary>
 			public IEnumerable<InMsg.CandleData> EnumCandleData(DateTimeOffset t0, DateTimeOffset t1)
 			{
 				var ts = "["+nameof(Candle.Timestamp)+"]";
-				var sql = Str.Build("select * from {0} where ",ts," >= ? && ",ts," <= ? order by ",ts);
+				var sql = Str.Build("select * from {0} where ",ts," >= ? and ",ts," <= ? order by ",ts);
 				var args = new object[] { t0.Ticks, t1.Ticks };
 				foreach (var tf in TimeFrames)
 				{

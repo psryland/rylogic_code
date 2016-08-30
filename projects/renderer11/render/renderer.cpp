@@ -14,21 +14,6 @@ namespace pr
 		// Useful reading:
 		//   http://msdn.microsoft.com/en-us/library/windows/desktop/bb205075(v=vs.85).aspx
 
-		// Default RdrSettings
-		RdrSettings::RdrSettings(BOOL gdi_compat)
-			:m_mem()
-			,m_adapter()
-			,m_driver_type(D3D_DRIVER_TYPE_HARDWARE)
-			,m_device_layers(gdi_compat ? D3D11_CREATE_DEVICE_BGRA_SUPPORT : 0)
-			,m_feature_levels()
-			,m_fallback_to_sw_device(true)
-		{
-			// Add the debug layer in debug mode
-			// Note: this automatically disables multi-sampling as well
-			//PR_EXPAND(PR_DBG_RDR, m_device_layers |= D3D11_CREATE_DEVICE_DEBUG);
-			//#pragma message(PR_LINK "WARNING: ************************************************** D3D11_CREATE_DEVICE_DEBUG enabled")
-		}
-
 		// Initialise the renderer state variables and creates the DX device and swap chain.
 		RdrState::RdrState(RdrSettings const& settings)
 			:m_settings(settings)
@@ -37,6 +22,10 @@ namespace pr
 			,m_immediate()
 			,m_d2dfactory()
 		{
+			// Check for incompatible build settings
+			RdrSettings::BuildOptions bo;
+			pr::CheckBuildOptions(bo, settings.m_build_options);
+
 			PR_INFO_IF(PR_DBG_RDR, (m_settings.m_device_layers & D3D11_CREATE_DEVICE_DEBUG       ) != 0, "D3D11_CREATE_DEVICE_DEBUG is enabled");
 			PR_INFO_IF(PR_DBG_RDR, (m_settings.m_device_layers & D3D11_CREATE_DEVICE_BGRA_SUPPORT) != 0, "D3D11_CREATE_DEVICE_BGRA_SUPPORT is enabled");
 

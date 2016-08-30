@@ -3560,6 +3560,16 @@ namespace pr.common
 		[AttributeUsage(AttributeTargets.Class|AttributeTargets.Struct, AllowMultiple = false, Inherited = true)]
 		public class TableAttribute :Attribute
 		{
+			public TableAttribute()
+			{
+				AllByDefault         = true;
+				PropertyBindingFlags = BindingFlags.Public;
+				FieldBindingFlags    = BindingFlags.Default;
+				Constraints          = null;
+				PrimaryKey           = null;
+				PKAutoInc            = false;
+			}
+
 			/// <summary>
 			/// If true, all properties/fields (selected by the given binding flags) are used as
 			/// columns in the created table unless marked with the Sqlite.IgnoreAttribute.<para/>
@@ -3605,16 +3615,6 @@ namespace pr.common
 			/// Set to true if the column given by 'PrimaryKey' is also an auto increment
 			/// column. Not used if PrimaryKey is not specified. Default is false.</summary>
 			public bool PKAutoInc { get; set; }
-
-			public TableAttribute()
-			{
-				AllByDefault         = true;
-				PropertyBindingFlags = BindingFlags.Public;
-				FieldBindingFlags    = BindingFlags.Default;
-				Constraints          = null;
-				PrimaryKey           = null;
-				PKAutoInc            = false;
-			}
 		}
 
 		/// <summary>
@@ -3637,6 +3637,16 @@ namespace pr.common
 		[AttributeUsage(AttributeTargets.Property|AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
 		public class ColumnAttribute :Attribute
 		{
+			public ColumnAttribute()
+			{
+				PrimaryKey  = false;
+				AutoInc     = false;
+				Name        = string.Empty;
+				Order       = 0;
+				SqlDataType = DataType.Null;
+				Constraints = null;
+			}
+
 			/// <summary>
 			/// True if this column should be used as a primary key.
 			/// If multiple primary keys are specified, ensure the Order
@@ -3661,16 +3671,6 @@ namespace pr.common
 
 			/// <summary>Custom constraints to add to this column. Default is null</summary>
 			public string Constraints { get; set; }
-
-			public ColumnAttribute()
-			{
-				PrimaryKey  = false;
-				AutoInc     = false;
-				Name        = string.Empty;
-				Order       = 0;
-				SqlDataType = DataType.Null;
-				Constraints = null;
-			}
 		}
 
 		/// <summary>Marks a property or field as not a column in the db table for a type.</summary>

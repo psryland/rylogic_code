@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Text;
 using System.Windows.Forms;
 using System.Windows.Threading;
+using System.Xml.Linq;
 using pr.attrib;
 using pr.common;
 using pr.container;
@@ -53,14 +55,20 @@ namespace Tradee
 			m_ibuf = new List<ushort>();
 			m_nbuf = new List<View3d.Nugget>();
 			m_gfx_cache = new Cache<int, CachedGfx>();
+			m_chart = new ChartControl(string.Empty, Settings.Chart.Style);
+			Indicators = new BindingSource<IndicatorBase> { DataSource = new BindingListEx<IndicatorBase>(), PerItemClear = true };
 
+			// Set the instrument displayed in this chart
 			Instrument = instr;
+
+			// Find the stored settings for charts of this type
+			ChartSettings = Model.FindChartSettings(Instrument.SymbolCode);
 
 			SetupUI();
 			UpdateUI();
 
 			// Select the time frame from the chart settings
-			TimeFrame = Settings.Chart.TimeFrame;
+			TimeFrame = ChartSettings.TimeFrame;
 
 			// Create a current price indicator
 			CurrentPrice = new CurrentPrice(Model, Instrument);
@@ -73,6 +81,8 @@ namespace Tradee
 		}
 		protected override void Dispose(bool disposing)
 		{
+			ChartSettings = null;
+			Indicators.Clear();
 			CurrentPrice = null;
 			Instrument = null;
 			Util.Dispose(ref m_gfx_cache);
@@ -96,6 +106,29 @@ namespace Tradee
 			}
 		}
 
+		/// <summary>Setting specific to this chart</summary>
+		public PerChartSettings ChartSettings
+		{
+			[DebuggerStepThrough] get { return m_chart_settings; }
+			private set
+			{
+				if (m_chart_settings == value) return;
+				m_chart_settings = value;
+				if (m_chart_settings != null)
+				{
+					// Pretend there is no settings while we create the saved indicators.
+					// This prevents the settings being changed as indicators are added
+				//	using (Scope.Create(() => m_chart_settings = null, () => m_chart_settings = value))
+				//	{
+				//		Indicators.Clear();
+				//		foreach (var node in value.Indicators.Elements(XmlTag.Indicator))
+				//			Indicators.Add((IndicatorBase)node.ToObject());
+				//	}
+				}
+			}
+		}
+		private PerChartSettings m_chart_settings;
+
 		/// <summary>The current instrument displayed in the chart</summary>
 		public Instrument Instrument
 		{
@@ -105,17 +138,35 @@ namespace Tradee
 				if (m_impl_instr == value) return;
 				if (m_impl_instr != null)
 				{
+					// Remove the SnRLevel indicators from the chart
+					// and stop watching for SnRLevels added/removed on the instrument.
+					m_impl_instr.SupportResistLevels.ListChanging -= HandleInstrumentSnRLevelsChanging;
+					var ids = m_impl_instr.SupportResistLevels.Select(x => x.Id).ToHashSet();
+					Indicators.RemoveIf(x => ids.Contains(x.Id));
+
+					// Stop watching for instrument data updates
 					m_impl_instr.DataChanged -= HandleInstrumentDataChanged;
+
+					// Release our reference to the instrument
 					m_impl_instr.ReferenceCount--;
 				}
 				m_impl_instr = value;
 				if (m_impl_instr != null)
 				{
+					// Add a reference to the instrument
+					m_impl_instr.ReferenceCount++;
+
 					// Ensure a valid time frame is selected
 					if (m_impl_instr.TimeFrame == ETimeFrame.None)
-						m_impl_instr.TimeFrame = ETimeFrame.Hour12;
+						m_impl_instr.TimeFrame = Settings.General.DefaultTimeFrame;
 
-					m_impl_instr.ReferenceCount++;
+					// Add indicators for the instrument's SnRLevels to this chart.
+					// Start watching for SnRLevels added/removed on the instrument.
+					m_impl_instr.SupportResistLevels.ListChanging += HandleInstrumentSnRLevelsChanging;
+					foreach (var snr in Instrument.SupportResistLevels)
+						Indicators.Add(new SnRIndicator(snr));
+
+					// Watch for instrument data updates
 					m_impl_instr.DataChanged += HandleInstrumentDataChanged;
 				}
 				m_chart?.Invalidate();
@@ -134,6 +185,26 @@ namespace Tradee
 		{
 			get { return m_chart.Elements; }
 		}
+
+		/// <summary>The collection of indicators on this chart</summary>
+		public BindingSource<IndicatorBase> Indicators
+		{
+			[DebuggerStepThrough] get { return m_indicators; }
+			private set
+			{
+				if (m_indicators == value) return;
+				if (m_indicators != null)
+				{
+					m_indicators.ListChanging -= HandleIndicatorsListChanging;
+				}
+				m_indicators = value;
+				if (m_indicators != null)
+				{
+					m_indicators.ListChanging += HandleIndicatorsListChanging;
+				}
+			}
+		}
+		private BindingSource<IndicatorBase> m_indicators;
 
 		/// <summary>The symbol displayed on the chart (or empty string if none)</summary>
 		public string SymbolCode
@@ -242,28 +313,28 @@ namespace Tradee
 			#endregion
 
 			#region Chart
-			m_chart = m_tsc.ContentPanel.Controls.Add2(new ChartControl(string.Empty, Settings.Chart.Style)
-			{
-				Name            = "m_chart",
-				BorderStyle     = BorderStyle.FixedSingle,
-				Dock            = DockStyle.Fill,
-				DefaultMouseControl = true,
-			});
+			m_chart.Name                = "m_chart";
+			m_chart.BorderStyle         = BorderStyle.FixedSingle;
+			m_chart.Dock                = DockStyle.Fill;
+			m_chart.DefaultMouseControl = true;
+
 			m_chart.XAxis.Options.ShowGridLines = true;
 			m_chart.XAxis.Options.PixelsPerTick = 50;
-			m_chart.XAxis.Options.MinTickSize = 30;
 			m_chart.XAxis.Options.TickFont = new Font("tahoma", 7f, FontStyle.Regular, GraphicsUnit.Point);
+			m_chart.XAxis.Options.MinTickSize = m_chart.XAxis.Options.TickFont.Height * 2.2f;
 			m_chart.XAxis.TickText = HandleChartXAxisLabels;
 
 			m_chart.YAxis.Options.ShowGridLines = true;
 			m_chart.YAxis.Options.PixelsPerTick = 20;
 			m_chart.YAxis.Options.MinTickSize = 50;
 			m_chart.YAxis.Options.TickFont = new Font("tahoma", 7f, FontStyle.Regular, GraphicsUnit.Point);
-			m_chart.YAxis.TickText = HandleChartYAxisLabels;
+			m_chart.YAxis.TickText = HandleChartYAxisTickText;
+			m_chart.YAxis.MeasureTickText = HandleChartYAxisMeasureTickText;
 
 			m_chart.FindingDefaultRange += HandleFindingDefaultRange;
 			m_chart.ChartRendering      += HandleChartRendering;
 			m_chart.KeyDown             += HandleChartKeyDown;
+			m_chart.MouseDown           += HandleChartMouseDown;
 			m_chart.AddOverlaysOnPaint  += HandleAddOverlaysOnPaint;
 			m_chart.AddUserMenuOptions  += HandleChartCMenu;
 
@@ -278,11 +349,12 @@ namespace Tradee
 			{
 				// Area select zoom if control is held down
 				var rect = new RectangleF(a.SelectionArea.MinX, a.SelectionArea.MinY, a.SelectionArea.SizeX, a.SelectionArea.SizeY);
-				if (rect.Width > 0 && rect.Height > 0 && ModifierKeys == Keys.Control)
+				if (rect.Width > 0 && rect.Height > 0 && ModifierKeys == Keys.Shift)
 					m_chart.ZoomArea(rect, false);
 
 				a.Handled = true;
 			};
+			m_tsc.ContentPanel.Controls.Add(m_chart);
 			#endregion
 		}
 
@@ -305,10 +377,25 @@ namespace Tradee
 		}
 
 		/// <summary>Set the X,Y Axis to the default range</summary>
-		private void ResetToDefaultRange()
+		public void ResetToDefaultRange()
 		{
 			m_chart.FindDefaultRange(false);
 			m_chart.ResetToDefaultRange();
+		}
+
+		/// <summary>Scroll the chart Y Axis so that the latest price is on screen</summary>
+		public void EnsureLatestPriceDisplayed()
+		{
+			// Get the current price relative to the centre of the displayed Y Axis range
+			var price = Instrument.Latest.Close;
+			var _80pc = m_chart.YAxis.Max - m_chart.YAxis.Span * 0.2;
+			var _20pc = m_chart.YAxis.Min + m_chart.YAxis.Span * 0.2;
+
+			// If the price value is not within 20-80%, scroll the Y Axis to put the price at the 20-80% level
+			if (price > _80pc)
+				m_chart.YAxis.Shift(price - _80pc);
+			if (price < _20pc)
+				m_chart.YAxis.Shift(price - _20pc);
 		}
 
 		/// <summary>Create a new trade or add to the existing trade</summary>
@@ -320,16 +407,18 @@ namespace Tradee
 		/// <summary>Returns the graphics model containing the data point with index 'idx'</summary>
 		private CachedGfx GfxAt(int cache_idx)
 		{
-			// On miss, generate the graphics model for the data range [idx0, idx0+GfxModelBatchSize)
+			// On miss, generate the graphics model for the data range [idx, idx + min(GfxModelBatchSize, Count-idx))
 			return m_gfx_cache.Get(cache_idx, i =>
 			{
 				var gfx = new CachedGfx();
+				gfx.m_db_idx_range = new Range((i+0) * GfxModelBatchSize, (i+1) * GfxModelBatchSize);
 
-				// Get the series data over the time range specified by the chart
-				gfx.m_idx_range = Instrument.IndexRange(i * GfxModelBatchSize, (i + 1) * GfxModelBatchSize);
-				var count = gfx.m_idx_range.Counti;
-				if (count == 0)
-					return default(CachedGfx);
+				// Get the series data over the time range specified
+				var rng = Instrument.IndexRange(
+					Instrument.FirstIdx + gfx.m_db_idx_range.Begini,
+					Instrument.FirstIdx + gfx.m_db_idx_range.Endi);
+				if (rng.Counti == 0)
+					return gfx;
 
 				// Using TriList for the bodies, and LineList for the wicks.
 				// So:    6 indices for the body, 4 for the wicks
@@ -339,7 +428,8 @@ namespace Tradee
 				//  |____\|
 				//     |
 				// Dividing the index buffer into [bodies, wicks]
-				var candles = Instrument.CandleRange(gfx.m_idx_range.Begini, gfx.m_idx_range.Endi);
+				var candles = Instrument.CandleRange(rng.Begini, rng.Endi);
+				var count = rng.Counti;
 
 				// Resize the cache buffers
 				m_vbuf.Resize(8 * count);
@@ -353,11 +443,11 @@ namespace Tradee
 				var nugt = 0;
 
 				// Create the geometry
-				var idx = 0;
+				var candle_idx = 0;
 				foreach (var candle in candles)
 				{
 					// Create the graphics with the first candle at x == 0
-					var x = (float)idx++;
+					var x = (float)candle_idx++;
 					var o = (float)Math.Max(candle.Open, candle.Close);
 					var h = (float)candle.High;
 					var l = (float)candle.Low;
@@ -401,7 +491,7 @@ namespace Tradee
 				m_nbuf[nugt++] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert|View3d.EGeom.Colr, 0, (uint)vert, (uint)body, (uint)wick);
 
 				// Create the graphics
-				gfx.m_obj = new View3d.Object("Candles-[{0},{1})".Fmt(gfx.m_idx_range.Begini,gfx.m_idx_range.Endi), 0xFFFFFFFF, vert, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray());
+				gfx.m_obj = new View3d.Object("Candles-[{0},{1})".Fmt(gfx.m_db_idx_range.Begini,gfx.m_db_idx_range.Endi), 0xFFFFFFFF, vert, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray());
 				return gfx;
 			});
 		}
@@ -410,8 +500,11 @@ namespace Tradee
 			/// <summary>The graphics object containing 'GfxModelBatchSize' candles</summary>
 			public View3d.Object m_obj;
 
-			/// <summary>The index range of candles in this graphic</summary>
-			public Range m_idx_range;
+			/// <summary>
+			/// The index range of candles in this graphic.
+			/// This index range is zero based and positive, because new candles are being added all the 
+			/// time and negative indices get invalidated whenever a new candle is added.</summary>
+			public Range m_db_idx_range;
 		}
 
 		/// <summary>Update the buttons that appear on the time frame tool bar</summary>
@@ -492,6 +585,13 @@ namespace Tradee
 		}
 		private bool m_sig_update_trade_graphics;
 
+		/// <summary>Invalidate any cached graphics</summary>
+		public void InvalidateCachedGraphics()
+		{
+			m_gfx_cache.Flush();
+			Invalidate(true);
+		}
+
 		/// <summary>Handle the connection to the trade data source connecting/disconnecting</summary>
 		private void HandleConnectionChanged(object sender, EventArgs e)
 		{
@@ -520,7 +620,8 @@ namespace Tradee
 			{
 				// Invalidate the cache value that contains 'idx'
 				var idx = Instrument.IndexAt(new TFTime(e.Candle.Timestamp, TimeFrame));
-				m_gfx_cache.Invalidate(idx / GfxModelBatchSize);
+				var cache_idx = (idx - Instrument.FirstIdx) / GfxModelBatchSize;
+				m_gfx_cache.Invalidate(cache_idx);
 			}
 			else
 			{
@@ -528,10 +629,17 @@ namespace Tradee
 				m_gfx_cache.Flush();
 			}
 
-			// If 'e.Candle' is a new candle and 'x == 0' is not visible,
-			// move the camera back by one index position so that view doesn't appear to move
-			if (e.NewCandle && m_chart.XAxis.Max < 0)
-				m_chart.XAxis.Set(m_chart.XAxis.Min - 1, m_chart.XAxis.Max - 1);
+			// Auto scroll if 'e.Candle' is a new candle
+			if (e.NewCandle)
+			{
+				// If 'x == 0' is not visible, move the camera back by
+				// one index position so that view doesn't appear to move.
+				if (m_chart.XAxis.Max < 0)
+					m_chart.XAxis.Set(m_chart.XAxis.Min - 1, m_chart.XAxis.Max - 1);
+				// Otherwise, scroll the YAxis to ensure the latest price is visible
+				else
+					EnsureLatestPriceDisplayed();
+			}
 
 			// Signal a refresh
 			m_chart.Invalidate();
@@ -543,17 +651,19 @@ namespace Tradee
 			// Convert the XAxis values into an index range.
 			// (indices, not time frame units, because of the gaps in the price data).
 			var range = Instrument.IndexRange((int)(m_chart.XAxis.Min - 1), (int)(m_chart.XAxis.Max + 1));
-			range.Begin = (range.Begin - GfxModelBatchSize + 1) / GfxModelBatchSize; // Round away from zero
-			range.End   = (range.End   - GfxModelBatchSize + 1) / GfxModelBatchSize;
 
-			// Add models from the cache
-			for (int i = range.Begini, iend = range.Endi; i <= iend;  ++i)
+			// Convert the index range into a cache index range
+			var cache0 = (range.Begini - Instrument.FirstIdx) / GfxModelBatchSize;
+			var cache1 = (range.Endi   - Instrument.FirstIdx) / GfxModelBatchSize;
+			for (int i = cache0; i <= cache1; ++i)
 			{
+				// Get the graphics model that contains candle 'i'
 				var gfx = GfxAt(i);
 				if (gfx.m_obj != null)
 				{
 					// Position the graphics object relative to 'x == 0'
-					gfx.m_obj.O2P = m4x4.Translation(new v4(gfx.m_idx_range.Begini, 0.0f, 0.0f, 1.0f));
+					var x = Instrument.FirstIdx + gfx.m_db_idx_range.Begini;
+					gfx.m_obj.O2P = m4x4.Translation(new v4(x, 0.0f, 0.0f, 1.0f));
 					e.AddToScene(gfx.m_obj);
 				}
 			}
@@ -638,6 +748,25 @@ namespace Tradee
 			}
 		}
 
+		/// <summary>Handle chart mouse down</summary>
+		private void HandleChartMouseDown(object sender, MouseEventArgs args)
+		{
+			// Edit chart elements when Control is held down
+			if (ModifierKeys == Keys.Control)
+			{
+				// Look for hit drag-able indicators
+				var hit = m_chart.HitTestCS(args.Location, ModifierKeys, x => (x as IndicatorBase)?.Dragable ?? false);
+				if (hit.Hits.Count != 0)
+				{
+					var ind = (IndicatorBase)hit.Hits[0].Element;
+
+					// Create a mouse operation for dragging the indicator
+					var op = ind.CreateDragMouseOp();
+					m_chart.MouseOperations.SetPending(MouseButtons.Left, op);
+				}
+			}
+		}
+
 		/// <summary>Convert the XAxis values into pretty datetime strings</summary>
 		private string HandleChartXAxisLabels(double x, double step)
 		{
@@ -688,12 +817,22 @@ namespace Tradee
 		private bool m_xaxis_in_candle_indices;
 
 		/// <summary>Convert the YAxis values into pretty price strings</summary>
-		private string HandleChartYAxisLabels(double x, double step)
+		private string HandleChartYAxisTickText(double x, double step)
 		{
 			if (Instrument == null)
 				return string.Empty;
 
-			return Math.Round(x, 5, MidpointRounding.AwayFromZero).ToString("F5");
+			var str = new StringBuilder(Math.Round(x, 5, MidpointRounding.AwayFromZero).ToString("F5"));
+			for (; str.Length > 6 && str[str.Length-1] == '0';) str.Length--;
+			return str.ToString();;
+		}
+
+		/// <summary>Measure the size of the y axis text</summary>
+		private float HandleChartYAxisMeasureTickText(Graphics gfx, bool width)
+		{
+			var sz0 = gfx.MeasureString(HandleChartYAxisTickText(m_chart.YAxis.Min, 0.0), m_chart.YAxis.Options.TickFont);
+			var sz1 = gfx.MeasureString(HandleChartYAxisTickText(m_chart.YAxis.Max, 0.0), m_chart.YAxis.Options.TickFont);
+			return width ? Math.Max(sz0.Width, sz1.Width) : Math.Max(sz0.Height, sz1.Height);
 		}
 
 		/// <summary>Handle the chart context menu</summary>
@@ -701,7 +840,84 @@ namespace Tradee
 		{
 			switch (e.Type)
 			{
+			case ChartControl.AddUserMenuOptionsEventArgs.EType.Chart:
+				#region
+				{
+					int idx = 0;
+
+					#region Indicators
+					var indicators_menu = e.Menu.Items.Insert2(idx++, new ToolStripMenuItem("Indicators"));
+					{
+						// Add a new indicator
+						var add_menu = indicators_menu.DropDownItems.Add2(new ToolStripMenuItem("Add Indicator"));
+						{
+							// S&R Level
+							var opt = add_menu.DropDownItems.Add2(new ToolStripMenuItem("Support/Resistance Level"));
+							opt.Click += (s,a) =>
+							{
+								// SnR levels are an Instrument thing. Add the SnRLevel to the instrument.
+								// We'll notice it in a different handler and add an indicator for it there.
+								var snr = new SnRLevel(e.HitResult.ChartPoint.Y, m_chart.YAxis.Span * 0.05 / Instrument.PriceData.PipSize);
+								Instrument.SupportResistLevels.Add(snr);
+								EditSnRLevel(Indicators.OfType<SnRIndicator>().First(x => x.Id == snr.Id));
+							};
+						}{
+							// EMA
+							var opt = add_menu.DropDownItems.Add2(new ToolStripMenuItem("Exponential Moving Average"));
+							opt.Click += (s,a) => EditEmaIndicator();
+						}{
+							// S&R
+							var opt = add_menu.DropDownItems.Add2(new ToolStripMenuItem("Support and Resistance"));
+							opt.Click += (s,a) => EditSnRIndicator();
+						}
+
+						indicators_menu.DropDownItems.AddSeparator();
+
+						// Modify existing indicators
+						var hit_indicators = e.HitResult.Hits.Where(x => x.Element is IndicatorBase).Select(x => (IndicatorBase)x.Element).ToArray();
+						foreach (var indicator in Indicators)
+						{
+							var colour = hit_indicators.Contains(indicator) ? Color.Blue : Color.Black;
+							var opt = indicators_menu.DropDownItems.Add2(new ToolStripMenuItem(indicator.Name) { ForeColor = colour });
+							opt.Click += (s,a) => EditIndicator(indicator);
+						}
+					}
+					#endregion
+
+					e.Menu.Items.InsertSeparator(idx++);
+
+					#region Orders
+					{
+						// The price where the mouse was clicked
+						var click_price = Misc.RoundToNearestPip(e.HitResult.ChartPoint.Y,  Instrument.PriceData);
+						Action<ETradeType> new_order = (tt) =>
+						{
+							Model.Positions.Orders.Add2(new Order(0, Instrument, tt, Trade.EState.Visualising)
+							{
+								EntryPrice = click_price,
+								StopLossRel = m_chart.YAxis.Span * 0.1,
+								TakeProfitRel = m_chart.YAxis.Span * 0.1,
+							});
+						};
+
+						{// Buy
+							var opt = e.Menu.Items.Insert2(idx++, new ToolStripMenuItem("Buy at {0}".Fmt(click_price)) { ForeColor = Settings.UI.AskColour });
+							opt.Click += (s,a) => new_order(ETradeType.Long);
+						}
+						{// Sell
+							var opt = e.Menu.Items.Insert2(idx++, new ToolStripMenuItem("Sell at {0}".Fmt(click_price)) { ForeColor = Settings.UI.BidColour });
+							opt.Click += (s,a) => new_order(ETradeType.Short);
+						}
+					}
+					#endregion
+
+					e.Menu.Items.InsertSeparator(idx++);
+
+					break;
+				}
+				#endregion
 			case ChartControl.AddUserMenuOptionsEventArgs.EType.XAxis:
+				#region
 				{
 					var opt = e.Menu.Items.Add2(new ToolStripMenuItem(m_xaxis_in_candle_indices ? "Local Time" : "Candle Index"));
 					opt.Click += (s,a) =>
@@ -711,8 +927,126 @@ namespace Tradee
 					};
 					break;
 				}
+				#endregion
 			}
 		}
+
+		#region Indicators
+
+		/// <summary>Handle indicators being added/removed from the chart</summary>
+		private void HandleIndicatorsListChanging(object sender, ListChgEventArgs<IndicatorBase> e)
+		{
+			switch (e.ChangeType)
+			{
+			case ListChg.ItemAdded:
+				{
+					// Ensure the 'Chart' property is set on the indicator
+					e.Item.Instrument = Instrument;
+					e.Item.Chart = m_chart;
+
+					// When the indicator changes, update the saved chart settings
+					e.Item.DataChanged += HandleIndicatorChanged;
+
+					// Update the settings.
+					HandleIndicatorChanged();
+
+					// Refresh the chart
+					Invalidate(true);
+					break;
+				}
+			case ListChg.ItemRemoved:
+				{
+					// Remove from the Chart
+					e.Item.Chart = null;
+					e.Item.Instrument = null;
+
+					// Ignore changes
+					e.Item.DataChanged -= HandleIndicatorChanged;
+
+					// Dispose the indicator
+					Util.Dispose(e.Item);
+
+					// Update the settings.
+					HandleIndicatorChanged();
+
+					// Refresh the chart
+					Invalidate(true);
+					break;
+				}
+			}
+		}
+
+		/// <summary>Handle an indicator on this chart changing</summary>
+		private void HandleIndicatorChanged(object sender = null, EventArgs e = null)
+		{
+			// ChartSettings is set to null on Dispose so that removing indicators
+			// doesn't write to the settings.
+			if (ChartSettings == null)
+				return;
+
+			// Save the indicators to the chart settings
+			var elements = new XElement("root");
+			foreach (var indicator in Indicators)
+				elements.Add2(XmlTag.Indicator, indicator, true);
+
+			// Update the settings
+			ChartSettings.Indicators = elements;
+		}
+
+		/// <summary>Handle SnR levels added to the instrument</summary>
+		private void HandleInstrumentSnRLevelsChanging(object sender, ListChgEventArgs<SnRLevel> e)
+		{
+			switch (e.ChangeType)
+			{
+			case ListChg.ItemAdded:
+				{
+					// Create an indicator for the new SnR level
+					Indicators.Add(new SnRIndicator(e.Item));
+					break;
+				}
+			case ListChg.ItemRemoved:
+				{
+					// Remove the associated indicator
+					Indicators.RemoveIf(x => x.Id == e.Item.Id);
+					break;
+				}
+			}
+		}
+
+		/// <summary>Edit an existing indicator</summary>
+		private void EditIndicator(object indicator)
+		{
+			if      (indicator is SnRIndicator) EditSnRLevel    ((SnRIndicator)indicator);
+			else if (indicator is EmaIndicator) EditEmaIndicator((EmaIndicator)indicator);
+			else if (indicator is SnR         ) EditSnRIndicator((SnR         )indicator);
+			else throw new Exception("Unknown indicator type: {0}".Fmt(indicator.GetType().Name));
+		}
+
+		/// <summary>Add/Edit an EMA indicator</summary>
+		private void EditEmaIndicator(EmaIndicator ema = null)
+		{
+			ema = ema ?? Indicators.Add2(new EmaIndicator());
+			new EditEmaUI(this, ema).Show(this);
+		}
+
+		/// <summary>Add/Edit a support and resistance indicator</summary>
+		private void EditSnRIndicator(SnR snr = null)
+		{
+			snr = snr ?? Indicators.Add2(new SnR());
+			new EditSnrUI(this, snr).Show(this);
+		}
+
+		/// <summary>Add/Edit a support/resistance line</summary>
+		private void EditSnRLevel(SnRIndicator snr)
+		{
+			//snr = snr ?? Instrument.SupportResistLevels.Add2(new SnRLevel(m_chart.YAxis.Centre, m_chart.YAxis.Span * 0.05 / Instrument.PriceData.PipSize));
+			new EditSnrLevelUI(this, snr).Show(this);
+		}
+
+		#endregion
+
+		#region Mouse Operations
+		#endregion
 
 		/// <summary>Convert between a chart name to a symbol code (or null)</summary>
 		public static string ToSymbolCode(string name)
@@ -730,8 +1064,11 @@ namespace Tradee
 		/// <summary>Z-values for chart elements</summary>
 		public static class Z
 		{
-			public const float Candles = 0.000f;
-			public const float Trades = 0.001f;
+			// Grid lines are drawn at 0
+			public const float SnR        = 0.009f;
+			public const float Candles    = 0.010f;
+			public const float Indicators = 0.011f;
+			public const float Trades     = 0.012f;
 		}
 
 		#region Component Designer generated code

@@ -75,7 +75,7 @@ namespace pr
 					.parent(parent)
 					.name("rdr-lighting-ui")
 					.title(L"Lighting Options")
-					.wh(300,400)
+					.wh(300,420)
 					.resizeable(false)
 					.style_ex('+',WS_EX_TOOLWINDOW)
 					.start_pos(EStartPosition::CentreParent)
@@ -94,7 +94,7 @@ namespace pr
 
 				,m_tb_position       (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_POSITION        ).w(119 ).xy(-1, 0                                    ).anchor(EAnchor::TopRight))
 				,m_tb_direction      (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_DIRECTION       ).w(119 ).xy(-1, Top|BottomOf|ID_EDIT_POSITION        ).anchor(EAnchor::TopRight))
-				,m_chk_cam_rel       (pr::gui::Button ::Params<>().parent(this_).id(ID_CHECK_CAMERA_RELATIVE).w(Auto).xy(-1, Top|BottomOf|ID_EDIT_DIRECTION       ).anchor(EAnchor::TopRight).text(L"Camera Relative:").chk_box().style('+',BS_LEFTTEXT))
+				,m_chk_cam_rel       (pr::gui::Button ::Params<>().parent(this_).id(ID_CHECK_CAMERA_RELATIVE).w(120 ).xy(-1, Top|BottomOf|ID_EDIT_DIRECTION       ).anchor(EAnchor::TopRight).text(L"Camera Relative:").chk_box().style('+',BS_LEFTTEXT))
 				,m_tb_range          (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_RANGE           ).w(75  ).xy(-1, Top|BottomOf|ID_CHECK_CAMERA_RELATIVE).anchor(EAnchor::TopRight))
 				,m_tb_falloff        (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_FALLOFF         ).w(75  ).xy(-1, Top|BottomOf|ID_EDIT_RANGE           ).anchor(EAnchor::TopRight))
 				,m_tb_shadow_range   (pr::gui::TextBox::Params<>().parent(this_).id(ID_EDIT_SHADOW_RANGE    ).w(75  ).xy(-1, Top|BottomOf|ID_EDIT_FALLOFF         ).anchor(EAnchor::TopRight))
@@ -184,7 +184,7 @@ namespace pr
 			//	COMMAND_ID_HANDLER_EX(IDC_RADIO_SPOT         ,OnCommand)
 			//	MESSAGE_RANGE_HANDLER(WM_MOUSEFIRST, WM_MOUSELAST, OnMouse);
 			//END_MSG_MAP            ()
-				CreateHandle();
+
 				PopulateControls();
 				UpdateUI();
 			}

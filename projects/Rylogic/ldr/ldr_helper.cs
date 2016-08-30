@@ -3,8 +3,11 @@
 //  Copyright (c) Rylogic Ltd 2008
 //***********************************************
 
+using System.Collections;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Text;
 using pr.extn;
 using pr.gfx;
@@ -15,20 +18,31 @@ namespace pr.ldr
 {
 	public static class Ldr
 	{
-		public static bool m_enable;
+		/// <summary>Filepath for outputting ldr script using 'LdrOut' extension</summary>
+		public static string OutFile = "";
 
+		/// <summary>Append this string to the Ldr.OutFile</summary>
+		public static void LdrOut(this string s, bool app = true)
+		{
+			using (var sw = new StreamWriter(OutFile, app))
+				sw.Write(s);
+		}
+
+		/// <summary>Write an ldr string to a file</summary>
 		public static void Write(string ldr_str, string filepath)
 		{
 			using (var sw = File.CreateText(filepath))
 				sw.Write(ldr_str);
 		}
+
+		// Ldr single string
 		public static string GroupStart(string name)
 		{
-			return "*Group " + name + "\n{\n";
+			return Str.Build("*Group ",name,"\n{\n");
 		}
 		public static string GroupStart(string name, Colour32 colour)
 		{
-			return "*Group " + name + " " + colour + "\n{\n";
+			return Str.Build("*Group ",name," ",colour,"\n{\n");
 		}
 		public static string GroupEnd()
 		{
@@ -52,12 +66,12 @@ namespace pr.ldr
 		}
 		public static string Position(v4 position)
 		{
-			if (position == v4.Zero || position == v4.Origin) return "";
+			if (position == v4.Zero || position == v4.Origin) return string.Empty;
 			return "*o2w{*pos{" + Vec3(position) + "}}";
 		}
 		public static string Transform(m4x4 o2w)
 		{
-			if (o2w == m4x4.Identity) return "";
+			if (o2w == m4x4.Identity) return string.Empty;
 			return "*o2w{*m4x4{" + Mat4x4(o2w) + "}}";
 		}
 		public static string Colour(uint col)
@@ -66,7 +80,7 @@ namespace pr.ldr
 		}
 		public static string Colour(Color col)
 		{
-			return Colour(unchecked((uint)col.ToArgb()));
+			return Colour(col.ToArgbU());
 		}
 		public static string Colour(Colour32 col)
 		{
@@ -76,37 +90,61 @@ namespace pr.ldr
 		{
 			return solid ? "*Solid" : string.Empty;
 		}
+		public static string Width(int width)
+		{
+			return width != 0 ? "*Width {{{0}}}".Fmt(width) : string.Empty;
+		}
 		public static string Facets(int facets)
 		{
 			return "*Facets {{{0}}}".Fmt(facets);
 		}
 		public static string CornerRadius(float rad)
 		{
-			return "*CornerRadius {" + rad + "}";
+			return "*CornerRadius {{{0}}}".Fmt(rad);
 		}
 		public static string Line(string name, Colour32 colour, v4 start, v4 end)
 		{
-			return "*Line " + name + " " + colour + " {" + Vec3(start) + " " + Vec3(end) + "}\n";
+			return Str.Build("*Line ",name," ",colour," {",Vec3(start)," ",Vec3(end),"}\n");
 		}
 		public static string LineD(string name, Colour32 colour, v4 start, v4 direction)
 		{
-			return "*LineD " + name + " " + colour + " {" + Vec3(start) + " " + Vec3(direction) + "}\n";
+			return Str.Build("*LineD ",name," ",colour," {",Vec3(start)," ",Vec3(direction),"}\n");
+		}
+		public static string LineStrip(string name, Colour32 colour, int width, IEnumerable<v4> points)
+		{
+			return Str.Build("*LineStrip ",name," ",colour," {",Width(width),points.Select(x => " "+Vec3(x)),"}");
 		}
 		public static string Ellipse(string name, Colour32 colour, int axis_id, float rx, float ry, v4 position)
 		{
-			return "*Ellipse " + name + " " + colour + " {" + axis_id + " " + rx + " " + ry + " " + Position(position) + "}\n";
+			return Str.Build("*Ellipse ",name," ",colour," {",axis_id," ",rx," ",ry," ",Position(position),"}\n");
 		}
 		public static string Rect(string name, Colour32 colour, int axis_id, float w, float h, bool solid, v4 position)
 		{
-			return Str.Build("*Rect ",name," ",colour," {",axis_id," ",w," ",h," ",(solid?"*Solid ":""),Position(position),"}\n");
+			return Str.Build("*Rect ",name," ",colour," {",axis_id," ",w," ",h," ",Solid(solid),Position(position),"}\n");
+		}
+		public static string Basis(string name, Colour32 colour, m4x4 basis, float size = 1f)
+		{
+			return Str.Build("*Matrix3x3 ",name," ",colour," {",Vec3(basis.x)," ",Vec3(basis.y)," ",Vec3(basis.z)," ",Position(basis.pos),"}\n");
+		}
+		public static string Basis(string name, Colour32 colour, quat basis, v4 pos, float size = 1f)
+		{
+			return Basis(name, colour, new m4x4(basis, pos), size);
 		}
 		public static string Box(string name, Colour32 colour, v4 position, float size)
 		{
-			return "*Box " + name + " " + colour + " {" + size + " " + Position(position) + "}\n";
+			return Str.Build("*Box ",name," ",colour," {",size," ",Position(position),"}\n");
 		}
 		public static string Box(string name, Colour32 colour, v4 position, v4 dim)
 		{
-			return "*Box" + name + " " + colour + " {" + dim.x + " " + dim.y + " " + dim.z + " " + Position(position) + "}\n";
+			return Str.Build("*Box ",name," ",colour," {",dim.x," ",dim.y," ",dim.z," ",Position(position),"}\n");
+		}
+		public static string Box(string name, Colour32 colour, m4x4 o2w, float size)
+		{
+			return Str.Build("*Box ",name," ",colour," {",size," ",Transform(o2w),"}\n");
+		}
+		public static string Box(string name, Colour32 colour, m4x4 o2w, v4 dim)
+		{
+			return Str.Build("*Box ",name," ",colour," {",dim.x," ",dim.y," ",dim.z," ",Transform(o2w),"}\n");
 		}
 		public static string Sphere(string name, Colour32 colour, float radius)
 		{
@@ -114,11 +152,11 @@ namespace pr.ldr
 		}
 		public static string Sphere(string name, Colour32 colour, float radius, v4 position)
 		{
-			return "*Sphere " + name + " " + colour + " {" + radius + " " + Position(position) + "}\n";
+			return Str.Build("*Sphere ",name," ",colour," {",radius," ",Position(position),"}\n");
 		}
 		public static string Grid(string name, Colour32 colour, float dimx, float dimy, int divx, int divy, v4 position)
 		{
-			return "*GridWH " + name + " " + colour + " {" + dimx + " " + dimy + " " + divx + " " + divy + " " + Position(position) + "}\n";
+			return Str.Build("*GridWH ",name," ",colour," {",dimx," ",dimy," ",divx," ",divy," ",Position(position),"}\n");
 		}
 	}
 
@@ -142,16 +180,20 @@ namespace pr.ldr
 		{
 			m_sb.Remove(start_index, length);
 		}
+		public LdrBuilder Append(object part)
+		{
+			if      (part is string     ) m_sb.Append((string)part);
+			else if (part is Color      ) m_sb.Append(Ldr.Colour((Color)part));
+			else if (part is v4         ) m_sb.Append(Ldr.Vec3((v4)part));
+			else if (part is m4x4       ) m_sb.Append(Ldr.Mat4x4((m4x4)part));
+			else if (part is AxisId     ) m_sb.Append(((AxisId)part).m_id);
+			else if (part is IEnumerable) foreach (var x in (IEnumerable )part) Append(x);
+			else if (part != null       ) m_sb.Append(part.ToString());
+			return this;
+		}
 		public LdrBuilder Append(params object[] parts)
 		{
-			foreach (var p in parts)
-			{
-				if      (p is Color ) m_sb.Append(Ldr.Colour((Color)p));
-				else if (p is v4    ) m_sb.Append(Ldr.Vec3  ((v4)p));
-				else if (p is m4x4  ) m_sb.Append(Ldr.Mat4x4((m4x4)p));
-				else if (p is AxisId) m_sb.Append(((AxisId)p).m_id);
-				else                  m_sb.Append(p.ToString());
-			}
+			foreach (var p in parts) Append(p);
 			return this;
 		}
 
@@ -170,6 +212,11 @@ namespace pr.ldr
 		public void Line(string name, Color colour, v4 start, v4 end)
 		{
 			Append("*Line ",name," ",colour," {",start," ",end,"}\n");
+		}
+		public void Line(string name, Color colour, int width, IEnumerable<v4> points)
+		{
+			var w = width != 0 ? "*Width {{{0}}}".Fmt(width) : string.Empty;
+			Append("*LineStrip ",name," ",colour," {",w,points.Select(x => " "+Ldr.Vec3(x)),"}");
 		}
 
 		public void Box()                                          { Box(string.Empty, Color.White); }

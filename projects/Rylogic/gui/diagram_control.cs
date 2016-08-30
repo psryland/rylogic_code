@@ -1740,7 +1740,7 @@ namespace pr.gui
 					if (dir == v4.Zero) dir = Anc1.NormalDS;
 					if (dir == v4.Zero) dir = v4.Normalise3(Anc0.LocationDS - Anc1.LocationDS, v4.YAxis);
 					var pos = new v4(Anc0.LocationDS.xy, Math.Max(Anc0.LocationDS.z, PositionZ), 1f);
-					m_gfx_bak.O2P = m4x4.Rotation(v4.ZAxis, (float)Math.Atan2(dir.y, dir.x), pos + bias) * m4x4.Scale(Style.Width, v4.Origin);
+					m_gfx_bak.O2P = m4x4.Transform(v4.ZAxis, (float)Math.Atan2(dir.y, dir.x), pos + bias) * m4x4.Scale(Style.Width, v4.Origin);
 				}
 
 				// If the connector has a forward arrow, add the arrow head graphics
@@ -1750,7 +1750,7 @@ namespace pr.gui
 					if (dir == v4.Zero) dir = Anc0.NormalDS;
 					if (dir == v4.Zero) dir = v4.Normalise3(Anc1.LocationDS - Anc0.LocationDS, v4.YAxis);
 					var pos = new v4(Anc1.LocationDS.xy, Math.Max(Anc1.LocationDS.z, PositionZ), 1f);
-					m_gfx_fwd.O2P = m4x4.Rotation(v4.ZAxis, (float)Math.Atan2(dir.y, dir.x), pos + bias) * m4x4.Scale(Style.Width, v4.Origin);
+					m_gfx_fwd.O2P = m4x4.Transform(v4.ZAxis, (float)Math.Atan2(dir.y, dir.x), pos + bias) * m4x4.Scale(Style.Width, v4.Origin);
 				}
 			}
 
@@ -4526,8 +4526,8 @@ namespace pr.gui
 				}))
 			{
 				// Prevent issues with nodes exactly on top of each other
-				var rand = new Rand(); var djitter = 10f;
-				Func<v2> jitter = () => v2.Random2(-djitter, djitter, rand);
+				var rng = new Random(); var djitter = 10f;
+				Func<v2> jitter = () => v2.Random2(-djitter, djitter, rng);
 
 				// Finds the minimum separation distance between to nodes for a given direction
 				Func<v2,Node,Node,float> min_separation = (v,n0,n1) =>

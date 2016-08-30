@@ -35,7 +35,7 @@ namespace pr
 				// true for #include "file", false for #include <file>
 				IncludeLocalDir = 1 << 1,
 
-				_bitwise_operators_allowed,
+				_bitwise_operators_allowed = -1,
 			};
 
 			bool m_ignore_missing_includes;
@@ -100,19 +100,19 @@ namespace pr
 
 		public:
 
-			explicit Includes(EType types = EType::None)
+			explicit Includes(EType types = EType::Files)
 				:m_types(types)
 				,m_paths()
 				,m_modules()
 				,m_strtab()
 				,FileOpened()
 			{}
-			explicit Includes(string const& search_paths, EType types = EType::None)
+			explicit Includes(string const& search_paths, EType types = EType::Files)
 				:Includes(types)
 			{
 				SearchPaths(search_paths);
 			}
-			explicit Includes(std::initializer_list<HMODULE> modules, EType types = EType::None)
+			explicit Includes(std::initializer_list<HMODULE> modules, EType types = EType::Files)
 				:Includes(types)
 			{
 				ResourceModules(modules);
@@ -259,6 +259,9 @@ namespace pr
 				string local_dir, *current_dir = nullptr;
 				if (include_local_dir)
 				{
+					// Note: 'local_dir' means the directory local to the current source location 'loc'.
+					// Don't use the executable local directory: "pr::filesys::CurrentDirectory<string>()"
+					// If the executable directory is wanted, add it manually before calling resolve.
 					local_dir = pr::filesys::GetDirectory(loc.StreamName());
 					current_dir = !local_dir.empty() ? &local_dir : nullptr;
 				}

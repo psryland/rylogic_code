@@ -39,6 +39,7 @@ namespace pr.common
 		SaveFailed,
 	}
 
+	/// <summary>Settings pairs</summary>
 	public class SettingsPair
 	{
 		public string Key   { get; set; }
@@ -59,10 +60,17 @@ namespace pr.common
 		public override string ToString() { return Key + "  " + Value; }
 	}
 
+	/// <summary>Common interface for 'SettingsSet' and 'SettingsBase'</summary>
 	public interface ISettingsSet
 	{
 		/// <summary>Parent settings for this settings object</summary>
 		ISettingsSet Parent { get; set; }
+
+		/// <summary>An event raised when a setting is about to change value</summary>
+		event EventHandler<SettingChangingEventArgs> SettingChanging;
+
+		/// <summary>An event raised after a setting has been changed</summary>
+		event EventHandler<SettingChangedEventArgs> SettingChanged;
 
 		/// <summary>Called just before a setting changes</summary>
 		void OnSettingChanging(SettingChangingEventArgs args);
@@ -75,12 +83,6 @@ namespace pr.common
 	public abstract class SettingsSet<T> :ISettingsSet where T:SettingsSet<T>, new()
 	{
 		protected readonly List<SettingsPair> Data;
-
-		/// <summary>An event raised when a settings is about to change value</summary>
-		public event EventHandler<SettingChangingEventArgs> SettingChanging;
-
-		/// <summary>An event raised after a setting has been changed</summary>
-		public event EventHandler<SettingChangedEventArgs> SettingChanged;
 
 		protected SettingsSet()
 		{
@@ -103,6 +105,17 @@ namespace pr.common
 			set { m_parent = value; } // could notify of parent changed...
 		}
 		private ISettingsSet m_parent;
+
+		/// <summary>Returns the top-most settings set</summary>
+		public ISettingsSet Root
+		{
+			get
+			{
+				ISettingsSet root;
+				for (root = this; root.Parent != null; root = root.Parent) {}
+				return root as T;
+			}
+		}
 
 		/// <summary>Return the index of 'key' in the data. Returned value is negative if not found</summary>
 		protected int index(string key)
@@ -141,7 +154,7 @@ namespace pr.common
 				return;
 
 			// If 'value' is a nested setting, set this object as the parent
-			SetParentIfNesting(value as ISettingsSet);
+			SetParentIfNesting(value);
 
 			// Key not in the data yet? Must be initial value from startup
 			int idx = index(key);
@@ -152,7 +165,8 @@ namespace pr.common
 
 			var args = new SettingChangingEventArgs(key, old_value, value, false);
 			OnSettingChanging(args);
-			if (!args.Cancel) Data[idx].Value = value;
+			if (args.Cancel) return;
+			Data[idx].Value = value;
 			OnSettingChanged(new SettingChangedEventArgs(key, old_value, value));
 		}
 
@@ -179,7 +193,7 @@ namespace pr.common
 			{
 				var pair = setting.As<SettingsPair>();
 				Debug.Assert(pair != null, "Failed to read setting " + setting.Name);
-				SetParentIfNesting(pair.Value as ISettingsSet);
+				SetParentIfNesting(pair.Value);
 				Data.Add(pair);
 			}
 
@@ -195,12 +209,18 @@ namespace pr.common
 				int idx = index(i.Key);
 				Debug.Assert(idx < 0, "has() is supposed to check the key is not already present");
 
-				SetParentIfNesting(i.Value as ISettingsSet);
+				SetParentIfNesting(i.Value);
 
 				// Key not in the data yet? Must be initial value from startup
 				Data.Insert(~idx, new SettingsPair{Key = i.Key, Value = i.Value});
 			}
 		}
+
+		/// <summary>An event raised when a setting is about to change value</summary>
+		public event EventHandler<SettingChangingEventArgs> SettingChanging;
+
+		/// <summary>An event raised after a setting has been changed</summary>
+		public event EventHandler<SettingChangedEventArgs> SettingChanged;
 
 		/// <summary>Called just before a setting changes</summary>
 		public virtual void OnSettingChanging(SettingChangingEventArgs args)
@@ -220,10 +240,20 @@ namespace pr.common
 		}
 
 		/// <summary>If 'nested' is not null, sets its Parent to this settings object</summary>
-		private void SetParentIfNesting(ISettingsSet nested)
+		private void SetParentIfNesting(object nested)
 		{
-			if (nested == null) return;
-			nested.Parent = this;
+			if (nested == null)
+				return;
+
+			// If 'nested' is a settings set
+			var set = nested as ISettingsSet;
+			if (set != null)
+				set.Parent = this;
+
+			// Of if 'nested' is a collection of settings sets
+			var sets = nested as IEnumerable<ISettingsSet>;
+			if (sets != null)
+				sets.ForEach(x => x.Parent = this);
 		}
 	}
 
@@ -578,6 +608,144 @@ namespace pr.common
 				MsgBox.Show(null, "An error occurred that prevented settings being saved.\r\n\r\n{0}\r\n{1}".Fmt(msg, ex.Message), "Save Settings", MessageBoxButtons.OK, MessageBoxIcon.Error);
 				break;
 			}
+		}
+	}
+
+	/// <summary>A base class for a class that gets saved to/loaded from XML only</summary>
+	public abstract class SettingsXml<T> :ISettingsSet where T:SettingsXml<T>, new()
+	{
+		private readonly Dictionary<string, object> m_data;
+
+		protected SettingsXml()
+		{
+			m_data = new Dictionary<string, object>();
+		}
+		protected SettingsXml(XElement node) :this()
+		{
+			Upgrade(node);
+
+			var ty = typeof(T);
+			foreach (var n in node.Elements())
+			{
+				// Use the type to determine the type of the XML element
+				var prop_name = n.Name.LocalName;
+				var pi = ty.GetProperty(prop_name, BindingFlags.Instance|BindingFlags.Public);
+
+				// Ignore XML values that are no longer properties of 'T'
+				if (pi == null) continue;
+				m_data[prop_name] = n.As(pi.PropertyType);
+			}
+		}
+		public virtual XElement ToXml(XElement node)
+		{
+			foreach (var pair in m_data.OrderBy(x => x.Key))
+				node.Add2(pair.Key, pair.Value);
+
+			return node;
+		}
+
+		/// <summary>The default values for the settings</summary>
+		public static T Default { get { return m_default ?? (m_default = new T()); } }
+		private static T m_default;
+
+		/// <summary>True to block all writes to the settings</summary>
+		[Browsable(false)]
+		public bool ReadOnly { get; set; }
+
+		/// <summary>Parent settings for this settings object</summary>
+		[Browsable(false)]
+		public ISettingsSet Parent
+		{
+			get { return m_parent; }
+			set { m_parent = value; } // could notify of parent changed...
+		}
+		private ISettingsSet m_parent;
+
+		/// <summary>An event raised when a setting is about to change value</summary>
+		public event EventHandler<SettingChangingEventArgs> SettingChanging;
+
+		/// <summary>An event raised after a setting has been changed</summary>
+		public event EventHandler<SettingChangedEventArgs> SettingChanged;
+
+		/// <summary>Called just before a setting changes</summary>
+		public virtual void OnSettingChanging(SettingChangingEventArgs args)
+		{
+			SettingChanging.Raise(this, args);
+			if (Parent == null) return;
+			Parent.OnSettingChanging(args);
+		}
+
+		/// <summary>Called just after a setting changes</summary>
+		public virtual void OnSettingChanged(SettingChangedEventArgs args)
+		{
+			SettingChanged.Raise(this, args);
+			var me = (ISettingsSet)this;
+			if (me.Parent == null) return;
+			me.Parent.OnSettingChanged(args);
+		}
+
+		/// <summary>Read a settings value</summary>
+		protected virtual Value get<Value>(string key)
+		{
+			object value;
+			if (m_data.TryGetValue(key, out value))
+				return (Value)value;
+
+			var ty = typeof(T);
+			var pi = ty.GetProperty(key, BindingFlags.Instance|BindingFlags.Public);
+			if (pi != null)
+				return (Value)pi.GetValue(Default);
+
+			throw new KeyNotFoundException("Unknown setting '"+key+"'.\r\n"+
+				"This is probably because there is no default value set "+
+				"in the constructor of the derived settings class");
+		}
+
+		/// <summary>Read a settings value</summary>
+		protected Value get<Value>(Expression<Func<T,Value>> expression)
+		{
+			return get<Value>(R<T>.Name(expression));
+		}
+
+		/// <summary>Write a settings value</summary>
+		protected virtual void set<Value>(string key, Value value)
+		{
+			// If the property doesn't exist, this is construction, just set the value
+			if (!m_data.ContainsKey(key))
+			{
+				m_data[key] = value;
+				return;
+			}
+
+			if (ReadOnly)
+				return;
+
+			// Otherwise, test for changes and notify
+			var old_value = (Value)m_data[key];
+			if (Equals(old_value, value)) return;
+
+			// Notify about to change
+			var args = new SettingChangingEventArgs(key, old_value, value, false);
+			OnSettingChanging(args);
+			if (args.Cancel) return;
+
+			// Change the property
+			m_data[key] = value;
+
+			// Notify changed
+			OnSettingChanged(new SettingChangedEventArgs(key, old_value, value));
+		}
+
+		/// <summary>Write a settings value</summary>
+		protected void set<Value>(Expression<Func<T,Value>> expression, Value value)
+		{
+			set(R<T>.Name(expression), value);
+		}
+
+		/// <summary>Allow XML settings to up converted to the latest version before being loaded</summary>
+		protected virtual void Upgrade(XElement node)
+		{
+			// User code will need to add versions to deal with this
 		}
 	}
 

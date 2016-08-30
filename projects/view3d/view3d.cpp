@@ -280,6 +280,20 @@ VIEW3D_API void __stdcall View3D_SettingsChanged(View3DWindow window, View3D_Set
 	CatchAndReport(View3D_SettingsChanged, window,);
 }
 
+// Add/Remove a callback that is called just prior to rendering the window
+VIEW3D_API void __stdcall View3D_RenderingCB(View3DWindow window, View3D_RenderCB rendering_cb, void* ctx, BOOL add)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+		if (add)
+			window->OnRendering += pr::StaticCallBack(rendering_cb, ctx);
+		else
+			window->OnRendering -= pr::StaticCallBack(rendering_cb, ctx);
+	}
+	CatchAndReport(View3D_RenderingCB, window,);
+}
+
 // Add/Remove objects to/from a window
 VIEW3D_API void __stdcall View3D_AddObject(View3DWindow window, View3DObject object)
 {
@@ -1017,7 +1031,21 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreate(char const* name, View3DCo
 			nug.m_geom = static_cast<EGeom>(n->m_geom);
 			nug.m_vrange = n->m_v0 != n->m_v1 ? Range(n->m_v0, n->m_v1) : Range(0, vcount);
 			nug.m_irange = n->m_i0 != n->m_i1 ? Range(n->m_i0, n->m_i1) : Range(0, icount);
+			nug.m_has_alpha = n->m_has_alpha != 0;
 			nug.m_tex_diffuse = n->m_mat.m_diff_tex;
+			switch (n->m_mat.m_shader)
+			{
+			default: break;
+			case EView3DShader::ThickLineListGS:
+				{
+					auto line_width = n->m_mat.m_shader_data[0];
+					PR_ASSERT(PR_DBG, line_width != 0, "The thick line shader requires a non-zero line width");
+					auto shdr = Dll().m_rdr.m_shdr_mgr.FindShader(EStockShader::ThickLineListGS)->Clone<pr::rdr::ThickLineListShaderGS>(AutoId, pr::FmtS("thick_line_%f", line_width));
+					shdr->m_default_width = static_cast<float>(line_width);
+					nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
+					break;
+				}
+			}
 			ngt.push_back(nug);
 
 			// Sanity check the nugget
@@ -1656,6 +1684,9 @@ void RenderWindow(view3d::Window& wnd)
 
 	// Reset the drawlist
 	scene.ClearDrawlists();
+
+	// Notify of a render about to happen
+	wnd.NotifyRendering();
 
 	// Add objects from the window to the scene
 	for (auto& obj : wnd.m_objects)

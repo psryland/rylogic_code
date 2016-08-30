@@ -2893,6 +2893,7 @@ namespace pr
 			COLORREF          m_colour_back;    // The background colour of the control
 			bool              m_client_wh;      // True if width and height parameters are desired client width/height, rather than screen bounds
 			bool              m_selectable;     // True if the control gains keyboard input focus when selected
+			bool              m_allow_drop;     // True if the control is a drag and drop target
 			bool              m_dbl_buffer;     // True if painting is double buffered for this control
 			void*             m_init_param;     // The initialisation data to pass through to WM_CREATE
 			gdi::PointF       m_dpi;            // The design-time DPI of the control's size and position.
@@ -2923,6 +2924,7 @@ namespace pr
 				,m_colour_back(CLR_INVALID)
 				,m_client_wh(false)
 				,m_selectable(false)
+				,m_allow_drop(false)
 				,m_dbl_buffer(false)
 				,m_init_param()
 				,m_dpi(96,96)
@@ -3159,6 +3161,11 @@ namespace pr
 			This& selectable(bool on = true)
 			{
 				params.m_selectable = on;
+				return me();
+			}
+			This& allow_drop(bool on = true)
+			{
+				params.m_allow_drop = on;
 				return me();
 			}
 			This& border(bool on = true)
@@ -4472,11 +4479,17 @@ namespace pr
 
 				// Initialise with a default true type font.
 				Font(DefaultGuiFont());
+
+				// Enable drag and drop
+				AllowDrop(cp().m_allow_drop);
 			}
 
 			// Called when this control is about to be destroyed
 			virtual void OnDestroy()
-			{}
+			{
+				// Enable drag and drop
+				AllowDrop(false);
+			}
 
 			// Handle window size changing starting or stopping
 			virtual void OnWindowPosChange(WindowPosEventArgs const& args)
@@ -4838,6 +4851,30 @@ namespace pr
 						break;
 					}
 					#pragma endregion
+				case WM_DROPFILES:
+					#pragma region
+					{
+						// Remember to call 'AllowDrop()' on this control
+
+						// Files dropped onto this control
+						auto drop_info = HDROP(wparam);
+						DropFilesEventArgs drop(drop_info);
+
+						// Read the file paths of the dropped files
+						int i = 0;
+						drop.m_filepaths.resize(::DragQueryFileW(drop_info, 0xFFFFFFFF, nullptr, 0));
+						for (auto& path : drop.m_filepaths)
+						{
+							path.resize(::DragQueryFileW(drop_info, i, 0, 0) + 1, 0);
+							Throw(::DragQueryFileW(drop_info, i, &path[0], UINT(path.size())) != 0, "Failed to query file name from dropped files");
+							++i;
+						}
+
+						// Call the handler
+						OnDropFiles(drop);
+						return true;
+					}
+					#pragma endregion
 				}
 				return DefWndProc(message, wparam, lparam);
 			}
@@ -4983,28 +5020,6 @@ namespace pr
 
 						// Not for this control, forward to children
 						return ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result, IsChild);
-					}
-					#pragma endregion
-				case WM_DROPFILES:
-					#pragma region
-					{
-						// Files dropped onto this control
-						auto drop_info = HDROP(wparam);
-						DropFilesEventArgs drop(drop_info);
-
-						// Read the file paths of the dropped files
-						int i = 0;
-						drop.m_filepaths.resize(::DragQueryFileW(drop_info, 0xFFFFFFFF, nullptr, 0));
-						for (auto& path : drop.m_filepaths)
-						{
-							path.resize(::DragQueryFileW(drop_info, i, 0, 0) + 1, 0);
-							Throw(::DragQueryFileW(drop_info, i, &path[0], UINT(path.size())) != 0, "Failed to query file name from dropped files");
-							++i;
-						}
-
-						// Call the handler
-						OnDropFiles(drop);
-						return true;
 					}
 					#pragma endregion
 				case WM_MOUSEWHEEL:
@@ -8716,11 +8731,11 @@ namespace pr
 			enum { ID_IMAGE = 100 };
 			MsgBox(HWND parent, wchar_t const* message, wchar_t const* title, EButtons btns = EButtons::Ok, EIcon icon = EIcon::None, int def_btn = 0, bool reflow =  true, float reflow_aspect = DefaultReflowAspect())
 				:Form(MakeDlgParams<>().name("msg-box").start_pos(EStartPosition::CentreParent ).title(title).wh(316,176).padding(0).wndclass(RegisterWndClass<MsgBox>()))
-				,m_panel_btns  (Panel      ::Params<>().name("panel-btns").parent(this_        ).wh(Fill, 52).dock(EDock::Bottom))
+				,m_panel_btns  (Panel      ::Params<>().name("panel-btns").parent(this_        ).wh(Fill, 52).dock(EDock::Bottom).border())
 				,m_btn_negative(Button     ::Params<>().name("btn-neg"   ).parent(&m_panel_btns).wh(86,23).dock(EDock::Right).margin(8,12,8,12).def_btn(def_btn==0))
 				,m_btn_neutral (Button     ::Params<>().name("btn-neu"   ).parent(&m_panel_btns).wh(86,23).dock(EDock::Right).margin(8,12,8,12).def_btn(def_btn==1))
 				,m_btn_positive(Button     ::Params<>().name("btn-pos"   ).parent(&m_panel_btns).wh(86,23).dock(EDock::Right).margin(8,12,8,12).def_btn(def_btn==2))
-				,m_panel_msg   (Panel      ::Params<>().name("panel-msg" ).parent(this_        ).dock(EDock::Fill).bk_col(0xFFFFFF))
+				,m_panel_msg   (Panel      ::Params<>().name("panel-msg" ).parent(this_        ).dock(EDock::Fill).bk_col(0xFFFFFF).border())
 				,m_image       (ImageBox   ::Params<>().name("img-icon"  ).parent(&m_panel_msg ).wh(48,48).xy(25,25).margin(8,0,8,0).visible(icon != EIcon::None).id(ID_IMAGE))
 				,m_message     (RichTextBox::Params<>().name("tb-msg"    ).parent(&m_panel_msg ).wh(Fill,Fill).xy(Left|RightOf|ID_IMAGE,Top|TopOf|ID_IMAGE).margin(0,0,8,12)
 					.style('-',WS_HSCROLL).word_wrap().detect_urls().read_only().anchor(EAnchor::All))

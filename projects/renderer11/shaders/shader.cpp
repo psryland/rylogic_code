@@ -92,7 +92,7 @@ namespace pr
 			return m_mgr->GetIP(m_id);
 		}
 
-		// Ref counting cleanup function
+		// Ref counting clean up function
 		void ShaderBase::RefCountZero(pr::RefCount<ShaderBase>* doomed)
 		{
 			ShaderBase* shdr = static_cast<ShaderBase*>(doomed);

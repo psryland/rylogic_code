@@ -20,6 +20,10 @@
 
 #pragma once
 
+#ifndef PR_RDR_RUNTIME_SHADERS
+#define PR_RDR_RUNTIME_SHADERS 0
+#endif
+
 // Forward
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/instance.h"

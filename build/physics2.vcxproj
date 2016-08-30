@@ -22,6 +22,25 @@
     <ClCompile Include="..\projects\physics2/src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\pr\collision\collision.h" />
+    <ClInclude Include="..\include\pr\collision\col_box_vs_box.h" />
+    <ClInclude Include="..\include\pr\collision\col_box_vs_line.h" />
+    <ClInclude Include="..\include\pr\collision\col_sphere_vs_box.h" />
+    <ClInclude Include="..\include\pr\collision\col_sphere_vs_sphere.h" />
+    <ClInclude Include="..\include\pr\collision\ldr_helper.h" />
+    <ClInclude Include="..\include\pr\collision\penetration.h" />
+    <ClInclude Include="..\include\pr\collision\ray.h" />
+    <ClInclude Include="..\include\pr\collision\ray_cast.h" />
+    <ClInclude Include="..\include\pr\collision\ray_cast_result.h" />
+    <ClInclude Include="..\include\pr\collision\shape.h" />
+    <ClInclude Include="..\include\pr\collision\shapes.h" />
+    <ClInclude Include="..\include\pr\collision\shape_array.h" />
+    <ClInclude Include="..\include\pr\collision\shape_box.h" />
+    <ClInclude Include="..\include\pr\collision\shape_line.h" />
+    <ClInclude Include="..\include\pr\collision\shape_polytope.h" />
+    <ClInclude Include="..\include\pr\collision\shape_sphere.h" />
+    <ClInclude Include="..\include\pr\collision\shape_triangle.h" />
+    <ClInclude Include="..\include\pr\collision\support.h" />
     <ClInclude Include="..\include\pr\gui\view3d_panel.h" />
     <ClInclude Include="..\include\pr\gui\wingui.h" />
     <ClInclude Include="..\include\pr\physics2\constants.h" />

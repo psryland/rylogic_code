@@ -1,8 +1,10 @@
 #pragma once
 #include <functional>
 
+#include "pr/common/assert.h"
 #include "pr/common/min_max_fix.h"
 #include "pr/common/guid.h"
+#include "pr/maths/stat.h"
 #include "pr/gui/wingui.h"
 #include "pr/gui/gdiplus.h"
 #include "pr/gui/view3d_panel.h"

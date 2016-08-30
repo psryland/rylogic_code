@@ -410,6 +410,8 @@ namespace pr.gui
 		/// <summary>An item that this row is bound to</summary>
 		public new object DataBoundItem
 		{
+			// This is dangerous, but I can't think of a better way to attach
+			// data to a tree grid node
 			get;
 			private set;
 		}

@@ -1,29 +1,38 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using pr.common;
+using pr.container;
 using pr.extn;
 using pr.maths;
 using pr.util;
+using NegIdx = System.Int32;
+using PosIdx = System.UInt32;
 
 namespace Tradee
 {
 	/// <summary>The data series for an instrument at a specific time frame</summary>
 	[DebuggerDisplay("{SymbolCode},{TimeFrame}")]
-	public class Instrument :IDisposable
+	public class Instrument :IDisposable ,IEnumerable<Candle>
 	{
 		// Notes:
 		// - This class is basically an array with an indexer and Count.
 		//   However the public interface is for indices that range from (-Count,0].
 		//   All methods that deal with indices should expect values in this range.
+		// - PosIdx is a positive index in the range [0, Count) where 0 = oldest
+		// - NegIdx is a negative index in the range (-Count,0] where 0 = newest
 
 		/// <summary>A database of price data for this instrument</summary>
 		private Sqlite.Database m_db;
+		private int m_suspend_db_updates;
 
 		/// <summary>A cache of candle data read from the database</summary>
 		private List<Candle> m_cache;
-		private const int CacheSize = 100000;
+		private const int CacheSize = 10000;
+		private const int MaxCacheSize = 15000;
 
 		public Instrument(MainModel model, string symbol)
 		{
@@ -31,6 +40,7 @@ namespace Tradee
 
 			Model = model;
 			SymbolCode = symbol;
+			SupportResistLevels = new BindingSource<SnRLevel> { DataSource = new BindingListEx<SnRLevel>() };
 
 			// Load the sqlite database of historic price data
 			m_db = new Sqlite.Database(DBFilepath);
@@ -39,27 +49,42 @@ namespace Tradee
 			m_db.Execute(Sqlite.Sql("PRAGMA synchronous = OFF"));
 			m_db.Execute(Sqlite.Sql("PRAGMA journal_mode = MEMORY"));
 
+			// Create a table for the price data info
+			m_db.Execute(SqlExpr.PriceDataTable());
+
 			// Ensure tables exist for each of the time frames.
 			// Note: timestamp is not the row id. Row Ids should not have any
 			// meaning. It's more efficient to let the DB do the sorting
 			// and just use 'order by' in queries
-			var sql = Sqlite.Sql("create table if not exists {0} (\n",
-				"[",nameof(Candle.Timestamp),"] integer unique,\n",
-				"[",nameof(Candle.Open     ),"] real,\n",
-				"[",nameof(Candle.High     ),"] real,\n",
-				"[",nameof(Candle.Low      ),"] real,\n",
-				"[",nameof(Candle.Close    ),"] real,\n",
-				"[",nameof(Candle.Volume   ),"] real)");
-			foreach (var tf in Enum<ETimeFrame>.Values.Skip(1))
-				m_db.Execute(sql.Fmt(tf));
+			foreach (var tf in Enum<ETimeFrame>.Values.Where(x => x != ETimeFrame.None))
+				m_db.Execute(SqlExpr.CandleTable(tf));
 
-			// Select no time frame to begin with
-			TimeFrame = ETimeFrame.None;
-			PriceData = new PriceData(0,0,0,0,0,0,0,0);
+			// Create a table for the SnR levels
+			m_db.Execute(SqlExpr.SnRLevelsTable());
+
+			// Initialise from the DB, so don't write back to the db
+			using (Scope.Create(() => ++m_suspend_db_updates, () => --m_suspend_db_updates))
+			{
+				// Select the default time frame to begin with
+				TimeFrame = Settings.General.DefaultTimeFrame;
+
+				// Load the last known price data for the instrument
+				PriceData = m_db.EnumRows<PriceData>(SqlExpr.GetPriceData()).FirstOrDefault() ?? new PriceData();
+
+				// Load the known support and resistance levels
+				SupportResistLevels.AddRange(m_db.EnumRows<SnRLevel>(SqlExpr.GetSnRLevelData()));
+			}
+		}
+		public Instrument(Instrument rhs, ETimeFrame time_frame)
+			:this(rhs.Model, rhs.SymbolCode)
+		{
+			TimeFrame = time_frame;
 		}
 		public virtual void Dispose()
 		{
+			Debug.Assert(ReferenceCount == 0);
 			TimeFrame = ETimeFrame.None;
+			SupportResistLevels = null;
 			Util.Dispose(ref m_db);
 			Model = null;
 		}
@@ -132,7 +157,7 @@ namespace Tradee
 
 				// Set the new time frame and flush any cached data
 				m_time_frame = value;
-				FlushCache();
+				InvalidateCachedData();
 
 				// Set the last updated time to the timestamp of the last candle
 				if (m_time_frame != ETimeFrame.None)
@@ -141,6 +166,9 @@ namespace Tradee
 					StartDataRequest();
 					LastUpdatedUTC = Latest.TimestampUTC;
 				}
+
+				// Notify time frame changed
+				OnTimeFrameChanged();
 			}
 		}
 		private ETimeFrame m_time_frame;
@@ -163,43 +191,58 @@ namespace Tradee
 		{
 			get
 			{
-				var sql = Str.Build("select count(*) from ",TimeFrame," where [",nameof(Candle.Timestamp),"] < ?");
-				return m_impl_count ?? (m_impl_count = m_db.ExecuteScalar(sql, 1, new object[] { Model.UtcNow.Ticks })).Value;
+				if (m_impl_count == null)
+				{
+					Debug.Assert(TimeFrame != ETimeFrame.None);
+					var sql = Str.Build("select count(*) from ",TimeFrame," where [",nameof(Candle.Timestamp),"] <= ?");
+					m_impl_count = m_db.ExecuteScalar(sql, 1, new object[] { Model.UtcNow.Ticks });
+				}
+				return m_impl_count.Value;
 			}
 		}
 		private int? m_impl_count;
 
+		/// <summary>The total number of data points in the cache.</summary>
+		private int Total
+		{
+			// This is different to Count when the simulation time is less than the current time.
+			// It allows finding the index of the last candle < Model.UtcNow
+			get { return m_impl_total ?? (m_impl_total = m_db.ExecuteScalar(Str.Build("select count(*) from ",TimeFrame))).Value; }
+		}
+		private int? m_impl_total;
+
 		/// <summary>Index range (-Count, 0]</summary>
-		public int FirstIdx
+		public NegIdx FirstIdx
 		{
 			get { return -(Count-1); }
 		}
-		public int LastIdx
+		public NegIdx LastIdx
 		{
 			get { return +1; }
 		}
 
-		/// <summary>The raw data. Idx = 0 is the latest, Idx more negative = goes back in time</summary>
-		public Candle this[int idx]
+		/// <summary>The raw data. Idx = -(Count+1) is the oldest, Idx = 0 is the latest</summary>
+		public Candle this[NegIdx neg_idx]
+		{
+			get { return this[(PosIdx)(neg_idx - FirstIdx)]; }
+		}
+
+		/// <summary>The raw data. Idx = 0 is the oldest, Idx = Count is the latest</summary>
+		public Candle this[PosIdx pos_idx]
 		{
 			get
 			{
-				// Convert the index to be relative to the oldest Candle
-				idx -= FirstIdx;
-
-				// Nothing newer than the latest or older than the oldest
-				if (idx < 0 || idx >= Count)
-					return null;
+				Debug.Assert(pos_idx >= 0 && pos_idx < Count);
 
 				// Shift the cached range if needed
-				if (!m_index_range.Contains(idx))
+				if (!m_index_range.Contains(pos_idx))
 				{
 					// Otherwise, reload the cache centred on the requested index
-					var new_range = new Range(idx - CacheSize/2, idx + CacheSize/2);
+					var new_range = new Range((long)pos_idx - CacheSize/2, (long)pos_idx + CacheSize/2);
 					if (new_range.Begin <   0) new_range = new_range.Shift(0   - new_range.Begin);
 					if (new_range.End > Count) new_range = new_range.Shift(Count - new_range.End);
 					if (new_range.Begin <   0) new_range.Begin = 0;
-					
+
 					// Populate the cache from the database
 					// Order by timestamp so that the oldest is first, and the newest is at the end.
 					var sql = Str.Build("select * from ",TimeFrame," order by [",nameof(Candle.Timestamp),"] limit ?,?");
@@ -207,8 +250,19 @@ namespace Tradee
 					m_index_range = new_range;
 				}
 
-				return m_cache[idx - m_index_range.Begini];
+				return m_cache[(int)pos_idx - m_index_range.Begini];
 			}
+		}
+
+		/// <summary>Enumerate all available candles in this instrument</summary>
+		IEnumerator<Candle> IEnumerable<Candle>.GetEnumerator()
+		{
+			for (PosIdx i = 0; i != Count; ++i)
+				yield return this[i];
+		}
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return ((IEnumerable<Candle>)this).GetEnumerator();
 		}
 
 		/// <summary>The candle index range covered by 'm_cache'. 0 = Oldest, Count = Latest</summary>
@@ -250,7 +304,7 @@ namespace Tradee
 		}
 
 		/// <summary>Clamps the given index range to a valid range within the data. i.e. [-Count,0]</summary>
-		public Range IndexRange(int idx_min, int idx_max)
+		public Range IndexRange(NegIdx idx_min, NegIdx idx_max)
 		{
 			Debug.Assert(idx_min <= idx_max);
 			var min = Maths.Clamp(idx_min, FirstIdx, LastIdx);
@@ -276,9 +330,15 @@ namespace Tradee
 				{
 					// If the cache covers the latest candle, return it from the cache otherwise get it from the DB.
 					if (m_index_range.Counti != 0 && m_index_range.Endi == Count)
+					{
 						m_latest = m_cache.Back();
+					}
 					else
-						m_latest = m_db.EnumRows<Candle>(Str.Build("select * from ",TimeFrame," order by [",nameof(Candle.Timestamp),"] desc limit 1")).FirstOrDefault();
+					{
+						var ts = "[" + nameof(Candle.Timestamp) + "]";
+						var sql = Str.Build("select * from ",TimeFrame," where ",ts," <= ? order by ",ts," desc limit 1");
+						m_latest = m_db.EnumRows<Candle>(sql, 1, new object[] { Model.UtcNow.Ticks }).FirstOrDefault();
+					}
 				}
 				return m_latest ?? Candle.Default;
 			}
@@ -294,9 +354,15 @@ namespace Tradee
 				{
 					// If the cache covers the latest candle, return it from the cache otherwise get it from the DB.
 					if (m_index_range.Counti != 0 && m_index_range.Begini == 0)
+					{
 						m_oldest = m_cache.Front();
+					}
 					else
-						m_oldest = m_db.EnumRows<Candle>(Str.Build("select * from ",TimeFrame," order by [",nameof(Candle.Timestamp),"] asc limit 1")).FirstOrDefault();
+					{
+						var ts = "[" + nameof(Candle.Timestamp) + "]";
+						var sql = Str.Build("select * from ",TimeFrame," where ",ts," < ? order by ",ts," asc limit 1");
+						m_oldest = m_db.EnumRows<Candle>(sql, 1, new object[] { Model.UtcNow.Ticks }).FirstOrDefault();
+					}
 				}
 				return m_oldest ?? Candle.Default;
 			}
@@ -317,37 +383,64 @@ namespace Tradee
 		}
 
 		/// <summary>Add a candle value to the data</summary>
-		public void Add(ETimeFrame tf, Candle candle)
+		public void Add(ETimeFrame tf, PriceCandle price_candle)
 		{
 			// Sanity check
+			var candle = new Candle(price_candle);
 			Debug.Assert(candle.Valid());
+			Debug.Assert(candle.Timestamp != 0);
 			Debug.Assert(tf != ETimeFrame.None);
 
 			// If this candle is the newest we've seen, then a new candle has started.
 			// Get the latest candle before inserting 'candle' into the database
 			var new_candle = tf == TimeFrame && candle.Timestamp > Latest.Timestamp;
-			var flush_needed = tf == TimeFrame;
 
-			// Insert the candle in the database
-			m_db.Execute(SqlExpr.InsertCandle(tf), 1, SqlExpr.InsertCandleParams(candle));
+			// Insert the candle into the database if the sim isn't running.
+			// The sim draws it's data from the database, so there's no point in writing
+			// the same data back in. Plus it might in the future do things to emulate sub-candle
+			// updates, which I don't want to overwrite the actual data.
+			if (!Model.SimActive)
+				m_db.Execute(SqlExpr.InsertCandle(tf), 1, SqlExpr.InsertCandleParams(candle));
 
 			// If the candle is for the current time frame and within the
 			// cached data range, update the cache to avoid invalidating it.
-			if (tf == TimeFrame && !new_candle)
+			if (tf == TimeFrame)
 			{
 				// Within the currently cached data?
 				// Note: this is false if 'candle' is the start of a new candle
-				var cache_idx = m_cache.BinarySearch(x => x.Timestamp.CompareTo(candle.Timestamp));
-				if (cache_idx >= 0)
+				if (!new_candle)
 				{
-					m_cache[cache_idx].Update(candle);
-					flush_needed = false;
+					// Find the index in the cache for 'candle'. If not an existing cache item, then just reset the cache
+					var cache_idx = m_cache.BinarySearch(x => x.Timestamp.CompareTo(candle.Timestamp));
+					if (cache_idx >= 0)
+						m_cache[cache_idx].Update(candle);
+					else
+						InvalidateCachedData();
+				}
+				// If the cached range ends at the latest candle (excluding the new candle)
+				// then we can preserve the cache and append the new candle to the cache data
+				else if (m_index_range.Endi == Count)
+				{
+					// If adding 'candle' will make the cache too big, just flush
+					if (m_cache.Count > MaxCacheSize)
+						InvalidateCachedData();
+
+					// Otherwise, append the new candle to the cache
+					else
+					{
+						m_cache.Add(candle);
+						m_index_range.End++;
+						m_impl_count = null;
+						m_impl_total = null;
+						m_latest = null;
+					}
+				}
+				// Otherwise the candle is not within the cache, just invalidate
+				else
+				{
+					InvalidateCachedData();
 				}
 			}
-
-			// Flush the cached candle data
-			if (flush_needed)
-				FlushCache();
 
 			// Record the last time data was received
 			LastUpdatedUTC = Model.UtcNow;
@@ -357,13 +450,13 @@ namespace Tradee
 		}
 
 		/// <summary>Add a batch of candles</summary>
-		public void Add(ETimeFrame tf, Candles candles)
+		public void Add(ETimeFrame tf, PriceCandles candles)
 		{
 			// Insert the candles into the database
 			using (var t = m_db.NewTransaction())
 			using (var query = new Sqlite.Query(m_db, SqlExpr.InsertCandle(tf)))
 			{
-				foreach (var candle in candles.AllCandles)
+				foreach (var candle in candles.AllCandles.Select(x => new Candle(x)))
 				{
 					query.Reset();
 					query.BindParms(1, SqlExpr.InsertCandleParams(candle));
@@ -373,7 +466,7 @@ namespace Tradee
 			}
 
 			// Don't bother maintaining the cache, just invalidate it
-			FlushCache();
+			InvalidateCachedData();
 
 			// Record the last time data was received
 			LastUpdatedUTC = Model.UtcNow;
@@ -387,6 +480,17 @@ namespace Tradee
 		private void OnPriceDataUpdated()
 		{
 			PriceDataUpdated.Raise(this);
+
+			// Write the price data into the db
+			if (m_suspend_db_updates == 0 && !Equals(PriceData, PriceData.Default))
+				m_db.Execute(SqlExpr.UpdatePriceData(), 1, SqlExpr.UpdatePriceDataParams(PriceData));
+		}
+
+		/// <summary>Raised whenever the time frame changes</summary>
+		public event EventHandler TimeFrameChanged;
+		private void OnTimeFrameChanged()
+		{
+			TimeFrameChanged.Raise(this);
 		}
 
 		/// <summary>Raised whenever candles are added/modified in this instrument</summary>
@@ -394,6 +498,12 @@ namespace Tradee
 		private void OnDataChanged(DataEventArgs args)
 		{
 			DataChanged.Raise(this, args);
+		}
+
+		/// <summary>Raise the data changed event for the current time frame</summary>
+		public void RaiseDataChanged()
+		{
+			OnDataChanged(new DataEventArgs(this, TimeFrame, null, false));
 		}
 
 		/// <summary>Return the chart X axis value for a given time</summary>
@@ -416,8 +526,8 @@ namespace Tradee
 
 			// Lerp between the timestamps of the candles on either side of 'idx'
 			// Candles should exist because we know we're in the time range of the candle data.
-			var c0 = this[idx  ]; Debug.Assert(c0 == null);
-			var c1 = this[idx+1]; Debug.Assert(c1 == null);
+			var c0 = this[idx  ]; Debug.Assert(c0 != null);
+			var c1 = this[idx+1]; Debug.Assert(c1 != null);
 			
 			var frac = Maths.Frac(c0.Timestamp, time.ExactTicks, c1.Timestamp);
 			Debug.Assert(frac >= 0.0 && frac <= 1.0);
@@ -425,7 +535,7 @@ namespace Tradee
 		}
 
 		/// <summary>Enumerate the candles within an index range (i.e. time-frame units)</summary>
-		public IEnumerable<Candle> CandleRange(int idx_min, int idx_max)
+		public IEnumerable<Candle> CandleRange(NegIdx idx_min, NegIdx idx_max)
 		{
 			var r = IndexRange(idx_min, idx_max);
 			for (var i = r.Begini; i != r.Endi; ++i)
@@ -440,11 +550,12 @@ namespace Tradee
 		}
 
 		/// <summary>Invalidate the cached data</summary>
-		private void FlushCache()
+		public void InvalidateCachedData()
 		{
 			m_cache.Clear();
 			m_index_range = Range.Zero;
 			m_impl_count  = null;
+			m_impl_total  = null;
 			m_latest      = null;
 			m_oldest      = null;
 		}
@@ -541,13 +652,35 @@ namespace Tradee
 		}
 
 		/// <summary>Request historic candle data by index range</summary>
-		public void RequestIndexRange(int i_oldest, int i_newest)
+		public void RequestIndexRange(NegIdx i_oldest, NegIdx i_newest, bool only_if_missing)
 		{
-			Debug.Assert(i_oldest >= i_newest);
+			Debug.Assert(i_oldest <= i_newest);
 			var msg = new OutMsg.RequestInstrumentHistory(SymbolCode, TimeFrame);
-			msg.IndexRanges.Add(i_oldest);
-			msg.IndexRanges.Add(i_newest);
-			Model.Post(msg);
+
+			// See if we have this range already
+			if (only_if_missing)
+			{
+				var range = IndexRange(i_oldest, i_newest);
+				if (i_oldest < range.Begin)
+				{
+					msg.IndexRanges.Add(i_oldest);
+					msg.IndexRanges.Add(Math.Min(range.Begini, i_newest));
+				}
+				if (i_newest > range.End)
+				{
+					msg.IndexRanges.Add(Math.Max(range.Endi, i_oldest));
+					msg.IndexRanges.Add(i_newest);
+				}
+			}
+			else
+			{
+				msg.IndexRanges.Add(i_oldest);
+				msg.IndexRanges.Add(i_newest);
+			}
+
+			// Request if ranges needed
+			if (msg.IndexRanges.Count != 0)
+				Model.Post(msg);
 		}
 
 		/// <summary>Handle the connection to the trade data source changing</summary>
@@ -557,8 +690,66 @@ namespace Tradee
 			// latest, oldest, instrument data may have changed.
 			if (Model.IsConnected)
 			{
-				FlushCache();
+				InvalidateCachedData();
 			}
+		}
+
+		/// <summary>Price levels that are support and resist levels in this instrument</summary>
+		public BindingSource<SnRLevel> SupportResistLevels
+		{
+			[DebuggerStepThrough] get { return m_snr_levels; }
+			private set
+			{
+				if (m_snr_levels == value) return;
+				if (m_snr_levels != null)
+				{
+					m_snr_levels.ListChanging -= HandleSnRLevelsChanging;
+				}
+				m_snr_levels = value;
+				if (m_snr_levels != null)
+				{
+					m_snr_levels.ListChanging += HandleSnRLevelsChanging;
+				}
+			}
+		}
+		private BindingSource<SnRLevel> m_snr_levels;
+
+		/// <summary>Handle SnR levels added/removed</summary>
+		private void HandleSnRLevelsChanging(object sender, ListChgEventArgs<SnRLevel> e)
+		{
+			switch (e.ChangeType)
+			{
+			case ListChg.ItemAdded:
+				{
+					// Watch for changes to the SnRLevel so we can update the DB
+					e.Item.PropertyChanged += HandleSnRLevelChanged;
+					HandleSnRLevelChanged(e.Item);
+					break;
+				}
+			case ListChg.ItemRemoved:
+				{
+					// Stop watching for changes
+					e.Item.PropertyChanged -= HandleSnRLevelChanged;
+
+					// Remove this level from the db.
+					// Note: this isn't called during shutdown because this event handler
+					// is removed from the binding source before it is disposed.
+					m_db.Execute(SqlExpr.RemoveSnRLevel(), 1, SqlExpr.RemoveSnRLevelParams(e.Item));
+
+					break;
+				}
+			}
+		}
+
+		/// <summary>Handle an individual SnR level being updated</summary>
+		private void HandleSnRLevelChanged(object sender, PropertyChangedEventArgs e = null)
+		{
+			if (m_suspend_db_updates != 0)
+				return;
+
+			// Update this SnR level in the db
+			var snr = (SnRLevel)sender;
+			m_db.Execute(SqlExpr.UpdateSnRLevel(), 1, SqlExpr.UpdateSnRLevelParams(snr));
 		}
 	}
 }

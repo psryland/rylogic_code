@@ -938,7 +938,7 @@ namespace pr.gui
 			// Paint the cell content
 			if (paint_parts.HasFlag(DataGridViewPaintParts.ContentForeground))
 			{
-				var v  = Convert.ToDouble(value);
+				var v  = Convert.ToDouble(formatted_value);
 				var mn = GetMinValueInternal(row_index);
 				var mx = GetMaxValueInternal(row_index);
 				DataGridViewTrackBarEditCtrl.PaintTrackBar(gfx, cell_bounds, v, mn, mx);

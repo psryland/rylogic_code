@@ -336,6 +336,16 @@ def TouchFile(fname, times=None):
 	with open(fname, mode='a') as f:
 		os.utime(fname, times=times)
 
+# Check the time stamps of a list of filepaths.
+# If any has a time stamp newer than 'touch_file' touch_file gets "touched"
+def CheckDependencies(deps, touch_file):
+	touch = os.path.getmtime(touch_file)
+	newer = touch
+	for dep in deps:
+		newer = max(os.path.getmtime(dep), newer)
+	if newer > touch:
+		TouchFile(touch_file)
+
 # Invoke MSBuild
 # e.g.
 #   sln = "C:\path\mysolution.sln"

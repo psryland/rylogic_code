@@ -6,7 +6,7 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using pr.maths;
+using pr.extn;
 
 namespace pr.maths
 {
@@ -25,11 +25,40 @@ namespace pr.maths
 		[FieldOffset( 8)] public v2 zw;
 
 		// Constructors
-		public v4(float x_, float y_, float z_, float w_) :this() { x = x_; y = y_; z = z_; w = w_; }
-		public v4(v2 xy_, float z_, float w_) :this()             { xy = xy_; z = z_; w = w_; }
-		public v4(v2 xy_, v2 zw_) :this()                         { xy = xy_; zw = zw_; }
-		public v4(float[] arr) :this()                            { x = arr[0]; y = arr[1]; z = arr[2]; w = arr[3]; }
-		public v4(float[] arr, float w_) :this()                  { x = arr[0]; y = arr[1]; z = arr[2]; w = w_; }
+		public v4(float x_) :this(x_,x_,x_,x_)
+		{}
+		public v4(float x_, float y_, float z_, float w_) :this()
+		{
+			x = x_;
+			y = y_;
+			z = z_;
+			w = w_;
+		}
+		public v4(v2 xy_, float z_, float w_) :this()
+		{
+			xy = xy_;
+			z = z_;
+			w = w_;
+		}
+		public v4(v2 xy_, v2 zw_) :this()
+		{
+			xy = xy_;
+			zw = zw_;
+		}
+		public v4(float[] arr) :this()
+		{
+			x = arr[0];
+			y = arr[1];
+			z = arr[2];
+			w = arr[3];
+		}
+		public v4(float[] arr, float w_) :this()
+		{
+			x = arr[0];
+			y = arr[1];
+			z = arr[2];
+			w = w_;
+		}
 
 		/// <summary>Get/Set components by index</summary>
 		public float this[int i]
@@ -55,76 +84,115 @@ namespace pr.maths
 				throw new ArgumentException("index out of range", "i");
 			}
 		}
+		public float this[uint i]
+		{
+			get { return this[(int)i]; }
+			set { this[(int)i] = value; }
+		}
 
 		// Integer cast accessors
-		public int ix { get { return (int)x; } }
-		public int iy { get { return (int)y; } }
-		public int iz { get { return (int)z; } }
-		public int iw { get { return (int)w; } }
-
-		public void set(float x_, float y_, float z_, float w_)
+		public int ix
 		{
-			x = x_;
-			y = y_;
-			z = z_;
-			w = w_;
+			get { return (int)x; }
 		}
-		public float Length2Sq                                  { get { return x * x + y * y; } }
-		public float Length3Sq                                  { get { return x * x + y * y + z * z; } }
-		public float Length4Sq                                  { get { return x * x + y * y + z * z + w * w; } }
-		public float Length2                                    { get { return (float)Math.Sqrt(Length2Sq); } }
-		public float Length3                                    { get { return (float)Math.Sqrt(Length3Sq); } }
-		public float Length4                                    { get { return (float)Math.Sqrt(Length4Sq); } }
-		public v4 AsPos                                         { get { v4 v = this; v.w = 1.0f; return v; } }
-		public v4 AsDir                                         { get { v4 v = this; v.w = 0.0f; return v; } }
-		public string ToString2()                               { return x + " " + y; }
-		public string ToString2(string format)                  { return x.ToString(format) + " " + y.ToString(format); }
-		public string ToString3()                               { return ToString2() + " " + z; }
-		public string ToString3(string format)                  { return ToString2(format) + " " + z.ToString(format); }
-		public string ToString4()                               { return ToString3() + " " + w; }
-		public string ToString4(string format)                  { return ToString3(format) + " " + w.ToString(format); }
-		public override string ToString()                       { return ToString4(); }
+		public int iy
+		{
+			get { return (int)y; }
+		}
+		public int iz
+		{
+			get { return (int)z; }
+		}
+		public int iw
+		{
+			get { return (int)w; }
+		}
 
-		public float[] ToArray()                                { return new[]{x, y, z, w}; }
+		/// <summary>Length</summary>
+		public float Length2Sq
+		{
+			get { return x * x + y * y; }
+		}
+		public float Length3Sq
+		{
+			get { return x * x + y * y + z * z; }
+		}
+		public float Length4Sq
+		{
+			get { return x * x + y * y + z * z + w * w; }
+		}
+		public float Length2
+		{
+			get { return (float)Math.Sqrt(Length2Sq); }
+		}
+		public float Length3
+		{
+			get { return (float)Math.Sqrt(Length3Sq); }
+		}
+		public float Length4
+		{
+			get { return (float)Math.Sqrt(Length4Sq); }
+		}
+
+		/// <summary>ToString</summary>
+		public string ToString2()
+		{
+			return x + " " + y;
+		}
+		public string ToString3()
+		{
+			return ToString2() + " " + z;
+		}
+		public string ToString4()
+		{
+			return ToString3() + " " + w;
+		}
+		public string ToString2(string format)
+		{
+			return x.ToString(format) + " " + y.ToString(format);
+		}
+		public string ToString3(string format)
+		{
+			return ToString2(format) + " " + z.ToString(format);
+		}
+		public string ToString4(string format)
+		{
+			return ToString3(format) + " " + w.ToString(format);
+		}
+		public override string ToString()
+		{
+			return ToString4();
+		}
+
+		/// <summary>ToArray()</summary>
+		public float[] ToArray()
+		{
+			return new[] { x, y, z, w };
+		}
 
 		// Removed because these get called when converting v4 to an object type. e.g. v4? x = v4.TryParse4("", out v) ? v : null. 
 		//public static implicit operator v4(float[] a)           { return new v4(a[0], a[1], a[2], a[3]); }
 		//public static implicit operator float[](v4 p)           { return p.ToArray(); }
 
-		public v4 w0 { get { return new v4(x, y, z, 0); } }
-		public v4 w1 { get { return new v4(x, y, z, 1); } }
+		public v4 w0
+		{
+			get { return new v4(x, y, z, 0); }
+		}
+		public v4 w1
+		{
+			get { return new v4(x, y, z, 1); }
+		}
 
 		// Static v4 types
-		private readonly static v4 m_zero;
-		private readonly static v4 m_xaxis;
-		private readonly static v4 m_yaxis;
-		private readonly static v4 m_zaxis;
-		private readonly static v4 m_waxis;
-		private readonly static v4 m_origin;
-		private readonly static v4 m_one;
-		private readonly static v4 m_min;
-		private readonly static v4 m_max;
-		static v4()
-		{
-			m_zero = new v4(0f, 0f, 0f, 0f);
-			m_xaxis = new v4(1f, 0f, 0f, 0f);
-			m_yaxis = new v4(0f, 1f, 0f, 0f);
-			m_zaxis = new v4(0f, 0f, 1f, 0f);
-			m_waxis = new v4(0f, 0f, 0f, 1f);
-			m_origin = new v4(0f, 0f, 0f, 1f);
-			m_one = new v4(1f, 1f, 1f, 1f);
-			m_min = new v4(float.MinValue, float.MinValue, float.MinValue, float.MinValue);
-			m_max = new v4(float.MaxValue, float.MaxValue, float.MaxValue, float.MaxValue);
-		}
-		public static v4 Zero { get { return m_zero; } }
-		public static v4 XAxis { get { return m_xaxis; } }
-		public static v4 YAxis { get { return m_yaxis; } }
-		public static v4 ZAxis { get { return m_zaxis; } }
-		public static v4 WAxis { get { return m_waxis; } }
-		public static v4 Origin { get { return m_origin; } }
-		public static v4 One { get { return m_one; } }
-		public static v4 MinValue { get { return m_min; } }
-		public static v4 MaxValue { get { return m_max; } }
+		public readonly static v4 Zero     = new v4(0f, 0f, 0f, 0f);
+		public readonly static v4 XAxis    = new v4(1f, 0f, 0f, 0f);
+		public readonly static v4 YAxis    = new v4(0f, 1f, 0f, 0f);
+		public readonly static v4 ZAxis    = new v4(0f, 0f, 1f, 0f);
+		public readonly static v4 WAxis    = new v4(0f, 0f, 0f, 1f);
+		public readonly static v4 Origin   = new v4(0f, 0f, 0f, 1f);
+		public readonly static v4 One      = new v4(1f, 1f, 1f, 1f);
+		public readonly static v4 MinValue = new v4(float.MinValue, float.MinValue, float.MinValue, float.MinValue);
+		public readonly static v4 MaxValue = new v4(float.MaxValue, float.MaxValue, float.MaxValue, float.MaxValue);
 
 		// Functions
 		public static v4 operator + (v4 lhs, v4 rhs)           { return new v4(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w); }
@@ -132,12 +200,8 @@ namespace pr.maths
 		public static v4 operator * (v4 lhs, float rhs)        { return new v4(lhs.x * rhs, lhs.y * rhs, lhs.z * rhs, lhs.w * rhs); }
 		public static v4 operator * (float lhs, v4 rhs)        { return new v4(lhs * rhs.x, lhs * rhs.y, lhs * rhs.z, lhs * rhs.w); }
 		public static v4 operator / (v4 lhs, float rhs)        { return new v4(lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs); }
-		public static bool operator ==(v4 lhs, v4 rhs)         { return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w; }
-		public static bool operator !=(v4 lhs, v4 rhs)         { return !(lhs == rhs); }
 		public static v4 operator + (v4 vec)                   { return vec; }
 		public static v4 operator - (v4 vec)                   { return new v4(-vec.x, -vec.y, -vec.z, -vec.w); }
-		public override bool Equals(object o)                  { return o is v4 && (v4)o == this; }
-		public override int GetHashCode()                      { unchecked { return x.GetHashCode() ^ y.GetHashCode() ^ z.GetHashCode() ^ w.GetHashCode(); } }
 
 		public static bool FEql2(v4 lhs, v4 rhs, float tol)    { return Maths.FEql(lhs.x, rhs.x, tol) && Maths.FEql(lhs.y, rhs.y, tol); }
 		public static bool FEql3(v4 lhs, v4 rhs, float tol)    { return Maths.FEql(lhs.x, rhs.x, tol) && Maths.FEql(lhs.y, rhs.y, tol) && Maths.FEql(lhs.z, rhs.z, tol); }
@@ -309,95 +373,105 @@ namespace pr.maths
 		#region Random
 
 		/// <summary>Return a random vector with components within the interval [min,max]</summary>
-		public static v4 Random4(float min, float max, Rand r)
+		public static v4 Random4(float min, float max, Random r)
 		{
-			r = r ?? new Rand();
 			return new v4(r.Float(min, max), r.Float(min, max), r.Float(min, max), r.Float(min, max));
 		}
 
 		/// <summary>Return a random vector with components within the intervals given by each component of min and max</summary>
-		public static v4 Random4(v4 min, v4 max, Rand r)
+		public static v4 Random4(v4 min, v4 max, Random r)
 		{
-			r = r ?? new Rand();
 			return new v4(r.Float(min.x, max.x), r.Float(min.y, max.y), r.Float(min.z, max.z), r.Float(min.w, max.w));
 		}
 		
 		/// <summary>Return a random vector within a 4D sphere of radius 'rad' (Note: *not* on the sphere)</summary>
-		public static v4 Random4(float rad, Rand r)
+		public static v4 Random4(float rad, Random r)
 		{
-			r = r ?? new Rand();
 			var rad_sq = rad*rad;
 			v4 v; for (; (v = Random4(-rad, rad, r)).Length4Sq > rad_sq;) { }
 			return v;
 		}
 
 		/// <summary>Return a random vector on the unit 4D sphere</summary>
-		public static v4 Random4N(Rand r)
+		public static v4 Random4N(Random r)
 		{
 			v4 v; for (; FEql4(v = Random4(1.0f, r), Zero); ) { }
 			return Normalise4(v);
 		}
 
 		/// <summary>Return a random vector with components within the interval [min,max]</summary>
-		public static v4 Random3(float min, float max, float w, Rand r)
+		public static v4 Random3(float min, float max, float w, Random r)
 		{
-			r = r ?? new Rand();
 			return new v4(r.Float(min, max), r.Float(min, max), r.Float(min, max), w);
 		}
 
 		/// <summary>Return a random vector with components within the intervals given by each component of min and max</summary>
-		public static v4 Random3(v4 min, v4 max, float w, Rand r)
+		public static v4 Random3(v4 min, v4 max, float w, Random r)
 		{
-			r = r ?? new Rand();
 			return new v4(r.Float(min.x, max.x), r.Float(min.y, max.y), r.Float(min.z, max.z), w);
 		}
 
 		/// <summary>Return a random vector within a 3D sphere of radius 'rad' (Note: *not* on a sphere)</summary>
-		public static v4 Random3(float rad, float w, Rand r)
+		public static v4 Random3(float rad, float w, Random r)
 		{
-			r = r ?? new Rand();
 			var rad_sq = rad*rad;
 			v4 v; for (; (v = Random3(-rad, rad, w, r)).Length3Sq > rad_sq; ){}
 			return v;
 		}
 
 		/// <summary>Return a random vector on the unit 3D sphere</summary>
-		public static v4 Random3N(float w, Rand r)
+		public static v4 Random3N(float w, Random r)
 		{
 			v4 v; for (; FEql3(v = Random3(1.0f, w, r), Zero); ) { }
 			return Normalise3(v);
 		}
 
 		/// <summary>Return a random vector with components within the interval [min,max]</summary>
-		public static v4 Random2(float min, float max, float z, float w, Rand r)
+		public static v4 Random2(float min, float max, float z, float w, Random r)
 		{
-			r = r ?? new Rand();
 			return new v4(r.Float(min, max), r.Float(min, max), z, w);
 		}
 
 		/// <summary>Return a random vector with components within the intervals given by each component of min and max</summary>
-		public static v4 Random2(v4 min, v4 max, float z, float w, Rand r)
+		public static v4 Random2(v4 min, v4 max, float z, float w, Random r)
 		{
-			r = r ?? new Rand();
 			return new v4(r.Float(min.x, max.x), r.Float(min.y, max.y), z, w);
 		}
 
 		/// <summary>Return a random vector on the unit 2D sphere</summary>
-		public static v4 Random2(float rad, float z, float w, Rand r)
+		public static v4 Random2(float rad, float z, float w, Random r)
 		{
-			r = r ?? new Rand();
 			var rad_sq = rad*rad;
 			v4 v; for (; (v = Random2(-rad, rad, z, w, r)).Length2Sq > rad_sq;) { }
 			return v;
 		}
 
 		/// <summary>Return a random vector on the unit 2D sphere</summary>
-		public static v4 Random2N(float z, float w, Rand r)
+		public static v4 Random2N(float z, float w, Random r)
 		{
 			v4 v; for (; FEql2(v = Random2(1.0f, z, w, r), Zero);) { }
 			return Normalise2(v);
 		}
 
+		#endregion
+
+		#region Equals
+		public static bool operator == (v4 lhs, v4 rhs)
+		{
+			return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w;
+		}
+		public static bool operator != (v4 lhs, v4 rhs)
+		{
+			return !(lhs == rhs);
+		}
+		public override bool Equals(object o)
+		{
+			return o is v4 && (v4)o == this;
+		}
+		public override int GetHashCode()
+		{
+			return new { x, y, z, w }.GetHashCode();
+		}
 		#endregion
 	}
 }
@@ -405,6 +479,8 @@ namespace pr.maths
 #if PR_UNITTESTS
 namespace pr.unittests
 {
+	using maths;
+
 	[TestFixture] public class UnitTestV4
 	{
 		[Test] public void Basic()

@@ -111,17 +111,17 @@ namespace Tradee
 		{
 			m_cb_symbols.AutoCompleteMode = AutoCompleteMode.Suggest;
 			m_cb_symbols.AutoCompleteSource = AutoCompleteSource.ListItems;
-			m_cb_symbols.DataSource = Enum<ETradePairs>.ValuesArray;
+			m_cb_symbols.DataSource = Misc.KnownSymbols.Keys.ToArray();
 			m_cb_symbols.Format += (s,a) =>
 			{
-				var pair = (ETradePairs)a.ListItem;
-				a.Value = "{0} - {1}".Fmt(pair, pair.Desc());
+				var sym = (string)a.ListItem;
+				a.Value = "{0} - {1}".Fmt(sym, Misc.KnownSymbols[sym].Desc);
 			};
 
 			// Add trading pair
 			m_btn_add.Click += (s,a) =>
 			{
-				Model.AddTransmitter((ETradePairs)m_cb_symbols.SelectedItem);
+				Model.AddTransmitter((string)m_cb_symbols.SelectedItem);
 			};
 
 			// Show current pairs
@@ -149,7 +149,7 @@ namespace Tradee
 				a.Graphics.DrawRectangleRounded(Pens.Black, bnds, 6f);
 
 				{ // Paint the symbol name
-					var str = "{0} - {1}".Fmt(item.Pair, item.Pair.Desc());
+					var str = "{0} - {1}".Fmt(item.SymbolCode, item.SymbolDescription.Desc);
 					var font = a.Font.Dup(FontStyle.Bold);
 					var sz = a.Graphics.MeasureString(str, font);
 					a.Graphics.DrawString(str, font, !item.Enabled ? SystemBrushes.ControlDark : Brushes.Black, x, y);
@@ -308,7 +308,6 @@ namespace Tradee
 			this.ClientSize = new System.Drawing.Size(274, 353);
 			this.Controls.Add(this.m_lb_symbols);
 			this.Controls.Add(this.m_panel_add);
-			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.SizableToolWindow;
 			this.MaximizeBox = false;
 			this.Name = "TradeeBotUI";
 			this.Padding = new System.Windows.Forms.Padding(3);

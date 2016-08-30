@@ -82,6 +82,13 @@ namespace Tradee
 			File.Delete(db_filepath);
 		}
 
+		/// <summary>Raise 'DataChanged' on all instruments</summary>
+		public void NotifyAllInstrumentsChanged()
+		{
+			foreach (var instr in Instruments)
+				instr.RaiseDataChanged();
+		}
+
 		/// <summary>The currency pairs</summary>
 		public BindingSource<Instrument> Instruments
 		{

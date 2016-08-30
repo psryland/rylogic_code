@@ -1,5 +1,6 @@
 using System;
 using cAlgo.API;
+using cAlgo.API.Internals;
 
 namespace Tradee
 {
@@ -94,6 +95,38 @@ namespace Tradee
 			}
 		}
 
+		/// <summary>Convert CAlgo error codes to tradee error codes</summary>
+		public static EErrorCode ToTradeeErrorCode(this ErrorCode code)
+		{
+			switch (code)
+			{
+			default: throw new Exception("Unknown error code");
+			case ErrorCode.TechnicalError: return EErrorCode.Failed;
+			case ErrorCode.NoMoney:        return EErrorCode.InsufficientFunds;
+			case ErrorCode.EntityNotFound: return EErrorCode.EntityNotFound;
+			case ErrorCode.BadVolume:      return EErrorCode.InvalidVolume;
+			case ErrorCode.MarketClosed:   return EErrorCode.MarketClosed;
+			case ErrorCode.Disconnected:   return EErrorCode.Disconnected;
+			case ErrorCode.Timeout:        return EErrorCode.Timeout;
+			}
+		}
+
+		/// <summary>Convert tradee error codes to CAlgo error codes</summary>
+		public static ErrorCode ToTradeeErrorCode(this EErrorCode code)
+		{
+			switch (code)
+			{
+			default: throw new Exception("Unknown error code");
+			case EErrorCode.Failed:            return ErrorCode.TechnicalError;
+			case EErrorCode.InsufficientFunds: return ErrorCode.NoMoney;
+			case EErrorCode.EntityNotFound:    return ErrorCode.EntityNotFound;
+			case EErrorCode.InvalidVolume:     return ErrorCode.BadVolume;
+			case EErrorCode.MarketClosed:      return ErrorCode.MarketClosed;
+			case EErrorCode.Disconnected:      return ErrorCode.Disconnected;
+			case EErrorCode.Timeout:           return ErrorCode.Timeout;
+			}
+		}
+
 		/// <summary>Return the stop loss as a signed price value relative to the entry price. 0 means no stop loss</summary>
 		public static double StopLossRel(this  cAlgo.API.Position pos)
 		{
@@ -138,5 +171,10 @@ namespace Tradee
 			}
 		}
 
+		/// <summary>Convert a price in base currency to pips</summary>
+		public static double PriceToPips(this Symbol sym, double price)
+		{
+			return price / sym.PipSize;
+		}
 	}
 }

@@ -108,7 +108,7 @@ namespace EscapeVelocity
 			Seed         = rnd.Next();
 			AtomicNumber = atomic_number;
 			Name         = GameConstants.ElementNames[AtomicNumber - 1];
-			MolarMass    = AtomicNumber != 1 ? 2*AtomicNumber*rnd.NextDoubleCentred(1.01,0.1) : 1;  // Roughly double the atomic number
+			MolarMass    = AtomicNumber != 1 ? 2*AtomicNumber*rnd.DoubleC(1.01,0.1) : 1;  // Roughly double the atomic number
 			Period       = CalcPeriod(consts, atomic_number);
 			TableX       = Maths.Frac(consts.ValenceLevels[Period-1] + 1, atomic_number, consts.ValenceLevels[Period]);
 			TableY       = Maths.Frac(1.0, Period, 7.0);

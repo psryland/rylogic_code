@@ -2,7 +2,7 @@
 // Quad Tree
 //  Copyright (c) Rylogic Ltd 2014
 //*****************************************
-// Sparce loose quad tree.
+// Sparse loose quad tree.
 // Items in the nodes of the tree can over hang up to half
 // the size of the smallest dimension of the node.
 using System;
@@ -12,7 +12,7 @@ using System.Drawing;
 
 namespace pr.container
 {
-	/// <summary>Loose sparce quad tree</summary>
+	/// <summary>Loose sparse quad tree</summary>
 	public class QuadTree<TItem>
 	{
 		/// <summary>The coordinates of a node within the tree</summary>
@@ -249,7 +249,7 @@ namespace pr.container
 			Node existing = null;
 			for (;node.m_level < coord.m_level;)
 			{
-				// Get the child quad to decend to
+				// Get the child quad to descend to
 				quad = QuadAtLevel(coord, node.m_level + 1);
 				existing = node.m_child[quad];
 
@@ -266,7 +266,7 @@ namespace pr.container
 					!Equals(CoordAtLevel(existing, lvl), CoordAtLevel(coord, lvl)))
 					break;
 
-				// The child is higher than where we need to add a node, keep decending
+				// The child is higher than where we need to add a node, keep descending
 				node = node.m_child[quad];
 			}
 
@@ -306,9 +306,9 @@ namespace pr.container
 			}
 
 			// Insert the intermediate node
-			Node interm = NewNode(icoord, node);
+			Node interim = NewNode(icoord, node);
 			int iquad = QuadAtLevel(icoord, node.m_level + 1);
-			node.m_child[iquad] = interm;
+			node.m_child[iquad] = interim;
 
 			// There are now two possibilities, either 'existing' and 'coord' are both
 			// parented by 'interm', or 'coord' == 'interm' and 'existing' is parented
@@ -317,32 +317,32 @@ namespace pr.container
 			int nquad = QuadAtLevel(coord,    icoord.m_level + 1);
 
 			Node newchild;
-			if (Equals(coord, interm))
+			if (Equals(coord, interim))
 			{
 				// 'coord' is 'interm'
-				newchild = interm;
+				newchild = interim;
 
-				// Insert 'existing' into interm
-				existing.m_parent = interm;
-				interm.m_child[equad] = existing;
+				// Insert 'existing' into interim
+				existing.m_parent = interim;
+				interim.m_child[equad] = existing;
 			}
 			// 'existing' and 'coord' are in different quads within 'interm'
 			else
 			{
 				Debug.Assert(equad != nquad);
 
-				// Insert 'newchild' into interm
-				newchild = NewNode(coord, interm);
-				interm.m_child[nquad] = newchild;
+				// Insert 'newchild' into interim
+				newchild = NewNode(coord, interim);
+				interim.m_child[nquad] = newchild;
 
-				// Insert 'existing' into interm
-				existing.m_parent = interm;
-				interm.m_child[equad] = existing;
+				// Insert 'existing' into interim
+				existing.m_parent = interim;
+				interim.m_child[equad] = existing;
 			}
 
 			// sanity check
 			Debug.Assert(SanityCheck(node));
-			Debug.Assert(SanityCheck(interm));
+			Debug.Assert(SanityCheck(interim));
 			Debug.Assert(SanityCheck(existing));
 			Debug.Assert(SanityCheck(newchild));
 			return newchild;
@@ -358,7 +358,7 @@ namespace pr.container
 
 			root = root ?? m_root;
 
-			// Parse the items at this level to pred
+			// Pass the items at this level to 'pred'
 			foreach (var item in root.m_items)
 			{
 				if (!pred(item, root))
@@ -524,7 +524,7 @@ namespace pr.unittests
 			Assert.AreEqual(10U, n1.m_x);
 			Assert.AreEqual(12U, n1.m_y);
 
-			// Outside the reqion but within the overhang at level 1
+			// Outside the region but within the overhang at level 1
 			var w2 = new Watzit(-14.99f, -7.2499f, 0);
 			var n2 = qtree.Insert(w2, w2.pos, w2.radius);
 			Assert.AreEqual(4, qtree.Nodes.Count);
@@ -532,7 +532,7 @@ namespace pr.unittests
 			Assert.AreEqual(0U, n2.m_x);
 			Assert.AreEqual(0U, n2.m_y);
 
-			// Outside the reqion on y but within on x
+			// Outside the region on y but within on x
 			var w3 = new Watzit(6.5f, 7.24449f, 0);
 			var n3 = qtree.Insert(w3, w3.pos, w3.radius);
 			Assert.AreEqual(5, qtree.Nodes.Count);
@@ -540,7 +540,7 @@ namespace pr.unittests
 			Assert.AreEqual(1U, n3.m_x);
 			Assert.AreEqual(1U, n3.m_y);
 
-			var rand = new Rand();
+			var rand = new Random();
 			Func<float,float,float> fltc = (avr,d) => rand.FloatC(avr, d);
 			Func<float,float,float> fltr = (mn,mx) => rand.Float(mn, mx);
 
