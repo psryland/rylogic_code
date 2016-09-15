@@ -4,7 +4,9 @@
 //***************************************************
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using pr.extn;
 
@@ -70,6 +72,13 @@ namespace pr.maths
 			}
 		}
 
+		/// <summary>Convert to a 4x4 matrix with zero translation</summary>
+		public m4x4 m4x4
+		{
+			get { return new m4x4(this, v4.Origin); }
+		}
+
+		/// <summary>ToString</summary>
 		public override string ToString()
 		{
 			return x + " \n" + y + " \n" + z + " \n";
@@ -297,6 +306,17 @@ namespace pr.maths
 			return Rotation(axis_norm, axis_sine_angle, cos_angle);
 		}
 
+		/// <summary>Spherically interpolate between two rotations</summary>
+		public static m3x4 Slerp(m3x4 lhs, m3x4 rhs, float frac)
+		{
+			return new m3x4(quat.Slerp(new quat(lhs), new quat(rhs), frac));
+		}
+
+		/// <summary>Return the average of a collection of rotations transforms</summary>
+		public static m3x4 Average(IEnumerable<m3x4> a2b)
+		{
+			return new m3x4(quat.Average(a2b.Select(x => new quat(x))));
+		}
 
 		#region Random
 	

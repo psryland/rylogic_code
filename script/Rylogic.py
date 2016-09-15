@@ -144,7 +144,7 @@ def Copy(src, dst, only_if_modified=True, show_unchanged=False, ignore_non_exist
 		elif not dst_is_dir:
 			raise FileNotFoundError("ERROR: "+dst+" is not a valid directory")
 
-	# Ensure the dstdir exists
+	# Ensure the 'dstdir' exists
 	dstdir = (dst if dst_is_dir else os.path.dirname(dst)).rstrip("/\\")
 	if not os.path.exists(dstdir):
 		os.makedirs(dstdir)

@@ -43,32 +43,6 @@ namespace pr.gfx
 		/// <summary>ToString</summary>
 		public override string ToString() { return string.Format("a={0} h={1} s={2} v={3}", A, H, S, V); }
 
-		/// <summary>Indicates whether this instance and a specified object are equal.</summary>
-		public override bool Equals(object obj)
-		{
-			return obj is HSV && Equals((HSV)obj);
-		}
-		public bool Equals(HSV other)
-		{
-			// If saturation is 0 for both, then H doesn't matter
-			return !S.Equals(0)
-				? A.Equals(other.A) && H.Equals(other.H) && S.Equals(other.S) && V.Equals(other.V)
-				: A.Equals(other.A) && V.Equals(other.V) && other.S.Equals(0);
-		}
-
-		/// <summary>Returns the hash code for this instance.</summary>
-		public override int GetHashCode()
-		{
-			unchecked
-			{
-				var hash_code = A.GetHashCode();
-				hash_code = (hash_code*397) ^ H.GetHashCode();
-				hash_code = (hash_code*397) ^ S.GetHashCode();
-				hash_code = (hash_code*397) ^ V.GetHashCode();
-				return hash_code;
-			}
-		}
-
 		/// <summary>Convert this HSV to RGB</summary>
 		public Color ToColor()
 		{
@@ -181,6 +155,24 @@ namespace pr.gfx
 			hsv.H /= 6f;
 			return hsv;
 		}
+
+		#region Equality
+		public bool Equals(HSV other)
+		{
+			// If saturation is 0 for both, then H doesn't matter
+			return !S.Equals(0)
+				? A.Equals(other.A) && H.Equals(other.H) && S.Equals(other.S) && V.Equals(other.V)
+				: A.Equals(other.A) && V.Equals(other.V) && other.S.Equals(0);
+		}
+		public override bool Equals(object obj)
+		{
+			return obj is HSV && Equals((HSV)obj);
+		}
+		public override int GetHashCode()
+		{
+			return new { A, H, S, V }.GetHashCode();
+		}
+		#endregion
 	}
 }
 

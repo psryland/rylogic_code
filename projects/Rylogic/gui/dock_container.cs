@@ -158,14 +158,19 @@ namespace pr.gui
 		}
 		protected override void Dispose(bool disposing)
 		{
-			if (Options.DisposeContent)
-				using (this.SuspendLayout(false))
-					Util.DisposeAll(m_all_content.Select(x => x.Owner));
+			using (this.SuspendLayout(false))
+			using (this.SuspendRedraw(false))
+			{
+				if (Options.DisposeContent)
+					using (this.SuspendLayout(false))
+						Util.DisposeAll(m_all_content.Select(x => x.Owner));
 
-			Root = null;
-			m_all_content.Clear();
-			m_floaters = Util.DisposeAll(m_floaters);
-			m_auto_hide = Util.DisposeAll(m_auto_hide);
+				Root = null;
+				m_all_content.Clear();
+				m_floaters = Util.DisposeAll(m_floaters);
+				m_auto_hide = Util.DisposeAll(m_auto_hide);
+			}
+
 			base.Dispose(disposing);
 		}
 
@@ -382,7 +387,7 @@ namespace pr.gui
 		protected override void OnLayout(LayoutEventArgs levent)
 		{
 			var rect = new RectangleRef(DisplayRectangle);
-			if (rect.Area() > 0 && Root != null)
+			if (rect.Area() > 0 && Root != null && !IsDisposed)
 			{
 				using (this.SuspendLayout(false))
 				{
@@ -411,17 +416,16 @@ namespace pr.gui
 		}
 
 		/// <summary>Initiate dragging of a pane or content</summary>
-		private static void DragBegin(DockPane pane)
+		private static void DragBegin(object draggee)
 		{
+			var dc = (DockContainer)null;
+			if      (draggee is DockPane   ) dc = ((DockPane)draggee).DockContainer;
+			else if (draggee is DockControl) dc = ((DockControl)draggee).DockContainer;
+			else throw new Exception("Dragging only supports dock pane or dock control");
+
 			// Create a form for displaying the dock site locations and handling the drop of a pane or content
-			using (var drop_handler = new DragHandler(pane.DockContainer, pane))
-				drop_handler.ShowDialog(pane.DockContainer);
-		}
-		private static void DragBegin(DockControl dc)
-		{
-			// Create a form for displaying the dock site locations and handling the drop of a pane or content
-			using (var drop_handler = new DragHandler(dc.DockContainer, dc))
-				drop_handler.ShowDialog(dc.DockContainer);
+			using (var drop_handler = new DragHandler(dc, draggee))
+				drop_handler.ShowDialog(dc);
 		}
 
 		/// <summary>The floating windows associated with this dock container</summary>
@@ -808,8 +812,12 @@ namespace pr.gui
 			}
 			protected override void Dispose(bool disposing)
 			{
-				Child = Util.Dispose(Child);
-				DockContainer = null;
+				using (this.SuspendLayout(false))
+				using (this.SuspendRedraw(false))
+				{
+					Child = Util.Dispose(Child);
+					DockContainer = null;
+				}
 				base.Dispose(disposing);
 			}
 
@@ -1321,33 +1329,25 @@ namespace pr.gui
 			public event EventHandler<TreeChangedEventArgs> TreeChanged;
 			private void RaiseTreeChanged(TreeChangedEventArgs args)
 			{
-				m_sig_tree_changed = false;
 				TreeChanged.Raise(this, args);
 				(Parent as Branch)?.OnTreeChanged(args);
 			}
 			internal void OnTreeChanged(TreeChangedEventArgs args)
 			{
-				if (!IsHandleCreated)
-				{
-					RaiseTreeChanged(args);
-				}
-				else if (!m_sig_tree_changed)
-				{
-					m_sig_tree_changed = true;
-					this.BeginInvoke(() => RaiseTreeChanged(args));
-				}
+				RaiseTreeChanged(args);
 			}
-			private bool m_sig_tree_changed;
 
 			/// <summary>Position the child controls</summary>
 			protected override void OnLayout(LayoutEventArgs levent)
 			{
-				if (Child == null) return;
-				using (this.SuspendLayout(false))
+				if (Child != null && !IsDisposed)
 				{
-					// Position the child controls at each dock site
-					foreach (var c in Child)
-						c.Layout();
+					using (this.SuspendLayout(false))
+					{
+						// Position the child controls at each dock site
+						foreach (var c in Child)
+							c.Layout();
+					}
 				}
 				base.OnLayout(levent);
 			}
@@ -1476,11 +1476,15 @@ namespace pr.gui
 			}
 			protected override void Dispose(bool disposing)
 			{
-				// Note: we don't own any of the content
-				VisibleContent = null;
-				TitleCtrl = null;
-				TabStripCtrl = null;
-				DockContainer = null;
+				using (this.SuspendLayout(false))
+				using (this.SuspendRedraw(false))
+				{
+					// Note: we don't own any of the content
+					VisibleContent = null;
+					TitleCtrl = null;
+					TabStripCtrl = null;
+					DockContainer = null;
+				}
 				base.Dispose(disposing);
 			}
 
@@ -1863,7 +1867,7 @@ namespace pr.gui
 			{
 				// Measure the remaining space and use that for the active content
 				var rect = DisplayRectangle;
-				if (rect.Area() > 0)
+				if (rect.Area() > 0 && !IsDisposed)
 				{
 					using (this.SuspendLayout(false))
 					{
@@ -2558,6 +2562,7 @@ namespace pr.gui
 				DefaultDockLocation = new DockLocation();
 				TabText             = null;
 				TabIcon             = null;
+				TabCMenu            = CreateDefaultTabCMenu();
 
 				DockAddresses = new Dictionary<Branch, EDockSite[]>();
 			}
@@ -2744,6 +2749,12 @@ namespace pr.gui
 				}
 			}
 
+			/// <summary>The floating window that hosts this content (if on a floating window, otherwise null)</summary>
+			public FloatingWindow HostFloatingWindow
+			{
+				get { return TreeHost as FloatingWindow; }
+			}
+
 			/// <summary>Get/Set whether this content is in an auto-hide panel</summary>
 			public bool IsAutoHide
 			{
@@ -2770,13 +2781,25 @@ namespace pr.gui
 					// Dock this content back in the dock container
 					else
 					{
+						var old_host = TreeHost as AutoHidePanel;
+
 						// Get the dock address associated with the dock container
 						var hs = DockAddressFor(DockContainer.Root);
 
 						// Return this content to the dock container
 						DockContainer.Add(Dockable, hs);
+
+						// Hide the auto hide panel so that it doesn't obscure the now pinned content
+						if (old_host != null)
+							old_host.PoppedOut = false;
 					}
 				}
+			}
+
+			/// <summary>The auto hide panel that hosts this content (if on an auto hide panel, otherwise null)</summary>
+			public AutoHidePanel HostAutoHidePanel
+			{
+				get { return TreeHost as AutoHidePanel; }
 			}
 
 			/// <summary>A record of where this pane was located in a dock container, auto hide window, or floating window</summary>
@@ -2885,16 +2908,30 @@ namespace pr.gui
 			}
 			private ContextMenuStrip m_impl_tab_cmenu;
 
+			/// <summary>Return a default context menu for the tab</summary>
+			private ContextMenuStrip CreateDefaultTabCMenu()
+			{
+				var cmenu = new ContextMenuStrip();
+				using (cmenu.SuspendLayout(true))
+				{
+					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Close"));
+					opt.Click += (s,a) => DockPane = null;
+				}
+				return cmenu;
+			}
+
 			/// <summary>True if this content is the active content within the owning dock container</summary>
 			public bool IsActiveContent
 			{
 				get { return DockContainer?.ActiveContent == this; }
+				set { if (value && DockContainer != null) DockContainer.ActiveContent = this; }
 			}
 
 			/// <summary>True if this content is the active content within its containing dock pane</summary>
 			public bool IsActiveContentInPane
 			{
 				get { return DockPane?.Content.Current == this; }
+				set { if (value && DockPane != null) DockPane.Content.Current = this; }
 			}
 
 			/// <summary>Save/Restore the control (possibly child control) that had input focus when the content was last active</summary>
@@ -4237,6 +4274,9 @@ namespace pr.gui
 				DropAddress = new EDockSite[0];
 				DropIndex = -1;
 
+				// Hide all auto hide panels, since they are not valid drop targets
+				DockContainer.AutoHidePanels.ForEach(ah => ah.PoppedOut = false);
+
 				// Create a form with a null region so that we have an invisible modal dialog
 				Name = "Drop handler";
 				FormBorderStyle = FormBorderStyle.None;
@@ -4277,6 +4317,7 @@ namespace pr.gui
 			protected override void OnShown(EventArgs e)
 			{
 				base.OnShown(e);
+
 				Capture = true;
 				IndLeft  .Visible = true;
 				IndTop   .Visible = true;
@@ -4743,7 +4784,9 @@ namespace pr.gui
 				var opts = DockContainer.Options;
 
 				// Update the position of the cross indicators
-				if (pane != null)
+				// Auto hide panels are not valid drop targets, there are special indicators
+				// for dropping onto an auto hide pane
+				if (pane != null && !pane.IsAutoHide)
 				{
 					// Display the large cross indicator when over the Centre site
 					// or the small cross indicator when over an edge site
@@ -4960,6 +5003,7 @@ namespace pr.gui
 		}
 
 		/// <summary>A floating window that hosts a tree of dock panes</summary>
+		[DebuggerDisplay("FloatingWindow")]
 		public class FloatingWindow :ToolForm ,ITreeHost
 		{
 			public FloatingWindow(DockContainer dc) :base(dc)
@@ -4968,7 +5012,7 @@ namespace pr.gui
 				FormBorderStyle = FormBorderStyle.Sizable;
 				HideOnClose = true;
 				Text = string.Empty;
-				Icon = null;
+				ShowIcon = false;
 				Owner = dc.TopLevelControl as Form;
 
 				using (this.SuspendLayout(false))
@@ -5364,6 +5408,8 @@ namespace pr.gui
 				{
 					if (m_impl_popped_out == value) return;
 					m_impl_popped_out = value;
+
+					// Force a layout of the dock container
 					Parent?.PerformLayout();
 
 					// When no longer popped out, make the last active content active again
@@ -5479,7 +5525,8 @@ namespace pr.gui
 						// All content in auto hide panels should be in the centre dock site.
 						// We don't need the pane tab strip because the auto hide tab strip handles selecting content
 						Root.Visible = Split.Visible = PoppedOut;
-						Root.Child[EDockSite.Centre].DockPane.TabStripCtrl.Visible = false;
+						if (Root.Child[EDockSite.Centre].DockPane != null)
+							Root.Child[EDockSite.Centre].DockPane.TabStripCtrl.Visible = false;
 
 						// Set the area that the splitter can move within and the size of the displayed Pane
 						if (PoppedOut)

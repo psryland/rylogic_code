@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace pr.win32
 {
@@ -16,5 +14,7 @@ namespace pr.win32
 		[DllImport("kernel32.dll", SetLastError = true)] public static extern bool   AttachConsole(int dwProcessId);
 		[DllImport("kernel32.dll", SetLastError = true)] public static extern bool   WriteConsole(IntPtr hConsoleOutput, string lpBuffer, uint nNumberOfCharsToWrite, out uint lpNumberOfCharsWritten, IntPtr lpReserved);
 		[DllImport("kernel32.dll", SetLastError = true)] public static extern uint   FormatMessage(uint dwFlags, IntPtr lpSource, uint dwMessageId, uint dwLanguageId, ref IntPtr lpBuffer, uint nSize, IntPtr pArguments);
+		[DllImport("kernel32.dll", SetLastError = true)] public static extern bool   SystemTimeToFileTime([In] ref SYSTEMTIME st, [Out] out FILETIME ft);
+		[DllImport("kernel32.dll", SetLastError = true)] public static extern bool   FileTimeToSystemTime([In] ref FILETIME ft, [Out] out SYSTEMTIME st);
 	}
 }

@@ -59,7 +59,11 @@ namespace pr.win32
 			public uint nPage;
 			public int nPos;
 			public int nTrackPos;
-			public static SCROLLINFO Default                     { get {return new SCROLLINFO{cbSize = (uint)Marshal.SizeOf(typeof(SCROLLINFO))};} }
+
+			public static SCROLLINFO Default
+			{
+				get { return new SCROLLINFO { cbSize = (uint)Marshal.SizeOf(typeof(SCROLLINFO)) }; }
+			}
 		}
 
 		// Structure pointed to by WM_GETMINMAXINFO lParam
@@ -96,6 +100,14 @@ namespace pr.win32
 			public WORD wMinute;
 			public WORD wSecond;
 			public WORD wMilliseconds;
+		}
+
+		[StructLayout(LayoutKind.Explicit)]
+		public struct FILETIME
+		{
+			[FieldOffset(0)] public DWORD dwLowDateTime;
+			[FieldOffset(4)] public DWORD dwHighDateTime;
+			[FieldOffset(0)] public long value;
 		}
 
 		[StructLayout(LayoutKind.Sequential)]

@@ -164,6 +164,8 @@ namespace pr
 			BottomRight     = Right|Bottom,
 			LeftTopRight    = Left|Top|Right,
 			LeftBottomRight = Left|Bottom|Right,
+			LeftTopBottom   = Left|Top|Bottom,
+			RightTopBottom  = Right|Top|Bottom,
 			All             = Left|Top|Right|Bottom,
 			_bitops_allowed,
 		};
@@ -2001,10 +2003,11 @@ namespace pr
 					return;
 
 				// Fill the client area of 'm_hwnd' with the background colour
-				Rect r; ::GetUpdateRect(m_hwnd, &r, FALSE);
-				Rect cr; ::GetClientRect(m_hwnd, &cr);
+				Rect cr; GetClientRect(m_hwnd, &cr);
+				auto r = cr.Intersect(UpdateRect());
 				if (!r.empty())
 					::FillRect(m_dc, &r, m_bsh_back);
+
 				m_parts = SetBits(m_parts, EParts::Background, false);
 			}
 		};
@@ -4240,14 +4243,15 @@ namespace pr
 				assert(::IsWindow(m_hwnd));
 				if (!repaint) flags = flags | EWindowPos::NoRedraw;
 
-				// Invalidate the previous and new rect on the parent
-				auto hwndparent = ::GetParent(m_hwnd);
-				if (hwndparent != nullptr)
-				{
-					auto pr = ParentRect();
-					::InvalidateRect(hwndparent, &pr, FALSE);
-					::InvalidateRect(hwndparent, &r, FALSE);
-				}
+				// Doesn't seem to be needed
+				//// Invalidate the previous and new rect on the parent
+				//auto hwndparent = ::GetParent(m_hwnd);
+				//if (hwndparent != nullptr)
+				//{
+				//	auto pr = ParentRect();
+				//	::InvalidateRect(hwndparent, &pr, FALSE);
+				//	::InvalidateRect(hwndparent, &r, FALSE);
+				//}
 
 				// SetWindowPos takes client space coordinates
 				// Use prev = ::GetWindow(m_hwnd, GW_HWNDPREV) for the current z-order
@@ -4624,6 +4628,8 @@ namespace pr
 						//    Draw(); <- do your drawing
 						//    Validate(&r); <- tell windows the update rect has been updated,
 						//  Non-client window parts are drawn in DefWndProc
+						// The WS_BORDER style decreases the client rectangle by 1 on all sides.
+						// The Border is part of the non-client area of the control.
 
 						// Create arguments for the paint event
 						PaintEventArgs args(m_hwnd, HDC(wparam), m_brush_back != nullptr ? m_brush_back : m_wci.hbrBackground);
@@ -4693,34 +4699,92 @@ namespace pr
 				case WM_WINDOWPOSCHANGED:
 					#pragma region
 					{
-						// -WM_WINDOWPOSCHANGED supersedes WM_SHOWWINDOW, WM_SIZE, WM_MOVE. These older messages
-						//  are only sent if WM_WINDOWPOSCHANGED is handled by DefWndProc.
-						// -Don't resize child controls during 'WM_WINDOWPOSCHANGING' because the 'm_pos_offset'
-						//  gets recorded relative to the old client area.
-						auto& wp = *reinterpret_cast<WindowPos*>(lparam);
+						// WM_WINDOWPOSCHANGING/ED is sent to a form/control when it is resized using SetWindowPos (or similar).
+						// It is not recursive, i.e. if a window is resized, then only that window receives the WM_WINDOWPOSCHANGED
+						// message.
+						// The logical way to handle WM_WINDOWPOSCHANGED is for the receiving window to resize all of it's children
+						// recursively so that the entire control tree is resized. However, resizing a child results in WM_WINDOWPOSCHANGED
+						// being sent to that child window. Logically then, you'd make the WM_WINDOWPOSCHANGED messages drive the
+						// recursion. However, in between the WM_WINDOWPOSCHANGED messages, WM_PAINT messages are sent which has the
+						// effect of making the UI look rubbery as parts resize amidst the redraws. What is needed is for the initial
+						// WM_WINDOWPOSCHANGED receiving window to resize all of its descendants, and for the WM_WINDOWPOSCHANGED messages,
+						// that get sent as a result of resizing the children, to be ignored. Ignoring messages is hard tho, so at the
+						// moment, rubbery it is...
+						//
+						// WinGui handles this as follows:
+						// - If a Control receives WM_WINDOWPOSCHANGED => Handled by Control::WndProc
+						// - If a Form receives WM_WINDOWPOSCHANGED => Handled by Form::ProcessWindowMessage
+						// - The Form::ProcessWindowMessage handler for WM_WINDOWPOSCHANGED does some special case work for initial form
+						//   position and window pinning, then allows the message to fall through to the Control::WndProc
+						// - Control::WndProc handles WM_WINDOWPOSCHANGED for any form or control.
+						//   Using a local stack, the control resizes its descendants in breadth-first order. Note: ClientRect cannot be
+						//   used during this because the window does not report the new size until after the WM_WINDOWPOSCHANGED for that
+						//   window has been handled.
+						//
+						// Other Notes:
+						// - WM_WINDOWPOSCHANGED supersedes WM_SHOWWINDOW, WM_SIZE, WM_MOVE. These older messages
+						//   are only sent if WM_WINDOWPOSCHANGED is handled by DefWndProc.
+						// - Don't resize child controls during 'WM_WINDOWPOSCHANGING' because the 'm_pos_offset'
+						//   gets recorded relative to the old client area.
+						auto& wp = *rcast<WindowPos*>(lparam);
 						auto before = message == WM_WINDOWPOSCHANGING;
-						if (!before)
+						if (before)
 						{
-							cp().m_x = wp.x;
-							cp().m_y = wp.y;
-							cp().m_w = wp.cx;
-							cp().m_h = wp.cy;
+							// Notify of position changing
+							OnWindowPosChange(WindowPosEventArgs(wp, before));
 						}
-
-						// Notify of position changed
-						OnWindowPosChange(WindowPosEventArgs(wp, before));
-
-						// Notify of visibility changed
-						if (!before)
+						else
 						{
-							if ((wp.flags & SWP_SHOWWINDOW) != 0)
+							auto is_resize = !AllSet(wp.flags, int(EWindowPos::NoSize));
+							auto is_move   = !AllSet(wp.flags, int(EWindowPos::NoMove));
+							auto redraw    = !AllSet(wp.flags, int(EWindowPos::NoRedraw));
+
+							// Record the new position/size in the parameters
+							if (is_move)
+							{
+								cp().m_x = wp.x;
+								cp().m_y = wp.y;
+							}
+							if (is_resize)
+							{
+								cp().m_w = wp.cx;
+								cp().m_h = wp.cy;
+							}
+
+							// Resize all descendants
+							if (is_resize || is_move)
+							{
+								//Controls stack = m_child;
+								auto client = ClientRect();
+								auto screen = ScreenRect();
+								for (auto c : m_child)
+								{
+									if (IsForm(c) && !IsPinnedForm(c))
+										continue;
+
+									// If 'child' is a child control and this is a resize, reposition within this control's client area
+									if (IsChild(c) && is_resize)
+										c->ResizeToParent(client);
+
+									// If 'child' is a pinned form and we have moved, move the child as well
+									if (IsForm(c) && is_move)
+										c->ResizeToParent(screen);
+								}
+							}
+
+							// Notify of position changed
+							OnWindowPosChange(WindowPosEventArgs(wp, before));
+
+							// Notify of visibility changed
+							if (AllSet(wp.flags, int(EWindowPos::ShowWindow)))
 								OnVisibilityChanged(VisibleEventArgs(true));
-							if ((wp.flags & SWP_HIDEWINDOW) != 0)
+							if (AllSet(wp.flags, int(EWindowPos::HideWindow)))
 								OnVisibilityChanged(VisibleEventArgs(false));
-						}
 
-						// It's more efficient to suppress the old WM_SIZE, WM_MOVE events
-						// ...but scintilla control needs them. Probably other controls too
+							// Invalidate the window
+							if (redraw)
+								Invalidate(true, nullptr, true);
+						}
 						break;
 					}
 					#pragma endregion
@@ -4948,30 +5012,8 @@ namespace pr
 				case WM_WINDOWPOSCHANGED:
 					#pragma region
 					{
-						// An ancestor/parent window has resized or moved.
-						// Resizing this window will cause WM_WINDOWPOSCHANGING/ED to
-						// be sent to this window's WndProc which then calls OnWindowPosChange.
-						// If this control/window has a parent, reposition relative to it using the anchor/docking mechanism.
-						if (m_parent.hwnd() != nullptr && m_parent.hwnd() == toplevel_hwnd)
-						{
-							auto& wp = *rcast<WindowPos*>(lparam);
-							auto is_form   = cp().top_level();
-							auto is_resize = !AllSet(wp.flags, int(EWindowPos::NoSize));
-							auto is_move   = !AllSet(wp.flags, int(EWindowPos::NoMove));
-
-							// If this is a child control and our parent has resized, reposition within the parent
-							if (!is_form && is_resize)
-								ResizeToParent(m_parent->ClientRect());
-
-							// If this is a pinned form and our parent has moved, move with the parent
-							if (is_form && is_move)
-								ResizeToParent(m_parent->ScreenRect());
-
-							// Hmm, should I recurse down the child tree here resizing all children?
-							// Relying on WM_WINDOWPOSCHANGED messages allows WM_PAINT's to occur in between...
-						}
-
-						return ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result, [](Control* c) { return IsChild(c) || IsPinnedForm(c); });
+						// See the notes in Control::WndProc for this message
+						return false;
 					}
 					#pragma endregion
 				case WM_TIMER:
@@ -6008,25 +6050,24 @@ namespace pr
 					{
 						auto& wp = *rcast<WindowPos*>(lparam);
 
-						if (AllSet(wp.flags, int(EWindowPos::ShowWindow)))
+						// If shown for the first time, apply the start position
+						if (AllSet(wp.flags, int(EWindowPos::ShowWindow)) &&
+							cp().m_start_pos == EStartPosition::CentreParent)
 						{
-							// If shown for the first time, apply the start position
-							// This will recursively call WM_WINDOWPOSCHANGED
-							if (cp().m_start_pos == EStartPosition::CentreParent)
-							{
-								cp().m_start_pos = EStartPosition::Manual;
-								CenterWindow(m_parent.hwnd());
-								return true;
-							}
+							// Calling 'CenterWindow' will recursively call WM_WINDOWPOSCHANGED
+							cp().m_start_pos = EStartPosition::Manual;
+							CenterWindow(m_parent.hwnd());
+							return true;
 						}
 
-						// If we're a pinned window, record our offset from our target
+						// If we're a pinned window, record our offset from our target.
+						// Test 'hwnd == m_hwnd' because we only record the offset when this window
+						// moves relative to it's parent, not when the parent moves relative to this window.
 						if (hwnd == m_hwnd && PinWindow())
 							RecordPosOffset();
 
-						// Resize child controls and pinned child windows
-						//RAII<bool> unpin(cp().m_pin_window, false);
-						return Control::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
+						// Let the WM_WINDOWPOSCHANGED message fall through to be handled by Control::WndProc
+						return false;
 					}
 					#pragma endregion
 				case WM_DROPFILES:
@@ -8709,13 +8750,13 @@ namespace pr
 			enum class EIcon
 			{
 				None,
-				Application = int(IDI_APPLICATION - (char*)0), 
-				Hand        = int(IDI_HAND        - (char*)0),
-				Question    = int(IDI_QUESTION    - (char*)0),
-				Exclamation = int(IDI_EXCLAMATION - (char*)0),
-				Asterisk    = int(IDI_ASTERISK    - (char*)0),
-				WinLogo     = int(IDI_WINLOGO     - (char*)0),
-				Shield      = int(IDI_SHIELD      - (char*)0),
+				Application = int((char*)IDI_APPLICATION - (char*)0), 
+				Hand        = int((char*)IDI_HAND        - (char*)0),
+				Question    = int((char*)IDI_QUESTION    - (char*)0),
+				Exclamation = int((char*)IDI_EXCLAMATION - (char*)0),
+				Asterisk    = int((char*)IDI_ASTERISK    - (char*)0),
+				WinLogo     = int((char*)IDI_WINLOGO     - (char*)0),
+				Shield      = int((char*)IDI_SHIELD      - (char*)0),
 				Warning     = Exclamation,
 				Error       = Hand,
 				Information = Asterisk,

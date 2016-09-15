@@ -87,12 +87,23 @@ namespace Tradee
 			// Set the 'all instrument' grid properties
 			m_grid_all.ColumnFilters(true).Enabled = true;
 
-			// Support drag and drop from the 'all' to the favourites list
+			// Support drag and drop from the 'all' to the 'favourites' list
+			// and for re-ordering the favourites list
 			m_dd = new DragDrop(m_grid_fav);
+			m_dd.DoDrop += DataGridViewEx.DragDrop_DoDropMoveRow;
 			m_dd.DoDrop += (s,a,m) =>
 			{
-				if (!a.Data.GetDataPresent(typeof(DataGridViewEx.DragDropData)))
+				var ddd = (DataGridViewEx.DragDropData)a.Data.GetData(typeof(DataGridViewEx.DragDropData));
+				if (ddd == null)
 					return false;
+
+				// Require drag from 'all' grid and drop on 'fav' grid
+				if (!ReferenceEquals(m_grid_all, ddd.DataGridView) ||
+					!ReferenceEquals(m_grid_fav, s))
+					return false;
+
+				//if (!a.Data.GetDataPresent(typeof(DataGridViewEx.DragDropData)))
+				//	return false;
 
 				// Set the drop effect to indicate what will happen if the item is dropped here
 				a.Effect = DragDropEffects.Copy;
@@ -101,7 +112,6 @@ namespace Tradee
 				if (m != pr.util.DragDrop.EDrop.Drop)
 					return true;
 
-				var ddd   = (DataGridViewEx.DragDropData)a.Data.GetData(typeof(DataGridViewEx.DragDropData));
 				var instr = ddd.Row.DataBoundItem as Instrument;
 				var pt    = m_grid_fav.PointToClient(new Point(a.X, a.Y));
 				var hit   = m_grid_fav.HitTestEx(pt);
@@ -109,9 +119,12 @@ namespace Tradee
 				Model.Favourites.Insert(idx, instr);
 				return true;
 			};
-
 			m_grid_fav.AllowDrop = true;
 			m_grid_all.MouseDown += DataGridViewEx.DragDrop_DragRow;
+			m_grid_fav.MouseDown += DataGridViewEx.DragDrop_DragRow;
+
+			// Allow delete on the favourites grid
+			m_grid_fav.AllowUserToDeleteRows = true;
 
 			// Combo of instruments
 			m_cb_symbols.AutoCompleteMode = AutoCompleteMode.Suggest;
@@ -120,7 +133,7 @@ namespace Tradee
 			m_cb_symbols.Format += (s,a) =>
 			{
 				var sym = (string)a.ListItem;
-				a.Value = "{0} - {1}".Fmt(sym, Misc.KnownSymbols[sym]);
+				a.Value = "{0} - {1}".Fmt(sym, Misc.KnownSymbols[sym].Desc);
 			};
 
 			// Add instrument
@@ -288,7 +301,7 @@ namespace Tradee
 			this.m_grid_fav.Location = new System.Drawing.Point(0, 0);
 			this.m_grid_fav.Name = "m_grid_fav";
 			this.m_grid_fav.ReadOnly = true;
-			this.m_grid_fav.RowHeadersVisible = false;
+			this.m_grid_fav.RowHeadersWidth = 20;
 			this.m_grid_fav.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
 			this.m_grid_fav.Size = new System.Drawing.Size(238, 283);
 			this.m_grid_fav.TabIndex = 0;

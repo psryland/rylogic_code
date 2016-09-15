@@ -42,17 +42,51 @@ namespace pr.gfx
 		public static Colour32 Green = new Colour32(0xFF,0x00,0xFF,0x00);
 		public static Colour32 Blue  = new Colour32(0xFF,0x00,0x00,0xFF);
 		public static Colour32 Gray  = new Colour32(0xFF,0x80,0x80,0x80);
-		
-		private static byte sat(int i) { return (byte)Math.Min(0xff, Math.Max(0, i)); }
-	
+
+		/// <summary>Saturate 'i'</summary>
+		private static byte sat(int i)
+		{
+			return (byte)Math.Min(0xff, Math.Max(0, i));
+		}
+
 		/// <summary>Linearly interpolate two colours</summary>
-		public static Colour32 Blend(Colour32 c0, Colour32 c1, float t)
+		public Colour32 Lerp(Colour32 rhs, float t)
+		{
+			return Lerp(this, rhs, t);
+		}
+		public static Colour32 Lerp(Colour32 lhs, Colour32 rhs, float t)
 		{
 			return new Colour32(
-				(byte)(c0.A*(1f - t) + c1.A*t),
-				(byte)(c0.R*(1f - t) + c1.R*t),
-				(byte)(c0.G*(1f - t) + c1.G*t),
-				(byte)(c0.B*(1f - t) + c1.B*t));
+				(byte)(lhs.A*(1f - t) + rhs.A*t),
+				(byte)(lhs.R*(1f - t) + rhs.R*t),
+				(byte)(lhs.G*(1f - t) + rhs.G*t),
+				(byte)(lhs.B*(1f - t) + rhs.B*t));
+		}
+
+		/// <summary>Linearly interpolate the non-alpha channels of two colours (lhs.A is used)</summary>
+		public Colour32 LerpNoAlpha(Colour32 rhs, float t)
+		{
+			return LerpNoAlpha(this, rhs, t);
+		}
+		public static Colour32 LerpNoAlpha(Colour32 lhs, Colour32 rhs, float t)
+		{
+			return new Colour32(
+				lhs.A,
+				(byte)(lhs.R*(1f - t) + rhs.R*t),
+				(byte)(lhs.G*(1f - t) + rhs.G*t),
+				(byte)(lhs.B*(1f - t) + rhs.B*t));
+		}
+
+		/// <summary>Lerp this colour toward black by 't'</summary>
+		public Colour32 Darken(float t, bool alpha_too = false)
+		{
+			return alpha_too ? Lerp(Black, t) : LerpNoAlpha(Black, t);
+		}
+
+		/// <summary>Lerp this colour toward white by 't'</summary>
+		public Colour32 Lighten(float t, bool alpha_too = false)
+		{
+			return alpha_too ? Lerp(White, t) : LerpNoAlpha(White, t);
 		}
 	}
 }

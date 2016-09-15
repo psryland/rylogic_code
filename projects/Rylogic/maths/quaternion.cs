@@ -4,7 +4,9 @@
 //***************************************************
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using pr.extn;
 
@@ -13,21 +15,32 @@ namespace pr.maths
 	/// <summary>Quaternion functions. Note: a quaternion is a v4</summary>
 	[Serializable]
 	[StructLayout(LayoutKind.Explicit)]
-	[DebuggerDisplay("{x}  {y}  {z}  {w}  // Len3={Length3}  Len4={Length4})")]
+	[DebuggerDisplay("{x}  {y}  {z}  {w}  // Axis={Axis}  Ang={Angle})")]
 	public struct quat
 	{
 		[FieldOffset( 0)] public float x;
 		[FieldOffset( 4)] public float y;
 		[FieldOffset( 8)] public float z;
 		[FieldOffset(12)] public float w;
-		[FieldOffset( 0)] public v4 vec;
+		[FieldOffset( 0)] public v4 xyzw; // (same name as the C++ version)
 
+		public quat(float x) :this()
+		{
+			this.x = x;
+			this.y = x;
+			this.z = x;
+			this.w = x;
+		}
 		public quat(float x, float y, float z, float w) :this()
 		{
 			this.x = x;
 			this.y = y;
 			this.z = z;
 			this.w = w;
+		}
+		public quat(v4 vec) :this()
+		{
+			this.xyzw = vec;
 		}
 
 		/// <summary>Create a quaternion from an axis and an angle</summary>
@@ -38,13 +51,6 @@ namespace pr.maths
 			y = s * axis.y;
 			z = s * axis.z;
 			w = (float)Math.Cos(0.5 * angle);
-		}
-
-		/// <summary>Create a quaternion from an angular displacement vector. length = angle(rad), direction = axis</summary>
-		public quat(v4 angular_displacement) :this()
-		{
-			var len = angular_displacement.Length3;
-			this = new quat(angular_displacement / len, len);
 		}
 
 		/// <summary>Create a quaternion from Euler angles. Order is: roll, pitch, yaw (to match DirectX)</summary>
@@ -63,30 +69,39 @@ namespace pr.maths
 		/// <summary>Create a quaternion from a rotation matrix</summary>
 		public quat(m3x4 m) :this()
 		{
+			Debug.Assert(m3x4.IsOrthonormal(m), "Only orientation matrices can be converted into quaternions");
 			var trace = m.x.x + m.y.y + m.z.z;
 			if (trace >= 0.0f)
 			{
-				var r = (float)Math.Sqrt(1.0f + trace);
-				var s = 0.5f / r;
-				x = (m.z.y - m.y.z) * s;
-				y = (m.x.z - m.z.x) * s;
-				z = (m.y.x - m.x.y) * s;
-				w = 0.5f * r;
+				var s = 0.5f / (float)Math.Sqrt(1.0f + trace);
+				x = (m.y.z - m.z.y) * s;
+				y = (m.z.x - m.x.z) * s;
+				z = (m.x.y - m.y.x) * s;
+				w = (0.25f / s);
+			}
+			else if (m.x.x > m.y.y && m.x.x > m.z.z)
+			{
+				var s = 0.5f / (float)Math.Sqrt(1.0f + m.x.x - m.y.y - m.z.z);
+				x = (0.25f / s);
+				y = (m.x.y + m.y.x) * s;
+				z = (m.z.x + m.x.z) * s;
+				w = (m.y.z - m.z.y) * s;
+			}
+			else if (m.y.y > m.z.z)
+			{
+				var s = 0.5f / (float)Math.Sqrt(1.0f - m.x.x + m.y.y - m.z.z);
+				x = (m.x.y + m.y.x) * s;
+				y = (0.25f / s);
+				z = (m.y.z + m.z.y) * s;
+				w = (m.z.x - m.x.z) * s;
 			}
 			else
 			{
-				int i = 0;
-				if (m.y.y > m.x.x  ) ++i;
-				if (m.z.z > m[i][i]) ++i;
-				int j = (i + 1) % 3;
-				int k = (i + 2) % 3;
-				var r = (float)Math.Sqrt(m[i][i] - m[j][j] - m[k][k] + 1.0f);
-				var s = 0.5f / r;
-
-				this[i] = 0.5f * r;
-				this[j] = (m[i][j] + m[j][i]) * s;
-				this[k] = (m[k][i] + m[i][k]) * s;
-				w       = (m[k][j] - m[j][k]) * s;
+				var s = 0.5f / (float)Math.Sqrt(1.0f - m.x.x - m.y.y + m.z.z);
+				x = (m.z.x + m.x.z) * s;
+				y = (m.y.z + m.z.y) * s;
+				z = (0.25f / s);
+				w = (m.x.y - m.y.x) * s;
 			}
 		}
 	
@@ -104,7 +119,7 @@ namespace pr.maths
 				s = 0.0f;
 			}
 
-			vec = v4.Normalise4(new v4(axis.x, axis.y, axis.z, s));
+			xyzw = v4.Normalise4(new v4(axis.x, axis.y, axis.z, s));
 		}
 
 		/// <summary>Reinterpret a vector as a quaternion</summary>
@@ -156,7 +171,44 @@ namespace pr.maths
 		/// <summary>Get the axis component of the quaternion (normalised)</summary>
 		public v4 Axis
 		{
-			get { return v4.Normalise3(vec.w0); }
+			get { return v4.Normalise3(xyzw.w0); }
+		}
+
+		// Return the angle of rotation about 'Axis()'
+		public float Angle
+		{
+			get {  return (float)Math.Acos(CosAngle); }
+		}
+
+		// Return the cosine of the angle of rotation about 'Axis()'
+		public float CosAngle
+		{
+			get
+			{
+				Debug.Assert(Maths.FEql(LengthSq, 1.0f), "quaternion isn't normalised");
+
+				// Trig:
+				//' cos²(x) = 0.5 * (1 + cos(2x))
+				//' w == cos(x/2)
+				//' w² == cos²(x/2) == 0.5 * (1 + cos(x))
+				//' 2w² - 1 == cos(x)
+				return Maths.Clamp(2f * Maths.Sqr(w) - 1f, -1f, +1f);
+			}
+		}
+
+		// Return the sine of the angle of rotation about 'Axis()'
+		public float SinAngle
+		{
+			get
+			{
+				Debug.Assert(Maths.FEql(LengthSq, 1.0f), "quaternion isn't normalised");
+
+				// Trig:
+				//' sin²(x) + cos²(x) == 1
+				//' sin²(x) == 1 - cos²(x)
+				//' sin(x) == sqrt(1 - cos²(x))
+				return (float)Math.Sqrt(1f - Maths.Sqr(CosAngle));
+			}
 		}
 
 		/// <summary>ToString</summary>
@@ -187,14 +239,12 @@ namespace pr.maths
 			get { return m_identity; }
 		}
 
-		/// <summary>Compare quaternions</summary>
+		/// <summary>Compare quaternions. Note: q == -q</summary>
 		public static bool FEql(quat lhs, quat rhs, float tol)
 		{
 			return
-				Maths.FEql(lhs.x, rhs.x, tol) &&
-				Maths.FEql(lhs.y, rhs.y, tol) &&
-				Maths.FEql(lhs.z, rhs.z, tol) &&
-				Maths.FEql(lhs.w, rhs.w, tol);
+				v4.FEql4(lhs.xyzw, +rhs.xyzw, tol) ||
+				v4.FEql4(lhs.xyzw, -rhs.xyzw, tol);
 		}
 		public static bool FEql(quat lhs, quat rhs)
 		{
@@ -202,21 +252,17 @@ namespace pr.maths
 		}
 
 		/// <summary>Operators</summary>
-		public static quat operator + (quat lhs, quat rhs)
+		public static quat operator + (quat q)
 		{
-			return new quat(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w);
+			return q;
 		}
-		public static quat operator - (quat lhs, quat rhs)
+		public static quat operator - (quat q)
 		{
-			return new quat(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w);
+			return new quat(-q.x, -q.y, -q.z, -q.w); // Note: Not conjugate
 		}
-		public static quat operator * (quat lhs, float rhs)
+		public static quat operator ~ (quat q)
 		{
-			return new quat(lhs.x * rhs, lhs.y * rhs, lhs.z * rhs, lhs.w * rhs);
-		}
-		public static quat operator * (float lhs, quat rhs)
-		{
-			return rhs * lhs;
+			return new quat(-q.x, -q.y, -q.z, q.w);
 		}
 		public static quat operator * (quat lhs, quat rhs)
 		{
@@ -227,33 +273,70 @@ namespace pr.maths
 				lhs.w*rhs.z + lhs.x*rhs.y - lhs.y*rhs.x + lhs.z*rhs.w,
 				lhs.w*rhs.w - lhs.x*rhs.x - lhs.y*rhs.y - lhs.z*rhs.z);
 		}
-		public static v4   operator * (quat lhs, v4 rhs)
+		public static v4 operator * (quat lhs, v4 rhs)
 		{
 			// Quaternion rotate. Same semantics at matrix multiply
 			return Rotate(lhs, rhs);
 		}
-		public static quat operator / (quat lhs, float rhs)
+
+		/// <summary>Component add</summary>
+		public static quat CompAdd(quat lhs, quat rhs)
 		{
-			return lhs * (1f/rhs);
+			return new quat(lhs.xyzw + rhs.xyzw);
+		}
+
+		/// <summary>Component multiply</summary>
+		public quat CompMul(quat lhs, float rhs)
+		{
+			return new quat(lhs.xyzw * rhs);
+		}
+		public quat CompMul(quat lhs, quat rhs)
+		{
+			return new quat(lhs.xyzw * rhs.xyzw);
 		}
 		
 		/// <summary>Normalise a quaternion to unit length</summary>
 		public static quat Normalise(quat q)
 		{
-			return q / q.Length;
+			return new quat(v4.Normalise4(q.xyzw));
 		}
 		public static quat Normalise(quat q, quat def)
 		{
-			return Maths.FEql(q.LengthSq, 0f) ? def : q / q.Length;
+			return new quat(v4.Normalise4(q.xyzw, def.xyzw));
 		}
-		
-		/// <summary>Return the quaternion conjugate of 'q'</summary>
-		public static quat Conjugate(quat q)
+
+		// Return the cosine of the angle between two quaternions (i.e. the dot product)
+		public static float CosAngle2(quat a, quat b)
 		{
-			q.x = -q.x;
-			q.y = -q.y;
-			q.z = -q.z;
-			return q;
+			return v4.Dot4(a.xyzw, b.xyzw);
+		}
+
+		// Return the angle between two quaternions (in radians)
+		public static float Angle2(quat a, quat b)
+		{
+			return (float)Math.Acos(CosAngle2(a ,b));
+		}
+
+		/// <summary>Scale the rotation by 'x'. i.e. x==2f => double the rotation, x==0.5f => halve the rotation</summary>
+		public static quat Scale(quat q, float frac)
+		{
+			Debug.Assert(Maths.FEql(q.LengthSq, 1.0f), "quaternion isn't normalised");
+
+			// Trig:
+			//' sin²(x) + cos²(x) == 1
+			//' s == sqrt(1 - w²) == sqrt(1 - cos²(x/2))
+			//' s² == 1 - cos²(x/2) == sin²(x/2)
+			//' s == sin(x/2)
+			var w = Maths.Clamp(q.w, -1f, 1f);    // = cos(x/2)
+			var s = (float)Math.Sqrt(1f - Maths.Sqr(w)); // = sin(x/2)
+			var a = frac * (float)Math.Acos(w);          // = scaled half angle
+			var sin_ha = (float)Math.Sin(a);
+			var cos_ha = (float)Math.Cos(a);
+			return new quat(
+				q.x * sin_ha / s,
+				q.y * sin_ha / s,
+				q.z * sin_ha / s,
+				cos_ha);
 		}
 
 		/// <summary>Return the axis and angle from a quaternion</summary>
@@ -278,51 +361,28 @@ namespace pr.maths
 				0f);
 		}
 
-		/// <summary>Linearly interpolate between two quaternions</summary>
-		public static quat Lerp(quat lhs, quat rhs, float frac)
-		{
-			return new quat(
-				Maths.Lerp(lhs.x,rhs.x,frac),
-				Maths.Lerp(lhs.y,rhs.y,frac),
-				Maths.Lerp(lhs.z,rhs.z,frac),
-				Maths.Lerp(lhs.w,rhs.w,frac));
-		}
-
 		/// <summary>Spherically interpolate between quaternions</summary>
-		public static quat Slerp(quat src, quat dst, float frac)
+		public static quat Slerp(quat a, quat b, float frac)
 		{
-			if (frac <= 0.0f) return src;
-			if (frac >= 1.0f) return dst;
-			
-			var cos_angle = src.x*dst.x + src.y*dst.y + src.z*dst.z + src.w*dst.w;
-			var sign      = (cos_angle >= 0) ? 1 : -1;
-			var abs_dst   = sign * dst;
-			cos_angle    *= sign;
-
-			// Calculate coefficients
+			// Flip 'b' so that both quaternions are in the same hemisphere (since: q == -q)
+			var cos_angle = CosAngle2(a, b);
+			var b_ = cos_angle >= 0 ? b : -b;
+			cos_angle = Math.Abs(cos_angle);
+		
 			if (cos_angle < 0.95f)
 			{
-				// standard case ('slerp')
-				var angle     = (float)Math.Acos(cos_angle);
-				var sin_angle = (float)Math.Sin (angle);
-				var scale0    = (float)Math.Sin((1.0f - frac) * angle);
-				var scale1    = (float)Math.Sin((       frac) * angle);
-				return (scale0*src + scale1*abs_dst) * (1.0f / sin_angle);
+				var angle = (float)Math.Acos(cos_angle);
+				var scale0 = (float)Math.Sin((1f - frac) * angle);
+				var scale1 = (float)Math.Sin((     frac) * angle);
+				var sin_angle = (float)Math.Sin(angle);
+				return new quat((a.xyzw * scale0 + b_.xyzw * scale1) / sin_angle);
 			}
+			// "a" and "b" quaternions are very close, use linear interpolation
 			else
 			{
-				// "src" and "dst" quaternions are very close 
-				return quat.Normalise(quat.Lerp(src, abs_dst, frac));
+				return Normalise(new quat(v4.Lerp(a.xyzw, b_.xyzw, frac)));
 			}
 		}
-
-		// this is quaternion multiply
-		///// <summary>Rotate 'rotatee' by 'rotator'. If 'rotatee' has w = 0, then this is equivalent to rotating a direction vector</summary>
-		//public static quat Rotate(quat rotator, quat rotatee)
-		//{
-		//	Debug.Assert(Maths.FEql(rotator.LengthSq, 1.0f), "Non-unit quaternion used for rotation");
-		//	return rotator * rotatee * Conjugate(rotator);
-		//}
 
 		/// <summary>Rotate a vector by a quaternion. This is an optimised version of: 'r = q*v*conj(q) for when v.w == 0'</summary>
 		public static v4 Rotate(quat lhs, v4 rhs)
@@ -336,6 +396,22 @@ namespace pr.maths
 				2*xy*rhs.x +   yy*rhs.y + 2*yz*rhs.z + 2*zw*rhs.x -   zz*rhs.y +   ww*rhs.y - 2*xw*rhs.z - xx*rhs.y,
 				2*xz*rhs.x + 2*yz*rhs.y +   zz*rhs.z - 2*yw*rhs.x -   yy*rhs.z + 2*xw*rhs.y -   xx*rhs.z + ww*rhs.z,
 				rhs.w);
+		}
+
+		/// <summary>
+		/// Return the average of a collection of rotations.
+		/// Note: this only really works if all the quaternions are relatively close together.
+		/// For two quaternions, prefer 'Slerp'</summary>
+		public static quat Average(IEnumerable<quat> rotations)
+		{
+			// Nicked from Unity3D
+			// This method is based on a simplified procedure described in this document:
+			// http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/20070017872_2007014421.pdf
+
+			// Ensure the quaternions are in the same hemisphere (since q == -q)
+			var first = rotations.First();
+			var avr = v4.Average(rotations.Select(q => v4.Dot4(q.xyzw, first.xyzw) >= 0 ? q.xyzw : -q.xyzw));
+			return Normalise(new quat(avr));
 		}
 
 		#region Random
@@ -384,6 +460,7 @@ namespace pr.maths
 #if PR_UNITTESTS
 namespace pr.unittests
 {
+	using System.Linq;
 	using extn;
 	using maths;
 
@@ -433,6 +510,19 @@ namespace pr.unittests
 					foreach (var r in angles)
 						Check(p, y, r);
 			#endif
+		}
+		[Test] public void Average()
+		{
+			var rng = new Random(1);
+			var ideal_mean = new quat(v4.Normalise3(new v4(1,1,1,0)), 0.5f);
+			var actual_mean = quat.Average(int_.Range(0, 1000).Select(i =>
+			{
+				var axis = v4.Normalise3(ideal_mean.Axis + v4.Random3(0.2f, 0f, rng));
+				var angle = rng.FloatC(ideal_mean.Angle, 0.2f);
+				var q = new quat(axis, angle);
+				return rng.Bool() ? q : -q;
+			}));
+			Assert.True(quat.FEql(ideal_mean, actual_mean, 0.01f));
 		}
 	}
 }

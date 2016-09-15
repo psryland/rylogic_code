@@ -696,6 +696,17 @@ namespace pr
 		return v4(cpm.y.z, cpm.z.x, cpm.x.y, 0.0f);
 	}
 
+	// Spherically interpolate between two affine transforms
+	template <typename = void> inline m4x4 pr_vectorcall Slerp(m4x4_cref lhs, m4x4_cref rhs, float frac)
+	{
+		assert(IsAffine(lhs));
+		assert(IsAffine(rhs));
+
+		auto q = Slerp(quat(lhs.rot), quat(rhs.rot), frac);
+		auto p = Lerp(lhs.pos, rhs.pos, frac);
+		return m4x4(q, p);
+	}
+
 	#pragma endregion
 }
 

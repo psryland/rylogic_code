@@ -198,6 +198,24 @@ namespace Tradee
 			OnSimReset();
 		}
 
+		/// <summary>Step the simulation backwards by 'count' step sizes</summary>
+		public void StepBack(int count)
+		{
+			// Go back one extra step, then step forward at the end
+			++count;
+			for (; count-- != 0; )
+				UtcNow -= StepSize;
+
+			// Remove any positions newer than 'UtcNow'
+			Positions.RemoveIf(x => x.EntryTime > UtcNow.Ticks);
+
+			// Invalidate all instruments
+			foreach (var instr in Model.MarketData.Instruments)
+				instr.InvalidateCachedData();
+
+			Step();
+		}
+
 		/// <summary>Step the simulation by one 'StepSize'</summary>
 		public void Step()
 		{

@@ -248,6 +248,12 @@ namespace pr
 				return false;
 			}
 
+			// Test for comm port errors
+			DWORD errors;
+			COMSTAT status;
+			if (!ClearCommError(m_handle, &errors, &status))
+				throw std::exception(FmtS("Failed to clear comm port error state. Error code %X", LastError()));
+
 			DWORD sent;
 			bool res;
 
@@ -318,6 +324,12 @@ namespace pr
 				assert(false && "Port not open for reading");
 				return false;
 			}
+
+			// Test for comm port errors
+			DWORD errors;
+			COMSTAT status;
+			if (!ClearCommError(m_handle, &errors, &status))
+				throw std::exception(FmtS("Failed to clear comm port error state. Error code %X", LastError()));
 
 			// Set the comms timeout
 			auto cto = CommTimeouts();

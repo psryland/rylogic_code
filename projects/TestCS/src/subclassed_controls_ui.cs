@@ -30,6 +30,8 @@ namespace TestCS
 		private BrowsePathUI m_browse_path;
 		private ValueBox m_vb_value;
 		private Label m_lbl_vb_value;
+		private AnimCheckBox m_abtn_switch;
+		private ImageList m_abtn_images;
 		private BindingListEx<Thing> m_bl1;
 
 		public SubclassedControlsUI()
@@ -174,17 +176,20 @@ namespace TestCS
 		private void InitializeComponent()
 		{
 			this.components = new System.ComponentModel.Container();
+			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SubclassedControlsUI));
 			this.m_ts = new System.Windows.Forms.ToolStrip();
 			this.m_btn_test = new System.Windows.Forms.Button();
 			this.m_timer = new System.Windows.Forms.Timer(this.components);
+			this.m_lbl_vb_value = new System.Windows.Forms.Label();
+			this.m_vb_value = new pr.gui.ValueBox();
 			this.m_browse_path = new pr.gui.BrowsePathUI();
 			this.m_pb = new pr.gui.TextProgressBar();
 			this.m_rtb = new pr.gui.RichTextBox();
 			this.m_lb = new pr.gui.ListBox();
 			this.m_dtp = new pr.gui.DateTimePicker();
 			this.m_cb = new pr.gui.ComboBox();
-			this.m_vb_value = new pr.gui.ValueBox();
-			this.m_lbl_vb_value = new System.Windows.Forms.Label();
+			this.m_abtn_switch = new pr.gui.AnimCheckBox();
+			this.m_abtn_images = new System.Windows.Forms.ImageList(this.components);
 			this.SuspendLayout();
 			// 
 			// m_ts
@@ -205,6 +210,23 @@ namespace TestCS
 			this.m_btn_test.Text = "Test";
 			this.m_btn_test.UseVisualStyleBackColor = true;
 			// 
+			// m_lbl_vb_value
+			// 
+			this.m_lbl_vb_value.AutoSize = true;
+			this.m_lbl_vb_value.Location = new System.Drawing.Point(245, 263);
+			this.m_lbl_vb_value.Name = "m_lbl_vb_value";
+			this.m_lbl_vb_value.Size = new System.Drawing.Size(33, 13);
+			this.m_lbl_vb_value.TabIndex = 9;
+			this.m_lbl_vb_value.Text = "value";
+			// 
+			// m_vb_value
+			// 
+			this.m_vb_value.Location = new System.Drawing.Point(93, 260);
+			this.m_vb_value.Name = "m_vb_value";
+			this.m_vb_value.Size = new System.Drawing.Size(146, 20);
+			this.m_vb_value.TabIndex = 8;
+			this.m_vb_value.Value = null;
+			// 
 			// m_browse_path
 			// 
 			this.m_browse_path.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
@@ -213,7 +235,7 @@ namespace TestCS
 			this.m_browse_path.Location = new System.Drawing.Point(12, 28);
 			this.m_browse_path.Name = "m_browse_path";
 			this.m_browse_path.Path = "";
-			this.m_browse_path.Size = new System.Drawing.Size(356, 40);
+			this.m_browse_path.Size = new System.Drawing.Size(356, 32);
 			this.m_browse_path.TabIndex = 7;
 			this.m_browse_path.Type = pr.gui.BrowsePathUI.EType.File;
 			// 
@@ -268,27 +290,33 @@ namespace TestCS
 			this.m_cb.Size = new System.Drawing.Size(121, 21);
 			this.m_cb.TabIndex = 0;
 			// 
-			// m_vb_value
+			// m_abtn_switch
 			// 
-			this.m_vb_value.Location = new System.Drawing.Point(93, 260);
-			this.m_vb_value.Name = "m_vb_value";
-			this.m_vb_value.Size = new System.Drawing.Size(146, 20);
-			this.m_vb_value.TabIndex = 8;
+			this.m_abtn_switch.ImageAlign = System.Drawing.ContentAlignment.TopCenter;
+			this.m_abtn_switch.ImageIndex = 0;
+			this.m_abtn_switch.ImageList = this.m_abtn_images;
+			this.m_abtn_switch.Location = new System.Drawing.Point(93, 286);
+			this.m_abtn_switch.Name = "m_abtn_switch";
+			this.m_abtn_switch.Size = new System.Drawing.Size(146, 64);
+			this.m_abtn_switch.TabIndex = 10;
+			this.m_abtn_switch.UseVisualStyleBackColor = true;
 			// 
-			// m_lbl_vb_value
+			// m_abtn_images
 			// 
-			this.m_lbl_vb_value.AutoSize = true;
-			this.m_lbl_vb_value.Location = new System.Drawing.Point(245, 263);
-			this.m_lbl_vb_value.Name = "m_lbl_vb_value";
-			this.m_lbl_vb_value.Size = new System.Drawing.Size(33, 13);
-			this.m_lbl_vb_value.TabIndex = 9;
-			this.m_lbl_vb_value.Text = "value";
+			this.m_abtn_images.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("m_abtn_images.ImageStream")));
+			this.m_abtn_images.TransparentColor = System.Drawing.Color.Transparent;
+			this.m_abtn_images.Images.SetKeyName(0, "slide_switch0.png");
+			this.m_abtn_images.Images.SetKeyName(1, "slide_switch1.png");
+			this.m_abtn_images.Images.SetKeyName(2, "slide_switch2.png");
+			this.m_abtn_images.Images.SetKeyName(3, "slide_switch3.png");
+			this.m_abtn_images.Images.SetKeyName(4, "slide_switch4.png");
 			// 
 			// SubclassedControlsUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(380, 415);
+			this.Controls.Add(this.m_abtn_switch);
 			this.Controls.Add(this.m_lbl_vb_value);
 			this.Controls.Add(this.m_vb_value);
 			this.Controls.Add(this.m_browse_path);

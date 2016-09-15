@@ -109,6 +109,12 @@ namespace pr
 		{
 			return static_cast<float>(dblc(avr, d));
 		}
+
+		// Generates a random true or false
+		bool boolean()
+		{
+			return (u32() % 2) != 0;
+		}
 	};
 
 	// Global static instance

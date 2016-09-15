@@ -10,6 +10,22 @@ namespace pr.extn
 {
 	public static class Random_
 	{
+		#region Booleans
+
+		/// <summary>Return a random boolean</summary>
+		public static bool Bool(this Random r)
+		{
+			return (r.Next() % 2) != 0;
+		}
+
+		/// <summary>An endless stream of random booleans</summary>
+		public static IEnumerable<bool> Bools(this Random r)
+		{
+			for (;;) yield return r.Bool();
+		}
+
+		#endregion
+
 		#region Bytes
 
 		/// <summary>Return a random byte</summary>
@@ -18,7 +34,7 @@ namespace pr.extn
 			return (byte)r.Next(0,256);
 		}
 
-		/// <summary>Return a random byte</summary>
+		/// <summary>An endless stream of random bytes</summary>
 		public static IEnumerable<byte> Bytes(this Random r)
 		{
 			for (;;) yield return r.Byte();

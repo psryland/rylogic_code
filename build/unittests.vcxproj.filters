@@ -954,6 +954,9 @@
     <ClInclude Include="..\include\pr\collision\col_box_vs_line.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\network\bluetooth_ui.h">
+      <Filter>pr\network</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

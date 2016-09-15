@@ -353,7 +353,13 @@ namespace pr
 			r[i] = Sign(v[i], zero_is_positive);
 		return r;
 	}
-	
+
+	// Divide 'a' by 'b' if 'b' is not equal to zero, otherwise return 'def'
+	template <typename T> T Div(T a, T b, T def = T())
+	{
+		return b != T() ? a/b : def;
+	}
+
 	// Truncate value
 	enum class ETruncType { TowardZero, ToNearest };
 	inline float Trunc(float x, ETruncType ty = ETruncType::TowardZero)

@@ -4,7 +4,9 @@
 //***************************************************
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using pr.extn;
 
@@ -185,6 +187,16 @@ namespace pr.maths
 			return	m3x4.IsOrthonormal(m.rot);
 		}
 
+		// Return true if 'mat' is an affine transform
+		public static bool IsAffine(m4x4 mat)
+		{
+			return
+				mat.x.w == 0.0f &&
+				mat.y.w == 0.0f &&
+				mat.z.w == 0.0f &&
+				mat.w.w == 1.0f;
+		}
+
 		/// <summary>Invert 'm' in-place (assuming an orthonormal matrix</summary>
 		public static void InvertFast(ref m4x4 m)
 		{
@@ -325,6 +337,25 @@ namespace pr.maths
 		public static m4x4 Scale(float sx, float sy, float sz, v4 translation)
 		{
 			return new m4x4(sx*v4.XAxis, sy*v4.YAxis, sz*v4.ZAxis, translation);
+		}
+
+		/// <summary>Spherically interpolate between two affine transforms</summary>
+		public static m4x4 Slerp(m4x4 lhs, m4x4 rhs, float frac)
+		{
+			Debug.Assert(IsAffine(lhs));
+			Debug.Assert(IsAffine(rhs));
+
+			var q = quat.Slerp(new quat(lhs.rot), new quat(rhs.rot), frac);
+			var p = v4.Lerp(lhs.pos, rhs.pos, frac);
+			return new m4x4(q, p);
+		}
+
+		/// <summary>Return the average of a collection of affine transforms</summary>
+		public static m4x4 Average(IEnumerable<m4x4> a2b)
+		{
+			var rot = m3x4.Average(a2b.Select(x => x.rot));
+			var pos = v4.Average(a2b.Select(x => x.pos));
+			return new m4x4(rot, pos);
 		}
 
 		#region Random

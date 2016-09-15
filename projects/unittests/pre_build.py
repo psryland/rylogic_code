@@ -60,8 +60,8 @@ try:
 				outf.write("#include \""+os.path.relpath(file, sd)+"\"\n")
 
 	# swap the tmp file with the file if difference
-	if Tools.DiffContent(outfile, tmpfile):
-		Tools.Copy(tmpfile, outfile)
+	# This sometimes fails because 'VS intellisense' (vcpkgsrv.exe) holds a lock on the source file
+	Tools.Copy(tmpfile, outfile, only_if_modified=True)
 
 	# delete the tmp file
 	os.remove(tmpfile)

@@ -73,6 +73,9 @@ namespace Tradee
 
 				// Load the known support and resistance levels
 				SupportResistLevels.AddRange(m_db.EnumRows<SnRLevel>(SqlExpr.GetSnRLevelData()));
+
+				// Set up the EMAs
+				ResetEma();
 			}
 		}
 		public Instrument(Instrument rhs, ETimeFrame time_frame)
@@ -83,6 +86,7 @@ namespace Tradee
 		public virtual void Dispose()
 		{
 			Debug.Assert(ReferenceCount == 0);
+			Ema = null;
 			TimeFrame = ETimeFrame.None;
 			SupportResistLevels = null;
 			Util.Dispose(ref m_db);
@@ -221,6 +225,54 @@ namespace Tradee
 			get { return +1; }
 		}
 
+		/// <summary>The candle with the latest timestamp for the current time frame</summary>
+		public Candle Latest
+		{
+			get
+			{
+				if (m_latest == null && TimeFrame != ETimeFrame.None)
+				{
+					// If the cache covers the latest candle, return it from the cache otherwise get it from the DB.
+					if (m_index_range.Counti != 0 && m_index_range.Endi == Count)
+					{
+						m_latest = m_cache.Back();
+					}
+					else
+					{
+						var ts = "[" + nameof(Candle.Timestamp) + "]";
+						var sql = Str.Build("select * from ",TimeFrame," where ",ts," <= ? order by ",ts," desc limit 1");
+						m_latest = m_db.EnumRows<Candle>(sql, 1, new object[] { Model.UtcNow.Ticks }).FirstOrDefault();
+					}
+				}
+				return m_latest ?? Candle.Default;
+			}
+		}
+		private Candle m_latest;
+
+		/// <summary>The candle with the oldest timestamp for the current time frame</summary>
+		public Candle Oldest
+		{
+			get
+			{
+				if (m_oldest == null && TimeFrame != ETimeFrame.None)
+				{
+					// If the cache covers the latest candle, return it from the cache otherwise get it from the DB.
+					if (m_index_range.Counti != 0 && m_index_range.Begini == 0)
+					{
+						m_oldest = m_cache.Front();
+					}
+					else
+					{
+						var ts = "[" + nameof(Candle.Timestamp) + "]";
+						var sql = Str.Build("select * from ",TimeFrame," where ",ts," < ? order by ",ts," asc limit 1");
+						m_oldest = m_db.EnumRows<Candle>(sql, 1, new object[] { Model.UtcNow.Ticks }).FirstOrDefault();
+					}
+				}
+				return m_oldest ?? Candle.Default;
+			}
+		}
+		private Candle m_oldest;
+
 		/// <summary>The raw data. Idx = -(Count+1) is the oldest, Idx = 0 is the latest</summary>
 		public Candle this[NegIdx neg_idx]
 		{
@@ -251,34 +303,6 @@ namespace Tradee
 				}
 
 				return m_cache[(int)pos_idx - m_index_range.Begini];
-			}
-		}
-
-		/// <summary>Enumerate all available candles in this instrument</summary>
-		IEnumerator<Candle> IEnumerable<Candle>.GetEnumerator()
-		{
-			for (PosIdx i = 0; i != Count; ++i)
-				yield return this[i];
-		}
-		IEnumerator IEnumerable.GetEnumerator()
-		{
-			return ((IEnumerable<Candle>)this).GetEnumerator();
-		}
-
-		/// <summary>The candle index range covered by 'm_cache'. 0 = Oldest, Count = Latest</summary>
-		private Range CachedIndexRange
-		{
-			[DebuggerStepThrough] get { return m_index_range; }
-		}
-		private Range m_index_range;
-
-		/// <summary>Return the time range covered by 'm_cache'. Note: Begin == oldest time, End == newest time</summary>
-		private Range CachedTimeRange
-		{
-			get
-			{
-				if (m_cache.Count == 0) return Range.Zero;
-				return new Range(m_cache.Front().Timestamp, m_cache.Back().Timestamp);
 			}
 		}
 
@@ -321,53 +345,31 @@ namespace Tradee
 			return new Range(idx_min, idx_max);
 		}
 
-		/// <summary>The candle with the latest timestamp</summary>
-		public Candle Latest
+		/// <summary>Enumerate the candles within an index range [idx_max,idx_max) (i.e. time-frame units)</summary>
+		public IEnumerable<Candle> CandleRange(NegIdx idx_min, NegIdx idx_max)
 		{
-			get
-			{
-				if (m_latest == null && TimeFrame != ETimeFrame.None)
-				{
-					// If the cache covers the latest candle, return it from the cache otherwise get it from the DB.
-					if (m_index_range.Counti != 0 && m_index_range.Endi == Count)
-					{
-						m_latest = m_cache.Back();
-					}
-					else
-					{
-						var ts = "[" + nameof(Candle.Timestamp) + "]";
-						var sql = Str.Build("select * from ",TimeFrame," where ",ts," <= ? order by ",ts," desc limit 1");
-						m_latest = m_db.EnumRows<Candle>(sql, 1, new object[] { Model.UtcNow.Ticks }).FirstOrDefault();
-					}
-				}
-				return m_latest ?? Candle.Default;
-			}
+			var r = IndexRange(idx_min, idx_max);
+			for (var i = r.Begini; i != r.Endi; ++i)
+				yield return this[i];
 		}
-		private Candle m_latest;
 
-		/// <summary>The candle with the oldest timestamp</summary>
-		public Candle Oldest
+		/// <summary>Enumerate the candles within a time range (given in time-frame units)</summary>
+		public IEnumerable<Candle> CandleRange(TFTime time_min, TFTime time_max)
 		{
-			get
-			{
-				if (m_oldest == null && TimeFrame != ETimeFrame.None)
-				{
-					// If the cache covers the latest candle, return it from the cache otherwise get it from the DB.
-					if (m_index_range.Counti != 0 && m_index_range.Begini == 0)
-					{
-						m_oldest = m_cache.Front();
-					}
-					else
-					{
-						var ts = "[" + nameof(Candle.Timestamp) + "]";
-						var sql = Str.Build("select * from ",TimeFrame," where ",ts," < ? order by ",ts," asc limit 1");
-						m_oldest = m_db.EnumRows<Candle>(sql, 1, new object[] { Model.UtcNow.Ticks }).FirstOrDefault();
-					}
-				}
-				return m_oldest ?? Candle.Default;
-			}
+			var range = TimeToIndexRange(time_min, time_max);
+			return CandleRange(range.Begini, range.Endi);
 		}
-		private Candle m_oldest;
+
+		/// <summary>Enumerate all available candles in this instrument</summary>
+		IEnumerator<Candle> IEnumerable<Candle>.GetEnumerator()
+		{
+			for (PosIdx i = 0; i != Count; ++i)
+				yield return this[i];
+		}
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return ((IEnumerable<Candle>)this).GetEnumerator();
+		}
 
 		/// <summary>The timestamp of the last time we received data (not necessarily the an update to 'Latest) (in UTC)</summary>
 		public DateTimeOffset LastUpdatedUTC
@@ -534,42 +536,6 @@ namespace Tradee
 			return idx + frac;
 		}
 
-		/// <summary>Enumerate the candles within an index range (i.e. time-frame units)</summary>
-		public IEnumerable<Candle> CandleRange(NegIdx idx_min, NegIdx idx_max)
-		{
-			var r = IndexRange(idx_min, idx_max);
-			for (var i = r.Begini; i != r.Endi; ++i)
-				yield return this[i];
-		}
-
-		/// <summary>Enumerate the candles within a time range (given in time-frame units)</summary>
-		public IEnumerable<Candle> CandleRange(TFTime time_min, TFTime time_max)
-		{
-			var range = TimeToIndexRange(time_min, time_max);
-			return CandleRange(range.Begini, range.Endi);
-		}
-
-		/// <summary>Invalidate the cached data</summary>
-		public void InvalidateCachedData()
-		{
-			m_cache.Clear();
-			m_index_range = Range.Zero;
-			m_impl_count  = null;
-			m_impl_total  = null;
-			m_latest      = null;
-			m_oldest      = null;
-		}
-
-		/// <summary>The cached price data database file location</summary>
-		public string DBFilepath
-		{
-			get { return CacheDBFilePath(Model.Settings, SymbolCode); }
-		}
-		public static string CacheDBFilePath(Settings settings, string sym)
-		{
-			return Path_.CombinePath(settings.General.PriceDataCacheDir, "PriceData_{0}.db".Fmt(sym));
-		}
-
 		/// <summary>Start data being sent for this instrument</summary>
 		public void StartDataRequest()
 		{
@@ -694,6 +660,234 @@ namespace Tradee
 			}
 		}
 
+		#region Candle Cache
+
+		/// <summary>The cached price data database file location</summary>
+		public string DBFilepath
+		{
+			get { return CacheDBFilePath(Model.Settings, SymbolCode); }
+		}
+		public static string CacheDBFilePath(Settings settings, string sym)
+		{
+			return Path_.CombinePath(settings.General.PriceDataCacheDir, "PriceData_{0}.db".Fmt(sym));
+		}
+
+		/// <summary>Invalidate the cached data</summary>
+		public void InvalidateCachedData()
+		{
+			m_cache.Clear();
+			m_index_range = Range.Zero;
+			m_impl_count  = null;
+			m_impl_total  = null;
+			m_latest      = null;
+			m_oldest      = null;
+		}
+
+		/// <summary>The candle index range covered by 'm_cache'. 0 = Oldest, Count = Latest</summary>
+		private Range CachedIndexRange
+		{
+			[DebuggerStepThrough] get { return m_index_range; }
+		}
+		private Range m_index_range;
+
+		/// <summary>Return the time range covered by 'm_cache'. Note: Begin == oldest time, End == newest time</summary>
+		private Range CachedTimeRange
+		{
+			get
+			{
+				if (m_cache.Count == 0) return Range.Zero;
+				return new Range(m_cache.Front().Timestamp, m_cache.Back().Timestamp);
+			}
+		}
+
+		#endregion
+
+		#region Trend
+
+		/// <summary>Return the true range for the candle at index position 'index'</summary>
+		public double TrueRange(NegIdx index)
+		{
+			// True Range is defined as the greater of:
+			// High of the current period less the low of the current period
+			// The high of the current period less the previous period’s closing value
+			// The low of the current period less the previous period’s closing value
+			if (index < FirstIdx)
+				return 0.0;
+			if (index < FirstIdx + 1)
+				return this[FirstIdx].TotalLength;
+
+			var A = this[index - 0];
+			var B = this[index - 1];
+			return Maths.Max(A.TotalLength, Math.Abs(A.High - B.Close), Math.Abs(A.Low - B.Close));
+		}
+
+		/// <summary>
+		/// Measures the trend over candles [index, index + count).
+		/// Returns a value on the range [-1,+1] (negative = bearish, positive = bullish)</summary>
+		public double MeasureTrend(NegIdx index, int count)
+		{
+			// Compress adjacent candles with the same sign into "group candles"
+			// Scan backwards from 'index+count-1'
+			// Scan back to the start of a group, even if it is earlier than 'index'
+			// so that strong trends are fairly represented.
+			// Scale by the ratio of body range to full range so that high volatility
+			// reduces trend strength
+
+			// The price range covered by the trend
+			var body_range = RangeF.Invalid;
+			var full_range = RangeF.Invalid;
+			var group = RangeF.Invalid;
+
+			var sign  = 0;   // The sign of the current block
+			var bulls = 0.0; // The net sum of the bullish blocks
+			var bears = 0.0; // The net sum of the bearish blocks
+			for (int i = index + count; i-- != FirstIdx;)
+			{
+				var candle = this[i];
+
+				// Find the range spanned.
+				body_range.Encompass(candle.Open);
+				body_range.Encompass(candle.Close);
+				full_range.Encompass(candle.High);
+				full_range.Encompass(candle.Low);
+
+				// Use candle bodies rather than wicks because wicks represent
+				// price changes that have been cancelled out therefore they don't
+				// contribute to the trend
+				if (sign == 0)
+				{
+					// Initialise on first candle
+					sign = candle.Sign;
+					group = candle.BodyRange;
+				}
+
+				// Calculate the group candle length
+				group.Encompass(candle.BodyLimit(-sign));
+
+				// If the trend changes direction add the group range to the appropriate accumulator
+				if (candle.Sign != sign)
+				{
+					// If this trend has extended beyond 'index', break
+					if (i < index) break;
+
+					// Otherwise accumulate and continue
+					if (sign < 0) bears += group.Size;
+					else          bulls += group.Size;
+
+					sign = candle.Sign;
+					group = candle.BodyRange;
+				}
+			}
+			if (sign < 0) bears += group.Size;
+			else          bulls += group.Size;
+
+			var trend_strength = Maths.Div(bulls - bears, bulls + bears);
+			var volatility = Maths.Div(body_range.Size, full_range.Size);
+			return trend_strength * volatility;
+		}
+
+		#endregion
+
+		#region EMA
+
+		/// <summary>Price EMA</summary>
+		public class EMA :ExpMovingAvr
+		{
+			public EMA(uint window_size)
+				:base(window_size)
+			{}
+
+			/// <summary>The gradient of the moving average</summary>
+			public double Slope
+			{
+				get;
+				private set;
+			}
+
+			/// <summary>Extend the mean to include the gradient of the mean</summary>
+			public override void Add(double value)
+			{
+				var prev = Mean;
+				base.Add(value);
+				Slope = (Mean - prev) / 1.0;
+			}
+		}
+
+		/// <summary>EMA of various window sizes for the current time frame</summary>
+		public EMA[] Ema
+		{
+			get { return m_ema; }
+			private set
+			{
+				if (m_ema == value) return;
+				if (m_ema != null)
+				{
+					DataChanged -= HandleCandleAddedForEma;
+					TimeFrameChanged -= HandleTimeFrameChangedForEma;
+				}
+				m_ema = value;
+				if (m_ema != null)
+				{
+					// Prime the EMAs
+					foreach (var ema in m_ema)
+					{
+						foreach (var candle in CandleRange(-(int)ema.WindowSize - 1, 0))
+							ema.Add(candle.Close);
+					}
+
+					// Whenever a new candle is added, add to the EMAs
+					DataChanged += HandleCandleAddedForEma;
+					TimeFrameChanged += HandleTimeFrameChangedForEma;
+				}
+			}
+		}
+		private EMA[] m_ema;
+
+		/// <summary>Initialise the EMAs</summary>
+		private void ResetEma()
+		{
+			var window_sizes = new uint[] { 5, 8, 13, 21, 34, 55, 89, 144, 233, };
+			Ema = window_sizes.Select(x => new EMA(x)).ToArray();
+		}
+
+		/// <summary>When the selected time frame changes, recreate the EMAs for the new time frame</summary>
+		private void HandleTimeFrameChangedForEma(object sender, EventArgs e)
+		{
+			ResetEma();
+		}
+
+		/// <summary>When a new candle is added, update the EMAs</summary>
+		private void HandleCandleAddedForEma(object sender, DataEventArgs e)
+		{
+			if (!e.NewCandle || Count <= 1) return;
+
+			var just_closed = this[-1];
+			foreach (var ema in m_ema)
+				ema.Add(just_closed.Close);
+		}
+
+		/// <summary>Gets the current trend strength based on </summary>
+		public double TrendStrength
+		{
+			get
+			{
+				return 0.0;
+			}
+		}
+
+		// Return ETrend strength based on the sign of the gradient, summed and normalised
+
+		// So client code can say "what's the trend strength?" and get a number on [-1,1]
+		// where 1 == strong up, 0 = no trend, -1 strong down
+
+		// Detecting ranging:
+		// Ratio of block sum of bulls verses block sum of bears over total range
+		// range of the sums
+
+		#endregion
+
+		#region Support and Resistance
+
 		/// <summary>Price levels that are support and resist levels in this instrument</summary>
 		public BindingSource<SnRLevel> SupportResistLevels
 		{
@@ -751,5 +945,7 @@ namespace Tradee
 			var snr = (SnRLevel)sender;
 			m_db.Execute(SqlExpr.UpdateSnRLevel(), 1, SqlExpr.UpdateSnRLevelParams(snr));
 		}
+
+		#endregion
 	}
 }

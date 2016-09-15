@@ -24,7 +24,7 @@ namespace Tradee
 		private Button m_btn_reset;
 		private Button m_btn_run_to_trade;
 		private ToolTip m_tt;
-		private Button m_btn_step;
+		private Button m_btn_step_fwd;
 		private pr.gui.ComboBox m_cb_step_size;
 		private Label m_lbl_step_size;
 		private Label m_lbl_sim_date;
@@ -44,6 +44,7 @@ namespace Tradee
 		private Panel m_panel_step_size;
 		private Timer m_timer_sim;
 		private NumericUpDown m_spinner_tbar_counts;
+		private Button m_btn_step_back;
 		private TextBox m_tb_sim_time;
 		#endregion
 
@@ -113,6 +114,14 @@ namespace Tradee
 		{
 			SimRunning = false;
 			Sim.Reset();
+			UpdateUI();
+		}
+
+		/// <summary>Go one step backward in time</summary>
+		public void SimStepBack()
+		{
+			Sim.StepBack(1);
+
 			UpdateUI();
 		}
 
@@ -224,9 +233,17 @@ namespace Tradee
 				SimRunning = !SimRunning;
 			};
 
+			// Step back
+			m_btn_step_back.ToolTip(m_tt, "Step one candle backward");
+			m_btn_step_back.Click += (s,a) =>
+			{
+				SimRunning = false;
+				SimStepBack();
+			};
+
 			// Step
-			m_btn_step.ToolTip(m_tt, "Step one candle forward");
-			m_btn_step.Click += (s,a) =>
+			m_btn_step_fwd.ToolTip(m_tt, "Step one candle forward");
+			m_btn_step_fwd.Click += (s,a) =>
 			{
 				SimRunning = false;
 				SimStep();
@@ -285,7 +302,7 @@ namespace Tradee
 			this.m_btn_run_to_trade = new System.Windows.Forms.Button();
 			this.m_btn_reset = new System.Windows.Forms.Button();
 			this.m_btn_run = new System.Windows.Forms.Button();
-			this.m_btn_step = new System.Windows.Forms.Button();
+			this.m_btn_step_fwd = new System.Windows.Forms.Button();
 			this.m_cb_step_size = new pr.gui.ComboBox();
 			this.m_lbl_step_size = new System.Windows.Forms.Label();
 			this.m_lbl_sim_date = new System.Windows.Forms.Label();
@@ -305,6 +322,7 @@ namespace Tradee
 			this.m_lbl_avr_profit = new System.Windows.Forms.Label();
 			this.m_panel_step_size = new System.Windows.Forms.Panel();
 			this.m_timer_sim = new System.Windows.Forms.Timer(this.components);
+			this.m_btn_step_back = new System.Windows.Forms.Button();
 			((System.ComponentModel.ISupportInitialize)(this.m_tbar_start_date)).BeginInit();
 			this.m_panel_sim_controls.SuspendLayout();
 			this.m_panel_initial_conditions.SuspendLayout();
@@ -336,19 +354,20 @@ namespace Tradee
 			// 
 			this.m_il.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("m_il.ImageStream")));
 			this.m_il.TransparentColor = System.Drawing.Color.Transparent;
-			this.m_il.Images.SetKeyName(0, "media_player_play.png");
-			this.m_il.Images.SetKeyName(1, "media_player_start.png");
+			this.m_il.Images.SetKeyName(0, "media_player_start.png");
+			this.m_il.Images.SetKeyName(1, "media_player_step_bck.png");
 			this.m_il.Images.SetKeyName(2, "media_player_step_fwd.png");
-			this.m_il.Images.SetKeyName(3, "media_player_pause.png");
-			this.m_il.Images.SetKeyName(4, "media_player_fwd.png");
+			this.m_il.Images.SetKeyName(3, "media_player_fwd.png");
+			this.m_il.Images.SetKeyName(4, "media_player_pause.png");
+			this.m_il.Images.SetKeyName(5, "media_player_play.png");
 			// 
 			// m_btn_run_to_trade
 			// 
 			this.m_btn_run_to_trade.ImageKey = "media_player_fwd.png";
 			this.m_btn_run_to_trade.ImageList = this.m_il;
-			this.m_btn_run_to_trade.Location = new System.Drawing.Point(122, 58);
+			this.m_btn_run_to_trade.Location = new System.Drawing.Point(144, 58);
 			this.m_btn_run_to_trade.Name = "m_btn_run_to_trade";
-			this.m_btn_run_to_trade.Size = new System.Drawing.Size(55, 46);
+			this.m_btn_run_to_trade.Size = new System.Drawing.Size(45, 46);
 			this.m_btn_run_to_trade.TabIndex = 5;
 			this.m_btn_run_to_trade.UseVisualStyleBackColor = true;
 			// 
@@ -356,9 +375,9 @@ namespace Tradee
 			// 
 			this.m_btn_reset.ImageKey = "media_player_start.png";
 			this.m_btn_reset.ImageList = this.m_il;
-			this.m_btn_reset.Location = new System.Drawing.Point(0, 57);
+			this.m_btn_reset.Location = new System.Drawing.Point(0, 58);
 			this.m_btn_reset.Name = "m_btn_reset";
-			this.m_btn_reset.Size = new System.Drawing.Size(55, 46);
+			this.m_btn_reset.Size = new System.Drawing.Size(45, 46);
 			this.m_btn_reset.TabIndex = 4;
 			this.m_btn_reset.UseVisualStyleBackColor = true;
 			// 
@@ -366,21 +385,21 @@ namespace Tradee
 			// 
 			this.m_btn_run.ImageKey = "media_player_play.png";
 			this.m_btn_run.ImageList = this.m_il;
-			this.m_btn_run.Location = new System.Drawing.Point(183, 58);
+			this.m_btn_run.Location = new System.Drawing.Point(192, 58);
 			this.m_btn_run.Name = "m_btn_run";
-			this.m_btn_run.Size = new System.Drawing.Size(55, 46);
+			this.m_btn_run.Size = new System.Drawing.Size(45, 46);
 			this.m_btn_run.TabIndex = 3;
 			this.m_btn_run.UseVisualStyleBackColor = true;
 			// 
-			// m_btn_step
+			// m_btn_step_fwd
 			// 
-			this.m_btn_step.ImageKey = "media_player_step_fwd.png";
-			this.m_btn_step.ImageList = this.m_il;
-			this.m_btn_step.Location = new System.Drawing.Point(61, 58);
-			this.m_btn_step.Name = "m_btn_step";
-			this.m_btn_step.Size = new System.Drawing.Size(55, 46);
-			this.m_btn_step.TabIndex = 6;
-			this.m_btn_step.UseVisualStyleBackColor = true;
+			this.m_btn_step_fwd.ImageKey = "media_player_step_fwd.png";
+			this.m_btn_step_fwd.ImageList = this.m_il;
+			this.m_btn_step_fwd.Location = new System.Drawing.Point(96, 58);
+			this.m_btn_step_fwd.Name = "m_btn_step_fwd";
+			this.m_btn_step_fwd.Size = new System.Drawing.Size(45, 46);
+			this.m_btn_step_fwd.TabIndex = 6;
+			this.m_btn_step_fwd.UseVisualStyleBackColor = true;
 			// 
 			// m_cb_step_size
 			// 
@@ -457,9 +476,10 @@ namespace Tradee
 			// 
 			// m_panel_sim_controls
 			// 
+			this.m_panel_sim_controls.Controls.Add(this.m_btn_step_back);
 			this.m_panel_sim_controls.Controls.Add(this.m_tb_step_rate);
 			this.m_panel_sim_controls.Controls.Add(this.m_lbl_step_rate);
-			this.m_panel_sim_controls.Controls.Add(this.m_btn_step);
+			this.m_panel_sim_controls.Controls.Add(this.m_btn_step_fwd);
 			this.m_panel_sim_controls.Controls.Add(this.m_btn_run_to_trade);
 			this.m_panel_sim_controls.Controls.Add(this.m_btn_reset);
 			this.m_panel_sim_controls.Controls.Add(this.m_btn_run);
@@ -566,6 +586,16 @@ namespace Tradee
 			this.m_panel_step_size.Name = "m_panel_step_size";
 			this.m_panel_step_size.Size = new System.Drawing.Size(238, 30);
 			this.m_panel_step_size.TabIndex = 19;
+			// 
+			// m_btn_step_back
+			// 
+			this.m_btn_step_back.ImageKey = "media_player_step_bck.png";
+			this.m_btn_step_back.ImageList = this.m_il;
+			this.m_btn_step_back.Location = new System.Drawing.Point(48, 58);
+			this.m_btn_step_back.Name = "m_btn_step_back";
+			this.m_btn_step_back.Size = new System.Drawing.Size(45, 46);
+			this.m_btn_step_back.TabIndex = 17;
+			this.m_btn_step_back.UseVisualStyleBackColor = true;
 			// 
 			// SimulationUI
 			// 

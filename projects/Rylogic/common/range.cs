@@ -21,6 +21,7 @@ namespace pr.common
 	// Note, there is no Range<T> because T cannot be constrained to value types with simple maths operators :-/
 
 	/// <summary>A range over [Begin,End)</summary>
+	[DebuggerDisplay("{Begin} {End} ({Size})")]
 	public struct Range :IEnumerable<long>
 	{
 		/// <summary>The value of the first element in the range</summary>
@@ -198,6 +199,7 @@ namespace pr.common
 	}
 
 	/// <summary>A floating point range over [Begin,End)</summary>
+	[DebuggerDisplay("{Begin} {End} ({Size})")]
 	public struct RangeF
 	{
 		/// <summary>The value of the first element in the range</summary>

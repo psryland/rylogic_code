@@ -30,11 +30,11 @@ namespace Tradee
 		PlaceMarketOrder,
 		//NEW_MSG_HERE
 	}
-	public enum ETradeType
+	[Flags] public enum ETradeType
 	{
 		None  = 0,
-		Long  = 1,
-		Short = 2,
+		Long  = 1 << 0,
+		Short = 1 << 1,
 	}
 	public enum ETimeFrame
 	{
@@ -91,14 +91,6 @@ namespace Tradee
 
 		/// <summary>Operation timed out.</summary>
 		[Description("Operation timed out.")] Timeout,
-	}
-	public enum ECandleType
-	{
-		Other,
-		Hammer,
-		InvHammer,
-		SpinningTop,
-		Engulging,
 	}
 	#endregion
 

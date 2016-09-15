@@ -4,6 +4,7 @@
 //***************************************************
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using pr.extn;
@@ -194,21 +195,69 @@ namespace pr.maths
 		public readonly static v4 MinValue = new v4(float.MinValue, float.MinValue, float.MinValue, float.MinValue);
 		public readonly static v4 MaxValue = new v4(float.MaxValue, float.MaxValue, float.MaxValue, float.MaxValue);
 
-		// Functions
-		public static v4 operator + (v4 lhs, v4 rhs)           { return new v4(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w); }
-		public static v4 operator - (v4 lhs, v4 rhs)           { return new v4(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w); }
-		public static v4 operator * (v4 lhs, float rhs)        { return new v4(lhs.x * rhs, lhs.y * rhs, lhs.z * rhs, lhs.w * rhs); }
-		public static v4 operator * (float lhs, v4 rhs)        { return new v4(lhs * rhs.x, lhs * rhs.y, lhs * rhs.z, lhs * rhs.w); }
-		public static v4 operator / (v4 lhs, float rhs)        { return new v4(lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs); }
-		public static v4 operator + (v4 vec)                   { return vec; }
-		public static v4 operator - (v4 vec)                   { return new v4(-vec.x, -vec.y, -vec.z, -vec.w); }
+		/// <summary>Operators</summary>
+		public static v4 operator + (v4 vec)
+		{
+			return vec;
+		}
+		public static v4 operator - (v4 vec)
+		{
+			return new v4(-vec.x, -vec.y, -vec.z, -vec.w);
+		}
+		public static v4 operator + (v4 lhs, v4 rhs)
+		{
+			return new v4(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w);
+		}
+		public static v4 operator - (v4 lhs, v4 rhs)
+		{
+			return new v4(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w);
+		}
+		public static v4 operator * (v4 lhs, float rhs)
+		{
+			return new v4(lhs.x * rhs, lhs.y * rhs, lhs.z * rhs, lhs.w * rhs);
+		}
+		public static v4 operator * (float lhs, v4 rhs)
+		{
+			return new v4(lhs * rhs.x, lhs * rhs.y, lhs * rhs.z, lhs * rhs.w);
+		}
+		public static v4 operator * (v4 lhs, v4 rhs)
+		{
+			// Not really sound mathematically, but too useful not to have
+			return new v4(lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z, lhs.w * rhs.w);
+		}
+		public static v4 operator / (v4 lhs, float rhs)
+		{
+			return new v4(lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs);
+		}
+		public static v4 operator / (v4 lhs, v4 rhs)
+		{
+			return new v4(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z, lhs.w / rhs.w);
+		}
 
-		public static bool FEql2(v4 lhs, v4 rhs, float tol)    { return Maths.FEql(lhs.x, rhs.x, tol) && Maths.FEql(lhs.y, rhs.y, tol); }
-		public static bool FEql3(v4 lhs, v4 rhs, float tol)    { return Maths.FEql(lhs.x, rhs.x, tol) && Maths.FEql(lhs.y, rhs.y, tol) && Maths.FEql(lhs.z, rhs.z, tol); }
-		public static bool FEql4(v4 lhs, v4 rhs, float tol)    { return Maths.FEql(lhs.x, rhs.x, tol) && Maths.FEql(lhs.y, rhs.y, tol) && Maths.FEql(lhs.z, rhs.z, tol) && Maths.FEql(lhs.w, rhs.w, tol); }
-		public static bool FEql2(v4 lhs, v4 rhs)               { return FEql2(lhs, rhs, Maths.TinyF); }
-		public static bool FEql3(v4 lhs, v4 rhs)               { return FEql3(lhs, rhs, Maths.TinyF); }
-		public static bool FEql4(v4 lhs, v4 rhs)               { return FEql4(lhs, rhs, Maths.TinyF); }
+		public static bool FEql2(v4 lhs, v4 rhs, float tol)
+		{
+			return Maths.FEql(lhs.x, rhs.x, tol) && Maths.FEql(lhs.y, rhs.y, tol);
+		}
+		public static bool FEql3(v4 lhs, v4 rhs, float tol)
+		{
+			return Maths.FEql(lhs.x, rhs.x, tol) && Maths.FEql(lhs.y, rhs.y, tol) && Maths.FEql(lhs.z, rhs.z, tol);
+		}
+		public static bool FEql4(v4 lhs, v4 rhs, float tol)
+		{
+			return Maths.FEql(lhs.x, rhs.x, tol) && Maths.FEql(lhs.y, rhs.y, tol) && Maths.FEql(lhs.z, rhs.z, tol) && Maths.FEql(lhs.w, rhs.w, tol);
+		}
+		public static bool FEql2(v4 lhs, v4 rhs)
+		{
+			return FEql2(lhs, rhs, Maths.TinyF);
+		}
+		public static bool FEql3(v4 lhs, v4 rhs)
+		{
+			return FEql3(lhs, rhs, Maths.TinyF);
+		}
+		public static bool FEql4(v4 lhs, v4 rhs)
+		{
+			return FEql4(lhs, rhs, Maths.TinyF);
+		}
 
 		/// <summary>Return a vector containing the maximum components</summary>
 		public static v4 Max(v4 x, params v4[] vecs)
@@ -269,7 +318,6 @@ namespace pr.maths
 		public static float Dot4(v4 lhs, v4 rhs)               { return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w; }
 		public static v4    Cross3(v4 lhs, v4 rhs)             { return new v4(lhs.y * rhs.z - lhs.z * rhs.y, lhs.z * rhs.x - lhs.x * rhs.z, lhs.x * rhs.y - lhs.y * rhs.x, 0.0f); }
 		public static float Triple3(v4 a, v4 b, v4 c)          { return Dot3(a, Cross3(b, c)); }
-		public static v4    ComponentDivide(v4 lhs, v4 rhs)    { return new v4(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z, lhs.w / rhs.w); }
 
 		/// <summary>True if 'lhs' and 'rhs' are parallel</summary>
 		public static bool Parallel(v4 lhs, v4 rhs, float tol)
@@ -306,26 +354,38 @@ namespace pr.maths
 			v *= vec.Length3 / v.Length3;
 			return v;
 		}
+
+		/// <summary>Returns a 3 bit bitmask of the octant the vector is in where X = 0x1, Y = 0x2, Z = 0x4</summary>
 		public static uint Octant(v4 vec)
 		{
-			// Returns a 3 bit bitmask of the octant the vector is in where X = 0x1, Y = 0x2, Z = 0x4    
 			return (uint)(((int)Maths.SignF(vec.x >= 0.0f)) | ((int)Maths.SignF(vec.y >= 0.0f) << 1) | ((int)Maths.SignF(vec.z >= 0.0f) << 2));
 		}
-		public static v4 Rotate(v4 vec, v4 axis_norm, float angle)
-		{
-			// Rotate 'vec' about 'axis_norm' by 'angle'
-			return m3x4.Rotation(axis_norm, angle) * vec;
-		}
+
+		/// <summary>Return the cosine of the angle between two vectors</summary>
 		public static float CosAngle3(v4 lhs, v4 rhs)
 		{
-			// Return the cosine of the angle between two vectors
 			Debug.Assert(lhs.Length3Sq != 0 && rhs.Length3Sq != 0, "CosAngle undefined for zero vectors");
 			return Maths.Clamp(Dot3(lhs,rhs) / (float)Math.Sqrt(lhs.Length3Sq * rhs.Length3Sq), -1f, 1f);
 		}
+
+		/// <summary>Return the angle between two vectors</summary>
 		public static float Angle3(v4 lhs, v4 rhs)
 		{
-			// Return the angle between two vectors
 			return (float)Math.Acos(CosAngle3(lhs, rhs));
+		}
+
+		/// <summary>Return the average of a collection of vectors</summary>
+		public static v4 Average(IEnumerable<v4> vecs)
+		{
+			var acc = Zero;
+			var count = 0;
+			foreach (var v in vecs)
+			{
+				acc += v;
+				++count;
+			}
+			if (count == 0) throw new Exception("Cannot average zero items");
+			return acc / count;
 		}
 
 		#region Parse

@@ -591,7 +591,7 @@ namespace pr.common
 				break;
 			case ESettingsEvent.LoadingSettings:
 			case ESettingsEvent.SavingSettings:
-				Log.Debug(this, msg);
+				//Log.Debug(this, msg);
 				break;
 			case ESettingsEvent.NoVersion:
 				Log.Info(this, msg);

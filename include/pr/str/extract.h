@@ -296,10 +296,10 @@ namespace pr
 			{
 				if (*wsrc == L'0')
 				{
-					++wsrc; // Don't need to add leading zeros
+					++wsrc;
 					if      (*wsrc == L'x' || *wsrc == L'X') { radix = 16; ++wsrc; }
 					else if (*wsrc == L'b' || *wsrc == L'B') { radix =  2; ++wsrc; }
-					else                                     { radix =  8; }
+					else                                     { radix =  8; str[i++] = L'0'; }
 				}
 				else if (*wsrc >= L'1' && *wsrc <= L'9')
 				{
@@ -312,11 +312,21 @@ namespace pr
 			}
 			else if (radix == 2)
 			{
-				if (*wsrc == L'0') { ++wsrc; wsrc += int(*wsrc == L'b' || *wsrc == L'B'); }
+				if (*wsrc == '0')
+				{
+					++wsrc;
+					if (*wsrc == 'b' || *wsrc == 'B') ++wsrc;
+					else str[i++] = L'0';
+				}
 			}
 			else if (radix == 16)
 			{
-				if (*wsrc == '0') { ++wsrc; wsrc += int(*wsrc == L'x' || *wsrc == L'X'); }
+				if (*wsrc == '0')
+				{
+					++wsrc;
+					if (*wsrc == 'x' || *wsrc == 'X') ++wsrc;
+					else str[i++] = L'0';
+				}
 			}
 
 			// Read the digits
@@ -329,6 +339,10 @@ namespace pr
 				if (hex_ch >= 0 && hex_ch <= 25 && hex_ch + 10 < radix) { str[i++] = wchar_t(ch); continue; }
 				break;
 			}
+
+			// Could not extract any number characters
+			if (i == 0)
+				return false;
 
 			// Convert the string to an integer.
 			// Careful here. if you're reading a number larger than the max value for 'Int' you'll get MAX_VALUE
@@ -438,6 +452,10 @@ namespace pr
 					str[i++] = *wsrc;
 				}
 			}
+
+			// Could not extract any number characters
+			if (i == 0)
+				return false;
 
 			// Convert the string to a real
 			errno = 0;
@@ -632,6 +650,10 @@ namespace pr
 				ll = *wsrc == L'l' || *wsrc == L'L';
 				if (ll) ++wsrc;
 			}
+
+			// Could not extract any number characters
+			if (i == 0)
+				return false;
 
 			// Convert the string to a value
 			errno = 0;

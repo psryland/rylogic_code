@@ -78,6 +78,12 @@ namespace pr
 			return arr[i];
 		}
 
+		// Convert to a 4x4 matrix with zero translation
+		template <typename = void> Mat4x4 m4x4() const
+		{
+			return Mat4x4(*this, v4Origin);
+		}
+
 		// Get/Set by row or column. Note: x,y,z are column vectors
 		v4 col(int i) const
 		{
@@ -699,6 +705,11 @@ namespace pr
 		return v4(cpm.y.z, cpm.z.x, cpm.x.y, 0.0f);
 	}
 
+	// Spherically interpolate between two rotations
+	template <typename = void> inline m3x4 pr_vectorcall Slerp(m3x4_cref lhs, m3x4_cref rhs, float frac)
+	{
+		return m3x4(Slerp(quat(lhs), quat(rhs), frac));
+	}
 	#pragma endregion
 }
 

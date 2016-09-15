@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
+using pr.attrib;
+using pr.extn;
 using pr.maths;
 using pr.util;
 using pr.win32;
@@ -13,6 +17,104 @@ namespace pr.common
 		public const int TimeoutQuantumMS = 1280;
 		public const int DefaultTimeoutMS = TimeoutQuantumMS * 2;
 
+		public enum EClassOfDeviceMajor
+		{
+			[Assoc("img", 0)] Miscellaneous = 0x00,
+			[Assoc("img", 1)] Computer      = 0x01,
+			[Assoc("img", 2)] Phone         = 0x02,
+			[Assoc("img", 3)] LanAccess     = 0x03,
+			[Assoc("img", 4)] Audio         = 0x04,
+			[Assoc("img", 5)] Peripheral    = 0x05,
+			[Assoc("img", 6)] Imaging       = 0x06,
+			[Assoc("img", 7)] Wearable      = 0x07,
+			[Assoc("img", 0)] Toy           = 0x08,
+			[Assoc("img", 0)] Unclassified  = 0x1F,
+		}
+		public enum EClassOfDeviceMinor
+		{
+			// Computer
+			Computer_Unclassified = 0x00,
+			Computer_Desktop      = 0x01,
+			Computer_Server       = 0x02,
+			Computer_Laptop       = 0x03,
+			Computer_Handheld     = 0x04,
+			Computer_Palm         = 0x05,
+			Computer_Wearable     = 0x06,
+
+			// Phone
+			Phone_Unclassified     = 0x00,
+			Phone_Cellular         = 0x01,
+			Phone_Cordless         = 0x02,
+			Phone_Smart            = 0x03,
+			Phone_WiredModem       = 0x04,
+			Phone_CommonISDNAccess = 0x05,
+
+			// Audio
+			Audio_Unclassified             = 0x00,
+			Audio_Headset                  = 0x01,
+			Audio_HandsFree                = 0x02,
+			Audio_HeadsetHandsFree         = 0x03,
+			Audio_Microphone               = 0x04,
+			Audio_LoudSpeaker              = 0x05,
+			Audio_Headphones               = 0x06,
+			Audio_PortableAudio            = 0x07,
+			Audio_CarAudio                 = 0x08,
+			Audio_SetTopBox                = 0x09,
+			Audio_HifiAudio                = 0x0a,
+			Audio_VCR                      = 0x0b,
+			Audio_VideoCamera              = 0x0c,
+			Audio_Camcorder                = 0x0d,
+			Audio_VideoMonitor             = 0x0e,
+			Audio_VideoDisplayLoudSpeaker  = 0x0F,
+			Audio_VideoDisplayConferencing = 0x10,
+			Audio_GamingToy                = 0x12,
+
+			// Peripheral
+			Peripheral_NoCategory      = 0x00,
+			Peripheral_Unclassified    = 0x00,
+			Peripheral_Joystick        = 0x01,
+			Peripheral_Gamepad         = 0x02,
+			Peripheral_RemoteControl   = 0x03,
+			Peripheral_Sensing         = 0x04,
+			Peripheral_DigitizerTablet = 0x05,
+			Peripheral_CardReader      = 0x06,
+			Peripheral_KeyboardMask    = 0x10,
+			Peripheral_PointerMask     = 0x20,
+
+			// Imaging
+			Imaging_DisplayMask = 0x04,
+			Imaging_CameraMask  = 0x08,
+			Imaging_ScannerMask = 0x10,
+			Imaging_PrinterMask = 0x20,
+
+			// Wearable
+			Wearable_WristWatch = 0x01,
+			Wearable_Pager      = 0x02,
+			Wearable_Jacket     = 0x03,
+			Wearable_Helmet     = 0x04,
+			Wearable_Glasses    = 0x05,
+
+			// Toy
+			Toy_Robot            = 0x01,
+			Toy_Vehicle          = 0x02,
+			Toy_DollActionFigure = 0x03,
+			Toy_Controller       = 0x04,
+			Toy_Game             = 0x05,
+
+			//// LAN Access - The minor CODs for LAN Access uses different constrants:
+			//COD_LAN_ACCESS_BIT_OFFSET = 5
+			//COD_LAN_MINOR_MASK = 0x00001C
+			//COD_LAN_ACCESS_MASK = 0x0000E0
+			//COD_LAN_MINOR_UNCLASSIFIED = 0x00
+			//COD_LAN_ACCESS_0_USED = 0x00
+			//COD_LAN_ACCESS_17_USED = 0x01
+			//COD_LAN_ACCESS_33_USED = 0x02
+			//COD_LAN_ACCESS_50_USED = 0x03
+			//COD_LAN_ACCESS_67_USED = 0x04
+			//COD_LAN_ACCESS_83_USED = 0x05
+			//COD_LAN_ACCESS_99_USED = 0x06
+			//COD_LAN_ACCESS_FULL = 0x07
+		}
 		[Flags] public enum EOptions
 		{
 			None                = 0,
@@ -20,31 +122,142 @@ namespace pr.common
 			ReturnRemembered    = 1 << 1,
 			ReturnUnknown       = 1 << 2,
 			ReturnConnected     = 1 << 3,
-			ReturnAll           = ~None,
+			ReturnAll           = 
+				ReturnAuthenticated |
+				ReturnRemembered    |
+				ReturnUnknown       |
+				ReturnConnected     ,
 		}
 
 		/// <summary>Bluetooth radio info</summary>
+		[DebuggerDisplay("{Name} {Connectible} {Discoverable}")]
 		public class Radio
 		{
-			internal Radio(BLUETOOTH_RADIO_INFO info)
+			private BLUETOOTH_RADIO_INFO m_info;
+
+			public Radio(IntPtr handle = default(IntPtr))
 			{
-				Name = info.szName;
+				Handle = handle;
+				if (handle != IntPtr.Zero)
+				{
+					m_info = BLUETOOTH_RADIO_INFO.New();
+					BluetoothGetRadioInfo(handle, ref m_info);
+				}
 			}
 
-			/// <summary>The name of the bluetooth device</summary>
-			public string Name { get; private set; }
+			/// <summary>System handle</summary>
+			public IntPtr Handle { get; private set; }
+
+			/// <summary>The name of the bluetooth radio</summary>
+			public string Name
+			{
+				get { return Handle != IntPtr.Zero ? m_info.szName : "All Radios"; }
+			}
+
+			/// <summary>Enable/Disable connect-ability for this radio</summary>
+			public bool Connectible
+			{
+				get { return BluetoothIsConnectable(Handle); }
+				set { BluetoothEnableIncomingConnections(Handle, value); }
+			}
+
+			/// <summary>Enable/Disable discovery for this radio</summary>
+			public bool Discoverable
+			{
+				get { return BluetoothIsDiscoverable(Handle); }
+				set { BluetoothEnableDiscovery(Handle, value); }
+			}
 		}
 
 		/// <summary>Bluetooth device info</summary>
+		[DebuggerDisplay("{Name} {ClassOfDeviceMajor} {StatusString}")]
 		public class Device
 		{
+			private const uint CoDServiceMask      = 0xFFE000;
+			private const uint CoDMajorMask        = 0x001F00;
+			private const uint CoDMinorMask        = 0x0000FC;
+			private const int  CoDMinorBitOffset   = 2;
+			private const int  CoDMajorBitOffset   = 8 * 1;
+			private const int  CoDServiceBitOffset = 8 * 1 + 5;
+			private BLUETOOTH_DEVICE_INFO m_info;
+
 			internal Device(BLUETOOTH_DEVICE_INFO info)
 			{
-				Name = info.szName;
+				m_info = info;
 			}
 
 			/// <summary>The name of the bluetooth device</summary>
-			public string Name { get; private set; }
+			public string Name
+			{
+				get { return m_info.szName; }
+			}
+
+			/// <summary>Major class of this device</summary>
+			public EClassOfDeviceMajor ClassOfDeviceMajor
+			{
+				get { return (EClassOfDeviceMajor)((CoD & CoDMajorMask) >> CoDMajorBitOffset); }
+			}
+
+			/// <summary>Minor class of this device</summary>
+			public EClassOfDeviceMinor ClassOfDeviceMinor
+			{
+				get { return (EClassOfDeviceMinor)((CoD & CoDMinorMask) >> CoDMinorBitOffset); }
+			}
+
+			/// <summary>Raw class of device value</summary>
+			public uint CoD
+			{
+				get { return m_info.ulClassofDevice; }
+			}
+
+			/// <summary>True if this device is currently connected/in use</summary>
+			public bool	IsConnected
+			{
+				get { return m_info.fConnected != 0; }
+			}
+
+			/// <summary>Device authenticated/paired/bonded</summary>
+			public bool IsPaired
+			{
+				get { return m_info.fAuthenticated != 0; }
+			}
+
+			/// <summary>True if the device is remembered</summary>
+			public bool IsRemembered
+			{
+				get { return m_info.fRemembered != 0; }
+			}
+
+			/// <summary>A string describing the device's current state</summary>
+			public string StatusString
+			{
+				get
+				{
+					var s = new StringBuilder();
+					if (IsConnected ) s.Append(s.Length != 0 ? ", " : string.Empty).Append("Connected" );
+					if (IsPaired    ) s.Append(s.Length != 0 ? ", " : string.Empty).Append("Paired"    );
+					if (IsRemembered) s.Append(s.Length != 0 ? ", " : string.Empty).Append("Remembered");
+					if (s.Length == 0) s.Append("Unknown");
+					return s.ToString();
+				}
+			}
+
+			/// <summary>The time that the device was last detected</summary>
+			public DateTimeOffset LastSeen
+			{
+				get { return DateTimeOffset_.FromSystemTime(m_info.stLastSeen); }
+			}
+
+			/// <summary>Last time the device was used for other than RNR, inquiry, or SDP</summary>
+			public DateTimeOffset LastUsed
+			{
+				get { return DateTimeOffset_.FromSystemTime(m_info.stLastUsed); }
+			}
+
+			/// <summary>Pair this device to the PC</summary>
+			public void Pair()
+			{
+			}
 		}
 
 		/// <summary>Enumerable bluetooth radios on the system</summary>
@@ -59,9 +272,7 @@ namespace pr.common
 				find = BluetoothFindFirstRadio(ref parms, out radio);
 				if (find != IntPtr.Zero)
 				{
-					var info = BLUETOOTH_RADIO_INFO.New();
-					BluetoothGetRadioInfo(radio, ref info);
-					yield return new Radio(info);
+					yield return new Radio(radio);
 				}
 				else
 				{
@@ -78,9 +289,7 @@ namespace pr.common
 				{
 					if (BluetoothFindNextRadio(find, out radio))
 					{
-						var info = BLUETOOTH_RADIO_INFO.New();
-						BluetoothGetRadioInfo(radio, ref info);
-						yield return new Radio(info);
+						yield return new Radio(radio);
 					}
 					else
 					{
@@ -145,8 +354,52 @@ namespace pr.common
 			}
 		}
 
+		///// <summary>Enable bluetooth on this system</summary>
+		//public static bool Enabled
+		//{
+		//	get
+		//	{
+		//		int enabled = 0;
+		//		var r = IsBluetoothRadioEnabled(ref enabled);
+		//		if (r != Win32.ERROR_SUCCESS)
+		//			throw new Win32Exception(r);
+
+		//		return enabled != 0;
+		//	}
+		//	set
+		//	{
+		//		var r = BluetoothEnableRadio(value);
+		//		if (r != Win32.ERROR_SUCCESS)
+		//			throw new Win32Exception(r);
+		//	}
+		//}
+
+		/// <summary>Enable incoming connections on all BT radios. Returns true if any radio changes state</summary>
+		public static bool Connectable
+		{
+			get { return BluetoothIsConnectable(IntPtr.Zero); }
+			set
+			{
+				var r = BluetoothEnableIncomingConnections(IntPtr.Zero, value);
+				if (r) System.Diagnostics.Debug.Write("Bluetooth radios {0} incoming connections".Fmt(value ? "listening for" : "ignoring"));
+				else   System.Diagnostics.Debug.Write("Bluetooth connectivity unchanged");
+			}
+		}
+
+		/// <summary>True if this PC is discoverable</summary>
+		public static bool Discoverable
+		{
+			get { return BluetoothIsDiscoverable(IntPtr.Zero); }
+			set
+			{
+				var r = BluetoothEnableDiscovery(IntPtr.Zero, value);
+				if (r) System.Diagnostics.Debug.Write("Bluetooth discovery {0}".Fmt(value ? "enabled" : "disabled"));
+				else   System.Diagnostics.Debug.Write("Bluetooth discovery unchanged");
+			}
+		}
+
 		#region Interop
-		private const string Dll = "irprops.cpl";
+		private const string Dll = "Bthprops.cpl";//"irprops.cpl";
 		private const int BLUETOOTH_MAX_NAME_SIZE = 248;
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -203,8 +456,8 @@ namespace pr.common
 		internal struct BLUETOOTH_DEVICE_INFO
 		{
 			public uint dwSize;                 //  size, in bytes, of this structure - must be the sizeof(BLUETOOTH_DEVICE_INFO)
-			public uint pad_;                 // for 8 byte alignment of 'Address'
-			public UInt64 Address;   //  Bluetooth address
+			public uint pad_;                   // for 8 byte alignment of 'Address'
+			public UInt64 Address;              //  Bluetooth address
 			public uint ulClassofDevice;        //  Bluetooth "Class of Device"
 			public int fConnected;              //  Device connected/in use
 			public int fRemembered;             //  Device remembered
@@ -234,6 +487,24 @@ namespace pr.common
 				return new BLUETOOTH_ADDRESS{rgBytes = new byte[6]};
 			}
 		}
+
+		[DllImport(Dll, SetLastError = true, CharSet = CharSet.Auto)]
+		private static extern int IsBluetoothRadioEnabled(ref int enabled);
+
+		[DllImport(Dll, SetLastError = true, CharSet = CharSet.Auto)]
+		private static extern bool BluetoothIsConnectable(IntPtr hRadio);
+
+		[DllImport(Dll, SetLastError = true, CharSet = CharSet.Auto)]
+		private static extern bool BluetoothIsDiscoverable(IntPtr hRadio);
+
+		[DllImport(Dll, SetLastError = true, CharSet = CharSet.Auto)]
+		private static extern int BluetoothEnableRadio(bool fEnable);
+
+		[DllImport(Dll, SetLastError = true, CharSet = CharSet.Auto)]
+		private static extern bool BluetoothEnableIncomingConnections(IntPtr hRadio, bool fEnable);
+
+		[DllImport(Dll, SetLastError = true, CharSet = CharSet.Auto)]
+		private static extern bool BluetoothEnableDiscovery(IntPtr hRadio, bool fEnable);
 
 		[DllImport(Dll, SetLastError = true, CharSet = CharSet.Auto)]
 		private static extern uint BluetoothGetRadioInfo(IntPtr hRadio, ref BLUETOOTH_RADIO_INFO pRadioInfo);

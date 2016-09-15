@@ -3427,7 +3427,7 @@ namespace pr.gui
 				{
 					if (e.RowIndex == -1)
 					{
-						m_ofs = DrawingEx.Subtract(MousePosition, TopLevelControl.Location);
+						m_ofs = Drawing_.Subtract(MousePosition, TopLevelControl.Location);
 						Capture = true;
 					}
 					base.OnCellMouseDown(e);

@@ -11,59 +11,115 @@ namespace pr.maths
 	/// <summary>Running Average</summary>
 	public class Avr
 	{
-		// let: D(k) = X(k) - avr(k-1)           => X(k) = D(k) + avr(k-1)
-		//  avr(k-1) = SUM{X(k-1)} / (k-1)       => SUM{X(k-1)} = (k-1)*avr(k-1)
-		//  avr(k)   = (SUM{X(k-1)} + X(k)) / k
-		//           = ((k-1)*avr(k-1) + D(k) + avr(k-1)) / k
-		//           = (k*avr(k-1) - avr(k-1) + D(k) + avr(k-1)) / k
-		//           = (k*avr(k-1) + D(k)) / k
-		//           = avr(k-1) + D(k) / k
-		// Running standard variance:
-		//  var(k)   = (1/(k-1)) * SUM{(X(k) - avr(k))²}
-		// (k-1)*var(k) = SUM{(X(k) - avr(k))²}
-		//              = SUM{(X(k)² - 2*avr(k)*X(k) + avr(k)²}
-		//              = SUM{X(k)²} - 2*avr(k)*SUM{X(k)} + k*avr(k)²
-		//              = SUM{X(k)²} - 2*avr(k)*k*avr(k) + k*avr(k)²
-		//              = SUM{X(k)²} - 2*k*avr(k)² + k*avr(k)²
-		//              = SUM{X(k)²} - k*avr(k)²
-		// so:
-		//  (k-2)*var(k-1) = SUM{X(k-1)²} - (k-1)*avr(k-1)²
-		// taking:
-		//  (k-1)*var(k) - (k-2)*var(k-1) = SUM{X(k)²} - k*avr(k)² - SUM{X(k-1)²} + (k-1)*avr(k-1)²
-		//                                = X(k)² - k*avr(k)² + (k-1)*avr(k-1)²
-		//                                = X(k)²                               - k*(avr(k-1) + D(k)/k)²                       + k*avr(k-1)² - avr(k-1)²
-		//                                = (D(k) + avr(k-1))²                  - k*(avr(k-1) + D(k)/k)²                       + k*avr(k-1)² - avr(k-1)²
-		//                                = D(k)² + 2*D(k)*avr(k-1) + avr(k-1)² - k*(avr(k-1)² + 2*D(k)*avr(k-1)/k + D(k)²/k²) + k*avr(k-1)² - avr(k-1)²
-		//                                = D(k)² + 2*D(k)*avr(k-1) + avr(k-1)² - k*avr(k-1)² - 2*D(k)*avr(k-1) - D(k)²/k      + k*avr(k-1)² - avr(k-1)²
-		//                                = D(k)² - D(k)²/k
-		//                                = ((k-1)/k) * D(k)²
+		//' let: D(k) = X(k) - avr(k-1)           => X(k) = D(k) + avr(k-1)
+		//'  avr(k-1) = SUM{X(k-1)} / (k-1)       => SUM{X(k-1)} = (k-1)*avr(k-1)
+		//'  avr(k)   = (SUM{X(k-1)} + X(k)) / k
+		//'           = ((k-1)*avr(k-1) + D(k) + avr(k-1)) / k
+		//'           = (k*avr(k-1) - avr(k-1) + D(k) + avr(k-1)) / k
+		//'           = (k*avr(k-1) + D(k)) / k
+		//'           = avr(k-1) + D(k) / k
 
-		private double m_mean;
-		private double m_var;
-		private uint   m_count;
+		protected double m_mean;
+		protected uint   m_count;
 		
 		public Avr()
 		{
 			Reset();
 		}
-		public Avr(double mean, double var, uint count)
+		public Avr(double mean, uint count)
 		{
 			m_mean  = mean;
-			m_var   = var;
 			m_count = count;
 		}
 
+		/// <summary>Number of items added</summary>
 		public uint Count
 		{
 			get { return m_count; }
 		}
+
+		/// <summary>Mean value</summary>
 		public double Mean
 		{
 			get { return m_mean; }
 		}
+
+		/// <summary>Sum of values</summary>
 		public double Sum
 		{
 			get { return m_mean * m_count; }
+		}
+
+		/// <summary>Reset the stats</summary>
+		public virtual void Reset()
+		{
+			m_count = 0;
+			m_mean  = 0.0;
+		}
+		
+		/// <summary>
+		/// Accumulate statistics for 'value' in a single pass.
+		/// Note, this method is more accurate than the sum of squares, square of sums approach.</summary>
+		public virtual void Add(double value)
+		{
+			++m_count;
+			var diff = value - m_mean;
+			var inv_count = 1.0 / m_count; // don't remove this, conversion to double here is needed for accuracy
+			m_mean += diff * inv_count;
+		}
+
+		/// <summary>
+		/// Calculate a running average.
+		/// 'value' is the new value to add to the mean.
+		/// 'mean' is the current mean.
+		/// 'count' is the number of data points that have contributed to 'mean'</summary>
+		public static double Running(double value, double mean, uint count)
+		{
+			return mean + (value - mean) / (1 + count);
+		}
+	}
+
+	/// <summary>Running Average</summary>
+	public class AvrVar :Avr
+	{
+		//' let: D(k) = X(k) - avr(k-1)           => X(k) = D(k) + avr(k-1)
+		//'  avr(k-1) = SUM{X(k-1)} / (k-1)       => SUM{X(k-1)} = (k-1)*avr(k-1)
+		//'  avr(k)   = (SUM{X(k-1)} + X(k)) / k
+		//'           = ((k-1)*avr(k-1) + D(k) + avr(k-1)) / k
+		//'           = (k*avr(k-1) - avr(k-1) + D(k) + avr(k-1)) / k
+		//'           = (k*avr(k-1) + D(k)) / k
+		//'           = avr(k-1) + D(k) / k
+		//' Running standard variance:
+		//'  var(k)   = (1/(k-1)) * SUM{(X(k) - avr(k))²}
+		//' (k-1)*var(k) = SUM{(X(k) - avr(k))²}
+		//'              = SUM{(X(k)² - 2*avr(k)*X(k) + avr(k)²}
+		//'              = SUM{X(k)²} - 2*avr(k)*SUM{X(k)} + k*avr(k)²
+		//'              = SUM{X(k)²} - 2*avr(k)*k*avr(k) + k*avr(k)²
+		//'              = SUM{X(k)²} - 2*k*avr(k)² + k*avr(k)²
+		//'              = SUM{X(k)²} - k*avr(k)²
+		//' so:
+		//'  (k-2)*var(k-1) = SUM{X(k-1)²} - (k-1)*avr(k-1)²
+		//' taking:
+		//'  (k-1)*var(k) - (k-2)*var(k-1) = SUM{X(k)²} - k*avr(k)² - SUM{X(k-1)²} + (k-1)*avr(k-1)²
+		//'                                = X(k)² - k*avr(k)² + (k-1)*avr(k-1)²
+		//'                                = X(k)²                               - k*(avr(k-1) + D(k)/k)²                       + k*avr(k-1)² - avr(k-1)²
+		//'                                = (D(k) + avr(k-1))²                  - k*(avr(k-1) + D(k)/k)²                       + k*avr(k-1)² - avr(k-1)²
+		//'                                = D(k)² + 2*D(k)*avr(k-1) + avr(k-1)² - k*(avr(k-1)² + 2*D(k)*avr(k-1)/k + D(k)²/k²) + k*avr(k-1)² - avr(k-1)²
+		//'                                = D(k)² + 2*D(k)*avr(k-1) + avr(k-1)² - k*avr(k-1)² - 2*D(k)*avr(k-1) - D(k)²/k      + k*avr(k-1)² - avr(k-1)²
+		//'                                = D(k)² - D(k)²/k
+		//'                                = ((k-1)/k) * D(k)²
+
+		protected double m_var;
+		
+		public AvrVar()
+			:base()
+		{
+			m_var = 0;
+		}
+		public AvrVar(double mean, double var, uint count)
+			:base(mean, count)
+		{
+			m_var = var;
 		}
 
 		/// <summary>Population standard deviation.<para/>Use when all data values in a set have been considered.</summary>
@@ -90,74 +146,64 @@ namespace pr.maths
 			get { return m_count > 1 ? m_var * (1.0 / (m_count - 1)) : 0.0; }
 		}
 
-		// Reset the stats
-		public void Reset()
+		/// <summary>Reset the stats</summary>
+		public override void Reset()
 		{
-			m_count = 0;
-			m_mean  = 0.0;
-			m_var   = 0.0;
+			base.Reset();
+			m_var = 0.0;
 		}
 		
-		// Accumulate statistics for 'value' in a single pass.
-		// Note, this method is more accurate than the sum of squares, square of sums approach.
-		public void Add(double value)
+		/// <summary>
+		/// Accumulate statistics for 'value' in a single pass.
+		/// Note, this method is more accurate than the sum of squares, square of sums approach.</summary>
+		public override void Add(double value)
 		{
 			++m_count;
-			double diff  = value - m_mean;
-			double inv_count = 1.0 / m_count;
+			var diff = value - m_mean;
+			var inv_count = 1.0 / m_count; // don't remove this, conversion to double here is needed for accuracy
 			m_mean += diff * inv_count;
-			m_var  += diff * diff * ((m_count - 1) * inv_count);
-		}
-
-		/// <summary>
-		/// Calculate a running average.
-		/// 'value' is the new value to add to the mean.
-		/// 'mean' is the current mean.
-		/// 'count' is the number of data points that have contributed to 'mean'</summary>
-		public static double Running(double value, double mean, uint count)
-		{
-			return mean + (value - mean) / (1 + count);
+			m_var += diff * diff * ((m_count - 1) * inv_count);
 		}
 	}
 	
 	/// <summary>Exponential Moving Average</summary>
 	public class ExpMovingAvr
 	{
-		//  avr(k) = a * X(k) + (1 - a) * avr(k-1)
-		//         = a * X(k) + avr(k-1) - a * avr(k-1)
-		//         = avr(k-1) + a * X(k) - a * avr(k-1)
-		//         = avr(k-1) + a * (X(k) - avr(k-1))
-		//    'a' is the exponential smoothing factor between (0,1)
-		//    define: a = 2 / (N + 1), where 'N' is roughly the window size of an equivalent moving window average
-		//    The interval over which the weights decrease by a factor of two (half-life) is approximately N/2.8854
-		// Exponential moving variance:
-		// (k-1)var(k) = SUM{w(k) * U(k)²}, where: U(k) = X(k) - avr(k)
-		//             = w(1)*U(1)² + w(2)*U(2)² + ... + w(k)*U(k)², where: w(1)+w(2)+...+w(k) = k
-		// If we say:  w(k) = k * a, ('a' between (0,1) as above) then SUM{w(k-1)} = k * (1-a)
-		// so consider var(k-1):
-		//  (k-2)var(k-1) = w(1)*U(1)² + w(2)*U(2)² + ... + w(k-1)*U(k-1)², where: w(1)+w(2)+...+w(k-1) = k - 1
-		// when we add the next term:
-		//  (k-1)var(k)   = w(1)*U(1)² + w(2)*U(2)² + ... + w(k-1)*U(k-1)² + w(k)*U(k)² (note w(1)..w(k-1) will be different values to above)
-		// we need:
-		//   k = k*a + k*(1-a) = w(k) + b*SUM{w(k-1)}
-		// => k*(1-a) = b*SUM{w(k-1)}
-		//          b = (1-a)*k/SUM{w(k-1)}
-		//            = (1-a)*k/(k-1)
-		// so:
-		// (k-1)var(k) = a*k*U(k)² + b*(k-2)var(k-1)
-		//             = a*k*U(k)² + (1-a)*(k/(k-1)) * (k-2)var(k-1)
-		//  let: D(k) = X(k) - avr(k-1)
-		//       U(k) = X(k) - avr(k-1) + avr(k-1) - avr(k)
-		//            = D(k) + avr(k-1) - avr(k)
-		//            = D(k) - (avr(k) - avr(k-1))
-		//            = D(k) - a * (X(k) - avr(k-1))
-		//            = D(k) - a * D(k)
-		//            = (1-a)*D(k)
-		// then:
-		// (k-1)var(k) = a*k*U(k)² + (1-a)*(k/(k-1)) * (k-2)var(k-1)
-		//             = a*k*(1-a)²*D(k)² + (1-a)*(k/(k-1)) * (k-2)var(k-1)
-		//             = a*k*b²*D(k)² + (b*k/(k-1)) * (k-2)var(k-1)         where: b = (1-a)
-		//             = (b*k/(k-1))*((a*b*(k-1)*D(k)² + (k-2)var(k-1))
+		//'  avr(k) = a * X(k) + (1 - a) * avr(k-1)
+		//'         = a * X(k) + avr(k-1) - a * avr(k-1)
+		//'         = avr(k-1) + a * X(k) - a * avr(k-1)
+		//'         = avr(k-1) + a * (X(k) - avr(k-1))
+		//'    'a' is the exponential smoothing factor between (0,1)
+		//'    define: a = 2 / (N + 1), where 'N' is roughly the window size of an equivalent moving window average
+		//'    The interval over which the weights decrease by a factor of two (half-life) is approximately N/2.8854
+		//' Exponential moving variance:
+		//' (k-1)var(k) = SUM{w(k) * U(k)²}, where: U(k) = X(k) - avr(k)
+		//'             = w(1)*U(1)² + w(2)*U(2)² + ... + w(k)*U(k)², where: w(1)+w(2)+...+w(k) = k
+		//' If we say:  w(k) = k * a, ('a' between (0,1) as above) then SUM{w(k-1)} = k * (1-a)
+		//' so consider var(k-1):
+		//'  (k-2)var(k-1) = w(1)*U(1)² + w(2)*U(2)² + ... + w(k-1)*U(k-1)², where: w(1)+w(2)+...+w(k-1) = k - 1
+		//' when we add the next term:
+		//'  (k-1)var(k)   = w(1)*U(1)² + w(2)*U(2)² + ... + w(k-1)*U(k-1)² + w(k)*U(k)² (note w(1)..w(k-1) will be different values to above)
+		//' we need:
+		//'   k = k*a + k*(1-a) = w(k) + b*SUM{w(k-1)}
+		//' => k*(1-a) = b*SUM{w(k-1)}
+		//'          b = (1-a)*k/SUM{w(k-1)}
+		//'            = (1-a)*k/(k-1)
+		//' so:
+		//' (k-1)var(k) = a*k*U(k)² + b*(k-2)var(k-1)
+		//'             = a*k*U(k)² + (1-a)*(k/(k-1)) * (k-2)var(k-1)
+		//'  let: D(k) = X(k) - avr(k-1)
+		//'       U(k) = X(k) - avr(k-1) + avr(k-1) - avr(k)
+		//'            = D(k) + avr(k-1) - avr(k)
+		//'            = D(k) - (avr(k) - avr(k-1))
+		//'            = D(k) - a * (X(k) - avr(k-1))
+		//'            = D(k) - a * D(k)
+		//'            = (1-a)*D(k)
+		//' then:
+		//' (k-1)var(k) = a*k*U(k)² + (1-a)*(k/(k-1)) * (k-2)var(k-1)
+		//'             = a*k*(1-a)²*D(k)² + (1-a)*(k/(k-1)) * (k-2)var(k-1)
+		//'             = a*k*b²*D(k)² + (b*k/(k-1)) * (k-2)var(k-1)         where: b = (1-a)
+		//'             = (b*k/(k-1))*((a*b*(k-1)*D(k)² + (k-2)var(k-1))
 	
 		private double m_mean;
 		private double m_var;
@@ -165,11 +211,11 @@ namespace pr.maths
 		private uint   m_count;
 
 		public ExpMovingAvr()
+			:this(0U)
+		{}
+		public ExpMovingAvr(uint window_size)
 		{
-			m_mean  = 0;
-			m_var   = 0;
-			m_size  = 0;
-			m_count = 0;
+			Reset(window_size);
 		}
 		public ExpMovingAvr(ExpMovingAvr rhs)
 		{
@@ -179,10 +225,19 @@ namespace pr.maths
 			m_count = rhs.m_count;
 		}
 
+		/// <summary>The size of an equivalent moving average window size</summary>
+		public uint WindowSize
+		{
+			get { return m_size; }
+		}
+
+		/// <summary>The number of data points added to this average</summary>
 		public uint Count
 		{
 			get { return m_count; }
 		}
+
+		/// <summary>The average</summary>
 		public double Mean
 		{
 			get { return m_mean; }
@@ -208,18 +263,14 @@ namespace pr.maths
 			get { return m_count > 1 ? m_var * (1.0 / (m_count - 1)) : 0.0; }
 		}
 
-		public ExpMovingAvr(uint window_size)
-		{
-			Reset(window_size);
-		}
-		public void Reset(uint window_size)
+		public virtual void Reset(uint window_size)
 		{
 			m_size  = window_size;
 			m_count = 0;
 			m_mean  = 0.0;
 			m_var   = 0.0;
 		}
-		public void Add(double value)
+		public virtual void Add(double value)
 		{
 			if (m_count >= m_size)
 			{
@@ -322,7 +373,7 @@ namespace pr.unittests
 		{
 			double[] num = new[]{2.0,4.0,7.0,3.0,2.0,-5.0,-4.0,1.0,-7.0,3.0,6.0,-8.0};
 			
-			Avr s = new Avr();
+			var s = new AvrVar();
 			for (int i = 0; i != num.Length; ++i)
 				s.Add(num[i]);
 			

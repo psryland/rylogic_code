@@ -23,10 +23,12 @@ namespace Tradee
 		private NumericUpDown m_spinner_region_size;
 		private NumericUpDown m_spinner_price_level;
 		private Label m_lbl_region_height;
-		private ColourWheel m_colour;
-		private Label m_lbl_colour;
+		private ColourWheel m_colour_line;
+		private Label m_lbl_line_colour;
 		private Label m_lbl_line_width;
 		private NumericUpDown m_spinner_line_width;
+		private ColourWheel m_colour_region;
+		private Label m_lbl_region_colour;
 		private Button m_btn_ok;
 		#endregion
 
@@ -81,12 +83,18 @@ namespace Tradee
 				m_snr_level.Settings.LineWidth = (int)m_spinner_line_width.Value;
 			};
 
-			// Colour
-			m_colour.Colour = m_snr_level.Settings.Colour;
-			m_colour.ColourChanged += (s,a) =>
+			// Colour Line
+			m_colour_line.Colour = m_snr_level.Settings.Colour;
+			m_colour_line.ColourChanged += (s,a) =>
 			{
-				m_snr_level.Settings.Colour = m_colour.Colour;
-				m_snr_level.Settings.RegionColour = m_colour.Colour.Alpha(0.5f);
+				m_snr_level.Settings.Colour = m_colour_line.Colour;
+			};
+
+			// Colour region
+			m_colour_region.Colour = m_snr_level.Settings.RegionColour;
+			m_colour_region.ColourChanged += (s,a) =>
+			{
+				m_snr_level.Settings.RegionColour = m_colour_region.Colour;
 			};
 
 			// Remove this indicator from the chart
@@ -107,10 +115,12 @@ namespace Tradee
 			this.m_spinner_region_size = new System.Windows.Forms.NumericUpDown();
 			this.m_spinner_price_level = new System.Windows.Forms.NumericUpDown();
 			this.m_lbl_region_height = new System.Windows.Forms.Label();
-			this.m_colour = new pr.gui.ColourWheel();
-			this.m_lbl_colour = new System.Windows.Forms.Label();
+			this.m_colour_line = new pr.gui.ColourWheel();
+			this.m_lbl_line_colour = new System.Windows.Forms.Label();
 			this.m_lbl_line_width = new System.Windows.Forms.Label();
 			this.m_spinner_line_width = new System.Windows.Forms.NumericUpDown();
+			this.m_colour_region = new pr.gui.ColourWheel();
+			this.m_lbl_region_colour = new System.Windows.Forms.Label();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_region_size)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_price_level)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_line_width)).BeginInit();
@@ -119,7 +129,7 @@ namespace Tradee
 			// m_btn_delete
 			// 
 			this.m_btn_delete.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-			this.m_btn_delete.Location = new System.Drawing.Point(12, 170);
+			this.m_btn_delete.Location = new System.Drawing.Point(12, 228);
 			this.m_btn_delete.Name = "m_btn_delete";
 			this.m_btn_delete.Size = new System.Drawing.Size(75, 23);
 			this.m_btn_delete.TabIndex = 16;
@@ -130,7 +140,7 @@ namespace Tradee
 			// 
 			this.m_btn_ok.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this.m_btn_ok.Location = new System.Drawing.Point(144, 170);
+			this.m_btn_ok.Location = new System.Drawing.Point(144, 228);
 			this.m_btn_ok.Name = "m_btn_ok";
 			this.m_btn_ok.Size = new System.Drawing.Size(75, 23);
 			this.m_btn_ok.TabIndex = 15;
@@ -169,29 +179,29 @@ namespace Tradee
 			this.m_lbl_region_height.TabIndex = 21;
 			this.m_lbl_region_height.Text = "Region Size (in pips):";
 			// 
-			// m_colour
+			// m_colour_line
 			// 
-			this.m_colour.Colour = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(255)))));
-			this.m_colour.Location = new System.Drawing.Point(99, 89);
-			this.m_colour.Name = "m_colour";
-			this.m_colour.Parts = ((pr.gui.ColourWheel.EParts)((((((pr.gui.ColourWheel.EParts.Wheel | pr.gui.ColourWheel.EParts.VSlider) 
+			this.m_colour_line.Colour = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(255)))));
+			this.m_colour_line.Location = new System.Drawing.Point(99, 89);
+			this.m_colour_line.Name = "m_colour_line";
+			this.m_colour_line.Parts = ((pr.gui.ColourWheel.EParts)((((((pr.gui.ColourWheel.EParts.Wheel | pr.gui.ColourWheel.EParts.VSlider) 
             | pr.gui.ColourWheel.EParts.ASlider) 
             | pr.gui.ColourWheel.EParts.ColourSelection) 
             | pr.gui.ColourWheel.EParts.VSelection) 
             | pr.gui.ColourWheel.EParts.ASelection)));
-			this.m_colour.Size = new System.Drawing.Size(120, 63);
-			this.m_colour.SliderWidth = 20;
-			this.m_colour.TabIndex = 22;
-			this.m_colour.VerticalLayout = false;
+			this.m_colour_line.Size = new System.Drawing.Size(120, 63);
+			this.m_colour_line.SliderWidth = 20;
+			this.m_colour_line.TabIndex = 22;
+			this.m_colour_line.VerticalLayout = false;
 			// 
-			// m_lbl_colour
+			// m_lbl_line_colour
 			// 
-			this.m_lbl_colour.AutoSize = true;
-			this.m_lbl_colour.Location = new System.Drawing.Point(50, 90);
-			this.m_lbl_colour.Name = "m_lbl_colour";
-			this.m_lbl_colour.Size = new System.Drawing.Size(40, 13);
-			this.m_lbl_colour.TabIndex = 23;
-			this.m_lbl_colour.Text = "Colour:";
+			this.m_lbl_line_colour.AutoSize = true;
+			this.m_lbl_line_colour.Location = new System.Drawing.Point(24, 89);
+			this.m_lbl_line_colour.Name = "m_lbl_line_colour";
+			this.m_lbl_line_colour.Size = new System.Drawing.Size(63, 13);
+			this.m_lbl_line_colour.TabIndex = 23;
+			this.m_lbl_line_colour.Text = "Line Colour:";
 			// 
 			// m_lbl_line_width
 			// 
@@ -209,16 +219,42 @@ namespace Tradee
 			this.m_spinner_line_width.Size = new System.Drawing.Size(100, 20);
 			this.m_spinner_line_width.TabIndex = 25;
 			// 
+			// m_colour_region
+			// 
+			this.m_colour_region.Colour = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(255)))));
+			this.m_colour_region.Location = new System.Drawing.Point(99, 158);
+			this.m_colour_region.Name = "m_colour_region";
+			this.m_colour_region.Parts = ((pr.gui.ColourWheel.EParts)((((((pr.gui.ColourWheel.EParts.Wheel | pr.gui.ColourWheel.EParts.VSlider) 
+            | pr.gui.ColourWheel.EParts.ASlider) 
+            | pr.gui.ColourWheel.EParts.ColourSelection) 
+            | pr.gui.ColourWheel.EParts.VSelection) 
+            | pr.gui.ColourWheel.EParts.ASelection)));
+			this.m_colour_region.Size = new System.Drawing.Size(120, 63);
+			this.m_colour_region.SliderWidth = 20;
+			this.m_colour_region.TabIndex = 26;
+			this.m_colour_region.VerticalLayout = false;
+			// 
+			// m_lbl_region_colour
+			// 
+			this.m_lbl_region_colour.AutoSize = true;
+			this.m_lbl_region_colour.Location = new System.Drawing.Point(10, 158);
+			this.m_lbl_region_colour.Name = "m_lbl_region_colour";
+			this.m_lbl_region_colour.Size = new System.Drawing.Size(77, 13);
+			this.m_lbl_region_colour.TabIndex = 27;
+			this.m_lbl_region_colour.Text = "Region Colour:";
+			// 
 			// EditSnrLevelUI
 			// 
 			this.AcceptButton = this.m_btn_ok;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(231, 205);
+			this.ClientSize = new System.Drawing.Size(231, 263);
+			this.Controls.Add(this.m_lbl_region_colour);
+			this.Controls.Add(this.m_colour_region);
 			this.Controls.Add(this.m_spinner_line_width);
 			this.Controls.Add(this.m_lbl_line_width);
-			this.Controls.Add(this.m_lbl_colour);
-			this.Controls.Add(this.m_colour);
+			this.Controls.Add(this.m_lbl_line_colour);
+			this.Controls.Add(this.m_colour_line);
 			this.Controls.Add(this.m_lbl_region_height);
 			this.Controls.Add(this.m_spinner_price_level);
 			this.Controls.Add(this.m_spinner_region_size);

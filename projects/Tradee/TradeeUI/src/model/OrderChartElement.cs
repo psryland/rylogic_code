@@ -13,20 +13,151 @@ using pr.util;
 namespace Tradee
 {
 	/// <summary>Base class for trades on a chart</summary>
-	public class OrderChartElement :ChartControl.Element
+	public class OrderChartElement :ChartElement
 	{
 		public OrderChartElement(Order order)
-			:base(Guid.NewGuid(), m4x4.Identity, "Order {0}".Fmt(order.Id))
+			:base(Guid.NewGuid(), "Order {0}".Fmt(order.Id))
 		{
 			Order = order;
-			Highlighted = false;
-			VisibleToFindRange = false;
 		}
 		protected override void Dispose(bool disposing)
 		{
 			Order = null;
 			Gfx = null;
 			base.Dispose(disposing);
+		}
+		protected override void SetChartCore(ChartControl chart)
+		{
+			// Invalidate the graphics whenever the x axis zooms or scrolls
+			if (Chart != null)
+			{
+				Chart.XAxis.Scroll -= Invalidate;
+				Chart.XAxis.Zoomed -= Invalidate;
+			}
+			base.SetChartCore(chart);
+			if (Chart != null)
+			{
+				Chart.XAxis.Scroll += Invalidate;
+				Chart.XAxis.Zoomed += Invalidate;
+			}
+		}
+		protected override void UpdateGfxCore()
+		{
+			// Find the index range in the Instrument history that 'Order' maps to
+			var t0 = new TFTime(Order.EntryTimeUTC.Ticks, Instrument.TimeFrame);
+			var t1 = new TFTime(Order.ExitTimeUTC .Ticks, Instrument.TimeFrame);
+			var range = Instrument.TimeToIndexRange(t0, t1);
+
+			// If the expiry is in the future, add on the expected number of candles
+			var t2 = t1.ExactUTC > Instrument.Latest.TimestampUTC
+				? (int)new TFTime(t1.ExactUTC - Instrument.Latest.TimestampUTC, Instrument.TimeFrame).IntgTF : 0;
+
+			// Determine the width and position of the order
+			var x = (float)(range.Begini - range.Endi);
+			var w = (float)(range.Sizei + t2);
+
+			// Get the entry price, stop loss, and take profit values
+			var ep = (float)Order.EntryPrice;
+			var sl = (float)Order.StopLossRel;
+			var tp = (float)Order.TakeProfitRel;
+
+			// Create graphics for the order
+			switch (Order.TradeType)
+			{
+			default:
+				{
+					Debug.Assert(false, "Unknown trade type");
+					Gfx = null;
+					break;
+				}
+			case ETradeType.None:
+				{
+					Gfx = null;
+					break;
+				}
+			case ETradeType.Short:
+			case ETradeType.Long:
+				{
+					var sign     = Order.TradeType == ETradeType.Long ? +1 : -1;
+					var selected = Selected || Hovered;
+					var alpha    = selected ? 0.5f : 0.25f;
+					var z        = ChartUI.Z.Trades + (selected ? 0.0001f : 0f);
+					var sl_col   = Settings.Chart.TradeLossColour  .Alpha(alpha);
+					var tp_col   = Settings.Chart.TradeProfitColour.Alpha(alpha);
+					var ep_col   = Color.DarkBlue;
+					var line_col = Order.TradeType == ETradeType.Long ? Settings.UI.BullishColour.Alpha(0x60) : Settings.UI.BearishColour.Alpha(0x60);
+					var xmin     = selected ? (float)Chart.XAxis.Min : x - 0;
+					var xmax     = selected ? (float)Chart.XAxis.Max : x + w;
+		
+					m_vbuf.Clear();
+					m_ibuf.Clear();
+					m_nbuf.Clear();
+					var V = 0U;
+					var I = 0U;
+
+					// Take profit area
+					if (tp > 0)
+					{
+						var v = m_vbuf.Count;
+						var y0 = sign > 0 ? Math.Max(ep, ep - sl) : ep - tp;
+						var y1 = sign > 0 ? ep + tp : Math.Min(ep, ep + sl);
+						m_vbuf.Add(new View3d.Vertex(new v4(x    , y0, z, 1), tp_col.ToArgbU()));
+						m_vbuf.Add(new View3d.Vertex(new v4(x + w, y0, z, 1), tp_col.ToArgbU()));
+						m_vbuf.Add(new View3d.Vertex(new v4(x    , y1, z, 1), tp_col.ToArgbU()));
+						m_vbuf.Add(new View3d.Vertex(new v4(x + w, y1, z, 1), tp_col.ToArgbU()));
+						m_ibuf.AddRange(new[] { (ushort)v, (ushort)(v+1), (ushort)(v+3), (ushort)(v+3), (ushort)(v+2), (ushort)v});
+					}
+					// Stop loss area
+					if (sl > 0)
+					{
+						var v = m_vbuf.Count;
+						var y0 = sign > 0 ? ep - sl : Math.Max(ep, ep - tp);
+						var y1 = sign > 0 ? Math.Min(ep, ep + tp) : ep + sl;
+						m_vbuf.Add(new View3d.Vertex(new v4(x    , y0, z, 1), sl_col.ToArgbU()));
+						m_vbuf.Add(new View3d.Vertex(new v4(x + w, y0, z, 1), sl_col.ToArgbU()));
+						m_vbuf.Add(new View3d.Vertex(new v4(x    , y1, z, 1), sl_col.ToArgbU()));
+						m_vbuf.Add(new View3d.Vertex(new v4(x + w, y1, z, 1), sl_col.ToArgbU()));
+						m_ibuf.AddRange(new[] { (ushort)v, (ushort)(v+1), (ushort)(v+3), (ushort)(v+3), (ushort)(v+2), (ushort)v});
+					}
+					m_nbuf.Add(new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert|View3d.EGeom.Colr, V, (uint)m_vbuf.Count, I, (uint)m_ibuf.Count, true));
+					V = (uint)m_vbuf.Count;
+					I = (uint)m_ibuf.Count;
+
+					// Entry Price line
+					{
+						var v = m_vbuf.Count;
+						m_vbuf.Add(new View3d.Vertex(new v4(xmin, ep, z, 1), Color.DarkBlue.ToArgbU()));
+						m_vbuf.Add(new View3d.Vertex(new v4(xmax, ep, z, 1), Color.DarkBlue.ToArgbU()));
+						m_ibuf.AddRange(new[] { (ushort)v, (ushort)(v+1) });
+
+					}
+					// Take Profit line
+					{
+						var v = m_vbuf.Count;
+						m_vbuf.Add(new View3d.Vertex(new v4(xmin, ep + sign*tp, z, 1), Color.DarkGreen.ToArgbU()));
+						m_vbuf.Add(new View3d.Vertex(new v4(xmax, ep + sign*tp, z, 1), Color.DarkGreen.ToArgbU()));
+						m_ibuf.AddRange(new[] { (ushort)v, (ushort)(v+1) });
+					}
+					// Stop Loss line
+					{
+						var v = m_vbuf.Count;
+						m_vbuf.Add(new View3d.Vertex(new v4(xmin, ep - sign*sl, z, 1), Color.DarkRed.ToArgbU()));
+						m_vbuf.Add(new View3d.Vertex(new v4(xmax, ep - sign*sl, z, 1), Color.DarkRed.ToArgbU()));
+						m_ibuf.AddRange(new[] { (ushort)v, (ushort)(v+1) });
+					}
+					m_nbuf.Add(new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert|View3d.EGeom.Colr, V, (uint)m_vbuf.Count, I, (uint)m_ibuf.Count, true));
+
+					// Create the geometry
+					Gfx = new View3d.Object("Order", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray());
+					break;
+				}
+			}
+			base.UpdateGfxCore();
+		}
+		protected override void AddToSceneCore(View3d.Window window)
+		{
+			if (Gfx == null) return;
+			window.AddObject(Gfx);
 		}
 
 		/// <summary>Application settings</summary>
@@ -45,10 +176,12 @@ namespace Tradee
 				if (m_order != null)
 				{
 					m_order.Changed -= Invalidate;
+					Instrument = null;
 				}
 				m_order = value;
 				if (m_order != null)
 				{
+					Instrument = m_order.Instrument;
 					m_order.Changed += Invalidate;
 				}
 				Invalidate();
@@ -69,91 +202,21 @@ namespace Tradee
 		}
 		private View3d.Object m_impl_gfx;
 
-		/// <summary>The instrument associated with the trade</summary>
-		public Instrument Instrument
+		/// <summary>Hittable locations on this graphic</summary>
+		public EHitSite HitSite
 		{
-			[DebuggerStepThrough] get { return Order.Instrument; }
+			[DebuggerStepThrough] get { return m_hovered_zone; }
+			set { SetProp(ref m_hovered_zone, value, nameof(HitSite), true, true); }
 		}
-
-		/// <summary>True if this Order is the centre of attention</summary>
-		public bool Highlighted
+		private EHitSite m_hovered_zone;
+		public enum EHitSite
 		{
-			[DebuggerStepThrough] get { return m_highlight; }
-			set { SetProp(ref m_highlight, value, nameof(Highlighted), true, true); }
-		}
-		private bool m_highlight;
-
-		/// <summary>Generate the graphics for this trade type</summary>
-		protected override void UpdateGfxCore()
-		{
-			// Find the index range in the Instrument history that 'Order' maps to
-			var t0 = new TFTime(Order.EntryTimeUTC.Ticks, Instrument.TimeFrame);
-			var t1 = new TFTime(Order.ExitTimeUTC .Ticks, Instrument.TimeFrame);
-			var range = Instrument.TimeToIndexRange(t0, t1);
-
-			// If the expiry is in the future, add on the expected number of candles
-			var t2 = t1.ExactUTC > Instrument.Latest.TimestampUTC
-				? (int)new TFTime(t1.ExactUTC - Instrument.Latest.TimestampUTC, Instrument.TimeFrame).IntgTF : 0;
-
-			// Determine the width and position of the order
-			var x = range.Begini - range.Endi;
-			var w = range.Sizei + t2;
-
-			// Get the entry price, stop loss, and take profit values
-			var ep = (float)Order.EntryPrice;
-			var sl = (float)Order.StopLossRel;
-			var tp = (float)Order.TakeProfitRel;
-
-			// Create graphics for the order
-			switch (Order.TradeType)
-			{
-			default:
-				{
-					Debug.Assert(false, "Unknown trade type");
-					Gfx = null;
-					return;
-				}
-			case ETradeType.None:
-				{
-					Gfx = null;
-					break;
-				}
-			case ETradeType.Short:
-			case ETradeType.Long:
-				{
-					var ldr = new LdrBuilder();
-					using (ldr.Group("Order"))
-					{
-						var sign     = Order.TradeType == ETradeType.Long ? +1 : -1;
-						var alpha    = (Hovered || Highlighted) ? 0.5f : 0.25f;
-						var sl_col   = Settings.Chart.TradeLossColour  .Alpha(alpha);
-						var tp_col   = Settings.Chart.TradeProfitColour.Alpha(alpha);
-						var ep_col   = Color.DarkBlue.Alpha(alpha);
-						var line_col = Order.TradeType == ETradeType.Long ? Settings.UI.BullishColour.Alpha(0x60) : Settings.UI.BearishColour.Alpha(0x60);
-
-						// Draw the TP and SL regions
-						ldr.Rect("take_profit", tp_col, AxisId.PosZ, w, Math.Abs(tp), true, new v4(x + w/2f, ep + sign*tp/2f, ChartUI.Z.Trades, 1));
-						ldr.Rect("stop_loss"  , sl_col, AxisId.PosZ, w, Math.Abs(sl), true, new v4(x + w/2f, ep - sign*sl/2f, ChartUI.Z.Trades, 1));
-
-						// Add lines for the EntryPrice, TP and SL levels
-						var xmin = (Hovered || Highlighted) ? (float)Chart.XAxis.Min : x - 0;
-						var xmax = (Hovered || Highlighted) ? (float)Chart.XAxis.Max : x + w;
-						ldr.Line("entry_price", ep_col          , new v4(xmin, ep          , ChartUI.Z.Trades, 1), new v4(xmax, ep          , ChartUI.Z.Trades, 1));
-						ldr.Line("take_profit", tp_col.Alpha(1f), new v4(xmin, ep + sign*tp, ChartUI.Z.Trades, 1), new v4(xmax, ep + sign*tp, ChartUI.Z.Trades, 1));
-						ldr.Line("stop_loss"  , sl_col.Alpha(1f), new v4(xmin, ep - sign*sl, ChartUI.Z.Trades, 1), new v4(xmax, ep - sign*sl, ChartUI.Z.Trades, 1));
-					}
-					Gfx = new View3d.Object(ldr.ToString(), file: false);
-					break;
-				}
-			}
-			base.UpdateGfxCore();
-		}
-
-		/// <summary>Add our graphics to the chart during render</summary>
-		protected override void AddToSceneCore(View3d.Window window)
-		{
-			if (Gfx == null) return;
-			window.AddObject(Gfx);
+			None,
+			EntryPrice,
+			StopLoss,
+			TakeProfit,
+			EntryTime,
+			Expiry,
 		}
 
 		/// <summary>Hit test this order</summary>
@@ -254,15 +317,6 @@ namespace Tradee
 			}
 		}
 
-		/// <summary>Hittable locations on this graphic</summary>
-		private enum EHitSite
-		{
-			EntryPrice,
-			StopLoss,
-			TakeProfit,
-			EntryTime,
-			Expiry,
-		}
 
 		/// <summary>A mouse operation for moving an Order's price level</summary>
 		private class MouseOpMovePriceLevel :ChartControl.MouseOp

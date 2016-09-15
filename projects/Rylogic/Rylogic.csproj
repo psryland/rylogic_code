@@ -90,6 +90,7 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows.Forms" />
@@ -233,11 +234,17 @@
     <Compile Include="gfx\exif.cs" />
     <Compile Include="gfx\gfx.cs" />
     <Compile Include="gfx\view3d.cs" />
+    <Compile Include="gui\bluetooth_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="gui\browse_path_ui.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="gui\chart_control.cs">
       <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="gui\checkbox_switch.cs">
+      <SubType>Component</SubType>
     </Compile>
     <Compile Include="gui\checked_groupbox.cs">
       <SubType>Component</SubType>
@@ -253,6 +260,9 @@
     </Compile>
     <Compile Include="gui\find_ui.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="gui\anim_button.cs">
+      <SubType>Component</SubType>
     </Compile>
     <Compile Include="gui\layout.cs" />
     <Compile Include="gui\help_ui.cs">
@@ -449,6 +459,7 @@
     <Compile Include="util\unittest.cs" />
     <Compile Include="util\user_data.cs" />
     <Compile Include="win32\com_guids.cs" />
+    <Compile Include="win32\device_manager.cs" />
     <Compile Include="win32\error_codes.cs" />
     <Compile Include="win32\gdi32.cs" />
     <Compile Include="win32\interop_structs.cs" />
@@ -497,6 +508,12 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="gui\anim_button.resx">
+      <DependentUpon>anim_button.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="gui\bluetooth_ui.resx">
+      <DependentUpon>bluetooth_ui.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="gui\browse_path_ui.resx">
       <DependentUpon>browse_path_ui.cs</DependentUpon>
     </EmbeddedResource>

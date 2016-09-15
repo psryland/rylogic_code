@@ -24,7 +24,9 @@ namespace Tradee
 		}
 		public EmaIndicator(XElement node)
 			:base(node)
-		{}
+		{
+			m_ema = new List<EmaPt>();
+		}
 		protected override void Dispose(bool disposing)
 		{
 			Gfx = null;
@@ -279,7 +281,7 @@ namespace Tradee
 	{
 		public EmaSettings()
 		{
-			Width                = 1;
+			Width                = 5;
 			WindowSize           = 14;
 			ColourEMA            = Color.LightGreen;
 			BollingerBands       = 2f;

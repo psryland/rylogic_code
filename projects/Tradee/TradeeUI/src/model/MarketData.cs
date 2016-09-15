@@ -179,7 +179,7 @@ namespace Tradee
 			get { return Instrument?.SymbolCode ?? string.Empty; }
 		}
 
-		/// <summary>The time frame that changed</summary>
+		/// <summary>The time frame that changed (Note: not necessarily Instrument.TimeFrame)</summary>
 		public ETimeFrame TimeFrame { get; private set; }
 
 		/// <summary>The instrument containing the changes</summary>

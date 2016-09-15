@@ -229,6 +229,7 @@
 #include "pr\meta\square_root.h"
 #include "pr\meta\type_list.h"
 #include "pr\network\bluetooth.h"
+#include "pr\network\bluetooth_ui.h"
 #include "pr\network\sockets.h"
 #include "pr\network\tcpip.h"
 #include "pr\network\web_get.h"

@@ -166,7 +166,7 @@ namespace pr
 			return false;
 		}
 
-		// Get address from formated address-string of the remote device
+		// Get address from formatted address-string of the remote device
 		inline bool DeviceAddrToBluetoothAddr(wchar_t const* addr_string, SOCKADDR_BTH& addr)
 		{
 			std::wstring addr_str = addr_string;
@@ -184,8 +184,8 @@ namespace pr
 			typedef std::vector<GUID> TServices;
 			TServices m_services;
 
-			BTServer(BTServer const&); // no copying
-			BTServer& operator =(BTServer const&);
+			BTServer(BTServer const&) = delete; // no copying
+			BTServer& operator =(BTServer const&) = delete;
 
 			// Create m_listen_socket to use for listening on
 			virtual void CreateListenSocket() override
@@ -267,8 +267,8 @@ namespace pr
 		// A bluetooth socket with client behaviour
 		class BTClient :public ClientSocket
 		{
-			BTClient(BTClient const&); // no copying
-			BTClient& operator =(BTClient const&);
+			BTClient(BTClient const&) = delete; // no copying
+			BTClient& operator =(BTClient const&) = delete;
 
 			// Connect 'm_socket' to 'addr'
 			bool ConnectToHost(SOCKADDR_BTH const& addr, int timeout_ms)
@@ -319,7 +319,7 @@ namespace pr
 					pr::network::ThrowSocketError(WSAGetLastError());
 			}
 
-			// Connect to a bt device
+			// Connect to a BT device
 			bool Connect(BluetoothDeviceInfo const& device, ServiceOrPort service_or_port, int timeout_ms = ~0)
 			{
 				if (m_socket == INVALID_SOCKET)

@@ -2217,7 +2217,7 @@ namespace pr.gui
 				{
 					// If the drag operation started on a selected element then drag the
 					// selected elements within the diagram.
-					var delta = DrawingEx.Subtract(m_chart.ClientToChart(e.Location), m_grab_chart);
+					var delta = Drawing_.Subtract(m_chart.ClientToChart(e.Location), m_grab_chart);
 					m_chart.DragSelected(v2.From(delta), false);
 				}
 				else
@@ -2276,7 +2276,7 @@ namespace pr.gui
 					// If an element was selected, drag it around
 					if (m_hit_selected != null && m_chart.AllowEditing)
 					{
-						var delta = DrawingEx.Subtract(m_chart.ClientToChart(e.Location), m_grab_chart);
+						var delta = Drawing_.Subtract(m_chart.ClientToChart(e.Location), m_grab_chart);
 						m_chart.DragSelected(delta, true);
 					}
 					// Otherwise create an area selection if the click started within the chart
@@ -2371,8 +2371,17 @@ namespace pr.gui
 		[DebuggerDisplay("{Name} {Id} {GetType().Name}")]
 		public abstract class Element :INotifyPropertyChanged ,IDisposable
 		{
+			/// <summary>Buffers for creating the chart graphics</summary>
+			protected List<View3d.Vertex> m_vbuf;
+			protected List<ushort>        m_ibuf;
+			protected List<View3d.Nugget> m_nbuf;
+
 			protected Element(Guid id, m4x4 position, string name)
 			{
+				m_vbuf = new List<View3d.Vertex>();
+				m_ibuf = new List<ushort>();
+				m_nbuf = new List<View3d.Nugget>();
+
 				Id                           = id;
 				Name                         = name;
 				m_impl_chart                 = null;

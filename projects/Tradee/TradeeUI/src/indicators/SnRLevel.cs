@@ -150,12 +150,11 @@ namespace Tradee
 		}
 		protected override void AddToSceneCore(View3d.Window window)
 		{
-			if (Gfx != null)
-			{
-				// Graphics are created at the origin, position at XAxis.Max
-				Gfx.O2P = m4x4.Translation((float)Chart.XAxis.Min, (float)Level.Price, ChartUI.Z.SnR);
-				window.AddObject(Gfx);
-			}
+			if (Gfx == null) return;
+
+			// Graphics are created at the origin, position at XAxis.Max
+			Gfx.O2P = m4x4.Translation((float)Chart.XAxis.Min, (float)Level.Price, ChartUI.Z.SnR);
+			window.AddObject(Gfx);
 		}
 
 		/// <summary>The level being represented on the chart</summary>
@@ -264,7 +263,7 @@ namespace Tradee
 		public SnRLevelSettings()
 		{
 			LineWidth    = 2;
-			Colour       = Color.LightBlue;
+			Colour       = Color.Blue;
 			RegionColour = Color.LightBlue.Alpha(0.5f);
 		}
 		public SnRLevelSettings(XElement node)

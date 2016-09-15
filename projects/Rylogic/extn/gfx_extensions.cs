@@ -55,13 +55,13 @@ namespace pr.extn
 		}
 
 		/// <summary>Draws a rectangle with rounded corners</summary>
-		public static void DrawRectangleRounded(this Graphics gfx, Pen pen, Rectangle rect, float radius)
+		public static void DrawRectangleRounded(this Graphics gfx, Pen pen, RectangleF rect, float radius)
 		{
 			gfx.DrawPath(pen, Gfx.RoundedRectanglePath(rect, radius));
 		}
 
 		/// <summary>Fill a rectangle with rounded corners</summary>
-		public static void FillRectangleRounded(this Graphics gfx, Brush brush, Rectangle rect, float radius)
+		public static void FillRectangleRounded(this Graphics gfx, Brush brush, RectangleF rect, float radius)
 		{
 			gfx.FillPath(brush, Gfx.RoundedRectanglePath(rect, radius));
 		}

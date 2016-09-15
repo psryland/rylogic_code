@@ -12,7 +12,7 @@ namespace ldr
 		:m_camera(camera)
 		,m_view_size()
 		,m_reset_up(pr::Length3Sq(reset_up) > pr::maths::tiny ? reset_up : pr::v4YAxis)
-		,m_reset_forward(pr::Parallel3(m_reset_up, pr::v4ZAxis) ? -pr::v4XAxis : -pr::v4ZAxis)
+		,m_reset_forward(pr::Parallel3(m_reset_up, pr::v4ZAxis) ? pr::v4YAxis : -pr::v4ZAxis)
 		,m_orbit_timer(GetTickCount())
 		,m_views()
 	{
@@ -44,7 +44,7 @@ namespace ldr
 	{
 		m_camera.SetAlign(up);
 		if (m_camera.IsAligned()) m_reset_up = m_camera.m_align;
-		m_reset_forward = pr::Parallel3(m_reset_up, pr::v4ZAxis) ? -pr::v4XAxis : -pr::Normalise3(pr::Cross3(pr::v4XAxis, m_reset_up));
+		m_reset_forward = pr::Parallel3(m_reset_up, pr::v4ZAxis) ? pr::v4YAxis : -pr::Normalise3(pr::Cross3(pr::v4ZAxis, m_reset_up));
 	}
 	pr::v4 Navigation::CameraAlign() const
 	{

@@ -121,9 +121,15 @@ namespace Tradee
 		/// <summary>Update the current active positions</summary>
 		public void Update(Position[] positions)
 		{
+			var valid = positions.ToHashSet(x => x.Id);
+
+			// Remove any active positions that are not in 'positions'
+			Orders.RemoveIf(x => x.State == Trade.EState.ActivePosition && !valid.Contains(x.Id));
+
+			// Add or update the current positions
 			foreach (var pos in positions)
 			{
-				var idx = Orders.IndexOf(x => x.Id == pos.Id);
+				var idx = Orders.IndexOf(x => x.State == Trade.EState.ActivePosition && x.Id == pos.Id);
 				var instr = Model.MarketData[pos.SymbolCode];
 				var order = idx >= 0 ? Orders[idx] : Orders.Add2(new Order(pos.Id, instr, pos.TradeType, Trade.EState.ActivePosition));
 				order.Update(pos);
@@ -131,12 +137,18 @@ namespace Tradee
 			InvalidateTrades();
 		}
 
-		/// <summary>Update the current active positions</summary>
+		/// <summary>Update the pending orders</summary>
 		public void Update(PendingOrder[] pending)
 		{
+			var valid = pending.ToHashSet(x => x.Id);
+
+			// Remove any pending orders that are not in 'pending'
+			Orders.RemoveIf(x => x.State == Trade.EState.PendingOrder && !valid.Contains(x.Id));
+
+			// Add or update the pending orders
 			foreach (var pos in pending)
 			{
-				var idx = Orders.IndexOf(x => x.Id == pos.Id);
+				var idx = Orders.IndexOf(x => x.State == Trade.EState.PendingOrder && x.Id == pos.Id);
 				var instr = Model.MarketData[pos.SymbolCode];
 				var order = idx >= 0 ? Orders[idx] : Orders.Add2(new Order(pos.Id, instr, pos.TradeType, Trade.EState.PendingOrder));
 				order.Update(pos);
@@ -147,9 +159,15 @@ namespace Tradee
 		/// <summary>Update the closed positions</summary>
 		public void Update(ClosedOrder[] closed)
 		{
+			var valid = closed.ToHashSet(x => x.Id);
+
+			// Remove any closed orders that are not in 'pending'
+			Orders.RemoveIf(x => x.State == Trade.EState.Closed && !valid.Contains(x.Id));
+
+			// Add or update the closed orders
 			foreach (var pos in closed)
 			{
-				var idx = Orders.IndexOf(x => x.Id == pos.Id);
+				var idx = Orders.IndexOf(x => x.State == Trade.EState.Closed && x.Id == pos.Id);
 				var instr = Model.MarketData[pos.SymbolCode];
 				var order = idx >= 0 ? Orders[idx] : Orders.Add2(new Order(pos.Id, instr, pos.TradeType, Trade.EState.Closed));
 				order.Update(pos);

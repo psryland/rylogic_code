@@ -690,6 +690,11 @@ namespace pr
 					{
 						m4x4 o2w_ = m4x4Identity;
 						reader.Matrix4x4S(o2w_);
+						if (o2w_.w.w != 1)
+						{
+							reader.ReportError(pr::script::EResult::UnknownValue, "M4x4 must be an affine transform with: w.w == 1");
+							break;
+						}
 						p2w = o2w_ * p2w;
 						break;
 					}

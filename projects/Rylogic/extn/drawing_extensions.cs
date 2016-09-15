@@ -32,7 +32,7 @@ namespace pr.extn
 		Centre = Left|Top|Right|Bottom,
 	}
 
-	public static class DrawingEx
+	public static class Drawing_
 	{
 		// There's already a static method 'Union'
 		///// <summary>Replaces this rectangle with the union of itself and 'rect'</summary>
@@ -544,6 +544,36 @@ namespace pr.extn
 			if (bm.Width > 128 || bm.Height > 128) throw new Exception("Icons can only be created from bitmaps up to 128x128 pixels in size");
 			using (var handle = Scope.Create(() => bm.GetHicon(), h => Win32.DestroyIcon(h)))
 				return Icon.FromHandle(handle.Value);
+		}
+	}
+
+	/// <summary>Color extensions</summary>
+	public static class Color_
+	{
+		/// <summary>Create a colour from a uint</summary>
+		public static Color FromArgb(uint argb)
+		{
+			return Color.FromArgb(
+				(int)((argb >> 24) & 0xFF),
+				(int)((argb >> 16) & 0xFF),
+				(int)((argb >>  8) & 0xFF),
+				(int)((argb >>  0) & 0xFF));
+		}
+
+		/// <summary>Lighten this colour, towards white</summary>
+		public static Color Lighten(this Color col, float t, bool alpha_too = false)
+		{
+			var c = (Colour32)col;
+			c = c.Lighten(t, alpha_too);
+			return c.ToColor();
+		}
+
+		/// <summary>Darken this colour, towards black</summary>
+		public static Color Darken(this Color col, float t, bool alpha_too = false)
+		{
+			var c = (Colour32)col;
+			c = c.Darken(t, alpha_too);
+			return c.ToColor();
 		}
 	}
 

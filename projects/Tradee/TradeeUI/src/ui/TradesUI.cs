@@ -289,7 +289,7 @@ namespace Tradee
 
 			// Set the highlighted state for all selected orders on all charts
 			foreach (var order_gfx in Model.Charts.SelectMany(x => x.Elements).OfType<OrderChartElement>())
-				order_gfx.Highlighted = sel.Contains(order_gfx.Order);
+				order_gfx.Selected = sel.Contains(order_gfx.Order);
 		}
 
 		/// <summary>Handle mouse click within the trade grid</summary>

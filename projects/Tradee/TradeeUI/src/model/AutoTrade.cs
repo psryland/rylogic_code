@@ -16,13 +16,13 @@ namespace Tradee
 	{
 		public AutoTrade(Instrument instr)
 		{
-			WickFollow = new WickFollow();
+			PatternRecogniser = new CandlePatterns();
 			Instrument = instr;
 		}
 		public virtual void Dispose()
 		{
 			Instrument = null;
-			WickFollow = null;
+			PatternRecogniser = null;
 		}
 
 		/// <summary>The App logic</summary>
@@ -43,52 +43,53 @@ namespace Tradee
 				if (m_instr == value) return;
 				if (m_instr != null)
 				{
-					WickFollow.Instrument = null;
+					PatternRecogniser.Instrument = null;
 				}
 				m_instr = value;
 				if (m_instr != null)
 				{
-					WickFollow.Instrument = m_instr;
+					PatternRecogniser.Instrument = m_instr;
 				}
 			}
 		}
 		private Instrument m_instr;
 
 		/// <summary>Wick follower</summary>
-		private WickFollow WickFollow
+		private CandlePatterns PatternRecogniser
 		{
-			get { return m_wick_follow; }
+			get { return m_candle_patterns; }
 			set
 			{
-				if (m_wick_follow == value) return;
-				if (m_wick_follow != null)
+				if (m_candle_patterns == value) return;
+				if (m_candle_patterns != null)
 				{
-					m_wick_follow.FollowLengthChanged -= HandleFollowLengthChanged;
-					Util.Dispose(ref m_wick_follow);
+					m_candle_patterns.TrendLengthChanged -= HandleFollowLengthChanged;
+					Util.Dispose(ref m_candle_patterns);
 				}
-				m_wick_follow = value;
-				if (m_wick_follow != null)
+				m_candle_patterns = value;
+				if (m_candle_patterns != null)
 				{
-					m_wick_follow.FollowLengthChanged += HandleFollowLengthChanged;
+					m_candle_patterns.TrendLengthChanged += HandleFollowLengthChanged;
 				}
 			}
 		}
-		private WickFollow m_wick_follow;
+		private CandlePatterns m_candle_patterns;
 
 		/// <summary>Handle the length of the wick follow changing</summary>
 		private void HandleFollowLengthChanged(object sender, EventArgs args)
 		{
+			#if false
 			// Test..
-			if (WickFollow.HighSeqLength >= 3)
+			if (PatternRecogniser.HighSeqLength >= 3)
 			{
 				// Trade type
-				var tt = WickFollow.HighRising ? ETradeType.Long : ETradeType.Short;
+				var tt = PatternRecogniser.HighRising ? ETradeType.Long : ETradeType.Short;
 
 				// Enter at the current market price
-				var ep = WickFollow.HighRising ? Instrument.PriceData.AskPrice : Instrument.PriceData.BidPrice;
+				var ep = PatternRecogniser.HighRising ? Instrument.PriceData.AskPrice : Instrument.PriceData.BidPrice;
 
 				// Set the stop loss to just past the lowest (rising) or highest (falling) of the last 3 candles
-				var sl = WickFollow.HighRising
+				var sl = PatternRecogniser.HighRising
 					? Instrument.CandleRange(Instrument.LastIdx -  3, Instrument.LastIdx).Select(x => x.Low ).Concat(ep).Min()
 					: Instrument.CandleRange(Instrument.LastIdx -  3, Instrument.LastIdx).Select(x => x.High).Concat(ep).Max();
 
@@ -99,6 +100,7 @@ namespace Tradee
 				order.State = Trade.EState.ActivePosition;
 				order.Commit();
 			}
+			#endif
 		}
 	}
 }

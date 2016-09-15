@@ -36,5 +36,17 @@ namespace Tradee
 		{
 			return state == Trade.EState.Visualising || state == Trade.EState.PendingOrder;
 		}
+
+		/// <summary>True if this is a possible indecision (reversal or continuation) candle type</summary>
+		public static bool IsIndecision(this Candle.EType type)
+		{
+			return type == Candle.EType.Doji || type == Candle.EType.SpinningTop || type == Candle.EType.Hammer || type == Candle.EType.InvHammer;
+		}
+
+		/// <summary>True if this is a trend indicating candle type</summary>
+		public static bool IsTrend(this Candle.EType type)
+		{
+			return type == Candle.EType.Marubozu || type == Candle.EType.MarubozuStrengthening || type == Candle.EType.MarubozuWeakening;
+		}
 	}
 }

@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using pr.win32;
 
 namespace pr.extn
 {
@@ -178,6 +179,15 @@ namespace pr.extn
 			if (time > max) return max;
 			return time;
 		}
+
+		/// <summary>Convert a win32 system time to a date time offset</summary>
+		public static DateTimeOffset FromSystemTime(Win32.SYSTEMTIME st)
+		{
+			var ft = new Win32.FILETIME();
+			if (!Win32.SystemTimeToFileTime(ref st, out ft))
+				throw new Exception("Failed to convert system time to file time");
+			return DateTimeOffset.FromFileTime(ft.value);
+		}
 	}
 
 	public static class TimeSpan_
@@ -313,6 +323,16 @@ namespace pr.extn
 				show_m ? "{0}{1} ".Fmt(m, unit_m) : string.Empty,
 				show_s ? "{0}{1} ".Fmt(s, unit_s) : string.Empty,
 				show_f ? "{0}{1} ".Fmt(f, unit_f) : string.Empty).TrimEnd(' ');
+		}
+
+		/// <summary>Return the approximate time for this time span using the least number of characters possible</summary>
+		public static string ToMinimalString(this TimeSpan ts)
+		{
+			if (ts.TotalDays    > 1) return "{0}d".Fmt((int)ts.TotalDays);
+			if (ts.TotalHours   > 1) return "{0}h".Fmt((int)ts.TotalHours);
+			if (ts.TotalMinutes > 1) return "{0}m".Fmt((int)ts.TotalMinutes);
+			if (ts.TotalSeconds > 1) return "{0}s".Fmt((int)ts.TotalSeconds);
+			return "{0}ms".Fmt((int)ts.TotalMilliseconds);
 		}
 	}
 }

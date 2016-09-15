@@ -693,6 +693,30 @@ namespace Tradee
 				e.Gfx.FillRectangle(bsh, new RectangleF(pt.X - box.Width, pt.Y - box.Height/2, box.Width, box.Height));
 				e.Gfx.DrawString(price_str, e.Chart.YAxis.Options.TickFont, Brushes.White, pt.X - sz.Width, pt.Y - sz.Height/2);
 			}
+
+			// This needs to be done on a textured quad and positioned in the 3d scene
+			// Draw the time remaining on the latest candle
+			if (e.Chart.XAxis.Range.Contains(0.0))
+			{
+				// Find the remaining time
+				var latest = Instrument.Latest;
+				var one = Misc.TimeFrameToTimeSpan(1.0, TimeFrame);
+				var age = Model.UtcNow - latest.TimestampUTC;
+				var str = (one - age).ToMinimalString();
+
+				// Measure the time remaining string
+				var font = e.Chart.XAxis.Options.TickFont;
+				var sz = e.Gfx.MeasureString(str, font);
+
+				// Find the point on the chart to draw the string
+				var pt = e.Chart.ChartToClient(new PointF(0f, (float)e.Chart.YAxis.Min));
+				pt.X = (int)(pt.X - sz.Width / 2);
+				pt.Y = (int)(pt.Y + 5.0);
+
+				// Draw the string under the candle
+				e.Gfx.FillRectangle(Brushes.Black, new RectangleF(pt.X, pt.Y, sz.Width, sz.Height));
+				e.Gfx.DrawString(str, font, Brushes.White, pt.X, pt.Y);
+			}
 		}
 
 		/// <summary>Handle finding the default range for the chart</summary>
@@ -869,6 +893,10 @@ namespace Tradee
 							// S&R
 							var opt = add_menu.DropDownItems.Add2(new ToolStripMenuItem("Support and Resistance"));
 							opt.Click += (s,a) => EditSnRIndicator();
+						}{
+							// Trend Strength
+							var opt = add_menu.DropDownItems.Add2(new ToolStripMenuItem("Trend Strength"));
+							opt.Click += (s,a) => EditTrendStrengthIndicator();
 						}
 
 						indicators_menu.DropDownItems.AddSeparator();
@@ -1034,6 +1062,13 @@ namespace Tradee
 		{
 			snr = snr ?? Indicators.Add2(new SnR());
 			new EditSnrUI(this, snr).Show(this);
+		}
+
+		/// <summary>Add/Edit a trend strength indicator</summary>
+		private void EditTrendStrengthIndicator(TrendStrength ts = null)
+		{
+			ts = ts ?? Indicators.Add2(new TrendStrength());
+			// new EditTrendStrengthUI(this, ts).Show(this);
 		}
 
 		/// <summary>Add/Edit a support/resistance line</summary>

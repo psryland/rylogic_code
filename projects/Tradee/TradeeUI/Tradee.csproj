@@ -76,8 +76,9 @@
     <Compile Include="src\indicators\HorizontalLine.cs" />
     <Compile Include="src\indicators\IndicatorBase.cs" />
     <Compile Include="src\indicators\SnRLevel.cs" />
-    <Compile Include="src\indicators\Trend.cs" />
-    <Compile Include="src\indicators\WickFollow.cs" />
+    <Compile Include="src\indicators\TrendStrength.cs" />
+    <Compile Include="src\misc\ChartElement.cs" />
+    <Compile Include="src\model\CandlePatterns.cs" />
     <Compile Include="src\misc\Misc.cs" />
     <Compile Include="src\misc\Settings.cs" />
     <Compile Include="src\misc\SqlExpr.cs" />

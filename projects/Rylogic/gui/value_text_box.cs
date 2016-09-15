@@ -82,32 +82,37 @@ namespace pr.gui
 			set
 			{
 				if (Equals(m_value, value)) return;
-
-				// Adopt the type from the value if 'ValueType' is currently 'object'
-				if (ValueType == typeof(object) && value != null)
-					ValueType = value.GetType();
-
-				// Null is equivalent to the default type for structs
-				if (!ValueType.IsClass && value == null)
-					value = Activator.CreateInstance(ValueType);
-
-				// Check the assigned value has the correct type
-				if (value != null && !ValueType.IsAssignableFrom(value.GetType()))
-					throw new ArgumentException("Cannot assign to 'Value', argument has the wrong type. Expected: {0}  Received: {1}".Fmt(ValueType.Name, value.GetType().Name));
-
-				// Assign the value
-				m_value = value;
-
-				// Only update the text when not focused to prevent
-				// the text changing while the user is typing.
-				if (!Focused)
-					Text = ValueToText(value);
-
-				// Notify value changed
-				OnValueChanged();
+				SetValue(value);
 			}
 		}
 		private object m_value;
+
+		/// <summary>Set the value explicitly (i.e. not ignored if equal to the current value)</summary>
+		public void SetValue(object value)
+		{
+			// Adopt the type from the value if 'ValueType' is currently 'object'
+			if (ValueType == typeof(object) && value != null)
+				ValueType = value.GetType();
+
+			// Null is equivalent to the default type for structs
+			if (!ValueType.IsClass && value == null)
+				value = Activator.CreateInstance(ValueType);
+
+			// Check the assigned value has the correct type
+			if (value != null && !ValueType.IsAssignableFrom(value.GetType()))
+				throw new ArgumentException("Cannot assign to 'Value', argument has the wrong type. Expected: {0}  Received: {1}".Fmt(ValueType.Name, value.GetType().Name));
+
+			// Assign the value
+			m_value = value;
+
+			// Only update the text when not focused to prevent
+			// the text changing while the user is typing.
+			if (!Focused)
+				Text = ValueToText(value);
+
+			// Notify value changed
+			OnValueChanged();
+		}
 
 		/// <summary>True if the control contains a valid value</summary>
 		public bool Valid

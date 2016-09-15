@@ -85,7 +85,7 @@ namespace pr.gui
 						{
 							var mn = Target.MinimumSize;
 							var mx = Target.MaximumSize != Size.Empty ? Target.MaximumSize : new Size(int.MaxValue, int.MaxValue);
-							var delta = DrawingEx.Subtract(pt, m_grab.Value);
+							var delta = Drawing_.Subtract(pt, m_grab.Value);
 							if ((m_mask & EBoxZone.Right)  != 0) { Target.Width  = Maths.Clamp(m_size.Width  + delta.Width , mn.Width , mx.Width ); }
 							if ((m_mask & EBoxZone.Bottom) != 0) { Target.Height = Maths.Clamp(m_size.Height + delta.Height, mn.Height, mx.Height); }
 							if ((m_mask & EBoxZone.Left)   != 0) { Target.Width  = Maths.Clamp(m_size.Width  - delta.Width , mn.Width , mx.Width ); Target.Left = m_loc.X + m_size.Width  - Target.Width;  }
@@ -136,7 +136,7 @@ namespace pr.gui
 		private EBoxZone Mask(Point screen_pt)
 		{
 			var pt = Target.PointToClient(screen_pt);
-			return DrawingEx.GetBoxZone(Target.ClientRectangle.Inflated(-BorderWidth,-BorderWidth,-BorderWidth,-BorderWidth), pt);
+			return Drawing_.GetBoxZone(Target.ClientRectangle.Inflated(-BorderWidth,-BorderWidth,-BorderWidth,-BorderWidth), pt);
 		}
 	}
 }

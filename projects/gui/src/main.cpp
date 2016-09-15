@@ -9,6 +9,8 @@
 #include "pr/gui/scintilla_ctrl.h"
 #include "pr/win32/win32.h"
 
+#include "pr/network/bluetooth_ui.h"
+
 #define USE_ATL
 #ifdef USE_ATL
 #include <atlapp.h>
@@ -277,9 +279,10 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 		//ProgressUI main(ProgressUI::Params<>().title(L"Progress").desc(L"This is not a drill").xy(2000,100).main_wnd());
 		//return main.ShowDialog();
 
-		Main main; main.Show();
+		//Main main; main.Show();
 		//Test test1; auto& main = test1; test1.Show();
 		//Test2 test2; auto& main = test2; test2.Show();
+		pr::network::BTDevicePickerUI main; main.Show();
 
 		MessageLoop loop;
 		loop.AddMessageFilter(main);

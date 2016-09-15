@@ -12,6 +12,7 @@
 #include "pr/maths/vector4.h"
 #include "pr/maths/matrix3x3.h"
 #include "pr/maths/matrix4x4.h"
+#include "pr/maths/stat.h"
 
 namespace pr
 {
@@ -58,6 +59,11 @@ namespace pr
 		{
 			assert(maths::is_aligned(this));
 		}
+		explicit Quat(v4 const& vec)
+			:xyzw(vec)
+		{
+			assert(maths::is_aligned(this));
+		}
 		template <typename T, typename = maths::enable_if_v4<T>> explicit Quat(T const& v)
 			:Quat(x_as<float>(v), y_as<float>(v), z_as<float>(v), w_as<float>(v))
 		{}
@@ -82,6 +88,20 @@ namespace pr
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
+		}
+
+		// Operators
+		Quat operator +() const
+		{
+			return *this;
+		}
+		Quat operator -() const
+		{
+			return Quat(-x, -y, -z, -w); // Note: Not conjugate
+		}
+		Quat operator ~() const
+		{
+			return Quat(-x, -y, -z, w);
 		}
 
 		// Create a quaternion from an axis and an angle
@@ -173,6 +193,42 @@ namespace pr
 			}
 			xyzw = Normalise4(v4(axis.x, axis.y, axis.z, s));
 		}
+
+		// Get the axis component of the quaternion (normalised)
+		v4 Axis() const
+		{
+			// The axis is arbitrary for identity rotations
+			return Normalise3(xyzw.w0(), v4ZAxis);
+		}
+
+		// Return the angle of rotation about 'Axis()'
+		float Angle() const
+		{
+			return ACos(CosAngle());
+		}
+
+		// Return the cosine of the angle of rotation about 'Axis()'
+		float CosAngle() const
+		{
+			assert("quaternion isn't normalised" && IsNormal4(*this));
+
+			// Trig:
+			//' cos²(x) = 0.5 * (1 + cos(2x))
+			//' w == cos(x/2)
+			//' w² == cos²(x/2) == 0.5 * (1 + cos(x))
+			//' 2w² - 1 == cos(x)
+			return Clamp(2.0f * Sqr(w) - 1.0f, -1.0f, +1.0f);
+		}
+
+		// Return the sine of the angle of rotation about 'Axis()'
+		float SinAngle() const
+		{
+			// Trig:
+			//' sin²(x) + cos²(x) == 1
+			//' sin²(x) == 1 - cos²(x)
+			//' sin(x) == sqrt(1 - cos²(x))
+			return Sqrt(1.0f - Sqr(CosAngle()));
+		}
 	};
 	using quat = Quat;
 	static_assert(maths::is_vec4<quat>::value, "");
@@ -196,92 +252,15 @@ namespace pr
 	#pragma endregion
 
 	#pragma region Operators
-	inline quat pr_vectorcall operator + (quat_cref q)
-	{
-		return q;
-	}
-	inline quat pr_vectorcall operator - (quat_cref q)
-	{
-		return quat(-q.x, -q.y, -q.z, -q.w); // Note: Not conjugate
-	}
-	inline quat& operator *= (quat& lhs, float rhs)
-	{
-		lhs.x *= rhs;
-		lhs.y *= rhs;
-		lhs.z *= rhs;
-		lhs.w *= rhs;
-		return lhs;
-	}
-	inline quat& operator /= (quat& lhs, float rhs)
-	{
-		assert("divide by zero" && rhs != 0);
-		lhs.x /= rhs;
-		lhs.y /= rhs;
-		lhs.z /= rhs;
-		lhs.w /= rhs;
-		return lhs;
-	}
-	inline quat& pr_vectorcall operator += (quat& lhs, quat_cref rhs)
-	{
-		lhs.x += rhs.x;
-		lhs.y += rhs.y;
-		lhs.z += rhs.z;
-		lhs.w += rhs.w;
-		return lhs;
-	}
-	inline quat& pr_vectorcall operator -= (quat& lhs, quat_cref rhs)
-	{
-		lhs.x -= rhs.x;
-		lhs.y -= rhs.y;
-		lhs.z -= rhs.z;
-		lhs.w -= rhs.w;
-		return lhs;
-	}
-	inline quat pr_vectorcall operator + (quat_cref lhs, quat_cref rhs)
-	{
-		auto q = lhs;
-		return q += rhs;
-	}
-	inline quat pr_vectorcall operator - (quat_cref lhs, quat_cref rhs)
-	{
-		auto q = lhs;
-		return q -= rhs;
-	}
-	template <typename = void> inline quat& operator %= (quat&, float)
-	{
-		static_assert(false, "Quaternion modulus has no meaning");
-	}
-	template <typename = void> inline quat operator *= (quat&, quat const&)
-	{
-		static_assert(false,
-			"Quaternion component multiply is not defined because it is incorrect semantically. "
-			"To rotate a vector by a quaternion use: r = q * (v3,0) * Conjugate(q). "
-			"Or use the 'Rotate()' functions. ");
-	}
-	template <typename = void> inline quat operator /= (quat&, quat const&)
-	{
-		static_assert(false,
-			"Quaternion component multiply is not defined because it is incorrect semantically. "
-			"To rotate a vector by a quaternion use: r = q * (v3,0) * Conjugate(q). "
-			"Or use the 'Rotate()' functions. ");
-	}
-	template <typename = void> inline quat operator %= (quat&, quat const&)
-	{
-		static_assert(false,
-			"Quaternion component multiply is not defined because it is incorrect semantically. "
-			"To rotate a vector by a quaternion use: r = q * (v3,0) * Conjugate(q). "
-			"Or use the 'Rotate()' functions. ");
-	}
-
 	// Quaternion multiply
 	// Note about 'quat multiply' vs. 'r = q*v*conj(q)':
 	// To rotate a vector or another quaternion, use the "sandwich product"
 	// However, combining rotations is done using q1 * q2.
 	// This is because:
-	//  'r1 = a * v * conj(a)  - first rotation '
-	//  'r2 = b * r1 * conj(b) - second rotation'
-	//  'r2 = b * a * v * conj(a) * conj(b)     '
-	//  'r2 = (b*a) * v * conj(b*a)             '
+	//'  r1 = a * v * conj(a)  - first rotation 
+	//'  r2 = b * r1 * conj(b) - second rotation
+	//'  r2 = b * a * v * conj(a) * conj(b)     
+	//'  r2 = (b*a) * v * conj(b*a)             
 	inline quat pr_vectorcall operator * (quat_cref lhs, quat_cref rhs)
 	{
 		auto q = quat{};
@@ -299,64 +278,130 @@ namespace pr
 	{
 		return Rotate(lhs, rhs);
 	}
-
 	#pragma endregion
 
 	#pragma region Functions
 
-	// Return the conjugate of quaternion 'q'
-	inline quat pr_vectorcall Conjugate(quat_cref q)
+	// Quaternion FEql. Note: q == -q
+	inline bool pr_vectorcall FEql(quat_cref lhs, quat_cref rhs, float tol = maths::tiny)
 	{
-		return quat(-q.x, -q.y, -q.z, q.w);
+		return
+			FEql4(lhs.xyzw, +rhs.xyzw, tol) ||
+			FEql4(lhs.xyzw, -rhs.xyzw, tol);
+	}
+
+	// Component add
+	inline quat pr_vectorcall CompAdd(quat_cref lhs, quat_cref rhs)
+	{
+		return quat(lhs.xyzw + rhs.xyzw);
+	}
+
+	// Component multiply
+	inline quat pr_vectorcall CompMul(quat_cref lhs, float rhs)
+	{
+		return quat(lhs.xyzw * rhs);
+	}
+	inline quat pr_vectorcall CompMul(quat_cref lhs, quat_cref rhs)
+	{
+		return quat(lhs.xyzw * rhs.xyzw);
+	}
+
+	// Normalise the quaternion 'q'
+	inline quat pr_vectorcall Normalise(quat_cref q)
+	{
+		return quat(Normalise4(q.xyzw));
+	}
+	inline quat pr_vectorcall Normalise(quat_cref q, quat_cref def)
+	{
+		return quat(Normalise4(q.xyzw, def.xyzw));
+	}
+
+	// Return the cosine of the angle between two quaternions (i.e. the dot product)
+	inline float pr_vectorcall CosAngle(quat_cref a, quat_cref b)
+	{
+		return Dot4(a.vec, b.vec);
+	}
+
+	// Return the angle between two quaternions (in radians)
+	inline float pr_vectorcall Angle(quat_cref a, quat_cref b)
+	{
+		return ACos(CosAngle(a,b));
+	}
+
+	// Scale the rotation 'q' by 'frac'. Returns a rotation about the same axis but with angle scaled by 'frac'
+	inline quat pr_vectorcall Scale(quat_cref q, float frac)
+	{
+		assert("quaternion isn't normalised" && IsNormal4(q));
+
+		// Trig:
+		//' sin²(x) + cos²(x) == 1
+		//' s == sqrt(1 - w²) == sqrt(1 - cos²(x/2))
+		//' s² == 1 - cos²(x/2) == sin²(x/2)
+		//' s == sin(x/2)
+		auto w = Clamp(q.w, -1.0f, 1.0f); // = cos(x/2)
+		auto s = Sqrt(1.0f - Sqr(w));     // = sin(x/2)
+		auto a = frac * ACos(w);          // = scaled half angle
+		auto sin_ha = Sin(a);
+		auto cos_ha = Cos(a);
+		return quat(
+			q.x * sin_ha / s,
+			q.y * sin_ha / s,
+			q.z * sin_ha / s,
+			cos_ha);
 	}
 
 	// Return the axis and angle from a quaternion
 	inline void pr_vectorcall AxisAngle(quat_cref q, v4& axis, float& angle)
 	{
 		assert("quaternion isn't normalised" && IsNormal4(q));
-		float w = Clamp(q.w, -1.0f, 1.0f);
-		float s = Sqrt(1.0f - w * w);
-		angle = 2.0f * pr::ACos(w);
+
+		// Trig:
+		//' sin²(x) + cos²(x) == 1
+		//' s == sqrt(1 - w²) == sqrt(1 - cos²(x/2))
+		//' s² == 1 - cos²(x/2) == sin²(x/2)
+		//' s == sin(x/2)
+		auto w = Clamp(q.w, -1.0f, 1.0f);
+		auto s = Sqrt(1.0f - Sqr(w));
+		angle = 2.0f * ACos(w);
 		axis = !FEql(s, 0.0f)
 			? v4(q.x/s, q.y/s, q.z/s, 0.0f)
 			: v4ZAxis; // axis arbitrary for angle = 0
 	}
 
+	// Return possible Euler angles for the quaternion 'q'
+	inline v4 EulerAngles(quat_cref q)
+	{
+		// From Wikipedia
+		double q0 = q.w, q1 = q.x, q2 = q.y, q3 = q.z;
+		return v4(
+			(float)atan2(2.0 * (q0*q1 + q2*q3), 1.0 - 2.0 * (q1*q1 + q2*q2)),
+			(float)asin (2.0 * (q0*q2 - q3*q1)),
+			(float)atan2(2.0 * (q0*q3 + q1*q2), 1.0 - 2.0 * (q2*q2 + q3*q3)),
+			0);
+	}
+
 	// Spherically interpolate between quaternions
 	inline quat pr_vectorcall Slerp(quat_cref a, quat_cref b, float frac)
 	{
-		if (frac <= 0.0f) return a;
-		if (frac >= 1.0f) return b;
-
-		// Calculate cosine
-		quat abs_b;
-		auto cos_angle = a.x*b.x + a.y*b.y + a.z*b.z + a.w*b.w;
-		if (cos_angle >= 0) { abs_b =  b; }
-		else                { abs_b = -b; cos_angle = -cos_angle; }
+		// Flip 'b' so that both quaternions are in the same hemisphere (since: q == -q)
+		auto cos_angle = CosAngle(a,b);
+		quat b_ = cos_angle >= 0 ? b : -b;
+		cos_angle = Abs(cos_angle);
 
 		// Calculate coefficients
-		if (FGtr(1.0f, cos_angle, 0.05f))
+		if (cos_angle < 0.95f)
 		{
-			// standard case (SLerp)
-			float angle     = ACos(cos_angle);
-			float sin_angle = Sin(angle);
-			float scale0    = Sin((1.0f - frac) * angle);
-			float scale1    = Sin((frac) * angle);
-			return (scale0*a + scale1*abs_b) * (1.0f / sin_angle);
+			auto angle     = ACos(cos_angle);
+			auto scale0    = Sin((1.0f - frac) * angle);
+			auto scale1    = Sin((frac       ) * angle);
+			auto sin_angle = Sin(angle);
+			return quat((scale0*a.xyzw + scale1*b_.xyzw) / sin_angle);
 		}
 		else // "a" and "b" quaternions are very close
 		{
-			return Normalise4(Lerp(a, abs_b, frac));
+			return Normalise(quat(Lerp(a.xyzw, b_.xyzw, frac)));
 		}
 	}
-
-	// this is quaternion multiply
-	//// Rotate 'rotatee' by 'rotator'
-	//inline quat pr_vectorcall Rotate(quat_cref rotator, quat_cref rotatee)
-	//{
-	//	assert("Non-unit quaternion used for rotation" && FEql(Length4Sq(rotator), 1.0f));
-	//	return rotator * rotatee * Conjugate(rotator);
-	//}
 
 	// Rotate a vector by a quaternion
 	// This is an optimised version of: 'r = q*v*conj(q) for when v.w == 0'
@@ -374,6 +419,30 @@ namespace pr
 		r.w = rhs.w;
 		return r;
 	}
+
+	// Specialise 'Avr' for quaternions
+	// Finds the average rotation.
+	template <> struct Avr<quat,float> :private Avr<v4,float>
+	{
+		using base = Avr<v4,float>;
+		using base::Count;
+		using base::Reset;
+		quat Mean() const
+		{
+			return Normalise(quat(base::Mean()));
+		}
+		void Add(quat_cref q)
+		{
+			// Nicked from Unity3D
+			// Note: this only really works if all the quaternions are relatively close together.
+			// For two quaternions, prefer 'Slerp'
+			// This method is based on a simplified procedure described in this document:
+			// http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/20070017872_2007014421.pdf
+
+			// Ensure the quaternions are in the same hemisphere (since q == -q)
+			base::Add(Dot4(q.xyzw, m_mean) >= 0 ? q.xyzw : -q.xyzw);
+		}
+	};
 
 	#pragma endregion
 }
@@ -395,6 +464,23 @@ namespace pr
 				auto q0 = quat(p,y,r);
 				quat q1(DirectX::XMQuaternionRotationRollPitchYaw(p,y,r));
 				PR_CHECK(FEql4(q0, q1), true);
+			}
+			{ // Average
+				Rand rng(1);
+				auto ideal_mean = quat(Normalise3(v4(1,1,1,0)), 0.5f);
+				
+				Avr<quat, float> avr;
+				for (int i = 0; i != 1000; ++i)
+				{
+					auto axis = Normalise3(ideal_mean.Axis() + Random3(rng, 0.0f, 0.2f, 0.0f));
+					auto angle = rng.fltc(ideal_mean.Angle(), 0.2f);
+					quat q(axis, angle);
+					avr.Add(rng.boolean() ? q : -q);
+				}
+				
+				auto actual_mean = avr.Mean();
+				PR_CHECK(FEql(ideal_mean, actual_mean, 0.01f), true);
+
 			}
 		}
 	}
