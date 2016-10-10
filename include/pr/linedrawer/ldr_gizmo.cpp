@@ -1030,9 +1030,9 @@ namespace pr
 		// Add this gizmo to a scene
 		void LdrGizmo::AddToScene(pr::rdr::Scene& scene)
 		{
-			m_gfx.m_axis[0].m_i2w = m_gfx.m_o2w * m4x4::Rotation(0, pr::maths::tau_by_4, pr::maths::tau_by_4, v4Origin);
-			m_gfx.m_axis[1].m_i2w = m_gfx.m_o2w * m4x4::Rotation(-pr::maths::tau_by_4, -pr::maths::tau_by_4, 0, v4Origin);
-			m_gfx.m_axis[2].m_i2w = m_gfx.m_o2w * m4x4::Rotation(0,0,0, v4Origin);
+			m_gfx.m_axis[0].m_i2w = m_gfx.m_o2w * m4x4::Transform(0, pr::maths::tau_by_4, pr::maths::tau_by_4, v4Origin);
+			m_gfx.m_axis[1].m_i2w = m_gfx.m_o2w * m4x4::Transform(-pr::maths::tau_by_4, -pr::maths::tau_by_4, 0, v4Origin);
+			m_gfx.m_axis[2].m_i2w = m_gfx.m_o2w * m4x4::Transform(0,0,0, v4Origin);
 
 			scene.AddInstance(m_gfx.m_axis[0]);
 			scene.AddInstance(m_gfx.m_axis[1]);
@@ -1097,7 +1097,7 @@ namespace pr
 			auto c  = nss_point - p0.xy;
 			auto t  = s * ATan2(Dot2(c,b), Dot2(c,a));
 
-			m_offset = m4x4::Translation(p) * m4x4::Rotation(axis, t, v4Origin) * m4x4::Translation((-p).w1()); // World space rotation about 'axis'
+			m_offset = m4x4::Translation(p) * m4x4::Transform(axis, t, v4Origin) * m4x4::Translation((-p).w1()); // World space rotation about 'axis'
 
 			// Rotate attached objects by t radians about the component axis
 			for (int i = 0, iend = int(m_attached_ptr.size()); i != iend; ++i)

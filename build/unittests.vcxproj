@@ -262,6 +262,7 @@
     <ClInclude Include="..\include\pr\meta\function_arity.h" />
     <ClInclude Include="..\include\pr\meta\gcf.h" />
     <ClInclude Include="..\include\pr\meta\if.h" />
+    <ClInclude Include="..\include\pr\meta\is_char.h" />
     <ClInclude Include="..\include\pr\meta\min_max.h" />
     <ClInclude Include="..\include\pr\meta\not.h" />
     <ClInclude Include="..\include\pr\meta\or.h" />
@@ -396,7 +397,7 @@
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <PreprocessorDefinitions>PR_UNITTESTS=1;_WIN32_WINNT=0x0600;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_UNITTESTS=1;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <SDLCheck>false</SDLCheck>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
@@ -426,7 +427,7 @@
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <PreprocessorDefinitions>PR_UNITTESTS=1;PR_MATHS_USE_INTRINSICS=1;_WIN32_WINNT=0x0600;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_UNITTESTS=1;PR_MATHS_USE_INTRINSICS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <SDLCheck>false</SDLCheck>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
@@ -456,7 +457,7 @@
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <PreprocessorDefinitions>PR_UNITTESTS=1;_WIN32_WINNT=0x0600;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_UNITTESTS=1;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>false</SDLCheck>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
@@ -485,7 +486,7 @@
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <PreprocessorDefinitions>PR_UNITTESTS=1;_WIN32_WINNT=0x0600;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>false</SDLCheck>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>

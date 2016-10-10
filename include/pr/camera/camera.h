@@ -509,7 +509,7 @@ namespace pr
 			pr::v4 old_focus = FocusPoint();
 
 			// Rotate the camera matrix
-			m_c2w = m_base_c2w * m4x4::Rotation(pitch, yaw, roll, v4Origin);
+			m_c2w = m_base_c2w * m4x4::Transform(pitch, yaw, roll, v4Origin);
 
 			// Position the camera so that the focus is still in the same position
 			m_c2w.pos = old_focus + m_c2w.z * m_focus_dist;
@@ -656,7 +656,7 @@ namespace pr
 			pr::v4 axis = IsAligned() ? pr::InvertFast(m_c2w) * m_align : m_c2w.y;
 
 			// Rotate the camera transform and reposition to look at the focus point
-			m_c2w     = m_c2w * m4x4::Rotation(axis, angle_rad, v4Origin);
+			m_c2w     = m_c2w * m4x4::Transform(axis, angle_rad, v4Origin);
 			m_c2w.pos = old_focus + m_focus_dist * m_c2w.z;
 			m_c2w     = pr::Orthonorm(m_c2w);
 

@@ -7,6 +7,7 @@
 #ifndef PR_CRYPT_CRYPT_H
 #define PR_CRYPT_CRYPT_H
 
+// deprecate, use crc or md5 directly
 #include "pr/common/prtypes.h"
 #include "pr/common/crc.h"
 
@@ -14,10 +15,6 @@ namespace pr
 {
 	namespace crypt
 	{
-		// CRC functions
-		CRC        CrcFile(char const* filename, CRC initial_crc);
-		inline CRC CrcFile(char const* filename) { return CrcFile(filename, InitialCrc); }
-
 		struct  MD5         { uint8 m_key[16];      };
 		struct  MD5Context  { uint8 m_context[104]; };
 		void    MD5Begin(MD5Context& context);

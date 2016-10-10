@@ -124,7 +124,7 @@ namespace pr
 	}
 }
 
-#if PR_UNITTESTS
+#if PR_UNITTESTS&&0
 #include "pr/common/unittests.h"
 #include "pr/linedrawer/ldr_helper.h"
 namespace pr
@@ -143,7 +143,7 @@ namespace pr
 			};
 			pr::m4x4 r2w_[] =
 			{
-				pr::m4x4::Rotation(pr::maths::tau_by_8, pr::maths::tau_by_8, pr::maths::tau_by_8, pr::v4(0.2f, 0.3f, 0.1f, 1.0f)),
+				pr::m4x4::Transform(pr::maths::tau_by_8, pr::maths::tau_by_8, pr::maths::tau_by_8, pr::v4(0.2f, 0.3f, 0.1f, 1.0f)),
 			};
 
 			Rand rng;

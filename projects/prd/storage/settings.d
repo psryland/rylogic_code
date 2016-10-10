@@ -1,5 +1,6 @@
 module prd.storage.settings;
 
+import std.stdio;
 import std.exception;
 import std.file;
 import std.conv;
@@ -52,7 +53,7 @@ void Save(T)(T data, string file)
 	//auto doc = new std.xml.Document(new std.xml.Tag("settings"));
 	foreach (i, member; __traits(allMembers, T))
 	{
-		std.stdio.writeln(to!string(member));
+		writeln(to!string(member));
 		//auto field = data.tupleof[i];
 		//static if (SerialiseMember!(typeof(field)))
 		{

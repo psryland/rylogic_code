@@ -579,7 +579,7 @@ namespace pr.gfx
 		}
 
 		/// <summary>Report errors callback</summary>
-		public delegate void ReportErrorCB(IntPtr ctx, string msg);
+		public delegate void ReportErrorCB(IntPtr ctx, [MarshalAs(UnmanagedType.LPWStr)] string msg);
 
 		/// <summary>Report settings changed callback</summary>
 		public delegate void SettingsChangedCB(IntPtr ctx, HWindow wnd);

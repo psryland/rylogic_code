@@ -419,14 +419,23 @@ namespace pr
 		// insert element at end
 		void push_back(const_reference value)
 		{
-			Type const& val = inside(&value) ? Type(value) : value;
-			ensure_space(m_count + 1, true);
-			push_back_fast(val);
+			if (inside(&value))
+			{
+				auto idx = &value - &front();
+				ensure_space(m_count + 1, true);
+				push_back_fast((*this)[idx]);
+			}
+			else
+			{
+				ensure_space(m_count + 1, true);
+				push_back_fast(value);
+			}
 		}
 
 		// add an element to the end of the array without "ensure_space" first
 		void push_back_fast(const_reference value)
 		{
+			static_assert(std::is_copy_constructible<Type>::value, "Cannot copy construct 'Type'");
 			assert(m_count + 1 <= m_capacity && "Container overflow");
 			assert(!inside(&value) && "Cannot push_back_fast an item from this container");
 			traits::fill_constr(alloc(), m_ptr + m_count, 1, value);
@@ -541,9 +550,18 @@ namespace pr
 		{
 			if (m_count < newsize)
 			{
-				Type const& val = inside(&value) ? Type(value) : value;
-				ensure_space(newsize, false);
-				traits::fill_constr(alloc(), m_ptr + m_count, newsize - m_count, val);
+				static_assert(std::is_copy_constructible<Type>::value, "Cannot copy construct 'Type'");
+				if (inside(&value))
+				{
+					auto idx = &value - &front();
+					ensure_space(newsize, false);
+					traits::fill_constr(alloc(), m_ptr + m_count, newsize - m_count, (*this)[idx]);
+				}
+				else
+				{
+					ensure_space(newsize, false);
+					traits::fill_constr(alloc(), m_ptr + m_count, newsize - m_count, value);
+				}
 			}
 			else if (m_count > newsize)
 			{

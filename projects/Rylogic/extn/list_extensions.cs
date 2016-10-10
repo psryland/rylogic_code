@@ -15,7 +15,7 @@ using pr.extn;
 namespace pr.extn
 {
 	/// <summary>Extensions for Lists</summary>
-	public static class ListExtensions
+	public static class List_
 	{
 		/// <summary>Return true if the list is empty</summary>
 		public static bool Empty(this IList list)
@@ -504,6 +504,84 @@ namespace pr.extn
 			comparer = comparer ?? Cmp<T>.Default;
 			return list.NthElement(n, 0, list.Count, comparer);
 		}
+
+		/// <summary>Merge a collection into this list. Note: this is a linear operation, this list and 'others' are expected to be ordered</summary>
+		public static IList<T> Merge<T>(this IList<T> list, IEnumerable<T> others, EMergeType merge_type, Cmp<T> comparer = null)
+		{
+			comparer = comparer ?? Cmp<T>.Default;
+
+			var i = 0;
+			var j = others.GetIterator();
+
+			for (; i != list.Count && !j.AtEnd; )
+			{
+				var lhs = list[i];
+				var rhs = j.Current;
+				var cmp = comparer.Compare(lhs, rhs);
+
+				// lhs < rhs, advance the left iterator
+				if (cmp < 0)
+				{
+					++i;
+				}
+				// lhs > rhs, insert from 'right' and advance the right iterator
+				else if (cmp > 0)
+				{
+					list.Insert(i, rhs);
+					++i; j.MoveNext();
+				}
+				// lhs == rhs, select one or both
+				else
+				{
+					switch (merge_type)
+					{
+					case EMergeType.KeepLeft:
+						{
+							// Keep the lhs in the list, skip over the rhs
+							j.MoveNext();
+							break;
+						}
+					case EMergeType.KeepRight:
+						{
+							// Replace the lhs with the rhs
+							list[i] = rhs;
+							++i; j.MoveNext();
+							break;
+						}
+					case EMergeType.KeepBoth:
+						{
+							// Insert 'rhs' after 'lhs'
+							list.Insert(i+1, rhs);
+							++i; j.MoveNext();
+							break;
+						}
+					}
+				}
+			}
+
+			// Append the remain from 'rhs'
+			for (; !j.AtEnd; j.MoveNext())
+				list.Add(j.Current);
+
+			return list;
+		}
+		public enum EMergeType
+		{
+			/// <summary>
+			/// All elements in the left collection are retained.
+			/// Elements in the right collection are only added if they are not in the left collection</summary>
+			KeepLeft,
+
+			/// <summary>
+			/// All elements in the right collection are retained.
+			/// Elements in the left collection are removed if not in the right collection</summary>
+			KeepRight,
+
+			/// <summary>
+			/// All elements in both collections are retained.
+			/// Matching elements in the left collection will be before elements from the right collection.</summary>
+			KeepBoth,
+		}
 	}
 }
 
@@ -511,40 +589,54 @@ namespace pr.extn
 namespace pr.unittests
 {
 	[TestFixture] public class TestListExtns
-		{
+	{
 		[Test] public void ListQuickSort()
-			{
-				var rng = new Random();
-				var list = new List<int>(99);
-				for (var i = 0; i != 99; ++i)
-					list.Add(rng.Next(10));
+		{
+			var rng = new Random();
+			var list = new List<int>(99);
+			for (var i = 0; i != 99; ++i)
+				list.Add(rng.Next(10));
 
-				list.Sort();
+			list.Sort();
 				
-				for (var i = 0; i != list.Count - 1; ++i)
-					Assert.True(list[i] <= list[i+1]);
-			}
+			for (var i = 0; i != list.Count - 1; ++i)
+				Assert.True(list[i] <= list[i+1]);
+		}
 		[Test] public void ListUnique()
-			{
-				var rng = new Random();
-				var list = new List<int>(100);
-				for (var i = 0; i != 100; ++i)
-					list.Add(rng.Next(10));
+		{
+			var rng = new Random();
+			var list = new List<int>(100);
+			for (var i = 0; i != 100; ++i)
+				list.Add(rng.Next(10));
 
-				list.Sort();
+			list.Sort();
 
-				int last = list.Unique(0, 50);
-				for (var i = 0; i < last; ++i)
-				for (var j = i+1; j < last; ++j)
-					Assert.AreNotEqual(list[i], list[j]);
+			int last = list.Unique(0, 50);
+			for (var i = 0; i < last; ++i)
+			for (var j = i+1; j < last; ++j)
+				Assert.AreNotEqual(list[i], list[j]);
 
-				list.Unique();
-				for (var i = 0; i < list.Count; ++i)
-				for (var j = i+1; j < list.Count; ++j)
-					Assert.AreNotEqual(list[i], list[j]);
+			list.Unique();
+			for (var i = 0; i < list.Count; ++i)
+			for (var j = i+1; j < list.Count; ++j)
+				Assert.AreNotEqual(list[i], list[j]);
 
-				Assert.AreEqual(5, list.Add2(5));
-			}
+			Assert.AreEqual(5, list.Add2(5));
+		}
+		[Test] public void Merge()
+		{
+			var lhs = new[] { 1, 2, 4, 7, 8 };
+			var rhs = new[] { 1, 3, 5, 6, 8, 9, 10 };
+
+			var l0 = lhs.ToList().Merge(rhs, List_.EMergeType.KeepLeft);
+			Assert.True(l0.SequenceEqual(new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }));
+
+			var l1 = lhs.ToList().Merge(rhs, List_.EMergeType.KeepRight);
+			Assert.True(l1.SequenceEqual(new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }));
+
+			var l2 = lhs.ToList().Merge(rhs, List_.EMergeType.KeepBoth);
+			Assert.True(l2.SequenceEqual(new[] { 1, 1, 2, 3, 4, 5, 6, 7, 8, 8, 9, 10 }));
 		}
 	}
+}
 #endif

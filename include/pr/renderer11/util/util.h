@@ -27,17 +27,17 @@ namespace pr
 		// Make a RdrId from 'unique_thing'
 		template <typename T> inline RdrId MakeId(T const& unique_thing)
 		{
-			return pr::hash::HashData(&unique_thing, sizeof(unique_thing));
+			return pr::hash::HashObj(unique_thing);
 		}
 
 		// Make an RdrId from a string
 		inline RdrId MakeId(wchar_t const* str)
 		{
-			return pr::hash::HashC(str);
+			return pr::hash::Hash(str);
 		}
 		inline RdrId MakeId(char const* str)
 		{
-			return pr::hash::HashC(str);
+			return pr::hash::Hash(str);
 		}
 
 		// Return the immediate device context for a device

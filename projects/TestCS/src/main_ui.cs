@@ -73,7 +73,7 @@ namespace TestCS
 
 			m_menu_tests_bluetooth_ui.Click += (s,a) =>
 			{
-				new BluetoothUI().ShowDialog(this);
+				new BluetoothUI() { ShowRadioSelector = false }.ShowDialog(this);
 			};
 
 			m_menu_tests_chart.Click += (s,a) =>

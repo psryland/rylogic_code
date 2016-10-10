@@ -160,13 +160,13 @@ namespace pr
 		}
 
 		// Create a rotation matrix from Euler angles.  Order is: roll, pitch, yaw (to match DirectX)
-		static Mat4x4 Rotation(float pitch, float yaw, float roll, v4 const& pos)
+		static Mat4x4 Transform(float pitch, float yaw, float roll, v4 const& pos)
 		{
 			return Mat4x4(m3x4::Rotation(pitch, yaw, roll), pos);
 		}
 
 		// Create from an axis and angle. 'axis' should be normalised
-		static Mat4x4 Rotation(v4 const& axis, float angle, v4 const& pos)
+		static Mat4x4 Transform(v4 const& axis, float angle, v4 const& pos)
 		{
 			assert("'axis' should be normalised" && IsNormal3(axis));
 			#if PR_MATHS_USE_DIRECTMATH
@@ -177,30 +177,30 @@ namespace pr
 		}
 
 		// Create from an angular displacement vector. length = angle(rad), direction = axis
-		static Mat4x4 Rotation(v4 const& angular_displacement, v4 const& pos)
+		static Mat4x4 Transform(v4 const& angular_displacement, v4 const& pos)
 		{
 			return Mat4x4(m3x4::Rotation(angular_displacement), pos);
 		}
 
 		// Create from quaternion
-		template <typename Quat, typename = maths::enable_if_v4<Quat>> static Mat4x4 Rotation(Quat const& q, v4 const& pos)
+		template <typename = void> static Mat4x4 Transform(Quat const& q, v4 const& pos)
 		{
 			assert("'q' should be a normalised quaternion" && IsNormal4(q));
 			#if PR_MATHS_USE_DIRECTMATH
 			return Mat4x4(DirectX::XMMatrixRotationQuaternion(q.vec), pos);
 			#else
-			return Mat4x4(m3x4::Rotation(q), pos);
+			return Mat4x4(m3x4(q), pos);
 			#endif
 		}
 
 		// Create a transform representing the rotation from one vector to another.
-		static Mat4x4 Rotation(v4 const& from, v4 const& to, v4 const& pos)
+		static Mat4x4 Transform(v4 const& from, v4 const& to, v4 const& pos)
 		{
 			return Mat4x4(m3x4::Rotation(from, to), pos);
 		}
 
 		// Create a transform from one basis axis to another
-		static Mat4x4 Rotation(AxisId from_axis, AxisId to_axis, v4 const& pos)
+		static Mat4x4 Transform(AxisId from_axis, AxisId to_axis, v4 const& pos)
 		{
 			return Mat4x4(m3x4::Rotation(from_axis, to_axis), pos);
 		}
@@ -760,8 +760,8 @@ namespace pr
 			}
 			{//m4x4CreateFrom
 				v4 V1 = Random3(rnd, 0.0f, 10.0f, 1.0f);
-				m4x4 a2b = m4x4::Rotation(v4::Normal3(+3,-2,-1,0), +1.23f, v4(+4.4f, -3.3f, +2.2f, 1.0f));
-				m4x4 b2c = m4x4::Rotation(v4::Normal3(-1,+2,-3,0), -3.21f, v4(-1.1f, +2.2f, -3.3f, 1.0f));
+				m4x4 a2b = m4x4::Transform(v4::Normal3(+3,-2,-1,0), +1.23f, v4(+4.4f, -3.3f, +2.2f, 1.0f));
+				m4x4 b2c = m4x4::Transform(v4::Normal3(-1,+2,-3,0), -3.21f, v4(-1.1f, +2.2f, -3.3f, 1.0f));
 				PR_CHECK(IsOrthonormal(a2b), true);
 				PR_CHECK(IsOrthonormal(b2c), true);
 				v4 V2 = a2b * V1;
@@ -772,22 +772,22 @@ namespace pr
 			}
 			{//m4x4CreateFrom2
 				auto q = quat(1.0f, 0.5f, 0.7f);
-				m4x4 m1 = m4x4::Rotation(1.0f, 0.5f, 0.7f, v4Origin);
-				m4x4 m2 = m4x4::Rotation(q, v4Origin);
+				m4x4 m1 = m4x4::Transform(1.0f, 0.5f, 0.7f, v4Origin);
+				m4x4 m2 = m4x4::Transform(q, v4Origin);
 				PR_CHECK(IsOrthonormal(m1), true);
 				PR_CHECK(IsOrthonormal(m2), true);
 				PR_CHECK(FEql(m1, m2), true);
 
 				float ang = rnd.fltc(0.0f,1.0f);
 				v4 axis = Random3N(rnd, 0.0f);
-				m1 = m4x4::Rotation(axis, ang, v4Origin);
-				m2 = m4x4::Rotation(quat(axis, ang), v4Origin);
+				m1 = m4x4::Transform(axis, ang, v4Origin);
+				m2 = m4x4::Transform(quat(axis, ang), v4Origin);
 				PR_CHECK(IsOrthonormal(m1), true);
 				PR_CHECK(IsOrthonormal(m2), true);
 				PR_CHECK(FEql(m1, m2), true);
 			}
 			{// Invert
-				m4x4 a2b = m4x4::Rotation(v4::Normal3(-4,-3,+2,0), -2.15f, v4(-5,+3,+1,1));
+				m4x4 a2b = m4x4::Transform(v4::Normal3(-4,-3,+2,0), -2.15f, v4(-5,+3,+1,1));
 				m4x4 b2a = Invert(a2b);
 				m4x4 a2a = b2a * a2b;
 				PR_CHECK(FEql(m4x4Identity, a2a), true);

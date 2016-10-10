@@ -55,7 +55,7 @@ namespace pr
 		{
 			assert(maths::is_aligned(this));
 		}
-		template <typename T, typename = maths::enable_if_v4<T>> Vec4(T const& v)
+		template <typename T, typename = maths::enable_if_v4<T>> explicit Vec4(T const& v)
 			:Vec4(x_as<float>(v), y_as<float>(v), z_as<float>(v), w_as<float>(v))
 		{}
 		template <typename T, typename = maths::enable_if_v3<T>> Vec4(T const& v, float w_)

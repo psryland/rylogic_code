@@ -34,7 +34,7 @@ namespace pr
 			static_assert(has_bitwise_operators_allowed<FieldEnum>::value, "");
 
 			// Cached CRC of the state desc
-			mutable pr::hash::HashValue m_crc;
+			mutable size_t m_crc;
 
 			// A bit field of the members in 'TStateDesc' that have had a value set.
 			FieldEnum m_mask[N];
@@ -50,7 +50,10 @@ namespace pr
 			TStateDesc& Desc() { return *this; }
 
 			// Return the hash of the data in this state object
-			pr::hash::HashValue Hash() const { return m_crc != 0 ? m_crc : (m_crc = pr::hash::HashObj(*this)); }
+			size_t Hash() const
+			{
+				return m_crc != 0 ? m_crc : (m_crc = pr::hash::HashObj(*this));
+			}
 
 			// Clear a field in the state description
 			void Clear(FieldEnum field)
@@ -113,7 +116,7 @@ namespace pr
 		template <typename TStateBlock, typename TD3DInterface> struct StateManager
 		{
 			typedef StateManager<TStateBlock, TD3DInterface> base;
-			typedef Lookup<pr::hash::HashValue, TD3DInterface*> Lookup;
+			typedef Lookup<size_t, TD3DInterface*> Lookup;
 			D3DPtr<ID3D11Device> m_device;
 			Lookup m_lookup;
 

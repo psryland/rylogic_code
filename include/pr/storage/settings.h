@@ -19,8 +19,8 @@
 #include "pr/common/assert.h"
 #include "pr/common/fmt.h"
 #include "pr/common/events.h"
-#include "pr/common/colour.h"
 #include "pr/common/hash.h"
+#include "pr/common/colour.h"
 #include "pr/filesys/file.h"
 #include "pr/filesys/filesys.h"
 #include "pr/maths/maths.h"
@@ -164,9 +164,9 @@ namespace pr
 		// Create an event for this settings type
 		using Evt = typename pr::settings::Evt<TSettings>;
 
-		std::string m_filepath;    // The file path to save the settings
-		pr::hash::HashValue m_crc; // The CRC of the settings last time they were saved
-		std::string m_comments;    // Comments to add to the head of the exported settings
+		std::string m_filepath; // The file path to save the settings
+		std::size_t m_crc;      // The CRC of the settings last time they were saved
+		std::string m_comments; // Comments to add to the head of the exported settings
 
 		// Settings constructor
 		SettingsBase(std::string filepath)
@@ -259,7 +259,7 @@ namespace pr
 				std::string invalid_hashcodes;
 				for (int i = 0; i != TSettings::NumberOf; ++i)
 				{
-					pr::script::HashValue hash;
+					int hash;
 					auto setting = TSettings::ByIndex(i);
 					auto name    = TSettings::NameW(setting);
 					if ((hash = reader.HashKeyword(name)) != static_cast<pr::hash::HashValue>(setting))
@@ -292,22 +292,22 @@ namespace pr
 	protected:
 
 		// Returns the CRC of 'settings'
-		pr::hash::HashValue Crc(std::string const& settings) const
+		size_t Crc(std::string const& settings) const
 		{
-			return pr::hash::FastHash(settings.c_str(), settings.size());
+			return pr::hash::Hash(settings.c_str());
 		}
 	};
 }
 
-#define PR_SETTINGS_INSTANTIATE(type, name, default_value, hashvalue, description)   type m_##name;
-#define PR_SETTINGS_CONSTRUCT(type, name, default_value, hashvalue, description)     ,m_##name(default_value)
-#define PR_SETTINGS_ENUM(type, name, default_value, hashvalue, description)          name = hashvalue,
-#define PR_SETTINGS_ENUM_TOSTRINGA(type, name, default_value, hashvalue, description) case name: return #name;
-#define PR_SETTINGS_ENUM_TOSTRINGW(type, name, default_value, hashvalue, description) case name: return L#name;
-#define PR_SETTINGS_ENUM_FIELDS(type, name, default_value, hashvalue, description)   name,
-#define PR_SETTINGS_COUNT(type, name, default_value, hashvalue, description)         +1
-#define PR_SETTINGS_READ(type, name, default_value, hashvalue, description)          case name: return pr::settings::Read(reader, m_##name);
-#define PR_SETTINGS_WRITE(type, name, default_value, hashvalue, description)         case name: out << '*' << #name << " {" << pr::settings::Write(m_##name) << "}" << (""description[0]?" // "description:"") << "\r\n"; break;
+#define PR_SETTINGS_INSTANTIATE(type, name, default_value, description)   type m_##name;
+#define PR_SETTINGS_CONSTRUCT(type, name, default_value, description)     ,m_##name(default_value)
+#define PR_SETTINGS_ENUM(type, name, default_value, description)          name = pr::hash::Hash(#name),
+#define PR_SETTINGS_ENUM_TOSTRINGA(type, name, default_value, description) case name: return #name;
+#define PR_SETTINGS_ENUM_TOSTRINGW(type, name, default_value, description) case name: return L#name;
+#define PR_SETTINGS_ENUM_FIELDS(type, name, default_value, description)   name,
+#define PR_SETTINGS_COUNT(type, name, default_value, description)         +1
+#define PR_SETTINGS_READ(type, name, default_value, description)          case name: return pr::settings::Read(reader, m_##name);
+#define PR_SETTINGS_WRITE(type, name, default_value, description)         case name: out << '*' << #name << " {" << pr::settings::Write(m_##name) << "}" << (""description[0]?" // "description:"") << "\r\n"; break;
 
 #define PR_DEFINE_SETTINGS(settings_name, x)\
 	struct settings_name :pr::SettingsBase<settings_name>\
@@ -404,17 +404,17 @@ namespace pr
 				Free,
 			};
 
-			//x(type, name, default_value, hashvalue, description)
+			//x(type, name, default_value, description)
 			#define PR_SETTING(x)\
-				x(int          , count    , 2                 , 0xC0A20C46, "")\
-				x(float        , scale    , 3.14f             , 0x8FB215FF, "")\
-				x(unsigned int , mask     , 0xABCU            , 0x5CD68DFB, "")\
-				x(pr::Colour32 , colour   , pr::Colour32Green , 0x0C32CB6F, "the colour")\
-				x(pr::v2       , area     , pr::v2(1,2)       , 0x1C6B5612, "")\
-				x(pr::v4       , position , pr::v4(1,2,3,1)   , 0x6B614A7C, "")\
-				x(std::string  , name     , "hello settings"  , 0xC30D43FC, "")\
-				x(Enum1        , emun     , Enum1::Two        , 0xBC21407E, "")\
-				x(Enum2        , emun2    , Enum2::Free       , 0x745837A4, "")
+				x(int          , count    , 2                 , "")\
+				x(float        , scale    , 3.14f             , "")\
+				x(unsigned int , mask     , 0xABCU            , "")\
+				x(pr::Colour32 , colour   , pr::Colour32Green , "the colour")\
+				x(pr::v2       , area     , pr::v2(1,2)       , "")\
+				x(pr::v4       , position , pr::v4(1,2,3,1)   , "")\
+				x(std::string  , name     , "hello settings"  , "")\
+				x(Enum1        , emun     , Enum1::Two        , "")\
+				x(Enum2        , emun2    , Enum2::Free       , "")
 			PR_DEFINE_SETTINGS(Settings, PR_SETTING);
 			#undef PR_SETTING
 		}

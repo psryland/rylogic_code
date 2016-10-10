@@ -106,6 +106,10 @@ namespace pr
 	template <typename T> inline float w_cp(Vec8<T> const& v) { return v.lin.w; }
 
 	#pragma region Operators
+	template <typename T> Vec8<T> operator + (Vec8<T> const& lhs)
+	{
+		return lhs;
+	}
 	template <typename T> Vec8<T> operator - (Vec8<T> const& lhs)
 	{
 		return Vec8<T>(-lhs.v0, -lhs.v1);
@@ -388,7 +392,7 @@ namespace pr
 			{
 				v4 vel(1,2,3,0);
 				v4 ang(4,3,2,0);
-				auto o2w = m4x4::Rotation(v4ZAxis, maths::tau_by_4, v4(1,1,1,1));
+				auto o2w = m4x4::Transform(v4ZAxis, maths::tau_by_4, v4(1,1,1,1));
 			}
 			{// Cross Products
 				auto v  =  v8( 1, 1, 1, 2, 2, 2);

@@ -12,25 +12,22 @@
 namespace pr
 {
 	// A C++ standards compliant allocator for use in containers
-	template <typename T> struct aligned_alloc
+	template <typename T, int A = std::alignment_of<T>::value> struct aligned_alloc
 	{
-		typedef T         value_type;
-		typedef T*        pointer;
-		typedef T&        reference;
-		typedef T const*  const_pointer;
-		typedef T const&  const_reference;
-		typedef size_t    size_type;
-		typedef ptrdiff_t difference_type;
-		enum
-		{
-			value_alignment = std::alignment_of<T>::value,
-		};
+		using value_type       = T;
+		using pointer          = T*;
+		using reference        = T&;
+		using const_pointer    = T const*;
+		using const_reference  = T const&;
+		using size_type        = size_t;
+		using difference_type  = ptrdiff_t;
+		enum { value_alignment = A };
 
 		// constructors
 		aligned_alloc() {}
 		aligned_alloc(aligned_alloc const&) {}
-		template <typename U> aligned_alloc(aligned_alloc<U> const&) {}
-		template <typename U> struct rebind { typedef aligned_alloc<U> other; };
+		template <typename U> aligned_alloc(aligned_alloc<U, A> const&) {}
+		template <typename U> struct rebind { typedef aligned_alloc<U, A> other; };
 
 		// std::allocator interface
 		size_type     max_size  () const throw()       { return std::numeric_limits<size_type>::max() / sizeof(T); }
@@ -39,11 +36,13 @@ namespace pr
 
 		pointer allocate(size_type n, void const* = 0)
 		{
+			if (n == 0) return nullptr; // Avoid the undefined behaviour of _aligned_malloc(0)
 			#ifndef NDEBUG
 			auto ptr = static_cast<T*>(_aligned_malloc_dbg(n * sizeof(T), value_alignment, __FILE__, __LINE__));
 			#else
 			auto ptr = static_cast<T*>(_aligned_malloc(n * sizeof(T), value_alignment));
 			#endif
+			if (ptr == nullptr) throw std::bad_alloc(); // Allocators should throw bad_alloc on allocation failure
 			return ptr;
 		}
 		void deallocate(pointer p, size_type)
@@ -56,7 +55,7 @@ namespace pr
 		}
 
 		// enable if helpers
-		template <typename U> using enable_if_pod = typename std::enable_if<std::is_pod<U>::value>::type;
+		template <typename U> using enable_if_pod    = typename std::enable_if< std::is_pod<U>::value>::type;
 		template <typename U> using enable_if_nonpod = typename std::enable_if<!std::is_pod<U>::value>::type;
 		template <typename U> using enable_if_can_cc = typename std::enable_if<std::is_copy_constructible<U>::value>::type;
 

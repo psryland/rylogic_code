@@ -25,7 +25,7 @@ namespace pr
 {
 	namespace unittests
 	{
-		PRUnitTest(pr_geometry_collision)
+		PRUnitTest(pr_collision)
 		{
 		}
 	}

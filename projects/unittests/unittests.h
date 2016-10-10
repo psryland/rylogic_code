@@ -217,6 +217,7 @@
 #include "pr\meta\function_arity.h"
 #include "pr\meta\gcf.h"
 #include "pr\meta\if.h"
+#include "pr\meta\is_char.h"
 #include "pr\meta\is_class.h"
 #include "pr\meta\is_pod.h"
 #include "pr\meta\is_pointer.h"

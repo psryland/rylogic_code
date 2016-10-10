@@ -1,8 +1,8 @@
 module prd.view3d.view3d;
 
-import dgui.all;
 import std.stdio;
 import std.conv;
+import core.sys.windows.windows;
 
 public enum EView3DResult
 {
@@ -10,25 +10,25 @@ public enum EView3DResult
 	Failed,
 }
 
-public class View3d :Control
-{
-	public this()
-	{
-	}
-
-	// Initialise the control
-	public void Initialise(HWND hwnd)
-	{
-		View3D_Initialise(hwnd, &ErrorCB, &SettingsChangedCB);
-	}
-}
+//public class View3d :Control
+//{
+//    public this()
+//    {
+//    }
+//
+//    // Initialise the control
+//    public void Initialise(HWND hwnd)
+//    {
+//        View3D_Initialise(hwnd, &ErrorCB, &SettingsChangedCB);
+//    }
+//}
 
 extern (Windows)
 {
 	void ErrorCB(const (char)* msg)
 	{
 		writeln(to!(string)(msg));
-		MsgBox.show("Error", to!(string)(msg));
+		//MsgBox.show("Error", to!(string)(msg));
 		//MessageBoxA(null, msg, "Error", MB_OK);
 	}
 

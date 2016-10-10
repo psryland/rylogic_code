@@ -87,6 +87,7 @@ namespace pr.win32
 		[DllImport("user32.dll")]                                                                             public static extern HWND   SetFocus(HWND hwnd);
 		[DllImport("user32.dll")]                                                                             public static extern bool   SetForegroundWindow(HWND hwnd);
 		[DllImport("user32.dll")]                                                                             public static extern IntPtr SetParent(HWND hWndChild, HWND hWndNewParent);
+		[DllImport("user32.dll")]                                                                             public static extern bool   SetProcessDPIAware();
 		[DllImport("user32.dll")]                                                                             public static extern int    SetScrollInfo(HWND hwnd, int fnBar, ref SCROLLINFO lpsi, bool fRedraw);
 		[DllImport("user32.dll")]                                                                             public static extern int    SetScrollPos(HWND hWnd, int nBar, int nPos, bool bRedraw);
 		[DllImport("user32.dll")]                                                                             public static extern int    SetWindowsHookEx(int idHook, HookProc lpfn, IntPtr hMod, int dwThreadId);

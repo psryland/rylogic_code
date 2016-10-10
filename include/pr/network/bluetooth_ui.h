@@ -4,6 +4,12 @@
 //*****************************************************************************
 #pragma once
 
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT _WIN32_WINNT_WIN7
+#elif _WIN32_WINNT < _WIN32_WINNT_WIN7
+#error "_WIN32_WINNT >= _WIN32_WINNT_WIN7 required"
+#endif
+
 #include "pr/hardware/find_bt_device.h"
 #include "pr/network/bluetooth.h"
 #include "pr/gui/wingui.h"
@@ -41,7 +47,6 @@ namespace pr
 					return params;
 				}
 			};
-
 			pr::gui::Label m_lbl_enable_bt;
 			pr::gui::Button m_chk_enable_bt;
 			pr::gui::ListView m_lv_devices;
@@ -53,9 +58,7 @@ namespace pr
 				,m_lbl_enable_bt(pr::gui::Label::Params<>().parent(this_).text(L"Enable Bluetooth"))
 				,m_chk_enable_bt(pr::gui::Button::Params<>().parent(this_).chk_box())
 				//,m_lv_devices(pr::gui::ListView::Params<>().parent(this_).wh(Fill,Fill).mode(pr::gui::ListView::EViewType::List))
-			{
-				
-			}
+			{}
 		};
 
 		// A dialog for choosing blue tooth devices

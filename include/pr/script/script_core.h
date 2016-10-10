@@ -221,7 +221,7 @@ namespace pr
 				static std::locale global_locale;
 				switch (m_enc)
 				{
-				default: throw std::exception("Unsupport file encoding");
+				default: throw std::exception("Unsupported file encoding");
 				case EEncoding::ascii:
 					{
 						break;
@@ -392,7 +392,7 @@ namespace pr
 				return *this;
 			}
 
-			// Array access to the buffered data. Buffer size grows to accomodate 'i'
+			// Array access to the buffered data. Buffer size grows to accommodate 'i'
 			value_type operator [](size_t i) const
 			{
 				if (i == 0) return **this;
@@ -540,7 +540,7 @@ namespace pr
 				return pr::string<value_type>(first, first + count);
 			}
 
-			// String compare - note asymmetric: i.e. buf="abcd", str="ab", buf.match(str) == true
+			// String compare - note asymmetric: i.e. 'buf="abcd", str="ab", buf.match(str) == true'
 			// Buffers the input stream and compares it to 'str' return true if they match.
 			// If 'adv_if_match' is true, the matching characters are popped from the buffer.
 			// Note: *only* buffers matching characters. This prevents the buffer containing extra
@@ -549,7 +549,7 @@ namespace pr
 			// Not returning partial match length as that makes use as a boolean expression tricky.
 			template <typename Str> int match(Str const& str) const
 			{
-				// Can't use wcscmp(), m_buf is not guaranteed contiguous
+				// Cant use 'wcscmp()', m_buf is not guaranteed contiguous
 				size_t i = 0, count = pr::str::Length(str);
 
 				// If the buffer contains data already, test that first
@@ -584,41 +584,24 @@ namespace pr
 
 		#pragma region Global Functions
 
-		// Return the hash of a single character
-		inline HashValue hashfunc(wchar_t ch, HashValue r = ~HashValue())
+		// Hash a raw string on the range [0, count)
+		template <typename Char> inline int Hash(Char const* str, Char const* end)
 		{
-			unsigned int const prime = 16777619U;
-			r ^= HashValue(ch);
-			r *= prime;
-			return r;
+			return pr::hash::Hash(str, end);
 		}
 
-		// Return the hash value for a string
-		inline HashValue Hash(wchar_t const* name)
-		{
-			auto r = ~HashValue();
-			for (; *name; ++name) r = hashfunc(*name, r);
-			return r;
-		}
-		inline HashValue HashLwr(wchar_t const* name)
-		{
-			auto r = ~HashValue();
-			for (; *name; ++name) r = hashfunc(towlower(*name), r);
-			return r;
-		}
-		template <typename Iter> inline HashValue Hash(Iter first, Iter last)
-		{
-			auto r = ~HashValue();
-			for (; first != last; ++first) r = hashfunc(*first, r);
-			return r;
-		}
-		template <typename String> inline HashValue Hash(String const& name, size_t ofs = 0, size_t count = ~size_t())
+		// Hash a std::string-like value using the default 'Hash' function
+		template <typename String> inline int Hash(String const& name, size_t ofs = 0, size_t count = ~size_t())
 		{
 			auto beg = std::begin(name);
 			auto end = std::end(name);
+
 			assert(ofs <= size_t(end - beg));
 			assert(count == ~size_t() || count <= size_t((end - beg) - ofs)); // If given, count must be within 'name'
-			return Hash(beg + ofs, beg + ofs + (count != ~size_t() ? count : size_t((end - beg) - ofs)));
+
+			auto first = beg + ofs;
+			auto last  = beg + ofs + (count != ~size_t() ? count : size_t((end - beg) - ofs));
+			return pr::hash::Hash(first, last);
 		}
 
 		// Buffer an identifier into 'buf'. 'emit' is the read position in 'buf'
@@ -639,7 +622,7 @@ namespace pr
 		}
 
 		// Buffer a literal string or character into 'buf'. 'emit' is the read position in 'buf'
-		// Callers should check that buf[emit] == end to verify a complete string has been read.
+		// Callers should check that 'buf[emit] == end' to verify a complete string has been read.
 		template <typename TBuf> inline void BufferLiteral(TBuf& buf, EmitCount& emit, wchar_t end = buf[emit])
 		{
 			++emit;
@@ -735,7 +718,7 @@ namespace pr
 			pr::CheckHashEnum<EKeyword, wchar_t>(
 				[](wchar_t const* name)
 				{
-					return Hash(name);
+					return pr::hash::Hash(name);
 				},
 				[](char const* msg)
 				{
@@ -745,7 +728,7 @@ namespace pr
 			pr::CheckHashEnum<EPPKeyword, wchar_t>(
 				[](wchar_t const* name)
 				{
-					return Hash(name);
+					return pr::hash::Hash(name);
 				},
 				[](char const* msg)
 				{

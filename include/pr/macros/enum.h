@@ -271,7 +271,7 @@ struct enum_name\
 #define PR_DEFINE_ENUM1(enum_name, enum_vals)                 PR_DEFINE_ENUM_IMPL(enum_name, enum_vals, PR_ENUM_NULL, PR_ENUM_NULL, PR_ENUM_EXPAND, PR_ENUM_NULL, )
 #define PR_DEFINE_ENUM1_BASE(enum_name, enum_vals, base_type) PR_DEFINE_ENUM_IMPL(enum_name, enum_vals, PR_ENUM_NULL, PR_ENUM_NULL, PR_ENUM_EXPAND, PR_ENUM_NULL, :base_type)
 
-// Declares an enum where the values are assigned explicitly, 'enum_vals' should be a macro with two paramters; id and value
+// Declares an enum where the values are assigned explicitly, 'enum_vals' should be a macro with two parameters; id and value
 #define PR_DEFINE_ENUM2(enum_name, enum_vals)                 PR_DEFINE_ENUM_IMPL(enum_name, PR_ENUM_NULL, enum_vals, PR_ENUM_NULL, PR_ENUM_EXPAND, PR_ENUM_NULL, )
 #define PR_DEFINE_ENUM2_BASE(enum_name, enum_vals, base_type) PR_DEFINE_ENUM_IMPL(enum_name, PR_ENUM_NULL, enum_vals, PR_ENUM_NULL, PR_ENUM_EXPAND, PR_ENUM_NULL, :base_type)
 
@@ -279,7 +279,7 @@ struct enum_name\
 #define PR_DEFINE_ENUM3(enum_name, enum_vals)                 PR_DEFINE_ENUM_IMPL(enum_name, PR_ENUM_NULL, PR_ENUM_NULL, enum_vals, PR_ENUM_EXPAND, PR_ENUM_NULL, )
 #define PR_DEFINE_ENUM3_BASE(enum_name, enum_vals, base_type) PR_DEFINE_ENUM_IMPL(enum_name, PR_ENUM_NULL, PR_ENUM_NULL, enum_vals, PR_ENUM_EXPAND, PR_ENUM_NULL, :base_type)
 
-// Declares a flags enum where the values are assigned explicitly, 'enum_vals' should be a macro with two paramters; id and value
+// Declares a flags enum where the values are assigned explicitly, 'enum_vals' should be a macro with two parameters; id and value
 #define PR_DEFINE_ENUM2_FLAGS(enum_name, enum_vals)                 PR_DEFINE_ENUM_IMPL(enum_name, PR_ENUM_NULL, enum_vals, PR_ENUM_NULL, PR_ENUM_NULL, PR_ENUM_EXPAND, )
 #define PR_DEFINE_ENUM2_FLAGS_BASE(enum_name, enum_vals, base_type) PR_DEFINE_ENUM_IMPL(enum_name, PR_ENUM_NULL, enum_vals, PR_ENUM_NULL, PR_ENUM_NULL, PR_ENUM_EXPAND, :base_type)
 

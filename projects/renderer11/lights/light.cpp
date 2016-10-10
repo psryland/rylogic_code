@@ -63,23 +63,23 @@ namespace pr
 		}
 
 		#define PR_ENUM(x)\
-			x(Pos  ,= 0x69FCCEDF)\
-			x(Dir  ,= 0x8BFA9FFE)\
-			x(Type ,= 0x0CBF8747)\
-			x(Amb  ,= 0xDBF6A735)\
-			x(Diff ,= 0xF3BAD914)\
-			x(Spec ,= 0x2DE5D728)\
-			x(SPwr ,= 0x0EC31419)\
-			x(InCA ,= 0x30DDD5AC)\
-			x(OtCA ,= 0xA89FF1D4)\
-			x(Rng  ,= 0xAA7451F4)\
-			x(FOff ,= 0xF6B8D1F8)\
-			x(Shdw ,= 0xAAAEB4D5)\
-			x(On   ,= 0x8CEABA7A)
+			x(Pos  ,= pr::hash::HashI(L"Pos" ))\
+			x(Dir  ,= pr::hash::HashI(L"Dir" ))\
+			x(Type ,= pr::hash::HashI(L"Type"))\
+			x(Amb  ,= pr::hash::HashI(L"Amb" ))\
+			x(Diff ,= pr::hash::HashI(L"Diff"))\
+			x(Spec ,= pr::hash::HashI(L"Spec"))\
+			x(SPwr ,= pr::hash::HashI(L"SPwr"))\
+			x(InCA ,= pr::hash::HashI(L"InCA"))\
+			x(OtCA ,= pr::hash::HashI(L"OtCA"))\
+			x(Rng  ,= pr::hash::HashI(L"Rng" ))\
+			x(FOff ,= pr::hash::HashI(L"FOff"))\
+			x(Shdw ,= pr::hash::HashI(L"Shdw"))\
+			x(On   ,= pr::hash::HashI(L"On"  ))
 		PR_DEFINE_ENUM2(ELightKW, PR_ENUM);
 		#undef PR_ENUM
 
-		// Check the hash values are correct
+		// Check the hash values are correct and match the hash function that the script reader will use
 		#if PR_DBG_RDR
 		auto hash = [](wchar_t const* s) { return script::Reader::StaticHashKeyword(s, false); };
 		static bool s_light_kws_checked = CheckHashEnum<ELightKW,wchar_t>(hash);

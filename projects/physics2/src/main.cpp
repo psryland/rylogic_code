@@ -47,17 +47,18 @@ struct MainUI :Form
 	void Step(double elapsed_seconds)
 	{
 		(void)elapsed_seconds;
-		//  // Apply gravity: GMm/r^2
-		//  float const G = 1.0f;
-		//  auto sep = m_body0.O2W().pos - m_body1.O2W().pos;
-		//  auto r_sq = Length3Sq(sep);
-		//  if (r_sq > 0.1_m)
-		//  {
-		//  	auto force_mag = G * m_body0.Mass() * m_body1.Mass() / r_sq;
-		//  	auto force = v8f(v4Zero, force_mag * sep / Sqrt(r_sq));
-		//  	m_body0.m_rb.m_force += force;
-		//  	m_body1.m_rb.m_force -= force;
-		//  }
+
+		// Apply gravity: GMm/r^2
+		float const G = 1.0f;
+		auto sep = m_body0.O2W().pos - m_body1.O2W().pos;
+		auto r_sq = Length3Sq(sep);
+		if (r_sq > 0.1_m)
+		{
+			auto force_mag = G * m_body0.Mass() * m_body1.Mass() / r_sq;
+			auto force = v8f(v4Zero, force_mag * sep / Sqrt(r_sq));
+			m_body0.ApplyForceWS(+force);
+			m_body1.ApplyForceWS(-force);
+		}
 
 //		m_body0.ApplyForceWS(v4XAxis, v4XAxis, v4Zero);
 

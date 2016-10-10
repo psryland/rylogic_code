@@ -73,12 +73,6 @@ namespace Rylobot
 		}
 		private RylobotModel m_model;
 
-		/// <summary>Called when the bot ticks</summary>
-		public void OnTick()
-		{
-			Model.OnTick();
-		}
-
 		/// <summary>Set up controls</summary>
 		private void SetupUI()
 		{

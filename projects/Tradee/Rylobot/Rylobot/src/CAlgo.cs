@@ -60,5 +60,18 @@ namespace Rylobot
 		{
 			return price / sym.PipSize;
 		}
+
+		/// <summary>Return the gradient at 'index'</summary>
+		public static double Gradient(this IndicatorDataSeries series, int index)
+		{
+			if (index == 0) return 0.0;
+			return series[index] - series[index-1];
+		}
+
+		/// <summary>Return the opposite trade type to this type</summary>
+		public static TradeType Opposite(this TradeType tt)
+		{
+			return tt == TradeType.Buy ? TradeType.Sell : TradeType.Buy;
+		}
 	}
 }

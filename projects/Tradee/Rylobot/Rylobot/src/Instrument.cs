@@ -60,6 +60,12 @@ namespace Rylobot
 			get { return Model.Robot.MarketSeries; }
 		}
 
+		/// <summary>The CAlgo Symbol interface for this instrument</summary>
+		public Symbol Symbol
+		{
+			get { return Model.GetSymbol(SymbolCode); }
+		}
+
 		/// <summary>The instrument symbol code</summary>
 		public string SymbolCode
 		{
@@ -87,26 +93,25 @@ namespace Rylobot
 		{
 			get
 			{
-				// CAlgo uses 0 = latest, Count = oldest
+				// CAlgo uses 0 = oldest, Count = latest
+				var idx = Data.OpenTime.Count + neg_idx - 1;
 				return new Candle(
-					Data.OpenTime  [-neg_idx].Ticks,
-					Data.Open      [-neg_idx],
-					Data.High      [-neg_idx],
-					Data.Low       [-neg_idx],
-					Data.Close     [-neg_idx],
-					Data.Median    [-neg_idx],
-					Data.TickVolume[-neg_idx]);
+					Data.OpenTime  [idx].Ticks,
+					Data.Open      [idx],
+					Data.High      [idx],
+					Data.Low       [idx],
+					Data.Close     [idx],
+					Data.Median    [idx],
+					Data.TickVolume[idx]);
 			}
 		}
 
 		/// <summary>The candle with the latest timestamp for the current time frame</summary>
 		public Candle Latest
 		{
-			get
-			{
-				// Cache the latest candle so that we can detect a new candle starting.
-				return m_latest ?? (m_latest = this[0]);
-			}
+			// Cache the latest candle so that we can detect a new candle starting.
+			get { return m_latest ?? (m_latest = this[0]); }
+			private set { m_latest = null; }
 		}
 		private Candle m_latest;
 
@@ -132,8 +137,11 @@ namespace Rylobot
 			// Check if this is the start of a new candle
 			var new_candle = candle.Timestamp > Latest.Timestamp;
 
-			// Apply the new data to the latest candle
-			Latest.Update(candle);
+			// Apply the data to the latest candle or invalidate the cached Latest
+			if (new_candle)
+				Latest = null;
+			else
+				Latest.Update(candle);
 
 			// Record the last time data was received
 			LastUpdatedUTC = DateTimeOffset.UtcNow;

@@ -957,6 +957,9 @@
     <ClInclude Include="..\include\pr\network\bluetooth_ui.h">
       <Filter>pr\network</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\meta\is_char.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

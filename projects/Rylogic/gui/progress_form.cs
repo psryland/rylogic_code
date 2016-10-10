@@ -59,26 +59,37 @@ namespace pr.gui
 		/// <summary>Create a progress form for external control via the UpdateProgress method</summary>
 		public ProgressForm(string title, string desc, Icon icon, ProgressBarStyle style)
 		{
-			m_progress = new TextProgressBar
+			using (this.SuspendLayout(true))
+			{
+				AutoScaleMode       = AutoScaleMode.Font;
+				AutoScaleDimensions = new SizeF(6F, 13F);
+				AutoSizeMode        = AutoSizeMode.GrowOnly;
+				StartPosition       = FormStartPosition.CenterParent;
+				FormBorderStyle     = FormBorderStyle.FixedDialog;
+				DialogResult        = DialogResult.OK;
+				ClientSize          = new Size(136, 20);
+				HideOnClose         = false;
+
+				m_progress = new TextProgressBar
 				{
 					Style = style,
 					Anchor = AnchorStyles.Left|AnchorStyles.Right|AnchorStyles.Top
 				};
-			m_description = new Label
+				m_description = new Label
 				{
 					Text = desc ?? string.Empty,
 					AutoSize = false,
 					Anchor = AnchorStyles.Top|AnchorStyles.Left
 				};
 			
-			m_button = new Button
+				m_button = new Button
 				{
 					Text = "Cancel",
 					UseVisualStyleBackColor = true,
 					TabIndex = 1,
 					Anchor = AnchorStyles.Bottom|AnchorStyles.Right
 				};
-			m_button.Click += (s,a) =>
+				m_button.Click += (s,a) =>
 				{
 					if (CancelSignal != null)
 						CancelSignal.Set();
@@ -87,21 +98,13 @@ namespace pr.gui
 					m_button.Enabled = false;
 				};
 
-			Text = title ?? string.Empty;
-			if (icon != null) Icon = icon;
+				Text = title ?? string.Empty;
+				if (icon != null) Icon = icon;
 
-			AutoSizeMode        = AutoSizeMode.GrowOnly;
-			AutoScaleDimensions = new SizeF(6F, 13F);
-			AutoScaleMode       = AutoScaleMode.Font;
-			StartPosition       = FormStartPosition.CenterParent;
-			FormBorderStyle     = FormBorderStyle.FixedDialog;
-			DialogResult        = DialogResult.OK;
-			ClientSize          = new Size(136, 20);
-			HideOnClose         = false;
-
-			Controls.Add(m_description);
-			Controls.Add(m_progress);
-			Controls.Add(m_button);
+				Controls.Add(m_description);
+				Controls.Add(m_progress);
+				Controls.Add(m_button);
+			}
 		}
 
 		/// <summary>Progress function delegate</summary>

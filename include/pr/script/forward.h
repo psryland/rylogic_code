@@ -14,6 +14,7 @@
 #include <cassert>
 #include "pr/common/exception.h"
 #include "pr/common/fmt.h"
+#include "pr/common/hash.h"
 #include "pr/common/scope.h"
 #include "pr/common/expr_eval.h"
 #include "pr/container/vector.h"
@@ -29,7 +30,6 @@ namespace pr
 {
 	namespace script
 	{
-		using HashValue = int;
 		using string = pr::string<wchar_t>;
 
 		#pragma region Enumerations
@@ -48,65 +48,65 @@ namespace pr
 
 		#pragma region C keywords
 		#define PR_ENUM(x)\
-			x(Invalid  ,""         ,= 0xffffffff)\
-			x(Auto     ,"auto"     ,= 0x187C3F6C)\
-			x(Double   ,"double"   ,= 0x8FFA9612)\
-			x(Int      ,"int"      ,= 0x5CE21D70)\
-			x(Struct   ,"struct"   ,= 0xA98D0AFE)\
-			x(Break    ,"break"    ,= 0xFDDA6A72)\
-			x(Else     ,"else"     ,= 0x5A7F7A9E)\
-			x(Long     ,"long"     ,= 0x241D4609)\
-			x(Switch   ,"switch"   ,= 0x3776015F)\
-			x(Case     ,"case"     ,= 0x0F909A23)\
-			x(Enum     ,"enum"     ,= 0x795FE4E6)\
-			x(Register ,"register" ,= 0xD2E90C52)\
-			x(Typedef  ,"typedef"  ,= 0x5C019616)\
-			x(Char     ,"char"     ,= 0x10C1DF07)\
-			x(Extern   ,"extern"   ,= 0xEC53F561)\
-			x(Return   ,"return"   ,= 0x5FBA9DDD)\
-			x(Union    ,"union"    ,= 0xBD3984B6)\
-			x(Const    ,"const"    ,= 0xAF749E3A)\
-			x(Float    ,"float"    ,= 0x906E736B)\
-			x(Short    ,"short"    ,= 0x0E57FE17)\
-			x(Unsigned ,"unsigned" ,= 0xD0208C58)\
-			x(Continue ,"continue" ,= 0x29BDDE56)\
-			x(For      ,"for"      ,= 0xB8CCEE6A)\
-			x(Signed   ,"signed"   ,= 0x0AF75B8B)\
-			x(Void     ,"void"     ,= 0xB2D22281)\
-			x(Default  ,"default"  ,= 0x96B0DEA8)\
-			x(Goto     ,"goto"     ,= 0xC278F5C4)\
-			x(Sizeof   ,"sizeof"   ,= 0x7693BDE7)\
-			x(Volatile ,"volatile" ,= 0xB225EF47)\
-			x(Do       ,"do"       ,= 0x6E06602A)\
-			x(If       ,"if"       ,= 0x64F9860C)\
-			x(Static   ,"static"   ,= 0x3D26EFB5)\
-			x(While    ,"while"    ,= 0x8D56B330)
+			x(Invalid  ,""         ,= pr::hash::Hash(""         ))\
+			x(Auto     ,"auto"     ,= pr::hash::Hash("auto"     ))\
+			x(Double   ,"double"   ,= pr::hash::Hash("double"   ))\
+			x(Int      ,"int"      ,= pr::hash::Hash("int"      ))\
+			x(Struct   ,"struct"   ,= pr::hash::Hash("struct"   ))\
+			x(Break    ,"break"    ,= pr::hash::Hash("break"    ))\
+			x(Else     ,"else"     ,= pr::hash::Hash("else"     ))\
+			x(Long     ,"long"     ,= pr::hash::Hash("long"     ))\
+			x(Switch   ,"switch"   ,= pr::hash::Hash("switch"   ))\
+			x(Case     ,"case"     ,= pr::hash::Hash("case"     ))\
+			x(Enum     ,"enum"     ,= pr::hash::Hash("enum"     ))\
+			x(Register ,"register" ,= pr::hash::Hash("register" ))\
+			x(Typedef  ,"typedef"  ,= pr::hash::Hash("typedef"  ))\
+			x(Char     ,"char"     ,= pr::hash::Hash("char"     ))\
+			x(Extern   ,"extern"   ,= pr::hash::Hash("extern"   ))\
+			x(Return   ,"return"   ,= pr::hash::Hash("return"   ))\
+			x(Union    ,"union"    ,= pr::hash::Hash("union"    ))\
+			x(Const    ,"const"    ,= pr::hash::Hash("const"    ))\
+			x(Float    ,"float"    ,= pr::hash::Hash("float"    ))\
+			x(Short    ,"short"    ,= pr::hash::Hash("short"    ))\
+			x(Unsigned ,"unsigned" ,= pr::hash::Hash("unsigned" ))\
+			x(Continue ,"continue" ,= pr::hash::Hash("continue" ))\
+			x(For      ,"for"      ,= pr::hash::Hash("for"      ))\
+			x(Signed   ,"signed"   ,= pr::hash::Hash("signed"   ))\
+			x(Void     ,"void"     ,= pr::hash::Hash("void"     ))\
+			x(Default  ,"default"  ,= pr::hash::Hash("default"  ))\
+			x(Goto     ,"goto"     ,= pr::hash::Hash("goto"     ))\
+			x(Sizeof   ,"sizeof"   ,= pr::hash::Hash("sizeof"   ))\
+			x(Volatile ,"volatile" ,= pr::hash::Hash("volatile" ))\
+			x(Do       ,"do"       ,= pr::hash::Hash("do"       ))\
+			x(If       ,"if"       ,= pr::hash::Hash("if"       ))\
+			x(Static   ,"static"   ,= pr::hash::Hash("static"   ))\
+			x(While    ,"while"    ,= pr::hash::Hash("while"    ))
 		PR_DEFINE_ENUM3(EKeyword, PR_ENUM);
 		#undef PR_ENUM
 		#pragma endregion
 
 		#pragma region Preprocessor keywords
 		#define PR_ENUM(x)\
-			x(Invalid      ,""             ,= 0xffffffff)\
-			x(Include      ,"include"      ,= 0x1D27DEED)\
-			x(IncludePath  ,"include_path" ,= 0xB541601D)\
-			x(Define       ,"define"       ,= 0x3E7EDBEC)\
-			x(Undef        ,"undef"        ,= 0xA6236687)\
-			x(Defifndef    ,"defifndef"    ,= 0x48F0434C)\
-			x(If           ,"if"           ,= 0x64F9860C)\
-			x(Ifdef        ,"ifdef"        ,= 0x17E02913)\
-			x(Ifndef       ,"ifndef"       ,= 0xB1F1232D)\
-			x(Elif         ,"elif"         ,= 0x7970A0E1)\
-			x(Else         ,"else"         ,= 0x5A7F7A9E)\
-			x(Endif        ,"endif"        ,= 0x8774DC3B)\
-			x(Pragma       ,"pragma"       ,= 0x7BE590B7)\
-			x(Line         ,"line"         ,= 0x8A9A6F5D)\
-			x(Error        ,"error"        ,= 0x221BB06F)\
-			x(Warning      ,"warning"      ,= 0xBDC00819)\
-			x(Defined      ,"defined"      ,= 0xE9B39718)\
-			x(Eval         ,"eval"         ,= 0xAE926225)\
-			x(Lit          ,"lit"          ,= 0x14C22A9C)\
-			x(Embedded     ,"embedded"     ,= 0x82A3D0E5)
+			x(Invalid      ,""             ,= pr::hash::Hash(""            ))\
+			x(Include      ,"include"      ,= pr::hash::Hash("include"     ))\
+			x(IncludePath  ,"include_path" ,= pr::hash::Hash("include_path"))\
+			x(Define       ,"define"       ,= pr::hash::Hash("define"      ))\
+			x(Undef        ,"undef"        ,= pr::hash::Hash("undef"       ))\
+			x(Defifndef    ,"defifndef"    ,= pr::hash::Hash("defifndef"   ))\
+			x(If           ,"if"           ,= pr::hash::Hash("if"          ))\
+			x(Ifdef        ,"ifdef"        ,= pr::hash::Hash("ifdef"       ))\
+			x(Ifndef       ,"ifndef"       ,= pr::hash::Hash("ifndef"      ))\
+			x(Elif         ,"elif"         ,= pr::hash::Hash("elif"        ))\
+			x(Else         ,"else"         ,= pr::hash::Hash("else"        ))\
+			x(Endif        ,"endif"        ,= pr::hash::Hash("endif"       ))\
+			x(Pragma       ,"pragma"       ,= pr::hash::Hash("pragma"      ))\
+			x(Line         ,"line"         ,= pr::hash::Hash("line"        ))\
+			x(Error        ,"error"        ,= pr::hash::Hash("error"       ))\
+			x(Warning      ,"warning"      ,= pr::hash::Hash("warning"     ))\
+			x(Defined      ,"defined"      ,= pr::hash::Hash("defined"     ))\
+			x(Eval         ,"eval"         ,= pr::hash::Hash("eval"        ))\
+			x(Lit          ,"lit"          ,= pr::hash::Hash("lit"         ))\
+			x(Embedded     ,"embedded"     ,= pr::hash::Hash("embedded"    ))
 		PR_DEFINE_ENUM3(EPPKeyword, PR_ENUM);
 		#undef PR_ENUM
 		#pragma endregion
@@ -238,7 +238,6 @@ namespace pr
 			SrcConstPtr(wchar_t const* p) :wptr(p) {}
 			SrcConstPtr(char const* p) :aptr(p) {}
 		};
-
 	}
 }
 

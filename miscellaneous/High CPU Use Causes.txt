@@ -1,0 +1,2 @@
+High CPU while Task Manager shows no tasks using the CPU
+=> Virtual machine running

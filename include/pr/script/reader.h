@@ -84,12 +84,14 @@ namespace pr
 			}
 
 			// Return the hash of a keyword using the current reader settings
-			static HashValue StaticHashKeyword(wchar_t const* keyword, bool case_sensitive) // Can't have the same name as 'HashKeyword' because it causes a compiler error
+			static int StaticHashKeyword(wchar_t const* keyword, bool case_sensitive)
 			{
-				auto kw = case_sensitive ? Hash(keyword) : HashLwr(keyword);
-				return kw; //return (kw & 0x7fffffff); // mask off msb so that enum's show up in the debugger
+				// This function can't have the same name as 'HashKeyword' because it causes a compiler error
+				// Use the pr::hash::Hash functions that have been mapped into this namespace
+				auto kw = case_sensitive ? pr::hash::Hash(keyword) : pr::hash::HashI(keyword);
+				return kw;
 			}
-			HashValue HashKeyword(wchar_t const* keyword) const
+			int HashKeyword(wchar_t const* keyword) const
 			{
 				return StaticHashKeyword(keyword, m_case_sensitive);
 			}
@@ -208,10 +210,10 @@ namespace pr
 			}
 
 			// As above an error is reported if the next token is not a keyword
-			HashValue NextKeywordH()
+			int NextKeywordH()
 			{
 				auto& src = m_pp;
-				HashValue kw = 0;
+				int kw = 0;
 				if (!NextKeywordH(kw)) ReportError(EResult::TokenNotFound, src.Loc(), "keyword expected");
 				return kw;
 			}
@@ -224,14 +226,14 @@ namespace pr
 			// Returns false if the named keyword is not found, true if it is
 			bool FindNextKeyword(wchar_t const* named_kw)
 			{
-				auto kw_hashed = HashValue();
+				int kw_hashed = 0;
 				auto named_kw_hashed = HashKeyword(named_kw);
 				for (; NextKeywordH(kw_hashed) && kw_hashed != named_kw_hashed; ) {}
 				return named_kw_hashed == kw_hashed;
 			}
 
 			// Extract a token from the source.
-			// A token is a contiguous block of non-separater characters
+			// A token is a contiguous block of non-separator characters
 			template <typename StrType> bool Token(StrType& token)
 			{
 				auto& src = m_pp;
@@ -313,7 +315,7 @@ namespace pr
 				auto& src = m_pp;
 				pr::str::Resize(cstring, 0);
 				if (pr::str::ExtractString(cstring, src, '\\', m_delim)) return true;
-				return ReportError(EResult::TokenNotFound, "cstring expected");
+				return ReportError(EResult::TokenNotFound, "'cstring' expected");
 			}
 			template <typename StrType> bool CStringS(StrType& cstring)
 			{
@@ -588,7 +590,7 @@ namespace pr
 				"*LastThing";
 
 			char kw[50];
-			HashValue hashed_kw = 0;
+			int hashed_kw = 0;
 			std::string str;
 			bool bval = false, barray[4];
 			int ival = 0, iarray[4];

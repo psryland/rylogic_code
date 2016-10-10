@@ -13,7 +13,7 @@ using pr.util;
 namespace pr.extn
 {
 	/// <summary>Extensions for IEnumerable</summary>
-	public static class EnumerableExtensions
+	public static class Enumerable_
 	{
 		/// <summary>Enumerate instances of a given type</summary>
 		public static IEnumerable OfType(this IEnumerable source, Type ty)

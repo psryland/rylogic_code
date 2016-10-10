@@ -24,7 +24,6 @@ namespace pr
 {
 	namespace ldr
 	{
-		typedef pr::hash::HashValue      HashValue;
 		typedef pr::vector<pr::v4>       VCont;
 		typedef pr::vector<pr::v4>       NCont;
 		typedef pr::vector<pr::uint16>   ICont;
@@ -54,6 +53,12 @@ namespace pr
 		inline ICont& Index() { g_cache.m_index.resize(0); return g_cache.m_index; }
 		inline CCont& Color() { g_cache.m_color.resize(0); return g_cache.m_color; }
 		inline TCont& Texts() { g_cache.m_texts.resize(0); return g_cache.m_texts; }
+
+		// String hash wrapper
+		inline size_t Hash(char const* str)
+		{
+			return pr::hash::Hash(str);
+		}
 
 		// LdrObject Creation functions *********************************************
 
@@ -297,6 +302,7 @@ namespace pr
 			{
 			default: return false;
 			case EKeyword::O2W:
+			case EKeyword::Txfm:
 				{
 					ParseLdrTransform(p.m_reader, obj->m_o2p);
 					return true;
@@ -709,7 +715,7 @@ namespace pr
 				pr::m4x4 o2w, *po2w = nullptr;
 				if (m_axis_id != 3)
 				{
-					o2w = pr::m4x4::Rotation(pr::AxisId(3), m_axis_id, pr::v4Origin);
+					o2w = pr::m4x4::Transform(pr::AxisId(3), m_axis_id, pr::v4Origin);
 					po2w = &o2w;
 				}
 
@@ -1234,7 +1240,7 @@ namespace pr
 				pr::m4x4 o2w, *po2w = nullptr;
 				if (m_axis_id != 3)
 				{
-					o2w = pr::m4x4::Rotation(pr::AxisId(3), m_axis_id, pr::v4Origin);
+					o2w = pr::m4x4::Transform(pr::AxisId(3), m_axis_id, pr::v4Origin);
 					po2w = &o2w;
 				}
 
@@ -1275,7 +1281,7 @@ namespace pr
 				pr::m4x4 o2w, *po2w = nullptr;
 				if (m_axis_id != 3)
 				{
-					o2w = pr::m4x4::Rotation(pr::AxisId(3), m_axis_id, pr::v4Origin);
+					o2w = pr::m4x4::Transform(pr::AxisId(3), m_axis_id, pr::v4Origin);
 					po2w = &o2w;
 				}
 
@@ -1314,7 +1320,7 @@ namespace pr
 				pr::m4x4 o2w, *po2w = nullptr;
 				if (m_axis_id != 3)
 				{
-					o2w = pr::m4x4::Rotation(pr::AxisId(3), m_axis_id, pr::v4Origin);
+					o2w = pr::m4x4::Transform(pr::AxisId(3), m_axis_id, pr::v4Origin);
 					po2w = &o2w;
 				}
 
@@ -1589,12 +1595,12 @@ namespace pr
 
 				switch (m_axis_id){
 				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
-				case  1: m_b2w = m4x4::Rotation(0.0f, -pr::maths::tau_by_4, 0.0f, v4Origin); break;
-				case -1: m_b2w = m4x4::Rotation(0.0f, pr::maths::tau_by_4, 0.0f, v4Origin); break;
-				case  2: m_b2w = m4x4::Rotation(-pr::maths::tau_by_4, 0.0f, 0.0f, v4Origin); break;
-				case -2: m_b2w = m4x4::Rotation(pr::maths::tau_by_4, 0.0f, 0.0f, v4Origin); break;
+				case  1: m_b2w = m4x4::Transform(0.0f, -pr::maths::tau_by_4, 0.0f, v4Origin); break;
+				case -1: m_b2w = m4x4::Transform(0.0f, pr::maths::tau_by_4, 0.0f, v4Origin); break;
+				case  2: m_b2w = m4x4::Transform(-pr::maths::tau_by_4, 0.0f, 0.0f, v4Origin); break;
+				case -2: m_b2w = m4x4::Transform(pr::maths::tau_by_4, 0.0f, 0.0f, v4Origin); break;
 				case  3: m_b2w = m4x4Identity; break;
-				case -3: m_b2w = m4x4::Rotation(0.0f, pr::maths::tau_by_2, 0.0f, v4Origin); break;
+				case -3: m_b2w = m4x4::Transform(0.0f, pr::maths::tau_by_2, 0.0f, v4Origin); break;
 				}
 
 				IObjectCreatorCuboid::CreateModel(p, obj);
@@ -1633,12 +1639,12 @@ namespace pr
 
 				switch (m_axis_id) {
 				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
-				case  1: m_b2w = m4x4::Rotation(0.0f, pr::maths::tau_by_4, 0.0f, v4Origin); break;
-				case -1: m_b2w = m4x4::Rotation(0.0f, -pr::maths::tau_by_4, 0.0f, v4Origin); break;
-				case  2: m_b2w = m4x4::Rotation(-pr::maths::tau_by_4, 0.0f, 0.0f, v4Origin); break;
-				case -2: m_b2w = m4x4::Rotation(pr::maths::tau_by_4, 0.0f, 0.0f, v4Origin); break;
+				case  1: m_b2w = m4x4::Transform(0.0f, pr::maths::tau_by_4, 0.0f, v4Origin); break;
+				case -1: m_b2w = m4x4::Transform(0.0f, -pr::maths::tau_by_4, 0.0f, v4Origin); break;
+				case  2: m_b2w = m4x4::Transform(-pr::maths::tau_by_4, 0.0f, 0.0f, v4Origin); break;
+				case -2: m_b2w = m4x4::Transform(pr::maths::tau_by_4, 0.0f, 0.0f, v4Origin); break;
 				case  3: m_b2w = m4x4Identity; break;
-				case -3: m_b2w = m4x4::Rotation(0.0f, pr::maths::tau_by_2, 0.0f, v4Origin); break;
+				case -3: m_b2w = m4x4::Transform(0.0f, pr::maths::tau_by_2, 0.0f, v4Origin); break;
 				}
 
 				IObjectCreatorCuboid::CreateModel(p, obj);
@@ -1808,8 +1814,8 @@ namespace pr
 
 		#pragma region Special Objects
 
-		// ELdrObject::DirectionalLight
-		template <> struct ObjectCreator<ELdrObject::DirectionalLight> :IObjectCreatorLight
+		// ELdrObject::DirLight
+		template <> struct ObjectCreator<ELdrObject::DirLight> :IObjectCreatorLight
 		{
 			void Parse(ParseParams& p) override
 			{
@@ -1864,7 +1870,7 @@ namespace pr
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
 				// Locate the model that this is an instance of
-				auto model_key = pr::hash::HashC(obj->m_name.c_str());
+				auto model_key = Hash(obj->m_name.c_str());
 				auto mdl = p.m_models.find(model_key);
 				if (mdl == p.m_models.end())
 				{
@@ -1913,7 +1919,7 @@ namespace pr
 			creator.CreateModel(p, obj);
 
 			// Add the model and instance to the containers
-			p.m_models[pr::hash::HashC(obj->m_name.c_str())] = obj->m_model;
+			p.m_models[Hash(obj->m_name.c_str())] = obj->m_model;
 			p.m_objects.push_back(obj);
 		}
 
@@ -1946,38 +1952,38 @@ namespace pr
 			switch (kw)
 			{
 			default: return false;
-			case ELdrObject::Line:             Parse<ELdrObject::Line            >(p); break;
-			case ELdrObject::LineD:            Parse<ELdrObject::LineD           >(p); break;
-			case ELdrObject::LineStrip:        Parse<ELdrObject::LineStrip       >(p); break;
-			case ELdrObject::LineBox:          Parse<ELdrObject::LineBox         >(p); break;
-			case ELdrObject::Grid:             Parse<ELdrObject::Grid            >(p); break;
-			case ELdrObject::Spline:           Parse<ELdrObject::Spline          >(p); break;
-			case ELdrObject::Arrow:            Parse<ELdrObject::Arrow           >(p); break;
-			case ELdrObject::Circle:           Parse<ELdrObject::Circle          >(p); break;
-			case ELdrObject::Rect:             Parse<ELdrObject::Rect            >(p); break;
-			case ELdrObject::Pie:              Parse<ELdrObject::Pie             >(p); break;
-			case ELdrObject::Matrix3x3:        Parse<ELdrObject::Matrix3x3       >(p); break;
-			case ELdrObject::CoordFrame:       Parse<ELdrObject::CoordFrame      >(p); break;
-			case ELdrObject::Triangle:         Parse<ELdrObject::Triangle        >(p); break;
-			case ELdrObject::Quad:             Parse<ELdrObject::Quad            >(p); break;
-			case ELdrObject::Plane:            Parse<ELdrObject::Plane           >(p); break;
-			case ELdrObject::Ribbon:           Parse<ELdrObject::Ribbon          >(p); break;
-			case ELdrObject::Box:              Parse<ELdrObject::Box             >(p); break;
-			case ELdrObject::BoxLine:          Parse<ELdrObject::BoxLine         >(p); break;
-			case ELdrObject::BoxList:          Parse<ELdrObject::BoxList         >(p); break;
-			case ELdrObject::FrustumWH:        Parse<ELdrObject::FrustumWH       >(p); break;
-			case ELdrObject::FrustumFA:        Parse<ELdrObject::FrustumFA       >(p); break;
-			case ELdrObject::Sphere:           Parse<ELdrObject::Sphere          >(p); break;
-			case ELdrObject::CylinderHR:       Parse<ELdrObject::CylinderHR      >(p); break;
-			case ELdrObject::ConeHA:           Parse<ELdrObject::ConeHA          >(p); break;
-			case ELdrObject::Mesh:             Parse<ELdrObject::Mesh            >(p); break;
-			case ELdrObject::ConvexHull:       Parse<ELdrObject::ConvexHull      >(p); break;
-			case ELdrObject::Model:            Parse<ELdrObject::Model           >(p); break;
-			case ELdrObject::DirectionalLight: Parse<ELdrObject::DirectionalLight>(p); break;
-			case ELdrObject::PointLight:       Parse<ELdrObject::PointLight      >(p); break;
-			case ELdrObject::SpotLight:        Parse<ELdrObject::SpotLight       >(p); break;
-			case ELdrObject::Group:            Parse<ELdrObject::Group           >(p); break;
-			case ELdrObject::Instance:         Parse<ELdrObject::Instance        >(p); break;
+			case ELdrObject::Line:       Parse<ELdrObject::Line      >(p); break;
+			case ELdrObject::LineD:      Parse<ELdrObject::LineD     >(p); break;
+			case ELdrObject::LineStrip:  Parse<ELdrObject::LineStrip >(p); break;
+			case ELdrObject::LineBox:    Parse<ELdrObject::LineBox   >(p); break;
+			case ELdrObject::Grid:       Parse<ELdrObject::Grid      >(p); break;
+			case ELdrObject::Spline:     Parse<ELdrObject::Spline    >(p); break;
+			case ELdrObject::Arrow:      Parse<ELdrObject::Arrow     >(p); break;
+			case ELdrObject::Circle:     Parse<ELdrObject::Circle    >(p); break;
+			case ELdrObject::Rect:       Parse<ELdrObject::Rect      >(p); break;
+			case ELdrObject::Pie:        Parse<ELdrObject::Pie       >(p); break;
+			case ELdrObject::Matrix3x3:  Parse<ELdrObject::Matrix3x3 >(p); break;
+			case ELdrObject::CoordFrame: Parse<ELdrObject::CoordFrame>(p); break;
+			case ELdrObject::Triangle:   Parse<ELdrObject::Triangle  >(p); break;
+			case ELdrObject::Quad:       Parse<ELdrObject::Quad      >(p); break;
+			case ELdrObject::Plane:      Parse<ELdrObject::Plane     >(p); break;
+			case ELdrObject::Ribbon:     Parse<ELdrObject::Ribbon    >(p); break;
+			case ELdrObject::Box:        Parse<ELdrObject::Box       >(p); break;
+			case ELdrObject::BoxLine:    Parse<ELdrObject::BoxLine   >(p); break;
+			case ELdrObject::BoxList:    Parse<ELdrObject::BoxList   >(p); break;
+			case ELdrObject::FrustumWH:  Parse<ELdrObject::FrustumWH >(p); break;
+			case ELdrObject::FrustumFA:  Parse<ELdrObject::FrustumFA >(p); break;
+			case ELdrObject::Sphere:     Parse<ELdrObject::Sphere    >(p); break;
+			case ELdrObject::CylinderHR: Parse<ELdrObject::CylinderHR>(p); break;
+			case ELdrObject::ConeHA:     Parse<ELdrObject::ConeHA    >(p); break;
+			case ELdrObject::Mesh:       Parse<ELdrObject::Mesh      >(p); break;
+			case ELdrObject::ConvexHull: Parse<ELdrObject::ConvexHull>(p); break;
+			case ELdrObject::Model:      Parse<ELdrObject::Model     >(p); break;
+			case ELdrObject::DirLight:   Parse<ELdrObject::DirLight  >(p); break;
+			case ELdrObject::PointLight: Parse<ELdrObject::PointLight>(p); break;
+			case ELdrObject::SpotLight:  Parse<ELdrObject::SpotLight >(p); break;
+			case ELdrObject::Group:      Parse<ELdrObject::Group     >(p); break;
+			case ELdrObject::Instance:   Parse<ELdrObject::Instance  >(p); break;
 			}
 
 			// Apply properties to each object added
@@ -2405,7 +2411,7 @@ LR"(// *************************************************************************
 // child objects. In some ways they are like a *Group object, they have no geometry
 // of their own but can contain objects with geometry.
 
-*DirectionalLight sun FFFF00  // Colour attribute is the colour of the light source
+*DirLight sun FFFF00  // Colour attribute is the colour of the light source
 {
 	0 -1 -0.3                 // Direction dx,dy,dz (doesn't need to be normalised)
 	*Specular {FFFFFF 1000}   // Optional. Specular colour and power

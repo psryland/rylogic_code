@@ -194,7 +194,7 @@ namespace pr
 	// Create a random affine transform matrix
 	template <typename = void> inline m4x4 Random4x4(Rand& rnd, v4 const& axis, float min_angle, float max_angle, v4 const& position)
 	{
-		return m4x4::Rotation(axis, rnd.fltr(min_angle, max_angle), position);
+		return m4x4::Transform(axis, rnd.fltr(min_angle, max_angle), position);
 	}
 	template <typename = void> inline m4x4 Random4x4(Rand& rnd, float min_angle, float max_angle, v4 const& position)
 	{

@@ -208,7 +208,9 @@ namespace pr.util
 
 		/// <summary>
 		/// Recursively checks the AutoScaleMode and AutoScaleDimensions of all container controls below 'root'.
-		/// 'on_failure' is a callback that receives each failing control. Return true from 'on_failure' to end the recursion</summary>
+		/// 'on_failure' is a callback that receives each failing control. Return true from 'on_failure' to end the recursion.
+		/// Note: If you use want an assert check, use 'AssertAutoScaling'. Also, 'AutoScaleDimensions' gets changed by .net
+		/// when run on non-96dpi systems</summary>
 		public static bool CheckAutoScaling(Control root, AutoScaleMode? mode_ = null, SizeF? dim_ = null, Func<Control,bool> on_failure = null)
 		{
 			// Guidelines: http://stackoverflow.com/questions/22735174/how-to-write-winforms-code-that-auto-scales-to-system-font-and-dpi-settings
@@ -236,6 +238,7 @@ namespace pr.util
 					if (on_failure(root))
 						return false;
 				}
+				// 'AutoScaleDimensions' gets changed on non-96dpi systems
 				else if (cc.AutoScaleDimensions != dim)
 				{
 					failed = true;
@@ -594,7 +597,18 @@ namespace pr.util
 			ts = ts.AddHours(TimeZone.CurrentTimeZone.GetUtcOffset(ts).Hours);
 			return ts;
 		}
-		public static DateTime AssemblyTimestamp() { return AssemblyTimestamp(null); }
+		public static DateTime AssemblyTimestamp(Type type)
+		{
+			return AssemblyTimestamp(Assembly.GetAssembly(type));
+		}
+		public static DateTime AssemblyTimestamp()
+		{
+			return AssemblyTimestamp((Assembly)null);
+		}
+		public static DateTime AppTimestamp
+		{
+			get { return AssemblyTimestamp(); }
+		}
 
 		/// <summary>Return the copyright string from an assembly</summary>
 		public static string AssemblyCopyright(Assembly ass)
@@ -616,6 +630,26 @@ namespace pr.util
 			get { return AssemblyCopyright(); }
 		}
 
+		/// <summary>Return the company string from an assembly</summary>
+		public static string AssemblyCompany(Assembly ass)
+		{
+			if (ass == null) ass = Assembly.GetEntryAssembly();
+			if (ass == null) ass = Assembly.GetExecutingAssembly();
+			return ass.CustomAttributes.First(x => x.AttributeType == typeof(AssemblyCompanyAttribute)).ConstructorArguments[0].Value.ToString();
+		}
+		public static string AssemblyCompany(Type type)
+		{
+			return AssemblyCompany(Assembly.GetAssembly(type));
+		}
+		public static string AssemblyCompany()
+		{
+			return AssemblyCompany((Assembly)null);
+		}
+		public static string AppCompany
+		{
+			get { return AssemblyCompany(); }
+		}
+
 		/// <summary>Read a text file embedded resource returning it as a string</summary>
 		public static string TextResource(string resource_name, Assembly ass)
 		{
@@ -635,15 +669,19 @@ namespace pr.util
 		/// <summary>Returns the full path to a file or directory relative to the app executable</summary>
 		public static string ResolveAppPath(string relative_path = "")
 		{
-			var dir = Path_.Directory(Application.ExecutablePath);
-			var path = Path_.CombinePath(dir, relative_path);
-			return path;
+			return Path_.CombinePath(AppDirectory, relative_path);
 		}
 
 		/// <summary>The application directory for a roaming user</summary>
 		public static string ResolveAppDataPath(string company, string application, string relative_path = "")
 		{
 			return Path_.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), company, application, relative_path);
+		}
+
+		/// <summary>The user's 'Documents' directory</summary>
+		public static string ResolveUserDocumentsPath(string company, string application, string relative_path = "")
+		{
+			return Path_.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), company, application, relative_path);
 		}
 
 		/// <summary>

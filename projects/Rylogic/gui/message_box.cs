@@ -564,6 +564,8 @@ namespace pr.gui
 			// 
 			// MsgBox
 			// 
+			this.AutoScaleMode = AutoScaleMode.Font;
+			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.ClientSize = new System.Drawing.Size(447, 157);
 			this.Controls.Add(this.m_panel);
 			this.Controls.Add(this.m_panel_btns);

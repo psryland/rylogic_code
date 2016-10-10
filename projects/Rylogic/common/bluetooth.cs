@@ -129,6 +129,51 @@ namespace pr.common
 				ReturnConnected     ,
 		}
 
+		public enum EAuthenticationRequirements :int
+		{
+			MITMProtectionNotRequired               = 0x00,
+			MITMProtectionRequired                  = 0x01,
+			MITMProtectionNotRequiredBonding        = 0x02,
+			MITMProtectionRequiredBonding           = 0x03,
+			MITMProtectionNotRequiredGeneralBonding = 0x04,
+			MITMProtectionRequiredGeneralBonding    = 0x05,
+			MITMProtectionNotDefined                = 0xff,
+		}
+		public enum EAuthenticationMethod :int
+		{
+			/// <summary>The Bluetooth device supports authentication via a PIN</summary>
+			Legacy = 0x1,
+			
+			/// <summary>The Bluetooth device supports authentication via out-of-band data.</summary>
+			OutOfBandData,
+
+			/// <summary>The Bluetooth device supports authentication via numeric comparison.</summary>
+			NumericComparison,
+
+			/// <summary>The Bluetooth device supports authentication via passkey notification.</summary>
+			PasskeyNotification,
+
+			/// <summary>The Bluetooth device supports authentication via passkey.</summary>
+			Passkey,
+		}
+		public enum EIOCapability :int
+		{
+			/// <summary>The Bluetooth device is capable of output via display only.</summary>
+			DisplayOnly = 0x00,
+
+			/// <summary>The Bluetooth device is capable of output via a display, and has the additional capability to presenting a yes/no question to the user.</summary>
+			DisplayYesNo = 0x01,
+
+			/// <summary>The Bluetooth device is capable of input via keyboard.</summary>
+			KeyboardOnly = 0x02,
+
+			/// <summary>The Bluetooth device is not capable of input/output.</summary>
+			NoInputNoOutput = 0x03,
+
+			/// <summary>The input/output capabilities for the Bluetooth device are undefined.</summary>
+			Undefined = 0xff,
+		}
+
 		/// <summary>Bluetooth radio info</summary>
 		[DebuggerDisplay("{Name} {Connectible} {Discoverable}")]
 		public class Radio
@@ -158,14 +203,25 @@ namespace pr.common
 			public bool Connectible
 			{
 				get { return BluetoothIsConnectable(Handle); }
-				set { BluetoothEnableIncomingConnections(Handle, value); }
+				set
+				{
+					var r = BluetoothEnableIncomingConnections(Handle, value);
+					if (r) Debug.WriteLine("Bluetooth radios {0} incoming connections".Fmt(value ? "listening for" : "ignoring"));
+					else   Debug.WriteLine("Bluetooth connectivity unchanged");
+				}
 			}
 
 			/// <summary>Enable/Disable discovery for this radio</summary>
 			public bool Discoverable
 			{
 				get { return BluetoothIsDiscoverable(Handle); }
-				set { BluetoothEnableDiscovery(Handle, value); }
+				set
+				{
+					if (value) Connectable = true;
+					var r = BluetoothEnableDiscovery(Handle, value);
+					if (r) Debug.WriteLine("Bluetooth discovery {0}".Fmt(value ? "enabled" : "disabled"));
+					else   Debug.WriteLine("Bluetooth discovery unchanged");
+				}
 			}
 		}
 
@@ -234,10 +290,10 @@ namespace pr.common
 				get
 				{
 					var s = new StringBuilder();
-					if (IsConnected ) s.Append(s.Length != 0 ? ", " : string.Empty).Append("Connected" );
-					if (IsPaired    ) s.Append(s.Length != 0 ? ", " : string.Empty).Append("Paired"    );
-					if (IsRemembered) s.Append(s.Length != 0 ? ", " : string.Empty).Append("Remembered");
-					if (s.Length == 0) s.Append("Unknown");
+					if (IsConnected)   s.Append("Connected" );
+					else if (IsPaired) s.Append("Paired"    );
+					else               s.Append("Ready to pair");
+					if (IsRemembered)  s.Append(", Remembered");
 					return s.ToString();
 				}
 			}
@@ -255,7 +311,80 @@ namespace pr.common
 			}
 
 			/// <summary>Pair this device to the PC</summary>
-			public void Pair()
+			public void Pair(IntPtr parent_hwnd, Radio radio, EAuthenticationRequirements req = EAuthenticationRequirements.MITMProtectionRequired)
+			{
+				// Register a callback for authentication, then start the authentication process
+				var auth_callback = new AuthenticationCallback(AuthCallback);
+				using (RegAuthCallback(auth_callback))
+				{
+					// Start the pairing process.
+					// This will result in the AuthCallback being called.
+					// In this callback we need to call 'BluetoothSendAuthenticationResponseEx' to complete the pairing.
+					var r = BluetoothAuthenticateDeviceEx(parent_hwnd, radio.Handle, ref m_info, parent_hwnd, req);
+					if (r != Win32.ERROR_SUCCESS)
+						throw new Win32Exception(r);
+				}
+			}
+
+			/// <summary>Callback function called when pairing requires authentication</summary>
+			private bool AuthCallback(IntPtr parent_hwnd, ref BLUETOOTH_AUTHENTICATION_CALLBACK_PARAMS parms)
+			{
+				switch (parms.IOCapability)
+				{
+				case EIOCapability.DisplayOnly:
+				case EIOCapability.DisplayYesNo:
+				case EIOCapability.KeyboardOnly:
+				case EIOCapability.NoInputNoOutput:
+				case EIOCapability.Undefined:
+					break;
+				}
+
+
+				switch (parms.AuthenticationMethod)
+				{
+				default:
+					{
+						throw new Exception("Unknown authentication method {0}".Fmt(parms.AuthenticationMethod));
+					}
+				case EAuthenticationMethod.Legacy:
+					{
+						break;
+					}
+				case EAuthenticationMethod.OutOfBandData:
+					break;
+				case EAuthenticationMethod.NumericComparison:
+					break;
+				case EAuthenticationMethod.PasskeyNotification:
+					break;
+				case EAuthenticationMethod.Passkey:
+					break;
+				}
+				return false;
+			}
+
+			/// <summary>RAII register callback for authentication</summary>
+			private Scope RegAuthCallback(AuthenticationCallback auth_callback)
+			{
+				return Scope.Create(
+					() =>
+					{
+						var h = IntPtr.Zero;
+						var r = BluetoothRegisterForAuthenticationEx(ref m_info, out h, auth_callback, IntPtr.Zero);
+						if (r != Win32.ERROR_SUCCESS) throw new Win32Exception(r);
+						return h;
+					},
+					h =>
+					{
+						var r = BluetoothUnregisterAuthentication(h);
+						if (!r) throw new Win32Exception(Win32.GetLastError());
+					});
+			}
+
+			public void Disconnect()
+			{
+			}
+
+			public void Forget()
 			{
 			}
 		}
@@ -354,26 +483,6 @@ namespace pr.common
 			}
 		}
 
-		///// <summary>Enable bluetooth on this system</summary>
-		//public static bool Enabled
-		//{
-		//	get
-		//	{
-		//		int enabled = 0;
-		//		var r = IsBluetoothRadioEnabled(ref enabled);
-		//		if (r != Win32.ERROR_SUCCESS)
-		//			throw new Win32Exception(r);
-
-		//		return enabled != 0;
-		//	}
-		//	set
-		//	{
-		//		var r = BluetoothEnableRadio(value);
-		//		if (r != Win32.ERROR_SUCCESS)
-		//			throw new Win32Exception(r);
-		//	}
-		//}
-
 		/// <summary>Enable incoming connections on all BT radios. Returns true if any radio changes state</summary>
 		public static bool Connectable
 		{
@@ -381,8 +490,8 @@ namespace pr.common
 			set
 			{
 				var r = BluetoothEnableIncomingConnections(IntPtr.Zero, value);
-				if (r) System.Diagnostics.Debug.Write("Bluetooth radios {0} incoming connections".Fmt(value ? "listening for" : "ignoring"));
-				else   System.Diagnostics.Debug.Write("Bluetooth connectivity unchanged");
+				if (r) Debug.WriteLine("Bluetooth radios {0} incoming connections".Fmt(value ? "listening for" : "ignoring"));
+				else   Debug.WriteLine("Bluetooth connectivity unchanged");
 			}
 		}
 
@@ -393,14 +502,17 @@ namespace pr.common
 			set
 			{
 				var r = BluetoothEnableDiscovery(IntPtr.Zero, value);
-				if (r) System.Diagnostics.Debug.Write("Bluetooth discovery {0}".Fmt(value ? "enabled" : "disabled"));
-				else   System.Diagnostics.Debug.Write("Bluetooth discovery unchanged");
+				if (r) Debug.WriteLine("Bluetooth discovery {0}".Fmt(value ? "enabled" : "disabled"));
+				else   Debug.WriteLine("Bluetooth discovery unchanged");
 			}
 		}
 
 		#region Interop
 		private const string Dll = "Bthprops.cpl";//"irprops.cpl";
 		private const int BLUETOOTH_MAX_NAME_SIZE = 248;
+		private const int BTH_MAX_PIN_SIZE = 16;
+
+		internal delegate bool AuthenticationCallback([In] IntPtr pvParam, [In] ref BLUETOOTH_AUTHENTICATION_CALLBACK_PARAMS pAuthCallbackParams);
 
 		[StructLayout(LayoutKind.Sequential)]
 		private struct BLUETOOTH_FIND_RADIO_PARAMS
@@ -488,6 +600,62 @@ namespace pr.common
 			}
 		}
 
+		[StructLayout(LayoutKind.Sequential)]
+		internal struct BLUETOOTH_PIN_INFO
+		{
+			[MarshalAs(UnmanagedType.ByValArray, SizeConst = BTH_MAX_PIN_SIZE)]
+			public byte[] pin;
+			public byte pinLength;
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
+		internal struct BLUETOOTH_OOB_DATA
+		{
+			[MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)] public byte[] C;
+			[MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)] public byte[] R;
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
+		internal struct BLUETOOTH_NUMERIC_COMPARISON_INFO
+		{
+			public uint NumericValue;
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
+		internal struct BLUETOOTH_PASSKEY_INFO
+		{
+			public uint passkey;
+		}
+
+		[StructLayout(LayoutKind.Explicit)]
+		internal struct BLUETOOTH_AUTHENTICATION_CALLBACK_PARAMS
+		{
+			// Sizes measured in native code
+			[FieldOffset(  0)] public BLUETOOTH_DEVICE_INFO DeviceInfo;
+			[FieldOffset(560)] public EAuthenticationMethod AuthenticationMethod;
+			[FieldOffset(564)] public EIOCapability IOCapability;
+			[FieldOffset(568)] public EAuthenticationRequirements AuthenticationRequirements;
+
+			// union {
+			[FieldOffset(572)] public uint NumericValue;
+			[FieldOffset(572)] public uint Passkey;
+		}
+
+		[StructLayout(LayoutKind.Explicit)]
+		internal struct BLUETOOTH_AUTHENTICATE_RESPONSE
+		{
+			[FieldOffset(0)] public BLUETOOTH_ADDRESS bthAddressRemote;
+			[FieldOffset(8)] public EAuthenticationMethod authMethod;
+			
+			// union (largest is 2*16 bytes)
+			[FieldOffset(12)] public BLUETOOTH_PIN_INFO                pinInfo;
+			[FieldOffset(12)] public BLUETOOTH_OOB_DATA                oobInfo;
+			[FieldOffset(12)] public BLUETOOTH_NUMERIC_COMPARISON_INFO numericCompInfo;
+			[FieldOffset(12)] public BLUETOOTH_PASSKEY_INFO            passkeyInfo;
+	
+			[FieldOffset(44)] public byte negativeResponse;
+		}
+
 		[DllImport(Dll, SetLastError = true, CharSet = CharSet.Auto)]
 		private static extern int IsBluetoothRadioEnabled(ref int enabled);
 
@@ -527,6 +695,17 @@ namespace pr.common
 		[DllImport(Dll, SetLastError = true)]
 		private static extern bool BluetoothFindDeviceClose(IntPtr hFind);
 
+		[DllImport(Dll, SetLastError = true)]
+		private static extern int BluetoothRegisterForAuthenticationEx([In] ref BLUETOOTH_DEVICE_INFO pbtdiln, [Out] out IntPtr phRegHandleOut, [In] AuthenticationCallback pfnCallbackIn, [In] IntPtr pvParam);
+
+		[DllImport(Dll, SetLastError = true)]
+		private static extern bool BluetoothUnregisterAuthentication(IntPtr hRegHandle);
+
+		[DllImport(Dll, SetLastError = true)]
+		private static extern int BluetoothAuthenticateDeviceEx(IntPtr hwndParentIn, IntPtr hRadioIn, [In][Out] ref BLUETOOTH_DEVICE_INFO pbtdiInout, [In][Out] IntPtr pbtOobData, [In] EAuthenticationRequirements authenticationRequirement);
+
+		[DllImport(Dll, SetLastError = true)]
+		private static extern int BluetoothSendAuthenticationResponseEx([In] IntPtr hRadioIn, [In] ref BLUETOOTH_AUTHENTICATE_RESPONSE pauthResponse);
 		#endregion
 	}
 }

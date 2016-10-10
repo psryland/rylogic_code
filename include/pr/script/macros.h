@@ -40,11 +40,11 @@ namespace pr
 				}
 			};
 
-			string    m_tag;       // The macro tag
-			string    m_expansion; // The substitution text
-			Params    m_params;    // Parameters for the macro, empty() for no parameter list, [0]="" for empty parameter list 'TAG()'
-			HashValue m_hash;      // The hash of the macro tag
-			FileLoc   m_loc;       // The source location of where the macro was defined
+			string  m_tag;       // The macro tag
+			string  m_expansion; // The substitution text
+			Params  m_params;    // Parameters for the macro, empty() for no parameter list, [0]="" for empty parameter list 'TAG()'
+			int     m_hash;      // The hash of the macro tag
+			FileLoc m_loc;       // The source location of where the macro was defined
 
 			// Return a macro tag from 'src' (or fail)
 			template <typename Iter, typename FailPolicy = ThrowOnFailure>
@@ -65,7 +65,7 @@ namespace pr
 				,m_loc(loc)
 			{}
 
-			// Construct a preprocessor macro of the form: TAG(p0,p1,..,pn) expansion
+			// Construct a preprocessor macro of the form: 'TAG(p0,p1,..,pn)' expansion
 			// from a stream of characters. Stops at the first non-escaped new line
 			template <typename Iter> explicit Macro(Iter& src, Location const& loc)
 				:Macro(L"", L"", Params(), loc)
@@ -88,7 +88,7 @@ namespace pr
 				pr::str::Trim(m_expansion, pr::str::IsWhiteSpace<wchar_t>, true, true);
 			}
 
-			// Extract a comma separated parameter list of the form "(p0,p1,..,pn)"
+			// Extract a comma separated parameter list of the form '(p0,p1,..,pn)'
 			// If 'identifiers' is true then the parameters are expected to be identifiers.
 			// If not, then anything delimited by commas is accepted. 'identifiers' == true is used when
 			// reading the definition of the macro, 'identifiers' == false is used when expanding an instance.
@@ -142,7 +142,7 @@ namespace pr
 						}
 					}
 
-					// Save the parameter or paramater name
+					// Save the parameter or parameter name
 					params.push_back(param);
 					param.resize(0);
 				}
@@ -150,7 +150,7 @@ namespace pr
 				// Skip over the ')'
 				++buf;
 
-				// Add a blank param to distingush between "TAG()" and "TAG"
+				// Add a blank param to distinguish between "TAG()" and "TAG"
 				if (params.empty())
 					params.push_back(L"");
 
@@ -225,7 +225,7 @@ namespace pr
 			return !(lhs == rhs);
 		}
 
-		// Interfase/Base class for the preprocessor macro handler
+		// Interface/Base class for the preprocessor macro handler
 		struct IMacroHandler
 		{
 			virtual ~IMacroHandler() {}
@@ -235,11 +235,11 @@ namespace pr
 			virtual void Add(Macro const& macro) = 0;
 
 			// Remove a macro (by hashed name)
-			virtual void Remove(HashValue hash) = 0;
+			virtual void Remove(int hash) = 0;
 
 			// Find a macro expansion for a given macro identifier (hashed)
 			// Returns nullptr if no macro is found.
-			virtual Macro const* Find(HashValue hash) const = 0;
+			virtual Macro const* Find(int hash) const = 0;
 		};
 
 		// A collection of preprocessor macros
@@ -248,7 +248,7 @@ namespace pr
 		struct MacroDB :IMacroHandler
 		{
 			// The database of macro definitions
-			using DB = std::unordered_map<HashValue, Macro>;
+			using DB = std::unordered_map<int, Macro>;
 			DB m_db;
 
 			// Add a macro expansion to the db.
@@ -266,7 +266,7 @@ namespace pr
 			}
 
 			// Remove a macro (by hashed name)
-			void Remove(HashValue hash) override
+			void Remove(int hash) override
 			{
 				auto i = m_db.find(hash);
 				if (i != std::end(m_db))
@@ -275,7 +275,7 @@ namespace pr
 
 			// Find a macro expansion for a given macro identifier (hashed)
 			// Returns nullptr if no macro is found.
-			Macro const* Find(HashValue hash) const override
+			Macro const* Find(int hash) const override
 			{
 				auto i = m_db.find(hash);
 				return i != std::end(m_db) ? &i->second : nullptr;

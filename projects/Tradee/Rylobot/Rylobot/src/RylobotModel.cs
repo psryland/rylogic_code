@@ -30,12 +30,15 @@ namespace Rylobot
 			// Create the instrument
 			Instrument = new Instrument(this);
 
+			// Create a strategy
+			Strategy = new StrategyPotLuck(this);
 
 			// ToDo:
 			// Restore SnR levels + other indicators
 		}
 		public void Dispose()
 		{
+			Strategy = null;
 			Instrument = null;
 			Acct = null;
 			Robot = null;
@@ -89,6 +92,19 @@ namespace Rylobot
 		}
 		private Instrument m_instr;
 
+		/// <summary>The current active strategy</summary>
+		public Strategy Strategy
+		{
+			[DebuggerStepThrough] get { return m_strategy; }
+			set
+			{
+				if (m_strategy == value) return;
+				Util.Dispose(ref m_strategy);
+				m_strategy = value;
+			}
+		}
+		private Strategy m_strategy;
+
 		/// <summary>Return the symbol for a given symbol code or null if invalid or unavailable</summary>
 		public Symbol GetSymbol(string symbol_code)
 		{
@@ -109,6 +125,12 @@ namespace Rylobot
 		}
 		private Cache<string,Symbol> m_sym_cache;
 
+		/// <summary>Raised when a position is closed</summary>
+		public event EventHandler<PositionEventArgs> PositionClosed;
+		public void OnPositionClosed(Position position)
+		{
+			PositionClosed.Raise(new PositionEventArgs(position));
+		}
 
 		public void Step()
 		{
@@ -120,6 +142,21 @@ namespace Rylobot
 		{
 			// Update the instrument
 			Instrument.OnTick();
+
+			// Advance the current strategy
+			if (Strategy != null)
+				Strategy.Step();
 		}
 	}
+
+	#region Event Args
+	public class PositionEventArgs :EventArgs
+	{
+		public PositionEventArgs(Position position)
+		{
+			Position = position;
+		}
+		public Position Position { get; private set; }
+	}
+	#endregion
 }

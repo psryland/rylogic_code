@@ -1,0 +1,10 @@
+Go to http://my.visualstudio.com/downloads
+Download and install the Remote Tools for Visual Studio 2015 Update 3 (or whatever the latest is for your VS)
+Run 'Remote Debugger' (by searching from the start menu)
+Click 'Configure remote debugging'
+Run 'ipconfig' on the remote machine to get the IP address
+
+In VS on the dev machine, open 'Attach to Process'
+Connect to '<ip address>:4020'
+
+

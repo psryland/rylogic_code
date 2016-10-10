@@ -189,29 +189,35 @@ def ExtractFileOptions(filepath:str):
 				debug = False
 	return sw, copy, debug;
 
+# Return the full path to 'cl.exe' for 32 or 64 bit
+def CompilerPath(_32bit:bool):
+	path = UserVars.vs_dir + "\\VC\\bin\\cl.exe" if _32bit else UserVars.vs_dir + "\\VC\\bin\\amd64\\cl.exe"
+	Tools.AssertPathsExist([path])
+	return path
+
+# Return the full path to 'link.exe' for 32 or 64 bit
+def LinkerPath(_32bit:bool):
+	path = UserVars.vs_dir + "\\VC\\bin\\link.exe" if _32bit else UserVars.vs_dir + "\\VC\\bin\\amd64\\link.exe"
+	Tools.AssertPathsExist([path])
+	return path
+
 # Compile the given C++ file
 # The source file can specify additional compiler switches by having special
 # comments (//@) before the first preprocessor command
 # Returns the name of the executable file if generated
 def Compile(
 	filepath:str,
-	_32bit     = True,
-	create_exe = True,
-	debug      = True,
+	_32bit     = False,
+	create_exe = False,
+	debug      = False,
 	outdir     = "",
 	sw         = DefaultSwitches,
 	includes   = DefaultIncludes,
 	defines    = DefaultDefines,
 	):
 
-	# Get the compiler and linker paths
-	if _32bit:
-		cl   = UserVars.vs_dir + "\\VC\\bin\\cl.exe"
-		link = UserVars.vs_dir + "\\VC\\bin\\link.exe"
-	else:
-		cl   = UserVars.vs_dir + "\\VC\\bin\\amd64\\cl.exe"
-		link = UserVars.vs_dir + "\\VC\\bin\\amd64\\link.exe"
-	Tools.AssertPathsExist([cl, link])
+	# Get the compiler path
+	cl = CompilerPath(_32bit)
 
 	# Pull the filepath apart
 	dir, file = os.path.split(filepath)
@@ -276,12 +282,32 @@ def Compile(
 	exe = outdir + "\\" + fname + ".exe"
 	return exe
 
+# Link object files together
+# Use this if you don't use 'create_exe' in the 'Compile' function
+def Link(
+	obj_files:[],
+	bin_name:str,
+	_32bit = False,
+	):
+
+	# Get the linker path
+	link = LinkerPath(_32bit)
+
+	args = []
+	args += ["/OUT:"+bin_name]
+
+	# Link the object files together
+	Tools.Exec([link] + args + obj_files)
+
+	# Return the binary name
+	return bin_name
+	
 # Compile a C++ source file using standard pr includes, compiler switches
 def CompilePR(
 	filepath:str,
-	_32bit     = True,
-	create_exe = True,
-	debug      = True,
+	_32bit     = False,
+	create_exe = False,
+	debug      = False,
 	outdir     = "",
 	sw         = PrSwitches,
 	includes   = PrIncludes,

@@ -2296,7 +2296,11 @@ namespace pr.gui
 							var opt = cmenu.Items.Add2(new ToolStripMenuItem(c.TabText, c.TabIcon));
 							cmenu.Opening += (s,a) =>
 							{
-								opt.Enabled = pane.VisibleContent != c;
+								// Copy the tab context menu to this menu item (copy because otherwise the items get disposed)
+								opt.DropDownItems.Clear();
+								if (c.TabCMenu != null)
+									foreach (var tab_item in c.TabCMenu.Items.OfType<ToolStripMenuItem>())
+										opt.DropDownItems.Add(tab_item.Text, tab_item.Image, (ss,aa) => tab_item.PerformClick());
 							};
 							opt.Click += (s,a) =>
 							{

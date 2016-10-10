@@ -135,6 +135,26 @@ namespace pr
 			}
 		};
 
+		// Launch the system control panel for bluetooth devices
+		inline bool ShowBTControlPanel()
+		{
+			// Get the windows directory on the local system
+			wchar_t windir[32767];
+			::GetWindowsDirectoryW(windir, _countof(windir));
+
+			// Create a working path using the alias 'sysnative'. This is needed because the control panel
+			// must be launched as an x86 or x64 process regardless of whether this is called from a 32 or 64
+			// bit process.
+			std::wstring path = windir;
+			path.append(L"\\sysnative");
+	
+			// Create the control panel process to display the bluetooth settings
+			auto pi = PROCESS_INFORMATION{};
+			auto si = STARTUPINFOW{sizeof(STARTUPINFOW)};
+			std::wstring cmdline = path + L"\\control bthprops.cpl";
+			return CreateProcessW(nullptr, &cmdline[0], nullptr, nullptr, FALSE, 0, nullptr, path.c_str(), &si, &pi) != 0;
+		}
+
 		// Convert a bluetooth device name to a bluetooth address by performing inquiry with remote name requests.
 		// Note: this method can fail (return false) because remote name requests arrive after a device inquiry has completed.
 		// Without a window to receive IN_RANGE notifications, we don't have a direct mechanism to determine when remote name

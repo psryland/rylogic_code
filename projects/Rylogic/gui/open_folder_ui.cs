@@ -84,19 +84,19 @@ namespace pr.gui
 		}
 		private string m_desc;
 
-		/// <summary>Get/Set whether the New Folder button is shown in the dialog</summary>
-		public bool ShowNewFolderButton
+		/// <summary>Get/Set whether the user is prompted to create folders that don't exist</summary>
+		public bool CreateNewFolder
 		{
-			get { return m_old_browse_folder_dlg != null ? m_old_browse_folder_dlg.ShowNewFolderButton : m_show_new_folder_btn; }
+			get { return m_old_browse_folder_dlg != null ? m_old_browse_folder_dlg.ShowNewFolderButton : m_create_new_folder; }
 			set
 			{
 				if (m_old_browse_folder_dlg != null)
 					m_old_browse_folder_dlg.ShowNewFolderButton = value;
 				else
-					m_show_new_folder_btn = value;
+					m_create_new_folder = value;
 			}
 		}
-		private bool m_show_new_folder_btn;
+		private bool m_create_new_folder;
 
 		/// <summary>Show and run the dialog</summary>
 		protected override bool RunDialog(IntPtr hwndOwner)
@@ -108,7 +108,7 @@ namespace pr.gui
 			try
 			{
 				dialog = new NativeFileOpenDialog();
-				dialog.SetOptions(Win32.FOS.FOS_PICKFOLDERS | Win32.FOS.FOS_FORCEFILESYSTEM | Win32.FOS.FOS_FILEMUSTEXIST);
+				dialog.SetOptions(Win32.FOS.FOS_PICKFOLDERS | Win32.FOS.FOS_FORCEFILESYSTEM | Win32.FOS.FOS_FILEMUSTEXIST | (CreateNewFolder ? Win32.FOS.FOS_CREATEPROMPT : 0));
 
 				if (Title.HasValue())
 					dialog.SetTitle(Title);
@@ -158,7 +158,7 @@ namespace pr.gui
 			m_desc                = string.Empty;
 			m_selected_path       = string.Empty;
 			m_initial_dir         = Environment.SpecialFolder.Desktop;
-			m_show_new_folder_btn = true;
+			m_create_new_folder = true;
 		}
 	}
 }

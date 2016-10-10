@@ -178,37 +178,38 @@ namespace pr
 		{
 			using namespace pr::collision;
 
-			auto lhs = ShapeBox::make(pr::v4(0.3f, 0.4f, 0.5f, 0.0f));
-			auto rhs = ShapeBox::make(pr::v4(0.3f, 0.4f, 0.5f, 0.0f));
+			auto lhs = ShapeBox{pr::v4(0.3f, 0.4f, 0.5f, 0.0f)};
+			auto rhs = ShapeBox{pr::v4(0.3f, 0.4f, 0.5f, 0.0f)};
 			pr::m4x4 l2w_[] =
 			{
 				pr::m4x4Identity,
 			};
 			pr::m4x4 r2w_[] =
 			{
-				pr::Rotation4x4(pr::maths::tau_by_8, 0, 0, pr::v4(0.2f, 0.3f, 0.1f, 1.0f)),
-				pr::Rotation4x4(0, pr::maths::tau_by_8, 0, pr::v4(0.2f, 0.3f, 0.1f, 1.0f)),
-				pr::Rotation4x4(0, 0, pr::maths::tau_by_8, pr::v4(0.2f, 0.3f, 0.1f, 1.0f)),
-				pr::Rotation4x4(0, 0, -3*pr::maths::tau_by_8, pr::v4(0.2f, 0.3f, 0.1f, 1.0f)),
+				pr::m4x4::Transform(pr::maths::tau_by_8, 0, 0, pr::v4(0.2f, 0.3f, 0.1f, 1.0f)),
+				pr::m4x4::Transform(0, pr::maths::tau_by_8, 0, pr::v4(0.2f, 0.3f, 0.1f, 1.0f)),
+				pr::m4x4::Transform(0, 0, pr::maths::tau_by_8, pr::v4(0.2f, 0.3f, 0.1f, 1.0f)),
+				pr::m4x4::Transform(0, 0, -3*pr::maths::tau_by_8, pr::v4(0.2f, 0.3f, 0.1f, 1.0f)),
 			};
 
+			pr::Rand rng;
 			for (int i = 0; i != 20; ++i)
 			{
 				pr::v4 axis, pt; float pen;
-				pr::m4x4 l2w = i < _countof(l2w_) ? l2w_[i] : pr::Random4x4(pr::v4Origin, 0.5f);
-				pr::m4x4 r2w = i < _countof(r2w_) ? r2w_[i] : pr::Random4x4(pr::v4Origin, 0.5f);
+				pr::m4x4 l2w = i < _countof(l2w_) ? l2w_[i] : pr::Random4x4(rng, pr::v4Origin, 0.5f);
+				pr::m4x4 r2w = i < _countof(r2w_) ? r2w_[i] : pr::Random4x4(rng, pr::v4Origin, 0.5f);
 
 				pr::string<> s;
 				pr::ldr::Shape(s, "lhs", 0x30FF0000, lhs, l2w);
 				pr::ldr::Shape(s, "rhs", 0x3000FF00, rhs, r2w);
-				pr::ldr::Write(s, "collision_unittests.ldr");
+				pr::ldr::Write(s, L"collision_unittests.ldr");
 				if (BoxVsBox(lhs, l2w, rhs, r2w, axis, pen, pt))
 				{
 					pr::ldr::LineD(s, "sep_axis", pr::Colour32Yellow, pt, axis);
 					pr::ldr::Box(s, "pt0", pr::Colour32Yellow, pt - 0.5f*pen*axis, 0.01f);
 					pr::ldr::Box(s, "pt1", pr::Colour32Yellow, pt + 0.5f*pen*axis, 0.01f);
 				}
-				pr::ldr::Write(s, "collision_unittests.ldr");
+				pr::ldr::Write(s, L"collision_unittests.ldr");
 			}
 		}
 	}

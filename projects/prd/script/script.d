@@ -1,6 +1,5 @@
 module prd.script.script;
 
-import std.stream;
 import std.algorithm;
 
 /// A line,column location within a stream

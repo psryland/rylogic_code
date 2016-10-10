@@ -29,121 +29,126 @@ namespace pr
 		// Forwards
 		struct LdrObject;
 		struct ObjectAttributes;
-		typedef pr::RefPtr<LdrObject> LdrObjectPtr;
-		typedef pr::vector<LdrObjectPtr, 8> ObjectCont;
-		typedef pr::string<char, 32> string32;
+		using LdrObjectPtr  = pr::RefPtr<LdrObject>;
+		using ObjectCont    = pr::vector<LdrObjectPtr, 8>;
+		using string32      = pr::string<char, 32>;
+
+		// Map the compile time hash function to this namespace
+		using HashValue = pr::hash::HashValue;
+		constexpr HashValue HashI(char const* str) { return pr::hash::HashI(str); }
 
 		#pragma region Ldr object types
 		#define PR_ENUM(x)\
-			x(Unknown          ,= 0x11D1AD67)\
-			x(Line             ,= 0x8A9A6F5D)\
-			x(LineD            ,= 0x6A1D16BB)\
-			x(LineStrip        ,= 0x8C952CA9)\
-			x(LineBox          ,= 0xA1D53DBA)\
-			x(Grid             ,= 0xCF074F93)\
-			x(Spline           ,= 0x4CEC857E)\
-			x(Arrow            ,= 0x0CBAF67C)\
-			x(Circle           ,= 0x2ED06DC7)\
-			x(Pie              ,= 0x840307FB)\
-			x(Rect             ,= 0xF0C8A301)\
-			x(Matrix3x3        ,= 0x5D67CFF6)\
-			x(CoordFrame       ,= 0x189B0F81)\
-			x(Triangle         ,= 0x4E18A8E3)\
-			x(Quad             ,= 0x40CADC80)\
-			x(Plane            ,= 0x3A982C87)\
-			x(Ribbon           ,= 0x0A4A6CB7)\
-			x(Box              ,= 0x5B1A1960)\
-			x(BoxLine          ,= 0x14A58F1A)\
-			x(BoxList          ,= 0xFF7192A8)\
-			x(FrustumWH        ,= 0x8E413710)\
-			x(FrustumFA        ,= 0x9B6C2C8E)\
-			x(Sphere           ,= 0xA618F4AA)\
-			x(CylinderHR       ,= 0x5761F5DF)\
-			x(ConeHA           ,= 0x9D8FB673)\
-			x(Mesh             ,= 0x914CF852)\
-			x(ConvexHull       ,= 0x491E3B7B)\
-			x(Model            ,= 0x066EEB3C)\
-			x(Group            ,= 0x3C0312A6)\
-			x(Instance         ,= 0xA971AABC)\
-			x(DirectionalLight ,= 0x049B75FF)\
-			x(PointLight       ,= 0xFB23D171)\
-			x(SpotLight        ,= 0xEC0B9241)\
-			x(Custom           ,= 0x92C4AFAC)
+			x(Unknown    ,= HashI("Unknown"   ))\
+			x(Line       ,= HashI("Line"      ))\
+			x(LineD      ,= HashI("LineD"     ))\
+			x(LineStrip  ,= HashI("LineStrip" ))\
+			x(LineBox    ,= HashI("LineBox"   ))\
+			x(Grid       ,= HashI("Grid"      ))\
+			x(Spline     ,= HashI("Spline"    ))\
+			x(Arrow      ,= HashI("Arrow"     ))\
+			x(Circle     ,= HashI("Circle"    ))\
+			x(Pie        ,= HashI("Pie"       ))\
+			x(Rect       ,= HashI("Rect"      ))\
+			x(Matrix3x3  ,= HashI("Matrix3x3" ))\
+			x(CoordFrame ,= HashI("CoordFrame"))\
+			x(Triangle   ,= HashI("Triangle"  ))\
+			x(Quad       ,= HashI("Quad"      ))\
+			x(Plane      ,= HashI("Plane"     ))\
+			x(Ribbon     ,= HashI("Ribbon"    ))\
+			x(Box        ,= HashI("Box"       ))\
+			x(BoxLine    ,= HashI("BoxLine"   ))\
+			x(BoxList    ,= HashI("BoxList"   ))\
+			x(FrustumWH  ,= HashI("FrustumWH" ))\
+			x(FrustumFA  ,= HashI("FrustumFA" ))\
+			x(Sphere     ,= HashI("Sphere"    ))\
+			x(CylinderHR ,= HashI("CylinderHR"))\
+			x(ConeHA     ,= HashI("ConeHA"    ))\
+			x(Mesh       ,= HashI("Mesh"      ))\
+			x(ConvexHull ,= HashI("ConvexHull"))\
+			x(Model      ,= HashI("Model"     ))\
+			x(Group      ,= HashI("Group"     ))\
+			x(Instance   ,= HashI("Instance"  ))\
+			x(DirLight   ,= HashI("DirLight"  ))\
+			x(PointLight ,= HashI("PointLight"))\
+			x(SpotLight  ,= HashI("SpotLight" ))\
+			x(Custom     ,= HashI("Custom"    ))
 		PR_DEFINE_ENUM2(ELdrObject, PR_ENUM);
 		#undef PR_ENUM
 		#pragma endregion
 
 		#pragma region Ldr script keywords
 		#define PR_ENUM(x)\
-			x(O2W                ,= 0xD19FD403)\
-			x(M4x4               ,= 0x63B99A6A)\
-			x(M3x3               ,= 0x9C585402)\
-			x(Pos                ,= 0x69FCCEDF)\
-			x(Up                 ,= 0x8ADBACCA)\
-			x(Direction          ,= 0x9EED3AF8)\
-			x(Quat               ,= 0x50CAF5B0)\
-			x(Rand4x4            ,= 0xA0EBAB08)\
-			x(RandPos            ,= 0x7B04543A)\
-			x(RandOri            ,= 0x11FAF99C)\
-			x(Euler              ,= 0x7535694C)\
-			x(Scale              ,= 0x8FB215FF)\
-			x(Transpose          ,= 0x378A52F2)\
-			x(Inverse            ,= 0x3319D509)\
-			x(Normalise          ,= 0xC217A4DF)\
-			x(Orthonormalise     ,= 0xA4F80FAF)\
-			x(Colour             ,= 0x0C32CB6F)\
-			x(Solid              ,= 0xA1CB05CA)\
-			x(Facets             ,= 0x67EA2D0F)\
-			x(CornerRadius       ,= 0x37853594)\
-			x(RandColour         ,= 0x19CF8704)\
-			x(ColourMask         ,= 0x1C458BCB)\
-			x(Animation          ,= 0xD6A332B7)\
-			x(Style              ,= 0x543F0AA0)\
-			x(Period             ,= 0xDA30C5CE)\
-			x(Velocity           ,= 0xA758C8D8)\
-			x(AngVelocity        ,= 0x0B71C716)\
-			x(Axis               ,= 0xAC6E5BAA)\
-			x(Hidden             ,= 0xF9043C0F)\
-			x(Wireframe          ,= 0xFB4BD3C3)\
-			x(Delimiters         ,= 0x47722F15)\
-			x(Clear              ,= 0x22FEC570)\
-			x(Camera             ,= 0xDF0BDCD0)\
-			x(LookAt             ,= 0xE7ADE2F1)\
-			x(Align              ,= 0xC0243C84)\
-			x(Aspect             ,= 0x4D61E74B)\
-			x(FovX               ,= 0x0491D892)\
-			x(FovY               ,= 0x0591DA25)\
-			x(Fov                ,= 0xB4CCE81E)\
-			x(Near               ,= 0x74616F61)\
-			x(Far                ,= 0xB8DBF8F4)\
-			x(AbsoluteClipPlanes ,= 0x6DDFDFBF)\
-			x(Orthographic       ,= 0xCE585A2D)\
-			x(Lock               ,= 0x08014378)\
-			x(Coloured           ,= 0x63AC372E)\
-			x(Width              ,= 0xD71AF451)\
-			x(Smooth             ,= 0x1FE1082D)\
-			x(Param              ,= 0xFE1F478C)\
-			x(Texture            ,= 0x8085453E)\
-			x(Video              ,= 0xB56087A2)\
-			x(Divisions          ,= 0xD3B6B8A9)\
-			x(Layers             ,= 0x2660A179)\
-			x(Wedges             ,= 0x513C557A)\
-			x(ViewPlaneZ         ,= 0xCEA11392)\
-			x(Verts              ,= 0x3D923EE5)\
-			x(Normals            ,= 0x919EF841)\
-			x(Colours            ,= 0x4FF5BD14)\
-			x(TexCoords          ,= 0xEDC4BA8A)\
-			x(Lines              ,= 0x5F1D056A)\
-			x(Faces              ,= 0xB1E5491F)\
-			x(Tetra              ,= 0xA59C3E8D)\
-			x(GenerateNormals    ,= 0x0F28F5C8)\
-			x(BakeTransform      ,= 0x4A574C82)\
-			x(Step               ,= 0x769C2FAD)\
-			x(Addr               ,= 0x8C9D2A58)\
-			x(Filter             ,= 0xDEC6CAD9)\
-			x(Range              ,= 0x713C8894)\
-			x(Specular           ,= 0x81057AC6)\
-			x(CastShadow         ,= 0x27866224)
+			x(Txfm               ,= HashI("Txfm"              ))\
+			x(O2W                ,= HashI("O2W"               ))\
+			x(M4x4               ,= HashI("M4x4"              ))\
+			x(M3x3               ,= HashI("M3x3"              ))\
+			x(Pos                ,= HashI("Pos"               ))\
+			x(Up                 ,= HashI("Up"                ))\
+			x(Direction          ,= HashI("Direction"         ))\
+			x(Quat               ,= HashI("Quat"              ))\
+			x(Rand4x4            ,= HashI("Rand4x4"           ))\
+			x(RandPos            ,= HashI("RandPos"           ))\
+			x(RandOri            ,= HashI("RandOri"           ))\
+			x(Euler              ,= HashI("Euler"             ))\
+			x(Scale              ,= HashI("Scale"             ))\
+			x(Transpose          ,= HashI("Transpose"         ))\
+			x(Inverse            ,= HashI("Inverse"           ))\
+			x(Normalise          ,= HashI("Normalise"         ))\
+			x(Orthonormalise     ,= HashI("Orthonormalise"    ))\
+			x(Colour             ,= HashI("Colour"            ))\
+			x(Solid              ,= HashI("Solid"             ))\
+			x(Facets             ,= HashI("Facets"            ))\
+			x(CornerRadius       ,= HashI("CornerRadius"      ))\
+			x(RandColour         ,= HashI("RandColour"        ))\
+			x(ColourMask         ,= HashI("ColourMask"        ))\
+			x(Animation          ,= HashI("Animation"         ))\
+			x(Style              ,= HashI("Style"             ))\
+			x(Period             ,= HashI("Period"            ))\
+			x(Velocity           ,= HashI("Velocity"          ))\
+			x(AngVelocity        ,= HashI("AngVelocity"       ))\
+			x(Axis               ,= HashI("Axis"              ))\
+			x(Hidden             ,= HashI("Hidden"            ))\
+			x(Wireframe          ,= HashI("Wireframe"         ))\
+			x(Delimiters         ,= HashI("Delimiters"        ))\
+			x(Clear              ,= HashI("Clear"             ))\
+			x(Camera             ,= HashI("Camera"            ))\
+			x(LookAt             ,= HashI("LookAt"            ))\
+			x(Align              ,= HashI("Align"             ))\
+			x(Aspect             ,= HashI("Aspect"            ))\
+			x(FovX               ,= HashI("FovX"              ))\
+			x(FovY               ,= HashI("FovY"              ))\
+			x(Fov                ,= HashI("Fov"               ))\
+			x(Near               ,= HashI("Near"              ))\
+			x(Far                ,= HashI("Far"               ))\
+			x(AbsoluteClipPlanes ,= HashI("AbsoluteClipPlanes"))\
+			x(Orthographic       ,= HashI("Orthographic"      ))\
+			x(Lock               ,= HashI("Lock"              ))\
+			x(Coloured           ,= HashI("Coloured"          ))\
+			x(Width              ,= HashI("Width"             ))\
+			x(Smooth             ,= HashI("Smooth"            ))\
+			x(Param              ,= HashI("Param"             ))\
+			x(Texture            ,= HashI("Texture"           ))\
+			x(Video              ,= HashI("Video"             ))\
+			x(Divisions          ,= HashI("Divisions"         ))\
+			x(Layers             ,= HashI("Layers"            ))\
+			x(Wedges             ,= HashI("Wedges"            ))\
+			x(ViewPlaneZ         ,= HashI("ViewPlaneZ"        ))\
+			x(Verts              ,= HashI("Verts"             ))\
+			x(Normals            ,= HashI("Normals"           ))\
+			x(Colours            ,= HashI("Colours"           ))\
+			x(TexCoords          ,= HashI("TexCoords"         ))\
+			x(Lines              ,= HashI("Lines"             ))\
+			x(Faces              ,= HashI("Faces"             ))\
+			x(Tetra              ,= HashI("Tetra"             ))\
+			x(GenerateNormals    ,= HashI("GenerateNormals"   ))\
+			x(BakeTransform      ,= HashI("BakeTransform"     ))\
+			x(Step               ,= HashI("Step"              ))\
+			x(Addr               ,= HashI("Addr"              ))\
+			x(Filter             ,= HashI("Filter"            ))\
+			x(Range              ,= HashI("Range"             ))\
+			x(Specular           ,= HashI("Specular"          ))\
+			x(CastShadow         ,= HashI("CastShadow"        ))
 		PR_DEFINE_ENUM2(EKeyword, PR_ENUM);
 		#undef PR_ENUM
 		#pragma endregion
@@ -258,7 +263,7 @@ namespace pr
 				case EAnimStyle::PlayContinuous:    t = time_s; break;
 				}
 
-				return m4x4::Rotation(m_ang_velocity*t, m_velocity*t + pr::v4Origin);
+				return m4x4::Transform(m_ang_velocity*t, m_velocity*t + pr::v4Origin);
 			}
 		};
 
@@ -298,7 +303,7 @@ namespace pr
 			bool              m_wireframe;     // True if this object is drawn in wireframe
 			pr::UserData      m_user_data;     // User data
 
-			LdrObject(ObjectAttributes const& attr, pr::ldr::LdrObject* parent, GUID const& context_id);
+			LdrObject(ObjectAttributes const& attr, LdrObject* parent, pr::Guid const& context_id);
 			~LdrObject();
 
 			// Return the type and name of this object
@@ -538,7 +543,7 @@ namespace pr
 		// The results of parsing ldr script
 		struct ParseResult
 		{
-			typedef std::unordered_map<pr::hash::HashValue, pr::rdr::ModelPtr> ModelLookup;
+			typedef std::unordered_map<size_t, pr::rdr::ModelPtr> ModelLookup;
 
 			// Bit mask of set camera fields
 			enum class ECamField
@@ -728,14 +733,14 @@ namespace pr
 							break;
 						}
 
-						p2w = m4x4::Rotation(axis, direction, v4Origin) * p2w;
+						p2w = m4x4::Transform(axis, direction, v4Origin) * p2w;
 						break;
 					}
 				case EKeyword::Quat:
 					{
 						pr::quat q;
 						reader.Vector4S(q.xyzw);
-						p2w = m4x4::Rotation(q, v4Origin) * p2w;
+						p2w = m4x4::Transform(q, v4Origin) * p2w;
 						break;
 					}
 				case EKeyword::Rand4x4:
@@ -771,7 +776,7 @@ namespace pr
 					{
 						pr::v4 angles;
 						reader.Vector3S(angles, 0.0f);
-						p2w = m4x4::Rotation(pr::DegreesToRadians(angles.x), pr::DegreesToRadians(angles.y), pr::DegreesToRadians(angles.z), pr::v4Origin) * p2w;
+						p2w = m4x4::Transform(pr::DegreesToRadians(angles.x), pr::DegreesToRadians(angles.y), pr::DegreesToRadians(angles.z), pr::v4Origin) * p2w;
 						break;
 					}
 				case EKeyword::Scale:

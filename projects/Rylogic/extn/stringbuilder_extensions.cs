@@ -31,6 +31,13 @@ namespace pr.extn
 			return sb;
 		}
 
+		/// <summary>Append 'sep' if the current string is not empty</summary>
+		public static StringBuilder AppendSep(this StringBuilder sb, string sep)
+		{
+			if (sb.Length == 0) return sb;
+			return sb.Append(sep);
+		}
+
 		/// <summary>Resize the string builder to 'newsize', padding with 'fill' as needed</summary>
 		public static StringBuilder Resize(this StringBuilder sb, int newsize, char fill = '\0')
 		{

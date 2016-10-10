@@ -569,7 +569,7 @@ namespace pr.container
 
 			// Suspend events, since this is just a reorder
 			using (this.SuspendEvents(false))
-				ListExtensions.Sort(this, comparer);
+				List_.Sort(this, comparer);
 
 			RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.Reordered, -1, default(TItem)));
 		}

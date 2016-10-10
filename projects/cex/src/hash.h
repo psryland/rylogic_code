@@ -34,7 +34,9 @@ namespace cex
 
 		int Run() override
 		{
-			printf("%08X", pr::hash::HashC(m_text.c_str()));
+			auto hash = pr::hash::Hash(m_text.c_str());
+			auto ui = static_cast<unsigned int>(hash);
+			printf("%08X", ui);
 			return 0;
 		}
 	};

@@ -57,6 +57,22 @@ namespace pr.gui
 			}
 		}
 
+		/// <summary>Preserves the selected index in the combo</summary>
+		public Scope SelectedIndexScope()
+		{
+			return Scope.Create(
+				() => SelectedIndex,
+				si => SelectedIndex = si);
+		}
+
+		/// <summary>Preserves the selected item in the combo</summary>
+		public Scope SelectedItemScope()
+		{
+			return Scope.Create(
+				() => SelectedItem,
+				si => SelectedItem = si);
+		}
+
 		/// <summary>
 		/// Raised whenever an attempt to change the selected item to an unknown item is made.
 		/// I.e. whenever the combo box ignores a call to 'SelectedItem = value'</summary>
@@ -79,7 +95,7 @@ namespace pr.gui
 			set
 			{
 				if (PreserveSelectionThruFocusChange && !Focused)
-					RestoreSelection(m_selection);
+					RestoreTextSelection(m_selection);
 
 				base.SelectedText = value;
 			}
@@ -93,7 +109,7 @@ namespace pr.gui
 			{
 				base.SelectionStart = value;
 				if (PreserveSelectionThruFocusChange)
-					m_selection = SaveSelection();
+					m_selection = SaveTextSelection();
 			}
 		}
 
@@ -105,7 +121,7 @@ namespace pr.gui
 			{
 				base.SelectionLength = value;
 				if (PreserveSelectionThruFocusChange)
-					m_selection = SaveSelection();
+					m_selection = SaveTextSelection();
 			}
 		}
 
@@ -113,7 +129,7 @@ namespace pr.gui
 		public void SetText(string text)
 		{
 			if (PreserveSelectionThruFocusChange)
-				RestoreSelection(m_selection);
+				RestoreTextSelection(m_selection);
 
 			var idx = SelectionStart;
 			SelectedText = text;
@@ -124,7 +140,7 @@ namespace pr.gui
 		public void AppendText(string text)
 		{
 			if (PreserveSelectionThruFocusChange)
-				RestoreSelection(m_selection);
+				RestoreTextSelection(m_selection);
 
 			var carot_at_end = SelectionStart == Text.Length && SelectionLength == 0;
 			if (carot_at_end)
@@ -188,7 +204,7 @@ namespace pr.gui
 		{
 			// Note, don't save on lost focus, the selection has already been reset to 0,0 by then
 			if (PreserveSelectionThruFocusChange)
-				RestoreSelection(m_selection);
+				RestoreTextSelection(m_selection);
 	
 			base.OnGotFocus(e);
 		}
@@ -199,7 +215,7 @@ namespace pr.gui
 			Modified = true;
 			base.OnTextUpdate(e);
 			if (PreserveSelectionThruFocusChange)
-				m_selection = SaveSelection();
+				m_selection = SaveTextSelection();
 		}
 
 		/// <summary>Clear the Modified flag after text changed</summary>
@@ -214,7 +230,7 @@ namespace pr.gui
 		{
 			base.OnMouseUp(e);
 			if (PreserveSelectionThruFocusChange)
-				m_selection = SaveSelection();
+				m_selection = SaveTextSelection();
 		}
 
 		/// <summary>Save the selection after it has been changed by key presses</summary>
@@ -222,19 +238,19 @@ namespace pr.gui
 		{
 			base.OnKeyUp(e);
 			if (PreserveSelectionThruFocusChange)
-				m_selection = SaveSelection();
+				m_selection = SaveTextSelection();
 		}
 
 		/// <summary>Preserve the selection in the combo</summary>
-		public Scope PreserveSelection()
+		public Scope TextSelectionScope()
 		{
 			return Scope.Create(
-				() => SaveSelection(),
-				sr => RestoreSelection(sr));
+				() => SaveTextSelection(),
+				sr => RestoreTextSelection(sr));
 		}
 
 		/// <summary>Restore the selection</summary>
-		public void RestoreSelection(Range selection)
+		public void RestoreTextSelection(Range selection)
 		{
 			// Only allow selection setting for editable combo box styles
 			if (DropDownStyle != ComboBoxStyle.DropDownList)
@@ -246,7 +262,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Save the current selection</summary>
-		public Range SaveSelection()
+		public Range SaveTextSelection()
 		{
 			var selection = Range.FromStartLength(SelectionStart, SelectionLength);
 			//System.Diagnostics.Trace.WriteLine("Selection Saved: [{0},{1}]\n\t{2}"

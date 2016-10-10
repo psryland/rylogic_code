@@ -15,8 +15,8 @@ Authors: Trogu Antonio Davide
 
 module dgui.core.winapi;
 
-public import std.c.windows.windows;
-public import std.c.windows.com;
+public import core.sys.windows.windows;
+public import core.sys.windows.com;
 
 extern(Windows)
 {
