@@ -10,16 +10,6 @@
 // phase are passed to the collision dispatcher which creates a collision agent
 // containing the appropriate narrow phase collision detection function.
 //
-//  +------------------------------+
-//  | Shape                        |
-//  |  BBox, mass, mass tensor,    |
-//  |  inverse mass tensor, shape* |
-//  +------------------------------+
-//  | transform                    |
-//  +------------------------------+
-//  | Shape Data                   |
-//  +------------------------------+
-//
 // Notes:
 // * Shapes MUST be memory location independent. (i.e. no pointers, byte offsets only)
 //	 This is so they can be copied around/saved to file/appended to/etc
@@ -40,11 +30,11 @@ namespace pr
 	{
 		// Primitive shape types
 		// New Shape CheckList:
+		//  - add forward declaration
 		//  - add include to shapes.h
 		//  - add enum value to EShape
 		//  - add string to ToString(EShape)
 		//  - add new shape_type.h file and implement
-		//  - add forward declaration
 		//  - add to is_shape<> type traits
 		//  - add to support.h
 		enum class EShape
@@ -83,7 +73,6 @@ namespace pr
 		}
 
 		// Forward declare shape types
-		using MaterialId = unsigned int;
 		struct Shape;
 		struct ShapeSphere;
 		struct ShapeBox;
@@ -93,6 +82,8 @@ namespace pr
 		struct ShapeLine;
 		struct ShapeArray;
 		struct Ray;
+
+		using MaterialId = unsigned int;
 
 		// Shape base. All shapes must have this as their first member
 		struct Shape

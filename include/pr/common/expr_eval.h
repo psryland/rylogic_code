@@ -241,8 +241,8 @@ namespace pr
 
 		// Extract a token from 'expr'
 		// If the token is a value then 'expr' is advanced past the value
-		// if it's an operator it isn't. This is so that operator precedense works
-		// 'follows_value' should be true if the preceeding expression evaluates to a value
+		// if it's an operator it isn't. This is so that operator precedence works
+		// 'follows_value' should be true if the preceding expression evaluates to a value
 		template <typename Char> ETok Token(Char const*& expr, Val& val, bool follows_value)
 		{
 			using traits = traits_base<Char>;

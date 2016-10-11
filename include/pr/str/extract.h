@@ -7,7 +7,9 @@
 
 #include <type_traits>
 #include <cerrno>
+#include "pr/common/number.h"
 #include "pr/str/string_core.h"
+#include "pr/common/flags_enum.h"
 
 namespace pr
 {
@@ -15,7 +17,7 @@ namespace pr
 	{
 		// Notes:
 		// Functions ending with 'C' don't advance the character source pointer
-		// errno is used for wcstoul,etc conversions. errno is thread local so is thread safe
+		// 'errno' is used for 'wcstoul', etc conversions. 'errno' is thread local so is thread safe
 
 		#pragma region Extract Utility Functions
 
@@ -57,6 +59,181 @@ namespace pr
 			// Advance while *src points to a delimiter
 			return Advance(src, [=](Char ch){ return *FindChar(delim, ch) != 0; });
 		}
+
+		// Used to filter the accepted characters when extracting number strings
+		enum class ENumType
+		{
+			Int = 1 << 0,
+			FP  = 1 << 1,
+			Any = Int|FP,
+			_bitwise_operators_allowed,
+		};
+
+		// Buffer characters for a number (real or int) from 'src'
+		// Format: [delim][{+|-}][0[{x|X|b|B}]][digits][.digits][{d|D|e|E}[{+|-}]digits][U][L][L]
+		// [out] 'num' = the extracted value
+		// [in] 'radix' = the base of the number to read.
+		// [in] 'type' = the number style to read.
+		// [in] 'src' = the forward only input stream
+		// [in] 'delim' = token delimiter characters.
+		// Returns false if a valid number could not be read, or 'str' is too small
+		template <typename Ptr, typename Char = char_type_t<Ptr>> void BufferNumber(Ptr& src, wchar_t (&str)[256], int& len, int& radix, ENumType type = ENumType::Any, Char const* delim = nullptr)
+		{
+			delim = Delim(delim);
+			len = 0;
+
+			// Find the first non-delimiter
+			if (!AdvanceToNonDelim(src, delim))
+				return;
+
+			// Promote the character stream to wchar_t's.
+			wchar_ptr<Ptr> wsrc(src);
+			auto append = [&](wchar_t ch)
+			{
+				if (len == _countof(str)) return false;
+				str[len++] = ch;
+				return true;
+			};
+			auto digit = [](wchar_t ch)
+			{
+				if (ch >= '0' && ch <= '9') return ch - '0';
+				if (ch >= 'a' && ch <= 'z') return 10 + ch - 'a';
+				if (ch >= 'A' && ch <= 'Z') return 10 + ch - 'A';
+				return std::numeric_limits<int>::max();
+			};
+
+			auto allow_fp = (type & ENumType::FP) == ENumType::FP;
+			auto fp = false;
+
+			// Look for the optional sign character
+			// Ideally we'd prefer not to advance 'src' passed the '+' or '-' if the next
+			// character is not the start of a number. However doing so means 'src' can't
+			// be a forward only input stream. Therefore, I'm pushing the responsibility
+			// back to the caller, they need to check that if *src is a '+' or '-' then
+			// the following char is a decimal digit.
+			if (*wsrc == '+' || *wsrc == '-')
+			{
+				if (!append(*wsrc)) return;
+				++wsrc;
+			}
+
+			// Look for a radix prefix on the number, this overrides 'radix'.
+			// If the first digit is zero, then the number may have a radix prefix.
+			// '0x' or '0b' must have at least one digit following the prefix
+			// Adding 'o' for octal, in addition to standard C literal syntax
+			if (*wsrc == '0')
+			{
+				++wsrc;
+				auto digit_required = false;
+				if (*wsrc == 'x' || *wsrc == 'X') { radix = 16; ++wsrc; digit_required = true; }
+				if (*wsrc == 'o' || *wsrc == 'O') { radix =  8; ++wsrc; digit_required = true; }
+				if (*wsrc == 'b' || *wsrc == 'B') { radix =  2; ++wsrc; digit_required = true; }
+
+				// Check for the required integer
+				if (digit_required)
+				{
+					if (digit(*wsrc) >= radix)
+					{
+						len = 0;
+						return;
+					}
+				}
+				else
+				{
+					// If no radix is given, then assume octal (for conformance with C)
+					if (radix == 0) radix = 8;
+
+					// Add '0' to the string because we're not skipping over a prefix.
+					// This is needed to handle the "0" case.
+					if (!append('0')) return;
+				}
+			}
+			else if (radix == 0)
+			{
+				radix = 10;
+			}
+
+			// Read digits up to a delimiter, decimal point, or digit >= radix.
+			auto assumed_fp_len = 0; // the length of 'str' when we first assumed a FP number.
+			for (; *wsrc; ++wsrc)
+			{
+				// If the character is greater than the radix, then assume a FP number.
+				// e.g. 09.1 could be an invalid octal number or a FP number.
+				// 019 is assumed to be FP, 
+				auto d = digit(*wsrc);
+				if (d < radix)
+				{
+					if (!append(*wsrc)) return;
+					continue;
+				}
+				else if (radix == 8 && allow_fp && d < 10)
+				{
+					if (assumed_fp_len == 0) assumed_fp_len = len;
+					if (!append(*wsrc)) return;
+					continue;
+				}
+				break;
+			}
+
+			// If we're assuming this is a FP number but no decimal point is found,
+			// then truncate the string at the last valid character given 'radix'.
+			// If a decimal point is found, change the radix to base 10.
+			if (assumed_fp_len != 0)
+			{
+				if (*wsrc == '.') radix = 10;
+				else len = assumed_fp_len;
+			}
+
+			// FP numbers can be in dec or hex, but not anything else...
+			allow_fp &= radix == 10 || radix == 16;
+
+			// If floating point is allowed, read a decimal point followed by more digits, and an optional exponent
+			if (allow_fp && *wsrc == '.' && IsDecDigit(*(++wsrc)))
+			{
+				fp = true;
+				if (!append('.')) return;
+
+				// Read decimal digits up to a delimiter, sign, or exponent
+				for (; IsDecDigit(*wsrc); ++wsrc)
+					if (!append(*wsrc)) return;
+
+				// Read an optional exponent
+				if (*wsrc == 'e' || *wsrc == 'E' || *wsrc == 'd' || *wsrc == 'D')
+				{
+					if (!append(*wsrc)) return;
+					++wsrc;
+
+					// Read the optional exponent sign
+					if (*wsrc == '+' || *wsrc == '-')
+					{
+						if (!append(*wsrc)) return;
+						++wsrc;
+					}
+
+					// Read decimal digits up to a delimiter, or suffix
+					for (; IsDecDigit(*wsrc); ++wsrc)
+						if (!append(*wsrc)) return;
+				}
+			}
+
+			// Read the optional number suffixes
+			if (allow_fp && (*wsrc == 'f' || *wsrc == 'F'))
+			{
+				fp = true;
+				++wsrc;
+			}
+			if (!fp && (*wsrc == 'u' || *wsrc == 'U'))
+			{
+				++wsrc;
+			}
+			if (!fp && (*wsrc == 'l' || *wsrc == 'L'))
+			{
+				++wsrc;
+				auto ll = *wsrc == 'l' || *wsrc == 'L';
+				if (ll) ++wsrc;
+			}
+		}
+
 		#pragma endregion
 
 		#pragma region Extract Line
@@ -268,97 +445,19 @@ namespace pr
 		// whose assigned values are less than 'radix' are permitted.
 		template <typename Int, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractInt(Int& intg, int radix, Ptr& src, Char const* delim = nullptr)
 		{
-			errno = 0;
-			delim = Delim(delim);
+			wchar_t str[256] = {}; int len = 0;
+			BufferNumber(src, str, len, radix, ENumType::Int, delim);
+			if (len == 0 || len == _countof(str)) return false;
+			str[len] = 0;
 
-			// Find the first non-delimiter
-			if (!AdvanceToNonDelim(src, delim))
-				return false;
-
-			wchar_t str[256] = {};
-			int i = 0;
-
-			// Read the character stream as wchars.
-			// I'm casting up to wchar_t because, if the stream has multibyte chars,
-			// casting down to char could wrap and produce a silently accepted value.
-			wchar_ptr<Ptr> wsrc(src);
-
-			// Read the optional sign
-			if (*wsrc == L'+' || *wsrc == L'-')
-			{
-				str[i++] = *wsrc;
-				++wsrc;
-			}
-
-			// Look for radix identifiers prefixing the number
-			// If the radix if given, allow the number to have the associated radix prefix
-			if (radix == 0)
-			{
-				if (*wsrc == L'0')
-				{
-					++wsrc;
-					if      (*wsrc == L'x' || *wsrc == L'X') { radix = 16; ++wsrc; }
-					else if (*wsrc == L'b' || *wsrc == L'B') { radix =  2; ++wsrc; }
-					else                                     { radix =  8; str[i++] = L'0'; }
-				}
-				else if (*wsrc >= L'1' && *wsrc <= L'9')
-				{
-					radix = 10;
-				}
-				else
-				{
-					return false;
-				}
-			}
-			else if (radix == 2)
-			{
-				if (*wsrc == '0')
-				{
-					++wsrc;
-					if (*wsrc == 'b' || *wsrc == 'B') ++wsrc;
-					else str[i++] = L'0';
-				}
-			}
-			else if (radix == 16)
-			{
-				if (*wsrc == '0')
-				{
-					++wsrc;
-					if (*wsrc == 'x' || *wsrc == 'X') ++wsrc;
-					else str[i++] = L'0';
-				}
-			}
-
-			// Read the digits
-			for (; *wsrc; ++wsrc)
-			{
-				int ch = ::towupper(*wsrc);
-				int dec_ch = ch - L'0', hex_ch = ch - L'A';
-				if (i == _countof(str)) return false; // Out of local buffer space
-				if (dec_ch >= 0 && dec_ch <= 9  && dec_ch      < radix) { str[i++] = wchar_t(ch); continue; }
-				if (hex_ch >= 0 && hex_ch <= 25 && hex_ch + 10 < radix) { str[i++] = wchar_t(ch); continue; }
-				break;
-			}
-
-			// Could not extract any number characters
-			if (i == 0)
-				return false;
-
-			// Convert the string to an integer.
-			// Careful here. if you're reading a number larger than the max value for 'Int' you'll get MAX_VALUE
-			// i.e. reading a hex value greater than 0x7FFFFFFF into an int will return 0x7FFFFFFF
 			errno = 0;
 			wchar_t* end;
-			intg = sizeof(Int) == sizeof(long long)
-				? std::is_unsigned<Int>::value
-					? Int(::_wcstoui64(str, &end, radix))
-					: Int(::_wcstoi64(str, &end, radix))
-				: std::is_unsigned<Int>::value
-					? Int(::wcstoul(str, &end, radix))
-					: Int(::wcstol(str, &end, radix));
+			intg = std::is_unsigned<Int>::value
+				? static_cast<Int>(::_wcstoui64(str, &end, radix))
+				: static_cast<Int>(::_wcstoi64(str, &end, radix));
 
 			// Check all of the string was used in the conversion and there wasn't an overflow
-			return end - &str[0] == i && errno != ERANGE;
+			return end - &str[0] == len && errno != ERANGE;
 		}
 		template <typename Int, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractIntC(Int& intg, int radix, Ptr src, Char const* delim = nullptr)
 		{
@@ -385,85 +484,18 @@ namespace pr
 		// If neither an exponent part nor a '.' character appears, a '.' character is assumed to follow the last digit in the string.
 		template <typename Real, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractReal(Real& real, Ptr& src, Char const* delim = nullptr)
 		{
-			errno = 0;
-			delim = Delim(delim);
+			int radix = 10;
+			wchar_t str[256] = {}; int len = 0;
+			BufferNumber(src, str, len, radix, ENumType::FP, delim);
+			if (len == 0 || len == _countof(str)) return false;
+			str[len] = 0;
 
-			// Find the first non-delimiter
-			if (!AdvanceToNonDelim(src, delim))
-				return false;
-
-			wchar_t str[256] = {};
-			int i = 0;
-
-			// Read the character stream as wchars.
-			// I'm casting up to wchar_t because, if the stream has multibyte chars,
-			// casting down to char could wrap and produce a silently accepted value.
-			wchar_ptr<Ptr> wsrc(src);
-
-			// Read the optional sign
-			if (*wsrc == L'+' || *wsrc == L'-')
-			{
-				str[i++] = *wsrc;
-				++wsrc;
-			}
-
-			// Read digits up to the '.'
-			for (; IsDecDigit(*wsrc); ++wsrc)
-			{
-				if (i == _countof(str)) return false; // Out of local buffer space
-				str[i++] = *wsrc;
-			}
-
-			// If the next char is the decimal point, add it and keep reading
-			if (*wsrc == L'.')
-			{
-				if (i == _countof(str)) return false; // Out of local buffer space
-				str[i++] = *wsrc;
-				++wsrc;
-
-				// Read more digits
-				for (; IsDecDigit(*wsrc); ++wsrc)
-				{
-					if (i == _countof(str)) return false; // Out of local buffer space
-					str[i++] = *wsrc;
-				}
-			}
-
-			// Look for the optional exponent character
-			if (*wsrc == L'd' || *wsrc == L'D' || *wsrc == L'e' || *wsrc == L'E')
-			{
-				// Add the exponent char
-				if (i == _countof(str)) return false; // Out of local buffer space
-				str[i++] = *wsrc;
-				++wsrc;
-
-				// Read the optional exponent sign
-				if (*wsrc == L'+' || *wsrc == L'-')
-				{
-					if (i == _countof(str)) return false; // Out of local buffer space
-					str[i++] = *wsrc;
-					++wsrc;
-				}
-
-				// Read the exponent digits
-				for (; IsDecDigit(*wsrc); ++wsrc)
-				{
-					if (i == _countof(str)) return false; // Out of local buffer space
-					str[i++] = *wsrc;
-				}
-			}
-
-			// Could not extract any number characters
-			if (i == 0)
-				return false;
-
-			// Convert the string to a real
 			errno = 0;
 			wchar_t* end;
-			real = Real(::wcstod(str, &end));
+			real = static_cast<Real>(::wcstod(str, &end));
 
 			// Check all of the string was used in the conversion and there wasn't an overflow
-			return end - &str[0] == i && errno != ERANGE;
+			return end - &str[0] == len && errno != ERANGE;
 		}
 		template <typename Real, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractRealC(Real& real, Ptr src, Char const* delim = nullptr)
 		{
@@ -477,6 +509,45 @@ namespace pr
 		template <typename Real, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractRealArrayC(Real* real, size_t count, Ptr src, Char const* delim = nullptr)
 		{
 			return ExtractRealArray(real, count, src, delim);
+		}
+		#pragma endregion
+
+
+		#pragma region Extract Number
+		// Extract a number (real or int) from 'src'
+		// Format: [delim][{+|-}][0[{x|X|b|B}]][digits][.digits][{d|D|e|E}[{+|-}]digits][U][L][L]
+		// [out] 'num' = the extracted value
+		// [in] 'radix' = the base of the number to read.
+		// [in] 'type' = the number style to read.
+		// [in] 'src' = the forward only input stream
+		// [in] 'delim' = token delimiter characters.
+		// Returns false if a valid number could not be read, or 'str' is too small
+		template <typename Ptr, typename Char = char_type_t<Ptr>> bool ExtractNumber(Number& num, Ptr& src, int radix = 0, Char const* delim = nullptr)
+		{
+			wchar_t str[256] = {}; int len = 0;
+			BufferNumber(src, str, len, radix, ENumType::Any, delim);
+			if (len == 0 || len == _countof(str)) return false;
+			str[len] = 0;
+
+			errno = 0;
+			wchar_t* end;
+			num = Number::From(str, &end, radix);
+
+			// Check all of the string was used in the conversion and there wasn't an overflow
+			return end - &str[0] == len && errno != ERANGE;
+		}
+		template <typename Ptr, typename Char = char_type_t<Ptr>> bool ExtractNumberC(Number& num, Ptr src, int radix = 0, Char const* delim = nullptr)
+		{
+			return ExtractNumber(num, src, radix, delim);
+		}
+		template <typename Real, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractNumberArray(Real* real, size_t count, Ptr& src, int radix = 0, Char const* delim = nullptr)
+		{
+			while (count--) if (!ExtractNumber(*num++, src, radix, delim)) return false;
+			return true;
+		}
+		template <typename Real, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractNumberArrayC(Number* num, size_t count, Ptr src, int radix = 0, Char const* delim = nullptr)
+		{
+			return ExtractNumberArray(num, count, src, radix, delim);
 		}
 		#pragma endregion
 
@@ -506,181 +577,6 @@ namespace pr
 		{
 			return ExtractEnum(enum_, src, delim);
 		}
-		#pragma endregion
-
-		#pragma region Extract Number
-		// Supported radii, supporting a few non-C constant types
-		enum class ENumType { Dec = 10, Hex = 16, Oct = 8, Bin = 2, FP = 0 };
-
-		// Extract a numeric constant of unknown type.
-		// Format: [delim][{+|-}][0[{x|X|b|B}]][digits][.digits][{d|D|e|E}[{+|-}]digits][U][L][L]
-		// On return:
-		//  'fp' indicates what type of constant was extracted (integral or floating point)
-		//  'unsignd' indicates whether the number was signed or unsigned (if false is returned check errno = ERANGE)
-		//  'llong' indicates whether the number was a long long (if false is returned check errno = ERANGE)
-		//  'ivalue','fvalue' will contain the corresponding value and the
-		//    other value will be unchanged (this allows unions to work)
-		template <typename Int, typename Real, typename Ptr, typename Char = char_type_t<Ptr>> bool ExtractNumber(Int& ivalue, Real& fvalue, bool& fp, Ptr& src, bool* unsignd = nullptr, bool* llong = nullptr, Char const* delim = nullptr)
-		{
-			errno = 0;
-			delim = Delim(delim);
-
-			// Find the first non-delimiter
-			if (!AdvanceToNonDelim(src, delim))
-				return false;
-
-			// Read the character stream as wchars.
-			// I'm casting up to wchar_t because, if the stream has multibyte chars,
-			// casting down to char could wrap and produce a silently accepted value.
-			wchar_ptr<Ptr> wsrc(src);
-
-			// Buffer the number string locally so that we can first read the
-			// entire number then convert it appropriately
-			wchar_t str[256] = {}; int i = 0;
-			bool us_buf, ll_buf;
-			auto& us = unsignd ? *unsignd : us_buf;
-			auto& ll = llong   ? *llong   : ll_buf;
-
-			// Initialise defaults
-			fp = false;
-			us = false;
-			ll = false;
-
-			// Look for the optional sign character
-			// Ideally we don't want to advance 'src' passed the '+' or '-' if the next
-			// character is not the start of a number. However doing so means 'src' can't
-			// be a forward only input stream. Therefore, I'm pushing the responsibility
-			// back to the caller, they need to check that if the next char is a '+' or '-'
-			// then the following char is a decimal digit
-			if (*wsrc == L'+' || *wsrc == L'-')
-			{
-				str[i++] = *wsrc;
-				++wsrc;
-			}
-
-			// If the first digit is zero, then the number may be of a different base
-			int radix = 10;
-			if (*wsrc == L'0')
-			{
-				++wsrc; // Leading zeros don't need to be added to 'str'
-				if      (*wsrc == L'.')                  { str[i++] = *wsrc; ++wsrc; fp = true; }
-				else if (*wsrc == L'x' || *wsrc == L'X') { radix = 16; ++wsrc; }
-				else if (*wsrc == L'b' || *wsrc == L'B') { radix =  2; ++wsrc; }
-				else                                     { radix =  8; }
-			}
-			else if (!IsDecDigit(*wsrc))
-			{
-				// Numeric constants all begin with a digit
-				return false;
-			}
-
-			// Read a string of digits
-			for (bool dp = false, exp = false;;)
-			{
-				if (fp)
-				{
-					// Read decimal digits
-					for (; *wsrc && IsDecDigit(*wsrc); ++wsrc)
-					{
-						if (i == _countof(str)) return false; // Out of local buffer space
-						str[i++] = *wsrc;
-					}
-				}
-				else
-				{
-					// Read digits with values less that 'radix'
-					for (; *wsrc; ++wsrc)
-					{
-						int ch = ::towupper(*wsrc);
-						int dec_ch = ch - L'0', hex_ch = ch - L'A';
-						if (i == _countof(str)) return false; // Out of local buffer space
-						if (dec_ch >= 0 && dec_ch <= 9  && dec_ch      < radix) { str[i++] = wchar_t(ch); continue; }
-						if (hex_ch >= 0 && hex_ch <= 25 && hex_ch + 10 < radix) { str[i++] = wchar_t(ch); continue; }
-						break;
-					}
-				}
-
-				// If the next char is a decimal point, and it's the first one we've seen, add it and go round again
-				if (!dp && *wsrc == L'.' && radix == 10) // may not know that it's fp yet
-				{
-					if (i == _countof(str)) return false; // Out of local buffer space
-					str[i++] = *wsrc;
-					++wsrc;
-					dp = true;
-					fp = true;
-				}
-
-				// If the next char is the exponent char, and it's the first one we've seen, add it and go round again
-				else if (!exp && (*wsrc == L'e' || *wsrc == L'E' || *wsrc == L'd' || *wsrc == L'D') && radix == 10) // may not know that it's fp yet
-				{
-					if (i == _countof(str)) return false; // Out of local buffer space
-					str[i++] = *wsrc;
-					++wsrc;
-					exp = true;
-					fp = true;
-
-					// Read the optional exponent sign
-					if (*wsrc == L'+' || *wsrc == L'-')
-					{
-						if (i == _countof(str)) return false; // Out of local buffer space
-						str[i++] = *wsrc;
-						++wsrc;
-					}
-				}
-				else
-				{
-					break;
-				}
-			}
-
-			// Read the optional number suffixes
-			if ((fp || radix == 10) && (*wsrc == L'f' || *wsrc == L'F'))
-			{
-				fp = true;
-				++wsrc;
-			}
-			if (!fp && (*wsrc == L'u' || *wsrc == L'U'))
-			{
-				us = true;
-				++wsrc;
-			}
-			if (!fp && (*wsrc == L'l' || *wsrc == L'L'))
-			{
-				++wsrc;
-				ll = *wsrc == L'l' || *wsrc == L'L';
-				if (ll) ++wsrc;
-			}
-
-			// Could not extract any number characters
-			if (i == 0)
-				return false;
-
-			// Convert the string to a value
-			errno = 0;
-			wchar_t* end;
-			if (fp)
-			{
-				fvalue = Real(::wcstod(str, &end));
-			}
-			else
-			{
-				ivalue = ll
-					? us
-						? Int(::_wcstoui64(str, &end, radix))
-						: Int(::_wcstoi64(str, &end, radix))
-					: us
-						? Int(::wcstoul(str, &end, radix))
-						: Int(::wcstol(str, &end, radix));
-			}
-
-			// Check all of the string was used in the conversion and there wasn't an overflow
-			return end - &str[0] == i && errno != ERANGE;
-		}
-		template <typename Int, typename Real, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractNumberC(Int& ivalue, Real& fvalue, bool& fp, Ptr src, bool* unsignd = nullptr, bool* llong = nullptr, Char const* delim = nullptr)
-		{
-			return ExtractNumber(ivalue, fvalue, fp, src, unsignd, llong, delim);
-		}
-
 		#pragma endregion
 	}
 }
@@ -815,6 +711,13 @@ namespace pr
 				long long ll = 0; unsigned long long ull = 0;
 				float  f = 0;     double d = 0;
 				{
+					char src[] = "0";
+					PR_CHECK(ExtractIntC(i,  0, src), true); PR_CHECK(i, (int)0);
+					PR_CHECK(ExtractIntC(i,  8, src), true); PR_CHECK(i, (int)0);
+					PR_CHECK(ExtractIntC(i, 10, src), true); PR_CHECK(i, (int)0);
+					PR_CHECK(ExtractIntC(i, 16, src), true); PR_CHECK(i, (int)0);
+				}
+				{
 					char src[] = "\n -1.14 ";
 					PR_CHECK(ExtractIntC(c  ,10 ,src) ,true);   PR_CHECK(c  ,(char)-1);
 					PR_CHECK(ExtractIntC(uc ,10 ,src) ,true);   PR_CHECK(uc ,(unsigned char)0xff);
@@ -892,17 +795,39 @@ namespace pr
 			}
 			{// Number
 				using namespace pr::str;
+				
+				Number num;
+				PR_CHECK(ExtractNumberC(num, "0"       ), true); PR_CHECK(num.ll(), 0);
+				PR_CHECK(ExtractNumberC(num, "+0"      ), true); PR_CHECK(num.ll(), 0);
+				PR_CHECK(ExtractNumberC(num, "-0"      ), true); PR_CHECK(num.ll(), 0);
+				PR_CHECK(ExtractNumberC(num, "+.0f"    ), true); PR_CHECK(FEql(num.db(), +0.0), true);
+				PR_CHECK(ExtractNumberC(num, "-.1f"    ), true); PR_CHECK(FEql(num.db(), -0.1), true);
+				PR_CHECK(ExtractNumberC(num, "1F"      ), true); PR_CHECK(FEql(num.db(), 1.0 ), true);
+				PR_CHECK(ExtractNumberC(num, "12three" ), true); PR_CHECK(num.ll(), 12        );
+				PR_CHECK(ExtractNumberC(num, "0x123"   ), true); PR_CHECK(num.ll(), 0x123     );
+				PR_CHECK(ExtractNumberC(num, "0x123ULL"), true); PR_CHECK(num.ul(), 0x123ULL  );
+				PR_CHECK(ExtractNumberC(num, "0x123L"  ), true); PR_CHECK(num.ll(), 0x123LL   );
+				PR_CHECK(ExtractNumberC(num, "0x123LL" ), true); PR_CHECK(num.ll(), 0x123LL   );
+
+				PR_CHECK(ExtractNumberC(num, "0b101010"), true); PR_CHECK(num.ll(), 0b101010LL);
+				PR_CHECK(ExtractNumberC(num, "0923.0"  ), true); PR_CHECK(FEql(num.db(), 0923.0), true);
+				PR_CHECK(ExtractNumberC(num, "0199"    ), true); PR_CHECK(num.ll(), 01); // because it's octal
+				PR_CHECK(ExtractNumberC(num, "0199", 10), true); PR_CHECK(num.ll(), 199);
+				PR_CHECK(ExtractNumberC(num, "0x1.f"   ), true); PR_CHECK(FEql(num.db(), 0x1.0), true);
+
+				PR_CHECK(ExtractNumberC(num, "0x.0"), false);
+				PR_CHECK(ExtractNumberC(num, ".x0"), false);
+				PR_CHECK(ExtractNumberC(num, "-x.0"), false);
 
 				char    src0[] =  "-3.24e-39f";
 				wchar_t src1[] = L"0x123abcUL";
 				char    src2[] =  "01234567";
 				wchar_t src3[] = L"-34567L";
 		
-				float f = 0; int i = 0; bool fp = false;
-				PR_CHECK(ExtractNumberC(i,f,fp,src0) ,true); PR_CHECK( fp, true); PR_CHECK(f ,-3.24e-39f);
-				PR_CHECK(ExtractNumberC(i,f,fp,src1) ,true); PR_CHECK(!fp, true); PR_CHECK((unsigned long)i, 0x123abcUL);
-				PR_CHECK(ExtractNumberC(i,f,fp,src2) ,true); PR_CHECK(!fp, true); PR_CHECK(i ,01234567);
-				PR_CHECK(ExtractNumberC(i,f,fp,src3) ,true); PR_CHECK(!fp, true); PR_CHECK((long)i ,-34567L);
+				PR_CHECK(ExtractNumberC(num, src0) ,true); PR_CHECK(num.m_type == Number::FP , true); PR_CHECK(FEql(num.db(),-3.24e-39), true);
+				PR_CHECK(ExtractNumberC(num, src1) ,true); PR_CHECK(num.m_type == Number::Int, true); PR_CHECK(num.ul(), 0x123abcULL);
+				PR_CHECK(ExtractNumberC(num, src2) ,true); PR_CHECK(num.m_type == Number::Int, true); PR_CHECK(num.ll(), 01234567);
+				PR_CHECK(ExtractNumberC(num, src3) ,true); PR_CHECK(num.m_type == Number::Int, true); PR_CHECK(num.ll(), -34567LL);
 			}
 		}
 	}

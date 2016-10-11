@@ -71,6 +71,7 @@
 #include "pr\common\msgbox.h"
 #include "pr\common\multi_cast.h"
 #include "pr\common\new.h"
+#include "pr\common\number.h"
 #include "pr\common\objectpool.h"
 #include "pr\common\observe.h"
 #include "pr\common\pe_file.h"

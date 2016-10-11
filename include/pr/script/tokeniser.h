@@ -157,11 +157,11 @@ namespace pr
 					// Extract a numeric constant
 					tokeniser_extract_constant:
 					{
-						long long ivalue; double fvalue; bool fp;
-						if (!pr::str::ExtractNumber(ivalue, fvalue, fp, src))
+						pr::Number num;
+						if (!pr::str::ExtractNumber(num, src))
 							return FailPolicy::Fail(EResult::SyntaxError, src.Loc(), "Invalid numeric constant");
 
-						m_tok = Token(fp ? EConstant::FloatingPoint : EConstant::Integral, fvalue, ivalue);
+						m_tok = num.m_type == Number::EType::FP ? Token(EConstant::FloatingPoint, num.db()) : Token(EConstant::Integral, num.ll());
 						break;
 					}
 

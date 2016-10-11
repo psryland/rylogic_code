@@ -308,19 +308,23 @@ namespace pr
 				operator citer<T,B,A>() const { return citer<T,B,A>(m_idx, *m_map); }
 			};
 
-			template <typename L,typename R> inline typename std::enable_if<L::pr_deque_iter && R::pr_deque_iter, bool>::type operator == (L lhs, R rhs) { return lhs.m_idx == rhs.m_idx; }
-			template <typename L,typename R> inline typename std::enable_if<L::pr_deque_iter && R::pr_deque_iter, bool>::type operator != (L lhs, R rhs) { return lhs.m_idx != rhs.m_idx; }
-			template <typename L,typename R> inline typename std::enable_if<L::pr_deque_iter && R::pr_deque_iter, bool>::type operator <  (L lhs, R rhs) { return lhs.m_idx <  rhs.m_idx; }
-			template <typename L,typename R> inline typename std::enable_if<L::pr_deque_iter && R::pr_deque_iter, bool>::type operator >  (L lhs, R rhs) { return lhs.m_idx >  rhs.m_idx; }
-			template <typename L,typename R> inline typename std::enable_if<L::pr_deque_iter && R::pr_deque_iter, bool>::type operator <= (L lhs, R rhs) { return lhs.m_idx <= rhs.m_idx; }
-			template <typename L,typename R> inline typename std::enable_if<L::pr_deque_iter && R::pr_deque_iter, bool>::type operator >= (L lhs, R rhs) { return lhs.m_idx >= rhs.m_idx; }
+			template <typename L, typename R, typename = std::enable_if_t<L::pr_deque_iter>> inline bool operator == (L lhs, R rhs) { return lhs.m_idx == rhs.m_idx; }
+			template <typename L, typename R, typename = std::enable_if_t<L::pr_deque_iter>> inline bool operator != (L lhs, R rhs) { return lhs.m_idx != rhs.m_idx; }
+			template <typename L, typename R, typename = std::enable_if_t<L::pr_deque_iter>> inline bool operator <  (L lhs, R rhs) { return lhs.m_idx <  rhs.m_idx; }
+			template <typename L, typename R, typename = std::enable_if_t<L::pr_deque_iter>> inline bool operator >  (L lhs, R rhs) { return lhs.m_idx >  rhs.m_idx; }
+			template <typename L, typename R, typename = std::enable_if_t<L::pr_deque_iter>> inline bool operator <= (L lhs, R rhs) { return lhs.m_idx <= rhs.m_idx; }
+			template <typename L, typename R, typename = std::enable_if_t<L::pr_deque_iter>> inline bool operator >= (L lhs, R rhs) { return lhs.m_idx >= rhs.m_idx; }
 
-			template <typename L> inline typename std::enable_if<L::pr_deque_iter, L&>::type operator += (L& lhs, std::ptrdiff_t ofs) { lhs.m_idx += ofs; return lhs; }
-			template <typename L> inline typename std::enable_if<L::pr_deque_iter, L&>::type operator -= (L& lhs, std::ptrdiff_t ofs) { lhs.m_idx -= ofs; return lhs; }
-			template <typename L> inline typename std::enable_if<L::pr_deque_iter, L>::type  operator +  (L lhs, std::ptrdiff_t ofs) { L tmp = lhs; return tmp += ofs; }
-			template <typename L> inline typename std::enable_if<L::pr_deque_iter, L>::type  operator -  (L lhs, std::ptrdiff_t ofs) { L tmp = lhs; return tmp -= ofs; }
+			template <typename L, typename = std::enable_if_t<L::pr_deque_iter>> inline L& operator += (L& lhs, std::ptrdiff_t ofs) { lhs.m_idx += ofs; return lhs; }
+			template <typename L, typename = std::enable_if_t<L::pr_deque_iter>> inline L& operator -= (L& lhs, std::ptrdiff_t ofs) { lhs.m_idx -= ofs; return lhs; }
+			template <typename L, typename = std::enable_if_t<L::pr_deque_iter>> inline L operator +  (L lhs, std::ptrdiff_t ofs) { auto tmp = lhs; return tmp += ofs; }
+			template <typename L, typename = std::enable_if_t<L::pr_deque_iter>> inline L operator -  (L lhs, std::ptrdiff_t ofs) { auto tmp = lhs; return tmp -= ofs; }
 
-			template <typename L,typename R> inline typename std::enable_if<L::pr_deque_iter && R::pr_deque_iter, std::ptrdiff_t>::type operator - (L lhs, R rhs) { return rhs.m_idx <= lhs.m_idx ? lhs.m_idx - rhs.m_idx : -ptrdiff_t(rhs.m_idx - lhs.m_idx); }
+			template <typename L,typename R, typename = std::enable_if_t<L::pr_deque_iter>, typename = std::enable_if_t<R::pr_deque_iter>>
+			inline std::ptrdiff_t operator - (L lhs, R rhs)
+			{
+				return rhs.m_idx <= lhs.m_idx ? lhs.m_idx - rhs.m_idx : -ptrdiff_t(rhs.m_idx - lhs.m_idx);
+			}
 
 			// std::aligned_type doesn't work for alignments > 8 on VC++
 			template <int Alignment> struct aligned_type {};

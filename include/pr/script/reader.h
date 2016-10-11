@@ -87,7 +87,6 @@ namespace pr
 			static int StaticHashKeyword(wchar_t const* keyword, bool case_sensitive)
 			{
 				// This function can't have the same name as 'HashKeyword' because it causes a compiler error
-				// Use the pr::hash::Hash functions that have been mapped into this namespace
 				auto kw = case_sensitive ? pr::hash::Hash(keyword) : pr::hash::HashI(keyword);
 				return kw;
 			}

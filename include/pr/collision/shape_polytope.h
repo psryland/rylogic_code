@@ -3,6 +3,7 @@
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
 #pragma once
+#include "pr/container/vector.h"
 #include "pr/collision/shape.h"
 
 namespace pr

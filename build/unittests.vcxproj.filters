@@ -960,6 +960,9 @@
     <ClInclude Include="..\include\pr\meta\is_char.h">
       <Filter>pr\meta</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\common\number.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

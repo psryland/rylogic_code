@@ -22,13 +22,13 @@ namespace ldr
 	char const*    AppStringLine() { return pr::FmtX<struct Ldr, 128>("%s - Version: %s %s", AppTitleA(), AppVersion(), AppCopyright()); }
 
 	// Returns the settings filepath to use (from the local executable directory)
-	std::string UserSettingsFilePath()
+	std::wstring UserSettingsFilePath()
 	{
-		char temp[MAX_PATH];
-		GetModuleFileNameA(0, temp, MAX_PATH);
-		std::string path = temp;
+		wchar_t temp[MAX_PATH];
+		GetModuleFileNameW(0, temp, MAX_PATH);
+		std::wstring path = temp;
 		pr::filesys::RmvExtension(path);
-		path += ".ini";
+		path += L".ini";
 		return path;
 	}
 

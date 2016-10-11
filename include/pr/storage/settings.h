@@ -164,12 +164,12 @@ namespace pr
 		// Create an event for this settings type
 		using Evt = typename pr::settings::Evt<TSettings>;
 
-		std::string m_filepath; // The file path to save the settings
-		std::size_t m_crc;      // The CRC of the settings last time they were saved
-		std::string m_comments; // Comments to add to the head of the exported settings
+		std::wstring m_filepath; // The file path to save the settings
+		std::size_t m_crc;       // The CRC of the settings last time they were saved
+		std::string m_comments;  // Comments to add to the head of the exported settings
 
 		// Settings constructor
-		SettingsBase(std::string filepath)
+		SettingsBase(std::wstring filepath)
 			:m_filepath(filepath)
 			,m_crc()
 			,m_comments()
@@ -180,12 +180,12 @@ namespace pr
 		{
 			return Load(m_filepath);
 		}
-		bool Load(std::string file)
+		bool Load(std::wstring file)
 		{
 			m_filepath = file;
 			if (!pr::filesys::FileExists(m_filepath))
 			{
-				pr::events::Send(Evt(pr::FmtS("User settings file '%s' not found", m_filepath.c_str()), Evt::Warning));
+				pr::events::Send(Evt(pr::FmtS("User settings file '%S' not found", m_filepath.c_str()), Evt::Warning));
 				return false;
 			}
 
@@ -193,7 +193,7 @@ namespace pr
 			std::string settings;
 			if (!pr::FileToBuffer(m_filepath, settings))
 			{
-				pr::events::Send(Evt(pr::FmtS("User settings file '%s' could not be read", m_filepath.c_str()), Evt::Error));
+				pr::events::Send(Evt(pr::FmtS("User settings file '%S' could not be read", m_filepath.c_str()), Evt::Error));
 				return false;
 			}
 
@@ -205,21 +205,21 @@ namespace pr
 		{
 			return Save(m_filepath);
 		}
-		bool Save(std::string file)
+		bool Save(std::wstring file)
 		{
 			m_filepath = file;
 
 			auto dir = pr::filesys::GetDirectory(m_filepath);
 			if (!pr::filesys::DirectoryExists(dir) && !pr::filesys::CreateDir(dir))
 			{
-				pr::events::Send(Evt(pr::FmtS("Failed to save user settings file '%s'",m_filepath.c_str()), Evt::Error));
+				pr::events::Send(Evt(pr::FmtS("Failed to save user settings file '%S'",m_filepath.c_str()), Evt::Error));
 				return false;
 			}
 
 			auto settings = Export();
 			if (!pr::BufferToFile(settings, m_filepath.c_str()))
 			{
-				pr::events::Send(Evt(pr::FmtS("Failed to save user settings file '%s'",m_filepath.c_str()), Evt::Error));
+				pr::events::Send(Evt(pr::FmtS("Failed to save user settings file '%S'",m_filepath.c_str()), Evt::Error));
 				return false;
 			}
 
@@ -315,7 +315,7 @@ namespace pr
 		/* Members */\
 		x(PR_SETTINGS_INSTANTIATE)\
 \
-		settings_name(std::string filepath = "", bool load = false)\
+		settings_name(std::wstring filepath = L"", bool load = false)\
 			:SettingsBase(filepath)\
 			x(PR_SETTINGS_CONSTRUCT)\
 		{\

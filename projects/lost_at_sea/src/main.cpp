@@ -33,7 +33,7 @@ namespace las
 			:m_gui(&gui)
 		{}
 
-		std::string UserSettings() const { return ""; }
+		std::wstring UserSettings() const { return L""; }
 
 		// Return configuration settings for the renderer
 		pr::rdr::RdrSettings RdrSettings()
