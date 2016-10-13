@@ -446,11 +446,11 @@ namespace pr
 }
 
 #if PR_UNITTESTS
+#include <fstream>
+#include <random>
 #include "pr/common/unittests.h"
 #include "pr/common/fmt.h"
 #include "pr/maths/maths.h"
-#include <fstream>
-
 namespace pr
 {
 	namespace unittests
@@ -477,8 +477,8 @@ namespace pr
 		{
 			using namespace pr::unittests::quad_tree;
 
+			std::default_random_engine rng;
 			pr::QuadTree<Watzit, 2> qtree({-10,-5},{20,10});
-			Rand rnd;
 
 			// just inside quad0 at the root level
 			Watzit w0(-0.5f*qtree.CellSize(0,15),-0.5f*qtree.CellSize(1,15), 0);
@@ -514,7 +514,10 @@ namespace pr
 
 			for (int i = 0; i != 10000; ++i)
 			{
-				Watzit w(rnd.fltc(0.0f, qtree.m_size[0]), rnd.fltc(0.0f, qtree.m_size[1]), 0.2f*rnd.fltr(0.0f, 0.5f * Len2(qtree.m_size[0], qtree.m_size[1])));
+				std::uniform_real_distribution<float> dist_x(-qtree.m_size[0], qtree.m_size[0]);
+				std::uniform_real_distribution<float> dist_y(-qtree.m_size[1], qtree.m_size[1]);
+				std::uniform_real_distribution<float> dist_r(0.0f, 0.5f * Len2(qtree.m_size[0], qtree.m_size[1]));
+				Watzit w(dist_x(rng), dist_y(rng), 0.2f * dist_r(rng));
 				auto n = qtree.Insert(w, w.pos, w.radius);
 
 				// the root node can have arbitrarily large objects in it
@@ -545,7 +548,10 @@ namespace pr
 					for (auto& item : node.m_items)
 						item.flag = false;
 
-				Watzit W(rnd.fltc(0.0f, qtree.m_size[0]), rnd.fltc(0.0f, qtree.m_size[1]), 0.2f*rnd.fltr(0.0f, 0.5f * pr::Len2(qtree.m_size[0], qtree.m_size[1])));
+				std::uniform_real_distribution<float> dist_x(-qtree.m_size[0], qtree.m_size[0]);
+				std::uniform_real_distribution<float> dist_y(-qtree.m_size[1], qtree.m_size[1]);
+				std::uniform_real_distribution<float> dist_r(0.0f, 0.5f * Len2(qtree.m_size[0], qtree.m_size[1]));
+				Watzit W(dist_x(rng), dist_y(rng), 0.2f * dist_r(rng));
 				qtree.Traverse(W.pos, W.radius, [&](Watzit& w, void*)
 				{
 					w.flag = Collide(W, w);

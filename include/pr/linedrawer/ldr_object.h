@@ -751,7 +751,7 @@ namespace pr
 						reader.Vector3(centre, 1.0f);
 						reader.Real(radius);
 						reader.SectionEnd();
-						p2w = pr::Random4x4(pr::g_Rand(), centre, radius) * p2w;
+						p2w = pr::Random4x4(g_rng(), centre, radius) * p2w;
 						break;
 					}
 				case EKeyword::RandPos:
@@ -762,13 +762,13 @@ namespace pr
 						reader.Vector3(centre, 1.0f);
 						reader.Real(radius);
 						reader.SectionEnd();
-						p2w = m4x4::Translation(Random3(g_Rand(), centre, radius, 1.0f)) * p2w;
+						p2w = m4x4::Translation(Random3(g_rng(), centre, radius, 1.0f)) * p2w;
 						break;
 					}
 				case EKeyword::RandOri:
 					{
 						m4x4 m = m4x4Identity;
-						m.rot = pr::Random3x4(pr::g_Rand());
+						m.rot = pr::Random3x4(g_rng());
 						p2w = m * p2w;
 						break;
 					}

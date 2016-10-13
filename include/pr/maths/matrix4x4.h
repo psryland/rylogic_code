@@ -745,7 +745,7 @@ namespace pr
 		PRUnitTest(pr_maths_matrix4x4)
 		{
 			using namespace pr;
-			Rand rnd;
+			std::default_random_engine rng;
 			{
 				m4x4 m1 = m4x4Identity;
 				m4x4 m2 = m4x4Identity;
@@ -759,7 +759,7 @@ namespace pr
 				PR_CHECK(FEql(m1, m2), true);
 			}
 			{//m4x4CreateFrom
-				v4 V1 = Random3(rnd, 0.0f, 10.0f, 1.0f);
+				v4 V1 = Random3(rng, 0.0f, 10.0f, 1.0f);
 				m4x4 a2b = m4x4::Transform(v4::Normal3(+3,-2,-1,0), +1.23f, v4(+4.4f, -3.3f, +2.2f, 1.0f));
 				m4x4 b2c = m4x4::Transform(v4::Normal3(-1,+2,-3,0), -3.21f, v4(-1.1f, +2.2f, -3.3f, 1.0f));
 				PR_CHECK(IsOrthonormal(a2b), true);
@@ -778,8 +778,9 @@ namespace pr
 				PR_CHECK(IsOrthonormal(m2), true);
 				PR_CHECK(FEql(m1, m2), true);
 
-				float ang = rnd.fltc(0.0f,1.0f);
-				v4 axis = Random3N(rnd, 0.0f);
+				std::uniform_real_distribution<float> dist(-1.0f,+1.0f);
+				float ang = dist(rng);
+				v4 axis = Random3N(rng, 0.0f);
 				m1 = m4x4::Transform(axis, ang, v4Origin);
 				m2 = m4x4::Transform(quat(axis, ang), v4Origin);
 				PR_CHECK(IsOrthonormal(m1), true);

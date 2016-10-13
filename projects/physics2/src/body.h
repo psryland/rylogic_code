@@ -10,9 +10,9 @@ struct Body :pr::physics::RigidBody
 	// Graphics for the object
 	View3DObject m_gfx;
 
-	static pr::Rand& rng()
+	static std::default_random_engine& rng()
 	{
-		static pr::Rand r;
+		static std::default_random_engine r;
 		return r;
 	}
 	static char const* Desc()

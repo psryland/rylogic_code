@@ -197,7 +197,6 @@
 #include "pr\maths\polynomial.h"
 #include "pr\maths\primes.h"
 #include "pr\maths\quaternion.h"
-#include "pr\maths\rand.h"
 #include "pr\maths\rand_mt19937.h"
 #include "pr\maths\rand_vector.h"
 #include "pr\maths\rectangle.h"

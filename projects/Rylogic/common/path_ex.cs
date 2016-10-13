@@ -669,6 +669,9 @@ namespace pr.common
 			/// <summary>Don't display progress UI (confirm prompts may be displayed still)</summary>
 			Silent = Win32.FOF_SILENT,
 
+			/// <summary>Copy/Move multiple files to multiple locations</summary>
+			MultipleDstFiles = Win32.FOF_MULTIDESTFILES,
+
 			/// <summary>Automatically rename the source files to avoid the collisions</summary>
 			RenameOnCollision = Win32.FOF_RENAMEONCOLLISION,
 
@@ -709,11 +712,29 @@ namespace pr.common
 		/// <summary>Copy a file using a Shell file operation</summary>
 		public static bool ShellCopy(string src, string dst, EFileOpFlags flags = EFileOpFlags.None, string title = "Copying Files...")
 		{
+			return ShellCopy(new[] { src }, dst, flags, title);
+		}
+		public static bool ShellCopy(IEnumerable<string> src, string dst, EFileOpFlags flags = EFileOpFlags.None, string title = "Copying Files...")
+		{
+			return ShellCopy(src, new[] { dst }, flags, title);
+		}
+		public static bool ShellCopy(IEnumerable<string> src, IEnumerable<string> dst, EFileOpFlags flags = EFileOpFlags.None, string title = "Copying Files...")
+		{
+			var src_list = src.ToArray();
+			var dst_list = dst.ToArray();
+
+			if ((src_list.Length == 0 && dst_list.Length != 0) ||
+				(src_list.Length != 0 && dst_list.Length == 0) ||
+				(src_list.Length != 0 && dst_list.Length != 1 && dst_list.Length != src_list.Length))
+				throw new Exception("Illogical combination of source and destination file paths");
+
+			if (dst_list.Length > 1) flags |= EFileOpFlags.MultipleDstFiles;
+
 			var shf = new Win32.SHFILEOPSTRUCT(); 
 			shf.wFunc = Win32.FO_COPY;
 			shf.fFlags = unchecked((short)flags);
-			shf.pFrom = src + "\0\0";// ensure double null termination
-			shf.pTo = dst + "\0\0";// ensure double null termination
+			shf.pFrom = string.Join("\0",src_list) + "\0\0";// ensure double null termination
+			shf.pTo   = string.Join("\0",dst_list) + "\0\0";// ensure double null termination
 			shf.lpszProgressTitle = title;
 			Win32.SHFileOperation(ref shf);
 			return !shf.fAnyOperationsAborted;
@@ -722,11 +743,29 @@ namespace pr.common
 		/// <summary>Move a file using a Shell file operation</summary>
 		public static bool ShellMove(string src, string dst, EFileOpFlags flags = EFileOpFlags.None, string title = "Moving Files...")
 		{
+			return ShellMove(new[] { src }, dst, flags, title);
+		}
+		public static bool ShellMove(IEnumerable<string> src, string dst, EFileOpFlags flags = EFileOpFlags.None, string title = "Moving Files...")
+		{
+			return ShellMove(src, new[] { dst }, flags, title);
+		}
+		public static bool ShellMove(IEnumerable<string> src, IEnumerable<string> dst, EFileOpFlags flags = EFileOpFlags.None, string title = "Moving Files...")
+		{
+			var src_list = src.ToArray();
+			var dst_list = dst.ToArray();
+
+			if ((src_list.Length == 0 && dst_list.Length != 0) ||
+				(src_list.Length != 0 && dst_list.Length == 0) ||
+				(src_list.Length != 0 && dst_list.Length != 1 && dst_list.Length != src_list.Length))
+				throw new Exception("Illogical combination of source and destination file paths");
+
+			if (dst_list.Length > 1) flags |= EFileOpFlags.MultipleDstFiles;
+
 			var shf = new Win32.SHFILEOPSTRUCT(); 
 			shf.wFunc = Win32.FO_MOVE;
 			shf.fFlags = unchecked((short)flags);
-			shf.pFrom = src + "\0\0";// ensure double null termination
-			shf.pTo = dst + "\0\0";// ensure double null termination
+			shf.pFrom = string.Join("\0",src_list) + "\0\0";// ensure double null termination
+			shf.pTo   = string.Join("\0",dst_list) + "\0\0";// ensure double null termination;
 			shf.lpszProgressTitle = title;
 			Win32.SHFileOperation(ref shf);
 			return !shf.fAnyOperationsAborted;

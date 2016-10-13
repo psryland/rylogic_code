@@ -246,7 +246,6 @@
     <ClInclude Include="..\include\pr\maths\primes.h" />
     <ClInclude Include="..\include\pr\maths\pr_to_ode.h" />
     <ClInclude Include="..\include\pr\maths\quaternion.h" />
-    <ClInclude Include="..\include\pr\maths\rand.h" />
     <ClInclude Include="..\include\pr\maths\rand_mt19937.h" />
     <ClInclude Include="..\include\pr\maths\maths_core.h" />
     <ClInclude Include="..\include\pr\maths\spatial.h" />

@@ -32,7 +32,6 @@
 #include "pr/maths/spline.h"
 #include "pr/maths/line3.h"
 #include "pr/maths/polynomial.h"
-#include "pr/maths/rand.h"
 #include "pr/maths/rand_vector.h"
 #include "pr/maths/compress.h"
 

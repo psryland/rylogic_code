@@ -10,49 +10,45 @@
 //  float offset = bias for the noise.
 //  PerlinNoiseGenerator Perlin;
 //  [-1, 1] * amp + offset = Perlin.Noise(x * freq, y * freq, z * freq) * amp + offset;
-	
+
 #pragma once
-#ifndef PR_MATHS_PERLIN_NOISE_H
-#define PR_MATHS_PERLIN_NOISE_H
-	
+#include <random>
+#include <algorithm>
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
-#include "pr/maths/rand.h"
 #include "pr/maths/vector4.h"
 
 namespace pr
 {
+	template <typename Rng = std::default_random_engine>
 	class PerlinNoiseGenerator
 	{
-		enum { PermTableSize = 1 << 10, PermTableMask = PermTableSize - 1 };
-		
-		IRandom m_rand;
-		int     m_perm[PermTableSize * 2];
-		
-		float Fade(float t) const                    { return t * t * t * (t * (t * 6 - 15) + 10); }
-		float Lerp(float t, float a, float b) const  { return a + t * (b - a); }
-		float Grad(int hash, float x, float y, float z) const
+		enum
 		{
-			int h = hash & 15; // Convert the lower 4 bits of the hash code into one of 12 gradient directions
-			float u = h < 8 ? x : y;
-			float v = h < 4 ? y : h == 12 || h == 14 ? x : z;
-			return ((h&1) == 0 ? u : -u) + ((h&2) == 0 ? v : -v);
-		}
-		
+			PermTableSize = 1 << 10,
+			PermTableMask = PermTableSize - 1,
+		};
+
+		Rng* m_rng;
+		int  m_perm[PermTableSize * 2];
+
 	public:
-		PerlinNoiseGenerator(int seed = 0)
-		:m_rand(seed)
+
+		explicit PerlinNoiseGenerator(Rng& rng)
+			:m_rng(&rng)
 		{
 			// Generate a permutation table
-			int table[PermTableSize];
-			for (int i = 0; i < PermTableSize; ++i) { table[i] = i; }
-			for (int i = 0; i < PermTableSize; ++i)
+			for (int i = 0; i != PermTableSize; ++i)
+				m_perm[i] = i;
+
+			// Shuffle
+			std::uniform_int_distribution<int> dist(0, PermTableSize-1); // (inclusive-inclusive)
+			for (int i = 0; i != PermTableSize; ++i)
 			{
-				m_rand.next();
-				int j = m_rand.value() % PermTableSize;
-				int temp = table[i]; table[i] = table[j]; table[j] = temp;
+				int j = dist(*m_rng);
+				std::swap(table[i], table[j]);
 			}
-			
+
 			// Can also use this pre-generated one if you want...
 			//const int table[PermTableSize] =
 			//{
@@ -73,13 +69,15 @@ namespace pr
 			//	184,  84, 204, 176, 115, 121,  50,  45, 127,   4, 150, 254, 138, 236, 205,  93,
 			//	222, 114,  67,  29,  24,  72, 243, 141, 128, 195,  78,  66, 215,  61, 156, 180
 			//};
-			
-			for( int i = 0; i < PermTableSize; ++i )
-				m_perm[i] = m_perm[PermTableSize + i] = table[i];
+			for (int i = 0; i != PermTableSize; ++i)
+				m_perm[i+PermTableSize] = m_perm[i];
 		}
-		
+
 		// Return the noise value at coordinate (x,y,z)
-		float Noise(v4 const& vec) const { return Noise(vec.x, vec.y, vec.z); }
+		float Noise(v4 const& vec) const
+		{
+			return Noise(vec.x, vec.y, vec.z);
+		}
 		float Noise(float x, float y, float z) const
 		{
 			// Pick valid points within the permutation table
@@ -96,11 +94,11 @@ namespace pr
 			float u = Fade(x);
 			float v = Fade(y);
 			float w = Fade(z);
-			
+
 			// Hash the coordinates of the 8 cube corners
 			int A = m_perm[X    ] + Y, AA = m_perm[A] + Z, AB = m_perm[A + 1] + Z;
 			int B = m_perm[X + 1] + Y, BA = m_perm[B] + Z, BB = m_perm[B + 1] + Z;
-			
+
 			// Add the blended results from the 8 corners of the cube
 			return  Lerp(w, Lerp(v, Lerp(u, Grad(m_perm[AA  ], x  , y  , z   ),
 											Grad(m_perm[BA  ], x-1, y  , z   )),
@@ -111,7 +109,23 @@ namespace pr
 									Lerp(u, Grad(m_perm[AB+1], x  , y-1, z-1 ),
 											Grad(m_perm[BB+1], x-1, y-1, z-1 ))));
 		}
+
+	private:
+
+		float Fade(float t) const
+		{
+			return t * t * t * (t * (t * 6 - 15) + 10);
+		}
+		float Lerp(float t, float a, float b) const
+		{
+			return a + t * (b - a);
+		}
+		float Grad(int hash, float x, float y, float z) const
+		{
+			int h = hash & 15; // Convert the lower 4 bits of the hash code into one of 12 gradient directions
+			float u = h < 8 ? x : y;
+			float v = h < 4 ? y : h == 12 || h == 14 ? x : z;
+			return ((h&1) == 0 ? u : -u) + ((h&2) == 0 ? v : -v);
+		}
 	};
 }
-
-#endif

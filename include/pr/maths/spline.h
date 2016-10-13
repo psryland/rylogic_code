@@ -3,7 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
 #pragma once
-
+#include <random>
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
 #include "pr/maths/vector4.h"
@@ -334,33 +334,32 @@ namespace pr
 	}
 	
 	// Random infinite spline within a bounding box
+	template <typename Rng = std::default_random_engine> 
 	struct RandSpline :Spline
 	{
+		Rng*   m_rng;
 		Spline m_next;
 		BBox   m_bbox;
-		Rand   m_rng;
-		uint   m_seed;
-		float      m_clock;  // The current 'time' along the spline [0,1)
+		float  m_clock;  // The current 'time' along the spline [0,1)
 
-		RandSpline(BBox const& bbox = BBoxUnit, uint seed = 1)
-			:m_next()
+		RandSpline(Rng& rng, BBox const& bbox = BBoxUnit)
+			:m_rng(&rng)
+			,m_next()
 			,m_bbox(bbox)
-			,m_rng()
-			,m_seed(seed)
 			,m_clock(0.0f)
 		{
 			m_next = Spline(GenPoint(), GenPoint(), GenPoint(), GenPoint());
 			Roll();
 			Roll();
 		}
-		void Reset()
+		void Reset(Rng& rng)
 		{
-			m_rng.seed(m_seed);
+			m_rng = &rng;
 			m_clock = 0.0f;
 		}
 		v4 GenPoint()
 		{
-			return Random3(m_rng, m_bbox.Lower(), m_bbox.Upper(), 1.0f);
+			return Random3(*m_rng, m_bbox.Lower(), m_bbox.Upper(), 1.0f);
 		}
 		void Roll()
 		{

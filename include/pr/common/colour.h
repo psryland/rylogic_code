@@ -397,15 +397,16 @@ namespace pr
 	}
 
 	// Create a random colour
-	inline Colour32 RandomRGB(Rand& rnd, float a)
+	template <typename Rng = std::default_random_engine> inline Colour32 RandomRGB(Rng& rng, float a)
 	{
-		return Colour32(rnd.flt(), rnd.flt(), rnd.flt(), a);
+		std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+		return Colour32(dist(rng), dist(rng), dist(rng), a);
 	}
 
 	// Create a random colour
-	inline Colour32 RandomRGB(Rand& rnd)
+	template <typename Rng = std::default_random_engine> inline Colour32 RandomRGB(Rng& rng)
 	{
-		return RandomRGB(rnd, 1.0f);
+		return RandomRGB(rng, 1.0f);
 	}
 	#pragma endregion
 

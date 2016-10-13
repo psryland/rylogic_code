@@ -477,9 +477,6 @@
     <ClInclude Include="..\include\pr\maths\rand_mt19937.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\maths\rand.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\maths\polynomial.h">
       <Filter>pr\maths</Filter>
     </ClInclude>

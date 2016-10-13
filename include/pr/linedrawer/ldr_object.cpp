@@ -319,7 +319,7 @@ namespace pr
 				}
 			case EKeyword::RandColour:
 				{
-					obj->m_base_colour = pr::RandomRGB(g_Rand());
+					obj->m_base_colour = pr::RandomRGB(g_rng());
 					return true;
 				}
 			case EKeyword::Animation:

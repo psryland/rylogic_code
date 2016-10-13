@@ -466,16 +466,19 @@ namespace pr
 				PR_CHECK(FEql4(q0, q1), true);
 			}
 			{ // Average
-				Rand rng(1);
 				auto ideal_mean = quat(Normalise3(v4(1,1,1,0)), 0.5f);
-				
+
+				std::default_random_engine rng(1U);
+				std::uniform_int_distribution<int> rng_bool(0, 1);
+				std::uniform_real_distribution<float> rng_angle(ideal_mean.Angle() - 0.2f, ideal_mean.Angle() + 0.2f);
+
 				Avr<quat, float> avr;
 				for (int i = 0; i != 1000; ++i)
 				{
 					auto axis = Normalise3(ideal_mean.Axis() + Random3(rng, 0.0f, 0.2f, 0.0f));
-					auto angle = rng.fltc(ideal_mean.Angle(), 0.2f);
+					auto angle = rng_angle(rng);
 					quat q(axis, angle);
-					avr.Add(rng.boolean() ? q : -q);
+					avr.Add(rng_bool(rng) ? q : -q);
 				}
 				
 				auto actual_mean = avr.Mean();

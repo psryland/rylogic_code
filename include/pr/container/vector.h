@@ -956,6 +956,7 @@ namespace pr
 
 #if PR_UNITTESTS
 #include <algorithm>
+#include <random>
 #include "pr/common/unittests.h"
 #include "pr/common/refcount.h"
 #include "pr/common/refptr.h"
@@ -1282,8 +1283,8 @@ namespace pr
 			{//AlignedTypes
 				StartObjectCount() = ObjectCount();
 				{
-					Rand rnd;
-					auto spline = Spline(Random3N(rnd, 1.0f), Random3N(rnd, 1.0f), Random3N(rnd, 1.0f), Random3N(rnd, 1.0f));
+					std::default_random_engine rng;
+					auto spline = Spline(Random3N(rng, 1.0f), Random3N(rng, 1.0f), Random3N(rng, 1.0f), Random3N(rng, 1.0f));
 
 					pr::vector<v4> arr0;
 					Raster(spline, arr0, 100);
