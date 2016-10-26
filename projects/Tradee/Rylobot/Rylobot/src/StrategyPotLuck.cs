@@ -1,63 +1,56 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using cAlgo.API;
 using pr.extn;
 
 namespace Rylobot
 {
+	/// <summary>Random chance</summary>
 	public class StrategyPotLuck :Strategy
 	{
-		private const string Label = "StrategyPotLuck";
-
 		private Random m_rng;
-		private Position m_position;
 		
-		public StrategyPotLuck(RylobotModel model)
-			:base(model)
+		public StrategyPotLuck(Rylobot bot)
+			:base(bot, "StrategyPotLuck")
 		{
-			m_rng = new Random();
-
-			// Look for any existing trades created by this strategy
-			m_position = Model.Robot.Positions.FirstOrDefault(x => x.Label == Label);
+			m_rng = new Random(1);
 		}
 
-		private void CreateOrder()
-		{
-			if (m_position != null)
-				throw new Exception("Order already exists");
-
-			var tt = m_rng.Float() > 0.5f ? TradeType.Buy : TradeType.Sell;
-			var instr = Model.Instrument;
-			var r = Model.Robot.ExecuteMarketOrder(tt, instr.Symbol, 1000, Label, 100.0, 50.0);
-			if (r.IsSuccessful)
-			{
-				m_position = r.Position;
-			}
-			else
-			{
-				Model.Robot.Print("Create order failed: {0}".Fmt(r.Error));
-			}
-		}
-
+		/// <summary>Called when new data is received</summary>
 		public override void Step()
 		{
 			// No current position? create one
-			if (m_position == null)
+			if (Position == null)
 				CreateOrder();
 		}
 
-		/// <summary>Called when a position closes</summary>
-		protected override void HandlePositionClosed(object sender, PositionEventArgs e)
+		/// <summary>Return a score for how well suited this strategy is to the current conditions</summary>
+		public override double Score()
 		{
-			base.HandlePositionClosed(sender, e);
-			if (m_position != null && m_position.Id == e.Position.Id)
-			{
-				m_position = null;
-				CreateOrder();
-			}
+			return 0.01;
+		}
+
+		/// <summary>Called then the current position closes</summary>
+		protected override void OnPositionClosed(Position position)
+		{
+			base.OnPositionClosed(position);
+
+			// Update the account
+			Bot.Broker.Update();
+
+			// If the position was a win, create another one the same, if not, try opposite
+			var tt = position.GrossProfit > 0 ? position.TradeType : position.TradeType.Opposite();
+			CreateOrder(tt);
+		}
+
+		/// <summary>Create a random trade</summary>
+		private void CreateOrder(TradeType? preferred = null)
+		{
+			if (Position != null)
+				throw new Exception("Position already exists");
+
+			// Choose a trade type
+			var tt = preferred ?? (m_rng.Float() > 0.5f ? TradeType.Buy : TradeType.Sell);
+			Position = Bot.Broker.CreateOrder(Bot.Symbol, tt, Label);
 		}
 	}
 }

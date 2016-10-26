@@ -4,47 +4,116 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using cAlgo.API;
+using cAlgo.API.Indicators;
 using pr.util;
 
 namespace Rylobot
 {
 	public abstract class Strategy :IDisposable
 	{
-		public Strategy(RylobotModel model)
+		// Notes:
+		// - One trade per strategy.
+		// - Strategies should be resume-able, i.e on start they should look for
+		//   existing positions associated with the strategy and continue using them.
+		//   This is so startup/shutdown have very little effect on the running of the bot.
+
+		public Strategy(Rylobot bot, string label)
 		{
-			Model = model;
+			Bot = bot;
+			Instrument = new Instrument(bot, bot.Symbol.Code);
+			Label = label;
+
+			// Look for any existing trade created by this strategy
+			Position = Bot.Positions.FirstOrDefault(x => x.Label == Label);
 		}
 		public virtual void Dispose()
 		{
-			Model = null;
+			Instrument = null;
+			Bot = null;
+		}
+
+		/// <summary>A label for positions created by this strategy</summary>
+		public string Label
+		{
+			get;
+			private set;
 		}
 
 		/// <summary>Application logic</summary>
-		public RylobotModel Model
+		public Rylobot Bot
 		{
-			[DebuggerStepThrough] get { return m_model; }
+			[DebuggerStepThrough] get { return m_bot; }
 			private set
 			{
-				if (m_model == value) return;
-				if (m_model != null)
+				if (m_bot == value) return;
+				if (m_bot != null)
 				{
-					m_model.PositionClosed -= HandlePositionClosed;
-					Util.Dispose(ref m_model);
+					m_bot.Positions.Closed -= HandlePositionClosed;
 				}
-				m_model = value;
-				if (m_model != null)
+				m_bot = value;
+				if (m_bot != null)
 				{
-					m_model.PositionClosed += HandlePositionClosed;
+					m_bot.Positions.Closed += HandlePositionClosed;
 				}
 			}
 		}
-		private RylobotModel m_model;
+		private Rylobot m_bot;
+
+		/// <summary>The main instrument for this bot</summary>
+		public Instrument Instrument
+		{
+			get { return m_instr; }
+			private set
+			{
+				if (m_instr == value) return;
+				Util.Dispose(ref m_instr);
+				m_instr = value;
+			}
+		}
+		private Instrument m_instr;
+
+		/// <summary>The position managed by this strategy</summary>
+		public Position Position
+		{
+			get { return m_position; }
+			protected set
+			{
+				if (m_position == value) return;
+				if (m_position != null)
+				{
+				}
+				m_position = value;
+				if (m_position != null)
+				{
+				}
+			}
+		}
+		private Position m_position;
 
 		/// <summary>Step the strategy</summary>
 		public abstract void Step();
 
-		/// <summary>Called when a position closes</summary>
-		protected virtual void HandlePositionClosed(object sender, PositionEventArgs e)
+		/// <summary>Return a score for how well suited this strategy is to the current conditions</summary>
+		public abstract double Score();
+
+		/// <summary>Called when the current position closes</summary>
+		protected virtual void OnPositionClosed(Position position)
 		{}
+
+		/// <summary>Called when a position closes</summary>
+		private void HandlePositionClosed(PositionClosedEventArgs args)
+		{
+			// If not the position owned by this strategy, then ignore
+			if (Position == null || args.Position.Id != Position.Id)
+				return;
+
+			// Save a reference to the outgoing position and set the current position to null
+			var position = Position;
+			Position = null;
+
+			// Notify position closed
+			OnPositionClosed(position);
+		}
 	}
 }

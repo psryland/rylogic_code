@@ -201,6 +201,12 @@ namespace pr.maths
 			return (double)(scale * Math.Round((decimal)d / scale, digits));
 		}
 
+		/// <summary>Quantise a value to 'scale'. For best results, 'scale' should be a power of 2, i.e. 256, 1024, 2048, etc</summary>
+		public static double Quantise(double x, int scale)
+		{
+			return (int)(x*scale) / (float)(scale);
+		}
+
 		/// <summary>Convert a series of floating point values into a series of integers, preserving the remainders such that the sum of integers is within 1.0 of the sum of the floats</summary>
 		public static IEnumerable<int> TruncWithRemainder(IEnumerable<double> floats)
 		{

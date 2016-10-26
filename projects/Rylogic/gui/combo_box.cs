@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
@@ -19,6 +20,9 @@ namespace pr.gui
 		//   text does not restore cb.SelectedIndex and cb.SelectedItem.
 		// - When the BS position is changed, the CB text is changed before the SelectedIndex
 		//   so TextChanged is raised, then SelectedIndexChanged is raised.
+		// - SelectedIndex/SelectedItem only accept values that are legal according to the Items
+		//   collection. When using a DataSource, however, the items collection isn't updated until
+		//   the control has a windows handle and a parent window (it seems)
 		//
 		// To use the text field to update the bound item do this:
 		//	m_cb.TextChanged += (s,a) =>
@@ -30,11 +34,18 @@ namespace pr.gui
 		//		if (m_cb.SelectedItem == null)
 		//			m_bs.Current.Name = m_cb.Text;
 		//	};
+		public ComboBox()
+			:base()
+		{
+			// Ensure the combo box has a binding context so that assigning
+			// to the DataSource property correctly initialises the Items collection. 
+			BindingContext = new BindingContext();
+		}
 
 		/// <summary>The index of the selected item in the drop down list</summary>
 		public override int SelectedIndex
 		{
-			get { return base.SelectedIndex; }
+			get { return Items.Count > 0 ? base.SelectedIndex : -1; }
 			set
 			{
 				if (value < 0 || value >= Items.Count) return;
@@ -272,3 +283,47 @@ namespace pr.gui
 		}
 	}
 }
+
+#if PR_UNITTESTS
+namespace pr.unittests
+{
+	[TestFixture] public class TestComboBox
+	{
+		[Test] public void DataBinding()
+		{
+			var cb = new pr.gui.ComboBox();
+			var arr = new[]{ "Hello","World" };
+
+			{// Test the data source works even when the window handle hasn't been created
+				cb.DataSource = arr;
+				cb.SelectedItem = "Hello";
+
+				Assert.AreEqual(cb.SelectedIndex, 0);
+				Assert.AreEqual(cb.SelectedItem, "Hello");
+
+				cb.DataSource = new string[0];
+				Assert.AreEqual(cb.SelectedIndex, -1);
+				Assert.AreEqual(cb.SelectedItem, null);
+
+				cb.DataSource = null;
+				Assert.AreEqual(cb.SelectedIndex, -1);
+				Assert.AreEqual(cb.SelectedItem, null);
+			}
+
+			{// Test the combo box still works when added to a form
+				var f = new Form();
+				f.Controls.Add(cb);
+				cb.DataSource = arr;
+				cb.SelectedItem = "Hello";
+
+				Assert.AreEqual(cb.SelectedIndex, 0);
+				Assert.AreEqual(cb.SelectedItem, "Hello");
+
+				cb.DataSource = null;
+				Assert.AreEqual(cb.SelectedIndex, -1);
+				Assert.AreEqual(cb.SelectedItem, null);
+			}
+		}
+	}
+}
+#endif

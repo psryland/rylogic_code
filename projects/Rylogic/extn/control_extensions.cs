@@ -383,6 +383,11 @@ namespace pr.extn
 		public static T FormWrap<T>(this Control ctrl, object[] args = null, string title = null, Icon icon = null, Point? loc = null, Size? sz = null, FormBorderStyle? border = null, FormStartPosition? start_pos = null, bool? show_in_taskbar = null) where T:Form, new()
 		{
 			var f = (T)Activator.CreateInstance(typeof(T), args);
+
+			// Set the window minimum size
+			f.ClientSize = ctrl.MinimumSize;
+			f.MinimumSize = f.Bounds.Size;
+
 			f.ClientSize = ctrl.Bounds.Size;
 			f.ShowIcon = false;
 
@@ -594,6 +599,28 @@ namespace pr.extn
 		public static int ValueClamped(this TrackBar tb, int value)
 		{
 			return tb.Value = Maths.Clamp(value, tb.Minimum, tb.Maximum);
+		}
+	}
+
+	/// <summary>Progress bar extensions</summary>
+	public static class ProgressBar_
+	{
+		/// <summary>Return the value of the progress bar as a normalised fraction</summary>
+		public static double ValueFrac(this ProgressBar pb)
+		{
+			return Maths.Frac((double)pb.Minimum, (double)pb.Value, (double)pb.Maximum);
+		}
+
+		/// <summary>Set the value of the progress bar as a normalised fraction of the min-max range</summary>
+		public static void ValueFrac(this ProgressBar pb, float frac)
+		{
+			pb.Value = Maths.Lerp(pb.Minimum, pb.Maximum, frac);
+		}
+
+		/// <summary>Set the value of progress bar, clamping it to the min/max range</summary>
+		public static int ValueClamped(this ProgressBar pb, int value)
+		{
+			return pb.Value = Maths.Clamp(value, pb.Minimum, pb.Maximum);
 		}
 	}
 }

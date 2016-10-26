@@ -44,6 +44,41 @@ namespace pr.extn
 		//    r.Height = Math.Max(r.Bottom - r.Y, rect.Bottom - r.Y);
 		//}
 
+		/// <summary>Returns a rectangle scaled such that 'rect' will fit centred within 'area'</summary>
+		public static RectangleF ZoomToFit(RectangleF area, SizeF rect, bool allow_grow = true)
+		{
+			if (rect.Width == 0 && rect.Height == 0)
+				return new RectangleF(area.Centre(), SizeF.Empty);
+		
+			// If we need to zoom out to fit 'rect' within 'area', or zoom in is allowed,
+			// return a  rectangle the fills 'area' while preserving the aspect ratio of 'rect'.
+			if (allow_grow || rect.Width > area.Width || rect.Height > area.Height)
+			{
+				// If the aspect ratio (width/height) of 'rect' is greater than the
+				// aspect ratio of 'area' then 'rect' is width bound within 'area'
+				if (rect.Width * area.Height > area.Width * rect.Height)
+				{
+					// 'rect.Width' cannot be zero, because if it was we wouldn't be width bound
+					rect.Height = area.Width * rect.Height / rect.Width;
+					rect.Width  = area.Width;
+				}
+				// Otherwise, 'rect' is height bound within 'area'
+				else
+				{
+					// 'rect.Height' cannot be zero, because if it was we wouldn't be height bound
+					rect.Width  = area.Height * rect.Width / rect.Height;
+					rect.Height = area.Height;
+				}
+			}
+
+			// Return 'rect' centred within 'area'
+			return new RectangleF(
+				area.Left + (area.Width - rect.Width)/2,
+				area.Top + (area.Height - rect.Height)/2,
+				rect.Width,
+				rect.Height);
+		}
+
 		/// <summary>Compare 'pt' to 'rect' and return the zone that it is in</summary>
 		public static EBoxZone GetBoxZone(Rectangle rect, Point pt)
 		{

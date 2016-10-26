@@ -12,8 +12,9 @@ namespace Rylobot
 	{
 		public Settings()
 		{
-			General    = new GeneralSettings();
-			UI         = new UISettings();
+			General = new GeneralSettings();
+			UI      = new UISettings();
+			Acct    = new AcctSettings();
 		}
 		public Settings(string filepath)
 			:base(filepath)
@@ -46,6 +47,17 @@ namespace Rylobot
 				set(x => x.UI, value);
 			}
 		}
+
+		/// <summary>Account settings</summary>
+		public AcctSettings Acct
+		{
+			get { return get(x => x.Acct); }
+			set
+			{
+				if (value == null) throw new ArgumentNullException("Setting '{0}' cannot be null".Fmt(R<Settings>.Name(x => x.Acct)));
+				set(x => x.Acct, value);
+			}
+		}
 	}
 
 	/// <summary>Settings associated with a connection to Rex via RexLink</summary>
@@ -67,7 +79,7 @@ namespace Rylobot
 		private class TyConv :GenericTypeConverter<GeneralSettings> {}
 	}
 
-		/// <summary>Settings associated with a connection to Rex via RexLink</summary>
+	/// <summary>Settings associated with a connection to Rex via RexLink</summary>
 	[TypeConverter(typeof(TyConv))]
 	public class UISettings :SettingsSet<UISettings>
 	{
@@ -84,5 +96,40 @@ namespace Rylobot
 		}
 
 		private class TyConv :GenericTypeConverter<UISettings> {}
+	}
+
+	/// <summary>Settings associated with a connection to Rex via RexLink</summary>
+	[TypeConverter(typeof(TyConv))]
+	public class AcctSettings :SettingsSet<AcctSettings>
+	{
+		public AcctSettings()
+		{
+			MaxRiskPC       = 10.0;
+			LookBackCount   = 50;
+			MinRewardToRisk = 1.5;
+		}
+
+		/// <summary>The percentage of the account balance to risk at any one time</summary>
+		public double MaxRiskPC
+		{
+			get { return get(x => x.MaxRiskPC); }
+			set { set(x => x.MaxRiskPC, value); }
+		}
+
+		/// <summary>The minimum reward to risk ratio for a trade (reward/risk) </summary>
+		public double MinRewardToRisk
+		{
+			get { return get(x => x.MinRewardToRisk); }
+			set { set(x => x.MinRewardToRisk, value); }
+		}
+
+		/// <summary>The number of candles to look back when setting a stop loss or take profit value</summary>
+		public int LookBackCount
+		{
+			get { return get(x => x.LookBackCount); }
+			set { set(x => x.LookBackCount, value); }
+		}
+
+		private class TyConv :GenericTypeConverter<AcctSettings> {}
 	}
 }

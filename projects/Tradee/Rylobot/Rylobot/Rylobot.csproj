@@ -36,7 +36,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="cAlgo.API">
-      <HintPath>..\..\API\cAlgo.API.dll</HintPath>
+      <HintPath>P:\projects\Tradee\API\cAlgo.API.dll</HintPath>
     </Reference>
     <Reference Include="rylogic">
       <HintPath>P:\lib\anycpu\release\rylogic.dll</HintPath>
@@ -56,16 +56,21 @@
     <Compile Include="src\Account.cs" />
     <Compile Include="src\CAlgo.cs" />
     <Compile Include="src\Candle.cs" />
+    <Compile Include="src\Debugging.cs" />
+    <Compile Include="src\SnR.cs" />
     <Compile Include="src\StrategyEmaCross.cs" />
     <Compile Include="src\Instrument.cs" />
     <Compile Include="src\InstrumentSettings.cs" />
-    <Compile Include="src\RylobotModel.cs" />
-    <Compile Include="src\RylobotUI.cs">
+    <Compile Include="src\StrategyTail.cs" />
+    <None Include="src\RylobotModel.cs" />
+    <None Include="src\RylobotUI.cs">
       <SubType>Form</SubType>
-    </Compile>
+    </None>
     <Compile Include="src\Settings.cs" />
     <Compile Include="src\Strategy.cs" />
+    <Compile Include="src\StrategyMain.cs" />
     <Compile Include="src\StrategyPotLuck.cs" />
+    <Compile Include="src\StrategySelector.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="src\RylobotUI.resx">

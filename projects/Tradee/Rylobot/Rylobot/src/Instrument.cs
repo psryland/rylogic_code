@@ -1,7 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using cAlgo.API;
 using cAlgo.API.Internals;
+using pr.common;
 using pr.extn;
+using pr.maths;
 using pr.util;
 using NegIdx = System.Int32;
 
@@ -9,15 +14,22 @@ namespace Rylobot
 {
 	public class Instrument :IDisposable
 	{
-		public Instrument(RylobotModel model)
+		public Instrument(Rylobot bot, string symbol_code)
 		{
-			Model = model;
-			Settings = new InstrumentSettings(Util.ResolveAppDataPath("Rylogic", "Rylobot", ".\\Instruments\\{0}.xml".Fmt(SymbolCode)));
+			Bot = bot;
+
+			// Ensure the instrument settings directory exists
+			if (!Path_.DirExists(Bot.Settings.General.InstrumentSettingsDir))
+				Directory.CreateDirectory(Bot.Settings.General.InstrumentSettingsDir);
+
+			// Load settings for this instrument
+			var instr_settings_filepath = Util.ResolveAppDataPath("Rylogic", "Rylobot", ".\\Instruments\\{0}.xml".Fmt(SymbolCode));
+			Settings = new InstrumentSettings(instr_settings_filepath);
 		}
 		public void Dispose()
 		{
 			Settings = null;
-			Model = null;
+			Bot = null;
 		}
 
 		/// <summary>Settings for the current instrument</summary>
@@ -28,24 +40,24 @@ namespace Rylobot
 		}
 
 		/// <summary>The App logic</summary>
-		public RylobotModel Model
+		public Rylobot Bot
 		{
-			[DebuggerStepThrough] get { return m_model; }
+			[DebuggerStepThrough] get { return m_bot; }
 			private set
 			{
-				if (m_model == value) return;
-				if (m_model != null)
+				if (m_bot == value) return;
+				if (m_bot != null)
 				{
-				//	m_model.ConnectionChanged -= HandleConnectionChanged;
+					m_bot.Tick -= HandleTick;
 				}
-				m_model = value;
-				if (m_model != null)
+				m_bot = value;
+				if (m_bot != null)
 				{
-				//	m_model.ConnectionChanged += HandleConnectionChanged;
+					m_bot.Tick += HandleTick;
 				}
 			}
 		}
-		private RylobotModel m_model;
+		private Rylobot m_bot;
 
 		/// <summary>Raised whenever candles are added/modified in this instrument</summary>
 		public event EventHandler<DataEventArgs> DataChanged;
@@ -54,22 +66,34 @@ namespace Rylobot
 			DataChanged.Raise(this, args);
 		}
 
-		/// <summary>The instrument data source</summary>
-		private MarketSeries Data
+		/// <summary>The instrument time-frame</summary>
+		public TimeFrame TimeFrame
 		{
-			get { return Model.Robot.MarketSeries; }
+			get { return Data.TimeFrame; }
+		}
+
+		/// <summary>The instrument data source</summary>
+		public MarketSeries Data
+		{
+			get { return Bot.MarketSeries; }
 		}
 
 		/// <summary>The CAlgo Symbol interface for this instrument</summary>
 		public Symbol Symbol
 		{
-			get { return Model.GetSymbol(SymbolCode); }
+			get { return Bot.GetSymbol(SymbolCode); }
 		}
 
 		/// <summary>The instrument symbol code</summary>
 		public string SymbolCode
 		{
 			get { return Data.SymbolCode; }
+		}
+
+		/// <summary>The current Ask(+1)/Bid(-1) price</summary>
+		public double CurrentPrice(int sign)
+		{
+			return sign > 0 ? Symbol.Ask : Symbol.Bid;
 		}
 
 		/// <summary>The total number of data points available</summary>
@@ -93,6 +117,8 @@ namespace Rylobot
 		{
 			get
 			{
+				Debug.Assert(neg_idx >= FirstIdx && neg_idx < LastIdx);
+
 				// CAlgo uses 0 = oldest, Count = latest
 				var idx = Data.OpenTime.Count + neg_idx - 1;
 				return new Candle(
@@ -128,8 +154,29 @@ namespace Rylobot
 			private set;
 		}
 
+		/// <summary>Clamps the given index range to a valid range within the data. i.e. [-Count,0]</summary>
+		public Range IndexRange(NegIdx idx_min, NegIdx idx_max)
+		{
+			Debug.Assert(idx_min <= idx_max);
+			var min = Maths.Clamp(idx_min, FirstIdx, LastIdx);
+			var max = Maths.Clamp(idx_max, min, LastIdx);
+			return new Range(min, max);
+		}
+
+		/// <summary>Enumerate the candles within an index range [idx_max,idx_max) (i.e. time-frame units)</summary>
+		public IEnumerable<Candle> CandleRange(NegIdx idx_min, NegIdx idx_max)
+		{
+			var r = IndexRange(idx_min, idx_max);
+			for (var i = r.Begini; i != r.Endi; ++i)
+				yield return this[i];
+		}
+		public IEnumerable<Candle> CandleRange(Range idx_range)
+		{
+			return CandleRange(idx_range.Begini, idx_range.Endi);
+		}
+
 		/// <summary>Called when the instrument data has been updated</summary>
-		public void OnTick()
+		private void HandleTick(object sender, EventArgs e)
 		{
 			// Get the latest candle
 			var candle = this[0];

@@ -684,6 +684,12 @@ namespace pr.util
 			return Path_.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), company, application, relative_path);
 		}
 
+		/// <summary>The ProgramData directory</summary>
+		public static string ResolveProgramDataPath(string company, string application, string relative_path = "")
+		{
+			return Path_.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), company, application, relative_path);
+		}
+
 		/// <summary>
 		/// Event handler used to load a dll from an embedded resource.<para/>
 		/// Use:<para/>

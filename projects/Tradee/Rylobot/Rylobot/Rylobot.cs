@@ -1,94 +1,123 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
-using System.Windows.Forms;
 using cAlgo.API;
-using cAlgo.API.Indicators;
+using cAlgo.API.Internals;
+using pr.common;
 using pr.extn;
+using pr.util;
 
 namespace Rylobot
 {
 	[Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.FullAccess)]
 	public class Rylobot :Robot
 	{
-		private RylobotUI m_ui;
-		private Thread m_thread;
-		private ManualResetEvent m_running;
-
-		private Random m_rng;
-		private Position m_position;
-		private const string Label = "StrategyPotLuck";
-		private MovingAverage m_ema;
-
-		[Parameter("Pip Step", DefaultValue = 50)]
-		public int PipStep { get; set; }
-
+		/// <summary></summary>
 		protected override void OnStart()
 		{
 			base.OnStart();
 
-			m_rng = new Random();
+			// Load the bot settings
+			var settings_filepath = Util.ResolveAppDataPath("Rylogic","Rylobot","Settings.xml");
+			Settings = new Settings(settings_filepath){AutoSaveOnChanges = true};
 
-			// Look for any existing trades created by this strategy
-			m_position = Positions.FirstOrDefault(x => x.Label == Label);
+			// Create the cache of symbol data
+			m_sym_cache = new Cache<string, Symbol> { ThreadSafe = true , Mode = CacheMode.StandardCache };
 
-			m_ema = Indicators.MovingAverage(MarketSeries.Close, 55, MovingAverageType.Exponential);
+			// Create the guy responsible for selecting the trading strategy
+			Selector = new StrategySelector(this);
 
-			Positions.Closed += HandlePositionClosed;
+			// Create the account manager and trade creator
+			Broker = new Broker(this, Account);
+
 		}
 		protected override void OnStop()
 		{
-			Positions.Closed -= HandlePositionClosed;
+			Strat = null;
+			Selector = null;
+			Broker = null;
+			Util.Dispose(ref m_sym_cache);
 			base.OnStop();
 		}
 		protected override void OnTick()
 		{
 			base.OnTick();
+			Tick.Raise(this);
 
-			// No current position? create one
-			if (m_position == null)
-				CreateOrder();
+			// Update the account info
+			Broker.Update();
+
+			// Is it time to change strategy?
+			Strat = Selector.Step(Strat);
+
+			// Step the current strategy
+			Strat.Step();
 		}
+		public event EventHandler Tick;
 
-		/// <summary>Called when a position closes</summary>
-		private void HandlePositionClosed(PositionClosedEventArgs args)
+		/// <summary>App settings</summary>
+		public Settings Settings
 		{
-			if (m_position != null && m_position.Id == args.Position.Id)
-			{
-				m_position = null;
-				CreateOrder();
-			}
+			[DebuggerStepThrough] get;
+			private set;
 		}
 
-		private void CreateOrder(Position last)
+		/// <summary>Manages choosing a trading strategy</summary>
+		public StrategySelector Selector
 		{
-			if (m_position != null)
-				throw new Exception("Order already exists");
-
-			var tt = TradeType.Buy;
-			if (last != null)
-			{
-				tt = last.GrossProfit > 0 ? last.TradeType : last.TradeType.Opposite();
-			}
-
-			var grad = m_ema.Result.Gradient(m_ema.Result.Count-1);
-			var thres = 0f;//grad > 0 ? -0.25f : +0.25f;
-			var tt = m_rng.FloatC(0f, 1f) > thres ? TradeType.Buy : TradeType.Sell;
-
-			var r = ExecuteMarketOrder(tt, Symbol, 1000, Label, 2*PipStep, PipStep);
-			if (r.IsSuccessful)
-			{
-				m_position = r.Position;
-			}
-			else
-			{
-				Print("Create order failed: {0}".Fmt(r.Error));
-			}
+			get;
+			private set;
 		}
 
+		/// <summary>The current trading strategy</summary>
+		public Strategy Strat
+		{
+			get;
+			private set;
+		}
 
-		#if false
+		/// <summary>Manages creating trades and managing the risk level</summary>
+		public Broker Broker
+		{
+			get;
+			private set;
+		}
+
+		/// <summary>Return the symbol for a given symbol code or null if invalid or unavailable</summary>
+		public Symbol GetSymbol(string symbol_code)
+		{
+			// Quick out if the requested symbol is the one this bot is running on
+			if (symbol_code == Symbol.Code)
+				return Symbol;
+
+			// Otherwise, request the other symbol data
+			return m_sym_cache.Get(symbol_code, c =>
+			{
+				Symbol res = null;
+				using (var wait = new ManualResetEvent(false))
+				{
+					BeginInvokeOnMainThread(() =>
+					{
+						res = MarketData.GetSymbol(symbol_code);
+						wait.Set();
+					});
+					wait.WaitOne(TimeSpan.FromSeconds(30));
+					return res;
+				}
+			});
+		}
+		private Cache<string,Symbol> m_sym_cache;
+	}
+}
+
+
+
+
+
+#if false
+		private RylobotUI m_ui;
+		private Thread m_thread;
+		private ManualResetEvent m_running;
 		protected override void OnStart()
 		{
 			try
@@ -96,13 +125,15 @@ namespace Rylobot
 				m_running = new ManualResetEvent(false);
 
 				// Create a thread and launch the Rylobot UI in it
-				m_thread = new Thread(Main) { Name = "Rylobot" };
+				m_thread = new Thread(Main) 
+				{
+					Name = "Rylobot"
+				};
 				m_thread.SetApartmentState(ApartmentState.STA);
 				m_thread.Start();
 
 				m_running.WaitOne(1000);
-			}
-			catch (Exception ex)
+			} catch (Exception ex)
 			{
 				Trace.WriteLine(ex.Message);
 				m_thread = null;
@@ -116,8 +147,7 @@ namespace Rylobot
 			{
 				if (m_ui != null && !m_ui.IsDisposed && m_ui.IsHandleCreated)
 					m_ui.BeginInvoke(() => m_ui.Close());
-			}
-			catch (Exception ex)
+			} catch (Exception ex)
 			{
 				Trace.WriteLine(ex.Message);
 			}
@@ -134,7 +164,8 @@ namespace Rylobot
 		}
 
 		/// <summary>Thread entry point</summary>
-		[STAThread] private void Main()
+		[STAThread()]
+		private void Main()
 		{
 			try
 			{
@@ -150,12 +181,9 @@ namespace Rylobot
 				}
 
 				Stop();
-			}
-			catch (Exception ex)
+			} catch (Exception ex)
 			{
 				Trace.WriteLine(ex.Message);
 			}
 		}
-		#endif
-	}
-}
+#endif

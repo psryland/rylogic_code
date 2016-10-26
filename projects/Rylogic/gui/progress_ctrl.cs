@@ -10,7 +10,7 @@ using pr.win32;
 namespace pr.gui
 {
 	/// <summary>Progress bar that allows text overlay</summary>
-	public class TextProgressBar :System.Windows.Forms.ProgressBar
+	public class TextProgressBar :ProgressBar
 	{
 		public TextProgressBar()
 		{

@@ -10,12 +10,18 @@ namespace Rylobot
 	{
 		// Look for crosses of the EMA.
 		// When a candle closes on compl
-		public StrategyEmaCross(RylobotModel model)
-			:base(model)
+		public StrategyEmaCross(Rylobot bot)
+			:base(bot, "StrategyEmaCross")
 		{ }
 
 		public override void Step()
 		{
+		}
+
+		/// <summary>Return a score for how well suited this strategy is to the current conditions</summary>
+		public override double Score()
+		{
+			return 0.0; // not implemented
 		}
 	}
 }

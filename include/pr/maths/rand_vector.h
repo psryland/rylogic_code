@@ -158,6 +158,7 @@ namespace pr
 			auto x = dist(rng);
 			auto y = dist(rng);
 			auto z = dist(rng);
+			auto w = dist(rng);
 			auto v = v4(x, y, z, w);
 			auto len = Length4Sq(v);
 			if (len >= 0.01f && len <= 1.0f)

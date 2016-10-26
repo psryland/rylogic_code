@@ -1,29 +1,34 @@
-import sys, os, time, shutil, glob, subprocess, re, socket, zipfile, ctypes, enum
+import sys, os, time, shutil, glob, subprocess, threading, re, enum, socket, zipfile, ctypes
+import xml.etree.ElementTree as xml
+import xml.dom.minidom as minidom
 import UserVars
 
 # Terminate the script indicating success
-def OnSuccess(msg = "\nSuccess\n", enter_to_close=False, pause_time_seconds=5):
+def OnSuccess(msg = "\nSuccess\n", enter_to_close=False, pause_time_seconds=5, sys_exit=False):
 	print(msg)
 	try:
 		if enter_to_close: input("Press enter to close")
 		else: time.sleep(pause_time_seconds)
 	except:
 		pass
-	sys.exit(0)
+	if sys_exit:
+		sys.exit(0)
 
 # Terminate the script indicating an error
-def OnError(msg = "\nFailed\n", enter_to_close=True, pause_time_seconds=0):
+def OnError(msg = "\nFailed\n", enter_to_close=True, pause_time_seconds=0, sys_exit=False):
 	print(msg)
 	try:
 		if enter_to_close: input("Press enter to close")
 		else: time.sleep(pause_time_seconds)
 	except:
 		pass
-	sys.exit(-1)
+	if sys_exit:
+		sys.exit(-1)
 
 # Terminate on exception
 def OnException(ex,enter_to_close=True, pause_time_seconds=0):
 	OnError("ERROR: " + str(ex), enter_to_close=enter_to_close, pause_time_seconds=pause_time_seconds)
+	return
 
 # Check that the UserVars file is the correct version
 def AssertVersion(version):
@@ -52,6 +57,18 @@ def NormaliseFilepath(filepath):
 	filepath = filepath.replace('"','')
 	filepath = filepath if os.path.isabs(filepath) else os.path.abspath(filepath)
 	return filepath
+
+# Ask for user input with a timeout. Returns [True, input] on success, or [False, ""] on timeout
+def InputWithTimeout(msg, timeout_s):
+	res = [False, ""]
+	e = threading.Event();
+	def prompt(r):
+		r[1] = input(msg)
+		r[0] = True
+		e.set()
+	threading.Thread(target=prompt, args=[res]).start()
+	e.wait(timeout_s)
+	return res
 
 # Delete a file or directory tree using the shell
 def ShellDelete(path, wait_time_ms = 100):
@@ -119,24 +136,26 @@ def DiffContent(src,dst,trace=False):
 # Copy 'src' to 'dst' optionally if 'src' is newer than 'dst'
 def Copy(src, dst, only_if_modified=True, show_unchanged=False, ignore_non_existing=False, quiet=False):
 
+	src_is_dir = src.endswith("/") or src.endswith("\\")
+	dst_is_dir = dst.endswith("/") or dst.endswith("\\")
 	src = os.path.abspath(src)
 	dst = os.path.abspath(dst)
-	src_is_dir = os.path.isdir(src)
-	dst_is_dir = os.path.isdir(dst) or dst.endswith("/") or dst.endswith("\\") or src_is_dir
+	src_is_dir |= os.path.isdir(src)
+	dst_is_dir |= os.path.isdir(dst) or src_is_dir
 
-	# Find the names of the source files to copy
-	files = []
+	# Find the source files/directories to copy (filenames only, not full paths)
+	lst = []
 	if src_is_dir:
-		files += [f for f in EnumFiles(src)]
+		lst += [f for f in os.listdir(src)]
 	elif os.path.exists(src):
-		files += [src]
+		lst += [os.path.split(src)[1]]
 	elif "*" in src or "?" in src:
-		files += glob.glob(src)
+		lst += [os.path.split(f)[1] for f in glob.glob(src)]
 	elif not ignore_non_existing:
 		raise FileNotFoundError("ERROR: "+src+" does not exist")
 
 	# If the 'src' represents multiple files, 'dst' must be a directory
-	if src_is_dir or len(files) > 1:
+	if src_is_dir or len(lst) > 1:
 		# if 'dst' doesn't exist, assume it's a directory
 		if not os.path.exists(dst):
 			dst_is_dir = True
@@ -144,34 +163,41 @@ def Copy(src, dst, only_if_modified=True, show_unchanged=False, ignore_non_exist
 		elif not dst_is_dir:
 			raise FileNotFoundError("ERROR: "+dst+" is not a valid directory")
 
-	# Ensure the 'dstdir' exists
+	srcdir = (src if src_is_dir else os.path.dirname(src)).rstrip("/\\")
 	dstdir = (dst if dst_is_dir else os.path.dirname(dst)).rstrip("/\\")
+
+	# Ensure 'dstdir' exists
 	if not os.path.exists(dstdir):
 		os.makedirs(dstdir)
+		if src_is_dir: shutil.copystat(src, dstdir)
+		if not quiet: print(srcdir + " --> " + dstdir)
 
-	# Copy the file(s) to 'dst'
-	for srcfile in files:
-		# All src directories should have been converted to a list of files
-		if os.path.isdir(srcfile):
-			raise AssertionError("ERROR: "+srcfile+" is a directory, not a file");
-		
-		# If 'dst' is a directory, use the same filename from 'srcfile'
-		if dst_is_dir:
-			spath = os.path.relpath(srcfile, src) if src_is_dir else os.path.split(srcfile)[1]
-			dstfile = os.path.join(dstdir, spath)
+	# Copy the source files/directories to 'dst'
+	for src_item in lst:
+		s = os.path.join(srcdir, src_item)
+		d = os.path.join(dstdir, src_item) if dst_is_dir else dst
+
+		# Test for symlinks...
+		# Needs an option to copy symlinks, or follow the links and copy what they point to
+		if os.path.islink(s):
+			raise AssertionError("ERROR: This copy function doesn't consider symlinks yet. It's a todo...")
+
+		# Call recursively for directory copies
+		if os.path.isdir(s):
+			Copy(s, d+"\\", only_if_modified, show_unchanged, ignore_non_existing, quiet)
+
+		# Copy the file
 		else:
-			dstfile = dst
+			# Copy if modified or always based on the flag
+			if only_if_modified and not DiffContent(s, d):
+				if not quiet and show_unchanged: print(s + " --> unchanged")
+				continue
 
-		# Copy if modified or always based on the flag
-		if only_if_modified and not DiffContent(srcfile,dstfile):
-			if not quiet and show_unchanged: print(srcfile + " --> unchanged")
-			continue
+			# Copy the file
+			if not quiet: print(s + " --> " + d)
+			shutil.copy2(s, d)
 
-		# Ensure the directory path exists
-		d,f = os.path.split(dstfile);
-		if not os.path.exists(d): os.makedirs(d);
-		if not quiet: print(srcfile + " --> " + dstfile)
-		shutil.copy2(srcfile, dstfile)
+	return
 
 # Return the line number of a given byte offset into a file
 def LineNumber(fpath, ofs):
@@ -192,7 +218,23 @@ def VSLink(file,lineno=None,ofs=None):
 		except: lineno = 0
 	return "\n" + file + "(" + str(lineno + 1) + "): "
 
+# Replaces GCC style "file:line:col:" substrings with VS style "file(line):"
+# Handles byte arrays or strings
+def Gcc2Vs(line):
+	# (?:\w:[/\\])? = optional drive letter followed by '\' or '/'
+	# (?:[\w\-. ]+[/\\])* = 0 or more subdirectories
+	# (?:[\w\-. ]+) = file name including extension
+	# :(\d+) = :line_number
+	# (?::\d+) = optional :column number
+	pat = r"((?:\w:[/\\])?(?:[\w\-. ]+[/\\])*(?:[\w\-. ]+)):(\d+)(?::\d+)"
+	repl = r"\g<1>(\g<2>)"
+	if isinstance(line, bytes):
+		return re.sub(pat.encode(), repl.encode(), line)
+	else:
+		return re.sub(pat, repl, line)
+
 # Executes a program and returns it's stdout/stderr as a string
+# Returns (result,output)
 def Run(args, expected_return_code=0,show_arguments=False):
 	try:
 		if show_arguments: print(args)
@@ -214,6 +256,7 @@ def Exec(args, expected_return_code=0, working_dir=".\\", show_arguments=False):
 # Call another script. Remember, you can import and call directly.. probably preferable to this
 def Call(script, args, expected_return_code=0,show_arguments=False):
 	Exec(["py.exe", script] + args, expected_return_code=expected_return_code, show_arguments=show_arguments)
+	return
 
 # Run a program in a separate console window
 # Returns the process for the caller to call wait() on,
@@ -239,9 +282,10 @@ def Spawn(args, expected_return_code=0, same_window=False, show_window=True, sho
 # Extract data from a text file using a regex
 # Capture groups are defined like: (?P<name>.*) and accessed like: m.group("name")
 # Returns the regex match object for the first match or null
-def Extract(filepath, regex):
+# Encoding can be: ascii, utf-8, cp1250, etc
+def Extract(filepath, regex, encoding="utf-8"):
 	pat = re.compile(regex)
-	with open(filepath, encoding="utf-8") as f:
+	with open(filepath, encoding=encoding) as f:
 		for line in f:
 			m = pat.search(line)
 			if m: return m
@@ -286,9 +330,8 @@ def Expand(template_filepath, output_filepath, regex_pattern, subst_func):
 	with open(output_filepath, mode='w') as f:
 		f.write(buf)
 
-# Modify a file using regex
-# Capture groups are defined like: (?P<name>.*)
-# and accessed like: m.group("name")
+# Modify a file, line-by-line, using regex
+# Capture groups are defined like: (?P<name>.*) and accessed like: m.group("name")
 def UpdateFileByLine(filepath:str, regex:str, repl:str, all=False):
 	pat = re.compile(regex)
 	with open(filepath+".tmp", mode='w') as outf:
@@ -345,30 +388,31 @@ def CheckDependencies(deps, touch_file):
 		newer = max(os.path.getmtime(dep), newer)
 	if newer > touch:
 		TouchFile(touch_file)
-
-# Invoke MSBuild
-# e.g.
-#   sln = "C:\path\mysolution.sln"
-#	projects = [
-#		"project_name",
-#		"\"folder\proj_name:Rebuild\""
-#		]
-#	platforms = [
-#		"x64",
-#		"x86"
-#		]
-#	configs = [
-#		"release",
-#		"debug",
-#		]
-#	Tools.MSBuild(sln, projects, platforms, configs, True, True)
-def MSBuild(sln, projects, platforms, configs, parallel=False, same_window=True):
-	projs = ";".join(projects)
-	procs = []
+		
+# Invoke MSBuild on a solution or project file.
+# Solution file usage:
+#   sln_or_proj_file = "C:\path\mysolution.sln"
+#	projects = ["project_name","\"folder\proj_name:Rebuild\""]
+#	platforms = ["x64","x86","AnyCPU"]
+#	configs = ["release","debug"]
+#	Tools.MSBuild(sln_or_proj_file, projects, platforms, configs, True, True)
+# Project file usage:
+#   sln_or_proj_file = "C:\path\myproject.csproj"
+#	projects = []
+#	platforms = ["x64","x86","AnyCPU"]
+#	configs = ["release","debug"]
+#	Tools.MSBuild(sln_or_proj_file, projects, platforms, configs, True, True)
+def MSBuild(sln_or_proj_file, projects, platforms, configs, parallel=False, same_window=True):
+	
+	# Build the arguments list
 	AssertPathsExist([UserVars.msbuild])
+	args_base = [UserVars.msbuild, UserVars.msbuild_props, sln_or_proj_file, "/m", "/verbosity:minimal", "/nologo"]
+	if len(projects) != 0: args_base += ["/t:" + ";".join(projects)]
+	
+	procs = []
 	for platform in platforms:
 		for config in configs:
-			args = [UserVars.msbuild, UserVars.msbuild_props, sln, "/t:"+projs, "/p:Configuration="+config+";Platform="+platform, "/m", "/verbosity:minimal", "/nologo"]
+			args = args_base + ["/p:Configuration="+config+";Platform="+platform]
 			if parallel:
 				procs.extend([Spawn(args, same_window=same_window)])
 			else:
@@ -409,6 +453,80 @@ def ZipDirectory(zip_path, root_dir):
 			arcpath  = os.path.relpath(filepath, root_dir)
 			zipf.write(filepath, arcpath)
 	zipf.close()
+
+# Write XML to a file with decent formatting.
+# For some reason this is glaringly missing from the built in XML support
+def WriteXml(root:xml.Element, filepath:str, formatted=True):
+	with open(filepath, "w") as f:
+		if formatted:
+			f.write(minidom.parseString(xml.tostring(root)).toprettyxml())
+		else:
+			f.write(xml.tostring(root))
+
+# Enums for StrTxfm
+class ECapitalise(enum.Enum):
+	LowerCase  = -1
+	DontChange = 0
+	UpperCase  = +1
+class ESeparate(enum.Enum):
+	Remove     = -1
+	DontChange = 0
+	Add        = +1
+
+# Transform a string by the given casing rules
+# Capitalise values: -1 => to lower case, 0 => unchanged, +1 => to upper case
+# Separation values: -1 => remove separator, 0 => unchanged, +1 => insert separator
+# 'word_start' - How to capitalise the start of words
+# 'word_case' - How to capitalise the whole word
+def StrTxfm(string:str, word_start=ECapitalise.DontChange, word_case=ECapitalise.DontChange, word_sep=ESeparate.DontChange, sep="", delims=""):
+
+	# Ignore empty or null strings
+	if string == None or string == "":
+		return string
+
+	delims = delims if delims != None else ""
+	strlen = len(string)
+	sb = ""
+
+	i = 0
+	while i != strlen:
+
+		# Skip over multiple delimiters
+		while i != strlen and delims.find(string[i]) != -1:
+			if word_sep == ESeparate.DontChange:
+				sb += string[i]
+			i += 1
+
+		# Detect word boundaries
+		boundary = (
+			i == 0 or                                          # first letter in the string
+			delims.find(string[i-1]) != -1 or                  # previous char is a delimiter
+			(string[i-1].islower() and string[i].isupper()) or # lower to upper case letters
+			(string[i-1].isalpha() and string[i].isdigit()) or # letter to digit
+			(string[i-1].isdigit() and string[i].isalpha()) or # digit to letter
+			(i < strlen - 1 and string[i-1].isupper() and string[i].isupper() and string[i+1].islower()))
+
+		# Add/Remove separators at word boundaries
+		if boundary:
+			if i != 0 and word_sep == ESeparate.Add and sep != None:
+				sb += sep
+
+			if   word_start == ECapitalise.DontChange: sb += string[i]
+			elif word_start == ECapitalise.UpperCase:  sb += string[i].upper()
+			elif word_start == ECapitalise.LowerCase:  sb += string[i].lower()
+			else: raise Exception("Unknown 'ECapitalise' value for 'word_start'")
+
+		# Capitalise words
+		else:
+			if   word_case == ECapitalise.DontChange: sb += string[i]
+			elif word_case == ECapitalise.UpperCase:  sb += string[i].upper()
+			elif word_case == ECapitalise.LowerCase:  sb += string[i].lower()
+			else: raise Exception("Unknown 'ECapitalise' value for 'word_case'")
+
+		# Next character
+		i += 1
+
+	return sb
 
 # Popup a message box
 class EMsgBoxBtns(enum.IntEnum):
