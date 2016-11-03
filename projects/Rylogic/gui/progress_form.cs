@@ -52,7 +52,7 @@ namespace pr.gui
 
 		private readonly TextProgressBar m_progress;
 		private readonly Label m_description;
-		private readonly Button m_button;
+		private readonly Button m_btn_cancel;
 		private Thread m_thread;
 		private Exception m_error;
 
@@ -82,20 +82,20 @@ namespace pr.gui
 					Anchor = AnchorStyles.Top|AnchorStyles.Left
 				};
 			
-				m_button = new Button
+				m_btn_cancel = new Button
 				{
 					Text = "Cancel",
 					UseVisualStyleBackColor = true,
 					TabIndex = 1,
 					Anchor = AnchorStyles.Bottom|AnchorStyles.Right
 				};
-				m_button.Click += (s,a) =>
+				m_btn_cancel.Click += (s,a) =>
 				{
 					if (CancelSignal != null)
 						CancelSignal.Set();
 
-					m_button.Text = "Cancelling...";
-					m_button.Enabled = false;
+					m_btn_cancel.Text = "Cancelling...";
+					m_btn_cancel.Enabled = false;
 				};
 
 				Text = title ?? string.Empty;
@@ -103,7 +103,7 @@ namespace pr.gui
 
 				Controls.Add(m_description);
 				Controls.Add(m_progress);
-				Controls.Add(m_button);
+				Controls.Add(m_btn_cancel);
 			}
 		}
 
@@ -171,13 +171,18 @@ namespace pr.gui
 		}
 		protected override void OnLayout(LayoutEventArgs levent)
 		{
-			using (this.SuspendLayout(false))
-				DoLayout();
-
+			DoLayout();
 			base.OnLayout(levent);
 		}
 		protected override void OnFormClosing(FormClosingEventArgs e)
 		{
+			// If cancel isn't allowed, ignore the Red X
+			if (e.CloseReason == CloseReason.UserClosing && !AllowCancel)
+			{
+				e.Cancel = true;
+				return;
+			}
+
 			if (CancelSignal != null)
 			{
 				// Save the result based on whether cancel was selected
@@ -212,9 +217,15 @@ namespace pr.gui
 		/// <summary>Allow/Disallow cancel</summary>
 		public bool AllowCancel
 		{
-			get { return m_button.Visible; }
-			set { m_button.Visible = false; }
+			get { return m_allow_cancel; }
+			set
+			{
+				if (m_allow_cancel == value) return;
+				m_allow_cancel = false;
+				DoLayout();
+			}
 		}
+		private bool m_allow_cancel;
 
 		/// <summary>An event used to signal the other thread to cancel</summary>
 		public ManualResetEvent CancelSignal { get; private set; }
@@ -287,7 +298,11 @@ namespace pr.gui
 				DoLayout();
 
 			if (us.CloseDialog)
+			{
+				// Don't trigger a layout, we just want to exit
+				m_allow_cancel = true;
 				Close();
+			}
 		}
 
 		/// <summary>Set the exception, so that an exception is throw on closing the dialog</summary>
@@ -299,36 +314,40 @@ namespace pr.gui
 		/// <summary>Layout the form</summary>
 		private void DoLayout()
 		{
-			const int space = 10;
-
-			// Determine the vertical and left positions
-			m_description.Location = new Point(space, space);
-			m_description.Size     = new Size(m_description.PreferredWidth, m_description.PreferredHeight);
-			m_progress.Location    = new Point(space, m_description.Bottom + space);
-			m_progress.Width       = Math.Max(300, m_description.PreferredWidth);
-			m_button.Location      = new Point(m_progress.Right - m_button.Width, m_progress.Bottom + space);
-
-			// Find the bounds of the controls
-			Rectangle bounds = Rectangle.Empty;
-			foreach (Control c in Controls)
-				bounds = Rectangle.Union(bounds, c.Bounds);
-
-			// Set the dialog size
-			var preferred_size = bounds.Size + new Size(space, space);
-			switch (AutoSizeMode)
+			using (this.SuspendLayout(false))
 			{
-			case AutoSizeMode.GrowAndShrink:
-				ClientSize = preferred_size;
-				break;
-			case AutoSizeMode.GrowOnly:
-				ClientSize = new Size(
-					Math.Max(preferred_size.Width, ClientSize.Width),
-					Math.Max(preferred_size.Height, ClientSize.Height));
-				break;
-			}
+				const int space = 10;
 
-			m_progress.Width = ClientSize.Width - 2*space;
-			m_button.Location = new Point(m_progress.Right - m_button.Width, m_progress.Bottom + space);
+				// Determine the vertical and left positions
+				m_description.Location = new Point(space, space);
+				m_description.Size     = new Size(m_description.PreferredWidth, m_description.PreferredHeight);
+				m_progress.Location    = new Point(space, m_description.Bottom + space);
+				m_progress.Width       = Math.Max(300, m_description.PreferredWidth);
+				m_btn_cancel.Location  = new Point(m_progress.Right - m_btn_cancel.Width, m_progress.Bottom + space);
+
+				// Find the bounds of the controls
+				Rectangle bounds = Rectangle.Empty;
+				foreach (Control c in Controls)
+					bounds = Rectangle.Union(bounds, c.Bounds);
+
+				// Set the dialog size
+				var preferred_size = bounds.Size + new Size(space, space);
+				switch (AutoSizeMode)
+				{
+				case AutoSizeMode.GrowAndShrink:
+					ClientSize = preferred_size;
+					break;
+				case AutoSizeMode.GrowOnly:
+					ClientSize = new Size(
+						Math.Max(preferred_size.Width, ClientSize.Width),
+						Math.Max(preferred_size.Height, ClientSize.Height));
+					break;
+				}
+
+				m_progress.Width = ClientSize.Width - 2*space;
+				m_btn_cancel.Location = new Point(m_progress.Right - m_btn_cancel.Width, m_progress.Bottom + space);
+				m_btn_cancel.Visible = AllowCancel;
+			}
 		}
 	}
 }

@@ -74,7 +74,11 @@ namespace pr.gui
 		public override string Text
 		{
 			get { return base.Text; }
-			set { base.Text = TextC.Text = value; }
+			set
+			{
+				if (Text == value) return;
+				base.Text = TextC.Text = value;
+			}
 		}
 
 		/// <summary>Standard control font maps to 'TextC'</summary>

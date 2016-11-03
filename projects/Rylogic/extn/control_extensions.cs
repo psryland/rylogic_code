@@ -610,15 +610,27 @@ namespace pr.extn
 		{
 			return Maths.Frac((double)pb.Minimum, (double)pb.Value, (double)pb.Maximum);
 		}
+		public static double ValueFrac(this ToolStripProgressBar pb)
+		{
+			return Maths.Frac((double)pb.Minimum, (double)pb.Value, (double)pb.Maximum);
+		}
 
 		/// <summary>Set the value of the progress bar as a normalised fraction of the min-max range</summary>
 		public static void ValueFrac(this ProgressBar pb, float frac)
 		{
 			pb.Value = Maths.Lerp(pb.Minimum, pb.Maximum, frac);
 		}
+		public static void ValueFrac(this ToolStripProgressBar pb, float frac)
+		{
+			pb.Value = Maths.Lerp(pb.Minimum, pb.Maximum, frac);
+		}
 
 		/// <summary>Set the value of progress bar, clamping it to the min/max range</summary>
 		public static int ValueClamped(this ProgressBar pb, int value)
+		{
+			return pb.Value = Maths.Clamp(value, pb.Minimum, pb.Maximum);
+		}
+		public static int ValueClamped(this ToolStripProgressBar pb, int value)
 		{
 			return pb.Value = Maths.Clamp(value, pb.Minimum, pb.Maximum);
 		}

@@ -33,6 +33,11 @@ namespace pr.maths
 			m_mean  = mean;
 			m_count = count;
 		}
+		public Avr(Avr rhs)
+		{
+			m_mean = rhs.m_mean;
+			m_count = rhs.m_count;
+		}
 
 		/// <summary>Number of items added</summary>
 		public uint Count
@@ -81,7 +86,7 @@ namespace pr.maths
 		}
 	}
 
-	/// <summary>Running Average</summary>
+	/// <summary>Running Average with standard deviation and variance</summary>
 	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
 	public class AvrVar :Avr
 	{
@@ -124,6 +129,11 @@ namespace pr.maths
 		{
 			m_var = var;
 		}
+		public AvrVar(AvrVar rhs)
+			:base(rhs)
+		{
+			m_var = rhs.m_var;
+		}
 
 		/// <summary>Population standard deviation.<para/>Use when all data values in a set have been considered.</summary>
 		public double PopStdDev
@@ -155,7 +165,7 @@ namespace pr.maths
 			base.Reset();
 			m_var = 0.0;
 		}
-		
+
 		/// <summary>
 		/// Accumulate statistics for 'value' in a single pass.
 		/// Note, this method is more accurate than the sum of squares, square of sums approach.</summary>
@@ -168,7 +178,151 @@ namespace pr.maths
 			m_var += diff * diff * ((m_count - 1) * inv_count);
 		}
 	}
-	
+
+	/// <summary>Running average of two variables with standard deviation, variance, and correlation coefficient</summary>
+	public class Correlation
+	{
+		protected uint m_count;
+		protected double m_mean_x;
+		protected double m_mean_y;
+		protected double m_var_x;
+		protected double m_var_y;
+		protected double m_var_xy;
+
+		public Correlation()
+		{
+			m_count  = 0;
+			m_mean_x = 0;
+			m_mean_y = 0;
+			m_var_x  = 0;
+			m_var_y  = 0;
+			m_var_xy = 0;
+		}
+		public Correlation(Correlation rhs)
+		{
+			m_count  = rhs.m_count;
+			m_mean_x = rhs.m_mean_x;
+			m_mean_y = rhs.m_mean_y;
+			m_var_x  = rhs.m_var_x;
+			m_var_y  = rhs.m_var_y;
+			m_var_xy = rhs.m_var_xy;
+		}
+
+		/// <summary>Number of items added</summary>
+		public uint Count
+		{
+			get { return m_count; }
+		}
+
+		/// <summary>Mean value</summary>
+		public double MeanX
+		{
+			get { return m_mean_x; }
+		}
+		public double MeanY
+		{
+			get { return m_mean_y; }
+		}
+
+		/// <summary>Sum of values</summary>
+		public double SumX
+		{
+			get { return m_mean_x * m_count; }
+		}
+		public double SumY
+		{
+			get { return m_mean_y * m_count; }
+		}
+
+		/// <summary>Population standard deviation.<para/>Use when all data values in a set have been considered.</summary>
+		public double PopStdDevX
+		{
+			get { return Maths.Sqrt(PopStdVarX); }
+		}
+		public double PopStdDevY
+		{
+			get { return Maths.Sqrt(PopStdVarY); }
+		}
+
+		/// <summary>Sample standard deviation.<para/>Use the when the data values used are only a sample of the total population</summary>
+		public double SamStdDevX
+		{
+			get { return Maths.Sqrt(SamStdVarX); }
+		}
+		public double SamStdDevY
+		{
+			get { return Maths.Sqrt(SamStdVarY); }
+		}
+
+		/// <summary>Population variance.<para/>Use when all data values in a set have been considered.</summary>
+		public double PopStdVarX
+		{
+			get { return m_count > 0 ? m_var_x * (1.0 / (m_count - 0)) : 0.0; }
+		}
+		public double PopStdVarY
+		{
+			get { return m_count > 0 ? m_var_y * (1.0 / (m_count - 0)) : 0.0; }
+		}
+
+		/// <summary>Sample variance.<para/>Use the when the data values used are only a sample of the total population</summary>
+		public double SamStdVarX
+		{
+			get { return m_count > 1 ? m_var_x * (1.0 / (m_count - 1)) : 0.0; }
+		}
+		public double SamStdVarY
+		{
+			get { return m_count > 1 ? m_var_y * (1.0 / (m_count - 1)) : 0.0; }
+		}
+
+		/// <summary>Population covariance</summary>
+		public double PopCoVar
+		{
+			get { return m_count > 0 ? m_var_xy * (1.0 / (m_count - 0)) : 0.0; }
+		}
+
+		/// <summary>Sample covariance</summary>
+		public double SamCoVar
+		{
+			get { return m_count > 1 ? m_var_xy * (1.0 / (m_count - 1)) : 0.0; }
+		}
+
+		/// <summary>The correlation coefficient between 'x' and 'y' (A value between [-1,+1])</summary>
+		public double CorrCoeff
+		{
+			get { return m_count > 0 && !Maths.FEql(m_var_xy, 0, Maths.TinyD) ? m_var_xy / Maths.Sqrt(m_var_x * m_var_y) : 0.0; }
+		}
+
+		/// <summary>Reset the stats</summary>
+		public void Reset()
+		{
+			m_count  = 0;
+			m_mean_x = 0;
+			m_mean_y = 0;
+			m_var_x  = 0;
+			m_var_y  = 0;
+			m_var_xy = 0;
+		}
+
+		/// <summary>
+		/// Accumulate the correlation between two variables 'x' and 'y' in a single pass.
+		/// Note, this method is more accurate than the sum of squares, square of sums approach.</summary>
+		public void Add(double x, double y)
+		{
+			++m_count;
+			var diff_x = x - m_mean_x;
+			var diff_y = y - m_mean_y;
+			var inv_count = 1.0 / m_count; // don't remove this, conversion to double here is needed for accuracy
+
+			m_mean_x += diff_x * inv_count;
+			m_mean_y += diff_y * inv_count;
+
+			m_var_x += diff_x * diff_x * ((m_count - 1) * inv_count);
+			m_var_y += diff_y * diff_y * ((m_count - 1) * inv_count);
+
+			m_var_xy += diff_x * diff_y * ((m_count - 1) * inv_count);
+		}
+	}
+
 	/// <summary>Exponential Moving Average</summary>
 	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
 	public class ExpMovingAvr
@@ -427,6 +581,35 @@ namespace pr.unittests
 				else               { ema = a * v + (1 - a) * ema; }
 				s.Add(v);
 				Assert.AreEqual(ema ,s.Mean ,0.00001);
+			}
+		}
+		[Test] public void Correlation()
+		{
+			var arr0 = new double[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+			var arr1 = new double[] { 2, 3, 4, 5, 6, 7, 8, 9,10 };
+			var arr2 = new double[] { 9, 8, 7, 6, 5, 4, 3, 2, 1 };
+			var arr3 = new double[] { 5, 5, 5, 5, 5, 5, 5, 5, 5 };
+
+			{
+				var corr = new Correlation();
+				for (int i = 0; i != arr0.Length; ++i)
+					corr.Add(arr0[i], arr0[i]);
+				Assert.AreEqual(corr.CorrCoeff, 1.0, Maths.TinyD);
+			} {
+				var corr = new Correlation();
+				for (int i = 0; i != arr0.Length; ++i)
+					corr.Add(arr0[i], arr1[i]);
+				Assert.AreEqual(corr.CorrCoeff, 1.0, Maths.TinyD);
+			} {
+				var corr = new Correlation();
+				for (int i = 0; i != arr0.Length; ++i)
+					corr.Add(arr0[i], arr2[i]);
+				Assert.AreEqual(corr.CorrCoeff, -1.0, Maths.TinyD);
+			}{
+				var corr = new Correlation();
+				for (int i = 0; i != arr0.Length; ++i)
+					corr.Add(arr0[i], arr3[i]);
+				Assert.AreEqual(corr.CorrCoeff, 0.0, Maths.TinyD);
 			}
 		}
 	}

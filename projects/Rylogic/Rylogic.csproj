@@ -272,7 +272,6 @@
     <Compile Include="gui\list_box.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="maths\matrix.cs" />
     <Compile Include="gui\open_folder_ui.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -393,6 +392,7 @@
     <Compile Include="maths\closest_point.cs" />
     <Compile Include="maths\distance.cs" />
     <Compile Include="maths\intersect.cs" />
+    <Compile Include="maths\matrix.cs" />
     <Compile Include="maths\matrix2x2.cs" />
     <Compile Include="maths\matrix3x4.cs" />
     <Compile Include="maths\matrix4x4.cs" />
