@@ -20,6 +20,7 @@ using pr.extn;
 using pr.maths;
 using pr.util;
 using pr.win32;
+using Matrix = System.Drawing.Drawing2D.Matrix;
 
 namespace pr.gui
 {

@@ -84,6 +84,17 @@ namespace pr.maths
 			return x + " \n" + y + " \n" + z + " \n";
 		}
 
+		/// <summary>To flat array</summary>
+		public float[] ToArray()
+		{
+			return new []
+			{
+				x.x, x.y, x.z, x.w,
+				y.x, y.y, y.z, y.w,
+				z.x, z.y, z.z, z.w,
+			};
+		}
+
 		// Static m3x4 types
 		private readonly static m3x4 m_zero = new m3x4(v4.Zero, v4.Zero, v4.Zero);
 		private readonly static m3x4 m_identity = new m3x4(v4.XAxis, v4.YAxis, v4.ZAxis);
@@ -103,7 +114,7 @@ namespace pr.maths
 		public static bool operator !=(m3x4 lhs, m3x4 rhs)  { return !(lhs == rhs); }
 		public static v4 operator * (m3x4 lhs, v4 rhs)
 		{
-			Transpose3x3(ref lhs);
+			Transpose(ref lhs);
 			return new v4(
 				v4.Dot4(lhs.x, rhs),
 				v4.Dot4(lhs.y, rhs),
@@ -112,7 +123,7 @@ namespace pr.maths
 		}
 		public static m3x4 operator * (m3x4 lhs, m3x4 rhs)
 		{
-			Transpose3x3(ref lhs);
+			Transpose(ref lhs);
 			return new m3x4(
 				new v4(v4.Dot4(lhs.x, rhs.x), v4.Dot4(lhs.y, rhs.x), v4.Dot4(lhs.z, rhs.x), 0f),
 				new v4(v4.Dot4(lhs.x, rhs.y), v4.Dot4(lhs.y, rhs.y), v4.Dot4(lhs.z, rhs.y), 0f),
@@ -129,8 +140,14 @@ namespace pr.maths
 			return FEql(lhs, rhs, Maths.TinyF);
 		}
 
+		/// <summary>Return the determinant of 'm'</summary>
+		public static float Determinant(m3x4 m)
+		{
+			return v4.Triple3(m.x, m.y, m.z);
+		}
+
 		/// <summary>Transpose 'm' in-place</summary>
-		public static void Transpose3x3(ref m3x4 m)
+		public static void Transpose(ref m3x4 m)
 		{
 			Maths.Swap(ref m.x.y, ref m.y.x);
 			Maths.Swap(ref m.x.z, ref m.z.x);
@@ -138,9 +155,9 @@ namespace pr.maths
 		}
 
 		/// <summary>Return the transpose of 'm'</summary>
-		public static m3x4 Transpose3x3(m3x4 m)
+		public static m3x4 Transpose(m3x4 m)
 		{
-			Transpose3x3(ref m);
+			Transpose(ref m);
 			return m;
 		}
 
@@ -148,7 +165,7 @@ namespace pr.maths
 		public static void InvertFast(ref m3x4 m)
 		{
 			Debug.Assert(IsOrthonormal(m), "Matrix is not orthonormal");
-			Transpose3x3(ref m);
+			Transpose(ref m);
 		}
 
 		/// <summary>Return the inverse of 'm'</summary>
@@ -156,6 +173,26 @@ namespace pr.maths
 		{
 			InvertFast(ref m);
 			return m;
+		}
+
+		/// <summary>True if 'm' can be inverted</summary>
+		public static bool IsInvertable(m3x4 m)
+		{
+			return !Maths.FEql(Determinant(m), 0.0f);
+		}
+
+		/// <summary>Invert the matrix 'm'</summary>
+		public static m3x4 Invert(m3x4 m)
+		{
+			Debug.Assert(IsInvertable(m), "Matrix has no inverse");
+
+			var det = Determinant(m);
+			var tmp = new m3x4(
+				v4.Cross3(m.y, m.z) / det,
+				v4.Cross3(m.z, m.x) / det,
+				v4.Cross3(m.x, m.y) / det);
+
+			return Transpose(tmp);
 		}
 
 		/// <summary>Orthonormalise 'm' in-place</summary>

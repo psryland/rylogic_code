@@ -161,9 +161,9 @@ namespace pr.extn
 					node.Add2(nameof(Blend.Positions), string.Join(",", blend.Positions), false);
 					return node;
 				};
-				this[typeof(Matrix)] = (obj, node) =>
+				this[typeof(System.Drawing.Drawing2D.Matrix)] = (obj, node) =>
 				{
-					var mat = (Matrix)obj;
+					var mat = (System.Drawing.Drawing2D.Matrix)obj;
 					node.Add(string.Join(" ", mat.Elements));
 					return node;
 				};
@@ -526,10 +526,10 @@ namespace pr.extn
 						Positions = positions,
 					};
 				};
-				this[typeof(Matrix)] = (elem, type, instance) =>
+				this[typeof(System.Drawing.Drawing2D.Matrix)] = (elem, type, instance) =>
 				{
 					var v = float_.ParseArray(elem.Value);
-					return new Matrix(v[0], v[1], v[2], v[3], v[4], v[5]);
+					return new System.Drawing.Drawing2D.Matrix(v[0], v[1], v[2], v[3], v[4], v[5]);
 				};
 				this[typeof(v2)] = (elem, type, instance) =>
 				{
@@ -1877,12 +1877,12 @@ namespace pr.unittests
 		}
 		[Test] public void ToXml24()
 		{
-			var mat = new Matrix(1f, 2f, 3f, 4f, 5f, 6f);
+			var mat = new System.Drawing.Drawing2D.Matrix(1f, 2f, 3f, 4f, 5f, 6f);
 			var node = mat.ToXml("mat", true);
 			var s = node.ToString(SaveOptions.DisableFormatting);
 			Assert.AreEqual("<mat ty=\"System.Drawing.Drawing2D.Matrix\">1 2 3 4 5 6</mat>", s);
 
-			var MAT = node.As<Matrix>();
+			var MAT = node.As<System.Drawing.Drawing2D.Matrix>();
 			Assert.True(mat.Equals(MAT));
 		}
 		[Test] public void XmlAs()

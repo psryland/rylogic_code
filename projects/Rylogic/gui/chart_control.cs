@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
 using System.Xml.Linq;
@@ -19,6 +18,7 @@ using pr.ldr;
 using pr.maths;
 using pr.util;
 using pr.win32;
+using Matrix = System.Drawing.Drawing2D.Matrix;
 
 namespace pr.gui
 {

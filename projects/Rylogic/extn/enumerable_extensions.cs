@@ -420,6 +420,20 @@ namespace pr.extn
 			}
 		}
 
+		/// <summary>Return 'count' items from 'source'. If not enough, pad to 'count' using 'pad'</summary>
+		public static IEnumerable<TSource> Take<TSource>(this IEnumerable<TSource> source, int count, TSource pad)
+		{
+			foreach (var x in source)
+			{
+				yield return x;
+				if (--count == 0) break;
+			}
+			for (; count-- != 0;)
+			{
+				yield return pad;
+			}
+		}
+
 		/// <summary>Normalise the values in this array to 'to'</summary>
 		public static IEnumerable<float> Normalise(this IEnumerable<float> source, float to = 1f)
 		{

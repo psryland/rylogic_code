@@ -239,7 +239,7 @@ VIEW3D_API void __stdcall View3D_SetSettings(View3DWindow window, char const* se
 		if (!window) throw std::exception("window is null");
 
 		// Parse the settings
-		pr::script::PtrA<> src(settings);
+		pr::script::PtrA src(settings);
 		pr::script::Reader reader(src);
 
 		for (pr::script::string kw; reader.NextKeywordS(kw);)
@@ -952,7 +952,7 @@ pr::script::Includes<> GetIncludes(View3DIncludes const* includes)
 // These objects will not have handles but can be added/removed by their context id.
 // 'include_paths' is a comma separated list of include paths to use to resolve #include directives (or nullptr)
 // Returns the number of objects added.
-VIEW3D_API int __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, GUID const& context_id, BOOL async, View3DIncludes const* includes)
+VIEW3D_API int __stdcall View3D_ObjectsCreateFromFile(wchar_t const* ldr_filepath, GUID const& context_id, BOOL async, View3DIncludes const* includes)
 {
 	using namespace pr::script;
 	try
@@ -960,7 +960,7 @@ VIEW3D_API int __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, 
 		DllLockGuard;
 
 		// Create a reader to parse the script files
-		FileSrc<> src(ldr_filepath);
+		FileSrc src(ldr_filepath);
 		auto inc = GetIncludes(includes);
 		Reader reader(src, false, &inc, nullptr, &Dll().m_lua);
 
@@ -979,7 +979,7 @@ VIEW3D_API int __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, 
 // 'context_id' - the context id to create the LdrObjects with
 // 'async' - if objects should be created by a background thread
 // 'includes' - information used to resolve include directives in 'ldr_script'
-VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(char const* ldr_script, BOOL file, GUID const& context_id, BOOL async, View3DIncludes const* includes)
+VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(wchar_t const* ldr_script, BOOL file, GUID const& context_id, BOOL async, View3DIncludes const* includes)
 {
 	using namespace pr::script;
 	try
@@ -990,14 +990,14 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(char const* ldr_script,
 		pr::ldr::ParseResult out;
 		if (file)
 		{
-			FileSrc<> src(ldr_script);
+			FileSrc src(ldr_script);
 			auto inc = GetIncludes(includes);
 			Reader reader(src, false, &inc, nullptr, &Dll().m_lua);
 			pr::ldr::Parse(Dll().m_rdr, reader, out, async != 0, context_id);
 		}
 		else // string
 		{
-			PtrA<> src(ldr_script);
+			PtrW src(ldr_script);
 			auto inc = GetIncludes(includes); 
 			Reader reader(src, false, &inc, nullptr, &Dll().m_lua);
 			pr::ldr::Parse(Dll().m_rdr, reader, out, async != 0, context_id);
@@ -1222,7 +1222,7 @@ VIEW3D_API void __stdcall View3D_ObjectUpdate(View3DObject object, char const* l
 
 		DllLockGuard;
 
-		pr::script::PtrA<> src(ldr_script);
+		pr::script::PtrA src(ldr_script);
 		pr::script::Reader reader(src, false);
 		pr::ldr::Update(Dll().m_rdr, object, reader, static_cast<pr::ldr::EUpdateObject::Enum_>(flags));
 	}
@@ -2391,7 +2391,7 @@ VIEW3D_API void __stdcall View3D_CreateDemoScene(View3DWindow window)
 
 		// Get the string of all LDR objects
 		auto scene = pr::ldr::CreateDemoScene();
-		pr::script::PtrW<> src(scene.c_str());
+		pr::script::PtrW src(scene.c_str());
 		pr::script::Reader reader(src, false, nullptr, nullptr, &Dll().m_lua);
 
 		// Parse the string, and add all objects to the window
@@ -2455,7 +2455,7 @@ VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_script)
 {
 	try
 	{
-		pr::script::PtrA<> src(ldr_script);
+		pr::script::PtrA src(ldr_script);
 		pr::script::Reader reader(src);
 		return view3d::To<View3DM4x4>(pr::ldr::ParseLdrTransform(reader));
 	}

@@ -103,6 +103,7 @@
     <Compile Include="..\..\sdk\scintilla\include\Scintilla.cs">
       <Link>gui\Scintilla.cs</Link>
     </Compile>
+    <Compile Include="attrib\abstract_base_desc_provider.cs" />
     <Compile Include="attrib\assoc_attr.cs" />
     <Compile Include="attrib\desc_attr.cs" />
     <Compile Include="attrib\units_attr.cs" />
@@ -271,6 +272,7 @@
     <Compile Include="gui\list_box.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="maths\matrix.cs" />
     <Compile Include="gui\open_folder_ui.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -394,6 +396,7 @@
     <Compile Include="maths\matrix2x2.cs" />
     <Compile Include="maths\matrix3x4.cs" />
     <Compile Include="maths\matrix4x4.cs" />
+    <Compile Include="maths\polynomial.cs" />
     <Compile Include="maths\quaternion.cs" />
     <Compile Include="maths\scalar.cs" />
     <Compile Include="maths\spline.cs" />

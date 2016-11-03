@@ -223,5 +223,15 @@ namespace pr.maths
 		{
 			return TruncWithRemainder(floats.Select(x => (double)x));
 		}
+
+		/// <summary>
+		/// Scale a value on the range [-inf,+inf] to within the range [-1,+1].
+		/// 'n' is a horizontal scaling factor.
+		/// If n = 1, [-1,+1] maps to [-0.5, +0.5]
+		/// If n = 10, [-10,+10] maps to [-0.5, +0.5], etc</summary>
+		public static double Sigmoid(double x, double n = 1.0)
+		{
+			return Math.Atan(x/n) / TauBy4;
+		}
 	}
 }

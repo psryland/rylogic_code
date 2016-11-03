@@ -235,19 +235,26 @@ namespace pr.extn
 		/// Returns the number of elements removed.</summary>
 		public static int RemoveIf<T>(this List<T> list, Func<T,bool> pred, bool stable)
 		{
+			return RemoveIf(list, pred, stable, 0, list.Count);
+		}
+		public static int RemoveIf<T>(this List<T> list, Func<T,bool> pred, bool stable, int start, int count)
+		{
+			if (start < 0) throw new ArgumentOutOfRangeException("start","Start index {0} out of range [0,{1})".Fmt(start, list.Count));
+			if (start + count > list.Count) throw new ArgumentOutOfRangeException("count","Item count {0} out of range [0,{1}]".Fmt(count, list.Count));
+
 			// If stable remove is needed, use the IList version
 			if (stable)
-				return ((IList<T>)list).RemoveIf(pred);
+				return ((IList<T>)list).RemoveIf(pred, start, count);
 
 			int end = list.Count;
-			for (int i = list.Count; i-- != 0;)
+			for (int i = start + count; i-- != start;)
 			{
 				if (!pred(list[i])) continue;
 				list.Swap(i, --end);
 			}
-			int count = list.Count - end;
-			list.RemoveRange(end, count);
-			return count;
+			int removed = list.Count - end;
+			list.RemoveRange(end, removed);
+			return removed;
 		}
 
 		/// <summary>
@@ -256,25 +263,39 @@ namespace pr.extn
 		/// Returns the number of elements removed.</summary>
 		public static int RemoveIf<T>(this IList<T> list, Func<T,bool> pred)
 		{
-			int count = 0;
-			for (int i = list.Count; i-- != 0;)
-			{
-				if (!pred(list[i])) continue;
-				list.RemoveAt(i);
-				++count;
-			}
-			return count;
+			return RemoveIf(list, pred, 0, list.Count);
 		}
 		public static int RemoveIf<T>(this IList list, Func<T,bool> pred)
 		{
-			int count = 0;
-			for (int i = list.Count; i-- != 0;)
+			return RemoveIf(list, pred, 0, list.Count);
+		}
+		public static int RemoveIf<T>(this IList<T> list, Func<T,bool> pred, int start, int count)
+		{
+			if (start < 0) throw new ArgumentOutOfRangeException("start","Start index {0} out of range [0,{1})".Fmt(start, list.Count));
+			if (start + count > list.Count) throw new ArgumentOutOfRangeException("count","Item count {0} out of range [0,{1}]".Fmt(count, list.Count));
+
+			int removed = 0;
+			for (int i = start + count; i-- != start;)
+			{
+				if (!pred(list[i])) continue;
+				list.RemoveAt(i);
+				++removed;
+			}
+			return removed;
+		}
+		public static int RemoveIf<T>(this IList list, Func<T,bool> pred, int start, int count)
+		{
+			if (start < 0) throw new ArgumentOutOfRangeException("start","Start index {0} out of range [0,{1})".Fmt(start, list.Count));
+			if (start + count > list.Count) throw new ArgumentOutOfRangeException("count","Item count {0} out of range [0,{1}]".Fmt(count, list.Count));
+
+			int removed = 0;
+			for (int i = start + count; i-- != start;)
 			{
 				if (!pred((T)list[i])) continue;
 				list.RemoveAt(i);
-				++count;
+				++removed;
 			}
-			return count;
+			return removed;
 		}
 
 		/// <summary>Remove a range of items from this list</summary>

@@ -45,12 +45,12 @@ namespace pr.maths
 			this.pos = pos;
 		}
 
-		/// <summary>Get/Set components by index</summary>
-		public v4 this[int i]
+		/// <summary>Get/Set columns by index</summary>
+		public v4 this[int c]
 		{
 			get
 			{
-				switch (i) {
+				switch (c) {
 				case 0: return x;
 				case 1: return y;
 				case 2: return z;
@@ -60,7 +60,7 @@ namespace pr.maths
 			}
 			set
 			{
-				switch (i) {
+				switch (c) {
 				case 0: x = value; return;
 				case 1: y = value; return;
 				case 2: z = value; return;
@@ -75,10 +75,44 @@ namespace pr.maths
 			set { this[(int)i] = value; }
 		}
 
+		/// <summary>Get/Set components by index</summary>
+		public float this[int c, int r]
+		{
+			get { return this[c][r]; }
+			set
+			{
+				var vec = this[c];
+				vec[r] = value;
+				this[c] = vec;
+			}
+		}
+		public float this[uint c, uint r]
+		{
+			get { return this[(int)c][(int)r]; }
+			set
+			{
+				var vec = this[c];
+				vec[r] = value;
+				this[c] = vec;
+			}
+		}
+
 		/// <summary>ToString()</summary>
 		public override string ToString()
 		{
 			return "{0} \n{1} \n{2} \n{3} \n".Fmt(x,y,z,w);
+		}
+
+		/// <summary>To flat array</summary>
+		public float[] ToArray()
+		{
+			return new []
+			{
+				x.x, x.y, x.z, x.w,
+				y.x, y.y, y.z, y.w,
+				z.x, z.y, z.z, z.w,
+				w.x, w.y, w.z, w.w,
+			};
 		}
 
 		/// <summary>Static m4x4 types</summary>
@@ -143,10 +177,26 @@ namespace pr.maths
 				new v4(v4.Dot4(lhs.x, rhs.w), v4.Dot4(lhs.y, rhs.w), v4.Dot4(lhs.z, rhs.w), v4.Dot4(lhs.w, rhs.w)));
 		}
 
+		/// <summary>Return the 4x4 determinant of the arbitrary transform 'mat'</summary>
+		public static float Determinant4(m4x4 m)
+		{
+			float c1 = (m.z.z * m.w.w) - (m.z.w * m.w.z);
+			float c2 = (m.z.y * m.w.w) - (m.z.w * m.w.y);
+			float c3 = (m.z.y * m.w.z) - (m.z.z * m.w.y);
+			float c4 = (m.z.x * m.w.w) - (m.z.w * m.w.x);
+			float c5 = (m.z.x * m.w.z) - (m.z.z * m.w.x);
+			float c6 = (m.z.x * m.w.y) - (m.z.y * m.w.x);
+			return
+				m.x.x * (m.y.y*c1 - m.y.z*c2 + m.y.w*c3) -
+				m.x.y * (m.y.x*c1 - m.y.z*c4 + m.y.w*c5) +
+				m.x.z * (m.y.x*c2 - m.y.y*c4 + m.y.w*c6) -
+				m.x.w * (m.y.x*c3 - m.y.y*c5 + m.y.z*c6);
+		}
+
 		/// <summary>Transpose the rotation part of an affine transform</summary>
 		public static void Transpose3x3(ref m4x4 m)
 		{
-			m3x4.Transpose3x3(ref m.rot);
+			m3x4.Transpose(ref m.rot);
 		}
 		public static m4x4 Transpose3x3(m4x4 m)
 		{
@@ -215,9 +265,17 @@ namespace pr.maths
 			return m;
 		}
 
+		/// <summary>True if 'mat' has an inverse</summary>
+		public static bool IsInvertable(m4x4 m)
+		{
+			return !Maths.FEql(Determinant4(m), 0);
+		}
+
 		/// <summary>Return 'm' inverted</summary>
 		public static m4x4 Invert(m4x4 m)
 		{
+			Debug.Assert(IsInvertable(m), "Matrix has no inverse");
+
 			var A = Transpose4x4(m); // Take the transpose so that row operations are faster
 			var B = Identity;
 
@@ -422,6 +480,15 @@ namespace pr.unittests
 
 	[TestFixture] public class UnitTestM4x4
 	{
+		[Test] public void Basic()
+		{
+			var rng = new Random(1);
+			var m = m4x4.Random4x4(-5, +5, rng);
+
+			Assert.True(m.x.x == m[0,0]);
+			Assert.True(m.z.y == m[2,1]);
+			Assert.True(m.w.x == m[3,0]);
+		}
 		[Test] public void Identity()
 		{
 			var m1 = m4x4.Identity;

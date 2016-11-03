@@ -29,10 +29,10 @@ namespace pr.ldr
 		}
 
 		/// <summary>Write an ldr string to a file</summary>
-		public static void Write(string ldr_str, string filepath)
+		public static void Write(string ldr_str, string filepath, bool append = false)
 		{
-			using (var sw = File.CreateText(filepath))
-				sw.Write(ldr_str);
+			using (var f = new StreamWriter(new FileStream(filepath, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.Read)))
+				f.Write(ldr_str);
 		}
 
 		// Ldr single string
@@ -47,6 +47,10 @@ namespace pr.ldr
 		public static string GroupEnd()
 		{
 			return "}\n";
+		}
+		public static string Vec2(v2 vec)
+		{
+			return "{0} {1}".Fmt(vec.x,vec.y);
 		}
 		public static string Vec3(v2 vec)
 		{
@@ -64,15 +68,15 @@ namespace pr.ldr
 		{
 			return "{0} {1} {2} {3}".Fmt(Vec4(mat.x),Vec4(mat.y),Vec4(mat.z),Vec4(mat.w));
 		}
-		public static string Position(v4 position)
+		public static string Position(v4 position, bool newline = false)
 		{
 			if (position == v4.Zero || position == v4.Origin) return string.Empty;
-			return "*o2w{*pos{" + Vec3(position) + "}}";
+			return "*o2w{*pos{" + Vec3(position) + "}}" + (newline?"\n":"");
 		}
-		public static string Transform(m4x4 o2w)
+		public static string Transform(m4x4 o2w, bool newline = false)
 		{
 			if (o2w == m4x4.Identity) return string.Empty;
-			return "*o2w{*m4x4{" + Mat4x4(o2w) + "}}";
+			return "*o2w{*m4x4{" + Mat4x4(o2w) + "}}" + (newline?"\n":"");
 		}
 		public static string Colour(uint col)
 		{
@@ -203,9 +207,10 @@ namespace pr.ldr
 			if      (part is string     ) m_sb.Append((string)part);
 			else if (part is Color      ) m_sb.Append(Ldr.Colour((Color)part));
 			else if (part is v4         ) m_sb.Append(Ldr.Vec3((v4)part));
+			else if (part is v2         ) m_sb.Append(Ldr.Vec2((v2)part));
 			else if (part is m4x4       ) m_sb.Append(Ldr.Mat4x4((m4x4)part));
 			else if (part is AxisId     ) m_sb.Append(((AxisId)part).m_id);
-			else if (part is IEnumerable) foreach (var x in (IEnumerable )part) Append(x);
+			else if (part is IEnumerable) foreach (var x in (IEnumerable )part) Append(" ").Append(x);
 			else if (part != null       ) m_sb.Append(part.ToString());
 			return this;
 		}
@@ -213,6 +218,13 @@ namespace pr.ldr
 		{
 			foreach (var p in parts) Append(p);
 			return this;
+		}
+
+		public void Comment(string comments)
+		{
+			var lines = comments.Split('\n');
+			foreach (var line in lines)
+				Append("// ",line,"\n");
 		}
 
 		public Scope Group()
@@ -235,7 +247,7 @@ namespace pr.ldr
 		{
 			return Scope.Create(
 				() => Append("*Group ",name," {\n"),
-				() => Append(Ldr.Position(position),"}\n")
+				() => Append(Ldr.Position(position, newline:true), "}\n")
 				);
 		}
 		public Scope Group(string name, m4x4 transform)
@@ -246,7 +258,7 @@ namespace pr.ldr
 		{
 			return Scope.Create(
 				() => Append("*Group ",name," {\n"),
-				() => Append(Ldr.Transform(transform),"}\n")
+				() => Append(Ldr.Transform(transform, newline:true), "}\n")
 				);
 		}
 
@@ -265,7 +277,7 @@ namespace pr.ldr
 		public void Line(string name, Colour32 colour, int width, IEnumerable<v4> points)
 		{
 			var w = width != 0 ? "*Width {{{0}}}".Fmt(width) : string.Empty;
-			Append("*LineStrip ", name, " ", colour, " {", w, points.Select(x => " "+Ldr.Vec3(x)), "}");
+			Append("*LineStrip ", name, " ", colour, " {", w, points.Select(x => Ldr.Vec3(x)), "}");
 		}
 		public void LineD(string name, Colour32 colour, v4 start, v4 direction)
 		{
@@ -275,6 +287,19 @@ namespace pr.ldr
 		{
 			var w = width != 0 ? "*Width {{{0}}} ".Fmt(width) : string.Empty;
 			Append("*LineD ",name," ",colour," {",w,start," ",direction,"}");
+		}
+
+		public void Grid(Colour32 colour, AxisId axis_id, int width, int height)
+		{
+			Grid(string.Empty, colour, axis_id, width, height);
+		}
+		public void Grid(string name, Colour32 colour, AxisId axis_id, int width, int height)
+		{
+			Grid(name, colour, axis_id, width, height, width, height, v4.Origin);
+		}
+		public void Grid(string name, Colour32 colour, AxisId axis_id, int width, int height, int wdiv, int hdiv, v4 position)
+		{
+			Append("*Grid ",name," ",colour," {",axis_id," ",width," ",height," ",wdiv," ",hdiv," ",Ldr.Position(position),"}\n");
 		}
 
 		public void Box()
@@ -435,6 +460,10 @@ namespace pr.ldr
 		{
 			Append("*Quad ", name, " ", colour, " {", bl, " ", br, " ", tr, " ", tl, " ", Ldr.Position(position), "}\n");
 		}
+		public void Quad(string name, Colour32 colour, AxisId axis_id, float w, float h, v4 position)
+		{
+			Rect(name, colour, axis_id, w, h, true, position);
+		}
 
 		public void Axis()
 		{
@@ -465,14 +494,55 @@ namespace pr.ldr
 			Append("*Matrix3x3 ",name," ",colour," {",basis.x*scale," ",basis.y*scale," ",basis.z*scale," ",Ldr.Position(basis.pos),"}\n");
 		}
 
+		public void Mesh(string name, Colour32 colour, IEnumerable<v4> verts, IEnumerable<v4> normals = null, IEnumerable<Colour32> colours = null, IEnumerable<v2> tex = null, IEnumerable<ushort> faces = null, IEnumerable<ushort> lines = null, IEnumerable<ushort> tetra = null, bool generate_normals = false, v4? position = null)
+		{
+			Append("*Mesh ",name," ",colour," {\n");
+			if (verts   != null) Append("*Verts {"    ).Append(verts  .Select(x => Ldr.Vec3(x)))  .Append("}\n");
+			if (normals != null) Append("*Normals {"  ).Append(normals.Select(x => Ldr.Vec3(x)))  .Append("}\n");
+			if (colours != null) Append("*Colours {"  ).Append(colours.Select(x => Ldr.Colour(x))).Append("}\n");
+			if (tex     != null) Append("*TexCoords {").Append(tex    .Select(x => Ldr.Vec2(x)))  .Append("}\n");
+			if (faces != null) Append("*Faces {").Append(faces).Append("}\n");
+			if (lines != null) Append("*Lines {").Append(lines).Append("}\n");
+			if (tetra != null) Append("*Tetra {").Append(tetra).Append("}\n");
+			if (generate_normals) Append("*GenerateNormals\n");
+			if (position != null) Append(Ldr.Position(position.Value));
+			Append("}\n");
+		}
+		public void Mesh(string name, Colour32 colour, View3d.EGeom geom, IEnumerable<View3d.Vertex> verts, IEnumerable<ushort> faces = null, IEnumerable<ushort> lines = null, IEnumerable<ushort> tetra = null, bool generate_normals = false, v4? position = null)
+		{
+			Append("*Mesh ",name," ",colour," {\n");
+			if ((geom & View3d.EGeom.Vert) != 0) Append("*Verts {"      ).Append(verts.Select(x => Ldr.Vec3(x.m_pos)))   .Append("}\n");
+			if ((geom & View3d.EGeom.Norm) != 0) Append("*Normals {"    ).Append(verts.Select(x => Ldr.Vec3(x.m_norm)))  .Append("}\n");
+			if ((geom & View3d.EGeom.Colr) != 0) Append("*Colours {"    ).Append(verts.Select(x => Ldr.Colour(x.m_col))) .Append("}\n");
+			if ((geom & View3d.EGeom.Tex0) != 0) Append("*TexCoords {"  ).Append(verts.Select(x => Ldr.Vec2(x.m_uv)))    .Append("}\n");
+			if (faces != null) Append("*Faces {").Append(faces).Append("}\n");
+			if (lines != null) Append("*Lines {").Append(lines).Append("}\n");
+			if (tetra != null) Append("*Tetra {").Append(tetra).Append("}\n");
+			if (generate_normals) Append("*GenerateNormals\n");
+			if (position != null) Append(Ldr.Position(position.Value));
+			Append("}\n");
+		}
+
+		public void Graph(string name, AxisId axis_id, IEnumerable<v4> data)
+		{
+			var bbox = BBox.Reset;
+			foreach (var d in data)
+				bbox.Encompass(d);
+
+			using (Group(name))
+			{
+				Grid(string.Empty, 0xFFAAAAAA, axis_id, (int)(bbox.SizeX * 1.1), (int)(bbox.SizeY * 1.1), 50, 50, new v4(bbox.Centre.x, bbox.Centre.y, 0f, 1f));
+				Line("data", 0xFFFFFFFF, 1, data);
+			}
+		}
+
 		public override string ToString()
 		{
 			return m_sb.ToString();
 		}
 		public void ToFile(string filepath, bool append = false)
 		{
-			using (var f = new StreamWriter(new FileStream(filepath, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.Read)))
-				f.Write(ToString());
+			Ldr.Write(ToString(), filepath, append);
 		}
 	}
 }

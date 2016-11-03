@@ -4,11 +4,13 @@
 //*********************************************************************
 
 using System;
+using System.Diagnostics;
 using pr.maths;
 
 namespace pr.maths
 {
 	/// <summary>Running Average</summary>
+	[DebuggerDisplay("{Mean} N={Count}")]
 	public class Avr
 	{
 		//' let: D(k) = X(k) - avr(k-1)           => X(k) = D(k) + avr(k-1)
@@ -80,6 +82,7 @@ namespace pr.maths
 	}
 
 	/// <summary>Running Average</summary>
+	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
 	public class AvrVar :Avr
 	{
 		//' let: D(k) = X(k) - avr(k-1)           => X(k) = D(k) + avr(k-1)
@@ -167,6 +170,7 @@ namespace pr.maths
 	}
 	
 	/// <summary>Exponential Moving Average</summary>
+	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
 	public class ExpMovingAvr
 	{
 		//'  avr(k) = a * X(k) + (1 - a) * avr(k-1)
@@ -291,8 +295,9 @@ namespace pr.maths
 			}
 		}
 	}
-	
+
 	/// <summary>Moving Window Average</summary>
+	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
 	public class MovingAvr
 	{
 		// Let: D(k) = X(k) - X(k-N) => X(k-N) = X(k) - D(k)

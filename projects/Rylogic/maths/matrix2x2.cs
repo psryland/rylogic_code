@@ -13,7 +13,21 @@ namespace pr.maths
 		public v2 x;
 		public v2 y;
 
-		public override string ToString() { return x + " \n" + y + " \n"; }
+		/// <summary>ToString</summary>
+		public override string ToString()
+		{
+			return x + " \n" + y + " \n";
+		}
+
+		/// <summary>To flat array</summary>
+		public float[] ToArray()
+		{
+			return new []
+			{
+				x.x, x.y,
+				y.x, y.y,
+			};
+		}
 
 		public m2x2(v2 x_, v2 y_) :this()                               { set(x_, y_); }
 		//public m2x2(v2 axis_norm, v4 axis_sine_angle, float cos_angle) :this() { set(axis_norm, axis_sine_angle, cos_angle); }

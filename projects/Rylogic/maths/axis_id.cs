@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using pr.extn;
 
 namespace pr.maths
@@ -44,14 +41,15 @@ namespace pr.maths
 			}
 		}
 
-		public static AxisId PosX = new AxisId(+1);
-		public static AxisId NegX = new AxisId(-1);
-		public static AxisId PosY = new AxisId(+2);
-		public static AxisId NegY = new AxisId(-2);
-		public static AxisId PosZ = new AxisId(+3);
-		public static AxisId NegZ = new AxisId(-3);
+		public static readonly AxisId PosX = new AxisId(+1);
+		public static readonly AxisId NegX = new AxisId(-1);
+		public static readonly AxisId PosY = new AxisId(+2);
+		public static readonly AxisId NegY = new AxisId(-2);
+		public static readonly AxisId PosZ = new AxisId(+3);
+		public static readonly AxisId NegZ = new AxisId(-3);
 
 		public static implicit operator int(AxisId id) { return id.m_id; }
 		public static implicit operator AxisId(int id) { return new AxisId(id); }
+		public override string ToString() { return m_id.ToString(); }
 	}
 }

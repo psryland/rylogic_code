@@ -622,5 +622,11 @@ namespace pr.extn
 		{
 			return pb.Value = Maths.Clamp(value, pb.Minimum, pb.Maximum);
 		}
+
+		/// <summary>Set the colour of a progress bar. State = 1(green), 2(red), 3(yellow)</summary>
+		public static void BackColor(this ProgressBar pb, int state)
+		{
+			Win32.SendMessage(pb.Handle, 1040, (IntPtr)state, IntPtr.Zero);
+		}
 	}
 }
