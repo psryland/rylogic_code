@@ -19,9 +19,9 @@ namespace Rylobot
 		}
 
 		/// <summary>Return a score for how well suited this strategy is to the current conditions</summary>
-		public override double Score()
+		public static double FitnessScore(Rylobot bot)
 		{
-			return 0.0; // not implemented
+			return 0.0; // not implemented 
 		}
 	}
 }

@@ -91,125 +91,29 @@ namespace Rylobot
 			PendingRisk = risk;
 		}
 
-		/// <summary>Creates a market order in the given direction taking into account risk</summary>
-		public Position CreateOrder(Symbol sym, TradeType tt, string label)
+		/// <summary>Creates a market order in the given direction</summary>
+		public Position CreateOrder(Trade trade)
 		{
 			try
 			{
-				// Want a stop loss just above or below a recent high or low (depending on 'tt')
-				// The stop loss should only risk up to the max risk percentage of the current balance
-				// If the stop loss is nowhere near the desired risk, the volume can be adjusted
-				using (var instr = new Instrument(Bot, sym.Code))
-				{
-					instr.Dump();
+				//trade.Dump();
 
-					// The caller wants an order placed now in the direction of 'tt'
-					// Choose appropriate stop loss and take profit levels, and volume,
-					var volume = sym.VolumeMin;
-					var sl = ChooseSL(instr, tt, out volume);
-					var tp = ChooseTP(instr, tt, sl, Bot.Settings.Acct.MinRewardToRisk);
-					this.DumpOrder(instr, tt, sl, tp);
+				// Place the order
+				var r = Bot.ExecuteMarketOrder(trade.Type, trade.Instrument.Symbol, trade.Volume, trade.Label, trade.SL_pips, trade.TP_pips);
+				if (!r.IsSuccessful)
+					throw new Exception("Execute market order failed: {0}".Fmt(r.Error));
 
-					// Place the order
-					var r = Bot.ExecuteMarketOrder(tt, sym, volume, label, sl, tp);
-					if (!r.IsSuccessful)
-						throw new Exception("Execute market order failed: {0}".Fmt(r.Error));
+				// Update the account balance
+				Update();
 
-					// Update the account balance
-					Update();
-
-					// Return the created position
-					return r.Position;
-				}
+				// Return the created position
+				return r.Position;
 			}
 			catch (Exception ex)
 			{
 				Bot.Print(ex.Message);
 				return null;
 			}
-		}
-
-		/// <summary>Choose an appropriate stop loss (in pips) for the given instrument</summary>
-		public double ChooseSL(Instrument instr, TradeType tt, out long volume)
-		{
-			// Find the percentage of balance available to risk
-			var max_risk_pc = Bot.Settings.Acct.MaxRiskPC;
-			var available_risk_pc = max_risk_pc - TotalRiskPC;
-			if (available_risk_pc <= 0)
-				throw new Exception("Insufficient available risk. Current Risk: {0}%, Maximum Risk: {1}%".Fmt(TotalRiskPC, max_risk_pc));
-
-			// Find the account currency value of the available risk
-			var balance_to_risk = Balance * available_risk_pc * 0.01;
-
-			// Look for a peak in the recent history of the quote currency
-			var sign = tt.Sign();
-			var current_price = instr.CurrentPrice(sign);
-
-			// Scan backwards looking for a peak in the stop loss direction.
-			var sl = 0.0;
-			foreach (var candle in instr.CandleRange(-Bot.Settings.Acct.LookBackCount, 0))
-			{
-				var limit = candle.WickLimit(-sign);
-				var diff = current_price - limit;
-				if (Maths.Sign(diff) != sign) continue;
-				if (Math.Abs(diff) < sl) continue;
-				sl = Math.Abs(diff);
-			}
-
-			// For short trades, add the spread to the SL
-			sl += (sign > 0 ? 0 : instr.Symbol.Spread);
-
-			// Add on a bit as a safety buffer
-			sl *= 1.05f;
-
-			// Adjust the volume so that the risk is within the acceptable range
-			// If the risk is too high reduce the volume first, down to the VolumeMin
-			// then reduce 'peak'. If the risk is low, increase volume to fit within 'risk'
-
-			// Find the account value risked at the current stop loss
-			var sl_acct = instr.Symbol.QuotePriceToAcct(sl);
-			var optimal_volume = balance_to_risk / sl_acct;
-
-			// If the risk is too high, reduce the stop loss
-			if (optimal_volume < instr.Symbol.VolumeMin)
-			{
-				volume = instr.Symbol.VolumeMin;
-				sl = instr.Symbol.AcctToQuotePrice(balance_to_risk / volume);
-			}
-			// Otherwise, round down to the nearest volume multiple
-			else
-			{
-				volume = instr.Symbol.NormalizeVolume(optimal_volume, RoundingMode.Down);
-			}
-
-			// Convert the risk to pips
-			return instr.Symbol.QuotePriceToPips(sl);
-		}
-
-		/// <summary>Choose an appropriate take profit (in pips) for the given instrument</summary>
-		public double ChooseTP(Instrument instr, TradeType tt, double sl_pips, double min_reward_to_risk)
-		{
-			var sign = tt.Sign();
-			var current_price = instr.CurrentPrice(sign);
-
-			// Get the support and resistance levels
-			var snr = new SnR(instr, -Bot.Settings.Acct.LookBackCount, 0);
-			snr.Dump();
-
-			// The take profit as determined by the minimum reward to risk ratio (signed value in quote currency)
-			var tp = instr.Symbol.PipsToQuotePrice(sl_pips) * min_reward_to_risk;
-
-			// Set the TP at the first significant SnR level above the RR ratio
-			foreach (var lvl in snr.SnRLevels.Take(snr.SnRLevels.Count/2))
-			{
-				var dprice = lvl.Price - current_price;
-				if (Maths.Sign(dprice) != sign) continue;
-				if (sign * dprice < tp) continue;
-				tp = sign * dprice;
-				break;
-			}
-
-			return instr.Symbol.QuotePriceToPips(tp);
 		}
 
 		/// <summary>Raised when the AccountId is about to change</summary>

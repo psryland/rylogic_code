@@ -132,6 +132,7 @@ namespace Rylobot
 			PositionClosed.Raise(new PositionEventArgs(position));
 		}
 
+		/// <summary>Update the non-instrument related things</summary>
 		public void Step()
 		{
 			Acct.Update();

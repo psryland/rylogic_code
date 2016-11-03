@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using pr.common;
 
 namespace Rylobot
 {
@@ -78,41 +79,46 @@ namespace Rylobot
 			return sign == +1 ? Math.Max(Open,Close) : sign == -1 ? Math.Min(Open,Close) : Median;
 		}
 
-		/// <summary>Single candle type</summary>
-		public EType Type
+		/// <summary>Single candle type. Relative to the mean candle size (total size)</summary>
+		public EType Type(double mean_candle_size)
 		{
-			get
+			// A candle is a doji if the body is very small
+			if (BodyLength < 0.03 * mean_candle_size)
 			{
-				if (BodyLength < 0.03 * TotalLength)
-				{
-					return EType.Doji;
-				}
-				if (BodyLength < 0.25 * TotalLength)
-				{
-					if (UpperWickLength < 0.1 * TotalLength) return EType.Hammer;
-					if (LowerWickLength < 0.1 * TotalLength) return EType.InvHammer;
-					return EType.SpinningTop;
-				}
-				if (BodyLength > 0.75 * TotalLength)
-				{
-					return EType.Marubozu;
-				}
-				if (UpperWickLength < 0.1 * TotalLength)
+				return EType.Doji;
+			}
+
+			// A candle is a hammer/inverse hammer if it has a small body that is near one end of the candle
+			if (BodyLength < 0.25 * mean_candle_size)
+			{
+				if (UpperWickLength < 0.1 * TotalLength) return EType.Hammer;
+				if (LowerWickLength < 0.1 * TotalLength) return EType.InvHammer;
+				return EType.SpinningTop;
+			}
+
+			// A candle is a Marubozu if it has a large body
+			if (BodyLength > 1.0 * mean_candle_size)
+			{
+				// A strengthening or weakening marubozu 
+				if (LowerWickLength > 0.4 * TotalLength)
 				{
 					return
 						Bullish ? EType.MarubozuStrengthening :
 						Bearish ? EType.MarubozuWeakening :
-						EType.Unknown;
+						EType.Marubozu;
 				}
-				if (LowerWickLength < 0.1 * TotalLength)
+				if (UpperWickLength > 0.4 * TotalLength)
 				{
 					return
 						Bullish ? EType.MarubozuWeakening :
 						Bearish ? EType.MarubozuStrengthening :
-						EType.Unknown;
+						EType.Marubozu;
 				}
-				return EType.Unknown;
+
+				// Short wicks at both ends just means Marubozu
+				return EType.Marubozu;
 			}
+			return EType.Unknown;
 		}
 		public enum EType
 		{
@@ -171,6 +177,18 @@ namespace Rylobot
 			get { return (Open + Close) / 2.0; }
 		}
 
+		/// <summary>The centre of the whole candle</summary>
+		public double Centre
+		{
+			get { return (High + Low) / 2.0; }
+		}
+
+		/// <summary>Return the Open/Close as a range</summary>
+		public RangeF BodyRange
+		{
+			get { return new RangeF(Math.Min(Open,Close), Math.Max(Open,Close)); }
+		}
+
 		/// <summary>The length of the upper wick</summary>
 		public double UpperWickLength
 		{
@@ -181,6 +199,12 @@ namespace Rylobot
 		public double LowerWickLength
 		{
 			get { return Math.Min(Open, Close) - Low; }
+		}
+
+		/// <summary>Return the High/Low as a range</summary>
+		public RangeF WickRange
+		{
+			get { return new RangeF(Math.Min(High,Low), Math.Max(High,Low)); }
 		}
 
 		/// <summary>Replace the data in this candle with 'rhs' (Must have a matching timestamp though)</summary>
@@ -245,5 +269,20 @@ namespace Rylobot
 			return new { Timestamp, Open, High, Low, Close, Median, Volume }.GetHashCode();
 		}
 		#endregion
+	}
+
+	public static class Candle_
+	{
+		/// <summary>True if this is a trend indicating candle type</summary>
+		public static bool IsTrend(this Candle.EType type)
+		{
+			return type == Candle.EType.Marubozu || type == Candle.EType.MarubozuStrengthening || type == Candle.EType.MarubozuWeakening;
+		}
+
+		/// <summary>True if this is an indecision (reversal or continuation) candle type</summary>
+		public static bool IsIndecision(this Candle.EType type)
+		{
+			return type == Candle.EType.Doji || type == Candle.EType.SpinningTop || type == Candle.EType.Hammer || type == Candle.EType.InvHammer;
+		}
 	}
 }

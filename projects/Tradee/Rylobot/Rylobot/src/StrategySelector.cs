@@ -26,9 +26,15 @@ namespace Rylobot
 		public Strategy Step(Strategy strat)
 		{
 			// Ask each strategy to rate itself over the recent data.
+
 			// Choose the strategy with the best score. Use hysteresis to prevent bouncing.
 			if (strat == null)
-				return new StrategyPotLuck(Bot);
+			{
+				//return new StrategyPotLuck(Bot);
+				//return new StrategyTail(Bot);
+				return new StrategyMain(Bot);
+				//return new StrategyDataCollector(Bot);
+			}
 
 			// Nope, current one is still fine
 			return strat;

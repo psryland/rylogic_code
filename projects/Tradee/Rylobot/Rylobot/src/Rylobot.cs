@@ -1,11 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading;
 using cAlgo.API;
 using cAlgo.API.Internals;
 using pr.common;
 using pr.extn;
 using pr.util;
+using pr.win32;
 
 namespace Rylobot
 {
@@ -15,11 +18,14 @@ namespace Rylobot
 		/// <summary></summary>
 		protected override void OnStart()
 		{
+			Debug.WriteLine("Rylobot is a {0} bit process".Fmt(Environment.Is64BitProcess?"64":"32"));
+
 			base.OnStart();
 
 			// Load the bot settings
 			var settings_filepath = Util.ResolveAppDataPath("Rylogic","Rylobot","Settings.xml");
 			Settings = new Settings(settings_filepath){AutoSaveOnChanges = true};
+			Settings.Save();
 
 			// Create the cache of symbol data
 			m_sym_cache = new Cache<string, Symbol> { ThreadSafe = true , Mode = CacheMode.StandardCache };
@@ -29,10 +35,11 @@ namespace Rylobot
 
 			// Create the account manager and trade creator
 			Broker = new Broker(this, Account);
-
 		}
 		protected override void OnStop()
 		{
+			Stopping.Raise(this);
+
 			Strat = null;
 			Selector = null;
 			Broker = null;
@@ -41,6 +48,8 @@ namespace Rylobot
 		}
 		protected override void OnTick()
 		{
+			// Raise the Bot.Tick event before stepping the strategy
+			// Instruments are signed up to the Tick event so they will be updated first
 			base.OnTick();
 			Tick.Raise(this);
 
@@ -53,13 +62,24 @@ namespace Rylobot
 			// Step the current strategy
 			Strat.Step();
 		}
+
+		/// <summary>New data arriving</summary>
 		public event EventHandler Tick;
+
+		/// <summary>Bot shutting down</summary>
+		public event EventHandler Stopping;
 
 		/// <summary>App settings</summary>
 		public Settings Settings
 		{
 			[DebuggerStepThrough] get;
 			private set;
+		}
+
+		/// <summary>The current server time</summary>
+		public DateTimeOffset UtcNow
+		{
+			get { return Server.Time; }
 		}
 
 		/// <summary>Manages choosing a trading strategy</summary>
@@ -72,16 +92,28 @@ namespace Rylobot
 		/// <summary>The current trading strategy</summary>
 		public Strategy Strat
 		{
-			get;
-			private set;
+			get { return m_strat; }
+			private set
+			{
+				if (m_strat == value) return;
+				Util.Dispose(ref m_strat);
+				m_strat = value;
+			}
 		}
+		private Strategy m_strat;
 
 		/// <summary>Manages creating trades and managing the risk level</summary>
 		public Broker Broker
 		{
-			get;
-			private set;
+			[DebuggerStepThrough] get { return m_broker; }
+			private set
+			{
+				if (m_broker == value) return;
+				Util.Dispose(ref m_broker);
+				m_broker = value;
+			}
 		}
+		private Broker m_broker;
 
 		/// <summary>Return the symbol for a given symbol code or null if invalid or unavailable</summary>
 		public Symbol GetSymbol(string symbol_code)
@@ -113,7 +145,7 @@ namespace Rylobot
 
 
 
-
+// Displaying a UI
 #if false
 		private RylobotUI m_ui;
 		private Thread m_thread;

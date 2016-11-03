@@ -1,6 +1,7 @@
 ﻿using System;
 using cAlgo.API;
 using cAlgo.API.Internals;
+using pr.common;
 
 namespace Rylobot
 {
@@ -27,7 +28,17 @@ namespace Rylobot
 		//   Delta pips to account value  =>  (678pips * Symbol.PipValue) * Volume
 		// 
 
-		/// <summary>Return the stop loss as a signed price value relative to the entry price. 0 means no stop loss</summary>
+		/// <summary>The current Ask(+1)/Bid(-1) price</summary>
+		public static double CurrentPrice(this Symbol sym, int sign)
+		{
+			return sign > 0 ? sym.Ask : sym.Bid;
+		}
+
+		/// <summary>
+		/// Return the stop loss as a signed price value relative to the entry price.
+		/// Positive values mean on the losing side (e.g. buy => sign = +1, entry_price - sign*SL = lower price)
+		/// Negative values mean on the winning side (e.g. buy => sign = +1, entry_price - sign*SL = higher price)
+		/// 0 means no stop loss</summary>
 		public static double StopLossRel(this Position pos)
 		{
 			switch (pos.TradeType)
@@ -38,7 +49,11 @@ namespace Rylobot
 			}
 		}
 
-		/// <summary>Return the take profit as a signed price value relative to the entry price. 0 means no take profit</summary>
+		/// <summary>
+		/// Return the take profit as a signed price value relative to the entry price.
+		/// Positive values mean on the winning side (e.g. buy => sign = +1, entry_price + sign*TP = higher price)
+		/// Negative values mean on the losing side (e.g. buy => sign = +1, entry_price + sign*TP = lower price)
+		/// 0 means no take profit</summary>
 		public static double TakeProfitRel(this Position pos)
 		{
 			switch (pos.TradeType)
@@ -150,6 +165,48 @@ namespace Rylobot
 		public static long TimeFrameToTicks(double time, TimeFrame tf)
 		{
 			return (long)(time * tf.ToTicks());
+		}
+
+		/// <summary>Return the first derivative of the data series at 'index' (CAlgo index)</summary>
+		public static double FirstDerivative(this DataSeries series, int index)
+		{
+			if (series.Count <= 1)
+				return double.NaN;
+
+			// Forwards single point derivative
+			if (index == 0)
+				return (series[index+1] - series[index]) / 1.0; // Error O(h)
+
+			// Backwards single point derivative
+			if (index == series.Count-1)
+				return (series[index] - series[index-1]) / 1.0; // Error O(h)
+
+			// Centred 3 point derivative
+			if (index == 1 || index == series.Count-2)
+				return (series[index+1] - series[index-1]) / 2.0;  // Error O(h^2)
+
+			// Centred 5 point derivative
+			return (series[index-2] - 8*series[index-1] + 8*series[index+1] - series[index+2]) / 12.0;  // Error O(h^4)
+		}
+
+		/// <summary>Return the second derivative of the data series at 'index'</summary>
+		public static double SecondDerivative(this DataSeries series, int index)
+		{
+			if (series.Count <= 1)
+				return double.NaN;
+			if (series.Count <= 2)
+				return 0.0;
+
+			// Forwards double point 2nd derivative
+			if (index == 0)
+				return (series[index+2] - 2*series[index+1] + series[index]) / 1.0; // Error O(h)
+
+			// Backwards double point 2nd derivative
+			if (index == series.Count-1)
+				return (series[index] - 2*series[index-1] + series[index-2]) / 1.0; // Error O(h)
+
+			// Centred double point 2nd derivative
+			return (series[index+1] - 2*series[index] + series[index-1]) / 1.0;  // Error O(h^2)
 		}
 	}
 }

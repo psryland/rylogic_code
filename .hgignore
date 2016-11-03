@@ -67,3 +67,6 @@ tools/GrepWin/grepwin.ini
 Rylogic/resources/*.html
 RylogicRB.sln
 build/*.ldr
+projects/Tradee/Rylobot/Rylobot/net/Data/
+projects/Tradee/Rylobot/Rylobot/net/Model/
+.vs/

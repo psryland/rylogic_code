@@ -15,7 +15,7 @@ namespace Rylobot
 		/// <summary>
 		/// Construct the price density data for a range of candles in 'instr'
 		/// 'ibeg' and 'iend' should be negative indices</summary>
-		public SnR(Instrument instr, int ibeg, int iend)
+		public SnR(Instrument instr, NegIdx ibeg, NegIdx iend)
 		{
 			Instrument = instr;
 			Range = Instrument.IndexRange(ibeg, iend);
@@ -78,7 +78,7 @@ namespace Rylobot
 				return;
 
 			// Use a fraction of the mean candle size as the hysteresis
-			var mean_candle_size = Instrument.CandleRange(Range).Average(x => x.TotalLength);
+			var mean_candle_size = Instrument.MeanCandleSize(Range);
 			Hysteresis = Math.Max(mean_candle_size * 0.25f, Instrument.Symbol.PipSize * 5);
 
 			// Find the stationary points in the close prices
@@ -197,7 +197,7 @@ namespace Rylobot
 				Price = price;
 			}
 
-			/// <summary>The index in the instrument data of the stationary point</summary>
+			/// <summary>The NegIdx index in the instrument data of the stationary point</summary>
 			public double Index { get; private set; }
 
 			/// <summary>The price value at the stationary point</summary>

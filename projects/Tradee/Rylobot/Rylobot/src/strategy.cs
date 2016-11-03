@@ -49,12 +49,14 @@ namespace Rylobot
 				if (m_bot == value) return;
 				if (m_bot != null)
 				{
+					m_bot.Stopping -= HandleBotStopping;
 					m_bot.Positions.Closed -= HandlePositionClosed;
 				}
 				m_bot = value;
 				if (m_bot != null)
 				{
 					m_bot.Positions.Closed += HandlePositionClosed;
+					m_bot.Stopping += HandleBotStopping;
 				}
 			}
 		}
@@ -63,7 +65,7 @@ namespace Rylobot
 		/// <summary>The main instrument for this bot</summary>
 		public Instrument Instrument
 		{
-			get { return m_instr; }
+			[DebuggerStepThrough] get { return m_instr; }
 			private set
 			{
 				if (m_instr == value) return;
@@ -91,15 +93,17 @@ namespace Rylobot
 		}
 		private Position m_position;
 
-		/// <summary>Step the strategy</summary>
+		/// <summary>Step the strategy. Note: Instruments signed up to Bot.Tick while already be updated</summary>
 		public abstract void Step();
-
-		/// <summary>Return a score for how well suited this strategy is to the current conditions</summary>
-		public abstract double Score();
 
 		/// <summary>Called when the current position closes</summary>
 		protected virtual void OnPositionClosed(Position position)
 		{}
+
+		/// <summary>Called just before the bot stops</summary>
+		protected virtual void OnBotStopping()
+		{
+		}
 
 		/// <summary>Called when a position closes</summary>
 		private void HandlePositionClosed(PositionClosedEventArgs args)
@@ -114,6 +118,13 @@ namespace Rylobot
 
 			// Notify position closed
 			OnPositionClosed(position);
+		}
+
+		/// <summary>Called just before the bot stops</summary>
+		private void HandleBotStopping(object sender, EventArgs e)
+		{
+			// Notify stopping
+			OnBotStopping();
 		}
 	}
 }

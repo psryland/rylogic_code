@@ -23,12 +23,6 @@ namespace Rylobot
 				CreateOrder();
 		}
 
-		/// <summary>Return a score for how well suited this strategy is to the current conditions</summary>
-		public override double Score()
-		{
-			return 0.01;
-		}
-
 		/// <summary>Called then the current position closes</summary>
 		protected override void OnPositionClosed(Position position)
 		{
@@ -50,7 +44,14 @@ namespace Rylobot
 
 			// Choose a trade type
 			var tt = preferred ?? (m_rng.Float() > 0.5f ? TradeType.Buy : TradeType.Sell);
-			Position = Bot.Broker.CreateOrder(Bot.Symbol, tt, Label);
+			var trade = new Trade(Bot, Instrument, tt, Label);
+			Position = Bot.Broker.CreateOrder(trade);
+		}
+
+		/// <summary>Return a score for how well suited this strategy is to the current conditions</summary>
+		public static double FitnessScore(Rylobot bot)
+		{
+			return 0.01; // never a good idea...
 		}
 	}
 }
