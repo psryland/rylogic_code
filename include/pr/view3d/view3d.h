@@ -336,8 +336,8 @@ extern "C"
 	VIEW3D_API void        __stdcall View3D_ShowLightingDlg          (View3DWindow window);
 
 	// Objects
-	VIEW3D_API int          __stdcall View3D_ObjectsCreateFromFile    (char const* ldr_filepath, GUID const& context_id, BOOL async, View3DIncludes const* includes);
-	VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr          (char const* ldr_script, BOOL file, GUID const& context_id, BOOL async, View3DIncludes const* includes);
+	VIEW3D_API int          __stdcall View3D_ObjectsCreateFromFile    (wchar_t const* ldr_filepath, GUID const& context_id, BOOL async, View3DIncludes const* includes);
+	VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr          (wchar_t const* ldr_script, BOOL file, GUID const& context_id, BOOL async, View3DIncludes const* includes);
 	VIEW3D_API View3DObject __stdcall View3D_ObjectCreate             (char const* name, View3DColour colour, int vcount, int icount, int ncount, View3DVertex const* verts, UINT16 const* indices, View3DNugget const* nuggets, GUID const& context_id);
 	VIEW3D_API View3DObject __stdcall View3D_ObjectCreateEditCB       (char const* name, View3DColour colour, int vcount, int icount, int ncount, View3D_EditObjectCB edit_cb, void* ctx, GUID const& context_id);
 	VIEW3D_API void         __stdcall View3D_ObjectEdit               (View3DObject object, View3D_EditObjectCB edit_cb, void* ctx);

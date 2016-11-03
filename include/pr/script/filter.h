@@ -59,7 +59,7 @@ namespace pr
 			BufWN m_reg; // The character "shift register"
 
 			Filter()
-				:Src(ESrcType::Unknown)
+				:Src(ESrcType::Unknown, Location())
 				,m_src()
 				,m_reg()
 			{}
@@ -324,7 +324,7 @@ namespace pr
 					on";
 				char const* str_out = "Li					on";
 
-				PtrA<> src(str_in);
+				PtrA src(str_in);
 				StripLineContinuations<> strip(src);
 				for (;*strip; ++strip, ++str_out)
 				{
@@ -361,7 +361,7 @@ namespace pr
 					"\n"
 					"\n";
 
-				PtrA<> src(str_in);
+				PtrA src(str_in);
 				StripLineContinuations<> cont(src);
 				StripComments<> strip(cont);
 				for (;*strip; ++strip, ++str_out)
@@ -393,7 +393,7 @@ namespace pr
 						"\n"
 						"string \"     abc  ";
 
-					PtrA<> src(str_in);
+					PtrA src(str_in);
 					StripNewLines<> strip(src,0,0);
 					for (; *strip; ++strip, ++str_out)
 					{
@@ -412,7 +412,7 @@ namespace pr
 						"abc  \n"
 						"";
 
-					PtrA<> src(str_in);
+					PtrA src(str_in);
 					StripNewLines<> strip(src);
 					for (; *strip; ++strip, ++str_out)
 					{
@@ -428,7 +428,7 @@ namespace pr
 						"\n"
 						"string \"     abc  ";
 
-					PtrA<> src(str_in);
+					PtrA src(str_in);
 					StripNewLines<> strip(src, 0, 0);
 					for (; *strip; ++strip, ++str_out)
 					{
@@ -451,7 +451,7 @@ namespace pr
 						"\n"
 						"";
 
-					PtrA<> src(str_in);
+					PtrA src(str_in);
 					StripNewLines<> strip(src,2,2);
 					for (; *strip; ++strip, ++str_out)
 					{

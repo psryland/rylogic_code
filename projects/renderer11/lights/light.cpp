@@ -115,7 +115,7 @@ namespace pr
 				Light light;
 
 				// Parse the settings
-				script::PtrA<> src(settings);
+				script::PtrA src(settings);
 				script::Reader reader(src, false);
 
 				ELightKW kw;

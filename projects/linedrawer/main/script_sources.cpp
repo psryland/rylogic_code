@@ -69,7 +69,7 @@ namespace ldr
 			ParseResult out(m_store);
 			auto bcount = m_store.size();
 
-			PtrW<> src(str.c_str());
+			PtrW src(str.c_str());
 			Reader reader(src, false, nullptr, nullptr, &m_lua_src);
 			Parse(m_rdr, reader, out, false);
 
@@ -135,7 +135,7 @@ namespace ldr
 			}
 			else // assume ldr script file
 			{
-				FileSrc<> src(file.m_filepath.c_str());
+				FileSrc src(file.m_filepath.c_str());
 
 				Includes<> inc;
 				inc.FileOpened += add_watch;

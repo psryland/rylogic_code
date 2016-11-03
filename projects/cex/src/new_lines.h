@@ -10,12 +10,12 @@ namespace cex
 {
 	struct NewLines :ICex
 	{
-		std::string m_infile;
-		std::string m_outfile;
+		std::wstring m_infile;
+		std::wstring m_outfile;
 		size_t m_min, m_max;
 		std::string m_lineends;
 		bool m_replace_infile;
-		pr::script::FileSrc<> m_filesrc;
+		pr::script::FileSrc m_filesrc;
 		pr::script::StripNewLines<> m_filter;
 		pr::script::Src* m_src;
 
@@ -54,13 +54,13 @@ namespace cex
 			if (pr::str::EqualI(option, "-f"))
 			{
 				if (arg_end - arg < 1) throw std::exception("-f must be followed by a filepath");
-				m_infile = *arg++;
+				m_infile = pr::Widen(*arg++);
 				return true;
 			}
 			if (pr::str::EqualI(option, "-o"))
 			{
 				if (arg_end - arg < 1) throw std::exception("-o must be followed by a filepath");
-				m_outfile = *arg++;
+				m_outfile = pr::Widen(*arg++);
 				return true;
 			}
 			if (pr::str::EqualI(option, "-limit"))
@@ -85,7 +85,7 @@ namespace cex
 		void ValidateInput() override
 		{
 			m_replace_infile = m_outfile.empty();
-			if (m_replace_infile) m_outfile = m_infile + ".tmp";
+			if (m_replace_infile) m_outfile = m_infile + L".tmp";
 
 			if (!pr::filesys::FileExists(m_infile))
 				throw std::exception(pr::FmtS("Input file '%s' doesn't exist", m_infile.c_str()));

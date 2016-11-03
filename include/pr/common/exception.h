@@ -15,15 +15,33 @@ namespace pr
 		EResultGen_Failed = 0x80000000
 	};
 
-	template <typename CodeType = int> struct Exception :std::exception
+	template <typename CodeType = int>
+	struct Exception :std::exception
 	{
 		CodeType m_code;
+		std::string m_msg;
 
-		Exception()                               :std::exception()            ,m_code()     {}
-		Exception(std::string msg)                :std::exception(msg.c_str()) ,m_code()     {}
-		Exception(CodeType code)                  :std::exception()            ,m_code(code) {}
-		Exception(CodeType code, std::string msg) :std::exception(msg.c_str()) ,m_code(code) {}
-		virtual CodeType code() const { return m_code; }
+		Exception()
+			:std::exception()
+			,m_code()
+		{}
+		Exception(std::string msg)
+			:std::exception(msg.c_str())
+			,m_code()
+		{}
+		Exception(CodeType code)
+			:std::exception(std::string("Error code ").append(std::to_string(code)).c_str())
+			,m_code(code)
+		{}
+		Exception(CodeType code, std::string msg)
+			:std::exception(msg.c_str()) // Don't add the error code here. The caller will have added it to 'msg'
+			,m_code(code)
+		{}
+
+		virtual CodeType code() const
+		{
+			return m_code;
+		}
 	};
 
 	// Note:

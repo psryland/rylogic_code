@@ -308,21 +308,21 @@ namespace pr
 				if (AllSet(m_types, EType::Files) && ResolveFileInclude(include, AllSet(flags, EFlags::IncludeLocalDir), loc, result, searched_paths))
 				{
 					FileOpened.Raise(result);
-					return std::make_unique<FileSrc<>>(result.c_str());
+					return std::make_unique<FileSrc>(result.c_str());
 				}
 
 				// Try resources
 				if (AllSet(m_types, EType::Resources) && ResolveResourceInclude(include, result, AllSet(flags, EFlags::Binary), module))
 				{
 					auto res = pr::resource::Read<char>(result.c_str(), L"TEXT", module);
-					return std::make_unique<PtrA<>>(res.m_data);
+					return std::make_unique<PtrA>(res.m_data);
 				}
 
 				// Try the string table
 				if (AllSet(m_types, EType::Strings) && ResolveStringInclude(include, result))
 				{
 					auto i = m_strtab.find(result);
-					return std::make_unique<PtrA<>>(i->second.c_str());
+					return std::make_unique<PtrA>(i->second.c_str());
 				}
 
 				auto msg = !searched_paths.empty()

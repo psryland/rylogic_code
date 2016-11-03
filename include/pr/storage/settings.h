@@ -244,7 +244,7 @@ namespace pr
 		bool Import(std::string const& settings)
 		{
 			// Create a default reader from the import string
-			pr::script::PtrA<> src(settings.c_str());
+			pr::script::PtrA src(settings.c_str());
 			pr::script::Reader reader(src);
 			return Import(reader);
 		}

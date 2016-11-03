@@ -4685,7 +4685,11 @@ namespace pr
 							// Allow sub-classes to handle painting
 							OnPaint(args);
 							if (args.m_handled)
+							{
+								// Mark the update rect as updated
+								Validate();
 								return S_OK;
+							}
 
 							// If the sub-class hasn't totally handled the paint, paint the remaining parts.
 							// Manually draw the background, since we're swallowing WM_ERASEBKGND.

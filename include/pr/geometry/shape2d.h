@@ -152,6 +152,8 @@ namespace pr
 		Props RoundedRectangle(float dimx, float dimy, bool solid, float corner_radius, int facets, Colour32 colour, TVertIter v_out, TIdxIter i_out)
 		{
 			using VIdx = std::remove_reference<decltype(*i_out)>::type;
+			if (dimx < 0) { assert(!"Rectangle model dimension X is less than zero"); dimx = 0; }
+			if (dimy < 0) { assert(!"Rectangle model dimension Y is less than zero"); dimy = 0; }
 
 			Props props;
 			props.m_geom = EGeom::Vert | EGeom::Colr | (solid ? EGeom::Norm : EGeom::None) | (solid ? EGeom::Tex0 : EGeom::None);

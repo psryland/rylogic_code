@@ -238,8 +238,8 @@ namespace ldr
 			m_nav.OrbitCamera(m_settings.m_CameraOrbitSpeed);
 
 		// Refresh at 60Hz
-		m_panel.Invalidate();
-		UpdateWindow(m_panel);
+		//m_panel.Invalidate();
+		//UpdateWindow(m_panel);
 	}
 
 	// Reset the camera to view all, selected, or visible objects

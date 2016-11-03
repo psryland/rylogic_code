@@ -24,12 +24,20 @@ namespace pr
 {
 	namespace ldr
 	{
-		typedef pr::vector<pr::v4>       VCont;
-		typedef pr::vector<pr::v4>       NCont;
-		typedef pr::vector<pr::uint16>   ICont;
-		typedef pr::vector<pr::Colour32> CCont;
-		typedef pr::vector<pr::v2>       TCont;
-		typedef ParseResult::ModelLookup ModelCont;
+		// Notes:
+		// Handling Errors:
+		//  For parsing or logical errors (e.g. negative widths, etc) use p.ReportError(EResult, msg)
+		//  then return gracefully or continue with a valid value. The ReportError function may not
+		//  throw in which case parsing will need to continue with sane values.
+
+		using VCont = pr::vector<pr::v4>;
+		using NCont = pr::vector<pr::v4>;
+		using ICont = pr::vector<pr::uint16>;
+		using CCont = pr::vector<pr::Colour32>;
+		using TCont = pr::vector<pr::v2>;
+		using GCont = pr::vector<pr::rdr::NuggetProps>;
+		using ModelCont = ParseResult::ModelLookup;
+		using EResult = pr::script::EResult;
 
 		struct Cache
 		{
@@ -38,6 +46,7 @@ namespace pr
 			ICont m_index;
 			CCont m_color;
 			TCont m_texts;
+			GCont m_nugts;
 
 			void release()
 			{
@@ -46,13 +55,17 @@ namespace pr
 				m_index.clear();
 				m_color.clear();
 				m_texts.clear();
+				m_nugts.clear();
 			}
-		} g_cache;
+		};
+		
+		thread_local static Cache g_cache;
 		inline VCont& Point() { g_cache.m_point.resize(0); return g_cache.m_point; }
 		inline NCont& Norms() { g_cache.m_norms.resize(0); return g_cache.m_norms; }
 		inline ICont& Index() { g_cache.m_index.resize(0); return g_cache.m_index; }
 		inline CCont& Color() { g_cache.m_color.resize(0); return g_cache.m_color; }
 		inline TCont& Texts() { g_cache.m_texts.resize(0); return g_cache.m_texts; }
+		inline GCont& Nugts() { g_cache.m_nugts.resize(0); return g_cache.m_nugts; }
 
 		// String hash wrapper
 		inline size_t Hash(char const* str)
@@ -91,9 +104,21 @@ namespace pr
 				,m_keyword(keyword)
 				,m_parent(parent)
 			{}
-
 			ParseParams(ParseParams const&) = delete;
 			ParseParams& operator = (ParseParams const&) = delete;
+
+			// Report an error in the script
+			// After calling this, set the incorrect value to a safe value so that
+			// parsing can continue. This function may or may not throw based on the
+			// script error handling policy.
+			void ReportError(EResult result)
+			{
+				m_reader.ReportError(result);
+			}
+			void ReportError(EResult result, char const* msg) 
+			{
+				m_reader.ReportError(result, msg);
+			}
 		};
 
 		// Forward declare the recursive object parsing function
@@ -363,7 +388,7 @@ namespace pr
 					{
 					default:
 					{
-						p.m_reader.ReportError(pr::script::EResult::UnknownToken);
+						p.ReportError(EResult::UnknownToken);
 						break;
 					}
 					case EKeyword::O2W:
@@ -408,7 +433,7 @@ namespace pr
 				}
 				catch (std::exception const& e)
 				{
-					p.m_reader.ReportError(pr::script::EResult::ValueNotFound, pr::FmtS("failed to create texture %s\nReason: %s", tex_filepath.c_str(), e.what()));
+					p.ReportError(EResult::ValueNotFound, pr::FmtS("failed to create texture %s\nReason: %s", tex_filepath.c_str(), e.what()));
 				}
 			}
 			return true;
@@ -431,7 +456,7 @@ namespace pr
 				//}
 				//catch (std::exception const& e)
 				//{
-				//	p.m_reader.ReportError(pr::script::EResult::ValueNotFound, pr::FmtS("failed to create video %s\nReason: %s" ,filepath.c_str() ,e.what()));
+				//	p.ReportError(EResult::ValueNotFound, pr::FmtS("failed to create video %s\nReason: %s" ,filepath.c_str() ,e.what()));
 				//}
 			}
 			p.m_reader.SectionEnd();
@@ -453,7 +478,7 @@ namespace pr
 			}
 			virtual void Parse(ParseParams& p)
 			{
-				p.m_reader.ReportError(pr::script::EResult::UnknownToken);
+				p.ReportError(EResult::UnknownToken);
 			}
 			virtual void CreateModel(ParseParams& p, LdrObjectPtr obj)
 			{
@@ -467,7 +492,10 @@ namespace pr
 			Texture2DPtr m_texture;
 			NuggetProps m_local_mat;
 
-			IObjectCreatorTexture() :m_texture(), m_local_mat() {}
+			IObjectCreatorTexture()
+				:m_texture(),
+				m_local_mat()
+			{}
 			bool ParseKeyword(ParseParams& p, EKeyword kw) override
 			{
 				switch (kw) {
@@ -492,7 +520,11 @@ namespace pr
 		{
 			Light m_light;
 
-			IObjectCreatorLight() :m_light() { m_light.m_on = true; }
+			IObjectCreatorLight()
+				:m_light()
+			{
+				m_light.m_on = true;
+			}
 			bool ParseKeyword(ParseParams& p, EKeyword kw) override
 			{
 				switch (kw) {
@@ -563,7 +595,7 @@ namespace pr
 						pp.m_reader.RealS(t, 2);
 						if (m_point.size() < 2)
 						{
-							pp.m_reader.ReportError(pr::script::EResult::Failed, "No preceding line to apply parametric values to");
+							pp.ReportError(EResult::Failed, "No preceding line to apply parametric values to");
 							return true;
 						}
 						auto& p0 = m_point[m_point.size() - 2];
@@ -583,7 +615,7 @@ namespace pr
 				// Validate
 				if (m_point.size() < 2)
 				{
-					p.m_reader.ReportError(pr::script::EResult::Failed, pr::FmtS("Line object '%s' description incomplete", obj->TypeAndName().c_str()));
+					p.ReportError(EResult::Failed, pr::FmtS("Line object '%s' description incomplete", obj->TypeAndName().c_str()));
 					return;
 				}
 
@@ -634,7 +666,12 @@ namespace pr
 			int    m_facets;
 			bool   m_solid;
 
-			IObjectCreatorShape2d() :m_axis_id(), m_dim(), m_facets(40), m_solid(false) {}
+			IObjectCreatorShape2d()
+				:m_axis_id(),
+				m_dim(),
+				m_facets(40),
+				m_solid(false)
+			{}
 			bool ParseKeyword(ParseParams& p, EKeyword kw) override
 			{
 				switch (kw)
@@ -653,7 +690,11 @@ namespace pr
 			CCont& m_colour;
 			bool   m_per_vert_colour;
 
-			IObjectCreatorPlane() :m_point(Point()), m_colour(Color()), m_per_vert_colour() {}
+			IObjectCreatorPlane()
+				:m_point(Point()),
+				m_colour(Color()),
+				m_per_vert_colour()
+			{}
 			bool ParseKeyword(ParseParams& p, EKeyword kw) override
 			{
 				switch (kw) {
@@ -668,7 +709,7 @@ namespace pr
 				// Validate
 				if (m_point.empty() || (m_point.size() % 4) != 0)
 				{
-					p.m_reader.ReportError(pr::script::EResult::Failed, "Object description incomplete");
+					p.ReportError(EResult::Failed, "Object description incomplete");
 					return;
 				}
 
@@ -684,7 +725,10 @@ namespace pr
 			pr::v4 m_pt[8];
 			pr::m4x4 m_b2w;
 
-			IObjectCreatorCuboid() :m_pt(), m_b2w(pr::m4x4Identity) {}
+			IObjectCreatorCuboid()
+				:m_pt(),
+				m_b2w(pr::m4x4Identity)
+			{}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
 				obj->m_model = ModelGenerator<>::Boxes(p.m_rdr, 1, m_pt, m_b2w, 0, 0, Material());
@@ -700,7 +744,13 @@ namespace pr
 			pr::v2 m_scale;
 			int m_layers, m_wedges;
 
-			IObjectCreatorCone() :m_axis_id(), m_dim(), m_scale(pr::v2One), m_layers(1), m_wedges(20) {}
+			IObjectCreatorCone()
+				:m_axis_id(),
+				m_dim(),
+				m_scale(pr::v2One),
+				m_layers(1),
+				m_wedges(20)
+			{}
 			bool ParseKeyword(ParseParams& p, EKeyword kw) override
 			{
 				switch (kw) {
@@ -733,75 +783,168 @@ namespace pr
 			CCont& m_colours;
 			TCont& m_texs;
 			ICont& m_indices;
-			EPrim  m_prim_type;
+			GCont& m_nuggets;
 			float m_gen_normals;
 
-			IObjectCreatorMesh() :m_verts(Point()), m_normals(Norms()), m_colours(Color()), m_texs(Texts()), m_indices(Index()), m_prim_type(), m_gen_normals(-1.0f) {}
+			IObjectCreatorMesh()
+				:m_verts(Point())
+				,m_normals(Norms())
+				,m_colours(Color())
+				,m_texs(Texts())
+				,m_indices(Index())
+				,m_nuggets(Nugts())
+				,m_gen_normals(-1.0f)
+			{}
 			bool ParseKeyword(ParseParams& p, EKeyword kw) override
 			{
-				switch (kw) {
-				default: return IObjectCreatorTexture::ParseKeyword(p, kw);
+				switch (kw)
+				{
+				default:
+					{
+						return IObjectCreatorTexture::ParseKeyword(p, kw);
+					}
 				case EKeyword::Verts:
 					{
 						p.m_reader.SectionStart();
-						for (pr::v4 v; !p.m_reader.IsSectionEnd();) { p.m_reader.Vector3(v, 1.0f); m_verts.push_back(v); }
+						for (pr::v4 v; !p.m_reader.IsSectionEnd();)
+						{
+							p.m_reader.Vector3(v, 1.0f);
+							m_verts.push_back(v);
+						}
 						p.m_reader.SectionEnd();
 						return true;
 					}
 				case EKeyword::Normals:
 					{
 						p.m_reader.SectionStart();
-						for (pr::v4 n; !p.m_reader.IsSectionEnd();) { p.m_reader.Vector3(n, 0.0f); m_normals.push_back(n); }
+						for (pr::v4 n; !p.m_reader.IsSectionEnd();)
+						{
+							p.m_reader.Vector3(n, 0.0f);
+							m_normals.push_back(n);
+						}
 						p.m_reader.SectionEnd();
 						return true;
 					}
 				case EKeyword::Colours:
 					{
 						p.m_reader.SectionStart();
-						for (pr::Colour32 c; !p.m_reader.IsSectionEnd();) { p.m_reader.Int(c.argb, 16); m_colours.push_back(c); }
+						for (pr::Colour32 c; !p.m_reader.IsSectionEnd();)
+						{
+							p.m_reader.Int(c.argb, 16);
+							m_colours.push_back(c);
+						}
 						p.m_reader.SectionEnd();
 						return true;
 					}
 				case EKeyword::TexCoords:
 					{
 						p.m_reader.SectionStart();
-						for (pr::v2 t; !p.m_reader.IsSectionEnd();) { p.m_reader.Vector2(t); m_texs.push_back(t); }
+						for (pr::v2 t; !p.m_reader.IsSectionEnd();)
+						{
+							p.m_reader.Vector2(t);
+							m_texs.push_back(t);
+						}
 						p.m_reader.SectionEnd();
 						return true;
 					}
 				case EKeyword::Lines:
 					{
+						NuggetProps nug = *Material();
+						nug.m_topo = EPrim::LineList;
+						nug.m_geom = EGeom::Vert | (!m_colours.empty() ? EGeom::Colr : EGeom::None);
+						nug.m_vrange = pr::rdr::Range::Reset();
+						nug.m_irange = pr::rdr::Range(m_indices.size(), m_indices.size());
+						nug.m_has_alpha = false;
+
 						p.m_reader.SectionStart();
 						for (pr::uint16 idx[2]; !p.m_reader.IsSectionEnd();)
 						{
 							p.m_reader.Int(idx, 2, 10);
+
+							nug.m_vrange.encompass(idx[0]);
+							nug.m_vrange.encompass(idx[1]);
+							nug.m_irange.m_end += 2;
+							if ((int(nug.m_geom) & int(EGeom::Colr)) != 0)
+							{
+								nug.m_has_alpha |= m_colours[idx[0]].a != 0xFF;
+								nug.m_has_alpha |= m_colours[idx[1]].a != 0xFF;
+							}
+
 							m_indices.push_back(idx[0]);
 							m_indices.push_back(idx[1]);
 						}
 						p.m_reader.SectionEnd();
-						m_prim_type = EPrim::LineList;
+
+						m_nuggets.push_back(nug);
 						return true;
 					}
 				case EKeyword::Faces:
 					{
+						NuggetProps nug = *Material();
+						nug.m_topo = EPrim::TriList;
+						nug.m_geom = EGeom::Vert |
+							(!m_normals.empty() ? EGeom::Norm : EGeom::None) |
+							(!m_colours.empty() ? EGeom::Colr : EGeom::None) |
+							(!m_texs.empty()    ? EGeom::Tex0 : EGeom::None);
+						nug.m_vrange = pr::rdr::Range::Reset();
+						nug.m_irange = pr::rdr::Range(m_indices.size(), m_indices.size());
+						nug.m_has_alpha = false;
+
 						p.m_reader.SectionStart();
 						for (pr::uint16 idx[3]; !p.m_reader.IsSectionEnd();)
 						{
 							p.m_reader.Int(idx, 3, 10);
+
+							nug.m_vrange.encompass(idx[0]);
+							nug.m_vrange.encompass(idx[1]);
+							nug.m_vrange.encompass(idx[2]);
+							nug.m_irange.m_end += 3;
+							if ((int(nug.m_geom) & int(EGeom::Colr)) != 0)
+							{
+								nug.m_has_alpha |= m_colours[idx[0]].a != 0xFF;
+								nug.m_has_alpha |= m_colours[idx[1]].a != 0xFF;
+								nug.m_has_alpha |= m_colours[idx[2]].a != 0xFF;
+							}
+
 							m_indices.push_back(idx[0]);
 							m_indices.push_back(idx[1]);
 							m_indices.push_back(idx[2]);
 						}
 						p.m_reader.SectionEnd();
-						m_prim_type = EPrim::TriList;
+
+						m_nuggets.push_back(nug);
 						return true;
 					}
 				case EKeyword::Tetra:
 					{
+						NuggetProps nug = *Material();
+						nug.m_topo = EPrim::TriList;
+						nug.m_geom = EGeom::Vert |
+							(!m_normals.empty() ? EGeom::Norm : EGeom::None) |
+							(!m_colours.empty() ? EGeom::Colr : EGeom::None) |
+							(!m_texs.empty()    ? EGeom::Tex0 : EGeom::None);
+						nug.m_vrange = pr::rdr::Range::Reset();
+						nug.m_irange = pr::rdr::Range(m_indices.size(), m_indices.size());
+						nug.m_has_alpha = false;
+
 						p.m_reader.SectionStart();
 						for (pr::uint16 idx[4]; !p.m_reader.IsSectionEnd();)
 						{
 							p.m_reader.Int(idx, 4, 10);
+
+							nug.m_vrange.encompass(idx[0]);
+							nug.m_vrange.encompass(idx[1]);
+							nug.m_vrange.encompass(idx[2]);
+							nug.m_vrange.encompass(idx[3]);
+							nug.m_irange.m_end += 12;
+							if ((int(nug.m_geom) & int(EGeom::Colr)) != 0)
+							{
+								nug.m_has_alpha |= m_colours[idx[0]].a != 0xFF;
+								nug.m_has_alpha |= m_colours[idx[1]].a != 0xFF;
+								nug.m_has_alpha |= m_colours[idx[2]].a != 0xFF;
+								nug.m_has_alpha |= m_colours[idx[3]].a != 0xFF;
+							}
+
 							m_indices.push_back(idx[0]);
 							m_indices.push_back(idx[1]);
 							m_indices.push_back(idx[2]);
@@ -816,7 +959,8 @@ namespace pr
 							m_indices.push_back(idx[1]);
 						}
 						p.m_reader.SectionEnd();
-						m_prim_type = EPrim::TriList;
+
+						m_nuggets.push_back(nug);
 						return true;
 					}
 				case EKeyword::GenerateNormals:
@@ -829,56 +973,58 @@ namespace pr
 			}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
-				using namespace pr::rdr;
-
 				// Validate
 				if (m_indices.empty() || m_verts.empty())
 				{
-					p.m_reader.ReportError(pr::script::EResult::Failed, "Mesh object description incomplete");
+					p.ReportError(EResult::Failed, "Mesh object description incomplete");
 					return;
 				}
 
 				// Generate normals if needed
-				if (m_gen_normals >= 0.0f && m_prim_type == EPrim::TriList)
+				if (m_gen_normals >= 0.0f)
 				{
-					auto iout = std::begin(m_indices);
+					// Can't generate normals per nugget because nuggets may share vertices.
+					// Generate normals for all vertices (verts used by lines only with have zero-normals)
 					m_normals.resize(m_verts.size());
 
-					pr::geometry::GenerateNormals(m_indices.size(), m_indices.data(), m_gen_normals,
-						[&](pr::uint16 i)
-						{
-							return m_verts[i];
-						}, 0,
-						[&](pr::uint16 new_idx, pr::uint16 orig_idx, v4 const& norm)
-						{
-							if (new_idx >= m_verts.size())
-							{
-								m_verts  .resize(new_idx + 1, m_verts[orig_idx]);
-								m_normals.resize(new_idx + 1, m_normals[orig_idx]);
-							}
-							m_normals[new_idx] = norm;
-						},
-						[&](pr::uint16 i0, pr::uint16 i1, pr::uint16 i2)
-						{
-							*iout++ = i0;
-							*iout++ = i1;
-							*iout++ = i2;
-						});
-				}
+					// Generate normals for the nuggets containing faces
+					for (auto& nug : m_nuggets)
+					{
+						// Not face topology...
+						if (nug.m_topo != EPrim::TriList)
+							continue;
 
-				// Create the nuggets
-				NuggetProps nug = *Material();
-				nug.m_topo = m_prim_type;
-				nug.m_geom = EGeom::Vert |
-					(!m_normals.empty() ? EGeom::Norm : EGeom::None) |
-					(!m_colours.empty() ? EGeom::Colr : EGeom::None) |
-					(!m_texs.empty()    ? EGeom::Tex0 : EGeom::None);
+						// Not sure if this works... needs testing
+						auto icount = nug.m_irange.size();
+						auto iptr = m_indices.data() + nug.m_irange.begin();
+						pr::geometry::GenerateNormals(icount, iptr, m_gen_normals,
+							[&](pr::uint16 i)
+							{
+								return m_verts[i];
+							}, 0,
+							[&](pr::uint16 new_idx, pr::uint16 orig_idx, v4 const& norm)
+							{
+								if (new_idx >= m_verts.size())
+								{
+									m_verts  .resize(new_idx + 1, m_verts[orig_idx]);
+									m_normals.resize(new_idx + 1, m_normals[orig_idx]);
+								}
+								m_normals[new_idx] = norm;
+							},
+							[&](pr::uint16 i0, pr::uint16 i1, pr::uint16 i2)
+							{
+								*iptr++ = i0;
+								*iptr++ = i1;
+								*iptr++ = i2;
+							});
+					}
+				}
 
 				// Create the model
 				auto cdata = MeshCreationData()
 					.verts(m_verts.data(), m_verts.size())
 					.indices(m_indices.data(), m_indices.size())
-					.nuggets(&nug, 1)
+					.nuggets(m_nuggets.data(), m_nuggets.size())
 					.colours(m_colours.data(), m_colours.size())
 					.normals(m_normals.data(), m_normals.size())
 					.tex(m_texs.data(), m_texs.size());
@@ -1049,7 +1195,7 @@ namespace pr
 					else if (pr::str::EqualNI(ty, "Fwd"    )) m_type = EArrowType::Fwd;
 					else if (pr::str::EqualNI(ty, "Back"   )) m_type = EArrowType::Back;
 					else if (pr::str::EqualNI(ty, "FwdBack")) m_type = EArrowType::FwdBack;
-					else { p.m_reader.ReportError(pr::script::EResult::UnknownValue, "arrow type must one of Line, Fwd, Back, FwdBack"); return; }
+					else { p.ReportError(EResult::UnknownValue, "arrow type must one of Line, Fwd, Back, FwdBack"); return; }
 				}
 				else
 				{
@@ -1072,7 +1218,7 @@ namespace pr
 				// Validate
 				if (m_point.size() < 2)
 				{
-					p.m_reader.ReportError(pr::script::EResult::Failed, FmtS("Arrow object '%s' description incomplete", obj->TypeAndName().c_str()));
+					p.ReportError(EResult::Failed, FmtS("Arrow object '%s' description incomplete", obj->TypeAndName().c_str()));
 					return;
 				}
 
@@ -1231,7 +1377,16 @@ namespace pr
 			{
 				p.m_reader.Int(m_axis_id.value, 10);
 				p.m_reader.Real(m_dim.x);
-				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.Real(m_dim.y);
+				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd())
+					m_dim.y = m_dim.x;
+				else
+					p.m_reader.Real(m_dim.y);
+
+				if (Abs(m_dim) != m_dim)
+				{
+					p.ReportError(EResult::InvalidValue, "Circle dimensions contain a negative value");
+					m_dim = Abs(m_dim);
+				}
 			}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
@@ -1312,11 +1467,16 @@ namespace pr
 				p.m_reader.Real(m_dim.x);
 				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.Real(m_dim.y);
 				m_dim *= 0.5f;
+
+				if (Abs(m_dim) != m_dim)
+				{
+					p.ReportError(EResult::InvalidValue, "Rect dimensions contain a negative value");
+					m_dim = Abs(m_dim);
+				}
 			}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
 				using namespace pr::rdr;
-
 				pr::m4x4 o2w, *po2w = nullptr;
 				if (m_axis_id != 3)
 				{
@@ -1448,7 +1608,7 @@ namespace pr
 				// Validate
 				if (m_point.size() < 2)
 				{
-					p.m_reader.ReportError(pr::script::EResult::Failed, "Object description incomplete");
+					p.ReportError(EResult::Failed, "Object description incomplete");
 					return;
 				}
 
@@ -1544,7 +1704,12 @@ namespace pr
 				// Validate
 				if (m_dim == pr::v4Zero || m_location.size() == 0)
 				{
-					p.m_reader.ReportError(pr::script::EResult::Failed, "Box list object description incomplete");
+					p.ReportError(EResult::Failed, "BoxList object description incomplete");
+					return;
+				}
+				if (Abs(m_dim) != m_dim)
+				{
+					p.ReportError(EResult::InvalidValue, "BoxList box dimensions contain a negative value");
 					return;
 				}
 
@@ -1594,7 +1759,7 @@ namespace pr
 				m_pt[7] = v4(-f*w, +f*h, f, 1.0f);
 
 				switch (m_axis_id){
-				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
+				default: p.ReportError(EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
 				case  1: m_b2w = m4x4::Transform(0.0f, -pr::maths::tau_by_4, 0.0f, v4Origin); break;
 				case -1: m_b2w = m4x4::Transform(0.0f, pr::maths::tau_by_4, 0.0f, v4Origin); break;
 				case  2: m_b2w = m4x4::Transform(-pr::maths::tau_by_4, 0.0f, 0.0f, v4Origin); break;
@@ -1638,7 +1803,7 @@ namespace pr
 				m_pt[7] = v4(+f*w, +f*h, f, 1.0f);
 
 				switch (m_axis_id) {
-				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
+				default: p.ReportError(EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
 				case  1: m_b2w = m4x4::Transform(0.0f, pr::maths::tau_by_4, 0.0f, v4Origin); break;
 				case -1: m_b2w = m4x4::Transform(0.0f, -pr::maths::tau_by_4, 0.0f, v4Origin); break;
 				case  2: m_b2w = m4x4::Transform(-pr::maths::tau_by_4, 0.0f, 0.0f, v4Origin); break;
@@ -1706,12 +1871,13 @@ namespace pr
 				m_dim.y = h1 * pr::Tan(a);
 			}
 		};
+
 		// ELdrObject::Mesh
 		template <> struct ObjectCreator<ELdrObject::Mesh> :IObjectCreatorMesh
 		{
 			void Parse(ParseParams& p) override
 			{
-				p.m_reader.ReportError(pr::script::EResult::UnknownValue, "Mesh object description invalid");
+				p.ReportError(EResult::UnknownValue, "Mesh object description invalid");
 				p.m_reader.FindSectionEnd();
 			}
 		};
@@ -1721,12 +1887,11 @@ namespace pr
 		{
 			ObjectCreator()
 			{
-				m_prim_type = EPrim::TriList;
 				m_gen_normals = 0.0f;
 			}
 			void Parse(ParseParams& p) override
 			{
-				p.m_reader.ReportError(pr::script::EResult::UnknownValue, "Convex hull object description invalid");
+				p.ReportError(EResult::UnknownValue, "Convex hull object description invalid");
 				p.m_reader.FindSectionEnd();
 			}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
@@ -1740,6 +1905,12 @@ namespace pr
 				m_verts.resize(num_verts);
 				m_indices.resize(3 * num_faces);
 
+				// Create a nugget for the hull
+				auto nug = *Material();
+				nug.m_topo = EPrim::TriList;
+				nug.m_geom = EGeom::Vert;
+				m_nuggets.push_back(nug);
+
 				IObjectCreatorMesh::CreateModel(p, obj);
 			}
 		};
@@ -1751,7 +1922,11 @@ namespace pr
 			m4x4 m_bake;
 			float m_gen_normals;
 
-			ObjectCreator() :m_filepath() ,m_bake(m4x4Identity) ,m_gen_normals(-1.0f) {}
+			ObjectCreator()
+				:m_filepath()
+				,m_bake(m4x4Identity)
+				,m_gen_normals(-1.0f)
+			{}
 			bool ParseKeyword(ParseParams& p, EKeyword kw) override
 			{
 				switch (kw) {
@@ -1781,7 +1956,7 @@ namespace pr
 				// Validate
 				if (m_filepath.empty())
 				{
-					p.m_reader.ReportError(pr::script::EResult::Failed, "Model filepath not given");
+					p.ReportError(EResult::Failed, "Model filepath not given");
 					return;
 				}
 
@@ -1791,7 +1966,7 @@ namespace pr
 				{
 					string512 msg = pr::FmtS("Mesh file '%s' is not supported.\nSupported Formats: ", Narrow(m_filepath).c_str());
 					for (auto f : EModelFileFormat::MemberNames<char>()) msg.append(f).append(" ");
-					p.m_reader.ReportError(pr::script::EResult::Failed, msg.c_str());
+					p.ReportError(EResult::Failed, msg.c_str());
 					return;
 				}
 
@@ -1800,7 +1975,7 @@ namespace pr
 				auto src = p.m_reader.Includes().OpenStreamA(m_filepath, flags);
 				if (!src || !*src)
 				{
-					p.m_reader.ReportError(pr::script::EResult::Failed, pr::FmtS("Failed to open file stream '%s'", m_filepath.c_str()));
+					p.ReportError(EResult::Failed, pr::FmtS("Failed to open file stream '%s'", m_filepath.c_str()));
 					return;
 				}
 
@@ -1874,7 +2049,7 @@ namespace pr
 				auto mdl = p.m_models.find(model_key);
 				if (mdl == p.m_models.end())
 				{
-					p.m_reader.ReportError(pr::script::EResult::UnknownValue, "Instance not found");
+					p.ReportError(EResult::UnknownValue, "Instance not found");
 					return;
 				}
 				obj->m_model = mdl->second;
@@ -1905,7 +2080,7 @@ namespace pr
 					if (ParseLdrObject(pp)) continue;
 					if (ParseProperties(pp, (EKeyword)kw, obj)) continue;
 					if (creator.ParseKeyword(p, (EKeyword)kw)) continue;
-					p.m_reader.ReportError(pr::script::EResult::UnknownToken);
+					p.ReportError(EResult::UnknownToken);
 					continue;
 				}
 				else
@@ -2733,11 +2908,14 @@ LR"(// A mesh of lines, faces, or tetrahedra.
 //		[*Normals { nx ny nz ... }]                            // One per vertex
 //		[*Colours { c0 c1 c2 ... }]                            // One per vertex
 //		[*TexCoords { tx ty ... }]                             // One per vertex
-//		[GenerateNormals]                                      // Only works for faces or tetras
 //		*Faces { f00 f01 f02  f10 f11 f12  f20 f21 f22  ...}   // Indices of faces
 //		*Lines { l00 l01  l10 l11  l20 l21  l30 l31 ...}       // Indices of lines
 //		*Tetra { t00 t01 t02 t03  t10 t11 t12 t13 ...}         // Indices of tetrahedra
+//		[GenerateNormals]                                      // Only works for faces or tetras
 //	}
+// Each 'Faces', 'Lines', 'Tetra' block is a sub-model within the mesh
+// Vertex, normal, colour, and texture data must be given before faces, lines, or tetra data
+// Textures must be defined before faces, lines, or tetra
 *Mesh mesh FFFFFF00
 {
 	*Verts {

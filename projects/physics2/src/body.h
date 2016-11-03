@@ -15,9 +15,9 @@ struct Body :pr::physics::RigidBody
 		static std::default_random_engine r;
 		return r;
 	}
-	static char const* Desc()
+	static wchar_t const* Desc()
 	{
-		return pr::FmtS("*Box b %08X { 1 1 1 }", pr::RandomRGB(rng()).argb);
+		return pr::FmtS(L"*Box b %08X { 1 1 1 }", pr::RandomRGB(rng()).argb);
 	}
 
 	Body()

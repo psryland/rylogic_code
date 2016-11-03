@@ -196,24 +196,24 @@ namespace pr
 				// Read decimal digits up to a delimiter, sign, or exponent
 				for (; IsDecDigit(*wsrc); ++wsrc)
 					if (!append(*wsrc)) return;
+			}
 
-				// Read an optional exponent
-				if (*wsrc == 'e' || *wsrc == 'E' || *wsrc == 'd' || *wsrc == 'D')
+			// Read an optional exponent
+			if (allow_fp && (*wsrc == 'e' || *wsrc == 'E' || *wsrc == 'd' || *wsrc == 'D'))
+			{
+				if (!append(*wsrc)) return;
+				++wsrc;
+
+				// Read the optional exponent sign
+				if (*wsrc == '+' || *wsrc == '-')
 				{
 					if (!append(*wsrc)) return;
 					++wsrc;
-
-					// Read the optional exponent sign
-					if (*wsrc == '+' || *wsrc == '-')
-					{
-						if (!append(*wsrc)) return;
-						++wsrc;
-					}
-
-					// Read decimal digits up to a delimiter, or suffix
-					for (; IsDecDigit(*wsrc); ++wsrc)
-						if (!append(*wsrc)) return;
 				}
+
+				// Read decimal digits up to a delimiter, or suffix
+				for (; IsDecDigit(*wsrc); ++wsrc)
+					if (!append(*wsrc)) return;
 			}
 
 			// Read the optional number suffixes
@@ -803,6 +803,7 @@ namespace pr
 				PR_CHECK(ExtractNumberC(num, "+.0f"    ), true); PR_CHECK(FEql(num.db(), +0.0), true);
 				PR_CHECK(ExtractNumberC(num, "-.1f"    ), true); PR_CHECK(FEql(num.db(), -0.1), true);
 				PR_CHECK(ExtractNumberC(num, "1F"      ), true); PR_CHECK(FEql(num.db(), 1.0 ), true);
+				PR_CHECK(ExtractNumberC(num, "3E-05F"  ), true); PR_CHECK(FEql(num.db(), 3E-05), true);
 				PR_CHECK(ExtractNumberC(num, "12three" ), true); PR_CHECK(num.ll(), 12        );
 				PR_CHECK(ExtractNumberC(num, "0x123"   ), true); PR_CHECK(num.ll(), 0x123     );
 				PR_CHECK(ExtractNumberC(num, "0x123ULL"), true); PR_CHECK(num.ul(), 0x123ULL  );

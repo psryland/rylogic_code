@@ -324,7 +324,7 @@ namespace pr
 				">= == != && || <<= >>= &= |= ^= += -= *= /= %= ..."
 				;
 
-			PtrA<> src(str_in);
+			PtrA src(str_in);
 			Tokeniser<> tkr(src);
 			PR_CHECK(*tkr == EKeyword::Auto     , true); ++tkr;
 			PR_CHECK(*tkr == EKeyword::Double   , true); ++tkr;

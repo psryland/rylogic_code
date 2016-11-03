@@ -15,10 +15,11 @@ namespace pr
 		// Script exception
 		struct Exception :pr::Exception<EResult>
 		{
-			Location const* m_loc;
+			Location m_loc;
+
 			Exception(EResult result, Location const& loc, std::string msg)
-				:pr::Exception<EResult>(result, msg)
-				,m_loc(&loc)
+				:pr::Exception<EResult>(result, msg.append("\nError Code: ").append(result.ToStringA()).append("\nLocation: ").append(Narrow(loc.ToString())))
+				,m_loc(loc)
 			{}
 		};
 

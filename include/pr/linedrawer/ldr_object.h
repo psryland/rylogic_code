@@ -607,12 +607,12 @@ namespace pr
 		// 'include_paths' is a comma/semicolon separated list of include paths to use to resolve #include directives (or nullptr)
 		inline void ParseFile(
 			pr::Renderer& rdr,                     // The renderer to create models for
-			char const* filename,                  // The file containing the ldr script
+			wchar_t const* filename,               // The file containing the ldr script
 			ParseResult& out,                      // The results of parsing the script
 			bool async = true,                     // True if parsing should be done in a background thread
 			pr::Guid const& context_id = GuidZero) // The context id to assign to each created object
 		{
-			pr::script::FileSrc<> src(filename);
+			pr::script::FileSrc src(filename);
 			pr::script::Reader reader(src);
 			Parse(rdr, reader, out, async, context_id);
 		}

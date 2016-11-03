@@ -6,7 +6,7 @@
 #pragma once
 
 #include <string>
-#include <deque>
+#include <fstream>
 #include <unordered_map>
 #include <type_traits>
 #include <locale>
@@ -117,6 +117,7 @@ namespace pr
 			x(Failed                          ,= 0x80000000)\
 			x(InvalidIdentifier               ,)\
 			x(InvalidString                   ,)\
+			x(InvalidValue                    ,)\
 			x(ParameterCountMismatch          ,)\
 			x(UnexpectedEndOfFile             ,)\
 			x(UnknownPreprocessorCommand      ,)\

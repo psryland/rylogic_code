@@ -16,11 +16,34 @@ namespace pr
 		// Interface to a stream of wchar_t's, essentially a pointer-like interface
 		struct Src
 		{
-			virtual ~Src() {}
+		protected:
+
+			ESrcType m_type;
+			Location m_loc;
+
+			Src(ESrcType type, Location const& loc)
+				:m_type(type)
+				,m_loc(loc)
+			{}
+
+		public:
+
+			virtual ~Src()
+			{}
+
+			// Source type
+			virtual ESrcType Type() const
+			{
+				return m_type;
+			}
+
+			// Location within the source
+			virtual Location const& Loc() const
+			{
+				return m_loc;
+			}
 
 			// Debugging helper interface
-			virtual ESrcType Type() const { return m_type; }
-			virtual Location const& Loc() const { static Location s_loc; return s_loc; }
 			virtual SrcConstPtr DbgPtr() const = 0;
 
 			// Pointer-like interface
@@ -28,49 +51,47 @@ namespace pr
 			virtual Src&    operator ++() = 0;
 
 			// Convenience methods
-			Src& operator +=(int n)
+			Src& operator += (int n)
 			{
 				for (;n--;) ++*this;
 				return *this;
 			}
-
-		protected:
-
-			ESrcType m_type;
-			Src(ESrcType type)
-				:m_type(type)
-			{}
 		};
 
 		// An empty source
 		struct NullSrc :Src
 		{
-			NullSrc() :Src(ESrcType::Null) {}
-			SrcConstPtr DbgPtr() const override { return SrcConstPtr(); }
-			wchar_t operator * () const override { return 0; }
-			NullSrc& operator ++() { return *this; }
+			NullSrc()
+				:Src(ESrcType::Null, Location())
+			{}
+			SrcConstPtr DbgPtr() const override
+			{
+				return SrcConstPtr();
+			}
+			wchar_t operator * () const override
+			{
+				return 0;
+			}
+			NullSrc& operator ++()
+			{
+				return *this;
+			}
 		};
 
 		// Allow any type that implements a pointer to implement 'Src'
-		template <typename TPtr, bool UTF8 = false, typename TLoc = TextLoc> struct Ptr :Src
+		template <typename TPtr, bool UTF8 = false> struct Ptr :Src
 		{
 			TPtr m_ptr; // The pointer-like data source
-			TLoc m_loc;
 
-			Ptr(TPtr ptr, TLoc loc = TLoc(), ESrcType src_type = ESrcType::Pointer)
-				:Src(src_type)
+			Ptr(TPtr ptr, Location* loc = nullptr, ESrcType src_type = ESrcType::Pointer)
+				:Src(src_type, loc ? *loc : Location())
 				,m_ptr(ptr)
-				,m_loc(loc)
 			{}
 
 			// Debugging helper interface
 			SrcConstPtr DbgPtr() const override
 			{
 				return &*m_ptr;
-			}
-			TextLoc const& Loc() const override
-			{
-				return m_loc;
 			}
 
 			// Pointer-like interface
@@ -101,33 +122,27 @@ namespace pr
 				return ch;
 			}
 		};
-		template <typename TLoc = TextLoc> using PtrA = Ptr<char const*, false, TLoc>;
-		template <typename TLoc = TextLoc> using PtrUTF8 = Ptr<char const*, true, TLoc>;
-		template <typename TLoc = TextLoc> using PtrW = Ptr<wchar_t const*, false, TLoc>;
+		using PtrA    = Ptr<char const*, false>;
+		using PtrW    = Ptr<wchar_t const*, false>;
+		using PtrUTF8 = Ptr<char const*, true>;
 
 		// A pointer range char source
-		template <typename TPtr, typename TLoc = TextLoc> struct PtrRange :Src
+		template <typename TPtr> struct PtrRange :Src
 		{
 			TPtr m_ptr;
 			TPtr m_beg, m_end;
-			TLoc m_loc;
 
-			PtrRange(TPtr beg, TPtr end, TLoc loc = TLoc(), ESrcType src_type = ESrcType::Range)
-				:Src(src_type)
+			PtrRange(TPtr beg, TPtr end, Location* loc = nullptr, ESrcType src_type = ESrcType::Range)
+				:Src(src_type, loc ? *loc : Location())
 				,m_ptr(beg)
 				,m_beg(beg)
 				,m_end(end)
-				,m_loc(loc)
 			{}
 
 			// Debugging helper interface
 			SrcConstPtr DbgPtr() const override
 			{
 				return &*m_ptr;
-			}
-			TextLoc const& Loc() const override
-			{
-				return m_loc;
 			}
 
 			// Pointer-like interface
@@ -144,10 +159,10 @@ namespace pr
 			}
 
 			// Reset to the start of the range
-			void reset(size_t ofs = 0, TLoc loc = TLoc())
+			void reset(size_t ofs = 0, Location* loc = nullptr)
 			{
 				m_ptr = m_beg + ofs;
-				m_loc = loc;
+				m_loc = loc ? *loc : Location();
 			}
 
 			// Iterator range
@@ -161,59 +176,58 @@ namespace pr
 			}
 
 			// Return a sub range of this range
-			PtrRange Subrange(size_t ofs, size_t count, TLoc loc = TLoc()) const
+			PtrRange Subrange(size_t ofs, size_t count, Location* loc = nullptr) const
 			{
 				return PtrRange(m_beg + ofs, m_beg + ofs + count, loc);
 			}
 		};
 
 		// A file char source
-		template <typename TLoc = FileLoc> struct FileSrc :Src
+		struct FileSrc :Src
 		{
 			enum class EEncoding { ascii, utf8, utf16, utf16_be, auto_detect };
 
 			mutable std::wifstream m_file; // The file stream source
 			BufW4 m_buf;                   // Use a small shift buffer to make debugging easier
-			TLoc m_loc;                    // The location within the file (note, TLoc could be Location* to reference an external location object)
 			EEncoding m_enc;               // The detected file encoding
 
 			FileSrc()
-				:Src(ESrcType::File)
+				:Src(ESrcType::File, Location())
 				,m_file()
 				,m_buf()
-				,m_loc()
 				,m_enc()
 			{}
-			template <typename String> explicit FileSrc(String const& filepath, size_t ofs = 0, EEncoding enc = EEncoding::auto_detect, TLoc loc = TLoc())
-				:FileSrc()
+			explicit FileSrc(string const& filepath, size_t ofs = 0, EEncoding enc = EEncoding::auto_detect, Location* loc = nullptr)
+				:Src(ESrcType::File, loc ? *loc : Location(filepath, ofs))
+				,m_file()
+				,m_buf()
+				,m_enc()
 			{
-				if (!pr::str::Empty(filepath))
+				if (!filepath.empty())
 					Open(filepath, ofs, enc, loc);
 			}
 
 			// Open a file as a stream source
-			template <typename String> void Open(String const& filepath, size_t ofs = 0, EEncoding enc = EEncoding::auto_detect, TLoc loc = TLoc())
+			void Open(string const& filepath, size_t ofs = 0, EEncoding enc = EEncoding::auto_detect, Location* loc = nullptr)
 			{
 				Close();
 
-				auto fpath = pr::str::c_str(filepath);
-				m_enc = enc;
-				m_loc = loc;
-
 				// Determine file encoding, look for the BOM in the first 3 bytes
+				m_enc = enc;
+				auto bom_size = 0;
 				if (m_enc == EEncoding::auto_detect)
 				{
 					unsigned char bom[3];
-					std::ifstream file(fpath, std::ios::binary);
+					std::ifstream file(filepath, std::ios::binary);
 					auto read = file.good() ? file.read(reinterpret_cast<char*>(&bom[0]), sizeof(bom)).gcount() : 0;
-					if      (read >= 3 && bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF) { m_enc = EEncoding::utf8;     ofs += 3; }
-					else if (read >= 2 && bom[0] == 0xFE && bom[1] == 0xFF)                   { m_enc = EEncoding::utf16_be; ofs += 2; }
-					else if (read >= 2 && bom[0] == 0xFF && bom[1] == 0xFE)                   { m_enc = EEncoding::utf16;    ofs += 2; }
+					if      (read >= 3 && bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF) { m_enc = EEncoding::utf8;     bom_size = 3; }
+					else if (read >= 2 && bom[0] == 0xFE && bom[1] == 0xFF)                   { m_enc = EEncoding::utf16_be; bom_size = 2; }
+					else if (read >= 2 && bom[0] == 0xFF && bom[1] == 0xFE)                   { m_enc = EEncoding::utf16;    bom_size = 2; }
 					else m_enc = EEncoding::utf8; // If no valid bomb is found, assume UTF-8 as that is a superset of ASCII
 				}
 
 				// Open the input file stream
-				m_file.open(fpath, std::ios::binary);
+				m_file.open(filepath, std::ios::binary);
 				if (!m_file.good())
 					throw std::exception(pr::FmtS("Failed to open file %s", Narrow(filepath).c_str()));
 
@@ -247,7 +261,8 @@ namespace pr
 				}
 
 				// Seek to the position to start reading from (may include the skip over the BOM)
-				m_file.seekg(ofs);
+				m_file.seekg(bom_size + ofs);
+				m_loc = loc ? *loc : Location(filepath, bom_size + ofs, 0, 0, ofs == 0);
 
 				// Load the shift register
 				for (int n = BufW4::Capacity; n--;)
@@ -262,8 +277,8 @@ namespace pr
 			{
 				m_file.close();
 				m_buf.clear();
-				m_loc = TLoc();
 				m_enc = EEncoding::auto_detect;
+				m_loc = Location();
 			}
 
 			// Debugging helper interface
@@ -274,10 +289,6 @@ namespace pr
 			SrcConstPtr DbgPtr() const override
 			{
 				return &m_buf.m_ch[0];
-			}
-			TLoc const& Loc() const override
-			{
-				return m_loc;
 			}
 
 			// Pointer-like interface
@@ -322,7 +333,7 @@ namespace pr
 			NullSrc m_null;           // Used when 'm_src' == nullptr;
 
 			Buffer(ESrcType type = ESrcType::Buffered)
-				:Src(type)
+				:Src(type, Location())
 				,m_buf()
 				,m_src(&m_null)
 				,m_null()
@@ -333,13 +344,13 @@ namespace pr
 				Source(src);
 			}
 			template <typename Iter> Buffer(ESrcType type, Iter first, Iter last)
-				:Src(type)
+				:Src(type, Location())
 				,m_buf(first, last)
 				,m_src(&m_null)
 				,m_null()
 			{}
 			template <typename TPtr> Buffer(ESrcType type, TPtr ptr)
-				:Src(type)
+				:Src(type, Location())
 				,m_buf()
 				,m_src(&m_null)
 				,m_null()
@@ -742,7 +753,7 @@ namespace pr
 
 			{// Simple buffering
 				char const str[] = "123abc";
-				PtrA<> ptr(str);
+				PtrA ptr(str);
 				Buffer<> buf(ptr);
 
 				PR_CHECK(*buf  , L'1');
@@ -757,7 +768,7 @@ namespace pr
 			}
 			{// Matching
 				wchar_t const str[] = L"0123456789";
-				PtrW<> ptr(str);
+				PtrW ptr(str);
 				Buffer<> buf(ptr);
 
 				PR_CHECK(buf.match(L"0123") != 0, true);
@@ -769,11 +780,11 @@ namespace pr
 				Buffer<> buf(ESrcType::Buffered, "abcd1234");
 				PR_CHECK(buf.match(L"abcd1234") != 0, true);
 			}
-			char const* script_utf = "script_utf.txt";
+			wchar_t const* script_utf = L"script_utf.txt";
 			{// UTF8 big endian File source
 
 				// UTF-16be data (if host system is little-endian)
-				unsigned char data[] = {0xef, 0xbb, 0xbf, 0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd}; // ni hao (chinesse)
+				unsigned char data[] = {0xef, 0xbb, 0xbf, 0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd}; //' ni hao (chinesse)
 				wchar_t str[] = {0x4f60, 0x597d};
 
 				{// Create the file
@@ -781,14 +792,14 @@ namespace pr
 					fout.write(reinterpret_cast<char const*>(&data[0]), sizeof(data));
 				}
 
-				FileSrc<> file(script_utf);
+				FileSrc file(script_utf);
 				PR_CHECK(*file, str[0]); ++file;
 				PR_CHECK(*file, str[1]); ++file;
 			}
 			{// UTF 16 little endian File source
 
 				// UTF-16le data (if host system is little-endian)
-				unsigned short data[] = {0xfeff, 0x4f60, 0x597d}; // ni hao (chinesse)
+				unsigned short data[] = {0xfeff, 0x4f60, 0x597d}; //' ni hao (chinesse)
 				wchar_t str[] = {0x4f60, 0x597d};
 
 				{// Create the file
@@ -796,14 +807,14 @@ namespace pr
 					fout.write(reinterpret_cast<char const*>(&data[0]), sizeof(data));
 				}
 
-				FileSrc<> file(script_utf);
+				FileSrc file(script_utf);
 				PR_CHECK(*file, str[0]); ++file;
 				PR_CHECK(*file, str[1]); ++file;
 			}
 			{// UTF 16 big endian File source
 
 				// UTF-16be data (if host system is little-endian)
-				unsigned short data[] = {0xfffe, 0x604f, 0x7d59}; // ni hao (chinesse)
+				unsigned short data[] = {0xfffe, 0x604f, 0x7d59}; //' ni hao (chinesse)
 				wchar_t str[] = {0x4f60, 0x597d};
 
 				{// Create the file
@@ -811,7 +822,7 @@ namespace pr
 					fout.write(reinterpret_cast<char const*>(&data[0]), sizeof(data));
 				}
 
-				FileSrc<> file(script_utf);
+				FileSrc file(script_utf);
 				PR_CHECK(*file, str[0]); ++file;
 				PR_CHECK(*file, str[1]); ++file;
 			}

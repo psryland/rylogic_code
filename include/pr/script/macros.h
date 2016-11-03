@@ -40,11 +40,11 @@ namespace pr
 				}
 			};
 
-			string  m_tag;       // The macro tag
-			string  m_expansion; // The substitution text
-			Params  m_params;    // Parameters for the macro, empty() for no parameter list, [0]="" for empty parameter list 'TAG()'
-			int     m_hash;      // The hash of the macro tag
-			FileLoc m_loc;       // The source location of where the macro was defined
+			string   m_tag;       // The macro tag
+			string   m_expansion; // The substitution text
+			Params   m_params;    // Parameters for the macro, empty() for no parameter list, [0]="" for empty parameter list 'TAG()'
+			int      m_hash;      // The hash of the macro tag
+			Location m_loc;       // The source location of where the macro was defined
 
 			// Return a macro tag from 'src' (or fail)
 			template <typename Iter, typename FailPolicy = ThrowOnFailure>
@@ -57,7 +57,7 @@ namespace pr
 			}
 
 			// Construct a simple #define TWO 2 style macro
-			Macro(wchar_t const* tag = L"", wchar_t const* expansion = L"", Params const& params = Params(), FileLoc const& loc = FileLoc())
+			Macro(wchar_t const* tag = L"", wchar_t const* expansion = L"", Params const& params = Params(), Location const& loc = Location())
 				:m_tag(tag)
 				,m_expansion(expansion)
 				,m_params(params)

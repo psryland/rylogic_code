@@ -44,7 +44,7 @@ namespace pr
 						delete m_in;
 				}
 				PPSource(Src* src, bool del)
-					:Src(src->Type())
+					:Src(src->Type(), Location())
 					,m_in (src)
 					,m_del(del)
 					,m_slc(*m_in)
@@ -87,15 +87,24 @@ namespace pr
 				PPSource& operator =(PPSource const&) = delete;
 
 				// Debugging helper interface
-				Location const& Loc() const override { return m_out.Loc(); }
-				SrcConstPtr DbgPtr() const override  { return m_out.DbgPtr(); }
-				BufType const* DbgBuf() const        { return m_out.DbgBuf(); }
+				Location const& Loc() const override
+				{
+					return m_out.Loc();
+				}
+				SrcConstPtr DbgPtr() const override
+				{
+					return m_out.DbgPtr();
+				}
+				BufType const* DbgBuf() const
+				{
+					return m_out.DbgBuf();
+				}
 
 				// Pointer-like interface
 				wchar_t operator * () const override { return *m_out; }
 				PPSource& operator ++() override     { ++m_out; --m_emit; return *this; }
 
-				// Array access to the buffered data. Buffer size grows to accomodate 'i'
+				// Array access to the buffered data. Buffer size grows to accommodate 'i'
 				wchar_t operator [](size_t i) const { return m_out[i]; }
 				wchar_t& operator [](size_t i)      { return m_out[i]; }
 
@@ -178,7 +187,7 @@ namespace pr
 
 		public:
 			Preprocessor(IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, IEmbeddedCode* emb = nullptr)
-				:Src(ESrcType::Preprocessor)
+				:Src(ESrcType::Preprocessor, Location())
 				,m_stack()
 				,m_if_stack()
 				,m_def_macros()
@@ -268,7 +277,7 @@ namespace pr
 			}
 			Location const& Loc() const override
 			{
-				static FileLoc s_null_loc;
+				static Location s_null_loc;
 				return !m_stack.empty() ? m_stack.back().Loc() : s_null_loc;
 			}
 
@@ -1068,7 +1077,7 @@ namespace pr
 					;
 
 				Includes<> inc; inc.AddString(L"inc", "included ONE");
-				PtrA<> src(str_in);
+				PtrA src(str_in);
 				Preprocessor<> pp(&src, false, &inc);
 				for (;*pp && *str_out; ++pp, ++str_out)
 				{
