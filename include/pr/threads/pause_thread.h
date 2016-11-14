@@ -37,18 +37,21 @@ namespace pr
 			mutable std::mutex      m_mutex_pause;
 			std::condition_variable m_cv_pause;
 			std::thread::id         m_pause_request_threadid;
+			std::atomic_bool        m_pause_request;
 			bool                    m_force_unpause;
-			bool                    m_pause_request;
 			bool                    m_paused;
 
 			PauseThread(bool init_pause_request = false)
 				:m_mutex_pause()
 				,m_cv_pause()
 				,m_pause_request_threadid()
+				,m_pause_request()
 				,m_force_unpause(false)
-				,m_pause_request(init_pause_request)
 				,m_paused(false)
-			{}
+			{
+				m_pause_request_threadid = std::this_thread::get_id();
+				m_pause_request = init_pause_request;
+			}
 
 			// Test if the associated thread is paused
 			// This method should be called from an external thread context
@@ -71,9 +74,8 @@ namespace pr
 					return !pause;
 
 				// If pause/unpause is requested but the thread is not yet paused/unpaused,
-				// assert that the call is from the same thread. If the actual
-				// thread state matches the requested state, we allow a
-				// different thread to call pause/unpause.
+				// assert that the call is from the same thread. If the actual thread state
+				// matches the requested state, we allow a different thread to call pause/unpause.
 				if (m_pause_request != m_paused && m_pause_request_threadid != std::this_thread::get_id())
 					throw std::exception("Cross thread pause request made");
 
@@ -86,11 +88,11 @@ namespace pr
 
 				// Tests the block condition. Returns true to unblock
 				auto test_condition = [&]
-					{
-						return
-							(m_paused == pause) || // The thread has paused/unpaused as requested
-							(m_force_unpause);     // ForceUnpause() has been called
-					};
+				{
+					return
+						(m_paused == pause) || // The thread has paused/unpaused as requested
+						(m_force_unpause);     // ForceUnpause() has been called
+				};
 
 				// Wait till paused/unpaused
 				return wait_ms == ~0
@@ -122,9 +124,13 @@ namespace pr
 			// This method should be called from the thread context that is to be paused
 			bool TestPaused()
 			{
+				// Test outside of the lock for performance reasons
+				if (!m_pause_request)
+					return true;
+
 				std::unique_lock<std::mutex> lock(m_mutex_pause);
 
-				// Test if pause requested.
+				// Retest if pause requested to prevent the race condition.
 				if (!m_pause_request)
 					return true;
 

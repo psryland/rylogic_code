@@ -139,7 +139,8 @@ namespace pr
 			x(UnknownKeyword                  ,)\
 			x(UnknownToken                    ,)\
 			x(UnknownValue                    ,)\
-			x(ValueNotFound                   ,)
+			x(ValueNotFound                   ,)\
+			x(FileNotFound                    ,)
 		PR_DEFINE_ENUM2(EResult, PR_ENUM);
 		#undef PR_ENUM
 		#pragma endregion

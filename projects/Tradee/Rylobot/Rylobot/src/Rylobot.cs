@@ -1,26 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Threading;
 using cAlgo.API;
 using cAlgo.API.Internals;
 using pr.common;
 using pr.extn;
 using pr.util;
-using pr.win32;
 
 namespace Rylobot
 {
 	[Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.FullAccess)]
 	public class Rylobot :Robot
 	{
+		/// <summary>Singleton access</summary>
+		public static Rylobot Instance { get; private set; }
+
 		/// <summary></summary>
 		protected override void OnStart()
 		{
 			Debug.WriteLine("Rylobot is a {0} bit process".Fmt(Environment.Is64BitProcess?"64":"32"));
-
 			base.OnStart();
+			Instance = this;
 
 			// Load the bot settings
 			var settings_filepath = Util.ResolveAppDataPath("Rylogic","Rylobot","Settings.xml");
@@ -30,20 +31,27 @@ namespace Rylobot
 			// Create the cache of symbol data
 			m_sym_cache = new Cache<string, Symbol> { ThreadSafe = true , Mode = CacheMode.StandardCache };
 
-			// Create the guy responsible for selecting the trading strategy
-			Selector = new StrategySelector(this);
-
 			// Create the account manager and trade creator
 			Broker = new Broker(this, Account);
+
+			// Create the guy responsible for selecting the trading strategy
+			Strats = new List<Strategy>();
+			Strats.Add(new StrategyTrend(this));
+			//Strats.Add(new StrategyHedge(this));
+
+			Debugging.LogTrades(this, true);
 		}
 		protected override void OnStop()
 		{
 			Stopping.Raise(this);
 
-			Strat = null;
-			Selector = null;
+			Debugging.LogTrades(this, false);
+
+			Strats = null;
 			Broker = null;
 			Util.Dispose(ref m_sym_cache);
+
+			Instance = null;
 			base.OnStop();
 		}
 		protected override void OnTick()
@@ -56,11 +64,11 @@ namespace Rylobot
 			// Update the account info
 			Broker.Update();
 
-			// Is it time to change strategy?
-			Strat = Selector.Step(Strat);
-
-			// Step the current strategy
-			Strat.Step();
+			// Sort the strategies by score and step them in order of highest to lowest so that
+			// the best strategies get to create positions in preference to less suited strategies.
+			Strats.Sort((l,r) => l.SuitabilityScore.CompareTo(r.SuitabilityScore));
+			foreach (var strat in Strats)
+				strat.Step();
 		}
 
 		/// <summary>New data arriving</summary>
@@ -82,25 +90,18 @@ namespace Rylobot
 			get { return Server.Time; }
 		}
 
-		/// <summary>Manages choosing a trading strategy</summary>
-		public StrategySelector Selector
+		/// <summary>All the active strategies</summary>
+		public List<Strategy> Strats
 		{
-			get;
-			private set;
-		}
-
-		/// <summary>The current trading strategy</summary>
-		public Strategy Strat
-		{
-			get { return m_strat; }
+			[DebuggerStepThrough] get { return m_strats; }
 			private set
 			{
-				if (m_strat == value) return;
-				Util.Dispose(ref m_strat);
-				m_strat = value;
+				if (m_strats == value) return;
+				Util.DisposeAll(m_strats);
+				m_strats = value;
 			}
 		}
-		private Strategy m_strat;
+		private List<Strategy> m_strats;
 
 		/// <summary>Manages creating trades and managing the risk level</summary>
 		public Broker Broker
@@ -139,6 +140,28 @@ namespace Rylobot
 			});
 		}
 		private Cache<string,Symbol> m_sym_cache;
+
+		/// <summary>Return the series for a given symbol and time frame</summary>
+		public MarketSeries GetSeries(Symbol sym, TimeFrame tf)
+		{
+			if (MarketSeries.SymbolCode == sym.Code && MarketSeries.TimeFrame == tf)
+				return MarketSeries;
+
+			if (IsBacktesting)
+				throw new Exception("This can't be used in back testing");
+
+			MarketSeries res = null;
+			using (var wait = new ManualResetEvent(false))
+			{
+				BeginInvokeOnMainThread(() =>
+				{
+					res = MarketData.GetSeries(sym, tf);
+					wait.Set();
+				});
+				wait.WaitOne();
+				return res;
+			}
+		}
 	}
 }
 

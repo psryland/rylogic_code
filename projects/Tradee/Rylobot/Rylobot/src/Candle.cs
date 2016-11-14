@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using pr.common;
+using pr.extn;
 
 namespace Rylobot
 {
@@ -80,16 +81,16 @@ namespace Rylobot
 		}
 
 		/// <summary>Single candle type. Relative to the mean candle size (total size)</summary>
-		public EType Type(double mean_candle_size)
+		public EType Type(double mcs)
 		{
 			// A candle is a doji if the body is very small
-			if (BodyLength < 0.03 * mean_candle_size)
+			if (BodyLength < 0.03 * mcs)
 			{
 				return EType.Doji;
 			}
 
 			// A candle is a hammer/inverse hammer if it has a small body that is near one end of the candle
-			if (BodyLength < 0.25 * mean_candle_size)
+			if (BodyLength < 0.125 * mcs)
 			{
 				if (UpperWickLength < 0.1 * TotalLength) return EType.Hammer;
 				if (LowerWickLength < 0.1 * TotalLength) return EType.InvHammer;
@@ -97,7 +98,7 @@ namespace Rylobot
 			}
 
 			// A candle is a Marubozu if it has a large body
-			if (BodyLength > 1.0 * mean_candle_size)
+			if (BodyLength > 1.0 * mcs)
 			{
 				// A strengthening or weakening marubozu 
 				if (LowerWickLength > 0.4 * TotalLength)
@@ -183,10 +184,18 @@ namespace Rylobot
 			get { return (High + Low) / 2.0; }
 		}
 
+		/// <summary>
+		/// The ratio of BodyLength to TotalLevel.
+		/// "Strong" candles are those that show a significant move over life of the candle</summary>
+		public double Strength
+		{
+			get { return BodyLength / TotalLength; }
+		}
+
 		/// <summary>Return the Open/Close as a range</summary>
 		public RangeF BodyRange
 		{
-			get { return new RangeF(Math.Min(Open,Close), Math.Max(Open,Close)); }
+			get { return new RangeF(Math.Min(Open, Close), Math.Max(Open,Close)); }
 		}
 
 		/// <summary>The length of the upper wick</summary>
@@ -204,7 +213,7 @@ namespace Rylobot
 		/// <summary>Return the High/Low as a range</summary>
 		public RangeF WickRange
 		{
-			get { return new RangeF(Math.Min(High,Low), Math.Max(High,Low)); }
+			get { return new RangeF(Math.Min(High, Low), Math.Max(High, Low)); }
 		}
 
 		/// <summary>Replace the data in this candle with 'rhs' (Must have a matching timestamp though)</summary>

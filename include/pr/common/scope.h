@@ -11,8 +11,14 @@
 
 namespace pr
 {
+	// Allow anonymous scopes to be returned
+	struct IScope
+	{
+		virtual ~IScope() {}
+	};
+
 	// A scope object
-	template <typename Doit, typename Undo> struct Scope
+	template <typename Doit, typename Undo> struct Scope :IScope
 	{
 		Doit m_doit;
 		Undo m_undo;
@@ -58,7 +64,7 @@ namespace pr
 	}
 
 	// A scope object with state
-	template <typename State, typename Doit, typename Undo> struct StateScope
+	template <typename State, typename Doit, typename Undo> struct StateScope :IScope
 	{
 		Doit m_doit;
 		Undo m_undo;

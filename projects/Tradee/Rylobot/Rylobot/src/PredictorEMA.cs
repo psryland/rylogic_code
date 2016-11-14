@@ -28,7 +28,7 @@ namespace Rylobot
 		private ExponentialMovingAverage m_ema_sma;
 
 		/// <summary>Look for predictions with each new data element</summary>
-		protected override void Step()
+		protected override void UpdateFeatureValues(DataEventArgs args)
 		{
 			// Don't bother if there isn't enough data
 			if (m_ema_lar.Result.Count < 5 ||
@@ -53,7 +53,7 @@ namespace Rylobot
 				d1_sma > d1_med && d1_med > d1_lar && d1_lar > 0 && // All gradients rising with small > medium > large
 				d2_sma > d2_med && d2_med > d2_lar && d2_lar > 0)   // All curving upward with small > medium > large
 			{
-				Forecast = TradeType.Buy;
+				//Forecast = TradeType.Buy;
 				return;
 			}
 
@@ -62,11 +62,11 @@ namespace Rylobot
 				d1_sma < d1_med && d1_med < d1_lar && d1_lar < 0 && // All gradients falling with small > medium > large
 				d2_sma < d2_med && d2_med < d2_lar && d2_lar < 0)   // All curving downward with small > medium > large
 			{
-				Forecast = TradeType.Sell;
+				//Forecast = TradeType.Sell;
 				return;
 			}
 
-			Forecast = null;
+		//	Forecast = null;
 		}
 
 		/// <summary>Return an estimate of the current trend direction and strength (normalised [-1,+1])</summary>

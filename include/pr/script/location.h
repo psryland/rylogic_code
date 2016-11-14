@@ -22,13 +22,13 @@ namespace pr
 			string m_stream_name;
 
 			// The character offset into the stream
-			size_t m_pos;
+			std::streamoff m_pos;
 
-			// Line number in the character stream
-			size_t m_line;
+			// Line number in the character stream (0-based)
+			int m_line;
 
-			// Column number in the character stream
-			size_t m_col;
+			// Column number in the character stream (0-based)
+			int m_col;
 
 			// The number of columns that a tab character corresponds to
 			int m_tab_size;
@@ -47,16 +47,19 @@ namespace pr
 			explicit Location(string stream_name)
 				:Location(stream_name, 0, 0, 0, true)
 			{}
-			explicit Location(size_t pos)
+			explicit Location(std::streamoff pos)
 				:Location(nullptr, pos, 0, 0, pos == 0)
 			{}
-			Location(string stream_name, size_t pos)
+			Location(string stream_name, std::streamoff pos)
 				:Location(stream_name, pos, 0, 0, pos == 0)
 			{}
-			Location(size_t pos, size_t line, size_t col)
+			Location(std::streamoff pos, int line, int col)
 				:Location(nullptr, pos, line, col, true)
 			{}
-			Location(string stream_name, size_t pos, size_t line, size_t col, bool lc_valid, int tab_size = DefTabSize)
+			Location(string stream_name, std::streamoff pos, int line, int col)
+				:Location(stream_name, pos, line, col, true)
+			{}
+			Location(string stream_name, std::streamoff pos, int line, int col, bool lc_valid, int tab_size = DefTabSize)
 				:m_stream_name(stream_name)
 				,m_pos(pos)
 				,m_line(line)
@@ -100,17 +103,21 @@ namespace pr
 			{
 				return m_stream_name;
 			}
+			void StreamName(string stream_name)
+			{
+				m_stream_name = stream_name;
+			}
 
 			// Output the character index
-			size_t Pos() const
+			std::streamoff Pos() const
 			{
 				return m_pos;
 			}
-			void Pos(size_t pos, bool lc_valid)
+			void Pos(std::streamoff pos, bool lc_valid)
 			{
 				Pos(pos, m_line, m_col, lc_valid);
 			}
-			void Pos(size_t pos, size_t line, size_t col, bool lc_valid)
+			void Pos(std::streamoff pos, int line, int col, bool lc_valid)
 			{
 				m_pos      = pos;
 				m_line     = line;
@@ -119,15 +126,23 @@ namespace pr
 			}
 
 			// Output the line number
-			size_t Line() const
+			int Line() const
 			{
 				return m_line + 1;
 			}
+			void Line(int line)
+			{
+				m_line = line - 1;
+			}
 
 			// Output the column number
-			size_t Col() const
+			int Col() const
 			{
 				return m_col + 1;
+			}
+			void Col(int col)
+			{
+				m_col = col - 1;
 			}
 
 			// True if the line/column values are valid
@@ -183,8 +198,8 @@ namespace pr
 			for (auto s = str; *s; ++s)
 				loc.inc(*s);
 
-			PR_CHECK(loc.Line(), 3U);
-			PR_CHECK(loc.Col(), 6U);
+			PR_CHECK(loc.Line(), 3);
+			PR_CHECK(loc.Col(), 6);
 		}
 	}
 }

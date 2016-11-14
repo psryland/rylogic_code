@@ -18,9 +18,6 @@ namespace Rylobot
 		// Given a range of trading data it generates a set of the ideal trades for use in 
 		// training a neural net.
 
-		/// <summary>Used to predict trade entry points and directions</summary>
-		private PredictorNeuralNet m_nnet;
-
 		/// <summary>Training data to Testing data size ratio</summary>
 		private const int TrainToTestRatio = 10;
 
@@ -31,7 +28,7 @@ namespace Rylobot
 		public StrategyDataCollector(Rylobot bot)
 			:base(bot, "StrategyDataCollector")
 		{
-			m_nnet = new PredictorNeuralNet(bot);
+			NNet = new PredictorNeuralNet(bot);
 
 			WindowSize = 20;
 			RtRThreshold = 2.0;
@@ -41,6 +38,25 @@ namespace Rylobot
 			m_training = new StreamWriter(Path_.CombinePath(outdir, "training.txt"));
 			m_testing  = new StreamWriter(Path_.CombinePath(outdir, "testing.txt"));
 		}
+
+		/// <summary>A predictor used for entry point and direction signalling</summary>
+		public PredictorNeuralNet NNet
+		{
+			[DebuggerStepThrough] get { return m_pred_nnet; }
+			private set
+			{
+				if (m_pred_nnet == value) return;
+				if (m_pred_nnet != null)
+				{
+					Util.Dispose(ref m_pred_nnet);
+				}
+				m_pred_nnet = value;
+				if (m_pred_nnet != null)
+				{
+				}
+			}
+		}
+		private PredictorNeuralNet m_pred_nnet;
 
 		/// <summary>The maximum trade length in candles</summary>
 		public int WindowSize { get; private set; }
@@ -74,7 +90,7 @@ namespace Rylobot
 			NegIdx neg_idx = Instrument.FirstIdx + index;
 
 			// Get features up to the last closed candle, since we don't know anything about 'index' yet
-			var features = m_nnet.Features(neg_idx - 1);
+			var features = NNet.Features;
 
 			// Create a buy and sell trade at the open of the new candle
 			// Use the Broker's ChooseSL/TP so that the trades are realistic

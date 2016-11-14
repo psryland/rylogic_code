@@ -97,6 +97,7 @@ namespace ldr
 		,m_scene_rdr_pass(0)
 		,m_mouse_status_updates(true)
 		,m_suspend_render(false)
+		,m_render_needed(false)
 		,m_status_mgr(m_status)
 	{
 		// Create stock models such as the focus point, origin, selection box, etc
@@ -151,7 +152,7 @@ namespace ldr
 		m_angle_tool_ui.VisibilityChanged += std::bind(&MainUI::UpdateUI, this);
 
 		// Make the 3d-panel handle painting/resizing/mouse nav
-		m_panel.Paint           += std::bind(&MainUI::Render, this, _1, _2);
+		m_panel.Paint           += std::bind(&MainUI::Paint, this, _1, _2);
 		m_panel.WindowPosChange += std::bind(&MainUI::Resize, this, _1, _2);
 		m_panel.MouseButton     += std::bind(&MainUI::MouseButton, this, _1, _2); 
 		m_panel.MouseMove       += std::bind(&MainUI::MouseMove, this, _1, _2);
@@ -167,6 +168,7 @@ namespace ldr
 		// Set the initial camera position
 		ResetView(EObjectBounds::All);
 		m_nav.CameraAlign(m_settings.m_CameraAlignAxis);
+		m_nav.SetResetOrientation(m_settings.m_CameraResetForward, m_settings.m_CameraResetUp);
 
 		// Register for drag drop
 		AllowDrop(true);
@@ -238,8 +240,8 @@ namespace ldr
 			m_nav.OrbitCamera(m_settings.m_CameraOrbitSpeed);
 
 		// Refresh at 60Hz
-		//m_panel.Invalidate();
-		//UpdateWindow(m_panel);
+		if (m_render_needed)
+			Render();
 	}
 
 	// Reset the camera to view all, selected, or visible objects
@@ -250,12 +252,20 @@ namespace ldr
 	}
 
 	// Render the 3D scene
-	void MainUI::Render(Control&, PaintEventArgs& args)
+	void MainUI::Paint(Control&, PaintEventArgs& args)
 	{
 		// Ignore render calls if the user settings say rendering is disabled
 		args.m_handled = m_settings.m_RenderingEnabled;
 		if (!args.m_handled)
 			return;
+
+		Render();
+	}
+
+	// Render the 3D scene
+	void MainUI::Render()
+	{
+		m_render_needed = false;
 
 		// Update the position/scale of the focus point
 		if (m_settings.m_ShowFocusPoint)
@@ -300,6 +310,7 @@ namespace ldr
 	{
 		// Note: this can be called many times per frame with minimal cost
 		m_panel.Invalidate();
+		m_render_needed = true;
 	}
 
 	// Enable/Disable full screen mode
@@ -397,8 +408,8 @@ namespace ldr
 
 		if (m_input->MouseInput(pt, btn, false))
 		{
-			RenderNeeded();
 			args.m_handled = true;
+			Render(); // Render directly, for nice smooth scrolling
 		}
 
 		MouseStatusUpdate(mouse_loc);
@@ -428,8 +439,8 @@ namespace ldr
 		// Delta is '1.0f' for a single wheel click
 		if (m_input->MouseWheel(pt, args.m_delta/120.0f))
 		{
-			RenderNeeded();
 			args.m_handled = true;
+			Render(); // Render directly, for nice smooth scrolling
 		}
 
 		MouseStatusUpdate(mouse_loc);
@@ -576,7 +587,7 @@ namespace ldr
 		case ID_NAV_VIEW_AXIS_POSXYZ:
 			#pragma region
 			{
-				AlignCamToAxis(
+				CamForwardAxis(
 					item_id == ID_NAV_VIEW_AXIS_POSX   ?  pr::v4XAxis :
 					item_id == ID_NAV_VIEW_AXIS_NEGX   ? -pr::v4XAxis :
 					item_id == ID_NAV_VIEW_AXIS_POSY   ?  pr::v4YAxis :
@@ -1015,14 +1026,19 @@ namespace ldr
 	}
 
 	// View the current focus point looking down the selected axis
-	void MainUI::AlignCamToAxis(pr::v4 const& axis)
+	void MainUI::CamForwardAxis(pr::v4 const& fwd)
 	{
 		// axis = m_nav.CameraToWorld().z; use this for non-menu option
 		auto c2w   = m_nav.CameraToWorld();
 		auto focus = m_nav.FocusPoint();
-		auto cam   = focus + axis * m_nav.FocusDistance();
-		auto up    = pr::Parallel3(axis, c2w.y) ? pr::Cross3(axis, c2w.x) : c2w.y;
+		auto cam   = focus + fwd * m_nav.FocusDistance();
+		auto up    = pr::Parallel3(fwd, c2w.y) ? pr::Cross3(fwd, c2w.x) : c2w.y;
 		m_nav.LookAt(cam, focus, up);
+		
+		m_settings.m_CameraResetForward = fwd;
+		m_settings.m_CameraResetUp = up;
+		m_nav.SetResetOrientation(m_settings.m_CameraResetForward, m_settings.m_CameraResetUp);
+
 		RenderNeeded();
 	}
 

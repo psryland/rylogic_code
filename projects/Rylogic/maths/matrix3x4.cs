@@ -356,15 +356,24 @@ namespace pr.maths
 		}
 
 		#region Random
-	
-		// Create a random 3D rotation matrix
-		public static m3x4 Random3x4(v4 axis, float min_angle, float max_angle, Random r)
+
+		/// <summary>Create a random 3x4 matrix</summary>
+		public static m3x4 Random(Random r, float min_value, float max_value)
+		{
+			return new m3x4(
+				new v4(r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value)),
+				new v4(r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value)),
+				new v4(r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value)));
+		}
+
+		/// <summary>Create a random 3D rotation matrix</summary>
+		public static m3x4 Random(Random r, v4 axis, float min_angle, float max_angle)
 		{
 			return Rotation(axis, r.Float(min_angle, max_angle));
 		}
-		public static m3x4 Random3x4(Random r)
+		public static m3x4 Random(Random r)
 		{
-			return Random3x4(v4.Random3N(0.0f, r), 0.0f, Maths.Tau, r);
+			return Random(r, v4.Random3N(0.0f, r), 0.0f, Maths.Tau);
 		}
 
 		#endregion
@@ -378,10 +387,38 @@ namespace pr.unittests
 
 	[TestFixture] public class UnitTestM3x4
 	{
+		[Test] public void TestInversion()
+		{
+			var rng = new Random();
+			{
+				var m = m3x4.Random(rng, v4.Random3N(0, rng), -Maths.Tau, +Maths.Tau);
+				var inv_m0 = m3x4.InvertFast(m);
+				var inv_m1 = m3x4.Invert(m);
+				Assert.True(m3x4.FEql(inv_m0, inv_m1));
+			}{
+				var m = m3x4.Random(rng, -5.0f, +5.0f);
+				var inv_m = m3x4.Invert(m);
+				var I0 = inv_m * m;
+				var I1 = m * inv_m;
+
+				Assert.True(m3x4.FEql(I0, m3x4.Identity));
+				Assert.True(m3x4.FEql(I1, m3x4.Identity));
+			}{
+				var m = new m3x4(
+					new v4(0.25f, 0.5f, 1.0f, 0.0f),
+					new v4(0.49f, 0.7f, 1.0f, 0.0f),
+					new v4(1.0f, 1.0f, 1.0f, 0.0f));
+				var INV_M = new m3x4(
+					new v4(10.0f, -16.666667f, 6.66667f, 0.0f),
+					new v4(-17.0f, 25.0f, -8.0f, 0.0f),
+					new v4(7.0f, -8.333333f, 2.333333f, 0.0f));
+
+				var inv_m = m3x4.Invert(m);
+				Assert.True(m3x4.FEql(inv_m, INV_M));
+			}
+		}
 		[Test] public void TestQuatConversion()
 		{
-
-
 		}
 	}
 }

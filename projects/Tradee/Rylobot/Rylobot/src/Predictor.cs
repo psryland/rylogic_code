@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using cAlgo.API;
+using pr.common;
 using pr.extn;
 using pr.maths;
 using pr.util;
@@ -13,20 +15,24 @@ namespace Rylobot
 {
 	public abstract class Predictor :IDisposable
 	{
-		// This is a base class for a signal trigger.
-		// Derived types use various methods to guess where price is going
-		// and their accuracy is tested.
+		// Notes:
+		// This is a base class for an entry signal trigger.
+		// Derived types use various methods to guess where price is going.
+		// Derived types add 'Feature' objects to the 'Features' collection, these are basically
+		// values in the range [-1.0,+1.0] where -1.0 = strong sell, +1.0 = strong buy.
 
 		public Predictor(Rylobot bot, string name)
 		{
-			Bot         = bot;
-			Name        = name;
-			Instrument  = new Instrument(bot, bot.Symbol.Code);
-			Predictions = new List<Prediction>();
-			Results     = Util.NewArray(Bot.Settings.PredictionForecastLength, i => new RtR(i));
+			Bot          = bot;
+			Name         = name;
+			CurrentIndex = 0;
+			Instrument   = new Instrument(bot);
+			Features     = new List<Feature>();
+			LogFilepath  = Path_.CombinePath(@"P:\projects\Tradee\Rylobot\Rylobot\net\Data", "{0}.predictions.csv".Fmt(name));
 		}
 		public virtual void Dispose()
 		{
+			TrackForecasts = false;
 			Instrument = null;
 			Bot = null;
 		}
@@ -75,157 +81,236 @@ namespace Rylobot
 		}
 		private Instrument m_instr;
 
+		/// <summary>
+		/// The index to treat as the 'latest' candle.
+		/// This is typically 0, but can be used to run a predictor behind the latest when
+		/// measuring success rate.</summary>
+		public NegIdx CurrentIndex
+		{
+			[DebuggerStepThrough] get { return m_current_index; }
+			set
+			{
+				if (m_current_index == value) return;
+				m_current_index = value;
+				OnCurrentIndexChanged();
+			}
+		}
+		private NegIdx m_current_index;
+
+		/// <summary>Track forecasts to measure success rate</summary>
+		public bool TrackForecasts
+		{
+			get { return m_track_forecasts; }
+			set
+			{
+				if (m_track_forecasts == value) return;
+				if (m_track_forecasts)
+				{
+					Predictions = null;
+				}
+				m_track_forecasts = value;
+				if (m_track_forecasts)
+				{
+					Predictions = new List<Prediction>();
+					m_reset_log = true;
+				}
+			}
+		}
+		private bool m_track_forecasts;
+
+		/// <summary>Raised when the current index changes, meaning the "now" position has moved</summary>
+		public event EventHandler CurrentIndexChanged;
+		protected virtual void OnCurrentIndexChanged()
+		{
+			CurrentIndexChanged.Raise(this);
+		}
+
 		/// <summary>The predicted best trade direction, or null if no prediction</summary>
 		public TradeType? Forecast
 		{
 			get { return m_forecast; }
-			protected set
+			private set
 			{
 				if (m_forecast == value) return;
 				m_forecast = value;
-				Comments = string.Empty;
-
-				// If a trade direction is specified, add it as a prediction
-				if (m_forecast != null)
-				{
-					var tt = m_forecast.Value;
-					var price = Bot.Symbol.CurrentPrice(tt.Sign());
-					Predictions.Add(new Prediction(tt, price, 0));
-				}
-
-				ForecastChange.Raise(this);
+				OnForecastChange();
 			}
 		}
 		private TradeType? m_forecast;
 
-		/// <summary>Notes about the logic that lead to the current forecast. Set 'Forecast' first</summary>
-		public string Comments
-		{
-			get;
-			protected set;
-		}
-
 		/// <summary>Raised whenever the predictor has a guess at the future</summary>
 		public event EventHandler ForecastChange;
+		protected virtual void OnForecastChange()
+		{
+			ForecastChange.Raise(this);
 
-		/// <summary>A collection of predictions</summary>
-		protected List<Prediction> Predictions
+			// If track forecasts is enabled, create a trade that we'll watch
+			if (TrackForecasts && Forecast != null)
+			{
+				// Create a prediction with this forecast
+				var trade = new Trade(Bot, Instrument, Forecast.Value, Name, CurrentIndex);
+				var features = new List<Feature>(Features);
+				Predictions.Add(new Prediction(trade, features));
+			}
+		}
+
+		/// <summary>
+		/// A vector of signal values (features)
+		/// Each feature value should be a value from [-1,+1]
+		/// Values &gt; 0.5 indicate buy signals, &lt; -0.5 indicate sell signals.summary>
+		public List<Feature> Features
 		{
 			get;
 			private set;
 		}
 
-		/// <summary>The Reward to Risk verses candle index after the prediction was made</summary>
-		public RtR[] Results
+		/// <summary>A collection of predictions</summary>
+		private List<Prediction> Predictions
 		{
 			get;
 			set;
 		}
 
+		/// <summary>
+		/// Update the 'Features' vector with values for the quality of a trade at 'CurrentIndex'.
+		/// Note: args.Candle is the candle at 'CurrentIndex'</summary>
+		protected abstract void UpdateFeatureValues(DataEventArgs args);
+		public void UpdateFeatureValues()
+		{
+			var candle = Instrument[CurrentIndex];
+			UpdateFeatureValues(new DataEventArgs(Instrument, candle, false));
+		}
+
 		/// <summary>Called when new data is added to the instrument</summary>
-		private void HandleDataChanged(object sender, DataEventArgs e)
+		private void HandleDataChanged(object sender, DataEventArgs args)
 		{
-			// Allow derived types to make predictions
-			Step(e);
+			// Get the "latest" candle at 'CurrentIndex'
+			var candle = args.Instrument[CurrentIndex];
 
-			// Whenever a new candle is added, the start index moves down one
-			if (e.NewCandle)
+			// Get derived types to update the state of the features vector
+			args = new DataEventArgs(args.Instrument, candle, args.NewCandle);
+			UpdateFeatureValues(args);
+
+			// No features == no Forecast 
+			if (Features.Count == 0)
+				return;
+
+			// Make a forecast based on the features
+			// This can be replaced by a neural net prediction of the features
+			var signal = Features.Average(x => x.Value);
+			Forecast =
+				signal > +0.5 ? (TradeType?)TradeType.Buy :
+				signal < -0.5 ? (TradeType?)TradeType.Sell :
+				null;
+
+			// Track predictions
+			if (TrackForecasts)
 			{
+				// Advance the predictions and log the results
 				foreach (var pred in Predictions)
-					--pred.StartIndex;
-
-				// Drop predictions older than the forecast length
-				Predictions.RemoveIf(x => -x.StartIndex >= Bot.Settings.PredictionForecastLength);
-			}
-
-			// Use the current price to determine new max profit/loss
-			foreach (var pred in Predictions)
-			{
-				var profit = 0.0;
-				var loss = 0.0;
-				if (pred.PredictedTrend == TradeType.Buy)
 				{
-					var cpr = Instrument.CurrentPrice(-1);     // Current price assuming profit
-					var lmt = Instrument.Latest.WickLimit(+1); // Candle wick high limit
-					profit = Math.Max(cpr,lmt) - pred.EntryPrice;
-
-					cpr = Instrument.CurrentPrice(+1);     // Current price assuming loss
-					lmt = Instrument.Latest.WickLimit(-1); // Candle wick low limit
-					loss = pred.EntryPrice - Maths.Min(cpr,lmt);
-				}
-				if (pred.PredictedTrend == TradeType.Sell)
-				{
-					var cpr = Instrument.CurrentPrice(+1); // Current price assuming profit
-					var lmt = Instrument.Latest.WickLimit(-1) + Instrument.Symbol.Spread; // Candle wick low
-					profit = pred.EntryPrice - Math.Min(cpr,lmt);
-
-					cpr = Instrument.CurrentPrice(-1);; // Current price assuming loss
-					lmt = Instrument.Latest.WickLimit(+1) + Instrument.Symbol.Spread; // Candle wick high
-					loss = Math.Max(cpr,lmt) - pred.EntryPrice;
+					// When a trade closes record the result
+					pred.Trade.AddCandle(candle, CurrentIndex);
+					if (pred.Trade.Result != Trade.EResult.Open)
+						LogPrediction(pred);
 				}
 
-				pred.MaxProfit = Math.Max(pred.MaxProfit, profit);
-				pred.MaxLoss   = Math.Max(pred.MaxLoss, loss);
-
-				// Accumulate the results
-				Results[-pred.StartIndex].TP.Add(pred.MaxProfit);
-				Results[-pred.StartIndex].SL.Add(pred.MaxLoss);
-				Results[-pred.StartIndex].RR.Add(pred.MaxProfit / pred.MaxLoss);
+				// Remove closed predictions
+				Predictions.RemoveIf(x => x.Trade.Result != Trade.EResult.Open);
 			}
 		}
 
-		/// <summary>Look for predictions with each new data element</summary>
-		protected abstract void Step(DataEventArgs e);
+		/// <summary>Where to write the prediction log to</summary>
+		public string LogFilepath { get; set; }
 
-		/// <summary>The reward to risk for a particular distance after a prediction</summary>
-		public class RtR
+		/// <summary>Reset the log file</summary>
+		private void ResetLog()
 		{
-			public RtR(int index)
+			using (var log = new StreamWriter(new FileStream(LogFilepath, FileMode.Create, FileAccess.Write, FileShare.Read)))
 			{
-				Index = index;
-				TP = new AvrVar();
-				SL = new AvrVar();
-				RR = new AvrVar();
+				log.WriteLine(Str.Build(
+					"Succeeded, ",
+					"TradeType, ",
+					"Profit, ",
+					"RtR, ",
+					string.Join(", ", Features.Select(x => x.Label)),
+					string.Empty));
 			}
+			m_reset_log = false;
+		}
+		private bool m_reset_log;
 
-			public int Index { get; private set; }
+		/// <summary>Add the results of a virtual trade to the log</summary>
+		private void LogPrediction(Prediction pred)
+		{
+			if (m_reset_log)
+				ResetLog();
 
-			/// <summary>The maximum number of pips on the winning side of the prediction at 'Index'</summary>
-			public AvrVar TP { get; set; }
-
-			/// <summary>The maximum number of pips on the losing side of the prediction at 'Index'</summary>
-			public AvrVar SL { get; set; }
-
-			/// <summary>The reward to risk ratio at 'Index'</summary>
-			public AvrVar RR { get; set; }
+			var trade = pred.Trade;
+			var features = pred.Features;
+			using (var log = new StreamWriter(new FileStream(LogFilepath, FileMode.Append, FileAccess.Write, FileShare.Read)))
+			{
+				log.WriteLine(Str.Build(
+					trade.Result == Trade.EResult.HitTP ? 1 : 0, ", ",
+					trade.TradeType, ", ",
+					(trade.Result == Trade.EResult.HitTP ? trade.PeakProfit : -trade.PeakLoss) * trade.Volume, ", ",
+					trade.RtR, ", ",
+					string.Join(", ", features.Select(x => x.Value)),
+					string.Empty));
+			}
 		}
 
-		/// <summary>Records what happens to the price over time</summary>
-		protected class Prediction
+		/// <summary>Returns the feature string for the candle at position 'neg_idx'</summary>
+		public string FeaturesString(NegIdx neg_idx)
 		{
-			public Prediction(TradeType tt, double price, NegIdx index)
+			m_sb = m_sb ?? new StringBuilder();
+			m_sb.Clear();
+
+			// Output feature values
+			m_sb.Append("|features ");
+			foreach (var v in Features)
+				m_sb.Append(" ").Append(v.Value);
+
+			return m_sb.ToString();
+		}
+		private StringBuilder m_sb;
+
+		/// <summary>A signal feature value</summary>
+		[DebuggerDisplay("{Label} {Value} {Comment}")]
+		public class Feature
+		{
+			public Feature(string label, double value, string comment = null)
 			{
-				PredictedTrend = tt;
-				EntryPrice = price;
-				StartIndex = index;
-				MaxProfit = -double.MaxValue;
-				MaxLoss = -double.MaxValue;
+				Label   = label;
+				Value   = value;
+				Comment = comment;
 			}
 
-			/// <summary>The predicted price direction</summary>
-			public TradeType PredictedTrend { get; private set; }
+			/// <summary>A name for the feature</summary>
+			public string Label { get; private set; }
 
-			/// <summary>The candle index (NegIdx) at the time the prediction was made</summary>
-			public NegIdx StartIndex { get; set; }
+			/// <summary>The feature value</summary>
+			public double Value { get; private set; }
 
-			/// <summary>The price at the time the prediction was made</summary>
-			public double EntryPrice { get; private set; }
+			/// <summary>Comments about the feature</summary>
+			public string Comment { get; set; }
+		}
 
-			/// <summary>The maximum distance (in quote currency) that the price has moved in the profit direction</summary>
-			public double MaxProfit { get; set; }
+		/// <summary>A prediction is a virtual trade plus state that triggered the trade</summary>
+		[DebuggerDisplay("{Trade}")]
+		private class Prediction
+		{
+			public Prediction(Trade trade, List<Feature> features)
+			{
+				Trade    = trade;
+				Features = features;
+			}
 
-			/// <summary>The maximum distance (in quote currency) that the price has moved in the loss direction</summary>
-			public double MaxLoss { get; set; }
+			/// <summary>The virtual trade made using the forecast</summary>
+			public Trade Trade { get; private set; }
+
+			/// <summary>State data used to make the forecast</summary>
+			public List<Feature> Features { get; private set; }
 		}
 	}
 }

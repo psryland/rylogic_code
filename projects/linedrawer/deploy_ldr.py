@@ -21,11 +21,9 @@ try:
 		]
 	configs = [
 		"release",
-		"debug",
 		]
 	platforms = [
 		"x64",
-		"x86"
 		]
 
 	# Build the project

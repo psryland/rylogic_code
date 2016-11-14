@@ -37,8 +37,22 @@ namespace pr
 		struct Loc
 		{
 			std::size_t row, col;
-			Loc() :row(0) ,col(0) {}
-			void inc(int ch) { if (ch == ',') { ++col; } else if (ch == '\n') { ++row; col = 0; } }
+			Loc()
+				:row(0)
+				,col(0)
+			{}
+			void inc(int ch)
+			{
+				if (ch == ',')
+				{
+					++col;
+				}
+				else if (ch == '\n')
+				{
+					++row;
+					col = 0;
+				}
+			}
 		};
 
 		// Range checked lookup

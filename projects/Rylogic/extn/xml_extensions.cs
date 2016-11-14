@@ -167,6 +167,18 @@ namespace pr.extn
 					node.Add(string.Join(" ", mat.Elements));
 					return node;
 				};
+				this[typeof(Range)] = (obj, node) =>
+				{
+					var r = (Range)obj;
+					node.SetValue("{0} {1}".Fmt(r.Begin, r.End));
+					return node;
+				};
+				this[typeof(RangeF)] = (obj, node) =>
+				{
+					var r = (RangeF)obj;
+					node.SetValue("{0} {1}".Fmt(r.Begin, r.End));
+					return node;
+				};
 				this[typeof(v2)] = (obj, node) =>
 				{
 					var vec = (v2)obj;
@@ -249,6 +261,8 @@ namespace pr.extn
 
 				// Handle unknown collections as arrays
 				if (obj is IEnumerable &&
+					type != typeof(Range) &&
+					type != typeof(RangeF) &&
 					gen_type != typeof(List<>) &&
 					gen_type != typeof(Dictionary<,>) &&
 					gen_type != typeof(HashSet<>))
@@ -530,6 +544,14 @@ namespace pr.extn
 				{
 					var v = float_.ParseArray(elem.Value);
 					return new System.Drawing.Drawing2D.Matrix(v[0], v[1], v[2], v[3], v[4], v[5]);
+				};
+				this[typeof(Range)] = (elem, type, instance) =>
+				{
+					return Range.Parse(elem.Value);
+				};
+				this[typeof(RangeF)] = (elem, type, instance) =>
+				{
+					return RangeF.Parse(elem.Value);
 				};
 				this[typeof(v2)] = (elem, type, instance) =>
 				{
@@ -1686,35 +1708,62 @@ namespace pr.unittests
 		}
 		#endregion
 
-		[Test] public void ToXml1()
+		[Test] public void ToXmlBuiltInTypes()
 		{
 			// Built in types
 			var node = 5.ToXml("five", false);
 			var five = node.As<int>();
 			Assert.AreEqual(5, five);
 		}
-		[Test] public void ToXml2()
+		[Test] public void ToXmlFont()
 		{
 			var font = SystemFonts.DefaultFont;
 			var node = font.ToXml("font", false);
 			var FONT = node.As<Font>();
 			Assert.True(font.Equals(FONT));
 		}
-		[Test] public void ToXml3()
+		[Test] public void ToXmlDrawing()
 		{
-			var pt = new Point(1,2);
-			var node = pt.ToXml("pt", false);
-			var PT = node.As<Point>();
-			Assert.True(pt.Equals(PT));
+			{	var pt = new Point(1,2);
+				var node = pt.ToXml("pt", false);
+				var PT = node.As<Point>();
+				Assert.True(pt.Equals(PT));
+			}
+			{
+				var pt = new PointF(1f,2f);
+				var node = pt.ToXml("pt", false);
+				var PT = node.As<PointF>();
+				Assert.True(pt.Equals(PT));
+			}
+			{
+				var arr = new[]{new Point(1,1), new Point(2,2)};
+				var node = arr.ToXml("arr", true);
+				var ARR = node.As<Point[]>();
+				Assert.True(arr.SequenceEqual(ARR));
+			}
+			{
+				var rc = new Rectangle(1,2,3,4);
+				var node = rc.ToXml("rect", false);
+				var RC = node.As<Rectangle>();
+				Assert.True(Equals(rc, RC));
+			}
+			{
+				var rc = new RectangleF(1f,2f,3f,4f);
+				var node = rc.ToXml("rect", false);
+				var RC = node.As<RectangleF>();
+				Assert.True(Equals(rc, RC));
+			}
+			{
+				var mat = new System.Drawing.Drawing2D.Matrix(1f, 2f, 3f, 4f, 5f, 6f);
+				var node = mat.ToXml("mat", true);
+				var s = node.ToString(SaveOptions.DisableFormatting);
+				Assert.AreEqual("<mat ty=\"System.Drawing.Drawing2D.Matrix\">1 2 3 4 5 6</mat>", s);
+
+				var MAT = node.As<System.Drawing.Drawing2D.Matrix>();
+				Assert.True(mat.Equals(MAT));
+			}
 		}
-		[Test] public void ToXml3a()
-		{
-			var pt = new PointF(1f,2f);
-			var node = pt.ToXml("pt", false);
-			var PT = node.As<PointF>();
-			Assert.True(pt.Equals(PT));
-		}
-		[Test] public void ToXml4()
+		[Test] public void ToXmlDateTime()
 		{
 			{
 				var dto0 = DateTimeOffset.MinValue;
@@ -1727,81 +1776,78 @@ namespace pr.unittests
 				Assert.AreEqual(dto0, dto1);
 			}
 		}
-		[Test] public void ToXml5()
+		[Test] public void ToXmlGuid()
 		{
 			var guid = Guid.NewGuid();
 			var node = guid.ToXml("guid", false);
 			var GUID = node.As<Guid>();
 			Assert.AreEqual(guid, GUID);
 		}
-		[Test] public void ToXml6()
+		[Test] public void ToXmlCustomTypes()
 		{
-			// XElement constructible class
-			var node = new Elem1(4).ToXml("four", false);
-			var four = node.As<Elem1>();
-			Assert.AreEqual(4U, four.m_uint);
+			{
+				// XElement constructible class
+				var node = new Elem1(4).ToXml("four", false);
+				var four = node.As<Elem1>();
+				Assert.AreEqual(4U, four.m_uint);
+			}
+			{
+				var arr = new[]{new Elem2(1,"1"), null, new Elem2(3,"3")};
+				var node = arr.ToXml("arr", false);
+				var ARR = node.As<Elem2[]>(factory:t => new Elem2(0,""));
+				Assert.True(arr.SequenceEqual(ARR));
+			}
+			{
+				var arr = new[]{new Elem2(1,"1"), new Elem2(2,"2"), new Elem2(3,"3")};
+				var node = arr.ToXml("arr", false);
+				var ARR = node.As<Elem2[]>(factory:t => new Elem2(0,null));
+				Assert.True(arr.SequenceEqual(ARR));
+			}
+			{
+				var dc = new Elem2(2,"3");
+				var node = dc.ToXml("dc", false);
+				var DC = node.As<Elem2>(factory:t => new Elem2(0,null));
+				Assert.AreEqual(dc.m_int, DC.m_int);
+				Assert.AreEqual(dc.m_string, DC.m_string);
+			}
+			{
+				var e4 = new Elem4{m_int = 3};
+				var node = e4.ToXml("e4", false);
+				var E4 = node.As<Elem4>();
+				Assert.AreEqual(e4.m_int, E4.m_int);
+			}
 		}
-		[Test] public void ToXml7()
+		[Test] public void ToXmlArrays()
 		{
-			// DC class
-			var dc = new Elem2(2,"3");
-			var node = dc.ToXml("dc", false);
-			var DC = node.As<Elem2>(factory:t => new Elem2(0,null));
-			Assert.AreEqual(dc.m_int, DC.m_int);
-			Assert.AreEqual(dc.m_string, DC.m_string);
+			{
+				var arr = new int[]{0,1,2,3,4};
+				var node = arr.ToXml("arr", false);
+				var ARR = node.As<int[]>();
+				Assert.True(arr.SequenceEqual(ARR));
+			}
+			{
+				var arr = new string[]{"hello", "world"};
+				var node = arr.ToXml("arr", false);
+				var ARR = node.As<string[]>();
+				Assert.True(arr.SequenceEqual(ARR));
+			}
 		}
-		[Test] public void ToXml8()
+		[Test] public void ToXmlNullables()
 		{
-			// Arrays
-			var arr = new int[]{0,1,2,3,4};
-			var node = arr.ToXml("arr", false);
-			var ARR = node.As<int[]>();
-			Assert.True(arr.SequenceEqual(ARR));
+			{
+				int? three = 3;
+				var node = three.ToXml("three", false);
+				var THREE = node.As<int?>();
+				Assert.True(three == THREE);
+			}
+			{
+				var arr = new int?[]{1, null, 2};
+				var node = arr.ToXml("arr", true);
+				var ARR = node.As<int?[]>();
+				Assert.True(arr.SequenceEqual(ARR));
+			}
 		}
-		[Test] public void ToXml9()
-		{
-			var arr = new string[]{"hello", "world"};
-			var node = arr.ToXml("arr", false);
-			var ARR = node.As<string[]>();
-			Assert.True(arr.SequenceEqual(ARR));
-		}
-		[Test] public void ToXml10()
-		{
-			var arr = new[]{new Point(1,1), new Point(2,2)};
-			var node = arr.ToXml("arr", true);
-			var ARR = node.As<Point[]>();
-			Assert.True(arr.SequenceEqual(ARR));
-		}
-		[Test] public void ToXml11()
-		{
-			var arr = new[]{new Elem2(1,"1"), new Elem2(2,"2"), new Elem2(3,"3")};
-			var node = arr.ToXml("arr", false);
-			var ARR = node.As<Elem2[]>(factory:t => new Elem2(0,null));
-			Assert.True(arr.SequenceEqual(ARR));
-		}
-		[Test] public void ToXml12()
-		{
-			var arr = new[]{new Elem2(1,"1"), null, new Elem2(3,"3")};
-			var node = arr.ToXml("arr", false);
-			var ARR = node.As<Elem2[]>(factory:t => new Elem2(0,""));
-			Assert.True(arr.SequenceEqual(ARR));
-		}
-		[Test] public void ToXml13()
-		{
-			// nullables
-			int? three = 3;
-			var node = three.ToXml("three", false);
-			var THREE = node.As<int?>();
-			Assert.True(three == THREE);
-		}
-		[Test] public void ToXml14()
-		{
-			var arr = new int?[]{1, null, 2};
-			var node = arr.ToXml("arr", true);
-			var ARR = node.As<int?[]>();
-			Assert.True(arr.SequenceEqual(ARR));
-		}
-		[Test] public void ToXml15()
+		[Test] public void ToXmlObjectArrays()
 		{
 			var arr = new object[]{null, new Elem1(1), new Elem2(2,"2"), new Elem3(3,"3")};
 			var node = arr.ToXml("arr", true);
@@ -1814,76 +1860,67 @@ namespace pr.unittests
 				});
 			Assert.True(arr.SequenceEqual(ARR));
 		}
-		[Test] public void ToXml16()
+		[Test] public void ToXmlPrTypes()
 		{
+			{
+				var v = new v2(1f,-2f);
+				var node = v.ToXml("v", true);
+				var V = node.As<v2>();
+				Assert.True(v == V);
+			}
+			{
+				var v = new v4(1f, -2f, 0f, 1f);
+				var node = v.ToXml("v", true);
+				var V = node.As<v4>();
+				Assert.True(v == V);
+			}
+			{
+				var r = new Range(-1,+1);
+				var node = r.ToXml("r", true);
+				var R = node.As<Range>();
+				Assert.True(r == R);
+			}
+			{
+				var r = new RangeF(-0.2, +0.2);
+				var node = r.ToXml("r", true);
+				var R = node.As<RangeF>();
+				Assert.True(r == R);
+			}
 		}
-		[Test] public void ToXml17()
+		[Test] public void ToXmlContainers()
 		{
-			var e4 = new Elem4{m_int = 3};
-			var node = e4.ToXml("e4", false);
-			var E4 = node.As<Elem4>();
-			Assert.AreEqual(e4.m_int, E4.m_int);
-		}
-		[Test] public void ToXml18()
-		{
-			var rc = new Rectangle(1,2,3,4);
-			var node = rc.ToXml("rect", false);
-			var RC = node.As<Rectangle>();
-			Assert.True(Equals(rc, RC));
-		}
-		[Test] public void ToXml19()
-		{
-			var rc = new RectangleF(1f,2f,3f,4f);
-			var node = rc.ToXml("rect", false);
-			var RC = node.As<RectangleF>();
-			Assert.True(Equals(rc, RC));
-		}
-		[Test] public void ToXml20()
-		{
-			var kv = new KeyValuePair<int, string>(42, "fortytwo");
-			var node = kv.ToXml("kv", false);
-			var KV = node.As<KeyValuePair<int, string>>();
-			Assert.True(Equals(kv, KV));
-		}
-		[Test] public void ToXml21()
-		{
-			var list = new List<string>();
-			list.Add("one");
-			list.Add("two");
-			var node = list.ToXml("list", false);
-			var LIST = node.As<List<string>>();
-			Assert.True(list.SequenceEqual(LIST));
-		}
-		[Test] public void ToXml22()
-		{
-			var dic = new Dictionary<int, float>();
-			dic[1] = 1.1f;
-			dic[2] = 2.2f;
-			var node = dic.ToXml("dic", false);
-			var DIC = node.As<Dictionary<int,float>>();
-			Assert.True(dic.SequenceEqualUnordered(DIC));
-
-		}
-		[Test] public void ToXml23()
-		{
-			var seq = new[] {1,2,3,4,5,6,7,8,9 }.Where(x => x % 2 == 1);
-			var node = seq.ToXml("seq", false);
-			var SEQ0 = node.As<int[]>();
-			var SEQ1 = node.As<List<int>>();
-			var SEQ2 = node.As<HashSet<int>>();
-			Assert.True(seq.SequenceEqual(SEQ0));
-			Assert.True(seq.SequenceEqual(SEQ1));
-			Assert.True(seq.SequenceEqualUnordered(SEQ2));
-		}
-		[Test] public void ToXml24()
-		{
-			var mat = new System.Drawing.Drawing2D.Matrix(1f, 2f, 3f, 4f, 5f, 6f);
-			var node = mat.ToXml("mat", true);
-			var s = node.ToString(SaveOptions.DisableFormatting);
-			Assert.AreEqual("<mat ty=\"System.Drawing.Drawing2D.Matrix\">1 2 3 4 5 6</mat>", s);
-
-			var MAT = node.As<System.Drawing.Drawing2D.Matrix>();
-			Assert.True(mat.Equals(MAT));
+			{
+				var kv = new KeyValuePair<int, string>(42, "fortytwo");
+				var node = kv.ToXml("kv", false);
+				var KV = node.As<KeyValuePair<int, string>>();
+				Assert.True(Equals(kv, KV));
+			}
+			{
+				var list = new List<string>();
+				list.Add("one");
+				list.Add("two");
+				var node = list.ToXml("list", false);
+				var LIST = node.As<List<string>>();
+				Assert.True(list.SequenceEqual(LIST));
+			}
+			{
+				var dic = new Dictionary<int, float>();
+				dic[1] = 1.1f;
+				dic[2] = 2.2f;
+				var node = dic.ToXml("dic", false);
+				var DIC = node.As<Dictionary<int,float>>();
+				Assert.True(dic.SequenceEqualUnordered(DIC));
+			}
+			{
+				var seq = new[] {1,2,3,4,5,6,7,8,9 }.Where(x => x % 2 == 1);
+				var node = seq.ToXml("seq", false);
+				var SEQ0 = node.As<int[]>();
+				var SEQ1 = node.As<List<int>>();
+				var SEQ2 = node.As<HashSet<int>>();
+				Assert.True(seq.SequenceEqual(SEQ0));
+				Assert.True(seq.SequenceEqual(SEQ1));
+				Assert.True(seq.SequenceEqualUnordered(SEQ2));
+			}
 		}
 		[Test] public void XmlAs()
 		{

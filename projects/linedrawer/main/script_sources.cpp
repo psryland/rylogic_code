@@ -135,6 +135,7 @@ namespace ldr
 			}
 			else // assume ldr script file
 			{
+				pr::LockFile lock(file.m_filepath, 10, 5000);
 				FileSrc src(file.m_filepath.c_str());
 
 				Includes<> inc;
@@ -153,10 +154,10 @@ namespace ldr
 		{
 			pr::events::Send(Evt_AppMsg(pr::FmtS(L"Script error found while parsing source file '%s'.\r\n%S", fpath.c_str(), ex.what()), L"Add Script File"));
 		}
-		catch (LdrException const& e)
+		catch (LdrException const& ex)
 		{
 			std::wstring msg;
-			switch (e.code())
+			switch (ex.code())
 			{
 			default: throw;
 			case ELdrException::FileNotFound:
@@ -167,6 +168,10 @@ namespace ldr
 				break;
 			}
 			pr::events::Send(Evt_AppMsg(msg, L"Add Script File"));
+		}
+		catch (std::exception const& ex)
+		{
+			pr::events::Send(Evt_AppMsg(pr::FmtS(L"Error found while parsing source file '%s'.\r\n%S", fpath.c_str(), ex.what()), L"Add Script File"));
 		}
 	}
 

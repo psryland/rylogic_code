@@ -15,8 +15,7 @@ namespace Rylobot
 			InstrumentSettingsDir    = Util.ResolveAppDataPath("Rylogic", "Rylobot", ".\\Instruments");
 			UILayout                 = null;
 			MaxRiskPC                = 10.0;
-			MinRewardToRisk          = 1.0;
-			MaxRewardToRisk          = 7.0;
+			RewardToRisk             = new RangeF(0.1, 3.0);
 			LookBackCount            = 50;
 			PredictionForecastLength = 100;
 		}
@@ -51,18 +50,11 @@ namespace Rylobot
 			set { set(x => x.MaxRiskPC, value); }
 		}
 
-		/// <summary>The minimum reward to risk ratio for a trade (reward/risk) </summary>
-		public double MinRewardToRisk
+		/// <summary>The range of reward to risk ratios for a trade (reward/risk) </summary>
+		public RangeF RewardToRisk
 		{
-			get { return get(x => x.MinRewardToRisk); }
-			set { set(x => x.MinRewardToRisk, value); }
-		}
-
-		/// <summary>The maximum reward to risk ratio for a trade (reward/risk) </summary>
-		public double MaxRewardToRisk
-		{
-			get { return get(x => x.MaxRewardToRisk); }
-			set { set(x => x.MaxRewardToRisk, value); }
+			get { return get(x => x.RewardToRisk); }
+			set { set(x => x.RewardToRisk, value); }
 		}
 
 		/// <summary>The number of candles to look back when setting a stop loss or take profit value</summary>

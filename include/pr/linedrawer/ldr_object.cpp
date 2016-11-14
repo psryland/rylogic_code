@@ -615,6 +615,9 @@ namespace pr
 				// Validate
 				if (m_point.size() < 2)
 				{
+					// Allow line strips to have 0 or 1 point because they are a created from
+					// lists of points and treating 0 or 1 as a special case is inconvenient
+					if (m_linestrip) return;
 					p.ReportError(EResult::Failed, pr::FmtS("Line object '%s' description incomplete", obj->TypeAndName().c_str()));
 					return;
 				}
@@ -2248,7 +2251,7 @@ namespace pr
 					last_update = now;
 					char const* type = obj ? ELdrObject::ToStringA(obj->m_type) : "";
 					std::string name = obj ? obj->m_name : "";
-					return dlg->Progress(-1.0f, pr::FmtS(L"Parsing scene...\r\nObject count: %d\r\n%s %s", out.m_objects.size(), type, name.c_str()));
+					return dlg->Progress(-1.0f, pr::FmtS(L"Parsing scene...\r\nObject count: %d\r\n%S %S", out.m_objects.size(), type, name.c_str()));
 				});
 			};
 

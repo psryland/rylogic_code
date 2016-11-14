@@ -8,6 +8,7 @@
 #include "pr/script/forward.h"
 #include "pr/script/location.h"
 #include "pr/script/buf8.h"
+#include "pr/script/fail_policy.h"
 
 namespace pr
 {
@@ -159,7 +160,7 @@ namespace pr
 			}
 
 			// Reset to the start of the range
-			void reset(size_t ofs = 0, Location* loc = nullptr)
+			void reset(std::streamoff ofs = 0, Location* loc = nullptr)
 			{
 				m_ptr = m_beg + ofs;
 				m_loc = loc ? *loc : Location();
@@ -176,7 +177,7 @@ namespace pr
 			}
 
 			// Return a sub range of this range
-			PtrRange Subrange(size_t ofs, size_t count, Location* loc = nullptr) const
+			PtrRange Subrange(std::streamoff ofs, std::streamoff count, Location* loc = nullptr) const
 			{
 				return PtrRange(m_beg + ofs, m_beg + ofs + count, loc);
 			}
@@ -229,7 +230,7 @@ namespace pr
 				// Open the input file stream
 				m_file.open(filepath, std::ios::binary);
 				if (!m_file.good())
-					throw std::exception(pr::FmtS("Failed to open file %s", Narrow(filepath).c_str()));
+					throw pr::script::Exception(EResult::FileNotFound, Location(filepath), pr::FmtS("Failed to open file %s", Narrow(filepath).c_str()));
 
 				// "Imbue" the file stream so that character codes get converted
 				static std::locale global_locale;

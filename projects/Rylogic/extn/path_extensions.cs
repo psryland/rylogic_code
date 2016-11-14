@@ -782,6 +782,38 @@ namespace pr.common
 			Win32.SHFileOperation(ref shf);
 			return !shf.fAnyOperationsAborted;
 		}
+
+		/// <summary>
+		/// Scope object that creates a file called 'filepath.locked'.
+		/// Blocks until 'filepath.locked' is created or 'max_block_time_ms' it reached.
+		/// Throws if the lock cannot be created within the timeout.
+		/// Used as a file system mutex-file.
+		/// Note: Requires other processes to use a similar locking method</summary>
+		public static Scope LockFile(string filepath, int max_attempts = 3, int max_block_time_ms = 1000)
+		{
+			// Arithmetic series: Sn = 1+2+3+..+n = n(1 + n)/2. 
+			// For n attempts, the i'th attempt sleep time is: max_block_time_ms * i / Sn
+			// because the sum of sleep times need to add up to max_block_time_ms.
+			//  sleep_time(a) = a * back_off = a * max_block_time_ms / Sn
+			//  back_off = max_block_time_ms / Sn = 2*max_block_time_ms / n(1+n)
+			var back_off = 2.0 * max_block_time_ms / (max_attempts * (1 + max_attempts));
+
+			var fpath = filepath + ".locked";
+			for (var a = 0; a != max_attempts; ++a)
+			{
+				try
+				{
+					var fs = new FileStream(fpath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 8, FileOptions.DeleteOnClose);
+					File.SetAttributes(fpath, FileAttributes.Hidden|FileAttributes.Temporary);
+					return Scope.Create(null, () => fs.Dispose());
+				}
+				catch (IOException)
+				{
+					Thread.Sleep((int)(a * back_off)); // Back off delay
+				}
+			}
+			throw new Exception("Failed to lock file: '{0}'".Fmt(filepath));
+		}
 	}
 }
 

@@ -196,6 +196,11 @@ namespace pr.extn
 				return max;
 			}
 		}
+		public static TSource MaxByOrDefault<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey> comparer = null)
+		{
+			if (!source.Any()) return default(TSource);
+			return source.MaxBy(selector, comparer);
+		}
 
 		/// <summary>Returns the minimum element based on 'selector', with comparisons of the selector type made by 'comparer'</summary>
 		public static TSource MinBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey> comparer = null)
@@ -221,6 +226,11 @@ namespace pr.extn
 				}
 				return max;
 			}
+		}
+		public static TSource MinByOrDefault<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey> comparer = null)
+		{
+			if (!source.Any()) return default(TSource);
+			return source.MinBy(selector, comparer);
 		}
 
 		/// <summary>Returns one of the items that occur most frequently within a sequence</summary>

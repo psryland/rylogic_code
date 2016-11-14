@@ -73,6 +73,12 @@ namespace pr
 			return iter->second;
 		}
 
+		// True if 'key' is in the map
+		bool contains(Key const& key) const
+		{
+			return find(key) != end();
+		}
+
 		// const iterator to match for 'key' or end()
 		auto find(Key const& key) const -> decltype(begin())
 		{

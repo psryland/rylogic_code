@@ -49,6 +49,8 @@ namespace ldr
 		x(pr::v4                  ,CameraAlignAxis        ,pr::v4Zero                  ,)\
 		x(bool                    ,CameraOrbit            ,false                       ,)\
 		x(float                   ,CameraOrbitSpeed       ,0.3f                        ,)\
+		x(pr::v4                  ,CameraResetForward     ,-pr::v4ZAxis                ,"The direction the camera faces when reset")\
+		x(pr::v4                  ,CameraResetUp          ,pr::v4YAxis                 ,"The up direction for the camera when reset")\
 		x(bool                    ,EnableResourceMonitor  ,false                       ,)\
 		x(bool                    ,RenderingEnabled       ,true                        ,)\
 		x(pr::Colour32            ,BackgroundColour       ,pr::Colour32Gray            ,"The background colour")\

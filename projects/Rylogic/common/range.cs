@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
+using System.Globalization;
 using pr.extn;
 using pr.maths;
 
@@ -172,6 +173,16 @@ namespace pr.common
 		{
 			return "[{0},{1})".Fmt(Begin,End);
 		}
+
+		#region Equals
+		public static bool operator == (Range lhs, Range rhs)
+		{
+			return lhs.Equals(rhs);
+		}
+		public static bool operator != (Range lhs, Range rhs)
+		{
+			return !(lhs == rhs);
+		}
 		public override bool Equals(object obj)
 		{
 			if (ReferenceEquals(null, obj)) return false;
@@ -186,6 +197,9 @@ namespace pr.common
 		{
 			unchecked { return (Begin.GetHashCode()*397) ^ End.GetHashCode(); }
 		}
+		#endregion
+
+		#region IEnumerable
 
 		public IEnumerator<long> GetEnumerator()
 		{
@@ -196,6 +210,22 @@ namespace pr.common
 		{
 			return ((IEnumerable<long>)this).GetEnumerator();
 		}
+
+		#endregion
+
+		#region Parse
+
+		/// <summary>
+		/// Convert a string to a range
+		/// Examples: '1 2' '[1:2)' '-1,+1' '[-1,+1]' </summary>
+		public static Range Parse(string s)
+		{
+			var v = long_.ParseArray(s, NumberStyles.Integer, new[] { " ","\t",",",";",":","[","]","(",")" }, StringSplitOptions.RemoveEmptyEntries);
+			if (v.Length != 2) throw new FormatException("Range.Parse() string argument does not represent a 2 component range");
+			return new Range(v[0], v[1]);
+		}
+
+		#endregion
 	}
 
 	/// <summary>A floating point range over [Begin,End)</summary>
@@ -350,6 +380,28 @@ namespace pr.common
 		{
 			return "[{0},{1})".Fmt(Begin,End);
 		}
+
+		/// <summary>Allow implicit cast from 'Range'</summary>
+		public static implicit operator RangeF(Range r)
+		{
+			return new RangeF(r.Begin, r.End);
+		}
+
+		/// <summary>Allow explicit cast to 'Range'</summary>
+		public static explicit operator Range(RangeF r)
+		{
+			return new Range((long)r.Begin, (long)r.End);
+		}
+
+		#region Equals
+		public static bool operator == (RangeF lhs, RangeF rhs)
+		{
+			return lhs.Equals(rhs);
+		}
+		public static bool operator != (RangeF lhs, RangeF rhs)
+		{
+			return !(lhs == rhs);
+		}
 		public override bool Equals(object obj)
 		{
 			if (ReferenceEquals(null, obj)) return false;
@@ -364,6 +416,21 @@ namespace pr.common
 		{
 			unchecked { return (Begin.GetHashCode()*397) ^ End.GetHashCode(); }
 		}
+		#endregion
+
+		#region Parse
+
+		/// <summary>
+		/// Convert a string to a range
+		/// Examples: '1 2' '[1:2)' '-1,+1' '[-1,+1]' </summary>
+		public static RangeF Parse(string s)
+		{
+			var v = double_.ParseArray(s, NumberStyles.Float, new[] { " ","\t",",",";",":","[","]","(",")" }, StringSplitOptions.RemoveEmptyEntries);
+			if (v.Length != 2) throw new FormatException("RangeF.Parse() string argument does not represent a 2 component range");
+			return new RangeF(v[0], v[1]);
+		}
+
+		#endregion
 	}
 }
 

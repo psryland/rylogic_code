@@ -29,6 +29,10 @@ namespace pr
 			struct { float arr[4]; };
 			#if PR_MATHS_USE_INTRINSICS
 			__m128 vec;
+			#elif PR_MATHS_USE_DIRECTMATH
+			DirectX::XMVECTOR vec;
+			#else
+			struct { v4 vec; };
 			#endif
 		};
 		#pragma warning(pop)
@@ -319,7 +323,7 @@ namespace pr
 	// Return the cosine of the angle between two quaternions (i.e. the dot product)
 	inline float pr_vectorcall CosAngle(quat_cref a, quat_cref b)
 	{
-		return Dot4(a.vec, b.vec);
+		return Dot4(a.xyzw, b.xyzw);
 	}
 
 	// Return the angle between two quaternions (in radians)
@@ -457,6 +461,7 @@ namespace pr
 		PRUnitTest(pr_maths_quaternion)
 		{
 			{ // Create
+				#if PR_MATHS_USE_INTRINSICS
 				auto p = DegreesToRadians(  43.0f);
 				auto y = DegreesToRadians(  10.0f);
 				auto r = DegreesToRadians(-245.0f);
@@ -464,6 +469,7 @@ namespace pr
 				auto q0 = quat(p,y,r);
 				quat q1(DirectX::XMQuaternionRotationRollPitchYaw(p,y,r));
 				PR_CHECK(FEql4(q0, q1), true);
+				#endif
 			}
 			{ // Average
 				auto ideal_mean = quat(Normalise3(v4(1,1,1,0)), 0.5f);

@@ -37,6 +37,12 @@ namespace pr.extn
 			return list[list.Count - 1];
 		}
 
+		/// <summary>Return the list element at 'list.Count - index - 1'</summary>
+		public static T Back<T>(this IList<T> list, int index)
+		{
+			return list[list.Count - index - 1];
+		}
+
 		/// <summary>Remove the last item in the list</summary>
 		public static void PopBack<T>(this IList<T> list)
 		{

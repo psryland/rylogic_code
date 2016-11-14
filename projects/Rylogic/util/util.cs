@@ -107,6 +107,7 @@ namespace pr.util
 		}
 		[DebuggerStepThrough] public static void DisposeAll<T>(this IEnumerable<T> doomed) where T:class, IDisposable
 		{
+			if (doomed == null) return;
 			foreach (var d in doomed.Where(x => x != null).ToArray())
 				Dispose(d);
 		}
@@ -402,6 +403,12 @@ namespace pr.util
 		public static int[] ParseInts(string str, params char[] sep)
 		{
 			return str.Split(sep).Select(x => int.Parse(x)).ToArray();
+		}
+
+		/// <summary>Create a list of an anonymous type. e.g NewList(x => new{A=1, B=2.0})</summary>
+		public static List<T> NewList<T>(Func<T> anon_type)
+		{
+			return new object[0].Select(x => anon_type()).ToList();
 		}
 
 		/// <summary>Helper for allocating a dictionary preloaded with data</summary>

@@ -75,6 +75,7 @@
 #include <exception>
 #include <cassert>
 #include <windows.h>
+#include "pr/str/string.h"
 
 namespace pr
 {
@@ -230,7 +231,37 @@ namespace pr
 	inline FILETIME CreationTime(HANDLE handle)         { FILETIME creation_time; GetFileTime(handle, &creation_time, 0, 0); return creation_time; }
 	inline FILETIME LastAccessTime(HANDLE handle)       { FILETIME access_time;   GetFileTime(handle, 0, &access_time, 0);   return access_time;   }
 	inline FILETIME LastModifiedTime(HANDLE handle)     { FILETIME modified_time; GetFileTime(handle, 0, 0, &modified_time); return modified_time; }
-	
+
+	// Scoped object that blocks until it can create a file called 'filepath.locked'.
+	// 'filepath.locked' is deleted as soon as it goes out of scope.
+	// Used as a file system mutex-file
+	struct LockFile
+	{
+		Handle m_handle;
+		LockFile(std::wstring const& filepath, int max_attempts = 3, int max_block_time_ms = 1000)
+		{
+			// Arithmetic series: Sn = 1+2+3+..+n = n(1 + n)/2. 
+			// For n attempts, the i'th attempt sleep time is: max_block_time_ms * i / Sn
+			// because the sum of sleep times need to add up to max_block_time_ms.
+			//  sleep_time(a) = a * back_off = a * max_block_time_ms / Sn
+			//  back_off = max_block_time_ms / Sn = 2*max_block_time_ms / n(1+n)
+			auto back_off = 2.0 * max_block_time_ms / (max_attempts * (1 + max_attempts));
+
+			auto fpath = filepath;
+			fpath.append(L".locked");
+			for (auto a = 0; a != max_attempts; ++a)
+			{
+				m_handle = FileOpen(fpath.c_str(), GENERIC_READ|GENERIC_WRITE, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_HIDDEN|FILE_ATTRIBUTE_TEMPORARY|FILE_FLAG_DELETE_ON_CLOSE, nullptr);
+				if (m_handle != INVALID_HANDLE_VALUE)
+					return;
+
+				// Back off delay
+				Sleep(DWORD(a * back_off));
+			}
+			throw std::exception(std::string("Failed to lock file: '").append(pr::Narrow(filepath)).append("'").c_str());
+		}
+	};
+
 	//// Fill a buffer with the contents of a file
 	//// Note: the buffer could be a std::string
 	//template <typename tchar, typename tbuf> inline bool FileToBuffer(tchar const* filename, tbuf& buffer, DWORD sharing)

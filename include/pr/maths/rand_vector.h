@@ -200,6 +200,17 @@ namespace pr
 		return Random2x2(rng, 0.0f, maths::tau);
 	}
 
+	// Create a random 3D matrix
+	template <typename Rng = std::default_random_engine> inline m3x4 Random3x4(Rng& rng, float min_value, float max_value)
+	{
+		std::uniform_real_distribution<float> dist(min_value, max_value);
+		m3x4 m = {};
+		m.x = v4(dist(rng), dist(rng), dist(rng), dist(rng));
+		m.y = v4(dist(rng), dist(rng), dist(rng), dist(rng));
+		m.z = v4(dist(rng), dist(rng), dist(rng), dist(rng));
+		return m;
+	}
+
 	// Create a random 3D rotation matrix
 	template <typename Rng = std::default_random_engine> inline m3x4 Random3x4(Rng& rng, v4 const& axis, float min_angle, float max_angle)
 	{

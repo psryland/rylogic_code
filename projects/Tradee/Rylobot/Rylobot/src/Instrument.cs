@@ -15,9 +15,17 @@ namespace Rylobot
 	public class Instrument :IDisposable
 	{
 		/// <summary>Construction is fairly cheap</summary>
-		public Instrument(Rylobot bot, string symbol_code)
+		public Instrument(Rylobot bot)
+			:this(bot, bot.MarketSeries)
+		{}
+		public Instrument(Rylobot bot, Symbol sym, TimeFrame tf)
+			:this(bot, bot.GetSeries(sym, tf))
+		{}
+		public Instrument(Rylobot bot, MarketSeries series)
 		{
 			Bot = bot;
+			Data = series;
+			HighRes = new List<Vec4d>();
 
 			// Ensure the instrument settings directory exists
 			if (!Path_.DirExists(Bot.Settings.InstrumentSettingsDir))
@@ -60,6 +68,15 @@ namespace Rylobot
 		}
 		private Rylobot m_bot;
 
+		/// <summary>
+		/// Return this instrument at a higher or lower time frame (e.g. this=h1, ratio=2 => h2. this=h1, ratio=0.5 => m30)).
+		/// Note: can't use this with back testing</summary>
+		public Instrument RelativeTimeFrame(double ratio)
+		{
+			var tf = TimeFrame.GetRelativeTimeFrame(ratio);
+			return new Instrument(Bot, Symbol, tf);
+		}
+
 		/// <summary>Called when the instrument data has been updated</summary>
 		private void HandleTick(object sender, EventArgs e)
 		{
@@ -69,6 +86,12 @@ namespace Rylobot
 			// Check if this is the start of a new candle
 			NewCandle = candle.Timestamp > Latest.Timestamp;
 
+			// Capture the high res price data
+			var index = FractionalIndexAt(Bot.UtcNow) - (double)FirstIdx;
+			var idx = HighRes.Count != 0 && HighRes.Back().x > index ? HighRes.BinarySearch(x => x.x.CompareTo(index)) : HighRes.Count;
+			if (idx < 0) idx = ~idx;
+			HighRes.Insert(idx, new Vec4d(index, Symbol.Ask, Symbol.Bid, 0));
+
 			// Apply the data to the latest candle or invalidate the cached Latest
 			if (NewCandle)
 				Latest = null;
@@ -77,6 +100,9 @@ namespace Rylobot
 
 			// Record the last time data was received
 			LastUpdatedUTC = DateTimeOffset.UtcNow;
+
+			// Invalidate cached, per-candle, properties
+			m_msc = null;
 
 			// Notify data added/changed
 			OnDataChanged(new DataEventArgs(this, candle, NewCandle));
@@ -98,9 +124,17 @@ namespace Rylobot
 		/// <summary>The instrument data source</summary>
 		public MarketSeries Data
 		{
-			get { return Bot.MarketSeries; }
+			get;
+			private set;
 		}
 
+		/// <summary>The high res data for the instrument</summary>
+		public List<Vec4d> HighRes
+		{
+			get;
+			private set;
+		}
+		
 		/// <summary>The CAlgo Symbol interface for this instrument</summary>
 		public Symbol Symbol
 		{
@@ -113,14 +147,20 @@ namespace Rylobot
 			get { return Data.SymbolCode; }
 		}
 
+		/// <summary>The price spread</summary>
+		public QuoteCurrency Spread
+		{
+			get { return Symbol.Spread; }
+		}
+
 		/// <summary>The size of one pip (in quote currency)</summary>
-		public double PipSize
+		public QuoteCurrency PipSize
 		{
 			get { return Symbol.PipSize; }
 		}
 
-		/// <summary>The current Ask(+1)/Bid(-1) price</summary>
-		public double CurrentPrice(int sign)
+		/// <summary>The current Ask(+1)/Bid(-1)/Mid(0) price</summary>
+		public QuoteCurrency CurrentPrice(int sign)
 		{
 			return Symbol.CurrentPrice(sign);
 		}
@@ -194,8 +234,8 @@ namespace Rylobot
 		public Range IndexRange(NegIdx idx_min, NegIdx idx_max)
 		{
 			Debug.Assert(idx_min <= idx_max);
-			var min = Maths.Clamp(idx_min, FirstIdx, LastIdx);
-			var max = Maths.Clamp(idx_max, min, LastIdx);
+			var min = Maths.Clamp((int)idx_min, (int)FirstIdx, (int)LastIdx);
+			var max = Maths.Clamp((int)idx_max, (int)min, (int)LastIdx);
 			return new Range(min, max);
 		}
 		public Range IndexRange(Range range)
@@ -204,11 +244,11 @@ namespace Rylobot
 		}
 		public Range IndexRange(Position pos)
 		{
-			return IndexRange(new Range(IndexAt(pos.EntryTime), LastIdx));
+			return IndexRange(new Range((int)IndexAt(pos.EntryTime), (int)LastIdx));
 		}
 		public Range IndexRange(HistoricalTrade pos)
 		{
-			return IndexRange(new Range(IndexAt(pos.EntryTime), IndexAt(pos.ClosingTime)));
+			return IndexRange(new Range((int)IndexAt(pos.EntryTime), (int)IndexAt(pos.ClosingTime)));
 		}
 
 		/// <summary>Enumerate candles over a range that has been validated</summary>
@@ -229,6 +269,59 @@ namespace Rylobot
 		{
 			return CandleRangeInternal(IndexRange(idx_range));
 		}
+		public IEnumerable<Candle> CandleRange()
+		{
+			return CandleRangeInternal(IndexRange(FirstIdx, LastIdx));
+		}
+
+		/// <summary>
+		/// Iterate through the high res price data over the given range with a step size of 'step'.
+		/// 'first' and 'last' floating point NegIdx's (not indices in HighRes)
+		/// 'step' is the increment size in indices to move with each returned value</summary>
+		public IEnumerable<Vec4d> HighResRange(double idx_min, double idx_max, double step)
+		{
+			var first = idx_min - (double)FirstIdx;
+			var last  = idx_max - (double)FirstIdx;
+
+			var istart = HighRes.BinarySearch(x => x.x.CompareTo(first));
+			var iend   = HighRes.BinarySearch(x => x.x.CompareTo(last));
+			if (istart < 0) istart = ~istart;
+			if (iend   < 0) iend = ~iend;
+			if (istart == iend)
+				yield break;
+
+			// The point to return
+			var pt = HighRes[istart];
+
+			// Loop over the requested range
+			var X = HighRes[istart].x;
+			for (var i = istart; i < iend;)
+			{
+				yield return pt;
+
+				// Scan forward to the next price point to output
+				X += step;
+
+				// Find the range of the ask/bid price for the skipped price values
+				// Return the average X position of the skipped values
+				var cnt = 0;
+				pt = new Vec4d(0, double.MinValue, double.MaxValue, 0);
+				for (++i; i < iend; ++i)
+				{
+					pt.x += HighRes[i].x;
+					pt.y = Math.Max(pt.y, HighRes[i].y);
+					pt.z = Math.Min(pt.z, HighRes[i].z);
+					++cnt;
+					if (HighRes[i].x > X)
+						break;
+				}
+				pt.x /= cnt;
+			}
+		}
+		public IEnumerable<Vec4d> HighResRange(RangeF idx_range, double step)
+		{
+			return HighResRange(idx_range.Begin, idx_range.End, step);
+		}
 
 		/// <summary>Return the index into the candle data for the given time</summary>
 		public NegIdx IndexAt(DateTimeOffset dt)
@@ -237,16 +330,35 @@ namespace Rylobot
 			return idx + FirstIdx;
 		}
 
-		/// <summary>Return the average candle size (total length) of the given range</summary>
-		public double MeanCandleSize(NegIdx idx_min, NegIdx idx_max)
+		/// <summary>Return the fractional index into the candle data for the given time</summary>
+		public double FractionalIndexAt(DateTimeOffset dt)
 		{
-			var r = IndexRange(idx_min, idx_max);
-			var mean_candle_size = r.Size != 0 ? CandleRangeInternal(r).Average(x => x.TotalLength) : 0;
-			return mean_candle_size;
+			var idx = IndexAt(dt);
+
+			var candle = this[idx];
+			var ticks = dt.Ticks - candle.Timestamp;
+			var ticks_per_candle = TimeFrame.ToTicks();
+			return (double)idx + Maths.Clamp((double)ticks / ticks_per_candle, 0.0, 1.0);
 		}
-		public double MeanCandleSize(Range range)
+
+		/// <summary>A cached median candle size over the last 50 candles</summary>
+		public double MCS_50
 		{
-			return MeanCandleSize(range.Begini, range.Endi);
+			get { return (m_msc ?? (m_msc = MedianCandleSize(LastIdx - 50, LastIdx))).Value; }
+		}
+		private double? m_msc;
+
+		/// <summary>Return the average candle size (total length) of the given range</summary>
+		public double MedianCandleSize(NegIdx idx_min, NegIdx idx_max)
+		{
+			var lengths = CandleRange(idx_min, idx_max).Select(x => x.TotalLength).ToArray();
+			if (lengths.Length == 0) throw new Exception("Empty range, median candle size is not defined");
+			var mcs = lengths.NthElement(lengths.Length/2);
+			return mcs;
+		}
+		public double MedianCandleSize(Range range)
+		{
+			return MedianCandleSize(range.Begini, range.Endi);
 		}
 
 		/// <summary>Return the age of 'candle' normalised to the time frame</summary>
@@ -303,10 +415,10 @@ namespace Rylobot
 				var candle = this[i];
 
 				// Find the range spanned.
-				body_range.Encompass(candle.Open);
-				body_range.Encompass(candle.Close);
-				full_range.Encompass(candle.High);
-				full_range.Encompass(candle.Low);
+				body_range.Encompass((double)candle.Open);
+				body_range.Encompass((double)candle.Close);
+				full_range.Encompass((double)candle.High);
+				full_range.Encompass((double)candle.Low);
 
 				// Use candle bodies rather than wicks because wicks represent
 				// price changes that have been cancelled out therefore they don't
@@ -319,7 +431,7 @@ namespace Rylobot
 				}
 
 				// Calculate the group candle length
-				group.Encompass(candle.BodyLimit(-sign));
+				group.Encompass((double)candle.BodyLimit(-sign));
 
 				// If the trend changes direction add the group range to the appropriate accumulator
 				if (candle.Sign != sign)
@@ -342,17 +454,117 @@ namespace Rylobot
 			var volatility = Maths.Div(body_range.Size, full_range.Size);
 			return trend_strength * volatility;
 		}
-	}
 
-	// "typedef" for negative instrument indices
-	[DebuggerDisplay("{value}")]
-	public struct NegIdx
-	{
-		private int value;
-		[DebuggerStepThrough] private NegIdx(int v) { value = v; }
-		[DebuggerStepThrough] public static implicit operator int(NegIdx neg_idx) { return neg_idx.value; }
-		[DebuggerStepThrough] public static implicit operator NegIdx(int neg_idx) { return new NegIdx(neg_idx); }
-		[DebuggerStepThrough] public override string ToString() { return value.ToString(); }
+		/// <summary>Compress candles over the given range into a single equivalent candle</summary>
+		public Candle Compress(NegIdx idx_min, NegIdx idx_max)
+		{
+			var candles = CandleRange(idx_min, idx_max);
+			if (!candles.Any())
+				throw new Exception("Empty range, cannot create an equivalent candle");
+			
+			var timestamp = candles.First().Timestamp;
+			var open      = candles.First().Open;
+			var high      = candles.Max(x => x.High);
+			var low       = candles.Min(x => x.Low);;
+			var close     = candles.Last().Close;
+			var medians   = candles.Select(x => x.Median).ToArray();
+			var median    = medians.NthElement(medians.Length/2);
+			var volume    = candles.Sum(x => x.Volume);
+			
+			return new Candle(timestamp, open, high, low, close, median, volume);
+		}
+
+		/// <summary>True if the candle pattern leading up to 'idx' indicates a price reversal.</summary>
+		public bool IsCandlePattern(NegIdx idx, out int forecast_direction, out QuoteCurrency target_entry)
+		{
+			// Not enough data, assume not
+			// Require at least 3 candles
+			if (idx - FirstIdx < 3)
+			{
+				forecast_direction = 0;
+				target_entry = 0;
+				return false;
+			}
+
+			// Measure the age of the latest candle (normalised)
+			var a_age = AgeOf(this[idx], clamped:true);
+			if (a_age < 0.8) --idx; // include the latest candle if mostly done
+
+			var mcs = MCS_50;
+
+			// Get the last few candles
+			// 'A' is treated as the latest closed candle.
+			var A = this[idx-0]; var a_type = A.Type(mcs);
+			var B = this[idx-1]; var b_type = B.Type(mcs);
+			var C = this[idx-2]; var c_type = C.Type(mcs);
+
+			// Measure the strength of the trend leading up to 'B' (but not including)
+			var preceding_trend = MeasureTrend(idx - 5, idx - 1);
+
+			// Strong trend, Indecision, followed by strong reverse trend
+			if ((b_type.IsIndecision()) &&                                                                                      // A hammer, spinning top, or doji
+				(Math.Abs(preceding_trend) > 0.5) &&                                                                            // The preceding trend is strong
+				(A.Sign != Math.Sign(preceding_trend)) &&                                                                       // 'A' is in the opposite direction to the preceding trend
+				(a_type == Candle.EType.Marubozu || a_type == Candle.EType.MarubozuStrengthening ||                             // 'A' is a trend sign
+				(A.Strength > 0.7 && Math.Abs(A.Close - B.BodyCentre) > 1.2 * Math.Abs(B.WickLimit(A.Sign) - B.BodyCentre))) && // 'A' is a trend sign
+				true)
+			{
+				forecast_direction = A.Sign;
+				target_entry = B.Median;
+				return true;
+			}
+
+			// Indecision, followed by two semi strong candles in the same direction
+			if ((c_type.IsIndecision()) &&                  // A hammer, spinning top, or doji
+				(Math.Abs(preceding_trend) > 0.5) &&        // The preceding trend is strong
+				(A.Sign != Math.Sign(preceding_trend)) &&   // 'A' is in the opposite direction to the preceding trend
+				(B.Sign == A.Sign) &&                       // 'A' and 'B' in the same direction
+				(Math.Abs(A.Open - B.Close) < 0.1 * mcs) && // 'A' and 'B' join nose to tail
+				(Math.Abs(A.Close - B.Open) > mcs) &&       // 'A' and 'B' combined is a significant trend indication
+				true)
+			{
+				forecast_direction = A.Sign;
+				target_entry = C.Median;
+				return true;
+			}
+
+			// Engulfing pattern
+			const double EngulfingRatio = 1.2;
+			if ((A.Sign != B.Sign) &&                             // Candles need opposite directions
+				(!b_type.IsIndecision()) &&                       // Both candles need to be a reasonable size
+				(A.Strength > 0.7 && A.BodyLength > 0.5*mcs) &&   // Both candles need to be a reasonable size
+				(A.BodyLength > EngulfingRatio * B.BodyLength) && // 'A' is bigger than 'B'
+				(Math.Abs(A.Open - B.Close) < 0.1 * mcs) &&       // A.Open must be fairly close to B.Close
+				(Math.Abs(preceding_trend) > 0.5) &&              // The preceding trend is strong
+				(A.Sign != Math.Sign(preceding_trend)) &&         // 'A' is in the opposite direction to the preceding trend
+				true)
+			{
+				// Engulfing patterns tend to take off, so set the target entry at A.Close
+				forecast_direction = A.Sign;
+				target_entry = A.Close;
+				return true;
+			}
+
+			// Engulfing pattern, two semi strong candles in the same direction engulfing 'C'
+			var AB = Compress(idx-1,idx-0);
+			if ((A.Sign == B.Sign && A.Sign != C.Sign) &&          // 'A' and 'B' are in the same direction, and are opposite to 'C'
+				(!c_type.IsIndecision()) &&                        // Both candles need to be a reasonable size
+				(AB.Strength > 0.7 && AB.BodyLength > 0.5*mcs) &&  // Both candles need to be a reasonable size
+				(AB.BodyLength > EngulfingRatio * C.BodyLength) && // 'A+B' is bigger than 'C'
+				(Math.Abs(B.Open - C.Close) < 0.1 * mcs) &&        // B.Open must be fairly close to C.Close
+				(Math.Abs(preceding_trend) > 0.5) &&               // The preceding trend is strong
+				(AB.Sign != Math.Sign(preceding_trend)) &&         // 'A' is in the opposite direction to the preceding trend
+				true)
+			{
+				// Engulfing patterns tend to take off, so set the target entry at A.Close
+				forecast_direction = A.Sign;
+				target_entry = A.Close;
+				return true;
+			}
+			forecast_direction = 0;
+			target_entry = 0;
+			return false;
+		}
 	}
 
 	#region EventArgs

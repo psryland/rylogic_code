@@ -13,20 +13,22 @@ namespace Rylobot
 		{ }
 
 		/// <summary>Look for predictions with each new data element</summary>
-		protected override void Step()
+		protected override void UpdateFeatureValues(DataEventArgs args)
 		{
 			// Require at least 3 candles
 			if (Instrument.Count < 3)
 				return;
 
+			Features.Clear();
+
 			// Find the approximate candle size
-			var mean_candle_size = Instrument.MeanCandleSize(-100,0);
+			var msc = Instrument.MedianCandleSize(-100,0);
 
 			// Get the last few candles
 			// Make decisions based on 'B', the last closed candle.
-			var A = Instrument[ 0]; var a_type = A.Type(mean_candle_size);
-			var B = Instrument[-1]; var b_type = A.Type(mean_candle_size);
-			var C = Instrument[-2]; var c_type = A.Type(mean_candle_size);
+			var A = Instrument[ 0]; var a_type = A.Type(msc);
+			var B = Instrument[-1]; var b_type = A.Type(msc);
+			var C = Instrument[-2]; var c_type = A.Type(msc);
 
 			// The age of 'A' (normalised)
 			var a_age = Instrument.AgeOf(A, clamped:true);
@@ -48,13 +50,11 @@ namespace Rylobot
 				(Math.Abs(preceding_trend) > 0.8) &&                   // There was a trend leading into B
 				(Math.Sign(preceding_trend) != B.Sign))                // The trend was the opposite of B
 			{
-				Forecast = B.Sign > 0 ? TradeType.Buy : TradeType.Sell;
-				Comments = Str.Build(
+				Features.Add(new Feature("CandlePattern", B.Sign, Str.Build(
 					"Engulfing: A trend, ending with a reasonable sized body, followed by a bigger body in the opposite direction.\n",
 					" C:{0}  B:{1}  A:{2}\n".Fmt(c_type, b_type, a_type),
 					" Preceding trend: {0}\n".Fmt(preceding_trend),
-					"");
-					
+					"")));
 				return;
 			}
 
@@ -73,12 +73,11 @@ namespace Rylobot
 					if (a_age >= 1.0 - Maths.Frac(0.0, dist, 1.0))
 					{
 						var reversal = Math.Sign(preceding_trend) != A.Sign;
-						Forecast = A.Sign > 0 ? TradeType.Buy : TradeType.Sell;
-						Comments = Str.Build(
+						Features.Add(new Feature("CandlePattern", A.Sign, Str.Build(
 							"Hammer, Spinning top, or doji:  and a trend leading into the indecision\n",
 							" C:{0}  B:{1}  A:{2}\n".Fmt(c_type, b_type, a_type),
 							" Preceding trend: {0}\n".Fmt(preceding_trend),
-							"");
+							"")));
 						return;
 					}
 				}
@@ -117,7 +116,7 @@ namespace Rylobot
 			//}
 
 			// no idea
-			Forecast = null;
+			Features.Add(new Feature("CandlePattern", 0.0));
 		}
 	}
 }

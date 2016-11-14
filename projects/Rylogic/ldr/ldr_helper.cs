@@ -3,12 +3,15 @@
 //  Copyright (c) Rylogic Ltd 2008
 //***********************************************
 
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using pr.common;
 using pr.extn;
 using pr.gfx;
 using pr.maths;
@@ -31,8 +34,16 @@ namespace pr.ldr
 		/// <summary>Write an ldr string to a file</summary>
 		public static void Write(string ldr_str, string filepath, bool append = false)
 		{
-			using (var f = new StreamWriter(new FileStream(filepath, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.Read)))
-				f.Write(ldr_str);
+			try
+			{
+				using (Path_.LockFile(filepath))
+					using (var f = new StreamWriter(new FileStream(filepath, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.Read)))
+						f.Write(ldr_str);
+			}
+			catch (Exception ex)
+			{
+				Debug.WriteLine("Failed to write Ldr script to '{0}'. {1}".Fmt(filepath, ex.Message));
+			}
 		}
 
 		// Ldr single string
@@ -70,17 +81,23 @@ namespace pr.ldr
 		}
 		public static string Position(v4 position, bool newline = false)
 		{
-			if (position == v4.Zero || position == v4.Origin) return string.Empty;
-			return "*o2w{*pos{" + Vec3(position) + "}}" + (newline?"\n":"");
+			return
+				position == v4.Zero ? string.Empty :
+				position == v4.Origin ? string.Empty :
+				"*o2w{*pos{" + Vec3(position) + "}}" + (newline?"\n":"");
 		}
 		public static string Transform(m4x4 o2w, bool newline = false)
 		{
-			if (o2w == m4x4.Identity) return string.Empty;
-			return "*o2w{*m4x4{" + Mat4x4(o2w) + "}}" + (newline?"\n":"");
+			return 
+				o2w == m4x4.Identity ? string.Empty :
+				o2w.rot == m3x4.Identity ? Position(o2w.pos, newline) :
+				"*o2w{*m4x4{" + Mat4x4(o2w) + "}}" + (newline?"\n":"");
 		}
 		public static string Colour(uint col)
 		{
-			return col.ToString("X8");
+			return
+				col == 0xFFFFFFFF ? string.Empty :
+				col.ToString("X8");
 		}
 		public static string Colour(Color col)
 		{
@@ -245,10 +262,7 @@ namespace pr.ldr
 		}
 		public Scope Group(string name, Colour32 colour, v4 position)
 		{
-			return Scope.Create(
-				() => Append("*Group ",name," {\n"),
-				() => Append(Ldr.Position(position, newline:true), "}\n")
-				);
+			return Group(name, colour, m4x4.Translation(position));
 		}
 		public Scope Group(string name, m4x4 transform)
 		{
@@ -257,9 +271,25 @@ namespace pr.ldr
 		public Scope Group(string name, Colour32 colour, m4x4 transform)
 		{
 			return Scope.Create(
-				() => Append("*Group ",name," {\n"),
-				() => Append(Ldr.Transform(transform, newline:true), "}\n")
+				() => GroupOpen(name, colour),
+				() => GroupClose(transform)
 				);
+		}
+		public void GroupOpen(string name)
+		{
+			GroupOpen(name, 0xFFFFFFFF);
+		}
+		public void GroupOpen(string name, Colour32 colour)
+		{
+			Append("*Group ",name," ",colour," {\n");
+		}
+		public void GroupClose()
+		{
+			GroupClose(m4x4.Identity);
+		}
+		public void GroupClose(m4x4 transform)
+		{
+			Append(Ldr.Transform(transform, newline:true), "}\n");
 		}
 
 		public void Line(v4 start, v4 end)
@@ -277,7 +307,7 @@ namespace pr.ldr
 		public void Line(string name, Colour32 colour, int width, IEnumerable<v4> points)
 		{
 			var w = width != 0 ? "*Width {{{0}}}".Fmt(width) : string.Empty;
-			Append("*LineStrip ", name, " ", colour, " {", w, points.Select(x => Ldr.Vec3(x)), "}");
+			Append("*LineStrip ", name, " ", colour, " {", w, points.Select(x => Ldr.Vec3(x)), "}\n");
 		}
 		public void LineD(string name, Colour32 colour, v4 start, v4 direction)
 		{
@@ -563,7 +593,7 @@ namespace pr.unittests
 				ldr.Sphere("s", Color.Red);
 			}
 			var expected =
-				"*Group g {\n"+
+				"*Group g FFFFFFFF {\n"+
 				"*Box b FF00FF00 {1 }\n"+
 				"*Sphere s FFFF0000 {1 }\n"+
 				"}\n";

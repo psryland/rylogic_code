@@ -25,6 +25,76 @@ namespace pr.maths
 		double[] StationaryPoints { get; }
 	}
 
+	/// <summary>'F(x) = Ax + B. a.k.a. Linear</summary>
+	public class Monic :IPolynomial
+	{
+		public double A;
+		public double B;
+
+		public Monic(double a, double b)
+		{
+			A = a;
+			B = b;
+		}
+
+		/// <summary>Evaluate F(x) at 'x'</summary>
+		public double F(double x)
+		{
+			return A*x + B;
+		}
+
+		/// <summary>Evaluate dF(x)/dx at 'x'</summary>
+		public double dF(double x)
+		{
+			return A;
+		}
+
+		/// <summary>Evaluate d²F(x)/dx at 'x'</summary>
+		public double ddF(double x)
+		{
+			return 0;
+		}
+
+		/// <summary>Calculate the real roots of this polynomial</summary>
+		public double[] Roots
+		{
+			get
+			{
+				if (A == 0) return new double[0];
+				return new double[1] { -B / A };
+			}
+		}
+
+		/// <summary>Return the X values of the maxima, minima, or inflection points</summary>
+		public double[] StationaryPoints
+		{
+			get { return new double[0] {}; }
+		}
+
+		/// <summary>Returns a linear approximation of a curve defined by evaluating F(x), dF(x)/dx at 'x'</summary>
+		public static Monic FromDerivatives(double x, double y, double dy)
+		{
+			//' y  = Ax + B
+			//' y' = A
+
+			// A = dy
+			var A = dy;
+
+			// Ax + B = y
+			var B = y - A*x;
+
+			return new Monic(A,B);
+		}
+
+		/// <summary>Create a Monic from 2 points</summary>
+		public static Monic FromPoints(v2 a, v2 b)
+		{
+			var A = (b.y - a.y) / (b.x - a.x);
+			var B = a.y - A * a.x;
+			return new Monic(A, B);
+		}
+	}
+
 	/// <summary>'F(x) = Ax² + Bx + C'</summary>
 	public class Quadratic :IPolynomial
 	{
@@ -116,10 +186,10 @@ namespace pr.maths
 			//' A = |a.x² a.x 1| x = |A| y = |a.y|
 			//'     |b.x² b.x 1|     |B|     |b.y|
 			//'     |c.x² c.x 1|     |C|     |c.y|
-			var M = new m3x4(
+			var M = m3x4.Transpose(new m3x4(
 				new v4(a.x*a.x, a.x, 1, 0),
 				new v4(b.x*b.x, b.x, 1, 0),
-				new v4(c.x*c.x, c.x, 1, 0));
+				new v4(c.x*c.x, c.x, 1, 0)));
 
 			var y = new v4(a.y, b.y, c.y, 0);
 			var x = m3x4.Invert(M) * y;
@@ -239,3 +309,25 @@ namespace pr.maths
 		}
 	}
 }
+
+#if PR_UNITTESTS
+namespace pr.unittests
+{
+	using maths;
+
+	[TestFixture] public class TestPolynomial
+	{
+		[Test] public void FromPoints()
+		{
+			var a = new v2(0.5f, 0.3f);
+			var b = new v2(0.7f, -0.2f);
+			var c = new v2(1.0f, 0.6f);
+
+			var q = Quadratic.FromPoints(a,b,c);
+			Assert.AreEqual(q.F(a.x), a.y, Maths.TinyF);
+			Assert.AreEqual(q.F(b.x), b.y, Maths.TinyF);
+			Assert.AreEqual(q.F(c.x), c.y, Maths.TinyF);
+		}
+	}
+}
+#endif

@@ -1,5 +1,6 @@
 ﻿using System;
 using cAlgo.API;
+using pr.extn;
 
 namespace Rylobot
 {
@@ -14,12 +15,18 @@ namespace Rylobot
 		}
 
 		/// <summary>Look for predictions with each new data element</summary>
-		protected override void Step()
+		protected override void UpdateFeatureValues(DataEventArgs args)
 		{
-			if (m_rng.NextDouble() < 0.001 && Predictions.Count < 10)
-				Forecast = m_rng.NextDouble() > 0.5 ? TradeType.Buy : TradeType.Sell;
+			if (m_cooldown == 0)
+			{
+				Features.Add(new Feature("PotLuck", m_rng.Double(-1.0, +1.0)));
+				m_cooldown = 100;
+			}
 			else
-				Forecast = null;
+			{
+				--m_cooldown;
+			}
 		}
+		private int m_cooldown;
 	}
 }

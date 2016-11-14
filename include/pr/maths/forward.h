@@ -40,7 +40,7 @@ static_assert(_MSC_VER >= 1900, "VS v140 is required due to a value initialisati
 #if PR_MATHS_USE_DIRECTMATH
 #  include <directxmath.h>
 #  if !PR_MATHS_USE_INTRINSICS
-#     error "Intrinsics are required is using DirectX maths functions"
+#     error "Intrinsics are required if using DirectX maths functions"
 #  endif
 #else
 namespace DirectX

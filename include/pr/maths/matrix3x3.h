@@ -747,6 +747,36 @@ namespace pr
 	{
 		PRUnitTest(pr_maths_matrix3x3)
 		{
+			std::default_random_engine rng;
+
+			{// Inverse
+				{
+					auto m = Random3x4(rng, Random3N(rng, 0), -maths::tau, +maths::tau);
+					auto inv_m0 = InvertFast(m);
+					auto inv_m1 = Invert(m);
+					PR_CHECK(FEql(inv_m0, inv_m1), true);
+				}{
+					auto m = Random3x4(rng, -5.0f, +5.0f);
+					auto inv_m = Invert(m);
+					auto I0 = inv_m * m;
+					auto I1 = m * inv_m;
+
+					PR_CHECK(FEql(I0, m3x4Identity), true);
+					PR_CHECK(FEql(I1, m3x4Identity), true);
+				}{
+					auto m = m3x4(
+						v4(0.25f, 0.5f, 1.0f, 0.0f),
+						v4(0.49f, 0.7f, 1.0f, 0.0f),
+						v4(1.0f, 1.0f, 1.0f, 0.0f));
+					auto INV_M = m3x4(
+						v4(10.0f, -16.666667f, 6.66667f, 0.0f),
+						v4(-17.0f, 25.0f, -8.0f, 0.0f),
+						v4(7.0f, -8.333333f, 2.333333f, 0.0f));
+
+					auto inv_m = Invert(m);
+					PR_CHECK(FEql(inv_m, INV_M), true);
+				}
+			}
 		}
 	}
 }

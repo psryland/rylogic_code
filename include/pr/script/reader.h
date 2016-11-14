@@ -20,28 +20,33 @@ namespace pr
 		private:
 			Preprocessor<> m_pp;
 			wchar_t const* m_delim;
+			string m_last_keyword;
 			bool m_case_sensitive;
 
 		public:
 			Reader(bool case_sensitive = true, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, IEmbeddedCode* emb = nullptr)
 				:m_pp(inc, mac, emb)
 				,m_delim(L" \t\r\n\v,;")
+				,m_last_keyword()
 				,m_case_sensitive(case_sensitive)
 			{}
 			Reader(Src& src, bool case_sensitive = true, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, IEmbeddedCode* emb = nullptr)
 				:m_pp(src, inc, mac, emb)
 				,m_delim(L" \t\r\n\v,;")
+				,m_last_keyword()
 				,m_case_sensitive(case_sensitive)
 			{}
 			Reader(Src* src, bool delete_on_pop, bool case_sensitive = true, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, IEmbeddedCode* emb = nullptr)
 				:m_pp(src, delete_on_pop, inc, mac, emb)
 				,m_delim(L" \t\r\n\v,;")
+				,m_last_keyword()
 				,m_case_sensitive(case_sensitive)
 			{}
 			template <typename Char, typename = pr::str::enable_if_char_t<Char>>
 			Reader(Char const* src, bool case_sensitive = true, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, IEmbeddedCode* emb = nullptr)
 				:m_pp(src, inc, mac, emb)
 				,m_delim(L" \t\r\n\v,;")
+				,m_last_keyword()
 				,m_case_sensitive(case_sensitive)
 			{}
 
@@ -196,6 +201,7 @@ namespace pr
 				pr::str::Resize(kw, 0);
 				if (!pr::str::ExtractIdentifier(kw, src, m_delim)) return false;
 				if (!m_case_sensitive) pr::str::LowerCase(kw);
+				m_last_keyword = pr::Widen(kw);
 				return true;
 			}
 
@@ -204,6 +210,7 @@ namespace pr
 			{
 				string kw;
 				if (!NextKeywordS(kw)) return false;
+				m_last_keyword = kw;
 				enum_kw = static_cast<Enum>(HashKeyword(kw.c_str()));
 				return true;
 			}
@@ -211,14 +218,19 @@ namespace pr
 			// As above an error is reported if the next token is not a keyword
 			int NextKeywordH()
 			{
-				auto& src = m_pp;
 				int kw = 0;
-				if (!NextKeywordH(kw)) ReportError(EResult::TokenNotFound, src.Loc(), "keyword expected");
+				if (!NextKeywordH(kw)) ReportError(EResult::TokenNotFound, m_pp.Loc(), "keyword expected");
 				return kw;
 			}
 			template <typename Enum> Enum NextKeywordH()
 			{
 				return Enum(NextKeywordH());
+			}
+
+			// Return the last keyword reader from the stream
+			string LastKeyword() const
+			{
+				return m_last_keyword;
 			}
 
 			// Scans forward until a keyword matching 'named_kw' is found within the current scope.

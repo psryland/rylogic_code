@@ -82,6 +82,7 @@ namespace ldr
 		int              m_scene_rdr_pass;       // Index of the current scene.Render() call
 		bool             m_mouse_status_updates; // Whether to show mouse position in the status bar (todo: more general system for this)
 		bool             m_suspend_render;       // True to prevent rendering
+		bool             m_render_needed;        // True if the 3D scene needs to be rendered
 		StatusManager    m_status_mgr;           // Status priority buffer
 
 		// Construct
@@ -99,7 +100,8 @@ namespace ldr
 		void ResetView(EObjectBounds view_type);
 
 		// Render the 3D scene
-		void Render(Control&, PaintEventArgs& args);
+		void Paint(Control&, PaintEventArgs& args);
+		void Render();
 
 		// Request a render
 		void RenderNeeded();
@@ -140,7 +142,7 @@ namespace ldr
 		void ControlMode(EControlMode mode);
 
 		// View the current focus point looking down the selected axis
-		void AlignCamToAxis(pr::v4 const& axis);
+		void CamForwardAxis(pr::v4 const& axis);
 
 		// Set the position of the camera focus point in world space
 		void ShowFocusPositionUI();

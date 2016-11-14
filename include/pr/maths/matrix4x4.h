@@ -25,6 +25,10 @@ namespace pr
 			struct { v4 arr[4]; };
 			#if PR_MATHS_USE_INTRINSICS
 			__m128 vec[4];
+			#elif PR_MATHS_USE_DIRECTMATH
+			DirectX::XMVECTOR vec[4];
+			#else
+			struct { v4 vec[4]; };
 			#endif
 		};
 		#pragma warning(pop)
@@ -81,6 +85,7 @@ namespace pr
 		// Construct from DirectX::XMMATRIX (if defined)
 		template <typename T, typename = maths::enable_if_dx_mat<T>> Mat4x4(T const& mat, int = 0)
 		{
+			static_assert(PR_MATHS_USE_DIRECTMATH, "This function shouldn't be instantiated unless PR_MATHS_USE_DIRECTMATH is defined");
 			vec[0] = mat.r[0];
 			vec[1] = mat.r[1];
 			vec[2] = mat.r[2];
@@ -88,6 +93,7 @@ namespace pr
 		}
 		template <typename T, typename = maths::enable_if_dx_mat<T>> Mat4x4(T const& mat, v4 const& pos_, int = 0)
 		{
+			static_assert(PR_MATHS_USE_DIRECTMATH, "This function shouldn't be instantiated unless PR_MATHS_USE_DIRECTMATH is defined");
 			vec[0] = mat.r[0];
 			vec[1] = mat.r[1];
 			vec[2] = mat.r[2];
@@ -793,8 +799,10 @@ namespace pr
 				m4x4 a2a = b2a * a2b;
 				PR_CHECK(FEql(m4x4Identity, a2a), true);
 				{
+					#if PR_MATHS_USE_DIRECTMATH
 					auto dx_b2a = m4x4(DirectX::XMMatrixInverse(nullptr, a2b));
 					PR_CHECK(FEql(b2a, dx_b2a), true);
+					#endif
 				}
 
 				m4x4 b2a_fast = InvertFast(a2b);

@@ -2027,8 +2027,8 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_ShowLightingDlg          (HWindow window);
 
 		// Objects
-		[DllImport(Dll)] private static extern int               View3D_ObjectsCreateFromFile    (string ldr_filepath, ref Guid context_id, bool async, ref View3DIncludes includes);
-		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          (string ldr_script, bool file, ref Guid context_id, bool async, ref View3DIncludes includes);
+		[DllImport(Dll)] private static extern int               View3D_ObjectsCreateFromFile    ([MarshalAs(UnmanagedType.LPWStr)] string ldr_filepath, ref Guid context_id, bool async, ref View3DIncludes includes);
+		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, bool async, ref View3DIncludes includes);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreate             (string name, uint colour, int vcount, int icount, int ncount, IntPtr verts, IntPtr indices, IntPtr nuggets, ref Guid context_id);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateEditCB       (string name, uint colour, int vcount, int icount, int ncount, EditObjectCB edit_cb, IntPtr ctx, ref Guid context_id);
 		[DllImport(Dll)] private static extern void              View3D_ObjectUpdate             (HObject obj, string ldr_script, EUpdateObject flags);

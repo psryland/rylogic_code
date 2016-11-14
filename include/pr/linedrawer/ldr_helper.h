@@ -10,6 +10,7 @@
 #include "pr/common/fmt.h"
 #include "pr/common/assert.h"
 #include "pr/common/colour.h"
+#include "pr/common/scope.h"
 #include "pr/str/to_string.h"
 #include "pr/str/string.h"
 #include "pr/filesys/file.h"
@@ -119,10 +120,14 @@ namespace pr
 		template <typename TStr> inline void Write(TStr const& str, wchar_t const* filepath, bool append = false)
 		{
 			if (str.size() == 0) return;
+			pr::LockFile lock(filepath);
 			pr::BufferToFile(str, filepath, pr::EFileData::Utf8, pr::EFileData::Ucs2, append);
-			//pr::Handle h = ::CreateFileW(filepath, GENERIC_WRITE, FILE_SHARE_READ, 0, append ? OPEN_ALWAYS : CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
-			//DWORD bytes_written; ::WriteFile(h, &str[0], (DWORD)str.size(), &bytes_written, 0);
-			//PR_INFO_IF(PR_DBG, bytes_written != str.size(), PR_LINK "Failed to write ldr string");
+		}
+		template <typename TStr> inline IScope Group(TStr& str, typename TStr::value_type const* name, Col colour)
+		{
+			return std::move(CreateScope(
+				[&]{ GroupStart(str, name, colour); },
+				[&]{ GroupEnd(str); }));
 		}
 		template <typename TStr> inline TStr& GroupStart(TStr& str, typename TStr::value_type const* name, Col colour)
 		{
@@ -131,6 +136,10 @@ namespace pr
 		template <typename TStr> inline TStr& GroupStart(TStr& str, typename TStr::value_type const* name)
 		{
 			return Append(str, S("*Group"), name, S("{\n"));
+		}
+		template <typename TStr> inline TStr& GroupEnd(TStr& str, m4x4 const& o2w)
+		{
+			return Append(str, O2W(o2w), S("\n}\n"));
 		}
 		template <typename TStr> inline TStr& GroupEnd(TStr& str)
 		{

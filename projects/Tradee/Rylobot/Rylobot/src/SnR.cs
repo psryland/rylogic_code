@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using pr.common;
 using pr.extn;
 using pr.maths;
@@ -71,6 +68,29 @@ namespace Rylobot
 			private set;
 		}
 
+		/// <summary>
+		/// Return the nearest support level above or below 'price'.
+		/// 'sign' is the direction to look for a level. +1 means above, -1 means below.
+		/// 'soft' means the nearest SnR level >= price - sign*0.25*mcs</summary>
+		public Level Nearest(QuoteCurrency price, int sign, bool soft = true)
+		{
+			var thresh = price - sign * (soft ? 0.25 * Instrument.MCS_50 : 0);
+			var levels = SnRLevels.Where(x => Misc.Sign(x.Price - thresh) == sign);
+			return levels.MinByOrDefault(x => sign * (double)(x.Price - thresh));
+		}
+
+		/// <summary>
+		/// Return the nearest support level within 'range' and on the 'sign' side of 'price'.
+		/// 'sign' is the direction to look for a level. +1 means above, -1 means below.</summary>
+		public Level Nearest(QuoteCurrency price, int sign, RangeF range)
+		{
+			var levels = SnRLevels.Where(x =>
+				sign * (x.Price - range.Begin) > 0 &&
+				sign * (range.End   - x.Price) > 0);
+
+			return levels.MinByOrDefault(x => (double)Misc.Abs(x.Price - price));
+		}
+
 		/// <summary>Identify the support and resistance levels</summary>
 		private void CalculateLevels()
 		{
@@ -78,8 +98,8 @@ namespace Rylobot
 				return;
 
 			// Use a fraction of the mean candle size as the hysteresis
-			var mean_candle_size = Instrument.MeanCandleSize(Range);
-			Hysteresis = Math.Max(mean_candle_size * 0.25f, Instrument.Symbol.PipSize * 5);
+			var mcs = Instrument.MedianCandleSize(Range);
+			Hysteresis = Math.Max(mcs * 0.25, Instrument.Symbol.PipSize * 5);
 
 			// Find the stationary points in the close prices
 			var price = Instrument.CandleRange(Range).Select(c => c.Close).ToList();
@@ -92,7 +112,7 @@ namespace Rylobot
 				// Add the stationary point
 				var x = (i0 + i1) / 2.0;
 				var p =
-					type == EPeakType.InflectionUp || type == EPeakType.InflectionDown ? Instrument.CandleRange(i0+1,i1).Average(c => c.Median) :
+					type == EPeakType.InflectionUp || type == EPeakType.InflectionDown ? Instrument.CandleRange(i0+1,i1).Average(c => (double)c.Median) :
 					type == EPeakType.Minimum ? Instrument.CandleRange(i0,i1).Min(c => c.BodyLimit(-1)) :
 					type == EPeakType.Maximum ? Instrument.CandleRange(i0,i1).Max(c => c.BodyLimit(+1)) : 0.0;
 				StationaryPoints.Add(new StationaryPoint(x, p));
@@ -115,13 +135,13 @@ namespace Rylobot
 					// If the nearest bucket is further than the bucket size, insert a bucket
 					var d0 = idx >               0 ? (sp.Price - SnRLevels[idx-1].Price) : Hysteresis;
 					var d1 = idx < SnRLevels.Count ? (SnRLevels[idx  ].Price - sp.Price) : Hysteresis;
-					if (Math.Min(d0,d1) >= Hysteresis)
+					if (Misc.Min(d0,d1) >= Hysteresis)
 						SnRLevels.Insert(idx, new Level(sp.Price));
 					else
 						idx = d0 < d1 ? idx - 1 : idx;
 
 					// Add 'sp' to the average for the bucket
-					SnRLevels[idx].Average.Add(sp.Price);
+					SnRLevels[idx].Average.Add((double)sp.Price);
 				}
 
 				done = true;
@@ -131,7 +151,7 @@ namespace Rylobot
 				SnRLevels.RemoveIf(x => x.Average.Count == 0);
 				foreach (var lvl in SnRLevels)
 				{
-					done &= Math.Abs(lvl.Price - lvl.Average.Mean) < pip;
+					done &= Misc.Abs(lvl.Price - lvl.Average.Mean) < pip;
 					lvl.Price = lvl.Average.Mean;
 					lvl.Strength = lvl.Average.Count;
 					lvl.Average.Reset();
@@ -191,7 +211,7 @@ namespace Rylobot
 
 		public class StationaryPoint
 		{
-			public StationaryPoint(double index, double price)
+			public StationaryPoint(double index, QuoteCurrency price)
 			{
 				Index = index;
 				Price = price;
@@ -201,11 +221,11 @@ namespace Rylobot
 			public double Index { get; private set; }
 
 			/// <summary>The price value at the stationary point</summary>
-			public double Price { get; private set; }
+			public QuoteCurrency Price { get; private set; }
 		}
 		public class Level
 		{
-			public Level(double price)
+			public Level(QuoteCurrency price)
 			{
 				Price    = price;
 				Strength = 0;
@@ -213,7 +233,7 @@ namespace Rylobot
 			}
 
 			/// <summary>The price level</summary>
-			public double Price { get; set; }
+			public QuoteCurrency Price { get; set; }
 
 			/// <summary>The strength of the SnR level</summary>
 			public double Strength { get; set; }

@@ -21,60 +21,24 @@ namespace Rylobot
 		/// <summary>The maximum number of candles to look back in time</summary>
 		public const int HistoryWindow = 100;
 
-		/// <summary>A cached string builder</summary>
-		private StringBuilder m_sb;
-
 		public PredictorNeuralNet(Rylobot bot)
 			:base(bot, "PredictorNeuralNet")
-		{
-			m_sb = new StringBuilder();
-
-			// Create network based on a trained model (for CPU evaluation)
-			//var m_nnet = new IEvaluateModelManagedD();
-
-			//var modelFilePath = Path_.CombinePath(Environment.CurrentDirectory, "forex.dnn");
-			//var config = string.Format("modelPath=\"{0}\"", modelFilePath);
-			//m_nnet.CreateNetwork(config, deviceId: -1);
-
-			// Generate random input values in the appropriate structure and size
-			//var inputs = GetDictionary("features", 28*28, 255);
-
-			// We can call the evaluate method and get back the results (single layer)...
-			// List<float> outputList = model.Evaluate(inputs, "ol.z");
-
-			// ... or we can preallocate the structure and pass it in (multiple output layers)
-		//	outputs = GetDictionary("ol.z", 10, 1);
-		//	model.Evaluate(inputs, outputs);                    
-		}
+		{}
 		public override void Dispose()
 		{
 	//		Util.Dispose(ref m_nnet);
 			base.Dispose();
 		}
 
-		/// <summary>Call whenever the instrument data changes</summary>
-		protected override void Step(DataEventArgs args)
+		/// <summary>
+		/// Update the 'Features' vector with values for the quality of a trade at 'CurrentIndex'.
+		/// Note: args.Candle is the candle at 'CurrentIndex'</summary>
+		protected override void UpdateFeatureValues(DataEventArgs args)
 		{
 			// Only make predictions on new candle events
 			if (!args.NewCandle)
 				return;
 
-			// Get the feature values for the candles leading up to the latest
-			var features = FeatureValues(0);
-
-			// Each feature value should be a valid from [-1,+1]
-			// Values > 0.5 indicate buy signals, < -0.5 indicate sell signals
-			// This can be replaced by a neural net prediction of the features
-			var signal = features.Average(x => x.Value);
-			Forecast =
-				signal > +0.5 ? (TradeType?)TradeType.Buy :
-				signal < -0.5 ? (TradeType?)TradeType.Sell :
-				null;
-		}
-
-		/// <summary>Return a set of feature values for the quality of a trade at 'neg_idx'</summary>
-		public List<Feature> FeatureValues(NegIdx neg_idx)
-		{
 			//// Get the candle in question
 			//var candle = Instrument[neg_idx];
 
@@ -84,13 +48,9 @@ namespace Rylobot
 			//// Get the average candle size over the history window
 			//var mcs = Instrument.MeanCandleSize(neg_idx - HistoryWindow, neg_idx);
 
-			// The collection to return
-			var features = new List<Feature>();
-
-			// Check the RSI indicator
-			RSIFeatures(features, neg_idx);
-
-			return features;
+			Features.Clear();
+			RSIFeatures();
+			CandlePatterns();
 #if false
 			//{// Preceding candle data
 			//	foreach (var c in Instrument.CandleRange(neg_idx - 3, neg_idx))
@@ -99,14 +59,6 @@ namespace Rylobot
 			//		values.Add(c.High );
 			//		values.Add(c.Low  );
 			//		values.Add(c.Close);
-			//	}
-			//}
-			//{// Preceding candle types
-			//	for (var j = 3; j-- != 0;)
-			//	{
-			//		var c = Instrument[neg_idx - j];
-			//		var ty = c.Sign * (double)c.Type(mcs);
-			//		values.Add(ty);
 			//	}
 			//}
 			{// Preceding trend
@@ -192,8 +144,21 @@ namespace Rylobot
 #endif
 		}
 
+		/// <summary>Get feature details from candle patterns</summary>
+		private void CandlePatterns()
+		{
+			//{// Preceding candle types
+			//	for (var j = 3; j-- != 0;)
+			//	{
+			//		var c = Instrument[neg_idx - j];
+			//		var ty = c.Sign * (double)c.Type(mcs);
+			//		values.Add(ty);
+			//	}
+			//}
+		}
+
 		/// <summary>Get feature details from the RSI indicator</summary>
-		private void RSIFeatures(List<Feature> features, NegIdx neg_idx)
+		private void RSIFeatures()
 		{
 			// Value is in the range [0,100] with 30/70 seen as the trigger levels.
 			// Entry signals are when the RSI indicator has gone outside the 30/70 level,
@@ -202,7 +167,7 @@ namespace Rylobot
 			var rsi = Bot.Indicators.RelativeStrengthIndex(Bot.MarketSeries.Close, 14);
 
 			// Approximate the RSI curve with a quadratic
-			var x = neg_idx - 1;
+			var x = (int)(CurrentIndex - 1 - Instrument.FirstIdx);
 			var y = rsi.Result[x];
 			var dy = rsi.Result.FirstDerivative(x);
 			var ddy = rsi.Result.SecondDerivative(x);
@@ -215,40 +180,10 @@ namespace Rylobot
 			//	var dist = (d - 50.0) / 20.0;
 			//	values.Add(dist);
 			
+			// For now, just map high/low values
+			var score = Maths.Sigmoid(y - 50.0, 20); // [-0.5 = 30, +0.5 = 70]
+			Features.Add(new Feature("RSI", score));
 		}
 
-
-		/// <summary>Returns the feature string for the candle at position 'neg_idx'</summary>
-		public string Features(NegIdx neg_idx)
-		{
-			m_sb.Clear();
-
-			// Output feature values
-			m_sb.Append("|features ");
-			foreach (var v in FeatureValues(neg_idx))
-				m_sb.Append(" ").Append(v.Value);
-
-			return m_sb.ToString();
-		}
-
-		/// <summary>A signal feature value</summary>
-		public class Feature
-		{
-			public Feature(string label, double value, string comment)
-			{
-				Label   = label;
-				Value   = value;
-				Comment = comment;
-			}
-
-			/// <summary>A name for the feature</summary>
-			public string Label { get; private set; }
-
-			/// <summary>The feature value</summary>
-			public double Value { get; private set; }
-
-			/// <summary>Comments about the feature</summary>
-			public string Comment { get; set; }
-		}
 	}
 }

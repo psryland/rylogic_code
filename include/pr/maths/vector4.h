@@ -25,6 +25,10 @@ namespace pr
 			struct { float arr[4]; };
 			#if PR_MATHS_USE_INTRINSICS
 			__m128 vec;
+			#elif PR_MATHS_USE_DIRECTMATH
+			DirectX::XMVECTOR vec;
+			#else
+			struct { float vec[4]; };
 			#endif
 		};
 		#pragma warning(pop)

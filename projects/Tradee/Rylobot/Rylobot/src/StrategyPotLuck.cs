@@ -15,10 +15,23 @@ namespace Rylobot
 			m_rng = new Random(1);
 		}
 
+		/// <summary>The position managed by this strategy</summary>
+		public Position Position
+		{
+			get { return m_position; }
+			protected set
+			{
+				if (m_position == value) return;
+				m_position = value;
+			}
+		}
+		private Position m_position;
+
 		/// <summary>Called when new data is received</summary>
 		public override void Step()
 		{
 			// No current position? create one
+			Position = FindLivePosition(Position);
 			if (Position == null)
 				CreateOrder();
 		}
