@@ -318,34 +318,48 @@ namespace pr
 	}
 
 	// Converts bool to +1,-1 (note: no 0 value)
-	template <typename T> inline T Sign(bool positive)
+	inline int SignI(bool positive)
 	{
-		return positive ? T(1) : T(-1);
+		return positive ? +1 : -1;
+	}
+	inline float SignF(bool positive)
+	{
+		return positive ? +1.0f : -1.0f;
 	}
 
 	// Sign, returns +1 if x >= 0 otherwise -1
-	template <typename T, typename = maths::enable_if_vec_cp<T>> inline T Sign(T x, bool zero_is_positive = true)
+	inline float Sign(float x, bool zero_is_positive = true)
 	{
-		return x > 0 ? T(+1) : x < 0 ? T(-1) : T(zero_is_positive);
+		return x > 0 ? +1.0f : x < 0 ? -1.0f : 1.0f * int(zero_is_positive);
 	}
-	//template <typename T, typename = maths::enable_if_v2<T>> inline int Sign2(T const& v)
-	//{
-	//	int p = (x_cp(v) > 0) + (y_cp(v) > 0);
-	//	int n = (x_cp(v) < 0) + (y_cp(v) < 0);
-	//	return (p == 2) - (n == 2);
-	//}
-	//template <typename T, typename = maths::enable_if_v3<T>> inline int Sign3(T const& v)
-	//{
-	//	int p = (x_cp(v) > 0) + (y_cp(v) > 0) + (z_cp(v) > 0);
-	//	int n = (x_cp(v) < 0) + (y_cp(v) < 0) + (z_cp(v) < 0);
-	//	return (p == 3) - (n == 3);
-	//}
-	//template <typename T, typename = maths::enable_if_v4<T>> inline int Sign4(T const& v)
-	//{
-	//	int n = (x_cp(v) < 0) + (y_cp(v) < 0) + (z_cp(v) < 0) + (w_cp(v) < 0);
-	//	int p = (x_cp(v) > 0) + (y_cp(v) > 0) + (z_cp(v) > 0) + (w_cp(v) > 0);
-	//	return (p == 4) - (n == 4);
-	//}
+	inline double Sign(double x, bool zero_is_positive = true)
+	{
+		return x > 0 ? +1.0 : x < 0 ? -1.0 : 1.0 * int(zero_is_positive);
+	}
+	inline int Sign(int x, bool zero_is_positive = true)
+	{
+		return x > 0 ? +1 : x < 0 ? -1 : int(zero_is_positive);
+	}
+	inline long Sign(long x, bool zero_is_positive = true)
+	{
+		return x > 0 ? +1 : x < 0 ? -1 : long(zero_is_positive);
+	}
+	inline int64 Sign(int64 x, bool zero_is_positive = true)
+	{
+		return x > 0 ? +1 : x < 0 ? -1 : int64(zero_is_positive);
+	}
+	inline uint Sign(uint x, bool zero_is_positive = true)
+	{
+		return x > 0 ? +1 : uint(zero_is_positive);
+	}
+	inline ulong Sign(ulong x, bool zero_is_positive = true)
+	{
+		return x > 0 ? +1 : ulong(zero_is_positive);
+	}
+	inline uint64 Sign(uint64 x, bool zero_is_positive = true)
+	{
+		return x > 0 ? +1 : uint64(zero_is_positive);
+	}
 	template <typename T, typename = maths::enable_if_vN<T>> inline T Sign(T const& v, bool zero_is_positive = true)
 	{
 		T r = {};

@@ -72,6 +72,8 @@
 #include "pr/geometry/box.h"
 #include "pr/geometry/sphere.h"
 #include "pr/geometry/cylinder.h"
+#include "pr/geometry/triangle.h"
+#include "pr/geometry/extrude.h"
 #include "pr/geometry/mesh.h"
 #include "pr/geometry/p3d.h"
 #include "pr/geometry/3ds.h"

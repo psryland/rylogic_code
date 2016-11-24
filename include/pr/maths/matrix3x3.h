@@ -177,7 +177,7 @@ namespace pr
 				: Mat3x4(v4XAxis, v4YAxis, v4ZAxis);
 		}
 
-		// Create a transform representing the rotation from one vector to another.
+		// Create a transform representing the rotation from one vector to another. (Vectors do not need to be normalised)
 		static Mat3x4 Rotation(v4 const& from, v4 const& to)
 		{
 			assert(!FEql(from, v4Zero));
@@ -668,30 +668,52 @@ namespace pr
 		return mat;
 	}
 
+	// Permute the vectors in a rotation matrix by 'n'.
+	// n == 0 : x  y  z
+	// n == 1 : z  x  y
+	// n == 2 : y  z  x
+	inline m3x4 pr_vectorcall PermuteRotation(m3x4_cref mat, int n)
+	{
+		switch (n%3)
+		{
+		default:return mat;
+		case 1: return m3x4(mat.z, mat.x, mat.y);
+		case 2: return m3x4(mat.y, mat.z, mat.x);
+		}
+	}
+
 	// Make an orientation matrix from a direction vector
-	// 'dir' is the direction to align the 'axis'th axis to
+	// 'dir' is the direction to align the axis 'axis_id' to. (Doesn't need to be normalised)
 	// 'up' is the preferred up direction, however if up is parallel to 'dir'
 	// then a vector perpendicular to 'dir' will be chosen.
-	inline m3x4 OriFromDir(v4 const& dir, int axis_id, v4 const& up)
+	inline m3x4 OriFromDir(v4 const& dir, AxisId axis_id, v4 const& up_)
 	{
-		assert("axis_id out of range" && axis_id >= 0 && axis_id <= 2);
-		v4 up_ = pr::Parallel3(up, dir) ? Perpendicular3(dir) : up;
-		auto _0 = (axis_id + 0) % 3;
-		auto _1 = (axis_id + 1) % 3;
-		auto _2 = (axis_id + 2) % 3;
-		m3x4 ori;
-		ori[_0] = Normalise3(dir);
-		ori[_1] = Normalise3(Cross3(up_, ori[_0]));
-		ori[_2] = Cross3(ori[_0], ori[_1]);
-		return ori;
+		// Get the preferred up direction (handling parallel cases)
+		auto up = Parallel3(up_, dir) ? Perpendicular3(dir) : up_;
+
+		m3x4 ori = {};
+		ori.z = Normalise3(Sign(float(axis_id)) * dir);
+		ori.x = Normalise3(Cross3(up, ori.z));
+		ori.y = Cross3(ori.z, ori.x);
+
+		// Permute the column vectors so +Z becomes 'axis'
+		return PermuteRotation(ori, abs(axis_id));
+	}
+	inline m3x4 OriFromDir(v4 const& dir, int axis_id)
+	{
+		return OriFromDir(dir, axis_id, Perpendicular3(dir));
 	}
 
 	// Make a scaled orientation matrix from a direction vector
 	// Returns a transform for scaling and rotating the 'axis'th axis to 'dir'
-	inline m3x4 ScaledOriFromDir(v4 const& dir, int axis, v4 const& up)
+	inline m3x4 ScaledOriFromDir(v4 const& dir, AxisId axis, v4 const& up)
 	{
 		auto len = Length3(dir);
-		return  len > pr::maths::tiny ? OriFromDir(dir, axis, up) * m3x4::Scale(len) : m3x4::Scale(0.0f);
+		return len > pr::maths::tiny ? OriFromDir(dir, axis, up) * m3x4::Scale(len) : m3x4Zero;
+	}
+	inline m3x4 ScaledOriFromDir(v4 const& dir, AxisId axis)
+	{
+		return ScaledOriFromDir(dir, axis, Perpendicular3(dir));
 	}
 
 	// Return a vector representing the approximate rotation between two orthonormal transforms
@@ -708,6 +730,8 @@ namespace pr
 	// Spherically interpolate between two rotations
 	template <typename = void> inline m3x4 pr_vectorcall Slerp(m3x4_cref lhs, m3x4_cref rhs, float frac)
 	{
+		if (frac == 0.0f) return lhs;
+		if (frac == 1.0f) return rhs;
 		return m3x4(Slerp(quat(lhs), quat(rhs), frac));
 	}
 	#pragma endregion
@@ -749,6 +773,26 @@ namespace pr
 		{
 			std::default_random_engine rng;
 
+			{//OriFromDir
+				v4 dir(0,1,0,0);
+				{
+					auto ori = OriFromDir(dir, AxisId::PosZ, v4ZAxis);
+					PR_CHECK(dir == +ori.z, true);
+					PR_CHECK(IsOrthonormal(ori), true);
+				}
+				{
+					auto ori = OriFromDir(dir, AxisId::NegX);
+					PR_CHECK(dir == -ori.x, true);
+					PR_CHECK(IsOrthonormal(ori), true);
+				}
+				{
+					auto scale = 0.125f;
+					auto sdir = scale * dir;
+					auto ori = ScaledOriFromDir(sdir, AxisId::PosY);
+					PR_CHECK(sdir == +ori.y, true);
+					PR_CHECK(IsOrthonormal((1/scale) * ori), true);
+				}
+			}
 			{// Inverse
 				{
 					auto m = Random3x4(rng, Random3N(rng, 0), -maths::tau, +maths::tau);

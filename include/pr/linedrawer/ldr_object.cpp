@@ -634,19 +634,19 @@ namespace pr
 				if (m_linemesh)
 				{
 					auto cdata = MeshCreationData()
-						.verts(m_point.data(), m_point.size())
-						.indices(m_index.data(), m_index.size())
+						.verts(m_point.data(), int(m_point.size()))
+						.indices(m_index.data(), int(m_index.size()))
 						.nuggets({NuggetProps(m_linestrip ? EPrim::LineStrip : EPrim::LineList, EGeom::Vert|EGeom::Colr)})
-						.colours(m_colour.data(), m_colour.size());
+						.colours(m_colour.data(), int(m_colour.size()));
 					obj->m_model = ModelGenerator<>::Mesh(p.m_rdr, cdata);
 				}
 				else if (m_linestrip)
 				{
-					obj->m_model = ModelGenerator<>::LineStrip(p.m_rdr, m_point.size() - 1, m_point.data(), m_colour.size(), m_colour.data());
+					obj->m_model = ModelGenerator<>::LineStrip(p.m_rdr, int(m_point.size() - 1), m_point.data(), int(m_colour.size()), m_colour.data());
 				}
 				else
 				{
-					obj->m_model = ModelGenerator<>::Lines(p.m_rdr, m_point.size() / 2, m_point.data(), m_colour.size(), m_colour.data());
+					obj->m_model = ModelGenerator<>::Lines(p.m_rdr, int(m_point.size() / 2), m_point.data(), int(m_colour.size()), m_colour.data());
 				}
 				obj->m_model->m_name = obj->TypeAndName();
 
@@ -670,7 +670,7 @@ namespace pr
 			bool   m_solid;
 
 			IObjectCreatorShape2d()
-				:m_axis_id(),
+				:m_axis_id(pr::AxisId::PosZ),
 				m_dim(),
 				m_facets(40),
 				m_solid(false)
@@ -717,7 +717,7 @@ namespace pr
 				}
 
 				// Create the model
-				obj->m_model = ModelGenerator<>::Quad(p.m_rdr, m_point.size() / 4, m_point.data(), m_colour.size(), m_colour.data(), pr::m4x4Identity, Material());
+				obj->m_model = ModelGenerator<>::Quad(p.m_rdr, int(m_point.size() / 4), m_point.data(), int(m_colour.size()), m_colour.data(), pr::m4x4Identity, Material());
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
@@ -748,7 +748,7 @@ namespace pr
 			int m_layers, m_wedges;
 
 			IObjectCreatorCone()
-				:m_axis_id(),
+				:m_axis_id(pr::AxisId::PosZ),
 				m_dim(),
 				m_scale(pr::v2One),
 				m_layers(1),
@@ -1025,12 +1025,12 @@ namespace pr
 
 				// Create the model
 				auto cdata = MeshCreationData()
-					.verts(m_verts.data(), m_verts.size())
-					.indices(m_indices.data(), m_indices.size())
-					.nuggets(m_nuggets.data(), m_nuggets.size())
-					.colours(m_colours.data(), m_colours.size())
-					.normals(m_normals.data(), m_normals.size())
-					.tex(m_texs.data(), m_texs.size());
+					.verts  (m_verts  .data(), int(m_verts  .size()))
+					.indices(m_indices.data(), int(m_indices.size()))
+					.nuggets(m_nuggets.data(), int(m_nuggets.size()))
+					.colours(m_colours.data(), int(m_colours.size()))
+					.normals(m_normals.data(), int(m_normals.size()))
+					.tex    (m_texs   .data(), int(m_texs   .size()));
 				obj->m_model = ModelGenerator<>::Mesh(p.m_rdr, cdata);
 				obj->m_model->m_name = obj->TypeAndName();
 			}
@@ -1244,7 +1244,7 @@ namespace pr
 
 				// Generate the model
 				// 'm_point' should contain line strip data
-				ModelGenerator<>::Cont cont(m_point.size() + 2, m_point.size() + 2);
+				ModelGenerator<>::Cont cont(int(m_point.size() + 2), int(m_point.size() + 2));
 				auto v_in  = std::begin(m_point);
 				auto v_out = std::begin(cont.m_vcont);
 				auto i_out = std::begin(cont.m_icont);
@@ -1493,6 +1493,59 @@ namespace pr
 			}
 		};
 
+		// ELdrObject::Polygon
+		template <> struct ObjectCreator<ELdrObject::Polygon> :IObjectCreatorShape2d
+		{
+			pr::vector<v2> m_verts;
+			CCont& m_colours;
+			bool   m_per_line_colour;
+
+			ObjectCreator()
+				:m_verts()
+				,m_colours(Color())
+				,m_per_line_colour(false)
+			{}
+			bool ParseKeyword(ParseParams& p, EKeyword kw) override
+			{
+				switch (kw)
+				{
+				default: return IObjectCreatorShape2d::ParseKeyword(p, kw);
+				case EKeyword::Coloured: m_per_line_colour = true; return true;
+				}
+			}
+			void Parse(ParseParams& p) override
+			{
+				p.m_reader.Int(m_axis_id.value, 10);
+				for (;p.m_reader.IsValue();)
+				{
+					v2 pt;
+					p.m_reader.Vector2(pt);
+					m_verts.push_back(pt);
+
+					if (m_per_line_colour)
+					{
+						Colour32 col;
+						p.m_reader.Int(col.argb, 16);
+						m_colours.push_back(col);
+					}
+				}
+			}
+			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			{
+				using namespace pr::rdr;
+				pr::m4x4 o2w, *po2w = nullptr;
+				if (m_axis_id != 3)
+				{
+					o2w = pr::m4x4::Transform(pr::AxisId(3), m_axis_id, pr::v4Origin);
+					po2w = &o2w;
+				}
+
+				// Create the model
+				obj->m_model = ModelGenerator<>::Polygon(p.m_rdr, int(m_verts.size()), m_verts.data(), m_solid, int(m_colours.size()), m_colours.data(), po2w, Material());
+				obj->m_model->m_name = obj->TypeAndName();
+			}
+		};
+
 		// ELdrObject::Triangle
 		template <> struct ObjectCreator<ELdrObject::Triangle> :IObjectCreatorPlane
 		{
@@ -1624,7 +1677,7 @@ namespace pr
 				}
 
 				pr::v4 normal = m_axis_id;
-				obj->m_model = ModelGenerator<>::QuadStrip(p.m_rdr, m_point.size() - 1, m_point.data(), m_width, 1, &normal, m_colour.size(), m_colour.data(), Material());
+				obj->m_model = ModelGenerator<>::QuadStrip(p.m_rdr, int(m_point.size() - 1), m_point.data(), m_width, 1, &normal, int(m_colour.size()), m_colour.data(), Material());
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
@@ -1719,7 +1772,7 @@ namespace pr
 				m_dim *= 0.5f;
 
 				// Create the model
-				obj->m_model = ModelGenerator<>::BoxList(p.m_rdr, m_location.size(), m_location.data(), m_dim, 0, 0, Material());
+				obj->m_model = ModelGenerator<>::BoxList(p.m_rdr, int(m_location.size()), m_location.data(), m_dim, 0, 0, Material());
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
@@ -1872,6 +1925,167 @@ namespace pr
 				m_dim.z = h1 - h0;
 				m_dim.x = h0 * pr::Tan(a);
 				m_dim.y = h1 * pr::Tan(a);
+			}
+		};
+
+		// ELdrObject::Tube
+		template <> struct ObjectCreator<ELdrObject::Tube> :IObjectCreatorLine
+		{
+			string32       m_type;         // Cross section type
+			pr::vector<v2> m_cs;           // 2d cross section
+			float          m_radx, m_rady; // X,Y radii for implicit cross sections
+			int            m_facets;       // The number of divisions for Round cross sections
+			bool           m_closed;       // True if the tube end caps should be filled in
+			bool           m_smooth_cs;    // True if outward normals for the tube are smoothed
+
+			ObjectCreator()
+				:IObjectCreatorLine(false, false)
+				,m_type()
+				,m_cs()
+				,m_radx()
+				,m_rady()
+				,m_facets(20)
+				,m_closed(false)
+				,m_smooth_cs(false)
+			{}
+			bool ParseKeyword(ParseParams& p, EKeyword kw) override
+			{
+				switch (kw)
+				{
+				default: return IObjectCreatorLine::ParseKeyword(p, kw);
+				case EKeyword::Style:
+					{
+						// Expect *Style { cross_section_type <data> }
+						p.m_reader.SectionStart();
+
+						// Determine the cross section type
+						p.m_reader.Identifier(m_type);
+
+						// Create the cross section profile based on the style
+						if (pr::str::EqualI(m_type, "Round"))
+						{
+							// Elliptical cross section, expect 1 or 2 radii to follow
+							p.m_reader.Real(m_radx);
+							if (p.m_reader.IsValue())
+								p.m_reader.Real(m_rady);
+							else
+								m_rady = m_radx;
+
+							m_smooth_cs = true;
+						}
+						else if (pr::str::EqualI(m_type, "Square"))
+						{
+							// Square cross section, expect 1 or 2 radii to follow
+							p.m_reader.Real(m_radx);
+							if (p.m_reader.IsValue())
+								p.m_reader.Real(m_rady);
+							else
+								m_rady = m_radx;
+
+							m_smooth_cs = false;
+						}
+						else if (pr::str::EqualI(m_type, "CrossSection"))
+						{
+							// Create the cross section, expect X,Y pairs
+							for (;p.m_reader.IsValue();)
+							{
+								v2 pt;
+								p.m_reader.Vector2(pt);
+								m_cs.push_back(pt);
+							}
+						}
+						else
+						{
+							p.ReportError(EResult::UnknownValue, FmtS("Cross Section type %s is not supported", m_type.c_str()));
+							p.m_reader.FindSectionEnd();
+							m_type.clear();
+						}
+
+						// Optional parameters
+						for (EKeyword kw0; p.m_reader.NextKeywordH(kw0);)
+						{
+							switch (kw0) {
+							case EKeyword::Facets: p.m_reader.IntS(m_facets, 10); break;
+							case EKeyword::Smooth: m_smooth_cs = true; break;
+							}
+						}
+
+						p.m_reader.SectionEnd();
+						return true;
+					}
+				case EKeyword::Closed:
+					{
+						m_closed = true;
+						return true;
+					}
+				}
+			}
+			void Parse(ParseParams& p) override
+			{
+				// Parse the extrusion path
+				v4 pt; Colour32 col;
+				p.m_reader.Vector3(pt, 1.0f);
+				if (m_per_line_colour) p.m_reader.Int(col.argb, 16);
+				
+				// Ignore degenerates
+				if (m_point.empty() || !FEql(m_point.back(), pt))
+				{
+					m_point.push_back(pt);
+					if (m_per_line_colour) m_colour.push_back(col);
+				}
+			}
+			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			{
+				// If no cross section or extrusion path is given
+				if (m_point.empty())
+				{
+					p.ReportError(EResult::Failed, pr::FmtS("Tube object '%s' description incomplete. No extrusion path", obj->TypeAndName().c_str()));
+					return;
+				}
+
+				// Create the cross section for implicit profiles
+				if (pr::str::EqualI(m_type, "Round"))
+				{
+					for (auto i = 0; i != m_facets; ++i)
+						m_cs.push_back(v2(m_radx * Cos(maths::tau * i / m_facets), m_rady * Sin(maths::tau * i / m_facets)));
+				}
+				else if (pr::str::EqualI(m_type, "Square"))
+				{
+					// Create the cross section
+					m_cs.push_back(v2(-m_radx, -m_rady));
+					m_cs.push_back(v2(+m_radx, -m_rady));
+					m_cs.push_back(v2(+m_radx, +m_rady));
+					m_cs.push_back(v2(-m_radx, +m_rady));
+				}
+				else if (pr::str::EqualI(m_type, "CrossSection"))
+				{
+					if (m_cs.empty())
+					{
+						p.ReportError(EResult::Failed, pr::FmtS("Tube object '%s' description incomplete", obj->TypeAndName().c_str()));
+						return;
+					}
+					if (pr::geometry::PolygonArea(m_cs.data(), int(m_cs.size())) < 0)
+					{
+						p.ReportError(EResult::Failed, pr::FmtS("Tube object '%s' cross section has a negative area (winding order is incorrect)", obj->TypeAndName().c_str()));
+						return;
+					}
+				}
+				else
+				{
+					p.ReportError(EResult::Failed, pr::FmtS("Tube object '%s' description incomplete. No style given.", obj->TypeAndName().c_str()));
+					return;
+				}
+
+				// Smooth the tube centre line
+				if (m_smooth)
+				{
+					auto points = m_point;
+					m_point.resize(0);
+					pr::Smooth(points, m_point);
+				}
+
+				obj->m_model = ModelGenerator<>::Extrude(p.m_rdr, int(m_cs.size()), m_cs.data(), int(m_point.size()), m_point.data(), m_closed, m_smooth_cs, int(m_colour.size()), m_colour.data());
+				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
 
@@ -2139,6 +2353,7 @@ namespace pr
 			case ELdrObject::Arrow:      Parse<ELdrObject::Arrow     >(p); break;
 			case ELdrObject::Circle:     Parse<ELdrObject::Circle    >(p); break;
 			case ELdrObject::Rect:       Parse<ELdrObject::Rect      >(p); break;
+			case ELdrObject::Polygon:    Parse<ELdrObject::Polygon   >(p); break;
 			case ELdrObject::Pie:        Parse<ELdrObject::Pie       >(p); break;
 			case ELdrObject::Matrix3x3:  Parse<ELdrObject::Matrix3x3 >(p); break;
 			case ELdrObject::CoordFrame: Parse<ELdrObject::CoordFrame>(p); break;
@@ -2154,6 +2369,7 @@ namespace pr
 			case ELdrObject::Sphere:     Parse<ELdrObject::Sphere    >(p); break;
 			case ELdrObject::CylinderHR: Parse<ELdrObject::CylinderHR>(p); break;
 			case ELdrObject::ConeHA:     Parse<ELdrObject::ConeHA    >(p); break;
+			case ELdrObject::Tube:       Parse<ELdrObject::Tube      >(p); break;
 			case ELdrObject::Mesh:       Parse<ELdrObject::Mesh      >(p); break;
 			case ELdrObject::ConvexHull: Parse<ELdrObject::ConvexHull>(p); break;
 			case ELdrObject::Model:      Parse<ELdrObject::Model     >(p); break;
@@ -2736,6 +2952,24 @@ LR"(// A circle or ellipse
 	*Facets { 2 }                      // Optional, controls the smoothness of the corners
 }
 
+// A 2D polygon
+*Polygon poly FFFFFFFF
+{
+	//*Coloured                          // Optional. If specified means each point has a colour (must come first)
+	3                                  // axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
+	1.0f, 3.0f                         // A list of 2D points with CCW winding order describing the polygon
+	1.4f, 1.7f
+	0.4f, 2.0f
+	1.5f, 1.2f
+	1.0f, 0.0f
+	1.7f, 1.0f
+	2.5f, 0.5f
+	2.0f, 1.5f
+	2.0f, 2.0f
+	1.5f, 2.5f
+	*Solid                             // Optional. Filled polygon
+}
+
 // A matrix drawn as a set of three basis vectors (X=red, Y=green, Z=blue)
 *Matrix3x3 a2b_transform
 {
@@ -2793,11 +3027,11 @@ LR"(// A circle or ellipse
 {
 	3                     // Axis id. The forward facing axis for the ribbon
 	0.1                   // Width (in world space)
-	*Coloured             // Optional. If specific means each pair of verts in along the ribbon has a colour
+	*Coloured             // Optional. If specified means each pair of verts in along the ribbon has a colour
 	-1 -2  0 FFFF0000
 	-1  3  0 FF00FF00
 	 2  0  0 FF0000FF
-	*Smooth               // Optional. Generates a spline throught the points
+	*Smooth               // Optional. Generates a spline through the points
 	*o2w{*randpos{0 0 0 2} *randori}
 	*Texture              // Optional texture repeated along each quad of the ribbon
 	{
@@ -2900,6 +3134,34 @@ LR"(// A box given by width, height, and depth
 	*Scale 1 1                        // Optional. X,Y scale factors
 	*Texture {"#checker"}             // Optional texture
 	*RandColour *o2w{*RandPos{0 0 0 2}}
+}
+
+// An extrusion along a path
+*Tube tube FFFFFFFF
+{
+	*Style
+	{
+		// The cross section type; one of Round, Square, CrossSection
+		//Round 0.2 0.3  // Elliptical profile. radius X [radius Y]  
+		//Square 0.2 0.3 // Rectangular profile. radius X [radius Y]
+		CrossSection     // <list of X,Y pairs> Arbitrary profile
+		-0.2 -0.2
+		+0.2 -0.2
+		+0.05 +0.0
+		+0.2 +0.2
+		-0.2 +0.2
+		-0.05 +0.0
+		*Facets { 50 }  // Optional. Used for Round cross section profiles
+		//*Smooth       // Optional. Use smooth normals for the walls of the tube
+	}
+	*Coloured             // Optional. If specified means each cross section along the tube has a colour
+	 0  1  0 FFFF0000
+	 0  0  1 FF00FF00
+	 0  1  2 FF0000FF
+	 1  1  2 FFFF00FF
+	*Smooth               // Optional. Generates a spline through the extrusion path
+	*Closed               // Optional. Fills in the end caps of the tube
+	*o2w{*randpos{0 0 0 2} *randori}
 }
 
 )"

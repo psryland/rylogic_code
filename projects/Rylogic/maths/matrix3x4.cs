@@ -221,7 +221,7 @@ namespace pr.maths
 		}
 
 		/// <summary>
-		/// Permute the rotation vectors in a matrix by 'n'.<para/>
+		/// Permute the vectors in a rotation matrix by 'n'.<para/>
 		/// n == 0 : x  y  z<para/>
 		/// n == 1 : z  x  y<para/>
 		/// n == 2 : y  z  x<para/></summary>
@@ -230,8 +230,8 @@ namespace pr.maths
 			switch (n%3)
 			{
 			default:return mat;
-			case 1: return new m3x4(mat.y, mat.z, mat.x);
-			case 2: return new m3x4(mat.z, mat.x, mat.y);
+			case 1: return new m3x4(mat.z, mat.x, mat.y);
+			case 2: return new m3x4(mat.y, mat.z, mat.x);
 			}
 		}
 
@@ -245,23 +245,22 @@ namespace pr.maths
 		/// <summary>
 		/// Make an orientation matrix from a direction. Note the rotation around the direction
 		/// vector is not defined. 'axis' is the axis that 'direction' will become.</summary>
-		public static m3x4 OriFromDir(v4 direction, AxisId axis, v4 preferred_up)
+		public static m3x4 OriFromDir(v4 dir, AxisId axis, v4 up)
 		{
 			// Get the preferred up direction (handling parallel cases)
-			preferred_up = v4.Parallel(preferred_up, direction) ? v4.Perpendicular(direction) : preferred_up;
+			up = v4.Parallel(up, dir) ? v4.Perpendicular(dir) : up;
 
-			// Create an orientation matrix where +Z points along 'direction'
-			m3x4 ans = Identity;
-			ans.z = v4.Normalise3(direction);
-			ans.x = v4.Normalise3(v4.Cross3(preferred_up, ans.z));
-			ans.y = v4.Cross3(ans.z, ans.x);
+			m3x4 ori = Identity;
+			ori.z = v4.Normalise3(Maths.Sign(axis) * dir);
+			ori.x = v4.Normalise3(v4.Cross3(up, ori.z));
+			ori.y = v4.Cross3(ori.z, ori.x);
 
 			// Permute the column vectors so +Z becomes 'axis'
-			return Maths.Sign(axis) * PermuteRotation(ans, Math.Abs(axis) - 1);
+			return PermuteRotation(ori, Math.Abs(axis));
 		}
-		public static m3x4 OriFromDir(v4 direction, AxisId axis)
+		public static m3x4 OriFromDir(v4 dir, AxisId axis)
 		{
-			return OriFromDir(direction, axis, v4.Perpendicular(direction));
+			return OriFromDir(dir, axis, v4.Perpendicular(dir));
 		}
 
 		/// <summary>
@@ -387,6 +386,20 @@ namespace pr.unittests
 
 	[TestFixture] public class UnitTestM3x4
 	{
+		[Test] public void TestOriFromDir()
+		{
+			var dir = new v4(0,1,0,0);
+			{
+				var ori = m3x4.OriFromDir(dir, AxisId.PosZ, v4.ZAxis);
+				Assert.True(dir == ori.z);
+				Assert.True(m3x4.IsOrthonormal(ori));
+			}
+			{
+				var ori = m3x4.OriFromDir(dir, AxisId.NegX);
+				Assert.True(dir == -ori.x);
+				Assert.True(m3x4.IsOrthonormal(ori));
+			}
+		}
 		[Test] public void TestInversion()
 		{
 			var rng = new Random();

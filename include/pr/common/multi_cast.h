@@ -8,6 +8,7 @@
 
 #include <list>
 #include <mutex>
+#include <atomic>
 #include <algorithm>
 
 namespace pr
@@ -32,8 +33,8 @@ namespace pr
 		{
 			MultiCast<Type>& m_mc;
 			std::lock_guard<std::mutex> m_lock;
-			Lock(Lock const&);
-			Lock& operator =(Lock const&);
+			Lock(Lock const&) = delete;
+			Lock& operator =(Lock const&) = delete;
 		public:
 			Lock(MultiCast& mc) :m_mc(mc) ,m_lock(mc.m_cs) {}
 			citer begin() const { return m_mc.m_cont.begin(); }
@@ -59,22 +60,28 @@ namespace pr
 			:m_cont(std::move(rhs.m_cont))
 			,m_cs()
 		{}
-		MultiCast& operator=(MultiCast&& rhs)
+		MultiCast(MultiCast const& rhs)
+			:m_cont(rhs.m_cont)
+			,m_cs()
+		{}
+		MultiCast& operator = (MultiCast&& rhs)
 		{
-			if (&rhs != this)
-			{
-				std::swap(m_cont, rhs.m_cont);
-			}
+			if (this == &rhs) return *this;
+			std::swap(m_cont, rhs.m_cont);
 			return *this;
 		}
-		MultiCast(MultiCast const&) = delete;
-		MultiCast& operator=(MultiCast const&) = delete;
+		MultiCast& operator = (MultiCast const& rhs)
+		{
+			if (this == &rhs) return *this;
+			m_cont = rhs.m_cont;
+			return *this;
+		}
 
 		// Attach/Remove event handlers
 		// Note: std::function<> is not equality comparable so if your Type
 		// is a std::function<> you can only attach, never detach.
 		// Unless you record the returned iterator and use that for deletion
-		Handler operator =  (Type handler)
+		Handler operator = (Type handler)
 		{
 			std::lock_guard<std::mutex> lock(m_cs);
 			m_cont.resize(0);
@@ -128,6 +135,108 @@ namespace pr
 			for (auto i : cont)
 				get(i)(std::forward<Args>(args)...);
 		}
+	};
+
+	// Returns an identifier for uniquely identifying event handlers
+	using EventHandlerId = unsigned long long;
+	inline EventHandlerId GenerateEventHandlerId()
+	{
+		static std::atomic_uint s_id = {};
+		auto id = s_id.load();
+		for (;!s_id.compare_exchange_weak(id, id + 1);) {}
+		return id + 1;
+	}
+
+	// EventHandler<>
+	// Use:
+	//   btn.Click += [&](Button&,EmptyArgs const) {...}
+	//   btn.Click += std::bind(&MyDlg::HandleBtn, this, _1, _2);
+	template <typename Sender, typename Args> struct EventHandler
+	{
+		// Note: This isn't thread safe
+		using Delegate = std::function<void(Sender,Args)>;
+		struct Func
+		{
+			Delegate m_delegate;
+			EventHandlerId m_id;
+			Func(Delegate delegate, EventHandlerId id)
+				:m_delegate(delegate)
+				,m_id(id)
+			{}
+		};
+		std::vector<Func> m_handlers;
+
+		EventHandler() :m_handlers() {}
+		EventHandler(EventHandler&& rhs) :m_handlers(std::move(rhs.m_handlers)) {}
+		EventHandler(EventHandler const&) = delete;
+		EventHandler& operator=(EventHandler const&) = delete;
+
+		// 'Raise' the event notifying subscribed observers
+		void operator()(Sender& s, Args const& a) const
+		{
+			for (auto& h : m_handlers)
+				h.m_delegate(s,a);
+		}
+
+		// Detach all handlers. NOTE: this invalidates all associated Handler's
+		void reset()
+		{
+			m_handlers.clear();
+		}
+
+		// Number of attached handlers
+		size_t count() const
+		{
+			return m_handlers.size();
+		}
+
+		// Attach/Detach handlers
+		EventHandlerId operator += (Delegate func)
+		{
+			auto handler = Func{func, GenerateEventHandlerId()};
+			m_handlers.push_back(handler);
+			return handler.m_id;
+		}
+		EventHandlerId operator = (Delegate func)
+		{
+			reset();
+			return *this += func;
+		}
+		void operator -= (EventHandlerId handler_id)
+		{
+			// Note, can't use -= (Delegate function) because std::function<> does not allow operator ==
+			auto iter = std::find_if(begin(m_handlers), end(m_handlers), [=](Func const& func){ return func.m_id == handler_id; });
+			if (iter != end(m_handlers)) m_handlers.erase(iter);
+		}
+
+		// Boolean test for no assigned handlers
+		struct bool_tester { int x; }; typedef int bool_tester::* bool_type;
+		operator bool_type() const { return !m_handlers.empty() ? &bool_tester::x : static_cast<bool_type>(0); }
+	};
+
+	// Place-holder for events that take no arguments. (Makes the templating consistent)
+	struct EmptyArgs
+	{};
+
+	// Event args used in cancel-able operations
+	struct CancelEventArgs :EmptyArgs
+	{
+		bool m_cancel;
+		CancelEventArgs(bool cancel = false)
+			:m_cancel(cancel)
+		{}
+	};
+
+	// Event args used to report an error code and error message
+	struct ErrorEventArgs :EmptyArgs
+	{
+		std::wstring m_msg;
+		int m_code;
+
+		ErrorEventArgs(std::wstring msg, int code = 0)
+			:m_msg(msg)
+			,m_code(code)
+		{}
 	};
 }
 

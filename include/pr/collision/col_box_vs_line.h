@@ -100,7 +100,7 @@ namespace pr
 			auto sep_axis = pen.SeparatingAxis();
 			auto p0 = Dot3(sep_axis, l2w * lhs.m_s2p.pos);
 			auto p1 = Dot3(sep_axis, r2w * rhs.m_s2p.pos);
-			auto sign = Sign<float>(p0 < p1);
+			auto sign = SignF(p0 < p1);
 
 			penetration = pen.Depth();
 			axis        = sign * sep_axis;

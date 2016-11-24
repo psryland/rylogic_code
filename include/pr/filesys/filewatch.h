@@ -31,7 +31,7 @@ namespace pr
 
 		// 'filepath' is the name of the changed file
 		// 'handled' should be set to false if the file should be reported as changed the next time 'CheckForChangedFiles' is called (true by default)
-		virtual void FileWatch_OnFileChanged(wchar_t const* filepath, void* user_data, bool& handled) = 0;
+		virtual void FileWatch_OnFileChanged(wchar_t const* filepath, pr::Guid const& id, void* user_data, bool& handled) = 0;
 	};
 
 	class FileWatch
@@ -58,20 +58,43 @@ namespace pr
 			bool operator == (string const& filepath) const { return pr::str::EqualI(m_filepath, filepath); }
 			bool operator == (pr::Guid const& id) const     { return m_id == id; }
 		};
-
 		using FileCont = std::vector<File>;
+
+	private:
+
 		FileCont m_files; // The files being watched
 
+		// Standardise a filepath
+		std::wstring Canonicalise(wchar_t const* filepath) const
+		{
+			return pr::filesys::Standardise<string>(filepath);
+		}
+
 	public:
+
 		FileWatch()
 			:m_files()
 		{}
+
+		// The files being watched
+		FileCont const& Files() const
+		{
+			return m_files;
+		}
+
+		// Return the Guid associated with the given filepath (or null, if not being watched)
+		pr::Guid const* FindId(wchar_t const* filepath) const
+		{
+			auto fpath = Canonicalise(filepath);
+			auto iter = std::find_if(std::begin(m_files), std::end(m_files), [&](File const& file){ return file.m_filepath == filepath; });
+			return iter != std::end(m_files) ? &iter->m_id : nullptr;
+		}
 
 		// Add a file to be watched
 		void Add(wchar_t const* filepath, IFileChangedHandler* onchanged, pr::Guid const& id, void* user_data)
 		{
 			Remove(filepath);
-			auto fpath = pr::filesys::Standardise<string>(filepath);
+			auto fpath = Canonicalise(filepath);
 			m_files.emplace_back(fpath, onchanged, id, user_data);
 		}
 
@@ -112,7 +135,7 @@ namespace pr
 			for (auto& file : changed_files)
 			{
 				bool handled = true;
-				file.m_onchanged->FileWatch_OnFileChanged(file.m_filepath.c_str(), file.m_user_data, handled);
+				file.m_onchanged->FileWatch_OnFileChanged(file.m_filepath.c_str(), file.m_id, file.m_user_data, handled);
 
 				// If the change is not handled, find the same file in 'm_files'
 				// and set it's timestamp back to the previous value (should be a rare case)

@@ -170,6 +170,7 @@
     <ClInclude Include="..\include\pr\linedrawer\ldr_objects_dlg.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_script_editor_dlg.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_object.h" />
+    <ClInclude Include="..\include\pr\linedrawer\ldr_sources.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_tools.h" />
     <ClInclude Include="..\include\pr\lua\lua.h" />
     <ClInclude Include="..\include\pr\script\embedded_lua.h" />

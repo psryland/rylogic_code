@@ -193,7 +193,7 @@ namespace Rylobot
 		private void Dump()
 		{
 			if (!Debugger.IsAttached) return;
-			Debugging.Dump(Instrument, range_:new Range(-100,1), high_res:20, emas:new[] {200,55});
+			Debugging.Dump(Instrument, range_:new Range(-100,1), high_res:0, emas:new[] {200,55});
 			Debugging.Dump(new SnR(Instrument, -100, 0));
 			if (Position != null)
 				Debugging.LogTrade(Position);

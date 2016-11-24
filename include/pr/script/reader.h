@@ -130,6 +130,12 @@ namespace pr
 				return *src == L'}';
 			}
 
+			// Return true if the next token is not a keyword, the section end, or the end of the source
+			bool IsValue()
+			{
+				return !IsKeyword() && !IsSectionEnd() && !IsSourceEnd();
+			}
+
 			// Move to the start/end of a section and then one past it
 			bool SectionStart()
 			{
@@ -215,7 +221,7 @@ namespace pr
 				return true;
 			}
 
-			// As above an error is reported if the next token is not a keyword
+			// As above except an error is reported if the next token is not a keyword
 			int NextKeywordH()
 			{
 				int kw = 0;

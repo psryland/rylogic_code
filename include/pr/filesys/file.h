@@ -38,17 +38,18 @@ namespace pr
 
 	// Examines 'filepath' to guess at the file data encoding (assumes 'filepath' is a text file)
 	// On return 'bom_length' is the length of the byte order mask.
-	// Returns 'Text' if unknown
+	// Returns 'UTF-8' if unknown, since UTF-8 recommends not using BOMs
 	template <typename String> inline EFileData DetectFileEncoding(String const& filepath, int& bom_length)
 	{
 		std::ifstream file(filepath, std::ios::binary);
-		auto enc = EFileData::Text;
 
+		EFileData enc;
 		unsigned char bom[3];
 		auto read = file.good() ? file.read(reinterpret_cast<char*>(&bom[0]), sizeof(bom)).gcount() : 0;
 		if      (read >= 3 && bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF) { enc = EFileData::Utf8;     bom_length = 3; }
 		else if (read >= 2 && bom[0] == 0xFE && bom[1] == 0xFF)                   { enc = EFileData::Utf16_be; bom_length = 2; }
 		else if (read >= 2 && bom[0] == 0xFF && bom[1] == 0xFE)                   { enc = EFileData::Utf16;    bom_length = 2; }
+		else                                                                      { enc = EFileData::Utf8;     bom_length = 0; }
 		return enc;
 	}
 	template <typename String> inline EFileData DetectFileEncoding(String const& filepath)
@@ -157,7 +158,7 @@ namespace pr
 	// 'file_enc' describes the encoding to be written to the file.
 	// 'buf_enc' describes the encoding used in 'buf'
 	// 'append' is true if the file should be appended to
-	// 'add_bom' is true if a byte order mask should be written to the file (applies to text encoding only, prefer not for utf-8)
+	// 'add_bom' is true if a byte order mask should be written to the file (applies to text encoding only, prefer not for UTF-8)
 	template <typename String> inline bool BufferToFile(void const* buf, size_t size, String const& filepath, EFileData file_enc = EFileData::Binary, EFileData buf_enc = EFileData::Binary, bool append = false, bool add_bom = false)
 	{
 		// Open the output file stream
@@ -206,7 +207,7 @@ namespace pr
 	}
 
 	// Write a buffer to a file.
-	// 'ofs' and 'count' are the subrange range to write (in units of 'Elem')
+	// 'ofs' and 'count' are the sub-range to write (in units of 'Elem')
 	template <typename Elem, typename String>
 	inline bool BufferToFile(Elem const* buf, size_t ofs, size_t count, String const& filepath, EFileData file_enc = EFileData::Binary, EFileData buf_enc = EFileData::Binary, bool append = false, bool add_bom = false)
 	{
@@ -214,7 +215,7 @@ namespace pr
 	}
 
 	// Write a buffer to a file.
-	// 'ofs' and 'count' are the subrange range to write (in units of 'Elem')
+	// 'ofs' and 'count' are the sub-range to write (in units of 'Elem')
 	template <typename Buf, typename String, typename Elem = Buf::value_type>
 	inline bool BufferToFile(Buf const& buf, size_t ofs, size_t len, String const& filepath, EFileData file_enc = EFileData::Binary, EFileData buf_enc = EFileData::Binary, bool append = false, bool add_bom = false)
 	{
@@ -274,22 +275,39 @@ namespace pr
 					}
 				}
 			}
-			{// Write utf-8 text
-				unsigned char utf8[] = {0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd, '\n', 0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd}; // ni hao (chinesse)
-				wchar_t       ucs2[] = {0x4f60, 0x597d, '\n', 0x4f60, 0x597d};
+			{// Write UTF-8 text
+				unsigned char utf8[] = {0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd, '\n', 0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd}; // 'ni hao (chinesse)'
+				wchar_t ucs2[] = {0x4f60, 0x597d, '\n', 0x4f60, 0x597d};
+
 				BufferToFile(utf8, 0, _countof(utf8), filepath, EFileData::Utf8, EFileData::Utf8, false, true);
 				PR_CHECK(DetectFileEncoding(filepath) == EFileData::Utf8, true);
 
-				{// Read utf-8 - BOM automatically stripped
+				{// Read UTF-8 - BOM automatically stripped
 					auto read = FileToBuffer<std::string>(filepath, EFileData::Utf8);
 					PR_CHECK(read.size() == _countof(utf8), true);
 					PR_CHECK(memcmp(&read[0], utf8, sizeof(utf8)) == 0, true);
 				}
-				{// Read utf-8 to UCS2 - BOM automatically stripped
+				{// Read UTF-8 to UCS2 - BOM automatically stripped
 					auto read = FileToBuffer<std::wstring>(filepath, EFileData::Ucs2);
 					PR_CHECK(read.size() == _countof(ucs2), true);
 					PR_CHECK(memcmp(&read[0], ucs2, sizeof(ucs2)) == 0, true);
 				}
+
+				//todo
+				BufferToFile(ucs2, 0, _countof(ucs2), filepath, EFileData::Utf8, EFileData::Ucs2, false, false);
+				PR_CHECK(DetectFileEncoding(filepath) == EFileData::Utf8, true);
+
+				//{// Read UTF-8 - BOM automatically stripped
+				//	auto read = FileToBuffer<std::string>(filepath, EFileData::Utf8);
+				//	PR_CHECK(read.size() == _countof(utf8), true);
+				//	PR_CHECK(memcmp(&read[0], utf8, sizeof(utf8)) == 0, true);
+				//}
+				//{// Read UTF-8 to UCS2 - BOM automatically stripped
+				//	auto read = FileToBuffer<std::wstring>(filepath, EFileData::Ucs2);
+				//	PR_CHECK(read.size() == _countof(ucs2), true);
+				//	PR_CHECK(memcmp(&read[0], ucs2, sizeof(ucs2)) == 0, true);
+				//}
+
 			}
 			{// todo...
 			}

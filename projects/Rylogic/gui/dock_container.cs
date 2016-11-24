@@ -87,7 +87,9 @@ namespace pr.gui
 	{
 		// Typical implementation:
 		//  /// <summary>Provides support for the DockContainer</summary>
-		//  [Browsable(false)] public DockControl DockControl
+		//  [Browsable(false)]
+		//  [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		//  public DockControl DockControl
 		//  {
 		//  	get { return m_impl_dock_control; }
 		//  	private set
@@ -1992,7 +1994,7 @@ namespace pr.gui
 				/// <summary>Get/Set whether this control is visible</summary>
 				public new bool Visible
 				{
-					get { return m_impl_visible; }
+					get { return m_impl_visible && DockPane.DockContainer.Options.TitleBar.ShowTitleBars; }
 					set { base.Visible = m_impl_visible = value; }
 				}
 				private bool m_impl_visible;
@@ -3025,6 +3027,8 @@ namespace pr.gui
 			{
 				public TitleBarData()
 				{
+					ShowTitleBars = true;
+
 					ActiveGrad= new ColourSet(
 						text: SystemColors.ActiveCaptionText,
 						beg: SystemColors.GradientActiveCaption,
@@ -3039,6 +3043,9 @@ namespace pr.gui
 					Padding  = new Padding(2, 1, 2, 1);
 					TextFont = SystemFonts.MenuFont;
 				}
+
+				/// <summary>Show/Hide all title bars</summary>
+				public bool ShowTitleBars { get; set; }
 
 				///<summary>Colour gradient for the caption title bar in an active DockPane</summary>
 				public ColourSet ActiveGrad { get; private set; }
@@ -3055,6 +3062,7 @@ namespace pr.gui
 				/// <summary>Save the options as XML</summary>
 				public XElement ToXml(XElement node)
 				{
+					node.Add2(nameof(ShowTitleBars), ShowTitleBars, false);
 					node.Add2(nameof(ActiveGrad), ActiveGrad, false);
 					node.Add2(nameof(InactiveGrad), InactiveGrad, false);
 					node.Add2(nameof(Padding), Padding, false);
@@ -5849,12 +5857,14 @@ namespace pr.gui
 	/// <summary>A wrapper control that hosts a control and implements IDockable</summary>
 	public class Dockable :Control, IDockable
 	{
-		public Dockable(Control hostee, string persist_name)
+		public Dockable(Control hostee, string persist_name, DockContainer.DockLocation location = null)
 		{
 			SetStyle(ControlStyles.Selectable, false);
 			SetStyle(ControlStyles.ContainerControl, true);
 
-			DockControl = new DockControl(this, persist_name);
+			DockControl = new DockControl(this, persist_name) { TabText = persist_name };
+			if (location != null)
+				DockControl.DefaultDockLocation = location;
 
 			hostee.Dock = DockStyle.Fill;
 			Controls.Add(hostee);

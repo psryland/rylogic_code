@@ -42,7 +42,7 @@ namespace ldr
 
 		// 'filepath' is the name of the changed file
 		// 'handled' should be set to false if the file should be reported as changed the next time 'CheckForChangedFiles' is called (true by default)
-		void FileWatch_OnFileChanged(wchar_t const* filepath, void* user_data, bool& handled);
+		void FileWatch_OnFileChanged(wchar_t const* filepath, pr::Guid const& id, void* user_data, bool& handled);
 
 		// Internal add file
 		void AddFile(wchar_t const* filepath, Evt_StoreChanged::EReason reason);

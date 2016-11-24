@@ -227,7 +227,8 @@ namespace Rylobot
 				// Add the higher resolution price line
 				if (high_res != null)
 				{
-					var price_data = instr.HighResRange(range, 1.0/high_res.Value);
+					var step = high_res.Value != 0 ? (double?)1.0/high_res.Value : null;
+					var price_data = instr.HighResRange(range, step);
 					if (price_data.Any())
 					{
 						ldr.Line("ask", Colour32.Yellow.Lerp(AskColor, 0.5f), 1, price_data.Select(x => new v4((float)x.x, (float)x.y, 0.05f, 1)));
@@ -334,9 +335,9 @@ namespace Rylobot
 			using (ldr.Group("SnR_{0}".Fmt(instr.SymbolCode), ldr_ == null ? ScaleTxfm : m4x4.Identity))
 			{
 				// Stationary points
-				const float scale = 0.25f;
+				const float scale = 0.005f;
 				foreach (var sp in snr.StationaryPoints)
-					ldr.Ellipse("pt", Color.Blue, +3, false, 1f*scale, (float)snr.Hysteresis*scale,
+					ldr.Rect("pt", Color.Blue, +3, 1f*scale, (float)snr.BucketSize*scale, false,
 						new v4((float)(sp.Index - (double)instr.FirstIdx), (float)sp.Price, 0f, 1f));
 
 				// SnR levels

@@ -50,6 +50,7 @@ namespace pr
 			x(Circle     ,= HashI("Circle"    ))\
 			x(Pie        ,= HashI("Pie"       ))\
 			x(Rect       ,= HashI("Rect"      ))\
+			x(Polygon    ,= HashI("Polygon"   ))\
 			x(Matrix3x3  ,= HashI("Matrix3x3" ))\
 			x(CoordFrame ,= HashI("CoordFrame"))\
 			x(Triangle   ,= HashI("Triangle"  ))\
@@ -64,6 +65,7 @@ namespace pr
 			x(Sphere     ,= HashI("Sphere"    ))\
 			x(CylinderHR ,= HashI("CylinderHR"))\
 			x(ConeHA     ,= HashI("ConeHA"    ))\
+			x(Tube       ,= HashI("Tube"      ))\
 			x(Mesh       ,= HashI("Mesh"      ))\
 			x(ConvexHull ,= HashI("ConvexHull"))\
 			x(Model      ,= HashI("Model"     ))\
@@ -127,6 +129,7 @@ namespace pr
 			x(Coloured           ,= HashI("Coloured"          ))\
 			x(Width              ,= HashI("Width"             ))\
 			x(Smooth             ,= HashI("Smooth"            ))\
+			x(Closed             ,= HashI("Closed"            ))\
 			x(Param              ,= HashI("Param"             ))\
 			x(Texture            ,= HashI("Texture"           ))\
 			x(Video              ,= HashI("Video"             ))\
@@ -276,6 +279,61 @@ namespace pr
 			LdrObjectStepData() { m_link.init(this); }
 			bool empty() const  { return m_code.empty(); }
 		};
+
+		#pragma endregion
+
+		#pragma region Parse Result
+
+		// The results of parsing ldr script
+		struct ParseResult
+		{
+			typedef std::unordered_map<size_t, pr::rdr::ModelPtr> ModelLookup;
+
+			// Bit mask of set camera fields
+			enum class ECamField
+			{
+				None    = 0,
+				C2W     = 1 << 0,
+				Focus   = 1 << 1,
+				Align   = 1 << 2,
+				Aspect  = 1 << 3,
+				FovY    = 1 << 4,
+				Near    = 1 << 5,
+				Far     = 1 << 6,
+				AbsClip = 1 << 7,
+				Ortho   = 1 << 8,
+			};
+
+			ObjectCont  m_def_objects; // Objects container that is used if none is provided
+			ModelLookup m_models;      // A lookup map for models based on hashed object name
+			ObjectCont& m_objects;     // Reference to the objects container to fill
+			pr::Camera  m_cam;         // Camera description has been read
+			ECamField   m_cam_fields;  // Bitmask of fields in 'm_cam' that were given in the camera description
+			bool        m_clear;       // True if '*Clear' was read in the script
+			bool        m_wireframe;   // True if '*Wireframe' was read in the script
+			
+			ParseResult()
+				:ParseResult(m_def_objects)
+			{}
+			ParseResult(ObjectCont& cont)
+				:m_def_objects()
+				,m_objects(cont)
+				,m_cam()
+				,m_cam_fields()
+				,m_clear()
+				,m_wireframe()
+			{}
+			ParseResult(ParseResult const&) = delete;
+			ParseResult& operator=(ParseResult const&) = delete;
+		};
+		inline ParseResult::ECamField& operator |= (ParseResult::ECamField& lhs, ParseResult::ECamField rhs)
+		{
+			return lhs = static_cast<ParseResult::ECamField>(int(lhs) | int(rhs));
+		}
+		inline int operator & (ParseResult::ECamField lhs, ParseResult::ECamField rhs)
+		{
+			return int(lhs) & int(rhs);
+		}
 
 		#pragma endregion
 
@@ -463,6 +521,9 @@ namespace pr
 
 		#pragma region Events
 
+		// Depreciate event use, globals are yuck
+		// use pr::EventHandler<> instead
+
 		// An ldr object has been modified
 		struct Evt_LdrObjectChg
 		{
@@ -470,128 +531,9 @@ namespace pr
 			Evt_LdrObjectChg(LdrObjectPtr obj) :m_obj(obj) {}
 		};
 
-		#if 0
-		// A number of objects are about to be added
-		struct Evt_AddBegin
-		{};
-
-		// The last object in a group has been added
-		struct Evt_AddEnd
-		{
-			int m_first, m_last;    // Index of the first and last object added
-			Evt_AddEnd(int first, int last) :m_first(first) ,m_last(last) {}
-		};
-
-		// All objects removed from the object manager
-		struct Evt_DeleteAll
-		{};
-
-		// An ldr object has been added
-		struct Evt_LdrObjectAdd
-		{
-			LdrObjectPtr m_obj;     // The object that was added.
-			Evt_LdrObjectAdd(LdrObjectPtr obj) :m_obj(obj) {}
-		};
-
-		// An ldr object is about to be deleted
-		struct Evt_LdrObjectDelete
-		{
-			LdrObject* m_obj;       // The object to be deleted. Note, not a ref ptr because this event is only sent when the ref count = 0
-			Evt_LdrObjectDelete(LdrObject* obj) :m_obj(obj) {}
-		};
-
-		// An object with step code has been created
-		struct Evt_LdrObjectStepCode
-		{
-			LdrObjectPtr m_obj;     // The object containing step code
-			Evt_LdrObjectStepCode(LdrObjectPtr obj) :m_obj(obj) {}
-		};
-
-		// A camera description has been read
-		struct Evt_LdrSetCamera
-		{
-			// Bit mask of set fields
-			enum EField
-			{
-				C2W     = 1 << 0,
-				Focus   = 1 << 1,
-				Align   = 1 << 2,
-				Aspect  = 1 << 3,
-				FovY    = 1 << 4,
-				Near    = 1 << 5,
-				Far     = 1 << 6,
-				AbsClip = 1 << 7,
-				Ortho   = 1 << 8,
-			};
-			pr::Camera m_cam;
-			size_t m_set_fields;
-			Evt_LdrSetCamera() :m_cam() ,m_set_fields() {}
-		};
-
-		// App commands read from the script
-		struct Evt_LdrAppCommands
-		{
-			bool m_clear;
-			bool m_wireframe;
-		};
-		#endif
-
 		#pragma endregion
 
 		// LdrObject Creation functions *********************************************
-
-		// The results of parsing ldr script
-		struct ParseResult
-		{
-			typedef std::unordered_map<size_t, pr::rdr::ModelPtr> ModelLookup;
-
-			// Bit mask of set camera fields
-			enum class ECamField
-			{
-				None    = 0,
-				C2W     = 1 << 0,
-				Focus   = 1 << 1,
-				Align   = 1 << 2,
-				Aspect  = 1 << 3,
-				FovY    = 1 << 4,
-				Near    = 1 << 5,
-				Far     = 1 << 6,
-				AbsClip = 1 << 7,
-				Ortho   = 1 << 8,
-			};
-
-			ObjectCont  m_def_objects; // Objects container that is used if none is provided
-			ModelLookup m_models;      // A lookup map for models based on hashed object name
-			ObjectCont& m_objects;     // Reference to the objects container to fill
-			pr::Camera  m_cam;         // Camera description has been read
-			ECamField   m_cam_fields;  // Bitmask of fields in 'm_cam' that were given in the camera description
-			bool        m_clear;       // True if '*Clear' was read in the script
-			bool        m_wireframe;   // True if '*Wireframe' was read in the script
-			
-			ParseResult()
-				:ParseResult(m_def_objects)
-			{}
-			ParseResult(ObjectCont& cont)
-				:m_def_objects()
-				,m_objects(cont)
-				,m_cam()
-				,m_cam_fields()
-				,m_clear()
-				,m_wireframe()
-			{}
-
-		private:
-			ParseResult(ParseResult const&);
-			ParseResult& operator=(ParseResult const&);
-		};
-		inline ParseResult::ECamField& operator |= (ParseResult::ECamField& lhs, ParseResult::ECamField rhs)
-		{
-			return lhs = static_cast<ParseResult::ECamField>(int(lhs) | int(rhs));
-		}
-		inline int operator & (ParseResult::ECamField lhs, ParseResult::ECamField rhs)
-		{
-			return int(lhs) & int(rhs);
-		}
 
 		// Parse the ldr script in 'reader' adding the results to 'out'
 		// If 'async' is true, a progress dialog is displayed and parsing is done in a background thread.

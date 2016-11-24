@@ -262,10 +262,10 @@ namespace pr
 			// in front of the camera.
 			float sign_z[4] =
 			{
-				pr::Sign<float>(face==1||face==3),
-				pr::Sign<float>(face==0||face==3),
-				pr::Sign<float>(face==1||face==2),
-				pr::Sign<float>(face==0||face==2),
+				pr::SignF(face==1||face==3),
+				pr::SignF(face==0||face==3),
+				pr::SignF(face==1||face==2),
+				pr::SignF(face==0||face==2),
 			};
 
 			// Get the corners of the plane that will be the far clip plane (in world space).

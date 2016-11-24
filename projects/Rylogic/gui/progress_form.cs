@@ -114,6 +114,7 @@ namespace pr.gui
 		public ProgressForm(string title, string desc, Icon icon, ProgressBarStyle style, WorkerFunc func, object arg = null, ThreadPriority priority = ThreadPriority.Normal)
 			:this(title, desc, icon, style)
 		{
+			m_allow_cancel = true;
 			Done         = new ManualResetEvent(false);
 			CancelSignal = new ManualResetEvent(false);
 			func = func ?? ((f,o,p) =>
@@ -221,7 +222,7 @@ namespace pr.gui
 			set
 			{
 				if (m_allow_cancel == value) return;
-				m_allow_cancel = false;
+				m_allow_cancel = value;
 				DoLayout();
 			}
 		}

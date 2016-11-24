@@ -130,6 +130,7 @@
     <ClInclude Include="..\include\pr\geometry\3ds.h" />
     <ClInclude Include="..\include\pr\geometry\box.h" />
     <ClInclude Include="..\include\pr\geometry\cylinder.h" />
+    <ClInclude Include="..\include\pr\geometry\extrude.h" />
     <ClInclude Include="..\include\pr\geometry\line.h" />
     <ClInclude Include="..\include\pr\geometry\common.h" />
     <ClInclude Include="..\include\pr\geometry\mesh.h" />

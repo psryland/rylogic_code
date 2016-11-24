@@ -212,5 +212,69 @@ namespace pr
 
 			return props;
 		}
+
+		// Polygon ********************************************************************************
+
+		// Returns the number of verts and indices needed to hold geometry for a 'Polygon'
+		template <typename Tvr, typename Tir>
+		void PolygonSize(int num_points, bool solid, Tvr& vcount, Tir& icount)
+		{
+			if (solid)
+			{
+				// Solid polygons have to be triangulated. The number of faces is (num_verts - 2)
+				vcount = static_cast<Tvr>(num_points);
+				icount = static_cast<Tir>(3 * (num_points - 2));
+			}
+			else
+			{
+				vcount = static_cast<Tvr>(num_points);
+				icount = static_cast<Tir>(num_points + 1);
+			}
+		}
+
+		// Generate a Polygon shape 
+		// 'num_points' - the length of the 'points' array
+		// 'points' - the 2d points of the polygon. With CCW winding order.
+		// 'solid' - if true, creates a TriList model. If false, creates a line strip model
+		// 'num_colours' - The number of colours in the 'colours' array. Can be 0, 1, or num_points.
+		// 'colours' - A array of colour values for the polygon
+		template <typename TVertIter, typename TIdxIter>
+		Props Polygon(int num_points, v2 const* points, bool solid, int num_colours, Colour32 const* colours, TVertIter v_out, TIdxIter i_out)
+		{
+			using VIdx = std::remove_reference<decltype(*i_out)>::type;
+
+			Props props;
+			props.m_geom = EGeom::Vert | EGeom::Colr | (solid ? EGeom::Norm : EGeom::None);
+
+			// Colour iterator
+			auto col = pr::CreateRepeater(colours, num_colours, num_points-1, Colour32White);
+			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a != 0xff; return c; };
+
+			// Bounding box
+			auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
+
+			// Verts
+			for (int i = 0; i != num_points; ++i)
+				SetPCN(*v_out++, bb(v4(points[i], 0, 1)), cc(*col++), v4ZAxis);
+
+			// Faces/Lines
+			if (solid)
+			{
+				TriangulatePolygon(points, num_points, [&](int i0, int i1, int i2)
+				{
+					*i_out++ = static_cast<VIdx>(i0);
+					*i_out++ = static_cast<VIdx>(i1);
+					*i_out++ = static_cast<VIdx>(i2);
+				});
+			}
+			else
+			{
+				for (int i = 0; i != num_points; ++i)
+					*i_out++ = static_cast<VIdx>(i);
+				*i_out++ = static_cast<VIdx>(0);
+			}
+
+			return props;
+		}
 	}
 }

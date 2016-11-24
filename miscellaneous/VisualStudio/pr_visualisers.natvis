@@ -250,12 +250,6 @@
 		<DisplayString>{m_type}</DisplayString>
 	</Type>
 	<Type Name="pr::script::Location">
-		<DisplayString>Pos:{m_pos}</DisplayString>
-	</Type>
-	<Type Name="pr::script::TextLoc">
-		<DisplayString>Text({m_line},{m_col}) Pos:{m_pos}</DisplayString>
-	</Type>
-	<Type Name="pr::script::FileLoc">
-		<DisplayString>{m_file}({m_line},{m_col}) Pos:{m_pos}</DisplayString>
+		<DisplayString>{m_stream_name}({m_line},{m_col}) Pos:{m_pos}</DisplayString>
 	</Type>
 </AutoVisualizer>

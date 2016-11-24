@@ -43,6 +43,9 @@ namespace pr.container
 	/// <summary>Args for the event raised whenever the list is changed</summary>
 	public class ListChgEventArgs<T> :EventArgs
 	{
+		[DebuggerStepThrough] public ListChgEventArgs(IList<T> list)
+			:this(list, ListChg.Reset, -1, default(T))
+		{}
 		[DebuggerStepThrough] public ListChgEventArgs(IList<T> list, ListChg chg, int index, T item)
 		{
 			List       = list;

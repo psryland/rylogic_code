@@ -645,20 +645,57 @@ namespace pr
 		iterator insert(const_iterator pos, Type const& value)
 		{
 			difference_type ofs = pos - begin();
-			_Insert(pos, 1, value);
+			insert(pos, size_type(1), value);
 			return begin() + ofs;
 		}
 
 		// insert count * value at pos
 		void insert(const_iterator pos, size_type count, Type const& value)
 		{
-			_Insert(pos, count, value);
+			assert(begin() <= pos && pos <= end() && "insert position must be within the array");
+			size_type ofs = pos - begin();
+			if (count == 0)
+			{
+			}
+			else if (count > max_size() - size())
+			{
+				throw std::overflow_error("pr::vector<> size too large");
+			}
+			else
+			{
+				ensure_space(m_count + count, true);
+				Type* ins = m_ptr + ofs;                                   // The insert point
+				Type* end = m_ptr + m_count;                               // The current end of the array
+				size_type rem = size() - ofs;                              // The number of remaining elements after 'ofs'
+				size_type n = rem > count ? count : rem;                   // min(count, rem)
+				traits::copy_constr(alloc(), end + count - n, end - n, n); // copy construct the last 'n' elements
+				traits::fill_constr(alloc(), end, count - n, value);       // fill from the current end to the element that was at ofs but has now moved. (might be nothing)
+				traits::move_right (ins + count, ins, rem - n);            // move those right of the insert point to butt up with the now moved remainder
+				traits::fill_assign(ins, n, value);                        // fill in the hole
+			}
+			m_count += count;
 		}
 
 		// insert [first, last) at pos
 		template <typename iter> void insert(const_iterator pos, iter first, iter last)
 		{
-			_Insert(pos, first, last);
+			assert(first <= last && "last must follow first");
+			assert(begin() <= pos && pos <= end() && "pos must be within the array");
+			size_type ofs = pos - begin(), count = last - first;
+			if (count)
+			{
+				size_type old_count = m_count;
+				ensure_space(m_count + count, true);
+				for (; first != last; ++first, ++m_count)
+					traits::fill_constr(alloc(), m_ptr + m_count, 1, *first);
+
+				if (ofs != old_count)
+				{
+					reverse(m_ptr + ofs, m_ptr + old_count);
+					reverse(m_ptr + old_count, m_ptr + m_count);
+					reverse(m_ptr + ofs, m_ptr + m_count);
+				}
+			}
 		}
 
 		// erase element at pos
@@ -867,55 +904,6 @@ namespace pr
 					right.m_ptr      = right.local_ptr();
 					right.m_capacity = right.LocalLength;
 					right.m_count    = 0;
-				}
-			}
-		}
-
-		// Insert count * value at iter
-		void _Insert(const_iterator pos, size_type count, Type const& value)
-		{
-			assert(begin() <= pos && pos <= end() && "insert position must be within the array");
-			size_type ofs = pos - begin();
-			if (count == 0)
-			{
-			}
-			else if (count > max_size() - size())
-			{
-				throw std::overflow_error("pr::vector<> size too large");
-			}
-			else
-			{
-				ensure_space(m_count + count, true);
-				Type* ins = m_ptr + ofs;                                   // The insert point
-				Type* end = m_ptr + m_count;                               // The current end of the array
-				size_type rem = size() - ofs;                              // The number of remaining elements after 'ofs'
-				size_type n = rem > count ? count : rem;                   // min(count, rem)
-				traits::copy_constr(alloc(), end + count - n, end - n, n); // copy construct the last 'n' elements
-				traits::fill_constr(alloc(), end, count - n, value);       // fill from the current end to the element that was at ofs but has now moved. (might be nothing)
-				traits::move_right (ins + count, ins, rem - n);            // move those right of the insert point to butt up with the now moved remainder
-				traits::fill_assign(ins, n, value);                        // fill in the hole
-			}
-			m_count += count;
-		}
-
-		// insert [first, last) at pos
-		template <typename iter> void _Insert(const_iterator pos, iter first, iter last)
-		{
-			assert(first <= last && "last must follow first");
-			assert(begin() <= pos && pos <= end() && "pos must be within the array");
-			size_type ofs = pos - begin(), count = last - first;
-			if (count)
-			{
-				size_type old_count = m_count;
-				ensure_space(m_count + count, true);
-				for (; first != last; ++first, ++m_count)
-					traits::fill_constr(alloc(), m_ptr + m_count, 1, *first);
-
-				if (ofs != old_count)
-				{
-					reverse(m_ptr + ofs, m_ptr + old_count);
-					reverse(m_ptr + old_count, m_ptr + m_count);
-					reverse(m_ptr + ofs, m_ptr + m_count);
 				}
 			}
 		}

@@ -11,9 +11,16 @@ namespace pr
 	// An integer that represents one of the basis axis: ±X, ±Y, ±Z
 	struct AxisId
 	{
+		static int const PosX = +1;
+		static int const PosY = +2;
+		static int const PosZ = +3;
+		static int const NegX = -1;
+		static int const NegY = -2;
+		static int const NegZ = -3;
+
 		int value;
 
-		AxisId(int axis_id = 3) :value(axis_id)
+		AxisId(int axis_id) :value(axis_id)
 		{
 			assert(IsValid(*this) && "axis_id must one of ±1, ±2, ±3");
 		}

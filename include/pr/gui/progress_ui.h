@@ -445,19 +445,19 @@ namespace pr
 			using namespace pr::gui;
 			int arg = 42;
 
-			ProgressUI dlg("Progressing...", "This is a progress dialog",
+			ProgressUI dlg(L"Progressing...", L"This is a progress dialog",
 				[](ProgressUI* dlg, int a)
 				{
 					for (int i = 0; i != a; ++i)
 					{
-						if (!dlg->Progress((i + 1.0f) / (float)a, pr::FmtS("Processing index %d", i), nullptr))
+						if (!dlg->Progress((i + 1.0f) / (float)a, pr::FmtS(L"Processing index %d", i), nullptr))
 							return;
 						Sleep(50);
 					}
 				}, arg);
 
-			auto r = dlg.DoModal(0);
-			PR_CHECK(r == IDOK || r == IDCANCEL, true);
+			auto r = dlg.ShowDialog(nullptr);
+			PR_CHECK(r == pr::gui::EDialogResult::Ok || r == pr::gui::EDialogResult::Cancel, true);
 		}
 	}
 }

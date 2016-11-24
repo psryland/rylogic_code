@@ -21,13 +21,13 @@ namespace pr
 			// The name of the stream source
 			string m_stream_name;
 
-			// The character offset into the stream
+			// The character offset into the stream (0-based)
 			std::streamoff m_pos;
 
-			// Line number in the character stream (0-based)
+			// Line number in the character stream (natural number, i.e. 1-based)
 			int m_line;
 
-			// Column number in the character stream (0-based)
+			// Column number in the character stream (natural number, i.e. 1-based)
 			int m_col;
 
 			// The number of columns that a tab character corresponds to
@@ -45,13 +45,13 @@ namespace pr
 				:Location(string())
 			{}
 			explicit Location(string stream_name)
-				:Location(stream_name, 0, 0, 0, true)
+				:Location(stream_name, 0, 1, 1, true)
 			{}
 			explicit Location(std::streamoff pos)
-				:Location(nullptr, pos, 0, 0, pos == 0)
+				:Location(nullptr, pos, 1, 1, pos == 0)
 			{}
 			Location(string stream_name, std::streamoff pos)
-				:Location(stream_name, pos, 0, 0, pos == 0)
+				:Location(stream_name, pos, 1, 1, pos == 0)
 			{}
 			Location(std::streamoff pos, int line, int col)
 				:Location(nullptr, pos, line, col, true)
@@ -62,12 +62,15 @@ namespace pr
 			Location(string stream_name, std::streamoff pos, int line, int col, bool lc_valid, int tab_size = DefTabSize)
 				:m_stream_name(stream_name)
 				,m_pos(pos)
-				,m_line(line)
-				,m_col(col)
+				,m_line(std::max(line, 1))
+				,m_col(std::max(col, 1))
 				,m_tab_size(tab_size)
 				,m_lc_valid(lc_valid)
-			{}
-			
+			{
+				assert("Line index should be natural number, 1-based" && line >= 1);
+				assert("Column index should be natural number, 1-based" && col >= 1);
+			}
+
 			// Advance the location by interpreting 'ch'
 			wchar_t inc(wchar_t ch)
 			{
@@ -80,7 +83,7 @@ namespace pr
 					if (ch == L'\n')
 					{
 						++m_line;
-						m_col = 0;
+						m_col = 1;
 					}
 					else if (ch == L'\t')
 					{
@@ -119,30 +122,34 @@ namespace pr
 			}
 			void Pos(std::streamoff pos, int line, int col, bool lc_valid)
 			{
+				assert("Line index should be natural number, 1-based" && line >= 1);
+				assert("Column index should be natural number, 1-based" && col >= 1);
 				m_pos      = pos;
 				m_line     = line;
 				m_col      = col;
 				m_lc_valid = lc_valid;
 			}
 
-			// Output the line number
+			// Get/Set the line number (as a natural number, 1-based)
 			int Line() const
 			{
-				return m_line + 1;
+				return m_line;
 			}
 			void Line(int line)
 			{
-				m_line = line - 1;
+				assert("Line index should be natural number, 1-based" && line >= 1);
+				m_line = line;
 			}
 
-			// Output the column number
+			// Get/Set the column number (as a natural number, 1-based)
 			int Col() const
 			{
-				return m_col + 1;
+				return m_col;
 			}
 			void Col(int col)
 			{
-				m_col = col - 1;
+				assert("Column index should be natural number, 1-based" && col >= 1);
+				m_col = col;
 			}
 
 			// True if the line/column values are valid
@@ -194,7 +201,7 @@ namespace pr
 				"abc\n"
 				"\tx";
 
-			Location loc(L"", 0, 0, 0, true, 4);
+			Location loc(L"", 0, 1, 1, true, 4);
 			for (auto s = str; *s; ++s)
 				loc.inc(*s);
 

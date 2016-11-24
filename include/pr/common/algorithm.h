@@ -48,17 +48,55 @@ namespace pr
 		return iter != std::end(cont);
 	}
 
-	// True if 'func' returns true for any element in 'cont'
-	template <typename TCont, typename TFunc> inline bool contains_if(TCont const& cont, TFunc func)
+	// Return the lower bound
+	template <typename TCont, typename TValue> inline auto lower_bound(TCont const& cont, TValue const& val) -> decltype(std::begin(cont))
 	{
-		auto iter = std::find_if(std::begin(cont), std::end(cont), func);
+		return std::lower_bound(std::begin(cont), std::end(cont), val);
+	}
+	template <typename TCont, typename TValue, typename TFunc> inline auto lower_bound(TCont const& cont, TValue const& val, TFunc pred) -> decltype(std::begin(cont))
+	{
+		return std::lower_bound(std::begin(cont), std::end(cont), val, pred);
+	}
+
+	// Return the upper bound
+	template <typename TCont, typename TValue> inline auto upper_bound(TCont const& cont, TValue const& val) -> decltype(std::begin(cont))
+	{
+		return std::upper_bound(std::begin(cont), std::end(cont), val);
+	}
+	template <typename TCont, typename TValue, typename TFunc> inline auto upper_bound(TCont const& cont, TValue const& val, TFunc pred) -> decltype(std::begin(cont))
+	{
+		return std::upper_bound(std::begin(cont), std::end(cont), val, pred);
+	}
+
+	// Returns a pair [lower, upper) for the range equal to 'val'
+	template <typename TCont, typename TValue> inline auto equal_range(TCont const& cont, TValue const& val) -> decltype(std::make_pair(std::begin(cont), std::begin(cont)))
+	{
+		return std::equal_range(std::begin(cont), std::end(cont), val);
+	}
+	template <typename TCont, typename TValue, typename TFunc> inline auto equal_range(TCont const& cont, TValue const& val, TFunc pred) -> decltype(std::make_pair(std::begin(cont), std::begin(cont)))
+	{
+		return std::equal_range(std::begin(cont), std::end(cont), val, pred);
+	}
+
+	// True if 'func' returns true for any element in 'cont'
+	template <typename TCont, typename TFunc> inline bool contains_if(TCont const& cont, TFunc pred)
+	{
+		auto iter = std::find_if(std::begin(cont), std::end(cont), pred);
 		return iter != std::end(cont);
 	}
 
-	// Return the index of 'val' in 'cont' or cont.size() if not found
-	template <typename TCont, typename TValue> inline size_t index_of(TCont const& cont, TValue const& val)
+	// Return the index of the first occurrence to satisfy 'pred'
+	template <typename TCont, typename TFunc> inline int index_if(TCont const& cont, TFunc pred)
 	{
-		return static_cast<size_t>(std::find(std::begin(cont), std::end(cont), val) - std::begin(cont));
+		auto iter = std::find_if(std::begin(cont), std::end(cont), pred);
+		return static_cast<int>(std::distance(std::begin(cont), iter));
+	}
+
+	// Return the index of 'val' in 'cont' or cont.size() if not found
+	template <typename TCont, typename TValue> inline int index_of(TCont const& cont, TValue const& val)
+	{
+		auto iter = std::find(std::begin(cont), std::end(cont), val);
+		return static_cast<int>(std::distance(std::begin(cont), iter));
 	}
 
 	// Return the first element in 'cont' that matches 'pred' or nullptr

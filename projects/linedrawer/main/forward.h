@@ -185,17 +185,16 @@ namespace ldr
 		// The store that was added to
 		pr::ldr::ObjectCont const& m_store;
 
-		// Contains the results of parsing including the
-		// object container that the objects where added to
+		// Contains the results of parsing including the object container that the objects where added to
 		pr::ldr::ParseResult const& m_result;
 
 		// The number of objects added as a result of the parsing.
-		std::size_t m_count;
+		int m_count;
 
 		// The origin of the store change
 		EReason m_reason;
 
-		Evt_StoreChanged(pr::ldr::ObjectCont const& store, std::size_t count, pr::ldr::ParseResult const& result, EReason why)
+		Evt_StoreChanged(pr::ldr::ObjectCont const& store, int count, pr::ldr::ParseResult const& result, EReason why)
 			:m_store(store)
 			,m_count(count)
 			,m_result(result)

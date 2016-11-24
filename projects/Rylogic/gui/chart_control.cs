@@ -10,6 +10,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using System.Xml.Linq;
+using pr.attrib;
 using pr.common;
 using pr.container;
 using pr.extn;
@@ -45,7 +46,7 @@ namespace pr.gui
 				Range           = new RangeData(this);
 				BaseRangeX      = new RangeF(0.0, 1.0);
 				BaseRangeY      = new RangeF(0.0, 1.0);
-				Window          = new ChartPanel(this); // Must come after 'Range'
+				Chart          = new ChartPanel(this); // Must come after 'Range'
 				MouseOperations = new MouseOps();
 				Tools           = new ChartTools(Options);
 				m_impl_zoom     = new RangeF(float.Epsilon, float.MaxValue);
@@ -81,12 +82,14 @@ namespace pr.gui
 		}
 		protected override void OnLayout(LayoutEventArgs e)
 		{
-			if (Window != null && !this.IsInDesignMode())
+			if (Chart != null && !this.IsInDesignMode())
 			{
 				using (this.SuspendLayout(false))
 				{
 					var dims = ChartDimensions;
-					Window.Bounds = dims.ChartArea;
+					Chart.Bounds = dims.ChartArea;
+					if (Options.LockAspect != null && dims.ChartArea.Area() != 0)
+						Aspect = Options.LockAspect.Value;
 				}
 			}
 			base.OnLayout(e);
@@ -99,7 +102,7 @@ namespace pr.gui
 		protected override void OnInvalidated(InvalidateEventArgs e)
 		{
 			base.OnInvalidated(e);
-			Window?.Invalidate();
+			Chart?.Invalidate();
 		}
 
 		/// <summary>Rendering options for the chart</summary>
@@ -177,8 +180,30 @@ namespace pr.gui
 			set;
 		}
 
+		/// <summary>Get/Set the aspect ratio of the chart area</summary>
+		public double Aspect
+		{
+			get
+			{
+				// Aspect = X/Y
+				// (XAxis.Range / Chart.Bounds.Width) / (YAxis.Range / Chart.Bounds.Height)
+				// (XAxis.Range / Chart.Bounds.Width) * (Chart.Bounds.Height / YAxis.Range)
+				// (XAxis.Range * Chart.Bounds.Height) / (YAxis.Range * Chart.Bounds.Width)
+				return (float)((XAxis.Span * Chart.Bounds.Height) / (YAxis.Span * Chart.Bounds.Width));
+			}
+			set
+			{
+				// When setting the aspect ratio, change the YAxis range since X is the
+				// independent variable and we can't change the chart panel bounds.
+				if (Aspect == value) return;
+				if (Options.LockAspect != null) Options.LockAspect = value;
+				YAxis.Span = (XAxis.Span * Chart.Bounds.Height) / (value * Chart.Bounds.Width);
+				Invalidate();
+			}
+		}
+
 		/// <summary>The view3d part of the chart</summary>
-		public ChartPanel Window
+		public ChartPanel Chart
 		{
 			[DebuggerStepThrough] get { return m_impl_chart; }
 			set
@@ -260,16 +285,16 @@ namespace pr.gui
 		public PointF ClientToChart(PointF client_point)
 		{
 			return new PointF(
-				(float)(XAxis.Min + (client_point.X - Window.Bounds.Left  ) * XAxis.Span / Window.Bounds.Width ),
-				(float)(YAxis.Min - (client_point.Y - Window.Bounds.Bottom) * YAxis.Span / Window.Bounds.Height));
+				(float)(XAxis.Min + (client_point.X - Chart.Bounds.Left  ) * XAxis.Span / Chart.Bounds.Width ),
+				(float)(YAxis.Min - (client_point.Y - Chart.Bounds.Bottom) * YAxis.Span / Chart.Bounds.Height));
 		}
 
 		/// <summary>Returns a point in client space from a point in chart space. Inverse of PointToChart</summary>
 		public Point ChartToClient(PointF chart_point)
 		{
 			return new Point(
-				(int)(Window.Bounds.Left   + (chart_point.X - XAxis.Min) * Window.Bounds.Width  / XAxis.Span),
-				(int)(Window.Bounds.Bottom - (chart_point.Y - YAxis.Min) * Window.Bounds.Height / YAxis.Span));
+				(int)(Chart.Bounds.Left   + (chart_point.X - XAxis.Min) * Chart.Bounds.Width  / XAxis.Span),
+				(int)(Chart.Bounds.Bottom - (chart_point.Y - YAxis.Min) * Chart.Bounds.Height / YAxis.Span));
 		}
 
 		/// <summary>
@@ -306,7 +331,7 @@ namespace pr.gui
 		}
 		public m4x4 ChartToClientSpace()
 		{
-			return ChartToClientSpace(Window.Bounds);
+			return ChartToClientSpace(Chart.Bounds);
 		}
 
 		/// <summary>
@@ -343,7 +368,7 @@ namespace pr.gui
 		}
 		public m4x4 ClientToChartSpace()
 		{
-			return ClientToChartSpace(Window.Bounds);
+			return ClientToChartSpace(Chart.Bounds);
 		}
 
 		/// <summary>Perform a hit test on the chart</summary>
@@ -366,7 +391,7 @@ namespace pr.gui
 				var elements = pred != null ? Elements.Where(pred) : Elements;
 				foreach (var elem in elements)
 				{
-					var hit = elem.HitTest(client_point, modifier_keys, Window.Camera);
+					var hit = elem.HitTest(client_point, modifier_keys, Chart.Camera);
 					if (hit != null)
 						hits.Add(hit);
 				}
@@ -375,7 +400,7 @@ namespace pr.gui
 				hits.Sort((l,r) => -l.Element.PositionZ.CompareTo(r.Element.PositionZ));
 			}
 
-			return new HitTestResult(zone, client_point, chart_point, modifier_keys, hits, Window.Camera);
+			return new HitTestResult(zone, client_point, chart_point, modifier_keys, hits, Chart.Camera);
 		}
 
 		/// <summary>
@@ -394,7 +419,7 @@ namespace pr.gui
 			yrange = args.YRange;
 
 			// Scale up the ranges to leave a margin around the default range
-			const float MarginScale = 1.00f;//1.05f
+			const float MarginScale = 1.05f;
 			if (xrange.Size > 0) xrange = xrange.Scale(MarginScale); else xrange = new RangeF(0.0, 1.0);
 			if (yrange.Size > 0) yrange = yrange.Scale(MarginScale); else yrange = new RangeF(0.0, 1.0);
 			BaseRangeX = xrange;
@@ -435,7 +460,21 @@ namespace pr.gui
 		{
 			if (!XAxis.LockRange) { Range.XAxis.Set(BaseRangeX); }
 			if (!YAxis.LockRange) { Range.YAxis.Set(BaseRangeY); }
+			if (Options.LockAspect != null) { Aspect = Options.LockAspect.Value; }
 			Invalidate();
+		}
+
+		/// <summary>Set the axis range based on the origin relative to the camera</summary>
+		private void SetRangeFromCamera()
+		{
+			// Project the camera to world vector into camera space to determine the centre of the X/Y axis. 
+			var w2c = m4x4.InvertFast(Chart.Camera.O2W);
+
+			// The span of the X/Y axis is determine by the FoV and the focus point distance.
+			var wh = Chart.Camera.ViewArea(Chart.Camera.FocusDist);
+
+			XAxis.Set(-w2c.pos.x - wh.x * 0.5, -w2c.pos.x + wh.x*0.5);
+			YAxis.Set(-w2c.pos.y - wh.y * 0.5, -w2c.pos.y + wh.y*0.5);
 		}
 
 		/// <summary>Paint the control</summary>
@@ -443,12 +482,20 @@ namespace pr.gui
 		{
 			try
 			{
+				// Set the projection mode (this must come before 'SetRangeFromCamera' because
+				// the 'ViewArea' function depends on the projection mode.
+				Chart.Camera.Orthographic = Options.Orthographic;
+				
+				// In 3D mode, navigation moves the camera and axis ranges are derived from the camera position/view
+				if (Options.NavigationMode == ENavMode.Scene3D)
+					SetRangeFromCamera();
+
 				// Get the areas to draw in
 				var dims = ChartDimensions;
 
-				// Render the 3d scene
-				Window.Bounds = dims.ChartArea;
-				Window.DoPaint();
+				// Ensure the scene is rendered
+				Chart.Bounds = dims.ChartArea;
+				Chart.Update();
 
 				// Draw the chart frame
 				DoPaintFrame(gfx, dims);
@@ -490,7 +537,7 @@ namespace pr.gui
 					gfx.ResetTransform();
 				}
 			}
-			if (XAxis.Label.HasValue())
+			if (XAxis.Label.HasValue() && Options.ShowAxes)
 			{
 				using (var bsh = new SolidBrush(XAxis.Options.LabelColour))
 				{
@@ -503,7 +550,7 @@ namespace pr.gui
 					gfx.ResetTransform();
 				}
 			}
-			if (YAxis.Label.HasValue())
+			if (YAxis.Label.HasValue() && Options.ShowAxes)
 			{
 				using (var bsh = new SolidBrush(YAxis.Options.LabelColour))
 				{
@@ -519,57 +566,60 @@ namespace pr.gui
 			}
 
 			// Tick marks and labels
-			var lblx = (float)(dims.ChartArea.Left - YAxis.Options.TickLength - 1);
-			var lbly = (float)(dims.ChartArea.Top + dims.ChartArea.Height + XAxis.Options.TickLength + 1);
-			if (XAxis.Options.DrawTickLabels || XAxis.Options.DrawTickMarks)
+			if (Options.ShowAxes)
 			{
-				using (var pen = new Pen(XAxis.Options.TickColour))
-				using (var bsh = new SolidBrush(XAxis.Options.TickColour))
+				var lblx = (float)(dims.ChartArea.Left - YAxis.Options.TickLength - 1);
+				var lbly = (float)(dims.ChartArea.Top + dims.ChartArea.Height + XAxis.Options.TickLength + 1);
+				if (XAxis.Options.DrawTickLabels || XAxis.Options.DrawTickMarks)
 				{
-					double min, max, step;
-					XAxis.GridLines(out min, out max, out step);
-					for (var x = min; x < max; x += step)
+					using (var pen = new Pen(XAxis.Options.TickColour))
+					using (var bsh = new SolidBrush(XAxis.Options.TickColour))
 					{
-						var X = (int)(dims.ChartArea.Left + x * dims.ChartArea.Width / XAxis.Span);
-						var s = XAxis.TickText(x + XAxis.Min, step);
-						var r = gfx.MeasureString(s, XAxis.Options.TickFont);
-						if (XAxis.Options.DrawTickLabels)
-							gfx.DrawString(s, XAxis.Options.TickFont, bsh, new PointF(X - r.Width*0.5f, lbly));
-						if (XAxis.Options.DrawTickMarks)
-							gfx.DrawLine(pen, X, dims.ChartArea.Top + dims.ChartArea.Height, X, dims.ChartArea.Top + dims.ChartArea.Height + XAxis.Options.TickLength);
+						double min, max, step;
+						XAxis.GridLines(out min, out max, out step);
+						for (var x = min; x < max; x += step)
+						{
+							var X = (int)(dims.ChartArea.Left + x * dims.ChartArea.Width / XAxis.Span);
+							var s = XAxis.TickText(x + XAxis.Min, step);
+							var r = gfx.MeasureString(s, XAxis.Options.TickFont);
+							if (XAxis.Options.DrawTickLabels)
+								gfx.DrawString(s, XAxis.Options.TickFont, bsh, new PointF(X - r.Width*0.5f, lbly));
+							if (XAxis.Options.DrawTickMarks)
+								gfx.DrawLine(pen, X, dims.ChartArea.Top + dims.ChartArea.Height, X, dims.ChartArea.Top + dims.ChartArea.Height + XAxis.Options.TickLength);
+						}
 					}
 				}
-			}
-			if (YAxis.Options.DrawTickLabels || YAxis.Options.DrawTickMarks)
-			{
-				using (var pen = new Pen(YAxis.Options.TickColour))
-				using (var bsh = new SolidBrush(YAxis.Options.TickColour))
+				if (YAxis.Options.DrawTickLabels || YAxis.Options.DrawTickMarks)
 				{
-					double min, max, step;
-					YAxis.GridLines(out min, out max, out step);
-					for (var y = min; y < max; y += step)
+					using (var pen = new Pen(YAxis.Options.TickColour))
+					using (var bsh = new SolidBrush(YAxis.Options.TickColour))
 					{
-						var Y = (int)(dims.ChartArea.Top + dims.ChartArea.Height - y * dims.ChartArea.Height / YAxis.Span);
-						var s = YAxis.TickText(y + YAxis.Min, step);
-						var r = gfx.MeasureString(s, YAxis.Options.TickFont);
-						if (YAxis.Options.DrawTickLabels)
-							gfx.DrawString(s, YAxis.Options.TickFont, bsh, new PointF(lblx - r.Width, Y - r.Height*0.5f));
-						if (YAxis.Options.DrawTickMarks)
-							gfx.DrawLine(pen, dims.ChartArea.Left - YAxis.Options.TickLength, Y, dims.ChartArea.Left, Y);
+						double min, max, step;
+						YAxis.GridLines(out min, out max, out step);
+						for (var y = min; y < max; y += step)
+						{
+							var Y = (int)(dims.ChartArea.Top + dims.ChartArea.Height - y * dims.ChartArea.Height / YAxis.Span);
+							var s = YAxis.TickText(y + YAxis.Min, step);
+							var r = gfx.MeasureString(s, YAxis.Options.TickFont);
+							if (YAxis.Options.DrawTickLabels)
+								gfx.DrawString(s, YAxis.Options.TickFont, bsh, new PointF(lblx - r.Width, Y - r.Height*0.5f));
+							if (YAxis.Options.DrawTickMarks)
+								gfx.DrawLine(pen, dims.ChartArea.Left - YAxis.Options.TickLength, Y, dims.ChartArea.Left, Y);
+						}
 					}
 				}
-			}
 
-			// Axes
-			using (var pen = new Pen(XAxis.Options.AxisColour, XAxis.Options.AxisThickness))
-			{
-				var y = dims.ChartArea.Bottom;
-				gfx.DrawLine(pen, new Point(dims.ChartArea.Left, y), new Point(dims.ChartArea.Right, y));
-			}
-			using (var pen = new Pen(YAxis.Options.AxisColour, YAxis.Options.AxisThickness))
-			{
-				var x = (int)(dims.ChartArea.Left - XAxis.Options.AxisThickness*0.5f);
-				gfx.DrawLine(pen, new Point(x, dims.ChartArea.Top), new Point(x, dims.ChartArea.Bottom));
+				// Axes
+				using (var pen = new Pen(XAxis.Options.AxisColour, XAxis.Options.AxisThickness))
+				{
+					var y = dims.ChartArea.Bottom;
+					gfx.DrawLine(pen, new Point(dims.ChartArea.Left, y), new Point(dims.ChartArea.Right, y));
+				}
+				using (var pen = new Pen(YAxis.Options.AxisColour, YAxis.Options.AxisThickness))
+				{
+					var x = (int)(dims.ChartArea.Left - XAxis.Options.AxisThickness*0.5f);
+					gfx.DrawLine(pen, new Point(x, dims.ChartArea.Top), new Point(x, dims.ChartArea.Bottom));
+				}
 			}
 		}
 
@@ -615,8 +665,6 @@ namespace pr.gui
 		public class ChartPanel :Control
 		{
 			private ChartControl          m_owner;         // The containing chart control
-			private View3d                m_view3d;        // Renderer
-			private View3d.Window         m_window;        // A view3d window for this control instance
 			private bool                  m_render_needed; // True when the scene needs rendering again
 
 			public ChartPanel(ChartControl owner)
@@ -637,7 +685,8 @@ namespace pr.gui
 					m_window.Orthographic = true;
 					m_camera = m_window.Camera;
 					m_camera.Orthographic = true;
-					m_camera.SetClipPlanes(0.5f, 1.5f, true);
+					m_camera.SetPosition(new v4(0, 0, 10, 1), v4.Origin, v4.YAxis);
+					m_camera.SetClipPlanes(0.01f, 1000f, true);
 				}
 				catch
 				{
@@ -665,7 +714,7 @@ namespace pr.gui
 			{
 				base.OnPaint(e);
 				if (m_render_needed) DoPaint();
-				m_window?.Present();
+				Present();
 			}
 			protected override void OnInvalidated(InvalidateEventArgs e)
 			{
@@ -685,8 +734,25 @@ namespace pr.gui
 				base.WndProc(ref m);
 			}
 
+			/// <summary>Renderer</summary>
+			public View3d View3d
+			{
+				[DebuggerStepThrough] get { return m_view3d; }
+			}
+			private View3d m_view3d;
+
+			/// <summary>The view3d window for this control instance</summary>
+			public View3d.Window Window
+			{
+				[DebuggerStepThrough] get { return m_window; }
+			}
+			private View3d.Window m_window;
+
 			/// <summary>The view of the chart</summary>
-			public View3d.CameraControls Camera { [DebuggerStepThrough] get { return m_camera; } }
+			public View3d.CameraControls Camera
+			{
+				[DebuggerStepThrough] get { return m_camera; }
+			}
 			private View3d.CameraControls m_camera;
 
 			/// <summary>Add an object to the scene</summary>
@@ -723,15 +789,32 @@ namespace pr.gui
 				// Add user graphics
 				m_owner.RaiseChartRendering(new ChartRenderingEventArgs(m_window));
 
-				// Position the camera based on the axis range.
-				var centre = new v4((float)m_owner.XAxis.Centre, (float)m_owner.YAxis.Centre, 0f, 1f);
-				m_camera.SetView((float)m_owner.XAxis.Span, (float)m_owner.YAxis.Span, 1.0f);
-				m_camera.SetPosition(centre + v4.ZAxis * m_camera.FocusDist, centre, v4.YAxis);
+				// Position the camera based on the navigation mode
+				switch (m_owner.Options.NavigationMode)
+				{
+				case ENavMode.Chart2D:
+					{
+						// Position the camera based on the axis range.
+						// Since anything can change the axis range, set the camera position here.
+						var centre = new v4((float)m_owner.XAxis.Centre, (float)m_owner.YAxis.Centre, 0f, 1f);
+						m_camera.SetView((float)m_owner.XAxis.Span, (float)m_owner.YAxis.Span, 1.0f);
+						m_camera.SetPosition(centre + v4.ZAxis * m_camera.FocusDist, centre, v4.YAxis);
+						break;
+					}
+				case ENavMode.Scene3D:
+					{
+						// In 3D scenes, navigation moves the camera and the axis range is derived from that
+						break;
+					}
+				}
 
 				// Start the render
 				m_window.BackgroundColour = m_owner.Options.ChartBkColour;
 				m_window.Render();
-				m_window.Present();
+			}
+			public void Present()
+			{
+				m_window?.Present();
 			}
 
 			/// <summary>Returns a point in chart space from a point in ChartPanel-client space.</summary>
@@ -769,53 +852,61 @@ namespace pr.gui
 					rect.Width  -= chart.Options.Margin.Left + chart.Options.Margin.Right;
 					rect.Height -= chart.Options.Margin.Top + chart.Options.Margin.Bottom;
 
-					// Add space for tick marks
-					if (chart.YAxis.Options.DrawTickMarks)
-					{
-						rect.X      += chart.YAxis.Options.TickLength;
-						rect.Width  -= chart.YAxis.Options.TickLength;
-					}
-					if (chart.XAxis.Options.DrawTickMarks)
-					{
-						rect.Height -= chart.XAxis.Options.TickLength;
-					}
-
-					// Add space for the title and axis labels
+					// Add space for the title
 					if (chart.Title.HasValue())
 					{
 						r = gfx.MeasureString(chart.Title, chart.Options.TitleFont);
 						rect.Y      += r.Height;
 						rect.Height -= r.Height;
 					}
-					if (chart.XAxis.Label.HasValue())
+
+					// Add space for the axes
+					if (chart.Options.ShowAxes)
 					{
-						r = gfx.MeasureString(chart.XAxis.Label, chart.XAxis.Options.LabelFont);
-						rect.Height -= r.Height;
-					}
-					if (chart.YAxis.Label.HasValue())
-					{
-						r = gfx.MeasureString(chart.Range.YAxis.Label, chart.YAxis.Options.LabelFont);
-						rect.X     += r.Height; // will be rotated by 90deg
-						rect.Width -= r.Height;
+						// Add space for tick marks
+						if (chart.YAxis.Options.DrawTickMarks)
+						{
+							rect.X      += chart.YAxis.Options.TickLength;
+							rect.Width  -= chart.YAxis.Options.TickLength;
+						}
+						if (chart.XAxis.Options.DrawTickMarks)
+						{
+							rect.Height -= chart.XAxis.Options.TickLength;
+						}
+
+						// Add space for the axis labels
+						if (chart.XAxis.Label.HasValue())
+						{
+							r = gfx.MeasureString(chart.XAxis.Label, chart.XAxis.Options.LabelFont);
+							rect.Height -= r.Height;
+						}
+						if (chart.YAxis.Label.HasValue())
+						{
+							r = gfx.MeasureString(chart.Range.YAxis.Label, chart.YAxis.Options.LabelFont);
+							rect.X     += r.Height; // will be rotated by 90deg
+							rect.Width -= r.Height;
+						}
+
+						// Add space for the tick labels
+						// Note: If you're having trouble with the axis jumping around
+						// check the 'TickText' callback is returning fixed length strings
+						if (chart.XAxis.Options.DrawTickLabels)
+						{
+							// Measure the height of the tick text
+							var h = Math.Max(chart.XAxis.MeasureTickText(gfx, false), chart.XAxis.Options.MinTickSize);
+							rect.Height -= h;
+						}
+						if (chart.YAxis.Options.DrawTickLabels)
+						{
+							// Measure the width of the tick text
+							var w = Math.Max(chart.YAxis.MeasureTickText(gfx, true), chart.YAxis.Options.MinTickSize);
+							rect.X     += w;
+							rect.Width -= w;
+						}
 					}
 
-					// Add space for the tick labels
-					// Note: If you're having trouble with the axis jumping around
-					// check the 'TickText' callback is returning fixed length strings
-					if (chart.XAxis.Options.DrawTickLabels)
-					{
-						// Measure the height of the tick text
-						var h = Math.Max(chart.XAxis.MeasureTickText(gfx, false), chart.XAxis.Options.MinTickSize);
-						rect.Height -= h;
-					}
-					if (chart.YAxis.Options.DrawTickLabels)
-					{
-						// Measure the width of the tick text
-						var w = Math.Max(chart.YAxis.MeasureTickText(gfx, true), chart.YAxis.Options.MinTickSize);
-						rect.X     += w;
-						rect.Width -= w;
-					}
-
+					if (rect.Width < 0) rect.Width = 0;
+					if (rect.Height < 0) rect.Height = 0;
 					ChartArea = rect.ToRect();
 				}
 			}
@@ -833,7 +924,7 @@ namespace pr.gui
 		/// <summary>The client space area of the view3d part of the chart</summary>
 		private Rectangle ChartBounds
 		{
-			get { return Window.Bounds; }
+			get { return Chart.Bounds; }
 		}
 
 		/// <summary>The client space area of the XAxis area of the chart</summary>
@@ -864,6 +955,8 @@ namespace pr.gui
 
 			public RdrOptions()
 			{
+				NavigationMode       = ENavMode.Chart2D;
+				LockAspect           = null;
 				BkColour             = SystemColors.Control;
 				ChartBkColour        = Color.White;
 				TitleColour          = Color.Black;
@@ -873,7 +966,9 @@ namespace pr.gui
 				NoteFont             = new Font("tahoma", 8, FontStyle.Regular);
 				SelectionColour      = Color.FromArgb(0x80, Color.DarkGray);
 				ShowGridLines        = true;
+				ShowAxes             = true;
 				AntiAliasing         = true;
+				Orthographic         = false;
 				MinSelectionDistance = 10f;
 				MinDragPixelDistance = 5f;
 				XAxis                = new Axis();
@@ -882,6 +977,8 @@ namespace pr.gui
 			}
 			public RdrOptions(RdrOptions rhs)
 			{
+				NavigationMode       = rhs.NavigationMode;
+				LockAspect           = rhs.LockAspect;
 				BkColour             = rhs.BkColour;
 				ChartBkColour        = rhs.ChartBkColour;
 				TitleColour          = rhs.TitleColour;
@@ -891,7 +988,9 @@ namespace pr.gui
 				NoteFont             = (Font)rhs.NoteFont.Clone();
 				SelectionColour      = rhs.SelectionColour;
 				ShowGridLines        = rhs.ShowGridLines;
+				ShowAxes             = rhs.ShowAxes;
 				AntiAliasing         = rhs.AntiAliasing;
+				Orthographic         = rhs.Orthographic;
 				MinSelectionDistance = rhs.MinSelectionDistance;
 				MinDragPixelDistance = rhs.MinDragPixelDistance;
 				XAxis                = new Axis(rhs.XAxis);
@@ -899,37 +998,45 @@ namespace pr.gui
 			}
 			public RdrOptions(XElement node) :this()
 			{
-				BkColour             = node.Element(XmlTag.BkColour            ).As(BkColour            );
-				ChartBkColour        = node.Element(XmlTag.ChartBkColour       ).As(ChartBkColour       );
-				TitleColour          = node.Element(XmlTag.TitleColour         ).As(TitleColour         );
-				TitleTransform       = node.Element(XmlTag.TitleTransform      ).As(TitleTransform      );
-				Margin               = node.Element(XmlTag.Margin              ).As(Margin              );
-				TitleFont            = node.Element(XmlTag.TitleFont           ).As(TitleFont           );
-				NoteFont             = node.Element(XmlTag.NoteFont            ).As(NoteFont            );
-				SelectionColour      = node.Element(XmlTag.SelectionColour     ).As(SelectionColour     );
-				ShowGridLines        = node.Element(XmlTag.ShowGridLines       ).As(ShowGridLines       );
-				AntiAliasing         = node.Element(XmlTag.AntiAliasing        ).As(AntiAliasing        );
-				MinSelectionDistance = node.Element(XmlTag.MinSelectionDistance).As(MinSelectionDistance);
-				MinDragPixelDistance = node.Element(XmlTag.MinDragPixelDistance).As(MinDragPixelDistance);
-				XAxis                = node.Element(XmlTag.XAxis               ).As(XAxis               );
-				YAxis                = node.Element(XmlTag.YAxis               ).As(YAxis               );
+				NavigationMode       = node.Element(nameof(NavigationMode      )).As(NavigationMode      );
+				LockAspect           = node.Element(nameof(LockAspect          )).As(LockAspect          );
+				BkColour             = node.Element(nameof(BkColour            )).As(BkColour            );
+				ChartBkColour        = node.Element(nameof(ChartBkColour       )).As(ChartBkColour       );
+				TitleColour          = node.Element(nameof(TitleColour         )).As(TitleColour         );
+				TitleTransform       = node.Element(nameof(TitleTransform      )).As(TitleTransform      );
+				Margin               = node.Element(nameof(Margin              )).As(Margin              );
+				TitleFont            = node.Element(nameof(TitleFont           )).As(TitleFont           );
+				NoteFont             = node.Element(nameof(NoteFont            )).As(NoteFont            );
+				SelectionColour      = node.Element(nameof(SelectionColour     )).As(SelectionColour     );
+				ShowAxes             = node.Element(nameof(ShowAxes            )).As(ShowAxes            );
+				ShowGridLines        = node.Element(nameof(ShowGridLines       )).As(ShowGridLines       );
+				AntiAliasing         = node.Element(nameof(AntiAliasing        )).As(AntiAliasing        );
+				Orthographic         = node.Element(nameof(Orthographic        )).As(Orthographic        );
+				MinSelectionDistance = node.Element(nameof(MinSelectionDistance)).As(MinSelectionDistance);
+				MinDragPixelDistance = node.Element(nameof(MinDragPixelDistance)).As(MinDragPixelDistance);
+				XAxis                = node.Element(nameof(XAxis               )).As(XAxis               );
+				YAxis                = node.Element(nameof(YAxis               )).As(YAxis               );
 			}
 			public XElement ToXml(XElement node)
 			{
-				node.Add2(XmlTag.BkColour             , BkColour             , false);
-				node.Add2(XmlTag.ChartBkColour        , ChartBkColour        , false);
-				node.Add2(XmlTag.TitleColour          , TitleColour          , false);
-				node.Add2(XmlTag.TitleTransform       , TitleTransform       , false);
-				node.Add2(XmlTag.Margin               , Margin               , false);
-				node.Add2(XmlTag.TitleFont            , TitleFont            , false);
-				node.Add2(XmlTag.NoteFont             , NoteFont             , false);
-				node.Add2(XmlTag.SelectionColour      , SelectionColour      , false);
-				node.Add2(XmlTag.ShowGridLines        , ShowGridLines        , false);
-				node.Add2(XmlTag.AntiAliasing         , AntiAliasing         , false);
-				node.Add2(XmlTag.MinSelectionDistance , MinSelectionDistance , false);
-				node.Add2(XmlTag.MinDragPixelDistance , MinDragPixelDistance , false);
-				node.Add2(XmlTag.XAxis                , XAxis                , false);
-				node.Add2(XmlTag.YAxis                , YAxis                , false);
+				node.Add2(nameof(NavigationMode      ) , NavigationMode       , false);
+				node.Add2(nameof(LockAspect          ) , LockAspect           , false);
+				node.Add2(nameof(BkColour            ) , BkColour             , false);
+				node.Add2(nameof(ChartBkColour       ) , ChartBkColour        , false);
+				node.Add2(nameof(TitleColour         ) , TitleColour          , false);
+				node.Add2(nameof(TitleTransform      ) , TitleTransform       , false);
+				node.Add2(nameof(Margin              ) , Margin               , false);
+				node.Add2(nameof(TitleFont           ) , TitleFont            , false);
+				node.Add2(nameof(NoteFont            ) , NoteFont             , false);
+				node.Add2(nameof(SelectionColour     ) , SelectionColour      , false);
+				node.Add2(nameof(ShowGridLines       ) , ShowGridLines        , false);
+				node.Add2(nameof(ShowAxes            ) , ShowAxes             , false);
+				node.Add2(nameof(AntiAliasing        ) , AntiAliasing         , false);
+				node.Add2(nameof(Orthographic        ) , Orthographic         , false);
+				node.Add2(nameof(MinSelectionDistance) , MinSelectionDistance , false);
+				node.Add2(nameof(MinDragPixelDistance) , MinDragPixelDistance , false);
+				node.Add2(nameof(XAxis               ) , XAxis                , false);
+				node.Add2(nameof(YAxis               ) , YAxis                , false);
 				return node;
 			}
 
@@ -941,6 +1048,22 @@ namespace pr.gui
 				prop = value;
 				PropertyChanged.Raise(this, new PropertyChangedEventArgs(name));
 			}
+
+			/// <summary>The control method used for shifting the camera</summary>
+			public ENavMode NavigationMode
+			{
+				get { return m_NavigationMode; }
+				set { SetProp(ref m_NavigationMode, value, nameof(NavigationMode)); }
+			}
+			private ENavMode m_NavigationMode;
+
+			/// <summary>Lock the aspect ratio for the chart (null means unlocked)</summary>
+			public double? LockAspect
+			{
+				get { return m_LockAspect; }
+				set { SetProp(ref m_LockAspect, value, nameof(LockAspect)); }
+			}
+			private double? m_LockAspect;
 
 			/// <summary>The fill colour of the background of the chart</summary>
 			public Color BkColour
@@ -1014,6 +1137,14 @@ namespace pr.gui
 			}
 			private bool m_ShowGridLines;
 
+			/// <summary>Show/Hide the chart axes</summary>
+			public bool ShowAxes
+			{
+				get { return m_ShowAxes; }
+				set { SetProp(ref m_ShowAxes, value, nameof(ShowAxes)); }
+			}
+			private bool m_ShowAxes;
+
 			/// <summary>Enable/Disable multi-sampling in the view3d view. Can only be changed before the view is created</summary>
 			public bool AntiAliasing
 			{
@@ -1021,6 +1152,14 @@ namespace pr.gui
 				set { SetProp(ref m_AntiAliasing, value, nameof(AntiAliasing)); }
 			}
 			private bool m_AntiAliasing;
+
+			/// <summary>Get/Set orthographic camera projection</summary>
+			public bool Orthographic
+			{
+				get { return m_Orthographic; }
+				set { SetProp(ref m_Orthographic, value, nameof(Orthographic)); }
+			}
+			private bool m_Orthographic;
 
 			/// <summary>How close a click has to be for selection to occur (in client space)</summary>
 			public float MinSelectionDistance
@@ -1115,37 +1254,37 @@ namespace pr.gui
 				}
 				public Axis(XElement node) :this()
 				{
-					AxisColour     = node.Element(XmlTag.AxisColour    ).As(AxisColour    );
-					LabelColour    = node.Element(XmlTag.LabelColour   ).As(LabelColour   );
-					GridColour     = node.Element(XmlTag.GridColour    ).As(GridColour    );
-					TickColour     = node.Element(XmlTag.TickColour    ).As(TickColour    );
-					LabelFont      = node.Element(XmlTag.LabelFont     ).As(LabelFont     );
-					TickFont       = node.Element(XmlTag.TickFont      ).As(TickFont      );
-					DrawTickMarks  = node.Element(XmlTag.DrawTickMarks ).As(DrawTickMarks );
-					DrawTickLabels = node.Element(XmlTag.DrawTickLabels).As(DrawTickLabels);
-					TickLength     = node.Element(XmlTag.TickLength    ).As(TickLength    );
-					MinTickSize    = node.Element(XmlTag.MinTickSize   ).As(MinTickSize   );
-					LabelTransform = node.Element(XmlTag.LabelTransform).As(LabelTransform);
-					AxisThickness  = node.Element(XmlTag.AxisThickness ).As(AxisThickness );
-					PixelsPerTick  = node.Element(XmlTag.PixelsPerTick ).As(PixelsPerTick );
-					ShowGridLines  = node.Element(XmlTag.ShowGridLines ).As(ShowGridLines );
+					AxisColour     = node.Element(nameof(AxisColour    )).As(AxisColour    );
+					LabelColour    = node.Element(nameof(LabelColour   )).As(LabelColour   );
+					GridColour     = node.Element(nameof(GridColour    )).As(GridColour    );
+					TickColour     = node.Element(nameof(TickColour    )).As(TickColour    );
+					LabelFont      = node.Element(nameof(LabelFont     )).As(LabelFont     );
+					TickFont       = node.Element(nameof(TickFont      )).As(TickFont      );
+					DrawTickMarks  = node.Element(nameof(DrawTickMarks )).As(DrawTickMarks );
+					DrawTickLabels = node.Element(nameof(DrawTickLabels)).As(DrawTickLabels);
+					TickLength     = node.Element(nameof(TickLength    )).As(TickLength    );
+					MinTickSize    = node.Element(nameof(MinTickSize   )).As(MinTickSize   );
+					LabelTransform = node.Element(nameof(LabelTransform)).As(LabelTransform);
+					AxisThickness  = node.Element(nameof(AxisThickness )).As(AxisThickness );
+					PixelsPerTick  = node.Element(nameof(PixelsPerTick )).As(PixelsPerTick );
+					ShowGridLines  = node.Element(nameof(ShowGridLines )).As(ShowGridLines );
 				}
 				public XElement ToXml(XElement node)
 				{
-					node.Add2(XmlTag.AxisColour    , AxisColour    , false);
-					node.Add2(XmlTag.LabelColour   , LabelColour   , false);
-					node.Add2(XmlTag.GridColour    , GridColour    , false);
-					node.Add2(XmlTag.TickColour    , TickColour    , false);
-					node.Add2(XmlTag.LabelFont     , LabelFont     , false);
-					node.Add2(XmlTag.TickFont      , TickFont      , false);
-					node.Add2(XmlTag.DrawTickMarks , DrawTickMarks , false);
-					node.Add2(XmlTag.DrawTickLabels, DrawTickLabels, false);
-					node.Add2(XmlTag.TickLength    , TickLength    , false);
-					node.Add2(XmlTag.MinTickSize   , MinTickSize   , false);
-					node.Add2(XmlTag.LabelTransform, LabelTransform, false);
-					node.Add2(XmlTag.AxisThickness , AxisThickness , false);
-					node.Add2(XmlTag.PixelsPerTick , PixelsPerTick , false);
-					node.Add2(XmlTag.ShowGridLines , ShowGridLines , false);
+					node.Add2(nameof(AxisColour    ), AxisColour    , false);
+					node.Add2(nameof(LabelColour   ), LabelColour   , false);
+					node.Add2(nameof(GridColour    ), GridColour    , false);
+					node.Add2(nameof(TickColour    ), TickColour    , false);
+					node.Add2(nameof(LabelFont     ), LabelFont     , false);
+					node.Add2(nameof(TickFont      ), TickFont      , false);
+					node.Add2(nameof(DrawTickMarks ), DrawTickMarks , false);
+					node.Add2(nameof(DrawTickLabels), DrawTickLabels, false);
+					node.Add2(nameof(TickLength    ), TickLength    , false);
+					node.Add2(nameof(MinTickSize   ), MinTickSize   , false);
+					node.Add2(nameof(LabelTransform), LabelTransform, false);
+					node.Add2(nameof(AxisThickness ), AxisThickness , false);
+					node.Add2(nameof(PixelsPerTick ), PixelsPerTick , false);
+					node.Add2(nameof(ShowGridLines ), ShowGridLines , false);
 					return node;
 				}
 
@@ -1382,14 +1521,19 @@ namespace pr.gui
 			/// <summary>Add the graphics associated with the axes to the scene</summary>
 			internal void AddToScene(View3d.Window window)
 			{
-				// Position the grid lines for each axis
+				var cam = Owner.Chart.Camera;
+				var wh = cam.ViewArea(Owner.Chart.Camera.FocusDist);
+					
+				// Position the grid lines so that they line up with the axis tick marks
+				// Grid lines are modelled from the bottom left corner
 				if (XAxis.Owner.Options.ShowGridLines && XAxis.Options.ShowGridLines)
 				{
 					double min, max, step;
 					XAxis.GridLines(out min, out max, out step);
-					var o2w = m4x4.Translation(new v4((float)(XAxis.Min + min), (float)YAxis.Min, GridLinesZ, 1f));
 
-					// Position the grid lines so that they line up with the axis tick marks
+					var o2w = cam.O2W;
+					o2w.pos = cam.FocusPoint - o2w * new v4((float)(wh.x/2 - min), wh.y/2, 0, 0);
+
 					XAxis.GridLineGfx.SetO2W(o2w);
 					window.AddObject(XAxis.GridLineGfx);
 				}
@@ -1397,7 +1541,9 @@ namespace pr.gui
 				{
 					double min, max, step;
 					YAxis.GridLines(out min, out max, out step);
-					var o2w = m4x4.Translation(new v4((float)XAxis.Min, (float)(YAxis.Min + min), GridLinesZ, 1f));
+
+					var o2w = cam.O2W;
+					o2w.pos = cam.FocusPoint - o2w * new v4(wh.x/2, (float)(wh.y/2 - min), 0, 0);
 
 					YAxis.GridLineGfx.SetO2W(o2w);
 					window.AddObject(YAxis.GridLineGfx);
@@ -1564,10 +1710,28 @@ namespace pr.gui
 				}
 
 				/// <summary>Allow scrolling on this axis</summary>
-				public bool AllowScroll { get; set; }
+				public bool AllowScroll
+				{
+					get { return m_allow_scroll && !LockRange; }
+					set
+					{
+						if (m_allow_scroll == value) return;
+						m_allow_scroll = value;
+					}
+				}
+				private bool m_allow_scroll;
 
 				/// <summary>Allow zooming on this axis</summary>
-				public bool AllowZoom { get; set; }
+				public bool AllowZoom
+				{
+					get { return m_allow_zoom && !LockRange; }
+					set
+					{
+						if (m_allow_zoom == value) return;
+						m_allow_zoom = value;
+					}
+				}
+				private bool m_allow_zoom;
 
 				/// <summary>Get/Set whether the range can be changed by user input</summary>
 				public bool LockRange { get; set; }
@@ -1665,9 +1829,12 @@ namespace pr.gui
 						if (m_gridlines == null)
 						{
 							// Create a model for the grid lines
+							// Need to allow for one step in either direction because we only create the
+							// grid lines model when scaling and we can translate by a max of one step in
+							// either direction.
 							double min, max, step;
 							GridLines(out min, out max, out step);
-							var num_lines = (int)(1 + (max - min) / step);
+							var num_lines = (int)(2 + (max - min) / step);
 
 							// Create the grid lines at the origin, they get positioned as the camera moves
 							var verts = new View3d.Vertex[num_lines * 2];
@@ -1771,6 +1938,16 @@ namespace pr.gui
 			Both  = XAxis | YAxis,
 		}
 
+		/// <summary>Navigation methods for moving the camera</summary>
+		public enum ENavMode
+		{
+			[Desc("2D Chart")]
+			Chart2D,
+
+			[Desc("3D Scene")]
+			Scene3D,
+		}
+
 		/// <summary>Enable/Disable mouse navigation</summary>
 		[Browsable(false)]
 		public bool DefaultMouseControl
@@ -1869,42 +2046,64 @@ namespace pr.gui
 		{
 			base.OnMouseWheel(e);
 
-			var delta = Maths.Clamp(e.Delta, -999, 999);
-			var chart_bounds = Window.Bounds;
+			var scale = 1f;
+			if (ModifierKeys.HasFlag(Keys.Shift  )) scale *= 0.1f;
+			if (ModifierKeys.HasFlag(Keys.Control)) scale *= 0.01f;
+			var delta = Maths.Clamp(e.Delta * scale, -999f, 999f);
+
+			var chart_bounds = Chart.Bounds;
 			if (chart_bounds.Contains(e.Location))
 			{
-				var point = ClientToChart(e.Location);
-				Zoom *= (1.0f - delta * 0.001f);
-				PositionChart(e.Location, point);
-				Invalidate();
-				return;
-			}
-			var xaxis_bounds = Rectangle.FromLTRB(chart_bounds.Left, chart_bounds.Bottom, chart_bounds.Right, ClientSize.Height);
-			if (xaxis_bounds.Contains(e.Location))
-			{
-				if (ModifierKeys == Keys.Control && XAxis.AllowScroll)
+				switch (Options.NavigationMode)
 				{
-					XAxis.Shift(XAxis.Span * delta * 0.001);
-					Invalidate();
-				}
-				if (ModifierKeys != Keys.Control && XAxis.AllowZoom)
-				{
-					XAxis.Span *= (1.0f - delta * 0.001);
-					Invalidate();
+				case ENavMode.Chart2D:
+					{
+						var point = ClientToChart(e.Location);
+						Zoom *= (1.0f - delta * 0.001f);
+						PositionChart(e.Location, point);
+						break;
+					}
+				case ENavMode.Scene3D:
+					{
+						Chart.Window.Navigate(0, 0, delta / 120f);
+						Invalidate();
+						break;
+					}
 				}
 			}
-			var yaxis_bounds = Rectangle.FromLTRB(0, chart_bounds.Top, chart_bounds.Left, chart_bounds.Bottom);
-			if (yaxis_bounds.Contains(e.Location))
+			else if (Options.ShowAxes)
 			{
-				if (ModifierKeys == Keys.Control && YAxis.AllowScroll)
+				var xaxis_bounds = Rectangle.FromLTRB(chart_bounds.Left, chart_bounds.Bottom, chart_bounds.Right, ClientSize.Height);
+				if (xaxis_bounds.Contains(e.Location) && !XAxis.LockRange)
 				{
-					YAxis.Shift(YAxis.Span * delta * 0.001);
-					Invalidate();
+					if (ModifierKeys == Keys.Control && XAxis.AllowScroll)
+					{
+						XAxis.Shift(XAxis.Span * delta * 0.001);
+						Invalidate();
+					}
+					if (ModifierKeys != Keys.Control && XAxis.AllowZoom)
+					{
+						XAxis.Span *= (1.0f - delta * 0.001);
+						Invalidate();
+					}
 				}
-				if (ModifierKeys != Keys.Control && YAxis.AllowZoom)
+				var yaxis_bounds = Rectangle.FromLTRB(0, chart_bounds.Top, chart_bounds.Left, chart_bounds.Bottom);
+				if (yaxis_bounds.Contains(e.Location) && !YAxis.LockRange)
 				{
-					YAxis.Span *= (1.0f - delta * 0.001);
-					Invalidate();
+					if (ModifierKeys == Keys.Control && YAxis.AllowScroll)
+					{
+						YAxis.Shift(YAxis.Span * delta * 0.001);
+						Invalidate();
+					}
+					if (ModifierKeys != Keys.Control && YAxis.AllowZoom)
+					{
+						YAxis.Span *= (1.0f - delta * 0.001);
+						Invalidate();
+					}
+				}
+				if (Options.LockAspect != null)
+				{
+					Aspect = Options.LockAspect.Value;
 				}
 			}
 		}
@@ -2041,9 +2240,27 @@ namespace pr.gui
 				lower = ClientToChart(lower);
 				upper = ClientToChart(upper);
 			}
+			if (Options.LockAspect != null)
+			{
+				var aspect = Options.LockAspect.Value;
+				var dy = upper.Y - lower.Y;
+				var dx = upper.X - lower.X;
+				if (dx < aspect * dy)
+				{
+					var chg = (float)(aspect * dy - dx) / 2f;
+					lower.X -= chg;
+					upper.X += chg;
+				}
+				else
+				{
+					var chg = (float)(dx - aspect * dy) / 2f;
+					lower.Y -= chg;
+					upper.Y += chg;
+				}
+			}
 
-			XAxis.Set(lower.X, upper.X);
-			YAxis.Set(lower.Y, upper.Y);
+			if (!XAxis.LockRange) XAxis.Set(lower.X, upper.X);
+			if (!YAxis.LockRange) YAxis.Set(lower.Y, upper.Y);
 			Invalidate();
 		}
 
@@ -2203,6 +2420,12 @@ namespace pr.gui
 				foreach (var elem in m_chart.Selected)
 					elem.DragStartPosition = elem.Position;
 
+				// For 3D scenes, left mouse rotates
+				if (m_chart.Options.NavigationMode == ENavMode.Scene3D)
+				{
+					m_chart.Chart.Window.MouseNavigate(e.Location, MouseButtons.Right, true);
+				}
+
 				// Prevent events while dragging the elements around
 				m_suspend_scope = m_chart.SuspendChartChanged(raise_on_resume:true);
 			}
@@ -2220,12 +2443,12 @@ namespace pr.gui
 					var delta = Drawing_.Subtract(m_chart.ClientToChart(e.Location), m_grab_chart);
 					m_chart.DragSelected(v2.From(delta), false);
 				}
-				else
+				else if (m_chart.Options.NavigationMode == ENavMode.Chart2D)
 				{
 					// Otherwise change the selection area
 					if (!m_selection_graphic_added)
 					{
-						m_chart.Window.AddObject(m_chart.Tools.AreaSelect);
+						m_chart.Chart.AddObject(m_chart.Tools.AreaSelect);
 						m_selection_graphic_added = true;
 					}
 
@@ -2236,6 +2459,12 @@ namespace pr.gui
 						selection_area.SizeY,
 						1f,
 						new v4(selection_area.Centre, m_chart.HighestZ, 1));
+				}
+				else if (m_chart.Options.NavigationMode == ENavMode.Scene3D)
+				{
+					// Mouse right provides rotation, which we want for left mouse button.
+					// I should probably use a different enum that describes the operation, not the button
+					m_chart.Chart.Window.MouseNavigate(e.Location, MouseButtons.Right, false);
 				}
 				m_chart.Invalidate();
 			}
@@ -2279,17 +2508,26 @@ namespace pr.gui
 						var delta = Drawing_.Subtract(m_chart.ClientToChart(e.Location), m_grab_chart);
 						m_chart.DragSelected(delta, true);
 					}
-					// Otherwise create an area selection if the click started within the chart
-					else if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.Chart))
+					else if (m_chart.Options.NavigationMode == ENavMode.Chart2D)
 					{
-						var selection_area = BBox.From(new v4(m_grab_chart, 0, 1f), new v4(m_chart.ClientToChart(e.Location), 0f, 1f));
-						m_chart.OnChartAreaSelect(new ChartAreaSelectEventArgs(selection_area));
+						// Otherwise create an area selection if the click started within the chart
+						if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.Chart))
+						{
+							var selection_area = BBox.From(new v4(m_grab_chart, 0, 1f), new v4(m_chart.ClientToChart(e.Location), 0f, 1f));
+							m_chart.OnChartAreaSelect(new ChartAreaSelectEventArgs(selection_area));
+						}
+					}
+					else if (m_chart.Options.NavigationMode == ENavMode.Scene3D)
+					{
+						// For 3D scenes, left mouse rotates
+						if (m_chart.Options.NavigationMode == ENavMode.Scene3D)
+							m_chart.Chart.Window.MouseNavigate(e.Location, MouseButtons.Right, true);
 					}
 				}
 
 				// Remove the area selection graphic
 				if (m_selection_graphic_added)
-					m_chart.Window.RemoveObject(m_chart.Tools.AreaSelect);
+					m_chart.Chart.RemoveObject(m_chart.Tools.AreaSelect);
 
 				m_chart.Cursor = Cursors.Default;
 				m_chart.Invalidate();
@@ -2310,6 +2548,10 @@ namespace pr.gui
 				if (m_chart.ChartBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.Both;
 				if (m_chart.XAxisBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.XAxis;
 				if (m_chart.YAxisBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.YAxis;
+
+				// For 3D scenes, right mouse translates
+				if (m_chart.Options.NavigationMode == ENavMode.Scene3D)
+					m_chart.Chart.Window.MouseNavigate(e.Location, MouseButtons.Left, true); 
 			}
 			public override void MouseMove(MouseEventArgs e)
 			{
@@ -2322,10 +2564,14 @@ namespace pr.gui
 
 				// Limit the drag direction
 				var drop_loc = e.Location;
-				if (!m_drag_axis_allow.HasFlag(EAxis.XAxis)) drop_loc.X = m_grab_client.X;
-				if (!m_drag_axis_allow.HasFlag(EAxis.YAxis)) drop_loc.Y = m_grab_client.Y;
+				if (!m_drag_axis_allow.HasFlag(EAxis.XAxis) || m_chart.XAxis.LockRange) drop_loc.X = m_grab_client.X;
+				if (!m_drag_axis_allow.HasFlag(EAxis.YAxis) || m_chart.YAxis.LockRange) drop_loc.Y = m_grab_client.Y;
 
 				m_chart.PositionChart(drop_loc, m_grab_chart);
+
+				// For 3D scenes, right mouse translates
+				if (m_chart.Options.NavigationMode == ENavMode.Scene3D)
+					m_chart.Chart.Window.MouseNavigate(e.Location, MouseButtons.Left, false);
 			}
 			public override void MouseUp(MouseEventArgs e)
 			{
@@ -2355,9 +2601,13 @@ namespace pr.gui
 				{
 					// Limit the drag direction
 					var drop_loc = e.Location;
-					if (!m_drag_axis_allow.HasFlag(EAxis.XAxis)) drop_loc.X = m_grab_client.X;
-					if (!m_drag_axis_allow.HasFlag(EAxis.YAxis)) drop_loc.Y = m_grab_client.Y;
+					if (!m_drag_axis_allow.HasFlag(EAxis.XAxis) || m_chart.XAxis.LockRange) drop_loc.X = m_grab_client.X;
+					if (!m_drag_axis_allow.HasFlag(EAxis.YAxis) || m_chart.YAxis.LockRange) drop_loc.Y = m_grab_client.Y;
 					m_chart.PositionChart(drop_loc, m_grab_chart);
+
+					// For 3D scenes, right mouse translates
+					if (m_chart.Options.NavigationMode == ENavMode.Scene3D)
+						m_chart.Chart.Window.MouseNavigate(e.Location, MouseButtons.Left, true);
 				}
 				m_chart.Invalidate();
 			}
@@ -2400,9 +2650,9 @@ namespace pr.gui
 			{
 				// Note: Bounds, size, etc are not stored, the implementation
 				// of the element provides those (typically in UpdateGfx)
-				Id       = node.Element(XmlTag.Id).As(Id);
-				Position = node.Element(XmlTag.Position).As(Position);
-				Name     = node.Element(XmlTag.Name).As(Name);
+				Id       = node.Element(nameof(Id      )).As(Id);
+				Position = node.Element(nameof(Position)).As(Position);
+				Name     = node.Element(nameof(Name    )).As(Name);
 			}
 			public void Dispose()
 			{
@@ -2482,17 +2732,17 @@ namespace pr.gui
 			/// <summary>Export to XML</summary>
 			public virtual XElement ToXml(XElement node)
 			{
-				node.Add2(XmlTag.Id, Id, false);
-				node.Add2(XmlTag.Position, Position, false);
-				node.Add2(XmlTag.Name, Name, false);
+				node.Add2(nameof(Id      ), Id      , false);
+				node.Add2(nameof(Position), Position, false);
+				node.Add2(nameof(Name    ), Name    , false);
 				return node;
 			}
 
 			/// <summary>Import from XML. Used to update the state of this element without having to delete/recreate it</summary>
 			protected virtual void FromXml(XElement node)
 			{
-				Position = node.Element(XmlTag.Position).As(Position);
-				Name = node.Element(XmlTag.Name).As(Name);
+				Position = node.Element(nameof(Position)).As(Position);
+				Name     = node.Element(nameof(Name    )).As(Name);
 			}
 
 			/// <summary>Replace the contents of this element with data from 'node'</summary>
@@ -3096,6 +3346,103 @@ namespace pr.gui
 							Invalidate();
 						};
 					}
+					{
+						var opt = zoom_menu.DropDownItems.Add2(new ToolStripMenuItem("Aspect 1:1") { Name = CMenu.ZoomMenu.Aspect1to1 });
+						opt.Click += (s,a) =>
+						{
+							Aspect = 1.0f;
+						};
+					}
+					{
+						var opt = zoom_menu.DropDownItems.Add2(new ToolStripMenuItem("Lock Aspect") { Name = CMenu.ZoomMenu.LockAspect });
+						opt.Checked = Options.LockAspect != null;
+						opt.Click += (s,a) =>
+						{
+							if (Options.LockAspect != null)
+								Options.LockAspect = null;
+							else
+								Options.LockAspect = (XAxis.Span * Chart.Bounds.Height) / (YAxis.Span * Chart.Bounds.Width);
+						};
+					}
+				}
+				#endregion
+				#region Objects
+				{
+					var objects_menu = cmenu.Items.Add2(new ToolStripMenuItem("Objects") { Name = CMenu.Objects });
+					{
+						var opt = objects_menu.DropDownItems.Add2(new ToolStripMenuItem("Origin") { Name = CMenu.ObjectsMenu.Origin });
+						opt.Checked = Chart.Window.OriginVisible;
+						opt.Click += (s,a) =>
+						{
+							Chart.Window.OriginVisible = true;
+							Invalidate();
+						};
+					}
+					{
+						var opt = objects_menu.DropDownItems.Add2(new ToolStripMenuItem("Focus") { Name = CMenu.ObjectsMenu.Focus });
+						opt.Checked = Chart.Window.FocusPointVisible;
+						opt.Click += (s,a) =>
+						{
+							Chart.Window.FocusPointVisible = true;
+							Invalidate();
+						};
+					}
+					{
+						var opt = objects_menu.DropDownItems.Add2(new ToolStripMenuItem("Grid Lines") { Name = CMenu.ObjectsMenu.GridLines });
+						opt.Checked = Options.ShowGridLines;
+						opt.Click += (s,a) =>
+						{
+							Options.ShowGridLines = !Options.ShowGridLines;
+							Invalidate();
+						};
+					}
+					{
+						var opt = objects_menu.DropDownItems.Add2(new ToolStripMenuItem("Axes") { Name = CMenu.ObjectsMenu.GridLines });
+						opt.Checked = Options.ShowAxes;
+						opt.Click += (s,a) =>
+						{
+							Options.ShowAxes = !Options.ShowAxes;
+							Invalidate();
+						};
+					}
+				}
+				#endregion
+				#region Rendering
+				{
+					var rendering_menu = cmenu.Items.Add2(new ToolStripMenuItem("Rendering") { Name = CMenu.Rendering });
+					{
+						var opt = rendering_menu.DropDownItems.Add2(new ToolStripComboBox("Navigation Mode") { Name = CMenu.RenderingMenu.NavigationMode });
+						opt.DropDownStyle = ComboBoxStyle.DropDownList;
+						opt.ComboBox.DataSource = Enum<ENavMode>.ValuesArray;
+						opt.SelectedItem = Options.NavigationMode;
+						opt.ComboBox.Format += (s,a) =>
+						{
+							a.Value = ((ENavMode)a.ListItem).Desc();
+						};
+						opt.SelectedIndexChanged += (s,a) =>
+						{
+							Options.NavigationMode = (ENavMode)opt.SelectedItem;
+							Invalidate();
+						};
+					}
+					{
+						var opt = rendering_menu.DropDownItems.Add2(new ToolStripMenuItem("Orthographic") { Name = CMenu.RenderingMenu.Orthographic });
+						opt.Checked = Options.Orthographic;
+						opt.Click += (s,a) =>
+						{
+							Options.Orthographic = !Options.Orthographic;
+							Invalidate();
+						};
+					}
+					{
+						var opt = rendering_menu.DropDownItems.Add2(new ToolStripMenuItem("Anti-Aliasing") { Name = CMenu.RenderingMenu.AntiAliasing });
+						opt.Checked = Options.AntiAliasing;
+						opt.Click += (s,a) =>
+						{
+							Options.AntiAliasing = !Options.AntiAliasing;
+							Invalidate();
+						};
+					}
 				}
 				#endregion
 				#region Properties
@@ -3133,7 +3480,7 @@ namespace pr.gui
 		/// <summary>Handle mouse move events while the tooltip is visible</summary>
 		private void OnMouseMoveTooltip(object sender, MouseEventArgs e)
 		{
-			if (Window.Bounds.Contains(e.Location))
+			if (Chart.Bounds.Contains(e.Location))
 			{
 				var pt = ClientToChart(e.Location);
 				var new_str = "{0} {1}".Fmt(XAxis.TickText(pt.X, 0.0), YAxis.TickText(pt.Y, 0.0));
@@ -3208,7 +3555,7 @@ namespace pr.gui
 			private View3d.Object m_area_select;
 			private View3d.Object CreateAreaSelect()
 			{
-				var ldr = Ldr.Rect("selection", Options.SelectionColour, AxisId.PosZ, 1f, 1f, true, v4.Origin);
+				var ldr = Ldr.Rect("selection", Options.SelectionColour, AxisId.PosZ, 1f, 1f, true, pos:v4.Origin);
 				return new View3d.Object(ldr, false, Id, false, null);
 			}
 
@@ -3421,43 +3768,43 @@ namespace pr.gui
 			public static readonly Cursor ArrowMinus = Resources.cursor_arrow_minus.ToCursor(Point.Empty);
 		}
 
-		/// <summary>String constants used in XML export/import</summary>
-		public static class XmlTag
-		{
-			public const string Root                 = "root";
-			public const string TypeAttribute        = "ty";
-			public const string Element              = "elem";
-			public const string Id                   = "id";
-			public const string Name                 = "name";
-			public const string Position             = "pos";
-			public const string XAxis                = "xaxis";
-			public const string YAxis                = "yaxis";
-			public const string BkColour             = "bk_colour";
-			public const string ChartBkColour        = "chart_bk_colour";
-			public const string TitleColour          = "title_colour";
-			public const string TitleTransform       = "title_xform";
-			public const string Margin               = "margin";
-			public const string TitleFont            = "title_font";
-			public const string NoteFont             = "note_font";
-			public const string SelectionColour      = "selection_colour";
-			public const string ShowGridLines        = "show_grid_lines";
-			public const string AntiAliasing         = "antialiasing";
-			public const string MinSelectionDistance = "min_selection_distance";
-			public const string MinDragPixelDistance = "min_drag_pixel_distance";
-			public const string AxisColour           = "axis_colour";
-			public const string LabelColour          = "label_colour";
-			public const string GridColour           = "grid_colour";
-			public const string TickColour           = "tick_colour";
-			public const string LabelFont            = "label_font";
-			public const string TickFont             = "tick_font";
-			public const string DrawTickMarks        = "draw_tick_marks";
-			public const string DrawTickLabels       = "draw_tick_labels";
-			public const string TickLength           = "tick_length";
-			public const string MinTickSize          = "min_tick_size";
-			public const string LabelTransform       = "label_xform";
-			public const string AxisThickness        = "axis_thickness";
-			public const string PixelsPerTick        = "pixels_per_tick";
-		}
+		///// <summary>String constants used in XML export/import</summary>
+		//public static class XmlTag
+		//{
+		//	public const string Root                 = "root";
+		//	public const string TypeAttribute        = "ty";
+		//	public const string Element              = "elem";
+		//	public const string Id                   = "id";
+		//	public const string Name                 = "name";
+		//	public const string Position             = "pos";
+		//	public const string XAxis                = "xaxis";
+		//	public const string YAxis                = "yaxis";
+		//	public const string BkColour             = "bk_colour";
+		//	public const string ChartBkColour        = "chart_bk_colour";
+		//	public const string TitleColour          = "title_colour";
+		//	public const string TitleTransform       = "title_xform";
+		//	public const string Margin               = "margin";
+		//	public const string TitleFont            = "title_font";
+		//	public const string NoteFont             = "note_font";
+		//	public const string SelectionColour      = "selection_colour";
+		//	public const string ShowGridLines        = "show_grid_lines";
+		//	public const string AntiAliasing         = "antialiasing";
+		//	public const string MinSelectionDistance = "min_selection_distance";
+		//	public const string MinDragPixelDistance = "min_drag_pixel_distance";
+		//	public const string AxisColour           = "axis_colour";
+		//	public const string LabelColour          = "label_colour";
+		//	public const string GridColour           = "grid_colour";
+		//	public const string TickColour           = "tick_colour";
+		//	public const string LabelFont            = "label_font";
+		//	public const string TickFont             = "tick_font";
+		//	public const string DrawTickMarks        = "draw_tick_marks";
+		//	public const string DrawTickLabels       = "draw_tick_labels";
+		//	public const string TickLength           = "tick_length";
+		//	public const string MinTickSize          = "min_tick_size";
+		//	public const string LabelTransform       = "label_xform";
+		//	public const string AxisThickness        = "axis_thickness";
+		//	public const string PixelsPerTick        = "pixels_per_tick";
+		//}
 
 		/// <summary>Names for context menu items to allow users to identify them</summary>
 		public static class CMenu
@@ -3471,6 +3818,23 @@ namespace pr.gui
 			public static class ZoomMenu
 			{
 				public const string Default = "default";
+				public const string Aspect1to1 = "aspect1:1";
+				public const string LockAspect = "lock_aspect";
+			}
+			public const string Objects = "objects";
+			public static class ObjectsMenu
+			{
+				public const string Origin = "origin";
+				public const string Focus = "focus";
+				public const string GridLines = "grid_lines";
+				public const string Axes = "axes";
+			}
+			public const string Rendering = "rendering";
+			public static class RenderingMenu
+			{
+				public const string NavigationMode = "nav_mode";
+				public const string Orthographic = "orthographic";
+				public const string AntiAliasing = "anti_aliasing";
 			}
 			public const string Properties = "appearance";
 			public static class AppearanceMenu

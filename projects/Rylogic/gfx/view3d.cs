@@ -25,6 +25,11 @@ namespace pr.gfx
 	/// <summary>.NET wrapper for View3D.dll</summary>
 	public class View3d :IDisposable
 	{
+		// Notes:
+		// - Each process should create a single View3d instance that is an isolated context.
+		// - Ldr objects are created and owned by the context.
+		// - A View3d.Object is a reference to a specific object owned by the context.
+		// - 
 		public const int DefaultContextId = 0;
 
 		#region Enumerations
@@ -588,17 +593,11 @@ namespace pr.gfx
 		public delegate void RenderCB(IntPtr ctx, HWindow wnd);
 
 		/// <summary>Edit object callback</summary>
-		public delegate void EditObjectCB(
-			int vcount,
-			int icount,
-			int ncount,
+		public delegate void EditObjectCB(int vcount, int icount, int ncount,
 			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=0)][Out] Vertex[] verts,
 			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=1)][Out] ushort[] indices,
 			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=2)][Out] Nugget[] nuggets,
-			out int new_vcount,
-			out int new_icount,
-			out int new_ncount,
-			IntPtr ctx);
+			out int new_vcount, out int new_icount, out int new_ncount, IntPtr ctx);
 
 		private readonly List<Window>  m_windows;  // Groups of objects to render
 		private readonly HContext      m_context;  // Unique id per Initialise call
@@ -626,11 +625,36 @@ namespace pr.gfx
 		}
 
 		/// <summary>Add a global error callback, returned object pops the error callback when disposed</summary>
-		public static Scope PushGlobalErrorCB(ReportErrorCB error_cb)
+		public Scope PushGlobalErrorCB(ReportErrorCB error_cb)
 		{
 			return Scope.Create(
 				() => View3D_PushGlobalErrorCB(error_cb, IntPtr.Zero),
 				() => View3D_PopGlobalErrorCB(error_cb));
+		}
+
+		/// <summary>
+		/// Create multiple objects from a source script file.
+		/// The objects are created with the context Id that is returned from this function.
+		/// Callers should then add objects to a window using AddObjectsById.
+		/// 'include_paths' is a comma separate list of include paths to use to resolve #include directives (or nullptr)
+		/// Note, these objects cannot be accessed other than by context id. This method is intended for creating static scenery</summary>
+		public Guid LoadScriptSource(string ldr_filepath, bool additional = false, bool async = true, string[] include_paths = null)
+		{
+			var inc = new View3DIncludes();
+			inc.m_include_paths = string.Join(",", include_paths ?? new string[0]);
+			return View3D_LoadScriptSource(ldr_filepath, additional, async, ref inc);
+		}
+
+		/// <summary>Release all created objects</summary>
+		public void DeleteAllObjects()
+		{
+			View3D_ObjectsDeleteAll();
+		}
+
+		/// <summary>Release all created objects with context id 'id'</summary>
+		public void DeleteAllObjects(Guid id)
+		{
+			View3D_ObjectsDeleteById(ref id);
 		}
 
 		/// <summary>Convert a button enum to a button state int</summary>
@@ -732,7 +756,7 @@ namespace pr.gfx
 			public View3d View { get { return m_view; } }
 
 			/// <summary>Get the native view3d handle for the window</summary>
-			public IntPtr Handle { get { return m_wnd; } }
+			public HWindow Handle { get { return m_wnd; } }
 
 			/// <summary>Camera controls</summary>
 			public CameraControls Camera { get; private set; }
@@ -995,10 +1019,10 @@ namespace pr.gfx
 					e.Handled = true;
 			}
 
-			/// <summary>Example for creating objects</summary>
-			public void CreateDemoScene()
+			/// <summary>Handy method for creating random objects</summary>
+			public Guid CreateDemoScene()
 			{
-				View3D_CreateDemoScene(Handle);
+				return View3D_CreateDemoScene(Handle);
 
 				#if false
 				{// Create an object using ldr script
@@ -1105,7 +1129,7 @@ namespace pr.gfx
 				View3D_CameraSetClipPlanes(m_window.Handle, near, far, focus_relative);
 			}
 
-			/// <summary>Get/Set the position of the camera focus point</summary>
+			/// <summary>Get/Set the position of the camera focus point (in world space, relative to the world origin)</summary>
 			public v4 FocusPoint
 			{
 				get { v4 pos; View3D_GetFocusPoint(m_window.Handle, out pos); return pos; }
@@ -1322,34 +1346,11 @@ namespace pr.gfx
 				m_owned = owned;
 				m_handle = handle;
 			}
-
 			public virtual void Dispose()
 			{
 				if (m_handle == HObject.Zero) return;
 				if (m_owned) View3D_ObjectDelete(m_handle);
 				m_handle = HObject.Zero;
-			}
-
-			/// <summary>
-			/// Create multiple objects from a source file and associate them with 'context_id'.
-			/// 'include_paths' is a comma separate list of include paths to use to resolve #include directives (or nullptr)
-			/// Note, these objects cannot be accessed other than by context id.
-			/// This method is intended for creating static scenery</summary>
-			public static void CreateFromFile(string ldr_filepath, string[] include_paths, Guid context_id, bool async)
-			{
-				var inc = new View3DIncludes();
-				inc.m_include_paths = string.Join(",", include_paths ?? new string[0]);
-				View3D_ObjectsCreateFromFile(ldr_filepath, ref context_id, async, ref inc);
-			}
-			public static void CreateFromFile(string ldr_filepath, string[] include_paths, bool async)
-			{
-				CreateFromFile(ldr_filepath, include_paths, Guid.Empty, async);
-			}
-
-			/// <summary>Delete all objects matching 'context_id'</summary>
-			public static void DeleteAll(Guid context_id)
-			{
-				View3D_ObjectsDeleteById(ref context_id);
 			}
 
 			/// <summary>Change the model for this object</summary>
@@ -1782,7 +1783,7 @@ namespace pr.gfx
 		/// <summary>
 		/// An ldr script editor control. A very lightweight wrapper of a scintilla control.
 		/// To use this in a WinForms application, create a System.Windows.Forms.Integration.ElementHost
-		/// and assign an instance of this class to it's 'Child' property</summary>
+		/// on your form and provide it to the constructor of this class</summary>
 		public class HostableEditor :HwndHost ,IKeyboardInputSink
 		{
 			// See: http://blogs.msdn.com/b/ivo_manolov/archive/2007/10/07/5354351.aspx
@@ -2027,7 +2028,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_ShowLightingDlg          (HWindow window);
 
 		// Objects
-		[DllImport(Dll)] private static extern int               View3D_ObjectsCreateFromFile    ([MarshalAs(UnmanagedType.LPWStr)] string ldr_filepath, ref Guid context_id, bool async, ref View3DIncludes includes);
+		[DllImport(Dll)] private static extern Guid              View3D_LoadScriptSource         ([MarshalAs(UnmanagedType.LPWStr)] string ldr_filepath, bool additional, bool async, ref View3DIncludes includes);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, bool async, ref View3DIncludes includes);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreate             (string name, uint colour, int vcount, int icount, int ncount, IntPtr verts, IntPtr indices, IntPtr nuggets, ref Guid context_id);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateEditCB       (string name, uint colour, int vcount, int icount, int ncount, EditObjectCB edit_cb, IntPtr ctx, ref Guid context_id);
@@ -2113,7 +2114,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern bool              View3D_OriginVisible            (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_ShowOrigin               (HWindow window, bool show);
 		[DllImport(Dll)] private static extern void              View3D_SetOriginSize            (HWindow window, float size);
-		[DllImport(Dll)] private static extern void              View3D_CreateDemoScene          (HWindow window);
+		[DllImport(Dll)] private static extern Guid              View3D_CreateDemoScene          (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_DeleteDemoScene          ();
 		[DllImport(Dll)] private static extern void              View3D_ShowDemoScript           (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_ShowObjectManager        (HWindow window, bool show);

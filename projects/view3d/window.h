@@ -5,35 +5,43 @@
 #pragma once
 
 #include "view3d/forward.h"
+#include "view3d/context.h"
+#include "pr/linedrawer/ldr_sources.h"
 
 namespace view3d
 {
 	struct Window :pr::AlignTo<16>
 	{
-		ErrorCBStack                m_error_cb;                 // Stack of error callback functions for the dll
-		HWND                        m_hwnd;                     // The associated window handle
-		pr::Renderer&               m_rdr;                      // Reference to the renderer
-		pr::rdr::Window             m_wnd;                      // The window being drawn on
-		pr::rdr::Scene              m_scene;                    // Scene manager
-		view3d::ObjectCont          m_objects;                  // References to objects to draw
-		view3d::GizmoCont           m_gizmos;                   // References to gizmos to draw
-		pr::Camera                  m_camera;                   // Camera control
-		pr::rdr::Light              m_light;                    // Light source for the set
-		bool                        m_light_is_camera_relative; // Whether the light is attached to the camera or not
-		EView3DFillMode             m_fill_mode;                // Fill mode
-		pr::Colour32                m_background_colour;        // The background colour for this draw set
-		view3d::Instance            m_focus_point;
-		view3d::Instance            m_origin_point;
-		float                       m_focus_point_size;         // The base size of the focus point object
-		float                       m_origin_point_size;        // The base size of the origin instance
-		bool                        m_focus_point_visible;      // True if we should draw the focus point
-		bool                        m_origin_point_visible;     // True if we should draw the origin point
-		pr::ldr::ScriptEditorUI     m_editor_ui;                // Object manager for objects added to this window
-		pr::ldr::LdrObjectManagerUI m_obj_cont_ui;              // Object manager for objects added to this window
-		pr::ldr::LdrMeasureUI       m_measure_tool_ui;
-		pr::ldr::LdrAngleUI         m_angle_tool_ui;
-		EditorCont                  m_editors;                  // User created editors
-		std::string                 m_settings;                 // Allows a char const* to be returned
+		using ScriptEditorUIPtr     = std::unique_ptr<pr::ldr::ScriptEditorUI>;
+		using LdrObjectManagerUIPtr = std::unique_ptr<pr::ldr::LdrObjectManagerUI>;
+		using LdrMeasureUIPtr       = std::unique_ptr<pr::ldr::LdrMeasureUI>;
+		using LdrAngleUIPtr         = std::unique_ptr<pr::ldr::LdrAngleUI>;
+
+		Context*              m_dll;                      // The dll context
+		ErrorCBStack          m_error_cb;                 // Stack of error callback functions for the dll
+		HWND                  m_hwnd;                     // The associated window handle
+		pr::rdr::Window       m_wnd;                      // The window being drawn on
+		pr::rdr::Scene        m_scene;                    // Scene manager
+		view3d::ObjectSet     m_objects;                  // References to objects to draw (note: objects are owned by the context, not the window)
+		view3d::GizmoSet      m_gizmos;                   // References to gizmos to draw (note: objects are owned by the context, not the window)
+		pr::Camera            m_camera;                   // Camera control
+		pr::rdr::Light        m_light;                    // Light source for the set
+		bool                  m_light_is_camera_relative; // Whether the light is attached to the camera or not
+		EView3DFillMode       m_fill_mode;                // Fill mode
+		pr::Colour32          m_background_colour;        // The background colour for this draw set
+		view3d::Instance      m_focus_point;
+		view3d::Instance      m_origin_point;
+		float                 m_focus_point_size;         // The base size of the focus point object
+		float                 m_origin_point_size;        // The base size of the origin instance
+		bool                  m_focus_point_visible;      // True if we should draw the focus point
+		bool                  m_origin_point_visible;     // True if we should draw the origin point
+		ScriptEditorUIPtr     m_editor_ui;                // A editor for editing Ldr script
+		LdrObjectManagerUIPtr m_obj_cont_ui;              // Object manager for objects added to this window
+		LdrMeasureUIPtr       m_measure_tool_ui;          // A UI for measuring distances between points within the 3d environment
+		LdrAngleUIPtr         m_angle_tool_ui;            // A UI for measuring angles between points within the 3d environment
+		EditorCont            m_editors;                  // User created editors
+		std::string           m_settings;                 // Allows a char const* to be returned
+		pr::EventHandlerId    m_eh_store_updated;
 
 		// Default window construction settings
 		static pr::rdr::WndSettings Settings(HWND hwnd, View3DWindowOptions const& opts)
@@ -49,14 +57,15 @@ namespace view3d
 			settings.m_name      = opts.m_dbg_name;
 			return settings;
 		}
-		Window* this_() { return this; }
-		Window(pr::Renderer& rdr, HWND hwnd, View3DWindowOptions const& opts)
-			:m_error_cb({pr::StaticCallBack(opts.m_error_cb, opts.m_error_cb_ctx)})
+
+		Window(HWND hwnd, Context* dll, View3DWindowOptions const& opts)
+			:m_dll(dll)
+			,m_error_cb({pr::StaticCallBack(opts.m_error_cb, opts.m_error_cb_ctx)})
 			,m_hwnd(hwnd)
-			,m_rdr(rdr)
-			,m_wnd(m_rdr, Settings(hwnd, opts))
+			,m_wnd(m_dll->m_rdr, Settings(hwnd, opts))
 			,m_scene(m_wnd)
 			,m_objects()
+			,m_gizmos()
 			,m_camera()
 			,m_light()
 			,m_light_is_camera_relative(true)
@@ -68,13 +77,20 @@ namespace view3d
 			,m_origin_point_size(0.05f)
 			,m_focus_point_visible(false)
 			,m_origin_point_visible(false)
-			,m_editor_ui(hwnd)
-			,m_obj_cont_ui(hwnd)
-			,m_measure_tool_ui(hwnd, ReadPoint, this_(), m_rdr)
-			,m_angle_tool_ui(hwnd, ReadPoint, this_(), m_rdr)
+			,m_editor_ui()
+			,m_obj_cont_ui()
+			,m_measure_tool_ui()
+			,m_angle_tool_ui()
 			,m_editors()
 			,m_settings()
 		{
+			// Observe the dll object store for changes
+			m_eh_store_updated = m_dll->m_sources.OnStoreChanged += [&](pr::ldr::ScriptSources&, pr::ldr::ScriptSources::StoreChangedEventArgs const&)
+			{
+				// Invalidate this window if it contains items from the store
+				InvalidateRect(nullptr, false);
+			};
+
 			// Set the initial aspect ratio
 			pr::iv2 client_area = m_wnd.RenderTargetSize();
 			m_camera.Aspect(client_area.x / float(client_area.y));
@@ -103,18 +119,20 @@ namespace view3d
 			// Don't know why, but the optimiser buggers this up if I use initializer_list<>. Hence local array
 			pr::Colour32 focus_cols[] = { 0xFFFF0000, 0xFFFF0000, 0xFF00FF00, 0xFF00FF00, 0xFF0000FF, 0xFF0000FF };
 			cdata.colours(focus_cols, _countof(focus_cols));
-			m_focus_point.m_model = pr::rdr::ModelGenerator<>::Mesh(m_rdr, cdata);
+			m_focus_point.m_model = pr::rdr::ModelGenerator<>::Mesh(m_dll->m_rdr, cdata);
 			m_focus_point.m_i2w   = pr::m4x4Identity;
 			
 			pr::Colour32 origin_cols[] = { 0xFF800000, 0xFF800000, 0xFF008000, 0xFF008000, 0xFF000080, 0xFF000080 };
 			cdata.colours(origin_cols, _countof(origin_cols));
-			m_origin_point.m_model = pr::rdr::ModelGenerator<>::Mesh(m_rdr, cdata);
+			m_origin_point.m_model = pr::rdr::ModelGenerator<>::Mesh(m_dll->m_rdr, cdata);
 			m_origin_point.m_i2w   = pr::m4x4Identity;
 		}
 		Window(Window const&) = delete;
 		Window& operator=(Window const&) = delete;
 		~Window()
 		{
+			m_dll->m_sources.OnStoreChanged -= m_eh_store_updated;
+
 			assert("Error callback stack is in consistent. Number of pushes != number of pops" && m_error_cb.size() == 1U);
 			if (!m_error_cb.empty())
 				m_error_cb.pop_back();
@@ -125,6 +143,102 @@ namespace view3d
 
 		// Rendering event
 		pr::MultiCast<RenderingCB> OnRendering;
+
+		// Render this window into whatever render target is currently set
+		void Render()
+		{
+			using namespace pr::rdr;
+
+			// Reset the drawlist
+			m_scene.ClearDrawlists();
+
+			// Notify of a render about to happen
+			NotifyRendering();
+
+			// Add objects from the window to the scene
+			for (auto& obj : m_objects)
+				obj->AddToScene(m_scene);
+
+			// Add gizmos from the window to the scene
+			for (auto& giz : m_gizmos)
+				giz->AddToScene(m_scene);
+
+			// Add the measure tool objects if the window is visible
+			if (m_measure_tool_ui != nullptr && LdrMeasureUI().Visible() && LdrMeasureUI().Gfx())
+				LdrMeasureUI().Gfx()->AddToScene(m_scene);
+
+			// Add the angle tool objects if the window is visible
+			if (m_angle_tool_ui != nullptr && LdrAngleUI().Visible() && LdrAngleUI().Gfx())
+				LdrAngleUI().Gfx()->AddToScene(m_scene);
+
+			// Position the focus point
+			if (m_focus_point_visible)
+			{
+				float scale = m_focus_point_size * m_camera.FocusDist();
+				m_focus_point.m_i2w = pr::m4x4::Scale(scale, m_camera.FocusPoint());
+				m_scene.AddInstance(m_focus_point);
+			}
+			// Scale the origin point
+			if (m_origin_point_visible)
+			{
+				float scale = m_origin_point_size * pr::Length3(m_camera.CameraToWorld().pos);
+				m_origin_point.m_i2w = pr::m4x4::Scale(scale, pr::v4Origin);
+				m_scene.AddInstance(m_origin_point);
+			}
+
+			// Set the view and projection matrices
+			pr::Camera& cam = m_camera;
+			m_scene.SetView(cam);
+			cam.m_moved = false;
+
+			// Set the light source
+			Light& light = m_scene.m_global_light;
+			light = m_light;
+			if (m_light_is_camera_relative)
+			{
+				light.m_direction = m_camera.CameraToWorld() * m_light.m_direction;
+				light.m_position  = m_camera.CameraToWorld() * m_light.m_position;
+			}
+
+			// Set the background colour
+			m_scene.m_bkgd_colour = m_background_colour;
+
+			// Set the global fill mode
+			switch (m_fill_mode) {
+			case EView3DFillMode::Solid:     m_scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
+			case EView3DFillMode::Wireframe: m_scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME); break;
+			case EView3DFillMode::SolidWire: m_scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
+			}
+
+			// Render the scene
+			m_scene.Render();
+
+			// Render wire frame over solid for 'SolidWire' mode
+			if (m_fill_mode == EView3DFillMode::SolidWire)
+			{
+				auto& fr = m_scene.RStep<ForwardRender>();
+				m_scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME);
+				m_scene.m_bsb.Set(EBS::BlendEnable, FALSE, 0);
+				fr.m_clear_bb = false;
+
+				m_scene.Render();
+
+				fr.m_clear_bb = true;
+				m_scene.m_rsb.Clear(ERS::FillMode);
+				m_scene.m_bsb.Clear(EBS::BlendEnable, 0);
+			}
+		}
+		void Present()
+		{
+			m_wnd.Present();
+		}
+
+		// Report an error for this window
+		void ReportError(wchar_t const* msg)
+		{
+			auto error_cb = m_error_cb.back();
+			error_cb(msg);
+		}
 
 		// Push/Pop error callbacks from the error callback stack
 		void PushErrorCB(View3D_ReportErrorCB cb, void* ctx)
@@ -149,7 +263,132 @@ namespace view3d
 			m_hwnd = 0;
 		}
 
-		// 'ctx' should be a Draw set
+		// The script editor UI
+		pr::ldr::ScriptEditorUI& EditorUI()
+		{
+			// Lazy create
+			if (m_editor_ui == nullptr)
+				m_editor_ui.reset(new pr::ldr::ScriptEditorUI(m_hwnd));
+			
+			return *m_editor_ui;
+		}
+
+		// The Ldr Object manager UI
+		pr::ldr::LdrObjectManagerUI& ObjectManagerUI()
+		{
+			if (m_obj_cont_ui == nullptr)
+				m_obj_cont_ui.reset(new pr::ldr::LdrObjectManagerUI(m_hwnd));
+			
+			return *m_obj_cont_ui;
+		}
+
+		// The distance measurement tool UI
+		pr::ldr::LdrMeasureUI& LdrMeasureUI()
+		{
+			if (m_measure_tool_ui == nullptr)
+				m_measure_tool_ui.reset(new pr::ldr::LdrMeasureUI(m_hwnd, ReadPoint, this, m_dll->m_rdr));
+
+			return *m_measure_tool_ui;
+		}
+
+		// The angle measurement tool UI
+		pr::ldr::LdrAngleUI& LdrAngleUI()
+		{
+			if (m_angle_tool_ui == nullptr)
+				m_angle_tool_ui.reset(new pr::ldr::LdrAngleUI(m_hwnd, ReadPoint, this, m_dll->m_rdr));
+
+			return *m_angle_tool_ui;
+		}
+
+		// Return true if 'object' is part of this scene
+		bool Has(pr::ldr::LdrObject* object) const
+		{
+			return m_objects.find(object) != std::end(m_objects);
+		}
+		bool Has(pr::ldr::LdrGizmo* gizmo) const
+		{
+			return m_gizmos.find(gizmo) != std::end(m_gizmos);
+		}
+
+		// Return the number of objects in this scene
+		int ObjectCount() const
+		{
+			return int(m_objects.size());
+		}
+		int GizmoCount() const
+		{
+			return int(m_gizmos.size());
+		}
+
+		// Add/Remove an object to this window
+		void Add(pr::ldr::LdrObject* object)
+		{
+			auto iter = m_objects.find(object);
+			if (iter == std::end(m_objects))
+				m_objects.insert(iter, object);
+		}
+		void Remove(pr::ldr::LdrObject* object)
+		{
+			m_objects.erase(object);
+		}
+
+		// Add/Remove a gizmo to this window
+		void Add(pr::ldr::LdrGizmo* gizmo)
+		{
+			auto iter = m_gizmos.find(gizmo);
+			if (iter == std::end(m_gizmos))
+				m_gizmos.insert(iter, gizmo);
+		}
+		void Remove(pr::ldr::LdrGizmo* gizmo)
+		{
+			m_gizmos.erase(gizmo);
+		}
+
+		// Remove all objects from this scene
+		void RemoveAllObjects()
+		{
+			m_objects.clear();
+		}
+
+		// Remove all objects from this window with the given context id (or not with)
+		void RemoveObjectsById(GUID const& context_id, bool all_except)
+		{
+			if (all_except)
+				pr::erase_if(m_objects, [&](pr::ldr::LdrObject* p){ return p->m_context_id != context_id; });
+			else
+				pr::erase_if(m_objects, [&](pr::ldr::LdrObject* p){ return p->m_context_id == context_id; });
+		}
+
+		// Return a bounding box containing the scene objects
+		pr::BBox BBox(bool objects = true, bool gizmos = false) const
+		{
+			auto bbox = pr::BBoxReset;
+			if (objects)
+			{
+				for (auto obj : m_objects)
+					pr::Encompass(bbox, obj->BBoxWS(true));
+			}
+			if (gizmos)
+			{
+				throw std::exception("not implemented");
+				//for (auto giz : m_gizmos)
+				//	pr::Encompass(bbox, giz->BBoxWS(true));
+			}
+			if (bbox == pr::BBoxReset)
+			{
+				bbox = pr::BBoxUnit;
+			}
+			return bbox;
+		}
+
+		// Reset the scene camera to view all objects in the scene
+		void ResetView(pr::v4 const& forward, pr::v4 const& up)
+		{
+			// The bounding box for the scene
+			auto bbox = BBox();
+			m_camera.View(bbox, forward, up, true);
+		}
+
 		// Return the focus point of the camera in this draw set
 		static pr::v4 __stdcall ReadPoint(void* ctx)
 		{
@@ -183,6 +422,15 @@ namespace view3d
 		void InvalidateRect(RECT const* rect, bool erase)
 		{
 			::InvalidateRect(m_hwnd, rect, erase);
+		}
+
+		// Show/Hide the object manager for the scene
+		void ShowObjectManager(bool show)
+		{
+			auto& ui = ObjectManagerUI();
+			ui.Show();
+			ui.Populate(m_objects);
+			ui.Visible(show);
 		}
 	};
 }

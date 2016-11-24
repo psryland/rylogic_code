@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2013
 //********************************
 #pragma once
-#ifndef PR_GEOMETRY_MESH_H
-#define PR_GEOMETRY_MESH_H
 
 #include "pr/geometry/common.h"
 
@@ -14,7 +12,7 @@ namespace pr
 	{
 		// Return the model buffer requirements of a mesh
 		template <typename Tvr, typename Tir>
-		void MeshSize(std::size_t num_verts, std::size_t num_indices, Tvr& vcount, Tir& icount)
+		void MeshSize(int num_verts, int num_indices, Tvr& vcount, Tir& icount)
 		{
 			vcount = checked_cast<Tvr>(num_verts  );
 			icount = checked_cast<Tir>(num_indices);
@@ -32,13 +30,13 @@ namespace pr
 		// Remember you can call "GenerateNormals()" to generate normals.
 		template <typename TVertCIter, typename TIdxCIter, typename TNormCIter, typename TVertIter, typename TIdxIter>
 		Props Mesh(
-			std::size_t num_verts,
-			std::size_t num_indices,
+			int num_verts,
+			int num_indices,
 			TVertCIter verts,
 			TIdxCIter  indices,
-			std::size_t num_colours,
+			int num_colours,
 			Colour32 const* colours,
-			std::size_t num_normals,
+			int num_normals,
 			TNormCIter normals,
 			v2 const* tex_coords,
 			TVertIter v_out, TIdxIter i_out)
@@ -60,16 +58,14 @@ namespace pr
 			auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
 
 			// Verts
-			for (std::size_t v = 0; v != num_verts; ++v)
+			for (auto v = 0; v != num_verts; ++v)
 				SetPCNT(*v_out++, bb(*verts++), cc(*col++), *norm++, *uv++);
 			
 			// Faces or edges or whatever
-			for (std::size_t i = 0; i != num_indices; ++i)
+			for (auto i = 0; i != num_indices; ++i)
 				*i_out++ = *indices++;
 
 			return props;
 		}
 	}
 }
-
-#endif

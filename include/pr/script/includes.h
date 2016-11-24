@@ -123,13 +123,6 @@ namespace pr
 				SearchPaths(search_paths);
 				ResourceModules(modules);
 			}
-			Includes(Includes&& rhs)
-				:m_types(rhs.m_types)
-				,m_paths(std::move(rhs.m_paths))
-				,m_modules(std::move(rhs.m_modules))
-				,m_strtab(std::move(rhs.m_strtab))
-				,FileOpened(std::move(rhs.FileOpened))
-			{}
 
 			// Get/Set the search paths as a comma or semicolon separated list
 			virtual string SearchPaths() const

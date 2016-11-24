@@ -73,7 +73,7 @@ namespace ldr
 			Reader reader(src, false, nullptr, nullptr, &m_lua_src);
 			Parse(m_rdr, reader, out, false);
 
-			pr::events::Send(Evt_StoreChanged(m_store, m_store.size() - bcount, out, Evt_StoreChanged::EReason::NewData));
+			pr::events::Send(Evt_StoreChanged(m_store, int(m_store.size() - bcount), out, Evt_StoreChanged::EReason::NewData));
 			pr::events::Send(Evt_Refresh());
 		}
 		catch (std::exception const& ex)
@@ -147,7 +147,7 @@ namespace ldr
 				Parse(m_rdr, reader, out, true, file.m_context_id);
 			}
 
-			pr::events::Send(Evt_StoreChanged(m_store, m_store.size() - bcount, out, reason));
+			pr::events::Send(Evt_StoreChanged(m_store, int(m_store.size() - bcount), out, reason));
 			pr::events::Send(Evt_Refresh());
 		}
 		catch (pr::script::Exception const& ex)
@@ -203,7 +203,7 @@ namespace ldr
 
 	// 'filepath' is the name of the changed file
 	// 'handled' should be set to false if the file should be reported as changed the next time 'CheckForChangedFiles' is called (true by default)
-	void ScriptSources::FileWatch_OnFileChanged(wchar_t const*, void* user_data, bool&)
+	void ScriptSources::FileWatch_OnFileChanged(wchar_t const*, pr::Guid const&, void* user_data, bool&)
 	{
 		// Get the filepath of the root file and add it as though it is a new file.
 		// The changed file may have been included from other files.

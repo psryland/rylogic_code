@@ -263,7 +263,7 @@ namespace pr
 
 				// Seek to the position to start reading from (may include the skip over the BOM)
 				m_file.seekg(bom_size + ofs);
-				m_loc = loc ? *loc : Location(filepath, bom_size + ofs, 0, 0, ofs == 0);
+				m_loc = loc ? *loc : Location(filepath, bom_size + ofs, 1, 1, ofs == 0);
 
 				// Load the shift register
 				for (int n = BufW4::Capacity; n--;)

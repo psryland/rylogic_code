@@ -387,6 +387,9 @@ namespace pr
 	// Spherically interpolate between quaternions
 	inline quat pr_vectorcall Slerp(quat_cref a, quat_cref b, float frac)
 	{
+		if (frac == 0.0f) return a;
+		if (frac == 1.0f) return b;
+
 		// Flip 'b' so that both quaternions are in the same hemisphere (since: q == -q)
 		auto cos_angle = CosAngle(a,b);
 		quat b_ = cos_angle >= 0 ? b : -b;

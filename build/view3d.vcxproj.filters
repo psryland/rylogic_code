@@ -13,9 +13,6 @@
     <Filter Include="src\pr\script">
       <UniqueIdentifier>{f6a00def-486d-441f-a6c6-4d47ca0a53d5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\pr\linedrawer">
-      <UniqueIdentifier>{1b49296e-e138-4c8a-8ebc-02bfe9d7d4e6}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\pr\camera">
       <UniqueIdentifier>{6ab12c5d-3166-4900-9228-2fc545650411}</UniqueIdentifier>
     </Filter>
@@ -24,6 +21,9 @@
     </Filter>
     <Filter Include="src\pr\win32">
       <UniqueIdentifier>{3283cba4-3b91-4635-a737-050334dd9891}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\pr\ldraw">
+      <UniqueIdentifier>{1b49296e-e138-4c8a-8ebc-02bfe9d7d4e6}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -37,19 +37,19 @@
       <Filter>src\pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\linedrawer\ldr_helper.h">
-      <Filter>src\pr\linedrawer</Filter>
+      <Filter>src\pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\linedrawer\ldr_object.h">
-      <Filter>src\pr\linedrawer</Filter>
+      <Filter>src\pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\linedrawer\ldr_objects_dlg.h">
-      <Filter>src\pr\linedrawer</Filter>
+      <Filter>src\pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\linedrawer\ldr_script_editor_dlg.h">
-      <Filter>src\pr\linedrawer</Filter>
+      <Filter>src\pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\linedrawer\ldr_tools.h">
-      <Filter>src\pr\linedrawer</Filter>
+      <Filter>src\pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\lua\lua.h">
       <Filter>src\pr\lua</Filter>
@@ -85,7 +85,7 @@
       <Filter>src\pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\linedrawer\ldr_gizmo.h">
-      <Filter>src\pr\linedrawer</Filter>
+      <Filter>src\pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\gui\scintilla_ctrl.h">
       <Filter>src\pr\gui</Filter>
@@ -99,13 +99,16 @@
     <ClInclude Include="..\include\pr\view3d\pr_conv.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\linedrawer\ldr_sources.h">
+      <Filter>src\pr\ldraw</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\include\pr\linedrawer\ldr_object.cpp">
-      <Filter>src\pr\linedrawer</Filter>
+      <Filter>src\pr\ldraw</Filter>
     </ClCompile>
     <ClCompile Include="..\include\pr\linedrawer\ldr_objects_dlg.cpp">
-      <Filter>src\pr\linedrawer</Filter>
+      <Filter>src\pr\ldraw</Filter>
     </ClCompile>
     <ClCompile Include="..\include\pr\lua\lua_core.c">
       <Filter>src\pr\lua</Filter>
@@ -117,7 +120,7 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\include\pr\linedrawer\ldr_gizmo.cpp">
-      <Filter>src\pr\linedrawer</Filter>
+      <Filter>src\pr\ldraw</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

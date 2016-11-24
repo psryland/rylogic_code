@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using pr.common;
 using pr.extn;
@@ -17,8 +18,9 @@ namespace Rylobot
 			Instrument = instr;
 			Range = Instrument.IndexRange(ibeg, iend);
 
-			StationaryPoints = new List<StationaryPoint>();
+//			StationaryPoints = new List<StationaryPoint>();
 			SnRLevels = new List<Level>();
+			BucketSize = 5.0 * Instrument.Symbol.PipSize;
 
 			CalculateLevels();
 		}
@@ -30,7 +32,7 @@ namespace Rylobot
 		/// <summary>The instrument on which the SnR levels have been calculated</summary>
 		public Instrument Instrument
 		{
-			get { return m_instrument; }
+			[DebuggerStepThrough] get { return m_instrument; }
 			set
 			{
 				if (m_instrument == value) return;
@@ -47,12 +49,32 @@ namespace Rylobot
 		}
 		private Range m_range;
 
-		/// <summary>Points where the derivative of the price is zero</summary>
-		public List<StationaryPoint> StationaryPoints
+		/// <summary>Return the price peaks and toughs in the instrument high res data</summary>
+		public IEnumerable<StationaryPoint> StationaryPoints
 		{
-			get;
-			private set;
+			get
+			{
+				// Find the stationary points in the high res data
+				var sign = 0;
+				var prev = new Vec4d();
+				var first_idx = Instrument.FirstIdx;
+				foreach (var data in Instrument.HighResRange(Range))
+				{
+					var s = Math.Sign(data.y - prev.y);
+					if (s == sign) continue;
+					if (sign != 0) yield return new StationaryPoint(prev.x + (double)first_idx, prev.y);
+					sign = s;
+					prev = data;
+				}
+			}
 		}
+
+		///// <summary>Points where the derivative of the price is zero</summary>
+		//public List<StationaryPoint> StationaryPoints
+		//{
+		//	get;
+		//	private set;
+		//}
 
 		/// <summary>An ordered list of the support and resistance levels, strongest levels first</summary>
 		public List<Level> SnRLevels
@@ -61,8 +83,8 @@ namespace Rylobot
 			private set;
 		}
 
-		/// <summary>The hysteresis value used</summary>
-		public double Hysteresis
+		/// <summary>The BucketSize value used</summary>
+		public double BucketSize
 		{
 			get;
 			private set;
@@ -94,33 +116,6 @@ namespace Rylobot
 		/// <summary>Identify the support and resistance levels</summary>
 		private void CalculateLevels()
 		{
-			if (Range.Size < 3)
-				return;
-
-			// Use a fraction of the mean candle size as the hysteresis
-			var mcs = Instrument.MedianCandleSize(Range);
-			Hysteresis = Math.Max(mcs * 0.25, Instrument.Symbol.PipSize * 5);
-
-			// Find the stationary points in the close prices
-			var price = Instrument.CandleRange(Range).Select(c => c.Close).ToList();
-			foreach (var sp in FindStationaryPoints(price, Hysteresis))
-			{
-				var i0 = Range.Begini + sp.Item1.Begini;
-				var i1 = Range.Begini + sp.Item1.Endi;
-				var type = sp.Item2;
-
-				// Add the stationary point
-				var x = (i0 + i1) / 2.0;
-				var p =
-					type == EPeakType.InflectionUp || type == EPeakType.InflectionDown ? Instrument.CandleRange(i0+1,i1).Average(c => (double)c.Median) :
-					type == EPeakType.Minimum ? Instrument.CandleRange(i0,i1).Min(c => c.BodyLimit(-1)) :
-					type == EPeakType.Maximum ? Instrument.CandleRange(i0,i1).Max(c => c.BodyLimit(+1)) : 0.0;
-				StationaryPoints.Add(new StationaryPoint(x, p));
-			}
-			if (StationaryPoints.Count == 0)
-				return;
-
-			// Find the SnR levels
 			SnRLevels.Clear();
 			for (var done = false; !done;)
 			{
@@ -133,9 +128,9 @@ namespace Rylobot
 
 					// Find the closest bucket
 					// If the nearest bucket is further than the bucket size, insert a bucket
-					var d0 = idx >               0 ? (sp.Price - SnRLevels[idx-1].Price) : Hysteresis;
-					var d1 = idx < SnRLevels.Count ? (SnRLevels[idx  ].Price - sp.Price) : Hysteresis;
-					if (Misc.Min(d0,d1) >= Hysteresis)
+					var d0 = idx >               0 ? (sp.Price - SnRLevels[idx-1].Price) : BucketSize;
+					var d1 = idx < SnRLevels.Count ? (SnRLevels[idx  ].Price - sp.Price) : BucketSize;
+					if (Misc.Min(d0,d1) >= BucketSize)
 						SnRLevels.Insert(idx, new Level(sp.Price));
 					else
 						idx = d0 < d1 ? idx - 1 : idx;
@@ -145,9 +140,9 @@ namespace Rylobot
 				}
 
 				done = true;
-				var pip = Instrument.Symbol.PipSize;
 
 				// Adjust the prices to the mean for each bucket and remove empty buckets
+				var pip = Instrument.Symbol.PipSize;
 				SnRLevels.RemoveIf(x => x.Average.Count == 0);
 				foreach (var lvl in SnRLevels)
 				{
@@ -166,49 +161,126 @@ namespace Rylobot
 			SnRLevels.Sort(Cmp<Level>.From((l,r) => -l.Strength.CompareTo(r.Strength)));
 		}
 
-		/// <summary>Returns the index range of the peak and the peak type in the given values</summary>
-		private static IEnumerable<Tuple<Range,EPeakType>> FindStationaryPoints(IList<double> values, double hysteresis)
-		{
-			// Returns the gradient 'values[i1] - values[i0]'
-			Func<int, int, double> grad = (i1,i0) => values[i1] - values[i0];
 
-			for (int i = 1, iend = values.Count; i != iend;)
-			{
-				// Look for where the gradient of the values crosses (or touches) zero
-				if      (grad(i,i-1) > 0) for (++i; i != iend && grad(i,i-1) > 0; ++i) {}
-				else if (grad(i,i-1) < 0) for (++i; i != iend && grad(i,i-1) < 0; ++i) {}
-				else { ++i; continue; }
-				if (i == iend) break;
-				--i;
+		///// <summary>Identify the support and resistance levels</summary>
+		//private void CalculateLevels()
+		//{
+		//	if (Range.Size < 3)
+		//		return;
 
-				var sign0 = Math.Sign(grad(i,i-1));
+		//	// Use a fraction of the mean candle size as the hysteresis
+		//	var mcs = Instrument.MedianCandleSize(Range);
+		//	Hysteresis = Math.Max(mcs * 0.25, Instrument.Symbol.PipSize * 5);
 
-				// Look for where the values move away from the stationary point by more than 'hystersis'
-				var j = i + 1;
-				for (; j != iend && Math.Abs(grad(j,i)) < hysteresis; ++j) {}
-				if (j == iend) break;
+		//	// Find the stationary points in the close prices
+		//	var price = Instrument.CandleRange(Range).Select(c => c.Close).ToList();
+		//	foreach (var sp in FindStationaryPoints(price, Hysteresis))
+		//	{
+		//		var i0 = Range.Begini + sp.Item1.Begini;
+		//		var i1 = Range.Begini + sp.Item1.Endi;
+		//		var type = sp.Item2;
 
-				var sign1 = Math.Sign(grad(j,i));
+		//		// Add the stationary point
+		//		var x = (i0 + i1) / 2.0;
+		//		var p =
+		//			type == EPeakType.InflectionUp || type == EPeakType.InflectionDown ? Instrument.CandleRange(i0+1,i1).Average(c => (double)c.Median) :
+		//			type == EPeakType.Minimum ? Instrument.CandleRange(i0,i1).Min(c => c.BodyLimit(-1)) :
+		//			type == EPeakType.Maximum ? Instrument.CandleRange(i0,i1).Max(c => c.BodyLimit(+1)) : 0.0;
+		//		StationaryPoints.Add(new StationaryPoint(x, p));
+		//	}
+		//	if (StationaryPoints.Count == 0)
+		//		return;
 
-				var type =
-					sign0 < 0 && sign1 > 0 ? EPeakType.Minimum :
-					sign0 < 0 && sign1 < 0 ? EPeakType.InflectionDown :
-					sign0 > 0 && sign1 > 0 ? EPeakType.InflectionUp :
-					EPeakType.Maximum;
+		//	// Find the SnR levels
+		//	SnRLevels.Clear();
+		//	for (var done = false; !done;)
+		//	{
+		//		// Sort the stationary points into their nearest bucket
+		//		foreach (var sp in StationaryPoints)
+		//		{
+		//			// Find the nearest level to 'sp'
+		//			var idx = SnRLevels.BinarySearch(x => x.Price.CompareTo(sp.Price));
+		//			if (idx < 0) idx = ~idx;
 
-				// Return the stationary point
-				yield return Tuple.Create(new Range(i,j), type);
-				i = j;
-			}
-		}
-		private enum EPeakType
-		{
-			Minimum,
-			Maximum,
-			InflectionUp,
-			InflectionDown,
-		}
+		//			// Find the closest bucket
+		//			// If the nearest bucket is further than the bucket size, insert a bucket
+		//			var d0 = idx >               0 ? (sp.Price - SnRLevels[idx-1].Price) : Hysteresis;
+		//			var d1 = idx < SnRLevels.Count ? (SnRLevels[idx  ].Price - sp.Price) : Hysteresis;
+		//			if (Misc.Min(d0,d1) >= Hysteresis)
+		//				SnRLevels.Insert(idx, new Level(sp.Price));
+		//			else
+		//				idx = d0 < d1 ? idx - 1 : idx;
 
+		//			// Add 'sp' to the average for the bucket
+		//			SnRLevels[idx].Average.Add((double)sp.Price);
+		//		}
+
+		//		done = true;
+		//		var pip = Instrument.Symbol.PipSize;
+
+		//		// Adjust the prices to the mean for each bucket and remove empty buckets
+		//		SnRLevels.RemoveIf(x => x.Average.Count == 0);
+		//		foreach (var lvl in SnRLevels)
+		//		{
+		//			done &= Misc.Abs(lvl.Price - lvl.Average.Mean) < pip;
+		//			lvl.Price = lvl.Average.Mean;
+		//			lvl.Strength = lvl.Average.Count;
+		//			lvl.Average.Reset();
+		//		}
+		//	}
+
+		//	// Normalise the strength values
+		//	var max = SnRLevels.Max(x => x.Strength);
+		//	SnRLevels.ForEach(x => x.Strength /= max);
+
+		//	// Sort the levels by strength
+		//	SnRLevels.Sort(Cmp<Level>.From((l,r) => -l.Strength.CompareTo(r.Strength)));
+		//}
+
+		///// <summary>Returns the index range of the peak and the peak type in the given values</summary>
+		//private static IEnumerable<Tuple<Range,EPeakType>> FindStationaryPoints(IList<double> values, double hysteresis)
+		//{
+		//	// Returns the gradient 'values[i1] - values[i0]'
+		//	Func<int, int, double> grad = (i1,i0) => values[i1] - values[i0];
+
+		//	for (int i = 1, iend = values.Count; i != iend;)
+		//	{
+		//		// Look for where the gradient of the values crosses (or touches) zero
+		//		if      (grad(i,i-1) > 0) for (++i; i != iend && grad(i,i-1) > 0; ++i) {}
+		//		else if (grad(i,i-1) < 0) for (++i; i != iend && grad(i,i-1) < 0; ++i) {}
+		//		else { ++i; continue; }
+		//		if (i == iend) break;
+		//		--i;
+
+		//		var sign0 = Math.Sign(grad(i,i-1));
+
+		//		// Look for where the values move away from the stationary point by more than 'hystersis'
+		//		var j = i + 1;
+		//		for (; j != iend && Math.Abs(grad(j,i)) < hysteresis; ++j) {}
+		//		if (j == iend) break;
+
+		//		var sign1 = Math.Sign(grad(j,i));
+
+		//		var type =
+		//			sign0 < 0 && sign1 > 0 ? EPeakType.Minimum :
+		//			sign0 < 0 && sign1 < 0 ? EPeakType.InflectionDown :
+		//			sign0 > 0 && sign1 > 0 ? EPeakType.InflectionUp :
+		//			EPeakType.Maximum;
+
+		//		// Return the stationary point
+		//		yield return Tuple.Create(new Range(i,j), type);
+		//		i = j;
+		//	}
+		//}
+		//private enum EPeakType
+		//{
+		//	Minimum,
+		//	Maximum,
+		//	InflectionUp,
+		//	InflectionDown,
+		//}
+
+		[DebuggerDisplay("{Index} {Price}")]
 		public class StationaryPoint
 		{
 			public StationaryPoint(double index, QuoteCurrency price)
@@ -223,6 +295,8 @@ namespace Rylobot
 			/// <summary>The price value at the stationary point</summary>
 			public QuoteCurrency Price { get; private set; }
 		}
+
+		[DebuggerDisplay("{Price} Str={Strength}")]
 		public class Level
 		{
 			public Level(QuoteCurrency price)

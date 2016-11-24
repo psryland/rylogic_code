@@ -10,10 +10,12 @@
 #include "pr/common/range.h"
 #include "pr/common/fmt.h"
 #include "pr/common/repeater.h"
+#include "pr/common/algorithm.h"
 #include "pr/common/interpolate.h"
 #include "pr/common/flags_enum.h"
 #include "pr/container/vector.h"
 #include "pr/container/deque.h"
+#include "pr/container/ring.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/interpolate.h"
 

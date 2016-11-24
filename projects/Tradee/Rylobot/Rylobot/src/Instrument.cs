@@ -128,7 +128,7 @@ namespace Rylobot
 			private set;
 		}
 
-		/// <summary>The high res data for the instrument</summary>
+		/// <summary>The high res data for the instrument. 'x' is the CAlgo index, 'y' is the ask price, 'z' is the bid price, 'w' is unused</summary>
 		public List<Vec4d> HighRes
 		{
 			get;
@@ -278,7 +278,7 @@ namespace Rylobot
 		/// Iterate through the high res price data over the given range with a step size of 'step'.
 		/// 'first' and 'last' floating point NegIdx's (not indices in HighRes)
 		/// 'step' is the increment size in indices to move with each returned value</summary>
-		public IEnumerable<Vec4d> HighResRange(double idx_min, double idx_max, double step)
+		public IEnumerable<Vec4d> HighResRange(double idx_min, double idx_max, double? step = null)
 		{
 			var first = idx_min - (double)FirstIdx;
 			var last  = idx_max - (double)FirstIdx;
@@ -299,26 +299,35 @@ namespace Rylobot
 			{
 				yield return pt;
 
-				// Scan forward to the next price point to output
-				X += step;
-
-				// Find the range of the ask/bid price for the skipped price values
-				// Return the average X position of the skipped values
-				var cnt = 0;
-				pt = new Vec4d(0, double.MinValue, double.MaxValue, 0);
-				for (++i; i < iend; ++i)
+				// Get the next point
+				if (step == null)
 				{
-					pt.x += HighRes[i].x;
-					pt.y = Math.Max(pt.y, HighRes[i].y);
-					pt.z = Math.Min(pt.z, HighRes[i].z);
-					++cnt;
-					if (HighRes[i].x > X)
-						break;
+					if (++i < iend)
+						pt = HighRes[i];
 				}
-				pt.x /= cnt;
+				// Scan forward to the next price point to output
+				else
+				{
+					X += step.Value;
+
+					// Find the range of the ask/bid price for the skipped price values
+					// Return the average X position of the skipped values
+					var cnt = 0;
+					pt = new Vec4d(0, double.MinValue, double.MaxValue, 0);
+					for (++i; i < iend; ++i)
+					{
+						pt.x += HighRes[i].x;
+						pt.y = Math.Max(pt.y, HighRes[i].y);
+						pt.z = Math.Min(pt.z, HighRes[i].z);
+						++cnt;
+						if (HighRes[i].x > X)
+							break;
+					}
+					pt.x /= cnt;
+				}
 			}
 		}
-		public IEnumerable<Vec4d> HighResRange(RangeF idx_range, double step)
+		public IEnumerable<Vec4d> HighResRange(RangeF idx_range, double? step = null)
 		{
 			return HighResRange(idx_range.Begin, idx_range.End, step);
 		}

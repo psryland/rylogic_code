@@ -13,13 +13,14 @@ namespace view3d
 	{
 		using InitSet = std::set<View3DContext>;
 
-		InitSet                   m_inits;            // A unique id assigned to each Initialise call
-		ErrorCBStack              m_error_cb;         // A stack of error callback functions
-		bool                      m_compatible;       // True if the renderer will work on this system
-		pr::Renderer              m_rdr;              // The renderer
-		WindowCont                m_wnd_cont;         // The created windows
-		pr::ldr::ObjectCont       m_obj_cont;         // The created ldr objects
-		pr::ldr::GizmoCont        m_giz_cont;         // The created ldr gizmos
+		InitSet                   m_inits;      // A unique id assigned to each Initialise call
+		ErrorCBStack              m_error_cb;   // A stack of error callback functions
+		bool                      m_compatible; // True if the renderer will work on this system
+		pr::Renderer              m_rdr;        // The renderer
+		WindowCont                m_wnd_cont;   // The created windows
+		pr::ldr::ObjectCont       m_obj_cont;   // The created ldr objects
+		pr::ldr::GizmoCont        m_giz_cont;   // The created ldr gizmos
+		pr::ldr::ScriptSources    m_sources;    // A file watcher for loaded script source files
 		pr::script::EmbeddedLua<> m_lua;
 		std::recursive_mutex      m_mutex;
 
@@ -31,10 +32,17 @@ namespace view3d
 			,m_wnd_cont()
 			,m_obj_cont()
 			,m_giz_cont()
+			,m_sources(m_obj_cont, m_rdr, &m_lua)
 			,m_lua()
 			,m_mutex()
 		{
 			PR_ASSERT(PR_DBG, pr::meta::is_aligned_to<16>(this), "dll data not aligned");
+
+			// Hook up the sources events
+			m_sources.OnError += [&](pr::ldr::ScriptSources&, pr::ErrorEventArgs const& args)
+			{
+				ReportError(args.m_msg.c_str());
+			};
 		}
 		~Context()
 		{
@@ -57,6 +65,24 @@ namespace view3d
 				throw std::exception("Attempt to pop an error callback that is not the most recently pushed callback. This is likely a destruction order probably");
 
 			m_error_cb.pop_back();
+		}
+
+		// Report an error for this window
+		void ReportError(wchar_t const* msg)
+		{
+			auto error_cb = m_error_cb.back();
+			error_cb(msg);
+		}
+
+		// Load/Add a script source
+		pr::Guid LoadScriptSource(wchar_t const* filepath, bool additional, bool async, pr::script::Includes<> const& includes)
+		{
+			// If this is not an additional load, clear the scene first
+			if (!additional)
+				m_sources.Clear();
+
+			// Add 'filepath' to the sources
+			return m_sources.AddFile(filepath, async, includes);
 		}
 	};
 }

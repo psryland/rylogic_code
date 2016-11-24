@@ -46,19 +46,7 @@ namespace pr.ldr
 			}
 		}
 
-		// Ldr single string
-		public static string GroupStart(string name)
-		{
-			return Str.Build("*Group ",name,"\n{\n");
-		}
-		public static string GroupStart(string name, Colour32 colour)
-		{
-			return Str.Build("*Group ",name," ",colour,"\n{\n");
-		}
-		public static string GroupEnd()
-		{
-			return "}\n";
-		}
+		// Type to string helpers
 		public static string Vec2(v2 vec)
 		{
 			return "{0} {1}".Fmt(vec.x,vec.y);
@@ -79,6 +67,8 @@ namespace pr.ldr
 		{
 			return "{0} {1} {2} {3}".Fmt(Vec4(mat.x),Vec4(mat.y),Vec4(mat.z),Vec4(mat.w));
 		}
+
+		// Ldr element helpers
 		public static string Position(v4 position, bool newline = false)
 		{
 			return
@@ -86,12 +76,27 @@ namespace pr.ldr
 				position == v4.Origin ? string.Empty :
 				"*o2w{*pos{" + Vec3(position) + "}}" + (newline?"\n":"");
 		}
+		public static string Position(v4? position, bool newline = false)
+		{
+			return position != null ? Position(position.Value, newline) : string.Empty;
+		}
 		public static string Transform(m4x4 o2w, bool newline = false)
 		{
 			return 
 				o2w == m4x4.Identity ? string.Empty :
 				o2w.rot == m3x4.Identity ? Position(o2w.pos, newline) :
 				"*o2w{*m4x4{" + Mat4x4(o2w) + "}}" + (newline?"\n":"");
+		}
+		public static string Transform(m4x4? o2w, bool newline = false)
+		{
+			return o2w != null ? Transform(o2w.Value, newline) : string.Empty;
+		}
+		public static string Transform(m4x4? o2w, v4? pos, bool newline = false)
+		{
+			return
+				o2w != null ? Transform(o2w.Value, newline) :
+				pos != null ? Position(pos.Value, newline) :
+				string.Empty;
 		}
 		public static string Colour(uint col)
 		{
@@ -123,25 +128,41 @@ namespace pr.ldr
 		{
 			return "*CornerRadius {{{0}}}".Fmt(rad);
 		}
-		public static string Line(string name, Colour32 colour, v4 start, v4 end)
+
+		// Ldr single string
+		public static string GroupStart(string name)
 		{
-			return Str.Build("*Line ",name," ",colour," {",Vec3(start)," ",Vec3(end),"}\n");
+			return Str.Build("*Group ",name,"\n{\n");
 		}
-		public static string LineD(string name, Colour32 colour, v4 start, v4 direction)
+		public static string GroupStart(string name, Colour32 colour)
 		{
-			return Str.Build("*LineD ",name," ",colour," {",Vec3(start)," ",Vec3(direction),"}\n");
+			return Str.Build("*Group ",name," ",colour,"\n{\n");
 		}
-		public static string LineStrip(string name, Colour32 colour, int width, IEnumerable<v4> points)
+		public static string GroupEnd(m4x4? o2w = null, v4? pos = null)
 		{
-			return Str.Build("*LineStrip ",name," ",colour," {",Width(width),points.Select(x => " "+Vec3(x)),"}");
+			return Str.Build(Transform(o2w, pos, newline:true), "}\n");
 		}
-		public static string Ellipse(string name, Colour32 colour, int axis_id, float rx, float ry, v4 position)
+		public static string Line(string name, Colour32 colour, v4 start, v4 end, m4x4? o2w = null, v4? pos = null)
 		{
-			return Str.Build("*Ellipse ",name," ",colour," {",axis_id," ",rx," ",ry," ",Position(position),"}\n");
+			return Str.Build("*Line ",name," ",colour," {",Vec3(start)," ",Vec3(end)," ",Transform(o2w, pos),"}\n");
 		}
-		public static string Rect(string name, Colour32 colour, int axis_id, float w, float h, bool solid, v4 position)
+		public static string LineD(string name, Colour32 colour, v4 start, v4 direction, m4x4? o2w = null, v4? pos = null)
 		{
-			return Str.Build("*Rect ",name," ",colour," {",axis_id," ",w," ",h," ",Solid(solid),Position(position),"}\n");
+			return Str.Build("*LineD ",name," ",colour," {",Vec3(start)," ",Vec3(direction)," ",Transform(o2w, pos),"}\n");
+		}
+		public static string LineStrip(string name, Colour32 colour, int width, IEnumerable<v4> points, m4x4? o2w = null, v4? pos = null)
+		{
+			var w = Width(width);
+			var pts = points.Select(x => " "+Vec3(x));
+			return Str.Build("*LineStrip ",name," ",colour," {",w," ",pts," ",Transform(o2w, pos),"}");
+		}
+		public static string Ellipse(string name, Colour32 colour, int axis_id, float rx, float ry, m4x4? o2w = null, v4? pos = null)
+		{
+			return Str.Build("*Ellipse ",name," ",colour," {",axis_id," ",rx," ",ry," ",Transform(o2w, pos),"}\n");
+		}
+		public static string Rect(string name, Colour32 colour, int axis_id, float w, float h, bool solid, m4x4? o2w = null, v4? pos = null)
+		{
+			return Str.Build("*Rect ",name," ",colour," {",axis_id," ",w," ",h," ",Solid(solid)," ",Transform(o2w, pos),"}\n");
 		}
 		public static string Axis(string name, Colour32 colour, m4x4 basis, float size = 1f)
 		{
@@ -151,33 +172,21 @@ namespace pr.ldr
 		{
 			return Axis(name, colour, new m4x4(basis, pos), size);
 		}
-		public static string Box(string name, Colour32 colour, v4 position, float size)
+		public static string Box(string name, Colour32 colour, float size, m4x4? o2w = null, v4? pos = null)
 		{
-			return Str.Build("*Box ",name," ",colour," {",size," ",Position(position),"}\n");
+			return Str.Build("*Box ",name," ",colour," {",size," ",Transform(o2w, pos),"}\n");
 		}
-		public static string Box(string name, Colour32 colour, v4 position, v4 dim)
+		public static string Box(string name, Colour32 colour, v4 dim, m4x4? o2w = null, v4? pos = null)
 		{
-			return Str.Build("*Box ",name," ",colour," {",dim.x," ",dim.y," ",dim.z," ",Position(position),"}\n");
+			return Str.Build("*Box ",name," ",colour," {",dim.x," ",dim.y," ",dim.z," ",Transform(o2w, pos),"}\n");
 		}
-		public static string Box(string name, Colour32 colour, m4x4 o2w, float size)
+		public static string Sphere(string name, Colour32 colour, float radius, m4x4? o2w = null, v4? pos = null)
 		{
-			return Str.Build("*Box ",name," ",colour," {",size," ",Transform(o2w),"}\n");
+			return Str.Build("*Sphere ",name," ",colour," {",radius," ",Transform(o2w, pos),"}\n");
 		}
-		public static string Box(string name, Colour32 colour, m4x4 o2w, v4 dim)
+		public static string Grid(string name, Colour32 colour, float dimx, float dimy, int divx, int divy, m4x4? o2w = null, v4? pos = null)
 		{
-			return Str.Build("*Box ",name," ",colour," {",dim.x," ",dim.y," ",dim.z," ",Transform(o2w),"}\n");
-		}
-		public static string Sphere(string name, Colour32 colour, float radius)
-		{
-			return Sphere(name, colour, radius, v4.Origin);
-		}
-		public static string Sphere(string name, Colour32 colour, float radius, v4 position)
-		{
-			return Str.Build("*Sphere ",name," ",colour," {",radius," ",Position(position),"}\n");
-		}
-		public static string Grid(string name, Colour32 colour, float dimx, float dimy, int divx, int divy, v4 position)
-		{
-			return Str.Build("*GridWH ",name," ",colour," {",dimx," ",dimy," ",divx," ",divy," ",Position(position),"}\n");
+			return Str.Build("*GridWH ",name," ",colour," {",dimx," ",dimy," ",divx," ",divy," ",Transform(o2w, pos),"}\n");
 		}
 	}
 
@@ -332,57 +341,33 @@ namespace pr.ldr
 			Append("*Grid ",name," ",colour," {",axis_id," ",width," ",height," ",wdiv," ",hdiv," ",Ldr.Position(position),"}\n");
 		}
 
-		public void Box()
+		public void Box(m4x4? o2w = null, v4? pos = null)
 		{
-			Box(string.Empty, Color.White);
+			Box(string.Empty, Color.White, o2w, pos);
 		}
-		public void Box(Colour32 colour, float size)
+		public void Box(Colour32 colour, float size, m4x4? o2w = null, v4? pos = null)
 		{
-			Box(colour, size, v4.Origin);
+			Box(string.Empty, colour, size, o2w, pos);
 		}
-		public void Box(Colour32 colour, float size, v4 position)
+		public void Box(Colour32 colour, float sx, float sy, float sz, m4x4? o2w = null, v4? pos = null)
 		{
-			Box(string.Empty, colour, size, position);
+			Box(string.Empty, colour, sx, sy, sz, o2w, pos);
 		}
-		public void Box(string name, Colour32 colour)
+		public void Box(string name, Colour32 colour, m4x4? o2w = null, v4? pos = null)
 		{
-			Box(name, colour, 1f);
+			Box(name, colour, 1f, o2w, pos);
 		}
-		public void Box(string name, Colour32 colour, float size)
+		public void Box(string name, Colour32 colour, float size, m4x4? o2w = null, v4? pos = null)
 		{
-			Box(name, colour, size, v4.Origin);
+			Append("*Box ",name," ",colour," {",size," ",Ldr.Transform(o2w, pos),"}\n");
 		}
-		public void Box(string name, Colour32 colour, float size, v4 position)
+		public void Box(string name, Colour32 colour, float sx, float sy, float sz, m4x4? o2w = null, v4? pos = null)
 		{
-			Append("*Box ",name," ",colour," {",size," ",Ldr.Position(position),"}\n");
+			Append("*Box ",name," ",colour," {",sx," ",sy," ",sz," ",Ldr.Transform(o2w, pos),"}\n");
 		}
-		public void Box(string name, Colour32 colour, v4 dim)
+		public void Box(string name, Colour32 colour, v4 dim, m4x4? o2w = null, v4? pos = null)
 		{
-			Box(name, colour, dim, v4.Origin);
-		}
-		public void Box(string name, Colour32 colour, v4 dim, v4 position)
-		{
-			Append("*Box ",name," ",colour," {",dim.x," ",dim.y," ",dim.z," ",Ldr.Position(position),"}\n");
-		}
-		public void Box(string name, Colour32 colour, v4 dim, m4x4 o2w)
-		{
-			Append("*Box ",name," ",colour," {",dim.x," ",dim.y," ",dim.z," ",Ldr.Transform(o2w),"}\n");
-		}
-		public void Box(Colour32 colour, float sx, float sy, float sz)
-		{
-			Box(colour, sx, sy, sz, v4.Origin);
-		}
-		public void Box(Colour32 colour, float sx, float sy, float sz, v4 position)
-		{
-			Box(string.Empty, colour, sx, sy, sz, position);
-		}
-		public void Box(string name, Colour32 colour, float sx, float sy, float sz)
-		{
-			Box(name, colour, sx, sy, sz);
-		}
-		public void Box(string name, Colour32 colour, float sx, float sy, float sz, v4 position)
-		{
-			Append("*Box ",name," ",colour," {",sx," ",sy," ",sz," ",Ldr.Position(position),"}\n");
+			Append("*Box ",name," ",colour," {",dim.x," ",dim.y," ",dim.z," ",Ldr.Transform(o2w,pos),"}\n");
 		}
 
 		public void Sphere()
@@ -400,6 +385,15 @@ namespace pr.ldr
 		public void Sphere(string name, Colour32 colour, float radius, v4 position)
 		{
 			Append("*Sphere ",name," ",colour," {",radius," ",Ldr.Position(position),"}\n");
+		}
+
+		public void Cylinder(Colour32 colour, AxisId axis_id, float height, float radius, m4x4? o2w = null, v4? pos = null)
+		{
+			Cylinder(string.Empty, colour, axis_id, height, radius, o2w, pos);
+		}
+		public void Cylinder(string name, Colour32 colour, AxisId axis_id, float height, float radius, m4x4? o2w = null, v4? pos = null)
+		{
+			Append("*CylinderHR ",name," ",colour," {",axis_id," ",height," ",radius," ",Ldr.Transform(o2w,pos),"}\n");
 		}
 
 		public void Circle()

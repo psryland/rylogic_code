@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
@@ -53,15 +54,24 @@ namespace pr.gui
 		}
 
 		/// <summary>The underlying interop wrapper</summary>
-		public View3d View3d { get { return m_impl_view3d; } }
+		public View3d View3d
+		{
+			[DebuggerStepThrough] get { return m_impl_view3d; }
+		}
 		private View3d m_impl_view3d;
 
 		/// <summary>The binding to this control</summary>
-		public View3d.Window Window { get { return m_impl_wnd; } }
+		public View3d.Window Window
+		{
+			[DebuggerStepThrough] get { return m_impl_wnd; }
+		}
 		private View3d.Window m_impl_wnd;
 
 		/// <summary>The main camera</summary>
-		public View3d.CameraControls Camera { get { return Window.Camera; } }
+		public View3d.CameraControls Camera
+		{
+			[DebuggerStepThrough] get { return Window.Camera; }
+		}
 
 		/// <summary>Called whenever an error is generated in view3d</summary>
 		public event EventHandler<ReportErrorEventArgs> ReportError;

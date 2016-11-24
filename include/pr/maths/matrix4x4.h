@@ -245,7 +245,7 @@ namespace pr
 		{
 			assert("invalid view rect" && IsFinite(w) && IsFinite(h) && w > 0 && h > 0);
 			assert("invalid near/far planes" && IsFinite(zn) && IsFinite(zf) && zn > 0 && zf > 0 && (zn - zf) != 0);
-			auto rh = Sign<float>(righthanded);
+			auto rh = SignF(righthanded);
 			auto mat = Mat4x4{};
 			mat.x.x = 2.0f / w;
 			mat.y.y = 2.0f / h;
@@ -260,7 +260,7 @@ namespace pr
 		{
 			assert("invalid view rect" && IsFinite(w) && IsFinite(h) && w > 0 && h > 0);
 			assert("invalid near/far planes" && IsFinite(zn) && IsFinite(zf) && zn > 0 && zf > 0 && (zn - zf) != 0);
-			auto rh = Sign<float>(righthanded);
+			auto rh = SignF(righthanded);
 			auto mat = Mat4x4{};
 			mat.x.x = 2.0f * zn / w;
 			mat.y.y = 2.0f * zn / h;
@@ -275,7 +275,7 @@ namespace pr
 		{
 			assert("invalid view rect" && IsFinite(l)  && IsFinite(r) && IsFinite(t) && IsFinite(b) && (r - l) > 0 && (t - b) > 0);
 			assert("invalid near/far planes" && IsFinite(zn) && IsFinite(zf) && zn > 0 && zf > 0 && (zn - zf) != 0);
-			auto rh = Sign<float>(righthanded);
+			auto rh = SignF(righthanded);
 			auto mat = Mat4x4{};
 			mat.x.x = 2.0f * zn / (r - l);
 			mat.y.y = 2.0f * zn / (t - b);
@@ -292,7 +292,7 @@ namespace pr
 		{
 			assert("invalid aspect ratio" && IsFinite(aspect) && aspect > 0);
 			assert("invalid near/far planes" && IsFinite(zn) && IsFinite(zf) && zn > 0 && zf > 0 && (zn - zf) != 0);
-			auto rh = Sign<float>(righthanded);
+			auto rh = SignF(righthanded);
 			auto mat = Mat4x4{};
 			mat.y.y = 1.0f / pr::Tan(fovY/2);
 			mat.x.x = mat.y.y / aspect;

@@ -162,6 +162,7 @@
     <ClInclude Include="..\include\pr\geometry\cylinder.h" />
     <ClInclude Include="..\include\pr\geometry\deformablemesh.h" />
     <ClInclude Include="..\include\pr\geometry\distance.h" />
+    <ClInclude Include="..\include\pr\geometry\extrude.h" />
     <ClInclude Include="..\include\pr\geometry\geometry.h" />
     <ClInclude Include="..\include\pr\geometry\intersect.h" />
     <ClInclude Include="..\include\pr\geometry\line.h" />
@@ -251,7 +252,6 @@
     <ClInclude Include="..\include\pr\maths\spatial.h" />
     <ClInclude Include="..\include\pr\maths\spline.h" />
     <ClInclude Include="..\include\pr\maths\stat.h" />
-    <ClInclude Include="..\include\pr\maths\triangulate.h" />
     <ClInclude Include="..\include\pr\maths\vector2.h" />
     <ClInclude Include="..\include\pr\maths\vector3.h" />
     <ClInclude Include="..\include\pr\maths\vector4.h" />

@@ -615,9 +615,6 @@
     <ClInclude Include="..\include\pr\maths\stat.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\maths\triangulate.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\container\tri_table.h">
       <Filter>pr\container</Filter>
     </ClInclude>
@@ -959,6 +956,9 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\common\number.h">
       <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\extrude.h">
+      <Filter>pr\geometry</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

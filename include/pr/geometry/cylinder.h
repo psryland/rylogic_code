@@ -12,7 +12,7 @@ namespace pr
 	{
 		// Returns the number of verts and number of indices needed to hold geometry for a cylinder
 		template <typename Tvr, typename Tir>
-		void CylinderSize(std::size_t wedges, std::size_t layers, Tvr& vcount, Tir& icount)
+		void CylinderSize(int wedges, int layers, Tvr& vcount, Tir& icount)
 		{
 			if (wedges < 3) wedges = 3;
 			if (layers < 1) layers = 1;
@@ -32,11 +32,11 @@ namespace pr
 		// The texture coords assigned to the cylinder map a quad around the 'barrel' of the cylinder and a circle
 		// on the ends of the cylinder since this is the most likely way it would be textured
 		template <typename TVertIter, typename TIdxIter>
-		Props Cylinder(float radius0, float radius1, float height, float xscale ,float yscale ,std::size_t wedges, std::size_t layers, std::size_t num_colours, Colour32 const* colours, TVertIter v_out, TIdxIter i_out)
+		Props Cylinder(float radius0, float radius1, float height, float xscale ,float yscale ,int wedges, int layers, int num_colours, Colour32 const* colours, TVertIter v_out, TIdxIter i_out)
 		{
 			using VIdx = typename std::remove_reference<decltype(*i_out)>::type;
 			
-			std::size_t vcount,icount;
+			int vcount,icount;
 			if (wedges < 3) wedges = 3;
 			if (layers < 1) layers = 1;
 			CylinderSize(wedges, layers, vcount, icount);
@@ -56,8 +56,8 @@ namespace pr
 			float z  = -height * 0.5f;
 			float dz = height / layers;
 			float da = maths::tau / wedges;
-			std::size_t verts_per_layer = wedges + 1;
-			std::size_t ibase = 0, last = vcount - 1;
+			int verts_per_layer = wedges + 1;
+			int ibase = 0, last = vcount - 1;
 
 			v4 pt = v4(0, 0, z, 1.0f);
 			v4 nm = -v4ZAxis;
@@ -65,18 +65,18 @@ namespace pr
 
 			// Verts
 			SetPCNT(*v_out++, pt, cc(*col++), nm, uv);
-			for (std::size_t w = 0; w <= wedges; ++w) // Bottom face
+			for (int w = 0; w <= wedges; ++w) // Bottom face
 			{
 				float a = da*w;
 				pt = v4(cos(a) * radius0 * xscale, sin(a) * radius0 * yscale, z, 1.0f);
 				uv = v2(cos(a) * 0.5f + 0.5f, sin(a) * 0.5f + 0.5f);
 				SetPCNT(*v_out++, pt, cc(*col++), nm, uv);
 			}
-			for (std::size_t l = 0; l <= layers; ++l) // The walls
+			for (int l = 0; l <= layers; ++l) // The walls
 			{
 				float r  = Lerp(radius0, radius1, l/(float)layers);
 				float nz = radius0 - radius1;
-				for (std::size_t w = 0; w <= wedges; ++w)
+				for (int w = 0; w <= wedges; ++w)
 				{
 					float a = da*w + (l%2)*da*0.5f;
 					pt = v4(cos(a) * r * xscale, sin(a) * r * yscale, z, 1.0f);
@@ -87,7 +87,7 @@ namespace pr
 				if (l != layers) z += dz;
 			}
 			nm = v4ZAxis;
-			for (std::size_t w = 0; w <= wedges; ++w) // Top face
+			for (int w = 0; w <= wedges; ++w) // Top face
 			{
 				float a = da*w + (layers%2)*da*0.5f;
 				pt = v4(cos(a) * radius1 * xscale, sin(a) * radius1 * yscale, z, 1.0f);
@@ -100,16 +100,16 @@ namespace pr
 
 			// Faces
 			ibase = 1;
-			for (std::size_t w = 0; w != wedges; ++w) // Bottom face
+			for (int w = 0; w != wedges; ++w) // Bottom face
 			{
 				*i_out++ = checked_cast<VIdx>(0);
 				*i_out++ = checked_cast<VIdx>(ibase + w + 1);
 				*i_out++ = checked_cast<VIdx>(ibase + w);
 			}
 			ibase += verts_per_layer;
-			for (std::size_t l = 0; l != layers; ++l) // The walls
+			for (int l = 0; l != layers; ++l) // The walls
 			{
-				for (std::size_t w = 0; w != wedges; ++w)
+				for (int w = 0; w != wedges; ++w)
 				{
 					*i_out++ = checked_cast<VIdx>(ibase + w);
 					*i_out++ = checked_cast<VIdx>(ibase + w + 1);
@@ -121,7 +121,7 @@ namespace pr
 				ibase += verts_per_layer;
 			}
 			ibase += verts_per_layer;
-			for (std::size_t w = 0; w != wedges; ++w) // Top face
+			for (int w = 0; w != wedges; ++w) // Top face
 			{
 				*i_out++ = checked_cast<VIdx>(ibase + w);
 				*i_out++ = checked_cast<VIdx>(ibase + w + 1);

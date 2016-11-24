@@ -30,6 +30,7 @@
 #include "pr/common/cast.h"
 #include "pr/container/vector.h"
 #include "pr/filesys/fileex.h"
+#include "pr/filesys/filewatch.h"
 #include "pr/script/reader.h"
 #include "pr/script/embedded_lua.h"
 #include "pr/macros/count_of.h"
@@ -44,6 +45,7 @@
 #include "pr/linedrawer/ldr_gizmo.h"
 #include "pr/linedrawer/ldr_tools.h"
 #include "pr/linedrawer/ldr_script_editor_dlg.h"
+#include "pr/linedrawer/ldr_sources.h"
 #include "pr/win32/win32.h"
 
 #include "pr/view3d/view3d.h"
@@ -52,8 +54,8 @@
 namespace view3d
 {
 	typedef std::unique_ptr<pr::ldr::ScriptEditorUI> EditorPtr;
-	typedef std::set<View3DObject>  ObjectCont;
-	typedef std::set<View3DGizmo>   GizmoCont;
+	typedef std::set<View3DObject>  ObjectSet;
+	typedef std::set<View3DGizmo>   GizmoSet;
 	typedef std::set<View3DWindow>  WindowCont;
 	typedef std::set<EditorPtr>     EditorCont;
 	typedef std::lock_guard<std::recursive_mutex> LockGuard;
