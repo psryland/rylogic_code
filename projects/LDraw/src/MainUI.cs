@@ -10,6 +10,7 @@ using System.Windows.Forms;
 using pr.extn;
 using pr.gfx;
 using pr.gui;
+using pr.maths;
 using pr.util;
 using pr.win32;
 using ToolStripContainer = pr.gui.ToolStripContainer;
@@ -38,8 +39,7 @@ namespace LDraw
 		private ToolStripMenuItem m_menu_nav;
 		private ToolStripMenuItem m_menu_nav_reset_view;
 		private ToolStripMenuItem m_menu_nav_view;
-		private ToolStripMenuItem m_menu_nav_set_focus_position;
-		private ToolStripMenuItem m_menu_nav_set_camera_position;
+		private ToolStripMenuItem m_menu_nav_camera;
 		private ToolStripSeparator toolStripSeparator4;
 		private ToolStripMenuItem m_menu_nav_align;
 		private ToolStripSeparator toolStripSeparator5;
@@ -66,7 +66,7 @@ namespace LDraw
 		private ToolStripMenuItem m_menu_nav_align_y;
 		private ToolStripMenuItem m_menu_nav_align_z;
 		private ToolStripMenuItem m_menu_nav_align_current;
-		private ToolStripSeparator toolStripSeparator11;
+		private ToolStripSeparator m_sep_saved_views;
 		private ToolStripMenuItem m_menu_nav_saved_views_clear;
 		private ToolStripSeparator toolStripSeparator12;
 		private ToolStripMenuItem m_menu_rendering;
@@ -152,7 +152,6 @@ namespace LDraw
 			InitializeComponent();
 
 			Settings = new Settings(Util.ResolveUserDocumentsPath("Rylogic", "LDraw", "settings.xml"));
-			View3d = new View3d();
 			Model = new Model(this);
 
 			SetupUI();
@@ -162,15 +161,15 @@ namespace LDraw
 		}
 		protected override void Dispose(bool disposing)
 		{
+			CameraUI = null;
+			Model = null;
 			Util.Dispose(ref m_dc);
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
-			Model = null;
-			View3d = null;
 		}
 		protected override void OnInvalidated(InvalidateEventArgs e)
 		{
-			Scene.Invalidate();
+			Model.Scene.Invalidate();
 			base.OnInvalidated(e);
 		}
 		protected override void OnFormClosed(FormClosedEventArgs e)
@@ -218,31 +217,19 @@ namespace LDraw
 		}
 		private Model m_impl_model;
 
-		/// <summary>A view3d context reference that lives for the lifetime of the application</summary>
-		public View3d View3d
-		{
-			[DebuggerStepThrough] get { return m_view3d; }
-			set
-			{
-				if (m_view3d == value) return;
-				Util.Dispose(ref m_view3d);
-				m_view3d = value;
-			}
-		}
-		private View3d m_view3d;
-
-		/// <summary>The 3d scene</summary>
-		public ChartControl Scene
-		{
-			get;
-			private set;
-		}
-
 		/// <summary>Main application status label</summary>
 		public ToolStripStatusLabel Status
 		{
 			get { return m_status; }
 		}
+
+		/// <summary>Lazy created camera properties UI</summary>
+		public CameraUI CameraUI
+		{
+			get { return m_camera_ui ?? (m_camera_ui = new CameraUI(this)); }
+			set { Util.Dispose(ref m_camera_ui); }
+		}
+		private CameraUI m_camera_ui;
 
 		/// <summary>Set up the UI</summary>
 		private void SetupUI()
@@ -261,57 +248,196 @@ namespace LDraw
 			{
 				OpenFile(null, true);
 			};
+			m_recent_files = new RecentFiles(m_menu_file_recent_files, HandleRecentFile);
+			m_recent_files.Import(Settings.RecentFiles);
+			m_recent_files.RecentListChanged += (s,a) => Settings.RecentFiles = m_recent_files.Export();
 			m_menu_file_exit.Click += (s,a) =>
 			{
 				Close();
 			};
-			m_recent_files = new RecentFiles(m_menu_file_recent_files, HandleRecentFile);
-			m_recent_files.Import(Settings.RecentFiles);
-			m_recent_files.RecentListChanged += (s,a) => Settings.RecentFiles = m_recent_files.Export();
 
 			// Navigation Menu
+			m_menu_nav_reset_view_all.Click += (s,a) =>
+			{
+				Model.ResetView(View3d.ESceneBounds.All);
+				Invalidate();
+			};
+			m_menu_nav_reset_view_selected.Click += (s,a) =>
+			{
+				Model.ResetView(View3d.ESceneBounds.Selected);
+				Invalidate();
+			};
+			m_menu_nav_reset_view_visible.Click += (s,a) =>
+			{
+				Model.ResetView(View3d.ESceneBounds.Visible);
+				Invalidate();
+			};
+			m_menu_nav_view_xpos.Click += (s, a) =>
+			{
+				Model.CamForwardAxis(-v4.XAxis);
+				Invalidate();
+			};
+			m_menu_nav_view_xneg.Click += (s, a) =>
+			{
+				Model.CamForwardAxis(+v4.XAxis);
+				Invalidate();
+			};
+			m_menu_nav_view_ypos.Click += (s, a) =>
+			{
+				Model.CamForwardAxis(-v4.YAxis);
+				Invalidate();
+			};
+			m_menu_nav_view_yneg.Click += (s, a) =>
+			{
+				Model.CamForwardAxis(+v4.YAxis);
+				Invalidate();
+			};
+			m_menu_nav_view_zpos.Click += (s, a) =>
+			{
+				Model.CamForwardAxis(-v4.ZAxis);
+				Invalidate();
+			};
+			m_menu_nav_view_zneg.Click += (s, a) =>
+			{
+				Model.CamForwardAxis(+v4.ZAxis);
+				Invalidate();
+			};
+			m_menu_nav_view_xyz.Click += (s, a) =>
+			{
+				Model.CamForwardAxis(new v4(-0.577350f, -0.577350f, -0.577350f, 0));
+				Invalidate();
+			};
+			m_menu_nav_align_none.Click += (s, a) =>
+			{
+				AlignCamera(v4.Zero);
+			};
+			m_menu_nav_align_x.Click += (s, a) =>
+			{
+				AlignCamera(v4.XAxis);
+			};
+			m_menu_nav_align_y.Click += (s, a) =>
+			{
+				AlignCamera(v4.YAxis);
+			};
+			m_menu_nav_align_z.Click += (s, a) =>
+			{
+				AlignCamera(v4.ZAxis);
+			};
+			m_menu_nav_align_current.Click += (s, a) =>
+			{
+				AlignCamera(Model.Camera.O2W.y);
+			};
+			m_menu_nav_save_view.Click += (s,a) =>
+			{
+				Model.SaveView();
+				UpdateSavedViewsMenu();
+			};
+			m_menu_nav_saved_views_clear.Click += (s,a) =>
+			{
+				Model.SavedViews.Clear();
+				UpdateSavedViewsMenu();
+			};
+			m_menu_nav_camera.Click += (s,a) =>
+			{
+				ShowCameraUI();
+			};
 
 			// Data Menu
-			m_menu_data_clear_scene.Click+= (s,a) =>
+			m_menu_data_clear_scene.Click += (s,a) =>
 			{
 				Model.ClearScene();
-				Scene.Invalidate();
+				Invalidate();
+			};
+			m_menu_data_auto_refresh.Click += (s,a) =>
+			{
 			};
 			m_menu_data_create_demo_scene.Click += (s,a) =>
 			{
 				Model.CreateDemoScene();
-				Scene.Invalidate();
+				Invalidate();
+			};
+			m_menu_data_object_manager.Click += (s,a) =>
+			{
 			};
 
 			// Rendering Menu
+			m_menu_rendering_show_focus.Click += (s,a) =>
+			{
+				Model.Window.FocusPointVisible = !Model.Window.FocusPointVisible;
+				Invalidate();
+				UpdateUI();
+			};
+			m_menu_rendering_show_origin.Click += (s,a) =>
+			{
+				Model.Window.OriginVisible = !Model.Window.OriginVisible;
+				Invalidate();
+				UpdateUI();
+			};
+			m_menu_rendering_show_selection.Click += (s,a) =>
+			{
+			};
+			m_menu_rendering_show_bounds.Click += (s,a) =>
+			{
+			};
+			m_menu_rendering_wireframe.Click += (s,a) =>
+			{
+				Model.CycleFillMode();
+				Invalidate();
+				UpdateUI();
+			};
+			m_menu_rendering_orthographic.Click += (s,a) =>
+			{
+				Model.Camera.Orthographic = !Model.Camera.Orthographic;
+				Invalidate();
+				UpdateUI();
+			};
+			m_menu_rendering_lighting.Click += (s,a) =>
+			{
+			};
 
 			// Window menu
+			m_menu_window_always_on_top.Click += (s,a) =>
+			{
+			};
+			m_menu_window_example_script.Click += (s,a) =>
+			{
+				ShowExampleScript();
+			};
+			m_menu_window_about.Click += (s,a) =>
+			{
+			};
 			#endregion
 
 			#region Scene
-			Scene = new ChartControl(string.Empty, Settings.Scene);
-			Scene.Name                   = "Scene";
-			Scene.BorderStyle            = BorderStyle.FixedSingle;
-			Scene.Dock                   = DockStyle.Fill;
-			Scene.DefaultMouseControl    = true;
-			Scene.Options.LockAspect     = 1.0f;
-			Scene.Options.NavigationMode = ChartControl.ENavMode.Scene3D;
-			Model.Window = Scene.Chart.Window;
+			Model.Scene.Name                     = "Scene";
+			Model.Scene.BorderStyle              = BorderStyle.FixedSingle;
+			Model.Scene.Dock                     = DockStyle.Fill;
+			Model.Scene.DefaultMouseControl      = true;
+			Model.Scene.DefaultKeyboardShortcuts = true;
+			Model.Scene.Options.LockAspect       = 1.0f;
+			Model.Scene.Options.NavigationMode   = ChartControl.ENavMode.Scene3D;
+			Model.Window.FocusPointVisible       = true;
+			//Model.Window.FocusPointSize        = 0.4f;
 			#endregion
 
 			#region Dock Container
-
 			m_menu_window.DropDownItems.Insert(0, m_dc.WindowsMenu());
 			m_dc.Options.TabStrip.AlwaysShowTabs = true;
 			m_dc.Options.TitleBar.ShowTitleBars = false;
-			var dc_scene = m_dc.Add2(new Dockable(Scene, "Scene"));
-			
+			var dc_scene = m_dc.Add2(new Dockable(Model.Scene, "Scene"));
 			#endregion
 		}
 
 		/// <summary>Update UI elements</summary>
 		private void UpdateUI(object sender = null, EventArgs args = null)
 		{
+			// Update menu state
+			m_menu_rendering_show_focus    .Checked = Model.Window.FocusPointVisible;
+			m_menu_rendering_show_origin   .Checked = Model.Window.OriginVisible;
+			m_menu_rendering_show_selection.Checked = false;
+			m_menu_rendering_show_bounds   .Checked = false;
+			m_menu_rendering_orthographic  .Checked = Model.Camera.Orthographic;
+			m_menu_rendering_wireframe.Text = Model.Window.FillMode.ToString();
 		}
 
 		/// <summary>Create a new file and an editor to edit the file</summary>
@@ -342,6 +468,57 @@ namespace LDraw
 			Model.OpenFile(filepath, additional);
 		}
 
+		/// <summary>Align the camera to an axis</summary>
+		private void AlignCamera(v4 axis)
+		{
+			m_menu_nav_align_none   .Checked = axis == v4.Zero;
+			m_menu_nav_align_x      .Checked = axis == v4.XAxis;
+			m_menu_nav_align_y      .Checked = axis == v4.YAxis;
+			m_menu_nav_align_z      .Checked = axis == v4.ZAxis;
+			m_menu_nav_align_current.Checked = axis == Model.Camera.O2W.y;
+			Model.AlignCamera(axis);
+			Invalidate();
+		}
+
+		/// <summary>Update the sub-menu of saved views</summary>
+		private void UpdateSavedViewsMenu()
+		{
+			// Remove all menu items
+			m_menu_nav_saved_views.DropDownItems.Clear();
+
+			// Add the saved views
+			foreach (var sv in Model.SavedViews)
+			{
+				var opt = m_menu_nav_saved_views.DropDownItems.Add2(new ToolStripMenuItem(sv.Name));
+				opt.Click += (s,a) =>
+				{
+					sv.Apply(Model.Camera);
+					Invalidate();
+				};
+				opt.MouseDown += (s,a) =>
+				{
+					if (a.Button != MouseButtons.Right) return;
+					var dd = (ToolStripDropDown)opt.GetCurrentParent();
+					dd.AutoClose = false;
+
+					var menu = new ContextMenuStrip();
+					menu.Items.Add2("Remove", null, (ss,aa) => Model.SavedViews.Remove(sv));
+					menu.Closed += (ss,aa) => { dd.AutoClose = true; dd.Close(); };
+					menu.Show(dd, opt.Bounds.X + a.X, opt.Bounds.Y + a.Y);
+				};
+			}
+
+			// Add the separator and clear option
+			m_menu_nav_saved_views.DropDownItems.Add(m_sep_saved_views);
+			m_menu_nav_saved_views.DropDownItems.Add(m_menu_nav_saved_views_clear);
+		}
+
+		/// <summary>Show the camera UI</summary>
+		private void ShowCameraUI()
+		{
+			CameraUI.Show(this);
+		}
+
 		/// <summary>Restore the last window position</summary>
 		private void RestoreWindowPosition()
 		{
@@ -363,6 +540,13 @@ namespace LDraw
 			OpenFile(filepath, (ModifierKeys & Keys.Shift) != 0);
 		}
 
+		/// <summary>Create a Text window containing the example script</summary>
+		private void ShowExampleScript()
+		{
+			var ui = m_dc.Add2(new ScriptUI(Model));
+			ui.Editor.Text = Model.View3d.ExampleScript;
+		}
+
 		#region Windows Form Designer generated code
 		private System.ComponentModel.IContainer components = null;
 		private void InitializeComponent()
@@ -374,52 +558,20 @@ namespace LDraw
 			this.m_dc = new pr.gui.DockContainer();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_new = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator8 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_open = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open_additional = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_recent_files = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_sep0 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_exit = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_data = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_data_clear_scene = new System.Windows.Forms.ToolStripMenuItem();
-			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_menu_data_create_demo_scene = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_data_auto_refresh = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_data_object_manager = new System.Windows.Forms.ToolStripMenuItem();
-			this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_nav = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_nav_reset_view = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_nav_reset_view_all = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_nav_reset_view_selected = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_nav_reset_view_visible = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_nav_view = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_nav_set_focus_position = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_nav_set_camera_position = new System.Windows.Forms.ToolStripMenuItem();
-			this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_menu_nav_align = new System.Windows.Forms.ToolStripMenuItem();
-			this.toolStripSeparator5 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_menu_nav_save_view = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_nav_saved_views = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_window = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_window_always_on_top = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_window_about = new System.Windows.Forms.ToolStripMenuItem();
-			this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_menu_window_example_script = new System.Windows.Forms.ToolStripMenuItem();
-			this.toolStripSeparator7 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_menu_file_new = new System.Windows.Forms.ToolStripMenuItem();
-			this.toolStripSeparator8 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_menu_rendering = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_rendering_show_focus = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_rendering_show_origin = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_rendering_show_selection = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_rendering_show_bounds = new System.Windows.Forms.ToolStripMenuItem();
-			this.toolStripSeparator9 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_menu_rendering_wireframe = new System.Windows.Forms.ToolStripMenuItem();
-			this.toolStripSeparator10 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_menu_rendering_orthographic = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_rendering_lighting = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_nav_align_x = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_nav_align_y = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_nav_align_z = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_nav_align_current = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_nav_align_none = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_nav_view_xpos = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_nav_view_xneg = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_nav_view_ypos = new System.Windows.Forms.ToolStripMenuItem();
@@ -427,12 +579,43 @@ namespace LDraw
 			this.m_menu_nav_view_zpos = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_nav_view_zneg = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_nav_view_xyz = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_nav_reset_view_all = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_nav_reset_view_selected = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_nav_reset_view_visible = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_nav_align = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_nav_align_none = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_nav_align_x = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_nav_align_y = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_nav_align_z = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_nav_align_current = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator5 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_nav_save_view = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_nav_saved_views = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_sep_saved_views = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_nav_saved_views_clear = new System.Windows.Forms.ToolStripMenuItem();
-			this.toolStripSeparator11 = new System.Windows.Forms.ToolStripSeparator();
 			this.toolStripSeparator12 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_nav_camera = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_data = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_data_clear_scene = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_data_auto_refresh = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_data_create_demo_scene = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_data_object_manager = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_rendering = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_rendering_show_focus = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_rendering_show_origin = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_rendering_show_selection = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_rendering_show_bounds = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator9 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_rendering_wireframe = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_rendering_orthographic = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator10 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_rendering_lighting = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_window = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_window_always_on_top = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator7 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_window_example_script = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_window_about = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.ContentPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
@@ -483,6 +666,7 @@ namespace LDraw
 			// 
 			this.m_dc.ActiveContent = null;
 			this.m_dc.ActiveDockable = null;
+			this.m_dc.ActivePane = null;
 			this.m_dc.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_dc.Location = new System.Drawing.Point(0, 0);
 			this.m_dc.Name = "m_dc";
@@ -518,6 +702,18 @@ namespace LDraw
 			this.m_menu_file.Name = "m_menu_file";
 			this.m_menu_file.Size = new System.Drawing.Size(37, 20);
 			this.m_menu_file.Text = "&File";
+			// 
+			// m_menu_file_new
+			// 
+			this.m_menu_file_new.Name = "m_menu_file_new";
+			this.m_menu_file_new.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.N)));
+			this.m_menu_file_new.Size = new System.Drawing.Size(236, 22);
+			this.m_menu_file_new.Text = "&New";
+			// 
+			// toolStripSeparator8
+			// 
+			this.toolStripSeparator8.Name = "toolStripSeparator8";
+			this.toolStripSeparator8.Size = new System.Drawing.Size(233, 6);
 			// 
 			// m_menu_file_open
 			// 
@@ -556,6 +752,196 @@ namespace LDraw
 			this.m_menu_file_exit.Size = new System.Drawing.Size(236, 22);
 			this.m_menu_file_exit.Text = "E&xit";
 			// 
+			// m_menu_nav
+			// 
+			this.m_menu_nav.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_nav_reset_view,
+            this.m_menu_nav_view,
+            this.toolStripSeparator4,
+            this.m_menu_nav_align,
+            this.toolStripSeparator5,
+            this.m_menu_nav_save_view,
+            this.m_menu_nav_saved_views,
+            this.toolStripSeparator12,
+            this.m_menu_nav_camera});
+			this.m_menu_nav.Name = "m_menu_nav";
+			this.m_menu_nav.Size = new System.Drawing.Size(77, 20);
+			this.m_menu_nav.Text = "&Navigation";
+			// 
+			// m_menu_nav_reset_view
+			// 
+			this.m_menu_nav_reset_view.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_nav_reset_view_all,
+            this.m_menu_nav_reset_view_selected,
+            this.m_menu_nav_reset_view_visible});
+			this.m_menu_nav_reset_view.Name = "m_menu_nav_reset_view";
+			this.m_menu_nav_reset_view.Size = new System.Drawing.Size(157, 22);
+			this.m_menu_nav_reset_view.Text = "&Reset View";
+			// 
+			// m_menu_nav_reset_view_all
+			// 
+			this.m_menu_nav_reset_view_all.Name = "m_menu_nav_reset_view_all";
+			this.m_menu_nav_reset_view_all.Size = new System.Drawing.Size(118, 22);
+			this.m_menu_nav_reset_view_all.Text = "&All";
+			// 
+			// m_menu_nav_reset_view_selected
+			// 
+			this.m_menu_nav_reset_view_selected.Name = "m_menu_nav_reset_view_selected";
+			this.m_menu_nav_reset_view_selected.Size = new System.Drawing.Size(118, 22);
+			this.m_menu_nav_reset_view_selected.Text = "&Selected";
+			// 
+			// m_menu_nav_reset_view_visible
+			// 
+			this.m_menu_nav_reset_view_visible.Name = "m_menu_nav_reset_view_visible";
+			this.m_menu_nav_reset_view_visible.Size = new System.Drawing.Size(118, 22);
+			this.m_menu_nav_reset_view_visible.Text = "&Visible";
+			// 
+			// m_menu_nav_view
+			// 
+			this.m_menu_nav_view.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_nav_view_xpos,
+            this.m_menu_nav_view_xneg,
+            this.m_menu_nav_view_ypos,
+            this.m_menu_nav_view_yneg,
+            this.m_menu_nav_view_zpos,
+            this.m_menu_nav_view_zneg,
+            this.m_menu_nav_view_xyz});
+			this.m_menu_nav_view.Name = "m_menu_nav_view";
+			this.m_menu_nav_view.Size = new System.Drawing.Size(157, 22);
+			this.m_menu_nav_view.Text = "&View";
+			// 
+			// m_menu_nav_view_xpos
+			// 
+			this.m_menu_nav_view_xpos.Name = "m_menu_nav_view_xpos";
+			this.m_menu_nav_view_xpos.Size = new System.Drawing.Size(211, 22);
+			this.m_menu_nav_view_xpos.Text = "Axis +X (&Right Side)";
+			// 
+			// m_menu_nav_view_xneg
+			// 
+			this.m_menu_nav_view_xneg.Name = "m_menu_nav_view_xneg";
+			this.m_menu_nav_view_xneg.Size = new System.Drawing.Size(211, 22);
+			this.m_menu_nav_view_xneg.Text = "Axis -X (&Left Side)";
+			// 
+			// m_menu_nav_view_ypos
+			// 
+			this.m_menu_nav_view_ypos.Name = "m_menu_nav_view_ypos";
+			this.m_menu_nav_view_ypos.Size = new System.Drawing.Size(211, 22);
+			this.m_menu_nav_view_ypos.Text = "Axis +Y (&Top)";
+			// 
+			// m_menu_nav_view_yneg
+			// 
+			this.m_menu_nav_view_yneg.Name = "m_menu_nav_view_yneg";
+			this.m_menu_nav_view_yneg.Size = new System.Drawing.Size(211, 22);
+			this.m_menu_nav_view_yneg.Text = "Axis -Y (&Bottom)";
+			// 
+			// m_menu_nav_view_zpos
+			// 
+			this.m_menu_nav_view_zpos.Name = "m_menu_nav_view_zpos";
+			this.m_menu_nav_view_zpos.Size = new System.Drawing.Size(211, 22);
+			this.m_menu_nav_view_zpos.Text = "Axis +Z (&Front)";
+			// 
+			// m_menu_nav_view_zneg
+			// 
+			this.m_menu_nav_view_zneg.Name = "m_menu_nav_view_zneg";
+			this.m_menu_nav_view_zneg.Size = new System.Drawing.Size(211, 22);
+			this.m_menu_nav_view_zneg.Text = "Axis -Z (Bac&k)";
+			// 
+			// m_menu_nav_view_xyz
+			// 
+			this.m_menu_nav_view_xyz.Name = "m_menu_nav_view_xyz";
+			this.m_menu_nav_view_xyz.Size = new System.Drawing.Size(211, 22);
+			this.m_menu_nav_view_xyz.Text = "Axis -X -Y -Z (&Perspective)";
+			// 
+			// toolStripSeparator4
+			// 
+			this.toolStripSeparator4.Name = "toolStripSeparator4";
+			this.toolStripSeparator4.Size = new System.Drawing.Size(154, 6);
+			// 
+			// m_menu_nav_align
+			// 
+			this.m_menu_nav_align.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_nav_align_none,
+            this.m_menu_nav_align_x,
+            this.m_menu_nav_align_y,
+            this.m_menu_nav_align_z,
+            this.m_menu_nav_align_current});
+			this.m_menu_nav_align.Name = "m_menu_nav_align";
+			this.m_menu_nav_align.Size = new System.Drawing.Size(157, 22);
+			this.m_menu_nav_align.Text = "&Align";
+			// 
+			// m_menu_nav_align_none
+			// 
+			this.m_menu_nav_align_none.Name = "m_menu_nav_align_none";
+			this.m_menu_nav_align_none.Size = new System.Drawing.Size(114, 22);
+			this.m_menu_nav_align_none.Text = "&None";
+			// 
+			// m_menu_nav_align_x
+			// 
+			this.m_menu_nav_align_x.Name = "m_menu_nav_align_x";
+			this.m_menu_nav_align_x.Size = new System.Drawing.Size(114, 22);
+			this.m_menu_nav_align_x.Text = "&X";
+			// 
+			// m_menu_nav_align_y
+			// 
+			this.m_menu_nav_align_y.Name = "m_menu_nav_align_y";
+			this.m_menu_nav_align_y.Size = new System.Drawing.Size(114, 22);
+			this.m_menu_nav_align_y.Text = "&Y";
+			// 
+			// m_menu_nav_align_z
+			// 
+			this.m_menu_nav_align_z.Name = "m_menu_nav_align_z";
+			this.m_menu_nav_align_z.Size = new System.Drawing.Size(114, 22);
+			this.m_menu_nav_align_z.Text = "&Z";
+			// 
+			// m_menu_nav_align_current
+			// 
+			this.m_menu_nav_align_current.Name = "m_menu_nav_align_current";
+			this.m_menu_nav_align_current.Size = new System.Drawing.Size(114, 22);
+			this.m_menu_nav_align_current.Text = "&Current";
+			// 
+			// toolStripSeparator5
+			// 
+			this.toolStripSeparator5.Name = "toolStripSeparator5";
+			this.toolStripSeparator5.Size = new System.Drawing.Size(154, 6);
+			// 
+			// m_menu_nav_save_view
+			// 
+			this.m_menu_nav_save_view.Name = "m_menu_nav_save_view";
+			this.m_menu_nav_save_view.Size = new System.Drawing.Size(157, 22);
+			this.m_menu_nav_save_view.Text = "&Save View";
+			// 
+			// m_menu_nav_saved_views
+			// 
+			this.m_menu_nav_saved_views.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_sep_saved_views,
+            this.m_menu_nav_saved_views_clear});
+			this.m_menu_nav_saved_views.Name = "m_menu_nav_saved_views";
+			this.m_menu_nav_saved_views.Size = new System.Drawing.Size(157, 22);
+			this.m_menu_nav_saved_views.Text = "Save&d Views";
+			// 
+			// m_sep_saved_views
+			// 
+			this.m_sep_saved_views.Name = "m_sep_saved_views";
+			this.m_sep_saved_views.Size = new System.Drawing.Size(165, 6);
+			// 
+			// m_menu_nav_saved_views_clear
+			// 
+			this.m_menu_nav_saved_views_clear.Name = "m_menu_nav_saved_views_clear";
+			this.m_menu_nav_saved_views_clear.Size = new System.Drawing.Size(168, 22);
+			this.m_menu_nav_saved_views_clear.Text = "&Clear Saved Views";
+			// 
+			// toolStripSeparator12
+			// 
+			this.toolStripSeparator12.Name = "toolStripSeparator12";
+			this.toolStripSeparator12.Size = new System.Drawing.Size(154, 6);
+			// 
+			// m_menu_nav_camera
+			// 
+			this.m_menu_nav_camera.Name = "m_menu_nav_camera";
+			this.m_menu_nav_camera.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.C)));
+			this.m_menu_nav_camera.Size = new System.Drawing.Size(157, 22);
+			this.m_menu_nav_camera.Text = "&Camera";
+			// 
 			// m_menu_data
 			// 
 			this.m_menu_data.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -575,6 +961,12 @@ namespace LDraw
 			this.m_menu_data_clear_scene.Size = new System.Drawing.Size(177, 22);
 			this.m_menu_data_clear_scene.Text = "&Clear Scene";
 			// 
+			// m_menu_data_auto_refresh
+			// 
+			this.m_menu_data_auto_refresh.Name = "m_menu_data_auto_refresh";
+			this.m_menu_data_auto_refresh.Size = new System.Drawing.Size(177, 22);
+			this.m_menu_data_auto_refresh.Text = "&Auto Refresh";
+			// 
 			// toolStripSeparator2
 			// 
 			this.toolStripSeparator2.Name = "toolStripSeparator2";
@@ -586,165 +978,16 @@ namespace LDraw
 			this.m_menu_data_create_demo_scene.Size = new System.Drawing.Size(177, 22);
 			this.m_menu_data_create_demo_scene.Text = "&Create Demo Scene";
 			// 
-			// m_menu_data_auto_refresh
+			// toolStripSeparator3
 			// 
-			this.m_menu_data_auto_refresh.Name = "m_menu_data_auto_refresh";
-			this.m_menu_data_auto_refresh.Size = new System.Drawing.Size(177, 22);
-			this.m_menu_data_auto_refresh.Text = "&Auto Refresh";
+			this.toolStripSeparator3.Name = "toolStripSeparator3";
+			this.toolStripSeparator3.Size = new System.Drawing.Size(174, 6);
 			// 
 			// m_menu_data_object_manager
 			// 
 			this.m_menu_data_object_manager.Name = "m_menu_data_object_manager";
 			this.m_menu_data_object_manager.Size = new System.Drawing.Size(177, 22);
 			this.m_menu_data_object_manager.Text = "&Object Manager";
-			// 
-			// toolStripSeparator3
-			// 
-			this.toolStripSeparator3.Name = "toolStripSeparator3";
-			this.toolStripSeparator3.Size = new System.Drawing.Size(174, 6);
-			// 
-			// m_menu_nav
-			// 
-			this.m_menu_nav.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_menu_nav_reset_view,
-            this.m_menu_nav_view,
-            this.toolStripSeparator4,
-            this.m_menu_nav_align,
-            this.toolStripSeparator5,
-            this.m_menu_nav_save_view,
-            this.m_menu_nav_saved_views,
-            this.toolStripSeparator12,
-            this.m_menu_nav_set_camera_position,
-            this.m_menu_nav_set_focus_position});
-			this.m_menu_nav.Name = "m_menu_nav";
-			this.m_menu_nav.Size = new System.Drawing.Size(77, 20);
-			this.m_menu_nav.Text = "&Navigation";
-			// 
-			// m_menu_nav_reset_view
-			// 
-			this.m_menu_nav_reset_view.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_menu_nav_reset_view_all,
-            this.m_menu_nav_reset_view_selected,
-            this.m_menu_nav_reset_view_visible});
-			this.m_menu_nav_reset_view.Name = "m_menu_nav_reset_view";
-			this.m_menu_nav_reset_view.Size = new System.Drawing.Size(222, 22);
-			this.m_menu_nav_reset_view.Text = "&Reset View";
-			// 
-			// m_menu_nav_view
-			// 
-			this.m_menu_nav_view.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_menu_nav_view_xpos,
-            this.m_menu_nav_view_xneg,
-            this.m_menu_nav_view_ypos,
-            this.m_menu_nav_view_yneg,
-            this.m_menu_nav_view_zpos,
-            this.m_menu_nav_view_zneg,
-            this.m_menu_nav_view_xyz});
-			this.m_menu_nav_view.Name = "m_menu_nav_view";
-			this.m_menu_nav_view.Size = new System.Drawing.Size(222, 22);
-			this.m_menu_nav_view.Text = "&View";
-			// 
-			// m_menu_nav_set_focus_position
-			// 
-			this.m_menu_nav_set_focus_position.Name = "m_menu_nav_set_focus_position";
-			this.m_menu_nav_set_focus_position.Size = new System.Drawing.Size(222, 22);
-			this.m_menu_nav_set_focus_position.Text = "Set &Focus Position";
-			// 
-			// m_menu_nav_set_camera_position
-			// 
-			this.m_menu_nav_set_camera_position.Name = "m_menu_nav_set_camera_position";
-			this.m_menu_nav_set_camera_position.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.C)));
-			this.m_menu_nav_set_camera_position.Size = new System.Drawing.Size(222, 22);
-			this.m_menu_nav_set_camera_position.Text = "Set Camera &Position";
-			// 
-			// toolStripSeparator4
-			// 
-			this.toolStripSeparator4.Name = "toolStripSeparator4";
-			this.toolStripSeparator4.Size = new System.Drawing.Size(219, 6);
-			// 
-			// m_menu_nav_align
-			// 
-			this.m_menu_nav_align.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_menu_nav_align_none,
-            this.m_menu_nav_align_x,
-            this.m_menu_nav_align_y,
-            this.m_menu_nav_align_z,
-            this.m_menu_nav_align_current});
-			this.m_menu_nav_align.Name = "m_menu_nav_align";
-			this.m_menu_nav_align.Size = new System.Drawing.Size(222, 22);
-			this.m_menu_nav_align.Text = "&Align";
-			// 
-			// toolStripSeparator5
-			// 
-			this.toolStripSeparator5.Name = "toolStripSeparator5";
-			this.toolStripSeparator5.Size = new System.Drawing.Size(219, 6);
-			// 
-			// m_menu_nav_save_view
-			// 
-			this.m_menu_nav_save_view.Name = "m_menu_nav_save_view";
-			this.m_menu_nav_save_view.Size = new System.Drawing.Size(222, 22);
-			this.m_menu_nav_save_view.Text = "&Save View";
-			// 
-			// m_menu_nav_saved_views
-			// 
-			this.m_menu_nav_saved_views.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.toolStripSeparator11,
-            this.m_menu_nav_saved_views_clear});
-			this.m_menu_nav_saved_views.Name = "m_menu_nav_saved_views";
-			this.m_menu_nav_saved_views.Size = new System.Drawing.Size(222, 22);
-			this.m_menu_nav_saved_views.Text = "Save&d Views";
-			// 
-			// m_menu_window
-			// 
-			this.m_menu_window.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_menu_window_always_on_top,
-            this.toolStripSeparator7,
-            this.m_menu_window_example_script,
-            this.toolStripSeparator6,
-            this.m_menu_window_about});
-			this.m_menu_window.Name = "m_menu_window";
-			this.m_menu_window.Size = new System.Drawing.Size(63, 20);
-			this.m_menu_window.Text = "&Window";
-			// 
-			// m_menu_window_always_on_top
-			// 
-			this.m_menu_window_always_on_top.Name = "m_menu_window_always_on_top";
-			this.m_menu_window_always_on_top.Size = new System.Drawing.Size(152, 22);
-			this.m_menu_window_always_on_top.Text = "Always on &Top";
-			// 
-			// m_menu_window_about
-			// 
-			this.m_menu_window_about.Name = "m_menu_window_about";
-			this.m_menu_window_about.Size = new System.Drawing.Size(152, 22);
-			this.m_menu_window_about.Text = "&About";
-			// 
-			// toolStripSeparator6
-			// 
-			this.toolStripSeparator6.Name = "toolStripSeparator6";
-			this.toolStripSeparator6.Size = new System.Drawing.Size(149, 6);
-			// 
-			// m_menu_window_example_script
-			// 
-			this.m_menu_window_example_script.Name = "m_menu_window_example_script";
-			this.m_menu_window_example_script.Size = new System.Drawing.Size(152, 22);
-			this.m_menu_window_example_script.Text = "&Example Script";
-			// 
-			// toolStripSeparator7
-			// 
-			this.toolStripSeparator7.Name = "toolStripSeparator7";
-			this.toolStripSeparator7.Size = new System.Drawing.Size(149, 6);
-			// 
-			// m_menu_file_new
-			// 
-			this.m_menu_file_new.Name = "m_menu_file_new";
-			this.m_menu_file_new.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.N)));
-			this.m_menu_file_new.Size = new System.Drawing.Size(236, 22);
-			this.m_menu_file_new.Text = "&New";
-			// 
-			// toolStripSeparator8
-			// 
-			this.toolStripSeparator8.Name = "toolStripSeparator8";
-			this.toolStripSeparator8.Size = new System.Drawing.Size(233, 6);
 			// 
 			// m_menu_rendering
 			// 
@@ -798,16 +1041,16 @@ namespace LDraw
 			this.m_menu_rendering_wireframe.Size = new System.Drawing.Size(158, 22);
 			this.m_menu_rendering_wireframe.Text = "Sol&id";
 			// 
-			// toolStripSeparator10
-			// 
-			this.toolStripSeparator10.Name = "toolStripSeparator10";
-			this.toolStripSeparator10.Size = new System.Drawing.Size(155, 6);
-			// 
 			// m_menu_rendering_orthographic
 			// 
 			this.m_menu_rendering_orthographic.Name = "m_menu_rendering_orthographic";
 			this.m_menu_rendering_orthographic.Size = new System.Drawing.Size(158, 22);
 			this.m_menu_rendering_orthographic.Text = "O&rthographic";
+			// 
+			// toolStripSeparator10
+			// 
+			this.toolStripSeparator10.Name = "toolStripSeparator10";
+			this.toolStripSeparator10.Size = new System.Drawing.Size(155, 6);
 			// 
 			// m_menu_rendering_lighting
 			// 
@@ -816,111 +1059,45 @@ namespace LDraw
 			this.m_menu_rendering_lighting.Size = new System.Drawing.Size(158, 22);
 			this.m_menu_rendering_lighting.Text = "Lighting";
 			// 
-			// m_menu_nav_align_x
+			// m_menu_window
 			// 
-			this.m_menu_nav_align_x.Name = "m_menu_nav_align_x";
-			this.m_menu_nav_align_x.Size = new System.Drawing.Size(152, 22);
-			this.m_menu_nav_align_x.Text = "&X";
+			this.m_menu_window.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_window_always_on_top,
+            this.toolStripSeparator7,
+            this.m_menu_window_example_script,
+            this.toolStripSeparator6,
+            this.m_menu_window_about});
+			this.m_menu_window.Name = "m_menu_window";
+			this.m_menu_window.Size = new System.Drawing.Size(63, 20);
+			this.m_menu_window.Text = "&Window";
 			// 
-			// m_menu_nav_align_y
+			// m_menu_window_always_on_top
 			// 
-			this.m_menu_nav_align_y.Name = "m_menu_nav_align_y";
-			this.m_menu_nav_align_y.Size = new System.Drawing.Size(152, 22);
-			this.m_menu_nav_align_y.Text = "&Y";
+			this.m_menu_window_always_on_top.Name = "m_menu_window_always_on_top";
+			this.m_menu_window_always_on_top.Size = new System.Drawing.Size(151, 22);
+			this.m_menu_window_always_on_top.Text = "Always on &Top";
 			// 
-			// m_menu_nav_align_z
+			// toolStripSeparator7
 			// 
-			this.m_menu_nav_align_z.Name = "m_menu_nav_align_z";
-			this.m_menu_nav_align_z.Size = new System.Drawing.Size(152, 22);
-			this.m_menu_nav_align_z.Text = "&Z";
+			this.toolStripSeparator7.Name = "toolStripSeparator7";
+			this.toolStripSeparator7.Size = new System.Drawing.Size(148, 6);
 			// 
-			// m_menu_nav_align_current
+			// m_menu_window_example_script
 			// 
-			this.m_menu_nav_align_current.Name = "m_menu_nav_align_current";
-			this.m_menu_nav_align_current.Size = new System.Drawing.Size(152, 22);
-			this.m_menu_nav_align_current.Text = "&Current";
+			this.m_menu_window_example_script.Name = "m_menu_window_example_script";
+			this.m_menu_window_example_script.Size = new System.Drawing.Size(151, 22);
+			this.m_menu_window_example_script.Text = "&Example Script";
 			// 
-			// m_menu_nav_align_none
+			// toolStripSeparator6
 			// 
-			this.m_menu_nav_align_none.Name = "m_menu_nav_align_none";
-			this.m_menu_nav_align_none.Size = new System.Drawing.Size(152, 22);
-			this.m_menu_nav_align_none.Text = "&None";
+			this.toolStripSeparator6.Name = "toolStripSeparator6";
+			this.toolStripSeparator6.Size = new System.Drawing.Size(148, 6);
 			// 
-			// m_menu_nav_view_xpos
+			// m_menu_window_about
 			// 
-			this.m_menu_nav_view_xpos.Name = "m_menu_nav_view_xpos";
-			this.m_menu_nav_view_xpos.Size = new System.Drawing.Size(211, 22);
-			this.m_menu_nav_view_xpos.Text = "Axis +X (&Right Side)";
-			// 
-			// m_menu_nav_view_xneg
-			// 
-			this.m_menu_nav_view_xneg.Name = "m_menu_nav_view_xneg";
-			this.m_menu_nav_view_xneg.Size = new System.Drawing.Size(211, 22);
-			this.m_menu_nav_view_xneg.Text = "Axis -X (&Left Side)";
-			// 
-			// m_menu_nav_view_ypos
-			// 
-			this.m_menu_nav_view_ypos.Name = "m_menu_nav_view_ypos";
-			this.m_menu_nav_view_ypos.Size = new System.Drawing.Size(211, 22);
-			this.m_menu_nav_view_ypos.Text = "Axis +Y (&Top)";
-			// 
-			// m_menu_nav_view_yneg
-			// 
-			this.m_menu_nav_view_yneg.Name = "m_menu_nav_view_yneg";
-			this.m_menu_nav_view_yneg.Size = new System.Drawing.Size(211, 22);
-			this.m_menu_nav_view_yneg.Text = "Axis -Y (&Bottom)";
-			// 
-			// m_menu_nav_view_zpos
-			// 
-			this.m_menu_nav_view_zpos.Name = "m_menu_nav_view_zpos";
-			this.m_menu_nav_view_zpos.Size = new System.Drawing.Size(211, 22);
-			this.m_menu_nav_view_zpos.Text = "Axis +Z (&Front)";
-			// 
-			// m_menu_nav_view_zneg
-			// 
-			this.m_menu_nav_view_zneg.Name = "m_menu_nav_view_zneg";
-			this.m_menu_nav_view_zneg.Size = new System.Drawing.Size(211, 22);
-			this.m_menu_nav_view_zneg.Text = "Axis -Z (Bac&k)";
-			// 
-			// m_menu_nav_view_xyz
-			// 
-			this.m_menu_nav_view_xyz.Name = "m_menu_nav_view_xyz";
-			this.m_menu_nav_view_xyz.Size = new System.Drawing.Size(211, 22);
-			this.m_menu_nav_view_xyz.Text = "Axis -X -Y -Z (&Perspective)";
-			// 
-			// m_menu_nav_reset_view_all
-			// 
-			this.m_menu_nav_reset_view_all.Name = "m_menu_nav_reset_view_all";
-			this.m_menu_nav_reset_view_all.Size = new System.Drawing.Size(152, 22);
-			this.m_menu_nav_reset_view_all.Text = "&All";
-			// 
-			// m_menu_nav_reset_view_selected
-			// 
-			this.m_menu_nav_reset_view_selected.Name = "m_menu_nav_reset_view_selected";
-			this.m_menu_nav_reset_view_selected.Size = new System.Drawing.Size(152, 22);
-			this.m_menu_nav_reset_view_selected.Text = "&Selected";
-			// 
-			// m_menu_nav_reset_view_visible
-			// 
-			this.m_menu_nav_reset_view_visible.Name = "m_menu_nav_reset_view_visible";
-			this.m_menu_nav_reset_view_visible.Size = new System.Drawing.Size(152, 22);
-			this.m_menu_nav_reset_view_visible.Text = "&Visible";
-			// 
-			// m_menu_nav_saved_views_clear
-			// 
-			this.m_menu_nav_saved_views_clear.Name = "m_menu_nav_saved_views_clear";
-			this.m_menu_nav_saved_views_clear.Size = new System.Drawing.Size(168, 22);
-			this.m_menu_nav_saved_views_clear.Text = "&Clear Saved Views";
-			// 
-			// toolStripSeparator11
-			// 
-			this.toolStripSeparator11.Name = "toolStripSeparator11";
-			this.toolStripSeparator11.Size = new System.Drawing.Size(165, 6);
-			// 
-			// toolStripSeparator12
-			// 
-			this.toolStripSeparator12.Name = "toolStripSeparator12";
-			this.toolStripSeparator12.Size = new System.Drawing.Size(219, 6);
+			this.m_menu_window_about.Name = "m_menu_window_about";
+			this.m_menu_window_about.Size = new System.Drawing.Size(151, 22);
+			this.m_menu_window_about.Text = "&About";
 			// 
 			// MainUI
 			// 

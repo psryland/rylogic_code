@@ -355,6 +355,23 @@ namespace pr.maths
 			return v;
 		}
 
+		/// <summary>Returns a vector perpendicular to 'vec' favouring 'previous' as the preferred perpendicular</summary>
+		public static v4 Perpendicular(v4 vec, v4 previous)
+		{
+			Debug.Assert(!FEql3(vec, Zero), "Cannot make a perpendicular to a zero vector");
+
+			// If 'previous' is still perpendicular, keep it
+			if (Maths.FEql(Dot3(vec, previous), 0))
+				return previous;
+
+			// If 'previous' is parallel to 'vec', choose a new perpendicular
+			if (Parallel(vec, previous))
+				return Perpendicular(vec);
+
+			// Otherwise, make a perpendicular that is close to 'previous'
+			return Normalise3(Cross3(Cross3(vec, previous), vec));
+		}
+
 		/// <summary>Returns a 3 bit bitmask of the octant the vector is in where X = 0x1, Y = 0x2, Z = 0x4</summary>
 		public static uint Octant(v4 vec)
 		{

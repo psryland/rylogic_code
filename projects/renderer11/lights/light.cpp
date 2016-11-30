@@ -44,9 +44,9 @@ namespace pr
 			switch (m_type)
 			{
 			default:                  return m4x4Identity;
-			case ELight::Directional: return m4x4::LookAt(centre - centre_dist*m_direction, centre, Perpendicular3(m_direction));
-			case ELight::Point:       return m4x4::LookAt(m_position, centre, Perpendicular3(centre - m_position));
-			case ELight::Spot:        return m4x4::LookAt(m_position, centre, Perpendicular3(centre - m_position));
+			case ELight::Directional: return m4x4::LookAt(centre - centre_dist*m_direction, centre, Perpendicular(m_direction));
+			case ELight::Point:       return m4x4::LookAt(m_position, centre, Perpendicular(centre - m_position));
+			case ELight::Spot:        return m4x4::LookAt(m_position, centre, Perpendicular(centre - m_position));
 			}
 		}
 

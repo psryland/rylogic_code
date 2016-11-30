@@ -306,7 +306,7 @@ bool pr::ph::RayCast(Ray const& ray, ShapePolytope const& shape, RayCastResult& 
 	}
 	else
 	{
-		 dir = Perpendicular3(ray.m_direction);
+		 dir = Perpendicular(ray.m_direction);
 		 start_vert = SupportVertex(shape, dir, id, id);
 			PR_EXPAND(PR_PH_DBG_RAY_CAST, StartFile("C:/Deleteme/raycast_vert.pr_script");)
 			PR_EXPAND(PR_PH_DBG_RAY_CAST, ldr::Box("vert", "FFFFFF00", start_vert, 0.02f);)

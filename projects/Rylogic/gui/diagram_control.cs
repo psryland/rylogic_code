@@ -17,7 +17,6 @@ using pr.ldr;
 using pr.maths;
 using pr.util;
 using pr.win32;
-using EBtnIdx = pr.gfx.View3d.EBtnIdx;
 
 namespace pr.gui
 {
@@ -1711,9 +1710,9 @@ namespace pr.gui
 				{
 					if (Selected == value) return;
 					base.Selected = value;
-					if (m_gfx_line != null) m_gfx_line.SetColour(Selected ? Style.Selected : Style.Line);
-					if (m_gfx_fwd  != null) m_gfx_fwd .SetColour(Selected ? Style.Selected : Style.Line);
-					if (m_gfx_bak  != null) m_gfx_bak .SetColour(Selected ? Style.Selected : Style.Line);
+					if (m_gfx_line != null) m_gfx_line.ColourSet(Selected ? Style.Selected : Style.Line);
+					if (m_gfx_fwd  != null) m_gfx_fwd .ColourSet(Selected ? Style.Selected : Style.Line);
+					if (m_gfx_bak  != null) m_gfx_bak .ColourSet(Selected ? Style.Selected : Style.Line);
 					UpdatePositions();
 				}
 			}
@@ -1822,14 +1821,14 @@ namespace pr.gui
 
 					// If the click was at the ends of the connector and diagram editing
 					// is allowed, detach the connector and start a move link mouse op
-					if ((hit_point_cs - anc0_cs).Length2Sq < DiagramControl.MinCSSelectionDistanceSq)
+					if ((hit_point_cs - anc0_cs).Length2Sq < MinCSSelectionDistanceSq)
 					{
-						Diagram.m_mouse_op.SetPending(EBtnIdx.Left, new MouseOpMoveLink(Diagram, this, false){StartOnMouseDown = false});
+						Diagram.m_mouse_op.SetPending(1, new MouseOpMoveLink(Diagram, this, false){StartOnMouseDown = false});
 						return true;
 					}
-					if ((hit_point_cs - anc1_cs).Length2Sq < DiagramControl.MinCSSelectionDistanceSq)
+					if ((hit_point_cs - anc1_cs).Length2Sq < MinCSSelectionDistanceSq)
 					{
-						Diagram.m_mouse_op.SetPending(EBtnIdx.Left, new MouseOpMoveLink(Diagram, this, true){StartOnMouseDown = false});
+						Diagram.m_mouse_op.SetPending(1, new MouseOpMoveLink(Diagram, this, true){StartOnMouseDown = false});
 						return true;
 					}
 				}
@@ -1875,11 +1874,11 @@ namespace pr.gui
 
 				// If the connector has a back arrow, add the arrow head graphics
 				if ((Type & EType.Back) != 0)
-					m_gfx_bak.SetColour(col);
+					m_gfx_bak.ColourSet(col);
 
 				// If the connector has a forward arrow, add the arrow head graphics
 				if ((Type & EType.Forward) != 0)
-					m_gfx_fwd.SetColour(col);
+					m_gfx_fwd.ColourSet(col);
 
 				UpdatePositions();
 			}
@@ -2628,33 +2627,33 @@ namespace pr.gui
 		/// <summary>Manages per-button mouse operations</summary>
 		private class MouseOps
 		{
-			private readonly Dictionary<EBtnIdx, MouseOp> m_ops;
-			private readonly Dictionary<EBtnIdx, MouseOp> m_pending;
+			private readonly Dictionary<int, MouseOp> m_ops;
+			private readonly Dictionary<int, MouseOp> m_pending;
 
 			public MouseOps()
 			{
-				m_ops     = Enum<EBtnIdx>.Values.ToDictionary(k => k, k => (MouseOp)null);
-				m_pending = Enum<EBtnIdx>.Values.ToDictionary(k => k, k => (MouseOp)null);
+				m_ops     = int_.Range(Util.MouseButtonCount).ToDictionary(k => k, k => (MouseOp)null);
+				m_pending = int_.Range(Util.MouseButtonCount).ToDictionary(k => k, k => (MouseOp)null);
 			}
 
 			/// <summary>The currently active mouse op</summary>
 			public MouseOp Active { get; private set; }
 
 			/// <summary>Return the op pending for button 'idx'</summary>
-			public MouseOp Pending(EBtnIdx idx)
+			public MouseOp Pending(int idx)
 			{
 				return m_pending[idx];
 			}
 
 			/// <summary>Add a mouse op to be started on the next mouse down event for button 'idx'</summary>
-			public void SetPending(EBtnIdx idx, MouseOp op)
+			public void SetPending(int idx, MouseOp op)
 			{
 				if (m_pending[idx] != null) m_pending[idx].Dispose();
 				m_pending[idx] = op;
 			}
 
 			/// <summary>Start/End the next mouse op for button 'idx'</summary>
-			public void BeginOp(EBtnIdx idx)
+			public void BeginOp(int idx)
 			{
 				Active = m_pending[idx];
 				m_pending[idx] = null;
@@ -2666,7 +2665,7 @@ namespace pr.gui
 					if (!Active.StartOnMouseDown) Active.MouseDown(null);
 				}
 			}
-			public void EndOp(EBtnIdx idx)
+			public void EndOp(int idx)
 			{
 				if (Active != null)
 				{
@@ -4118,9 +4117,9 @@ namespace pr.gui
 				return;
 
 			// Look for the mouse op to perform
-			var btn = View3d.ButtonIndex(e.Button);
+			var btn = e.Button.ButtonIndex();
 			if (m_mouse_op.Pending(btn) == null && DefaultMouseControl)
-				m_mouse_op.SetPending(btn, CreateDefaultMouseOp(btn, e.Location));
+				m_mouse_op.SetPending(btn, CreateDefaultMouseOp(e.Button, e.Location));
 
 			// Start the next mouse op
 			m_mouse_op.BeginOp(btn);
@@ -4155,7 +4154,7 @@ namespace pr.gui
 				Capture = false;
 
 			// Look for the mouse op to perform
-			var btn = View3d.ButtonIndex(e.Button);
+			var btn = e.Button.ButtonIndex();
 			var op = m_mouse_op.Active;
 			if (op != null && !op.Cancelled)
 				op.MouseUp(e);
@@ -4199,12 +4198,12 @@ namespace pr.gui
 		}
 
 		/// <summary>Create the default navigation mouse operation based on mouse button</summary>
-		private MouseOp CreateDefaultMouseOp(EBtnIdx btn, Point pt_cs)
+		private MouseOp CreateDefaultMouseOp(MouseButtons btn, Point pt_cs)
 		{
 			switch (btn)
 			{
 			default: return null;
-			case EBtnIdx.Left:
+			case MouseButtons.Left:
 				{
 					// If elements are selected, see if the mouse has selected one of the resize-grabbers
 					if (AllowEditing && SelectionResizeable)
@@ -4218,7 +4217,7 @@ namespace pr.gui
 					// Otherwise, normal drag/click behaviour
 					return new MouseOpDragOrClickElements(this);
 				}
-			case EBtnIdx.Right:
+			case MouseButtons.Right:
 				{
 					return new MouseOpDragOrClickDiagram(this);
 				}
@@ -5241,7 +5240,7 @@ namespace pr.gui
 						switch (btn.DefaultItem.Name)
 						{
 						case EditTools.Node.BoxNode:
-							m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateNode(this) : null);
+							m_mouse_op.SetPending(1, btn.Checked ? new MouseOpCreateNode(this) : null);
 							break;
 						}
 					};
@@ -5278,10 +5277,10 @@ namespace pr.gui
 					{
 						switch (btn.DefaultItem.Name)
 						{
-						case EditTools.Conn.Line:    m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.Line   ) : null); break;
-						case EditTools.Conn.Forward: m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.Forward) : null); break;
-						case EditTools.Conn.Back:    m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.Back   ) : null); break;
-						case EditTools.Conn.Bidir:   m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.BiDir  ) : null); break;
+						case EditTools.Conn.Line:    m_mouse_op.SetPending(1, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.Line   ) : null); break;
+						case EditTools.Conn.Forward: m_mouse_op.SetPending(1, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.Forward) : null); break;
+						case EditTools.Conn.Back:    m_mouse_op.SetPending(1, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.Back   ) : null); break;
+						case EditTools.Conn.Bidir:   m_mouse_op.SetPending(1, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.BiDir  ) : null); break;
 						}
 					};
 					#region Line Connector
@@ -5354,11 +5353,11 @@ namespace pr.gui
 			// as callers may set the visibility to suit their needs
 
 			var btn_node = m_toolstrip_edit.Items[EditTools.Node.Key].As<ToolStripSplitButtonCheckable>();
-			btn_node.Checked = m_mouse_op.Pending(EBtnIdx.Left) is MouseOpCreateNode;
+			btn_node.Checked = m_mouse_op.Pending(1) is MouseOpCreateNode;
 			btn_node.Enabled = AllowEditing;
 
 			var btn_conn = m_toolstrip_edit.Items[EditTools.Conn.Key].As<ToolStripSplitButtonCheckable>();
-			btn_conn.Checked = m_mouse_op.Pending(EBtnIdx.Left) is MouseOpCreateLink;
+			btn_conn.Checked = m_mouse_op.Pending(1) is MouseOpCreateLink;
 			btn_conn.Enabled = AllowEditing;
 		}
 

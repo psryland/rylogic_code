@@ -36,6 +36,6 @@ struct Body :pr::physics::RigidBody
 	// Position the graphics at the rigid body location
 	void UpdateGfx()
 	{
-		View3D_ObjectSetO2W(m_gfx, view3d::To<View3DM4x4>(m_o2w), nullptr);
+		View3D_ObjectO2WSet(m_gfx, view3d::To<View3DM4x4>(m_o2w), nullptr);
 	}
 };

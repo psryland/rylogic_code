@@ -40,6 +40,7 @@ namespace pr.common
 	}
 
 	/// <summary>Settings pairs</summary>
+	[Serializable]
 	public class SettingsPair
 	{
 		public string Key   { get; set; }
@@ -80,6 +81,7 @@ namespace pr.common
 	}
 
 	/// <summary>A base class for settings structures</summary>
+	[Serializable]
 	public abstract class SettingsSet<T> :ISettingsSet where T:SettingsSet<T>, new()
 	{
 		protected readonly List<SettingsPair> Data;
@@ -258,6 +260,7 @@ namespace pr.common
 	}
 
 	/// <summary>A base class for simple settings</summary>
+	[Serializable]
 	public abstract class SettingsBase<T> :SettingsSet<T> where T:SettingsBase<T>, new()
 	{
 		protected const string VersionKey = "__SettingsVersion";

@@ -69,8 +69,7 @@ namespace pr.util
 		private readonly List<WatchedFile> m_changed_files; // Recycle the changed files collection
 		private readonly Timer m_timer;
 		private bool m_in_check_for_changes;
-		private Action<object, FileSystemEventArgs> handleFileChanged;
-
+		
 		/// <summary>
 		/// File changed callback. Return true if the change was handled
 		/// Returning false causes the FileChanged notification to happen
@@ -92,11 +91,6 @@ namespace pr.util
 		{
 			foreach (string file in files)
 				m_files.Add(new WatchedFile(file, on_changed, id, ctx));
-		}
-
-		public FileWatch(Action<object, FileSystemEventArgs> handleFileChanged)
-		{
-			this.handleFileChanged=handleFileChanged;
 		}
 
 		/// <summary>The collection of watched filepaths</summary>

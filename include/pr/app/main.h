@@ -135,14 +135,13 @@ namespace pr
 			// Mouse navigation
 			virtual void Nav(pr::v2 const& pt, pr::gui::EMouseKey btn_state, bool nav_start_stop)
 			{
-				// EMouseKey and ENavBtn are both enums based on the MK_ macros
-				auto btnstate = static_cast<pr::camera::ENavBtn>(btn_state);
-				m_cam.MouseControl(pt, btnstate, nav_start_stop);
+				auto op = pr::camera::MouseBtnToNavOp(int(btn_state));
+				m_cam.MouseControl(pt, op, nav_start_stop);
 				RenderNeeded();
 			}
-			virtual void NavZ(float delta)
+			virtual void NavZ(pr::v2 const& pt, float delta)
 			{
-				m_cam.Translate(0, 0, delta);
+				m_cam.MouseControlZ(pt, delta);
 				RenderNeeded();
 			}
 			virtual void NavRevert()

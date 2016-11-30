@@ -74,15 +74,56 @@ namespace view3d
 			error_cb(msg);
 		}
 
+		// Remove all Ldr script sources
+		void ClearScriptSources()
+		{
+			m_sources.Clear();
+		}
+
 		// Load/Add a script source
 		pr::Guid LoadScriptSource(wchar_t const* filepath, bool additional, bool async, pr::script::Includes<> const& includes)
 		{
 			// If this is not an additional load, clear the scene first
 			if (!additional)
-				m_sources.Clear();
+				ClearScriptSources();
 
 			// Add 'filepath' to the sources
 			return m_sources.AddFile(filepath, async, includes);
+		}
+
+		// Reload script source files
+		void ReloadScriptSources()
+		{
+			// Remove script source objects from all windows
+			for (auto src : m_sources.List())
+			{
+				auto id = src.second.m_file_group_id;
+				DeleteAllObjectsById(id);
+			}
+
+			// Reload the source data
+			m_sources.Reload();
+		}
+
+		// Delete all objects
+		void DeleteAllObjects()
+		{
+			// Remove the objects from any windows they're in
+			for (auto wnd : m_wnd_cont)
+				View3D_RemoveAllObjects(wnd);
+		
+			// Clear the object container. The unique pointers should delete the objects
+			m_obj_cont.clear();
+		}
+
+		// Delete all objects with matching ids
+		void DeleteAllObjectsById(pr::Guid const& context_id)
+		{
+			// Remove objects from any windows they might be assigned to
+			for (auto wnd : m_wnd_cont)
+				View3D_RemoveObjectsById(wnd, false, context_id);
+
+			pr::ldr::Remove(m_obj_cont, &context_id, 1, 0, 0);
 		}
 	};
 }

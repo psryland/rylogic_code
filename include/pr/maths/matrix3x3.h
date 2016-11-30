@@ -498,7 +498,7 @@ namespace pr
 		}
 
 		// Determine the correct sign of the angle
-		auto vec = CreateNotParallelTo3(axis);
+		auto vec = CreateNotParallelTo(axis);
 		auto X = vec - Dot3(axis, vec) * axis;
 		auto Xprim = mat * X;
 		auto XcXp = Cross3(X, Xprim);
@@ -689,7 +689,7 @@ namespace pr
 	inline m3x4 OriFromDir(v4 const& dir, AxisId axis_id, v4 const& up_)
 	{
 		// Get the preferred up direction (handling parallel cases)
-		auto up = Parallel3(up_, dir) ? Perpendicular3(dir) : up_;
+		auto up = Parallel(up_, dir) ? Perpendicular(dir) : up_;
 
 		m3x4 ori = {};
 		ori.z = Normalise3(Sign(float(axis_id)) * dir);
@@ -701,7 +701,7 @@ namespace pr
 	}
 	inline m3x4 OriFromDir(v4 const& dir, int axis_id)
 	{
-		return OriFromDir(dir, axis_id, Perpendicular3(dir));
+		return OriFromDir(dir, axis_id, Perpendicular(dir));
 	}
 
 	// Make a scaled orientation matrix from a direction vector
@@ -713,7 +713,7 @@ namespace pr
 	}
 	inline m3x4 ScaledOriFromDir(v4 const& dir, AxisId axis)
 	{
-		return ScaledOriFromDir(dir, axis, Perpendicular3(dir));
+		return ScaledOriFromDir(dir, axis, Perpendicular(dir));
 	}
 
 	// Return a vector representing the approximate rotation between two orthonormal transforms

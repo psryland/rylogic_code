@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using pr.extn;
 using pr.util;
+using pr.win32;
 
 namespace pr.gui
 {
@@ -33,11 +34,25 @@ namespace pr.gui
 		// - Only update the value when the text can be converted to a valid value.
 		// - Use colour to indicate a mismatch between the value and the current text
 		// - On focus lost, update the text to the actual value
+		//
+		// Uses:
+		// - A field that displays a value, but can also be edited and used to update a value
+		//   m_tb.Value = MyValue;
+		//   m_tb.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0 && v.Value < Maths.TauBy2; };
+		//   m_tb.ValueChanged += (s,a) =>
+		//   {
+		//       if (!m_tb.Focused) return;
+		//       MyValue = (float)m_tb.Value;
+		//   };
 
 		public ValueBox()
 		{
 			ValueType = typeof(object);
 			Value = null;
+			ForeColorValid = Color.Black;
+			BackColorValid = Color.White;
+			ForeColorInvalid = Color.Gray;
+			BackColorInvalid = Color.White;
 		}
 
 		/// <summary>The type of 'Value'</summary>
@@ -70,7 +85,7 @@ namespace pr.gui
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public Func<object, string> ValueToText
 		{
-			get { return m_value_to_text ?? (x => { return x.ToString(); }); }
+			get { return m_value_to_text ?? (x => { return x?.ToString() ?? string.Empty; }); }
 			set { m_value_to_text = value; }
 		}
 		private Func<object, string> m_value_to_text;
@@ -120,6 +135,52 @@ namespace pr.gui
 			get { return ValidateText(Text); }
 		}
 
+		/// <summary>The text color for valid values</summary>
+		public Color ForeColorValid
+		{
+			get;
+			set;
+		}
+
+		/// <summary>The background color for valid values</summary>
+		public Color BackColorValid
+		{
+			get;
+			set;
+		}
+
+		/// <summary>The text color for invalid values</summary>
+		public Color ForeColorInvalid
+		{
+			get;
+			set;
+		}
+
+		/// <summary>The background color for invalid values</summary>
+		public Color BackColorInvalid
+		{
+			get;
+			set;
+		}
+
+		/// <summary>If the current text is value, update the value, and notify of value committed</summary>
+		public bool TryCommitValue()
+		{
+			if (!Valid || ValueType == typeof(object))
+				return false;
+
+			Value = TextToValue(Text);
+			OnValueCommitted();
+			return true;
+		}
+
+		/// <summary>Raised when the value is changed to a valid value by Enter pressed or focus lost</summary>
+		public event EventHandler ValueCommitted;
+		protected virtual void OnValueCommitted()
+		{
+			ValueCommitted.Raise(this);
+		}
+
 		/// <summary>Raised when the value changes</summary>
 		public event EventHandler ValueChanged;
 		protected virtual void OnValueChanged()
@@ -140,7 +201,8 @@ namespace pr.gui
 				var valid = Valid;
 
 				// Set the text colour based on whether the value matches the text
-				ForeColor = valid ? Color.Black : Color.Gray;
+				ForeColor = valid ? ForeColorValid : ForeColorInvalid;
+				BackColor = valid ? BackColorValid : BackColorInvalid;
 
 				// Update the value for valid text
 				if (valid && ValueType != typeof(object))
@@ -153,6 +215,7 @@ namespace pr.gui
 		protected override void OnLostFocus(EventArgs e)
 		{
 			base.OnLostFocus(e);
+			TryCommitValue();
 			Text = ValueToText(Value);
 		}
 	}

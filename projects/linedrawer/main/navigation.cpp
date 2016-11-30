@@ -12,7 +12,7 @@ namespace ldr
 		:m_camera(camera)
 		,m_view_size()
 		,m_reset_up(pr::Length3Sq(reset_up) > pr::maths::tiny ? reset_up : pr::v4YAxis)
-		,m_reset_forward(pr::Parallel3(m_reset_up, pr::v4ZAxis) ? pr::v4YAxis : -pr::v4ZAxis)
+		,m_reset_forward(pr::Parallel(m_reset_up, pr::v4ZAxis) ? pr::v4YAxis : -pr::v4ZAxis)
 		,m_orbit_timer(GetTickCount())
 		,m_views()
 	{
@@ -44,7 +44,7 @@ namespace ldr
 	{
 		m_camera.SetAlign(up);
 		if (m_camera.IsAligned()) m_reset_up = m_camera.m_align;
-		m_reset_forward = pr::Parallel3(m_reset_up, pr::v4ZAxis) ? pr::v4YAxis : -pr::Normalise3(pr::Cross3(pr::v4ZAxis, m_reset_up));
+		m_reset_forward = pr::Parallel(m_reset_up, pr::v4ZAxis) ? pr::v4YAxis : -pr::Normalise3(pr::Cross3(pr::v4ZAxis, m_reset_up));
 	}
 	pr::v4 Navigation::CameraAlign() const
 	{
@@ -92,21 +92,20 @@ namespace ldr
 
 	// Mouse input.
 	// 'pos' is the screen space position of the mouse
-	// 'button_state' is the state of the mouse buttons (pr::camera::ENavKey)
+	// 'nav_op' is a navigation/manipulation verb
 	// 'start_or_end' is true on mouse down/up
 	// Returns true if the camera has moved or objects in the scene have moved
-	bool Navigation::MouseInput(pr::v2 const& pt_ns, ENavBtn button_state, bool start_or_end)
+	bool Navigation::MouseInput(pr::v2 const& pt_ns, ENavOp nav_op, bool start_or_end)
 	{
 		// Ignore mouse movement unless a button is pressed
-		if (button_state == 0 && !start_or_end)
+		if (nav_op == ENavOp::None && !start_or_end)
 			return false;
 
-		return m_camera.MouseControl(pt_ns, button_state, start_or_end);
+		return m_camera.MouseControl(pt_ns, nav_op, start_or_end);
 	}
-	bool Navigation::MouseClick(pr::v2 const&, ENavBtn button_state)
+	bool Navigation::MouseClick(pr::v2 const&, ENavOp nav_op)
 	{
-		if (!pr::AllSet(button_state, pr::camera::ENavBtn::Middle) &&
-			!pr::AllSet(button_state, pr::camera::ENavBtn::Left|pr::camera::ENavBtn::Right))
+		if (nav_op != ENavOp::Zoom && nav_op != (ENavOp::Translate|ENavOp::Rotate))
 			return false;
 		
 		m_camera.ResetZoom();

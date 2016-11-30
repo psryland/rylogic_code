@@ -231,7 +231,7 @@ namespace pr
 		static Mat4x4 LookAt(v4 const& eye, v4 const& at, v4 const& up)
 		{
 			assert("Invalid position/direction vectors passed to LookAt" && eye.w == 1.0f && at.w == 1.0f && up.w == 0.0f);
-			assert("LookAt point and up axis are aligned" && !pr::Parallel3(at - eye, up));
+			assert("LookAt point and up axis are aligned" && !pr::Parallel(at - eye, up));
 			auto mat = Mat4x4{};
 			mat.z = Normalise3(eye - at);
 			mat.x = Normalise3(Cross3(up, mat.z));

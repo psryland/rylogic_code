@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Windows.Forms;
+using System.Windows.Forms.Integration;
 using pr.extn;
 using pr.gfx;
 using pr.gui;
+using pr.util;
 using ToolStripContainer = pr.gui.ToolStripContainer;
 
 namespace LDraw
@@ -11,7 +13,7 @@ namespace LDraw
 	{
 		#region UI Elements
 		private ToolStripContainer m_tsc;
-		private System.Windows.Forms.Integration.ElementHost m_element_host;
+		private ElementHost m_element_host;
 		private ToolStrip m_ts;
 		#endregion
 
@@ -28,13 +30,23 @@ namespace LDraw
 			base.Dispose(disposing);
 		}
 
+		/// <summary>The editor containing Ldr script</summary>
+		public View3d.HostableEditor Editor
+		{
+			get { return m_editor; }
+			private set
+			{
+				if (m_editor == value) return;
+				//Util.Dispose(ref m_editor); not needed, the ElementHost does the clean up
+				m_editor = value;
+			}
+		}
+		private View3d.HostableEditor m_editor;
+
 		/// <summary>Set up UI Elements</summary>
 		private void SetupUI()
 		{
-			#region Scintilla
-			new View3d.HostableEditor(m_element_host, true);
-			//m_tsc.ContentPanel.Controls.Add2(new ScintillaCtrl());
-			#endregion
+			Editor = new View3d.HostableEditor(m_element_host, true);
 		}
 
 		/// <summary>Update the state of UI Elements</summary>

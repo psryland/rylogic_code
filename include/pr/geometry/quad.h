@@ -278,7 +278,7 @@ namespace pr
 			Colour32 c0, c1 = *col++  , c2 = *col++  ;
 
 			// Create the first pair of verts
-			v4 bi = Normalise3(Cross3(n1, v2 - v1), pr::Perpendicular3(n1));
+			v4 bi = Normalise3(Cross3(n1, v2 - v1), pr::Perpendicular(n1));
 			SetPCNT(*v_out++, bb(v1 + bi*hwidth), cc(c1), n1, t00); *i_out++ = index++;
 			SetPCNT(*v_out++, bb(v1 - bi*hwidth), cc(c1), n1, t10); *i_out++ = index++;
 
@@ -290,8 +290,8 @@ namespace pr
 
 				auto d0 = v1 - v0;
 				auto d1 = v2 - v1;
-				auto b0 = Normalise3(Cross3(n1, d0), Perpendicular3(n1));
-				auto b1 = Normalise3(Cross3(n1, d1), Perpendicular3(n1));
+				auto b0 = Normalise3(Cross3(n1, d0), Perpendicular(n1));
+				auto b1 = Normalise3(Cross3(n1, d1), Perpendicular(n1));
 				bi = Normalise3(b0 + b1, bi); // The bisector at v1
 				// Note: bi always points to the left of d0 and d1
 			
@@ -347,7 +347,7 @@ namespace pr
 			}
 
 			// Finish the previous quad
-			bi = Normalise3(Cross3(n2, v2 - v1), Perpendicular3(n2));
+			bi = Normalise3(Cross3(n2, v2 - v1), Perpendicular(n2));
 			SetPCNT(*v_out++, bb(v2 + bi*hwidth), cc(c2), n2, t00); *i_out++ = index++;
 			SetPCNT(*v_out++, bb(v2 - bi*hwidth), cc(c2), n2, t10); *i_out++ = index++;
 

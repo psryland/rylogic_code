@@ -55,6 +55,9 @@
     <Compile Include="src\BaseUI.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Include="src\CameraUI.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="src\MainUI.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -73,6 +76,9 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <EmbeddedResource Include="src\CameraUI.resx">
+      <DependentUpon>CameraUI.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="src\MainUI.resx">
       <DependentUpon>MainUI.cs</DependentUpon>
     </EmbeddedResource>
@@ -99,6 +105,30 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\obj\v140\view3d\x64\Debug\view3d.dll">
+      <Link>lib\x64\debug\view3d.dll</Link>
+    </None>
+    <None Include="..\..\obj\v140\view3d\x64\Release\view3d.dll">
+      <Link>lib\x64\release\view3d.dll</Link>
+    </None>
+    <None Include="..\..\obj\v140\view3d\x86\Debug\view3d.dll">
+      <Link>lib\x86\debug\view3d.dll</Link>
+    </None>
+    <None Include="..\..\obj\v140\view3d\x86\Release\view3d.dll">
+      <Link>lib\x86\release\view3d.dll</Link>
+    </None>
+    <None Include="..\..\obj\v140\scintilla\x64\Debug\scintilla.dll">
+      <Link>lib\x64\debug\scintilla.dll</Link>
+    </None>
+    <None Include="..\..\obj\v140\scintilla\x64\Release\scintilla.dll">
+      <Link>lib\x64\release\scintilla.dll</Link>
+    </None>
+    <None Include="..\..\obj\v140\scintilla\x86\Debug\scintilla.dll">
+      <Link>lib\x86\debug\scintilla.dll</Link>
+    </None>
+    <None Include="..\..\obj\v140\scintilla\x86\Release\scintilla.dll">
+      <Link>lib\x86\release\scintilla.dll</Link>
+    </None>
     <Content Include="post_build.py" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

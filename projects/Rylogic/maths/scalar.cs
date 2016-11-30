@@ -224,6 +224,28 @@ namespace pr.maths
 			return TruncWithRemainder(floats.Select(x => (double)x));
 		}
 
+		/// <summary>Returns 1 if 'hi' is > 'lo' otherwise 0</summary>
+		public static double Step(double lo, double hi)
+		{
+			return lo <= hi ? 0.0 : 1.0;
+		}
+
+		/// <summary>Returns the 'Hermite' interpolation (3t² - 2t³) between 'lo' and 'hi' for t=[0,1]</summary>
+		public static double SmoothStep(double lo, double hi, double t)
+		{
+			if (lo == hi) return lo;
+			t = Clamp((t - lo)/(hi - lo), 0.0, 1.0);
+			return t*t*(3 - 2*t);
+		}
+
+		/// <summary>Returns a fifth-order 'Perlin' interpolation (6t^5 - 15t^4 + 10t^3) between 'lo' and 'hi' for t=[0,1]</summary>
+		public static double SmoothStep2(double lo, double hi, double t)
+		{
+			if (lo == hi) return lo;
+			t = Clamp((t - lo)/(hi - lo), 0.0, 1.0);
+			return t*t*t*(t*(t*6 - 15) + 10);
+		}
+
 		/// <summary>
 		/// Scale a value on the range [-inf,+inf] to within the range [-1,+1].
 		/// 'n' is a horizontal scaling factor.

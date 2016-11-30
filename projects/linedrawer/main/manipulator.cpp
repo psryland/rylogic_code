@@ -41,20 +41,20 @@ namespace ldr
 	// Mouse input.
 	// 'pos_ns' is the normalised screen space position of the mouse
 	//   i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal Cartesian axes
-	// 'button_state' is the state of the mouse buttons (pr::camera::ENavKey)
+	// 'nav_op' is the navigation operation (pr::camera::ENavKey)
 	// 'start_or_end' is true on mouse down/up
 	// Returns true if the camera has moved or objects in the scene have moved
-	bool Manipulator::MouseInput(pr::v2 const& pos_ns, ENavBtn btn_state, bool start_or_end)
+	bool Manipulator::MouseInput(pr::v2 const& pos_ns, ENavOp nav_op, bool start_or_end)
 	{
-		auto refresh = m_gizmo->MouseControl(m_cam, pos_ns, int(btn_state), start_or_end);
+		auto refresh = m_gizmo->MouseControl(m_cam, pos_ns, nav_op, start_or_end);
 		if (!m_gizmo->m_manipulating)
-			refresh |= m_fwd_input->MouseInput(pos_ns, btn_state, start_or_end);
+			refresh |= m_fwd_input->MouseInput(pos_ns, nav_op, start_or_end);
 		
 		return refresh;
 	}
-	bool Manipulator::MouseClick(pr::v2 const& pos_ns, ENavBtn btn_state)
+	bool Manipulator::MouseClick(pr::v2 const& pos_ns, ENavOp nav_op)
 	{
-		return m_fwd_input->MouseClick(pos_ns, btn_state);
+		return m_fwd_input->MouseClick(pos_ns, nav_op);
 	}
 	bool Manipulator::MouseWheel(pr::v2 const& pos_ns, float delta)
 	{

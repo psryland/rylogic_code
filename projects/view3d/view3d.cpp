@@ -51,7 +51,10 @@ static Context& Dll()
 }
 
 // Default error callback
-void __stdcall DefaultErrorCB(void*, wchar_t const* msg) { std::cerr << msg << std::endl; }
+void __stdcall DefaultErrorCB(void*, wchar_t const* msg)
+{
+	std::wcerr << msg << std::endl;
+}
 
 // Find the error callback to use
 ReportErrorCB GetErrorCB(View3DWindow wnd)
@@ -123,7 +126,10 @@ VIEW3D_API View3DContext __stdcall View3D_Initialise(View3D_ReportErrorCB initia
 	{
 		// Create the dll context on the first call
 		if (g_ctx == nullptr)
+		{
 			g_ctx = new Context();
+			g_ctx->m_error_cb.push_back(pr::StaticCallBack(DefaultErrorCB, nullptr));
+		}
 
 		// Generate a unique handle per Initialise call, used to match up with Shutdown calls
 		static View3DContext context = nullptr;
@@ -425,6 +431,19 @@ VIEW3D_API void __stdcall View3D_RemoveGizmo(View3DWindow window, View3DGizmo gi
 	CatchAndReport(View3D_RemoveGizmo, window,);
 }
 
+// Return the bounds of a scene
+VIEW3D_API View3DBBox __stdcall View3D_SceneBounds(View3DWindow window, EView3DSceneBounds bounds)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return view3d::To<View3DBBox>(window->SceneBounds(bounds));
+	}
+	CatchAndReport(View3D_RemoveGizmo, window, view3d::To<View3DBBox>(pr::BBoxUnit));
+}
+
 //  ********************************************************
 
 // Return the camera to world transform
@@ -464,6 +483,19 @@ VIEW3D_API void __stdcall View3D_PositionCamera(View3DWindow window, View3DV4 po
 		window->m_camera.LookAt(view3d::To<pr::v4>(position), view3d::To<pr::v4>(lookat), view3d::To<pr::v4>(up), true);
 	}
 	CatchAndReport(View3D_PositionCamera, window,);
+}
+
+// Commit the current O2W position as the reference position
+VIEW3D_API void __stdcall View3D_CameraCommit(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_camera.Commit();
+	}
+	CatchAndReport(View3D_CameraCommit, window,);
 }
 
 // Enable/Disable orthographic projection
@@ -607,6 +639,19 @@ VIEW3D_API void __stdcall View3D_CameraSetFovY(View3DWindow window, float fovY)
 	CatchAndReport(View3D_CameraSetFovY, window,);
 }
 
+// Set both the X and Y fields of view (i.e. set the aspect ratio)
+VIEW3D_API void __stdcall View3D_CameraSetFov(View3DWindow window, float fovX, float fovY)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_camera.Fov(fovX, fovY);
+	}
+	CatchAndReport(View3D_CameraSetFov, window,);
+}
+
 // Set the near and far clip planes for the camera
 VIEW3D_API void __stdcall View3D_CameraSetClipPlanes(View3DWindow window, float near_, float far_, BOOL focus_relative)
 {
@@ -628,7 +673,46 @@ VIEW3D_API void __stdcall View3D_CameraSetClipPlanes(View3DWindow window, float 
 // void OnMouseMove(UINT nFlags, CPoint point) { View3D_Navigate(m_drawset, point, nFlags, FALSE); } if 'nFlags' is zero, this will have no effect
 // void OnMouseUp  (UINT nFlags, CPoint point) { View3D_Navigate(m_drawset, point, 0, TRUE); }
 // BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint) { if (nFlags == 0) View3D_Navigate(m_drawset, 0, 0, zDelta / 120.0f); return TRUE; }
-VIEW3D_API BOOL __stdcall View3D_MouseNavigate(View3DWindow window, View3DV2 ss_pos, int button_state, BOOL nav_start_or_end)
+VIEW3D_API BOOL __stdcall View3D_MouseNavigate(View3DWindow window, View3DV2 ss_pos, EView3DNavOp nav_op, BOOL nav_start_or_end)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		auto ss_point = view3d::To<pr::v2>(ss_pos);
+		auto nss_point = window->SSPointToNSSPoint(ss_point);
+		auto op = static_cast<pr::camera::ENavOp>(nav_op);
+
+		auto refresh = false;
+		auto gizmo_in_use = false;
+
+		// Check any gizmos in the scene for interaction with the mouse
+		for (auto& giz : window->m_gizmos)
+		{
+			refresh |= giz->MouseControl(window->m_camera, nss_point, op, nav_start_or_end != 0);
+			gizmo_in_use |= giz->m_manipulating;
+			if (gizmo_in_use) break;
+		}
+
+		// If no gizmos are using the mouse, use standard mouse control
+		if (!gizmo_in_use)
+		{
+			if (window->m_camera.MouseControl(nss_point, op, nav_start_or_end != 0))
+				refresh |= true;
+		}
+
+		return refresh;
+	}
+	CatchAndReport(View3D_MouseNavigate, window, FALSE);
+}
+
+// <summary>
+// Zoom using the mouse.
+// 'point' is a point in client rect space.
+// 'delta' is the mouse wheel scroll delta value (i.e. 120 = 1 click)
+// Returns true if the scene requires refreshing
+VIEW3D_API BOOL __stdcall View3D_MouseNavigateZ(View3DWindow window, View3DV2 ss_pos, float delta)
 {
 	try
 	{
@@ -642,17 +726,19 @@ VIEW3D_API BOOL __stdcall View3D_MouseNavigate(View3DWindow window, View3DV2 ss_
 		auto gizmo_in_use = false;
 
 		// Check any gizmos in the scene for interaction with the mouse
+		#if 0 // todo, gizmo mouse wheel behaviour
 		for (auto& giz : window->m_gizmos)
 		{
-			refresh |= giz->MouseControl(window->m_camera, nss_point, button_state, nav_start_or_end != 0);
+			refresh |= giz->MouseControlZ(window->m_camera, nss_point, dist);
 			gizmo_in_use |= giz->m_manipulating;
 			if (gizmo_in_use) break;
 		}
+		#endif
 
 		// If no gizmos are using the mouse, use standard mouse control
 		if (!gizmo_in_use)
 		{
-			if (window->m_camera.MouseControl(nss_point, pr::camera::ENavBtn(button_state), nav_start_or_end != 0))
+			if (window->m_camera.MouseControlZ(nss_point, delta))
 				refresh |= true;
 		}
 
@@ -723,6 +809,18 @@ VIEW3D_API void __stdcall View3D_ResetView(View3DWindow window, View3DV4 forward
 		window->ResetView(view3d::To<pr::v4>(forward), view3d::To<pr::v4>(up));
 	}
 	CatchAndReport(View3D_ResetView, window,);
+}
+
+// Reset the camera to view a bbox
+VIEW3D_API void __stdcall View3D_ResetViewBBox(View3DWindow window, View3DBBox bbox, View3DV4 forward, View3DV4 up)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+		DllLockGuard;
+		window->ResetView(view3d::To<pr::BBox>(bbox), view3d::To<pr::v4>(forward), view3d::To<pr::v4>(up));
+	}
+	CatchAndReport(View3D_ResetViewBBox, window,);
 }
 
 // Return the size of the perpendicular area visible to the camera at 'dist' (in world space)
@@ -820,6 +918,12 @@ VIEW3D_API void __stdcall View3D_NSSPointToWSRay(View3DWindow window, View3DV4 s
 		ws_direction = view3d::To<View3DV4>(dir);
 	}
 	CatchAndReport(View3D_NSSPointToWSRay, window,);
+}
+
+// Convert an MK_ macro to a default navigation operation
+VIEW3D_API EView3DNavOp __stdcall View3D_MouseBtnToNavOp(int mk)
+{
+	return static_cast<EView3DNavOp>(pr::camera::MouseBtnToNavOp(mk));
 }
 
 // Lighting ********************************************************
@@ -960,6 +1064,51 @@ VIEW3D_API GUID __stdcall View3D_LoadScriptSource(wchar_t const* filepath, BOOL 
 		return Dll().LoadScriptSource(filepath, additional != 0, async != 0, GetIncludes(includes));
 	}
 	CatchAndReport(View3D_LoadScriptSource, (View3DWindow)nullptr, pr::GuidZero);
+}
+
+// Reload script sources. This will delete all objects associated with the script sources
+// then reload the files creating new objects with the same context ids
+VIEW3D_API void __stdcall View3D_ReloadScriptSources()
+{
+	try
+	{
+		DllLockGuard;
+		return Dll().ReloadScriptSources();
+	}
+	CatchAndReport(View3D_ReloadScriptSources,,);
+}
+
+// Remove all Ldr script sources
+VIEW3D_API void __stdcall View3D_ClearScriptSources()
+{
+	try
+	{
+		DllLockGuard;
+		return Dll().ClearScriptSources();
+	}
+	CatchAndReport(ClearScriptSources,,);
+}
+
+// Delete all objects
+VIEW3D_API void __stdcall View3D_ObjectsDeleteAll()
+{
+	try
+	{
+		DllLockGuard;
+		Dll().DeleteAllObjects();
+	}
+	CatchAndReport(View3D_ObjectsDeleteAll, ,);
+}
+
+// Delete all objects matching a context id
+VIEW3D_API void __stdcall View3D_ObjectsDeleteById(GUID const& context_id)
+{
+	try
+	{
+		DllLockGuard;
+		Dll().DeleteAllObjectsById(context_id);
+	}
+	CatchAndReport(View3D_ObjectsDeleteById, ,);
 }
 
 // Create objects given in an ldr string or file.
@@ -1219,39 +1368,6 @@ VIEW3D_API void __stdcall View3D_ObjectUpdate(View3DObject object, char const* l
 	CatchAndReport(View3D_ObjectUpdate, ,);
 }
 
-// Delete all objects
-VIEW3D_API void __stdcall View3D_ObjectsDeleteAll()
-{
-	try
-	{
-		DllLockGuard;
-
-		// Remove the objects from any windows they're in
-		for (auto wnd : Dll().m_wnd_cont)
-			View3D_RemoveAllObjects(wnd);
-		
-		// Clear the object container. The unique pointers should delete the objects
-		Dll().m_obj_cont.clear();
-	}
-	CatchAndReport(View3D_ObjectDeleteAll, ,);
-}
-
-// Delete all objects matching a context id
-VIEW3D_API void __stdcall View3D_ObjectsDeleteById(GUID const& context_id)
-{
-	try
-	{
-		DllLockGuard;
-
-		// Remove objects from any windows they might be assigned to
-		for (auto wnd : Dll().m_wnd_cont)
-			View3D_RemoveObjectsById(wnd, false, context_id);
-
-		pr::ldr::Remove(Dll().m_obj_cont, &context_id, 1, 0, 0);
-	}
-	CatchAndReport(View3D_ObjectsDeleteById, ,);
-}
-
 // Delete an object
 VIEW3D_API void __stdcall View3D_ObjectDelete(View3DObject object)
 {
@@ -1302,7 +1418,7 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectGetChild(View3DObject object, cha
 // If 'name' is null, then the state of the root object is returned
 // If 'name' begins with '#' then the remainder of the name is treated as a regular expression
 // Note, setting the o2w for a child object results in a transform that is relative to it's immediate parent
-VIEW3D_API View3DM4x4 __stdcall View3D_ObjectGetO2W(View3DObject object, char const* name)
+VIEW3D_API View3DM4x4 __stdcall View3D_ObjectO2WGet(View3DObject object, char const* name)
 {
 	try
 	{
@@ -1313,7 +1429,7 @@ VIEW3D_API View3DM4x4 __stdcall View3D_ObjectGetO2W(View3DObject object, char co
 	}
 	CatchAndReport(View3D_ObjectGetO2W, , view3d::To<View3DM4x4>(pr::m4x4Identity));
 }
-VIEW3D_API void __stdcall View3D_ObjectSetO2W(View3DObject object, View3DM4x4 const& o2w, char const* name)
+VIEW3D_API void __stdcall View3D_ObjectO2WSet(View3DObject object, View3DM4x4 const& o2w, char const* name)
 {
 	try
 	{
@@ -1329,7 +1445,7 @@ VIEW3D_API void __stdcall View3D_ObjectSetO2W(View3DObject object, View3DM4x4 co
 // Get/Set the object to parent transform for an object
 // This is the object to world transform for objects without parents
 // Note: In "*Box b { 1 1 1 *o2w{*pos{1 2 3}} }" setting this transform overwrites the "*o2w{*pos{1 2 3}}"
-VIEW3D_API View3DM4x4 __stdcall View3D_ObjectGetO2P(View3DObject object, char const* name)
+VIEW3D_API View3DM4x4 __stdcall View3D_ObjectO2PGet(View3DObject object, char const* name)
 {
 	try
 	{
@@ -1340,7 +1456,7 @@ VIEW3D_API View3DM4x4 __stdcall View3D_ObjectGetO2P(View3DObject object, char co
 	}
 	CatchAndReport(View3D_ObjectGetO2P, , view3d::To<View3DM4x4>(pr::m4x4Identity));
 }
-VIEW3D_API void __stdcall View3D_ObjectSetO2P(View3DObject object, View3DM4x4 const& o2p, char const* name)
+VIEW3D_API void __stdcall View3D_ObjectO2PSet(View3DObject object, View3DM4x4 const& o2p, char const* name)
 {
 	try
 	{
@@ -1355,18 +1471,18 @@ VIEW3D_API void __stdcall View3D_ObjectSetO2P(View3DObject object, View3DM4x4 co
 
 // Get/Set the object visibility
 // See LdrObject::Apply for docs on the format of 'name'
-VIEW3D_API BOOL __stdcall View3D_ObjectGetVisibility(View3DObject object, char const* name)
+VIEW3D_API BOOL __stdcall View3D_ObjectVisibilityGet(View3DObject object, char const* name)
 {
 	try
 	{
 		if (!object) throw std::exception("Object is null");
 
 		DllLockGuard;
-		return object->Visible(name);
+		return const_cast<pr::ldr::LdrObject const*>(object)->Visible(name);
 	}
 	CatchAndReport(View3D_ObjectGetVisibility, ,FALSE);
 }
-VIEW3D_API void __stdcall View3D_ObjectSetVisibility(View3DObject object, BOOL visible, char const* name)
+VIEW3D_API void __stdcall View3D_ObjectVisibilitySet(View3DObject object, BOOL visible, char const* name)
 {
 	try
 	{
@@ -1378,9 +1494,34 @@ VIEW3D_API void __stdcall View3D_ObjectSetVisibility(View3DObject object, BOOL v
 	CatchAndReport(View3D_ObjectSetVisibility, ,);
 }
 
+// Get/Set the object flags
+// See LdrObject::Apply for docs on the format of 'name'
+VIEW3D_API EView3DFlags __stdcall View3D_ObjectFlagsGet(View3DObject object, char const* name)
+{
+	try
+	{
+		if (!object) throw std::exception("Object is null");
+
+		DllLockGuard;
+		return static_cast<EView3DFlags>(object->Flags(name));
+	}
+	CatchAndReport(View3D_ObjectFlagsGet, ,EView3DFlags::None);
+}
+VIEW3D_API void __stdcall View3D_ObjectFlagsSet(View3DObject object, EView3DFlags flags, char const* name)
+{
+	try
+	{
+		if (!object) throw std::exception("Object is null");
+
+		DllLockGuard;
+		object->Flags(static_cast<pr::ldr::ELdrFlags>(flags), name);
+	}
+	CatchAndReport(View3D_ObjectFlagsSet, ,);
+}
+
 // Return the current or base colour of an object (the first object to match 'name')
 // See LdrObject::Apply for docs on the format of 'name'
-VIEW3D_API View3DColour __stdcall View3D_ObjectGetColour(View3DObject object, BOOL base_colour, char const* name)
+VIEW3D_API View3DColour __stdcall View3D_ObjectColourGet(View3DObject object, BOOL base_colour, char const* name)
 {
 	try
 	{
@@ -1394,7 +1535,7 @@ VIEW3D_API View3DColour __stdcall View3D_ObjectGetColour(View3DObject object, BO
 
 // Set the object colour
 // See LdrObject::Apply for docs on the format of 'name'
-VIEW3D_API void __stdcall View3D_ObjectSetColour(View3DObject object, View3DColour colour, UINT32 mask, char const* name)
+VIEW3D_API void __stdcall View3D_ObjectColourSet(View3DObject object, View3DColour colour, UINT32 mask, char const* name)
 {
 	try
 	{
@@ -2327,6 +2468,18 @@ VIEW3D_API void __stdcall View3D_DeleteDemoScene()
 		View3D_ObjectsDeleteById(GuidDemoSceneObjects);
 	}
 	CatchAndReport(View3D_DeleteDemoScene,,);
+}
+
+// Return the example Ldr script as a BSTR
+VIEW3D_API BSTR __stdcall View3D_ExampleScriptBStr()
+{
+	try
+	{
+		DllLockGuard;
+		auto example = pr::ldr::CreateDemoScene();
+		return ::SysAllocStringLen(example.c_str(), UINT(example.size()));
+	}
+	CatchAndReport(View3D_ExampleScriptBStr,,BSTR());
 }
 
 // Show a window containing the demo scene script

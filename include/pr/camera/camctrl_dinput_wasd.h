@@ -65,9 +65,9 @@ namespace pr
 					pr::v2 mv = pr::v2(
 						 5.0f * m_pan_speed * m_mouse.dx() / float(m_area.SizeX()),
 						-5.0f * m_pan_speed * m_mouse.dy() / float(m_area.SizeY()));
-					m_cam->MouseControl(pr::v2Zero, ENavBtn::Right, true);
-					m_cam->MouseControl(mv, ENavBtn::Right, false);
-					m_cam->MouseControl(mv, ENavBtn::None, true);
+					m_cam->MouseControl(pr::v2Zero, ENavOp::Rotate, true);
+					m_cam->MouseControl(mv, ENavOp::Rotate, false);
+					m_cam->MouseControl(mv, ENavOp::None, true);
 				}
 				
 				// Mouse wheel controls zoom

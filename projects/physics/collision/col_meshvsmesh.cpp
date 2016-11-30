@@ -347,7 +347,7 @@ namespace pr
 						SetNearestBound(col.m_simplex.m_vertex[0], col);
 						SetNearestBound(col.m_simplex.m_vertex[1], col);
 						v4 x = col.m_simplex.m_vertex[1].m_r - col.m_simplex.m_vertex[0].m_r;
-						v4 y = Perpendicular3(x);
+						v4 y = Perpendicular(x);
 						v4 z = Cross3(x, y);
 						col.SupportVertex( y);	SetNearestBound(col.m_vertex, col);
 						col.SupportVertex( z);	SetNearestBound(col.m_vertex, col);
@@ -563,8 +563,8 @@ namespace pr
 					// Initialise the half space normal once we have two r's
 					// If the product is zero, then any vector perpendicular to 'r[0]' should do
 					half_space_normal = r[0] + r[1];
-					if( FEql3(half_space_normal,pr::v4Zero) )	{ half_space_normal = Perpendicular3(r[0]); }
-					else								{ half_space_normal = Normalise3(half_space_normal); }
+					if (FEql3(half_space_normal,pr::v4Zero)) half_space_normal = Perpendicular(r[0]);
+					else                                     half_space_normal = Normalise3(half_space_normal);
 					first_new_r = 2;
 
 					PR_ASSERT(PR_DBG_MESH_COLLISION, VerifyHalfSpace(r, 2, half_space_normal), "");

@@ -859,10 +859,10 @@ namespace pr
 		// 'nss_point' should be normalised. i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal Cartesian axes
 		// The start of a mouse movement is indicated by 'btn_state' being non-zero
 		// The end of the mouse movement is indicated by 'btn_state' being zero
-		// 'btn_state' is one of the MK_LBUTTON, MK_RBUTTON, values
+		// 'nav_op' is a navigation/manipulation verb
 		// 'ref_point' should be true on the mouse down/up event, false while mouse moving
 		// Returns true if the gizmo has moved or changed colour
-		bool LdrGizmo::MouseControl(Camera& camera, v2 const& nss_point, int btn_state, bool ref_point)
+		bool LdrGizmo::MouseControl(Camera& camera, v2 const& nss_point, pr::camera::ENavOp nav_op, bool ref_point)
 		{
 			// Not enabled? ignore mouse input
 			if (!Enabled())
@@ -872,7 +872,7 @@ namespace pr
 			if (ref_point)
 			{
 				// On left mouse down, if we're not currently manipulating an axis, hit test to see if we should start
-				if (AllSet(btn_state, MK_LBUTTON) && m_component == EComponent::None)
+				if (nav_op == pr::camera::ENavOp::Translate && m_component == EComponent::None)
 				{
 					auto hit = HitTest(camera, nss_point);
 					SetAxisColour(hit, m_col_manip);
@@ -893,7 +893,7 @@ namespace pr
 				}
 
 				// If mouse up, end manipulating
-				if (!AllSet(btn_state, MK_LBUTTON) && m_component != EComponent::None)
+				if (nav_op != pr::camera::ENavOp::Translate && m_component != EComponent::None)
 				{
 					Commit();
 					auto hit = HitTest(camera, nss_point);
@@ -923,7 +923,7 @@ namespace pr
 			}
 
 			// If we're not currently manipulating, check for mouse hover over the gizmo
-			if (btn_state == 0)
+			if (nav_op == pr::camera::ENavOp::None)
 			{
 				auto hit = HitTest(camera, nss_point);
 				if (hit != m_last_hit)

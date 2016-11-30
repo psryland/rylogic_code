@@ -26,6 +26,17 @@ namespace pr.gui
 	/// <summary>A view 3d based chart control</summary>
 	public class ChartControl :UserControl
 	{
+		// Notes:
+		// - Two methods of camera control; 1. directly position the camera, or 2. set the
+		//   axis range, then determine the camera position from that. Both systems are used.
+		//   for mouse control, the camera is positioned and the axis range updated based on
+		//   the camera position. For ranging, or fixed chart positioning, the camera position
+		//   is moved to match the axis range.
+		// - After setting the axis range, call SetCameraFromRange()
+		// - After setting the camera position, call SetRangeFromCamera()
+		// - Mouse wheel moves the camera in the camera z direction
+		// - Mouse wheel on an axis (changing the aspect ratio) changes the FoV
+
 		#region Constants
 		public static readonly Guid GridId = new Guid("1783F2BF-2782-4C39-98AF-C5935B1003E9");
 		private const float GridLinesZ = -0.001f;
@@ -46,7 +57,7 @@ namespace pr.gui
 				Range           = new RangeData(this);
 				BaseRangeX      = new RangeF(0.0, 1.0);
 				BaseRangeY      = new RangeF(0.0, 1.0);
-				Chart          = new ChartPanel(this); // Must come after 'Range'
+				Scene          = new ChartPanel(this); // Must come after 'Range'
 				MouseOperations = new MouseOps();
 				Tools           = new ChartTools(Options);
 				m_impl_zoom     = new RangeF(float.Epsilon, float.MaxValue);
@@ -82,12 +93,12 @@ namespace pr.gui
 		}
 		protected override void OnLayout(LayoutEventArgs e)
 		{
-			if (Chart != null && !this.IsInDesignMode())
+			if (Scene != null && !this.IsInDesignMode())
 			{
 				using (this.SuspendLayout(false))
 				{
 					var dims = ChartDimensions;
-					Chart.Bounds = dims.ChartArea;
+					Scene.Bounds = dims.ChartArea;
 					if (Options.LockAspect != null && dims.ChartArea.Area() != 0)
 						Aspect = Options.LockAspect.Value;
 				}
@@ -101,8 +112,8 @@ namespace pr.gui
 		}
 		protected override void OnInvalidated(InvalidateEventArgs e)
 		{
+			Scene?.Invalidate();
 			base.OnInvalidated(e);
-			Chart?.Invalidate();
 		}
 
 		/// <summary>Rendering options for the chart</summary>
@@ -183,45 +194,39 @@ namespace pr.gui
 		/// <summary>Get/Set the aspect ratio of the chart area</summary>
 		public double Aspect
 		{
-			get
-			{
-				// Aspect = X/Y
-				// (XAxis.Range / Chart.Bounds.Width) / (YAxis.Range / Chart.Bounds.Height)
-				// (XAxis.Range / Chart.Bounds.Width) * (Chart.Bounds.Height / YAxis.Range)
-				// (XAxis.Range * Chart.Bounds.Height) / (YAxis.Range * Chart.Bounds.Width)
-				return (float)((XAxis.Span * Chart.Bounds.Height) / (YAxis.Span * Chart.Bounds.Width));
-			}
+			get { return Scene.Camera.Aspect * Scene.Bounds.Height / Scene.Bounds.Width; }
 			set
 			{
 				// When setting the aspect ratio, change the YAxis range since X is the
 				// independent variable and we can't change the chart panel bounds.
 				if (Aspect == value) return;
 				if (Options.LockAspect != null) Options.LockAspect = value;
-				YAxis.Span = (XAxis.Span * Chart.Bounds.Height) / (value * Chart.Bounds.Width);
+				Scene.Camera.Aspect = (float)(value * Scene.Bounds.Width / Scene.Bounds.Height);
+				XAxis.Span = YAxis.Span * Scene.Camera.Aspect;
 				Invalidate();
 			}
 		}
 
 		/// <summary>The view3d part of the chart</summary>
-		public ChartPanel Chart
+		public ChartPanel Scene
 		{
-			[DebuggerStepThrough] get { return m_impl_chart; }
+			[DebuggerStepThrough] get { return m_impl_scene; }
 			set
 			{
-				if (m_impl_chart == value) return;
-				if (m_impl_chart != null)
+				if (m_impl_scene == value) return;
+				if (m_impl_scene != null)
 				{
-					Controls.Remove(m_impl_chart);
-					Util.Dispose(ref m_impl_chart);
+					Controls.Remove(m_impl_scene);
+					Util.Dispose(ref m_impl_scene);
 				}
-				m_impl_chart = value;
-				if (m_impl_chart != null)
+				m_impl_scene = value;
+				if (m_impl_scene != null)
 				{
-					Controls.Add(m_impl_chart);
+					Controls.Add(m_impl_scene);
 				}
 			}
 		}
-		private ChartPanel m_impl_chart;
+		private ChartPanel m_impl_scene;
 
 		/// <summary>All chart objects</summary>
 		public BindingListEx<Element> Elements { get; private set; }
@@ -285,16 +290,16 @@ namespace pr.gui
 		public PointF ClientToChart(PointF client_point)
 		{
 			return new PointF(
-				(float)(XAxis.Min + (client_point.X - Chart.Bounds.Left  ) * XAxis.Span / Chart.Bounds.Width ),
-				(float)(YAxis.Min - (client_point.Y - Chart.Bounds.Bottom) * YAxis.Span / Chart.Bounds.Height));
+				(float)(XAxis.Min + (client_point.X - Scene.Bounds.Left  ) * XAxis.Span / Scene.Bounds.Width ),
+				(float)(YAxis.Min - (client_point.Y - Scene.Bounds.Bottom) * YAxis.Span / Scene.Bounds.Height));
 		}
 
 		/// <summary>Returns a point in client space from a point in chart space. Inverse of PointToChart</summary>
 		public Point ChartToClient(PointF chart_point)
 		{
 			return new Point(
-				(int)(Chart.Bounds.Left   + (chart_point.X - XAxis.Min) * Chart.Bounds.Width  / XAxis.Span),
-				(int)(Chart.Bounds.Bottom - (chart_point.Y - YAxis.Min) * Chart.Bounds.Height / YAxis.Span));
+				(int)(Scene.Bounds.Left   + (chart_point.X - XAxis.Min) * Scene.Bounds.Width  / XAxis.Span),
+				(int)(Scene.Bounds.Bottom - (chart_point.Y - YAxis.Min) * Scene.Bounds.Height / YAxis.Span));
 		}
 
 		/// <summary>
@@ -331,7 +336,7 @@ namespace pr.gui
 		}
 		public m4x4 ChartToClientSpace()
 		{
-			return ChartToClientSpace(Chart.Bounds);
+			return ChartToClientSpace(Scene.Bounds);
 		}
 
 		/// <summary>
@@ -368,7 +373,7 @@ namespace pr.gui
 		}
 		public m4x4 ClientToChartSpace()
 		{
-			return ClientToChartSpace(Chart.Bounds);
+			return ClientToChartSpace(Scene.Bounds);
 		}
 
 		/// <summary>Perform a hit test on the chart</summary>
@@ -391,7 +396,7 @@ namespace pr.gui
 				var elements = pred != null ? Elements.Where(pred) : Elements;
 				foreach (var elem in elements)
 				{
-					var hit = elem.HitTest(client_point, modifier_keys, Chart.Camera);
+					var hit = elem.HitTest(client_point, modifier_keys, Scene.Camera);
 					if (hit != null)
 						hits.Add(hit);
 				}
@@ -400,12 +405,12 @@ namespace pr.gui
 				hits.Sort((l,r) => -l.Element.PositionZ.CompareTo(r.Element.PositionZ));
 			}
 
-			return new HitTestResult(zone, client_point, chart_point, modifier_keys, hits, Chart.Camera);
+			return new HitTestResult(zone, client_point, chart_point, modifier_keys, hits, Scene.Camera);
 		}
 
 		/// <summary>
 		/// Find the appropriate range for all data in the chart.
-		/// Call ResetToDefaultRange() to zoom the chart to this range</summary>
+		/// Call ResetToDefaultRange() to zoom the chart to this range.</summary>
 		public void FindDefaultRange(bool visible_only)
 		{
 			// Measure the range on each axis
@@ -461,20 +466,50 @@ namespace pr.gui
 			if (!XAxis.LockRange) { Range.XAxis.Set(BaseRangeX); }
 			if (!YAxis.LockRange) { Range.YAxis.Set(BaseRangeY); }
 			if (Options.LockAspect != null) { Aspect = Options.LockAspect.Value; }
+			SetCameraFromRange();
 			Invalidate();
 		}
 
-		/// <summary>Set the axis range based on the origin relative to the camera</summary>
+		/// <summary>Set the axis range based on the position of the camera and the field of view</summary>
 		private void SetRangeFromCamera()
 		{
+			// The grid is always parallel to the image plane of the camera.
+			// The camera forward vector points at the centre of the grid.
+
 			// Project the camera to world vector into camera space to determine the centre of the X/Y axis. 
-			var w2c = m4x4.InvertFast(Chart.Camera.O2W);
+			var w2c = m4x4.InvertFast(Scene.Camera.O2W);
 
 			// The span of the X/Y axis is determine by the FoV and the focus point distance.
-			var wh = Chart.Camera.ViewArea(Chart.Camera.FocusDist);
+			var wh = Scene.Camera.ViewArea(Scene.Camera.FocusDist);
 
+			// Set the axes range
 			XAxis.Set(-w2c.pos.x - wh.x * 0.5, -w2c.pos.x + wh.x*0.5);
 			YAxis.Set(-w2c.pos.y - wh.y * 0.5, -w2c.pos.y + wh.y*0.5);
+		}
+
+		/// <summary>Position the camera based on the axis range</summary>
+		private void SetCameraFromRange()
+		{
+			// Set the aspect ratio from the axis range and scene bounds
+			Scene.Camera.Aspect = (float)(XAxis.Span / YAxis.Span);
+
+			// Find the world space position of the new focus point.
+			// Move the focus point within the focus plane (parallel to the camera XY plane)
+			// and adjust the focus distance so that the view has a width equal to XAxis.Span.
+			// The camera aspect ratio should ensure the YAxis is correct.
+			var c2w = Scene.Camera.O2W;
+			var focus =
+				c2w.x * (float)XAxis.Centre +
+				c2w.y * (float)YAxis.Centre +
+				c2w.z * v4.Dot3(Scene.Camera.FocusPoint - v4.Origin, c2w.z);
+
+			// Move the camera in the camera Z axis direction so that the width at the focus dist
+			// matches the XAxis range. Tan(FovX/2) = (XAxis.Span/2)/d
+			Scene.Camera.FocusDist = (float)(XAxis.Span / (2.0 * Math.Tan(Scene.Camera.FovX / 2.0)));
+			c2w.pos = focus.w1 + Scene.Camera.FocusDist * c2w.z;
+			
+			Scene.Camera.O2W = c2w;
+			Scene.Camera.Commit();
 		}
 
 		/// <summary>Paint the control</summary>
@@ -484,18 +519,17 @@ namespace pr.gui
 			{
 				// Set the projection mode (this must come before 'SetRangeFromCamera' because
 				// the 'ViewArea' function depends on the projection mode.
-				Chart.Camera.Orthographic = Options.Orthographic;
-				
-				// In 3D mode, navigation moves the camera and axis ranges are derived from the camera position/view
-				if (Options.NavigationMode == ENavMode.Scene3D)
-					SetRangeFromCamera();
+				Scene.Camera.Orthographic = Options.Orthographic;
+
+				// Navigation moves the camera and axis ranges are derived from the camera position/view
+				SetRangeFromCamera();
 
 				// Get the areas to draw in
 				var dims = ChartDimensions;
 
 				// Ensure the scene is rendered
-				Chart.Bounds = dims.ChartArea;
-				Chart.Update();
+				Scene.Bounds = dims.ChartArea;
+				Scene.Update();
 
 				// Draw the chart frame
 				DoPaintFrame(gfx, dims);
@@ -664,8 +698,8 @@ namespace pr.gui
 		#region Chart Panel
 		public class ChartPanel :Control
 		{
-			private ChartControl          m_owner;         // The containing chart control
-			private bool                  m_render_needed; // True when the scene needs rendering again
+			private ChartControl m_owner;         // The containing chart control
+			private bool         m_render_needed; // True when the scene needs rendering again
 
 			public ChartPanel(ChartControl owner)
 			{
@@ -703,8 +737,8 @@ namespace pr.gui
 			protected override void OnResize(EventArgs e)
 			{
 				base.OnResize(e);
-				if (m_window != null)
-					m_window.RenderTargetSize = ClientSize;
+				if (Window != null)
+					Window.RenderTargetSize = ClientSize;
 			}
 			protected override void OnPaintBackground(PaintEventArgs e)
 			{
@@ -718,9 +752,9 @@ namespace pr.gui
 			}
 			protected override void OnInvalidated(InvalidateEventArgs e)
 			{
-				base.OnInvalidated(e);
 				m_render_needed = true;
-				m_window?.Invalidate();
+				Window?.Invalidate();
+				base.OnInvalidated(e);
 			}
 			protected override void WndProc(ref Message m)
 			{
@@ -758,63 +792,45 @@ namespace pr.gui
 			/// <summary>Add an object to the scene</summary>
 			public void AddObject(View3d.Object obj)
 			{
-				m_window.AddObject(obj);
+				Window.AddObject(obj);
 			}
 
 			/// <summary>Remove an object from the scene</summary>
 			public void RemoveObject(View3d.Object obj)
 			{
-				m_window.RemoveObject(obj);
+				Window.RemoveObject(obj);
 			}
 
 			/// <summary>Render the chart 3d scene</summary>
 			public void DoPaint()
 			{
-				if (m_window == null || this.IsInDesignMode())
+				if (Window == null || this.IsInDesignMode())
 					return;
 
 				// Clear the scene
-				m_window.RemoveObjects(all_except:true, context_id:ChartTools.Id);
+				Window.RemoveObjects(all_except:true, context_id:ChartTools.Id);
 
 				// Add axis graphics
-				m_owner.Range.AddToScene(m_window);
+				m_owner.Range.AddToScene(Window);
 
 				// Add all chart elements
 				foreach (var elem in m_owner.Elements)
 				{
 					if (!elem.Visible) continue;
-					elem.AddToScene(m_window);
+					elem.AddToScene(Window);
 				}
 
 				// Add user graphics
-				m_owner.RaiseChartRendering(new ChartRenderingEventArgs(m_window));
-
-				// Position the camera based on the navigation mode
-				switch (m_owner.Options.NavigationMode)
-				{
-				case ENavMode.Chart2D:
-					{
-						// Position the camera based on the axis range.
-						// Since anything can change the axis range, set the camera position here.
-						var centre = new v4((float)m_owner.XAxis.Centre, (float)m_owner.YAxis.Centre, 0f, 1f);
-						m_camera.SetView((float)m_owner.XAxis.Span, (float)m_owner.YAxis.Span, 1.0f);
-						m_camera.SetPosition(centre + v4.ZAxis * m_camera.FocusDist, centre, v4.YAxis);
-						break;
-					}
-				case ENavMode.Scene3D:
-					{
-						// In 3D scenes, navigation moves the camera and the axis range is derived from that
-						break;
-					}
-				}
+				m_owner.RaiseChartRendering(new ChartRenderingEventArgs(Window));
 
 				// Start the render
-				m_window.BackgroundColour = m_owner.Options.ChartBkColour;
-				m_window.Render();
+				Window.BackgroundColour = m_owner.Options.ChartBkColour;
+				Window.FillMode = m_owner.Options.FillMode;
+				Window.Render();
 			}
 			public void Present()
 			{
-				m_window?.Present();
+				Window?.Present();
 			}
 
 			/// <summary>Returns a point in chart space from a point in ChartPanel-client space.</summary>
@@ -924,7 +940,7 @@ namespace pr.gui
 		/// <summary>The client space area of the view3d part of the chart</summary>
 		private Rectangle ChartBounds
 		{
-			get { return Chart.Bounds; }
+			get { return Scene.Bounds; }
 		}
 
 		/// <summary>The client space area of the XAxis area of the chart</summary>
@@ -968,6 +984,7 @@ namespace pr.gui
 				ShowGridLines        = true;
 				ShowAxes             = true;
 				AntiAliasing         = true;
+				FillMode             = View3d.EFillMode.Solid;
 				Orthographic         = false;
 				MinSelectionDistance = 10f;
 				MinDragPixelDistance = 5f;
@@ -990,6 +1007,7 @@ namespace pr.gui
 				ShowGridLines        = rhs.ShowGridLines;
 				ShowAxes             = rhs.ShowAxes;
 				AntiAliasing         = rhs.AntiAliasing;
+				FillMode             = rhs.FillMode;
 				Orthographic         = rhs.Orthographic;
 				MinSelectionDistance = rhs.MinSelectionDistance;
 				MinDragPixelDistance = rhs.MinDragPixelDistance;
@@ -1011,6 +1029,7 @@ namespace pr.gui
 				ShowAxes             = node.Element(nameof(ShowAxes            )).As(ShowAxes            );
 				ShowGridLines        = node.Element(nameof(ShowGridLines       )).As(ShowGridLines       );
 				AntiAliasing         = node.Element(nameof(AntiAliasing        )).As(AntiAliasing        );
+				FillMode             = node.Element(nameof(FillMode            )).As(FillMode            );
 				Orthographic         = node.Element(nameof(Orthographic        )).As(Orthographic        );
 				MinSelectionDistance = node.Element(nameof(MinSelectionDistance)).As(MinSelectionDistance);
 				MinDragPixelDistance = node.Element(nameof(MinDragPixelDistance)).As(MinDragPixelDistance);
@@ -1032,6 +1051,7 @@ namespace pr.gui
 				node.Add2(nameof(ShowGridLines       ) , ShowGridLines        , false);
 				node.Add2(nameof(ShowAxes            ) , ShowAxes             , false);
 				node.Add2(nameof(AntiAliasing        ) , AntiAliasing         , false);
+				node.Add2(nameof(FillMode            ) , FillMode             , false);
 				node.Add2(nameof(Orthographic        ) , Orthographic         , false);
 				node.Add2(nameof(MinSelectionDistance) , MinSelectionDistance , false);
 				node.Add2(nameof(MinDragPixelDistance) , MinDragPixelDistance , false);
@@ -1152,6 +1172,14 @@ namespace pr.gui
 				set { SetProp(ref m_AntiAliasing, value, nameof(AntiAliasing)); }
 			}
 			private bool m_AntiAliasing;
+
+			/// <summary>Fill mode, solid, wire, or both</summary>
+			public View3d.EFillMode FillMode
+			{
+				get { return m_FillMode; }
+				set { SetProp(ref m_FillMode, value, nameof(FillMode)); }
+			}
+			private View3d.EFillMode m_FillMode;
 
 			/// <summary>Get/Set orthographic camera projection</summary>
 			public bool Orthographic
@@ -1521,8 +1549,8 @@ namespace pr.gui
 			/// <summary>Add the graphics associated with the axes to the scene</summary>
 			internal void AddToScene(View3d.Window window)
 			{
-				var cam = Owner.Chart.Camera;
-				var wh = cam.ViewArea(Owner.Chart.Camera.FocusDist);
+				var cam = Owner.Scene.Camera;
+				var wh = cam.ViewArea(Owner.Scene.Camera.FocusDist);
 					
 				// Position the grid lines so that they line up with the axis tick marks
 				// Grid lines are modelled from the bottom left corner
@@ -1534,7 +1562,7 @@ namespace pr.gui
 					var o2w = cam.O2W;
 					o2w.pos = cam.FocusPoint - o2w * new v4((float)(wh.x/2 - min), wh.y/2, 0, 0);
 
-					XAxis.GridLineGfx.SetO2W(o2w);
+					XAxis.GridLineGfx.O2WSet(o2w);
 					window.AddObject(XAxis.GridLineGfx);
 				}
 				if (YAxis.Owner.Options.ShowGridLines && YAxis.Options.ShowGridLines)
@@ -1545,7 +1573,7 @@ namespace pr.gui
 					var o2w = cam.O2W;
 					o2w.pos = cam.FocusPoint - o2w * new v4(wh.x/2, (float)(wh.y/2 - min), 0, 0);
 
-					YAxis.GridLineGfx.SetO2W(o2w);
+					YAxis.GridLineGfx.O2WSet(o2w);
 					window.AddObject(YAxis.GridLineGfx);
 				}
 			}
@@ -1878,6 +1906,7 @@ namespace pr.gui
 							// Grid nugget
 							nuggets[0] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert|View3d.EGeom.Colr);
 							m_gridlines = new View3d.Object(name, 0xFFFFFFFF, verts.Length, indices.Length, nuggets.Length, verts, indices, nuggets, Guid.Empty);
+							m_gridlines.FlagsSet(View3d.EFlags.BBoxInvisible); 
 						}
 						return m_gridlines;
 					}
@@ -1933,6 +1962,7 @@ namespace pr.gui
 
 		[Flags] private enum EAxis
 		{
+			None  = 0,
 			XAxis = 1 << 0,
 			YAxis = 1 << 1,
 			Both  = XAxis | YAxis,
@@ -1960,6 +1990,18 @@ namespace pr.gui
 			}
 		}
 		private bool m_default_mouse_control;
+
+		/// <summary>Enable/Disable keyboard shortcuts for navigation</summary>
+		public bool DefaultKeyboardShortcuts
+		{
+			get { return m_default_keyboard_shortcuts; }
+			set
+			{
+				if (m_default_keyboard_shortcuts == value) return;
+				m_default_keyboard_shortcuts = value;
+			}
+		}
+		private bool m_default_keyboard_shortcuts;
 
 		/// <summary>Mouse events on the chart</summary>
 		protected override void OnMouseDown(MouseEventArgs e)
@@ -1989,7 +2031,7 @@ namespace pr.gui
 			if (op != null && !op.Cancelled)
 			{
 				op.m_btn_down    = true;
-				op.m_grab_client = e.Location;
+				op.m_grab_client = e.Location; // Note: in ChartControl space, not ChartPanel space
 				op.m_grab_chart  = ClientToChart(op.m_grab_client);
 				op.m_hit_result  = HitTestCS(op.m_grab_client, ModifierKeys, null);
 				op.MouseDown(e);
@@ -2046,84 +2088,92 @@ namespace pr.gui
 		{
 			base.OnMouseWheel(e);
 
-			var scale = 1f;
-			if (ModifierKeys.HasFlag(Keys.Shift  )) scale *= 0.1f;
-			if (ModifierKeys.HasFlag(Keys.Control)) scale *= 0.01f;
-			var delta = Maths.Clamp(e.Delta * scale, -999f, 999f);
-
-			var chart_bounds = Chart.Bounds;
+			var chart_bounds = Scene.Bounds;
 			if (chart_bounds.Contains(e.Location))
 			{
-				switch (Options.NavigationMode)
-				{
-				case ENavMode.Chart2D:
-					{
-						var point = ClientToChart(e.Location);
-						Zoom *= (1.0f - delta * 0.001f);
-						PositionChart(e.Location, point);
-						break;
-					}
-				case ENavMode.Scene3D:
-					{
-						Chart.Window.Navigate(0, 0, delta / 120f);
-						Invalidate();
-						break;
-					}
-				}
+				// Translate the camera along a ray through 'point'
+				var loc = Control_.MapPoint(this, Scene, e.Location);
+				Scene.Window.MouseNavigateZ(loc, e.Delta);
+				Invalidate();
 			}
 			else if (Options.ShowAxes)
 			{
+				var scale = 0.001f;
+				if (ModifierKeys.HasFlag(Keys.Shift  )) scale *= 0.1f;
+				if (ModifierKeys.HasFlag(Keys.Control)) scale *= 0.01f;
+				var delta = Maths.Clamp(e.Delta * scale, -999f, 999f);
+
+				// Change the aspect ratio by zooming on the XAxis range
+				var chg = false;
 				var xaxis_bounds = Rectangle.FromLTRB(chart_bounds.Left, chart_bounds.Bottom, chart_bounds.Right, ClientSize.Height);
 				if (xaxis_bounds.Contains(e.Location) && !XAxis.LockRange)
 				{
 					if (ModifierKeys == Keys.Control && XAxis.AllowScroll)
 					{
-						XAxis.Shift(XAxis.Span * delta * 0.001);
-						Invalidate();
+						XAxis.Shift(XAxis.Span * delta);
+						chg = true;
 					}
 					if (ModifierKeys != Keys.Control && XAxis.AllowZoom)
 					{
-						XAxis.Span *= (1.0f - delta * 0.001);
-						Invalidate();
+						XAxis.Span *= (1.0f - delta);
+						chg = true;
 					}
 				}
+
+				// Check the aspect ratio by zooming on the YAxis
 				var yaxis_bounds = Rectangle.FromLTRB(0, chart_bounds.Top, chart_bounds.Left, chart_bounds.Bottom);
 				if (yaxis_bounds.Contains(e.Location) && !YAxis.LockRange)
 				{
 					if (ModifierKeys == Keys.Control && YAxis.AllowScroll)
 					{
-						YAxis.Shift(YAxis.Span * delta * 0.001);
-						Invalidate();
+						YAxis.Shift(YAxis.Span * delta);
+						chg = true;;
 					}
 					if (ModifierKeys != Keys.Control && YAxis.AllowZoom)
 					{
-						YAxis.Span *= (1.0f - delta * 0.001);
-						Invalidate();
+						YAxis.Span *= (1.0f - delta);
+						chg = true;
 					}
 				}
+
+				// If the aspect ratio is fixed, restore the aspect ratio
 				if (Options.LockAspect != null)
 				{
 					Aspect = Options.LockAspect.Value;
+				}
+
+				// Set the camera position from the Axis ranges
+				if (chg)
+				{
+					SetCameraFromRange();
+					Invalidate();
 				}
 			}
 		}
 		protected override void OnKeyDown(KeyEventArgs e)
 		{
-			base.OnKeyDown(e);
 			SetCursor();
 
 			var op = MouseOperations.Active;
-			if (op != null)
+			if (op != null && !e.Handled)
 				op.OnKeyDown(e);
+
+			// If the current mouse operation doesn't use the key,
+			// see if it's a default keyboard shortcut.
+			if (!e.Handled && DefaultKeyboardShortcuts)
+				TranslateKey(e);
+
+			base.OnKeyDown(e);
 		}
 		protected override void OnKeyUp(KeyEventArgs e)
 		{
-			base.OnKeyUp(e);
 			SetCursor();
 
 			var op = MouseOperations.Active;
-			if (op != null)
+			if (op != null && !e.Handled)
 				op.OnKeyUp(e);
+
+			base.OnKeyUp(e);
 		}
 
 		/// <summary>Set the mouse cursor based on key state</summary>
@@ -2160,9 +2210,88 @@ namespace pr.gui
 		public void PositionChart(Point cs_point, PointF gs_point)
 		{
 			var dst = ClientToChart(cs_point);
-			XAxis.Shift(gs_point.X - dst.X);
-			YAxis.Shift(gs_point.Y - dst.Y);
+			var c2w = Scene.Camera.O2W;
+			c2w.pos += c2w.x * (gs_point.X - dst.X) + c2w.y * (gs_point.Y - dst.Y);
+			Scene.Camera.O2W = c2w;
+			//XAxis.Shift(gs_point.X - dst.X);
+			//YAxis.Shift(gs_point.Y - dst.Y);
+			//SetCameraFromRange();
 			Invalidate();
+		}
+
+		/// <summary>Handle navigation keyboard shortcuts</summary>
+		public virtual void TranslateKey(KeyEventArgs e)
+		{
+			if (e.Handled) return;
+			switch (e.KeyCode)
+			{
+			case Keys.Escape:
+				#region Clear Selection
+				{
+					if (AllowSelection)
+					{
+						Selected.Clear();
+						Invalidate();
+					}
+					break;
+				}
+				#endregion
+			case Keys.Delete:
+				#region Delete Elements
+				{
+					if (AllowEditing)
+					{
+						//// Allow the caller to cancel the deletion or change the selection
+						//var res = new DiagramChangedRemoveElementsEventArgs(Selected.ToArray());
+						//if (!RaiseDiagramChanged(res).Cancel)
+						//{
+						//	foreach (var elem in res.Elements)
+						//	{
+						//		var node = elem as Node;
+						//		if (node != null)
+						//			node.DetachConnectors();
+								
+						//		var conn = elem as Connector;
+						//		if (conn != null)
+						//			conn.DetachNodes();
+
+						//		Elements.Remove(elem);
+						//	}
+						//	Invalidate();
+						//}
+					}
+					break;
+				}
+				#endregion
+			case Keys.F5:
+				#region Reload scene
+				{
+					//InvalidateAllElements();
+					Invalidate();
+					break;
+				}
+				#endregion
+			case Keys.F6:
+				#region Reset to default range
+				{
+					ResetToDefaultRange();
+					break;
+				}
+				#endregion
+			case Keys.A:
+				#region Select All
+				{
+					if ((e.Modifiers & Keys.Control) != 0)
+					{
+						Selected.Clear();
+						Selected.AddRange(Elements);
+						Invalidate();
+						Debug.Assert(CheckConsistency());
+					}
+					break;
+				}
+				#endregion
+			}
 		}
 
 		/// <summary>Get/Set the centre of the chart</summary>
@@ -2174,6 +2303,7 @@ namespace pr.gui
 			{
 				XAxis.Min = value.X - XAxis.Span*0.5;
 				YAxis.Min = value.Y - YAxis.Span*0.5;
+				SetCameraFromRange();
 				Invalidate();
 			}
 		}
@@ -2209,6 +2339,7 @@ namespace pr.gui
 				{
 					YAxis.Span = BaseRangeY.Size * value;
 				}
+				SetCameraFromRange();
 				Invalidate();
 			}
 		}
@@ -2261,6 +2392,7 @@ namespace pr.gui
 
 			if (!XAxis.LockRange) XAxis.Set(lower.X, upper.X);
 			if (!YAxis.LockRange) YAxis.Set(lower.Y, upper.Y);
+			SetCameraFromRange();
 			Invalidate();
 		}
 
@@ -2353,7 +2485,7 @@ namespace pr.gui
 
 			// Selection data for a mouse button
 			public bool          m_btn_down;    // True while the corresponding mouse button is down
-			public Point         m_grab_client; // The client space location of where the chart was "grabbed"
+			public Point         m_grab_client; // The client space location of where the chart was "grabbed" (note: ChartControl, not ChartPanel space)
 			public PointF        m_grab_chart;  // The chart space location of where the chart was "grabbed"
 			public HitTestResult m_hit_result;  // The hit test result on mouse down
 
@@ -2406,6 +2538,7 @@ namespace pr.gui
 		{
 			private HitTestResult.Hit m_hit_selected;
 			private bool m_selection_graphic_added;
+			private EAxis m_hit_axis;
 
 			public MouseOpDefaultLButton(ChartControl chart) :base(chart)
 			{
@@ -2413,6 +2546,11 @@ namespace pr.gui
 			}
 			public override void MouseDown(MouseEventArgs e)
 			{
+				// See where mouse down occurred
+				if (m_chart.ChartBounds.Contains(e.Location)) m_hit_axis = EAxis.None;
+				if (m_chart.XAxisBounds.Contains(e.Location)) m_hit_axis = EAxis.XAxis;
+				if (m_chart.YAxisBounds.Contains(e.Location)) m_hit_axis = EAxis.YAxis;
+
 				// Look for a selected object that the mouse operation starts on
 				m_hit_selected = m_hit_result.Hits.FirstOrDefault(x => x.Element.Selected);
 
@@ -2420,11 +2558,9 @@ namespace pr.gui
 				foreach (var elem in m_chart.Selected)
 					elem.DragStartPosition = elem.Position;
 
-				// For 3D scenes, left mouse rotates
-				if (m_chart.Options.NavigationMode == ENavMode.Scene3D)
-				{
-					m_chart.Chart.Window.MouseNavigate(e.Location, MouseButtons.Right, true);
-				}
+				// For 3D scenes, left mouse rotates if mouse down is within the chart bounds
+				if (m_chart.Options.NavigationMode == ENavMode.Scene3D && m_hit_axis == EAxis.None)
+					m_chart.Scene.Window.MouseNavigate(e.Location, View3d.ENavOp.Rotate, true);
 
 				// Prevent events while dragging the elements around
 				m_suspend_scope = m_chart.SuspendChartChanged(raise_on_resume:true);
@@ -2448,7 +2584,7 @@ namespace pr.gui
 					// Otherwise change the selection area
 					if (!m_selection_graphic_added)
 					{
-						m_chart.Chart.AddObject(m_chart.Tools.AreaSelect);
+						m_chart.Scene.AddObject(m_chart.Tools.AreaSelect);
 						m_selection_graphic_added = true;
 					}
 
@@ -2462,9 +2598,8 @@ namespace pr.gui
 				}
 				else if (m_chart.Options.NavigationMode == ENavMode.Scene3D)
 				{
-					// Mouse right provides rotation, which we want for left mouse button.
-					// I should probably use a different enum that describes the operation, not the button
-					m_chart.Chart.Window.MouseNavigate(e.Location, MouseButtons.Right, false);
+					// MouseButtons.Right provides rotation, which we want for left mouse button.
+					m_chart.Scene.Window.MouseNavigate(e.Location, View3d.ENavOp.Rotate, false);
 				}
 				m_chart.Invalidate();
 			}
@@ -2520,14 +2655,13 @@ namespace pr.gui
 					else if (m_chart.Options.NavigationMode == ENavMode.Scene3D)
 					{
 						// For 3D scenes, left mouse rotates
-						if (m_chart.Options.NavigationMode == ENavMode.Scene3D)
-							m_chart.Chart.Window.MouseNavigate(e.Location, MouseButtons.Right, true);
+						m_chart.Scene.Window.MouseNavigate(e.Location, View3d.ENavOp.Rotate, true);
 					}
 				}
 
 				// Remove the area selection graphic
 				if (m_selection_graphic_added)
-					m_chart.Chart.RemoveObject(m_chart.Tools.AreaSelect);
+					m_chart.Scene.RemoveObject(m_chart.Tools.AreaSelect);
 
 				m_chart.Cursor = Cursors.Default;
 				m_chart.Invalidate();
@@ -2549,9 +2683,9 @@ namespace pr.gui
 				if (m_chart.XAxisBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.XAxis;
 				if (m_chart.YAxisBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.YAxis;
 
-				// For 3D scenes, right mouse translates
-				if (m_chart.Options.NavigationMode == ENavMode.Scene3D)
-					m_chart.Chart.Window.MouseNavigate(e.Location, MouseButtons.Left, true); 
+				// Right mouse translates for 2D and 3D scene
+				var loc = Control_.MapPoint(m_chart, m_chart.Scene, e.Location);
+				m_chart.Scene.Window.MouseNavigate(loc, View3d.ENavOp.Translate, true); 
 			}
 			public override void MouseMove(MouseEventArgs e)
 			{
@@ -2563,15 +2697,14 @@ namespace pr.gui
 				m_chart.Cursor = Cursors.SizeAll;
 
 				// Limit the drag direction
-				var drop_loc = e.Location;
-				if (!m_drag_axis_allow.HasFlag(EAxis.XAxis) || m_chart.XAxis.LockRange) drop_loc.X = m_grab_client.X;
-				if (!m_drag_axis_allow.HasFlag(EAxis.YAxis) || m_chart.YAxis.LockRange) drop_loc.Y = m_grab_client.Y;
+				var drop_loc = Control_.MapPoint(m_chart, m_chart.Scene, e.Location);
+				var grab_loc = Control_.MapPoint(m_chart, m_chart.Scene, m_grab_client);
+				if (!m_drag_axis_allow.HasFlag(EAxis.XAxis) || m_chart.XAxis.LockRange) drop_loc.X = grab_loc.X;
+				if (!m_drag_axis_allow.HasFlag(EAxis.YAxis) || m_chart.YAxis.LockRange) drop_loc.Y = grab_loc.Y;
 
-				m_chart.PositionChart(drop_loc, m_grab_chart);
-
-				// For 3D scenes, right mouse translates
-				if (m_chart.Options.NavigationMode == ENavMode.Scene3D)
-					m_chart.Chart.Window.MouseNavigate(e.Location, MouseButtons.Left, false);
+				m_chart.Scene.Window.MouseNavigate(drop_loc, View3d.ENavOp.Translate, false);
+				m_chart.SetRangeFromCamera();
+				m_chart.Invalidate();
 			}
 			public override void MouseUp(MouseEventArgs e)
 			{
@@ -2596,20 +2729,20 @@ namespace pr.gui
 								m_chart.YAxis.ShowContextMenu(args.Location, args.HitResult);
 						}
 					}
+					m_chart.Invalidate();
 				}
 				else
 				{
 					// Limit the drag direction
-					var drop_loc = e.Location;
-					if (!m_drag_axis_allow.HasFlag(EAxis.XAxis) || m_chart.XAxis.LockRange) drop_loc.X = m_grab_client.X;
-					if (!m_drag_axis_allow.HasFlag(EAxis.YAxis) || m_chart.YAxis.LockRange) drop_loc.Y = m_grab_client.Y;
-					m_chart.PositionChart(drop_loc, m_grab_chart);
+					var drop_loc = Control_.MapPoint(m_chart, m_chart.Scene, e.Location);
+					var grab_loc = Control_.MapPoint(m_chart, m_chart.Scene, m_grab_client);
+					if (!m_drag_axis_allow.HasFlag(EAxis.XAxis) || m_chart.XAxis.LockRange) drop_loc.X = grab_loc.X;
+					if (!m_drag_axis_allow.HasFlag(EAxis.YAxis) || m_chart.YAxis.LockRange) drop_loc.Y = grab_loc.Y;
 
-					// For 3D scenes, right mouse translates
-					if (m_chart.Options.NavigationMode == ENavMode.Scene3D)
-						m_chart.Chart.Window.MouseNavigate(e.Location, MouseButtons.Left, true);
+					m_chart.Scene.Window.MouseNavigate(drop_loc, View3d.ENavOp.None, true);
+					m_chart.SetRangeFromCamera();
+					m_chart.Invalidate();
 				}
-				m_chart.Invalidate();
 			}
 		}
 
@@ -3316,6 +3449,47 @@ namespace pr.gui
 			using (this.ChangeCursor(Cursors.WaitCursor))
 			using (cmenu.SuspendLayout(true))
 			{
+				#region Objects
+				{
+					var objects_menu = cmenu.Items.Add2(new ToolStripMenuItem("Objects") { Name = CMenu.Objects });
+					{
+						var opt = objects_menu.DropDownItems.Add2(new ToolStripMenuItem("Origin") { Name = CMenu.ObjectsMenu.Origin });
+						opt.Checked = Scene.Window.OriginVisible;
+						opt.Click += (s,a) =>
+						{
+							Scene.Window.OriginVisible = true;
+							Invalidate();
+						};
+					}
+					{
+						var opt = objects_menu.DropDownItems.Add2(new ToolStripMenuItem("Focus") { Name = CMenu.ObjectsMenu.Focus });
+						opt.Checked = Scene.Window.FocusPointVisible;
+						opt.Click += (s,a) =>
+						{
+							Scene.Window.FocusPointVisible = true;
+							Invalidate();
+						};
+					}
+					{
+						var opt = objects_menu.DropDownItems.Add2(new ToolStripMenuItem("Grid Lines") { Name = CMenu.ObjectsMenu.GridLines });
+						opt.Checked = Options.ShowGridLines;
+						opt.Click += (s,a) =>
+						{
+							Options.ShowGridLines = !Options.ShowGridLines;
+							Invalidate();
+						};
+					}
+					{
+						var opt = objects_menu.DropDownItems.Add2(new ToolStripMenuItem("Axes") { Name = CMenu.ObjectsMenu.GridLines });
+						opt.Checked = Options.ShowAxes;
+						opt.Click += (s,a) =>
+						{
+							Options.ShowAxes = !Options.ShowAxes;
+							Invalidate();
+						};
+					}
+				}
+				#endregion
 				#region Tools
 				{
 					var tools_menu = cmenu.Items.Add2(new ToolStripMenuItem("Tools") { Name = CMenu.Tools });
@@ -3361,48 +3535,7 @@ namespace pr.gui
 							if (Options.LockAspect != null)
 								Options.LockAspect = null;
 							else
-								Options.LockAspect = (XAxis.Span * Chart.Bounds.Height) / (YAxis.Span * Chart.Bounds.Width);
-						};
-					}
-				}
-				#endregion
-				#region Objects
-				{
-					var objects_menu = cmenu.Items.Add2(new ToolStripMenuItem("Objects") { Name = CMenu.Objects });
-					{
-						var opt = objects_menu.DropDownItems.Add2(new ToolStripMenuItem("Origin") { Name = CMenu.ObjectsMenu.Origin });
-						opt.Checked = Chart.Window.OriginVisible;
-						opt.Click += (s,a) =>
-						{
-							Chart.Window.OriginVisible = true;
-							Invalidate();
-						};
-					}
-					{
-						var opt = objects_menu.DropDownItems.Add2(new ToolStripMenuItem("Focus") { Name = CMenu.ObjectsMenu.Focus });
-						opt.Checked = Chart.Window.FocusPointVisible;
-						opt.Click += (s,a) =>
-						{
-							Chart.Window.FocusPointVisible = true;
-							Invalidate();
-						};
-					}
-					{
-						var opt = objects_menu.DropDownItems.Add2(new ToolStripMenuItem("Grid Lines") { Name = CMenu.ObjectsMenu.GridLines });
-						opt.Checked = Options.ShowGridLines;
-						opt.Click += (s,a) =>
-						{
-							Options.ShowGridLines = !Options.ShowGridLines;
-							Invalidate();
-						};
-					}
-					{
-						var opt = objects_menu.DropDownItems.Add2(new ToolStripMenuItem("Axes") { Name = CMenu.ObjectsMenu.GridLines });
-						opt.Checked = Options.ShowAxes;
-						opt.Click += (s,a) =>
-						{
-							Options.ShowAxes = !Options.ShowAxes;
-							Invalidate();
+								Options.LockAspect = (XAxis.Span * Scene.Bounds.Height) / (YAxis.Span * Scene.Bounds.Width);
 						};
 					}
 				}
@@ -3431,6 +3564,15 @@ namespace pr.gui
 						opt.Click += (s,a) =>
 						{
 							Options.Orthographic = !Options.Orthographic;
+							Invalidate();
+						};
+					}
+					{
+						var fillmode = Enum<View3d.EFillMode>.Cycle(Scene.Window.FillMode);
+						var opt = rendering_menu.DropDownItems.Add2(new ToolStripMenuItem(fillmode.ToString()) { Name = CMenu.RenderingMenu.Wireframe });
+						opt.Click += (s,a) =>
+						{
+							Options.FillMode = fillmode;
 							Invalidate();
 						};
 					}
@@ -3480,7 +3622,7 @@ namespace pr.gui
 		/// <summary>Handle mouse move events while the tooltip is visible</summary>
 		private void OnMouseMoveTooltip(object sender, MouseEventArgs e)
 		{
-			if (Chart.Bounds.Contains(e.Location))
+			if (Scene.Bounds.Contains(e.Location))
 			{
 				var pt = ClientToChart(e.Location);
 				var new_str = "{0} {1}".Fmt(XAxis.TickText(pt.X, 0.0), YAxis.TickText(pt.Y, 0.0));
@@ -3634,7 +3776,7 @@ namespace pr.gui
 			private void HandleOptionsChanged(object sender, PropertyChangedEventArgs e)
 			{
 				if (e.PropertyName == nameof(RdrOptions.SelectionColour))
-					AreaSelect.SetColour(Options.SelectionColour);
+					AreaSelect.ColourSet(Options.SelectionColour);
 			}
 		}
 
@@ -3834,6 +3976,7 @@ namespace pr.gui
 			{
 				public const string NavigationMode = "nav_mode";
 				public const string Orthographic = "orthographic";
+				public const string Wireframe = "wireframe";
 				public const string AntiAliasing = "anti_aliasing";
 			}
 			public const string Properties = "appearance";

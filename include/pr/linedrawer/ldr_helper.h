@@ -254,7 +254,7 @@ namespace pr
 		}
 		inline TStr& Quad(TStr& str, typename TStr::value_type const* name, Col colour, float width, float height, v4 const& position, v4 const& direction)
 		{
-			auto forward = Perpendicular3(direction);
+			auto forward = Perpendicular(direction);
 			auto left = Cross3(forward, direction);
 			forward *= height / 2.0f;
 			left *= width / 2.0f;

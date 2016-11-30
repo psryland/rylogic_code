@@ -167,7 +167,8 @@ namespace pr
 
 				if (m_nav_enabled)
 				{
-					m_main->Nav(pr::NormalisePoint(*this, args.m_point), args.m_keystate, false);
+					auto pt = pr::NormalisePoint(*this, args.m_point);
+					m_main->Nav(pt, args.m_keystate, false);
 					Invalidate();
 				}
 			}
@@ -176,7 +177,8 @@ namespace pr
 				base::OnMouseWheel(args);
 				if (args.m_handled) return;
 
-				m_main->NavZ(args.m_delta / (float)WHEEL_DELTA);
+				auto pt = pr::NormalisePoint(*this, args.m_point);
+				m_main->NavZ(pt, args.m_delta);
 				Invalidate();
 			}
 

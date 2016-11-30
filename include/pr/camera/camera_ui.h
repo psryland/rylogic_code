@@ -88,8 +88,8 @@ namespace pr
 
 				if (pr::FEql3(lookat - position, pr::v4Zero))
 					lookat = position + pr::v4ZAxis;
-				if (pr::Parallel3(lookat - position, up))
-					up = pr::Perpendicular3(up);
+				if (pr::Parallel(lookat - position, up))
+					up = pr::Perpendicular(up);
 		
 				m_cam.LookAt(position, lookat, up);
 				m_cam.FovX(hfov);

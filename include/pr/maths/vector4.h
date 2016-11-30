@@ -407,31 +407,48 @@ namespace pr
 	}
 
 	// Triple product: a . b x c
-	inline float Triple3(v4 const& a, v4 const& b, v4 const& c)
+	inline float Triple(v4 const& a, v4 const& b, v4 const& c)
 	{
 		return Dot3(a, Cross3(b, c));
 	}
 
 	// Returns true if 'a' and 'b' parallel
-	inline bool Parallel3(v4 const& v0, v4 const& v1, float tol = maths::tiny)
+	inline bool Parallel(v4 const& v0, v4 const& v1, float tol = maths::tiny)
 	{
 		return Length3Sq(Cross3(v0, v1)) <= Sqr(tol);
 	}
 
 	// Returns a vector guaranteed not parallel to 'v'
-	inline v4 CreateNotParallelTo3(v4 const& v)
+	inline v4 CreateNotParallelTo(v4 const& v)
 	{
 		bool x_aligned = Abs(v.x) > Abs(v.y) && Abs(v.x) > Abs(v.z);
 		return v4(static_cast<float>(!x_aligned), 0.0f, static_cast<float>(x_aligned), v.w);
 	}
 
 	// Returns a vector perpendicular to 'v'
-	inline v4 Perpendicular3(v4 const& v)
+	inline v4 pr_vectorcall Perpendicular(v4_cref v)
 	{
 		assert("Cannot make a perpendicular to a zero vector" && !IsZero3(v));
-		auto vec = Cross3(v, CreateNotParallelTo3(v));
+		auto vec = Cross3(v, CreateNotParallelTo(v));
 		vec *= Length3(v) / Length3(vec);
 		return vec;
+	}
+
+	// Returns a vector perpendicular to 'vec' favouring 'previous' as the preferred perpendicular
+	inline v4 pr_vectorcall Perpendicular(v4_cref vec, v4_cref previous)
+	{
+		assert("Cannot make a perpendicular to a zero vector" && !FEql3(vec, v4Zero));
+
+		// If 'previous' is still perpendicular, keep it
+		if (FEql(Dot3(vec, previous), 0))
+			return previous;
+
+		// If 'previous' is parallel to 'vec', choose a new perpendicular
+		if (Parallel(vec, previous))
+			return Perpendicular(vec);
+
+		// Otherwise, make a perpendicular that is close to 'previous'
+		return Normalise3(Cross3(Cross3(vec, previous), vec));
 	}
 
 	// Returns a vector with the 'xyz' values permuted 'n' times. '0=xyzw, 1=yzxw, 2=zxyw'

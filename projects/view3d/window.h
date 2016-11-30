@@ -6,7 +6,6 @@
 
 #include "view3d/forward.h"
 #include "view3d/context.h"
-#include "pr/linedrawer/ldr_sources.h"
 
 namespace view3d
 {
@@ -41,6 +40,7 @@ namespace view3d
 		LdrAngleUIPtr         m_angle_tool_ui;            // A UI for measuring angles between points within the 3d environment
 		EditorCont            m_editors;                  // User created editors
 		std::string           m_settings;                 // Allows a char const* to be returned
+		mutable pr::BBox      m_bbox_scene;               // Bounding box for all objects in the scene (Lazy updated)
 		pr::EventHandlerId    m_eh_store_updated;
 
 		// Default window construction settings
@@ -83,6 +83,8 @@ namespace view3d
 			,m_angle_tool_ui()
 			,m_editors()
 			,m_settings()
+			,m_bbox_scene(pr::BBoxReset)
+			,m_eh_store_updated()
 		{
 			// Observe the dll object store for changes
 			m_eh_store_updated = m_dll->m_sources.OnStoreChanged += [&](pr::ldr::ScriptSources&, pr::ldr::ScriptSources::StoreChangedEventArgs const&)
@@ -387,6 +389,70 @@ namespace view3d
 			// The bounding box for the scene
 			auto bbox = BBox();
 			m_camera.View(bbox, forward, up, true);
+		}
+
+		// Reset the camera to view a bbox
+		void ResetView(pr::BBox const& bbox, pr::v4 const& forward, pr::v4 const& up)
+		{
+			m_camera.View(bbox, forward, up, true);
+		}
+
+		// Return the bounding box of objects in this scene
+		pr::BBox SceneBounds(EView3DSceneBounds bounds)
+		{
+			pr::BBox bbox;
+			switch (bounds)
+			{
+			default:
+				{
+					assert(!"Unknown scene bounds type");
+					bbox = pr::BBoxUnit;
+					break;
+				}
+			case EView3DSceneBounds::All:
+				{
+					// Update the scene bounding box if out of date
+					if (m_bbox_scene == pr::BBoxReset)
+					{
+						for (auto& obj : m_objects)
+						{
+							auto bb = obj->BBoxWS(true);
+							if (!bb.empty())
+								pr::Encompass(m_bbox_scene, bb);
+						}
+					}
+					bbox = m_bbox_scene;
+					break;
+				}
+			case EView3DSceneBounds::Selected:
+				{
+					bbox = pr::BBoxReset;
+					for (auto& obj : m_objects)
+					{
+						if (!pr::AllSet(obj->m_flags, pr::ldr::ELdrFlags::Selected)) continue;
+
+						auto bb = obj->BBoxWS(true);
+						if (!bb.empty())
+							pr::Encompass(bbox, bb);
+					}
+					break;
+				}
+			case EView3DSceneBounds::Visible:
+				{
+					bbox = pr::BBoxReset;
+					for (auto& obj : m_objects)
+					{
+						obj->Apply([&](pr::ldr::LdrObject* o)
+						{
+							auto bb = o->BBoxWS(false);
+							if (!bb.empty()) pr::Encompass(bbox, bb);
+							return true;
+						}, "");
+					}
+					break;
+				}
+			}
+			return !bbox.empty() ? bbox : pr::BBoxUnit;
 		}
 
 		// Return the focus point of the camera in this draw set

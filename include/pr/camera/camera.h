@@ -9,6 +9,7 @@
 
 #include <bitset>
 #include "pr/maths/maths.h"
+#include "pr/maths/bit_fields.h"
 #include "pr/common/assert.h"
 #include "pr/common/keystate.h"
 #include "pr/common/flags_enum.h"
@@ -17,19 +18,17 @@ namespace pr
 {
 	namespace camera
 	{
-		enum class ENavBtn
+		// Navigation verbs
+		enum class ENavOp
 		{
-			None     = 0,
-			Left     = 1 << 0, // MK_LBUTTON
-			Right    = 1 << 1, // MK_RBUTTON
-			Shift    = 1 << 2, // MK_SHIFT
-			Ctrl     = 1 << 3, // MK_CONTROL
-			Middle   = 1 << 4, // MK_MBUTTON
-			XButton1 = 1 << 5, // MK_XBUTTON1
-			XButton2 = 1 << 6, // MK_XBUTTON2
+			None      = 0,
+			Translate = 1 << 0,
+			Rotate    = 1 << 1,
+			Zoom      = 1 << 2,
 			_bitwise_operators_allowed,
 		};
 
+		// Navigation keys
 		enum class ENavKey
 		{
 			Left,
@@ -82,6 +81,16 @@ namespace pr
 			};
 			operator bool() const { return (to_ulong() & All) != 0; }
 		};
+
+		// Convert an MK_ value into the default navigation operation
+		inline ENavOp MouseBtnToNavOp(int mk)
+		{
+			auto op = ENavOp::None;
+			if (pr::AllSet(mk, MK_LBUTTON)) op |= ENavOp::Rotate;
+			if (pr::AllSet(mk, MK_RBUTTON)) op |= ENavOp::Translate;
+			if (pr::AllSet(mk, MK_MBUTTON)) op |= ENavOp::Zoom;
+			return op;
+		}
 	}
 
 	// Camera matrix with 3D trackball-like control
@@ -92,26 +101,30 @@ namespace pr
 	//  point = v2(2.0f * pt.x / float(Width) - 1.0f, 1.0f - 2.0f * pt.y / float(Height));
 	struct Camera
 	{
-		m4x4                   m_base_c2w;          // The starting position during a mouse movement
-		m4x4                   m_c2w;               // Camera to world transform
-		v4                     m_align;             // The direction to align 'up' to, or v4Zero
-		float                  m_default_fovY;      // The default field of view
-		float                  m_base_fovY;         // The starting FOV during a mouse movement
-		float                  m_fovY;              // Field of view in the Y direction
-		float                  m_base_focus_dist;   // The starting focus distance during a mouse movement
-		float                  m_focus_dist;        // Distance from the c2w position to the focus, down the z axis
-		float                  m_aspect;            // Aspect ratio = width/height
-		float                  m_near;              // The near plane as a multiple of the focus distance
-		float                  m_far;               // The near plane as a multiple of the focus distance
-		float                  m_accuracy_scale;    // Scale factor for high accuracy control
-		v2                     m_Lref;              // Movement start reference point for the left button
-		v2                     m_Rref;              // Movement start reference point for the right button
-		v2                     m_Mref;              // Movement start reference point for the middle button
-		camera::NavKeyBindings m_key;               // Key bindings
-		camera::LockMask       m_lock_mask;         // Locks on the allowed motion
-		bool                   m_orthographic;      // True for orthographic camera to screen transforms, false for perspective
-		bool                   m_moved;             // Dirty flag for when the camera moves
-		bool                   m_focus_rel_clip;    // True if the near/far clip planes should be relative to the focus point
+		using NavKeyBindings = camera::NavKeyBindings;
+		using LockMask       = camera::LockMask;
+		using ENavOp         = camera::ENavOp;
+
+		m4x4           m_base_c2w;          // The starting position during a mouse movement
+		m4x4           m_c2w;               // Camera to world transform
+		v4             m_align;             // The direction to align 'up' to, or v4Zero
+		float          m_default_fovY;      // The default field of view
+		float          m_base_fovY;         // The starting FOV during a mouse movement
+		float          m_fovY;              // Field of view in the Y direction
+		float          m_base_focus_dist;   // The starting focus distance during a mouse movement
+		float          m_focus_dist;        // Distance from the c2w position to the focus, down the z axis
+		float          m_aspect;            // Aspect ratio = width/height
+		float          m_near;              // The near plane as a multiple of the focus distance
+		float          m_far;               // The near plane as a multiple of the focus distance
+		float          m_accuracy_scale;    // Scale factor for high accuracy control
+		v2             m_Tref;              // Movement start reference point for translation
+		v2             m_Rref;              // Movement start reference point for rotation
+		v2             m_Zref;              // Movement start reference point for zoom
+		NavKeyBindings m_key;               // Key bindings
+		LockMask       m_lock_mask;         // Locks on the allowed motion
+		bool           m_orthographic;      // True for orthographic camera to screen transforms, false for perspective
+		bool           m_moved;             // Dirty flag for when the camera moves
+		bool           m_focus_rel_clip;    // True if the near/far clip planes should be relative to the focus point
 
 		Camera()
 			:Camera(pr::m4x4Identity)
@@ -132,9 +145,9 @@ namespace pr
 			,m_near(near_)
 			,m_far(far_)
 			,m_accuracy_scale(0.1f)
-			,m_Lref(v2Zero)
+			,m_Tref(v2Zero)
 			,m_Rref(v2Zero)
-			,m_Mref(v2Zero)
+			,m_Zref(v2Zero)
 			,m_key()
 			,m_lock_mask()
 			,m_orthographic(orthographic)
@@ -300,7 +313,9 @@ namespace pr
 		// Set the YAxis field of view. FOV relationship: tan(fovY/2) * aspect_w_by_h = tan(fovX/2);
 		void FovY(float fovY)
 		{
-			PR_ASSERT(PR_DBG, fovY >= 0.0f && pr::IsFinite(fovY), "");
+			PR_ASSERT(PR_DBG, fovY >= 0.0f && fovY < maths::tau_by_2 && pr::IsFinite(fovY), "");
+			
+			fovY = Clamp(fovY, maths::tiny, maths::tau_by_2);
 			m_moved = fovY != m_fovY;
 			m_base_fovY = m_fovY = fovY;
 		}
@@ -310,6 +325,8 @@ namespace pr
 		{
 			PR_ASSERT(PR_DBG, pr::IsFinite(fovX) && pr::IsFinite(fovY), "");
 			PR_ASSERT(PR_DBG, fovX < maths::tau_by_2 && fovY < maths::tau_by_2, "");
+			fovX = Clamp(fovX, maths::tiny, maths::tau_by_2);
+			fovY = Clamp(fovY, maths::tiny, maths::tau_by_2);
 			auto aspect = pr::Tan(fovX/2) / pr::Tan(fovY/2);
 			Aspect(aspect);
 			FovY(fovY);
@@ -390,47 +407,91 @@ namespace pr
 		// The end of the mouse movement is indicated by 'btn_state' being zero
 		// 'ref_point' should be true on the mouse down/up event, false while dragging
 		// Returns true if the camera has moved
-		bool MouseControl(pr::v2 const& point, camera::ENavBtn btn_state, bool ref_point)
+		bool MouseControl(pr::v2 const& point, ENavOp nav_op, bool ref_point)
 		{
-			// Button states
-			bool lbtn = int(btn_state & camera::ENavBtn::Left  ) != 0;
-			bool rbtn = int(btn_state & camera::ENavBtn::Right ) != 0;
-			bool mbtn = int(btn_state & camera::ENavBtn::Middle) != 0;
+			// Navigation operations
+			bool translate = int(nav_op & camera::ENavOp::Translate) != 0;
+			bool rotate    = int(nav_op & camera::ENavOp::Rotate   ) != 0;
+			bool zoom      = int(nav_op & camera::ENavOp::Zoom     ) != 0;
 
 			if (ref_point)
 			{
-				if (int(btn_state & camera::ENavBtn::Left  ) != 0) m_Lref = point;
-				if (int(btn_state & camera::ENavBtn::Right ) != 0) m_Rref = point;
-				if (int(btn_state & camera::ENavBtn::Middle) != 0) m_Mref = point;
+				if (int(nav_op & camera::ENavOp::Translate) != 0) m_Tref = point;
+				if (int(nav_op & camera::ENavOp::Rotate   ) != 0) m_Rref = point;
+				if (int(nav_op & camera::ENavOp::Zoom     ) != 0) m_Zref = point;
 				Commit();
 			}
-			if (mbtn || (lbtn && rbtn))
+			if (zoom || (translate && rotate))
 			{
 				if (KeyDown(m_key[camera::ENavKey::TranslateZ]))
 				{
 					// Move in a fraction of the focus distance
-					float delta = mbtn ? (point.y - m_Mref.y) : (point.y - m_Lref.y);
+					float delta = zoom ? (point.y - m_Zref.y) : (point.y - m_Tref.y);
 					Translate(0, 0, delta * 10.0f, false);
 				}
 				else
 				{
 					// Zoom the field of view
-					float zoom = mbtn ? (m_Mref.y - point.y) : (m_Lref.y - point.y);
-					Zoom(zoom, false);
+					float zm = zoom ? (m_Zref.y - point.y) : (m_Tref.y - point.y);
+					Zoom(zm, false);
 				}
 			}
-			if (lbtn && !rbtn)
+			if (translate && !rotate)
 			{
-				float dx = (m_Lref.x - point.x) * m_focus_dist * pr::Tan(m_fovY * 0.5f) * m_aspect;
-				float dy = (m_Lref.y - point.y) * m_focus_dist * pr::Tan(m_fovY * 0.5f);
+				float dx = (m_Tref.x - point.x) * m_focus_dist * pr::Tan(m_fovY * 0.5f) * m_aspect;
+				float dy = (m_Tref.y - point.y) * m_focus_dist * pr::Tan(m_fovY * 0.5f);
 				Translate(dx, dy, 0.0f, false);
 			}
-			if (rbtn && !lbtn)
+			if (rotate && !translate)
 			{
 				// If in the roll zone
 				if (Length2(m_Rref) < 0.80f) Rotate((point.y - m_Rref.y) * maths::tau_by_4, (m_Rref.x - point.x) * maths::tau_by_4, 0.0f, false);
 				else                         Rotate(0.0f, 0.0f, ATan2(m_Rref.y, m_Rref.x) - ATan2(point.y, point.x), false);
 			}
+			return m_moved;
+		}
+
+		// Modify the camera position in the camera Z direction based on mouse wheel.
+		// 'point' should be normalised. i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal Cartesian axes
+		// 'delta' is the mouse wheel scroll delta value (i.e. 120 = 1 click = 10% of the focus distance)
+		// Returns true if the camera has moved
+		bool MouseControlZ(pr::v2 const& point, float delta, bool commit = true)
+		{
+			auto dist = delta / 120.0f;
+			if (KeyDown(m_key[camera::ENavKey::Accurate])) dist *= 0.1f;
+			if (KeyDown(m_key[camera::ENavKey::SuperAccurate])) dist *= 0.1f;
+
+			// Scale by the focus distance
+			dist *= m_base_focus_dist * 0.1f;
+
+			// Move along a ray cast from the camera position to the
+			// mouse point projected onto the focus plane.
+			auto pt  = NSSPointToWSPoint(v4(point, FocusDist(), 0.0f));
+			auto ray_ws = pt - CameraToWorld().pos;
+			auto ray_cs = dist * Normalise3(WorldToCamera() * ray_ws, v4Zero); // normalised ray in camera space
+
+			// If the 'TranslateZ' key is down move the focus point too.
+			// Otherwise move the camera toward or away from the focus point.
+			if (!KeyDown(m_key[camera::ENavKey::TranslateZ]))
+				m_focus_dist = Clamp(m_base_focus_dist + ray_cs.z, FocusDistMin(), FocusDistMax());
+
+			// Translate
+			auto pos = m_base_c2w.pos + m_base_c2w * ray_cs;
+			if (IsFinite(pos))
+				m_c2w.pos = pos;
+
+			// Apply non-camera relative locking
+			if (m_lock_mask && !m_lock_mask[camera::LockMask::CameraRelative])
+			{
+				if (m_lock_mask[camera::LockMask::TransX]) m_c2w.pos.x = m_base_c2w.pos.x;
+				if (m_lock_mask[camera::LockMask::TransY]) m_c2w.pos.y = m_base_c2w.pos.y;
+				if (m_lock_mask[camera::LockMask::TransZ]) m_c2w.pos.z = m_base_c2w.pos.z;
+			}
+
+			// Set the base values
+			if (commit) Commit();
+
+			m_moved = true;
 			return m_moved;
 		}
 
@@ -587,7 +648,7 @@ namespace pr
 			m_align = up;
 			if (Length3Sq(m_align) > maths::tiny)
 			{
-				if (pr::Parallel3(m_c2w.z, m_align)) m_c2w = m4x4(m_c2w.y, m_c2w.z, m_c2w.x, m_c2w.w);
+				if (Parallel(m_c2w.z, m_align)) m_c2w = m4x4(m_c2w.y, m_c2w.z, m_c2w.x, m_c2w.w);
 				m_c2w = m4x4::LookAt(m_c2w.pos, FocusPoint(), m_align);
 				m_moved = true;
 				m_base_c2w = m_c2w; // Update the base point

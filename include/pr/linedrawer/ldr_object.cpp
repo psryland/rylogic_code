@@ -1605,7 +1605,7 @@ namespace pr
 				p.m_reader.Real(h);
 
 				fwd = Normalise3(fwd);
-				auto up = Perpendicular3(fwd);
+				auto up = Perpendicular(fwd);
 				auto left = Cross3(up, fwd);
 				up *= h * 0.5f;
 				left *= w * 0.5f;
@@ -3352,21 +3352,22 @@ LR"(// *************************************************************************
 
 		LdrObject::LdrObject(ObjectAttributes const& attr, LdrObject* parent, pr::Guid const& context_id)
 			:RdrInstance()
-			, m_o2p(m4x4Identity)
-			, m_type(attr.m_type)
-			, m_parent(parent)
-			, m_child()
-			, m_name(attr.m_name)
-			, m_context_id(context_id)
-			, m_base_colour(attr.m_colour)
-			, m_colour_mask()
-			, m_anim()
-			, m_step()
-			, m_bbox_instance()
-			, m_instanced(attr.m_instance)
-			, m_visible(true)
-			, m_wireframe(false)
-			, m_user_data()
+			,m_o2p(m4x4Identity)
+			,m_type(attr.m_type)
+			,m_parent(parent)
+			,m_child()
+			,m_name(attr.m_name)
+			,m_context_id(context_id)
+			,m_base_colour(attr.m_colour)
+			,m_colour_mask()
+			,m_anim()
+			,m_step()
+			,m_bbox_instance()
+			,m_instanced(attr.m_instance)
+			,m_visible(true)
+			,m_wireframe(false)
+			,m_flags(ELdrFlags::None)
+			,m_user_data()
 		{
 			m_i2w = m4x4Identity;
 			m_colour = m_base_colour;
@@ -3472,18 +3473,22 @@ LR"(// *************************************************************************
 		}
 
 		// Get/Set the visibility of this object or child objects matching 'name' (see Apply)
-		bool LdrObject::Visible(char const* name)
+		bool LdrObject::Visible(char const* name) const
 		{
 			auto obj = Child(name);
 			return obj ? obj->m_visible : false;
 		}
 		void LdrObject::Visible(bool visible, char const* name)
 		{
-			Apply([=](LdrObject* o){ o->m_visible = visible; return true; }, name);
+			Apply([=](LdrObject* o)
+			{
+				o->m_visible = visible;
+				return true;
+			}, name);
 		}
 
 		// Get/Set the render mode for this object or child objects matching 'name' (see Apply)
-		bool LdrObject::Wireframe(char const* name)
+		bool LdrObject::Wireframe(char const* name) const
 		{
 			auto obj = Child(name);
 			return obj ? obj->m_wireframe : false;
@@ -3495,6 +3500,23 @@ LR"(// *************************************************************************
 				o->m_wireframe = wireframe;
 				if (o->m_wireframe) o->m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME);
 				else                o->m_rsb.Clear(ERS::FillMode);
+				return true;
+			}, name);
+		}
+
+		// Get/Set meta behaviour flags for this object or child objects matching 'name' (see Apply)
+		ELdrFlags LdrObject::Flags(char const* name) const
+		{
+			// Mainly used to allow non-user objects to be added to a scene
+			// and not affect the bounding box of the scene
+			auto obj = Child(name);
+			return obj ? obj->m_flags : ELdrFlags::None;
+		}
+		void LdrObject::Flags(ELdrFlags flags, char const* name)
+		{
+			Apply([=](LdrObject* o)
+			{
+				o->m_flags = flags;
 				return true;
 			}, name);
 		}

@@ -15,6 +15,7 @@
 #include "pr/common/refcount.h"
 #include "pr/common/refptr.h"
 #include "pr/common/user_data.h"
+#include "pr/common/flags_enum.h"
 #include "pr/container/vector.h"
 #include "pr/maths/maths.h"
 #include "pr/str/string.h"
@@ -184,7 +185,22 @@ namespace pr
 			x(StepData   ,= 1 << 9)
 		PR_DEFINE_ENUM2_FLAGS(EUpdateObject, PR_ENUM);
 		#undef PR_ENUM
-		
+
+		// Flags for extra behaviour of an object
+		enum class ELdrFlags
+		{
+			None = 0,
+
+			// Set when an object is selected. The meaning of 'selected' is up to the application
+			Selected = 1 << 0,
+
+			// Doesn't contribute to the bounding box on an object.
+			// Typically used for objects in a scene that are not part of the scene bbox
+			BBoxInvisible = 1 << 1,
+
+			// Bitwise operators
+			_bitwise_operators_allowed,
+		};
 		#pragma endregion
 
 		#pragma region Types
@@ -359,6 +375,7 @@ namespace pr
 			bool              m_instanced;     // False if this instance should never be drawn (it's used for instancing only)
 			bool              m_visible;       // True if the instance should be rendered
 			bool              m_wireframe;     // True if this object is drawn in wireframe
+			ELdrFlags         m_flags;         // Property flags controlling meta behaviour of the object
 			pr::UserData      m_user_data;     // User data
 
 			LdrObject(ObjectAttributes const& attr, LdrObject* parent, pr::Guid const& context_id);
@@ -429,12 +446,16 @@ namespace pr
 			void O2P(pr::m4x4 const& o2p, char const* name = nullptr);
 
 			// Get/Set the visibility of this object or child objects matching 'name' (see Apply)
-			bool Visible(char const* name = nullptr);
+			bool Visible(char const* name = nullptr) const;
 			void Visible(bool visible, char const* name = nullptr);
 
 			// Get/Set the render mode for this object or child objects matching 'name' (see Apply)
-			bool Wireframe(char const* name = nullptr);
+			bool Wireframe(char const* name = nullptr) const;
 			void Wireframe(bool wireframe, char const* name = nullptr);
+
+			// Get/Set meta behaviour flags for this object or child objects matching 'name' (see Apply)
+			ELdrFlags Flags(char const* name = nullptr) const;
+			void Flags(ELdrFlags flags, char const* name = nullptr);
 
 			// Get/Set the colour of this object or child objects matching 'name' (see Apply)
 			// For 'Get', the colour of the first object to match 'name' is returned
@@ -460,7 +481,7 @@ namespace pr
 
 				// Start with the bbox for this object
 				pr::BBox bbox = pr::BBoxReset;
-				if (m_model && pred(*this)) // Get the bbox from the graphics model
+				if (m_model && !AllSet(m_flags,ELdrFlags::BBoxInvisible) && pred(*this)) // Get the bbox from the graphics model
 				{
 					auto bb = i2w * m_model->m_bbox;
 					if (!bb.empty()) pr::Encompass(bbox, bb);

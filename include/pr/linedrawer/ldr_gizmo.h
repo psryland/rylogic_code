@@ -159,10 +159,10 @@ namespace pr
 			// 'nss_point' should be normalised. i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal Cartesian axes
 			// The start of a mouse movement is indicated by 'btn_state' being non-zero
 			// The end of the mouse movement is indicated by 'btn_state' being zero
-			// 'btn_state' is one of the MK_LBUTTON, MK_RBUTTON, values
+			// 'nav_op' is a navigation/manipulation verb
 			// 'ref_point' should be true on the mouse down/up event, false while dragging
 			// Returns true if the gizmo has moved or changed colour
-			bool MouseControl(pr::Camera& camera, pr::v2 const& nss_point, int btn_state, bool ref_point);
+			bool MouseControl(pr::Camera& camera, pr::v2 const& nss_point, pr::camera::ENavOp nav_op, bool ref_point);
 
 			// Perform a hit test given a normalised screen-space point
 			EComponent HitTest(pr::Camera& camera, pr::v2 const& nss_point);

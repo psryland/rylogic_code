@@ -1080,6 +1080,15 @@ namespace pr
 		return t*t*t*(t*(t*6 - 15) + 10);
 	}
 
+	// Scale a value on the range [-inf,+inf] to within the range [-1,+1].
+	// 'n' is a horizontal scaling factor.
+	// If n = 1, [-1,+1] maps to [-0.5, +0.5]
+	// If n = 10, [-10,+10] maps to [-0.5, +0.5], etc
+	inline float Sigmoid(float x, float n = 1.0f)
+	{
+		return ATan(x/n) / maths::tau_by_4;
+	}
+
 	// Low precision reciprocal square root
 	inline float Rsqrt0(float x)
 	{

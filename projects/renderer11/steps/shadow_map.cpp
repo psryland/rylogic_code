@@ -302,7 +302,7 @@ namespace pr
 
 					// Create a light to world transform.
 					auto centre = (TL + TR + BL + BR) * 0.25f;
-					auto lt2w = m4x4::LookAt(centre, centre + light.m_direction, Parallel3(light.m_direction,c2w.y) ? c2w.z : c2w.y);
+					auto lt2w = m4x4::LookAt(centre, centre + light.m_direction, Parallel(light.m_direction,c2w.y) ? c2w.z : c2w.y);
 					w2s = InvertFast(lt2w);
 
 					// Create an orthographic projection
@@ -369,7 +369,7 @@ namespace pr
 
 					// Create a light to world transform
 					// Position the light camera at the light position looking in the -frustum plane normal direction
-					auto lt2w = m4x4::LookAt(light.m_position, light.m_position - ws_norm, Parallel3(ws_norm,c2w.y) ? c2w.z : c2w.y);
+					auto lt2w = m4x4::LookAt(light.m_position, light.m_position - ws_norm, Parallel(ws_norm,c2w.y) ? c2w.z : c2w.y);
 					w2s = Invert(lt2w);
 					tl = w2s * TL;
 					tr = w2s * TR;

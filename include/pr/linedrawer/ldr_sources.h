@@ -45,7 +45,9 @@ namespace pr
 					,m_file_group_id(file_group_id)
 					,m_async(async)
 					,m_includes(includes)
-				{}
+				{
+					m_includes.AddSearchPath(pr::filesys::GetDirectory(m_filepath));
+				}
 			};
 
 			// A container that doesn't invalidate on add/remove is needed because
@@ -79,11 +81,11 @@ namespace pr
 
 		private:
 
-			FileCont                   m_files;
-			pr::FileWatch              m_watcher;
-			ObjectCont*                m_store;
-			pr::Renderer*              m_rdr; 
-			pr::script::IEmbeddedCode* m_embed;
+			FileCont                   m_files;    // The file sources of ldr script
+			pr::FileWatch              m_watcher;  // The watcher of files
+			ObjectCont*                m_store;    // The store to add Ldr objects to
+			pr::Renderer*              m_rdr;      // Renderer used to create models
+			pr::script::IEmbeddedCode* m_embed;    // Embedded code handler
 
 		public:
 
@@ -193,7 +195,11 @@ namespace pr
 					{
 						// Use the same file group Id for all included files
 						// Use 'file' as the user data so that each included file has a link to the root.
-						m_watcher.Add(pr::filesys::Standardise(fp).c_str(), this, file.m_file_group_id, &file);
+						auto fpath = pr::filesys::Standardise(fp);
+						m_watcher.Add(fpath.c_str(), this, file.m_file_group_id, &file);
+
+						// Add the directory of the included file to the paths
+						file.m_includes.AddSearchPath(pr::filesys::GetDirectory(fpath));
 					};
 
 					// Add the file based on it's file type
@@ -205,12 +211,7 @@ namespace pr
 					else if (pr::str::EqualI(extn, "p3d"))
 					{
 						Buffer<> src(ESrcType::Buffered, pr::FmtS("*Model {\"%s\"}", file.m_filepath.c_str()));
-
-						Includes<> inc;
-						inc.FileOpened += add_watch;
-						inc.AddSearchPath(pr::filesys::GetDirectory(file.m_filepath));
-
-						Reader reader(src, false, &inc, nullptr, m_embed);
+						Reader reader(src, false, &file.m_includes, nullptr, m_embed);
 						Parse(*m_rdr, reader, out, true, file.m_file_group_id);
 					}
 					else // assume ldr script file
@@ -218,11 +219,10 @@ namespace pr
 						pr::LockFile lock(file.m_filepath, 10, 5000);
 						FileSrc src(file.m_filepath.c_str());
 
-						Includes<> inc;
-						inc.FileOpened += add_watch;
-						inc.AddSearchPath(pr::filesys::GetDirectory(file.m_filepath));
+						// When the include handler opens files, add them to the watcher as well
+						file.m_includes.FileOpened = add_watch;
 
-						Reader reader(src, false, &inc, nullptr, m_embed);
+						Reader reader(src, false, &file.m_includes, nullptr, m_embed);
 						Parse(*m_rdr, reader, out, true, file.m_file_group_id);
 					}
 

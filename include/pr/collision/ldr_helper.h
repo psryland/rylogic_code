@@ -32,7 +32,7 @@ namespace pr
 		}
 		template <typename Str, typename Char = Str::value_type> inline Str& Shape(Str& str, Char const* name, Col colour, collision::ShapeBox const& shape, m4x4_cref o2w)
 		{
-			return Box(str, name, colour, o2w, shape.m_radius * 2.0f);
+			return Box(str, name, colour, shape.m_radius * 2.0f, o2w);
 		}
 		template <typename Str, typename Char = Str::value_type> inline Str& Shape(Str& str, Char const* name, Col colour, collision::ShapeLine const& shape, m4x4_cref o2w)
 		{

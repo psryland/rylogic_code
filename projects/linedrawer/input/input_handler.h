@@ -10,7 +10,7 @@ namespace ldr
 	// A interface for classes that handle user input
 	struct IInputHandler
 	{
-		using ENavBtn = pr::camera::ENavBtn;
+		using ENavOp = pr::camera::ENavOp;
 
 		virtual ~IInputHandler() {}
 		IInputHandler() {}
@@ -32,8 +32,8 @@ namespace ldr
 		// 'button_state' is the state of the mouse buttons (pr::camera::ENavKey)
 		// 'start_or_end' is true on mouse down/up
 		// Returns true if the scene needs refreshing
-		virtual bool MouseInput(pr::v2 const& pos_ns, ENavBtn button_state, bool start_or_end) = 0;
-		virtual bool MouseClick(pr::v2 const& pos_ns, ENavBtn button_state) = 0;
+		virtual bool MouseInput(pr::v2 const& pos_ns, ENavOp nav_op, bool start_or_end) = 0;
+		virtual bool MouseClick(pr::v2 const& pos_ns, ENavOp nav_op) = 0;
 		virtual bool MouseWheel(pr::v2 const& pos_ns, float delta) = 0;
 	};
 }

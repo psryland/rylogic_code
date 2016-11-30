@@ -192,7 +192,7 @@ namespace pr
 			if (FEql(s, 0.0f))
 			{
 				// vectors are 180 degrees apart
-				axis = Perpendicular3(to);
+				axis = Perpendicular(to);
 				s = 0.0f;
 			}
 			xyzw = Normalise4(v4(axis.x, axis.y, axis.z, s));

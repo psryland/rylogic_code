@@ -7,7 +7,6 @@
 #include <type_traits>
 #include <cassert>
 #include "pr/geometry/common.h"
-#include "pr/geometry/triangle.h"
 
 namespace pr
 {

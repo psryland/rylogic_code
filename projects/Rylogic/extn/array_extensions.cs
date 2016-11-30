@@ -3,6 +3,8 @@
 //  Copyright (c) Rylogic Ltd 2010
 //***************************************************
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace pr.extn
@@ -125,6 +127,99 @@ namespace pr.extn
 
 			return task.IsCompleted;
 		}
+	}
+
+	/// <summary>A sub range within an array</summary>
+	public struct ArraySlice<T> :IList<T> ,ICollection<T>, IEnumerable<T>, IEnumerable, IReadOnlyList<T>, IReadOnlyCollection<T>
+	{
+		// This class exists because ArraySegment doesn't provide an indexer.
+		// Yes, seriously.. ffs
+
+		public ArraySlice(T[] arr)
+			:this(arr,0,arr.Length)
+		{}
+		public ArraySlice(T[] arr, int offset, int length)
+		{
+			if (arr == null)
+				throw new ArgumentNullException(nameof(arr));
+			if (offset < 0 || offset > arr.Length)
+				throw new ArgumentOutOfRangeException(nameof(offset), "Offset out of range [0,{0}]".Fmt(arr.Length));
+			if (length < 0 || length > arr.Length - offset)
+				throw new ArgumentOutOfRangeException(nameof(offset), "Length out of range [0,{0}]".Fmt(arr.Length - offset));
+
+			Array = arr;
+			Offset = offset;
+			Length = length;
+		}
+
+		/// <summary>The original array</summary>
+		public T[] Array { get; private set; }
+
+		/// <summary>The index offset into 'Array' for the start of this slice</summary>
+		public int Offset { get; private set; }
+
+		/// <summary>The number of elements in this array slice</summary>
+		public int Length { get; private set; }
+		public int Count { get { return Length; } }
+
+		/// <summary>Get/Set by index</summary>
+		public T this[int idx]
+		{
+			get { return Array[Offset + idx]; }
+			set { Array[Offset + idx] = value; }
+		}
+
+		/// <summary>Implicit conversion to/from ArraySegment</summary>
+		public static implicit operator ArraySegment<T>(ArraySlice<T> s) { return new ArraySegment<T>(s.Array, s.Offset, s.Count); }
+		public static implicit operator ArraySlice<T>(ArraySegment<T> s) { return new ArraySlice<T>(s.Array, s.Offset, s.Count); }
+
+		#region IList
+		public bool IsReadOnly
+		{
+			get { return true; }
+		}
+		public int IndexOf(T item)
+		{
+			return System.Array.IndexOf(Array, item);
+		}
+		public void Insert(int index, T item)
+		{
+			throw new NotSupportedException("Cannot insert items into an array slice");
+		}
+		public bool Remove(T item)
+		{
+			throw new NotSupportedException("Cannot remove items from an array slice");
+		}
+		public void RemoveAt(int index)
+		{
+			throw new NotSupportedException("Cannot remove items from an array slice");
+		}
+		public void Add(T item)
+		{
+			throw new NotSupportedException("Cannot add items to an array slice");
+		}
+		public void Clear()
+		{
+			Length = 0;
+		}
+		public bool Contains(T item)
+		{
+			return IndexOf(item) != -1;
+		}
+		public void CopyTo(T[] array, int arrayIndex)
+		{
+			System.Array.Copy(Array, Offset, array, arrayIndex, Length);
+		}
+		public IEnumerator<T> GetEnumerator()
+		{
+			for (int i = Offset, iend = Offset + Length; i != iend; ++i)
+				yield return Array[i];
+		}
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return ((IEnumerable<T>)this).GetEnumerator();
+		}
+		#endregion
 	}
 }
 

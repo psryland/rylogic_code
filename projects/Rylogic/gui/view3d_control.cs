@@ -52,6 +52,11 @@ namespace pr.gui
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
+		protected override void OnInvalidated(InvalidateEventArgs e)
+		{
+			Window?.Invalidate();
+			base.OnInvalidated(e);
+		}
 
 		/// <summary>The underlying interop wrapper</summary>
 		public View3d View3d
@@ -174,7 +179,7 @@ namespace pr.gui
 			if (Window == null) return;
 			Cursor = Cursors.Default;
 			Capture = false;
-			if (Window.MouseNavigate(e.Location, 0, true))
+			if (Window.MouseNavigate(e.Location, View3d.ENavOp.None, true))
 				Invalidate();
 
 			// Short clicks bring up the context menu
@@ -190,7 +195,7 @@ namespace pr.gui
 		public void OnMouseWheel(object sender, MouseEventArgs e)
 		{
 			if (Window == null) return;
-			if (Window.Navigate(0f, 0f, e.Delta / 120f))
+			if (Window.MouseNavigateZ(e.Location, e.Delta))
 				Invalidate();
 		}
 		public void OnMouseDblClick(object sender, MouseEventArgs e)

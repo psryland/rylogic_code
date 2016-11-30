@@ -1221,7 +1221,21 @@ namespace pr.win32
 			return (int)LoWord((uint)dword);
 		}
 
-        // System.Windows.Forms.EKeys is the same as the win32 VK_ macros
+		// System.Windows.Forms.EKeys is the same as the win32 VK_ macros
+		// System.Windows.Forms.MouseButtons *isn't* the same as MK_ macros however
+		// nor is System.Windows.Input.MouseButton
+
+		/// <summary>Convert WinForms MouseButtons to win32 MK_ macro values</summary>
+		public static int ToMKey(MouseButtons btns)
+		{
+			var mk = 0;
+			if (btns.HasFlag(MouseButtons.Left    )) mk |= MK_LBUTTON;
+			if (btns.HasFlag(MouseButtons.Right   )) mk |= MK_RBUTTON;
+			if (btns.HasFlag(MouseButtons.Middle  )) mk |= MK_MBUTTON;
+			if (btns.HasFlag(MouseButtons.XButton1)) mk |= MK_XBUTTON1;
+			if (btns.HasFlag(MouseButtons.XButton2)) mk |= MK_XBUTTON2;
+			return mk;
+		}
 
 		/// <summary>Convert WParam to EKeys</summary>
 		public static Keys ToVKey(IntPtr wparam)

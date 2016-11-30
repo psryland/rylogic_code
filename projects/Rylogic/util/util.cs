@@ -584,7 +584,7 @@ namespace pr.util
 		}
 		public static string AppVersion
 		{
-			get { return AssemblyVersion().ToString(); }
+			get { return AssemblyVersion().ToString(3); }
 		}
 
 		/// <summary>Returns the timestamp of an assembly. Use 'Assembly.GetCallingAssembly()'</summary>
@@ -1167,6 +1167,18 @@ namespace pr.util
 			if (r.Top    < scn.Top   ) r.Y = scn.Top;
 			return r;
 		}
+
+		/// <summary>Convert this mouse button flag into an index of first button that is down</summary>
+		public static int ButtonIndex(this MouseButtons button)
+		{
+			if (Bit.AllSet((uint)button, (uint)MouseButtons.Left    )) return 1;
+			if (Bit.AllSet((uint)button, (uint)MouseButtons.Right   )) return 2;
+			if (Bit.AllSet((uint)button, (uint)MouseButtons.Middle  )) return 3;
+			if (Bit.AllSet((uint)button, (uint)MouseButtons.XButton1)) return 4;
+			if (Bit.AllSet((uint)button, (uint)MouseButtons.XButton2)) return 5;
+			return 0;
+		}
+		public const int MouseButtonCount = 6;
 	}
 
 	/// <summary>Type specific utility methods</summary>

@@ -386,12 +386,12 @@ namespace ldr
 			::ReleaseCapture();
 
 		// Get the button pressed and the location
-		auto btn = static_cast<pr::camera::ENavBtn>(args.m_button);
+		auto op = pr::camera::MouseBtnToNavOp(int(args.m_button));
 		auto mouse_loc = pr::To<pr::v2>(args.m_point);
 		auto pt = ToNormSS(mouse_loc, m_nav.ViewSize());
 
 		// Forward the mouse input to the input handler
-		if (m_input->MouseInput(pt, args.m_down ? btn : pr::camera::ENavBtn::None, true))
+		if (m_input->MouseInput(pt, args.m_down ? op : pr::camera::ENavOp::None, true))
 		{
 			RenderNeeded();
 			args.m_handled = true;
@@ -402,11 +402,11 @@ namespace ldr
 	void MainUI::MouseMove(Control&, MouseEventArgs& args)
 	{
 		// Get the button pressed and the location
-		auto btn = static_cast<pr::camera::ENavBtn>(args.m_button);
+		auto op = pr::camera::MouseBtnToNavOp(int(args.m_button));
 		auto mouse_loc = pr::To<pr::v2>(args.m_point);
 		auto pt = ToNormSS(mouse_loc, m_nav.ViewSize());
 
-		if (m_input->MouseInput(pt, btn, false))
+		if (m_input->MouseInput(pt, op, false))
 		{
 			args.m_handled = true;
 			Render(); // Render directly, for nice smooth scrolling
@@ -417,12 +417,12 @@ namespace ldr
 	void MainUI::MouseClick(Control&, MouseEventArgs& args)
 	{
 		// Get the button pressed and the location
-		auto btn = static_cast<pr::camera::ENavBtn>(args.m_button);
+		auto op = pr::camera::MouseBtnToNavOp(int(args.m_button));
 		auto mouse_loc = pr::To<pr::v2>(args.m_point);
 		auto pt = ToNormSS(mouse_loc, m_nav.ViewSize());
 
 		// Forward the mouse input to the input handler
-		if (m_input->MouseClick(pt, btn))
+		if (m_input->MouseClick(pt, op))
 		{
 			RenderNeeded();
 			args.m_handled = true;
@@ -1032,9 +1032,9 @@ namespace ldr
 		auto c2w   = m_nav.CameraToWorld();
 		auto focus = m_nav.FocusPoint();
 		auto cam   = focus + fwd * m_nav.FocusDistance();
-		auto up    = pr::Parallel3(fwd, c2w.y) ? pr::Cross3(fwd, c2w.x) : c2w.y;
+		auto up    = pr::Parallel(fwd, c2w.y) ? pr::Cross3(fwd, c2w.x) : c2w.y;
 		m_nav.LookAt(cam, focus, up);
-		
+
 		m_settings.m_CameraResetForward = fwd;
 		m_settings.m_CameraResetUp = up;
 		m_nav.SetResetOrientation(m_settings.m_CameraResetForward, m_settings.m_CameraResetUp);
