@@ -577,7 +577,10 @@ namespace pr
 
 			// If an align axis is given, align up to it
 			if (Length3Sq(m_align) > maths::tiny)
-				m_c2w = m4x4::LookAt(m_c2w.pos, old_focus, m_align);
+			{
+				auto up = pr::Perpendicular(m_c2w.pos - old_focus, m_align);
+				m_c2w = m4x4::LookAt(m_c2w.pos, old_focus, up);
+			}
 
 			// Set the base values
 			if (commit) Commit();

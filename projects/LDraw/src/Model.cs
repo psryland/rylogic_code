@@ -94,7 +94,7 @@ namespace LDraw
 		/// <summary>The View3d scene</summary>
 		public View3d.Window Window
 		{
-			[DebuggerStepThrough] get { return Scene.Scene.Window; }
+			[DebuggerStepThrough] get { return Scene?.Scene?.Window; }
 		}
 
 		/// <summary>The View3d scene camera</summary>
@@ -111,10 +111,10 @@ namespace LDraw
 		}
 
 		/// <summary>Context Ids of loaded script sources</summary>
-		private List<Guid> ContextIds
+		public List<Guid> ContextIds
 		{
 			get;
-			set;
+			private set;
 		}
 
 		/// <summary>Saved camera positions</summary>
@@ -175,8 +175,9 @@ namespace LDraw
 		public void SaveView()
 		{
 			// Prompt for a name
-			using (var dlg = new PromptForm { Title = "View Name:" })
+			using (var dlg = new PromptForm { Title = "View Name:", Value = "View{0}".Fmt(SavedViews.Count + 1) })
 			{
+				dlg.ValueCtrl.SelectAll();
 				if (dlg.ShowDialog(Owner) != DialogResult.OK) return;
 				SavedViews.Add(new SavedView(dlg.Value, Camera));
 			}
@@ -202,7 +203,7 @@ namespace LDraw
 		/// <summary>Add a demo scene to the scene</summary>
 		public void CreateDemoScene()
 		{
-			Window.CreateDemoScene();
+			ContextIds.Add(Window.CreateDemoScene());
 		}
 
 		/// <summary>Cycle through to the next fill mode</summary>

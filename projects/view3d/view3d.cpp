@@ -929,14 +929,13 @@ VIEW3D_API EView3DNavOp __stdcall View3D_MouseBtnToNavOp(int mk)
 // Lighting ********************************************************
 
 // Return the configuration of the single light source
-VIEW3D_API View3DLight __stdcall View3D_LightProperties(View3DWindow window)
+VIEW3D_API void __stdcall View3D_LightProperties(View3DWindow window, View3DLight& light)
 {
 	try
 	{
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		View3DLight light = {};
 		light.m_position        =  view3d::To<View3DV4>(window->m_light.m_position);
 		light.m_direction       =  view3d::To<View3DV4>(window->m_light.m_direction);
 		light.m_type            =  static_cast<EView3DLight>(window->m_light.m_type.value);
@@ -950,9 +949,8 @@ VIEW3D_API View3DLight __stdcall View3D_LightProperties(View3DWindow window)
 		light.m_falloff         =  window->m_light.m_falloff;
 		light.m_cast_shadow     =  window->m_light.m_cast_shadow;
 		light.m_on              =  window->m_light.m_on;
-		return light;
 	}
-	CatchAndReport(View3D_LightProperties, window, View3DLight());
+	CatchAndReport(View3D_LightProperties, window, );
 }
 
 // Configure the single light source
@@ -990,7 +988,7 @@ VIEW3D_API void __stdcall View3D_LightSource(View3DWindow window, View3DV4 posit
 		DllLockGuard;
 		window->m_light.m_position = view3d::To<pr::v4>(position);
 		window->m_light.m_direction = view3d::To<pr::v4>(direction);
-		window->m_light_is_camera_relative = camera_relative != 0;
+		window->m_light.m_cam_relative = camera_relative != 0;
 	}
 	CatchAndReport(View3D_LightSource, window,);
 }
@@ -1004,27 +1002,22 @@ VIEW3D_API void __stdcall View3D_ShowLightingDlg(View3DWindow window)
 
 		DllLockGuard;
 
-		auto pv = [&](Light const& light, bool cam_rel)
+		auto pv = [&](Light const& light)
 		{
-			auto prev_light   = window->m_light;
-			auto prev_cam_rel = window->m_light_is_camera_relative;
-
-			window->m_light                    = light;
-			window->m_light_is_camera_relative = cam_rel;
+			auto prev_light = window->m_light;
+			window->m_light = light;
 
 			View3D_Render(window);
 			View3D_Present(window);
 
-			window->m_light                    = prev_light;
-			window->m_light_is_camera_relative = prev_cam_rel;
+			window->m_light = prev_light;
 		};
 
-		LightingUI dlg(window->m_hwnd, window->m_light, window->m_light_is_camera_relative, pv);
+		LightingUI dlg(window->m_hwnd, window->m_light, pv);
 		if (dlg.ShowDialog(window->m_wnd.m_hwnd) != pr::gui::EDialogResult::Ok)
 			return;
 
-		window->m_light                    = dlg.m_light;
-		window->m_light_is_camera_relative = dlg.m_camera_relative;
+		window->m_light = dlg.m_light;
 
 		View3D_Render(window);
 		View3D_Present(window);
@@ -1064,6 +1057,18 @@ VIEW3D_API GUID __stdcall View3D_LoadScriptSource(wchar_t const* filepath, BOOL 
 		return Dll().LoadScriptSource(filepath, additional != 0, async != 0, GetIncludes(includes));
 	}
 	CatchAndReport(View3D_LoadScriptSource, (View3DWindow)nullptr, pr::GuidZero);
+}
+
+// Add an ldr script string. This will create all objects declared in 'ldr_script'
+// with context id 'context_id' if given, otherwise an id will be created
+VIEW3D_API GUID __stdcall View3D_LoadScript(wchar_t const* ldr_script, BOOL file, BOOL async, GUID const* context_id, View3DIncludes const* includes)
+{
+	try
+	{
+		DllLockGuard;
+		return Dll().LoadScript(ldr_script, file != 0, async != 0, context_id, GetIncludes(includes));
+	}
+	CatchAndReport(View3D_LoadScript, (View3DWindow)nullptr, pr::GuidZero);
 }
 
 // Reload script sources. This will delete all objects associated with the script sources
@@ -1118,33 +1123,16 @@ VIEW3D_API void __stdcall View3D_ObjectsDeleteById(GUID const& context_id)
 // 'context_id' - the context id to create the LdrObjects with
 // 'async' - if objects should be created by a background thread
 // 'includes' - information used to resolve include directives in 'ldr_script'
-VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(wchar_t const* ldr_script, BOOL file, GUID const& context_id, BOOL async, View3DIncludes const* includes)
+VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(wchar_t const* ldr_script, BOOL file, BOOL async, GUID const* context_id, View3DIncludes const* includes)
 {
-	using namespace pr::script;
 	try
 	{
 		DllLockGuard;
+		Dll().LoadScript(ldr_script, file != 0, async != 0, context_id, GetIncludes(includes));
 
-		// Parse the description
-		pr::ldr::ParseResult out;
-		if (file)
-		{
-			FileSrc src(ldr_script);
-			auto inc = GetIncludes(includes);
-			Reader reader(src, false, &inc, nullptr, &Dll().m_lua);
-			pr::ldr::Parse(Dll().m_rdr, reader, out, async != 0, context_id);
-		}
-		else // string
-		{
-			PtrW src(ldr_script);
-			auto inc = GetIncludes(includes); 
-			Reader reader(src, false, &inc, nullptr, &Dll().m_lua);
-			pr::ldr::Parse(Dll().m_rdr, reader, out, async != 0, context_id);
-		}
-
-		// Return the first object
-		Dll().m_obj_cont.insert(std::end(Dll().m_obj_cont), std::begin(out.m_objects), std::end(out.m_objects));
-		return !out.m_objects.empty() ? out.m_objects.front().m_ptr : nullptr;
+		// Return the last object. expecting 'ldr_script' to define one object only
+		auto& cont = Dll().m_obj_cont;
+		return !cont.empty() ? cont.back().m_ptr : nullptr;
 	}
 	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
 }

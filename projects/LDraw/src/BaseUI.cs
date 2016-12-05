@@ -16,9 +16,6 @@ namespace LDraw
 		{
 			DockControl = new DockControl(this, name) { TabText = name };
 			Model = model;
-
-			//CreateHandle();
-			//this.BeginInvoke(() => SetModelCore(model));
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -53,7 +50,15 @@ namespace LDraw
 			set
 			{
 				if (m_model == value) return;
+				if (m_model != null)
+				{
+					m_model.Window.OnRendering -= HandleSceneRendering;
+				}
 				SetModelCore(value);
+				if (m_model != null)
+				{
+					m_model.Window.OnRendering += HandleSceneRendering;
+				}
 			}
 		}
 		private Model m_model;
@@ -62,6 +67,14 @@ namespace LDraw
 		protected virtual void SetModelCore(Model model)
 		{
 			m_model = model;
+		}
+
+		/// <summary>Add instances to the scene just prior to rendering</summary>
+		protected virtual void OnSceneRendering()
+		{ }
+		private void HandleSceneRendering(object sender, EventArgs e)
+		{
+			OnSceneRendering();
 		}
 
 		/// <summary>Invalidate this control and all children</summary>

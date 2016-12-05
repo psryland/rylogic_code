@@ -66,11 +66,10 @@ namespace pr
 
 			// The light we're displaying properties for
 			Light m_light;
-			bool m_camera_relative;
 
 			// Show the lighting UI with preview callback: Preview(Light const& light, bool cam_rel);
 			template <typename Preview>
-			LightingUI(HWND parent, Light const& light, bool cam_rel, Preview preview)
+			LightingUI(HWND parent, Light const& light, Preview preview)
 				:Form(MakeDlgParams<>()
 					.parent(parent)
 					.name("rdr-lighting-ui")
@@ -120,7 +119,6 @@ namespace pr
 				,m_tt                (pr::gui::ToolTip::Params<>().parent(this_))
 
 				,m_light(light)
-				,m_camera_relative(cam_rel)
 			{
 				CreateHandle();
 
@@ -133,7 +131,7 @@ namespace pr
 				m_btn_preview.Click += [&,preview](pr::gui::Button&, pr::gui::EmptyArgs const&)
 				{
 					ReadValues();
-					preview(m_light, m_camera_relative);
+					preview(m_light);
 				};
 				m_btn_cancel.Click += [&](pr::gui::Button&, pr::gui::EmptyArgs const&)
 				{
@@ -209,7 +207,7 @@ namespace pr
 				ids[ELight::Spot]        = ID_RADIO_SPOT;
 
 				::CheckRadioButton(m_hwnd, ID_RADIO_AMBIENT, ID_RADIO_SPOT, ids[m_light.m_type]);
-				m_chk_cam_rel      .Checked(m_camera_relative);
+				m_chk_cam_rel      .Checked(m_light.m_cam_relative);
 				m_tb_position      .Text(pr::FmtS(L"%3.3f %3.3f %3.3f" ,m_light.m_position.x ,m_light.m_position.y ,m_light.m_position.z));
 				m_tb_direction     .Text(pr::FmtS(L"%3.3f %3.3f %3.3f" ,m_light.m_direction.x ,m_light.m_direction.y ,m_light.m_direction.z));
 				m_tb_range         .Text(pr::FmtS(L"%3.3f" ,m_light.m_range));
@@ -235,7 +233,7 @@ namespace pr
 				// Transform
 				m_light.m_position        = pr::To<v4>(m_tb_position.Text(), 1.0f);
 				m_light.m_direction       = pr::Normalise3(pr::To<v4>(m_tb_direction.Text(), 0.0f));
-				m_camera_relative         = m_chk_cam_rel.Checked();
+				m_light.m_cam_relative    = m_chk_cam_rel.Checked();
 				m_light.m_range           = pr::To<float>(m_tb_range.Text());
 				m_light.m_falloff         = pr::To<float>(m_tb_falloff.Text());
 				m_light.m_cast_shadow     = pr::To<float>(m_tb_shadow_range.Text());

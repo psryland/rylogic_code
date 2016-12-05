@@ -25,6 +25,7 @@ namespace pr
 			float    m_outer_cos_angle; // Spot light outer angle 0% light
 			float    m_cast_shadow;     // Shadow cast range, 0 for off
 			bool     m_on;              // True if this light is on
+			bool     m_cam_relative;    // True if the light should move with the camera
 
 			Light();
 			bool IsValid() const;

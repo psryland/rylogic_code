@@ -147,13 +147,13 @@ namespace pr.extn
 			if (length < 0 || length > arr.Length - offset)
 				throw new ArgumentOutOfRangeException(nameof(offset), "Length out of range [0,{0}]".Fmt(arr.Length - offset));
 
-			Array = arr;
+			SourceArray = arr;
 			Offset = offset;
 			Length = length;
 		}
 
 		/// <summary>The original array</summary>
-		public T[] Array { get; private set; }
+		public T[] SourceArray { get; private set; }
 
 		/// <summary>The index offset into 'Array' for the start of this slice</summary>
 		public int Offset { get; private set; }
@@ -165,12 +165,22 @@ namespace pr.extn
 		/// <summary>Get/Set by index</summary>
 		public T this[int idx]
 		{
-			get { return Array[Offset + idx]; }
-			set { Array[Offset + idx] = value; }
+			get { return SourceArray[Offset + idx]; }
+			set { SourceArray[Offset + idx] = value; }
+		}
+
+		/// <summary>Make a copy of the slice in a new buffer</summary>
+		public T[] ToArray()
+		{
+			// Note: don't provide implicit conversion to T[] because
+			// that makes a copy which could be unexpected.
+			var buf = new T[Length];
+			Array.Copy(SourceArray, Offset, buf, 0, Length);
+			return buf;
 		}
 
 		/// <summary>Implicit conversion to/from ArraySegment</summary>
-		public static implicit operator ArraySegment<T>(ArraySlice<T> s) { return new ArraySegment<T>(s.Array, s.Offset, s.Count); }
+		public static implicit operator ArraySegment<T>(ArraySlice<T> s) { return new ArraySegment<T>(s.SourceArray, s.Offset, s.Count); }
 		public static implicit operator ArraySlice<T>(ArraySegment<T> s) { return new ArraySlice<T>(s.Array, s.Offset, s.Count); }
 
 		#region IList
@@ -180,7 +190,8 @@ namespace pr.extn
 		}
 		public int IndexOf(T item)
 		{
-			return System.Array.IndexOf(Array, item);
+			var idx = Array.IndexOf(SourceArray, item, Offset, Length);
+			return idx >= 0 ? idx - Offset : idx;
 		}
 		public void Insert(int index, T item)
 		{
@@ -208,12 +219,12 @@ namespace pr.extn
 		}
 		public void CopyTo(T[] array, int arrayIndex)
 		{
-			System.Array.Copy(Array, Offset, array, arrayIndex, Length);
+			Array.Copy(SourceArray, Offset, array, arrayIndex, Length);
 		}
 		public IEnumerator<T> GetEnumerator()
 		{
 			for (int i = Offset, iend = Offset + Length; i != iend; ++i)
-				yield return Array[i];
+				yield return SourceArray[i];
 		}
 		IEnumerator IEnumerable.GetEnumerator()
 		{

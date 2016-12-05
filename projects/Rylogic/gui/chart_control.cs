@@ -42,6 +42,15 @@ namespace pr.gui
 		private const float GridLinesZ = -0.001f;
 		#endregion
 
+		/// <summary>Axis type</summary>
+		[Flags] public enum EAxis
+		{
+			None = 0,
+			XAxis = 1 << 0,
+			YAxis = 1 << 1,
+			Both = XAxis | YAxis,
+		}
+
 		public ChartControl()
 			:this(string.Empty, new RdrOptions())
 		{ }
@@ -411,24 +420,27 @@ namespace pr.gui
 		/// <summary>
 		/// Find the appropriate range for all data in the chart.
 		/// Call ResetToDefaultRange() to zoom the chart to this range.</summary>
-		public void FindDefaultRange(bool visible_only)
+		public void FindDefaultRange(EAxis axis = EAxis.Both, bool visible_only = true)
 		{
+			var do_x = axis.HasFlag(EAxis.XAxis);
+			var do_y = axis.HasFlag(EAxis.YAxis);
+
 			// Measure the range on each axis
-			var xrange = FindRange(e => new RangeF(e.Bounds.MinX, e.Bounds.MaxX), Elements, visible_only);
-			var yrange = FindRange(e => new RangeF(e.Bounds.MinY, e.Bounds.MaxY), Elements, visible_only);
+			var xrange = do_x ? FindRange(e => new RangeF(e.Bounds.MinX, e.Bounds.MaxX), Elements, visible_only) : RangeF.Zero;
+			var yrange = do_y ? FindRange(e => new RangeF(e.Bounds.MinY, e.Bounds.MaxY), Elements, visible_only) : RangeF.Zero;
 
 			// Allow users to adjust the default range
-			var args = new FindingDefaultRangeEventArgs(xrange, yrange);
+			var args = new FindingDefaultRangeEventArgs(axis, xrange, yrange);
 			OnFindingDefaultRange(args);
 			xrange = args.XRange;
 			yrange = args.YRange;
 
 			// Scale up the ranges to leave a margin around the default range
 			const float MarginScale = 1.05f;
-			if (xrange.Size > 0) xrange = xrange.Scale(MarginScale); else xrange = new RangeF(0.0, 1.0);
-			if (yrange.Size > 0) yrange = yrange.Scale(MarginScale); else yrange = new RangeF(0.0, 1.0);
-			BaseRangeX = xrange;
-			BaseRangeY = yrange;
+			if (xrange.Size > 0 && do_x) xrange = xrange.Scale(MarginScale); else xrange = new RangeF(0.0, 1.0);
+			if (yrange.Size > 0 && do_y) yrange = yrange.Scale(MarginScale); else yrange = new RangeF(0.0, 1.0);
+			if (do_x) BaseRangeX = xrange;
+			if (do_y) BaseRangeY = yrange;
 		}
 
 		/// <summary>Find the appropriate range on a single axis</summary>
@@ -461,11 +473,11 @@ namespace pr.gui
 		/// <summary>
 		/// Reset the axis ranges to the default.
 		/// Call FindDefaultRange() to set the default range</summary>
-		public void ResetToDefaultRange()
+		public void ResetToDefaultRange(EAxis axis = EAxis.Both)
 		{
-			if (!XAxis.LockRange) { Range.XAxis.Set(BaseRangeX); }
-			if (!YAxis.LockRange) { Range.YAxis.Set(BaseRangeY); }
-			if (Options.LockAspect != null) { Aspect = Options.LockAspect.Value; }
+			if (!XAxis.LockRange && axis.HasFlag(EAxis.XAxis)) Range.XAxis.Set(BaseRangeX);
+			if (!YAxis.LockRange && axis.HasFlag(EAxis.YAxis)) Range.YAxis.Set(BaseRangeY);
+			if (Options.LockAspect != null) Aspect = Options.LockAspect.Value;
 			SetCameraFromRange();
 			Invalidate();
 		}
@@ -713,7 +725,7 @@ namespace pr.gui
 					m_owner = owner;
 					m_view3d = new View3d();
 					m_window = new View3d.Window(m_view3d, Handle, opts);
-					m_window.LightProperties = View3d.Light.Directional(-v4.ZAxis, Colour32.Zero, Colour32.Gray, Colour32.Zero, 0f, 0f);
+					m_window.LightProperties = View3d.LightInfo.Directional(-v4.ZAxis, Colour32.Zero, Colour32.Gray, Colour32.Zero, 0f, 0f);
 					m_window.FocusPointVisible = false;
 					m_window.OriginVisible = false;
 					m_window.Orthographic = true;
@@ -1494,9 +1506,6 @@ namespace pr.gui
 				YAxis = null;
 			}
 
-			/// <summary>Axis type</summary>
-			public enum EAxis { XAxis, YAxis }
-
 			/// <summary>The chart that owns this axis</summary>
 			public ChartControl Owner { [DebuggerStepThrough] get; private set; }
 
@@ -1623,6 +1632,7 @@ namespace pr.gui
 				{ }
 				public Axis(EAxis axis, ChartControl owner, double min, double max)
 				{
+					Debug.Assert(axis == EAxis.XAxis || axis == EAxis.YAxis);
 					Debug.Assert(owner != null);
 					Set(min, max);
 					AxisType        = axis;
@@ -1959,14 +1969,6 @@ namespace pr.gui
 		#endregion
 
 		#region Navigation
-
-		[Flags] private enum EAxis
-		{
-			None  = 0,
-			XAxis = 1 << 0,
-			YAxis = 1 << 1,
-			Both  = XAxis | YAxis,
-		}
 
 		/// <summary>Navigation methods for moving the camera</summary>
 		public enum ENavMode
@@ -3698,7 +3700,7 @@ namespace pr.gui
 			private View3d.Object CreateAreaSelect()
 			{
 				var ldr = Ldr.Rect("selection", Options.SelectionColour, AxisId.PosZ, 1f, 1f, true, pos:v4.Origin);
-				return new View3d.Object(ldr, false, Id, false, null);
+				return new View3d.Object(ldr, false, false, Id, null);
 			}
 
 			/// <summary>Graphics for the resizing grab zones</summary>
@@ -3715,7 +3717,7 @@ namespace pr.gui
 			private ResizeGrabber[] m_resizer;
 			public class ResizeGrabber :View3d.Object
 			{
-				public ResizeGrabber(int corner) :base("*Box {5}", false, Id, false, null)
+				public ResizeGrabber(int corner) :base("*Box {5}", false, false, Id, null)
 				{
 					switch (corner)
 					{
@@ -4092,11 +4094,15 @@ namespace pr.gui
 		/// <summary>Event args for FindingDefaultRange</summary>
 		public class FindingDefaultRangeEventArgs :EventArgs
 		{
-			public FindingDefaultRangeEventArgs(RangeF xrange, RangeF yrange)
+			public FindingDefaultRangeEventArgs(EAxis axis, RangeF xrange, RangeF yrange)
 			{
+				Axis = axis;
 				XRange = xrange;
 				YRange = yrange;
 			}
+
+			/// <summary>The axis being ranged</summary>
+			public EAxis Axis { get; private set; }
 
 			/// <summary>The XAxis range calculated from known chart elements data</summary>
 			public RangeF XRange { get; set; }

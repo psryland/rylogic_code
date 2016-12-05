@@ -19,6 +19,7 @@ using HTexture = System.IntPtr;
 using HWindow = System.IntPtr;
 using HWND = System.IntPtr;
 using HMODULE = System.IntPtr;
+using System.ComponentModel;
 
 namespace pr.gfx
 {
@@ -463,10 +464,9 @@ namespace pr.gfx
 		/// <summary>Light source properties</summary>
 		[Serializable]
 		[StructLayout(LayoutKind.Sequential)]
-		public struct Light
+		public struct LightInfo
 		{
 			public ELight   m_type;
-			public bool     m_on;
 			public v4       m_position;
 			public v4       m_direction;
 			public Colour32 m_ambient;
@@ -478,14 +478,15 @@ namespace pr.gfx
 			public float    m_range;
 			public float    m_falloff;
 			public float    m_cast_shadow;
+			public bool     m_on;
+			public bool     m_cam_relative;
 
 			/// <summary>Return properties for an ambient light source</summary>
-			public static Light Ambient(Colour32 ambient)
+			public static LightInfo Ambient(Colour32 ambient)
 			{
-				return new Light
+				return new LightInfo
 				{
 					m_type           = ELight.Ambient,
-					m_on             = true,
 					m_position       = v4.Origin,
 					m_direction      = v4.Zero,
 					m_ambient        = ambient,
@@ -493,16 +494,17 @@ namespace pr.gfx
 					m_specular       = Colour32.Zero,
 					m_specular_power = 0f,
 					m_cast_shadow    = 0f,
+					m_on             = true,
+					m_cam_relative   = false,
 				};
 			}
 
 			/// <summary>Return properties for a directional light source</summary>
-			public static Light Directional(v4 direction, Colour32 ambient, Colour32 diffuse, Colour32 specular, float spec_power, float cast_shadow)
+			public static LightInfo Directional(v4 direction, Colour32 ambient, Colour32 diffuse, Colour32 specular, float spec_power, float cast_shadow)
 			{
-				return new Light
+				return new LightInfo
 				{
 					m_type           = ELight.Directional,
-					m_on             = true,
 					m_position       = v4.Origin,
 					m_direction      = direction,
 					m_ambient        = ambient,
@@ -510,16 +512,17 @@ namespace pr.gfx
 					m_specular       = specular,
 					m_specular_power = spec_power,
 					m_cast_shadow    = cast_shadow,
+					m_on             = true,
+					m_cam_relative   = false,
 				};
 			}
 
 			/// <summary>Return properties for a point light source</summary>
-			public static Light Point(v4 position, Colour32 ambient, Colour32 diffuse, Colour32 specular, float spec_power, float cast_shadow)
+			public static LightInfo Point(v4 position, Colour32 ambient, Colour32 diffuse, Colour32 specular, float spec_power, float cast_shadow)
 			{
-				return new Light
+				return new LightInfo
 				{
 					m_type           = ELight.Point,
-					m_on             = true,
 					m_position       = position,
 					m_direction      = v4.Zero,
 					m_ambient        = ambient,
@@ -527,6 +530,8 @@ namespace pr.gfx
 					m_specular       = specular,
 					m_specular_power = spec_power,
 					m_cast_shadow    = cast_shadow,
+					m_on             = true,
+					m_cam_relative   = false,
 				};
 			}
 		}
@@ -646,11 +651,20 @@ namespace pr.gfx
 		/// Note, these objects cannot be accessed other than by context id. This method is intended for creating static scenery</summary>
 		public Guid LoadScriptSource(string ldr_filepath, bool additional = false, bool async = true, string[] include_paths = null)
 		{
-			var inc = new View3DIncludes();
-			inc.m_include_paths = string.Join(",", include_paths ?? new string[0]);
+			var inc = new View3DIncludes { m_include_paths = string.Join(",", include_paths ?? new string[0]) };
 			return View3D_LoadScriptSource(ldr_filepath, additional, async, ref inc);
 		}
 
+		/// <summary>
+		/// Add an ldr script string. This will create all objects declared in 'ldr_script'
+		/// with context id 'context_id' if given, otherwise an id will be created.</summary>
+		public Guid LoadScript(string ldr_script, bool file, bool async, Guid? context_id, string[] include_paths = null)
+		{
+			var inc = new View3DIncludes { m_include_paths = string.Join(",", include_paths ?? new string[0]) };
+			var ctx = context_id ?? Guid.NewGuid();
+			return View3D_LoadScript(ldr_script, file, async, ref ctx, ref inc);
+		}
+	
 		/// <summary>Force a reload of all script sources</summary>
 		public void ReloadScriptSources()
 		{
@@ -921,9 +935,9 @@ namespace pr.gfx
 			}
 
 			/// <summary>Get/Set the light properties. Note returned value is a value type</summary>
-			public Light LightProperties
+			public LightInfo LightProperties
 			{
-				get { return View3D_LightProperties(m_wnd); }
+				get { LightInfo light; View3D_LightProperties(m_wnd, out light); return light; }
 				set { View3D_SetLightProperties(m_wnd, ref value); }
 			}
 
@@ -1347,16 +1361,17 @@ namespace pr.gfx
 				:this("*group{}", false)
 			{}
 			public Object(string ldr_script, bool file)
-				:this(ldr_script, file, null)
+				:this(ldr_script, file, false, null, null)
 			{}
-			public Object(string ldr_script, bool file, View3DIncludes? includes)
-				:this(ldr_script, file, Guid.Empty, false, includes)
+			public Object(string ldr_script, bool file, bool async)
+				:this(ldr_script, file, async, null, null)
 			{}
-			public Object(string ldr_script, bool file, Guid context_id, bool async, View3DIncludes? includes)
+			public Object(string ldr_script, bool file, bool async, Guid? context_id, View3DIncludes? includes)
 			{
 				m_owned = true;
 				var inc = includes ?? new View3DIncludes();
-				m_handle = View3D_ObjectCreateLdr(ldr_script, file, ref context_id, async, ref inc);
+				var ctx = context_id ?? Guid.NewGuid();
+				m_handle = View3D_ObjectCreateLdr(ldr_script, file, async, ref ctx, ref inc);
 				if (m_handle == HObject.Zero)
 					throw new Exception("Failed to create object from script\r\n{0}".Fmt(ldr_script.Summary(100)));
 			}
@@ -1842,13 +1857,15 @@ namespace pr.gfx
 			}
 		}
 
-		/// <summary>
-		/// An ldr script editor control. A very lightweight wrapper of a scintilla control.
-		/// To use this in a WinForms application, create a System.Windows.Forms.Integration.ElementHost
-		/// on your form and provide it to the constructor of this class</summary>
+		/// <summary>An ldr script editor control.</summary>
 		public class HostableEditor :HwndHost ,IKeyboardInputSink
 		{
+			// A very lightweight wrapper of a scintilla control.
+			// To use this in a WinForms application, create a
+			// System.Windows.Forms.Integration.ElementHost on your
+			// form and provide it to the constructor of this class.
 			// See: http://blogs.msdn.com/b/ivo_manolov/archive/2007/10/07/5354351.aspx
+
 			private ElementHost m_host;
 			private IntPtr m_wrap;
 			private IntPtr m_ctrl;
@@ -2006,6 +2023,131 @@ namespace pr.gfx
 			public event EventHandler TextChanged;
 		}
 
+		/// <summary>Reference type wrapper of a view3d light</summary>
+		public class Light :INotifyPropertyChanged
+		{
+			private LightInfo m_info;
+
+			public Light()
+			{
+				m_info = LightInfo.Ambient(0xFFFFFFFF);
+			}
+			public Light(LightInfo light)
+			{
+				m_info = light;
+			}
+
+			/// <summary>The type of light source</summary>
+			public ELight Type
+			{
+				get { return m_info.m_type; }
+				set { SetProp(ref m_info.m_type, value, nameof(Type)); }
+			}
+
+			/// <summary>The position of the light source</summary>
+			public v4 Position
+			{
+				get { return m_info.m_position; }
+				set { SetProp(ref m_info.m_position, value, nameof(Position)); }
+			}
+
+			/// <summary>The direction of the light source</summary>
+			public v4 Direction
+			{
+				get { return m_info.m_direction; }
+				set { SetProp(ref m_info.m_direction, value, nameof(Direction)); }
+			}
+
+			/// <summary>The colour of the ambient component of the light</summary>
+			public Colour32 Ambient
+			{
+				get { return m_info.m_ambient; }
+				set { SetProp(ref m_info.m_ambient, value, nameof(Ambient)); }
+			}
+
+			/// <summary>The colour of the diffuse component of the light</summary>
+			public Colour32 Diffuse
+			{
+				get { return m_info.m_diffuse; }
+				set { SetProp(ref m_info.m_diffuse, value, nameof(Diffuse)); }
+			}
+
+			/// <summary>The colour of the specular component of the light</summary>
+			public Colour32 Specular
+			{
+				get { return m_info.m_specular; }
+				set { SetProp(ref m_info.m_specular, value, nameof(Specular)); }
+			}
+
+			/// <summary>The specular power</summary>
+			public float SpecularPower
+			{
+				get { return m_info.m_specular_power; }
+				set { SetProp(ref m_info.m_specular_power, value, nameof(SpecularPower)); }
+			}
+
+			/// <summary>The inner spot light cone angle (in degrees)</summary>
+			public float InnerAngle
+			{
+				get { return (float)Maths.RadiansToDegrees(Math.Acos(m_info.m_inner_cos_angle)); }
+				set { SetProp(ref m_info.m_inner_cos_angle, (float)Math.Cos(Maths.DegreesToRadians(value)), nameof(InnerAngle)); }
+			}
+
+			/// <summary>The outer spot light cone angle (in degrees)</summary>
+			public float OuterAngle
+			{
+				get { return (float)Maths.RadiansToDegrees(Math.Acos(m_info.m_outer_cos_angle)); }
+				set { SetProp(ref m_info.m_outer_cos_angle, (float)Math.Cos(Maths.DegreesToRadians(value)), nameof(OuterAngle)); }
+			}
+
+			/// <summary>The range of the light</summary>
+			public float Range
+			{
+				get { return m_info.m_range; }
+				set { SetProp(ref m_info.m_range, value, nameof(Range)); }
+			}
+
+			/// <summary>The attenuation of the light with distance</summary>
+			public float Falloff
+			{
+				get { return m_info.m_falloff; }
+				set { SetProp(ref m_info.m_falloff, value, nameof(Falloff)); }
+			}
+
+			/// <summary>The maximum distance from the light source in which objects cast shadows</summary>
+			public float CastShadow
+			{
+				get { return m_info.m_cast_shadow; }
+				set { SetProp(ref m_info.m_cast_shadow, value, nameof(CastShadow)); }
+			}
+
+			/// <summary>Whether the light is active or not</summary>
+			public bool On
+			{
+				get { return m_info.m_on; }
+				set { SetProp(ref m_info.m_on, value, nameof(On)); }
+			}
+
+			/// <summary>Whether the light moves with the camera or not</summary>
+			public bool CameraRelative
+			{
+				get { return m_info.m_cam_relative; }
+				set { SetProp(ref m_info.m_cam_relative, value, nameof(CameraRelative)); }
+			}
+
+			/// <summary>Notify property value changed</summary>
+			public event PropertyChangedEventHandler PropertyChanged;
+			private void SetProp<T>(ref T prop, T value, string name)
+			{
+				if (Equals(prop, value)) return;
+				prop = value;
+				PropertyChanged.Raise(this, new PropertyChangedEventArgs(name));
+			}
+
+			/// <summary>Implicit conversion to the value type</summary>
+			public static implicit operator LightInfo(Light light) { return light.m_info; }
+		}
+
 		#region DLL extern functions
 
 		// A good idea is to add a static method in the class that is using this class
@@ -2090,18 +2232,19 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern ENavOp            View3D_MouseBtnToNavOp        (int mk);
 
 		// Lights
-		[DllImport(Dll)] private static extern Light             View3D_LightProperties          (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_SetLightProperties       (HWindow window, ref Light light);
+		[DllImport(Dll)] private static extern void              View3D_LightProperties          (HWindow window, out LightInfo light);
+		[DllImport(Dll)] private static extern void              View3D_SetLightProperties       (HWindow window, ref LightInfo light);
 		[DllImport(Dll)] private static extern void              View3D_LightSource              (HWindow window, v4 position, v4 direction, bool camera_relative);
 		[DllImport(Dll)] private static extern void              View3D_ShowLightingDlg          (HWindow window);
 
 		// Objects
 		[DllImport(Dll)] private static extern Guid              View3D_LoadScriptSource         ([MarshalAs(UnmanagedType.LPWStr)] string ldr_filepath, bool additional, bool async, ref View3DIncludes includes);
+		[DllImport(Dll)] private static extern Guid              View3D_LoadScript               ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, bool async, ref Guid context_id, ref View3DIncludes includes);
 		[DllImport(Dll)] private static extern void              View3D_ReloadScriptSources      ();
 		[DllImport(Dll)] private static extern void              View3D_ClearScriptSources       ();
 		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteAll         ();
 		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteById        (ref Guid context_id);
-		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, bool async, ref View3DIncludes includes);
+		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, bool async, ref Guid context_id, ref View3DIncludes includes);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreate             (string name, uint colour, int vcount, int icount, int ncount, IntPtr verts, IntPtr indices, IntPtr nuggets, ref Guid context_id);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateEditCB       (string name, uint colour, int vcount, int icount, int ncount, EditObjectCB edit_cb, IntPtr ctx, ref Guid context_id);
 		[DllImport(Dll)] private static extern void              View3D_ObjectUpdate             (HObject obj, string ldr_script, EUpdateObject flags);

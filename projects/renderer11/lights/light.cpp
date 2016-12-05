@@ -23,6 +23,7 @@ namespace pr
 			,m_outer_cos_angle (0.92f)
 			,m_cast_shadow     (0.0f)
 			,m_on              (true)
+			,m_cam_relative    (false)
 		{}
 
 		// Return true if this light is in a valid state
@@ -32,7 +33,7 @@ namespace pr
 			{
 			default: return false;
 			case ELight::Ambient:     return true;
-			case ELight::Point:       return true;
+			case ELight::Point:       return m_position.w == 1.0f;
 			case ELight::Spot:        return !IsZero3(m_direction);
 			case ELight::Directional: return !IsZero3(m_direction);
 			}
@@ -75,7 +76,8 @@ namespace pr
 			x(Rng  ,= pr::hash::HashI(L"Rng" ))\
 			x(FOff ,= pr::hash::HashI(L"FOff"))\
 			x(Shdw ,= pr::hash::HashI(L"Shdw"))\
-			x(On   ,= pr::hash::HashI(L"On"  ))
+			x(On   ,= pr::hash::HashI(L"On"  ))\
+			x(CRel ,= pr::hash::HashI(L"CRel"))
 		PR_DEFINE_ENUM2(ELightKW, PR_ENUM);
 		#undef PR_ENUM
 
@@ -104,6 +106,7 @@ namespace pr
 				<< "  *" << ELightKW::FOff << "{" << m_falloff << "}\n"
 				<< "  *" << ELightKW::Shdw << "{" << m_cast_shadow << "}\n"
 				<< "  *" << ELightKW::On   << "{" << m_on << "}\n"
+				<< "  *" << ELightKW::CRel << "{" << m_cam_relative << "}\n"
 				;
 			return out.str();
 		}
@@ -136,6 +139,7 @@ namespace pr
 					case ELightKW::FOff: reader.RealS(light.m_falloff); break;
 					case ELightKW::Shdw: reader.RealS(light.m_cast_shadow); break;
 					case ELightKW::On:   reader.BoolS(light.m_on); break;
+					case ELightKW::CRel: reader.BoolS(light.m_cam_relative); break;
 					}
 				}
 				*this = light;

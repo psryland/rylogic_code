@@ -91,6 +91,39 @@ namespace view3d
 			return m_sources.AddFile(filepath, async, includes);
 		}
 
+		// Load/Add ldr objects from a script string
+		pr::Guid LoadScript(wchar_t const* ldr_script, bool file, bool async, pr::Guid const* context_id, pr::script::Includes<> const& includes)
+		{
+			using namespace pr::script;
+
+			// Create a context id if none given
+			auto guid = pr::GenerateGUID();
+			if (context_id == nullptr)
+				context_id = &guid;
+
+			// Create a writeable includes handler
+			auto inc = includes;
+
+			// Parse the description
+			pr::ldr::ParseResult out(m_obj_cont);
+			if (file)
+			{
+				inc.AddSearchPath(pr::filesys::GetDirectory<pr::script::string>(ldr_script));
+
+				FileSrc src(ldr_script);
+				Reader reader(src, false, &inc, nullptr, &m_lua);
+				pr::ldr::Parse(m_rdr, reader, out, async, *context_id);
+			}
+			else // string
+			{
+				PtrW src(ldr_script);
+				Reader reader(src, false, &inc, nullptr, &m_lua);
+				pr::ldr::Parse(m_rdr, reader, out, async, *context_id);
+			}
+
+			return *context_id;
+		}
+
 		// Reload script source files
 		void ReloadScriptSources()
 		{

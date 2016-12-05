@@ -27,6 +27,15 @@ namespace pr.gui
 	/// <summary>Custom control for rendering a graph</summary>
 	public class GraphControl :UserControl
 	{
+		/// <summary>Axis type</summary>
+		[Flags] public enum EAxis
+		{
+			None = 0,
+			XAxis = 1 << 0,
+			YAxis = 1 << 1,
+			Both = XAxis | YAxis,
+		}
+
 		// Constructors
 		public GraphControl()
 			:this(string.Empty, new RdrOptions())
@@ -163,30 +172,33 @@ namespace pr.gui
 		}
 
 		/// <summary>
-		/// Find the appropriate range for all data in the graph.
+		/// Find the appropriate range for data on the interval [i0,i1) in the graph.
 		/// Call ResetToDefaultRange() to zoom the graph to this range</summary>
-		public void FindDefaultRange(bool visible_only = true)
+		public void FindDefaultRange(EAxis axis = EAxis.Both, int i0 = 0, int i1 = int.MaxValue, bool visible_only = true)
 		{
-			var xrange = FindRange(gv => gv.x, Data, visible_only:visible_only);
-			var yrange = FindRange(gv => gv.y, Data, visible_only:visible_only);
+			var do_x = axis.HasFlag(EAxis.XAxis);
+			var do_y = axis.HasFlag(EAxis.YAxis);
+
+			var xrange = do_x ? FindRange(gv => gv.x, Data, i0, i1, visible_only) : RangeF.Zero;
+			var yrange = do_y ? FindRange(gv => gv.y, Data, i0, i1, visible_only) : RangeF.Zero;
 
 			// Allow users to adjust the default range
-			var args = new FindingDefaultRangeEventArgs(xrange, yrange);
+			var args = new FindingDefaultRangeEventArgs(axis, xrange, yrange);
 			OnFindingDefaultRange(args);
 			xrange = args.XRange;
 			yrange = args.YRange;
 
 			// Scale up the ranges to leave a tasteful margin around the default range
-			if (xrange.Size > 0) xrange = xrange.Scale(1.05f); else xrange = new RangeF(0.0, 1.0);
-			if (yrange.Size > 0) yrange = yrange.Scale(1.05f); else yrange = new RangeF(0.0, 1.0);
+			if (xrange.Size > 0 && do_x) xrange = xrange.Scale(1.05f); else xrange = new RangeF(0.0, 1.0);
+			if (yrange.Size > 0 && do_y) yrange = yrange.Scale(1.05f); else yrange = new RangeF(0.0, 1.0);
 
 			// Save the default range
-			BaseRangeX = xrange;
-			BaseRangeY = yrange;
+			if (do_x) BaseRangeX = xrange;
+			if (do_y) BaseRangeY = yrange;
 		}
 
 		/// <summary>Find the appropriate range on a single axis</summary>
-		public static RangeF FindRange(Func<GraphValue,double> selector, IEnumerable<Series> data, bool visible_only)
+		public static RangeF FindRange(Func<GraphValue,double> selector, IEnumerable<Series> data, int i0 = 0, int i1 = int.MaxValue, bool visible_only = true)
 		{
 			var range = new RangeF(double.MaxValue, -double.MaxValue);
 			foreach (var series in data)
@@ -194,9 +206,8 @@ namespace pr.gui
 				if (visible_only && !series.Options.Visible)
 					continue;
 
-				// note: series.Sorted doesn't help because we
-				// still need to scan all the Y values.
-				foreach (var value in series.Values())
+				// Note: series.Sorted doesn't help because we still need to scan all the Y values.
+				foreach (var value in series.Values(i0, i1))
 				{
 					var v = selector(value);
 					if (v < range.Begin) range.Begin = v;
@@ -217,10 +228,10 @@ namespace pr.gui
 		/// <summary>
 		/// Reset the axis ranges to the default.
 		/// Call FindDefaultRange() to set the default range</summary>
-		public void ResetToDefaultRange()
+		public void ResetToDefaultRange(EAxis axis = EAxis.Both)
 		{
-			if (!XAxis.LockRange) { XAxis.Set(BaseRangeX); }
-			if (!YAxis.LockRange) { YAxis.Set(BaseRangeY); }
+			if (!XAxis.LockRange && axis.HasFlag(EAxis.XAxis)) XAxis.Set(BaseRangeX);
+			if (!YAxis.LockRange && axis.HasFlag(EAxis.YAxis)) YAxis.Set(BaseRangeY);
 			Dirty = true;
 		}
 
@@ -316,6 +327,8 @@ namespace pr.gui
 			/// <summary>Enumerable access to the data given an index range</summary>
 			public IEnumerable<GraphValue> Values(int i0 = 0, int i1 = int.MaxValue)
 			{
+				Debug.Assert(i0 >= 0 && i0 <= Count);
+				Debug.Assert(i1 >= i0);
 				for (int i = i0, iend = Math.Min(i1, Count); i != iend; ++i)
 				{
 					var gv = this[i];
@@ -950,9 +963,6 @@ namespace pr.gui
 				YAxis = null;
 			}
 
-			/// <summary>Axis type</summary>
-			public enum EAxis { XAxis, YAxis }
-
 			/// <summary>The chart that owns this axis</summary>
 			public GraphControl Owner { [DebuggerStepThrough] get; private set; }
 
@@ -1003,6 +1013,7 @@ namespace pr.gui
 				{ }
 				public Axis(EAxis axis, GraphControl owner, double min, double max, RdrOptions options)
 				{
+					Debug.Assert(axis == EAxis.XAxis || axis == EAxis.YAxis);
 					Debug.Assert(owner != null);
 					Set(min, max);
 					AxisType        = axis;
@@ -3098,11 +3109,15 @@ namespace pr.gui
 		/// <summary>Event args for FindingDefaultRange</summary>
 		public class FindingDefaultRangeEventArgs :EventArgs
 		{
-			public FindingDefaultRangeEventArgs(RangeF xrange, RangeF yrange)
+			public FindingDefaultRangeEventArgs(EAxis axis, RangeF xrange, RangeF yrange)
 			{
+				Axis = axis;
 				XRange = xrange;
 				YRange = yrange;
 			}
+
+			/// <summary>The axes being ranged</summary>
+			public EAxis Axis { get; private set; }
 
 			/// <summary>The XAxis range calculated from known chart elements data</summary>
 			public RangeF XRange { get; set; }

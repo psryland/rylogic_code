@@ -58,6 +58,9 @@
     <Compile Include="src\CameraUI.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\LightingUI.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="src\MainUI.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -78,6 +81,9 @@
     </Compile>
     <EmbeddedResource Include="src\CameraUI.resx">
       <DependentUpon>CameraUI.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\LightingUI.resx">
+      <DependentUpon>LightingUI.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\MainUI.resx">
       <DependentUpon>MainUI.cs</DependentUpon>

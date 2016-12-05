@@ -217,7 +217,6 @@ extern "C"
 	struct View3DLight
 	{
 		EView3DLight m_type;
-		BOOL         m_on;
 		View3DV4     m_position;
 		View3DV4     m_direction;
 		View3DColour m_ambient;
@@ -229,6 +228,8 @@ extern "C"
 		float        m_range;
 		float        m_falloff;
 		float        m_cast_shadow;
+		BOOL         m_on;
+		BOOL         m_cam_relative;
 	};
 	struct View3DTextureOptions
 	{
@@ -365,7 +366,7 @@ extern "C"
 	VIEW3D_API EView3DNavOp __stdcall View3D_MouseBtnToNavOp        (int mk);
 
 	// Lights
-	VIEW3D_API View3DLight __stdcall View3D_LightProperties          (View3DWindow window);
+	VIEW3D_API void        __stdcall View3D_LightProperties          (View3DWindow window, View3DLight& light);
 	VIEW3D_API void        __stdcall View3D_SetLightProperties       (View3DWindow window, View3DLight const& light);
 	VIEW3D_API void        __stdcall View3D_LightSource              (View3DWindow window, View3DV4 position, View3DV4 direction, BOOL camera_relative);
 	VIEW3D_API void        __stdcall View3D_ShowLightingDlg          (View3DWindow window);
@@ -376,7 +377,8 @@ extern "C"
 	VIEW3D_API void         __stdcall View3D_ClearScriptSources       ();
 	VIEW3D_API void         __stdcall View3D_ObjectsDeleteAll         ();
 	VIEW3D_API void         __stdcall View3D_ObjectsDeleteById        (GUID const& context_id);
-	VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr          (wchar_t const* ldr_script, BOOL file, GUID const& context_id, BOOL async, View3DIncludes const* includes);
+	VIEW3D_API GUID         __stdcall View3D_LoadScript               (wchar_t const* ldr_script, BOOL file, BOOL async, GUID const* context_id, View3DIncludes const* includes);
+	VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr          (wchar_t const* ldr_script, BOOL file, BOOL async, GUID const* context_id, View3DIncludes const* includes);
 	VIEW3D_API View3DObject __stdcall View3D_ObjectCreate             (char const* name, View3DColour colour, int vcount, int icount, int ncount, View3DVertex const* verts, UINT16 const* indices, View3DNugget const* nuggets, GUID const& context_id);
 	VIEW3D_API View3DObject __stdcall View3D_ObjectCreateEditCB       (char const* name, View3DColour colour, int vcount, int icount, int ncount, View3D_EditObjectCB edit_cb, void* ctx, GUID const& context_id);
 	VIEW3D_API void         __stdcall View3D_ObjectEdit               (View3DObject object, View3D_EditObjectCB edit_cb, void* ctx);

@@ -19,6 +19,12 @@ namespace LDraw
 {
 	public class MainUI :Form
 	{
+		/// <summary>The dockable containing the 3D scene</summary>
+		private Dockable m_dc_scene;
+
+		/// <summary>Recent files history</summary>
+		private RecentFiles m_recent_files;
+
 		#region UI Elements
 		private ToolStripContainer m_tsc;
 		private StatusStrip m_ss;
@@ -84,10 +90,9 @@ namespace LDraw
 		private ToolStripMenuItem m_menu_window_example_script;
 		private ToolStripSeparator toolStripSeparator6;
 		private ToolStripMenuItem m_menu_window_about;
+		private ToolStripMenuItem m_menu_file_save;
+		private ToolStripMenuItem m_menu_file_save_as;
 		#endregion
-
-		/// <summary>Recent files history</summary>
-		private RecentFiles m_recent_files;
 
 		/// <summary>The main entry point for the application.</summary>
 		[STAThread] static void Main()
@@ -162,8 +167,15 @@ namespace LDraw
 		protected override void Dispose(bool disposing)
 		{
 			CameraUI = null;
+			LightingUI = null;
 			Model = null;
-			Util.Dispose(ref m_dc);
+			if (m_dc != null)
+			{
+				// Remove the scene from 'm_dc' it needs to be disposed last
+				m_dc_scene.DockControl.DockPane = null;
+				Util.Dispose(ref m_dc);
+				Util.Dispose(ref m_dc_scene);
+			}
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
@@ -231,11 +243,19 @@ namespace LDraw
 		}
 		private CameraUI m_camera_ui;
 
+		/// <summary>Lazy creating lighting UI</summary>
+		public LightingUI LightingUI
+		{
+			get { return m_lighting_ui ?? (m_lighting_ui = new LightingUI(this)); }
+			set { Util.Dispose(ref m_lighting_ui); }
+		}
+		private LightingUI m_lighting_ui;
+
 		/// <summary>Set up the UI</summary>
 		private void SetupUI()
 		{
 			#region Menu
-			// File Menu
+			#region File Menu
 			m_menu_file_new.Click += (s,a) =>
 			{
 				NewFile(null);
@@ -248,6 +268,14 @@ namespace LDraw
 			{
 				OpenFile(null, true);
 			};
+			m_menu_file_save.Click += (s,a) =>
+			{
+				SaveFile(false);
+			};
+			m_menu_file_save_as.Click += (s,a) =>
+			{
+				SaveFile(true);
+			};
 			m_recent_files = new RecentFiles(m_menu_file_recent_files, HandleRecentFile);
 			m_recent_files.Import(Settings.RecentFiles);
 			m_recent_files.RecentListChanged += (s,a) => Settings.RecentFiles = m_recent_files.Export();
@@ -255,8 +283,8 @@ namespace LDraw
 			{
 				Close();
 			};
-
-			// Navigation Menu
+			#endregion
+			#region Navigation Menu
 			m_menu_nav_reset_view_all.Click += (s,a) =>
 			{
 				Model.ResetView(View3d.ESceneBounds.All);
@@ -341,8 +369,8 @@ namespace LDraw
 			{
 				ShowCameraUI();
 			};
-
-			// Data Menu
+			#endregion
+			#region Data Menu
 			m_menu_data_clear_scene.Click += (s,a) =>
 			{
 				Model.ClearScene();
@@ -359,8 +387,8 @@ namespace LDraw
 			m_menu_data_object_manager.Click += (s,a) =>
 			{
 			};
-
-			// Rendering Menu
+			#endregion
+			#region Rendering Menu
 			m_menu_rendering_show_focus.Click += (s,a) =>
 			{
 				Model.Window.FocusPointVisible = !Model.Window.FocusPointVisible;
@@ -393,9 +421,11 @@ namespace LDraw
 			};
 			m_menu_rendering_lighting.Click += (s,a) =>
 			{
+				ShowLightingUI();
 			};
-
-			// Window menu
+			#endregion
+			#region Window menu
+			m_menu_window.DropDownItems.Insert(0, m_dc.WindowsMenu());
 			m_menu_window_always_on_top.Click += (s,a) =>
 			{
 			};
@@ -406,6 +436,7 @@ namespace LDraw
 			m_menu_window_about.Click += (s,a) =>
 			{
 			};
+			#endregion
 			#endregion
 
 			#region Scene
@@ -421,10 +452,10 @@ namespace LDraw
 			#endregion
 
 			#region Dock Container
-			m_menu_window.DropDownItems.Insert(0, m_dc.WindowsMenu());
 			m_dc.Options.TabStrip.AlwaysShowTabs = true;
 			m_dc.Options.TitleBar.ShowTitleBars = false;
-			var dc_scene = m_dc.Add2(new Dockable(Model.Scene, "Scene"));
+			m_dc.ActiveContentChanged += UpdateUI;
+			m_dc_scene = m_dc.Add2(new Dockable(Model.Scene, "Scene"));
 			#endregion
 		}
 
@@ -432,18 +463,22 @@ namespace LDraw
 		private void UpdateUI(object sender = null, EventArgs args = null)
 		{
 			// Update menu state
+			m_menu_file_save.Enabled    = m_dc.ActiveContent?.Owner is ScriptUI;
+			m_menu_file_save_as.Enabled = m_dc.ActiveContent?.Owner is ScriptUI;
+
 			m_menu_rendering_show_focus    .Checked = Model.Window.FocusPointVisible;
 			m_menu_rendering_show_origin   .Checked = Model.Window.OriginVisible;
 			m_menu_rendering_show_selection.Checked = false;
 			m_menu_rendering_show_bounds   .Checked = false;
 			m_menu_rendering_orthographic  .Checked = Model.Camera.Orthographic;
+
 			m_menu_rendering_wireframe.Text = Model.Window.FillMode.ToString();
 		}
 
 		/// <summary>Create a new file and an editor to edit the file</summary>
 		private void NewFile(string filepath)
 		{
-			m_dc.Add2(new ScriptUI(Model));
+			m_dc.Add2(new ScriptUI(Model), EDockSite.Left);
 
 			// Create a new script file
 			Model.NewFile(filepath);
@@ -468,6 +503,15 @@ namespace LDraw
 			Model.OpenFile(filepath, additional);
 		}
 
+		/// <summary>Save a script UI to file</summary>
+		private void SaveFile(bool save_as)
+		{
+			// Get the script window to save
+			var script = m_dc.ActiveContent.Owner as ScriptUI;
+			Debug.Assert(script != null, "Should be able to save if a script isn't selected");
+			script.SaveFile(save_as ? null : script.Filepath);
+		}
+
 		/// <summary>Align the camera to an axis</summary>
 		private void AlignCamera(v4 axis)
 		{
@@ -487,9 +531,11 @@ namespace LDraw
 			m_menu_nav_saved_views.DropDownItems.Clear();
 
 			// Add the saved views
+			int i = 0;
 			foreach (var sv in Model.SavedViews)
 			{
 				var opt = m_menu_nav_saved_views.DropDownItems.Add2(new ToolStripMenuItem(sv.Name));
+				opt.ShortcutKeys = Keys.Control | (Keys)('1' + i++);
 				opt.Click += (s,a) =>
 				{
 					sv.Apply(Model.Camera);
@@ -519,6 +565,12 @@ namespace LDraw
 			CameraUI.Show(this);
 		}
 
+		/// <summary>Show the lighting UI</summary>
+		private void ShowLightingUI()
+		{
+			LightingUI.Show(this);
+		}
+
 		/// <summary>Restore the last window position</summary>
 		private void RestoreWindowPosition()
 		{
@@ -543,7 +595,7 @@ namespace LDraw
 		/// <summary>Create a Text window containing the example script</summary>
 		private void ShowExampleScript()
 		{
-			var ui = m_dc.Add2(new ScriptUI(Model));
+			var ui = m_dc.Add2(new ScriptUI(Model), EDockSite.Left);
 			ui.Editor.Text = Model.View3d.ExampleScript;
 		}
 
@@ -616,6 +668,8 @@ namespace LDraw
 			this.m_menu_window_example_script = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_window_about = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_save = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_save_as = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.ContentPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
@@ -666,7 +720,6 @@ namespace LDraw
 			// 
 			this.m_dc.ActiveContent = null;
 			this.m_dc.ActiveDockable = null;
-			this.m_dc.ActivePane = null;
 			this.m_dc.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_dc.Location = new System.Drawing.Point(0, 0);
 			this.m_dc.Name = "m_dc";
@@ -695,6 +748,8 @@ namespace LDraw
             this.toolStripSeparator8,
             this.m_menu_file_open,
             this.m_menu_file_open_additional,
+            this.m_menu_file_save,
+            this.m_menu_file_save_as,
             this.toolStripSeparator1,
             this.m_menu_file_recent_files,
             this.m_sep0,
@@ -728,7 +783,7 @@ namespace LDraw
 			this.m_menu_file_open_additional.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
             | System.Windows.Forms.Keys.O)));
 			this.m_menu_file_open_additional.Size = new System.Drawing.Size(236, 22);
-			this.m_menu_file_open_additional.Text = "Open &Additional";
+			this.m_menu_file_open_additional.Text = "Open A&dditional";
 			// 
 			// toolStripSeparator1
 			// 
@@ -1098,6 +1153,21 @@ namespace LDraw
 			this.m_menu_window_about.Name = "m_menu_window_about";
 			this.m_menu_window_about.Size = new System.Drawing.Size(151, 22);
 			this.m_menu_window_about.Text = "&About";
+			// 
+			// m_menu_file_save
+			// 
+			this.m_menu_file_save.Name = "m_menu_file_save";
+			this.m_menu_file_save.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.S)));
+			this.m_menu_file_save.Size = new System.Drawing.Size(236, 22);
+			this.m_menu_file_save.Text = "&Save";
+			// 
+			// m_menu_file_save_as
+			// 
+			this.m_menu_file_save_as.Name = "m_menu_file_save_as";
+			this.m_menu_file_save_as.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            | System.Windows.Forms.Keys.S)));
+			this.m_menu_file_save_as.Size = new System.Drawing.Size(236, 22);
+			this.m_menu_file_save_as.Text = "Save &As";
 			// 
 			// MainUI
 			// 

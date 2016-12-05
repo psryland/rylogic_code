@@ -5,6 +5,7 @@
 
 using System;
 using System.Drawing;
+using System.Globalization;
 using System.Runtime.InteropServices;
 
 namespace pr.gfx
@@ -90,5 +91,29 @@ namespace pr.gfx
 		{
 			return alpha_too ? Lerp(White, t) : LerpNoAlpha(White, t);
 		}
+
+		#region Parse
+		public static Colour32 Parse(string s, int radix = 16)
+		{
+			if (s == null) throw new ArgumentNullException("s", "Colour32.Parse() string argument was null");
+			if (radix != 16 && radix != 10) throw new FormatException("Colour32.Parse() only supports radix = 10 or 16");
+			return new Colour32(
+				radix == 16 ? uint.Parse(s, NumberStyles.HexNumber) :
+				radix == 10 ? uint.Parse(s, NumberStyles.Integer) :
+				0U);
+		}
+		public static bool TryParse(string s, out Colour32 col, int radix = 16)
+		{
+			return
+				radix == 16 ? uint.TryParse(s, NumberStyles.HexNumber, null, out col.m_argb) :
+				radix == 10 ? uint.TryParse(s, NumberStyles.Integer, null, out col.m_argb) :
+				uint.TryParse(s, out col.m_argb);
+		}
+		public static Colour32? TryParse(string s, int radix = 16)
+		{
+			Colour32 col;
+			return TryParse(s, out col, radix) ? (Colour32?)col : null;
+		}
+		#endregion
 	}
 }

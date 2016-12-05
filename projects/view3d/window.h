@@ -25,7 +25,6 @@ namespace view3d
 		view3d::GizmoSet      m_gizmos;                   // References to gizmos to draw (note: objects are owned by the context, not the window)
 		pr::Camera            m_camera;                   // Camera control
 		pr::rdr::Light        m_light;                    // Light source for the set
-		bool                  m_light_is_camera_relative; // Whether the light is attached to the camera or not
 		EView3DFillMode       m_fill_mode;                // Fill mode
 		pr::Colour32          m_background_colour;        // The background colour for this draw set
 		view3d::Instance      m_focus_point;
@@ -68,7 +67,6 @@ namespace view3d
 			,m_gizmos()
 			,m_camera()
 			,m_light()
-			,m_light_is_camera_relative(true)
 			,m_fill_mode(EView3DFillMode::Solid)
 			,m_background_colour(0xFF808080U)
 			,m_focus_point()
@@ -99,12 +97,13 @@ namespace view3d
 
 			// The light for the scene
 			m_light.m_type           = pr::rdr::ELight::Directional;
-			m_light.m_on             = true;
 			m_light.m_ambient        = pr::Colour32(0x00101010U);
 			m_light.m_diffuse        = pr::Colour32(0xFF808080U);
 			m_light.m_specular       = pr::Colour32(0x00404040U);
 			m_light.m_specular_power = 1000.0f;
 			m_light.m_direction      = -pr::v4ZAxis;
+			m_light.m_on             = true;
+			m_light.m_cam_relative   = true;
 
 			// Create the focus point/origin models
 			auto cdata = pr::rdr::MeshCreationData()
@@ -189,14 +188,14 @@ namespace view3d
 			}
 
 			// Set the view and projection matrices
-			pr::Camera& cam = m_camera;
+			auto& cam = m_camera;
 			m_scene.SetView(cam);
 			cam.m_moved = false;
 
 			// Set the light source
-			Light& light = m_scene.m_global_light;
+			auto& light = m_scene.m_global_light;
 			light = m_light;
-			if (m_light_is_camera_relative)
+			if (m_light.m_cam_relative)
 			{
 				light.m_direction = m_camera.CameraToWorld() * m_light.m_direction;
 				light.m_position  = m_camera.CameraToWorld() * m_light.m_position;
