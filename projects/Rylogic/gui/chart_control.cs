@@ -66,7 +66,7 @@ namespace pr.gui
 				Range           = new RangeData(this);
 				BaseRangeX      = new RangeF(0.0, 1.0);
 				BaseRangeY      = new RangeF(0.0, 1.0);
-				Scene          = new ChartPanel(this); // Must come after 'Range'
+				Scene           = new ChartPanel(this); // Must come after 'Range'
 				MouseOperations = new MouseOps();
 				Tools           = new ChartTools(Options);
 				m_impl_zoom     = new RangeF(float.Epsilon, float.MaxValue);
@@ -96,6 +96,7 @@ namespace pr.gui
 		{
 			MouseOperations = null;
 			Tools = null;
+			Scene = null;
 			Range = null;
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
@@ -220,7 +221,7 @@ namespace pr.gui
 		public ChartPanel Scene
 		{
 			[DebuggerStepThrough] get { return m_impl_scene; }
-			set
+			private set
 			{
 				if (m_impl_scene == value) return;
 				if (m_impl_scene != null)
@@ -838,6 +839,7 @@ namespace pr.gui
 				// Start the render
 				Window.BackgroundColour = m_owner.Options.ChartBkColour;
 				Window.FillMode = m_owner.Options.FillMode;
+				Window.CullMode = m_owner.Options.CullMode;
 				Window.Render();
 			}
 			public void Present()
@@ -997,6 +999,7 @@ namespace pr.gui
 				ShowAxes             = true;
 				AntiAliasing         = true;
 				FillMode             = View3d.EFillMode.Solid;
+				CullMode             = View3d.ECullMode.Back;
 				Orthographic         = false;
 				MinSelectionDistance = 10f;
 				MinDragPixelDistance = 5f;
@@ -1020,6 +1023,7 @@ namespace pr.gui
 				ShowAxes             = rhs.ShowAxes;
 				AntiAliasing         = rhs.AntiAliasing;
 				FillMode             = rhs.FillMode;
+				CullMode             = rhs.CullMode;
 				Orthographic         = rhs.Orthographic;
 				MinSelectionDistance = rhs.MinSelectionDistance;
 				MinDragPixelDistance = rhs.MinDragPixelDistance;
@@ -1042,6 +1046,7 @@ namespace pr.gui
 				ShowGridLines        = node.Element(nameof(ShowGridLines       )).As(ShowGridLines       );
 				AntiAliasing         = node.Element(nameof(AntiAliasing        )).As(AntiAliasing        );
 				FillMode             = node.Element(nameof(FillMode            )).As(FillMode            );
+				CullMode             = node.Element(nameof(CullMode            )).As(CullMode            );
 				Orthographic         = node.Element(nameof(Orthographic        )).As(Orthographic        );
 				MinSelectionDistance = node.Element(nameof(MinSelectionDistance)).As(MinSelectionDistance);
 				MinDragPixelDistance = node.Element(nameof(MinDragPixelDistance)).As(MinDragPixelDistance);
@@ -1064,6 +1069,7 @@ namespace pr.gui
 				node.Add2(nameof(ShowAxes            ) , ShowAxes             , false);
 				node.Add2(nameof(AntiAliasing        ) , AntiAliasing         , false);
 				node.Add2(nameof(FillMode            ) , FillMode             , false);
+				node.Add2(nameof(CullMode            ) , CullMode             , false);
 				node.Add2(nameof(Orthographic        ) , Orthographic         , false);
 				node.Add2(nameof(MinSelectionDistance) , MinSelectionDistance , false);
 				node.Add2(nameof(MinDragPixelDistance) , MinDragPixelDistance , false);
@@ -1192,6 +1198,14 @@ namespace pr.gui
 				set { SetProp(ref m_FillMode, value, nameof(FillMode)); }
 			}
 			private View3d.EFillMode m_FillMode;
+
+			/// <summary>Fill mode, solid, wire, or both</summary>
+			public View3d.ECullMode CullMode
+			{
+				get { return m_CullMode; }
+				set { SetProp(ref m_CullMode, value, nameof(CullMode)); }
+			}
+			private View3d.ECullMode m_CullMode;
 
 			/// <summary>Get/Set orthographic camera projection</summary>
 			public bool Orthographic
@@ -2093,10 +2107,15 @@ namespace pr.gui
 			var chart_bounds = Scene.Bounds;
 			if (chart_bounds.Contains(e.Location))
 			{
-				// Translate the camera along a ray through 'point'
-				var loc = Control_.MapPoint(this, Scene, e.Location);
-				Scene.Window.MouseNavigateZ(loc, e.Delta);
-				Invalidate();
+				// If there is a mouse op in progress, ignore the wheel
+				var op = MouseOperations.Active;
+				if (op == null || op.Cancelled)
+				{
+					// Translate the camera along a ray through 'point'
+					var loc = Control_.MapPoint(this, Scene, e.Location);
+					Scene.Window.MouseNavigateZ(loc, e.Delta);
+					Invalidate();
+				}
 			}
 			else if (Options.ShowAxes)
 			{
@@ -3584,6 +3603,7 @@ namespace pr.gui
 						opt.Click += (s,a) =>
 						{
 							Options.AntiAliasing = !Options.AntiAliasing;
+							Scene.Window.MultiSampling = Options.AntiAliasing ? 4 : 1;
 							Invalidate();
 						};
 					}

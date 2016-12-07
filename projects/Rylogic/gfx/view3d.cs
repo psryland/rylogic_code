@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
@@ -19,7 +20,7 @@ using HTexture = System.IntPtr;
 using HWindow = System.IntPtr;
 using HWND = System.IntPtr;
 using HMODULE = System.IntPtr;
-using System.ComponentModel;
+using System.Xml.Linq;
 
 namespace pr.gfx
 {
@@ -276,6 +277,12 @@ namespace pr.gfx
 			Wireframe,
 			SolidWire,
 		}
+		public enum ECullMode
+		{
+			None,
+			Back,
+			Front,
+		}
 		[Flags] public enum ENavOp
 		{
 			None      = 0,
@@ -506,7 +513,7 @@ namespace pr.gfx
 				{
 					m_type           = ELight.Directional,
 					m_position       = v4.Origin,
-					m_direction      = direction,
+					m_direction      = v4.Normalise3(direction),
 					m_ambient        = ambient,
 					m_diffuse        = diffuse,
 					m_specular       = specular,
@@ -927,11 +934,32 @@ namespace pr.gfx
 				set { View3D_SetOriginSize(m_wnd, value); }
 			}
 
+			/// <summary>Get/Set whether object bounding boxes are visible</summary>
+			public bool BBoxesVisible
+			{
+				get { return View3D_BBoxesVisibleGet(m_wnd); }
+				set { View3D_BBoxesVisibleSet(m_wnd, value); }
+			}
+
 			/// <summary>Get/Set the render mode</summary>
 			public EFillMode FillMode
 			{
-				get { return View3D_FillMode(m_wnd); }
-				set { View3D_SetFillMode(m_wnd, value); }
+				get { return View3D_FillModeGet(m_wnd); }
+				set { View3D_FillModeSet(m_wnd, value); }
+			}
+
+			/// <summary>Get/Set the face culling mode</summary>
+			public ECullMode CullMode
+			{
+				get { return View3D_CullModeGet(m_wnd); }
+				set { View3D_CullModeSet(m_wnd, value); }
+			}
+
+			/// <summary>Get/Set the multi-sampling level for the window</summary>
+			public int MultiSampling
+			{
+				get { return View3D_MultiSamplingGet(m_wnd); }
+				set { View3D_MultiSamplingSet(m_wnd, value); }
 			}
 
 			/// <summary>Get/Set the light properties. Note returned value is a value type</summary>
@@ -1112,6 +1140,26 @@ namespace pr.gfx
 			public CameraControls(Window window)
 			{
 				m_window = window;
+			}
+			public CameraControls(Window window, XElement node) :this(window)
+			{
+				O2W          = node.Element(nameof(O2W         )).As(O2W         );
+				FocusDist    = node.Element(nameof(FocusDist   )).As(FocusDist   );
+				Orthographic = node.Element(nameof(Orthographic)).As(Orthographic);
+				Aspect       = node.Element(nameof(Aspect      )).As(Aspect      );
+				FovY         = node.Element(nameof(FovY        )).As(FovY        );
+				AlignAxis    = node.Element(nameof(AlignAxis   )).As(AlignAxis   );
+				Commit();
+			}
+			public XElement ToXml(XElement node)
+			{
+				node.Add2(nameof(O2W         ), O2W         , false);
+				node.Add2(nameof(FocusDist   ), FocusDist   , false);
+				node.Add2(nameof(Orthographic), Orthographic, false);
+				node.Add2(nameof(Aspect      ), Aspect      , false);
+				node.Add2(nameof(FovY        ), FovY        , false);
+				node.Add2(nameof(AlignAxis   ), AlignAxis   , false);
+				return node;
 			}
 
 			/// <summary>Get/Set Orthographic projection mode</summary>
@@ -2026,8 +2074,6 @@ namespace pr.gfx
 		/// <summary>Reference type wrapper of a view3d light</summary>
 		public class Light :INotifyPropertyChanged
 		{
-			private LightInfo m_info;
-
 			public Light()
 			{
 				m_info = LightInfo.Ambient(0xFFFFFFFF);
@@ -2036,6 +2082,55 @@ namespace pr.gfx
 			{
 				m_info = light;
 			}
+			public Light(Colour32 ambient, Colour32 diffuse, Colour32 specular, float spec_power = 1000f, v4? direction = null, v4? position = null)
+				:this(
+					direction != null ? LightInfo.Directional(direction.Value, ambient, diffuse, specular, spec_power, 0f) :
+					position  != null ? LightInfo.Point(position.Value, ambient, diffuse, specular, spec_power, 0f) :
+					LightInfo.Ambient(ambient))
+			{}
+			public Light(XElement node) :this()
+			{
+				Type           = node.Element(nameof(Type          )).As(Type          );
+				Position       = node.Element(nameof(Position      )).As(Position      );
+				Direction      = node.Element(nameof(Direction     )).As(Direction     );
+				Ambient        = node.Element(nameof(Ambient       )).As(Ambient       );
+				Diffuse        = node.Element(nameof(Diffuse       )).As(Diffuse       );
+				Specular       = node.Element(nameof(Specular      )).As(Specular      );
+				SpecularPower  = node.Element(nameof(SpecularPower )).As(SpecularPower );
+				InnerAngle     = node.Element(nameof(InnerAngle    )).As(InnerAngle    );
+				OuterAngle     = node.Element(nameof(OuterAngle    )).As(OuterAngle    );
+				Range          = node.Element(nameof(Range         )).As(Range         );
+				Falloff        = node.Element(nameof(Falloff       )).As(Falloff       );
+				CastShadow     = node.Element(nameof(CastShadow    )).As(CastShadow    );
+				On             = node.Element(nameof(On            )).As(On            );
+				CameraRelative = node.Element(nameof(CameraRelative)).As(CameraRelative);
+			}
+			public XElement ToXml(XElement node)
+			{
+				node.Add2(nameof(Type          ), Type          , false);
+				node.Add2(nameof(Position      ), Position      , false);
+				node.Add2(nameof(Direction     ), Direction     , false);
+				node.Add2(nameof(Ambient       ), Ambient       , false);
+				node.Add2(nameof(Diffuse       ), Diffuse       , false);
+				node.Add2(nameof(Specular      ), Specular      , false);
+				node.Add2(nameof(SpecularPower ), SpecularPower , false);
+				node.Add2(nameof(InnerAngle    ), InnerAngle    , false);
+				node.Add2(nameof(OuterAngle    ), OuterAngle    , false);
+				node.Add2(nameof(Range         ), Range         , false);
+				node.Add2(nameof(Falloff       ), Falloff       , false);
+				node.Add2(nameof(CastShadow    ), CastShadow    , false);
+				node.Add2(nameof(On            ), On            , false);
+				node.Add2(nameof(CameraRelative), CameraRelative, false);
+				return node;
+			}
+
+			/// <summary>The View3d Light data</summary>
+			public LightInfo Data
+			{
+				get { return m_info; }
+				set { SetProp(ref m_info, value, nameof(Data)); }
+			}
+			private LightInfo m_info;
 
 			/// <summary>The type of light source</summary>
 			public ELight Type
@@ -2289,12 +2384,16 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_SetRenderTargetSize      (HWindow window, int width, int height);
 		[DllImport(Dll)] private static extern Viewport          View3D_Viewport                 (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_SetViewport              (HWindow window, Viewport vp);
-		[DllImport(Dll)] private static extern EFillMode         View3D_FillMode                 (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_SetFillMode              (HWindow window, EFillMode mode);
+		[DllImport(Dll)] private static extern EFillMode         View3D_FillModeGet              (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_FillModeSet              (HWindow window, EFillMode mode);
+		[DllImport(Dll)] private static extern ECullMode         View3D_CullModeGet              (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_CullModeSet              (HWindow window, ECullMode mode);
 		[DllImport(Dll)] private static extern bool              View3D_Orthographic             (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_SetOrthographic          (HWindow window, bool render2d);
 		[DllImport(Dll)] private static extern int               View3D_BackgroundColour         (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_SetBackgroundColour      (HWindow window, int aarrggbb);
+		[DllImport(Dll)] private static extern int               View3D_MultiSamplingGet         (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_MultiSamplingSet         (HWindow window, int multisampling);
 
 		// Tools
 		[DllImport(Dll)] private static extern bool              View3D_MeasureToolVisible       (HWindow window);
@@ -2329,6 +2428,8 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern bool              View3D_OriginVisible            (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_ShowOrigin               (HWindow window, bool show);
 		[DllImport(Dll)] private static extern void              View3D_SetOriginSize            (HWindow window, float size);
+		[DllImport(Dll)] private static extern bool              View3D_BBoxesVisibleGet         (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_BBoxesVisibleSet         (HWindow window, bool visible);
 		[DllImport(Dll)] private static extern Guid              View3D_CreateDemoScene          (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_DeleteDemoScene          ();
 		[DllImport(Dll)] [return:MarshalAs(UnmanagedType.BStr)] private static extern string View3D_ExampleScriptBStr();

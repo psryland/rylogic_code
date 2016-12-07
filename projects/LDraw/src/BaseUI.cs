@@ -25,13 +25,15 @@ namespace LDraw
 		}
 
 		/// <summary>Provides support for the DockContainer</summary>
-		[Browsable(false)] public DockControl DockControl
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public DockControl DockControl
 		{
 			[DebuggerStepThrough] get { return m_impl_dock_control; }
 			private set
 			{
 				if (m_impl_dock_control == value) return;
-				if (m_impl_dock_control != null) Util.Dispose(ref m_impl_dock_control);
+				Util.Dispose(ref m_impl_dock_control);
 				m_impl_dock_control = value;
 			}
 		}

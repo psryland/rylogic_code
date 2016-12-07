@@ -90,13 +90,16 @@ namespace pr
 			// The display mode of the main render target
 			DXGI_FORMAT DisplayFormat() const;
 
-			// Returns the size of the render target
-			pr::iv2 RenderTargetSize() const;
-
-			// Set the render target size.
+			// Get/Set the size of the render target
 			// Passing iv2.Zero will cause the RT to get its size from the associated window
 			// Call when the window size changes (e.g. from a WM_SIZE message)
-			void RenderTargetSize(pr::iv2 const& size);
+			pr::iv2 RenderTargetSize() const;
+			void RenderTargetSize(pr::iv2 const& size, bool force = false);
+
+			// Get/Set the multi-sampling used
+			// Changing the multi-sampling mode is a bit like resizing the back buffer
+			MultiSamp MultiSampling() const;
+			void MultiSampling(MultiSamp ms);
 
 			// Rendering:
 			//  For each scene to be rendered:

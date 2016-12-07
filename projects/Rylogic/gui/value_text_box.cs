@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using pr.extn;
@@ -9,6 +10,7 @@ using pr.win32;
 namespace pr.gui
 {
 	[Serializable]
+	[DebuggerDisplay("Value={Value} Text={Text} Valid={Valid}")]
 	public class ValueBox :TextBox
 	{
 		// Notes:
@@ -55,18 +57,61 @@ namespace pr.gui
 			BackColorInvalid = Color.White;
 		}
 
+		/// <summary>The text color for valid values</summary>
+		public Color ForeColorValid
+		{
+			get;
+			set;
+		}
+
+		/// <summary>The background color for valid values</summary>
+		public Color BackColorValid
+		{
+			get;
+			set;
+		}
+
+		/// <summary>The text color for invalid values</summary>
+		public Color ForeColorInvalid
+		{
+			get;
+			set;
+		}
+
+		/// <summary>The background color for invalid values</summary>
+		public Color BackColorInvalid
+		{
+			get;
+			set;
+		}
+
 		/// <summary>The type of 'Value'</summary>
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public Type ValueType { get; set; }
+		public Type ValueType
+		{
+			get;
+			set;
+		}
 
 		/// <summary>Returns true if the text in the control represents a valid value</summary>
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public Func<string, bool> ValidateText
 		{
-			get { return m_validate_text ?? (x => { try { Convert.ChangeType(x, ValueType); return true; } catch { return false; } }); }
-			set { m_validate_text = value; }
+			get
+			{
+				return m_validate_text ?? (x =>
+				{
+					try { Convert.ChangeType(x, ValueType); return true; }
+					catch { return false; }
+				});
+			}
+			set
+			{
+				m_validate_text = value;
+				m_valid = null;
+			}
 		}
 		private Func<string, bool> m_validate_text;
 
@@ -75,8 +120,19 @@ namespace pr.gui
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public Func<string, object> TextToValue
 		{
-			get { return m_text_to_value ?? (x => { try { return Convert.ChangeType(x, ValueType); } catch { return null; } }); }
-			set { m_text_to_value = value; }
+			get
+			{
+				return m_text_to_value ?? (x =>
+				{
+					try { return Convert.ChangeType(x, ValueType); }
+					catch { return null; }
+				});
+			}
+			set
+			{
+				m_text_to_value = value;
+				TextToValueIfValid();
+			}
 		}
 		private Func<string, object> m_text_to_value;
 
@@ -85,8 +141,18 @@ namespace pr.gui
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public Func<object, string> ValueToText
 		{
-			get { return m_value_to_text ?? (x => { return x?.ToString() ?? string.Empty; }); }
-			set { m_value_to_text = value; }
+			get
+			{
+				return m_value_to_text ?? (x =>
+				{
+					return x?.ToString() ?? string.Empty;
+				});
+			}
+			set
+			{
+				m_value_to_text = value;
+				ValueToTextIfNotFocused();
+			}
 		}
 		private Func<object, string> m_value_to_text;
 
@@ -122,8 +188,7 @@ namespace pr.gui
 
 			// Only update the text when not focused to prevent
 			// the text changing while the user is typing.
-			if (!Focused)
-				Text = ValueToText(value);
+			ValueToTextIfNotFocused();
 
 			// Notify value changed
 			OnValueChanged();
@@ -132,46 +197,46 @@ namespace pr.gui
 		/// <summary>True if the control contains a valid value</summary>
 		public bool Valid
 		{
-			get { return ValidateText(Text); }
+			get { return m_valid ?? (m_valid = ValidateText(Text)).Value; }
+		}
+		private bool? m_valid;
+
+		/// <summary>Convert the text to a value and assign to 'Value' if valid</summary>
+		private bool TextToValueIfValid()
+		{
+			// Set the text colour based on whether the value matches the text
+			UpdateTextColours();
+
+			// Update the value for valid text
+			var r = Valid && ValueType != typeof(object);
+			if (r) Value = TextToValue(Text);
+			return r;
 		}
 
-		/// <summary>The text color for valid values</summary>
-		public Color ForeColorValid
+		/// <summary>Convert the value to text and update 'Text' if not focused</summary>
+		private bool ValueToTextIfNotFocused()
 		{
-			get;
-			set;
-		}
-
-		/// <summary>The background color for valid values</summary>
-		public Color BackColorValid
-		{
-			get;
-			set;
-		}
-
-		/// <summary>The text color for invalid values</summary>
-		public Color ForeColorInvalid
-		{
-			get;
-			set;
-		}
-
-		/// <summary>The background color for invalid values</summary>
-		public Color BackColorInvalid
-		{
-			get;
-			set;
+			// Only update the text when not focused to prevent
+			// the text changing while the user is typing.
+			if (Focused) return false;
+			Text = ValueToText(Value);
+			return true;
 		}
 
 		/// <summary>If the current text is value, update the value, and notify of value committed</summary>
 		public bool TryCommitValue()
 		{
-			if (!Valid || ValueType == typeof(object))
-				return false;
+			var r = TextToValueIfValid();
+			if (r) OnValueCommitted();
+			return r;
+		}
 
-			Value = TextToValue(Text);
-			OnValueCommitted();
-			return true;
+		/// <summary>Set the Fore and Back colours for the value box based on the current text</summary>
+		public void UpdateTextColours()
+		{
+			// Set the text colour based on whether the value matches the text
+			ForeColor = Valid ? ForeColorValid : ForeColorInvalid;
+			BackColor = Valid ? BackColorValid : BackColorInvalid;
 		}
 
 		/// <summary>Raised when the value is changed to a valid value by Enter pressed or focus lost</summary>
@@ -193,21 +258,13 @@ namespace pr.gui
 		{
 			base.OnTextChanged(e);
 
+			// Invalidate the cached 'valid' state whenever the text changes
+			m_valid = null;
+
 			// Prevent reentrancy
 			if (m_in_set_text != 0) return;
 			using (Scope.Create(() => ++m_in_set_text, () => --m_in_set_text))
-			{
-				// Check if the text is valid
-				var valid = Valid;
-
-				// Set the text colour based on whether the value matches the text
-				ForeColor = valid ? ForeColorValid : ForeColorInvalid;
-				BackColor = valid ? BackColorValid : BackColorInvalid;
-
-				// Update the value for valid text
-				if (valid && ValueType != typeof(object))
-					Value = TextToValue(Text);
-			}
+				TextToValueIfValid();
 		}
 		private int m_in_set_text;
 

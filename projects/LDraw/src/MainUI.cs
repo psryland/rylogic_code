@@ -19,9 +19,6 @@ namespace LDraw
 {
 	public class MainUI :Form
 	{
-		/// <summary>The dockable containing the 3D scene</summary>
-		private Dockable m_dc_scene;
-
 		/// <summary>Recent files history</summary>
 		private RecentFiles m_recent_files;
 
@@ -32,7 +29,6 @@ namespace LDraw
 		private MenuStrip m_menu;
 		private ToolStripMenuItem m_menu_file;
 		private ToolStripSeparator m_sep0;
-		private DockContainer m_dc;
 		private ToolStripMenuItem m_menu_file_open;
 		private ToolStripMenuItem m_menu_file_open_additional;
 		private ToolStripSeparator toolStripSeparator1;
@@ -81,7 +77,6 @@ namespace LDraw
 		private ToolStripMenuItem m_menu_rendering_show_selection;
 		private ToolStripMenuItem m_menu_rendering_show_bounds;
 		private ToolStripSeparator toolStripSeparator9;
-		private ToolStripMenuItem m_menu_rendering_wireframe;
 		private ToolStripMenuItem m_menu_rendering_orthographic;
 		private ToolStripSeparator toolStripSeparator10;
 		private ToolStripMenuItem m_menu_rendering_lighting;
@@ -91,6 +86,14 @@ namespace LDraw
 		private ToolStripSeparator toolStripSeparator6;
 		private ToolStripMenuItem m_menu_window_about;
 		private ToolStripMenuItem m_menu_file_save;
+		private ToolStripMenuItem m_menu_rendering_fillmode;
+		private ToolStripMenuItem m_menu_rendering_fillmode_solid;
+		private ToolStripMenuItem m_menu_rendering_fillmode_wireframe;
+		private ToolStripMenuItem m_menu_rendering_fillmode_solidwire;
+		private ToolStripMenuItem m_menu_rendering_cullmode;
+		private ToolStripMenuItem m_menu_rendering_cullmode_none;
+		private ToolStripMenuItem m_menu_rendering_cullmode_back;
+		private ToolStripMenuItem m_menu_rendering_cullmode_front;
 		private ToolStripMenuItem m_menu_file_save_as;
 		#endregion
 
@@ -155,9 +158,11 @@ namespace LDraw
 		public MainUI()
 		{
 			InitializeComponent();
+			KeyPreview = true;
 
 			Settings = new Settings(Util.ResolveUserDocumentsPath("Rylogic", "LDraw", "settings.xml"));
 			Model = new Model(this);
+			DockContainer = new DockContainer();
 
 			SetupUI();
 			UpdateUI();
@@ -166,16 +171,12 @@ namespace LDraw
 		}
 		protected override void Dispose(bool disposing)
 		{
+			// The scripts and scene need to be disposed before view3d.
+			// The Scene owns the view3d Window and the Model owns the Scene.
 			CameraUI = null;
 			LightingUI = null;
+			DockContainer = null;
 			Model = null;
-			if (m_dc != null)
-			{
-				// Remove the scene from 'm_dc' it needs to be disposed last
-				m_dc_scene.DockControl.DockPane = null;
-				Util.Dispose(ref m_dc);
-				Util.Dispose(ref m_dc_scene);
-			}
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
@@ -201,6 +202,17 @@ namespace LDraw
 					Settings.UI.WindowMaximised = WindowState == FormWindowState.Maximized;
 			}
 		}
+		protected override void OnKeyDown(KeyEventArgs e)
+		{
+			// Cycle through fill modes
+			if (e.KeyCode == Keys.W && e.Control)
+			{
+				Model.Scene.Options.FillMode = Enum<View3d.EFillMode>.Cycle(Model.Scene.Options.FillMode);
+				Invalidate();
+				e.Handled = true;
+			}
+			base.OnKeyDown(e);
+		}
 
 		/// <summary>App settings</summary>
 		public Settings Settings
@@ -218,16 +230,19 @@ namespace LDraw
 				if (m_impl_model == value) return;
 				if (m_impl_model != null)
 				{
+					Util.Dispose(ref m_error_cb_wnd);
 					Util.Dispose(ref m_impl_model);
 				}
 				m_impl_model = value;
 				if (m_impl_model != null)
 				{
+					m_error_cb_wnd = Model.Window.PushErrorCB(Model.ReportError);
 				}
 				Update();
 			}
 		}
 		private Model m_impl_model;
+		private Scope m_error_cb_wnd;
 
 		/// <summary>Main application status label</summary>
 		public ToolStripStatusLabel Status
@@ -250,6 +265,36 @@ namespace LDraw
 			set { Util.Dispose(ref m_lighting_ui); }
 		}
 		private LightingUI m_lighting_ui;
+
+		/// <summary>The dock container control</summary>
+		private DockContainer DockContainer
+		{
+			get { return m_dc; }
+			set
+			{
+				if (m_dc == value) return;
+				if (m_dc != null)
+				{
+					// Remove the scene from the dock container before disposing it
+					// so that the scene is left for the model to dispose.
+					m_dc.ActiveContentChanged -= UpdateUI;
+					m_tsc.ContentPanel.Controls.Remove(m_dc);
+					m_dc.Remove(Model.Scene);
+					Util.Dispose(ref m_dc);
+				}
+				m_dc = value;
+				if (m_dc != null)
+				{
+					m_dc.Dock = DockStyle.Fill;
+					m_dc.Options.TabStrip.AlwaysShowTabs = true;
+					m_dc.Options.TitleBar.ShowTitleBars = false;
+					m_dc.Add(Model.Scene);
+					m_tsc.ContentPanel.Controls.Add(m_dc);
+					m_dc.ActiveContentChanged += UpdateUI;
+				}
+			}
+		}
+		private DockContainer m_dc;
 
 		/// <summary>Set up the UI</summary>
 		private void SetupUI()
@@ -406,10 +451,43 @@ namespace LDraw
 			};
 			m_menu_rendering_show_bounds.Click += (s,a) =>
 			{
+				Model.Window.BBoxesVisible = !Model.Window.BBoxesVisible;
+				Invalidate();
+				UpdateUI();
 			};
-			m_menu_rendering_wireframe.Click += (s,a) =>
+			m_menu_rendering_fillmode_solid.Click += (s,a) =>
 			{
-				Model.CycleFillMode();
+				Model.Scene.Options.FillMode = View3d.EFillMode.Solid;
+				Invalidate();
+				UpdateUI();
+			};
+			m_menu_rendering_fillmode_wireframe.Click += (s,a) =>
+			{
+				Model.Scene.Options.FillMode = View3d.EFillMode.Wireframe;
+				Invalidate();
+				UpdateUI();
+			};
+			m_menu_rendering_fillmode_solidwire.Click += (s,a) =>
+			{
+				Model.Scene.Options.FillMode = View3d.EFillMode.SolidWire;
+				Invalidate();
+				UpdateUI();
+			};
+			m_menu_rendering_cullmode_none.Click += (s,a) =>
+			{
+				Model.Scene.Options.CullMode = View3d.ECullMode.None;
+				Invalidate();
+				UpdateUI();
+			};
+			m_menu_rendering_cullmode_back.Click += (s,a) =>
+			{
+				Model.Scene.Options.CullMode = View3d.ECullMode.Back;
+				Invalidate();
+				UpdateUI();
+			};
+			m_menu_rendering_cullmode_front.Click += (s,a) =>
+			{
+				Model.Scene.Options.CullMode = View3d.ECullMode.Front;
 				Invalidate();
 				UpdateUI();
 			};
@@ -438,25 +516,6 @@ namespace LDraw
 			};
 			#endregion
 			#endregion
-
-			#region Scene
-			Model.Scene.Name                     = "Scene";
-			Model.Scene.BorderStyle              = BorderStyle.FixedSingle;
-			Model.Scene.Dock                     = DockStyle.Fill;
-			Model.Scene.DefaultMouseControl      = true;
-			Model.Scene.DefaultKeyboardShortcuts = true;
-			Model.Scene.Options.LockAspect       = 1.0f;
-			Model.Scene.Options.NavigationMode   = ChartControl.ENavMode.Scene3D;
-			Model.Window.FocusPointVisible       = true;
-			//Model.Window.FocusPointSize        = 0.4f;
-			#endregion
-
-			#region Dock Container
-			m_dc.Options.TabStrip.AlwaysShowTabs = true;
-			m_dc.Options.TitleBar.ShowTitleBars = false;
-			m_dc.ActiveContentChanged += UpdateUI;
-			m_dc_scene = m_dc.Add2(new Dockable(Model.Scene, "Scene"));
-			#endregion
 		}
 
 		/// <summary>Update UI elements</summary>
@@ -466,13 +525,20 @@ namespace LDraw
 			m_menu_file_save.Enabled    = m_dc.ActiveContent?.Owner is ScriptUI;
 			m_menu_file_save_as.Enabled = m_dc.ActiveContent?.Owner is ScriptUI;
 
+			// Set check marks next to visible things
 			m_menu_rendering_show_focus    .Checked = Model.Window.FocusPointVisible;
 			m_menu_rendering_show_origin   .Checked = Model.Window.OriginVisible;
 			m_menu_rendering_show_selection.Checked = false;
 			m_menu_rendering_show_bounds   .Checked = false;
 			m_menu_rendering_orthographic  .Checked = Model.Camera.Orthographic;
 
-			m_menu_rendering_wireframe.Text = Model.Window.FillMode.ToString();
+			// Display the next fill mode
+			m_menu_rendering_fillmode_solid    .Checked = Model.Scene.Options.FillMode == View3d.EFillMode.Solid;
+			m_menu_rendering_fillmode_wireframe.Checked = Model.Scene.Options.FillMode == View3d.EFillMode.Wireframe;
+			m_menu_rendering_fillmode_solidwire.Checked = Model.Scene.Options.FillMode == View3d.EFillMode.SolidWire;
+			m_menu_rendering_cullmode_none     .Checked = Model.Scene.Options.CullMode == View3d.ECullMode.None;
+			m_menu_rendering_cullmode_back     .Checked = Model.Scene.Options.CullMode == View3d.ECullMode.Back;
+			m_menu_rendering_cullmode_front    .Checked = Model.Scene.Options.CullMode == View3d.ECullMode.Front;
 		}
 
 		/// <summary>Create a new file and an editor to edit the file</summary>
@@ -607,13 +673,14 @@ namespace LDraw
 			this.m_tsc = new pr.gui.ToolStripContainer();
 			this.m_ss = new System.Windows.Forms.StatusStrip();
 			this.m_status = new System.Windows.Forms.ToolStripStatusLabel();
-			this.m_dc = new pr.gui.DockContainer();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_new = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator8 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_open = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open_additional = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_save = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_save_as = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_recent_files = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_sep0 = new System.Windows.Forms.ToolStripSeparator();
@@ -658,7 +725,6 @@ namespace LDraw
 			this.m_menu_rendering_show_selection = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_rendering_show_bounds = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator9 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_menu_rendering_wireframe = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_rendering_orthographic = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator10 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_rendering_lighting = new System.Windows.Forms.ToolStripMenuItem();
@@ -668,10 +734,15 @@ namespace LDraw
 			this.m_menu_window_example_script = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_window_about = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_file_save = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_file_save_as = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_rendering_cullmode = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_rendering_fillmode = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_rendering_fillmode_solid = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_rendering_fillmode_wireframe = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_rendering_fillmode_solidwire = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_rendering_cullmode_none = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_rendering_cullmode_back = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_rendering_cullmode_front = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
-			this.m_tsc.ContentPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
 			this.m_ss.SuspendLayout();
@@ -687,7 +758,6 @@ namespace LDraw
 			// 
 			// m_tsc.ContentPanel
 			// 
-			this.m_tsc.ContentPanel.Controls.Add(this.m_dc);
 			this.m_tsc.ContentPanel.Size = new System.Drawing.Size(663, 543);
 			this.m_tsc.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_tsc.Location = new System.Drawing.Point(0, 0);
@@ -715,17 +785,6 @@ namespace LDraw
 			this.m_status.Name = "m_status";
 			this.m_status.Size = new System.Drawing.Size(26, 17);
 			this.m_status.Text = "Idle";
-			// 
-			// m_dc
-			// 
-			this.m_dc.ActiveContent = null;
-			this.m_dc.ActiveDockable = null;
-			this.m_dc.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_dc.Location = new System.Drawing.Point(0, 0);
-			this.m_dc.Name = "m_dc";
-			this.m_dc.Size = new System.Drawing.Size(663, 543);
-			this.m_dc.TabIndex = 0;
-			this.m_dc.Text = "pr.gui.DockContainer";
 			// 
 			// m_menu
 			// 
@@ -784,6 +843,21 @@ namespace LDraw
             | System.Windows.Forms.Keys.O)));
 			this.m_menu_file_open_additional.Size = new System.Drawing.Size(236, 22);
 			this.m_menu_file_open_additional.Text = "Open A&dditional";
+			// 
+			// m_menu_file_save
+			// 
+			this.m_menu_file_save.Name = "m_menu_file_save";
+			this.m_menu_file_save.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.S)));
+			this.m_menu_file_save.Size = new System.Drawing.Size(236, 22);
+			this.m_menu_file_save.Text = "&Save";
+			// 
+			// m_menu_file_save_as
+			// 
+			this.m_menu_file_save_as.Name = "m_menu_file_save_as";
+			this.m_menu_file_save_as.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            | System.Windows.Forms.Keys.S)));
+			this.m_menu_file_save_as.Size = new System.Drawing.Size(236, 22);
+			this.m_menu_file_save_as.Text = "Save &As";
 			// 
 			// toolStripSeparator1
 			// 
@@ -1052,7 +1126,8 @@ namespace LDraw
             this.m_menu_rendering_show_selection,
             this.m_menu_rendering_show_bounds,
             this.toolStripSeparator9,
-            this.m_menu_rendering_wireframe,
+            this.m_menu_rendering_fillmode,
+            this.m_menu_rendering_cullmode,
             this.m_menu_rendering_orthographic,
             this.toolStripSeparator10,
             this.m_menu_rendering_lighting});
@@ -1088,13 +1163,6 @@ namespace LDraw
 			// 
 			this.toolStripSeparator9.Name = "toolStripSeparator9";
 			this.toolStripSeparator9.Size = new System.Drawing.Size(155, 6);
-			// 
-			// m_menu_rendering_wireframe
-			// 
-			this.m_menu_rendering_wireframe.Name = "m_menu_rendering_wireframe";
-			this.m_menu_rendering_wireframe.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.W)));
-			this.m_menu_rendering_wireframe.Size = new System.Drawing.Size(158, 22);
-			this.m_menu_rendering_wireframe.Text = "Sol&id";
 			// 
 			// m_menu_rendering_orthographic
 			// 
@@ -1154,20 +1222,61 @@ namespace LDraw
 			this.m_menu_window_about.Size = new System.Drawing.Size(151, 22);
 			this.m_menu_window_about.Text = "&About";
 			// 
-			// m_menu_file_save
+			// m_menu_rendering_cullmode
 			// 
-			this.m_menu_file_save.Name = "m_menu_file_save";
-			this.m_menu_file_save.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.S)));
-			this.m_menu_file_save.Size = new System.Drawing.Size(236, 22);
-			this.m_menu_file_save.Text = "&Save";
+			this.m_menu_rendering_cullmode.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_rendering_cullmode_none,
+            this.m_menu_rendering_cullmode_back,
+            this.m_menu_rendering_cullmode_front});
+			this.m_menu_rendering_cullmode.Name = "m_menu_rendering_cullmode";
+			this.m_menu_rendering_cullmode.Size = new System.Drawing.Size(158, 22);
+			this.m_menu_rendering_cullmode.Text = "&Cull Mode";
 			// 
-			// m_menu_file_save_as
+			// m_menu_rendering_fillmode
 			// 
-			this.m_menu_file_save_as.Name = "m_menu_file_save_as";
-			this.m_menu_file_save_as.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
-            | System.Windows.Forms.Keys.S)));
-			this.m_menu_file_save_as.Size = new System.Drawing.Size(236, 22);
-			this.m_menu_file_save_as.Text = "Save &As";
+			this.m_menu_rendering_fillmode.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_rendering_fillmode_solid,
+            this.m_menu_rendering_fillmode_wireframe,
+            this.m_menu_rendering_fillmode_solidwire});
+			this.m_menu_rendering_fillmode.Name = "m_menu_rendering_fillmode";
+			this.m_menu_rendering_fillmode.Size = new System.Drawing.Size(158, 22);
+			this.m_menu_rendering_fillmode.Text = "&Fill Mode";
+			// 
+			// m_menu_rendering_fillmode_solid
+			// 
+			this.m_menu_rendering_fillmode_solid.Name = "m_menu_rendering_fillmode_solid";
+			this.m_menu_rendering_fillmode_solid.Size = new System.Drawing.Size(174, 22);
+			this.m_menu_rendering_fillmode_solid.Text = "&Solid";
+			// 
+			// m_menu_rendering_fillmode_wireframe
+			// 
+			this.m_menu_rendering_fillmode_wireframe.Name = "m_menu_rendering_fillmode_wireframe";
+			this.m_menu_rendering_fillmode_wireframe.Size = new System.Drawing.Size(174, 22);
+			this.m_menu_rendering_fillmode_wireframe.Text = "&Wire Frame";
+			// 
+			// m_menu_rendering_fillmode_solidwire
+			// 
+			this.m_menu_rendering_fillmode_solidwire.Name = "m_menu_rendering_fillmode_solidwire";
+			this.m_menu_rendering_fillmode_solidwire.Size = new System.Drawing.Size(174, 22);
+			this.m_menu_rendering_fillmode_solidwire.Text = "Solid + Wire &Frame";
+			// 
+			// m_menu_rendering_cullmode_none
+			// 
+			this.m_menu_rendering_cullmode_none.Name = "m_menu_rendering_cullmode_none";
+			this.m_menu_rendering_cullmode_none.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_rendering_cullmode_none.Text = "&None";
+			// 
+			// m_menu_rendering_cullmode_back
+			// 
+			this.m_menu_rendering_cullmode_back.Name = "m_menu_rendering_cullmode_back";
+			this.m_menu_rendering_cullmode_back.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_rendering_cullmode_back.Text = "&Back";
+			// 
+			// m_menu_rendering_cullmode_front
+			// 
+			this.m_menu_rendering_cullmode_front.Name = "m_menu_rendering_cullmode_front";
+			this.m_menu_rendering_cullmode_front.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_rendering_cullmode_front.Text = "&Front";
 			// 
 			// MainUI
 			// 
@@ -1181,7 +1290,6 @@ namespace LDraw
 			this.Text = "LDraw";
 			this.m_tsc.BottomToolStripPanel.ResumeLayout(false);
 			this.m_tsc.BottomToolStripPanel.PerformLayout();
-			this.m_tsc.ContentPanel.ResumeLayout(false);
 			this.m_tsc.TopToolStripPanel.ResumeLayout(false);
 			this.m_tsc.TopToolStripPanel.PerformLayout();
 			this.m_tsc.ResumeLayout(false);

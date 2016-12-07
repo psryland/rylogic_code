@@ -23,6 +23,12 @@ namespace pr.extn
 					yield return x;
 		}
 
+		/// <summary>Enumerate all instances that aren't null</summary>
+		public static IEnumerable<TSource> NotNull<TSource>(this IEnumerable<TSource> source) where TSource:class
+		{
+			return source.Where(x => x != null);
+		}
+
 		/// <summary>Cast a collection to statically convertible type</summary>
 		public static IEnumerable<TResult> ConvertTo<TResult>(this IEnumerable source)
 		{

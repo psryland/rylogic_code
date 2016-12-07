@@ -936,19 +936,20 @@ VIEW3D_API void __stdcall View3D_LightProperties(View3DWindow window, View3DLigh
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		light.m_position        =  view3d::To<View3DV4>(window->m_light.m_position);
-		light.m_direction       =  view3d::To<View3DV4>(window->m_light.m_direction);
-		light.m_type            =  static_cast<EView3DLight>(window->m_light.m_type.value);
-		light.m_ambient         =  window->m_light.m_ambient;
-		light.m_diffuse         =  window->m_light.m_diffuse;
-		light.m_specular        =  window->m_light.m_specular;
-		light.m_specular_power  =  window->m_light.m_specular_power;
-		light.m_inner_cos_angle =  window->m_light.m_inner_cos_angle;
-		light.m_outer_cos_angle =  window->m_light.m_outer_cos_angle;
-		light.m_range           =  window->m_light.m_range;
-		light.m_falloff         =  window->m_light.m_falloff;
-		light.m_cast_shadow     =  window->m_light.m_cast_shadow;
-		light.m_on              =  window->m_light.m_on;
+		light.m_position        = view3d::To<View3DV4>(window->m_light.m_position);
+		light.m_direction       = view3d::To<View3DV4>(window->m_light.m_direction);
+		light.m_type            = static_cast<EView3DLight>(window->m_light.m_type.value);
+		light.m_ambient         = window->m_light.m_ambient;
+		light.m_diffuse         = window->m_light.m_diffuse;
+		light.m_specular        = window->m_light.m_specular;
+		light.m_specular_power  = window->m_light.m_specular_power;
+		light.m_inner_cos_angle = window->m_light.m_inner_cos_angle;
+		light.m_outer_cos_angle = window->m_light.m_outer_cos_angle;
+		light.m_range           = window->m_light.m_range;
+		light.m_falloff         = window->m_light.m_falloff;
+		light.m_cast_shadow     = window->m_light.m_cast_shadow;
+		light.m_on              = window->m_light.m_on;
+		light.m_cam_relative    = window->m_light.m_cam_relative;
 	}
 	CatchAndReport(View3D_LightProperties, window, );
 }
@@ -974,6 +975,7 @@ VIEW3D_API void __stdcall View3D_SetLightProperties(View3DWindow window, View3DL
 		window->m_light.m_falloff         = light.m_falloff;
 		window->m_light.m_cast_shadow     = light.m_cast_shadow;
 		window->m_light.m_on              = light.m_on != 0;
+		window->m_light.m_cam_relative    = light.m_cam_relative != 0;
 	}
 	CatchAndReport(View3D_SetLightProperties, window,);
 }
@@ -1950,7 +1952,7 @@ VIEW3D_API void __stdcall View3D_SetViewport(View3DWindow window, View3DViewport
 }
 
 // Get/Set the fill mode for a window
-VIEW3D_API EView3DFillMode __stdcall View3D_FillMode(View3DWindow window)
+VIEW3D_API EView3DFillMode __stdcall View3D_FillModeGet(View3DWindow window)
 {
 	try
 	{
@@ -1959,9 +1961,9 @@ VIEW3D_API EView3DFillMode __stdcall View3D_FillMode(View3DWindow window)
 		DllLockGuard;
 		return window->m_fill_mode;
 	}
-	CatchAndReport(View3D_FillMode, window, EView3DFillMode());
+	CatchAndReport(View3D_FillModeGet, window, EView3DFillMode());
 }
-VIEW3D_API void __stdcall View3D_SetFillMode(View3DWindow window, EView3DFillMode mode)
+VIEW3D_API void __stdcall View3D_FillModeSet(View3DWindow window, EView3DFillMode mode)
 {
 	try
 	{
@@ -1970,7 +1972,31 @@ VIEW3D_API void __stdcall View3D_SetFillMode(View3DWindow window, EView3DFillMod
 		DllLockGuard;
 		window->m_fill_mode = mode;
 	}
-	CatchAndReport(View3D_SetFillMode, window,);
+	CatchAndReport(View3D_FillModeSet, window,);
+}
+
+// Get/Set the cull mode for a faces in window
+VIEW3D_API EView3DCullMode __stdcall View3D_CullModeGet(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return window->m_cull_mode;
+	}
+	CatchAndReport(View3D_CullModeGet, window, EView3DCullMode());
+}
+VIEW3D_API void __stdcall View3D_CullModeSet(View3DWindow window, EView3DCullMode mode)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_cull_mode = mode;
+	}
+	CatchAndReport(View3D_CullModeSet, window,);
 }
 
 // Selected between perspective and orthographic projection
@@ -2019,6 +2045,31 @@ VIEW3D_API void __stdcall View3D_SetBackgroundColour(View3DWindow window, int aa
 		window->m_background_colour = pr::Colour32(aarrggbb);
 	}
 	CatchAndReport(View3D_SetBackgroundColour, window,);
+}
+
+// Get/Set the multi-sampling mode for a window
+VIEW3D_API int  __stdcall View3D_MultiSamplingGet(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return window->m_wnd.MultiSampling().Count;
+	}
+	CatchAndReport(View3D_MultiSamplingGet, window, 1);
+}
+VIEW3D_API void __stdcall View3D_MultiSamplingSet(View3DWindow window, int multisampling)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		pr::rdr::MultiSamp ms(multisampling);
+		window->m_wnd.MultiSampling(ms);
+	}
+	CatchAndReport(View3D_MultiSamplingSet, window, );
 }
 
 // Tools *******************************************************************
@@ -2283,10 +2334,10 @@ VIEW3D_API BOOL __stdcall View3D_TranslateKey(View3DWindow window, int key_code)
 			{
 				if (pr::KeyDown(VK_CONTROL))
 				{
-					switch (View3D_FillMode(window)) {
-					case EView3DFillMode::Solid:     View3D_SetFillMode(window, EView3DFillMode::Wireframe); break;
-					case EView3DFillMode::Wireframe: View3D_SetFillMode(window, EView3DFillMode::SolidWire); break;
-					case EView3DFillMode::SolidWire: View3D_SetFillMode(window, EView3DFillMode::Solid); break;
+					switch (View3D_FillModeGet(window)) {
+					case EView3DFillMode::Solid:     View3D_FillModeSet(window, EView3DFillMode::Wireframe); break;
+					case EView3DFillMode::Wireframe: View3D_FillModeSet(window, EView3DFillMode::SolidWire); break;
+					case EView3DFillMode::SolidWire: View3D_FillModeSet(window, EView3DFillMode::Solid); break;
 					}
 					View3D_Render(window);
 				}
@@ -2413,6 +2464,30 @@ VIEW3D_API void __stdcall View3D_SetOriginSize(View3DWindow window, float size)
 		window->m_origin_point_size = size;
 	}
 	CatchAndReport(View3D_SetOriginSize, window,);
+}
+
+// Get/Set whether object bounding boxes are visible
+VIEW3D_API BOOL __stdcall View3D_BBoxesVisibleGet(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return window->m_bboxes_visible;
+	}
+	CatchAndReport(View3D_BBoxesVisibleGet, window, FALSE);
+}
+VIEW3D_API void __stdcall View3D_BBoxesVisibleSet(View3DWindow window, BOOL visible)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_bboxes_visible = visible != 0;
+	}
+	CatchAndReport(View3D_BBoxesVisibleSet, window, );
 }
 
 pr::Guid const GuidDemoSceneObjects = { 0xFE51C164, 0x9E57, 0x456F, 0x9D, 0x8D, 0x39, 0xE3, 0xFA, 0xAF, 0xD3, 0xE7 };

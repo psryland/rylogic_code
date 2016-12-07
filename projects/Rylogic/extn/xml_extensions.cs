@@ -19,6 +19,8 @@ using System.Xml;
 using System.Xml.Linq;
 using pr.attrib;
 using pr.common;
+using pr.extn;
+using pr.gfx;
 using pr.maths;
 
 namespace pr.extn
@@ -97,6 +99,12 @@ namespace pr.extn
 				this[typeof(Color)] = (obj, node) =>
 				{
 					var col = ((Color)obj).ToArgb().ToString("X8");
+					node.SetValue(col);
+					return node;
+				};
+				this[typeof(Colour32)] = (obj, node) =>
+				{
+					var col = ((Colour32)obj).ARGB.ToString("X8");
 					node.SetValue(col);
 					return node;
 				};
@@ -483,7 +491,11 @@ namespace pr.extn
 				};
 				this[typeof(Color)] = (elem, type, ctor) =>
 				{
-					return Color.FromArgb(int.Parse(elem.Value, NumberStyles.HexNumber));
+					return Color_.FromArgb(uint.Parse(elem.Value, NumberStyles.HexNumber));
+				};
+				this[typeof(Colour32)] = (elem, type, ctor) =>
+				{
+					return new Colour32(uint.Parse(elem.Value, NumberStyles.HexNumber));
 				};
 				this[typeof(Size)] = (elem, type, ctor) =>
 				{

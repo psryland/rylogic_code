@@ -304,7 +304,7 @@ namespace pr
 		}
 
 		// Called when the window size changes (e.g. from a WM_SIZE message)
-		void Window::RenderTargetSize(iv2 const& size)
+		void Window::RenderTargetSize(iv2 const& size, bool force)
 		{
 			// Applications can make some changes to make the transition from windowed to full screen more efficient.
 			// For example, on a WM_SIZE message, the application should release any outstanding swap-chain back buffers,
@@ -331,7 +331,7 @@ namespace pr
 
 			// Ignore resizes that aren't changes in size
 			auto area = RenderTargetSize();
-			if (size == area)
+			if (size == area && !force)
 				return;
 
 			PR_ASSERT(PR_DBG_RDR, size.x >= 0 && size.y >= 0, "Size should be positive definite");
@@ -359,6 +359,66 @@ namespace pr
 			//target_mode.Width = area.x;
 			//target_mode.Height = area.y;
 			//pr::Throw(m_swap_chain->ResizeTarget(&target_mode));
+
+			// Set up the render targets again
+			InitRT();
+			RestoreRT();
+
+			// Notify that the resize is done
+			m_area = RenderTargetSize();
+			pr::events::Send(rdr::Evt_Resize(this, true, m_area)); // notify after changing the RT (with the new size)
+		}
+
+		// Get/Set the multi sampling used.
+		// Changing the multi-sampling mode is a bit like resizing the back buffer
+		MultiSamp Window::MultiSampling() const
+		{
+			return m_multisamp;
+		}
+		void Window::MultiSampling(MultiSamp ms)
+		{
+			auto device = m_rdr->Device();
+			auto dc = m_rdr->ImmediateDC();
+			auto area = RenderTargetSize();
+
+			// Get the description of the existing swap chain
+			DXGI_SWAP_CHAIN_DESC sd = {0};
+			m_swap_chain->GetDesc(&sd);
+
+			// Check for feature support
+			ms.Validate(device, sd.BufferDesc.Format);
+
+			// Notify that a resize of the swap chain is about to happen.
+			// Receivers need to ensure they don't have any outstanding references to the swap chain resources
+			pr::events::Send(rdr::Evt_Resize(this, false, area)); // notify before changing the RT (with the old size)
+
+			// Drop the render targets from the immediate context
+			dc->OMSetRenderTargets(0, nullptr, nullptr);
+			dc->ClearState();
+
+			m_main_tex = nullptr;
+			m_main_rtv = nullptr;
+			m_main_srv = nullptr;
+			m_main_dsv = nullptr;
+
+			// Get the factory that was used to create 'device'
+			D3DPtr<IDXGIDevice> dxgi_device;
+			D3DPtr<IDXGIAdapter> adapter;
+			D3DPtr<IDXGIFactory> factory;
+			pr::Throw(device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgi_device.m_ptr));
+			pr::Throw(dxgi_device->GetParent(__uuidof(IDXGIAdapter), (void**)&adapter.m_ptr));
+			pr::Throw(adapter->GetParent(__uuidof(IDXGIFactory), (void **)&factory.m_ptr));
+
+			sd.SampleDesc = ms;
+
+			// Create a new swap chain with the new multi-sampling mode
+			// Uses the flag 'DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE' to enable an application to
+			// render using GDI on a swap chain or a surface. This will allow the application
+			// to call IDXGISurface1::GetDC on the 0th back buffer or a surface.
+			pr::Throw(factory->CreateSwapChain(device.m_ptr, &sd, &m_swap_chain.m_ptr));
+			PR_EXPAND(PR_DBG_RDR, NameResource(m_swap_chain , pr::FmtS("swap chain")));
+
+			m_multisamp = ms;
 
 			// Set up the render targets again
 			InitRT();

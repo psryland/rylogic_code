@@ -66,6 +66,9 @@
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="src\Model.cs" />
+    <Compile Include="src\SceneUI.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="src\ScriptUI.cs">
       <SubType>UserControl</SubType>
     </Compile>

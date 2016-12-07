@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Xml.Linq;
 using pr.common;
 using pr.extn;
+using pr.gfx;
 using pr.gui;
 using pr.maths;
 using pr.util;
@@ -15,8 +16,12 @@ namespace LDraw
 		public Settings()
 		{
 			RecentFiles = string.Empty;
+			ShowBBoxes = false;
 
-			Scene                  = new ChartControl.RdrOptions();
+			var light = new View3d.Light(0x00000000, 0xFF808080, 0xFFFFFFFF, 1000, direction:new v4(-1,-1,-10, 0)) { CameraRelative = true };
+			Light = light.ToXml(new XElement(nameof(View3d.Light)));
+
+			Scene = new ChartControl.RdrOptions();
 			Scene.AntiAliasing     = false;
 			Scene.ChartBkColour    = Color.FromArgb(0x00,0x00,0x00);
 			Scene.XAxis.GridColour = Color.FromArgb(0x20,0x20,0x20);
@@ -36,6 +41,20 @@ namespace LDraw
 		{
 			get { return get(x => x.RecentFiles); }
 			set { set(x => x.RecentFiles, value); }
+		}
+
+		/// <summary>Show bounding boxes for objects</summary>
+		public bool ShowBBoxes
+		{
+			get { return get(x => x.ShowBBoxes); }
+			set { set(x => x.ShowBBoxes, value); }
+		}
+
+		/// <summary>Light settings</summary>
+		public XElement Light
+		{
+			get { return get(x => x.Light); }
+			set { set(x => x.Light, value); }
 		}
 
 		/// <summary>Style options for charts</summary>
@@ -85,7 +104,7 @@ namespace LDraw
 			ResetUp      = v4.YAxis;
 		}
 
-		/// <summary>The dock panel layout</summary>
+		/// <summary>The camera align axis</summary>
 		public v4 AlignAxis
 		{
 			get { return get(x => x.AlignAxis); }

@@ -35,24 +35,11 @@ namespace pr
 				m_verts = vbuf;
 				return *this;
 			}
-			MeshCreationData& verts(std::initializer_list<pr::v4> vbuf)
-			{
-				assert(pr::maths::is_aligned(vbuf.begin()));
-				m_vcount = int(vbuf.size());
-				m_verts = vbuf.begin();
-				return *this;
-			}
 			MeshCreationData& indices(pr::uint16 const* ibuf, int count)
 			{
 				assert(count == 0 || ibuf != nullptr);
 				m_icount = count;
 				m_indices = ibuf;
-				return *this;
-			}
-			MeshCreationData& indices(std::initializer_list<pr::uint16> ibuf)
-			{
-				m_icount = int(ibuf.size());
-				m_indices = ibuf.begin();
 				return *this;
 			}
 			MeshCreationData& nuggets(pr::rdr::NuggetProps const* gbuf, int count)
@@ -62,24 +49,12 @@ namespace pr
 				m_nuggets = gbuf;
 				return *this;
 			}
-			MeshCreationData& nuggets(std::initializer_list<pr::rdr::NuggetProps> gbuf)
-			{
-				m_gcount = int(gbuf.size());
-				m_nuggets = gbuf.begin();
-				return *this;
-			}
 			MeshCreationData& colours(pr::Colour32 const* cbuf, int count)
 			{
 				assert(count == 0 || cbuf != nullptr);
 				assert(count == 0 || count == 1 || count == m_vcount);
 				m_ccount = count;
 				m_colours = cbuf;
-				return *this;
-			}
-			MeshCreationData& colours(std::initializer_list<pr::Colour32> cbuf)
-			{
-				m_ccount = int(cbuf.size());
-				m_colours = cbuf.begin();
 				return *this;
 			}
 			MeshCreationData& normals(pr::v4 const* nbuf, int count)
@@ -91,14 +66,6 @@ namespace pr
 				m_normals = nbuf;
 				return *this;
 			}
-			MeshCreationData& normals(std::initializer_list<pr::v4> nbuf)
-			{
-				assert(int(nbuf.size()) == m_vcount);
-				assert(pr::maths::is_aligned(nbuf.begin()));
-				m_ncount = int(nbuf.size());
-				m_normals = nbuf.begin();
-				return *this;
-			}
 			MeshCreationData& tex(pr::v2 const* tbuf, int count)
 			{
 				assert(count == 0 || tbuf != nullptr);
@@ -107,11 +74,70 @@ namespace pr
 				(void)count;
 				return *this;
 			}
+
+			MeshCreationData& verts(std::initializer_list<pr::v4> vbuf)
+			{
+				assert(pr::maths::is_aligned(vbuf.begin()));
+				m_vcount = int(vbuf.size());
+				m_verts = vbuf.begin();
+				return *this;
+			}
+			MeshCreationData& indices(std::initializer_list<pr::uint16> ibuf)
+			{
+				m_icount = int(ibuf.size());
+				m_indices = ibuf.begin();
+				return *this;
+			}
+			MeshCreationData& nuggets(std::initializer_list<pr::rdr::NuggetProps> gbuf)
+			{
+				m_gcount = int(gbuf.size());
+				m_nuggets = gbuf.begin();
+				return *this;
+			}
+			MeshCreationData& colours(std::initializer_list<pr::Colour32> cbuf)
+			{
+				m_ccount = int(cbuf.size());
+				m_colours = cbuf.begin();
+				return *this;
+			}
+			MeshCreationData& normals(std::initializer_list<pr::v4> nbuf)
+			{
+				assert(int(nbuf.size()) == m_vcount);
+				assert(pr::maths::is_aligned(nbuf.begin()));
+				m_ncount = int(nbuf.size());
+				m_normals = nbuf.begin();
+				return *this;
+			}
 			MeshCreationData& tex(std::initializer_list<pr::v2> tbuf)
 			{
 				assert(int(tbuf.size()) == m_vcount);
 				m_tex_coords = tbuf.begin();
 				return *this;
+			}
+
+			template <int N> MeshCreationData& verts(pr::v4 const (&vbuf)[N])
+			{
+				return verts(&vbuf[0], N);
+			}
+			template <int N> MeshCreationData& indices(pr::uint16 const (&ibuf)[N])
+			{
+				return indices(&ibuf[0], N);
+			}
+			template <int N> MeshCreationData& nuggets(pr::rdr::NuggetProps const (&nbuf)[N])
+			{
+				return nuggets(&nbuf[0], N);
+			}
+			template <int N> MeshCreationData& colours(pr::Colour32 const (&cbuf)[N])
+			{
+				return colours(&cbuf[0], N);
+			}
+			template <int N> MeshCreationData& normals(pr::v4 const (&nbuf)[N])
+			{
+				return normals(&nbuf[0], N);
+			}
+			template <int N> MeshCreationData& tex(pr::v2 const (&tbuf)[N])
+			{
+				return tex(&tbuf[0], N);
 			}
 		};
 

@@ -470,7 +470,7 @@ namespace pr.gui
 		[Browsable(false)]
 		public BindingListEx<Series> Data
 		{
-			get { return m_impl_data; }
+			[DebuggerStepThrough] get { return m_impl_data; }
 			set
 			{
 				if (m_impl_data == value) return;

@@ -26,13 +26,17 @@ namespace view3d
 		pr::Camera            m_camera;                   // Camera control
 		pr::rdr::Light        m_light;                    // Light source for the set
 		EView3DFillMode       m_fill_mode;                // Fill mode
+		EView3DCullMode       m_cull_mode;                // Face culling mode
 		pr::Colour32          m_background_colour;        // The background colour for this draw set
-		view3d::Instance      m_focus_point;
-		view3d::Instance      m_origin_point;
+		view3d::Instance      m_focus_point;              // Focus point graphics
+		view3d::Instance      m_origin_point;             // Origin point graphics
+		view3d::Instance      m_bbox_model;               // Bounding box graphics
+		view3d::Instance      m_selection_box;            // Selection box graphics
 		float                 m_focus_point_size;         // The base size of the focus point object
 		float                 m_origin_point_size;        // The base size of the origin instance
 		bool                  m_focus_point_visible;      // True if we should draw the focus point
 		bool                  m_origin_point_visible;     // True if we should draw the origin point
+		bool                  m_bboxes_visible;           // True if we should draw object bounding boxes
 		ScriptEditorUIPtr     m_editor_ui;                // A editor for editing Ldr script
 		LdrObjectManagerUIPtr m_obj_cont_ui;              // Object manager for objects added to this window
 		LdrMeasureUIPtr       m_measure_tool_ui;          // A UI for measuring distances between points within the 3d environment
@@ -68,13 +72,17 @@ namespace view3d
 			,m_camera()
 			,m_light()
 			,m_fill_mode(EView3DFillMode::Solid)
+			,m_cull_mode(EView3DCullMode::Back)
 			,m_background_colour(0xFF808080U)
 			,m_focus_point()
 			,m_origin_point()
+			,m_bbox_model()
+			,m_selection_box()
 			,m_focus_point_size(0.05f)
 			,m_origin_point_size(0.05f)
 			,m_focus_point_visible(false)
 			,m_origin_point_visible(false)
+			,m_bboxes_visible(false)
 			,m_editor_ui()
 			,m_obj_cont_ui()
 			,m_measure_tool_ui()
@@ -105,28 +113,8 @@ namespace view3d
 			m_light.m_on             = true;
 			m_light.m_cam_relative   = true;
 
-			// Create the focus point/origin models
-			auto cdata = pr::rdr::MeshCreationData()
-				.verts({
-					pr::v4( 0.0f,  0.0f,  0.0f, 1.0f),
-					pr::v4( 1.0f,  0.0f,  0.0f, 1.0f),
-					pr::v4( 0.0f,  0.0f,  0.0f, 1.0f),
-					pr::v4( 0.0f,  1.0f,  0.0f, 1.0f),
-					pr::v4( 0.0f,  0.0f,  0.0f, 1.0f),
-					pr::v4( 0.0f,  0.0f,  1.0f, 1.0f)})
-				.indices({ 0, 1, 2, 3, 4, 5 })
-				.nuggets({ pr::rdr::NuggetProps(pr::rdr::EPrim::LineList, pr::rdr::EGeom::Vert|pr::rdr::EGeom::Colr) });
-
-			// Don't know why, but the optimiser buggers this up if I use initializer_list<>. Hence local array
-			pr::Colour32 focus_cols[] = { 0xFFFF0000, 0xFFFF0000, 0xFF00FF00, 0xFF00FF00, 0xFF0000FF, 0xFF0000FF };
-			cdata.colours(focus_cols, _countof(focus_cols));
-			m_focus_point.m_model = pr::rdr::ModelGenerator<>::Mesh(m_dll->m_rdr, cdata);
-			m_focus_point.m_i2w   = pr::m4x4Identity;
-			
-			pr::Colour32 origin_cols[] = { 0xFF800000, 0xFF800000, 0xFF008000, 0xFF008000, 0xFF000080, 0xFF000080 };
-			cdata.colours(origin_cols, _countof(origin_cols));
-			m_origin_point.m_model = pr::rdr::ModelGenerator<>::Mesh(m_dll->m_rdr, cdata);
-			m_origin_point.m_i2w   = pr::m4x4Identity;
+			// Create the stock models
+			CreateStockModels();
 		}
 		Window(Window const&) = delete;
 		Window& operator=(Window const&) = delete;
@@ -179,12 +167,20 @@ namespace view3d
 				m_focus_point.m_i2w = pr::m4x4::Scale(scale, m_camera.FocusPoint());
 				m_scene.AddInstance(m_focus_point);
 			}
+
 			// Scale the origin point
 			if (m_origin_point_visible)
 			{
 				float scale = m_origin_point_size * pr::Length3(m_camera.CameraToWorld().pos);
 				m_origin_point.m_i2w = pr::m4x4::Scale(scale, pr::v4Origin);
 				m_scene.AddInstance(m_origin_point);
+			}
+
+			// Bounding boxes
+			if (m_bboxes_visible)
+			{
+				for (auto& obj : m_objects)
+					obj->AddBBoxToScene(m_scene, m_bbox_model.m_model);
 			}
 
 			// Set the view and projection matrices
@@ -209,6 +205,13 @@ namespace view3d
 			case EView3DFillMode::Solid:     m_scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
 			case EView3DFillMode::Wireframe: m_scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME); break;
 			case EView3DFillMode::SolidWire: m_scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
+			}
+
+			// Set the global cull mode
+			switch (m_cull_mode) {
+			case EView3DCullMode::None:  m_scene.m_rsb.Set(ERS::CullMode, D3D11_CULL_NONE); break;
+			case EView3DCullMode::Back:  m_scene.m_rsb.Set(ERS::CullMode, D3D11_CULL_BACK); break;
+			case EView3DCullMode::Front: m_scene.m_rsb.Set(ERS::CullMode, D3D11_CULL_FRONT); break;
 			}
 
 			// Render the scene
@@ -496,6 +499,109 @@ namespace view3d
 			ui.Show();
 			ui.Populate(m_objects);
 			ui.Visible(show);
+		}
+
+		// Create stock models such as the focus point, origin, etc
+		void CreateStockModels()
+		{
+			using namespace pr::rdr;
+			{
+				// Create the focus point/origin models
+				// Don't know why, but the optimiser buggers this up if I use initializer_list<>. Hence local arrays
+				static pr::v4 const verts[] =
+				{
+						pr::v4( 0.0f,  0.0f,  0.0f, 1.0f),
+						pr::v4( 1.0f,  0.0f,  0.0f, 1.0f),
+						pr::v4( 0.0f,  0.0f,  0.0f, 1.0f),
+						pr::v4( 0.0f,  1.0f,  0.0f, 1.0f),
+						pr::v4( 0.0f,  0.0f,  0.0f, 1.0f),
+						pr::v4( 0.0f,  0.0f,  1.0f, 1.0f),
+				};
+				static pr::uint16 const indices[] = { 0, 1, 2, 3, 4, 5 };
+				static NuggetProps const nuggets[] = { NuggetProps(EPrim::LineList, EGeom::Vert|EGeom::Colr) };
+				static pr::Colour32 const focus_cols[] = { 0xFFFF0000, 0xFFFF0000, 0xFF00FF00, 0xFF00FF00, 0xFF0000FF, 0xFF0000FF };
+				static pr::Colour32 const origin_cols[] = { 0xFF800000, 0xFF800000, 0xFF008000, 0xFF008000, 0xFF000080, 0xFF000080 };
+
+				{
+					auto cdata = MeshCreationData().verts(verts).indices(indices).nuggets(nuggets).colours(focus_cols);
+					m_focus_point.m_model = ModelGenerator<>::Mesh(m_dll->m_rdr, cdata);
+					m_focus_point.m_model->m_name = "focus point";
+					m_focus_point.m_i2w   = pr::m4x4Identity;
+				}
+				{
+					auto cdata = MeshCreationData().verts(verts).indices(indices).nuggets(nuggets).colours(origin_cols);
+					m_origin_point.m_model = ModelGenerator<>::Mesh(m_dll->m_rdr, cdata);
+					m_focus_point.m_model->m_name = "origin point";
+					m_origin_point.m_i2w   = pr::m4x4Identity;
+				}
+			}
+			{
+				// Create the selection box model
+				static pr::v4 const verts[] =
+				{
+					pr::v4(-0.5f, -0.5f, -0.5f, 1.0f), pr::v4(-0.4f, -0.5f, -0.5f, 1.0f), pr::v4(-0.5f, -0.4f, -0.5f, 1.0f), pr::v4(-0.5f, -0.5f, -0.4f, 1.0f),
+					pr::v4( 0.5f, -0.5f, -0.5f, 1.0f), pr::v4( 0.5f, -0.4f, -0.5f, 1.0f), pr::v4( 0.4f, -0.5f, -0.5f, 1.0f), pr::v4( 0.5f, -0.5f, -0.4f, 1.0f),
+					pr::v4( 0.5f,  0.5f, -0.5f, 1.0f), pr::v4( 0.4f,  0.5f, -0.5f, 1.0f), pr::v4( 0.5f,  0.4f, -0.5f, 1.0f), pr::v4( 0.5f,  0.5f, -0.4f, 1.0f),
+					pr::v4(-0.5f,  0.5f, -0.5f, 1.0f), pr::v4(-0.5f,  0.4f, -0.5f, 1.0f), pr::v4(-0.4f,  0.5f, -0.5f, 1.0f), pr::v4(-0.5f,  0.5f, -0.4f, 1.0f),
+					pr::v4(-0.5f, -0.5f,  0.5f, 1.0f), pr::v4(-0.4f, -0.5f,  0.5f, 1.0f), pr::v4(-0.5f, -0.4f,  0.5f, 1.0f), pr::v4(-0.5f, -0.5f,  0.4f, 1.0f),
+					pr::v4( 0.5f, -0.5f,  0.5f, 1.0f), pr::v4( 0.5f, -0.4f,  0.5f, 1.0f), pr::v4( 0.4f, -0.5f,  0.5f, 1.0f), pr::v4( 0.5f, -0.5f,  0.4f, 1.0f),
+					pr::v4( 0.5f,  0.5f,  0.5f, 1.0f), pr::v4( 0.4f,  0.5f,  0.5f, 1.0f), pr::v4( 0.5f,  0.4f,  0.5f, 1.0f), pr::v4( 0.5f,  0.5f,  0.4f, 1.0f),
+					pr::v4(-0.5f,  0.5f,  0.5f, 1.0f), pr::v4(-0.5f,  0.4f,  0.5f, 1.0f), pr::v4(-0.4f,  0.5f,  0.5f, 1.0f), pr::v4(-0.5f,  0.5f,  0.4f, 1.0f),
+				};
+				static pr::uint16 const indices[] =
+				{
+					0,  1,  0,  2,  0,  3,
+					4,  5,  4,  6,  4,  7,
+					8,  9,  8, 10,  8, 11,
+					12, 13, 12, 14, 12, 15,
+					16, 17, 16, 18, 16, 19,
+					20, 21, 20, 22, 20, 23,
+					24, 25, 24, 26, 24, 27,
+					28, 29, 28, 30, 28, 31,
+				};
+				static NuggetProps const nuggets[] =
+				{
+					NuggetProps(EPrim::LineList, EGeom::Vert),
+				};
+
+				auto cdata = pr::rdr::MeshCreationData().verts(verts).indices(indices).nuggets(nuggets);
+				m_selection_box.m_model = ModelGenerator<>::Mesh(m_dll->m_rdr, cdata);
+				m_selection_box.m_model->m_name = "selection box";
+				m_selection_box.m_i2w   = pr::m4x4Identity;
+			}
+			{
+				// Create a bounding box model
+				static pr::v4 const verts[] =
+				{
+					pr::v4(-0.5f, -0.5f, -0.5f, 1.0f),
+					pr::v4(+0.5f, -0.5f, -0.5f, 1.0f),
+					pr::v4(+0.5f, +0.5f, -0.5f, 1.0f),
+					pr::v4(-0.5f, +0.5f, -0.5f, 1.0f),
+					pr::v4(-0.5f, -0.5f, +0.5f, 1.0f),
+					pr::v4(+0.5f, -0.5f, +0.5f, 1.0f),
+					pr::v4(+0.5f, +0.5f, +0.5f, 1.0f),
+					pr::v4(-0.5f, +0.5f, +0.5f, 1.0f),
+				};
+				static pr::uint16 const indices[] =
+				{
+					0, 1, 1, 2, 2, 3, 3, 0,
+					4, 5, 5, 6, 6, 7, 7, 4,
+					0, 4, 1, 5, 2, 6, 3, 7,
+				};
+				static pr::Colour32 const colours[] =
+				{
+					pr::Colour32Blue,
+				};
+				static NuggetProps const nuggets[] =
+				{
+					NuggetProps(EPrim::LineList),
+				};
+
+				auto cdata = pr::rdr::MeshCreationData().verts(verts).indices(indices).colours(colours).nuggets(nuggets);
+				m_bbox_model.m_model = ModelGenerator<>::Mesh(m_dll->m_rdr, cdata);
+				m_bbox_model.m_model->m_name = "bbox";
+				m_bbox_model.m_i2w   = pr::m4x4Identity;
+			}
 		}
 	};
 }

@@ -95,7 +95,7 @@ namespace pr.gui
 		//  	private set
 		//  	{
 		//  		if (m_impl_dock_control == value) return;
-		//  		if (m_impl_dock_control != null) Util.Dispose(ref m_impl_dock_control);
+		//  		Util.Dispose(ref m_impl_dock_control);
 		//  		m_impl_dock_control = value;
 		//  	}
 		//  }
@@ -162,7 +162,7 @@ namespace pr.gui
 		protected override void Dispose(bool disposing)
 		{
 			using (this.SuspendLayout(false))
-			using (this.SuspendRedraw(false))
+			//using (this.SuspendRedraw(false))
 			{
 				if (Options.DisposeContent)
 					using (this.SuspendLayout(false))
@@ -363,6 +363,28 @@ namespace pr.gui
 		{
 			Add(dockable, loc);
 			return dockable;
+		}
+
+		/// <summary>Remove a dockable from this dock container</summary>
+		public void Remove(DockControl dc)
+		{
+			if (dc == null)
+				throw new ArgumentNullException(nameof(dc), "'dockable' or 'dockable.DockControl' cannot be 'null'");
+
+			// Idempotent remove
+			if (dc.DockContainer == null)
+				return;
+
+			// Throw if 'dc' is not in this container
+			if (dc.DockContainer != this)
+				throw new InvalidOperationException("The given dockable is not managed by this dock container");
+
+			// The DockControl object can actually remove itself, but this method gives extra checking
+			dc.Remove();
+		}
+		public void Remove(IDockable dockable)
+		{
+			Remove(dockable?.DockControl);
 		}
 
 		/// <summary>Raised whenever the active pane changes in this dock container or associated floating window or auto hide panel</summary>
@@ -2600,6 +2622,13 @@ namespace pr.gui
 			}
 			private DockContainer m_impl_dock_container;
 
+			/// <summary>Remove this DockControl from whatever dock container it is in</summary>
+			public void Remove()
+			{
+				DockPane = null;
+				DockContainer = null;
+			}
+
 			/// <summary>The dock container, auto-hide panel, or floating window that this content is docked within</summary>
 			internal ITreeHost TreeHost
 			{
@@ -2607,7 +2636,11 @@ namespace pr.gui
 			}
 
 			/// <summary>Get the control we're providing docking functionality for</summary>
-			public Control Owner { [DebuggerStepThrough] get; private set; }
+			public Control Owner
+			{
+				[DebuggerStepThrough] get;
+				private set;
+			}
 
 			/// <summary>Gets 'Owner' as an IDockable</summary>
 			public IDockable Dockable
