@@ -193,6 +193,12 @@ namespace pr.extn
 					node.SetValue(vec.ToString());
 					return node;
 				};
+				this[typeof(v3)] = (obj, node) =>
+				{
+					var vec = (v3)obj;
+					node.SetValue(vec.ToString());
+					return node;
+				};
 				this[typeof(v4)] = (obj, node) =>
 				{
 					var vec = (v4)obj;
@@ -567,7 +573,11 @@ namespace pr.extn
 				};
 				this[typeof(v2)] = (elem, type, instance) =>
 				{
-					return v2.Parse(elem.Value);
+					return v2.Parse2(elem.Value);
+				};
+				this[typeof(v3)] = (elem, type, instance) =>
+				{
+					return v3.Parse3(elem.Value);
 				};
 				this[typeof(v4)] = (elem, type, instance) =>
 				{

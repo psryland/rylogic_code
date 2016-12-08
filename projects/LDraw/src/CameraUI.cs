@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using pr.extn;
 using pr.gfx;
@@ -35,7 +33,7 @@ namespace LDraw
 		#endregion
 
 		public CameraUI(MainUI main_ui)
-			:base(main_ui, EPin.TopLeft)
+			:base(main_ui.Model.Scene, EPin.Centre, Point.Empty)
 		{
 			InitializeComponent();
 			m_main_ui = main_ui;
@@ -75,10 +73,10 @@ namespace LDraw
 			}
 
 			// Focus point
-			m_tb_focus_point.ValueToText = x => ((v4)x).ToString3();
-			m_tb_focus_point.TextToValue = s => v4.Parse3(s, 1f);
-			m_tb_focus_point.ValidateText = s => v4.TryParse3(s, 1f) != null;
 			m_tb_focus_point.Value = Camera.FocusPoint;
+			m_tb_focus_point.ValidateText = s => v4.TryParse3(s, 1f) != null;
+			m_tb_focus_point.TextToValue = s => v4.Parse3(s, 1f);
+			m_tb_focus_point.ValueToText = x => ((v4)x).ToString3();
 			m_tb_focus_point.ValueChanged += (s,a) =>
 			{
 				if (!m_tb_focus_point.Focused) return;
@@ -87,22 +85,22 @@ namespace LDraw
 			};
 
 			// Camera forward
-			m_tb_camera_fwd.ValueToText = x => ((v4)x).ToString3();
-			m_tb_camera_fwd.TextToValue = s => v4.Parse3(s, 1f);
-			m_tb_camera_fwd.ValidateText = s => v4.TryParse3(s, 1f) != null;
 			m_tb_camera_fwd.Value = -Camera.O2W.z;
+			m_tb_camera_fwd.ValidateText = s => v4.TryParse3(s, 0f) != null;
+			m_tb_camera_fwd.TextToValue = s => v4.Normalise3(v4.Parse3(s, 0f));
+			m_tb_camera_fwd.ValueToText = x => ((v4)x).ToString3();
 			m_tb_camera_fwd.ReadOnly = true;
 
 			// Camera up
-			m_tb_camera_up.ValidateText = s => v4.TryParse3(s, 1f) != null;
-			m_tb_camera_up.ValueToText = x => ((v4)x).ToString3();
-			m_tb_camera_up.TextToValue = s => v4.Parse3(s, 1f);
 			m_tb_camera_up.Value = Camera.O2W.y;
+			m_tb_camera_up.ValidateText = s => v4.TryParse3(s, 0f) != null;
+			m_tb_camera_up.TextToValue = s => v4.Normalise3(v4.Parse3(s, 0f));
+			m_tb_camera_up.ValueToText = x => ((v4)x).ToString3();
 			m_tb_camera_up.ReadOnly = true;
 
 			// FovX
-			m_tb_fovX.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0 && v.Value < Maths.TauBy2; };
 			m_tb_fovX.Value = Camera.FovX;
+			m_tb_fovX.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0 && v.Value < Maths.TauBy2; };
 			m_tb_fovX.ValueChanged += (s,a) =>
 			{
 				if (!m_tb_fovX.Focused) return;
@@ -111,8 +109,8 @@ namespace LDraw
 			};
 
 			// FovY
-			m_tb_fovY.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0 && v.Value < Maths.TauBy2; };
 			m_tb_fovY.Value = Camera.FovY;
+			m_tb_fovY.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0 && v.Value < Maths.TauBy2; };
 			m_tb_fovY.ValueChanged += (s,a) =>
 			{
 				if (!m_tb_fovY.Focused) return;
@@ -121,8 +119,8 @@ namespace LDraw
 			};
 
 			// Focus distance
-			m_tb_focus_dist.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0; };
 			m_tb_focus_dist.Value = Camera.FocusDist;
+			m_tb_focus_dist.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0; };
 			m_tb_focus_dist.ValueChanged += (s,a) =>
 			{
 				if (!m_tb_focus_dist.Focused) return;
@@ -174,9 +172,9 @@ namespace LDraw
 			// m_lbl_focus_point
 			// 
 			this.m_lbl_focus_point.AutoSize = true;
-			this.m_lbl_focus_point.Location = new System.Drawing.Point(31, 15);
+			this.m_lbl_focus_point.Location = new System.Drawing.Point(42, 15);
 			this.m_lbl_focus_point.Name = "m_lbl_focus_point";
-			this.m_lbl_focus_point.Size = new System.Drawing.Size(81, 16);
+			this.m_lbl_focus_point.Size = new System.Drawing.Size(66, 13);
 			this.m_lbl_focus_point.TabIndex = 0;
 			this.m_lbl_focus_point.Text = "Focus Point:";
 			this.m_lbl_focus_point.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -184,9 +182,9 @@ namespace LDraw
 			// m_lbl_camera_up
 			// 
 			this.m_lbl_camera_up.AutoSize = true;
-			this.m_lbl_camera_up.Location = new System.Drawing.Point(32, 99);
+			this.m_lbl_camera_up.Location = new System.Drawing.Point(45, 99);
 			this.m_lbl_camera_up.Name = "m_lbl_camera_up";
-			this.m_lbl_camera_up.Size = new System.Drawing.Size(80, 16);
+			this.m_lbl_camera_up.Size = new System.Drawing.Size(63, 13);
 			this.m_lbl_camera_up.TabIndex = 2;
 			this.m_lbl_camera_up.Text = "Camera Up:";
 			this.m_lbl_camera_up.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -194,9 +192,9 @@ namespace LDraw
 			// m_lbl_camera_fwd
 			// 
 			this.m_lbl_camera_fwd.AutoSize = true;
-			this.m_lbl_camera_fwd.Location = new System.Drawing.Point(1, 71);
+			this.m_lbl_camera_fwd.Location = new System.Drawing.Point(21, 71);
 			this.m_lbl_camera_fwd.Name = "m_lbl_camera_fwd";
-			this.m_lbl_camera_fwd.Size = new System.Drawing.Size(111, 16);
+			this.m_lbl_camera_fwd.Size = new System.Drawing.Size(87, 13);
 			this.m_lbl_camera_fwd.TabIndex = 4;
 			this.m_lbl_camera_fwd.Text = "Camera Forward:";
 			this.m_lbl_camera_fwd.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -205,7 +203,7 @@ namespace LDraw
 			// 
 			this.m_btn_close.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_close.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this.m_btn_close.Location = new System.Drawing.Point(133, 184);
+			this.m_btn_close.Location = new System.Drawing.Point(208, 184);
 			this.m_btn_close.Name = "m_btn_close";
 			this.m_btn_close.Size = new System.Drawing.Size(100, 28);
 			this.m_btn_close.TabIndex = 6;
@@ -215,9 +213,9 @@ namespace LDraw
 			// m_lbl_fovX
 			// 
 			this.m_lbl_fovX.AutoSize = true;
-			this.m_lbl_fovX.Location = new System.Drawing.Point(14, 127);
+			this.m_lbl_fovX.Location = new System.Drawing.Point(28, 127);
 			this.m_lbl_fovX.Name = "m_lbl_fovX";
-			this.m_lbl_fovX.Size = new System.Drawing.Size(98, 16);
+			this.m_lbl_fovX.Size = new System.Drawing.Size(80, 13);
 			this.m_lbl_fovX.TabIndex = 8;
 			this.m_lbl_fovX.Text = "Field of View X:";
 			this.m_lbl_fovX.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -225,9 +223,9 @@ namespace LDraw
 			// m_lbl_fovY
 			// 
 			this.m_lbl_fovY.AutoSize = true;
-			this.m_lbl_fovY.Location = new System.Drawing.Point(13, 156);
+			this.m_lbl_fovY.Location = new System.Drawing.Point(28, 156);
 			this.m_lbl_fovY.Name = "m_lbl_fovY";
-			this.m_lbl_fovY.Size = new System.Drawing.Size(99, 16);
+			this.m_lbl_fovY.Size = new System.Drawing.Size(80, 13);
 			this.m_lbl_fovY.TabIndex = 10;
 			this.m_lbl_fovY.Text = "Field of View Y:";
 			this.m_lbl_fovY.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -235,9 +233,9 @@ namespace LDraw
 			// m_lbl_focus_dist
 			// 
 			this.m_lbl_focus_dist.AutoSize = true;
-			this.m_lbl_focus_dist.Location = new System.Drawing.Point(8, 43);
+			this.m_lbl_focus_dist.Location = new System.Drawing.Point(24, 43);
 			this.m_lbl_focus_dist.Name = "m_lbl_focus_dist";
-			this.m_lbl_focus_dist.Size = new System.Drawing.Size(104, 16);
+			this.m_lbl_focus_dist.Size = new System.Drawing.Size(84, 13);
 			this.m_lbl_focus_dist.TabIndex = 12;
 			this.m_lbl_focus_dist.Text = "Focus Distance:";
 			this.m_lbl_focus_dist.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -264,7 +262,7 @@ namespace LDraw
 			this.m_tb_focus_dist.ForeColorValid = System.Drawing.Color.Black;
 			this.m_tb_focus_dist.Location = new System.Drawing.Point(114, 40);
 			this.m_tb_focus_dist.Name = "m_tb_focus_dist";
-			this.m_tb_focus_dist.Size = new System.Drawing.Size(118, 22);
+			this.m_tb_focus_dist.Size = new System.Drawing.Size(193, 20);
 			this.m_tb_focus_dist.TabIndex = 5;
 			this.m_tb_focus_dist.Value = null;
 			// 
@@ -279,7 +277,7 @@ namespace LDraw
 			this.m_tb_fovX.ForeColorValid = System.Drawing.Color.Black;
 			this.m_tb_fovX.Location = new System.Drawing.Point(114, 124);
 			this.m_tb_fovX.Name = "m_tb_fovX";
-			this.m_tb_fovX.Size = new System.Drawing.Size(118, 22);
+			this.m_tb_fovX.Size = new System.Drawing.Size(193, 20);
 			this.m_tb_fovX.TabIndex = 3;
 			this.m_tb_fovX.Value = null;
 			// 
@@ -294,7 +292,7 @@ namespace LDraw
 			this.m_tb_fovY.ForeColorValid = System.Drawing.Color.Black;
 			this.m_tb_fovY.Location = new System.Drawing.Point(114, 153);
 			this.m_tb_fovY.Name = "m_tb_fovY";
-			this.m_tb_fovY.Size = new System.Drawing.Size(118, 22);
+			this.m_tb_fovY.Size = new System.Drawing.Size(193, 20);
 			this.m_tb_fovY.TabIndex = 4;
 			this.m_tb_fovY.Value = null;
 			// 
@@ -309,7 +307,7 @@ namespace LDraw
 			this.m_tb_camera_fwd.ForeColorValid = System.Drawing.Color.Black;
 			this.m_tb_camera_fwd.Location = new System.Drawing.Point(114, 68);
 			this.m_tb_camera_fwd.Name = "m_tb_camera_fwd";
-			this.m_tb_camera_fwd.Size = new System.Drawing.Size(118, 22);
+			this.m_tb_camera_fwd.Size = new System.Drawing.Size(193, 20);
 			this.m_tb_camera_fwd.TabIndex = 1;
 			this.m_tb_camera_fwd.Value = null;
 			// 
@@ -324,7 +322,7 @@ namespace LDraw
 			this.m_tb_camera_up.ForeColorValid = System.Drawing.Color.Black;
 			this.m_tb_camera_up.Location = new System.Drawing.Point(114, 96);
 			this.m_tb_camera_up.Name = "m_tb_camera_up";
-			this.m_tb_camera_up.Size = new System.Drawing.Size(118, 22);
+			this.m_tb_camera_up.Size = new System.Drawing.Size(193, 20);
 			this.m_tb_camera_up.TabIndex = 2;
 			this.m_tb_camera_up.Value = null;
 			// 
@@ -339,7 +337,7 @@ namespace LDraw
 			this.m_tb_focus_point.ForeColorValid = System.Drawing.Color.Black;
 			this.m_tb_focus_point.Location = new System.Drawing.Point(114, 12);
 			this.m_tb_focus_point.Name = "m_tb_focus_point";
-			this.m_tb_focus_point.Size = new System.Drawing.Size(118, 22);
+			this.m_tb_focus_point.Size = new System.Drawing.Size(193, 20);
 			this.m_tb_focus_point.TabIndex = 0;
 			this.m_tb_focus_point.Value = null;
 			// 
@@ -349,7 +347,7 @@ namespace LDraw
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.CancelButton = this.m_btn_close;
-			this.ClientSize = new System.Drawing.Size(245, 224);
+			this.ClientSize = new System.Drawing.Size(320, 224);
 			this.Controls.Add(this.m_btn_hidden);
 			this.Controls.Add(this.m_tb_focus_dist);
 			this.Controls.Add(this.m_lbl_focus_dist);
@@ -365,7 +363,7 @@ namespace LDraw
 			this.Controls.Add(this.m_tb_focus_point);
 			this.Controls.Add(this.m_lbl_focus_point);
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.SizableToolWindow;
-			this.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+			this.Margin = new System.Windows.Forms.Padding(5);
 			this.MinimumSize = new System.Drawing.Size(243, 263);
 			this.Name = "CameraUI";
 			this.PinOffset = new System.Drawing.Point(-300, 0);

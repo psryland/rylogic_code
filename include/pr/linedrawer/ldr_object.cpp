@@ -2454,8 +2454,8 @@ namespace pr
 			auto ParseObjects = [&](pr::gui::ProgressUI* dlg, ParseResult& out)
 			{
 				// Note: your application needs to have called CoInitialise() before here
-				std::size_t start_time = GetTickCount();
-				std::size_t last_update = start_time;
+				auto start_time = GetTickCount();
+				auto last_update = start_time;
 				ParseLdrObjects(rdr, reader, context_id, out, [&](LdrObjectPtr& obj)
 				{
 					// See if it's time for a progress update
@@ -2475,7 +2475,14 @@ namespace pr
 			{
 				// Run the adding process as a background task while displaying a progress dialog
 				pr::gui::ProgressUI dlg(L"Processing script", L"", ParseObjects, std::ref(out));
-				dlg.ShowDialog(::GetActiveWindow(), 100);
+
+				// Set the window icon to match the parent
+				auto parent = ::GetActiveWindow();
+				auto hicon = (HICON)SendMessageW(parent, WM_GETICON, ICON_SMALL, 0);
+				if (hicon != nullptr) dlg.Icon(hicon, false);
+
+				// Display the dialog after 100ms
+				dlg.ShowDialog(parent, 100);
 			}
 			else
 			{

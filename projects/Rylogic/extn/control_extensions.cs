@@ -11,7 +11,6 @@ using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using pr.common;
 using pr.maths;
 using pr.util;
 using pr.win32;
@@ -438,6 +437,13 @@ namespace pr.extn
 				ancestors.Add("{0}({1})".Fmt(p.Name, p.GetType().Name));
 			ancestors.Reverse();
 			return string.Join("->", ancestors);
+		}
+
+		/// <summary>Convenience method for setting the visibility and enabled state of this control in one call. null means no change</summary>
+		public static void VisEnable(this Control ctrl, bool? visible, bool? enabled)
+		{
+			if (visible != null) ctrl.Visible = visible.Value;
+			if (enabled != null) ctrl.Enabled = enabled.Value;
 		}
 	}
 

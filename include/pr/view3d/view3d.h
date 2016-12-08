@@ -317,7 +317,7 @@ extern "C"
 	VIEW3D_API void          __stdcall View3D_PopGlobalErrorCB (View3D_ReportErrorCB error_cb);
 
 	// Windows
-	VIEW3D_API View3DWindow __stdcall View3D_CreateWindow     (HWND hwnd, View3DWindowOptions const& opts);
+	VIEW3D_API View3DWindow __stdcall View3D_CreateWindow       (HWND hwnd, View3DWindowOptions const& opts);
 	VIEW3D_API void         __stdcall View3D_DestroyWindow      (View3DWindow window);
 	VIEW3D_API void         __stdcall View3D_PushErrorCB        (View3DWindow window, View3D_ReportErrorCB error_cb, void* ctx);
 	VIEW3D_API void         __stdcall View3D_PopErrorCB         (View3DWindow window, View3D_ReportErrorCB error_cb);
@@ -473,8 +473,8 @@ extern "C"
 	VIEW3D_API BOOL       __stdcall View3D_OriginVisible            (View3DWindow window);
 	VIEW3D_API void       __stdcall View3D_ShowOrigin               (View3DWindow window, BOOL show);
 	VIEW3D_API void       __stdcall View3D_SetOriginSize            (View3DWindow window, float size);
-	VIEW3D_API BOOL       __stdcall View3D_BBoxesVisibleGet   (View3DWindow window);
-	VIEW3D_API void       __stdcall View3D_BBoxesVisibleSet   (View3DWindow window, BOOL visible);
+	VIEW3D_API BOOL       __stdcall View3D_BBoxesVisibleGet         (View3DWindow window);
+	VIEW3D_API void       __stdcall View3D_BBoxesVisibleSet         (View3DWindow window, BOOL visible);
 	VIEW3D_API GUID       __stdcall View3D_CreateDemoScene          (View3DWindow window);
 	VIEW3D_API void       __stdcall View3D_DeleteDemoScene          ();
 	VIEW3D_API BSTR       __stdcall View3D_ExampleScriptBStr        ();

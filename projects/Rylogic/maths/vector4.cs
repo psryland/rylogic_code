@@ -13,7 +13,7 @@ namespace pr.maths
 {
 	[Serializable]
 	[StructLayout(LayoutKind.Explicit)]
-	[DebuggerDisplay("{x}  {y}  {z}  {w}  // Len3={Length3}  Len4={Length4})")]
+	[DebuggerDisplay("{x}  {y}  {z}  {w}  // Len3={Length3}  Len4={Length4}")]
 	public struct v4
 	{
 		[FieldOffset( 0)] public float x;
@@ -25,6 +25,8 @@ namespace pr.maths
 		[FieldOffset( 4)] public v2 yz;
 		[FieldOffset( 8)] public v2 zw;
 
+		[FieldOffset( 0)] public v3 xyz;
+		
 		// Constructors
 		public v4(float x_) :this(x_,x_,x_,x_)
 		{}
@@ -91,7 +93,7 @@ namespace pr.maths
 			set { this[(int)i] = value; }
 		}
 
-		// Integer cast accessors
+		/// <summary>Integer cast accessors</summary>
 		public int ix
 		{
 			get { return (int)x; }
@@ -165,15 +167,15 @@ namespace pr.maths
 			return ToString4();
 		}
 
-		/// <summary>ToArray()</summary>
+		/// <summary>ToArray(). Note not implicit because it gets called when converting v4 to an object type. e.g. v4? x = v4.TryParse4("", out v) ? v : null. </summary>
 		public float[] ToArray()
 		{
 			return new[] { x, y, z, w };
 		}
-
-		// Removed because these get called when converting v4 to an object type. e.g. v4? x = v4.TryParse4("", out v) ? v : null. 
+		// 
 		//public static implicit operator v4(float[] a)           { return new v4(a[0], a[1], a[2], a[3]); }
 		//public static implicit operator float[](v4 p)           { return p.ToArray(); }
+
 
 		public v4 w0
 		{
@@ -234,6 +236,7 @@ namespace pr.maths
 			return new v4(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z, lhs.w / rhs.w);
 		}
 
+		/// <summary>Approximate equal</summary>
 		public static bool FEql2(v4 lhs, v4 rhs, float tol)
 		{
 			return Maths.FEql(lhs.x, rhs.x, tol) && Maths.FEql(lhs.y, rhs.y, tol);
@@ -259,29 +262,35 @@ namespace pr.maths
 			return FEql4(lhs, rhs, Maths.TinyF);
 		}
 
-		/// <summary>Return a vector containing the maximum components</summary>
-		public static v4 Max(v4 x, params v4[] vecs)
-		{
-			foreach (var v in vecs)
-			{
-				x.x = Math.Max(x.x, v.x);
-				x.y = Math.Max(x.y, v.y);
-				x.z = Math.Max(x.z, v.z);
-				x.w = Math.Max(x.w, v.w);
-			}
-			return x;
-		}
-
 		/// <summary>Return a vector containing the minimum components</summary>
+		public static v4 Min(v4 lhs, v4 rhs)
+		{
+			 return new v4(
+				 Math.Min(lhs.x, rhs.x),
+				 Math.Min(lhs.y, rhs.y),
+				 Math.Min(lhs.z, rhs.z),
+				 Math.Min(lhs.w, rhs.w));
+		}
 		public static v4 Min(v4 x, params v4[] vecs)
 		{
 			foreach (var v in vecs)
-			{
-				x.x = Math.Min(x.x, v.x);
-				x.y = Math.Min(x.y, v.y);
-				x.z = Math.Min(x.z, v.z);
-				x.w = Math.Min(x.w, v.w);
-			}
+				x = Min(x,v);
+			return x;
+		}
+
+		/// <summary>Return a vector containing the maximum components</summary>
+		public static v4 Max(v4 lhs, v4 rhs)
+		{
+			 return new v4(
+				 Math.Max(lhs.x, rhs.x),
+				 Math.Max(lhs.y, rhs.y),
+				 Math.Max(lhs.z, rhs.z),
+				 Math.Max(lhs.w, rhs.w));
+		}
+		public static v4 Max(v4 x, params v4[] vecs)
+		{
+			foreach (var v in vecs)
+				x = Max(x,v);
 			return x;
 		}
 
@@ -302,22 +311,90 @@ namespace pr.maths
 				Maths.Clamp(vec.z, min.z, max.z),
 				Maths.Clamp(vec.w, min.w, max.w));
 		}
-		
-		public static v4    Abs(v4 vec)                        { return new v4(Math.Abs(vec.x), Math.Abs(vec.y), Math.Abs(vec.z), Math.Abs(vec.w)); }
-		public static v4    Blend(v4 lhs, v4 rhs, float frac)  { return lhs * (1f - frac) + rhs * (frac); }
-		public static v4    Normalise2(v4 vec)                 { return vec / vec.Length2; }
-		public static v4    Normalise3(v4 vec)                 { return vec / vec.Length3; }
-		public static v4    Normalise4(v4 vec)                 { return vec / vec.Length4; }
-		public static v4    Normalise2(v4 vec, v4 def)         { return Maths.FEql(vec.Length2Sq, 0f) ? def : vec / vec.Length2; }
-		public static v4    Normalise3(v4 vec, v4 def)         { return Maths.FEql(vec.Length3Sq, 0f) ? def : vec / vec.Length3; }
-		public static v4    Normalise4(v4 vec, v4 def)         { return Maths.FEql(vec.Length4Sq, 0f) ? def : vec / vec.Length4; }
-		public static v4    Normalise2(ref v4 vec)             { return vec /= vec.Length2; }
-		public static v4    Normalise3(ref v4 vec)             { return vec /= vec.Length3; }
-		public static v4    Normalise4(ref v4 vec)             { return vec /= vec.Length4; }
-		public static float Dot3(v4 lhs, v4 rhs)               { return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z; }
-		public static float Dot4(v4 lhs, v4 rhs)               { return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w; }
-		public static v4    Cross3(v4 lhs, v4 rhs)             { return new v4(lhs.y * rhs.z - lhs.z * rhs.y, lhs.z * rhs.x - lhs.x * rhs.z, lhs.x * rhs.y - lhs.y * rhs.x, 0.0f); }
-		public static float Triple3(v4 a, v4 b, v4 c)          { return Dot3(a, Cross3(b, c)); }
+
+		/// <summary>Component absolute value</summary>
+		public static v4 Abs(v4 vec)
+		{
+			return new v4(Math.Abs(vec.x), Math.Abs(vec.y), Math.Abs(vec.z), Math.Abs(vec.w));
+		}
+
+		/// <summary>Normalise 'vec' by the length of the XY components</summary>
+		public static v4 Normalise2(v4 vec)
+		{
+			return vec / vec.Length2;
+		}
+		public static v4 Normalise2(ref v4 vec)
+		{
+			return vec /= vec.Length2;
+		}
+
+		/// <summary>Normalise 'vec' by the length of the XYZ components</summary>
+		public static v4 Normalise3(v4 vec)
+		{
+			return vec / vec.Length3;
+		}
+		public static v4 Normalise3(ref v4 vec)
+		{
+			return vec /= vec.Length3;
+		}
+
+		/// <summary>Normalise 'vec' by the length of the XYZW components</summary>
+		public static v4 Normalise4(v4 vec)
+		{
+			return vec / vec.Length4;
+		}
+		public static v4 Normalise4(ref v4 vec)
+		{
+			return vec /= vec.Length4;
+		}
+
+		/// <summary>Normalise 'vec' by the length of the XY components or return 'def' if zero</summary>
+		public static v4 Normalise2(v4 vec, v4 def)
+		{
+			if (vec.xy == v2.Zero) return def;
+			var norm = Normalise2(vec);
+			return norm.xy != v2.Zero ? norm : def;
+		}
+
+		/// <summary>Normalise 'vec' by the length of the XYZ components or return 'def' if zero</summary>
+		public static v4 Normalise3(v4 vec, v4 def)
+		{
+			if (vec.xyz == v3.Zero) return def;
+			var norm = Normalise3(vec);
+			return norm.xyz != v3.Zero ? norm : def;
+		}
+
+		/// <summary>Normalise 'vec' by the length of the XYZW components or return 'def' if zero</summary>
+		public static v4 Normalise4(v4 vec, v4 def)
+		{
+			if (vec == v4.Zero) return def;
+			var norm = Normalise4(vec);
+			return norm != v4.Zero ? norm : def;
+		}
+
+		/// <summary>Dot product of XYZ components</summary>
+		public static float Dot3(v4 lhs, v4 rhs)
+		{
+			return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
+		}
+
+		/// <summary>Dot product of XYZW components</summary>
+		public static float Dot4(v4 lhs, v4 rhs)
+		{
+			return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w;
+		}
+
+		/// <summary>Cross product of XYZ components</summary>
+		public static v4 Cross3(v4 lhs, v4 rhs)
+		{
+			return new v4(lhs.y * rhs.z - lhs.z * rhs.y, lhs.z * rhs.x - lhs.x * rhs.z, lhs.x * rhs.y - lhs.y * rhs.x, 0.0f);
+		}
+
+		/// <summary>Triple product of XYZ components</summary>
+		public static float Triple3(v4 a, v4 b, v4 c)
+		{
+			return Dot3(a, Cross3(b, c));
+		}
 
 		/// <summary>True if 'lhs' and 'rhs' are parallel</summary>
 		public static bool Parallel(v4 lhs, v4 rhs, float tol)
@@ -332,11 +409,7 @@ namespace pr.maths
 		/// <summary>Linearly interpolate between two vectors</summary>
 		public static v4 Lerp(v4 lhs, v4 rhs, float frac)
 		{
-			return new v4(
-				Maths.Lerp(lhs.x,rhs.x,frac),
-				Maths.Lerp(lhs.y,rhs.y,frac),
-				Maths.Lerp(lhs.z,rhs.z,frac),
-				Maths.Lerp(lhs.w,rhs.w,frac));
+			return lhs * (1f - frac) + rhs * (frac);
 		}
 
 		/// <summary>Returns a vector guaranteed to not be parallel to 'vec'</summary>
@@ -350,8 +423,8 @@ namespace pr.maths
 		public static v4 Perpendicular(v4 vec)
 		{
 			Debug.Assert(!FEql3(vec, Zero), "Cannot make a perpendicular to a zero vector");
-			v4 v = Cross3(vec, CreateNotParallelTo(vec));
-			v *= vec.Length3 / v.Length3;
+			var v = Cross3(vec, CreateNotParallelTo(vec));
+			v *= (float)Math.Sqrt(vec.Length3Sq / v.Length3Sq);
 			return v;
 		}
 
@@ -369,7 +442,9 @@ namespace pr.maths
 				return Perpendicular(vec);
 
 			// Otherwise, make a perpendicular that is close to 'previous'
-			return Normalise3(Cross3(Cross3(vec, previous), vec));
+			var v = Cross3(Cross3(vec, previous), vec);
+			v *= (float)Math.Sqrt(vec.Length3Sq / v.Length3Sq);
+			return v;
 		}
 
 		/// <summary>Returns a 3 bit bitmask of the octant the vector is in where X = 0x1, Y = 0x2, Z = 0x4</summary>
@@ -409,14 +484,14 @@ namespace pr.maths
 		public static v4 Parse3(string s, float w)
 		{
 			if (s == null) throw new ArgumentNullException("s", "v4.Parse3() string argument was null");
-			string[] values = s.Split(new char[]{' ',',','\t'},3);
+			var values = s.Split(new char[]{' ',',','\t'},3);
 			if (values.Length != 3) throw new FormatException("v4.Parse3() string argument does not represent a 3 component vector");
 			return new v4(float.Parse(values[0]), float.Parse(values[1]), float.Parse(values[2]), w);
 		}
 		public static v4 Parse4(string s)
 		{
 			if (s == null) throw new ArgumentNullException("s", "v4.Parse4() string argument was null");
-			string[] values = s.Split(new char[]{' ',',','\t'},4);
+			var values = s.Split(new char[]{' ',',','\t'},4);
 			if (values.Length != 4) throw new FormatException("v4.Parse4() string argument does not represent a 4 component vector");
 			return new v4(float.Parse(values[0]), float.Parse(values[1]), float.Parse(values[2]), float.Parse(values[3]));
 		}
@@ -424,7 +499,7 @@ namespace pr.maths
 		{
 			vec = Zero;
 			if (s == null) return false;
-			string[] values = s.Split(new char[]{' ',',','\t'},3);
+			var values = s.Split(new char[]{' ',',','\t'},3);
 			vec.w = w;
 			return values.Length == 3 && float.TryParse(values[0], out vec.x) && float.TryParse(values[1], out vec.y) && float.TryParse(values[2], out vec.z);
 		}
@@ -437,7 +512,7 @@ namespace pr.maths
 		{
 			vec = Zero;
 			if (s == null) return false;
-			string[] values = s.Split(new char[]{' ',',','\t'},4);
+			var values = s.Split(new char[]{' ',',','\t'},4);
 			return  values.Length == 4 && float.TryParse(values[0], out vec.x) && float.TryParse(values[1], out vec.y) && float.TryParse(values[2], out vec.z) && float.TryParse(values[3], out vec.w);
 		}
 		public static v4? TryParse4(string s)
@@ -550,6 +625,22 @@ namespace pr.maths
 			return new { x, y, z, w }.GetHashCode();
 		}
 		#endregion
+	}
+
+	public static partial class Maths
+	{
+		public static v4 Min(v4 lhs, v4 rhs)
+		{
+			return v4.Min(lhs,rhs);
+		}
+		public static v4 Max(v4 lhs, v4 rhs)
+		{
+			return v4.Max(lhs,rhs);
+		}
+		public static v4 Clamp(v4 vec, v4 min, v4 max)
+		{
+			return v4.Clamp4(vec, min, max);
+		}
 	}
 }
 

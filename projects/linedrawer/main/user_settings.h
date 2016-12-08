@@ -56,7 +56,6 @@ namespace ldr
 		x(pr::Colour32            ,BackgroundColour       ,pr::Colour32Gray            ,"The background colour")\
 		x(EFillMode               ,GlobalFillMode         ,EFillMode::Solid            ,"Render all objects in the scene as solid, wireframe, or both")\
 		x(pr::rdr::Light          ,Light                  ,                            ,"Global lighting properties")\
-		x(bool                    ,LightIsCameraRelative  ,true                        ,)\
 		x(bool                    ,IgnoreMissingIncludes  ,true                        ,)\
 		x(bool                    ,ErrorOutputMsgBox      ,true                        ,)\
 		x(bool                    ,ErrorOutputToFile      ,false                       ,)\

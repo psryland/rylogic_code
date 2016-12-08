@@ -264,11 +264,10 @@ namespace pr.maths
 		}
 
 		/// <summary>
-		/// Create from an pitch, yaw, and roll.
+		/// Create from an pitch, yaw, and roll (in radians).
 		/// Order is roll, pitch, yaw because objects usually face along Z and have Y as up. (And to match DirectX)</summary>
 		public static m3x4 Rotation(float pitch, float yaw, float roll)
 		{
-			
 			float cos_p = (float)Math.Cos(pitch), sin_p = (float)Math.Sin(pitch);
 			float cos_y = (float)Math.Cos(yaw  ), sin_y = (float)Math.Sin(yaw  );
 			float cos_r = (float)Math.Cos(roll ), sin_r = (float)Math.Sin(roll );

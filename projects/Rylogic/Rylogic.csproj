@@ -407,6 +407,7 @@
       <DependentUpon>vector.tt</DependentUpon>
     </Compile>
     <Compile Include="maths\vector2.cs" />
+    <Compile Include="maths\vector3.cs" />
     <Compile Include="maths\vector4.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -23,7 +23,7 @@ struct Body :pr::physics::RigidBody
 	Body()
 		:pr::physics::RigidBody(&m_shape)
 		,m_shape(pr::v4(1,1,1,0))
-		,m_gfx(View3D_ObjectCreateLdr(Desc(), false, pr::GuidZero, false, nullptr))
+		,m_gfx(View3D_ObjectCreateLdr(Desc(), false, false, nullptr, nullptr))
 	{
 		O2W(pr::Random4x4(rng(), pr::v4Origin, 10.0f));
 	}

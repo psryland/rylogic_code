@@ -854,13 +854,10 @@ namespace pr
 	}
 
 	// Normalise - 2,3,4 variants scale all elements in the vector (consistent with DirectX)
+	// Note, due to FP rounding, normalising non-zero vectors can create zero vectors
 	template <typename T, typename = maths::enable_if_vN<T>> inline T Normalise(T const& v)
 	{
 		return v / Length(v);
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline T Normalise(T const& v, T const& def)
-	{
-		return !IsZero(v) ? Normalise(v) : def;
 	}
 	template <typename T, typename = maths::enable_if_v2<T>> inline T Normalise2(T const& v)
 	{
@@ -874,17 +871,29 @@ namespace pr
 	{
 		return v / Length4(v);
 	}
+	template <typename T, typename = maths::enable_if_vN<T>> inline T Normalise(T const& v, T const& def)
+	{
+		if (IsZero(v)) return def;
+		auto norm = Normalise(v);
+		return !IsZero(norm) ? norm : def;
+	}
 	template <typename T, typename = maths::enable_if_v2<T>> inline T Normalise2(T const& v, T const& def)
 	{
-		return !IsZero2(v) ? Normalise2(v) : def;
+		if (IsZero2(v)) return def;
+		auto norm = Normalise2(v);
+		return !IsZero2(norm) ? norm : def;
 	}
 	template <typename T, typename = maths::enable_if_v3<T>> inline T Normalise3(T const& v, T const& def)
 	{
-		return !IsZero3(v) ? Normalise3(v) : def;
+		if (IsZero3(v)) return def;
+		auto norm = Normalise3(v);
+		return !IsZero3(norm) ? norm : def;
 	}
 	template <typename T, typename = maths::enable_if_v4<T>> inline T Normalise4(T const& v, T const& def)
 	{
-		return !IsZero4(v) ? Normalise4(v) : def;
+		if (IsZero4(v)) return def;
+		auto norm = Normalise4(v);
+		return !IsZero4(norm) ? norm : def;
 	}
 	template <typename T, typename = maths::enable_if_vN<T>> inline bool IsNormal(T const& v)
 	{

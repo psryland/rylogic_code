@@ -423,6 +423,55 @@ namespace pr.common
 		/// <summary>Delete (i.e. Dispose) and remove all items from the cache</summary>
 		public void Flush() {}
 	}
+
+	/// <summary>A value that is cached for a period of time</summary>
+	public class TimeCachedValue<T>
+	{
+		private T m_value;
+		private int m_last_updated;
+		private bool m_valid;
+
+		public TimeCachedValue(int timeout_ms)
+			:this(default(T), timeout_ms)
+		{ }
+		public TimeCachedValue(T value, int timeout_ms)
+		{
+			m_value = value;
+			TimeoutMS = timeout_ms;
+		}
+		public TimeCachedValue(TimeCachedValue<T> rhs)
+		{
+			m_value = rhs.m_value;
+			m_last_updated = rhs.m_last_updated;
+			m_valid = rhs.m_valid;
+		}
+
+		/// <summary>How long the value remains value for</summary>
+		public int TimeoutMS
+		{
+			get;
+			set;
+		}
+
+		/// <summary>Invalidate the cached value</summary>
+		public void Invalidate()
+		{
+			m_valid = false;
+		}
+
+		/// <summary>Return the cached value</summary>
+		public T Get(Func<T> factory)
+		{
+			var now = Environment.TickCount;
+			if (!m_valid || (uint)(now - m_last_updated) > (uint)TimeoutMS)
+			{
+				m_value = factory();
+				m_last_updated = now;
+				m_valid = true;
+			}
+			return m_value;
+		}
+	}
 }
 
 #if PR_UNITTESTS

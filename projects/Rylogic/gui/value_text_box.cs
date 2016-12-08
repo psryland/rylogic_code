@@ -159,7 +159,7 @@ namespace pr.gui
 		/// <summary>The value represented in the text box</summary>
 		public object Value
 		{
-			get { return m_value; }
+			get { return m_value ?? (!ValueType.IsClass ? Activator.CreateInstance(ValueType) : null); }
 			set
 			{
 				if (Equals(m_value, value)) return;

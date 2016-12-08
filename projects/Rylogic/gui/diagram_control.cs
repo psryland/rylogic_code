@@ -4553,7 +4553,7 @@ namespace pr.gui
 				{
 					// Build a quad tree of the nodes
 					foreach (var node in nodes)
-						qtree.Insert(node, node.Bounds.Centre, node.Bounds.Diametre/2);
+						qtree.Insert(node, node.Bounds.Centre.ToArray(), node.Bounds.Diametre/2);
 
 					// Determine spring forces
 					for (int j = 0; j != conns.Count; ++j)
@@ -4585,7 +4585,7 @@ namespace pr.gui
 						var q0 = 1f + node0.Connectors.Count * Options.Scatter.ConnectorScale;
 
 						// Find nearby nodes and apply forces
-						qtree.Traverse(node0.PositionXY, node0.Bounds.Diametre, node1 =>
+						qtree.Traverse(node0.PositionXY.ToArray(), node0.Bounds.Diametre, node1 =>
 							{
 								if (node0 == node1) return true;
 

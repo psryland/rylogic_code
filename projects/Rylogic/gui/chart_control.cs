@@ -492,12 +492,16 @@ namespace pr.gui
 			// Project the camera to world vector into camera space to determine the centre of the X/Y axis. 
 			var w2c = m4x4.InvertFast(Scene.Camera.O2W);
 
-			// The span of the X/Y axis is determine by the FoV and the focus point distance.
+			// The span of the X/Y axis is determined by the FoV and the focus point distance.
 			var wh = Scene.Camera.ViewArea(Scene.Camera.FocusDist);
 
 			// Set the axes range
-			XAxis.Set(-w2c.pos.x - wh.x * 0.5, -w2c.pos.x + wh.x*0.5);
-			YAxis.Set(-w2c.pos.y - wh.y * 0.5, -w2c.pos.y + wh.y*0.5);
+			var xmin = -w2c.pos.x - wh.x * 0.5;
+			var xmax = -w2c.pos.x + wh.x * 0.5;
+			var ymin = -w2c.pos.y - wh.y * 0.5;
+			var ymax = -w2c.pos.y + wh.y * 0.5;
+			if (xmin < xmax) XAxis.Set(xmin, xmax);
+			if (ymin < ymax) YAxis.Set(ymin, ymax);
 		}
 
 		/// <summary>Position the camera based on the axis range</summary>

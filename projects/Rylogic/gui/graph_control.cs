@@ -109,6 +109,8 @@ namespace pr.gui
 		}
 
 		/// <summary>Rendering options for the graph</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public RdrOptions Options { get; private set; }
 
 		/// <summary>The graph title</summary>
@@ -125,6 +127,8 @@ namespace pr.gui
 		private string m_impl_title;
 
 		/// <summary>The current X/Y axis range of the chart</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public RangeData Range
 		{
 			get { return m_range; }
@@ -138,18 +142,24 @@ namespace pr.gui
 		private RangeData m_range;
 
 		/// <summary>Accessor to the current X axis</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public RangeData.Axis XAxis
 		{
 			get { return Range.XAxis; }
 		}
 
 		/// <summary>Accessor to the current Y axis</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public RangeData.Axis YAxis
 		{
 			get { return Range.YAxis; }
 		}
 
 		/// <summary>Default X axis range of the chart</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public RangeF BaseRangeX
 		{
 			get;
@@ -157,6 +167,8 @@ namespace pr.gui
 		}
 
 		/// <summary>Default Y axis range of the chart</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public RangeF BaseRangeY
 		{
 			get;
@@ -236,6 +248,8 @@ namespace pr.gui
 		}
 
 		/// <summary>Return the layout sizes of the graph</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public GraphDims GraphDimensions
 		{
 			get { return new GraphDims(this); }
@@ -385,7 +399,48 @@ namespace pr.gui
 			}
 
 			/// <summary>Options for rendering this series</summary>
+			[Browsable(false)]
+			[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 			public RdrOptions Options { get; set; }
+
+			/// <summary></summary>
+			public bool AllowDelete { get; set; }
+
+			/// <summary>True if this series can be considered sorted (on X)</summary>
+			public bool Sorted { get; set; }
+
+			/// <summary>Allow users to attach additional data to the series</summary>
+			public UserData UserData { get; private set; }
+
+			/// <summary>Sort the series by it's X value</summary>
+			public void SortX()
+			{
+				Sort(Cmp<GraphValue>.From((l,r) => l.x < r.x));
+				Sorted = true;
+			}
+
+			/// <summary>ToString</summary>
+			public override string ToString()
+			{
+				return "{0} - count:{1}".Fmt(Name, Count);
+			}
+
+			/// <summary>Plot colour generator</summary>
+			public static Color GenerateColour(int i)
+			{
+				return m_colours[i % m_colours.Length];
+			}
+			private static Color[] m_colours =
+			{
+				Color.Black     ,
+				Color.Blue      , Color.Red       , Color.Green      ,
+				Color.DarkBlue  , Color.DarkRed   , Color.DarkGreen  ,
+				Color.Purple    , Color.Turquoise , Color.Magenta    ,
+				Color.Orange    , Color.Yellow    ,
+				Color.LightBlue , Color.LightSalmon , Color.LightGreen ,
+			};
+
+			[Serializable]
 			public class RdrOptions
 			{
 				public RdrOptions()
@@ -427,47 +482,11 @@ namespace pr.gui
 				public Color      MALineColour   { get; set; }
 				public float      MALineWidth    { get; set; }
 			}
-
-			/// <summary></summary>
-			public bool AllowDelete { get; set; }
-
-			/// <summary>True if this series can be considered sorted (on X)</summary>
-			public bool Sorted { get; set; }
-
-			/// <summary>Allow users to attach additional data to the series</summary>
-			public UserData UserData { get; private set; }
-
-			/// <summary>Sort the series by it's X value</summary>
-			public void SortX()
-			{
-				Sort(Cmp<GraphValue>.From((l,r) => l.x < r.x));
-				Sorted = true;
-			}
-
-			/// <summary>ToString</summary>
-			public override string ToString()
-			{
-				return "{0} - count:{1}".Fmt(Name, Count);
-			}
-
-			/// <summary>Plot colour generator</summary>
-			public static Color GenerateColour(int i)
-			{
-				return m_colours[i % m_colours.Length];
-			}
-			private static Color[] m_colours =
-			{
-				Color.Black     ,
-				Color.Blue      , Color.Red       , Color.Green      ,
-				Color.DarkBlue  , Color.DarkRed   , Color.DarkGreen  ,
-				Color.Purple    , Color.Turquoise , Color.Magenta    ,
-				Color.Orange    , Color.Yellow    ,
-				Color.LightBlue , Color.LightSalmon , Color.LightGreen ,
-			};
 		}
 
 		/// <summary>The collection of series' that make up the graph data</summary>
 		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public BindingListEx<Series> Data
 		{
 			[DebuggerStepThrough] get { return m_impl_data; }
@@ -557,6 +576,7 @@ namespace pr.gui
 		#endregion
 
 		#region RdrOptions
+		[Serializable]
 		[TypeConverter(typeof(TyConv))]
 		public class RdrOptions :INotifyPropertyChanged
 		{
@@ -749,6 +769,7 @@ namespace pr.gui
 				PropertyChanged.Raise(this, new PropertyChangedEventArgs(nameof(YAxis)));
 			}
 
+			[Serializable]
 			[TypeConverter(typeof(TyConv))]
 			public class Axis
 			{

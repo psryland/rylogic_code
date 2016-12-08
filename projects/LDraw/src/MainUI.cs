@@ -94,6 +94,7 @@ namespace LDraw
 		private ToolStripMenuItem m_menu_rendering_cullmode_none;
 		private ToolStripMenuItem m_menu_rendering_cullmode_back;
 		private ToolStripMenuItem m_menu_rendering_cullmode_front;
+		private ToolStripMenuItem m_menu_file_edit_script;
 		private ToolStripMenuItem m_menu_file_save_as;
 		#endregion
 
@@ -303,7 +304,11 @@ namespace LDraw
 			#region File Menu
 			m_menu_file_new.Click += (s,a) =>
 			{
-				NewFile(null);
+				EditFile(null, false);
+			};
+			m_menu_file_edit_script.Click += (s,a) =>
+			{
+				EditFile(null, true);
 			};
 			m_menu_file_open.Click += (s,a) =>
 			{
@@ -513,6 +518,7 @@ namespace LDraw
 			};
 			m_menu_window_about.Click += (s,a) =>
 			{
+				new AboutUI().ShowDialog(this);
 			};
 			#endregion
 			#endregion
@@ -542,12 +548,26 @@ namespace LDraw
 		}
 
 		/// <summary>Create a new file and an editor to edit the file</summary>
-		private void NewFile(string filepath)
+		private void EditFile(string filepath, bool prompt)
 		{
-			m_dc.Add2(new ScriptUI(Model), EDockSite.Left);
+			if (prompt && !filepath.HasValue())
+			{
+				using (var dlg = new OpenFileDialog { Title = "Edit Ldr Script file", Filter = Util.FileDialogFilter("Ldr Script","*.ldr") })
+				{
+					if (dlg.ShowDialog(this) != DialogResult.OK) return;
+					filepath = dlg.FileName;
+				}
+			}
 
-			// Create a new script file
-			Model.NewFile(filepath);
+			// Add a script window
+			var script = m_dc.Add2(new ScriptUI(Model), EDockSite.Left);
+
+			// If a filepath is given, load the script UI with the file
+			if (filepath.HasValue())
+			{
+				m_recent_files.Add(filepath);
+				script.LoadFile(filepath);
+			}
 		}
 
 		/// <summary>Add a file source</summary>
@@ -555,7 +575,7 @@ namespace LDraw
 		{
 			if (!filepath.HasValue())
 			{
-				using (var dlg = new OpenFileDialog { Title = "Open Ldr Script file"})
+				using (var dlg = new OpenFileDialog { Title = "Open Ldr Script file", Filter = Util.FileDialogFilter("Ldr Script","*.ldr") })
 				{
 					if (dlg.ShowDialog(this) != DialogResult.OK) return;
 					filepath = dlg.FileName;
@@ -725,6 +745,14 @@ namespace LDraw
 			this.m_menu_rendering_show_selection = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_rendering_show_bounds = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator9 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_rendering_fillmode = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_rendering_fillmode_solid = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_rendering_fillmode_wireframe = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_rendering_fillmode_solidwire = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_rendering_cullmode = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_rendering_cullmode_none = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_rendering_cullmode_back = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_rendering_cullmode_front = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_rendering_orthographic = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator10 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_rendering_lighting = new System.Windows.Forms.ToolStripMenuItem();
@@ -734,14 +762,7 @@ namespace LDraw
 			this.m_menu_window_example_script = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_window_about = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_rendering_cullmode = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_rendering_fillmode = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_rendering_fillmode_solid = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_rendering_fillmode_wireframe = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_rendering_fillmode_solidwire = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_rendering_cullmode_none = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_rendering_cullmode_back = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_rendering_cullmode_front = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_edit_script = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
@@ -804,6 +825,7 @@ namespace LDraw
 			// 
 			this.m_menu_file.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_menu_file_new,
+            this.m_menu_file_edit_script,
             this.toolStripSeparator8,
             this.m_menu_file_open,
             this.m_menu_file_open_additional,
@@ -904,7 +926,7 @@ namespace LDraw
             this.m_menu_nav_reset_view_selected,
             this.m_menu_nav_reset_view_visible});
 			this.m_menu_nav_reset_view.Name = "m_menu_nav_reset_view";
-			this.m_menu_nav_reset_view.Size = new System.Drawing.Size(157, 22);
+			this.m_menu_nav_reset_view.Size = new System.Drawing.Size(160, 22);
 			this.m_menu_nav_reset_view.Text = "&Reset View";
 			// 
 			// m_menu_nav_reset_view_all
@@ -936,7 +958,7 @@ namespace LDraw
             this.m_menu_nav_view_zneg,
             this.m_menu_nav_view_xyz});
 			this.m_menu_nav_view.Name = "m_menu_nav_view";
-			this.m_menu_nav_view.Size = new System.Drawing.Size(157, 22);
+			this.m_menu_nav_view.Size = new System.Drawing.Size(160, 22);
 			this.m_menu_nav_view.Text = "&View";
 			// 
 			// m_menu_nav_view_xpos
@@ -984,7 +1006,7 @@ namespace LDraw
 			// toolStripSeparator4
 			// 
 			this.toolStripSeparator4.Name = "toolStripSeparator4";
-			this.toolStripSeparator4.Size = new System.Drawing.Size(154, 6);
+			this.toolStripSeparator4.Size = new System.Drawing.Size(157, 6);
 			// 
 			// m_menu_nav_align
 			// 
@@ -995,7 +1017,7 @@ namespace LDraw
             this.m_menu_nav_align_z,
             this.m_menu_nav_align_current});
 			this.m_menu_nav_align.Name = "m_menu_nav_align";
-			this.m_menu_nav_align.Size = new System.Drawing.Size(157, 22);
+			this.m_menu_nav_align.Size = new System.Drawing.Size(160, 22);
 			this.m_menu_nav_align.Text = "&Align";
 			// 
 			// m_menu_nav_align_none
@@ -1031,12 +1053,12 @@ namespace LDraw
 			// toolStripSeparator5
 			// 
 			this.toolStripSeparator5.Name = "toolStripSeparator5";
-			this.toolStripSeparator5.Size = new System.Drawing.Size(154, 6);
+			this.toolStripSeparator5.Size = new System.Drawing.Size(157, 6);
 			// 
 			// m_menu_nav_save_view
 			// 
 			this.m_menu_nav_save_view.Name = "m_menu_nav_save_view";
-			this.m_menu_nav_save_view.Size = new System.Drawing.Size(157, 22);
+			this.m_menu_nav_save_view.Size = new System.Drawing.Size(160, 22);
 			this.m_menu_nav_save_view.Text = "&Save View";
 			// 
 			// m_menu_nav_saved_views
@@ -1045,7 +1067,7 @@ namespace LDraw
             this.m_sep_saved_views,
             this.m_menu_nav_saved_views_clear});
 			this.m_menu_nav_saved_views.Name = "m_menu_nav_saved_views";
-			this.m_menu_nav_saved_views.Size = new System.Drawing.Size(157, 22);
+			this.m_menu_nav_saved_views.Size = new System.Drawing.Size(160, 22);
 			this.m_menu_nav_saved_views.Text = "Save&d Views";
 			// 
 			// m_sep_saved_views
@@ -1062,13 +1084,13 @@ namespace LDraw
 			// toolStripSeparator12
 			// 
 			this.toolStripSeparator12.Name = "toolStripSeparator12";
-			this.toolStripSeparator12.Size = new System.Drawing.Size(154, 6);
+			this.toolStripSeparator12.Size = new System.Drawing.Size(157, 6);
 			// 
 			// m_menu_nav_camera
 			// 
 			this.m_menu_nav_camera.Name = "m_menu_nav_camera";
-			this.m_menu_nav_camera.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.C)));
-			this.m_menu_nav_camera.Size = new System.Drawing.Size(157, 22);
+			this.m_menu_nav_camera.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.M)));
+			this.m_menu_nav_camera.Size = new System.Drawing.Size(160, 22);
 			this.m_menu_nav_camera.Text = "&Camera";
 			// 
 			// m_menu_data
@@ -1164,6 +1186,62 @@ namespace LDraw
 			this.toolStripSeparator9.Name = "toolStripSeparator9";
 			this.toolStripSeparator9.Size = new System.Drawing.Size(155, 6);
 			// 
+			// m_menu_rendering_fillmode
+			// 
+			this.m_menu_rendering_fillmode.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_rendering_fillmode_solid,
+            this.m_menu_rendering_fillmode_wireframe,
+            this.m_menu_rendering_fillmode_solidwire});
+			this.m_menu_rendering_fillmode.Name = "m_menu_rendering_fillmode";
+			this.m_menu_rendering_fillmode.Size = new System.Drawing.Size(158, 22);
+			this.m_menu_rendering_fillmode.Text = "&Fill Mode";
+			// 
+			// m_menu_rendering_fillmode_solid
+			// 
+			this.m_menu_rendering_fillmode_solid.Name = "m_menu_rendering_fillmode_solid";
+			this.m_menu_rendering_fillmode_solid.Size = new System.Drawing.Size(174, 22);
+			this.m_menu_rendering_fillmode_solid.Text = "&Solid";
+			// 
+			// m_menu_rendering_fillmode_wireframe
+			// 
+			this.m_menu_rendering_fillmode_wireframe.Name = "m_menu_rendering_fillmode_wireframe";
+			this.m_menu_rendering_fillmode_wireframe.Size = new System.Drawing.Size(174, 22);
+			this.m_menu_rendering_fillmode_wireframe.Text = "&Wire Frame";
+			// 
+			// m_menu_rendering_fillmode_solidwire
+			// 
+			this.m_menu_rendering_fillmode_solidwire.Name = "m_menu_rendering_fillmode_solidwire";
+			this.m_menu_rendering_fillmode_solidwire.Size = new System.Drawing.Size(174, 22);
+			this.m_menu_rendering_fillmode_solidwire.Text = "Solid + Wire &Frame";
+			// 
+			// m_menu_rendering_cullmode
+			// 
+			this.m_menu_rendering_cullmode.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_rendering_cullmode_none,
+            this.m_menu_rendering_cullmode_back,
+            this.m_menu_rendering_cullmode_front});
+			this.m_menu_rendering_cullmode.Name = "m_menu_rendering_cullmode";
+			this.m_menu_rendering_cullmode.Size = new System.Drawing.Size(158, 22);
+			this.m_menu_rendering_cullmode.Text = "&Cull Mode";
+			// 
+			// m_menu_rendering_cullmode_none
+			// 
+			this.m_menu_rendering_cullmode_none.Name = "m_menu_rendering_cullmode_none";
+			this.m_menu_rendering_cullmode_none.Size = new System.Drawing.Size(103, 22);
+			this.m_menu_rendering_cullmode_none.Text = "&None";
+			// 
+			// m_menu_rendering_cullmode_back
+			// 
+			this.m_menu_rendering_cullmode_back.Name = "m_menu_rendering_cullmode_back";
+			this.m_menu_rendering_cullmode_back.Size = new System.Drawing.Size(103, 22);
+			this.m_menu_rendering_cullmode_back.Text = "&Back";
+			// 
+			// m_menu_rendering_cullmode_front
+			// 
+			this.m_menu_rendering_cullmode_front.Name = "m_menu_rendering_cullmode_front";
+			this.m_menu_rendering_cullmode_front.Size = new System.Drawing.Size(103, 22);
+			this.m_menu_rendering_cullmode_front.Text = "&Front";
+			// 
 			// m_menu_rendering_orthographic
 			// 
 			this.m_menu_rendering_orthographic.Name = "m_menu_rendering_orthographic";
@@ -1222,61 +1300,12 @@ namespace LDraw
 			this.m_menu_window_about.Size = new System.Drawing.Size(151, 22);
 			this.m_menu_window_about.Text = "&About";
 			// 
-			// m_menu_rendering_cullmode
+			// m_menu_file_edit_script
 			// 
-			this.m_menu_rendering_cullmode.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_menu_rendering_cullmode_none,
-            this.m_menu_rendering_cullmode_back,
-            this.m_menu_rendering_cullmode_front});
-			this.m_menu_rendering_cullmode.Name = "m_menu_rendering_cullmode";
-			this.m_menu_rendering_cullmode.Size = new System.Drawing.Size(158, 22);
-			this.m_menu_rendering_cullmode.Text = "&Cull Mode";
-			// 
-			// m_menu_rendering_fillmode
-			// 
-			this.m_menu_rendering_fillmode.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_menu_rendering_fillmode_solid,
-            this.m_menu_rendering_fillmode_wireframe,
-            this.m_menu_rendering_fillmode_solidwire});
-			this.m_menu_rendering_fillmode.Name = "m_menu_rendering_fillmode";
-			this.m_menu_rendering_fillmode.Size = new System.Drawing.Size(158, 22);
-			this.m_menu_rendering_fillmode.Text = "&Fill Mode";
-			// 
-			// m_menu_rendering_fillmode_solid
-			// 
-			this.m_menu_rendering_fillmode_solid.Name = "m_menu_rendering_fillmode_solid";
-			this.m_menu_rendering_fillmode_solid.Size = new System.Drawing.Size(174, 22);
-			this.m_menu_rendering_fillmode_solid.Text = "&Solid";
-			// 
-			// m_menu_rendering_fillmode_wireframe
-			// 
-			this.m_menu_rendering_fillmode_wireframe.Name = "m_menu_rendering_fillmode_wireframe";
-			this.m_menu_rendering_fillmode_wireframe.Size = new System.Drawing.Size(174, 22);
-			this.m_menu_rendering_fillmode_wireframe.Text = "&Wire Frame";
-			// 
-			// m_menu_rendering_fillmode_solidwire
-			// 
-			this.m_menu_rendering_fillmode_solidwire.Name = "m_menu_rendering_fillmode_solidwire";
-			this.m_menu_rendering_fillmode_solidwire.Size = new System.Drawing.Size(174, 22);
-			this.m_menu_rendering_fillmode_solidwire.Text = "Solid + Wire &Frame";
-			// 
-			// m_menu_rendering_cullmode_none
-			// 
-			this.m_menu_rendering_cullmode_none.Name = "m_menu_rendering_cullmode_none";
-			this.m_menu_rendering_cullmode_none.Size = new System.Drawing.Size(152, 22);
-			this.m_menu_rendering_cullmode_none.Text = "&None";
-			// 
-			// m_menu_rendering_cullmode_back
-			// 
-			this.m_menu_rendering_cullmode_back.Name = "m_menu_rendering_cullmode_back";
-			this.m_menu_rendering_cullmode_back.Size = new System.Drawing.Size(152, 22);
-			this.m_menu_rendering_cullmode_back.Text = "&Back";
-			// 
-			// m_menu_rendering_cullmode_front
-			// 
-			this.m_menu_rendering_cullmode_front.Name = "m_menu_rendering_cullmode_front";
-			this.m_menu_rendering_cullmode_front.Size = new System.Drawing.Size(152, 22);
-			this.m_menu_rendering_cullmode_front.Text = "&Front";
+			this.m_menu_file_edit_script.Name = "m_menu_file_edit_script";
+			this.m_menu_file_edit_script.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.E)));
+			this.m_menu_file_edit_script.Size = new System.Drawing.Size(236, 22);
+			this.m_menu_file_edit_script.Text = "&Edit Script";
 			// 
 			// MainUI
 			// 

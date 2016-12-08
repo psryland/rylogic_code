@@ -55,8 +55,16 @@ namespace LDraw
 			private set
 			{
 				if (m_editor == value) return;
-				//Util.Dispose(ref m_editor); not needed, the ElementHost does the clean up
+				if (m_editor != null)
+				{
+					m_editor.TextChanged -= HandleScriptChanged;
+					//Util.Dispose(ref m_editor); not needed, the ElementHost does the clean up
+				}
 				m_editor = value;
+				if (m_editor != null)
+				{
+					m_editor.TextChanged += HandleScriptChanged;
+				}
 			}
 		}
 		private View3d.HostableEditor m_editor;
@@ -147,6 +155,7 @@ namespace LDraw
 
 			// Load the file into the editor
 			Editor.Text = File.ReadAllText(filepath);
+			SaveNeeded = false;
 		}
 		public void LoadFile()
 		{
@@ -171,10 +180,18 @@ namespace LDraw
 
 			// Save the file form the editor
 			File.WriteAllText(filepath, Editor.Text);
+			SaveNeeded = false;
 		}
 		public void SaveFile()
 		{
 			SaveFile(Filepath);
+		}
+
+		/// <summary>True if the script has been edited</summary>
+		public bool SaveNeeded
+		{
+			get;
+			set;
 		}
 
 		/// <summary>Remove any objects associated with this script</summary>
@@ -198,6 +215,12 @@ namespace LDraw
 			Model.Window.Invalidate();
 		}
 
+		/// <summary>Handle the script changing</summary>
+		private void HandleScriptChanged(object sender, EventArgs e)
+		{
+			SaveNeeded = true;
+		}
+
 		#region
 		private void InitializeComponent()
 		{
@@ -206,17 +229,17 @@ namespace LDraw
 			this.m_tsc = new pr.gui.ToolStripContainer();
 			this.m_element_host = new System.Windows.Forms.Integration.ElementHost();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
+			this.m_btn_open = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_save = new System.Windows.Forms.ToolStripButton();
+			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_render = new System.Windows.Forms.ToolStripButton();
+			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_clear = new System.Windows.Forms.ToolStripButton();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_shortcuts = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_shortcuts_render = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_shortcuts_clear = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_il_toolbar = new System.Windows.Forms.ImageList(this.components);
-			this.m_btn_open = new System.Windows.Forms.ToolStripButton();
-			this.m_btn_save = new System.Windows.Forms.ToolStripButton();
-			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
-			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_tsc.ContentPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
@@ -240,8 +263,8 @@ namespace LDraw
 			// 
 			// m_tsc.TopToolStripPanel
 			// 
-			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_ts);
 			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_menu);
+			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_ts);
 			// 
 			// m_element_host
 			// 
@@ -250,7 +273,6 @@ namespace LDraw
 			this.m_element_host.Name = "m_element_host";
 			this.m_element_host.Size = new System.Drawing.Size(495, 575);
 			this.m_element_host.TabIndex = 0;
-			this.m_element_host.Text = "elementHost1";
 			this.m_element_host.Child = null;
 			// 
 			// m_ts
@@ -266,8 +288,33 @@ namespace LDraw
             this.m_btn_clear});
 			this.m_ts.Location = new System.Drawing.Point(3, 24);
 			this.m_ts.Name = "m_ts";
-			this.m_ts.Size = new System.Drawing.Size(167, 31);
+			this.m_ts.Size = new System.Drawing.Size(136, 31);
 			this.m_ts.TabIndex = 0;
+			// 
+			// m_btn_open
+			// 
+			this.m_btn_open.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_open.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_open.Image")));
+			this.m_btn_open.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_open.Name = "m_btn_open";
+			this.m_btn_open.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_open.Text = "Open Script";
+			this.m_btn_open.ToolTipText = "Open a script file";
+			// 
+			// m_btn_save
+			// 
+			this.m_btn_save.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_save.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_save.Image")));
+			this.m_btn_save.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_save.Name = "m_btn_save";
+			this.m_btn_save.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_save.Text = "Save Script";
+			this.m_btn_save.ToolTipText = "Save the current script to a file";
+			// 
+			// toolStripSeparator1
+			// 
+			this.toolStripSeparator1.Name = "toolStripSeparator1";
+			this.toolStripSeparator1.Size = new System.Drawing.Size(6, 31);
 			// 
 			// m_btn_render
 			// 
@@ -277,6 +324,12 @@ namespace LDraw
 			this.m_btn_render.Name = "m_btn_render";
 			this.m_btn_render.Size = new System.Drawing.Size(28, 28);
 			this.m_btn_render.Text = "Render";
+			this.m_btn_render.ToolTipText = "Render this script";
+			// 
+			// toolStripSeparator2
+			// 
+			this.toolStripSeparator2.Name = "toolStripSeparator2";
+			this.toolStripSeparator2.Size = new System.Drawing.Size(6, 31);
 			// 
 			// m_btn_clear
 			// 
@@ -286,6 +339,7 @@ namespace LDraw
 			this.m_btn_clear.Name = "m_btn_clear";
 			this.m_btn_clear.Size = new System.Drawing.Size(28, 28);
 			this.m_btn_clear.Text = "Clear";
+			this.m_btn_clear.ToolTipText = "Remove objects, created by this script, from the scene";
 			// 
 			// m_menu
 			// 
@@ -327,34 +381,6 @@ namespace LDraw
 			this.m_il_toolbar.ColorDepth = System.Windows.Forms.ColorDepth.Depth32Bit;
 			this.m_il_toolbar.ImageSize = new System.Drawing.Size(16, 16);
 			this.m_il_toolbar.TransparentColor = System.Drawing.Color.Transparent;
-			// 
-			// m_btn_open
-			// 
-			this.m_btn_open.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_open.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_open.Image")));
-			this.m_btn_open.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_btn_open.Name = "m_btn_open";
-			this.m_btn_open.Size = new System.Drawing.Size(28, 28);
-			this.m_btn_open.Text = "toolStripButton1";
-			// 
-			// m_btn_save
-			// 
-			this.m_btn_save.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_save.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_save.Image")));
-			this.m_btn_save.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_btn_save.Name = "m_btn_save";
-			this.m_btn_save.Size = new System.Drawing.Size(28, 28);
-			this.m_btn_save.Text = "toolStripButton1";
-			// 
-			// toolStripSeparator1
-			// 
-			this.toolStripSeparator1.Name = "toolStripSeparator1";
-			this.toolStripSeparator1.Size = new System.Drawing.Size(6, 31);
-			// 
-			// toolStripSeparator2
-			// 
-			this.toolStripSeparator2.Name = "toolStripSeparator2";
-			this.toolStripSeparator2.Size = new System.Drawing.Size(6, 31);
 			// 
 			// ScriptUI
 			// 

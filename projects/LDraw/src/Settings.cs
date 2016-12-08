@@ -34,7 +34,9 @@ namespace LDraw
 		}
 		public Settings(string filepath)
 			:base(filepath)
-		{ }
+		{
+			AutoSaveOnChanges = true;
+		}
 
 		/// <summary>Recently loaded files</summary>
 		public string RecentFiles

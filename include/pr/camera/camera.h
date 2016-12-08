@@ -468,7 +468,7 @@ namespace pr
 			// mouse point projected onto the focus plane.
 			auto pt  = NSSPointToWSPoint(v4(point, FocusDist(), 0.0f));
 			auto ray_ws = pt - CameraToWorld().pos;
-			auto ray_cs = dist * Normalise3(WorldToCamera() * ray_ws, v4Zero); // normalised ray in camera space
+			auto ray_cs = dist * Normalise3(WorldToCamera() * ray_ws, -v4ZAxis); // normalised ray in camera space
 
 			// If the 'TranslateZ' key is down move the focus point too.
 			// Otherwise move the camera toward or away from the focus point.

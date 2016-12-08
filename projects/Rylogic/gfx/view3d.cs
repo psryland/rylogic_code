@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
 using System.Windows.Interop;
+using System.Xml.Linq;
 using pr.common;
 using pr.extn;
 using pr.maths;
@@ -20,7 +21,6 @@ using HTexture = System.IntPtr;
 using HWindow = System.IntPtr;
 using HWND = System.IntPtr;
 using HMODULE = System.IntPtr;
-using System.Xml.Linq;
 
 namespace pr.gfx
 {
@@ -1230,7 +1230,11 @@ namespace pr.gfx
 			public float FocusDist
 			{
 				get { return View3D_CameraFocusDistance(m_window.Handle); }
-				set { View3D_CameraSetFocusDistance(m_window.Handle, value); }
+				set
+				{
+					Debug.Assert(value >= 0, "Focus distance cannot be negative");
+					View3D_CameraSetFocusDistance(m_window.Handle, value);
+				}
 			}
 
 			/// <summary>Get/Set the camera to world transform. Note: use SetPosition to set the focus distance at the same time</summary>

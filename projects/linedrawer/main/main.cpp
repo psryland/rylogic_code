@@ -1069,27 +1069,23 @@ namespace ldr
 
 		// Preserve the current light settings
 		Light prev_light   = m_settings.m_Light;
-		bool  prev_cam_rel = m_settings.m_LightIsCameraRelative;
-		auto pv = [&](Light const& light, bool cam_rel)
+		auto pv = [&](Light const& light)
 		{
 			m_settings.m_Light = light;
-			m_settings.m_LightIsCameraRelative = cam_rel;
 			RenderNeeded();
 		};
 
 		// Show the lighting options UI
-		pr::rdr::LightingUI dlg(*this, m_settings.m_Light, m_settings.m_LightIsCameraRelative, pv);
+		pr::rdr::LightingUI dlg(*this, m_settings.m_Light, pv);
 		if (dlg.ShowDialog(this) == EDialogResult::Ok)
 		{
 			// Save the new options
 			m_settings.m_Light = dlg.m_light;
-			m_settings.m_LightIsCameraRelative = dlg.m_camera_relative;
 		}
 		else
 		{
 			// Restore the old light settings
 			m_settings.m_Light = prev_light;
-			m_settings.m_LightIsCameraRelative = prev_cam_rel;
 		}
 
 		// Refresh
@@ -1480,7 +1476,7 @@ namespace ldr
 		// Update the lighting. If lighting is camera relative, adjust the position and direction
 		pr::rdr::Light& light = m_scene.m_global_light;
 		light = m_settings.m_Light;
-		if (m_settings.m_LightIsCameraRelative)
+		if (m_settings.m_Light.m_cam_relative)
 		{
 			light.m_direction = m_cam.CameraToWorld() * m_settings.m_Light.m_direction;
 			light.m_position  = m_cam.CameraToWorld() * m_settings.m_Light.m_position;

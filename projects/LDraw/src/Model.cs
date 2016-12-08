@@ -128,11 +128,6 @@ namespace LDraw
 			MsgBox.Show(Owner, msg, "LDraw Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 		}
 
-		/// <summary>Create a new script file</summary>
-		public void NewFile(string filepath)
-		{
-		}
-
 		/// <summary>Add a file source</summary>
 		public void OpenFile(string filepath, bool additional)
 		{
