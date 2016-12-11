@@ -5215,7 +5215,7 @@ namespace pr.gui
 					{
 						// Double clicking the title bar returns the contents to the dock container
 						if (DockContainer.Options.DoubleClickTitleBarToDock &&
-							Win32.SendMessage(Handle, Win32.WM_NCHITTEST, IntPtr.Zero, m.LParam) == (int)Win32.HitTest.HTCAPTION)
+							(int)Win32.SendMessage(Handle, Win32.WM_NCHITTEST, IntPtr.Zero, m.LParam) == (int)Win32.HitTest.HTCAPTION)
 						{
 							// Move all content back to the dock container
 							using (this.SuspendLayout(true))

@@ -274,7 +274,7 @@ namespace pr.extn
 				() =>
 					{
 						Win32.SendMessage(ctrl.Handle, Win32.EM_GETSCROLLPOS, (IntPtr)0, ref scroll_pos);
-						event_mask = Win32.SendMessage(ctrl.Handle, Win32.EM_GETEVENTMASK, 0, 0);
+						event_mask = (int)Win32.SendMessage(ctrl.Handle, Win32.EM_GETEVENTMASK, 0, 0);
 					},
 				() =>
 					{

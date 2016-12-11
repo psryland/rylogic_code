@@ -17,7 +17,7 @@ namespace Scintilla
 	public class Scintilla
 	{
 		/// <summary>The scintilla direct function for non-message-based control</summary>
-		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
 		public delegate int DirectFunction(IntPtr ptr, int code, IntPtr wparam, IntPtr lparam);
 
 		/// <summary>Each character in the control is a multibyte char and a style char</summary>
@@ -1035,7 +1035,7 @@ namespace Scintilla
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
-		struct TextToFind
+		public struct TextToFind
 		{
 			public CharacterRange chrg;
 			[MarshalAs(UnmanagedType.LPStr)] public string lpstrText;

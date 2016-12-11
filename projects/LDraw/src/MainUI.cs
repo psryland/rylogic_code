@@ -326,6 +326,7 @@ namespace LDraw
 			{
 				SaveFile(true);
 			};
+			m_menu_file_recent_files.ToolTipText = "Shift+Click to open additionally\r\nCtrl+Click to edit";
 			m_recent_files = new RecentFiles(m_menu_file_recent_files, HandleRecentFile);
 			m_recent_files.Import(Settings.RecentFiles);
 			m_recent_files.RecentListChanged += (s,a) => Settings.RecentFiles = m_recent_files.Export();
@@ -675,7 +676,10 @@ namespace LDraw
 		/// <summary>Recent file selected</summary>
 		private void HandleRecentFile(string filepath)
 		{
-			OpenFile(filepath, (ModifierKeys & Keys.Shift) != 0);
+			if ((ModifierKeys & Keys.Control) != 0)
+				EditFile(filepath, false);
+			else
+				OpenFile(filepath, (ModifierKeys & Keys.Shift) != 0);
 		}
 
 		/// <summary>Create a Text window containing the example script</summary>

@@ -462,7 +462,7 @@ namespace pr.gui
 					// Send the rendered data for printing, then release and cached info
 					var res = Win32.SendMessage(rtb_handle, (uint)Win32.EM_FORMATRANGE,  new IntPtr(1), lparam);
 					Win32.SendMessage(rtb_handle, (uint)Win32.EM_FORMATRANGE, (IntPtr)0, (IntPtr)0);
-					return res; // Return last + 1 character printed
+					return (int)res; // Return last + 1 character printed
 				}
 			}
 		}
@@ -489,7 +489,7 @@ namespace pr.gui
 				using (var ptr = Marshal_.AllocCoTaskMem(typeof(IntPtr), 1))
 				{
 					//Marshal.WriteIntPtr(ptr, IntPtr.Zero);  // Clear it.
-					if (Win32.SendMessage(rtb.Handle, Win32.EM_GETOLEINTERFACE, IntPtr.Zero, ptr) == 0)
+					if (Win32.SendMessage(rtb.Handle, Win32.EM_GETOLEINTERFACE, IntPtr.Zero, ptr) == IntPtr.Zero)
 						throw new Exception("RichTextBox.OleInterface - EM_GETOLEINTERFACE failed.");
 
 					// Read the returned pointer.

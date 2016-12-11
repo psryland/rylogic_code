@@ -120,7 +120,7 @@ namespace pr.util
 		// Send a message to this window
 		public int SendMessage(uint msg, int wparam, int lparam)
 		{
-			return Win32.SendMessage(m_hwnd, msg, wparam, lparam);
+			return (int)Win32.SendMessage(m_hwnd, msg, wparam, lparam);
 		}
 
 		// Sets this Window Object's visibility

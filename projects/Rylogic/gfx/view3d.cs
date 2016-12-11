@@ -1989,11 +1989,11 @@ namespace pr.gfx
 						break;
 					}
 				}
-				
+
 				if (handled)
 					return IntPtr.Zero;
-				else
-					return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
+
+				return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
 			}
 
 			#region IKeyboardInputSink
@@ -2032,7 +2032,7 @@ namespace pr.gfx
 				var len = TextLength;
 				using (var bytes = Marshal_.AllocHGlobal(len + 1))
 				{
-					var num = Win32.SendMessage(m_ctrl, pr.gui.Sci.SCI_GETTEXT, (IntPtr)(len + 1), bytes.Value.Ptr);
+					var num = (int)Win32.SendMessage(m_ctrl, pr.gui.Sci.SCI_GETTEXT, (IntPtr)(len + 1), bytes.Value.Ptr);
 					return Marshal.PtrToStringAnsi(bytes.Value.Ptr, num);
 				}
 			}
@@ -2060,7 +2060,7 @@ namespace pr.gfx
 			/// <summary>Gets the length of the text in the control</summary>
 			public int TextLength
 			{
-				get { return m_text != null ? m_text.Length : Win32.SendMessage(m_ctrl, pr.gui.Sci.SCI_GETTEXTLENGTH, IntPtr.Zero, IntPtr.Zero); }
+				get { return m_text != null ? m_text.Length : (int)Win32.SendMessage(m_ctrl, pr.gui.Sci.SCI_GETTEXTLENGTH, IntPtr.Zero, IntPtr.Zero); }
 			}
 
 			/// <summary>Gets or sets the current text</summary>

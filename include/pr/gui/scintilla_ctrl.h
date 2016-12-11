@@ -928,13 +928,13 @@ namespace pr
 			void GrabFocus         ()                        { return Cmd<void>(SCI_GRABFOCUS, 0, 0L); }
 			bool Focus             () const                  { return Cmd<int >(SCI_GETFOCUS, 0, 0L) != 0; }
 			void Focus             (bool focus)              { return Cmd<void>(SCI_SETFOCUS, focus, 0L); }
+			bool ReadOnly() const         { return Cmd<int >(SCI_GETREADONLY, 0, 0L) != 0; }
+			void ReadOnly(bool readOnly)  { return Cmd<void>(SCI_SETREADONLY, readOnly, 0L); }
 			#pragma endregion
 
 			#pragma region Status/Errors
 			int  Status  () const         { return Cmd<int >(SCI_GETSTATUS, 0, 0L); }
 			void Status  (int statusCode) { return Cmd<void>(SCI_SETSTATUS, statusCode, 0L); }
-			bool ReadOnly() const         { return Cmd<int >(SCI_GETREADONLY, 0, 0L) != 0; }
-			void ReadOnly(bool readOnly)  { return Cmd<void>(SCI_SETREADONLY, readOnly, 0L); }
 			#pragma endregion
 
 		private:
