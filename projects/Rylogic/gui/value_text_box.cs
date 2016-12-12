@@ -51,11 +51,15 @@ namespace pr.gui
 		{
 			ValueType = typeof(object);
 			Value = null;
+			UseValidityColours = true;
 			ForeColorValid = Color.Black;
 			BackColorValid = Color.White;
 			ForeColorInvalid = Color.Gray;
 			BackColorInvalid = Color.White;
 		}
+
+		/// <summary>Get/Set whether the background colours are set based on value validity</summary>
+		public bool UseValidityColours { get; set; }
 
 		/// <summary>The text color for valid values</summary>
 		public Color ForeColorValid
@@ -103,6 +107,7 @@ namespace pr.gui
 			{
 				return m_validate_text ?? (x =>
 				{
+					if (!x.HasValue()) return false;
 					try { Convert.ChangeType(x, ValueType); return true; }
 					catch { return false; }
 				});
@@ -124,6 +129,7 @@ namespace pr.gui
 			{
 				return m_text_to_value ?? (x =>
 				{
+					if (!x.HasValue()) return null;
 					try { return Convert.ChangeType(x, ValueType); }
 					catch { return null; }
 				});
@@ -234,6 +240,9 @@ namespace pr.gui
 		/// <summary>Set the Fore and Back colours for the value box based on the current text</summary>
 		public void UpdateTextColours()
 		{
+			if (!UseValidityColours)
+				return;
+
 			// Set the text colour based on whether the value matches the text
 			ForeColor = Valid ? ForeColorValid : ForeColorInvalid;
 			BackColor = Valid ? BackColorValid : BackColorInvalid;

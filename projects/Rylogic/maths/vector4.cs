@@ -390,7 +390,7 @@ namespace pr.maths
 			return new v4(lhs.y * rhs.z - lhs.z * rhs.y, lhs.z * rhs.x - lhs.x * rhs.z, lhs.x * rhs.y - lhs.y * rhs.x, 0.0f);
 		}
 
-		/// <summary>Triple product of XYZ components</summary>
+		/// <summary>Triple product (a . (b x c)) of XYZ components</summary>
 		public static float Triple3(v4 a, v4 b, v4 c)
 		{
 			return Dot3(a, Cross3(b, c));

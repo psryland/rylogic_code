@@ -1503,14 +1503,14 @@ namespace pr.gui
 			private HoverScroll m_hs;
 			private EventBatcher m_eb;
 			private Dictionary<Style, byte> m_sty; // map from vt100 style to scintilla style index
-			private CellBuf m_cells;
+			private pr.scintilla.Sci.CellBuf m_cells;
 
 			public Display(Buffer buf)
 			{
 				m_hs = new HoverScroll(Handle);
 				m_eb = new EventBatcher(UpdateText, TimeSpan.FromMilliseconds(1)){TriggerOnFirst = true};
 				m_sty = new Dictionary<Style,byte>();
-				m_cells = new CellBuf();
+				m_cells = new pr.scintilla.Sci.CellBuf();
 				ContextMenuStrip = new CMenu(this);
 				
 				BlinkTimer = new Timer{Interval = 1000, Enabled = false};
@@ -1522,10 +1522,10 @@ namespace pr.gui
 				EndAtLastLine = true;
 
 				// Use our own context menu
-				Cmd(Sci.SCI_USEPOPUP, 0, 0);
+				UsePopUp = false;
 
 				// Turn off undo history
-				Cmd(Sci.SCI_SETUNDOCOLLECTION, 0);
+				UndoCollection = false;
 
 				Buffer = buf;
 			}
@@ -1583,14 +1583,6 @@ namespace pr.gui
 			[Browsable(false)]
 			public bool ScrollToBottomOnInput { get; set; }
 
-			/// <summary>Allow/Disallow scrolling up to one page past the last line</summary>
-			[Browsable(false)]
-			public bool EndAtLastLine
-			{
-				get { return Cmd(Sci.SCI_GETENDATLASTLINE) != 0; }
-				set { Cmd(Sci.SCI_SETENDATLASTLINE, value ? 1 : 0); }
-			}
-
 			/// <summary>Request an update of the display</summary>
 			public void SignalRefresh(object sender = null, EventArgs args = null)
 			{
@@ -1598,7 +1590,7 @@ namespace pr.gui
 			}
 
 			/// <summary>Clear the buffer and the display</summary>
-			public void Clear()
+			public new void Clear()
 			{
 				if (Buffer != null)
 					Buffer.Clear();
@@ -1607,13 +1599,13 @@ namespace pr.gui
 			}
 
 			/// <summary>Copy the current selection</summary>
-			public void Copy()
+			public new void Copy()
 			{
-				Cmd(Sci.SCI_COPY);
+				base.Copy();
 			}
 
 			/// <summary>Paste the clipboard into the input buffer</summary>
-			public void Paste()
+			public new void Paste()
 			{
 				Buffer.Paste();
 			}
@@ -1636,19 +1628,6 @@ namespace pr.gui
 					if (Win32.CharFromVKey(vk, out ch))
 						Buffer.AddInput(ch);
 				}
-			}
-
-			/// <summary>Scroll the last line into view</summary>
-			public void ScrollToBottom()
-			{
-				// Move the caret to the end
-				Cmd(Sci.SCI_SETEMPTYSELECTION, Cmd(Sci.SCI_GETTEXTLENGTH));
-
-				// Only scroll if the last line isn't visible
-				var last_line_index = Cmd(Sci.SCI_LINEFROMPOSITION, Cmd(Sci.SCI_GETTEXTLENGTH));
-				var last_vis_line = Cmd(Sci.SCI_GETFIRSTVISIBLELINE) + Cmd(Sci.SCI_LINESONSCREEN);
-				if (last_line_index >= last_vis_line)
-					Cmd(Sci.SCI_SCROLLCARET);
 			}
 
 			/// <summary>Start or stop capturing to a file</summary>
@@ -1715,11 +1694,12 @@ namespace pr.gui
 				using (ScrollScope())
 				{
 					// Grow the text in the control to the required number of lines (if necessary)
-					if (Cmd(Sci.SCI_GETLINECOUNT) < region.Bottom)
+					var line_count = LineCount;
+					if (line_count < region.Bottom)
 					{
-						var pad = new byte[region.Bottom - Cmd(Sci.SCI_GETLINECOUNT)].Memset(0x0a);
+						var pad = new byte[region.Bottom - line_count].Memset(0x0a);
 						using (var p = GCHandleEx.Alloc(pad, GCHandleType.Pinned))
-							Cmd(Sci.SCI_APPENDTEXT, pad.Length, p.Handle.AddrOfPinnedObject());
+							Cmd(pr.scintilla.Sci.SCI_APPENDTEXT, pad.Length, p.Handle.AddrOfPinnedObject());
 					}
 
 					// Update the text in the control from the invalid buffer region
@@ -1747,17 +1727,14 @@ namespace pr.gui
 					m_cells.Add(0, 0);
 
 					// Determine the character range to be updated
-					var beg = Cmd(Sci.SCI_POSITIONFROMLINE, region.Top);
-					var end = Cmd(Sci.SCI_POSITIONFROMLINE, region.Bottom);
+					var beg = PositionFromLine(region.Top);
+					var end = PositionFromLine(region.Bottom);
 					if (beg < 0) beg = 0;
 					if (end < 0) end = TextLength;
 
 					// Overwrite the visible lines with the buffer of cells
-					using (var c = m_cells.Pin())
-					{
-						Cmd(Sci.SCI_DELETERANGE, beg, end - beg);
-						Cmd(Sci.SCI_INSERTSTYLEDTEXT, beg, c.Pointer);
-					}
+					DeleteRange(beg, end - beg);
+					InsertStyledText(beg, m_cells);
 
 					// Reset, ready for next time
 					m_cells.Length = 0;
@@ -1778,16 +1755,11 @@ namespace pr.gui
 
 					var forecol = HBGR.ToColor(!sty.RevserseVideo ? sty.ForeColour : sty.BackColour);
 					var backcol = HBGR.ToColor(!sty.RevserseVideo ? sty.BackColour : sty.ForeColour);
-					var fontname = Encoding.UTF8.GetBytes("consolas");
-					using (var fonth = GCHandleEx.Alloc(fontname, GCHandleType.Pinned))
-					{
-						Cmd(Sci.SCI_STYLESETFONT, idx, fonth.Handle.AddrOfPinnedObject());
-						Cmd(Sci.SCI_STYLESETFORE, idx, forecol.ToAbgr() & 0x00FFFFFF);
-						Cmd(Sci.SCI_STYLESETBACK, idx, backcol.ToAbgr() & 0x00FFFFFF);
-						Cmd(Sci.SCI_STYLESETBOLD, idx, sty.Bold ? 1 : 0);
-						Cmd(Sci.SCI_STYLESETUNDERLINE, idx, sty.Underline ? 1 : 0);
-					}
-
+					StyleSetFont(idx, "consolas");
+					StyleSetFore(idx, forecol);
+					StyleSetBack(idx, backcol);
+					StyleSetBold(idx, sty.Bold);
+					StyleSetUnderline(idx, sty.Underline);
 					m_sty[sty] = idx;
 				}
 				return idx;
@@ -1870,7 +1842,7 @@ namespace pr.gui
 
 				// Turn on auto scroll if the last line is visible
 				var vis = VisibleLineIndexRange;
-				var last = Cmd(Sci.SCI_GETLINECOUNT) - 1;
+				var last = LineCount - 1;
 				AutoScrollToBottom = vis.Contains(last);
 			}
 
@@ -1899,12 +1871,12 @@ namespace pr.gui
 					m_sel.m_anchor  -= bytes;
 
 					// Remove the scrolled text from the control
-					Cmd(Sci.SCI_DELETERANGE, 0, bytes);
+					DeleteRange(0, bytes);
 
 					// Scroll up to move with the buffer text
-					var vis = Cmd(Sci.SCI_GETFIRSTVISIBLELINE);
+					var vis = FirstVisibleLine;
 					vis = Math.Max(0, vis - args.Dropped.Sizei);
-					Cmd(Sci.SCI_SETFIRSTVISIBLELINE, vis);
+					FirstVisibleLine = vis;
 				}
 				else
 				{

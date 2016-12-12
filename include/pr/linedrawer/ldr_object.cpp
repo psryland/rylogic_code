@@ -3410,19 +3410,21 @@ LR"(// *************************************************************************
 		// actual model, located and scaled to the transform and box of this object
 		void LdrObject::AddBBoxToScene(Scene& scene, ModelPtr bbox_model, float time_s, pr::m4x4 const* p2w)
 		{
-			// Set the instance to world
-			pr::m4x4 i2w = *p2w * m_o2p * m_anim.Step(time_s);
+			// Set the instance to world for this object
+			auto i2w = *p2w * m_o2p * m_anim.Step(time_s);
 
 			// Add the bbox instance to the scene drawlist
 			if (m_instanced && m_visible && m_model)
 			{
+				// Find the object to world for the bbox
+				auto o2w = i2w * m4x4::Scale(
+					m_model->m_bbox.SizeX() + pr::maths::tiny,
+					m_model->m_bbox.SizeY() + pr::maths::tiny,
+					m_model->m_bbox.SizeZ() + pr::maths::tiny,
+					m_model->m_bbox.Centre());
+
 				m_bbox_instance.m_model = bbox_model;
-				m_bbox_instance.m_i2w = i2w;
-				m_bbox_instance.m_i2w.x *= m_model->m_bbox.SizeX() + pr::maths::tiny;
-				m_bbox_instance.m_i2w.y *= m_model->m_bbox.SizeY() + pr::maths::tiny;
-				m_bbox_instance.m_i2w.z *= m_model->m_bbox.SizeZ() + pr::maths::tiny;
-				m_bbox_instance.m_i2w.w = i2w.w + m_model->m_bbox.Centre();
-				m_bbox_instance.m_i2w.w.w = 1.0f;
+				m_bbox_instance.m_i2w = o2w;
 				scene.AddInstance(m_bbox_instance); // Could add occlusion culling here...
 			}
 

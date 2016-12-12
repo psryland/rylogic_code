@@ -14,11 +14,11 @@ using System.Runtime.InteropServices;
 namespace Scintilla
 {
 	using SurfaceID = System.IntPtr;
-	public class Scintilla
+	public partial class Scintilla
 	{
 		/// <summary>The scintilla direct function for non-message-based control</summary>
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
-		public delegate int DirectFunction(IntPtr ptr, int code, IntPtr wparam, IntPtr lparam);
+		public delegate IntPtr DirectFunction(IntPtr ptr, int code, IntPtr wparam, IntPtr lparam);
 
 		/// <summary>Each character in the control is a multibyte char and a style char</summary>
 		public struct Cell
@@ -1070,7 +1070,7 @@ namespace Scintilla
 			// hwndFrom is really an environment specific window handle or pointer
 			// but most clients of Scintilla.h do not have this type visible.
 			public IntPtr hwndFrom;
-			public int idFrom;
+			public IntPtr idFrom;
 			public uint code;
 		}
 

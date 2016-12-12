@@ -1,15 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using System.Windows.Forms.Integration;
-using pr.extn;
+﻿using System.Windows.Forms;
 using pr.gfx;
+using pr.scintilla;
 using pr.util;
 
 namespace TestCS
@@ -18,34 +9,26 @@ namespace TestCS
 	{
 		private View3d m_view3d;
 		private StatusStrip m_status_strip;
+		private pr.gui.ScintillaCtrl m_sci;
 		private ToolStripStatusLabel m_status;
-		private View3d.Editor m_editor;
 
 		static LdrEditorUI()
 		{
+			Sci.LoadDll(@"..\..\..\..\lib\$(platform)\$(config)\");
 			View3d.LoadDll(@"..\..\..\..\lib\$(platform)\$(config)\");
 		}
 		public LdrEditorUI()
 		{
 			InitializeComponent();
 			m_view3d = new View3d();
-			
-			var editor = new View3d.HostableEditor(m_host_editor, false);
-			editor.Text = "Test Text";
-			editor.TextChanged += (s,a) => m_status.SetStatusMessage(msg:editor.Text.Summary(50), on_click:(ss,aa) => editor.Text = Text.Summary(50));
-
-			//m_editor = new View3d.Editor(Handle, 200, 200);
+			m_sci.InitLdrStyle();
 		}
 		protected override void Dispose(bool disposing)
 		{
-			Util.Dispose(ref m_host_editor);
-			Util.Dispose(ref m_editor);
 			Util.Dispose(ref m_view3d);
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
-
-		private ElementHost m_host_editor;
 
 		#region Windows Form Designer generated code
 
@@ -57,29 +40,19 @@ namespace TestCS
 		/// the contents of this method with the code editor.</summary>
 		private void InitializeComponent()
 		{
-			this.m_host_editor = new System.Windows.Forms.Integration.ElementHost();
 			this.m_status_strip = new System.Windows.Forms.StatusStrip();
 			this.m_status = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_sci = new pr.gui.ScintillaCtrl();
 			this.m_status_strip.SuspendLayout();
 			this.SuspendLayout();
-			// 
-			// m_host_editor
-			// 
-			this.m_host_editor.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_host_editor.Location = new System.Drawing.Point(0, 0);
-			this.m_host_editor.Name = "m_host_editor";
-			this.m_host_editor.Size = new System.Drawing.Size(284, 261);
-			this.m_host_editor.TabIndex = 0;
-			this.m_host_editor.Text = "elementHost1";
-			this.m_host_editor.Child = null;
 			// 
 			// m_status_strip
 			// 
 			this.m_status_strip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_status});
-			this.m_status_strip.Location = new System.Drawing.Point(0, 239);
+			this.m_status_strip.Location = new System.Drawing.Point(0, 325);
 			this.m_status_strip.Name = "m_status_strip";
-			this.m_status_strip.Size = new System.Drawing.Size(284, 22);
+			this.m_status_strip.Size = new System.Drawing.Size(339, 22);
 			this.m_status_strip.TabIndex = 1;
 			this.m_status_strip.Text = "statusStrip1";
 			// 
@@ -89,13 +62,20 @@ namespace TestCS
 			this.m_status.Size = new System.Drawing.Size(118, 17);
 			this.m_status.Text = "toolStripStatusLabel1";
 			// 
+			// m_sci
+			// 
+			this.m_sci.Location = new System.Drawing.Point(12, 12);
+			this.m_sci.Name = "m_sci";
+			this.m_sci.Size = new System.Drawing.Size(315, 310);
+			this.m_sci.TabIndex = 2;
+			// 
 			// LdrEditorUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(284, 261);
+			this.ClientSize = new System.Drawing.Size(339, 347);
+			this.Controls.Add(this.m_sci);
 			this.Controls.Add(this.m_status_strip);
-			this.Controls.Add(this.m_host_editor);
 			this.Name = "LdrEditorUI";
 			this.Text = "ldr_editor_ui";
 			this.m_status_strip.ResumeLayout(false);

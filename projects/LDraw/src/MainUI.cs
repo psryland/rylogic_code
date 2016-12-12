@@ -11,6 +11,7 @@ using pr.extn;
 using pr.gfx;
 using pr.gui;
 using pr.maths;
+using pr.scintilla;
 using pr.util;
 using pr.win32;
 using ToolStripContainer = pr.gui.ToolStripContainer;

@@ -15,10 +15,14 @@ namespace pr
 {
 	namespace gui
 	{
-		// Remember to call pr::win32::LoadDll<struct Scintilla>(L"scintilla.dll");
-		// before creating an instance of this control
 		struct ScintillaCtrl :Control
 		{
+			// Notes:
+			// - Remember to call pr::win32::LoadDll<struct Scintilla>(L"scintilla.dll");
+			//   before creating an instance of this control
+			// - There is a C# port of this control called pr.gui.ScintillaCtrl. Try to
+			//   keep these in sync
+
 			enum { DefW = 50, DefH = 50 };
 			static DWORD const DefaultStyle   = (DefaultControlStyle | WS_GROUP | SS_LEFT) & ~WS_TABSTOP;
 			static DWORD const DefaultStyleEx = DefaultControlStyleEx | WS_EX_STATICEDGE; // NOT WS_BORDER|
@@ -97,7 +101,7 @@ namespace pr
 			}
 
 			// Initialise styles with reasonable defaults
-			void InitDefaults()
+			void InitDefaultStyle()
 			{
 				CodePage(SC_CP_UTF8);
 				ClearDocumentStyle();
@@ -368,7 +372,6 @@ namespace pr
 			void SetText           (const char * text)                        { return Cmd<void>(SCI_SETTEXT, 0, text); }
 			char GetCharAt         (uint pos) const                           { return Cmd<char>(SCI_GETCHARAT, pos, 0L) & 0xFF; }
 			int  GetLine           (int line, char * text) const              { return Cmd<int >(SCI_GETLINE, line, text); }
-			int  GetLineLength     (int line) const                           { return Cmd<int >(SCI_GETLINE, line, nullptr); }
 			int  GetLineCount      () const                                   { return Cmd<int >(SCI_GETLINECOUNT, 0, 0L); }
 			int  GetTextRange      (Sci_TextRange & tr) const                 { return Cmd<int >(SCI_GETTEXTRANGE, 0, &tr); }
 			void AppendText        (const char * text, int length)            { return Cmd<void>(SCI_APPENDTEXT, length, text); }
@@ -825,11 +828,6 @@ namespace pr
 			void SetPrintColourMode   (int mode)                      { return Cmd<void>(SCI_SETPRINTCOLOURMODE, mode, 0L); }
 			int  GetPrintWrapMode     () const                        { return Cmd<int >(SCI_GETPRINTWRAPMODE, 0, 0L); }
 			void SetPrintWrapMode     (int mode)                      { return Cmd<void>(SCI_SETPRINTWRAPMODE, mode, 0L); }
-			#pragma endregion
-
-			#pragma region Direct Access
-			SciFnDirect GetDirectFunction() const { return Cmd<SciFnDirect>(SCI_GETDIRECTFUNCTION, 0, 0L ); }
-			void*       GetDirectPointer () const { return Cmd<void*>(SCI_GETDIRECTPOINTER, 0, 0L); }
 			#pragma endregion
 
 			#pragma region Multiple Views

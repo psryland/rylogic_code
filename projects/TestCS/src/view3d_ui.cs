@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Drawing;
-using System.IO;
-using System.Runtime.InteropServices;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Windows.Forms;
-using pr.common;
 using pr.extn;
 using pr.gfx;
 using pr.gui;
 using pr.maths;
+using pr.scintilla;
 using pr.util;
 
 namespace TestCS

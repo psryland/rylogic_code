@@ -1,21 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq;
 using System.Windows.Forms;
 using pr.util;
-using pr.gui;
-using pr.extn;
 
 namespace TestCS
 {
-	using WebBrowser = pr.gui.WebBrowser;
-
 	public class WebBrowserUI :Form
 	{
 		public WebBrowserUI()

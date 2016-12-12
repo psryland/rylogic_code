@@ -12,6 +12,7 @@ using pr.common;
 using pr.container;
 using pr.extn;
 using pr.gui;
+using pr.scintilla;
 using pr.util;
 using ToolStripContainer = pr.gui.ToolStripContainer;
 

@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using pr.extn;
 using pr.gfx;
 using pr.gui;
+using pr.scintilla;
 
 namespace TestCS
 {

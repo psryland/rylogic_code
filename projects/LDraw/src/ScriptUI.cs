@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
-using System.Windows.Forms.Integration;
 using pr.common;
 using pr.extn;
-using pr.gfx;
 using pr.gui;
 using pr.util;
 using ToolStripContainer = pr.gui.ToolStripContainer;
@@ -16,7 +13,6 @@ namespace LDraw
 	{
 		#region UI Elements
 		private ToolStripContainer m_tsc;
-		//private ElementHost m_element_host;
 		private ToolStripButton m_btn_render;
 		private ImageList m_il_toolbar;
 		private MenuStrip m_menu;
@@ -37,6 +33,7 @@ namespace LDraw
 			InitializeComponent();
 			ContextId = context_id ?? Guid.NewGuid();
 			Filepath = string.Empty;
+			Editor = new ScintillaCtrl();
 
 			SetupUI();
 			UpdateUI();
@@ -47,6 +44,7 @@ namespace LDraw
 			base.Dispose(disposing);
 		}
 
+		/// <summary>The editor control</summary>
 		public ScintillaCtrl Editor
 		{
 			get { return m_editor; }
@@ -61,32 +59,13 @@ namespace LDraw
 				if (m_editor != null)
 				{
 					m_editor.Dock = DockStyle.Fill;
+					m_editor.InitLdrStyle();
+
 					m_tsc.ContentPanel.Controls.Add(m_editor);
 				}
 			}
 		}
 		private ScintillaCtrl m_editor;
-
-		///// <summary>The editor containing Ldr script</summary>
-		//public View3d.HostableEditor Editor
-		//{
-		//	[DebuggerStepThrough] get { return m_editor; }
-		//	private set
-		//	{
-		//		if (m_editor == value) return;
-		//		if (m_editor != null)
-		//		{
-		//			m_editor.TextChanged -= HandleScriptChanged;
-		//			//Util.Dispose(ref m_editor); not needed, the ElementHost does the clean up
-		//		}
-		//		m_editor = value;
-		//		if (m_editor != null)
-		//		{
-		//			m_editor.TextChanged += HandleScriptChanged;
-		//		}
-		//	}
-		//}
-		//private View3d.HostableEditor m_editor;
 
 		/// <summary>A context Id for objects created by this script</summary>
 		public Guid ContextId
@@ -110,10 +89,6 @@ namespace LDraw
 		/// <summary>Set up UI Elements</summary>
 		private void SetupUI()
 		{
-			Editor = new ScintillaCtrl();
-
-				//new View3d.HostableEditor(m_element_host, false);
-
 			#region Menu
 			m_menu_shortcuts_render.Click += (s,a) => m_btn_render.PerformClick();
 			m_menu_shortcuts_clear.Click += (s,a) => m_btn_clear.PerformClick();
@@ -249,7 +224,6 @@ namespace LDraw
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ScriptUI));
 			this.m_tsc = new pr.gui.ToolStripContainer();
-	//		this.m_element_host = new System.Windows.Forms.Integration.ElementHost();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_shortcuts = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_shortcuts_render = new System.Windows.Forms.ToolStripMenuItem();
@@ -274,7 +248,6 @@ namespace LDraw
 			// 
 			// m_tsc.ContentPanel
 			// 
-		//	this.m_tsc.ContentPanel.Controls.Add(this.m_element_host);
 			this.m_tsc.ContentPanel.Size = new System.Drawing.Size(495, 575);
 			this.m_tsc.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_tsc.Location = new System.Drawing.Point(0, 0);
@@ -287,15 +260,6 @@ namespace LDraw
 			// 
 			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_menu);
 			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_ts);
-			//// 
-			//// m_element_host
-			//// 
-			//this.m_element_host.Dock = System.Windows.Forms.DockStyle.Fill;
-			//this.m_element_host.Location = new System.Drawing.Point(0, 0);
-			//this.m_element_host.Name = "m_element_host";
-			//this.m_element_host.Size = new System.Drawing.Size(495, 575);
-			//this.m_element_host.TabIndex = 0;
-			//this.m_element_host.Child = null;
 			// 
 			// m_menu
 			// 

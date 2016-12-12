@@ -763,7 +763,7 @@ namespace pr.unittests
 	{
 		[Test] public void Basic()
 		{
-			var rng = new Random();
+			var rng = new Random(1);
 
 			// Compare with m4x4
 			var m0 = new Matrix(4,4);

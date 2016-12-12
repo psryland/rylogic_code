@@ -1,218 +1,28 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
 using pr.common;
 using pr.extn;
 using pr.gfx;
+using pr.scintilla;
 using pr.util;
 using pr.win32;
-using Scintilla;
 
 namespace pr.gui
 {
-	/// <summary>Typedef Scintilla.Scintilla to 'pr.gui.Sci' and add pr specific features</summary>
-	public class Sci :Scintilla.Scintilla
-	{
-		/// <summary>Helper for sending text to scintilla</summary>
-		public class CellBuf
-		{
-			public CellBuf(int capacity = 1024)
-			{
-				m_cells = new Cell[capacity];
-				Length = 0;
-			}
-
-			/// <summary>The capacity of the buffer</summary>
-			public int Capacity
-			{
-				get { return m_cells.Length; }
-				set
-				{
-					Array.Resize(ref m_cells, value);
-					Length = Math.Min(Length, value);
-				}
-			}
-
-			/// <summary>The number of valid cells in the buffer</summary>
-			public int Length { get; set; }
-
-			/// <summary>The buffer of scintilla cells</summary>
-			public Cell[] Cells { get { return m_cells; } }
-			protected Cell[] m_cells;
-
-			/// <summary>Add a single character to the buffer, along with a style</summary>
-			public void Add(byte ch, byte sty)
-			{
-				EnsureSpace(Length + 1);
-				Append(ch, sty);
-				++Length;
-			}
-
-			/// <summary>Add an array of bytes all with the same style</summary>
-			public void Add(byte[] bytes, byte sty)
-			{
-				EnsureSpace(Length + bytes.Length);
-				Append(bytes, sty);
-				Length += bytes.Length;
-			}
-
-			/// <summary>Add a string to the buffer, all using the style 'sty'</summary>
-			public void Add(string text, byte sty)
-			{
-				Add(Encoding.UTF8.GetBytes(text), sty);
-			}
-
-			/// <summary>Remove the last 'n' cells from the buffer</summary>
-			public void Pop(int n)
-			{
-				Length -= Math.Min(n, Length);
-			}
-
-			/// <summary>Pin the buffer so it can be passed to Scintilla</summary>
-			public virtual BufPtr Pin()
-			{
-				return new BufPtr(m_cells, 0, Length);
-			}
-
-			/// <summary>Grow the internal array to ensure it can hold at least 'new_size' cells</summary>
-			public void EnsureSpace(int new_size)
-			{
-				if (new_size <= Capacity) return;
-				new_size = Math.Max(new_size, Capacity * 3/2);
-				Resize(new_size);
-			}
-
-			/// <summary>Add a single byte and style to the buffer</summary>
-			protected virtual void Append(byte ch, byte sty)
-			{
-				m_cells[Length] = new Cell(ch, sty);
-			}
-
-			/// <summary>Add an array of bytes and style to the buffer</summary>
-			protected virtual void Append(byte[] bytes, byte sty)
-			{
-				var ofs = Length;
-				for (int i = 0; i != bytes.Length; ++i, ++ofs)
-					m_cells[ofs] = new Cell(bytes[i], sty);
-			}
-
-			/// <summary>Resize the cell buffer</summary>
-			protected virtual void Resize(int new_size)
-			{
-				Array.Resize(ref m_cells, new_size);
-			}
-
-			public class BufPtr :IDisposable
-			{
-				private GCHandleScope m_scope;
-				public BufPtr(Cell[] cells, int ofs, int length)
-				{
-					m_scope = GCHandleEx.Alloc(cells, GCHandleType.Pinned);
-					Pointer = m_scope.Handle.AddrOfPinnedObject() + ofs * R<Cell>.SizeOf;
-					SizeInBytes = length * R<Cell>.SizeOf;
-				}
-				public void Dispose()
-				{
-					Util.Dispose(ref m_scope);
-				}
-
-				/// <summary>The pointer to the pinned memory</summary>
-				public IntPtr Pointer { get; private set; }
-
-				/// <summary>The size of the buffered data</summary>
-				public int SizeInBytes { get; private set; }
-			}
-		}
-
-		/// <summary>A cell buffer that fills from back to front</summary>
-		public class BackFillCellBuf :CellBuf
-		{
-			public BackFillCellBuf(int capacity = 1024) :base(capacity)
-			{}
-
-			/// <summary>Add a single character to the buffer, along with a style</summary>
-			protected override void Append(byte ch, byte sty)
-			{
-				m_cells[m_cells.Length - Length] = new Cell(ch, sty);
-			}
-
-			/// <summary>Add a string to the buffer, all using the style 'sty'</summary>
-			protected override void Append(byte[] bytes, byte sty)
-			{
-				var ofs = m_cells.Length - Length - bytes.Length;
-				for (int i = 0; i != bytes.Length; ++i, ++ofs)
-					m_cells[ofs] = new Cell(bytes[i], sty);
-			}
-
-			/// <summary>Resize the cell buffer, copying the contents to the end of the new buffer</summary>
-			protected override void Resize(int new_size)
-			{
-				var new_cells = new Cell[new_size];
-				Array.Copy(m_cells, m_cells.Length - Length, new_cells, new_cells.Length - Length, Length);
-				m_cells = new_cells;
-			}
-
-			/// <summary>Pin the buffer so it can be passed to Scintilla</summary>
-			public override BufPtr Pin()
-			{
-				return new BufPtr(m_cells, m_cells.Length - Length, Length);
-			}
-		}
-
-		/// <summary>Convert a scintilla message id to a string</summary>
-		public static string IdToString(int sci_id)
-		{
-			string name;
-			if (!m_sci_name.TryGetValue(sci_id, out name))
-			{
-				var fi = typeof(Sci).GetFields(System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.Static)
-					.Where(x => x.IsLiteral)
-					.Where(x => x.Name.StartsWith("SCI_") || x.Name.StartsWith("SCN_"))
-					.FirstOrDefault(x =>
-						{
-							var val = x.GetValue(null);
-							if (val is uint) return (uint)val == (uint)sci_id;
-							if (val is int)  return (int)val == sci_id;
-							return false;
-						});
-
-				name = fi != null ? fi.Name : string.Empty;
-				m_sci_name.Add(sci_id, name);
-			}
-			return name;
-		}
-		private static Dictionary<int, string> m_sci_name = new Dictionary<int,string>();
-
-		#region Scintilla Dll
-		public const string Dll = "scintilla";
-
-		public static bool ScintillaAvailable { get { return m_module != IntPtr.Zero; } }
-		private static IntPtr m_module = IntPtr.Zero;
-
-		/// <summary>Load the scintilla dll</summary>
-		public static void LoadDll(string dir = @".\lib\$(platform)")
-		{
-			if (m_module != IntPtr.Zero) return; // Already loaded
-			m_module = Win32.LoadDll(Dll+".dll", dir);
-		}
-		#endregion
-	}
-
 	/// <summary>A win forms wrapper of the scintilla control</summary>
 	public class ScintillaCtrl :Control
 	{
 		// Notes:
-		// - this is roughly a port of pr::gui::ScintillaCtrl
-		// - function comments are mostly incomplete because it'd take too long.. Fill them in as needed
+		// - See http://www.scintilla.org/ScintillaDoc.html for documentation
+		// - This is roughly a port of pr::gui::ScintillaCtrl
+		// - Function comments are mostly incomplete because it'd take too long.. Fill them in as needed
 		// - Copy/port #pragma regions from the native control on demand
 
-		protected class CellBuf :Sci.CellBuf
-		{ }
 		protected struct StyleDesc
 		{
 			public StyleDesc(int id, Colour32 fore, Colour32 back, string font)
@@ -225,7 +35,7 @@ namespace pr.gui
 			public int id;
 			public Colour32 fore;
 			public Colour32 back;
-			[MarshalAs(UnmanagedType.LPStr)] public string font;
+			public string font;
 		};
 
 		private Sci.DirectFunction m_func;
@@ -238,12 +48,14 @@ namespace pr.gui
 		}
 		public ScintillaCtrl()
 		{
+			if (!DesignMode)
+				CreateHandle();
 		}
 		protected override CreateParams CreateParams
 		{
 			get
 			{
-				if (Util.IsInDesignMode)
+				if (DesignMode)
 					return base.CreateParams;
 
 				if (!Sci.ScintillaAvailable)
@@ -256,20 +68,23 @@ namespace pr.gui
 		}
 		protected override void OnHandleCreated(EventArgs e)
 		{
-			// Get the function pointer for direct calling the WndProc (rather than windows messages)
-			var ptr = Win32.SendMessage(Handle, Sci.SCI_GETDIRECTFUNCTION, IntPtr.Zero, IntPtr.Zero);
-			m_ptr  = Win32.SendMessage(Handle, Sci.SCI_GETDIRECTPOINTER, IntPtr.Zero, IntPtr.Zero);
-			m_func = Marshal_.PtrToDelegate<Sci.DirectFunction>(ptr);
+			if (!DesignMode)
+			{
+				// Get the function pointer for direct calling the WndProc (rather than windows messages)
+				var func = Win32.SendMessage(Handle, Sci.SCI_GETDIRECTFUNCTION, IntPtr.Zero, IntPtr.Zero);
+				m_ptr = Win32.SendMessage(Handle, Sci.SCI_GETDIRECTPOINTER, IntPtr.Zero, IntPtr.Zero);
+				m_func = Marshal_.PtrToDelegate<Sci.DirectFunction>(func);
 
-			// Reset the style
-			Cmd(Sci.SCI_SETCODEPAGE, Sci.SC_CP_UTF8, 0);
-			ClearAll();
-			ClearDocumentStyle();
-			StyleBits = 7;
-			Cmd(Sci.SCI_SETTABWIDTH, 4);
-			Cmd(Sci.SCI_SETINDENT, 4);
+				// Reset the style
+				CodePage = Sci.SC_CP_UTF8;
+				ClearAll();
+				ClearDocumentStyle();
+				StyleBits = 7;
+				TabWidth = 4;
+				Indent = 4;
 	
-			Cursor = Cursors.IBeam;
+				Cursor = Cursors.IBeam;
+			}
 			base.OnHandleCreated(e);
 		}
 		protected override void OnHandleDestroyed(EventArgs e)
@@ -285,6 +100,7 @@ namespace pr.gui
 			case Win32.WM_PAINT:
 				#region
 				{
+					if (DesignMode) break;
 					Cmd(Win32.WM_PAINT);
 					return;
 				}
@@ -321,6 +137,77 @@ namespace pr.gui
 			base.WndProc(ref m);
 		}
 
+		/// <summary>Initialise with reasonable default style</summary>
+		public void InitDefaultStyle()
+		{
+			CodePage = Sci.SC_CP_UTF8;
+			ClearDocumentStyle();
+			StyleBits = 7;
+			IndentationGuides = true;
+			TabWidth = 4;
+			Indent = 4;
+			CaretPeriod = 400;
+
+			// source folding section
+			// tell the lexer that we want folding information - the lexer supplies "folding levels"
+			Property("fold"                       , "1");
+			Property("fold.html"                  , "1");
+			Property("fold.html.preprocessor"     , "1");
+			Property("fold.comment"               , "1");
+			Property("fold.at.else"               , "1");
+			Property("fold.flags"                 , "1");
+			Property("fold.preprocessor"          , "1");
+			Property("styling.within.preprocessor", "1");
+			Property("asp.default.language"       , "1");
+
+			// Tell scintilla to draw folding lines UNDER the folded line
+			FoldFlags(16);
+
+			// Set margin 2 = folding margin to display folding symbols
+			MarginMaskN(2, Sci.SC_MASK_FOLDERS);
+
+			// allow notifications for folding actions
+			ModEventMask = Sci.SC_MOD_INSERTTEXT|Sci.SC_MOD_DELETETEXT;
+			//ModEventMask(SC_MOD_CHANGEFOLD|SC_MOD_INSERTTEXT|SC_MOD_DELETETEXT);
+
+			// make the folding margin sensitive to folding events = if you click into the margin you get a notification event
+			MarginSensitiveN(2, true);
+		
+			// define a set of markers to display folding symbols
+			MarkerDefine(Sci.SC_MARKNUM_FOLDEROPEN    , Sci.SC_MARK_MINUS);
+			MarkerDefine(Sci.SC_MARKNUM_FOLDER        , Sci.SC_MARK_PLUS);
+			MarkerDefine(Sci.SC_MARKNUM_FOLDERSUB     , Sci.SC_MARK_EMPTY);
+			MarkerDefine(Sci.SC_MARKNUM_FOLDERTAIL    , Sci.SC_MARK_EMPTY);
+			MarkerDefine(Sci.SC_MARKNUM_FOLDEREND     , Sci.SC_MARK_EMPTY);
+			MarkerDefine(Sci.SC_MARKNUM_FOLDEROPENMID , Sci.SC_MARK_EMPTY);
+			MarkerDefine(Sci.SC_MARKNUM_FOLDERMIDTAIL , Sci.SC_MARK_EMPTY);
+
+			// Set the foreground color for some styles
+			StyleSetFore(0 , new Colour32(0xFF, 0   ,0  ,0  ));
+			StyleSetFore(2 , new Colour32(0xFF, 0   ,64 ,0  ));
+			StyleSetFore(5 , new Colour32(0xFF, 0   ,0  ,255));
+			StyleSetFore(6 , new Colour32(0xFF, 200 ,20 ,0  ));
+			StyleSetFore(9 , new Colour32(0xFF, 0   ,0  ,255));
+			StyleSetFore(10, new Colour32(0xFF, 255 ,0  ,64 ));
+			StyleSetFore(11, new Colour32(0xFF, 0   ,0  ,0  ));
+
+			// Set the background color of brace highlights
+			StyleSetBack(Sci.STYLE_BRACELIGHT, new Colour32(0xFF, 0, 255, 0));
+		
+			// Set end of line mode to CRLF
+			ConvertEOLs(Sci.EEndOfLineMode.LF);
+			EOLMode = Sci.EEndOfLineMode.LF;
+			//   SndMsg<void>(SCI_SETVIEWEOL, TRUE, 0);
+
+			// set marker symbol for marker type 0 - bookmark
+			MarkerDefine(0, Sci.SC_MARK_CIRCLE);
+		
+			//// display all margins
+			//DisplayLinenumbers(TRUE);
+			//SetDisplayFolding(TRUE);
+			//SetDisplaySelection(TRUE);
+		}
+
 		/// <summary>Set up this control for Ldr script</summary>
 		public void InitLdrStyle(bool dark = false)
 		{
@@ -332,8 +219,8 @@ namespace pr.gui
 			Indent = 4;
 			CaretFore = dark ? 0xFFffffff : 0xFF000000;
 			CaretPeriod = 400;
-			ConvertEOLs(Sci.SC_EOL_LF);
-			EOLMode = Sci.SC_EOL_LF;
+			ConvertEOLs(Sci.EEndOfLineMode.LF);
+			EOLMode = Sci.EEndOfLineMode.LF;
 			Property("fold", "1");
 			MultipleSelection = true;
 			AdditionalSelectionTyping = true;
@@ -415,17 +302,17 @@ namespace pr.gui
 					#region Auto Indent
 					if (AutoIndent)
 					{
-						var lem = Cmd(Sci.SCI_GETEOLMODE);
+						var lem = EOLMode;
 						var lend =
-							(lem == Sci.SC_EOL_CR   && notif.ch == '\r') ||
-							(lem == Sci.SC_EOL_LF   && notif.ch == '\n') ||
-							(lem == Sci.SC_EOL_CRLF && notif.ch == '\n');
+							(lem == Sci.EEndOfLineMode.CR   && notif.ch == '\r') ||
+							(lem == Sci.EEndOfLineMode.LF   && notif.ch == '\n') ||
+							(lem == Sci.EEndOfLineMode.CRLF && notif.ch == '\n');
 						if (lend)
 						{
-							var line = Cmd(Sci.SCI_LINEFROMPOSITION, Cmd(Sci.SCI_GETCURRENTPOS));
-							var indent = line > 0 ? Cmd(Sci.SCI_GETLINEINDENTATION, line - 1) : 0;
-							Cmd(Sci.SCI_SETLINEINDENTATION, line, indent);
-							Cmd(Sci.SCI_GOTOPOS, Cmd(Sci.SCI_GETLINEENDPOSITION, line));
+							var line = LineFromPosition(CurrentPos);
+							var indent = line > 0 ? LineIndentation(line-1) : 0;
+							LineIndentation(line, indent);
+							GotoPos(FindColumn(line, indent));
 						}
 					}
 					#endregion
@@ -472,11 +359,12 @@ namespace pr.gui
 		}
 
 		/// <summary>Call the direct function</summary>
-		public int Cmd(int code, IntPtr wparam, IntPtr lparam)
+		public IntPtr CmdPtr(int code, IntPtr wparam, IntPtr lparam)
 		{
-			if (Handle == null) return 0;
+			if (m_func == null) return IntPtr.Zero;
 			return m_func(m_ptr, code, wparam, lparam);
 		}
+		public int Cmd(int code, IntPtr wparam, IntPtr lparam) { return (int)CmdPtr(code, wparam, lparam); }
 		public int Cmd(int code, int wparam, IntPtr lparam)    { return Cmd(code, (IntPtr)wparam, lparam); }
 		public int Cmd(int code, int wparam, int lparam)       { return Cmd(code, (IntPtr)wparam, (IntPtr)lparam); }
 		public int Cmd(int code, int wparam)                   { return Cmd(code, (IntPtr)wparam, IntPtr.Zero); }
@@ -513,6 +401,9 @@ namespace pr.gui
 		private string GetText()
 		{
 			var len = TextLength;
+			if (len == 0)
+				return string.Empty;
+
 			var bytes = new byte[len];
 			using (var h = GCHandleEx.Alloc(bytes, GCHandleType.Pinned))
 			{
@@ -528,7 +419,7 @@ namespace pr.gui
 				ClearAll();
 			else
 			{
-				// Convert the string to utf-8
+				// Convert the string to UTF-8
 				var bytes = Encoding.UTF8.GetBytes(text);
 				using (var h = GCHandleEx.Alloc(bytes, GCHandleType.Pinned))
 					Cmd(Sci.SCI_SETTEXT, 0, h.Handle.AddrOfPinnedObject());
@@ -540,13 +431,151 @@ namespace pr.gui
 		/// <summary>Raised when text in the control is changed</summary>
 		public new event EventHandler TextChanged;
 
+		/// <summary></summary>
+		public char GetCharAt(int pos)
+		{
+			return (char)(Cmd(Sci.SCI_GETCHARAT, pos) & 0xFF);
+		}
+
+		/// <summary>Return a line of text</summary>
+		public string GetLine(int line)
+		{
+			var len = LineLength(line);
+			var bytes = new byte[len];
+			using (var h = GCHandleEx.Alloc(bytes, GCHandleType.Pinned))
+			{
+				var num = Cmd(Sci.SCI_GETLINE, line, h.Handle.AddrOfPinnedObject());
+				return Encoding.UTF8.GetString(bytes, 0, num);
+			}
+		}
+
+		/// <summary></summary>
+		public int  LineCount
+		{
+			get { return Cmd(Sci.SCI_GETLINECOUNT); }
+		}
+
+		/// <summary></summary>
+		public Range TextRange
+		{
+			get
+			{
+				throw new NotImplementedException();
+				//Sci.TextRange tr;
+				//Cmd(Sci.SCI_GETTEXTRANGE, 0, &tr);
+			}
+		}
+
+		/// <summary></summary>
+		public void AppendText(string text)
+		{
+			// Convert the string to UTF-8
+			var bytes = Encoding.UTF8.GetBytes(text);
+			using (var h = GCHandleEx.Alloc(bytes, GCHandleType.Pinned))
+				Cmd(Sci.SCI_APPENDTEXT, bytes.Length, h.Handle.AddrOfPinnedObject());
+		}
+
+		/// <summary>Append text and style data to the document</summary>
+		public void AppendStyledText(Sci.CellBuf cells)
+		{
+			using (var c = cells.Pin())
+				Cmd(Sci.SCI_APPENDSTYLEDTEXT, c.SizeInBytes, c.Pointer);
+		}
+
+		/// <summary></summary>
+		public void InsertText(int pos, string text)
+		{
+			// Ensure null termination
+			var bytes = Encoding.UTF8.GetBytes(text + "\0");
+			using (var h = GCHandleEx.Alloc(bytes, GCHandleType.Pinned))
+				Cmd(Sci.SCI_INSERTTEXT, pos, h.Handle.AddrOfPinnedObject());
+		}
+
+		/// <summary></summary>
+		public void ReplaceSel(string text)
+		{
+			// Ensure null termination
+			var bytes = Encoding.UTF8.GetBytes(text + "\0");
+			using (var h = GCHandleEx.Alloc(bytes, GCHandleType.Pinned))
+				Cmd(Sci.SCI_REPLACESEL, 0, h.Handle.AddrOfPinnedObject());
+		}
+
+		/// <summary></summary>
+		public void AddText(string text)
+		{
+			var bytes = Encoding.UTF8.GetBytes(text);
+			using (var h = GCHandleEx.Alloc(bytes, GCHandleType.Pinned))
+				Cmd(Sci.SCI_ADDTEXT, bytes.Length, h.Handle.AddrOfPinnedObject());
+		}
+
+		/// <summary></summary>
+		public void AddStyledText(string text)
+		{
+			var bytes = Encoding.UTF8.GetBytes(text);
+			using (var h = GCHandleEx.Alloc(bytes, GCHandleType.Pinned))
+				Cmd(Sci.SCI_ADDSTYLEDTEXT, bytes.Length, h.Handle.AddrOfPinnedObject());
+		}
+
+		/// <summary>Insert text and style data into the document at 'pos'</summary>
+		public void InsertStyledText(int pos, Sci.CellBuf cells)
+		{
+			using (var c = cells.Pin())
+				Cmd(Sci.SCI_INSERTSTYLEDTEXT, pos, c.Pointer);
+		}
+
+		/// <summary>Delete a character range from the document</summary>
+		public void DeleteRange(int start, int length)
+		{
+			Cmd(Sci.SCI_DELETERANGE, start, length);
+		}
+
+		/// <summary></summary>
+		public int GetStyleAt(int pos)
+		{
+			return Cmd(Sci.SCI_GETSTYLEAT, pos);
+		}
+
+		/// <summary></summary>
+		public int GetStyledText(out Sci.TextRange tr)
+		{
+			throw new NotImplementedException();
+			//return Cmd(Sci.SCI_GETSTYLEDTEXT, 0, &tr);
+		}
+		public int GetStyledText(StringBuilder text, long first, long last)
+		{
+			throw new NotImplementedException();
+			//TxtRng tr(text, first, last);
+			//return Cmd(Sci.SCI_GETSTYLEDTEXT, 0, &tr);
+		}
+
 		/// <summary>Get/Set style bits</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public int StyleBits
 		{
 			get { return Cmd(Sci.SCI_GETSTYLEBITS); }
 			set {  Cmd(Sci.SCI_SETSTYLEBITS, value); }
 		}
 	
+		/// <summary></summary>
+		public int TargetAsUTF8(StringBuilder text)
+		{
+			throw new NotImplementedException();
+			//return Cmd(Sci.SCI_TARGETASUTF8, 0, text);
+		}
+
+		/// <summary></summary>
+		public int EncodedFromUTF8(byte[] utf8, byte[] encoded)
+		{
+			throw new NotImplementedException();
+			//return Cmd(Sci.SCI_ENCODEDFROMUTF8, (WPARAM)utf8, (LPARAM )encoded);
+		}
+
+		/// <summary></summary>
+		public void SetLengthForEncode(int bytes)
+		{
+			Cmd(Sci.SCI_SETLENGTHFORENCODE, bytes);
+		}
+
 		#endregion
 
 		#region Selection/Navigation
@@ -596,6 +625,7 @@ namespace pr.gui
 		}
 
 		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public int SelectionMode
 		{
 			get { return Cmd(Sci.SCI_GETSELECTIONMODE); }
@@ -603,6 +633,7 @@ namespace pr.gui
 		}
 
 		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public int CurrentPos
 		{
 			get { return Cmd(Sci.SCI_GETCURRENTPOS); }
@@ -610,6 +641,7 @@ namespace pr.gui
 		}
 
 		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public int SelectionStart
 		{
 			get { return Cmd(Sci.SCI_GETSELECTIONSTART); }
@@ -617,87 +649,155 @@ namespace pr.gui
 		}
 
 		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public int SelectionEnd
 		{
 			get { return Cmd(Sci.SCI_GETSELECTIONEND); }
 			set { Cmd(Sci.SCI_SETSELECTIONEND, value); }
 		}
 
-		/// <summary></summary>
+		/// <summary>Set the range of selected text</summary>
 		public void SetSel(int start, int end)
 		{
 			Cmd(Sci.SCI_SETSEL, start, end);
 		}
 
-		/// <summary></summary>
-		public int GetSelText(out string text)
+		/// <summary>
+		/// Returns the currently selected text. This method allows for rectangular and discontiguous
+		/// selections as well as simple selections. See Multiple Selection for information on how multiple
+		/// and rectangular selections and virtual space are copied.</summary>
+		public string GetSelText()
 		{
-			throw new NotImplementedException();
-			//return Cmd(Sci.SCI_GETSELTEXT, 0, text);
+			var len = Cmd(Sci.SCI_GETSELTEXT);
+			var buf = new byte[len];
+			using (var t = GCHandleEx.Alloc(buf, GCHandleType.Pinned))
+			{
+				len = Cmd(Sci.SCI_GETSELTEXT, 0, t.Handle.AddrOfPinnedObject());
+				return Encoding.UTF8.GetString(buf, 0, len);
+			}
 		}
 
-		public int GetCurLine(out string text, int length)
+		/// <summary>Retrieves the text of the line containing the caret and returns the position within the line of the caret.</summary>
+		public string GetCurLine(out int caret_offset)
 		{
-			throw new NotImplementedException();
-			//return Cmd(Sci.SCI_GETCURLINE, length, text);
+			var len = Cmd(Sci.SCI_GETCURLINE);
+			var buf = new byte[len];
+			using (var t = GCHandleEx.Alloc(buf, GCHandleType.Pinned))
+			{
+				caret_offset = Cmd(Sci.SCI_GETCURLINE, buf.Length, t.Handle.AddrOfPinnedObject());
+				return Encoding.UTF8.GetString(buf, 0, len);
+			}
 		}
+		public string GetCurLine()
+		{
+			int caret_offset;
+			return GetCurLine(out caret_offset);
+		}
+
+		/// <summary></summary>
 		public int GetLineSelStartPosition(int line)
 		{
 			return Cmd(Sci.SCI_GETLINESELSTARTPOSITION, line);
 		}
+
+		/// <summary></summary>
 		public int GetLineSelEndPosition(int line)
 		{
 			return Cmd(Sci.SCI_GETLINESELENDPOSITION, line);
 		}
-		public int GetFirstVisibleLine()
+
+		/// <summary>Get/Set the index of the first visible line</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public int FirstVisibleLine
 		{
-			return Cmd(Sci.SCI_GETFIRSTVISIBLELINE);
+			get { return Cmd(Sci.SCI_GETFIRSTVISIBLELINE); }
+			set { Cmd(Sci.SCI_SETFIRSTVISIBLELINE, value); }
 		}
-		public int LinesOnScreen()
+
+		/// <summary>Get the number of lines visible on screen</summary>
+		public int LinesOnScreen
 		{
-			return Cmd(Sci.SCI_LINESONSCREEN);
+			get { return Cmd(Sci.SCI_LINESONSCREEN); }
 		}
+
+		/// <summary></summary>
 		public bool GetModify()
 		{
 			return Cmd(Sci.SCI_GETMODIFY) != 0;
 		}
+
+		/// <summary>
+		/// Removes any selection, sets the caret at caret and scrolls the view to make the caret visible, if necessary.
+		/// It is equivalent to SCI_SETSEL(caret, caret). The anchor position is set the same as the current position.</summary>
 		public void GotoPos(int pos)
 		{
 			Cmd(Sci.SCI_GOTOPOS, pos);
 		}
+
+		/// <summary>
+		/// Removes any selection and sets the caret at the start of line number line and scrolls the view (if needed)
+		/// to make it visible. The anchor position is set the same as the current position. If line is outside the lines
+		/// in the document (first line is 0), the line set is the first or last.</summary>
 		public void GotoLine(int line)
 		{
 			Cmd(Sci.SCI_GOTOLINE, line);
 		}
+
+		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public new int Anchor
 		{
 			get { return Cmd(Sci.SCI_GETANCHOR); }
 			set { Cmd(Sci.SCI_SETANCHOR, value); }
 		}
+
+		/// <summary>Get the line index from a character index</summary>
 		public int LineFromPosition(int pos)
 		{
 			return Cmd(Sci.SCI_LINEFROMPOSITION, pos);
 		}
+
+		/// <summary>Return the character index for the start of 'line'</summary>
 		public int PositionFromLine(int line)
 		{
 			return Cmd(Sci.SCI_POSITIONFROMLINE, line);
 		}
+
+		/// <summary></summary>
 		public int GetLineEndPosition(int line)
 		{
 			return Cmd(Sci.SCI_GETLINEENDPOSITION, line);
 		}
+
+		/// <summary>Return the length of line 'line'</summary>
 		public int LineLength(int line)
 		{
 			return Cmd(Sci.SCI_LINELENGTH, line);
 		}
+
+		/// <summary>
+		/// Returns the column number of a position 'pos' within the document taking the width of tabs into account.
+		/// This returns the column number of the last tab on the line before pos, plus the number of characters between
+		/// the last tab and pos. If there are no tab characters on the line, the return value is the number of characters
+		/// up to the position on the line. In both cases, double byte characters count as a single character.
+		/// This is probably only useful with mono-spaced fonts.</summary>
 		public int GetColumn(int pos)
 		{
 			return Cmd(Sci.SCI_GETCOLUMN, pos);
+		}
+
+		/// <summary>
+		/// Returns the character position of a column on a line taking the width of tabs into account.
+		/// It treats a multi-byte character as a single column. Column numbers, like lines start at 0.</summary>
+		public int GetPos(int line, int column)
+		{
+			return FindColumn(line, column);
 		}
 		public int FindColumn(int line, int column)
 		{
 			return Cmd(Sci.SCI_FINDCOLUMN, line, column);
 		}
+
 		public int PositionFromPoint(int x, int y)
 		{
 			return Cmd(Sci.SCI_POSITIONFROMPOINT, x, y);
@@ -742,15 +842,27 @@ namespace pr.gui
 		{
 			return Cmd(Sci.SCI_POSITIONAFTER, pos);
 		}
+
+		/// <summary>
+		/// Returns the width (in pixels) of a string drawn in the given style.
+		/// Can be used, for example, to decide how wide to make the line number margin in order to display a given number of numerals.</summary>
 		public int TextWidth(int style, string text)
-		{ 
-			throw new NotImplementedException();
-			//return Cmd(Sci.SCI_TEXTWIDTH, style, text);
+		{
+			var text_bytes = Encoding.UTF8.GetBytes(text);
+			using (var t = GCHandleEx.Alloc(text_bytes, GCHandleType.Pinned))
+				return Cmd(Sci.SCI_TEXTWIDTH, style, t.Handle.AddrOfPinnedObject());
 		}
+
+		/// <summary>Returns the height (in pixels) of a particular line. Currently all lines are the same height.</summary>
 		public int TextHeight(int line)
 		{
 			return Cmd(Sci.SCI_TEXTHEIGHT, line);
 		}
+
+		/// <summary>
+		/// Scintilla remembers the x value of the last position horizontally moved to explicitly by the user
+		/// and this value is then used when moving vertically such as by using the up and down keys.
+		/// This message sets the current x position of the caret as the remembered value.</summary>
 		public void ChooseCaretX()
 		{
 			Cmd(Sci.SCI_CHOOSECARETX);
@@ -759,6 +871,7 @@ namespace pr.gui
 		/// <summary>
 		/// Enable/disable multiple selection. When multiple selection is disabled, it is not
 		/// possible to select multiple ranges by holding down the Ctrl key while dragging with the mouse.</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool MultipleSelection
 		{
 			get { return Cmd(Sci.SCI_GETMULTIPLESELECTION) != 0; }
@@ -766,6 +879,7 @@ namespace pr.gui
 		}
 		
 		/// <summary>Whether typing, backspace, or delete works with multiple selections simultaneously.</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool AdditionalSelectionTyping
 		{
 			get { return Cmd(Sci.SCI_GETADDITIONALSELECTIONTYPING) != 0; }
@@ -775,6 +889,7 @@ namespace pr.gui
 		/// <summary>
 		/// When pasting into multiple selections, the pasted text can go into just the main selection
 		/// with SC_MULTIPASTE_ONCE=0 or into each selection with SC_MULTIPASTE_EACH=1. SC_MULTIPASTE_ONCE is the default.</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public int MutliPaste
 		{
 			get { return Cmd(Sci.SCI_GETMULTIPASTE); }
@@ -785,6 +900,7 @@ namespace pr.gui
 		/// Virtual space can be enabled or disabled for rectangular selections or in other circumstances or in both.
 		/// There are two bit flags SCVS_RECTANGULARSELECTION=1 and SCVS_USERACCESSIBLE=2 which can be set independently.
 		/// SCVS_NONE=0, the default, disables all use of virtual space.</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public int VirtualSpace
 		{
 			get { return Cmd(Sci.SCI_GETVIRTUALSPACEOPTIONS); }
@@ -792,6 +908,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Insert/Overwrite</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool Overtype
 		{
 			get { return Cmd(Sci.SCI_GETOVERTYPE) != 0; }
@@ -801,8 +918,11 @@ namespace pr.gui
 		#endregion
 
 		#region Indenting
+
 		/// <summary>Enable/Disable auto indent mode</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool AutoIndent { get; set; }
+
 		#endregion
 
 		#region Cut, Copy And Paste
@@ -896,16 +1016,12 @@ namespace pr.gui
 			Cmd(Sci.SCI_EMPTYUNDOBUFFER);
 		}
 
-		/// <summary></summary>
-		public void SetUndoCollection(bool collectUndo)
+		/// <summary>Enable/Disable undo history collection</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public bool UndoCollection
 		{
-			Cmd(Sci.SCI_SETUNDOCOLLECTION, collectUndo ? 1 : 0);
-		}
-
-		/// <summary></summary>
-		public bool GetUndoCollection()
-		{
-			return Cmd(Sci.SCI_GETUNDOCOLLECTION) != 0;
+			get { return Cmd(Sci.SCI_GETUNDOCOLLECTION) != 0; }
+			set { Cmd(Sci.SCI_SETUNDOCOLLECTION, value ? 1 : 0); }
 		}
 
 		/// <summary></summary>
@@ -1029,8 +1145,8 @@ namespace pr.gui
 		public Scope<int> ScrollScope()
 		{
 			return Scope.Create(
-				() => Cmd(Sci.SCI_GETFIRSTVISIBLELINE),
-				fv => Cmd(Sci.SCI_SETFIRSTVISIBLELINE, fv));
+				() => FirstVisibleLine,
+				fv => FirstVisibleLine = fv);
 		}
 
 		/// <summary>Gets the range of visible lines</summary>
@@ -1042,6 +1158,77 @@ namespace pr.gui
 				var c = Cmd(Sci.SCI_LINESONSCREEN);
 				return new Range(s, s + c);
 			}
+		}
+
+		/// <summary></summary>
+		public void ScrollToLine(int line)
+		{
+			LineScroll( 0, line - LineFromPosition(CurrentPos));
+		}
+
+		/// <summary>Scroll the last line into view</summary>
+		public void ScrollToBottom()
+		{
+			// Move the caret to the end
+			Cmd(Sci.SCI_SETEMPTYSELECTION, Cmd(Sci.SCI_GETTEXTLENGTH));
+
+			// Only scroll if the last line isn't visible
+			var last_line_index = Cmd(Sci.SCI_LINEFROMPOSITION, Cmd(Sci.SCI_GETTEXTLENGTH));
+			var last_vis_line = Cmd(Sci.SCI_GETFIRSTVISIBLELINE) + Cmd(Sci.SCI_LINESONSCREEN);
+			if (last_line_index >= last_vis_line)
+				Cmd(Sci.SCI_SCROLLCARET);
+		}
+
+		/// <summary></summary>
+		public void LineScroll(int columns, int lines)
+		{
+			Cmd(Sci.SCI_LINESCROLL, columns, lines);
+		}
+
+		/// <summary></summary>
+		public void ScrollCaret()
+		{
+			Cmd(Sci.SCI_SCROLLCARET);
+		}
+
+		/// <summary>Get/Set horizontal scroll bar visibility</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public bool HScrollBar
+		{
+			get { return Cmd(Sci.SCI_GETHSCROLLBAR) != 0; }
+			set { Cmd(Sci.SCI_SETHSCROLLBAR, value ? 1 : 0); }
+		}
+
+		/// <summary>Get/Set vertical scroll bar visibility</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public bool VScrollBar
+		{
+			get { return Cmd(Sci.SCI_GETVSCROLLBAR) != 0; }
+			set { Cmd(Sci.SCI_SETVSCROLLBAR, value ? 1 : 0); }
+		}
+
+		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public int XOffset
+		{
+			get { return Cmd(Sci.SCI_GETXOFFSET); }
+			set { Cmd(Sci.SCI_SETXOFFSET, value); }
+		}
+
+		/// <summary>Scroll width (in pixels)</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public int ScrollWidth
+		{
+			get { return Cmd(Sci.SCI_GETSCROLLWIDTH); }
+			set { Cmd(Sci.SCI_SETSCROLLWIDTH, value); }
+		}
+
+		/// <summary>Allow/Disallow scrolling up to one page past the last line</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public bool EndAtLastLine
+		{
+			get { return Cmd(Sci.SCI_GETENDATLASTLINE) != 0; }
+			set { Cmd(Sci.SCI_SETENDATLASTLINE, value ? 1 : 0); }
 		}
 
 		#endregion
@@ -1056,20 +1243,22 @@ namespace pr.gui
 
 		#region End of Line
 
-		/// <summary></summary>
-		public int EOLMode
+		/// <summary>Get/Set the characters that are added into the document when the user presses the Enter key</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public Sci.EEndOfLineMode EOLMode
 		{
-			get { return Cmd(Sci.SCI_GETEOLMODE); }
-			set { Cmd(Sci.SCI_SETEOLMODE, value); }
+			get { return (Sci.EEndOfLineMode)Cmd(Sci.SCI_GETEOLMODE); }
+			set { Cmd(Sci.SCI_SETEOLMODE, (int)value); }
 		}
 
-		/// <summary></summary>
-		public void ConvertEOLs(int eolMode)
+		/// <summary>Changes all the end of line characters in the document to match 'mode'</summary>
+		public void ConvertEOLs(Sci.EEndOfLineMode mode)
 		{
-			Cmd(Sci.SCI_CONVERTEOLS, eolMode);
+			Cmd(Sci.SCI_CONVERTEOLS, (int)mode);
 		}
 
-		/// <summary></summary>
+		/// <summary>Get/Set whether EOL characters are visible</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool ViewEOL
 		{
 			get { return Cmd(Sci.SCI_GETVIEWEOL) != 0; }
@@ -1080,89 +1269,90 @@ namespace pr.gui
 
 		#region Style
 
-		/// <summary></summary>
+		/// <summary>Clear all styles</summary>
 		public void StyleClearAll()
 		{
 			Cmd(Sci.SCI_STYLECLEARALL);
 		}
 
-		/// <summary></summary>
-		public void StyleSetFont(int style, string fontName)
+		/// <summary>Set the font for style index 'idx'</summary>
+		public void StyleSetFont(int idx, string font_name)
 		{
-			throw new NotImplementedException();
-			//Cmd(Sci.SCI_STYLESETFONT, style, fontName);
+			var bytes = Encoding.UTF8.GetBytes(font_name);
+			using (var handle = GCHandleEx.Alloc(bytes, GCHandleType.Pinned))
+				Cmd(Sci.SCI_STYLESETFONT, idx, handle.Handle.AddrOfPinnedObject());
+		}
+
+		/// <summary>Set the font size for style index 'idx'</summary>
+		public void StyleSetSize(int idx, int sizePoints)
+		{
+			Cmd(Sci.SCI_STYLESETSIZE, idx, sizePoints);
+		}
+
+		/// <summary>Set bold or regular for style index 'idx'</summary>
+		public void StyleSetBold(int idx, bool bold)
+		{
+			Cmd(Sci.SCI_STYLESETBOLD, idx, bold ? 1 : 0);
 		}
 
 		/// <summary></summary>
-		public void StyleSetSize(int style, int sizePoints)
+		public void StyleSetItalic(int idx, bool italic)
 		{
-			Cmd(Sci.SCI_STYLESETSIZE, style, sizePoints);
+			Cmd(Sci.SCI_STYLESETITALIC, idx, italic ? 1 : 0);
+		}
+
+		/// <summary>Set underlined for style index 'idx'</summary>
+		public void StyleSetUnderline(int idx, bool underline)
+		{
+			Cmd(Sci.SCI_STYLESETUNDERLINE, idx, underline ? 1 : 0);
+		}
+
+		/// <summary>Set the text colour for style index 'idx'</summary>
+		public void StyleSetFore(int idx, Colour32 fore)
+		{
+			Cmd(Sci.SCI_STYLESETFORE, idx, (int)(fore.ARGB & 0x00FFFFFF));
+		}
+
+		/// <summary>Set the background colour for style index 'idx'</summary>
+		public void StyleSetBack(int idx, Colour32 back)
+		{
+			Cmd(Sci.SCI_STYLESETBACK, idx, (int)(back.ARGB & 0x00FFFFFF));
 		}
 
 		/// <summary></summary>
-		public void StyleSetBold(int style, bool bold)
+		public void StyleSetEOLFilled(int idx, bool filled)
 		{
-			Cmd(Sci.SCI_STYLESETBOLD, style, bold ? 1 : 0);
+			Cmd(Sci.SCI_STYLESETEOLFILLED, idx, filled ? 1 : 0);
 		}
 
 		/// <summary></summary>
-		public void StyleSetItalic(int style, bool italic)
+		public void StyleSetCharacterSet(int idx, int characterSet)
 		{
-			Cmd(Sci.SCI_STYLESETITALIC, style, italic ? 1 : 0);
+			Cmd(Sci.SCI_STYLESETCHARACTERSET, idx, characterSet);
 		}
 
 		/// <summary></summary>
-		public void StyleSetUnderline(int style, bool underline)
+		public void StyleSetCase(int idx, int caseForce)
 		{
-			Cmd(Sci.SCI_STYLESETUNDERLINE, style, underline ? 1 : 0);
+			Cmd(Sci.SCI_STYLESETCASE, idx, caseForce);
 		}
 
 		/// <summary></summary>
-		public void StyleSetFore(int style, Colour32 fore)
+		public void StyleSetVisible(int idx, bool visible)
 		{
-			Cmd(Sci.SCI_STYLESETFORE, style, (int)fore.ARGB);
+			Cmd(Sci.SCI_STYLESETVISIBLE, idx, visible ? 1 : 0);
 		}
 
 		/// <summary></summary>
-		public void StyleSetBack(int style, Colour32 back)
+		public void StyleSetChangeable(int idx, bool changeable)
 		{
-			Cmd(Sci.SCI_STYLESETBACK, style, (int)back.ARGB);
+			Cmd(Sci.SCI_STYLESETCHANGEABLE, idx, changeable ? 1 : 0);
 		}
 
 		/// <summary></summary>
-		public void StyleSetEOLFilled(int style, bool filled)
+		public void StyleSetHotSpot(int idx, bool hotspot)
 		{
-			Cmd(Sci.SCI_STYLESETEOLFILLED, style, filled ? 1 : 0);
-		}
-
-		/// <summary></summary>
-		public void StyleSetCharacterSet(int style, int characterSet)
-		{
-			Cmd(Sci.SCI_STYLESETCHARACTERSET, style, characterSet);
-		}
-
-		/// <summary></summary>
-		public void StyleSetCase(int style, int caseForce)
-		{
-			Cmd(Sci.SCI_STYLESETCASE, style, caseForce);
-		}
-
-		/// <summary></summary>
-		public void StyleSetVisible(int style, bool visible)
-		{
-			Cmd(Sci.SCI_STYLESETVISIBLE, style, visible ? 1 : 0);
-		}
-
-		/// <summary></summary>
-		public void StyleSetChangeable(int style, bool changeable)
-		{
-			Cmd(Sci.SCI_STYLESETCHANGEABLE, style, changeable ? 1 : 0);
-		}
-
-		/// <summary></summary>
-		public void StyleSetHotSpot(int style, bool hotspot)
-		{
-			Cmd(Sci.SCI_STYLESETHOTSPOT, style, hotspot ? 1 : 0);
+			Cmd(Sci.SCI_STYLESETHOTSPOT, idx, hotspot ? 1 : 0);
 		}
 
 		/// <summary></summary>
@@ -1262,6 +1452,7 @@ namespace pr.gui
 		}
 
 		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool CaretLineVisible
 		{
 			get { return Cmd(Sci.SCI_GETCARETLINEVISIBLE) != 0; }
@@ -1276,6 +1467,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Caret blink period (in ms)</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public int CaretPeriod
 		{
 			get { return Cmd(Sci.SCI_GETCARETPERIOD); }
@@ -1283,6 +1475,7 @@ namespace pr.gui
 		}
 
 		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public int CaretWidth
 		{
 			get { return Cmd(Sci.SCI_GETCARETWIDTH); }
@@ -1290,6 +1483,7 @@ namespace pr.gui
 		}
 
 		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool CaretSticky
 		{
 			get { return Cmd(Sci.SCI_GETCARETSTICKY) != 0; }
@@ -1405,6 +1599,7 @@ namespace pr.gui
 		}
 
 		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public int MarginRight
 		{
 			get { return Cmd(Sci.SCI_GETMARGINRIGHT); }
@@ -1437,7 +1632,11 @@ namespace pr.gui
 
 		#region Tabs
 
-		/// <summary>Tab width</summary>
+		/// <summary>
+		/// Gets/Sets the size of a tab as a multiple of the size of a space character in STYLE_DEFAULT.
+		/// The default tab width is 8 characters. There are no limits on tab sizes, but values less than
+		/// 1 or large values may have undesirable effects.</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public int TabWidth
 		{
 			get { return Cmd(Sci.SCI_GETTABWIDTH); }
@@ -1445,27 +1644,34 @@ namespace pr.gui
 		}
 
 		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool UseTabs
 		{
 			get { return Cmd(Sci.SCI_GETUSETABS) != 0; }
 			set { Cmd(Sci.SCI_SETUSETABS, value ? 1 : 0); }
 		}
 
-		/// <summary></summary>
+		/// <summary>
+		/// Gets/Sets the size of indentation in terms of the width of a space in STYLE_DEFAULT.
+		/// If you set a width of 0, the indent size is the same as the tab size. There are no limits
+		/// on indent sizes, but values less than 0 or large values may have undesirable effects.</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public int Indent
 		{
 			get { return Cmd(Sci.SCI_GETINDENT); }
 			set { Cmd(Sci.SCI_SETINDENT, value); }
 		}
 
-		/// <summary></summary>
+		/// <summary>Inside indentation white space, gets/sets whether the tab key indents rather than inserts a tab character.</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool TabIndents
 		{
 			get { return Cmd(Sci.SCI_GETTABINDENTS) != 0; }
 			set { Cmd(Sci.SCI_SETTABINDENTS, value ? 1 : 0); }
 		}
 
-		/// <summary></summary>
+		/// <summary>Inside indentation white space, gets/sets whether the delete key un-indents rather than deletes a tab character.</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool BackSpaceUnIndents
 		{
 			get { return Cmd(Sci.SCI_GETBACKSPACEUNINDENTS) != 0; }
@@ -1489,6 +1695,7 @@ namespace pr.gui
 		}
 
 		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool IndentationGuides
 		{
 			get { return Cmd(Sci.SCI_GETINDENTATIONGUIDES) != 0; }
@@ -1496,6 +1703,7 @@ namespace pr.gui
 		}
 
 		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public int HighlightGuide
 		{
 			get { return Cmd(Sci.SCI_GETHIGHLIGHTGUIDE); }
@@ -1587,9 +1795,323 @@ namespace pr.gui
 
 		#endregion
 
+		#region Context Menu
+
+		/// <summary>Set whether the built-in context menu is used</summary>
+		public bool UsePopUp
+		{
+			set { Cmd(Sci.SCI_USEPOPUP, value ? 1 : 0); }
+		}
+
+		#endregion
+
+		#region Macro Recording
+
+		/// <summary></summary>
+		public void StartRecord()
+		{
+			Cmd(Sci.SCI_STARTRECORD);
+		}
+
+		/// <summary></summary>
+		public void StopRecord()
+		{
+			Cmd(Sci.SCI_STOPRECORD);
+		}
+
+		#endregion
+
+		#region Printing
+
+		/// <summary></summary>
+		public int FormatRange(bool draw, out Sci.RangeToFormat fr)
+		{
+			throw new NotImplementedException();
+			//return Cmd(Sci.SCI_FORMATRANGE, draw, &fr);
+		}
+
+		/// <summary></summary>
+		public int GetPrintMagnification()
+		{
+			return Cmd(Sci.SCI_GETPRINTMAGNIFICATION);
+		}
+
+		/// <summary></summary>
+		public void SetPrintMagnification(int magnification)
+		{
+			Cmd(Sci.SCI_SETPRINTMAGNIFICATION, magnification);
+		}
+
+		/// <summary></summary>
+		public int GetPrintColourMode()
+		{
+			return Cmd(Sci.SCI_GETPRINTCOLOURMODE);
+		}
+
+		/// <summary></summary>
+		public void SetPrintColourMode(int mode)
+		{
+			Cmd(Sci.SCI_SETPRINTCOLOURMODE, mode);
+		}
+
+		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public int PrintWrapMode
+		{
+			get { return Cmd(Sci.SCI_GETPRINTWRAPMODE); }
+			set { Cmd(Sci.SCI_SETPRINTWRAPMODE, value); }
+		}
+
+		#endregion
+
+		#region Multiple Views
+
+		public IntPtr GetDocPointer()
+		{
+			return CmdPtr(Sci.SCI_GETDOCPOINTER, IntPtr.Zero, IntPtr.Zero);
+		}
+		public void SetDocPointer(IntPtr pointer)
+		{
+			CmdPtr(Sci.SCI_SETDOCPOINTER, IntPtr.Zero, pointer);
+		}
+		public IntPtr CreateDocument()
+		{
+			return CmdPtr(Sci.SCI_CREATEDOCUMENT, IntPtr.Zero, IntPtr.Zero);
+		}
+		public void AddRefDocument(IntPtr doc)
+		{
+			CmdPtr(Sci.SCI_ADDREFDOCUMENT, IntPtr.Zero, doc);
+		}
+		public void ReleaseDocument(IntPtr doc)
+		{
+			CmdPtr(Sci.SCI_RELEASEDOCUMENT, IntPtr.Zero, doc);
+		}
+
+		#endregion
+
+		#region Folding
+
+		/// <summary></summary>
+		public int VisibleFromDocLine(int line)
+		{
+			return Cmd(Sci.SCI_VISIBLEFROMDOCLINE, line);
+		}
+
+		/// <summary></summary>
+		public int DocLineFromVisible(int lineDisplay)
+		{
+			return Cmd(Sci.SCI_DOCLINEFROMVISIBLE, lineDisplay);
+		}
+
+		/// <summary></summary>
+		public void ShowLines(int lineStart, int lineEnd)
+		{
+			Cmd(Sci.SCI_SHOWLINES, lineStart, lineEnd);
+		}
+
+		/// <summary></summary>
+		public void HideLines(int lineStart, int lineEnd)
+		{
+			Cmd(Sci.SCI_HIDELINES, lineStart, lineEnd);
+		}
+
+		/// <summary></summary>
+		public bool GetLineVisible(int line)
+		{
+			return Cmd(Sci.SCI_GETLINEVISIBLE, line) != 0;
+		}
+
+		/// <summary></summary>
+		public int FoldLevel(int line)
+		{
+			return Cmd(Sci.SCI_GETFOLDLEVEL, line);
+		}
+
+		/// <summary></summary>
+		public void FoldLevel(int line, int level)
+		{
+			Cmd(Sci.SCI_SETFOLDLEVEL, line, level);
+		}
+
+		/// <summary></summary>
+		public void FoldFlags(int flags)
+		{
+			Cmd(Sci.SCI_SETFOLDFLAGS, flags);
+		}
+
+		/// <summary></summary>
+		public int GetLastChild(int line, int level)
+		{
+			return Cmd(Sci.SCI_GETLASTCHILD, line, level);
+		}
+
+		/// <summary></summary>
+		public int GetFoldParent(int line)
+		{
+			return Cmd(Sci.SCI_GETFOLDPARENT, line);
+		}
+
+		/// <summary></summary>
+		public bool FoldExpanded(int line)
+		{
+			return Cmd(Sci.SCI_GETFOLDEXPANDED, line) != 0;
+		}
+
+		/// <summary></summary>
+		public void FoldExpanded(int line, bool expanded)
+		{
+			Cmd(Sci.SCI_SETFOLDEXPANDED, line, expanded ? 1 : 0);
+		}
+
+		/// <summary></summary>
+		public void ToggleFold(int line)
+		{
+			Cmd(Sci.SCI_TOGGLEFOLD, line);
+		}
+
+		/// <summary></summary>
+		public void EnsureVisible(int line)
+		{
+			Cmd(Sci.SCI_ENSUREVISIBLE, line);
+		}
+
+		/// <summary></summary>
+		public void EnsureVisibleEnforcePolicy(int line)
+		{
+			Cmd(Sci.SCI_ENSUREVISIBLEENFORCEPOLICY, line);
+		}
+
+		/// <summary></summary>
+		public void SetFoldMarginColour(bool useSetting, Colour32 back)
+		{
+			Cmd(Sci.SCI_SETFOLDMARGINCOLOUR, useSetting ? 1 : 0, (int)(back.ARGB & 0x00FFFFFF));
+		}
+
+		/// <summary></summary>
+		public void SetFoldMarginHiColour(bool useSetting, Colour32 fore)
+		{
+			Cmd(Sci.SCI_SETFOLDMARGINHICOLOUR, useSetting ? 1 : 0, (int)(fore.ARGB & 0x00FFFFFF));
+		}
+
+		#endregion
+
+		#region Line Wrapping
+
+		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public int WrapMode
+		{
+			get { return Cmd(Sci.SCI_GETWRAPMODE); }
+			set { Cmd(Sci.SCI_SETWRAPMODE, value); }
+		}
+
+		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public int WrapVisualFlags
+		{
+			get { return Cmd(Sci.SCI_GETWRAPVISUALFLAGS); }
+			set { Cmd(Sci.SCI_SETWRAPVISUALFLAGS, value); }
+		}
+
+		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public int WrapVisualFlagsLocation
+		{
+			get { return Cmd(Sci.SCI_GETWRAPVISUALFLAGSLOCATION); }
+			set { Cmd(Sci.SCI_SETWRAPVISUALFLAGSLOCATION, value); }
+		}
+
+		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public int WrapStartIndent
+		{
+			get { return Cmd(Sci.SCI_GETWRAPSTARTINDENT); }
+			set { Cmd(Sci.SCI_SETWRAPSTARTINDENT, value); }
+		}
+
+		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public int LayoutCache
+		{
+			get { return Cmd(Sci.SCI_GETLAYOUTCACHE); }
+			set { Cmd(Sci.SCI_SETLAYOUTCACHE, value); }
+		}
+
+		/// <summary></summary>
+		public void LinesSplit(int pixelWidth)
+		{
+			Cmd(Sci.SCI_LINESSPLIT, pixelWidth);
+		}
+
+		/// <summary></summary>
+		public void LinesJoin()
+		{
+			Cmd(Sci.SCI_LINESJOIN);
+		}
+
+		/// <summary></summary>
+		public int WrapCount(int line)
+		{
+			return Cmd(Sci.SCI_WRAPCOUNT, line);
+		}
+
+		#endregion
+
+		#region Zooming
+
+		/// <summary></summary>
+		public void ZoomIn()
+		{
+			Cmd(Sci.SCI_ZOOMIN);
+		}
+
+		/// <summary></summary>
+		public void ZoomOut()
+		{
+			Cmd(Sci.SCI_ZOOMOUT);
+		}
+
+		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public int Zoom
+		{
+			get { return Cmd(Sci.SCI_GETZOOM); }
+			set { Cmd(Sci.SCI_SETZOOM, value); }
+		}
+
+		#endregion
+
+		#region Long Lines
+
+		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public int EdgeMode
+		{
+			get { return Cmd(Sci.SCI_GETEDGEMODE); }
+			set { Cmd(Sci.SCI_SETEDGEMODE, value); }
+		}
+
+		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public int EdgeColumn
+		{
+			get { return Cmd(Sci.SCI_GETEDGECOLUMN); }
+			set { Cmd(Sci.SCI_SETEDGECOLUMN, value); }
+		}
+
+		/// <summary></summary>
+		public Colour32 EdgeColour
+		{
+			get { return new Colour32((uint)(0xFF000000 | Cmd(Sci.SCI_GETEDGECOLOUR))); }
+			set { Cmd(Sci.SCI_SETEDGECOLOUR, (int)(value.ARGB & 0x00FFFFFF)); }
+		}
+
+		#endregion
+
 		#region Lexer
 
 		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public int Lexer
 		{
 			get { return Cmd(Sci.SCI_GETLEXER); }
@@ -1621,13 +2143,25 @@ namespace pr.gui
 		/// <summary>Get/Set a property by key</summary>
 		public string Property(string key)
 		{
-			throw new NotImplementedException();
-			//todo return Cmd(Sci.SCI_GETPROPERTY, key, buf );
+			var key_bytes = Encoding.UTF8.GetBytes(key);
+			using (var k = GCHandleEx.Alloc(key_bytes, GCHandleType.Pinned))
+			{
+				var len = Cmd(Sci.SCI_GETPROPERTY, k.Handle.AddrOfPinnedObject(), IntPtr.Zero);
+				var buf = new byte[len + 1];
+				using (var b = GCHandleEx.Alloc(buf, GCHandleType.Pinned))
+				{
+					len = Cmd(Sci.SCI_GETPROPERTY, k.Handle.AddrOfPinnedObject(), b.Handle.AddrOfPinnedObject());
+					return Encoding.UTF8.GetString(buf, 0, len);
+				}
+			}
 		}
 		public void Property(string key, string value)
 		{
-			throw new NotImplementedException();
-			//todo Cmd(Sci.SCI_SETPROPERTY, key, value);
+			var key_bytes = Encoding.UTF8.GetBytes(key);
+			var val_bytes = Encoding.UTF8.GetBytes(value);
+			using (var k = GCHandleEx.Alloc(key_bytes, GCHandleType.Pinned))
+			using (var v = GCHandleEx.Alloc(val_bytes, GCHandleType.Pinned))
+				Cmd(Sci.SCI_SETPROPERTY, k.Handle.AddrOfPinnedObject(), v.Handle.AddrOfPinnedObject());
 		}
 		public string PropertyExpanded(string key)
 		{
@@ -1657,6 +2191,26 @@ namespace pr.gui
 
 		#endregion
 
+		#region Notifications
+
+		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public int ModEventMask
+		{
+			get { return Cmd(Sci.SCI_GETMODEVENTMASK); }
+			set { Cmd(Sci.SCI_SETMODEVENTMASK, value); }
+		}
+
+		/// <summary>(in ms)</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public int MouseDwellTime
+		{
+			get { return Cmd(Sci.SCI_GETMOUSEDWELLTIME); }
+			set { Cmd(Sci.SCI_SETMOUSEDWELLTIME, value); }
+		}
+
+		#endregion
+
 		#region Misc
 
 		/// <summary></summary>
@@ -1672,6 +2226,7 @@ namespace pr.gui
 		}
 
 		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool BufferedDraw
 		{
 			get { return Cmd(Sci.SCI_GETBUFFEREDDRAW) != 0; }
@@ -1679,6 +2234,7 @@ namespace pr.gui
 		}
 
 		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool TwoPhaseDraw
 		{
 			get { return Cmd(Sci.SCI_GETTWOPHASEDRAW) != 0; }
@@ -1686,6 +2242,7 @@ namespace pr.gui
 		}
 
 		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public int CodePage
 		{
 			get { return Cmd(Sci.SCI_GETCODEPAGE); }
@@ -1719,6 +2276,7 @@ namespace pr.gui
 		}
 
 		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public new bool Focus
 		{
 			get { return Cmd(Sci.SCI_GETFOCUS) != 0; }
@@ -1726,6 +2284,7 @@ namespace pr.gui
 		}
 
 		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool ReadOnly
 		{
 			get { return Cmd(Sci.SCI_GETREADONLY) != 0; }
@@ -1737,6 +2296,7 @@ namespace pr.gui
 		#region Status/Errors
 
 		/// <summary></summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public int Status
 		{
 			get { return Cmd(Sci.SCI_GETSTATUS); }
