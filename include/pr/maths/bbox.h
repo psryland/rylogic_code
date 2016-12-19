@@ -7,6 +7,7 @@
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
 #include "pr/maths/vector4.h"
+#include "pr/maths/matrix3x3.h"
 #include "pr/maths/matrix4x4.h"
 #include "pr/maths/plane.h"
 #include "pr/maths/bsphere.h"
@@ -200,6 +201,19 @@ namespace pr
 
 		BBox bb(m.pos, v4Zero);
 		m4x4 mat = Transpose3x3(m);
+		for (int i = 0; i != 3; ++i)
+		{
+			bb.m_centre[i] += Dot4(    mat[i] , rhs.m_centre);
+			bb.m_radius[i] += Dot4(Abs(mat[i]), rhs.m_radius);
+		}
+		return bb;
+	}
+	inline BBox pr_vectorcall operator * (m3x4_cref m, BBox_cref rhs)
+	{
+		assert("Transforming an invalid bounding box" && !rhs.empty());
+
+		BBox bb(v4Origin, v4Zero);
+		auto mat = Transpose(m);
 		for (int i = 0; i != 3; ++i)
 		{
 			bb.m_centre[i] += Dot4(    mat[i] , rhs.m_centre);

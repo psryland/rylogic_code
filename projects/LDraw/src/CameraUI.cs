@@ -29,6 +29,15 @@ namespace LDraw
 		private Label m_lbl_fovY;
 		private Button m_btn_close;
 		private Button m_btn_hidden;
+		private CheckBox m_chk_preserve_aspect;
+		private Label m_lbl_aspect_ratio;
+		private ValueBox m_tb_aspect;
+		private ValueBox m_tb_zoom;
+		private Label m_lbl_zoom;
+		private ValueBox m_tb_near;
+		private Label m_lbl_near;
+		private ValueBox m_tb_far;
+		private Label m_lbl_far;
 		private Timer m_timer;
 		#endregion
 
@@ -84,6 +93,18 @@ namespace LDraw
 				m_main_ui.Invalidate();
 			};
 
+			// Focus distance
+			m_tb_focus_dist.Value = Camera.FocusDist;
+			m_tb_focus_dist.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0; };
+			m_tb_focus_dist.ValueChanged += (s,a) =>
+			{
+				if (!m_tb_focus_dist.Focused) return;
+				var pt = Camera.FocusPoint;
+				Camera.FocusDist = (float)m_tb_focus_dist.Value;
+				Camera.FocusPoint = pt;
+				m_main_ui.Invalidate();
+			};
+
 			// Camera forward
 			m_tb_camera_fwd.Value = -Camera.O2W.z;
 			m_tb_camera_fwd.ValidateText = s => v4.TryParse3(s, 0f) != null;
@@ -98,13 +119,48 @@ namespace LDraw
 			m_tb_camera_up.ValueToText = x => ((v4)x).ToString3();
 			m_tb_camera_up.ReadOnly = true;
 
+			// Zoom
+			m_tb_zoom.Value = Camera.Zoom;
+			m_tb_zoom.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value >= 0; };
+			m_tb_zoom.ValueChanged += (s,a) =>
+			{
+				if (!m_tb_zoom.Focused) return;
+				Camera.Zoom = (float)m_tb_zoom.Value;
+				m_main_ui.Invalidate();
+			};
+
+			// Near
+			m_tb_near.Value = Camera.NearPlane;
+			m_tb_near.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value >= 0 && v.Value < Camera.FarPlane; };
+			m_tb_near.ValueChanged += (s,a) =>
+			{
+				if (!m_tb_near.Focused) return;
+				Camera.NearPlane = (float)m_tb_near.Value;
+				m_main_ui.Invalidate();
+			};
+
+			// Far
+			m_tb_far.Value = Camera.FarPlane;
+			m_tb_far.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value >= 0 && v.Value > Camera.NearPlane; };
+			m_tb_far.ValueChanged += (s,a) =>
+			{
+				if (!m_tb_far.Focused) return;
+				Camera.FarPlane = (float)m_tb_far.Value;
+				m_main_ui.Invalidate();
+			};
+
 			// FovX
 			m_tb_fovX.Value = Camera.FovX;
 			m_tb_fovX.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0 && v.Value < Maths.TauBy2; };
 			m_tb_fovX.ValueChanged += (s,a) =>
 			{
 				if (!m_tb_fovX.Focused) return;
-				Camera.FovX = (float)m_tb_fovX.Value;
+
+				if (m_chk_preserve_aspect.Checked)
+					Camera.FovX = (float)m_tb_fovX.Value;
+				else
+					Camera.SetFov((float)m_tb_fovY.Value, Camera.FovY);
+
 				m_main_ui.Invalidate();
 			};
 
@@ -114,19 +170,27 @@ namespace LDraw
 			m_tb_fovY.ValueChanged += (s,a) =>
 			{
 				if (!m_tb_fovY.Focused) return;
-				Camera.FovY = (float)m_tb_fovY.Value;
+
+				if (m_chk_preserve_aspect.Checked)
+					Camera.FovY = (float)m_tb_fovY.Value;
+				else
+					Camera.SetFov(Camera.FovX, (float)m_tb_fovY.Value);
+
 				m_main_ui.Invalidate();
 			};
 
-			// Focus distance
-			m_tb_focus_dist.Value = Camera.FocusDist;
-			m_tb_focus_dist.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0; };
-			m_tb_focus_dist.ValueChanged += (s,a) =>
+			// Aspect ratio
+			m_tb_aspect.Value = Camera.Aspect;
+			m_tb_aspect.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0; };
+			m_tb_aspect.ValueChanged += (s,a) =>
 			{
-				if (!m_tb_focus_dist.Focused) return;
-				Camera.FocusDist = (float)m_tb_focus_dist.Value;
+				if (!m_tb_aspect.Focused) return;
+				Camera.Aspect = (float)m_tb_aspect.Value;
 				m_main_ui.Invalidate();
 			};
+
+			// Preserve aspect
+			m_chk_preserve_aspect.Checked = true;
 		}
 
 		/// <summary>Update up UI Elements</summary>
@@ -140,11 +204,15 @@ namespace LDraw
 			};
 
 			Update(m_tb_focus_point, Camera.FocusPoint);
+			Update(m_tb_focus_dist, Camera.FocusDist);
 			Update(m_tb_camera_fwd, -Camera.O2W.z);
 			Update(m_tb_camera_up, Camera.O2W.y);
+			Update(m_tb_zoom, Camera.Zoom);
+			Update(m_tb_near, Camera.NearPlane);
+			Update(m_tb_far, Camera.FarPlane);
 			Update(m_tb_fovX, Camera.FovX);
 			Update(m_tb_fovY, Camera.FovY);
-			Update(m_tb_focus_dist, Camera.FocusDist);
+			Update(m_tb_aspect, Camera.Aspect);
 		}
 
 		#region Windows Form Designer generated code
@@ -167,6 +235,15 @@ namespace LDraw
 			this.m_tb_camera_fwd = new pr.gui.ValueBox();
 			this.m_tb_camera_up = new pr.gui.ValueBox();
 			this.m_tb_focus_point = new pr.gui.ValueBox();
+			this.m_chk_preserve_aspect = new System.Windows.Forms.CheckBox();
+			this.m_lbl_aspect_ratio = new System.Windows.Forms.Label();
+			this.m_tb_aspect = new pr.gui.ValueBox();
+			this.m_tb_zoom = new pr.gui.ValueBox();
+			this.m_lbl_zoom = new System.Windows.Forms.Label();
+			this.m_tb_near = new pr.gui.ValueBox();
+			this.m_lbl_near = new System.Windows.Forms.Label();
+			this.m_tb_far = new pr.gui.ValueBox();
+			this.m_lbl_far = new System.Windows.Forms.Label();
 			this.SuspendLayout();
 			// 
 			// m_lbl_focus_point
@@ -203,17 +280,17 @@ namespace LDraw
 			// 
 			this.m_btn_close.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_close.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this.m_btn_close.Location = new System.Drawing.Point(208, 184);
+			this.m_btn_close.Location = new System.Drawing.Point(145, 307);
 			this.m_btn_close.Name = "m_btn_close";
 			this.m_btn_close.Size = new System.Drawing.Size(100, 28);
-			this.m_btn_close.TabIndex = 6;
+			this.m_btn_close.TabIndex = 8;
 			this.m_btn_close.Text = "Close";
 			this.m_btn_close.UseVisualStyleBackColor = true;
 			// 
 			// m_lbl_fovX
 			// 
 			this.m_lbl_fovX.AutoSize = true;
-			this.m_lbl_fovX.Location = new System.Drawing.Point(28, 127);
+			this.m_lbl_fovX.Location = new System.Drawing.Point(28, 203);
 			this.m_lbl_fovX.Name = "m_lbl_fovX";
 			this.m_lbl_fovX.Size = new System.Drawing.Size(80, 13);
 			this.m_lbl_fovX.TabIndex = 8;
@@ -223,7 +300,7 @@ namespace LDraw
 			// m_lbl_fovY
 			// 
 			this.m_lbl_fovY.AutoSize = true;
-			this.m_lbl_fovY.Location = new System.Drawing.Point(28, 156);
+			this.m_lbl_fovY.Location = new System.Drawing.Point(28, 232);
 			this.m_lbl_fovY.Name = "m_lbl_fovY";
 			this.m_lbl_fovY.Size = new System.Drawing.Size(80, 13);
 			this.m_lbl_fovY.TabIndex = 10;
@@ -243,7 +320,7 @@ namespace LDraw
 			// m_btn_hidden
 			// 
 			this.m_btn_hidden.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-			this.m_btn_hidden.Location = new System.Drawing.Point(11, 184);
+			this.m_btn_hidden.Location = new System.Drawing.Point(11, 307);
 			this.m_btn_hidden.Name = "m_btn_hidden";
 			this.m_btn_hidden.Size = new System.Drawing.Size(121, 28);
 			this.m_btn_hidden.TabIndex = 13;
@@ -262,8 +339,9 @@ namespace LDraw
 			this.m_tb_focus_dist.ForeColorValid = System.Drawing.Color.Black;
 			this.m_tb_focus_dist.Location = new System.Drawing.Point(114, 40);
 			this.m_tb_focus_dist.Name = "m_tb_focus_dist";
-			this.m_tb_focus_dist.Size = new System.Drawing.Size(193, 20);
-			this.m_tb_focus_dist.TabIndex = 5;
+			this.m_tb_focus_dist.Size = new System.Drawing.Size(130, 20);
+			this.m_tb_focus_dist.TabIndex = 1;
+			this.m_tb_focus_dist.UseValidityColours = true;
 			this.m_tb_focus_dist.Value = null;
 			// 
 			// m_tb_fovX
@@ -275,10 +353,11 @@ namespace LDraw
 			this.m_tb_fovX.ForeColor = System.Drawing.Color.Black;
 			this.m_tb_fovX.ForeColorInvalid = System.Drawing.Color.Gray;
 			this.m_tb_fovX.ForeColorValid = System.Drawing.Color.Black;
-			this.m_tb_fovX.Location = new System.Drawing.Point(114, 124);
+			this.m_tb_fovX.Location = new System.Drawing.Point(114, 200);
 			this.m_tb_fovX.Name = "m_tb_fovX";
-			this.m_tb_fovX.Size = new System.Drawing.Size(193, 20);
-			this.m_tb_fovX.TabIndex = 3;
+			this.m_tb_fovX.Size = new System.Drawing.Size(130, 20);
+			this.m_tb_fovX.TabIndex = 4;
+			this.m_tb_fovX.UseValidityColours = true;
 			this.m_tb_fovX.Value = null;
 			// 
 			// m_tb_fovY
@@ -290,10 +369,11 @@ namespace LDraw
 			this.m_tb_fovY.ForeColor = System.Drawing.Color.Black;
 			this.m_tb_fovY.ForeColorInvalid = System.Drawing.Color.Gray;
 			this.m_tb_fovY.ForeColorValid = System.Drawing.Color.Black;
-			this.m_tb_fovY.Location = new System.Drawing.Point(114, 153);
+			this.m_tb_fovY.Location = new System.Drawing.Point(114, 229);
 			this.m_tb_fovY.Name = "m_tb_fovY";
-			this.m_tb_fovY.Size = new System.Drawing.Size(193, 20);
-			this.m_tb_fovY.TabIndex = 4;
+			this.m_tb_fovY.Size = new System.Drawing.Size(130, 20);
+			this.m_tb_fovY.TabIndex = 5;
+			this.m_tb_fovY.UseValidityColours = true;
 			this.m_tb_fovY.Value = null;
 			// 
 			// m_tb_camera_fwd
@@ -307,8 +387,9 @@ namespace LDraw
 			this.m_tb_camera_fwd.ForeColorValid = System.Drawing.Color.Black;
 			this.m_tb_camera_fwd.Location = new System.Drawing.Point(114, 68);
 			this.m_tb_camera_fwd.Name = "m_tb_camera_fwd";
-			this.m_tb_camera_fwd.Size = new System.Drawing.Size(193, 20);
-			this.m_tb_camera_fwd.TabIndex = 1;
+			this.m_tb_camera_fwd.Size = new System.Drawing.Size(130, 20);
+			this.m_tb_camera_fwd.TabIndex = 2;
+			this.m_tb_camera_fwd.UseValidityColours = true;
 			this.m_tb_camera_fwd.Value = null;
 			// 
 			// m_tb_camera_up
@@ -322,8 +403,9 @@ namespace LDraw
 			this.m_tb_camera_up.ForeColorValid = System.Drawing.Color.Black;
 			this.m_tb_camera_up.Location = new System.Drawing.Point(114, 96);
 			this.m_tb_camera_up.Name = "m_tb_camera_up";
-			this.m_tb_camera_up.Size = new System.Drawing.Size(193, 20);
-			this.m_tb_camera_up.TabIndex = 2;
+			this.m_tb_camera_up.Size = new System.Drawing.Size(130, 20);
+			this.m_tb_camera_up.TabIndex = 3;
+			this.m_tb_camera_up.UseValidityColours = true;
 			this.m_tb_camera_up.Value = null;
 			// 
 			// m_tb_focus_point
@@ -337,9 +419,124 @@ namespace LDraw
 			this.m_tb_focus_point.ForeColorValid = System.Drawing.Color.Black;
 			this.m_tb_focus_point.Location = new System.Drawing.Point(114, 12);
 			this.m_tb_focus_point.Name = "m_tb_focus_point";
-			this.m_tb_focus_point.Size = new System.Drawing.Size(193, 20);
+			this.m_tb_focus_point.Size = new System.Drawing.Size(130, 20);
 			this.m_tb_focus_point.TabIndex = 0;
+			this.m_tb_focus_point.UseValidityColours = true;
 			this.m_tb_focus_point.Value = null;
+			// 
+			// m_chk_preserve_aspect
+			// 
+			this.m_chk_preserve_aspect.AutoSize = true;
+			this.m_chk_preserve_aspect.Location = new System.Drawing.Point(114, 281);
+			this.m_chk_preserve_aspect.Name = "m_chk_preserve_aspect";
+			this.m_chk_preserve_aspect.Size = new System.Drawing.Size(132, 17);
+			this.m_chk_preserve_aspect.TabIndex = 7;
+			this.m_chk_preserve_aspect.Text = "Preserve Aspect Ratio";
+			this.m_chk_preserve_aspect.UseVisualStyleBackColor = true;
+			// 
+			// m_lbl_aspect_ratio
+			// 
+			this.m_lbl_aspect_ratio.AutoSize = true;
+			this.m_lbl_aspect_ratio.Location = new System.Drawing.Point(37, 258);
+			this.m_lbl_aspect_ratio.Name = "m_lbl_aspect_ratio";
+			this.m_lbl_aspect_ratio.Size = new System.Drawing.Size(71, 13);
+			this.m_lbl_aspect_ratio.TabIndex = 16;
+			this.m_lbl_aspect_ratio.Text = "Aspect Ratio:";
+			this.m_lbl_aspect_ratio.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+			// 
+			// m_tb_aspect
+			// 
+			this.m_tb_aspect.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_tb_aspect.BackColorInvalid = System.Drawing.Color.White;
+			this.m_tb_aspect.BackColorValid = System.Drawing.Color.White;
+			this.m_tb_aspect.ForeColor = System.Drawing.Color.Black;
+			this.m_tb_aspect.ForeColorInvalid = System.Drawing.Color.Gray;
+			this.m_tb_aspect.ForeColorValid = System.Drawing.Color.Black;
+			this.m_tb_aspect.Location = new System.Drawing.Point(114, 255);
+			this.m_tb_aspect.Name = "m_tb_aspect";
+			this.m_tb_aspect.Size = new System.Drawing.Size(130, 20);
+			this.m_tb_aspect.TabIndex = 6;
+			this.m_tb_aspect.UseValidityColours = true;
+			this.m_tb_aspect.Value = null;
+			// 
+			// m_tb_zoom
+			// 
+			this.m_tb_zoom.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_tb_zoom.BackColorInvalid = System.Drawing.Color.White;
+			this.m_tb_zoom.BackColorValid = System.Drawing.Color.White;
+			this.m_tb_zoom.ForeColor = System.Drawing.Color.Black;
+			this.m_tb_zoom.ForeColorInvalid = System.Drawing.Color.Gray;
+			this.m_tb_zoom.ForeColorValid = System.Drawing.Color.Black;
+			this.m_tb_zoom.Location = new System.Drawing.Point(114, 122);
+			this.m_tb_zoom.Name = "m_tb_zoom";
+			this.m_tb_zoom.Size = new System.Drawing.Size(130, 20);
+			this.m_tb_zoom.TabIndex = 17;
+			this.m_tb_zoom.UseValidityColours = true;
+			this.m_tb_zoom.Value = null;
+			// 
+			// m_lbl_zoom
+			// 
+			this.m_lbl_zoom.AutoSize = true;
+			this.m_lbl_zoom.Location = new System.Drawing.Point(71, 125);
+			this.m_lbl_zoom.Name = "m_lbl_zoom";
+			this.m_lbl_zoom.Size = new System.Drawing.Size(37, 13);
+			this.m_lbl_zoom.TabIndex = 18;
+			this.m_lbl_zoom.Text = "Zoom:";
+			this.m_lbl_zoom.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+			// 
+			// m_tb_near
+			// 
+			this.m_tb_near.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_tb_near.BackColorInvalid = System.Drawing.Color.White;
+			this.m_tb_near.BackColorValid = System.Drawing.Color.White;
+			this.m_tb_near.ForeColor = System.Drawing.Color.Black;
+			this.m_tb_near.ForeColorInvalid = System.Drawing.Color.Gray;
+			this.m_tb_near.ForeColorValid = System.Drawing.Color.Black;
+			this.m_tb_near.Location = new System.Drawing.Point(114, 148);
+			this.m_tb_near.Name = "m_tb_near";
+			this.m_tb_near.Size = new System.Drawing.Size(130, 20);
+			this.m_tb_near.TabIndex = 19;
+			this.m_tb_near.UseValidityColours = true;
+			this.m_tb_near.Value = null;
+			// 
+			// m_lbl_near
+			// 
+			this.m_lbl_near.AutoSize = true;
+			this.m_lbl_near.Location = new System.Drawing.Point(45, 151);
+			this.m_lbl_near.Name = "m_lbl_near";
+			this.m_lbl_near.Size = new System.Drawing.Size(63, 13);
+			this.m_lbl_near.TabIndex = 20;
+			this.m_lbl_near.Text = "Near Plane:";
+			this.m_lbl_near.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+			// 
+			// m_tb_far
+			// 
+			this.m_tb_far.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_tb_far.BackColorInvalid = System.Drawing.Color.White;
+			this.m_tb_far.BackColorValid = System.Drawing.Color.White;
+			this.m_tb_far.ForeColor = System.Drawing.Color.Black;
+			this.m_tb_far.ForeColorInvalid = System.Drawing.Color.Gray;
+			this.m_tb_far.ForeColorValid = System.Drawing.Color.Black;
+			this.m_tb_far.Location = new System.Drawing.Point(114, 174);
+			this.m_tb_far.Name = "m_tb_far";
+			this.m_tb_far.Size = new System.Drawing.Size(130, 20);
+			this.m_tb_far.TabIndex = 21;
+			this.m_tb_far.UseValidityColours = true;
+			this.m_tb_far.Value = null;
+			// 
+			// m_lbl_far
+			// 
+			this.m_lbl_far.AutoSize = true;
+			this.m_lbl_far.Location = new System.Drawing.Point(53, 177);
+			this.m_lbl_far.Name = "m_lbl_far";
+			this.m_lbl_far.Size = new System.Drawing.Size(55, 13);
+			this.m_lbl_far.TabIndex = 22;
+			this.m_lbl_far.Text = "Far Plane:";
+			this.m_lbl_far.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			// 
 			// CameraUI
 			// 
@@ -347,7 +544,16 @@ namespace LDraw
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.CancelButton = this.m_btn_close;
-			this.ClientSize = new System.Drawing.Size(320, 224);
+			this.ClientSize = new System.Drawing.Size(257, 347);
+			this.Controls.Add(this.m_tb_far);
+			this.Controls.Add(this.m_lbl_far);
+			this.Controls.Add(this.m_tb_near);
+			this.Controls.Add(this.m_lbl_near);
+			this.Controls.Add(this.m_tb_zoom);
+			this.Controls.Add(this.m_lbl_zoom);
+			this.Controls.Add(this.m_lbl_aspect_ratio);
+			this.Controls.Add(this.m_tb_aspect);
+			this.Controls.Add(this.m_chk_preserve_aspect);
 			this.Controls.Add(this.m_btn_hidden);
 			this.Controls.Add(this.m_tb_focus_dist);
 			this.Controls.Add(this.m_lbl_focus_dist);
@@ -364,9 +570,8 @@ namespace LDraw
 			this.Controls.Add(this.m_lbl_focus_point);
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.SizableToolWindow;
 			this.Margin = new System.Windows.Forms.Padding(5);
-			this.MinimumSize = new System.Drawing.Size(243, 263);
+			this.MinimumSize = new System.Drawing.Size(268, 386);
 			this.Name = "CameraUI";
-			this.PinOffset = new System.Drawing.Point(-300, 0);
 			this.Text = "Camera Properties";
 			this.ResumeLayout(false);
 			this.PerformLayout();

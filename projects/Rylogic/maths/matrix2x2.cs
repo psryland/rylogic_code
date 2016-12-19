@@ -5,6 +5,7 @@
 
 using System;
 using System.Diagnostics;
+using pr.extn;
 
 namespace pr.maths
 {
@@ -13,10 +14,67 @@ namespace pr.maths
 		public v2 x;
 		public v2 y;
 
+		public m2x2(v2 x, v2 y) :this()
+		{
+			this.x = x;
+			this.y = y;
+		}
+		//public m2x2(v2 axis_norm, v4 axis_sine_angle, float cos_angle) :this() { set(axis_norm, axis_sine_angle, cos_angle); }
+		//public m2x2(v2 axis_norm, float angle) :this()                         { set(axis_norm, angle); }
+		//public m2x2(v2 from, v4 to) :this()                                    { set(from, to); }
+
+		/// <summary>Get/Set columns by index</summary>
+		public v2 this[int c]
+		{
+			get
+			{
+				switch (c) {
+				case 0: return x;
+				case 1: return y;
+				}
+				throw new ArgumentException("index out of range", "i");
+			}
+			set
+			{
+				switch (c) {
+				case 0: x = value; return;
+				case 1: y = value; return;
+				}
+				throw new ArgumentException("index out of range", "i");
+			}
+		}
+		public v2 this[uint i]
+		{
+			get { return this[(int)i]; }
+			set { this[(int)i] = value; }
+		}
+
+		/// <summary>Get/Set components by index</summary>
+		public float this[int c, int r]
+		{
+			get { return this[c][r]; }
+			set
+			{
+				var vec = this[c];
+				vec[r] = value;
+				this[c] = vec;
+			}
+		}
+		public float this[uint c, uint r]
+		{
+			get { return this[(int)c][(int)r]; }
+			set
+			{
+				var vec = this[c];
+				vec[r] = value;
+				this[c] = vec;
+			}
+		}
+
 		/// <summary>ToString</summary>
 		public override string ToString()
 		{
-			return x + " \n" + y + " \n";
+			return "{0} \n{1} \n".Fmt(x,y);
 		}
 
 		/// <summary>To flat array</summary>
@@ -28,66 +86,6 @@ namespace pr.maths
 				y.x, y.y,
 			};
 		}
-
-		public m2x2(v2 x_, v2 y_) :this()                               { set(x_, y_); }
-		//public m2x2(v2 axis_norm, v4 axis_sine_angle, float cos_angle) :this() { set(axis_norm, axis_sine_angle, cos_angle); }
-		//public m2x2(v2 axis_norm, float angle) :this()                         { set(axis_norm, angle); }
-		//public m2x2(v2 from, v4 to) :this()                                    { set(from, to); }
-
-		public v2 this[int i]
-		{
-			get { switch(i){case 0:return x;case 1:return y;default: throw new ArgumentException("index out of range", "i");} }
-			set { switch(i){case 0:x=value;break;case 1:y=value;break;default: throw new ArgumentException("index out of range", "i");} }
-		}
-
-		public void set(v2 x_, v2 y_)
-		{
-			x = x_;
-			y = y_;
-		}
-		//public void set(v4 axis_norm, v4 axis_sine_angle, float cos_angle)
-		//{
-		//	Debug.Assert(Maths.FEql(axis_norm.Length3Sq, 1f, 2*Maths.TinyF), "'axis_norm' should be normalised");
-
-		//	v4 trace_vec = axis_norm * (1.0f - cos_angle);
-
-		//	x.x = trace_vec.x * axis_norm.x + cos_angle;
-		//	y.y = trace_vec.y * axis_norm.y + cos_angle;
-		//	z.z = trace_vec.z * axis_norm.z + cos_angle;
-
-		//	trace_vec.x *= axis_norm.y;
-		//	trace_vec.z *= axis_norm.x;
-		//	trace_vec.y *= axis_norm.z;
-
-		//	x.y = trace_vec.x + axis_sine_angle.z;
-		//	x.z = trace_vec.z - axis_sine_angle.y;
-		//	x.w = 0.0f;
-		//	y.x = trace_vec.x - axis_sine_angle.z;
-		//	y.z = trace_vec.y + axis_sine_angle.x;
-		//	y.w = 0.0f;
-		//	z.x = trace_vec.z + axis_sine_angle.y;
-		//	z.y = trace_vec.y - axis_sine_angle.x;
-		//	z.w = 0.0f;
-		//}
-		//public void set(v4 axis_norm, float angle)
-		//{
-		//	Debug.Assert(Maths.FEql(axis_norm.Length3Sq, 1f, 2*Maths.TinyF), "'axis_norm' should be normalised");
-		//	set(axis_norm, axis_norm * (float)Math.Sin(angle), (float)Math.Cos(angle));
-		//}
-		//public void set(v4 from, v4 to)
-		//{
-		//	Debug.Assert(Maths.FEql(from.Length3Sq, 1f, 2*Maths.TinyF) && Maths.FEql(to.Length3Sq, 1f, 2*Maths.TinyF), "'from' and 'to' should be normalised");
-
-		//	float cos_angle = v4.Dot3(from, to); // Cos angle
-		//	if      (cos_angle >= 1f - Maths.TinyF) { x =  v4.XAxis; y =  v4.YAxis; z =  v4.ZAxis; }
-		//	else if (cos_angle <= Maths.TinyF - 1f) { x = -v4.XAxis; y = -v4.YAxis; z = -v4.ZAxis; }
-		//	else
-		//	{
-		//		v4 axis_sine_angle = v4.Cross3(from, to); // Axis multiplied by sine of the angle
-		//		v4 axis_norm       = v4.Normalise3(axis_sine_angle);
-		//		set(axis_norm, axis_sine_angle, cos_angle);
-		//	}
-		//}
 
 		// Static m2x2 types
 		private readonly static m2x2 m_zero     = new m2x2(v2.Zero , v2.Zero );

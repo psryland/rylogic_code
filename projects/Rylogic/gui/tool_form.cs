@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
@@ -92,6 +93,7 @@ namespace pr.gui
 		}
 
 		/// <summary>How this tool window is pinned to the owner</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public EPin Pin
 		{
 			get { return m_pin; }
@@ -100,6 +102,7 @@ namespace pr.gui
 		private EPin m_pin;
 
 		/// <summary>True if the 'Pin' state should be used</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool PinWindow
 		{
 			get { return m_pin_window && PinTarget != null; }
@@ -112,14 +115,6 @@ namespace pr.gui
 		}
 		private bool m_pin_window;
 
-		/// <summary>The offset of top-left corner of this form to the pin location on the parent form</summary>
-		public Point PinOffset
-		{
-			get { return m_ofs; }
-			set { m_ofs = value; UpdateLocation(); }
-		}
-		private Point m_ofs;
-
 		/// <summary>Get/Set whether opacity is changed as the mouse enters/leaves the window bounds.</summary>
 		public bool AutoFade { get; set; }
 
@@ -130,6 +125,7 @@ namespace pr.gui
 		public bool HideOnClose { get; set; }
 
 		/// <summary>Get/Set the child control on the owner form that this tool window is pinned to. If null, assumes the form itself</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public Control PinTarget
 		{
 			get { return m_pin_target; }
@@ -155,6 +151,15 @@ namespace pr.gui
 			}
 		}
 		private Control m_pin_target;
+
+		/// <summary>The offset of top-left corner of this form to the pin location on the parent form</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public Point PinOffset
+		{
+			get { return m_ofs; }
+			set { m_ofs = value; UpdateLocation(); }
+		}
+		private Point m_ofs;
 
 		/// <summary>Display the UI (even if already visible)</summary>
 		public new void Show()

@@ -332,13 +332,42 @@ namespace pr
 			FovY(fovY);
 		}
 
+		// Adjust the FocusDist, FovX, and FovY so that the average FOV equals 'fov'
+		void BalanceFov(float fov)
+		{
+			// Measure the current focus distance and view size at that distance
+			auto d = FocusDist();
+			auto pt = FocusPoint();
+			auto wh = ViewArea(d);
+			auto size = (wh.x + wh.y) * 0.5f;
+
+			// The focus distance at 'fov' with a view size of 'size' is:
+			//'   d2 = (0.5 * size) / tan(0.5 * fov);
+			// The FOV at distance 'd2' is 
+			//'   fovX = 2 * atan((wh.x * 0.5) / d2);
+			//'   fovY = 2 * atan((wh.y * 0.5) / d2);
+			// Since the aspect is unchanged, we only need to calculate fovY
+			// Simplifying by substituting for 'd2'
+			//'   fovY = 2 * atan((wh.y * 0.5) / ((0.5 * size) / tan(0.5 * fov)));
+			//'   fovY = 2 * atan((wh.y * 0.5) * tan(0.5 * fov) / (0.5 * size));
+			//'   fovY = 2 * atan(wh.y * tan(0.5 * fov) / size);
+			//'   fovY = 2 * atan(tan(0.5 * fov) * wh.y / size);
+
+			// Calculate the actual Y FOV at 'd2'
+			auto d2 = (0.5f * size) / pr::Tan(0.5f * fov);
+			auto fovY = 2.0f * pr::ATan((0.5f * wh.y) / d2);
+
+			FovY(fovY);
+			FocusDist(d2);
+			FocusPoint(pt);
+		}
+
 		// Return the size of the perpendicular area visible to the camera at 'dist' (in world space)
 		pr::v2 ViewArea(float dist) const
 		{
+			dist = m_orthographic ? m_focus_dist : dist;
 			auto h = 2.0f * pr::Tan(m_fovY * 0.5f);
-			return m_orthographic
-				? pr::v2(h * m_aspect, h)
-				: pr::v2(dist * h * m_aspect, dist * h);
+			return pr::v2(dist * h * m_aspect, dist * h);
 		}
 
 		// Return the view frustum for this camera
@@ -397,7 +426,7 @@ namespace pr
 		void FocusDist(float dist)
 		{
 			PR_ASSERT(PR_DBG, pr::IsFinite(dist) && dist >= 0.0f, "'dist' should not be negative");
-			m_moved = dist != m_focus_dist;
+			m_moved |= dist != m_focus_dist;
 			m_base_focus_dist = m_focus_dist = Clamp(dist, FocusDistMin(), FocusDistMax());
 		}
 
@@ -614,6 +643,19 @@ namespace pr
 			return m_moved;
 		}
 
+		// Return the current zoom scaling factor
+		float Zoom() const
+		{
+			return m_default_fovY / m_fovY;
+		}
+
+		// Reset the FOV to the default
+		void ResetZoom()
+		{
+			m_moved = true;
+			m_base_fovY = m_fovY = m_default_fovY;
+		}
+
 		// Set the current position, FOV, and focus distance as the position reference
 		void Commit()
 		{
@@ -630,19 +672,6 @@ namespace pr
 			m_fovY = m_base_fovY;
 			m_focus_dist = m_base_focus_dist;
 			m_moved = true;
-		}
-
-		// Return the current zoom scaling factor
-		float Zoom() const
-		{
-			return m_default_fovY / m_fovY;
-		}
-
-		// Reset the FOV to the default
-		void ResetZoom()
-		{
-			m_moved = true;
-			m_base_fovY = m_fovY = m_default_fovY;
 		}
 
 		// Set the axis to align the camera up axis to
@@ -675,39 +704,101 @@ namespace pr
 		}
 
 		// Position the camera so that all of 'bbox' is visible to the camera when looking 'forward' and 'up'
-		void View(pr::BBox const& bbox, pr::v4 const& forward, pr::v4 const& up, bool update_base)
+		void View(pr::BBox const& bbox, pr::v4 const& forward, pr::v4 const& up, float focus_dist = 0, bool preserve_aspect = true, bool update_base = true)
 		{
 			if (bbox.empty()) return;
 
-			pr::v4 bbox_centre = bbox.Centre();
-			pr::v4 bbox_radius = bbox.Radius();
+			// This code projects 'bbox' onto a plane perpendicular to 'forward' and
+			// at the nearest point of the bbox to the camera. It then ensures a circle
+			// with radius of the projected 2D bbox fits within the view.
+			auto bbox_centre = bbox.Centre();
+			auto bbox_radius = bbox.Radius();
 
 			// Get the radius of the bbox projected onto the plane 'forward'
-			float sizez = pr::maths::float_max;
+			auto sizez = pr::maths::float_max;
 			sizez = pr::Min(sizez, pr::Abs(pr::Dot3(forward, pr::v4( bbox_radius.x,  bbox_radius.y,  bbox_radius.z, 0.0f))));
 			sizez = pr::Min(sizez, pr::Abs(pr::Dot3(forward, pr::v4(-bbox_radius.x,  bbox_radius.y,  bbox_radius.z, 0.0f))));
 			sizez = pr::Min(sizez, pr::Abs(pr::Dot3(forward, pr::v4( bbox_radius.x, -bbox_radius.y,  bbox_radius.z, 0.0f))));
 			sizez = pr::Min(sizez, pr::Abs(pr::Dot3(forward, pr::v4( bbox_radius.x,  bbox_radius.y, -bbox_radius.z, 0.0f))));
-			float sizexy = pr::Sqrt(pr::Clamp(pr::Length3Sq(bbox_radius) - pr::Sqr(sizez), 0.0f, pr::maths::float_max));
 
-			// 'sizexy' is the radius of the bounding box projected into the 'forward' plane
-			// 'dist' is the distance at which 'sizexy' is visible
-			// => the distance from camera to bbox_centre is 'dist + sizez'
-			float fov = m_aspect >= 1.0f ? m_fovY : m_fovY * m_aspect;
-			float dist = sizexy / pr::Tan(fov * 0.5f);
+			// 'focus_dist' is the focus distance (chosen, or specified) from the centre of the bbox
+			// to the camera. Since 'size' is the size to fit at the nearest point of the bbox,
+			// the focus distance needs to be 'dist' + 'sizez'.
 
-			LookAt(bbox_centre - forward * (sizez + dist), bbox_centre, up, update_base);
+			// If not preserving the aspect ratio, determine the width
+			// and height of the bbox as viewed from the camera.
+			if (!preserve_aspect)
+			{
+				// Get the camera orientation matrix
+				m3x4 c2w(pr::Cross3(up, forward), up, forward);
+				auto w2c = pr::InvertFast(c2w);
+
+				auto bbox_cs = w2c * bbox;
+				auto width   = bbox_cs.SizeX();
+				auto height  = bbox_cs.SizeY();
+
+				// Choose the fields of view. If 'focus_dist' is given, then that determines
+				// the X,Y field of view. If not, choose a focus distance based on a view size
+				// equal to the average of 'width' and 'height' using the default FOV.
+				if (focus_dist == 0)
+				{
+					auto size = (width + height) / 2.0f;
+					focus_dist = (0.5f * size) / pr::Tan(0.5f * m_default_fovY);
+				}
+
+				// 'a' has the effect of using FovY if aspect > 1.0 or FovX if not
+				auto aspect = width / height;
+				auto a = aspect >= 1.0f ? 1.0f : aspect;
+				auto d = focus_dist - sizez;
+
+				// Set the aspect and FOV based on the view of the bbox
+				Aspect(aspect);
+				FovY(2.0f * pr::ATan(0.5f * height * a / d));
+			}
+			else
+			{
+				// 'size' is the radius of the bounding box projected into the 'forward' plane.
+				auto size = pr::Sqrt(pr::Clamp(pr::Length3Sq(bbox_radius) - pr::Sqr(sizez), 0.0f, pr::maths::float_max));
+
+				// 'a' has the effect of using FovY if aspect > 1.0 or FovX if not
+				auto a = m_aspect >= 1.0f ? 1.0f : m_aspect;
+
+				// Choose the focus distance if not given
+				if (focus_dist == 0 || focus_dist < sizez)
+				{
+					auto d = (0.5f * size) / (pr::Tan(0.5f * FovY()) * a);
+					focus_dist = sizez + d;
+				}
+				else
+				{
+					auto d = focus_dist - sizez;
+					FovY(2.0f * pr::ATan(0.5f * size * a / d));
+				}
+			}
+
+			// the distance from camera to bbox_centre is 'dist + sizez'
+			LookAt(bbox_centre - forward * focus_dist, bbox_centre, up, update_base);
 		}
 
 		// Set the camera fields of view so that a rectangle with dimensions 'width'/'height' exactly fits the view at 'dist'.
-		void View(float width, float height, float dist)
+		void View(float width, float height, float focus_dist = 0)
 		{
-			PR_ASSERT(PR_DBG, width > 0 && height > 0 && dist > 0, "");
+			PR_ASSERT(PR_DBG, width > 0 && height > 0 && focus_dist >= 0, "");
 
-			// This works for orthographic mode as well so long as we set 'm_fovY'
+			// This works for orthographic mode as well so long as we set FOV
 			Aspect(width / height);
-			FovY(2.0f * pr::ATan(0.5f * height / dist));
-			FocusDist(dist);
+
+			// If 'focus_dist' is given, choose FOV so that the view exactly fits
+			if (focus_dist != 0)
+			{
+				FovY(2.0f * pr::ATan(0.5f * height / focus_dist));
+				FocusDist(focus_dist);
+			}
+			// Otherwise, choose a focus distance that preserves FOV
+			else
+			{
+				FocusDist(0.5f * height / pr::Tan(0.5f * FovY()));
+			}
 		}
 
 		// Orbit the camera about the focus point by 'angle_rad' radians

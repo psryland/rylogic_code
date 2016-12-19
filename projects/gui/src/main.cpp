@@ -194,7 +194,7 @@ struct Main :Form
 
 		if ((HWND)m_scint != nullptr)
 		{
-			m_scint.InitDefaults();
+			m_scint.InitDefaultStyle();
 			m_scint.InitLdrStyle();
 		}
 	}

@@ -18,7 +18,7 @@ namespace ldr
 	{
 		// Set an initial camera position
 		ViewSize(view_size);
-		m_camera.View(pr::BBoxUnit, m_reset_forward, m_reset_up, true);
+		m_camera.View(pr::BBoxUnit, m_reset_forward, m_reset_up);
 	}
 
 	// Get/Set the view size so we know how to convert screen space to normalised space
@@ -64,7 +64,7 @@ namespace ldr
 	// Reset the camera to view a bbox
 	void Navigation::ResetView(pr::BBox const& view_bbox)
 	{
-		m_camera.View(view_bbox, m_reset_forward, m_reset_up, true);
+		m_camera.View(view_bbox, m_reset_forward, m_reset_up);
 	}
 
 	// Position the camera prior to rendering a frame

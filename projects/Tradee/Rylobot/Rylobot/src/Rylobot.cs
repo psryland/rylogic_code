@@ -34,7 +34,7 @@ namespace Rylobot
 			// Create the account manager and trade creator
 			Broker = new Broker(this, Account);
 
-			// Create the guy responsible for selecting the trading strategy
+			// Create the strategies to use
 			Strats = new List<Strategy>();
 			Strats.Add(new StrategyTrend(this));
 			//Strats.Add(new StrategyHedge(this));

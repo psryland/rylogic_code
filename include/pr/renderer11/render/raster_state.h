@@ -39,7 +39,6 @@ namespace pr
 				Set(ERS::CullMode, cull);
 			}
 
-			using base::Hash;
 			using base::Desc;
 
 			// Clear a field in the state description

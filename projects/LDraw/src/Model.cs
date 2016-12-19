@@ -75,15 +75,11 @@ namespace LDraw
 				if (m_scene == value) return;
 				if (m_scene != null)
 				{
-					m_scene.KeyDown -= HandleKeyDown;
-					m_scene.Scene.Window.OnRendering -= HandleSceneRendering;
 					Util.Dispose(ref m_scene);
 				}
 				m_scene = value;
 				if (m_scene != null)
 				{
-					m_scene.Scene.Window.OnRendering += HandleSceneRendering;
-					m_scene.KeyDown                  += HandleKeyDown;
 				}
 			}
 		}
@@ -151,7 +147,10 @@ namespace LDraw
 			var cam   = focus - fwd * Camera.FocusDist;
 
 			Settings.Camera.ResetForward = fwd;
-			Settings.Camera.ResetUp = v4.Perpendicular(fwd, Settings.Camera.ResetUp);
+			Settings.Camera.ResetUp      = v4.Perpendicular(fwd, Settings.Camera.ResetUp);
+			Scene.Options.ResetUp        = Settings.Camera.ResetUp;
+			Scene.Options.ResetForward   = Settings.Camera.ResetForward;
+
 			Camera.SetPosition(cam, focus, Settings.Camera.ResetUp);
 		}
 
@@ -160,8 +159,13 @@ namespace LDraw
 		{
 			Camera.AlignAxis = axis;
 			Settings.Camera.AlignAxis = axis;
-			Settings.Camera.ResetUp = axis;
-			Settings.Camera.ResetForward = v4.Perpendicular(axis, Settings.Camera.ResetForward);
+			if (axis != v4.Zero)
+			{
+				Settings.Camera.ResetForward = v4.Perpendicular(axis, Settings.Camera.ResetForward);
+				Settings.Camera.ResetUp      = axis;
+				Scene.Options.ResetUp        = Settings.Camera.ResetUp;
+				Scene.Options.ResetForward   = Settings.Camera.ResetForward;
+			}
 		}
 
 		/// <summary>Save the current camera position and view</summary>
@@ -179,9 +183,6 @@ namespace LDraw
 		/// <summary>Clear the scene</summary>
 		public void ClearScene()
 		{
-			//// Remove all objects from the window's drawlist
-			//Window.RemoveAllObjects();
-
 			// Remove and delete all objects (excluding focus points, selection boxes, etc)
 			foreach (var id in ContextIds)
 				View3d.DeleteAllObjects(id);
@@ -203,45 +204,6 @@ namespace LDraw
 		public void CycleFillMode()
 		{
 			Scene.Options.FillMode = Enum<View3d.EFillMode>.Cycle(Scene.Options.FillMode);
-		}
-
-		/// <summary>Handle keyboard shortcuts</summary>
-		private void HandleKeyDown(object sender, KeyEventArgs e)
-		{
-			switch (e.KeyCode)
-			{
-			case Keys.F5:
-				#region
-				{
-					View3d.ReloadScriptSources();
-					e.Handled = true;
-					break;
-				}
-			#endregion
-			case Keys.F7:
-				#region
-				{
-					Camera.ResetView(Settings.Camera.ResetForward, Settings.Camera.ResetUp);
-					Owner.Invalidate();
-					e.Handled = true;
-					break;
-				}
-				#endregion
-			}
-		}
-
-		/// <summary>Handle the scene</summary>
-		private void HandleSceneRendering(object sender, EventArgs e)
-		{
-			// Add all objects to the window's drawlist
-			foreach (var id in ContextIds)
-				Window.AddObjects(id);
-
-			// Add bounding boxes
-			if (Settings.ShowBBoxes)
-				foreach (var id in ContextIds)
-					Window.AddObjects(id);
-
 		}
 
 		public class SavedView

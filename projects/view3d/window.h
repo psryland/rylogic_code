@@ -163,16 +163,18 @@ namespace view3d
 			// Position the focus point
 			if (m_focus_point_visible)
 			{
-				float scale = m_focus_point_size * m_camera.FocusDist();
-				m_focus_point.m_i2w = pr::m4x4::Scale(scale, m_camera.FocusPoint());
+				auto scale = m_focus_point_size * m_camera.FocusDist();
+				auto aspect = m_camera.Aspect() * m_scene.m_viewport.Height / m_scene.m_viewport.Width;
+				m_focus_point.m_i2w = pr::m4x4::Scale(scale * aspect, scale, scale, m_camera.FocusPoint());
 				m_scene.AddInstance(m_focus_point);
 			}
 
 			// Scale the origin point
 			if (m_origin_point_visible)
 			{
-				float scale = m_origin_point_size * pr::Length3(m_camera.CameraToWorld().pos);
-				m_origin_point.m_i2w = pr::m4x4::Scale(scale, pr::v4Origin);
+				auto scale = m_origin_point_size * pr::Length3(m_camera.CameraToWorld().pos);
+				auto aspect = m_camera.Aspect() * m_scene.m_viewport.Height / m_scene.m_viewport.Width;
+				m_origin_point.m_i2w = pr::m4x4::Scale(scale * aspect, scale, scale, pr::v4Origin);
 				m_scene.AddInstance(m_origin_point);
 			}
 
@@ -329,11 +331,15 @@ namespace view3d
 		{
 			auto iter = m_objects.find(object);
 			if (iter == std::end(m_objects))
+			{
 				m_objects.insert(iter, object);
+				ObjectContainerChanged();
+			}
 		}
 		void Remove(pr::ldr::LdrObject* object)
 		{
 			m_objects.erase(object);
+			ObjectContainerChanged();
 		}
 
 		// Add/Remove a gizmo to this window
@@ -352,6 +358,7 @@ namespace view3d
 		void RemoveAllObjects()
 		{
 			m_objects.clear();
+			ObjectContainerChanged();
 		}
 
 		// Remove all objects from this window with the given context id (or not with)
@@ -361,6 +368,8 @@ namespace view3d
 				pr::erase_if(m_objects, [&](pr::ldr::LdrObject* p){ return p->m_context_id != context_id; });
 			else
 				pr::erase_if(m_objects, [&](pr::ldr::LdrObject* p){ return p->m_context_id == context_id; });
+			
+			ObjectContainerChanged();
 		}
 
 		// Return a bounding box containing the scene objects
@@ -386,17 +395,15 @@ namespace view3d
 		}
 
 		// Reset the scene camera to view all objects in the scene
-		void ResetView(pr::v4 const& forward, pr::v4 const& up)
+		void ResetView(pr::v4 const& forward, pr::v4 const& up, float dist = 0, bool preserve_aspect = true, bool commit = true)
 		{
-			// The bounding box for the scene
-			auto bbox = BBox();
-			m_camera.View(bbox, forward, up, true);
+			ResetView(BBox(), forward, up, dist, preserve_aspect, commit);
 		}
 
 		// Reset the camera to view a bbox
-		void ResetView(pr::BBox const& bbox, pr::v4 const& forward, pr::v4 const& up)
+		void ResetView(pr::BBox const& bbox, pr::v4 const& forward, pr::v4 const& up, float dist = 0, bool preserve_aspect = true, bool commit = true)
 		{
-			m_camera.View(bbox, forward, up, true);
+			m_camera.View(bbox, forward, up, dist, preserve_aspect, commit);
 		}
 
 		// Return the bounding box of objects in this scene
@@ -490,6 +497,13 @@ namespace view3d
 		void InvalidateRect(RECT const* rect, bool erase)
 		{
 			::InvalidateRect(m_hwnd, rect, erase);
+		}
+
+		// Called when objects are added/removed from this window
+		void ObjectContainerChanged()
+		{
+			// Invalidate cached members
+			m_bbox_scene = pr::BBoxReset;
 		}
 
 		// Show/Hide the object manager for the scene

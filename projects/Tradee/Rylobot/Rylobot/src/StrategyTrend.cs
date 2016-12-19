@@ -55,7 +55,7 @@ namespace Rylobot
 		}
 		private PositionManager m_pos_mgr;
 
-		/// <summary>Return the current trend.  +0.5 and up = rising, -0.5 and below = falling</summary>
+		/// <summary>Return the current trend. +0.5 and up = rising, -0.5 and below = falling</summary>
 		public double Trend
 		{
 			get

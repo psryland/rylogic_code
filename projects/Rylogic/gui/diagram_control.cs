@@ -3867,7 +3867,7 @@ namespace pr.gui
 				m_window = new View3d.Window(m_view3d, Handle, new View3d.WindowOptions(false, null, IntPtr.Zero) { DbgName = "Diagram" });
 				m_tools  = new Tools();
 				m_camera = m_window.Camera;
-				m_camera.SetClipPlanes(0.5f, 1.1f, true);
+				m_camera.ClipPlanes(0.5f, 1.1f, true);
 				m_window.LightProperties = View3d.LightInfo.Directional(-v4.ZAxis, Colour32.Zero, Colour32.Gray, Colour32.Zero, 0f, 0f);
 				m_window.FocusPointVisible = false;
 				m_window.OriginVisible = false;

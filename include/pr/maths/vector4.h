@@ -439,13 +439,13 @@ namespace pr
 	{
 		assert("Cannot make a perpendicular to a zero vector" && !FEql3(vec, v4Zero));
 
+		// If 'previous' is parallel to 'vec', choose a new perpendicular (includes previous == zero)
+		if (Parallel(vec, previous))
+			return Perpendicular(vec);
+
 		// If 'previous' is still perpendicular, keep it
 		if (FEql(Dot3(vec, previous), 0))
 			return previous;
-
-		// If 'previous' is parallel to 'vec', choose a new perpendicular
-		if (Parallel(vec, previous))
-			return Perpendicular(vec);
 
 		// Otherwise, make a perpendicular that is close to 'previous'
 		return Normalise3(Cross3(Cross3(vec, previous), vec));

@@ -588,7 +588,7 @@ VIEW3D_API void __stdcall View3D_CameraSetAspect(View3DWindow window, float aspe
 }
 
 // Return the horizontal field of view (in radians).
-VIEW3D_API float __stdcall View3D_CameraFovX(View3DWindow window)
+VIEW3D_API float __stdcall View3D_CameraFovXGet(View3DWindow window)
 {
 	try
 	{
@@ -597,11 +597,11 @@ VIEW3D_API float __stdcall View3D_CameraFovX(View3DWindow window)
 		DllLockGuard;
 		return window->m_camera.FovX();
 	}
-	CatchAndReport(View3D_CameraFovX, window, 0.0f);
+	CatchAndReport(View3D_CameraFovXGet, window, 0.0f);
 }
 
 // Set the horizontal field of view (in radians). Note aspect ratio is preserved, setting FovX changes FovY and visa versa
-VIEW3D_API void __stdcall View3D_CameraSetFovX(View3DWindow window, float fovX)
+VIEW3D_API void __stdcall View3D_CameraFovXSet(View3DWindow window, float fovX)
 {
 	try
 	{
@@ -610,11 +610,11 @@ VIEW3D_API void __stdcall View3D_CameraSetFovX(View3DWindow window, float fovX)
 		DllLockGuard;
 		window->m_camera.FovX(fovX);
 	}
-	CatchAndReport(View3D_CameraSetFovX, window,);
+	CatchAndReport(View3D_CameraFovXSet, window,);
 }
 
 // Return the vertical field of view (in radians).
-VIEW3D_API float __stdcall View3D_CameraFovY(View3DWindow window)
+VIEW3D_API float __stdcall View3D_CameraFovYGet(View3DWindow window)
 {
 	try
 	{
@@ -623,11 +623,11 @@ VIEW3D_API float __stdcall View3D_CameraFovY(View3DWindow window)
 		DllLockGuard;
 		return window->m_camera.FovY();
 	}
-	CatchAndReport(View3D_CameraFovY, window, 0.0f);
+	CatchAndReport(View3D_CameraFovYGet, window, 0.0f);
 }
 
 // Set the vertical field of view (in radians). Note aspect ratio is preserved, setting FovY changes FovX and visa versa
-VIEW3D_API void __stdcall View3D_CameraSetFovY(View3DWindow window, float fovY)
+VIEW3D_API void __stdcall View3D_CameraFovYSet(View3DWindow window, float fovY)
 {
 	try
 	{
@@ -636,7 +636,7 @@ VIEW3D_API void __stdcall View3D_CameraSetFovY(View3DWindow window, float fovY)
 		DllLockGuard;
 		window->m_camera.FovY(fovY);
 	}
-	CatchAndReport(View3D_CameraSetFovY, window,);
+	CatchAndReport(View3D_CameraFovYSet, window,);
 }
 
 // Set both the X and Y fields of view (i.e. set the aspect ratio)
@@ -652,8 +652,33 @@ VIEW3D_API void __stdcall View3D_CameraSetFov(View3DWindow window, float fovX, f
 	CatchAndReport(View3D_CameraSetFov, window,);
 }
 
-// Set the near and far clip planes for the camera
-VIEW3D_API void __stdcall View3D_CameraSetClipPlanes(View3DWindow window, float near_, float far_, BOOL focus_relative)
+// Adjust the FocusDist, FovX, and FovY so that the average FOV equals 'fov'
+VIEW3D_API void __stdcall View3D_CameraBalanceFov(View3DWindow window, float fov)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_camera.BalanceFov(fov);
+	}
+	CatchAndReport(View3D_CameraBalanceFov, window,);
+}
+
+// Get/Set the near and far clip planes for the camera
+VIEW3D_API void __stdcall View3D_CameraClipPlanesGet(View3DWindow window, float& near_, float& far_)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		near_ = window->m_camera.Near();
+		far_  = window->m_camera.Far();
+	}
+	CatchAndReport(View3D_CameraClipPlanesGet, window,);
+}
+VIEW3D_API void __stdcall View3D_CameraClipPlanesSet(View3DWindow window, float near_, float far_, BOOL focus_relative)
 {
 	try
 	{
@@ -662,7 +687,7 @@ VIEW3D_API void __stdcall View3D_CameraSetClipPlanes(View3DWindow window, float 
 		DllLockGuard;
 		window->m_camera.ClipPlanes(near_, far_, focus_relative != 0);
 	}
-	CatchAndReport(View3D_CameraSetClipPlanes, window,);
+	CatchAndReport(View3D_CameraClipPlanesSet, window,);
 }
 
 // General mouse navigation
@@ -773,6 +798,30 @@ VIEW3D_API void __stdcall View3D_ResetZoom(View3DWindow window)
 	CatchAndReport(View3D_ResetZoom, window,);
 }
 
+// Get/Set the FOV zoom
+VIEW3D_API float __stdcall View3D_ZoomGet(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return window->m_camera.Zoom();
+	}
+	CatchAndReport(View3D_ZoomGet, window, 1.0f);
+}
+VIEW3D_API void __stdcall View3D_ZoomSet(View3DWindow window, float zoom)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_camera.Zoom(zoom, true);
+	}
+	CatchAndReport(View3D_ZoomSet, window,);
+}
+
 // Return the camera align axis
 VIEW3D_API void __stdcall View3D_CameraAlignAxis(View3DWindow window, View3DV4& axis)
 {
@@ -799,26 +848,26 @@ VIEW3D_API void __stdcall View3D_AlignCamera(View3DWindow window, View3DV4 axis)
 	CatchAndReport(View3D_AlignCamera, window,);
 }
 
-// Move the camera to a position that can see the whole scene
-VIEW3D_API void __stdcall View3D_ResetView(View3DWindow window, View3DV4 forward, View3DV4 up)
+// Move the camera to a position that can see the whole scene. Set 'dist' to 0 to preserve the FoV, or a distance to set the FoV
+VIEW3D_API void __stdcall View3D_ResetView(View3DWindow window, View3DV4 forward, View3DV4 up, float dist, BOOL preserve_aspect, BOOL commit)
 {
 	try
 	{
 		if (!window) throw std::exception("window is null");
 		DllLockGuard;
-		window->ResetView(view3d::To<pr::v4>(forward), view3d::To<pr::v4>(up));
+		window->ResetView(view3d::To<pr::v4>(forward), view3d::To<pr::v4>(up), dist, preserve_aspect != 0, commit != 0);
 	}
 	CatchAndReport(View3D_ResetView, window,);
 }
 
-// Reset the camera to view a bbox
-VIEW3D_API void __stdcall View3D_ResetViewBBox(View3DWindow window, View3DBBox bbox, View3DV4 forward, View3DV4 up)
+// Reset the camera to view a bbox. Set 'dist' to 0 to preserve the FoV, or a distance to set the FoV
+VIEW3D_API void __stdcall View3D_ResetViewBBox(View3DWindow window, View3DBBox bbox, View3DV4 forward, View3DV4 up, float dist, BOOL preserve_aspect, BOOL commit)
 {
 	try
 	{
 		if (!window) throw std::exception("window is null");
 		DllLockGuard;
-		window->ResetView(view3d::To<pr::BBox>(bbox), view3d::To<pr::v4>(forward), view3d::To<pr::v4>(up));
+		window->ResetView(view3d::To<pr::BBox>(bbox), view3d::To<pr::v4>(forward), view3d::To<pr::v4>(up), dist, preserve_aspect != 0, commit != 0);
 	}
 	CatchAndReport(View3D_ResetViewBBox, window,);
 }
@@ -2321,7 +2370,7 @@ VIEW3D_API BOOL __stdcall View3D_TranslateKey(View3DWindow window, int key_code)
 
 				auto forward = up.z > up.y ? View3DV4{0.0f, 1.0f, 0.0f, 0.0f} : View3DV4{0.0f, 0.0f, 1.0f, 0.0f};
 
-				View3D_ResetView(window, forward, up);
+				View3D_ResetView(window, forward, up, 0, TRUE, TRUE);
 				View3D_Render(window);
 				return TRUE;
 			}
@@ -2516,7 +2565,7 @@ VIEW3D_API GUID __stdcall View3D_CreateDemoScene(View3DWindow window)
 		}
 
 		// Position the camera to look at the scene
-		View3D_ResetView(window, View3DV4{0.0f, 0.0f, -1.0f, 0.0f}, View3DV4{0.0f, 1.0f, 0.0f, 0.0f});
+		View3D_ResetView(window, View3DV4{0.0f, 0.0f, -1.0f, 0.0f}, View3DV4{0.0f, 1.0f, 0.0f, 0.0f}, 0, TRUE, TRUE);
 		return GuidDemoSceneObjects;
 	}
 	CatchAndReport(View3D_CreateDemoScene, window, GuidDemoSceneObjects);

@@ -47,7 +47,7 @@ namespace Rylobot
 		/// <summary>Transform that scales Y axis to a decent size</summary>
 		public static m4x4 ScaleTxfm
 		{
-			get { return m4x4.Scale(0.1f, 1000f, 1f, v4.Origin); }
+			get { return m4x4.Scale(1f, 1000f, 1f, v4.Origin); }
 		}
 
 		/// <summary>Reset a file to empty</summary>
@@ -135,8 +135,8 @@ namespace Rylobot
 				var y_tp = (float)(ep + tp) / 2;
 				var y_sl = (float)(ep + sl) / 2;
 
-				ldr.Box("profit", 0x4000FF00, w, h_tp, 0.001f, new v4(x, y_tp, -0.01f, 1));
-				ldr.Box("loss"  , 0x40FF0000, w, h_sl, 0.001f, new v4(x, y_sl, -0.01f, 1));
+				ldr.Box("profit", 0x4000FF00, w, h_tp, 0.001f, pos:new v4(x, y_tp, -0.01f, 1));
+				ldr.Box("loss"  , 0x40FF0000, w, h_sl, 0.001f, pos:new v4(x, y_sl, -0.01f, 1));
 			}
 			if (ldr_ == null)
 				Ldr.Write(ldr.ToString(), FP("trade.ldr"));

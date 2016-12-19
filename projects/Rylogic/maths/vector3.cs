@@ -59,9 +59,9 @@ namespace pr.maths
 			set
 			{
 				switch (i) {
-				case 0: x = value; break;
-				case 1: y = value; break;
-				case 2: z = value; break;
+				case 0: x = value; return;
+				case 1: y = value; return;
+				case 2: z = value; return;
 				}
 				throw new ArgumentException("index out of range", "i");
 			}
@@ -333,13 +333,13 @@ namespace pr.maths
 		{
 			Debug.Assert(!FEql3(vec, Zero), "Cannot make a perpendicular to a zero vector");
 
+			// If 'previous' is parallel to 'vec', choose a new perpendicular (includes previous == zero)
+			if (Parallel(vec, previous))
+				return Perpendicular(vec);
+
 			// If 'previous' is still perpendicular, keep it
 			if (Maths.FEql(Dot3(vec, previous), 0))
 				return previous;
-
-			// If 'previous' is parallel to 'vec', choose a new perpendicular
-			if (Parallel(vec, previous))
-				return Perpendicular(vec);
 
 			// Otherwise, make a perpendicular that is close to 'previous'
 			var v = Cross3(Cross3(vec, previous), vec);

@@ -301,7 +301,7 @@ namespace pr
 
 #define PR_SETTINGS_INSTANTIATE(type, name, default_value, description)   type m_##name;
 #define PR_SETTINGS_CONSTRUCT(type, name, default_value, description)     ,m_##name(default_value)
-#define PR_SETTINGS_ENUM(type, name, default_value, description)          name = pr::hash::Hash(#name),
+#define PR_SETTINGS_ENUM(type, name, default_value, description)          name = pr::hash::HashCT(#name),
 #define PR_SETTINGS_ENUM_TOSTRINGA(type, name, default_value, description) case name: return #name;
 #define PR_SETTINGS_ENUM_TOSTRINGW(type, name, default_value, description) case name: return L#name;
 #define PR_SETTINGS_ENUM_FIELDS(type, name, default_value, description)   name,

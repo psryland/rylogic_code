@@ -33,14 +33,14 @@ namespace pr
 		static const uint32_t FNV_offset_basis32 = 2166136261U;
 		static const uint32_t FNV_prime32        = 16777619U;
 
-		// Convert 'ch' to lower case
-		constexpr int Lower(int ch)
-		{
-			return ch + 32*(ch >= 'A' && ch <= 'Z');
-		}
-
 		namespace impl
 		{
+			// Convert 'ch' to lower case
+			constexpr int Lower(int ch)
+			{
+				return ch + 32*(ch >= 'A' && ch <= 'Z');
+			}
+
 			// 32 bit multiply without an overflow warning...
 			constexpr uint32_t Mul32(uint32_t a, uint32_t b)
 			{
@@ -60,87 +60,107 @@ namespace pr
 			static_assert(Mul64(0x1234567887654321, 0x1234567887654321) == 0x290D0FCAD7A44A41, "");
 		}
 
-		// Hash and accumulate 
-		constexpr uint32_t Hash32(uint32_t ch, uint32_t h)
+		// Compile time hash and accumulate 
+		constexpr uint32_t Hash32CT(uint32_t ch, uint32_t h)
 		{
 			return impl::Mul32(h ^ ch, FNV_prime32);
 		}
-		constexpr uint64_t Hash64(uint64_t ch, uint64_t h)
+		constexpr uint64_t Hash64CT(uint64_t ch, uint64_t h)
 		{
 			return impl::Mul64(h ^ ch, FNV_prime64);
 		}
 
 		// Sentinel hash
-		template <typename Ty> constexpr uint32_t Hash32(Ty const* str, Ty term = 0, uint32_t h = FNV_offset_basis32)
+		template <typename Ty> constexpr uint32_t Hash32CT(Ty const* str, Ty term = 0, uint32_t h = FNV_offset_basis32)
 		{
-			return *str == term ? h : Hash32(str + 1, term, Hash32(uint32_t(*str), h));
+			return *str == term ? h : Hash32CT(str + 1, term, Hash32CT(uint32_t(*str), h));
 		}
-		template <typename Ty> constexpr uint64_t Hash64(Ty const* str, Ty term = 0, uint64_t h = FNV_offset_basis64)
+		template <typename Ty> constexpr uint64_t Hash64CT(Ty const* str, Ty term = 0, uint64_t h = FNV_offset_basis64)
 		{
-			return *str == term ? h : Hash64(str + 1, term, Hash64(uint64_t(*str), h));
+			return *str == term ? h : Hash64CT(str + 1, term, Hash64CT(uint64_t(*str), h));
 		}
 
 		// Case insensitive sentinel hash
-		template <typename Ty> constexpr uint32_t HashI32(Ty const* str, Ty term = 0, uint32_t h = FNV_offset_basis32)
+		template <typename Ty> constexpr uint32_t HashI32CT(Ty const* str, Ty term = 0, uint32_t h = FNV_offset_basis32)
 		{
-			return *str == term ? h : HashI32(str + 1, term, Hash32(Lower(*str), h));
+			return *str == term ? h : HashI32CT(str + 1, term, Hash32CT(impl::Lower(*str), h));
 		}
-		template <typename Ty> constexpr uint64_t HashI64(Ty const* str, Ty term = 0, uint64_t h = FNV_offset_basis64)
+		template <typename Ty> constexpr uint64_t HashI64CT(Ty const* str, Ty term = 0, uint64_t h = FNV_offset_basis64)
 		{
-			return *str == term ? h : HashI64(str + 1, term, HAsh64(Lower(*str), h));
+			return *str == term ? h : HashI64CT(str + 1, term, Hash64CT(impl::Lower(*str), h));
 		}
 
 		// Range hash
-		template <typename Ty> constexpr uint32_t Hash32(Ty const* str, Ty const* end, uint32_t h = FNV_offset_basis32)
+		template <typename Ty> constexpr uint32_t Hash32CT(Ty const* str, Ty const* end, uint32_t h = FNV_offset_basis32)
 		{
-			return str == end ? h : Hash32(str + 1, end, Hash32(uint32_t(*str), h));
+			return str == end ? h : Hash32CT(str + 1, end, Hash32CT(uint32_t(*str), h));
 		}
-		template <typename Ty> constexpr uint32_t Hash64(Ty const* str, Ty const* end, uint32_t h = FNV_offset_basis64)
+		template <typename Ty> constexpr uint32_t Hash64CT(Ty const* str, Ty const* end, uint32_t h = FNV_offset_basis64)
 		{
-			return str == end ? h : Hash64(str + 1, end, Hash64(uint64_t(*str), h));
+			return str == end ? h : Hash64CT(str + 1, end, Hash64CT(uint64_t(*str), h));
 		}
 
 		// Case insensitive range hash
-		template <typename Ty> constexpr uint32_t HashI32(Ty const* str, Ty const* end, uint32_t h = FNV_offset_basis32)
+		template <typename Ty> constexpr uint32_t HashI32CT(Ty const* str, Ty const* end, uint32_t h = FNV_offset_basis32)
 		{
-			return str == end ? h : HashI32(str + 1, end, Hash32(Lower(*str), h));
+			return str == end ? h : HashI32CT(str + 1, end, Hash32CT(impl::Lower(*str), h));
 		}
-		template <typename Ty> constexpr uint64_t HashI64(Ty const* str, Ty const* end, uint64_t h = FNV_offset_basis64)
+		template <typename Ty> constexpr uint64_t HashI64CT(Ty const* str, Ty const* end, uint64_t h = FNV_offset_basis64)
 		{
-			return str == end ? h : HashI64(str + 1, end, HAsh64(Lower(*str), h));
+			return str == end ? h : HashI64CT(str + 1, end, Hash64CT(impl::Lower(*str), h));
 		}
 
 		// Default hash = 32 bit hash, even on 64bit builds for consistency
-		template <typename Ty> constexpr uint32_t Hash(Ty ch, uint32_t h)
+		template <typename Ty> constexpr uint32_t HashCT(Ty ch, uint32_t h)
 		{
-			return Hash32(ch, h);
+			return Hash32CT(ch, h);
 		}
-		template <typename Ty> constexpr HashValue Hash(Ty const* str, Ty term = 0)
+		template <typename Ty> constexpr HashValue HashCT(Ty const* str, Ty term = 0)
 		{
-			return static_cast<HashValue>(Hash32(str, term));
+			return static_cast<HashValue>(Hash32CT(str, term));
 		}
-		template <typename Ty> constexpr HashValue HashI(Ty const* str, Ty term = 0)
+		template <typename Ty> constexpr HashValue HashICT(Ty const* str, Ty term = 0)
 		{
-			return static_cast<HashValue>(HashI32(str, term));
+			return static_cast<HashValue>(HashI32CT(str, term));
 		}
-		template <typename Ty> constexpr HashValue Hash(Ty const* str, Ty const* end)
+		template <typename Ty> constexpr HashValue HashCT(Ty const* str, Ty const* end)
 		{
-			return Hash32(str, end);
+			return Hash32CT(str, end);
 		}
-		template <typename Ty> constexpr HashValue HashI(Ty const* str, Ty const* end)
+		template <typename Ty> constexpr HashValue HashICT(Ty const* str, Ty const* end)
 		{
-			return HashI32(str, end);
+			return HashI32CT(str, end);
 		}
 
 		//template <unsigned int N> class C; C<HashI("ABC")> c;
-		static_assert(Hash("ABC") == 1552166763U, "Compile time CRC failed");
-		static_assert(HashI("ABC") == 440920331U, "Compile time CRC failed");
+		static_assert(HashCT("ABC") == 1552166763U, "Compile time CRC failed");
+		static_assert(HashICT("ABC") == 440920331U, "Compile time CRC failed");
+
+		// Hash a sentinel string using the default 'Hash' function
+		template <typename Ty> inline HashValue Hash(Ty const* str, Ty term = 0)
+		{
+			auto r = FNV_offset_basis32;
+			for (; *str != term; ++str) r = HashCT(*str, r);
+			return r;
+		}
+		template <typename Ty> inline HashValue HashI(Ty const* str, Ty term = 0)
+		{
+			auto r = FNV_offset_basis32;
+			for (; *str != term; ++str) r = HashCT(impl::Lower(*str), r);
+			return r;
+		}
 
 		// Hash a range of elements using the default 'Hash' function
 		template <typename Iter> inline HashValue Hash(Iter first, Iter last)
 		{
 			auto r = FNV_offset_basis32;
-			for (; first != last; ++first) r = Hash(*first, r);
+			for (; first != last; ++first) r = HashCT(*first, r);
+			return r;
+		}
+		template <typename Iter> inline HashValue HashI(Iter first, Iter last)
+		{
+			auto r = FNV_offset_basis32;
+			for (; first != last; ++first) r = HashCT(impl::Lower(*first), r);
 			return r;
 		}
 
@@ -331,35 +351,32 @@ namespace pr
 			}
 			{// Compile time hash vs. std::hash
 				char const data[] = "Paul was here. CrC this, mofo";
-				const auto h0  = sizeof(size_t) == 8 ? Hash64(data) : Hash32(data);
+				const auto h0  = sizeof(size_t) == 8 ? Hash64CT(data) : Hash32CT(data);
 				auto h1 = std::hash<std::string>{}(&data[0]);
 				PR_CHECK(h0 == h1, true);
 			}
-			//enum
-			//{
-			//	Blah = -0x7FFFFFFF,
-			//};
-			//char const data2[] = "paul was here. crc this, mofo";
-			//{
-			//	auto h0 = HashData(data, sizeof(data));
-			//	PR_CHECK(h0, 0x12345678);
-			//
-			//	auto h1 = HashData64(data, sizeof(data));
-			//	PR_CHECK(h1,h1);
-			//}
-			//{ // Check accumulative hash works
-			//	pr::hash::HashValue h0 = pr::hash::HashData(data, sizeof(data));
-			//	pr::hash::HashValue h1 = pr::hash::HashData(data + 5, sizeof(data) - 5, pr::hash::HashData(data, 5));
-			//	pr::hash::HashValue h2 = pr::hash::HashData(data + 9, sizeof(data) - 9, pr::hash::HashData(data, 9));
-			//	PR_CHECK(h0, h1);
-			//	PR_CHECK(h0, h2);
-			//}
-			//{
-			//	auto h0 = pr::hash::HashLwr(data);
-			//	auto h1 = pr::hash::HashC(data2);
-			//	PR_CHECK(h1, h0);
-			//}
-
+			{// Compile time vs. run time
+				char const data[] = "Paul was here. CrC this, mofo";
+				const auto h0 = HashCT(&data[0]);
+				const auto h1 = Hash(&data[0]);
+				PR_CHECK(h0 == h1, true);
+			}
+			{// Hash POD
+				struct POD { int i; char c; float f; };
+				auto pod0 = POD{32,'A',6.28f};
+				auto pod1 = POD{31,'B',3.14f};
+				auto pod2 = POD{32,'A',6.28f};
+				const auto h0 = HashObj(pod0);
+				const auto h1 = HashObj(pod1);
+				const auto h2 = HashObj(pod2);
+				PR_CHECK(h0 != h1, true);
+				PR_CHECK(h0 == h2, true);
+			}
+			{// Case insensitive hash
+				enum E { Blah = HashICT("Blah"), };
+				const auto h0 = HashI("Blah");
+				PR_CHECK(E(h0) == Blah, true);
+			}
 			{ // HsiehHash16
 				char const data[] = "Hsieh hash test!";
 				auto h0 = HsiehHash16(&data[0], sizeof(data));

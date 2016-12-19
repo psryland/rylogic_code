@@ -383,7 +383,7 @@ namespace pr
 
 			// Get the description of the existing swap chain
 			DXGI_SWAP_CHAIN_DESC sd = {0};
-			m_swap_chain->GetDesc(&sd);
+			pr::Throw(m_swap_chain->GetDesc(&sd), "Failed to get current swap chain description");
 
 			// Check for feature support
 			ms.Validate(device, sd.BufferDesc.Format);

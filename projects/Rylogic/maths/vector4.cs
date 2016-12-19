@@ -433,13 +433,13 @@ namespace pr.maths
 		{
 			Debug.Assert(!FEql3(vec, Zero), "Cannot make a perpendicular to a zero vector");
 
+			// If 'previous' is parallel to 'vec', choose a new perpendicular (includes previouis == zero)
+			if (Parallel(vec, previous))
+				return Perpendicular(vec);
+
 			// If 'previous' is still perpendicular, keep it
 			if (Maths.FEql(Dot3(vec, previous), 0))
 				return previous;
-
-			// If 'previous' is parallel to 'vec', choose a new perpendicular
-			if (Parallel(vec, previous))
-				return Perpendicular(vec);
 
 			// Otherwise, make a perpendicular that is close to 'previous'
 			var v = Cross3(Cross3(vec, previous), vec);

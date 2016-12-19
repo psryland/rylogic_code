@@ -71,6 +71,33 @@ namespace pr.maths
 				throw new ArgumentException("index out of range", "i");
 			}
 		}
+		public v4 this[uint i]
+		{
+			get { return this[(int)i]; }
+			set { this[(int)i] = value; }
+		}
+
+		/// <summary>Get/Set components by index</summary>
+		public float this[int c, int r]
+		{
+			get { return this[c][r]; }
+			set
+			{
+				var vec = this[c];
+				vec[r] = value;
+				this[c] = vec;
+			}
+		}
+		public float this[uint c, uint r]
+		{
+			get { return this[(int)c][(int)r]; }
+			set
+			{
+				var vec = this[c];
+				vec[r] = value;
+				this[c] = vec;
+			}
+		}
 
 		/// <summary>Convert to a 4x4 matrix with zero translation</summary>
 		public m4x4 m4x4

@@ -92,7 +92,10 @@ namespace pr.common
 		}
 
 		/// <summary>The default values for the settings</summary>
-		public static T Default { get { return m_default ?? (m_default = new T()); } }
+		public static T Default
+		{
+			get { return m_default ?? (m_default = new T()); }
+		}
 		private static T m_default;
 
 		/// <summary>True to block all writes to the settings</summary>

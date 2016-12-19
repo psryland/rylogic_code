@@ -39,33 +39,52 @@ namespace pr
 		using ModelCont = ParseResult::ModelLookup;
 		using EResult = pr::script::EResult;
 
-		struct Cache
+		struct CacheData
 		{
-			VCont m_point;
-			NCont m_norms;
-			ICont m_index;
-			CCont m_color;
-			TCont m_texts;
-			GCont m_nugts;
-
+			VCont* m_point;
+			NCont* m_norms;
+			ICont* m_index;
+			CCont* m_color;
+			TCont* m_texts;
+			GCont* m_nugts;
+			
+			CacheData()
+			{
+				assert(pr::maths::is_aligned(this) && "Not 16 byte aligned");
+				m_point = new (_aligned_malloc(sizeof(VCont), 16)) VCont;
+				m_norms = new (_aligned_malloc(sizeof(NCont), 16)) NCont;
+				m_index = new (_aligned_malloc(sizeof(ICont), 16)) ICont;
+				m_color = new (_aligned_malloc(sizeof(CCont), 16)) CCont;
+				m_texts = new (_aligned_malloc(sizeof(TCont), 16)) TCont;
+				m_nugts = new (_aligned_malloc(sizeof(GCont), 16)) GCont;
+			}
+			~CacheData()
+			{
+				m_point->~VCont(); _aligned_free(m_point);
+				m_norms->~NCont(); _aligned_free(m_norms);
+				m_index->~ICont(); _aligned_free(m_index);
+				m_color->~CCont(); _aligned_free(m_color);
+				m_texts->~TCont(); _aligned_free(m_texts);
+				m_nugts->~GCont(); _aligned_free(m_nugts);
+			}
 			void release()
 			{
-				m_point.clear();
-				m_norms.clear();
-				m_index.clear();
-				m_color.clear();
-				m_texts.clear();
-				m_nugts.clear();
+				m_point->clear();
+				m_norms->clear();
+				m_index->clear();
+				m_color->clear();
+				m_texts->clear();
+				m_nugts->clear();
 			}
 		};
-		
-		thread_local static Cache g_cache;
-		inline VCont& Point() { g_cache.m_point.resize(0); return g_cache.m_point; }
-		inline NCont& Norms() { g_cache.m_norms.resize(0); return g_cache.m_norms; }
-		inline ICont& Index() { g_cache.m_index.resize(0); return g_cache.m_index; }
-		inline CCont& Color() { g_cache.m_color.resize(0); return g_cache.m_color; }
-		inline TCont& Texts() { g_cache.m_texts.resize(0); return g_cache.m_texts; }
-		inline GCont& Nugts() { g_cache.m_nugts.resize(0); return g_cache.m_nugts; }
+		thread_local static CacheData g_cache;
+
+		inline VCont& Point() { g_cache.m_point->resize(0); return *g_cache.m_point; }
+		inline NCont& Norms() { g_cache.m_norms->resize(0); return *g_cache.m_norms; }
+		inline ICont& Index() { g_cache.m_index->resize(0); return *g_cache.m_index; }
+		inline CCont& Color() { g_cache.m_color->resize(0); return *g_cache.m_color; }
+		inline TCont& Texts() { g_cache.m_texts->resize(0); return *g_cache.m_texts; }
+		inline GCont& Nugts() { g_cache.m_nugts->resize(0); return *g_cache.m_nugts; }
 
 		// String hash wrapper
 		inline size_t Hash(char const* str)

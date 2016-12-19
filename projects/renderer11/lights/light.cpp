@@ -64,20 +64,20 @@ namespace pr
 		}
 
 		#define PR_ENUM(x)\
-			x(Pos  ,= pr::hash::HashI(L"Pos" ))\
-			x(Dir  ,= pr::hash::HashI(L"Dir" ))\
-			x(Type ,= pr::hash::HashI(L"Type"))\
-			x(Amb  ,= pr::hash::HashI(L"Amb" ))\
-			x(Diff ,= pr::hash::HashI(L"Diff"))\
-			x(Spec ,= pr::hash::HashI(L"Spec"))\
-			x(SPwr ,= pr::hash::HashI(L"SPwr"))\
-			x(InCA ,= pr::hash::HashI(L"InCA"))\
-			x(OtCA ,= pr::hash::HashI(L"OtCA"))\
-			x(Rng  ,= pr::hash::HashI(L"Rng" ))\
-			x(FOff ,= pr::hash::HashI(L"FOff"))\
-			x(Shdw ,= pr::hash::HashI(L"Shdw"))\
-			x(On   ,= pr::hash::HashI(L"On"  ))\
-			x(CRel ,= pr::hash::HashI(L"CRel"))
+			x(Pos  ,= pr::hash::HashICT(L"Pos" ))\
+			x(Dir  ,= pr::hash::HashICT(L"Dir" ))\
+			x(Type ,= pr::hash::HashICT(L"Type"))\
+			x(Amb  ,= pr::hash::HashICT(L"Amb" ))\
+			x(Diff ,= pr::hash::HashICT(L"Diff"))\
+			x(Spec ,= pr::hash::HashICT(L"Spec"))\
+			x(SPwr ,= pr::hash::HashICT(L"SPwr"))\
+			x(InCA ,= pr::hash::HashICT(L"InCA"))\
+			x(OtCA ,= pr::hash::HashICT(L"OtCA"))\
+			x(Rng  ,= pr::hash::HashICT(L"Rng" ))\
+			x(FOff ,= pr::hash::HashICT(L"FOff"))\
+			x(Shdw ,= pr::hash::HashICT(L"Shdw"))\
+			x(On   ,= pr::hash::HashICT(L"On"  ))\
+			x(CRel ,= pr::hash::HashICT(L"CRel"))
 		PR_DEFINE_ENUM2(ELightKW, PR_ENUM);
 		#undef PR_ENUM
 

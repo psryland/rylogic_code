@@ -57,6 +57,18 @@ namespace pr.gui
 			ForeColorInvalid = Color.Gray;
 			BackColorInvalid = Color.White;
 		}
+		protected override void OnKeyDown(KeyEventArgs e)
+		{
+			if (!Multiline && e.KeyCode == Keys.Return)
+			{
+				TryCommitValue();
+				e.Handled = true;
+			}
+			else
+			{
+				base.OnKeyDown(e);
+			}
+		}
 
 		/// <summary>Get/Set whether the background colours are set based on value validity</summary>
 		public bool UseValidityColours { get; set; }

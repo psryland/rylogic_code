@@ -33,50 +33,42 @@ namespace pr
 			using FieldEnum = TFieldEnum;
 			static_assert(has_bitwise_operators_allowed<FieldEnum>::value, "");
 
-			// Cached CRC of the state desc
-			mutable size_t m_crc;
-
 			// A bit field of the members in 'TStateDesc' that have had a value set.
 			FieldEnum m_mask[N];
 
 			StateBlock()
 				:TStateDesc()
-				,m_crc()
 				,m_mask()
 			{}
 
 			// Returns the description
-			TStateDesc const& Desc() const { return *this; }
-			TStateDesc& Desc() { return *this; }
-
-			// Return the hash of the data in this state object
-			size_t Hash() const
+			TStateDesc const& Desc() const
 			{
-				return m_crc != 0 ? m_crc : (m_crc = pr::hash::HashObj(*this));
+				return *this;
+			}
+			TStateDesc& Desc()
+			{
+				return *this;
 			}
 
 			// Clear a field in the state description
 			void Clear(FieldEnum field)
 			{
 				m_mask[0] = pr::SetBits(m_mask[0], field, false);
-				m_crc = 0;
 			}
 			void Clear(FieldEnum field, int n)
 			{
 				m_mask[n] = pr::SetBits(m_mask[n], field, false);
-				m_crc = 0;
 			}
 
 			// Set the value of a field in the state description
 			void Set(FieldEnum field)
 			{
 				m_mask[0] = pr::SetBits(m_mask[0], field, true);
-				m_crc = 0;
 			}
 			void Set(FieldEnum field, int n)
 			{
 				m_mask[n] = pr::SetBits(m_mask[n], field, true);
-				m_crc = 0;
 			}
 
 			// Combine two states into one. 'rhs' has priority over 'this'
@@ -95,19 +87,14 @@ namespace pr
 				mask = rhs.m_mask[0];
 				for (int i = 1; i < N; ++i) mask = mask | rhs.m_mask[i];
 				if (mask == FieldEnum())
-				{
 					return;
-				}
 
 				// Otherwise, we have to through field-by-field copying those
 				// that are set in 'rhs' over to 'this'
 				for (int i = 0; i != N; ++i)
 				{
 					for (auto field : pr::EnumerateBits(rhs.m_mask[i]))
-					{
 						merge((FieldEnum)field, i, rhs);
-						m_crc = 0;
-					}
 				}
 			}
 		};
@@ -134,7 +121,7 @@ namespace pr
 			D3DPtr<TD3DInterface> GetState(TStateBlock const& desc, CreateFunc create)
 			{
 				// Look for a corresponding state object
-				auto hash = desc.Hash();
+				auto hash = pr::hash::HashObj(desc);
 				auto iter = m_lookup.find(hash);
 				if (iter == end(m_lookup))
 				{
@@ -168,7 +155,8 @@ namespace pr
 		template <typename TStateDesc, typename TFieldEnum, size_t N>
 		inline bool operator == (StateBlock<TStateDesc, TFieldEnum, N> const& lhs, StateBlock<TStateDesc, TFieldEnum, N> const& rhs)
 		{
-			return lhs.Hash() == rhs.Hash();
+			// Direct memory compare is way faster than comparing CRCs of the blocks
+			return memcmp(&lhs, &rhs, sizeof(lhs)) == 0;
 		}
 		template <typename TStateDesc, typename TFieldEnum, size_t N>
 		inline bool operator != (StateBlock<TStateDesc, TFieldEnum, N> const& lhs, StateBlock<TStateDesc, TFieldEnum, N> const& rhs)

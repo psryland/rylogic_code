@@ -69,7 +69,6 @@ namespace pr.gui
 				Scene           = new ChartPanel(this); // Must come after 'Range'
 				MouseOperations = new MouseOps();
 				Tools           = new ChartTools(Options);
-				m_impl_zoom     = new RangeF(float.Epsilon, float.MaxValue);
 				m_tt_show_value = new ToolTip { ShowAlways = false, UseAnimation = false, UseFading = false, Tag = false };
 
 				Elements = new BindingListEx<Element> { PerItemClear = true, UseHashSet = true };
@@ -84,7 +83,6 @@ namespace pr.gui
 				AllowEditing = false;
 				AllowSelection = false;
 				DefaultMouseControl = true;
-				FindDefaultRange(visible_only:false);
 			}
 			catch
 			{
@@ -204,15 +202,19 @@ namespace pr.gui
 		/// <summary>Get/Set the aspect ratio of the chart area</summary>
 		public double Aspect
 		{
-			get { return Scene.Camera.Aspect * Scene.Bounds.Height / Scene.Bounds.Width; }
+			get { return Camera.Aspect * Scene.Bounds.Height / Scene.Bounds.Width; }
 			set
 			{
-				// When setting the aspect ratio, change the YAxis range since X is the
-				// independent variable and we can't change the chart panel bounds.
 				if (Aspect == value) return;
 				if (Options.LockAspect != null) Options.LockAspect = value;
-				Scene.Camera.Aspect = (float)(value * Scene.Bounds.Width / Scene.Bounds.Height);
-				XAxis.Span = YAxis.Span * Scene.Camera.Aspect;
+				Camera.Aspect = (float)(value * Scene.Bounds.Width / Scene.Bounds.Height);
+
+				//if (XAxis.Span > YAxis.Span)
+				//	YAxis.Span = XAxis.Span / aspect;
+				//else
+				//	XAxis.Span = YAxis.Span * aspect;
+
+				SetRangeFromCamera();
 				Invalidate();
 			}
 		}
@@ -237,6 +239,24 @@ namespace pr.gui
 			}
 		}
 		private ChartPanel m_impl_scene;
+
+		/// <summary>Renderer</summary>
+		public View3d View3d
+		{
+			[DebuggerStepThrough] get { return Scene?.View3d; }
+		}
+
+		/// <summary>The view3d window for this control instance</summary>
+		public View3d.Window Window
+		{
+			[DebuggerStepThrough] get { return Scene?.Window; }
+		}
+
+		/// <summary>The view of the chart</summary>
+		public View3d.CameraControls Camera
+		{
+			[DebuggerStepThrough] get { return Scene?.Camera; }
+		}
 
 		/// <summary>All chart objects</summary>
 		public BindingListEx<Element> Elements { get; private set; }
@@ -418,73 +438,109 @@ namespace pr.gui
 			return new HitTestResult(zone, client_point, chart_point, modifier_keys, hits, Scene.Camera);
 		}
 
-		/// <summary>
-		/// Find the appropriate range for all data in the chart.
-		/// Call ResetToDefaultRange() to zoom the chart to this range.</summary>
-		public void FindDefaultRange(EAxis axis = EAxis.Both, bool visible_only = true)
+		///// <summary>Find the appropriate range for all data in the chart. Call ResetToDefaultRange() to zoom the chart to this range.</summary>
+		//public void FindDefaultRange(EAxis axis = EAxis.Both, bool visible_only = true)
+		//{
+		//	// Notes:
+		//	//  - Find the range on camera X/Y regardless of the aspect ratio. It's up to
+		//	//   'ResetToDefaultRange()' to apply the aspect ratio. This means 'FindDefaultRange()'
+		//	//    does not need to called after changing the aspect ratio.
+
+		//	var do_x = axis.HasFlag(EAxis.XAxis);
+		//	var do_y = axis.HasFlag(EAxis.YAxis);
+
+		//	// Measure elements? or just use the scene bounding box?
+		//	// Measure the range on each axis
+		//	//var xrange = do_x ? FindRange(e => new RangeF(e.Bounds.MinX, e.Bounds.MaxX), Elements, visible_only) : RangeF.Zero;
+		//	//var yrange = do_y ? FindRange(e => new RangeF(e.Bounds.MinY, e.Bounds.MaxY), Elements, visible_only) : RangeF.Zero;
+
+		//	// Set the range based on the scene bounding box
+		//	// Determine the X/Y range spanned by the bounding box as viewed from the camera
+		//	var bbox = Window.SceneBounds(View3d.ESceneBounds.All);
+		//	var bbox_cs = m4x4.InvertFast(Camera.O2W) * bbox;
+		//	var xrange = do_x ? new RangeF(bbox_cs.MinX, bbox_cs.MaxX) : RangeF.Zero;
+		//	var yrange = do_y ? new RangeF(bbox_cs.MinY, bbox_cs.MaxY) : RangeF.Zero;
+
+		//	// Allow users to adjust the default range
+		//	var args = new FindingDefaultRangeEventArgs(axis, xrange, yrange);
+		//	OnFindingDefaultRange(args);
+		//	xrange = args.XRange;
+		//	yrange = args.YRange;
+
+		//	// Scale up the ranges to leave a margin around the default range
+		//	const float MarginScale = 1.05f;
+		//	if (do_x && xrange.Size > 0) xrange = xrange.Scale(MarginScale); else xrange = new RangeF(0.0, 1.0);
+		//	if (do_y && yrange.Size > 0) yrange = yrange.Scale(MarginScale); else yrange = new RangeF(0.0, 1.0);
+		//	if (do_x) BaseRangeX = xrange;
+		//	if (do_y) BaseRangeY = yrange;
+		//}
+
+		///// <summary>Find the appropriate range on a single axis</summary>
+		//public static RangeF FindRange(Func<Element, RangeF> selector, IEnumerable<Element> elements, bool visible_only)
+		//{
+		//	var range = new RangeF(double.MaxValue, -double.MaxValue);
+		//	foreach (var elem in elements)
+		//	{
+		//		if (!elem.VisibleToFindRange)
+		//			continue;
+		//		if (visible_only && !elem.Visible)
+		//			continue;
+
+		//		// Get the bounding box of the chart element
+		//		var bnds = selector(elem);
+		//		if (bnds.Begin < range.Begin) range.Begin = bnds.Begin;
+		//		if (bnds.End   > range.End  ) range.End   = bnds.End;
+		//	}
+
+		//	return range;
+		//}
+
+		///// <summary>Raised when the default range is being found</summary>
+		//public event EventHandler<FindingDefaultRangeEventArgs> FindingDefaultRange;
+		//protected virtual void OnFindingDefaultRange(FindingDefaultRangeEventArgs args)
+		//{
+		//	FindingDefaultRange.Raise(this, args);
+		//}
+
+		///// <summary>Reset the axis ranges to the default. Call FindDefaultRange() to set the default range</summary>
+		//public void ResetToDefaultRange(EAxis axis = EAxis.Both)
+		//{
+		//	if (!XAxis.LockRange && axis.HasFlag(EAxis.XAxis)) Range.XAxis.Set(BaseRangeX);
+		//	if (!YAxis.LockRange && axis.HasFlag(EAxis.YAxis)) Range.YAxis.Set(BaseRangeY);
+		//	if (Options.LockAspect != null) Aspect = Options.LockAspect.Value;
+		//	SetCameraFromRange();
+		//	Invalidate();
+		//}
+
+		/// <summary>Find the default range, then reset to the default range</summary>
+		public void AutoRange(View3d.ESceneBounds who = View3d.ESceneBounds.All)
 		{
-			var do_x = axis.HasFlag(EAxis.XAxis);
-			var do_y = axis.HasFlag(EAxis.YAxis);
+			var bbox = Window.SceneBounds(who);
+			Camera.ResetView(bbox, Options.ResetForward, Options.ResetUp,
+				dist: Options.NavigationMode == ENavMode.Chart2D ? Camera.FocusDist : 0,
+				preserve_aspect: LockAspect,
+				commit: true);
 
-			// Measure the range on each axis
-			var xrange = do_x ? FindRange(e => new RangeF(e.Bounds.MinX, e.Bounds.MaxX), Elements, visible_only) : RangeF.Zero;
-			var yrange = do_y ? FindRange(e => new RangeF(e.Bounds.MinY, e.Bounds.MaxY), Elements, visible_only) : RangeF.Zero;
-
-			// Allow users to adjust the default range
-			var args = new FindingDefaultRangeEventArgs(axis, xrange, yrange);
-			OnFindingDefaultRange(args);
-			xrange = args.XRange;
-			yrange = args.YRange;
-
-			// Scale up the ranges to leave a margin around the default range
-			const float MarginScale = 1.05f;
-			if (xrange.Size > 0 && do_x) xrange = xrange.Scale(MarginScale); else xrange = new RangeF(0.0, 1.0);
-			if (yrange.Size > 0 && do_y) yrange = yrange.Scale(MarginScale); else yrange = new RangeF(0.0, 1.0);
-			if (do_x) BaseRangeX = xrange;
-			if (do_y) BaseRangeY = yrange;
-		}
-
-		/// <summary>Find the appropriate range on a single axis</summary>
-		public static RangeF FindRange(Func<Element, RangeF> selector, IEnumerable<Element> elements, bool visible_only)
-		{
-			var range = new RangeF(double.MaxValue, -double.MaxValue);
-			foreach (var elem in elements)
-			{
-				if (!elem.VisibleToFindRange)
-					continue;
-				if (visible_only && !elem.Visible)
-					continue;
-
-				// Get the bounding box of the chart element
-				var bnds = selector(elem);
-				if (bnds.Begin < range.Begin) range.Begin = bnds.Begin;
-				if (bnds.End   > range.End  ) range.End   = bnds.End;
-			}
-
-			return range;
-		}
-
-		/// <summary>Raised when the default range is being found</summary>
-		public event EventHandler<FindingDefaultRangeEventArgs> FindingDefaultRange;
-		protected virtual void OnFindingDefaultRange(FindingDefaultRangeEventArgs args)
-		{
-			FindingDefaultRange.Raise(this, args);
-		}
-
-		/// <summary>
-		/// Reset the axis ranges to the default.
-		/// Call FindDefaultRange() to set the default range</summary>
-		public void ResetToDefaultRange(EAxis axis = EAxis.Both)
-		{
-			if (!XAxis.LockRange && axis.HasFlag(EAxis.XAxis)) Range.XAxis.Set(BaseRangeX);
-			if (!YAxis.LockRange && axis.HasFlag(EAxis.YAxis)) Range.YAxis.Set(BaseRangeY);
-			if (Options.LockAspect != null) Aspect = Options.LockAspect.Value;
-			SetCameraFromRange();
+			SetRangeFromCamera();
 			Invalidate();
 		}
 
+		/// <summary>Get/Set whether the aspect ratio is locked to the current value</summary>
+		public bool LockAspect
+		{
+			get { return Options.LockAspect != null; }
+			set
+			{
+				if (LockAspect == value) return;
+				if (value)
+					Options.LockAspect = (XAxis.Span * Scene.Bounds.Height) / (YAxis.Span * Scene.Bounds.Width);
+				else
+					Options.LockAspect = null;
+			}
+		}
+
 		/// <summary>Set the axis range based on the position of the camera and the field of view</summary>
-		private void SetRangeFromCamera()
+		public void SetRangeFromCamera()
 		{
 			// The grid is always parallel to the image plane of the camera.
 			// The camera forward vector points at the centre of the grid.
@@ -505,7 +561,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Position the camera based on the axis range</summary>
-		private void SetCameraFromRange()
+		public void SetCameraFromRange()
 		{
 			// Set the aspect ratio from the axis range and scene bounds
 			Scene.Camera.Aspect = (float)(XAxis.Span / YAxis.Span);
@@ -737,7 +793,7 @@ namespace pr.gui
 					m_camera = m_window.Camera;
 					m_camera.Orthographic = true;
 					m_camera.SetPosition(new v4(0, 0, 10, 1), v4.Origin, v4.YAxis);
-					m_camera.SetClipPlanes(0.01f, 1000f, true);
+					m_camera.ClipPlanes(0.01f, 1000f, true);
 				}
 				catch
 				{
@@ -1007,6 +1063,8 @@ namespace pr.gui
 				Orthographic         = false;
 				MinSelectionDistance = 10f;
 				MinDragPixelDistance = 5f;
+				ResetForward         = -v4.ZAxis;
+				ResetUp              = +v4.YAxis;
 				XAxis                = new Axis();
 				YAxis                = new Axis();
 				// Don't forget to add new members to the other constructors!
@@ -1031,6 +1089,8 @@ namespace pr.gui
 				Orthographic         = rhs.Orthographic;
 				MinSelectionDistance = rhs.MinSelectionDistance;
 				MinDragPixelDistance = rhs.MinDragPixelDistance;
+				ResetForward         = rhs.ResetForward;
+				ResetUp              = rhs.ResetUp;
 				XAxis                = new Axis(rhs.XAxis);
 				YAxis                = new Axis(rhs.YAxis);
 			}
@@ -1054,6 +1114,8 @@ namespace pr.gui
 				Orthographic         = node.Element(nameof(Orthographic        )).As(Orthographic        );
 				MinSelectionDistance = node.Element(nameof(MinSelectionDistance)).As(MinSelectionDistance);
 				MinDragPixelDistance = node.Element(nameof(MinDragPixelDistance)).As(MinDragPixelDistance);
+				ResetForward         = node.Element(nameof(ResetForward        )).As(ResetForward        );
+				ResetUp              = node.Element(nameof(ResetUp             )).As(ResetUp             );
 				XAxis                = node.Element(nameof(XAxis               )).As(XAxis               );
 				YAxis                = node.Element(nameof(YAxis               )).As(YAxis               );
 			}
@@ -1077,6 +1139,8 @@ namespace pr.gui
 				node.Add2(nameof(Orthographic        ) , Orthographic         , false);
 				node.Add2(nameof(MinSelectionDistance) , MinSelectionDistance , false);
 				node.Add2(nameof(MinDragPixelDistance) , MinDragPixelDistance , false);
+				node.Add2(nameof(ResetForward        ) , ResetForward         , false);
+				node.Add2(nameof(ResetUp             ) , ResetUp              , false);
 				node.Add2(nameof(XAxis               ) , XAxis                , false);
 				node.Add2(nameof(YAxis               ) , YAxis                , false);
 				return node;
@@ -1234,6 +1298,22 @@ namespace pr.gui
 				set { SetProp(ref m_MinDragPixelDistance, value, nameof(MinDragPixelDistance)); }
 			}
 			private float m_MinDragPixelDistance;
+
+			/// <summary>The forward direction of the camera when reset</summary>
+			public v4 ResetForward
+			{
+				get { return m_ResetForward; }
+				set { SetProp(ref m_ResetForward, value, nameof(ResetForward)); }
+			}
+			public v4 m_ResetForward;
+
+			/// <summary>The up direction of the camera when reset</summary>
+			public v4 ResetUp
+			{
+				get { return m_ResetUp; }
+				set { SetProp(ref m_ResetUp, value, nameof(ResetUp)); }
+			}
+			public v4 m_ResetUp;
 
 			/// <summary>XAxis rendering options</summary>
 			public Axis XAxis 
@@ -1988,6 +2068,10 @@ namespace pr.gui
 
 		#region Navigation
 
+		// Prefer camera matrix operations for navigation, then call
+		// SetRangeFromCamera to update the X/Y axis since these work
+		// for 2D or 3D.
+
 		/// <summary>Navigation methods for moving the camera</summary>
 		public enum ENavMode
 		{
@@ -2038,8 +2122,9 @@ namespace pr.gui
 				switch (e.Button)
 				{
 				default: return;
-				case MouseButtons.Left:  MouseOperations.SetPending(e.Button, new MouseOpDefaultLButton(this)); break;
-				case MouseButtons.Right: MouseOperations.SetPending(e.Button, new MouseOpDefaultRButton(this)); break;
+				case MouseButtons.Left:   MouseOperations.SetPending(e.Button, new MouseOpDefaultLButton(this)); break;
+				case MouseButtons.Middle: MouseOperations.SetPending(e.Button, new MouseOpDefaultMButton(this)); break;
+				case MouseButtons.Right:  MouseOperations.SetPending(e.Button, new MouseOpDefaultRButton(this)); break;
 				}
 			}
 
@@ -2124,11 +2209,11 @@ namespace pr.gui
 			else if (Options.ShowAxes)
 			{
 				var scale = 0.001f;
-				if (ModifierKeys.HasFlag(Keys.Shift  )) scale *= 0.1f;
-				if (ModifierKeys.HasFlag(Keys.Control)) scale *= 0.01f;
+				if (ModifierKeys.HasFlag(Keys.Shift)) scale *= 0.1f;
+				if (ModifierKeys.HasFlag(Keys.Alt  )) scale *= 0.01f;
 				var delta = Maths.Clamp(e.Delta * scale, -999f, 999f);
 
-				// Change the aspect ratio by zooming on the XAxis range
+				// Change the aspect ratio by zooming on the XAxis
 				var chg = false;
 				var xaxis_bounds = Rectangle.FromLTRB(chart_bounds.Left, chart_bounds.Bottom, chart_bounds.Right, ClientSize.Height);
 				if (xaxis_bounds.Contains(e.Location) && !XAxis.LockRange)
@@ -2141,6 +2226,8 @@ namespace pr.gui
 					if (ModifierKeys != Keys.Control && XAxis.AllowZoom)
 					{
 						XAxis.Span *= (1.0f - delta);
+						if (Options.LockAspect != null)
+							YAxis.Span *= (1.0f - delta);
 						chg = true;
 					}
 				}
@@ -2157,14 +2244,10 @@ namespace pr.gui
 					if (ModifierKeys != Keys.Control && YAxis.AllowZoom)
 					{
 						YAxis.Span *= (1.0f - delta);
+						if (Options.LockAspect != null)
+							XAxis.Span *= (1.0f - delta);
 						chg = true;
 					}
-				}
-
-				// If the aspect ratio is fixed, restore the aspect ratio
-				if (Options.LockAspect != null)
-				{
-					Aspect = Options.LockAspect.Value;
 				}
 
 				// Set the camera position from the Axis ranges
@@ -2183,12 +2266,14 @@ namespace pr.gui
 			if (op != null && !e.Handled)
 				op.OnKeyDown(e);
 
+			// Allow derived classes to handle the key
+			base.OnKeyDown(e);
+
 			// If the current mouse operation doesn't use the key,
 			// see if it's a default keyboard shortcut.
 			if (!e.Handled && DefaultKeyboardShortcuts)
 				TranslateKey(e);
 
-			base.OnKeyDown(e);
 		}
 		protected override void OnKeyUp(KeyEventArgs e)
 		{
@@ -2251,7 +2336,7 @@ namespace pr.gui
 			switch (e.KeyCode)
 			{
 			case Keys.Escape:
-				#region Clear Selection
+				#region
 				{
 					if (AllowSelection)
 					{
@@ -2262,7 +2347,7 @@ namespace pr.gui
 				}
 				#endregion
 			case Keys.Delete:
-				#region Delete Elements
+				#region
 				{
 					if (AllowEditing)
 					{
@@ -2289,22 +2374,22 @@ namespace pr.gui
 				}
 				#endregion
 			case Keys.F5:
-				#region Reload scene
+				#region
 				{
 					//InvalidateAllElements();
 					Invalidate();
 					break;
 				}
 				#endregion
-			case Keys.F6:
-				#region Reset to default range
+			case Keys.F7:
+				#region
 				{
-					ResetToDefaultRange();
+					AutoRange();
 					break;
 				}
 				#endregion
 			case Keys.A:
-				#region Select All
+				#region
 				{
 					if ((e.Modifiers & Keys.Control) != 0)
 					{
@@ -2317,108 +2402,6 @@ namespace pr.gui
 				}
 				#endregion
 			}
-		}
-
-		/// <summary>Get/Set the centre of the chart</summary>
-		[Browsable(false)]
-		public PointF Centre
-		{
-			get { return new PointF((float)(XAxis.Min + XAxis.Span*0.5), (float)(YAxis.Min + YAxis.Span*0.5)); }
-			set
-			{
-				XAxis.Min = value.X - XAxis.Span*0.5;
-				YAxis.Min = value.Y - YAxis.Span*0.5;
-				SetCameraFromRange();
-				Invalidate();
-			}
-		}
-
-		/// <summary>Zoom in/out on the chart. Remember to call refresh. Zoom is a floating point value where 1f = no zoom, 2f = 2x magnification</summary>
-		[Browsable(false)]
-		public double Zoom
-		{
-			get
-			{
-				return
-					XAxis.AllowZoom ? XAxis.Span / BaseRangeX.Size :
-					YAxis.AllowZoom ? YAxis.Span / BaseRangeY.Size : 1f;
-			}
-			set
-			{
-				// Limit zoom amount
-				value = Maths.Clamp(value, ZoomMin, ZoomMax);
-
-				// If both axes allow zoom, maintain the aspect ratio
-				if (XAxis.AllowZoom && YAxis.AllowZoom)
-				{
-					var aspect = (YAxis.Span * BaseRangeX.Size) / (BaseRangeY.Size * XAxis.Span);
-					aspect = Maths.Clamp(Maths.IsFinite(aspect) ? aspect : 1.0, 0.001, 1000);
-					XAxis.Span = BaseRangeX.Size * value         ;
-					YAxis.Span = BaseRangeY.Size * value * aspect;
-				}
-				else if (XAxis.AllowZoom)
-				{
-					XAxis.Span = BaseRangeX.Size * value;
-				}
-				else if (YAxis.AllowZoom)
-				{
-					YAxis.Span = BaseRangeY.Size * value;
-				}
-				SetCameraFromRange();
-				Invalidate();
-			}
-		}
-		private RangeF m_impl_zoom;
-
-		/// <summary>Minimum zoom limit</summary>
-		public double ZoomMin
-		{
-			get { return m_impl_zoom.Begin; }
-			set { Debug.Assert(value > 0f); m_impl_zoom.Begin = value; }
-		}
-
-		/// <summary>Maximum zoom limit</summary>
-		public double ZoomMax
-		{
-			get { return m_impl_zoom.End; }
-			set { Debug.Assert(value > 0f); m_impl_zoom.End = value; }
-		}
-
-		/// <summary>Zoom the chart to an area in client space or chart space</summary>
-		public void ZoomArea(RectangleF area, bool client_space)
-		{
-			Debug.Assert(area.Width > 0 && area.Height > 0);
-
-			var lower = new PointF(area.X              , area.Y              );
-			var upper = new PointF(area.X + area.Width , area.Y + area.Height);
-			if (client_space)
-			{
-				lower = ClientToChart(lower);
-				upper = ClientToChart(upper);
-			}
-			if (Options.LockAspect != null)
-			{
-				var aspect = Options.LockAspect.Value;
-				var dy = upper.Y - lower.Y;
-				var dx = upper.X - lower.X;
-				if (dx < aspect * dy)
-				{
-					var chg = (float)(aspect * dy - dx) / 2f;
-					lower.X -= chg;
-					upper.X += chg;
-				}
-				else
-				{
-					var chg = (float)(dx - aspect * dy) / 2f;
-					lower.Y -= chg;
-					upper.Y += chg;
-				}
-			}
-
-			if (!XAxis.LockRange) XAxis.Set(lower.X, upper.X);
-			if (!YAxis.LockRange) YAxis.Set(lower.Y, upper.Y);
-			SetCameraFromRange();
-			Invalidate();
 		}
 
 		#endregion
@@ -2693,7 +2676,56 @@ namespace pr.gui
 			}
 		}
 
-		/// <summary>A mouse operation for dragging the chart around or right clicking(Right Button)</summary>
+		/// <summary>A mouse operation for zooming (Middle Button)</summary>
+		public class MouseOpDefaultMButton :MouseOp
+		{
+			public MouseOpDefaultMButton(ChartControl chart) :base(chart)
+			{}
+			public override void MouseDown(MouseEventArgs e)
+			{
+			}
+			public override void MouseMove(MouseEventArgs e)
+			{
+				// If we haven't dragged, treat it as a click instead (i.e. ignore till it's a drag operation)
+				if (IsClick(e.Location))
+					return;
+
+				// Todo zoom based on move while the middle button down
+
+				m_chart.Invalidate();
+			}
+			public override void MouseUp(MouseEventArgs e)
+			{
+				Util.Dispose(ref m_suspend_scope);
+
+				// If this is a single click...
+				if (IsClick(e.Location))
+				{
+					// Pass the click event out to users first
+					var args = new ChartClickedEventArgs(m_hit_result, e);
+					m_chart.OnChartClicked(args);
+
+					if (!args.Handled)
+					{
+						if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.Chart))
+							m_chart.Camera.ResetZoom();
+						else if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.XAxis))
+						{ }
+						else if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.YAxis))
+						{ }
+					}
+				}
+				// Otherwise this is a drag action
+				else
+				{
+				}
+
+				m_chart.Cursor = Cursors.Default;
+				m_chart.Invalidate();
+			}
+		}
+
+		/// <summary>A mouse operation for dragging the chart around or right clicking (Right Button)</summary>
 		public class MouseOpDefaultRButton :MouseOp
 		{
 			/// <summary>The allowed motion based on where the chart was grabbed</summary>
@@ -3482,7 +3514,7 @@ namespace pr.gui
 						opt.Checked = Scene.Window.OriginVisible;
 						opt.Click += (s,a) =>
 						{
-							Scene.Window.OriginVisible = true;
+							Scene.Window.OriginVisible = !Scene.Window.OriginVisible;
 							Invalidate();
 						};
 					}
@@ -3491,7 +3523,7 @@ namespace pr.gui
 						opt.Checked = Scene.Window.FocusPointVisible;
 						opt.Click += (s,a) =>
 						{
-							Scene.Window.FocusPointVisible = true;
+							Scene.Window.FocusPointVisible = !Scene.Window.FocusPointVisible;
 							Invalidate();
 						};
 					}
@@ -3540,9 +3572,7 @@ namespace pr.gui
 						var opt = zoom_menu.DropDownItems.Add2(new ToolStripMenuItem("Default") { Name = CMenu.ZoomMenu.Default });
 						opt.Click += (s, a) =>
 						{
-							FindDefaultRange(visible_only:false);
-							ResetToDefaultRange();
-							Invalidate();
+							AutoRange();
 						};
 					}
 					{
@@ -3557,10 +3587,7 @@ namespace pr.gui
 						opt.Checked = Options.LockAspect != null;
 						opt.Click += (s,a) =>
 						{
-							if (Options.LockAspect != null)
-								Options.LockAspect = null;
-							else
-								Options.LockAspect = (XAxis.Span * Scene.Bounds.Height) / (YAxis.Span * Scene.Bounds.Width);
+							LockAspect = !LockAspect;
 						};
 					}
 				}

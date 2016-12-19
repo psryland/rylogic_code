@@ -152,10 +152,10 @@ namespace pr
 		assert(Succeeded(result) && Reason().c_str());
 		(void)result;
 	}
-	template <typename Result> inline void Throw(Result result, std::string msg = "")
+	template <typename Result> inline void Throw(Result result, char const* msg = nullptr)
 	{
 		if (Succeeded(result)) return;
-		throw pr::Exception<Result>(result, msg + " " + Reason());
+		throw pr::Exception<Result>(result, std::string(msg?msg:"") + (msg?" ":"") + Reason());
 	}
 
 	// Check the 'errno' value, and throw if non-zero

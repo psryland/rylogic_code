@@ -5,6 +5,13 @@ namespace pr.extn
 {
 	public static class DictExtensions
 	{
+		/// <summary>Try to get an element from this dictionary, returning null if not available</summary>
+		public static V TryGetValue<K,V>(this IDictionary<K,V> dic, K key) where V : class
+		{
+			V value;
+			return dic.TryGetValue(key, out value) ? value : null;
+		}
+
 		/// <summary>Insert the given key,value pair into this dictionary, returning this for method chaining</summary>
 		public static Dictionary<K,V> Add2<K,V>(this Dictionary<K,V> dic, K key, V value)
 		{

@@ -35,7 +35,6 @@ namespace pr
 
 			DSBlock() :base() {}
 
-			using base::Hash;
 			using base::Desc;
 
 			// Clear a field in the state description

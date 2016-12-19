@@ -25,12 +25,42 @@ namespace LDraw
 
 			DockControl = new DockControl(this, Name) { TabText = Name };
 			Model = model;
+
 		}
 		protected override void Dispose(bool disposing)
 		{
 			Model = null;
 			DockControl = null;
 			base.Dispose(disposing);
+		}
+		protected override void OnChartRendering(ChartRenderingEventArgs args)
+		{
+			// Add all objects to the window's drawlist
+			foreach (var id in Model.ContextIds)
+				Window.AddObjects(id);
+
+			// Add bounding boxes
+			if (Model.Settings.ShowBBoxes)
+				foreach (var id in Model.ContextIds)
+					Window.AddObjects(id);
+
+			base.OnChartRendering(args);
+		}
+		protected override void OnKeyDown(KeyEventArgs e)
+		{
+			switch (e.KeyCode)
+			{
+			case Keys.F5:
+				#region
+				{
+					View3d.ReloadScriptSources();
+					e.Handled = true;
+					break;
+				}
+				#endregion
+			}
+
+			base.OnKeyDown(e);
 		}
 
 		/// <summary>The app logic</summary>
@@ -65,11 +95,5 @@ namespace LDraw
 			}
 		}
 		private DockControl m_impl_dock_control;
-
-		/// <summary>The View3d scene</summary>
-		public View3d.Window Window
-		{
-			[DebuggerStepThrough] get { return Scene?.Window; }
-		}
 	}
 }

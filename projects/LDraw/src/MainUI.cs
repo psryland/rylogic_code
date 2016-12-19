@@ -96,6 +96,11 @@ namespace LDraw
 		private ToolStripMenuItem m_menu_rendering_cullmode_back;
 		private ToolStripMenuItem m_menu_rendering_cullmode_front;
 		private ToolStripMenuItem m_menu_file_edit_script;
+		private ToolStripMenuItem m_menu_nav_zoom;
+		private ToolStripMenuItem m_menu_nav_zoom_default;
+		private ToolStripMenuItem m_menu_nav_zoom_aspect11;
+		private ToolStripMenuItem m_menu_nav_zoom_lock_aspect;
+		private ToolStripSeparator toolStripSeparator11;
 		private ToolStripMenuItem m_menu_file_save_as;
 		#endregion
 
@@ -232,6 +237,7 @@ namespace LDraw
 				if (m_impl_model == value) return;
 				if (m_impl_model != null)
 				{
+					m_impl_model.Scene.Options.PropertyChanged -= UpdateUI;
 					Util.Dispose(ref m_error_cb_wnd);
 					Util.Dispose(ref m_impl_model);
 				}
@@ -239,6 +245,7 @@ namespace LDraw
 				if (m_impl_model != null)
 				{
 					m_error_cb_wnd = Model.Window.PushErrorCB(Model.ReportError);
+					m_impl_model.Scene.Options.PropertyChanged += UpdateUI;
 				}
 				Update();
 			}
@@ -387,6 +394,21 @@ namespace LDraw
 				Model.CamForwardAxis(new v4(-0.577350f, -0.577350f, -0.577350f, 0));
 				Invalidate();
 			};
+			m_menu_nav_zoom_default.Click += (s,a) =>
+			{
+				Model.Scene.AutoRange();
+				UpdateUI();
+			};
+			m_menu_nav_zoom_aspect11.Click += (s,a) =>
+			{
+				Model.Scene.Aspect = 1.0f;
+				UpdateUI();
+			};
+			m_menu_nav_zoom_lock_aspect.Click += (s,a) =>
+			{
+				Model.Scene.LockAspect = !Model.Scene.LockAspect;
+				UpdateUI();
+			};
 			m_menu_nav_align_none.Click += (s, a) =>
 			{
 				AlignCamera(v4.Zero);
@@ -438,6 +460,7 @@ namespace LDraw
 			};
 			m_menu_data_object_manager.Click += (s,a) =>
 			{
+				Model.Window.ShowObjectManager(true);
 			};
 			#endregion
 			#region Rendering Menu
@@ -534,10 +557,11 @@ namespace LDraw
 			m_menu_file_save_as.Enabled = m_dc.ActiveContent?.Owner is ScriptUI;
 
 			// Set check marks next to visible things
+			m_menu_nav_zoom_lock_aspect    .Checked = Model.Scene.LockAspect;
 			m_menu_rendering_show_focus    .Checked = Model.Window.FocusPointVisible;
 			m_menu_rendering_show_origin   .Checked = Model.Window.OriginVisible;
 			m_menu_rendering_show_selection.Checked = false;
-			m_menu_rendering_show_bounds   .Checked = false;
+			m_menu_rendering_show_bounds   .Checked = Model.Window.BBoxesVisible;
 			m_menu_rendering_orthographic  .Checked = Model.Camera.Orthographic;
 
 			// Display the next fill mode
@@ -701,6 +725,7 @@ namespace LDraw
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_new = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_edit_script = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator8 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_open = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open_additional = new System.Windows.Forms.ToolStripMenuItem();
@@ -767,7 +792,11 @@ namespace LDraw
 			this.m_menu_window_example_script = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_window_about = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_file_edit_script = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator11 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_nav_zoom = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_nav_zoom_default = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_nav_zoom_aspect11 = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_nav_zoom_lock_aspect = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
@@ -851,6 +880,13 @@ namespace LDraw
 			this.m_menu_file_new.Size = new System.Drawing.Size(236, 22);
 			this.m_menu_file_new.Text = "&New";
 			// 
+			// m_menu_file_edit_script
+			// 
+			this.m_menu_file_edit_script.Name = "m_menu_file_edit_script";
+			this.m_menu_file_edit_script.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.E)));
+			this.m_menu_file_edit_script.Size = new System.Drawing.Size(236, 22);
+			this.m_menu_file_edit_script.Text = "&Edit Script";
+			// 
 			// toolStripSeparator8
 			// 
 			this.toolStripSeparator8.Name = "toolStripSeparator8";
@@ -914,6 +950,8 @@ namespace LDraw
             this.m_menu_nav_reset_view,
             this.m_menu_nav_view,
             this.toolStripSeparator4,
+            this.m_menu_nav_zoom,
+            this.toolStripSeparator11,
             this.m_menu_nav_align,
             this.toolStripSeparator5,
             this.m_menu_nav_save_view,
@@ -1305,12 +1343,38 @@ namespace LDraw
 			this.m_menu_window_about.Size = new System.Drawing.Size(151, 22);
 			this.m_menu_window_about.Text = "&About";
 			// 
-			// m_menu_file_edit_script
+			// toolStripSeparator11
 			// 
-			this.m_menu_file_edit_script.Name = "m_menu_file_edit_script";
-			this.m_menu_file_edit_script.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.E)));
-			this.m_menu_file_edit_script.Size = new System.Drawing.Size(236, 22);
-			this.m_menu_file_edit_script.Text = "&Edit Script";
+			this.toolStripSeparator11.Name = "toolStripSeparator11";
+			this.toolStripSeparator11.Size = new System.Drawing.Size(157, 6);
+			// 
+			// m_menu_nav_zoom
+			// 
+			this.m_menu_nav_zoom.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_nav_zoom_default,
+            this.m_menu_nav_zoom_aspect11,
+            this.m_menu_nav_zoom_lock_aspect});
+			this.m_menu_nav_zoom.Name = "m_menu_nav_zoom";
+			this.m_menu_nav_zoom.Size = new System.Drawing.Size(160, 22);
+			this.m_menu_nav_zoom.Text = "&Zoom";
+			// 
+			// m_menu_nav_zoom_default
+			// 
+			this.m_menu_nav_zoom_default.Name = "m_menu_nav_zoom_default";
+			this.m_menu_nav_zoom_default.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_nav_zoom_default.Text = "&Default";
+			// 
+			// m_menu_nav_zoom_aspect11
+			// 
+			this.m_menu_nav_zoom_aspect11.Name = "m_menu_nav_zoom_aspect11";
+			this.m_menu_nav_zoom_aspect11.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_nav_zoom_aspect11.Text = "Aspect 1:1";
+			// 
+			// m_menu_nav_zoom_lock_aspect
+			// 
+			this.m_menu_nav_zoom_lock_aspect.Name = "m_menu_nav_zoom_lock_aspect";
+			this.m_menu_nav_zoom_lock_aspect.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_nav_zoom_lock_aspect.Text = "Lock Aspect";
 			// 
 			// MainUI
 			// 

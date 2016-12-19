@@ -51,8 +51,8 @@ namespace pr.maths
 			set
 			{
 				switch (i) {
-				case 0: x = value; break;
-				case 1: y = value; break;
+				case 0: x = value; return;
+				case 1: y = value; return;
 				}
 				throw new ArgumentException("index out of range", "i");
 			}

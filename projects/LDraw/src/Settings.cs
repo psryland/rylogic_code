@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Xml.Linq;
 using pr.common;
@@ -103,7 +104,7 @@ namespace LDraw
 		{
 			AlignAxis    = v4.Zero;
 			ResetForward = -v4.ZAxis;
-			ResetUp      = v4.YAxis;
+			ResetUp      = +v4.YAxis;
 		}
 
 		/// <summary>The camera align axis</summary>
@@ -117,14 +118,14 @@ namespace LDraw
 		public v4 ResetForward
 		{
 			get { return get(x => x.ResetForward); }
-			set { set(x => x.ResetForward, value); }
+			set { set(x => x.ResetForward, value); Debug.Assert(value != v4.Zero); }
 		}
 
 		/// <summary>The reset camera up direction</summary>
 		public v4 ResetUp
 		{
 			get { return get(x => x.ResetUp); }
-			set { set(x => x.ResetUp, value); }
+			set { set(x => x.ResetUp, value); Debug.Assert(value != v4.Zero); }
 		}
 
 		private class TyConv :GenericTypeConverter<CameraSettings> {}

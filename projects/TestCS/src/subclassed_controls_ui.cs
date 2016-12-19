@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Drawing;
 using System.Windows.Forms;
 using pr.container;
 using pr.extn;
@@ -110,8 +111,17 @@ namespace TestCS
 			};
 
 			// Value Box
-			m_vb_value.ValueChanged += (s,a) => m_lbl_vb_value.Text = m_vb_value.Value.ToString();
+			var vb_value_flag = true;
 			m_vb_value.Value = 6.28;
+			m_vb_value.ValueChanged += (s,a) =>
+			{
+				m_lbl_vb_value.Text = m_vb_value.Value.ToString();
+			};
+			m_vb_value.ValueCommitted += (s,a) =>
+			{
+				vb_value_flag = !vb_value_flag;
+				m_vb_value.BackColor = vb_value_flag ? Color.Red : Color.Blue;
+			};
 
 			// Init binding source
 			ChangeSource();

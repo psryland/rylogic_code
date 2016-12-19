@@ -1194,15 +1194,15 @@ namespace pr.gfx
 			/// <summary>Get/Set the camera horizontal field of view (in radians). Note aspect ratio is preserved, setting FovX changes FovY and visa versa</summary>
 			public float FovX
 			{
-				get { return View3D_CameraFovX(m_window.Handle); }
-				set { View3D_CameraSetFovX(m_window.Handle, value); }
+				get { return View3D_CameraFovXGet(m_window.Handle); }
+				set { View3D_CameraFovXSet(m_window.Handle, value); }
 			}
 
 			/// <summary>Get/Set the camera vertical field of view (in radians). Note aspect ratio is preserved, setting FovY changes FovX and visa versa</summary>
 			public float FovY
 			{
-				get { return View3D_CameraFovY(m_window.Handle); }
-				set { View3D_CameraSetFovY(m_window.Handle, value); }
+				get { return View3D_CameraFovYGet(m_window.Handle); }
+				set { View3D_CameraFovYSet(m_window.Handle, value); }
 			}
 
 			/// <summary>Set both the X and Y field of view (i.e. change the aspect ratio)</summary>
@@ -1211,10 +1211,34 @@ namespace pr.gfx
 				View3D_CameraSetFov(m_window.Handle, fovX, fovY);
 			}
 
-			/// <summary>Set the camera near plane distance. Note aspect ratio is preserved, setting FovY changes FovX and visa versa</summary>
-			public void SetClipPlanes(float near, float far, bool focus_relative)
+			/// <summary>Adjust the FocusDist, FovX, and FovY so that the average FOV equals 'fov'</summary>
+			public void BalanceFov(float fov)
 			{
-				View3D_CameraSetClipPlanes(m_window.Handle, near, far, focus_relative);
+				View3D_CameraBalanceFov(m_window.Handle, fov);
+			}
+
+			/// <summary>Get/Set the camera near plane distance</summary>
+			public float NearPlane
+			{
+				get { float n,f; ; ClipPlanes(out n, out f); return n; }
+				set { ClipPlanes(value, FarPlane, true); }
+			}
+
+			/// <summary>Get/Set the camera far plane distance</summary>
+			public float FarPlane
+			{
+				get { float n,f; ClipPlanes(out n, out f); return f; }
+				set { ClipPlanes(NearPlane, value, true); }
+			}
+
+			/// <summary>Get/Set the camera clip plane distances</summary>
+			public void ClipPlanes(out float near, out float far)
+			{
+				View3D_CameraClipPlanesGet(m_window.Handle, out near, out far);
+			}
+			public void ClipPlanes(float near, float far, bool focus_relative)
+			{
+				View3D_CameraClipPlanesSet(m_window.Handle, near, far, focus_relative);
 			}
 
 			/// <summary>Get/Set the position of the camera focus point (in world space, relative to the world origin)</summary>
@@ -1287,21 +1311,28 @@ namespace pr.gfx
 			}
 
 			/// <summary>Move the camera to a position that can see the whole scene given camera directions 'forward' and 'up'</summary>
-			public void ResetView(v4 forward, v4 up)
+			public void ResetView(v4 forward, v4 up, float dist = 0f, bool preserve_aspect = true, bool commit = true)
 			{
-				View3D_ResetView(m_window.Handle, forward, up);
+				View3D_ResetView(m_window.Handle, forward, up, dist, preserve_aspect, commit);
 			}
 
 			/// <summary>Reset the camera to view a bbox</summary>
-			public void ResetView(BBox bbox, v4 forward, v4 up)
+			public void ResetView(BBox bbox, v4 forward, v4 up, float dist = 0f, bool preserve_aspect = true, bool commit = true)
 			{
-				View3D_ResetViewBBox(m_window.Handle, bbox, forward, up);
+				View3D_ResetViewBBox(m_window.Handle, bbox, forward, up, dist, preserve_aspect, commit);
 			}
 
 			/// <summary>Reset the zoom factor to 1f</summary>
 			public void ResetZoom()
 			{
 				View3D_ResetZoom(m_window.Handle);
+			}
+
+			/// <summary>Get/Set the camera FOV zoom</summary>
+			public float Zoom
+			{
+				get { return View3D_ZoomGet(m_window.Handle); }
+				set { View3D_ZoomSet(m_window.Handle, value); }
 			}
 
 			/// <summary>
@@ -2115,20 +2146,24 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_CameraSetViewRect      (HWindow window, float width, float height, float dist);
 		[DllImport(Dll)] private static extern float             View3D_CameraAspect           (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_CameraSetAspect        (HWindow window, float aspect);
-		[DllImport(Dll)] private static extern float             View3D_CameraFovX             (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_CameraSetFovX          (HWindow window, float fovX);
-		[DllImport(Dll)] private static extern float             View3D_CameraFovY             (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_CameraSetFovY          (HWindow window, float fovY);
+		[DllImport(Dll)] private static extern float             View3D_CameraFovXGet          (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_CameraFovXSet          (HWindow window, float fovX);
+		[DllImport(Dll)] private static extern float             View3D_CameraFovYGet          (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_CameraFovYSet          (HWindow window, float fovY);
 		[DllImport(Dll)] private static extern void              View3D_CameraSetFov           (HWindow window, float fovX, float fovY);
-		[DllImport(Dll)] private static extern void              View3D_CameraSetClipPlanes    (HWindow window, float near, float far, bool focus_relative);
+		[DllImport(Dll)] private static extern void              View3D_CameraBalanceFov       (HWindow window, float fov);
+		[DllImport(Dll)] private static extern void              View3D_CameraClipPlanesGet    (HWindow window, out float near, out float far);
+		[DllImport(Dll)] private static extern void              View3D_CameraClipPlanesSet    (HWindow window, float near, float far, bool focus_relative);
 		[DllImport(Dll)] private static extern bool              View3D_MouseNavigate          (HWindow window, v2 ss_point, ENavOp nav_op, bool nav_start_or_end);
 		[DllImport(Dll)] private static extern bool              View3D_MouseNavigateZ         (HWindow window, v2 ss_point, float delta);
 		[DllImport(Dll)] private static extern bool              View3D_Navigate               (HWindow window, float dx, float dy, float dz);
 		[DllImport(Dll)] private static extern void              View3D_ResetZoom              (HWindow window);
+		[DllImport(Dll)] private static extern float             View3D_ZoomGet                (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_ZoomSet                (HWindow window, float zoom);
 		[DllImport(Dll)] private static extern void              View3D_CameraAlignAxis        (HWindow window, out v4 axis);
 		[DllImport(Dll)] private static extern void              View3D_AlignCamera            (HWindow window, v4 axis);
-		[DllImport(Dll)] private static extern void              View3D_ResetView              (HWindow window, v4 forward, v4 up);
-		[DllImport(Dll)] private static extern void              View3D_ResetViewBBox          (HWindow window, BBox bbox, v4 forward, v4 up);
+		[DllImport(Dll)] private static extern void              View3D_ResetView              (HWindow window, v4 forward, v4 up, float dist, bool preserve_aspect, bool commit);
+		[DllImport(Dll)] private static extern void              View3D_ResetViewBBox          (HWindow window, BBox bbox, v4 forward, v4 up, float dist, bool preserve_aspect, bool commit);
 		[DllImport(Dll)] private static extern v2                View3D_ViewArea               (HWindow window, float dist);
 		[DllImport(Dll)] private static extern void              View3D_GetFocusPoint          (HWindow window, out v4 position);
 		[DllImport(Dll)] private static extern void              View3D_SetFocusPoint          (HWindow window, v4 position);
@@ -2244,10 +2279,10 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_BBoxesVisibleSet         (HWindow window, bool visible);
 		[DllImport(Dll)] private static extern Guid              View3D_CreateDemoScene          (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_DeleteDemoScene          ();
-		[DllImport(Dll)] [return:MarshalAs(UnmanagedType.BStr)] private static extern string View3D_ExampleScriptBStr();
 		[DllImport(Dll)] private static extern void              View3D_ShowDemoScript           (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_ShowObjectManager        (HWindow window, bool show);
 		[DllImport(Dll)] private static extern m4x4              View3D_ParseLdrTransform        (string ldr_script);
+		[DllImport(Dll)] [return:MarshalAs(UnmanagedType.BStr)] private static extern string View3D_ExampleScriptBStr();
 
 		[DllImport(Dll)] private static extern HWND              View3D_LdrEditorCreate          (HWND parent);
 		[DllImport(Dll)] private static extern void              View3D_LdrEditorDestroy         (HWND hwnd);

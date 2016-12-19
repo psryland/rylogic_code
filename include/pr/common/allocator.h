@@ -111,7 +111,7 @@ namespace pr
 		// helpers
 		T* New()
 		{
-			auto p = allocator(1);
+			auto p = allocate(1);
 			construct(p);
 			return p;
 		}

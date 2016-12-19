@@ -36,7 +36,7 @@ namespace pr
 
 		// Map the compile time hash function to this namespace
 		using HashValue = pr::hash::HashValue;
-		constexpr HashValue HashI(char const* str) { return pr::hash::HashI(str); }
+		constexpr HashValue HashI(char const* str) { return pr::hash::HashICT(str); }
 
 		#pragma region Ldr object types
 		#define PR_ENUM(x)\
