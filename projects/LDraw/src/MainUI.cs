@@ -224,9 +224,18 @@ namespace LDraw
 		/// <summary>App settings</summary>
 		public Settings Settings
 		{
-			[DebuggerStepThrough] get;
-			private set;
+			[DebuggerStepThrough] get { return m_settings; }
+			private set
+			{
+				if (m_settings == value) return;
+				if (m_settings != null)
+				{ }
+				m_settings = value;
+				if (m_settings != null)
+				{ }
+			}
 		}
+		private Settings m_settings;
 
 		/// <summary>The app logic</summary>
 		public Model Model
@@ -452,6 +461,9 @@ namespace LDraw
 			};
 			m_menu_data_auto_refresh.Click += (s,a) =>
 			{
+				Model.Settings.AutoRefresh = !Model.Settings.AutoRefresh;
+				Model.AutoRefreshSources = Model.Settings.AutoRefresh;
+				UpdateUI();
 			};
 			m_menu_data_create_demo_scene.Click += (s,a) =>
 			{
@@ -558,6 +570,7 @@ namespace LDraw
 
 			// Set check marks next to visible things
 			m_menu_nav_zoom_lock_aspect    .Checked = Model.Scene.LockAspect;
+			m_menu_data_auto_refresh       .Checked = Model.AutoRefreshSources;
 			m_menu_rendering_show_focus    .Checked = Model.Window.FocusPointVisible;
 			m_menu_rendering_show_origin   .Checked = Model.Window.OriginVisible;
 			m_menu_rendering_show_selection.Checked = false;

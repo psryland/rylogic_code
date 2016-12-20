@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows.Forms;
 using pr.gfx;
@@ -9,12 +10,15 @@ namespace LDraw
 {
 	public class SceneUI :ChartControl ,IDockable
 	{
-		private SceneUI() {}
+		private SceneUI() { InitializeComponent(); }
 		public SceneUI(Model model)
 			:base(string.Empty, model.Settings.Scene)
 		{
+			InitializeComponent();
+
 			Name                          = "Scene";
 			BorderStyle                   = BorderStyle.FixedSingle;
+			AllowDrop                     = true;
 			DefaultMouseControl           = true;
 			DefaultKeyboardShortcuts      = true;
 			Options.LockAspect            = 1.0f;
@@ -25,7 +29,6 @@ namespace LDraw
 
 			DockControl = new DockControl(this, Name) { TabText = Name };
 			Model = model;
-
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -72,18 +75,19 @@ namespace LDraw
 				if (m_model == value) return;
 				if (m_model != null)
 				{
+					m_model.DragDrop.Detach(this);
 				}
 				m_model = value;
 				if (m_model != null)
 				{
+					m_model.DragDrop.Attach(this);
 				}
 			}
 		}
 		private Model m_model;
 
 		/// <summary>Provides support for the DockContainer</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public DockControl DockControl
 		{
 			[DebuggerStepThrough] get { return m_impl_dock_control; }
@@ -95,5 +99,18 @@ namespace LDraw
 			}
 		}
 		private DockControl m_impl_dock_control;
+
+		private void InitializeComponent()
+		{
+			this.SuspendLayout();
+			// 
+			// SceneUI
+			// 
+			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+			this.Name = "SceneUI";
+			this.Size = new System.Drawing.Size(477, 333);
+			this.ResumeLayout(false);
+
+		}
 	}
 }

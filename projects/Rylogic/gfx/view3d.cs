@@ -682,6 +682,12 @@ namespace pr.gfx
 			View3D_ClearScriptSources();
 		}
 
+		/// <summary>Poll for changed script source files, and reload any that have changed. (designed as a Timer.Tick handler)</summary>
+		public void CheckForChangedSources(object sender = null, EventArgs args = null)
+		{
+			View3D_CheckForChangedSources();
+		}
+
 		/// <summary>Release all created objects</summary>
 		public void DeleteAllObjects()
 		{
@@ -2184,6 +2190,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern Guid              View3D_LoadScript               ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, bool async, ref Guid context_id, ref View3DIncludes includes);
 		[DllImport(Dll)] private static extern void              View3D_ReloadScriptSources      ();
 		[DllImport(Dll)] private static extern void              View3D_ClearScriptSources       ();
+		[DllImport(Dll)] private static extern void              View3D_CheckForChangedSources   ();
 		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteAll         ();
 		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteById        (ref Guid context_id);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, bool async, ref Guid context_id, ref View3DIncludes includes);

@@ -173,8 +173,10 @@ namespace pr
 
 		private:
 
-			// Internal add file. Returns the number of objects added
-			pr::Guid AddFile(File const& file_, StoreChangedEventArgs::EReason reason)
+			// Internal add file. Returns the number of objects added.
+			// Note: 'file_' not passed by reference because it can be a
+			// file already in the collection, so we need a local copy.
+			pr::Guid AddFile(File file_, StoreChangedEventArgs::EReason reason)
 			{
 				using namespace pr::script;
 

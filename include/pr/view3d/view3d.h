@@ -385,6 +385,7 @@ extern "C"
 	VIEW3D_API GUID         __stdcall View3D_LoadScriptSource         (wchar_t const* filepath, BOOL additional, BOOL async, View3DIncludes const* includes);
 	VIEW3D_API void         __stdcall View3D_ReloadScriptSources      ();
 	VIEW3D_API void         __stdcall View3D_ClearScriptSources       ();
+	VIEW3D_API void         __stdcall View3D_CheckForChangedSources   ();
 	VIEW3D_API void         __stdcall View3D_ObjectsDeleteAll         ();
 	VIEW3D_API void         __stdcall View3D_ObjectsDeleteById        (GUID const& context_id);
 	VIEW3D_API GUID         __stdcall View3D_LoadScript               (wchar_t const* ldr_script, BOOL file, BOOL async, GUID const* context_id, View3DIncludes const* includes);

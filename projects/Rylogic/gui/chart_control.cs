@@ -101,7 +101,7 @@ namespace pr.gui
 		}
 		protected override void OnLayout(LayoutEventArgs e)
 		{
-			if (Scene != null && !this.IsInDesignMode())
+			if (Scene != null && !DesignMode)
 			{
 				using (this.SuspendLayout(false))
 				{
@@ -116,6 +116,7 @@ namespace pr.gui
 		protected override void OnPaint(PaintEventArgs e)
 		{
 			base.OnPaint(e);
+			if (DesignMode) return;
 			DoPaint(e.Graphics);
 		}
 		protected override void OnInvalidated(InvalidateEventArgs e)
@@ -148,6 +149,7 @@ namespace pr.gui
 		}
 
 		/// <summary>The title of the chart</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public string Title
 		{
 			get { return m_title ?? string.Empty; }
@@ -161,6 +163,7 @@ namespace pr.gui
 		private string m_title;
 
 		/// <summary>The current X/Y axis range of the chart</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public RangeData Range
 		{
 			[DebuggerStepThrough] get { return m_range; }
@@ -174,18 +177,21 @@ namespace pr.gui
 		private RangeData m_range;
 
 		/// <summary>Accessor to the current X axis</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public RangeData.Axis XAxis
 		{
 			[DebuggerStepThrough] get { return Range.XAxis; }
 		}
 
 		/// <summary>Accessor to the current Y axis</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public RangeData.Axis YAxis
 		{
 			[DebuggerStepThrough] get { return Range.YAxis; }
 		}
 
 		/// <summary>Default X axis range of the chart</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public RangeF BaseRangeX
 		{
 			[DebuggerStepThrough] get;
@@ -193,6 +199,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Default Y axis range of the chart</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public RangeF BaseRangeY
 		{
 			[DebuggerStepThrough] get;
@@ -200,6 +207,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Get/Set the aspect ratio of the chart area</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public double Aspect
 		{
 			get { return Camera.Aspect * Scene.Bounds.Height / Scene.Bounds.Width; }
@@ -208,18 +216,13 @@ namespace pr.gui
 				if (Aspect == value) return;
 				if (Options.LockAspect != null) Options.LockAspect = value;
 				Camera.Aspect = (float)(value * Scene.Bounds.Width / Scene.Bounds.Height);
-
-				//if (XAxis.Span > YAxis.Span)
-				//	YAxis.Span = XAxis.Span / aspect;
-				//else
-				//	XAxis.Span = YAxis.Span * aspect;
-
 				SetRangeFromCamera();
 				Invalidate();
 			}
 		}
 
 		/// <summary>The view3d part of the chart</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public ChartPanel Scene
 		{
 			[DebuggerStepThrough] get { return m_impl_scene; }
@@ -526,6 +529,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Get/Set whether the aspect ratio is locked to the current value</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool LockAspect
 		{
 			get { return Options.LockAspect != null; }
@@ -3711,6 +3715,9 @@ namespace pr.gui
 
 			public ChartTools(RdrOptions opts)
 			{
+				if (Util.IsInDesignMode)
+					return;
+
 				Options    = opts;
 				AreaSelect = CreateAreaSelect();
 				Resizer    = Util.NewArray(8, i => new ResizeGrabber(i));

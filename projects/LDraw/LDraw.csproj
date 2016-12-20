@@ -100,6 +100,9 @@
     <EmbeddedResource Include="src\ObjectManagerUI.resx">
       <DependentUpon>ObjectManagerUI.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="src\SceneUI.resx">
+      <DependentUpon>SceneUI.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="src\ScriptUI.resx">
       <DependentUpon>ScriptUI.cs</DependentUpon>
     </EmbeddedResource>

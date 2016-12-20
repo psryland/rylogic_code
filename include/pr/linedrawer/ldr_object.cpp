@@ -2500,8 +2500,8 @@ namespace pr
 				auto hicon = (HICON)SendMessageW(parent, WM_GETICON, ICON_SMALL, 0);
 				if (hicon != nullptr) dlg.Icon(hicon, false);
 
-				// Display the dialog after 100ms
-				dlg.ShowDialog(parent, 100);
+				// Display the dialog after a while
+				dlg.ShowDialog(parent, 1000);
 			}
 			else
 			{

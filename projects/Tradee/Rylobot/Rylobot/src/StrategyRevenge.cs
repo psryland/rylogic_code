@@ -13,13 +13,13 @@ namespace Rylobot
 		//  - Make a trade
 		//  - If it goes the wrong way, make another one in the opposite direction for twice the volume
 		//  - repeat.
-		// Only if price is moving my more than the mean candle size
+		// Only if price is moving by more than the mean candle size
 		// Only if price is within one sigma of the mean
 
 		private const int HistoryWindow = 100;
 
 		public StrategyRevenge(Rylobot bot)
-			:base(bot, "StrategyReverseDouble")
+			:base(bot, "StrategyRevenge")
 		{
 			ReversesCount = 3;
 			TakeProfitPC = 0.001;

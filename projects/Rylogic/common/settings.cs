@@ -39,26 +39,35 @@ namespace pr.common
 		SaveFailed,
 	}
 
-	/// <summary>Settings pairs</summary>
+	/// <summary>A single setting</summary>
 	[Serializable]
-	public class SettingsPair
+	[DebuggerDisplay("{Key}={Value}")]
+	public class Setting
 	{
-		public string Key   { get; set; }
-		public object Value { get; set; }
+		public Setting() {}
+		public Setting(string key, object value)
+		{
+			Key   = key;
+			Value = value;
+		}
+		public override string ToString()
+		{
+			return Key + "  " + Value;
+		}
 
-		public SettingsPair() {}
-		public SettingsPair(XElement node)
+		/// <summary>The name of the setting variable</summary>
+		public string Key
 		{
-			Key   = node.Element("key").As<string>();
-			Value = node.Element("value").ToObject();
+			get;
+			set;
 		}
-		public XElement ToXml(XElement node)
+
+		/// <summary>The value of the setting</summary>
+		public object Value
 		{
-			node.Add(Key  .ToXml("key", false));
-			node.Add(Value.ToXml("value", true));
-			return node;
+			get;
+			set;
 		}
-		public override string ToString() { return Key + "  " + Value; }
 	}
 
 	/// <summary>Common interface for 'SettingsSet' and 'SettingsBase'</summary>
@@ -84,12 +93,13 @@ namespace pr.common
 	[Serializable]
 	public abstract class SettingsSet<T> :ISettingsSet where T:SettingsSet<T>, new()
 	{
-		protected readonly List<SettingsPair> Data;
-
 		protected SettingsSet()
 		{
-			Data = new List<SettingsPair>();
+			Data = new List<Setting>();
 		}
+
+		/// <summary>The collection of settings</summary>
+		protected readonly List<Setting> Data;
 
 		/// <summary>The default values for the settings</summary>
 		public static T Default
@@ -163,7 +173,7 @@ namespace pr.common
 
 			// Key not in the data yet? Must be initial value from startup
 			int idx = index(key);
-			if (idx < 0) { Data.Insert(~idx, new SettingsPair{Key = key, Value = value}); return; }
+			if (idx < 0) { Data.Insert(~idx, new Setting{Key = key, Value = value}); return; }
 
 			object old_value = Data[idx].Value;
 			if (Equals(old_value, value)) return; // If the values are the same, don't raise 'changing' events
@@ -185,7 +195,11 @@ namespace pr.common
 		public virtual XElement ToXml(XElement node)
 		{
 			foreach (var d in Data)
-				node.Add2("setting", d, false);
+			{
+				var elem = node.Add2(new XElement("setting"));
+				elem.SetAttributeValue("key", d.Key);
+				d.Value.ToXml(elem, true);
+			}
 			return node;
 		}
 
@@ -196,10 +210,26 @@ namespace pr.common
 			Data.Clear();
 			foreach (var setting in node.Elements())
 			{
-				var pair = setting.As<SettingsPair>();
-				Debug.Assert(pair != null, "Failed to read setting " + setting.Name);
-				SetParentIfNesting(pair.Value);
-				Data.Add(pair);
+				var key = setting.Attribute("key")?.Value;
+				if (key == null)
+				{
+					// Support old style settings
+					var key_elem = setting.Element("key");
+					var val_elem = setting.Element("value");
+					if (key_elem == null || val_elem == null)
+						throw new Exception("Invalid setting element found: {0}".Fmt(setting));
+
+					key = key_elem.As<string>();
+					var val = val_elem.ToObject();
+					SetParentIfNesting(val);
+					Data.Add(new Setting(key, val));
+				}
+				else
+				{
+					var val = setting.ToObject();
+					SetParentIfNesting(val);
+					Data.Add(new Setting(key, val));
+				}
 			}
 
 			// Sort for binary search
@@ -217,7 +247,7 @@ namespace pr.common
 				SetParentIfNesting(i.Value);
 
 				// Key not in the data yet? Must be initial value from startup
-				Data.Insert(~idx, new SettingsPair{Key = i.Key, Value = i.Value});
+				Data.Insert(~idx, new Setting(i.Key, i.Value));
 			}
 		}
 
@@ -266,9 +296,6 @@ namespace pr.common
 	[Serializable]
 	public abstract class SettingsBase<T> :SettingsSet<T> where T:SettingsBase<T>, new()
 	{
-		protected const string VersionKey = "__SettingsVersion";
-		private bool m_block_saving;
-
 		protected SettingsBase()
 		{
 			m_filepath = "";
@@ -341,7 +368,11 @@ namespace pr.common
 		}
 
 		/// <summary>The settings version, used to detect when 'Upgrade' is needed</summary>
-		protected virtual string Version { get { return "v1.0"; } }
+		protected virtual string Version
+		{
+			get { return "v1.0"; }
+		}
+		public const string VersionKey = "__SettingsVersion";
 
 		/// <summary>Returns the filepath for the persisted settings file. Settings cannot be saved until this property has a valid filepath</summary>
 		public string Filepath
@@ -559,6 +590,7 @@ namespace pr.common
 				}
 			}
 		}
+		private bool m_block_saving;
 
 		/// <summary>Save using the last filepath</summary>
 		public void Save()
@@ -810,8 +842,6 @@ namespace pr.unittests
 	{
 		private sealed class SettingsThing
 		{
-			public int x,y,z;
-				
 			public SettingsThing()
 			{
 				x = 1;
@@ -831,23 +861,16 @@ namespace pr.unittests
 				node.Add2("z", z, false);
 				return node;
 			}
+			public int x,y,z;
 		}
 		private sealed class SubSettings :SettingsSet<SubSettings>
 		{
+			public SubSettings() { Field = 2; Buffer = new byte[]{1,2,3}; }
 			public int Field     { get { return get(x => x.Field); } set { set(x => x.Field, value); } }
 			public byte[] Buffer { get { return get(x => x.Buffer); } set { set(x => x.Buffer, value); } }
-			public SubSettings() { Field = 2; Buffer = new byte[]{1,2,3}; }
 		}
 		private sealed class Settings :SettingsBase<Settings>
 		{
-			public string         Str    { get { return get(x => x.Str   ); } set { set(x => x.Str    , value); } }
-			public int            Int    { get { return get(x => x.Int   ); } set { set(x => x.Int    , value); } }
-			public DateTimeOffset DTO    { get { return get(x => x.DTO   ); } set { set(x => x.DTO    , value); } }
-			public Font           Font   { get { return get(x => x.Font  ); } set { set(x => x.Font   , value); } }
-			public float[]        Floats { get { return get(x => x.Floats); } set { set(x => x.Floats , value); } }
-			public SubSettings    Sub    { get { return get(x => x.Sub   ); } set { set(x => x.Sub    , value); } }
-			public XElement       Sub2   { get { return get(x => x.Sub2  ); } set { set(x => x.Sub2   , value); } }
-
 			public Settings()
 			{
 				Str    = "default";
@@ -857,9 +880,19 @@ namespace pr.unittests
 				Floats = new[]{1f,2f,3f};
 				Sub    = new SubSettings();
 				Sub2   = new XElement("external");
+				Things = new object[] { 1, 2.3f, "hello" };
 			}
 			public Settings(string filepath) :base(filepath) {}
 			public Settings(XElement node) : base(node) {}
+
+			public string         Str    { get { return get(x => x.Str   ); } set { set(x => x.Str    , value); } }
+			public int            Int    { get { return get(x => x.Int   ); } set { set(x => x.Int    , value); } }
+			public DateTimeOffset DTO    { get { return get(x => x.DTO   ); } set { set(x => x.DTO    , value); } }
+			public Font           Font   { get { return get(x => x.Font  ); } set { set(x => x.Font   , value); } }
+			public float[]        Floats { get { return get(x => x.Floats); } set { set(x => x.Floats , value); } }
+			public SubSettings    Sub    { get { return get(x => x.Sub   ); } set { set(x => x.Sub    , value); } }
+			public XElement       Sub2   { get { return get(x => x.Sub2  ); } set { set(x => x.Sub2   , value); } }
+			public object[]       Things { get { return get(x => x.Things); } set { set(x => x.Things , value); } }
 		}
 
 		[Test] public void TestSettings1()
@@ -873,6 +906,9 @@ namespace pr.unittests
 			Assert.AreEqual(Settings.Default.Sub.Field, s.Sub.Field);
 			Assert.True(Settings.Default.Sub.Buffer.SequenceEqual(s.Sub.Buffer));
 			Assert.True(Settings.Default.Sub2.Name == s.Sub2.Name);
+			Assert.True((int)Settings.Default.Things[0] == 1);
+			Assert.True((float)Settings.Default.Things[1] == 2.3f);
+			Assert.True((string)Settings.Default.Things[2] == "hello");
 			Assert.Throws(typeof(ArgumentNullException), s.Save); // no filepath set
 		}
 		[Test] public void TestSettings2()
@@ -880,19 +916,20 @@ namespace pr.unittests
 			var file = Path.GetTempFileName();
 			var st = new SettingsThing();
 			var s = new Settings
+			{
+				Str = "Changed",
+				Int = 42,
+				DTO = DateTimeOffset.UtcNow,
+				Font = SystemFonts.DialogFont,
+				Floats = new[]{4f,5f,6f},
+				Sub = new SubSettings
 				{
-					Str = "Changed",
-					Int = 42,
-					DTO = DateTimeOffset.UtcNow,
-					Font = SystemFonts.DialogFont,
-					Floats = new[]{4f,5f,6f},
-					Sub = new SubSettings
-					{
-						Field = 12,
-						Buffer = new byte[]{4,5,6}
-					},
-					Sub2 = st.ToXml(new XElement("external")),
-				};
+					Field = 12,
+					Buffer = new byte[]{4,5,6}
+				},
+				Sub2 = st.ToXml(new XElement("external")),
+				Things = new object[] { "Hello", 6.28 },
+			};
 			var xml = s.ToXml();
 
 			var S = new Settings(xml);
@@ -904,6 +941,8 @@ namespace pr.unittests
 			Assert.True(s.Floats.SequenceEqual(S.Floats));
 			Assert.AreEqual(s.Sub.Field , S.Sub.Field);
 			Assert.True(s.Sub.Buffer.SequenceEqual(S.Sub.Buffer));
+			Assert.True((string)s.Things[0] == "Hello");
+			Assert.True((double)s.Things[1] == 6.28);
 
 			var st2 = new SettingsThing(s.Sub2);
 			Assert.AreEqual(st.x, st2.x);

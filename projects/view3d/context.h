@@ -138,6 +138,12 @@ namespace view3d
 			m_sources.Reload();
 		}
 
+		// Poll for changed script source files, and reload any that have changed
+		void CheckForChangedSources()
+		{
+			m_sources.RefreshChangedFiles();
+		}
+
 		// Delete all objects
 		void DeleteAllObjects()
 		{

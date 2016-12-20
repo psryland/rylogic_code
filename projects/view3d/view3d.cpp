@@ -1142,7 +1142,18 @@ VIEW3D_API void __stdcall View3D_ClearScriptSources()
 		DllLockGuard;
 		return Dll().ClearScriptSources();
 	}
-	CatchAndReport(ClearScriptSources,,);
+	CatchAndReport(View3D_ClearScriptSources,,);
+}
+
+// Poll for changed script source files, and reload any that have changed
+VIEW3D_API void __stdcall View3D_CheckForChangedSources()
+{
+	try
+	{
+		DllLockGuard;
+		return Dll().CheckForChangedSources();
+	}
+	CatchAndReport(View3D_CheckForChangedSources,,);
 }
 
 // Delete all objects

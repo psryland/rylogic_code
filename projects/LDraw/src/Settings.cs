@@ -17,6 +17,8 @@ namespace LDraw
 		public Settings()
 		{
 			RecentFiles = string.Empty;
+			AutoRefresh = false;
+			ResetOnLoad = true;
 			ShowBBoxes = false;
 
 			var light = new View3d.Light(0x00000000, 0xFF808080, 0xFFFFFFFF, 1000, direction:new v4(-1,-1,-10, 0)) { CameraRelative = true };
@@ -44,6 +46,20 @@ namespace LDraw
 		{
 			get { return get(x => x.RecentFiles); }
 			set { set(x => x.RecentFiles, value); }
+		}
+
+		/// <summary>Auto reload script sources when changes are detected</summary>
+		public bool AutoRefresh
+		{
+			get { return get(x => x.ShowBBoxes); }
+			set { set(x => x.ShowBBoxes, value); }
+		}
+
+		/// <summary>True if the scene should auto range after loading files</summary>
+		public bool ResetOnLoad
+		{
+			get { return get(x => x.ResetOnLoad); }
+			set { set(x => x.ResetOnLoad, value); }
 		}
 
 		/// <summary>Show bounding boxes for objects</summary>

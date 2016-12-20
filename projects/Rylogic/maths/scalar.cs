@@ -191,6 +191,13 @@ namespace pr.maths
 			return Math.Acos(CosAngle(a,b,c));
 		}
 
+		/// <summary>Return the length of a triangle side given by two adjacent side lengths and an angle between them</summary>
+		public static double Length(double adj0, double adj1, double angle)
+		{
+			var len_sq = adj0*adj0 + adj1*adj1 - 2.0f * adj0 * adj1 * Math.Cos(angle);
+			return len_sq > 0 ? Sqrt(len_sq) : 0.0;
+		}
+
 		/// <summary>Round a number to 'digits' significant figures</summary>
 		public static double RoundSF(double d, int digits)
 		{

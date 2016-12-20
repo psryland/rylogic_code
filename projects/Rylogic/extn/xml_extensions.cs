@@ -284,10 +284,17 @@ namespace pr.extn
 					// Derive an element name from the singular of the array name
 					var name = node.Name.LocalName;
 					var elem_name = name.Length > 1 && name.EndsWith("s") ? name.Substring(0,name.Length-1) : "_";
+					var child_type = type.GetElementType();
 
 					// Add each element from the collection
+					// 'type_attr' can be false if the element matches the array element type
 					foreach (var i in (IEnumerable)obj)
-						node.Add(Convert(i, new XElement(elem_name), type_attr));
+					{
+						var ty_attr = i == null || child_type == typeof(object) || i.GetType() != child_type;
+						node.Add(Convert(i, new XElement(elem_name), ty_attr));
+					}
+
+					// Make <elem></elem> different to <elem/>
 					if (!node.HasElements)
 						node.SetValue(string.Empty);
 

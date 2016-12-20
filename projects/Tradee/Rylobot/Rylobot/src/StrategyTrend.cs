@@ -9,8 +9,8 @@ namespace Rylobot
 {
 	public class StrategyTrend :Strategy
 	{
-		private ExponentialMovingAverage m_ema0;
-		private ExponentialMovingAverage m_ema1;
+		// Notes:
+		// 
 
 		public StrategyTrend(Rylobot bot)
 			:base(bot, "StrategyTrend")
@@ -19,6 +19,9 @@ namespace Rylobot
 			m_ema0 = Bot.Indicators.ExponentialMovingAverage(Bot.MarketSeries.Median, 100);
 			m_ema1 = Bot.Indicators.ExponentialMovingAverage(Bot.MarketSeries.Median, 55);
 		}
+
+		private ExponentialMovingAverage m_ema0;
+		private ExponentialMovingAverage m_ema1;
 
 		/// <summary>The position managed by this strategy</summary>
 		public Position Position
@@ -102,7 +105,8 @@ namespace Rylobot
 		/// <summary>The target entry for a trade, use while in the 'BuyOnPullBack' state</summary>
 		private TargetEntryData TargetEntry
 		{
-			get; set;
+			get;
+			set;
 		}
 		private struct TargetEntryData
 		{

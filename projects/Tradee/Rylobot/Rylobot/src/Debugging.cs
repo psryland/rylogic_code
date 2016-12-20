@@ -153,7 +153,7 @@ namespace Rylobot
 				return ldr;
 
 			// Note: Drawn with x = 0 == oldest (CAlgo indices) so that the X position doesn't change with updates
-			using (ldr.Group(instr.SymbolCode, ldr_ == null ? ScaleTxfm : m4x4.Identity))
+			using (ldr.Group(instr.SymbolCode))
 			{
 				var msc = instr.MedianCandleSize(range.Endi - (msc_range ?? 10), range.Endi);
 
@@ -285,7 +285,7 @@ namespace Rylobot
 		public static void Dump(this Trade trade, LdrBuilder ldr_ = null, bool show_snr = false)
 		{
 			var ldr = ldr_ ?? new LdrBuilder();
-			using (ldr.Group("Trade", ldr_ == null ? ScaleTxfm : m4x4.Identity))
+			using (ldr.Group("Trade"))
 			{
 				var sign    = trade.TradeType.Sign();
 				var x0      = (float)(trade.EntryIndex);
