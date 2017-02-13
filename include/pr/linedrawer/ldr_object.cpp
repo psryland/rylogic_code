@@ -873,7 +873,8 @@ namespace pr
 					{
 						NuggetProps nug = *Material();
 						nug.m_topo = EPrim::LineList;
-						nug.m_geom = EGeom::Vert | (!m_colours.empty() ? EGeom::Colr : EGeom::None);
+						nug.m_geom = EGeom::Vert |
+							(!m_colours.empty() ? EGeom::Colr : EGeom::None);
 						nug.m_vrange = pr::rdr::Range::Reset();
 						nug.m_irange = pr::rdr::Range(m_indices.size(), m_indices.size());
 						nug.m_has_alpha = false;
@@ -882,18 +883,12 @@ namespace pr
 						for (pr::uint16 idx[2]; !p.m_reader.IsSectionEnd();)
 						{
 							p.m_reader.Int(idx, 2, 10);
+							m_indices.push_back(idx[0]);
+							m_indices.push_back(idx[1]);
 
 							nug.m_vrange.encompass(idx[0]);
 							nug.m_vrange.encompass(idx[1]);
 							nug.m_irange.m_end += 2;
-							if ((int(nug.m_geom) & int(EGeom::Colr)) != 0)
-							{
-								nug.m_has_alpha |= m_colours[idx[0]].a != 0xFF;
-								nug.m_has_alpha |= m_colours[idx[1]].a != 0xFF;
-							}
-
-							m_indices.push_back(idx[0]);
-							m_indices.push_back(idx[1]);
 						}
 						p.m_reader.SectionEnd();
 
@@ -916,21 +911,14 @@ namespace pr
 						for (pr::uint16 idx[3]; !p.m_reader.IsSectionEnd();)
 						{
 							p.m_reader.Int(idx, 3, 10);
+							m_indices.push_back(idx[0]);
+							m_indices.push_back(idx[1]);
+							m_indices.push_back(idx[2]);
 
 							nug.m_vrange.encompass(idx[0]);
 							nug.m_vrange.encompass(idx[1]);
 							nug.m_vrange.encompass(idx[2]);
 							nug.m_irange.m_end += 3;
-							if ((int(nug.m_geom) & int(EGeom::Colr)) != 0)
-							{
-								nug.m_has_alpha |= m_colours[idx[0]].a != 0xFF;
-								nug.m_has_alpha |= m_colours[idx[1]].a != 0xFF;
-								nug.m_has_alpha |= m_colours[idx[2]].a != 0xFF;
-							}
-
-							m_indices.push_back(idx[0]);
-							m_indices.push_back(idx[1]);
-							m_indices.push_back(idx[2]);
 						}
 						p.m_reader.SectionEnd();
 
@@ -953,32 +941,24 @@ namespace pr
 						for (pr::uint16 idx[4]; !p.m_reader.IsSectionEnd();)
 						{
 							p.m_reader.Int(idx, 4, 10);
+							m_indices.push_back(idx[0]);
+							m_indices.push_back(idx[1]);
+							m_indices.push_back(idx[2]);
+							m_indices.push_back(idx[0]);
+							m_indices.push_back(idx[2]);
+							m_indices.push_back(idx[3]);
+							m_indices.push_back(idx[0]);
+							m_indices.push_back(idx[3]);
+							m_indices.push_back(idx[1]);
+							m_indices.push_back(idx[3]);
+							m_indices.push_back(idx[2]);
+							m_indices.push_back(idx[1]);
 
 							nug.m_vrange.encompass(idx[0]);
 							nug.m_vrange.encompass(idx[1]);
 							nug.m_vrange.encompass(idx[2]);
 							nug.m_vrange.encompass(idx[3]);
 							nug.m_irange.m_end += 12;
-							if ((int(nug.m_geom) & int(EGeom::Colr)) != 0)
-							{
-								nug.m_has_alpha |= m_colours[idx[0]].a != 0xFF;
-								nug.m_has_alpha |= m_colours[idx[1]].a != 0xFF;
-								nug.m_has_alpha |= m_colours[idx[2]].a != 0xFF;
-								nug.m_has_alpha |= m_colours[idx[3]].a != 0xFF;
-							}
-
-							m_indices.push_back(idx[0]);
-							m_indices.push_back(idx[1]);
-							m_indices.push_back(idx[2]);
-							m_indices.push_back(idx[0]);
-							m_indices.push_back(idx[2]);
-							m_indices.push_back(idx[3]);
-							m_indices.push_back(idx[0]);
-							m_indices.push_back(idx[3]);
-							m_indices.push_back(idx[1]);
-							m_indices.push_back(idx[3]);
-							m_indices.push_back(idx[2]);
-							m_indices.push_back(idx[1]);
 						}
 						p.m_reader.SectionEnd();
 
@@ -1000,6 +980,41 @@ namespace pr
 				{
 					p.ReportError(EResult::Failed, "Mesh object description incomplete");
 					return;
+				}
+				if (!m_colours.empty() && m_colours.size() != m_verts.size())
+				{
+					p.ReportError(EResult::SyntaxError, FmtS("Mesh objects with colours require one colour per vertex. %d required, %d given.", int(m_verts.size()), int(m_colours.size())));
+					return;
+				}
+				if (!m_normals.empty() && m_normals.size() != m_verts.size())
+				{
+					p.ReportError(EResult::SyntaxError, FmtS("Mesh objects with normals require one normal per vertex. %d required, %d given.", int(m_verts.size()), int(m_normals.size())));
+					return;
+				}
+				if (!m_texs.empty() && m_texs.size() != m_verts.size())
+				{
+					p.ReportError(EResult::SyntaxError, FmtS("Mesh objects with texture coordinates require one coordinate per vertex. %d required, %d given.", int(m_verts.size()), int(m_normals.size())));
+					return;
+				}
+				for (auto& nug : m_nuggets)
+				{
+					// Check the index range is valid
+					if (nug.m_vrange.m_begin < 0 || nug.m_vrange.m_end > m_verts.size())
+					{
+						p.ReportError(EResult::SyntaxError, FmtS("Mesh object with face, line, or tetra section contains indices out of range (section index: %d).", int(&nug - &m_nuggets[0])));
+						return;
+					}
+
+					// Set the nugget 'has_alpha' value now we know the indices are valid
+					if (!m_colours.empty())
+					{
+						for (auto i = nug.m_irange.begin(); i != nug.m_irange.end(); ++i)
+						{
+							if (m_colours[m_indices[i]].a == 0xFF) continue;
+							nug.m_has_alpha = true;
+							break;
+						}
+					}
 				}
 
 				// Generate normals if needed
@@ -1835,12 +1850,12 @@ namespace pr
 
 				switch (m_axis_id){
 				default: p.ReportError(EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
-				case  1: m_b2w = m4x4::Transform(0.0f, -pr::maths::tau_by_4, 0.0f, v4Origin); break;
-				case -1: m_b2w = m4x4::Transform(0.0f, pr::maths::tau_by_4, 0.0f, v4Origin); break;
-				case  2: m_b2w = m4x4::Transform(-pr::maths::tau_by_4, 0.0f, 0.0f, v4Origin); break;
-				case -2: m_b2w = m4x4::Transform(pr::maths::tau_by_4, 0.0f, 0.0f, v4Origin); break;
+				case  1: m_b2w = m4x4::Transform(0.0f, -float(maths::tau_by_4), 0.0f, v4Origin); break;
+				case -1: m_b2w = m4x4::Transform(0.0f, +float(maths::tau_by_4), 0.0f, v4Origin); break;
+				case  2: m_b2w = m4x4::Transform(-float(maths::tau_by_4), 0.0f, 0.0f, v4Origin); break;
+				case -2: m_b2w = m4x4::Transform(+float(maths::tau_by_4), 0.0f, 0.0f, v4Origin); break;
 				case  3: m_b2w = m4x4Identity; break;
-				case -3: m_b2w = m4x4::Transform(0.0f, pr::maths::tau_by_2, 0.0f, v4Origin); break;
+				case -3: m_b2w = m4x4::Transform(0.0f, float(maths::tau_by_2), 0.0f, v4Origin); break;
 				}
 
 				IObjectCreatorCuboid::CreateModel(p, obj);
@@ -1851,9 +1866,9 @@ namespace pr
 		template <> struct ObjectCreator<ELdrObject::FrustumFA> :IObjectCreatorCuboid
 		{
 			float m_fovY, m_aspect, m_near, m_far;
-			pr::AxisId m_axis_id;
+			AxisId m_axis_id;
 
-			ObjectCreator() :m_fovY(pr::maths::tau_by_8), m_aspect(1.0f), m_near(0.0f), m_far(1.0f), m_axis_id(3) {}
+			ObjectCreator() :m_fovY(float(maths::tau_by_8)), m_aspect(1.0f), m_near(0.0f), m_far(1.0f), m_axis_id(3) {}
 			void Parse(ParseParams& p) override
 			{
 				p.m_reader.Int(m_axis_id.value, 10);
@@ -1865,7 +1880,7 @@ namespace pr
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
 				// Construct pointed down +z, then rotate the points based on axis id
-				float h = pr::Tan(pr::DegreesToRadians(m_fovY * 0.5f));
+				float h = Tan(DegreesToRadians(m_fovY * 0.5f));
 				float w = m_aspect * h;
 				float n = m_near, f = m_far;
 				m_pt[0] = v4(-n*w, -n*h, n, 1.0f);
@@ -1879,12 +1894,12 @@ namespace pr
 
 				switch (m_axis_id) {
 				default: p.ReportError(EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
-				case  1: m_b2w = m4x4::Transform(0.0f, pr::maths::tau_by_4, 0.0f, v4Origin); break;
-				case -1: m_b2w = m4x4::Transform(0.0f, -pr::maths::tau_by_4, 0.0f, v4Origin); break;
-				case  2: m_b2w = m4x4::Transform(-pr::maths::tau_by_4, 0.0f, 0.0f, v4Origin); break;
-				case -2: m_b2w = m4x4::Transform(pr::maths::tau_by_4, 0.0f, 0.0f, v4Origin); break;
+				case  1: m_b2w = m4x4::Transform(0.0f, +float(maths::tau_by_4), 0.0f, v4Origin); break;
+				case -1: m_b2w = m4x4::Transform(0.0f, -float(maths::tau_by_4), 0.0f, v4Origin); break;
+				case  2: m_b2w = m4x4::Transform(-float(maths::tau_by_4), 0.0f, 0.0f, v4Origin); break;
+				case -2: m_b2w = m4x4::Transform(+float(maths::tau_by_4), 0.0f, 0.0f, v4Origin); break;
 				case  3: m_b2w = m4x4Identity; break;
-				case -3: m_b2w = m4x4::Transform(0.0f, pr::maths::tau_by_2, 0.0f, v4Origin); break;
+				case -3: m_b2w = m4x4::Transform(0.0f, float(maths::tau_by_2), 0.0f, v4Origin); break;
 				}
 
 				IObjectCreatorCuboid::CreateModel(p, obj);
@@ -1894,7 +1909,7 @@ namespace pr
 		// ELdrObject::Sphere
 		template <> struct ObjectCreator<ELdrObject::Sphere> :IObjectCreatorTexture
 		{
-			pr::v4 m_dim;
+			v4 m_dim;
 			int m_divisions;
 
 			ObjectCreator() :m_dim(), m_divisions(3) {}
@@ -1913,7 +1928,7 @@ namespace pr
 			}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
-				obj->m_model = ModelGenerator<>::Geosphere(p.m_rdr, m_dim, m_divisions, pr::Colour32White, Material());
+				obj->m_model = ModelGenerator<>::Geosphere(p.m_rdr, m_dim, m_divisions, Colour32White, Material());
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
@@ -1942,8 +1957,8 @@ namespace pr
 				p.m_reader.Real(a);
 
 				m_dim.z = h1 - h0;
-				m_dim.x = h0 * pr::Tan(a);
-				m_dim.y = h1 * pr::Tan(a);
+				m_dim.x = h0 * Tan(a);
+				m_dim.y = h1 * Tan(a);
 			}
 		};
 
@@ -2066,7 +2081,7 @@ namespace pr
 				if (pr::str::EqualI(m_type, "Round"))
 				{
 					for (auto i = 0; i != m_facets; ++i)
-						m_cs.push_back(v2(m_radx * Cos(maths::tau * i / m_facets), m_rady * Sin(maths::tau * i / m_facets)));
+						m_cs.push_back(v2(m_radx * Cos(float(maths::tau) * i / m_facets), m_rady * Sin(float(maths::tau) * i / m_facets)));
 				}
 				else if (pr::str::EqualI(m_type, "Square"))
 				{
@@ -3401,6 +3416,7 @@ LR"(// *************************************************************************
 		}
 		LdrObject::~LdrObject()
 		{
+			PR_EXPAND(PR_DBG, pr::events::Send(Evt_LdrObjectDestruct(this)));
 			PR_EXPAND(PR_DBG, g_ldr_object_tracker.remove(this));
 		}
 

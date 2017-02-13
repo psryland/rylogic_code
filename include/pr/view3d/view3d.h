@@ -357,7 +357,7 @@ extern "C"
 	VIEW3D_API void         __stdcall View3D_CameraClipPlanesGet    (View3DWindow window, float& near_, float& far_);
 	VIEW3D_API void         __stdcall View3D_CameraClipPlanesSet    (View3DWindow window, float near_, float far_, BOOL focus_relative);
 	VIEW3D_API BOOL         __stdcall View3D_MouseNavigate          (View3DWindow window, View3DV2 ss_pos, EView3DNavOp nav_op, BOOL nav_start_or_end);
-	VIEW3D_API BOOL         __stdcall View3D_MouseNavigateZ         (View3DWindow window, View3DV2 ss_pos, float delta);
+	VIEW3D_API BOOL         __stdcall View3D_MouseNavigateZ         (View3DWindow window, View3DV2 ss_pos, float delta, BOOL along_ray);
 	VIEW3D_API BOOL         __stdcall View3D_Navigate               (View3DWindow window, float dx, float dy, float dz);
 	VIEW3D_API void         __stdcall View3D_ResetZoom              (View3DWindow window);
 	VIEW3D_API float        __stdcall View3D_ZoomGet                (View3DWindow window);

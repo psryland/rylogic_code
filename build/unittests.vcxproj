@@ -229,6 +229,7 @@
     <ClInclude Include="..\include\pr\maths\conversion.h" />
     <ClInclude Include="..\include\pr\maths\convex_hull.h" />
     <ClInclude Include="..\include\pr\maths\forward.h" />
+    <ClInclude Include="..\include\pr\maths\matrix.h" />
     <ClInclude Include="..\include\pr\maths\rectangle.h" />
     <ClInclude Include="..\include\pr\maths\frustum.h" />
     <ClInclude Include="..\include\pr\maths\interpolate.h" />

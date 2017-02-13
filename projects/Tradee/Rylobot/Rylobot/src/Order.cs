@@ -5,13 +5,13 @@ using pr.maths;
 
 namespace Rylobot
 {
-
-	/// <summary>
-	/// A helper for treating Positions, PendingOrders, or virtual trades as one type.
-	/// Used when calculating maximum risk/profit.</summary>
 	[DebuggerDisplay("{TradeType} ep={EntryPrice} sl={StopLoss} tp={TakeProfit} volume={Volume} active={TreatAsActive}")]
 	public class Order
 	{
+		// Notes:
+		//  A helper for treating Positions, PendingOrders, or Trades as one type.
+		//  Used when calculating maximum risk/profit.
+
 		public Order(Position pos, bool active = true)
 		{
 			Position = pos;

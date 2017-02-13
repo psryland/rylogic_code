@@ -431,7 +431,7 @@ namespace pr.maths
 		/// <summary>Construct a random quaternion rotation</summary>
 		public static quat Random(Random r)
 		{
-			return new quat(v4.Random3N(0f, r), r.Float(0f, Maths.Tau));
+			return new quat(v4.Random3N(0f, r), r.Float(0f, (float)Maths.Tau));
 		}
 
 		#endregion
@@ -517,8 +517,8 @@ namespace pr.unittests
 			var ideal_mean = new quat(v4.Normalise3(new v4(1,1,1,0)), 0.5f);
 			var actual_mean = quat.Average(int_.Range(0, 1000).Select(i =>
 			{
-				var axis = v4.Normalise3(ideal_mean.Axis + v4.Random3(0.2f, 0f, rng));
-				var angle = rng.FloatC(ideal_mean.Angle, 0.2f);
+				var axis = v4.Normalise3(ideal_mean.Axis + v4.Random3(0.02f, 0f, rng));
+				var angle = rng.FloatC(ideal_mean.Angle, 0.02f);
 				var q = new quat(axis, angle);
 				return rng.Bool() ? q : -q;
 			}));

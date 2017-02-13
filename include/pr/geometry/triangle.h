@@ -65,7 +65,7 @@ namespace pr
 
 				angles.x = 0.5f * ACos(Clamp(2*(bc*bc / (d1 + (d1 == 0.0f))) - 1, -1.0f, 1.0f));
 				angles.y = 0.5f * ACos(Clamp(2*(ca*ca / (d2 + (d2 == 0.0f))) - 1, -1.0f, 1.0f));
-				angles.z = maths::tau_by_2 - angles.x - angles.y;
+				angles.z = float(maths::tau_by_2 - angles.x - angles.y);
 			}
 			else if (asq > bsq && asq > csq)
 			{
@@ -74,7 +74,7 @@ namespace pr
 
 				angles.y = 0.5f * ACos(Clamp(2*(ca*ca / (d2 + (d2 == 0.0f))) - 1, -1.0f, 1.0f));
 				angles.z = 0.5f * ACos(Clamp(2*(ab*ab / (d0 + (d0 == 0.0f))) - 1, -1.0f, 1.0f));
-				angles.x = maths::tau_by_2 - angles.y - angles.z;
+				angles.x = float(maths::tau_by_2 - angles.y - angles.z);
 			}
 			else
 			{
@@ -83,7 +83,7 @@ namespace pr
 			
 				angles.x = 0.5f * ACos(Clamp(2*(bc*bc / (d1 + (d1 == 0.0f))) - 1, -1.0f, 1.0f));
 				angles.z = 0.5f * ACos(Clamp(2*(ab*ab / (d0 + (d0 == 0.0f))) - 1, -1.0f, 1.0f));
-				angles.y = maths::tau_by_2 - angles.x - angles.z;
+				angles.y = float(maths::tau_by_2 - angles.x - angles.z);
 			}
 			angles.w = 0.0f;
 			return angles;

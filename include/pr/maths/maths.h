@@ -19,6 +19,7 @@
 #include "pr/maths/matrix2x2.h"
 #include "pr/maths/matrix3x3.h"
 #include "pr/maths/matrix4x4.h"
+#include "pr/maths/matrix.h"
 #include "pr/maths/ivector2.h"
 #include "pr/maths/ivector4.h"
 #include "pr/maths/bbox.h"

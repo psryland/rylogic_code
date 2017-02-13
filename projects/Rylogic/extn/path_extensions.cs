@@ -174,7 +174,7 @@ namespace pr.common
 			return Canonicalise(path);
 		}
 
-		/// <summary>Remove '..' or '.' directories from a path and swap all '/' to '\'</summary>
+		/// <summary>Remove '..' or '.' directories from a path and swap all '/' to '\'. Returns a full filepath</summary>
 		public static string Canonicalise(string path, Case change_case = Case.Unchanged)
 		{
 			if (change_case == Case.Lower) path = path.ToLowerInvariant();

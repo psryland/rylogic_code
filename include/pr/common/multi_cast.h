@@ -15,7 +15,7 @@ namespace pr
 {
 	template <typename Type> class MultiCast
 	{
-		typedef std::list<Type> TypeCont;
+		using TypeCont = std::vector<Type>;
 
 		TypeCont m_cont;
 		mutable std::mutex m_cs;
@@ -122,7 +122,7 @@ namespace pr
 			// Re-entry issues here. Raising the event may result in handlers being added or removed.
 			// Three options:
 			//  1) Don't allow the event to be modified during 'Raise' (forbids self removing handlers)
-			//  2) Copy 'm_cont' and call all handlers (a handler may cause another handler object to be delete = access violation)
+			//  2) Copy 'm_cont' and call all handlers (a handler may cause another handler object to be deleted = access violation)
 			//  3) Iterate through the handlers assuming 'm_cont' is changing with each call (possible missed handlers, lots of locking)
 
 			// Make a copy of the handlers so that modifying the
@@ -279,7 +279,7 @@ namespace pr
 			{
 				int calls;
 				Observer() :calls() {}
-				void Thing::ICall2::operator()(Thing&) override { ++calls; }
+				void operator()(Thing&) override { ++calls; }
 			};
 		}
 

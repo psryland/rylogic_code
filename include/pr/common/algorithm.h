@@ -119,6 +119,16 @@ namespace pr
 		return *iter;
 	}
 
+	// Return the first element in 'cont' that matches 'pred' or return a default element instance
+	template <typename TCont, typename Pred> inline auto find_or_default(TCont& cont, Pred pred) -> decltype(*std::begin(cont))
+	{
+		using Elem = std::remove_cv_t<std::remove_reference_t<decltype(*std::begin(cont))>>;
+
+		auto iter = find_if(cont, pred);
+		if (iter == std::end(cont)) return Elem();
+		return *iter;
+	}
+
 	// Return the number of elements in 'cont' that match 'pred'
 	template <typename TCont, typename Pred> inline typename TCont::difference_type count_if(TCont const& cont, Pred pred)
 	{

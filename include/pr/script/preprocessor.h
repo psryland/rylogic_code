@@ -569,10 +569,8 @@ namespace pr
 									auto flags = end == L'\"' ? IIncludeHandler::EFlags::IncludeLocalDir : IIncludeHandler::EFlags::None;
 									auto inc = Includes->Open(path, flags, src.Loc());
 									if (inc)
-									{
-										Push(inc.get(), true);
-										inc.release();
-									}
+										Push(inc.release(), true);
+
 									continue;
 								}
 								#pragma endregion

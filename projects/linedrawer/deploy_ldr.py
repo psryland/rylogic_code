@@ -16,18 +16,19 @@ try:
 	Tools.AssertPathsExist([UserVars.root])
 
 	# Use the everything sln so that dependent projects get built as well
+	sln = UserVars.root + "\\build\\Rylogic.sln"
 	projects = [ # e.g: "\"folder\proj_name:Rebuild\""
 		"linedrawer",
-		]
-	configs = [
-		"release",
 		]
 	platforms = [
 		"x64",
 		]
+	configs = [
+		"release",
+		]
 
 	# Build the project
-	if not Tools.MSBuild(UserVars.root + "\\build\\Rylogic.sln", projects, platforms, configs, parallel=True, same_window=True):
+	if not Tools.MSBuild(sln, projects, platforms, configs, parallel=True, same_window=True):
 		Tools.OnError("Errors occurred")
 
 	# Deploy

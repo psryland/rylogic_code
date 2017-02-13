@@ -195,7 +195,7 @@ namespace pr.gui
 		public void OnMouseWheel(object sender, MouseEventArgs e)
 		{
 			if (Window == null) return;
-			if (Window.MouseNavigateZ(e.Location, e.Delta))
+			if (Window.MouseNavigateZ(e.Location, e.Delta, true))
 				Invalidate();
 		}
 		public void OnMouseDblClick(object sender, MouseEventArgs e)

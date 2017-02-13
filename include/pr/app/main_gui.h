@@ -178,7 +178,7 @@ namespace pr
 				if (args.m_handled) return;
 
 				auto pt = pr::NormalisePoint(*this, args.m_point);
-				m_main->NavZ(pt, args.m_delta);
+				m_main->NavZ(pt, args.m_delta, true);
 				Invalidate();
 			}
 

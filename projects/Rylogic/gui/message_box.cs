@@ -279,14 +279,18 @@ namespace pr.gui
 					{
 						// Binary search for an aspect ratio ~= ReflowAspectRatio
 						var initial_width = text_area.Width;
-						for (float scale0 = 0.0f, scale1 = 1.0f; Math.Abs(scale1 - scale0) > 0.05f;)
+						for (float scale0 = 0.0f, scale1 = 1.0f;;)
 						{
 							var scale = (scale0 + scale1) / 2f;
 							text_area = gfx.MeasureString(m_message.Text, m_message.Font, (int)(initial_width * scale));
 							var aspect = text_area.Aspect();
 							if      (aspect < ReflowAspectRatio) scale0 = scale;
 							else if (aspect > ReflowAspectRatio) scale1 = scale;
-							else break;
+							if (Math.Abs(scale1 - scale0) < 0.05f)
+							{
+								text_area = gfx.MeasureString(m_message.Text, m_message.Font, (int)(initial_width * scale1));
+								break;
+							}
 						}
 					}
 

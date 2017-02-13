@@ -15,20 +15,26 @@ namespace pr
 		// Careful!, these are global variables and therefore
 		// do not have a defined construction order. If you're using
 		// them in other global objects they mightn't be initialised
-		constexpr float const tiny       = 1.00000002e-4F; // Can't go lower than this cos DX uses less precision
-		constexpr float const tiny_sq    = 1.00000008e-8F;
-		constexpr float const tiny_sqrt  = 1.00000008e-2F;
-		constexpr float const phi        = 1.618034e+0F; // "Golden Ratio"
-		constexpr float const tau        = 6.283185e+0F; // circle constant
-		constexpr float const inv_tau    = 1.591549e-1F;
-		constexpr float const tau_by_2   = 3.141593e+0F;
-		constexpr float const tau_by_4   = 1.570796e+0F;
-		constexpr float const tau_by_8   = 7.853982e-1F;
-		constexpr float const tau_by_360 = 1.745329e-2F;
-		constexpr float const E60_by_tau = 5.729578e+1F;
-		constexpr float const root2      = 1.414214e+0F;
-		constexpr float const inv_root2  = 7.071069e-1F;
-		constexpr double const dbl_tiny = 1.000000e-12;
+		constexpr float const tiny       = float(1.00000007e-05);
+		constexpr float const tiny_sq    = float(1.00000015e-10);
+		constexpr float const tiny_sqrt  = float(3.16227786e-03);
+
+		constexpr double const tinyd      = double(1.0000000000000002e-12);
+		constexpr double const tinyd_sq   = double(1.0000000000000003e-24);
+		constexpr double const tinyd_sqrt = double(1.0000000000000002e-06);
+
+		constexpr double const phi        = double(1.618033988749894848204586834);    // "Golden Ratio"
+		constexpr double const tau        = double(6.283185307179586476925286766559);    // circle constant
+		constexpr double const inv_tau    = 1.0 / tau;
+		constexpr double const tau_by_2   = tau / 2.0;
+		constexpr double const tau_by_4   = tau / 4.0;
+		constexpr double const tau_by_8   = tau / 8.0;
+		constexpr double const tau_by_360 = tau / 360.0;
+		constexpr double const E60_by_tau = 360.0 / tau;
+		constexpr double const root2      = double(1.4142135623730950488);
+		constexpr double const root3      = double(1.7320508075688772935274463415059);
+		constexpr double const inv_root2  = 1.0 / root2;
+		constexpr double const inv_root3  = 1.0 / root3;
 
 		constexpr char const    char_min     = limits<char>::min();
 		constexpr char const    char_max     = limits<char>::max();

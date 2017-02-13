@@ -108,8 +108,8 @@ namespace pr
 		{
 			// A solid sphere:  'Ixx = Iyy = Izz = (2/5)mr^2'
 			// A hollow sphere: 'Ixx = Iyy = Izz = (2/3)mr^2'
-			auto scale = shape.m_hollow ? (2.0f/3.0f) : (2.0f/5.0f);
-			auto volume = (2.0f/3.0f) * maths::tau * shape.m_radius * shape.m_radius * shape.m_radius;
+			auto scale = float(shape.m_hollow ? (2.0/3.0) : (2.0/5.0));
+			auto volume = float((2.0/3.0) * maths::tau * shape.m_radius * shape.m_radius * shape.m_radius);
 
 			MassProperties mp;
 			mp.m_centre_of_mass    = v4Zero;

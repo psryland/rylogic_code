@@ -321,6 +321,7 @@ namespace pr
 				auto msg = !searched_paths.empty()
 					? pr::FmtS("Failed to open include '%S'\n\nFile not found in search paths:\n%S", include.c_str(), searched_paths.c_str())
 					: pr::FmtS("Failed to open include '%S'", include.c_str());
+
 				return FailPolicy::Fail(EResult::MissingInclude, loc, msg, std::unique_ptr<Src>());
 			}
 

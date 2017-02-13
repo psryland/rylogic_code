@@ -46,7 +46,7 @@ namespace pr
 			using namespace pr::rdr;
 
 			{// Projection
-				pr::m4x4 proj = ProjectedTexture::MakeTransform(pr::v4(0,0,10,1), pr::v4Origin, pr::v4YAxis, 1.0f, pr::maths::tau_by_4, 0.01f, 100.0f, false);
+				pr::m4x4 proj = ProjectedTexture::MakeTransform(pr::v4(0,0,10,1), pr::v4Origin, pr::v4YAxis, 1.0f, float(maths::tau_by_4), 0.01f, 100.0f, false);
 				pr::v4 vin[] =
 				{
 					pr::v4Origin,
@@ -83,7 +83,7 @@ namespace pr
 				}
 			}
 			{// Orthographic
-				pr::m4x4 proj = ProjectedTexture::MakeTransform(pr::v4(0,0,10,1), pr::v4Origin, pr::v4YAxis, 1.0f, pr::maths::tau_by_4, 0.01f, 100.0f, true);
+				pr::m4x4 proj = ProjectedTexture::MakeTransform(pr::v4(0,0,10,1), pr::v4Origin, pr::v4YAxis, 1.0f, float(maths::tau_by_4), 0.01f, 100.0f, true);
 				pr::v4 vin[] =
 				{
 					pr::v4Origin,

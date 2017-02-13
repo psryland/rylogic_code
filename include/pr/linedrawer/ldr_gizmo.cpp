@@ -1030,8 +1030,8 @@ namespace pr
 		// Add this gizmo to a scene
 		void LdrGizmo::AddToScene(pr::rdr::Scene& scene)
 		{
-			m_gfx.m_axis[0].m_i2w = m_gfx.m_o2w * m4x4::Transform(0, pr::maths::tau_by_4, pr::maths::tau_by_4, v4Origin);
-			m_gfx.m_axis[1].m_i2w = m_gfx.m_o2w * m4x4::Transform(-pr::maths::tau_by_4, -pr::maths::tau_by_4, 0, v4Origin);
+			m_gfx.m_axis[0].m_i2w = m_gfx.m_o2w * m4x4::Transform(0, float(pr::maths::tau_by_4), float(pr::maths::tau_by_4), v4Origin);
+			m_gfx.m_axis[1].m_i2w = m_gfx.m_o2w * m4x4::Transform(-float(pr::maths::tau_by_4), -float(pr::maths::tau_by_4), 0, v4Origin);
 			m_gfx.m_axis[2].m_i2w = m_gfx.m_o2w * m4x4::Transform(0,0,0, v4Origin);
 
 			scene.AddInstance(m_gfx.m_axis[0]);

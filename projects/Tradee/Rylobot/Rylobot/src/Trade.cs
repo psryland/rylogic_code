@@ -11,6 +11,11 @@ namespace Rylobot
 	[DebuggerDisplay("idx=[{EntryIndex},{ExitIndex}] {TradeType} RtR={RtR}")]
 	public class Trade
 	{
+		// Notes:
+		//  A 'Trade' is the bot's representation of a position on a symbol, or simulated position on a symbol.
+		//  Trades can be used to track the profit/loss of a position without having to actually hold the position.
+		//  Trades are different to 'Position', 'PendingOrder', or 'Order'
+
 		/// <summary>Create a trade with explicit values</summary>
 		public Trade(Instrument instr, TradeType tt, string label, QuoteCurrency ep, QuoteCurrency sl, QuoteCurrency tp, long volume, NegIdx? neg_idx = null)
 		{
@@ -34,6 +39,13 @@ namespace Rylobot
 		/// <summary>
 		/// Create a trade with automatic SL and TP levels set.
 		/// SL/TP levels are set based on the current account balance (even if 'neg_idx' != 0)</summary>
+		/// <param name="bot">The access to the CAlgo interface</param>
+		/// <param name="instr">The instrument to be traded</param>
+		/// <param name="tt">Whether to buy or sell</param>
+		/// <param name="label">Optional. An identifying name for the trade</param>
+		/// <param name="neg_idx">Optional. The instrument index of when the trade was created. (default is the current time)</param>
+		/// <param name="ep">Optional. The price at which the trade was entered. (default is current ask/bid price)</param>
+		/// <param name="risk">Optional. Scaling factor for the amount to risk. (default is 1.0)</param>
 		public Trade(Rylobot bot, Instrument instr, TradeType tt, string label = null, NegIdx? neg_idx = null, double? ep = null, double? risk = null, RangeF? rtr_range = null)
 			:this(instr, tt, label, 0, 0, 0, 0, neg_idx)
 		{
@@ -61,6 +73,8 @@ namespace Rylobot
 
 			#region Set SL
 
+			// Choose a stop loss value for the trade.
+			// Look at recent history and set the stop loss beyond recent pecks/toughs
 			QuoteCurrency sl = 0.0;
 
 			// Scan backwards looking for a peak in the stop loss direction.

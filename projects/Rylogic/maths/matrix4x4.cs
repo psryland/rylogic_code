@@ -447,7 +447,7 @@ namespace pr.maths
 		}
 		public static m4x4 Random4x4(v4 centre, float radius, Random r)
 		{
-			return Random4x4(v4.Random3N(0.0f, r), 0.0f, Maths.Tau, centre, radius, r);
+			return Random4x4(v4.Random3N(0.0f, r), 0.0f, (float)Maths.Tau, centre, radius, r);
 		}
 
 		#endregion
@@ -506,8 +506,8 @@ namespace pr.unittests
 		{
 			var rnd = new Random();
 			var V1 = v4.Random3(0.0f, 10.0f, 1.0f, rnd);
-			var a2b = m4x4.Transform(v4.Random3N(0.0f, rnd), rnd.FloatC(0, Maths.TauBy2), v4.Random3(0.0f, 10.0f, 1.0f, rnd));
-			var b2c = m4x4.Transform(v4.Random3N(0.0f, rnd), rnd.FloatC(0, Maths.TauBy2), v4.Random3(0.0f, 10.0f, 1.0f, rnd));
+			var a2b = m4x4.Transform(v4.Random3N(0.0f, rnd), rnd.FloatC(0, (float)Maths.TauBy2), v4.Random3(0.0f, 10.0f, 1.0f, rnd));
+			var b2c = m4x4.Transform(v4.Random3N(0.0f, rnd), rnd.FloatC(0, (float)Maths.TauBy2), v4.Random3(0.0f, 10.0f, 1.0f, rnd));
 			Assert.True(m4x4.IsOrthonormal(a2b));
 			Assert.True(m4x4.IsOrthonormal(b2c));
 

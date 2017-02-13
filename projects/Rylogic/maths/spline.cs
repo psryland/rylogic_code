@@ -132,7 +132,7 @@ namespace pr.maths
 		}
 
 		/// <summary>Return the length of a spline from t0 to t1</summary>
-		public float Length(float t0, float t1, float tol = Maths.Tiny)
+		public float Length(float t0, float t1, float tol = Maths.TinyF)
 		{
 			// Recursive lambda
 			Func<Spline,float,float> Len = null;

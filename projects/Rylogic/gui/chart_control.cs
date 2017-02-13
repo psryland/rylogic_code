@@ -69,7 +69,7 @@ namespace pr.gui
 				Scene           = new ChartPanel(this); // Must come after 'Range'
 				MouseOperations = new MouseOps();
 				Tools           = new ChartTools(Options);
-				m_tt_show_value = new ToolTip { ShowAlways = false, UseAnimation = false, UseFading = false, Tag = false };
+				m_tt_show_value = new HintBalloon();
 
 				Elements = new BindingListEx<Element> { PerItemClear = true, UseHashSet = true };
 				Selected = new BindingListEx<Element> { PerItemClear = false };
@@ -1049,104 +1049,108 @@ namespace pr.gui
 
 			public RdrOptions()
 			{
-				NavigationMode       = ENavMode.Chart2D;
-				LockAspect           = null;
-				BkColour             = SystemColors.Control;
-				ChartBkColour        = Color.White;
-				TitleColour          = Color.Black;
-				TitleFont            = new Font("tahoma", 12, FontStyle.Bold);
-				TitleTransform       = new Matrix(1f, 0f, 0f, 1f, 0f, 0f);
-				Margin               = new Padding(3);
-				NoteFont             = new Font("tahoma", 8, FontStyle.Regular);
-				SelectionColour      = Color.FromArgb(0x80, Color.DarkGray);
-				ShowGridLines        = true;
-				ShowAxes             = true;
-				AntiAliasing         = true;
-				FillMode             = View3d.EFillMode.Solid;
-				CullMode             = View3d.ECullMode.Back;
-				Orthographic         = false;
-				MinSelectionDistance = 10f;
-				MinDragPixelDistance = 5f;
-				ResetForward         = -v4.ZAxis;
-				ResetUp              = +v4.YAxis;
-				XAxis                = new Axis();
-				YAxis                = new Axis();
+				NavigationMode            = ENavMode.Chart2D;
+				LockAspect                = null;
+				BkColour                  = SystemColors.Control;
+				ChartBkColour             = Color.White;
+				TitleColour               = Color.Black;
+				TitleFont                 = new Font("tahoma", 12, FontStyle.Bold);
+				TitleTransform            = new Matrix(1f, 0f, 0f, 1f, 0f, 0f);
+				Margin                    = new Padding(3);
+				NoteFont                  = new Font("tahoma", 8, FontStyle.Regular);
+				SelectionColour           = Color.FromArgb(0x80, Color.DarkGray);
+				ShowGridLines             = true;
+				ShowAxes                  = true;
+				AntiAliasing              = true;
+				FillMode                  = View3d.EFillMode.Solid;
+				CullMode                  = View3d.ECullMode.Back;
+				Orthographic              = false;
+				MinSelectionDistance      = 10f;
+				MinDragPixelDistance      = 5f;
+				PerpendicularZTranslation = false;
+				ResetForward              = -v4.ZAxis;
+				ResetUp                   = +v4.YAxis;
+				XAxis                     = new Axis();
+				YAxis                     = new Axis();
 				// Don't forget to add new members to the other constructors!
 			}
 			public RdrOptions(RdrOptions rhs)
 			{
-				NavigationMode       = rhs.NavigationMode;
-				LockAspect           = rhs.LockAspect;
-				BkColour             = rhs.BkColour;
-				ChartBkColour        = rhs.ChartBkColour;
-				TitleColour          = rhs.TitleColour;
-				TitleFont            = (Font)rhs.TitleFont.Clone();
-				TitleTransform       = rhs.TitleTransform;
-				Margin               = rhs.Margin;
-				NoteFont             = (Font)rhs.NoteFont.Clone();
-				SelectionColour      = rhs.SelectionColour;
-				ShowGridLines        = rhs.ShowGridLines;
-				ShowAxes             = rhs.ShowAxes;
-				AntiAliasing         = rhs.AntiAliasing;
-				FillMode             = rhs.FillMode;
-				CullMode             = rhs.CullMode;
-				Orthographic         = rhs.Orthographic;
-				MinSelectionDistance = rhs.MinSelectionDistance;
-				MinDragPixelDistance = rhs.MinDragPixelDistance;
-				ResetForward         = rhs.ResetForward;
-				ResetUp              = rhs.ResetUp;
-				XAxis                = new Axis(rhs.XAxis);
-				YAxis                = new Axis(rhs.YAxis);
+				NavigationMode            = rhs.NavigationMode;
+				LockAspect                = rhs.LockAspect;
+				BkColour                  = rhs.BkColour;
+				ChartBkColour             = rhs.ChartBkColour;
+				TitleColour               = rhs.TitleColour;
+				TitleFont                 = (Font)rhs.TitleFont.Clone();
+				TitleTransform            = rhs.TitleTransform;
+				Margin                    = rhs.Margin;
+				NoteFont                  = (Font)rhs.NoteFont.Clone();
+				SelectionColour           = rhs.SelectionColour;
+				ShowGridLines             = rhs.ShowGridLines;
+				ShowAxes                  = rhs.ShowAxes;
+				AntiAliasing              = rhs.AntiAliasing;
+				FillMode                  = rhs.FillMode;
+				CullMode                  = rhs.CullMode;
+				Orthographic              = rhs.Orthographic;
+				MinSelectionDistance      = rhs.MinSelectionDistance;
+				MinDragPixelDistance      = rhs.MinDragPixelDistance;
+				PerpendicularZTranslation = rhs.PerpendicularZTranslation;
+				ResetForward              = rhs.ResetForward;
+				ResetUp                   = rhs.ResetUp;
+				XAxis                     = new Axis(rhs.XAxis);
+				YAxis                     = new Axis(rhs.YAxis);
 			}
 			public RdrOptions(XElement node) :this()
 			{
-				NavigationMode       = node.Element(nameof(NavigationMode      )).As(NavigationMode      );
-				LockAspect           = node.Element(nameof(LockAspect          )).As(LockAspect          );
-				BkColour             = node.Element(nameof(BkColour            )).As(BkColour            );
-				ChartBkColour        = node.Element(nameof(ChartBkColour       )).As(ChartBkColour       );
-				TitleColour          = node.Element(nameof(TitleColour         )).As(TitleColour         );
-				TitleTransform       = node.Element(nameof(TitleTransform      )).As(TitleTransform      );
-				Margin               = node.Element(nameof(Margin              )).As(Margin              );
-				TitleFont            = node.Element(nameof(TitleFont           )).As(TitleFont           );
-				NoteFont             = node.Element(nameof(NoteFont            )).As(NoteFont            );
-				SelectionColour      = node.Element(nameof(SelectionColour     )).As(SelectionColour     );
-				ShowAxes             = node.Element(nameof(ShowAxes            )).As(ShowAxes            );
-				ShowGridLines        = node.Element(nameof(ShowGridLines       )).As(ShowGridLines       );
-				AntiAliasing         = node.Element(nameof(AntiAliasing        )).As(AntiAliasing        );
-				FillMode             = node.Element(nameof(FillMode            )).As(FillMode            );
-				CullMode             = node.Element(nameof(CullMode            )).As(CullMode            );
-				Orthographic         = node.Element(nameof(Orthographic        )).As(Orthographic        );
-				MinSelectionDistance = node.Element(nameof(MinSelectionDistance)).As(MinSelectionDistance);
-				MinDragPixelDistance = node.Element(nameof(MinDragPixelDistance)).As(MinDragPixelDistance);
-				ResetForward         = node.Element(nameof(ResetForward        )).As(ResetForward        );
-				ResetUp              = node.Element(nameof(ResetUp             )).As(ResetUp             );
-				XAxis                = node.Element(nameof(XAxis               )).As(XAxis               );
-				YAxis                = node.Element(nameof(YAxis               )).As(YAxis               );
+				NavigationMode            = node.Element(nameof(NavigationMode           )).As(NavigationMode           );
+				LockAspect                = node.Element(nameof(LockAspect               )).As(LockAspect               );
+				BkColour                  = node.Element(nameof(BkColour                 )).As(BkColour                 );
+				ChartBkColour             = node.Element(nameof(ChartBkColour            )).As(ChartBkColour            );
+				TitleColour               = node.Element(nameof(TitleColour              )).As(TitleColour              );
+				TitleTransform            = node.Element(nameof(TitleTransform           )).As(TitleTransform           );
+				Margin                    = node.Element(nameof(Margin                   )).As(Margin                   );
+				TitleFont                 = node.Element(nameof(TitleFont                )).As(TitleFont                );
+				NoteFont                  = node.Element(nameof(NoteFont                 )).As(NoteFont                 );
+				SelectionColour           = node.Element(nameof(SelectionColour          )).As(SelectionColour          );
+				ShowAxes                  = node.Element(nameof(ShowAxes                 )).As(ShowAxes                 );
+				ShowGridLines             = node.Element(nameof(ShowGridLines            )).As(ShowGridLines            );
+				AntiAliasing              = node.Element(nameof(AntiAliasing             )).As(AntiAliasing             );
+				FillMode                  = node.Element(nameof(FillMode                 )).As(FillMode                 );
+				CullMode                  = node.Element(nameof(CullMode                 )).As(CullMode                 );
+				Orthographic              = node.Element(nameof(Orthographic             )).As(Orthographic             );
+				MinSelectionDistance      = node.Element(nameof(MinSelectionDistance     )).As(MinSelectionDistance     );
+				MinDragPixelDistance      = node.Element(nameof(MinDragPixelDistance     )).As(MinDragPixelDistance     );
+				PerpendicularZTranslation = node.Element(nameof(PerpendicularZTranslation)).As(PerpendicularZTranslation);
+				ResetForward              = node.Element(nameof(ResetForward             )).As(ResetForward             );
+				ResetUp                   = node.Element(nameof(ResetUp                  )).As(ResetUp                  );
+				XAxis                     = node.Element(nameof(XAxis                    )).As(XAxis                    );
+				YAxis                     = node.Element(nameof(YAxis                    )).As(YAxis                    );
 			}
 			public XElement ToXml(XElement node)
 			{
-				node.Add2(nameof(NavigationMode      ) , NavigationMode       , false);
-				node.Add2(nameof(LockAspect          ) , LockAspect           , false);
-				node.Add2(nameof(BkColour            ) , BkColour             , false);
-				node.Add2(nameof(ChartBkColour       ) , ChartBkColour        , false);
-				node.Add2(nameof(TitleColour         ) , TitleColour          , false);
-				node.Add2(nameof(TitleTransform      ) , TitleTransform       , false);
-				node.Add2(nameof(Margin              ) , Margin               , false);
-				node.Add2(nameof(TitleFont           ) , TitleFont            , false);
-				node.Add2(nameof(NoteFont            ) , NoteFont             , false);
-				node.Add2(nameof(SelectionColour     ) , SelectionColour      , false);
-				node.Add2(nameof(ShowGridLines       ) , ShowGridLines        , false);
-				node.Add2(nameof(ShowAxes            ) , ShowAxes             , false);
-				node.Add2(nameof(AntiAliasing        ) , AntiAliasing         , false);
-				node.Add2(nameof(FillMode            ) , FillMode             , false);
-				node.Add2(nameof(CullMode            ) , CullMode             , false);
-				node.Add2(nameof(Orthographic        ) , Orthographic         , false);
-				node.Add2(nameof(MinSelectionDistance) , MinSelectionDistance , false);
-				node.Add2(nameof(MinDragPixelDistance) , MinDragPixelDistance , false);
-				node.Add2(nameof(ResetForward        ) , ResetForward         , false);
-				node.Add2(nameof(ResetUp             ) , ResetUp              , false);
-				node.Add2(nameof(XAxis               ) , XAxis                , false);
-				node.Add2(nameof(YAxis               ) , YAxis                , false);
+				node.Add2(nameof(NavigationMode           ) , NavigationMode            , false);
+				node.Add2(nameof(LockAspect               ) , LockAspect                , false);
+				node.Add2(nameof(BkColour                 ) , BkColour                  , false);
+				node.Add2(nameof(ChartBkColour            ) , ChartBkColour             , false);
+				node.Add2(nameof(TitleColour              ) , TitleColour               , false);
+				node.Add2(nameof(TitleTransform           ) , TitleTransform            , false);
+				node.Add2(nameof(Margin                   ) , Margin                    , false);
+				node.Add2(nameof(TitleFont                ) , TitleFont                 , false);
+				node.Add2(nameof(NoteFont                 ) , NoteFont                  , false);
+				node.Add2(nameof(SelectionColour          ) , SelectionColour           , false);
+				node.Add2(nameof(ShowGridLines            ) , ShowGridLines             , false);
+				node.Add2(nameof(ShowAxes                 ) , ShowAxes                  , false);
+				node.Add2(nameof(AntiAliasing             ) , AntiAliasing              , false);
+				node.Add2(nameof(FillMode                 ) , FillMode                  , false);
+				node.Add2(nameof(CullMode                 ) , CullMode                  , false);
+				node.Add2(nameof(Orthographic             ) , Orthographic              , false);
+				node.Add2(nameof(MinSelectionDistance     ) , MinSelectionDistance      , false);
+				node.Add2(nameof(MinDragPixelDistance     ) , MinDragPixelDistance      , false);
+				node.Add2(nameof(PerpendicularZTranslation) , PerpendicularZTranslation , false);
+				node.Add2(nameof(ResetForward             ) , ResetForward              , false);
+				node.Add2(nameof(ResetUp                  ) , ResetUp                   , false);
+				node.Add2(nameof(XAxis                    ) , XAxis                     , false);
+				node.Add2(nameof(YAxis                    ) , YAxis                     , false);
 				return node;
 			}
 
@@ -1302,6 +1306,14 @@ namespace pr.gui
 				set { SetProp(ref m_MinDragPixelDistance, value, nameof(MinDragPixelDistance)); }
 			}
 			private float m_MinDragPixelDistance;
+
+			/// <summary>True if the camera should move along a ray cast through the mouse point</summary>
+			public bool PerpendicularZTranslation
+			{
+				get { return m_PerpendicularZTranslation; }
+				set { SetProp(ref m_PerpendicularZTranslation, value, nameof(PerpendicularZTranslation)); }
+			}
+			private bool m_PerpendicularZTranslation;
 
 			/// <summary>The forward direction of the camera when reset</summary>
 			public v4 ResetForward
@@ -1743,7 +1755,7 @@ namespace pr.gui
 					AllowScroll     = true;
 					AllowZoom       = true;
 					LockRange       = false;
-					TickText        = (x,step) => Math.Round(x, 4, MidpointRounding.AwayFromZero).ToString("G4");
+					TickText        = (x,step) => Math.Round(x, 4, MidpointRounding.AwayFromZero).ToString("G8");
 					MeasureTickText = (gfx,w)  => Options.MinTickSize;
 				}
 				public Axis(Axis rhs)
@@ -2206,7 +2218,8 @@ namespace pr.gui
 				{
 					// Translate the camera along a ray through 'point'
 					var loc = Control_.MapPoint(this, Scene, e.Location);
-					Scene.Window.MouseNavigateZ(loc, e.Delta);
+					var along_ray = Options.PerpendicularZTranslation == (ModifierKeys == Keys.Alt);
+					Scene.Window.MouseNavigateZ(loc, e.Delta, along_ray);
 					Invalidate();
 				}
 			}
@@ -3557,13 +3570,12 @@ namespace pr.gui
 					#region Show Value
 					{
 						var opt = tools_menu.DropDownItems.Add2(new ToolStripMenuItem("Show Value") { Name = CMenu.ToolsMenu.ShowValue });
-						opt.Checked = (bool)m_tt_show_value.Tag;
+						opt.Checked = m_show_value;
 						opt.Click += (s, a) =>
 						{
-							m_tt_show_value.Hide(this);
-							if ((bool)m_tt_show_value.Tag) MouseMove -= OnMouseMoveTooltip;
-							m_tt_show_value.Tag = !(bool)m_tt_show_value.Tag;
-							if ((bool)m_tt_show_value.Tag) MouseMove += OnMouseMoveTooltip;
+							if (m_show_value) MouseMove -= OnMouseMoveTooltip;
+							m_show_value = !m_show_value;
+							if (m_show_value) MouseMove += OnMouseMoveTooltip;
 						};
 					}
 					#endregion
@@ -3592,6 +3604,14 @@ namespace pr.gui
 						opt.Click += (s,a) =>
 						{
 							LockAspect = !LockAspect;
+						};
+					}
+					{
+						var opt = zoom_menu.DropDownItems.Add2(new ToolStripMenuItem("Perpendicular Z Translation") { Name = CMenu.ZoomMenu.PerpZTrans });
+						opt.Checked = Options.PerpendicularZTranslation;
+						opt.Click += (s,a) =>
+						{
+							Options.PerpendicularZTranslation = !Options.PerpendicularZTranslation;
 						};
 					}
 				}
@@ -3674,7 +3694,8 @@ namespace pr.gui
 		#region Show Value Tooltip
 
 		/// <summary>A tool tip to display the mouse location value</summary>
-		private ToolTip m_tt_show_value;
+		private HintBalloon m_tt_show_value;
+		private bool m_show_value;
 
 		/// <summary>Handle mouse move events while the tooltip is visible</summary>
 		private void OnMouseMoveTooltip(object sender, MouseEventArgs e)
@@ -3682,13 +3703,15 @@ namespace pr.gui
 			if (Scene.Bounds.Contains(e.Location))
 			{
 				var pt = ClientToChart(e.Location);
-				var new_str = "{0} {1}".Fmt(XAxis.TickText(pt.X, 0.0), YAxis.TickText(pt.Y, 0.0));
-				var old_str = m_tt_show_value.GetToolTip(this);
-				if (old_str != new_str) // Fix a flickering problem for non-moving mouse
-					m_tt_show_value.Show(new_str, this, e.Location + new Size(20, 0));
+				m_tt_show_value.Text = "{0} {1}".Fmt(XAxis.TickText(pt.X, 0.0), YAxis.TickText(pt.Y, 0.0));
+				m_tt_show_value.Location = PointToScreen(e.Location);
+				m_tt_show_value.Owner = TopLevelControl as Form;
+				m_tt_show_value.Visible = true;
 			}
 			else
-				m_tt_show_value.Hide(this);
+			{
+				m_tt_show_value.Visible = false;
+			}
 		}
 
 		#endregion
@@ -4022,6 +4045,7 @@ namespace pr.gui
 				public const string Default = "default";
 				public const string Aspect1to1 = "aspect1:1";
 				public const string LockAspect = "lock_aspect";
+				public const string PerpZTrans = "perp_z_trans";
 			}
 			public const string Objects = "objects";
 			public static class ObjectsMenu

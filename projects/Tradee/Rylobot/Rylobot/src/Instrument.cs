@@ -25,7 +25,7 @@ namespace Rylobot
 		{
 			Bot = bot;
 			Data = series;
-			HighRes = new List<Vec4d>();
+			HighRes = new List<PriceTick>();
 
 			// Ensure the instrument settings directory exists
 			if (!Path_.DirExists(Bot.Settings.InstrumentSettingsDir))
@@ -68,15 +68,6 @@ namespace Rylobot
 		}
 		private Rylobot m_bot;
 
-		/// <summary>
-		/// Return this instrument at a higher or lower time frame (e.g. this=h1, ratio=2 => h2. this=h1, ratio=0.5 => m30)).
-		/// Note: can't use this with back testing</summary>
-		public Instrument RelativeTimeFrame(double ratio)
-		{
-			var tf = TimeFrame.GetRelativeTimeFrame(ratio);
-			return new Instrument(Bot, Symbol, tf);
-		}
-
 		/// <summary>Called when the instrument data has been updated</summary>
 		private void HandleTick(object sender, EventArgs e)
 		{
@@ -88,9 +79,9 @@ namespace Rylobot
 
 			// Capture the high res price data
 			var index = FractionalIndexAt(Bot.UtcNow) - (double)FirstIdx;
-			var idx = HighRes.Count != 0 && HighRes.Back().x > index ? HighRes.BinarySearch(x => x.x.CompareTo(index)) : HighRes.Count;
+			var idx = HighRes.Count != 0 && HighRes.Back().m_index > index ? HighRes.BinarySearch(x => x.m_index.CompareTo(index)) : HighRes.Count;
 			if (idx < 0) idx = ~idx;
-			HighRes.Insert(idx, new Vec4d(index, Symbol.Ask, Symbol.Bid, 0));
+			HighRes.Insert(idx, new PriceTick(index, Symbol.Ask, Symbol.Bid));
 
 			// Apply the data to the latest candle or invalidate the cached Latest
 			if (NewCandle)
@@ -106,6 +97,15 @@ namespace Rylobot
 
 			// Notify data added/changed
 			OnDataChanged(new DataEventArgs(this, candle, NewCandle));
+		}
+
+		/// <summary>
+		/// Return this instrument at a higher or lower time frame (e.g. this=h1, ratio=2 => h2. this=h1, ratio=0.5 => m30)).
+		/// Note: can't use this with back testing</summary>
+		public Instrument RelativeTimeFrame(double ratio)
+		{
+			var tf = TimeFrame.GetRelativeTimeFrame(ratio);
+			return new Instrument(Bot, Symbol, tf);
 		}
 
 		/// <summary>Raised whenever candles are added/modified in this instrument</summary>
@@ -129,12 +129,30 @@ namespace Rylobot
 		}
 
 		/// <summary>The high res data for the instrument. 'x' is the CAlgo index, 'y' is the ask price, 'z' is the bid price, 'w' is unused</summary>
-		public List<Vec4d> HighRes
+		public List<PriceTick> HighRes
 		{
 			get;
 			private set;
 		}
-		
+		public struct PriceTick
+		{
+			/// <summary>The fractional CAlgo index</summary>
+			public double m_index;
+
+			/// <summary>The Ask price</summary>
+			public QuoteCurrency m_ask;
+
+			/// <summary>The Ask price</summary>
+			public QuoteCurrency m_bid;
+
+			public PriceTick(double index, QuoteCurrency ask, QuoteCurrency bid)
+			{
+				m_index = index;
+				m_ask = ask;
+				m_bid = bid;
+			}
+		}
+
 		/// <summary>The CAlgo Symbol interface for this instrument</summary>
 		public Symbol Symbol
 		{
@@ -278,13 +296,13 @@ namespace Rylobot
 		/// Iterate through the high res price data over the given range with a step size of 'step'.
 		/// 'first' and 'last' floating point NegIdx's (not indices in HighRes)
 		/// 'step' is the increment size in indices to move with each returned value</summary>
-		public IEnumerable<Vec4d> HighResRange(double idx_min, double idx_max, double? step = null)
+		public IEnumerable<PriceTick> HighResRange(double idx_min, double idx_max, double? step = null)
 		{
 			var first = idx_min - (double)FirstIdx;
 			var last  = idx_max - (double)FirstIdx;
 
-			var istart = HighRes.BinarySearch(x => x.x.CompareTo(first));
-			var iend   = HighRes.BinarySearch(x => x.x.CompareTo(last));
+			var istart = HighRes.BinarySearch(x => x.m_index.CompareTo(first));
+			var iend   = HighRes.BinarySearch(x => x.m_index.CompareTo(last));
 			if (istart < 0) istart = ~istart;
 			if (iend   < 0) iend = ~iend;
 			if (istart == iend)
@@ -294,7 +312,7 @@ namespace Rylobot
 			var pt = HighRes[istart];
 
 			// Loop over the requested range
-			var X = HighRes[istart].x;
+			var X = HighRes[istart].m_index;
 			for (var i = istart; i < iend;)
 			{
 				yield return pt;
@@ -313,21 +331,21 @@ namespace Rylobot
 					// Find the range of the ask/bid price for the skipped price values
 					// Return the average X position of the skipped values
 					var cnt = 0;
-					pt = new Vec4d(0, double.MinValue, double.MaxValue, 0);
+					pt = new PriceTick(0.0, double.MinValue, double.MaxValue);
 					for (++i; i < iend; ++i)
 					{
-						pt.x += HighRes[i].x;
-						pt.y = Math.Max(pt.y, HighRes[i].y);
-						pt.z = Math.Min(pt.z, HighRes[i].z);
+						pt.m_index += HighRes[i].m_index;
+						pt.m_ask = Math.Max((double)pt.m_ask, (double)HighRes[i].m_ask);
+						pt.m_bid = Math.Min((double)pt.m_bid, (double)HighRes[i].m_bid);
 						++cnt;
-						if (HighRes[i].x > X)
+						if (HighRes[i].m_index > X)
 							break;
 					}
-					pt.x /= cnt;
+					pt.m_index /= cnt;
 				}
 			}
 		}
-		public IEnumerable<Vec4d> HighResRange(RangeF idx_range, double? step = null)
+		public IEnumerable<PriceTick> HighResRange(RangeF idx_range, double? step = null)
 		{
 			return HighResRange(idx_range.Begin, idx_range.End, step);
 		}

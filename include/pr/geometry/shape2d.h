@@ -38,9 +38,9 @@ namespace pr
 			// Set Verts
 			for (int i = 0; i != facets; ++i)
 			{
-				auto a = pr::maths::tau * i / facets;
-				auto c = pr::Cos(a);
-				auto s = pr::Sin(a);
+				auto a = float(pr::maths::tau * i / facets);
+				auto c = Cos(a);
+				auto s = Sin(a);
 				SetPCNT(*v_out++, v4(dimx * c, dimy * s, 0, 1), colour, v4ZAxis, v2(0.5f*(c + 1), 0.5f*(1 - s)));
 			}
 			if (solid)
@@ -178,8 +178,8 @@ namespace pr
 				auto vb1 = v_out + verts_per_cnr * 2;
 				for (int i = 0; i != verts_per_cnr; ++i)
 				{
-					auto c = verts_per_cnr > 1 ? Cos(pr::maths::tau_by_4 * i / (verts_per_cnr - 1)) : 0;
-					auto s = verts_per_cnr > 1 ? Sin(pr::maths::tau_by_4 * i / (verts_per_cnr - 1)) : 0;
+					auto c = float(verts_per_cnr > 1 ? Cos(pr::maths::tau_by_4 * i / (verts_per_cnr - 1)) : 0);
+					auto s = float(verts_per_cnr > 1 ? Sin(pr::maths::tau_by_4 * i / (verts_per_cnr - 1)) : 0);
 					SetPCNT(*vb0++, v4(-dimx + rad * (1 - c), +dimy - rad * (1 - s), 0, 1), colour, v4ZAxis, v2(t0 + (1 - c)*tx, t0 + (1 - s)*ty));
 					SetPCNT(*vb0++, v4(-dimx + rad * (1 - c), -dimy + rad * (1 - s), 0, 1), colour, v4ZAxis, v2(t0 + (1 - c)*tx, t1 - (1 - s)*ty));
 					SetPCNT(*vb1++, v4(+dimx - rad * (1 - s), +dimy - rad * (1 - c), 0, 1), colour, v4ZAxis, v2(t1 - (1 - s)*tx, t0 + (1 - c)*ty));
@@ -195,8 +195,8 @@ namespace pr
 				auto vb3 = v_out + verts_per_cnr * 3;
 				for (int i = 0; i != verts_per_cnr; ++i)
 				{
-					auto c = verts_per_cnr > 1 ? Cos(pr::maths::tau_by_4 * i / (verts_per_cnr - 1)) : 0;
-					auto s = verts_per_cnr > 1 ? Sin(pr::maths::tau_by_4 * i / (verts_per_cnr - 1)) : 0;
+					auto c = float(verts_per_cnr > 1 ? Cos(pr::maths::tau_by_4 * i / (verts_per_cnr - 1)) : 0);
+					auto s = float(verts_per_cnr > 1 ? Sin(pr::maths::tau_by_4 * i / (verts_per_cnr - 1)) : 0);
 					SetPCNT(*vb0++, v4(-dimx + rad * (1 - c), -dimy + rad * (1 - s), 0, 1), colour, v4ZAxis, v2(t0 + (1 - c)*tx, t1 - (1 - s)*ty));
 					SetPCNT(*vb1++, v4(+dimx - rad * (1 - s), -dimy + rad * (1 - c), 0, 1), colour, v4ZAxis, v2(t1 - (1 - s)*tx, t1 - (1 - c)*ty));
 					SetPCNT(*vb2++, v4(+dimx - rad * (1 - c), +dimy - rad * (1 - s), 0, 1), colour, v4ZAxis, v2(t1 - (1 - c)*tx, t0 + (1 - s)*ty));

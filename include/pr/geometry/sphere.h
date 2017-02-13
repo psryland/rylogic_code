@@ -139,11 +139,11 @@ namespace pr
 			// Create an Icosahedron and recursively subdivide the triangles
 			inline void CreateIcosahedron(CreateGeosphereData& data)
 			{
-				float const A    = 2.0f / (1.0f + maths::phi * maths::phi);
+				float const A    = 2.0f / (1.0f + float(Sqr(maths::phi)));
 				float const H1   =  1.0f - A;
 				float const H2   = -1.0f + A;
 				float const R    = Sqrt(1.0f - H1 * H1);
-				float const dAng = maths::tau / 5.0f;
+				float const dAng = float(maths::tau / 5.0);
 				float const ua[] = {0.0f,0.2f,0.4f,0.6f,0.8f,1.0f,1.2f};
 				float const ub[] = {0.1f,0.3f,0.5f,0.7f,0.9f,1.1f,1.3f};
 

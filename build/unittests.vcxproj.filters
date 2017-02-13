@@ -960,6 +960,9 @@
     <ClInclude Include="..\include\pr\geometry\extrude.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\maths\matrix.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

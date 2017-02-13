@@ -39,6 +39,11 @@ namespace view3d
 			PR_ASSERT(PR_DBG, pr::meta::is_aligned_to<16>(this), "dll data not aligned");
 
 			// Hook up the sources events
+			m_sources.OnFileRemoved += [&](pr::ldr::ScriptSources&, pr::ldr::ScriptSources::FileRemovedEventArgs const& args)
+			{
+				for (auto& wnd : m_wnd_cont)
+					View3D_RemoveObjectsById(wnd, false, args.m_file_group_id);
+			};
 			m_sources.OnError += [&](pr::ldr::ScriptSources&, pr::ErrorEventArgs const& args)
 			{
 				ReportError(args.m_msg.c_str());
@@ -77,6 +82,7 @@ namespace view3d
 		// Remove all Ldr script sources
 		void ClearScriptSources()
 		{
+			// Reset the sources collection
 			m_sources.Clear();
 		}
 

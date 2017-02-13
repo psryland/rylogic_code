@@ -19,15 +19,25 @@ namespace pr.gui
 	/// <summary>A Checked list box set up for enum flags</summary>
 	public class FlagCheckedListBox :CheckedListBox
 	{
-		private Type m_enum_type;
-		private Enum m_enum_value;
-		private bool m_is_updating_check_states;
-		private List<ItemCheckEventArgs> m_pending_itemcheck_events;
-
 		public FlagCheckedListBox()
 		{
 			m_pending_itemcheck_events = new List<ItemCheckEventArgs>();
+			RequireDescAttribute = false;
 		}
+
+		/// <summary>Set to true to only display enum member that have the 'Desc' attribute</summary>
+		public bool RequireDescAttribute
+		{
+			get { return m_require_desc; }
+			set
+			{
+				if (m_require_desc == value) return;
+				m_require_desc = value;
+				if (EnumValue != null)
+					FillEnumMembers();
+			}
+		}
+		private bool m_require_desc;
 
 		/// <summary>Gets the current bit value corresponding to all checked items</summary>
 		public int Bitmask
@@ -49,17 +59,27 @@ namespace pr.gui
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public Enum EnumValue
 		{
-			get { return (Enum)Enum.ToObject(m_enum_type, Bitmask); }
+			get { return m_enum_type != null ? (Enum)Enum.ToObject(m_enum_type, Bitmask) : null; }
 			set
 			{
 				if (Equals(m_enum_value,value) && Equals(m_enum_type,value.GetType())) return;
-				Items.Clear();
-				m_enum_value = value; // Store the current enum value
-				m_enum_type = value.GetType(); // Store enum type
-				FillEnumMembers(); // Add items for enum members
-				UpdateCheckedItems((int)Convert.ChangeType(m_enum_value, typeof(int))); // Check/uncheck items depending on enum value
+				if (value != null)
+				{
+					m_enum_value = value; // Store the current enum value
+					m_enum_type = value.GetType(); // Store enum type
+					FillEnumMembers(); // Add items for enum members
+					UpdateCheckedItems((int)Convert.ChangeType(m_enum_value, typeof(int))); // Check/uncheck items depending on enum value
+				}
+				else
+				{
+					m_enum_value = null;
+					m_enum_type = null;
+					Items.Clear();
+				}
 			}
 		}
+		private Enum m_enum_value;
+		private Type m_enum_type;
 
 		/// <summary>
 		/// Adds a bitmask value and its associated description.
@@ -147,15 +167,19 @@ namespace pr.gui
 			m_pending_itemcheck_events.Clear();
 			Invalidate();
 		}
+		private List<ItemCheckEventArgs> m_pending_itemcheck_events;
+		private bool m_is_updating_check_states;
 
 		/// <summary>Adds items to the check list box based on the members of the enum</summary>
 		private void FillEnumMembers()
 		{
+			Items.Clear();
 			foreach (var val in Enum.GetValues(m_enum_type))
 			{
 				var name = Enum.GetName(m_enum_type, val);
 				var desc = DescAttr.Desc(m_enum_type, name);
 				int bits = (int)Convert.ChangeType(val, typeof(int));
+				if (RequireDescAttribute && desc == null) continue;
 				Add(bits, desc ?? name);
 			}
 		}

@@ -25,7 +25,7 @@ namespace pr.maths
 			// For all three slabs
 			for (int i = 0; i != 3; ++i)
 			{
-				if (Math.Abs(direction[i]) < Maths.Tiny)
+				if (Math.Abs(direction[i]) < Maths.TinyF)
 				{
 					// Ray is parallel to slab. No hit if origin not within slab
 					if (point[i] < lower[i] || point[i] > upper[i])

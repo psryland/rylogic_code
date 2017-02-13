@@ -38,15 +38,7 @@ namespace LDraw
 		}
 		protected override void OnChartRendering(ChartRenderingEventArgs args)
 		{
-			// Add all objects to the window's drawlist
-			foreach (var id in Model.ContextIds)
-				Window.AddObjects(id);
-
-			// Add bounding boxes
-			if (Model.Settings.ShowBBoxes)
-				foreach (var id in Model.ContextIds)
-					Window.AddObjects(id);
-
+			Populate();
 			base.OnChartRendering(args);
 		}
 		protected override void OnKeyDown(KeyEventArgs e)
@@ -100,6 +92,20 @@ namespace LDraw
 		}
 		private DockControl m_impl_dock_control;
 
+		/// <summary>Add objects to the scene just prior to rendering</summary>
+		public void Populate()
+		{
+			// Add all objects to the window's drawlist
+			foreach (var id in Model.ContextIds)
+				Window.AddObjects(id);
+
+			// Add bounding boxes
+			if (Model.Settings.ShowBBoxes)
+				foreach (var id in Model.ContextIds)
+					Window.AddObjects(id);
+		}
+
+		#region Component Designer generated code
 		private void InitializeComponent()
 		{
 			this.SuspendLayout();
@@ -112,5 +118,6 @@ namespace LDraw
 			this.ResumeLayout(false);
 
 		}
+		#endregion
 	}
 }

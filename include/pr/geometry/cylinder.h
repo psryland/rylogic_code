@@ -53,9 +53,9 @@ namespace pr
 			auto col = pr::CreateRepeater(colours, num_colours, vcount, pr::Colour32White);
 			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a != 0xff; return c; };
 
-			float z  = -height * 0.5f;
-			float dz = height / layers;
-			float da = maths::tau / wedges;
+			auto z  = -height * 0.5f;
+			auto dz = height / layers;
+			auto da = float(maths::tau) / wedges;
 			int verts_per_layer = wedges + 1;
 			int ibase = 0, last = vcount - 1;
 
@@ -81,7 +81,7 @@ namespace pr
 					float a = da*w + (l%2)*da*0.5f;
 					pt = v4(cos(a) * r * xscale, sin(a) * r * yscale, z, 1.0f);
 					nm = v4::Normal3(height * cos(a + da*0.5f) / xscale, height * sin(a + da*0.5f) / yscale ,nz ,0.0f);
-					uv = v2(a / maths::tau, 1.0f - (z + height*0.5f) / height);
+					uv = v2(a / float(maths::tau), 1.0f - (z + height*0.5f) / height);
 					SetPCNT(*v_out++, pt, cc(*col++), nm, uv);
 				}
 				if (l != layers) z += dz;

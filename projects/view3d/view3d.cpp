@@ -737,7 +737,7 @@ VIEW3D_API BOOL __stdcall View3D_MouseNavigate(View3DWindow window, View3DV2 ss_
 // 'point' is a point in client rect space.
 // 'delta' is the mouse wheel scroll delta value (i.e. 120 = 1 click)
 // Returns true if the scene requires refreshing
-VIEW3D_API BOOL __stdcall View3D_MouseNavigateZ(View3DWindow window, View3DV2 ss_pos, float delta)
+VIEW3D_API BOOL __stdcall View3D_MouseNavigateZ(View3DWindow window, View3DV2 ss_pos, float delta, BOOL along_ray)
 {
 	try
 	{
@@ -763,7 +763,7 @@ VIEW3D_API BOOL __stdcall View3D_MouseNavigateZ(View3DWindow window, View3DV2 ss
 		// If no gizmos are using the mouse, use standard mouse control
 		if (!gizmo_in_use)
 		{
-			if (window->m_camera.MouseControlZ(nss_point, delta))
+			if (window->m_camera.MouseControlZ(nss_point, delta, along_ray != 0))
 				refresh |= true;
 		}
 

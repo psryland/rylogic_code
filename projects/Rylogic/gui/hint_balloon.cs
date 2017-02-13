@@ -17,9 +17,16 @@ namespace pr.gui
 		private readonly object m_lock;
 		private GraphicsPath m_path;
 		private RichTextBox m_msg;
-		private int m_corner;           // The corner that the tip currently points to
+		private int m_corner; // The corner that the tip currently points to
 		private int m_issue;
 
+		/// <summary>Create a balloon tooltip form</summary>
+		/// <param name="pin_to">Optional. Pin the balloon to a control and move with it</param>
+		/// <param name="msg">The text on the hint balloon</param>
+		/// <param name="target">The position of the balloon relative to the pinned control</param>
+		/// <param name="show_delay">The time (in ms) before displaying the hint balloon</param>
+		/// <param name="duration">How long the balloon is displayed for before auto hiding</param>
+		/// <param name="fade_duration">The period to fade out the hint balloon</param>
 		public HintBalloon(Control pin_to = null, string msg = null, Point? target = null, int show_delay = 500, int duration = 2000, int fade_duration = 500)
 		{
 			InitializeComponent();
@@ -32,7 +39,7 @@ namespace pr.gui
 			ShowInTaskbar      = false;
 			Visible            = false;
 			m_lock             = new object();
-			m_corner           = -1;
+			m_corner           = 0;
 			m_issue            = 0;
 			ShowDelay          = show_delay;
 			Duration           = duration;
@@ -67,6 +74,73 @@ namespace pr.gui
 		{
 			get { return true; }
 		}
+		protected override void OnLayout(LayoutEventArgs levent)
+		{
+			using (this.SuspendLayout(false))
+			{
+				var update_region = false;
+
+				// Determine the best size for the balloon
+				var size = new Size(640,480);
+
+				// Binary search for an aspect ratio ~= ReflowAspectRatio
+				const float ReflowAspectRatio = 5f;
+				var initial_width = 640;
+				for (float scale0 = 0.0f, scale1 = 1.0f;;)
+				{
+					var scale = (scale0 + scale1) / 2f;
+					size = m_msg.GetPreferredSize(new Size((int)(initial_width * scale), 0));
+					if      (size.Aspect() < ReflowAspectRatio) scale0 = scale;
+					else if (size.Aspect() > ReflowAspectRatio) scale1 = scale;
+					if (Math.Abs(scale1 - scale0) < 0.05f)
+					{
+						size = m_msg.GetPreferredSize(new Size((int)(initial_width * scale1), 0));
+						break;
+					}
+				}
+
+				var margin = TipLength + CornerRadius;
+				var balloon_size = new Size(size.Width + 2*margin, size.Height + 2*margin);
+
+				// Update the size of the form and the form's Region
+				if (Size != balloon_size)
+				{
+					m_msg.Bounds = new Rectangle(margin, margin, size.Width, size.Height);
+					Size = balloon_size;
+
+					// Update the form's Region
+					update_region = true;
+				}
+
+				// Set the position of the balloon given the target point relative to the screen.
+				var pt = TargetInScreenSpace;
+				var screen = Screen.FromPoint(pt);
+				var loc = pt;
+				int corner = (int)PreferredTipCorner;
+				if ((corner & 1) != 0) loc.X -= Width;
+				if ((corner & 2) != 0) loc.Y -= Height;
+				if ((corner & 1) != 0 && loc.X          < screen.WorkingArea.Left  ) { loc.X += Width ; corner &= ~1; }
+				if ((corner & 2) != 0 && loc.Y          < screen.WorkingArea.Top   ) { loc.Y += Height; corner &= ~2; }
+				if ((corner & 1) == 0 && loc.X + Width  > screen.WorkingArea.Right ) { loc.X -= Width ; corner |=  1; }
+				if ((corner & 2) == 0 && loc.Y + Height > screen.WorkingArea.Bottom) { loc.Y -= Height; corner |=  2; }
+				Location = loc;
+
+				// Update the region if the corner changes
+				if (corner != m_corner)
+				{
+					m_corner = corner;
+					update_region = true;
+				}
+
+				// Update the shape of the balloon form
+				if (update_region)
+				{
+					m_path = GeneratePath(false);
+					Region = new Region(GeneratePath(true));
+				}
+			}
+			base.OnLayout(levent);
+		}
 		protected override void OnPaint(PaintEventArgs e)
 		{
 			base.OnPaint(e);
@@ -79,7 +153,7 @@ namespace pr.gui
 		protected override void OnResize(EventArgs e)
 		{
 			base.OnResize(e);
-			UpdateBalloonLocation();
+			Invalidate();
 		}
 
 		/// <summary>The period to wait before displaying the hint (in milliseconds)</summary>
@@ -94,31 +168,97 @@ namespace pr.gui
 		/// <summary>The text to display in the hint</summary>
 		public override string Text
 		{
-			get { return m_msg != null ? m_msg.Text : string.Empty; }
-			set { if (m_msg != null) m_msg.Text = value; }
+			get { return m_msg?.Text ?? string.Empty; }
+			set
+			{
+				if (Text == value) return;
+				if (m_msg != null)
+				{
+					m_msg.Text = value;
+					base.Invalidate();
+				}
+			}
 		}
 
 		/// <summary>The hint text in RTF</summary>
 		public string TextRtf
 		{
-			get { return m_msg != null ? m_msg.Rtf : string.Empty; }
-			set { if (m_msg != null) m_msg.Rtf = value; }
+			get { return m_msg?.Rtf ?? string.Empty; }
+			set
+			{
+				if (TextRtf == value) return;
+				if (m_msg != null)
+				{
+					m_msg.Rtf = value;
+					base.Invalidate();
+				}
+			}
 		}
 
 		/// <summary>The (optional) control that the balloon is pinned to</summary>
-		public Control PinTo { get; set; }
+		public Control PinTo
+		{
+			get { return m_pin_to; }
+			set
+			{
+				if (m_pin_to == value) return;
+				m_pin_to = value;
+				base.Invalidate();
+			}
+		}
+		private Control m_pin_to;
 
 		/// <summary>The position to point the tool tip at (relative to the associated control)</summary>
-		public Point Target { get; set; }
+		public Point Target
+		{
+			get { return m_target; }
+			set
+			{
+				if (m_target == value) return;
+				m_target = value;
+				base.Invalidate();
+			}
+		}
+		private Point m_target;
 
 		/// <summary>The radius of the corners of the balloon</summary>
-		public int CornerRadius { get; set; }
+		public int CornerRadius
+		{
+			get { return m_corner_radius; }
+			set
+			{
+				if (m_corner_radius == value) return;
+				m_corner_radius = value;
+				base.Invalidate();
+			}
+		}
+		private int m_corner_radius;
 
 		/// <summary>The width of the fat end of the pointer</summary>
-		public int TipBaseWidth { get; set; }
+		public int TipBaseWidth
+		{
+			get { return m_tip_base_width; }
+			set
+			{
+				if (m_tip_base_width == value) return;
+				m_tip_base_width = value;
+				base.Invalidate();
+			}
+		}
+		private int m_tip_base_width;
 
 		/// <summary>The vertical length of the tip</summary>
-		public int TipLength { get; set; }
+		public int TipLength
+		{
+			get { return m_tip_length; }
+			set
+			{
+				if (m_tip_length == value) return;
+				m_tip_length = value;
+				base.Invalidate();
+			}
+		}
+		private int m_tip_length;
 
 		/// <summary>The preferred orientation of the balloon tip</summary>
 		public ETipCorner PreferredTipCorner { get; set; }
@@ -165,56 +305,35 @@ namespace pr.gui
 
 				if (PinTo != null)
 				{
-					PinTo.Move   -= UpdateBalloonLocation;
-					PinTo.Resize -= UpdateBalloonLocation;
+					PinTo.Move   -= Invalidate;
+					PinTo.Resize -= Invalidate;
 				}
 				if (Owner != null)
 				{
-					Owner.Move       -= UpdateBalloonLocation;
-					Owner.Resize     -= UpdateBalloonLocation;
+					Owner.Move       -= Invalidate;
+					Owner.Resize     -= Invalidate;
 					Owner.FormClosed -= DetachFromOwner;
 				}
 
-				Opacity  = 1.0;
-				Owner    = pin_to != null ? pin_to.TopLevelControl as Form : null;
-				PinTo    = pin_to;
+				Opacity = 1.0;
+				Owner   = pin_to != null ? pin_to.TopLevelControl as Form : null;
+				TopMost = Owner == null;
+				PinTo   = pin_to;
 
 				if (PinTo != null)
 				{
-					PinTo.Move   += UpdateBalloonLocation;
-					PinTo.Resize += UpdateBalloonLocation;
+					PinTo.Move   += Invalidate;
+					PinTo.Resize += Invalidate;
 				}
 				if (Owner != null)
 				{
-					Owner.Move       += UpdateBalloonLocation;
-					Owner.Resize     += UpdateBalloonLocation;
+					Owner.Move       += Invalidate;
+					Owner.Resize     += Invalidate;
 					Owner.FormClosed += DetachFromOwner;
 				}
 
-				// Determine the best size for the balloon
-				var size = new Size(640,480);
-				double best_aspect_diff = double.MaxValue;
-				for (var w = 60; w < 640; w += 40)
-				{
-					var sz = m_msg.GetPreferredSize(new Size(w, 0));
-					var aspect = sz.Height != 0 ? (double)sz.Width / sz.Height : double.MaxValue;
-					var aspect_diff = Math.Abs(3.0 - aspect);
-					if (aspect_diff < best_aspect_diff)
-					{
-						best_aspect_diff = aspect_diff;
-						size = sz;
-					}
-				}
-				var margin = TipLength + CornerRadius;
-				m_msg.Bounds = new Rectangle(margin, margin, size.Width, size.Height);
-				Size = new Size(size.Width + 2*margin, size.Height + 2*margin);
-
-				// Generate the boundary of the hint balloon and set its screen position
-				m_corner = -1;
-				UpdateBalloonLocation();
 				Win32.ShowWindow(Handle, Win32.SW_SHOWNOACTIVATE);
 				Win32.SetWindowPos(Handle, Win32.HWND_TOP, 0, 0, 0, 0, Win32.SWP_NOACTIVATE|Win32.SWP_NOMOVE|Win32.SWP_NOSIZE);
-
 				this.BeginInvokeDelayed(Duration, () => HideHintInternal(issue));
 			}
 		}
@@ -258,24 +377,6 @@ namespace pr.gui
 		private Point TargetInScreenSpace
 		{
 			get { return PinTo != null ? PinTo.PointToScreen(Target) : Target; }
-		}
-
-		/// <summary>Sets the position of the balloon given the target point relative to the screen. Returns the tip corner</summary>
-		private int SetLocation()
-		{
-			var pt = TargetInScreenSpace;
-			var screen = Screen.FromPoint(pt);
-			var loc = pt;
-			int corner = (int)PreferredTipCorner;
-			if ((corner & 1) != 0) loc.X -= Width;
-			if ((corner & 2) != 0) loc.Y -= Height;
-			if ((corner & 1) != 0 && loc.X          < screen.WorkingArea.Left  ) { loc.X += Width ; corner &= ~1; }
-			if ((corner & 2) != 0 && loc.Y          < screen.WorkingArea.Top   ) { loc.Y += Height; corner &= ~2; }
-			if ((corner & 1) == 0 && loc.X + Width  > screen.WorkingArea.Right ) { loc.X -= Width ; corner |=  1; }
-			if ((corner & 2) == 0 && loc.Y + Height > screen.WorkingArea.Bottom) { loc.Y -= Height; corner |=  2; }
-			Location = loc;
-
-			return corner;
 		}
 
 		/// <summary>Generates the boundary of the hint balloon</summary>
@@ -333,16 +434,9 @@ namespace pr.gui
 		}
 
 		/// <summary>When the parent control moves, follow it</summary>
-		private void UpdateBalloonLocation(object sender = null, EventArgs e = null)
+		private void Invalidate(object sender, EventArgs e)
 		{
-			var corner = SetLocation();
-			if (corner != m_corner)
-			{
-				m_corner = corner;
-				m_path = GeneratePath(false);
-				Region = new Region(GeneratePath(true));
-				Invalidate();
-			}
+			Invalidate();
 		}
 
 		/// <summary>Called when the owner is closed</summary>

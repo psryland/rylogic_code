@@ -11,77 +11,51 @@ using pr.extn;
 
 namespace pr.maths
 {
-	/*
-    Matrix class in C#
-    Written by Ivan Kuckir (ivan.kuckir@gmail.com, http://blog.ivank.net)
-    Faculty of Mathematics and Physics
-    Charles University in Prague
-    (C) 2010
-    - updated on 1. 6.2014 - Trimming the string before parsing
-    - updated on 14.6.2012 - parsing improved. Thanks to Andy!
-    - updated on 3.10.2012 - there was a terrible bug in LU, SoLE and Inversion. Thanks to Danilo Neves Cruz for reporting that!
-	- updated on 3.11.2016 - refactored
-
-    This code is distributed under MIT licence.
-
-		Permission is hereby granted, free of charge, to any person
-		obtaining a copy of this software and associated documentation
-		files (the "Software"), to deal in the Software without
-		restriction, including without limitation the rights to use,
-		copy, modify, merge, publish, distribute, sub license, and/or sell
-		copies of the Software, and to permit persons to whom the
-		Software is furnished to do so, subject to the following
-		conditions:
-
-		The above copyright notice and this permission notice shall be
-		included in all copies or substantial portions of the Software.
-
-		THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-		EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-		OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-		NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-		HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-		WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-		FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-		OTHER DEALINGS IN THE SOFTWARE.
-	*/
-	[Serializable]
-	[DebuggerDisplay("m{rows}x{cols}) {mat}")]
+	/// <summary>A dynamic NxM matrix</summary>
+	[DebuggerDisplay("{m_rows}x{m_cols}) {m_data}")]
 	public struct Matrix
 	{
+		public int m_rows;
+		public int m_cols;
+		public double[] m_data;
+
 		public Matrix(int row_count, int col_count)
 		{
-			rows = row_count;
-			cols = col_count;
-			mat = new double[rows * cols];
-			m_cache = null;
+			m_rows = row_count;
+			m_cols = col_count;
+			m_data = new double[m_rows * m_cols];
 		}
-
-		/// <summary>Copy constructor</summary>
 		public Matrix(Matrix rhs)
-			:this(rhs.rows, rhs.cols)
+			:this(rhs.m_rows, rhs.m_cols)
 		{
-			for (int i = 0; i < rows; i++)
-				for (int j = 0; j < cols; j++)
-					this[i,j] = rhs[i,j];
-
-			// Clone the cached data too if available
-			if (rhs.m_cache != null)
-				m_cache = new CachedLU(rhs.m_cache);
+			Array.Copy(rhs.m_data, m_data, rhs.m_data.Length);
 		}
 
-		/// <summary>Dimensions</summary>
-		public int rows;
-		public int cols;
+		/// <summary>Return an identity matrix of the given dimensions</summary>
+		public static Matrix Identity(int row_count, int col_count)
+		{
+			var m = new Matrix(row_count, col_count);
+			for (int i = 0, iend = Math.Min(row_count, col_count); i != iend; ++i)
+				m[i, i] = 1;
 
-		/// <summary>The matrix data</summary>
-		public double[] mat;
+			return m;
+		}
 
 		/// <summary>Access this matrix as a 2D array</summary>
 		public double this[int row, int col]
 		{
-			get { return mat[row * cols + col]; }
-			set { mat[row * cols + col] = value; }
+			get
+			{
+				Debug.Assert(row >= 0 && row < m_rows);
+				Debug.Assert(col >= 0 && col < m_cols);
+				return m_data[row * m_cols + col];
+			}
+			set
+			{
+				Debug.Assert(row >= 0 && row < m_rows);
+				Debug.Assert(col >= 0 && col < m_cols);
+				m_data[row * m_cols + col] = value;
+			}
 		}
 
 		/// <summary>Access this matrix by row</summary>
@@ -94,15 +68,15 @@ namespace pr.maths
 			{
 				get
 				{
-					var m = new Matrix(1, mat.cols);
-					for (int i = 0; i < mat.cols; i++)
+					var m = new Matrix(1, mat.m_cols);
+					for (int i = 0; i < mat.m_cols; i++)
 						m[0,i] = mat[k,i];
 
 					return m;
 				}
 				set
 				{
-					for (int i = 0; i < mat.rows; i++)
+					for (int i = 0; i < mat.m_rows; i++)
 						mat[k,i] = value[0,i];
 				}
 			}
@@ -118,224 +92,109 @@ namespace pr.maths
 			{
 				get
 				{
-					var m = new Matrix(mat.rows, 1);
-					for (int i = 0; i < mat.rows; i++)
+					var m = new Matrix(mat.m_rows, 1);
+					for (int i = 0; i < mat.m_rows; i++)
 						m[i,0] = mat[i,k];
 
 					return m;
 				}
 				set
 				{
-					for (int i = 0; i < mat.rows; i++)
+					for (int i = 0; i < mat.m_rows; i++)
 						mat[i,k] = value[i,0];
 				}
 			}
 		}
 
-		/// <summary>Cache the results of LU decomposition</summary>
-		private CachedLU cache { get { return m_cache ?? (m_cache = new CachedLU(this)); } }
-		private CachedLU m_cache;
-		private class CachedLU
-		{
-			public CachedLU(Matrix m)
-			{
-				DetOfP = 1;
-
-				if (!m.IsSquare)
-					throw new Exception("LU decomposition is only possible on square matrices");
-
-				L = IdentityMatrix(m.rows, m.cols);
-				U = new Matrix(m);
-
-				// Initialise the permutation vector
-				pi = new int[m.rows];
-				for (int i = 0; i < m.rows; i++)
-					pi[i] = i;
-
-				int k0 = 0;
-				for (int k = 0; k < m.cols - 1; k++)
-				{
-					var p = 0.0;
-
-					// Find the row with the biggest pivot
-					for (int i = k; i < m.rows; i++)
-					{
-						if (Math.Abs(U[i, k]) > p)
-						{
-							p = Math.Abs(U[i, k]);
-							k0 = i;
-						}
-					}
-					if (p == 0)
-						throw new Exception("The matrix is singular");
-
-					{// Switch two rows in permutation matrix
-						var tmp = pi[k];
-						pi[k] = pi[k0];
-						pi[k0] = tmp;
-					}
-					for (int i = 0; i < k; i++)
-					{
-						var tmp = L[k, i];
-						L[k, i] = L[k0, i];
-						L[k0, i] = tmp;
-					}
-
-					if (k != k0)
-						DetOfP *= -1;
-
-					// Switch rows in U
-					for (int i = 0; i < m.cols; i++)
-					{
-						var tmp = U[k, i];
-						U[k, i] = U[k0, i];
-						U[k0, i] = tmp;
-					}
-
-					for (int i = k + 1; i < m.rows; i++)
-					{
-						L[i, k] = U[i, k] / U[k, k];
-						for (int j = k; j < m.cols; j++)
-							U[i, j] = U[i, j] - L[i, k] * U[k, j];
-					}
-				}
-			}
-			public CachedLU(CachedLU rhs)
-			{
-				L = new Matrix(rhs.L);
-				U = new Matrix(rhs.U);
-				DetOfP = rhs.DetOfP;
-			}
-
-			/// <summary>The LU decomposition of the owner matrix</summary>
-			public Matrix L;
-			public Matrix U;
-
-			/// <summary>The determinant of the permutation matrix</summary>
-			public double DetOfP;
-
-			/// <summary>The permutation row indices</summary>
-			public int[] pi;
-		}
-
-		/// <summary>Return the lower part of the LU decomposition of this matrix</summary>
-		public Matrix L
-		{
-			get { return cache.L; }
-		}
-
-		/// <summary>Return the upper part of the LU decomposition of this matrix</summary>
-		public Matrix U
-		{
-			get { return cache.U; }
-		}
-
-		/// <summary>True if the matrix is square</summary>
-		public bool IsSquare
-		{
-			get { return rows == cols; }
-		}
-
-		/// <summary>Return the determinant of this matrix</summary>
-		public double Determinant
-		{
-			get
-			{
-				var det = cache.DetOfP;
-				for (int i = 0; i < rows; i++)
-					det *= U[i, i];
-				return det;
-			}
-		}
+		#region Functions
 
 		/// <summary>Special case equality operators</summary>
 		public static bool FEql(Matrix lhs, Matrix rhs)
 		{
-			if (lhs.rows != rhs.rows) return false;
-			if (lhs.cols != rhs.cols) return false;
-			for (int i = 0; i != lhs.mat.Length; ++i)
-				if (!Maths.FEql(lhs.mat[i], rhs.mat[i]))
+			if (lhs.m_rows != rhs.m_rows) return false;
+			if (lhs.m_cols != rhs.m_cols) return false;
+			for (int i = 0; i != lhs.m_data.Length; ++i)
+				if (!Maths.FEql(lhs.m_data[i], rhs.m_data[i]))
 					return false;
 
 			return true;
 		}
 		public static bool FEql(Matrix lhs, m4x4 rhs)
 		{
-			if (lhs.rows != 4 && lhs.cols != 4) return false;
+			if (lhs.m_rows != 4 && lhs.m_cols != 4) return false;
 			return
-				Maths.FEql((float)lhs.mat[ 0], rhs.x.x) &&
-				Maths.FEql((float)lhs.mat[ 1], rhs.x.y) &&
-				Maths.FEql((float)lhs.mat[ 2], rhs.x.z) &&
-				Maths.FEql((float)lhs.mat[ 3], rhs.x.w) &&
+				Maths.FEql((float)lhs.m_data[ 0], rhs.x.x) &&
+				Maths.FEql((float)lhs.m_data[ 1], rhs.x.y) &&
+				Maths.FEql((float)lhs.m_data[ 2], rhs.x.z) &&
+				Maths.FEql((float)lhs.m_data[ 3], rhs.x.w) &&
 
-				Maths.FEql((float)lhs.mat[ 4], rhs.y.x) &&
-				Maths.FEql((float)lhs.mat[ 5], rhs.y.y) &&
-				Maths.FEql((float)lhs.mat[ 6], rhs.y.z) &&
-				Maths.FEql((float)lhs.mat[ 7], rhs.y.w) &&
+				Maths.FEql((float)lhs.m_data[ 4], rhs.y.x) &&
+				Maths.FEql((float)lhs.m_data[ 5], rhs.y.y) &&
+				Maths.FEql((float)lhs.m_data[ 6], rhs.y.z) &&
+				Maths.FEql((float)lhs.m_data[ 7], rhs.y.w) &&
 
-				Maths.FEql((float)lhs.mat[ 8], rhs.z.x) &&
-				Maths.FEql((float)lhs.mat[ 9], rhs.z.y) &&
-				Maths.FEql((float)lhs.mat[10], rhs.z.z) &&
-				Maths.FEql((float)lhs.mat[11], rhs.z.w) &&
+				Maths.FEql((float)lhs.m_data[ 8], rhs.z.x) &&
+				Maths.FEql((float)lhs.m_data[ 9], rhs.z.y) &&
+				Maths.FEql((float)lhs.m_data[10], rhs.z.z) &&
+				Maths.FEql((float)lhs.m_data[11], rhs.z.w) &&
 
-				Maths.FEql((float)lhs.mat[12], rhs.w.x) &&
-				Maths.FEql((float)lhs.mat[13], rhs.w.y) &&
-				Maths.FEql((float)lhs.mat[14], rhs.w.z) &&
-				Maths.FEql((float)lhs.mat[15], rhs.w.w);
+				Maths.FEql((float)lhs.m_data[12], rhs.w.x) &&
+				Maths.FEql((float)lhs.m_data[13], rhs.w.y) &&
+				Maths.FEql((float)lhs.m_data[14], rhs.w.z) &&
+				Maths.FEql((float)lhs.m_data[15], rhs.w.w);
 		}
 
-		/// <summary>Return an identity matrix of the given dimensions</summary>
-		public static Matrix IdentityMatrix(int row_count, int col_count)
+		/// <summary>True if the matrix is square</summary>
+		public bool IsSquare
 		{
-			var matrix = new Matrix(row_count, col_count);
-			for (int i = 0; i < Math.Min(row_count, col_count); i++)
-				matrix[i, i] = 1;
-			return matrix;
+			get { return m_rows == m_cols; }
 		}
 
 		/// <summary>Find the transpose of matrix 'm'</summary>
 		public static Matrix Transpose(Matrix m)
 		{
-			var t = new Matrix(m.cols, m.rows);
-			for (int i = 0; i < m.rows; i++)
-				for (int j = 0; j < m.cols; j++)
+			var t = new Matrix(m.m_cols, m.m_rows);
+			for (int i = 0; i < m.m_rows; i++)
+				for (int j = 0; j < m.m_cols; j++)
 					t[j, i] = m[i, j];
 			return t;
+		}
+
+		/// <summary>Return the determinant of this matrix</summary>
+		public static double Determinant(Matrix m)
+		{
+			return MatrixLU.Determinant(new MatrixLU(m));
 		}
 
 		/// <summary>True if 'mat' has an inverse</summary>
 		public static bool IsInvertable(Matrix m)
 		{
-			return !Maths.FEql(m.Determinant, 0);
+			return MatrixLU.IsInvertable(new MatrixLU(m));
+		}
+
+		/// <summary>Solves for x in 'Ax = v'</summary>
+		public static Matrix Solve(Matrix A, Matrix v)
+		{
+			return MatrixLU.Solve(new MatrixLU(A), v);
 		}
 
 		/// <summary>Return the inverse of matrix 'm'</summary>
 		public static Matrix Invert(Matrix m)
 		{
-			Debug.Assert(IsInvertable(m), "Matrix has no inverse");
-
-			var inv = new Matrix(m.rows, m.cols);
-			var elem = new Matrix(m.rows, 1);
-			for (int i = 0; i != m.rows; ++i)
-			{
-				elem[i,0] = 1;
-				inv.col[i] = Solve(m, elem);
-				elem[i,0] = 0;
-			}
-			return inv;
+			return MatrixLU.Invert(new MatrixLU(m));
 		}
 
 		/// <summary>Matrix to the power 'pow'</summary>
 		public static Matrix Power(Matrix m, int pow)
 		{
-			if (pow == 0) return IdentityMatrix(m.rows, m.cols);
-			if (pow == 1) return new Matrix(m);
+			if (pow == +1) return m;
+			if (pow ==  0) return Identity(m.m_rows, m.m_cols);
 			if (pow == -1) return Invert(m);
 
-			var x = pow < 0 ? Invert(m) : new Matrix(m);
+			var x = pow < 0 ? Invert(m) : m;
 			if (pow < 0) pow *= -1;
 
-			var ret = IdentityMatrix(m.rows, m.cols);
+			var ret = Identity(m.m_rows, m.m_cols);
 			while (pow != 0)
 			{
 				if ((pow & 1) == 1) ret *= x;
@@ -345,50 +204,15 @@ namespace pr.maths
 			return ret;
 		}
 
-		/// <summary>Solves for x in 'Ax = v'</summary>
-		public static Matrix Solve(Matrix A, Matrix v)
+		/// <summary>Generates the random matrix</summary>
+		public static Matrix Random(int row_count, int col_count, double min, double max, Random r)
 		{
-			if (A.rows != A.cols) throw new Exception("The matrix is not square");
-			if (A.rows != v.rows) throw new Exception("Solution vector has the wrong dimensions");
+			var m = new Matrix(row_count, col_count);
+			for (int i = 0; i != row_count; ++i)
+				for (int j = 0; j != col_count; ++j)
+					m[i,j] = r.Double(min, max);
 
-			// Switch two items in "v" due to permutation matrix
-			var b = new Matrix(A.rows, 1);
-			for (int i = 0; i < A.rows; i++)
-				b[i,0] = v[A.cache.pi[i], 0];
-
-			var x0 = SolveL(A.L, b);
-			var x1 = SolveU(A.U, x0);
-			return x1;
-		}
-
-		/// <summary>Solves for x in 'Lx = b' assuming 'L' is a lower triangular matrix</summary>
-		public static Matrix SolveL(Matrix L, Matrix b)
-		{
-			var x = new Matrix(L.rows, 1);
-			for (int i = 0; i < L.rows; i++)
-			{
-				x[i,0] = b[i,0];
-				for (int j = 0; j < i; j++)
-					x[i,0] -= L[i,j] * x[j,0];
-
-				x[i,0] = x[i,0] / L[i,i];
-			}
-			return x;
-		}
-
-		/// <summary>Solves for x in 'Ux = b' assuming 'U' is an upper triangular matrix</summary>
-		public static Matrix SolveU(Matrix U, Matrix b)
-		{
-			var x = new Matrix(U.rows, 1);
-			for (int i = U.rows; i-- != 0;)
-			{
-				x[i,0] = b[i,0];
-				for (int j = U.rows - 1; j > i; j--)
-					x[i,0] -= U[i,j] * x[j,0];
-
-				x[i,0] = x[i,0] / U[i,i];
-			}
-			return x;
+			return m;
 		}
 
 		/// <summary>Parse a matrix from a string</summary>
@@ -427,24 +251,13 @@ namespace pr.maths
 			return m;
 		}
 
-		/// <summary>Generates the random matrix</summary>
-		public static Matrix Random(int row_count, int col_count, double min, double max, Random r)
-		{
-			var m = new Matrix(row_count, col_count);
-			for (int i = 0; i != row_count; ++i)
-				for (int j = 0; j != col_count; ++j)
-					m[i,j] = r.Double(min, max);
-
-			return m;
-		}
-
 		/// <summary>ToString</summary>
 		public override string ToString()
 		{
 			var s = new StringBuilder();
-			for (int i = 0; i < rows; i++)
+			for (int i = 0; i < m_rows; i++)
 			{
-				for (int j = 0; j < cols; j++)
+				for (int j = 0; j < m_cols; j++)
 					s.Append("{0,5:0.00} ".Fmt(this[i,j]));
 
 				s.AppendLine();
@@ -452,18 +265,7 @@ namespace pr.maths
 			return s.ToString();
 		}
 
-		/// <summary>Permutation matrix "P" due to permutation vector "pi"</summary>
-		private Matrix PermutationMatrix
-		{
-			get
-			{
-				var m = new Matrix(rows, cols);
-				for (int i = 0; i < rows; i++)
-					m[cache.pi[i], i] = 1;
-
-				return m;
-			}
-		}
+		#endregion
 
 		#region Operators
 
@@ -480,24 +282,24 @@ namespace pr.maths
 		// Addition/Subtraction
 		public static Matrix operator + (Matrix lhs, Matrix rhs)
 		{
-			if (lhs.rows != rhs.rows || lhs.cols != rhs.cols)
+			if (lhs.m_rows != rhs.m_rows || lhs.m_cols != rhs.m_cols)
 				throw new Exception("Matrices must have the same dimensions!");
 
-			var r = new Matrix(lhs.rows, lhs.cols);
-			for (int i = 0; i != r.rows; ++i)
-				for (int j = 0; j != r.cols; ++j)
+			var r = new Matrix(lhs.m_rows, lhs.m_cols);
+			for (int i = 0; i != r.m_rows; ++i)
+				for (int j = 0; j != r.m_cols; ++j)
 					r[i,j] = lhs[i,j] + rhs[i,j];
 
 			return r;
 		}
 		public static Matrix operator - (Matrix lhs, Matrix rhs)
 		{
-			if (lhs.rows != rhs.rows || lhs.cols != rhs.cols)
+			if (lhs.m_rows != rhs.m_rows || lhs.m_cols != rhs.m_cols)
 				throw new Exception("Matrices must have the same dimensions!");
 
-			var r = new Matrix(lhs.rows, lhs.cols);
-			for (int i = 0; i != r.rows; ++i)
-				for (int j = 0; j != r.cols; ++j)
+			var r = new Matrix(lhs.m_rows, lhs.m_cols);
+			for (int i = 0; i != r.m_rows; ++i)
+				for (int j = 0; j != r.m_cols; ++j)
 					r[i,j] = lhs[i,j] - rhs[i,j];
 
 			return r;
@@ -506,18 +308,18 @@ namespace pr.maths
 		/// <summary>Matrix product</summary>
 		public static Matrix operator * (Matrix lhs, Matrix rhs)
 		{
-			if (lhs.cols != rhs.rows)
+			if (lhs.m_cols != rhs.m_rows)
 				throw new Exception("Wrong dimension of matrix!");
 
 			Matrix R;
-			int msize = Math.Max(Math.Max(lhs.rows, lhs.cols), Math.Max(rhs.rows, rhs.cols));
+			int msize = Math.Max(Math.Max(lhs.m_rows, lhs.m_cols), Math.Max(rhs.m_rows, rhs.m_cols));
 			if (msize < 32)
 			{
 				// Small matrix multiply
-				R = new Matrix(lhs.rows, rhs.cols);
-				for (int i = 0; i < R.rows; i++)
-					for (int j = 0; j < R.cols; j++)
-						for (int k = 0; k < lhs.cols; k++)
+				R = new Matrix(lhs.m_rows, rhs.m_cols);
+				for (int i = 0; i < R.m_rows; i++)
+					for (int j = 0; j < R.m_cols; j++)
+						for (int k = 0; k < lhs.m_cols; k++)
 							R[i, j] += lhs[i, k] * rhs[k, j];
 			}
 			else
@@ -547,8 +349,8 @@ namespace pr.maths
 						for (int j = 0; j < sz; j++) // cols
 						{
 							C[i, j] = 0;
-							if (xa + j < A.cols && ya + i < A.rows) C[i, j] += A[ya + i, xa + j];
-							if (xb + j < B.cols && yb + i < B.rows) C[i, j] += B[yb + i, xb + j];
+							if (xa + j < A.m_cols && ya + i < A.m_rows) C[i, j] += A[ya + i, xa + j];
+							if (xb + j < B.m_cols && yb + i < B.m_rows) C[i, j] += B[yb + i, xb + j];
 						}
 					}
 				};
@@ -559,8 +361,8 @@ namespace pr.maths
 						for (int j = 0; j < sz; j++) // cols
 						{
 							C[i, j] = 0;
-							if (xa + j < A.cols && ya + i < A.rows) C[i, j] += A[ya + i, xa + j];
-							if (xb + j < B.cols && yb + i < B.rows) C[i, j] -= B[yb + i, xb + j];
+							if (xa + j < A.m_cols && ya + i < A.m_rows) C[i, j] += A[ya + i, xa + j];
+							if (xb + j < B.m_cols && yb + i < B.m_rows) C[i, j] -= B[yb + i, xb + j];
 						}
 					}
 				};
@@ -571,7 +373,7 @@ namespace pr.maths
 						for (int j = 0; j < sz; j++) // cols
 						{
 							C[i, j] = 0;
-							if (xa + j < A.cols && ya + i < A.rows) C[i, j] += A[ya + i, xa + j];
+							if (xa + j < A.m_cols && ya + i < A.m_rows) C[i, j] += A[ya + i, xa + j];
 						}
 					}
 				};
@@ -598,15 +400,15 @@ namespace pr.maths
 				{
 					// A * B into C, level of recursion, matrix field
 					// function for square matrix 2^N x 2^N
-					var sz = A.rows;
+					var sz = A.m_rows;
 					if (sz < 32)
 					{
-						for (int i = 0; i < C.rows; i++)
+						for (int i = 0; i < C.m_rows; i++)
 						{
-							for (int j = 0; j < C.cols; j++)
+							for (int j = 0; j < C.m_cols; j++)
 							{
 								C[i, j] = 0;
-								for (int k = 0; k < A.cols; k++)
+								for (int k = 0; k < A.m_cols; k++)
 									C[i, j] += A[i, k] * B[k, j];
 							}
 						}
@@ -642,22 +444,22 @@ namespace pr.maths
 					AplusBintoC(B, 0, hh, B, hh, hh, f[l, 1], hh);
 					StrassenMultiplyRun(f[l, 0], f[l, 1], f[l, 1 + 7], l + 1, f); // (A12 - A22) * (B21 + B22);
 
-					/// C11
+					// C11
 					for (int i = 0; i < hh; i++) // rows
 						for (int j = 0; j < hh; j++) // cols
 							C[i, j] = f[l, 1 + 1][i, j] + f[l, 1 + 4][i, j] - f[l, 1 + 5][i, j] + f[l, 1 + 7][i, j];
 
-					/// C12
+					// C12
 					for (int i = 0; i < hh; i++) // rows
 						for (int j = hh; j < sz; j++) // cols
 							C[i, j] = f[l, 1 + 3][i, j - hh] + f[l, 1 + 5][i, j - hh];
 
-					/// C21
+					// C21
 					for (int i = hh; i < sz; i++) // rows
 						for (int j = 0; j < hh; j++) // cols
 							C[i, j] = f[l, 1 + 2][i - hh, j] + f[l, 1 + 4][i - hh, j];
 
-					/// C22
+					// C22
 					for (int i = hh; i < sz; i++) // rows
 						for (int j = hh; j < sz; j++) // cols
 							C[i, j] = f[l, 1 + 1][i - hh, j - hh] - f[l, 1 + 2][i - hh, j - hh] + f[l, 1 + 3][i - hh, j - hh] + f[l, 1 + 6][i - hh, j - hh];
@@ -692,26 +494,26 @@ namespace pr.maths
 				SafeAplusBintoC(rhs, 0, h, rhs, h, h, field[0, 1], h);
 				StrassenMultiplyRun(field[0, 0], field[0, 1], field[0, 1 + 7], 1, field); // (A12 - A22) * (B21 + B22);
 
-				R = new Matrix(lhs.rows, rhs.cols); // result
+				R = new Matrix(lhs.m_rows, rhs.m_cols); // result
 
-				/// C11
-				for (int i = 0; i < Math.Min(h, R.rows); i++) // rows
-					for (int j = 0; j < Math.Min(h, R.cols); j++) // cols
+				// C11
+				for (int i = 0; i < Math.Min(h, R.m_rows); i++) // rows
+					for (int j = 0; j < Math.Min(h, R.m_cols); j++) // cols
 						R[i, j] = field[0, 1 + 1][i, j] + field[0, 1 + 4][i, j] - field[0, 1 + 5][i, j] + field[0, 1 + 7][i, j];
 
-				/// C12
-				for (int i = 0; i < Math.Min(h, R.rows); i++) // rows
-					for (int j = h; j < Math.Min(2 * h, R.cols); j++) // cols
+				// C12
+				for (int i = 0; i < Math.Min(h, R.m_rows); i++) // rows
+					for (int j = h; j < Math.Min(2 * h, R.m_cols); j++) // cols
 						R[i, j] = field[0, 1 + 3][i, j - h] + field[0, 1 + 5][i, j - h];
 
-				/// C21
-				for (int i = h; i < Math.Min(2 * h, R.rows); i++) // rows
-					for (int j = 0; j < Math.Min(h, R.cols); j++) // cols
+				// C21
+				for (int i = h; i < Math.Min(2 * h, R.m_rows); i++) // rows
+					for (int j = 0; j < Math.Min(h, R.m_cols); j++) // cols
 						R[i, j] = field[0, 1 + 2][i - h, j] + field[0, 1 + 4][i - h, j];
 
-				/// C22
-				for (int i = h; i < Math.Min(2 * h, R.rows); i++) // rows
-					for (int j = h; j < Math.Min(2 * h, R.cols); j++) // cols
+				// C22
+				for (int i = h; i < Math.Min(2 * h, R.m_rows); i++) // rows
+					for (int j = h; j < Math.Min(2 * h, R.m_cols); j++) // cols
 						R[i, j] = field[0, 1 + 1][i - h, j - h] - field[0, 1 + 2][i - h, j - h] + field[0, 1 + 3][i - h, j - h] + field[0, 1 + 6][i - h, j - h];
 			}
 			return R;
@@ -720,9 +522,9 @@ namespace pr.maths
 		/// <summary>Matrix times scalar</summary>
 		public static Matrix operator * (double s, Matrix mat)
 		{
-			var r = new Matrix(mat.rows, mat.cols);
-			for (int i = 0; i < mat.rows; i++)
-				for (int j = 0; j < mat.cols; j++)
+			var r = new Matrix(mat.m_rows, mat.m_cols);
+			for (int i = 0; i < mat.m_rows; i++)
+				for (int j = 0; j < mat.m_cols; j++)
 					r[i, j] = mat[i, j] * s;
 			return r;
 		}
@@ -736,7 +538,7 @@ namespace pr.maths
 		#region Equals
 		public static bool operator == (Matrix lhs, Matrix rhs)
 		{
-			return Array_.Equal(lhs.mat, rhs.mat);
+			return Array_.Equal(lhs.m_data, rhs.m_data);
 		}
 		public static bool operator != (Matrix lhs, Matrix rhs)
 		{
@@ -748,8 +550,238 @@ namespace pr.maths
 		}
 		public override int GetHashCode()
 		{
-			return new { rows, cols, mat }.GetHashCode();
+			return new { m_rows, m_cols, m_data }.GetHashCode();
 		}
+		#endregion
+	}
+
+	/// <summary>The LU decomposition of a square matrix</summary>
+	[DebuggerDisplay("m{rows}x{cols}) {m_data}")]
+	public struct MatrixLU
+	{
+		private Matrix[] m_mat;
+		public MatrixLU(Matrix m)
+		{
+			m_mat = new Matrix[1];
+			L = new LProxy(m_mat);
+			U = new UProxy(m_mat);
+			pi = new int[m.m_rows];
+			DetOfP = 1;
+
+			if (!m.IsSquare)
+				throw new Exception("LU decomposition is only possible on square matrices");
+
+			// We will store both the L and U matrices in 'mat' since we know
+			// L has the form: [1 0] and U has the form: [U U]
+			//                 [L 1]                     [0 U]
+			var LL = Matrix.Identity(m.m_rows, m.m_cols);
+			var UU = new Matrix(m);
+
+			// Initialise the permutation vector
+			for (int i = 0; i < m.m_rows; i++)
+				pi[i] = i;
+
+			// Decompose 'm' into 'LL' and 'UU'
+			for (int k = 0, k0 = 0, kend = m.m_cols - 1; k != kend; k++)
+			{
+				// Find the row with the biggest pivot
+				var p = 0.0;
+				for (int i = k; i != m.m_rows; ++i)
+				{
+					if (Math.Abs(UU[i, k]) <= p) continue;
+					p = Math.Abs(UU[i, k]);
+					k0 = i;
+				}
+				if (p == 0)
+					throw new Exception("The matrix is singular");
+
+				{// Switch two rows in permutation matrix
+					var tmp = pi[k];
+					pi[k] = pi[k0];
+					pi[k0] = tmp;
+				}
+				for (int i = 0; i < k; i++)
+				{
+					var tmp = LL[k, i];
+					LL[k, i] = LL[k0, i];
+					LL[k0, i] = tmp;
+				}
+				if (k != k0)
+					DetOfP *= -1;
+
+				// Switch rows in U
+				for (int i = 0; i != m.m_cols; ++i)
+				{
+					var tmp = UU[k, i];
+					UU[k, i] = UU[k0, i];
+					UU[k0, i] = tmp;
+				}
+
+				// Gaussian eliminate the remaining rows
+				for (int i = k + 1; i < m.m_rows; ++i)
+				{
+					LL[i,k] = UU[i,k] / UU[k,k];
+					for (int j = k; j < m.m_cols; ++j)
+						UU[i,j] = UU[i,j] - LL[i,k] * UU[k,j];
+				}
+			}
+
+			// Store 'LL' in the zero part of 'UU'
+			for (int r = 1; r < m.m_rows; ++r)
+				for (int c = 0; c != r; ++c)
+					UU[r,c] = LL[r,c];
+
+			// Store in m_mat
+			m_mat[0] = UU;
+		}
+
+		/// <summary>Row count</summary>
+		public int m_rows
+		{
+			get { return m_mat[0].m_rows; }
+		}
+
+		/// <summary>Column count</summary>
+		public int m_cols
+		{
+			get { return m_mat[0].m_cols; }
+		}
+
+		/// <summary>Accesser for the lower diagonal matrix</summary>
+		public LProxy L;
+		public struct LProxy
+		{
+			private Matrix[] m_mat;
+			internal  LProxy(Matrix[] m)
+			{
+				m_mat = m;
+			}
+			public double this[int row, int col]
+			{
+				get
+				{
+					Debug.Assert(row >= 0 && row < m_mat[0].m_rows);
+					Debug.Assert(col >= 0 && col < m_mat[0].m_cols);
+					return row > col ? m_mat[0][row, col] : row == col ? 1 : 0;
+				}
+			}
+		};
+
+		/// <summary>Accesser for the upper diagonal matrix</summary>
+		public UProxy U;
+		public struct UProxy
+		{
+			private Matrix[] m_mat;
+			internal UProxy(Matrix[] m)
+			{
+				m_mat = m;
+			}
+			public double this[int row, int col]
+			{
+				get
+				{
+					Debug.Assert(row >= 0 && row < m_mat[0].m_rows);
+					Debug.Assert(col >= 0 && col < m_mat[0].m_cols);
+					return row <= col ? m_mat[0][row, col] : 0;
+				}
+			}
+		};
+
+		/// <summary>The determinant of the permutation matrix</summary>
+		public double DetOfP;
+
+		/// <summary>The permutation row indices</summary>
+		public int[] pi;
+
+		#region Functions
+
+		/// <summary>Permutation matrix "P" due to permutation vector "pi"</summary>
+		private Matrix PermutationMatrix
+		{
+			get
+			{
+				var m = new Matrix(m_rows, m_cols);
+				for (int i = 0; i < m_rows; i++)
+					m[pi[i], i] = 1;
+
+				return m;
+			}
+		}
+
+		/// <summary>Return the determinant of this matrix</summary>
+		public static double Determinant(MatrixLU lu)
+		{
+			var det = lu.DetOfP;
+			for (int i = 0; i != lu.m_rows; ++i)
+				det *= lu.U[i,i];
+
+			return det;
+		}
+
+		/// <summary>True if 'mat' has an inverse</summary>
+		public static bool IsInvertable(MatrixLU lu)
+		{
+			return !Maths.FEql(Determinant(lu), 0);
+		}
+
+		/// <summary>Solves for x in 'Ax = v'</summary>
+		public static Matrix Solve(MatrixLU A, Matrix v)
+		{
+			if (A.m_rows != v.m_rows)
+				throw new Exception("Solution vector has the wrong dimensions");
+
+			var a = new Matrix(A.m_rows, 1);
+			var b = new Matrix(A.m_rows, 1);
+
+			// Switch items in "v" due to permutation matrix
+			for (int i = 0; i != A.m_rows; ++i)
+				a[i,0] = v[A.pi[i], 0];
+
+			// Solve for x in 'Lx = b' assuming 'L' is a lower triangular matrix
+			{
+				for (int i = 0; i != A.m_rows; ++i)
+				{
+					b[i,0] = a[i,0];
+					for (int j = 0; j != i; ++j)
+						b[i,0] -= A.L[i,j] * b[j,0];
+
+					b[i,0] = b[i,0] / A.L[i,i];
+				}
+			}
+
+			a = b;
+
+			// Solve for x in 'Ux = b' assuming 'U' is an upper triangular matrix
+			{
+				for (int i = A.m_rows; i-- != 0;)
+				{
+					b[i,0] = a[i,0];
+					for (int j = A.m_rows - 1; j > i; j--)
+						b[i,0] -= A.U[i,j] * b[j,0];
+
+					b[i,0] = b[i,0] / A.U[i,i];
+				}
+			}
+
+			return b;
+		}
+
+		/// <summary>Return the inverse of matrix 'm'</summary>
+		public static Matrix Invert(MatrixLU lu)
+		{
+			Debug.Assert(IsInvertable(lu), "Matrix has no inverse");
+
+			var inv = new Matrix(lu.m_rows, lu.m_cols);
+			var elem = new Matrix(lu.m_rows, 1);
+			for (int i = 0; i != lu.m_rows; ++i)
+			{
+				elem[i,0] = 1;
+				inv.col[i] = Solve(lu, elem);
+				elem[i,0] = 0;
+			}
+			return inv;
+		}
+
 		#endregion
 	}
 }
@@ -766,27 +798,53 @@ namespace pr.unittests
 			var rng = new Random(1);
 
 			// Compare with m4x4
-			var m0 = new Matrix(4,4);
-			var M0 = m4x4.Random4x4(-5, +5, rng);
+			var m = new Matrix(4,4);
+			var M = m4x4.Random4x4(-5, +5, rng);
 			for (int i = 0; i != 4; ++i)
 				for (int j = 0; j != 4; ++j)
-					m0[i,j] = M0[i,j];
+					m[i,j] = M[i,j];
 
-			Assert.True(Matrix.FEql(m0, M0));
+			Assert.True(Matrix.FEql(m, M));
 
-			Assert.True(Maths.FEql(M0.w.x, m0[3,0]));
-			Assert.True(Maths.FEql(M0.x.w, m0[0,3]));
-			Assert.True(Maths.FEql(M0.z.z, m0[2,2]));
+			Assert.True(Maths.FEql(M.w.x, m[3,0]));
+			Assert.True(Maths.FEql(M.x.w, m[0,3]));
+			Assert.True(Maths.FEql(M.z.z, m[2,2]));
 
-			Assert.AreEqual(Matrix.IsInvertable(m0), m4x4.IsInvertable(M0));
+			Assert.AreEqual(Matrix.IsInvertable(m), m4x4.IsInvertable(M));
 
-			var m1 = Matrix.Invert(m0);
-			var M1 = m4x4.Invert(M0);
+			var m1 = Matrix.Invert(m);
+			var M1 = m4x4.Invert(M);
 			Assert.True(Matrix.FEql(m1, M1));
 
-			var m2 = Matrix.Transpose(m0);
-			var M2 = m4x4.Transpose4x4(M0);
+			var m2 = Matrix.Transpose(m);
+			var M2 = m4x4.Transpose4x4(M);
 			Assert.True(Matrix.FEql(m2, M2));
+		}
+		[Test] public void MultiplyRoundTrip()
+		{
+			var rng = new Random(1);
+
+			const int SZ = 100;
+			var m = new Matrix(SZ,SZ);
+			for (int k = 0; k != 10; ++k)
+			{
+				for (int i = 0; i != m.m_rows; ++i)
+					for (int j = 0; j != m.m_cols; ++j)
+						m[i,j] = rng.Double(-5.0, +5.0);
+
+				if (Matrix.IsInvertable(m))
+				{
+					var m_inv = Matrix.Invert(m);
+
+					var i0 = Matrix.Identity(SZ,SZ);
+					var i1 = m * m_inv;
+					var i2 = m_inv * m;
+
+					Assert.True(Matrix.FEql(i0, i1));
+					Assert.True(Matrix.FEql(i0, i2));
+					break;
+				}
+			}
 		}
 	}
 }

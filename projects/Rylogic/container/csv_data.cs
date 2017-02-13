@@ -17,10 +17,16 @@ namespace pr.container
 	{
 		public class Row :List<string>
 		{
-			public Row() {}
-			public Row(int capacity) :base(capacity) {}
-			public Row(IEnumerable<object> values) :base(values.Select(x => x.ToString())) {}
-			public Row(params object[] values) :base(values.Select(x => x.ToString())) {}
+			public Row()
+			{ }
+			public Row(int capacity) :base(capacity)
+			{ }
+			public Row(IEnumerable<object> values)
+				:base(values.Select(x => x?.ToString() ?? string.Empty))
+			{ }
+			public Row(params object[] values)
+				:base(values.Select(x => x?.ToString() ?? string.Empty))
+			{ }
 
 			/// <summary>Add a item to the row</summary>
 			public new Row Add(string s)

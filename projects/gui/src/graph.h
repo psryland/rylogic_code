@@ -25,11 +25,11 @@ namespace pr
 				,m_series0(L"Sin")
 				,m_series1(L"Cos")
 			{
-				float j = 0.0f;
-				for (int i = 0; i != 3600; ++i, j += 0.1f)
+				auto j = 0.0;
+				for (int i = 0; i != 3600; ++i, j += 0.1)
 				{
-					m_series0.m_values.push_back(GraphDatum(j, sinf(j/pr::maths::tau)));
-					m_series1.m_values.push_back(GraphDatum(j, cosf(j/pr::maths::tau)));
+					m_series0.m_values.push_back(GraphDatum(j, sin(j/pr::maths::tau)));
+					m_series1.m_values.push_back(GraphDatum(j, cos(j/pr::maths::tau)));
 				}
 				m_graph.m_series.push_back(&m_series0);
 				m_graph.m_series.push_back(&m_series1);

@@ -36,7 +36,7 @@ BBox& pr::ph::CalcBBox(ShapeCylinder const& shape, BBox& bbox)
 // Return the mass properties
 MassProperties& pr::ph::CalcMassProperties(ShapeCylinder const& shape, float density, MassProperties& mp)
 {
-	float volume = maths::tau * shape.m_radius * shape.m_radius * shape.m_height;
+	auto volume = float(maths::tau * shape.m_radius * shape.m_radius * shape.m_height);
 
 	mp.m_centre_of_mass = v4Zero;
 	mp.m_mass = volume * density;

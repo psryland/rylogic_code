@@ -1024,6 +1024,7 @@ namespace pr.gui
 			private Axis m_yaxis;
 
 			/// <summary>Graph axis data</summary>
+			[DebuggerDisplay("lbl={Label} rng=[{Min} : {Max}]")]
 			public class Axis :IDisposable
 			{
 				public Axis(EAxis axis, GraphControl owner)
@@ -1228,12 +1229,6 @@ namespace pr.gui
 					// Protect against too many ticks along the axis
 					if (max - min > step*100)
 						step = (max - min) * 0.01f;
-				}
-
-				/// <summary>Friendly string view</summary>
-				public override string ToString()
-				{
-					return "{0} - [{1}:{2}]".Fmt(Label, Min, Max);
 				}
 			}
 		}

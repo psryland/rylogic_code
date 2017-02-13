@@ -186,7 +186,7 @@ namespace pr
 
 			auto cos_angle = Dot3(from, to) / len;
 			if (cos_angle >= 1.0f - maths::tiny) return Mat3x4(v4XAxis, v4YAxis, v4ZAxis);
-			if (cos_angle <= maths::tiny - 1.0f) return Mat3x4(-v4XAxis, -v4YAxis, -v4ZAxis);
+			if (cos_angle <= maths::tiny - 1.0f) return Rotation(Normalise3(Perpendicular(from - to)), float(maths::tau_by_2));
 
 			auto axis_size_angle = Cross3(from, to) / len;
 			auto axis_norm = Normalise3(axis_size_angle);
@@ -203,21 +203,21 @@ namespace pr
 			switch (from_axis)
 			{
 			default: assert(false && "axis_id must one of ±1, ±2, ±3"); o2f = m3x4Identity; break;
-			case -1: o2f = Mat3x4::Rotation(0.0f, +maths::tau_by_4, 0.0f); break;
-			case +1: o2f = Mat3x4::Rotation(0.0f, -maths::tau_by_4, 0.0f); break;
-			case -2: o2f = Mat3x4::Rotation(+maths::tau_by_4, 0.0f, 0.0f); break;
-			case +2: o2f = Mat3x4::Rotation(-maths::tau_by_4, 0.0f, 0.0f); break;
-			case -3: o2f = Mat3x4::Rotation(0.0f, +maths::tau_by_2, 0.0f); break;
+			case -1: o2f = Mat3x4::Rotation(0.0f, +float(maths::tau_by_4), 0.0f); break;
+			case +1: o2f = Mat3x4::Rotation(0.0f, -float(maths::tau_by_4), 0.0f); break;
+			case -2: o2f = Mat3x4::Rotation(+float(maths::tau_by_4), 0.0f, 0.0f); break;
+			case +2: o2f = Mat3x4::Rotation(-float(maths::tau_by_4), 0.0f, 0.0f); break;
+			case -3: o2f = Mat3x4::Rotation(0.0f, +float(maths::tau_by_2), 0.0f); break;
 			case +3: o2f = m3x4Identity; break;
 			}
 			switch (to_axis)
 			{
 			default: assert(false && "axis_id must one of ±1, ±2, ±3"); o2t = m3x4Identity; break;
-			case -1: o2t = Mat3x4::Rotation(0.0f, -maths::tau_by_4, 0.0f); break; // I know this sign looks wrong, but it isn't. Must be something to do with signs passed to cos()/sin()
-			case +1: o2t = Mat3x4::Rotation(0.0f, +maths::tau_by_4, 0.0f); break;
-			case -2: o2t = Mat3x4::Rotation(+maths::tau_by_4, 0.0f, 0.0f); break;
-			case +2: o2t = Mat3x4::Rotation(-maths::tau_by_4, 0.0f, 0.0f); break;
-			case -3: o2t = Mat3x4::Rotation(0.0f, +maths::tau_by_2, 0.0f); break;
+			case -1: o2t = Mat3x4::Rotation(0.0f, -float(maths::tau_by_4), 0.0f); break; // I know this sign looks wrong, but it isn't. Must be something to do with signs passed to cos()/sin()
+			case +1: o2t = Mat3x4::Rotation(0.0f, +float(maths::tau_by_4), 0.0f); break;
+			case -2: o2t = Mat3x4::Rotation(+float(maths::tau_by_4), 0.0f, 0.0f); break;
+			case +2: o2t = Mat3x4::Rotation(-float(maths::tau_by_4), 0.0f, 0.0f); break;
+			case -3: o2t = Mat3x4::Rotation(0.0f, +float(maths::tau_by_2), 0.0f); break;
 			case +3: o2t = m3x4Identity; break;
 			}
 			return o2t * InvertFast(o2f);
@@ -795,7 +795,7 @@ namespace pr
 			}
 			{// Inverse
 				{
-					auto m = Random3x4(rng, Random3N(rng, 0), -maths::tau, +maths::tau);
+					auto m = Random3x4(rng, Random3N(rng, 0), -float(maths::tau), +float(maths::tau));
 					auto inv_m0 = InvertFast(m);
 					auto inv_m1 = Invert(m);
 					PR_CHECK(FEql(inv_m0, inv_m1), true);
@@ -818,7 +818,7 @@ namespace pr
 						v4(7.0f, -8.333333f, 2.333333f, 0.0f));
 
 					auto inv_m = Invert(m);
-					PR_CHECK(FEql(inv_m, INV_M), true);
+					PR_CHECK(FEql(inv_m, INV_M, 0.0001f), true);
 				}
 			}
 		}

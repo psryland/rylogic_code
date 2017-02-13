@@ -552,6 +552,13 @@ namespace pr
 			Evt_LdrObjectChg(LdrObjectPtr obj) :m_obj(obj) {}
 		};
 
+		// Debugging only! - Notify of object destructed
+		struct Evt_LdrObjectDestruct
+		{
+			LdrObject* m_obj; // The object that is to be destructed
+			Evt_LdrObjectDestruct(LdrObject* obj) :m_obj(obj) {}
+		};
+
 		#pragma endregion
 
 		// LdrObject Creation functions *********************************************

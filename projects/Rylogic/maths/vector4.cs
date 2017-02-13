@@ -671,11 +671,11 @@ namespace pr.unittests
 			var a = new v4(3,-1,2,-4);
 
 			Assert.True(Maths.FEql(a.Length2Sq, a.x*a.x + a.y*a.y));
-			Assert.True(Maths.FEql(a.Length2  , Math.Sqrt(a.Length2Sq)));
+			Assert.True(Maths.FEql(a.Length2  , (float)Math.Sqrt(a.Length2Sq)));
 			Assert.True(Maths.FEql(a.Length3Sq, a.x*a.x + a.y*a.y + a.z*a.z));
-			Assert.True(Maths.FEql(a.Length3  , Math.Sqrt(a.Length3Sq)));
+			Assert.True(Maths.FEql(a.Length3  , (float)Math.Sqrt(a.Length3Sq)));
 			Assert.True(Maths.FEql(a.Length4Sq, a.x*a.x + a.y*a.y + a.z*a.z + a.w*a.w));
-			Assert.True(Maths.FEql(a.Length4  , Math.Sqrt(a.Length4Sq)));
+			Assert.True(Maths.FEql(a.Length4  , (float)Math.Sqrt(a.Length4Sq)));
 		}
 		[Test] public void Normals()
 		{
@@ -684,7 +684,7 @@ namespace pr.unittests
 			var c = v4.Normalise4(a);
 			Assert.True(Maths.FEql(b.Length3, 1.0f));
 			Assert.True(Maths.FEql(b.w, a.w / a.Length3));
-			Assert.True(Maths.FEql(Math.Sqrt(c.x*c.x + c.y*c.y + c.z*c.z + c.w*c.w), 1.0f));
+			Assert.True(Maths.FEql((float)Math.Sqrt(c.x*c.x + c.y*c.y + c.z*c.z + c.w*c.w), 1.0f));
 			Assert.True(Maths.FEql(a.Length3, 1.0f) == false);
 			Assert.True(Maths.FEql(a.Length4, 1.0f) == false);
 			Assert.True(Maths.FEql(b.Length3, 1.0f));

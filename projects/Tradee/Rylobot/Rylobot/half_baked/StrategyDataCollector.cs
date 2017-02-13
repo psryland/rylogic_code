@@ -129,12 +129,12 @@ namespace Rylobot
 				if (m_ldr == null)
 				{
 					m_ldr = new pr.ldr.LdrBuilder();
-					m_grp = m_ldr.Group("Training", Debugging.ScaleTxfm);
+					m_grp = m_ldr.Group("Training");
 				}
 				if (buy.PeakRtR > sel.PeakRtR)
-					buy.Dump(m_ldr, show_snr:true);
+					Debugging.Dump(buy, ldr_:m_ldr);
 				else
-					sel.Dump(m_ldr, show_snr:true);
+					Debugging.Dump(sel, ldr_:m_ldr);
 
 				cooldown = 20;
 			}

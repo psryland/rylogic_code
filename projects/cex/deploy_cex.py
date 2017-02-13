@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 import sys, os, shutil, re
-sys.path.append(os.path.realpath(os.path.dirname(__file__) + "\\..\\..\\script"))
+sys.path.append(re.sub(r"(.:[\\/]).*", r"\1script", os.path.abspath(__file__))) # add the \script path
 import Rylogic as Tools
 import UserVars
 
@@ -16,7 +16,7 @@ try:
 	Tools.AssertPathsExist([UserVars.root])
 
 	# Use the everything sln so that dependent projects get built as well
-	sln = UserVars.rylogic_sln
+	sln = UserVars.root + "\\build\\Rylogic.sln"
 	projects = [ # e.g: "\"folder\proj_name:Rebuild\""
 		"cex",
 		]
@@ -34,10 +34,10 @@ try:
 		Tools.OnError("Errors occurred")
 
 	# Deploy
-	files = [
-		"cex.exe",
-		]
-	Tools.DeployToBin("cex", files, platforms, "release", CopyForArch=True)
+	objdir = UserVars.root + "\\obj\\" + UserVars.platform_toolset + "\\cex"
+	outdir = UserVars.root + "\\bin"
+	for p in platforms:
+		Tools.Copy(objdir+"\\"+p+"\\release\\Cex.exe", outdir+"\\cex\\"+p+"\\")
 
 	Tools.OnSuccess()
 

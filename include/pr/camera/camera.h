@@ -41,6 +41,7 @@ namespace pr
 			TranslateZ, // Key to set In/Out to be z translations rather than zoom
 			Accurate,
 			SuperAccurate,
+			PerpendicularZ,
 			NumberOf,
 		};
 
@@ -51,16 +52,17 @@ namespace pr
 			int operator[](ENavKey key) const { return m_bindings[int(key)]; }
 			NavKeyBindings()
 			{
-				m_bindings[int(ENavKey::Left         )] = VK_LEFT;
-				m_bindings[int(ENavKey::Up           )] = VK_UP;
-				m_bindings[int(ENavKey::Right        )] = VK_RIGHT;
-				m_bindings[int(ENavKey::Down         )] = VK_DOWN;
-				m_bindings[int(ENavKey::In           )] = VK_HOME;
-				m_bindings[int(ENavKey::Out          )] = VK_END;
-				m_bindings[int(ENavKey::Rotate       )] = VK_SHIFT;
-				m_bindings[int(ENavKey::TranslateZ   )] = VK_CONTROL;
-				m_bindings[int(ENavKey::Accurate     )] = VK_SHIFT;
-				m_bindings[int(ENavKey::SuperAccurate)] = VK_CONTROL;
+				m_bindings[int(ENavKey::Left          )] = VK_LEFT;
+				m_bindings[int(ENavKey::Up            )] = VK_UP;
+				m_bindings[int(ENavKey::Right         )] = VK_RIGHT;
+				m_bindings[int(ENavKey::Down          )] = VK_DOWN;
+				m_bindings[int(ENavKey::In            )] = VK_HOME;
+				m_bindings[int(ENavKey::Out           )] = VK_END;
+				m_bindings[int(ENavKey::Rotate        )] = VK_SHIFT;
+				m_bindings[int(ENavKey::TranslateZ    )] = VK_CONTROL;
+				m_bindings[int(ENavKey::Accurate      )] = VK_SHIFT;
+				m_bindings[int(ENavKey::SuperAccurate )] = VK_CONTROL;
+				m_bindings[int(ENavKey::PerpendicularZ)] = VK_MENU;
 			}
 		};
 
@@ -315,7 +317,7 @@ namespace pr
 		{
 			PR_ASSERT(PR_DBG, fovY >= 0.0f && fovY < maths::tau_by_2 && pr::IsFinite(fovY), "");
 			
-			fovY = Clamp(fovY, maths::tiny, maths::tau_by_2);
+			fovY = Clamp(fovY, maths::tiny, float(maths::tau_by_2));
 			m_moved = fovY != m_fovY;
 			m_base_fovY = m_fovY = fovY;
 		}
@@ -325,8 +327,8 @@ namespace pr
 		{
 			PR_ASSERT(PR_DBG, pr::IsFinite(fovX) && pr::IsFinite(fovY), "");
 			PR_ASSERT(PR_DBG, fovX < maths::tau_by_2 && fovY < maths::tau_by_2, "");
-			fovX = Clamp(fovX, maths::tiny, maths::tau_by_2);
-			fovY = Clamp(fovY, maths::tiny, maths::tau_by_2);
+			fovX = Clamp(fovX, maths::tiny, float(maths::tau_by_2));
+			fovY = Clamp(fovY, maths::tiny, float(maths::tau_by_2));
 			auto aspect = pr::Tan(fovX/2) / pr::Tan(fovY/2);
 			Aspect(aspect);
 			FovY(fovY);
@@ -474,7 +476,7 @@ namespace pr
 			if (rotate && !translate)
 			{
 				// If in the roll zone
-				if (Length2(m_Rref) < 0.80f) Rotate((point.y - m_Rref.y) * maths::tau_by_4, (m_Rref.x - point.x) * maths::tau_by_4, 0.0f, false);
+				if (Length2(m_Rref) < 0.80f) Rotate((point.y - m_Rref.y) * float(maths::tau_by_4), (m_Rref.x - point.x) * float(maths::tau_by_4), 0.0f, false);
 				else                         Rotate(0.0f, 0.0f, ATan2(m_Rref.y, m_Rref.x) - ATan2(point.y, point.x), false);
 			}
 			return m_moved;
@@ -484,7 +486,7 @@ namespace pr
 		// 'point' should be normalised. i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal Cartesian axes
 		// 'delta' is the mouse wheel scroll delta value (i.e. 120 = 1 click = 10% of the focus distance)
 		// Returns true if the camera has moved
-		bool MouseControlZ(pr::v2 const& point, float delta, bool commit = true)
+		bool MouseControlZ(pr::v2 const& point, float delta, bool along_ray, bool commit = true)
 		{
 			auto dist = delta / 120.0f;
 			if (KeyDown(m_key[camera::ENavKey::Accurate])) dist *= 0.1f;
@@ -493,11 +495,17 @@ namespace pr
 			// Scale by the focus distance
 			dist *= m_base_focus_dist * 0.1f;
 
-			// Move along a ray cast from the camera position to the
-			// mouse point projected onto the focus plane.
-			auto pt  = NSSPointToWSPoint(v4(point, FocusDist(), 0.0f));
-			auto ray_ws = pt - CameraToWorld().pos;
-			auto ray_cs = dist * Normalise3(WorldToCamera() * ray_ws, -v4ZAxis); // normalised ray in camera space
+			// Get the ray in camera space to move the camera along
+			auto ray_cs = -v4ZAxis;
+			if (along_ray)
+			{
+				// Move along a ray cast from the camera position to the
+				// mouse point projected onto the focus plane.
+				auto pt  = NSSPointToWSPoint(v4(point, FocusDist(), 0.0f));
+				auto ray_ws = pt - CameraToWorld().pos;
+				ray_cs = Normalise3(WorldToCamera() * ray_ws, -v4ZAxis);
+			}
+			ray_cs *= dist;
 
 			// If the 'TranslateZ' key is down move the focus point too.
 			// Otherwise move the camera toward or away from the focus point.
@@ -634,7 +642,7 @@ namespace pr
 			}
 
 			m_fovY = (1.0f + zoom) * m_base_fovY;
-			m_fovY = pr::Clamp(m_fovY, pr::maths::tiny, pr::maths::tau_by_2 - pr::maths::tiny);
+			m_fovY = pr::Clamp(m_fovY, pr::maths::tiny, float(pr::maths::tau_by_2 - pr::maths::tiny));
 
 			// Set the base values
 			if (commit) Commit();
@@ -714,7 +722,7 @@ namespace pr
 			auto bbox_centre = bbox.Centre();
 			auto bbox_radius = bbox.Radius();
 
-			// Get the radius of the bbox projected onto the plane 'forward'
+			// Get the distance from the centre of the bbox to the point nearest the camera
 			auto sizez = pr::maths::float_max;
 			sizez = pr::Min(sizez, pr::Abs(pr::Dot3(forward, pr::v4( bbox_radius.x,  bbox_radius.y,  bbox_radius.z, 0.0f))));
 			sizez = pr::Min(sizez, pr::Abs(pr::Dot3(forward, pr::v4(-bbox_radius.x,  bbox_radius.y,  bbox_radius.z, 0.0f))));
@@ -757,7 +765,7 @@ namespace pr
 			}
 			else
 			{
-				// 'size' is the radius of the bounding box projected into the 'forward' plane.
+				// 'size' is the *radius* (i.e. not the full height) of the bounding box projected into the 'forward' plane.
 				auto size = pr::Sqrt(pr::Clamp(pr::Length3Sq(bbox_radius) - pr::Sqr(sizez), 0.0f, pr::maths::float_max));
 
 				// 'a' has the effect of using FovY if aspect > 1.0 or FovX if not
@@ -766,13 +774,13 @@ namespace pr
 				// Choose the focus distance if not given
 				if (focus_dist == 0 || focus_dist < sizez)
 				{
-					auto d = (0.5f * size) / (pr::Tan(0.5f * FovY()) * a);
+					auto d = size / (pr::Tan(0.5f * FovY()) * a);
 					focus_dist = sizez + d;
 				}
 				else
 				{
 					auto d = focus_dist - sizez;
-					FovY(2.0f * pr::ATan(0.5f * size * a / d));
+					FovY(2.0f * pr::ATan(size * a / d));
 				}
 			}
 

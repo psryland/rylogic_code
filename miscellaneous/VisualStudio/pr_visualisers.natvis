@@ -91,6 +91,9 @@
 	<Type Name="pr::m4x4">
 		<DisplayString LegacyAddin="p:\lib\x86\release\prautoexp.dll" Export="AddIn_m4x4"></DisplayString>
 	</Type>
+	<Type Name="pr::Matrix&lt;*&gt;">
+		<DisplayString>{cols()}x{rows()} {m_data}</DisplayString>
+	</Type>
 	<Type Name="pr::Mat6x8&lt;*,*&gt;">
 		<DisplayString LegacyAddin="p:\lib\x86\release\prautoexp.dll" Export="AddIn_m6x8"></DisplayString>
 	</Type>

@@ -77,7 +77,7 @@ namespace pr
 				pr::v4 lin_acc = pr::v4Zero; float rot = 0.0f;
 				float lacc = m_max_lvel / m_accel_time; // The acceleration to use (m/s/s)
 				float ldec = m_max_lvel / m_drag_time;  // The deceleration to use (m/s/s)
-				float turn = pr::maths::tau_by_8 * m_turn_speed;
+				float turn = float(pr::maths::tau_by_8 * m_turn_speed);
 				if (m_kb.KeyDown(DIK_Q)) lin_acc.x -= lacc; // strafe left
 				if (m_kb.KeyDown(DIK_W)) lin_acc.z -= lacc; // forward
 				if (m_kb.KeyDown(DIK_E)) lin_acc.x += lacc; // strafe right

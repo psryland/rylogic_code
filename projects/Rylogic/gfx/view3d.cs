@@ -809,10 +809,11 @@ namespace pr.gfx
 			/// Zoom using the mouse.
 			/// 'point' is a point in client rect space.
 			/// 'delta' is the mouse wheel scroll delta value (i.e. 120 = 1 click)
+			/// 'along_ray' is true if the camera should move along a ray cast through 'point'
 			/// Returns true if the scene requires refreshing</summary>
-			public bool MouseNavigateZ(PointF point, float delta)
+			public bool MouseNavigateZ(PointF point, float delta, bool along_ray)
 			{
-				return View3D_MouseNavigateZ(Handle, v2.From(point), delta);
+				return View3D_MouseNavigateZ(Handle, v2.From(point), delta, along_ray);
 			}
 
 			/// <summary>
@@ -2161,7 +2162,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_CameraClipPlanesGet    (HWindow window, out float near, out float far);
 		[DllImport(Dll)] private static extern void              View3D_CameraClipPlanesSet    (HWindow window, float near, float far, bool focus_relative);
 		[DllImport(Dll)] private static extern bool              View3D_MouseNavigate          (HWindow window, v2 ss_point, ENavOp nav_op, bool nav_start_or_end);
-		[DllImport(Dll)] private static extern bool              View3D_MouseNavigateZ         (HWindow window, v2 ss_point, float delta);
+		[DllImport(Dll)] private static extern bool              View3D_MouseNavigateZ         (HWindow window, v2 ss_point, float delta, bool along_ray);
 		[DllImport(Dll)] private static extern bool              View3D_Navigate               (HWindow window, float dx, float dy, float dz);
 		[DllImport(Dll)] private static extern void              View3D_ResetZoom              (HWindow window);
 		[DllImport(Dll)] private static extern float             View3D_ZoomGet                (HWindow window);

@@ -77,6 +77,17 @@ namespace Rylobot
 			get { return Positions.Sum(x => x.NetProfit); }
 		}
 
+		public void Step2()
+		{
+			// Look for an entry trigger (candle pattern, SnR levels, next price vs. prev using quadratic etc)
+
+			// Create a trade.
+			// Set the SL to be > 2*mcs and higher than any recent peaks
+			// Set the TP to be between [-SL, -2*SL] or at any significant SnR level
+
+
+		}
+
 		/// <summary>Called when new data is received</summary>
 		public override void Step()
 		{
@@ -174,6 +185,10 @@ namespace Rylobot
 						Positions.Add(pos);
 				}
 			}
+
+			int break_point;
+			if (Instrument.NewCandle)
+				break_point = 1;
 		}
 
 		/// <summary>Close all positions</summary>

@@ -79,8 +79,8 @@ namespace pr
 		// Get the Y field of view
 		float FovY() const
 		{
-			float dot = Clamp(m_Tnorms.y.z*m_Tnorms.y.w + m_Tnorms.z.z*m_Tnorms.z.w, -1.0f, 1.0f);
-			return maths::tau_by_2 - ACos(dot);
+			auto dot = Clamp(m_Tnorms.y.z*m_Tnorms.y.w + m_Tnorms.z.z*m_Tnorms.z.w, -1.0f, 1.0f);
+			return float(maths::tau_by_2 - ACos(dot));
 		}
 
 		// Get the aspect ratio for the frustum

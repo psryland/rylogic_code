@@ -298,6 +298,7 @@ namespace LDraw
 					m_dc.ActiveContentChanged -= UpdateUI;
 					m_tsc.ContentPanel.Controls.Remove(m_dc);
 					m_dc.Remove(Model.Scene);
+					m_dc.Remove(Model.Log);
 					Util.Dispose(ref m_dc);
 				}
 				m_dc = value;
@@ -307,6 +308,7 @@ namespace LDraw
 					m_dc.Options.TabStrip.AlwaysShowTabs = true;
 					m_dc.Options.TitleBar.ShowTitleBars = false;
 					m_dc.Add(Model.Scene);
+					m_dc.Add(Model.Log);
 					m_tsc.ContentPanel.Controls.Add(m_dc);
 					m_dc.ActiveContentChanged += UpdateUI;
 				}
@@ -456,8 +458,7 @@ namespace LDraw
 			#region Data Menu
 			m_menu_data_clear_scene.Click += (s,a) =>
 			{
-				Model.ClearScene();
-				Invalidate();
+				ClearScene();
 			};
 			m_menu_data_auto_refresh.Click += (s,a) =>
 			{
@@ -626,6 +627,10 @@ namespace LDraw
 
 			// Load the file source
 			Model.OpenFile(filepath, additional);
+
+			// Set the title to the last loaded file
+			if (Model.ContextIds.Count == 0 || !additional)
+				Text = "LDraw - {0}".Fmt(filepath);
 		}
 
 		/// <summary>Save a script UI to file</summary>
@@ -635,6 +640,14 @@ namespace LDraw
 			var script = m_dc.ActiveContent.Owner as ScriptUI;
 			Debug.Assert(script != null, "Should be able to save if a script isn't selected");
 			script.SaveFile(save_as ? null : script.Filepath);
+		}
+
+		/// <summary>Clear or script sources</summary>
+		private void ClearScene()
+		{
+			Model.ClearScene();
+			Text = "LDraw";
+			Invalidate();
 		}
 
 		/// <summary>Align the camera to an axis</summary>

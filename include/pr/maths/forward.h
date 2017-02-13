@@ -6,6 +6,7 @@
 
 #include <iterator>
 #include <algorithm>
+#include <memory>
 #include <thread>
 #include <limits>
 #include <cassert>

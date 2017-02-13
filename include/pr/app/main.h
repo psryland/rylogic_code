@@ -120,7 +120,7 @@ namespace pr
 
 				// Position the camera
 				m_cam.Aspect(1.0f);
-				m_cam.FovY(pr::maths::tau_by_8);
+				m_cam.FovY(float(pr::maths::tau_by_8));
 				m_cam.LookAt(
 					pr::v4(0, 0, 1.0f / (float)tan(m_cam.m_fovY/2.0f), 1.0f),
 					pr::v4Origin,
@@ -139,9 +139,9 @@ namespace pr
 				m_cam.MouseControl(pt, op, nav_start_stop);
 				RenderNeeded();
 			}
-			virtual void NavZ(pr::v2 const& pt, float delta)
+			virtual void NavZ(pr::v2 const& pt, float delta, bool along_ray)
 			{
-				m_cam.MouseControlZ(pt, delta);
+				m_cam.MouseControlZ(pt, delta, along_ray);
 				RenderNeeded();
 			}
 			virtual void NavRevert()

@@ -78,45 +78,40 @@ namespace pr
 	}
 
 	// Floating point comparisons
-	inline bool FGtr(float a, float b, float tol = maths::tiny)
-	{
-		return a - b > tol;
-	}
-	inline bool FGtrEql(float a, float b, float tol = maths::tiny)
-	{
-		return a - b > -tol;
-	}
-	inline bool FLess(float a, float b, float tol = maths::tiny)
-	{
-		return !FGtrEql(a, b, tol);
-	}
-	inline bool FLessEql(float a, float b, float tol = maths::tiny)
-	{
-		return !FGtr(a, b, tol);
-	}
 	inline bool FEql(float a, float b, float tol = maths::tiny)
 	{
-		return !FGtr(a, b, tol) && !FLess(a, b, tol);
+		// Floating point compare is dangerous and subtle.
+		// See: https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
+		// and: http://floating-point-gui.de/errors/NearlyEqualsTest.java
+		// Tests against zero treat 'tol' as an absolute difference threshold.
+		// Tests between two non-zero values use 'tol' as a relative difference threshold.
+		// i.e.
+		//    FEql(2e-30, 1e-30) == false
+		//    FEql(2e-30 - 1e-30, 0) == true
+
+		// Handles tests against zero where relative error is meaningless
+		// Tests with 'b == 0' are the most common so do them first
+		if (b == 0) return std::abs(a) < tol;
+		if (a == 0) return std::abs(b) < tol;
+
+		// Handle infinities and exact values
+		if (a == b) return true;
+
+		// Test relative error as a fraction of the largest value
+		return std::abs(a - b) < tol * std::max(std::abs(a), std::abs(b));
 	}
-	inline bool FGtr(double a, double b, double tol = maths::tiny)
+	inline bool FEql(double a, double b, double tol = maths::tinyd)
 	{
-		return a - b > tol;
-	}
-	inline bool FGtrEql(double a, double b, double tol = maths::tiny)
-	{
-		return a - b > -tol;
-	}
-	inline bool FLess(double a, double b, double tol = maths::tiny)
-	{
-		return !FGtrEql(a, b, tol);
-	}
-	inline bool FLessEql(double a, double b, double tol = maths::tiny)
-	{
-		return !FGtr(a, b, tol);
-	}
-	inline bool FEql(double a, double b, double tol = maths::tiny)
-	{
-		return !FGtr(a, b, tol) && !FLess(a, b, tol);
+		// Handles tests against zero where relative error is meaningless
+		// Tests with 'b == 0' are the most common so do them first
+		if (b == 0) return std::abs(a) < tol;
+		if (a == 0) return std::abs(b) < tol;
+
+		// Handle infinities and exact values
+		if (a == b) return true;
+
+		// Test relative error as a fraction of the largest value
+		return std::abs(a - b) < tol * std::max(std::abs(a), std::abs(b));
 	}
 	template <typename T, typename = maths::enable_if_vN<T>> inline bool FEql(T const& a, T const& b, float tol = maths::tiny)
 	{
@@ -146,6 +141,40 @@ namespace pr
 			FEql(w_as<float>(lhs), w_as<float>(rhs), tol);
 	}
 
+	// Float inequalities
+	inline bool FGtr(float a, float b, float tol = maths::tiny)
+	{
+		return a - b > tol;
+	}
+	inline bool FGtrEql(float a, float b, float tol = maths::tiny)
+	{
+		return a - b > -tol;
+	}
+	inline bool FLess(float a, float b, float tol = maths::tiny)
+	{
+		return !FGtrEql(a, b, tol);
+	}
+	inline bool FLessEql(float a, float b, float tol = maths::tiny)
+	{
+		return !FGtr(a, b, tol);
+	}
+	inline bool FGtr(double a, double b, double tol = maths::tiny)
+	{
+		return a - b > tol;
+	}
+	inline bool FGtrEql(double a, double b, double tol = maths::tiny)
+	{
+		return a - b > -tol;
+	}
+	inline bool FLess(double a, double b, double tol = maths::tiny)
+	{
+		return !FGtrEql(a, b, tol);
+	}
+	inline bool FLessEql(double a, double b, double tol = maths::tiny)
+	{
+		return !FGtr(a, b, tol);
+	}
+
 	// Zero test
 	template <typename T, typename = maths::enable_if_vec_cp<T>> inline bool IsZero(T x)
 	{
@@ -173,11 +202,11 @@ namespace pr
 	// NaN test
 	inline bool IsNaN(float value)
 	{
-		return isnan(value);
+		return std::isnan(value);
 	}
 	inline bool IsNaN(double value)
 	{
-		return isnan(value);
+		return std::isnan(value);
 	}
 	template <typename T, typename = std::enable_if<std::is_arithmetic<T>::value>::type> inline bool IsNaN(T value)
 	{
@@ -201,19 +230,19 @@ namespace pr
 	// Finite test
 	inline bool IsFinite(float value)
 	{
-		return isfinite(value);
+		return std::isfinite(value);
 	}
 	inline bool IsFinite(double value)
 	{
-		return isfinite(value);
+		return std::isfinite(value);
 	}
 	inline bool IsFinite(float value, float max_value)
 	{
-		return IsFinite(value) && fabs(value) < max_value;
+		return IsFinite(value) && std::fabs(value) < max_value;
 	}
 	inline bool IsFinite(double value, double max_value)
 	{
-		return IsFinite(value) && fabs(value) < max_value;
+		return IsFinite(value) && std::fabs(value) < max_value;
 	}
 	template <typename T, typename = std::enable_if<std::is_arithmetic<T>::value>::type> inline bool IsFinite(T value)
 	{
@@ -255,33 +284,33 @@ namespace pr
 	// Absolute value
 	inline float Abs(float x)
 	{
-		return fabsf(x);
+		return std::fabs(x);
 	}
 	inline double Abs(double x)
 	{
-		return fabs(x);
+		return std::fabs(x);
 	}
 	inline int Abs(int x)
 	{
-		return abs(x);
+		return std::abs(x);
 	}
 	inline long Abs(long x)
 	{
-		return labs(x);
+		return std::abs(x);
 	}
-	inline int64 Abs(int64 x)
+	inline long long Abs(long long x)
 	{
-		return _abs64(x);
+		return std::abs(x);
 	}
-	inline uint Abs(uint x)
-	{
-		return x;
-	}
-	inline ulong Abs(ulong x)
+	inline unsigned int Abs(unsigned int x)
 	{
 		return x;
 	}
-	inline uint64 Abs(uint64 x)
+	inline unsigned long Abs(unsigned long x)
+	{
+		return x;
+	}
+	inline unsigned long long Abs(unsigned long long x)
 	{
 		return x;
 	}
@@ -406,12 +435,12 @@ namespace pr
 	inline float Frac(float x)
 	{
 		float n;
-		return modff(x, &n);
+		return std::modf(x, &n);
 	}
 	inline double Frac(double x)
 	{
 		double n;
-		return modf(x, &n);
+		return std::modf(x, &n);
 	}
 	template <typename T, typename = maths::enable_if_vN<T>> inline T Frac(T const& x)
 	{
@@ -449,7 +478,12 @@ namespace pr
 	inline float Sqrt(float x)
 	{
 		assert("Sqrt of negative or undefined value" && x >= 0 && IsFinite(x));
-		return sqrtf(x);
+		return std::sqrt(x);
+	}
+	inline double Sqrt(double x)
+	{
+		assert("Sqrt of negative or undefined value" && x >= 0 && IsFinite(x));
+		return std::sqrt(x);
 	}
 	inline float Sqrt(int x)
 	{
@@ -458,11 +492,6 @@ namespace pr
 	inline float Sqrt(long x)
 	{
 		return Sqrt(static_cast<float>(x));
-	}
-	inline double Sqrt(double x)
-	{
-		assert("Sqrt of negative or undefined value" && x >= 0 && IsFinite(x));
-		return sqrt(x);
 	}
 	inline double Sqrt(long long x)
 	{
@@ -526,90 +555,90 @@ namespace pr
 	}
 
 	// Scalar functions
-	inline float DegreesToRadians(float degrees)
+	template <typename T> inline T DegreesToRadians(T degrees)
 	{
-		return degrees * 1.74532e-2f;
+		return T(degrees * maths::tau_by_360);
 	}
-	inline float RadiansToDegrees(float radians)
+	template <typename T> inline T RadiansToDegrees(T radians)
 	{
-		return radians * 5.72957e+1f;
+		return T(radians * maths::E60_by_tau);
 	}
-	inline float Ceil(float x)
+	template <typename T> inline T Ceil(T x)
 	{
-		return ceilf(x);
+		return std::ceil(x);
 	}
-	inline float Floor(float x)
+	template <typename T> inline T Floor(T x)
 	{
-		return floorf(x);
+		return std::floor(x);
 	}
-	inline float Sin(float x)
+	template <typename T> inline T Sin(T x)
 	{
-		return sinf(x);
+		return std::sin(x);
 	}
-	inline float Cos(float x)
+	template <typename T> inline T Cos(T x)
 	{
-		return cosf(x);
+		return std::cos(x);
 	}
-	inline float Tan(float x)
+	template <typename T> inline T Tan(T x)
 	{
-		return tanf(x);
+		return std::tan(x);
 	}
-	inline float ASin(float x)
+	template <typename T> inline T ASin(T x)
 	{
-		return asinf(x);
+		return std::asin(x);
 	}
-	inline float ACos(float x)
+	template <typename T> inline T ACos(T x)
 	{
-		return acosf(x);
+		return std::acos(x);
 	}
-	inline float ATan(float x)
+	template <typename T> inline T ATan(T x)
 	{
-		return atanf(x);
+		return std::atan(x);
 	}
-	inline float ATan2(float y, float x)
+	template <typename T> inline T ATan2(T y, T x)
 	{
-		return atan2f(y, x);
+		return std::atan2(y, x);
 	}
-	inline float ATan2Positive(float y, float x)
+	template <typename T> inline T ATan2Positive(T y, T x)
 	{
-		float a = atan2f(y, x);
-		return a < 0.0f ? a += maths::tau : a;
+		auto a = std::atan2(y, x);
+		return a < 0 ? T(a + maths::tau) : T(a);
 	}
-	inline float Sinh(float x)
+	template <typename T> inline T Sinh(T x)
 	{
-		return sinhf(x);
+		return std::sinh(x);
 	}
-	inline float Cosh(float x)
+	template <typename T> inline T Cosh(T x)
 	{
-		return coshf(x);
+		return std::cosh(x);
 	}
-	inline float Tanh(float x)
+	template <typename T> inline T Tanh(T x)
 	{
-		return tanhf(x);
+		return std::tanh(x);
 	}
-	inline float Pow(float x, float y)
+	template <typename T> inline T Pow(T x, T y)
 	{
-		return powf(x, y);
+		return std::pow(x, y);
+	}
+	template <typename T> inline T Fmod(T x, T y)
+	{
+		return std::fmod(x, y);
+	}
+	template <typename T> inline T Exp(T x)
+	{
+		return std::exp(x);
+	}
+	template <typename T> inline T Log10(T x)
+	{
+		return std::log10(x);
+	}
+	template <typename T> inline T Log(T x)
+	{
+		return std::log(x);
 	}
 	inline int Pow2(int n)
 	{
 		return 1 << n;
-	}
-	inline float Fmod(float x, float y)
-	{
-		return fmodf(x, y);
-	}
-	inline float Exp(float x)
-	{
-		return expf(x);
-	}
-	inline float Log10(float x)
-	{
-		return log10f(x);
-	}
-	inline float Log(float x)
-	{
-		return logf(x);
 	}
 
 	// Test any or all components pass 'Pred'
@@ -981,11 +1010,15 @@ namespace pr
 	}
 
 	// Dot product
+	inline int Dot(int a, int b)
+	{
+		return a * b;
+	}
 	inline float Dot(float a, float b)
 	{
 		return a * b;
 	}
-	inline int Dot(int a, int b)
+	inline double Dot(double a, double b)
 	{
 		return a * b;
 	}
@@ -1024,7 +1057,11 @@ namespace pr
 	// Quantise a value to a power of two. 'scale' should be a power of 2, i.e. 256, 1024, 2048, etc
 	inline float Quantise(float x, int scale)
 	{
-		return static_cast<int>(x*scale) / static_cast<float>(scale);
+		return static_cast<int>(x*scale) / float(scale);
+	}
+	inline double Quantise(double x, int scale)
+	{
+		return static_cast<int>(x*scale) / double(scale);
 	}
 	template <typename T, typename = maths::enable_if_fp_vec<T>> inline T Quantise(T const& x, int scale)
 	{
@@ -1035,10 +1072,10 @@ namespace pr
 	}
 
 	// Return the cosine of the angle of the triangle apex opposite 'opp'
-	inline float CosAngle(float adj0, float adj1, float opp)
+	template <typename T> inline T CosAngle(T adj0, T adj1, T opp)
 	{
 		assert("Angle undefined an when adjacent length is zero" && !FEql(adj0,0) && !FEql(adj1,0));
-		return Clamp((adj0*adj0 + adj1*adj1 - opp*opp) / (2.0f * adj0 * adj1), -1.0f, 1.0f);
+		return Clamp<T>((adj0*adj0 + adj1*adj1 - opp*opp) / (2 * adj0 * adj1), -1, 1);
 	}
 
 	// Return the cosine of the angle between two vectors
@@ -1049,7 +1086,7 @@ namespace pr
 	}
 
 	// Return the angle (in radians) of the triangle apex opposite 'opp'
-	inline float Angle(float adj0, float adj1, float opp)
+	template <typename T> inline T Angle(T adj0, T adj1, T opp)
 	{
 		return ACos(CosAngle(adj0, adj1, opp));
 	}
@@ -1061,31 +1098,31 @@ namespace pr
 	}
 
 	// Return the length of a triangle side given by two adjacent side lengths and an angle between them
-	inline float Length(float adj0, float adj1, float angle)
+	template <typename T> inline T Length(T adj0, T adj1, T angle)
 	{
-		float len_sq = adj0*adj0 + adj1*adj1 - 2.0f * adj0 * adj1 * Cos(angle);
-		return len_sq > 0.0f ? Sqrt(len_sq) : 0.0f;
+		auto len_sq = adj0*adj0 + adj1*adj1 - 2 * adj0 * adj1 * Cos(angle);
+		return len_sq > 0 ? Sqrt(len_sq) : 0;
 	}
 
-	// Returns 1.0f if 'hi' is > 'lo' otherwise 0.0f
-	inline float Step(float lo, float hi)
+	// Returns 1 if 'hi' is > 'lo' otherwise 0
+	template <typename T> T Step(T lo, T hi)
 	{
-		return lo <= hi ? 0.0f : 1.0f;
+		return lo <= hi ? T(0) : T(1);
 	}
 
 	// Returns the 'Hermite' interpolation (3t² - 2t³) between 'lo' and 'hi' for t=[0,1]
-	inline float SmoothStep(float lo, float hi, float t)
+	template <typename T> inline T SmoothStep(T lo, T hi, T t)
 	{
 		if (lo == hi) return lo;
-		t = Clamp((t - lo)/(hi - lo), 0.0f, 1.0f);
+		t = Clamp((t - lo)/(hi - lo), T(0), T(1));
 		return t*t*(3 - 2*t);
 	}
 
 	// Returns a fifth-order 'Perlin' interpolation (6t^5 - 15t^4 + 10t^3) between 'lo' and 'hi' for t=[0,1]
-	inline float SmoothStep2(float lo, float hi, float t)
+	template <typename T> inline T SmoothStep2(T lo, T hi, T t)
 	{
 		if (lo == hi) return lo;
-		t = Clamp((t - lo)/(hi - lo), 0.0f, 1.0f);
+		t = Clamp((t - lo)/(hi - lo), T(0), T(1));
 		return t*t*t*(t*(t*6 - 15) + 10);
 	}
 
@@ -1093,9 +1130,9 @@ namespace pr
 	// 'n' is a horizontal scaling factor.
 	// If n = 1, [-1,+1] maps to [-0.5, +0.5]
 	// If n = 10, [-10,+10] maps to [-0.5, +0.5], etc
-	inline float Sigmoid(float x, float n = 1.0f)
+	template <typename T> inline T Sigmoid(T x, T n = T(1))
 	{
-		return ATan(x/n) / maths::tau_by_4;
+		return T(ATan(x/n) / maths::tau_by_4);
 	}
 
 	// Low precision reciprocal square root
@@ -1137,21 +1174,47 @@ namespace pr
 	// Cube root
 	inline float Cubert(float x)
 	{
-		union { float f; uint32 i; } as;
-		bool flip_sign = x < 0.0f;
-		if (flip_sign)  x = -x;
-		if (x == 0.0f) return x;
+		// This works because the integer interpretation of an IEEE 754 float
+		// is approximately the log2(x) scaled by 2^23. The basic idea is to
+		// use the log2(x) value as the initial guess then do some Newton-Raphson
+		// iterations to find the actual root.
+		
+		if (x == 0)
+			return x;
+
+		auto flip_sign = x < 0.0f;
+		if (flip_sign) x = -x;
+		
+		union { float f; unsigned long i; } as;
 		as.f = x;
-		uint32 bits = as.i;
-
-		bits = (bits + (uint32)2 * 0x3f800000) / 3;
-
-		as.i = bits;
-		float guess = as.f;
+		as.i = (as.i + 2U * 0x3f800000) / 3U;
+		auto guess = as.f;
 
 		x *= 1.0f / 3.0f;
 		guess = (x / (guess*guess) + guess * (2.0f / 3.0f));
 		guess = (x / (guess*guess) + guess * (2.0f / 3.0f));
+		guess = (x / (guess*guess) + guess * (2.0f / 3.0f));
+		return (flip_sign ? -guess : guess);
+	}
+	inline double Cubert(double x)
+	{
+		if (x == 0)
+			return x;
+
+		auto flip_sign = x < 0.0f;
+		if (flip_sign)  x = -x;
+
+		union { double f; unsigned long long i; } as;
+		as.f = x;
+		as.i = (as.i + 2ULL * 0x3FF0000000000000ULL) / 3ULL;
+		auto guess = as.f;
+
+		x *= 1.0 / 3.0;
+		guess = (x / (guess*guess) + guess * (2.0 / 3.0));
+		guess = (x / (guess*guess) + guess * (2.0 / 3.0));
+		guess = (x / (guess*guess) + guess * (2.0 / 3.0));
+		guess = (x / (guess*guess) + guess * (2.0 / 3.0));
+		guess = (x / (guess*guess) + guess * (2.0 / 3.0));
 		return (flip_sign ? -guess : guess);
 	}
 
@@ -1261,6 +1324,116 @@ namespace pr
 		PRUnitTest(pr_maths_maths_core)
 		{
 			{// Floating point compare
+				constexpr float const _6dp = float(0.00000100000006);
+
+				// Regular large numbers - generally not problematic
+				PR_CHECK(FEql(1000000.0f, 1000001.0f, _6dp), true);
+				PR_CHECK(FEql(1000001.0f, 1000000.0f, _6dp), true);
+				PR_CHECK(FEql(1000000.0f, 1000010.0f, _6dp), false);
+				PR_CHECK(FEql(1000010.0f, 1000000.0f, _6dp), false);
+
+				// Negative large numbers
+				PR_CHECK(FEql(-1000000.0f, -1000001.0f, _6dp), true);
+				PR_CHECK(FEql(-1000001.0f, -1000000.0f, _6dp), true);
+				PR_CHECK(FEql(-1000000.0f, -1000010.0f, _6dp), false);
+				PR_CHECK(FEql(-1000010.0f, -1000000.0f, _6dp), false);
+
+				// Numbers around 1
+				PR_CHECK(FEql(1.0000001f, 1.0000002f, _6dp), true);
+				PR_CHECK(FEql(1.0000002f, 1.0000001f, _6dp), true);
+				PR_CHECK(FEql(1.0000020f, 1.0000010f, _6dp), false);
+				PR_CHECK(FEql(1.0000010f, 1.0000020f, _6dp), false);
+
+				// Numbers around -1
+				PR_CHECK(FEql(-1.0000001f, -1.0000002f, _6dp), true);
+				PR_CHECK(FEql(-1.0000002f, -1.0000001f, _6dp), true);
+				PR_CHECK(FEql(-1.0000010f, -1.0000020f, _6dp), false);
+				PR_CHECK(FEql(-1.0000020f, -1.0000010f, _6dp), false);
+
+				// Numbers between 1 and 0
+				PR_CHECK(FEql(0.000000001000001f, 0.000000001000002f, _6dp), true);
+				PR_CHECK(FEql(0.000000001000002f, 0.000000001000001f, _6dp), true);
+				PR_CHECK(FEql(0.000000000100002f, 0.000000000100001f, _6dp), false);
+				PR_CHECK(FEql(0.000000000100001f, 0.000000000100002f, _6dp), false);
+
+				// Numbers between -1 and 0
+				PR_CHECK(FEql(-0.0000000010000001f, -0.0000000010000002f, _6dp), true);
+				PR_CHECK(FEql(-0.0000000010000002f, -0.0000000010000001f, _6dp), true);
+				PR_CHECK(FEql(-0.0000000001000002f, -0.0000000001000001f, _6dp), false);
+				PR_CHECK(FEql(-0.0000000001000001f, -0.0000000001000002f, _6dp), false);
+
+				// Comparisons involving zero
+				PR_CHECK(FEql(+0.0f, +0.0f, _6dp), true);
+				PR_CHECK(FEql(+0.0f, -0.0f, _6dp), true);
+				PR_CHECK(FEql(-0.0f, -0.0f, _6dp), true);
+				PR_CHECK(FEql(+0.000001f, +0.0f, _6dp), true);
+				PR_CHECK(FEql(+0.0f, +0.000001f, _6dp), true);
+				PR_CHECK(FEql(-0.000001f, +0.0f, _6dp), true);
+				PR_CHECK(FEql(+0.0f, -0.000001f, _6dp), true);
+				PR_CHECK(FEql(+0.00001f, +0.0f, _6dp), false);
+				PR_CHECK(FEql(+0.0f, +0.00001f, _6dp), false);
+				PR_CHECK(FEql(-0.00001f, +0.0f, _6dp), false);
+				PR_CHECK(FEql(+0.0f, -0.00001f, _6dp), false);
+
+				// Comparisons involving extreme values (overflow potential)
+				PR_CHECK(FEql(+maths::float_max, +maths::float_max, _6dp), true);
+				PR_CHECK(FEql(+maths::float_max, -maths::float_max, _6dp), false);
+				PR_CHECK(FEql(-maths::float_max, +maths::float_max, _6dp), false);
+				PR_CHECK(FEql(+maths::float_max, +maths::float_max / 2, _6dp), false);
+				PR_CHECK(FEql(+maths::float_max, -maths::float_max / 2, _6dp), false);
+				PR_CHECK(FEql(-maths::float_max, +maths::float_max / 2, _6dp), false);
+
+				// Comparisons involving infinities
+				PR_CHECK(FEql(+maths::float_inf, +maths::float_inf, _6dp), true);
+				PR_CHECK(FEql(-maths::float_inf, -maths::float_inf, _6dp), true);
+				PR_CHECK(FEql(-maths::float_inf, +maths::float_inf, _6dp), false);
+				PR_CHECK(FEql(+maths::float_inf, +maths::float_max, _6dp), false);
+				PR_CHECK(FEql(-maths::float_inf, -maths::float_max, _6dp), false);
+
+				// Comparisons involving NaN values
+				PR_CHECK(FEql(maths::float_nan, maths::float_nan, _6dp), false);
+				PR_CHECK(FEql(maths::float_nan, +0.0f, _6dp), false);
+				PR_CHECK(FEql(-0.0f, maths::float_nan, _6dp), false);
+				PR_CHECK(FEql(maths::float_nan, -0.0f, _6dp), false);
+				PR_CHECK(FEql(+0.0f, maths::float_nan, _6dp), false);
+				PR_CHECK(FEql( maths::float_nan, +maths::float_inf, _6dp), false);
+				PR_CHECK(FEql(+maths::float_inf,  maths::float_nan, _6dp), false);
+				PR_CHECK(FEql( maths::float_nan, -maths::float_inf, _6dp), false);
+				PR_CHECK(FEql(-maths::float_inf,  maths::float_nan, _6dp), false);
+				PR_CHECK(FEql( maths::float_nan, +maths::float_max, _6dp), false);
+				PR_CHECK(FEql(+maths::float_max,  maths::float_nan, _6dp), false);
+				PR_CHECK(FEql( maths::float_nan, -maths::float_max, _6dp), false);
+				PR_CHECK(FEql(-maths::float_max,  maths::float_nan, _6dp), false);
+				PR_CHECK(FEql( maths::float_nan, +maths::float_min, _6dp), false);
+				PR_CHECK(FEql(+maths::float_min,  maths::float_nan, _6dp), false);
+				PR_CHECK(FEql( maths::float_nan, -maths::float_min, _6dp), false);
+				PR_CHECK(FEql(-maths::float_min,  maths::float_nan, _6dp), false);
+
+				// Comparisons of numbers on opposite sides of 0
+				PR_CHECK(FEql(+1.0f, -1.0f, _6dp), false);
+				PR_CHECK(FEql(-1.0f, +1.0f, _6dp), false);
+				PR_CHECK(FEql(+1.000000001f, -1.0f, _6dp), false);
+				PR_CHECK(FEql(-1.0f, +1.000000001f, _6dp), false);
+				PR_CHECK(FEql(-1.000000001f, +1.0f, _6dp), false);
+				PR_CHECK(FEql(+1.0f, -1.000000001f, _6dp), false);
+				PR_CHECK(FEql(2 * maths::float_min, 0, _6dp), true);
+				PR_CHECK(FEql(maths::float_min, -maths::float_min, _6dp), false);
+
+				// The really tricky part - comparisons of numbers very close to zero.
+				PR_CHECK(FEql(+maths::float_min, +maths::float_min, _6dp), true);
+				PR_CHECK(FEql(+maths::float_min, -maths::float_min, _6dp), false);
+				PR_CHECK(FEql(-maths::float_min, +maths::float_min, _6dp), false);
+				PR_CHECK(FEql(+maths::float_min, 0, _6dp), true);
+				PR_CHECK(FEql(0, +maths::float_min, _6dp), true);
+				PR_CHECK(FEql(-maths::float_min, 0, _6dp), true);
+				PR_CHECK(FEql(0, -maths::float_min, _6dp), true);
+
+				PR_CHECK(FEql(0.000000001f, -maths::float_min, _6dp), false);
+				PR_CHECK(FEql(0.000000001f, +maths::float_min, _6dp), false);
+				PR_CHECK(FEql(+maths::float_min, 0.000000001f, _6dp), false);
+				PR_CHECK(FEql(-maths::float_min, 0.000000001f, _6dp), false);
+			}
+			{// Floating point vector compare
 				float arr0[] = {1,2,3,4};
 				float arr1[] = {1,2,3,5};
 				static_assert(maths::is_vec<decltype(arr0)>::value, "");
@@ -1480,17 +1653,27 @@ namespace pr
 				PR_CHECK(FEql(Slerp(v4XAxis, 2.0f*v4YAxis, 0.5f), 1.5f*v4::Normal4(0.5f,0.5f,0,0)), true);
 			}
 			{// Quantise
-				v4 arr0(1.0f/3.0f, 0.0f, 2.0f, maths::tau);
+				v4 arr0(1.0f/3.0f, 0.0f, 2.0f, float(maths::tau));
 				PR_CHECK(FEql(Quantise(arr0, 1024), v4(0.333f, 0.0f, 2.0f, 6.28222f)), true);
 			}
 			{// CosAngle
 				v2 arr0(1,0);
 				v2 arr1(0,1);
-				PR_CHECK(FEql(CosAngle(1,1,1.4142135f), Cos(DegreesToRadians(90.0f))), true);
-				PR_CHECK(FEql(CosAngle(arr0, arr1), Cos(DegreesToRadians(90.0f))), true);
-				PR_CHECK(FEql(Angle(1,1,1.4142135f), DegreesToRadians(90.0f)), true);
-				PR_CHECK(FEql(Angle(arr0, arr1), DegreesToRadians(90.0f)), true);
-				PR_CHECK(FEql(Length(1.0f, 1.0f, DegreesToRadians(90.0f)), 1.4142135f), true);
+				PR_CHECK(FEql(CosAngle(1.0,1.0,maths::root2) - Cos(DegreesToRadians(90.0)), 0), true);
+				PR_CHECK(FEql(CosAngle(arr0, arr1)           - Cos(DegreesToRadians(90.0f)), 0), true);
+				PR_CHECK(FEql(Angle(1.0,1.0,maths::root2), DegreesToRadians(90.0)), true);
+				PR_CHECK(FEql(Angle(arr0, arr1),           DegreesToRadians(90.0f)), true);
+				PR_CHECK(FEql(Length(1.0f, 1.0f, DegreesToRadians(90.0f)), float(maths::root2)), true);
+			}
+			{// Cube Root (32bit)
+				auto a = 1.23456789123456789f;
+				auto b = Cubert(a * a * a);
+				PR_CHECK(FEql(a,b,0.000001f), true);
+			}
+			{// Cube Root (64bit)
+				auto a = 1.23456789123456789;
+				auto b = Cubert(a * a * a);
+				PR_CHECK(FEql(a,b,0.000000000001), true);
 			}
 		}
 	}

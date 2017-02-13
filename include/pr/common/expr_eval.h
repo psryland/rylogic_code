@@ -78,6 +78,10 @@ namespace pr
 			Value
 		};
 
+		// Constants
+		constexpr double const TAU = double(6.283185307179586476925286766559);
+		constexpr double const PHI = double(1.618033988749894848204586834);
+
 		// Returns the precedence of a token
 		// How to work out precedence:
 		//   NewOp = the op whose precedence you want to know
@@ -328,8 +332,8 @@ namespace pr
 				else break;
 			case 'p':
 				if      (cmp(expr, str("pow")   ,3) == 0) return ETok::Pow;
-				else if (cmp(expr, str("phi")   ,3) == 0) { expr += 3; val = 1.618033988749894848204586834; return ETok::Value; }
-				else if (cmp(expr, str("pi")    ,2) == 0) { expr += 2; val = 3.1415926535897932384626433832795; return ETok::Value; }
+				else if (cmp(expr, str("phi")   ,3) == 0) { expr += 3; val = PHI; return ETok::Value; }
+				else if (cmp(expr, str("pi")    ,2) == 0) { expr += 2; val = TAU/2.0; return ETok::Value; }
 				else break;
 			case 'r':
 				if      (cmp(expr, str("round") ,5) == 0) return ETok::Round;
@@ -344,7 +348,7 @@ namespace pr
 			case 't':
 				if      (cmp(expr, str("tanh")  ,4) == 0) return ETok::TanH;
 				else if (cmp(expr, str("tan")   ,3) == 0) return ETok::Tan;
-				else if (cmp(expr, str("tau")   ,3) == 0) { expr += 3; val = 6.283185307179586476925286766559; return ETok::Value; }
+				else if (cmp(expr, str("tau")   ,3) == 0) { expr += 3; val = TAU; return ETok::Value; }
 				else if (cmp(expr, str("true")  ,4) == 0) { expr += 4; val = 1.0; return ETok::Value; }
 				else break;
 			}
@@ -617,11 +621,11 @@ namespace pr
 					}break;
 				case ETok::Deg:
 					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
-					result[ridx] = rhs.db() * 5.729578e+1F;
+					result[ridx] = rhs.db() * (360.0 / TAU);
 					break;
 				case ETok::Rad:
 					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
-					result[ridx] = rhs.db() * 1.745329e-2F;
+					result[ridx] = rhs.db() * (TAU / 360.0);
 					break;
 				case ETok::Comma:
 					if (ridx + 1 == rmax) throw std::exception("too many parameters");
@@ -712,9 +716,6 @@ namespace pr
 
 		PRUnitTest(pr_common_expr_eval)
 		{
-			float const TAU = pr::maths::tau;
-			float const PHI = pr::maths::phi;
-
 			PR_CHECK(VAL(1), true);
 			PR_CHECK(VAL(1.0), true);
 			PR_CHECK(VAL(-1), true);
@@ -761,11 +762,11 @@ namespace pr
 			PR_CHECK(EXPR(~(4294967295 >> 2)), true);
 			PR_CHECK(EXPR(~(0xFFFFFFFFLL >> 2)), true);
 			PR_CHECK(EXPR(~(4294967295LL >> 2)), true);
-			PR_CHECK(Expr("sin(1.0 + 2.0)"          ,::sin(1.0 + 2.0))  ,true);
-			PR_CHECK(Expr("cos(TAU)"                ,::cos(TAU))        ,true);
-			PR_CHECK(Expr("tan(PHI)"                ,::tan(PHI))        ,true);
-			PR_CHECK(Expr("abs( 1.0)"               ,::abs( 1.0))       ,true);
-			PR_CHECK(Expr("abs(-1.0)"               ,::abs(-1.0))       ,true);
+			PR_CHECK(Expr("sin(1.0 + 2.0)"          ,::sin(1.0 + 2.0))      ,true);
+			PR_CHECK(Expr("cos(TAU)"                ,::cos(eval_impl::TAU)) ,true);
+			PR_CHECK(Expr("tan(PHI)"                ,::tan(eval_impl::PHI)) ,true);
+			PR_CHECK(Expr("abs( 1.0)"               ,::abs( 1.0))           ,true);
+			PR_CHECK(Expr("abs(-1.0)"               ,::abs(-1.0))           ,true);
 			PR_CHECK(EXPR(11 % 3), true);
 			PR_CHECK(Expr("fmod(11.3, 3.1)"         ,::fmod(11.3, 3.1)) ,true);
 			PR_CHECK(EXPR(3.0*fmod(17.3, 2.1)), true);
@@ -791,8 +792,8 @@ namespace pr
 			PR_CHECK(Expr("len2(3,4)"                ,::sqrt(3.0*3.0 + 4.0*4.0))                      ,true);
 			PR_CHECK(Expr("len3(3,4,5)"              ,::sqrt(3.0*3.0 + 4.0*4.0 + 5.0*5.0))            ,true);
 			PR_CHECK(Expr("len4(3,4,5,6)"            ,::sqrt(3.0*3.0 + 4.0*4.0 + 5.0*5.0 + 6.0*6.0))  ,true);
-			PR_CHECK(Expr("deg(-1.24)"               ,-1.24 * pr::maths::E60_by_tau)                  ,true);
-			PR_CHECK(Expr("rad(241.32)"              ,241.32 * pr::maths::tau_by_360)                 ,true);
+			PR_CHECK(Expr("deg(-1.24)"               ,-1.24 * (360.0 / eval_impl::TAU))               ,true);
+			PR_CHECK(Expr("rad(241.32)"              ,241.32 * (eval_impl::TAU / 360.0))              ,true);
 			PR_CHECK(Expr("round( 3.5)"              ,::floor(3.5 + 0.5))                             ,true);
 			PR_CHECK(Expr("round(-3.5)"              ,::floor(-3.5 + 0.5))                            ,true);
 			PR_CHECK(Expr("round( 3.2)"              ,::floor(3.2 + 0.5))                             ,true);
@@ -800,7 +801,7 @@ namespace pr
 			PR_CHECK(Expr("min(-3.2, -3.4)"          ,pr::Min(-3.2, -3.4))                            ,true);
 			PR_CHECK(Expr("max(-3.2, -3.4)"          ,pr::Max(-3.2, -3.4))                            ,true);
 			PR_CHECK(Expr("clamp(10.0, -3.4, -3.2)"  ,pr::Clamp(10.0, -3.4, -3.2))                    ,true);
-			PR_CHECK(Expr("sqr(sqrt(2.3)*-abs(4%2)/15.0-tan(TAU/-6))", pr::Sqr(::sqrt(2.3)*-::abs(4%2)/15.0-::tan(TAU/-6))), true);
+			PR_CHECK(Expr("sqr(sqrt(2.3)*-abs(4%2)/15.0-tan(TAU/-6))", pr::Sqr(::sqrt(2.3)*-::abs(4%2)/15.0-::tan(eval_impl::TAU/-6))), true);
 			{
 				long long v1 = 0, v0 = 123456789000000LL / 2;
 				PR_CHECK(pr::EvaluateI("123456789000000 / 2", v1), true);

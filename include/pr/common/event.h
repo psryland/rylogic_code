@@ -3,6 +3,11 @@
 //  Copyright (c) Oct 2009 Paul Ryland
 //******************************************
 // C#-style multicast delegate event
+//
+// NOTE:
+//  Prefer 'multi_cast.h' over this header.
+//  It's thread safe and moveable.
+//
 // Use:
 //   struct MyType
 //   {
@@ -65,7 +70,7 @@ namespace pr
 				void operator ()() const { m_delegate(); }
 				Func(Delegate delegate, pr::EventHandlerId id) :m_delegate(delegate) ,m_id(id) {}
 			};
-			std::list<Func> m_handlers;
+			std::vector<Func> m_handlers;
 			void operator()() const { for (auto& h : m_handlers) h.m_delegate(); }
 		};
 
@@ -80,7 +85,7 @@ namespace pr
 				void operator ()(P0 p0) const { m_delegate(p0); }
 				Func(Delegate delegate, pr::EventHandlerId id) :m_delegate(delegate) ,m_id(id) {}
 			};
-			std::list<Func> m_handlers;
+			std::vector<Func> m_handlers;
 			void operator()(P0 p0) const { for (auto& h : m_handlers) h(p0); }
 		};
 
@@ -95,7 +100,7 @@ namespace pr
 				void operator()(P0 p0, P1 p1) const { m_delegate(p0,p1); }
 				Func(Delegate delegate, pr::EventHandlerId id) :m_delegate(delegate) ,m_id(id) {}
 			};
-			std::list<Func> m_handlers;
+			std::vector<Func> m_handlers;
 			void operator()(P0 p0, P1 p1) const { for (auto& h : m_handlers) h(p0,p1); }
 		};
 
@@ -110,7 +115,7 @@ namespace pr
 				void operator()(P0 p0, P1 p1, P2 p2) const { m_delegate(p0,p1,p2); }
 				Func(Delegate delegate, pr::EventHandlerId id) :m_delegate(delegate) ,m_id(id) {}
 			};
-			std::list<Func> m_handlers;
+			std::vector<Func> m_handlers;
 			void operator()(P0 p0, P1 p1, P2 p2) const { for (auto& h : m_handlers) h(p0,p1,p2); }
 		};
 
@@ -125,7 +130,7 @@ namespace pr
 				void operator()(P0 p0, P1 p1, P2 p2, P3 p3) const { m_delegate(p0,p1,p2,p3); }
 				Func(Delegate delegate, pr::EventHandlerId id) :m_delegate(delegate) ,m_id(id) {}
 			};
-			std::list<Func> m_handlers;
+			std::vector<Func> m_handlers;
 			void operator()(P0 p0, P1 p1, P2 p2, P3 p3) const { for (auto& h : m_handlers) h(p0,p1,p2,p3); }
 		};
 
@@ -140,7 +145,7 @@ namespace pr
 				void operator()(P0 p0, P1 p1, P2 p2, P3 p3, P4 p4) const { m_delegate(p0,p1,p2,p3,p4); }
 				Func(Delegate delegate, pr::EventHandlerId id) :m_delegate(delegate) ,m_id(id) {}
 			};
-			std::list<Func> m_handlers;
+			std::vector<Func> m_handlers;
 			void operator()(P0 p0, P1 p1, P2 p2, P3 p3, P4 p4) const { for (auto& h : m_handlers) h(p0,p1,p2,p3,p4); }
 		};
 	}

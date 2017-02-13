@@ -108,7 +108,7 @@ namespace pr
 			}
 			void OnMouseWheel(MouseWheelArgs& args) override
 			{
-				View3D_MouseNavigateZ(m_win, view3d::To<View3DV2>(args.m_point), args.m_delta);
+				View3D_MouseNavigateZ(m_win, view3d::To<View3DV2>(args.m_point), args.m_delta, TRUE);
 			}
 
 			// Render the panel

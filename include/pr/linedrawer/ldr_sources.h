@@ -79,6 +79,16 @@ namespace pr
 				{}
 			};
 
+			// Source file removed event args
+			struct FileRemovedEventArgs
+			{
+				pr::Guid m_file_group_id;
+
+				FileRemovedEventArgs(pr::Guid file_group_id)
+					:m_file_group_id(file_group_id)
+				{}
+			};
+
 		private:
 
 			FileCont                   m_files;    // The file sources of ldr script
@@ -97,6 +107,7 @@ namespace pr
 				,m_embed(embed)
 				,OnError()
 				,OnStoreChanged()
+				,OnFileRemoved()
 			{}
 
 			// Parse error event
@@ -104,6 +115,9 @@ namespace pr
 
 			// Store changed event
 			pr::EventHandler<ScriptSources&, StoreChangedEventArgs const&> OnStoreChanged;
+
+			// Source file being removed event (i.e. objects deleted by Id)
+			pr::EventHandler<ScriptSources&, FileRemovedEventArgs const&> OnFileRemoved;
 
 			// Return const access to the source files
 			FileCont const& List() const
@@ -116,14 +130,17 @@ namespace pr
 			{
 				// Delete all objects belonging to all file groups
 				for (auto& file : m_files)
+				{
+					OnFileRemoved(*this, FileRemovedEventArgs(file.second.m_file_group_id));
 					pr::ldr::Remove(*m_store, &file.second.m_file_group_id, 1, 0, 0);
+				}
 
 				// Remove all file watches
 				m_watcher.RemoveAll();
 				m_files.clear();
 			}
 
-			// Add a file source. Returns the number of objects added
+			// Add a file source
 			pr::Guid AddFile(wchar_t const* filepath, bool async, pr::script::Includes<> const& includes)
 			{
 				File file(filepath, pr::GenerateGUID(), async, includes);
@@ -155,6 +172,9 @@ namespace pr
 
 				auto& file = iter->second;
 
+				// Notify of objects about to be deleted
+				OnFileRemoved(*this, FileRemovedEventArgs(file.m_file_group_id));
+
 				// Delete all objects belonging to this file group
 				pr::ldr::Remove(*m_store, &file.m_file_group_id, 1, 0, 0);
 
@@ -173,18 +193,18 @@ namespace pr
 
 		private:
 
-			// Internal add file. Returns the number of objects added.
+			// Internal add file.
 			// Note: 'file_' not passed by reference because it can be a
 			// file already in the collection, so we need a local copy.
-			pr::Guid AddFile(File file_, StoreChangedEventArgs::EReason reason)
+			pr::Guid AddFile(File file, StoreChangedEventArgs::EReason reason)
 			{
 				using namespace pr::script;
 
 				// Ensure the same file is not added twice
-				Remove(file_.m_filepath.c_str());
+				Remove(file.m_filepath.c_str());
 
 				// Add the filepath to the source files collection
-				auto& file = m_files[file_.m_filepath] = file_;
+				m_files[file.m_filepath] = file;
 
 				try
 				{
@@ -192,13 +212,13 @@ namespace pr
 					auto bcount = m_store->size();
 
 					// Add file watchers for the file and everything it includes
-					m_watcher.Add(file.m_filepath.c_str(), this, file.m_file_group_id, &file);
+					m_watcher.Add(file.m_filepath.c_str(), this, file.m_file_group_id);
 					auto add_watch = [&](pr::script::string const& fp)
 					{
 						// Use the same file group Id for all included files
 						// Use 'file' as the user data so that each included file has a link to the root.
 						auto fpath = pr::filesys::Standardise(fp);
-						m_watcher.Add(fpath.c_str(), this, file.m_file_group_id, &file);
+						m_watcher.Add(fpath.c_str(), this, file.m_file_group_id);
 
 						// Add the directory of the included file to the paths
 						file.m_includes.AddSearchPath(pr::filesys::GetDirectory(fpath));
@@ -212,12 +232,13 @@ namespace pr
 					}
 					else if (pr::str::EqualI(extn, "p3d"))
 					{
-						Buffer<> src(ESrcType::Buffered, pr::FmtS("*Model {\"%s\"}", file.m_filepath.c_str()));
+						Buffer<> src(ESrcType::Buffered, pr::FmtS(L"*Model {\"%s\"}", file.m_filepath.c_str()));
 						Reader reader(src, false, &file.m_includes, nullptr, m_embed);
 						Parse(*m_rdr, reader, out, true, file.m_file_group_id);
 					}
-					else // assume ldr script file
+					else
 					{
+						// Assume an ldr script file
 						pr::LockFile lock(file.m_filepath, 10, 5000);
 						FileSrc src(file.m_filepath.c_str());
 
@@ -228,31 +249,19 @@ namespace pr
 						Parse(*m_rdr, reader, out, true, file.m_file_group_id);
 					}
 
+					// Notify of the store change
 					auto count = int(m_store->size() - bcount);
 					OnStoreChanged(*this, StoreChangedEventArgs(*m_store, count, out, reason));
 					return file.m_file_group_id;
 				}
 				catch (pr::script::Exception const& ex)
 				{
+					Remove(file.m_filepath.c_str());
 					OnError(*this, ErrorEventArgs(pr::FmtS(L"Script error found while parsing source file '%s'.\r\n%S", file.m_filepath.c_str(), ex.what())));
 				}
-				//catch (LdrException const& ex)
-				//{
-				//	std::wstring msg;
-				//	switch (ex.code())
-				//	{
-				//	default: throw;
-				//	case ELdrException::FileNotFound:
-				//		msg = pr::FmtS(L"Source file '%s' not found.", fpath.c_str());
-				//		break;
-				//	case ELdrException::FailedToLoad:
-				//		msg = pr::FmtS(L"Failed to load source file '%s'", fpath.c_str());
-				//		break;
-				//	}
-				//	pr::events::Send(Evt_AppMsg(msg, L"Add Script File"));
-				//}
 				catch (std::exception const& ex)
 				{
+					Remove(file.m_filepath.c_str());
 					OnError(*this, ErrorEventArgs(pr::FmtS(L"Error found while parsing source file '%s'.\r\n%S", file.m_filepath.c_str(), ex.what())));
 				}
 				return pr::GuidZero;
@@ -260,14 +269,15 @@ namespace pr
 
 			// 'filepath' is the name of the changed file
 			// 'handled' should be set to false if the file should be reported as changed the next time 'CheckForChangedFiles' is called (true by default)
-			void FileWatch_OnFileChanged(wchar_t const*, pr::Guid const&, void* user_data, bool& handled)
+			void FileWatch_OnFileChanged(wchar_t const*, pr::Guid const& file_group_id, void*, bool&)
 			{
-				// Get the root file object associated with 'filepath' and add it as though it is a new file.
-				// The changed file may have been included from other files.
-				// We want to reload from the root of the file hierarchy
-				auto& file = *static_cast<File const*>(user_data);
-				AddFile(file, StoreChangedEventArgs::EReason::Reload);
-				handled = true;
+				// Look for the root file for group 'file_group_id'
+				auto iter = pr::find_if(m_files, [=](auto& file){ return file.second.m_file_group_id == file_group_id; });
+				if (iter == std::end(m_files))
+					return;
+
+				// Reload that file group
+				AddFile(iter->second, StoreChangedEventArgs::EReason::Reload);
 			}
 		};
 	}

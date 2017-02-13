@@ -16,7 +16,6 @@ namespace Rylobot
 	public abstract class Strategy :IDisposable
 	{
 		// Notes:
-		// - One trade per strategy.
 		// - Strategies should be resume-able, i.e on start they should look for
 		//   existing positions associated with the strategy and continue using them.
 		//   This is so startup/shutdown have very little effect on the running of the bot.
@@ -85,9 +84,7 @@ namespace Rylobot
 		}
 		private List<Vec2d> Suitability;
 
-		/// <summary>
-		/// Step the strategy.
-		/// Note: Instruments are signed up to Bot.Tick, they will be updated before Strategy.Step() is called.</summary>
+		/// <summary>Step the strategy. Note: Instruments are signed up to Bot.Tick, they will be updated before Strategy.Step() is called.</summary>
 		public virtual void Step()
 		{
 			if (Instrument.NewCandle)
@@ -101,31 +98,31 @@ namespace Rylobot
 		/// <summary>Called just before the bot stops</summary>
 		protected virtual void OnBotStopping()
 		{
-			{// Output instrument
-				var ldr = new pr.ldr.LdrBuilder();
-				using (ldr.Group(string.Empty, Debugging.ScaleTxfm))
-					Debugging.Dump(Instrument, emas:new[] {100,55}, ldr_:ldr);
-				ldr.ToFile(Debugging.FP("{0}_{1}.ldr".Fmt(Label, Instrument.SymbolCode)));
-			}
-			{// Output suitability
-				var range = RangeF.Invalid;
-				foreach (var c in Instrument.CandleRange())
-				{
-					range.Encompass(c.Low);
-					range.Encompass(c.High);
-				}
+			//{// Output instrument
+			//	var ldr = new pr.ldr.LdrBuilder();
+			//	using (ldr.Group(string.Empty, Debugging.ScaleTxfm))
+			//		Debugging.Dump(Instrument, emas:new[] {100,55}, ldr_:ldr);
+			//	ldr.ToFile(Debugging.FP("{0}_{1}.ldr".Fmt(Label, Instrument.SymbolCode)));
+			//}
+			//{// Output suitability
+			//	var range = RangeF.Invalid;
+			//	foreach (var c in Instrument.CandleRange())
+			//	{
+			//		range.Encompass(c.Low);
+			//		range.Encompass(c.High);
+			//	}
 
-				var ldr = new pr.ldr.LdrBuilder();
-				using (ldr.Group(string.Empty, Debugging.ScaleTxfm))
-				{
-					var suitability = Suitability.Select(x => new v4((float)x.x, (float)(x.y * range.Size + range.Begin), 0.05f, 1f));
-					ldr.Line("suitability", 0xFF8000FF, 1, suitability);
-					ldr.Line("suitability_0", 0xFF8000A0, new v4(0f, (float)range.Begin, 0.05f, 1f), new v4(Instrument.Count, (float)range.Begin, 0.05f, 1f));
-					ldr.Line("suitability_v", 0xFF8020F0, new v4(0f, (float)range.Mid  , 0.05f, 1f), new v4(Instrument.Count, (float)range.Mid  , 0.05f, 1f));
-					ldr.Line("suitability_1", 0xFF8000A0, new v4(0f, (float)range.End  , 0.05f, 1f), new v4(Instrument.Count, (float)range.End  , 0.05f, 1f));
-				}
-				ldr.ToFile(Debugging.FP("{0}_suitability.ldr".Fmt(Label)));
-			}
+			//	var ldr = new pr.ldr.LdrBuilder();
+			//	using (ldr.Group(string.Empty, Debugging.ScaleTxfm))
+			//	{
+			//		var suitability = Suitability.Select(x => new v4((float)x.x, (float)(x.y * range.Size + range.Begin), 0.05f, 1f));
+			//		ldr.Line("suitability", 0xFF8000FF, 1, suitability);
+			//		ldr.Line("suitability_0", 0xFF8000A0, new v4(0f, (float)range.Begin, 0.05f, 1f), new v4(Instrument.Count, (float)range.Begin, 0.05f, 1f));
+			//		ldr.Line("suitability_v", 0xFF8020F0, new v4(0f, (float)range.Mid  , 0.05f, 1f), new v4(Instrument.Count, (float)range.Mid  , 0.05f, 1f));
+			//		ldr.Line("suitability_1", 0xFF8000A0, new v4(0f, (float)range.End  , 0.05f, 1f), new v4(Instrument.Count, (float)range.End  , 0.05f, 1f));
+			//	}
+			//	ldr.ToFile(Debugging.FP("{0}_suitability.ldr".Fmt(Label)));
+			//}
 		}
 
 		/// <summary>Return the position associated with 'id' or null</summary>

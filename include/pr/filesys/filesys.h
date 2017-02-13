@@ -203,8 +203,8 @@ namespace pr
 		// Return true if 'path' contains a drive, i.e. is a full path
 		template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline bool IsFullPath(Str const& path)
 		{
-			Char const colon[] = {Char(':')}; // no null, because 'find' is templated on array length, and so tries to match the string ":\0" (i.e. length 2)
-			return path.find(colon) != Str::npos;
+			Char const colon[] = {':', 0}; // no null, because 'find' is templated on array length, and so tries to match the string ":\0" (i.e. length 2)
+			return path.find(&colon[0]) != Str::npos;
 		}
 
 		// Add quotes to the str if it doesn't already have them

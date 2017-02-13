@@ -184,9 +184,7 @@ namespace Rylobot
 			get { return (High + Low) / 2.0; }
 		}
 
-		/// <summary>
-		/// The ratio of BodyLength to TotalLevel.
-		/// "Strong" candles are those that show a significant move over life of the candle</summary>
+		/// <summary>The ratio of BodyLength to TotalLevel. "Strong" candles are those that show a significant move over the life of the candle</summary>
 		public double Strength
 		{
 			get { return BodyLength / TotalLength; }

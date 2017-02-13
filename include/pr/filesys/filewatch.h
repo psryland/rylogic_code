@@ -91,7 +91,7 @@ namespace pr
 		}
 
 		// Add a file to be watched
-		void Add(wchar_t const* filepath, IFileChangedHandler* onchanged, pr::Guid const& id, void* user_data)
+		void Add(wchar_t const* filepath, IFileChangedHandler* onchanged, pr::Guid const& id, void* user_data = nullptr)
 		{
 			Remove(filepath);
 			auto fpath = Canonicalise(filepath);

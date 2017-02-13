@@ -290,7 +290,7 @@ namespace pr.extn
 					// 'type_attr' can be false if the element matches the array element type
 					foreach (var i in (IEnumerable)obj)
 					{
-						var ty_attr = i == null || child_type == typeof(object) || i.GetType() != child_type;
+						var ty_attr = type_attr && (i == null || child_type == typeof(object) || i.GetType() != child_type);
 						node.Add(Convert(i, new XElement(elem_name), ty_attr));
 					}
 

@@ -153,9 +153,10 @@ namespace LDraw
 	{
 		public UISettings()
 		{
-			UILayout             = null;
-			WindowPosition       = Rectangle.Empty;
-			WindowMaximised      = false;
+			UILayout                  = null;
+			WindowPosition            = Rectangle.Empty;
+			WindowMaximised           = false;
+			ShowErrorLogOnNewMessages = true;
 		}
 
 		/// <summary>The dock panel layout</summary>
@@ -175,6 +176,13 @@ namespace LDraw
 		{
 			get { return get(x => x.WindowMaximised); }
 			set { set(x => x.WindowMaximised, value); }
+		}
+
+		/// <summary>Show the log window when new errors are added</summary>
+		public bool ShowErrorLogOnNewMessages
+		{
+			get { return get(x => x.ShowErrorLogOnNewMessages); }
+			set { set(x => x.ShowErrorLogOnNewMessages, value); }
 		}
 
 		private class TyConv :GenericTypeConverter<UISettings> {}

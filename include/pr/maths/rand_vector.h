@@ -219,7 +219,7 @@ namespace pr
 	}
 	template <typename Rng = std::default_random_engine> inline m3x4 Random3x4(Rng& rng)
 	{
-		return Random3x4(rng, Random3N(rng, 0.0f), 0.0f, maths::tau);
+		return Random3x4(rng, Random3N(rng, 0.0f), 0.0f, float(maths::tau));
 	}
 
 	// Create a random 4x4 matrix
@@ -254,7 +254,7 @@ namespace pr
 	}
 	template <typename Rng = std::default_random_engine> inline m4x4 Random4x4(Rng& rng, v4 const& centre, float radius)
 	{
-		return Random4x4(rng, Random3N(rng, 0.0f), 0.0f, maths::tau, centre, radius);
+		return Random4x4(rng, Random3N(rng, 0.0f), 0.0f, float(maths::tau), centre, radius);
 	}
 
 	// Create a random quaternion rotation
@@ -270,7 +270,7 @@ namespace pr
 	}
 	template <typename Rng = std::default_random_engine> inline quat RandomQ(Rng& rng)
 	{
-		std::uniform_real_distribution<float> dist(0.0f, maths::tau);
+		std::uniform_real_distribution<float> dist(0.0f, float(maths::tau));
 		return quat(Random3N(rng, 0.0f), dist(rng));
 	}
 }

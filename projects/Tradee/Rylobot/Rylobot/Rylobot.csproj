@@ -61,28 +61,20 @@
     <Compile Include="src\CAlgo.cs" />
     <Compile Include="src\Candle.cs" />
     <Compile Include="src\Debugging.cs" />
-    <Compile Include="src\Predictor.cs" />
-    <Compile Include="src\PredictorCandle.cs" />
-    <Compile Include="src\PredictorEMA.cs" />
-    <Compile Include="src\PredictorNeuralNet.cs" />
-    <Compile Include="src\PredictorPotLuck.cs" />
     <Compile Include="src\SnR.cs" />
-    <Compile Include="src\StrategyDataCollector.cs" />
-    <Compile Include="src\StrategyHedge.cs" />
     <Compile Include="src\StrategyRevenge.cs" />
     <Compile Include="src\Instrument.cs" />
     <Compile Include="src\InstrumentSettings.cs" />
-    <Compile Include="src\StrategyTail.cs" />
     <Compile Include="src\Settings.cs" />
     <Compile Include="src\Strategy.cs" />
-    <Compile Include="src\StrategyMain.cs" />
-    <Compile Include="src\StrategyPotLuck.cs" />
-    <Compile Include="src\StrategyTrend.cs" />
     <Compile Include="src\Trade.cs" />
     <Compile Include="src\Typedefs.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="net\forex.cntk" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="half_baked\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -13,33 +13,36 @@ namespace pr.maths
 	/// <summary>scalar functions</summary>
 	public static partial class Maths
 	{
-		public const float Tiny      = 1.000000e-4F; // Can't go lower than this cos DX uses less precision
-		public const float Tau       = 6.283185307179586476925286766559e+0F; // circle constant
-		public const float TauBy360  = 0.01745329251994329576923690768489e+0F;
-		public const float _360ByTau = 57.295779513082320876798154814105e+0F;
-		public const float Phi       = 1.618034e+0F; // "Golden Ratio"
-		public const float InvTau    = 0.15915494309189533576888376337251e+0F;
-		public const float TauBy2    = 3.1415926535897932384626433832795e+0F;
-		public const float TauBy3    = 2.0943951023931954923084289221863e+0F;
-		public const float TauBy4    = 1.5707963267948966192313216916398e+0F;
-		public const float TauBy5    = 1.2566370614359172953850573533118e+0F;
-		public const float TauBy6    = 1.047198551196597746154214461093e+0F;
-		public const float TauBy7    = 0.897597901025655210989326680937e+0F;
-		public const float TauBy8    = 0.78539816339744830961566084581988e+0F;
-		public const float TauBy10   = 0.6283185307179586476925286766559e+0F;
-		public const float TauBy16   = 0.39269908169872415480783042290994e+0F;
-		public const float TauBy32   = 0.19634954084936207740391521145497e+0F;
-		public const float Root2     = 1.4142135623730950488016887242097e+0F;
-		public const float Root3     = 1.7320508075688772935274463415059e+0F;
+		public const float TinyF     = 1.00000007e-05f;
+		public const float TinySqF   = 1.00000015e-10f;
+		public const float TinySqrtF = 3.16227786e-03f;
 
-		public static float     TinyF                                           { get { return Tiny; } }
-		public static double    TinyD                                           { get { return Tiny; } }
+		public const double TinyD     = 1.0000000000000002e-12;
+		public const double TinySqD   = 1.0000000000000003e-24;
+		public const double TinySqrtD = 1.0000000000000002e-06;
+		
+		public const double Phi       = 1.618033988749894848204586834; // "Golden Ratio"
+		public const double Tau       = 6.283185307179586476925286766559; // circle constant
+		public const double InvTau    = 1.0 / Tau;
+		public const double TauBy2    = Tau / 2.0;
+		public const double TauBy3    = Tau / 3.0;
+		public const double TauBy4    = Tau / 4.0;
+		public const double TauBy5    = Tau / 5.0;
+		public const double TauBy6    = Tau / 6.0;
+		public const double TauBy7    = Tau / 7.0;
+		public const double TauBy8    = Tau / 8.0;
+		public const double TauBy10   = Tau / 10.0;
+		public const double TauBy16   = Tau / 16.0;
+		public const double TauBy32   = Tau / 32.0;
+		public const double TauBy360  = Tau / 360.0;
+		public const double _360ByTau = 360.0 / Tau;
+		public const double Root2     = 1.4142135623730950488016887242097;
+		public const double Root3     = 1.7320508075688772935274463415059;
+		public const double InvRoot2  = 1.0 / 1.4142135623730950488016887242097;
+		public const double InvRoot3  = 1.0 / 1.7320508075688772935274463415059;
+
 		public static bool      IsFinite(float x)                               { return !float.IsInfinity(x) && !float.IsNaN(x); }
 		public static bool      IsFinite(double x)                              { return !double.IsInfinity(x) && !double.IsNaN(x); }
-		public static bool      FEql(float lhs, float rhs, float tol)           { return Math.Abs(lhs - rhs) < tol; }
-		public static bool      FEql(float lhs, float rhs)                      { return FEql(lhs, rhs, TinyF); }
-		public static bool      FEql(double lhs, double rhs, double tol)        { return Math.Abs(lhs - rhs) < tol; }
-		public static bool      FEql(double lhs, double rhs)                    { return FEql(lhs, rhs, TinyD); }
 		public static int       SignI(bool positive)                            { return positive ? 1 : -1; }
 		public static float     SignF(bool positive)                            { return positive ? 1f : -1f; }
 		public static double    SignD(bool positive)                            { return positive ? 1.0 : -1.0; }
@@ -68,12 +71,16 @@ namespace pr.maths
 		public static float     Clamp(float x, float min, float max)            { Debug.Assert(min <= max); return (x > max) ? max : (x < min) ? min : x; }
 		public static double    Clamp(double x, double min, double max)         { Debug.Assert(min <= max); return (x > max) ? max : (x < min) ? min : x; }
 		public static decimal   Clamp(decimal x, decimal min, decimal max)      { Debug.Assert(min <= max); return (x > max) ? max : (x < min) ? min : x; }
-		public static float     DegreesToRadians(float degrees)                 { return degrees * TauBy360; }
+		public static float     DegreesToRadians(float degrees)                 { return (float)(degrees * TauBy360); }
 		public static double    DegreesToRadians(double degrees)                { return degrees * TauBy360; }
-		public static float     RadiansToDegrees(float radians)                 { return radians * _360ByTau; }
+		public static v4        DegreesToRadians(v4 degrees)                    { return new v4(DegreesToRadians(degrees.x), DegreesToRadians(degrees.y), DegreesToRadians(degrees.z), DegreesToRadians(degrees.w)); }
+		public static float     RadiansToDegrees(float radians)                 { return (float)(radians * _360ByTau); }
 		public static double    RadiansToDegrees(double radians)                { return radians * _360ByTau; }
-		public static void      Swap(ref int lhs, ref int rhs)                  { int tmp = lhs; lhs = rhs; rhs = tmp; }
-		public static void      Swap(ref float lhs, ref float rhs)              { float tmp = lhs; lhs = rhs; rhs = tmp; }
+		public static v4        RadiansToDegrees(v4 degrees)                    { return new v4(RadiansToDegrees(degrees.x), RadiansToDegrees(degrees.y), RadiansToDegrees(degrees.z), RadiansToDegrees(degrees.w)); }
+		public static void      Swap(ref int lhs, ref int rhs)                  { var tmp = lhs; lhs = rhs; rhs = tmp; }
+		public static void      Swap(ref long lhs, ref long rhs)                { var tmp = lhs; lhs = rhs; rhs = tmp; }
+		public static void      Swap(ref float lhs, ref float rhs)              { var tmp = lhs; lhs = rhs; rhs = tmp; }
+		public static void      Swap(ref double lhs, ref double rhs)            { var tmp = lhs; lhs = rhs; rhs = tmp; }
 		public static int       Lerp(int lhs, int rhs, float frac)              { return (int)Math.Round(Lerp((float)lhs, (float)rhs, frac), 0); }
 		public static long      Lerp(long lhs, long rhs, double frac)           { return (long)Math.Round(Lerp((double)lhs, (double)rhs, frac), 0); }
 		public static float     Lerp(float lhs, float rhs, float frac)          { return lhs * (1f - frac) + rhs * (frac); }
@@ -91,6 +98,43 @@ namespace pr.maths
 		public static float     Len2(float x, float y)                          { return Sqrt(Len2Sq(x,y)); }
 		public static float     Len3Sq(float x, float y, float z)               { return Sqr(x) + Sqr(y) + Sqr(z); }
 		public static float     Len3(float x, float y, float z)                 { return Sqrt(Len3Sq(x,y,z)); }
+
+		// Floating point comparisons
+		public static bool FEql(float a, float b, float tol = TinyF)
+		{
+			// Floating point compare is dangerous and subtle.
+			// See: https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
+			// and: http://floating-point-gui.de/errors/NearlyEqualsTest.java
+			// Tests against zero treat 'tol' as an absolute difference threshold.
+			// Tests between two non-zero values use 'tol' as a relative difference threshold.
+			// i.e.
+			//    FEql(2e-30, 1e-30) == false
+			//    FEql(2e-30 - 1e-30, 0) == true
+
+			// Handles tests against zero where relative error is meaningless
+			// Tests with 'b == 0' are the most common so do them first
+			if (b == 0) return Math.Abs(a) < tol;
+			if (a == 0) return Math.Abs(b) < tol;
+
+			// Handle infinities and exact values
+			if (a == b) return true;
+
+			// Test relative error as a fraction of the largest value
+			return Math.Abs(a - b) < tol * Math.Max(Math.Abs(a), Math.Abs(b));
+		}
+		public static bool FEql(double a, double b, double tol = TinyD)
+		{
+			// Handles tests against zero where relative error is meaningless
+			// Tests with 'b == 0' are the most common so do them first
+			if (b == 0) return Math.Abs(a) < tol;
+			if (a == 0) return Math.Abs(b) < tol;
+
+			// Handle infinities and exact values
+			if (a == b) return true;
+
+			// Test relative error as a fraction of the largest value
+			return Math.Abs(a - b) < tol * Math.Max(Math.Abs(a), Math.Abs(b));
+		}
 
 		/// <summary>Divide 'a' by 'b' if 'b' is not equal to zero, otherwise return 0</summary>
 		public static int Div(int a, int b, int def = 0)

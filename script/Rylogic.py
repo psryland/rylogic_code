@@ -1,4 +1,4 @@
-import sys, os, time, shutil, glob, subprocess, threading, re, enum, socket, zipfile, ctypes
+import sys, os, time, shutil, glob, subprocess, threading, re, enum, socket, zipfile, ctypes, hashlib
 import xml.etree.ElementTree as xml
 import xml.dom.minidom as minidom
 import UserVars
@@ -97,14 +97,25 @@ def SaveFile(path, buf, mode='wb', encoding="utf-8"):
 	with open(path, mode, encoding=encoding) as f:
 		f.write(buf)
 
+# Return the hash of a file
+def HashFile(filepath, hasher = None, blocksize = 65536):
+	hasher = hasher if hasher else hashlib.md5()
+	with open(filepath, 'rb') as file:
+		buf = file.read(blocksize)
+		while len(buf) > 0:
+			hasher.update(buf)
+			buf = file.read(blocksize)
+	
+	return hasher.hexdigest()
+
 # Compare the timestamps of two files and return true if they are different
-def Diff(src,dst):
+def Diff(src, dst):
 	sfound = os.path.exists(src)
 	dfound = os.path.exists(dst)
 	return not sfound or not dfound or os.stat(src).st_mtime != os.stat(dst).st_mtime
 
 # Compare the content of two files and return true if they are different, ignoring file timestamps
-def DiffContent(src,dst,trace=False):
+def DiffContent(src, dst, trace=False, blocksize = 65536):
 	sfound = os.path.exists(src)
 	dfound = os.path.exists(dst)
 	if not sfound:
@@ -118,21 +129,47 @@ def DiffContent(src,dst,trace=False):
 		return True
 	with open(src,'rb') as s:
 		with open(dst,'rb') as d:
-			sd = s.read()
-			dd = d.read()
-			if sd != dd:
+			sd = s.read(blocksize);
+			dd = d.read(blocksize);
+			blk = 0;
+			while len(sd) > 0 or len(dd) > 0:
+				if sd != dd: break;
+				sd = s.read(blocksize);
+				dd = d.read(blocksize);
+				blk += 1;
+			
+			if len(sd) != 0 or len(dd) != 0:
 				if trace:
-					print("Content different, '"+src+"' and '"+dst+"' have different content")
-					print(len(sd))
+					print("Content different, '"+src+"' and '"+dst+"' have different content ")
 					for i in range(0,len(sd)):
 						if sd[i] != dd[i]:
-							print("diff at byte " + str(i) + ": " + str(sd[i]) + " != " + str(dd[i]))
+							print("diff at byte " + str(i+blk*blocksize) + ": " + str(sd[i]) + " != " + str(dd[i]))
 							break
 				return True
 
 	if trace: print("'"+src+"' and '"+dst+"' are identical")
 	return False
 
+# Compare the content of two files by calculating and comparing hashes, ignoring file timestamps
+def DiffHash(src,dst,trace=False):
+	sfound = os.path.exists(src)
+	dfound = os.path.exists(dst)
+	if not sfound:
+		if trace: print("Content different, '"+src+"' not found")
+		return True
+	if not dfound:
+		if trace: print("Content different, '"+dst+"' not found")
+		return True
+	if os.path.getsize(src) != os.path.getsize(dst):
+		if trace: print("Content different, '"+src+"' and '"+dst+"' have different sizes")
+		return True
+	if not HashFile(src) == HashFile(dst):
+		if trace: print("Content different, '"+src+"' and '"+dst+"' have different hashes")
+		return True
+
+	if trace: print("'"+src+"' and '"+dst+"' are identical")
+	return False
+	
 # Copy 'src' to 'dst' optionally if 'src' is newer than 'dst'
 def Copy(src, dst, only_if_modified=True, show_unchanged=False, ignore_non_existing=False, quiet=False):
 
@@ -189,7 +226,7 @@ def Copy(src, dst, only_if_modified=True, show_unchanged=False, ignore_non_exist
 		# Copy the file
 		else:
 			# Copy if modified or always based on the flag
-			if only_if_modified and not DiffContent(s, d):
+			if only_if_modified and not DiffContent(s,d):
 				if not quiet and show_unchanged: print(s + " --> unchanged")
 				continue
 

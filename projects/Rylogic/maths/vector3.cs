@@ -517,9 +517,9 @@ namespace pr.unittests
 			var a = new v3(3,-1,2);
 
 			Assert.True(Maths.FEql(a.Length2Sq, a.x*a.x + a.y*a.y));
-			Assert.True(Maths.FEql(a.Length2  , Math.Sqrt(a.Length2Sq)));
+			Assert.True(Maths.FEql(a.Length2  , (float)Math.Sqrt(a.Length2Sq)));
 			Assert.True(Maths.FEql(a.Length3Sq, a.x*a.x + a.y*a.y + a.z*a.z));
-			Assert.True(Maths.FEql(a.Length3  , Math.Sqrt(a.Length3Sq)));
+			Assert.True(Maths.FEql(a.Length3  , (float)Math.Sqrt(a.Length3Sq)));
 		}
 		[Test] public void Normals()
 		{

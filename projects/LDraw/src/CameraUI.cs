@@ -28,7 +28,7 @@ namespace LDraw
 		private Label m_lbl_fovX;
 		private Label m_lbl_fovY;
 		private Button m_btn_close;
-		private Button m_btn_hidden;
+		private Button m_btn_bong;
 		private CheckBox m_chk_preserve_aspect;
 		private Label m_lbl_aspect_ratio;
 		private ValueBox m_tb_aspect;
@@ -228,7 +228,7 @@ namespace LDraw
 			this.m_lbl_fovY = new System.Windows.Forms.Label();
 			this.m_lbl_focus_dist = new System.Windows.Forms.Label();
 			this.m_timer = new System.Windows.Forms.Timer(this.components);
-			this.m_btn_hidden = new System.Windows.Forms.Button();
+			this.m_btn_bong = new System.Windows.Forms.Button();
 			this.m_tb_focus_dist = new pr.gui.ValueBox();
 			this.m_tb_fovX = new pr.gui.ValueBox();
 			this.m_tb_fovY = new pr.gui.ValueBox();
@@ -317,16 +317,16 @@ namespace LDraw
 			this.m_lbl_focus_dist.Text = "Focus Distance:";
 			this.m_lbl_focus_dist.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			// 
-			// m_btn_hidden
+			// m_btn_bong
 			// 
-			this.m_btn_hidden.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-			this.m_btn_hidden.Location = new System.Drawing.Point(11, 307);
-			this.m_btn_hidden.Name = "m_btn_hidden";
-			this.m_btn_hidden.Size = new System.Drawing.Size(121, 28);
-			this.m_btn_hidden.TabIndex = 13;
-			this.m_btn_hidden.Text = "Prevent the Bong";
-			this.m_btn_hidden.UseVisualStyleBackColor = true;
-			this.m_btn_hidden.Visible = false;
+			this.m_btn_bong.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+			this.m_btn_bong.Location = new System.Drawing.Point(11, 307);
+			this.m_btn_bong.Name = "m_btn_bong";
+			this.m_btn_bong.Size = new System.Drawing.Size(121, 28);
+			this.m_btn_bong.TabIndex = 13;
+			this.m_btn_bong.Text = "BONG!";
+			this.m_btn_bong.UseVisualStyleBackColor = true;
+			this.m_btn_bong.Visible = false;
 			// 
 			// m_tb_focus_dist
 			// 
@@ -540,7 +540,7 @@ namespace LDraw
 			// 
 			// CameraUI
 			// 
-			this.AcceptButton = this.m_btn_hidden;
+			this.AcceptButton = this.m_btn_bong;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.CancelButton = this.m_btn_close;
@@ -554,7 +554,7 @@ namespace LDraw
 			this.Controls.Add(this.m_lbl_aspect_ratio);
 			this.Controls.Add(this.m_tb_aspect);
 			this.Controls.Add(this.m_chk_preserve_aspect);
-			this.Controls.Add(this.m_btn_hidden);
+			this.Controls.Add(this.m_btn_bong);
 			this.Controls.Add(this.m_tb_focus_dist);
 			this.Controls.Add(this.m_lbl_focus_dist);
 			this.Controls.Add(this.m_tb_fovX);

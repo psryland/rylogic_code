@@ -491,7 +491,7 @@ namespace pr.unittests
 			var a = new v2(3,-1);
 
 			Assert.True(Maths.FEql(a.Length2Sq, a.x*a.x + a.y*a.y));
-			Assert.True(Maths.FEql(a.Length2  , Math.Sqrt(a.Length2Sq)));
+			Assert.True(Maths.FEql(a.Length2  , (float)Math.Sqrt(a.Length2Sq)));
 		}
 		[Test] public void Normals()
 		{

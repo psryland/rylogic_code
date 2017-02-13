@@ -9,6 +9,9 @@ namespace Rylobot
 {
 	public class StrategyHedge :Strategy
 	{
+		// Notes:
+		//
+
 		public StrategyHedge(Rylobot bot)
 			:base(bot, "StrategyHedge")
 		{
@@ -140,15 +143,15 @@ namespace Rylobot
 		/// <summary>Debugging output</summary>
 		private void Dump()
 		{
-			if (!Debugger.IsAttached) return;
-			Debugging.Dump(Instrument, high_res:20);
-			var ldr = new pr.ldr.LdrBuilder();
-			using (ldr.Group("active", Debugging.ScaleTxfm))
-			{
-				if (Buy != null) Debugging.Dump(Buy, Instrument, ldr_:ldr);
-				if (Sel != null) Debugging.Dump(Sel, Instrument, ldr_:ldr);
-			}
-			ldr.ToFile(Debugging.FP("hedge.ldr"));
+			//if (!Debugger.IsAttached) return;
+			//Debugging.Dump(Instrument, high_res:20);
+			//var ldr = new pr.ldr.LdrBuilder();
+			//using (ldr.Group("active", Debugging.ScaleTxfm))
+			//{
+			//	if (Buy != null) Debugging.Dump(Buy, Instrument, ldr_:ldr);
+			//	if (Sel != null) Debugging.Dump(Sel, Instrument, ldr_:ldr);
+			//}
+			//ldr.ToFile(Debugging.FP("hedge.ldr"));
 		}
 	}
 }

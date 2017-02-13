@@ -346,7 +346,7 @@ namespace pr.maths
 		{
 			Debug.Assert(angular_displacement.w == 0, "'angular_displacement' should be a scaled direction vector");
 			var len = angular_displacement.Length3;
-			return len > Maths.Tiny
+			return len > Maths.TinyF
 				? Rotation(angular_displacement/len, len)
 				: Identity;
 		}
@@ -354,12 +354,14 @@ namespace pr.maths
 		/// <summary>Create a transform representing the rotation from one vector to another. 'from' and 'to' do not have to be normalised</summary>
 		public static m3x4 Rotation(v4 from, v4 to)
 		{
+			Debug.Assert(!Maths.FEql(from.Length3, 0));
+			Debug.Assert(!Maths.FEql(to.Length3, 0));
 			var len = from.Length3 * to.Length3;
 
 			// Find the cosine of the angle between the vectors
 			var cos_angle = v4.Dot3(from, to) / len;
 			if (cos_angle >= 1f - Maths.TinyF) return Identity;
-			if (cos_angle <= Maths.TinyF - 1f) return -Identity;
+			if (cos_angle <= Maths.TinyF - 1f) return Rotation(v4.Normalise3(v4.Perpendicular(from - to)), (float)Maths.TauBy2);
 
 			// Axis multiplied by sine of the angle
 			var axis_sine_angle = v4.Cross3(from, to) / len;
@@ -398,7 +400,7 @@ namespace pr.maths
 		}
 		public static m3x4 Random(Random r)
 		{
-			return Random(r, v4.Random3N(0.0f, r), 0.0f, Maths.Tau);
+			return Random(r, v4.Random3N(0.0f, r), 0.0f, (float)Maths.Tau);
 		}
 
 		#endregion
@@ -430,7 +432,7 @@ namespace pr.unittests
 		{
 			var rng = new Random();
 			{
-				var m = m3x4.Random(rng, v4.Random3N(0, rng), -Maths.Tau, +Maths.Tau);
+				var m = m3x4.Random(rng, v4.Random3N(0, rng), -(float)Maths.Tau, +(float)Maths.Tau);
 				var inv_m0 = m3x4.InvertFast(m);
 				var inv_m1 = m3x4.Invert(m);
 				Assert.True(m3x4.FEql(inv_m0, inv_m1));

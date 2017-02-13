@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using cAlgo.API;
 using cAlgo.API.Internals;
@@ -36,15 +37,18 @@ namespace Rylobot
 
 			// Create the strategies to use
 			Strats = new List<Strategy>();
-			Strats.Add(new StrategyTrend(this));
+			Strats.Add(new StrategyRevenge(this));
+			//Strats.Add(new StrategyTrend(this));
 			//Strats.Add(new StrategyHedge(this));
 
+			// Enable capture of trades to Ldr files
 			Debugging.LogTrades(this, true);
 		}
 		protected override void OnStop()
 		{
 			Stopping.Raise(this);
 
+			// Stop capturing trades
 			Debugging.LogTrades(this, false);
 
 			Strats = null;

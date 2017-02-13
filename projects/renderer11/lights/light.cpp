@@ -58,8 +58,8 @@ namespace pr
 			{
 			default:                  return m4x4Identity;
 			case ELight::Directional: return m4x4::ProjectionOrthographic(10.0f, 10.0f, centre_dist * 0.01f, centre_dist * 100.0f, true);
-			case ELight::Point:       return m4x4::ProjectionPerspectiveFOV(maths::tau_by_8, 1.0f, centre_dist * 0.01f, centre_dist * 100.0f, true);
-			case ELight::Spot:        return m4x4::ProjectionPerspectiveFOV(maths::tau_by_8, 1.0f, centre_dist * 0.01f, centre_dist * 100.0f, true);
+			case ELight::Point:       return m4x4::ProjectionPerspectiveFOV(float(maths::tau_by_8), 1.0f, centre_dist * 0.01f, centre_dist * 100.0f, true);
+			case ELight::Spot:        return m4x4::ProjectionPerspectiveFOV(float(maths::tau_by_8), 1.0f, centre_dist * 0.01f, centre_dist * 100.0f, true);
 			}
 		}
 

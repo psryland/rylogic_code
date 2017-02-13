@@ -191,6 +191,7 @@
 #include "pr\maths\line3_impl.h"
 #include "pr\maths\maths.h"
 #include "pr\maths\maths_core.h"
+#include "pr\maths\matrix.h"
 #include "pr\maths\matrix2x2.h"
 #include "pr\maths\matrix3x3.h"
 #include "pr\maths\matrix4x4.h"

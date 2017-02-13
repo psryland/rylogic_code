@@ -196,7 +196,7 @@ namespace Rylobot
 		}
 		private int m_suspend_risk_check;
 
-		/// <summary>Creates a market order in the given direction</summary>
+		/// <summary>Creates a market order. Throws if insufficient risk available</summary>
 		public Position CreateOrder(Trade trade, bool rethrow = false)
 		{
 			try
@@ -215,6 +215,7 @@ namespace Rylobot
 				if (!r.IsSuccessful)
 					throw new Exception("Execute market order failed: {0}".Fmt(r.Error));
 
+				// Output the order that was placed
 				Debugging.LogTrade(r.Position);
 
 				// Update the account balance
@@ -250,6 +251,7 @@ namespace Rylobot
 				if (!r.IsSuccessful)
 					throw new Exception("Modifying market order failed: {0}".Fmt(r.Error));
 
+				// Replace the order with updated info
 				Debugging.LogTrade(pos);
 
 				// Update the account balance
@@ -278,6 +280,7 @@ namespace Rylobot
 				if (!r.IsSuccessful)
 					throw new Exception("Close position failed: {0}".Fmt(r.Error));
 
+				// Update the order
 				Debugging.LogTrade(pos);
 
 				// Update the account balance
