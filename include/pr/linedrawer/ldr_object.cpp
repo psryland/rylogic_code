@@ -2307,7 +2307,7 @@ namespace pr
 					// No data
 					return;
 				}
-				if (m_xcolumn < -2 || m_xcolumn >= m_table.size())
+				if (m_xcolumn < -2 || m_xcolumn >= int(m_table.size()))
 				{
 					p.ReportError(EResult::Failed, pr::FmtS("Chart object '%s', X axis column does not exist", obj->TypeAndName().c_str()));
 					return;
@@ -2390,10 +2390,12 @@ namespace pr
 
 					// X Axis
 					auto ibase = verts.size();
-					verts.push_back(rot * v4(xrange.m_beg - 0.05f * xrange.size(), 0.0f, 0.0f, 1.0f));
-					verts.push_back(rot * v4(xrange.m_end + 0.05f * xrange.size(), 0.0f, 0.0f, 1.0f));
-					verts.push_back(rot * v4(0.0f, yrange.m_beg - 0.05f * yrange.size(), 0.0f, 1.0f));
-					verts.push_back(rot * v4(0.0f, yrange.m_end + 0.05f * yrange.size(), 0.0f, 1.0f));
+					auto x0 = xrange.m_beg > 0 ? xrange.m_beg : xrange.m_end < 0 ? xrange.m_end : 0.0f;
+					auto y0 = yrange.m_beg > 0 ? yrange.m_beg : yrange.m_end < 0 ? yrange.m_end : 0.0f;
+					verts.push_back(rot * v4(xrange.m_beg - 0.05f * xrange.size(), y0, 0.0f, 1.0f));
+					verts.push_back(rot * v4(xrange.m_end + 0.05f * xrange.size(), y0, 0.0f, 1.0f));
+					verts.push_back(rot * v4(x0, yrange.m_beg - 0.05f * yrange.size(), 0.0f, 1.0f));
+					verts.push_back(rot * v4(x0, yrange.m_end + 0.05f * yrange.size(), 0.0f, 1.0f));
 
 					lines.push_back(static_cast<pr::uint16>(ibase + 0));
 					lines.push_back(static_cast<pr::uint16>(ibase + 1));

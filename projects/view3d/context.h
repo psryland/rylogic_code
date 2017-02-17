@@ -48,6 +48,10 @@ namespace view3d
 			{
 				ReportError(args.m_msg.c_str());
 			};
+			m_sources.OnStoreChanged += [&](pr::ldr::ScriptSources&, pr::ldr::ScriptSources::StoreChangedEventArgs const& args)
+			{
+				OnSourcesChanged.Raise(static_cast<ESourcesChangedReason>(args.m_reason));
+			};
 		}
 		~Context()
 		{
@@ -149,6 +153,9 @@ namespace view3d
 		{
 			m_sources.RefreshChangedFiles();
 		}
+
+		// Event raised when the script sources are updated
+		pr::MultiCast<SourcesChangedCB> OnSourcesChanged;
 
 		// Delete all objects
 		void DeleteAllObjects()

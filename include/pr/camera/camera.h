@@ -754,33 +754,30 @@ namespace pr
 					focus_dist = (0.5f * size) / pr::Tan(0.5f * m_default_fovY);
 				}
 
-				// 'a' has the effect of using FovY if aspect > 1.0 or FovX if not
+				// Set the aspect ratio
 				auto aspect = width / height;
-				auto a = aspect >= 1.0f ? 1.0f : aspect;
 				auto d = focus_dist - sizez;
 
 				// Set the aspect and FOV based on the view of the bbox
 				Aspect(aspect);
-				FovY(2.0f * pr::ATan(0.5f * height * a / d));
+				FovY(2.0f * pr::ATan(0.5f * height / d));
 			}
 			else
 			{
-				// 'size' is the *radius* (i.e. not the full height) of the bounding box projected into the 'forward' plane.
+				// 'size' is the *radius* (i.e. not the full height) of the bounding box projected onto the 'forward' plane.
 				auto size = pr::Sqrt(pr::Clamp(pr::Length3Sq(bbox_radius) - pr::Sqr(sizez), 0.0f, pr::maths::float_max));
-
-				// 'a' has the effect of using FovY if aspect > 1.0 or FovX if not
-				auto a = m_aspect >= 1.0f ? 1.0f : m_aspect;
 
 				// Choose the focus distance if not given
 				if (focus_dist == 0 || focus_dist < sizez)
 				{
-					auto d = size / (pr::Tan(0.5f * FovY()) * a);
+					auto d = size / (pr::Tan(0.5f * FovY()) * m_aspect);
 					focus_dist = sizez + d;
 				}
+				// Otherwise, set the FOV
 				else
 				{
 					auto d = focus_dist - sizez;
-					FovY(2.0f * pr::ATan(size * a / d));
+					FovY(2.0f * pr::ATan(size * m_aspect / d));
 				}
 			}
 

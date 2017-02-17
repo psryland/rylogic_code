@@ -71,11 +71,13 @@ namespace LDraw
 				if (m_model != null)
 				{
 					m_model.DragDrop.Detach(this);
+					Scene.View3d.OnSourcesChanged -= HandleSourcesChanged;
 				}
 				m_model = value;
 				if (m_model != null)
 				{
 					m_model.DragDrop.Attach(this);
+					Scene.View3d.OnSourcesChanged += HandleSourcesChanged;
 				}
 			}
 		}
@@ -106,6 +108,16 @@ namespace LDraw
 			if (Model.Settings.ShowBBoxes)
 				foreach (var id in Model.ContextIds)
 					Window.AddObjects(id);
+		}
+
+		/// <summary>Handle notification that the script sources have changed</summary>
+		private void HandleSourcesChanged(object sender, View3d.SourcesChangedEventArgs e)
+		{
+			if (e.Reason == View3d.ESourcesChangedReason.Reload && Model.Settings.ResetOnLoad)
+			{
+				Populate();
+				AutoRange(View3d.ESceneBounds.All);
+			}
 		}
 
 		#region Component Designer generated code

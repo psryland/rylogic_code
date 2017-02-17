@@ -95,7 +95,9 @@ namespace view3d
 			// Observe the dll object store for changes
 			m_eh_store_updated = m_dll->m_sources.OnStoreChanged += [&](pr::ldr::ScriptSources&, pr::ldr::ScriptSources::StoreChangedEventArgs const&)
 			{
-				// Invalidate this window if it contains items from the store
+				// Don't instigate a view reset here because the window doesn't know how the caller would
+				// like the view reset (e.g. all objects, just selected, etc). The caller can instead sign
+				// up to the StoreUpdated event on the context sources
 				InvalidateRect(nullptr, false);
 			};
 
@@ -394,10 +396,17 @@ namespace view3d
 			return bbox;
 		}
 
+		// Reset the scene camera, using it's current forward and up directions, to view all objects in the scene
+		void ResetView()
+		{
+			auto c2w = m_camera.CameraToWorld();
+			ResetView(-c2w.z, c2w.y);
+		}
+
 		// Reset the scene camera to view all objects in the scene
 		void ResetView(pr::v4 const& forward, pr::v4 const& up, float dist = 0, bool preserve_aspect = true, bool commit = true)
 		{
-			ResetView(BBox(), forward, up, dist, preserve_aspect, commit);
+			ResetView(SceneBounds(EView3DSceneBounds::All), forward, up, dist, preserve_aspect, commit);
 		}
 
 		// Reset the camera to view a bbox
@@ -422,14 +431,8 @@ namespace view3d
 				{
 					// Update the scene bounding box if out of date
 					if (m_bbox_scene == pr::BBoxReset)
-					{
-						for (auto& obj : m_objects)
-						{
-							auto bb = obj->BBoxWS(true);
-							if (!bb.empty())
-								pr::Encompass(m_bbox_scene, bb);
-						}
-					}
+						m_bbox_scene = BBox();
+
 					bbox = m_bbox_scene;
 					break;
 				}
@@ -439,10 +442,7 @@ namespace view3d
 					for (auto& obj : m_objects)
 					{
 						if (!pr::AllSet(obj->m_flags, pr::ldr::ELdrFlags::Selected)) continue;
-
-						auto bb = obj->BBoxWS(true);
-						if (!bb.empty())
-							pr::Encompass(bbox, bb);
+						pr::Encompass(bbox, obj->BBoxWS(true));
 					}
 					break;
 				}
@@ -453,8 +453,7 @@ namespace view3d
 					{
 						obj->Apply([&](pr::ldr::LdrObject* o)
 						{
-							auto bb = o->BBoxWS(false);
-							if (!bb.empty()) pr::Encompass(bbox, bb);
+							pr::Encompass(bbox, o->BBoxWS(false));
 							return true;
 						}, "");
 					}

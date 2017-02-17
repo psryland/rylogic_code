@@ -131,7 +131,7 @@ namespace LDraw
 
 			// Near
 			m_tb_near.Value = Camera.NearPlane;
-			m_tb_near.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value >= 0 && v.Value < Camera.FarPlane; };
+			m_tb_near.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0 && v.Value < Camera.FarPlane; };
 			m_tb_near.ValueChanged += (s,a) =>
 			{
 				if (!m_tb_near.Focused) return;
@@ -141,7 +141,7 @@ namespace LDraw
 
 			// Far
 			m_tb_far.Value = Camera.FarPlane;
-			m_tb_far.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value >= 0 && v.Value > Camera.NearPlane; };
+			m_tb_far.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0 && v.Value > Camera.NearPlane; };
 			m_tb_far.ValueChanged += (s,a) =>
 			{
 				if (!m_tb_far.Focused) return;

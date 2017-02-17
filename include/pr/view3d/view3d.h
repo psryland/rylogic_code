@@ -169,6 +169,11 @@ extern "C"
 		Selected,
 		Visible,
 	};
+	enum class ESourcesChangedReason :int
+	{
+		NewData,
+		Reload,
+	};
 
 	struct View3DV2
 	{
@@ -296,6 +301,7 @@ extern "C"
 	};
 
 	typedef void (__stdcall *View3D_SettingsChangedCB)(void* ctx, View3DWindow window);
+	typedef void (__stdcall *View3D_SourcesChangedCB)(void* ctx, ESourcesChangedReason reason);
 	typedef void (__stdcall *View3D_RenderCB)(void* ctx, View3DWindow window);
 	typedef void (__stdcall *View3D_GizmoMovedCB)(void* ctx, View3DGizmoEvent const& args);
 	typedef void (__stdcall *View3D_EditObjectCB)(
@@ -386,6 +392,7 @@ extern "C"
 	VIEW3D_API void         __stdcall View3D_ReloadScriptSources      ();
 	VIEW3D_API void         __stdcall View3D_ClearScriptSources       ();
 	VIEW3D_API void         __stdcall View3D_CheckForChangedSources   ();
+	VIEW3D_API void         __stdcall View3D_SourcesChangedCBSet      (View3D_SourcesChangedCB sources_changed_cb, void* ctx, BOOL add);
 	VIEW3D_API void         __stdcall View3D_ObjectsDeleteAll         ();
 	VIEW3D_API void         __stdcall View3D_ObjectsDeleteById        (GUID const& context_id);
 	VIEW3D_API GUID         __stdcall View3D_LoadScript               (wchar_t const* ldr_script, BOOL file, BOOL async, GUID const* context_id, View3DIncludes const* includes);

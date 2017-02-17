@@ -327,6 +327,11 @@ namespace pr.gfx
 			Selected,
 			Visible,
 		}
+		public enum ESourcesChangedReason
+		{
+			NewData,
+			Reload,
+		}
 		#endregion
 
 		#region Structs
@@ -605,6 +610,9 @@ namespace pr.gfx
 		/// <summary>Report settings changed callback</summary>
 		public delegate void SettingsChangedCB(IntPtr ctx, HWindow wnd);
 
+		/// <summary>Callback when the sources are reloaded</summary>
+		public delegate void SourcesChangedCB(IntPtr ctx, ESourcesChangedReason reason);
+
 		/// <summary>Called just prior to rendering</summary>
 		public delegate void RenderCB(IntPtr ctx, HWindow wnd);
 
@@ -617,6 +625,7 @@ namespace pr.gfx
 
 		private readonly List<Window>  m_windows;  // Groups of objects to render
 		private readonly HContext      m_context;  // Unique id per Initialise call
+		private SourcesChangedCB       m_sources_changed_cb; // Reference to callback
 
 		public View3d()
 		{
@@ -631,9 +640,16 @@ namespace pr.gfx
 			m_context = View3D_Initialise(error_cb, IntPtr.Zero);
 			if (m_context == HContext.Zero)
 				throw new Exception(init_error ?? "Failed to initialised View3d");
+
+			// Sign up for notification of the sources changing
+			m_sources_changed_cb = (ctx,reason) => OnSourcesChanged.Raise(this, new SourcesChangedEventArgs(reason));
+			View3D_SourcesChangedCBSet(m_sources_changed_cb, IntPtr.Zero, true);
 		}
 		public void Dispose()
 		{
+			// Unsubscribe
+			View3D_SourcesChangedCBSet(m_sources_changed_cb, IntPtr.Zero, false);
+
 			while (m_windows.Count != 0)
 				m_windows[0].Dispose();
 
@@ -686,6 +702,19 @@ namespace pr.gfx
 		public void CheckForChangedSources(object sender = null, EventArgs args = null)
 		{
 			View3D_CheckForChangedSources();
+		}
+
+		/// <summary>Event notifying whenever sources are reloaded</summary>
+		public event EventHandler<SourcesChangedEventArgs> OnSourcesChanged;
+		public class SourcesChangedEventArgs :EventArgs
+		{
+			public SourcesChangedEventArgs(ESourcesChangedReason reason)
+			{
+				Reason = reason;
+			}
+
+			/// <summary>The cause of the source changes</summary>
+			public ESourcesChangedReason Reason { get; private set; }
 		}
 
 		/// <summary>Release all created objects</summary>
@@ -2192,6 +2221,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_ReloadScriptSources      ();
 		[DllImport(Dll)] private static extern void              View3D_ClearScriptSources       ();
 		[DllImport(Dll)] private static extern void              View3D_CheckForChangedSources   ();
+		[DllImport(Dll)] private static extern void              View3D_SourcesChangedCBSet      (SourcesChangedCB sources_changed_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteAll         ();
 		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteById        (ref Guid context_id);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, bool async, ref Guid context_id, ref View3DIncludes includes);

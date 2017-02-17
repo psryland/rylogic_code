@@ -1156,6 +1156,20 @@ VIEW3D_API void __stdcall View3D_CheckForChangedSources()
 	CatchAndReport(View3D_CheckForChangedSources,,);
 }
 
+// Set the callback called when the sources are reloaded
+VIEW3D_API void __stdcall View3D_SourcesChangedCBSet(View3D_SourcesChangedCB sources_changed_cb, void* ctx, BOOL add)
+{
+	try
+	{
+		DllLockGuard;
+		if (add)
+			Dll().OnSourcesChanged += pr::StaticCallBack(sources_changed_cb, ctx);
+		else
+			Dll().OnSourcesChanged -= pr::StaticCallBack(sources_changed_cb, ctx);
+	}
+	CatchAndReport(View3D_SourcesChangedCBSet,,);
+}
+
 // Delete all objects
 VIEW3D_API void __stdcall View3D_ObjectsDeleteAll()
 {
@@ -2749,6 +2763,9 @@ static_assert(int(EView3DGizmoEvent::Revert    ) == int(pr::ldr::ELdrGizmoEvent:
 static_assert(int(EView3DGizmoMode::Translate) == int(pr::ldr::LdrGizmo::EMode::Translate), "");
 static_assert(int(EView3DGizmoMode::Rotate   ) == int(pr::ldr::LdrGizmo::EMode::Rotate   ), "");
 static_assert(int(EView3DGizmoMode::Scale    ) == int(pr::ldr::LdrGizmo::EMode::Scale    ), "");
+
+static_assert(int(ESourcesChangedReason::NewData) == int(pr::ldr::ScriptSources::StoreChangedEventArgs::EReason::NewData), "");
+static_assert(int(ESourcesChangedReason::Reload) == int(pr::ldr::ScriptSources::StoreChangedEventArgs::EReason::Reload), "");
 
 // Specifically used to avoid alignment problems
 static_assert(sizeof(View3DV2    ) == sizeof(pr::v2       ), "");
