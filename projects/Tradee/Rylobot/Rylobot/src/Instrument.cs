@@ -78,7 +78,7 @@ namespace Rylobot
 			NewCandle = candle.Timestamp > Latest.Timestamp;
 
 			// Capture the high res price data
-			var index = FractionalIndexAt(Bot.UtcNow) - (double)FirstIdx;
+			var index = FractionalIndexAt(Bot.UtcNow) - (double)IdxFirst;
 			var idx = HighRes.Count != 0 && HighRes.Back().m_index > index ? HighRes.BinarySearch(x => x.m_index.CompareTo(index)) : HighRes.Count;
 			if (idx < 0) idx = ~idx;
 			HighRes.Insert(idx, new PriceTick(index, Symbol.Ask, Symbol.Bid));
@@ -190,11 +190,11 @@ namespace Rylobot
 		}
 
 		/// <summary>Index range (-Count, 0]</summary>
-		public NegIdx FirstIdx
+		public NegIdx IdxFirst
 		{
 			get { return (NegIdx)(1 - Count); }
 		}
-		public NegIdx LastIdx
+		public NegIdx IdxLast
 		{
 			get { return (NegIdx)(+1); }
 		}
@@ -204,7 +204,7 @@ namespace Rylobot
 		{
 			get
 			{
-				Debug.Assert(neg_idx >= FirstIdx && neg_idx < LastIdx);
+				Debug.Assert(neg_idx >= IdxFirst && neg_idx < IdxLast);
 
 				// CAlgo uses 0 = oldest, Count = latest
 				var idx = (int)(Data.OpenTime.Count + neg_idx - 1);
@@ -231,7 +231,7 @@ namespace Rylobot
 		/// <summary>The candle with the oldest timestamp for the current time frame</summary>
 		public Candle Oldest
 		{
-			get { return this[FirstIdx]; }
+			get { return this[IdxFirst]; }
 		}
 
 		/// <summary>True if the latest update was the start of a new candle (and therefore the old candle just closed)</summary>
@@ -252,8 +252,8 @@ namespace Rylobot
 		public Range IndexRange(NegIdx idx_min, NegIdx idx_max)
 		{
 			Debug.Assert(idx_min <= idx_max);
-			var min = Maths.Clamp((int)idx_min, (int)FirstIdx, (int)LastIdx);
-			var max = Maths.Clamp((int)idx_max, (int)min, (int)LastIdx);
+			var min = Maths.Clamp((int)idx_min, (int)IdxFirst, (int)IdxLast);
+			var max = Maths.Clamp((int)idx_max, (int)min, (int)IdxLast);
 			return new Range(min, max);
 		}
 		public Range IndexRange(Range range)
@@ -262,7 +262,7 @@ namespace Rylobot
 		}
 		public Range IndexRange(Position pos)
 		{
-			return IndexRange(new Range((int)IndexAt(pos.EntryTime), (int)LastIdx));
+			return IndexRange(new Range((int)IndexAt(pos.EntryTime), (int)IdxLast));
 		}
 		public Range IndexRange(HistoricalTrade pos)
 		{
@@ -272,8 +272,8 @@ namespace Rylobot
 		/// <summary>Enumerate candles over a range that has been validated</summary>
 		private IEnumerable<Candle> CandleRangeInternal(Range checked_range)
 		{
-			Debug.Assert(checked_range.Begini >= FirstIdx);
-			Debug.Assert(checked_range.Endi <= LastIdx);
+			Debug.Assert(checked_range.Begini >= IdxFirst);
+			Debug.Assert(checked_range.Endi <= IdxLast);
 			for (var i = checked_range.Begini; i != checked_range.Endi; ++i)
 				yield return this[i];
 		}
@@ -289,7 +289,7 @@ namespace Rylobot
 		}
 		public IEnumerable<Candle> CandleRange()
 		{
-			return CandleRangeInternal(IndexRange(FirstIdx, LastIdx));
+			return CandleRangeInternal(IndexRange(IdxFirst, IdxLast));
 		}
 
 		/// <summary>
@@ -298,8 +298,8 @@ namespace Rylobot
 		/// 'step' is the increment size in indices to move with each returned value</summary>
 		public IEnumerable<PriceTick> HighResRange(double idx_min, double idx_max, double? step = null)
 		{
-			var first = idx_min - (double)FirstIdx;
-			var last  = idx_max - (double)FirstIdx;
+			var first = idx_min - (double)IdxFirst;
+			var last  = idx_max - (double)IdxFirst;
 
 			var istart = HighRes.BinarySearch(x => x.m_index.CompareTo(first));
 			var iend   = HighRes.BinarySearch(x => x.m_index.CompareTo(last));
@@ -354,7 +354,7 @@ namespace Rylobot
 		public NegIdx IndexAt(DateTimeOffset dt)
 		{
 			var idx = Data.OpenTime.GetIndexByTime(dt.UtcDateTime);
-			return idx + FirstIdx;
+			return idx + IdxFirst;
 		}
 
 		/// <summary>Return the fractional index into the candle data for the given time</summary>
@@ -369,21 +369,21 @@ namespace Rylobot
 		}
 
 		/// <summary>A cached median candle size over the last 50 candles</summary>
-		public double MCS_50
+		public QuoteCurrency MCS_50
 		{
-			get { return (m_msc ?? (m_msc = MedianCandleSize(LastIdx - 50, LastIdx))).Value; }
+			get { return (m_msc ?? (m_msc = MedianCandleSize(IdxLast - 50, IdxLast))).Value; }
 		}
-		private double? m_msc;
+		private QuoteCurrency? m_msc;
 
 		/// <summary>Return the average candle size (total length) of the given range</summary>
-		public double MedianCandleSize(NegIdx idx_min, NegIdx idx_max)
+		public QuoteCurrency MedianCandleSize(NegIdx idx_min, NegIdx idx_max)
 		{
 			var lengths = CandleRange(idx_min, idx_max).Select(x => x.TotalLength).ToArray();
 			if (lengths.Length == 0) throw new Exception("Empty range, median candle size is not defined");
 			var mcs = lengths.NthElement(lengths.Length/2);
 			return mcs;
 		}
-		public double MedianCandleSize(Range range)
+		public QuoteCurrency MedianCandleSize(Range range)
 		{
 			return MedianCandleSize(range.Begini, range.Endi);
 		}
@@ -398,16 +398,16 @@ namespace Rylobot
 		}
 
 		/// <summary>Return the true range for the candle at index position 'index'</summary>
-		public double TrueRange(NegIdx index)
+		public QuoteCurrency TrueRange(NegIdx index)
 		{
 			// True Range is defined as the greater of:
 			// High of the current period less the low of the current period
 			// The high of the current period less the previous period’s closing value
 			// The low of the current period less the previous period’s closing value
-			if (index < FirstIdx)
+			if (index < IdxFirst)
 				return 0.0;
-			if (index < FirstIdx + 1)
-				return this[FirstIdx].TotalLength;
+			if (index < IdxFirst + 1)
+				return this[IdxFirst].TotalLength;
 
 			var A = this[index - 0];
 			var B = this[index - 1];
@@ -437,7 +437,7 @@ namespace Rylobot
 			var sign  = 0;   // The sign of the current block
 			var bulls = 0.0; // The net sum of the bullish blocks
 			var bears = 0.0; // The net sum of the bearish blocks
-			for (var i = range.Endi; i-- != FirstIdx;)
+			for (var i = range.Endi; i-- != IdxFirst;)
 			{
 				var candle = this[i];
 
@@ -506,7 +506,7 @@ namespace Rylobot
 		{
 			// Not enough data, assume not
 			// Require at least 3 candles
-			if (idx - FirstIdx < 3)
+			if (idx - IdxFirst < 3)
 			{
 				forecast_direction = 0;
 				target_entry = 0;
@@ -591,6 +591,79 @@ namespace Rylobot
 			forecast_direction = 0;
 			target_entry = 0;
 			return false;
+		}
+
+		/// <summary>Returns a trade type when a likely good trade is identified. Or null</summary>
+		public TradeType? FindTradeEntry(NegIdx? idx_ = null)
+		{
+			// Where in the instrument to look
+			var idx = idx_ ?? 0;
+
+			// Need some sort of voting system.
+			// Each method adds a weighted vote of whether to buy or sell or skip.
+			// Need some way to see what each vote is for each candle
+			//  -> Step through each new candle, write the votes to a text file
+
+			int dir;
+			QuoteCurrency entry;
+			if (IsCandlePattern(idx, out dir, out entry))
+				return
+					dir > 0 ? TradeType.Buy :
+					dir < 0 ? TradeType.Sell :
+					(TradeType?)null;
+			
+			return null;
+
+			// Get the current price
+			var curr_price = idx_ != null ? this[idx].Close : (double)CurrentPrice(0);
+
+			// Get the gradient of the long period EMA
+			var ema100 = Bot.Indicators.ExponentialMovingAverage(Data.Close, 100);
+			var grad100 = ema100.Result.FirstDerivative(idx) / MCS_50;
+
+			// Get the gradient of the short period EMA
+			var ema14 = Bot.Indicators.ExponentialMovingAverage(Data.Close, 14);
+			var grad14 = ema14.Result.FirstDerivative(idx) / MCS_50;
+
+			// Is price is trending...
+			var price_trending = 0;
+			{
+				// Price is trending if:
+				//  - the long EMA has a large slope
+				//  - the short EMA is on the same side as the curvature of the long EMA
+				const double ema100_trending = 0.1; // pips per index
+				price_trending =
+					grad100 > +ema100_trending ? +1 :
+					grad100 < -ema100_trending ? -1 :
+					0;
+
+			}
+
+			{// Look for price volatility >> MCS
+				// If price isn't trending but is moving up and down significantly more
+				// than the mean candle size, then price is ranging
+			}
+
+			// Is the instrument is over-bought or over-sold?
+			{
+				// Look for the price over or under 70/30 and having just crossed back into the normal range
+				var rsi = Bot.Indicators.RelativeStrengthIndex(Data.Close, 14);
+				var rsi_sum = rsi.Result.Integrate(idx - 5, idx - 0) / 5.0;
+
+				//if (tt == TradeType.Buy && rsi.Result.LastValue > 70.0)
+				//	return null; // Over bought
+				//if (tt == TradeType.Sell && rsi.Result.LastValue < 30.0)
+				//	return null; // Over sold
+			}
+
+			// Is price showing a known candle pattern on a strong SnR level
+			{
+			}
+
+			// Has price spiked a long way over a few candles?
+			{
+				// Expect the price to retrace back by a third of the price jump
+			}
 		}
 	}
 

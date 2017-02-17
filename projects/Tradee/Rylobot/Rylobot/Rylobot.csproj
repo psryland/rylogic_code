@@ -53,6 +53,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="src\StrategyMain.cs" />
     <Compile Include="src\Order.cs" />
     <Compile Include="src\PositionManager.cs" />
     <Compile Include="src\Rylobot.cs" />
@@ -62,7 +63,7 @@
     <Compile Include="src\Candle.cs" />
     <Compile Include="src\Debugging.cs" />
     <Compile Include="src\SnR.cs" />
-    <Compile Include="src\StrategyRevenge.cs" />
+    <Compile Include="half_baked\StrategyRevenge.cs" />
     <Compile Include="src\Instrument.cs" />
     <Compile Include="src\InstrumentSettings.cs" />
     <Compile Include="src\Settings.cs" />
@@ -73,9 +74,7 @@
   <ItemGroup>
     <None Include="net\forex.cntk" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="half_baked\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

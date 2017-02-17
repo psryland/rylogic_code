@@ -201,7 +201,7 @@ namespace pr
 				Nugget const& nugget = *dle.m_nugget;
 				dc->DrawIndexed(
 					UINT(nugget.m_irange.size()),
-					UINT(nugget.m_irange.m_begin),
+					UINT(nugget.m_irange.m_beg),
 					0);
 			}
 

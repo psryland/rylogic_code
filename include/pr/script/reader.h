@@ -19,7 +19,7 @@ namespace pr
 		{
 		private:
 			Preprocessor<> m_pp;
-			wchar_t const* m_delim;
+			string m_delim;
 			string m_last_keyword;
 			bool m_case_sensitive;
 
@@ -50,6 +50,12 @@ namespace pr
 				,m_case_sensitive(case_sensitive)
 			{}
 
+			// Access the underlying source
+			Src& Source()
+			{
+				return m_pp;
+			}
+
 			// Access the include handler
 			IIncludeHandler& Includes() const
 			{
@@ -71,7 +77,7 @@ namespace pr
 			// Get/Set delimiter characters
 			wchar_t const* Delimiters() const
 			{
-				return m_delim;
+				return m_delim.c_str();
 			}
 			void Delimiters(wchar_t const* delim)
 			{
@@ -104,7 +110,7 @@ namespace pr
 			bool IsSourceEnd()
 			{
 				auto& src = m_pp;
-				EatWhiteSpace(src, 0, 0);
+				EatDelimiters(src, m_delim.c_str());
 				return *src == 0;
 			}
 
@@ -112,7 +118,7 @@ namespace pr
 			bool IsKeyword()
 			{
 				auto& src = m_pp;
-				EatWhiteSpace(src, 0, 0);
+				EatDelimiters(src, m_delim.c_str());
 				return *src == '*';
 			}
 
@@ -120,13 +126,13 @@ namespace pr
 			bool IsSectionStart()
 			{
 				auto& src = m_pp;
-				EatDelimiters(src, m_delim);
+				EatDelimiters(src, m_delim.c_str());
 				return *src == L'{';
 			}
 			bool IsSectionEnd()
 			{
 				auto& src = m_pp;
-				EatDelimiters(src, m_delim);
+				EatDelimiters(src, m_delim.c_str());
 				return *src == L'}';
 			}
 
@@ -205,7 +211,7 @@ namespace pr
 				}
 				if (*src == L'*') ++src; else return false;
 				pr::str::Resize(kw, 0);
-				if (!pr::str::ExtractIdentifier(kw, src, m_delim)) return false;
+				if (!pr::str::ExtractIdentifier(kw, src, m_delim.c_str())) return false;
 				if (!m_case_sensitive) pr::str::LowerCase(kw);
 				m_last_keyword = pr::Widen(kw);
 				return true;
@@ -255,7 +261,7 @@ namespace pr
 			{
 				auto& src = m_pp;
 				pr::str::Resize(token, 0);
-				if (pr::str::ExtractToken(token, src, m_delim)) return true;
+				if (pr::str::ExtractToken(token, src, m_delim.c_str())) return true;
 				return ReportError(EResult::TokenNotFound, "token expected");
 			}
 			template <typename StrType> bool TokenS(StrType& token)
@@ -282,7 +288,7 @@ namespace pr
 			{
 				auto& src = m_pp;
 				pr::str::Resize(word, 0);
-				if (pr::str::ExtractIdentifier(word, src, m_delim)) return true;
+				if (pr::str::ExtractIdentifier(word, src, m_delim.c_str())) return true;
 				return ReportError(EResult::TokenNotFound, "identifier expected");
 			}
 			template <typename StrType> bool IdentifierS(StrType& word)
@@ -296,14 +302,14 @@ namespace pr
 				(void)sep;
 				auto& src = m_pp;
 				pr::str::Resize(word, 0);
-				if (pr::str::ExtractIdentifier(word, src, m_delim)) return true;
+				if (pr::str::ExtractIdentifier(word, src, m_delim.c_str())) return true;
 				return ReportError(EResult::TokenNotFound, "identifier expected");
 			}
 			template <typename StrType, typename... StrTypes> bool Identifiers(char sep, StrType& word, StrTypes&&... words)
 			{
 				auto& src = m_pp;
 				pr::str::Resize(word, 0);
-				if (!pr::str::ExtractIdentifier(word, src, m_delim)) return ReportError(EResult::TokenNotFound, "identifier expected");
+				if (!pr::str::ExtractIdentifier(word, src, m_delim.c_str())) return ReportError(EResult::TokenNotFound, "identifier expected");
 				if (*src == sep) ++src; else return ReportError(EResult::TokenNotFound, "identifier separator expected");
 				return Identifiers(sep, std::forward<StrTypes>(words)...);
 			}
@@ -318,7 +324,7 @@ namespace pr
 			{
 				auto& src = m_pp;
 				pr::str::Resize(string, 0);
-				if (pr::str::ExtractString(string, src, 0, m_delim)) return true;
+				if (pr::str::ExtractString(string, src, 0, m_delim.c_str())) return true;
 				return ReportError(EResult::TokenNotFound, "string expected");
 			}
 			template <typename StrType> bool StringS(StrType& string)
@@ -331,7 +337,7 @@ namespace pr
 			{
 				auto& src = m_pp;
 				pr::str::Resize(cstring, 0);
-				if (pr::str::ExtractString(cstring, src, '\\', m_delim)) return true;
+				if (pr::str::ExtractString(cstring, src, '\\', m_delim.c_str())) return true;
 				return ReportError(EResult::TokenNotFound, "'cstring' expected");
 			}
 			template <typename StrType> bool CStringS(StrType& cstring)
@@ -343,7 +349,7 @@ namespace pr
 			template <typename TBool> bool Bool(TBool& bool_)
 			{
 				auto& src = m_pp;
-				if (pr::str::ExtractBool(bool_, src, m_delim)) return true;
+				if (pr::str::ExtractBool(bool_, src, m_delim.c_str())) return true;
 				return ReportError(EResult::TokenNotFound, "bool expected");
 			}
 			template <typename TBool> bool BoolS(TBool& bool_)
@@ -364,7 +370,7 @@ namespace pr
 			template <typename TInt> bool Int(TInt& int_, int radix)
 			{
 				auto& src = m_pp;
-				if (pr::str::ExtractInt(int_, radix, src, m_delim)) return true;
+				if (pr::str::ExtractInt(int_, radix, src, m_delim.c_str())) return true;
 				return ReportError(EResult::TokenNotFound, "integral expected");
 			}
 			template <typename TInt> bool IntS(TInt& int_, int radix)
@@ -385,7 +391,7 @@ namespace pr
 			template <typename TReal> bool Real(TReal& real_)
 			{
 				auto& src = m_pp;
-				if (pr::str::ExtractReal(real_, src, m_delim)) return true;
+				if (pr::str::ExtractReal(real_, src, m_delim.c_str())) return true;
 				return ReportError(EResult::TokenNotFound, "real expected");
 			}
 			template <typename TReal> bool RealS(TReal& real_)
@@ -406,7 +412,7 @@ namespace pr
 			template <typename TEnum> bool EnumValue(TEnum& enum_)
 			{
 				auto& src = m_pp;
-				if (pr::str::ExtractEnumValue(enum_, src, m_delim)) return true;
+				if (pr::str::ExtractEnumValue(enum_, src, m_delim.c_str())) return true;
 				return ReportError(EResult::TokenNotFound, "enum integral value expected");
 			}
 			template <typename TEnum> bool EnumValueS(TEnum& enum_)
@@ -418,7 +424,7 @@ namespace pr
 			template <typename TEnum> bool Enum(TEnum& enum_)
 			{
 				auto& src = m_pp;
-				if (pr::str::ExtractEnum(enum_, src, m_delim)) return true;
+				if (pr::str::ExtractEnum(enum_, src, m_delim.c_str())) return true;
 				return ReportError(EResult::TokenNotFound, "enum member string name expected");
 			}
 			template <typename TEnum> bool EnumS(TEnum& enum_)

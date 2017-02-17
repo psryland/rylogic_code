@@ -201,6 +201,13 @@ namespace Rylobot
 		{
 			try
 			{
+				// Handle invalid 'trade's by returning null
+				if (trade.Error != null)
+				{
+					Bot.Print(trade.Error.Message);
+					return null;
+				}
+
 				// Check that placing this order will not exceed the maximum risk
 				if (m_suspend_risk_check == 0)
 				{

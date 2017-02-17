@@ -40,7 +40,7 @@ namespace Rylobot
 				return
 					Position     != null ? Position    .Id :
 					PendingOrder != null ? PendingOrder.Id :
-					Trade        != null ? Trade       .Id :
+					Trade        != null ? Trade       .Index :
 					-1;
 			}
 		}

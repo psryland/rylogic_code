@@ -872,7 +872,8 @@ namespace pr
 			if (ref_point)
 			{
 				// On left mouse down, if we're not currently manipulating an axis, hit test to see if we should start
-				if (nav_op == pr::camera::ENavOp::Translate && m_component == EComponent::None)
+				auto lbtn = pr::camera::ENavOp::Rotate;
+				if (nav_op == lbtn && m_component == EComponent::None)
 				{
 					auto hit = HitTest(camera, nss_point);
 					SetAxisColour(hit, m_col_manip);
@@ -893,7 +894,7 @@ namespace pr
 				}
 
 				// If mouse up, end manipulating
-				if (nav_op != pr::camera::ENavOp::Translate && m_component != EComponent::None)
+				if (nav_op != lbtn && m_component != EComponent::None)
 				{
 					Commit();
 					auto hit = HitTest(camera, nss_point);

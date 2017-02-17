@@ -81,12 +81,12 @@ namespace pr
 			//  allocated with PAGE_WRITECOMBINE, and your app must honour all restrictions that are associated with such memory.
 			// The SDK recommends using volatile pointers (but struct assignment for volatiles requires cv-qualified assignment operators)
 			// Just don't read from ptr()...
-			pr::uint8 const* data() const                    { return static_cast<pr::uint8 const*>(pData) + m_stride * m_range.m_begin; }
-			pr::uint8*       data()                          { return static_cast<pr::uint8*>      (pData) + m_stride * m_range.m_begin; }
+			pr::uint8 const* data() const                    { return static_cast<pr::uint8 const*>(pData) + m_stride * m_range.m_beg; }
+			pr::uint8*       data()                          { return static_cast<pr::uint8*>      (pData) + m_stride * m_range.m_beg; }
 			pr::uint8 const* end() const                     { return static_cast<pr::uint8 const*>(pData) + m_stride * m_range.m_end; }
 			pr::uint8*       end()                           { return static_cast<pr::uint8*>      (pData) + m_stride * m_range.m_end; }
-			template <typename Type> Type const* ptr() const { return static_cast<Type const*>(pData) + m_range.m_begin; }
-			template <typename Type> Type* ptr()             { return static_cast<Type*>      (pData) + m_range.m_begin; }
+			template <typename Type> Type const* ptr() const { return static_cast<Type const*>(pData) + m_range.m_beg; }
+			template <typename Type> Type* ptr()             { return static_cast<Type*>      (pData) + m_range.m_beg; }
 			template <typename Type> Type const* end() const { return static_cast<Type const*>(pData) + m_range.m_end; }
 			template <typename Type> Type* end()             { return static_cast<Type*>      (pData) + m_range.m_end; }
 

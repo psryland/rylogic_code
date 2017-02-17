@@ -656,7 +656,7 @@ namespace pr
 					max_3ds::Material const& mat = mats(mgrp.m_name);
 
 					// Write out each face that belongs to this group
-					irange.m_begin = irange.m_end;
+					irange.m_beg = irange.m_end;
 					vrange = pr::Range<pr::uint16>::Reset();
 					for (auto const& face_idx : mgrp.m_face)
 					{

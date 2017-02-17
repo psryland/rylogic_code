@@ -16,6 +16,8 @@
 #include "pr/gui/progress_ui.h"
 #include "pr/win32/windows_com.h"
 #include "pr/renderer11/renderer.h"
+#include "pr/storage/csv.h"
+#include "pr/str/extract.h"
 
 using namespace pr::rdr;
 using namespace pr::script;
@@ -644,8 +646,8 @@ namespace pr
 				// Smooth the points
 				if (m_smooth && m_linestrip)
 				{
-					auto points = m_point;
-					m_point.resize(0);
+					VCont points;
+					std::swap(points, m_point);
 					pr::Smooth(points, m_point);
 				}
 
@@ -683,16 +685,16 @@ namespace pr
 		// Base class for object creators that are based on 2d shapes
 		struct IObjectCreatorShape2d :IObjectCreatorTexture
 		{
-			pr::AxisId m_axis_id;
-			pr::v4 m_dim;
+			AxisId m_axis_id;
+			v4     m_dim;
 			int    m_facets;
 			bool   m_solid;
 
 			IObjectCreatorShape2d()
-				:m_axis_id(pr::AxisId::PosZ),
-				m_dim(),
-				m_facets(40),
-				m_solid(false)
+				:m_axis_id(AxisId::PosZ)
+				,m_dim()
+				,m_facets(40)
+				,m_solid(false)
 			{}
 			bool ParseKeyword(ParseParams& p, EKeyword kw) override
 			{
@@ -748,8 +750,8 @@ namespace pr
 			pr::m4x4 m_b2w;
 
 			IObjectCreatorCuboid()
-				:m_pt(),
-				m_b2w(pr::m4x4Identity)
+				:m_pt()
+				,m_b2w(m4x4Identity)
 			{}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
@@ -761,17 +763,17 @@ namespace pr
 		// Base class for cone shapes
 		struct IObjectCreatorCone :IObjectCreatorTexture
 		{
-			pr::AxisId m_axis_id;
-			pr::v4 m_dim; // x,y = radius, z = height
-			pr::v2 m_scale;
+			AxisId m_axis_id;
+			v4 m_dim; // x,y = radius, z = height
+			v2 m_scale;
 			int m_layers, m_wedges;
 
 			IObjectCreatorCone()
-				:m_axis_id(pr::AxisId::PosZ),
-				m_dim(),
-				m_scale(pr::v2One),
-				m_layers(1),
-				m_wedges(20)
+				:m_axis_id(AxisId::PosZ)
+				,m_dim()
+				,m_scale(v2One)
+				,m_layers(1)
+				,m_wedges(20)
 			{}
 			bool ParseKeyword(ParseParams& p, EKeyword kw) override
 			{
@@ -784,10 +786,10 @@ namespace pr
 			}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
-				pr::m4x4 o2w, *po2w = nullptr;
-				if (m_axis_id != 3)
+				m4x4 o2w, *po2w = nullptr;
+				if (m_axis_id != AxisId::PosZ)
 				{
-					o2w = pr::m4x4::Transform(pr::AxisId(3), m_axis_id, pr::v4Origin);
+					o2w = m4x4::Transform(AxisId::PosZ, m_axis_id, v4Origin);
 					po2w = &o2w;
 				}
 
@@ -999,7 +1001,7 @@ namespace pr
 				for (auto& nug : m_nuggets)
 				{
 					// Check the index range is valid
-					if (nug.m_vrange.m_begin < 0 || nug.m_vrange.m_end > m_verts.size())
+					if (nug.m_vrange.m_beg < 0 || nug.m_vrange.m_end > m_verts.size())
 					{
 						p.ReportError(EResult::SyntaxError, FmtS("Mesh object with face, line, or tetra section contains indices out of range (section index: %d).", int(&nug - &m_nuggets[0])));
 						return;
@@ -1429,10 +1431,10 @@ namespace pr
 			{
 				using namespace pr::rdr;
 
-				pr::m4x4 o2w, *po2w = nullptr;
-				if (m_axis_id != 3)
+				m4x4 o2w, *po2w = nullptr;
+				if (m_axis_id != AxisId::PosZ)
 				{
-					o2w = pr::m4x4::Transform(pr::AxisId(3), m_axis_id, pr::v4Origin);
+					o2w = m4x4::Transform(AxisId::PosZ, m_axis_id, v4Origin);
 					po2w = &o2w;
 				}
 
@@ -1470,10 +1472,10 @@ namespace pr
 			{
 				using namespace pr::rdr;
 
-				pr::m4x4 o2w, *po2w = nullptr;
-				if (m_axis_id != 3)
+				m4x4 o2w, *po2w = nullptr;
+				if (m_axis_id != AxisId::PosZ)
 				{
-					o2w = pr::m4x4::Transform(pr::AxisId(3), m_axis_id, pr::v4Origin);
+					o2w = m4x4::Transform(AxisId::PosZ, m_axis_id, v4Origin);
 					po2w = &o2w;
 				}
 
@@ -1514,10 +1516,10 @@ namespace pr
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
 				using namespace pr::rdr;
-				pr::m4x4 o2w, *po2w = nullptr;
-				if (m_axis_id != 3)
+				m4x4 o2w, *po2w = nullptr;
+				if (m_axis_id != AxisId::PosZ)
 				{
-					o2w = pr::m4x4::Transform(pr::AxisId(3), m_axis_id, pr::v4Origin);
+					o2w = m4x4::Transform(AxisId::PosZ, m_axis_id, v4Origin);
 					po2w = &o2w;
 				}
 
@@ -1567,10 +1569,10 @@ namespace pr
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
 				using namespace pr::rdr;
-				pr::m4x4 o2w, *po2w = nullptr;
-				if (m_axis_id != 3)
+				m4x4 o2w, *po2w = nullptr;
+				if (m_axis_id != AxisId::PosZ)
 				{
-					o2w = pr::m4x4::Transform(pr::AxisId(3), m_axis_id, pr::v4Origin);
+					o2w = m4x4::Transform(AxisId::PosZ, m_axis_id, v4Origin);
 					po2w = &o2w;
 				}
 
@@ -1653,12 +1655,17 @@ namespace pr
 		// ELdrObject::Ribbon
 		template <> struct ObjectCreator<ELdrObject::Ribbon> :IObjectCreatorPlane
 		{
-			pr::AxisId m_axis_id;
+			AxisId m_axis_id;
 			float m_width;
 			bool m_smooth;
 			int m_parm_index;
 
-			ObjectCreator() :m_axis_id(3) ,m_width(10.0f) ,m_smooth(false) ,m_parm_index(0) {}
+			ObjectCreator()
+				:m_axis_id(AxisId::PosZ)
+				,m_width(10.0f)
+				,m_smooth(false)
+				,m_parm_index(0)
+			{}
 			bool ParseKeyword(ParseParams& p, EKeyword kw) override
 			{
 				switch (kw){
@@ -1815,9 +1822,16 @@ namespace pr
 		template <> struct ObjectCreator<ELdrObject::FrustumWH> :IObjectCreatorCuboid
 		{
 			float m_width, m_height, m_near, m_far, m_view_plane;
-			pr::AxisId m_axis_id;
+			AxisId m_axis_id;
 
-			ObjectCreator() :m_width(1.0f), m_height(1.0f), m_near(0.0f), m_far(1.0f), m_view_plane(1.0f), m_axis_id(3) {}
+			ObjectCreator()
+				:m_width(1.0f)
+				,m_height(1.0f)
+				,m_near(0.0f)
+				,m_far(1.0f)
+				,m_view_plane(1.0f)
+				,m_axis_id(AxisId::PosZ)
+			{}
 			bool ParseKeyword(ParseParams& p, EKeyword kw) override
 			{
 				switch (kw) {
@@ -1848,15 +1862,7 @@ namespace pr
 				m_pt[6] = v4(-f*w, -f*h, f, 1.0f);
 				m_pt[7] = v4(-f*w, +f*h, f, 1.0f);
 
-				switch (m_axis_id){
-				default: p.ReportError(EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
-				case  1: m_b2w = m4x4::Transform(0.0f, -float(maths::tau_by_4), 0.0f, v4Origin); break;
-				case -1: m_b2w = m4x4::Transform(0.0f, +float(maths::tau_by_4), 0.0f, v4Origin); break;
-				case  2: m_b2w = m4x4::Transform(-float(maths::tau_by_4), 0.0f, 0.0f, v4Origin); break;
-				case -2: m_b2w = m4x4::Transform(+float(maths::tau_by_4), 0.0f, 0.0f, v4Origin); break;
-				case  3: m_b2w = m4x4Identity; break;
-				case -3: m_b2w = m4x4::Transform(0.0f, float(maths::tau_by_2), 0.0f, v4Origin); break;
-				}
+				m_b2w = m4x4::Transform(AxisId::PosZ, m_axis_id, v4Origin);
 
 				IObjectCreatorCuboid::CreateModel(p, obj);
 			}
@@ -1868,7 +1874,13 @@ namespace pr
 			float m_fovY, m_aspect, m_near, m_far;
 			AxisId m_axis_id;
 
-			ObjectCreator() :m_fovY(float(maths::tau_by_8)), m_aspect(1.0f), m_near(0.0f), m_far(1.0f), m_axis_id(3) {}
+			ObjectCreator()
+				:m_fovY(float(maths::tau_by_8))
+				,m_aspect(1.0f)
+				,m_near(0.0f)
+				,m_far(1.0f)
+				,m_axis_id(AxisId::PosZ)
+			{}
 			void Parse(ParseParams& p) override
 			{
 				p.m_reader.Int(m_axis_id.value, 10);
@@ -1892,15 +1904,7 @@ namespace pr
 				m_pt[6] = v4(-f*w, +f*h, f, 1.0f);
 				m_pt[7] = v4(+f*w, +f*h, f, 1.0f);
 
-				switch (m_axis_id) {
-				default: p.ReportError(EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
-				case  1: m_b2w = m4x4::Transform(0.0f, +float(maths::tau_by_4), 0.0f, v4Origin); break;
-				case -1: m_b2w = m4x4::Transform(0.0f, -float(maths::tau_by_4), 0.0f, v4Origin); break;
-				case  2: m_b2w = m4x4::Transform(-float(maths::tau_by_4), 0.0f, 0.0f, v4Origin); break;
-				case -2: m_b2w = m4x4::Transform(+float(maths::tau_by_4), 0.0f, 0.0f, v4Origin); break;
-				case  3: m_b2w = m4x4Identity; break;
-				case -3: m_b2w = m4x4::Transform(0.0f, float(maths::tau_by_2), 0.0f, v4Origin); break;
-				}
+				m_b2w = m4x4::Transform(AxisId::PosZ, m_axis_id, v4Origin);
 
 				IObjectCreatorCuboid::CreateModel(p, obj);
 			}
@@ -2166,6 +2170,258 @@ namespace pr
 			}
 		};
 
+		// ELdrObject::Chart
+		template <> struct ObjectCreator<ELdrObject::Chart> :IObjectCreator
+		{
+			using Column = pr::vector<float>;
+			using Table  = pr::vector<Column>;
+
+			AxisId m_axis_id;
+			Table m_table;
+			CCont m_colours;
+			int m_xcolumn;
+			float m_width;
+
+			ObjectCreator()
+				:m_axis_id(AxisId::PosZ)
+				,m_table()
+				,m_colours()
+				,m_xcolumn(0)
+				,m_width(0)
+			{}
+			bool ParseKeyword(ParseParams& p, EKeyword kw) override
+			{
+				switch (kw) {
+				default: return IObjectCreator::ParseKeyword(p, kw);
+				case EKeyword::XColumn: p.m_reader.IntS(m_xcolumn, 10); return true;
+				case EKeyword::Width: p.m_reader.RealS(m_width); return true;
+				case EKeyword::Colours:
+					{
+						p.m_reader.SectionStart();
+						for (;!p.m_reader.IsSectionEnd();)
+						{
+							Colour32 col;
+							p.m_reader.Int(col.argb, 16);
+							m_colours.push_back(col);
+						}
+						p.m_reader.SectionEnd();
+						return true;
+					}
+				}
+			}
+			void Parse(ParseParams& p) override
+			{
+				// Read the axis id
+				p.m_reader.Int(m_axis_id.value, 10);
+
+				// Read up to the first non-delimiter. This is the start of the CSV data
+				if (!p.m_reader.IsSectionEnd())
+				{
+					m_table.reserve(10);
+
+					// Create an adapter that makes the script reader look like a std::stream
+					struct StreamWrapper
+					{
+						Reader&      m_reader; // The reader to adapt
+						std::wstring m_delims; // Preserve the delimiters
+
+						StreamWrapper(Reader& reader)
+							:m_reader(reader)
+							,m_delims(reader.Delimiters())
+						{
+							// Change the delimiters to suit CSV data
+							m_reader.Delimiters(L"");
+						}
+						~StreamWrapper()
+						{
+							m_reader.Delimiters(m_delims.c_str());
+						}
+						StreamWrapper(StreamWrapper const&) = delete;
+						StreamWrapper& operator =(StreamWrapper const&) = delete;
+						bool good() const
+						{
+							return !eof() && !bad();
+						}
+						bool eof() const
+						{
+							return m_reader.IsKeyword() || m_reader.IsSectionEnd();
+						}
+						bool bad() const
+						{
+							return m_reader.IsSourceEnd();
+						}
+						wchar_t peek()
+						{
+							return *m_reader.Source();
+						}
+						wchar_t get()
+						{
+							auto ch = peek();
+							++m_reader.Source();
+							return ch;
+						}
+					};
+					StreamWrapper wrap(p.m_reader);
+
+					// Read CSV data up to the section close
+					pr::csv::Loc loc;
+					std::vector<float> values;
+					for (pr::csv::Row row; pr::csv::Read(wrap, row, loc); row.resize(0), values.resize(0))
+					{
+						// Trim trailing empty values and empty rows
+						if (row.size() == 1 && pr::str::Trim(row[0], pr::str::IsWhiteSpace<wchar_t>, false, true).empty())
+							row.pop_back();
+						if (!row.empty() && pr::str::Trim(row.back(), pr::str::IsWhiteSpace<wchar_t>, false, true).empty())
+							row.pop_back();
+						if (row.empty())
+							continue;
+
+						// Convert the row to values
+						bool skip_row = false;
+						for (auto& item : row)
+						{
+							float value;
+							if (!pr::str::ExtractRealC(value, item.c_str())) { skip_row = true; break; }
+							values.push_back(value);
+						}
+						if (skip_row) continue;
+
+						// Make sure 'm_table' and 'values' have the same length
+						auto width = std::max(m_table.size(), values.size());
+						m_table.resize(width);
+						values.resize(width);
+
+						// Add the row of values to the table
+						for (int i = 0, iend = int(values.size()); i != iend; ++i)
+							m_table[i].push_back(values[i]);
+					}
+				}
+			}
+			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			{
+				using namespace pr::rdr;
+
+				// Validate
+				if (m_table.size() == 0 || m_table[0].size() < 2)
+				{
+					// No data
+					return;
+				}
+				if (m_xcolumn < -2 || m_xcolumn >= m_table.size())
+				{
+					p.ReportError(EResult::Failed, pr::FmtS("Chart object '%s', X axis column does not exist", obj->TypeAndName().c_str()));
+					return;
+				}
+
+				// Get the rotation for axis id
+				auto rot = m3x4::Rotation(AxisId::PosZ, m_axis_id);
+
+				// Default colours to use for each column
+				Colour32 const colours[] =
+				{
+					0xFF0000FF, 0xFF00FF00, 0xFFFF0000,
+					0xFF0000A0, 0xFF00A000, 0xFFA00000,
+					0xFF000080, 0xFF008000, 0xFF800000,
+					0xFF00FFFF, 0xFFFFFF00, 0xFFFF00FF,
+					0xFF00A0A0, 0xFFA0A000, 0xFFA000A0,
+					0xFF008080, 0xFF808000, 0xFF800080,
+				};
+				int cidx = 0;
+
+				auto& verts = Point();
+				auto& lines = Index();
+				auto& colrs = Color();
+				auto& nugts = Nugts();
+
+				// Record the range of data in the chart
+				auto xrange = pr::Range<float>::Reset();
+				auto yrange = pr::Range<float>::Reset();
+
+				// Create each column as a line strip nugget
+				for (int c = 0, cend = int(m_table.size()); c != cend; ++c)
+				{
+					auto& col = m_table[c];
+
+					// Don't plot the x axis values
+					if (c == m_xcolumn)
+						continue;
+
+					// Find the verts/indices range for this nugget
+					pr::rdr::Range vrange(verts.size(), verts.size() + col.size());
+					pr::rdr::Range irange(lines.size(), lines.size() + col.size());
+
+					// Set a colour for this column
+					auto colour = cidx < int(m_colours.size()) ? m_colours[cidx] : colours[cidx % _countof(colours)];
+					++cidx;
+
+					// Add a line strip for this column
+					auto ibase = verts.size();
+					for (int i = 0, iend = int(col.size()); i != iend; ++i)
+					{
+						auto x = m_xcolumn == -1 ? i : m_table[m_xcolumn][i];
+						auto y = col[i];
+
+						Encompass(xrange, x);
+						Encompass(yrange, y);
+
+						v4 vert(x, y, 0.0f, 1.0f);
+						verts.push_back(m_axis_id != AxisId::PosZ ? rot * vert : vert);
+						lines.push_back(static_cast<pr::uint16>(ibase + i));
+						colrs.push_back(colour);
+					}
+
+					// Create a nugget for the line strip
+					NuggetProps nug(EPrim::LineStrip, EGeom::Vert|EGeom::Colr, nullptr, vrange, irange);
+					if (m_width != 0.0f)
+					{
+						// Use thick lines
+						auto shdr = p.m_rdr.m_shdr_mgr.FindShader(EStockShader::ThickLineListGS)->Clone<ThickLineListShaderGS>(AutoId, pr::FmtS("thick_line_%f", m_width));
+						shdr->m_default_width = m_width;
+						nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
+					}
+					nugts.push_back(nug);
+				}
+
+				// Add axes
+				{
+					// Find the verts/indices range for this nugget
+					pr::rdr::Range vrange(verts.size(), verts.size() + 4);
+					pr::rdr::Range irange(lines.size(), lines.size() + 4);
+
+					// X Axis
+					auto ibase = verts.size();
+					verts.push_back(rot * v4(xrange.m_beg - 0.05f * xrange.size(), 0.0f, 0.0f, 1.0f));
+					verts.push_back(rot * v4(xrange.m_end + 0.05f * xrange.size(), 0.0f, 0.0f, 1.0f));
+					verts.push_back(rot * v4(0.0f, yrange.m_beg - 0.05f * yrange.size(), 0.0f, 1.0f));
+					verts.push_back(rot * v4(0.0f, yrange.m_end + 0.05f * yrange.size(), 0.0f, 1.0f));
+
+					lines.push_back(static_cast<pr::uint16>(ibase + 0));
+					lines.push_back(static_cast<pr::uint16>(ibase + 1));
+					lines.push_back(static_cast<pr::uint16>(ibase + 2));
+					lines.push_back(static_cast<pr::uint16>(ibase + 3));
+
+					// Set a colour for the axes
+					colrs.push_back(0xFF000000);
+					colrs.push_back(0xFF000000);
+					colrs.push_back(0xFF000000);
+					colrs.push_back(0xFF000000);
+
+					// Create a nugget for the axes
+					NuggetProps nug(EPrim::LineList, EGeom::Vert|EGeom::Colr, nullptr, vrange, irange);
+					nugts.push_back(nug);
+				}
+
+				// Create the model
+				auto cdata = MeshCreationData()
+					.verts  (verts.data(), int(verts.size()))
+					.indices(lines.data(), int(lines.size()))
+					.colours(colrs.data(), int(colrs.size()))
+					.nuggets(nugts.data(), int(nugts.size()));
+				obj->m_model = ModelGenerator<>::Mesh(p.m_rdr, cdata);
+				obj->m_model->m_name = obj->TypeAndName();
+			}
+		};
+
 		// ELdrObject::Model
 		template <> struct ObjectCreator<ELdrObject::Model> :IObjectCreator
 		{
@@ -2407,6 +2663,7 @@ namespace pr
 			case ELdrObject::Mesh:       Parse<ELdrObject::Mesh      >(p); break;
 			case ELdrObject::ConvexHull: Parse<ELdrObject::ConvexHull>(p); break;
 			case ELdrObject::Model:      Parse<ELdrObject::Model     >(p); break;
+			case ELdrObject::Chart:      Parse<ELdrObject::Chart     >(p); break;
 			case ELdrObject::DirLight:   Parse<ELdrObject::DirLight  >(p); break;
 			case ELdrObject::PointLight: Parse<ELdrObject::PointLight>(p); break;
 			case ELdrObject::SpotLight:  Parse<ELdrObject::SpotLight >(p); break;
@@ -2415,6 +2672,7 @@ namespace pr
 			}
 
 			// Apply properties to each object added
+			assert("No object added, or objects removed, without Parse error" && p.m_objects.size() > object_count);
 			for (auto i = object_count, iend = p.m_objects.size(); i != iend; ++i)
 				ApplyObjectState(p.m_objects[i]);
 
@@ -2443,6 +2701,7 @@ namespace pr
 						}
 
 						// Notify of an object added. Cancel if 'add_cb' returns false
+						assert("Objects removed but 'ParseLdrObject' didn't fail" && result.m_objects.size() > object_count);
 						cancel = !add_cb(result.m_objects[object_count]);
 						break;
 					}
@@ -3282,6 +3541,28 @@ LR"(// A mesh of lines, faces, or tetrahedra.
 //	*Part { n }          // For model formats that contain multiple models, allows a specific one to be selected
 //	*GenerateNormals     // Generate normals for the model
 //}
+
+// Create a chart from a table of values.
+// Expects text data in a 2D matrix. Plots columns 1,2,3,.. v.s. column 0.
+*Chart chart FFFFFFFF
+{
+	3                 // Axis id
+	//#include "filepath.csv" // Alternatively, #include a file containing the data:
+	index, col1, col2 // Rows containing non-number values are ignored
+	0, 10, -10,       // Chart data
+	1,  5,   0,
+	2,  0,   8,
+	3,  2,   5,
+	4,  6,  10,       // Trailing blank values are ignored
+	                  // Trailing new lines are ignored
+	*XColumn { 0 }    // Optional. Define which column to use as the X axis values (default 0). Use -1 to plot vs. index position
+	*Colours          // Optional. Assign colours to each column
+	{
+		FF00FF00
+		FFFF0000
+	}
+	*Width { 1 }      // Optional. A width for the lines
+}
 
 // A group of objects
 *Group group

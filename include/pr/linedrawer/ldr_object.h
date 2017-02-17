@@ -70,6 +70,7 @@ namespace pr
 			x(Mesh       ,= HashI("Mesh"      ))\
 			x(ConvexHull ,= HashI("ConvexHull"))\
 			x(Model      ,= HashI("Model"     ))\
+			x(Chart      ,= HashI("Chart"     ))\
 			x(Group      ,= HashI("Group"     ))\
 			x(Instance   ,= HashI("Instance"  ))\
 			x(DirLight   ,= HashI("DirLight"  ))\
@@ -130,6 +131,7 @@ namespace pr
 			x(Coloured           ,= HashI("Coloured"          ))\
 			x(Width              ,= HashI("Width"             ))\
 			x(Smooth             ,= HashI("Smooth"            ))\
+			x(XColumn            ,= HashI("XColumn"           ))\
 			x(Closed             ,= HashI("Closed"            ))\
 			x(Param              ,= HashI("Param"             ))\
 			x(Texture            ,= HashI("Texture"           ))\

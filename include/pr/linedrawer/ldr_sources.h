@@ -236,6 +236,12 @@ namespace pr
 						Reader reader(src, false, &file.m_includes, nullptr, m_embed);
 						Parse(*m_rdr, reader, out, true, file.m_file_group_id);
 					}
+					else if (pr::str::EqualI(extn, "csv"))
+					{
+						Buffer<> src(ESrcType::Buffered, pr::FmtS(L"*Chart {3 \"%s\"}", file.m_filepath.c_str()));
+						Reader reader(src, false, &file.m_includes, nullptr, m_embed);
+						Parse(*m_rdr, reader, out, true, file.m_file_group_id);
+					}
 					else
 					{
 						// Assume an ldr script file
@@ -256,12 +262,12 @@ namespace pr
 				}
 				catch (pr::script::Exception const& ex)
 				{
-					Remove(file.m_filepath.c_str());
+					pr::ldr::Remove(*m_store, &file.m_file_group_id, 1, nullptr, 0);
 					OnError(*this, ErrorEventArgs(pr::FmtS(L"Script error found while parsing source file '%s'.\r\n%S", file.m_filepath.c_str(), ex.what())));
 				}
 				catch (std::exception const& ex)
 				{
-					Remove(file.m_filepath.c_str());
+					pr::ldr::Remove(*m_store, &file.m_file_group_id, 1, nullptr, 0);
 					OnError(*this, ErrorEventArgs(pr::FmtS(L"Error found while parsing source file '%s'.\r\n%S", file.m_filepath.c_str(), ex.what())));
 				}
 				return pr::GuidZero;

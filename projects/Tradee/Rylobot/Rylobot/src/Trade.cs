@@ -19,11 +19,12 @@ namespace Rylobot
 		/// <summary>Create a trade with explicit values</summary>
 		public Trade(Instrument instr, TradeType tt, string label, QuoteCurrency ep, QuoteCurrency sl, QuoteCurrency tp, long volume, NegIdx? neg_idx = null)
 		{
-			Id         = m_trade_id++;
+			Id         = null;
+			Index      = m_trade_id++;
 			TradeType  = tt;
 			Instrument = instr;
 			Result     = EResult.Open;
-			EntryIndex = (double)((neg_idx ?? 0) - instr.FirstIdx);
+			EntryIndex = (double)((neg_idx ?? 0) - instr.IdxFirst);
 			ExitIndex  = EntryIndex;
 			Label      = label ?? string.Empty;
 
@@ -49,105 +50,119 @@ namespace Rylobot
 		public Trade(Rylobot bot, Instrument instr, TradeType tt, string label = null, NegIdx? neg_idx = null, double? ep = null, double? risk = null, RangeF? rtr_range = null)
 			:this(instr, tt, label, 0, 0, 0, 0, neg_idx)
 		{
-			var sign = tt.Sign();
-			NegIdx index = neg_idx ?? 0;
-
-			// If the index == 0, add the fractional index amount
-			if (index == 0)
+			try
 			{
-				var ticks_elapsed = bot.UtcNow.Ticks - instr.Latest.Timestamp;
-				var ticks_per_candle = instr.TimeFrame.ToTicks();
-				EntryIndex += Maths.Clamp((double)ticks_elapsed / ticks_per_candle, 0.0, 1.0);
-				ExitIndex = EntryIndex;
+				var sign = tt.Sign();
+				NegIdx index = neg_idx ?? 0;
+
+				// If the index == 0, add the fractional index amount
+				if (index == 0)
+				{
+					var ticks_elapsed = bot.UtcNow.Ticks - instr.Latest.Timestamp;
+					var ticks_per_candle = instr.TimeFrame.ToTicks();
+					EntryIndex += Maths.Clamp((double)ticks_elapsed / ticks_per_candle, 0.0, 1.0);
+					ExitIndex = EntryIndex;
+				}
+
+				// Set the trade entry price
+				EP = ep ?? (index == 0
+					? instr.CurrentPrice(sign) // Use the latest price
+					: instr[index].Open + (sign > 0 ? instr.Symbol.Spread : 0));// Use the open price of the candle at 'index'
+
+				// Find the account currency value of the available risk
+				var balance_to_risk = bot.Broker.BalanceToRisk * (risk ?? 1.0);
+				if (balance_to_risk == 0)
+					throw new Exception("Insufficient available risk. Current Risk: {0}%, Maximum Risk: {1}%".Fmt(bot.Broker.TotalRiskPC, bot.Settings.MaxRiskPC));
+
+				// Require the SL to be at least 2 * the median candle size
+				var volatility = instr.Symbol.QuoteToAcct(2 * instr.MCS_50 * instr.Symbol.VolumeMin);
+				if (balance_to_risk < volatility)
+					throw new Exception("Insufficient available risk. Volatility: {0}, Balance To Risk: {1}".Fmt(volatility, balance_to_risk));
+
+				#region Set SL
+
+				// Choose a stop loss value for the trade.
+				// Look at recent history and set the stop loss beyond recent pecks/toughs
+				QuoteCurrency sl = 0.0;
+
+				// Scan backwards looking for a peak in the stop loss direction.
+				foreach (var candle in instr.CandleRange(index - bot.Settings.LookBackCount, index))
+				{
+					var limit = candle.WickLimit(-sign);
+					var diff = (double)(EP - limit);
+					if (Maths.Sign(diff) != sign) continue;
+					if (Math.Abs(diff) < sl) continue;
+					sl = Math.Abs(diff);
+				}
+
+				// For short trades, add the spread to the SL
+				sl += (sign > 0 ? 0 : instr.Symbol.Spread);
+
+				// Add on a bit as a safety buffer
+				sl *= 1.1f;
+
+				// Adjust the volume so that the risk is within the acceptable range
+				// If the risk is too high reduce the volume first, down to the VolumeMin
+				// then reduce 'peak'. If the risk is low, increase volume to fit within 'risk'.
+
+				// Find the account value risked at the current stop loss
+				var sl_acct = instr.Symbol.QuoteToAcct(sl);
+				var optimal_volume = balance_to_risk / sl_acct;
+
+				// If the risk is too high, reduce the stop loss
+				if (optimal_volume < instr.Symbol.VolumeMin)
+				{
+					Volume = instr.Symbol.VolumeMin;
+					sl = instr.Symbol.AcctToQuote(balance_to_risk / Volume);
+				}
+				// Otherwise, round down to the nearest volume multiple
+				else
+				{
+					Volume = instr.Symbol.NormalizeVolume(optimal_volume, RoundingMode.Down);
+				}
+
+				// Set the SL level
+				SL = EP - sign * sl;
+
+				#endregion
+
+				#region Set TP
+
+				QuoteCurrency tp = sl;
+				var rtr = rtr_range ?? bot.Settings.RewardToRisk;
+
+				// Get the support and resistance levels
+				var snr = new SnR(instr, index - bot.Settings.LookBackCount, index);
+
+				// Select SnR levels that are between the min and max reward to risk ratios.
+				// Set the TP at the nearest SnR level above the minimum RtR ratio
+				// Scale the TP to 95% to put it on the near-side of the SnR level
+				var lvl_min = EP + sign * sl * rtr.Begin;
+				var lvl_max = EP + sign * sl * rtr.End;
+				var lvl = EP + sign * tp;
+				var nearest = snr.Nearest(lvl, sign, new RangeF((double)lvl_min, (double)lvl_max));
+				if (nearest != null)
+					tp = sign * 0.90 * (nearest.Price - EP);
+
+				// Set the TP level
+				TP = EP + sign * tp;
+
+				#endregion
 			}
-
-			// Set the trade entry price
-			EP = ep ?? (index == 0
-				? instr.CurrentPrice(sign) // Use the latest price
-				: instr[index].Open + (sign > 0 ? instr.Symbol.Spread : 0));// Use the open price of the candle at 'index'
-
-			// Find the account currency value of the available risk
-			var balance_to_risk = bot.Broker.BalanceToRisk * (risk ?? 1.0);
-			if (balance_to_risk == 0)
-				throw new Exception("Insufficient available risk. Current Risk: {0}%, Maximum Risk: {1}%".Fmt(bot.Broker.TotalRiskPC, bot.Settings.MaxRiskPC));
-
-			#region Set SL
-
-			// Choose a stop loss value for the trade.
-			// Look at recent history and set the stop loss beyond recent pecks/toughs
-			QuoteCurrency sl = 0.0;
-
-			// Scan backwards looking for a peak in the stop loss direction.
-			foreach (var candle in instr.CandleRange(index - bot.Settings.LookBackCount, index))
+			catch (Exception ex)
 			{
-				var limit = candle.WickLimit(-sign);
-				var diff = (double)(EP - limit);
-				if (Maths.Sign(diff) != sign) continue;
-				if (Math.Abs(diff) < sl) continue;
-				sl = Math.Abs(diff);
+				Error = ex;
 			}
-
-			// For short trades, add the spread to the SL
-			sl += (sign > 0 ? 0 : instr.Symbol.Spread);
-
-			// Add on a bit as a safety buffer
-			sl *= 1.1f;
-
-			// Adjust the volume so that the risk is within the acceptable range
-			// If the risk is too high reduce the volume first, down to the VolumeMin
-			// then reduce 'peak'. If the risk is low, increase volume to fit within 'risk'.
-
-			// Find the account value risked at the current stop loss
-			var sl_acct = instr.Symbol.QuoteToAcct(sl);
-			var optimal_volume = balance_to_risk / sl_acct;
-
-			// If the risk is too high, reduce the stop loss
-			if (optimal_volume < instr.Symbol.VolumeMin)
-			{
-				Volume = instr.Symbol.VolumeMin;
-				sl = instr.Symbol.AcctToQuote(balance_to_risk / Volume);
-			}
-			// Otherwise, round down to the nearest volume multiple
-			else
-			{
-				Volume = instr.Symbol.NormalizeVolume(optimal_volume, RoundingMode.Down);
-			}
-
-			// Set the SL level
-			SL = EP - sign * sl;
-
-			#endregion
-
-			#region Set TP
-
-			QuoteCurrency tp = sl;
-			var rtr = rtr_range ?? bot.Settings.RewardToRisk;
-
-			// Get the support and resistance levels
-			var snr = new SnR(instr, index - bot.Settings.LookBackCount, index);
-
-			// Select SnR levels that are between the min and max reward to risk ratios.
-			// Set the TP at the nearest SnR level above the minimum RtR ratio
-			// Scale the TP to 95% to put it on the near-side of the SnR level
-			var lvl_min = EP + sign * sl * rtr.Begin;
-			var lvl_max = EP + sign * sl * rtr.End;
-			var lvl = EP + sign * tp;
-			var nearest = snr.Nearest(lvl, sign, new RangeF((double)lvl_min, (double)lvl_max));
-			if (nearest != null)
-				tp = sign * 0.90 * (nearest.Price - EP);
-
-			// Set the TP level
-			TP = EP + sign * tp;
-
-			#endregion
 		}
 
 		/// <summary>Construct a trade from an existing position</summary>
 		public Trade(Instrument instr, Position pos)
 			:this(instr, pos.TradeType, pos.Label, pos.EntryPrice, pos.StopLoss ?? pos.EntryPrice, pos.TakeProfit ?? pos.EntryPrice, pos.Volume)
 		{
-			EntryIndex = instr.FractionalIndexAt(pos.EntryTime) - (double)instr.FirstIdx;
-			ExitIndex  = instr.FractionalIndexAt(instr.Bot.UtcNow) - (double)instr.FirstIdx;
+			Id = pos.Id;
+
+			EntryIndex = instr.FractionalIndexAt(pos.EntryTime) - (double)instr.IdxFirst;
+			ExitIndex  = instr.FractionalIndexAt(instr.Bot.UtcNow) - (double)instr.IdxFirst;
 
 			PeakProfit = TradeType.Sign() * (TP - EP);
 			PeakLoss   = TradeType.Sign() * (EP - SL);
@@ -159,8 +174,11 @@ namespace Rylobot
 		/// <summary>The instrument traded</summary>
 		public Instrument Instrument { get; private set; }
 
+		/// <summary>The CAlgo Id for this trade (or null)</summary>
+		public int? Id { get; set; }
+
 		/// <summary>Incrementing trade index</summary>
-		public int Id { get; private set; }
+		public int Index { get; private set; }
 		private static int m_trade_id;
 
 		/// <summary>The entry point CAlgo index (can be a fractional index)</summary>
@@ -197,6 +215,9 @@ namespace Rylobot
 
 		/// <summary>A string label for the trade</summary>
 		public string Label { get; set; }
+
+		/// <summary>Null if this is a valid trade, otherwise the error that makes the trade invalid</summary>
+		public Exception Error { get; private set; }
 
 		/// <summary>The outcome of this trade so far</summary>
 		public EResult Result { get; private set; }
@@ -260,7 +281,7 @@ namespace Rylobot
 				PeakLoss   = Misc.Max(PeakLoss  , sign * (EP - p));
 			}
 
-			ExitIndex = (double)(index - Instrument.FirstIdx);
+			ExitIndex = (double)(index - Instrument.IdxFirst);
 		}
 	}
 }

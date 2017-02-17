@@ -18,11 +18,24 @@
 #include <fstream>
 #include <cassert>
 
+#ifndef PR_CSV_USE_PRSTRING
+#define PR_CSV_USE_PRSTRING 1
+#endif
+
+#if PR_CSV_USE_PRSTRING
+#include "pr/str/string.h"
+#endif
+
 namespace pr
 {
 	namespace csv
 	{
-		typedef std::string Str;
+		#if PR_CSV_USE_PRSTRING
+		using Str = pr::string<char, 64>;
+		#else
+		using Str = std::string;
+		#endif
+
 		struct Row :std::vector<Str>
 		{
 			Row() :std::vector<Str>() {}
@@ -75,7 +88,7 @@ namespace pr
 
 			Str out; out.reserve(str.size() * 11 / 10);
 			out.push_back('"');
-			for (char ch : str)
+			for (auto ch : str)
 			{
 				if (ch == '"') out.push_back('"');
 				out.push_back(ch);
@@ -89,7 +102,7 @@ namespace pr
 				return str;
 
 			Str out; out.reserve(str.size());
-			char const* ptr = str.c_str();
+			auto ptr = str.c_str();
 			for (++ptr; *ptr != 0; ++ptr)
 			{
 				if (*ptr == '"' && *(++ptr) != '"') break;
@@ -99,7 +112,7 @@ namespace pr
 			return out;
 		}
 
-		// Set an element in the csv
+		// Set an element in the CSV
 		inline Str& Item(Csv& csv, std::size_t row, std::size_t col)
 		{
 			if (row >= csv     .size()) csv     .resize(row + 1);
@@ -107,7 +120,7 @@ namespace pr
 			return csv[row][col];
 		}
 
-		// Set an element in the csv, throwing if out of range
+		// Set an element in the CSV, throwing if out of range
 		inline Str& ItemT(Csv& csv, std::size_t row, std::size_t col)
 		{
 			if (row >= csv     .size()) throw std::exception("row index out of range"   );
@@ -116,7 +129,7 @@ namespace pr
 		}
 
 		// This allows a 'Loc' to be used in a stream to remove ',' and '\n'
-		// characters while also maintaining the csv row,col position
+		// characters while also maintaining the CSV row,col position
 		template <typename Stream> inline Stream& operator >> (Stream& s, Loc& loc)
 		{
 			int ch = s.peek();
@@ -150,24 +163,24 @@ namespace pr
 				{
 					if (ch == '"')
 					{
-						if (esc) item.push_back(char(ch));
+						if (esc) item.push_back(Str::value_type(ch));
 						esc = !esc;
 					}
 					else
 					{
 						if (esc) break;
-						item.push_back(char(ch));
+						item.push_back(Str::value_type(ch));
 					}
 				}
 
 				// Expect the quoted string to be closed
 				if (!esc) // i.e. we should've seen one '"' followed by not '"' or eof
-					throw std::exception("incomplete csv item");
+					throw std::exception("incomplete CSV item");
 			}
 
 			// Read to the next ',' or '\n'
 			for (ch = s.get(); s.good() && ch != ',' && ch != '\n'; ch = s.get())
-				item.push_back(char(ch));
+				item.push_back(Str::value_type(ch));
 
 			if (!s.eof()) loc.inc(ch);
 			return true;
@@ -236,8 +249,8 @@ namespace pr
 			return Read(s, row, loc);
 		}
 
-		// Read all csv data from a stream
-		// Returns true if csv is read, false if nothing was read
+		// Read all CSV data from a stream
+		// Returns true if CSV is read, false if nothing was read
 		// Throws on bad stream or partial element read.
 		// 's' will point at eof after a successful read.
 		template <typename Stream> bool Read(Stream& s, Csv& csv, Loc& loc)
@@ -279,7 +292,7 @@ namespace pr
 			}
 		}
 
-		// Write all csv data to a stream
+		// Write all CSV data to a stream
 		template <typename Stream> inline void Write(Stream& s, Csv const& csv)
 		{
 			auto count = csv.size();
@@ -290,7 +303,7 @@ namespace pr
 			}
 		}
 
-		// Write a Csv object to a file
+		// Write a CSV object to a file
 		template <typename tchar> inline void Save(tchar const* csv_filename, Csv const& csv)
 		{
 			std::ofstream out(csv_filename);
@@ -298,7 +311,7 @@ namespace pr
 			Write(out, csv);
 		}
 
-		// Populate a Csv object from a file
+		// Populate a CSV object from a file
 		template <typename tchar> inline bool Load(tchar const* csv_filename, Csv& csv, Loc& loc)
 		{
 			std::ifstream in(csv_filename);
@@ -331,7 +344,7 @@ namespace pr
 			return csv;
 		}
 
-		// Csv streaming operators
+		// CSV streaming operators
 		inline Csv& operator << (Csv& csv, Str str)
 		{
 			if (csv.empty()) csv.push_back(Row());
@@ -356,7 +369,7 @@ namespace pr
 			return (*func)(row);
 		}
 
-		// Generate stream to Csv
+		// Generate stream to CSV
 		template <typename T> inline Csv& operator << (Csv& csv, T item)
 		{
 			std::stringstream ss; ss << item;

@@ -178,7 +178,14 @@ namespace pr
 		}
 		inline TStr& LineD(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& start, v4 const& direction)
 		{
-			return Append(str, "*LineD", name, colour, "{", start[0] ,start[1] ,start[2] ,direction[0] ,direction[1] ,direction[2], "}\n");
+			return Append(str, "*LineD", name, colour, "{", start.xyz ,direction.xyz, "}\n");
+		}
+		inline TStr& LineStrip(TStr& str, typename TStr::value_type const* name, Col colour, int width, int count, v4 const* points)
+		{
+			Append(str, "*LineStrip ",name," ",colour," {");
+			if (width != 0) Append(str, "*Width {",width,"} ");
+			for (int i = 0; i != count; ++i) Append(str, points[i].xyz);
+			return Append(str, "}\n");
 		}
 		inline TStr& Rect(TStr& str, typename TStr::value_type const* name, Col colour, int axis, float w, float h, bool solid, m4x4 const& o2w)
 		{

@@ -103,7 +103,7 @@ namespace pr
 				// Add the nugget to the device context
 				dc->DrawIndexed(
 					UINT(dle.m_nugget->m_irange.size()),
-					UINT(dle.m_nugget->m_irange.m_begin),
+					UINT(dle.m_nugget->m_irange.m_beg),
 					0);
 			}
 		}

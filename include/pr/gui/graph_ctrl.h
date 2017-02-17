@@ -634,7 +634,7 @@ namespace pr
 				auto aspect = (m_yaxis.span() * m_base_xrange.span()) / (m_base_yrange.span() * m_xaxis.span());
 				aspect = pr::Clamp(pr::IsFinite(aspect) ? aspect : 1.0, 0.001, 1000.0);
 
-				zm = pr::Clamp(zm, m_zoom_limits.m_begin, m_zoom_limits.m_end);
+				zm = pr::Clamp(zm, m_zoom_limits.m_beg, m_zoom_limits.m_end);
 				if (m_xaxis.m_allow_zoom) m_xaxis.span(m_base_xrange.span() * zm         );
 				if (m_yaxis.m_allow_zoom) m_yaxis.span(m_base_yrange.span() * zm * aspect);
 				Dirty(true);

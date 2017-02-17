@@ -3,9 +3,9 @@
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
 // Fundamental string functions that operate on:
-//   std::string, std::wstring, pr::string<>, etc
-//   char[], wchar_t[], etc
-//   char*, wchar_t*, etc
+//'   std::string, std::wstring, pr::string<>, etc
+//'   char[], wchar_t[], etc
+//'   char*, wchar_t*, etc
 // Note: char-array strings are not handled as special cases because there is no
 // guarantee that the entire buffer is filled by the string, the null terminator
 // may be midway through the buffer
@@ -232,7 +232,7 @@ namespace pr
 		#pragma endregion
 
 		#pragma region Standard Library Functions
-		// Variable arg sprintf, overloaded for all char type combinations
+		// Variable arg 'sprintf', overloaded for all char type combinations
 		inline int vsprintf(char* buf, size_t buf_size_in_bytes, char const* format, va_list args)
 		{
 			return vsprintf_s(buf, buf_size_in_bytes, format, args);
@@ -250,7 +250,7 @@ namespace pr
 			return vswprintf_s(buf, buf_size_in_words, Widen(format).c_str(), args);
 		}
 
-		// sprintf accepting any char type
+		// 'sprintf' accepting any char type
 		template <typename Char1, typename Char2> inline int sprintf(Char1* buf, size_t buf_size_in_words, Char2 const* format, ...)
 		{
 			va_list arg_list;
@@ -308,7 +308,7 @@ namespace pr
 		#pragma endregion
 
 		#pragma region Length
-		// Return the length of the string, excluding the null terminator (same as strlen)
+		// Return the length of the string, excluding the null terminator (same as 'strlen')
 		template <typename Str, typename = Str::value_type> inline size_t Length(Str const& str)
 		{
 			return str.size();
@@ -383,7 +383,7 @@ namespace pr
 		#pragma endregion
 
 		#pragma region Equal
-		// Return true if the ranges [i,iend) and [j,jend) are equal
+		// Return true if the ranges '[i,iend)' and '[j,jend)' are equal
 		template <typename Iter1, typename Iter2, typename Pred> inline bool Equal(Iter1 i, Iter1 iend, Iter2 j, Iter2 jend, Pred pred)
 		{
 			for (; !(i == iend) && !(j == jend) && pred(*i, *j); ++i, ++j) {}
@@ -431,7 +431,7 @@ namespace pr
 		#pragma endregion
 
 		#pragma region EqualI
-		// Return true if the ranges [i,iend) and [j,jend) are equal, ignoring case
+		// Return true if the ranges '[i,iend)' and '[j,jend)' are equal, ignoring case
 		template <typename Iter1, typename Iter2, typename Char1 = decltype(*Iter1()), typename Char2 = decltype(*Iter2())> inline bool EqualI(Iter1 i, Iter1 iend, Iter2 j, Iter2 jend)
 		{
 			return Equal(i, iend, j, jend, [](Char1 lhs, Char2 rhs)
@@ -509,10 +509,10 @@ namespace pr
 		{
 			return EqualNI(str, str2, N);
 		}
-#pragma endregion
+		#pragma endregion
 
 		#pragma region FindChar
-		// Return a pointer to the first occurrance of 'ch' in a string or the string null terminator
+		// Return a pointer to the first occurrence of 'ch' in a string or the string null terminator
 		template <typename Char1, typename Char2> inline Char1* FindChar(Char1* str, Char2 ch)
 		{
 			for (;*str && *str != ch; ++str) {}
@@ -523,7 +523,7 @@ namespace pr
 			return FindChar(const_cast<Char1*>(str.c_str()), ch);
 		}
 
-		// Return a pointer to the first occurrange of 'ch' in a string or the string null terminator or the 'length' character
+		// Return a pointer to the first occurrence of 'ch' in a string or the string null terminator or the 'length' character
 		template <typename Char1, typename Char2> inline Char1* FindChar(Char1* str, Char2 ch, size_t length)
 		{
 			for (;*str && length-- && *str != ch; ++str) {}
@@ -581,40 +581,38 @@ namespace pr
 			return beg;
 		}
 
-		// Returns a pointer to the first character in 'str[offset, offset+count)' that satisfies 'pred', or a pointer to the end of the string or &str[offset+count]
+		// Returns a pointer to the first character in '[offset, offset+count)' that satisfies 'pred', or a pointer to the end of the string or &str[offset+count]
 		template <typename Str, typename Pred, typename Iter = traits<Str>::iter> inline Iter FindFirst(Str& str, size_t offset, size_t count, Pred pred)
 		{
-			auto p = Begin(str) + offset;
-			auto pend = End(str, offset + count);
-			for (; count-- != 0 && p != pend && !pred(*p); ++p) {}
-			return p;
+			return FindFirst(Begin(str) + offset, End(str, offset + count), pred);
 		}
+
+		// Returns a pointer to the first character in 'str' that satisfies 'pred', or a pointer to the end of the string
 		template <typename Str, typename Pred, typename Iter = traits<Str>::iter> inline Iter FindFirst(Str& str, Pred pred)
 		{
 			return FindFirst(str, 0, ~size_t(), pred);
 		}
 
-		// Return an iterator to the last position that satisfies 'pred'
+		// Return an iterator to *one past* the last position that satisfies 'pred' or a pointer to the beginning of the string. Intended to be used to form a range with FindFirst/FindLast.
 		template <typename Iter, typename Pred> inline Iter FindLast(Iter beg, Iter end, Pred pred)
 		{
-			for (auto i = end; i != beg;) { if (pred(*--i)) return i; }
+			for (; end != beg && !pred(*(end-1)); --end) {}
 			return end;
 		}
 
-		// Returns a pointer to the last character in 'str[offset, offset+count)' that satisfies 'pred', or a pointer to the beginning of the string or &str[offset]
+		// Returns a pointer to *one past* the last character in '[offset, offset+count)' that satisfies 'pred', or a pointer to the beginning of the string or &str[offset]
 		template <typename Str, typename Pred, typename Iter = traits<Str>::iter> inline Iter FindLast(Str& str, size_t offset, size_t count, Pred pred)
 		{
-			auto p = End(str, offset + count);
-			auto pend = Begin(str) + offset;
-			for (; count-- != 0 && p != pend && !pred(*--p);) {}
-			return p;
+			return FindLast(Begin(str) + offset, End(str, offset + count), pred);
 		}
+
+		// Returns a pointer to *one past* the last character in 'str' that satisfies 'pred', or a pointer to the beginning of the string
 		template <typename Str, typename Pred, typename Iter = traits<Str>::iter> inline Iter FindLast(Str& str, Pred pred)
 		{
 			return FindLast(str, 0, ~size_t(), pred);
 		}
 
-		// Find the first occurance of one of the chars in 'delim'
+		// Find the first occurrence of one of the chars in 'delim'
 		template <typename Iter, typename Char> inline Iter FindFirstOf(Iter beg, Iter end, Char const* delim)
 		{
 			for (; beg != end && *FindChar(delim, *beg) == 0; ++beg) {}
@@ -622,10 +620,7 @@ namespace pr
 		}
 		template <typename Str, typename Char, typename Iter = traits<Str>::iter> inline Iter FindFirstOf(Str& str, Char const* delim)
 		{
-			auto beg = Begin(str);
-			auto end = End(str);
-			for (; beg != end && *FindChar(delim, *beg) == 0; ++beg) {}
-			return beg;
+			return FindFirstOf(Begin(str), End(str), delim);
 		}
 		template <typename Iter, typename Char> inline size_t FindFirstOfAdv(Iter& str, Char const* delim)
 		{
@@ -634,18 +629,15 @@ namespace pr
 			return count;
 		}
 
-		// Find the last occurance of one of the chars in 'delim'
+		// Return a pointer to *one past* the last occurrence of one of the chars in 'delim'. Intended to be use with FindFirstOf to for a range
 		template <typename Iter, typename Char> inline Iter FindLastOf(Iter beg, Iter end, Char const* delim)
 		{
-			for (auto i = end; i != beg;) { if (*FindChar(delim, *--i) != 0) return i; }
+			for (;end != beg && *FindChar(delim, *(end-1)) == 0; --end) {}
 			return end;
 		}
 		template <typename Str, typename Char, typename Iter = traits<Str>::iter> inline Iter FindLastOf(Str& str, Char const* delim)
 		{
-			auto beg = Begin(str);
-			auto end = End(str);
-			for (auto i = end; i != beg;) { if (*FindChar(delim, *--i) != 0) return i; }
-			return end;
+			return FindLastOf(Begin(str), End(str), delim);
 		}
 
 		// Find the first character not in the set 'delim'
@@ -656,10 +648,7 @@ namespace pr
 		}
 		template <typename Str, typename Char, typename Iter = traits<Str>::iter> inline Iter FindFirstNotOf(Str& str, Char const* delim)
 		{
-			auto beg = Begin(str);
-			auto end = End(str);
-			for (; beg != end && *FindChar(delim, *beg) != 0; ++beg) {}
-			return beg;
+			return FindFirstNotOf(Begin(str), End(str), delim);
 		}
 		template <typename Iter, typename Char> inline size_t FindFirstNotOfAdv(Iter& str, Char const* delim)
 		{
@@ -668,23 +657,20 @@ namespace pr
 			return count;
 		}
 
-		// Find the last character not in the set 'delim'
+		// Return a pointer to *one past* the last character not in the set 'delim'
 		template <typename Iter, typename Char> inline Iter FindLastNotOf(Iter beg, Iter end, Char const* delim)
 		{
-			for (auto i = end; i != beg;) { if (*FindChar(delim, *--i) == 0) return i; }
+			for (;end != beg && *FindChar(delim, *(end-1)) != 0; --end) {}
 			return end;
 		}
 		template <typename Str, typename Char, typename Iter = traits<Str>::iter> inline Iter FindLastNotOf(Str& str, Char const* delim)
 		{
-			auto beg = Begin(str);
-			auto end = End(str);
-			for (auto i = end; i != beg;) { if (*FindChar(delim, *--i) == 0) return i; }
-			return end;
+			return FindLastNotOf(Begin(str), End(str), delim);
 		}
 		#pragma endregion
 
 		#pragma region Resize
-		// Resize a string. For pointers to fixed buffers, it's the callers responsibilty to ensure sufficient space
+		// Resize a string. For pointers to fixed buffers, it's the callers responsibility to ensure sufficient space
 		template <typename Str, typename Char2 = char, typename Char1 = Str::value_type> inline void Resize(Str& str, size_t new_size, Char2 ch = 0)
 		{
 			str.resize(new_size, Char1(ch));
@@ -730,7 +716,7 @@ namespace pr
 		#pragma endregion
 
 		#pragma region Assign
-		// Assign a range of characters to a subrange within a string.
+		// Assign a range of characters to a sub-range within a string.
 		// 'dest' is the string to be assigned to
 		// 'offset' is the index position of where to start copying to
 		// 'count' is the maximum number of characters to copy. The capacity of dest *must* be >= offset + count
@@ -845,9 +831,8 @@ namespace pr
 			auto end = End(str);
 			auto first = front ? FindFirst(beg  , end, [&](Char ch){ return !pred(ch); }) : beg;
 			auto last  = back  ? FindLast (first, end, [&](Char ch){ return !pred(ch); }) : end;
-			last += int(last != end);
 
-			// Move the non-trimed characters to the front of the string and trim the tail
+			// Move the non-trimmed characters to the front of the string and trim the tail
 			auto out = beg;
 			for (; first != last; ++first, ++out) { *out = *first; }
 			Resize(str, out - beg);
@@ -1080,7 +1065,7 @@ namespace pr
 				PR_CHECK(FindStr(aptr + 2, aptr + 9, "in") - Begin(aptr) == 5, true);
 				PR_CHECK(FindStr(wptr + 2, wptr + 9, "in") - Begin(wptr) == 5, true);
 			}
-			{// FindFirst
+			{// FindFirst                  0123456789
 				char const*     aptr   =  "find first";
 				char            aarr[] =  "find first";
 				std::string     astr   =  "find first";
@@ -1088,21 +1073,27 @@ namespace pr
 				wchar_t         warr[] = L"find first";
 				std::wstring    wstr   = L"find first";
 
-				PR_CHECK(Equal(&*FindFirst(aptr, [](char    ch){ return ch ==  'i'; }), "ind first"), true);
-				PR_CHECK(Equal(&*FindFirst(aarr, [](char    ch){ return ch ==  'i'; }), "ind first"), true);
-				PR_CHECK(Equal(&*FindFirst(astr, [](char    ch){ return ch ==  'i'; }), "ind first"), true);
-				PR_CHECK(Equal(&*FindFirst(wptr, [](wchar_t ch){ return ch == L'i'; }), "ind first"), true);
-				PR_CHECK(Equal(&*FindFirst(warr, [](wchar_t ch){ return ch == L'i'; }), "ind first"), true);
-				PR_CHECK(Equal(&*FindFirst(wstr, [](wchar_t ch){ return ch == L'i'; }), "ind first"), true);
+				PR_CHECK(FindFirst(aptr, [](char    ch){ return ch ==  'i'; }) == &aptr[0] + 1        , true);
+				PR_CHECK(FindFirst(aarr, [](char    ch){ return ch ==  'i'; }) == &aarr[0] + 1        , true);
+				PR_CHECK(FindFirst(astr, [](char    ch){ return ch ==  'i'; }) == std::begin(astr) + 1, true);
+				PR_CHECK(FindFirst(wptr, [](wchar_t ch){ return ch == L'i'; }) == &wptr[0] + 1        , true);
+				PR_CHECK(FindFirst(warr, [](wchar_t ch){ return ch == L'i'; }) == &warr[0] + 1        , true);
+				PR_CHECK(FindFirst(wstr, [](wchar_t ch){ return ch == L'i'; }) == std::begin(wstr) + 1, true);
 
-				PR_CHECK(FindFirst(aptr, [](char    ch){ return ch ==  'x'; }) == End(aptr), true);
-				PR_CHECK(FindFirst(aarr, [](char    ch){ return ch ==  'x'; }) == End(aarr), true);
-				PR_CHECK(FindFirst(astr, [](char    ch){ return ch ==  'x'; }) == End(astr), true);
-				PR_CHECK(FindFirst(wptr, [](wchar_t ch){ return ch == L'x'; }) == End(wptr), true);
-				PR_CHECK(FindFirst(warr, [](wchar_t ch){ return ch == L'x'; }) == End(warr), true);
-				PR_CHECK(FindFirst(wstr, [](wchar_t ch){ return ch == L'x'; }) == End(wstr), true);
+				PR_CHECK(FindFirst(aptr, [](char    ch){ return ch ==  'x'; }) == &aptr[0] + 10        , true);
+				PR_CHECK(FindFirst(aarr, [](char    ch){ return ch ==  'x'; }) == &aarr[0] + 10        , true);
+				PR_CHECK(FindFirst(astr, [](char    ch){ return ch ==  'x'; }) == std::begin(astr) + 10, true);
+				PR_CHECK(FindFirst(wptr, [](wchar_t ch){ return ch == L'x'; }) == &wptr[0] + 10        , true);
+				PR_CHECK(FindFirst(warr, [](wchar_t ch){ return ch == L'x'; }) == &warr[0] + 10        , true);
+				PR_CHECK(FindFirst(wstr, [](wchar_t ch){ return ch == L'x'; }) == std::begin(wstr) + 10, true);
+
+				PR_CHECK(FindFirst(&aptr[0] + 2, &aptr[0] + 8, [](char ch){ return ch ==  'i'; }) == &aptr[0] + 6, true);
+				PR_CHECK(FindFirst(&aptr[0] + 2, &aptr[0] + 8, [](char ch){ return ch ==  't'; }) == &aptr[0] + 8, true);
+
+				PR_CHECK(FindFirst(aptr, 2, 6, [](char ch){ return ch ==  'i'; }) == &aptr[0] + 6, true);
+				PR_CHECK(FindFirst(aptr, 2, 6, [](char ch){ return ch ==  't'; }) == &aptr[0] + 8, true);
 			}
-			{//FindLast
+			{//FindLast                    0123456789
 				char const*     aptr   =  "find flast";
 				char            aarr[] =  "find flast";
 				std::string     astr   =  "find flast";
@@ -1110,68 +1101,66 @@ namespace pr
 				wchar_t         warr[] = L"find flast";
 				std::wstring    wstr   = L"find flast";
 
-				PR_CHECK(Equal(&*FindLast(aptr, [](char    ch){ return ch ==  'f'; }), "flast"), true);
-				PR_CHECK(Equal(&*FindLast(aarr, [](char    ch){ return ch ==  'f'; }), "flast"), true);
-				PR_CHECK(Equal(&*FindLast(astr, [](char    ch){ return ch ==  'f'; }), "flast"), true);
-				PR_CHECK(Equal(&*FindLast(wptr, [](wchar_t ch){ return ch == L'f'; }), "flast"), true);
-				PR_CHECK(Equal(&*FindLast(warr, [](wchar_t ch){ return ch == L'f'; }), "flast"), true);
-				PR_CHECK(Equal(&*FindLast(wstr, [](wchar_t ch){ return ch == L'f'; }), "flast"), true);
+				PR_CHECK(FindLast(aptr, [](char    ch){ return ch ==  'f'; }) == &aptr[0] + 6        , true);
+				PR_CHECK(FindLast(aarr, [](char    ch){ return ch ==  'f'; }) == &aarr[0] + 6        , true);
+				PR_CHECK(FindLast(astr, [](char    ch){ return ch ==  'f'; }) == std::begin(astr) + 6, true);
+				PR_CHECK(FindLast(wptr, [](wchar_t ch){ return ch == L'f'; }) == &wptr[0] + 6        , true);
+				PR_CHECK(FindLast(warr, [](wchar_t ch){ return ch == L'f'; }) == &warr[0] + 6        , true);
+				PR_CHECK(FindLast(wstr, [](wchar_t ch){ return ch == L'f'; }) == std::begin(wstr) + 6, true);
 
-				PR_CHECK(Equal(&*FindLast(aptr, [](char    ch){ return ch ==  'x'; }), "find flast"), true);
-				PR_CHECK(Equal(&*FindLast(aarr, [](char    ch){ return ch ==  'x'; }), "find flast"), true);
-				PR_CHECK(Equal(&*FindLast(astr, [](char    ch){ return ch ==  'x'; }), "find flast"), true);
-				PR_CHECK(Equal(&*FindLast(wptr, [](wchar_t ch){ return ch == L'x'; }), "find flast"), true);
-				PR_CHECK(Equal(&*FindLast(warr, [](wchar_t ch){ return ch == L'x'; }), "find flast"), true);
-				PR_CHECK(Equal(&*FindLast(wstr, [](wchar_t ch){ return ch == L'x'; }), "find flast"), true);
+				PR_CHECK(FindLast(aptr, [](char    ch){ return ch ==  'x'; }) == &aptr[0] + 0        , true);
+				PR_CHECK(FindLast(aarr, [](char    ch){ return ch ==  'x'; }) == &aarr[0] + 0        , true);
+				PR_CHECK(FindLast(astr, [](char    ch){ return ch ==  'x'; }) == std::begin(astr) + 0, true);
+				PR_CHECK(FindLast(wptr, [](wchar_t ch){ return ch == L'x'; }) == &wptr[0] + 0        , true);
+				PR_CHECK(FindLast(warr, [](wchar_t ch){ return ch == L'x'; }) == &warr[0] + 0        , true);
+				PR_CHECK(FindLast(wstr, [](wchar_t ch){ return ch == L'x'; }) == std::begin(wstr) + 0, true);
+
+				PR_CHECK(FindLast(&aptr[0] + 2, &aptr[0] + 8, [](char ch){ return ch ==  'f'; }) == &aptr[0] + 6, true);
+				PR_CHECK(FindLast(&aptr[0] + 2, &aptr[0] + 8, [](char ch){ return ch ==  't'; }) == &aptr[0] + 2, true);
+
+				PR_CHECK(FindLast(aptr, 2, 6, [](char ch){ return ch ==  'f'; }) == &aptr[0] + 6, true);
+				PR_CHECK(FindLast(aptr, 2, 6, [](char ch){ return ch ==  't'; }) == &aptr[0] + 2, true);
 			}
-			{// FindFirstOf
+			{// FindFirstOf             0123456
 				char         aarr[] =  "AaAaAa";
 				wchar_t      warr[] = L"AaAaAa";
 				std::string  astr   =  "AaAaAa";
 				std::wstring wstr   = L"AaAaAa";
 
-				PR_CHECK(Equal(FindFirstOf(aarr, "A"), "AaAaAa"), true);
-				PR_CHECK(Equal(FindFirstOf(warr, "a"),  "aAaAa"), true);
-				PR_CHECK(FindFirstOf(astr, "B") == End(astr), true);
-				PR_CHECK(FindFirstOf(wstr, "B") == End(wstr), true);
-				PR_CHECK(FindFirstOf(astr, "A") - Begin(astr), 0);
-				PR_CHECK(FindFirstOf(wstr, "a") - Begin(wstr), 1);
+				PR_CHECK(FindFirstOf(aarr, "A") == &aarr[0] + 0        , true);
+				PR_CHECK(FindFirstOf(warr, "a") == &warr[0] + 1        , true);
+				PR_CHECK(FindFirstOf(astr, "B") == std::begin(astr) + 6, true);
+				PR_CHECK(FindFirstOf(wstr, "B") == std::begin(wstr) + 6, true);
 			}
-			{//FindLastOf
+			{//FindLastOf               0123456
 				char         aarr[] =  "AaAaAa";
-				wchar_t      warr[] = L"AaAaa";
+				wchar_t      warr[] = L"AaAaaa";
 				std::string  astr   =  "AaAaaa";
-				std::wstring wstr   = L"Aaaaa";
-				PR_CHECK(Equal(FindLastOf(aarr, L"A"), "Aa"), true);
-				PR_CHECK(Equal(FindLastOf(warr, L"A"), "Aaa"), true);
-				PR_CHECK(FindLastOf(astr, L"B") == End(astr), true);
-				PR_CHECK(FindLastOf(wstr, L"B") == End(wstr), true);
-				PR_CHECK(FindLastOf(astr, "A") - Begin(astr), 2);
-				PR_CHECK(FindLastOf(wstr, "A") - Begin(wstr), 0);
+				std::wstring wstr   = L"Aaaaaa";
+				PR_CHECK(FindLastOf(aarr, L"A") == &aarr[0] + 5    , true);
+				PR_CHECK(FindLastOf(warr, L"A") == &warr[0] + 3    , true);
+				PR_CHECK(FindLastOf(astr, L"B") == std::begin(astr), true);
+				PR_CHECK(FindLastOf(wstr, L"B") == std::begin(wstr), true);
 			}
-			{//FindFirstNotOf
+			{//FindFirstNotOf           01234567890123
 				char         aarr[] =  "junk_str_junk";
 				wchar_t      warr[] = L"junk_str_junk";
 				std::string  astr   =  "junk_str_junk";
 				std::wstring wstr   = L"junk_str_junk";
-				PR_CHECK(Equal(FindFirstNotOf(aarr, "_knuj"), "str_junk"), true);
-				PR_CHECK(Equal(FindFirstNotOf(warr, "_knuj"), "str_junk"), true);
-				PR_CHECK(FindFirstNotOf(astr, "_knujstr") == End(astr), true);
-				PR_CHECK(FindFirstNotOf(wstr, "_knujstr") == End(wstr), true);
-				PR_CHECK(FindFirstNotOf(astr, "_knuj") - Begin(astr), 5);
-				PR_CHECK(FindFirstNotOf(wstr, "_knuj") - Begin(wstr), 5);
+				PR_CHECK(FindFirstNotOf(aarr, "_knuj"   ) == &aarr[0] + 5         , true);
+				PR_CHECK(FindFirstNotOf(warr, "_knuj"   ) == &warr[0] + 5         , true);
+				PR_CHECK(FindFirstNotOf(astr, "_knujstr") == std::begin(astr) + 13, true);
+				PR_CHECK(FindFirstNotOf(wstr, "_knujstr") == std::begin(wstr) + 13, true);
 			}
-			{//FindLastNotOf
+			{//FindLastNotOf            01234567890123
 				char         aarr[] =  "junk_str_junk";
 				wchar_t      warr[] = L"junk_str_junk";
 				std::string  astr   =  "junk_str_junk";
 				std::wstring wstr   = L"junk_str_junk";
-				PR_CHECK(Equal(FindLastNotOf(aarr, "_knuj"), "r_junk"), true);
-				PR_CHECK(Equal(FindLastNotOf(warr, "_knuj"), "r_junk"), true);
-				PR_CHECK(FindLastNotOf(astr, "_knujstr") == End(astr), true);
-				PR_CHECK(FindLastNotOf(wstr, "_knujstr") == End(wstr), true);
-				PR_CHECK(FindLastNotOf(astr, "_knuj") - Begin(astr) ,7);
-				PR_CHECK(FindLastNotOf(wstr, "_knuj") - Begin(wstr) ,7);
+				PR_CHECK(FindLastNotOf(aarr, "_knuj"   ) == &aarr[0] + 8        , true);
+				PR_CHECK(FindLastNotOf(warr, "_knuj"   ) == &warr[0] + 8        , true);
+				PR_CHECK(FindLastNotOf(astr, "_knujstr") == std::begin(astr) + 0, true);
+				PR_CHECK(FindLastNotOf(wstr, "_knujstr") == std::begin(wstr) + 0, true);
 			}
 			{// Resize
 				char            aarr[] = {'a','a','a','a'};
@@ -1332,6 +1321,8 @@ namespace pr
 				PR_CHECK(Equal(TrimChars( " \t,trim\n", L" \t,\n" ,true  ,true) , L"trim"    ), true);
 				PR_CHECK(Equal(TrimChars(L" \t,trim\n",  " \t,\n" ,true  ,false),  "trim\n"  ), true);
 				PR_CHECK(Equal(TrimChars(L" \t,trim\n", L" \t,\n" ,false ,true) , L" \t,trim"), true);
+
+				PR_CHECK(Equal(Trim(" \t ", aws, false, true), ""), true);
 			}
 		}
 	}

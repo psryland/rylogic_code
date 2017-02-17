@@ -10,7 +10,7 @@ namespace Rylobot
 		/// <summary>Manage an active position</summary>
 		public PositionManager(Instrument instr, Position pos, NegIdx? neg_idx = null)
 		{
-			var index = (int)((neg_idx ?? 0) - instr.FirstIdx);
+			var index = (int)((neg_idx ?? 0) - instr.IdxFirst);
 
 			ColdFeetCount       = 10;
 			Instrument          = instr;

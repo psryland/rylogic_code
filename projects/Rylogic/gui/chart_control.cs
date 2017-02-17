@@ -3575,6 +3575,7 @@ namespace pr.gui
 						{
 							if (m_show_value) MouseMove -= OnMouseMoveTooltip;
 							m_show_value = !m_show_value;
+							m_tt_show_value.Visible = m_show_value;
 							if (m_show_value) MouseMove += OnMouseMoveTooltip;
 						};
 					}

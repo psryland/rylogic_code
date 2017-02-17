@@ -57,7 +57,7 @@ namespace Rylobot
 				// Find the stationary points in the high res data
 				var sign = 0;
 				var prev = new Instrument.PriceTick();
-				var first_idx = Instrument.FirstIdx;
+				var first_idx = Instrument.IdxFirst;
 				foreach (var data in Instrument.HighResRange(Range))
 				{
 					var s = Math.Sign((double)(data.m_ask - prev.m_ask));
@@ -153,12 +153,15 @@ namespace Rylobot
 				}
 			}
 
-			// Normalise the strength values
-			var max = SnRLevels.Max(x => x.Strength);
-			SnRLevels.ForEach(x => x.Strength /= max);
+			if (SnRLevels.Count != 0)
+			{
+				// Normalise the strength values
+				var max = SnRLevels.Max(x => x.Strength);
+				SnRLevels.ForEach(x => x.Strength /= max);
 
-			// Sort the levels by strength
-			SnRLevels.Sort(Cmp<Level>.From((l,r) => -l.Strength.CompareTo(r.Strength)));
+				// Sort the levels by strength
+				SnRLevels.Sort(Cmp<Level>.From((l,r) => -l.Strength.CompareTo(r.Strength)));
+			}
 		}
 
 

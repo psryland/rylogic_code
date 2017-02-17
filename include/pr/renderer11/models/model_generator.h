@@ -22,8 +22,8 @@ namespace pr
 			pr::v4               const* m_verts;      // The vertex data for the model
 			pr::uint16           const* m_indices;    // The index data for the model
 			pr::rdr::NuggetProps const* m_nuggets;    // The nugget data for the model
-			pr::Colour32         const* m_colours;    // The colour data for the model. nullptr, 1, or 'vcount' colours
-			pr::v4               const* m_normals;    // The normal data for the model. nullptr or a pointer to 'vcount' normals
+			pr::Colour32         const* m_colours;    // The colour data for the model. Typically nullptr, 1, or 'vcount' colours
+			pr::v4               const* m_normals;    // The normal data for the model. Typically nullptr or a pointer to 'vcount' normals
 			pr::v2               const* m_tex_coords; // The texture coordinates data for the model. nullptr or a pointer to 'vcount' texture coords
 
 			MeshCreationData() :m_vcount() ,m_icount() ,m_gcount() ,m_ccount() ,m_ncount() ,m_verts() ,m_indices() ,m_nuggets() ,m_colours() ,m_normals() ,m_tex_coords() {}
@@ -51,16 +51,16 @@ namespace pr
 			}
 			MeshCreationData& colours(pr::Colour32 const* cbuf, int count)
 			{
+				// Count doesn't have to be 0, 1, or 'vcount' because interpolation is used
 				assert(count == 0 || cbuf != nullptr);
-				assert(count == 0 || count == 1 || count == m_vcount);
 				m_ccount = count;
 				m_colours = cbuf;
 				return *this;
 			}
 			MeshCreationData& normals(pr::v4 const* nbuf, int count)
 			{
+				// Count doesn't have to be 0, 1, or 'vcount' because interpolation is used
 				assert(count == 0 || nbuf != nullptr);
-				assert(count == 0 || count == m_vcount);
 				assert(pr::maths::is_aligned(nbuf));
 				m_ncount = count;
 				m_normals = nbuf;
@@ -68,8 +68,8 @@ namespace pr
 			}
 			MeshCreationData& tex(pr::v2 const* tbuf, int count)
 			{
+				// Count doesn't have to be 0, 1, or 'vcount' because interpolation is used
 				assert(count == 0 || tbuf != nullptr);
-				assert(count == 0 || count == m_vcount);
 				m_tex_coords = tbuf;
 				(void)count;
 				return *this;

@@ -15,26 +15,29 @@ namespace LDraw
 			:base(string.Empty, model.Settings.Scene)
 		{
 			InitializeComponent();
+			Model = model;
 
 			Name                          = "Scene";
 			BorderStyle                   = BorderStyle.FixedSingle;
 			AllowDrop                     = true;
 			DefaultMouseControl           = true;
 			DefaultKeyboardShortcuts      = true;
-			Options.LockAspect            = 1.0f;
-			Options.NavigationMode        = ENavMode.Scene3D;
 			Window.FocusPointVisible      = true;
 			Window.FocusPointSize         = 0.03f;
 			Scene.Window.LightProperties  = new View3d.Light(model.Settings.Light);
 
 			DockControl = new DockControl(this, Name) { TabText = Name };
-			Model = model;
 		}
 		protected override void Dispose(bool disposing)
 		{
 			Model = null;
 			DockControl = null;
 			base.Dispose(disposing);
+		}
+		protected override void OnRdrOptionsChanged()
+		{
+			base.OnRdrOptionsChanged();
+			Model.Settings.Save();
 		}
 		protected override void OnChartRendering(ChartRenderingEventArgs args)
 		{

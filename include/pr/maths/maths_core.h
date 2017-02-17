@@ -1324,7 +1324,7 @@ namespace pr
 		PRUnitTest(pr_maths_maths_core)
 		{
 			{// Floating point compare
-				constexpr float const _6dp = float(0.00000100000006);
+				constexpr float const _6dp = 1.000000111e-6f;
 
 				// Regular large numbers - generally not problematic
 				PR_CHECK(FEql(1000000.0f, 1000001.0f, _6dp), true);
@@ -1379,9 +1379,11 @@ namespace pr
 				PR_CHECK(FEql(+maths::float_max, +maths::float_max, _6dp), true);
 				PR_CHECK(FEql(+maths::float_max, -maths::float_max, _6dp), false);
 				PR_CHECK(FEql(-maths::float_max, +maths::float_max, _6dp), false);
+				PR_CHECK(FEql(-maths::float_max, -maths::float_max, _6dp), true);
 				PR_CHECK(FEql(+maths::float_max, +maths::float_max / 2, _6dp), false);
 				PR_CHECK(FEql(+maths::float_max, -maths::float_max / 2, _6dp), false);
 				PR_CHECK(FEql(-maths::float_max, +maths::float_max / 2, _6dp), false);
+				PR_CHECK(FEql(-maths::float_max, -maths::float_max / 2, _6dp), false);
 
 				// Comparisons involving infinities
 				PR_CHECK(FEql(+maths::float_inf, +maths::float_inf, _6dp), true);

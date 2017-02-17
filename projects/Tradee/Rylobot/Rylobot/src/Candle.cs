@@ -81,7 +81,7 @@ namespace Rylobot
 		}
 
 		/// <summary>Single candle type. Relative to the mean candle size (total size)</summary>
-		public EType Type(double mcs)
+		public EType Type(QuoteCurrency mcs)
 		{
 			// A candle is a doji if the body is very small
 			if (BodyLength < 0.03 * mcs)

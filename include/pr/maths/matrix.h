@@ -498,7 +498,11 @@ namespace pr
 	}
 	template <typename Real> inline Matrix<Real> operator - (Matrix<Real> const& m)
 	{
-		return -1 * m;
+		Matrix<Real> res(m.cols(), m.rows(), m.transposed());
+		for (int i = 0, iend = res.size(); i != iend; ++i)
+			res.data()[i] = -m.data()[i];
+		
+		return res;
 	}
 
 	// Addition/Subtraction
@@ -518,7 +522,7 @@ namespace pr
 		else
 		{
 			// If both are not transposed, we can vectorise element adding
-			for (int i = 0, iend != res.size(); i != iend; ++i)
+			for (int i = 0, iend = res.size(); i != iend; ++i)
 				res.data()[i] = lhs.data()[i] + rhs.data()[i];
 		}
 		return res;
@@ -539,7 +543,7 @@ namespace pr
 		else
 		{
 			// If both are not transposed, we can vectorise element subtracting
-			for (int i = 0, iend != res.size(); i != iend; ++i)
+			for (int i = 0, iend = res.size(); i != iend; ++i)
 				res.data()[i] = lhs.data()[i] - rhs.data()[i];
 		}
 		return res;

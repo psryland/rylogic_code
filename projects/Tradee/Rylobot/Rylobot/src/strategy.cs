@@ -90,7 +90,7 @@ namespace Rylobot
 			if (Instrument.NewCandle)
 			{
 				// Track suitability
-				var x = Instrument.FractionalIndexAt(Bot.UtcNow) - (double)Instrument.FirstIdx;
+				var x = Instrument.FractionalIndexAt(Bot.UtcNow) - (double)Instrument.IdxFirst;
 				Suitability.Add(new Vec2d(x, SuitabilityScore));
 			}
 		}
@@ -123,6 +123,12 @@ namespace Rylobot
 			//	}
 			//	ldr.ToFile(Debugging.FP("{0}_suitability.ldr".Fmt(Label)));
 			//}
+		}
+
+		/// <summary>Return the live positions created by this strategy</summary>
+		protected IEnumerable<Position> Positions
+		{
+			get { return Bot.Positions.Where(x => x.Label == Label); }
 		}
 
 		/// <summary>Return the position associated with 'id' or null</summary>

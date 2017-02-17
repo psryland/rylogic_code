@@ -4,6 +4,7 @@ using System.Reflection;
 using cAlgo.API;
 using cAlgo.API.Internals;
 using pr.extn;
+using pr.maths;
 
 namespace Rylobot
 {
@@ -126,6 +127,10 @@ namespace Rylobot
 		{
 			return new Order(pos).StopLossRel;
 		}
+		public static QuoteCurrency StopLossRel(this Trade pos)
+		{
+			return new Order(pos, false).StopLossRel;
+		}
 
 		/// <summary>
 		/// Return the take profit as a signed price value relative to the entry price.
@@ -139,6 +144,10 @@ namespace Rylobot
 		public static QuoteCurrency TakeProfitRel(this PendingOrder pos)
 		{
 			return new Order(pos).TakeProfitRel;
+		}
+		public static QuoteCurrency TakeProfitRel(this Trade pos)
+		{
+			return new Order(pos, false).TakeProfitRel;
 		}
 
 		/// <summary>Return the price level at which this position would break even</summary>
@@ -156,50 +165,83 @@ namespace Rylobot
 
 		#region DataSeries
 
-		/// <summary>Return the first derivative of the data series at 'index' (CAlgo index)</summary>
-		public static double FirstDerivative(this DataSeries series, int index)
+		/// <summary>Return the first derivative of the data series at 'index'</summary>
+		public static double FirstDerivative(this DataSeries series, NegIdx index)
 		{
+			// No data => no gradient
 			if (series.Count <= 1)
 				return double.NaN;
 
+			// Convert from 'NegIdx' to CAlgo index
+			var idx = (int)(index + series.Count - 1);
+
 			// Allow indices before the start of the data, assuming zero slope
-			if (index < 0)
+			if (idx < 0)
 				return 0;
 
 			// Forwards single point derivative
-			if (index == 0)
-				return (series[index+1] - series[index]) / 1.0; // Error O(h)
+			if (idx == 0)
+				return (series[idx+1] - series[idx]) / 1.0; // Error O(h)
 
 			// Backwards single point derivative
-			if (index == series.Count-1)
-				return (series[index] - series[index-1]) / 1.0; // Error O(h)
+			if (idx == series.Count-1)
+				return (series[idx] - series[idx-1]) / 1.0; // Error O(h)
 
 			// Centred 3 point derivative
-			if (index == 1 || index == series.Count-2)
-				return (series[index+1] - series[index-1]) / 2.0;  // Error O(h^2)
+			if (idx == 1 || idx == series.Count-2)
+				return (series[idx+1] - series[idx-1]) / 2.0;  // Error O(h^2)
 
 			// Centred 5 point derivative
-			return (series[index-2] - 8*series[index-1] + 8*series[index+1] - series[index+2]) / 12.0;  // Error O(h^4)
+			return (series[idx-2] - 8*series[idx-1] + 8*series[idx+1] - series[idx+2]) / 12.0;  // Error O(h^4)
+		}
+		public static double FirstDerivative(this DataSeries series)
+		{
+			return FirstDerivative(series, 0);
 		}
 
 		/// <summary>Return the second derivative of the data series at 'index'</summary>
-		public static double SecondDerivative(this DataSeries series, int index)
+		public static double SecondDerivative(this DataSeries series, NegIdx index)
 		{
+			// Not enough data
 			if (series.Count <= 1)
 				return double.NaN;
 			if (series.Count <= 2)
 				return 0.0;
 
+			var idx = (int)(index + series.Count - 1);
+
 			// Forwards double point 2nd derivative
-			if (index == 0)
-				return (series[index+2] - 2*series[index+1] + series[index]) / 1.0; // Error O(h)
+			if (idx == 0)
+				return (series[idx+2] - 2*series[idx+1] + series[idx]) / 1.0; // Error O(h)
 
 			// Backwards double point 2nd derivative
-			if (index == series.Count-1)
-				return (series[index] - 2*series[index-1] + series[index-2]) / 1.0; // Error O(h)
+			if (idx == series.Count-1)
+				return (series[idx] - 2*series[idx-1] + series[idx-2]) / 1.0; // Error O(h)
 
 			// Centred double point 2nd derivative
-			return (series[index+1] - 2*series[index] + series[index-1]) / 1.0;  // Error O(h^2)
+			return (series[idx+1] - 2*series[idx] + series[idx-1]) / 1.0;  // Error O(h^2)
+		}
+		public static double SecondDerivative(this DataSeries series)
+		{
+			return SecondDerivative(series, 0);
+		}
+
+		/// <summary>Integrate the series over the index range [index0,index1)</summary>
+		public static double Integrate(this DataSeries series, NegIdx index0, NegIdx index1)
+		{
+			if (index0 > index1)
+				throw new Exception("Invalid index range: [{0},{1})".Fmt(index0, index1));
+
+			var idx0 = (int)(index0 + series.Count - 1);
+			var idx1 = (int)(index1 + series.Count - 1);
+			idx0 = Maths.Clamp(idx0, 0, series.Count);
+			idx1 = Maths.Clamp(idx1, 0, series.Count);
+
+			var sum = 0.0;
+			for (int i = idx0; i != idx1; ++i)
+				sum += series[i];
+
+			return sum;
 		}
 
 		#endregion

@@ -316,9 +316,9 @@ namespace pr.gui
 				}
 
 				Opacity = 1.0;
+				PinTo   = pin_to;
 				Owner   = pin_to != null ? pin_to.TopLevelControl as Form : null;
 				TopMost = Owner == null;
-				PinTo   = pin_to;
 
 				if (PinTo != null)
 				{
@@ -436,7 +436,8 @@ namespace pr.gui
 		/// <summary>When the parent control moves, follow it</summary>
 		private void Invalidate(object sender, EventArgs e)
 		{
-			Invalidate();
+			PerformLayout();
+			//Invalidate();
 		}
 
 		/// <summary>Called when the owner is closed</summary>

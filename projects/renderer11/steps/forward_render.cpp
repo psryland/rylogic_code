@@ -54,7 +54,7 @@ namespace pr
 			if (m_clear_bb)
 			{
 				// Get the render target views
-				// Note: if you've called GetDC() you need to call ReleaseDC() and Window.RestoreRT() or rtv will be null
+				// Note: if you've called GetDC() you need to call ReleaseDC() and Window.RestoreRT() or 'rtv' will be null
 				D3DPtr<ID3D11RenderTargetView> rtv;
 				D3DPtr<ID3D11DepthStencilView> dsv;
 				dc->OMGetRenderTargets(1, &rtv.m_ptr, &dsv.m_ptr);
@@ -96,7 +96,7 @@ namespace pr
 				Nugget const& nugget = *dle.m_nugget;
 				dc->DrawIndexed(
 					UINT(nugget.m_irange.size()),
-					UINT(nugget.m_irange.m_begin),
+					UINT(nugget.m_irange.m_beg),
 					0);
 			}
 		}

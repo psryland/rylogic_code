@@ -92,7 +92,7 @@ namespace Rylobot
 			var ldr = ldr_ ?? new LdrBuilder();
 
 			// Get the range of candles to output
-			var range = instr.IndexRange(range_ ?? new Range((int)instr.FirstIdx, (int)instr.LastIdx));
+			var range = instr.IndexRange(range_ ?? new Range((int)instr.IdxFirst, (int)instr.IdxLast));
 			if (range.Empty)
 				return ldr;
 
@@ -122,7 +122,7 @@ namespace Rylobot
 					for (int i = range.Begini; i != range.Endi; ++i)
 					{
 						var candle = instr[i];
-						var x = (float)(i - instr.FirstIdx);
+						var x = (float)(i - instr.IdxFirst);
 						var o = (float)Math.Max(candle.Open, candle.Close);
 						var h = (float)candle.High;
 						var l = (float)candle.Low;
@@ -189,8 +189,8 @@ namespace Rylobot
 					{
 						if (!range.Empty)
 						{
-							var first = (int)(range.Begin - (double)instr.FirstIdx);
-							var last  = (int)(range.End   - (double)instr.FirstIdx);
+							var first = (int)(range.Begin - (double)instr.IdxFirst);
+							var last  = (int)(range.End   - (double)instr.IdxFirst);
 							var series = instr.Bot.Indicators.ExponentialMovingAverage(instr.Data.Close, ema).Result;
 							ldr.Line("ema", cols[coli], 1, int_.Range(first,last).Select(i => new v4((float)i, (float)series[i], 0.05f, 1)));
 							coli = (coli + 1) % cols.Length;
@@ -343,6 +343,9 @@ namespace Rylobot
 				// Sign up for position created/closed events
 				bot.Positions.Closed += LogTradeClosed;
 				bot.Positions.Opened += LogTradeOpened;
+
+				// Initial instrument output
+				LogInstrument();
 			}
 		}
 		private static bool m_log_trades;
@@ -367,6 +370,9 @@ namespace Rylobot
 				m_ldr_all_trades.ToFile(FP("all_trades.ldr"));
 				m_trade_ids.Add(pos.Id);
 			}
+
+			// Update the instrument
+			LogInstrument();
 		}
 
 		/// <summary>Handle trade created/closed events</summary>
@@ -382,11 +388,17 @@ namespace Rylobot
 		/// <summary>Output the instrument to a file as it changes</summary>
 		private static void LogInstrument(object sender, DataEventArgs e)
 		{
-			if (!m_trades_instr.NewCandle)
-				return;
-
+		//	if (!m_trades_instr.NewCandle) return;
+		//	LogInstrument();
+		//
+		//	// Update the graphics for active trades
+		//	foreach (var pos in Rylobot.Instance.Positions)
+		//		LogTrade(pos);
+		}
+		private static void LogInstrument()
+		{
 			// Write the instrument to 'm_ldr_instr'
-			Dump(m_trades_instr, range_:new Range(-100, 0), emas:new[] { 14, 200 }, ldr_:m_ldr_instr);
+			Dump(m_trades_instr, range_:new Range(-300, 0), emas:new[] { 14, 100 }, ldr_:m_ldr_instr);
 			m_ldr_instr.ToFile(FP("{0}.ldr".Fmt(m_trades_instr.SymbolCode)));
 			m_ldr_instr.Clear();
 		}

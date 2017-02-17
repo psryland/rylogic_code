@@ -174,7 +174,7 @@ namespace pr
 
 				template <typename T> Range& operator = (pr::Range<T> rhs)
 				{
-					first = checked_cast<u32>(rhs.m_begin);
+					first = checked_cast<u32>(rhs.m_beg);
 					count = checked_cast<u32>(rhs.size());
 					return *this;
 				}

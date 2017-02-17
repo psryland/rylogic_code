@@ -83,8 +83,8 @@ namespace pr
 		// true if 'tstr' is a 'pr::string<Type,...>' string
 		template <typename tstr> struct is_pr_str
 		{
-			static tstr const& str();
-			template <int L, bool F, typename A> static std::true_type  check(string<Type, L, F, A> const&);
+			static tstr* str();
+			template <int L, bool F, typename A> static std::true_type  check(string<Type, L, F, A>*);
 			template <int = 0>                   static std::false_type check(...);
 			using type = decltype(check(str()));
 			static bool const value = type::value;

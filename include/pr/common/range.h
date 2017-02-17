@@ -19,8 +19,8 @@ namespace pr
 			static bool const is_integral = Integral;
 		};
 
-		T m_begin; // The first in the range
-		T m_end;   // One past the last in the range
+		T m_beg; // The first in the range
+		T m_end; // One past the last in the range
 
 		// The default empty range
 		static Range Zero()
@@ -36,25 +36,25 @@ namespace pr
 
 		// Construct a range
 		Range() = default;
-		Range(T begin, T end)
-			:m_begin(begin)
+		Range(T beg, T end)
+			:m_beg(beg)
 			,m_end(end)
 		{}
 
 		// True if this is an empty range
 		bool empty() const
 		{
-			return m_begin == m_end;
+			return m_beg == m_end;
 		}
 
 		// begin/end range support
 		T begin() const
 		{
-			return m_begin;
+			return m_beg;
 		}
 		T& begin()
 		{
-			return m_begin;
+			return m_beg;
 		}
 		T end() const
 		{
@@ -68,33 +68,33 @@ namespace pr
 		// The number of elements in or length of the range
 		auto size() const -> decltype(T() - T())
 		{
-			return m_end - m_begin;
+			return m_end - m_beg;
 		}
 
 		// Set the range
 		void set(T const& begin, T const& end)
 		{
-			m_begin = begin;
+			m_beg = begin;
 			m_end = end;
 		}
 
 		// Set the number of elements in or length of the range
 		template <typename U> void resize(U size)
 		{
-			m_end = static_cast<T>(m_begin + size);
+			m_end = static_cast<T>(m_beg + size);
 		}
 
 		// Move the range
 		template <typename U> void shift(U offset)
 		{
-			m_begin = static_cast<T>(m_begin + offset);
-			m_end   = static_cast<T>(m_end   + offset);
+			m_beg = static_cast<T>(m_beg + offset);
+			m_end = static_cast<T>(m_end + offset);
 		}
 
 		// Return the midpoint of the range
 		T mid() const
 		{
-			return m_begin + (m_end - m_begin)/2;
+			return m_beg + (m_end - m_beg)/2;
 		}
 
 		// Returns the last value to be considered within the range
@@ -110,8 +110,8 @@ namespace pr
 		{
 			assert(size() >= 0 && "range is invalid");
 			return traits::is_integral
-				? rhs >= m_begin && rhs < m_end
-				: rhs >= m_begin && rhs <= m_end;
+				? rhs >= m_beg && rhs < m_end
+				: rhs >= m_beg && rhs <= m_end;
 		}
 
 		// True if 'rhs' is entirely within this range
@@ -119,7 +119,7 @@ namespace pr
 		{
 			assert(size() >= 0 && "range is invalid");
 			assert(rhs.size() >= 0 && "range is invalid");
-			return contains(rhs.m_begin) && rhs.m_end <= m_end;
+			return contains(rhs.m_beg) && rhs.m_end <= m_end;
 		}
 
 		// Returns true if this range and 'rhs' overlap
@@ -127,14 +127,14 @@ namespace pr
 		{
 			assert(size() >= 0 && "range is invalid");
 			assert(rhs.size() >= 0 && "rhs range is invalid");
-			return m_begin < rhs.m_end && rhs.m_begin < m_end;
+			return m_beg < rhs.m_end && rhs.m_beg < m_end;
 		}
 
 		// Grows the range to include 'rhs'
 		template <typename U> Range<T>& encompass(U rhs)
 		{
-			if (rhs < m_begin) { m_begin = static_cast<T>(rhs); }
-			if (rhs >= m_end ) { m_end   = static_cast<T>(rhs + traits::is_integral); }
+			if (rhs <  m_beg) { m_beg = static_cast<T>(rhs); }
+			if (rhs >= m_end) { m_end = static_cast<T>(rhs + traits::is_integral); }
 			return *this;
 		}
 
@@ -142,8 +142,8 @@ namespace pr
 		template <typename U> Range<T>& encompass(Range<U> rhs)
 		{
 			assert(rhs.size() >= 0 && "rhs range is invalid");
-			if (rhs.m_begin < m_begin) { m_begin = rhs.m_begin; }
-			if (rhs.m_end  >= m_end  ) { m_end   = rhs.m_end; }
+			if (rhs.m_beg <  m_beg) { m_beg = rhs.m_beg; }
+			if (rhs.m_end >= m_end) { m_end = rhs.m_end; }
 			return *this;
 		}
 
@@ -151,14 +151,14 @@ namespace pr
 		template <typename U, typename = typename std::enable_if<std::is_convertible<T,U>::value>::type>
 		operator Range<U>()
 		{
-			return Range<U>(m_begin, m_end);
+			return Range<U>(m_beg, m_end);
 		}
 	};
 
 	// Operators
 	template <typename T, typename U> inline bool operator == (Range<T> const& lhs, Range<U> const& rhs)
 	{
-		return lhs.m_begin == rhs.m_begin && lhs.m_end == rhs.m_end;
+		return lhs.m_beg == rhs.m_beg && lhs.m_end == rhs.m_end;
 	}
 	template <typename T, typename U> inline bool operator != (Range<T> const& lhs, Range<U> const& rhs)
 	{
@@ -212,9 +212,9 @@ namespace pr
 	{
 		assert(lhs.size() >= 0 && "lhs range is invalid");
 		assert(rhs.size() >= 0 && "rhs range is invalid");
-		if (rhs.m_end   <= lhs.m_begin) return Range<T>::make(lhs.m_begin, lhs.m_begin);
-		if (rhs.m_begin >= lhs.m_end  ) return Range<T>::make(lhs.m_end  , lhs.m_end  );
-		return Range<T>::make(std::max(lhs.m_begin, rhs.m_begin), std::min(lhs.m_end, rhs.m_end));
+		if (rhs.m_end <= lhs.m_beg) return Range<T>::make(lhs.m_beg, lhs.m_beg);
+		if (rhs.m_beg >= lhs.m_end) return Range<T>::make(lhs.m_end, lhs.m_end);
+		return Range<T>::make(std::max(lhs.m_beg, rhs.m_beg), std::min(lhs.m_end, rhs.m_end));
 	}
 
 	// Returns a range that is the union of this range with 'rhs'
@@ -222,13 +222,13 @@ namespace pr
 	{
 		assert(lhs.size() >= 0 && "lhs range is invalid");
 		assert(rhs.size() >= 0 && "rhs range is invalid");
-		return Range<T>::make(std::min(lhs.m_begin, rhs.m_begin), std::max(lhs.m_end, rhs.m_end));
+		return Range<T>::make(std::min(lhs.m_beg, rhs.m_beg), std::max(lhs.m_end, rhs.m_end));
 	}
 
 	// Clamp 'value' to within 'range'
 	template <typename T, typename U> inline T Clamp(T value, Range<U> const& range)
 	{
-		return pr::Clamp<T>(value, range.m_begin, range.m_end - Range<U>::traits::is_integral);
+		return pr::Clamp<T>(value, range.m_beg, range.m_end - Range<U>::traits::is_integral);
 	}
 }
 
@@ -287,7 +287,7 @@ namespace pr
 
 				IRange r4 = IRange::Reset();
 				Encompass(r4, 4);
-				PR_CHECK(4, r4.m_begin);
+				PR_CHECK(4, r4.m_beg);
 				PR_CHECK(5, r4.m_end);
 				PR_CHECK(1, r4.size());
 				PR_CHECK(IsWithin(r4, 4), true);
@@ -340,8 +340,8 @@ namespace pr
 
 				IRange r4(vec.end(),vec.begin());
 				Encompass(r4, vec.begin() + 4);
-				PR_CHECK(vec.begin() + 4 == r4.m_begin, true);
-				PR_CHECK(vec.begin() + 5 == r4.m_end  , true);
+				PR_CHECK(vec.begin() + 4 == r4.m_beg, true);
+				PR_CHECK(vec.begin() + 5 == r4.m_end, true);
 				PR_CHECK(1, r4.size());
 				PR_CHECK(IsWithin(r4, vec.begin() + 4), true);
 			}
@@ -391,7 +391,7 @@ namespace pr
 
 				FRange r4 = FRange::Reset();
 				Encompass(r4, 4.0f);
-				PR_CHECK(4.0f, r4.m_begin);
+				PR_CHECK(4.0f, r4.m_beg);
 				PR_CHECK(4.0f, r4.m_end);
 				PR_CHECK(0.0f, r4.size());
 				PR_CHECK(IsWithin(r4, 4.0f), true);

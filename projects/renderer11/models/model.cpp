@@ -33,13 +33,13 @@ namespace pr
 		bool Model::MapVerts(Lock& lock, D3D11_MAP map_type, uint flags, Range vrange)
 		{
 			if (vrange == RangeZero) vrange  = m_vrange;
-			else vrange.shift((int)m_vrange.m_begin);
+			else vrange.shift((int)m_vrange.m_beg);
 			return m_model_buffer->MapVerts(lock, map_type, flags, vrange);
 		}
 		bool Model::MapIndices(Lock& lock, D3D11_MAP map_type, uint flags, Range irange)
 		{
 			if (irange == RangeZero) irange  = m_irange;
-			else irange.shift((int)m_irange.m_begin);
+			else irange.shift((int)m_irange.m_beg);
 			return m_model_buffer->MapIndices(lock, map_type, flags, irange);
 		}
 
@@ -52,9 +52,9 @@ namespace pr
 
 			// Empty ranges are assumed to mean the entire model
 			if (props.m_vrange.empty()) props.m_vrange = m_vrange;
-			else                        props.m_vrange.shift((int)m_vrange.m_begin);
+			else                        props.m_vrange.shift((int)m_vrange.m_beg);
 			if (props.m_irange.empty()) props.m_irange = m_irange;
-			else                        props.m_irange.shift((int)m_irange.m_begin);
+			else                        props.m_irange.shift((int)m_irange.m_beg);
 			PR_ASSERT(PR_DBG_RDR, IsWithin(m_vrange, props.m_vrange), "This range exceeds the size of this model"); 
 			PR_ASSERT(PR_DBG_RDR, IsWithin(m_irange, props.m_irange), "This range exceeds the size of this model");
 

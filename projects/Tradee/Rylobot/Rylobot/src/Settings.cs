@@ -12,7 +12,7 @@ namespace Rylobot
 	{
 		public Settings()
 		{
-			InstrumentSettingsDir    = Util.ResolveAppDataPath("Rylogic", "Rylobot", ".\\Instruments");
+			InstrumentSettingsDir    = Util.ResolveUserDocumentsPath("Rylogic", "Rylobot", ".\\Instruments");
 			UILayout                 = null;
 			MaxRiskPC                = 10.0;
 			RewardToRisk             = new RangeF(0.1, 3.0);
