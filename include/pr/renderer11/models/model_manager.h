@@ -22,9 +22,7 @@ namespace pr
 			Allocator<Model>       m_alex_model;
 			Allocator<Nugget>      m_alex_nugget;
 			D3DPtr<ID3D11Device>   m_device;
-
-			ModelManager(const ModelManager&);
-			ModelManager& operator =(const ModelManager&);
+			std::recursive_mutex   m_mutex;
 
 			// Delete methods that models/model buffers call to clean themselves up
 			friend struct ModelBuffer;
@@ -42,7 +40,8 @@ namespace pr
 			// Models and ModelBuffers must be created by the ModelManager
 			// because the model manager has the allocator
 			ModelManager(MemFuncs& mem, D3DPtr<ID3D11Device>& device);
-			~ModelManager();
+			ModelManager(ModelManager const&) = delete;
+			ModelManager& operator =(ModelManager const&) = delete;
 
 			// Create a model buffer in which one or more models can be created
 			ModelBufferPtr CreateModelBuffer(MdlSettings const& settings);

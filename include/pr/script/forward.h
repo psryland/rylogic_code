@@ -25,6 +25,8 @@
 #include "pr/str/string_core.h"
 #include "pr/str/string_util.h"
 #include "pr/str/extract.h"
+#include "pr/filesys/file.h"
+#include "pr/filesys/filesys.h"
 
 namespace pr
 {

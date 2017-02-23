@@ -135,6 +135,27 @@ namespace pr
 			for (auto i : cont)
 				get(i)(std::forward<Args>(args)...);
 		}
+
+		// Raise the event passing 'args' to the event handler
+		// 'result' is the combined boolean result of all handlers.
+		// If initially 'true', result is the AND'd result of all handlers.
+		// If initially 'false', result is the OR'd result of all handlers.
+		template <typename... Args> void Raise(bool& result, Args&&... args)
+		{
+			TypeCont cont;
+			{
+				std::lock_guard<std::mutex> lock(m_cs);
+				cont = m_cont;
+			}
+
+			auto combine_with_and = result;
+			for (auto i : cont)
+			{
+				bool r = get(i)(std::forward<Args>(args)...);
+				if (combine_with_and) result &= r;
+				else                  result |= r;
+			}
+		}
 	};
 
 	// Returns an identifier for uniquely identifying event handlers
@@ -321,14 +342,24 @@ namespace pr
 
 			int call4 = 0;
 			thg.m_count1 = 3;
+
+			// Add a callback
 			thg.Call4Happened += StaticCallBack(L::Kate, &call4);
 			thg.Call4();
 			PR_CHECK(call4, 4);
 			PR_CHECK(thg.m_count1, 4);
+
+			// The callback has to match including the ctx pointer (i.e. this doesn't remove the callback)
 			thg.Call4Happened -= StaticCallBack(L::Kate);
 			thg.Call4();
-			PR_CHECK(call4, 4);
-			PR_CHECK(thg.m_count1, 4);
+			PR_CHECK(call4, 5);
+			PR_CHECK(thg.m_count1, 5);
+
+			// Now it's removed...
+			thg.Call4Happened -= StaticCallBack(L::Kate, &call4);
+			thg.Call4();
+			PR_CHECK(call4, 5);
+			PR_CHECK(thg.m_count1, 5);
 		}
 	}
 }

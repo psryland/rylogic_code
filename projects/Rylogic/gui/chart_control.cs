@@ -94,8 +94,8 @@ namespace pr.gui
 		{
 			MouseOperations = null;
 			Tools = null;
-			Scene = null;
 			Range = null;
+			Scene = null;
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
@@ -229,15 +229,18 @@ namespace pr.gui
 			private set
 			{
 				if (m_impl_scene == value) return;
-				if (m_impl_scene != null)
+				using (this.SuspendLayout(false))
 				{
-					Controls.Remove(m_impl_scene);
-					Util.Dispose(ref m_impl_scene);
-				}
-				m_impl_scene = value;
-				if (m_impl_scene != null)
-				{
-					Controls.Add(m_impl_scene);
+					if (m_impl_scene != null)
+					{
+						Controls.Remove(m_impl_scene);
+						Util.Dispose(ref m_impl_scene);
+					}
+					m_impl_scene = value;
+					if (m_impl_scene != null)
+					{
+						Controls.Add(m_impl_scene);
+					}
 				}
 			}
 		}
@@ -1060,6 +1063,7 @@ namespace pr.gui
 				NoteFont                  = new Font("tahoma", 8, FontStyle.Regular);
 				SelectionColour           = Color.FromArgb(0x80, Color.DarkGray);
 				ShowGridLines             = true;
+				GridZOffset               = 0f;
 				ShowAxes                  = true;
 				AntiAliasing              = true;
 				FillMode                  = View3d.EFillMode.Solid;
@@ -1087,6 +1091,7 @@ namespace pr.gui
 				NoteFont                  = (Font)rhs.NoteFont.Clone();
 				SelectionColour           = rhs.SelectionColour;
 				ShowGridLines             = rhs.ShowGridLines;
+				GridZOffset               = rhs.GridZOffset;
 				ShowAxes                  = rhs.ShowAxes;
 				AntiAliasing              = rhs.AntiAliasing;
 				FillMode                  = rhs.FillMode;
@@ -1114,6 +1119,7 @@ namespace pr.gui
 				SelectionColour           = node.Element(nameof(SelectionColour          )).As(SelectionColour          );
 				ShowAxes                  = node.Element(nameof(ShowAxes                 )).As(ShowAxes                 );
 				ShowGridLines             = node.Element(nameof(ShowGridLines            )).As(ShowGridLines            );
+				GridZOffset               = node.Element(nameof(GridZOffset              )).As(GridZOffset              );
 				AntiAliasing              = node.Element(nameof(AntiAliasing             )).As(AntiAliasing             );
 				FillMode                  = node.Element(nameof(FillMode                 )).As(FillMode                 );
 				CullMode                  = node.Element(nameof(CullMode                 )).As(CullMode                 );
@@ -1139,6 +1145,7 @@ namespace pr.gui
 				node.Add2(nameof(NoteFont                 ) , NoteFont                  , false);
 				node.Add2(nameof(SelectionColour          ) , SelectionColour           , false);
 				node.Add2(nameof(ShowGridLines            ) , ShowGridLines             , false);
+				node.Add2(nameof(GridZOffset              ) , GridZOffset               , false);
 				node.Add2(nameof(ShowAxes                 ) , ShowAxes                  , false);
 				node.Add2(nameof(AntiAliasing             ) , AntiAliasing              , false);
 				node.Add2(nameof(FillMode                 ) , FillMode                  , false);
@@ -1152,6 +1159,10 @@ namespace pr.gui
 				node.Add2(nameof(XAxis                    ) , XAxis                     , false);
 				node.Add2(nameof(YAxis                    ) , YAxis                     , false);
 				return node;
+			}
+			public override string ToString()
+			{
+				return "Rendering Options";
 			}
 
 			/// <summary>Property changed</summary>
@@ -1250,6 +1261,14 @@ namespace pr.gui
 				set { SetProp(ref m_ShowGridLines, value, nameof(ShowGridLines)); }
 			}
 			private bool m_ShowGridLines;
+
+			/// <summary>The offset from the origin for the grid, in the forward direction of the camera</summary>
+			public float GridZOffset
+			{
+				get { return m_GridZOffset; }
+				set { SetProp(ref m_GridZOffset, value, nameof(GridZOffset)); }
+			}
+			private float m_GridZOffset;
 
 			/// <summary>Show/Hide the chart axes</summary>
 			public bool ShowAxes
@@ -1440,6 +1459,10 @@ namespace pr.gui
 					node.Add2(nameof(PixelsPerTick ), PixelsPerTick , false);
 					node.Add2(nameof(ShowGridLines ), ShowGridLines , false);
 					return node;
+				}
+				public override string ToString()
+				{
+					return "Axis Options";
 				}
 
 				/// <summary>Property changed</summary>
@@ -1683,7 +1706,7 @@ namespace pr.gui
 					XAxis.GridLines(out min, out max, out step);
 
 					var o2w = cam.O2W;
-					o2w.pos = cam.FocusPoint - o2w * new v4((float)(wh.x/2 - min), wh.y/2, 0, 0);
+					o2w.pos = cam.FocusPoint - o2w * new v4((float)(wh.x/2 - min), wh.y/2, -Owner.Options.GridZOffset, 0);
 
 					XAxis.GridLineGfx.O2WSet(o2w);
 					window.AddObject(XAxis.GridLineGfx);
@@ -1694,7 +1717,7 @@ namespace pr.gui
 					YAxis.GridLines(out min, out max, out step);
 
 					var o2w = cam.O2W;
-					o2w.pos = cam.FocusPoint - o2w * new v4(wh.x/2, (float)(wh.y/2 - min), 0, 0);
+					o2w.pos = cam.FocusPoint - o2w * new v4(wh.x/2, (float)(wh.y/2 - min), -Owner.Options.GridZOffset, 0);
 
 					YAxis.GridLineGfx.O2WSet(o2w);
 					window.AddObject(YAxis.GridLineGfx);
@@ -3782,7 +3805,7 @@ namespace pr.gui
 			private View3d.Object CreateAreaSelect()
 			{
 				var ldr = Ldr.Rect("selection", Options.SelectionColour, AxisId.PosZ, 1f, 1f, true, pos:v4.Origin);
-				return new View3d.Object(ldr, false, false, Id, null);
+				return new View3d.Object(ldr, false, Id, null);
 			}
 
 			/// <summary>Graphics for the resizing grab zones</summary>
@@ -3799,7 +3822,7 @@ namespace pr.gui
 			private ResizeGrabber[] m_resizer;
 			public class ResizeGrabber :View3d.Object
 			{
-				public ResizeGrabber(int corner) :base("*Box {5}", false, false, Id, null)
+				public ResizeGrabber(int corner) :base("*Box {5}", false, Id, null)
 				{
 					switch (corner)
 					{

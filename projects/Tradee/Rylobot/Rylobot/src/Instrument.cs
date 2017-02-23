@@ -26,6 +26,7 @@ namespace Rylobot
 			Bot = bot;
 			Data = series;
 			HighRes = new List<PriceTick>();
+			HighResHistoryLength = 10000;
 
 			// Ensure the instrument settings directory exists
 			if (!Path_.DirExists(Bot.Settings.InstrumentSettingsDir))
@@ -79,9 +80,11 @@ namespace Rylobot
 
 			// Capture the high res price data
 			var index = FractionalIndexAt(Bot.UtcNow) - (double)IdxFirst;
-			var idx = HighRes.Count != 0 && HighRes.Back().m_index > index ? HighRes.BinarySearch(x => x.m_index.CompareTo(index)) : HighRes.Count;
+			var idx = HighRes.Count == 0 || index > HighRes.Back().Index ? HighRes.Count : HighRes.BinarySearch(x => x.Index.CompareTo(index));
 			if (idx < 0) idx = ~idx;
 			HighRes.Insert(idx, new PriceTick(index, Symbol.Ask, Symbol.Bid));
+			if (HighRes.Count > 3 * HighResHistoryLength / 2)
+				HighRes.RemoveRange(0, HighRes.Count - HighResHistoryLength);
 
 			// Apply the data to the latest candle or invalidate the cached Latest
 			if (NewCandle)
@@ -128,29 +131,18 @@ namespace Rylobot
 			private set;
 		}
 
-		/// <summary>The high res data for the instrument. 'x' is the CAlgo index, 'y' is the ask price, 'z' is the bid price, 'w' is unused</summary>
+		/// <summary>The high res data for the instrument.</summary>
 		public List<PriceTick> HighRes
 		{
 			get;
 			private set;
 		}
-		public struct PriceTick
+
+		/// <summary>The maximum number of price ticks to keep</summary>
+		public int HighResHistoryLength
 		{
-			/// <summary>The fractional CAlgo index</summary>
-			public double m_index;
-
-			/// <summary>The Ask price</summary>
-			public QuoteCurrency m_ask;
-
-			/// <summary>The Ask price</summary>
-			public QuoteCurrency m_bid;
-
-			public PriceTick(double index, QuoteCurrency ask, QuoteCurrency bid)
-			{
-				m_index = index;
-				m_ask = ask;
-				m_bid = bid;
-			}
+			get;
+			set;
 		}
 
 		/// <summary>The CAlgo Symbol interface for this instrument</summary>
@@ -177,10 +169,16 @@ namespace Rylobot
 			get { return Symbol.PipSize; }
 		}
 
-		/// <summary>The current Ask(+1)/Bid(-1)/Mid(0) price</summary>
+		/// <summary>The current Ask(+1)/Bid(-1)/Mid(0) price. Remember: Ask > Bid</summary>
 		public QuoteCurrency CurrentPrice(int sign)
 		{
 			return Symbol.CurrentPrice(sign);
+		}
+
+		/// <summary>The current Ask(+1)/Bid(-1)/Mid(0) price</summary>
+		public PriceTick LatestPrice
+		{
+			[DebuggerStepThrough] get { return new PriceTick(0, CurrentPrice(+1), CurrentPrice(-1)); }
 		}
 
 		/// <summary>The total number of data points available</summary>
@@ -301,8 +299,8 @@ namespace Rylobot
 			var first = idx_min - (double)IdxFirst;
 			var last  = idx_max - (double)IdxFirst;
 
-			var istart = HighRes.BinarySearch(x => x.m_index.CompareTo(first));
-			var iend   = HighRes.BinarySearch(x => x.m_index.CompareTo(last));
+			var istart = HighRes.BinarySearch(x => x.Index.CompareTo(first));
+			var iend   = HighRes.BinarySearch(x => x.Index.CompareTo(last));
 			if (istart < 0) istart = ~istart;
 			if (iend   < 0) iend = ~iend;
 			if (istart == iend)
@@ -312,7 +310,7 @@ namespace Rylobot
 			var pt = HighRes[istart];
 
 			// Loop over the requested range
-			var X = HighRes[istart].m_index;
+			var X = HighRes[istart].Index;
 			for (var i = istart; i < iend;)
 			{
 				yield return pt;
@@ -331,17 +329,17 @@ namespace Rylobot
 					// Find the range of the ask/bid price for the skipped price values
 					// Return the average X position of the skipped values
 					var cnt = 0;
-					pt = new PriceTick(0.0, double.MinValue, double.MaxValue);
+					pt = PriceTick.Invalid;
 					for (++i; i < iend; ++i)
 					{
-						pt.m_index += HighRes[i].m_index;
-						pt.m_ask = Math.Max((double)pt.m_ask, (double)HighRes[i].m_ask);
-						pt.m_bid = Math.Min((double)pt.m_bid, (double)HighRes[i].m_bid);
+						pt.Index += HighRes[i].Index;
+						pt.Ask = Math.Max((double)pt.Ask, (double)HighRes[i].Ask);
+						pt.Bid = Math.Min((double)pt.Bid, (double)HighRes[i].Bid);
 						++cnt;
-						if (HighRes[i].m_index > X)
+						if (HighRes[i].Index > X)
 							break;
 					}
-					pt.m_index /= cnt;
+					pt.Index /= cnt;
 				}
 			}
 		}
@@ -666,6 +664,64 @@ namespace Rylobot
 			}
 		}
 	}
+
+	#region Price Tick
+	[DebuggerDisplay("Ask={Ask} Bid={Bid}")]
+	public class PriceTick
+	{
+		public PriceTick()
+		{
+			Index = 0;
+			Ask = 0;
+			Bid = 0;
+		}
+		public PriceTick(double index, QuoteCurrency ask, QuoteCurrency bid)
+		{
+			if (ask < bid) throw new Exception("Negative spread");
+
+			Index = index;
+			Ask = ask;
+			Bid = bid;
+		}
+		public static PriceTick Invalid
+		{
+			get { return new PriceTick {Ask = -double.MaxValue, Bid = +double.MaxValue }; }
+		}
+
+		/// <summary>The fractional CAlgo index</summary>
+		public double Index
+		{
+			get;
+			set;
+		}
+
+		/// <summary>The ask price (remember: Ask > Bid)</summary>
+		public QuoteCurrency Ask
+		{
+			get;
+			set;
+		}
+
+		/// <summary>The bid price (remember: Ask > Bid)</summary>
+		public QuoteCurrency Bid
+		{
+			get;
+			set;
+		}
+
+		/// <summary>The average of ask and bid</summary>
+		public QuoteCurrency Mid
+		{
+			get { return (Ask + Bid) / 2; }
+		}
+
+		/// <summary>The buy/sell spread</summary>
+		public QuoteCurrency Spread
+		{
+			get { return Ask - Bid; }
+		}
+	}
+	#endregion
 
 	#region EventArgs
 

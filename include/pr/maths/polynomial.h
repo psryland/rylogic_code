@@ -188,6 +188,13 @@ namespace pr
 			{
 				return FromPoints(pts[0], pts[1], pts[2]);
 			}
+			static Quadratic FromPoints(double x0, double y0, double x1, double y1, double x2, double y2)
+			{
+				return FromPoints(
+					v2(float(x0), float(y0)),
+					v2(float(x1), float(y1)),
+					v2(float(x2), float(y2)));
+			}
 		};
 
 		//' F(x) = Ax³ + Bx² + Cx + D

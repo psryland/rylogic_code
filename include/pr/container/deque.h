@@ -579,7 +579,7 @@ namespace pr
 		// test if container is empty
 		bool empty() const
 		{
-			return size() == 0;
+			return m_last == m_first;
 		}
 
 		// return the length of the container

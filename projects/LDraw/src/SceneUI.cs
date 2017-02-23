@@ -113,10 +113,14 @@ namespace LDraw
 		/// <summary>Handle notification that the script sources have changed</summary>
 		private void HandleSourcesChanged(object sender, View3d.SourcesChangedEventArgs e)
 		{
-			if (e.Reason == View3d.ESourcesChangedReason.Reload && Model.Settings.ResetOnLoad)
+			if (e.Reason == View3d.ESourcesChangedReason.Reload)
 			{
-				Populate();
-				AutoRange(View3d.ESceneBounds.All);
+				// Just after reloading sources
+				if (!e.Before && Model.Settings.ResetOnLoad)
+				{
+					Populate();
+					AutoRange(View3d.ESceneBounds.All);
+				}
 			}
 		}
 

@@ -32,15 +32,19 @@ namespace Rylobot
 			// Create the cache of symbol data
 			m_sym_cache = new Cache<string, Symbol> { ThreadSafe = true , Mode = CacheMode.StandardCache };
 
+			// Create the main instrument
+			Instrument = new Instrument(this);
+
 			// Create the account manager and trade creator
 			Broker = new Broker(this, Account);
 
 			// Create the strategies to use
 			Strats = new List<Strategy>();
-			Strats.Add(new StrategyMain(this));
+			//Strats.Add(new StrategyMain(this));
+			//Strats.Add(new StrategyMeanCross(this));
 			//Strats.Add(new StrategyRevenge(this));
 			//Strats.Add(new StrategyTrend(this));
-			//Strats.Add(new StrategyHedge(this));
+			Strats.Add(new StrategyHedge(this));
 
 			// Enable capture of trades to Ldr files
 			Debugging.LogTrades(this, true);
@@ -57,6 +61,7 @@ namespace Rylobot
 
 			Strats = null;
 			Broker = null;
+			Instrument = null;
 			Util.Dispose(ref m_sym_cache);
 
 			Instance = null;
@@ -76,7 +81,10 @@ namespace Rylobot
 			// the best strategies get to create positions in preference to less suited strategies.
 			Strats.Sort((l,r) => l.SuitabilityScore.CompareTo(r.SuitabilityScore));
 			foreach (var strat in Strats)
+			{
+				if (strat.SuitabilityScore == 0) continue;
 				strat.Step();
+			}
 		}
 
 		/// <summary>New data arriving</summary>
@@ -123,6 +131,19 @@ namespace Rylobot
 			}
 		}
 		private Broker m_broker;
+
+		/// <summary>The main instrument for this bot</summary>
+		public Instrument Instrument
+		{
+			[DebuggerStepThrough] get { return m_instr; }
+			private set
+			{
+				if (m_instr == value) return;
+				Util.Dispose(ref m_instr);
+				m_instr = value;
+			}
+		}
+		private Instrument m_instr;
 
 		/// <summary>Return the symbol for a given symbol code or null if invalid or unavailable</summary>
 		public Symbol GetSymbol(string symbol_code)

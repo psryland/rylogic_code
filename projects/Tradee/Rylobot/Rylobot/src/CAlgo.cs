@@ -32,6 +32,14 @@ namespace Rylobot
 		// 
 
 		#region Trade Type
+		
+		/// <summary>Convert a sign value to a trade type</summary>
+		public static TradeType SignToTradeType(int sign)
+		{
+			if (sign > 0) return TradeType.Buy;
+			if (sign < 0) return TradeType.Sell;
+			throw new Exception("Sign == 0 is not a trade type");
+		}
 
 		/// <summary>Return the opposite trade type to this type</summary>
 		public static TradeType Opposite(this TradeType tt)
@@ -95,21 +103,25 @@ namespace Rylobot
 		{
 			return new Order(pos).ValueAt(price, consider_sl, consider_tp);
 		}
+		public static QuoteCurrency ValueAt(this Trade pos, double price, bool consider_sl, bool consider_tp)
+		{
+			return new Order(pos, true).ValueAt(price, consider_sl, consider_tp);
+		}
 
-		public static QuoteCurrency StopLossAbs(this Position pos)
+		public static QuoteCurrency? StopLossAbs(this Position pos)
 		{
 			return new Order(pos).StopLoss;
 		}
-		public static QuoteCurrency StopLossAbs(this PendingOrder pos)
+		public static QuoteCurrency? StopLossAbs(this PendingOrder pos)
 		{
 			return new Order(pos).StopLoss;
 		}
 
-		public static QuoteCurrency TakeProfitAbs(this Position pos)
+		public static QuoteCurrency? TakeProfitAbs(this Position pos)
 		{
 			return new Order(pos).TakeProfit;
 		}
-		public static QuoteCurrency TakeProfitAbs(this PendingOrder pos)
+		public static QuoteCurrency? TakeProfitAbs(this PendingOrder pos)
 		{
 			return new Order(pos).TakeProfit;
 		}
@@ -283,35 +295,41 @@ namespace Rylobot
 		}
 
 		/// <summary>Convert a time-frame value to ticks</summary>
-		public static long ToTicks(this TimeFrame tf)
+		public static TimeSpan ToTimeSpan(this TimeFrame tf, int num = 1)
 		{
-			if (tf == TimeFrame.Minute  ) return TimeSpan.FromMinutes(1).Ticks;
-			if (tf == TimeFrame.Minute2 ) return TimeSpan.FromMinutes(2).Ticks;
-			if (tf == TimeFrame.Minute3 ) return TimeSpan.FromMinutes(3).Ticks;
-			if (tf == TimeFrame.Minute4 ) return TimeSpan.FromMinutes(4).Ticks;
-			if (tf == TimeFrame.Minute5 ) return TimeSpan.FromMinutes(5).Ticks;
-			if (tf == TimeFrame.Minute6 ) return TimeSpan.FromMinutes(6).Ticks;
-			if (tf == TimeFrame.Minute7 ) return TimeSpan.FromMinutes(7).Ticks;
-			if (tf == TimeFrame.Minute8 ) return TimeSpan.FromMinutes(8).Ticks;
-			if (tf == TimeFrame.Minute9 ) return TimeSpan.FromMinutes(9).Ticks;
-			if (tf == TimeFrame.Minute10) return TimeSpan.FromMinutes(10).Ticks;
-			if (tf == TimeFrame.Minute15) return TimeSpan.FromMinutes(15).Ticks;
-			if (tf == TimeFrame.Minute20) return TimeSpan.FromMinutes(20).Ticks;
-			if (tf == TimeFrame.Minute30) return TimeSpan.FromMinutes(30).Ticks;
-			if (tf == TimeFrame.Minute45) return TimeSpan.FromMinutes(45).Ticks;
-			if (tf == TimeFrame.Hour    ) return TimeSpan.FromHours(1).Ticks;
-			if (tf == TimeFrame.Hour2   ) return TimeSpan.FromHours(2).Ticks;
-			if (tf == TimeFrame.Hour3   ) return TimeSpan.FromHours(3).Ticks;
-			if (tf == TimeFrame.Hour4   ) return TimeSpan.FromHours(4).Ticks;
-			if (tf == TimeFrame.Hour6   ) return TimeSpan.FromHours(6).Ticks;
-			if (tf == TimeFrame.Hour8   ) return TimeSpan.FromHours(8).Ticks;
-			if (tf == TimeFrame.Hour12  ) return TimeSpan.FromHours(12).Ticks;
-			if (tf == TimeFrame.Daily   ) return TimeSpan.FromDays(1).Ticks;
-			if (tf == TimeFrame.Day2    ) return TimeSpan.FromDays(2).Ticks;
-			if (tf == TimeFrame.Day3    ) return TimeSpan.FromDays(3).Ticks;
-			if (tf == TimeFrame.Weekly  ) return TimeSpan.FromDays(7).Ticks;
-			if (tf == TimeFrame.Monthly ) return TimeSpan.FromDays(30).Ticks;
+			if (tf == TimeFrame.Minute  ) return TimeSpan.FromMinutes(num * 1 );
+			if (tf == TimeFrame.Minute2 ) return TimeSpan.FromMinutes(num * 2 );
+			if (tf == TimeFrame.Minute3 ) return TimeSpan.FromMinutes(num * 3 );
+			if (tf == TimeFrame.Minute4 ) return TimeSpan.FromMinutes(num * 4 );
+			if (tf == TimeFrame.Minute5 ) return TimeSpan.FromMinutes(num * 5 );
+			if (tf == TimeFrame.Minute6 ) return TimeSpan.FromMinutes(num * 6 );
+			if (tf == TimeFrame.Minute7 ) return TimeSpan.FromMinutes(num * 7 );
+			if (tf == TimeFrame.Minute8 ) return TimeSpan.FromMinutes(num * 8 );
+			if (tf == TimeFrame.Minute9 ) return TimeSpan.FromMinutes(num * 9 );
+			if (tf == TimeFrame.Minute10) return TimeSpan.FromMinutes(num * 10);
+			if (tf == TimeFrame.Minute15) return TimeSpan.FromMinutes(num * 15);
+			if (tf == TimeFrame.Minute20) return TimeSpan.FromMinutes(num * 20);
+			if (tf == TimeFrame.Minute30) return TimeSpan.FromMinutes(num * 30);
+			if (tf == TimeFrame.Minute45) return TimeSpan.FromMinutes(num * 45);
+			if (tf == TimeFrame.Hour    ) return TimeSpan.FromHours  (num * 1 );
+			if (tf == TimeFrame.Hour2   ) return TimeSpan.FromHours  (num * 2 );
+			if (tf == TimeFrame.Hour3   ) return TimeSpan.FromHours  (num * 3 );
+			if (tf == TimeFrame.Hour4   ) return TimeSpan.FromHours  (num * 4 );
+			if (tf == TimeFrame.Hour6   ) return TimeSpan.FromHours  (num * 6 );
+			if (tf == TimeFrame.Hour8   ) return TimeSpan.FromHours  (num * 8 );
+			if (tf == TimeFrame.Hour12  ) return TimeSpan.FromHours  (num * 12);
+			if (tf == TimeFrame.Daily   ) return TimeSpan.FromDays   (num * 1 );
+			if (tf == TimeFrame.Day2    ) return TimeSpan.FromDays   (num * 2 );
+			if (tf == TimeFrame.Day3    ) return TimeSpan.FromDays   (num * 3 );
+			if (tf == TimeFrame.Weekly  ) return TimeSpan.FromDays   (num * 7 );
+			if (tf == TimeFrame.Monthly ) return TimeSpan.FromDays   (num * 30);
 			throw new Exception("Unknown time frame");
+		}
+
+		/// <summary>Convert a time-frame value to ticks</summary>
+		public static long ToTicks(this TimeFrame tf, int num = 1)
+		{
+			return ToTimeSpan(tf, num).Ticks;
 		}
 
 		/// <summary>Return a higher or lower time frame (e.g. this=h1, ratio=2 => h2. this=h1, ratio=0.5 => m30))</summary>

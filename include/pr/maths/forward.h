@@ -9,13 +9,12 @@
 #include <memory>
 #include <thread>
 #include <limits>
-#include <cassert>
 #include <type_traits>
 #include <intrin.h>
-#include <math.h>
-#include <float.h>
-#include <stdlib.h>
-#include <memory.h>
+#include <cmath>
+#include <cstdlib>
+#include <complex>
+#include <cassert>
 
 // Libraries built to use DirectXMath should be fine when linked in projects
 // that don't use DirectXMath because all of the maths types have the same

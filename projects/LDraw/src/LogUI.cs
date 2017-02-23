@@ -26,6 +26,8 @@ namespace LDraw
 		{
 			InitializeComponent();
 			DockControl.DefaultDockLocation = new DockContainer.DockLocation(auto_hide:EDockSite.Right);
+			DockControl.TabColoursActive = new DockContainer.OptionData().TabStrip.ActiveTab;
+			DockControl.ActiveChanged += HandleActiveChanged;
 
 			// Create the text panel for displaying the log
 			m_text = m_tsc.ContentPanel.Controls.Add2(new LogPanel(this));
@@ -35,7 +37,14 @@ namespace LDraw
 		}
 		protected override void Dispose(bool disposing)
 		{
+			DockControl.ActiveChanged -= HandleActiveChanged;
 			base.Dispose(disposing);
+		}
+
+		/// <summary>Reset the error log to empty</summary>
+		public void Clear()
+		{
+			m_text.ClearAll();
 		}
 
 		/// <summary>Add text to the log</summary>
@@ -43,7 +52,14 @@ namespace LDraw
 		{
 			m_text.AppendText(text + "\n\n");
 			if (Settings.UI.ShowErrorLogOnNewMessages)
+			{
 				DockControl.DockContainer.FindAndShow(this);
+			}
+			else
+			{
+				DockControl.TabColoursActive.Text = Color.Red;
+				DockControl.InvalidateTab();
+			}
 		}
 
 		/// <summary>Set up UI Elements</summary>
@@ -54,6 +70,16 @@ namespace LDraw
 		/// <summary>Update the state of UI Elements</summary>
 		private void UpdateUI(object sender = null, EventArgs args = null)
 		{
+		}
+
+		/// <summary>Handle this window becoming active</summary>
+		private void HandleActiveChanged(object sender, EventArgs e)
+		{
+			if (DockControl.IsActiveContent)
+			{
+				DockControl.TabColoursActive.Text = Color.Black;
+				DockControl.InvalidateTab();
+			}
 		}
 
 		#region Log Panel
@@ -69,11 +95,10 @@ namespace LDraw
 
 				// Create styles for the log levels
 				var fontname = Encoding.UTF8.GetBytes("tahoma");
-				var cols = new[] { Color.Gray, Color.Black, Color.DarkGoldenrod, Color.DarkRed, Color.Purple };
 				using (var fonth = GCHandleEx.Alloc(fontname, GCHandleType.Pinned))
 				{
 					Cmd(Sci.SCI_STYLESETFONT, 0, fonth.Handle.AddrOfPinnedObject());
-					Cmd(Sci.SCI_STYLESETFORE, 0, cols[0].ToAbgr() & 0x00FFFFFF);
+					Cmd(Sci.SCI_STYLESETFORE, 0, Color.Black.ToAbgr() & 0x00FFFFFF);
 				}
 
 				// Use our own context menu

@@ -182,7 +182,7 @@ namespace Rylobot
 		}
 
 		/// <summary>Temporarily suspend risk checks</summary>
-		public Scope SuspendRiskCheck()
+		public Scope SuspendRiskCheck(bool ignore_risk = false)
 		{
 			return Scope.Create(
 				() => ++m_suspend_risk_check,
@@ -190,11 +190,102 @@ namespace Rylobot
 				{
 					if (--m_suspend_risk_check != 0) return;
 					Debug.Assert(m_suspend_risk_check == 0);
-					if (MaxRisk > AllowedRisk)
+					if (!ignore_risk && MaxRisk > AllowedRisk)
 						throw new Exception("Maximum risk exceeded");
 				});
 		}
 		private int m_suspend_risk_check;
+
+		/// <summary>Creates a pending order. Throws if insufficient risk available</summary>
+		public PendingOrder CreatePendingOrder(Trade trade, bool rethrow = false)
+		{
+			try
+			{
+				// Handle invalid 'trade's by returning null
+				if (trade.Error != null)
+				{
+					Bot.Print(trade.Error.Message);
+					return null;
+				}
+
+				// Check that placing this order will not exceed the maximum risk
+				if (m_suspend_risk_check == 0)
+				{
+					var trades = AllOrders.Concat(new Order(trade, active:true)).ToList();
+					var max_risk = FindMaxRisk(trades);
+					if (AllowedRisk - max_risk < -Maths.TinyD)
+						throw new Exception("Trade disallowed, exceeds allowable risk");
+				}
+
+				// Place the pending order.
+				var r = (TradeResult)null;
+
+				// Buy from below or Sell from above is a limit order
+				if ((trade.TradeType == TradeType.Buy && trade.EP < trade.Instrument.CurrentPrice(+1)) ||
+					(trade.TradeType == TradeType.Sell && trade.EP > trade.Instrument.CurrentPrice(-1)))
+				{
+					r = Bot.PlaceLimitOrder(trade.TradeType, trade.Instrument.Symbol, trade.Volume, (double)trade.EP, trade.Label, (double?)trade.SL_pips, (double?)trade.TP_pips, trade.Expiration);
+					if (!r.IsSuccessful)
+						throw new Exception("Place limit order failed: {0}".Fmt(r.Error));
+				}
+
+				// Buy from above or Sell from below is a stop order
+				if ((trade.TradeType == TradeType.Buy && trade.EP > trade.Instrument.CurrentPrice(+1)) ||
+					(trade.TradeType == TradeType.Sell && trade.EP < trade.Instrument.CurrentPrice(-1)))
+				{
+					r = Bot.PlaceStopOrder(trade.TradeType, trade.Instrument.Symbol, trade.Volume, (double)trade.EP, trade.Label, (double?)trade.SL_pips, (double?)trade.TP_pips, trade.Expiration);
+					if (!r.IsSuccessful)
+						throw new Exception("Place stop order failed: {0}".Fmt(r.Error));
+				}
+
+				// Neither condition valid? not sure this is possible
+				if (r == null)
+					throw new Exception("Pending order not placed");
+
+				// Update the order
+				Debugging.LogOrder(r.PendingOrder, true);
+
+				// Update the account balance
+				Update();
+
+				// Return the created order
+				return r.PendingOrder;
+			}
+			catch (Exception ex)
+			{
+				Bot.Print(ex.Message);
+				if (rethrow) throw;
+				return null;
+			}
+		}
+
+		/// <summary>Cancel a pending order</summary>
+		public PendingOrder CancelPendingOrder(PendingOrder ord, bool rethrow = false)
+		{
+			try
+			{
+				// Allow closing null
+				if (ord == null)
+					return null;
+
+				// Update the order
+				Debugging.LogOrder(ord, true);
+
+				var r = Bot.CancelPendingOrder(ord);
+				if (!r.IsSuccessful)
+					throw new Exception("Close position failed: {0}".Fmt(r.Error));
+
+				// Update the account balance
+				Update();
+				return null;
+			}
+			catch (Exception ex)
+			{
+				Bot.Print(ex.Message);
+				if (rethrow) throw;
+				return null;
+			}
+		}
 
 		/// <summary>Creates a market order. Throws if insufficient risk available</summary>
 		public Position CreateOrder(Trade trade, bool rethrow = false)
@@ -218,12 +309,12 @@ namespace Rylobot
 				}
 
 				// Place the order
-				var r = Bot.ExecuteMarketOrder(trade.TradeType, trade.Instrument.Symbol, trade.Volume, trade.Label, (double)trade.SL_pips, (double)trade.TP_pips);
+				var r = Bot.ExecuteMarketOrder(trade.TradeType, trade.Instrument.Symbol, trade.Volume, trade.Label, (double?)trade.SL_pips, (double?)trade.TP_pips);
 				if (!r.IsSuccessful)
 					throw new Exception("Execute market order failed: {0}".Fmt(r.Error));
 
 				// Output the order that was placed
-				Debugging.LogTrade(r.Position);
+				Debugging.LogTrade(r.Position, true);
 
 				// Update the account balance
 				Update();
@@ -254,12 +345,12 @@ namespace Rylobot
 				}
 
 				// Modify the order
-				var r = Bot.ModifyPosition(pos, (double)trade.SL, (double)trade.TP);
+				var r = Bot.ModifyPosition(pos, (double?)trade.SL, (double?)trade.TP);
 				if (!r.IsSuccessful)
 					throw new Exception("Modifying market order failed: {0}".Fmt(r.Error));
 
 				// Replace the order with updated info
-				Debugging.LogTrade(pos);
+				Debugging.LogTrade(pos, true);
 
 				// Update the account balance
 				Update();
@@ -283,12 +374,12 @@ namespace Rylobot
 				if (pos == null)
 					return null;
 
+				// Update the position
+				Debugging.LogTrade(pos, true);
+
 				var r = Bot.ClosePosition(pos);
 				if (!r.IsSuccessful)
 					throw new Exception("Close position failed: {0}".Fmt(r.Error));
-
-				// Update the order
-				Debugging.LogTrade(pos);
 
 				// Update the account balance
 				Update();
@@ -322,6 +413,20 @@ namespace Rylobot
 			// Convert to pips
 			var sl = MaxSL(instr, volume);
 			return instr.Symbol.QuoteToPips(sl);
+		}
+
+		/// <summary>Return the maximum volume to trade given a relative stop loss value</summary>
+		public long MaxVolume(Instrument instr, QuoteCurrency sl)
+		{
+			// Find the amount we're allowed to risk
+			// Scale down a little bit to prevent issues comparing the returned SL to BalanceToRisk
+			var balance_to_risk = BalanceToRisk * 0.99;
+			if (balance_to_risk == 0)
+				return 0;
+
+			// Get this amount in quote currency
+			var volume = balance_to_risk / instr.Symbol.QuoteToAcct(sl);
+			return instr.Symbol.NormalizeVolume(volume, RoundingMode.Down);
 		}
 
 		/// <summary>Calculate the maximum risk given the current positions/orders (in account currency). (positive is risk, negative is guaranteed win)</summary>
@@ -360,9 +465,7 @@ namespace Rylobot
 				if (sym_trades.Count == 1)
 				{
 					var trade = sym_trades[0];
-					var sign = trade.TradeType.Sign();
-					var sl = trade.StopLoss;
-					var risk = sign * (trade.EntryPrice - sl) * trade.Volume;
+					var risk = trade.StopLossRel * trade.Volume;
 					total_risk += sym.QuoteToAcct(risk);
 				}
 				else
@@ -375,12 +478,12 @@ namespace Rylobot
 						{
 							// Test the SL and TP to see which is the correct side of 'price' and is the nearest
 							var d_sl = direction * (ord.StopLoss - price);
-							if (d_sl >= 0 && d_sl < dist)
-								dist = d_sl;
+							if (d_sl != null && d_sl >= 0 && d_sl < dist)
+								dist = d_sl.Value;
 
 							var d_tp = direction * (ord.TakeProfit - price);
-							if (d_tp >= 0 && d_tp < dist)
-								dist = d_tp;
+							if (d_tp != null && d_tp >= 0 && d_tp < dist)
+								dist = d_tp.Value;
 						}
 						else
 						{
@@ -488,8 +591,7 @@ namespace Rylobot
 			var risk = (AcctCurrency)0.0;
 			foreach (var position in positions.Select(x => new Order(x)))
 			{
-				// The stop loss will be negative if it is on the 'win' side
-				// of the entry price, regardless of trade type.
+				// The stop loss will be negative if it is on the 'win' side of the entry price, regardless of trade type.
 				var sym = Bot.GetSymbol(position.SymbolCode);
 				risk += sym.QuoteToAcct(position.StopLossRel) * position.Volume;
 			}

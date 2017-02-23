@@ -170,7 +170,7 @@ namespace pr
 
 			// The stack of input streams. Streams are pushed/popped from
 			// the stack as files are opened, or macros are evaluated.
-			std::vector<PPSource> m_stack;
+			pr::vector<PPSource> m_stack;
 
 			// A stack recording the 'inclusion' state of nested #if/#endif blocks
 			using BitStack = pr::BitStack<>;

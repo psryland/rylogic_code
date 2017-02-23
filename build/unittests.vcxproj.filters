@@ -963,6 +963,9 @@
     <ClInclude Include="..\include\pr\maths\matrix.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\maths\fft.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

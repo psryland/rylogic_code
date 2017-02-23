@@ -951,7 +951,7 @@ namespace pr.gui
 			return Cmd(Sci.SCI_CANPASTE) != 0;
 		}
 
-		/// <summary></summary>
+		/// <summary>Clear the *selected* text</summary>
 		public void Clear()
 		{
 			Cmd(Sci.SCI_CLEAR);

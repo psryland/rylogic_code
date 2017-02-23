@@ -39,11 +39,9 @@ namespace pr
 			D3DPtr<ID2D1Factory>       m_d2dfactory;
 			TextureLookup              m_lookup_tex;     // A map from texture id to existing texture instances
 			TexFileLookup              m_lookup_fname;   // A map from hash of filepath to an existing dx texture
-			pr::vector<Texture2DPtr>    m_stock_textures; // A collection of references to the stock textures
+			pr::vector<Texture2DPtr>   m_stock_textures; // A collection of references to the stock textures
 			pr::GdiPlus                m_gdiplus;
-
-			TextureManager(TextureManager const&); // no copying
-			TextureManager& operator = (TextureManager const&);
+			std::recursive_mutex       m_mutex;          // Sync's access to texture creation
 
 			friend struct Texture2D;
 			friend struct TextureGdi;
@@ -64,6 +62,8 @@ namespace pr
 
 		public:
 			TextureManager(MemFuncs& mem, D3DPtr<ID3D11Device>& device, D3DPtr<ID2D1Factory>& d2dfactory);
+			TextureManager(TextureManager const&) = delete;
+			TextureManager& operator = (TextureManager const&) = delete;
 
 			// Create a new texture instance.
 			// 'id' is the id to assign to the created texture instance. Use 'AutoId' to auto generate an id

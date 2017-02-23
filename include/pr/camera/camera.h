@@ -744,23 +744,25 @@ namespace pr
 				auto bbox_cs = w2c * bbox;
 				auto width   = bbox_cs.SizeX();
 				auto height  = bbox_cs.SizeY();
-
-				// Choose the fields of view. If 'focus_dist' is given, then that determines
-				// the X,Y field of view. If not, choose a focus distance based on a view size
-				// equal to the average of 'width' and 'height' using the default FOV.
-				if (focus_dist == 0)
+				if (!FEql(width,0) && !FEql(height, 0))
 				{
-					auto size = (width + height) / 2.0f;
-					focus_dist = (0.5f * size) / pr::Tan(0.5f * m_default_fovY);
+					// Choose the fields of view. If 'focus_dist' is given, then that determines
+					// the X,Y field of view. If not, choose a focus distance based on a view size
+					// equal to the average of 'width' and 'height' using the default FOV.
+					if (focus_dist == 0)
+					{
+						auto size = (width + height) / 2.0f;
+						focus_dist = (0.5f * size) / pr::Tan(0.5f * m_default_fovY);
+					}
+
+					// Set the aspect ratio
+					auto aspect = width / height;
+					auto d = focus_dist - sizez;
+
+					// Set the aspect and FOV based on the view of the bbox
+					Aspect(aspect);
+					FovY(2.0f * pr::ATan(0.5f * height / d));
 				}
-
-				// Set the aspect ratio
-				auto aspect = width / height;
-				auto d = focus_dist - sizez;
-
-				// Set the aspect and FOV based on the view of the bbox
-				Aspect(aspect);
-				FovY(2.0f * pr::ATan(0.5f * height / d));
 			}
 			else
 			{

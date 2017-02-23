@@ -97,7 +97,7 @@ namespace view3d
 			{
 				// Don't instigate a view reset here because the window doesn't know how the caller would
 				// like the view reset (e.g. all objects, just selected, etc). The caller can instead sign
-				// up to the StoreUpdated event on the context sources
+				// up to the StoreUpdated event on the content sources
 				InvalidateRect(nullptr, false);
 			};
 

@@ -87,7 +87,7 @@ namespace pr
 			
 			virtual ~ShaderBase() {}
 
-			// Setup the shader ready to be used on 'dle'
+			// Set up the shader ready to be used on 'dle'
 			// This needs to take the state stack and set things via that, to prevent unnecessary state changes
 			virtual void Setup(D3DPtr<ID3D11DeviceContext>& dc, DeviceState& state);
 
@@ -108,7 +108,7 @@ namespace pr
 			// Note, returns null for all shaders except vertex shaders
 			D3DPtr<ID3D11InputLayout> IpLayout() const;
 
-			// Ref counting cleanup
+			// Ref counting clean up
 			static void RefCountZero(pr::RefCount<ShaderBase>* doomed);
 			protected: virtual void Delete() = 0;
 
@@ -166,7 +166,7 @@ namespace pr
 				return shdr;
 			}
 
-			// Ref count cleanup
+			// Ref count clean up
 			void Delete() override
 			{
 				ShaderBase::Delete<Derived>(static_cast<Derived*>(this));

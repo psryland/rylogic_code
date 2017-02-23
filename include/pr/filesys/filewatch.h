@@ -6,6 +6,7 @@
 
 #include <vector>
 #include "pr/common/guid.h"
+#include "pr/common/multi_cast.h"
 #include "pr/filesys/fileex.h"
 #include "pr/filesys/filesys.h"
 #include "pr/str/string.h"
@@ -36,6 +37,7 @@ namespace pr
 
 	class FileWatch
 	{
+	public:
 		using string = pr::string<wchar_t>;
 
 		struct File
@@ -75,6 +77,9 @@ namespace pr
 		FileWatch()
 			:m_files()
 		{}
+
+		// Raised when changed files are detected. Allows modification of file list
+		pr::MultiCast<std::function<void(FileCont&)>> OnFilesChanged;
 
 		// The files being watched
 		FileCont const& Files() const
@@ -131,18 +136,24 @@ namespace pr
 				file.m_time = stamp;
 			}
 
-			// Report each changed file
-			for (auto& file : changed_files)
+			if (!changed_files.empty())
 			{
-				bool handled = true;
-				file.m_onchanged->FileWatch_OnFileChanged(file.m_filepath.c_str(), file.m_id, file.m_user_data, handled);
+				// Notify of detected changes and allow changes
+				OnFilesChanged.Raise(changed_files);
 
-				// If the change is not handled, find the same file in 'm_files'
-				// and set it's timestamp back to the previous value (should be a rare case)
-				if (!handled)
+				// Report each changed file
+				for (auto& file : changed_files)
 				{
-					auto iter = std::find(std::begin(m_files), std::end(m_files), file.m_filepath);
-					if (iter != std::end(m_files)) iter->m_time = file.m_time;
+					bool handled = true;
+					file.m_onchanged->FileWatch_OnFileChanged(file.m_filepath.c_str(), file.m_id, file.m_user_data, handled);
+
+					// If the change is not handled, find the same file in 'm_files'
+					// and set it's timestamp back to the previous value (should be a rare case)
+					if (!handled)
+					{
+						auto iter = std::find(std::begin(m_files), std::end(m_files), file.m_filepath);
+						if (iter != std::end(m_files)) iter->m_time = file.m_time;
+					}
 				}
 			}
 		}

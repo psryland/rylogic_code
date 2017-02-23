@@ -33,8 +33,16 @@ namespace LDraw
 			private set
 			{
 				if (m_impl_dock_control == value) return;
-				Util.Dispose(ref m_impl_dock_control);
+				if (m_impl_dock_control != null)
+				{
+					m_impl_dock_control.DockContainerChanged -= HandleDockContainerChanged;
+					Util.Dispose(ref m_impl_dock_control);
+				}
 				m_impl_dock_control = value;
+				if (m_impl_dock_control != null)
+				{
+					m_impl_dock_control.DockContainerChanged += HandleDockContainerChanged;
+				}
 			}
 		}
 		private DockControl m_impl_dock_control;
@@ -84,5 +92,14 @@ namespace LDraw
 		{
 			Invalidate(true);
 		}
+
+		/// <summary>Raised when the dock container is assigned/changed</summary>
+		protected virtual void OnDockContainerChanged(DockContainerChangedEventArgs args)
+		{}
+		private void HandleDockContainerChanged(object sender, DockContainerChangedEventArgs e)
+		{
+			OnDockContainerChanged(e);
+		}
+
 	}
 }

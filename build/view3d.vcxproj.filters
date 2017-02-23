@@ -102,6 +102,9 @@
     <ClInclude Include="..\include\pr\linedrawer\ldr_sources.h">
       <Filter>src\pr\ldraw</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\str\extract.h">
+      <Filter>src\pr\script</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\include\pr\linedrawer\ldr_object.cpp">

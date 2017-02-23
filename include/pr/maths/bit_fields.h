@@ -45,21 +45,48 @@ namespace pr
 		return (value & T(mask)) == T(mask);
 	}
 
-	// Reverse the order of bits in 'n'
-	inline uint8 ReverseBits(uint8 n)
+	// Reverse the order of bits in 'v'
+	inline uint8 ReverseBits8(uint8 v)
 	{
-		return static_cast<uint8>(((n * 0x0802LU & 0x22110LU) | (n * 0x8020LU & 0x88440LU)) * 0x10101LU >> 16);
+		//if constexpr(sizeof(void*) == 8)
+			return static_cast<uint8>(((v * 0x80200802ULL) & 0x0884422110ULL) * 0x0101010101ULL >> 32);
+		//else
+		//	return static_cast<uint8>(((v * 0x0802LU & 0x22110LU) | (n * 0x8020LU & 0x88440LU)) * 0x10101LU >> 16);
 	}
 
-	// Reverse the order of bits in 'n'
-	inline uint ReverseBits(uint n)
+	// Reverse the order of bits in 'v'
+	inline uint ReverseBits32(uint v)
 	{
-		n = ((n >> 1) & 0x55555555) | ((n & 0x55555555) << 1);	// swap odd and even bits
-		n = ((n >> 2) & 0x33333333) | ((n & 0x33333333) << 2);	// swap consecutive pairs
-		n = ((n >> 4) & 0x0F0F0F0F) | ((n & 0x0F0F0F0F) << 4);	// swap nibbles ...
-		n = ((n >> 8) & 0x00FF00FF) | ((n & 0x00FF00FF) << 8);	// swap bytes
-		n = ( n >> 16             ) | ( n               << 16);	// swap 2-byte long pairs
-		return n;
+		v = ((v >> 1) & 0x55555555) | ((v & 0x55555555) << 1);	// swap odd and even bits
+		v = ((v >> 2) & 0x33333333) | ((v & 0x33333333) << 2);	// swap consecutive pairs
+		v = ((v >> 4) & 0x0F0F0F0F) | ((v & 0x0F0F0F0F) << 4);	// swap nibbles ...
+		v = ((v >> 8) & 0x00FF00FF) | ((v & 0x00FF00FF) << 8);	// swap bytes
+		v = ( v >> 16             ) | ( v               << 16);	// swap 2-byte long pairs
+		return v;
+	}
+
+	// Reverse the order of the lower 'n' bits in 'v'. e.g. ReverseBits32(0b00101101, 4) returns 0b00101011
+	inline uint ReverseBits32(uint v, int n)
+	{
+		return (v & (0xFFFFFFFFU << n)) | (ReverseBits32(v) >> (32 - n));
+	}
+
+	// Reverse the order of bits in 'v'
+	inline uint64 ReverseBits64(uint64 v)
+	{
+		v = ((v >>  1) & 0x5555555555555555ULL) | ((v & 0x5555555555555555ULL) <<  1); // swap odd and even bits
+		v = ((v >>  2) & 0x3333333333333333ULL) | ((v & 0x3333333333333333ULL) <<  2); // swap consecutive pairs
+		v = ((v >>  4) & 0x0F0F0F0F0F0F0F0FULL) | ((v & 0x0F0F0F0F0F0F0F0FULL) <<  4); // swap nibbles ...
+		v = ((v >>  8) & 0x00FF00FF00FF00FFULL) | ((v & 0x00FF00FF00FF00FFULL) <<  8); // swap bytes
+		v = ((v >> 16) & 0x0000FFFF0000FFFFULL) | ((v & 0x0000FFFF0000FFFFULL) << 16); // swap 2-byte pairs
+		v = ( v >> 32                         ) | ( v                          << 32); // swap 4-byte pairs
+		return v;
+	}
+
+	// Reverse the order of the lower 'n' bits in 'v'. e.g. ReverseBits32(0b00101101, 4) returns 0b00101011
+	inline uint64 ReverseBits64(uint64 v, int n)
+	{
+		return (v & (0xFFFFFFFFFFFFFFFFULL << n)) | (ReverseBits64(v) >> (64 - n));
 	}
 
 	// Returns a bit mask containing only the lowest bit of 'n'
@@ -276,6 +303,34 @@ namespace pr
 				PR_CHECK(LowBitIndex(mask), 2U);
 				PR_CHECK(LowBit(mask), 4);
 				PR_CHECK(HighBit(mask), 0x8000000000000000ULL);
+			}
+			{
+				auto a = uint8(0b10110101);
+				auto b = uint8(0b10101101);
+				auto c = ReverseBits8(a);
+				PR_CHECK(b, c);
+			}
+			{            //01234567890123456789012345678901 32bits
+				auto a = 0b01100011110000011111100000001111U;
+
+				auto b = ReverseBits32(a);
+				auto B = 0b11110000000111111000001111000110U;
+				PR_CHECK(b, B);
+
+				auto c = ReverseBits32(a, 8); // just the lower 8 bits
+				auto C = 0b01100011110000011111100011110000U;
+				PR_CHECK(c, C);
+			}
+			{            //0123456789_123456789_123456789_123456789_123456789_123456879_123 64bits
+				auto a = 0b0110001111000001111110000000111111110000000001111111111000000000ULL;
+
+				auto b = ReverseBits64(a);
+				auto B = 0b0000000001111111111000000000111111110000000111111000001111000110ULL;
+				PR_CHECK(b, B);
+
+				auto c = ReverseBits64(a, 12); // just the lower 12 bits
+				auto C = 0b0110001111000001111110000000111111110000000001111111000000000111ULL;
+				PR_CHECK(c, C);
 			}
 		}
 	}

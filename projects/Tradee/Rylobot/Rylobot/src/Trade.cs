@@ -15,17 +15,19 @@ namespace Rylobot
 		//  A 'Trade' is the bot's representation of a position on a symbol, or simulated position on a symbol.
 		//  Trades can be used to track the profit/loss of a position without having to actually hold the position.
 		//  Trades are different to 'Position', 'PendingOrder', or 'Order'
+		//  SL/TP are nullable because they are not required, even though it's generally a good idea to have them
 
 		/// <summary>Create a trade with explicit values</summary>
-		public Trade(Instrument instr, TradeType tt, string label, QuoteCurrency ep, QuoteCurrency sl, QuoteCurrency tp, long volume, NegIdx? neg_idx = null)
+		public Trade(Instrument instr, TradeType tt, string label, QuoteCurrency ep, QuoteCurrency? sl, QuoteCurrency? tp, long volume, NegIdx? neg_idx = null)
 		{
 			Id         = null;
-			Index      = m_trade_id++;
+			TradeIndex = m_trade_index++;
 			TradeType  = tt;
 			Instrument = instr;
-			Result     = EResult.Open;
+			Result     = EResult.Unknown;
 			EntryIndex = (double)((neg_idx ?? 0) - instr.IdxFirst);
 			ExitIndex  = EntryIndex;
+			Expiration = null;
 			Label      = label ?? string.Empty;
 
 			EP         = ep;
@@ -157,15 +159,31 @@ namespace Rylobot
 
 		/// <summary>Construct a trade from an existing position</summary>
 		public Trade(Instrument instr, Position pos)
-			:this(instr, pos.TradeType, pos.Label, pos.EntryPrice, pos.StopLoss ?? pos.EntryPrice, pos.TakeProfit ?? pos.EntryPrice, pos.Volume)
+			:this(instr, pos.TradeType, pos.Label, pos.EntryPrice, pos.StopLoss, pos.TakeProfit, pos.Volume)
 		{
 			Id = pos.Id;
+			Result = EResult.Open;
 
 			EntryIndex = instr.FractionalIndexAt(pos.EntryTime) - (double)instr.IdxFirst;
 			ExitIndex  = instr.FractionalIndexAt(instr.Bot.UtcNow) - (double)instr.IdxFirst;
 
-			PeakProfit = TradeType.Sign() * (TP - EP);
-			PeakLoss   = TradeType.Sign() * (EP - SL);
+			// Buy at the bid price, then: loss = EP - ask, profit = ask - EP
+			// Sell at the ask price, then: loss = bid - EP, profit = EP - bid
+			PeakProfit = Math.Max(0.0, (double)(TradeType == TradeType.Buy ? (instr.LatestPrice.Ask - EP) : (EP - instr.LatestPrice.Bid)));
+			PeakLoss   = Math.Min(0.0, (double)(TradeType == TradeType.Buy ? (EP - instr.LatestPrice.Ask) : (instr.LatestPrice.Bid - EP)));
+		}
+
+		/// <summary>Construct a trade from an existing pending order</summary>
+		public Trade(Instrument instr, PendingOrder ord)
+			:this(instr, ord.TradeType, ord.Label, ord.TargetPrice, ord.StopLoss, ord.TakeProfit, ord.Volume)
+		{
+			Id = ord.Id;
+			Result = EResult.Pending;
+
+			var now = instr.Bot.UtcNow;
+			var fin = ord.ExpirationTime ?? (now + Instrument.TimeFrame.ToTimeSpan(num:10));
+			EntryIndex = instr.FractionalIndexAt(now) - (double)instr.IdxFirst;
+			ExitIndex  = instr.FractionalIndexAt(fin) - (double)instr.IdxFirst;
 		}
 
 		/// <summary>Direction of trade</summary>
@@ -178,8 +196,8 @@ namespace Rylobot
 		public int? Id { get; set; }
 
 		/// <summary>Incrementing trade index</summary>
-		public int Index { get; private set; }
-		private static int m_trade_id;
+		public int TradeIndex { get; private set; }
+		private static int m_trade_index;
 
 		/// <summary>The entry point CAlgo index (can be a fractional index)</summary>
 		public double EntryIndex { get; private set; }
@@ -187,27 +205,30 @@ namespace Rylobot
 		/// <summary>The exit point CAlgo index (can be a fractional index)</summary>
 		public double ExitIndex { get; private set; }
 
+		/// <summary>When the trade or pending order should/did expire. Null means not closed, or indefinite</summary>
+		public DateTime? Expiration { get; set; }
+
 		/// <summary>The entry price</summary>
 		public QuoteCurrency EP { get; private set; }
 
 		/// <summary>The stop loss price (absolute, in quote currency)</summary>
-		public QuoteCurrency SL { get; set; }
+		public QuoteCurrency? SL { get; set; }
 
 		/// <summary>The take profit price (absolute, in quote currency)</summary>
-		public QuoteCurrency TP { get; set; }
+		public QuoteCurrency? TP { get; set; }
 
 		/// <summary>The stop loss in pips (relative, positive = on losing side of EP)</summary>
-		public Pips SL_pips
+		public Pips? SL_pips
 		{
-			get { return Instrument.Symbol.QuoteToPips(TradeType.Sign() * (EP - SL)); }
-			set { SL = EP - TradeType.Sign() * Instrument.Symbol.PipsToQuote(value); }
+			get { return SL != null ? Instrument.Symbol.QuoteToPips(TradeType.Sign() * (EP - SL.Value)) : (Pips?)null; }
+			set { SL = value != null ? EP - TradeType.Sign() * Instrument.Symbol.PipsToQuote(value.Value) : (QuoteCurrency?)null; }
 		}
 
 		/// <summary>The take profit in pips (relative, positive = on wining side of EP)</summary>
-		public Pips TP_pips
+		public Pips? TP_pips
 		{
-			get { return Instrument.Symbol.QuoteToPips(TradeType.Sign() * (TP - EP)); }
-			set { TP = EP + TradeType.Sign() * Instrument.Symbol.PipsToQuote(value); }
+			get { return TP != null ? Instrument.Symbol.QuoteToPips(TradeType.Sign() * (TP.Value - EP)) : (Pips?)null; }
+			set { TP = value != null ? EP + TradeType.Sign() * Instrument.Symbol.PipsToQuote(value.Value) : (QuoteCurrency?)null; }
 		}
 
 		/// <summary>The size of the trade</summary>
@@ -221,7 +242,7 @@ namespace Rylobot
 
 		/// <summary>The outcome of this trade so far</summary>
 		public EResult Result { get; private set; }
-		public enum EResult { Unknown, Open, HitSL, HitTP };
+		public enum EResult { Unknown, Pending, Open, HitSL, HitTP };
 
 		/// <summary>Reward to risk ratio of the SL/TP levels</summary>
 		public double RtR
@@ -229,11 +250,27 @@ namespace Rylobot
 			get
 			{
 				var sign = TradeType.Sign();
-				return Misc.Div(sign * (TP - EP), sign * (EP - SL));
+				if (SL == null) return 0.0;
+				if (TP == null) return double.PositiveInfinity;
+				return Misc.Div(sign * (TP.Value - EP), sign * (EP - SL.Value));
 			}
 		}
 
-		/// <summary>The highest profit seen over the duration of the trade (in currency, relative, positive = profit)</summary>
+		/// <summary>Return the value of this trade if it was to be closed at the given price tick</summary>
+		public QuoteCurrency ValueAt(PriceTick price, bool consider_sl = true, bool consider_tp = true)
+		{
+			// Closing a Buy means selling to the highest *bid*er
+			var p = TradeType == TradeType.Buy ? price.Bid : price.Ask;
+			return new Order(this, true).ValueAt(p, consider_sl, consider_tp);
+		}
+
+		/// <summary>Return the value of this trade at the current price level</summary>
+		public QuoteCurrency ValueNow()
+		{
+			return ValueAt(Instrument.LatestPrice);
+		}
+
+		/// <summary>The highest profit seen over the duration of the trade (in quote currency, relative, positive = profit)</summary>
 		public QuoteCurrency PeakProfit { get; private set; }
 
 		/// <summary>The highest loss seen over the duration of the trade (in currency, relative, positive = loss)</summary>
@@ -248,40 +285,61 @@ namespace Rylobot
 		/// <summary>Incorporate a candle into this trade</summary>
 		public void AddCandle(Candle candle, NegIdx index)
 		{
-			// Trade has closed out
-			if (Result != EResult.Open)
-				return;
+			// Adding a candle "open"s an unknown candle
+			if (Result == EResult.Unknown)
+				Result = EResult.Open;
 
-			// Assume the worst for order of prices within a candle
-			var prices = TradeType.Sign() > 0
-				? new[] {candle.Open, candle.Low, candle.High, candle.Close }
-				: new[] {candle.Open, candle.High, candle.Low, candle.Close };
-
-			var sign = TradeType.Sign();
-			foreach (var p in prices)
+			// If the trade is pending, look of an entry trigger
+			if (Result == EResult.Pending)
 			{
-				// SL hit
-				if (sign * (SL - p) > 0)
+				if ((TradeType == TradeType.Buy  && candle.Close >= EP) ||
+					(TradeType == TradeType.Sell && candle.Close <= EP))
 				{
-					PeakLoss = sign * (EP - SL);
-					Result = EResult.HitSL;
-					break;
+					Result = EResult.Open;
+					EntryIndex = (double)(index - Instrument.IdxFirst);
 				}
-
-				// TP hit
-				if (sign * (p - TP) > 0)
-				{
-					PeakProfit = sign * (TP - EP);
-					Result = EResult.HitTP;
-					break;
-				}
-
-				// Record the peaks
-				PeakProfit = Misc.Max(PeakProfit, sign * (p - EP));
-				PeakLoss   = Misc.Max(PeakLoss  , sign * (EP - p));
 			}
 
-			ExitIndex = (double)(index - Instrument.IdxFirst);
+			// Trade has closed out
+			if (Result == EResult.HitSL || Result == EResult.HitTP)
+				return;
+
+			// Otherwise, if this is an open trade.
+			if (Result == EResult.Open)
+			{
+				// Assume the worst for order of prices within a candle
+				var prices = TradeType.Sign() > 0
+					? new[] {candle.Open, candle.Low, candle.High, candle.Close }
+					: new[] {candle.Open, candle.High, candle.Low, candle.Close };
+
+				var sign = TradeType.Sign();
+				foreach (var p in prices)
+				{
+					// SL hit
+					if (SL != null && sign * (SL.Value - p) > 0)
+					{
+						PeakLoss = sign * (EP - SL.Value);
+						Result = EResult.HitSL;
+						Expiration = candle.TimestampUTC.DateTime; 
+						break;
+					}
+
+					// TP hit
+					if (TP != null && sign * (p - TP.Value) > 0)
+					{
+						PeakProfit = sign * (TP.Value - EP);
+						Result = EResult.HitTP;
+						Expiration = candle.TimestampUTC.DateTime;
+						break;
+					}
+
+					// Record the peaks
+					PeakProfit = Misc.Max(PeakProfit, sign * (p - EP));
+					PeakLoss   = Misc.Max(PeakLoss  , sign * (EP - p));
+				}
+
+				ExitIndex = (double)(index - Instrument.IdxFirst);
+			}
 		}
 	}
 }

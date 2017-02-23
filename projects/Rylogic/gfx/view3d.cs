@@ -19,6 +19,7 @@ using HTexture = System.IntPtr;
 using HWindow = System.IntPtr;
 using HWND = System.IntPtr;
 using HMODULE = System.IntPtr;
+using System.Text;
 
 namespace pr.gfx
 {
@@ -610,8 +611,11 @@ namespace pr.gfx
 		/// <summary>Report settings changed callback</summary>
 		public delegate void SettingsChangedCB(IntPtr ctx, HWindow wnd);
 
+		/// <summary>Callback for progress updates during AddFile / Reload</summary>
+		public delegate bool AddFileProgressCB(IntPtr ctx, Guid context_id, [MarshalAs(UnmanagedType.LPWStr)] string filepath, long file_offset, bool complete);
+
 		/// <summary>Callback when the sources are reloaded</summary>
-		public delegate void SourcesChangedCB(IntPtr ctx, ESourcesChangedReason reason);
+		public delegate void SourcesChangedCB(IntPtr ctx, ESourcesChangedReason reason, bool before);
 
 		/// <summary>Called just prior to rendering</summary>
 		public delegate void RenderCB(IntPtr ctx, HWindow wnd);
@@ -623,9 +627,10 @@ namespace pr.gfx
 			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=2)][Out] Nugget[] nuggets,
 			out int new_vcount, out int new_icount, out int new_ncount, IntPtr ctx);
 
-		private readonly List<Window>  m_windows;  // Groups of objects to render
-		private readonly HContext      m_context;  // Unique id per Initialise call
-		private SourcesChangedCB       m_sources_changed_cb; // Reference to callback
+		private readonly List<Window> m_windows;              // Groups of objects to render
+		private readonly HContext     m_context;              // Unique id per Initialise call
+		private AddFileProgressCB     m_add_file_progress_cb; // Reference to callback
+		private SourcesChangedCB      m_sources_changed_cb;   // Reference to callback
 
 		public View3d()
 		{
@@ -641,19 +646,74 @@ namespace pr.gfx
 			if (m_context == HContext.Zero)
 				throw new Exception(init_error ?? "Failed to initialised View3d");
 
+			// Sign up for progress reports
+			m_add_file_progress_cb = (ctx, context_id, fpath, foffset, complete) =>
+			{
+				var args = new AddFileProgressEventArgs(context_id, fpath, foffset, complete);
+				AddFileProgress.Raise(this, args);
+				return args.Cancel;
+			};
+			View3D_AddFileProgressCBSet(m_add_file_progress_cb, IntPtr.Zero, true);
+			
 			// Sign up for notification of the sources changing
-			m_sources_changed_cb = (ctx,reason) => OnSourcesChanged.Raise(this, new SourcesChangedEventArgs(reason));
+			m_sources_changed_cb = (ctx,reason,before) =>
+			{
+				OnSourcesChanged.Raise(this, new SourcesChangedEventArgs(reason, before));
+			};
 			View3D_SourcesChangedCBSet(m_sources_changed_cb, IntPtr.Zero, true);
 		}
 		public void Dispose()
 		{
 			// Unsubscribe
+			View3D_AddFileProgressCBSet(m_add_file_progress_cb, IntPtr.Zero, false);
 			View3D_SourcesChangedCBSet(m_sources_changed_cb, IntPtr.Zero, false);
 
 			while (m_windows.Count != 0)
 				m_windows[0].Dispose();
 
 			View3D_Shutdown(m_context);
+		}
+
+		/// <summary>Event notifying whenever sources are reloaded</summary>
+		public event EventHandler<AddFileProgressEventArgs> AddFileProgress;
+		public class AddFileProgressEventArgs :CancelEventArgs
+		{
+			public AddFileProgressEventArgs(Guid context_id, string filepath, long file_offset, bool complete)
+			{
+				ContextId  = context_id;
+				Filepath   = filepath;
+				FileOffset = file_offset;
+				Complete   = complete;
+			}
+
+			/// <summary>An anonymous pointer unique to each 'AddFile' call</summary>
+			public Guid ContextId { get; private set; }
+
+			/// <summary>The file currently being parsed</summary>
+			public string Filepath { get; private set; }
+
+			/// <summary>How far through the current file parsing is up to</summary>
+			public long FileOffset { get; private set; }
+
+			/// <summary>Last progress update notification</summary>
+			public bool Complete { get; private set; }
+		}
+
+		/// <summary>Event notifying whenever sources are reloaded</summary>
+		public event EventHandler<SourcesChangedEventArgs> OnSourcesChanged;
+		public class SourcesChangedEventArgs :EventArgs
+		{
+			public SourcesChangedEventArgs(ESourcesChangedReason reason, bool before)
+			{
+				Reason = reason;
+				Before = before;
+			}
+
+			/// <summary>The cause of the source changes</summary>
+			public ESourcesChangedReason Reason { get; private set; }
+
+			/// <summary>True if files are about to change</summary>
+			public bool Before { get; private set; }
 		}
 
 		/// <summary>Add a global error callback, returned object pops the error callback when disposed</summary>
@@ -665,27 +725,29 @@ namespace pr.gfx
 		}
 
 		/// <summary>
-		/// Create multiple objects from a source script file.
+		/// Create multiple objects from a source script file and store the script file in the collection of sources.
 		/// The objects are created with the context Id that is returned from this function.
 		/// Callers should then add objects to a window using AddObjectsById.
-		/// 'include_paths' is a comma separate list of include paths to use to resolve #include directives (or nullptr)
-		/// Note, these objects cannot be accessed other than by context id. This method is intended for creating static scenery</summary>
-		public Guid LoadScriptSource(string ldr_filepath, bool additional = false, bool async = true, string[] include_paths = null)
+		/// 'include_paths' is a comma separate list of include paths to use to resolve #include directives (or nullptr)</summary>
+		public Guid LoadScriptSource(string ldr_filepath, bool additional = false, string[] include_paths = null)
 		{
 			var inc = new View3DIncludes { m_include_paths = string.Join(",", include_paths ?? new string[0]) };
-			return View3D_LoadScriptSource(ldr_filepath, additional, async, ref inc);
+			return View3D_LoadScriptSource(ldr_filepath, additional, ref inc);
 		}
 
 		/// <summary>
 		/// Add an ldr script string. This will create all objects declared in 'ldr_script'
-		/// with context id 'context_id' if given, otherwise an id will be created.</summary>
-		public Guid LoadScript(string ldr_script, bool file, bool async, Guid? context_id, string[] include_paths = null)
+		/// with context id 'context_id' if given, otherwise an id will be created.
+		/// 'include_paths' is a comma separate list of include paths to use to resolve #include directives (or nullptr)
+		/// This is different to 'LoadScriptSource' because if 'ldr_script' is a file it is not added to
+		/// the collection of script sources. It's a one-off method to add objects</summary>
+		public Guid LoadScript(string ldr_script, bool file, Guid? context_id, string[] include_paths = null)
 		{
 			var inc = new View3DIncludes { m_include_paths = string.Join(",", include_paths ?? new string[0]) };
 			var ctx = context_id ?? Guid.NewGuid();
-			return View3D_LoadScript(ldr_script, file, async, ref ctx, ref inc);
+			return View3D_LoadScript(ldr_script, file, ref ctx, ref inc);
 		}
-	
+
 		/// <summary>Force a reload of all script sources</summary>
 		public void ReloadScriptSources()
 		{
@@ -702,19 +764,6 @@ namespace pr.gfx
 		public void CheckForChangedSources(object sender = null, EventArgs args = null)
 		{
 			View3D_CheckForChangedSources();
-		}
-
-		/// <summary>Event notifying whenever sources are reloaded</summary>
-		public event EventHandler<SourcesChangedEventArgs> OnSourcesChanged;
-		public class SourcesChangedEventArgs :EventArgs
-		{
-			public SourcesChangedEventArgs(ESourcesChangedReason reason)
-			{
-				Reason = reason;
-			}
-
-			/// <summary>The cause of the source changes</summary>
-			public ESourcesChangedReason Reason { get; private set; }
 		}
 
 		/// <summary>Release all created objects</summary>
@@ -1478,17 +1527,14 @@ namespace pr.gfx
 				:this("*group{}", false)
 			{}
 			public Object(string ldr_script, bool file)
-				:this(ldr_script, file, false, null, null)
+				:this(ldr_script, file, null, null)
 			{}
-			public Object(string ldr_script, bool file, bool async)
-				:this(ldr_script, file, async, null, null)
-			{}
-			public Object(string ldr_script, bool file, bool async, Guid? context_id, View3DIncludes? includes)
+			public Object(string ldr_script, bool file, Guid? context_id, View3DIncludes? includes)
 			{
 				m_owned = true;
 				var inc = includes ?? new View3DIncludes();
 				var ctx = context_id ?? Guid.NewGuid();
-				m_handle = View3D_ObjectCreateLdr(ldr_script, file, async, ref ctx, ref inc);
+				m_handle = View3D_ObjectCreateLdr(ldr_script, file, ref ctx, ref inc);
 				if (m_handle == HObject.Zero)
 					throw new Exception("Failed to create object from script\r\n{0}".Fmt(ldr_script.Summary(100)));
 			}
@@ -1740,6 +1786,13 @@ namespace pr.gfx
 			{
 				get { return View3D_GizmoGetMode(m_handle); }
 				set { View3D_GizmoSetMode(m_handle, value); }
+			}
+
+			/// <summary>Get/Set the scale of the gizmo</summary>
+			public float Scale
+			{
+				get { return View3D_GizmoScaleGet(m_handle); }
+				set { View3D_GizmoScaleSet(m_handle, value); }
 			}
 
 			/// <summary>Get/Set the gizmo object to world transform (scale is allowed)</summary>
@@ -2216,15 +2269,16 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_ShowLightingDlg          (HWindow window);
 
 		// Objects
-		[DllImport(Dll)] private static extern Guid              View3D_LoadScriptSource         ([MarshalAs(UnmanagedType.LPWStr)] string ldr_filepath, bool additional, bool async, ref View3DIncludes includes);
-		[DllImport(Dll)] private static extern Guid              View3D_LoadScript               ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, bool async, ref Guid context_id, ref View3DIncludes includes);
+		[DllImport(Dll)] private static extern Guid              View3D_LoadScriptSource         ([MarshalAs(UnmanagedType.LPWStr)] string ldr_filepath, bool additional, ref View3DIncludes includes);
+		[DllImport(Dll)] private static extern Guid              View3D_LoadScript               ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, ref View3DIncludes includes);
 		[DllImport(Dll)] private static extern void              View3D_ReloadScriptSources      ();
 		[DllImport(Dll)] private static extern void              View3D_ClearScriptSources       ();
 		[DllImport(Dll)] private static extern void              View3D_CheckForChangedSources   ();
+		[DllImport(Dll)] private static extern void              View3D_AddFileProgressCBSet     (AddFileProgressCB progress_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern void              View3D_SourcesChangedCBSet      (SourcesChangedCB sources_changed_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteAll         ();
 		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteById        (ref Guid context_id);
-		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, bool async, ref Guid context_id, ref View3DIncludes includes);
+		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, ref View3DIncludes includes);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreate             (string name, uint colour, int vcount, int icount, int ncount, IntPtr verts, IntPtr indices, IntPtr nuggets, ref Guid context_id);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateEditCB       (string name, uint colour, int vcount, int icount, int ncount, EditObjectCB edit_cb, IntPtr ctx, ref Guid context_id);
 		[DllImport(Dll)] private static extern void              View3D_ObjectUpdate             (HObject obj, string ldr_script, EUpdateObject flags);
@@ -2293,6 +2347,8 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_GizmoDetachCB            (HGizmo gizmo, Gizmo.Callback cb);
 		[DllImport(Dll)] private static extern void              View3D_GizmoAttach              (HGizmo gizmo, HObject obj);
 		[DllImport(Dll)] private static extern void              View3D_GizmoDetach              (HGizmo gizmo, HObject obj);
+		[DllImport(Dll)] private static extern float             View3D_GizmoScaleGet            (HGizmo gizmo);
+		[DllImport(Dll)] private static extern void              View3D_GizmoScaleSet            (HGizmo gizmo, float scale);
 		[DllImport(Dll)] private static extern Gizmo.EMode       View3D_GizmoGetMode             (HGizmo gizmo);
 		[DllImport(Dll)] private static extern void              View3D_GizmoSetMode             (HGizmo gizmo, Gizmo.EMode mode);
 		[DllImport(Dll)] private static extern m4x4              View3D_GizmoGetO2W              (HGizmo gizmo);

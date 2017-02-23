@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using pr.common;
@@ -12,6 +13,7 @@ using pr.gui;
 using pr.maths;
 using pr.util;
 using pr.win32;
+using Timer = System.Windows.Forms.Timer;
 
 namespace LDraw
 {
@@ -20,7 +22,6 @@ namespace LDraw
 		public Model(MainUI main_ui)
 		{
 			Owner        = main_ui;
-			View3d       = new View3d();
 			IncludePaths = new List<string>();
 			ContextIds   = new List<Guid>();
 			SavedViews   = new List<SavedView>();
@@ -35,7 +36,6 @@ namespace LDraw
 		{
 			Log = null;
 			Scene = null;
-			View3d = null;
 		}
 
 		/// <summary>The UI that created this model</summary>
@@ -54,24 +54,8 @@ namespace LDraw
 		/// <summary>A view3d context reference that lives for the lifetime of the application</summary>
 		public View3d View3d
 		{
-			[DebuggerStepThrough] get { return m_view3d; }
-			set
-			{
-				if (m_view3d == value) return;
-				if (m_view3d != null)
-				{
-					Util.Dispose(ref m_error_cb_gbl);
-					Util.Dispose(ref m_view3d);
-				}
-				m_view3d = value;
-				if (m_view3d != null)
-				{
-					m_error_cb_gbl = m_view3d.PushGlobalErrorCB(ReportError);
-				}
-			}
+			[DebuggerStepThrough] get { return Scene.View3d; }
 		}
-		private View3d m_view3d;
-		private Scope m_error_cb_gbl;
 
 		/// <summary>The 3d scene</summary>
 		public SceneUI Scene
@@ -80,11 +64,24 @@ namespace LDraw
 			private set
 			{
 				if (m_scene == value) return;
-				Util.Dispose(ref m_scene);
+				if (m_scene != null)
+				{
+					View3d.AddFileProgress -= HandleAddFileProgress;
+					View3d.OnSourcesChanged -= HandleSourcesChanged;
+					Util.Dispose(ref m_error_cb_gbl);
+					Util.Dispose(ref m_scene);
+				}
 				m_scene = value;
+				if (m_scene != null)
+				{
+					m_error_cb_gbl = View3d.PushGlobalErrorCB(ReportError);
+					View3d.OnSourcesChanged += HandleSourcesChanged;
+					View3d.AddFileProgress += HandleAddFileProgress;
+				}
 			}
 		}
 		private SceneUI m_scene;
+		private Scope m_error_cb_gbl;
 
 		/// <summary>The error log</summary>
 		public LogUI Log
@@ -194,15 +191,20 @@ namespace LDraw
 		/// <summary>Add a file source</summary>
 		public void OpenFile(string filepath, bool additional, bool auto_range = true)
 		{
-			// Load a source file and save the context id for that file
-			var id = View3d.LoadScriptSource(filepath, additional, async:true, include_paths: IncludePaths.ToArray());
-			ContextIds.Add(id);
-
-			if (auto_range)
+			ThreadPool.QueueUserWorkItem(x =>
 			{
-				Scene.Populate();
-				Scene.AutoRange();
-			}
+				// Load a source file and save the context id for that file
+				var id = View3d.LoadScriptSource(filepath, additional, include_paths: IncludePaths.ToArray());
+				Owner.BeginInvoke(() =>
+				{
+					ContextIds.Add(id);
+					if (auto_range)
+					{
+						Scene.Populate();
+						Scene.AutoRange();
+					}
+				});
+			});
 		}
 
 		/// <summary>Reset the camera to view objects in the scene</summary>
@@ -270,7 +272,16 @@ namespace LDraw
 		/// <summary>Add a demo scene to the scene</summary>
 		public void CreateDemoScene()
 		{
-			ContextIds.Add(Window.CreateDemoScene());
+			// See, parsing in a worker thread!
+			ThreadPool.QueueUserWorkItem(x =>
+			{
+				var guid = Window.CreateDemoScene();
+				Owner.BeginInvoke(() =>
+				{
+					ContextIds.Add(guid);
+					Owner.Invalidate();
+				});
+			});
 		}
 
 		/// <summary>Cycle through to the next fill mode</summary>
@@ -299,6 +310,58 @@ namespace LDraw
 			}
 		}
 		private Timer m_timer_refresh;
+
+		/// <summary>Handle notification that the script sources are about to be reloaded</summary>
+		private void HandleSourcesChanged(object sender, View3d.SourcesChangedEventArgs e)
+		{
+			// Just prior to reloading sources
+			if (e.Before && Settings.UI.ClearErrorLogOnReload)
+				Log.Clear();
+		}
+
+		/// <summary>Handle progress updates during file parsing</summary>
+		private void HandleAddFileProgress(object sender, View3d.AddFileProgressEventArgs e)
+		{
+			// Warning: called from a background thread context
+
+			// Ignore if there is no file (i.e. string sources)
+			if (!e.Filepath.HasValue())
+				return;
+
+			// Marshal to the main thread and update progress
+			var complete = e.Complete;
+			var progress = new AddFileProgressData(e.ContextId, e.Filepath, e.FileOffset);
+			Owner.BeginInvoke(() =>
+			{
+				// Only update with info from the same file
+				if (AddFileProgress != null && AddFileProgress.ContextId != progress.ContextId)
+					return;
+
+				// If progress is complete, clear the progress data
+				AddFileProgress = !complete ? progress : null;
+				Owner.UpdateProgress();
+			});
+		}
+
+		public AddFileProgressData AddFileProgress { get; private set; }
+		public class AddFileProgressData
+		{
+			public AddFileProgressData(Guid context_id, string filepath, long file_offset)
+			{
+				ContextId  = context_id;
+				Filepath   = filepath;
+				FileOffset = file_offset;
+			}
+
+			/// <summary>The context id for the 'AddFile' group</summary>
+			public Guid ContextId{ get; private set; }
+
+			/// <summary>The file being parsed</summary>
+			public string Filepath { get; private set; }
+
+			/// <summary>How far through the file being parsed we are</summary>
+			public long FileOffset { get; private set; }
+		}
 
 		public class SavedView
 		{

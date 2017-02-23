@@ -50,6 +50,7 @@ namespace pr
 			,m_lookup_fname(mem)
 			,m_stock_textures()
 			,m_gdiplus()
+			,m_mutex()
 		{
 			CreateStockTextures();
 		}
@@ -61,6 +62,8 @@ namespace pr
 		// 'sdesc' is a description of the sampler to use
 		Texture2DPtr TextureManager::CreateTexture2D(RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, char const* name)
 		{
+			std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
 			// Check whether 'id' already exists, if so, throw.
 			if (id != AutoId && m_lookup_tex.find(id) != end(m_lookup_tex))
 				throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Texture Id '%d' is already in use", id));
@@ -83,6 +86,8 @@ namespace pr
 		{
 			if (filepath == nullptr)
 				throw std::exception("Filepath must be given");
+
+			std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
 			// Accept stock texture strings: #black, #white, #checker, etc
 			// This is handy for model files that contain string paths for textures.
@@ -139,6 +144,8 @@ namespace pr
 		// 'sdesc' is a description of the sampler to use
 		TextureGdiPtr TextureManager::CreateTextureGdi(RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, char const* name)
 		{
+			std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
 			// Check whether 'id' already exists, if so, throw.
 			if (id != AutoId && m_lookup_tex.find(id) != end(m_lookup_tex))
 				throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Texture Id '%d' is already in use", id));
@@ -180,6 +187,8 @@ namespace pr
 		// 'sam_desc' is an optional sampler state description to set on the clone.
 		Texture2DPtr TextureManager::CloneTexture2D(RdrId id, Texture2DPtr const& existing, SamplerDesc const* sam_desc, char const* name)
 		{
+			std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
 			// Check whether 'id' already exists, if so, throw.
 			if (id != AutoId && m_lookup_tex.find(id) == end(m_lookup_tex))
 				throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Texture Id '%d' is already in use", id));
@@ -204,6 +213,8 @@ namespace pr
 		// 'sam_desc' is an optional sampler state description to set on the clone.
 		Texture2DPtr TextureManager::CreateTexture2D(RdrId id, D3DPtr<ID3D11Texture2D> existing_tex, D3DPtr<ID3D11ShaderResourceView> existing_srv, SamplerDesc const& sam_desc, char const* name)
 		{
+			std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
 			// Check whether 'id' already exists, if so, throw.
 			if (id != AutoId && m_lookup_tex.find(id) != end(m_lookup_tex))
 				throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Texture Id '%d' is already in use", id));
@@ -224,6 +235,8 @@ namespace pr
 		{
 			if (tex == nullptr)
 				return;
+
+			std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
 			// Find 'tex' in the map of RdrIds to texture instances
 			// We'll remove this, but first use it as a non-const reference
@@ -309,6 +322,7 @@ namespace pr
 			}
 		}
 
+		// Handle events
 		void TextureManager::OnEvent(Evt_RendererDestroy const&)
 		{
 			// Drop references to the stock textures

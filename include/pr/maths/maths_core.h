@@ -764,6 +764,14 @@ namespace pr
 	{
 		return Sqrt(Length4Sq(x));
 	}
+	template <typename T> inline T LengthSq(std::complex<T> const& x)
+	{
+		return Sqr(x.real()) + Sqr(x.imag());
+	}
+	template <typename T> inline T Length(std::complex<T> const& x)
+	{
+		return Sqrt(LengthSq(x));
+	}
 
 	// Min/Max/Clamp
 	template <typename T, typename = maths::enable_if_not_vN<T>> inline T Min(T x, T y)
@@ -1037,7 +1045,15 @@ namespace pr
 	}
 
 	// Linearly interpolate from 'lhs' to 'rhs'
-	template <typename T> inline T Lerp(T const& lhs, T const& rhs, float frac)
+	inline float Lerp(float lhs, float rhs, float frac)
+	{
+		return lhs + frac * (rhs - lhs);
+	}
+	inline double Lerp(double lhs, double rhs, double frac)
+	{
+		return lhs + frac * (rhs - lhs);
+	}
+	template <typename T, typename U> inline T Lerp(T const& lhs, T const& rhs, U frac)
 	{
 		return lhs + frac * (rhs - lhs);
 	}

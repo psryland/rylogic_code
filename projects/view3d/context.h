@@ -39,6 +39,22 @@ namespace view3d
 			PR_ASSERT(PR_DBG, pr::meta::is_aligned_to<16>(this), "dll data not aligned");
 
 			// Hook up the sources events
+			m_sources.OnAddFileProgress += [&](pr::ldr::ScriptSources&, pr::ldr::ScriptSources::AddFileProgressEventArgs& args)
+			{
+				auto context_id  = args.m_context_id;
+				auto filepath    = args.m_loc.StreamName();
+				auto file_offset = args.m_loc.Pos();
+				auto complete    = args.m_complete;
+				OnAddFileProgress.Raise(args.m_cancel, context_id, filepath.c_str(), file_offset, complete);
+			};
+			m_sources.OnReload += [&](pr::ldr::ScriptSources&, pr::ldr::ScriptSources::ReloadEventArgs const& args)
+			{
+				OnSourcesChanged.Raise(static_cast<ESourcesChangedReason>(args.m_reason), true);
+			};
+			m_sources.OnStoreChanged += [&](pr::ldr::ScriptSources&, pr::ldr::ScriptSources::StoreChangedEventArgs const& args)
+			{
+				OnSourcesChanged.Raise(static_cast<ESourcesChangedReason>(args.m_reason), false);
+			};
 			m_sources.OnFileRemoved += [&](pr::ldr::ScriptSources&, pr::ldr::ScriptSources::FileRemovedEventArgs const& args)
 			{
 				for (auto& wnd : m_wnd_cont)
@@ -47,10 +63,6 @@ namespace view3d
 			m_sources.OnError += [&](pr::ldr::ScriptSources&, pr::ErrorEventArgs const& args)
 			{
 				ReportError(args.m_msg.c_str());
-			};
-			m_sources.OnStoreChanged += [&](pr::ldr::ScriptSources&, pr::ldr::ScriptSources::StoreChangedEventArgs const& args)
-			{
-				OnSourcesChanged.Raise(static_cast<ESourcesChangedReason>(args.m_reason));
 			};
 		}
 		~Context()
@@ -83,6 +95,12 @@ namespace view3d
 			error_cb(msg);
 		}
 
+		// Event raised when script sources are parsed during adding/updating
+		pr::MultiCast<AddFileProgressCB> OnAddFileProgress;
+
+		// Event raised when the script sources are updated
+		pr::MultiCast<SourcesChangedCB> OnSourcesChanged;
+
 		// Remove all Ldr script sources
 		void ClearScriptSources()
 		{
@@ -91,18 +109,18 @@ namespace view3d
 		}
 
 		// Load/Add a script source
-		pr::Guid LoadScriptSource(wchar_t const* filepath, bool additional, bool async, pr::script::Includes<> const& includes)
+		pr::Guid LoadScriptSource(wchar_t const* filepath, bool additional, pr::script::Includes<> const& includes)
 		{
 			// If this is not an additional load, clear the scene first
 			if (!additional)
 				ClearScriptSources();
 
 			// Add 'filepath' to the sources
-			return m_sources.AddFile(filepath, async, includes);
+			return m_sources.AddFile(filepath, includes);
 		}
 
 		// Load/Add ldr objects from a script string
-		pr::Guid LoadScript(wchar_t const* ldr_script, bool file, bool async, pr::Guid const* context_id, pr::script::Includes<> const& includes)
+		pr::Guid LoadScript(wchar_t const* ldr_script, bool file, pr::Guid const* context_id, pr::script::Includes<> const& includes)
 		{
 			using namespace pr::script;
 
@@ -122,13 +140,13 @@ namespace view3d
 
 				FileSrc src(ldr_script);
 				Reader reader(src, false, &inc, nullptr, &m_lua);
-				pr::ldr::Parse(m_rdr, reader, out, async, *context_id);
+				pr::ldr::Parse(m_rdr, reader, out, *context_id);
 			}
 			else // string
 			{
 				PtrW src(ldr_script);
 				Reader reader(src, false, &inc, nullptr, &m_lua);
-				pr::ldr::Parse(m_rdr, reader, out, async, *context_id);
+				pr::ldr::Parse(m_rdr, reader, out, *context_id);
 			}
 
 			return *context_id;
@@ -153,9 +171,6 @@ namespace view3d
 		{
 			m_sources.RefreshChangedFiles();
 		}
-
-		// Event raised when the script sources are updated
-		pr::MultiCast<SourcesChangedCB> OnSourcesChanged;
 
 		// Delete all objects
 		void DeleteAllObjects()

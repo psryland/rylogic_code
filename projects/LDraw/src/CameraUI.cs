@@ -82,10 +82,10 @@ namespace LDraw
 			}
 
 			// Focus point
-			m_tb_focus_point.Value = Camera.FocusPoint;
 			m_tb_focus_point.ValidateText = s => v4.TryParse3(s, 1f) != null;
 			m_tb_focus_point.TextToValue = s => v4.Parse3(s, 1f);
-			m_tb_focus_point.ValueToText = x => ((v4)x).ToString3();
+			m_tb_focus_point.ValueToText = x => x != null ? ((v4)x).ToString3() : string.Empty;
+			m_tb_focus_point.Value = Camera.FocusPoint;
 			m_tb_focus_point.ValueChanged += (s,a) =>
 			{
 				if (!m_tb_focus_point.Focused) return;
@@ -94,8 +94,8 @@ namespace LDraw
 			};
 
 			// Focus distance
-			m_tb_focus_dist.Value = Camera.FocusDist;
 			m_tb_focus_dist.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0; };
+			m_tb_focus_dist.Value = Camera.FocusDist;
 			m_tb_focus_dist.ValueChanged += (s,a) =>
 			{
 				if (!m_tb_focus_dist.Focused) return;
@@ -106,22 +106,22 @@ namespace LDraw
 			};
 
 			// Camera forward
-			m_tb_camera_fwd.Value = -Camera.O2W.z;
 			m_tb_camera_fwd.ValidateText = s => v4.TryParse3(s, 0f) != null;
 			m_tb_camera_fwd.TextToValue = s => v4.Normalise3(v4.Parse3(s, 0f));
-			m_tb_camera_fwd.ValueToText = x => ((v4)x).ToString3();
+			m_tb_camera_fwd.ValueToText = x => x != null ? ((v4)x).ToString3() : string.Empty;
+			m_tb_camera_fwd.Value = -Camera.O2W.z;
 			m_tb_camera_fwd.ReadOnly = true;
 
 			// Camera up
-			m_tb_camera_up.Value = Camera.O2W.y;
 			m_tb_camera_up.ValidateText = s => v4.TryParse3(s, 0f) != null;
 			m_tb_camera_up.TextToValue = s => v4.Normalise3(v4.Parse3(s, 0f));
-			m_tb_camera_up.ValueToText = x => ((v4)x).ToString3();
+			m_tb_camera_up.ValueToText = x => x != null ? ((v4)x).ToString3() : string.Empty;
+			m_tb_camera_up.Value = Camera.O2W.y;
 			m_tb_camera_up.ReadOnly = true;
 
 			// Zoom
-			m_tb_zoom.Value = Camera.Zoom;
 			m_tb_zoom.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value >= 0; };
+			m_tb_zoom.Value = Camera.Zoom;
 			m_tb_zoom.ValueChanged += (s,a) =>
 			{
 				if (!m_tb_zoom.Focused) return;
@@ -130,8 +130,8 @@ namespace LDraw
 			};
 
 			// Near
-			m_tb_near.Value = Camera.NearPlane;
 			m_tb_near.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0 && v.Value < Camera.FarPlane; };
+			m_tb_near.Value = Camera.NearPlane;
 			m_tb_near.ValueChanged += (s,a) =>
 			{
 				if (!m_tb_near.Focused) return;
@@ -140,8 +140,8 @@ namespace LDraw
 			};
 
 			// Far
-			m_tb_far.Value = Camera.FarPlane;
 			m_tb_far.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0 && v.Value > Camera.NearPlane; };
+			m_tb_far.Value = Camera.FarPlane;
 			m_tb_far.ValueChanged += (s,a) =>
 			{
 				if (!m_tb_far.Focused) return;
@@ -150,38 +150,40 @@ namespace LDraw
 			};
 
 			// FovX
-			m_tb_fovX.Value = Camera.FovX;
-			m_tb_fovX.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0 && v.Value < Maths.TauBy2; };
+			m_tb_fovX.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0 && v.Value < 180f; };
+			m_tb_fovX.Value = Maths.RadiansToDegrees(Camera.FovX);
 			m_tb_fovX.ValueChanged += (s,a) =>
 			{
 				if (!m_tb_fovX.Focused) return;
 
+				var fov = Maths.DegreesToRadians((float)m_tb_fovX.Value);
 				if (m_chk_preserve_aspect.Checked)
-					Camera.FovX = (float)m_tb_fovX.Value;
+					Camera.FovX = fov;
 				else
-					Camera.SetFov((float)m_tb_fovY.Value, Camera.FovY);
+					Camera.SetFov(fov, Camera.FovY);
 
 				m_main_ui.Invalidate();
 			};
 
 			// FovY
-			m_tb_fovY.Value = Camera.FovY;
-			m_tb_fovY.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0 && v.Value < Maths.TauBy2; };
+			m_tb_fovY.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0 && v.Value < 180f; };
+			m_tb_fovY.Value = Maths.RadiansToDegrees(Camera.FovY);
 			m_tb_fovY.ValueChanged += (s,a) =>
 			{
 				if (!m_tb_fovY.Focused) return;
 
+				var fov = Maths.DegreesToRadians((float)m_tb_fovY.Value);
 				if (m_chk_preserve_aspect.Checked)
-					Camera.FovY = (float)m_tb_fovY.Value;
+					Camera.FovY = fov;
 				else
-					Camera.SetFov(Camera.FovX, (float)m_tb_fovY.Value);
+					Camera.SetFov(Camera.FovX, fov);
 
 				m_main_ui.Invalidate();
 			};
 
 			// Aspect ratio
-			m_tb_aspect.Value = Camera.Aspect;
 			m_tb_aspect.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0; };
+			m_tb_aspect.Value = Camera.Aspect;
 			m_tb_aspect.ValueChanged += (s,a) =>
 			{
 				if (!m_tb_aspect.Focused) return;
@@ -210,8 +212,8 @@ namespace LDraw
 			Update(m_tb_zoom, Camera.Zoom);
 			Update(m_tb_near, Camera.NearPlane);
 			Update(m_tb_far, Camera.FarPlane);
-			Update(m_tb_fovX, Camera.FovX);
-			Update(m_tb_fovY, Camera.FovY);
+			Update(m_tb_fovX, Maths.RadiansToDegrees(Camera.FovX));
+			Update(m_tb_fovY, Maths.RadiansToDegrees(Camera.FovY));
 			Update(m_tb_aspect, Camera.Aspect);
 		}
 

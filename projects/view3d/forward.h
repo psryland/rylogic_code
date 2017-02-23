@@ -53,17 +53,18 @@
 
 namespace view3d
 {
-	typedef std::unique_ptr<pr::ldr::ScriptEditorUI> EditorPtr;
-	typedef std::set<View3DObject>  ObjectSet;
-	typedef std::set<View3DGizmo>   GizmoSet;
-	typedef std::set<View3DWindow>  WindowCont;
-	typedef std::set<EditorPtr>     EditorCont;
-	typedef std::lock_guard<std::recursive_mutex> LockGuard;
-	typedef pr::StaticCB<void, wchar_t const*> ReportErrorCB;
-	typedef pr::StaticCB<void, Window*> SettingsChangedCB;
-	typedef pr::StaticCB<void, ESourcesChangedReason> SourcesChangedCB;
-	typedef pr::StaticCB<void, Window*> RenderingCB;
-	typedef std::vector<ReportErrorCB> ErrorCBStack;
+	using EditorPtr         = std::unique_ptr<pr::ldr::ScriptEditorUI>;
+	using ObjectSet         = std::set<View3DObject>;
+	using GizmoSet          = std::set<View3DGizmo>;
+	using WindowCont        = std::set<View3DWindow>;
+	using EditorCont        = std::set<EditorPtr>;
+	using LockGuard         = std::lock_guard<std::recursive_mutex>;
+	using ReportErrorCB     = pr::StaticCB<void, wchar_t const*>;
+	using SettingsChangedCB = pr::StaticCB<void, Window*>;
+	using AddFileProgressCB = pr::StaticCB<bool, pr::Guid const&, wchar_t const*, long long, BOOL>;
+	using SourcesChangedCB  = pr::StaticCB<void, ESourcesChangedReason, BOOL>;
+	using RenderingCB       = pr::StaticCB<void, Window*>;
+	using ErrorCBStack      = std::vector<ReportErrorCB>;
 
 	#define PR_RDR_INST(x)\
 		x(pr::m4x4          ,m_i2w   ,pr::rdr::EInstComp::I2WTransform)\

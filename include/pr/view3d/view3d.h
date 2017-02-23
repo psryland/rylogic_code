@@ -300,11 +300,12 @@ extern "C"
 		// (ToDo) A string lookup table
 	};
 
-	typedef void (__stdcall *View3D_SettingsChangedCB)(void* ctx, View3DWindow window);
-	typedef void (__stdcall *View3D_SourcesChangedCB)(void* ctx, ESourcesChangedReason reason);
-	typedef void (__stdcall *View3D_RenderCB)(void* ctx, View3DWindow window);
-	typedef void (__stdcall *View3D_GizmoMovedCB)(void* ctx, View3DGizmoEvent const& args);
-	typedef void (__stdcall *View3D_EditObjectCB)(
+	using View3D_SettingsChangedCB = void (__stdcall *)(void* ctx, View3DWindow window);
+	using View3D_AddFileProgressCB = bool (__stdcall *)(void* ctx, GUID const& context_id, wchar_t const* filepath, long long file_offset, BOOL complete);
+	using View3D_SourcesChangedCB  = void (__stdcall *)(void* ctx, ESourcesChangedReason reason, BOOL before);
+	using View3D_RenderCB          = void (__stdcall *)(void* ctx, View3DWindow window);
+	using View3D_GizmoMovedCB      = void (__stdcall *)(void* ctx, View3DGizmoEvent const& args);
+	using View3D_EditObjectCB = void (__stdcall *)(
 		UINT32 vcount,           // The maximum size of 'verts'
 		UINT32 icount,           // The maximum size of 'indices'
 		UINT32 ncount,           // The maximum size of 'nuggets'
@@ -388,15 +389,16 @@ extern "C"
 	VIEW3D_API void        __stdcall View3D_ShowLightingDlg          (View3DWindow window);
 
 	// Objects
-	VIEW3D_API GUID         __stdcall View3D_LoadScriptSource         (wchar_t const* filepath, BOOL additional, BOOL async, View3DIncludes const* includes);
+	VIEW3D_API GUID         __stdcall View3D_LoadScriptSource         (wchar_t const* filepath, BOOL additional, View3DIncludes const* includes);
+	VIEW3D_API GUID         __stdcall View3D_LoadScript               (wchar_t const* ldr_script, BOOL file, GUID const* context_id, View3DIncludes const* includes);
 	VIEW3D_API void         __stdcall View3D_ReloadScriptSources      ();
 	VIEW3D_API void         __stdcall View3D_ClearScriptSources       ();
 	VIEW3D_API void         __stdcall View3D_CheckForChangedSources   ();
+	VIEW3D_API void         __stdcall View3D_AddFileProgressCBSet     (View3D_AddFileProgressCB progress_cb, void* ctx, BOOL add);
 	VIEW3D_API void         __stdcall View3D_SourcesChangedCBSet      (View3D_SourcesChangedCB sources_changed_cb, void* ctx, BOOL add);
 	VIEW3D_API void         __stdcall View3D_ObjectsDeleteAll         ();
 	VIEW3D_API void         __stdcall View3D_ObjectsDeleteById        (GUID const& context_id);
-	VIEW3D_API GUID         __stdcall View3D_LoadScript               (wchar_t const* ldr_script, BOOL file, BOOL async, GUID const* context_id, View3DIncludes const* includes);
-	VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr          (wchar_t const* ldr_script, BOOL file, BOOL async, GUID const* context_id, View3DIncludes const* includes);
+	VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr          (wchar_t const* ldr_script, BOOL file, GUID const* context_id, View3DIncludes const* includes);
 	VIEW3D_API View3DObject __stdcall View3D_ObjectCreate             (char const* name, View3DColour colour, int vcount, int icount, int ncount, View3DVertex const* verts, UINT16 const* indices, View3DNugget const* nuggets, GUID const& context_id);
 	VIEW3D_API View3DObject __stdcall View3D_ObjectCreateEditCB       (char const* name, View3DColour colour, int vcount, int icount, int ncount, View3D_EditObjectCB edit_cb, void* ctx, GUID const& context_id);
 	VIEW3D_API void         __stdcall View3D_ObjectEdit               (View3DObject object, View3D_EditObjectCB edit_cb, void* ctx);
@@ -465,6 +467,8 @@ extern "C"
 	VIEW3D_API void             __stdcall View3D_GizmoDetachCB            (View3DGizmo gizmo, View3D_GizmoMovedCB cb);
 	VIEW3D_API void             __stdcall View3D_GizmoAttach              (View3DGizmo gizmo, View3DObject obj);
 	VIEW3D_API void             __stdcall View3D_GizmoDetach              (View3DGizmo gizmo, View3DObject obj);
+	VIEW3D_API float            __stdcall View3D_GizmoScaleGet            (View3DGizmo gizmo);
+	VIEW3D_API void             __stdcall View3D_GizmoScaleSet            (View3DGizmo gizmo, float scale);
 	VIEW3D_API EView3DGizmoMode __stdcall View3D_GizmoGetMode             (View3DGizmo gizmo);
 	VIEW3D_API void             __stdcall View3D_GizmoSetMode             (View3DGizmo gizmo, EView3DGizmoMode mode);
 	VIEW3D_API View3DM4x4       __stdcall View3D_GizmoGetO2W              (View3DGizmo gizmo);

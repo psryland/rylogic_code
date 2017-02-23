@@ -188,28 +188,44 @@ namespace pr
 		{
 			enum class EEncoding { ascii, utf8, utf16, utf16_be, auto_detect };
 
-			mutable std::wifstream m_file; // The file stream source
-			BufW4 m_buf;                   // Use a small shift buffer to make debugging easier
-			EEncoding m_enc;               // The detected file encoding
+			// Conversion from UTF encoded files to wchar_t streams using wistream::imbue is very slow.
+			// It uses 'std::string' internally. Instead, treat the file as a binary stream and convert
+			// characters as needed.
+
+			mutable std::ifstream  m_file;    // The file stream source
+			pr::vector<char, 1024> m_buf;     // A local buffer of file data
+			char const*            m_ptr;     // The current position in 'm_buf'
+			char const*            m_end;     // The end position of valid data in 'm_buf'
+			EEncoding              m_enc;     // The detected file encoding
+			mutable wchar_t        m_ch;      // Cached converted char
+			mutable int            m_ch_len;  // The number of bytes used to get 'm_ch'
 
 			FileSrc()
 				:Src(ESrcType::File, Location())
 				,m_file()
 				,m_buf()
+				,m_ptr()
+				,m_end()
 				,m_enc()
+				,m_ch()
+				,m_ch_len(-1)
 			{}
-			explicit FileSrc(string const& filepath, size_t ofs = 0, EEncoding enc = EEncoding::auto_detect, Location* loc = nullptr)
+			explicit FileSrc(string const& filepath, std::streamsize ofs = 0, EEncoding enc = EEncoding::auto_detect, Location* loc = nullptr)
 				:Src(ESrcType::File, loc ? *loc : Location(filepath, ofs))
 				,m_file()
 				,m_buf()
+				,m_ptr()
+				,m_end()
 				,m_enc()
+				,m_ch()
+				,m_ch_len(-1)
 			{
 				if (!filepath.empty())
 					Open(filepath, ofs, enc, loc);
 			}
 
 			// Open a file as a stream source
-			void Open(string const& filepath, size_t ofs = 0, EEncoding enc = EEncoding::auto_detect, Location* loc = nullptr)
+			void Open(string const& filepath, std::streamsize ofs = 0, EEncoding enc = EEncoding::auto_detect, Location* loc = nullptr)
 			{
 				Close();
 
@@ -221,56 +237,31 @@ namespace pr
 					unsigned char bom[3];
 					std::ifstream file(filepath, std::ios::binary);
 					auto read = file.good() ? file.read(reinterpret_cast<char*>(&bom[0]), sizeof(bom)).gcount() : 0;
-					if      (read >= 3 && bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF) { m_enc = EEncoding::utf8;     bom_size = 3; }
-					else if (read >= 2 && bom[0] == 0xFE && bom[1] == 0xFF)                   { m_enc = EEncoding::utf16_be; bom_size = 2; }
-					else if (read >= 2 && bom[0] == 0xFF && bom[1] == 0xFE)                   { m_enc = EEncoding::utf16;    bom_size = 2; }
-					else m_enc = EEncoding::utf8; // If no valid bomb is found, assume UTF-8 as that is a superset of ASCII
+					if      (read >= 3 && bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF) { m_enc = EEncoding::utf8;        bom_size = 3; }
+					else if (read >= 2 && bom[0] == 0xFE && bom[1] == 0xFF)                   { m_enc = EEncoding::utf16_be;    bom_size = 2; }
+					else if (read >= 2 && bom[0] == 0xFF && bom[1] == 0xFE)                   { m_enc = EEncoding::utf16;       bom_size = 2; }
+					else                                                                      { m_enc = EEncoding::auto_detect; bom_size = 0; } // If no valid bomb is found, assume ASCII until an UTF-8 is found
 				}
 
 				// Open the input file stream
-				m_file.open(filepath, std::ios::binary);
+				m_file.open(filepath, std::ios::binary | std::ios::ate);
 				if (!m_file.good())
 					throw pr::script::Exception(EResult::FileNotFound, Location(filepath), pr::FmtS("Failed to open file %s", Narrow(filepath).c_str()));
 
-				// "Imbue" the file stream so that character codes get converted
-				static std::locale global_locale;
-				switch (m_enc)
-				{
-				default: throw std::exception("Unsupported file encoding");
-				case EEncoding::ascii:
-					{
-						break;
-					}
-				case EEncoding::utf8:
-					{
-						static std::locale utf8_locale(global_locale, new std::codecvt_utf8<wchar_t>);
-						m_file.imbue(utf8_locale);
-						break;
-					}
-				case EEncoding::utf16:
-					{
-						static std::locale utf16_locale(global_locale, new std::codecvt_utf16<wchar_t, 0x10ffff, std::little_endian>);
-						m_file.imbue(utf16_locale);
-						break;
-					}
-				case EEncoding::utf16_be:
-					{
-						static std::locale utf16_locale(global_locale, new std::codecvt_utf16<wchar_t>);
-						m_file.imbue(utf16_locale);
-						break;
-					}
-				}
+				// Get the file size
+				auto flen = size_t(m_file.tellg());
 
 				// Seek to the position to start reading from (may include the skip over the BOM)
 				m_file.seekg(bom_size + ofs);
 				m_loc = loc ? *loc : Location(filepath, bom_size + ofs, 1, 1, ofs == 0);
+				flen -= size_t(m_file.tellg());
 
-				// Load the shift register
-				for (int n = BufW4::Capacity; n--;)
-				{
-					auto ch = m_file.get();
-					m_buf.shift(m_file.good() ? ch : 0);
-				}
+				// Set the local buffer size
+				m_buf.resize(Clamp(flen, m_buf.capacity(), size_t(1*1024*1024)));
+
+				// Pre-load the buffer
+				m_end = m_ptr = m_buf.data();
+				m_end += m_file.good() ? m_file.read(m_buf.data(), m_buf.size()).gcount() : 0;
 			}
 
 			// Close the file stream
@@ -278,6 +269,8 @@ namespace pr
 			{
 				m_file.close();
 				m_buf.clear();
+				m_ptr = nullptr;
+				m_end = nullptr;
 				m_enc = EEncoding::auto_detect;
 				m_loc = Location();
 			}
@@ -289,20 +282,127 @@ namespace pr
 			}
 			SrcConstPtr DbgPtr() const override
 			{
-				return &m_buf.m_ch[0];
+				return m_ptr;
 			}
 
 			// Pointer-like interface
 			wchar_t operator * () const override
 			{
-				return m_buf.front();
+				return const_cast<FileSrc&>(*this).mb_to_wchar();
 			}
 			FileSrc& operator ++() override
 			{
-				m_loc.inc(m_buf.front());
-				auto ch = m_file.get();
-				m_buf.shift(m_file.good() ? ch : 0);
+				m_loc.inc(**this); // Move the location (calls 'mb_to_wchar')
+				load(m_ch_len);    // Shift out the number of bytes used to decode 'm_ch'
+				m_ch_len = -1;     // Invalidate the cached character
 				return *this;
+			}
+
+			// Convert the current 'm_buf' contents to a wide character and record the number of bytes to consume
+			wchar_t mb_to_wchar()
+			{
+				// Return the cached converted character
+				if (m_ch_len >= 0)
+					return m_ch;
+
+				// If we're at the end of the buffer
+				if (m_ptr == m_end)
+				{
+					m_ch = 0;
+					m_ch_len = 0;
+					return m_ch;
+				}
+
+				// Assume ASCII, unless a UTF-8 char is found
+				auto enc = m_enc;
+				if (m_enc == EEncoding::auto_detect)
+				{
+					if ((*m_ptr & 0x80) != 0)
+						enc = (m_enc = EEncoding::utf8);
+					else
+						enc = EEncoding::ascii;
+				}
+
+				switch (enc)
+				{
+				default: throw std::exception("Unsupported file encoding");
+				case EEncoding::ascii:
+					{
+						m_ch_len = 1;
+						m_ch = *m_ptr;
+						break;
+					}
+				case EEncoding::utf8:
+					{
+						// Interpret a multi byte character
+						static std::codecvt_utf8_utf16<wchar_t> f;
+						for (auto mb = std::mbstate_t{};;)
+						{
+							char const* in_end; wchar_t* out_end;
+							auto r = f.in(mb, m_ptr, m_end, in_end, &m_ch, &m_ch + 1, out_end);
+							if (r == std::codecvt_base::ok     ) { m_ch_len = int(in_end - m_ptr); break; }    // Successful conversion
+							if (r == std::codecvt_base::partial) { load(int(m_end - m_ptr)); continue; }       // Partial character, load more bytes and continue converting
+							if (r == std::codecvt_base::error  ) { load(1); mb = std::mbstate_t{}; continue; } // Conversion error
+							throw std::exception("unknown character encoding result");
+						}
+						break;
+					}
+				case EEncoding::utf16:
+					{
+						m_ch_len = 2;
+						m_ch = wchar_t((m_ptr[1] << 8) | m_ptr[0]);
+						break;
+					}
+				case EEncoding::utf16_be:
+					{
+						m_ch_len = 2;
+						m_ch = wchar_t((m_ptr[0] << 8) | m_ptr[1]);
+						break;
+					}
+				}
+				return m_ch;
+			}
+
+			// Shift out 'n' bytes from 'm_buf', while shifting in 'n' more from the file
+			void load(int n)
+			{
+				// Shift 'n' bytes "out" of the buffer
+				m_ptr += n;
+
+				// We can only buffer more data if the file was bigger than the buffer
+				if (m_end == m_buf.data() + m_buf.size())
+				{
+					// Ensure that at least N bytes are buffered (if possible)
+					const int N = 8;
+					if (m_end - m_ptr < N) // If 'm_ptr' is within or past 'N' bytes of end
+					{
+						auto remainder = m_end - m_ptr;
+						if (remainder >= 0)
+						{
+							// Move the last up-to-N bytes to the front of the buffer
+							assert(int(m_buf.size()) >= remainder);
+							std::memmove(m_buf.data(), m_ptr, remainder);
+							m_end -= m_buf.size() - remainder;
+							m_ptr -= m_buf.size() - remainder;
+						}
+						else
+						{
+							// Seek the file to the new read position
+							m_file.seekg(-remainder, std::ios_base::cur);
+							m_end -= m_buf.size();
+							m_ptr = m_end;
+							remainder = 0;
+						}
+
+						// Fill the rest of the buffer from the file
+						m_end += m_file.good() ? m_file.read(m_buf.data() + remainder, m_buf.size() - remainder).gcount() : 0;
+					}
+				}
+				else if (m_ptr > m_end)
+				{
+					// Clamp to the end of the buffer
+					m_ptr = m_end;
+				}
 			}
 		};
 
@@ -789,7 +889,7 @@ namespace pr
 				wchar_t str[] = {0x4f60, 0x597d};
 
 				{// Create the file
-					std::ofstream fout(script_utf);
+					std::ofstream fout(script_utf, std::ios::binary);
 					fout.write(reinterpret_cast<char const*>(&data[0]), sizeof(data));
 				}
 
@@ -804,7 +904,7 @@ namespace pr
 				wchar_t str[] = {0x4f60, 0x597d};
 
 				{// Create the file
-					std::ofstream fout(script_utf);
+					std::ofstream fout(script_utf, std::ios::binary);
 					fout.write(reinterpret_cast<char const*>(&data[0]), sizeof(data));
 				}
 
@@ -819,7 +919,7 @@ namespace pr
 				wchar_t str[] = {0x4f60, 0x597d};
 
 				{// Create the file
-					std::ofstream fout(script_utf);
+					std::ofstream fout(script_utf, std::ios::binary);
 					fout.write(reinterpret_cast<char const*>(&data[0]), sizeof(data));
 				}
 

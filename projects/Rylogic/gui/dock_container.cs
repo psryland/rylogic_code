@@ -486,7 +486,10 @@ namespace pr.gui
 		}
 
 		/// <summary>Panels that auto hide when their contained tree does not contain the active pane</summary>
-		public IEnumerable<AutoHidePanel> AutoHidePanels { get { return m_auto_hide.Skip(1); } }
+		public IEnumerable<AutoHidePanel> AutoHidePanels
+		{
+			get { return m_auto_hide.Skip(1); }
+		}
 		private AutoHidePanel[] m_auto_hide;
 
 		/// <summary>Returns the auto hide panel corresponding to 'site'</summary>
@@ -2591,6 +2594,10 @@ namespace pr.gui
 				DefaultDockLocation = new DockLocation();
 				TabText             = null;
 				TabIcon             = null;
+				TabColoursActive    = null;
+				TabColoursInactive  = null;
+				TabFontActive       = null;
+				TabFontInactive     = null;
 				TabCMenu            = CreateDefaultTabCMenu();
 
 				DockAddresses = new Dictionary<Branch, EDockSite[]>();
@@ -2609,18 +2616,26 @@ namespace pr.gui
 				set
 				{
 					if (m_impl_dock_container == value) return;
+					var old = m_impl_dock_container;
+					var nue = value;
 					if (m_impl_dock_container != null)
 					{
+						m_impl_dock_container.ActiveContentChanged -= HandleActiveContentChanged;
 						m_impl_dock_container.Forget(this);
 					}
 					m_impl_dock_container = value;
 					if (m_impl_dock_container != null)
 					{
 						m_impl_dock_container.Remember(this);
+						m_impl_dock_container.ActiveContentChanged += HandleActiveContentChanged;
 					}
+					DockContainerChanged.Raise(this, new DockContainerChangedEventArgs(old, nue));
 				}
 			}
 			private DockContainer m_impl_dock_container;
+
+			/// <summary>Raised when this DockControl is assigned to a dock container (or possibly to null)</summary>
+			public event EventHandler<DockContainerChangedEventArgs> DockContainerChanged;
 
 			/// <summary>Remove this DockControl from whatever dock container it is in</summary>
 			public void Remove()
@@ -2686,6 +2701,14 @@ namespace pr.gui
 
 			/// <summary>Raised when the pane this dockable is on is changing (possibly to null)</summary>
 			public event EventHandler PaneChanged;
+
+			/// <summary>Raised when this becomes the active content</summary>
+			public event EventHandler ActiveChanged;
+			private void HandleActiveContentChanged(object sender, ActiveContentChangedEventArgs e)
+			{
+				if (e.ContentNew == Owner || e.ContentOld == Owner)
+					ActiveChanged.Raise(this);
+			}
 
 			/// <summary>The name to use for this instance when saving layout to XML</summary>
 			public string PersistName { get; private set; }
@@ -2893,8 +2916,8 @@ namespace pr.gui
 				{
 					if (m_impl_tab_text == value) return;
 					m_impl_tab_text = value;
-					DockPane?.TitleCtrl.Invalidate();
-					DockPane?.TabStripCtrl.Invalidate();
+					InvalidateTitle();
+					InvalidateTab();
 				}
 			}
 			private string m_impl_tab_text;
@@ -2926,11 +2949,63 @@ namespace pr.gui
 				{
 					if (m_impl_icon == value) return;
 					m_impl_icon = value;
-					DockPane?.TabStripCtrl.Invalidate();
+					InvalidateTab();
 				}
 			}
 			private Image m_impl_icon;
 			private Icon m_impl_form_icon;
+
+			/// <summary>The colour to use for this tab's text. If null, defaults to the colour set of the containing TabStrip</summary>
+			public OptionData.ColourSet TabColoursActive
+			{
+				get { return m_tab_colours_active; }
+				set
+				{
+					if (m_tab_colours_active == value) return;
+					m_tab_colours_active = value;
+					InvalidateTab();
+				}
+			}
+			private OptionData.ColourSet m_tab_colours_active;
+
+			/// <summary>The colour to use for this tab's text. If null, defaults to the colour set of the containing TabStrip</summary>
+			public OptionData.ColourSet TabColoursInactive
+			{
+				get { return m_tab_colours_inactive; }
+				set
+				{
+					if (m_tab_colours_inactive == value) return;
+					m_tab_colours_inactive = value;
+					InvalidateTab();
+				}
+			}
+			private OptionData.ColourSet m_tab_colours_inactive;
+
+			/// <summary>The font to use for the active tab. If null, defaults to the fonts of the containing TabStrip</summary>
+			public Font TabFontActive
+			{
+				get { return m_tab_font_active; }
+				set
+				{
+					if (m_tab_font_active == value) return;
+					m_tab_font_active = value;
+					InvalidateTab();
+				}
+			}
+			private Font m_tab_font_active;
+
+			/// <summary>The font used on the inactive tabs. If null, defaults to the fonts of the containing TabStrip</summary>
+			public Font TabFontInactive
+			{
+				get { return m_tab_font_inactive; }
+				set
+				{
+					if (m_tab_font_inactive == value) return;
+					m_tab_font_inactive = value;
+					InvalidateTab();
+				}
+			}
+			private Font m_tab_font_inactive;
 
 			/// <summary>A tool tip to display when the mouse hovers over the tab for this content</summary>
 			public string TabToolTip
@@ -2996,6 +3071,21 @@ namespace pr.gui
 				node.Add2(XmlTag.Name, PersistName, false);
 				CurrentDockLocation.ToXml(node);
 				return node;
+			}
+
+			/// <summary>Invalidate the tab that represents this content</summary>
+			public void InvalidateTab()
+			{
+				// Have to invalidate the whole strip, because tabs are not controls
+				if (DockPane == null) return;
+				DockPane.TabStripCtrl.Invalidate();
+			}
+
+			/// <summary>Invalidate the title that represents this content</summary>
+			public void InvalidateTitle()
+			{
+				if (DockPane == null) return;
+				DockPane.TitleCtrl.Invalidate();
 			}
 
 			/// <summary></summary>
@@ -3221,6 +3311,19 @@ namespace pr.gui
 					{
 						Factors = new float[] { 0.0f, 1.0f },
 						Positions = new float[] { 0.0f, 1.0f },
+					};
+				}
+				public ColourSet(ColourSet rhs)
+				{
+					Text   = rhs.Text;
+					Beg    = rhs.Beg;
+					End    = rhs.End;
+					Border = rhs.Border;
+					Mode   = rhs.Mode;
+					Blend  = new Blend(rhs.Blend.Factors.Length)
+					{
+						Factors   = (float[])rhs.Blend.Factors.Clone(),
+						Positions = (float[])rhs.Blend.Positions.Clone(),
 					};
 				}
 				public override string ToString()
@@ -3778,7 +3881,11 @@ namespace pr.gui
 			}
 
 			/// <summary>Get the options specific to this tab strip</summary>
-			public OptionData.TabStripData TabStripOpts { get; private set; }
+			public OptionData.TabStripData TabStripOpts
+			{
+				get;
+				set;
+			}
 
 			/// <summary>The location of the tab strip within the dock pane, Only L,T,R,B are valid</summary>
 			public EDockSite StripLocation
@@ -4156,15 +4263,14 @@ namespace pr.gui
 			/// 'x' is the distance along the tab strip (in pixels) for this tab.</summary>
 			internal TabBtn(TabStrip strip, DockControl content, int index, Graphics gfx, int x, int min_width, int max_width)
 			{
-				Strip = strip;
+				Strip   = strip;
 				Content = content;
-				Index = index;
+				Index   = index;
+
+				var font = TabFont;
+				var opts = Strip.TabStripOpts;
 
 				// Calculate the bounding rectangle that would contain this Tab in tab strip space.
-				var opts = Strip.TabStripOpts;
-				var active = Active;
-				var font = active ? opts.ActiveFont : opts.InactiveFont;
-
 				var sz = gfx.MeasureString(Text, font, max_width, FmtFlags);
 				var w = opts.TabPadding.Left + (Icon != null ? opts.IconSize + opts.IconToTextSpacing : 0) + (int)sz.Width + 1 + opts.TabPadding.Right; // +1 so '...' isn't added to tab text due to rounding error
 				var width = Maths.Clamp(w, min_width, max_width);
@@ -4217,11 +4323,10 @@ namespace pr.gui
 			/// <summary>Draw the tab</summary>
 			public void Paint(Graphics gfx)
 			{
-				var opts = Strip.TabStripOpts;
-				var active = Active;
-				var cols = active ? opts.ActiveTab : opts.InactiveTab;
-				var font = active ? opts.ActiveFont : opts.InactiveFont;
+				var font = TabFont;
+				var cols = TabColour;
 				var rect = new RectangleRef(Bounds);
+				var opts = Strip.TabStripOpts;
 
 				// Fill the background
 				using (var brush = new LinearGradientBrush(rect, cols.Beg, cols.End, cols.Mode) { Blend=cols.Blend })
@@ -4263,6 +4368,28 @@ namespace pr.gui
 					if (r.Area() > 0)
 						using (var bsh = new SolidBrush(cols.Text))
 							gfx.DrawString(Text, font, bsh, r, FmtFlags);
+				}
+			}
+
+			/// <summary>The font to use for the tab</summary>
+			private Font TabFont
+			{
+				get
+				{
+					return Active
+						? (Content.TabFontActive ?? Strip.TabStripOpts.ActiveFont)
+						: (Content.TabFontInactive ?? Strip.TabStripOpts.InactiveFont);
+				}
+			}
+
+			/// <summary>The colour to use for the tab</summary>
+			private OptionData.ColourSet TabColour
+			{
+				get
+				{
+					return Active
+						? (Content.TabColoursActive ?? Strip.TabStripOpts.ActiveTab)
+						: (Content.TabColoursInactive ?? Strip.TabStripOpts.InactiveTab);
 				}
 			}
 		}
@@ -5976,6 +6103,22 @@ namespace pr.gui
 
 		/// <summary>The dockable that is being added or removed</summary>
 		public IDockable Dockable { get; private set; }
+	}
+
+	/// <summary>Args for when the DockContainer is changed on a DockControl</summary>
+	public class DockContainerChangedEventArgs :EventArgs
+	{
+		public DockContainerChangedEventArgs(DockContainer old, DockContainer nue)
+		{
+			Previous = old;
+			Current = nue;
+		}
+
+		/// <summary>The old dock container</summary>
+		public DockContainer Previous { get; private set; }
+
+		/// <summary>The new dock container</summary>
+		public DockContainer Current { get; private set; }
 	}
 
 	#endregion

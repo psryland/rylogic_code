@@ -206,7 +206,7 @@ namespace LDraw
 			ClearScript();
 
 			// Need a View3d method for rendering a string containing a scene
-			Model.View3d.LoadScript(Editor.Text, false, true, ContextId, null);
+			Model.View3d.LoadScript(Editor.Text, false, ContextId, null);
 			Model.ContextIds.Add(ContextId);
 			Model.Window.Invalidate();
 		}

@@ -172,6 +172,12 @@ namespace pr
 			return count;
 		}
 
+		// std::unique_ptr<> interface
+		T* get() const
+		{
+			return m_ptr;
+		}
+
 	protected:
 		long IncRef(T* ptr) const
 		{

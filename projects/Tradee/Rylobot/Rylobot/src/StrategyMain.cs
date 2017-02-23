@@ -38,27 +38,53 @@ namespace Rylobot
 		/// <summary>Called when new data is received</summary>
 		public override void Step()
 		{
-			// Look for an existing trade for this strategy.
-			// If none, look for a good entry point
-			var position = Positions.FirstOrDefault();
-			if (position == null)
-			{
-				// Look for indicators to say "enter" and which direction.
-				var tt = Instrument.FindTradeEntry();
-				if (tt == null)
-					return;
-
-				// Create a trade in the suggested direction
-				var trade = new Trade(Bot, Instrument, tt.Value, Label, rtr_range:new RangeF(1.0,5.0));
-				var pos = Bot.Broker.CreateOrder(trade);
-				if (pos != null)
-					PosMgr = new PositionManager(Instrument, pos);
-			}
+			base.Step();
 
 			// Run the position manager
 			if (PosMgr != null)
 				PosMgr.Step();
+
+			// If there is a pending order, wait for it to trigger or expire
+			var pending = PendingOrders.FirstOrDefault();
+			if (pending != null)
+				return;
+
+			// Look for an existing trade for this strategy.
+			var position = Positions.FirstOrDefault();
+			if (position == null)
+			{
+				// Look for indicators to say "enter" and which direction.
+				var macd_tt = SignalMACD();//Instrument.FindTradeEntry();
+				if (macd_tt == null)
+					return;
+
+				var slope_tt = SignalSlope(26);
+				if (slope_tt != null && slope_tt != macd_tt)
+					return;
+
+				var tt = macd_tt.Value;
+
+				// Create a trade in the suggested direction
+				var trade = new Trade(Bot, Instrument, tt, Label, rtr_range:new RangeF(1.0,5.0));
+				var pos = Bot.Broker.CreateOrder(trade);
+				if (pos != null)
+					PosMgr = new PositionManager(Instrument, pos);
+			}
+			else
+			{
+				var tt = SignalMACD();
+				if (tt == null)
+					return;
+
+				if (tt.Value != position.TradeType)
+					Bot.Broker.ClosePosition(position);
+			}
 		}
+
+		// Trade management
+		// - Set SL past recent peaks / 00 levels
+		// - Close trade if signals change
+
 
 		/// <summary>Watch for position closed</summary>
 		protected override void OnPositionClosed(Position position)
@@ -69,9 +95,9 @@ namespace Rylobot
 		}
 
 		/// <summary>Return a score for how well suited this strategy is to the current conditions</summary>
-		public static double FitnessScore(Rylobot bot)
+		public override double SuitabilityScore
 		{
-			return 0.0; // not implemented 
+			get { return 1.0; }
 		}
 	}
 }

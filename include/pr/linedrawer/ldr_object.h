@@ -16,6 +16,7 @@
 #include "pr/common/refptr.h"
 #include "pr/common/user_data.h"
 #include "pr/common/flags_enum.h"
+#include "pr/common/static_callback.h"
 #include "pr/container/vector.h"
 #include "pr/maths/maths.h"
 #include "pr/str/string.h"
@@ -33,6 +34,7 @@ namespace pr
 		using LdrObjectPtr  = pr::RefPtr<LdrObject>;
 		using ObjectCont    = pr::vector<LdrObjectPtr, 8>;
 		using string32      = pr::string<char, 32>;
+		using Location      = pr::script::Location;
 
 		// Map the compile time hash function to this namespace
 		using HashValue = pr::hash::HashValue;
@@ -305,7 +307,7 @@ namespace pr
 		// The results of parsing ldr script
 		struct ParseResult
 		{
-			typedef std::unordered_map<size_t, pr::rdr::ModelPtr> ModelLookup;
+			using ModelLookup = std::unordered_map<size_t, pr::rdr::ModelPtr>;
 
 			// Bit mask of set camera fields
 			enum class ECamField
@@ -320,22 +322,24 @@ namespace pr
 				Far     = 1 << 6,
 				AbsClip = 1 << 7,
 				Ortho   = 1 << 8,
+				_bitwise_operators_allowed,
 			};
 
-			ObjectCont  m_def_objects; // Objects container that is used if none is provided
-			ModelLookup m_models;      // A lookup map for models based on hashed object name
-			ObjectCont& m_objects;     // Reference to the objects container to fill
-			pr::Camera  m_cam;         // Camera description has been read
-			ECamField   m_cam_fields;  // Bitmask of fields in 'm_cam' that were given in the camera description
-			bool        m_clear;       // True if '*Clear' was read in the script
-			bool        m_wireframe;   // True if '*Wireframe' was read in the script
+			ObjectCont  m_objects_;   // Objects container that is used if none is provided
+			ObjectCont& m_objects;    // Reference to the objects container to fill
+			ModelLookup m_models;     // A lookup map for models based on hashed object name
+			pr::Camera  m_cam;        // Camera description has been read
+			ECamField   m_cam_fields; // Bitmask of fields in 'm_cam' that were given in the camera description
+			bool        m_clear;      // True if '*Clear' was read in the script
+			bool        m_wireframe;  // True if '*Wireframe' was read in the script
 			
 			ParseResult()
-				:ParseResult(m_def_objects)
+				:ParseResult(m_objects_)
 			{}
 			ParseResult(ObjectCont& cont)
-				:m_def_objects()
+				:m_objects_()
 				,m_objects(cont)
+				,m_models()
 				,m_cam()
 				,m_cam_fields()
 				,m_clear()
@@ -344,14 +348,6 @@ namespace pr
 			ParseResult(ParseResult const&) = delete;
 			ParseResult& operator=(ParseResult const&) = delete;
 		};
-		inline ParseResult::ECamField& operator |= (ParseResult::ECamField& lhs, ParseResult::ECamField rhs)
-		{
-			return lhs = static_cast<ParseResult::ECamField>(int(lhs) | int(rhs));
-		}
-		inline int operator & (ParseResult::ECamField lhs, ParseResult::ECamField rhs)
-		{
-			return int(lhs) & int(rhs);
-		}
 
 		#pragma endregion
 
@@ -565,43 +561,62 @@ namespace pr
 
 		// LdrObject Creation functions *********************************************
 
-		// Parse the ldr script in 'reader' adding the results to 'out'
-		// If 'async' is true, a progress dialog is displayed and parsing is done in a background thread.
-		void Parse(
-			pr::Renderer& rdr,                // The renderer to create models for
-			pr::script::Reader& reader,       // The source of the script
-			ParseResult& out,                 // The results of parsing the script
-			bool async = true,                // True if parsing should be done in a background thread
-			pr::Guid const& context_id = GuidZero // The context id to assign to each created object
-			);
+		// Parsing data cache.
+		// Create one of these and provide it in successive Parse calls to speed up parsing.
+		struct CacheData;
+		CacheData* ThisThreadCache();
+		std::unique_ptr<CacheData> CreateCache();
 
-		// Parse ldr script from a text file
-		// 'include_paths' is a comma/semicolon separated list of include paths to use to resolve #include directives (or nullptr)
+		// Callback function type used during script parsing
+		// 'bool function(Guid context_id, ParseResult& out, pr::script::Location const& loc, bool complete)'
+		// Returns 'true' to continue parsing, false to abort parsing.
+		using ParseProgressCB = pr::StaticCB<bool, Guid const&, ParseResult const&, pr::script::Location const&, bool>;
+
+		// Parse the ldr script in 'reader' adding the results to 'out'.
+		// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
+		// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
+		// life-times of the script reader, the parse output, and the 'store' container it refers to.
+		void Parse(
+			pr::Renderer& rdr,                     // The renderer to create models for
+			pr::script::Reader& reader,            // The source of the script
+			ParseResult& out,                      // The results of parsing the script
+			pr::Guid const& context_id = GuidZero, // The context id to assign to each created object
+			ParseProgressCB progress_cb = nullptr, // Progress callback
+			CacheData* cache = nullptr);           // Parsing cache for speeding up parsing
+
+		// Parse ldr script from a text file.
+		// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
+		// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
+		// life-times of the script reader, the parse output, and the 'store' container it refers to.
 		inline void ParseFile(
 			pr::Renderer& rdr,                     // The renderer to create models for
 			wchar_t const* filename,               // The file containing the ldr script
 			ParseResult& out,                      // The results of parsing the script
-			bool async = true,                     // True if parsing should be done in a background thread
-			pr::Guid const& context_id = GuidZero) // The context id to assign to each created object
+			pr::Guid const& context_id = GuidZero, // The context id to assign to each created object
+			ParseProgressCB progress_cb = nullptr, // Progress callback
+			CacheData* cache = nullptr)            // Parsing cache for speeding up parsing
 		{
 			pr::script::FileSrc src(filename);
 			pr::script::Reader reader(src);
-			Parse(rdr, reader, out, async, context_id);
+			Parse(rdr, reader, out, context_id, progress_cb, cache);
 		}
 
 		// Parse ldr script from a string
-		// 'include_paths' is a comma/semicolon separated list of include "paths" to use to resolve #include directives (or nullptr)
+		// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
+		// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
+		// life-times of the script reader, the parse output, and the 'store' container it refers to.
 		template <typename Char>
 		inline void ParseString(
 			pr::Renderer& rdr,                     // The reader to create models for
-			Char const* ldr_script,                // The literal string containing the script
+			Char const* ldr_script,                // The string containing the script
 			ParseResult& out,                      // The results of parsing the script
-			bool async = true,                     // True if parsing should be done in a background thread
-			pr::Guid const& context_id = GuidZero) // The context id to assign to each created object
+			pr::Guid const& context_id = GuidZero, // The context id to assign to each created object
+			ParseProgressCB progress_cb = nullptr, // Progress callback
+			CacheData* cache = nullptr)            // Parsing cache for speeding up parsing
 		{
 			pr::script::Ptr<Char const*> src(ldr_script);
 			pr::script::Reader reader(src);
-			Parse(rdr, reader, out, async, context_id);
+			Parse(rdr, reader, out, context_id, progress_cb, cache);
 		}
 
 		// Callback function for editing a dynamic model
@@ -632,7 +647,7 @@ namespace pr
 		void Edit(pr::Renderer& rdr, LdrObjectPtr object, EditObjectCB edit_cb, void* ctx);
 
 		// Update 'object' with info from 'desc'. 'keep' describes the properties of 'object' to update
-		void Update(pr::Renderer& rdr, LdrObjectPtr object, pr::script::Reader& reader, EUpdateObject flags = EUpdateObject::All);
+		void Update(pr::Renderer& rdr, LdrObjectPtr object, pr::script::Reader& reader, EUpdateObject flags = EUpdateObject::All, CacheData* cache = nullptr);
 
 		// Remove all objects from 'objects' that have a context id matching one in 'doomed' and not in 'excluded'
 		// If 'doomed' is 0, all are assumed doomed. If 'excluded' is 0, none are assumed excluded

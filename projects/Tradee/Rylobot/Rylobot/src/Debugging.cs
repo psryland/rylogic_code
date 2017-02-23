@@ -60,22 +60,57 @@ namespace Rylobot
 			{
 				var sign    = trade.TradeType.Sign();
 				var x0      = (float)(trade.EntryIndex);
-				var x1      = (float)Math.Max(trade.ExitIndex, x0 + 1.0);
+				var x1      = (float)Math.Max(trade.ExitIndex, x0 + 5.0);
 				var w       = (float)(x1 - x0);
 				var xmid    = (float)(trade.EntryIndex + w/2);
+				var colr    = trade.Result == Trade.EResult.Pending ? 0x4000007F : 0xFF0000FF;
+				var sl_colr = trade.Result == Trade.EResult.Pending ? 0x407F0000 : 0xFFFF0000;
+				var tp_colr = trade.Result == Trade.EResult.Pending ? 0x40007F00 : 0xFF00FF00;
 
 				// EP, SL, TP lines
-				ldr.Line("EP", 0xFF0000FF, new v4(x0, (float)trade.EP, 0f, 1f), new v4(x1, (float)trade.EP, +0.001f, 1f));
-				ldr.Line("TP", 0xFF00FF00, new v4(x0, (float)trade.TP, 0f, 1f), new v4(x1, (float)trade.TP, +0.001f, 1f));
-				ldr.Line("SL", 0xFFFF0000, new v4(x0, (float)trade.SL, 0f, 1f), new v4(x1, (float)trade.SL, +0.001f, 1f));
+				ldr.Line("EP", colr, new v4(x0, (float)trade.EP, 0f, 1f), new v4(x1, (float)trade.EP, +0.001f, 1f));
+				if (trade.SL != null) ldr.Line("SL", sl_colr, new v4(x0, (float)trade.SL, 0f, 1f), new v4(x1, (float)trade.SL, +0.001f, 1f));
+				if (trade.TP != null) ldr.Line("TP", tp_colr, new v4(x0, (float)trade.TP, 0f, 1f), new v4(x1, (float)trade.TP, +0.001f, 1f));
+
+				// Draw green for profit, red for loss
+				switch (trade.Result)
+				{
+				case Trade.EResult.Open:
+					{
+						var value = (float)trade.ValueNow() / trade.Volume;
+						var h = Math.Abs(value);
+						var y = (float)(trade.EP + sign * Math.Sign(value) * h / 2);
+						var col = value > 0 ? 0x4000FF00U : 0x40FF0000U;
+						ldr.Rect("result", col, AxisId.PosZ, w, h, true, new v4(xmid, y, +0.001f, 1));
+						break;
+					}
+				case Trade.EResult.Pending:
+					{
+						break;
+					}
+				case Trade.EResult.HitSL:
+					{
+						var h = (float)trade.StopLossRel();
+						var y = (float)(trade.EP - sign * h / 2);
+						ldr.Rect("result", 0x80FF0000, AxisId.PosZ, w, h, true, new v4(xmid, y, +0.001f, 1));
+						break;
+					}
+				case Trade.EResult.HitTP:
+					{
+						var h = (float)trade.TakeProfitRel();
+						var y = (float)(trade.EP + sign * h / 2);
+						ldr.Rect("result", 0x8000FF00, AxisId.PosZ, w, h, true, new v4(xmid, y, +0.001f, 1));
+						break;
+					}
+				}
 
 				// Areas showing peaks
-				var col_pp = trade.Result == Trade.EResult.HitTP ? 0x8000FF00 : 0x4000FF00;
-				var col_pl = trade.Result == Trade.EResult.HitSL ? 0x80FF0000 : 0x40FF0000;
-				var y_pp = (float)(trade.EP + sign * trade.PeakProfit / 2);
-				var y_pl = (float)(trade.EP - sign * trade.PeakLoss   / 2);
-				ldr.Rect("peak_profit", col_pp, AxisId.PosZ, w, (float)Misc.Abs(trade.PeakProfit), true, new v4(xmid, y_pp, +0.001f, 1));
-				ldr.Rect("peak_loss"  , col_pl, AxisId.PosZ, w, (float)Misc.Abs(trade.PeakLoss  ), true, new v4(xmid, y_pl, +0.001f, 1));
+				// var col_pp = trade.Result == Trade.EResult.HitTP ? 0x8000FF00 : 0x4000FF00;
+				// var col_pl = trade.Result == Trade.EResult.HitSL ? 0x80FF0000 : 0x40FF0000;
+				// var y_pp = (float)(trade.EP + sign * trade.PeakProfit / 2);
+				// var y_pl = (float)(trade.EP - sign * trade.PeakLoss   / 2);
+				// ldr.Rect("peak_profit", col_pp, AxisId.PosZ, w, (float)Misc.Abs(trade.PeakProfit), true, new v4(xmid, y_pp, +0.001f, 1));
+				// ldr.Rect("peak_loss"  , col_pl, AxisId.PosZ, w, (float)Misc.Abs(trade.PeakLoss  ), true, new v4(xmid, y_pl, +0.001f, 1));
 			}
 			if (ldr_ == null)
 				Ldr.Write(ldr.ToString(), FP("trade.ldr"));
@@ -176,8 +211,8 @@ namespace Rylobot
 					var price_data = instr.HighResRange(range, step);
 					if (price_data.Any())
 					{
-						ldr.Line("ask", Colour32.Yellow.Lerp(AskColor, 0.5f), 1, price_data.Select(x => new v4((float)x.m_index, (float)x.m_ask, 0.05f, 1)));
-						ldr.Line("bid", Colour32.Yellow.Lerp(BidColor, 0.5f), 1, price_data.Select(x => new v4((float)x.m_index, (float)x.m_bid, 0.05f, 1)));
+						ldr.Line("ask", Colour32.Yellow.Lerp(AskColor, 0.5f), 1, price_data.Select(x => new v4((float)x.Index, (float)x.Ask, 0.05f, 1)));
+						ldr.Line("bid", Colour32.Yellow.Lerp(BidColor, 0.5f), 1, price_data.Select(x => new v4((float)x.Index, (float)x.Bid, 0.05f, 1)));
 					}
 				}
 
@@ -226,6 +261,176 @@ namespace Rylobot
 
 			return ldr;
 		}
+
+
+		#endregion
+
+		#region Trade Logging
+
+		/// <summary>Master switch</summary>
+		private static bool LoggingEnabled = true;
+
+		/// <summary>The list of logged trades</summary>
+		private static List<int> m_trade_ids = new List<int>();
+
+		/// <summary>A ldr builder for outputting trades</summary>
+		private static LdrBuilder m_ldr_all_trades;
+
+		/// <summary>The index range of trades</summary>
+		private static Range m_trades_range;
+
+		/// <summary>The instrument being logged</summary>
+		private static Instrument m_trades_instr;
+
+		/// <summary>A ldr builder for outputting the instrument</summary>
+		private static LdrBuilder m_ldr_instr;
+
+		/// <summary>Enable/Disable logging trades to an ldr file</summary>
+		public static void LogTrades(Rylobot bot, bool enabled)
+		{
+			if (m_log_trades == enabled) return;
+
+			// Disabled
+			if (m_log_trades)
+			{
+				// Unsubscribe
+				bot.Positions.Opened -= LogTradeOpened;
+				bot.Positions.Closed -= LogTradeClosed;
+
+				// Clean up
+				m_trades_instr.DataChanged -= HandleInstrumentDataChanged;
+				Util.Dispose(ref m_trades_instr);
+			}
+
+			m_log_trades = enabled;
+
+			// Enabled
+			if (m_log_trades)
+			{
+				// Reset the 'all_trades' file
+				m_ldr_all_trades = new LdrBuilder();
+				m_ldr_all_trades.ToFile(FP("all_trades.ldr"));
+				m_trades_range = Range.Invalid;
+				m_trade_ids.Clear();
+
+				// Create the instrument being traded
+				m_trades_instr = new Instrument(bot);
+				m_trades_instr.DataChanged += HandleInstrumentDataChanged;
+				m_ldr_instr = new LdrBuilder();
+
+				// Sign up for position created/closed events
+				bot.Positions.Closed += LogTradeClosed;
+				bot.Positions.Opened += LogTradeOpened;
+
+				// Initial instrument output
+				LogInstrument();
+			}
+		}
+		private static bool m_log_trades;
+
+		/// <summary>Update the details of a trade</summary>
+		public static void LogTrade(Position pos, bool update_instrument)
+		{
+			if (!LoggingEnabled)
+				return;
+
+			// Output the trade as a separate file
+			var ldr = new LdrBuilder();
+			using (ldr.Group("trade_{0}".Fmt(pos.Id)))
+				Dump(new Trade(m_trades_instr, pos), ldr_:ldr);
+			ldr.ToFile(FP("trades\\trade_{0}.ldr".Fmt(pos.Id)));
+
+			// Encompass the range
+			m_trades_range.Begin = Math.Min(m_trades_range.Begin, m_trades_instr.Count - 10);
+			m_trades_range.End   = Math.Max(m_trades_range.End  , m_trades_instr.Count + 10);
+
+			// Add to the 'all trades' file
+			if (!m_trade_ids.Contains(pos.Id))
+			{
+				m_ldr_all_trades.Append("#include \"trades\\trade_{0}.ldr\"\n".Fmt(pos.Id));
+				m_ldr_all_trades.ToFile(FP("all_trades.ldr"));
+				m_trade_ids.Add(pos.Id);
+			}
+
+			// Also update the instrument so that it matches the trade
+			if (update_instrument)
+				LogInstrument();
+		}
+
+		/// <summary>Update the details of a pending order</summary>
+		public static void LogOrder(PendingOrder ord, bool update_instrument)
+		{
+			if (!LoggingEnabled)
+				return;
+
+			// Output the order as a separate file
+			var ldr = new LdrBuilder();
+			using (ldr.Group("order_{0}".Fmt(ord.Id)))
+				Dump(new Trade(m_trades_instr, ord), ldr_:ldr);
+			ldr.ToFile(FP("trades\\order_{0}.ldr".Fmt(ord.Id)));
+
+			// Also update the instrument so that it matches the trade
+			if (update_instrument)
+				LogInstrument();
+		}
+
+		/// <summary>Handle trade created/closed events</summary>
+		private static void LogTradeOpened(PositionOpenedEventArgs args)
+		{
+			LogTrade(args.Position, true);
+		}
+		private static void LogTradeClosed(PositionClosedEventArgs args)
+		{
+			LogTrade(args.Position, true);
+		}
+
+		/// <summary>Output the instrument to a file as it changes</summary>
+		private static void LogInstrument()
+		{
+			if (!LoggingEnabled)
+				return;
+
+			// Write the instrument to 'm_ldr_instr'
+			Dump(m_trades_instr, range_:new Range(-500, 1), ldr_:m_ldr_instr);
+			m_ldr_instr.ToFile(FP("{0}.ldr".Fmt(m_trades_instr.SymbolCode)));
+			m_ldr_instr.Clear();
+
+			// Update the graphics for active trades and orders
+			foreach (var pos in Rylobot.Instance.Positions)
+				LogTrade(pos, false);
+			foreach (var ord in Rylobot.Instance.PendingOrders)
+				LogOrder(ord, false);
+
+			// Update the live trades file
+			{
+				var sb = new LdrBuilder();
+				foreach (var p in Rylobot.Instance.Positions)
+					sb.Append("#include \"trades\\trade_{0}.ldr\"\n".Fmt(p.Id));
+				foreach (var p in Rylobot.Instance.PendingOrders)
+					sb.Append("#include \"trades\\order_{0}.ldr\"\n".Fmt(p.Id));
+				sb.ToFile(FP("live_trades.ldr"));
+			}
+		}
+
+		/// <summary>Write debugging output when the instrument changes</summary>
+		private static void HandleInstrumentDataChanged(object sender, DataEventArgs e)
+		{
+			if (!LoggingEnabled)
+				return;
+
+			// Limit dumps to once / second
+			if (Environment.TickCount - m_last_instr_dump < 1000) return;
+			m_last_instr_dump = Environment.TickCount;
+
+			// Output the instrument
+			LogInstrument();
+		}
+		private static int m_last_instr_dump = 0;
+
+		#endregion
+	}
+}
+
 
 #if false
 
@@ -288,121 +493,3 @@ namespace Rylobot
 				Ldr.Write(ldr.ToString(), FP("snr.ldr"));
 		}
 #endif
-		#endregion
-
-		#region Trade Logging
-
-		/// <summary>The list of logged trades</summary>
-		private static List<int> m_trade_ids = new List<int>();
-
-		/// <summary>A ldr builder for outputting trades</summary>
-		private static LdrBuilder m_ldr_all_trades;
-
-		/// <summary>The index range of trades</summary>
-		private static Range m_trades_range;
-
-		/// <summary>The instrument being logged</summary>
-		private static Instrument m_trades_instr;
-
-		/// <summary>A ldr builder for outputting the instrument</summary>
-		private static LdrBuilder m_ldr_instr;
-
-		/// <summary>Enable/Disable logging trades to an ldr file</summary>
-		public static void LogTrades(Rylobot bot, bool enabled)
-		{
-			if (m_log_trades == enabled) return;
-
-			// Disabled
-			if (m_log_trades)
-			{
-				// Unsubscribe
-				bot.Positions.Opened -= LogTradeOpened;
-				bot.Positions.Closed -= LogTradeClosed;
-
-				// Clean up
-				m_trades_instr.DataChanged -= LogInstrument;
-				Util.Dispose(ref m_trades_instr);
-			}
-
-			m_log_trades = enabled;
-
-			// Enabled
-			if (m_log_trades)
-			{
-				// Reset the 'all_trades' file
-				m_ldr_all_trades = new LdrBuilder();
-				m_ldr_all_trades.ToFile(FP("all_trades.ldr"));
-				m_trades_range = Range.Invalid;
-				m_trade_ids.Clear();
-
-				// Create the instrument being traded
-				m_trades_instr = new Instrument(bot);
-				m_trades_instr.DataChanged += LogInstrument;
-				m_ldr_instr = new LdrBuilder();
-
-				// Sign up for position created/closed events
-				bot.Positions.Closed += LogTradeClosed;
-				bot.Positions.Opened += LogTradeOpened;
-
-				// Initial instrument output
-				LogInstrument();
-			}
-		}
-		private static bool m_log_trades;
-
-		/// <summary>Update the details of a trade</summary>
-		public static void LogTrade(Position pos)
-		{
-			// Output the trade as a separate file
-			var ldr = new LdrBuilder();
-			using (ldr.Group("trade_{0}".Fmt(pos.Id)))
-				Dump(new Trade(m_trades_instr, pos), ldr_:ldr);
-			ldr.ToFile(FP("trades\\trade_{0}.ldr".Fmt(pos.Id)));
-
-			// Encompass the range
-			m_trades_range.Begin = Math.Min(m_trades_range.Begin, m_trades_instr.Count - 10);
-			m_trades_range.End   = Math.Max(m_trades_range.End  , m_trades_instr.Count + 10);
-
-			// Add to the 'all trades' file
-			if (!m_trade_ids.Contains(pos.Id))
-			{
-				m_ldr_all_trades.Append("#include \"trades\\trade_{0}.ldr\"\n".Fmt(pos.Id));
-				m_ldr_all_trades.ToFile(FP("all_trades.ldr"));
-				m_trade_ids.Add(pos.Id);
-			}
-
-			// Update the instrument
-			LogInstrument();
-		}
-
-		/// <summary>Handle trade created/closed events</summary>
-		private static void LogTradeOpened(PositionOpenedEventArgs args)
-		{
-			LogTrade(args.Position);
-		}
-		private static void LogTradeClosed(PositionClosedEventArgs args)
-		{
-			LogTrade(args.Position);
-		}
-
-		/// <summary>Output the instrument to a file as it changes</summary>
-		private static void LogInstrument(object sender, DataEventArgs e)
-		{
-		//	if (!m_trades_instr.NewCandle) return;
-		//	LogInstrument();
-		//
-		//	// Update the graphics for active trades
-		//	foreach (var pos in Rylobot.Instance.Positions)
-		//		LogTrade(pos);
-		}
-		private static void LogInstrument()
-		{
-			// Write the instrument to 'm_ldr_instr'
-			Dump(m_trades_instr, range_:new Range(-300, 0), emas:new[] { 14, 100 }, ldr_:m_ldr_instr);
-			m_ldr_instr.ToFile(FP("{0}.ldr".Fmt(m_trades_instr.SymbolCode)));
-			m_ldr_instr.Clear();
-		}
-
-		#endregion
-	}
-}

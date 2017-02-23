@@ -1100,24 +1100,25 @@ pr::script::Includes<> GetIncludes(View3DIncludes const* includes)
 // Add an Ldr source file. This file will be watched and the object store updated whenever
 // it, or any of it's included dependencies change. The returned GUID is the context id for
 // all objects added as a result of 'filepath' and its dependencies.
-VIEW3D_API GUID __stdcall View3D_LoadScriptSource(wchar_t const* filepath, BOOL additional, BOOL async, View3DIncludes const* includes)
+VIEW3D_API GUID __stdcall View3D_LoadScriptSource(wchar_t const* filepath, BOOL additional, View3DIncludes const* includes)
 {
 	try
 	{
-		DllLockGuard;
-		return Dll().LoadScriptSource(filepath, additional != 0, async != 0, GetIncludes(includes));
+		// Concurrent entry is allowed.
+		//'DllLockGuard;
+		return Dll().LoadScriptSource(filepath, additional != 0, GetIncludes(includes));
 	}
 	CatchAndReport(View3D_LoadScriptSource, (View3DWindow)nullptr, pr::GuidZero);
 }
 
 // Add an ldr script string. This will create all objects declared in 'ldr_script'
 // with context id 'context_id' if given, otherwise an id will be created
-VIEW3D_API GUID __stdcall View3D_LoadScript(wchar_t const* ldr_script, BOOL file, BOOL async, GUID const* context_id, View3DIncludes const* includes)
+VIEW3D_API GUID __stdcall View3D_LoadScript(wchar_t const* ldr_script, BOOL file, GUID const* context_id, View3DIncludes const* includes)
 {
 	try
 	{
 		DllLockGuard;
-		return Dll().LoadScript(ldr_script, file != 0, async != 0, context_id, GetIncludes(includes));
+		return Dll().LoadScript(ldr_script, file != 0, context_id, GetIncludes(includes));
 	}
 	CatchAndReport(View3D_LoadScript, (View3DWindow)nullptr, pr::GuidZero);
 }
@@ -1154,6 +1155,20 @@ VIEW3D_API void __stdcall View3D_CheckForChangedSources()
 		return Dll().CheckForChangedSources();
 	}
 	CatchAndReport(View3D_CheckForChangedSources,,);
+}
+
+// Set the callback for progress events when script sources are loaded or updated
+VIEW3D_API void __stdcall View3D_AddFileProgressCBSet(View3D_AddFileProgressCB progress_cb, void* ctx, BOOL add)
+{
+	try
+	{
+		DllLockGuard;
+		if (add)
+			Dll().OnAddFileProgress += pr::StaticCallBack(progress_cb, ctx);
+		else
+			Dll().OnAddFileProgress -= pr::StaticCallBack(progress_cb, ctx);
+	}
+	CatchAndReport(View3D_SourcesChangedCBSet,,);
 }
 
 // Set the callback called when the sources are reloaded
@@ -1199,12 +1214,12 @@ VIEW3D_API void __stdcall View3D_ObjectsDeleteById(GUID const& context_id)
 // 'context_id' - the context id to create the LdrObjects with
 // 'async' - if objects should be created by a background thread
 // 'includes' - information used to resolve include directives in 'ldr_script'
-VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(wchar_t const* ldr_script, BOOL file, BOOL async, GUID const* context_id, View3DIncludes const* includes)
+VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(wchar_t const* ldr_script, BOOL file, GUID const* context_id, View3DIncludes const* includes)
 {
 	try
 	{
 		DllLockGuard;
-		Dll().LoadScript(ldr_script, file != 0, async != 0, context_id, GetIncludes(includes));
+		Dll().LoadScript(ldr_script, file != 0, context_id, GetIncludes(includes));
 
 		// Return the last object. expecting 'ldr_script' to define one object only
 		auto& cont = Dll().m_obj_cont;
@@ -1977,11 +1992,23 @@ VIEW3D_API void __stdcall View3D_SetRenderTargetSize(View3DWindow window, int wi
 		DllLockGuard;
 		if (width  < 0) width  = 0;
 		if (height < 0) height = 0;
-		window->m_wnd.RenderTargetSize(pr::iv2(width, height));
-		auto size = window->m_wnd.RenderTargetSize();
 
-		// Update the window aspect ratio
-		float aspect = (size.x == 0 || size.y == 0) ? 1.0f : size.x / float(size.y);
+		// Before resize, the old aspect is: Aspect0 = scale * Width0 / Height0
+		// After resize, the new aspect is: Aspect1 = scale * Width1 / Height1
+
+		// Save the current camera aspect ratio
+		auto old_size = window->m_wnd.RenderTargetSize();
+		auto old_aspect = window->m_camera.Aspect();
+		auto scale = old_aspect * old_size.y / float(old_size.x);
+
+		// Resize the render target
+		window->m_wnd.RenderTargetSize(pr::iv2(width, height));
+
+		// Adjust the camera aspect ratio to preserve it
+		auto new_size = window->m_wnd.RenderTargetSize();
+		auto new_aspect = (new_size.x == 0 || new_size.y == 0) ? 1.0f : new_size.x / float(new_size.y);
+		auto aspect = scale * new_aspect;
+
 		window->m_camera.Aspect(aspect);
 	}
 	CatchAndReport(View3D_SetRenderTargetSize, window,);
@@ -2291,6 +2318,30 @@ VIEW3D_API void __stdcall View3D_GizmoDetach(View3DGizmo gizmo, View3DObject obj
 	CatchAndReport(View3D_GizmoDetach, ,);
 }
 
+// Get/Set the scale factor for the gizmo
+VIEW3D_API float __stdcall View3D_GizmoScaleGet(View3DGizmo gizmo)
+{
+	try
+	{
+		if (!gizmo) throw std::exception("Gizmo is null");
+
+		DllLockGuard;
+		return gizmo->m_scale;
+	}
+	CatchAndReport(View3D_GizmoScaleGet, , 0.0f);
+}
+VIEW3D_API void __stdcall View3D_GizmoScaleSet(View3DGizmo gizmo, float scale)
+{
+	try
+	{
+		if (!gizmo) throw std::exception("Gizmo is null");
+
+		DllLockGuard;
+		gizmo->m_scale = scale;
+	}
+	CatchAndReport(View3D_GizmoScaleSet, , );
+}
+
 // Get/Set the current mode of the gizmo
 VIEW3D_API EView3DGizmoMode __stdcall View3D_GizmoGetMode(View3DGizmo gizmo)
 {
@@ -2582,7 +2633,7 @@ VIEW3D_API GUID __stdcall View3D_CreateDemoScene(View3DWindow window)
 
 		// Parse the string, and add all objects to the window
 		pr::ldr::ParseResult out;
-		pr::ldr::Parse(Dll().m_rdr, reader, out, true, GuidDemoSceneObjects);
+		pr::ldr::Parse(Dll().m_rdr, reader, out, GuidDemoSceneObjects);
 		for (auto& obj : out.m_objects)
 		{
 			Dll().m_obj_cont.push_back(obj);
@@ -2764,8 +2815,8 @@ static_assert(int(EView3DGizmoMode::Translate) == int(pr::ldr::LdrGizmo::EMode::
 static_assert(int(EView3DGizmoMode::Rotate   ) == int(pr::ldr::LdrGizmo::EMode::Rotate   ), "");
 static_assert(int(EView3DGizmoMode::Scale    ) == int(pr::ldr::LdrGizmo::EMode::Scale    ), "");
 
-static_assert(int(ESourcesChangedReason::NewData) == int(pr::ldr::ScriptSources::StoreChangedEventArgs::EReason::NewData), "");
-static_assert(int(ESourcesChangedReason::Reload) == int(pr::ldr::ScriptSources::StoreChangedEventArgs::EReason::Reload), "");
+static_assert(int(ESourcesChangedReason::NewData) == int(pr::ldr::ScriptSources::EReason::NewData), "");
+static_assert(int(ESourcesChangedReason::Reload) == int(pr::ldr::ScriptSources::EReason::Reload), "");
 
 // Specifically used to avoid alignment problems
 static_assert(sizeof(View3DV2    ) == sizeof(pr::v2       ), "");

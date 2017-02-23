@@ -167,7 +167,7 @@ namespace pr
 				return !Derived::equal(m_ui, rhs.m_ui);
 			}
 
-			// Default implemenation
+			// Default implementation
 			static TStore right_shift(TStore const& ui)
 			{
 				return ui >> 8 * sizeof(Char);
@@ -180,6 +180,16 @@ namespace pr
 			{
 				return lhs == rhs;
 			}
+		};
+
+		// A "shift register" of 8 narrow characters
+		struct Buf8 :Buf<Buf8, unsigned long long, char>
+		{
+			using base = Buf<Buf8, unsigned long long, char>;
+			Buf8() :base() {}
+			Buf8(Buf8&& rhs) :base(std::move<base&>(rhs)) {}
+			template <typename Ptr> explicit Buf8(Ptr const& src) :Buf(src) {}
+			template <typename Ptr> explicit Buf8(Ptr& src) :Buf(src) {}
 		};
 
 		// A "shift register" of 2 wide characters
@@ -211,7 +221,7 @@ namespace pr
 			template <typename Ptr> explicit BufW8(Ptr const& src) :Buf(src) {}
 			template <typename Ptr> explicit BufW8(Ptr& src) :Buf(src) {}
 
-			// Default implemenation
+			// Default implementation
 			static __m128i right_shift(__m128i const& ui)
 			{
 				return _mm_srli_si128(ui, sizeof(wchar_t));

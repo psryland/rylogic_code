@@ -83,6 +83,9 @@
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="src\Settings.cs" />
+    <Compile Include="src\SettingsUI.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <SubType>Designer</SubType>
@@ -111,6 +114,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="src\ScriptUI.resx">
       <DependentUpon>ScriptUI.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\SettingsUI.resx">
+      <DependentUpon>SettingsUI.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>

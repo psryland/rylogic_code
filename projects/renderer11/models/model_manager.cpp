@@ -18,15 +18,14 @@ namespace pr
 			:m_alex_mdlbuf(Allocator<ModelBuffer>(mem))
 			,m_alex_model (Allocator<Model>(mem))
 			,m_alex_nugget(Allocator<Nugget>(mem))
-			,m_device     (device)
+			,m_device(device)
+			,m_mutex()
 		{
-			PR_ASSERT(PR_DBG_RDR, m_device != 0, "Null directx device");
+			PR_ASSERT(PR_DBG_RDR, m_device != 0, "Null DirectX device");
 
 			// Create stock models
 			CreateStockModels();
 		}
-		ModelManager::~ModelManager()
-		{}
 
 		// Create a model buffer in which one or more models can be created
 		ModelBufferPtr ModelManager::CreateModelBuffer(MdlSettings const& settings)
@@ -35,6 +34,8 @@ namespace pr
 				throw std::exception("Attempt to create 0-length model vertex buffer");
 			if (settings.m_ib.ElemCount == 0)
 				throw std::exception("Attempt to create 0-length model index buffer");
+
+			std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
 			// Create a new model buffer
 			ModelBufferPtr mb(m_alex_mdlbuf.New());
@@ -70,7 +71,9 @@ namespace pr
 		ModelPtr ModelManager::CreateModel(MdlSettings const& settings, ModelBufferPtr& model_buffer)
 		{
 			PR_ASSERT(PR_DBG_RDR, model_buffer->IsCompatible(settings), "Incompatible model buffer provided");
-			PR_ASSERT(PR_DBG_RDR, model_buffer->IsRoomFor(settings.m_vb.ElemCount, settings.m_ib.ElemCount), "Insufficent room for a model of this size in this model buffer");
+			PR_ASSERT(PR_DBG_RDR, model_buffer->IsRoomFor(settings.m_vb.ElemCount, settings.m_ib.ElemCount), "Insufficient room for a model of this size in this model buffer");
+
+			std::lock_guard<std::recursive_mutex> lock(m_mutex);
 			return ModelPtr(m_alex_model.New(settings, model_buffer));
 		}
 
@@ -78,6 +81,7 @@ namespace pr
 		void ModelManager::Delete(ModelBuffer* model_buffer)
 		{
 			if (!model_buffer) return;
+			std::lock_guard<std::recursive_mutex> lock(m_mutex);
 			m_alex_mdlbuf.Delete(model_buffer);
 		}
 
@@ -85,6 +89,7 @@ namespace pr
 		void ModelManager::Delete(Model* model)
 		{
 			if (!model) return;
+			std::lock_guard<std::recursive_mutex> lock(m_mutex);
 			m_alex_model.Delete(model);
 		}
 
@@ -92,6 +97,7 @@ namespace pr
 		void ModelManager::Delete(Nugget* nugget)
 		{
 			if (!nugget) return;
+			std::lock_guard<std::recursive_mutex> lock(m_mutex);
 			m_alex_nugget.Delete(nugget);
 		}
 

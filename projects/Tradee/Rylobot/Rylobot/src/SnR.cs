@@ -56,13 +56,13 @@ namespace Rylobot
 			{
 				// Find the stationary points in the high res data
 				var sign = 0;
-				var prev = new Instrument.PriceTick();
+				var prev = new PriceTick();
 				var first_idx = Instrument.IdxFirst;
 				foreach (var data in Instrument.HighResRange(Range))
 				{
-					var s = Math.Sign((double)(data.m_ask - prev.m_ask));
+					var s = Math.Sign((double)(data.Ask - prev.Ask));
 					if (s == sign) continue;
-					if (sign != 0) yield return new StationaryPoint(prev.m_index + (double)first_idx, prev.m_ask);
+					if (sign != 0) yield return new StationaryPoint(prev.Index + (double)first_idx, prev.Ask);
 					sign = s;
 					prev = data;
 				}

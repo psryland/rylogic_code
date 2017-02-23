@@ -120,7 +120,7 @@ namespace pr
 					GroupEnd(str);
 
 					ParseResult out;
-					ParseString(m_rdr, str.c_str(), out, false, GfxContextId());
+					ParseString(m_rdr, str.c_str(), out, GfxContextId());
 					if (!out.m_objects.empty())
 						m_gfx = out.m_objects.back();
 				}
@@ -257,7 +257,7 @@ namespace pr
 					GroupEnd(str);
 
 					ParseResult out;
-					ParseString(m_rdr, str.c_str(), out, false, GfxContextId());
+					ParseString(m_rdr, str.c_str(), out, GfxContextId());
 					if (!out.m_objects.empty())
 						m_gfx = out.m_objects.back();
 				}

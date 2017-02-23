@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
-#ifndef PR_RDR_MODELS_MODEL_BUFFER_H
-#define PR_RDR_MODELS_MODEL_BUFFER_H
 
 #include "pr/renderer11/forward.h"
 
@@ -50,7 +48,7 @@ namespace pr
 			bool MapVerts  (pr::rdr::Lock& lock, D3D11_MAP map_type = D3D11_MAP_WRITE, uint flags = 0, Range vrange = RangeZero);
 			bool MapIndices(pr::rdr::Lock& lock, D3D11_MAP map_type = D3D11_MAP_WRITE, uint flags = 0, Range irange = RangeZero);
 
-			// Refcounting cleanup function
+			// Ref-counting clean up function
 			static void RefCountZero(pr::RefCount<ModelBuffer>* doomed);
 		private:
 			ModelBuffer(const ModelBuffer&);
@@ -58,5 +56,3 @@ namespace pr
 		};
 	}
 }
-
-#endif

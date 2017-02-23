@@ -196,6 +196,13 @@ namespace pr.maths
 
 			return new Quadratic(x.x, x.y, x.z);
 		}
+		public static Quadratic FromPoints(double x0, double y0, double x1, double y1, double x2, double y2)
+		{
+			return FromPoints(
+				new v2((float)x0, (float)y0),
+				new v2((float)x1, (float)y1),
+				new v2((float)x2, (float)y2));
+		}
 	}
 
 	/// <summary>'F(x) = Ax³ + Bx² + Cx + D'</summary>

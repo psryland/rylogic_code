@@ -22,6 +22,7 @@ namespace pr
 			,m_lookup_gs(mem)
 			,m_lookup_shader(mem)
 			,m_lookup_cbuf(mem)
+			,m_mutex()
 			,m_device(device)
 		{
 			CreateStockShaders();
@@ -100,6 +101,8 @@ namespace pr
 		// Get (or create) an input layout
 		D3DPtr<ID3D11InputLayout> ShaderManager::GetIP(RdrId id, VShaderDesc const* desc)
 		{
+			std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
 			// Note: we need an input layout per vertex shader because the CreateInputLayout
 			// validates the input layout for the vertex shader and can make changes if there
 			// is a difference.
@@ -117,6 +120,8 @@ namespace pr
 		// Get (or create) a vertex shader.
 		D3DPtr<ID3D11VertexShader> ShaderManager::GetVS(RdrId id, VShaderDesc const* desc)
 		{
+			std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
 			return Get(id, m_lookup_vs, [=]
 			{
 				if (desc == nullptr)
@@ -135,6 +140,8 @@ namespace pr
 		// Get (or create) a pixel shader.
 		D3DPtr<ID3D11PixelShader> ShaderManager::GetPS(RdrId id, PShaderDesc const* desc)
 		{
+			std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
 			return Get(id, m_lookup_ps, [=]
 			{
 				if (desc == nullptr)
@@ -150,6 +157,8 @@ namespace pr
 		// Get (or create) a geometry shader.
 		D3DPtr<ID3D11GeometryShader> ShaderManager::GetGS(RdrId id, GShaderDesc const* desc)
 		{
+			std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
 			return Get(id, m_lookup_gs, [=]
 			{
 				if (desc == nullptr)
@@ -165,9 +174,10 @@ namespace pr
 		// Add a shader instance to our map
 		ShaderPtr ShaderManager::InitShader(ShaderBase* shdr)
 		{
+			// Should already be lock_guarded
 			PR_ASSERT(PR_DBG_RDR, FindShader(shdr->m_id) == 0, "A shader with this Id already exists");
 
-			// Setup a sort id for the shader
+			// Set up a sort id for the shader
 			shdr->m_sort_id = m_lookup_shader.size() % SortKey::MaxShaderId;
 
 			// Add the shader instance to the lookup map
@@ -183,6 +193,7 @@ namespace pr
 		// Delete a shader instance from our map
 		void ShaderManager::DestShader(ShaderBase* shdr)
 		{
+			// Should already be lock_guarded
 			if (shdr == nullptr)
 				return;
 
@@ -195,11 +206,13 @@ namespace pr
 		}
 
 		// Find a shader by id
-		ShaderPtr ShaderManager::FindShader(RdrId id) const
+		ShaderPtr ShaderManager::FindShader(RdrId id)
 		{
 			// AutoId means make a new shader, so it'll never exist already
 			if (id == AutoId)
 				return nullptr;
+
+			std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
 			// See if 'id' already exists, if not, then we'll carry on and create a new shader.
 			auto iter = m_lookup_shader.find(id);

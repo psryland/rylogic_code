@@ -40,7 +40,7 @@ namespace Rylobot
 				return
 					Position     != null ? Position    .Id :
 					PendingOrder != null ? PendingOrder.Id :
-					Trade        != null ? Trade       .Index :
+					Trade        != null ? Trade       .TradeIndex :
 					-1;
 			}
 		}
@@ -85,27 +85,27 @@ namespace Rylobot
 		}
 
 		/// <summary>The stop loss value (absolute, in quote currency)</summary>
-		public QuoteCurrency StopLoss
+		public QuoteCurrency? StopLoss
 		{
 			get
 			{
 				return
-					Position     != null && Position    .StopLoss != null ? Position    .StopLoss.Value :
-					PendingOrder != null && PendingOrder.StopLoss != null ? PendingOrder.StopLoss.Value :
-					Trade        != null && Trade.SL != Trade.EP          ? Trade       .SL :
+					Position     != null ? Position    .StopLoss :
+					PendingOrder != null ? PendingOrder.StopLoss :
+					Trade        != null ? Trade       .SL       :
 					(TradeType == TradeType.Buy ? double.NegativeInfinity : double.PositiveInfinity);
 			}
 		}
 
 		/// <summary>The take profit value (absolute, in quote currency)</summary>
-		public QuoteCurrency TakeProfit
+		public QuoteCurrency? TakeProfit
 		{
 			get
 			{
 				return
-					Position     != null && Position    .TakeProfit != null ? Position    .TakeProfit.Value :
-					PendingOrder != null && PendingOrder.TakeProfit != null ? PendingOrder.TakeProfit.Value :
-					Trade        != null && Trade.TP != Trade.EP            ? Trade       .TP :
+					Position     != null ? Position    .TakeProfit :
+					PendingOrder != null ? PendingOrder.TakeProfit :
+					Trade        != null ? Trade       .TP         :
 					(TradeType == TradeType.Buy ? double.PositiveInfinity : double.NegativeInfinity);
 			}
 		}
@@ -143,7 +143,7 @@ namespace Rylobot
 		/// 0 means no stop loss</summary>
 		public QuoteCurrency StopLossRel
 		{
-			get { return TradeType.Sign() * (EntryPrice - StopLoss); }
+			get { return StopLoss != null ? TradeType.Sign() * (EntryPrice - StopLoss.Value) : 0; }
 		}
 
 		/// <summary>
@@ -153,7 +153,7 @@ namespace Rylobot
 		/// 0 means no take profit</summary>
 		public QuoteCurrency TakeProfitRel
 		{
-			get { return TradeType.Sign() * (TakeProfit - EntryPrice); }
+			get { return TakeProfit != null ? TradeType.Sign() * (TakeProfit.Value - EntryPrice) : 0; }
 		}
 
 		/// <summary>Return the value (in quote currency) of this order when the price is at 'price'</summary>
@@ -162,12 +162,12 @@ namespace Rylobot
 			var sign = TradeType.Sign();
 
 			// If 'price' is beyond the stop loss, clamp at the stop loss value
-			if (consider_sl && StopLoss != null && Maths.Sign((double)(StopLoss - price)) == sign)
-				price = StopLoss;
+			if (consider_sl && StopLoss != null && Maths.Sign((double)(StopLoss.Value - price)) == sign)
+				price = StopLoss.Value;
 
 			// If 'price' is beyond the take profit, clamp at the take profit value
-			if (consider_tp && TakeProfit != null && Maths.Sign((double)(price - TakeProfit)) == sign)
-				price = TakeProfit;
+			if (consider_tp && TakeProfit != null && Maths.Sign((double)(price - TakeProfit.Value)) == sign)
+				price = TakeProfit.Value;
 
 			// Return the position value in quote currency
 			var dprice = price - EntryPrice;

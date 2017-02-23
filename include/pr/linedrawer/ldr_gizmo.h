@@ -102,6 +102,7 @@ namespace pr
 			pr::Renderer*    m_rdr;          // The renderer, used to create the gizmo graphics
 			EMode            m_mode;         // The mode the gizmo is in
 			Gfx              m_gfx;          // The graphics object for the gizmo
+			float            m_scale;        // Scale factor for the gizmo
 			pr::m4x4         m_offset;       // The world-space offset transform between when manipulation began and now
 			pr::v2           m_ref_pt;       // The normalised screen space location of where manipulation began
 			pr::Colour32     m_col_hover;    // The colour the component axis has doing hover

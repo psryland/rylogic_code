@@ -8,13 +8,12 @@
 #include <array>
 #include <set>
 #include <unordered_map>
+#include <mutex>
 #include "pr/linedrawer/ldr_object.h"
 #include "pr/common/assert.h"
 #include "pr/common/hash.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/convex_hull.h"
-#include "pr/gui/progress_ui.h"
-#include "pr/win32/windows_com.h"
 #include "pr/renderer11/renderer.h"
 #include "pr/storage/csv.h"
 #include "pr/str/extract.h"
@@ -43,50 +42,56 @@ namespace pr
 
 		struct CacheData
 		{
-			VCont* m_point;
-			NCont* m_norms;
-			ICont* m_index;
-			CCont* m_color;
-			TCont* m_texts;
-			GCont* m_nugts;
-			
+			VCont& m_point;
+			NCont& m_norms;
+			ICont& m_index;
+			CCont& m_color;
+			TCont& m_texts;
+			GCont& m_nugts;
+
 			CacheData()
-			{
-				assert(pr::maths::is_aligned(this) && "Not 16 byte aligned");
-				m_point = new (_aligned_malloc(sizeof(VCont), 16)) VCont;
-				m_norms = new (_aligned_malloc(sizeof(NCont), 16)) NCont;
-				m_index = new (_aligned_malloc(sizeof(ICont), 16)) ICont;
-				m_color = new (_aligned_malloc(sizeof(CCont), 16)) CCont;
-				m_texts = new (_aligned_malloc(sizeof(TCont), 16)) TCont;
-				m_nugts = new (_aligned_malloc(sizeof(GCont), 16)) GCont;
-			}
+				:m_point(*new (_aligned_malloc(sizeof(VCont), 16)) VCont)
+				,m_norms(*new (_aligned_malloc(sizeof(NCont), 16)) NCont)
+				,m_index(*new (_aligned_malloc(sizeof(ICont), 16)) ICont)
+				,m_color(*new (_aligned_malloc(sizeof(CCont), 16)) CCont)
+				,m_texts(*new (_aligned_malloc(sizeof(TCont), 16)) TCont)
+				,m_nugts(*new (_aligned_malloc(sizeof(GCont), 16)) GCont)
+			{}
 			~CacheData()
 			{
-				m_point->~VCont(); _aligned_free(m_point);
-				m_norms->~NCont(); _aligned_free(m_norms);
-				m_index->~ICont(); _aligned_free(m_index);
-				m_color->~CCont(); _aligned_free(m_color);
-				m_texts->~TCont(); _aligned_free(m_texts);
-				m_nugts->~GCont(); _aligned_free(m_nugts);
+				m_nugts.~GCont(); _aligned_free(&m_nugts);
+				m_texts.~TCont(); _aligned_free(&m_texts);
+				m_color.~CCont(); _aligned_free(&m_color);
+				m_index.~ICont(); _aligned_free(&m_index);
+				m_norms.~NCont(); _aligned_free(&m_norms);
+				m_point.~VCont(); _aligned_free(&m_point);
 			}
-			void release()
+			CacheData(CacheData const& rhs) = delete;
+			CacheData& operator =(CacheData const& rhs) = delete;
+
+			// Empty cache buffers
+			void reset()
 			{
-				m_point->clear();
-				m_norms->clear();
-				m_index->clear();
-				m_color->clear();
-				m_texts->clear();
-				m_nugts->clear();
+				m_point.resize(0);
+				m_norms.resize(0);
+				m_index.resize(0);
+				m_color.resize(0);
+				m_texts.resize(0);
+				m_nugts.resize(0);
 			}
 		};
-		thread_local static CacheData g_cache;
-
-		inline VCont& Point() { g_cache.m_point->resize(0); return *g_cache.m_point; }
-		inline NCont& Norms() { g_cache.m_norms->resize(0); return *g_cache.m_norms; }
-		inline ICont& Index() { g_cache.m_index->resize(0); return *g_cache.m_index; }
-		inline CCont& Color() { g_cache.m_color->resize(0); return *g_cache.m_color; }
-		inline TCont& Texts() { g_cache.m_texts->resize(0); return *g_cache.m_texts; }
-		inline GCont& Nugts() { g_cache.m_nugts->resize(0); return *g_cache.m_nugts; }
+		
+		// Create a parsing cache instance
+		std::unique_ptr<CacheData> CreateCache()
+		{
+			return std::make_unique<CacheData>();
+		}
+		CacheData* ThisThreadCache()
+		{
+			thread_local static CacheData* s_cache;
+			if (s_cache == nullptr) s_cache = new CacheData();
+			return s_cache;
+		}
 
 		// String hash wrapper
 		inline size_t Hash(char const* str)
@@ -99,31 +104,49 @@ namespace pr
 		// Helper object for passing parameters between parsing functions
 		struct ParseParams
 		{
-			pr::Renderer&  m_rdr;
-			Reader&        m_reader;
-			ObjectCont&    m_objects;
-			ModelCont&     m_models;
-			pr::Guid       m_context_id;
-			HashValue      m_keyword;
-			LdrObject*     m_parent;
+			using system_clock = std::chrono::system_clock;
+			using time_point   = std::chrono::time_point<system_clock>;
 
-			ParseParams(pr::Renderer& rdr, Reader& reader, ObjectCont& objects, ModelCont& models, pr::Guid const& context_id, HashValue keyword, LdrObject* parent)
+			pr::Renderer&   m_rdr;
+			Reader&         m_reader;
+			ParseResult&    m_result;
+			ObjectCont&     m_objects;
+			ModelCont&      m_models;
+			CacheData&      m_cache;
+			pr::Guid        m_context_id;
+			HashValue       m_keyword;
+			LdrObject*      m_parent;
+			ParseProgressCB m_progress_cb;
+			time_point      m_last_progress_update;
+			bool&           m_cancel;
+
+			ParseParams(pr::Renderer& rdr, Reader& reader, ParseResult& result, CacheData& cache, pr::Guid const& context_id, ParseProgressCB progress_cb, bool& cancel)
 				:m_rdr(rdr)
 				,m_reader(reader)
-				,m_objects(objects)
-				,m_models(models)
+				,m_result(result)
+				,m_objects(result.m_objects)
+				,m_models(result.m_models)
+				,m_cache(cache)
 				,m_context_id(context_id)
-				,m_keyword(keyword)
-				,m_parent(parent)
+				,m_keyword()
+				,m_parent()
+				,m_progress_cb(progress_cb)
+				,m_last_progress_update(system_clock::now())
+				,m_cancel(cancel)
 			{}
 			ParseParams(ParseParams& p, ObjectCont& objects, HashValue keyword, LdrObject* parent)
 				:m_rdr(p.m_rdr)
 				,m_reader(p.m_reader)
+				,m_result(p.m_result)
 				,m_objects(objects)
 				,m_models(p.m_models)
+				,m_cache(p.m_cache)
 				,m_context_id(p.m_context_id)
 				,m_keyword(keyword)
 				,m_parent(parent)
+				,m_progress_cb(p.m_progress_cb)
+				,m_last_progress_update(p.m_last_progress_update)
+				,m_cancel(p.m_cancel)
 			{}
 			ParseParams(ParseParams const&) = delete;
 			ParseParams& operator = (ParseParams const&) = delete;
@@ -140,10 +163,34 @@ namespace pr
 			{
 				m_reader.ReportError(result, msg);
 			}
+
+			// Give a progress update
+			void ReportProgress()
+			{
+				using namespace std::chrono;
+
+				// Callback provided?
+				if (m_progress_cb == nullptr)
+					return;
+
+				// Limit callbacks to once every X seconds.
+				if (system_clock::now() - m_last_progress_update < milliseconds(200))
+					return;
+
+				// Call the callback with the freshly minted object.
+				// If the callback returns false, abort parsing.
+				m_cancel = !m_progress_cb(m_context_id, m_result, m_reader.Loc(), false);
+				m_last_progress_update = system_clock::now();
+			}
 		};
+
+		// Template prototype for ObjectCreators
+		template <ELdrObject::Enum_ ObjType> struct ObjectCreator;
 
 		// Forward declare the recursive object parsing function
 		bool ParseLdrObject(ParseParams& p);
+
+		#pragma region Parse Common Elements
 
 		// Read the name, colour, and instance flag for an object
 		ObjectAttributes ParseAttributes(pr::script::Reader& reader, ELdrObject model_type)
@@ -340,9 +387,8 @@ namespace pr
 			reader.Section(step.m_code, false);
 		}
 
-		// Parse keywords that can appear in any section
-		// Returns true if the keyword was recognised
-		bool ParseProperties(ParseParams& p, EKeyword kw, LdrObjectPtr obj)
+		// Parse keywords that can appear in any section. Returns true if the keyword was recognised.
+		bool ParseProperties(ParseParams& p, EKeyword kw, LdrObject* obj)
 		{
 			switch (kw)
 			{
@@ -391,12 +437,11 @@ namespace pr
 			}
 		}
 
-		// Parse a texture description
-		// Returns a pointer to the Texture created in the renderer
+		// Parse a texture description. Returns a pointer to the Texture created in the renderer.
 		bool ParseTexture(ParseParams& p, Texture2DPtr& tex)
 		{
 			std::string tex_filepath;
-			pr::m4x4 t2s = pr::m4x4Identity;
+			auto t2s = pr::m4x4Identity;
 			SamplerDesc sam;
 
 			p.m_reader.SectionStart();
@@ -404,7 +449,7 @@ namespace pr
 			{
 				if (p.m_reader.IsKeyword())
 				{
-					EKeyword kw = p.m_reader.NextKeywordH<EKeyword>();
+					auto kw = p.m_reader.NextKeywordH<EKeyword>();
 					switch (kw)
 					{
 					default:
@@ -470,41 +515,40 @@ namespace pr
 			{
 				(void)vid;
 				//todo
-				//// Load the video texture
-				//try
-				//{
-				//	vid = p.m_rdr.m_tex_mgr.CreateVideoTexture(AutoId, filepath.c_str());
-				//}
-				//catch (std::exception const& e)
-				//{
-				//	p.ReportError(EResult::ValueNotFound, pr::FmtS("failed to create video %s\nReason: %s" ,filepath.c_str() ,e.what()));
-				//}
+				//' // Load the video texture
+				//' try
+				//' {
+				//' 	vid = p.m_rdr.m_tex_mgr.CreateVideoTexture(AutoId, filepath.c_str());
+				//' }
+				//' catch (std::exception const& e)
+				//' {
+				//' 	p.ReportError(EResult::ValueNotFound, pr::FmtS("failed to create video %s\nReason: %s" ,filepath.c_str() ,e.what()));
+				//' }
 			}
 			p.m_reader.SectionEnd();
 			return true;
 		}
 
-		// Template prototype for ObjectCreators
-		template <ELdrObject::Enum_ ObjType> struct ObjectCreator;
+		#pragma endregion
 
 		#pragma region ObjectCreator Base Classes
 
 		// Base class for all object creators
 		struct IObjectCreator
 		{
+			ParseParams& p;
 			virtual ~IObjectCreator() {}
-			virtual bool ParseKeyword(ParseParams&, EKeyword)
+			IObjectCreator(ParseParams& p_) :p(p_) {}
+			virtual bool ParseKeyword(EKeyword)
 			{
 				return false;
 			}
-			virtual void Parse(ParseParams& p)
+			virtual void Parse()
 			{
 				p.ReportError(EResult::UnknownToken);
 			}
-			virtual void CreateModel(ParseParams& p, LdrObjectPtr obj)
-			{
-				(void)p, obj;
-			}
+			virtual void CreateModel(LdrObject*)
+			{}
 		};
 
 		// Base class for objects with a texture
@@ -513,21 +557,22 @@ namespace pr
 			Texture2DPtr m_texture;
 			NuggetProps m_local_mat;
 
-			IObjectCreatorTexture()
-				:m_texture(),
-				m_local_mat()
+			IObjectCreatorTexture(ParseParams& p)
+				:IObjectCreator(p)
+				,m_texture()
+				,m_local_mat()
 			{}
-			bool ParseKeyword(ParseParams& p, EKeyword kw) override
+			bool ParseKeyword(EKeyword kw) override
 			{
 				switch (kw) {
-				default: return IObjectCreator::ParseKeyword(p, kw);
+				default: return IObjectCreator::ParseKeyword(kw);
 				case EKeyword::Texture:  ParseTexture(p, m_texture); return true;
 				case EKeyword::Video:    ParseVideo(p, m_texture); return true;
 				}
 			}
 			virtual NuggetProps* Material()
 			{
-				// This function is used to pass texture/shader data to the model generated
+				// This function is used to pass texture/shader data to the model generated.
 				// Topo and Geom are not used, each model type knows what topo and geom it's using.
 				m_local_mat.m_tex_diffuse = m_texture;
 				//if (m_texture->m_video)
@@ -541,15 +586,17 @@ namespace pr
 		{
 			Light m_light;
 
-			IObjectCreatorLight()
-				:m_light()
+			IObjectCreatorLight(ParseParams& p)
+				:IObjectCreator(p)
+				,m_light()
 			{
 				m_light.m_on = true;
 			}
-			bool ParseKeyword(ParseParams& p, EKeyword kw) override
+			bool ParseKeyword(EKeyword kw) override
 			{
-				switch (kw) {
-				default: return IObjectCreator::ParseKeyword(p, kw);
+				switch (kw)
+				{
+				default: return IObjectCreator::ParseKeyword(kw);
 				case EKeyword::Range:
 					{
 						p.m_reader.SectionStart();
@@ -573,7 +620,7 @@ namespace pr
 					}
 				}
 			}
-			void CreateModel(ParseParams&, LdrObjectPtr obj) override
+			void CreateModel(LdrObject* obj) override
 			{
 				// Assign the light data as user data
 				obj->m_user_data.get<Light>() = m_light;
@@ -585,51 +632,72 @@ namespace pr
 		{
 			VCont& m_point;
 			ICont& m_index;
-			CCont& m_colour;
+			CCont& m_color;
 			float  m_line_width;
 			bool   m_per_line_colour;
 			bool   m_smooth;
 			bool   m_linestrip;
 			bool   m_linemesh;
 
-			IObjectCreatorLine(bool linestrip, bool linemesh)
-				:m_point(Point())
-				,m_index(Index())
-				,m_colour(Color())
+			IObjectCreatorLine(ParseParams& p, bool linestrip, bool linemesh)
+				:IObjectCreator(p)
+				,m_point(p.m_cache.m_point)
+				,m_index(p.m_cache.m_index)
+				,m_color(p.m_cache.m_color)
 				,m_line_width()
 				,m_per_line_colour()
 				,m_smooth()
 				,m_linestrip(linestrip)
 				,m_linemesh(linemesh)
 			{}
-			bool ParseKeyword(ParseParams& pp, EKeyword kw) override
+			bool ParseKeyword(EKeyword kw) override
 			{
 				switch (kw)
 				{
-				default: return IObjectCreator::ParseKeyword(pp, kw);
-				case EKeyword::Coloured: m_per_line_colour = true; return true;
-				case EKeyword::Smooth: m_smooth = true; return true;
-				case EKeyword::Width: pp.m_reader.RealS(m_line_width); return true;
+				default: return IObjectCreator::ParseKeyword(kw);
+				case EKeyword::Coloured:
+					#pragma region
+					{
+						m_per_line_colour = true;
+						return true;
+					}
+					#pragma endregion
+				case EKeyword::Smooth:
+					#pragma region
+					{
+						m_smooth = true;
+						return true;
+					}
+					#pragma endregion
+				case EKeyword::Width:
+					#pragma region
+					{
+						p.m_reader.RealS(m_line_width);
+						return true;
+					}
+					#pragma endregion
 				case EKeyword::Param:
+					#pragma region
 					{
 						float t[2];
-						pp.m_reader.RealS(t, 2);
+						p.m_reader.RealS(t, 2);
 						if (m_point.size() < 2)
 						{
-							pp.ReportError(EResult::Failed, "No preceding line to apply parametric values to");
+							p.ReportError(EResult::Failed, "No preceding line to apply parametric values to");
 							return true;
 						}
 						auto& p0 = m_point[m_point.size() - 2];
 						auto& p1 = m_point[m_point.size() - 1];
-						auto p = p0;
 						auto dir = p1 - p0;
-						p0 = p + t[0] * dir;
-						p1 = p + t[1] * dir;
+						auto pt = p0;
+						p0 = pt + t[0] * dir;
+						p1 = pt + t[1] * dir;
 						return true;
 					}
+					#pragma endregion
 				}
 			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			void CreateModel(LdrObject* obj) override
 			{
 				using namespace pr::rdr;
 
@@ -655,19 +723,19 @@ namespace pr
 				if (m_linemesh)
 				{
 					auto cdata = MeshCreationData()
-						.verts(m_point.data(), int(m_point.size()))
+						.verts  (m_point.data(), int(m_point.size()))
 						.indices(m_index.data(), int(m_index.size()))
-						.nuggets({NuggetProps(m_linestrip ? EPrim::LineStrip : EPrim::LineList, EGeom::Vert|EGeom::Colr)})
-						.colours(m_colour.data(), int(m_colour.size()));
+						.colours(m_color.data(), int(m_color.size()))
+						.nuggets({NuggetProps(m_linestrip ? EPrim::LineStrip : EPrim::LineList, EGeom::Vert|EGeom::Colr)});
 					obj->m_model = ModelGenerator<>::Mesh(p.m_rdr, cdata);
 				}
 				else if (m_linestrip)
 				{
-					obj->m_model = ModelGenerator<>::LineStrip(p.m_rdr, int(m_point.size() - 1), m_point.data(), int(m_colour.size()), m_colour.data());
+					obj->m_model = ModelGenerator<>::LineStrip(p.m_rdr, int(m_point.size() - 1), m_point.data(), int(m_color.size()), m_color.data());
 				}
 				else
 				{
-					obj->m_model = ModelGenerator<>::Lines(p.m_rdr, int(m_point.size() / 2), m_point.data(), int(m_colour.size()), m_colour.data());
+					obj->m_model = ModelGenerator<>::Lines(p.m_rdr, int(m_point.size() / 2), m_point.data(), int(m_color.size()), m_color.data());
 				}
 				obj->m_model->m_name = obj->TypeAndName();
 
@@ -690,17 +758,18 @@ namespace pr
 			int    m_facets;
 			bool   m_solid;
 
-			IObjectCreatorShape2d()
-				:m_axis_id(AxisId::PosZ)
+			IObjectCreatorShape2d(ParseParams& p)
+				:IObjectCreatorTexture(p)
+				,m_axis_id(AxisId::PosZ)
 				,m_dim()
 				,m_facets(40)
 				,m_solid(false)
 			{}
-			bool ParseKeyword(ParseParams& p, EKeyword kw) override
+			bool ParseKeyword(EKeyword kw) override
 			{
 				switch (kw)
 				{
-				default: return IObjectCreatorTexture::ParseKeyword(p, kw);
+				default: return IObjectCreatorTexture::ParseKeyword(kw);
 				case EKeyword::Solid:  m_solid = true; return true;
 				case EKeyword::Facets: p.m_reader.IntS(m_facets, 10); return true;
 				}
@@ -711,22 +780,29 @@ namespace pr
 		struct IObjectCreatorPlane :IObjectCreatorTexture
 		{
 			VCont& m_point;
-			CCont& m_colour;
+			CCont& m_color;
 			bool   m_per_vert_colour;
 
-			IObjectCreatorPlane()
-				:m_point(Point()),
-				m_colour(Color()),
-				m_per_vert_colour()
+			IObjectCreatorPlane(ParseParams& p)
+				:IObjectCreatorTexture(p)
+				,m_point(p.m_cache.m_point)
+				,m_color(p.m_cache.m_color)
+				,m_per_vert_colour()
 			{}
-			bool ParseKeyword(ParseParams& p, EKeyword kw) override
+			bool ParseKeyword(EKeyword kw) override
 			{
 				switch (kw) {
-				default: return IObjectCreatorTexture::ParseKeyword(p, kw);
-				case EKeyword::Coloured: m_per_vert_colour = true; return true;
+				default: return IObjectCreatorTexture::ParseKeyword(kw);
+				case EKeyword::Coloured:
+					#pragma region
+					{
+						m_per_vert_colour = true;
+						return true;
+					}
+					#pragma endregion
 				}
 			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			void CreateModel(LdrObject* obj) override
 			{
 				using namespace pr::rdr;
 
@@ -738,7 +814,7 @@ namespace pr
 				}
 
 				// Create the model
-				obj->m_model = ModelGenerator<>::Quad(p.m_rdr, int(m_point.size() / 4), m_point.data(), int(m_colour.size()), m_colour.data(), pr::m4x4Identity, Material());
+				obj->m_model = ModelGenerator<>::Quad(p.m_rdr, int(m_point.size() / 4), m_point.data(), int(m_color.size()), m_color.data(), pr::m4x4Identity, Material());
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
@@ -749,11 +825,12 @@ namespace pr
 			pr::v4 m_pt[8];
 			pr::m4x4 m_b2w;
 
-			IObjectCreatorCuboid()
-				:m_pt()
+			IObjectCreatorCuboid(ParseParams& p)
+				:IObjectCreatorTexture(p)
+				,m_pt()
 				,m_b2w(m4x4Identity)
 			{}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			void CreateModel(LdrObject* obj) override
 			{
 				obj->m_model = ModelGenerator<>::Boxes(p.m_rdr, 1, m_pt, m_b2w, 0, 0, Material());
 				obj->m_model->m_name = obj->TypeAndName();
@@ -764,27 +841,30 @@ namespace pr
 		struct IObjectCreatorCone :IObjectCreatorTexture
 		{
 			AxisId m_axis_id;
-			v4 m_dim; // x,y = radius, z = height
-			v2 m_scale;
-			int m_layers, m_wedges;
+			v4     m_dim; // x,y = radius, z = height
+			v2     m_scale;
+			int    m_layers;
+			int    m_wedges;
 
-			IObjectCreatorCone()
-				:m_axis_id(AxisId::PosZ)
+			IObjectCreatorCone(ParseParams& p)
+				:IObjectCreatorTexture(p)
+				,m_axis_id(AxisId::PosZ)
 				,m_dim()
 				,m_scale(v2One)
 				,m_layers(1)
 				,m_wedges(20)
 			{}
-			bool ParseKeyword(ParseParams& p, EKeyword kw) override
+			bool ParseKeyword(EKeyword kw) override
 			{
-				switch (kw) {
-				default: return IObjectCreatorTexture::ParseKeyword(p, kw);
+				switch (kw)
+				{
+				default: return IObjectCreatorTexture::ParseKeyword(kw);
 				case EKeyword::Layers:  p.m_reader.Int(m_layers, 10); return true;
 				case EKeyword::Wedges:  p.m_reader.Int(m_wedges, 10); return true;
 				case EKeyword::Scale:   p.m_reader.Vector2(m_scale); return true;
 				}
 			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			void CreateModel(LdrObject* obj) override
 			{
 				m4x4 o2w, *po2w = nullptr;
 				if (m_axis_id != AxisId::PosZ)
@@ -803,75 +883,90 @@ namespace pr
 		struct IObjectCreatorMesh :IObjectCreatorTexture
 		{
 			VCont& m_verts;
+			ICont& m_indices;
 			NCont& m_normals;
 			CCont& m_colours;
 			TCont& m_texs;
-			ICont& m_indices;
 			GCont& m_nuggets;
 			float m_gen_normals;
 
-			IObjectCreatorMesh()
-				:m_verts(Point())
-				,m_normals(Norms())
-				,m_colours(Color())
-				,m_texs(Texts())
-				,m_indices(Index())
-				,m_nuggets(Nugts())
+			IObjectCreatorMesh(ParseParams& p)
+				:IObjectCreatorTexture(p)
+				,m_verts  (p.m_cache.m_point)
+				,m_indices(p.m_cache.m_index)
+				,m_normals(p.m_cache.m_norms)
+				,m_colours(p.m_cache.m_color)
+				,m_texs   (p.m_cache.m_texts)
+				,m_nuggets(p.m_cache.m_nugts)
 				,m_gen_normals(-1.0f)
 			{}
-			bool ParseKeyword(ParseParams& p, EKeyword kw) override
+			bool ParseKeyword(EKeyword kw) override
 			{
 				switch (kw)
 				{
-				default:
-					{
-						return IObjectCreatorTexture::ParseKeyword(p, kw);
-					}
+				default: return IObjectCreatorTexture::ParseKeyword(kw);
 				case EKeyword::Verts:
+					#pragma region
 					{
+						int r = 1;
 						p.m_reader.SectionStart();
-						for (pr::v4 v; !p.m_reader.IsSectionEnd();)
+						for (pr::v4 v; !p.m_reader.IsSectionEnd(); ++r)
 						{
 							p.m_reader.Vector3(v, 1.0f);
 							m_verts.push_back(v);
+							if (r % 500 == 0) p.ReportProgress();
 						}
 						p.m_reader.SectionEnd();
 						return true;
 					}
+					#pragma endregion
 				case EKeyword::Normals:
+					#pragma region
 					{
+						int r = 1;
 						p.m_reader.SectionStart();
-						for (pr::v4 n; !p.m_reader.IsSectionEnd();)
+						for (pr::v4 n; !p.m_reader.IsSectionEnd(); ++r)
 						{
 							p.m_reader.Vector3(n, 0.0f);
 							m_normals.push_back(n);
+							if (r % 500 == 0) p.ReportProgress();
 						}
 						p.m_reader.SectionEnd();
 						return true;
 					}
+					#pragma endregion
 				case EKeyword::Colours:
+					#pragma region
 					{
+						int r = 1;
 						p.m_reader.SectionStart();
-						for (pr::Colour32 c; !p.m_reader.IsSectionEnd();)
+						for (pr::Colour32 c; !p.m_reader.IsSectionEnd(); ++r)
 						{
 							p.m_reader.Int(c.argb, 16);
 							m_colours.push_back(c);
+							if (r % 500 == 0) p.ReportProgress();
 						}
 						p.m_reader.SectionEnd();
 						return true;
 					}
+					#pragma endregion
 				case EKeyword::TexCoords:
+					#pragma region
 					{
+						int r = 1;
 						p.m_reader.SectionStart();
-						for (pr::v2 t; !p.m_reader.IsSectionEnd();)
+						for (pr::v2 t; !p.m_reader.IsSectionEnd(); ++r)
 						{
 							p.m_reader.Vector2(t);
 							m_texs.push_back(t);
+							if (r % 500 == 0) p.ReportProgress();
 						}
 						p.m_reader.SectionEnd();
 						return true;
 					}
+					#pragma endregion
 				case EKeyword::Lines:
+					#pragma region
 					{
 						NuggetProps nug = *Material();
 						nug.m_topo = EPrim::LineList;
@@ -881,8 +976,9 @@ namespace pr
 						nug.m_irange = pr::rdr::Range(m_indices.size(), m_indices.size());
 						nug.m_has_alpha = false;
 
+						int r = 1;
 						p.m_reader.SectionStart();
-						for (pr::uint16 idx[2]; !p.m_reader.IsSectionEnd();)
+						for (pr::uint16 idx[2]; !p.m_reader.IsSectionEnd(); ++r)
 						{
 							p.m_reader.Int(idx, 2, 10);
 							m_indices.push_back(idx[0]);
@@ -891,13 +987,17 @@ namespace pr
 							nug.m_vrange.encompass(idx[0]);
 							nug.m_vrange.encompass(idx[1]);
 							nug.m_irange.m_end += 2;
+
+							if (r % 500 == 0) p.ReportProgress();
 						}
 						p.m_reader.SectionEnd();
 
 						m_nuggets.push_back(nug);
 						return true;
 					}
+					#pragma endregion
 				case EKeyword::Faces:
+					#pragma region
 					{
 						NuggetProps nug = *Material();
 						nug.m_topo = EPrim::TriList;
@@ -909,8 +1009,9 @@ namespace pr
 						nug.m_irange = pr::rdr::Range(m_indices.size(), m_indices.size());
 						nug.m_has_alpha = false;
 
+						int r = 1;
 						p.m_reader.SectionStart();
-						for (pr::uint16 idx[3]; !p.m_reader.IsSectionEnd();)
+						for (pr::uint16 idx[3]; !p.m_reader.IsSectionEnd(); ++r)
 						{
 							p.m_reader.Int(idx, 3, 10);
 							m_indices.push_back(idx[0]);
@@ -921,13 +1022,17 @@ namespace pr
 							nug.m_vrange.encompass(idx[1]);
 							nug.m_vrange.encompass(idx[2]);
 							nug.m_irange.m_end += 3;
+
+							if (r % 500 == 0) p.ReportProgress();
 						}
 						p.m_reader.SectionEnd();
 
 						m_nuggets.push_back(nug);
 						return true;
 					}
+					#pragma endregion
 				case EKeyword::Tetra:
+					#pragma region
 					{
 						NuggetProps nug = *Material();
 						nug.m_topo = EPrim::TriList;
@@ -939,8 +1044,9 @@ namespace pr
 						nug.m_irange = pr::rdr::Range(m_indices.size(), m_indices.size());
 						nug.m_has_alpha = false;
 
+						int r = 1;
 						p.m_reader.SectionStart();
-						for (pr::uint16 idx[4]; !p.m_reader.IsSectionEnd();)
+						for (pr::uint16 idx[4]; !p.m_reader.IsSectionEnd(); ++r)
 						{
 							p.m_reader.Int(idx, 4, 10);
 							m_indices.push_back(idx[0]);
@@ -961,21 +1067,26 @@ namespace pr
 							nug.m_vrange.encompass(idx[2]);
 							nug.m_vrange.encompass(idx[3]);
 							nug.m_irange.m_end += 12;
+
+							if (r % 500 == 0) p.ReportProgress();
 						}
 						p.m_reader.SectionEnd();
 
 						m_nuggets.push_back(nug);
 						return true;
 					}
+					#pragma endregion
 				case EKeyword::GenerateNormals:
+					#pragma region
 					{
 						p.m_reader.RealS(m_gen_normals);
 						m_gen_normals = pr::DegreesToRadians(m_gen_normals);
 						return true;
 					}
+					#pragma endregion
 				}
 			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			void CreateModel(LdrObject* obj) override
 			{
 				// Validate
 				if (m_indices.empty() || m_verts.empty())
@@ -1079,8 +1190,10 @@ namespace pr
 		// ELdrObject::Line
 		template <> struct ObjectCreator<ELdrObject::Line> :IObjectCreatorLine
 		{
-			ObjectCreator() :IObjectCreatorLine(false, false) {}
-			void Parse(ParseParams& p) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorLine(p, false, false)
+			{}
+			void Parse() override
 			{
 				pr::v4 p0, p1;
 				p.m_reader.Vector3(p0, 1.0f);
@@ -1091,8 +1204,8 @@ namespace pr
 				{
 					pr::Colour32 col;
 					p.m_reader.Int(col.argb, 16);
-					m_colour.push_back(col);
-					m_colour.push_back(col);
+					m_color.push_back(col);
+					m_color.push_back(col);
 				}
 			}
 		};
@@ -1100,8 +1213,10 @@ namespace pr
 		// ELdrObject::LineD
 		template <> struct ObjectCreator<ELdrObject::LineD> :IObjectCreatorLine
 		{
-			ObjectCreator() :IObjectCreatorLine(false, false) {}
-			void Parse(ParseParams& p) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorLine(p, false, false)
+			{}
+			void Parse() override
 			{
 				pr::v4 p0, p1;
 				p.m_reader.Vector3(p0, 1.0f);
@@ -1112,8 +1227,8 @@ namespace pr
 				{
 					pr::Colour32 col;
 					p.m_reader.Int(col.argb, 16);
-					m_colour.push_back(col);
-					m_colour.push_back(col);
+					m_color.push_back(col);
+					m_color.push_back(col);
 				}
 			}
 		};
@@ -1121,8 +1236,10 @@ namespace pr
 		// ELdrObject::LineStrip
 		template <> struct ObjectCreator<ELdrObject::LineStrip> :IObjectCreatorLine
 		{
-			ObjectCreator() :IObjectCreatorLine(true, false) {}
-			void Parse(ParseParams& p) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorLine(p, true, false)
+			{}
+			void Parse() override
 			{
 				pr::v4 pt;
 				p.m_reader.Vector3(pt, 1.0f);
@@ -1132,7 +1249,7 @@ namespace pr
 				{
 					pr::Colour32 col;
 					p.m_reader.Int(col.argb, 16);
-					m_colour.push_back(col);
+					m_color.push_back(col);
 				}
 			}
 		};
@@ -1140,8 +1257,10 @@ namespace pr
 		// ELdrObject::LineBox
 		template <> struct ObjectCreator<ELdrObject::LineBox> :IObjectCreatorLine
 		{
-			ObjectCreator() :IObjectCreatorLine(false, true) {}
-			void Parse(ParseParams& p) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorLine(p, false, true)
+			{}
+			void Parse() override
 			{
 				pr::v4 dim;
 				p.m_reader.Real(dim.x);
@@ -1166,8 +1285,10 @@ namespace pr
 		// ELdrObject::Grid
 		template <> struct ObjectCreator<ELdrObject::Grid> :IObjectCreatorLine
 		{
-			ObjectCreator() :IObjectCreatorLine(false, false) {}
-			void Parse(ParseParams& p) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorLine(p, false, false)
+			{}
+			void Parse() override
 			{
 				int axis_id;
 				pr::v2 dim, div;
@@ -1192,8 +1313,10 @@ namespace pr
 		// ELdrObject::Spline
 		template <> struct ObjectCreator<ELdrObject::Spline> :IObjectCreatorLine
 		{
-			ObjectCreator() :IObjectCreatorLine(true, false) {}
-			void Parse(ParseParams& p) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorLine(p, true, false)
+			{}
+			void Parse() override
 			{
 				pr::Spline spline;
 				p.m_reader.Vector3(spline.x, 1.0f);
@@ -1211,7 +1334,7 @@ namespace pr
 					pr::Colour32 col;
 					p.m_reader.Int(col.argb, 16);
 					for (size_t i = 0, iend = raster.size(); i != iend; ++i)
-						m_colour.push_back(col);
+						m_color.push_back(col);
 				}
 			}
 		};
@@ -1222,8 +1345,11 @@ namespace pr
 			enum EArrowType { Invalid = -1, Line = 0, Fwd = 1 << 0, Back = 1 << 1, FwdBack = Fwd | Back };
 			EArrowType m_type;
 
-			ObjectCreator() :IObjectCreatorLine(true, false) ,m_type(EArrowType::Invalid) {}
-			void Parse(ParseParams& p) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorLine(p, true, false)
+				,m_type(EArrowType::Invalid)
+			{}
+			void Parse() override
 			{
 				// If no points read yet, expect the arrow type first
 				if (m_type == EArrowType::Invalid)
@@ -1246,11 +1372,11 @@ namespace pr
 					{
 						pr::Colour32 col;
 						p.m_reader.Int(col.argb, 16);
-						m_colour.push_back(col);
+						m_color.push_back(col);
 					}
 				}
 			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			void CreateModel(LdrObject* obj) override
 			{
 				using namespace pr::rdr;
 				
@@ -1272,7 +1398,7 @@ namespace pr
 				pr::geometry::Props props;
 
 				// Colour interpolation iterator
-				auto col = pr::CreateLerpRepeater(m_colour.data(), m_colour.size(), m_point.size(), pr::Colour32White);
+				auto col = pr::CreateLerpRepeater(m_color.data(), m_color.size(), m_point.size(), pr::Colour32White);
 				auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a != 0xff; return c; };
 
 				// Model bounding box
@@ -1366,8 +1492,10 @@ namespace pr
 		// ELdrObject::Matrix3x3
 		template <> struct ObjectCreator<ELdrObject::Matrix3x3> :IObjectCreatorLine
 		{
-			ObjectCreator() :IObjectCreatorLine(false, true) {}
-			void Parse(ParseParams& p) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorLine(p, false, true)
+			{}
+			void Parse() override
 			{
 				pr::m4x4 basis;
 				p.m_reader.Matrix3x3(basis.rot);
@@ -1376,27 +1504,27 @@ namespace pr
 				pr::Colour32 col[] = { pr::Colour32Red, pr::Colour32Red, pr::Colour32Green, pr::Colour32Green, pr::Colour32Blue, pr::Colour32Blue };
 				pr::uint16   idx[] = { 0, 1, 2, 3, 4, 5 };
 
-				m_point .insert(m_point .end(), pts, pts + PR_COUNTOF(pts));
-				m_colour.insert(m_colour.end(), col, col + PR_COUNTOF(col));
-				m_index .insert(m_index .end(), idx, idx + PR_COUNTOF(idx));
+				m_point.insert(m_point.end(), pts, pts + PR_COUNTOF(pts));
+				m_color.insert(m_color.end(), col, col + PR_COUNTOF(col));
+				m_index.insert(m_index.end(), idx, idx + PR_COUNTOF(idx));
 			}
 		};
 
 		// ELdrObject::CoordFrame
 		template <> struct ObjectCreator<ELdrObject::CoordFrame> :IObjectCreatorLine
 		{
-			ObjectCreator()
-				:IObjectCreatorLine(false, true)
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorLine(p, false, true)
 			{
 				pr::v4       pts[] = { pr::v4Origin, pr::v4XAxis.w1(), pr::v4Origin, pr::v4YAxis.w1(), pr::v4Origin, pr::v4ZAxis.w1() };
 				pr::Colour32 col[] = { pr::Colour32Red, pr::Colour32Red, pr::Colour32Green, pr::Colour32Green, pr::Colour32Blue, pr::Colour32Blue };
 				pr::uint16   idx[] = { 0, 1, 2, 3, 4, 5 };
 
-				m_point .insert(m_point .end(), pts, pts + PR_COUNTOF(pts));
-				m_colour.insert(m_colour.end(), col, col + PR_COUNTOF(col));
-				m_index .insert(m_index .end(), idx, idx + PR_COUNTOF(idx));
+				m_point.insert(m_point.end(), pts, pts + PR_COUNTOF(pts));
+				m_color.insert(m_color.end(), col, col + PR_COUNTOF(col));
+				m_index.insert(m_index.end(), idx, idx + PR_COUNTOF(idx));
 			}
-			void Parse(ParseParams& p) override
+			void Parse() override
 			{
 				float scale;
 				p.m_reader.Real(scale);
@@ -1412,7 +1540,10 @@ namespace pr
 		// ELdrObject::Circle
 		template <> struct ObjectCreator<ELdrObject::Circle> :IObjectCreatorShape2d
 		{
-			void Parse(ParseParams& p) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorShape2d(p)
+			{}
+			void Parse() override
 			{
 				p.m_reader.Int(m_axis_id.value, 10);
 				p.m_reader.Real(m_dim.x);
@@ -1427,7 +1558,7 @@ namespace pr
 					m_dim = Abs(m_dim);
 				}
 			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			void CreateModel(LdrObject* obj) override
 			{
 				using namespace pr::rdr;
 
@@ -1447,18 +1578,17 @@ namespace pr
 		// LdrObject::Pie
 		template <> struct ObjectCreator<ELdrObject::Pie> :IObjectCreatorShape2d
 		{
-			pr::v2 m_ang, m_rad;
+			v2 m_ang;
+			v2 m_rad;
 
-			ObjectCreator() :m_ang() ,m_rad() { m_dim = v4One; }
-			bool ParseKeyword(ParseParams& p, EKeyword kw) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorShape2d(p)
+				,m_ang()
+				,m_rad()
 			{
-				switch (kw)
-				{
-				default: return IObjectCreatorShape2d::ParseKeyword(p, kw);
-				case EKeyword::Scale: p.m_reader.Vector2(m_dim.xy); return true;
-				}
+				m_dim = v4One;
 			}
-			void Parse(ParseParams& p) override
+			void Parse() override
 			{
 				p.m_reader.Int(m_axis_id.value, 10);
 				p.m_reader.Vector2(m_ang);
@@ -1468,7 +1598,15 @@ namespace pr
 				m_ang.x = pr::DegreesToRadians(m_ang.x);
 				m_ang.y = pr::DegreesToRadians(m_ang.y);
 			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			bool ParseKeyword(EKeyword kw) override
+			{
+				switch (kw)
+				{
+				default: return IObjectCreatorShape2d::ParseKeyword(kw);
+				case EKeyword::Scale: p.m_reader.Vector2(m_dim.xy); return true;
+				}
+			}
+			void CreateModel(LdrObject* obj) override
 			{
 				using namespace pr::rdr;
 
@@ -1490,17 +1628,11 @@ namespace pr
 		{
 			float m_corner_radius;
 
-			ObjectCreator() :m_corner_radius() {}
-			bool ParseKeyword(ParseParams& p, EKeyword kw) override
-			{
-				switch (kw)
-				{
-				default: return IObjectCreatorShape2d::ParseKeyword(p, kw);
-				case EKeyword::CornerRadius: p.m_reader.RealS(m_corner_radius); return true;
-				case EKeyword::Facets:       p.m_reader.IntS(m_facets, 10); m_facets *= 4; return true;
-				}
-			}
-			void Parse(ParseParams& p) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorShape2d(p)
+				,m_corner_radius()
+			{}
+			void Parse() override
 			{
 				p.m_reader.Int(m_axis_id.value, 10);
 				p.m_reader.Real(m_dim.x);
@@ -1513,7 +1645,16 @@ namespace pr
 					m_dim = Abs(m_dim);
 				}
 			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			bool ParseKeyword(EKeyword kw) override
+			{
+				switch (kw)
+				{
+				default: return IObjectCreatorShape2d::ParseKeyword(kw);
+				case EKeyword::CornerRadius: p.m_reader.RealS(m_corner_radius); return true;
+				case EKeyword::Facets:       p.m_reader.IntS(m_facets, 10); m_facets *= 4; return true;
+				}
+			}
+			void CreateModel(LdrObject* obj) override
 			{
 				using namespace pr::rdr;
 				m4x4 o2w, *po2w = nullptr;
@@ -1533,23 +1674,16 @@ namespace pr
 		template <> struct ObjectCreator<ELdrObject::Polygon> :IObjectCreatorShape2d
 		{
 			pr::vector<v2> m_verts;
-			CCont& m_colours;
-			bool   m_per_line_colour;
+			CCont&         m_colours;
+			bool           m_per_line_colour;
 
-			ObjectCreator()
-				:m_verts()
-				,m_colours(Color())
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorShape2d(p)
+				,m_verts()
+				,m_colours(p.m_cache.m_color)
 				,m_per_line_colour(false)
 			{}
-			bool ParseKeyword(ParseParams& p, EKeyword kw) override
-			{
-				switch (kw)
-				{
-				default: return IObjectCreatorShape2d::ParseKeyword(p, kw);
-				case EKeyword::Coloured: m_per_line_colour = true; return true;
-				}
-			}
-			void Parse(ParseParams& p) override
+			void Parse() override
 			{
 				p.m_reader.Int(m_axis_id.value, 10);
 				for (;p.m_reader.IsValue();)
@@ -1566,7 +1700,15 @@ namespace pr
 					}
 				}
 			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			bool ParseKeyword(EKeyword kw) override
+			{
+				switch (kw)
+				{
+				default: return IObjectCreatorShape2d::ParseKeyword(kw);
+				case EKeyword::Coloured: m_per_line_colour = true; return true;
+				}
+			}
+			void CreateModel(LdrObject* obj) override
 			{
 				using namespace pr::rdr;
 				m4x4 o2w, *po2w = nullptr;
@@ -1585,7 +1727,10 @@ namespace pr
 		// ELdrObject::Triangle
 		template <> struct ObjectCreator<ELdrObject::Triangle> :IObjectCreatorPlane
 		{
-			void Parse(ParseParams& p) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorPlane(p)
+			{}
+			void Parse() override
 			{
 				pr::v4 pt[3]; pr::Colour32 col[3];
 				p.m_reader.Vector3(pt[0], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[0].argb, 16));
@@ -1597,10 +1742,10 @@ namespace pr
 				m_point.push_back(pt[2]); // create a degenerate
 				if (m_per_vert_colour)
 				{
-					m_colour.push_back(col[0]);
-					m_colour.push_back(col[1]);
-					m_colour.push_back(col[2]);
-					m_colour.push_back(col[2]);
+					m_color.push_back(col[0]);
+					m_color.push_back(col[1]);
+					m_color.push_back(col[2]);
+					m_color.push_back(col[2]);
 				}
 			}
 		};
@@ -1608,7 +1753,10 @@ namespace pr
 		// ELdrObject::Quad
 		template <> struct ObjectCreator<ELdrObject::Quad> :IObjectCreatorPlane
 		{
-			void Parse(ParseParams& p) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorPlane(p)
+			{}
+			void Parse() override
 			{
 				pr::v4 pt[4]; pr::Colour32 col[4];
 				p.m_reader.Vector3(pt[0], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[0].argb, 16));
@@ -1621,10 +1769,10 @@ namespace pr
 				m_point.push_back(pt[3]);
 				if (m_per_vert_colour)
 				{
-					m_colour.push_back(col[0]);
-					m_colour.push_back(col[1]);
-					m_colour.push_back(col[2]);
-					m_colour.push_back(col[3]);
+					m_color.push_back(col[0]);
+					m_color.push_back(col[1]);
+					m_color.push_back(col[2]);
+					m_color.push_back(col[3]);
 				}
 			}
 		};
@@ -1632,7 +1780,10 @@ namespace pr
 		// ELdrObject::Plane
 		template <> struct ObjectCreator<ELdrObject::Plane> :IObjectCreatorPlane
 		{
-			void Parse(ParseParams& p) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorPlane(p)
+			{}
+			void Parse() override
 			{
 				v4 pnt, fwd; float w, h;
 				p.m_reader.Vector3(pnt, 1.0f);
@@ -1656,24 +1807,18 @@ namespace pr
 		template <> struct ObjectCreator<ELdrObject::Ribbon> :IObjectCreatorPlane
 		{
 			AxisId m_axis_id;
-			float m_width;
-			bool m_smooth;
-			int m_parm_index;
+			float  m_width;
+			bool   m_smooth;
+			int    m_parm_index;
 
-			ObjectCreator()
-				:m_axis_id(AxisId::PosZ)
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorPlane(p)
+				,m_axis_id(AxisId::PosZ)
 				,m_width(10.0f)
 				,m_smooth(false)
 				,m_parm_index(0)
 			{}
-			bool ParseKeyword(ParseParams& p, EKeyword kw) override
-			{
-				switch (kw){
-				default: return IObjectCreatorPlane::ParseKeyword(p, kw);
-				case EKeyword::Smooth: m_smooth = true; return true;
-				}
-			}
-			void Parse(ParseParams& p) override
+			void Parse() override
 			{
 				switch (m_parm_index){
 				case 0: // Axis id
@@ -1693,12 +1838,19 @@ namespace pr
 					{
 						pr::Colour32 col;
 						p.m_reader.Int(col.argb, 16);
-						m_colour.push_back(col);
+						m_color.push_back(col);
 					}
 					break;
 				}
 			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			bool ParseKeyword(EKeyword kw) override
+			{
+				switch (kw){
+				default: return IObjectCreatorPlane::ParseKeyword(kw);
+				case EKeyword::Smooth: m_smooth = true; return true;
+				}
+			}
+			void CreateModel(LdrObject* obj) override
 			{
 				using namespace pr::rdr;
 
@@ -1718,7 +1870,7 @@ namespace pr
 				}
 
 				pr::v4 normal = m_axis_id;
-				obj->m_model = ModelGenerator<>::QuadStrip(p.m_rdr, int(m_point.size() - 1), m_point.data(), m_width, 1, &normal, int(m_colour.size()), m_colour.data(), Material());
+				obj->m_model = ModelGenerator<>::QuadStrip(p.m_rdr, int(m_point.size() - 1), m_point.data(), m_width, 1, &normal, int(m_color.size()), m_color.data(), Material());
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
@@ -1730,17 +1882,20 @@ namespace pr
 		// ELdrObject::Box
 		template <> struct ObjectCreator<ELdrObject::Box> :IObjectCreatorTexture
 		{
-			pr::v4 m_dim;
+			v4 m_dim;
 
-			ObjectCreator() :m_dim() {}
-			void Parse(ParseParams& p) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorTexture(p)
+				,m_dim()
+			{}
+			void Parse() override
 			{
 				p.m_reader.Real(m_dim.x);
 				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.Real(m_dim.y);
 				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.z = m_dim.y; else p.m_reader.Real(m_dim.z);
 				m_dim *= 0.5f;
 			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			void CreateModel(LdrObject* obj) override
 			{
 				// Create the model
 				obj->m_model = ModelGenerator<>::Box(p.m_rdr, m_dim, pr::m4x4Identity, pr::Colour32White, Material());
@@ -1751,18 +1906,16 @@ namespace pr
 		// ELdrObject::BoxLine
 		template <> struct ObjectCreator<ELdrObject::BoxLine> :IObjectCreatorTexture
 		{
-			pr::m4x4 m_b2w;
-			pr::v4 m_dim, m_up;
+			m4x4 m_b2w;
+			v4 m_dim, m_up;
 
-			ObjectCreator() :m_b2w(), m_dim(), m_up(pr::v4YAxis) {}
-			bool ParseKeyword(ParseParams& p, EKeyword kw) override
-			{
-				switch (kw) {
-				default: return IObjectCreatorTexture::ParseKeyword(p, kw);
-				case EKeyword::Up: p.m_reader.Vector3S(m_up, 0.0f); return true;
-				}
-			}
-			void Parse(ParseParams& p) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorTexture(p)
+				,m_b2w()
+				,m_dim()
+				,m_up(v4YAxis)
+			{}
+			void Parse() override
 			{
 				float w = 0.1f, h = 0.1f;
 				v4 s0, s1;
@@ -1773,9 +1926,16 @@ namespace pr
 				m_dim = v4(w, h, pr::Length3(s1 - s0), 0.0f) * 0.5f;
 				m_b2w = pr::OriFromDir(s1 - s0, 2, m_up, (s1 + s0) * 0.5f);
 			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			bool ParseKeyword(EKeyword kw) override
 			{
-				obj->m_model = ModelGenerator<>::Box(p.m_rdr, m_dim, m_b2w, pr::Colour32White, Material());
+				switch (kw) {
+				default: return IObjectCreatorTexture::ParseKeyword(kw);
+				case EKeyword::Up: p.m_reader.Vector3S(m_up, 0.0f); return true;
+				}
+			}
+			void CreateModel(LdrObject* obj) override
+			{
+				obj->m_model = ModelGenerator<>::Box(p.m_rdr, m_dim, m_b2w, Colour32White, Material());
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
@@ -1783,20 +1943,24 @@ namespace pr
 		// ELdrObject::BoxList
 		template <> struct ObjectCreator<ELdrObject::BoxList> :IObjectCreatorTexture
 		{
-			pr::vector<pr::v4, 16> m_location;
-			pr::v4 m_dim;
+			pr::vector<v4,16> m_location;
+			v4 m_dim;
 
-			ObjectCreator() :m_location(), m_dim() {}
-			void Parse(ParseParams& p) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorTexture(p)
+				,m_location()
+				,m_dim()
+			{}
+			void Parse() override
 			{
-				pr::v4 v;
+				v4 v;
 				p.m_reader.Vector3(v, 1.0f);
 				if (m_dim == pr::v4Zero)
 					m_dim = v.w0();
 				else
 					m_location.push_back(v);
 			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			void CreateModel(LdrObject* obj) override
 			{
 				// Validate
 				if (m_dim == pr::v4Zero || m_location.size() == 0)
@@ -1824,22 +1988,16 @@ namespace pr
 			float m_width, m_height, m_near, m_far, m_view_plane;
 			AxisId m_axis_id;
 
-			ObjectCreator()
-				:m_width(1.0f)
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorCuboid(p)
+				,m_width(1.0f)
 				,m_height(1.0f)
 				,m_near(0.0f)
 				,m_far(1.0f)
 				,m_view_plane(1.0f)
 				,m_axis_id(AxisId::PosZ)
 			{}
-			bool ParseKeyword(ParseParams& p, EKeyword kw) override
-			{
-				switch (kw) {
-				default: return IObjectCreatorCuboid::ParseKeyword(p, kw);
-				case EKeyword::ViewPlaneZ: p.m_reader.RealS(m_view_plane); return true;
-				}
-			}
-			void Parse(ParseParams& p) override
+			void Parse() override
 			{
 				p.m_reader.Int(m_axis_id.value, 10);
 				p.m_reader.Real(m_width);
@@ -1847,7 +2005,14 @@ namespace pr
 				p.m_reader.Real(m_near);
 				p.m_reader.Real(m_far);
 			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			bool ParseKeyword(EKeyword kw) override
+			{
+				switch (kw) {
+				default: return IObjectCreatorCuboid::ParseKeyword(kw);
+				case EKeyword::ViewPlaneZ: p.m_reader.RealS(m_view_plane); return true;
+				}
+			}
+			void CreateModel(LdrObject* obj) override
 			{
 				float w = m_width  * 0.5f / m_view_plane;
 				float h = m_height * 0.5f / m_view_plane;
@@ -1864,7 +2029,7 @@ namespace pr
 
 				m_b2w = m4x4::Transform(AxisId::PosZ, m_axis_id, v4Origin);
 
-				IObjectCreatorCuboid::CreateModel(p, obj);
+				IObjectCreatorCuboid::CreateModel(obj);
 			}
 		};
 
@@ -1874,14 +2039,15 @@ namespace pr
 			float m_fovY, m_aspect, m_near, m_far;
 			AxisId m_axis_id;
 
-			ObjectCreator()
-				:m_fovY(float(maths::tau_by_8))
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorCuboid(p)
+				,m_fovY(float(maths::tau_by_8))
 				,m_aspect(1.0f)
 				,m_near(0.0f)
 				,m_far(1.0f)
 				,m_axis_id(AxisId::PosZ)
 			{}
-			void Parse(ParseParams& p) override
+			void Parse() override
 			{
 				p.m_reader.Int(m_axis_id.value, 10);
 				p.m_reader.Real(m_fovY);
@@ -1889,7 +2055,7 @@ namespace pr
 				p.m_reader.Real(m_near);
 				p.m_reader.Real(m_far);
 			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			void CreateModel(LdrObject* obj) override
 			{
 				// Construct pointed down +z, then rotate the points based on axis id
 				float h = Tan(DegreesToRadians(m_fovY * 0.5f));
@@ -1906,7 +2072,7 @@ namespace pr
 
 				m_b2w = m4x4::Transform(AxisId::PosZ, m_axis_id, v4Origin);
 
-				IObjectCreatorCuboid::CreateModel(p, obj);
+				IObjectCreatorCuboid::CreateModel(obj);
 			}
 		};
 
@@ -1916,21 +2082,25 @@ namespace pr
 			v4 m_dim;
 			int m_divisions;
 
-			ObjectCreator() :m_dim(), m_divisions(3) {}
-			bool ParseKeyword(ParseParams& p, EKeyword kw) override
-			{
-				switch (kw) {
-				default: return IObjectCreatorTexture::ParseKeyword(p, kw);
-				case EKeyword::Divisions: p.m_reader.Int(m_divisions, 10); return true;
-				}
-			}
-			void Parse(ParseParams& p) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorTexture(p)
+				,m_dim()
+				,m_divisions(3)
+			{}
+			void Parse() override
 			{
 				p.m_reader.Real(m_dim.x);
 				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.Real(m_dim.y);
 				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.z = m_dim.y; else p.m_reader.Real(m_dim.z);
 			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			bool ParseKeyword(EKeyword kw) override
+			{
+				switch (kw) {
+				default: return IObjectCreatorTexture::ParseKeyword(kw);
+				case EKeyword::Divisions: p.m_reader.Int(m_divisions, 10); return true;
+				}
+			}
+			void CreateModel(LdrObject* obj) override
 			{
 				obj->m_model = ModelGenerator<>::Geosphere(p.m_rdr, m_dim, m_divisions, Colour32White, Material());
 				obj->m_model->m_name = obj->TypeAndName();
@@ -1940,7 +2110,10 @@ namespace pr
 		// ELdrObject::CylinderHR
 		template <> struct ObjectCreator<ELdrObject::CylinderHR> :IObjectCreatorCone
 		{
-			void Parse(ParseParams& p) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorCone(p)
+			{}
+			void Parse() override
 			{
 				p.m_reader.Int(m_axis_id.value, 10);
 				p.m_reader.Real(m_dim.z);
@@ -1952,7 +2125,10 @@ namespace pr
 		// ELdrObject::ConeHA
 		template <> struct ObjectCreator<ELdrObject::ConeHA> :IObjectCreatorCone
 		{
-			void Parse(ParseParams& p) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorCone(p)
+			{}
+			void Parse() override
 			{
 				float h0, h1, a;
 				p.m_reader.Int(m_axis_id.value, 10);
@@ -1976,8 +2152,8 @@ namespace pr
 			bool           m_closed;       // True if the tube end caps should be filled in
 			bool           m_smooth_cs;    // True if outward normals for the tube are smoothed
 
-			ObjectCreator()
-				:IObjectCreatorLine(false, false)
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorLine(p, false, false)
 				,m_type()
 				,m_cs()
 				,m_radx()
@@ -1986,11 +2162,25 @@ namespace pr
 				,m_closed(false)
 				,m_smooth_cs(false)
 			{}
-			bool ParseKeyword(ParseParams& p, EKeyword kw) override
+			void Parse() override
+			{
+				// Parse the extrusion path
+				v4 pt; Colour32 col;
+				p.m_reader.Vector3(pt, 1.0f);
+				if (m_per_line_colour) p.m_reader.Int(col.argb, 16);
+				
+				// Ignore degenerates
+				if (m_point.empty() || !FEql(m_point.back(), pt))
+				{
+					m_point.push_back(pt);
+					if (m_per_line_colour) m_color.push_back(col);
+				}
+			}
+			bool ParseKeyword(EKeyword kw) override
 			{
 				switch (kw)
 				{
-				default: return IObjectCreatorLine::ParseKeyword(p, kw);
+				default: return IObjectCreatorLine::ParseKeyword(kw);
 				case EKeyword::Style:
 					{
 						// Expect *Style { cross_section_type <data> }
@@ -2058,21 +2248,7 @@ namespace pr
 					}
 				}
 			}
-			void Parse(ParseParams& p) override
-			{
-				// Parse the extrusion path
-				v4 pt; Colour32 col;
-				p.m_reader.Vector3(pt, 1.0f);
-				if (m_per_line_colour) p.m_reader.Int(col.argb, 16);
-				
-				// Ignore degenerates
-				if (m_point.empty() || !FEql(m_point.back(), pt))
-				{
-					m_point.push_back(pt);
-					if (m_per_line_colour) m_colour.push_back(col);
-				}
-			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			void CreateModel(LdrObject* obj) override
 			{
 				// If no cross section or extrusion path is given
 				if (m_point.empty())
@@ -2122,7 +2298,7 @@ namespace pr
 					pr::Smooth(points, m_point);
 				}
 
-				obj->m_model = ModelGenerator<>::Extrude(p.m_rdr, int(m_cs.size()), m_cs.data(), int(m_point.size()), m_point.data(), m_closed, m_smooth_cs, int(m_colour.size()), m_colour.data());
+				obj->m_model = ModelGenerator<>::Extrude(p.m_rdr, int(m_cs.size()), m_cs.data(), int(m_point.size()), m_point.data(), m_closed, m_smooth_cs, int(m_color.size()), m_color.data());
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
@@ -2130,7 +2306,10 @@ namespace pr
 		// ELdrObject::Mesh
 		template <> struct ObjectCreator<ELdrObject::Mesh> :IObjectCreatorMesh
 		{
-			void Parse(ParseParams& p) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorMesh(p)
+			{}
+			void Parse() override
 			{
 				p.ReportError(EResult::UnknownValue, "Mesh object description invalid");
 				p.m_reader.FindSectionEnd();
@@ -2140,16 +2319,17 @@ namespace pr
 		// ELdrObject::ConvexHull
 		template <> struct ObjectCreator<ELdrObject::ConvexHull> :IObjectCreatorMesh
 		{
-			ObjectCreator()
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorMesh(p)
 			{
 				m_gen_normals = 0.0f;
 			}
-			void Parse(ParseParams& p) override
+			void Parse() override
 			{
 				p.ReportError(EResult::UnknownValue, "Convex hull object description invalid");
 				p.m_reader.FindSectionEnd();
 			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			void CreateModel(LdrObject* obj) override
 			{
 				// Allocate space for the face indices
 				m_indices.resize(6 * (m_verts.size() - 2));
@@ -2166,7 +2346,7 @@ namespace pr
 				nug.m_geom = EGeom::Vert;
 				m_nuggets.push_back(nug);
 
-				IObjectCreatorMesh::CreateModel(p, obj);
+				IObjectCreatorMesh::CreateModel(obj);
 			}
 		};
 
@@ -2182,34 +2362,15 @@ namespace pr
 			int m_xcolumn;
 			float m_width;
 
-			ObjectCreator()
-				:m_axis_id(AxisId::PosZ)
+			ObjectCreator(ParseParams& p)
+				:IObjectCreator(p)
+				,m_axis_id(AxisId::PosZ)
 				,m_table()
 				,m_colours()
 				,m_xcolumn(0)
 				,m_width(0)
 			{}
-			bool ParseKeyword(ParseParams& p, EKeyword kw) override
-			{
-				switch (kw) {
-				default: return IObjectCreator::ParseKeyword(p, kw);
-				case EKeyword::XColumn: p.m_reader.IntS(m_xcolumn, 10); return true;
-				case EKeyword::Width: p.m_reader.RealS(m_width); return true;
-				case EKeyword::Colours:
-					{
-						p.m_reader.SectionStart();
-						for (;!p.m_reader.IsSectionEnd();)
-						{
-							Colour32 col;
-							p.m_reader.Int(col.argb, 16);
-							m_colours.push_back(col);
-						}
-						p.m_reader.SectionEnd();
-						return true;
-					}
-				}
-			}
-			void Parse(ParseParams& p) override
+			void Parse() override
 			{
 				// Read the axis id
 				p.m_reader.Int(m_axis_id.value, 10);
@@ -2297,7 +2458,27 @@ namespace pr
 					}
 				}
 			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			bool ParseKeyword(EKeyword kw) override
+			{
+				switch (kw) {
+				default: return IObjectCreator::ParseKeyword(kw);
+				case EKeyword::XColumn: p.m_reader.IntS(m_xcolumn, 10); return true;
+				case EKeyword::Width: p.m_reader.RealS(m_width); return true;
+				case EKeyword::Colours:
+					{
+						p.m_reader.SectionStart();
+						for (;!p.m_reader.IsSectionEnd();)
+						{
+							Colour32 col;
+							p.m_reader.Int(col.argb, 16);
+							m_colours.push_back(col);
+						}
+						p.m_reader.SectionEnd();
+						return true;
+					}
+				}
+			}
+			void CreateModel(LdrObject* obj) override
 			{
 				using namespace pr::rdr;
 
@@ -2328,10 +2509,10 @@ namespace pr
 				};
 				int cidx = 0;
 
-				auto& verts = Point();
-				auto& lines = Index();
-				auto& colrs = Color();
-				auto& nugts = Nugts();
+				auto& verts = p.m_cache.m_point;
+				auto& lines = p.m_cache.m_index;
+				auto& colrs = p.m_cache.m_color;
+				auto& nugts = p.m_cache.m_nugts;
 
 				// Record the range of data in the chart
 				auto xrange = pr::Range<float>::Reset();
@@ -2388,14 +2569,16 @@ namespace pr
 					pr::rdr::Range vrange(verts.size(), verts.size() + 4);
 					pr::rdr::Range irange(lines.size(), lines.size() + 4);
 
+					// Draw the X/Y axis through 0,0 if near by, otherwise around the bounds of the data
+					auto x0 = xrange.m_beg > 0 + 2*xrange.size() ? xrange.m_beg : xrange.m_end < 0 - 2*xrange.size() ? xrange.m_end : 0.0f;
+					auto y0 = yrange.m_beg > 0 + 2*yrange.size() ? yrange.m_beg : yrange.m_end < 0 - 2*yrange.size() ? yrange.m_end : 0.0f;
+
 					// X Axis
 					auto ibase = verts.size();
-					auto x0 = xrange.m_beg > 0 ? xrange.m_beg : xrange.m_end < 0 ? xrange.m_end : 0.0f;
-					auto y0 = yrange.m_beg > 0 ? yrange.m_beg : yrange.m_end < 0 ? yrange.m_end : 0.0f;
-					verts.push_back(rot * v4(xrange.m_beg - 0.05f * xrange.size(), y0, 0.0f, 1.0f));
-					verts.push_back(rot * v4(xrange.m_end + 0.05f * xrange.size(), y0, 0.0f, 1.0f));
-					verts.push_back(rot * v4(x0, yrange.m_beg - 0.05f * yrange.size(), 0.0f, 1.0f));
-					verts.push_back(rot * v4(x0, yrange.m_end + 0.05f * yrange.size(), 0.0f, 1.0f));
+					verts.push_back(rot * v4(std::min(x0, xrange.m_beg - 0.05f * xrange.size()), y0, 0.0f, 1.0f));
+					verts.push_back(rot * v4(std::max(x0, xrange.m_end + 0.05f * xrange.size()), y0, 0.0f, 1.0f));
+					verts.push_back(rot * v4(x0, std::min(y0, yrange.m_beg - 0.05f * yrange.size()), 0.0f, 1.0f));
+					verts.push_back(rot * v4(x0, std::max(y0, yrange.m_end + 0.05f * yrange.size()), 0.0f, 1.0f));
 
 					lines.push_back(static_cast<pr::uint16>(ibase + 0));
 					lines.push_back(static_cast<pr::uint16>(ibase + 1));
@@ -2431,15 +2614,20 @@ namespace pr
 			m4x4 m_bake;
 			float m_gen_normals;
 
-			ObjectCreator()
-				:m_filepath()
+			ObjectCreator(ParseParams& p)
+				:IObjectCreator(p)
+				,m_filepath()
 				,m_bake(m4x4Identity)
 				,m_gen_normals(-1.0f)
 			{}
-			bool ParseKeyword(ParseParams& p, EKeyword kw) override
+			void Parse() override
+			{
+				p.m_reader.String(m_filepath);
+			}
+			bool ParseKeyword(EKeyword kw) override
 			{
 				switch (kw) {
-				default: return IObjectCreator::ParseKeyword(p, kw);
+				default: return IObjectCreator::ParseKeyword(kw);
 				case EKeyword::GenerateNormals:
 					{
 						p.m_reader.RealS(m_gen_normals);
@@ -2453,11 +2641,7 @@ namespace pr
 					}
 				}
 			}
-			void Parse(ParseParams& p) override
-			{
-				p.m_reader.String(m_filepath);
-			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			void CreateModel(LdrObject* obj) override
 			{
 				using namespace pr::rdr;
 				using namespace pr::geometry;
@@ -2501,7 +2685,10 @@ namespace pr
 		// ELdrObject::DirLight
 		template <> struct ObjectCreator<ELdrObject::DirLight> :IObjectCreatorLight
 		{
-			void Parse(ParseParams& p) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorLight(p)
+			{}
+			void Parse() override
 			{
 				p.m_reader.Vector3(m_light.m_direction, 0.0f);
 			}
@@ -2510,7 +2697,10 @@ namespace pr
 		// ELdrObject::PointLight
 		template <> struct ObjectCreator<ELdrObject::PointLight> :IObjectCreatorLight
 		{
-			void Parse(ParseParams& p) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorLight(p)
+			{}
+			void Parse() override
 			{
 				p.m_reader.Vector3(m_light.m_position, 1.0f);
 			}
@@ -2519,7 +2709,10 @@ namespace pr
 		// ELdrObject::SpotLight
 		template <> struct ObjectCreator<ELdrObject::SpotLight> :IObjectCreatorLight
 		{
-			void Parse(ParseParams& p) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorLight(p)
+			{}
+			void Parse() override
 			{
 				p.m_reader.Vector3(m_light.m_position, 1.0f);
 				p.m_reader.Vector3(m_light.m_direction, 0.0f);
@@ -2531,9 +2724,13 @@ namespace pr
 		//ELdrObject::Group
 		template <> struct ObjectCreator<ELdrObject::Group> :IObjectCreator
 		{
-			void CreateModel(ParseParams&, LdrObjectPtr obj) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreator(p)
+			{}
+			void CreateModel(LdrObject* obj) override
 			{
 				// Object modifiers applied to groups are applied recursively to children within the group
+
 				// Apply colour to all children
 				if (obj->m_colour_mask != 0)
 					obj->Colour(obj->m_base_colour, obj->m_colour_mask, "");
@@ -2551,7 +2748,10 @@ namespace pr
 		// ELdrObject::Instance
 		template <> struct ObjectCreator<ELdrObject::Instance> :IObjectCreator
 		{
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			ObjectCreator(ParseParams& p)
+				:IObjectCreator(p)
+			{}
+			void CreateModel(LdrObject* obj) override
 			{
 				// Locate the model that this is an instance of
 				auto model_key = Hash(obj->m_name.c_str());
@@ -2568,47 +2768,53 @@ namespace pr
 		#pragma endregion
 
 		// Parse an ldr object of type 'ShapeType'
-		// Note: not using an output iterator style callback because model instancing
-		// relies on the map from object to model.
+		// Note: not using an output iterator style callback because model instancing relies on the map from object to model.
 		template <ELdrObject::Enum_ ShapeType> void Parse(ParseParams& p)
 		{
 			// Read the object attributes: name, colour, instance
-			auto attr    = ParseAttributes(p.m_reader, ShapeType);
-			auto obj     = LdrObjectPtr(new LdrObject(attr, p.m_parent, p.m_context_id));
-			auto creator = ObjectCreator<ShapeType>{};
+			auto attr = ParseAttributes(p.m_reader, ShapeType);
+			auto obj  = LdrObjectPtr(new LdrObject(attr, p.m_parent, p.m_context_id));
+
+			ObjectCreator<ShapeType> creator(p);
 
 			// Read the description of the model
 			p.m_reader.SectionStart();
-			while (!p.m_reader.IsSectionEnd())
+			for (;!p.m_cancel && !p.m_reader.IsSectionEnd();)
 			{
 				if (p.m_reader.IsKeyword())
 				{
 					// Interpret child objects
-					auto kw = p.m_reader.NextKeywordH();
-					ParseParams pp(p, obj->m_child, kw, obj.m_ptr);
+					auto kw = p.m_reader.NextKeywordH<EKeyword>();
+					ParseParams pp(p, obj->m_child, kw, obj.get());
 					if (ParseLdrObject(pp)) continue;
-					if (ParseProperties(pp, (EKeyword)kw, obj)) continue;
-					if (creator.ParseKeyword(p, (EKeyword)kw)) continue;
+					if (ParseProperties(pp, kw, obj.get())) continue;
+					if (creator.ParseKeyword(kw)) continue;
 					p.ReportError(EResult::UnknownToken);
 					continue;
 				}
 				else
 				{
-					creator.Parse(p);
+					creator.Parse();
 				}
 			}
 			p.m_reader.SectionEnd();
 
 			// Create the model
-			creator.CreateModel(p, obj);
+			creator.CreateModel(obj.get());
 
 			// Add the model and instance to the containers
 			p.m_models[Hash(obj->m_name.c_str())] = obj->m_model;
 			p.m_objects.push_back(obj);
+
+			// Reset the memory pool
+			p.m_cache.reset();
+
+			// Report progress
+			p.ReportProgress();
 		}
 
 		// Apply the states such as colour,wireframe,etc to the objects renderer model
-		void ApplyObjectState(LdrObjectPtr obj)
+		void ApplyObjectState(LdrObject* obj)
 		{
 			// Set colour on 'obj' (so that render states are set correctly)
 			// Note that the colour is 'blended' with 'm_base_colour' so m_base_colour * White = m_base_colour.
@@ -2676,113 +2882,111 @@ namespace pr
 			// Apply properties to each object added
 			assert("No object added, or objects removed, without Parse error" && p.m_objects.size() > object_count);
 			for (auto i = object_count, iend = p.m_objects.size(); i != iend; ++i)
-				ApplyObjectState(p.m_objects[i]);
+				ApplyObjectState(p.m_objects[i].get());
 
 			return true;
 		}
 
 		// Reads all ldr objects from a script returning 'result'
+		// 'add_cb' is 'bool function(int object_index, ParseResult& out, pr::script::Location const& loc)'
 		template <typename AddCB>
-		void ParseLdrObjects(pr::Renderer& rdr, pr::script::Reader& reader, pr::Guid const& context_id, ParseResult& result, AddCB add_cb)
+		void ParseLdrObjects(ParseParams& p, AddCB add_cb)
 		{
-			// Your application needs to have called CoInitialise() before here
-			bool cancel = false;
-			reader.CaseSensitive(false); // Ldr script is not case sensitive
-			for (EKeyword kw; !cancel && reader.NextKeywordH(kw);)
+			// Ldr script is not case sensitive
+			p.m_reader.CaseSensitive(false);
+
+			// Loop over keywords in the script
+			for (;!p.m_cancel && p.m_reader.NextKeywordH(p.m_keyword);)
 			{
+				auto kw = (EKeyword)p.m_keyword;
 				switch (kw)
 				{
 				default:
+					#pragma region
 					{
-						auto object_count = result.m_objects.size();
-						ParseParams pp(rdr, reader, result.m_objects, result.m_models, context_id, kw, nullptr);
-						if (!ParseLdrObject(pp))
+						// Save the current number of objects
+						auto object_count = int(p.m_objects.size());
+
+						// Assign the keyword is an object and start parsing
+						if (!ParseLdrObject(p))
 						{
-							reader.ReportError(pr::script::EResult::UnknownToken);
+							p.m_reader.ReportError(pr::script::EResult::UnknownToken);
 							break;
 						}
+						assert("Objects removed but 'ParseLdrObject' didn't fail" && int(p.m_objects.size()) > object_count);
 
-						// Notify of an object added. Cancel if 'add_cb' returns false
-						assert("Objects removed but 'ParseLdrObject' didn't fail" && result.m_objects.size() > object_count);
-						cancel = !add_cb(result.m_objects[object_count]);
+						// Call the callback with the freshly minted object.
+						add_cb(object_count);
 						break;
 					}
+					#pragma endregion
 
 				// Camera position description
 				case EKeyword::Camera:
+					#pragma region
 					{
-						ParseCamera(reader, result);
+						ParseCamera(p.m_reader, p.m_result);
 						break;
 					}
+					#pragma endregion
 
 				// Application commands
 				case EKeyword::Clear:
+					#pragma region
 					{
 						// Clear resets the scene up to the point of the clear, that includes
 						// objects we may have already parsed. A use for this is for a script
 						// that might be a work in progress, *Clear can be used to remove everything
 						// above a point in the script.
-						result.m_objects.clear();
-						result.m_clear = true;
+						p.m_objects.clear();
+						p.m_result.m_clear = true;
 						break;
 					}
+					#pragma endregion
 				case EKeyword::Wireframe:
+					#pragma region
 					{
-						result.m_wireframe = true;
+						p.m_result.m_wireframe = true;
 						break;
 					}
-				case EKeyword::Lock: break;
-				case EKeyword::Delimiters: break;
+					#pragma endregion
+				case EKeyword::Lock:
+					break;
+				case EKeyword::Delimiters:
+					break;
 				}
 			}
-
-			// Release scratch buffers
-			g_cache.release();
 		}
 
-		// Parse the ldr script in 'reader' adding the results to 'out'
-		// If 'async' is true, a progress dialog is displayed and parsing is done in a background thread.
-		void Parse(pr::Renderer& rdr, pr::script::Reader& reader, ParseResult& out, bool async, pr::Guid const& context_id)
+		// Parse the ldr script in 'reader' adding the results to 'out'.
+		// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
+		// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
+		// lifetimes of the script reader, the parse output, and the 'store' container it refers to.
+		void Parse(pr::Renderer& rdr, pr::script::Reader& reader, ParseResult& out, Guid const& context_id, ParseProgressCB progress_cb, CacheData* cache)
 		{
-			// Does the work of parsing objects and adds them to 'models'
-			// 'total' is the total number of objects added
-			auto ParseObjects = [&](pr::gui::ProgressUI* dlg, ParseResult& out)
-			{
-				// Note: your application needs to have called CoInitialise() before here
-				auto start_time = GetTickCount();
-				auto last_update = start_time;
-				ParseLdrObjects(rdr, reader, context_id, out, [&](LdrObjectPtr& obj)
+			// Ensure the cache data is not null
+			cache = cache ? cache : ThisThreadCache();
+
+			// Give initial and final progress updates
+			auto start_loc = reader.Loc();
+			auto exit = pr::CreateScope(
+				[&]
 				{
-					// See if it's time for a progress update
-					if (dlg == nullptr) return true;
-					auto now = GetTickCount();
-					if (now - start_time < 200 || now - last_update < 100)
-						return true;
-
-					last_update = now;
-					char const* type = obj ? ELdrObject::ToStringA(obj->m_type) : "";
-					std::string name = obj ? obj->m_name : "";
-					return dlg->Progress(-1.0f, pr::FmtS(L"Parsing scene...\r\nObject count: %d\r\n%S %S", out.m_objects.size(), type, name.c_str()));
+					// Give an initial progress update
+					if (progress_cb != nullptr)
+						progress_cb(context_id, out, start_loc, false);
+				},
+				[&]
+				{
+					// Give a final progress update
+					if (progress_cb != nullptr)
+						progress_cb(context_id, out, start_loc, true);
 				});
-			};
 
-			if (async)
-			{
-				// Run the adding process as a background task while displaying a progress dialog
-				pr::gui::ProgressUI dlg(L"Processing script", L"", ParseObjects, std::ref(out));
-
-				// Set the window icon to match the parent
-				auto parent = ::GetActiveWindow();
-				auto hicon = (HICON)SendMessageW(parent, WM_GETICON, ICON_SMALL, 0);
-				if (hicon != nullptr) dlg.Icon(hicon, false);
-
-				// Display the dialog after a while
-				dlg.ShowDialog(parent, 1000);
-			}
-			else
-			{
-				ParseObjects(nullptr, out);
-			}
+			// Parse the script
+			bool cancel = false;
+			ParseParams pp(rdr, reader, out, *cache, context_id, progress_cb, cancel);
+			ParseLdrObjects(pp, [&](int){});
 		}
 
 		// Create an ldr object from creation data.
@@ -2830,13 +3034,19 @@ namespace pr
 		}
 
 		// Update 'object' with info from 'reader'. 'flags' describes the properties of 'object' to update
-		void Update(pr::Renderer& rdr, LdrObjectPtr object, pr::script::Reader& reader, EUpdateObject flags)
+		void Update(pr::Renderer& rdr, LdrObjectPtr object, pr::script::Reader& reader, EUpdateObject flags, CacheData* cache)
 		{
-			// Parse 'readerdesc' for the new model
+			// Parsing parameters
 			ParseResult result;
-			ParseLdrObjects(rdr, reader, object->m_context_id, result, [&](LdrObjectPtr rhs)
+			bool cancel = false;
+			cache = cache ? cache : ThisThreadCache();
+			ParseParams pp(rdr, reader, result, *cache, object->m_context_id, nullptr, cancel);
+	
+			// Parse 'reader' for the new model
+			ParseLdrObjects(pp, [&](int object_index)
 			{
 				// Want the first root level object
+				auto& rhs = result.m_objects[object_index];
 				if (rhs->m_parent != nullptr)
 					return true;
 
@@ -2886,7 +3096,7 @@ namespace pr
 						object->AddChild(rhs->RemoveChild(0));
 				}
 				else
-					ApplyObjectState(object);
+					ApplyObjectState(object.get());
 
 				// Only want one object
 				return false;
@@ -3636,13 +3846,17 @@ LR"(// *************************************************************************
 
 		// LdrObject ***********************************
 
+		#pragma region LdrObject
+
 		#if PR_DBG
 		struct LeakedLdrObjects
 		{
 			std::set<LdrObject const*> m_ldr_objects;
+			std::mutex m_mutex;
 			
 			LeakedLdrObjects()
 				:m_ldr_objects()
+				,m_mutex()
 			{}
 			~LeakedLdrObjects()
 			{
@@ -3665,10 +3879,12 @@ LR"(// *************************************************************************
 			}
 			void add(LdrObject const* ldr)
 			{
+				std::lock_guard<std::mutex> lock(m_mutex);
 				m_ldr_objects.insert(ldr);
 			}
 			void remove(LdrObject const* ldr)
 			{
+				std::lock_guard<std::mutex> lock(m_mutex);
 				m_ldr_objects.erase(ldr);
 			}
 		} g_ldr_object_tracker;
@@ -3951,5 +4167,58 @@ LR"(// *************************************************************************
 		{
 			return RefCount<LdrObject>::Release();
 		}
+
+		#pragma endregion
 	}
 }
+
+
+
+		#if 0
+
+
+		// Parse the ldr script in 'reader' adding the results to 'out'
+		// If 'async' is true, a progress dialog is displayed and parsing is done in a background thread.
+		void Parse(pr::Renderer& rdr, pr::script::Reader& reader, ParseResult& out, bool async, pr::Guid const& context_id)
+		{
+			// Does the work of parsing objects and adds them to 'models'
+			// 'total' is the total number of objects added
+			auto ParseObjects = [&](pr::gui::ProgressUI* dlg, ParseResult& out)
+			{
+				// Note: your application needs to have called CoInitialise() before here
+				auto start_time = GetTickCount();
+				auto last_update = start_time;
+				ParseLdrObjects(rdr, reader, context_id, out, [&](LdrObjectPtr& obj)
+				{
+					// See if it's time for a progress update
+					if (dlg == nullptr) return true;
+					auto now = GetTickCount();
+					if (now - start_time < 200 || now - last_update < 100)
+						return true;
+
+					last_update = now;
+					char const* type = obj ? ELdrObject::ToStringA(obj->m_type) : "";
+					std::string name = obj ? obj->m_name : "";
+					return dlg->Progress(-1.0f, pr::FmtS(L"Parsing scene...\r\nObject count: %d\r\n%S %S", out.m_objects.size(), type, name.c_str()));
+				});
+			};
+
+			if (async)
+			{
+				// Run the adding process as a background task while displaying a progress dialog
+				pr::gui::ProgressUI dlg(L"Processing script", L"", ParseObjects, std::ref(out));
+
+				// Set the window icon to match the parent
+				auto parent = ::GetActiveWindow();
+				auto hicon = (HICON)SendMessageW(parent, WM_GETICON, ICON_SMALL, 0);
+				if (hicon != nullptr) dlg.Icon(hicon, false);
+
+				// Display the dialog after a while
+				dlg.ShowDialog(parent, 1000);
+			}
+			else
+			{
+				ParseObjects(nullptr, out);
+			}
+		}
+		#endif

@@ -7,6 +7,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
+using pr.common;
 using pr.extn;
 using pr.gfx;
 using pr.gui;
@@ -103,6 +104,10 @@ namespace LDraw
 		private ToolStripSeparator toolStripSeparator11;
 		private ToolStripMenuItem m_menu_nav_reset_on_reload;
 		private ToolStripSeparator toolStripSeparator13;
+		private ToolStripSeparator toolStripSeparator14;
+		private ToolStripMenuItem m_menu_file_options;
+		private ToolStripStatusLabel m_lbl_loading;
+		private ToolStripProgressBar m_pb_loading;
 		private ToolStripMenuItem m_menu_file_save_as;
 		#endregion
 
@@ -308,7 +313,7 @@ namespace LDraw
 				{
 					m_dc.Dock = DockStyle.Fill;
 					m_dc.Options.TabStrip.AlwaysShowTabs = true;
-					m_dc.Options.TitleBar.ShowTitleBars = false;
+					m_dc.Options.TitleBar.ShowTitleBars = true;
 					m_dc.Add(Model.Scene);
 					m_dc.Add(Model.Log);
 					m_tsc.ContentPanel.Controls.Add(m_dc);
@@ -346,6 +351,10 @@ namespace LDraw
 			m_menu_file_save_as.Click += (s,a) =>
 			{
 				SaveFile(true);
+			};
+			m_menu_file_options.Click += (s,a) =>
+			{
+				ShowOptions();
 			};
 			m_menu_file_recent_files.ToolTipText = "Shift+Click to open additionally\r\nCtrl+Click to edit";
 			m_recent_files = new RecentFiles(m_menu_file_recent_files, HandleRecentFile);
@@ -476,7 +485,6 @@ namespace LDraw
 			m_menu_data_create_demo_scene.Click += (s,a) =>
 			{
 				Model.CreateDemoScene();
-				Invalidate();
 			};
 			m_menu_data_object_manager.Click += (s,a) =>
 			{
@@ -567,6 +575,9 @@ namespace LDraw
 			};
 			#endregion
 			#endregion
+
+			#region Progress Bar
+			#endregion
 		}
 
 		/// <summary>Update UI elements</summary>
@@ -593,6 +604,9 @@ namespace LDraw
 			m_menu_rendering_cullmode_none     .Checked = Model.Scene.Options.CullMode == View3d.ECullMode.None;
 			m_menu_rendering_cullmode_back     .Checked = Model.Scene.Options.CullMode == View3d.ECullMode.Back;
 			m_menu_rendering_cullmode_front    .Checked = Model.Scene.Options.CullMode == View3d.ECullMode.Front;
+
+			// Update file loading progress
+			UpdateProgress();
 		}
 
 		/// <summary>Create a new file and an editor to edit the file</summary>
@@ -648,6 +662,13 @@ namespace LDraw
 			var script = m_dc.ActiveContent.Owner as ScriptUI;
 			Debug.Assert(script != null, "Should be able to save if a script isn't selected");
 			script.SaveFile(save_as ? null : script.Filepath);
+		}
+
+		/// <summary>Display the options dialog</summary>
+		private void ShowOptions()
+		{
+			using (var dlg = new SettingsUI(this, Settings))
+				dlg.ShowDialog();
 		}
 
 		/// <summary>Clear or script sources</summary>
@@ -748,6 +769,23 @@ namespace LDraw
 			ui.Editor.Text = Model.View3d.ExampleScript;
 		}
 
+		/// <summary>Update the state of the progress bar</summary>
+		public void UpdateProgress()
+		{
+			var progress = Model.AddFileProgress;
+
+			// Show/Hide the progress indicators
+			m_pb_loading .Visible = progress != null;
+			m_lbl_loading.Visible = progress != null;
+
+			if (progress != null)
+			{
+				var finfo = new FileInfo(progress.Filepath);
+				m_lbl_loading.Text = progress.Filepath;
+				m_pb_loading.ValueFrac((float)progress.FileOffset / finfo.Length);
+			}
+		}
+
 		#region Windows Form Designer generated code
 		private System.ComponentModel.IContainer components = null;
 		private void InitializeComponent()
@@ -756,6 +794,8 @@ namespace LDraw
 			this.m_tsc = new pr.gui.ToolStripContainer();
 			this.m_ss = new System.Windows.Forms.StatusStrip();
 			this.m_status = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_lbl_loading = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_pb_loading = new System.Windows.Forms.ToolStripProgressBar();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_new = new System.Windows.Forms.ToolStripMenuItem();
@@ -765,11 +805,15 @@ namespace LDraw
 			this.m_menu_file_open_additional = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_save = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_save_as = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator14 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_file_options = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_recent_files = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_sep0 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_exit = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_nav = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_nav_reset_on_reload = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator13 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_nav_reset_view = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_nav_reset_view_all = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_nav_reset_view_selected = new System.Windows.Forms.ToolStripMenuItem();
@@ -831,8 +875,6 @@ namespace LDraw
 			this.m_menu_window_example_script = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_window_about = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_nav_reset_on_reload = new System.Windows.Forms.ToolStripMenuItem();
-			this.toolStripSeparator13 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
@@ -865,7 +907,9 @@ namespace LDraw
 			// 
 			this.m_ss.Dock = System.Windows.Forms.DockStyle.None;
 			this.m_ss.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_status});
+            this.m_status,
+            this.m_lbl_loading,
+            this.m_pb_loading});
 			this.m_ss.Location = new System.Drawing.Point(0, 0);
 			this.m_ss.Name = "m_ss";
 			this.m_ss.Size = new System.Drawing.Size(663, 22);
@@ -876,6 +920,20 @@ namespace LDraw
 			this.m_status.Name = "m_status";
 			this.m_status.Size = new System.Drawing.Size(26, 17);
 			this.m_status.Text = "Idle";
+			// 
+			// m_lbl_spacer
+			// 
+			this.m_lbl_loading.Name = "m_lbl_spacer";
+			this.m_lbl_loading.Size = new System.Drawing.Size(389, 17);
+			this.m_lbl_loading.Spring = true;
+			this.m_lbl_loading.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+			// 
+			// m_pb_loading
+			// 
+			this.m_pb_loading.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
+			this.m_pb_loading.Name = "m_pb_loading";
+			this.m_pb_loading.Size = new System.Drawing.Size(200, 16);
+			this.m_pb_loading.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
 			// 
 			// m_menu
 			// 
@@ -901,6 +959,8 @@ namespace LDraw
             this.m_menu_file_open_additional,
             this.m_menu_file_save,
             this.m_menu_file_save_as,
+            this.toolStripSeparator14,
+            this.m_menu_file_options,
             this.toolStripSeparator1,
             this.m_menu_file_recent_files,
             this.m_sep0,
@@ -958,6 +1018,17 @@ namespace LDraw
 			this.m_menu_file_save_as.Size = new System.Drawing.Size(236, 22);
 			this.m_menu_file_save_as.Text = "Save &As";
 			// 
+			// toolStripSeparator14
+			// 
+			this.toolStripSeparator14.Name = "toolStripSeparator14";
+			this.toolStripSeparator14.Size = new System.Drawing.Size(233, 6);
+			// 
+			// m_menu_file_options
+			// 
+			this.m_menu_file_options.Name = "m_menu_file_options";
+			this.m_menu_file_options.Size = new System.Drawing.Size(236, 22);
+			this.m_menu_file_options.Text = "&Options...";
+			// 
 			// toolStripSeparator1
 			// 
 			this.toolStripSeparator1.Name = "toolStripSeparator1";
@@ -1000,6 +1071,17 @@ namespace LDraw
 			this.m_menu_nav.Size = new System.Drawing.Size(77, 20);
 			this.m_menu_nav.Text = "&Navigation";
 			// 
+			// m_menu_nav_reset_on_reload
+			// 
+			this.m_menu_nav_reset_on_reload.Name = "m_menu_nav_reset_on_reload";
+			this.m_menu_nav_reset_on_reload.Size = new System.Drawing.Size(160, 22);
+			this.m_menu_nav_reset_on_reload.Text = "Reset on Reload";
+			// 
+			// toolStripSeparator13
+			// 
+			this.toolStripSeparator13.Name = "toolStripSeparator13";
+			this.toolStripSeparator13.Size = new System.Drawing.Size(157, 6);
+			// 
 			// m_menu_nav_reset_view
 			// 
 			this.m_menu_nav_reset_view.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -1013,19 +1095,19 @@ namespace LDraw
 			// m_menu_nav_reset_view_all
 			// 
 			this.m_menu_nav_reset_view_all.Name = "m_menu_nav_reset_view_all";
-			this.m_menu_nav_reset_view_all.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_nav_reset_view_all.Size = new System.Drawing.Size(118, 22);
 			this.m_menu_nav_reset_view_all.Text = "&All";
 			// 
 			// m_menu_nav_reset_view_selected
 			// 
 			this.m_menu_nav_reset_view_selected.Name = "m_menu_nav_reset_view_selected";
-			this.m_menu_nav_reset_view_selected.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_nav_reset_view_selected.Size = new System.Drawing.Size(118, 22);
 			this.m_menu_nav_reset_view_selected.Text = "&Selected";
 			// 
 			// m_menu_nav_reset_view_visible
 			// 
 			this.m_menu_nav_reset_view_visible.Name = "m_menu_nav_reset_view_visible";
-			this.m_menu_nav_reset_view_visible.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_nav_reset_view_visible.Size = new System.Drawing.Size(118, 22);
 			this.m_menu_nav_reset_view_visible.Text = "&Visible";
 			// 
 			// m_menu_nav_view
@@ -1413,17 +1495,6 @@ namespace LDraw
 			this.m_menu_window_about.Name = "m_menu_window_about";
 			this.m_menu_window_about.Size = new System.Drawing.Size(151, 22);
 			this.m_menu_window_about.Text = "&About";
-			// 
-			// m_menu_nav_reset_on_reload
-			// 
-			this.m_menu_nav_reset_on_reload.Name = "m_menu_nav_reset_on_reload";
-			this.m_menu_nav_reset_on_reload.Size = new System.Drawing.Size(160, 22);
-			this.m_menu_nav_reset_on_reload.Text = "Reset on Reload";
-			// 
-			// toolStripSeparator13
-			// 
-			this.toolStripSeparator13.Name = "toolStripSeparator13";
-			this.toolStripSeparator13.Size = new System.Drawing.Size(157, 6);
 			// 
 			// MainUI
 			// 

@@ -51,9 +51,19 @@ namespace pr
 			{}
 
 			// Access the underlying source
+			Src const& Source() const
+			{
+				return m_pp;
+			}
 			Src& Source()
 			{
 				return m_pp;
+			}
+
+			// Return the current source location
+			Location Loc() const
+			{
+				return Source().Loc();
 			}
 
 			// Access the include handler

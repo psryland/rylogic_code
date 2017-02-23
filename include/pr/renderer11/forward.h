@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <functional>
 #include <type_traits>
+#include <mutex>
 
 #include <intrin.h>
 #include <malloc.h>
@@ -92,18 +93,19 @@ namespace pr
 
 	namespace rdr
 	{
-		typedef pr::uint8  byte;
-		typedef uintptr_t  RdrId;
-		typedef pr::uint16 SortKeyId;
+		using byte      = unsigned char;
+		using RdrId     = std::uintptr_t;
+		using SortKeyId = pr::uint16;
+		using Range     = pr::Range<size_t>;
+
+		using string32   = pr::string<char, 32>;
+		using string512  = pr::string<char, 512>;
+		using wstring32  = pr::string<wchar_t, 32>;
+		using wstring256 = pr::string<wchar_t, 256>;
+
+		static Range const RangeZero = {0,0};
 		static RdrId const AutoId = ~RdrId(); // A special value for automatically generating an Id
 		static RdrId const InvalidId = RdrId();
-
-		typedef pr::string<char, 32>     string32;
-		typedef pr::string<char, 512>    string512;
-		typedef pr::string<wchar_t, 32>  wstring32;
-		typedef pr::string<wchar_t, 256> wstring256;
-		typedef pr::Range<size_t> Range;
-		const Range RangeZero = {0,0};
 
 		using EGeom = pr::geometry::EGeom;
 		using EPrim = pr::geometry::EPrim;
@@ -171,7 +173,7 @@ namespace pr
 		// Lighting
 		struct Light;
 
-		// Util
+		// Utility
 		class BlendStateManager;
 		class DepthStateManager;
 		class RasterStateManager;
