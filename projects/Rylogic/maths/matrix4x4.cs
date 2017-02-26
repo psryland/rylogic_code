@@ -544,7 +544,7 @@ namespace pr.unittests
 			Assert.True(m4x4.FEql(m4x4.Identity, a2a));
 
 			var b2a_fast = m4x4.InvertFast(a2b);
-			Assert.True(m4x4.FEql(b2a_fast, b2a));
+			Assert.True(m4x4.FEql(b2a_fast, b2a, 0.001f));
 		}
 		[Test] public void Orthonormalise()
 		{

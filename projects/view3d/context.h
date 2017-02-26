@@ -14,7 +14,6 @@ namespace view3d
 		using InitSet = std::set<View3DContext>;
 
 		InitSet                   m_inits;      // A unique id assigned to each Initialise call
-		ErrorCBStack              m_error_cb;   // A stack of error callback functions
 		bool                      m_compatible; // True if the renderer will work on this system
 		pr::Renderer              m_rdr;        // The renderer
 		WindowCont                m_wnd_cont;   // The created windows
@@ -26,7 +25,6 @@ namespace view3d
 
 		Context()
 			:m_inits()
-			,m_error_cb()
 			,m_compatible(pr::rdr::TestSystemCompatibility())
 			,m_rdr(pr::rdr::RdrSettings(FALSE))
 			,m_wnd_cont()
@@ -73,33 +71,20 @@ namespace view3d
 		Context(Context const&) = delete;
 		Context& operator=(Context const&) = delete;
 
-		// Push/Pop error callbacks from the error callback stack
-		void PushErrorCB(View3D_ReportErrorCB cb, void* ctx)
-		{
-			m_error_cb.emplace_back(ReportErrorCB(cb, ctx));
-		}
-		void PopErrorCB(View3D_ReportErrorCB cb)
-		{
-			if (m_error_cb.empty())
-				throw std::exception("Error callback stack is empty, cannot pop");
-			if (m_error_cb.back().m_cb != cb)
-				throw std::exception("Attempt to pop an error callback that is not the most recently pushed callback. This is likely a destruction order probably");
-
-			m_error_cb.pop_back();
-		}
-
-		// Report an error for this window
-		void ReportError(wchar_t const* msg)
-		{
-			auto error_cb = m_error_cb.back();
-			error_cb(msg);
-		}
+		// Error event. Can be called in a worker thread context
+		pr::MultiCast<ReportErrorCB> OnError;
 
 		// Event raised when script sources are parsed during adding/updating
 		pr::MultiCast<AddFileProgressCB> OnAddFileProgress;
 
 		// Event raised when the script sources are updated
 		pr::MultiCast<SourcesChangedCB> OnSourcesChanged;
+
+		// Report an error to the global error handler
+		void ReportError(wchar_t const* msg)
+		{
+			OnError.Raise(msg);
+		}
 
 		// Remove all Ldr script sources
 		void ClearScriptSources()
@@ -163,7 +148,7 @@ namespace view3d
 			}
 
 			// Reload the source data
-			m_sources.Reload();
+			std::thread([&]{ m_sources.Reload(); }).detach();
 		}
 
 		// Poll for changed script source files, and reload any that have changed

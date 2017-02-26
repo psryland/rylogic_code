@@ -229,8 +229,8 @@ namespace pr.gui
 				{// Show Origin
 					var show_origin_menu = new ToolStripMenuItem("Show Origin");
 					view_menu.DropDownItems.Add(show_origin_menu);
-					show_origin_menu.Checked = Window.OriginVisible;
-					show_origin_menu.Click += (s,a) => { Window.OriginVisible = !Window.OriginVisible; Refresh(); };
+					show_origin_menu.Checked = Window.OriginPointVisible;
+					show_origin_menu.Click += (s,a) => { Window.OriginPointVisible = !Window.OriginPointVisible; Refresh(); };
 				}
 				{// Show coords
 				}

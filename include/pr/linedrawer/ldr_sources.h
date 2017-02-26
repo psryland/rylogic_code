@@ -150,16 +150,15 @@ namespace pr
 				,m_rdr(&rdr)
 				,m_embed(embed)
 				,m_mutex()
-				,OnReload()
-				,OnStoreChanged()
-				,OnFileRemoved()
-				,OnError()
 			{
 				m_watcher.OnFilesChanged += [&](FileWatch::FileCont&)
 				{
 					OnReload(*this, ReloadEventArgs(*m_store, EReason::Reload));
 				};
 			}
+
+			// Parse error event. Note: raised in the same thread context as 'AddFile'.
+			pr::EventHandler<ScriptSources&, ErrorEventArgs const&> OnError;
 
 			// An event raised during parsing of files. This is called in the context of the threads that call 'AddFile'. Do not sign up while AddFile calls are running.
 			pr::EventHandler<ScriptSources&, AddFileProgressEventArgs&> OnAddFileProgress;
@@ -172,9 +171,6 @@ namespace pr
 
 			// Source file being removed event (i.e. objects deleted by Id)
 			pr::EventHandler<ScriptSources&, FileRemovedEventArgs const&> OnFileRemoved;
-
-			// Parse error event. Note: raised in the same thread context as 'AddFile'.
-			pr::EventHandler<ScriptSources&, ErrorEventArgs const&> OnError;
 
 			// Return const access to the source files
 			FileCont const& List() const
@@ -269,8 +265,9 @@ namespace pr
 				if (iter == std::end(m_files))
 					return;
 
-				// Reload that file group
-				AddFile(iter->second, EReason::Reload);
+				// Reload that file group (asynchronously)
+				auto filepath = iter->second;
+				std::thread([=]{ AddFile(filepath, EReason::Reload); }).detach();
 			}
 
 			// Internal add file.

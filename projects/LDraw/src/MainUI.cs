@@ -254,20 +254,17 @@ namespace LDraw
 				if (m_impl_model != null)
 				{
 					m_impl_model.Scene.Options.PropertyChanged -= UpdateUI;
-					Util.Dispose(ref m_error_cb_wnd);
 					Util.Dispose(ref m_impl_model);
 				}
 				m_impl_model = value;
 				if (m_impl_model != null)
 				{
-					m_error_cb_wnd = Model.Window.PushErrorCB(Model.ReportError);
 					m_impl_model.Scene.Options.PropertyChanged += UpdateUI;
 				}
 				Update();
 			}
 		}
 		private Model m_impl_model;
-		private Scope m_error_cb_wnd;
 
 		/// <summary>Main application status label</summary>
 		public ToolStripStatusLabel Status
@@ -500,7 +497,7 @@ namespace LDraw
 			};
 			m_menu_rendering_show_origin.Click += (s,a) =>
 			{
-				Model.Window.OriginVisible = !Model.Window.OriginVisible;
+				Model.Window.OriginPointVisible = !Model.Window.OriginPointVisible;
 				Invalidate();
 				UpdateUI();
 			};
@@ -592,7 +589,7 @@ namespace LDraw
 			m_menu_nav_zoom_lock_aspect    .Checked = Model.Scene.LockAspect;
 			m_menu_data_auto_refresh       .Checked = Model.AutoRefreshSources;
 			m_menu_rendering_show_focus    .Checked = Model.Window.FocusPointVisible;
-			m_menu_rendering_show_origin   .Checked = Model.Window.OriginVisible;
+			m_menu_rendering_show_origin   .Checked = Model.Window.OriginPointVisible;
 			m_menu_rendering_show_selection.Checked = false;
 			m_menu_rendering_show_bounds   .Checked = Model.Window.BBoxesVisible;
 			m_menu_rendering_orthographic  .Checked = Model.Camera.Orthographic;

@@ -17,7 +17,6 @@ namespace view3d
 		using LdrAngleUIPtr         = std::unique_ptr<pr::ldr::LdrAngleUI>;
 
 		Context*              m_dll;                      // The dll context
-		ErrorCBStack          m_error_cb;                 // Stack of error callback functions for the dll
 		HWND                  m_hwnd;                     // The associated window handle
 		pr::rdr::Window       m_wnd;                      // The window being drawn on
 		pr::rdr::Scene        m_scene;                    // Scene manager
@@ -28,8 +27,8 @@ namespace view3d
 		EView3DFillMode       m_fill_mode;                // Fill mode
 		EView3DCullMode       m_cull_mode;                // Face culling mode
 		pr::Colour32          m_background_colour;        // The background colour for this draw set
-		view3d::Instance      m_focus_point;              // Focus point graphics
-		view3d::Instance      m_origin_point;             // Origin point graphics
+		view3d::PointInstance m_focus_point;              // Focus point graphics
+		view3d::PointInstance m_origin_point;             // Origin point graphics
 		view3d::Instance      m_bbox_model;               // Bounding box graphics
 		view3d::Instance      m_selection_box;            // Selection box graphics
 		float                 m_focus_point_size;         // The base size of the focus point object
@@ -63,7 +62,6 @@ namespace view3d
 
 		Window(HWND hwnd, Context* dll, View3DWindowOptions const& opts)
 			:m_dll(dll)
-			,m_error_cb({pr::StaticCallBack(opts.m_error_cb, opts.m_error_cb_ctx)})
 			,m_hwnd(hwnd)
 			,m_wnd(m_dll->m_rdr, Settings(hwnd, opts))
 			,m_scene(m_wnd)
@@ -78,8 +76,8 @@ namespace view3d
 			,m_origin_point()
 			,m_bbox_model()
 			,m_selection_box()
-			,m_focus_point_size(0.05f)
-			,m_origin_point_size(0.05f)
+			,m_focus_point_size(1.0f)
+			,m_origin_point_size(1.0f)
 			,m_focus_point_visible(false)
 			,m_origin_point_visible(false)
 			,m_bboxes_visible(false)
@@ -92,6 +90,10 @@ namespace view3d
 			,m_bbox_scene(pr::BBoxReset)
 			,m_eh_store_updated()
 		{
+			// Attach the error handler
+			if (opts.m_error_cb != nullptr)
+				OnError += pr::StaticCallBack(opts.m_error_cb, opts.m_error_cb_ctx);
+			
 			// Observe the dll object store for changes
 			m_eh_store_updated = m_dll->m_sources.OnStoreChanged += [&](pr::ldr::ScriptSources&, pr::ldr::ScriptSources::StoreChangedEventArgs const&)
 			{
@@ -123,17 +125,22 @@ namespace view3d
 		~Window()
 		{
 			m_dll->m_sources.OnStoreChanged -= m_eh_store_updated;
-
-			assert("Error callback stack is in consistent. Number of pushes != number of pops" && m_error_cb.size() == 1U);
-			if (!m_error_cb.empty())
-				m_error_cb.pop_back();
 		}
+
+		// Error event. Can be called in a worker thread context
+		pr::MultiCast<ReportErrorCB> OnError;
 
 		// Settings changed event
 		pr::MultiCast<SettingsChangedCB> OnSettingsChanged;
 
 		// Rendering event
 		pr::MultiCast<RenderingCB> OnRendering;
+
+		// Report an error for this window
+		void ReportError(wchar_t const* msg)
+		{
+			OnError.Raise(msg);
+		}
 
 		// Render this window into whatever render target is currently set
 		void Render()
@@ -165,18 +172,22 @@ namespace view3d
 			// Position the focus point
 			if (m_focus_point_visible)
 			{
-				auto scale = m_focus_point_size * m_camera.FocusDist();
-				auto aspect = m_camera.Aspect() * m_scene.m_viewport.Height / m_scene.m_viewport.Width;
-				m_focus_point.m_i2w = pr::m4x4::Scale(scale * aspect, scale, scale, m_camera.FocusPoint());
+				float const screen_fraction = 0.1f;
+				auto fd = m_camera.FocusDist();
+				auto sz = m_focus_point_size * screen_fraction * fd;
+				m_focus_point.m_i2w = pr::m4x4::Scale(sz, sz, sz, m_camera.FocusPoint());
+				m_focus_point.m_c2s = m_camera.CameraToScreen(float(m_scene.m_viewport.Width)/float(m_scene.m_viewport.Height));
 				m_scene.AddInstance(m_focus_point);
 			}
 
 			// Scale the origin point
 			if (m_origin_point_visible)
 			{
-				auto scale = m_origin_point_size * pr::Length3(m_camera.CameraToWorld().pos);
-				auto aspect = m_camera.Aspect() * m_scene.m_viewport.Height / m_scene.m_viewport.Width;
-				m_origin_point.m_i2w = pr::m4x4::Scale(scale * aspect, scale, scale, pr::v4Origin);
+				float const screen_fraction = 0.1f;
+				auto fd = pr::Length3(m_camera.CameraToWorld().pos);
+				auto sz = m_origin_point_size * screen_fraction * fd;
+				m_origin_point.m_i2w = pr::m4x4::Scale(sz, sz, sz, pr::v4Origin);
+				m_origin_point.m_c2s = m_camera.CameraToScreen(float(m_scene.m_viewport.Width)/float(m_scene.m_viewport.Height));
 				m_scene.AddInstance(m_origin_point);
 			}
 
@@ -239,28 +250,6 @@ namespace view3d
 		void Present()
 		{
 			m_wnd.Present();
-		}
-
-		// Report an error for this window
-		void ReportError(wchar_t const* msg)
-		{
-			auto error_cb = m_error_cb.back();
-			error_cb(msg);
-		}
-
-		// Push/Pop error callbacks from the error callback stack
-		void PushErrorCB(View3D_ReportErrorCB cb, void* ctx)
-		{
-			m_error_cb.emplace_back(ReportErrorCB(cb, ctx));
-		}
-		void PopErrorCB(View3D_ReportErrorCB cb)
-		{
-			if (m_error_cb.empty())
-				throw std::exception("Error callback stack is empty, cannot pop");
-			if (m_error_cb.back().m_cb != cb)
-				throw std::exception("Attempt to pop an error callback that is not the most recently pushed callback. This is likely a destruction order probably");
-
-			m_error_cb.pop_back();
 		}
 
 		// Close any window handles

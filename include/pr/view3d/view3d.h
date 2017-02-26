@@ -56,8 +56,8 @@ extern "C"
 	struct View3DMaterial;
 	struct View3DViewport;
 	struct View3DGizmoEvent;
-	typedef unsigned int View3DColour;
-	typedef void (__stdcall *View3D_ReportErrorCB)(void* ctx, wchar_t const* msg);
+	using View3DColour = unsigned int;
+	using View3D_ReportErrorCB = void (__stdcall *)(void* ctx, wchar_t const* msg);
 
 	enum class EView3DResult
 	{
@@ -320,14 +320,12 @@ extern "C"
 	// Initialise/shutdown the dll
 	VIEW3D_API View3DContext __stdcall View3D_Initialise       (View3D_ReportErrorCB initialise_error_cb, void* ctx);
 	VIEW3D_API void          __stdcall View3D_Shutdown         (View3DContext context);
-	VIEW3D_API void          __stdcall View3D_PushGlobalErrorCB(View3D_ReportErrorCB error_cb, void* ctx);
-	VIEW3D_API void          __stdcall View3D_PopGlobalErrorCB (View3D_ReportErrorCB error_cb);
+	VIEW3D_API void          __stdcall View3D_GlobalErrorCBSet (View3D_ReportErrorCB error_cb, void* ctx, BOOL add);
 
 	// Windows
 	VIEW3D_API View3DWindow __stdcall View3D_CreateWindow       (HWND hwnd, View3DWindowOptions const& opts);
 	VIEW3D_API void         __stdcall View3D_DestroyWindow      (View3DWindow window);
-	VIEW3D_API void         __stdcall View3D_PushErrorCB        (View3DWindow window, View3D_ReportErrorCB error_cb, void* ctx);
-	VIEW3D_API void         __stdcall View3D_PopErrorCB         (View3DWindow window, View3D_ReportErrorCB error_cb);
+	VIEW3D_API void         __stdcall View3D_ErrorCBSet         (View3DWindow window, View3D_ReportErrorCB error_cb, void* ctx, BOOL add);
 	VIEW3D_API char const*  __stdcall View3D_GetSettings        (View3DWindow window);
 	VIEW3D_API void         __stdcall View3D_SetSettings        (View3DWindow window, char const* settings);
 	VIEW3D_API void         __stdcall View3D_SettingsChanged    (View3DWindow window, View3D_SettingsChangedCB settings_changed_cb, void* ctx, BOOL add);

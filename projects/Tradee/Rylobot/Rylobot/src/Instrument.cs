@@ -499,26 +499,30 @@ namespace Rylobot
 			return new Candle(timestamp, open, high, low, close, median, volume);
 		}
 
-		/// <summary>True if the candle pattern leading up to 'idx' indicates a price reversal.</summary>
-		public bool IsCandlePattern(NegIdx idx, out int forecast_direction, out QuoteCurrency target_entry)
+		/// <summary>True if the candle pattern leading up to 'idx' signals a possible trade entry point.</summary>
+		public TradeType? IsCandlePattern(NegIdx idx)
 		{
-			// Not enough data, assume not
-			// Require at least 3 candles
+			// Notes:
+			//  This just indicates candle patterns, *not* trade entries.
+			//  Trade entry should also consider general trend, SnR levels, etc
+
+			// Not enough data. Require at least 3 candles
 			if (idx - IdxFirst < 3)
-			{
-				forecast_direction = 0;
-				target_entry = 0;
-				return false;
-			}
+				return null;
 
-			// Measure the age of the latest candle (normalised)
-			var a_age = AgeOf(this[idx], clamped:true);
-			if (a_age < 0.8) --idx; // include the latest candle if mostly done
-
+			// 'A' is treated as the latest candle (potentially not closed).
+			// Typically we're looking for 'B' being a price reversal, with 'A' being confirmation.
+			// The function is intended to be called on every tick. If 'A' shows a strong trend direction
+			// count it as 'closed' for the purposes of candle pattern detection.
 			var mcs = MCS_50;
 
-			// Get the last few candles
-			// 'A' is treated as the latest closed candle.
+			// If the current candle is not old enough, or does not indicate a clear trend, ignore it.
+			if (NewCandle ||                             // 'A' is a new candle
+				AgeOf(this[idx], clamped:true) < 0.1f || // A young candle
+				!this[idx].Type(mcs).IsTrend())          // Not a strong trend
+				--idx;
+
+			// Get the last few candles.
 			var A = this[idx-0]; var a_type = A.Type(mcs);
 			var B = this[idx-1]; var b_type = B.Type(mcs);
 			var C = this[idx-2]; var c_type = C.Type(mcs);
@@ -533,11 +537,7 @@ namespace Rylobot
 				(a_type == Candle.EType.Marubozu || a_type == Candle.EType.MarubozuStrengthening ||                             // 'A' is a trend sign
 				(A.Strength > 0.7 && Math.Abs(A.Close - B.BodyCentre) > 1.2 * Math.Abs(B.WickLimit(A.Sign) - B.BodyCentre))) && // 'A' is a trend sign
 				true)
-			{
-				forecast_direction = A.Sign;
-				target_entry = B.Median;
-				return true;
-			}
+				return CAlgo.SignToTradeType(A.Sign);
 
 			// Indecision, followed by two semi strong candles in the same direction
 			if ((c_type.IsIndecision()) &&                  // A hammer, spinning top, or doji
@@ -547,11 +547,7 @@ namespace Rylobot
 				(Math.Abs(A.Open - B.Close) < 0.1 * mcs) && // 'A' and 'B' join nose to tail
 				(Math.Abs(A.Close - B.Open) > mcs) &&       // 'A' and 'B' combined is a significant trend indication
 				true)
-			{
-				forecast_direction = A.Sign;
-				target_entry = C.Median;
-				return true;
-			}
+				return CAlgo.SignToTradeType(A.Sign);
 
 			// Engulfing pattern
 			const double EngulfingRatio = 1.2;
@@ -563,12 +559,7 @@ namespace Rylobot
 				(Math.Abs(preceding_trend) > 0.5) &&              // The preceding trend is strong
 				(A.Sign != Math.Sign(preceding_trend)) &&         // 'A' is in the opposite direction to the preceding trend
 				true)
-			{
-				// Engulfing patterns tend to take off, so set the target entry at A.Close
-				forecast_direction = A.Sign;
-				target_entry = A.Close;
-				return true;
-			}
+				return CAlgo.SignToTradeType(A.Sign);
 
 			// Engulfing pattern, two semi strong candles in the same direction engulfing 'C'
 			var AB = Compress(idx-1,idx-0);
@@ -580,62 +571,60 @@ namespace Rylobot
 				(Math.Abs(preceding_trend) > 0.5) &&               // The preceding trend is strong
 				(AB.Sign != Math.Sign(preceding_trend)) &&         // 'A' is in the opposite direction to the preceding trend
 				true)
-			{
-				// Engulfing patterns tend to take off, so set the target entry at A.Close
-				forecast_direction = A.Sign;
-				target_entry = A.Close;
-				return true;
-			}
-			forecast_direction = 0;
-			target_entry = 0;
-			return false;
+				return CAlgo.SignToTradeType(A.Sign);
+
+			return null;
 		}
 
 		/// <summary>Returns a trade type when a likely good trade is identified. Or null</summary>
 		public TradeType? FindTradeEntry(NegIdx? idx_ = null)
 		{
+			// Look for:
+			// Candle pattern.. at a SnR level.. not against the slow EMA trend.
+			// Notes:
+			//  - Candle size depends on the volatility and on the time frame
+
 			// Where in the instrument to look
 			var idx = idx_ ?? 0;
 
-			// Need some sort of voting system.
-			// Each method adds a weighted vote of whether to buy or sell or skip.
-			// Need some way to see what each vote is for each candle
-			//  -> Step through each new candle, write the votes to a text file
+// Show the instrument
+//Debugging.Dump(this, range_:new Range((int)idx-300, (int)idx));
 
-			int dir;
-			QuoteCurrency entry;
-			if (IsCandlePattern(idx, out dir, out entry))
-				return
-					dir > 0 ? TradeType.Buy :
-					dir < 0 ? TradeType.Sell :
-					(TradeType?)null;
-			
-			return null;
+			// Look for a candle pattern to start the entry point consideration
+			var tt = IsCandlePattern(idx);
+			if (tt == null) return null;
+			var trade_type = tt.Value;
+			var mcs = MCS_50 / PipSize;
+// Draw a box around the candle pattern
 
-			// Get the current price
-			var curr_price = idx_ != null ? this[idx].Close : (double)CurrentPrice(0);
+			// Look at the instrument on a higher time frame
+			var high_tf = this;// RelativeTimeFrame(5.0);
+			var high_tf_idx = high_tf.IndexAt(this[idx].TimestampUTC);
 
-			// Get the gradient of the long period EMA
-			var ema100 = Bot.Indicators.ExponentialMovingAverage(Data.Close, 100);
-			var grad100 = ema100.Result.FirstDerivative(idx) / MCS_50;
+			// Get the long EMA for the higher time-frame and ensure we're not trading against the trend
+			var high_tf_ema = Bot.Indicators.ExponentialMovingAverage(high_tf.Data.Close, 200);
+			var trend_slope = high_tf_ema.Result.FirstDerivative(high_tf_idx) / MCS_50; // in mcs / candle
 
-			// Get the gradient of the short period EMA
-			var ema14 = Bot.Indicators.ExponentialMovingAverage(Data.Close, 14);
-			var grad14 = ema14.Result.FirstDerivative(idx) / MCS_50;
+// Draw the slope
+//Debugging.
 
-			// Is price is trending...
-			var price_trending = 0;
-			{
-				// Price is trending if:
-				//  - the long EMA has a large slope
-				//  - the short EMA is on the same side as the curvature of the long EMA
-				const double ema100_trending = 0.1; // pips per index
-				price_trending =
-					grad100 > +ema100_trending ? +1 :
-					grad100 < -ema100_trending ? -1 :
-					0;
+			// If the trend is strong and opposed to the trade direction, ignore
+			if (Math.Sign(trend_slope) != trade_type.Sign() && Math.Abs(trend_slope) > 0.1)
+				return null;
 
-			}
+			// Look at the SnR levels in the higher time frame.
+			// If the indecision isn't occurring on a significant SnR level, ignore
+			const int SnRHistoryLength = 200;
+			var snr = new SnR(this, idx - SnRHistoryLength, idx);
+
+// Show the SNR levels
+
+// Detect higher lows, or lower highs, Use this to decide trend
+
+			return trade_type;
+
+			//// Measure the trend using candle ratios
+			//var trend = MeasureTrend(idx - 5, idx);
 
 			{// Look for price volatility >> MCS
 				// If price isn't trending but is moving up and down significantly more
@@ -645,8 +634,8 @@ namespace Rylobot
 			// Is the instrument is over-bought or over-sold?
 			{
 				// Look for the price over or under 70/30 and having just crossed back into the normal range
-				var rsi = Bot.Indicators.RelativeStrengthIndex(Data.Close, 14);
-				var rsi_sum = rsi.Result.Integrate(idx - 5, idx - 0) / 5.0;
+				//var rsi = Bot.Indicators.RelativeStrengthIndex(Data.Close, 14);
+				//var rsi_sum = rsi.Result.Integrate(idx - 5, idx - 0) / 5.0;
 
 				//if (tt == TradeType.Buy && rsi.Result.LastValue > 70.0)
 				//	return null; // Over bought
@@ -662,6 +651,10 @@ namespace Rylobot
 			{
 				// Expect the price to retrace back by a third of the price jump
 			}
+
+			// Rejected ideas:
+			//  Detect trend direction by comparing fast EMA to slow EMA with fast > slow meaning rising.
+			//  Fails because
 		}
 	}
 

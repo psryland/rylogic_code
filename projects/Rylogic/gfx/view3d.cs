@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using pr.common;
@@ -19,7 +20,8 @@ using HTexture = System.IntPtr;
 using HWindow = System.IntPtr;
 using HWND = System.IntPtr;
 using HMODULE = System.IntPtr;
-using System.Text;
+using System.Windows.Threading;
+using System.Threading;
 
 namespace pr.gfx
 {
@@ -629,6 +631,9 @@ namespace pr.gfx
 
 		private readonly List<Window> m_windows;              // Groups of objects to render
 		private readonly HContext     m_context;              // Unique id per Initialise call
+		private readonly Dispatcher   m_dispatcher;           // Thread marshaller
+		private readonly int          m_thread_id;            // The main thread id
+		private ReportErrorCB         m_error_cb;             // Reference to callback
 		private AddFileProgressCB     m_add_file_progress_cb; // Reference to callback
 		private SourcesChangedCB      m_sources_changed_cb;   // Reference to callback
 
@@ -638,6 +643,8 @@ namespace pr.gfx
 				throw new Exception("View3d.dll has not been loaded");
 
 			m_windows = new List<Window>();
+			m_dispatcher = Dispatcher.CurrentDispatcher;
+			m_thread_id = Thread.CurrentThread.ManagedThreadId;
 
 			// Initialise view3d
 			string init_error = null;
@@ -645,6 +652,16 @@ namespace pr.gfx
 			m_context = View3D_Initialise(error_cb, IntPtr.Zero);
 			if (m_context == HContext.Zero)
 				throw new Exception(init_error ?? "Failed to initialised View3d");
+
+			// Attach the global error handler
+			m_error_cb = (ctx, msg) =>
+			{
+				if (m_thread_id != Thread.CurrentThread.ManagedThreadId)
+					m_dispatcher.BeginInvoke(m_error_cb, ctx, msg);
+				else
+					Error.Raise(this, new ErrorEventArgs(msg));
+			};
+			View3D_GlobalErrorCBSet(m_error_cb, IntPtr.Zero, true);
 
 			// Sign up for progress reports
 			m_add_file_progress_cb = (ctx, context_id, fpath, foffset, complete) =>
@@ -658,13 +675,17 @@ namespace pr.gfx
 			// Sign up for notification of the sources changing
 			m_sources_changed_cb = (ctx,reason,before) =>
 			{
-				OnSourcesChanged.Raise(this, new SourcesChangedEventArgs(reason, before));
+				if (m_thread_id != Thread.CurrentThread.ManagedThreadId)
+					m_dispatcher.BeginInvoke(m_sources_changed_cb, ctx, reason, before);
+				else
+					OnSourcesChanged.Raise(this, new SourcesChangedEventArgs(reason, before));
 			};
 			View3D_SourcesChangedCBSet(m_sources_changed_cb, IntPtr.Zero, true);
 		}
 		public void Dispose()
 		{
 			// Unsubscribe
+			View3D_GlobalErrorCBSet(m_error_cb, IntPtr.Zero, false);
 			View3D_AddFileProgressCBSet(m_add_file_progress_cb, IntPtr.Zero, false);
 			View3D_SourcesChangedCBSet(m_sources_changed_cb, IntPtr.Zero, false);
 
@@ -672,6 +693,19 @@ namespace pr.gfx
 				m_windows[0].Dispose();
 
 			View3D_Shutdown(m_context);
+		}
+
+		/// <summary>Event call on errors. Note: can be called in a background thread context</summary>
+		public event EventHandler<ErrorEventArgs> Error;
+		public class ErrorEventArgs :EventArgs
+		{
+			public ErrorEventArgs(string msg)
+			{
+				Message = msg;
+			}
+
+			/// <summary>The error message</summary>
+			public string Message { get; private set; }
 		}
 
 		/// <summary>Event notifying whenever sources are reloaded</summary>
@@ -714,14 +748,6 @@ namespace pr.gfx
 
 			/// <summary>True if files are about to change</summary>
 			public bool Before { get; private set; }
-		}
-
-		/// <summary>Add a global error callback, returned object pops the error callback when disposed</summary>
-		public Scope PushGlobalErrorCB(ReportErrorCB error_cb)
-		{
-			return Scope.Create(
-				() => View3D_PushGlobalErrorCB(error_cb, IntPtr.Zero),
-				() => View3D_PopGlobalErrorCB(error_cb));
 		}
 
 		/// <summary>
@@ -807,6 +833,10 @@ namespace pr.gfx
 				if (m_wnd == null)
 					throw new Exception("Failed to create View3D window");
 
+				// Attach the global error handler
+				m_error_cb = (ctx, msg) => Error.Raise(this, new ErrorEventArgs(msg));
+				View3D_ErrorCBSet(m_wnd, m_error_cb, IntPtr.Zero, true);
+
 				// Set up a callback for when settings are changed
 				m_settings_cb = (c,w) => OnSettingsChanged.Raise(this, EventArgs.Empty);
 				View3D_SettingsChanged(m_wnd, m_settings_cb, IntPtr.Zero, true);
@@ -827,21 +857,25 @@ namespace pr.gfx
 			}
 			public void Dispose()
 			{
-				if (m_wnd != HWindow.Zero)
-				{
-					View3D_SettingsChanged(m_wnd, m_settings_cb, IntPtr.Zero, false);
-					View3D_RenderingCB(m_wnd, m_render_cb, IntPtr.Zero, false);
-					View3D_DestroyWindow(m_wnd);
-					m_wnd = HWindow.Zero;
-				}
+				if (m_wnd == HWindow.Zero) return;
+				View3D_RenderingCB(m_wnd, m_render_cb, IntPtr.Zero, false);
+				View3D_SettingsChanged(m_wnd, m_settings_cb, IntPtr.Zero, false);
+				View3D_ErrorCBSet(m_wnd, m_error_cb, IntPtr.Zero, false);
+				View3D_DestroyWindow(m_wnd);
+				m_wnd = HWindow.Zero;
 			}
 
-			/// <summary>Add an error callback. returned object pops the error callback when disposed</summary>
-			public Scope PushErrorCB(ReportErrorCB error_cb)
+			/// <summary>Event call on errors. Note: can be called in a background thread context</summary>
+			public event EventHandler<ErrorEventArgs> Error;
+			public class ErrorEventArgs :EventArgs
 			{
-				return Scope.Create(
-					() => View3D_PushErrorCB(m_wnd, error_cb, IntPtr.Zero),
-					() => View3D_PopErrorCB(m_wnd, error_cb));
+				public ErrorEventArgs(string msg)
+				{
+					Message = msg;
+				}
+
+				/// <summary>The error message</summary>
+				public string Message { get; private set; }
 			}
 
 			/// <summary>Event notifying whenever rendering settings have changed</summary>
@@ -1005,14 +1039,14 @@ namespace pr.gfx
 			}
 
 			/// <summary>Show/Hide the origin point</summary>
-			public bool OriginVisible
+			public bool OriginPointVisible
 			{
 				get { return View3D_OriginVisible(m_wnd); }
 				set { View3D_ShowOrigin(m_wnd, value); }
 			}
 
 			/// <summary>Set the size of the origin graphic</summary>
-			public float OriginSize
+			public float OriginPointSize
 			{
 				set { View3D_SetOriginSize(m_wnd, value); }
 			}
@@ -2200,14 +2234,12 @@ namespace pr.gfx
 		// Initialise / shutdown the dll
 		[DllImport(Dll)] private static extern HContext          View3D_Initialise             (ReportErrorCB initialise_error_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern void              View3D_Shutdown               (HContext context);
-		[DllImport(Dll)] private static extern void              View3D_PushGlobalErrorCB      (ReportErrorCB error_cb, IntPtr ctx);
-		[DllImport(Dll)] private static extern void              View3D_PopGlobalErrorCB       (ReportErrorCB error_cb);
+		[DllImport(Dll)] private static extern void              View3D_GlobalErrorCBSet       (ReportErrorCB error_cb, IntPtr ctx, bool add);
 
 		// Windows
 		[DllImport(Dll)] private static extern HWindow           View3D_CreateWindow           (HWND hwnd, ref WindowOptions opts);
 		[DllImport(Dll)] private static extern void              View3D_DestroyWindow          (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_PushErrorCB            (HWindow window, ReportErrorCB error_cb, IntPtr ctx);
-		[DllImport(Dll)] private static extern void              View3D_PopErrorCB             (HWindow window, ReportErrorCB error_cb);
+		[DllImport(Dll)] private static extern void              View3D_ErrorCBSet             (HWindow window, ReportErrorCB error_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern IntPtr            View3D_GetSettings            (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_SetSettings            (HWindow window, string settings);
 		[DllImport(Dll)] private static extern void              View3D_SettingsChanged        (HWindow window, SettingsChangedCB settings_changed_cb, IntPtr ctx, bool add);

@@ -54,21 +54,16 @@ namespace Rylobot
 			if (position == null)
 			{
 				// Look for indicators to say "enter" and which direction.
-				var macd_tt = SignalMACD();//Instrument.FindTradeEntry();
-				if (macd_tt == null)
+				var tt = Instrument.FindTradeEntry();
+				if (tt == null)
 					return;
-
-				var slope_tt = SignalSlope(26);
-				if (slope_tt != null && slope_tt != macd_tt)
-					return;
-
-				var tt = macd_tt.Value;
 
 				// Create a trade in the suggested direction
-				var trade = new Trade(Bot, Instrument, tt, Label, rtr_range:new RangeF(1.0,5.0));
-				var pos = Bot.Broker.CreateOrder(trade);
-				if (pos != null)
-					PosMgr = new PositionManager(Instrument, pos);
+				var trade = new Trade(Bot, Instrument, tt.Value, Label, rtr_range:new RangeF(1.0,5.0));
+				//var pos = 
+					Bot.Broker.CreateOrder(trade);
+				//if (pos != null)
+				//	PosMgr = new PositionManager(Instrument, pos);
 			}
 			else
 			{

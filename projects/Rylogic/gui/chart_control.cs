@@ -523,7 +523,7 @@ namespace pr.gui
 		{
 			var bbox = Window.SceneBounds(who);
 			Camera.ResetView(bbox, Options.ResetForward, Options.ResetUp,
-				dist: Options.NavigationMode == ENavMode.Chart2D ? Camera.FocusDist : 0,
+				dist: 0f,//Options.NavigationMode == ENavMode.Chart2D ? Camera.FocusDist : 0,
 				preserve_aspect: LockAspect,
 				commit: true);
 
@@ -795,7 +795,7 @@ namespace pr.gui
 					m_window = new View3d.Window(m_view3d, Handle, opts);
 					m_window.LightProperties = View3d.LightInfo.Directional(-v4.ZAxis, Colour32.Zero, Colour32.Gray, Colour32.Zero, 0f, 0f);
 					m_window.FocusPointVisible = false;
-					m_window.OriginVisible = false;
+					m_window.OriginPointVisible = false;
 					m_window.Orthographic = true;
 					m_camera = m_window.Camera;
 					m_camera.Orthographic = true;
@@ -3551,10 +3551,10 @@ namespace pr.gui
 					var objects_menu = cmenu.Items.Add2(new ToolStripMenuItem("Objects") { Name = CMenu.Objects });
 					{
 						var opt = objects_menu.DropDownItems.Add2(new ToolStripMenuItem("Origin") { Name = CMenu.ObjectsMenu.Origin });
-						opt.Checked = Scene.Window.OriginVisible;
+						opt.Checked = Scene.Window.OriginPointVisible;
 						opt.Click += (s,a) =>
 						{
-							Scene.Window.OriginVisible = !Scene.Window.OriginVisible;
+							Scene.Window.OriginPointVisible = !Scene.Window.OriginPointVisible;
 							Invalidate();
 						};
 					}

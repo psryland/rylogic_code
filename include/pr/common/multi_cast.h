@@ -107,6 +107,17 @@ namespace pr
 			m_cont.erase(handler.m_iter);
 		}
 
+		// Allow comparison to null to test for no handlers
+		bool operator == (nullptr_t) const
+		{
+			std::lock_guard<std::mutex> lock(m_cs);
+			return m_cont.empty();
+		}
+		bool operator != (nullptr_t) const
+		{
+			return !(*this == nullptr);
+		}
+
 		// Attach/Remove event handlers (advanced)
 		Handler add_unique(Type handler) // Add if not already added
 		{

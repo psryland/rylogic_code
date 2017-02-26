@@ -118,9 +118,13 @@ namespace LDraw
 	{
 		public CameraSettings()
 		{
-			AlignAxis    = v4.Zero;
-			ResetForward = -v4.ZAxis;
-			ResetUp      = +v4.YAxis;
+			AlignAxis          = v4.Zero;
+			ResetForward       = -v4.ZAxis;
+			ResetUp            = +v4.YAxis;
+			FocusPointSize     = 1.0f;
+			OriginPointSize    = 1.0f;
+			FocusPointVisible  = true;
+			OriginPointVisible = false;
 		}
 
 		/// <summary>The camera align axis</summary>
@@ -142,6 +146,34 @@ namespace LDraw
 		{
 			get { return get(x => x.ResetUp); }
 			set { set(x => x.ResetUp, value); Debug.Assert(value != v4.Zero); }
+		}
+
+		/// <summary>The size of the focus point</summary>
+		public float FocusPointSize
+		{
+			get { return get(x => x.FocusPointSize); }
+			set { set(x => x.FocusPointSize, value); }
+		}
+
+		/// <summary>The size of the focus point</summary>
+		public float OriginPointSize
+		{
+			get { return get(x => x.OriginPointSize); }
+			set { set(x => x.OriginPointSize, value); }
+		}
+
+		/// <summary>True if the focus point should be visible</summary>
+		public bool FocusPointVisible
+		{
+			get { return get(x => x.FocusPointVisible); }
+			set { set(x => x.FocusPointVisible, value); }
+		}
+
+		/// <summary>True if the origin point should be visible</summary>
+		public bool OriginPointVisible
+		{
+			get { return get(x => x.OriginPointVisible); }
+			set { set(x => x.OriginPointVisible, value); }
 		}
 
 		private class TyConv :GenericTypeConverter<CameraSettings> {}

@@ -595,10 +595,13 @@ namespace pr.extn
 		/// <summary>Return the value of the track bar as a normalised fraction</summary>
 		public static double ValueFrac(this TrackBar tb)
 		{
-			var min = (double)tb.Minimum;
-			var max = (double)tb.Maximum;
-			var val = (double)tb.Value;
-			return Maths.Frac(min, val, max);
+			return Maths.Frac((double)tb.Minimum, (double)tb.Value, (double)tb.Maximum);
+		}
+
+		/// <summary>Return the value of the track bar as a normalised fraction of the min-max range</summary>
+		public static void ValueFrac(this TrackBar tb, float frac)
+		{
+			tb.Value = Maths.Lerp(tb.Minimum, tb.Maximum, frac);
 		}
 
 		/// <summary>Set the value of track bar, clamping it to the min/max range</summary>

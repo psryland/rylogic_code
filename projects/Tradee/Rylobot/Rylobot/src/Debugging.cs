@@ -119,10 +119,10 @@ namespace Rylobot
 		/// <summary>Dump an instrument to an ldr file</summary>
 		/// <param name="instr">The instrument to be output</param>
 		/// <param name="range_">Optional. Sub range within the instrument data (NegIdx)</param>
-		/// <param name="msc_range">Optional. The number of candles to use to get the median candle size for candle type classification. (default 10)</param>
+		/// <param name="mcs_range">Optional. The number of candles to use to get the median candle size for candle type classification. (default 50)</param>
 		/// <param name="high_res">Optional. Add the sub candle ask/bid line. Value is the number of steps within each candle.</param>
 		/// <param name="emas">Optional. Add exponential moving average lines, with periods of the values given.</param>
-		public static LdrBuilder Dump(Instrument instr, Range? range_ = null, double? high_res = null, int[] emas = null, int? msc_range = null, LdrBuilder ldr_ = null)
+		public static LdrBuilder Dump(Instrument instr, Range? range_ = null, double? high_res = null, int[] emas = null, int? mcs_range = null, LdrBuilder ldr_ = null)
 		{
 			var ldr = ldr_ ?? new LdrBuilder();
 
@@ -135,7 +135,7 @@ namespace Rylobot
 			using (ldr.Group(instr.SymbolCode))
 			{
 				// Find the MCS
-				var mcs = instr.MedianCandleSize(range.Endi - (msc_range ?? 10), range.Endi);
+				var mcs = instr.MedianCandleSize(range.Endi - (mcs_range ?? 50), range.Endi);
 
 				// Draw bullish/bearish candles
 				{

@@ -40,11 +40,11 @@ namespace Rylobot
 
 			// Create the strategies to use
 			Strats = new List<Strategy>();
-			//Strats.Add(new StrategyMain(this));
+			Strats.Add(new StrategyMain(this));
 			//Strats.Add(new StrategyMeanCross(this));
 			//Strats.Add(new StrategyRevenge(this));
 			//Strats.Add(new StrategyTrend(this));
-			Strats.Add(new StrategyHedge(this));
+			//Strats.Add(new StrategyHedge(this));
 
 			// Enable capture of trades to Ldr files
 			Debugging.LogTrades(this, true);

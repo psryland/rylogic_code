@@ -3870,7 +3870,7 @@ namespace pr.gui
 				m_camera.ClipPlanes(0.5f, 1.1f, true);
 				m_window.LightProperties = View3d.LightInfo.Directional(-v4.ZAxis, Colour32.Zero, Colour32.Gray, Colour32.Zero, 0f, 0f);
 				m_window.FocusPointVisible = false;
-				m_window.OriginVisible = false;
+				m_window.OriginPointVisible = false;
 				m_window.Orthographic = false;
 
 				InitializeComponent();

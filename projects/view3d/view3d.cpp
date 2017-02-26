@@ -57,31 +57,24 @@ void __stdcall DefaultErrorCB(void*, wchar_t const* msg)
 }
 
 // Find the error callback to use
-ReportErrorCB GetErrorCB(View3DWindow wnd)
+pr::MultiCast<ReportErrorCB>& GetErrorCB(View3DWindow wnd)
 {
-	auto error_cb = ReportErrorCB(DefaultErrorCB, nullptr);
-	if (!Dll().m_error_cb.empty()) error_cb = Dll().m_error_cb.back();
-	if (wnd != nullptr && !wnd->m_error_cb.empty()) error_cb = wnd->m_error_cb.back();
-	return error_cb;
+	return (wnd != nullptr && wnd->OnError != nullptr) ? wnd->OnError : Dll().OnError;
 }
 
 // Report a basic error message
 inline void ReportError(wchar_t const* msg, View3DWindow wnd)
 {
-	auto error_cb = GetErrorCB(wnd);
-	error_cb(msg);
+	GetErrorCB(wnd).Raise(msg);
 }
 
 // Report an error message via the window error callback
 inline void ReportError(char const* func_name, View3DWindow wnd, std::exception const* ex)
 {
-	// Find the callback to use
-	auto error_cb = GetErrorCB(wnd);
-
 	// Report the error
 	pr::string<wchar_t> msg = pr::FmtS(L"%S failed.\n%S", func_name, ex ? ex->what() : "Unknown exception occurred.");
 	if (msg.last() != '\n') msg.push_back('\n');
-	error_cb(msg.c_str());
+	GetErrorCB(wnd).Raise(msg.c_str());
 }
 
 // Maths type traits
@@ -126,10 +119,7 @@ VIEW3D_API View3DContext __stdcall View3D_Initialise(View3D_ReportErrorCB initia
 	{
 		// Create the dll context on the first call
 		if (g_ctx == nullptr)
-		{
 			g_ctx = new Context();
-			g_ctx->m_error_cb.push_back(pr::StaticCallBack(DefaultErrorCB, nullptr));
-		}
 
 		// Generate a unique handle per Initialise call, used to match up with Shutdown calls
 		static View3DContext context = nullptr;
@@ -159,22 +149,18 @@ VIEW3D_API void __stdcall View3D_Shutdown(View3DContext context)
 	g_ctx = nullptr;
 }
 
-// Push/Pop global error callback
-VIEW3D_API void __stdcall View3D_PushGlobalErrorCB(View3D_ReportErrorCB error_cb, void* ctx)
+// Add/Remove a global error callback.
+// Note: The callback function can be called in a worker thread context if errors occur during LoadScriptSource
+VIEW3D_API void __stdcall View3D_GlobalErrorCBSet(View3D_ReportErrorCB error_cb, void* ctx, BOOL add)
 {
 	try
 	{
-		Dll().PushErrorCB(error_cb, ctx);
+		if (add)
+			Dll().OnError += pr::StaticCallBack(error_cb, ctx);
+		else
+			Dll().OnError -= pr::StaticCallBack(error_cb, ctx);
 	}
-	CatchAndReport(View3D_PushGlobalErrorCB,,);
-}
-VIEW3D_API void __stdcall View3D_PopGlobalErrorCB(View3D_ReportErrorCB error_cb)
-{
-	try
-	{
-		Dll().PopErrorCB(error_cb);
-	}
-	CatchAndReport(View3D_PopGlobalErrorCB,,);
+	CatchAndReport(View3D_GlobalErrorCBSet,,);
 }
 
 // Create/Destroy a window
@@ -216,24 +202,19 @@ VIEW3D_API void __stdcall View3D_DestroyWindow(View3DWindow window)
 	CatchAndReport(View3D_DestroyWindow,window,);
 }
 
-// Push/Pop window error callback
-VIEW3D_API void __stdcall View3D_PushErrorCB(View3DWindow window, View3D_ReportErrorCB error_cb, void* ctx)
+// Add/Remove a window error callback
+// Note: The callback function can be called in a worker thread context if errors occur during LoadScriptSource
+VIEW3D_API void __stdcall View3D_ErrorCBSet(View3DWindow window, View3D_ReportErrorCB error_cb, void* ctx, BOOL add)
 {
 	try
 	{
 		if (!window) throw std::exception("window is null");
-		window->PushErrorCB(error_cb, ctx);
+		if (add)
+			window->OnError += pr::StaticCallBack(error_cb, ctx);
+		else
+			window->OnError -= pr::StaticCallBack(error_cb, ctx);
 	}
-	CatchAndReport(View3D_PushGlobalErrorCB,window,);
-}
-VIEW3D_API void __stdcall View3D_PopErrorCB(View3DWindow window, View3D_ReportErrorCB error_cb)
-{
-	try
-	{
-		if (!window) throw std::exception("window is null");
-		window->PopErrorCB(error_cb);
-	}
-	CatchAndReport(View3D_PopGlobalErrorCB, window,);
+	CatchAndReport(View3D_ErrorCBSet,window,);
 }
 
 // Generate/Parse a settings string for the view
