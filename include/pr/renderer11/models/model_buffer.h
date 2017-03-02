@@ -31,6 +31,12 @@ namespace pr
 
 			ModelBuffer();
 
+			// Access the model manager
+			ModelManager& MdlMgr()
+			{
+				return *m_mdl_mgr;
+			}
+
 			// Returns true if 'settings' describe a model format that is compatible with this model buffer
 			bool IsCompatible(MdlSettings const& settings) const;
 

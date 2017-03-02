@@ -36,15 +36,16 @@ namespace pr.gfx
 		public static Colour32 operator - (Colour32 lhs, Colour32 rhs)	{ return new Colour32(sat(lhs.A-rhs.A), sat(lhs.R-rhs.R), sat(lhs.G-rhs.G), sat(lhs.B-rhs.B)); }
 
 		// Constants
-		public static Colour32 Zero   = new Colour32(0x00,0x00,0x00,0x00);
-		public static Colour32 Black  = new Colour32(0xFF,0x00,0x00,0x00);
-		public static Colour32 White  = new Colour32(0xFF,0xFF,0xFF,0xFF);
-		public static Colour32 Red    = new Colour32(0xFF,0xFF,0x00,0x00);
-		public static Colour32 Green  = new Colour32(0xFF,0x00,0xFF,0x00);
-		public static Colour32 Blue   = new Colour32(0xFF,0x00,0x00,0xFF);
-		public static Colour32 Yellow = new Colour32(0xFF,0xFF,0xFF,0x00);
-		public static Colour32 Purple = new Colour32(0xFF,0x00,0xFF,0xFF);
-		public static Colour32 Gray   = new Colour32(0xFF,0x80,0x80,0x80);
+		public static Colour32 Zero      = new Colour32(0x00,0x00,0x00,0x00);
+		public static Colour32 Black     = new Colour32(0xFF,0x00,0x00,0x00);
+		public static Colour32 White     = new Colour32(0xFF,0xFF,0xFF,0xFF);
+		public static Colour32 Red       = new Colour32(0xFF,0xFF,0x00,0x00);
+		public static Colour32 Green     = new Colour32(0xFF,0x00,0xFF,0x00);
+		public static Colour32 Blue      = new Colour32(0xFF,0x00,0x00,0xFF);
+		public static Colour32 Yellow    = new Colour32(0xFF,0xFF,0xFF,0x00);
+		public static Colour32 Turquoise = new Colour32(0xFF,0x00,0xFF,0xFF);
+		public static Colour32 Purple    = new Colour32(0xFF,0xFF,0x00,0xFF);
+		public static Colour32 Gray      = new Colour32(0xFF,0x80,0x80,0x80);
 
 		/// <summary>Saturate 'i'</summary>
 		private static byte sat(int i)

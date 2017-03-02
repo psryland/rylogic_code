@@ -29,6 +29,12 @@ namespace pr
 			DeleteNuggets();
 		}
 
+		// Access the model manager
+		ModelManager& Model::MdlMgr()
+		{
+			return m_model_buffer->MdlMgr();
+		}
+
 		// Access to the vertex/index buffers
 		bool Model::MapVerts(Lock& lock, D3D11_MAP map_type, uint flags, Range vrange)
 		{
@@ -72,7 +78,7 @@ namespace pr
 			// Create the nugget and add it to the model
 			if (!props.m_irange.empty())
 			{
-				auto nug = m_model_buffer->m_mdl_mgr->m_alex_nugget.New(props, m_model_buffer, this);
+				auto nug = MdlMgr().CreateNugget(props, m_model_buffer.get(), this);
 				m_nuggets.push_back(*nug);
 			}
 		}
@@ -81,14 +87,14 @@ namespace pr
 		void Model::DeleteNuggets()
 		{
 			while (!m_nuggets.empty())
-				m_model_buffer->m_mdl_mgr->Delete(&m_nuggets.front());
+				MdlMgr().Delete(&m_nuggets.front());
 		}
 
-		// Ref-counting cleanup function
+		// Ref-counting clean up function
 		void Model::RefCountZero(pr::RefCount<Model>* doomed)
 		{
 			Model* mdl = static_cast<Model*>(doomed);
-			mdl->m_model_buffer->m_mdl_mgr->Delete(mdl);
+			mdl->MdlMgr().Delete(mdl);
 		}
 	}
 }

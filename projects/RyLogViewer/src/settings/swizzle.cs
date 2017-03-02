@@ -72,8 +72,8 @@ namespace RyLogViewer
 				cas.Clear();
 				for (int k = 0; k != map.Dst.Size; ++k)
 				{
-					int s = map.Src.Begini + (k%map.Src.Sizei);
-					int d = map.Dst.Begini + k;
+					int s = map.Src.Begi + (k%map.Src.Sizei);
+					int d = map.Dst.Begi + k;
 					cas.Add(
 						src[s] == dst[d]
 						? Map.ECase.NoChange : src[s] == char.ToLowerInvariant(src[s])
@@ -91,16 +91,16 @@ namespace RyLogViewer
 			var sb = new StringBuilder();
 			foreach (var m in mapping)
 			{
-				if (m.Src.Begini >= text.Length) continue;
-				for (int i = 0, iend = Math.Min(m.Dst.Sizei, text.Length - m.Src.Begini); i != iend; ++i)
+				if (m.Src.Begi >= text.Length) continue;
+				for (int i = 0, iend = Math.Min(m.Dst.Sizei, text.Length - m.Src.Begi); i != iend; ++i)
 				{
-					char ch = text[m.Src.Begini + (i % m.Src.Sizei)];
+					char ch = text[m.Src.Begi + (i % m.Src.Sizei)];
 					switch (m.Case[i])
 					{
 					case Map.ECase.ToUpper: ch = char.ToUpperInvariant(ch); break;
 					case Map.ECase.ToLower: ch = char.ToLowerInvariant(ch); break;
 					}
-					while (sb.Length < m.Dst.Begini) sb.Append(' ');
+					while (sb.Length < m.Dst.Begi) sb.Append(' ');
 					sb.Append(ch);
 				}
 			}

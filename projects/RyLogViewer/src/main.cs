@@ -692,7 +692,7 @@ namespace RyLogViewer
 								// Create a clip region for the highlighted parts of the line
 								gfx.SetClip(Rectangle.Empty, CombineMode.Replace);
 								var fmt = new StringFormat(m_strfmt);
-								fmt.SetMeasurableCharacterRanges(hl.Match(col.Text).Select(x => new CharacterRange(x.Begini, x.Sizei)).ToArray());
+								fmt.SetMeasurableCharacterRanges(hl.Match(col.Text).Select(x => new CharacterRange(x.Begi, x.Sizei)).ToArray());
 								foreach (var r in gfx.MeasureCharacterRanges(col.Text, cs.Font, cellbounds, fmt))
 								{
 									var bnd = r.GetBounds(gfx);
@@ -770,7 +770,7 @@ namespace RyLogViewer
 								// Create a clip region for the highlighted parts of the line
 								gfx.SetClip(Rectangle.Empty, CombineMode.Replace);
 								var fmt = new StringFormat(m_strfmt);
-								fmt.SetMeasurableCharacterRanges(hl.Match(col.Text).Select(x => new CharacterRange(x.Begini, x.Sizei)).ToArray());
+								fmt.SetMeasurableCharacterRanges(hl.Match(col.Text).Select(x => new CharacterRange(x.Begi, x.Sizei)).ToArray());
 								foreach (var r in gfx.MeasureCharacterRanges(col.Text, cs.Font, textbounds, fmt))
 									gfx.SetClip(r.GetBounds(gfx), CombineMode.Union);
 
@@ -983,7 +983,7 @@ namespace RyLogViewer
 
 			// Find the new centre position of the thumb
 			var range = m_scroll_file.ThumbRange;
-			long pos = (range.Begin == 0) ? 0 : (range.End == m_fileend) ? m_fileend : range.Mid;
+			long pos = (range.Beg == 0) ? 0 : (range.End == m_fileend) ? m_fileend : range.Mid;
 			Log.Info(this, "file scroll to {0}".Fmt(pos));
 
 			// Set the new selected row from the mouse up position
@@ -1002,8 +1002,8 @@ namespace RyLogViewer
 
 			const float Limit = 1f / Constants.AutoScrollAtBoundaryLimit;
 			float ratio = Maths.Frac(0, SelectedRowIndex, m_grid.RowCount - 1);
-			if (ratio < 0f + Limit && LineIndexRange.Begin > m_encoding.GetPreamble().Length)
-				BuildLineIndex(LineStartIndexRange.Begin, false);
+			if (ratio < 0f + Limit && LineIndexRange.Beg > m_encoding.GetPreamble().Length)
+				BuildLineIndex(LineStartIndexRange.Beg, false);
 			if (ratio > 1f - Limit && LineIndexRange.End < m_fileend - m_row_delim.Length)
 				BuildLineIndex(LineStartIndexRange.End  , false);
 		}
@@ -1071,7 +1071,7 @@ namespace RyLogViewer
 		public void EnableQuickFilter(bool enable)
 		{
 			var has_selection = SelectedRowIndex != -1;
-			var ofs = has_selection ? SelectedRowByteRange.Begin : -1;
+			var ofs = has_selection ? SelectedRowByteRange.Beg : -1;
 
 			Settings.QuickFilterEnabled = enable;
 			ApplySettings();
@@ -1087,7 +1087,7 @@ namespace RyLogViewer
 		{
 			var has_selection = SelectedRowIndex != -1;
 			var bli_needed = Settings.QuickFilterEnabled;
-			var ofs = has_selection && bli_needed ? SelectedRowByteRange.Begin : -1;
+			var ofs = has_selection && bli_needed ? SelectedRowByteRange.Beg : -1;
 
 			Settings.HighlightsEnabled = enable;
 			ApplySettings();
@@ -1107,7 +1107,7 @@ namespace RyLogViewer
 		public void EnableFilters(bool enable)
 		{
 			var has_selection = SelectedRowIndex != -1;
-			var ofs = has_selection ? SelectedRowByteRange.Begin : -1;
+			var ofs = has_selection ? SelectedRowByteRange.Beg : -1;
 
 			Settings.FiltersEnabled = enable;
 			ApplySettings();
@@ -1136,7 +1136,7 @@ namespace RyLogViewer
 		/// <summary>Jumps to a specific byte offset into the file</summary>
 		private void JumpTo()
 		{
-			var dlg = new JumpToUi(this, FileByteRange.Begin, FileByteRange.End);
+			var dlg = new JumpToUi(this, FileByteRange.Beg, FileByteRange.End);
 			if (dlg.ShowDialog(this) != DialogResult.OK) return;
 			SelectRowByAddr(dlg.Address);
 		}
@@ -1928,7 +1928,7 @@ namespace RyLogViewer
 
 				// Get current file position
 				int r = SelectedRowIndex;
-				long p = (r != -1) ? m_line_index[r].Begin : 0;
+				long p = (r != -1) ? m_line_index[r].Beg : 0;
 				StringBuilder pos = pretty(new StringBuilder(p.ToString(CultureInfo.InvariantCulture)));
 				StringBuilder len = pretty(new StringBuilder(FileByteRange.End.ToString(CultureInfo.InvariantCulture)));
 
@@ -1963,7 +1963,7 @@ namespace RyLogViewer
 		{
 			Range range = LineIndexRange;
 			if (!range.Equals(m_scroll_file.ThumbRange))
-				Log.Info(this, "File scroll set to [{0},{1}) within file [{2},{3})".Fmt(range.Begin, range.End, FileByteRange.Begin, FileByteRange.End));
+				Log.Info(this, "File scroll set to [{0},{1}) within file [{2},{3})".Fmt(range.Beg, range.End, FileByteRange.Beg, FileByteRange.End));
 
 			m_scroll_file.TotalRange = FileByteRange;
 			m_scroll_file.ThumbRange = range;

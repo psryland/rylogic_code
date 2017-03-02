@@ -218,7 +218,7 @@ namespace pr.gui
 							int starti = m_edit_test.GetFirstCharIndexFromLine(i);
 
 							// Highlight the capture groups in the test text
-							m_edit_test.Select(starti + r.Begini, r.Sizei);
+							m_edit_test.Select(starti + r.Begi, r.Sizei);
 							m_edit_test.SelectionBackColor = BkColors[j++ % BkColors.Length];
 						}
 					}

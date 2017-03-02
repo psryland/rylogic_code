@@ -18,6 +18,9 @@ namespace pr
 			:m_alex_mdlbuf(Allocator<ModelBuffer>(mem))
 			,m_alex_model (Allocator<Model>(mem))
 			,m_alex_nugget(Allocator<Nugget>(mem))
+			,m_dbg_mem_mdlbuf()
+			,m_dbg_mem_mdl()
+			,m_dbg_mem_nugget()
 			,m_device(device)
 			,m_mutex()
 		{
@@ -39,6 +42,7 @@ namespace pr
 
 			// Create a new model buffer
 			ModelBufferPtr mb(m_alex_mdlbuf.New());
+			assert(m_dbg_mem_mdlbuf.add(mb.m_ptr));
 			mb->m_mdl_mgr = this;
 			{// Create a vertex buffer
 				SubResourceData init(settings.m_vb.Data, 0, UINT(settings.m_vb.SizeInBytes()));
@@ -74,7 +78,18 @@ namespace pr
 			PR_ASSERT(PR_DBG_RDR, model_buffer->IsRoomFor(settings.m_vb.ElemCount, settings.m_ib.ElemCount), "Insufficient room for a model of this size in this model buffer");
 
 			std::lock_guard<std::recursive_mutex> lock(m_mutex);
-			return ModelPtr(m_alex_model.New(settings, model_buffer));
+			ModelPtr ptr(m_alex_model.New(settings, model_buffer));
+			assert(m_dbg_mem_mdl.add(ptr.m_ptr));
+			return ptr;
+		}
+
+		// Create a nugget using our allocator
+		Nugget* ModelManager::CreateNugget(NuggetProps props, ModelBuffer* model_buffer, Model* model)
+		{
+			std::lock_guard<std::recursive_mutex> lock(m_mutex);
+			Nugget* ptr(m_alex_nugget.New(props, model_buffer, model));
+			assert(m_dbg_mem_nugget.add(ptr));
+			return ptr;
 		}
 
 		// Return a model buffer to the allocator
@@ -82,6 +97,7 @@ namespace pr
 		{
 			if (!model_buffer) return;
 			std::lock_guard<std::recursive_mutex> lock(m_mutex);
+			assert(m_dbg_mem_mdlbuf.remove(model_buffer));
 			m_alex_mdlbuf.Delete(model_buffer);
 		}
 
@@ -90,6 +106,7 @@ namespace pr
 		{
 			if (!model) return;
 			std::lock_guard<std::recursive_mutex> lock(m_mutex);
+			assert(m_dbg_mem_mdl.remove(model));
 			m_alex_model.Delete(model);
 		}
 
@@ -98,6 +115,7 @@ namespace pr
 		{
 			if (!nugget) return;
 			std::lock_guard<std::recursive_mutex> lock(m_mutex);
+			assert(m_dbg_mem_nugget.remove(nugget));
 			m_alex_nugget.Delete(nugget);
 		}
 

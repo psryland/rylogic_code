@@ -178,13 +178,13 @@ namespace pr.extn
 				this[typeof(Range)] = (obj, node) =>
 				{
 					var r = (Range)obj;
-					node.SetValue("{0} {1}".Fmt(r.Begin, r.End));
+					node.SetValue("{0} {1}".Fmt(r.Beg, r.End));
 					return node;
 				};
 				this[typeof(RangeF)] = (obj, node) =>
 				{
 					var r = (RangeF)obj;
-					node.SetValue("{0} {1}".Fmt(r.Begin, r.End));
+					node.SetValue("{0} {1}".Fmt(r.Beg, r.End));
 					return node;
 				};
 				this[typeof(v2)] = (obj, node) =>

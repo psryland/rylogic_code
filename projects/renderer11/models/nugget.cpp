@@ -34,7 +34,7 @@ namespace pr
 			,m_has_alpha(false)
 		{}
 
-		Nugget::Nugget(NuggetProps const& props, ModelBufferPtr& model_buffer, Model* owner)
+		Nugget::Nugget(NuggetProps const& props, ModelBuffer* model_buffer, Model* owner)
 			:NuggetData(props)
 			,m_model_buffer(model_buffer)
 			,m_prim_count(PrimCount(props.m_irange.size(), props.m_topo))
@@ -47,7 +47,13 @@ namespace pr
 		Nugget::~Nugget()
 		{
 			while (!m_nuggets.empty())
-				m_model_buffer->m_mdl_mgr->Delete(&m_nuggets.front());
+				MdlMgr().Delete(&m_nuggets.front());
+		}
+
+		// Access the model manager
+		ModelManager& Nugget::MdlMgr()
+		{
+			return m_model_buffer->MdlMgr();
 		}
 
 		// Return the sort key composed from the base 'm_sort_key' plus any shaders in 'm_smap'
@@ -96,7 +102,7 @@ namespace pr
 
 				// Create a dependent nugget to do the back faces
 				NuggetProps props = *this;
-				auto& nug = *m_model_buffer->m_mdl_mgr->m_alex_nugget.New(props, m_model_buffer, m_owner);
+				auto& nug = *MdlMgr().CreateNugget(props, m_model_buffer, m_owner);
 				nug.m_sort_key.Group(ESortGroup::AlphaBack);
 				nug.m_bsb.Set(EBS::BlendEnable    ,TRUE                      ,0);
 				nug.m_bsb.Set(EBS::BlendOp        ,D3D11_BLEND_OP_ADD        ,0);

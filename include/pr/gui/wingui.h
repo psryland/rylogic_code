@@ -50,6 +50,8 @@
 #include <gdiplus.h>
 #pragma warning(pop)
 
+#include "pr/common/flags_enum.h"
+
 #define PR_WNDPROCDEBUG 0
 #if PR_WNDPROCDEBUG
 #include "pr/gui/messagemap_dbg.h"
@@ -105,15 +107,6 @@ namespace pr
 		#pragma endregion
 
 		#pragma region Enumerations
-		// True (true_type) if 'T' has '_bitops_allowed' as a static member
-		template <typename T> struct bitops_allowed
-		{
-			template <typename U> static std::true_type  check(decltype(U::_bitops_allowed)*);
-			template <typename>   static std::false_type check(...);
-			using type = decltype(check<T>(0));
-			static bool const value = type::value;
-		};
-		template <typename T> using enable_if_bitops_allowed = typename std::enable_if<bitops_allowed<T>::value>::type;
 
 		// The common control classes
 		enum class ECommonControl
@@ -137,7 +130,7 @@ namespace pr
 			StandardClasses = ICC_STANDARD_CLASSES   ,
 			LinkClass       = ICC_LINK_CLASS         ,
 			All             = ~None,
-			_bitops_allowed,
+			_bitwise_operators_allowed,
 		};
 
 		//todo: unused at the mo
@@ -167,7 +160,7 @@ namespace pr
 			LeftTopBottom   = Left|Top|Bottom,
 			RightTopBottom  = Right|Top|Bottom,
 			All             = Left|Top|Right|Bottom,
-			_bitops_allowed,
+			_bitwise_operators_allowed,
 		};
 
 		// Window docking
@@ -229,7 +222,7 @@ namespace pr
 			NoClientSize   = 0x0800, // SWP_NOCLIENTSIZE (don't send WM_SIZE)
 			NoClientMove   = 0x1000, // SWP_NOCLIENTMOVE (don't send WM_MOVE)
 			StateChange    = 0x8000, // SWP_STATECHANGED (minimized, maximised, etc)
-			_bitops_allowed,
+			_bitwise_operators_allowed,
 		};
 
 		// Control key state
@@ -245,7 +238,7 @@ namespace pr
 			LAlt   = 1 << 4,
 			RAlt   = 1 << 5,
 			Alt    = LAlt | RAlt,
-			_bitops_allowed,
+			_bitwise_operators_allowed,
 		};
 
 		// Mouse key state, used in mouse down/up events
@@ -260,7 +253,7 @@ namespace pr
 			XButton1 = MK_XBUTTON1,// 0x0020
 			XButton2 = MK_XBUTTON2,// 0x0040
 			Alt      = 0x0080,     // There is not MK_ define for alt, this is tested using GetKeyState
-			_bitops_allowed,
+			_bitwise_operators_allowed,
 		};
 
 		enum :DWORD { DefaultControlStyle = WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS };
@@ -371,36 +364,6 @@ namespace pr
 		// Convert to byte pointer
 		template <typename T> byte const* bptr(T const* t) { return reinterpret_cast<byte const*>(t); }
 		template <typename T> byte*       bptr(T*       t) { return reinterpret_cast<byte*      >(t); }
-
-		// Enum bitwise operators
-		template <typename TEnum, typename UT = std::underlying_type<TEnum>::type, typename = enable_if_bitops_allowed<TEnum>> inline TEnum operator ~(TEnum lhs)
-		{
-			return TEnum(~UT(lhs));
-		}
-		template <typename TEnum, typename UT = std::underlying_type<TEnum>::type, typename = enable_if_bitops_allowed<TEnum>> inline bool operator == (TEnum lhs, UT rhs)
-		{
-			return UT(lhs) == rhs;
-		}
-		template <typename TEnum, typename UT = std::underlying_type<TEnum>::type, typename = enable_if_bitops_allowed<TEnum>> inline bool operator != (TEnum lhs, UT rhs)
-		{
-			return UT(lhs) != rhs;
-		}
-		template <typename TEnum, typename UT = std::underlying_type<TEnum>::type, typename = enable_if_bitops_allowed<TEnum>> inline TEnum operator | (TEnum lhs, TEnum rhs)
-		{
-			return TEnum(UT(lhs) | UT(rhs));
-		}
-		template <typename TEnum, typename UT = std::underlying_type<TEnum>::type, typename = enable_if_bitops_allowed<TEnum>> inline TEnum operator & (TEnum lhs, TEnum rhs)
-		{
-			return TEnum(UT(lhs) & UT(rhs));
-		}
-		template <typename TEnum, typename UT = std::underlying_type<TEnum>::type, typename = enable_if_bitops_allowed<TEnum>> inline TEnum& operator |= (TEnum& lhs, TEnum rhs)
-		{
-			return lhs = lhs | rhs;
-		}
-		template <typename TEnum, typename UT = std::underlying_type<TEnum>::type, typename = enable_if_bitops_allowed<TEnum>> inline TEnum& operator &= (TEnum& lhs, TEnum rhs)
-		{
-			return lhs = lhs & rhs;
-		}
 
 		// Append bytes
 		template <typename TCont> void append(TCont& cont, void const* x, size_t byte_count)
@@ -841,7 +804,7 @@ namespace pr
 				MaxPosition  = 1 << 1,
 				MinTrackSize = 1 << 2,
 				MaxTrackSize = 1 << 3,
-				_bitops_allowed,
+				_bitwise_operators_allowed,
 			};
 			EMask m_mask;
 			
@@ -1661,7 +1624,7 @@ namespace pr
 				String     = MIIM_STRING,
 				Submenu    = MIIM_SUBMENU,
 				Type       = MIIM_TYPE,
-				_bitops_allowed,
+				_bitwise_operators_allowed,
 			};
 			enum class EType :UINT
 			{
@@ -1675,7 +1638,7 @@ namespace pr
 				RightOrder   = MFT_RIGHTORDER,
 				Separator    = MFT_SEPARATOR,
 				String       = MFT_STRING,
-				_bitops_allowed,
+				_bitwise_operators_allowed,
 			};
 			enum class EState :UINT
 			{
@@ -1687,7 +1650,7 @@ namespace pr
 				Disabled = MFS_DISABLED,
 				Hilite   = MFS_HILITE,
 				Unhilite = MFS_UNHILITE,
-				_bitops_allowed,
+				_bitwise_operators_allowed,
 			};
 			enum class EStockBmp :INT_PTR
 			{
@@ -1966,7 +1929,7 @@ namespace pr
 				Background = 1 << 0,
 				Foreground = 1 << 1,
 				All = Background | Foreground,
-				_bitops_allowed,
+				_bitwise_operators_allowed,
 			};
 
 			EParts m_parts;    // The parts to be painted
@@ -8749,7 +8712,7 @@ namespace pr
 				YesNoCancel      = YesNo | Cancel,
 				AbortRetryIgnore = (1 << int(EDialogResult::Abort)) | (1 << int(EDialogResult::Retry)) | (1 << int(EDialogResult::Ignore)),
 				RetryCancel      = (1 << int(EDialogResult::Retry)) | Cancel,
-				_bitops_allowed,
+				_bitwise_operators_allowed,
 			};
 			enum class EIcon
 			{

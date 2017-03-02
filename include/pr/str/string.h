@@ -1317,7 +1317,7 @@ namespace pr
 			return std::basic_string<Type, std::char_traits<Type>, std::allocator<Type>>(begin(), end());
 		}
 
-		// equality operators
+		// equality operators - note: "friends" so the operators don't use ADL
 		bool operator == (type const& right) const { return compare(right) == 0; }
 		bool operator != (type const& right) const { return compare(right) != 0; }
 		bool operator <  (type const& right) const { return compare(right) <  0; }
@@ -1330,6 +1330,12 @@ namespace pr
 		template <typename tstr> bool operator <= (tstr const& right) const { return compare(right) <= 0; }
 		template <typename tstr> bool operator >= (tstr const& right) const { return compare(right) >= 0; }
 		template <typename tstr> bool operator >  (tstr const& right) const { return compare(right) >  0; }
+		//template <typename tstr> friend inline bool operator == (tstr const& lhs, type const& rhs) { return rhs == lhs; }
+		//template <typename tstr> friend inline bool operator != (tstr const& lhs, type const& rhs) { return rhs != lhs; }
+		//template <typename tstr> friend inline bool operator <  (tstr const& lhs, type const& rhs) { return !(rhs >= lhs); }
+		//template <typename tstr> friend inline bool operator <= (tstr const& lhs, type const& rhs) { return !(rhs >  lhs); }
+		//template <typename tstr> friend inline bool operator >= (tstr const& lhs, type const& rhs) { return !(rhs <  lhs); }
+		//template <typename tstr> friend inline bool operator >  (tstr const& lhs, type const& rhs) { return !(rhs <= lhs); }
 	};
 
 	namespace impl
@@ -1373,14 +1379,6 @@ namespace pr
 	{
 		return impl::widen<string<wchar_t>>(from.c_str(), from.size());
 	}
-
-	// equality operators
-	template <typename tstr, typename T, int L, bool F, typename A> inline bool operator == (tstr const& lhs, string<T,L,F,A> const& rhs) { return rhs == lhs; }
-	template <typename tstr, typename T, int L, bool F, typename A> inline bool operator != (tstr const& lhs, string<T,L,F,A> const& rhs) { return rhs != lhs; }
-	template <typename tstr, typename T, int L, bool F, typename A> inline bool operator <  (tstr const& lhs, string<T,L,F,A> const& rhs) { return !(rhs >= lhs); }
-	template <typename tstr, typename T, int L, bool F, typename A> inline bool operator <= (tstr const& lhs, string<T,L,F,A> const& rhs) { return !(rhs >  lhs); }
-	template <typename tstr, typename T, int L, bool F, typename A> inline bool operator >= (tstr const& lhs, string<T,L,F,A> const& rhs) { return !(rhs <  lhs); }
-	template <typename tstr, typename T, int L, bool F, typename A> inline bool operator >  (tstr const& lhs, string<T,L,F,A> const& rhs) { return !(rhs <= lhs); }
 
 	// string concatenation
 	template <typename T, int L0, bool F0, typename A0, int L1, bool F1, typename A1>

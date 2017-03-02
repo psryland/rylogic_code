@@ -39,21 +39,21 @@ namespace RyLogViewer
 			Debug.Assert(FileOpen);
 
 			// Check if the line is already cached
-			Line line = m_line_cache[(int)(rng.Begin % m_line_cache.Count)];
-			if (line.LineStartAddr == rng.Begin) return line;
+			Line line = m_line_cache[(int)(rng.Beg % m_line_cache.Count)];
+			if (line.LineStartAddr == rng.Beg) return line;
 
 			// If not, read it from file and perform highlighting and transforming on it
 			try
 			{
 				// Read the whole line into m_buf
 				//m_file.Flush(); why??
-				m_file.Stream.Seek(rng.Begin, SeekOrigin.Begin);
+				m_file.Stream.Seek(rng.Beg, SeekOrigin.Begin);
 				m_line_buf = rng.Size <= m_line_buf.Length ? m_line_buf : new byte[rng.Size];
 				int read = m_file.Stream.Read(m_line_buf, 0, (int)rng.Size);
-				if (read != rng.Size) throw new IOException("failed to read file over range [{0},{1}) ({2} bytes). Read {3}/{2} bytes.".Fmt(rng.Begin, rng.End, rng.Size, read));
+				if (read != rng.Size) throw new IOException("failed to read file over range [{0},{1}) ({2} bytes). Read {3}/{2} bytes.".Fmt(rng.Beg, rng.End, rng.Size, read));
 
 				// Cache data for the line
-				line.Read(rng.Begin, m_line_buf, 0, read, m_encoding, m_col_delim, m_highlights, m_transforms);
+				line.Read(rng.Beg, m_line_buf, 0, read, m_encoding, m_col_delim, m_highlights, m_transforms);
 
 				// Save the text size
 				line.TextSize = m_gfx.MeasureString(line.RowText, m_grid.RowsDefaultCellStyle.Font);

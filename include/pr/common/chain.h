@@ -283,12 +283,6 @@ namespace pr
 		// Chain head
 		template <typename Type, typename GroupId = impl::DefaultGroupId> struct head :link<Type, GroupId>
 		{
-			// Chain list heads should not be copied unless empty,
-			// otherwise you'll end up with chains containing more than one head.
-			head() {}
-			head(head const&) :link<Type, GroupId>() { PR_ASSERT(PR_DBG, false, ""); }
-			head& operator = (head const& rhs)       { PR_ASSERT(PR_DBG, false, ""); return *this; }
-
 			typedef impl::citer<Type, GroupId> const_iterator;
 			typedef impl::iter<Type, GroupId>  iterator;
 			typedef const Type*                const_pointer;
@@ -299,6 +293,12 @@ namespace pr
 			typedef std::ptrdiff_t             difference_type;
 			typedef std::size_t                size_type;
 			typedef link<Type, GroupId>        link_type;
+
+			// Chain list heads should not be copied unless empty,
+			// otherwise you'll end up with chains containing more than one head.
+			head() {}
+			head(head const&) = delete;
+			head& operator = (head const& rhs) = delete;
 
 			const_iterator  begin() const { return const_iterator(m_next); }
 			iterator        begin()       { return iterator(m_next); }

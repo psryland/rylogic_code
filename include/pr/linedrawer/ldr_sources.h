@@ -20,8 +20,8 @@ namespace pr
 	namespace ldr
 	{
 		// A collection of the file sources.
-		// This class manages an externally provided 'ObjectCont'.
-		// It adds/removes objects from the 'store', but only the ones it knows about.
+		// This class manages an internal 'ObjectCont'.
+		// It adds/removes objects from the object container, but only the ones it knows about.
 		// Files each have their own unique Guid. This is so all objects created by a
 		// file group can be removed.
 		class ScriptSources :pr::IFileChangedHandler
@@ -87,14 +87,14 @@ namespace pr
 			// Source reload event args
 			struct ReloadEventArgs
 			{
-				// The store that is effected
-				ObjectCont const* m_store;
+				// The object container that is effected
+				ObjectCont const* m_objects;
 
-				// The origin of the store change
+				// The origin of the object container change
 				EReason m_reason;
 
-				ReloadEventArgs(ObjectCont const& store, EReason why)
-					:m_store(&store)
+				ReloadEventArgs(ObjectCont const& objects, EReason why)
+					:m_objects(&objects)
 					,m_reason(why)
 				{}
 			};
@@ -102,8 +102,8 @@ namespace pr
 			// Store changed event args
 			struct StoreChangedEventArgs
 			{
-				// The store that was added to
-				ObjectCont const* m_store;
+				// The object container that was added to
+				ObjectCont const* m_objects;
 
 				// Contains the results of parsing including the object container that the objects where added to
 				ParseResult const* m_result;
@@ -111,11 +111,11 @@ namespace pr
 				// The number of objects added as a result of the parsing.
 				int m_count;
 
-				// The origin of the store change
+				// The origin of the object container change
 				EReason m_reason;
 
-				StoreChangedEventArgs(ObjectCont const& store, int count, ParseResult const& result, EReason why)
-					:m_store(&store)
+				StoreChangedEventArgs(ObjectCont const& objects, int count, ParseResult const& result, EReason why)
+					:m_objects(&objects)
 					,m_result(&result)
 					,m_count(count)
 					,m_reason(why)
@@ -136,24 +136,26 @@ namespace pr
 
 			FileCont                   m_files;    // The file sources of ldr script
 			pr::FileWatch              m_watcher;  // The watcher of files
-			ObjectCont*                m_store;    // The store to add Ldr objects to
+			ObjectCont                 m_objects;  // The created ldr objects
+			GizmoCont                  m_gizmos;   // The created ldr gizmos
 			pr::Renderer*              m_rdr;      // Renderer used to create models
 			pr::script::IEmbeddedCode* m_embed;    // Embedded code handler
-			std::recursive_mutex       m_mutex;    // Sync access to the store
+			std::recursive_mutex       m_mutex;    // Sync access
 
 		public:
 
-			ScriptSources(ObjectCont& store, pr::Renderer& rdr, pr::script::IEmbeddedCode* embed)
+			ScriptSources(pr::Renderer& rdr, pr::script::IEmbeddedCode* embed)
 				:m_files()
 				,m_watcher()
-				,m_store(&store)
+				,m_objects()
+				,m_gizmos()
 				,m_rdr(&rdr)
 				,m_embed(embed)
 				,m_mutex()
 			{
 				m_watcher.OnFilesChanged += [&](FileWatch::FileCont&)
 				{
-					OnReload(*this, ReloadEventArgs(*m_store, EReason::Reload));
+					OnReload(*this, ReloadEventArgs(m_objects, EReason::Reload));
 				};
 			}
 
@@ -172,27 +174,112 @@ namespace pr
 			// Source file being removed event (i.e. objects deleted by Id)
 			pr::EventHandler<ScriptSources&, FileRemovedEventArgs const&> OnFileRemoved;
 
-			// Return const access to the source files
-			FileCont const& List() const
+			// A lock context for accessing the contained lists
+			class Lock
 			{
-				return m_files;
+				ScriptSources& m_ss;
+				std::lock_guard<std::recursive_mutex> m_lock;
+
+			public:
+
+				Lock(ScriptSources& ss) :m_ss(ss) ,m_lock(ss.m_mutex) {}
+				Lock(Lock const&) = delete;
+				Lock& operator =(Lock const&) = delete;
+
+				// Return const access to the source files
+				FileCont const& FileList() const
+				{
+					return m_ss.m_files;
+				}
+
+				// Access the object container
+				ObjectCont const& Objects() const
+				{
+					return m_ss.m_objects;
+				}
+				ObjectCont& Objects()
+				{
+					return m_ss.m_objects;
+				}
+
+				// Access the gizmo container
+				GizmoCont const& Gizmos() const
+				{
+					return m_ss.m_gizmos;
+				}
+				GizmoCont& Gizmos()
+				{
+					return m_ss.m_gizmos;
+				}
+			};
+
+			// Remove all objects and file sources
+			void ClearAll()
+			{
+				Lock lock(*this);
+
+				m_objects.clear();
+				m_gizmos.clear();
+				m_watcher.RemoveAll();
+				m_files.clear();
 			}
 
 			// Remove all file sources
 			void Clear()
 			{
-				std::lock_guard<std::recursive_mutex> lock(m_mutex);
+				Lock lock(*this);
 
 				// Delete all objects belonging to all file groups
 				for (auto& file : m_files)
 				{
 					OnFileRemoved(*this, FileRemovedEventArgs(file.second.m_file_group_id));
-					pr::ldr::Remove(*m_store, &file.second.m_file_group_id, 1, 0, 0);
+					pr::ldr::Remove(m_objects, &file.second.m_file_group_id, 1, 0, 0);
 				}
 
 				// Remove all file watches
 				m_watcher.RemoveAll();
 				m_files.clear();
+			}
+
+			// Remove a single object from the object container
+			void Remove(LdrObject* object)
+			{
+				Lock lock(*this);
+				pr::ldr::Remove(m_objects, object);
+			}
+
+			// Remove all objects associated with 'file_group_id'
+			void Remove(Guid const& file_group_id)
+			{
+				Lock lock(*this);
+
+				// Notify of objects about to be deleted
+				OnFileRemoved(*this, FileRemovedEventArgs(file_group_id));
+
+				// Delete all objects belonging to this file group
+				pr::ldr::Remove(m_objects, &file_group_id, 1, 0, 0);
+
+				// Delete all associated file watches
+				m_watcher.RemoveAll(file_group_id);
+			}
+
+			// Remove a file source
+			void RemoveFile(wchar_t const* filepath)
+			{
+				Lock lock(*this);
+
+				// Find the file in the file list
+				auto fpath = pr::filesys::Standardise<filepath_t>(filepath);
+				auto iter = m_files.find(fpath);
+				if (iter == std::end(m_files))
+					return;
+
+				// Remove the objects created from this file source
+				auto& file = iter->second;
+				Remove(file.m_file_group_id);
+
+				// Remove the file source
+				m_files.erase(iter);
 			}
 
 			// Add a file source
@@ -206,7 +293,7 @@ namespace pr
 			// Reload all files
 			void Reload()
 			{
-				std::lock_guard<std::recursive_mutex> lock(m_mutex);
+				Lock lock(*this);
 
 				// Make a copy of the file list
 				auto files = m_files;
@@ -215,50 +302,24 @@ namespace pr
 				Clear();
 
 				// Notify reloading
-				OnReload(*this, ReloadEventArgs(*m_store, EReason::Reload));
+				OnReload(*this, ReloadEventArgs(m_objects, EReason::Reload));
 
 				// Add each file again
 				for (auto& f : files)
 					AddFile(f.second, EReason::Reload);
 			}
 
-			// Remove a file source
-			void Remove(wchar_t const* filepath)
-			{
-				std::lock_guard<std::recursive_mutex> lock(m_mutex);
-
-				// Find the file in the file list
-				auto fpath = pr::filesys::Standardise<filepath_t>(filepath);
-				auto iter = m_files.find(fpath);
-				if (iter == std::end(m_files))
-					return;
-
-				auto& file = iter->second;
-
-				// Notify of objects about to be deleted
-				OnFileRemoved(*this, FileRemovedEventArgs(file.m_file_group_id));
-
-				// Delete all objects belonging to this file group
-				pr::ldr::Remove(*m_store, &file.m_file_group_id, 1, 0, 0);
-
-				// Delete all associated file watches
-				m_watcher.RemoveAll(file.m_file_group_id);
-
-				// Remove from the file list
-				m_files.erase(iter);
-			}
-
 			// Check all file sources for modifications and reload any that have changed
 			void RefreshChangedFiles()
 			{
-				m_watcher.CheckForChangedFiles();
+				std::thread([=]{ m_watcher.CheckForChangedFiles(); }).detach();
 			}
 
 		private:
 
 			// 'filepath' is the name of the changed file
 			// 'handled' should be set to false if the file should be reported as changed the next time 'CheckForChangedFiles' is called (true by default)
-			void FileWatch_OnFileChanged(wchar_t const*, pr::Guid const& file_group_id, void*, bool&)
+			void FileWatch_OnFileChanged(wchar_t const*, pr::Guid const& file_group_id, void*, bool& handled)
 			{
 				// Look for the root file for group 'file_group_id'
 				auto iter = pr::find_if(m_files, [=](auto& file){ return file.second.m_file_group_id == file_group_id; });
@@ -267,7 +328,7 @@ namespace pr
 
 				// Reload that file group (asynchronously)
 				auto filepath = iter->second;
-				std::thread([=]{ AddFile(filepath, EReason::Reload); }).detach();
+				handled = AddFile(filepath, EReason::Reload) != pr::GuidZero;
 			}
 
 			// Internal add file.
@@ -278,7 +339,7 @@ namespace pr
 				using namespace pr::script;
 
 				// Ensure the same file is not added twice
-				Remove(file.m_filepath.c_str());
+				RemoveFile(file.m_filepath.c_str());
 
 				// Record the files that get included so we can watch them for changes
 				pr::vector<filepath_t> filepaths;
@@ -291,6 +352,7 @@ namespace pr
 				};
 
 				ParseResult out;
+				auto context_id = pr::GuidZero;
 				try
 				{
 					// Add the file based on it's file type
@@ -328,25 +390,7 @@ namespace pr
 						Parse(*m_rdr, reader, out, file.m_file_group_id, pr::StaticCallBack(AddFileProgressCB, this));
 					}
 
-					// Merge the objects into 'm_store' and add the files to the watch.
-					{
-						std::lock_guard<std::recursive_mutex> lock(m_mutex);
-
-						// Add to the container of script sources
-						m_files[file.m_filepath] = file;
-
-						// Add to the watcher
-						for (auto& fp : filepaths)
-							m_watcher.Add(fp.c_str(), this, file.m_file_group_id);
-
-						// Merge the store
-						for (auto& obj : out.m_objects)
-							m_store->push_back(obj);
-
-						// Notify of the store change
-						OnStoreChanged(*this, StoreChangedEventArgs(*m_store, int(out.m_objects.size()), out, reason));
-					}
-					return file.m_file_group_id;
+					context_id = file.m_file_group_id;
 				}
 				catch (pr::script::Exception const& ex)
 				{
@@ -356,7 +400,28 @@ namespace pr
 				{
 					OnError(*this, ErrorEventArgs(pr::FmtS(L"Error found while parsing source file '%s'.\r\n%S", file.m_filepath.c_str(), ex.what())));
 				}
-				return pr::GuidZero;
+
+				// Merge the objects into our 'm_objects' and add the files to the watch,
+				// even if this is a partial load. We want Reload() to try these files again
+				{
+					Lock lock(*this);
+
+					// Add to the container of script sources
+					m_files[file.m_filepath] = file;
+
+					// Add to the watcher
+					for (auto& fp : filepaths)
+						m_watcher.Add(fp.c_str(), this, file.m_file_group_id);
+
+					// Merge the objects
+					for (auto& obj : out.m_objects)
+						m_objects.push_back(obj);
+
+					// Notify of the object container change
+					OnStoreChanged(*this, StoreChangedEventArgs(m_objects, int(out.m_objects.size()), out, reason));
+				}
+
+				return context_id;
 			}
 
 			// Callback function for 'Parse'

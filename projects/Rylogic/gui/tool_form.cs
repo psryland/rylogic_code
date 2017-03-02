@@ -325,7 +325,7 @@ namespace pr.gui
 
 			var rad = 5;
 			var d = Math.Sqrt(Geometry.DistanceSq(v2.From(PointToClient(MousePosition)), BRect.From(ClientRectangle.Inflated(-rad))));
-			Opacity = Maths.Lerp(FadeRange.End, FadeRange.Begin, Maths.Clamp(d / rad, 0.0, 1.0));
+			Opacity = Maths.Lerp(FadeRange.End, FadeRange.Beg, Maths.Clamp(d / rad, 0.0, 1.0));
 		}
 
 		/// <summary>Get/Set the owning form</summary>

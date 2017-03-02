@@ -404,6 +404,9 @@ namespace pr.common
 			/// <summary>The filename.extn of the file</summary>
 			public string FileName { get { return m_find_data.FileName; } }
 
+			/// <summary>Return the file title (without the extension)</summary>
+			public string FileTitle { get { return FileTitle(FullPath); } }
+
 			/// <summary>Attributes of the file.</summary>
 			public FileAttributes Attributes { get { return m_find_data.Attributes; } }
 			public bool IsDirectory { get { return (Attributes & FileAttributes.Directory) == FileAttributes.Directory; } }

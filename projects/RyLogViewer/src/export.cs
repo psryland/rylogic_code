@@ -177,7 +177,7 @@ namespace RyLogViewer
 						return true;
 
 					// Parse the line from the buffer
-					line.Read(baddr + line_rng.Begin, bf, (int)line_rng.Begin, (int)line_rng.Size, d.encoding, d.col_delim, null, d.transforms);
+					line.Read(baddr + line_rng.Beg, bf, (int)line_rng.Beg, (int)line_rng.Size, d.encoding, d.col_delim, null, d.transforms);
 
 					// Keep searching while the text is filtered out or doesn't match the pattern
 					if (!PassesFilters(line.RowText, d.filters)) return true;
@@ -192,11 +192,11 @@ namespace RyLogViewer
 			foreach (var rng in ranges)
 			{
 				// Find the start of a line (grow the range if necessary)
-				var r = new Range(Maths.Clamp(rng.Begin, 0, d.file.Stream.Length), Maths.Clamp(rng.End, 0, d.file.Stream.Length));
-				r.Begin = FindLineStart(d.file, r.Begin, r.End, d.row_delim, d.encoding, buf);
+				var r = new Range(Maths.Clamp(rng.Beg, 0, d.file.Stream.Length), Maths.Clamp(rng.End, 0, d.file.Stream.Length));
+				r.Beg = FindLineStart(d.file, r.Beg, r.End, d.row_delim, d.encoding, buf);
 
 				// Read lines and write them to the export file
-				FindLines(d.file, r.Begin, r.End, false, r.Size, add_line, d.encoding, d.row_delim, buf, d.progress);
+				FindLines(d.file, r.Beg, r.End, false, r.Size, add_line, d.encoding, d.row_delim, buf, d.progress);
 			}
 		}
 	}

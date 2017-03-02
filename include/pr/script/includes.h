@@ -318,6 +318,12 @@ namespace pr
 					return std::make_unique<PtrA>(i->second.c_str());
 				}
 
+				// If ignoring missing includes, return an empty source
+				if (m_ignore_missing_includes)
+				{
+					return std::make_unique<PtrA>("");
+				}
+
 				auto msg = !searched_paths.empty()
 					? pr::FmtS("Failed to open include '%S'\n\nFile not found in search paths:\n%S", include.c_str(), searched_paths.c_str())
 					: pr::FmtS("Failed to open include '%S'", include.c_str());

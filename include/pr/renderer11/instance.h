@@ -21,8 +21,10 @@
 #define PR_RDR_INST_MEMBERS(ty,nm,em)           ty nm;
 #define PR_RDR_INST_INIT_COMPONENTS(ty,nm,em)   m_cpt[i++] = CompDesc::make(em, offsetof(inst_type, nm));
 
+// Notes:
+// No inheritance in this type. It relies on POD behaviour
 #define PR_RDR_DEFINE_INSTANCE(name, fields)\
-	struct name :pr::AlignTo<16>\
+	struct name\
 	{\
 		pr::rdr::BaseInstance m_base;\
 		pr::rdr::CompDesc m_cpt[0 fields(PR_RDR_INST_MEMBER_COUNT)];\
@@ -34,9 +36,20 @@
 			fields(PR_RDR_INST_INITIALISERS)\
 		{\
 			using namespace pr::rdr;\
-			typedef name inst_type;\
+			using inst_type = name;\
+			static_assert(offsetof(inst_type, m_base) == 0, "'m_base' must be be the first member");\
 			int i = 0;\
-			m_base.m_cpt_count = sizeof(m_cpt)/sizeof(m_cpt[0]);\
+			m_base.m_cpt_count = _countof(m_cpt);\
 			fields(PR_RDR_INST_INIT_COMPONENTS)\
+		}\
+\
+		/* Overload operator new/delete to ensure alignment*/\
+		static void* __cdecl operator new(size_t count)\
+		{\
+			return pr::impl::AlignedAlloc<16>(count);\
+		}\
+		static void __cdecl operator delete (void* obj)\
+		{\
+			pr::impl::AlignedFree<16>(obj);\
 		}\
 	};

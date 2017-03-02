@@ -63,9 +63,6 @@
     <ClInclude Include="..\projects\view3d\forward.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script\reader.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\view3d\view3d.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -103,6 +100,9 @@
       <Filter>src\pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\str\extract.h">
+      <Filter>src\pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\reader.h">
       <Filter>src\pr\script</Filter>
     </ClInclude>
   </ItemGroup>

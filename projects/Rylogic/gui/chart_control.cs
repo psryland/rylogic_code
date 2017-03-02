@@ -1880,7 +1880,7 @@ namespace pr.gui
 					set
 					{
 						if (Equals(Range, value)) return;
-						Set(value.Begin, value.End);
+						Set(value.Beg, value.End);
 					}
 				}
 
@@ -1932,7 +1932,7 @@ namespace pr.gui
 				}
 				public void Set(RangeF range)
 				{
-					Set(range.Begin, range.End);
+					Set(range.Beg, range.End);
 				}
 
 				/// <summary>Raised whenever the range scales</summary>

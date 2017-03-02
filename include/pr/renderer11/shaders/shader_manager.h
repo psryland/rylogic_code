@@ -26,8 +26,10 @@ namespace pr
 
 			using ShaderAlexFunc = std::function<ShaderPtr(ShaderManager*)>;
 			using ShaderDeleteFunc = std::function<void(ShaderBase*)>;
+			using AllocationsTracker = AllocationsTracker<ShaderBase>;
 
 			MemFuncs             m_mem;           // Not using an allocator here, because the Shader type isn't known until 'CreateShader' is called
+			AllocationsTracker   m_dbg_mem;       // Allocation tracker
 			IPLookup             m_lookup_ip;     // Map from id to D3D input layout
 			VSLookup             m_lookup_vs;     // Map from id to D3D vertex shader
 			PSLookup             m_lookup_ps;     // Map from id to D3D pixel shader
@@ -53,6 +55,7 @@ namespace pr
 			{
 				std::lock_guard<std::recursive_mutex> lock(m_mutex);
 				DestShader(shdr);
+				assert(m_dbg_mem.remove(shdr));
 				Allocator<ShaderType>(m_mem).Delete(shdr);
 			}
 
@@ -80,12 +83,33 @@ namespace pr
 			{
 				std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
-				ShaderPtr shdr = Allocator<ShaderType>(m_mem).New(this, id, name, d3d_shdr);
+				ShaderPtr shdr(Allocator<ShaderType>(m_mem).New(this, id, name, d3d_shdr));
+				assert(m_dbg_mem.add(shdr.m_ptr));
 				return InitShader(shdr.m_ptr);
 			}
 
 			// Return the shader corresponding to 'id' or null if not found
 			ShaderPtr FindShader(RdrId id);
+
+			// Return the shader corresponding to 'id' or null if not found
+			template <typename ShaderType> pr::RefPtr<ShaderType> FindShader(RdrId id)
+			{
+				return FindShader(id);
+			}
+
+			// Look for a shader with id 'id'. If not found, find the shader with id 'base_id' and clone it with name 'name'
+			template <typename ShaderType> pr::RefPtr<ShaderType> FindShader(RdrId id, RdrId base_id, char const* name)
+			{
+				auto shdr = FindShader(id);
+				return shdr ? shdr : CloneShader(base_id, id, name);
+			}
+
+			// Look for a shader named 'name'. If not found, find the shader with id 'base_id' and clone it with name 'name'
+			template <typename ShaderType> pr::RefPtr<ShaderType> FindShader(char const* name, RdrId base_id)
+			{
+				auto id = MakeId(name);
+				return FindShader<ShaderType>(id, base_id, name);
+			}
 
 			// Create a copy of an existing shader.
 			ShaderPtr CloneShader(RdrId id, RdrId new_id, char const* new_name);

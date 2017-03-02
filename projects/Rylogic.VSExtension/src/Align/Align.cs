@@ -33,7 +33,7 @@ namespace Rylogic.VSExtension
 			public Range Span { get; private set; }
 
 			/// <summary>The minimum distance of this token from 'caret_pos'</summary>
-			public int Distance(int caret_pos) { return (int)(Span.Contains(caret_pos) ? 0 : Math.Min(Math.Abs(Span.Begin - caret_pos), Math.Abs(Span.End - caret_pos))); }
+			public int Distance(int caret_pos) { return (int)(Span.Contains(caret_pos) ? 0 : Math.Min(Math.Abs(Span.Beg - caret_pos), Math.Abs(Span.End - caret_pos))); }
 
 			/// <summary>The minimum character index that this token can be left shifted to</summary>
 			public int MinCharIndex { get; private set; }
@@ -57,12 +57,12 @@ namespace Rylogic.VSExtension
 				LineNumber = line_number;
 
 				var line_text  = Line.GetText();
-				int i; for (i = (int)(Span.Begin - 1); i >= 0 && char.IsWhiteSpace(line_text[i]); --i) {} ++i;
+				int i; for (i = (int)(Span.Beg - 1); i >= 0 && char.IsWhiteSpace(line_text[i]); --i) {} ++i;
 
 				MinCharIndex       = i;
 				MinColumnIndex     = CharIndexToColumnIndex(line_text, MinCharIndex, tab_size);
-				CurrentCharIndex   = (int)Span.Begin;
-				CurrentColumnIndex = CharIndexToColumnIndex(line_text, (int)Span.Begin, tab_size);
+				CurrentCharIndex   = (int)Span.Beg;
+				CurrentColumnIndex = CharIndexToColumnIndex(line_text, (int)Span.Beg, tab_size);
 			}
 
 			/// <summary>Set this edit so that it cannot be moved to the left</summary>
@@ -103,7 +103,7 @@ namespace Rylogic.VSExtension
 			public readonly int CaretLineNumber;     // The line that the caret is on
 			public bool IsEmpty      { get { return Pos.Empty; } }
 			public bool IsSingleLine { get { return Lines.Empty; } }
-			public bool IsWholeLines { get { return Pos.Begini == SLine.Start.Position && Pos.Endi >= ELine.End.Position; } } // >= because ELine.End.Position doesn't include the newline
+			public bool IsWholeLines { get { return Pos.Begi == SLine.Start.Position && Pos.Endi >= ELine.End.Position; } } // >= because ELine.End.Position doesn't include the newline
 
 			public Selection(IWpfTextView view)
 			{
@@ -113,10 +113,10 @@ namespace Rylogic.VSExtension
 
 				Pos   = new Range(selection.Start.Position, selection.End.Position);
 				Lines = new Range(
-					snapshot.GetLineNumberFromPosition(Pos.Begini),
-					snapshot.GetLineNumberFromPosition(Pos.Empty ? Pos.Begini : Pos.Endi - 1));
+					snapshot.GetLineNumberFromPosition(Pos.Begi),
+					snapshot.GetLineNumberFromPosition(Pos.Empty ? Pos.Begi : Pos.Endi - 1));
 
-				SLine = snapshot.GetLineFromLineNumber(Lines.Begini);
+				SLine = snapshot.GetLineFromLineNumber(Lines.Begi);
 				ELine = snapshot.GetLineFromLineNumber(Lines.Endi);
 
 				CaretPos = Maths.Clamp(caret.Position.BufferPosition, SLine.Start.Position, ELine.End.Position);
@@ -182,7 +182,7 @@ namespace Rylogic.VSExtension
 			var pattern_selection = !selection.IsEmpty && selection.IsSingleLine && !selection.IsWholeLines;
 			if (pattern_selection)
 			{
-				var s = selection.Pos.Begini - selection.SLine.Start.Position;
+				var s = selection.Pos.Begi - selection.SLine.Start.Position;
 				var e = selection.Pos.Endi   - selection.SLine.Start.Position;
 				var text = selection.SLine.GetText();
 				var expr = text.Substring(s, Math.Min(e - s, text.Length - s));
@@ -200,7 +200,7 @@ namespace Rylogic.VSExtension
 			{
 				var line = selection.SLine;
 				var line_text = line.GetText();
-				var column = selection.Pos.Begini - line.Start.Position;
+				var column = selection.Pos.Begi - line.Start.Position;
 				Debug.Assert(column >= 0 && column <= (line.End.Position - line.Start.Position));
 
 				// Find matches that span, are immediately to the right, or immediately to the left (priority order)
@@ -214,11 +214,11 @@ namespace Rylogic.VSExtension
 					foreach (var match in pat.AllMatches(line_text))
 					{
 						// Spanning matches have the highest priority
-						if (match.Begin < column && match.End > column)
+						if (match.Beg < column && match.End > column)
 							spanning = grp;
 
 						// Matches to the right separated only by whitespace are the next highest priority
-						if (match.Begin >= column && string.IsNullOrWhiteSpace(line_text.Substring(column, match.Begini - column)))
+						if (match.Beg >= column && string.IsNullOrWhiteSpace(line_text.Substring(column, match.Begi - column)))
 							rightof = grp;
 
 						// Matches to the left separated only by whitespace are next
@@ -261,7 +261,7 @@ namespace Rylogic.VSExtension
 				}
 			}
 
-			tokens.Sort((lhs,rhs) => lhs.Span.Begin.CompareTo(rhs.Span.Begin));
+			tokens.Sort((lhs,rhs) => lhs.Span.Beg.CompareTo(rhs.Span.Beg));
 			return tokens;
 		}
 
@@ -315,7 +315,7 @@ namespace Rylogic.VSExtension
 				// If there are edits but they are all already aligned at the
 				// correct column, then move on to the next candidate.
 				var pos = FindAlignColumn(edits);
-				var col = pos.Column - pos.Span.Begini;
+				var col = pos.Column - pos.Span.Begi;
 				if (edits.All(x => x.CurrentColumnIndex - x.Patn.Offset == col))
 				{
 					edits.Clear();
@@ -379,8 +379,8 @@ namespace Rylogic.VSExtension
 
 				// Find the column to align to
 				var pos = FindAlignColumn(edits);
-				var col = pos.Column - pos.Span.Begini;
-				Debug.Assert(pos.Span.Begini <= 0, "0 should be included in the span");
+				var col = pos.Column - pos.Span.Begi;
+				Debug.Assert(pos.Span.Begi <= 0, "0 should be included in the span");
 
 				foreach (var edit in edits)
 				{
@@ -392,7 +392,7 @@ namespace Rylogic.VSExtension
 						text.Insert(edit.Line.Start.Position + edit.Span.Endi, new string(' ', ws_tail));
 
 					// Delete all preceding whitespace
-					text.Delete(edit.Line.Start.Position + edit.MinCharIndex, edit.Span.Begini - edit.MinCharIndex);
+					text.Delete(edit.Line.Start.Position + edit.MinCharIndex, edit.Span.Begi - edit.MinCharIndex);
 
 					// Insert whitespace to align
 					var ws_head = col - edit.MinColumnIndex + edit.Patn.Offset;

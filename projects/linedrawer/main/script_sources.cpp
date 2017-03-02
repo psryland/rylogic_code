@@ -71,7 +71,7 @@ namespace ldr
 
 			PtrW src(str.c_str());
 			Reader reader(src, false, nullptr, nullptr, &m_lua_src);
-			Parse(m_rdr, reader, out, false);
+			Parse(m_rdr, reader, out);
 
 			pr::events::Send(Evt_StoreChanged(m_store, int(m_store.size() - bcount), out, Evt_StoreChanged::EReason::NewData));
 			pr::events::Send(Evt_Refresh());
@@ -131,7 +131,7 @@ namespace ldr
 				inc.AddSearchPath(pr::filesys::GetDirectory(fpath));
 
 				Reader reader(src, false, &inc, nullptr, &m_lua_src);
-				Parse(m_rdr, reader, out, true, file.m_context_id);
+				Parse(m_rdr, reader, out, file.m_context_id);
 			}
 			else // assume ldr script file
 			{
@@ -144,7 +144,7 @@ namespace ldr
 				inc.AddSearchPath(pr::filesys::GetDirectory(fpath));
 
 				Reader reader(src, false, &inc, nullptr, &m_lua_src);
-				Parse(m_rdr, reader, out, true, file.m_context_id);
+				Parse(m_rdr, reader, out, file.m_context_id);
 			}
 
 			pr::events::Send(Evt_StoreChanged(m_store, int(m_store.size() - bcount), out, reason));

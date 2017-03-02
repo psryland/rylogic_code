@@ -55,22 +55,22 @@ namespace RyLogViewer
 			long ovr, hbuf = buf_size / 2;
 
 			// Start with the range that has filepos in the middle
-			rng.Begin = filepos - hbuf;
+			rng.Beg = filepos - hbuf;
 			rng.End   = filepos + hbuf;
 
 			// Any overflow, add to the other range
-			if ((ovr = 0     - rng.Begin) > 0) { rng.Begin += ovr; rng.End   += ovr; }
-			if ((ovr = rng.End - fileend) > 0) { rng.End   -= ovr; rng.Begin -= ovr; }
-			if ((ovr = 0     - rng.Begin) > 0) { rng.Begin += ovr; }
+			if ((ovr = 0     - rng.Beg) > 0) { rng.Beg += ovr; rng.End   += ovr; }
+			if ((ovr = rng.End - fileend) > 0) { rng.End   -= ovr; rng.Beg -= ovr; }
+			if ((ovr = 0     - rng.Beg) > 0) { rng.Beg += ovr; }
 
-			Debug.Assert(rng.Begin >= 0 && rng.End <= fileend && rng.Begin <= rng.End);
+			Debug.Assert(rng.Beg >= 0 && rng.End <= fileend && rng.Beg <= rng.End);
 			return rng;
 		}
 
 		/// <summary>Returns the full byte range currently represented by 'm_line_index'</summary>
 		private Range LineIndexRange
 		{
-			get { return m_line_index.Count != 0 ? new Range(m_line_index.First().Begin, m_line_index.Last().End) : Range.Zero; }
+			get { return m_line_index.Count != 0 ? new Range(m_line_index.First().Beg, m_line_index.Last().End) : Range.Zero; }
 		}
 
 		/// <summary>
@@ -79,7 +79,7 @@ namespace RyLogViewer
 		/// this is the only range we know is complete and doesn't contain partial lines</summary>
 		private Range LineStartIndexRange
 		{
-			get { return m_line_index.Count != 0 ? new Range(m_line_index.First().Begin, m_line_index.Last().Begin) : Range.Zero; }
+			get { return m_line_index.Count != 0 ? new Range(m_line_index.First().Beg, m_line_index.Last().Beg) : Range.Zero; }
 		}
 
 		/// <summary>Returns the byte range of the currently displayed rows</summary>
@@ -90,7 +90,7 @@ namespace RyLogViewer
 				if (m_line_index.Count == 0) return Range.Zero;
 				int b = Maths.Clamp(m_grid.FirstDisplayedScrollingRowIndex, 0, m_line_index.Count - 1);
 				int e = Maths.Clamp(b + m_grid.DisplayedRowCount(true), 0, m_line_index.Count - 1);
-				return new Range(m_line_index[b].Begin, m_line_index[e].End);
+				return new Range(m_line_index[b].Beg, m_line_index[e].End);
 			}
 		}
 
@@ -358,7 +358,7 @@ namespace RyLogViewer
 								// Test 'text' against each filter to see if it's included
 								// Note: not caching this string because we want to read immediate data
 								// from the file to pick up file changes.
-								string text = d.encoding.GetString(buf, (int)line.Begin, (int)line.Size);
+								string text = d.encoding.GetString(buf, (int)line.Beg, (int)line.Size);
 								if (!PassesFilters(text, d.filters))
 									return true;
 
@@ -381,12 +381,12 @@ namespace RyLogViewer
 
 						// Scan twice, starting in the direction of the smallest range so that any
 						// unused cache space is used by the search in the other direction
-						long scan_from = Maths.Clamp(d.filepos, rng.Begin, rng.End);
+						long scan_from = Maths.Clamp(d.filepos, rng.Beg, rng.End);
 						for (int a = 0; a != 2; ++a, scan_backward = !scan_backward)
 						{
 							line_buf[0] = scan_backward ? bwd_line_buf : fwd_line_buf;
 							line_limit[0] += scan_backward ? bwd_lines : fwd_lines;
-							long range = scan_backward ? scan_from - rng.Begin : rng.End - scan_from;
+							long range = scan_backward ? scan_from - rng.Beg : rng.End - scan_from;
 							FindLines(d.file, scan_from, d.fileend, scan_backward, range, add_line, d.encoding, d.row_delim, buf, progress);
 							if (BuildCancelled(d.build_issue)) return;
 						}
@@ -489,7 +489,7 @@ namespace RyLogViewer
 			// without loading data that is already cached.
 
 			// Find the available scan range on both sides of the currently cached range
-			var Lrange = new Range(scan_range.Begin, d.cached_whole_line_range.Begin);
+			var Lrange = new Range(scan_range.Beg, d.cached_whole_line_range.Beg);
 			var Rrange = new Range(d.cached_whole_line_range.End, scan_range.End);
 			if (Lrange.Size <= 0 && Rrange.Size <= 0)
 			{
@@ -748,8 +748,8 @@ namespace RyLogViewer
 		private int MergeLineIndex(Range scan_range, List<Range> line_index, long cache_range, long filepos, long fileend, bool replace)
 		{
 			int row_delta = 0;
-			Range old_rng = m_line_index.Count != 0 ? new Range(m_line_index.First().Begin, m_line_index.Last().End) : Range.Zero;
-			Range new_rng =   line_index.Count != 0 ? new Range(  line_index.First().Begin,   line_index.Last().End) : Range.Zero;
+			Range old_rng = m_line_index.Count != 0 ? new Range(m_line_index.First().Beg, m_line_index.Last().End) : Range.Zero;
+			Range new_rng =   line_index.Count != 0 ? new Range(  line_index.First().Beg,   line_index.Last().End) : Range.Zero;
 
 			// Replace the cached line index with 'line_index'
 			if (replace || scan_range.Contains(old_rng))
@@ -760,11 +760,11 @@ namespace RyLogViewer
 				// If the ranges overlap, we can search for the begin address of the intersect in both ranges to
 				// get the row delta. If the don't overlap, the best we can do is say the direction.
 				if (intersect.Empty)
-					row_delta = intersect.Begin == old_rng.End ? -line_index.Count : line_index.Count;
+					row_delta = intersect.Beg == old_rng.End ? -line_index.Count : line_index.Count;
 				else
 				{
-					int old_idx = LineIndex(m_line_index, intersect.Begin);
-					int new_idx = LineIndex(line_index, intersect.Begin);
+					int old_idx = LineIndex(m_line_index, intersect.Beg);
+					int new_idx = LineIndex(line_index, intersect.Beg);
 					row_delta = new_idx - old_idx;
 				}
 
@@ -784,7 +784,7 @@ namespace RyLogViewer
 					Log.Info(this, "Merging results front. Results contain {0} lines. filepos {1}/{2}".Fmt(line_index.Count, filepos, fileend));
 
 					// Make sure there's no overlap of rows between 'scan_range' and m_line_index
-					while (m_line_index.Count != 0 && scan_range.Contains(m_line_index.First().Begin))
+					while (m_line_index.Count != 0 && scan_range.Contains(m_line_index.First().Beg))
 					{
 						m_line_index.RemoveAt(0);
 						--row_delta;
@@ -798,19 +798,19 @@ namespace RyLogViewer
 					int i, iend = m_line_index.Count;
 					for (i = Math.Min(Settings.LineCacheCount, iend); i-- != 0; )
 					{
-						if (m_line_index[i].Begin - line_range.Begin > cache_range) continue;
+						if (m_line_index[i].Beg - line_range.Beg > cache_range) continue;
 						++i;
 						m_line_index.RemoveRange(i, iend - i);
 						break;
 					}
 				}
 				// Or append to the end and trim the front
-				else if (scan_range.Begin > old_rng.Begin)
+				else if (scan_range.Beg > old_rng.Beg)
 				{
 					Log.Info(this, "Merging results tail. Results contain {0} lines. filepos {1}/{2}".Fmt(line_index.Count, filepos, fileend));
 
 					// Make sure there's no overlap of rows between 'scan_range' and 'm_line_index'
-					while (m_line_index.Count != 0 && scan_range.Contains(m_line_index.Last().Begin))
+					while (m_line_index.Count != 0 && scan_range.Contains(m_line_index.Last().Beg))
 						m_line_index.RemoveAt(m_line_index.Count - 1);
 
 					m_line_index.AddRange(line_index);
@@ -939,7 +939,7 @@ namespace RyLogViewer
 			// it could be in the last line, or after the last line.
 			if (line_index.Count == 0) return 0;
 			if (filepos >= line_index.Last().End) return line_index.Count;
-			int idx = line_index.BinarySearch(line => Maths.Compare(line.Begin, filepos));
+			int idx = line_index.BinarySearch(line => Maths.Compare(line.Beg, filepos));
 			return idx >= 0 ? idx : ~idx - 1;
 		}
 	}

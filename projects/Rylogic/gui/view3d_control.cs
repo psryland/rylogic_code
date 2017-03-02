@@ -235,7 +235,7 @@ namespace pr.gui
 				{// Show coords
 				}
 				{// Axis Views
-					var view_options = new ToolStripComboBox("Views");
+					var view_options = new ToolStripComboBox("Views") { DropDownStyle = ComboBoxStyle.DropDownList };
 					view_menu.DropDownItems.Add(view_options);
 					view_options.Items.Add("Views");
 					view_options.Items.Add("Axis +X");
@@ -264,9 +264,9 @@ namespace pr.gui
 					};
 				}
 				{// Object Manager UI
-					var obj_mgr_ui = new ToolStripMenuItem("Object Manager");
-					view_menu.DropDownItems.Add(obj_mgr_ui);
-					obj_mgr_ui.Click += (s,a) => Window.ShowObjectManager(true);
+					//var obj_mgr_ui = new ToolStripMenuItem("Object Manager");
+					//view_menu.DropDownItems.Add(obj_mgr_ui);
+					//obj_mgr_ui.Click += (s,a) => Window.ShowObjectManager(true);
 				}
 			}
 			{// Navigation
@@ -281,7 +281,7 @@ namespace pr.gui
 					var align_menu = new ToolStripMenuItem("Align");
 					rdr_menu.DropDownItems.Add(align_menu);
 					{
-						var align_options = new ToolStripComboBox("Aligns");
+						var align_options = new ToolStripComboBox("Aligns") { DropDownStyle = ComboBoxStyle.DropDownList };
 						align_menu.DropDownItems.Add(align_options);
 						align_options.Items.Add("None");
 						align_options.Items.Add("X");
@@ -332,7 +332,7 @@ namespace pr.gui
 				var rdr_menu = new ToolStripMenuItem("Rendering");
 				context_menu.Items.Add(rdr_menu);
 				{// Solid/Wireframe/Solid+Wire
-					var option = new ToolStripComboBox();
+					var option = new ToolStripComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
 					rdr_menu.DropDownItems.Add(option);
 					option.Items.AddRange(Enum<View3d.EFillMode>.Names.Cast<object>().ToArray());
 					option.SelectedIndex = (int)Window.FillMode;

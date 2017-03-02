@@ -43,7 +43,7 @@ namespace pr.gui
 			set
 			{
 				if (Equals(m_total_range, value)) return;
-				if (value.Size <= 0) value.End = value.Begin + 1;
+				if (value.Size <= 0) value.End = value.Beg + 1;
 				m_total_range = value;
 				m_thumb_range = Range.Constrain(m_thumb_range, m_total_range);
 				foreach (var r in m_indicator_ranges) r.Range = Range.Constrain(r.Range, m_total_range);
@@ -60,7 +60,7 @@ namespace pr.gui
 			set
 			{
 				if (Equals(m_thumb_range, value)) return;
-				if (value.Size <= 0) value.End = value.Begin + 1;
+				if (value.Size <= 0) value.End = value.Beg + 1;
 				m_thumb_range = Range.Constrain(value, m_total_range);
 				RaiseScrollEvent();
 				Invalidate();
@@ -197,8 +197,8 @@ namespace pr.gui
 			// Create rectangles for the highlight ranges
 			foreach (var r in m_indicator_ranges)
 			{
-				int sy = (int)(Maths.Frac(total.Begin, r.Range.Begin, total.End) * bounds.Height);
-				int ey = (int)(Maths.Frac(total.Begin, r.Range.End  , total.End) * bounds.Height);
+				int sy = (int)(Maths.Frac(total.Beg, r.Range.Beg, total.End) * bounds.Height);
+				int ey = (int)(Maths.Frac(total.Beg, r.Range.End, total.End) * bounds.Height);
 				r.m_rect = new Rectangle(bounds.X, bounds.Y + sy, bounds.Width, Math.Max(ey - sy, 1));
 			}
 
@@ -270,7 +270,7 @@ namespace pr.gui
 		private void ScrollThumbPos(int y)
 		{
 			Range thm = ThumbRange;
-			thm.Mid = TotalRange.Begin + (long)(Maths.Frac(0, y, Height) * TotalRange.Size);
+			thm.Mid = TotalRange.Beg + (long)(Maths.Frac(0, y, Height) * TotalRange.Size);
 			ThumbRange = thm;
 		}
 
@@ -281,8 +281,8 @@ namespace pr.gui
 			var thm    = ThumbRange;
 			var total  = TotalRange;
 
-			int sy = (int)(Maths.Frac(total.Begin, thm.Begin, total.End) * bounds.Height);
-			int ey = (int)(Maths.Frac(total.Begin, thm.End  , total.End) * bounds.Height);
+			int sy = (int)(Maths.Frac(total.Beg, thm.Beg, total.End) * bounds.Height);
+			int ey = (int)(Maths.Frac(total.Beg, thm.End, total.End) * bounds.Height);
 			var r = new Rectangle(bounds.X, bounds.Y + sy, bounds.Width, ey - sy);
 
 			// Apply the minimum thumb size constraint

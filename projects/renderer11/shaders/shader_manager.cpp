@@ -175,7 +175,7 @@ namespace pr
 		ShaderPtr ShaderManager::InitShader(ShaderBase* shdr)
 		{
 			// Should already be lock_guarded
-			PR_ASSERT(PR_DBG_RDR, FindShader(shdr->m_id) == 0, "A shader with this Id already exists");
+			PR_ASSERT(PR_DBG_RDR, FindShader(shdr->m_id) == nullptr, "A shader with this Id already exists");
 
 			// Set up a sort id for the shader
 			shdr->m_sort_id = m_lookup_shader.size() % SortKey::MaxShaderId;

@@ -18,9 +18,12 @@ namespace pr
 	{
 		class ModelManager
 		{
-			Allocator<ModelBuffer> m_alex_mdlbuf;
-			Allocator<Model>       m_alex_model;
-			Allocator<Nugget>      m_alex_nugget;
+			Allocator<ModelBuffer>          m_alex_mdlbuf;
+			Allocator<Model>                m_alex_model;
+			Allocator<Nugget>               m_alex_nugget;
+			AllocationsTracker<ModelBuffer> m_dbg_mem_mdlbuf;
+			AllocationsTracker<Model>       m_dbg_mem_mdl;
+			AllocationsTracker<Nugget>      m_dbg_mem_nugget;
 			D3DPtr<ID3D11Device>   m_device;
 			std::recursive_mutex   m_mutex;
 
@@ -52,6 +55,9 @@ namespace pr
 			// Create a model within the provided model buffer.
 			// The buffer must contain sufficient space for the model
 			ModelPtr CreateModel(MdlSettings const& settings, ModelBufferPtr& model_buffer);
+
+			// Create a nugget using our allocator
+			Nugget* CreateNugget(NuggetProps props, ModelBuffer* model_buffer, Model* model);
 
 			// Stock models
 			ModelPtr m_unit_quad;

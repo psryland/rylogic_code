@@ -1415,15 +1415,15 @@ namespace ldr
 		if (evt.m_reason != Evt_StoreChanged::EReason::Reload && evt.m_result.m_cam_fields != ParseResult::ECamField::None)
 		{
 			auto fields = evt.m_result.m_cam_fields;
-			if (fields & ParseResult::ECamField::C2W    ) m_cam.CameraToWorld     (evt.m_result.m_cam.CameraToWorld());
-			if (fields & ParseResult::ECamField::Focus  ) m_cam.FocusDist         (evt.m_result.m_cam.FocusDist());
-			if (fields & ParseResult::ECamField::Align  ) m_cam.SetAlign          (evt.m_result.m_cam.m_align);
-			if (fields & ParseResult::ECamField::Aspect ) m_cam.Aspect            (evt.m_result.m_cam.m_aspect);
-			if (fields & ParseResult::ECamField::FovY   ) m_cam.FovY              (evt.m_result.m_cam.FovY());
-			if (fields & ParseResult::ECamField::Near   ) m_cam.m_near           = evt.m_result.m_cam.m_near;
-			if (fields & ParseResult::ECamField::Far    ) m_cam.m_far            = evt.m_result.m_cam.m_far;
-			if (fields & ParseResult::ECamField::AbsClip) m_cam.m_focus_rel_clip = evt.m_result.m_cam.m_focus_rel_clip;
-			if (fields & ParseResult::ECamField::Ortho  ) m_cam.m_orthographic   = evt.m_result.m_cam.m_orthographic;
+			if (AllSet(fields, ParseResult::ECamField::C2W    )) m_cam.CameraToWorld     (evt.m_result.m_cam.CameraToWorld());
+			if (AllSet(fields, ParseResult::ECamField::Focus  )) m_cam.FocusDist         (evt.m_result.m_cam.FocusDist());
+			if (AllSet(fields, ParseResult::ECamField::Align  )) m_cam.SetAlign          (evt.m_result.m_cam.m_align);
+			if (AllSet(fields, ParseResult::ECamField::Aspect )) m_cam.Aspect            (evt.m_result.m_cam.m_aspect);
+			if (AllSet(fields, ParseResult::ECamField::FovY   )) m_cam.FovY              (evt.m_result.m_cam.FovY());
+			if (AllSet(fields, ParseResult::ECamField::Near   )) m_cam.m_near           = evt.m_result.m_cam.m_near;
+			if (AllSet(fields, ParseResult::ECamField::Far    )) m_cam.m_far            = evt.m_result.m_cam.m_far;
+			if (AllSet(fields, ParseResult::ECamField::AbsClip)) m_cam.m_focus_rel_clip = evt.m_result.m_cam.m_focus_rel_clip;
+			if (AllSet(fields, ParseResult::ECamField::Ortho  )) m_cam.m_orthographic   = evt.m_result.m_cam.m_orthographic;
 		}
 
 		m_suspend_render = false;

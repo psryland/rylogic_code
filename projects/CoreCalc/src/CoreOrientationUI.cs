@@ -131,7 +131,7 @@ namespace CoreCalc
 				"  0 0 0",
 				"  0 1 0",
 				"  *Width {20}",
-				"}"), false, false, null));
+				"}"), false, null));
 
 			GfxCore = new View3d.Object(Str.Build(
 				"*CylinderHR Core FF00AF00 ",
@@ -150,7 +150,7 @@ namespace CoreCalc
 			m_view3d_core.Invalidate();
 
 			// Core View
-			View.OriginVisible = false;
+			View.OriginPointVisible = false;
 			View.FocusPointVisible = false;
 			View.Camera.AlignAxis = v4.ZAxis;
 

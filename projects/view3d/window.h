@@ -176,7 +176,7 @@ namespace view3d
 				auto fd = m_camera.FocusDist();
 				auto sz = m_focus_point_size * screen_fraction * fd;
 				m_focus_point.m_i2w = pr::m4x4::Scale(sz, sz, sz, m_camera.FocusPoint());
-				m_focus_point.m_c2s = m_camera.CameraToScreen(float(m_scene.m_viewport.Width)/float(m_scene.m_viewport.Height));
+				m_focus_point.m_c2s = m_camera.CameraToScreen(float(m_scene.m_viewport.Width)/float(m_scene.m_viewport.Height), float(pr::maths::tau_by_8), m_camera.FocusDist());
 				m_scene.AddInstance(m_focus_point);
 			}
 
@@ -187,7 +187,7 @@ namespace view3d
 				auto fd = pr::Length3(m_camera.CameraToWorld().pos);
 				auto sz = m_origin_point_size * screen_fraction * fd;
 				m_origin_point.m_i2w = pr::m4x4::Scale(sz, sz, sz, pr::v4Origin);
-				m_origin_point.m_c2s = m_camera.CameraToScreen(float(m_scene.m_viewport.Width)/float(m_scene.m_viewport.Height));
+				m_origin_point.m_c2s = m_camera.CameraToScreen(float(m_scene.m_viewport.Width)/float(m_scene.m_viewport.Height), float(pr::maths::tau_by_8), m_camera.FocusDist());
 				m_scene.AddInstance(m_origin_point);
 			}
 

@@ -1862,7 +1862,7 @@ namespace pr.gui
 					// Calculate the number of bytes dropped.
 					// Note: Buffer does not store line endings, but the saved selection does.
 					var bytes = 0;
-					for (int i = args.Dropped.Begini; i != args.Dropped.Endi; ++i)
+					for (int i = args.Dropped.Begi; i != args.Dropped.Endi; ++i)
 						bytes += Encoding.UTF8.GetByteCount(Buffer.Lines[i].m_line.ToString()) + 1; // +1 '\n' per line
 
 					// Save the selection and adjust it by the number of characters to be dropped

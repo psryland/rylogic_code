@@ -14,17 +14,20 @@ namespace pr
 		// A graphics model containing vertices and indices
 		struct Model :pr::RefCount<Model>
 		{
-			ModelBufferPtr  m_model_buffer;  // The buffer that contains this model's vertex and index data
-			Range           m_vrange;        // The first and number of vertices for this model within 'm_model_buffer'
-			Range           m_irange;        // The first and number of indices for this model within 'm_model_buffer'
-			TNuggetChain    m_nuggets;       // The nuggets for this model
-			pr::BBox        m_bbox;          // A bounding box for the model. Set by the client
-			string32        m_name;          // A human readable name for the model
-			mutable int     m_dbg_flags;     // Flags used by PR_DBG_RDR to output info once only
+			ModelBufferPtr m_model_buffer;  // The buffer that contains this model's vertex and index data
+			Range          m_vrange;        // The first and number of vertices for this model within 'm_model_buffer'
+			Range          m_irange;        // The first and number of indices for this model within 'm_model_buffer'
+			TNuggetChain   m_nuggets;       // The nuggets for this model
+			pr::BBox       m_bbox;          // A bounding box for the model. Set by the client
+			string32       m_name;          // A human readable name for the model
+			mutable int    m_dbg_flags;     // Flags used by PR_DBG_RDR to output info once only
 
 			// Only the model manager should be creating these
 			Model(MdlSettings const& settings, ModelBufferPtr& model_buffer);
 			~Model();
+
+			// Access the model manager
+			ModelManager& MdlMgr();
 
 			// Access to the vertex/index buffers
 			// Only returns false if 'D3D11_MAP_FLAG_DO_NOT_WAIT' flag is set, all other fail cases throw

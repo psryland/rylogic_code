@@ -80,7 +80,7 @@ namespace RyLogViewer
 			if (!PreFind())
 				return;
 
-			var start = from_start ? FileByteRange.Begin : SelectedRowByteRange.End;
+			var start = from_start ? FileByteRange.Beg : SelectedRowByteRange.End;
 			Log.Info(this, "FindNext starting from {0}".Fmt(start));
 
 			long found;
@@ -94,7 +94,7 @@ namespace RyLogViewer
 			if (!PreFind())
 				return;
 
-			var start = from_end ? FileByteRange.End : SelectedRowByteRange.Begin;
+			var start = from_end ? FileByteRange.End : SelectedRowByteRange.Beg;
 			Log.Info(this, "FindPrev starting from {0}".Fmt(start));
 
 			long found;
@@ -111,7 +111,7 @@ namespace RyLogViewer
 				? (start == FileByteRange.End
 					? "Searching backward from the end of the file..."
 					: "Searching backward from the current selection position...")
-				: (start == FileByteRange.Begin
+				: (start == FileByteRange.Beg
 					? "Searching forward from the start of the file..."
 					: "Searching forward from the current selection position...");
 
@@ -136,7 +136,7 @@ namespace RyLogViewer
 					// Searching....
 					DoFind(pat, start, backward, d, rng =>
 						{
-							at = rng.Begin;
+							at = rng.Beg;
 							return false;
 						});
 
@@ -218,14 +218,14 @@ namespace RyLogViewer
 							return true;
 
 						// Parse the line from the buffer
-						line.Read(baddr + line_rng.Begin, bf, (int)line_rng.Begin, (int)line_rng.Size, d.encoding, d.col_delim, null, d.transforms);
+						line.Read(baddr + line_rng.Beg, bf, (int)line_rng.Beg, (int)line_rng.Size, d.encoding, d.col_delim, null, d.transforms);
 
 						// Keep searching while the text is filtered out or doesn't match the pattern
 						if (!PassesFilters(line.RowText, d.filters) || !pat.IsMatch(line.RowText))
 							return true;
 
 						// Found a match
-						return on_found(new Range(baddr + line_rng.Begin, baddr + line_rng.End));
+						return on_found(new Range(baddr + line_rng.Beg, baddr + line_rng.End));
 					};
 
 				// Search for files

@@ -22,42 +22,42 @@ namespace pr.common
 	// Note, there is no Range<T> because T cannot be constrained to value types with simple maths operators :-/
 
 	/// <summary>A range over [Begin,End)</summary>
-	[DebuggerDisplay("{Begin} {End} ({Size})")]
+	[DebuggerDisplay("{Beg} {End} ({Size})")]
 	public struct Range :IEnumerable<long>
 	{
 		/// <summary>The value of the first element in the range</summary>
-		public long Begin;
+		public long Beg;
 
 		/// <summary>The value of one past the last element in the range</summary>
 		public long End;
 
 		/// <summary>The default empty range</summary>
-		public static readonly Range Zero = new Range{Begin = 0, End = 0};
+		public static readonly Range Zero = new Range{Beg = 0, End = 0};
 
 		/// <summary>An invalid range. Used as an initialiser when finding a bounding range</summary>
-		public static readonly Range Invalid = new Range{Begin = long.MaxValue, End = long.MinValue};
+		public static readonly Range Invalid = new Range{Beg = long.MaxValue, End = long.MinValue};
 
 		/// <summary>Create a range from a Start and Length</summary>
 		public static Range FromStartLength(long start, long length) { return new Range(start, start + length); }
 
 		/// <summary>Construct from a range</summary>
-		public Range(long begin, long end) { Begin = begin; End = end; }
+		public Range(long begin, long end) { Beg = begin; End = end; }
 
 		/// <summary>True if the range spans zero elements</summary>
-		public bool Empty { get { return End == Begin; } }
+		public bool Empty { get { return End == Beg; } }
 
 		/// <summary>Get/Set the number of elements in the range. Setting changes 'End' only</summary>
-		public long Count { get { return End - Begin; } set { End = Begin + value; } }
+		public long Count { get { return End - Beg; } set { End = Beg + value; } }
 		public long Size  { get { return Count; } set { Count = value; } }
 
 		/// <summary>Get/Set the middle of the range. Setting the middle point does not change 'Size', i.e. 'Begin' and 'End' are both potentially moved</summary>
-		public long Mid { get { return (Begin + End) / 2; } set { var count = Size; Begin = value - count/2; End = value + (count+1)/2; } }
+		public long Mid { get { return (Beg + End) / 2; } set { var count = Size; Beg = value - count/2; End = value + (count+1)/2; } }
 
 		/// <summary>Empty the range and reset to [0,0)</summary>
-		public void Clear() { Begin = End = 0; }
+		public void Clear() { Beg = End = 0; }
 
 		// Casting helpers
-		public int Begini { get { return (int)Begin; } }
+		public int Begi   { get { return (int)Beg; } }
 		public int Endi   { get { return (int)End;   } }
 		public int Counti { get { return (int)Count; } }
 		public int Sizei  { get { return (int)Size;  } }
@@ -68,7 +68,7 @@ namespace pr.common
 		{
 			get
 			{
-				for (var i = Begin; i != End; ++i)
+				for (var i = Beg; i != End; ++i)
 					yield return i;
 			}
 		}
@@ -76,7 +76,7 @@ namespace pr.common
 		{
 			get
 			{
-				for (var i = Begini; i != Endi; ++i)
+				for (var i = Begi; i != Endi; ++i)
 					yield return i;
 			}
 		}
@@ -84,13 +84,13 @@ namespace pr.common
 		/// <summary>Returns true if 'value' is within the range [Begin,End) (i.e. end exclusive)</summary>
 		[Pure] public bool Contains(long value)
 		{
-			return Begin <= value && value < End;
+			return Beg <= value && value < End;
 		}
 
 		/// <summary>Returns true if 'value' is within the range [Begin,End] (i.e. inclusive)</summary>
 		[Pure] public bool ContainsInclusive(long value)
 		{
-			return Begin <= value && value <= End;
+			return Beg <= value && value <= End;
 		}
 
 		/// <summary>Returns true if 'rng' is entirely within this range</summary>
@@ -98,13 +98,13 @@ namespace pr.common
 		{
 			Debug.Assert(Size >= 0, "this range is inside out");
 			Debug.Assert(rng.Size >= 0, "'rng' is inside out");
-			return Begin <= rng.Begin && rng.End <= End;
+			return Beg <= rng.Beg && rng.End <= End;
 		}
 
 		/// <summary>Grow the bounds of this range to include 'x'</summary>
 		public void Encompass(long value)
 		{
-			Begin = Math.Min(Begin , value);
+			Beg = Math.Min(Beg , value);
 			End   = Math.Max(End   , value + 1);
 		}
 
@@ -112,14 +112,14 @@ namespace pr.common
 		public void Encompass(Range rng)
 		{
 			Debug.Assert(rng.Size >= 0, "'rng' is inside out");
-			Begin = Math.Min(Begin ,rng.Begin);
+			Beg = Math.Min(Beg ,rng.Beg);
 			End   = Math.Max(End   ,rng.End  );
 		}
 
 		/// <summary>Returns a range scaled by 'scale'. Begin and End are changed, the mid point of the range is unchanged</summary>
 		public Range Scale(float scale)
 		{
-			return new Range(Begin, (long)(Begin + Size*scale)){Mid = Mid};
+			return new Range(Beg, (long)(Beg + Size*scale)){Mid = Mid};
 		}
 
 		/// <summary>
@@ -129,7 +129,7 @@ namespace pr.common
 		{
 			Debug.Assert(Size >= 0, "this range is inside out");
 			Debug.Assert(rng.Size >= 0, "'rng' is inside out");
-			return new Range(Math.Min(Begin, rng.Begin), Math.Max(End, rng.End));
+			return new Range(Math.Min(Beg, rng.Beg), Math.Max(End, rng.End));
 		}
 
 		/// <summary>
@@ -140,38 +140,38 @@ namespace pr.common
 		{
 			Debug.Assert(Size >= 0, "this range is inside out");
 			Debug.Assert(rng.Size >= 0, "'rng' is inside out");
-			if (rng.End <= Begin) return new Range(Begin, Begin);
-			if (rng.Begin >= End) return new Range(End, End);
-			return new Range(Math.Max(Begin, rng.Begin), Math.Min(End, rng.End));
+			if (rng.End <= Beg) return new Range(Beg, Beg);
+			if (rng.Beg >= End) return new Range(End, End);
+			return new Range(Math.Max(Beg, rng.Beg), Math.Min(End, rng.End));
 		}
 
 		/// <summary>Move the range by an offset</summary>
 		public Range Shift(long ofs)
 		{
-			return new Range(Begin + ofs, End + ofs);
+			return new Range(Beg + ofs, End + ofs);
 		}
 
 		/// <summary>Returns 'x' clamped by 'range'</summary>
 		public static Range Clamp(Range x, Range range)
 		{
 			return new Range(
-				Maths.Clamp(x.Begin, range.Begin, range.End),
-				Maths.Clamp(x.End, range.Begin, range.End));
+				Maths.Clamp(x.Beg, range.Beg, range.End),
+				Maths.Clamp(x.End, range.Beg, range.End));
 		}
 
 		/// <summary>Returns 'x' constrained by 'range'. i.e 'x' will be fitted within 'range' and only resized if x.Size > range.Size</summary>
 		public static Range Constrain(Range x, Range range)
 		{
-			if (x.Begin < range.Begin) x = x.Shift(range.Begin - x.Begin);
+			if (x.Beg < range.Beg) x = x.Shift(range.Beg - x.Beg);
 			if (x.End   > range.End  ) x = x.Shift(range.End - x.End);
-			if (x.Begin < range.Begin) x.Begin = range.Begin;
+			if (x.Beg < range.Beg) x.Beg = range.Beg;
 			return x;
 		}
 
 		/// <summary>String representation of the range</summary>
 		public override string ToString()
 		{
-			return "[{0},{1})".Fmt(Begin,End);
+			return "[{0},{1})".Fmt(Beg,End);
 		}
 
 		#region Equals
@@ -191,11 +191,11 @@ namespace pr.common
 		}
 		public bool Equals(Range other)
 		{
-			return other.Begin == Begin && other.End == End;
+			return other.Beg == Beg && other.End == End;
 		}
 		public override int GetHashCode()
 		{
-			unchecked { return (Begin.GetHashCode()*397) ^ End.GetHashCode(); }
+			unchecked { return (Beg.GetHashCode()*397) ^ End.GetHashCode(); }
 		}
 		#endregion
 
@@ -203,7 +203,7 @@ namespace pr.common
 
 		public IEnumerator<long> GetEnumerator()
 		{
-			for (var i = Begin; i != End; ++i)
+			for (var i = Beg; i != End; ++i)
 				yield return i;
 		}
 		IEnumerator IEnumerable.GetEnumerator()
@@ -229,49 +229,49 @@ namespace pr.common
 	}
 
 	/// <summary>A floating point range over [Begin,End)</summary>
-	[DebuggerDisplay("{Begin} {End} ({Size})")]
+	[DebuggerDisplay("{Beg} {End} ({Size})")]
 	public struct RangeF
 	{
 		/// <summary>The value of the first element in the range</summary>
-		public double Begin;
+		public double Beg;
 
 		/// <summary>The value of one past the last element in the range</summary>
 		public double End;
 
 		/// <summary>The default empty range</summary>
-		public static readonly RangeF Zero = new RangeF{Begin = 0.0, End = 0.0};
+		public static readonly RangeF Zero = new RangeF{Beg = 0.0, End = 0.0};
 
 		/// <summary>An invalid range. Used as an initialiser when finding a bounding range</summary>
-		public static readonly RangeF Invalid = new RangeF{Begin = double.MaxValue, End = double.MinValue};
+		public static readonly RangeF Invalid = new RangeF{Beg = double.MaxValue, End = double.MinValue};
 
 		/// <summary>Construct from a range</summary>
 		public RangeF(double begin, double end)
 		{
-			Begin = begin;
+			Beg = begin;
 			End = end;
 		}
 
 		/// <summary>True if the range spans zero elements</summary>
 		public bool Empty
 		{
-			get { return Equals(Begin,End); }
+			get { return Equals(Beg,End); }
 		}
 
 		/// <summary>Get/Set the number of elements in the range. Setting changes 'End' only</summary>
 		public double Size
 		{
-			get { return End - Begin; }
-			set { End = Begin + value; }
+			get { return End - Beg; }
+			set { End = Beg + value; }
 		}
 
 		/// <summary>Get/Set the middle of the range. Setting the middle point does not change 'Size', i.e. 'Begin' and 'End' are both potentially moved</summary>
 		public double Mid
 		{
-			get { return (Begin + End) * 0.5; }
+			get { return (Beg + End) * 0.5; }
 			set
 			{
 				var hsize = Size*0.5;
-				Begin = value - hsize;
+				Beg = value - hsize;
 				End = value + hsize;
 			}
 		}
@@ -279,25 +279,25 @@ namespace pr.common
 		/// <summary>Empty the range and reset to [0,0)</summary>
 		public void Clear()
 		{
-			Begin = End = 0.0;
+			Beg = End = 0.0;
 		}
 
 		// Casting helpers
-		public float Beginf { get { return (float)Begin; } }
-		public float Endf   { get { return (float)End;   } }
-		public float Sizef  { get { return (float)Size;  } }
-		public float Midf   { get { return (float)Mid;   } }
+		public float Begf  { get { return (float)Beg;  } }
+		public float Endf  { get { return (float)End;  } }
+		public float Sizef { get { return (float)Size; } }
+		public float Midf  { get { return (float)Mid;  } }
 
 		/// <summary>Returns true if 'value' is within the range [Begin,End) (i.e. end exclusive)</summary>
 		[Pure] public bool Contains(double value)
 		{
-			return Begin <= value && value < End;
+			return Beg <= value && value < End;
 		}
 
 		/// <summary>Returns true if 'value' is within the range [Begin,End] (i.e. end inclusive)</summary>
 		[Pure] public bool ContainsInclusive(double value)
 		{
-			return Begin <= value && value <= End;
+			return Beg <= value && value <= End;
 		}
 
 		/// <summary>Returns true if 'rng' is entirely within this range</summary>
@@ -305,13 +305,13 @@ namespace pr.common
 		{
 			Debug.Assert(Size >= 0.0, "this range is inside out");
 			Debug.Assert(rng.Size >= 0.0, "'rng' is inside out");
-			return Begin <= rng.Begin && rng.End <= End;
+			return Beg <= rng.Beg && rng.End <= End;
 		}
 
 		/// <summary>Grow the bounds of this range to include 'value'</summary>
 		public void Encompass(double value)
 		{
-			Begin = Math.Min(Begin , value);
+			Beg = Math.Min(Beg , value);
 			End   = Math.Max(End   , value);
 		}
 
@@ -319,14 +319,14 @@ namespace pr.common
 		public void Encompass(RangeF rng)
 		{
 			Debug.Assert(rng.Size >= 0.0, "'rng' is inside out");
-			Begin = Math.Min(Begin ,rng.Begin);
+			Beg = Math.Min(Beg ,rng.Beg);
 			End   = Math.Max(End   ,rng.End  );
 		}
 
 		/// <summary>Returns a range scaled by 'scale'. Begin and End are changed, the mid point of the range is unchanged</summary>
 		public RangeF Scale(double scale)
 		{
-			return new RangeF(Begin, Begin + Size*scale){Mid = Mid};
+			return new RangeF(Beg, Beg + Size*scale){Mid = Mid};
 		}
 
 		/// <summary>
@@ -336,7 +336,7 @@ namespace pr.common
 		{
 			Debug.Assert(Size >= 0, "this range is inside out");
 			Debug.Assert(rng.Size >= 0, "'rng' is inside out");
-			return new RangeF(Math.Min(Begin, rng.Begin), Math.Max(End, rng.End));
+			return new RangeF(Math.Min(Beg, rng.Beg), Math.Max(End, rng.End));
 		}
 
 		/// <summary>
@@ -347,50 +347,50 @@ namespace pr.common
 		{
 			Debug.Assert(Size >= 0, "this range is inside out");
 			Debug.Assert(rng.Size >= 0, "'rng' is inside out");
-			if (rng.End <= Begin) return new RangeF(Begin, Begin);
-			if (rng.Begin >= End) return new RangeF(End, End);
-			return new RangeF(Math.Max(Begin, rng.Begin), Math.Min(End, rng.End));
+			if (rng.End <= Beg) return new RangeF(Beg, Beg);
+			if (rng.Beg >= End) return new RangeF(End, End);
+			return new RangeF(Math.Max(Beg, rng.Beg), Math.Min(End, rng.End));
 		}
 
 		/// <summary>Move the range by an offset</summary>
 		public RangeF Shift(double ofs)
 		{
-			return new RangeF(Begin + ofs, End + ofs);
+			return new RangeF(Beg + ofs, End + ofs);
 		}
 
 		/// <summary>Returns 'x' clamped by 'range'</summary>
 		public static RangeF Clamp(RangeF x, RangeF range)
 		{
 			return new RangeF(
-				Maths.Clamp(x.Begin, range.Begin, range.End),
-				Maths.Clamp(x.End, range.Begin, range.End));
+				Maths.Clamp(x.Beg, range.Beg, range.End),
+				Maths.Clamp(x.End, range.Beg, range.End));
 		}
 
 		/// <summary>Returns 'x' constrained by 'range'. i.e 'x' will be fitted within 'range' and only resized if x.Size > range.Size</summary>
 		public static RangeF Constrain(RangeF x, RangeF range)
 		{
-			if (x.Begin < range.Begin) x = x.Shift(range.Begin - x.Begin);
+			if (x.Beg < range.Beg) x = x.Shift(range.Beg - x.Beg);
 			if (x.End   > range.End  ) x = x.Shift(range.End - x.End);
-			if (x.Begin < range.Begin) x.Begin = range.Begin;
+			if (x.Beg < range.Beg) x.Beg = range.Beg;
 			return x;
 		}
 
 		/// <summary>String representation of the range</summary>
 		public override string ToString()
 		{
-			return "[{0},{1})".Fmt(Begin,End);
+			return "[{0},{1})".Fmt(Beg,End);
 		}
 
 		/// <summary>Allow implicit cast from 'Range'</summary>
 		public static implicit operator RangeF(Range r)
 		{
-			return new RangeF(r.Begin, r.End);
+			return new RangeF(r.Beg, r.End);
 		}
 
 		/// <summary>Allow explicit cast to 'Range'</summary>
 		public static explicit operator Range(RangeF r)
 		{
-			return new Range((long)r.Begin, (long)r.End);
+			return new Range((long)r.Beg, (long)r.End);
 		}
 
 		#region Equals
@@ -410,11 +410,11 @@ namespace pr.common
 		}
 		public bool Equals(RangeF other)
 		{
-			return Equals(Begin,other.Begin) && Equals(End,other.End);
+			return Equals(Beg,other.Beg) && Equals(End,other.End);
 		}
 		public override int GetHashCode()
 		{
-			unchecked { return (Begin.GetHashCode()*397) ^ End.GetHashCode(); }
+			unchecked { return (Beg.GetHashCode()*397) ^ End.GetHashCode(); }
 		}
 		#endregion
 
@@ -464,32 +464,32 @@ namespace pr.unittests
 		{
 			var r = Range.Invalid;
 			r.Encompass(4);
-			Assert.AreEqual(4L, r.Begin);
+			Assert.AreEqual(4L, r.Beg);
 			Assert.AreEqual(5L, r.End);
 			Assert.True(r.Contains(4));
 
 			r.Encompass(-2);
-			Assert.AreEqual(-2L, r.Begin);
+			Assert.AreEqual(-2L, r.Beg);
 			Assert.AreEqual( 5L, r.End);
 			Assert.True(r.Contains(-2));
 			Assert.True(r.Contains(4));
 
 			r.Encompass(new Range(1,7));
-			Assert.AreEqual(-2L, r.Begin);
+			Assert.AreEqual(-2L, r.Beg);
 			Assert.AreEqual( 7L, r.End);
 			Assert.True(r.Contains(-2));
 			Assert.False(r.Contains(7));
 
 			var r2 = r.Union(new Range(-3,2));
-			Assert.AreEqual(-2L, r.Begin);
+			Assert.AreEqual(-2L, r.Beg);
 			Assert.AreEqual( 7L, r.End);
-			Assert.AreEqual(-3L, r2.Begin);
+			Assert.AreEqual(-3L, r2.Beg);
 			Assert.AreEqual( 7L, r2.End);
 
 			var r3 = r.Intersect(new Range(1,10));
-			Assert.AreEqual(-2L, r.Begin);
+			Assert.AreEqual(-2L, r.Beg);
 			Assert.AreEqual( 7L, r.End);
-			Assert.AreEqual( 1L, r3.Begin);
+			Assert.AreEqual( 1L, r3.Beg);
 			Assert.AreEqual( 7L, r3.End);
 		}
 		[Test] public void IntersectF()
@@ -514,27 +514,27 @@ namespace pr.unittests
 		{
 			var r = RangeF.Invalid;
 			r.Encompass(4);
-			Assert.AreEqual(4.0, r.Begin);
+			Assert.AreEqual(4.0, r.Beg);
 			Assert.AreEqual(4.0, r.End);
 
 			r.Encompass(-2);
-			Assert.AreEqual(-2.0, r.Begin);
+			Assert.AreEqual(-2.0, r.Beg);
 			Assert.AreEqual( 4.0, r.End);
 
 			r.Encompass(new RangeF(1,7));
-			Assert.AreEqual(-2.0, r.Begin);
+			Assert.AreEqual(-2.0, r.Beg);
 			Assert.AreEqual( 7.0, r.End);
 
 			var r2 = r.Union(new RangeF(-3,2));
-			Assert.AreEqual(-2.0, r.Begin);
+			Assert.AreEqual(-2.0, r.Beg);
 			Assert.AreEqual( 7.0, r.End);
-			Assert.AreEqual(-3.0, r2.Begin);
+			Assert.AreEqual(-3.0, r2.Beg);
 			Assert.AreEqual( 7.0, r2.End);
 
 			var r3 = r.Intersect(new RangeF(1,10));
-			Assert.AreEqual(-2.0, r.Begin);
+			Assert.AreEqual(-2.0, r.Beg);
 			Assert.AreEqual( 7.0, r.End);
-			Assert.AreEqual( 1.0, r3.Begin);
+			Assert.AreEqual( 1.0, r3.Beg);
 			Assert.AreEqual( 7.0, r3.End);
 		}
 	}

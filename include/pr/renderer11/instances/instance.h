@@ -50,7 +50,11 @@ namespace pr
 		{
 			pr::uint16 m_type;    // The type of component this is an offset to
 			pr::uint16 m_offset;  // Byte offset from the instance pointer
-			static CompDesc make(EInstComp comp, pr::uint16 offset) { CompDesc c = {checked_cast<pr::uint16>(comp.value), offset}; return c; }
+			static CompDesc make(EInstComp comp, pr::uint16 offset)
+			{
+				CompDesc c = {checked_cast<pr::uint16>(comp.value), offset};
+				return c;
+			}
 		};
 
 		// The header for an instance. All instances must start with one of these
@@ -58,7 +62,11 @@ namespace pr
 		{
 			pr::uint m_cpt_count;
 
-			static BaseInstance make(pr::uint cpt_count) { BaseInstance b = {cpt_count}; return b; }
+			static BaseInstance make(pr::uint cpt_count)
+			{
+				BaseInstance b = {cpt_count};
+				return b;
+			}
 
 			CompDesc const* begin() const { return pr::type_ptr<CompDesc>(this + 1); }
 			CompDesc*       begin()       { return pr::type_ptr<CompDesc>(this + 1); }

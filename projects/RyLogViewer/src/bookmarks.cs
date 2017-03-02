@@ -18,7 +18,7 @@ namespace RyLogViewer
 		public string Text { get; set; }
 
 		/// <summary>The begin address of the bookmarked line</summary>
-		public long Position { get { return Range.Begin; } }
+		public long Position { get { return Range.Beg; } }
 
 		public Bookmark(Range range, string text)
 		{
@@ -65,7 +65,7 @@ namespace RyLogViewer
 		private void SetBookmark(Range line, Bit.EState bookmarked)
 		{
 			// Look for the bookmark
-			var idx = m_bookmarks.BinarySearch(b => b.Position.CompareTo(line.Begin));
+			var idx = m_bookmarks.BinarySearch(b => b.Position.CompareTo(line.Beg));
 			if (idx >= 0 && bookmarked != Bit.EState.Set)
 			{
 				// Bookmark was found, remove it
@@ -88,7 +88,7 @@ namespace RyLogViewer
 			var line = row_index >= 0 && row_index < m_line_index.Count ? m_line_index[row_index] : Range.Zero;
 
 			// Look for the first bookmark after line.Begin
-			var idx = m_bookmarks.BinarySearch(b => b.Position.CompareTo(line.Begin + 1));
+			var idx = m_bookmarks.BinarySearch(b => b.Position.CompareTo(line.Beg + 1));
 			if (idx < 0) idx = ~idx;
 			if (idx == m_bookmarks.Count) idx = 0;
 			SelectBookmark(idx);
@@ -103,7 +103,7 @@ namespace RyLogViewer
 			var line = row_index >= 0 && row_index < m_line_index.Count ? m_line_index[row_index] : Range.Zero;
 
 			// Look for the first bookmark after line.Begin
-			var idx = m_bookmarks.BinarySearch(b => b.Position.CompareTo(line.Begin));
+			var idx = m_bookmarks.BinarySearch(b => b.Position.CompareTo(line.Beg));
 			if (idx < 0) idx = ~idx;
 			if (idx < 1) idx = m_bookmarks.Count;
 			SelectBookmark(idx - 1);

@@ -267,7 +267,7 @@ namespace pr.gui
 			if (DropDownStyle != ComboBoxStyle.DropDownList)
 			{
 				//System.Diagnostics.Trace.WriteLine("Restoring Selection: [{0},{1}]".Fmt(selection.Begini, selection.Sizei));
-				Select(selection.Begini, selection.Sizei);
+				Select(selection.Begi, selection.Sizei);
 				//System.Diagnostics.Trace.WriteLine("Selection is now: [{0},{1}]".Fmt(SelectionStart, SelectionLength));
 			}
 		}

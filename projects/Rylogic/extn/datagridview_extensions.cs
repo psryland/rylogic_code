@@ -184,11 +184,11 @@ namespace pr.extn
 		/// <summary>Grid paste implementation that pastes over existing cells within the current size limits of the grid</summary>
 		public static bool PasteReplace(DataGridView grid)
 		{
+			// Read the lines from the clipboard
+			var lines = Clipboard.GetText().Split('\n');
+
 			if (grid.SelectedCells.Count == 1)
 			{
-				// Read the lines from the clipboard
-				var lines = Clipboard.GetText().Split('\n');
-
 				var row = grid.CurrentCell.RowIndex;
 				for (var j = 0; j != lines.Length && row != grid.RowCount; ++j, ++row)
 				{
@@ -196,7 +196,7 @@ namespace pr.extn
 					if (lines[j].Length == 0) continue;
 
 					var col = grid.CurrentCell.ColumnIndex;
-					var cells = lines[j].Split('\t',',',';');
+					var cells = lines[j].Split(new[] { ' ','\t',',',';','|' }, StringSplitOptions.RemoveEmptyEntries);
 					for (var i = 0; i != cells.Length && col != grid.ColumnCount; ++i, ++col)
 					{
 						var cell = grid[col,row];
@@ -231,12 +231,35 @@ namespace pr.extn
 					max.X = Math.Max(max.X, item.ColumnIndex+1);
 					max.Y = Math.Max(max.Y, item.RowIndex+1);
 				}
+				var dst_dim = new Point(max.X - min.X, max.Y - min.Y);
 
 				// Read the cells from the clipboard
-				var lines = Clipboard.GetText().Split('\n');
 				var cells = new string[lines.Length][];
-				for (var i = 0; i != lines.Length; ++i)
-					cells[i] = lines[i].Split('\t',',',';');
+				var src_dim = new Point(0,0);
+				for (var r = 0; r != lines.Length; ++r)
+				{
+					var row = lines[r].Split(new[] { ' ','\t',',',';','|' }, StringSplitOptions.RemoveEmptyEntries);
+					cells[r] = row;
+					src_dim.X = Math.Max(src_dim.X, row.Length);
+					src_dim.Y = src_dim.Y + 1;
+				}
+
+				// Special case 1-dimensional data. If a row vector is pasted
+				// into a column, or visa versa, automatically transpose the data.
+				if ((src_dim.X == 1 && dst_dim.Y == 1 && src_dim.Y == dst_dim.X) ||
+					(src_dim.Y == 1 && dst_dim.X == 1 && src_dim.X == dst_dim.Y))
+				{
+					var cellsT = new string[src_dim.X][];
+					for (var r = 0; r != cellsT.Length; ++r)
+					{
+						cellsT[r] = new string[cells.Length];
+						for (var c = 0; c != cells.Length; ++c)
+							cellsT[r][c] = cells[c][r];
+					}
+
+					cells = cellsT;
+					var tmp = src_dim.X; src_dim.Y = src_dim.X; src_dim.X = tmp;
+				}
 
 				// Paste into the selected cells, filling if the selected cell area
 				// is bigger than the clipboard cells

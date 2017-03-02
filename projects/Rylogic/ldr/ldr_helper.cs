@@ -320,8 +320,17 @@ namespace pr.ldr
 		}
 		public void Line(string name, Colour32 colour, int width, IEnumerable<v4> points)
 		{
+			if (!points.Any()) return;
 			var w = width != 0 ? "*Width {{{0}}}".Fmt(width) : string.Empty;
 			Append("*LineStrip ", name, " ", colour, " {", w, points.Select(x => Ldr.Vec3(x)), "}\n");
+		}
+		public void Line(string name, Colour32 colour, int width, Func<int,v4?> points)
+		{
+			int idx = 0;
+			var w = width != 0 ? "*Width {{{0}}}".Fmt(width) : string.Empty;
+			Append("*LineStrip ", name, " ", colour, " {", w);
+			for (v4? pt; (pt = points(idx++)) != null;) Append(Ldr.Vec3(pt.Value));
+			Append("}\n");
 		}
 		public void LineD(string name, Colour32 colour, v4 start, v4 direction)
 		{

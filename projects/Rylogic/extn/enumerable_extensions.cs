@@ -426,6 +426,12 @@ namespace pr.extn
 		}
 
 		/// <summary>Return all of the range except the last 'count' items</summary>
+		public static IEnumerable<TSource> TakeFrac<TSource>(this IList<TSource> source, float frac)
+		{
+			return source.Take((int)(source.Count * frac));
+		}
+
+		/// <summary>Return all of the range except the last 'count' items</summary>
 		public static IEnumerable<TSource> TakeAllBut<TSource>(this IEnumerable<TSource> source, int count)
 		{
 			var queue = new Queue<TSource>();

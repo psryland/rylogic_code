@@ -366,7 +366,9 @@ VIEW3D_API void __stdcall View3D_AddObjectsById(View3DWindow window, GUID const&
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		for (auto obj : Dll().m_obj_cont)
+
+		pr::ldr::ScriptSources::Lock sslock(Dll().m_sources);
+		for (auto& obj : sslock.Objects())
 		{
 			if (obj->m_context_id != context_id) continue;
 			View3D_AddObject(window, obj.m_ptr);
@@ -1203,7 +1205,8 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(wchar_t const* ldr_scri
 		Dll().LoadScript(ldr_script, file != 0, context_id, GetIncludes(includes));
 
 		// Return the last object. expecting 'ldr_script' to define one object only
-		auto& cont = Dll().m_obj_cont;
+		pr::ldr::ScriptSources::Lock sslock(Dll().m_sources);
+		auto& cont = sslock.Objects();
 		return !cont.empty() ? cont.back().m_ptr : nullptr;
 	}
 	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
@@ -1294,7 +1297,13 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreate(char const* name, View3DCo
 			.normals(nrm.data(), int(nrm.size()))
 			.tex    (tex.data(), int(tex.size()));
 		auto obj = pr::ldr::Create(Dll().m_rdr, attr, cdata, context_id);
-		if (obj) Dll().m_obj_cont.push_back(obj);
+	
+		// Add to the sources
+		if (obj)
+		{
+			pr::ldr::ScriptSources::Lock sslock(Dll().m_sources);
+			sslock.Objects().push_back(obj);
+		}
 		return obj.m_ptr;
 	}
 	CatchAndReport(View3D_ObjectCreate, , nullptr);
@@ -1392,7 +1401,11 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreateEditCB(char const* name, Vi
 		ObjectEditCBData cbdata = {edit_cb, ctx};
 		pr::ldr::ObjectAttributes attr(pr::ldr::ELdrObject::Custom, name, pr::Colour32(colour));
 		auto obj = pr::ldr::CreateEditCB(Dll().m_rdr, attr, vcount, icount, ncount, ObjectEditCB, &cbdata, context_id);
-		if (obj) Dll().m_obj_cont.push_back(obj);
+		if (obj)
+		{
+			pr::ldr::ScriptSources::Lock sslock(Dll().m_sources);
+			sslock.Objects().push_back(obj);
+		}
 		return obj.m_ptr;
 	}
 	CatchAndReport(View3D_ObjectCreateEditCB, , nullptr);
@@ -1436,13 +1449,7 @@ VIEW3D_API void __stdcall View3D_ObjectDelete(View3DObject object)
 		if (!object) return;
 		
 		DllLockGuard;
-
-		// Remove the object from any windows it's in
-		for (auto wnd : Dll().m_wnd_cont)
-			View3D_RemoveObject(wnd, object);
-		
-		// Delete the object from the object container
-		pr::ldr::Remove(Dll().m_obj_cont, object);
+		Dll().DeleteObject(object);
 	}
 	CatchAndReport(View3D_ObjectDelete, ,);
 }
@@ -2222,8 +2229,7 @@ VIEW3D_API View3DGizmo __stdcall View3D_GizmoCreate(EView3DGizmoMode mode, View3
 	try
 	{
 		DllLockGuard;
-		auto giz = LdrGizmoPtr(new LdrGizmo(Dll().m_rdr, static_cast<LdrGizmo::EMode>(mode), view3d::To<pr::m4x4>(o2w)));
-		Dll().m_giz_cont.push_back(giz);
+		auto giz = Dll().CreateGizmo(static_cast<LdrGizmo::EMode>(mode), view3d::To<pr::m4x4>(o2w));
 		return giz.m_ptr;
 	}
 	CatchAndReport(View3D_GizmoCreate, , nullptr);
@@ -2237,13 +2243,7 @@ VIEW3D_API void __stdcall View3D_GizmoDelete(View3DGizmo gizmo)
 		if (!gizmo) return;
 		
 		DllLockGuard;
-
-		// Remove the gizmo from any windows it's in
-		for (auto wnd : Dll().m_wnd_cont)
-			View3D_RemoveGizmo(wnd, gizmo);
-		
-		// Delete the gizmo from the gizmo container (removing the last reference)
-		pr::erase_first(Dll().m_giz_cont, [&](pr::ldr::LdrGizmoPtr p){ return p.m_ptr == gizmo; });
+		Dll().DeleteGizmo(gizmo);
 	}
 	CatchAndReport(View3D_GizmoDelete, ,);
 }
@@ -2601,6 +2601,8 @@ pr::Guid const GuidDemoSceneObjects = { 0xFE51C164, 0x9E57, 0x456F, 0x9D, 0x8D, 
 // Create a scene showing the capabilities of view3d (actually of ldr_object_manager)
 VIEW3D_API GUID __stdcall View3D_CreateDemoScene(View3DWindow window)
 {
+	using namespace pr::script;
+	using namespace pr::ldr;
 	try
 	{
 		if (!window) throw std::exception("window is null");
@@ -2608,16 +2610,17 @@ VIEW3D_API GUID __stdcall View3D_CreateDemoScene(View3DWindow window)
 		DllLockGuard;
 
 		// Get the string of all LDR objects
-		auto scene = pr::ldr::CreateDemoScene();
-		pr::script::PtrW src(scene.c_str());
-		pr::script::Reader reader(src, false, nullptr, nullptr, &Dll().m_lua);
+		auto scene = CreateDemoScene();
+		PtrW src(scene.c_str());
+		Reader reader(src, false, nullptr, nullptr, &Dll().m_lua);
 
 		// Parse the string, and add all objects to the window
-		pr::ldr::ParseResult out;
-		pr::ldr::Parse(Dll().m_rdr, reader, out, GuidDemoSceneObjects);
+		ParseResult out;
+		Parse(Dll().m_rdr, reader, out, GuidDemoSceneObjects);
+		ScriptSources::Lock sslock(Dll().m_sources);
 		for (auto& obj : out.m_objects)
 		{
-			Dll().m_obj_cont.push_back(obj);
+			sslock.Objects().push_back(obj);
 			View3D_AddObject(window, obj.m_ptr);
 		}
 

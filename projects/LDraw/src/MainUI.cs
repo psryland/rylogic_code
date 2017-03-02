@@ -561,6 +561,8 @@ namespace LDraw
 			m_menu_window.DropDownItems.Insert(0, m_dc.WindowsMenu());
 			m_menu_window_always_on_top.Click += (s,a) =>
 			{
+				TopMost = !TopMost;
+				UpdateUI();
 			};
 			m_menu_window_example_script.Click += (s,a) =>
 			{
@@ -601,6 +603,8 @@ namespace LDraw
 			m_menu_rendering_cullmode_none     .Checked = Model.Scene.Options.CullMode == View3d.ECullMode.None;
 			m_menu_rendering_cullmode_back     .Checked = Model.Scene.Options.CullMode == View3d.ECullMode.Back;
 			m_menu_rendering_cullmode_front    .Checked = Model.Scene.Options.CullMode == View3d.ECullMode.Front;
+
+			m_menu_window_always_on_top.Checked = TopMost;
 
 			// Update file loading progress
 			UpdateProgress();
@@ -779,7 +783,7 @@ namespace LDraw
 			{
 				var finfo = new FileInfo(progress.Filepath);
 				m_lbl_loading.Text = progress.Filepath;
-				m_pb_loading.ValueFrac((float)progress.FileOffset / finfo.Length);
+				m_pb_loading.ValueFrac(finfo.Length != 0 ? Maths.Clamp((float)progress.FileOffset / finfo.Length, 0f, 1f) : 1f);
 			}
 		}
 

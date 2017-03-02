@@ -19,15 +19,11 @@ namespace pr
 		}
 
 		// Make a RdrId from a pointer
-		template <typename T> RdrId MakeId(T const* ptr)
+		// Careful, don't make a templated MakeId(T const& obj) function. It will be selected
+		// in preference to this function.
+		inline RdrId MakeId(void const* ptr)
 		{
-			return static_cast<RdrId>(ptr - (T const*)0);
-		}
-
-		// Make a RdrId from 'unique_thing'
-		template <typename T> inline RdrId MakeId(T const& unique_thing)
-		{
-			return pr::hash::HashObj(unique_thing);
+			return static_cast<RdrId>(byte_ptr(ptr) - byte_ptr(nullptr));
 		}
 
 		// Make an RdrId from a string

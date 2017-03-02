@@ -28,7 +28,7 @@ namespace pr.gui
 			set
 			{
 				if (Equals(m_total_range, value)) return;
-				if (value.Size <= 0) value.End = value.Begin + 1;
+				if (value.Size <= 0) value.End = value.Beg + 1;
 				m_total_range   = value;
 				m_zoomed_range  = value;
 				m_visible_range = Range.Constrain(m_visible_range, m_total_range);
@@ -45,7 +45,7 @@ namespace pr.gui
 			set
 			{
 				if (Equals(m_zoomed_range, value)) return;
-				if (value.Size <= 0) value.End = value.Begin + 1;
+				if (value.Size <= 0) value.End = value.Beg + 1;
 				m_zoomed_range  = Range.Constrain(value, m_total_range);
 				m_visible_range = Range.Constrain(m_visible_range, m_zoomed_range);
 				Invalidate();
@@ -61,7 +61,7 @@ namespace pr.gui
 			set
 			{
 				if (Equals(m_visible_range, value)) return;
-				if (value.Size <= 0) value.End = value.Begin + 1;
+				if (value.Size <= 0) value.End = value.Beg + 1;
 				m_visible_range = Range.Constrain(value, m_zoomed_range);
 				RaiseScrollEvent();
 				Invalidate();
@@ -112,8 +112,8 @@ namespace pr.gui
 				value = Maths.Clamp(value, 1.0f, 1000000.0f);
 				var sz = Math.Max((int)(m_total_range.Size / value), MinimumVisibleRangeSize);
 				var r = new Range(0, sz){Mid = ZoomedRange.Mid};
-				if (r.Begin > VisibleRange.Begin) r = r.Shift(VisibleRange.Begin - r.Begin);
-				if (r.End   < VisibleRange.End  ) r = r.Shift(VisibleRange.End - r.End);
+				if (r.Beg > VisibleRange.Beg) r = r.Shift(VisibleRange.Beg - r.Beg);
+				if (r.End < VisibleRange.End) r = r.Shift(VisibleRange.End - r.End);
 				ZoomedRange = r;
 			}
 		}
@@ -242,8 +242,8 @@ namespace pr.gui
 			// Draw the visible range
 			if (bounds.Width > 2)
 			{
-				int sy = (int)(Maths.Frac(total.Begin, VisibleRange.Begin, total.End) * bounds.Height);
-				int ey = (int)(Maths.Frac(total.Begin, VisibleRange.End,   total.End) * bounds.Height);
+				int sy = (int)(Maths.Frac(total.Beg, VisibleRange.Beg, total.End) * bounds.Height);
+				int ey = (int)(Maths.Frac(total.Beg, VisibleRange.End, total.End) * bounds.Height);
 				var r = new Rectangle(bounds.X+1, bounds.Y + sy, bounds.Width-2, ey - sy);
 				using (var bsh = new SolidBrush(VisibleRangeColor))
 				{
@@ -265,7 +265,7 @@ namespace pr.gui
 		private void CentreVisible(int y)
 		{
 			var vis = VisibleRange;
-			vis.Mid = ZoomedRange.Begin + (long)(Maths.Frac(0, y, Height) * ZoomedRange.Size);
+			vis.Mid = ZoomedRange.Beg + (long)(Maths.Frac(0, y, Height) * ZoomedRange.Size);
 			VisibleRange = vis;
 		}
 	}

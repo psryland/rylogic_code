@@ -68,15 +68,15 @@ namespace RyLogViewer
 
 			// Byte Range
 			m_spinner_range_min.ToolTip(m_tt, "The start of the data range (in bytes)");
-			m_spinner_range_min.Minimum = byte_range.Begin;
+			m_spinner_range_min.Minimum = byte_range.Beg;
 			m_spinner_range_min.Maximum = byte_range.End;
-			m_spinner_range_min.Value = byte_range.Begin;
+			m_spinner_range_min.Value = byte_range.Beg;
 
 			m_spinner_range_max.ToolTip(m_tt, "The end of the data range (in bytes)");
-			m_spinner_range_max.Minimum = byte_range.Begin;
+			m_spinner_range_max.Minimum = byte_range.Beg;
 			m_spinner_range_max.Maximum = byte_range.End;
 			m_spinner_range_max.Value = byte_range.End;
-			m_btn_range_to_start.Click += (s,a) => m_spinner_range_min.Value = byte_range.Begin;
+			m_btn_range_to_start.Click += (s,a) => m_spinner_range_min.Value = byte_range.Beg;
 			m_btn_range_to_end  .Click += (s,a) => m_spinner_range_max.Value = byte_range.End;
 
 			UpdateUI();

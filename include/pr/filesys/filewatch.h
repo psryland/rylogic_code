@@ -5,6 +5,7 @@
 #pragma once
 
 #include <vector>
+#include <mutex>
 #include "pr/common/guid.h"
 #include "pr/common/multi_cast.h"
 #include "pr/filesys/fileex.h"
@@ -64,7 +65,8 @@ namespace pr
 
 	private:
 
-		FileCont m_files; // The files being watched
+		FileCont           m_files; // The files being watched
+		mutable std::mutex m_mutex; // Synchronise access to the 'm_files' list
 
 		// Standardise a filepath
 		std::wstring Canonicalise(wchar_t const* filepath) const
@@ -76,14 +78,16 @@ namespace pr
 
 		FileWatch()
 			:m_files()
+			,m_mutex()
 		{}
 
 		// Raised when changed files are detected. Allows modification of file list
 		pr::MultiCast<std::function<void(FileCont&)>> OnFilesChanged;
 
 		// The files being watched
-		FileCont const& Files() const
+		FileCont Files() const
 		{
+			std::lock_guard<std::mutex> lock(m_mutex);
 			return m_files;
 		}
 
@@ -91,8 +95,11 @@ namespace pr
 		pr::Guid const* FindId(wchar_t const* filepath) const
 		{
 			auto fpath = Canonicalise(filepath);
-			auto iter = std::find_if(std::begin(m_files), std::end(m_files), [&](File const& file){ return file.m_filepath == filepath; });
-			return iter != std::end(m_files) ? &iter->m_id : nullptr;
+			{
+				std::lock_guard<std::mutex> lock(m_mutex);
+				auto iter = std::find_if(std::begin(m_files), std::end(m_files), [&](File const& file){ return file.m_filepath == filepath; });
+				return iter != std::end(m_files) ? &iter->m_id : nullptr;
+			}
 		}
 
 		// Add a file to be watched
@@ -100,20 +107,27 @@ namespace pr
 		{
 			Remove(filepath);
 			auto fpath = Canonicalise(filepath);
-			m_files.emplace_back(fpath, onchanged, id, user_data);
+			{
+				std::lock_guard<std::mutex> lock(m_mutex);
+				m_files.emplace_back(fpath, onchanged, id, user_data);
+			}
 		}
 
 		// Remove a watched file
 		void Remove(wchar_t const* filepath)
 		{
 			auto fpath = pr::filesys::Standardise<string>(filepath);
-			auto i = std::find(std::begin(m_files), std::end(m_files), fpath);
-			if (i != std::end(m_files)) m_files.erase(i);
+			{
+				std::lock_guard<std::mutex> lock(m_mutex);
+				auto i = std::find(std::begin(m_files), std::end(m_files), fpath);
+				if (i != std::end(m_files)) m_files.erase(i);
+			}
 		}
 
 		// Remove all watches where 'm_id == id'
 		void RemoveAll(pr::Guid const& id)
 		{
+			std::lock_guard<std::mutex> lock(m_mutex);
 			auto end = std::remove_if(std::begin(m_files), std::end(m_files), [&](File const& file) { return file.m_id == id; });
 			m_files.erase(end, std::end(m_files));
 		}
@@ -121,6 +135,7 @@ namespace pr
 		// Remove all watches
 		void RemoveAll()
 		{
+			std::lock_guard<std::mutex> lock(m_mutex);
 			m_files.resize(0);
 		}
 
@@ -129,11 +144,14 @@ namespace pr
 		{
 			// Build a collection of the changed files to prevent reentrancy problems with the callbacks
 			FileCont changed_files;
-			for (auto& file : m_files)
 			{
-				auto stamp = pr::filesys::FileTimeStats(file.m_filepath);
-				if (file.m_time.m_last_modified != stamp.m_last_modified) changed_files.push_back(file);
-				file.m_time = stamp;
+				std::lock_guard<std::mutex> lock(m_mutex);
+				for (auto& file : m_files)
+				{
+					auto stamp = pr::filesys::FileTimeStats(file.m_filepath);
+					if (file.m_time.m_last_modified != stamp.m_last_modified) changed_files.push_back(file);
+					file.m_time = stamp;
+				}
 			}
 
 			if (!changed_files.empty())
@@ -151,6 +169,7 @@ namespace pr
 					// and set it's timestamp back to the previous value (should be a rare case)
 					if (!handled)
 					{
+						std::lock_guard<std::mutex> lock(m_mutex);
 						auto iter = std::find(std::begin(m_files), std::end(m_files), file.m_filepath);
 						if (iter != std::end(m_files)) iter->m_time = file.m_time;
 					}

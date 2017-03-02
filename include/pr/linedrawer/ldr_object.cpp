@@ -742,7 +742,9 @@ namespace pr
 				// Use thick lines
 				if (m_line_width != 0.0f)
 				{
-					auto shdr = p.m_rdr.m_shdr_mgr.FindShader(EStockShader::ThickLineListGS)->Clone<ThickLineListShaderGS>(AutoId, pr::FmtS("thick_line_%f", m_line_width));
+					// Get or create an instance of the thick line shader
+					auto shdr = p.m_rdr.m_shdr_mgr.FindShader<ThickLineListShaderGS>(pr::FmtS("ldraw_thick_line_%f", m_line_width), EStockShader::ThickLineListGS);
+
 					shdr->m_default_width = m_line_width;
 					for (auto& nug : obj->m_model->m_nuggets)
 						nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
@@ -1442,9 +1444,9 @@ namespace pr
 				obj->m_model->m_name = obj->TypeAndName();
 
 				// Get instances of the arrow head geometry shader and the thick line shader
-				auto thk_shdr = p.m_rdr.m_shdr_mgr.FindShader(EStockShader::ThickLineListGS)->Clone<ThickLineListShaderGS>(AutoId, "thick_line");
+				auto thk_shdr = p.m_rdr.m_shdr_mgr.FindShader<ThickLineListShaderGS>("ldraw_thick_line", EStockShader::ThickLineListGS);
 				thk_shdr->m_default_width = m_line_width;
-				auto arw_shdr = p.m_rdr.m_shdr_mgr.FindShader(EStockShader::ArrowHeadGS)->Clone<ArrowHeadShaderGS>(AutoId, "arrow_head");
+				auto arw_shdr = p.m_rdr.m_shdr_mgr.FindShader<ArrowHeadShaderGS>("ldraw_arrow_head", EStockShader::ArrowHeadGS);
 				arw_shdr->m_default_width = m_line_width * 2;
 
 				// Create nuggets
@@ -2556,7 +2558,7 @@ namespace pr
 					if (m_width != 0.0f)
 					{
 						// Use thick lines
-						auto shdr = p.m_rdr.m_shdr_mgr.FindShader(EStockShader::ThickLineListGS)->Clone<ThickLineListShaderGS>(AutoId, pr::FmtS("thick_line_%f", m_width));
+						auto shdr = p.m_rdr.m_shdr_mgr.FindShader<ThickLineListShaderGS>(pr::FmtS("ldraw_thick_line_%f", m_width), EStockShader::ThickLineListGS);
 						shdr->m_default_width = m_width;
 						nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
 					}
@@ -2943,6 +2945,13 @@ namespace pr
 						break;
 					}
 					#pragma endregion
+				case EKeyword::AllowMissingIncludes:
+					#pragma region
+					{
+						p.m_reader.Includes().m_ignore_missing_includes = true;
+						break;
+					}
+					#pragma endregion
 				case EKeyword::Wireframe:
 					#pragma region
 					{
@@ -3147,6 +3156,10 @@ LR"(//********************************************
 
 // Clear existing data
 *Clear /*{ctx_id ...}*/ // Context ids can be listed within a section
+
+// Allow missing includes not to cause errors
+*AllowMissingIncludes
+#include "missing_file.ldr"
 
 // Object descriptions have the following format:
 //	*ObjectType [name] [colour] [instance]

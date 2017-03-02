@@ -257,7 +257,10 @@ namespace pr
 				flen -= size_t(m_file.tellg());
 
 				// Set the local buffer size
-				m_buf.resize(Clamp(flen, m_buf.capacity(), size_t(1*1024*1024)));
+				size_t const MaxBufferSize = size_t(1*1024*1024);
+				if (flen < m_buf.capacity()) flen = m_buf.capacity();
+				if (flen > MaxBufferSize) flen = MaxBufferSize;
+				m_buf.resize(flen);
 
 				// Pre-load the buffer
 				m_end = m_ptr = m_buf.data();

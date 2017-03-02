@@ -222,7 +222,7 @@ namespace pr.gui
 				foreach (var value in series.Values(i0, i1))
 				{
 					var v = selector(value);
-					if (v < range.Begin) range.Begin = v;
+					if (v < range.Beg) range.Beg = v;
 					if (v > range.End) range.End = v;
 				}
 			}
@@ -1144,7 +1144,7 @@ namespace pr.gui
 					set
 					{
 						if (Equals(Range, value)) return;
-						Set(value.Begin, value.End);
+						Set(value.Beg, value.End);
 					}
 				}
 
@@ -1178,7 +1178,7 @@ namespace pr.gui
 				}
 				public void Set(RangeF range)
 				{
-					Set(range.Begin, range.End);
+					Set(range.Beg, range.End);
 				}
 
 				/// <summary>Raised whenever the range scales</summary>
@@ -1334,11 +1334,11 @@ namespace pr.gui
 		/// <summary>Minimum zoom limit</summary>
 		public double ZoomMin
 		{
-			get { return m_impl_zoom.Begin; }
+			get { return m_impl_zoom.Beg; }
 			set
 			{
 				Debug.Assert(value > 0f);
-				m_impl_zoom.Begin = value;
+				m_impl_zoom.Beg = value;
 			}
 		}
 
@@ -1743,8 +1743,8 @@ namespace pr.gui
 				{
 					if (m_snap.m_bm != null)
 					{
-						var tl = GraphToPoint(new PointF((float)m_snap.m_xrange.Begin, (float)m_snap.m_yrange.End));
-						var br = GraphToPoint(new PointF((float)m_snap.m_xrange.End, (float)m_snap.m_yrange.Begin));
+						var tl = GraphToPoint(new PointF((float)m_snap.m_xrange.Beg, (float)m_snap.m_yrange.End));
+						var br = GraphToPoint(new PointF((float)m_snap.m_xrange.End, (float)m_snap.m_yrange.Beg));
 						var dst_rect = Rectangle.FromLTRB((int)tl.X, (int)tl.Y, (int)br.X, (int)br.Y);
 						var src_rect = m_snap.Rect;
 						gfx.DrawImage(m_snap.m_bm, dst_rect, (int)src_rect.X, (int)src_rect.Y, (int)src_rect.Width, (int)src_rect.Height, GraphicsUnit.Pixel);

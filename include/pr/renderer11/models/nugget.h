@@ -97,16 +97,19 @@ namespace pr
 		// DrawIndexed call for any possible shader.
 		struct Nugget :pr::chain::link<Nugget, ChainGroupNugget> ,NuggetData
 		{
-			ModelBufferPtr m_model_buffer;  // The vertex and index buffers.
-			size_t         m_prim_count;    // The number of primitives in this nugget
-			Model*         m_owner;         // The model that this nugget belongs to (for debugging mainly)
-			TNuggetChain   m_nuggets;       // The dependent nuggets associated with this nugget
-			bool           m_alpha_enabled; // True if the nugget is configured for alpha blending
+			ModelBuffer* m_model_buffer;  // The vertex and index buffers.
+			size_t       m_prim_count;    // The number of primitives in this nugget
+			Model*       m_owner;         // The model that this nugget belongs to (for debugging mainly)
+			TNuggetChain m_nuggets;       // The dependent nuggets associated with this nugget
+			bool         m_alpha_enabled; // True if the nugget is configured for alpha blending
 
-			Nugget(NuggetProps const& props, ModelBufferPtr& model_buffer, Model* owner);
+			Nugget(NuggetProps const& props, ModelBuffer* model_buffer, Model* owner);
 			~Nugget();
 
-			// Return the sortkey composed from the base 'm_sort_key' plus any shaders in 'm_smap'
+			// Access the model manager
+			ModelManager& MdlMgr();
+
+			// Return the sort key composed from the base 'm_sort_key' plus any shaders in 'm_smap'
 			SortKey SortKey(ERenderStep rstep) const;
 
 			// Add this nugget and any dependent nuggets to a drawlist

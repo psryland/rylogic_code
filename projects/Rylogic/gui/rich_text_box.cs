@@ -208,10 +208,10 @@ namespace pr.gui
 			var l0 = FirstVisibleLineIndex;
 			var l1 = l0 + VisibleLineCount;
 			if (line_range.End < l0) return Rectangle.Empty;
-			if (line_range.Begin > l1) return Rectangle.Empty;
+			if (line_range.Beg > l1) return Rectangle.Empty;
 			
-			var t = (int)Math.Min(Height, Math.Max(0, (line_range.Begin - l0) * Font.Height));
-			var b = (int)Math.Min(Height, Math.Max(0, (line_range.End   - l0) * Font.Height));
+			var t = (int)Math.Min(Height, Math.Max(0, (line_range.Beg - l0) * Font.Height));
+			var b = (int)Math.Min(Height, Math.Max(0, (line_range.End - l0) * Font.Height));
 			return Rectangle.FromLTRB(Left, t, Right, b);
 		}
 

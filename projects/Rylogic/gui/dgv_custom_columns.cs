@@ -720,7 +720,7 @@ namespace pr.gui
 			get { return m_impl_value; }
 			set
 			{
-				value = (int)Maths.Clamp(value, Range.Begin, Range.End);
+				value = (int)Maths.Clamp(value, Range.Beg, Range.End);
 				if (Equals(m_impl_value, value) || m_in_set_position) return;
 				using (Scope.Create(() => m_in_set_position = true, () => m_in_set_position = false))
 				{
@@ -773,7 +773,7 @@ namespace pr.gui
 		{
 			var value = Convert.ToDouble(Position);
 			e.Graphics.FillRectangle(Brushes.LightBlue, Bounds); // Paint background to show "in-edit-mode"
-			PaintTrackBar(e.Graphics, Bounds, value, Range.Begin, Range.End);
+			PaintTrackBar(e.Graphics, Bounds, value, Range.Beg, Range.End);
 		}
 		protected override void OnMouseDown(MouseEventArgs e)
 		{
@@ -792,7 +792,7 @@ namespace pr.gui
 		private int ReadValueAt(int x)
 		{
 			var frac = Maths.Clamp(Maths.Frac(m_btn_width/2, x, Width - m_btn_width/2), 0f, 1f);
-			return Maths.Lerp(Range.Begini, Range.Endi, frac);
+			return Maths.Lerp(Range.Begi, Range.Endi, frac);
 		}
 
 		/// <summary>Paint the track bar</summary>

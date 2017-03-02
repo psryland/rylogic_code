@@ -15,7 +15,7 @@ namespace pr.extn
 		{
 			return Scope.Create(
 				() => Range.FromStartLength(edit.SelectionStart, edit.SelectionLength),
-				rn => edit.Select(rn.Begini, rn.Sizei));
+				rn => edit.Select(rn.Begi, rn.Sizei));
 		}
 
 		/// <summary>Returns a disposable object that preserves the current selection</summary>
@@ -23,7 +23,7 @@ namespace pr.extn
 		{
 			return Scope.Create(
 				() => Range.FromStartLength(edit.SelectionStart, edit.SelectionLength),
-				pt => edit.Select(pt.Begini, pt.Sizei));
+				pt => edit.Select(pt.Begi, pt.Sizei));
 		}
 
 		/// <summary>A smarter set text that does sensible things with the caret position</summary>
@@ -87,7 +87,7 @@ namespace pr.extn
 				// It's likely that 'AddTextToDropDownList' is being called from a TextChanged handler
 			}
 
-			cb.Select(selection.Begini, selection.Sizei);
+			cb.Select(selection.Begi, selection.Sizei);
 		}
 
 		/// <summary>

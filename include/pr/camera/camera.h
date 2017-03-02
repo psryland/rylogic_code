@@ -183,20 +183,20 @@ namespace pr
 		}
 
 		// Return a perspective projection transform
-		pr::m4x4 CameraToScreen(float aspect, float near_clip, float far_clip) const
+		pr::m4x4 CameraToScreen(float near_clip, float far_clip, float aspect, float fovY, float focus_dist) const
 		{
-			float height = 2.0f * m_focus_dist * pr::Tan(m_fovY * 0.5f);
+			float height = 2.0f * focus_dist * tan(fovY * 0.5f);
 			return m_orthographic
 				? m4x4::ProjectionOrthographic(height*aspect, height, near_clip, far_clip, true)
-				: m4x4::ProjectionPerspectiveFOV(m_fovY, aspect, near_clip, far_clip, true);
+				: m4x4::ProjectionPerspectiveFOV(fovY, aspect, near_clip, far_clip, true);
 		}
 		pr::m4x4 CameraToScreen(float near_clip, float far_clip) const
 		{
-			return CameraToScreen(m_aspect, near_clip, far_clip);
+			return CameraToScreen(near_clip, far_clip, m_aspect, m_fovY, m_focus_dist);
 		}
-		pr::m4x4 CameraToScreen(float aspect) const
+		pr::m4x4 CameraToScreen(float aspect, float fovY, float focus_dist) const
 		{
-			return CameraToScreen(aspect, Near(), Far());
+			return CameraToScreen(Near(), Far(), aspect, fovY, focus_dist);
 		}
 		pr::m4x4 CameraToScreen() const
 		{

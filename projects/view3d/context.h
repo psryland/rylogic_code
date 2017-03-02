@@ -17,8 +17,6 @@ namespace view3d
 		bool                      m_compatible; // True if the renderer will work on this system
 		pr::Renderer              m_rdr;        // The renderer
 		WindowCont                m_wnd_cont;   // The created windows
-		pr::ldr::ObjectCont       m_obj_cont;   // The created ldr objects
-		pr::ldr::GizmoCont        m_giz_cont;   // The created ldr gizmos
 		pr::ldr::ScriptSources    m_sources;    // A file watcher for loaded script source files
 		pr::script::EmbeddedLua<> m_lua;
 		std::recursive_mutex      m_mutex;
@@ -28,9 +26,7 @@ namespace view3d
 			,m_compatible(pr::rdr::TestSystemCompatibility())
 			,m_rdr(pr::rdr::RdrSettings(FALSE))
 			,m_wnd_cont()
-			,m_obj_cont()
-			,m_giz_cont()
-			,m_sources(m_obj_cont, m_rdr, &m_lua)
+			,m_sources(m_rdr, &m_lua)
 			,m_lua()
 			,m_mutex()
 		{
@@ -118,7 +114,7 @@ namespace view3d
 			auto inc = includes;
 
 			// Parse the description
-			pr::ldr::ParseResult out(m_obj_cont);
+			pr::ldr::ParseResult out;
 			if (file)
 			{
 				inc.AddSearchPath(pr::filesys::GetDirectory<pr::script::string>(ldr_script));
@@ -133,18 +129,24 @@ namespace view3d
 				Reader reader(src, false, &inc, nullptr, &m_lua);
 				pr::ldr::Parse(m_rdr, reader, out, *context_id);
 			}
-
+			{// Merge the results
+				pr::ldr::ScriptSources::Lock lock(m_sources);
+				for (auto& obj : out.m_objects)
+					lock.Objects().push_back(obj);
+			}
 			return *context_id;
 		}
 
 		// Reload script source files
 		void ReloadScriptSources()
 		{
-			// Remove script source objects from all windows
-			for (auto src : m_sources.List())
-			{
-				auto id = src.second.m_file_group_id;
-				DeleteAllObjectsById(id);
+			{// Remove script source objects from all windows
+				pr::ldr::ScriptSources::Lock lock(m_sources);
+				for (auto src : lock.FileList())
+				{
+					auto id = src.second.m_file_group_id;
+					DeleteAllObjectsById(id);
+				}
 			}
 
 			// Reload the source data
@@ -165,7 +167,7 @@ namespace view3d
 				View3D_RemoveAllObjects(wnd);
 		
 			// Clear the object container. The unique pointers should delete the objects
-			m_obj_cont.clear();
+			m_sources.ClearAll();
 		}
 
 		// Delete all objects with matching ids
@@ -175,7 +177,42 @@ namespace view3d
 			for (auto wnd : m_wnd_cont)
 				View3D_RemoveObjectsById(wnd, false, context_id);
 
-			pr::ldr::Remove(m_obj_cont, &context_id, 1, 0, 0);
+			m_sources.Remove(context_id);
+		}
+
+		// Delete a single object
+		void DeleteObject(pr::ldr::LdrObject* object)
+		{
+			// Remove the object from any windows it's in
+			for (auto wnd : m_wnd_cont)
+				View3D_RemoveObject(wnd, object);
+		
+			// Delete the object from the object container
+			m_sources.Remove(object);
+		}
+
+		// Create a gizmo object and add it to the gizmo collection
+		pr::ldr::LdrGizmoPtr CreateGizmo(pr::ldr::LdrGizmo::EMode mode, pr::m4x4 const& o2w)
+		{
+			using namespace pr::ldr;
+			auto giz = LdrGizmoPtr(new LdrGizmo(m_rdr, mode, o2w));
+			ScriptSources::Lock lock(m_sources);
+			lock.Gizmos().push_back(giz);
+			return giz.m_ptr;
+		}
+
+		// Destroy a gizmo
+		void DeleteGizmo(View3DGizmo gizmo)
+		{
+			using namespace pr::ldr;
+
+			// Remove the gizmo from any windows it's in
+			for (auto wnd : m_wnd_cont)
+				View3D_RemoveGizmo(wnd, gizmo);
+		
+			// Delete the gizmo from the gizmo container (removing the last reference)
+			ScriptSources::Lock lock(m_sources);
+			pr::erase_first(lock.Gizmos(), [&](pr::ldr::LdrGizmoPtr p){ return p.m_ptr == gizmo; });
 		}
 	};
 }

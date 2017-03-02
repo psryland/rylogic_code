@@ -85,78 +85,79 @@ namespace pr
 
 		#pragma region Ldr script keywords
 		#define PR_ENUM(x)\
-			x(Txfm               ,= HashI("Txfm"              ))\
-			x(O2W                ,= HashI("O2W"               ))\
-			x(M4x4               ,= HashI("M4x4"              ))\
-			x(M3x3               ,= HashI("M3x3"              ))\
-			x(Pos                ,= HashI("Pos"               ))\
-			x(Up                 ,= HashI("Up"                ))\
-			x(Direction          ,= HashI("Direction"         ))\
-			x(Quat               ,= HashI("Quat"              ))\
-			x(Rand4x4            ,= HashI("Rand4x4"           ))\
-			x(RandPos            ,= HashI("RandPos"           ))\
-			x(RandOri            ,= HashI("RandOri"           ))\
-			x(Euler              ,= HashI("Euler"             ))\
-			x(Scale              ,= HashI("Scale"             ))\
-			x(Transpose          ,= HashI("Transpose"         ))\
-			x(Inverse            ,= HashI("Inverse"           ))\
-			x(Normalise          ,= HashI("Normalise"         ))\
-			x(Orthonormalise     ,= HashI("Orthonormalise"    ))\
-			x(Colour             ,= HashI("Colour"            ))\
-			x(Solid              ,= HashI("Solid"             ))\
-			x(Facets             ,= HashI("Facets"            ))\
-			x(CornerRadius       ,= HashI("CornerRadius"      ))\
-			x(RandColour         ,= HashI("RandColour"        ))\
-			x(ColourMask         ,= HashI("ColourMask"        ))\
-			x(Animation          ,= HashI("Animation"         ))\
-			x(Style              ,= HashI("Style"             ))\
-			x(Period             ,= HashI("Period"            ))\
-			x(Velocity           ,= HashI("Velocity"          ))\
-			x(AngVelocity        ,= HashI("AngVelocity"       ))\
-			x(Axis               ,= HashI("Axis"              ))\
-			x(Hidden             ,= HashI("Hidden"            ))\
-			x(Wireframe          ,= HashI("Wireframe"         ))\
-			x(Delimiters         ,= HashI("Delimiters"        ))\
-			x(Clear              ,= HashI("Clear"             ))\
-			x(Camera             ,= HashI("Camera"            ))\
-			x(LookAt             ,= HashI("LookAt"            ))\
-			x(Align              ,= HashI("Align"             ))\
-			x(Aspect             ,= HashI("Aspect"            ))\
-			x(FovX               ,= HashI("FovX"              ))\
-			x(FovY               ,= HashI("FovY"              ))\
-			x(Fov                ,= HashI("Fov"               ))\
-			x(Near               ,= HashI("Near"              ))\
-			x(Far                ,= HashI("Far"               ))\
-			x(AbsoluteClipPlanes ,= HashI("AbsoluteClipPlanes"))\
-			x(Orthographic       ,= HashI("Orthographic"      ))\
-			x(Lock               ,= HashI("Lock"              ))\
-			x(Coloured           ,= HashI("Coloured"          ))\
-			x(Width              ,= HashI("Width"             ))\
-			x(Smooth             ,= HashI("Smooth"            ))\
-			x(XColumn            ,= HashI("XColumn"           ))\
-			x(Closed             ,= HashI("Closed"            ))\
-			x(Param              ,= HashI("Param"             ))\
-			x(Texture            ,= HashI("Texture"           ))\
-			x(Video              ,= HashI("Video"             ))\
-			x(Divisions          ,= HashI("Divisions"         ))\
-			x(Layers             ,= HashI("Layers"            ))\
-			x(Wedges             ,= HashI("Wedges"            ))\
-			x(ViewPlaneZ         ,= HashI("ViewPlaneZ"        ))\
-			x(Verts              ,= HashI("Verts"             ))\
-			x(Normals            ,= HashI("Normals"           ))\
-			x(Colours            ,= HashI("Colours"           ))\
-			x(TexCoords          ,= HashI("TexCoords"         ))\
-			x(Lines              ,= HashI("Lines"             ))\
-			x(Faces              ,= HashI("Faces"             ))\
-			x(Tetra              ,= HashI("Tetra"             ))\
-			x(GenerateNormals    ,= HashI("GenerateNormals"   ))\
-			x(BakeTransform      ,= HashI("BakeTransform"     ))\
-			x(Step               ,= HashI("Step"              ))\
-			x(Addr               ,= HashI("Addr"              ))\
-			x(Filter             ,= HashI("Filter"            ))\
-			x(Range              ,= HashI("Range"             ))\
-			x(Specular           ,= HashI("Specular"          ))\
-			x(CastShadow         ,= HashI("CastShadow"        ))
+			x(Txfm                 ,= HashI("Txfm"                ))\
+			x(O2W                  ,= HashI("O2W"                 ))\
+			x(M4x4                 ,= HashI("M4x4"                ))\
+			x(M3x3                 ,= HashI("M3x3"                ))\
+			x(Pos                  ,= HashI("Pos"                 ))\
+			x(Up                   ,= HashI("Up"                  ))\
+			x(Direction            ,= HashI("Direction"           ))\
+			x(Quat                 ,= HashI("Quat"                ))\
+			x(Rand4x4              ,= HashI("Rand4x4"             ))\
+			x(RandPos              ,= HashI("RandPos"             ))\
+			x(RandOri              ,= HashI("RandOri"             ))\
+			x(Euler                ,= HashI("Euler"               ))\
+			x(Scale                ,= HashI("Scale"               ))\
+			x(Transpose            ,= HashI("Transpose"           ))\
+			x(Inverse              ,= HashI("Inverse"             ))\
+			x(Normalise            ,= HashI("Normalise"           ))\
+			x(Orthonormalise       ,= HashI("Orthonormalise"      ))\
+			x(Colour               ,= HashI("Colour"              ))\
+			x(Solid                ,= HashI("Solid"               ))\
+			x(Facets               ,= HashI("Facets"              ))\
+			x(CornerRadius         ,= HashI("CornerRadius"        ))\
+			x(RandColour           ,= HashI("RandColour"          ))\
+			x(ColourMask           ,= HashI("ColourMask"          ))\
+			x(Animation            ,= HashI("Animation"           ))\
+			x(Style                ,= HashI("Style"               ))\
+			x(Period               ,= HashI("Period"              ))\
+			x(Velocity             ,= HashI("Velocity"            ))\
+			x(AngVelocity          ,= HashI("AngVelocity"         ))\
+			x(Axis                 ,= HashI("Axis"                ))\
+			x(Hidden               ,= HashI("Hidden"              ))\
+			x(Wireframe            ,= HashI("Wireframe"           ))\
+			x(Delimiters           ,= HashI("Delimiters"          ))\
+			x(Clear                ,= HashI("Clear"               ))\
+			x(AllowMissingIncludes ,= HashI("AllowMissingIncludes"))\
+			x(Camera               ,= HashI("Camera"              ))\
+			x(LookAt               ,= HashI("LookAt"              ))\
+			x(Align                ,= HashI("Align"               ))\
+			x(Aspect               ,= HashI("Aspect"              ))\
+			x(FovX                 ,= HashI("FovX"                ))\
+			x(FovY                 ,= HashI("FovY"                ))\
+			x(Fov                  ,= HashI("Fov"                 ))\
+			x(Near                 ,= HashI("Near"                ))\
+			x(Far                  ,= HashI("Far"                 ))\
+			x(AbsoluteClipPlanes   ,= HashI("AbsoluteClipPlanes"  ))\
+			x(Orthographic         ,= HashI("Orthographic"        ))\
+			x(Lock                 ,= HashI("Lock"                ))\
+			x(Coloured             ,= HashI("Coloured"            ))\
+			x(Width                ,= HashI("Width"               ))\
+			x(Smooth               ,= HashI("Smooth"              ))\
+			x(XColumn              ,= HashI("XColumn"             ))\
+			x(Closed               ,= HashI("Closed"              ))\
+			x(Param                ,= HashI("Param"               ))\
+			x(Texture              ,= HashI("Texture"             ))\
+			x(Video                ,= HashI("Video"               ))\
+			x(Divisions            ,= HashI("Divisions"           ))\
+			x(Layers               ,= HashI("Layers"              ))\
+			x(Wedges               ,= HashI("Wedges"              ))\
+			x(ViewPlaneZ           ,= HashI("ViewPlaneZ"          ))\
+			x(Verts                ,= HashI("Verts"               ))\
+			x(Normals              ,= HashI("Normals"             ))\
+			x(Colours              ,= HashI("Colours"             ))\
+			x(TexCoords            ,= HashI("TexCoords"           ))\
+			x(Lines                ,= HashI("Lines"               ))\
+			x(Faces                ,= HashI("Faces"               ))\
+			x(Tetra                ,= HashI("Tetra"               ))\
+			x(GenerateNormals      ,= HashI("GenerateNormals"     ))\
+			x(BakeTransform        ,= HashI("BakeTransform"       ))\
+			x(Step                 ,= HashI("Step"                ))\
+			x(Addr                 ,= HashI("Addr"                ))\
+			x(Filter               ,= HashI("Filter"              ))\
+			x(Range                ,= HashI("Range"               ))\
+			x(Specular             ,= HashI("Specular"            ))\
+			x(CastShadow           ,= HashI("CastShadow"        ))
 		PR_DEFINE_ENUM2(EKeyword, PR_ENUM);
 		#undef PR_ENUM
 		#pragma endregion
@@ -353,8 +354,8 @@ namespace pr
 
 		// A line drawer object
 		struct LdrObject
-			:RdrInstance
-			,pr::RefCount<LdrObject>
+			:pr::RefCount<LdrObject>
+			,RdrInstance
 		{
 			// Note: try not to use the RdrInstance members for things other than rendering
 			// they can temporarily have different models/transforms/etc during rendering of
