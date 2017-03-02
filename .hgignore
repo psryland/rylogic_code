@@ -21,6 +21,7 @@ syntax: glob
 *.vssettings
 *.DotSettings
 *.pyc
+*.algo
 *ReSharper*
 dlang/*
 renderer11/shaders/hlsl/compiled/*
@@ -67,6 +68,7 @@ tools/GrepWin/grepwin.ini
 Rylogic/resources/*.html
 RylogicRB.sln
 build/*.ldr
-projects/Tradee/Rylobot/Rylobot/net/Data/
-projects/Tradee/Rylobot/Rylobot/net/Model/
+*/Rylobot/net/Data/*
+*/Rylobot/net/Model/*
 .vs/
+*Sample*
