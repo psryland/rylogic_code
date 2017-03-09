@@ -40,10 +40,10 @@ namespace Rylobot
 		{
 			base.Step();
 
-			Debugging.BreakOnCandleOfInterest();
 			if (Instrument.NewCandle)
 			{
 				Debugging.LogInstrument();
+				Debugging.BreakOnCandleOfInterest();
 			}
 
 			// Run the position manager
@@ -53,7 +53,15 @@ namespace Rylobot
 			// If there is a pending order, wait for it to trigger or expire
 			var pending = PendingOrders.FirstOrDefault();
 			if (pending != null)
-				return;
+			{
+				// If the price is more than the SL/TP distance from the EP then give up on the order
+				var dist = Misc.Abs(Instrument.LatestPrice.Mid - pending.TargetPrice);
+				if (dist > Misc.Abs(pending.TakeProfitRel()) ||
+					dist > Misc.Abs(pending.StopLossRel()))
+					Bot.Broker.CancelPendingOrder(pending);
+				else
+					return;
+			}
 
 			// Look for an existing trade for this strategy.
 			var position = Positions.FirstOrDefault();
@@ -66,8 +74,8 @@ namespace Rylobot
 					return;
 
 				// Create a trade in the suggested direction
-				var trade = new Trade(Bot, Instrument, tt.Value, Label, ep:ep, tp:tp);
-				trade.Expiration = (Bot.UtcNow + Instrument.TimeFrame.ToTimeSpan(2)).DateTime;
+				var trade = new Trade(Instrument, tt.Value, Label, ep:ep, tp:tp);
+				trade.Expiration = (Bot.UtcNow + Instrument.TimeFrame.ToTimeSpan(10)).DateTime;
 				if (trade.RtR < 0.2)
 					return;
 
@@ -84,14 +92,12 @@ namespace Rylobot
 		/// <summary>Watch for pending order filled</summary>
 		protected override void OnPositionOpened(Position position)
 		{
-			Debugging.LogTrade(position, true);
 			PosMgr = new PositionManager(Instrument, position);
 		}
 
 		/// <summary>Watch for position closed</summary>
 		protected override void OnPositionClosed(Position position)
 		{
-			Debugging.LogTrade(position, true);
 			if (PosMgr != null && position == PosMgr.Position)
 				PosMgr = null;
 		}

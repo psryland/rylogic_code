@@ -229,6 +229,29 @@ namespace pr
 			{
 				return 6*A*x + 2*B;
 			}
+
+			// Create a cubic from 4 points
+			static Cubic FromPoints(v2 a, v2 b, v2 c, v2 d)
+			{
+				//' Aa.x³ + Ba.x² + Ca.x + D = a.y
+				//' Ab.x³ + Bb.x² + Cb.x + D = a.y
+				//' Ac.x³ + Bc.x² + Cc.x + D = a.y
+				//' Ad.x³ + Bd.x² + Cd.x + D = a.y
+				//' => Ax = y
+				//' A = |a.x² a.x 1| x = |A| y = |a.y|
+				//'     |b.x² b.x 1|     |B|     |b.y|
+				//'     |c.x² c.x 1|     |C|     |c.y|
+				auto M = Transpose4x4(m4x4(
+					v4(a.x*a.x*a.x, a.x*a.x, a.x, 1),
+					v4(b.x*b.x*b.x, b.x*b.x, b.x, 1),
+					v4(c.x*c.x*c.x, c.x*c.x, c.x, 1),
+					v4(d.x*d.x*d.x, d.x*d.x, d.x, 1)));
+
+				auto y = v4(a.y, b.y, c.y, d.y);
+				auto x = Invert(M) * y;
+
+				return Cubic(x.x, x.y, x.z, x.w);
+			}
 		};
 
 		//' F(x) = Ax^4 + Bx³ + Cx² + Dx + E

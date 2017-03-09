@@ -37,7 +37,7 @@ namespace pr.extn
 			return list[list.Count - 1];
 		}
 
-		/// <summary>Return the list element at 'list.Count - index - 1'</summary>
+		/// <summary>Return the list element at 'list.Count - index - 1'. i.e '0' is the last item, '-1' is off the end</summary>
 		public static T Back<T>(this IList<T> list, int index)
 		{
 			return list[list.Count - index - 1];
@@ -331,6 +331,51 @@ namespace pr.extn
 					list.RemoveAt(i);
 		}
 
+		/// <summary>
+		/// Remove duplicates from this list.
+		/// If 'forward' the first instance of each duplicate is retained, otherwise the last (affects resulting order)
+		/// Returns the number removed</summary>
+		public static int RemoveDuplicates<T>(this IList<T> list, bool forward)
+		{
+			return RemoveDuplicates(list, 0, list.Count, forward);
+		}
+		public static int RemoveDuplicates<T>(this IList<T> list, int start, int count, bool forward)
+		{
+			// No duplicates in 1 or 0 items
+			if (count < 2)
+				return 0;
+
+			// Start at the front if going forward, back if going backward
+			int s = forward ? start : start + count - 1, e = s;
+			var set = new HashSet<T>();
+			set.Add(list[s]);
+			if (forward)
+			{
+				for (int i = 1; i != count; ++i)
+				{
+					if (!set.Contains(list[++e]))
+					{
+						set.Add(list[e]);
+						list[++s] = list[e];
+					}
+				}
+				list.RemoveRange(s + 1, e - s);
+			}
+			else
+			{
+				for (int i = 1; i != count; ++i)
+				{
+					if (!set.Contains(list[--s]))
+					{
+						set.Add(list[s]);
+						list[--e] = list[s];
+					}
+				}
+				list.RemoveRange(s, e - s);
+			}
+			return e - s;
+		}
+
 		/// <summary>Remove elements from the start of this list that satisfy 'pred'</summary>
 		public static void TrimStart<T>(this IList<T> list, Func<T,bool> pred)
 		{
@@ -617,6 +662,38 @@ namespace pr.unittests
 {
 	[TestFixture] public class TestListExtns
 	{
+		[Test] public void List()
+		{
+			{
+				var list0 = new List<int>(new[] { 1, 2, 3, 3, 2, 4, 5, 2, 1, 5, 4 });
+				var list1 = new List<int>(new[] { 1, 2, 3, 4, 5 });
+				var count = list0.RemoveDuplicates(forward:true);
+				Assert.True(count == 6);
+				Assert.True(list0.SequenceEqual(list1));
+			}
+			{
+				var list0 = new List<int>(new[] { 1, 2, 3, 3, 2, 4, 5, 2, 1, 5, 4 });
+				var list1 = new List<int>(new[] { 3, 2, 1, 5, 4 });
+				var count = list0.RemoveDuplicates(forward:false);
+				Assert.True(count == 6);
+				Assert.True(list0.SequenceEqual(list1));
+			}
+			{
+				var list0 = new List<int>(new[] { 1, 2, 3, 3, 2, 4, 5, 2, 1, 5, 4 });
+				var list1 = new List<int>(new[] { 1, 2, 3, 2, 4, 5, 1, 5, 4 });
+				var count = list0.RemoveDuplicates(2, 7, forward:true);
+				Assert.True(count == 2);
+				Assert.True(list0.SequenceEqual(list1));
+			}
+			{
+				var list0 = new List<int>(new[] { 1, 2, 3, 3, 2, 4, 5, 2, 1, 5, 4 });
+				var list1 = new List<int>(new[] { 1, 2, 3, 4, 5, 2, 1, 5, 4 });
+				var count = list0.RemoveDuplicates(2, 7, forward:false);
+				Assert.True(count == 2);
+				Assert.True(list0.SequenceEqual(list1));
+			}
+
+		}
 		[Test] public void ListQuickSort()
 		{
 			var rng = new Random();

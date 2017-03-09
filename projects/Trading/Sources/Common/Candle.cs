@@ -8,8 +8,9 @@ namespace Rylobot
 	public class Candle
 	{
 		public Candle() {}
-		public Candle(long timestamp, double open, double high, double low, double close, double median, double volume)
+		public Candle(int index, long timestamp, double open, double high, double low, double close, double median, double volume)
 		{
+			Index     = index;
 			Timestamp = timestamp;
 			Open      = open;
 			High      = Math.Max(high, Math.Max(open, close));
@@ -20,6 +21,7 @@ namespace Rylobot
 		}
 		public Candle(Candle rhs)
 		{
+			Index     = rhs.Index;
 			Timestamp = rhs.Timestamp;
 			Open      = rhs.Open;
 			High      = rhs.High;
@@ -28,6 +30,9 @@ namespace Rylobot
 			Median    = rhs.Median;
 			Volume    = rhs.Volume;
 		}
+
+		/// <summary>CAlgo index</summary>
+		public int Index { get; private set; }
 
 		/// <summary>The timestamp (in ticks) of when this candle opened</summary>
 		public long Timestamp { get; private set; }
@@ -80,36 +85,7 @@ namespace Rylobot
 			return sign == +1 ? Math.Max(Open,Close) : sign == -1 ? Math.Min(Open,Close) : Median;
 		}
 
-		/// <summary>Single candle type. Relative to the mean candle size (total size)</summary>
-		public EType Type(QuoteCurrency mcs)
-		{
-			// A candle is a doji if the body is very small
-			if (BodyLength < 0.03 * mcs)
-			{
-				return EType.Doji;
-			}
-
-			// A candle is a hammer/inverse hammer if it has a small body that is near one end of the candle
-			if (BodyLength < 0.125 * mcs)
-			{
-				if (UpperWickLength < 0.1 * TotalLength) return EType.Hammer;
-				if (LowerWickLength < 0.1 * TotalLength) return EType.InvHammer;
-				return EType.SpinningTop;
-			}
-
-			// A candle is a Marubozu if it has a large body
-			if (BodyLength > 0.8 * mcs)
-			{
-				// A strengthening or weakening marubozu
-				return
-					Strengthening ? EType.MarubozuStrengthening :
-					Weakening     ? EType.MarubozuWeakening :
-					EType.Marubozu;
-			}
-
-			// No particular type
-			return EType.Unknown;
-		}
+		/// <summary>Known candle types</summary>
 		public enum EType
 		{
 			/// <summary>
@@ -147,6 +123,37 @@ namespace Rylobot
 			/// <summary>
 			/// Body of the candle is almost all of the candle (strong trend)</summary>
 			Marubozu,
+		}
+
+		/// <summary>Single candle type. Relative to the mean candle size (total size)</summary>
+		public EType Type(QuoteCurrency mcs)
+		{
+			// A candle is a doji if the body is very small
+			if (BodyLength < 0.03 * mcs)
+			{
+				return EType.Doji;
+			}
+
+			// A candle is a hammer/inverse hammer if it has a small body that is near one end of the candle
+			if (BodyLength < 0.125 * mcs || BodyLength < 0.1 * TotalLength)
+			{
+				if (UpperWickLength < 0.1 * TotalLength) return EType.Hammer;
+				if (LowerWickLength < 0.1 * TotalLength) return EType.InvHammer;
+				return EType.SpinningTop;
+			}
+
+			// A candle is a Marubozu if it has a large body
+			if (BodyLength > 0.8 * mcs)
+			{
+				// A strengthening or weakening marubozu
+				return
+					Strengthening ? EType.MarubozuStrengthening :
+					Weakening     ? EType.MarubozuWeakening :
+					EType.Marubozu;
+			}
+
+			// No particular type
+			return EType.Unknown;
 		}
 
 		/// <summary>The overall length of the candle from high to low</summary>

@@ -35,6 +35,9 @@ namespace Rylobot
 				Debugging.LogInstrument();
 			}
 
+			foreach (var pm in PositionManagers)
+				pm.Step();
+
 			if (PendingOrders.Any())
 				return;
 
@@ -45,21 +48,19 @@ namespace Rylobot
 				// 'ep' must be lower than 'tp'
 				var ep = 0.2;
 				var tp = 0.6;
-				var sl = 4.0;
+				var sl = 0.8;
 				var exp = 1;
-				var step = Instrument.MaxCandleSize(-5,1);
+				var step = Instrument.MCS;//MedianCandleSize(-5,1);
 
 				var sym = Instrument.LatestPrice;
-				var trade0 = new Trade(Bot, Instrument, TradeType.Buy , label:Label, ep:sym.Ask + ep*step, sl:sym.Ask - sl*step, tp:sym.Ask + tp*step, risk:0.5f) { Expiration = (Bot.UtcNow + Instrument.TimeFrame.ToTimeSpan(exp)).DateTime };
-				var trade1 = new Trade(Bot, Instrument, TradeType.Sell, label:Label, ep:sym.Bid - ep*step, sl:sym.Bid + sl*step, tp:sym.Bid - tp*step, risk:0.5f) { Expiration = (Bot.UtcNow + Instrument.TimeFrame.ToTimeSpan(exp)).DateTime };
+				var trade0 = new Trade(Instrument, TradeType.Buy , Label, ep:sym.Ask + ep*step, sl:sym.Ask - sl*step, tp:sym.Ask + tp*step, risk:0.5f) { Expiration = (Bot.UtcNow + Instrument.TimeFrame.ToTimeSpan(exp)).DateTime };
+				var trade1 = new Trade(Instrument, TradeType.Sell, Label, ep:sym.Bid - ep*step, sl:sym.Bid + sl*step, tp:sym.Bid - tp*step, risk:0.5f) { Expiration = (Bot.UtcNow + Instrument.TimeFrame.ToTimeSpan(exp)).DateTime };
 
 				Bot.Broker.CreatePendingOrder(trade0);
 				Bot.Broker.CreatePendingOrder(trade1);
 			}
 			else
 			{
-				foreach (var pm in PositionManagers)
-					pm.Step();
 			}
 		}
 

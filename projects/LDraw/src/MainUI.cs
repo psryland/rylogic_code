@@ -638,7 +638,7 @@ namespace LDraw
 		{
 			if (!filepath.HasValue())
 			{
-				using (var dlg = new OpenFileDialog { Title = "Open Ldr Script file", Filter = Util.FileDialogFilter("Ldr Script","*.ldr") })
+				using (var dlg = new OpenFileDialog { Title = "Open Ldr Script file", Filter = Util.FileDialogFilter("Ldr Script","*.ldr", "Comma Separated Values","*.csv", "Binary Model File","*.p3d", "All Files","*.*") })
 				{
 					if (dlg.ShowDialog(this) != DialogResult.OK) return;
 					filepath = dlg.FileName;

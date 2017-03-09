@@ -146,7 +146,7 @@ namespace pr
 		// 'window_size' is the number of samples in the sliding window. 
 		// 'inverse' is true if this is actually an inverse DFT
 		SlidingDFT()
-			:SlidingDFT(0, false)
+			:SlidingDFT(0, 0.0, false)
 		{}
 		SlidingDFT(int window_size, Real sampling_frequency, bool inverse = false)
 			:m_in()

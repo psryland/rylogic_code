@@ -68,6 +68,7 @@ namespace Rylobot
 		{
 			TradeLooksGood,
 			Scalp,
+			TrailingSL,
 			NoRecentProfitPeaks,
 			LookForExitAfterNextPeak,
 			CloseAtNextNonPeak,
@@ -102,6 +103,7 @@ namespace Rylobot
 			var profitable = Position.NetProfit > 0;
 			var new_peak = Position.NetProfit > PeakProfit;
 			var better = Position.NetProfit > LastProfit;
+			var profit = Instrument.Symbol.AcctToQuote(Position.NetProfit);
 
 			// How long since a new profit peak was made
 			var time_since_peak = new_peak ? 0 : Instrument.Count - PeakProfitIndex;
@@ -109,8 +111,28 @@ namespace Rylobot
 			// How long since the trade was profitable at all
 			var time_since_profitable = profitable ? 0 : Instrument.Count - LastProfitableIndex;
 
+			// If the trade goes into profit by 50% of the TP, move the SL to break event
+			if (profit > 0.5 * Position.TakeProfitRel() * Position.Volume && Position.StopLossRel() > 0)
+			{
+			//	var sign = Position.TradeType.Sign();
+			//	var trade = new Trade(Instrument, Position) { SL = Position.EntryPrice + sign * 0.1 * Position.TakeProfitRel() };
+			//	Bot.Broker.ModifyOrder(Position, trade);
+			//	State = EState.TradeLooksGood;
+			//	Debugging.Trace("SL moved to break even");
+			}
+
+			// If the trade goes to 80% of TP and has a strong preceding trend go into trailing SL mode to try to maximise profit
+			if (profit > 0.8 * Position.TakeProfitRel() * Position.Volume && Math.Abs(Instrument.MeasureTrend(-3, 0)) > 0.8)
+			{
+			//	var sign = Position.TradeType.Sign();
+			//	var trade = new Trade(Instrument, Position) { TP = Position.EntryPrice + sign * 1.5 * Position.TakeProfitRel() };
+			//	Bot.Broker.ModifyOrder(Position, trade);
+			//	State = EState.TrailingSL;
+			//	Debugging.Trace("Trailing SL mode");
+			}
+
 			// If we're lucky enough to get a huge spike in profit, go into scalp mode
-			if (Position.NetProfit > Bot.Broker.AllowedRisk)
+			if (State == EState.TradeLooksGood && Position.NetProfit > Bot.Broker.AllowedRisk)
 				State = EState.Scalp;
 
 			// What about candle follow mode:
@@ -140,6 +162,26 @@ namespace Rylobot
 						Bot.Broker.ClosePosition(Position);
 						State = EState.PositionClosed;
 						Debugging.Trace("Position closed - scalping profit");
+					}
+					break;
+				}
+			case EState.TrailingSL:
+				{
+					// In this mode, we move the SL up to just above/below a recently closed candle
+					if (Instrument.NewCandle)
+					{
+						var sign = Position.TradeType.Sign();
+						var limit = Instrument.CurrentPrice(-sign);
+						foreach (var c in Instrument.CandleRange(-3,0))
+							limit = sign > 0 ? Misc.Min(limit, c.Low) : Misc.Max(limit, c.High);
+
+						// Move the SL if in the correct direction
+						if (sign > 0 && limit > Position.StopLoss ||
+							sign < 0 && limit < Position.StopLoss)
+						{
+							var trade = new Trade(Instrument, Position) { SL = limit };
+							Bot.Broker.ModifyOrder(Position, trade);
+						}
 					}
 					break;
 				}

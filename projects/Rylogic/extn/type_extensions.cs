@@ -172,6 +172,7 @@ namespace pr.extn
 			return Range(0, count);
 		}
 
+		/// <summary>Parse an integer returning the value or null</summary>
 		public static int? TryParse(string val, NumberStyles style = NumberStyles.Integer)
 		{
 			int o;
@@ -187,11 +188,19 @@ namespace pr.extn
 			var strs = val.Split(delim ?? new[]{" ","\t",","}, opts);
 			return strs.Select(s => int.Parse(s, style, null)).ToArray();
 		}
+
+		/// <summary>True if this value is in the range [beg,end)</summary>
+		public static bool Within(this int x, int beg, int end)
+		{
+			if (beg > end) throw new Exception("Within range must have 'beg' <= 'end'. Provided values were beg='{0}', end='{1}'".Fmt(beg,end));
+			return x >= beg && x < end;
+		}
 	}
 
 	/// <summary>'uint' type extensions</summary>
 	public static class uint_
 	{
+		/// <summary>Parse an unsigned integer returning the value or null</summary>
 		public static uint? TryParse(string val, NumberStyles style = NumberStyles.Integer)
 		{
 			uint o;
@@ -207,10 +216,19 @@ namespace pr.extn
 			var strs = val.Split(delim ?? new[]{" ","\t",","}, opts);
 			return strs.Select(s => uint.Parse(s, style, null)).ToArray();
 		}
+
+		/// <summary>True if this value is in the range [beg,end)</summary>
+		public static bool Within(this uint x, uint beg, uint end)
+		{
+			if (beg > end) throw new Exception("Within range must have 'beg' <= 'end'. Provided values were beg='{0}', end='{1}'".Fmt(beg,end));
+			return x >= beg && x < end;
+		}
 	}
+
 	/// <summary>'long' type extensions</summary>
 	public static class long_
 	{
+		/// <summary>Parse a long returning the value or null</summary>
 		public static long? TryParse(string val, NumberStyles style = NumberStyles.Integer)
 		{
 			long o;
@@ -225,6 +243,13 @@ namespace pr.extn
 		{
 			var strs = val.Split(delim ?? new[]{" ","\t",","}, opts);
 			return strs.Select(s => long.Parse(s, style, null)).ToArray();
+		}
+
+		/// <summary>True if this value is in the range [beg,end)</summary>
+		public static bool Within(this long x, long beg, long end)
+		{
+			if (beg > end) throw new Exception("Within range must have 'beg' <= 'end'. Provided values were beg='{0}', end='{1}'".Fmt(beg,end));
+			return x >= beg && x < end;
 		}
 	}
 
@@ -246,10 +271,26 @@ namespace pr.extn
 			var strs = val.Split(delim ?? new[]{" ","\t",","}, opts);
 			return strs.Select(s => ulong.Parse(s, style, null)).ToArray();
 		}
+
+		/// <summary>True if this value is in the range [beg,end)</summary>
+		public static bool Within(this ulong x, ulong beg, ulong end)
+		{
+			if (beg > end) throw new Exception("Within range must have 'beg' <= 'end'. Provided values were beg='{0}', end='{1}'".Fmt(beg,end));
+			return x >= beg && x < end;
+		}
 	}
+
 	/// <summary>'float' type extensions</summary>
 	public static class float_
 	{
+		/// <summary>Enumerate floats in the range [beg, end) with a step size of 'step'</summary>
+		public static IEnumerable<float> Range(float beg, float end, float step)
+		{
+			for (;beg < end; beg += step)
+				yield return beg;
+		}
+
+		/// <summary>Try parse a float from a string</summary>
 		public static float? TryParse(string val, NumberStyles style = NumberStyles.Float)
 		{
 			float o;
@@ -265,11 +306,29 @@ namespace pr.extn
 			var strs = val.Split(delim ?? new[]{" ","\t",","}, opts);
 			return strs.Select(s => float.Parse(s, style, null)).ToArray();
 		}
+
+		/// <summary>True if this value is in the range [beg,end)</summary>
+		public static bool Within(this float x, float beg, float end)
+		{
+			if (beg > end) throw new Exception("Within range must have 'beg' <= 'end'. Provided values were beg='{0}', end='{1}'".Fmt(beg,end));
+			return x >= beg && x < end;
+		}
 	}
 
 	/// <summary>'double' type extensions</summary>
 	public static class double_
 	{
+		/// <summary>Enumerate floats in the range [beg, end) with a step size of 'step'</summary>
+		public static IEnumerable<double> Range(double beg, double end, double step)
+		{
+			for (;beg < end; beg += step)
+				yield return beg;
+		}
+
+		/// <summary>Try parse a double from a string</summary>
+		/// <param name="val"></param>
+		/// <param name="style"></param>
+		/// <returns></returns>
 		public static double? TryParse(string val, NumberStyles style = NumberStyles.Float)
 		{
 			double o;
@@ -284,6 +343,13 @@ namespace pr.extn
 		{
 			var strs = val.Split(delim ?? new[]{" ","\t",","}, opts);
 			return strs.Select(s => double.Parse(s, style, null)).ToArray();
+		}
+
+		/// <summary>True if this value is in the range [beg,end)</summary>
+		public static bool Within(this double x, double beg, double end)
+		{
+			if (beg > end) throw new Exception("Within range must have 'beg' <= 'end'. Provided values were beg='{0}', end='{1}'".Fmt(beg,end));
+			return x >= beg && x < end;
 		}
 	}
 }

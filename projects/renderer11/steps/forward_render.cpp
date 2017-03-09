@@ -34,10 +34,13 @@ namespace pr
 			// See if the instance has a sort key override
 			SKOverride const* sko = inst.find<SKOverride>(EInstComp::SortkeyOverride);
 
+			Lock lock(*this);
+			auto& drawlist = lock.drawlist();
+
 			// Add a drawlist element for each nugget in the instance's model
-			m_drawlist.reserve(m_drawlist.size() + nuggets.size());
+			drawlist.reserve(drawlist.size() + nuggets.size());
 			for (auto& nug : nuggets)
-				nug.AddToDrawlist(m_drawlist, inst, sko, Id, m_sset);
+				nug.AddToDrawlist(drawlist, inst, sko, Id, m_sset);
 
 			m_sort_needed = true;
 		}
@@ -79,7 +82,8 @@ namespace pr
 			SetShadowMapConstants(m_scene->m_view, smap_rstep != nullptr ? 1 : 0, cb0.m_shadow);
 			WriteConstants(dc, m_cbuf_frame, cb0, EShaderType::VS|EShaderType::PS);
 
-			for (auto& dle : m_drawlist)
+			Lock lock(*this);
+			for (auto& dle : lock.drawlist())
 			{
 				StateStack::DleFrame frame(ss, dle);
 				ss.Commit();

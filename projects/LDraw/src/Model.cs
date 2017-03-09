@@ -155,7 +155,7 @@ namespace LDraw
 
 			// The drop filepaths
 			var files = (string[])args.Data.GetData(DataFormats.FileDrop);
-			var extns = new string[] { ".ldr", ".p3d", ".x" };
+			var extns = new string[] { ".ldr", ".csv", ".p3d", ".x" };
 			if (!files.All(x => extns.Contains(Path_.Extn(x).ToLowerInvariant())))
 				return false;
 

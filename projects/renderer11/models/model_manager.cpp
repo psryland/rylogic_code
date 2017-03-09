@@ -6,6 +6,7 @@
 #include "pr/renderer11/models/model_manager.h"
 #include "pr/renderer11/models/model_settings.h"
 #include "pr/renderer11/shaders/input_layout.h"
+#include "pr/renderer11/util/event_types.h"
 #include "pr/renderer11/util/allocator.h"
 #include "pr/renderer11/util/wrappers.h"
 #include "pr/renderer11/util/util.h"
@@ -105,6 +106,7 @@ namespace pr
 		void ModelManager::Delete(Model* model)
 		{
 			if (!model) return;
+			pr::events::Send(Evt_ModelDestroy(*model));
 			std::lock_guard<std::recursive_mutex> lock(m_mutex);
 			assert(m_dbg_mem_mdl.remove(model));
 			m_alex_model.Delete(model);

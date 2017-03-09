@@ -6015,12 +6015,13 @@ namespace pr.gui
 	}
 
 	/// <summary>A wrapper control that hosts a control and implements IDockable</summary>
-	public class Dockable :Control, IDockable
+	public class Dockable :ContainerControl, IDockable
 	{
 		public Dockable(Control hostee, string persist_name, DockContainer.DockLocation location = null)
 		{
 			SetStyle(ControlStyles.Selectable, false);
-			SetStyle(ControlStyles.ContainerControl, true);
+			MaximumSize = hostee.MaximumSize;
+			MinimumSize = hostee.MinimumSize;
 
 			DockControl = new DockControl(this, persist_name) { TabText = persist_name };
 			if (location != null)

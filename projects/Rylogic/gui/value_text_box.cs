@@ -294,7 +294,8 @@ namespace pr.gui
 		{
 			base.OnLostFocus(e);
 			TryCommitValue();
-			Text = ValueToText(Value);
+			var text = ValueToText(Value);
+			Text = text;
 		}
 	}
 }

@@ -23,11 +23,21 @@ namespace Rylobot
 		{
 			base.Step();
 
-			Debugging.BreakOnCandleOfInterest();
 			if (Instrument.NewCandle)
 			{
 				Debugging.LogInstrument();
+				Debugging.BreakOnCandleOfInterest();
 			}
+		}
+
+		/// <summary>Watch for pending order filled</summary>
+		protected override void OnPositionOpened(Position position)
+		{
+		}
+
+		/// <summary>Watch for position closed</summary>
+		protected override void OnPositionClosed(Position position)
+		{
 		}
 
 		/// <summary>Return a score for how well suited this strategy is to the current conditions</summary>

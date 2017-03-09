@@ -124,7 +124,7 @@ namespace pr
 				// Restore the main RT and depth buffer
 				dc->OMSetRenderTargets(1, &m_main_rtv.m_ptr, m_main_dsv.m_ptr);
 
-				// Release our reference to the main rtv/dsv
+				// Release our reference to the main RTV/DSV
 				m_main_rtv = nullptr;
 				m_main_dsv = nullptr;
 			}
@@ -136,11 +136,14 @@ namespace pr
 			// See if the instance has a sort key override
 			SKOverride const* sko = inst.find<SKOverride>(EInstComp::SortkeyOverride);
 
+			Lock lock(*this);
+			auto& drawlist = lock.drawlist();
+
 			// Add the drawlist elements for this instance that
 			// correspond to the render nuggets of the renderable
-			m_drawlist.reserve(m_drawlist.size() + nuggets.size());
+			drawlist.reserve(drawlist.size() + nuggets.size());
 			for (auto& nug : nuggets)
-				nug.AddToDrawlist(m_drawlist, inst, sko, Id, m_sset);
+				nug.AddToDrawlist(drawlist, inst, sko, Id, m_sset);
 
 			m_sort_needed = true;
 		}
@@ -174,7 +177,8 @@ namespace pr
 			WriteConstants(dc, m_cbuf_camera, cb0, EShaderType::VS|EShaderType::PS);
 
 			// Loop over the elements in the draw list
-			for (auto& dle : m_drawlist)
+			Lock lock(*this);
+			for (auto& dle : lock.drawlist())
 			{
 				StateStack::DleFrame frame(ss, dle);
 				ss.Commit();

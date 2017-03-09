@@ -18,7 +18,7 @@ namespace pr
 		RenderStep::RenderStep(Scene& scene)
 			:m_scene(&scene)
 			,m_shdr_mgr(&scene.m_wnd->shdr_mgr())
-			,m_drawlist(scene.m_wnd->m_rdr->Allocator<DrawListElement>())
+			,m_impl_drawlist(scene.m_wnd->m_rdr->Allocator<DrawListElement>())
 			,m_sort_needed(true)
 			,m_bsb()
 			,m_rsb()
@@ -28,13 +28,15 @@ namespace pr
 		// Reset/Populate the drawlist
 		void RenderStep::ClearDrawlist()
 		{
-			m_drawlist.resize(0);
+			Lock lock(*this);
+			lock.drawlist().resize(0);
 		}
 
-		// Sort the drawlist based on sortkey
+		// Sort the drawlist based on sort key
 		void RenderStep::Sort()
 		{
-			std::sort(std::begin(m_drawlist), std::end(m_drawlist));
+			Lock lock(*this);
+			pr::sort(lock.drawlist());
 			m_sort_needed = false;
 		}
 		void RenderStep::SortIfNeeded()
@@ -71,8 +73,8 @@ namespace pr
 		// Remove an instance from the scene
 		void RenderStep::RemoveInstance(BaseInstance const& inst)
 		{
-			auto new_end = std::remove_if(std::begin(m_drawlist), std::end(m_drawlist), [&](DrawListElement const& dle){ return dle.m_instance == &inst; });
-			m_drawlist.resize(new_end - std::begin(m_drawlist));
+			Lock lock(*this);
+			pr::erase_if(lock.drawlist(), [&](DrawListElement const& dle){ return dle.m_instance == &inst; });
 		}
 
 		// Remove a batch of instances. Optimised by a single past through the drawlist
@@ -85,12 +87,12 @@ namespace pr
 			std::sort(doomed, doomed_end);
 
 			// Remove instances
-			auto new_end = std::remove_if(std::begin(m_drawlist), std::end(m_drawlist), [&](DrawListElement const& dle)
+			Lock lock(*this);
+			pr::erase_if(lock.drawlist(), [&](DrawListElement const& dle)
 			{
 				auto iter = std::lower_bound(doomed, doomed_end, dle.m_instance);
 				return iter != doomed_end && *iter == dle.m_instance;
 			});
-			m_drawlist.resize(new_end - std::begin(m_drawlist));
 		}
 
 		// Perform the render step
@@ -114,6 +116,22 @@ namespace pr
 
 			// Notify that the render step has finished
 			pr::events::Send(Evt_RenderStepExecute(*this, false));
+		}
+
+		// Notification of a model being destroyed
+		void RenderStep::OnEvent(Evt_ModelDestroy const& evt)
+		{
+			(void)evt;
+			#if PR_DBG_RDR
+
+			// Check the model is not current in a drawlist
+			Lock lock(*this);
+			for (auto& dle : lock.drawlist())
+			{
+				assert(evt.m_model != dle.m_nugget->m_owner);
+			}
+
+			#endif
 		}
 	}
 }

@@ -93,6 +93,12 @@ namespace pr.maths
 			var B = a.y - A * a.x;
 			return new Monic(A, B);
 		}
+		public static Monic FromPoints(double x0, double y0, double x1, double y1)
+		{
+			return FromPoints(
+				new v2((float)x0, (float)y0),
+				new v2((float)x1, (float)y1));
+		}
 	}
 
 	/// <summary>'F(x) = Ax² + Bx + C'</summary>
@@ -313,6 +319,29 @@ namespace pr.maths
 				// dF(x) == 0 at the roots of dF(x)
 				return new Quadratic(3*A, 2*B, C).Roots;
 			}
+		}
+
+		// Create a cubic from 4 points
+		public static Cubic FromPoints(v2 a, v2 b, v2 c, v2 d)
+		{
+			//' Aa.x³ + Ba.x² + Ca.x + D = a.y
+			//' Ab.x³ + Bb.x² + Cb.x + D = a.y
+			//' Ac.x³ + Bc.x² + Cc.x + D = a.y
+			//' Ad.x³ + Bd.x² + Cd.x + D = a.y
+			//' => Ax = y
+			//' A = |a.x² a.x 1| x = |A| y = |a.y|
+			//'     |b.x² b.x 1|     |B|     |b.y|
+			//'     |c.x² c.x 1|     |C|     |c.y|
+			var M = m4x4.Transpose4x4(new m4x4(
+				new v4(a.x*a.x*a.x, a.x*a.x, a.x, 1),
+				new v4(b.x*b.x*b.x, b.x*b.x, b.x, 1),
+				new v4(c.x*c.x*c.x, c.x*c.x, c.x, 1),
+				new v4(d.x*d.x*d.x, d.x*d.x, d.x, 1)));
+
+			var y = new v4(a.y, b.y, c.y, d.y);
+			var x = m4x4.Invert(M) * y;
+
+			return new Cubic(x.x, x.y, x.z, x.w);
 		}
 	}
 }

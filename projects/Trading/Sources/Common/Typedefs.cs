@@ -11,6 +11,7 @@ namespace Rylobot
 		private int value;
 		[DebuggerStepThrough] private NegIdx(int v) { value = v; }
 		[DebuggerStepThrough] public static explicit operator int(NegIdx neg_idx) { return neg_idx.value; }
+		[DebuggerStepThrough] public static explicit operator double(NegIdx neg_idx) { return (double)neg_idx.value; }
 		[DebuggerStepThrough] public static implicit operator NegIdx(int neg_idx) { return new NegIdx(neg_idx); }
 		[DebuggerStepThrough] public static bool operator == (NegIdx lhs, NegIdx rhs) { return lhs.value == rhs.value; }
 		[DebuggerStepThrough] public static bool operator != (NegIdx lhs, NegIdx rhs) { return lhs.value != rhs.value; }

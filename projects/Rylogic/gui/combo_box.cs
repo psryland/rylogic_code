@@ -34,6 +34,11 @@ namespace pr.gui
 		//		if (m_cb.SelectedItem == null)
 		//			m_bs.Current.Name = m_cb.Text;
 		//	};
+		//
+		// For DropDownList style combo boxes, use the 'DropDownClosed' event to trigger changes
+		// of SelectedItem. 'SelectedIndexChanged' and other events all trigger on mouse over of
+		// items in the drop down list.
+
 		public ComboBox()
 			:base()
 		{

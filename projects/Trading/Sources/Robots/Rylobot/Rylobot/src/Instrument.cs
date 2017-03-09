@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using cAlgo.API;
+using cAlgo.API.Indicators;
 using cAlgo.API.Internals;
 using pr.common;
 using pr.extn;
@@ -80,7 +81,7 @@ namespace Rylobot
 
 			// Get the fractional index for this tick
 			var index = FractionalIndexAt(now) - (double)IdxFirst;
-			var price = new PriceTick(index, Symbol.Ask, Symbol.Bid);
+			var price = new PriceTick(index, now.Ticks, Symbol.Ask, Symbol.Bid);
 			Debug.Assert(HighRes.Count == 0 || index > HighRes.Back().Index);
 			//var idx = HighRes.Count == 0 || index > HighRes.Back().Index ? HighRes.Count : HighRes.BinarySearch(x => x.Index.CompareTo(index));
 			//if (idx < 0) idx = ~idx;
@@ -101,8 +102,7 @@ namespace Rylobot
 			m_last_tick_time = now.Ticks;
 
 			// Invalidate cached, per-candle, properties
-			m_max_cs = null;
-			m_median_cs = null;
+			m_mcs = null;
 
 			// Notify data added/changed
 			OnDataChanged(new DataEventArgs(this, candle, NewCandle));
@@ -201,7 +201,7 @@ namespace Rylobot
 		/// <summary>The current Ask(+1)/Bid(-1)/Mid(0) price</summary>
 		public PriceTick LatestPrice
 		{
-			[DebuggerStepThrough] get { return new PriceTick(0, CurrentPrice(+1), CurrentPrice(-1)); }
+			[DebuggerStepThrough] get { return new PriceTick(0, Bot.UtcNow.Ticks, CurrentPrice(+1), CurrentPrice(-1)); }
 		}
 
 		/// <summary>The total number of data points available</summary>
@@ -230,6 +230,7 @@ namespace Rylobot
 				// CAlgo uses 0 = oldest, Count = latest
 				var idx = (int)(Data.OpenTime.Count + neg_idx - 1);
 				return new Candle(
+					idx,
 					Data.OpenTime  [idx].Ticks,
 					Data.Open      [idx],
 					Data.High      [idx],
@@ -260,6 +261,12 @@ namespace Rylobot
 		{
 			get;
 			private set;
+		}
+
+		/// <summary>The age of the current candle normalised to the time frame</summary>
+		public double LatestAge
+		{
+			get { return AgeOf(Latest, false); }
 		}
 
 		/// <summary>The timestamp of the last time we received price data (in UTC)</summary>
@@ -371,6 +378,26 @@ namespace Rylobot
 			return HighResRange(idx_range.Beg, idx_range.End, step);
 		}
 
+		/// <summary>Create a candle that uses the high res data over the given 'NegIdx' range</summary>
+		public Candle HighResCandle(double idx_min, double idx_max)
+		{
+			var data = HighResRange(idx_min, idx_max).ToArray();
+			if (!data.Any())
+				throw new Exception("Empty range, cannot create an equivalent candle");
+
+			var index     = (int)(data.First().Index - (double)IdxFirst);
+			var timestamp = data.First().Timestamp;
+			var open      = (double)data.First().Bid;
+			var high      = (double)data.Max(x => x.Bid);
+			var low       = (double)data.Min(x => x.Bid);
+			var close     = (double)data.Last().Bid;
+			var medians   = data.Select(x => x.Bid).ToArray();
+			var median    = (double)medians.NthElement(medians.Length/2);
+			var volume    = data.Length;
+			
+			return new Candle(index, timestamp, open, high, low, close, median, volume);
+		}
+
 		/// <summary>Return the index into the candle data for the given time</summary>
 		public NegIdx IndexAt(DateTimeOffset dt)
 		{
@@ -389,12 +416,11 @@ namespace Rylobot
 			return (double)idx + Maths.Clamp((double)ticks / ticks_per_candle, 0.0, 1.0);
 		}
 
-		/// <summary>A cached median candle size over the last 50 candles</summary>
-		public QuoteCurrency MaxCS_50
+		/// <summary>Returns a time 'num_candles' in the future</summary>
+		public DateTime ExpirationTime(int num_candles)
 		{
-			get { return (m_max_cs ?? (m_max_cs = MaxCandleSize(IdxLast - 50, IdxLast))).Value; }
+			return (Bot.UtcNow + TimeFrame.ToTimeSpan(num_candles)).DateTime;
 		}
-		private QuoteCurrency? m_max_cs;
 
 		/// <summary>Return the max candle size (total length) of the given range</summary>
 		public QuoteCurrency MaxCandleSize(NegIdx idx_min, NegIdx idx_max)
@@ -410,11 +436,11 @@ namespace Rylobot
 		}
 
 		/// <summary>A cached median candle size over the last 50 candles</summary>
-		public QuoteCurrency MedianCS_50
+		public QuoteCurrency MCS
 		{
-			get { return (m_median_cs ?? (m_median_cs = MedianCandleSize(IdxLast - 50, IdxLast))).Value; }
+			get { return (m_mcs ?? (m_mcs = MedianCandleSize(IdxLast - 50, IdxLast))).Value; }
 		}
-		private QuoteCurrency? m_median_cs;
+		private QuoteCurrency? m_mcs;
 
 		/// <summary>Return the median candle size (total length) of the given range</summary>
 		public QuoteCurrency MedianCandleSize(NegIdx idx_min, NegIdx idx_max)
@@ -453,6 +479,147 @@ namespace Rylobot
 			var A = this[index - 0];
 			var B = this[index - 1];
 			return Maths.Max(A.TotalLength, Math.Abs(A.High - B.Close), Math.Abs(A.Low - B.Close));
+		}
+
+		/// <summary>Return the average slope of all the EMAs over 'period_range'</summary>
+		public double EMASlope(NegIdx index, Range? period_range = null)
+		{
+			period_range = period_range ?? new Range(1, 101);
+
+			// Integrate the area under the graph of slope vs. EMA period.
+			var sum = 0.0;
+			foreach (var r in period_range.Value)
+			{
+				var ema = Bot.Indicators.ExponentialMovingAverage(Data.Close, (int)r);
+				var slope = ema.Result.FirstDerivative(index);
+				sum += slope;
+			}
+			return sum / period_range.Value.Size;
+		}
+
+		/// <summary>Return the combined EMA slope interpreted as a trend in the range [-1,+1]</summary>
+		public double EMATrend(NegIdx index, Range? period_range = null)
+		{
+			return MeasureTrend(EMASlope(index, period_range));
+		}
+
+		/// <summary>Return an appropriate stop loss, take profit, and volume for a trade at the given candle an entry price</summary>
+		public TradeExit ChooseTradeExit(TradeType tt, NegIdx idx, QuoteCurrency ep, double? risk = null)
+		{
+			var exit = new TradeExit { EP = ep, SL = ep, TP = ep, Volume = Symbol.VolumeMin };
+			var sign = tt.Sign();
+
+			// Get the support and resistance levels
+			var snr = new SnR(this, idx, ep);
+			Debugging.Dump(snr);
+
+			#region SL
+			{
+				// Start with a minimum of the MCS
+				var sl_rel = MCS;
+
+				// Scan backwards looking for a peak in the stop loss direction.
+				foreach (var candle in CandleRange(idx - Bot.Settings.LookBackCount, idx))
+				{
+					var limit = candle.WickLimit(-sign);
+					var diff = ep - limit;
+					if (Misc.Sign(diff) != sign) continue;
+					if (Misc.Abs(diff) < sl_rel) continue;
+					sl_rel = Misc.Abs(diff);
+				}
+
+				// Count the number of SnR levels between 'ep' and 'sl'.
+				// If there are two or more strong levels, reduce the SL to just beyond the 2nd level
+				var lvls = snr.SnRLevels
+					.Where(x => x.Strength > 0.5)                // strong
+					.Where(x => Misc.Sign(ep - x.Price) == sign) // on the SL side
+					.Where(x => Misc.Abs(ep - x.Price) < sl_rel) // between 'ep' and 'sl'
+					.OrderBy(x => x.Price)                       // sort by increasing price
+					.ToArray();
+				if (lvls.Length >= 2)
+				{
+					sl_rel = sign > 0
+						? Misc.Abs(ep - lvls[lvls.Length-2].Price)
+						: Misc.Abs(ep - lvls[1].Price);
+				}
+
+				//// 
+				//// In the case of strong trends this SL loss is too large, limit it to just past a strong SnR level
+				//var trend = MeasureTrend(idx);
+				//if (Math.Abs(trend) > 0.5)
+				//{
+				//	foreach (var lvl in snr.SnRLevels.Where(x => x.Strength > 0.5f))
+				//	{
+				//		var diff = (ep - lvl.Price) * 1.5f;
+				//		if (Misc.Sign(diff) != sign) continue;
+				//		if (Misc.Abs(diff) > sl_rel) continue;
+				//		sl_rel = Misc.Abs(diff);
+				//	}
+				//}
+
+				// For short trades, add the spread to the SL
+				sl_rel += (sign > 0 ? 0 : Spread);
+
+				// Add on a bit as a safety buffer
+				sl_rel *= 1.1f;
+
+				// Adjust the volume so that the risk is within the acceptable range.
+				// If the risk is too high reduce the volume first, down to the VolumeMin
+				// then reduce 'peak'. If the risk is low, increase volume to fit within 'risk'.
+				risk = risk ?? 1.0;
+				var balance_to_risk = Bot.Broker.BalanceToRisk * risk.Value;
+
+				// Find the account value risked at the current stop loss
+				var sl_acct = Symbol.QuoteToAcct(sl_rel);
+				var optimal_volume = balance_to_risk / sl_acct;
+
+				// If the risk is too high, reduce the stop loss
+				if (optimal_volume < Symbol.VolumeMin)
+				{
+					exit.Volume = Symbol.VolumeMin;
+					sl_rel = Symbol.AcctToQuote(balance_to_risk / exit.Volume);
+				}
+				// Otherwise, round down to the nearest volume multiple
+				else
+				{
+					exit.Volume = Symbol.NormalizeVolume(optimal_volume, RoundingMode.Down);
+				}
+
+				// Find the absolute price for the stop loss level
+				exit.SL = ep - sign * sl_rel;
+			}
+			#endregion
+			#region TP
+			{
+				// Start with a minimum of the MCS
+				var tp_rel = MCS;
+
+				// Look for a level on the profit side of the entry price
+				// If there are no levels, use a few typical candle sizes
+				var nearest = snr.Nearest(ep + sign * tp_rel, sign);
+				if (nearest != null)
+				{
+					tp_rel = Misc.Abs(nearest.Price - ep);
+				}
+				else
+				{
+					tp_rel = 2 * MCS;
+				}
+
+				// Find the absolute price for the take profit level
+				exit.TP = ep + sign * tp_rel;
+			}
+			#endregion
+
+			return exit;
+		}
+		[DebuggerDisplay("ep={EP} sl={SL} tp={TP}")]
+		public struct TradeExit
+		{
+			public QuoteCurrency EP;
+			public QuoteCurrency SL;
+			public QuoteCurrency TP;
+			public long Volume;
 		}
 
 		/// <summary>
@@ -534,7 +701,7 @@ namespace Rylobot
 		{
 			// If the slope is greater/less than MCS / N candles classify as a trend
 			var run = 20.0;
-			var rise = (double)MedianCS_50;
+			var rise = (double)MCS;
 			var threshold = rise / run;
 			var trend = Maths.Sigmoid(slope, threshold);
 			return trend;
@@ -560,7 +727,8 @@ namespace Rylobot
 			var candles = CandleRange(idx_min, idx_max).ToArray();
 			if (!candles.Any())
 				throw new Exception("Empty range, cannot create an equivalent candle");
-			
+
+			var index     = candles.First().Index;
 			var timestamp = candles.First().Timestamp;
 			var open      = candles.First().Open;
 			var high      = candles.Max(x => x.High);
@@ -570,12 +738,38 @@ namespace Rylobot
 			var median    = medians.NthElement(medians.Length/2);
 			var volume    = candles.Sum(x => x.Volume);
 			
-			return new Candle(timestamp, open, high, low, close, median, volume);
+			return new Candle(index, timestamp, open, high, low, close, median, volume);
+		}
+
+		/// <summary>Compare a candle to a price value, returning the ratio above or below the value. Returns positive for 'candle' above 'price'</summary>
+		public double Compare(Candle candle, QuoteCurrency price, bool wicks)
+		{
+			var hi = wicks ? candle.High : candle.BodyLimit(+1);
+			var lo = wicks ? candle.Low  : candle.BodyLimit(-1);
+			var above = Misc.Max(0, hi - price);
+			var below = Misc.Max(0, price - lo);
+			if (above == 0) return -1.0;
+			if (below == 0) return +1.0;
+			return (above - below) / (above + below);
+		}
+
+		/// <summary>Compare a candle to a trend line, returning the ratio above or below the line. Returns positive for 'candle' above 'trend'</summary>
+		public double Compare(Candle candle, Monic trend, bool wicks)
+		{
+			return Compare(candle, trend.F((double)(candle.Index + IdxFirst)), wicks);
+		}
+
+		/// <summary>Compare a candle to a moving average, returning the ratio above or below the line. Returns positive for 'candle' above 'ma'</summary>
+		public double Compare(Candle candle, MovingAverage ma, bool wicks)
+		{
+			return Compare(candle, ma.Result[candle.Index], wicks);
 		}
 
 		/// <summary>Types of candle patterns</summary>
 		public enum ECandlePattern
 		{
+			Stall1,
+			Stall2,
 			Reversal1,
 			Reversal2,
 			Reversal3,
@@ -602,219 +796,281 @@ namespace Rylobot
 			//  Trade entry should also consider general trend, SnR levels, etc
 
 			// Require at least 10 candles
-			if (idx - IdxFirst >= 10)
+			if (idx - IdxFirst < 10)
 			{
-				// 'A' is treated as the latest candle (potentially not closed).
-				// Typically we're looking for 'B' being a price reversal, with 'A' being confirmation.
-				// The function is intended to be called on every tick. If 'A' shows a strong trend direction
-				// count it as 'closed' for the purposes of candle pattern detection.
-				var mcs = MedianCS_50;
-				var age = AgeOf(this[idx], clamped:true);
-				var typ = this[idx].Type(mcs);
-
-				// If the current candle is not old enough, or does not indicate a clear trend, ignore it.
-				if (NewCandle || age < 0.9f || !typ.IsTrend())
-					--idx;
-
-				// Get the last few candles.
-				var last = idx+1;
-				var a_idx = idx-0; var A = this[a_idx]; var a_type = A.Type(mcs);
-				var b_idx = idx-1; var B = this[b_idx]; var b_type = B.Type(mcs);
-				var c_idx = idx-2; var C = this[c_idx]; var c_type = C.Type(mcs);
-				var d_idx = idx-3; var D = this[d_idx]; var d_type = D.Type(mcs);
-				var AB = Compress(b_idx,last); var ab_type = AB.Type(mcs);
-				var AC = Compress(c_idx,last); var ac_type = AC.Type(mcs);
-
-				// Get SnR data
-				var snr = new SnR(this, idx, A.Close);
-
-				// The minimum number of candles to use to determine trend
-				const int MeasureTrendCount = 3;
-
-				// Strong trend, Indecision, followed by strong reverse trend
-				#region Reversal
-				{
-					// Determine if the candle at 'indecision_idx' is a reversal pattern
-					Func<NegIdx,bool> IsReversal = (indecision_idx) =>
-					{
-						// A hammer, spinning top, or doji
-						var indecision_candle = this[indecision_idx];
-						if (!indecision_candle.Type(mcs).IsIndecision())
-							return false;
-
-						// Create the trend candle by compressing from 'indecision_idx' to 'last'
-						var trend_candle = Compress(indecision_idx, last);
-						if (!CandleRange(indecision_idx, last).AllSame(x => x.Sign))
-							return false;
-
-						// The trend candle is in the opposite direction to the preceding trend and the preceding candle trend is significant.
-						var preceding_trend = MeasureTrend(indecision_idx - MeasureTrendCount, indecision_idx);
-						if (trend_candle.Sign == Math.Sign(preceding_trend) || Math.Abs(preceding_trend) < 0.5)
-							return false;
-				
-						//var underlying_trend = MeasureTrend(indecision_idx - 1);
-						// Or, the underlying trend is in the same direction as A and is significant
-						//||(A.Sign == Math.Sign(underlying_trend) && Math.Abs(underlying_trend) > 0.5);
-
-						// Require the trend candle to not be weakening
-						if (trend_candle.Weakening)
-							return false;
-
-						// 'trend_candle' is a trend sign or 'trend_candle' is a strong candle that has grown significantly beyond the wick of 'indecision_candle'
-						var trend_candle_type = trend_candle.Type(mcs);
-						if (trend_candle_type != Candle.EType.Marubozu &&
-							trend_candle_type != Candle.EType.MarubozuStrengthening &&
-							(
-								trend_candle.Strength < 0.5 ||
-								Math.Abs(trend_candle.Close - indecision_candle.BodyCentre) < 1.2*Math.Abs(indecision_candle.WickLimit(trend_candle.Sign) - indecision_candle.BodyCentre)
-							))
-							return false;
-
-						// The indecision is near a strong SnR level
-						var lvl = snr.Nearest(indecision_candle.Close, sign:0, radius:0.5*mcs);
-						if (lvl == null)
-							return false;
-
-						return true;
-					};
-
-					if (IsReversal(b_idx))
-					{
-						tt = CAlgo.SignToTradeType(A.Sign);
-						range = new Range((int)b_idx, (int)last);
-						index = b_idx;
-						ep = A.Open + A.Sign * 0.10 * A.BodyLength;
-						tp = null;
-						return ECandlePattern.Reversal1;
-					}
-					if (IsReversal(c_idx))
-					{
-						tt = CAlgo.SignToTradeType(A.Sign);
-						range = new Range((int)c_idx, (int)last);
-						index = c_idx;
-						ep = AB.Open + AB.Sign * 0.10 * AB.BodyLength;
-						tp = null;
-						return ECandlePattern.Reversal2;
-					}
-					if (IsReversal(d_idx))
-					{
-						tt = CAlgo.SignToTradeType(A.Sign);
-						range = new Range((int)d_idx, (int)last);
-						index = d_idx;
-						ep = AC.Open + AC.Sign * 0.10 * AC.BodyLength;
-						tp = null;
-						return ECandlePattern.Reversal3;
-					}
-				}
-				#endregion
-
-				// Engulfing pattern
-				#region Engulfing
-				{
-					Func<NegIdx,bool> IsEngulfing = (engulfed_idx) =>
-					{
-						var engulfed_candle = this[engulfed_idx];
-
-						// Create the trend candle by compressing from 'engulf_idx' to 'last'
-						var trend_candle = Compress(engulfed_idx+1, last);
-						if (!CandleRange(engulfed_idx+1, last).AllSame(x => x.Sign))
-							return false;
-
-						// 'trend_candle' must have the opposite direction to 'engulfed_candle'
-						if (engulfed_candle.Sign == trend_candle.Sign)
-							return false;
-
-						// Both candles need to be a reasonable size
-						if (engulfed_candle.Type(mcs).IsIndecision() || trend_candle.Strength < 0.7 || trend_candle.BodyLength < 0.5*mcs)
-							return false;
-
-						// 'trend_candle' is bigger than 'engulfed_candle'
-						const double EngulfingRatio = 1.2;
-						if (trend_candle.BodyLength < EngulfingRatio * engulfed_candle.BodyLength)
-							return false;
-
-						// 'trend_candle' is not itself engulfed by any of the previous few candles
-						if (CandleRange(engulfed_idx-3, engulfed_idx+1).Any(c => c.BodyLength > EngulfingRatio * trend_candle.BodyLength))
-							return false;
-
-						// 'trend_candle.Open' must be fairly close to 'engulfed_candle.Close'
-						if (Math.Abs(trend_candle.Open - engulfed_candle.Close) > 0.1 * mcs)
-							return false;
-
-						// 'trend_candle' is in the opposite direction to the preceding trend and the preceding trend is strong
-						var preceding_trend = MeasureTrend(engulfed_idx - MeasureTrendCount, engulfed_idx+1);
-						if (trend_candle.Sign == Math.Sign(preceding_trend) || Math.Abs(preceding_trend) < 0.5)
-							return false;
-
-						// Or, the underlying trend is in the same direction as AB and is significant
-						//var underlying_trend = MeasureTrend(b_idx);
-						//||(AB.Sign == Math.Sign(underlying_trend) && Math.Abs(underlying_trend) > 0.5);
-
-						return true;
-					};
-
-					if (IsEngulfing(b_idx))
-					{
-						tt = CAlgo.SignToTradeType(A.Sign);
-						range = new Range((int)b_idx, (int)last);
-						index = a_idx;
-						ep = A.Open + A.Sign * 0.8 * A.BodyLength;
-						tp = null;
-						return ECandlePattern.Engulfing1;
-					}
-					if (IsEngulfing(c_idx))
-					{
-						tt = CAlgo.SignToTradeType(A.Sign);
-						range = new Range((int)c_idx, (int)last);
-						index = b_idx;
-						ep = AB.Open + AB.Sign * 0.8 * AB.BodyLength;
-						tp = null;
-						return ECandlePattern.Engulfing2;
-					}
-				}
-				#endregion
-
-				// Large price spike
-				#region Price Spike
-				{
-					Func<NegIdx,bool> IsSpike = (spike_idx) =>
-					{
-						var spike_candle = this[spike_idx];
-
-						// 'spike_candle' is a huge spike
-						if (spike_candle.TotalLength < 6 * mcs)
-							return false;
-
-						// Create the candle after the spike
-						var trend_candle = Compress(spike_idx+1, last);
-						if (!CandleRange(spike_idx+1, last).AllSame(x => x.Sign))
-							return false;
-
-						// 'trend_candle' has not exceeded the spike of 'spike_candle'
-						if ((spike_candle.Sign > 0 && trend_candle.High > spike_candle.High) ||
-							(spike_candle.Sign < 0 && trend_candle.Low  < spike_candle.Low))
-							return false;
-
-						// The current price is still near the limit of the spike
-						if ((spike_candle.Sign > 0 && trend_candle.Close < spike_candle.High - 0.33 * spike_candle.TotalLength) ||
-							(spike_candle.Sign < 0 && trend_candle.Close > spike_candle.Low  + 0.33 * spike_candle.TotalLength))
-							return false;
-
-						return true;
-					};
-
-					if (IsSpike(b_idx))
-					{
-						tt = CAlgo.SignToTradeType(-B.Sign);
-						range = new Range((int)c_idx, (int)last);
-						index = a_idx;
-						ep = A.Close;
-						tp = B.Open + B.Sign * 0.5 * B.BodyLength;
-						return ECandlePattern.Spike;
-					}
-				}
-				#endregion
+				tt = TradeType.Buy;
+				range = new Range((int)idx, (int)idx);
+				index = idx;
+				ep = null;
+				tp = null;
+				return null;
 			}
+
+			// 'A' is treated as the latest candle (potentially not closed).
+			// Typically we're looking for 'B' being a price reversal, with 'A' being confirmation.
+			// The function is intended to be called on every tick. If 'A' shows a strong trend direction
+			// count it as 'closed' for the purposes of candle pattern detection.
+			var mcs = MCS;
+			var age = AgeOf(this[idx], clamped:true);
+			var typ = this[idx].Type(mcs);
+
+			// If the current candle is not old enough, or does not indicate a clear trend, ignore it.
+			if (NewCandle || age < 0.9f || !typ.IsTrend())
+				--idx;
+
+			// Get the last few candles.
+			var last = idx+1;
+			var a_idx = idx-0; var A = this[a_idx]; var a_type = A.Type(mcs);
+			var b_idx = idx-1; var B = this[b_idx]; var b_type = B.Type(mcs);
+			var c_idx = idx-2; var C = this[c_idx]; var c_type = C.Type(mcs);
+			var d_idx = idx-3; var D = this[d_idx]; var d_type = D.Type(mcs);
+			var AB = Compress(b_idx,last); var ab_type = AB.Type(mcs);
+			var AC = Compress(c_idx,last); var ac_type = AC.Type(mcs);
+
+			// Get SnR data
+			var snr = new SnR(this, idx, A.Close);
+
+			// The minimum number of candles to use to determine trend
+			const int MeasureTrendCount = 3;
+
+			// Forex4Noobs trigger
+			#region Forex4Noobs
+			{
+				var trade_type = (TradeType?)null;
+				Func<NegIdx,bool> IsStall = (indecision_idx) =>
+				{
+					// Indecision
+					var indecision_candle = this[indecision_idx];
+					if (!indecision_candle.Type(mcs).IsIndecision())
+						return false;
+
+					// Create the trend candle by compressing from 'indecision_idx' to 'last'
+					var trend_candle = Compress(indecision_idx, last);
+					if (!CandleRange(indecision_idx, last).AllSame(x => x.Sign))
+						return false;
+
+					// There is a significant preceding trend
+					var preceding_trend = MeasureTrend(indecision_idx - MeasureTrendCount, indecision_idx);
+					if (Math.Abs(preceding_trend) < 0.5)
+						return false;
+
+					// The trend candle has the opposite direction to the preceding trend
+					if (!trend_candle.Type(mcs).IsIndecision() && trend_candle.Sign == Math.Sign(preceding_trend))
+						return false;
+
+					// The stall has occurred on a significant SnR level
+					var lvl = snr.Nearest(indecision_candle.Close, 0, radius:0.5*mcs);
+					if (lvl == null)
+						return false;
+
+					trade_type = CAlgo.SignToTradeType(-Math.Sign(preceding_trend));
+					return true;
+				};
+
+				if (IsStall(b_idx))
+				{
+					tt = trade_type.Value;//CAlgo.SignToTradeType(A.Sign);
+					range = new Range((int)c_idx, (int)last);
+					index = b_idx;
+					ep = B.Median;// A.Open + A.Sign * 0.10 * A.BodyLength;
+					tp = null;
+					return ECandlePattern.Stall1;
+				}
+				if (IsStall(c_idx))
+				{
+					tt = trade_type.Value;//CAlgo.SignToTradeType(A.Sign);
+					range = new Range((int)d_idx, (int)last);
+					index = c_idx;
+					ep = C.Median;//A.Open + A.Sign * 0.10 * A.BodyLength;
+					tp = null;
+					return ECandlePattern.Stall2;
+				}
+			}
+			#endregion
+
+			// Strong trend, Indecision, followed by strong reverse trend
+			#region Reversal
+			{
+				// Determine if the candle at 'indecision_idx' is a reversal pattern
+				Func<NegIdx,bool> IsReversal = (indecision_idx) =>
+				{
+					// A hammer, spinning top, or doji
+					var indecision_candle = this[indecision_idx];
+					if (!indecision_candle.Type(mcs).IsIndecision())
+						return false;
+
+					// Create the trend candle by compressing from 'indecision_idx' to 'last'
+					var trend_candle = Compress(indecision_idx, last);
+					if (!CandleRange(indecision_idx, last).AllSame(x => x.Sign))
+						return false;
+
+					// The trend candle is in the opposite direction to the preceding trend and the preceding candle trend is significant.
+					var preceding_trend = MeasureTrend(indecision_idx - MeasureTrendCount, indecision_idx);
+					if (trend_candle.Sign == Math.Sign(preceding_trend) || Math.Abs(preceding_trend) < 0.5)
+						return false;
+				
+					//var underlying_trend = MeasureTrend(indecision_idx - 1);
+					// Or, the underlying trend is in the same direction as A and is significant
+					//||(A.Sign == Math.Sign(underlying_trend) && Math.Abs(underlying_trend) > 0.5);
+
+					// Require the trend candle to not be weakening
+					if (trend_candle.Weakening)
+						return false;
+
+					// 'trend_candle' is a trend sign or 'trend_candle' is a strong candle that has grown significantly beyond the wick of 'indecision_candle'
+					var trend_candle_type = trend_candle.Type(mcs);
+					if (trend_candle_type != Candle.EType.Marubozu &&
+						trend_candle_type != Candle.EType.MarubozuStrengthening &&
+						(
+							trend_candle.Strength < 0.5 ||
+							Math.Abs(trend_candle.Close - indecision_candle.BodyCentre) < 1.2*Math.Abs(indecision_candle.WickLimit(trend_candle.Sign) - indecision_candle.BodyCentre)
+						))
+						return false;
+
+					// The indecision is near a strong SnR level
+					var lvl = snr.Nearest(indecision_candle.Close, sign:0, radius:0.5*mcs);
+					if (lvl == null)
+						return false;
+
+					return true;
+				};
+
+				if (IsReversal(b_idx))
+				{
+					tt = CAlgo.SignToTradeType(A.Sign);
+					range = new Range((int)b_idx, (int)last);
+					index = b_idx;
+					ep = A.Open + A.Sign * 0.10 * A.BodyLength;
+					tp = null;
+					return ECandlePattern.Reversal1;
+				}
+				if (IsReversal(c_idx))
+				{
+					tt = CAlgo.SignToTradeType(A.Sign);
+					range = new Range((int)c_idx, (int)last);
+					index = c_idx;
+					ep = AB.Open + AB.Sign * 0.10 * AB.BodyLength;
+					tp = null;
+					return ECandlePattern.Reversal2;
+				}
+				if (IsReversal(d_idx))
+				{
+					tt = CAlgo.SignToTradeType(A.Sign);
+					range = new Range((int)d_idx, (int)last);
+					index = d_idx;
+					ep = AC.Open + AC.Sign * 0.10 * AC.BodyLength;
+					tp = null;
+					return ECandlePattern.Reversal3;
+				}
+			}
+			#endregion
+
+			// Engulfing pattern
+			#region Engulfing
+			{
+				Func<NegIdx,bool> IsEngulfing = (engulfed_idx) =>
+				{
+					var engulfed_candle = this[engulfed_idx];
+
+					// Create the trend candle by compressing from 'engulf_idx' to 'last'
+					var trend_candle = Compress(engulfed_idx+1, last);
+					if (!CandleRange(engulfed_idx+1, last).AllSame(x => x.Sign))
+						return false;
+
+					// 'trend_candle' must have the opposite direction to 'engulfed_candle'
+					if (engulfed_candle.Sign == trend_candle.Sign)
+						return false;
+
+					// Both candles need to be a reasonable size
+					if (engulfed_candle.Type(mcs).IsIndecision() || trend_candle.Strength < 0.7 || trend_candle.BodyLength < 0.5*mcs)
+						return false;
+
+					// 'trend_candle' is bigger than 'engulfed_candle'
+					const double EngulfingRatio = 1.2;
+					if (trend_candle.BodyLength < EngulfingRatio * engulfed_candle.BodyLength)
+						return false;
+
+					// 'trend_candle' is not itself engulfed by any of the previous few candles
+					if (CandleRange(engulfed_idx-3, engulfed_idx+1).Any(c => c.BodyLength > EngulfingRatio * trend_candle.BodyLength))
+						return false;
+
+					// 'trend_candle.Open' must be fairly close to 'engulfed_candle.Close'
+					if (Math.Abs(trend_candle.Open - engulfed_candle.Close) > 0.1 * mcs)
+						return false;
+
+					// 'trend_candle' is in the opposite direction to the preceding trend and the preceding trend is strong
+					var preceding_trend = MeasureTrend(engulfed_idx - MeasureTrendCount, engulfed_idx+1);
+					if (trend_candle.Sign == Math.Sign(preceding_trend) || Math.Abs(preceding_trend) < 0.5)
+						return false;
+
+					// Or, the underlying trend is in the same direction as AB and is significant
+					//var underlying_trend = MeasureTrend(b_idx);
+					//||(AB.Sign == Math.Sign(underlying_trend) && Math.Abs(underlying_trend) > 0.5);
+
+					return true;
+				};
+
+				if (IsEngulfing(b_idx))
+				{
+					tt = CAlgo.SignToTradeType(A.Sign);
+					range = new Range((int)b_idx, (int)last);
+					index = a_idx;
+					ep = A.Open + A.Sign * 0.8 * A.BodyLength;
+					tp = null;
+					return ECandlePattern.Engulfing1;
+				}
+				if (IsEngulfing(c_idx))
+				{
+					tt = CAlgo.SignToTradeType(A.Sign);
+					range = new Range((int)c_idx, (int)last);
+					index = b_idx;
+					ep = AB.Open + AB.Sign * 0.8 * AB.BodyLength;
+					tp = null;
+					return ECandlePattern.Engulfing2;
+				}
+			}
+			#endregion
+
+			// Large price spike
+			#region Price Spike
+			{
+				Func<NegIdx,bool> IsSpike = (spike_idx) =>
+				{
+					var spike_candle = this[spike_idx];
+
+					// 'spike_candle' is a huge spike
+					if (spike_candle.TotalLength < 6 * mcs)
+						return false;
+
+					// Create the candle after the spike
+					var trend_candle = Compress(spike_idx+1, last);
+					if (!CandleRange(spike_idx+1, last).AllSame(x => x.Sign))
+						return false;
+
+					// 'trend_candle' has not exceeded the spike of 'spike_candle'
+					if ((spike_candle.Sign > 0 && trend_candle.High > spike_candle.High) ||
+						(spike_candle.Sign < 0 && trend_candle.Low  < spike_candle.Low))
+						return false;
+
+					// The current price is still near the limit of the spike
+					if ((spike_candle.Sign > 0 && trend_candle.Close < spike_candle.High - 0.33 * spike_candle.TotalLength) ||
+						(spike_candle.Sign < 0 && trend_candle.Close > spike_candle.Low  + 0.33 * spike_candle.TotalLength))
+						return false;
+
+					return true;
+				};
+
+				if (IsSpike(b_idx))
+				{
+					tt = CAlgo.SignToTradeType(-B.Sign);
+					range = new Range((int)c_idx, (int)last);
+					index = a_idx;
+					ep = A.Close;
+					tp = B.Open + B.Sign * 0.5 * B.BodyLength;
+					return ECandlePattern.Spike;
+				}
+			}
+			#endregion
 
 			// No pattern found
 			tt = TradeType.Buy;
@@ -825,11 +1081,108 @@ namespace Rylobot
 			return null;
 		}
 
+		/// <summary>Types of patterns found using 'PricePeaks'</summary>
+		public enum EPeakPattern
+		{
+			BreakOutHigh,
+			BreakOutLow,
+			HighReversal,
+			LowReversal,
+		}
+
+		/// <summary>Look for patterns in the price peaks</summary>
+		public EPeakPattern? IsPeakPattern(NegIdx idx, out TradeType tt, out QuoteCurrency ep)
+		{
+			var pp = new PricePeaks(this, idx+1);
+
+			// If a break out is detected, create a trade now
+			if (pp.IsBreakOutHigh)
+			{
+				tt = TradeType.Buy;
+				ep = LatestPrice.Ask;
+				return EPeakPattern.BreakOutHigh;
+			}
+			if (pp.IsBreakOutLow)
+			{
+				tt = TradeType.Sell;
+				ep = LatestPrice.Bid;
+				return EPeakPattern.BreakOutLow;
+			}
+
+			// If a significant trend is detected, look for a reversal at the trend line
+			if (pp.Strength > 0.5)
+			{
+				Func<NegIdx,bool,bool> IsReversal = (rev_idx,high) =>
+				{
+					var A = this[rev_idx    ];
+					var B = this[rev_idx - 1];
+					var sign = high ? +1 : -1;
+
+					// No trend line? no reversal
+					var trend = high ? pp.TrendHigh : pp.TrendLow;
+					if (trend == null)
+						return false;
+
+					// Don't trade against the trend
+					if (pp.Sign != 0 && pp.Sign == sign)
+						return false;
+
+					// Look for candle patterns that indicate a reversal at the trend line
+					var trend_price = trend.F((double)rev_idx);
+
+					// Look for B.Close within 0.5*MCS of the trend line (on the non-break-out side) or B.Wick within 0.1 * MCS of trend line
+					var dist = sign * (trend_price - B.Close);
+					if (!dist.Within(0.0, 0.5*(double)MCS) &&
+						Math.Abs(trend_price - B.WickLimit(sign)) >= 0.1*MCS)
+						return false;
+
+					// 'A' should not be an indecision candle, we want to see price reversing
+					if (A.Type(MCS).IsIndecision() || A.Sign == sign)
+						return false;
+
+					// 'A' must be mostly on the non-break-out side of the trend line
+					var ratio = Compare(A, trend, false);
+					if (Math.Abs(ratio) < 0.75 || Math.Sign(ratio) == sign)
+						return false;
+
+					// If any part of A or B is more than 0.5*MCS on the break-out side of the trend line, then abort
+					if (sign * (A.WickLimit(sign) - trend_price) > 0.5*MCS ||
+						sign * (B.WickLimit(sign) - trend_price) > 0.5*MCS)
+						return false;
+
+					return true;
+				};
+
+				if (IsReversal(idx, true))
+				{
+					tt = TradeType.Sell;
+					ep = pp.TrendHigh.F((double)idx) - Spread;
+					return EPeakPattern.HighReversal;
+				}
+				if (IsReversal(idx, false))
+				{
+					tt = TradeType.Buy;
+					ep = pp.TrendLow.F((double)idx) + Spread;
+					return EPeakPattern.LowReversal;
+				}
+			}
+
+			// No pattern detected
+			tt = TradeType.Buy;
+			ep = 0.0;
+			return null;
+		}
+
 		/// <summary>Returns a trade type when a likely good trade is identified. Or null</summary>
 		public TradeType? FindTradeEntry(out QuoteCurrency? ep, out QuoteCurrency? tp, NegIdx? idx_ = null)
 		{
 			// Where in the instrument to look
 			var idx = idx_ ?? 0;
+
+			// If Peak.Trend is strong, look for trades when price is at a peak
+			// Debug. Forex4NOobs pattern.. it's still waiting for the next candle
+			// Pattern Spike: enter when the spike has a clear weakening sign, e.g. wick in spike direction > 20%
+
 
 			// Look for a candle pattern to start the entry point consideration
 			Range range;
@@ -849,23 +1202,23 @@ namespace Rylobot
 			LastTradeEntryRange = new Range(range.Beg - (long)IdxFirst, range.End - (long)IdxFirst);
 			LastTradeEntryResult = null;
 
-			// Show the instrument
-			Debugging.LogInstrument();
-			Debugging.CandlePattern(range.Begi,range.Endi);
-			Debugging.Trace("\nCandle Pattern: --- {0} --- ({1})".Fmt(trade_type, pattern.Value));
-
 			var candle = this[idx];
 			var vote = 0.0;
+
+			// Show the debugging data
+			Debugging.LogInstrument();
+			Debugging.CandlePattern(range.Begi,range.Endi);
+			Debugging.Dump(new SnR(this, idx, candle.Close));
+			Debugging.Trace("\nCandle Pattern: --- {0} --- ({1})".Fmt(trade_type, pattern.Value));
 
 			// Check the price peaks
 			#region Price Peak
 			{
 				var pp = new PricePeaks(this, 0);
-				var pp_trend = pp.Trend;
 				Debugging.Dump(pp);
 
 				// Vote based on agreement with trend direction
-				var v = trade_type.Sign() * pp_trend;
+				var v = trade_type.Sign() * pp.Strength;
 				Debugging.Trace("PP Trend (vote = {0})".Fmt(v));
 				vote += v;
 

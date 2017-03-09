@@ -442,8 +442,8 @@ namespace pr.unittests
 				var I0 = inv_m * m;
 				var I1 = m * inv_m;
 
-				Assert.True(m3x4.FEql(I0, m3x4.Identity));
-				Assert.True(m3x4.FEql(I1, m3x4.Identity));
+				Assert.True(m3x4.FEql(I0, m3x4.Identity, 0.001f));
+				Assert.True(m3x4.FEql(I1, m3x4.Identity, 0.001f));
 			}{
 				var m = new m3x4(
 					new v4(0.25f, 0.5f, 1.0f, 0.0f),

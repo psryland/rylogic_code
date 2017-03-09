@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
-#ifndef PR_RDR_MODELS_MODEL_MANAGER_H
-#define PR_RDR_MODELS_MODEL_MANAGER_H
 
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/util/allocator.h"
@@ -24,8 +22,8 @@ namespace pr
 			AllocationsTracker<ModelBuffer> m_dbg_mem_mdlbuf;
 			AllocationsTracker<Model>       m_dbg_mem_mdl;
 			AllocationsTracker<Nugget>      m_dbg_mem_nugget;
-			D3DPtr<ID3D11Device>   m_device;
-			std::recursive_mutex   m_mutex;
+			D3DPtr<ID3D11Device>            m_device;
+			std::recursive_mutex            m_mutex;
 
 			// Delete methods that models/model buffers call to clean themselves up
 			friend struct ModelBuffer;
@@ -64,5 +62,3 @@ namespace pr
 		};
 	}
 }
-
-#endif

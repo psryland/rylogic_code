@@ -12,11 +12,14 @@ namespace pr.maths
 {
 	public interface IStatMean
 	{
-		/// <summary>The mean value</summary>
-		double Mean { get; }
-
 		/// <summary>The sum of the values added</summary>
 		int Count { get; }
+
+		/// <summary>The sum of values added</summary>
+		double Sum { get; }
+
+		/// <summary>The mean value</summary>
+		double Mean { get; }
 	}
 	public interface IStatVariance
 	{
@@ -35,7 +38,7 @@ namespace pr.maths
 	public interface IStatSingleVariable
 	{
 		/// <summary>Add a single value to the stat</summary>
-		void Add(double value);
+		IStatSingleVariable Add(double value);
 	}
 	public interface IStatTwoVariables
 	{
@@ -43,9 +46,9 @@ namespace pr.maths
 		void Add(double x, double y);
 	}
 
-	/// <summary>Running Average</summary>
+	/// <summary>Simple Running Average</summary>
 	[DebuggerDisplay("{Mean} N={Count}")]
-	public class Avr :IStatMean ,IStatSingleVariable
+	public class Avr<T> :IStatMean ,IStatSingleVariable where T:Avr<T>
 	{
 		//' let: D(k) = X(k) - avr(k-1)           => X(k) = D(k) + avr(k-1)
 		//'  avr(k-1) = SUM{X(k-1)} / (k-1)       => SUM{X(k-1)} = (k-1)*avr(k-1)
@@ -67,7 +70,7 @@ namespace pr.maths
 			m_mean  = mean;
 			m_count = count;
 		}
-		public Avr(Avr rhs)
+		public Avr(Avr<T> rhs)
 		{
 			m_mean = rhs.m_mean;
 			m_count = rhs.m_count;
@@ -79,16 +82,16 @@ namespace pr.maths
 			get { return m_count; }
 		}
 
-		/// <summary>Mean value</summary>
-		public double Mean
-		{
-			get { return m_mean; }
-		}
-
 		/// <summary>Sum of values</summary>
 		public double Sum
 		{
 			get { return m_mean * m_count; }
+		}
+
+		/// <summary>Mean value</summary>
+		public double Mean
+		{
+			get { return m_mean; }
 		}
 
 		/// <summary>Reset the stats</summary>
@@ -97,11 +100,20 @@ namespace pr.maths
 			m_count = 0;
 			m_mean  = 0.0;
 		}
-		
+
 		/// <summary>
 		/// Accumulate statistics for 'value' in a single pass.
 		/// Note, this method is more accurate than the sum of squares, square of sums approach.</summary>
-		public virtual void Add(double value)
+		public T Add(double value)
+		{
+			AddInternal(value);
+			return (T)this;
+		}
+		IStatSingleVariable IStatSingleVariable.Add(double value)
+		{
+			return Add(value);
+		}
+		protected virtual void AddInternal(double value)
 		{
 			++m_count;
 			var diff = value - m_mean;
@@ -119,10 +131,22 @@ namespace pr.maths
 			return mean + (value - mean) / (1 + count);
 		}
 	}
+	public class Avr :Avr<Avr>
+	{
+		public Avr()
+			:base()
+		{}
+		public Avr(double mean, int count)
+			:base(mean, count)
+		{}
+		public Avr(Avr rhs)
+			:base(rhs)
+		{}
+	}
 
 	/// <summary>Running Average with standard deviation and variance</summary>
 	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
-	public class AvrVar :Avr ,IStatMean ,IStatVariance ,IStatSingleVariable
+	public class AvrVar<T> :Avr<T> ,IStatMean ,IStatVariance ,IStatSingleVariable where T:AvrVar<T>
 	{
 		//' let: D(k) = X(k) - avr(k-1)           => X(k) = D(k) + avr(k-1)
 		//'  avr(k-1) = SUM{X(k-1)} / (k-1)       => SUM{X(k-1)} = (k-1)*avr(k-1)
@@ -163,7 +187,7 @@ namespace pr.maths
 		{
 			m_var = var;
 		}
-		public AvrVar(AvrVar rhs)
+		public AvrVar(AvrVar<T> rhs)
 			:base(rhs)
 		{
 			m_var = rhs.m_var;
@@ -203,7 +227,7 @@ namespace pr.maths
 		/// <summary>
 		/// Accumulate statistics for 'value' in a single pass.
 		/// Note, this method is more accurate than the sum of squares, square of sums approach.</summary>
-		public override void Add(double value)
+		protected override void AddInternal(double value)
 		{
 			++m_count;
 			var diff = value - m_mean;
@@ -212,10 +236,22 @@ namespace pr.maths
 			m_var += diff * diff * ((m_count - 1) * inv_count);
 		}
 	}
+	public class AvrVar :AvrVar<AvrVar>
+	{
+		public AvrVar()
+			:base()
+		{}
+		public AvrVar(double mean, double var, int count)
+			:base(mean, var, count)
+		{}
+		public AvrVar(AvrVar rhs)
+			:base(rhs)
+		{}
+	}
 
 	/// <summary>Running average with standard deviation and min/max range</summary>
 	[DebuggerDisplay("{Mean ({PopStdDev}) N={Count} R=[{Min},{Max}]")]
-	public class AvrVarMinMax :AvrVar ,IStatMean ,IStatVariance ,IStatSingleVariable
+	public class AvrVarMinMax<T> :AvrVar<T> ,IStatMean ,IStatVariance ,IStatSingleVariable where T:AvrVarMinMax<T>
 	{
 		protected double m_min;
 		protected double m_max;
@@ -232,7 +268,7 @@ namespace pr.maths
 			m_min = min;
 			m_max = max;
 		}
-		public AvrVarMinMax(AvrVarMinMax rhs)
+		public AvrVarMinMax(AvrVarMinMax<T> rhs)
 			:base(rhs)
 		{
 			m_min = rhs.m_min;
@@ -280,17 +316,29 @@ namespace pr.maths
 		}
 
 		/// <summary>Add a single value to the stat</summary>
-		public override void Add(double value)
+		protected override void AddInternal(double value)
 		{
 			if (value > m_max) m_max = value;
 			if (value < m_min) m_min = value;
-			base.Add(value);
+			base.AddInternal(value);
 		}
+	}
+	public class AvrVarMinMax :AvrVarMinMax<AvrVarMinMax>
+	{
+		public AvrVarMinMax()
+			:base()
+		{}
+		public AvrVarMinMax(double mean, double var, int count, double min, double max)
+			:base(mean, var, count, min, max)
+		{}
+		public AvrVarMinMax(AvrVarMinMax rhs)
+			:base(rhs)
+		{}
 	}
 
 	/// <summary>Exponential Moving Average</summary>
 	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
-	public class ExpMovingAvr :IStatMean ,IStatVariance ,IStatSingleVariable
+	public class ExpMovingAvr<T> :IStatMean ,IStatVariance ,IStatSingleVariable where T:ExpMovingAvr<T>
 	{
 		//'  avr(k) = a * X(k) + (1 - a) * avr(k-1)
 		//'         = a * X(k) + avr(k-1) - a * avr(k-1)
@@ -340,7 +388,7 @@ namespace pr.maths
 		{
 			Reset(window_size);
 		}
-		public ExpMovingAvr(ExpMovingAvr rhs)
+		public ExpMovingAvr(ExpMovingAvr<T> rhs)
 		{
 			m_mean  = rhs.m_mean;
 			m_var   = rhs.m_var;
@@ -358,6 +406,12 @@ namespace pr.maths
 		public int Count
 		{
 			get { return m_count; }
+		}
+
+		/// <summary>Sum of values</summary>
+		public double Sum
+		{
+			get { return m_mean * m_count; }
 		}
 
 		/// <summary>The average</summary>
@@ -397,7 +451,16 @@ namespace pr.maths
 		}
 
 		/// <summary>Add a value to the moving average</summary>
-		public virtual void Add(double value)
+		public T Add(double value)
+		{
+			AddInternal(value);
+			return (T)this;
+		}
+		IStatSingleVariable IStatSingleVariable.Add(double value)
+		{
+			return Add(value);
+		}
+		protected virtual void AddInternal(double value)
 		{
 			if (m_count >= m_size)
 			{
@@ -418,10 +481,22 @@ namespace pr.maths
 			}
 		}
 	}
+	public class ExpMovingAvr :ExpMovingAvr<ExpMovingAvr>
+	{
+		public ExpMovingAvr()
+			:base()
+		{}
+		public ExpMovingAvr(int window_size)
+			:base(window_size)
+		{}
+		public ExpMovingAvr(ExpMovingAvr rhs)
+			:base(rhs)
+		{}
+	}
 
 	/// <summary>Exponential Moving Average and min/max</summary>
 	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count} R=[{Min},{Max}]")]
-	public class ExpMovingAvrMinMax :ExpMovingAvr
+	public class ExpMovingAvrMinMax<T> :ExpMovingAvr<T> where T:ExpMovingAvrMinMax<T>
 	{
 		protected double m_min;
 		protected double m_max;
@@ -435,7 +510,7 @@ namespace pr.maths
 			m_min = min;
 			m_max = max;
 		}
-		public ExpMovingAvrMinMax(ExpMovingAvrMinMax rhs)
+		public ExpMovingAvrMinMax(ExpMovingAvrMinMax<T> rhs)
 			:base(rhs)
 		{
 			m_min = rhs.m_min;
@@ -483,12 +558,24 @@ namespace pr.maths
 		}
 
 		/// <summary>Add a single value to the stat</summary>
-		public override void Add(double value)
+		protected override void AddInternal(double value)
 		{
 			if (value > m_max) m_max = value;
 			if (value < m_min) m_min = value;
-			base.Add(value);
+			base.AddInternal(value);
 		}
+	}
+	public class ExpMovingAvrMinMax :ExpMovingAvrMinMax<ExpMovingAvrMinMax>
+	{
+		public ExpMovingAvrMinMax()
+			:base()
+		{}
+		public ExpMovingAvrMinMax(int window_size, double min = double.MaxValue, double max = double.MinValue)
+			:base(window_size, min, max)
+		{}
+		public ExpMovingAvrMinMax(ExpMovingAvrMinMax rhs)
+			:base(rhs)
+		{}
 	}
 
 	/// <summary>Running average of two variables with standard deviation, variance, and correlation coefficient</summary>
@@ -683,12 +770,19 @@ namespace pr.maths
 			get { return m_count; }
 		}
 
+		/// <summary>Sum of values</summary>
+		public double Sum
+		{
+			get { return m_mean * m_count; }
+		}
+
 		/// <summary>The average</summary>
 		public double Mean
 		{
 			get { return m_mean; }
 		}
 
+		/// <summary>Variance</summary>
 		private double Var
 		{
 			get
@@ -733,7 +827,7 @@ namespace pr.maths
 		}
 
 		/// <summary>Add a value to the moving average</summary>
-		public void Add(double value)
+		public MovingAvr Add(double value)
 		{
 			if (m_count == m_window.Length)
 			{
@@ -751,10 +845,14 @@ namespace pr.maths
 				m_mean += diff * inv_count;
 				m_window[m_i++] = value;
 			}
+			return this;
 		}
-	};
+		IStatSingleVariable IStatSingleVariable.Add(double value)
+		{
+			return Add(value);
+		}
+	}
 }
-
 
 #if PR_UNITTESTS
 namespace pr.unittests

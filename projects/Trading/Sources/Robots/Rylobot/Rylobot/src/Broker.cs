@@ -197,7 +197,7 @@ namespace Rylobot
 		private int m_suspend_risk_check;
 
 		/// <summary>Creates a pending order. Throws if insufficient risk available</summary>
-		public PendingOrder CreatePendingOrder(Trade trade, bool rethrow = false)
+		public PendingOrder CreatePendingOrder(Trade trade, bool rethrow)
 		{
 			try
 			{
@@ -258,9 +258,13 @@ namespace Rylobot
 				return null;
 			}
 		}
+		public PendingOrder CreatePendingOrder(Trade trade)
+		{
+			return CreatePendingOrder(trade, false);
+		}
 
 		/// <summary>Cancel a pending order</summary>
-		public PendingOrder CancelPendingOrder(PendingOrder ord, bool rethrow = false)
+		public PendingOrder CancelPendingOrder(PendingOrder ord, bool rethrow)
 		{
 			try
 			{
@@ -286,9 +290,13 @@ namespace Rylobot
 				return null;
 			}
 		}
+		public PendingOrder CancelPendingOrder(PendingOrder ord)
+		{
+			return CancelPendingOrder(ord, false);
+		}
 
 		/// <summary>Creates a market order. Throws if insufficient risk available</summary>
-		public Position CreateOrder(Trade trade, bool rethrow = false)
+		public Position CreateOrder(Trade trade, bool rethrow)
 		{
 			try
 			{
@@ -314,7 +322,7 @@ namespace Rylobot
 					throw new Exception("Execute market order failed: {0}".Fmt(r.Error));
 
 				// Output the order that was placed
-				Debugging.LogTrade(r.Position, true);
+				Debugging.LogTrade(r.Position, live:true, update_instrument:true);
 
 				// Update the account balance
 				Update();
@@ -328,6 +336,10 @@ namespace Rylobot
 				if (rethrow) throw;
 				return null;
 			}
+		}
+		public Position CreateOrder(Trade trade)
+		{
+			return CreateOrder(trade, false);
 		}
 
 		/// <summary>Change the values of an existing order</summary>
@@ -350,7 +362,7 @@ namespace Rylobot
 					throw new Exception("Modifying market order failed: {0}".Fmt(r.Error));
 
 				// Replace the order with updated info
-				Debugging.LogTrade(pos, true);
+				Debugging.LogTrade(pos, live:true, update_instrument:true);
 
 				// Update the account balance
 				Update();
@@ -366,7 +378,7 @@ namespace Rylobot
 		}
 
 		/// <summary>Close an open position</summary>
-		public Position ClosePosition(Position pos, bool rethrow = false)
+		public Position ClosePosition(Position pos, bool rethrow)
 		{
 			try
 			{
@@ -375,7 +387,7 @@ namespace Rylobot
 					return null;
 
 				// Update the position
-				Debugging.LogTrade(pos, true);
+				Debugging.LogTrade(pos, live:false, update_instrument:true);
 
 				var r = Bot.ClosePosition(pos);
 				if (!r.IsSuccessful)
@@ -391,6 +403,17 @@ namespace Rylobot
 				if (rethrow) throw;
 				return null;
 			}
+		}
+		public Position ClosePosition(Position pos)
+		{
+			return ClosePosition(pos, false);
+		}
+
+		/// <summary>Close all positions with the given label</summary>
+		public void CloseAllPositions(string label)
+		{
+			foreach (var pos in Bot.Positions.Where(x => x.Label == label).ToArray())
+				ClosePosition(pos);
 		}
 
 		/// <summary>Return the maximum SL value (in quote currency) for the given volume</summary>
@@ -556,6 +579,16 @@ namespace Rylobot
 				}
 			}
 			return total_risk;
+		}
+
+		/// <summary>Return the signed net volume for positions tagged with 'label'</summary>
+		public long NetVolume(string label)
+		{
+			var net_volume = 0L;
+			foreach (var pos in Bot.Positions.Where(x => x.Label == label))
+				net_volume += pos.TradeType.Sign() * pos.Volume;
+
+			return net_volume;
 		}
 
 		/// <summary>Update the state of the account</summary>

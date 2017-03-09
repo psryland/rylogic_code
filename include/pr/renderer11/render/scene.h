@@ -28,7 +28,7 @@ namespace pr
 		{
 			// Fixed container of render steps. Doesn't really need to be fixed,
 			// but non-fixed means we need the pr::rdr::Allocator to construct it.
-			typedef pr::vector<RenderStepPtr, 16, true> RenderStepCont;
+			using RenderStepCont = pr::vector<RenderStepPtr, 16, true>;
 
 			Window*        m_wnd;          // The controlling window
 			SceneView      m_view;         // Represents the camera properties used to project onto the screen
@@ -47,8 +47,14 @@ namespace pr
 			void SetRenderSteps(std::vector<ERenderStep>&& rsteps);
 			
 			// Some render step pre-sets
-			static std::vector<ERenderStep> ForwardRendering() { return {ERenderStep::ForwardRender}; }
-			static std::vector<ERenderStep> DeferredRendering() { return {ERenderStep::GBuffer, ERenderStep::DSLighting}; }
+			static std::vector<ERenderStep> ForwardRendering()
+			{
+				return {ERenderStep::ForwardRender};
+			}
+			static std::vector<ERenderStep> DeferredRendering()
+			{
+				return {ERenderStep::GBuffer, ERenderStep::DSLighting};
+			}
 
 			// Get/Set the view (i.e. the camera to screen projection or 'View' matrix in dx speak)
 			void SetView(SceneView const& view) { m_view = view; }
@@ -72,9 +78,9 @@ namespace pr
 			}
 
 			// Clear/Populate the drawlists for each render step.
-			// Drawlists can be used in two ways, one is to clear the drawsets with each frame
+			// Drawlists can be used in two ways, one is to clear the draw sets with each frame
 			// and rebuild them from scratch (useful for scenes that change frequently).
-			// The other is to NOT clear the drawsets and add/remove instances between frames
+			// The other is to NOT clear the draw sets and add/remove instances between frames
 			void ClearDrawlists();
 			void UpdateDrawlists();
 

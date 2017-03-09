@@ -44,6 +44,7 @@ namespace view3d
 		std::string           m_settings;                 // Allows a char const* to be returned
 		mutable pr::BBox      m_bbox_scene;               // Bounding box for all objects in the scene (Lazy updated)
 		pr::EventHandlerId    m_eh_store_updated;
+		pr::EventHandlerId    m_eh_file_removed;
 
 		// Default window construction settings
 		static pr::rdr::WndSettings Settings(HWND hwnd, View3DWindowOptions const& opts)
@@ -89,6 +90,7 @@ namespace view3d
 			,m_settings()
 			,m_bbox_scene(pr::BBoxReset)
 			,m_eh_store_updated()
+			,m_eh_file_removed()
 		{
 			// Attach the error handler
 			if (opts.m_error_cb != nullptr)
@@ -101,6 +103,10 @@ namespace view3d
 				// like the view reset (e.g. all objects, just selected, etc). The caller can instead sign
 				// up to the StoreUpdated event on the content sources
 				InvalidateRect(nullptr, false);
+			};
+			m_eh_file_removed = m_dll->m_sources.OnFileRemoved += [&](pr::ldr::ScriptSources&, pr::ldr::ScriptSources::FileRemovedEventArgs const& args)
+			{
+				RemoveObjectsById(args.m_file_group_id, false);
 			};
 
 			// Set the initial aspect ratio
@@ -125,6 +131,7 @@ namespace view3d
 		~Window()
 		{
 			m_dll->m_sources.OnStoreChanged -= m_eh_store_updated;
+			m_dll->m_sources.OnFileRemoved -= m_eh_file_removed;
 		}
 
 		// Error event. Can be called in a worker thread context
@@ -490,6 +497,9 @@ namespace view3d
 		// Called when objects are added/removed from this window
 		void ObjectContainerChanged()
 		{
+			// Reset the drawlists so that removed objects are no longer in the drawlist
+			m_scene.ClearDrawlists();
+
 			// Invalidate cached members
 			m_bbox_scene = pr::BBoxReset;
 		}

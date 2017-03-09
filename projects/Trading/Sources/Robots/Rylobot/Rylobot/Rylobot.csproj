@@ -72,7 +72,9 @@
       <Link>src\common\Typedefs.cs</Link>
     </Compile>
     <Compile Include="half_baked\StrategyHedge.cs" />
-    <Compile Include="src\StrategyHedge2.cs" />
+    <Compile Include="half_baked\StrategyHedge2.cs" />
+    <Compile Include="src\StrategyHedge3.cs" />
+    <Compile Include="src\StrategyPeaks.cs" />
     <Compile Include="src\StrategyTemplate.cs" />
     <Compile Include="src\Peaks.cs" />
     <Compile Include="src\StrategyMain.cs" />

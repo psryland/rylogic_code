@@ -312,7 +312,12 @@ namespace pr
 			// Check all file sources for modifications and reload any that have changed
 			void RefreshChangedFiles()
 			{
-				std::thread([=]{ m_watcher.CheckForChangedFiles(); }).detach();
+				//HACK - This can't be async because there needs to be a way of changing the object
+				// container, raising events, etc on the main thread.
+				// Todo: Use the renderer's window somehow, or maybe the d3d device HWND and hook
+				// the window's message pump to get BeginInvoke behaviour
+				//std::thread([=]{ m_watcher.CheckForChangedFiles(); }).detach();
+				m_watcher.CheckForChangedFiles();
 			}
 
 		private:
@@ -372,7 +377,7 @@ namespace pr
 					else if (pr::str::EqualI(extn, "csv"))
 					{
 						// CSV data, create a chart to graph the data
-						Buffer<> src(ESrcType::Buffered, pr::FmtS(L"*Chart {3 \"%s\"}", file.m_filepath.c_str()));
+						Buffer<> src(ESrcType::Buffered, pr::FmtS(L"*Chart {3 #include \"%s\"}", file.m_filepath.c_str()));
 						Reader reader(src, false, &file.m_includes, nullptr, m_embed);
 						Parse(*m_rdr, reader, out, file.m_file_group_id, pr::StaticCallBack(AddFileProgressCB, this));
 					}

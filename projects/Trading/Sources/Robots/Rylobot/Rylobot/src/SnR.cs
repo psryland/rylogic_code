@@ -25,7 +25,7 @@ namespace Rylobot
 			// Set the range based on the recent span of candles
 			if (range == null)
 			{
-				var r = instr.MedianCS_50 * 5;
+				var r = instr.MCS * 5;
 				foreach (var c in instr.CandleRange(iend - instr.Bot.Settings.LookBackCount, iend+1))
 				{
 					r = Misc.Max(r, Misc.Abs(c.High - price));
@@ -41,7 +41,7 @@ namespace Rylobot
 			Count = count ?? instr.Bot.Settings.SnRHistoryLength;
 			Range = range.Value;
 			Price = price;
-			BucketSize = (double)(bucket_size ?? instr.MedianCS_50);
+			BucketSize = (double)(bucket_size ?? instr.MCS);
 
 			CalculateLevels();
 		}
@@ -157,7 +157,7 @@ namespace Rylobot
 				range = new RangeF((double)(price - radius), (double)(price + radius));
 
 			// Set the minimum if not provided
-			min_dist = min_dist ?? (sign == 0 ? 0 : 0.25*Instrument.MedianCS_50);
+			min_dist = min_dist ?? (sign == 0 ? 0 : 0.25*Instrument.MCS);
 
 			// Get the threshold price
 			var thresh = price + sign * min_dist.Value;
@@ -218,11 +218,15 @@ namespace Rylobot
 				if (done) break;
 			}
 
+			// Determine strength values for each SnR level
 			if (SnRLevels.Count != 0)
 			{
-				// Normalise the strength values
-				var max = SnRLevels.Max(x => x.Strength);
-				SnRLevels.ForEach(x => x.Strength /= max);
+				// Level strength depends on the number of stationary points
+				// used to form the level. Not the number of points relative
+				// to other levels.
+				const int StrongCount = 3;
+				foreach (var lvl in SnRLevels)
+					lvl.Strength = 0.5 * Maths.Sigmoid(lvl.Strength - StrongCount, StrongCount) + 0.5;
 
 				// Sort the levels by strength
 				SnRLevels.Sort(Cmp<Level>.From((l,r) => -l.Strength.CompareTo(r.Strength)));

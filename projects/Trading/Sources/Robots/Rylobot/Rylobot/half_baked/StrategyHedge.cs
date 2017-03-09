@@ -104,12 +104,12 @@ namespace Rylobot
 						// Create pending orders around the current price.
 						// Hopefully, the pending orders won't be tripped and price will reverse.
 						{
-							var ep = nue.Mid + sold_sign * PendingOrderOffset * Instrument.MedianCS_50;
+							var ep = nue.Mid + sold_sign * PendingOrderOffset * Instrument.MCS;
 							var trade = new Trade(Instrument, sold_tt, Label, ep, null, null, Volume);
 							Bot.Broker.CreatePendingOrder(trade);
 						}
 						{
-							var ep = nue.Mid - sold_sign * PendingOrderOffset * Instrument.MedianCS_50;
+							var ep = nue.Mid - sold_sign * PendingOrderOffset * Instrument.MCS;
 							var trade = new Trade(Instrument, sold_tt.Opposite(), Label, ep, null, null, Volume);
 							Bot.Broker.CreatePendingOrder(trade);
 						}

@@ -87,6 +87,7 @@
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Numerics" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
@@ -390,6 +391,7 @@
     <Compile Include="maths\clip.cs" />
     <Compile Include="maths\closest_point.cs" />
     <Compile Include="maths\distance.cs" />
+    <Compile Include="maths\fft.cs" />
     <Compile Include="maths\intersect.cs" />
     <Compile Include="maths\matrix.cs" />
     <Compile Include="maths\matrix2x2.cs" />

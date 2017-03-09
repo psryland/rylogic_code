@@ -37,6 +37,18 @@ namespace Rylobot
 			Color_.FromArgb(0xFFFF0000), // Marubozu
 		};
 
+		/// <summary>Master switch</summary>
+		private static bool LoggingEnabled
+		{
+			get { return Path_.FileExists(FP("logging_enabled")) && string.Compare(File.ReadAllText(FP("logging_enabled")), "true", true) == 0; }
+		}
+
+		/// <summary>Master switch</summary>
+		private static bool DumpEnabled
+		{
+			get { return Path_.FileExists(FP("dump_enabled")) && string.Compare(File.ReadAllText(FP("dump_enabled")), "true", true) == 0; }
+		}
+
 		/// <summary>Full path for a dump file</summary>
 		public static string FP(string fname)
 		{
@@ -81,6 +93,7 @@ namespace Rylobot
 		/// <summary>Dump a trade to an ldr file</summary>
 		public static void Dump(Trade trade, LdrBuilder ldr_ = null)
 		{
+			if (!DumpEnabled) return;
 			var ldr = ldr_ ?? new LdrBuilder();
 			using (ldr.Group("Trade"))
 			{
@@ -89,9 +102,9 @@ namespace Rylobot
 				var x1      = (float)Math.Max(trade.ExitIndex, x0 + 5.0);
 				var w       = (float)(x1 - x0);
 				var xmid    = (float)(trade.EntryIndex + w/2);
-				var colr    = trade.Result == Trade.EResult.Pending ? 0x4000007F : 0xFF0000FF;
-				var sl_colr = trade.Result == Trade.EResult.Pending ? 0x407F0000 : 0xFFFF0000;
-				var tp_colr = trade.Result == Trade.EResult.Pending ? 0x40007F00 : 0xFF00FF00;
+				var colr    = trade.Result == Trade.EResult.Pending ? 0x4000007FU : 0x400000FFU;
+				var sl_colr = trade.Result == Trade.EResult.Pending ? 0x407F0000U : 0x40FF0000U;
+				var tp_colr = trade.Result == Trade.EResult.Pending ? 0x40007F00U : 0x4000FF00U;
 
 				// EP, SL, TP lines
 				ldr.Line("EP", colr, new v4(x0, (float)trade.EP, 0f, 1f), new v4(x1, (float)trade.EP, +0.001f, 1f));
@@ -148,14 +161,15 @@ namespace Rylobot
 		/// <param name="mcs_range">Optional. The number of candles to use to get the median candle size for candle type classification. (default 50)</param>
 		/// <param name="high_res">Optional. Add the sub candle ask/bid line. Value is the number of steps within each candle.</param>
 		/// <param name="emas">Optional. Add exponential moving average lines, with periods of the values given.</param>
-		public static LdrBuilder Dump(Instrument instr, Range? range_ = null, double? high_res = null, int[] emas = null, int? mcs_range = null, LdrBuilder ldr_ = null)
+		public static void Dump(Instrument instr, Range? range_ = null, double? high_res = null, int[] emas = null, int? mcs_range = null, bool ema_slope = false, LdrBuilder ldr_ = null)
 		{
+			if (!DumpEnabled) return;
 			var ldr = ldr_ ?? new LdrBuilder();
 
 			// Get the range of candles to output
 			var range = instr.IndexRange(range_ ?? new Range((int)instr.IdxFirst, (int)instr.IdxLast));
 			if (range.Empty)
-				return ldr;
+				return;
 
 			// Note: Drawn with x = 0 == oldest (CAlgo indices) so that the X position doesn't change with updates
 			using (ldr.Group(instr.SymbolCode))
@@ -164,6 +178,7 @@ namespace Rylobot
 				var mcs = instr.MedianCandleSize(range.Endi - (mcs_range ?? 50), range.Endi);
 
 				// Draw bullish/bearish candles
+				#region Candles
 				{
 					// Using TriList for the bodies, and LineList for the wicks.
 					// So: 6 indices for the body, 4 for the wicks
@@ -230,8 +245,10 @@ namespace Rylobot
 					if (lines.Count != 0 || faces.Count != 0)
 						ldr.Mesh(string.Empty, 0xFFFFFFFF, View3d.EGeom.Vert|View3d.EGeom.Colr, vbuf, faces:faces, lines:lines);
 				}
+				#endregion
 
 				// Add the higher resolution price line
+				#region High Res
 				if (high_res != null)
 				{
 					var step = high_res.Value != 0 ? (double?)1.0/high_res.Value : null;
@@ -242,8 +259,10 @@ namespace Rylobot
 						ldr.Line("bid", Colour32.Yellow.Lerp(BidColor, 0.5f), 1, price_data.Select(x => new v4((float)x.Index, (float)x.Bid, 0.05f, 1)));
 					}
 				}
+				#endregion
 
 				// Add exponential moving average lines
+				#region EMA
 				if (emas != null)
 				{
 					var cols = new[] { Colour32.Green, Colour32.Red, Colour32.Blue }; var coli = 0;
@@ -260,10 +279,30 @@ namespace Rylobot
 						coli = (coli + 1) % cols.Length;
 					}
 				}
+				#endregion
 
 				// Current price levels
-				ldr.Line("ASK", 0xFF00FF00, new v4(0 - (int)instr.IdxFirst, (float)instr.Symbol.Ask, 0, 1f), new v4(20 - (int)instr.IdxFirst, (float)instr.Symbol.Ask, 0, 1f));
-				ldr.Line("BID", 0xFFFF0000, new v4(0 - (int)instr.IdxFirst, (float)instr.Symbol.Bid, 0, 1f), new v4(20 - (int)instr.IdxFirst, (float)instr.Symbol.Bid, 0, 1f));
+				#region Current Price
+				{
+					ldr.Line("ASK", 0xFF00FF00, new v4(0 - (int)instr.IdxFirst, (float)instr.Symbol.Ask, 0, 1f), new v4(20 - (int)instr.IdxFirst, (float)instr.LatestPrice.Ask, 0, 1f));
+					ldr.Line("BID", 0xFFFF0000, new v4(0 - (int)instr.IdxFirst, (float)instr.Symbol.Bid, 0, 1f), new v4(20 - (int)instr.IdxFirst, (float)instr.LatestPrice.Bid, 0, 1f));
+					ldr.Rect("MCS", 0xFFFF80FF, AxisId.PosZ, 1f, (float)mcs, false, new v4(10 - (int)instr.IdxFirst, (float)instr.LatestPrice.Mid, 0, 1f));
+				}
+				#endregion
+
+				// EMA slope integral
+				#region EMA trend
+				if (ema_slope)
+				{
+					using (ldr.Group("EMASlope"))
+					{
+						var scale = 20.0;
+						var offset = (float)(instr.LatestPrice.Mid - 3*instr.MCS);
+						ldr.Line("EMASlope", 0xFFA000A0, 1, range.Select(x => new v4((int)x - instr.IdxFirst, offset + (float)(scale*instr.EMASlope((NegIdx)x)), 0, 1)));
+						ldr.Line("Zero", 0xFF800080, new v4(range.Begi - instr.IdxFirst, offset, 0, 1), new v4(range.Endi - instr.IdxFirst, offset, 0, 1));
+					}
+				}
+				#endregion
 
 				//// Candle candles by type and show detected trend regions
 				//for (int i = range.Begini; i != range.Endi; ++i)
@@ -290,13 +329,12 @@ namespace Rylobot
 			}
 			if (ldr_ == null)
 				ldr.ToFile(FP("{0}.ldr".Fmt(instr.SymbolCode)));
-
-			return ldr;
 		}
 
 		/// <summary>Dump the SnR data to an ldr file</summary>
 		public static void Dump(SnR snr, LdrBuilder ldr_ = null)
 		{
+			if (!DumpEnabled) return;
 			var ldr = ldr_ ?? new LdrBuilder();
 			var instr = snr.Instrument;
 
@@ -323,18 +361,36 @@ namespace Rylobot
 		/// <summary>Dump the price peaks to an ldr file</summary>
 		public static void Dump(PricePeaks pp, LdrBuilder ldr_ = null)
 		{
+			if (!DumpEnabled) return;
 			var ldr = ldr_ ?? new LdrBuilder();
 			var instr = pp.Instrument;
 
 			using (ldr.Group("PricePeaks_{0}".Fmt(instr.SymbolCode)))
 			{
-				for (int i = 0, iend = pp.Peaks.Count; i != iend; ++i)
+				foreach (var pk in pp.Peaks.Take(20))
 				{
-					var pk = pp.Peaks[i];
 					var name = pk.High ? "high" : "low";
-					ldr.Ellipse(name, 0x800000FF, AxisId.PosZ, true, 0.25f, (float)(3f*instr.PipSize), new v4(pk.Index - instr.IdxFirst + 0.5f, (float)pk.Price, 0.01f, 1f));
+					ldr.Ellipse(name, 0x800000FF, AxisId.PosZ, true, 0.25f, (float)(1f*instr.PipSize), new v4(pk.Index - instr.IdxFirst + 0.5f, (float)pk.Price, 0.01f, 1f));
 				}
+
+				// Curve fit the peaks
+				var curve_hi = pp.TrendHigh;
+				if (curve_hi != null)
+					ldr.Line("TrendHigh", 0xFF00FF00, 5, double_.Range(-60, +5, 0.1).Select(x => new v4((float)(x - (int)instr.IdxFirst), (float)curve_hi.F(x), 0, 1f)));
+				var curve_lo = pp.TrendLow;
+				if (curve_lo != null)
+					ldr.Line("TrendLow", 0xFFFF0000, 5, double_.Range(-60, +5, 0.1).Select(x => new v4((float)(x - (int)instr.IdxFirst), (float)curve_lo.F(x), 0, 1f)));
 			}
+			if (ldr_ == null)
+				ldr.ToFile(FP("price_peaks.ldr"));
+		}
+
+		/// <summary>Dump a polynomial to an ldr file</summary>
+		public static void Dump(IPolynomial poly, Colour32 colour, RangeF range, double step = 0.1, LdrBuilder ldr_ = null)
+		{
+			if (!DumpEnabled) return;
+			var ldr = ldr_ ?? new LdrBuilder();
+
 			if (ldr_ == null)
 				ldr.ToFile(FP("price_peaks.ldr"));
 		}
@@ -342,6 +398,7 @@ namespace Rylobot
 		/// <summary>Dump a slope, coloured to indicate trend</summary>
 		public static void Slope(NegIdx idx, double slope, LdrBuilder ldr_ = null)
 		{
+			if (!DumpEnabled) return;
 			var ldr = ldr_ ?? new LdrBuilder();
 			var price = Instrument[idx].Close;
 			var trend = Instrument.MeasureTrend(slope);
@@ -362,9 +419,6 @@ namespace Rylobot
 		#endregion
 
 		#region Trade Logging
-
-		/// <summary>Master switch</summary>
-		private static bool LoggingEnabled = true;
 
 		/// <summary>The list of logged trades</summary>
 		private static List<int> m_trade_ids = new List<int>();
@@ -447,15 +501,37 @@ namespace Rylobot
 		/// <summary>Handle trade created/closed events</summary>
 		private static void LogTradeOpened(PositionOpenedEventArgs args)
 		{
-			LogTrade(args.Position, true);
+			LogTrade(args.Position, live:true, update_instrument:true);
 		}
 		private static void LogTradeClosed(PositionClosedEventArgs args)
 		{
-			LogTrade(args.Position, true);
+			LogTrade(args.Position, live:false, update_instrument:true);
+		}
+
+		/// <summary>Output the live trades to a file</summary>
+		private static void LogLiveTrades()
+		{
+			var sb = new LdrBuilder();
+			foreach (var p in Rylobot.Instance.Positions)
+				sb.Append("#include \"trades\\trade_{0}.ldr\"\n".Fmt(p.Id));
+			foreach (var p in Rylobot.Instance.PendingOrders)
+				sb.Append("#include \"trades\\order_{0}.ldr\"\n".Fmt(p.Id));
+			sb.ToFile(FP("live_trades.ldr"));
+		}
+
+		/// <summary>Add position 'id' to the list of completed trades</summary>
+		private static void LogCompleteTrade(int id)
+		{
+			if (m_trade_ids.Contains(id))
+				return;
+
+			m_ldr_all_trades.Append("#include \"trades\\trade_{0}.ldr\"\n".Fmt(id));
+			m_ldr_all_trades.ToFile(FP("all_trades.ldr"));
+			m_trade_ids.Add(id);
 		}
 
 		/// <summary>Update the details of a trade</summary>
-		public static void LogTrade(Position pos, bool update_instrument)
+		public static void LogTrade(Position pos, bool live, bool update_instrument)
 		{
 			if (!LoggingEnabled)
 				return;
@@ -470,13 +546,11 @@ namespace Rylobot
 			m_trades_range.Beg = Math.Min(m_trades_range.Beg, Instrument.Count - 10);
 			m_trades_range.End = Math.Max(m_trades_range.End, Instrument.Count + 10);
 
-			// Add to the 'all trades' file
-			if (!m_trade_ids.Contains(pos.Id))
-			{
-				m_ldr_all_trades.Append("#include \"trades\\trade_{0}.ldr\"\n".Fmt(pos.Id));
-				m_ldr_all_trades.ToFile(FP("all_trades.ldr"));
-				m_trade_ids.Add(pos.Id);
-			}
+			// Add to the 'all trades' or 'live trades' file
+			if (live)
+				LogLiveTrades();
+			else
+				LogCompleteTrade(pos.Id);
 
 			// Also update the instrument so that it matches the trade
 			if (update_instrument)
@@ -495,6 +569,9 @@ namespace Rylobot
 				Dump(new Trade(Instrument, ord), ldr_:ldr);
 			ldr.ToFile(FP("trades\\order_{0}.ldr".Fmt(ord.Id)));
 
+			// Update the 'live trades' file
+			LogLiveTrades();
+
 			// Also update the instrument so that it matches the trade
 			if (update_instrument)
 				LogInstrument();
@@ -506,9 +583,10 @@ namespace Rylobot
 			if (!LoggingEnabled)
 				return;
 
+			// Dump the instrument data
 			Dump(Instrument
-				,range_:new Range(-500, 1)
-				,emas:new[] { 14, 200 }
+				,range_:new Range(-100, 1)
+				,emas:new[] { 10, 200 }
 				,ldr_:m_ldr_instr);
 
 			// Write the instrument to 'm_ldr_instr'
@@ -517,19 +595,12 @@ namespace Rylobot
 
 			// Update the graphics for active trades and orders
 			foreach (var pos in Rylobot.Instance.Positions)
-				LogTrade(pos, false);
+				LogTrade(pos, live:true, update_instrument:false);
 			foreach (var ord in Rylobot.Instance.PendingOrders)
-				LogOrder(ord, false);
+				LogOrder(ord, update_instrument:false);
 
 			// Update the live trades file
-			{
-				var sb = new LdrBuilder();
-				foreach (var p in Rylobot.Instance.Positions)
-					sb.Append("#include \"trades\\trade_{0}.ldr\"\n".Fmt(p.Id));
-				foreach (var p in Rylobot.Instance.PendingOrders)
-					sb.Append("#include \"trades\\order_{0}.ldr\"\n".Fmt(p.Id));
-				sb.ToFile(FP("live_trades.ldr"));
-			}
+			LogLiveTrades();
 		}
 
 		/// <summary>Draw a box around the candles in the range [beg,end]</summary>

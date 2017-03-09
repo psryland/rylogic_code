@@ -14,6 +14,9 @@ namespace Rylobot
 	[Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.FullAccess)]
 	public class Rylobot :Robot
 	{
+		[Parameter("Profit Threshold", DefaultValue = 0.05, MinValue = 0.001, MaxValue = 0.1, Step = 0.001)]
+		public double ProfitThreshold { get; set; }
+
 		/// <summary>Singleton access</summary>
 		public static Rylobot Instance { get; private set; }
 
@@ -38,6 +41,9 @@ namespace Rylobot
 			// Create the account manager and trade creator
 			Broker = new Broker(this, Account);
 
+			// Enable capture of trades to Ldr files
+			Debugging.LogTrades(this, true);
+
 			// Create the strategies to use
 			Strats = new List<Strategy>();
 			//Strats.Add(new StrategyMain(this));
@@ -45,10 +51,9 @@ namespace Rylobot
 			//Strats.Add(new StrategyRevenge(this));
 			//Strats.Add(new StrategyTrend(this));
 			//Strats.Add(new StrategyHedge(this));
-			Strats.Add(new StrategyHedge2(this));
-
-			// Enable capture of trades to Ldr files
-			Debugging.LogTrades(this, true);
+			//Strats.Add(new StrategyHedge2(this));
+			Strats.Add(new StrategyHedge3(this));
+			//Strats.Add(new StrategyPeaks(this));
 		}
 		protected override void OnStop()
 		{

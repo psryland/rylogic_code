@@ -20,12 +20,6 @@ namespace pr
 			ShaderPtr m_ps;
 
 			ShaderSet() :m_vs() ,m_gs() ,m_ps() {}
-			~ShaderSet()
-			{
-				m_vs = nullptr;
-				m_gs = nullptr;
-				m_ps = nullptr;
-			}
 			std::initializer_list<ShaderPtr> Enumerate() const { return std::initializer_list<ShaderPtr>(&m_vs, &m_ps + 1); }
 			D3DPtr<ID3D11VertexShader>   VS() const { return m_vs ? m_vs->m_shdr : nullptr; }
 			D3DPtr<ID3D11GeometryShader> GS() const { return m_gs ? m_gs->m_shdr : nullptr; }

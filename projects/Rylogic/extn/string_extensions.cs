@@ -431,6 +431,16 @@ namespace pr.extn
 	/// <summary>Helper string building functions</summary>
 	public static class Str
 	{
+		/// <summary>A thread local string builder, cached for better memory performance</summary>
+		public static StringBuilder CachedSB { get { return m_cached_sb ?? (m_cached_sb = new StringBuilder()); } }
+		[ThreadStatic] private static StringBuilder m_cached_sb; // no initialised for thread statics
+
+		/// <summary>Reset the cached string builder'</summary>
+		[DebuggerStepThrough] public static void Reset()
+		{
+			CachedSB.Clear();
+		}
+
 		/// <summary>A helper for gluing strings together</summary>
 		[DebuggerStepThrough] public static string Build(params object[] parts)
 		{
@@ -441,6 +451,12 @@ namespace pr.extn
 		[DebuggerStepThrough] public static void Append(params object[] parts)
 		{
 			Append(CachedSB, parts);
+		}
+
+		/// <summary>Reset the cached string builder'</summary>
+		public static string Text
+		{
+			[DebuggerStepThrough] get { return CachedSB.ToString(); }
 		}
 
 		/// <summary>A helper for gluing strings together</summary>
@@ -465,10 +481,6 @@ namespace pr.extn
 			foreach (var part in parts)
 				Append(sb, part);
 		}
-
-		/// <summary>A thread local string builder, cached for better memory performance</summary>
-		public static StringBuilder CachedSB { get { return m_cached_sb ?? (m_cached_sb = new StringBuilder()); } }
-		[ThreadStatic] private static StringBuilder m_cached_sb; // no initialised for thread statics
 	}
 
 	/// <summary>An interface for string-like objects (typically StringBuilder or System.String)</summary>

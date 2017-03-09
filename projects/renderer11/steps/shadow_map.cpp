@@ -126,8 +126,11 @@ namespace pr
 		// Add model nuggets to the draw list for this render step
 		void ShadowMap::AddNuggets(BaseInstance const& inst, TNuggetChain& nuggets)
 		{
+			Lock lock(*this);
+			auto& drawlist = lock.drawlist();
+
 			// Add a drawlist element for each nugget in the instance's model
-			m_drawlist.reserve(m_drawlist.size() + nuggets.size());
+			drawlist.reserve(drawlist.size() + nuggets.size());
 			for (auto& nug : nuggets)
 			{
 				// Ensure the nugget contains the required vs/gs/ps shaders
@@ -143,7 +146,7 @@ namespace pr
 				default: continue; // Ignore point lists.. can a point cast a shadow anyway?
 				}
 
-				nug.AddToDrawlist(m_drawlist, inst, nullptr, Id, sset);
+				nug.AddToDrawlist(drawlist, inst, nullptr, Id, sset);
 			}
 
 			m_sort_needed = true;
@@ -188,7 +191,8 @@ namespace pr
 			}
 			
 			// Loop over the elements in the draw list
-			for (auto& dle : m_drawlist)
+			Lock lock(*this);
+			for (auto& dle : lock.drawlist())
 			{
 				StateStack::DleFrame frame(ss, dle);
 				ss.Commit();

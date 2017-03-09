@@ -1283,7 +1283,9 @@ namespace pr.gui
 		}
 
 		/// <summary>Get/Set the centre of the graph</summary>
-		[Browsable(false)] public PointF Centre
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public PointF Centre
 		{
 			get { return new PointF((float)(XAxis.Min + XAxis.Span*0.5), (float)(YAxis.Min + YAxis.Span*0.5)); }
 			set
@@ -1296,6 +1298,7 @@ namespace pr.gui
 
 		/// <summary>Zoom in/out on the chart. Remember to call refresh. Zoom is a floating point value where 1f = no zoom, 2f = 2x magnification</summary>
 		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public double Zoom
 		{
 			get
@@ -1572,7 +1575,9 @@ namespace pr.gui
 		private Snapshot m_tmp;
 
 		/// <summary>True when the bitmap needs to be regenerated</summary>
-		[Browsable(false)] public bool Dirty
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public bool Dirty
 		{
 			get { return m_impl_dirty; }
 			set
@@ -2385,6 +2390,7 @@ namespace pr.gui
 
 		/// <summary>Notes to add to the graph</summary>
 		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public List<Note> Notes { get; private set; }
 
 		#endregion

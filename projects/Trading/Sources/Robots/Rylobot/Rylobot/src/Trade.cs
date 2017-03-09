@@ -51,11 +51,12 @@ namespace Rylobot
 		/// <param name="sl">Optional. The stop loss (absolute) to use instead of automatically finding one</param>
 		/// <param name="tp">Optional. The take profit (absolute) to use instead of automatically finding one</param>
 		/// <param name="risk">Optional. Scaling factor for the amount to risk. (default is 1.0)</param>
-		public Trade(Rylobot bot, Instrument instr, TradeType tt, string label = null, NegIdx? neg_idx = null, QuoteCurrency? ep = null, QuoteCurrency? sl = null, QuoteCurrency? tp = null, double? risk = null)
+		public Trade(Instrument instr, TradeType tt, string label = null, NegIdx? neg_idx = null, QuoteCurrency? ep = null, QuoteCurrency? sl = null, QuoteCurrency? tp = null, double? risk = null)
 			:this(instr, tt, label, 0, 0, 0, 0, neg_idx)
 		{
 			try
 			{
+				var bot = instr.Bot;
 				var sign = tt.Sign();
 				NegIdx index = neg_idx ?? 0;
 				Debugging.Trace("Creating Trade (Index = {0})".Fmt(TradeIndex));
@@ -83,111 +84,15 @@ namespace Rylobot
 					throw new Exception("Insufficient available risk. Current Risk: {0}%, Maximum Risk: {1}%".Fmt(bot.Broker.TotalRiskPC, bot.Settings.MaxRiskPC));
 
 				// Require the SL to be at least 2 * the median candle size
-				var volatility = instr.Symbol.QuoteToAcct(2 * instr.MedianCS_50 * instr.Symbol.VolumeMin);
+				var volatility = instr.Symbol.QuoteToAcct(2 * instr.MCS * instr.Symbol.VolumeMin);
 				if (balance_to_risk < volatility)
 					throw new Exception("Insufficient available risk. Volatility: {0}, Balance To Risk: {1}".Fmt(volatility, balance_to_risk));
 
-				// Choose an initial volume
-				Volume = sl != null
-					? instr.Bot.Broker.MaxVolume(instr, sl.Value / risk.Value)
-					: instr.Symbol.VolumeMin;
-
-				// Get the support and resistance levels for setting SL and TP
-				var snr = new SnR(instr, index, EP);
-				Debugging.Dump(snr);
-
-				#region Set SL
-
-				// Choose a stop loss value for the trade.
-				// Look at recent history and set the stop loss beyond recent pecks/toughs
-				if (sl == null)
-				{
-					QuoteCurrency sl_rel = 0.0;
-
-					// Scan backwards looking for a peak in the stop loss direction.
-					foreach (var candle in instr.CandleRange(index - bot.Settings.LookBackCount, index))
-					{
-						var limit = candle.WickLimit(-sign);
-						var diff = EP - limit;
-						if (Misc.Sign(diff) != sign) continue;
-						if (Misc.Abs(diff) < sl_rel) continue;
-						sl_rel = Misc.Abs(diff);
-					}
-
-					// In the case of strong trends this SL loss is too large, limit it to just past a strong SnR level
-					var ema = bot.Indicators.ExponentialMovingAverage(instr.Data.Close, bot.Settings.SlowEMAPeriods);
-					var trend = instr.MeasureTrend(ema.Result.FirstDerivative(index));
-					if (Math.Abs(trend) > 0.5)
-					{
-						foreach (var lvl in snr.SnRLevels.Where(x => x.Strength > 0.5f))
-						{
-							var diff = (EP - lvl.Price) * 1.5f;
-							if (Misc.Sign(diff) != sign) continue;
-							if (Misc.Abs(diff) > sl_rel) continue;
-							sl_rel = Misc.Abs(diff);
-						}
-					}
-
-					// For short trades, add the spread to the SL
-					sl_rel += (sign > 0 ? 0 : instr.Symbol.Spread);
-
-					// Add on a bit as a safety buffer
-					sl_rel *= 1.1f;
-
-					// Adjust the volume so that the risk is within the acceptable range
-					// If the risk is too high reduce the volume first, down to the VolumeMin
-					// then reduce 'peak'. If the risk is low, increase volume to fit within 'risk'.
-
-					// Find the account value risked at the current stop loss
-					var sl_acct = instr.Symbol.QuoteToAcct(sl_rel);
-					var optimal_volume = balance_to_risk / sl_acct;
-
-					// If the risk is too high, reduce the stop loss
-					if (optimal_volume < instr.Symbol.VolumeMin)
-					{
-						Volume = instr.Symbol.VolumeMin;
-						sl_rel = instr.Symbol.AcctToQuote(balance_to_risk / Volume);
-					}
-					// Otherwise, round down to the nearest volume multiple
-					else
-					{
-						Volume = instr.Symbol.NormalizeVolume(optimal_volume, RoundingMode.Down);
-					}
-
-					sl = EP - sign * sl_rel;
-				}
-
-				// Set the SL level
-				SL = sl;
-
-				#endregion
-
-				#region Set TP
-
-				// Determine a take profit value if none provided
-				if (tp == null)
-				{
-					QuoteCurrency tp_rel = 0.0;
-
-					// Look for a level on the profit side of the entry price
-					var nearest = snr.Nearest(EP, sign);
-					if (nearest != null)
-					{
-						tp_rel = Misc.Abs(nearest.Price - EP);
-					}
-					else
-					{
-						// If there are no levels, use a few typical candle sizes
-						tp_rel = instr.MedianCS_50 * 3;
-					}
-
-					tp = EP + sign * tp_rel;
-				}
-
-				// Set the TP level
-				TP = tp;
-
-				#endregion
+				// Get the instrument to recommend trade exit conditions
+				var exit = instr.ChooseTradeExit(tt, index, EP, risk);
+				TP     = tp != null ? tp.Value : exit.TP;
+				SL     = sl != null ? sl.Value : exit.SL;
+				Volume = sl != null ? instr.Bot.Broker.MaxVolume(instr, sl.Value / risk.Value) : exit.Volume;
 			}
 			catch (Exception ex)
 			{

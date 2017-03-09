@@ -49,11 +49,6 @@ namespace view3d
 			{
 				OnSourcesChanged.Raise(static_cast<ESourcesChangedReason>(args.m_reason), false);
 			};
-			m_sources.OnFileRemoved += [&](pr::ldr::ScriptSources&, pr::ldr::ScriptSources::FileRemovedEventArgs const& args)
-			{
-				for (auto& wnd : m_wnd_cont)
-					View3D_RemoveObjectsById(wnd, false, args.m_file_group_id);
-			};
 			m_sources.OnError += [&](pr::ldr::ScriptSources&, pr::ErrorEventArgs const& args)
 			{
 				ReportError(args.m_msg.c_str());

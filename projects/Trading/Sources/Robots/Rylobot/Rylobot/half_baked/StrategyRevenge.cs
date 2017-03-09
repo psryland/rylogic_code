@@ -272,19 +272,19 @@ namespace Rylobot
 				// Does it match the long period EMA?
 				const double ema100_threshold_gradient = 0.1; // pips per index
 				var ema100 = Bot.Indicators.ExponentialMovingAverage(Instrument.Data.Close, 100);
-				var grad100 = ema100.Result.FirstDerivative() / Instrument.MedianCS_50;
+				var grad100 = ema100.Result.FirstDerivative() / Instrument.MCS;
 				if (Math.Abs(grad100) < ema100_threshold_gradient || Math.Sign(grad100) != sign)
 					return null;
 
 				// Does it match the short period EMA?
 				const double ema14_threshold_gradient = 0.1f; // pips per index
 				var ema14 = Bot.Indicators.ExponentialMovingAverage(Instrument.Data.Close, 14);
-				var grad14 = ema14.Result.FirstDerivative() / Instrument.MedianCS_50;
+				var grad14 = ema14.Result.FirstDerivative() / Instrument.MCS;
 				if (Math.Abs(grad14) < ema14_threshold_gradient || Math.Sign(grad14) != sign)
 					return null;
 				
 				// Is the price within the MCS of the long period EMA?
-				if (Math.Abs(curr_price - ema100.Result.LastValue) > Instrument.MedianCS_50)
+				if (Math.Abs(curr_price - ema100.Result.LastValue) > Instrument.MCS)
 					return null;
 
 				// Is the instrument over-bought or over-sold
@@ -298,7 +298,7 @@ namespace Rylobot
 
 				// Is there a candle pattern that agrees with the trade
 			}
-			return new Trade(Bot, Instrument, tt, Label);
+			return new Trade(Instrument, tt, Label);
 		}
 
 		/// <summary>Close all positions</summary>

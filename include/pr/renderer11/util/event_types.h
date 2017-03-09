@@ -50,26 +50,25 @@ namespace pr
 		{
 		};
 
+		// Raised when a model is deleted
+		struct Evt_ModelDestroy
+		{
+			Model* m_model; // The model being destructed
+			explicit Evt_ModelDestroy(Model& model) :m_model(&model) {}
+		};
+
 		// Raised during shutdown when a scene is about to be destructed
 		struct Evt_SceneDestroy
 		{
-			Scene& m_scene; // The scene being destructed
-			explicit Evt_SceneDestroy(Scene& scene) :m_scene(scene) {}
-
-		private:
-			Evt_SceneDestroy(Evt_SceneDestroy const&);
-			Evt_SceneDestroy& operator=(Evt_SceneDestroy const&);
+			Scene* m_scene; // The scene being destructed
+			explicit Evt_SceneDestroy(Scene& scene) :m_scene(&scene) {}
 		};
 
 		// Raised during shutdown when the renderer is about to be destructed
 		struct Evt_RendererDestroy
 		{
-			Renderer& m_rdr; // The scene being destructed
-			explicit Evt_RendererDestroy(Renderer& rdr) :m_rdr(rdr) {}
-
-		private:
-			Evt_RendererDestroy(Evt_RendererDestroy const&);
-			Evt_RendererDestroy& operator=(Evt_RendererDestroy const&);
+			Renderer* m_rdr; // The scene being destructed
+			explicit Evt_RendererDestroy(Renderer& rdr) :m_rdr(&rdr) {}
 		};
 	}
 }

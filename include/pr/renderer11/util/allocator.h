@@ -30,7 +30,8 @@ namespace pr
 		template <typename T> struct Allocator :MemFuncs
 		{
 			// Note: Allocator's are created as temporary objects. Their allocations
-			// out- live the allocator so leak detection cannot be implemented in the allocator.
+			// out-live the allocator so leak detection cannot be implemented in the allocator.
+			// Also, the allocator can't have any state.
 			typedef T         value_type;
 			typedef T*        pointer;
 			typedef T&        reference;

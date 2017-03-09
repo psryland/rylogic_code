@@ -3,30 +3,39 @@ using System.Diagnostics;
 
 namespace Rylobot
 {
-	[DebuggerDisplay("Ask={Ask} Bid={Bid}")]
+	[DebuggerDisplay("Idx={Index} Ask={Ask} Bid={Bid}")]
 	public class PriceTick
 	{
 		public PriceTick()
 		{
-			Index = 0;
-			Ask = 0;
-			Bid = 0;
+			Index     = 0;
+			Timestamp = 0;
+			Ask       = 0;
+			Bid       = 0;
 		}
-		public PriceTick(double index, QuoteCurrency ask, QuoteCurrency bid)
+		public PriceTick(double index, long timestamp, QuoteCurrency ask, QuoteCurrency bid)
 		{
 			if (ask < bid) throw new Exception("Negative spread");
 
-			Index = index;
-			Ask = ask;
-			Bid = bid;
+			Index     = index;
+			Timestamp = timestamp;
+			Ask       = ask;
+			Bid       = bid;
 		}
 		public static PriceTick Invalid
 		{
-			get { return new PriceTick {Ask = -double.MaxValue, Bid = +double.MaxValue }; }
+			get { return new PriceTick(0, 0, -double.MaxValue, +double.MaxValue); }
 		}
 
 		/// <summary>The fractional CAlgo index</summary>
 		public double Index
+		{
+			get;
+			set;
+		}
+
+		/// <summary>The server time (in ticks) of this price tick</summary>
+		public long Timestamp
 		{
 			get;
 			set;
