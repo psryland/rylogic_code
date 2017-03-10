@@ -137,7 +137,7 @@ namespace view3d
 		{
 			{// Remove script source objects from all windows
 				pr::ldr::ScriptSources::Lock lock(m_sources);
-				for (auto src : lock.FileList())
+				for (auto src : lock.Files())
 				{
 					auto id = src.second.m_file_group_id;
 					DeleteAllObjectsById(id);

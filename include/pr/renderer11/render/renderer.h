@@ -71,6 +71,11 @@ namespace pr
 	// The main renderer object
 	class Renderer :rdr::RdrState
 	{
+		using TaskQueue = pr::vector<std::future<void>>;
+		std::thread::id m_main_thread_id;
+		std::mutex m_mutex_task_queue;
+		TaskQueue m_task_queue;
+
 	public:
 		// These manager classes form part of the public interface of the renderer
 		rdr::ModelManager       m_mdl_mgr;
@@ -84,21 +89,56 @@ namespace pr
 		~Renderer();
 
 		// Return the dx device
-		D3DPtr<ID3D11Device> Device() const { return m_device; }
+		D3DPtr<ID3D11Device> Device() const
+		{
+			return m_device;
+		}
 
 		// Return the immediate device context
-		D3DPtr<ID3D11DeviceContext> ImmediateDC() const { return m_immediate; }
+		D3DPtr<ID3D11DeviceContext> ImmediateDC() const
+		{
+			return m_immediate;
+		}
 
 		// Create a new deferred device context
-		D3DPtr<ID3D11DeviceContext> DeferredDC() const { return nullptr; };
+		D3DPtr<ID3D11DeviceContext> DeferredDC() const
+		{
+			return nullptr;
+		}
 
 		// Return the direct2d factory
-		D3DPtr<ID2D1Factory> D2DFactory() const { return m_d2dfactory; }
+		D3DPtr<ID2D1Factory> D2DFactory() const
+		{
+			return m_d2dfactory;
+		}
 
 		// Returns an allocator object suitable for allocating instances of 'T'
-		template <class Type> rdr::Allocator<Type> Allocator() const { return rdr::Allocator<Type>(m_settings.m_mem); }
+		template <class Type> rdr::Allocator<Type> Allocator() const
+		{
+			return rdr::Allocator<Type>(m_settings.m_mem);
+		}
 
 		// Read access to the initialisation settings
-		rdr::RdrSettings const& Settings() const { return m_settings; }
+		rdr::RdrSettings const& Settings() const
+		{
+			return m_settings;
+		}
+
+		// Run the given function on the Main/GUI thread
+		// 'policy = std::launch::deferred' means the function is executed by the main thread during 'RunTasks'
+		// 'policy = std::launch::async' means the function is run at any time in a worker thread. The result is collected in 'RunTasks'
+		// 'policy' can be a bitwise OR of both deferred and async
+		template <typename Func, typename... Args> inline void RunOnMainThread(std::launch policy, Func&& func, Args&&... args)
+		{
+			std::lock_guard<std::mutex> lock(m_mutex_task_queue);
+			m_task_queue.emplace_back(std::async(policy, func, args...));
+		}
+		template <typename Func, typename... Args> inline void RunOnMainThread(Func&& func, Args&&... args)
+		{
+			RunOnMainThread(std::launch::deferred, func, args...);
+		}
+
+		// Execute any pending tasks in the task queue. Must be called from the Main/GUI thread
+		void RunTasks();
 	};
 }

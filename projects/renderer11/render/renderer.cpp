@@ -88,6 +88,9 @@ namespace pr
 	// Construct the renderer
 	Renderer::Renderer(rdr::RdrSettings const& settings)
 		:RdrState(settings)
+		,m_main_thread_id(std::this_thread::get_id())
+		,m_mutex_task_queue()
+		,m_task_queue()
 		,m_mdl_mgr(m_settings.m_mem, m_device)
 		,m_shdr_mgr(m_settings.m_mem, m_device)
 		,m_tex_mgr(m_settings.m_mem, m_device, m_d2dfactory)
@@ -99,5 +102,22 @@ namespace pr
 	{
 		// Notify of the renderer shutdown
 		pr::events::Send(pr::rdr::Evt_RendererDestroy(*this));
+	}
+
+	// Execute any pending tasks in the task queue
+	void Renderer::RunTasks()
+	{
+		if (std::this_thread::get_id() != m_main_thread_id)
+			throw std::exception("RunTasks must be called from the main thread");
+
+		TaskQueue tasks;
+		{
+			std::lock_guard<std::mutex> lock(m_mutex_task_queue);
+			std::swap(tasks, m_task_queue);
+		}
+
+		// Execute each task
+		for (auto& task : tasks)
+			task.get();
 	}
 }

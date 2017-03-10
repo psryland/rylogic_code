@@ -265,7 +265,7 @@ namespace pr
 		std::wstring m_msg;
 		int m_code;
 
-		ErrorEventArgs(std::wstring msg, int code = 0)
+		ErrorEventArgs(std::wstring msg = L"", int code = 0)
 			:m_msg(msg)
 			,m_code(code)
 		{}

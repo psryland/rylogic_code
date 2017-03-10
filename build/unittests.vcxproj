@@ -206,6 +206,7 @@
     <ClInclude Include="..\include\pr\linedrawer\ldr_object.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_objects_dlg.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_script_editor_dlg.h" />
+    <ClInclude Include="..\include\pr\linedrawer\ldr_sources.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_tools.h" />
     <ClInclude Include="..\include\pr\macros\align.h" />
     <ClInclude Include="..\include\pr\macros\auto_do.h" />
@@ -315,6 +316,7 @@
     <ClInclude Include="..\include\pr\threads\pause_thread.h" />
     <ClInclude Include="..\include\pr\threads\process.h" />
     <ClInclude Include="..\include\pr\threads\sim_message_pump.h" />
+    <ClInclude Include="..\include\pr\threads\synchronise.h" />
     <ClInclude Include="..\include\pr\threads\wait_state.h" />
     <ClInclude Include="..\include\pr\win32\win32.h" />
     <ClInclude Include="..\include\pr\win32\windows_com.h" />

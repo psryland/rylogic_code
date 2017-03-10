@@ -8,9 +8,12 @@
 #include <mutex>
 #include "pr/common/guid.h"
 #include "pr/common/multi_cast.h"
+#include "pr/common/algorithm.h"
+#include "pr/container/vector.h"
 #include "pr/filesys/fileex.h"
 #include "pr/filesys/filesys.h"
 #include "pr/str/string.h"
+#include "pr/threads/synchronise.h"
 
 namespace pr
 {
@@ -39,8 +42,11 @@ namespace pr
 	class FileWatch
 	{
 	public:
+
+		// Filepath strings
 		using string = pr::string<wchar_t>;
 
+		// File time stamp info
 		struct File
 		{
 			pr::string<wchar_t>   m_filepath;  // The file to watch
@@ -61,12 +67,13 @@ namespace pr
 			bool operator == (string const& filepath) const { return pr::str::EqualI(m_filepath, filepath); }
 			bool operator == (pr::Guid const& id) const     { return m_id == id; }
 		};
-		using FileCont = std::vector<File>;
+		struct FileCont :pr::vector<File> {};
 
 	private:
 
-		FileCont           m_files; // The files being watched
-		mutable std::mutex m_mutex; // Synchronise access to the 'm_files' list
+		// The files being watched. Access via a Lock instance
+		FileCont m_impl_files;
+		std::mutex mutable m_mutex;
 
 		// Standardise a filepath
 		std::wstring Canonicalise(wchar_t const* filepath) const
@@ -77,66 +84,86 @@ namespace pr
 	public:
 
 		FileWatch()
-			:m_files()
+			:m_impl_files()
 			,m_mutex()
 		{}
 
 		// Raised when changed files are detected. Allows modification of file list
 		pr::MultiCast<std::function<void(FileCont&)>> OnFilesChanged;
 
-		// The files being watched
-		FileCont Files() const
+		// Synchronise access to the file container
+		struct Lock :Synchronise<FileWatch>
 		{
-			std::lock_guard<std::mutex> lock(m_mutex);
-			return m_files;
-		}
+			Lock(FileWatch const& fw)
+				:base(fw, fw.m_mutex)
+			{}
 
-		// Return the Guid associated with the given filepath (or null, if not being watched)
-		pr::Guid const* FindId(wchar_t const* filepath) const
+			// The files being watched
+			FileCont const& files() const
+			{
+				return get().m_impl_files;
+			}
+			FileCont& files()
+			{
+				return get().m_impl_files;
+			}
+		};
+
+		// Return the Guid associated with the given filepath (or GuidZero, if not being watched)
+		pr::Guid FindId(wchar_t const* filepath) const
 		{
 			auto fpath = Canonicalise(filepath);
-			{
-				std::lock_guard<std::mutex> lock(m_mutex);
-				auto iter = std::find_if(std::begin(m_files), std::end(m_files), [&](File const& file){ return file.m_filepath == filepath; });
-				return iter != std::end(m_files) ? &iter->m_id : nullptr;
-			}
+			
+			Lock lock(*this);
+			auto& files = lock.files();
+			auto iter = pr::find(files, fpath);
+			return iter != std::end(files) ? iter->m_id : pr::GuidZero;
+		}
+
+		// Mark a file as changed, to be caught on the next 'CheckForChangedFiles' call
+		void MarkAsChanged(wchar_t const* filepath)
+		{
+			auto fpath = Canonicalise(filepath);
+			
+			Lock lock(*this);
+			auto& files = lock.files();
+			auto iter = pr::find(files, fpath);
+			if (iter != std::end(files))
+				iter->m_time.m_last_modified--;
 		}
 
 		// Add a file to be watched
 		void Add(wchar_t const* filepath, IFileChangedHandler* onchanged, pr::Guid const& id, void* user_data = nullptr)
 		{
+			// Remove if already added
 			Remove(filepath);
+
+			// Add to the files collection
+			Lock lock(*this);
 			auto fpath = Canonicalise(filepath);
-			{
-				std::lock_guard<std::mutex> lock(m_mutex);
-				m_files.emplace_back(fpath, onchanged, id, user_data);
-			}
+			lock.files().emplace_back(fpath, onchanged, id, user_data);
 		}
 
 		// Remove a watched file
 		void Remove(wchar_t const* filepath)
 		{
-			auto fpath = pr::filesys::Standardise<string>(filepath);
-			{
-				std::lock_guard<std::mutex> lock(m_mutex);
-				auto i = std::find(std::begin(m_files), std::end(m_files), fpath);
-				if (i != std::end(m_files)) m_files.erase(i);
-			}
+			Lock lock(*this);
+			auto fpath = Canonicalise(filepath);
+			pr::erase_first(lock.files(), [&](File const& f){ return f == fpath; });
 		}
 
 		// Remove all watches where 'm_id == id'
 		void RemoveAll(pr::Guid const& id)
 		{
-			std::lock_guard<std::mutex> lock(m_mutex);
-			auto end = std::remove_if(std::begin(m_files), std::end(m_files), [&](File const& file) { return file.m_id == id; });
-			m_files.erase(end, std::end(m_files));
+			Lock lock(*this);
+			pr::erase_if(lock.files(), [=](File const& file) { return file.m_id == id; });
 		}
 
 		// Remove all watches
 		void RemoveAll()
 		{
-			std::lock_guard<std::mutex> lock(m_mutex);
-			m_files.resize(0);
+			Lock lock(*this);
+			lock.files().resize(0);
 		}
 
 		// Check the timestamps of all watched files and call the callback for those that have changed.
@@ -145,8 +172,8 @@ namespace pr
 			// Build a collection of the changed files to prevent reentrancy problems with the callbacks
 			FileCont changed_files;
 			{
-				std::lock_guard<std::mutex> lock(m_mutex);
-				for (auto& file : m_files)
+				Lock lock(*this);
+				for (auto& file : lock.files())
 				{
 					auto stamp = pr::filesys::FileTimeStats(file.m_filepath);
 					if (file.m_time.m_last_modified != stamp.m_last_modified) changed_files.push_back(file);
@@ -164,15 +191,8 @@ namespace pr
 				{
 					bool handled = true;
 					file.m_onchanged->FileWatch_OnFileChanged(file.m_filepath.c_str(), file.m_id, file.m_user_data, handled);
-
-					// If the change is not handled, find the same file in 'm_files'
-					// and set it's timestamp back to the previous value (should be a rare case)
 					if (!handled)
-					{
-						std::lock_guard<std::mutex> lock(m_mutex);
-						auto iter = std::find(std::begin(m_files), std::end(m_files), file.m_filepath);
-						if (iter != std::end(m_files)) iter->m_time = file.m_time;
-					}
+						MarkAsChanged(file.m_filepath.c_str());
 				}
 			}
 		}

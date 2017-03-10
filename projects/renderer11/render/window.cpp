@@ -35,6 +35,7 @@ namespace pr
 			}
 		}
 
+		// Window constructor
 		Window::Window(Renderer& rdr, WndSettings const& settings)
 			:m_rdr(&rdr)
 			,m_hwnd(settings.m_hwnd)
@@ -51,39 +52,47 @@ namespace pr
 			,m_name(settings.m_name)
 			,m_area()
 		{
-			auto device = rdr.Device();
+			try
+			{
+				auto device = rdr.Device();
 
-			// Check feature support
-			m_multisamp.Validate(device, settings.m_mode.Format);
-			m_multisamp.Validate(device, settings.m_depth_format);
+				// Check feature support
+				m_multisamp.Validate(device, settings.m_mode.Format);
+				m_multisamp.Validate(device, settings.m_depth_format);
 
-			// Get the factory that was used to create 'rdr.m_device'
-			D3DPtr<IDXGIDevice> dxgi_device;
-			D3DPtr<IDXGIAdapter> adapter;
-			D3DPtr<IDXGIFactory> factory;
-			pr::Throw(device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgi_device.m_ptr));
-			pr::Throw(dxgi_device->GetParent(__uuidof(IDXGIAdapter), (void**)&adapter.m_ptr));
-			pr::Throw(adapter->GetParent(__uuidof(IDXGIFactory), (void **)&factory.m_ptr));
+				// Get the factory that was used to create 'rdr.m_device'
+				D3DPtr<IDXGIDevice> dxgi_device;
+				D3DPtr<IDXGIAdapter> adapter;
+				D3DPtr<IDXGIFactory> factory;
+				pr::Throw(device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgi_device.m_ptr));
+				pr::Throw(dxgi_device->GetParent(__uuidof(IDXGIAdapter), (void**)&adapter.m_ptr));
+				pr::Throw(adapter->GetParent(__uuidof(IDXGIFactory), (void **)&factory.m_ptr));
 
-			// Uses the flag 'DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE' to enable an application to
-			// render using GDI on a swap chain or a surface. This will allow the application
-			// to call IDXGISurface1::GetDC on the 0th back buffer or a surface.
-			DXGI_SWAP_CHAIN_DESC sd = {0};
-			sd.BufferCount  = settings.m_buffer_count;
-			sd.BufferDesc   = settings.m_mode;
-			sd.SampleDesc   = m_multisamp;
-			sd.BufferUsage  = settings.m_usage;
-			sd.OutputWindow = settings.m_hwnd;
-			sd.Windowed     = settings.m_windowed;
-			sd.SwapEffect   = settings.m_swap_effect;
-			sd.Flags        = settings.m_swap_chain_flags;
-			pr::Throw(factory->CreateSwapChain(device.m_ptr, &sd, &m_swap_chain.m_ptr));
-			PR_EXPAND(PR_DBG_RDR, NameResource(m_swap_chain , pr::FmtS("swap chain")));
+				// Uses the flag 'DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE' to enable an application to
+				// render using GDI on a swap chain or a surface. This will allow the application
+				// to call IDXGISurface1::GetDC on the 0th back buffer or a surface.
+				DXGI_SWAP_CHAIN_DESC sd = {0};
+				sd.BufferCount  = settings.m_buffer_count;
+				sd.BufferDesc   = settings.m_mode;
+				sd.SampleDesc   = m_multisamp;
+				sd.BufferUsage  = settings.m_usage;
+				sd.OutputWindow = settings.m_hwnd;
+				sd.Windowed     = settings.m_windowed;
+				sd.SwapEffect   = settings.m_swap_effect;
+				sd.Flags        = settings.m_swap_chain_flags;
+				pr::Throw(factory->CreateSwapChain(device.m_ptr, &sd, &m_swap_chain.m_ptr));
+				PR_EXPAND(PR_DBG_RDR, NameResource(m_swap_chain , pr::FmtS("swap chain")));
 
-			// Make DXGI monitor for Alt-Enter and switch between windowed and full screen
-			pr::Throw(factory->MakeWindowAssociation(settings.m_hwnd, settings.m_allow_alt_enter ? 0 : DXGI_MWA_NO_ALT_ENTER));
+				// Make DXGI monitor for Alt-Enter and switch between windowed and full screen
+				pr::Throw(factory->MakeWindowAssociation(settings.m_hwnd, settings.m_allow_alt_enter ? 0 : DXGI_MWA_NO_ALT_ENTER));
 
-			InitRT();
+				InitRT();
+			}
+			catch (...)
+			{
+				this->~Window();
+				throw;
+			}
 		}
 		Window::~Window()
 		{
@@ -150,7 +159,7 @@ namespace pr
 			pr::Throw(m_swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&back_buffer.m_ptr));
 			PR_EXPAND(PR_DBG_RDR, NameResource(back_buffer, "main RT"));
 			
-			// Read the texture properties from the bb
+			// Read the texture properties from the BB
 			TextureDesc bbdesc;
 			back_buffer->GetDesc(&bbdesc);
 			static_cast<DXGI_SAMPLE_DESC&>(m_multisamp) = bbdesc.SampleDesc;
@@ -158,7 +167,7 @@ namespace pr
 			// Create a render-target view of the back buffer
 			pr::Throw(device->CreateRenderTargetView(back_buffer.m_ptr, nullptr, &m_main_rtv.m_ptr));
 
-			// If the texture was created with srv binding, create a srv
+			// If the texture was created with SRV binding, create a SRV
 			if (bbdesc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
 				pr::Throw(device->CreateShaderResourceView(back_buffer.m_ptr, nullptr, &m_main_srv.m_ptr));
 
@@ -226,28 +235,28 @@ namespace pr
 		{
 			// For D3D11 you should initially set DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH, as explained above.
 			// There are then two main things you must do.
-			// The first is to call SetFullScreenState on your swapchain object. This will just switch the
-			// display mode to fullscreen, but doesn't change anything else relating to the mode. You've
+			// The first is to call SetFullScreenState on your swap chain object. This will just switch the
+			// display mode to full screen, but doesn't change anything else relating to the mode. You've
 			// still got the same height, width, format, etc as before.
-			// The second is to call ResizeTarget and ResizeBuffers (both again on the swapchain) to actually
+			// The second is to call ResizeTarget and ResizeBuffers (both again on the swap chain) to actually
 			// change the mode.
 			// Here's where things can get a little bit more complex (although it's actually simple if you follow
 			// the logic of the design).
-			// When switching from windowed to fullscreen I've found it best to call ResizeTarget first, then
+			// When switching from windowed to full screen I've found it best to call ResizeTarget first, then
 			// call SetFullScreenState.
-			// When going the other way (fullscreen to windowed) you call SetFullScreenState first, then call
+			// When going the other way (full screen to windowed) you call SetFullScreenState first, then call
 			// ResizeTarget.
-			// When just switching modes (but leaving fullscreen state alone) you just need to call ResizeTarget.
+			// When just switching modes (but leaving full screen state alone) you just need to call ResizeTarget.
 			// These orders may not be 100% necessary (I haven't found anything in the documentation to confirm
 			// or deny) but I've found through trial, error and experimentation that they work and give predictable
 			// behaviour. Otherwise you may get extra mode changes which slow down the process, and may get weird
 			// behaviour.
 			// In all cases, you should ensure that the mode you're switching to has been properly enumerated
 			// (via EnumAdapters/EnumOutputs/GetDisplayModeList) - it's not necessary for switching to a windowed
-			// mode, but is highly recommended for switching to a fullscreen mode, and makes things easier overall.
-			// Following that you need to respond to WM_SIZE in your message loop; when you recieve a WM_SIZE you
+			// mode, but is highly recommended for switching to a full screen mode, and makes things easier overall.
+			// Following that you need to respond to WM_SIZE in your message loop; when you receive a WM_SIZE you
 			// just need to call ResizeBuffers in response to it. That bit is optional but if you leave it out you're
-			// keeping the old framebuffer sizes, meaning that D3D11 has to do a stretch operation to the buffers,
+			// keeping the old frame buffer sizes, meaning that D3D11 has to do a stretch operation to the buffers,
 			// which can degrade performance and quality. If you need to destroy any old render targets/depth
 			// stencils/etc and create new ones at the new mode resolution, this is also a good place to do it.
 			//
@@ -259,7 +268,7 @@ namespace pr
 			// that you don't explicitly destroy yourself though). If you're using a depth buffer also release
 			// and recreate it (both the view and the texture).
 			//
-			// There's a pretty good writeup, with sample code and other useful info, of the process in the SDK
+			// There's a pretty good write up, with sample code and other useful info, of the process in the SDK
 			// documentation under the heading "DXGI Overview", but unfortunately the help file index seems to be
 			// - shall we say - not quite as good as it once was these days, so you may need to use the Search
 			// function. A search for ResizeBuffers should give you this article as the first hit with the June 2010 SDK.
@@ -432,6 +441,13 @@ namespace pr
 		// Flip the scene to the display
 		void Window::Present()
 		{
+			// Run any pending tasks in the main thread.
+			// It's a good idea to do work between RenderEnd and Present, so running tasks is something we can do.
+			// If there are multiple windows, then this will probably be a no-op for the 2+ windows.
+			// RunTasks can be called at any point by the main thread. If having tasks run here is inconvenient,
+			// just call RunTasks at some earlier time so that this is a no-op.
+			m_rdr->RunTasks();
+
 			// Be careful that you never have the message-pump thread wait on the render thread.
 			// For instance, calling IDXGISwapChain1::Present1 (from the render thread) may cause
 			// the render thread to wait on the message-pump thread. When a mode change occurs,
@@ -456,7 +472,7 @@ namespace pr
 				m_idle = false;
 				break;
 
-			// This happens when the window is not visible onscreen, the app should go into idle mode
+			// This happens when the window is not visible on-screen, the app should go into idle mode
 			case DXGI_STATUS_OCCLUDED:
 				m_idle = true;
 				break;
@@ -466,7 +482,7 @@ namespace pr
 			case DXGI_ERROR_DEVICE_RESET:
 				throw pr::Exception<HRESULT>(DXGI_ERROR_DEVICE_RESET, "Graphics adapter reset");
 
-			// This happens in situations like, laptop undocked, or remote desktop connect etc.
+			// This happens in situations like, laptop un-docked, or remote desktop connect etc.
 			// We'll just through so the app can shutdown/reset/whatever
 			case DXGI_ERROR_DEVICE_REMOVED:
 				throw pr::Exception<HRESULT>(m_rdr->Device()->GetDeviceRemovedReason(), "Graphics adapter no longer available");

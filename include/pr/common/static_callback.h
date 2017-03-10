@@ -10,7 +10,7 @@ namespace pr
 {
 	template <typename Ret, typename... Args> struct StaticCB
 	{
-		typedef Ret (__stdcall *func)(void*, Args...);
+		using func = Ret (__stdcall *)(void*, Args...);
 
 		func m_cb;
 		void* m_ctx;
@@ -19,7 +19,7 @@ namespace pr
 			:m_cb()
 			,m_ctx()
 		{}
-		StaticCB(func cb, void* ctx)
+		StaticCB(func cb, void* ctx = nullptr)
 			:m_cb(cb)
 			,m_ctx(ctx)
 		{}

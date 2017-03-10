@@ -326,8 +326,7 @@ namespace pr
 				_bitwise_operators_allowed,
 			};
 
-			ObjectCont  m_objects_;   // Objects container that is used if none is provided
-			ObjectCont& m_objects;    // Reference to the objects container to fill
+			ObjectCont  m_objects;    // Reference to the objects container to fill
 			ModelLookup m_models;     // A lookup map for models based on hashed object name
 			pr::Camera  m_cam;        // Camera description has been read
 			ECamField   m_cam_fields; // Bitmask of fields in 'm_cam' that were given in the camera description
@@ -335,19 +334,13 @@ namespace pr
 			bool        m_wireframe;  // True if '*Wireframe' was read in the script
 			
 			ParseResult()
-				:ParseResult(m_objects_)
-			{}
-			ParseResult(ObjectCont& cont)
-				:m_objects_()
-				,m_objects(cont)
+				:m_objects()
 				,m_models()
 				,m_cam()
 				,m_cam_fields()
 				,m_clear()
 				,m_wireframe()
 			{}
-			ParseResult(ParseResult const&) = delete;
-			ParseResult& operator=(ParseResult const&) = delete;
 		};
 
 		#pragma endregion

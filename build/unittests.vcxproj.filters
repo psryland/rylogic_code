@@ -966,6 +966,12 @@
     <ClInclude Include="..\include\pr\maths\fft.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\linedrawer\ldr_sources.h">
+      <Filter>pr\linedrawer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\threads\synchronise.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

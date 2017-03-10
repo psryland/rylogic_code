@@ -14,6 +14,7 @@
 #include "pr/script/forward.h"
 #include "pr/filesys/filewatch.h"
 #include "pr/linedrawer/ldr_object.h"
+#include "pr/threads/synchronise.h"
 
 namespace pr
 {
@@ -134,28 +135,49 @@ namespace pr
 
 		private:
 
-			FileCont                   m_files;    // The file sources of ldr script
-			pr::FileWatch              m_watcher;  // The watcher of files
-			ObjectCont                 m_objects;  // The created ldr objects
-			GizmoCont                  m_gizmos;   // The created ldr gizmos
-			pr::Renderer*              m_rdr;      // Renderer used to create models
-			pr::script::IEmbeddedCode* m_embed;    // Embedded code handler
-			std::recursive_mutex       m_mutex;    // Sync access
+			pr::FileWatch                m_watcher;      // The watcher of files
+			FileCont                     m_impl_files;   // The file sources of ldr script
+			ObjectCont                   m_impl_objects; // The created ldr objects
+			GizmoCont                    m_impl_gizmos;  // The created ldr gizmos
+			pr::Renderer*                m_rdr;          // Renderer used to create models
+			pr::script::IEmbeddedCode*   m_embed;        // Embedded code handler
+			std::recursive_mutex mutable m_mutex;        // Sync access
 
 		public:
 
+			// A lock context for accessing the contained lists
+			struct Lock :Synchronise<ScriptSources, std::recursive_mutex>
+			{
+				Lock(ScriptSources const& ss)
+					:base(ss, ss.m_mutex)
+				{}
+
+				// Return access to the source files
+				FileCont const& Files() const { return get().m_impl_files; }
+				FileCont&       Files()       { return get().m_impl_files; }
+
+				// Access the object container
+				ObjectCont const& Objects() const { return get().m_impl_objects; }
+				ObjectCont&       Objects()       { return get().m_impl_objects; }
+
+				// Access the gizmo container
+				GizmoCont const& Gizmos() const { return get().m_impl_gizmos; }
+				GizmoCont&       Gizmos()       { return get().m_impl_gizmos; }
+			};
+
 			ScriptSources(pr::Renderer& rdr, pr::script::IEmbeddedCode* embed)
-				:m_files()
-				,m_watcher()
-				,m_objects()
-				,m_gizmos()
+				:m_watcher()
+				,m_impl_files()
+				,m_impl_objects()
+				,m_impl_gizmos()
 				,m_rdr(&rdr)
 				,m_embed(embed)
 				,m_mutex()
 			{
 				m_watcher.OnFilesChanged += [&](FileWatch::FileCont&)
 				{
-					OnReload(*this, ReloadEventArgs(m_objects, EReason::Reload));
+					Lock lock(*this);
+					OnReload(*this, ReloadEventArgs(lock.Objects(), EReason::Reload));
 				};
 			}
 
@@ -174,54 +196,14 @@ namespace pr
 			// Source file being removed event (i.e. objects deleted by Id)
 			pr::EventHandler<ScriptSources&, FileRemovedEventArgs const&> OnFileRemoved;
 
-			// A lock context for accessing the contained lists
-			class Lock
-			{
-				ScriptSources& m_ss;
-				std::lock_guard<std::recursive_mutex> m_lock;
-
-			public:
-
-				Lock(ScriptSources& ss) :m_ss(ss) ,m_lock(ss.m_mutex) {}
-				Lock(Lock const&) = delete;
-				Lock& operator =(Lock const&) = delete;
-
-				// Return const access to the source files
-				FileCont const& FileList() const
-				{
-					return m_ss.m_files;
-				}
-
-				// Access the object container
-				ObjectCont const& Objects() const
-				{
-					return m_ss.m_objects;
-				}
-				ObjectCont& Objects()
-				{
-					return m_ss.m_objects;
-				}
-
-				// Access the gizmo container
-				GizmoCont const& Gizmos() const
-				{
-					return m_ss.m_gizmos;
-				}
-				GizmoCont& Gizmos()
-				{
-					return m_ss.m_gizmos;
-				}
-			};
-
 			// Remove all objects and file sources
 			void ClearAll()
 			{
 				Lock lock(*this);
-
-				m_objects.clear();
-				m_gizmos.clear();
+				lock.Objects().clear();
+				lock.Gizmos().clear();
+				lock.Files().clear();
 				m_watcher.RemoveAll();
-				m_files.clear();
 			}
 
 			// Remove all file sources
@@ -230,22 +212,22 @@ namespace pr
 				Lock lock(*this);
 
 				// Delete all objects belonging to all file groups
-				for (auto& file : m_files)
+				for (auto& file : lock.Files())
 				{
 					OnFileRemoved(*this, FileRemovedEventArgs(file.second.m_file_group_id));
-					pr::ldr::Remove(m_objects, &file.second.m_file_group_id, 1, 0, 0);
+					pr::ldr::Remove(lock.Objects(), &file.second.m_file_group_id, 1, 0, 0);
 				}
 
 				// Remove all file watches
+				lock.Files().clear();
 				m_watcher.RemoveAll();
-				m_files.clear();
 			}
 
 			// Remove a single object from the object container
 			void Remove(LdrObject* object)
 			{
 				Lock lock(*this);
-				pr::ldr::Remove(m_objects, object);
+				pr::ldr::Remove(lock.Objects(), object);
 			}
 
 			// Remove all objects associated with 'file_group_id'
@@ -257,7 +239,7 @@ namespace pr
 				OnFileRemoved(*this, FileRemovedEventArgs(file_group_id));
 
 				// Delete all objects belonging to this file group
-				pr::ldr::Remove(m_objects, &file_group_id, 1, 0, 0);
+				pr::ldr::Remove(lock.Objects(), &file_group_id, 1, 0, 0);
 
 				// Delete all associated file watches
 				m_watcher.RemoveAll(file_group_id);
@@ -267,11 +249,12 @@ namespace pr
 			void RemoveFile(wchar_t const* filepath)
 			{
 				Lock lock(*this);
+				auto& files = lock.Files();
 
 				// Find the file in the file list
 				auto fpath = pr::filesys::Standardise<filepath_t>(filepath);
-				auto iter = m_files.find(fpath);
-				if (iter == std::end(m_files))
+				auto iter = files.find(fpath);
+				if (iter == std::end(files))
 					return;
 
 				// Remove the objects created from this file source
@@ -279,7 +262,7 @@ namespace pr
 				Remove(file.m_file_group_id);
 
 				// Remove the file source
-				m_files.erase(iter);
+				files.erase(iter);
 			}
 
 			// Add a file source
@@ -296,13 +279,13 @@ namespace pr
 				Lock lock(*this);
 
 				// Make a copy of the file list
-				auto files = m_files;
+				FileCont files = lock.Files();
 
 				// Reset the sources
 				Clear();
 
 				// Notify reloading
-				OnReload(*this, ReloadEventArgs(m_objects, EReason::Reload));
+				OnReload(*this, ReloadEventArgs(lock.Objects(), EReason::Reload));
 
 				// Add each file again
 				for (auto& f : files)
@@ -312,12 +295,7 @@ namespace pr
 			// Check all file sources for modifications and reload any that have changed
 			void RefreshChangedFiles()
 			{
-				//HACK - This can't be async because there needs to be a way of changing the object
-				// container, raising events, etc on the main thread.
-				// Todo: Use the renderer's window somehow, or maybe the d3d device HWND and hook
-				// the window's message pump to get BeginInvoke behaviour
-				//std::thread([=]{ m_watcher.CheckForChangedFiles(); }).detach();
-				m_watcher.CheckForChangedFiles();
+				std::thread([this]{ m_watcher.CheckForChangedFiles(); }).detach();
 			}
 
 		private:
@@ -327,13 +305,15 @@ namespace pr
 			void FileWatch_OnFileChanged(wchar_t const*, pr::Guid const& file_group_id, void*, bool& handled)
 			{
 				// Look for the root file for group 'file_group_id'
-				auto iter = pr::find_if(m_files, [=](auto& file){ return file.second.m_file_group_id == file_group_id; });
-				if (iter == std::end(m_files))
+				Lock lock(*this);
+				auto iter = pr::find_if(lock.Files(), [=](auto& file){ return file.second.m_file_group_id == file_group_id; });
+				if (iter == std::end(lock.Files()))
 					return;
 
 				// Reload that file group (asynchronously)
-				auto filepath = iter->second;
-				handled = AddFile(filepath, EReason::Reload) != pr::GuidZero;
+				auto file = iter->second;
+				auto id = AddFile(file, EReason::Reload);
+				handled = id != pr::GuidZero;
 			}
 
 			// Internal add file.
@@ -341,10 +321,8 @@ namespace pr
 			// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 			pr::Guid AddFile(File file, EReason reason)
 			{
+				// Note: worker thread context
 				using namespace pr::script;
-
-				// Ensure the same file is not added twice
-				RemoveFile(file.m_filepath.c_str());
 
 				// Record the files that get included so we can watch them for changes
 				pr::vector<filepath_t> filepaths;
@@ -356,8 +334,11 @@ namespace pr
 					filepaths.push_back(pr::filesys::Standardise(fp));
 				};
 
-				ParseResult out;
+				// Parse the contents of the file
+				ErrorEventArgs errors;
 				auto context_id = pr::GuidZero;
+				auto out = std::make_shared<ParseResult>();
+				#pragma region Parse
 				try
 				{
 					// Add the file based on it's file type
@@ -372,14 +353,14 @@ namespace pr
 						// P3D binary model file
 						Buffer<> src(ESrcType::Buffered, pr::FmtS(L"*Model {\"%s\"}", file.m_filepath.c_str()));
 						Reader reader(src, false, &file.m_includes, nullptr, m_embed);
-						Parse(*m_rdr, reader, out, file.m_file_group_id, pr::StaticCallBack(AddFileProgressCB, this));
+						Parse(*m_rdr, reader, *out, file.m_file_group_id, pr::StaticCallBack(AddFileProgressCB, this));
 					}
 					else if (pr::str::EqualI(extn, "csv"))
 					{
 						// CSV data, create a chart to graph the data
 						Buffer<> src(ESrcType::Buffered, pr::FmtS(L"*Chart {3 #include \"%s\"}", file.m_filepath.c_str()));
 						Reader reader(src, false, &file.m_includes, nullptr, m_embed);
-						Parse(*m_rdr, reader, out, file.m_file_group_id, pr::StaticCallBack(AddFileProgressCB, this));
+						Parse(*m_rdr, reader, *out, file.m_file_group_id, pr::StaticCallBack(AddFileProgressCB, this));
 					}
 					else
 					{
@@ -392,39 +373,52 @@ namespace pr
 
 						// Parse the script
 						Reader reader(src, false, &file.m_includes, nullptr, m_embed);
-						Parse(*m_rdr, reader, out, file.m_file_group_id, pr::StaticCallBack(AddFileProgressCB, this));
+						Parse(*m_rdr, reader, *out, file.m_file_group_id, pr::StaticCallBack(AddFileProgressCB, this));
 					}
 
 					context_id = file.m_file_group_id;
 				}
 				catch (pr::script::Exception const& ex)
 				{
-					OnError(*this, ErrorEventArgs(pr::FmtS(L"Script error found while parsing source file '%s'.\r\n%S", file.m_filepath.c_str(), ex.what())));
+					errors = ErrorEventArgs(pr::FmtS(L"Script error found while parsing source file '%s'.\r\n%S", file.m_filepath.c_str(), ex.what()));
 				}
 				catch (std::exception const& ex)
 				{
-					OnError(*this, ErrorEventArgs(pr::FmtS(L"Error found while parsing source file '%s'.\r\n%S", file.m_filepath.c_str(), ex.what())));
+					errors = ErrorEventArgs(pr::FmtS(L"Error found while parsing source file '%s'.\r\n%S", file.m_filepath.c_str(), ex.what()));
 				}
+				#pragma endregion
 
-				// Merge the objects into our 'm_objects' and add the files to the watch,
-				// even if this is a partial load. We want Reload() to try these files again
+				// Ensure the same file is not added twice and remove objects from the old version of the file
+				RemoveFile(file.m_filepath.c_str());
+
+				// Merge the objects into our objects collection
 				{
 					Lock lock(*this);
 
 					// Add to the container of script sources
-					m_files[file.m_filepath] = file;
+					lock.Files()[file.m_filepath] = file;
 
 					// Add to the watcher
 					for (auto& fp : filepaths)
 						m_watcher.Add(fp.c_str(), this, file.m_file_group_id);
 
 					// Merge the objects
-					for (auto& obj : out.m_objects)
-						m_objects.push_back(obj);
+					for (auto& obj : out->m_objects)
+						lock.Objects().push_back(obj);
+				}
+
+				// Raise events on the main thread
+				auto new_count = int(out->m_objects.size());
+				m_rdr->RunOnMainThread([=]
+				{
+					// Notify of any errors that occurred
+					if (!errors.m_msg.empty())
+						OnError(*this, errors);
 
 					// Notify of the object container change
-					OnStoreChanged(*this, StoreChangedEventArgs(m_objects, int(out.m_objects.size()), out, reason));
-				}
+					Lock lock(*this);
+					OnStoreChanged(*this, StoreChangedEventArgs(lock.Objects(), new_count, *out, reason));
+				});
 
 				return context_id;
 			}

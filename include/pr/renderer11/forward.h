@@ -14,6 +14,9 @@
 #include <functional>
 #include <type_traits>
 #include <mutex>
+#pragma warning(disable:4355)
+#include <future>
+#pragma warning(default:4355)
 
 #include <intrin.h>
 #include <malloc.h>
@@ -58,7 +61,9 @@
 #include "pr/common/scope.h"
 #include "pr/common/algorithm.h"
 #include "pr/common/user_data.h"
+#include "pr/common/static_callback.h"
 #include "pr/container/vector.h"
+#include "pr/container/deque.h"
 #include "pr/str/string.h"
 #include "pr/str/to_string.h"
 #include "pr/filesys/fileex.h"
@@ -180,6 +185,7 @@ namespace pr
 		struct Lock;
 		struct MLock;
 		template <class T> struct Allocator;
+		using InvokeFunc = void (__stdcall *)(void* ctx);
 
 		// EResult
 		#define PR_ENUM(x)/*
