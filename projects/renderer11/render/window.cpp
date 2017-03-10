@@ -444,13 +444,6 @@ namespace pr
 		// Flip the scene to the display
 		void Window::Present()
 		{
-			// Run any pending tasks in the main thread.
-			// It's a good idea to do work between RenderEnd and Present, so running tasks is something we can do.
-			// If there are multiple windows, then this will probably be a no-op for the 2+ windows.
-			// RunTasks can be called at any point by the main thread. If having tasks run here is inconvenient,
-			// just call RunTasks at some earlier time so that this is a no-op.
-			m_rdr->RunTasks();
-
 			// Be careful that you never have the message-pump thread wait on the render thread.
 			// For instance, calling IDXGISwapChain1::Present1 (from the render thread) may cause
 			// the render thread to wait on the message-pump thread. When a mode change occurs,
