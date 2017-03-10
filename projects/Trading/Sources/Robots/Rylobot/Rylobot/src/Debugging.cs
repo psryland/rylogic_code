@@ -265,13 +265,13 @@ namespace Rylobot
 				#region EMA
 				if (emas != null)
 				{
-					var cols = new[] { Colour32.Green, Colour32.Red, Colour32.Blue }; var coli = 0;
+					var cols = new[] { 0xFF00A000, 0xFFA00000, 0xFF0000A0 }; var coli = 0;
 					var first = (int)(range.Beg - (double)instr.IdxFirst);
 					var last  = (int)(range.End - (double)instr.IdxFirst);
 					foreach (var ema in emas)
 					{
 						var avr = new ExpMovingAvr(ema);
-						ldr.Line("ema", cols[coli], 1, int_.Range((int)range.Beg, (int)range.End).Select(i =>
+						ldr.Line("ema", cols[coli], 3, int_.Range((int)range.Beg, (int)range.End).Select(i =>
 						{
 							avr.Add(instr[i].Median);
 							return new v4((float)(i - instr.IdxFirst), (float)avr.Mean, 0.05f, 1f);
@@ -386,13 +386,15 @@ namespace Rylobot
 		}
 
 		/// <summary>Dump a polynomial to an ldr file</summary>
-		public static void Dump(IPolynomial poly, Colour32 colour, RangeF range, double step = 0.1, LdrBuilder ldr_ = null)
+		public static void Dump(IPolynomial poly, string name, Colour32 colour, RangeF range, double step = 0.1, LdrBuilder ldr_ = null)
 		{
 			if (!DumpEnabled) return;
 			var ldr = ldr_ ?? new LdrBuilder();
 
+			ldr.Line(name, colour, 3, double_.Range(range, 0.1).Select(x => new v4((float)(x - (double)Instrument.IdxFirst), (float)poly.F(x), 0f, 1f)));
+
 			if (ldr_ == null)
-				ldr.ToFile(FP("price_peaks.ldr"));
+				ldr.ToFile(FP("poly_{0}.ldr".Fmt(name)));
 		}
 
 		/// <summary>Dump a slope, coloured to indicate trend</summary>
@@ -586,7 +588,7 @@ namespace Rylobot
 			// Dump the instrument data
 			Dump(Instrument
 				,range_:new Range(-100, 1)
-				,emas:new[] { 10, 200 }
+				,emas:new[] { 5, 15, 200 }
 				,ldr_:m_ldr_instr);
 
 			// Write the instrument to 'm_ldr_instr'

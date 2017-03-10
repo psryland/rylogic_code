@@ -14,6 +14,24 @@ namespace pr
 		// Useful reading:
 		//   http://msdn.microsoft.com/en-us/library/windows/desktop/bb205075(v=vs.85).aspx
 
+		// Registered windows message for BeginInvoke
+		wchar_t const* BeginInvokeWndClassName = L"pr::rdr::BeginInvoke";
+
+		// WndProc for the dummy window used to implement BeginInvoke functionality
+		static LRESULT __stdcall BeginInvokeWndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
+		{
+			switch (message)
+			{
+			case WM_BeginInvoke:
+				{
+					auto& rdr = *reinterpret_cast<pr::Renderer*>(wparam);
+					rdr.RunTasks();
+					break;
+				}
+			}
+			return DefWindowProcW(hwnd, message, wparam, lparam);
+		}
+
 		// Initialise the renderer state variables and creates the DX device and swap chain.
 		RdrState::RdrState(RdrSettings const& settings)
 			:m_settings(settings)
@@ -88,26 +106,67 @@ namespace pr
 	// Construct the renderer
 	Renderer::Renderer(rdr::RdrSettings const& settings)
 		:RdrState(settings)
-		,m_main_thread_id(std::this_thread::get_id())
+		,m_main_thread_id(GetCurrentThreadId())
 		,m_mutex_task_queue()
 		,m_task_queue()
+		,m_dummy_hwnd()
 		,m_mdl_mgr(m_settings.m_mem, m_device)
 		,m_shdr_mgr(m_settings.m_mem, m_device)
 		,m_tex_mgr(m_settings.m_mem, m_device, m_d2dfactory)
 		,m_bs_mgr(m_settings.m_mem, m_device)
 		,m_ds_mgr(m_settings.m_mem, m_device)
 		,m_rs_mgr(m_settings.m_mem, m_device)
-	{}
+	{
+		try
+		{
+			// Register a window class for the dummy window
+			WNDCLASSEXW wc = {sizeof(WNDCLASSEXW)};
+			wc.style         = 0;
+			wc.cbClsExtra    = 0;
+			wc.cbWndExtra    = 0;
+			wc.hInstance     = m_settings.m_instance;
+			wc.hIcon         = nullptr;
+			wc.hIconSm       = nullptr;
+			wc.hCursor       = nullptr;
+			wc.hbrBackground = nullptr;
+			wc.lpszMenuName  = nullptr;
+			wc.lpfnWndProc   = &rdr::BeginInvokeWndProc;
+			wc.lpszClassName = rdr::BeginInvokeWndClassName;
+			auto atom = ATOM(::RegisterClassExW(&wc));
+			if (atom == 0)
+				throw std::exception(pr::HrMsg(GetLastError()).c_str());
+
+			// Create a dummy window for BeginInvoke functionality
+			m_dummy_hwnd = ::CreateWindowExW(0, (LPCWSTR)MAKEINTATOM(atom), L"", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, nullptr, nullptr);
+			if (m_dummy_hwnd == nullptr)
+				throw std::exception(pr::HrMsg(GetLastError()).c_str());
+		}
+		catch (...)
+		{
+			this->~Renderer();
+			throw;
+		}
+	}
 	Renderer::~Renderer()
 	{
 		// Notify of the renderer shutdown
 		pr::events::Send(pr::rdr::Evt_RendererDestroy(*this));
+
+		// Release the dummy window
+		if (m_dummy_hwnd != nullptr)
+		{
+			::DestroyWindow(m_dummy_hwnd);
+			m_dummy_hwnd = nullptr;
+		}
+
+		// Un-register the dummy window class
+		::UnregisterClassW(rdr::BeginInvokeWndClassName, m_settings.m_instance);
 	}
 
 	// Execute any pending tasks in the task queue
 	void Renderer::RunTasks()
 	{
-		if (std::this_thread::get_id() != m_main_thread_id)
+		if (GetCurrentThreadId() != m_main_thread_id)
 			throw std::exception("RunTasks must be called from the main thread");
 
 		TaskQueue tasks;

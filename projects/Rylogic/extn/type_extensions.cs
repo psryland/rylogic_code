@@ -289,6 +289,10 @@ namespace pr.extn
 			for (;beg < end; beg += step)
 				yield return beg;
 		}
+		public static IEnumerable<float> Range(common.RangeF range, float step)
+		{
+			return Range(range.Begf, range.Endf, step);
+		}
 
 		/// <summary>Try parse a float from a string</summary>
 		public static float? TryParse(string val, NumberStyles style = NumberStyles.Float)
@@ -323,6 +327,10 @@ namespace pr.extn
 		{
 			for (;beg < end; beg += step)
 				yield return beg;
+		}
+		public static IEnumerable<double> Range(common.RangeF range, double step)
+		{
+			return Range(range.Beg, range.End, step);
 		}
 
 		/// <summary>Try parse a double from a string</summary>

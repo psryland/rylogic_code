@@ -66,14 +66,13 @@ namespace ldr
 		{
 			using namespace pr::script;
 
-			ParseResult out(m_store);
-			auto bcount = m_store.size();
-
+			ParseResult out;
 			PtrW src(str.c_str());
 			Reader reader(src, false, nullptr, nullptr, &m_lua_src);
 			Parse(m_rdr, reader, out);
 
-			pr::events::Send(Evt_StoreChanged(m_store, int(m_store.size() - bcount), out, Evt_StoreChanged::EReason::NewData));
+			m_store.insert(std::end(m_store), out.m_objects.begin(), out.m_objects.end());
+			pr::events::Send(Evt_StoreChanged(m_store, int(out.m_objects.size()), out, Evt_StoreChanged::EReason::NewData));
 			pr::events::Send(Evt_Refresh());
 		}
 		catch (std::exception const& ex)
@@ -104,8 +103,7 @@ namespace ldr
 
 		try
 		{
-			ParseResult out(m_store);
-			auto bcount = m_store.size();
+			ParseResult out;
 
 			// Add file watchers for the file and everything it includes
 			m_watcher.Add(fpath.c_str(), this, file.m_context_id, &file);
@@ -147,7 +145,8 @@ namespace ldr
 				Parse(m_rdr, reader, out, file.m_context_id);
 			}
 
-			pr::events::Send(Evt_StoreChanged(m_store, int(m_store.size() - bcount), out, reason));
+			m_store.insert(std::end(m_store), out.m_objects.begin(), out.m_objects.end());
+			pr::events::Send(Evt_StoreChanged(m_store, int(out.m_objects.size()), out, reason));
 			pr::events::Send(Evt_Refresh());
 		}
 		catch (pr::script::Exception const& ex)

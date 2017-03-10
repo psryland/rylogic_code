@@ -21,10 +21,10 @@ namespace view3d
 		pr::script::EmbeddedLua<> m_lua;
 		std::recursive_mutex      m_mutex;
 
-		Context()
+		explicit Context(HINSTANCE instance)
 			:m_inits()
 			,m_compatible(pr::rdr::TestSystemCompatibility())
-			,m_rdr(pr::rdr::RdrSettings(FALSE))
+			,m_rdr(pr::rdr::RdrSettings(instance, FALSE))
 			,m_wnd_cont()
 			,m_sources(m_rdr, &m_lua)
 			,m_lua()

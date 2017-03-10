@@ -622,6 +622,26 @@ namespace Rylobot
 			public long Volume;
 		}
 
+		/// <summary>Compress candles over the given range [idx_min,idx_max) into a single equivalent candle</summary>
+		public Candle Compress(NegIdx idx_min, NegIdx idx_max)
+		{
+			var candles = CandleRange(idx_min, idx_max).ToArray();
+			if (!candles.Any())
+				throw new Exception("Empty range, cannot create an equivalent candle");
+
+			var index     = candles.First().Index;
+			var timestamp = candles.First().Timestamp;
+			var open      = candles.First().Open;
+			var high      = candles.Max(x => x.High);
+			var low       = candles.Min(x => x.Low);;
+			var close     = candles.Last().Close;
+			var medians   = candles.Select(x => x.Median).ToArray();
+			var median    = medians.NthElement(medians.Length/2);
+			var volume    = candles.Sum(x => x.Volume);
+			
+			return new Candle(index, timestamp, open, high, low, close, median, volume);
+		}
+
 		/// <summary>
 		/// Measures the trend over candles [idx_min, idx_max).
 		/// Returns a value on the range [-1,+1] (negative = bearish, positive = bullish)
@@ -721,26 +741,6 @@ namespace Rylobot
 			return MeasureTrend(slope);
 		}
 
-		/// <summary>Compress candles over the given range [idx_min,idx_max) into a single equivalent candle</summary>
-		public Candle Compress(NegIdx idx_min, NegIdx idx_max)
-		{
-			var candles = CandleRange(idx_min, idx_max).ToArray();
-			if (!candles.Any())
-				throw new Exception("Empty range, cannot create an equivalent candle");
-
-			var index     = candles.First().Index;
-			var timestamp = candles.First().Timestamp;
-			var open      = candles.First().Open;
-			var high      = candles.Max(x => x.High);
-			var low       = candles.Min(x => x.Low);;
-			var close     = candles.Last().Close;
-			var medians   = candles.Select(x => x.Median).ToArray();
-			var median    = medians.NthElement(medians.Length/2);
-			var volume    = candles.Sum(x => x.Volume);
-			
-			return new Candle(index, timestamp, open, high, low, close, median, volume);
-		}
-
 		/// <summary>Compare a candle to a price value, returning the ratio above or below the value. Returns positive for 'candle' above 'price'</summary>
 		public double Compare(Candle candle, QuoteCurrency price, bool wicks)
 		{
@@ -763,6 +763,33 @@ namespace Rylobot
 		public double Compare(Candle candle, MovingAverage ma, bool wicks)
 		{
 			return Compare(candle, ma.Result[candle.Index], wicks);
+		}
+
+		/// <summary>Return a quadratic approximation of a EMA</summary>
+		public Quadratic PredictEMA(int periods)
+		{
+			// Use the average of a few independently calculated quadratics
+			var ema = Bot.Indicators.ExponentialMovingAverage(Data.Close, periods).Result;
+			if (ema.Count < 10)
+				return null;
+
+			var q0 = Quadratic.FromPoints(
+				-0, ema[-0 - IdxFirst],
+				-3, ema[-3 - IdxFirst],
+				-6, ema[-6 - IdxFirst]);
+			var q1 = Quadratic.FromPoints(
+				-1, ema[-1 - IdxFirst],
+				-4, ema[-4 - IdxFirst],
+				-7, ema[-7 - IdxFirst]);
+			var q2 = Quadratic.FromPoints(
+				-2, ema[-2 - IdxFirst],
+				-5, ema[-5 - IdxFirst],
+				-8, ema[-8 - IdxFirst]);
+
+			return new Quadratic(
+				(q0.A + q1.A + q2.A) / 3.0,
+				(q0.B + q1.B + q2.B) / 3.0,
+				(q0.C + q1.C + q2.C) / 3.0);
 		}
 
 		/// <summary>Types of candle patterns</summary>

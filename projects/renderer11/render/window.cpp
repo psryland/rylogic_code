@@ -105,10 +105,13 @@ namespace pr
 			// You may not release a swap chain in full-screen mode because doing so may create thread contention
 			// (which will cause DXGI to raise a non-continuable exception). Before releasing a swap chain, first
 			// switch to windowed mode (using IDXGISwapChain::SetFullscreenState( FALSE, NULL )) and then call IUnknown::Release.
-			PR_EXPAND(PR_DBG_RDR, int rcnt);
-			PR_ASSERT(PR_DBG_RDR, (rcnt = m_swap_chain.RefCount()) == 1, "Outstanding references to the swap chain");
-			m_swap_chain->SetFullscreenState(FALSE, nullptr);
-			m_swap_chain = nullptr;
+			if (m_swap_chain != nullptr)
+			{
+				PR_EXPAND(PR_DBG_RDR, int rcnt);
+				PR_ASSERT(PR_DBG_RDR, (rcnt = m_swap_chain.RefCount()) == 1, "Outstanding references to the swap chain");
+				m_swap_chain->SetFullscreenState(FALSE, nullptr);
+				m_swap_chain = nullptr;
+			}
 		}
 
 		// Return the DX device

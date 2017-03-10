@@ -27,15 +27,15 @@ using namespace view3d;
 #ifdef _MANAGED
 #pragma managed(push, off)
 #endif
-BOOL APIENTRY DllMain(HMODULE hInstance, DWORD ul_reason_for_call, LPVOID)
+HINSTANCE g_hInstance;
+BOOL APIENTRY DllMain(HINSTANCE hInstance, DWORD ul_reason_for_call, LPVOID)
 {
-	(void)hInstance;
 	switch (ul_reason_for_call)
 	{
+	case DLL_PROCESS_ATTACH: g_hInstance = hInstance; break;
+	case DLL_PROCESS_DETACH: g_hInstance = nullptr; break;
 	case DLL_THREAD_ATTACH:  break;
 	case DLL_THREAD_DETACH:  break;
-	case DLL_PROCESS_ATTACH: break;
-	case DLL_PROCESS_DETACH: break;
 	}
 	return TRUE;
 }
@@ -119,7 +119,7 @@ VIEW3D_API View3DContext __stdcall View3D_Initialise(View3D_ReportErrorCB initia
 	{
 		// Create the dll context on the first call
 		if (g_ctx == nullptr)
-			g_ctx = new Context();
+			g_ctx = new Context(g_hInstance);
 
 		// Generate a unique handle per Initialise call, used to match up with Shutdown calls
 		static View3DContext context = nullptr;

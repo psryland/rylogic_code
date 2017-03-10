@@ -18,6 +18,9 @@ namespace pr
 {
 	namespace rdr
 	{
+		// Registered windows message for BeginInvoke
+		static UINT const WM_BeginInvoke = WM_USER + 0x1976;
+
 		// Settings for constructing the renderer
 		struct RdrSettings
 		{
@@ -29,6 +32,7 @@ namespace pr
 				BuildOptions() :m_std() ,m_maths() ,RunTimeShaders(PR_RDR_RUNTIME_SHADERS) {}
 			};
 			
+			HINSTANCE                     m_instance;              // Executable instance 
 			BuildOptions                  m_build_options;         // The state of #defines. Used to check for incompatibilities
 			MemFuncs                      m_mem;                   // The manager of allocations/deallocations
 			D3DPtr<IDXGIAdapter>          m_adapter;               // The adapter to use. nullptr means use the default
@@ -38,8 +42,9 @@ namespace pr
 			bool                          m_fallback_to_sw_device; // True to use a software device if 'm_driver_type' fails
 
 			// Keep this inline so that m_build_options can be verified.
-			RdrSettings(BOOL gdi_compat)
-				:m_build_options()
+			RdrSettings(HINSTANCE inst, BOOL gdi_compat)
+				:m_instance(inst)
+				,m_build_options()
 				,m_mem()
 				,m_adapter()
 				,m_driver_type(D3D_DRIVER_TYPE_HARDWARE)
@@ -72,9 +77,10 @@ namespace pr
 	class Renderer :rdr::RdrState
 	{
 		using TaskQueue = pr::vector<std::future<void>>;
-		std::thread::id m_main_thread_id;
+		DWORD m_main_thread_id;
 		std::mutex m_mutex_task_queue;
 		TaskQueue m_task_queue;
+		HWND m_dummy_hwnd;
 
 	public:
 		// These manager classes form part of the public interface of the renderer
@@ -132,6 +138,8 @@ namespace pr
 		{
 			std::lock_guard<std::mutex> lock(m_mutex_task_queue);
 			m_task_queue.emplace_back(std::async(policy, func, args...));
+			if (!::PostMessageW(m_dummy_hwnd, pr::rdr::WM_BeginInvoke, WPARAM(this), LPARAM()))
+				throw std::exception(pr::HrMsg(GetLastError()).c_str());
 		}
 		template <typename Func, typename... Args> inline void RunOnMainThread(Func&& func, Args&&... args)
 		{

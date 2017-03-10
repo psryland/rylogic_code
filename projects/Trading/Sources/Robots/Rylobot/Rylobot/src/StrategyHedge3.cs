@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using cAlgo.API;
+using pr.common;
 using pr.extn;
+using pr.gfx;
 using pr.maths;
 
 namespace Rylobot
@@ -13,7 +15,7 @@ namespace Rylobot
 		// Notes:
 		//  - Open 1K positions
 		//  - No SL/TP
-		//  - Ensure the direction of profit for the net position is the same as the slow EMA
+		//  - Ensure the direction of profit for the net position is the same as trend direction
 		//  - Set SL to break even + amount
 
 		public StrategyHedge3(Rylobot bot)
@@ -58,27 +60,32 @@ namespace Rylobot
 		{
 			get
 			{
-				//
-				const int count = 5;
-				var t0 = Instrument.MeasureTrend(+0 - count, +0);
-				var t1 = Instrument.MeasureTrend(+1 - count, +1);
+				// Use the intersections of two EMAs for trend direction signals
+				var ema0 = Bot.Indicators.ExponentialMovingAverage(Instrument.Data.Close,  5).Result;
+				var ema1 = Bot.Indicators.ExponentialMovingAverage(Instrument.Data.Close, 15).Result;
+				return ema0[0 - (int)Instrument.IdxFirst].CompareTo(ema1[0 - (int)Instrument.IdxFirst]);
 
-				// The previous trend was really strong, use the current candle as the direction
-				if (Math.Abs(t0) > 0.9)
-					return Instrument.Latest.Sign;
+				
+				//const int count = 5;
+				//var t0 = Instrument.MeasureTrend(+0 - count, +0);
+				//var t1 = Instrument.MeasureTrend(+1 - count, +1);
 
-				// The previous trend was weak, but with the latest candle is stronger
-				if (Math.Abs(t0) < 0.3 && Math.Abs(t1) > 0.6)
-					return Instrument.Latest.Sign;
+				//// The previous trend was really strong, use the current candle as the direction
+				//if (Math.Abs(t0) > 0.9)
+				//	return Instrument.Latest.Sign;
 
-			//	// Otherwise use the slow EMA gradient
-			//	var ema = Bot.Indicators.ExponentialMovingAverage(Instrument.Data.Close, 200);
-			//	return Math.Sign(ema.Result.FirstDerivative());
+				//// The previous trend was weak, but with the latest candle is stronger
+				//if (Math.Abs(t0) < 0.3 && Math.Abs(t1) > 0.6)
+				//	return Instrument.Latest.Sign;
 
-				// The last complete candle
-				var candle = Instrument.LatestAge > 0.5 ? Instrument[0] : Instrument[-1];
-				var ratio = Instrument.Compare(candle, MedianPrice.Mean, false);
-				return Math.Sign(ratio);
+				////// Otherwise use the slow EMA gradient
+				////var ema = Bot.Indicators.ExponentialMovingAverage(Instrument.Data.Close, 200);
+				////return Math.Sign(ema.Result.FirstDerivative());
+
+				//// The last complete candle
+				//var candle = Instrument.LatestAge > 0.5 ? Instrument[0] : Instrument[-1];
+				//var ratio = Instrument.Compare(candle, MedianPrice.Mean, false);
+				//return Math.Sign(ratio);
 
 				//var ema = Bot.Indicators.ExponentialMovingAverage(Instrument.Data.Median, 3);
 				//var candle = Instrument[-1];
@@ -208,6 +215,12 @@ namespace Rylobot
 
 			if (Instrument.NewCandle)
 			{
+				// When there's a change of trend direction, allow 3 candles for a good close of positions
+
+				//var ema0 = Instrument.PredictEMA(5);
+				//var ema1 = Instrument.PredictEMA(15);
+				//Debugging.Dump(ema0, "ema0", Colour32.Green, new RangeF(-10.0, 10.0));
+				//Debugging.Dump(ema1, "ema1", Colour32.Red, new RangeF(-10.0, 10.0));
 				Debugging.LogInstrument();
 				Debugging.BreakOnCandleOfInterest();
 			}

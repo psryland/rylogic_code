@@ -24,35 +24,24 @@ namespace pr
 			using TDrawList = pr::vector<DrawListElement, 1024, false, pr::rdr::Allocator<DrawListElement>>;
 
 			// A lock context for the drawlist
-			class Lock
+			struct Lock :Synchronise<RenderStep, std::recursive_mutex>
 			{
-				RenderStep& m_rs;
-				std::lock_guard<std::recursive_mutex> m_lock;
-			
-			public:
+				Lock(RenderStep const& rs)
+					:base(rs, rs.m_mutex)
+				{}
 
-				Lock(RenderStep& rs) :m_rs(rs) ,m_lock(rs.m_mutex) {}
-				Lock(Lock const&) = delete;
-				Lock& operator =(Lock const&) = delete;
-
-				TDrawList const& drawlist() const
-				{
-					return m_rs.m_impl_drawlist;
-				}
-				TDrawList& drawlist()
-				{
-					return m_rs.m_impl_drawlist;
-				}
+				TDrawList const& drawlist() const { return get().m_impl_drawlist; }
+				TDrawList&       drawlist()       { return get().m_impl_drawlist; }
 			};
 
-			Scene*               m_scene;         // The scene this render step is owned by
-			ShaderManager*       m_shdr_mgr;      // Convenience pointer to the shader manager
-			TDrawList            m_impl_drawlist; // The drawlist for this render step. Access via 'Lock'
-			bool                 m_sort_needed;   // True when the list needs sorting
-			BSBlock              m_bsb;           // Blend states
-			RSBlock              m_rsb;           // Raster states
-			DSBlock              m_dsb;           // Depth buffer states
-			std::recursive_mutex m_mutex;         // Sync access to the drawlist
+			Scene*                       m_scene;         // The scene this render step is owned by
+			ShaderManager*               m_shdr_mgr;      // Convenience pointer to the shader manager
+			TDrawList                    m_impl_drawlist; // The drawlist for this render step. Access via 'Lock'
+			bool                         m_sort_needed;   // True when the list needs sorting
+			BSBlock                      m_bsb;           // Blend states
+			RSBlock                      m_rsb;           // Raster states
+			DSBlock                      m_dsb;           // Depth buffer states
+			std::recursive_mutex mutable m_mutex;         // Sync access to the drawlist
 
 			RenderStep(Scene& scene);
 			virtual ~RenderStep() {}
