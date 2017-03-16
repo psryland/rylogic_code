@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using cAlgo.API;
 using cAlgo.API.Internals;
@@ -26,6 +27,7 @@ namespace Rylobot
 			Debug.WriteLine("Rylobot is a {0} bit process".Fmt(Environment.Is64BitProcess?"64":"32"));
 			base.OnStart();
 			Instance = this;
+			TickNumber = 0;
 
 			// Load the bot settings
 			var settings_filepath = Util.ResolveAppDataPath("Rylogic","Rylobot","Settings.xml");
@@ -47,12 +49,13 @@ namespace Rylobot
 			// Create the strategies to use
 			Strats = new List<Strategy>();
 			//Strats.Add(new StrategyMain(this));
-			//Strats.Add(new StrategyMeanCross(this));
+			Strats.Add(new StrategyMeanCross(this));
 			//Strats.Add(new StrategyRevenge(this));
 			//Strats.Add(new StrategyTrend(this));
 			//Strats.Add(new StrategyHedge(this));
 			//Strats.Add(new StrategyHedge2(this));
-			Strats.Add(new StrategyHedge3(this));
+			//Strats.Add(new StrategyEmaCross(this));
+			//Strats.Add(new StrategySpike(this));
 			//Strats.Add(new StrategyPeaks(this));
 		}
 		protected override void OnStop()
@@ -63,7 +66,7 @@ namespace Rylobot
 			Debugging.LogTrades(this, false);
 
 			// Log the whole instrument
-			Debugging.Dump(new Instrument(this), emas:new[]{14, 200});
+			Debugging.Dump(new Instrument(this));
 
 			Strats = null;
 			Broker = null;
@@ -75,6 +78,8 @@ namespace Rylobot
 		}
 		protected override void OnTick()
 		{
+			++TickNumber;
+
 			// Raise the Bot.Tick event before stepping the strategy
 			// Instruments are signed up to the Tick event so they will be updated first
 			base.OnTick();
@@ -83,12 +88,19 @@ namespace Rylobot
 			// Update the account info
 			Broker.Update();
 
-			// Sort the strategies by score and step them in order of highest to lowest so that
-			// the best strategies get to create positions in preference to less suited strategies.
+			// Sort the strategies by score.
 			Strats.Sort((l,r) => l.SuitabilityScore.CompareTo(r.SuitabilityScore));
+
+			// Step them in order of highest to lowest so that the best strategies
+			// get to create positions in preference to less suited strategies.
 			foreach (var strat in Strats)
 			{
-				if (strat.SuitabilityScore == 0) continue;
+				// If the strategy has not positions or pending orders and is not suitable, skip it
+				if (!strat.Positions.Any() &&
+					!strat.PendingOrders.Any() &&
+					strat.SuitabilityScore == 0)
+					continue;
+
 				strat.Step();
 			}
 		}
@@ -110,6 +122,13 @@ namespace Rylobot
 		public DateTimeOffset UtcNow
 		{
 			get { return Server.Time; }
+		}
+
+		/// <summary>Incremented whenever OnTick is called</summary>
+		public int TickNumber
+		{
+			get;
+			private set;
 		}
 
 		/// <summary>All the active strategies</summary>

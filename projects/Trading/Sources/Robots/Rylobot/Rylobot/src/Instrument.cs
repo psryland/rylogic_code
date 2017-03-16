@@ -79,8 +79,8 @@ namespace Rylobot
 			// Check if this is the start of a new candle
 			NewCandle = candle.Timestamp > Latest.Timestamp;
 
-			// Get the fractional index for this tick
-			var index = FractionalIndexAt(now) - (double)IdxFirst;
+			// Get the fractional CAlgo index for this tick
+			var index = IndexAt(now) - IdxFirst;
 			var price = new PriceTick(index, now.Ticks, Symbol.Ask, Symbol.Bid);
 			Debug.Assert(HighRes.Count == 0 || index > HighRes.Back().Index);
 			//var idx = HighRes.Count == 0 || index > HighRes.Back().Index ? HighRes.Count : HighRes.BinarySearch(x => x.Index.CompareTo(index));
@@ -211,33 +211,37 @@ namespace Rylobot
 		}
 
 		/// <summary>Index range (-Count, 0]</summary>
-		public NegIdx IdxFirst
+		public Idx IdxFirst
 		{
-			get { return (NegIdx)(1 - Count); }
+			get { return 1 - Count; }
 		}
-		public NegIdx IdxLast
+		public Idx IdxLast
 		{
-			get { return (NegIdx)(+1); }
+			get { return +1; }
+		}
+		public Idx IdxNow
+		{
+			get { return IndexAt(Bot.UtcNow); }
 		}
 
 		/// <summary>The raw data. Idx = -(Count+1) is the oldest, Idx = 0 is the latest</summary>
-		public Candle this[NegIdx neg_idx]
+		public Candle this[Idx idx]
 		{
 			get
 			{
-				Debug.Assert(neg_idx >= IdxFirst && neg_idx < IdxLast);
+				Debug.Assert(idx >= IdxFirst && idx < IdxLast);
 
 				// CAlgo uses 0 = oldest, Count = latest
-				var idx = (int)(Data.OpenTime.Count + neg_idx - 1);
+				var i = (int)(idx - IdxFirst);
 				return new Candle(
-					idx,
-					Data.OpenTime  [idx].Ticks,
-					Data.Open      [idx],
-					Data.High      [idx],
-					Data.Low       [idx],
-					Data.Close     [idx],
-					Data.Median    [idx],
-					Data.TickVolume[idx]);
+					i,
+					Data.OpenTime  [i].Ticks,
+					Data.Open      [i],
+					Data.High      [i],
+					Data.Low       [i],
+					Data.Close     [i],
+					Data.Median    [i],
+					Data.TickVolume[i]);
 			}
 		}
 
@@ -245,8 +249,14 @@ namespace Rylobot
 		public Candle Latest
 		{
 			// Cache the latest candle so that we can detect a new candle starting.
-			get { return m_latest ?? (m_latest = this[0]); }
-			private set { m_latest = null; }
+			get
+			{
+				return m_latest ?? (m_latest = this[0]);
+			}
+			private set
+			{
+				m_latest = null;
+			}
 		}
 		private Candle m_latest;
 
@@ -277,11 +287,11 @@ namespace Rylobot
 		private long m_last_tick_time;
 
 		/// <summary>Clamps the given index range to a valid range within the data. i.e. [-Count,0]</summary>
-		public Range IndexRange(NegIdx idx_min, NegIdx idx_max)
+		public Range IndexRange(Idx idx_min, Idx idx_max)
 		{
 			Debug.Assert(idx_min <= idx_max);
-			var min = Maths.Clamp((int)idx_min, (int)IdxFirst, (int)IdxLast);
-			var max = Maths.Clamp((int)idx_max, (int)min, (int)IdxLast);
+			var min = Maths.Clamp(idx_min, IdxFirst, IdxLast);
+			var max = Maths.Clamp(idx_max, min, IdxLast);
 			return new Range(min, max);
 		}
 		public Range IndexRange(Range range)
@@ -307,7 +317,7 @@ namespace Rylobot
 		}
 
 		/// <summary>Enumerate the candles within an index range [idx_max,idx_max) (i.e. time-frame units)</summary>
-		public IEnumerable<Candle> CandleRange(NegIdx idx_min, NegIdx idx_max)
+		public IEnumerable<Candle> CandleRange(Idx idx_min, Idx idx_max)
 		{
 			return CandleRangeInternal(IndexRange(idx_min, idx_max));
 		}
@@ -322,12 +332,12 @@ namespace Rylobot
 
 		/// <summary>
 		/// Iterate through the high res price data over the given range with a step size of 'step'.
-		/// 'first' and 'last' floating point NegIdx's (not indices in HighRes)
+		/// 'first' and 'last' floating point Idx's (not indices in HighRes)
 		/// 'step' is the increment size in indices to move with each returned value</summary>
-		public IEnumerable<PriceTick> HighResRange(double idx_min, double idx_max, double? step = null)
+		public IEnumerable<PriceTick> HighResRange(Idx idx_min, Idx idx_max, double? step = null)
 		{
-			var first = idx_min - (double)IdxFirst;
-			var last  = idx_max - (double)IdxFirst;
+			var first = idx_min - IdxFirst;
+			var last  = idx_max - IdxFirst;
 
 			var istart = HighRes.BinarySearch(x => x.Index.CompareTo(first));
 			var iend   = HighRes.BinarySearch(x => x.Index.CompareTo(last));
@@ -378,12 +388,12 @@ namespace Rylobot
 			return HighResRange(idx_range.Beg, idx_range.End, step);
 		}
 
-		/// <summary>Create a candle that uses the high res data over the given 'NegIdx' range</summary>
-		public Candle HighResCandle(double idx_min, double idx_max)
+		/// <summary>Create a candle that uses the high res data over the given 'Idx' range</summary>
+		public Candle HighResCandle(Idx idx_min, Idx idx_max)
 		{
 			var data = HighResRange(idx_min, idx_max).ToArray();
 			if (!data.Any())
-				throw new Exception("Empty range, cannot create an equivalent candle");
+				return new Candle();
 
 			var index     = (int)(data.First().Index - (double)IdxFirst);
 			var timestamp = data.First().Timestamp;
@@ -399,21 +409,18 @@ namespace Rylobot
 		}
 
 		/// <summary>Return the index into the candle data for the given time</summary>
-		public NegIdx IndexAt(DateTimeOffset dt)
+		public Idx IndexAt(DateTimeOffset dt)
 		{
+			// Get the integral CAlgo index
 			var idx = Data.OpenTime.GetIndexByTime(dt.UtcDateTime);
-			return idx + IdxFirst;
-		}
 
-		/// <summary>Return the fractional index into the candle data for the given time</summary>
-		public double FractionalIndexAt(DateTimeOffset dt)
-		{
-			var idx = IndexAt(dt);
-
-			var candle = this[idx];
-			var ticks = dt.Ticks - candle.Timestamp;
+			// Find the sub-candle fractional part
+			var open = Data.OpenTime[idx];
+			var ticks = dt.Ticks - open.Ticks;
 			var ticks_per_candle = TimeFrame.ToTicks();
-			return (double)idx + Maths.Clamp((double)ticks / ticks_per_candle, 0.0, 1.0);
+			var frac = Maths.Clamp((double)ticks / ticks_per_candle, 0.0, 1.0);
+
+			return idx + frac + IdxFirst;
 		}
 
 		/// <summary>Returns a time 'num_candles' in the future</summary>
@@ -423,11 +430,11 @@ namespace Rylobot
 		}
 
 		/// <summary>Return the max candle size (total length) of the given range</summary>
-		public QuoteCurrency MaxCandleSize(NegIdx idx_min, NegIdx idx_max)
+		public QuoteCurrency MaxCandleSize(Idx idx_min, Idx idx_max)
 		{
 			var range = IndexRange(idx_min, idx_max);
 			if (range.Empty) throw new Exception("Empty range, max candle size is not defined");
-			var max_cs = range.Max(x => TrueRange((NegIdx)x));
+			var max_cs = range.Max(x => TrueRange(x));
 			return max_cs;
 		}
 		public QuoteCurrency MaxCandleSize(Range range)
@@ -443,9 +450,9 @@ namespace Rylobot
 		private QuoteCurrency? m_mcs;
 
 		/// <summary>Return the median candle size (total length) of the given range</summary>
-		public QuoteCurrency MedianCandleSize(NegIdx idx_min, NegIdx idx_max)
+		public QuoteCurrency MedianCandleSize(Idx idx_min, Idx idx_max)
 		{
-			var lengths = IndexRange(idx_min, idx_max).Select(x => TrueRange((NegIdx)x)).ToArray();
+			var lengths = IndexRange(idx_min, idx_max).Select(x => TrueRange(x)).ToArray();
 			if (lengths.Length == 0) throw new Exception("Empty range, median candle size is not defined");
 			var mcs = lengths.NthElement(lengths.Length/2);
 			return mcs;
@@ -465,7 +472,7 @@ namespace Rylobot
 		}
 
 		/// <summary>Return the true range for the candle at index position 'index'</summary>
-		public QuoteCurrency TrueRange(NegIdx index)
+		public QuoteCurrency TrueRange(Idx index)
 		{
 			// True Range is defined as the greater of:
 			// High of the current period less the low of the current period
@@ -482,7 +489,7 @@ namespace Rylobot
 		}
 
 		/// <summary>Return the average slope of all the EMAs over 'period_range'</summary>
-		public double EMASlope(NegIdx index, Range? period_range = null)
+		public double EMASlope(Idx index, Range? period_range = null)
 		{
 			period_range = period_range ?? new Range(1, 101);
 
@@ -498,19 +505,19 @@ namespace Rylobot
 		}
 
 		/// <summary>Return the combined EMA slope interpreted as a trend in the range [-1,+1]</summary>
-		public double EMATrend(NegIdx index, Range? period_range = null)
+		public double EMATrend(Idx index, Range? period_range = null)
 		{
 			return MeasureTrend(EMASlope(index, period_range));
 		}
 
 		/// <summary>Return an appropriate stop loss, take profit, and volume for a trade at the given candle an entry price</summary>
-		public TradeExit ChooseTradeExit(TradeType tt, NegIdx idx, QuoteCurrency ep, double? risk = null)
+		public TradeExit ChooseTradeExit(TradeType tt, Idx idx, QuoteCurrency ep, double? risk = null, int? look_back = null)
 		{
 			var exit = new TradeExit { EP = ep, SL = ep, TP = ep, Volume = Symbol.VolumeMin };
 			var sign = tt.Sign();
 
 			// Get the support and resistance levels
-			var snr = new SnR(this, idx, ep);
+			var snr = new SnR(this, ep, idx+1);
 			Debugging.Dump(snr);
 
 			#region SL
@@ -519,28 +526,29 @@ namespace Rylobot
 				var sl_rel = MCS;
 
 				// Scan backwards looking for a peak in the stop loss direction.
-				foreach (var candle in CandleRange(idx - Bot.Settings.LookBackCount, idx))
+				look_back = look_back ?? Bot.Settings.LookBackCount;
+				foreach (var candle in CandleRange(idx - look_back.Value, idx))
 				{
 					var limit = candle.WickLimit(-sign);
 					var diff = ep - limit;
-					if (Misc.Sign(diff) != sign) continue;
-					if (Misc.Abs(diff) < sl_rel) continue;
-					sl_rel = Misc.Abs(diff);
+					if (Math.Sign(diff) != sign) continue;
+					if (Math.Abs(diff) < sl_rel) continue;
+					sl_rel = Math.Abs(diff);
 				}
 
 				// Count the number of SnR levels between 'ep' and 'sl'.
 				// If there are two or more strong levels, reduce the SL to just beyond the 2nd level
 				var lvls = snr.SnRLevels
 					.Where(x => x.Strength > 0.5)                // strong
-					.Where(x => Misc.Sign(ep - x.Price) == sign) // on the SL side
-					.Where(x => Misc.Abs(ep - x.Price) < sl_rel) // between 'ep' and 'sl'
+					.Where(x => Math.Sign(ep - x.Price) == sign) // on the SL side
+					.Where(x => Math.Abs(ep - x.Price) < sl_rel) // between 'ep' and 'sl'
 					.OrderBy(x => x.Price)                       // sort by increasing price
 					.ToArray();
 				if (lvls.Length >= 2)
 				{
 					sl_rel = sign > 0
-						? Misc.Abs(ep - lvls[lvls.Length-2].Price)
-						: Misc.Abs(ep - lvls[1].Price);
+						? Math.Abs(ep - lvls[lvls.Length-2].Price)
+						: Math.Abs(ep - lvls[1].Price);
 				}
 
 				//// 
@@ -599,7 +607,7 @@ namespace Rylobot
 				var nearest = snr.Nearest(ep + sign * tp_rel, sign);
 				if (nearest != null)
 				{
-					tp_rel = Misc.Abs(nearest.Price - ep);
+					tp_rel = Math.Abs(nearest.Price - ep);
 				}
 				else
 				{
@@ -623,7 +631,7 @@ namespace Rylobot
 		}
 
 		/// <summary>Compress candles over the given range [idx_min,idx_max) into a single equivalent candle</summary>
-		public Candle Compress(NegIdx idx_min, NegIdx idx_max)
+		public Candle Compress(Idx idx_min, Idx idx_max)
 		{
 			var candles = CandleRange(idx_min, idx_max).ToArray();
 			if (!candles.Any())
@@ -646,7 +654,7 @@ namespace Rylobot
 		/// Measures the trend over candles [idx_min, idx_max).
 		/// Returns a value on the range [-1,+1] (negative = bearish, positive = bullish)
 		/// Treat ­0.5 as the limit between trend and no trend.</summary>
-		public double MeasureTrend(NegIdx idx_min, NegIdx idx_max)
+		public double MeasureTrend(Idx idx_min, Idx idx_max)
 		{
 			// Compress adjacent candles with the same sign into "group candles"
 			// Scan backwards from 'idx_max-1'
@@ -731,7 +739,7 @@ namespace Rylobot
 		/// Classify the trend at the given index using the slope of the slow EMA.
 		/// Returns a value on the range [-1,+1] (negative = bearish, positive = bullish)
 		/// Scales the range [-inf,+inf] to [-1,+1]. Treat ­0.5 as the limit between trend and no trend.</summary>
-		public double MeasureTrend(NegIdx idx, DataSeries data = null, int? ema_periods = null)
+		public double MeasureTrend(Idx idx, DataSeries data = null, int? ema_periods = null)
 		{
 			data = data ?? Data.Close;
 			ema_periods = ema_periods ?? Bot.Settings.SlowEMAPeriods;
@@ -746,8 +754,8 @@ namespace Rylobot
 		{
 			var hi = wicks ? candle.High : candle.BodyLimit(+1);
 			var lo = wicks ? candle.Low  : candle.BodyLimit(-1);
-			var above = Misc.Max(0, hi - price);
-			var below = Misc.Max(0, price - lo);
+			var above = Math.Max(0, hi - price);
+			var below = Math.Max(0, price - lo);
 			if (above == 0) return -1.0;
 			if (below == 0) return +1.0;
 			return (above - below) / (above + below);
@@ -765,33 +773,6 @@ namespace Rylobot
 			return Compare(candle, ma.Result[candle.Index], wicks);
 		}
 
-		/// <summary>Return a quadratic approximation of a EMA</summary>
-		public Quadratic PredictEMA(int periods)
-		{
-			// Use the average of a few independently calculated quadratics
-			var ema = Bot.Indicators.ExponentialMovingAverage(Data.Close, periods).Result;
-			if (ema.Count < 10)
-				return null;
-
-			var q0 = Quadratic.FromPoints(
-				-0, ema[-0 - IdxFirst],
-				-3, ema[-3 - IdxFirst],
-				-6, ema[-6 - IdxFirst]);
-			var q1 = Quadratic.FromPoints(
-				-1, ema[-1 - IdxFirst],
-				-4, ema[-4 - IdxFirst],
-				-7, ema[-7 - IdxFirst]);
-			var q2 = Quadratic.FromPoints(
-				-2, ema[-2 - IdxFirst],
-				-5, ema[-5 - IdxFirst],
-				-8, ema[-8 - IdxFirst]);
-
-			return new Quadratic(
-				(q0.A + q1.A + q2.A) / 3.0,
-				(q0.B + q1.B + q2.B) / 3.0,
-				(q0.C + q1.C + q2.C) / 3.0);
-		}
-
 		/// <summary>Types of candle patterns</summary>
 		public enum ECandlePattern
 		{
@@ -806,17 +787,17 @@ namespace Rylobot
 		}
 
 		/// <summary>True if the candle pattern leading up to 'idx' signals a possible trade entry point.</summary>
-		public ECandlePattern? IsCandlePattern(NegIdx idx)
+		public ECandlePattern? IsCandlePattern(Idx idx)
 		{
 			Range range;
-			NegIdx index;
+			Idx index;
 			TradeType tt;
 			QuoteCurrency? ep, tp;
 			return IsCandlePattern(idx, out tt, out range, out index, out ep, out tp);
 		}
 
 		/// <summary>True if the candle pattern leading up to 'idx' signals a possible trade entry point.</summary>
-		public ECandlePattern? IsCandlePattern(NegIdx idx, out TradeType tt, out Range range, out NegIdx index, out QuoteCurrency? ep, out QuoteCurrency? tp)
+		public ECandlePattern? IsCandlePattern(Idx idx, out TradeType tt, out Range range, out Idx index, out QuoteCurrency? ep, out QuoteCurrency? tp)
 		{
 			// Notes:
 			//  This just indicates candle patterns, *not* trade entries.
@@ -855,7 +836,7 @@ namespace Rylobot
 			var AC = Compress(c_idx,last); var ac_type = AC.Type(mcs);
 
 			// Get SnR data
-			var snr = new SnR(this, idx, A.Close);
+			var snr = new SnR(this, A.Close, last);
 
 			// The minimum number of candles to use to determine trend
 			const int MeasureTrendCount = 3;
@@ -864,7 +845,7 @@ namespace Rylobot
 			#region Forex4Noobs
 			{
 				var trade_type = (TradeType?)null;
-				Func<NegIdx,bool> IsStall = (indecision_idx) =>
+				Func<Idx,bool> IsStall = (indecision_idx) =>
 				{
 					// Indecision
 					var indecision_candle = this[indecision_idx];
@@ -919,7 +900,7 @@ namespace Rylobot
 			#region Reversal
 			{
 				// Determine if the candle at 'indecision_idx' is a reversal pattern
-				Func<NegIdx,bool> IsReversal = (indecision_idx) =>
+				Func<Idx,bool> IsReversal = (indecision_idx) =>
 				{
 					// A hammer, spinning top, or doji
 					var indecision_candle = this[indecision_idx];
@@ -995,7 +976,7 @@ namespace Rylobot
 			// Engulfing pattern
 			#region Engulfing
 			{
-				Func<NegIdx,bool> IsEngulfing = (engulfed_idx) =>
+				Func<Idx,bool> IsEngulfing = (engulfed_idx) =>
 				{
 					var engulfed_candle = this[engulfed_idx];
 
@@ -1061,7 +1042,7 @@ namespace Rylobot
 			// Large price spike
 			#region Price Spike
 			{
-				Func<NegIdx,bool> IsSpike = (spike_idx) =>
+				Func<Idx,bool> IsSpike = (spike_idx) =>
 				{
 					var spike_candle = this[spike_idx];
 
@@ -1118,7 +1099,7 @@ namespace Rylobot
 		}
 
 		/// <summary>Look for patterns in the price peaks</summary>
-		public EPeakPattern? IsPeakPattern(NegIdx idx, out TradeType tt, out QuoteCurrency ep)
+		public EPeakPattern? IsPeakPattern(Idx idx, out TradeType tt, out QuoteCurrency ep)
 		{
 			var pp = new PricePeaks(this, idx+1);
 
@@ -1139,7 +1120,7 @@ namespace Rylobot
 			// If a significant trend is detected, look for a reversal at the trend line
 			if (pp.Strength > 0.5)
 			{
-				Func<NegIdx,bool,bool> IsReversal = (rev_idx,high) =>
+				Func<Idx,bool,bool> IsReversal = (rev_idx,high) =>
 				{
 					var A = this[rev_idx    ];
 					var B = this[rev_idx - 1];
@@ -1200,8 +1181,47 @@ namespace Rylobot
 			return null;
 		}
 
+		/// <summary>Returns the number of sequential higher lows ending at 'idx'</summary>
+		public int HigherLows(Idx idx, double tol_pips = 3)
+		{
+			var count = 0;
+			var low = this[idx].Low;
+			var tol = tol_pips * PipSize;
+			for (var i = idx; i-- != IdxFirst; ++count)
+			{
+				var lo = this[i].Low;
+				if (lo > low + tol) break;
+				if (lo < low) low = lo;
+			}
+			return count;
+		}
+
+		/// <summary>Returns the number of sequential lower highs ending at 'idx'</summary>
+		public int LowerHighs(Idx idx, double tol_pips = 3)
+		{
+			var count = 0;
+			var high = this[idx].High;
+			var tol = tol_pips * PipSize;
+			for (var i = idx; i-- != IdxFirst; ++count)
+			{
+				var hi = this[i].High;
+				if (hi < high - tol) break;
+				if (hi > high) high = hi;
+			}
+			return count;
+		}
+
+		/// <summary>Return the number of sequential peaks in the direction 'sign'</summary>
+		public int SequentialPeaks(int sign, Idx idx, double tol_pips = 3)
+		{
+			return
+				sign > 0 ? HigherLows(idx, tol_pips) :
+				sign < 0 ? LowerHighs(idx, tol_pips) :
+				Math.Max(HigherLows(idx, tol_pips), LowerHighs(idx, tol_pips));
+		}
+
 		/// <summary>Returns a trade type when a likely good trade is identified. Or null</summary>
-		public TradeType? FindTradeEntry(out QuoteCurrency? ep, out QuoteCurrency? tp, NegIdx? idx_ = null)
+		public TradeType? FindTradeEntry(out QuoteCurrency? ep, out QuoteCurrency? tp, Idx? idx_ = null)
 		{
 			// Where in the instrument to look
 			var idx = idx_ ?? 0;
@@ -1213,7 +1233,7 @@ namespace Rylobot
 
 			// Look for a candle pattern to start the entry point consideration
 			Range range;
-			NegIdx pattern_start_index;
+			Idx pattern_start_index;
 			TradeType trade_type;
 			var pattern = IsCandlePattern(idx, out trade_type, out range, out pattern_start_index, out ep, out tp);
 			if (pattern == null)
@@ -1235,7 +1255,7 @@ namespace Rylobot
 			// Show the debugging data
 			Debugging.LogInstrument();
 			Debugging.CandlePattern(range.Begi,range.Endi);
-			Debugging.Dump(new SnR(this, idx, candle.Close));
+			Debugging.Dump(new SnR(this, candle.Close, idx+1));
 			Debugging.Trace("\nCandle Pattern: --- {0} --- ({1})".Fmt(trade_type, pattern.Value));
 
 			// Check the price peaks

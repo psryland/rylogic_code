@@ -400,6 +400,7 @@ namespace pr.maths
 		public int WindowSize
 		{
 			get { return m_size; }
+			set { m_size = value; }
 		}
 
 		/// <summary>The number of data points added to this average</summary>
@@ -448,6 +449,10 @@ namespace pr.maths
 			m_count = 0;
 			m_mean  = 0.0;
 			m_var   = 0.0;
+		}
+		public void Reset()
+		{
+			Reset(WindowSize);
 		}
 
 		/// <summary>Add a value to the moving average</summary>

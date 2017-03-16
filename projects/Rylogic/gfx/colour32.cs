@@ -93,6 +93,16 @@ namespace pr.gfx
 			return alpha_too ? Lerp(White, t) : LerpNoAlpha(White, t);
 		}
 
+		/// <summary>Return this colour with the alpha value changed</summary>
+		public Colour32 Alpha(byte alpha)
+		{
+			return new Colour32(((uint)alpha << 24) | (m_argb & 0x00FFFFFF));
+		}
+		public Colour32 Alpha(float alpha)
+		{
+			return Alpha((byte)(alpha * 0xFF));
+		}
+
 		#region Parse
 		public static Colour32 Parse(string s, int radix = 16)
 		{

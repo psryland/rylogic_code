@@ -435,7 +435,7 @@ namespace pr.unittests
 				var m = m3x4.Random(rng, v4.Random3N(0, rng), -(float)Maths.Tau, +(float)Maths.Tau);
 				var inv_m0 = m3x4.InvertFast(m);
 				var inv_m1 = m3x4.Invert(m);
-				Assert.True(m3x4.FEql(inv_m0, inv_m1));
+				Assert.True(m3x4.FEql(inv_m0, inv_m1, 0.001f));
 			}{
 				var m = m3x4.Random(rng, -5.0f, +5.0f);
 				var inv_m = m3x4.Invert(m);
@@ -455,7 +455,7 @@ namespace pr.unittests
 					new v4(7.0f, -8.333333f, 2.333333f, 0.0f));
 
 				var inv_m = m3x4.Invert(m);
-				Assert.True(m3x4.FEql(inv_m, INV_M));
+				Assert.True(m3x4.FEql(inv_m, INV_M, 0.001f));
 			}
 		}
 		[Test] public void TestQuatConversion()

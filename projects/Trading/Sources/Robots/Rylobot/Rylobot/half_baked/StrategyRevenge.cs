@@ -102,7 +102,7 @@ namespace Rylobot
 				BalanceRisked = sym.QuoteToAcct(trade.StopLossRel() * trade.Volume);
 
 				// Open the position
-				var pos = Bot.Broker.CreateOrder(trade);
+				var pos = Broker.CreateOrder(trade);
 				if (pos != null)
 					Trades.Add(new Trade(Instrument, pos));
 			}
@@ -135,7 +135,7 @@ namespace Rylobot
 					//{
 					//	var last = Trades.Back();
 					//	var trade = new Trade(Bot, Instrument, last.TradeType.Opposite());
-					//	var pos = Bot.Broker.CreateOrder(trade);
+					//	var pos = Broker.CreateOrder(trade);
 					//	if (pos != null)
 					//		Trades.Add(new Trade(Instrument, pos));
 					//}
@@ -160,7 +160,7 @@ namespace Rylobot
 
 		//	// If the sum of all trades is greater than the threshold, cash in
 		//	// If the sum of all trades exceeds 90% of the balance to risk, bail out
-		//	var profit_threshold = Misc.Max(1.0, Bot.Broker.Balance * TakeProfitPC);
+		//	var profit_threshold = Misc.Max(1.0, Broker.Balance * TakeProfitPC);
 		//	if (net > profit_threshold)
 		//	{
 		//		CloseOut();
@@ -179,8 +179,8 @@ namespace Rylobot
 		//		var pos1 = Positions.Back(1);
 		//		if (pos0.NetProfit + pos1.NetProfit > 1.0)
 		//		{
-		//			Bot.Broker.ClosePosition(pos0);
-		//			Bot.Broker.ClosePosition(pos1);
+		//			Broker.ClosePosition(pos0);
+		//			Broker.ClosePosition(pos1);
 		//			continue;
 		//		}
 		//		break;
@@ -201,7 +201,7 @@ namespace Rylobot
 
 		//		// Create the initial trade
 		//		var volume = sym.VolumeMin;
-		//		var risk = Bot.Broker.MaxSL(Instrument, volume);
+		//		var risk = Broker.MaxSL(Instrument, volume);
 		//		var ep = Instrument.CurrentPrice(sign);
 		//		var tp = ep + sign * risk;
 		//		var sl = ep - sign * risk;
@@ -211,7 +211,7 @@ namespace Rylobot
 		//		BalanceRisked = sym.QuoteToAcct(risk * volume);
 
 		//		// Open the position
-		//		var pos = Bot.Broker.CreateOrder(trade);
+		//		var pos = Broker.CreateOrder(trade);
 		//		if (pos != null)
 		//			Positions.Add(pos);
 		//	}
@@ -234,7 +234,7 @@ namespace Rylobot
 		//			var trade = new Trade(Instrument, tt, Label, ep, sl, tp, volume);
 
 		//			// Open the reverse position
-		//			var pos = Bot.Broker.CreateOrder(trade);
+		//			var pos = Broker.CreateOrder(trade);
 		//			if (pos != null)
 		//				Positions.Add(pos);
 		//		}
@@ -305,7 +305,7 @@ namespace Rylobot
 		private void CloseOut()
 		{
 			foreach (var pos in Positions)
-				Bot.Broker.ClosePosition(pos);
+				Broker.ClosePosition(pos);
 
 			Trades.Clear();
 		}

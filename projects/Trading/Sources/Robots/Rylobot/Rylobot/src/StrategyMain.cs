@@ -43,7 +43,7 @@ namespace Rylobot
 			if (Instrument.NewCandle)
 			{
 				Debugging.LogInstrument();
-				Debugging.BreakOnCandleOfInterest();
+				Debugging.BreakOnPointOfInterest();
 			}
 
 			// Run the position manager
@@ -55,10 +55,10 @@ namespace Rylobot
 			if (pending != null)
 			{
 				// If the price is more than the SL/TP distance from the EP then give up on the order
-				var dist = Misc.Abs(Instrument.LatestPrice.Mid - pending.TargetPrice);
-				if (dist > Misc.Abs(pending.TakeProfitRel()) ||
-					dist > Misc.Abs(pending.StopLossRel()))
-					Bot.Broker.CancelPendingOrder(pending);
+				var dist = Math.Abs(Instrument.LatestPrice.Mid - pending.TargetPrice);
+				if (dist > Math.Abs(pending.TakeProfitRel()) ||
+					dist > Math.Abs(pending.StopLossRel()))
+					Broker.CancelPendingOrder(pending);
 				else
 					return;
 			}
@@ -80,8 +80,8 @@ namespace Rylobot
 					return;
 
 				// Create a pending order
-				Bot.Broker.CreatePendingOrder(trade);
-				//Bot.Broker.CreateOrder(trade);
+				Broker.CreatePendingOrder(trade);
+				//Broker.CreateOrder(trade);
 			}
 		}
 

@@ -38,7 +38,16 @@ namespace pr.common
 		public static readonly Range Invalid = new Range{Beg = long.MaxValue, End = long.MinValue};
 
 		/// <summary>Create a range from a Start and Length</summary>
-		public static Range FromStartLength(long start, long length) { return new Range(start, start + length); }
+		public static Range FromStartLength(long start, long length)
+		{
+			return new Range(start, start + length);
+		}
+
+		/// <summary>Create a range from a centre value and + or - a radius</summary>
+		public static Range FromCentreRadius(long centre, long radius)
+		{
+			return new Range(centre - radius, centre + radius);
+		}
 
 		/// <summary>Construct from a range</summary>
 		public Range(long begin, long end) { Beg = begin; End = end; }
@@ -243,6 +252,18 @@ namespace pr.common
 
 		/// <summary>An invalid range. Used as an initialiser when finding a bounding range</summary>
 		public static readonly RangeF Invalid = new RangeF{Beg = double.MaxValue, End = double.MinValue};
+
+		/// <summary>Create a range from a Start and Length</summary>
+		public static RangeF FromStartLength(double start, double length)
+		{
+			return new RangeF(start, start + length);
+		}
+
+		/// <summary>Create a range from a centre value and + or - a radius</summary>
+		public static RangeF FromCentreRadius(double centre, double radius)
+		{
+			return new RangeF(centre - radius, centre + radius);
+		}
 
 		/// <summary>Construct from a range</summary>
 		public RangeF(double begin, double end)

@@ -20,27 +20,30 @@ namespace Rylobot
 		/// <param name="price">The centre price to centre the SnR level data around</param>
 		/// <param name="count">The number of candles that contribute to the SnR levels (only candles intersecting the range)</param>
 		/// <param name="range">The range of prices (above and below 'price') to check</param>
-		public SnR(Instrument instr, NegIdx iend, QuoteCurrency price, int? count = null, QuoteCurrency? range = null, QuoteCurrency? bucket_size = null)
+		public SnR(Instrument instr, QuoteCurrency? price = null, Idx? iend = null, int? count = null, QuoteCurrency? range = null, QuoteCurrency? bucket_size = null)
 		{
+			price = price ?? instr.LatestPrice.Mid;
+			iend = iend ?? 1;
+
 			// Set the range based on the recent span of candles
 			if (range == null)
 			{
 				var r = instr.MCS * 5;
-				foreach (var c in instr.CandleRange(iend - instr.Bot.Settings.LookBackCount, iend+1))
+				foreach (var c in instr.CandleRange(iend.Value - instr.Bot.Settings.LookBackCount, iend.Value))
 				{
-					r = Misc.Max(r, Misc.Abs(c.High - price));
-					r = Misc.Max(r, Misc.Abs(price - c.Low));
+					r = Math.Max(r, Math.Abs(c.High - price.Value));
+					r = Math.Max(r, Math.Abs(price.Value - c.Low));
 				}
 				range = r;
 			};
 
 			SnRLevels = new List<Level>();
 			Instrument = instr;
-			Beg = iend + 1;
-			End = iend + 1;
+			Beg = iend.Value;
+			End = iend.Value;
 			Count = count ?? instr.Bot.Settings.SnRHistoryLength;
 			Range = range.Value;
-			Price = price;
+			Price = price.Value;
 			BucketSize = (double)(bucket_size ?? instr.MCS);
 
 			CalculateLevels();
@@ -63,10 +66,10 @@ namespace Rylobot
 		private Instrument m_instrument;
 
 		/// <summary>The index of the first candle considered</summary>
-		public NegIdx Beg { get; private set; }
+		public Idx Beg { get; private set; }
 
 		/// <summary>The index of the end candle considered</summary>
-		public NegIdx End { get; private set; }
+		public Idx End { get; private set; }
 
 		/// <summary>The number of candles that contribute to the SnR levels</summary>
 		public int Count { get; private set; }
@@ -165,11 +168,11 @@ namespace Rylobot
 			// Find levels above/below the threshold
 			var levels = (IEnumerable<Level>)SnRLevels;
 			if (range != null)        levels = levels.Where(x => range.Value.Contains((double)x.Price));
-			if (sign != 0)            levels = levels.Where(x => Misc.Sign(x.Price - thresh) == sign);
+			if (sign != 0)            levels = levels.Where(x => Math.Sign(x.Price - thresh) == sign);
 			if (min_strength != null) levels = levels.Where(x => x.Strength >= min_strength.Value);
 
 			// Return the levels closed to 'price'
-			return levels.MinByOrDefault(x => (double)Misc.Abs(x.Price - price));
+			return levels.MinByOrDefault(x => Math.Abs(x.Price - price));
 		}
 
 		/// <summary>Identify the support and resistance levels</summary>
@@ -193,9 +196,9 @@ namespace Rylobot
 
 					// Find the closest bucket
 					// If the nearest bucket is further than the bucket size, insert a bucket
-					var d0 = idx >               0 ? (sp.Price - SnRLevels[idx-1].Price) : BucketSize;
-					var d1 = idx < SnRLevels.Count ? (SnRLevels[idx  ].Price - sp.Price) : BucketSize;
-					if (Misc.Min(d0,d1) >= BucketSize)
+					var d0 = idx >               0 ? (double)(sp.Price - SnRLevels[idx-1].Price) : BucketSize;
+					var d1 = idx < SnRLevels.Count ? (double)(SnRLevels[idx  ].Price - sp.Price) : BucketSize;
+					if (Math.Min(d0,d1) >= BucketSize)
 						SnRLevels.Insert(idx, new Level(sp.Price));
 					else
 						idx = d0 < d1 ? idx - 1 : idx;
@@ -210,7 +213,7 @@ namespace Rylobot
 				SnRLevels.RemoveIf(x => x.Average.Count == 0);
 				foreach (var lvl in SnRLevels)
 				{
-					done &= Misc.Abs(lvl.Price - lvl.Average.Mean) < pip;
+					done &= Math.Abs(lvl.Price - lvl.Average.Mean) < pip;
 					lvl.Price = lvl.Average.Mean;
 					lvl.Strength = lvl.Average.Count;
 					lvl.Average.Reset();
@@ -237,15 +240,15 @@ namespace Rylobot
 		[DebuggerDisplay("{Index} {Price}")]
 		public class StationaryPoint
 		{
-			public StationaryPoint(NegIdx index, QuoteCurrency price, bool maximum)
+			public StationaryPoint(Idx index, QuoteCurrency price, bool maximum)
 			{
 				Index   = index;
 				Price   = price;
 				Maximum = maximum;
 			}
 
-			/// <summary>The NegIdx index in the instrument data of the stationary point</summary>
-			public NegIdx Index { get; private set; }
+			/// <summary>The index in the instrument data of the stationary point</summary>
+			public Idx Index { get; private set; }
 
 			/// <summary>The price value at the stationary point</summary>
 			public QuoteCurrency Price { get; private set; }
@@ -281,7 +284,7 @@ namespace Rylobot
 		/// <summary>
 		/// Construct the price density data for a range of candles in 'instr'
 		/// 'ibeg' and 'iend' should be negative indices</summary>
-		public SnR(Instrument instr, NegIdx ibeg, NegIdx iend)
+		public SnR(Instrument instr, Idx ibeg, Idx iend)
 		{
 			Instrument = instr;
 			Range = Instrument.IndexRange(ibeg, iend);

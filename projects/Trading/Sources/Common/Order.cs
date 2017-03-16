@@ -76,10 +76,10 @@ namespace Rylobot
 			get
 			{
 				return
-					Position     != null ? Position    .EntryPrice :
-					PendingOrder != null ? PendingOrder.TargetPrice :
-					Trade        != null ? Trade       .EP :
-					0;
+					Position     != null ? (QuoteCurrency)Position    .EntryPrice :
+					PendingOrder != null ? (QuoteCurrency)PendingOrder.TargetPrice :
+					Trade        != null ? (QuoteCurrency)Trade       .EP :
+					(QuoteCurrency)0;
 			}
 		}
 
@@ -89,10 +89,10 @@ namespace Rylobot
 			get
 			{
 				return
-					Position     != null ? Position    .StopLoss :
-					PendingOrder != null ? PendingOrder.StopLoss :
-					Trade        != null ? Trade       .SL       :
-					(TradeType == TradeType.Buy ? double.NegativeInfinity : double.PositiveInfinity);
+					Position     != null ? (QuoteCurrency?)Position    .StopLoss :
+					PendingOrder != null ? (QuoteCurrency?)PendingOrder.StopLoss :
+					Trade        != null ? (QuoteCurrency?)Trade       .SL       :
+					(TradeType == TradeType.Buy ? (QuoteCurrency?)double.NegativeInfinity : (QuoteCurrency?)double.PositiveInfinity);
 			}
 		}
 
@@ -102,10 +102,10 @@ namespace Rylobot
 			get
 			{
 				return
-					Position     != null ? Position    .TakeProfit :
-					PendingOrder != null ? PendingOrder.TakeProfit :
-					Trade        != null ? Trade       .TP         :
-					(TradeType == TradeType.Buy ? double.PositiveInfinity : double.NegativeInfinity);
+					Position     != null ? (QuoteCurrency?)Position    .TakeProfit :
+					PendingOrder != null ? (QuoteCurrency?)PendingOrder.TakeProfit :
+					Trade        != null ? (QuoteCurrency?)Trade       .TP         :
+					(TradeType == TradeType.Buy ? (QuoteCurrency?)double.PositiveInfinity : (QuoteCurrency?)double.NegativeInfinity);
 			}
 		}
 

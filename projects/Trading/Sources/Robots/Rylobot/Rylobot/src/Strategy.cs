@@ -25,6 +25,8 @@ namespace Rylobot
 			Bot = bot;
 			Label = label;
 			Suitability = new List<Vec2d>();
+			PositionManagers = new List<PositionManager>();
+			Correlator = new Correlator(label);
 		}
 		public virtual void Dispose()
 		{
@@ -68,6 +70,37 @@ namespace Rylobot
 			[DebuggerStepThrough] get { return Bot.Instrument; }
 		}
 
+		/// <summary>The account broker</summary>
+		public Broker Broker
+		{
+			[DebuggerStepThrough] get { return Bot.Broker; }
+		}
+
+		/// <summary>An object for tracking correlation between trades and decision factors</summary>
+		public Correlator Correlator
+		{
+			get;
+			private set;
+		}
+
+		/// <summary>The current signed net position volume</summary>
+		public long NetVolume
+		{
+			get { return Broker.NetVolume(Label); }
+		}
+
+		/// <summary>The direction of increasing profit</summary>
+		public int ProfitSign
+		{
+			get { return Math.Sign(NetVolume); }
+		}
+
+		/// <summary>The net equity as a result of all trades created by this strategy</summary>
+		public AcctCurrency Equity
+		{
+			get { return Broker.Balance + Broker.NetProfit(Label); }
+		}
+
 		/// <summary>How well this strategy applies to the data</summary>
 		public virtual double SuitabilityScore
 		{
@@ -80,10 +113,14 @@ namespace Rylobot
 		{
 			if (Instrument.NewCandle)
 			{
-				// Track suitability
-				var x = Instrument.FractionalIndexAt(Bot.UtcNow) - (double)Instrument.IdxFirst;
-				Suitability.Add(new Vec2d(x, SuitabilityScore));
+			//	// Track suitability
+			//	var x = Instrument.IndexAt(Bot.UtcNow) - Instrument.IdxFirst;
+			//	Suitability.Add(new Vec2d(x, SuitabilityScore));
 			}
+
+			// Step active position managers
+			foreach (var pm in PositionManagers)
+				pm.Step();
 		}
 
 		/// <summary>Called just before the bot stops</summary>
@@ -116,14 +153,21 @@ namespace Rylobot
 			//}
 		}
 
+		/// <summary>Active position managers</summary>
+		public List<PositionManager> PositionManagers
+		{
+			get;
+			private set;
+		}
+
 		/// <summary>Return the live positions created by this strategy</summary>
-		protected IEnumerable<Position> Positions
+		public IEnumerable<Position> Positions
 		{
 			get { return Bot.Positions.Where(x => x.Label == Label); }
 		}
 
 		/// <summary>Return pending orders created by this strategy</summary>
-		protected IEnumerable<PendingOrder> PendingOrders
+		public IEnumerable<PendingOrder> PendingOrders
 		{
 			get { return Bot.PendingOrders.Where(x => x.Label == Label); }
 		}
@@ -146,6 +190,15 @@ namespace Rylobot
 		/// <summary>Called when a position is opened</summary>
 		private void HandlePositionOpened(PositionOpenedEventArgs args)
 		{
+			var position = args.Position;
+
+			Debugging.Trace("Idx={0},Tick={1} - Position Opened - {2} EP={3} Volume={4}".Fmt(Instrument.Count, Bot.TickNumber, position.TradeType, position.EntryPrice, position.Volume));
+
+			Correlator.Track(position, CorrFactor.SL, position.StopLossRel());
+			Correlator.Track(position, CorrFactor.TP, position.TakeProfitRel());
+			Correlator.Track(position, CorrFactor.RtR, position.TakeProfitRel() / position.StopLossRel());
+			Correlator.Track(position, CorrFactor.Volume, position.Volume);
+
 			// Notify position closed
 			OnPositionOpened(args.Position);
 		}
@@ -157,8 +210,18 @@ namespace Rylobot
 		/// <summary>Called when a position closes</summary>
 		private void HandlePositionClosed(PositionClosedEventArgs args)
 		{
+			var position = args.Position;
+
+			Debugging.Trace("Idx={0},Tick={1} - Position Closed - {2} EP={3} Volume={4} Profit=${5} Equity=${6}".Fmt(Instrument.Count, Bot.TickNumber, position.TradeType, position.EntryPrice, position.Volume, position.NetProfit, Equity));
+
+			// Track the trade result
+			Correlator.Result(position);
+
+			// Close any position managers that are managing 'position'
+			PositionManagers.RemoveIf(x => x.Position == position);
+
 			// Notify position closed
-			OnPositionClosed(args.Position);
+			OnPositionClosed(position);
 		}
 
 		/// <summary>Called when the current position closes</summary>
@@ -168,6 +231,11 @@ namespace Rylobot
 		/// <summary>Called just before the bot stops</summary>
 		private void HandleBotStopping(object sender, EventArgs e)
 		{
+			foreach (var pos in Positions)
+				Correlator.Result(pos);
+
+			Debugging.Dump(Correlator);
+
 			// Notify stopping
 			OnBotStopping();
 		}
@@ -236,5 +304,13 @@ namespace Rylobot
 		}
 
 		#endregion
+
+		public static class CorrFactor
+		{
+			public const string SL = "SL";
+			public const string TP = "TP";
+			public const string RtR = "RtR";
+			public const string Volume = "Volume";
+		}
 	}
 }

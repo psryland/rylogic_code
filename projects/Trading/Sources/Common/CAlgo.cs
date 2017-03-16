@@ -53,6 +53,18 @@ namespace Rylobot
 			return tt == TradeType.Buy ? +1 : -1;
 		}
 
+		/// <summary>Return +1 for long positions, -1 for short positions</summary>
+		public static int Sign(this Position pos)
+		{
+			return pos.TradeType.Sign();
+		}
+
+		/// <summary>Return +1 for long orders, -1 for short orders</summary>
+		public static int Sign(this PendingOrder ord)
+		{
+			return ord.TradeType.Sign();
+		}
+
 		#endregion
 
 		#region Symbol Extensions
@@ -178,13 +190,13 @@ namespace Rylobot
 		#region DataSeries
 
 		/// <summary>Return the first derivative of the data series at 'index'</summary>
-		public static double FirstDerivative(this DataSeries series, NegIdx index)
+		public static double FirstDerivative(this DataSeries series, Idx index)
 		{
 			// No data => no gradient
 			if (series.Count <= 1)
 				return double.NaN;
 
-			// Convert from 'NegIdx' to CAlgo index
+			// Convert from 'Idx' to CAlgo index
 			var idx = (int)(index + series.Count - 1);
 
 			// Allow indices before the start of the data, assuming zero slope
@@ -212,7 +224,7 @@ namespace Rylobot
 		}
 
 		/// <summary>Return the second derivative of the data series at 'index'</summary>
-		public static double SecondDerivative(this DataSeries series, NegIdx index)
+		public static double SecondDerivative(this DataSeries series, Idx index)
 		{
 			// Not enough data
 			if (series.Count <= 1)
@@ -239,7 +251,7 @@ namespace Rylobot
 		}
 
 		/// <summary>Integrate the series over the index range [index0,index1)</summary>
-		public static double Integrate(this DataSeries series, NegIdx index0, NegIdx index1)
+		public static double Integrate(this DataSeries series, Idx index0, Idx index1)
 		{
 			if (index0 > index1)
 				throw new Exception("Invalid index range: [{0},{1})".Fmt(index0, index1));

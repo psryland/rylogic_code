@@ -72,20 +72,20 @@ namespace Rylobot
 		private static LdrBuilder m_ldr = new LdrBuilder();
 
 		/// <summary>Break the debugger on the start of certain candles</summary>
-		public static void BreakOnCandleOfInterest()
+		public static void BreakOnPointOfInterest()
 		{
-			if (!Instrument.NewCandle) return;
-			if (!Path_.FileExists(FP("BreakCandleIndices.txt"))) return;
-			var str = File.ReadAllText(FP("BreakCandleIndices.txt"));
-			var indices = int_.ParseArray(str);
-			if (indices.Contains(Instrument.Count))
+			if (m_ticks_of_interest.Contains(Bot.TickNumber) ||
+				Instrument.NewCandle && m_candles_of_interest.Contains(Instrument.Count))
 				Debugger.Break();
 		}
+		private static int[] m_candles_of_interest;
+		private static int[] m_ticks_of_interest;
 
 		/// <summary>Output a debug message</summary>
 		public static void Trace(string message)
 		{
-			Debug.WriteLine(message);
+			using (var f = new StreamWriter(new FileStream(FP("trace.log"), FileMode.Append, FileAccess.Write, FileShare.Read)))
+				f.WriteLine(message);
 		}
 
 		#region Dump to Ldr File
@@ -106,25 +106,60 @@ namespace Rylobot
 				var sl_colr = trade.Result == Trade.EResult.Pending ? 0x407F0000U : 0x40FF0000U;
 				var tp_colr = trade.Result == Trade.EResult.Pending ? 0x40007F00U : 0x4000FF00U;
 
-				// EP, SL, TP lines
-				ldr.Line("EP", colr, new v4(x0, (float)trade.EP, 0f, 1f), new v4(x1, (float)trade.EP, +0.001f, 1f));
-				if (trade.SL != null) ldr.Line("SL", sl_colr, new v4(x0, (float)trade.SL, 0f, 1f), new v4(x1, (float)trade.SL, +0.001f, 1f));
-				if (trade.TP != null) ldr.Line("TP", tp_colr, new v4(x0, (float)trade.TP, 0f, 1f), new v4(x1, (float)trade.TP, +0.001f, 1f));
-
 				// Draw green for profit, red for loss
 				switch (trade.Result)
 				{
+				default:
+					throw new Exception("Unknown trade result {0}".Fmt(trade.Result));
 				case Trade.EResult.Open:
+				case Trade.EResult.Unknown:
 					{
 						var value = (float)trade.ValueNow() / trade.Volume;
 						var h = Math.Abs(value);
 						var y = (float)(trade.EP + sign * Math.Sign(value) * h / 2);
 						var col = value > 0 ? 0x4000FF00U : 0x40FF0000U;
 						ldr.Rect("result", col, AxisId.PosZ, w, h, true, new v4(xmid, y, +0.001f, 1));
+
+						// EP, SL, TP lines
+						ldr.Line("EP", colr, new v4(x0, (float)trade.EP, 0f, 1f), new v4(x1, (float)trade.EP, +0.001f, 1f));
+						if (trade.SL != null)
+						{
+							ldr.Line("SL", sl_colr, new v4(x0, (float)trade.EP, 0.001f, 1f), new v4(x0, (float)trade.SL, +0.001f, 1f));
+							ldr.Line("SL", sl_colr, new v4(x0, (float)trade.SL, 0.001f, 1f), new v4(x1, (float)trade.SL, +0.001f, 1f));
+						}
+						if (trade.TP != null)
+						{
+							ldr.Line("TP", tp_colr, new v4(x0, (float)trade.EP, 0.001f, 1f), new v4(x0, (float)trade.TP, +0.001f, 1f));
+							ldr.Line("TP", tp_colr, new v4(x0, (float)trade.TP, 0.001f, 1f), new v4(x1, (float)trade.TP, +0.001f, 1f));
+						}
+						break;
+					}
+				case Trade.EResult.Closed:
+					{
+						var value = (float)trade.ValueNow() / trade.Volume;
+						var h = Math.Abs(value);
+						var y = (float)(trade.EP + sign * Math.Sign(value) * h / 2);
+						var col = value > 0 ? 0x8000FF00U : 0x80FF0000U;
+						ldr.Rect("result", col, AxisId.PosZ, w, h, true, new v4(xmid, y, +0.001f, 1));
+				
+						// EP, SL, TP lines
+						ldr.Line("EP", colr, new v4(x0, (float)trade.EP, 0f, 1f), new v4(x1, (float)trade.EP, +0.001f, 1f));
 						break;
 					}
 				case Trade.EResult.Pending:
 					{
+						// EP, SL, TP lines
+						ldr.Line("EP", colr, new v4(x0, (float)trade.EP, 0f, 1f), new v4(x1, (float)trade.EP, +0.001f, 1f));
+						if (trade.SL != null)
+						{
+							ldr.Line("SL", sl_colr, new v4(x0, (float)trade.EP, 0.001f, 1f), new v4(x0, (float)trade.SL, +0.001f, 1f));
+							ldr.Line("SL", sl_colr, new v4(x0, (float)trade.SL, 0.001f, 1f), new v4(x1, (float)trade.SL, +0.001f, 1f));
+						}
+						if (trade.TP != null)
+						{
+							ldr.Line("TP", tp_colr, new v4(x0, (float)trade.EP, 0.001f, 1f), new v4(x0, (float)trade.TP, +0.001f, 1f));
+							ldr.Line("TP", tp_colr, new v4(x0, (float)trade.TP, 0.001f, 1f), new v4(x1, (float)trade.TP, +0.001f, 1f));
+						}
 						break;
 					}
 				case Trade.EResult.HitSL:
@@ -132,6 +167,14 @@ namespace Rylobot
 						var h = (float)trade.StopLossRel();
 						var y = (float)(trade.EP - sign * h / 2);
 						ldr.Rect("result", 0x80FF0000, AxisId.PosZ, w, h, true, new v4(xmid, y, +0.001f, 1));
+
+						// EP, SL, TP lines
+						ldr.Line("EP", colr, new v4(x0, (float)trade.EP, 0f, 1f), new v4(x1, (float)trade.EP, +0.001f, 1f));
+						if (trade.SL != null)
+						{
+							ldr.Line("SL", sl_colr, new v4(x0, (float)trade.EP, 0.001f, 1f), new v4(x0, (float)trade.SL, +0.001f, 1f));
+							ldr.Line("SL", sl_colr, new v4(x0, (float)trade.SL, 0.001f, 1f), new v4(x1, (float)trade.SL, +0.001f, 1f));
+						}
 						break;
 					}
 				case Trade.EResult.HitTP:
@@ -139,6 +182,14 @@ namespace Rylobot
 						var h = (float)trade.TakeProfitRel();
 						var y = (float)(trade.EP + sign * h / 2);
 						ldr.Rect("result", 0x8000FF00, AxisId.PosZ, w, h, true, new v4(xmid, y, +0.001f, 1));
+
+						// EP, SL, TP lines
+						ldr.Line("EP", colr, new v4(x0, (float)trade.EP, 0f, 1f), new v4(x1, (float)trade.EP, +0.001f, 1f));
+						if (trade.TP != null)
+						{
+							ldr.Line("TP", tp_colr, new v4(x0, (float)trade.EP, 0.001f, 1f), new v4(x0, (float)trade.TP, +0.001f, 1f));
+							ldr.Line("TP", tp_colr, new v4(x0, (float)trade.TP, 0.001f, 1f), new v4(x1, (float)trade.TP, +0.001f, 1f));
+						}
 						break;
 					}
 				}
@@ -157,19 +208,23 @@ namespace Rylobot
 
 		/// <summary>Dump an instrument to an ldr file</summary>
 		/// <param name="instr">The instrument to be output</param>
-		/// <param name="range_">Optional. Sub range within the instrument data (NegIdx)</param>
+		/// <param name="range_">Optional. Sub range within the instrument data (Idx)</param>
 		/// <param name="mcs_range">Optional. The number of candles to use to get the median candle size for candle type classification. (default 50)</param>
 		/// <param name="high_res">Optional. Add the sub candle ask/bid line. Value is the number of steps within each candle.</param>
 		/// <param name="emas">Optional. Add exponential moving average lines, with periods of the values given.</param>
-		public static void Dump(Instrument instr, Range? range_ = null, double? high_res = null, int[] emas = null, int? mcs_range = null, bool ema_slope = false, LdrBuilder ldr_ = null)
+		public static void Dump(Instrument instr, Range? range_ = null, double? high_res = null, int[] emas = null, int[] smas = null, int? mcs_range = null, bool? ema_slope = null, LdrBuilder ldr_ = null)
 		{
 			if (!DumpEnabled) return;
 			var ldr = ldr_ ?? new LdrBuilder();
 
 			// Get the range of candles to output
-			var range = instr.IndexRange(range_ ?? new Range((int)instr.IdxFirst, (int)instr.IdxLast));
+			var range = instr.IndexRange(range_ ?? new Range(instr.IdxFirst, instr.IdxLast));
 			if (range.Empty)
 				return;
+
+			// Colours for lines
+			var cols = new[] { 0xFFB9D1EA, 0xFF066896, 0xFF0000A0, 0XFFFF2267, 0xFF9FCD38 };
+			var coli = 0;
 
 			// Note: Drawn with x = 0 == oldest (CAlgo indices) so that the X position doesn't change with updates
 			using (ldr.Group(instr.SymbolCode))
@@ -218,14 +273,14 @@ namespace Rylobot
 						}
 
 						// Candle verts
-						vbuf.Add(new View3d.Vertex(new v4(x + 0.5f        , h, 0f, 1f), col));
-						vbuf.Add(new View3d.Vertex(new v4(x + 0.5f        , o, 0f, 1f), col));
-						vbuf.Add(new View3d.Vertex(new v4(x + 0.5f - 0.4f , o, 0f, 1f), col));
-						vbuf.Add(new View3d.Vertex(new v4(x + 0.5f + 0.4f , o, 0f, 1f), col));
-						vbuf.Add(new View3d.Vertex(new v4(x + 0.5f - 0.4f , c, 0f, 1f), col));
-						vbuf.Add(new View3d.Vertex(new v4(x + 0.5f + 0.4f , c, 0f, 1f), col));
-						vbuf.Add(new View3d.Vertex(new v4(x + 0.5f        , c, 0f, 1f), col));
-						vbuf.Add(new View3d.Vertex(new v4(x + 0.5f        , l, 0f, 1f), col));
+						vbuf.Add(new View3d.Vertex(new v4(x + 0.5f        , h, -0.01f, 1f), col));
+						vbuf.Add(new View3d.Vertex(new v4(x + 0.5f        , o, -0.01f, 1f), col));
+						vbuf.Add(new View3d.Vertex(new v4(x + 0.5f - 0.4f , o, -0.01f, 1f), col));
+						vbuf.Add(new View3d.Vertex(new v4(x + 0.5f + 0.4f , o, -0.01f, 1f), col));
+						vbuf.Add(new View3d.Vertex(new v4(x + 0.5f - 0.4f , c, -0.01f, 1f), col));
+						vbuf.Add(new View3d.Vertex(new v4(x + 0.5f + 0.4f , c, -0.01f, 1f), col));
+						vbuf.Add(new View3d.Vertex(new v4(x + 0.5f        , c, -0.01f, 1f), col));
+						vbuf.Add(new View3d.Vertex(new v4(x + 0.5f        , l, -0.01f, 1f), col));
 
 						// Candle body
 						faces.Add((ushort)(v + 3));
@@ -265,18 +320,39 @@ namespace Rylobot
 				#region EMA
 				if (emas != null)
 				{
-					var cols = new[] { 0xFF00A000, 0xFFA00000, 0xFF0000A0 }; var coli = 0;
-					var first = (int)(range.Beg - (double)instr.IdxFirst);
-					var last  = (int)(range.End - (double)instr.IdxFirst);
-					foreach (var ema in emas)
+					var first = (int)(range.Beg - instr.IdxFirst);
+					var last  = (int)(range.End - instr.IdxFirst);
+					foreach (var p in emas)
 					{
-						var avr = new ExpMovingAvr(ema);
-						ldr.Line("ema", cols[coli], 3, int_.Range((int)range.Beg, (int)range.End).Select(i =>
-						{
-							avr.Add(instr[i].Median);
-							return new v4((float)(i - instr.IdxFirst), (float)avr.Mean, 0.05f, 1f);
-						}));
+						var col = (Colour32)cols[coli++ % cols.Length];
+						var ma = new Indicator(instr, instr.Bot.Indicators.ExponentialMovingAverage(instr.Data.Close, p).Result);
+						ldr.Line("ema", col, 5, range.Select(i => new v4(i - instr.IdxFirst, (float)ma[(int)i], 0.05f, 1f)));
 						coli = (coli + 1) % cols.Length;
+
+						// And extrapolations
+						var extrap = ma.Extrapolate(p);
+						if (extrap != null)
+							ldr.Line("ema_future", col.Alpha(0x40), 5, double_.Range(0,5,0.1).Select(x => new v4((float)(x - (double)instr.IdxFirst - p*0.5), (float)extrap[x], 0.05f, 1f)));
+					}
+				}
+				#endregion
+
+				// Add simple moving average lines
+				#region SMA
+				if (smas != null)
+				{
+					var first = (int)(range.Beg - instr.IdxFirst);
+					var last  = (int)(range.End - instr.IdxFirst);
+					foreach (var p in smas)
+					{
+						var col = (Colour32)cols[coli++ % cols.Length];
+						var ma = new Indicator(instr, instr.Bot.Indicators.SimpleMovingAverage(instr.Data.Close, p).Result);
+						ldr.Line("sma", col, 5, range.Select(i => new v4(i - instr.IdxFirst - p/2, (float)ma[(int)i], 0.05f, 1f)));
+
+						// And extrapolations
+						var extrap = ma.Extrapolate(p);
+						if (extrap != null)
+							ldr.Line("sma_future", col.Alpha(0x40), 5, double_.Range(0,p/2,0.1).Select(x => new v4((float)(x - (double)instr.IdxFirst - p*0.5), (float)extrap[x], 0.05f, 1f)));
 					}
 				}
 				#endregion
@@ -292,13 +368,13 @@ namespace Rylobot
 
 				// EMA slope integral
 				#region EMA trend
-				if (ema_slope)
+				if (ema_slope ?? false)
 				{
 					using (ldr.Group("EMASlope"))
 					{
 						var scale = 20.0;
 						var offset = (float)(instr.LatestPrice.Mid - 3*instr.MCS);
-						ldr.Line("EMASlope", 0xFFA000A0, 1, range.Select(x => new v4((int)x - instr.IdxFirst, offset + (float)(scale*instr.EMASlope((NegIdx)x)), 0, 1)));
+						ldr.Line("EMASlope", 0xFFA000A0, 1, range.Select(x => new v4((int)x - instr.IdxFirst, offset + (float)(scale*instr.EMASlope((Idx)x)), 0, 1)));
 						ldr.Line("Zero", 0xFF800080, new v4(range.Begi - instr.IdxFirst, offset, 0, 1), new v4(range.Endi - instr.IdxFirst, offset, 0, 1));
 					}
 				}
@@ -391,14 +467,22 @@ namespace Rylobot
 			if (!DumpEnabled) return;
 			var ldr = ldr_ ?? new LdrBuilder();
 
-			ldr.Line(name, colour, 3, double_.Range(range, 0.1).Select(x => new v4((float)(x - (double)Instrument.IdxFirst), (float)poly.F(x), 0f, 1f)));
+			if (poly != null)
+				ldr.Line(name, colour, 5, double_.Range(range, 0.1).Select(x => new v4((float)(x - (double)Instrument.IdxFirst), (float)poly.F(x), 0.05f, 1f)));
 
 			if (ldr_ == null)
 				ldr.ToFile(FP("poly_{0}.ldr".Fmt(name)));
 		}
 
+		/// <summary>Dump the results of the correlator</summary>
+		public static void Dump(Correlator correlator)
+		{
+			var filepath = FP("{0}_report.txt".Fmt(correlator.Name));
+			File.WriteAllText(filepath, correlator.Report);
+		}
+
 		/// <summary>Dump a slope, coloured to indicate trend</summary>
-		public static void Slope(NegIdx idx, double slope, LdrBuilder ldr_ = null)
+		public static void Slope(Idx idx, double slope, LdrBuilder ldr_ = null)
 		{
 			if (!DumpEnabled) return;
 			var ldr = ldr_ ?? new LdrBuilder();
@@ -455,6 +539,12 @@ namespace Rylobot
 		}
 		private static Instrument m_instr;
 
+		/// <summary>The bot</summary>
+		private static Rylobot Bot
+		{
+			get { return Instrument.Bot; }
+		}
+
 		/// <summary>Enable/Disable logging trades to an ldr file</summary>
 		public static void LogTrades(Rylobot bot, bool enabled)
 		{
@@ -463,12 +553,14 @@ namespace Rylobot
 			// Disabled
 			if (m_log_trades)
 			{
-				Trace("TRADE LOGGING DISABLED");
+				Trace("TRADE LOGGING DISABLED\n");
 
 				// Unsubscribe
 				bot.Positions.Opened -= LogTradeOpened;
 				bot.Positions.Closed -= LogTradeClosed;
 
+				m_candles_of_interest = new int[0];
+				m_ticks_of_interest = new int[0];
 				Instrument = null;
 			}
 
@@ -495,7 +587,20 @@ namespace Rylobot
 				// Initial instrument output
 				LogInstrument();
 
-				Trace("TRADE LOGGING ENABLED");
+				// Look for candles/ticks of interest
+				if (!Path_.FileExists(FP("BreakCandleIndices.txt"))) return;
+				var lines = File.ReadAllLines(FP("BreakCandleIndices.txt"));
+				for (int i = 0, j = 0; i != lines.Length; ++i)
+				{
+					if (lines[i].StartsWith("//")) continue;
+					if (j == 0) m_candles_of_interest = int_.ParseArray(lines[i]);
+					if (j == 1) m_ticks_of_interest = int_.ParseArray(lines[i]);
+					++j;
+				}
+	
+				// Reset the log file
+				using (new FileStream(FP("trace.log"), FileMode.Create, FileAccess.Write, FileShare.Read)) {}
+				Trace("\nTRADE LOGGING ENABLED");
 			}
 		}
 		private static bool m_log_trades;
@@ -541,7 +646,7 @@ namespace Rylobot
 			// Output the trade as a separate file
 			var ldr = new LdrBuilder();
 			using (ldr.Group("trade_{0}".Fmt(pos.Id)))
-				Dump(new Trade(Instrument, pos), ldr_:ldr);
+				Dump(new Trade(Instrument, pos, live:live), ldr_:ldr);
 			ldr.ToFile(FP("trades\\trade_{0}.ldr".Fmt(pos.Id)));
 
 			// Encompass the range
@@ -580,15 +685,19 @@ namespace Rylobot
 		}
 
 		/// <summary>Output the instrument to a file as it changes</summary>
-		public static void LogInstrument()
+		public static void LogInstrument(Range? range_ = null, double? high_res = null, int[] emas = null, int[] smas = null, int? mcs_range = null, bool? ema_slope = null)
 		{
 			if (!LoggingEnabled)
 				return;
 
 			// Dump the instrument data
 			Dump(Instrument
-				,range_:new Range(-100, 1)
-				,emas:new[] { 5, 15, 200 }
+				,range_ ?? new Range(-100, 1)
+				,high_res
+				,emas
+				,smas
+				,mcs_range
+				,ema_slope
 				,ldr_:m_ldr_instr);
 
 			// Write the instrument to 'm_ldr_instr'
@@ -606,7 +715,7 @@ namespace Rylobot
 		}
 
 		/// <summary>Draw a box around the candles in the range [beg,end]</summary>
-		public static void CandlePattern(NegIdx beg, NegIdx end)
+		public static void CandlePattern(Idx beg, Idx end)
 		{
 			var w = new RangeF((double)(beg - Instrument.IdxFirst), (double)(beg - Instrument.IdxFirst));
 			var h = RangeF.Invalid;

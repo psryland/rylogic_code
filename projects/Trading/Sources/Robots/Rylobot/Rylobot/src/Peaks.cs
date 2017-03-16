@@ -20,7 +20,7 @@ namespace Rylobot
 		/// <summary>Find the highs and lows of the price</summary>
 		/// <param name="instr">The instrument to find peaks in</param>
 		/// <param name="iend">The last candle, i.e. look backwards from here</param>
-		public PricePeaks(Instrument instr, NegIdx iend, int window_size = 5)
+		public PricePeaks(Instrument instr, Idx iend, int window_size = 5)
 		{
 			Instrument   = instr;
 			WindowSize   = window_size;
@@ -83,7 +83,7 @@ namespace Rylobot
 						{
 							// Get the predicted value from the trend line
 							var p = trend.F((double)pk.Index);
-							if (Misc.Abs(p - pk.Price) < threshold)
+							if (Math.Abs(p - pk.Price) < threshold)
 							{
 								// If within tolerance, the trend is confirmed
 								corr.Add((double)pk.Index, (double)pk.Price);
@@ -137,10 +137,10 @@ namespace Rylobot
 		private Instrument m_instrument;
 
 		/// <summary>The index of the first candle considered</summary>
-		public NegIdx Beg { get; private set; }
+		public Idx Beg { get; private set; }
 
 		/// <summary>The index of the end candle considered</summary>
-		public NegIdx End { get; private set; }
+		public Idx End { get; private set; }
 
 		/// <summary>The first peak encountered (possible break out)</summary>
 		public Peak FirstPeak { get; private set; }
@@ -258,7 +258,7 @@ namespace Rylobot
 					if (last == null)
 						last = pk;
 					else if (last.High != pk.High)
-						dist = Misc.Min(dist, Misc.Abs(pk.Price - last.Price));
+						dist = Math.Min(dist, Math.Abs(pk.Price - last.Price));
 				}
 				return dist;
 			}
@@ -301,7 +301,7 @@ namespace Rylobot
 
 			// The price must be beyond the trend by a significant amount
 			var price_threshold = trend.F(0.0) + sign * Instrument.MCS;
-			if (Misc.Sign(latest.Close - price_threshold) != sign)
+			if (Math.Sign(latest.Close - price_threshold) != sign)
 				return false;
 
 			// Only the latest few candles can be beyond the trend line
@@ -322,7 +322,7 @@ namespace Rylobot
 		}
 
 		/// <summary>Returns the price peaks using a window with size 'window_size'</summary>
-		public IEnumerable<Peak> FindPeaks(NegIdx iend)
+		public IEnumerable<Peak> FindPeaks(Idx iend)
 		{
 			// Create window buffers for the high/low prices
 			var price_hi = new QuoteCurrency[WindowSize];
@@ -335,7 +335,7 @@ namespace Rylobot
 
 			// Look for peaks
 			int d = 0, hh = -1, ll = -1, hcount = 0, lcount = 0;
-			for (NegIdx i = iend; i-- != Instrument.IdxFirst; d = (d+1) % WindowSize)
+			for (Idx i = iend; i-- != Instrument.IdxFirst; d = (d+1) % WindowSize)
 			{
 				var candle = Instrument[i];
 
@@ -390,7 +390,7 @@ namespace Rylobot
 	[DebuggerDisplay("{Index} peak={Price} high={High}")]
 	public class Peak
 	{
-		public Peak(NegIdx index, QuoteCurrency price, bool high)
+		public Peak(Idx index, QuoteCurrency price, bool high)
 		{
 			Index = index;
 			Price = price;
@@ -398,7 +398,7 @@ namespace Rylobot
 		}
 
 		/// <summary>The candle index of the peak</summary>
-		public NegIdx Index { get; private set; }
+		public Idx Index { get; private set; }
 
 		/// <summary>The price at the peak</summary>
 		public QuoteCurrency Price { get; private set; }

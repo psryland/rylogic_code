@@ -53,9 +53,9 @@ namespace Rylobot
 				if (pattern != null)
 				{
 					Debugging.LogInstrument();
-					Debugging.Dump(new SnR(Instrument, 0, Instrument.LatestPrice.Mid));
+					Debugging.Dump(new SnR(Instrument));
 					Debugging.Dump(new PricePeaks(Instrument, 0));
-					Debugging.BreakOnCandleOfInterest();
+					Debugging.BreakOnPointOfInterest();
 
 					var trade = (Trade)null;
 					var order = (Trade)null;
@@ -81,9 +81,9 @@ namespace Rylobot
 					}
 
 					if (order != null)
-						Bot.Broker.CreatePendingOrder(order);
+						Broker.CreatePendingOrder(order);
 					if (trade != null)
-						Bot.Broker.CreateOrder(trade);
+						Broker.CreateOrder(trade);
 				}
 			}
 
@@ -91,7 +91,7 @@ namespace Rylobot
 			if (Instrument.NewCandle && (Positions.Any() || PendingOrders.Any()))
 			{
 				Debugging.LogInstrument();
-				Debugging.BreakOnCandleOfInterest();
+				Debugging.BreakOnPointOfInterest();
 			}
 		}
 

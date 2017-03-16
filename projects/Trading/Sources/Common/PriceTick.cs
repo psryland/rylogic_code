@@ -13,18 +13,24 @@ namespace Rylobot
 			Ask       = 0;
 			Bid       = 0;
 		}
-		public PriceTick(double index, long timestamp, QuoteCurrency ask, QuoteCurrency bid)
+		public PriceTick(double calgo_index, long timestamp, QuoteCurrency ask, QuoteCurrency bid)
 		{
 			if (ask < bid) throw new Exception("Negative spread");
 
-			Index     = index;
+			Index     = calgo_index;
 			Timestamp = timestamp;
 			Ask       = ask;
 			Bid       = bid;
 		}
 		public static PriceTick Invalid
 		{
-			get { return new PriceTick(0, 0, -double.MaxValue, +double.MaxValue); }
+			get
+			{
+				var pt = new PriceTick();
+				pt.Ask = -double.MaxValue;
+				pt.Bid = +double.MaxValue;
+				return pt;
+			}
 		}
 
 		/// <summary>The fractional CAlgo index</summary>
@@ -39,6 +45,10 @@ namespace Rylobot
 		{
 			get;
 			set;
+		}
+		public DateTimeOffset TimestampUTC
+		{
+			get { return new DateTimeOffset(Timestamp, TimeSpan.Zero); }
 		}
 
 		/// <summary>The ask price (remember: Ask > Bid)</summary>
@@ -58,7 +68,7 @@ namespace Rylobot
 		/// <summary>The average of ask and bid</summary>
 		public QuoteCurrency Mid
 		{
-			get { return (Ask + Bid) / 2; }
+			get { return (Ask + Bid) / 2.0; }
 		}
 
 		/// <summary>The buy/sell spread</summary>

@@ -10,24 +10,13 @@ namespace Rylobot
 {
 	public class StrategyHedge :Strategy
 	{
-		// Notes:
-		//  - At the 00 levels, open long and short positions
-		//  - When price moves to a new 00 level, close profitable
-		//    positions and open new positions so that longs == shorts
-		//  - Relies on price variation
-		//  - Don't need SL/TP because position is always hedged
-
-		// RESULT:
-		// Doesn't work... you end up with bad trades at the extreme prices that
-		// never get cleared.
-
-		private Pips BoundarySizePips = 50.0;
-		private QuoteCurrency MinProfitThreshold = 1.0;
-		private double PendingOrderOffset = 2; // multiples of mcs
+		private const int EmaPeriods = 55;
 
 		public StrategyHedge(Rylobot bot)
 			:base(bot, "StrategyHedge")
-		{}
+		{
+			EMA = new Indicator(Instrument, Bot.Indicators.ExponentialMovingAverage(Instrument.Data.Close, EmaPeriods).Result);
+		}
 
 		/// <summary>Return the suitability of this strategy</summary>
 		public override double SuitabilityScore
@@ -35,163 +24,154 @@ namespace Rylobot
 			get { return 1.0f; }
 		}
 
-		/// <summary>The last price boundary considered</summary>
-		private QuoteCurrency LastBoundary { get; set; }
+		/// <summary>EMA for determining trend</summary>
+		private Indicator EMA { get; set; }
 
-		/// <summary>The volume to use for hedged positions</summary>
-		private long Volume
+		/// <summary>The equity level due to trades created by this strategy the last time a position was opened</summary>
+		private AcctCurrency LastEquity { get; set; }
+
+		/// <summary>The sign of the trend direction</summary>
+		private int TrendSign
 		{
-			get { return Instrument.Symbol.VolumeMin; }
+			get
+			{
+				var slope = EMA.FirstDerivative(0);
+				var trend = Instrument.MeasureTrend(slope);
+				return Math.Abs(trend) > 0.5 ? Math.Sign(trend) : 0;
+			}
 		}
 
-		/// <summary>The Net profit</summary>
-		private QuoteCurrency Profit { get; set; }
+		/// <summary>Debugging output</summary>
+		private void Dump()
+		{
+			Debugging.LogInstrument();
+		}
 
 		/// <summary>Called when new data is received</summary>
 		public override void Step()
 		{
 			base.Step();
-			if (Instrument.HighRes.Count < 2)
-				return;
-
-			using (Bot.Broker.SuspendRiskCheck(ignore_risk:true))
+			using (Broker.SuspendRiskCheck(ignore_risk:true))
 			{
-				// When price crosses a new price boundary
-				var old = Instrument.HighRes.Back(1);
-				var nue = Instrument.HighRes.Back(0);
+				const double TakeProfitFrac = 1.020;
+				const double ReverseFrac    = 0.998;
+				Dump();
 
-				// Ensure one trade to kick things off
-				if (!Positions.Any())
+				// The unit of volume to trade
+				var mcs = Instrument.MCS;
+				var ep = Instrument.LatestPrice.Mid;
+				var vol = Broker.ChooseVolume(Instrument, 5.0 * mcs);
+
+				// Open a trade in the direction of the trend
+				if (ProfitSign == 0)
 				{
-					var trade = new Trade(Instrument, TradeType.Buy, Label, Instrument.LatestPrice.Bid, null, null, Volume);
-					Bot.Broker.CreateOrder(trade);
+					Dump();
+					Debugging.Trace("Idx={0},Tick={1} - Setting profit sign ({2}) - Equity = ${3}".Fmt(Instrument.Count, Bot.TickNumber, TrendSign, Equity));
+
+					var tt = CAlgo.SignToTradeType(TrendSign);
+					var trade = new Trade(Instrument, tt, Label, ep, null, null, vol);
+					Broker.CreateOrder(trade);
+					LastEquity = Equity;
 				}
 
-				// If the price is spanning a boundary, look for profit
-				var boundary = PriceBoundary(old, nue);
-				if (boundary != null && boundary != LastBoundary)
+				// While the profit direction is the same as the trend direction
+				// look for good spots to add hedged pending orders
+				if (ProfitSign == TrendSign)
 				{
-					LastBoundary = boundary.Value;
+					// If the current price is at a SnR level, add pending orders on either side.
+					// Hopefully price will reverse at the SnR level and only trigger one of the pending orders.
+					// If price then reverses we can sell an existing profitable trade and be left with the
+					// profit direction going in the right direction
+					var snr = new SnR(Instrument, ep);
+					var lvl_above = snr.Nearest(ep, +1, min_dist:0.5*mcs, min_strength:0.7);
+					var lvl_below = snr.Nearest(ep, -1, min_dist:0.5*mcs, min_strength:0.7);
 
-					// Close any positions with a nett profit
-					var volume_closed = 0L;
-					foreach (var pos in Positions)
+					// Choose price levels for the pending orders
+					var above = lvl_above != null ? lvl_above.Price + 0.5*mcs : ep + mcs;
+					var below = lvl_below != null ? lvl_below.Price - 0.5*mcs : ep - mcs;
+
+					// Only recreate if necessary
+					if (!PendingOrders.Any(x => x.TradeType == TradeType.Buy  && Maths.FEql(x.TargetPrice, above, 5*Instrument.PipSize)) ||
+						!PendingOrders.Any(x => x.TradeType == TradeType.Sell && Maths.FEql(x.TargetPrice, below, 5*Instrument.PipSize)))
 					{
-						if (pos.NetProfit < MinProfitThreshold) continue;
-						volume_closed += pos.TradeType.Sign() * pos.Volume;
-						Bot.Broker.ClosePosition(pos);
-						Profit += pos.NetProfit;
-					}
+						Dump();
+						Debugging.Dump(snr);
+						Debugging.Trace("Idx={0},Tick={1} - Adjusting pending orders - Equity = ${2}".Fmt(Instrument.Count, Bot.TickNumber, Equity));
 
-					// Find the worse position and if we've made more in profit since it was created close it.
-					if (Positions.Any())
-					{
-						var worst = Positions.MinBy(x => x.NetProfit);
-						if (Profit > -worst.NetProfit)
-						{
-							volume_closed += worst.TradeType.Sign() * worst.Volume;
-							Bot.Broker.ClosePosition(worst);
-							Profit += worst.NetProfit;
-						}
-					}
+						// Cancel any other pending orders further away than these too
+						Broker.CancelAllPendingOrders(Label);
 
-					// Create new positions
-					if (volume_closed != 0)
-					{
-						var sold_sign = Math.Sign(volume_closed);
-						var sold_tt = CAlgo.SignToTradeType(sold_sign);
-
-						// Create pending orders around the current price.
-						// Hopefully, the pending orders won't be tripped and price will reverse.
-						{
-							var ep = nue.Mid + sold_sign * PendingOrderOffset * Instrument.MCS;
-							var trade = new Trade(Instrument, sold_tt, Label, ep, null, null, Volume);
-							Bot.Broker.CreatePendingOrder(trade);
-						}
-						{
-							var ep = nue.Mid - sold_sign * PendingOrderOffset * Instrument.MCS;
-							var trade = new Trade(Instrument, sold_tt.Opposite(), Label, ep, null, null, Volume);
-							Bot.Broker.CreatePendingOrder(trade);
-						}
-
-						// Ensure there is only one pending order above and below the current price
-						var order_above = (PendingOrder)null;
-						var order_below = (PendingOrder)null;
-						var price_above = +double.MaxValue;
-						var price_below = -double.MaxValue;
-						foreach (var pos in PendingOrders)
-						{
-							if (pos.TradeType == TradeType.Buy && pos.TargetPrice < price_above)
-								order_above = pos;
-							if (pos.TradeType == TradeType.Sell && pos.TargetPrice > price_below)
-								order_below = pos;
-						}
-						foreach (var pos in PendingOrders)
-						{
-							if (pos == order_above) continue;
-							if (pos == order_below) continue;
-							Bot.Broker.CancelPendingOrder(pos);
-						}
+						var buy = new Trade(Instrument, TradeType.Buy, Label, above, null, null, vol);
+						var sel = new Trade(Instrument, TradeType.Sell, Label, below, null, null, vol);
+						Broker.CreatePendingOrder(buy);
+						Broker.CreatePendingOrder(sel);
 					}
 				}
 
-				// Ensure the positions are balanced
-				var balance = 0L;
-				foreach (var pos in Positions)
-					balance += pos.TradeType.Sign() * pos.Volume;
-				foreach (var pos in PendingOrders)
-					balance += pos.TradeType.Sign() * pos.Volume;
-
-				// If there is a net position, create positions to restore balance
-				if (balance != 0)
+				// If the profit is against the Trend, do nothing until losing a fraction of last equity
+				if (ProfitSign != TrendSign && Equity < ReverseFrac * LastEquity)
 				{
-					// A positive balance means losses if the price falls.
-					// Therefore, positive => sell, negative => buy.
-					var tt = CAlgo.SignToTradeType(-Math.Sign(balance));
+					Dump();
+					Debugging.Trace("Idx={0},Tick={1} - Changing profit sign to ({2}) - Equity = ${3}".Fmt(Instrument.Count, Bot.TickNumber, TrendSign, Equity));
+					var sign = -ProfitSign;
 
-					// Create a trade to balance the position
-					var trade = new Trade(Instrument, tt, Label, nue.Mid, null, null, Math.Abs(balance));
-					Bot.Broker.CreateOrder(trade);
+					// Try to reverse the sign by closing profitable positions
+					foreach (var pos in Positions.Where(x => x.Sign() != sign && x.NetProfit > 0).OrderBy(x => -x.NetProfit).ToArray())
+					{
+						Broker.ClosePosition(pos);
+
+						// Break out when the profit direction has been reversed
+						if (ProfitSign == sign)
+							break;
+					}
+
+					// Couldn't reverse the sign by closing positions, open a new one
+					if (ProfitSign != sign)
+					{
+						var tt = CAlgo.SignToTradeType(sign);
+						var reverse_vol = Math.Abs(NetVolume) + vol;
+						var trade = new Trade(Instrument, tt, Label, ep, null, null, reverse_vol);
+						Broker.CreateOrder(trade);
+					}
+					LastEquity = Equity;
+				}
+
+				// If equity is greater than a threshold, take profits
+				if (Equity > TakeProfitFrac * LastEquity)
+				{
+					Dump();
+					Debugging.Trace("Idx={0},Tick={1} - Profit taking - Equity = ${2}".Fmt(Instrument.Count, Bot.TickNumber, Equity));
+
+					var sign = ProfitSign;
+					foreach (var pos in Positions.Where(x => x.Sign() == sign && x.NetProfit > 0).OrderBy(x => -x.NetProfit).ToArray())
+					{
+						if (pos.Volume >= Math.Abs(NetVolume)) continue;
+						Broker.ClosePosition(pos);
+					}
+					LastEquity = Equity;
 				}
 			}
 		}
 
-		/// <summary>Return the price bounding spanned by 'price0' and 'price1'</summary>
-		private QuoteCurrency? PriceBoundary(PriceTick old, PriceTick nue)
+		/// <summary>Watch for pending order filled</summary>
+		protected override void OnPositionOpened(Position position)
 		{
-			// Convert to pips
-			var pips0 = old.Mid / Instrument.PipSize;
-			var pips1 = nue.Mid / Instrument.PipSize;
-
-			// Quantise to the boundary size
-			var quantised0 = (int)(pips0 / BoundarySizePips);
-			var quantised1 = (int)(pips1 / BoundarySizePips);
-
-			// Rising price
-			if (quantised0 < quantised1)
-				return quantised1 * (double)BoundarySizePips * Instrument.PipSize;
-
-			// Falling price
-			if (quantised0 > quantised1)
-				return quantised0 * (double)BoundarySizePips * Instrument.PipSize;
-
-			// Not spanning a boundary
-			return null;
+			Debugging.Trace("Idx={0},Tick={1} - Position Opened - {2} EP={3} Volume={4}".Fmt(Instrument.Count, Bot.TickNumber, position.TradeType, position.EntryPrice, position.Volume));
 		}
 
-		/// <summary>When a position closes</summary>
+		/// <summary>Watch for position closed</summary>
 		protected override void OnPositionClosed(Position position)
 		{
-			base.OnPositionClosed(position);
+			Debugging.Trace("Idx={0},Tick={1} - Position Closed - {2} EP={3} Volume={4} Profit=${5}".Fmt(Instrument.Count, Bot.TickNumber, position.TradeType, position.EntryPrice, position.Volume, position.NetProfit));
 		}
 
-		/// <summary>Close all positions on shutdown</summary>
-		protected override void OnBotStopping()
-		{
-			foreach (var pos in Positions)
-				Bot.Broker.ClosePosition(pos);
+		///// <summary>Close all positions on shutdown</summary>
+		//protected override void OnBotStopping()
+		//{
+		//	foreach (var pos in Positions)
+		//		Broker.ClosePosition(pos);
 
-			base.OnBotStopping();
-		}
+		//	base.OnBotStopping();
+		//}
 	}
 }

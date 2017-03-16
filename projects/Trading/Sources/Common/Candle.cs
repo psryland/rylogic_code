@@ -142,8 +142,8 @@ namespace Rylobot
 				return EType.SpinningTop;
 			}
 
-			// A candle is a Marubozu if it has a large body
-			if (BodyLength > 0.8 * mcs)
+			// A candle is a Marubozu if it has a large body and is a large portion of the total length
+			if (BodyLength > 0.9 * mcs && BodyLength > 0.5 * TotalLength)
 			{
 				// A strengthening or weakening marubozu
 				return
@@ -247,9 +247,9 @@ namespace Rylobot
 		/// <summary>Incorporate 'price' into this candle</summary>
 		public void Update(PriceTick price)
 		{
-			High  = (double)Misc.Max(High, price.Bid);
-			Low   = (double)Misc.Min(Low , price.Bid);
-			Close = (double)price.Bid;
+			High  = Math.Max(High, price.Bid);
+			Low   = Math.Min(Low , price.Bid);
+			Close = price.Bid;
 		}
 
 		/// <summary>The time stamp of this candle (in UTC)</summary>
@@ -310,6 +310,18 @@ namespace Rylobot
 		public static bool IsTrend(this Candle.EType type)
 		{
 			return type == Candle.EType.Marubozu || type == Candle.EType.MarubozuStrengthening || type == Candle.EType.MarubozuWeakening;
+		}
+
+		/// <summary>True if this is a strengthening trend indicating candle type</summary>
+		public static bool IsTrendStrengthening(this Candle.EType type)
+		{
+			return type == Candle.EType.Marubozu || type == Candle.EType.MarubozuStrengthening;
+		}
+
+		/// <summary>True if this is a weakening trend indicating candle type</summary>
+		public static bool IsTrendWeakening(this Candle.EType type)
+		{
+			return type == Candle.EType.Marubozu || type == Candle.EType.MarubozuWeakening;
 		}
 
 		/// <summary>True if this is an indecision (reversal or continuation) candle type</summary>

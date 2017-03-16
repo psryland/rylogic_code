@@ -2,13 +2,14 @@
 using System.Diagnostics;
 using cAlgo.API;
 using pr.extn;
+using pr.maths;
 
 namespace Rylobot
 {
 	public class PositionManager
 	{
 		/// <summary>Manage an active position</summary>
-		public PositionManager(Instrument instr, Position pos, NegIdx? neg_idx = null)
+		public PositionManager(Instrument instr, Position pos, Idx? neg_idx = null)
 		{
 			var index = (int)((neg_idx ?? 0) - instr.IdxFirst);
 
@@ -82,16 +83,40 @@ namespace Rylobot
 		public int ColdFeetCount { get; set; }
 
 		/// <summary>The maximum profit reached with the current trade</summary>
-		public double PeakProfit { get; private set; }
+		public AcctCurrency PeakProfit { get; private set; }
 
 		/// <summary>The profit value last time step was called</summary>
-		public double LastProfit { get; private set; }
+		public AcctCurrency LastProfit { get; private set; }
 
 		/// <summary>Where the peak profit was detected</summary>
 		public int PeakProfitIndex { get; private set; }
 
 		/// <summary>Where the position was last profitable</summary>
 		public int LastProfitableIndex { get; private set; }
+
+		/// <summary>The number of candles since a new peak was made</summary>
+		public int CandlesSincePeak { get; private set; }
+
+		/// <summary>The number of candles since the trade was profitable</summary>
+		public int CandlesSinceProfitable { get; private set; }
+
+		/// <summary>The number of price ticks since a new peak was made</summary>
+		public int TicksSincePeak { get; private set; }
+
+		/// <summary>The number of price ticks since the trade was profitable</summary>
+		public int TicksSinceProfitable { get; private set; }
+
+		/// <summary>The profit limit at which we want to take profits as soon as possible</summary>
+		public AcctCurrency ScalpThreshold
+		{
+			get { return Bot.Broker.Balance * 0.01; }
+		}
+
+		/// <summary>The profit limit at which we move the SL to break even</summary>
+		public AcctCurrency BreakEvenThreshold
+		{
+			get { return Bot.Broker.Balance * 0.005; }
+		}
 
 		/// <summary>Manage an open trade. This should be called on each tick</summary>
 		public void Step()
@@ -101,39 +126,39 @@ namespace Rylobot
 
 			// Current profit state
 			var profitable = Position.NetProfit > 0;
-			var new_peak = Position.NetProfit > PeakProfit;
+			var new_peak = Position.NetProfit >= PeakProfit;
 			var better = Position.NetProfit > LastProfit;
 			var profit = Instrument.Symbol.AcctToQuote(Position.NetProfit);
+			if (new_peak)
+			{
+				PeakProfit = Position.NetProfit;
+				PeakProfitIndex = Instrument.Count;
+			}
 
 			// How long since a new profit peak was made
-			var time_since_peak = new_peak ? 0 : Instrument.Count - PeakProfitIndex;
+			CandlesSincePeak = new_peak ? 0 : Instrument.Count - PeakProfitIndex;
+			TicksSincePeak   = new_peak ? 0 : TicksSincePeak + 1;
 
 			// How long since the trade was profitable at all
-			var time_since_profitable = profitable ? 0 : Instrument.Count - LastProfitableIndex;
+			CandlesSinceProfitable = profitable ? 0 : Instrument.Count - LastProfitableIndex;
+			TicksSinceProfitable   = profitable ? 0 : TicksSinceProfitable + 1;
 
-			// If the trade goes into profit by 50% of the TP, move the SL to break event
-			if (profit > 0.5 * Position.TakeProfitRel() * Position.Volume && Position.StopLossRel() > 0)
+			// Enter scalp mode when profit > scalp threshold
+			if (State == EState.TradeLooksGood && Position.NetProfit > ScalpThreshold)
 			{
-			//	var sign = Position.TradeType.Sign();
-			//	var trade = new Trade(Instrument, Position) { SL = Position.EntryPrice + sign * 0.1 * Position.TakeProfitRel() };
-			//	Bot.Broker.ModifyOrder(Position, trade);
-			//	State = EState.TradeLooksGood;
-			//	Debugging.Trace("SL moved to break even");
-			}
-
-			// If the trade goes to 80% of TP and has a strong preceding trend go into trailing SL mode to try to maximise profit
-			if (profit > 0.8 * Position.TakeProfitRel() * Position.Volume && Math.Abs(Instrument.MeasureTrend(-3, 0)) > 0.8)
-			{
-			//	var sign = Position.TradeType.Sign();
-			//	var trade = new Trade(Instrument, Position) { TP = Position.EntryPrice + sign * 1.5 * Position.TakeProfitRel() };
-			//	Bot.Broker.ModifyOrder(Position, trade);
-			//	State = EState.TrailingSL;
-			//	Debugging.Trace("Trailing SL mode");
-			}
-
-			// If we're lucky enough to get a huge spike in profit, go into scalp mode
-			if (State == EState.TradeLooksGood && Position.NetProfit > Bot.Broker.AllowedRisk)
+				Debugging.Trace("Entering scalp mode - Profit ${0} > Threshold ${1}".Fmt(Position.NetProfit, ScalpThreshold));
 				State = EState.Scalp;
+			}
+
+			// Move SL to break even when profit > BreakEvenThreshold (adjusted for Spread)
+			var adjusted_profit = Position.NetProfit - Instrument.Symbol.QuoteToAcct(Instrument.Spread * Position.Volume);
+			if (adjusted_profit > BreakEvenThreshold && Position.StopLossRel() > 0)
+			{
+				Debugging.Trace("Moving SL to break even - Profit ${0} > Threshold ${1}".Fmt(Position.NetProfit, BreakEvenThreshold));
+
+				var trade = new Trade(Instrument, Position) { SL = Position.EntryPrice + Position.Sign() * 2.0 * Instrument.Spread };
+				Bot.Broker.ModifyOrder(Position, trade);
+			}
 
 			// What about candle follow mode:
 			// If the price is heading for the TP and the last tops/bottoms of the last few candles
@@ -145,7 +170,7 @@ namespace Rylobot
 			case EState.TradeLooksGood:
 				{
 					// In this state, the trade looks good. Keep it open.
-					if (time_since_peak >= ColdFeetCount)
+					if (CandlesSincePeak >= ColdFeetCount)
 					{
 						// It's been a while since a profit peak was set...
 						State = EState.LookForExitAfterNextPeak;
@@ -155,13 +180,62 @@ namespace Rylobot
 				}
 			case EState.Scalp:
 				{
-					// In this mode we've made a decent profit. Close the Position
-					// when the profit drops by 5% of the peak
-					if (Position.NetProfit < 0.95 * PeakProfit)
+					// In this mode we've made a decent profit.
+					var close = false;
+					for (;;)
+					{
+						//// Close if the profit drops to fraction of the peak
+						//const double ScalpFraction = 0.5;
+						//if (Position.NetProfit < ScalpFraction * PeakProfit)
+						//{
+						//	close = true;
+						//	Debugging.Trace("Position closed - profit dropped by {0} - ${1}".Fmt(ScalpFraction, Position.NetProfit));
+						//}
+
+						// Close if the closed candle is an indecision candle.
+						if (Instrument.NewCandle &&
+							Instrument[-1].Type(Instrument.MCS).IsIndecision())
+						{
+							Debugging.Trace("Closing position - indecision candle");
+							close = true;
+							break;
+						}
+
+						// Close if the peak of the candle just closed is not better than the candle before's peak i.e. Not higher lows, or lower highs
+						if (Instrument.NewCandle &&
+							Position.EntryTime < Instrument[-1].TimestampUTC &&
+							Instrument.SequentialPeaks(Position.Sign(), 0) < 1)
+						{
+							Debugging.Trace("Closing position - peaks oppose trend direction");
+							close = true;
+							break;
+						}
+
+						// Close if the candle closes worse then the close of the -2 candle
+						if (Instrument.NewCandle &&
+							Position.EntryTime < Instrument[-1].TimestampUTC &&
+							Math.Sign(Instrument[-1].Close - Instrument[-2].Close) != Position.Sign())
+						{
+							Debugging.Trace("Closing position - candle close was worse that close of -2 candle");
+							close = true;
+							break;
+						}
+
+						// Close if the profit is huge
+						if (Position.NetProfit > 2.0 * ScalpThreshold && TicksSincePeak > 10)
+						{
+							Debugging.Trace("Closing position - huge spike detected!");
+							close = true;
+							break;
+						}
+
+						// Don't close.
+						break;
+					}
+					if (close)
 					{
 						Bot.Broker.ClosePosition(Position);
 						State = EState.PositionClosed;
-						Debugging.Trace("Position closed - scalping profit");
 					}
 					break;
 				}
@@ -173,7 +247,7 @@ namespace Rylobot
 						var sign = Position.TradeType.Sign();
 						var limit = Instrument.CurrentPrice(-sign);
 						foreach (var c in Instrument.CandleRange(-3,0))
-							limit = sign > 0 ? Misc.Min(limit, c.Low) : Misc.Max(limit, c.High);
+							limit = sign > 0 ? Math.Min(limit, c.Low) : Math.Max(limit, c.High);
 
 						// Move the SL if in the correct direction
 						if (sign > 0 && limit > Position.StopLoss ||
@@ -195,7 +269,7 @@ namespace Rylobot
 						State = EState.CloseAtNextNonPeak;
 						Debugging.Trace("Closing at next non peak");
 					}
-					else if (time_since_peak >= 2 * ColdFeetCount)
+					else if (CandlesSincePeak >= 2 * ColdFeetCount)
 					{
 						State = EState.BailIfProfitable;
 						Debugging.Trace("Closing when profitable");
@@ -239,7 +313,7 @@ namespace Rylobot
 						Position = Bot.Broker.ClosePosition(Position);
 						State = EState.PositionClosed;
 					}
-					else if (time_since_profitable > 4 * ColdFeetCount)
+					else if (CandlesSinceProfitable > 4 * ColdFeetCount)
 					{
 						State = EState.CloseAtNextProfitDrop;
 						Debugging.Trace("Closing at next drop in profit");
@@ -249,11 +323,6 @@ namespace Rylobot
 			}
 
 			// Track peak and profitable positions
-			if (new_peak)
-			{
-				PeakProfit = Position.NetProfit;
-				PeakProfitIndex = Instrument.Count;
-			}
 			if (profitable)
 			{
 				LastProfitableIndex = Instrument.Count;

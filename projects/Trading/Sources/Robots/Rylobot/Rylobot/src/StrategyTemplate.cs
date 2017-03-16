@@ -18,6 +18,12 @@ namespace Rylobot
 			base.Dispose();
 		}
 
+		/// <summary>Return a score for how well suited this strategy is to the current conditions</summary>
+		public override double SuitabilityScore
+		{
+			get { return 0.0; }
+		}
+
 		/// <summary>Called when new data is received</summary>
 		public override void Step()
 		{
@@ -26,7 +32,7 @@ namespace Rylobot
 			if (Instrument.NewCandle)
 			{
 				Debugging.LogInstrument();
-				Debugging.BreakOnCandleOfInterest();
+				Debugging.BreakOnPointOfInterest();
 			}
 		}
 
@@ -38,12 +44,6 @@ namespace Rylobot
 		/// <summary>Watch for position closed</summary>
 		protected override void OnPositionClosed(Position position)
 		{
-		}
-
-		/// <summary>Return a score for how well suited this strategy is to the current conditions</summary>
-		public override double SuitabilityScore
-		{
-			get { return 0.0; }
 		}
 	}
 }

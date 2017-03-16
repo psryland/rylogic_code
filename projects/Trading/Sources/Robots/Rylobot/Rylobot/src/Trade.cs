@@ -18,7 +18,7 @@ namespace Rylobot
 		//  SL/TP are nullable because they are not required, even though it's generally a good idea to have them
 
 		/// <summary>Create a trade with explicit values</summary>
-		public Trade(Instrument instr, TradeType tt, string label, QuoteCurrency ep, QuoteCurrency? sl, QuoteCurrency? tp, long volume, NegIdx? neg_idx = null)
+		public Trade(Instrument instr, TradeType tt, string label, QuoteCurrency ep, QuoteCurrency? sl, QuoteCurrency? tp, long volume, Idx? neg_idx = null)
 		{
 			CAlgoId    = null;
 			TradeIndex = m_trade_index++;
@@ -51,14 +51,14 @@ namespace Rylobot
 		/// <param name="sl">Optional. The stop loss (absolute) to use instead of automatically finding one</param>
 		/// <param name="tp">Optional. The take profit (absolute) to use instead of automatically finding one</param>
 		/// <param name="risk">Optional. Scaling factor for the amount to risk. (default is 1.0)</param>
-		public Trade(Instrument instr, TradeType tt, string label = null, NegIdx? neg_idx = null, QuoteCurrency? ep = null, QuoteCurrency? sl = null, QuoteCurrency? tp = null, double? risk = null)
+		public Trade(Instrument instr, TradeType tt, string label = null, Idx? neg_idx = null, QuoteCurrency? ep = null, QuoteCurrency? sl = null, QuoteCurrency? tp = null, double? risk = null)
 			:this(instr, tt, label, 0, 0, 0, 0, neg_idx)
 		{
 			try
 			{
 				var bot = instr.Bot;
 				var sign = tt.Sign();
-				NegIdx index = neg_idx ?? 0;
+				Idx index = neg_idx ?? 0;
 				Debugging.Trace("Creating Trade (Index = {0})".Fmt(TradeIndex));
 
 				// If the index == 0, add the fractional index amount
@@ -72,8 +72,8 @@ namespace Rylobot
 
 				// Set the trade entry price
 				EP = ep ?? (index == 0
-					? instr.CurrentPrice(sign) // Use the latest price
-					: instr[index].Open + (sign > 0 ? instr.Symbol.Spread : 0));// Use the open price of the candle at 'index'
+					? (QuoteCurrency)instr.CurrentPrice(sign) // Use the latest price
+					: (QuoteCurrency)instr[index].Open + (sign > 0 ? instr.Symbol.Spread : 0));// Use the open price of the candle at 'index'
 
 				// Choose a risk scaler
 				risk = risk ?? 1.0;
@@ -92,7 +92,7 @@ namespace Rylobot
 				var exit = instr.ChooseTradeExit(tt, index, EP, risk);
 				TP     = tp != null ? tp.Value : exit.TP;
 				SL     = sl != null ? sl.Value : exit.SL;
-				Volume = sl != null ? instr.Bot.Broker.MaxVolume(instr, sl.Value / risk.Value) : exit.Volume;
+				Volume = sl != null ? instr.Bot.Broker.ChooseVolume(instr, sl.Value / risk.Value) : exit.Volume;
 			}
 			catch (Exception ex)
 			{
@@ -101,14 +101,14 @@ namespace Rylobot
 		}
 
 		/// <summary>Construct a trade from an existing position</summary>
-		public Trade(Instrument instr, Position pos)
+		public Trade(Instrument instr, Position pos, bool live = true)
 			:this(instr, pos.TradeType, pos.Label, pos.EntryPrice, pos.StopLoss, pos.TakeProfit, pos.Volume)
 		{
 			CAlgoId = pos.Id;
-			Result = EResult.Open;
+			Result = live ? EResult.Open : EResult.Closed;
 
-			EntryIndex = instr.FractionalIndexAt(pos.EntryTime) - (double)instr.IdxFirst;
-			ExitIndex  = instr.FractionalIndexAt(instr.Bot.UtcNow) - (double)instr.IdxFirst;
+			EntryIndex = instr.IndexAt(pos.EntryTime) - instr.IdxFirst;
+			ExitIndex  = instr.IndexAt(instr.Bot.UtcNow) - instr.IdxFirst;
 
 			// Buy at the bid price, then: loss = EP - ask, profit = ask - EP
 			// Sell at the ask price, then: loss = bid - EP, profit = EP - bid
@@ -117,16 +117,16 @@ namespace Rylobot
 		}
 
 		/// <summary>Construct a trade from an existing pending order</summary>
-		public Trade(Instrument instr, PendingOrder ord)
+		public Trade(Instrument instr, PendingOrder ord, bool live = true)
 			:this(instr, ord.TradeType, ord.Label, ord.TargetPrice, ord.StopLoss, ord.TakeProfit, ord.Volume)
 		{
 			CAlgoId = ord.Id;
-			Result = EResult.Pending;
+			Result = live ? EResult.Pending : EResult.Closed;
 
 			var now = instr.Bot.UtcNow;
 			var fin = ord.ExpirationTime ?? (now + Instrument.TimeFrame.ToTimeSpan(num:10));
-			EntryIndex = instr.FractionalIndexAt(now) - (double)instr.IdxFirst;
-			ExitIndex  = instr.FractionalIndexAt(fin) - (double)instr.IdxFirst;
+			EntryIndex = instr.IndexAt(now) - instr.IdxFirst;
+			ExitIndex  = instr.IndexAt(fin) - instr.IdxFirst;
 		}
 
 		/// <summary>Incrementing trade index</summary>
@@ -138,6 +138,9 @@ namespace Rylobot
 
 		/// <summary>Direction of trade</summary>
 		public TradeType TradeType { get; private set; }
+
+		/// <summary>The sign of this trade</summary>
+		public int Sign { get { return TradeType.Sign(); } }
 
 		/// <summary>The instrument traded</summary>
 		public Instrument Instrument { get; private set; }
@@ -158,7 +161,7 @@ namespace Rylobot
 		public DateTime? Expiration { get; set; }
 
 		/// <summary>The entry price</summary>
-		public QuoteCurrency EP { get; private set; }
+		public QuoteCurrency EP { get; set; }
 
 		/// <summary>The stop loss price (absolute, in quote currency)</summary>
 		public QuoteCurrency? SL { get; set; }
@@ -191,7 +194,7 @@ namespace Rylobot
 
 		/// <summary>The outcome of this trade so far</summary>
 		public EResult Result { get; private set; }
-		public enum EResult { Unknown, Pending, Open, HitSL, HitTP };
+		public enum EResult { Unknown, Pending, Open, Closed, HitSL, HitTP };
 
 		/// <summary>Reward to risk ratio of the SL/TP levels</summary>
 		public double RtR
@@ -201,7 +204,7 @@ namespace Rylobot
 				var sign = TradeType.Sign();
 				if (SL == null) return 0.0;
 				if (TP == null) return double.PositiveInfinity;
-				return Misc.Div(sign * (TP.Value - EP), sign * (EP - SL.Value));
+				return Maths.Div(sign * (TP.Value - EP), sign * (EP - SL.Value));
 			}
 		}
 
@@ -228,11 +231,11 @@ namespace Rylobot
 		/// <summary>The highest reward to risk seen over the duration of the trade</summary>
 		public double PeakRtR
 		{
-			get { return Misc.Div(Misc.Max(0.0, PeakProfit), Misc.Max(Instrument.PipSize, PeakLoss)); }
+			get { return Maths.Div(Math.Max(0.0, PeakProfit), Math.Max(Instrument.PipSize, PeakLoss)); }
 		}
 
 		/// <summary>Incorporate a candle into this trade</summary>
-		public void AddCandle(Candle candle, NegIdx index)
+		public void AddCandle(Candle candle, Idx index)
 		{
 			// Adding a candle "open"s an unknown candle
 			if (Result == EResult.Unknown)
@@ -283,8 +286,8 @@ namespace Rylobot
 					}
 
 					// Record the peaks
-					PeakProfit = Misc.Max(PeakProfit, sign * (p - EP));
-					PeakLoss   = Misc.Max(PeakLoss  , sign * (EP - p));
+					PeakProfit = Math.Max(PeakProfit, sign * (p - EP));
+					PeakLoss   = Math.Max(PeakLoss  , sign * (EP - p));
 				}
 
 				ExitIndex = (double)(index - Instrument.IdxFirst);

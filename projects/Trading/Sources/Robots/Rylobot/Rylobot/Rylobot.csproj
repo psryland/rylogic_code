@@ -73,8 +73,11 @@
     </Compile>
     <Compile Include="half_baked\StrategyHedge.cs" />
     <Compile Include="half_baked\StrategyHedge2.cs" />
-    <Compile Include="src\StrategyHedge3.cs" />
-    <Compile Include="src\StrategyPeaks.cs" />
+    <Compile Include="src\Correlator.cs" />
+    <Compile Include="src\Indicator.cs" />
+    <Compile Include="half_baked\StrategyEmaCross.cs" />
+    <Compile Include="half_baked\StrategyPeaks.cs" />
+    <Compile Include="half_baked\StrategySpike.cs" />
     <Compile Include="src\StrategyTemplate.cs" />
     <Compile Include="src\Peaks.cs" />
     <Compile Include="src\StrategyMain.cs" />
@@ -89,7 +92,7 @@
     <Compile Include="src\InstrumentSettings.cs" />
     <Compile Include="src\Settings.cs" />
     <Compile Include="src\Strategy.cs" />
-    <Compile Include="half_baked\StrategyMeanCross.cs" />
+    <Compile Include="src\StrategyMeanCross.cs" />
     <Compile Include="src\Trade.cs" />
   </ItemGroup>
   <ItemGroup>

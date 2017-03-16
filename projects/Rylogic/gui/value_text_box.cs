@@ -57,17 +57,13 @@ namespace pr.gui
 			ForeColorInvalid = Color.Gray;
 			BackColorInvalid = Color.White;
 		}
-		protected override void OnKeyDown(KeyEventArgs e)
+		public override bool PreProcessMessage(ref Message m)
 		{
-			if (!Multiline && e.KeyCode == Keys.Return)
-			{
+			// Commit on return
+			if (m.Msg == Win32.WM_KEYDOWN && Win32.ToVKey(m.WParam) == Keys.Return && !Multiline)
 				TryCommitValue();
-				e.Handled = true;
-			}
-			else
-			{
-				base.OnKeyDown(e);
-			}
+
+			return base.PreProcessMessage(ref m);
 		}
 
 		/// <summary>Get/Set whether the background colours are set based on value validity</summary>

@@ -17,7 +17,6 @@ namespace Rylobot
 		public StrategyHedge2(Rylobot bot)
 			:base(bot, "StrategyHedge2")
 		{
-			PositionManagers = new List<PositionManager>();
 		}
 		public override void Dispose()
 		{
@@ -29,14 +28,11 @@ namespace Rylobot
 		{
 			base.Step();
 
-			Debugging.BreakOnCandleOfInterest();
+			Debugging.BreakOnPointOfInterest();
 			if (Instrument.NewCandle)
 			{
 				Debugging.LogInstrument();
 			}
-
-			foreach (var pm in PositionManagers)
-				pm.Step();
 
 			if (PendingOrders.Any())
 				return;
@@ -56,8 +52,8 @@ namespace Rylobot
 				var trade0 = new Trade(Instrument, TradeType.Buy , Label, ep:sym.Ask + ep*step, sl:sym.Ask - sl*step, tp:sym.Ask + tp*step, risk:0.5f) { Expiration = (Bot.UtcNow + Instrument.TimeFrame.ToTimeSpan(exp)).DateTime };
 				var trade1 = new Trade(Instrument, TradeType.Sell, Label, ep:sym.Bid - ep*step, sl:sym.Bid + sl*step, tp:sym.Bid - tp*step, risk:0.5f) { Expiration = (Bot.UtcNow + Instrument.TimeFrame.ToTimeSpan(exp)).DateTime };
 
-				Bot.Broker.CreatePendingOrder(trade0);
-				Bot.Broker.CreatePendingOrder(trade1);
+				Broker.CreatePendingOrder(trade0);
+				Broker.CreatePendingOrder(trade1);
 			}
 			else
 			{
@@ -70,7 +66,7 @@ namespace Rylobot
 
 			// Close pending orders when a position is opened
 			foreach (var ord in PendingOrders)
-				Bot.Broker.CancelPendingOrder(ord);
+				Broker.CancelPendingOrder(ord);
 
 			// Create a position manager
 			PositionManagers.Add(new PositionManager(Instrument, position));
@@ -79,14 +75,6 @@ namespace Rylobot
 		protected override void OnPositionClosed(Position position)
 		{
 			base.OnPositionClosed(position);
-			PositionManagers.RemoveIf(x => x.Position == position);
-		}
-
-		/// <summary>Position managers</summary>
-		private List<PositionManager> PositionManagers
-		{
-			get;
-			set;
 		}
 
 		/// <summary>Return a score for how well suited this strategy is to the current conditions</summary>

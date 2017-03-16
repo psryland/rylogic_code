@@ -189,11 +189,16 @@ namespace pr.extn
 			return strs.Select(s => int.Parse(s, style, null)).ToArray();
 		}
 
-		/// <summary>True if this value is in the range [beg,end)</summary>
+		/// <summary>True if this value is in the range [beg,end) or [end,beg) (whichever is a positive range)</summary>
 		public static bool Within(this int x, int beg, int end)
 		{
-			if (beg > end) throw new Exception("Within range must have 'beg' <= 'end'. Provided values were beg='{0}', end='{1}'".Fmt(beg,end));
-			return x >= beg && x < end;
+			return beg <= end
+				? x >= beg && x < end
+				: x >= end && x < beg;
+		}
+		public static bool Within(this int? x, int beg, int end)
+		{
+			return x.HasValue && x.Value.Within(beg,end);
 		}
 	}
 
@@ -217,11 +222,16 @@ namespace pr.extn
 			return strs.Select(s => uint.Parse(s, style, null)).ToArray();
 		}
 
-		/// <summary>True if this value is in the range [beg,end)</summary>
+		/// <summary>True if this value is in the range [beg,end) or [end,beg) (whichever is a positive range)</summary>
 		public static bool Within(this uint x, uint beg, uint end)
 		{
-			if (beg > end) throw new Exception("Within range must have 'beg' <= 'end'. Provided values were beg='{0}', end='{1}'".Fmt(beg,end));
-			return x >= beg && x < end;
+			return beg <= end
+				? x >= beg && x < end
+				: x >= end && x < beg;
+		}
+		public static bool Within(this uint? x, uint beg, uint end)
+		{
+			return x.HasValue && x.Value.Within(beg,end);
 		}
 	}
 
@@ -245,11 +255,16 @@ namespace pr.extn
 			return strs.Select(s => long.Parse(s, style, null)).ToArray();
 		}
 
-		/// <summary>True if this value is in the range [beg,end)</summary>
+		/// <summary>True if this value is in the range [beg,end) or [end,beg) (whichever is a positive range)</summary>
 		public static bool Within(this long x, long beg, long end)
 		{
-			if (beg > end) throw new Exception("Within range must have 'beg' <= 'end'. Provided values were beg='{0}', end='{1}'".Fmt(beg,end));
-			return x >= beg && x < end;
+			return beg <= end
+				? x >= beg && x < end
+				: x >= end && x < beg;
+		}
+		public static bool Within(this long? x, long beg, long end)
+		{
+			return x.HasValue && x.Value.Within(beg,end);
 		}
 	}
 
@@ -272,11 +287,16 @@ namespace pr.extn
 			return strs.Select(s => ulong.Parse(s, style, null)).ToArray();
 		}
 
-		/// <summary>True if this value is in the range [beg,end)</summary>
+		/// <summary>True if this value is in the range [beg,end) or [end,beg) (whichever is a positive range)</summary>
 		public static bool Within(this ulong x, ulong beg, ulong end)
 		{
-			if (beg > end) throw new Exception("Within range must have 'beg' <= 'end'. Provided values were beg='{0}', end='{1}'".Fmt(beg,end));
-			return x >= beg && x < end;
+			return beg <= end
+				? x >= beg && x < end
+				: x >= end && x < beg;
+		}
+		public static bool Within(this ulong? x, ulong beg, ulong end)
+		{
+			return x.HasValue && x.Value.Within(beg,end);
 		}
 	}
 
@@ -311,11 +331,16 @@ namespace pr.extn
 			return strs.Select(s => float.Parse(s, style, null)).ToArray();
 		}
 
-		/// <summary>True if this value is in the range [beg,end)</summary>
+		/// <summary>True if this value is in the range [beg,end] or [end,beg] (whichever is a positive range)</summary>
 		public static bool Within(this float x, float beg, float end)
 		{
-			if (beg > end) throw new Exception("Within range must have 'beg' <= 'end'. Provided values were beg='{0}', end='{1}'".Fmt(beg,end));
-			return x >= beg && x < end;
+			return beg <= end
+				? x >= beg && x <= end
+				: x >= end && x <= beg;
+		}
+		public static bool Within(this float? x, float beg, float end)
+		{
+			return x.HasValue && x.Value.Within(beg,end);
 		}
 	}
 
@@ -353,11 +378,16 @@ namespace pr.extn
 			return strs.Select(s => double.Parse(s, style, null)).ToArray();
 		}
 
-		/// <summary>True if this value is in the range [beg,end)</summary>
+		/// <summary>True if this value is in the range [beg,end] or [end,beg] (whichever is a positive range)</summary>
 		public static bool Within(this double x, double beg, double end)
 		{
-			if (beg > end) throw new Exception("Within range must have 'beg' <= 'end'. Provided values were beg='{0}', end='{1}'".Fmt(beg,end));
-			return x >= beg && x < end;
+			return beg <= end
+				? x >= beg && x <= end
+				: x >= end && x <= beg;
+		}
+		public static bool Within(this double? x, double beg, double end)
+		{
+			return x.HasValue && x.Value.Within(beg,end);
 		}
 	}
 }

@@ -68,7 +68,7 @@ namespace pr
 			// Return settings to configure the render
 			pr::rdr::RdrSettings RdrSettings()
 			{
-				return pr::rdr::RdrSettings(GdiCompat);
+				return pr::rdr::RdrSettings(GetModuleHandleW(nullptr), GdiCompat);
 			}
 
 			// Return settings for the render window

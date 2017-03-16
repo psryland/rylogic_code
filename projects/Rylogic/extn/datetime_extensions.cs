@@ -192,6 +192,38 @@ namespace pr.extn
 
 	public static class TimeSpan_
 	{
+		/// <summary>The total years represented</summary>
+		public static double TotalYears(this TimeSpan ts)
+		{
+			return ts.TotalDays / 365.0;
+		}
+
+		/// <summary>The total weeks represented</summary>
+		public static double TotalWeeks(this TimeSpan ts)
+		{
+			return ts.TotalDays / 7.0;
+		}
+
+		/// <summary>The years value of this time span</summary>
+		public static long Years(this TimeSpan ts)
+		{
+			return (long)ts.TotalYears();
+		}
+
+		/// <summary>The weeks value of this time span</summary>
+		public static long Weeks(this TimeSpan ts)
+		{
+			var x = 365*ts.TotalYears() - 365*ts.Years();
+			return (long)(x / 7);
+		}
+
+		/// <summary>The days value of this time span (use when displaying years/weeks as well)</summary>
+		public static long Days(this TimeSpan ts)
+		{
+			var x = 365*ts.TotalYears() - 365*ts.Years() - 7*ts.Weeks();
+			return (long)(x / 1);
+		}
+
 		/// <summary>Return the absolute value of a time span</summary>
 		public static TimeSpan Abs(TimeSpan ts)
 		{
@@ -234,54 +266,70 @@ namespace pr.extn
 		///  10sec, 2min, 1 hr, 2 min 30sec, 2.5 min (2:30), 30s 10m 1h (01:10:30)</summary>
 		public static TimeSpan? TryParseExpr(string val, ETimeUnits default_units = ETimeUnits.Seconds)
 		{
-			// If the value parses as a double, treat the number as 'default_units'
-			double x;
-			if (double.TryParse(val, out x))
+			try
 			{
-				switch (default_units)
+				// If the value parses as a double, treat the number as 'default_units'
+				double x;
+				if (double.TryParse(val, out x))
 				{
-				default: throw new Exception("unknown time units {0}".Fmt(default_units));
-				case ETimeUnits.Milliseconds: return TimeSpan.FromMilliseconds(x);
-				case ETimeUnits.Seconds:      return TimeSpan.FromSeconds(x);
-				case ETimeUnits.Minutes:      return TimeSpan.FromMinutes(x);
-				case ETimeUnits.Hours:        return TimeSpan.FromHours(x);
-				case ETimeUnits.Days:         return TimeSpan.FromDays(x);
+					switch (default_units)
+					{
+					default: throw new Exception("unknown time units {0}".Fmt(default_units));
+					case ETimeUnits.Milliseconds: return TimeSpan.FromMilliseconds(x);
+					case ETimeUnits.Seconds:      return TimeSpan.FromSeconds(x);
+					case ETimeUnits.Minutes:      return TimeSpan.FromMinutes(x);
+					case ETimeUnits.Hours:        return TimeSpan.FromHours(x);
+					case ETimeUnits.Days:         return TimeSpan.FromDays(x);
+					case ETimeUnits.Weeks:        return TimeSpan.FromDays(x*7);
+					case ETimeUnits.Years:        return TimeSpan.FromDays(x*365);
+					}
 				}
-			}
 
-			// Try standard TimeSpan expressions
-			var ts = TimeSpan.Zero;
-			if (TimeSpan.TryParse(val, out ts))
+				// Try standard TimeSpan expressions
+				var ts = TimeSpan.Zero;
+				if (TimeSpan.TryParse(val, out ts))
+					return ts;
+
+				const string num_patn =
+					@"(?:^|\s+)"+            // Start of the string or preceded by whitespace
+					@"("+                    //
+						@"[+-]?"+            // Optional + or - sign
+						@"(?:"+              //
+							@"(?:\d*\.\d+)"+ // ##.### or .####
+							@"|(?:\d+)"+     // or ####
+						@")"+                //
+					@")\s*"+                 // trailed by optional whitespace
+					@"({0})"+                // time unit patterns
+					@"(?:$|\s)";             // End of the string or followed by whitespace
+
+				// Extract parts
+				var msec  = val.SubstringRegex(num_patn.Fmt("msecs|msec|ms"), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'msecs', 'msec', or 'ms'
+				var sec   = val.SubstringRegex(num_patn.Fmt("secs|sec|s"   ), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'secs', 'sec', or 's'
+				var min   = val.SubstringRegex(num_patn.Fmt("mins|min|m"   ), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'mins', 'min', or 'm'
+				var hrs   = val.SubstringRegex(num_patn.Fmt("hrs|hr|h"     ), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'hrs', 'hr', 'h'
+				var days  = val.SubstringRegex(num_patn.Fmt("days|day|d"   ), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'days', 'day', 'd'
+				var weeks = val.SubstringRegex(num_patn.Fmt("weeks|week|w" ), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'weeks', 'week', 'w'
+				var years = val.SubstringRegex(num_patn.Fmt("years|year|y" ), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'years', 'year', 'y'
+				if (msec == null && sec == null && min == null && hrs == null && days == null && weeks == null && years == null)
+					return null;
+
+				// Build the time span from parts
+				if (msec  != null && double.TryParse(msec , out x)) ts += TimeSpan.FromMilliseconds(x);
+				if (sec   != null && double.TryParse(sec  , out x)) ts += TimeSpan.FromSeconds(x);
+				if (min   != null && double.TryParse(min  , out x)) ts += TimeSpan.FromMinutes(x);
+				if (hrs   != null && double.TryParse(hrs  , out x)) ts += TimeSpan.FromHours(x);
+				if (days  != null && double.TryParse(days , out x)) ts += TimeSpan.FromDays(x);
+				if (weeks != null && double.TryParse(weeks, out x)) ts += TimeSpan.FromDays(7*x);
+				if (years != null && double.TryParse(years, out x)) ts += TimeSpan.FromDays(365*x);
+				// Note: Not accounting for leap years because there's no way to know if the time span crosses a leap year
+				// (e.g 2y might span a leap year). Users will have to add additional days to the offset as needed
+
 				return ts;
-
-			const string num_patn =
-				@"(?:^|\s+)"+            // Start of the string or preceded by whitespace
-				@"("+                    //
-					@"[+-]?"+            // Optional + or - sign
-					@"(?:"+              //
-						@"(?:\d*\.\d+)"+ // ##.### or .####
-						@"|(?:\d+)"+     // or ####
-					@")"+                //
-				@")\s*"+                 // trailed by optional whitespace
-				@"({0})"+                // time unit patterns
-				@"(?:$|\s)";             // End of the string or followed by whitespace
-
-			// Extract parts
-			var msec = val.SubstringRegex(num_patn.Fmt("msecs|msec|ms"), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'msecs', 'msec', or 'ms'
-			var sec  = val.SubstringRegex(num_patn.Fmt("secs|sec|s"   ), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'secs', 'sec', or 's'
-			var min  = val.SubstringRegex(num_patn.Fmt("mins|min|m"   ), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'mins', 'min', or 'm'
-			var hrs  = val.SubstringRegex(num_patn.Fmt("hrs|hr|h"     ), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'hrs', 'hr', 'h'
-			var days = val.SubstringRegex(num_patn.Fmt("days|day|d"   ), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'days', 'day', 'd'
-			if (msec == null && sec == null && min == null && hrs == null && days == null)
+			}
+			catch
+			{
 				return null;
-
-			// Build the time span from parts
-			if (msec != null && double.TryParse(msec, out x)) ts += TimeSpan.FromMilliseconds(x);
-			if (sec  != null && double.TryParse(sec , out x)) ts += TimeSpan.FromSeconds(x);
-			if (min  != null && double.TryParse(min , out x)) ts += TimeSpan.FromMinutes(x);
-			if (hrs  != null && double.TryParse(hrs , out x)) ts += TimeSpan.FromHours(x);
-			if (days != null && double.TryParse(days, out x)) ts += TimeSpan.FromDays(x);
-			return ts;
+			}
 		}
 
 		/// <summary>Labels for time units. Ordered by increasing duration, i.e. Seconds > Milliseconds</summary>
@@ -292,18 +340,24 @@ namespace pr.extn
 			Minutes,
 			Hours,
 			Days,
+			Weeks,
+			Years,
 		}
 
 		/// <summary>Return the time span as a nice looking string</summary>
 		public static string ToPrettyString(this TimeSpan ts, bool short_format = true, ETimeUnits min_unit = ETimeUnits.Seconds, ETimeUnits max_unit = ETimeUnits.Days, bool leading_zeros = false, bool trailing_zeros = true)
 		{
 			// Get each of the parts
-			var d = max_unit > ETimeUnits.Days         ? ts.Days         : (long)ts.TotalDays;
+			var y = max_unit > ETimeUnits.Years        ? ts.Years()      : (long)ts.TotalYears();
+			var w = max_unit > ETimeUnits.Weeks        ? ts.Weeks()      : (long)ts.TotalWeeks();
+			var d = max_unit > ETimeUnits.Days         ? ts.Days()       : (long)ts.TotalDays;
 			var h = max_unit > ETimeUnits.Hours        ? ts.Hours        : (long)ts.TotalHours;
 			var m = max_unit > ETimeUnits.Minutes      ? ts.Minutes      : (long)ts.TotalMinutes;
 			var s = max_unit > ETimeUnits.Seconds      ? ts.Seconds      : (long)ts.TotalSeconds;
 			var f = max_unit > ETimeUnits.Milliseconds ? ts.Milliseconds : (long)ts.TotalMilliseconds;
 
+			var unit_y = short_format ? "y"  : y != 1 ? "years" : "year";
+			var unit_w = short_format ? "w"  : w != 1 ? "weeks" : "week";
 			var unit_d = short_format ? "d"  : d != 1 ? "days"  : "day";
 			var unit_h = short_format ? "h"  : h != 1 ? "hrs"   : "hr";
 			var unit_m = short_format ? "m"  : m != 1 ? "mins"  : "min";
@@ -311,13 +365,17 @@ namespace pr.extn
 			var unit_f = short_format ? "ms" : f != 1 ? "msecs" : "msec";
 
 			// Show if: (unit in range [min_unit,max_unit])  and  ((value != 0) or (showing leading zeros) or (showing trailing zeros and high unit is shown) or (unit = min_unit and 'ts' is smaller than unit))
-			var show_d = (min_unit <= ETimeUnits.Days         && ETimeUnits.Days         <= max_unit) && (d != 0 || leading_zeros                               || (min_unit == ETimeUnits.Days         && (long)ts.TotalDays         == 0));
-			var show_h = (min_unit <= ETimeUnits.Hours        && ETimeUnits.Hours        <= max_unit) && (h != 0 || leading_zeros || (trailing_zeros && show_d) || (min_unit == ETimeUnits.Hours        && (long)ts.TotalHours        == 0));
-			var show_m = (min_unit <= ETimeUnits.Minutes      && ETimeUnits.Minutes      <= max_unit) && (m != 0 || leading_zeros || (trailing_zeros && show_h) || (min_unit == ETimeUnits.Minutes      && (long)ts.TotalMinutes      == 0));
-			var show_s = (min_unit <= ETimeUnits.Seconds      && ETimeUnits.Seconds      <= max_unit) && (s != 0 || leading_zeros || (trailing_zeros && show_m) || (min_unit == ETimeUnits.Seconds      && (long)ts.TotalSeconds      == 0));
-			var show_f = (min_unit <= ETimeUnits.Milliseconds && ETimeUnits.Milliseconds <= max_unit) && (f != 0 || leading_zeros || (trailing_zeros && show_s) || (min_unit == ETimeUnits.Milliseconds && (long)ts.TotalMilliseconds == 0));
+			var show_y = (min_unit <= ETimeUnits.Years        && ETimeUnits.Years        <= max_unit) && (y != 0 || leading_zeros                               || (min_unit == ETimeUnits.Years        && (long)(ts.TotalDays / 365.0) == 0));
+			var show_w = (min_unit <= ETimeUnits.Weeks        && ETimeUnits.Weeks        <= max_unit) && (w != 0 || leading_zeros                               || (min_unit == ETimeUnits.Weeks        && (long)(ts.TotalDays / 7.0)   == 0));
+			var show_d = (min_unit <= ETimeUnits.Days         && ETimeUnits.Days         <= max_unit) && (d != 0 || leading_zeros                               || (min_unit == ETimeUnits.Days         && (long)ts.TotalDays           == 0));
+			var show_h = (min_unit <= ETimeUnits.Hours        && ETimeUnits.Hours        <= max_unit) && (h != 0 || leading_zeros || (trailing_zeros && show_d) || (min_unit == ETimeUnits.Hours        && (long)ts.TotalHours          == 0));
+			var show_m = (min_unit <= ETimeUnits.Minutes      && ETimeUnits.Minutes      <= max_unit) && (m != 0 || leading_zeros || (trailing_zeros && show_h) || (min_unit == ETimeUnits.Minutes      && (long)ts.TotalMinutes        == 0));
+			var show_s = (min_unit <= ETimeUnits.Seconds      && ETimeUnits.Seconds      <= max_unit) && (s != 0 || leading_zeros || (trailing_zeros && show_m) || (min_unit == ETimeUnits.Seconds      && (long)ts.TotalSeconds        == 0));
+			var show_f = (min_unit <= ETimeUnits.Milliseconds && ETimeUnits.Milliseconds <= max_unit) && (f != 0 || leading_zeros || (trailing_zeros && show_s) || (min_unit == ETimeUnits.Milliseconds && (long)ts.TotalMilliseconds   == 0));
 
 			return Str.Build(
+				show_y ? "{0}{1} ".Fmt(y, unit_y) : string.Empty,
+				show_w ? "{0}{1} ".Fmt(w, unit_w) : string.Empty,
 				show_d ? "{0}{1} ".Fmt(d, unit_d) : string.Empty,
 				show_h ? "{0}{1} ".Fmt(h, unit_h) : string.Empty,
 				show_m ? "{0}{1} ".Fmt(m, unit_m) : string.Empty,
@@ -341,6 +399,7 @@ namespace pr.extn
 namespace pr.unittests
 {
 	using extn;
+	using maths;
 
 	[TestFixture] public class TestDateTimeExtensions
 	{
@@ -407,34 +466,56 @@ namespace pr.unittests
 			const string expr_short = "1428d 21h 33m 9s";
 			const string expr_long  = "1428days 21hrs 33mins 9secs";
 
-			var ts1 = TimeSpan.FromSeconds(123456789);
-			var s1 = ts1.ToPrettyString();
-			Assert.AreEqual(s1, expr_short);
+			{
+				var ts = TimeSpan.FromSeconds(123456789);
+				var s = ts.ToPrettyString();
+				Assert.AreEqual(s, expr_short);
 
-			var TS1 = TimeSpan_.TryParseExpr(expr_long);
-			Assert.AreEqual(TS1, ts1);
-
-			var ts2 = TimeSpan_.TryParseExpr("1d 12Hrs 1min 100secs 5msec");
-			var TS2 = new TimeSpan(1, 12, 1, 100, 5);
-			Assert.AreEqual(ts2, TS2);
-
-			var ts3 = TimeSpan_.TryParseExpr("-2mins").Value;
-			var s2 = ts3.ToPrettyString();
-			var s3 = ts3.ToPrettyString(short_format:false, min_unit:TimeSpan_.ETimeUnits.Milliseconds, trailing_zeros:true);
-			var s4 = ts3.ToPrettyString(short_format:false, min_unit:TimeSpan_.ETimeUnits.Milliseconds, trailing_zeros:false);
-			Assert.AreEqual(s2, "-2m 0s");
-			Assert.AreEqual(s3, "-2mins 0secs 0msecs");
-			Assert.AreEqual(s4, "-2mins");
-
-			var ts4 = TimeSpan_.TryParseExpr("0mins").Value;
-			var s5 = ts4.ToPrettyString();
-			Assert.AreEqual(s5, "0s");
-
-			var ts5 = TimeSpan_.TryParseExpr("2ms").Value;
-			var s6 = ts5.ToPrettyString();
-			var s7 = ts5.ToPrettyString(min_unit:TimeSpan_.ETimeUnits.Milliseconds);
-			Assert.AreEqual(s6, "0s");
-			Assert.AreEqual(s7, "2ms");
+				var TS = TimeSpan_.TryParseExpr(expr_long);
+				Assert.AreEqual(TS, ts);
+			}
+			{
+				var ts = TimeSpan_.TryParseExpr("1d 12Hrs 1min 100secs 5msec");
+				var TS = new TimeSpan(1, 12, 1, 100, 5);
+				Assert.AreEqual(ts, TS);
+			}
+			{
+				var ts = TimeSpan_.TryParseExpr("-2mins").Value;
+				var s1 = ts.ToPrettyString();
+				var s2 = ts.ToPrettyString(short_format:false, min_unit:TimeSpan_.ETimeUnits.Milliseconds, trailing_zeros:true);
+				var s3 = ts.ToPrettyString(short_format:false, min_unit:TimeSpan_.ETimeUnits.Milliseconds, trailing_zeros:false);
+				Assert.AreEqual(s1, "-2m 0s");
+				Assert.AreEqual(s2, "-2mins 0secs 0msecs");
+				Assert.AreEqual(s3, "-2mins");
+			}
+			{
+				var ts = TimeSpan_.TryParseExpr("0mins").Value;
+				var s1 = ts.ToPrettyString();
+				Assert.AreEqual(s1, "0s");
+			}
+			{
+				var ts = TimeSpan_.TryParseExpr("2ms").Value;
+				var s1 = ts.ToPrettyString();
+				var s2 = ts.ToPrettyString(min_unit:TimeSpan_.ETimeUnits.Milliseconds);
+				Assert.AreEqual(s1, "0s");
+				Assert.AreEqual(s2, "2ms");
+			}
+			{
+				var ts = TimeSpan_.TryParseExpr("10y 25w 7d").Value;
+				var s1 = ts.ToPrettyString(trailing_zeros:false);
+				var s2 = ts.ToPrettyString(max_unit:TimeSpan_.ETimeUnits.Years, trailing_zeros:false);
+				Assert.True(Maths.FEql(ts.TotalDays, 10*365 + 25*7 + 7));
+				Assert.AreEqual(s1, "3832d");
+				Assert.AreEqual(s2, "10y 26w");
+			}
+			{
+				var ts = TimeSpan_.TryParseExpr("-10y 25w 7d").Value;
+				var s1 = ts.ToPrettyString(trailing_zeros:false);
+				var s2 = ts.ToPrettyString(max_unit:TimeSpan_.ETimeUnits.Years, trailing_zeros:false);
+				Assert.True(Maths.FEql(ts.TotalDays, -10*365 + 25*7 + 7));
+				Assert.AreEqual(s1, "-3468d");
+				Assert.AreEqual(s2, "-9y -26w -1d");
+			}
 		}
 	}
 }

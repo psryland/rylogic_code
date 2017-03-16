@@ -61,7 +61,7 @@ namespace ldr
 		,m_saved_views()
 
 		// 3D Scene
-		,m_rdr(pr::rdr::RdrSettings(FALSE))
+		,m_rdr(pr::rdr::RdrSettings(GetModuleHandleW(nullptr), FALSE))
 		,m_window(m_rdr, pr::rdr::WndSettings(m_panel, TRUE, FALSE, pr::To<pr::iv2>(m_panel.CreateHandle().ClientRect().size())))
 		,m_scene(m_window,{pr::rdr::ERenderStep::ForwardRender})
 		,m_cam(pr::v4(0, 0, 2.41421f, 1), pr::v4Origin, pr::v4YAxis) // 1/tan(tau/16)

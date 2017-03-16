@@ -43,6 +43,19 @@ namespace pr.extn
 			return list[list.Count - index - 1];
 		}
 
+		/// <summary>Return all of the range except the last 'count' items</summary>
+		public static IEnumerable<TSource> SubRange<TSource>(this IList<TSource> list, int start, int count)
+		{
+			for (int i = start; count-- != 0; ++i)
+				yield return list[i];
+		}
+
+		/// <summary>Return all of the range except the last 'count' items</summary>
+		public static IEnumerable<TSource> TakeFrac<TSource>(this IList<TSource> source, float frac)
+		{
+			return source.Take((int)(source.Count * frac));
+		}
+
 		/// <summary>Remove the last item in the list</summary>
 		public static void PopBack<T>(this IList<T> list)
 		{
@@ -401,22 +414,28 @@ namespace pr.extn
 		/// Binary search using for an element using only a predicate function.
 		/// Returns the index of the element if found or the 2s-complement of the first
 		/// element larger than the one searched for.
-		/// 'cmp' should return -1 if T is less than the target, +1 if greater, or 0 if equal</summary>
-		public static int BinarySearch<T>(this IList<T> list, Func<T,int> cmp)
+		/// 'cmp' should return -1 if T is less than the target, +1 if greater, or 0 if equal
+		/// 'insert_position' should be true to always return positive indices (i.e. when searching to find insert position)</summary>
+		public static int BinarySearch<T>(this IList<T> list, Func<T,int> cmp, bool insert_position = false)
 		{
-			if (list.Count == 0) return ~0;
-			for (int b = 0, e = list.Count;;)
+			var idx = ~0;
+			if (list.Count != 0)
 			{
-				int m = b + ((e - b) >> 1); // prevent overflow
-				int c = cmp(list[m]);       // <0 means list[m] is less than the target element
-				if (c == 0) { return m; }
-				if (c <  0) { if (m == b){return ~e;} b = m; continue; }
-				if (c >  0) { if (m == b){return ~b;} e = m; }
+				for (int b = 0, e = list.Count;;)
+				{
+					int m = b + ((e - b) >> 1); // prevent overflow
+					int c = cmp(list[m]);       // <0 means list[m] is less than the target element
+					if (c == 0) { idx = m; break; }
+					if (c <  0) { if (m == b) { idx = ~e; break; } b = m; continue; }
+					if (c >  0) { if (m == b) { idx = ~b; break; } e = m; }
+				}
 			}
+			if (insert_position && idx < 0) idx = ~idx;
+			return idx;
 		}
-		public static int BinarySearch<T>(this IList<T> list, T item, Cmp<T> cmp)
+		public static int BinarySearch<T>(this IList<T> list, T item, Cmp<T> cmp, bool insert_position = false)
 		{
-			return list.BinarySearch(x => cmp.Compare(x, item));
+			return list.BinarySearch(x => cmp.Compare(x, item), insert_position);
 		}
 
 		/// <summary>Binary search for an element in 'list'. Returns the element if found, or default(T) if not.</summary>

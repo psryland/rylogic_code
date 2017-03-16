@@ -55,6 +55,21 @@ namespace pr.maths
 			return 0;
 		}
 
+		/// <summary>Evaluate the definite integral of the monic from 'x0' to 'x1'</summary>
+		public double Integrate(double x0, double x1)
+		{
+			//' y(x) = Ax + B
+			//' Intg-y(x) = Ax²/2 + Bx + C
+			//' (A/2)(x1² - x0²) + (B/1)(x1 - x0)
+			return (A/2.0)*(x1*x1 - x0*x0) + (B/1.0)*(x1 - x0);
+		}
+
+		/// <summary>Evaluate the indefinite integral with constant of integration 'C'</summary>
+		public Quadratic Integrate(double C)
+		{
+			return new Quadratic(A/2.0, B/1.0, C);
+		}
+
 		/// <summary>Calculate the real roots of this polynomial</summary>
 		public double[] Roots
 		{
@@ -133,6 +148,24 @@ namespace pr.maths
 			return 2*A;
 		}
 
+		/// <summary>Evaluate the definite integral of the quadratic from 'x0' to 'x1'</summary>
+		public double Integrate(double x0, double x1)
+		{
+			//' y(x) = Ax² + Bx + C
+			//' Intg(y(x)) = Ax³/3 + Bx²/2 + Cx + D |
+			//' Ax1³/3 + Bx1²/2 + Cx1 + D - Ax0³/3 - Bx0²/2 - Cx0 - D
+			//' Ax1³/3 - Ax0³/3 + Bx1²/2 - Bx0²/2 + Cx1 - Cx0 + D - D 
+			//' Ax1³/3 - Ax0³/3 + Bx1²/2 - Bx0²/2 + Cx1 - Cx0 + D - D 
+			//' (A/3)(x1³ - x0³) + (B/2)(x1² - x0²) + C(x1 - x0)
+			return (A/3.0)*(x1*x1*x1 - x0*x0*x0) + (B/2.0)*(x1*x1 - x0*x0) + (C/1.0)*(x1 - x0);
+		}
+
+		/// <summary>Evaluate the indefinite integral with constant of integration 'D'</summary>
+		public Cubic Integrate(double D)
+		{
+			return new Cubic(A/3.0, B/2.0, C/1.0, D);
+		}
+
 		/// <summary>Calculate the real roots of this polynomial</summary>
 		public double[] Roots
 		{
@@ -149,11 +182,16 @@ namespace pr.maths
 					? -0.5 * (B - discriminant)
 					: -0.5 * (B + discriminant);
 
-				return new double[2]
+				var roots = new double[2]
 				{
 					discriminant / A,
 					C / discriminant
 				};
+				if (roots[0] > roots[1])
+				{
+					Maths.Swap(ref roots[0], ref roots[1]);
+				}
+				return roots;
 			}
 		}
 
@@ -209,6 +247,53 @@ namespace pr.maths
 				new v2((float)x1, (float)y1),
 				new v2((float)x2, (float)y2));
 		}
+
+		#region Operators
+		public static Quadratic operator + (Quadratic lhs)
+		{
+			return lhs;
+		}
+		public static Quadratic operator + (Quadratic lhs, Quadratic rhs)
+		{
+			return new Quadratic(lhs.A + rhs.A, lhs.B + rhs.B, lhs.C + rhs.C);
+		}
+		public static Quadratic operator + (Quadratic lhs, Monic rhs)
+		{
+			return new Quadratic(lhs.A, lhs.B + rhs.A, lhs.C + rhs.B);
+		}
+		public static Quadratic operator + (Monic lhs, Quadratic rhs)
+		{
+			return rhs + lhs;
+		}
+		public static Quadratic operator - (Quadratic lhs)
+		{
+			return new Quadratic(-lhs.A, -lhs.B, -lhs.C);
+		}
+		public static Quadratic operator - (Quadratic lhs, Quadratic rhs)
+		{
+			return new Quadratic(lhs.A - rhs.A, lhs.B - rhs.B, lhs.C - rhs.C);
+		}
+		public static Quadratic operator - (Quadratic lhs, Monic rhs)
+		{
+			return new Quadratic(lhs.A, lhs.B - rhs.A, lhs.C - rhs.B);
+		}
+		public static Quadratic operator - (Monic lhs, Quadratic rhs)
+		{
+			return -(rhs - lhs);
+		}
+		public static Quadratic operator * (double lhs, Quadratic rhs)
+		{
+			return new Quadratic(lhs * rhs.A, lhs * rhs.B, lhs * rhs.C);
+		}
+		public static Quadratic operator * (Quadratic lhs, double rhs)
+		{
+			return rhs * lhs;
+		}
+		public static Quadratic operator / (Quadratic lhs, double rhs)
+		{
+			return lhs * (1.0/rhs);
+		}
+		#endregion
 	}
 
 	/// <summary>'F(x) = Ax³ + Bx² + Cx + D'</summary>
@@ -342,6 +427,20 @@ namespace pr.maths
 			var x = m4x4.Invert(M) * y;
 
 			return new Cubic(x.x, x.y, x.z, x.w);
+		}
+	}
+
+	/// <summary>Polynomial functions</summary>
+	public static partial class Maths
+	{
+		/// <summary>Return the X values of the points if intersection with 'rhs'</summary>
+		public static double[] Intersection(Quadratic lhs, Quadratic rhs)
+		{
+			return (lhs - rhs).Roots;
+		}
+		public static double[] Intersection(Quadratic lhs, Monic rhs)
+		{
+			return (lhs - rhs).Roots;
 		}
 	}
 }

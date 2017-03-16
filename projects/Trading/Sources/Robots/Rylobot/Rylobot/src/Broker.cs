@@ -90,7 +90,7 @@ namespace Rylobot
 		/// <summary>Account balance (in units of account currency)</summary>
 		public AcctCurrency Balance
 		{
-			get { return Misc.Max(m_balance, 0.0); }
+			get { return Math.Max((double)m_balance, 0.0); }
 			set { SetProp(ref m_balance, value, R<Broker>.Name(x => x.Balance)); }
 		}
 		private AcctCurrency m_balance;
@@ -171,7 +171,7 @@ namespace Rylobot
 				var max_risk_pc = Bot.Settings.MaxRiskPC;
 
 				// Determine how much room is left given existing risk
-				var available_risk_pc = max_risk_pc - Bot.Broker.TotalRiskPC;
+				var available_risk_pc = max_risk_pc - TotalRiskPC;
 				if (available_risk_pc <= 0)
 					return 0.0;
 
@@ -224,7 +224,7 @@ namespace Rylobot
 				if ((trade.TradeType == TradeType.Buy && trade.EP < trade.Instrument.CurrentPrice(+1)) ||
 					(trade.TradeType == TradeType.Sell && trade.EP > trade.Instrument.CurrentPrice(-1)))
 				{
-					r = Bot.PlaceLimitOrder(trade.TradeType, trade.Instrument.Symbol, trade.Volume, (double)trade.EP, trade.Label, (double?)trade.SL_pips, (double?)trade.TP_pips, trade.Expiration);
+					r = Bot.PlaceLimitOrder(trade.TradeType, trade.Instrument.Symbol, trade.Volume, trade.EP, trade.Label, trade.SL_pips, trade.TP_pips, trade.Expiration);
 					if (!r.IsSuccessful)
 						throw new Exception("Place limit order failed: {0}".Fmt(r.Error));
 				}
@@ -233,7 +233,7 @@ namespace Rylobot
 				if ((trade.TradeType == TradeType.Buy && trade.EP > trade.Instrument.CurrentPrice(+1)) ||
 					(trade.TradeType == TradeType.Sell && trade.EP < trade.Instrument.CurrentPrice(-1)))
 				{
-					r = Bot.PlaceStopOrder(trade.TradeType, trade.Instrument.Symbol, trade.Volume, (double)trade.EP, trade.Label, (double?)trade.SL_pips, (double?)trade.TP_pips, trade.Expiration);
+					r = Bot.PlaceStopOrder(trade.TradeType, trade.Instrument.Symbol, trade.Volume, trade.EP, trade.Label, trade.SL_pips, trade.TP_pips, trade.Expiration);
 					if (!r.IsSuccessful)
 						throw new Exception("Place stop order failed: {0}".Fmt(r.Error));
 				}
@@ -261,6 +261,45 @@ namespace Rylobot
 		public PendingOrder CreatePendingOrder(Trade trade)
 		{
 			return CreatePendingOrder(trade, false);
+		}
+
+		/// <summary>Update a pending order</summary>
+		public bool ModifyPendingOrder(PendingOrder ord, Trade trade, bool rethrow)
+		{
+			try
+			{
+				// Check that changing this order will not exceed the maximum risk
+				if (m_suspend_risk_check == 0)
+				{
+					var trades = AllOrders.Where(x => x.Id != ord.Id).Concat(new Order(trade, active:true)).ToList();
+					var max_risk = FindMaxRisk(trades);
+					if (max_risk > AllowedRisk)
+						throw new Exception("Modification disallowed, exceeds allowable risk");
+				}
+
+				// Modify the pending order
+				var r = Bot.ModifyPendingOrder(ord, trade.EP, trade.SL_pips, trade.TP_pips, trade.Expiration);
+				if (!r.IsSuccessful)
+					throw new Exception("Modifying pending order failed: {0}".Fmt(r.Error));
+
+				// Replace the order with updated info
+				Debugging.LogOrder(ord, update_instrument:true);
+
+				// Update the account balance
+				Update();
+
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Bot.Print(ex.Message);
+				if (rethrow) throw;
+				return false;
+			}
+		}
+		public bool ModifyPendingOrder(PendingOrder ord, Trade trade)
+		{
+			return ModifyPendingOrder(ord, trade, false);
 		}
 
 		/// <summary>Cancel a pending order</summary>
@@ -293,6 +332,19 @@ namespace Rylobot
 		public PendingOrder CancelPendingOrder(PendingOrder ord)
 		{
 			return CancelPendingOrder(ord, false);
+		}
+
+		/// <summary>Cancel a collection of pending orders</summary>
+		public void CancelPendingOrders(IEnumerable<PendingOrder> orders)
+		{
+			foreach (var ord in orders.ToArray())
+				CancelPendingOrder(ord);
+		}
+
+		/// <summary>Close all positions with the given label</summary>
+		public void CancelAllPendingOrders(string label)
+		{
+			CancelPendingOrders(Bot.PendingOrders.Where(x => x.Label == label));
 		}
 
 		/// <summary>Creates a market order. Throws if insufficient risk available</summary>
@@ -377,6 +429,18 @@ namespace Rylobot
 			}
 		}
 
+		/// <summary>Change the SL or TP on a position</summary>
+		public bool ModifyOrder(Instrument instr, Position position, QuoteCurrency? sl = null, QuoteCurrency? tp = null)
+		{
+			// 'tp' is optional, it set it replaces the TP on 'position'
+			Debug.Assert(instr.SymbolCode == position.SymbolCode);
+
+			var trade = new Trade(instr, position);
+			if (sl != null) trade.SL = sl;
+			if (tp != null) trade.TP = tp;
+			return ModifyOrder(position, trade);
+		}
+
 		/// <summary>Close an open position</summary>
 		public Position ClosePosition(Position pos, bool rethrow)
 		{
@@ -409,11 +473,166 @@ namespace Rylobot
 			return ClosePosition(pos, false);
 		}
 
+		/// <summary>Close a range of positions</summary>
+		public void ClosePositions(IEnumerable<Position> positions)
+		{
+			foreach (var pos in positions.ToArray())
+				ClosePosition(pos);
+		}
+
 		/// <summary>Close all positions with the given label</summary>
 		public void CloseAllPositions(string label)
 		{
-			foreach (var pos in Bot.Positions.Where(x => x.Label == label).ToArray())
-				ClosePosition(pos);
+			ClosePositions(Bot.Positions.Where(x => x.Label == label));
+		}
+
+		/// <summary>
+		/// Set the SL/TP on an existing position so that there's a chance it'll close in profit.
+		/// Sets the SL to the wick limit of the latest and previous candle.
+		/// This will only ever reduce the SL distance from it's current value.
+		/// Set 'tp' to chance the current TP value as well (only if the SL is changed tho).
+		/// Returns true if the SL was changed</summary>
+		public bool CloseByStopLoss(Instrument instr, Position position, QuoteCurrency? tp = null)
+		{
+			// 'tp' is optional, it set it replaces the TP on 'position'
+			Debug.Assert(instr.SymbolCode == position.SymbolCode);
+
+			// Set the SL to just past the last candle
+			var price = instr.CurrentPrice(-position.Sign());
+			var sl = position.Sign() > 0
+				? Math.Min(instr[-1].WickLimit(-1), instr[0].WickLimit(-1)) - instr.Spread
+				: Math.Max(instr[-1].WickLimit(+1), instr[0].WickLimit(+1)) + instr.Spread;
+
+			// Only make the SL smaller
+			var sl_rel = position.Sign() * (position.EntryPrice - sl);
+			if (sl_rel > position.StopLossRel())
+				return false;
+
+			// Move the stop loss to just past the current price
+			var trade = new Trade(instr, position) { SL = sl, TP = tp ?? position.TakeProfit };
+			if (!ModifyOrder(position, trade))
+				ClosePosition(position); // Something went wrong, just close now
+
+			return true;
+		}
+
+		/// <summary>Set the SL or TP for a position such that it will close when the price hits 'price'</summary>
+		public bool CloseAt(Instrument instr, Position position, QuoteCurrency price)
+		{
+			// 'tp' is optional, it set it replaces the TP on 'position'
+			Debug.Assert(instr.SymbolCode == position.SymbolCode);
+
+			// If the position already has a TP/SL at 'price' then don't change anything
+			if ((position.StopLoss.HasValue && Maths.FEql(position.StopLoss.Value, price)) ||
+				(position.TakeProfit.HasValue && Maths.FEql(position.TakeProfit.Value, price)))
+				return false;
+
+			var trade = (Trade)null;
+			if (position.TradeType == TradeType.Buy)
+			{
+				// If the current price is not between 'price' and 'position.StopLoss' move the SL to 'price'
+				if (!instr.CurrentPrice(-1).Within(position.StopLoss ?? -double.MaxValue, price))
+					trade = new Trade(instr, position) { SL = price - instr.Spread };
+
+				// If the current price is not between 'price' and 'position.TakeProfit' move the TP to 'price'
+				else if (!instr.CurrentPrice(+1).Within(price, position.TakeProfit ?? +double.MaxValue))
+					trade = new Trade(instr, position) { TP = price };
+
+				// If the current price spans 'price', set the TP and SL one spread distance on either side of 'price'
+				else
+					trade = null;//new Trade(instr, position) { SL = price - instr.Spread, TP = price + instr.Spread };
+			}
+			else
+			{
+				// If the current price is not between 'price' and 'position.StopLoss' move the SL to 'price'
+				if (!instr.CurrentPrice(+1).Within(price, position.StopLoss ?? +double.MaxValue))
+					trade = new Trade(instr, position) { SL = price + instr.Spread };
+
+				// If the current price is not between 'price' and 'position.TakeProfit' move the TP to 'price'
+				else if (!instr.CurrentPrice(-1).Within(position.TakeProfit ?? -double.MaxValue, price))
+					trade = new Trade(instr, position) { TP = price };
+
+				// If the current price spans 'price', set the TP and SL one spread distance on either side of 'price'
+				else
+					trade = null;//new Trade(instr, position) { SL = price + instr.Spread, TP = price - instr.Spread };
+			}
+			if (trade != null)
+			{
+				// Move the SL/TP
+				ModifyOrder(position, trade);
+			}
+			else
+			{
+				// Close immediately if the price spread spans 'price'
+				ClosePosition(position);
+			}
+			return true;
+		}
+
+		/// <summary>Move the SL so that position can only close at break even</summary>
+		public bool MoveToBreakEven(Instrument instr, Position position, AcctCurrency? profit = null)
+		{
+			profit = profit ?? 0;
+			if (position.NetProfit < profit)
+				return false;
+
+			var sl = position.EntryPrice + position.Sign() * instr.Symbol.AcctToQuote(profit.Value / position.Volume);
+			var trade = new Trade(instr, position) { SL = sl };
+			ModifyOrder(position, trade);
+			return true;
+		}
+
+		/// <summary>Look for positions that cancel out and close them, ensuring a net profit</summary>
+		public void CancelOutPositions(string label, int trend_sign)
+		{
+			// Get the winning and losing positions
+			var winners = Bot.Positions.Where(x => x.Label == label && x.NetProfit > 0).OrderBy(x => -x.NetProfit).ToList();                           // From biggest to smallest
+			var losers  = Bot.Positions.Where(x => x.Label == label && x.Sign() != trend_sign && x.NetProfit < 0).OrderBy(x => +x.NetProfit).ToList(); // From worst to best
+			if (winners.Count != 0 && losers.Count != 0)
+			{
+				// Find the totals of winning and losing positions
+				var win_total = winners.Sum(x => x.NetProfit);
+				var los_total = losers.Sum(x => -x.NetProfit);
+
+				// More winners than losers, close as few winners as needed
+				if (win_total > los_total)
+				{
+					for (int i = winners.Count; i-- != 0;)
+					{
+						if (los_total > win_total - winners[i].NetProfit) break;
+						win_total -= winners[i].NetProfit;
+						winners.RemoveAt(i);
+					}
+				}
+
+				// More losers than winners, close as many losers as we can
+				else if (los_total > win_total)
+				{
+					los_total = 0;
+					for (int i = 0; i != losers.Count; ++i)
+					{
+						// Find the first loser less than 'win_total'
+						for (;losers.Count != i;)
+						{
+							if (los_total + -losers[i].NetProfit < win_total) break;
+							losers.RemoveAt(i);
+						}
+						if (losers.Count == i) break;
+						los_total += -losers[i].NetProfit;
+					}
+				}
+
+				// Anything cancel out?
+				if (winners.Count != 0 && losers.Count != 0)
+				{
+					var bal = winners.Sum(x => x.NetProfit) - losers.Sum(x => -x.NetProfit);
+					Debugging.Trace("Cancelling positions! Net: {0}".Fmt(bal));
+					Debug.Assert(bal >= 0.0);
+
+					ClosePositions(winners);
+					ClosePositions(losers);
+				}
+			}
 		}
 
 		/// <summary>Return the maximum SL value (in quote currency) for the given volume</summary>
@@ -439,7 +658,7 @@ namespace Rylobot
 		}
 
 		/// <summary>Return the maximum volume to trade given a relative stop loss value</summary>
-		public long MaxVolume(Instrument instr, QuoteCurrency sl)
+		public long ChooseVolume(Instrument instr, QuoteCurrency sl, double? risk = null)
 		{
 			// Find the amount we're allowed to risk
 			// Scale down a little bit to prevent issues comparing the returned SL to BalanceToRisk
@@ -448,7 +667,7 @@ namespace Rylobot
 				return 0;
 
 			// Get this amount in quote currency
-			var volume = balance_to_risk / instr.Symbol.QuoteToAcct(sl);
+			var volume = (risk ?? 1.0) * balance_to_risk / instr.Symbol.QuoteToAcct(sl);
 			return instr.Symbol.NormalizeVolume(volume, RoundingMode.Down);
 		}
 
@@ -543,7 +762,7 @@ namespace Rylobot
 							// Find the risk at 'price_l',
 							var price_l = price - dist_l;
 							var r = (QuoteCurrency)orders.Sum(x => (double)x.ValueAt(price_l, false, false));
-							max_risk = Misc.Max(max_risk, -r);
+							max_risk = Math.Max(max_risk, -r);
 
 							// Recursively search the remaining orders.
 							var remaining = orders.ToList();
@@ -559,7 +778,7 @@ namespace Rylobot
 							// Find the risk at 'price_r'
 							var price_r = price + dist_r;
 							var r = (QuoteCurrency)orders.Sum(x => (double)x.ValueAt(price_r, false, false));
-							max_risk = Misc.Max(max_risk, -r);
+							max_risk = Math.Max(max_risk, -r);
 
 							// Recursively search the remaining orders.
 							var remaining = orders.ToList();
@@ -589,6 +808,16 @@ namespace Rylobot
 				net_volume += pos.TradeType.Sign() * pos.Volume;
 
 			return net_volume;
+		}
+
+		/// <summary>Return the net profit of positions tagged with 'label'</summary>
+		public AcctCurrency NetProfit(string label)
+		{
+			var net_profit = 0.0;
+			foreach (var pos in Bot.Positions.Where(x => x.Label == label))
+				net_profit += pos.NetProfit;
+
+			return net_profit;
 		}
 
 		/// <summary>Update the state of the account</summary>
