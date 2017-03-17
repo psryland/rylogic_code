@@ -943,8 +943,8 @@ namespace pr.maths
 				{
 					var r = XRange;
 					return
-						i <                0 ? new Bucket(r.Beg - 0.5*m_bucket_size) :
-						i >= m_buckets.Count ? new Bucket(r.End + 0.5*m_bucket_size) :
+						i <                0 ? new Bucket(r.Beg - m_bucket_size) :
+						i >= m_buckets.Count ? new Bucket(r.End + m_bucket_size) :
 						m_buckets[i];
 				}
 			}
@@ -972,7 +972,7 @@ namespace pr.maths
 			/// <summary>The span of bucket central values</summary>
 			internal RangeF XRange
 			{
-				get { return m_buckets.Count != 0 ? new RangeF(m_buckets.Front().Value - 0.5*m_bucket_size, m_buckets.Back().Value + 0.5*m_bucket_size) : RangeF.Zero; }
+				get { return m_buckets.Count != 0 ? new RangeF(m_buckets.Front().Value - m_bucket_size, m_buckets.Back().Value + m_bucket_size) : RangeF.Zero; }
 			}
 
 			/// <summary>The range of counts per bucket</summary>
@@ -1069,12 +1069,14 @@ namespace pr.maths
 		public void Add(double value)
 		{
 			++Buckets[value, true].Count;
+			++Count;
 		}
 
 		/// <summary>Remove a value from the distribution</summary>
 		public void Remove(double value)
 		{
 			--Buckets[value, true].Count;
+			--Count;
 		}
 
 		/// <summary>Set 'Normalisation' so that the maximum count returns a value of 'len' in 'this[i]'</summary>
@@ -1103,8 +1105,8 @@ namespace pr.maths
 			// The accumulated probability
 			var probability = 0.0;
 
-			// Normaliser than makes the total probability 1.0
-			var n = Buckets.NormalisingFactor(1.0);
+			// Scales probabilities to un-normalised values
+			var n = BucketSize / Buckets.NormalisingFactor(1.0);
 
 			// Iterator through the buckets
 			foreach (var bucket in Buckets.BucketRange())
@@ -1124,19 +1126,19 @@ namespace pr.maths
 				var r = 0.5 * (b1.Count + b2.Count); // height of the right side of the bucket
 
 				// The probability for the left and right side of the bucket
-				var lprob = 0.5 * (l + c) * rad * n;
-				var rprob = 0.5 * (c + r) * rad * n;
+				var lprob = 0.5 * (l + c) * rad;
+				var rprob = 0.5 * (c + r) * rad;
 
 				// Find values in the left side of the bucket
-				for (; p != probabilities.Length && probabilities[p] < probability + lprob; ++p)
-					values[p] = Maths.Lerp(val-rad, val, Maths.Frac(probability, probabilities[p], probability + lprob));
+				for (; p != probabilities.Length && n*probabilities[p] < probability + lprob; ++p)
+					values[p] = Maths.Lerp(val-rad, val, Maths.Frac(probability, n*probabilities[p], probability + lprob));
 
 				// Accumulate the left side probability
 				probability += lprob;
 
 				// Find values in the right side of the bucket
-				for (; p != probabilities.Length && probabilities[p] < probability + rprob; ++p)
-					values[p] = Maths.Lerp(val, val+rad, Maths.Frac(probability, probabilities[p], probability + rprob));
+				for (; p != probabilities.Length && n*probabilities[p] < probability + rprob; ++p)
+					values[p] = Maths.Lerp(val, val+rad, Maths.Frac(probability, n*probabilities[p], probability + rprob));
 
 				// Accumulate probability
 				probability += rprob;
@@ -1144,7 +1146,7 @@ namespace pr.maths
 
 			// Fill the remainder with a value greater that the max value in the distribution
 			for (;p != probabilities.Length; ++p)
-				values[p] = Buckets[Buckets.Count].Value;
+				values[p] = Buckets[Buckets.Count].Value - BucketSize;
 
 			return values;
 		}
@@ -1166,11 +1168,8 @@ namespace pr.maths
 			// Half bucket size
 			var rad = 0.5 * BucketSize;
 
-			// The accumulated probability
+			// The accumulated un-normalised probability (i.e. area under the graph)
 			var probability = 0.0;
-
-			// Normaliser than makes the total probability 1.0
-			var n = Buckets.NormalisingFactor(1.0);
 
 			// Iterate through the buckets
 			foreach (var bucket in Buckets.BucketRange())
@@ -1195,14 +1194,14 @@ namespace pr.maths
 
 				// Find probabilities in the left side of the bucket
 				for (; v != values.Length && values[v] < val; ++v)
-					probabilities[v] = n * (probability + Maths.Frac(val-rad, values[v], val) * lprob);
+					probabilities[v] = probability + Maths.Frac(val-rad, values[v], val) * lprob;
 
 				// Accumulate the left side probability
 				probability += lprob;
 
 				// Find probabilities in the right side of the bucket
 				for (; v != values.Length && values[v] < val+rad; ++v)
-					probabilities[v] = n * (probability + Maths.Frac(val, values[v], val+rad) * rprob);
+					probabilities[v] = probability + Maths.Frac(val, values[v], val+rad) * rprob;
 
 				// Accumulate probability
 				probability += rprob;
@@ -1210,7 +1209,11 @@ namespace pr.maths
 
 			// Fill the remainder with 1.0
 			for (;v != values.Length; ++v)
-				probabilities[v] = 1.0;
+				probabilities[v] = probability;
+
+			// Normalise probabilities
+			for (var i = 0; i != probabilities.Length; ++i)
+				probabilities[i] /= probability;
 
 			return probabilities;
 		}
@@ -1349,45 +1352,63 @@ namespace pr.unittests
 		}
 		[Test] public void Probability()
 		{
-			var pd = new Distribution(1.0);
-			pd.Add(1);
-			pd.Add(2);
-			pd.Add(2);
-			pd.Add(3);
-			pd.Add(3);
-			pd.Add(3);
-			pd.Add(5);
-			pd.Add(8);
-			pd.Add(8);
-
-			//var sb = new StringBuilder();
-			//var series = new List<double>();
-			//for (var i = 0.0; i < 10.0; i += 0.1)
-			//{
-			//	var x = pd[i];
-			//	series.Add(x);
-			//	sb.AppendLine("{0},{1}".Fmt(i,x));
-			//}
-			//sb.ToFile(@"P:\dump\test.csv");
-
+			// Check we're independent of bucket size
+			foreach (var bk_size in new [] {0.1, 0.5, 1.0, 2.0, 5.0 })
 			{
-				var values = new[] {-10.0, -1.0, 0.0, 0.5, 3.0, 4.0, 5.0, 10.0 };
-				var prob = pd.Probability(values);
-				Assert.True(Maths.FEql(prob[0], 0.0));
-				Assert.True(Maths.FEql(prob[1], 0.0   / 9.0));
-				Assert.True(Maths.FEql(prob[2], 0.0   / 9.0));
-				Assert.True(Maths.FEql(prob[3], 0.125 / 9.0));
-				Assert.True(Maths.FEql(prob[4], 4.5   / 9.0));
-				Assert.True(Maths.FEql(prob[5], 6.0   / 9.0));
-				Assert.True(Maths.FEql(prob[6], 6.5   / 9.0));
-				Assert.True(Maths.FEql(prob[7], 9.0   / 9.0));
-			}
-			{
-				var probs  = new[] {0.0, 0.1, 0.3, 0.8, 1.0 };
-				var vals   = pd.Values(probs);
-				var probs2 = pd.Probability(vals);
-				for (int i = 0; i != probs.Length; ++i)
-					Maths.FEql(probs[i], probs2[i]);
+				var pd = new Distribution(bk_size);
+				pd.Add(1);
+				pd.Add(2);
+				pd.Add(2);
+				pd.Add(3);
+				pd.Add(3);
+				pd.Add(3);
+				pd.Add(5);
+				pd.Add(8);
+				pd.Add(8);
+
+				var sb = new StringBuilder();
+				foreach (var x in double_.Range(pd.XRange, 0.1))
+					sb.AppendLine("{0},{1}".Fmt(x, pd[x]));
+				sb.ToFile(@"P:\dump\test.csv");
+
+				{
+					var probabilities = new[] {0.0, 0.1, 0.5, 0.8, 1.0 };
+					var vals = pd.Values(probabilities);
+					var prob = pd.Probability(vals);
+
+					Assert.True(prob.All(x => x.Within(0.0, 1.0)));
+					for (int i = 0; i != prob.Length; ++i)
+						Assert.True(Maths.FEql(prob[i], probabilities[i]));
+				}
+				{
+					var values = new[] {-10.0, -1.0, 0.0, 0.5, 3.0, 4.0, 5.0, 10.0 };
+					var prob = pd.Probability(values);
+					var vals = pd.Values(prob);
+					var prob2 = pd.Probability(vals);
+					
+					Assert.True(prob.All(x => x.Within(0.0, 1.0)));
+					for (int i = 0; i != vals.Length; ++i)
+					{
+						// Values with 0 or 1 probably are outside the distribution
+						// so we can't get the value back
+						if (prob[i] == 0.0)
+						{
+							Assert.True(Maths.FEql(prob[i], prob2[i]));
+							Assert.True(values[i] <= vals[i]);
+							continue;
+						}
+						if (prob[i] == 1.0)
+						{
+							Assert.True(Maths.FEql(prob[i], prob2[i]));
+							Assert.True(values[i] >= vals[i]);
+							continue;
+						}
+
+						// Values within ranges of zero probability are ambiguous, so long as the
+						// probability for the values is the same, it's ok.
+						Assert.True(Maths.FEql(vals[i], values[i]) || Maths.FEql(prob[i], prob2[i]));
+					}
+				}
 			}
 		}
 	}

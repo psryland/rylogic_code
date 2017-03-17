@@ -103,13 +103,13 @@ namespace Rylobot
 		{
 			if (m_ticks_of_interest.Contains(Bot.TickNumber))
 			{
-				m_ticks_of_interest.Remove(Bot.TickNumber);
 				Debugger.Break();
+				m_ticks_of_interest.Remove(Bot.TickNumber);
 			}
 			if (Instrument.NewCandle && m_candles_of_interest.Contains(Instrument.Count))
 			{
-				m_candles_of_interest.Remove(Instrument.Count);
 				Debugger.Break();
+				m_candles_of_interest.Remove(Instrument.Count);
 			}
 		}
 		private static List<int> m_candles_of_interest = new List<int>();
@@ -513,13 +513,13 @@ namespace Rylobot
 			{
 				// Draw an axis
 				ldr.Line("X", Colour32.Black, new v4(pt.x, pt.y, 0, 1), new v4(pt.x + rx.Sizef, pt.y, 0, 1));
-				ldr.Line("Y", Colour32.Black, new v4(pt.x, pt.y + ry.Begf, 0, 1), new v4(pt.x, pt.y + ry.Endf, 0, 1));
+				ldr.Line("Y", Colour32.Black, new v4(pt.x, ry.Begf, 0, 1), new v4(pt.x, ry.Endf, 0, 1));
 
 				// Plot the distribution vertically 
 				ldr.Line("dist", 0xFF0000FF, 1, false, double_.Range(ry, ry.Size*0.01).Select(y =>
 				{
 					var value = distribution[y];
-					return new v4((float)(pt.x + value), (float)(pt.y + y), 0, 1);
+					return new v4((float)(pt.x + value), (float)(y), 0, 1);
 				}));
 			}
 
