@@ -369,7 +369,7 @@ namespace Rylobot
 				}
 
 				// Place the order
-				var r = Bot.ExecuteMarketOrder(trade.TradeType, trade.Instrument.Symbol, trade.Volume, trade.Label, (double?)trade.SL_pips, (double?)trade.TP_pips);
+				var r = Bot.ExecuteMarketOrder(trade.TradeType, trade.Instrument.Symbol, trade.Volume, trade.Label, (double?)trade.SL_pips, (double?)trade.TP_pips, null, trade.Comment);
 				if (!r.IsSuccessful)
 					throw new Exception("Execute market order failed: {0}".Fmt(r.Error));
 

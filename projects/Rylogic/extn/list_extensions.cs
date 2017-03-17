@@ -416,7 +416,7 @@ namespace pr.extn
 		/// element larger than the one searched for.
 		/// 'cmp' should return -1 if T is less than the target, +1 if greater, or 0 if equal
 		/// 'insert_position' should be true to always return positive indices (i.e. when searching to find insert position)</summary>
-		public static int BinarySearch<T>(this IList<T> list, Func<T,int> cmp, bool insert_position = false)
+		public static int BinarySearch<T>(this IList<T> list, Func<T,int> cmp, bool find_insert_position = false)
 		{
 			var idx = ~0;
 			if (list.Count != 0)
@@ -430,12 +430,12 @@ namespace pr.extn
 					if (c >  0) { if (m == b) { idx = ~b; break; } e = m; }
 				}
 			}
-			if (insert_position && idx < 0) idx = ~idx;
+			if (find_insert_position && idx < 0) idx = ~idx;
 			return idx;
 		}
-		public static int BinarySearch<T>(this IList<T> list, T item, Cmp<T> cmp, bool insert_position = false)
+		public static int BinarySearch<T>(this IList<T> list, T item, Cmp<T> cmp, bool find_insert_position = false)
 		{
-			return list.BinarySearch(x => cmp.Compare(x, item), insert_position);
+			return list.BinarySearch(x => cmp.Compare(x, item), find_insert_position);
 		}
 
 		/// <summary>Binary search for an element in 'list'. Returns the element if found, or default(T) if not.</summary>

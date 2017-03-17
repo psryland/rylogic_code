@@ -156,13 +156,11 @@ namespace Rylobot
 		/// <summary>Watch for pending order filled</summary>
 		protected override void OnPositionOpened(Position position)
 		{
-			Debugging.Trace("Idx={0},Tick={1} - Position Opened - {2} EP={3} Volume={4}".Fmt(Instrument.Count, Bot.TickNumber, position.TradeType, position.EntryPrice, position.Volume));
 		}
 
 		/// <summary>Watch for position closed</summary>
 		protected override void OnPositionClosed(Position position)
 		{
-			Debugging.Trace("Idx={0},Tick={1} - Position Closed - {2} EP={3} Volume={4} Profit=${5}".Fmt(Instrument.Count, Bot.TickNumber, position.TradeType, position.EntryPrice, position.Volume, position.NetProfit));
 		}
 
 		///// <summary>Close all positions on shutdown</summary>

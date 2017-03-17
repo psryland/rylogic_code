@@ -5,6 +5,7 @@
 
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 using pr.extn;
 
@@ -22,6 +23,13 @@ namespace pr.extn
 		public static string ToString(this StringBuilder sb, int ofs)
 		{
 			return sb.ToString(ofs, sb.Length - ofs);
+		}
+
+		/// <summary>Write this string to a file</summary>
+		public static void ToFile(this StringBuilder sb, string filepath, bool append = false)
+		{
+			using (var f = new StreamWriter(new FileStream(filepath, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.ReadWrite)))
+				f.Write(sb.ToString());
 		}
 
 		/// <summary>Append a bunch of stuff</summary>

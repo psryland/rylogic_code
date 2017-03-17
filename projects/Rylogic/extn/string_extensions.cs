@@ -265,6 +265,13 @@ namespace pr.extn
 			return new MemoryStream(enc.GetBytes(str), false);
 		}
 
+		/// <summary>Write this string to a file</summary>
+		public static void ToFile(this string str, string filepath, bool append = false)
+		{
+			using (var f = new StreamWriter(new FileStream(filepath, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.ReadWrite)))
+				f.Write(str);
+		}
+
 		/// <summary>
 		/// Returns the minimum edit distance between two strings.
 		/// Useful for determining how "close" two strings are to each other</summary>

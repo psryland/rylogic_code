@@ -71,28 +71,28 @@
     <Compile Include="..\..\..\Common\Typedefs.cs">
       <Link>src\common\Typedefs.cs</Link>
     </Compile>
-    <Compile Include="half_baked\StrategyHedge.cs" />
-    <Compile Include="half_baked\StrategyHedge2.cs" />
+    <Compile Include="strategies\StrategyHedge.cs" />
+    <Compile Include="strategies\StrategyHedge2.cs" />
     <Compile Include="src\Correlator.cs" />
     <Compile Include="src\Indicator.cs" />
-    <Compile Include="half_baked\StrategyEmaCross.cs" />
-    <Compile Include="half_baked\StrategyPeaks.cs" />
-    <Compile Include="half_baked\StrategySpike.cs" />
-    <Compile Include="src\StrategyTemplate.cs" />
+    <Compile Include="strategies\StrategyEmaCross.cs" />
+    <Compile Include="strategies\StrategyPeaks.cs" />
+    <Compile Include="strategies\StrategySpike.cs" />
+    <Compile Include="strategies\StrategyTemplate.cs" />
     <Compile Include="src\Peaks.cs" />
-    <Compile Include="src\StrategyMain.cs" />
+    <Compile Include="strategies\StrategyMain.cs" />
     <Compile Include="src\PositionManager.cs" />
     <Compile Include="src\Rylobot.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="src\Broker.cs" />
     <Compile Include="src\Debugging.cs" />
     <Compile Include="src\SnR.cs" />
-    <Compile Include="half_baked\StrategyRevenge.cs" />
+    <Compile Include="strategies\StrategyRevenge.cs" />
     <Compile Include="src\Instrument.cs" />
     <Compile Include="src\InstrumentSettings.cs" />
     <Compile Include="src\Settings.cs" />
     <Compile Include="src\Strategy.cs" />
-    <Compile Include="src\StrategyMeanCross.cs" />
+    <Compile Include="strategies\StrategyMeanCross.cs" />
     <Compile Include="src\Trade.cs" />
   </ItemGroup>
   <ItemGroup>

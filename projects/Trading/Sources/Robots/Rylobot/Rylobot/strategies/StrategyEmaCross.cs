@@ -44,11 +44,11 @@ namespace Rylobot
 		/// <summary>A prediction of the future EMA values</summary>
 		private Extrapolation Future0
 		{
-			get { return EMA0.Extrapolate(); }
+			get { return EMA0.Extrapolate(2); }
 		}
 		private Extrapolation Future1
 		{
-			get { return EMA1.Extrapolate(); }
+			get { return EMA1.Extrapolate(2); }
 		}
 
 		/// <summary>The sign of the trend direction</summary>
@@ -106,7 +106,7 @@ namespace Rylobot
 				const int Fwd = +5;
 
 				// Find where the two curves intersect within the range
-				var roots = Maths.Intersection(ema0.Curve, ema1.Curve).Where(x => x.Within(0,Fwd)).ToArray();
+				var roots = Maths.Intersection((Quadratic)ema0.Curve, (Quadratic)ema1.Curve).Where(x => x.Within(0,Fwd)).ToArray();
 				if (roots.Length == 0)
 					return null;
 
@@ -358,13 +358,11 @@ namespace Rylobot
 		/// <summary>Watch for pending order filled</summary>
 		protected override void OnPositionOpened(Position position)
 		{
-			Debugging.Trace("Position Opened - Idx={0},Tick={1}  EP={2} Volume={3}".Fmt(Instrument.IndexAt(Bot.UtcNow) - Instrument.IdxFirst, Bot.TickNumber, position.EntryPrice, position.Volume));
 		}
 
 		/// <summary>Watch for position closed</summary>
 		protected override void OnPositionClosed(Position position)
 		{
-			Debugging.Trace("Position Closed - Idx={0},Tick={1} EP={2} Volume={3} Profit=${4}".Fmt(Instrument.IndexAt(Bot.UtcNow) - Instrument.IdxFirst, Bot.TickNumber, position.EntryPrice, position.Volume, position.NetProfit));
 		}
 
 		/// <summary>Return the number of times the EMAs have crossed on the candle range '[idx_min, idx_max)'</summary>

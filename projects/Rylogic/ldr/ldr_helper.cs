@@ -318,17 +318,19 @@ namespace pr.ldr
 		{
 			Append("*Line ", name, " ", colour, " {", start, " ", end, "}\n");
 		}
-		public void Line(string name, Colour32 colour, int width, IEnumerable<v4> points)
+		public void Line(string name, Colour32 colour, int width, bool smooth, IEnumerable<v4> points)
 		{
 			if (!points.Any()) return;
 			var w = width != 0 ? "*Width {{{0}}}".Fmt(width) : string.Empty;
-			Append("*LineStrip ", name, " ", colour, " {", w, points.Select(x => Ldr.Vec3(x)), "}\n");
+			var s = smooth ? "*Smooth " : string.Empty;
+			Append("*LineStrip ", name, " ", colour, " {", w, s, points.Select(x => Ldr.Vec3(x)), "}\n");
 		}
-		public void Line(string name, Colour32 colour, int width, Func<int,v4?> points)
+		public void Line(string name, Colour32 colour, int width, bool smooth, Func<int,v4?> points)
 		{
 			int idx = 0;
 			var w = width != 0 ? "*Width {{{0}}}".Fmt(width) : string.Empty;
-			Append("*LineStrip ", name, " ", colour, " {", w);
+			var s = smooth ? "*Smooth " : string.Empty;
+			Append("*LineStrip ", name, " ", colour, " {", w, s);
 			for (v4? pt; (pt = points(idx++)) != null;) Append(Ldr.Vec3(pt.Value));
 			Append("}\n");
 		}
@@ -561,7 +563,7 @@ namespace pr.ldr
 			Append("}\n");
 		}
 
-		public void Graph(string name, AxisId axis_id, IEnumerable<v4> data)
+		public void Graph(string name, AxisId axis_id, bool smooth, IEnumerable<v4> data)
 		{
 			var bbox = BBox.Reset;
 			foreach (var d in data)
@@ -570,7 +572,7 @@ namespace pr.ldr
 			using (Group(name))
 			{
 				Grid(string.Empty, 0xFFAAAAAA, axis_id, (int)(bbox.SizeX * 1.1), (int)(bbox.SizeY * 1.1), 50, 50, new v4(bbox.Centre.x, bbox.Centre.y, 0f, 1f));
-				Line("data", 0xFFFFFFFF, 1, data);
+				Line("data", 0xFFFFFFFF, 1, smooth, data);
 			}
 		}
 

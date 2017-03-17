@@ -8,7 +8,7 @@ using pr.maths;
 
 namespace Rylobot
 {
-	[DebuggerDisplay("idx=[{EntryIndex},{ExitIndex}] {TradeType} RtR={RtR}")]
+	[DebuggerDisplay("{DebuggerDisplay}")]
 	public class Trade :ITrade
 	{
 		// Notes:
@@ -18,17 +18,18 @@ namespace Rylobot
 		//  SL/TP are nullable because they are not required, even though it's generally a good idea to have them
 
 		/// <summary>Create a trade with explicit values</summary>
-		public Trade(Instrument instr, TradeType tt, string label, QuoteCurrency ep, QuoteCurrency? sl, QuoteCurrency? tp, long volume, Idx? neg_idx = null)
+		public Trade(Instrument instr, TradeType tt, string label, QuoteCurrency ep, QuoteCurrency? sl, QuoteCurrency? tp, long volume, string comment = null, Idx? idx = null)
 		{
 			CAlgoId    = null;
 			TradeIndex = m_trade_index++;
 			TradeType  = tt;
 			Instrument = instr;
 			Result     = EResult.Unknown;
-			EntryIndex = (double)((neg_idx ?? 0) - instr.IdxFirst);
+			EntryIndex = idx != null ? (double)(idx - instr.IdxFirst) : (double)instr.IdxNow;
 			ExitIndex  = EntryIndex;
 			Expiration = null;
 			Label      = label ?? string.Empty;
+			Comment    = comment ?? string.Empty;
 
 			EP         = ep;
 			SL         = sl;
@@ -46,19 +47,19 @@ namespace Rylobot
 		/// <param name="instr">The instrument to be traded</param>
 		/// <param name="tt">Whether to buy or sell</param>
 		/// <param name="label">Optional. An identifying name for the trade</param>
-		/// <param name="neg_idx">Optional. The instrument index of when the trade was created. (default is the current time)</param>
+		/// <param name="idx">Optional. The instrument index of when the trade was created. (default is the current time)</param>
 		/// <param name="ep">Optional. The price at which the trade was entered. (default is current ask/bid price)</param>
 		/// <param name="sl">Optional. The stop loss (absolute) to use instead of automatically finding one</param>
 		/// <param name="tp">Optional. The take profit (absolute) to use instead of automatically finding one</param>
 		/// <param name="risk">Optional. Scaling factor for the amount to risk. (default is 1.0)</param>
-		public Trade(Instrument instr, TradeType tt, string label = null, Idx? neg_idx = null, QuoteCurrency? ep = null, QuoteCurrency? sl = null, QuoteCurrency? tp = null, double? risk = null)
-			:this(instr, tt, label, 0, 0, 0, 0, neg_idx)
+		public Trade(Instrument instr, TradeType tt, string label = null, QuoteCurrency? ep = null, QuoteCurrency? sl = null, QuoteCurrency? tp = null, double? risk = null, string comment = null, Idx? idx = null)
+			:this(instr, tt, label, 0, null, null, 0, comment:comment, idx:idx)
 		{
 			try
 			{
 				var bot = instr.Bot;
 				var sign = tt.Sign();
-				Idx index = neg_idx ?? 0;
+				Idx index = idx ?? 0;
 				Debugging.Trace("Creating Trade (Index = {0})".Fmt(TradeIndex));
 
 				// If the index == 0, add the fractional index amount
@@ -102,7 +103,7 @@ namespace Rylobot
 
 		/// <summary>Construct a trade from an existing position</summary>
 		public Trade(Instrument instr, Position pos, bool live = true)
-			:this(instr, pos.TradeType, pos.Label, pos.EntryPrice, pos.StopLoss, pos.TakeProfit, pos.Volume)
+			:this(instr, pos.TradeType, pos.Label, pos.EntryPrice, pos.StopLoss, pos.TakeProfit, pos.Volume, comment:pos.Comment)
 		{
 			CAlgoId = pos.Id;
 			Result = live ? EResult.Open : EResult.Closed;
@@ -118,7 +119,7 @@ namespace Rylobot
 
 		/// <summary>Construct a trade from an existing pending order</summary>
 		public Trade(Instrument instr, PendingOrder ord, bool live = true)
-			:this(instr, ord.TradeType, ord.Label, ord.TargetPrice, ord.StopLoss, ord.TakeProfit, ord.Volume)
+			:this(instr, ord.TradeType, ord.Label, ord.TargetPrice, ord.StopLoss, ord.TakeProfit, ord.Volume, comment:ord.Comment)
 		{
 			CAlgoId = ord.Id;
 			Result = live ? EResult.Pending : EResult.Closed;
@@ -188,6 +189,9 @@ namespace Rylobot
 
 		/// <summary>A string label for the trade</summary>
 		public string Label { get; set; }
+
+		/// <summary>A comment attached to the position</summary>
+		public string Comment { get; set; }
 
 		/// <summary>Null if this is a valid trade, otherwise the error that makes the trade invalid</summary>
 		public Exception Error { get; private set; }
@@ -292,6 +296,12 @@ namespace Rylobot
 
 				ExitIndex = (double)(index - Instrument.IdxFirst);
 			}
+		}
+
+		/// <summary>Debugger string</summary>
+		private string DebuggerDisplay
+		{
+			get { return "idx=[{0:N3},{1:N3}] {2} RtR={3}".Fmt(EntryIndex, ExitIndex, TradeType, RtR); }
 		}
 	}
 }

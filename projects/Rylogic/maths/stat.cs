@@ -4,8 +4,12 @@
 //*********************************************************************
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using pr.common;
+using pr.extn;
 using pr.maths;
 
 namespace pr.maths
@@ -396,7 +400,11 @@ namespace pr.maths
 			m_count = rhs.m_count;
 		}
 
-		/// <summary>The size of an equivalent moving average window size</summary>
+		/// <summary>
+		/// The size of an equivalent moving average window size.
+		/// Note: Changing the window size dynamically does not significantly
+		/// change the mean (so long as 'Count' is larger than the old/new window size)
+		/// but does produce different standard deviation values</summary>
 		public int WindowSize
 		{
 			get { return m_size; }
@@ -857,11 +865,379 @@ namespace pr.maths
 			return Add(value);
 		}
 	}
+
+	/// <summary>A class for tracking the distribution of a variable</summary>
+	public class Distribution
+	{
+		public Distribution(double bucket_size, string name = null)
+		{
+			Name = name;
+			BucketSize = bucket_size;
+			Buckets = new BucketCollection(bucket_size);
+			Reset();
+		}
+
+		/// <summary>A name for the distribution</summary>
+		public string Name
+		{
+			get;
+			set;
+		}
+
+		/// <summary>Get/Set the bucket size. Setting the bucket size resets the bucket collection</summary>
+		public double BucketSize
+		{
+			get;
+			private set;
+		}
+
+		/// <summary>The span of values added</summary>
+		public RangeF XRange
+		{
+			get { return Buckets.XRange; }
+		}
+
+		/// <summary>The range of counts</summary>
+		public RangeF YRange
+		{
+			get { return new RangeF(0, Buckets.MaxCount * Normalisation); }
+		}
+
+		/// <summary>The distribution data as an ordered list of buckets</summary>
+		public BucketCollection Buckets
+		{
+			[DebuggerStepThrough] get;
+			private set;
+		}
+		public class BucketCollection
+		{
+			// Notes:
+			//  - Buckets span from -inf,+inf, but we only store buckets with values in
+			//  - There is a bucket whose centre value is 0. (i.e. it spans from [-bucket_radius,+bucket_radius))
+
+			private List<Bucket> m_buckets;
+			private double m_bucket_size;
+
+			public BucketCollection(double bucket_size)
+			{
+				m_buckets = new List<Bucket>();
+				m_bucket_size = bucket_size;
+			}
+
+			/// <summary>Reset the collection</summary>
+			internal void Clear()
+			{
+				m_buckets.Clear();
+			}
+
+			/// <summary>The number of actual buckets</summary>
+			internal int Count
+			{
+				get { return m_buckets.Count; }
+			}
+
+			/// <summary>Access buckets directly</summary>
+			internal Bucket this[int i]
+			{
+				get
+				{
+					var r = XRange;
+					return
+						i <                0 ? new Bucket(r.Beg - 0.5*m_bucket_size) :
+						i >= m_buckets.Count ? new Bucket(r.End + 0.5*m_bucket_size) :
+						m_buckets[i];
+				}
+			}
+
+			/// <summary>Return the bucket that would contain 'value'. If 'insert' is true, the bucket will be added to the collection if not already there</summary>
+			public Bucket this[double value]
+			{
+				get { return this[value, false]; }
+			}
+			internal Bucket this[double value, bool insert]
+			{
+				get
+				{
+					// Quantise 'value' to a bucket value
+					var bval = BucketValue(value);
+
+					// Look for an existing bucket
+					var idx = m_buckets.BinarySearch(x => !Maths.FEql(x.Value, bval) ? x.Value.CompareTo(bval) : 0);
+					return idx >= 0
+						? m_buckets[idx]
+						: (insert ? m_buckets.Insert2(idx = ~idx, new Bucket(bval)) : new Bucket(bval));
+				}
+			}
+
+			/// <summary>The span of bucket central values</summary>
+			internal RangeF XRange
+			{
+				get { return m_buckets.Count != 0 ? new RangeF(m_buckets.Front().Value - 0.5*m_bucket_size, m_buckets.Back().Value + 0.5*m_bucket_size) : RangeF.Zero; }
+			}
+
+			/// <summary>The range of counts per bucket</summary>
+			internal double MaxCount
+			{
+				get { return m_buckets.Max(x => x.Count); }
+			}
+			
+			/// <summary>Set 'Normalisation' so that the maximum count returns a value of 'len' in 'this[i]'</summary>
+			internal double NormalisingFactor(double len)
+			{
+				var sum = m_buckets.Sum(x => x.Count);
+				return Maths.Div(len, sum, 1.0);
+			}
+
+			/// <summary>Return the bucket central value nearest to 'value'</summary>
+			private double BucketValue(double value)
+			{
+				return m_bucket_size * Math.Floor((value + 0.5*m_bucket_size) / m_bucket_size);
+			}
+
+			/// <summary>Enumerate the buckets</summary>
+			internal IEnumerable<Bucket> BucketRange()
+			{
+				if (Count == 0)
+					yield break;
+
+				// Include a zero bucket on each side of a run of non-zero buckets
+				for (int i = -1; i != Count+1; ++i)
+				{
+					// Current and Next bucket
+					var b0 = this[i];
+					var b1 = this[i+1];
+
+					yield return b0;
+
+					// The distance between b1 and b0
+					var dist = b1.Value - b0.Value - Maths.TinyD;
+
+					// If there is a gap of at least two, insert two zero buckets
+					if (dist > 2*m_bucket_size)
+					{
+						yield return this[b0.Value + m_bucket_size];
+						yield return this[b1.Value - m_bucket_size];
+					}
+					else if (dist > 1*m_bucket_size)
+					{
+						yield return this[b0.Value + m_bucket_size];
+					}
+				}
+			}
+		}
+
+		/// <summary>The number of values added to the distribution</summary>
+		public int Count
+		{
+			get;
+			private set;
+		}
+
+		/// <summary>A normalisation factor that effects values returned from 'this[i]'</summary>
+		public double Normalisation
+		{
+			get;
+			set;
+		}
+
+		/// <summary>Access the data as a continuous probability distribution</summary>
+		public double this[double value]
+		{
+			get
+			{
+				// Get the buckets around 'value'
+				var b0 = Buckets[value];
+				var sign = value >= b0.Value ? +1 : -1;
+				var b1 = Buckets[value + sign * BucketSize];
+
+				// Blend the values from these buckets
+				// Don't use 'SmoothStep', it adds "steps"
+				var t = Maths.Frac(b0.Value, value, b1.Value);
+				return Maths.Lerp(b0.Count, b1.Count, t);
+			}
+		}
+
+		/// <summary>Reset the distribution</summary>
+		public void Reset()
+		{
+			Buckets.Clear();
+			Count = 0;
+			Normalisation = 1.0;
+		}
+
+		/// <summary>Add a value to the distribution</summary>
+		public void Add(double value)
+		{
+			++Buckets[value, true].Count;
+		}
+
+		/// <summary>Remove a value from the distribution</summary>
+		public void Remove(double value)
+		{
+			--Buckets[value, true].Count;
+		}
+
+		/// <summary>Set 'Normalisation' so that the maximum count returns a value of 'len' in 'this[i]'</summary>
+		public void Normalise(double len = 1)
+		{
+			Normalisation = Buckets.NormalisingFactor(len);
+		}
+
+		/// <summary>
+		/// Values for the given probability levels.
+		/// 'probabilities' is an array of probability values ([0,1]) sorted from 0->1
+		/// Returns the value for each probability. E.g for a probability of 0.5, the returned value has half the distribution less than it.</summary>
+		public double[] Values(double[] probabilities)
+		{
+			Debug.Assert(int_.Range(probabilities.Length).All(i => i == 0 || probabilities[i] >= probabilities[i-1]));
+			var values = new double[probabilities.Length];
+			if (probabilities.Length == 0 || Buckets.Count == 0)
+				return values;
+
+			// Index into 'probabilities' and 'values'
+			var p = 0;
+
+			// Half bucket size
+			var rad = 0.5 * BucketSize;
+
+			// The accumulated probability
+			var probability = 0.0;
+
+			// Normaliser than makes the total probability 1.0
+			var n = Buckets.NormalisingFactor(1.0);
+
+			// Iterator through the buckets
+			foreach (var bucket in Buckets.BucketRange())
+			{
+				// The central value of 'bucket'
+				var val = bucket.Value;
+
+				// Get the virtual buckets around 'val'
+				var b0 = Buckets[val - BucketSize];
+				var b1 = Buckets[val];
+				var b2 = Buckets[val + BucketSize];
+
+				// Probability is the area under the distribution.
+				// This is made trickier by linear interpolation between buckets and missing buckets.
+				var l = 0.5 * (b0.Count + b1.Count); // height of the left side of the bucket
+				var c = b1.Count;                    // height of the centre of the bucket
+				var r = 0.5 * (b1.Count + b2.Count); // height of the right side of the bucket
+
+				// The probability for the left and right side of the bucket
+				var lprob = 0.5 * (l + c) * rad * n;
+				var rprob = 0.5 * (c + r) * rad * n;
+
+				// Find values in the left side of the bucket
+				for (; p != probabilities.Length && probabilities[p] < probability + lprob; ++p)
+					values[p] = Maths.Lerp(val-rad, val, Maths.Frac(probability, probabilities[p], probability + lprob));
+
+				// Accumulate the left side probability
+				probability += lprob;
+
+				// Find values in the right side of the bucket
+				for (; p != probabilities.Length && probabilities[p] < probability + rprob; ++p)
+					values[p] = Maths.Lerp(val, val+rad, Maths.Frac(probability, probabilities[p], probability + rprob));
+
+				// Accumulate probability
+				probability += rprob;
+			}
+
+			// Fill the remainder with a value greater that the max value in the distribution
+			for (;p != probabilities.Length; ++p)
+				values[p] = Buckets[Buckets.Count].Value;
+
+			return values;
+		}
+
+		/// <summary>
+		/// Probabilities for the given values.
+		/// 'values' is an array of values sorted from sorted from smallest to largest
+		/// Returns the probability for each value ([0,1]). E.g. for a value == median, the returned probability is 0.5</summary>
+		public double[] Probability(double[] values)
+		{
+			Debug.Assert(int_.Range(values.Length).All(i => i == 0 || values[i] >= values[i-1]));
+			var probabilities = new double[values.Length];
+			if (values.Length == 0 || Buckets.Count == 0)
+				return probabilities;
+
+			// Index into 'values' and 'probabilities'
+			var v = 0;
+
+			// Half bucket size
+			var rad = 0.5 * BucketSize;
+
+			// The accumulated probability
+			var probability = 0.0;
+
+			// Normaliser than makes the total probability 1.0
+			var n = Buckets.NormalisingFactor(1.0);
+
+			// Iterate through the buckets
+			foreach (var bucket in Buckets.BucketRange())
+			{
+				// The central value of 'bucket'
+				var val = bucket.Value;
+
+				// Get the virtual buckets around 'val'
+				var b0 = Buckets[val - BucketSize];
+				var b1 = Buckets[val];
+				var b2 = Buckets[val + BucketSize];
+
+				// Probability is the area under the distribution.
+				// This is made trickier by linear interpolation between buckets and missing buckets.
+				var l = 0.5 * (b0.Count + b1.Count); // height of the left side of the bucket
+				var c = b1.Count;                    // height of the centre of the bucket
+				var r = 0.5 * (b1.Count + b2.Count); // height of the right side of the bucket
+
+				// The probability for the left and right side of the bucket
+				var lprob = 0.5 * (l + c) * rad;
+				var rprob = 0.5 * (c + r) * rad;
+
+				// Find probabilities in the left side of the bucket
+				for (; v != values.Length && values[v] < val; ++v)
+					probabilities[v] = n * (probability + Maths.Frac(val-rad, values[v], val) * lprob);
+
+				// Accumulate the left side probability
+				probability += lprob;
+
+				// Find probabilities in the right side of the bucket
+				for (; v != values.Length && values[v] < val+rad; ++v)
+					probabilities[v] = n * (probability + Maths.Frac(val, values[v], val+rad) * rprob);
+
+				// Accumulate probability
+				probability += rprob;
+			}
+
+			// Fill the remainder with 1.0
+			for (;v != values.Length; ++v)
+				probabilities[v] = 1.0;
+
+			return probabilities;
+		}
+
+		/// <summary>A range of values</summary>
+		[DebuggerDisplay("{Value} N={Count}")]
+		public class Bucket
+		{
+			public Bucket(double value)
+			{
+				Value = value;
+			}
+
+			/// <summary>The central value of the bucket</summary>
+			public double Value { get; private set; }
+
+			/// <summary>The number of values added to this bucket</summary>
+			public double Count { get; internal set; }
+		}
+	}
 }
+
 
 #if PR_UNITTESTS
 namespace pr.unittests
 {
+	using System.Text;
 	[TestFixture] public class TestStat
 	{
 		[Test] public void Stat()
@@ -969,6 +1345,49 @@ namespace pr.unittests
 				for (int i = 0; i != arr0.Length; ++i)
 					corr.Add(arr0[i], arr3[i]);
 				Assert.AreEqual(corr.CorrCoeff, 0.0, Maths.TinyD);
+			}
+		}
+		[Test] public void Probability()
+		{
+			var pd = new Distribution(1.0);
+			pd.Add(1);
+			pd.Add(2);
+			pd.Add(2);
+			pd.Add(3);
+			pd.Add(3);
+			pd.Add(3);
+			pd.Add(5);
+			pd.Add(8);
+			pd.Add(8);
+
+			//var sb = new StringBuilder();
+			//var series = new List<double>();
+			//for (var i = 0.0; i < 10.0; i += 0.1)
+			//{
+			//	var x = pd[i];
+			//	series.Add(x);
+			//	sb.AppendLine("{0},{1}".Fmt(i,x));
+			//}
+			//sb.ToFile(@"P:\dump\test.csv");
+
+			{
+				var values = new[] {-10.0, -1.0, 0.0, 0.5, 3.0, 4.0, 5.0, 10.0 };
+				var prob = pd.Probability(values);
+				Assert.True(Maths.FEql(prob[0], 0.0));
+				Assert.True(Maths.FEql(prob[1], 0.0   / 9.0));
+				Assert.True(Maths.FEql(prob[2], 0.0   / 9.0));
+				Assert.True(Maths.FEql(prob[3], 0.125 / 9.0));
+				Assert.True(Maths.FEql(prob[4], 4.5   / 9.0));
+				Assert.True(Maths.FEql(prob[5], 6.0   / 9.0));
+				Assert.True(Maths.FEql(prob[6], 6.5   / 9.0));
+				Assert.True(Maths.FEql(prob[7], 9.0   / 9.0));
+			}
+			{
+				var probs  = new[] {0.0, 0.1, 0.3, 0.8, 1.0 };
+				var vals   = pd.Values(probs);
+				var probs2 = pd.Probability(vals);
+				for (int i = 0; i != probs.Length; ++i)
+					Maths.FEql(probs[i], probs2[i]);
 			}
 		}
 	}

@@ -62,11 +62,11 @@ namespace Rylobot
 		{
 			Stopping.Raise(this);
 
+			// Log the whole instrument
+			Debugging.Dump(Instrument);
+
 			// Stop capturing trades
 			Debugging.LogTrades(this, false);
-
-			// Log the whole instrument
-			Debugging.Dump(new Instrument(this));
 
 			Strats = null;
 			Broker = null;

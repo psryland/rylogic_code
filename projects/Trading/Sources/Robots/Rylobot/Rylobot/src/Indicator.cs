@@ -8,12 +8,14 @@ namespace Rylobot
 	/// <summary>A wrapper for CAlgo indicators than maps Idx to the data</summary>
 	public class Indicator
 	{
-		private readonly IndicatorDataSeries m_series;
 		public Indicator(Instrument instr, IndicatorDataSeries series)
 		{
 			Instrument = instr;
-			m_series = series;
+			Source = series;
 		}
+
+		/// <summary>The indicator series providing the data</summary>
+		public IndicatorDataSeries Source { get; private set; }
 
 		/// <summary>The instrument this is an indicator on</summary>
 		public Instrument Instrument
@@ -25,13 +27,13 @@ namespace Rylobot
 		/// <summary>The number of elements in this indicator</summary>
 		public int Count
 		{
-			get { return m_series.Count; }
+			get { return Source.Count; }
 		}
 
 		/// <summary>Index range (-Count, 0]</summary>
 		public Idx IdxFirst
 		{
-			get { return 1 - m_series.Count; }
+			get { return 1 - Source.Count; }
 		}
 		public Idx IdxLast
 		{
@@ -45,8 +47,8 @@ namespace Rylobot
 			{
 				Debug.Assert(neg_idx >= IdxFirst && neg_idx < IdxLast);
 
-				var val0 = m_series[neg_idx - IdxFirst];
-				var val1 = m_series[neg_idx - IdxFirst];
+				var val0 = Source[neg_idx - IdxFirst];
+				var val1 = Source[neg_idx - IdxFirst];
 				return Maths.Lerp(val0, val1, (double)neg_idx - (int)neg_idx);
 			}
 		}
@@ -54,25 +56,25 @@ namespace Rylobot
 		/// <summary>Return the first derivative of the data series at 'index'</summary>
 		public double FirstDerivative(Idx index)
 		{
-			return m_series.FirstDerivative(index);
+			return Source.FirstDerivative(index);
 		}
 		public double FirstDerivative()
 		{
-			return m_series.FirstDerivative();
+			return Source.FirstDerivative();
 		}
 
 		/// <summary>Return the second derivative of the data series at 'index'</summary>
 		public double SecondDerivative(Idx index)
 		{
-			return m_series.SecondDerivative(index);
+			return Source.SecondDerivative(index);
 		}
 		public double SecondDerivative()
 		{
-			return m_series.SecondDerivative();
+			return Source.SecondDerivative();
 		}
 
-		/// <summary>Return a quadratic approximation of a EMA or null if no decent approximation could be made</summary>
-		public Extrapolation Extrapolate(int history_count = 5)
+		/// <summary>Return a polynomial approximation of a EMA or null if no decent approximation could be made</summary>
+		public Extrapolation Extrapolate(int order, int history_count = 5)
 		{
 			// Require a number of periods
 			if (Count < 10)
@@ -96,10 +98,22 @@ namespace Rylobot
 			foreach (var combo in combos)
 			{
 				// Create a curve from the sample points
-				var curve = Quadratic.FromPoints(
+				var curve = (IPolynomial)null;
+				switch (order)
+				{
+				default: throw new Exception("Unsupported polynomial order");
+				case 2:
+					curve = Quadratic.FromPoints(
 					combo[0], this[combo[0]],
 					combo[1], this[combo[1]],
 					combo[2], this[combo[2]]);
+					break;
+				case 1:
+					curve = Monic.FromPoints(
+					combo[0], this[combo[0]],
+					combo[2], this[combo[2]]);
+					break;
+				}
 
 				// Measure the confidence of the curve as an approximation
 				var err = new Avr();
@@ -124,14 +138,14 @@ namespace Rylobot
 	#region Extrapolation
 	public class Extrapolation
 	{
-		public Extrapolation(Quadratic curve, double confidence)
+		public Extrapolation(IPolynomial curve, double confidence)
 		{
 			Curve = curve;
 			Confidence = confidence;
 		}
 
 		/// <summary>The predicted curve</summary>
-		public Quadratic Curve { get; private set; }
+		public IPolynomial Curve { get; private set; }
 
 		/// <summary>The confidence in the prediction</summary>
 		public double Confidence { get; private set; }

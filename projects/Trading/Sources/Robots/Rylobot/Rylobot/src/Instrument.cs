@@ -287,12 +287,12 @@ namespace Rylobot
 		private long m_last_tick_time;
 
 		/// <summary>Clamps the given index range to a valid range within the data. i.e. [-Count,0]</summary>
-		public Range IndexRange(Idx idx_min, Idx idx_max)
+		public Range IndexRange(Idx min, Idx max)
 		{
-			Debug.Assert(idx_min <= idx_max);
-			var min = Maths.Clamp(idx_min, IdxFirst, IdxLast);
-			var max = Maths.Clamp(idx_max, min, IdxLast);
-			return new Range(min, max);
+			Debug.Assert(min <= max);
+			var mn = Maths.Clamp(min, IdxFirst, IdxLast);
+			var mx = Maths.Clamp(max, min, IdxLast);
+			return new Range(mn, mx);
 		}
 		public Range IndexRange(Range range)
 		{
@@ -317,13 +317,13 @@ namespace Rylobot
 		}
 
 		/// <summary>Enumerate the candles within an index range [idx_max,idx_max) (i.e. time-frame units)</summary>
-		public IEnumerable<Candle> CandleRange(Idx idx_min, Idx idx_max)
+		public IEnumerable<Candle> CandleRange(Idx min, Idx max)
 		{
-			return CandleRangeInternal(IndexRange(idx_min, idx_max));
+			return CandleRangeInternal(IndexRange(min, max));
 		}
-		public IEnumerable<Candle> CandleRange(Range idx_range)
+		public IEnumerable<Candle> CandleRange(Range range)
 		{
-			return CandleRangeInternal(IndexRange(idx_range));
+			return CandleRangeInternal(IndexRange(range));
 		}
 		public IEnumerable<Candle> CandleRange()
 		{
@@ -334,15 +334,13 @@ namespace Rylobot
 		/// Iterate through the high res price data over the given range with a step size of 'step'.
 		/// 'first' and 'last' floating point Idx's (not indices in HighRes)
 		/// 'step' is the increment size in indices to move with each returned value</summary>
-		public IEnumerable<PriceTick> HighResRange(Idx idx_min, Idx idx_max, double? step = null)
+		public IEnumerable<PriceTick> HighResRange(Idx min, Idx max, double? step = null)
 		{
-			var first = idx_min - IdxFirst;
-			var last  = idx_max - IdxFirst;
+			var first = min - IdxFirst;
+			var last  = max - IdxFirst;
 
-			var istart = HighRes.BinarySearch(x => x.Index.CompareTo(first));
-			var iend   = HighRes.BinarySearch(x => x.Index.CompareTo(last));
-			if (istart < 0) istart = ~istart;
-			if (iend   < 0) iend = ~iend;
+			var istart = HighRes.BinarySearch(x => x.Index.CompareTo(first), find_insert_position:true);
+			var iend   = HighRes.BinarySearch(x => x.Index.CompareTo(last), find_insert_position:true);
 			if (istart == iend)
 				yield break;
 
@@ -383,15 +381,15 @@ namespace Rylobot
 				}
 			}
 		}
-		public IEnumerable<PriceTick> HighResRange(RangeF idx_range, double? step = null)
+		public IEnumerable<PriceTick> HighResRange(RangeF range, double? step = null)
 		{
-			return HighResRange(idx_range.Beg, idx_range.End, step);
+			return HighResRange(range.Beg, range.End, step);
 		}
 
 		/// <summary>Create a candle that uses the high res data over the given 'Idx' range</summary>
-		public Candle HighResCandle(Idx idx_min, Idx idx_max)
+		public Candle HighResCandle(Idx min, Idx max)
 		{
-			var data = HighResRange(idx_min, idx_max).ToArray();
+			var data = HighResRange(min, max).ToArray();
 			if (!data.Any())
 				return new Candle();
 
@@ -406,6 +404,16 @@ namespace Rylobot
 			var volume    = data.Length;
 			
 			return new Candle(index, timestamp, open, high, low, close, median, volume);
+		}
+
+		/// <summary>The number of PriceTick's available in the given candle range</summary>
+		public int HighResCount(Idx min, Idx max)
+		{
+			var first = min - IdxFirst;
+			var last  = max - IdxFirst;
+			var istart = HighRes.BinarySearch(x => x.Index.CompareTo(first), find_insert_position:true);
+			var iend   = HighRes.BinarySearch(x => x.Index.CompareTo(last), find_insert_position:true);
+			return iend - istart;
 		}
 
 		/// <summary>Return the index into the candle data for the given time</summary>
@@ -430,9 +438,9 @@ namespace Rylobot
 		}
 
 		/// <summary>Return the max candle size (total length) of the given range</summary>
-		public QuoteCurrency MaxCandleSize(Idx idx_min, Idx idx_max)
+		public QuoteCurrency MaxCandleSize(Idx min, Idx max)
 		{
-			var range = IndexRange(idx_min, idx_max);
+			var range = IndexRange(min, max);
 			if (range.Empty) throw new Exception("Empty range, max candle size is not defined");
 			var max_cs = range.Max(x => TrueRange(x));
 			return max_cs;
@@ -450,9 +458,9 @@ namespace Rylobot
 		private QuoteCurrency? m_mcs;
 
 		/// <summary>Return the median candle size (total length) of the given range</summary>
-		public QuoteCurrency MedianCandleSize(Idx idx_min, Idx idx_max)
+		public QuoteCurrency MedianCandleSize(Idx min, Idx max)
 		{
-			var lengths = IndexRange(idx_min, idx_max).Select(x => TrueRange(x)).ToArray();
+			var lengths = IndexRange(min, max).Select(x => TrueRange(x)).ToArray();
 			if (lengths.Length == 0) throw new Exception("Empty range, median candle size is not defined");
 			var mcs = lengths.NthElement(lengths.Length/2);
 			return mcs;
@@ -486,6 +494,12 @@ namespace Rylobot
 			var A = this[index - 0];
 			var B = this[index - 1];
 			return Maths.Max(A.TotalLength, Math.Abs(A.High - B.Close), Math.Abs(A.Low - B.Close));
+		}
+
+		/// <summary>Return the number of ticks in the given range of candles</summary>
+		public long TradeVolume(Idx min, Idx max)
+		{
+			return (long)CandleRange(min, max).Sum(x => x.Volume);
 		}
 
 		/// <summary>Return the average slope of all the EMAs over 'period_range'</summary>

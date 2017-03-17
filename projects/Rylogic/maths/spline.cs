@@ -19,7 +19,7 @@ namespace pr.maths
 	public struct Spline
 	{
 		private m4x4 m;
-		enum CtrlPt { Start, SCtrl, ECtrl, End };
+		public enum CtrlPt { Start, SCtrl, ECtrl, End };
 
 		// Construct a spline from 4 control points
 		public Spline(v4 start, v4 start_ctrl, v4 end_ctrl, v4 end) :this(new m4x4(start, start_ctrl, end_ctrl, end)) {}

@@ -18,41 +18,41 @@ namespace Rylobot
 		//  - Spread must be << range
 		//  - Buy the lows, sell the highs
 
-		const int MeanPeriods = 55;
+		const int MAPeriods = 55;
 
 		public StrategyMeanCross(Rylobot bot)
 			:base(bot, "StrategyMeanCross")
 		{
-			PriceAverage = new MovingAvr(MeanPeriods);
-			SMA = new Indicator(Instrument, bot.Indicators.SimpleMovingAverage(Instrument.Data.Close, MeanPeriods).Result);
-			LastStdDev = 0;
+			PriceDistribution = new Distribution(Instrument.PipSize);
+			MA = new Indicator(Instrument, bot.Indicators.ExponentialMovingAverage(Instrument.Data.Close, MAPeriods).Result);
+			LastProb = 0;
 		}
 		public override void Dispose()
 		{
 			base.Dispose();
 		}
 
-		/// <summary>An average of the price</summary>
-		private MovingAvr PriceAverage { get; set; }
+		/// <summary>A moving distribution of the price</summary>
+		private Distribution PriceDistribution { get; set; }
 
 		/// <summary>The historic simple moving average</summary>
-		private Indicator SMA { get; set; }
+		private Indicator MA { get; set; }
 
 		/// <summary>Extrapolation of the MA</summary>
 		private Extrapolation Future
 		{
-			get { return SMA.Extrapolate(MeanPeriods); }
+			get { return MA.Extrapolate(1, MAPeriods); }
 		}
 		
-		/// <summary>The *signed* index of the last standard deviation level crossed</summary>
-		private int LastStdDev { get; set; }
+		/// <summary>The last *signed* distance from the mean in units of standard deviation</summary>
+		private double LastProb { get; set; }
 
 		/// <summary>The sign of the trend direction</summary>
 		private int TrendSign
 		{
 			get
 			{
-				var slope = SMA.FirstDerivative(0);
+				var slope = MA.FirstDerivative(0);
 				var trend = Instrument.MeasureTrend(slope);
 				return Math.Abs(trend) > 0.5 ? Math.Sign(trend) : 0;
 			}
@@ -64,7 +64,24 @@ namespace Rylobot
 		/// <summary>Debugging output</summary>
 		private void Dump()
 		{
-			Debugging.LogInstrument(smas:new[] { MeanPeriods });
+			var emas = MA.Source is ExponentialMovingAverage ? new [] {MAPeriods } : null;
+			var smas = MA.Source is SimpleMovingAverage ? new [] {MAPeriods } : null;
+			Debugging.LogInstrument(emas:emas, smas:smas);
+			
+			{// Show the price distribution
+				var vals = PriceDistribution.Values(new[] { 0.1, 0.5, 0.9 });
+				var ldr = new pr.ldr.LdrBuilder();
+				Debugging.Dump(PriceDistribution, +5, vals[1], ldr);
+				ldr.Line("sd", 0xFF8080FF
+					,new v4( 5-Instrument.IdxFirst, (float)vals[0], 0, 1)
+					,new v4(10-Instrument.IdxFirst, (float)vals[0], 0, 1));
+				ldr.Line("sd", 0xFF8080FF
+					,new v4( 5-Instrument.IdxFirst, (float)vals[2], 0, 1)
+					,new v4(10-Instrument.IdxFirst, (float)vals[2], 0, 1));
+				ldr.ToFile(Debugging.FP("distribution.ldr"));
+			}
+
+			Debugging.BreakOnPointOfInterest();
 		}
 
 		/// <summary>Called when new data is received</summary>
@@ -74,59 +91,54 @@ namespace Rylobot
 			if (Instrument.NewCandle)
 				Dump();
 
+			AcctCurrency MinProfit = Broker.Balance * 0.005;
+			AcctCurrency MaxLoss   = Broker.Balance * 0.01;
+
 			var mcs = Instrument.MCS;
 			var price = Instrument.LatestPrice.Mid;
-			var volume = Broker.ChooseVolume(Instrument, 5.0 * mcs);//Instrument.Symbol.VolumeMin;//
+			var volume = Instrument.Symbol.VolumeMin;
+			//var volume = Broker.ChooseVolume(Instrument, 5.0 * mcs);
 
-			// Track the average price
-			PriceAverage.Add(price);
-			if (PriceAverage.Count < PriceAverage.WindowSize)
-				return;
+			// Add to the price distribution
+			UpdatePriceDistribution();
+			if (PriceDistribution.Count < MAPeriods)
+				return; // Require at least one tick per candle
 
-			// Only allow a maximum of N bad trades
-			const int MaxBadCount = 5;
-			var BadThreshold = Broker.Balance * 0.01;
-			var bad = Positions.Where(x => x.NetProfit < -BadThreshold).ToArray();
-			if (bad.Length >= MaxBadCount)
-			{
-				// Close the worst
-				var worst = bad.OrderBy(x => x.NetProfit).First();
-			//	Broker.ClosePosition(worst);
-			}
+			// Find the probability of the price being at it's current level
+			var prob = 2.0 * PriceDistribution.Probability(new double[] { price })[0] - 1.0; // [-1,+1]
+			var dist = 1.0 - Maths.Abs(prob);
 
-			// Find how far the current price is from the mean in multiples of standard deviation
-			var mean = PriceAverage.Mean;//Future[MeanPeriods/2]; //
-			var stddev = PriceAverage.PopStdDev;
-			var dist = (price - mean) / stddev;
-
-			// Find the s.d. band that 'dist' falls within
-			var sd_band = (int)dist; // round toward zero
-
-			// On a change of s.d. band by more than 2, buy/sell
-			var sd_change = Math.Abs(LastStdDev - sd_band);
-			if (sd_change >= 2)
+			// On a change of more than 20%, buy/sell
+			var change = Math.Abs(LastProb - dist);
+			if (change >= 0.2)
 			{
 				Dump();
 
-				if (sd_band >= 2)
+				// If the probability of the current price level is unlikely, open a position
+				if (dist < 0.1)
 				{
 					// Buy the lows, sell the highs
-					var sign = -Math.Sign(sd_band);
+					var sign = -Math.Sign(prob);
 					var tt = CAlgo.SignToTradeType(sign);
 					var vol = volume;// + (TrendSign == sign ? Instrument.Symbol.VolumeMin : 0); // Bias trades in the trend direction
 					var sl = (QuoteCurrency?)null;//price - sign * stddev * 10.0;
 					var tp = (QuoteCurrency?)null;//price + sign * stddev * Math.Abs(dist + 1);
 					var trade = new Trade(Instrument, tt, Label, price, sl, tp, vol);
-					var pos = Broker.CreateOrder(trade);
-					Correlator.Track(pos, "With Trend", TrendSign == sign ? +1 : -1);
+
+					using (Broker.SuspendRiskCheck(ignore_risk: true))
+						Broker.CreateOrder(trade);
 				}
 
 				// Look for positions to close
-				AcctCurrency MinProfit = Broker.Balance * 0.005;
-				foreach (var pos in Positions.Where(x => x.NetProfit > MinProfit).ToArray())
-					Broker.ClosePosition(pos);
+				var trend_sign = TrendSign;
+				foreach (var pos in Positions.ToArray())
+				{
+					var min_profit = pos.Sign() == trend_sign ? MinProfit : 0;
+					if (pos.NetProfit > min_profit || pos.NetProfit < -MaxLoss)
+						Broker.ClosePosition(pos);
+				}
 
-				LastStdDev = sd_band;
+				LastProb = dist;
 			}
 		}
 
@@ -138,6 +150,18 @@ namespace Rylobot
 		/// <summary>Watch for position closed</summary>
 		protected override void OnPositionClosed(Position position)
 		{
+		}
+
+		/// <summary>Track the average price, returns true if the average is ok to use</summary>
+		private void UpdatePriceDistribution()
+		{
+			// Ensure we get a distribution over the same period of time
+			// (rather than number of ticks)
+
+			// Create a distribution from the high res data over the last view candles
+			PriceDistribution.Reset();
+			foreach (var x in Instrument.HighResRange(-MAPeriods, 1))
+				PriceDistribution.Add(x.Mid);
 		}
 
 		/// <summary>Return a score for how well suited this strategy is to the current conditions</summary>
