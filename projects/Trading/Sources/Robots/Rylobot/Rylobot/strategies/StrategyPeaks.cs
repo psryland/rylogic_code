@@ -66,14 +66,14 @@ namespace Rylobot
 					case Instrument.EPeakPattern.BreakOutHigh:
 					case Instrument.EPeakPattern.BreakOutLow:
 						{
-							var exit = Instrument.ChooseTradeExit(tt, 0, ep);
+							var exit = Instrument.ChooseTradeExit(tt, ep);
 							trade = new Trade(Instrument, tt, Label, exit.EP, exit.SL, exit.TP, exit.Volume);
 							break;
 						}
 					case Instrument.EPeakPattern.HighReversal:
 					case Instrument.EPeakPattern.LowReversal:
 						{	
-							var exit = Instrument.ChooseTradeExit(tt, 0, ep);
+							var exit = Instrument.ChooseTradeExit(tt, ep);
 							order = new Trade(Instrument, tt, Label, exit.EP, exit.SL, exit.TP, exit.Volume);
 							order.Expiration = Instrument.ExpirationTime(1);
 							break;

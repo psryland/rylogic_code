@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using cAlgo.API;
 using pr.maths;
 
@@ -161,16 +162,31 @@ namespace Rylobot
 			var sign = TradeType.Sign();
 
 			// If 'price' is beyond the stop loss, clamp at the stop loss value
-			if (consider_sl && SL != null && Maths.Sign((double)(SL.Value - price)) == sign)
+			if (consider_sl && SL != null && Maths.Sign(SL.Value - price) == sign)
 				price = SL.Value;
 
 			// If 'price' is beyond the take profit, clamp at the take profit value
-			if (consider_tp && TP != null && Maths.Sign((double)(price - TP.Value)) == sign)
+			if (consider_tp && TP != null && Maths.Sign(price - TP.Value) == sign)
 				price = TP.Value;
 
 			// Return the position value in quote currency
 			var dprice = price - EP;
 			return sign * dprice * Volume;
+		}
+
+		/// <summary>Return the normalised value ([-1,+1]) of this order at 'price'. Only valid if the order has SL and TP levels</summary>
+		public double ValueFrac(PriceTick price)
+		{
+			if (SL == null || TP == null)
+				return 0.0;
+
+			var sign = TradeType.Sign();
+			var win = Maths.Frac(EP, price.Price(+sign), TP.Value);
+			var los = Maths.Frac(EP, price.Price(-sign), SL.Value);
+
+			if (win < 0) return -los;
+			if (los < 0) return +win;
+			return win > los ? win : -los;
 		}
 
 		/// <summary>A flag for orders that causes them to be considered as if they are active positions</summary>

@@ -107,32 +107,58 @@ namespace Rylobot
 		#region Position Extensions
 
 		/// <summary>Return the value (in quote currency) of this position when the price is at 'price'</summary>
-		public static QuoteCurrency ValueAt(this Position pos, double price, bool consider_sl, bool consider_tp)
+		public static QuoteCurrency ValueAt(this Position pos, QuoteCurrency price, bool consider_sl, bool consider_tp)
 		{
 			return new Order(pos).ValueAt(price, consider_sl, consider_tp);
 		}
-		public static QuoteCurrency ValueAt(this PendingOrder pos, double price, bool consider_sl, bool consider_tp)
+
+		/// <summary>Return the value (in quote currency) of this position when the price is at 'price'</summary>
+		public static QuoteCurrency ValueAt(this PendingOrder pos, QuoteCurrency price, bool consider_sl, bool consider_tp)
 		{
 			return new Order(pos).ValueAt(price, consider_sl, consider_tp);
 		}
-		public static QuoteCurrency ValueAt(this ITrade pos, double price, bool consider_sl, bool consider_tp)
+
+		/// <summary>Return the value (in quote currency) of this position when the price is at 'price'</summary>
+		public static QuoteCurrency ValueAt(this ITrade pos, QuoteCurrency price, bool consider_sl, bool consider_tp)
 		{
 			return new Order(pos, true).ValueAt(price, consider_sl, consider_tp);
 		}
 
+		/// <summary>Return the normalised value of a position/trade</summary>
+		public static QuoteCurrency ValueFrac(this Position pos, PriceTick price)
+		{
+			return new Order(pos).ValueFrac(price);
+		}
+
+		/// <summary>Return the normalised value of a position/trade</summary>
+		public static QuoteCurrency ValueFrac(this PendingOrder pos, PriceTick price)
+		{
+			return new Order(pos).ValueFrac(price);
+		}
+
+		/// <summary>Return the normalised value of a position/trade</summary>
+		public static QuoteCurrency ValueFrac(this ITrade pos, PriceTick price)
+		{
+			return new Order(pos, true).ValueFrac(price);
+		}
+
+		/// <summary></summary>
 		public static QuoteCurrency? StopLossAbs(this Position pos)
 		{
 			return new Order(pos).SL;
 		}
+		/// <summary></summary>
 		public static QuoteCurrency? StopLossAbs(this PendingOrder pos)
 		{
 			return new Order(pos).SL;
 		}
 
+		/// <summary></summary>
 		public static QuoteCurrency? TakeProfitAbs(this Position pos)
 		{
 			return new Order(pos).TP;
 		}
+		/// <summary></summary>
 		public static QuoteCurrency? TakeProfitAbs(this PendingOrder pos)
 		{
 			return new Order(pos).TP;

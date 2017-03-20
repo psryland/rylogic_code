@@ -294,9 +294,9 @@ namespace Rylobot
 			var mx = Maths.Clamp(max, min, IdxLast);
 			return new Range(mn, mx);
 		}
-		public Range IndexRange(Range range)
+		public Range IndexRange(RangeF range)
 		{
-			return IndexRange(range.Begi, range.Endi);
+			return IndexRange(range.Beg, range.End);
 		}
 		public Range IndexRange(Position pos)
 		{
@@ -321,7 +321,7 @@ namespace Rylobot
 		{
 			return CandleRangeInternal(IndexRange(min, max));
 		}
-		public IEnumerable<Candle> CandleRange(Range range)
+		public IEnumerable<Candle> CandleRange(RangeF range)
 		{
 			return CandleRangeInternal(IndexRange(range));
 		}
@@ -525,23 +525,25 @@ namespace Rylobot
 		}
 
 		/// <summary>Return an appropriate stop loss, take profit, and volume for a trade at the given candle an entry price</summary>
-		public TradeExit ChooseTradeExit(TradeType tt, Idx idx, QuoteCurrency ep, double? risk = null, int? look_back = null)
+		public TradeExit ChooseTradeExit(TradeType tt, QuoteCurrency ep, Idx? idx = null, double? risk = null, int? look_back = null, double? rtr = null)
 		{
 			var exit = new TradeExit { EP = ep, SL = ep, TP = ep, Volume = Symbol.VolumeMin };
 			var sign = tt.Sign();
+			idx = idx ?? 0;
 
 			// Get the support and resistance levels
 			var snr = new SnR(this, ep, idx+1);
 			Debugging.Dump(snr);
 
 			#region SL
-			{
-				// Start with a minimum of the MCS
-				var sl_rel = MCS;
 
+			// Start with a minimum of the MCS
+			var sl_rel = MCS;
+
+			{
 				// Scan backwards looking for a peak in the stop loss direction.
 				look_back = look_back ?? Bot.Settings.LookBackCount;
-				foreach (var candle in CandleRange(idx - look_back.Value, idx))
+				foreach (var candle in CandleRange(idx.Value - look_back.Value, idx.Value))
 				{
 					var limit = candle.WickLimit(-sign);
 					var diff = ep - limit;
@@ -612,10 +614,10 @@ namespace Rylobot
 			}
 			#endregion
 			#region TP
-			{
-				// Start with a minimum of the MCS
-				var tp_rel = MCS;
+			// Start with a minimum of the MCS
+			var tp_rel = MCS;
 
+			{
 				// Look for a level on the profit side of the entry price
 				// If there are no levels, use a few typical candle sizes
 				var nearest = snr.Nearest(ep + sign * tp_rel, sign);
@@ -626,6 +628,12 @@ namespace Rylobot
 				else
 				{
 					tp_rel = 2 * MCS;
+				}
+
+				// Apply the minimum reward to risk ratio
+				if (rtr != null)
+				{
+					tp_rel = Math.Max(tp_rel, sl_rel * rtr.Value);
 				}
 
 				// Find the absolute price for the take profit level
@@ -664,11 +672,20 @@ namespace Rylobot
 			return new Candle(index, timestamp, open, high, low, close, median, volume);
 		}
 
+		/// <summary>Compress the candle at 'idx' with former candles of the same sign</summary>
+		public Candle Compress(Idx idx)
+		{
+			Idx i = idx;
+			var sign = this[idx].Sign;
+			for (; i-- != IdxFirst && this[i].Sign == sign;) {}
+			return Compress(i+1, idx+1);
+		}
+
 		/// <summary>
 		/// Measures the trend over candles [idx_min, idx_max).
 		/// Returns a value on the range [-1,+1] (negative = bearish, positive = bullish)
 		/// Treat ­0.5 as the limit between trend and no trend.</summary>
-		public double MeasureTrend(Idx idx_min, Idx idx_max)
+		public double MeasureTrendFromCandles(Idx idx_min, Idx idx_max)
 		{
 			// Compress adjacent candles with the same sign into "group candles"
 			// Scan backwards from 'idx_max-1'
@@ -872,7 +889,7 @@ namespace Rylobot
 						return false;
 
 					// There is a significant preceding trend
-					var preceding_trend = MeasureTrend(indecision_idx - MeasureTrendCount, indecision_idx);
+					var preceding_trend = MeasureTrendFromCandles(indecision_idx - MeasureTrendCount, indecision_idx);
 					if (Math.Abs(preceding_trend) < 0.5)
 						return false;
 
@@ -927,7 +944,7 @@ namespace Rylobot
 						return false;
 
 					// The trend candle is in the opposite direction to the preceding trend and the preceding candle trend is significant.
-					var preceding_trend = MeasureTrend(indecision_idx - MeasureTrendCount, indecision_idx);
+					var preceding_trend = MeasureTrendFromCandles(indecision_idx - MeasureTrendCount, indecision_idx);
 					if (trend_candle.Sign == Math.Sign(preceding_trend) || Math.Abs(preceding_trend) < 0.5)
 						return false;
 				
@@ -1021,7 +1038,7 @@ namespace Rylobot
 						return false;
 
 					// 'trend_candle' is in the opposite direction to the preceding trend and the preceding trend is strong
-					var preceding_trend = MeasureTrend(engulfed_idx - MeasureTrendCount, engulfed_idx+1);
+					var preceding_trend = MeasureTrendFromCandles(engulfed_idx - MeasureTrendCount, engulfed_idx+1);
 					if (trend_candle.Sign == Math.Sign(preceding_trend) || Math.Abs(preceding_trend) < 0.5)
 						return false;
 

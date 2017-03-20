@@ -45,5 +45,14 @@ namespace Rylobot
 		protected override void OnPositionClosed(Position position)
 		{
 		}
+
+		/// <summary>Watch for bot stopped</summary>
+		protected override void OnBotStopping()
+		{
+			base.OnBotStopping();
+
+			// Log the whole instrument
+			Debugging.Dump(Instrument);
+		}
 	}
 }

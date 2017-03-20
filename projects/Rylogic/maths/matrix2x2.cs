@@ -201,4 +201,12 @@ namespace pr.maths
 		//	return new m3x4(from, to);
 		//}
 	}
+
+	public static partial class Maths
+	{
+		public static bool IsFinite(m2x2 vec)
+		{
+			return IsFinite(vec.x) && IsFinite(vec.y);
+		}
+	}
 }

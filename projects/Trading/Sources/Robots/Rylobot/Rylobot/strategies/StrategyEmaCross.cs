@@ -291,7 +291,7 @@ namespace Rylobot
 				// If the current price is better than the entry price, or we're in a strong trend, enter immediately.
 				if (immediate || Math.Sign(ep - price) == trade_sign)
 				{
-					var exit = Instrument.ChooseTradeExit(tt, 0, price, risk:0.2);
+					var exit = Instrument.ChooseTradeExit(tt, price, risk:0.2);
 					//if (strong_trend) exit.SL = trade_sign > 0 ? Math.Min(exit.SL, Instrument[-1].High) : Math.Max(exit.SL, Instrument[-1].Low);
 					var trade = new Trade(Instrument, tt, Label, price, exit.SL, null, exit.Volume);
 					Broker.CreateOrder(trade);

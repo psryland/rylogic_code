@@ -486,6 +486,12 @@ namespace Rylobot
 			ClosePositions(Bot.Positions.Where(x => x.Label == label));
 		}
 
+		/// <summary>Close all positions created by this bot</summary>
+		public void CloseAllPositions()
+		{
+			ClosePositions(Bot.Positions);
+		}
+
 		/// <summary>
 		/// Set the SL/TP on an existing position so that there's a chance it'll close in profit.
 		/// Sets the SL to the wick limit of the latest and previous candle.

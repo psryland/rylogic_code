@@ -21,15 +21,25 @@ namespace Rylobot
 			PeaksHistoryLength       = 200;
 			SlowEMAPeriods           = 200;
 			PredictionForecastLength = 100;
+
+			AutoSaveOnChanges = true;
 		}
 		public Settings(string filepath)
 			:base(filepath)
-		{ }
+		{
+			AutoSaveOnChanges = true;
+		}
 
 		/// <summary>Settings version</summary>
 		protected override string Version
 		{
 			get { return "v1.0"; }
+		}
+
+		/// <summary>Filepath for Rylobot settings</summary>
+		public static new string DefaultFilepath
+		{
+			get { return Util.ResolveUserDocumentsPath("Rylogic","Rylobot","Settings.xml"); }
 		}
 
 		/// <summary>The directory for account database files</summary>

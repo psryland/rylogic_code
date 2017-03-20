@@ -90,7 +90,7 @@ namespace Rylobot
 					throw new Exception("Insufficient available risk. Volatility: {0}, Balance To Risk: {1}".Fmt(volatility, balance_to_risk));
 
 				// Get the instrument to recommend trade exit conditions
-				var exit = instr.ChooseTradeExit(tt, index, EP, risk);
+				var exit = instr.ChooseTradeExit(tt, EP, idx:index, risk:risk);
 				TP     = tp != null ? tp.Value : exit.TP;
 				SL     = sl != null ? sl.Value : exit.SL;
 				Volume = sl != null ? instr.Bot.Broker.ChooseVolume(instr, sl.Value / risk.Value) : exit.Volume;

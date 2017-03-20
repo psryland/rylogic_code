@@ -76,5 +76,14 @@ namespace Rylobot
 		{
 			get { return Ask - Bid; }
 		}
+
+		/// <summary>Return the price in the given direction. Ask(+1)/Bid(-1)/Mid(0)</summary>
+		public QuoteCurrency Price(int sign)
+		{
+			return
+				sign > 0 ? Ask :
+				sign < 0 ? Bid :
+				Mid;
+		}
 	}
 }

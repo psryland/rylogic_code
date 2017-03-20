@@ -139,7 +139,10 @@ namespace pr
 			std::lock_guard<std::mutex> lock(m_mutex_task_queue);
 			m_task_queue.emplace_back(std::async(policy, func, args...));
 			if (!::PostMessageW(m_dummy_hwnd, pr::rdr::WM_BeginInvoke, WPARAM(this), LPARAM()))
-				throw std::exception(pr::HrMsg(GetLastError()).c_str());
+			{
+				auto msg = pr::HrMsg(GetLastError());
+				throw std::exception(msg.c_str());
+			}
 		}
 		template <typename Func, typename... Args> inline void RunOnMainThread(Func&& func, Args&&... args)
 		{

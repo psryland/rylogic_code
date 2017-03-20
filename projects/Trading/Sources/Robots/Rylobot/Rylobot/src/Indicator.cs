@@ -41,22 +41,33 @@ namespace Rylobot
 		}
 
 		/// <summary>The raw data. Idx = -(Count+1) is the oldest, Idx = 0 is the latest</summary>
-		public double this[Idx neg_idx]
+		public double this[Idx idx]
 		{
 			get
 			{
-				Debug.Assert(neg_idx >= IdxFirst && neg_idx < IdxLast);
-
-				var val0 = Source[neg_idx - IdxFirst];
-				var val1 = Source[neg_idx - IdxFirst];
-				return Maths.Lerp(val0, val1, (double)neg_idx - (int)neg_idx);
+				var val = 0.0;
+				if (Source.Count == 0 || (int)idx == IdxFirst) {}
+				else if ((int)idx < IdxLast && idx <= Instrument.IdxNow)
+				{
+					var val0 = Source[idx - IdxFirst - 1];
+					var val1 = Source[idx - IdxFirst    ];
+					val = Maths.Lerp(val0, val1, (double)idx - (int)idx);
+				}
+				else if (idx > 0)
+				{
+					var extrap = Extrapolate(2);
+					if (extrap != null)
+						val = extrap[idx];
+				}
+				Debug.Assert(Maths.IsFinite(val));
+				return val;
 			}
 		}
 
 		/// <summary>Return the first derivative of the data series at 'index'</summary>
-		public double FirstDerivative(Idx index)
+		public double FirstDerivative(Idx idx)
 		{
-			return Source.FirstDerivative(index);
+			return Source.FirstDerivative(idx);
 		}
 		public double FirstDerivative()
 		{
@@ -64,9 +75,9 @@ namespace Rylobot
 		}
 
 		/// <summary>Return the second derivative of the data series at 'index'</summary>
-		public double SecondDerivative(Idx index)
+		public double SecondDerivative(Idx idx)
 		{
-			return Source.SecondDerivative(index);
+			return Source.SecondDerivative(idx);
 		}
 		public double SecondDerivative()
 		{

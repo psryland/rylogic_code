@@ -463,6 +463,11 @@ namespace pr.maths
 		{
 			return v2.Clamp(vec, min, max);
 		}
+
+		public static bool IsFinite(v2 vec)
+		{
+			return IsFinite(vec.x) && IsFinite(vec.y);
+		}
 	}
 }
 

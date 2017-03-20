@@ -28,10 +28,10 @@ namespace Rylobot
 			base.OnStart();
 			Instance = this;
 			TickNumber = 0;
+			BaseEquity = Account.Equity;
 
 			// Load the bot settings
-			var settings_filepath = Util.ResolveAppDataPath("Rylogic","Rylobot","Settings.xml");
-			Settings = new Settings(settings_filepath){AutoSaveOnChanges = true};
+			Settings = new Settings(Settings.DefaultFilepath);
 			Settings.Save();
 
 			// Create the cache of symbol data
@@ -62,9 +62,6 @@ namespace Rylobot
 		{
 			Stopping.Raise(this);
 
-			// Log the whole instrument
-			Debugging.Dump(Instrument);
-
 			// Stop capturing trades
 			Debugging.LogTrades(this, false);
 
@@ -79,6 +76,18 @@ namespace Rylobot
 		protected override void OnTick()
 		{
 			++TickNumber;
+
+			// Emergency stop
+			var max_loss_ratio = (1.0 - 0.01 * Settings.MaxRiskPC);
+			BaseEquity = Math.Max((double)BaseEquity, Account.Equity * max_loss_ratio);
+			if (Account.Equity < BaseEquity * max_loss_ratio)
+			{
+				Debugging.Trace("Account equity (${0}) dropped below max risk percentage. Stopping".Fmt(Account.Equity));
+				Print("Account equity (${0}) dropped below max risk percentage. Stopping".Fmt(Account.Equity));
+				Broker.CloseAllPositions();
+				Stop();
+				return;
+			}
 
 			// Raise the Bot.Tick event before stepping the strategy
 			// Instruments are signed up to the Tick event so they will be updated first
@@ -169,6 +178,13 @@ namespace Rylobot
 			}
 		}
 		private Instrument m_instr;
+
+		/// <summary>The equity at the time the Bot was started</summary>
+		public AcctCurrency BaseEquity
+		{
+			get;
+			private set;
+		}
 
 		/// <summary>Return the symbol for a given symbol code or null if invalid or unavailable</summary>
 		public Symbol GetSymbol(string symbol_code)

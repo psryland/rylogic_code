@@ -54,22 +54,27 @@ namespace pr.ldr
 		// Type to string helpers
 		public static string Vec2(v2 vec)
 		{
+			Debug.Assert(Maths.IsFinite(vec));
 			return "{0} {1}".Fmt(vec.x,vec.y);
 		}
 		public static string Vec3(v2 vec)
 		{
+			Debug.Assert(Maths.IsFinite(vec));
 			return "{0} {1} 0".Fmt(vec.x,vec.y);
 		}
 		public static string Vec3(v4 vec)
 		{
+			Debug.Assert(Maths.IsFinite(vec));
 			return "{0} {1} {2}".Fmt(vec.x,vec.y,vec.z);
 		}
 		public static string Vec4(v4 vec)
 		{
+			Debug.Assert(Maths.IsFinite(vec));
 			return "{0} {1} {2} {3}".Fmt(vec.x,vec.y,vec.z,vec.w);
 		}
 		public static string Mat4x4(m4x4 mat)
 		{
+			Debug.Assert(Maths.IsFinite(mat));
 			return "{0} {1} {2} {3}".Fmt(Vec4(mat.x),Vec4(mat.y),Vec4(mat.z),Vec4(mat.w));
 		}
 

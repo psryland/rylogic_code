@@ -66,13 +66,14 @@ namespace Rylobot
 				var los_total = loss.Sum(x => (double)x.Profit);
 
 				// Add win/loss ratio
-				sb.AppendLine("Net Profit: ${0:N2}".Fmt(win_total));
-				sb.AppendLine("Net Loss:   ${0:N2}".Fmt(los_total));
-				sb.AppendLine("Nett:       ${0:N2}".Fmt(win_total + los_total));
+				sb.AppendLine("Net Profit:   ${0:N2}".Fmt(win_total));
+				sb.AppendLine("Net Loss:     ${0:N2}".Fmt(los_total));
+				sb.AppendLine("Nett:         ${0:N2}".Fmt(win_total + los_total));
+				sb.AppendLine("Profit Ratio:  {0:N3}".Fmt(win_total / los_total));
 				sb.AppendLine();
-				sb.AppendLine("Win Count:  {0}".Fmt(wins.Length));
-				sb.AppendLine("Loss Count: {0}".Fmt(loss.Length));
-				sb.AppendLine("Win Ratio:  {0:N3}%".Fmt(100.0 * wins.Length / (wins.Length + loss.Length)));
+				sb.AppendLine("Win Count:     {0}".Fmt(wins.Length));
+				sb.AppendLine("Loss Count:    {0}".Fmt(loss.Length));
+				sb.AppendLine("Win Ratio:     {0:N3}%".Fmt(100.0 * wins.Length / (wins.Length + loss.Length)));
 				sb.AppendLine();
 
 				sb.AppendLine("Correlations:");

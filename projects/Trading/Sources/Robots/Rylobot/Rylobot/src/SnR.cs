@@ -15,21 +15,21 @@ namespace Rylobot
 		// - ignore candles that aren't within the range.
 
 		/// <summary>Find support and resistance level data within the given price range</summary>
-		/// <param name="instr">The instrument to find levels data in</param>
+		/// <param name="instrument">The instrument to find levels data in</param>
 		/// <param name="iend">The last candle, i.e. look backwards from here</param>
 		/// <param name="price">The centre price to centre the SnR level data around</param>
 		/// <param name="count">The number of candles that contribute to the SnR levels (only candles intersecting the range)</param>
 		/// <param name="range">The range of prices (above and below 'price') to check</param>
-		public SnR(Instrument instr, QuoteCurrency? price = null, Idx? iend = null, int? count = null, QuoteCurrency? range = null, QuoteCurrency? bucket_size = null)
+		public SnR(Instrument instrument, QuoteCurrency? price = null, Idx? iend = null, int? count = null, QuoteCurrency? range = null, QuoteCurrency? bucket_size = null)
 		{
-			price = price ?? instr.LatestPrice.Mid;
+			price = price ?? instrument.LatestPrice.Mid;
 			iend = iend ?? 1;
 
 			// Set the range based on the recent span of candles
 			if (range == null)
 			{
-				var r = instr.MCS * 5;
-				foreach (var c in instr.CandleRange(iend.Value - instr.Bot.Settings.LookBackCount, iend.Value))
+				var r = instrument.MCS * 5;
+				foreach (var c in instrument.CandleRange(iend.Value - instrument.Bot.Settings.LookBackCount, iend.Value))
 				{
 					r = Math.Max(r, Math.Abs(c.High - price.Value));
 					r = Math.Max(r, Math.Abs(price.Value - c.Low));
@@ -38,13 +38,13 @@ namespace Rylobot
 			};
 
 			SnRLevels = new List<Level>();
-			Instrument = instr;
+			Instrument = instrument;
 			Beg = iend.Value;
 			End = iend.Value;
-			Count = count ?? instr.Bot.Settings.SnRHistoryLength;
+			Count = count ?? instrument.Bot.Settings.SnRHistoryLength;
 			Range = range.Value;
 			Price = price.Value;
-			BucketSize = (double)(bucket_size ?? instr.MCS);
+			BucketSize = (double)(bucket_size ?? instrument.MCS);
 
 			CalculateLevels();
 		}

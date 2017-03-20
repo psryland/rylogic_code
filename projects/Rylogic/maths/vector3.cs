@@ -488,6 +488,12 @@ namespace pr.maths
 		{
 			return v3.Clamp(vec, min, max);
 		}
+
+		public static bool IsFinite(v3 vec)
+		{
+			return IsFinite(vec.x) && IsFinite(vec.y) && IsFinite(vec.z);
+		}
+
 	}
 }
 

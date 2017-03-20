@@ -773,6 +773,7 @@ namespace LDraw
 		/// <summary>Update the state of the progress bar</summary>
 		public void UpdateProgress()
 		{
+			if (Model == null) return;
 			var progress = Model.AddFileProgress;
 
 			// Show/Hide the progress indicators

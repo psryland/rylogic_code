@@ -405,6 +405,14 @@ namespace pr.maths
 
 		#endregion
 	}
+
+	public static partial class Maths
+	{
+		public static bool IsFinite(m3x4 vec)
+		{
+			return IsFinite(vec.x) && IsFinite(vec.y) && IsFinite(vec.z);
+		}
+	}
 }
 
 #if PR_UNITTESTS

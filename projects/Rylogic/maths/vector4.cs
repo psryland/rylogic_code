@@ -172,10 +172,8 @@ namespace pr.maths
 		{
 			return new[] { x, y, z, w };
 		}
-		// 
 		//public static implicit operator v4(float[] a)           { return new v4(a[0], a[1], a[2], a[3]); }
 		//public static implicit operator float[](v4 p)           { return p.ToArray(); }
-
 
 		public v4 w0
 		{
@@ -640,6 +638,11 @@ namespace pr.maths
 		public static v4 Clamp(v4 vec, v4 min, v4 max)
 		{
 			return v4.Clamp4(vec, min, max);
+		}
+
+		public static bool IsFinite(v4 vec)
+		{
+			return IsFinite(vec.x) && IsFinite(vec.y) && IsFinite(vec.z) && IsFinite(vec.w);
 		}
 	}
 }
