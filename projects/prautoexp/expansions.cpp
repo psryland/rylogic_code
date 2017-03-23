@@ -15,7 +15,6 @@
 #include "pr/common/fmt.h"
 #include "pr/common/alloca.h"
 #include "pr/common/cast.h"
-#include "pr/common/imposter.h"
 #include "pr/macros/link.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/spatial.h"

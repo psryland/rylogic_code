@@ -38,7 +38,7 @@ namespace las
 		// Return configuration settings for the renderer
 		pr::rdr::RdrSettings RdrSettings()
 		{
-			pr::rdr::RdrSettings s(FALSE);
+			pr::rdr::RdrSettings s(GetModuleHandleW(nullptr), FALSE);
 			//s.m_window_handle      = hwnd;
 			//s.m_device_config      = settings.m_fullscreen ?
 			//	pr::rdr::GetDefaultDeviceConfigFullScreen(settings.m_res_x, settings.m_res_y, D3DDEVTYPE_HAL) :
