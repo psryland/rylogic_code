@@ -136,7 +136,7 @@ namespace pr.maths
 			return Math.Abs(a - b) < tol * Math.Max(Math.Abs(a), Math.Abs(b));
 		}
 
-		/// <summary>Divide 'a' by 'b' if 'b' is not equal to zero, otherwise return 0</summary>
+		/// <summary>Return 'a/b', or 'def' if 'b' is zero</summary>
 		public static int Div(int a, int b, int def = 0)
 		{
 			return b != 0 ? a/b : def;

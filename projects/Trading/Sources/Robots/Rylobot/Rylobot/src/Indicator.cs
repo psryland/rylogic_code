@@ -8,14 +8,32 @@ namespace Rylobot
 	/// <summary>A wrapper for CAlgo indicators than maps Idx to the data</summary>
 	public class Indicator
 	{
-		public Indicator(Instrument instr, IndicatorDataSeries series)
+		public Indicator(Instrument instr, IndicatorDataSeries series, int periods, int? extrap_history = null)
 		{
-			Instrument = instr;
-			Source = series;
+			Instrument    = instr;
+			Source        = series;
+			Periods       = periods;
+			ExtrapHistory = extrap_history ?? periods;
+		}
+
+		/// <summary>SMA indicator</summary>
+		public static Indicator SMA(Instrument instr, int periods, int? extrap_history = null)
+		{
+			return new Indicator(instr, instr.Bot.Indicators.SimpleMovingAverage(instr.Data.Close, periods).Result, periods, extrap_history);
+		}
+
+		/// <summary>EMA indicator</summary>
+		public static Indicator EMA(Instrument instr, int periods, int? extrap_history = null)
+		{
+			return new Indicator(instr, instr.Bot.Indicators.ExponentialMovingAverage(instr.Data.Close, periods).Result, periods, extrap_history);
 		}
 
 		/// <summary>The indicator series providing the data</summary>
-		public IndicatorDataSeries Source { get; private set; }
+		public IndicatorDataSeries Source
+		{
+			get;
+			private set;
+		}
 
 		/// <summary>The instrument this is an indicator on</summary>
 		public Instrument Instrument
@@ -28,6 +46,20 @@ namespace Rylobot
 		public int Count
 		{
 			get { return Source.Count; }
+		}
+
+		/// <summary>The number of periods associated with the indicator</summary>
+		public int Periods
+		{
+			get;
+			private set;
+		}
+
+		/// <summary>The number of periods to fit extrapolated curves to</summary>
+		public int ExtrapHistory
+		{
+			get;
+			set;
 		}
 
 		/// <summary>Index range (-Count, 0]</summary>
@@ -45,20 +77,12 @@ namespace Rylobot
 		{
 			get
 			{
-				var val = 0.0;
-				if (Source.Count == 0 || (int)idx == IdxFirst) {}
-				else if ((int)idx < IdxLast && idx <= Instrument.IdxNow)
-				{
-					var val0 = Source[idx - IdxFirst - 1];
-					var val1 = Source[idx - IdxFirst    ];
-					val = Maths.Lerp(val0, val1, (double)idx - (int)idx);
-				}
-				else if (idx > 0)
-				{
-					var extrap = Extrapolate(2);
-					if (extrap != null)
-						val = extrap[idx];
-				}
+				if (Count == 0) throw new IndexOutOfRangeException("");
+				var i0 = Maths.Clamp(idx - 1, IdxFirst, IdxLast-1);
+				var i1 = Maths.Clamp(idx    , IdxFirst, IdxLast-1);
+				var val0 = Source[i0 - IdxFirst];
+				var val1 = Source[i1 - IdxFirst];
+				var val = Maths.Lerp(val0, val1, (double)idx - (int)idx);
 				Debug.Assert(Maths.IsFinite(val));
 				return val;
 			}
@@ -84,8 +108,14 @@ namespace Rylobot
 			return Source.SecondDerivative();
 		}
 
+		/// <summary>Default extrapolation of the indicator</summary>
+		public Extrapolation Future
+		{
+			get { return Extrapolate(2, ExtrapHistory); }
+		}
+
 		/// <summary>Return a polynomial approximation of a EMA or null if no decent approximation could be made</summary>
-		public Extrapolation Extrapolate(int order, int history_count = 5)
+		public Extrapolation Extrapolate(int order, int history_count)
 		{
 			// Require a number of periods
 			if (Count < 10)

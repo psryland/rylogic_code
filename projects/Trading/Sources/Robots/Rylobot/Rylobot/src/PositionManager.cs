@@ -6,87 +6,116 @@ using pr.maths;
 
 namespace Rylobot
 {
-	public class PositionManager
+	/// <summary>Position manager base class</summary>
+	public abstract class PositionManager :IDisposable
 	{
-		/// <summary>Manage an active position</summary>
-		public PositionManager(Instrument instr, Position pos, Idx? neg_idx = null)
+		protected PositionManager(Strategy strat, Position pos)
 		{
-			var index = (int)((neg_idx ?? 0) - instr.IdxFirst);
-
-			ColdFeetCount       = 10;
-			Instrument          = instr;
-			Position            = pos;
-			PeakProfit          = double.NegativeInfinity;
-			LastProfit          = double.NegativeInfinity;
-			State               = EState.TradeLooksGood;
-			PeakProfitIndex     = index;
-			LastProfitableIndex = index;
+			Strategy           = strat;
+			Position           = pos;
+			MinRtR             = 1.0;
+			MinRtRCrossedIndex = null;
+			Closed             = false;
 		}
+		public virtual void Dispose()
+		{
+			Position = null;
+			Strategy = null;
+		}
+
+		/// <summary>The strategy that created the position and position manager</summary>
+		public Strategy Strategy
+		{
+			[DebuggerStepThrough] get { return m_strat; }
+			private set
+			{
+				if (m_strat == value) return;
+				if (m_strat != null)
+				{
+					Bot.Positions.Closed -= HandlePositionClosed;
+				} 
+				m_strat = value;
+				if (m_strat != null)
+				{
+					Bot.Positions.Closed += HandlePositionClosed;
+				}
+			}
+		}
+		private Strategy m_strat;
 
 		/// <summary>The app logic</summary>
 		public Rylobot Bot
 		{
-			[DebuggerStepThrough] get { return Instrument.Bot; }
+			[DebuggerStepThrough] get { return Strategy.Bot; }
+		}
+
+		/// <summary>The broker</summary>
+		public Broker Broker
+		{
+			[DebuggerStepThrough] get { return Bot.Broker; }
 		}
 
 		/// <summary>The main instrument for this bot</summary>
 		public Instrument Instrument
 		{
-			[DebuggerStepThrough] get { return m_instr; }
-			private set
-			{
-				if (m_instr == value) return;
-				m_instr = value;
-			}
+			[DebuggerStepThrough] get { return Strategy.Instrument; }
 		}
-		private Instrument m_instr;
 
 		/// <summary>The position to be managed</summary>
-		public Position Position
+		public virtual Position Position
 		{
 			[DebuggerStepThrough] get { return m_position; }
 			private set
 			{
 				if (m_position == value) return;
+				if (m_position != null)
+				{
+					Profit                 = 0;
+					LastProfit             = 0;
+					PeakProfit             = 0;
+					PeakProfitIndex        = 0;
+					LastProfitableIndex    = 0;
+					CandlesSincePeak       = 0;
+					CandlesSinceProfitable = 0;
+					TicksSincePeak         = 0;
+					TicksSinceProfitable   = 0;
+					Profitable             = true;
+					NewPeak                = true;
+					IsGain                 = false;
+				}
 				m_position = value;
+				if (m_position != null)
+				{
+
+					EntryIndex             = Instrument.IndexAt(m_position.EntryTime) - Instrument.IdxFirst;
+					Profit                 = m_position.NetProfit;
+					LastProfit             = m_position.NetProfit;
+					PeakProfit             = m_position.NetProfit;
+					PeakProfitIndex        = EntryIndex;
+					LastProfitableIndex    = EntryIndex;
+					CandlesSincePeak       = 0;
+					CandlesSinceProfitable = 0;
+					TicksSincePeak         = 0;
+					TicksSinceProfitable   = 0;
+					Profitable             = true;
+					NewPeak                = true;
+					IsGain                 = false;
+				}
 			}
 		}
 		private Position m_position;
 
-		/// <summary>The current state of managing a open position</summary>
-		public EState State
-		{
-			[DebuggerStepThrough] get { return m_state; }
-			private set
-			{
-				if (m_state == value) return;
-				m_state = value;
-				StateChanged.Raise(this);
-			}
-		}
-		private EState m_state;
-		public enum EState
-		{
-			TradeLooksGood,
-			Scalp,
-			TrailingSL,
-			NoRecentProfitPeaks,
-			LookForExitAfterNextPeak,
-			CloseAtNextNonPeak,
-			CloseAtNextProfitDrop,
-			BailIfProfitable,
-			PositionClosed,
-		}
-		public event EventHandler StateChanged;
+		/// <summary>The (CAlgo) index of when 'Position' was opened</summary>
+		public int EntryIndex { get; private set; }
 
-		/// <summary>How many candles with a new profit peak before we start getting nervous</summary>
-		public int ColdFeetCount { get; set; }
-
-		/// <summary>The maximum profit reached with the current trade</summary>
-		public AcctCurrency PeakProfit { get; private set; }
+		/// <summary>The current profit value (basically NetProfit)</summary>
+		public AcctCurrency Profit { get; private set; }
 
 		/// <summary>The profit value last time step was called</summary>
 		public AcctCurrency LastProfit { get; private set; }
+
+		/// <summary>The maximum profit reached with the current trade</summary>
+		public AcctCurrency PeakProfit { get; private set; }
 
 		/// <summary>Where the peak profit was detected</summary>
 		public int PeakProfitIndex { get; private set; }
@@ -106,50 +135,147 @@ namespace Rylobot
 		/// <summary>The number of price ticks since the trade was profitable</summary>
 		public int TicksSinceProfitable { get; private set; }
 
+		/// <summary>True if the position is currently profitable</summary>
+		public bool Profitable { get; private set; }
+
+		/// <summary>True if the current step is a new profit peak</summary>
+		public bool NewPeak { get; private set; }
+
+		/// <summary>True if the current step is a gain in profit</summary>
+		public bool IsGain { get; private set; }
+
+		/// <summary>The minimum reward to risk ratio for the position (i.e. don't take less profit than this)</summary>
+		public double MinRtR { get; set; }
+
+		/// <summary>The (CAlgo) index that profit exceeded the MinRtR (or null)</summary>
+		public int? MinRtRCrossedIndex { get; private set; }
+
+		/// <summary>True once the position has closed</summary>
+		public bool Closed { get; private set; }
+
+		/// <summary>Output the current state</summary>
+		public virtual void Dump()
+		{
+			if (Strategy != null)
+				Strategy.Dump();
+		}
+
+		/// <summary>Manage an open trade. This should be called on each tick</summary>
+		public virtual void Step()
+		{
+			if (Closed)
+				return;
+
+			LastProfit = Profit;
+			Profit     = Position.NetProfit;
+			IsGain     = Profit > LastProfit;
+
+			// Track profitable
+			Profitable = Position.NetProfit >= 0;
+			LastProfitableIndex = Profitable ? Instrument.Count : LastProfitableIndex;
+
+			// Profit peaks
+			NewPeak         = Position.NetProfit >= PeakProfit;
+			PeakProfit      = NewPeak ? Position.NetProfit : PeakProfit;
+			PeakProfitIndex = NewPeak ? Instrument.Count : PeakProfitIndex;
+
+			// How long since a new profit peak was made
+			CandlesSincePeak = NewPeak ? 0 : Instrument.Count - PeakProfitIndex;
+			TicksSincePeak   = NewPeak ? 0 : TicksSincePeak + 1;
+
+			// How long since the trade was profitable at all
+			CandlesSinceProfitable = Profitable ? 0 : Instrument.Count - LastProfitableIndex;
+			TicksSinceProfitable   = Profitable ? 0 : TicksSinceProfitable + 1;
+
+			// Check whether 'MinRtR' has been exceeded
+			if (MinRtRCrossedIndex == null && MinRtRExceeded())
+				MinRtRCrossedIndex = Instrument.Count - 1;
+
+			StepCore();
+		}
+		protected abstract void StepCore();
+
+		/// <summary>True if the current value of the position exceeds the MinRtR value</summary>
+		protected bool MinRtRExceeded()
+		{
+			// Get the SL to determine the minimum TP
+			var sl_rel = Position.StopLossRel();
+			if (sl_rel <= 0)
+				return true;
+
+			// Compare the current value to the SL
+			var rel = Position.ValueAt(Instrument.LatestPrice);
+			var tp_rel = MinRtR * sl_rel;
+			return rel >= tp_rel;
+		}
+
+		/// <summary>Handle position closed</summary>
+		private void HandlePositionClosed(PositionClosedEventArgs args)
+		{
+			if (args.Position.Id != Position.Id) return;
+			Closed = true;
+		}
+	}
+
+	/// <summary>A position manager that closes a position when it looks like it's done</summary>
+	public class PositionManagerNervious :PositionManager
+	{
+		/// <summary>State machine states</summary>
+		public enum EState
+		{
+			TradeLooksGood,
+			Scalp,
+			TrailingSL,
+			NoRecentProfitPeaks,
+			LookForExitAfterNextPeak,
+			CloseAtNextNonPeak,
+			CloseAtNextProfitDrop,
+			BailIfProfitable,
+			PositionClosed,
+		}
+
+		/// <summary>Manage an active position</summary>
+		public PositionManagerNervious(Strategy strat, Position pos)
+			:base(strat, pos)
+		{
+			ColdFeetCount = 10;
+			State         = EState.TradeLooksGood;
+		}
+
+		/// <summary>How many candles without a new profit peak before we start getting nervous</summary>
+		public int ColdFeetCount { get; set; }
+
+		/// <summary>The current state of managing a open position</summary>
+		public EState State
+		{
+			[DebuggerStepThrough] get { return m_state; }
+			private set
+			{
+				if (m_state == value) return;
+				m_state = value;
+				StateChanged.Raise(this);
+			}
+		}
+		private EState m_state;
+
+		/// <summary>Raised when the state changes</summary>
+		public event EventHandler StateChanged;
+
 		/// <summary>The profit limit at which we want to take profits as soon as possible</summary>
 		public AcctCurrency ScalpThreshold
 		{
-			get { return Bot.Broker.Balance * 0.01; }
+			get { return Broker.Balance * 0.01; }
 		}
 
 		/// <summary>The profit limit at which we move the SL to break even</summary>
 		public AcctCurrency BreakEvenThreshold
 		{
-			get { return Bot.Broker.Balance * 0.005; }
+			get { return Broker.Balance * 0.005; }
 		}
 
 		/// <summary>Manage an open trade. This should be called on each tick</summary>
-		public void Step()
+		protected override void StepCore()
 		{
-			if (Position == null || State == EState.PositionClosed)
-				return;
-
-			// Current profit state
-			var profitable = Position.NetProfit > 0;
-			var new_peak = Position.NetProfit >= PeakProfit;
-			var better = Position.NetProfit > LastProfit;
-			var profit = Instrument.Symbol.AcctToQuote(Position.NetProfit);
-			if (new_peak)
-			{
-				PeakProfit = Position.NetProfit;
-				PeakProfitIndex = Instrument.Count;
-			}
-
-			// How long since a new profit peak was made
-			CandlesSincePeak = new_peak ? 0 : Instrument.Count - PeakProfitIndex;
-			TicksSincePeak   = new_peak ? 0 : TicksSincePeak + 1;
-
-			// How long since the trade was profitable at all
-			CandlesSinceProfitable = profitable ? 0 : Instrument.Count - LastProfitableIndex;
-			TicksSinceProfitable   = profitable ? 0 : TicksSinceProfitable + 1;
-
-			// Enter scalp mode when profit > scalp threshold
-			if (State == EState.TradeLooksGood && Position.NetProfit > ScalpThreshold)
-			{
-				Debugging.Trace("Entering scalp mode - Profit ${0} > Threshold ${1}".Fmt(Position.NetProfit, ScalpThreshold));
-				State = EState.Scalp;
-			}
-
 			// Move SL to break even when profit > BreakEvenThreshold (adjusted for Spread)
 			var adjusted_profit = Position.NetProfit - Instrument.Symbol.QuoteToAcct(Instrument.Spread * Position.Volume);
 			if (adjusted_profit > BreakEvenThreshold && Position.StopLossRel() > 0)
@@ -157,7 +283,7 @@ namespace Rylobot
 				Debugging.Trace("Moving SL to break even - Profit ${0} > Threshold ${1}".Fmt(Position.NetProfit, BreakEvenThreshold));
 
 				var trade = new Trade(Instrument, Position) { SL = Position.EntryPrice + Position.Sign() * 2.0 * Instrument.Spread };
-				Bot.Broker.ModifyOrder(Position, trade);
+				Broker.ModifyOrder(Position, trade);
 			}
 
 			// What about candle follow mode:
@@ -167,17 +293,25 @@ namespace Rylobot
 			// A state machine for managing the position
 			switch (State)
 			{
+			// In this state, the trade looks good. Keep it open.
 			case EState.TradeLooksGood:
+				#region
 				{
-					// In this state, the trade looks good. Keep it open.
-					if (CandlesSincePeak >= ColdFeetCount)
+					// Enter scalp mode when profit > scalp threshold
+					if (Profit > ScalpThreshold)
+					{
+						Debugging.Trace("Entering scalp mode - Profit ${0} > Threshold ${1}".Fmt(Profit, ScalpThreshold));
+						State = EState.Scalp;
+					}
+					else if (CandlesSincePeak >= ColdFeetCount)
 					{
 						// It's been a while since a profit peak was set...
-						State = EState.LookForExitAfterNextPeak;
 						Debugging.Trace("Getting nervous... no peaks for a while");
+						State = EState.LookForExitAfterNextPeak;
 					}
 					break;
 				}
+				#endregion
 			case EState.Scalp:
 				{
 					// In this mode we've made a decent profit.
@@ -234,7 +368,7 @@ namespace Rylobot
 					}
 					if (close)
 					{
-						Bot.Broker.ClosePosition(Position);
+						Broker.ClosePosition(Position);
 						State = EState.PositionClosed;
 					}
 					break;
@@ -254,7 +388,7 @@ namespace Rylobot
 							sign < 0 && limit < Position.StopLoss)
 						{
 							var trade = new Trade(Instrument, Position) { SL = limit };
-							Bot.Broker.ModifyOrder(Position, trade);
+							Broker.ModifyOrder(Position, trade);
 						}
 					}
 					break;
@@ -264,7 +398,7 @@ namespace Rylobot
 					// In this state, the profit hit a peak a while ago,
 					// and we're waiting for it to come back to that peak
 					// level so we can bail out.
-					if (new_peak)
+					if (NewPeak)
 					{
 						State = EState.CloseAtNextNonPeak;
 						Debugging.Trace("Closing at next non peak");
@@ -280,9 +414,9 @@ namespace Rylobot
 				{
 					// In this state we're looking to exit the trade the
 					// next time the profit peak is not set
-					if (!new_peak)
+					if (!NewPeak)
 					{
-						Position = Bot.Broker.ClosePosition(Position);
+						Broker.ClosePosition(Position);
 						State = EState.PositionClosed;
 						Debugging.Trace("Position closed - non-peak");
 					}
@@ -292,9 +426,9 @@ namespace Rylobot
 				{
 					// In this state we just want out with the minimum of loss.
 					// Bail as soon as the profit decreases
-					if (!better)
+					if (!IsGain)
 					{
-						Position = Bot.Broker.ClosePosition(Position);
+						Broker.ClosePosition(Position);
 						State = EState.PositionClosed;
 						Debugging.Trace("Position closed - profit dropped");
 					}
@@ -304,13 +438,13 @@ namespace Rylobot
 				{
 					// In this state, it's been too long since the peak was last
 					// hit, bail out if profitable
-					if (new_peak)
+					if (NewPeak)
 					{
 						State = EState.CloseAtNextNonPeak;
 					}
 					else if (Position.NetProfit > 0)
 					{
-						Position = Bot.Broker.ClosePosition(Position);
+						Broker.ClosePosition(Position);
 						State = EState.PositionClosed;
 					}
 					else if (CandlesSinceProfitable > 4 * ColdFeetCount)
@@ -321,16 +455,174 @@ namespace Rylobot
 					break;
 				}
 			}
+		}
+	}
 
-			// Track peak and profitable positions
-			if (profitable)
+	/// <summary>Trailing stop loss that uses the worst of the last N candles</summary>
+	public class PositionManagerCandleFollow :PositionManager
+	{
+		public PositionManagerCandleFollow(Strategy strat, Position pos, int num_candles)
+			:base(strat, pos)
+		{
+			NumCandles = num_candles;
+		}
+
+		/// <summary>The look-back length</summary>
+		public int NumCandles { get; private set; }
+
+		/// <summary></summary>
+		protected override void StepCore()
+		{
+			if (!Instrument.NewCandle)
+				return;
+
+			// Look at the last few candles to find the level for the SL
+			var range = Instrument.PriceRange(-NumCandles, 1);
+
+			// Choose the worst over the range and adjust the SL
+			if (Position.Sign() > 0)
 			{
-				LastProfitableIndex = Instrument.Count;
+				var sl = range.Beg - 5 * Instrument.PipSize - Instrument.Spread;
+				if (sl > Position.StopLoss || Position.StopLoss == null)
+					Broker.ModifyOrder(Instrument, Position, sl:sl);
 			}
-			if (Position != null)
+			else
 			{
-				LastProfit = Position.NetProfit;
+				var sl = range.End + 5 * Instrument.PipSize + Instrument.Spread;
+				if (sl < Position.StopLoss || Position.StopLoss == null)
+					Broker.ModifyOrder(Instrument, Position, sl:sl);
 			}
+		}
+	}
+
+	/// <summary>Take profit when the price drops to a percentage of the peak</summary>
+	public class PositionManagerPeakPC :PositionManager
+	{
+		public PositionManagerPeakPC(Strategy strat, Position pos, double peak_frac = 0.7)
+			:base(strat, pos)
+		{
+			PeakFrac = peak_frac;
+		}
+
+		/// <summary>The pull back from the peak</summary>
+		public double PeakFrac
+		{
+			get;
+			private set;
+		}
+
+		/// <summary>True if the price got close to the threshold</summary>
+		private bool Nearly
+		{
+			get;
+			set;
+		}
+
+		protected override void StepCore()
+		{
+			// Only apply this when in profit and the TP has been crossed
+			if (Profit <= 0 || MinRtRCrossedIndex == null)
+				return;
+
+			// The fraction of the peak profit
+			var ratio = Profit / PeakProfit;
+			Debugging.Trace("PeakPC ratio: {0:N3}".Fmt(ratio));
+			if (ratio <= 0)
+				return;
+
+			// Watch for the price dipping to just above the threshold
+			if (ratio < PeakFrac + 0.1)
+				Nearly = true;
+
+			// Close if, we've passed the min RtR
+			// and the ratio is below the threshold,
+			// or we nearly closed and now the price is at a high again
+			if (ratio < PeakFrac || (Nearly && ratio > 0.95))
+				Bot.ClosePosition(Position);
+		}
+	}
+
+	/// <summary>A position manager that tries to maximise profits</summary>
+	public class PositionManagerLetHerRun :PositionManager
+	{
+		public PositionManagerLetHerRun(Strategy strat, Position pos)
+			:base(strat, pos)
+		{
+			PeakRatio = 0.0;
+		}
+
+		/// <summary>A scalp threshold. If price spikes higher than this, close out immediately</summary>
+		public double PeakRatio { get; private set; }
+
+		/// <summary></summary>
+		protected override void StepCore()
+		{
+			// Determine the age of the trade (in fractional candles)
+			var age = Instrument.IdxNow - (double)(EntryIndex + Instrument.IdxFirst);
+			if (age < 0.1)
+				return;
+
+			// Get the SL to determine the minimum TP
+			var sl_rel = Position.StopLossRel();
+			if (sl_rel <= 0)
+				return;
+
+			// If the profit is less than the required RtR, do nothing until it's crossed
+			// If the profit has cross the MinRtR and fallen back, close out
+			var rel = Position.ValueAt(Instrument.LatestPrice);
+			var tp_rel = MinRtR * sl_rel;
+			if (rel < tp_rel)
+			{
+				if (MinRtRCrossedIndex != null && (MinRtRCrossedIndex.Value - EntryIndex) >= 1)
+					Broker.ClosePosition(Position);
+
+				return;
+			}
+
+			//
+			var min_ratio = (double)tp_rel/ (Instrument.PipSize * age);
+			var ratio     = (double)rel   / (Instrument.PipSize * age);
+
+			PeakRatio = Math.Max(PeakRatio, ratio);
+
+			Debugging.Trace("Ratio: {0}".Fmt(ratio));
+
+			//// Spike! grab now
+			//if (area > MaxProfitGradient)
+			//{
+			//	Debugging.Trace("Profit Spike!: {0:N3} / {1:N3}".Fmt(ratio, MaxProfitGradient));
+			//	Broker.ClosePosition(Position);
+			//}
+			//else if (ratio < min_grad)
+			//{
+			//}
+
+			//// Take profit when the aspect drops below the threshold
+			//if (ratio < 2*min_grad)
+			//	Broker.ClosePosition(Position);
+		}
+	}
+
+	/// <summary>Close a trade after a fixed number of candles</summary>
+	public class PositionManagerFixedTime :PositionManager
+	{
+		public PositionManagerFixedTime(Strategy strat, Position pos, int num_candles)
+			:base(strat, pos)
+		{
+			NumCandles = num_candles;
+		}
+
+		/// <summary>The number of candles to hold the position for</summary>
+		public int NumCandles { get; set; }
+
+		/// <summary></summary>
+		protected override void StepCore()
+		{
+			if (!Instrument.NewCandle)
+				return;
+
+			if (Instrument.Count - EntryIndex >= NumCandles)
+				Bot.ClosePosition(Position);
 		}
 	}
 }

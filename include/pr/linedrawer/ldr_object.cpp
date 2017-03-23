@@ -9,6 +9,7 @@
 #include <set>
 #include <unordered_map>
 #include <mutex>
+#include "pr/meta/optional.h"
 #include "pr/linedrawer/ldr_object.h"
 #include "pr/common/assert.h"
 #include "pr/common/hash.h"
@@ -39,6 +40,7 @@ namespace pr
 		using GCont = pr::vector<pr::rdr::NuggetProps>;
 		using ModelCont = ParseResult::ModelLookup;
 		using EResult = pr::script::EResult;
+		template <typename T> using optional = pr::optional<T>;
 
 		struct CacheData
 		{
@@ -2363,6 +2365,8 @@ namespace pr
 			CCont m_colours;
 			int m_xcolumn;
 			float m_width;
+			optional<float> m_x0;
+			optional<float> m_y0;
 
 			ObjectCreator(ParseParams& p)
 				:IObjectCreator(p)
@@ -2371,6 +2375,8 @@ namespace pr
 				,m_colours()
 				,m_xcolumn(0)
 				,m_width(0)
+				,m_x0()
+				,m_y0()
 			{}
 			void Parse() override
 			{
@@ -2464,8 +2470,28 @@ namespace pr
 			{
 				switch (kw) {
 				default: return IObjectCreator::ParseKeyword(kw);
-				case EKeyword::XColumn: p.m_reader.IntS(m_xcolumn, 10); return true;
-				case EKeyword::Width: p.m_reader.RealS(m_width); return true;
+				case EKeyword::YAxis:
+					{
+						m_x0 = 0.0f;
+						p.m_reader.RealS(*m_x0);
+						return true;
+					}
+				case EKeyword::XAxis:
+					{
+						m_y0 = 0.0f;
+						p.m_reader.RealS(*m_y0);
+						return true;
+					}
+				case EKeyword::XColumn:
+					{
+						p.m_reader.IntS(m_xcolumn, 10);
+						return true;
+					}
+				case EKeyword::Width:
+					{
+						p.m_reader.RealS(m_width);
+						return true;
+					}
 				case EKeyword::Colours:
 					{
 						p.m_reader.SectionStart();
@@ -2572,15 +2598,15 @@ namespace pr
 					pr::rdr::Range irange(lines.size(), lines.size() + 4);
 
 					// Draw the X/Y axis through 0,0 if near by, otherwise around the bounds of the data
-					auto x0 = xrange.m_beg > 0 + 2*xrange.size() ? xrange.m_beg : xrange.m_end < 0 - 2*xrange.size() ? xrange.m_end : 0.0f;
-					auto y0 = yrange.m_beg > 0 + 2*yrange.size() ? yrange.m_beg : yrange.m_end < 0 - 2*yrange.size() ? yrange.m_end : 0.0f;
+					if (!m_x0) m_x0 = xrange.m_beg > 0 + 2*xrange.size() ? xrange.m_beg : xrange.m_end < 0 - 2*xrange.size() ? xrange.m_end : 0.0f;
+					if (!m_y0) m_y0 = yrange.m_beg > 0 + 2*yrange.size() ? yrange.m_beg : yrange.m_end < 0 - 2*yrange.size() ? yrange.m_end : 0.0f;
 
-					// X Axis
+					// X/Y Axis
 					auto ibase = verts.size();
-					verts.push_back(rot * v4(std::min(x0, xrange.m_beg - 0.05f * xrange.size()), y0, 0.0f, 1.0f));
-					verts.push_back(rot * v4(std::max(x0, xrange.m_end + 0.05f * xrange.size()), y0, 0.0f, 1.0f));
-					verts.push_back(rot * v4(x0, std::min(y0, yrange.m_beg - 0.05f * yrange.size()), 0.0f, 1.0f));
-					verts.push_back(rot * v4(x0, std::max(y0, yrange.m_end + 0.05f * yrange.size()), 0.0f, 1.0f));
+					verts.push_back(rot * v4(std::min(*m_x0, xrange.m_beg - 0.05f * xrange.size()), *m_y0, 0.0f, 1.0f));
+					verts.push_back(rot * v4(std::max(*m_x0, xrange.m_end + 0.05f * xrange.size()), *m_y0, 0.0f, 1.0f));
+					verts.push_back(rot * v4(*m_x0, std::min(*m_y0, yrange.m_beg - 0.05f * yrange.size()), 0.0f, 1.0f));
+					verts.push_back(rot * v4(*m_x0, std::max(*m_y0, yrange.m_end + 0.05f * yrange.size()), 0.0f, 1.0f));
 
 					lines.push_back(static_cast<pr::uint16>(ibase + 0));
 					lines.push_back(static_cast<pr::uint16>(ibase + 1));
@@ -3781,6 +3807,8 @@ LR"(// A mesh of lines, faces, or tetrahedra.
 	4,  6,  10,       // Trailing blank values are ignored
 	                  // Trailing new lines are ignored
 	*XColumn { 0 }    // Optional. Define which column to use as the X axis values (default 0). Use -1 to plot vs. index position
+	*XAxis { 2 }      // Optional. Explicit X axis Y intercept
+	*YAxis { 0 }      // Optional. Explicit Y axis X intercept
 	*Colours          // Optional. Assign colours to each column
 	{
 		FF00FF00

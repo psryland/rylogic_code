@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using cAlgo.API;
@@ -28,7 +27,7 @@ namespace Rylobot
 			base.OnStart();
 			Instance = this;
 			TickNumber = 0;
-			BaseEquity = Account.Equity;
+			BalanceMinimum = 0;
 
 			// Load the bot settings
 			Settings = new Settings(Settings.DefaultFilepath);
@@ -49,7 +48,9 @@ namespace Rylobot
 			// Create the strategies to use
 			Strats = new List<Strategy>();
 			//Strats.Add(new StrategyMain(this));
-			Strats.Add(new StrategyMeanCross(this));
+			Strats.Add(new StrategyPriceDistribution(this, 0.2)); // This is nearly working
+			//Strats.Add(new StrategyMAExtreme(this, 0.2));
+			//Strats.Add(new StrategyBreakOut(this, 0.2));
 			//Strats.Add(new StrategyRevenge(this));
 			//Strats.Add(new StrategyTrend(this));
 			//Strats.Add(new StrategyHedge(this));
@@ -57,6 +58,8 @@ namespace Rylobot
 			//Strats.Add(new StrategyEmaCross(this));
 			//Strats.Add(new StrategySpike(this));
 			//Strats.Add(new StrategyPeaks(this));
+
+			Debug.Assert(Strats.Sum(x => x.Risk) < 1.001);
 		}
 		protected override void OnStop()
 		{
@@ -76,14 +79,15 @@ namespace Rylobot
 		protected override void OnTick()
 		{
 			++TickNumber;
+			Debugging.BreakOnPointOfInterest();
 
 			// Emergency stop
-			var max_loss_ratio = (1.0 - 0.01 * Settings.MaxRiskPC);
-			BaseEquity = Math.Max((double)BaseEquity, Account.Equity * max_loss_ratio);
-			if (Account.Equity < BaseEquity * max_loss_ratio)
+			var max_loss_ratio = (1.0 - 0.01*Settings.MaxRiskPC);
+			BalanceMinimum = Math.Max((double)BalanceMinimum, Account.Balance * max_loss_ratio);
+			if (Account.Equity < BalanceMinimum)
 			{
-				Debugging.Trace("Account equity (${0}) dropped below max risk percentage. Stopping".Fmt(Account.Equity));
-				Print("Account equity (${0}) dropped below max risk percentage. Stopping".Fmt(Account.Equity));
+				Debugging.Trace("Account equity (${0}) dropped below the balance minimum (${1}). Stopping".Fmt(Account.Equity, BalanceMinimum));
+				Print("Account equity (${0}) dropped below the balance minimum (${1}). Stopping".Fmt(Account.Equity, BalanceMinimum));
 				Broker.CloseAllPositions();
 				Stop();
 				return;
@@ -179,8 +183,8 @@ namespace Rylobot
 		}
 		private Instrument m_instr;
 
-		/// <summary>The equity at the time the Bot was started</summary>
-		public AcctCurrency BaseEquity
+		/// <summary>The account balance used for emergency stop</summary>
+		public AcctCurrency BalanceMinimum
 		{
 			get;
 			private set;

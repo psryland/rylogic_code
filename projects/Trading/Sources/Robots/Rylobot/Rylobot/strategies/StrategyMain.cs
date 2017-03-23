@@ -19,8 +19,8 @@ namespace Rylobot
 		//  - Aim for > 50% success
 		//  - No hedging etc...
 		//  
-		public StrategyMain(Rylobot bot)
-			:base(bot, "StrategyMain")
+		public StrategyMain(Rylobot bot, double risk)
+			:base(bot, "StrategyMain", risk)
 		{
 		}
 		public override void Dispose()
@@ -92,7 +92,7 @@ namespace Rylobot
 		/// <summary>Watch for pending order filled</summary>
 		protected override void OnPositionOpened(Position position)
 		{
-			PosMgr = new PositionManager(Instrument, position);
+			PosMgr = new PositionManagerNervious(this, position);
 		}
 
 		/// <summary>Watch for position closed</summary>

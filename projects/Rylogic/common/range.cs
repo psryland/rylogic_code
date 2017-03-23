@@ -50,23 +50,56 @@ namespace pr.common
 		}
 
 		/// <summary>Construct from a range</summary>
-		public Range(long begin, long end) { Beg = begin; End = end; }
+		public Range(long begin, long end)
+		{
+			Beg = begin;
+			End = end;
+		}
 
 		/// <summary>True if the range spans zero elements</summary>
-		public bool Empty { get { return End == Beg; } }
+		public bool Empty
+		{
+			get { return End == Beg; }
+		}
 
 		/// <summary>Get/Set the number of elements in the range. Setting changes 'End' only</summary>
-		public long Count { get { return End - Beg; } set { End = Beg + value; } }
-		public long Size  { get { return Count; } set { Count = value; } }
+		public long Count
+		{
+			get { return End - Beg; }
+			set { End = Beg + value; }
+		}
+		public long Size
+		{
+			get { return Count; }
+			set { Count = value; }
+		}
 
 		/// <summary>Get/Set the middle of the range. Setting the middle point does not change 'Size', i.e. 'Begin' and 'End' are both potentially moved</summary>
-		public long Mid { get { return (Beg + End) / 2; } set { var count = Size; Beg = value - count/2; End = value + (count+1)/2; } }
+		public long Mid
+		{
+			get { return (Beg + End) / 2; }
+			set
+			{
+				var count = Size;
+				Beg = value - count/2;
+				End = value + (count+1)/2;
+			}
+		}
+
+		/// <summary>Exact mid point</summary>
+		public double Midf
+		{
+			get { return 0.5 * (Beg + End);  }
+		}
 
 		/// <summary>Empty the range and reset to [0,0)</summary>
-		public void Clear() { Beg = End = 0; }
+		public void Clear()
+		{
+			Beg = End = 0;
+		}
 
 		// Casting helpers
-		public int Begi   { get { return (int)Beg; } }
+		public int Begi   { get { return (int)Beg;   } }
 		public int Endi   { get { return (int)End;   } }
 		public int Counti { get { return (int)Count; } }
 		public int Sizei  { get { return (int)Size;  } }

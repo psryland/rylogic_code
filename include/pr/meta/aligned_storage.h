@@ -4,8 +4,6 @@
 //******************************************
 
 #pragma once
-#ifndef PR_META_ALIGNED_STORAGE_H
-#define PR_META_ALIGNED_STORAGE_H
 
 // <type_traits> was introduced in sp1
 #if defined(_MSC_FULL_VER) && _MSC_FULL_VER < 150030729
@@ -21,6 +19,7 @@ namespace pr
 	{
 		#if _MSC_VER >= 1600
 		
+		// Use using buffer_t = aligned_storage<sizeof(Thing), alignof(Thing)>::type;
 		template <std::size_t Size, std::size_t Alignment>
 		struct aligned_storage :std::aligned_storage<Size,Alignment>
 		{};
@@ -50,5 +49,3 @@ namespace pr
 		#endif
 	}
 }
-
-#endif

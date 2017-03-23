@@ -12,10 +12,10 @@ namespace Rylobot
 	{
 		private const int EmaPeriods = 55;
 
-		public StrategyHedge(Rylobot bot)
-			:base(bot, "StrategyHedge")
+		public StrategyHedge(Rylobot bot, double risk)
+			:base(bot, "StrategyHedge", risk)
 		{
-			EMA = new Indicator(Instrument, Bot.Indicators.ExponentialMovingAverage(Instrument.Data.Close, EmaPeriods).Result);
+			EMA = Indicator.EMA(Instrument, EmaPeriods);
 		}
 
 		/// <summary>Return the suitability of this strategy</summary>
@@ -36,13 +36,13 @@ namespace Rylobot
 			get
 			{
 				var slope = EMA.FirstDerivative(0);
-				var trend = Instrument.MeasureTrend(slope);
+				var trend = Instrument.MeasureTrendFromSlope(slope);
 				return Math.Abs(trend) > 0.5 ? Math.Sign(trend) : 0;
 			}
 		}
 
 		/// <summary>Debugging output</summary>
-		private void Dump()
+		public override void Dump()
 		{
 			Debugging.LogInstrument();
 		}

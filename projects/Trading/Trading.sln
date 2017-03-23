@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylobot", "D:\Users\Paul\Do
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sessions", "D:\Users\Paul\Documents\cAlgo\Sources\Indicators\Sessions\Sessions\Sessions.csproj", "{411AA76A-8FBF-4276-BBE0-7359A649047C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic", "..\Rylogic\Rylogic.csproj", "{1735C773-5477-45E6-9CBF-5F2B6DC707EF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{411AA76A-8FBF-4276-BBE0-7359A649047C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{411AA76A-8FBF-4276-BBE0-7359A649047C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{411AA76A-8FBF-4276-BBE0-7359A649047C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

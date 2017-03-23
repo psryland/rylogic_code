@@ -71,6 +71,12 @@ namespace Rylobot
 			}
 		}
 
+		/// <summary>The sign of this order</summary>
+		public int Sign
+		{
+			get { return TradeType.Sign(); }
+		}
+
 		/// <summary>The entry price of the trade</summary>
 		public QuoteCurrency EP
 		{
@@ -156,7 +162,8 @@ namespace Rylobot
 			get { return TP != null ? TradeType.Sign() * (TP.Value - EP) : 0; }
 		}
 
-		/// <summary>Return the value (in quote currency) of this order when the price is at 'price'</summary>
+		/// <summary>Return the value (in quote currency) of this order when the price is at 'price' (not scaled by volume)
+		/// Positive values mean in profit. Negative values mean loss</summary>
 		public QuoteCurrency ValueAt(QuoteCurrency price, bool consider_sl, bool consider_tp)
 		{
 			var sign = TradeType.Sign();
@@ -170,8 +177,15 @@ namespace Rylobot
 				price = TP.Value;
 
 			// Return the position value in quote currency
-			var dprice = price - EP;
-			return sign * dprice * Volume;
+			return sign * (price - EP);
+		}
+
+		/// <summary>Return the value of this order if it was to be closed at the given price tick</summary>
+		public QuoteCurrency ValueAt(PriceTick price, bool consider_sl, bool consider_tp)
+		{
+			// Closing a Buy means selling to the highest *bid*er
+			var p = TradeType == TradeType.Buy ? price.Bid : price.Ask;
+			return ValueAt(p, consider_sl, consider_tp);
 		}
 
 		/// <summary>Return the normalised value ([-1,+1]) of this order at 'price'. Only valid if the order has SL and TP levels</summary>

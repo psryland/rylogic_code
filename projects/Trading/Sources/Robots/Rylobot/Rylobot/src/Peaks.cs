@@ -7,6 +7,15 @@ using pr.maths;
 
 namespace Rylobot
 {
+	/// <summary>Types of patterns found using 'PricePeaks'</summary>
+	public enum EPeakPattern
+	{
+		BreakOutHigh,
+		BreakOutLow,
+		HighReversal,
+		LowReversal,
+	}
+
 	/// <summary>Detects the highs and lows of the price</summary>
 	[DebuggerDisplay("[{Beg},{End}) strength={Strength}  hh={HigherHighs} hl={HigherLows} lh={LowerHighs} ll={LowerLows}")]
 	public class PricePeaks
@@ -241,7 +250,7 @@ namespace Rylobot
 					TrendLowStrength  > TrendHighStrength ? TrendLow.A  :
 					0.0;
 
-				var trend = Instrument.MeasureTrend(slope);
+				var trend = Instrument.MeasureTrendFromSlope(slope);
 				return Math.Abs(trend) >= 0.5 ? Math.Sign(trend) : 0;
 			}
 		}

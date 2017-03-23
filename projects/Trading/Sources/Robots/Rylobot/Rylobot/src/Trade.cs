@@ -17,6 +17,21 @@ namespace Rylobot
 		//  Trades are different to 'Position', 'PendingOrder', or 'Order'
 		//  SL/TP are nullable because they are not required, even though it's generally a good idea to have them
 
+		/// <summary>Trade state</summary>
+		public enum EResult
+		{
+			Unknown,
+			Pending,
+
+			// All below here are considered open
+			Open,
+
+			// All below here are considered closed
+			Closed,
+			HitSL,
+			HitTP
+		}
+
 		/// <summary>Create a trade with explicit values</summary>
 		public Trade(Instrument instr, TradeType tt, string label, QuoteCurrency ep, QuoteCurrency? sl, QuoteCurrency? tp, long volume, string comment = null, Idx? idx = null)
 		{
@@ -36,22 +51,24 @@ namespace Rylobot
 			TP         = tp;
 			Volume     = volume;
 
-			PeakProfit = 0.0;
-			PeakLoss   = 0.0;
+			PeakProfit  = 0.0;
+			PeakLoss    = 0.0;
+			NetProfit   = 0.0;
+			GrossProfit = 0.0;
 		}
 
 		/// <summary>
 		/// Create a trade with automatic SL and TP levels set.
-		/// SL/TP levels are set based on the current account balance (even if 'neg_idx' != 0)</summary>
-		/// <param name="bot">The access to the CAlgo interface</param>
+		/// SL/TP levels are set based on the current account balance (even if 'idx' != 0)</summary>
 		/// <param name="instr">The instrument to be traded</param>
 		/// <param name="tt">Whether to buy or sell</param>
 		/// <param name="label">Optional. An identifying name for the trade</param>
-		/// <param name="idx">Optional. The instrument index of when the trade was created. (default is the current time)</param>
 		/// <param name="ep">Optional. The price at which the trade was entered. (default is current ask/bid price)</param>
 		/// <param name="sl">Optional. The stop loss (absolute) to use instead of automatically finding one</param>
 		/// <param name="tp">Optional. The take profit (absolute) to use instead of automatically finding one</param>
 		/// <param name="risk">Optional. Scaling factor for the amount to risk. (default is 1.0)</param>
+		/// <param name="comment">Optional. A comment/tag associated with the trade</param>
+		/// <param name="idx">Optional. The instrument index of when the trade was created. (default is the current time)</param>
 		public Trade(Instrument instr, TradeType tt, string label = null, QuoteCurrency? ep = null, QuoteCurrency? sl = null, QuoteCurrency? tp = null, double? risk = null, string comment = null, Idx? idx = null)
 			:this(instr, tt, label, 0, null, null, 0, comment:comment, idx:idx)
 		{
@@ -102,11 +119,11 @@ namespace Rylobot
 		}
 
 		/// <summary>Construct a trade from an existing position</summary>
-		public Trade(Instrument instr, Position pos, bool live = true)
+		public Trade(Instrument instr, Position pos, EResult result = EResult.Open)
 			:this(instr, pos.TradeType, pos.Label, pos.EntryPrice, pos.StopLoss, pos.TakeProfit, pos.Volume, comment:pos.Comment)
 		{
 			CAlgoId = pos.Id;
-			Result = live ? EResult.Open : EResult.Closed;
+			Result = result;
 
 			EntryIndex = instr.IndexAt(pos.EntryTime) - instr.IdxFirst;
 			ExitIndex  = instr.IndexAt(instr.Bot.UtcNow) - instr.IdxFirst;
@@ -115,14 +132,17 @@ namespace Rylobot
 			// Sell at the ask price, then: loss = bid - EP, profit = EP - bid
 			PeakProfit = Math.Max(0.0, (double)(TradeType == TradeType.Buy ? (instr.LatestPrice.Ask - EP) : (EP - instr.LatestPrice.Bid)));
 			PeakLoss   = Math.Min(0.0, (double)(TradeType == TradeType.Buy ? (EP - instr.LatestPrice.Ask) : (instr.LatestPrice.Bid - EP)));
+
+			NetProfit   = pos.NetProfit;
+			GrossProfit = pos.GrossProfit;
 		}
 
 		/// <summary>Construct a trade from an existing pending order</summary>
-		public Trade(Instrument instr, PendingOrder ord, bool live = true)
+		public Trade(Instrument instr, PendingOrder ord, EResult result = EResult.Pending)
 			:this(instr, ord.TradeType, ord.Label, ord.TargetPrice, ord.StopLoss, ord.TakeProfit, ord.Volume, comment:ord.Comment)
 		{
 			CAlgoId = ord.Id;
-			Result = live ? EResult.Pending : EResult.Closed;
+			Result = result;
 
 			var now = instr.Bot.UtcNow;
 			var fin = ord.ExpirationTime ?? (now + Instrument.TimeFrame.ToTimeSpan(num:10));
@@ -135,19 +155,32 @@ namespace Rylobot
 		private static int m_trade_index;
 
 		/// <summary>The CAlgo Id for this trade</summary>
-		public int Id { get { return CAlgoId ?? TradeIndex; } }
+		public int Id
+		{
+			get { return CAlgoId ?? TradeIndex; }
+		}
 
 		/// <summary>Direction of trade</summary>
 		public TradeType TradeType { get; private set; }
 
 		/// <summary>The sign of this trade</summary>
-		public int Sign { get { return TradeType.Sign(); } }
+		public int Sign
+		{
+			get { return TradeType.Sign(); }
+		}
 
 		/// <summary>The instrument traded</summary>
-		public Instrument Instrument { get; private set; }
+		public Instrument Instrument
+		{
+			get;
+			private set;
+		}
 
 		/// <summary>The string identifier for the symbol</summary>
-		public string SymbolCode { get { return Instrument.SymbolCode; } }
+		public string SymbolCode
+		{
+			get { return Instrument.SymbolCode; }
+		}
 
 		/// <summary>The CAlgo Id for this trade (or null)</summary>
 		public int? CAlgoId { get; set; }
@@ -198,7 +231,24 @@ namespace Rylobot
 
 		/// <summary>The outcome of this trade so far</summary>
 		public EResult Result { get; private set; }
-		public enum EResult { Unknown, Pending, Open, Closed, HitSL, HitTP };
+
+		/// <summary>True if the trade has not been triggered yet</summary>
+		public bool IsPending
+		{
+			get { return Result >= EResult.Pending && Result < EResult.Open; }
+		}
+
+		/// <summary>True if the trade has not closed</summary>
+		public bool IsLive
+		{
+			get { return Result >= EResult.Open && Result < EResult.Closed; }
+		}
+
+		/// <summary>True if the trade has closed</summary>
+		public bool IsClosed
+		{
+			get { return Result >= EResult.Closed; }
+		}
 
 		/// <summary>Reward to risk ratio of the SL/TP levels</summary>
 		public double RtR
@@ -212,19 +262,17 @@ namespace Rylobot
 			}
 		}
 
-		/// <summary>Return the value of this trade if it was to be closed at the given price tick</summary>
-		public QuoteCurrency ValueAt(PriceTick price, bool consider_sl = true, bool consider_tp = true)
+		/// <summary>Return the value of this trade at the current price level</summary>
+		public QuoteCurrency ValueNow
 		{
-			// Closing a Buy means selling to the highest *bid*er
-			var p = TradeType == TradeType.Buy ? price.Bid : price.Ask;
-			return new Order(this, true).ValueAt(p, consider_sl, consider_tp);
+			get { return this.ValueAt(Instrument.LatestPrice); }
 		}
 
-		/// <summary>Return the value of this trade at the current price level</summary>
-		public QuoteCurrency ValueNow()
-		{
-			return ValueAt(Instrument.LatestPrice);
-		}
+		/// <summary>The current profit/loss of this trade including commissions</summary>
+		public AcctCurrency NetProfit { get; private set; }
+
+		/// <summary>The raw profit/loss of this trade based on price only</summary>
+		public AcctCurrency GrossProfit { get; private set; }
 
 		/// <summary>The highest profit seen over the duration of the trade (in quote currency, relative, positive = profit)</summary>
 		public QuoteCurrency PeakProfit { get; private set; }
@@ -236,6 +284,42 @@ namespace Rylobot
 		public double PeakRtR
 		{
 			get { return Maths.Div(Math.Max(0.0, PeakProfit), Math.Max(Instrument.PipSize, PeakLoss)); }
+		}
+
+		/// <summary>Find the normalised maximum adverse and favourable excursion of price from the entry point of this trade</summary>
+		public RangeF[] MaxExcursion(int periods)
+		{
+			// The max adverse/favourable excursion of price
+			// from the entry price for 'periods' candles after entry
+			var excursion = new RangeF[periods];
+
+			// Normalise by MCS at the time of entry
+			var idx = Math.Max(0, EntryIndex-50) + Instrument.IdxFirst;
+			var mcs = Instrument.MedianCandleSize(idx, idx + 50);
+
+			var mae = 0.0; // maximum adverse excursion
+			var mfe = 0.0; // maximum favourable excursion
+			var start = (int)EntryIndex;
+			for (int i = 0; i != periods; ++i)
+			{
+				if (start + i >= Instrument.Count) break;
+				var hi = Instrument.Data.High[start + i];
+				var lo = Instrument.Data.Low [start + i];
+				if (Sign > 0)
+				{
+					mae = Math.Max(mae, EP - lo);
+					mfe = Math.Max(mfe, hi - EP);
+				}
+				else
+				{
+					mae = Math.Max(mae, hi - EP);
+					mfe = Math.Max(mfe, EP - lo);
+				}
+				excursion[i].Beg = mae / mcs;
+				excursion[i].End = mfe / mcs;
+			}
+
+			return excursion;
 		}
 
 		/// <summary>Incorporate a candle into this trade</summary>
@@ -301,7 +385,7 @@ namespace Rylobot
 		/// <summary>Debugger string</summary>
 		private string DebuggerDisplay
 		{
-			get { return "idx=[{0:N3},{1:N3}] {2} RtR={3}".Fmt(EntryIndex, ExitIndex, TradeType, RtR); }
+			get { return "idx=[{0:N3},{1:N3}] {2} Profit={3} RtR={4}".Fmt(EntryIndex, ExitIndex, TradeType, NetProfit, RtR); }
 		}
 	}
 }

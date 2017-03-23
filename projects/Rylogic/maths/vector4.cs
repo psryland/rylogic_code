@@ -644,6 +644,12 @@ namespace pr.maths
 		{
 			return IsFinite(vec.x) && IsFinite(vec.y) && IsFinite(vec.z) && IsFinite(vec.w);
 		}
+
+		/// <summary>Return 'a/b', or 'def' if 'b' is zero</summary>
+		public static v4 Div(v4 a, v4 b, v4 def)
+		{
+			return b != v4.Zero ? a / b : def;
+		}
 	}
 }
 

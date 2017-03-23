@@ -106,6 +106,24 @@ namespace Rylobot
 
 		#region Position Extensions
 
+		/// <summary>Return the value of this position if it was to be closed at the given price tick</summary>
+		public static QuoteCurrency ValueAt(this Position pos, PriceTick price, bool consider_sl = true, bool consider_tp = true)
+		{
+			return new Order(pos).ValueAt(price, consider_sl, consider_tp);
+		}
+
+		/// <summary>Return the value of this position if it was to be closed at the given price tick</summary>
+		public static QuoteCurrency ValueAt(this PendingOrder pos, PriceTick price, bool consider_sl = true, bool consider_tp = true)
+		{
+			return new Order(pos).ValueAt(price, consider_sl, consider_tp);
+		}
+
+		/// <summary>Return the value of this position if it was to be closed at the given price tick</summary>
+		public static QuoteCurrency ValueAt(this ITrade pos, PriceTick price, bool consider_sl = true, bool consider_tp = true)
+		{
+			return new Order(pos, true).ValueAt(price, consider_sl, consider_tp);
+		}
+
 		/// <summary>Return the value (in quote currency) of this position when the price is at 'price'</summary>
 		public static QuoteCurrency ValueAt(this Position pos, QuoteCurrency price, bool consider_sl, bool consider_tp)
 		{
@@ -147,6 +165,7 @@ namespace Rylobot
 		{
 			return new Order(pos).SL;
 		}
+
 		/// <summary></summary>
 		public static QuoteCurrency? StopLossAbs(this PendingOrder pos)
 		{
@@ -158,6 +177,7 @@ namespace Rylobot
 		{
 			return new Order(pos).TP;
 		}
+
 		/// <summary></summary>
 		public static QuoteCurrency? TakeProfitAbs(this PendingOrder pos)
 		{

@@ -3901,6 +3901,7 @@ namespace pr.gui
 			ResetDiagram();
 			Util.Dispose(ref m_hoverscroll);
 			Util.Dispose(ref m_tools);
+			Util.Dispose(ref m_window);
 			Util.Dispose(ref m_view3d);
 			Util.Dispose(ref components);
 			base.Dispose(disposing);

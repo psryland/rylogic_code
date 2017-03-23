@@ -143,7 +143,7 @@ namespace Rylobot
 			get;
 			private set;
 		}
-		public class HighResCollection :List<PriceTick>
+		public class HighResCollection :List<PriceTick> ,DataSeries
 		{
 			private readonly Instrument m_instr;
 			public HighResCollection(Instrument instr, int max_length)
@@ -166,6 +166,34 @@ namespace Rylobot
 				if (Count > 3 * MaxLength / 2) RemoveRange(0, Count - MaxLength);
 				return price;
 			}
+
+			#region DataSeries
+
+			/// <summary>Gets the value in the data series at the specified position.</summary>
+			double DataSeries.this[int index]
+			{
+				get { return this[index].Mid; }
+			}
+
+			/// <summary>Gets the total number of elements contained in the DataSeries.</summary>
+			int DataSeries.Count
+			{
+				get { return Count; }
+			}
+
+			/// <summary>Gets the last value of this DataSeries.</summary>
+			double DataSeries.LastValue
+			{
+				get { return Count != 0 ? (double)this.Back(0).Mid : 0.0; }
+			}
+
+			/// <summary>Access a value in the data series certain bars ago</summary>
+			double DataSeries.Last(int index)
+			{
+				return Count != 0 ? (double)this.Back(index).Mid : 0.0;
+			}
+
+			#endregion
 		}
 
 		/// <summary>The CAlgo Symbol interface for this instrument</summary>
@@ -470,6 +498,24 @@ namespace Rylobot
 			return MedianCandleSize(range.Begi, range.Endi);
 		}
 
+		/// <summary>Return the number of ticks in the given range of candles</summary>
+		public long TradeVolume(Idx min, Idx max)
+		{
+			return (long)CandleRange(min, max).Sum(x => x.Volume);
+		}
+
+		/// <summary>Return the price range on the interval [min, max)</summary>
+		public RangeF PriceRange(Idx min, Idx max)
+		{
+			var range = RangeF.Invalid;
+			foreach (var c in CandleRange(min, max))
+			{
+				range.Encompass(c.High);
+				range.Encompass(c.Low);
+			}
+			return range;
+		}
+
 		/// <summary>Return the age of 'candle' normalised to the time frame</summary>
 		public double AgeOf(Candle candle, bool clamped)
 		{
@@ -496,10 +542,13 @@ namespace Rylobot
 			return Maths.Max(A.TotalLength, Math.Abs(A.High - B.Close), Math.Abs(A.Low - B.Close));
 		}
 
-		/// <summary>Return the number of ticks in the given range of candles</summary>
-		public long TradeVolume(Idx min, Idx max)
+		/// <summary>Return the average true range for candles in [min,max)</summary>
+		public QuoteCurrency AverageTrueRange(Idx min, Idx max)
 		{
-			return (long)CandleRange(min, max).Sum(x => x.Volume);
+			var avr = new Avr();
+			for (var i = min; i != max; ++i)
+				avr.Add(TrueRange(i));
+			return avr.Mean;
 		}
 
 		/// <summary>Return the average slope of all the EMAs over 'period_range'</summary>
@@ -521,7 +570,7 @@ namespace Rylobot
 		/// <summary>Return the combined EMA slope interpreted as a trend in the range [-1,+1]</summary>
 		public double EMATrend(Idx index, Range? period_range = null)
 		{
-			return MeasureTrend(EMASlope(index, period_range));
+			return MeasureTrendFromSlope(EMASlope(index, period_range));
 		}
 
 		/// <summary>Return an appropriate stop loss, take profit, and volume for a trade at the given candle an entry price</summary>
@@ -675,9 +724,18 @@ namespace Rylobot
 		/// <summary>Compress the candle at 'idx' with former candles of the same sign</summary>
 		public Candle Compress(Idx idx)
 		{
+			var mcs = MCS;
+			var sign = 0;
 			Idx i = idx;
-			var sign = this[idx].Sign;
-			for (; i-- != IdxFirst && this[i].Sign == sign;) {}
+			for (; i-- != IdxFirst;)
+			{
+				var candle = this[i];
+				if (candle.Type(mcs).IsIndecision()) continue;
+				//if (candle.BodyLength < 4*PipSize) continue;
+				if (sign == 0) sign = candle.Sign;
+				if (sign == candle.Sign) continue;
+				break;
+			}
 			return Compress(i+1, idx+1);
 		}
 
@@ -756,7 +814,7 @@ namespace Rylobot
 		/// Classify a slope in price/candle as a trend direction
 		/// Returns a value on the range [-1,+1] (negative = bearish, positive = bullish)
 		/// Scales the range [-inf,+inf] to [-1,+1]. Treat ­0.5 as the limit between trend and no trend.</summary>
-		public double MeasureTrend(double slope)
+		public double MeasureTrendFromSlope(double slope)
 		{
 			// If the slope is greater/less than MCS / N candles classify as a trend
 			var run = 20.0;
@@ -777,7 +835,25 @@ namespace Rylobot
 			var ema = Bot.Indicators.ExponentialMovingAverage(data, ema_periods.Value);
 			var slope = ema.Result.FirstDerivative(idx);
 			Debugging.Slope(idx, slope);
-			return MeasureTrend(slope);
+			return MeasureTrendFromSlope(slope);
+		}
+
+		/// <summary>Classify the trend of the high res data over the last N ticks</summary>
+		public double MeasureTrendHighRes(int ticks, Idx? idx = null)
+		{
+			// Find the index in the high res data to start the search from
+			idx = idx ?? IdxNow;
+			var calgo_index = idx.Value - IdxFirst;
+			var iend = HighRes.BinarySearch(x => x.Index.CompareTo(calgo_index), find_insert_position:true);
+			var istart = Math.Max(0, iend - ticks);
+
+			// Do a linear regression on the price ticks
+			var corr = new Correlation();
+			for (int i = istart; i != iend; ++i)
+				corr.Add(HighRes[i].Index, HighRes[i].Mid);
+
+			// Convert the slope to a trend value
+			return MeasureTrendFromSlope(corr.LinearRegression.A);
 		}
 
 		/// <summary>Compare a candle to a price value, returning the ratio above or below the value. Returns positive for 'candle' above 'price'</summary>
@@ -802,6 +878,13 @@ namespace Rylobot
 		public double Compare(Candle candle, MovingAverage ma, bool wicks)
 		{
 			return Compare(candle, ma.Result[candle.Index], wicks);
+		}
+
+		/// <summary>Categorise the market state over the range [min,max)</summary>
+		public EMarketState MarketState(Idx min, Idx max)
+		{
+			throw new NotImplementedException();
+			//return EMarketState.Unknown;
 		}
 
 		/// <summary>Types of candle patterns</summary>
@@ -1120,15 +1203,6 @@ namespace Rylobot
 			return null;
 		}
 
-		/// <summary>Types of patterns found using 'PricePeaks'</summary>
-		public enum EPeakPattern
-		{
-			BreakOutHigh,
-			BreakOutLow,
-			HighReversal,
-			LowReversal,
-		}
-
 		/// <summary>Look for patterns in the price peaks</summary>
 		public EPeakPattern? IsPeakPattern(Idx idx, out TradeType tt, out QuoteCurrency ep)
 		{
@@ -1372,6 +1446,16 @@ namespace Rylobot
 
 		/// <summary>The result of the last test for trade entry</summary>
 		public TradeType? LastTradeEntryResult { get; set; }
+	}
+
+	/// <summary>States that the market can be in</summary>
+	[Flags] public enum EMarketState
+	{
+		Unknown  = 0,
+		Steady   = 1 << 0,
+		Volatile = 1 << 1,
+		Ranging  = 1 << 2,
+		Trending = 1 << 3,
 	}
 
 	#region EventArgs

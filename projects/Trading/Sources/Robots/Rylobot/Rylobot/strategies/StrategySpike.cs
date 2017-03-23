@@ -16,16 +16,18 @@ namespace Rylobot
 		// - Wait for marubozu candles
 		// - Run on 1min data
 
-		public StrategySpike(Rylobot bot)
-			:base(bot, "StrategySpike")
+		public StrategySpike(Rylobot bot, double risk)
+			:base(bot, "StrategySpike", risk)
 		{
 			Periods = 5;
 			XShift = 1.5;
 			HighResCandleWidth = 0.5;
 			EMA0 = new ExpMovingAvr(Periods);
+			Debugging.DumpInstrument += Dump;
 		}
 		public override void Dispose()
 		{
+			Debugging.DumpInstrument -= Dump;
 			base.Dispose();
 		}
 
@@ -41,11 +43,11 @@ namespace Rylobot
 		/// <summary>The width of the high res candle</summary>
 		private double HighResCandleWidth { get; set; }
 
-		private void Dump()
+		/// <summary>Output the current state</summary>
+		public override void Dump()
 		{
-			Debugging.LogInstrument(high_res:20.0);
+			Debugging.Dump(Instrument, range:new Range(-100,1), high_res:20.0);
 			//Debugging.Dump(EMA0.Extrapolate().Curve, "ema0", Colour32.Green, new RangeF(-5.0, 5.0));
-			Debugging.BreakOnPointOfInterest();
 		}
 
 		/// <summary>Update the EP/SL/TP in 'buy','sel' to span the current price</summary>

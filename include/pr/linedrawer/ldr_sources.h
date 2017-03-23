@@ -304,15 +304,17 @@ namespace pr
 			// 'handled' should be set to false if the file should be reported as changed the next time 'CheckForChangedFiles' is called (true by default)
 			void FileWatch_OnFileChanged(wchar_t const*, pr::Guid const& file_group_id, void*, bool& handled)
 			{
-				// Look for the root file for group 'file_group_id'
-				Lock lock(*this);
-				auto iter = pr::find_if(lock.Files(), [=](auto& file){ return file.second.m_file_group_id == file_group_id; });
-				if (iter == std::end(lock.Files()))
-					return;
+				File root_file;
+				{
+					// Look for the root file for group 'file_group_id'
+					Lock lock(*this);
+					auto iter = pr::find_if(lock.Files(), [=](auto& file){ return file.second.m_file_group_id == file_group_id; });
+					if (iter == std::end(lock.Files())) return;
+					root_file = iter->second;
+				}
 
 				// Reload that file group (asynchronously)
-				auto file = iter->second;
-				auto id = AddFile(file, EReason::Reload);
+				auto id = AddFile(root_file, EReason::Reload);
 				handled = id != pr::GuidZero;
 			}
 

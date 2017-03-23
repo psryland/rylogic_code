@@ -71,11 +71,13 @@
     <Compile Include="..\..\..\Common\Typedefs.cs">
       <Link>src\common\Typedefs.cs</Link>
     </Compile>
+    <Compile Include="strategies\StrategyBreakOut.cs" />
     <Compile Include="strategies\StrategyHedge.cs" />
     <Compile Include="strategies\StrategyHedge2.cs" />
     <Compile Include="src\Correlator.cs" />
     <Compile Include="src\Indicator.cs" />
     <Compile Include="strategies\StrategyEmaCross.cs" />
+    <Compile Include="strategies\StrategyMAExtreme.cs" />
     <Compile Include="strategies\StrategyPeaks.cs" />
     <Compile Include="strategies\StrategySpike.cs" />
     <Compile Include="strategies\StrategyTemplate.cs" />
@@ -92,7 +94,7 @@
     <Compile Include="src\InstrumentSettings.cs" />
     <Compile Include="src\Settings.cs" />
     <Compile Include="src\Strategy.cs" />
-    <Compile Include="strategies\StrategyMeanCross.cs" />
+    <Compile Include="strategies\StrategyPriceDistribution.cs" />
     <Compile Include="src\Trade.cs" />
   </ItemGroup>
   <ItemGroup>

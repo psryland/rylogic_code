@@ -978,7 +978,7 @@ namespace pr.maths
 			/// <summary>The range of counts per bucket</summary>
 			internal double MaxCount
 			{
-				get { return m_buckets.Max(x => x.Count); }
+				get { return m_buckets.Count != 0 ? m_buckets.Max(x => x.Count) : 0.0; }
 			}
 			
 			/// <summary>Set 'Normalisation' so that the maximum count returns a value of 'len' in 'this[i]'</summary>
@@ -1235,7 +1235,6 @@ namespace pr.maths
 		}
 	}
 }
-
 
 #if PR_UNITTESTS
 namespace pr.unittests

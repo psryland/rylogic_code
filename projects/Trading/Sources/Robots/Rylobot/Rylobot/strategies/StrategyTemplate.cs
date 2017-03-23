@@ -1,5 +1,6 @@
 ﻿using System;
 using cAlgo.API;
+using pr.common;
 using pr.extn;
 
 namespace Rylobot
@@ -10,11 +11,14 @@ namespace Rylobot
 		// Notes:
 		//  - Describe what the strategy does
 
-		public StrategyTemplate(Rylobot bot)
-			:base(bot, "StrategyTemplate")
-		{}
+		public StrategyTemplate(Rylobot bot, double risk)
+			:base(bot, "StrategyTemplate", risk)
+		{
+			Debugging.DumpInstrument += Dump;
+		}
 		public override void Dispose()
 		{
+			Debugging.DumpInstrument -= Dump;
 			base.Dispose();
 		}
 
@@ -24,16 +28,17 @@ namespace Rylobot
 			get { return 0.0; }
 		}
 
+		/// <summary>Debugging, output current state</summary>
+		public override void Dump()
+		{
+			Debugging.CurrentPrice(Instrument);
+			Debugging.Dump(Instrument, range:new Range(-100,1));
+		}
+
 		/// <summary>Called when new data is received</summary>
 		public override void Step()
 		{
 			base.Step();
-
-			if (Instrument.NewCandle)
-			{
-				Debugging.LogInstrument();
-				Debugging.BreakOnPointOfInterest();
-			}
 		}
 
 		/// <summary>Watch for pending order filled</summary>

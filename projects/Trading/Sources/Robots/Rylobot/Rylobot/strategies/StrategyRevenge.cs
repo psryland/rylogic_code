@@ -18,8 +18,8 @@ namespace Rylobot
 
 		private const int HistoryWindow = 100;
 
-		public StrategyRevenge(Rylobot bot)
-			:base(bot, "StrategyRevenge")
+		public StrategyRevenge(Rylobot bot, double risk)
+			:base(bot, "StrategyRevenge", risk)
 		{
 			ReversesCount = 3;
 			TakeProfitPC = 0.001;

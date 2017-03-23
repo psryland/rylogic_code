@@ -1899,6 +1899,10 @@ namespace pr.gui
 				{
 					using (this.SuspendLayout(false))
 					{
+						// Reset the scroll position
+						HorizontalScroll.Value = 0;
+						VerticalScroll.Value = 0;
+
 						// Position the title bar
 						if (TitleCtrl != null && TitleCtrl.Visible)
 						{

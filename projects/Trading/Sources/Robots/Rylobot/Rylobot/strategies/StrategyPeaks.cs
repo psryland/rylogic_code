@@ -16,8 +16,8 @@ namespace Rylobot
 		//  - open trades when price reaches the curve
 		//  - close when trades reach the other curve
 
-		public StrategyPeaks(Rylobot bot)
-			:base(bot, "StrategyPeaks")
+		public StrategyPeaks(Rylobot bot, double risk)
+			:base(bot, "StrategyPeaks", risk)
 		{}
 		public override void Dispose()
 		{
@@ -63,15 +63,15 @@ namespace Rylobot
 					// Convert the patterns to trades
 					switch (pattern.Value)
 					{
-					case Instrument.EPeakPattern.BreakOutHigh:
-					case Instrument.EPeakPattern.BreakOutLow:
+					case EPeakPattern.BreakOutHigh:
+					case EPeakPattern.BreakOutLow:
 						{
 							var exit = Instrument.ChooseTradeExit(tt, ep);
 							trade = new Trade(Instrument, tt, Label, exit.EP, exit.SL, exit.TP, exit.Volume);
 							break;
 						}
-					case Instrument.EPeakPattern.HighReversal:
-					case Instrument.EPeakPattern.LowReversal:
+					case EPeakPattern.HighReversal:
+					case EPeakPattern.LowReversal:
 						{	
 							var exit = Instrument.ChooseTradeExit(tt, ep);
 							order = new Trade(Instrument, tt, Label, exit.EP, exit.SL, exit.TP, exit.Volume);
@@ -98,7 +98,7 @@ namespace Rylobot
 		protected override void OnPositionOpened(Position position)
 		{
 			base.OnPositionOpened(position);
-			PosMgr = new PositionManager(Instrument, position);
+			PosMgr = new PositionManagerNervious(this, position);
 		}
 		protected override void OnPositionClosed(Position position)
 		{

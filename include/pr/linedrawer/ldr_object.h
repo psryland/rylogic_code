@@ -134,6 +134,8 @@ namespace pr
 			x(Coloured             ,= HashI("Coloured"            ))\
 			x(Width                ,= HashI("Width"               ))\
 			x(Smooth               ,= HashI("Smooth"              ))\
+			x(XAxis                ,= HashI("XAxis"               ))\
+			x(YAxis                ,= HashI("YAxis"               ))\
 			x(XColumn              ,= HashI("XColumn"             ))\
 			x(Closed               ,= HashI("Closed"              ))\
 			x(Param                ,= HashI("Param"               ))\

@@ -24,12 +24,12 @@ namespace Rylobot
 		private const int EmaPeriods1 = 15;
 		private const int EmaPeriodsGlobal = 200;
 
-		public StrategyEmaCross(Rylobot bot)
-			:base(bot, "StrategyEmaCross")
+		public StrategyEmaCross(Rylobot bot, double risk)
+			:base(bot, "StrategyEmaCross", risk)
 		{
-			EMA0 = new Indicator(Instrument, Bot.Indicators.ExponentialMovingAverage(Instrument.Data.Close, EmaPeriods0).Result);
-			EMA1 = new Indicator(Instrument, Bot.Indicators.ExponentialMovingAverage(Instrument.Data.Close, EmaPeriods1).Result);
-			EMAGlobal = new Indicator(Instrument, Bot.Indicators.ExponentialMovingAverage(Instrument.Data.Close, EmaPeriodsGlobal).Result);
+			EMA0 = Indicator.EMA(Instrument, EmaPeriods0);
+			EMA1 = Indicator.EMA(Instrument, EmaPeriods1);
+			EMAGlobal = Indicator.EMA(Instrument, EmaPeriodsGlobal);
 		}
 		public override void Dispose()
 		{
@@ -44,11 +44,11 @@ namespace Rylobot
 		/// <summary>A prediction of the future EMA values</summary>
 		private Extrapolation Future0
 		{
-			get { return EMA0.Extrapolate(2); }
+			get { return EMA0.Future; }
 		}
 		private Extrapolation Future1
 		{
-			get { return EMA1.Extrapolate(2); }
+			get { return EMA1.Future; }
 		}
 
 		/// <summary>The sign of the trend direction</summary>
@@ -147,7 +147,7 @@ namespace Rylobot
 			return Math.Sqrt(div.Mean);
 		}
 
-		private void Dump()
+		public override void Dump()
 		{
 			// When there's a change of trend direction, allow 3 candles for a good close of positions
 			Debugging.Dump(Future0.Curve, "ema0", Colour32.Green, new RangeF(-5.0, 5.0));

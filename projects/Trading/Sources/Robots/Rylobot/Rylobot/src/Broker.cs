@@ -399,6 +399,9 @@ namespace Rylobot
 		{
 			try
 			{
+				if (pos.Volume < trade.Volume)
+					throw new Exception("Cannot increase the volume of a position");
+
 				// Check that changing this order will not exceed the maximum risk
 				if (m_suspend_risk_check == 0)
 				{
@@ -409,9 +412,18 @@ namespace Rylobot
 				}
 
 				// Modify the order
-				var r = Bot.ModifyPosition(pos, (double?)trade.SL, (double?)trade.TP);
-				if (!r.IsSuccessful)
-					throw new Exception("Modifying market order failed: {0}".Fmt(r.Error));
+				if (pos.StopLoss != trade.SL || pos.TakeProfit != trade.TP)
+				{
+					var r = Bot.ModifyPosition(pos, (double?)trade.SL, (double?)trade.TP);
+					if (!r.IsSuccessful)
+						throw new Exception("Modifying market order failed: {0}".Fmt(r.Error));
+				}
+				if (pos.Volume != trade.Volume)
+				{
+					var r = Bot.ClosePosition(pos, pos.Volume - trade.Volume);
+					if (!r.IsSuccessful)
+						throw new Exception("Modifying market order failed: {0}".Fmt(r.Error));
+				}
 
 				// Replace the order with updated info
 				Debugging.LogTrade(pos, live:true, update_instrument:true);
@@ -430,15 +442,16 @@ namespace Rylobot
 		}
 
 		/// <summary>Change the SL or TP on a position</summary>
-		public bool ModifyOrder(Instrument instr, Position position, QuoteCurrency? sl = null, QuoteCurrency? tp = null)
+		public bool ModifyOrder(Instrument instr, Position pos, QuoteCurrency? sl = null, QuoteCurrency? tp = null, long? vol = null)
 		{
 			// 'tp' is optional, it set it replaces the TP on 'position'
-			Debug.Assert(instr.SymbolCode == position.SymbolCode);
+			Debug.Assert(instr.SymbolCode == pos.SymbolCode);
 
-			var trade = new Trade(instr, position);
-			if (sl != null) trade.SL = sl;
-			if (tp != null) trade.TP = tp;
-			return ModifyOrder(position, trade);
+			var trade = new Trade(instr, pos);
+			if (sl  != null) trade.SL = sl;
+			if (tp  != null) trade.TP = tp;
+			if (vol != null) trade.Volume = vol.Value;
+			return ModifyOrder(pos, trade);
 		}
 
 		/// <summary>Close an open position</summary>
@@ -641,6 +654,14 @@ namespace Rylobot
 			}
 		}
 
+		/// <summary>True if there are open positions within a range of 'price'</summary>
+		public bool NearbyPositions(string label, QuoteCurrency price, double min_trade_dist, int sign = 0)
+		{
+			return sign == 0
+				? Bot.Positions.Where(x => x.Label == label).Any(x => Math.Abs(x.EntryPrice - price) < min_trade_dist)
+				: Bot.Positions.Where(x => x.Label == label).Any(x => Math.Abs(x.EntryPrice - price) < min_trade_dist && x.Sign() == sign);
+		}
+
 		/// <summary>Return the maximum SL value (in quote currency) for the given volume</summary>
 		public QuoteCurrency MaxSL(Instrument instr, long volume)
 		{
@@ -664,7 +685,7 @@ namespace Rylobot
 		}
 
 		/// <summary>Return the maximum volume to trade given a relative stop loss value</summary>
-		public long ChooseVolume(Instrument instr, QuoteCurrency sl, double? risk = null)
+		public long ChooseVolume(Instrument instr, QuoteCurrency sl_rel, double? risk = null)
 		{
 			// Find the amount we're allowed to risk
 			// Scale down a little bit to prevent issues comparing the returned SL to BalanceToRisk
@@ -672,8 +693,12 @@ namespace Rylobot
 			if (balance_to_risk == 0)
 				return 0;
 
+			// Set a hard lower limit on 'SL'
+			if (sl_rel < 5.0 * instr.PipSize)
+				sl_rel = 5.0 * instr.PipSize;
+
 			// Get this amount in quote currency
-			var volume = (risk ?? 1.0) * balance_to_risk / instr.Symbol.QuoteToAcct(sl);
+			var volume = (risk ?? 1.0) * balance_to_risk / instr.Symbol.QuoteToAcct(sl_rel);
 			return instr.Symbol.NormalizeVolume(volume, RoundingMode.Down);
 		}
 
@@ -767,7 +792,7 @@ namespace Rylobot
 						{
 							// Find the risk at 'price_l',
 							var price_l = price - dist_l;
-							var r = (QuoteCurrency)orders.Sum(x => (double)x.ValueAt(price_l, false, false));
+							var r = (QuoteCurrency)orders.Sum(x => (double)x.ValueAt(price_l, false, false) * x.Volume);
 							max_risk = Math.Max(max_risk, -r);
 
 							// Recursively search the remaining orders.
@@ -783,7 +808,7 @@ namespace Rylobot
 						{
 							// Find the risk at 'price_r'
 							var price_r = price + dist_r;
-							var r = (QuoteCurrency)orders.Sum(x => (double)x.ValueAt(price_r, false, false));
+							var r = (QuoteCurrency)orders.Sum(x => (double)x.ValueAt(price_r, false, false) * x.Volume);
 							max_risk = Math.Max(max_risk, -r);
 
 							// Recursively search the remaining orders.

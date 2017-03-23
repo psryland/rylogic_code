@@ -14,8 +14,8 @@ namespace Rylobot
 		//  - Set SL to 1*MCS
 		//  - Set TP to 2*MCS
 
-		public StrategyHedge2(Rylobot bot)
-			:base(bot, "StrategyHedge2")
+		public StrategyHedge2(Rylobot bot, double risk)
+			:base(bot, "StrategyHedge2", risk)
 		{
 		}
 		public override void Dispose()
@@ -69,7 +69,7 @@ namespace Rylobot
 				Broker.CancelPendingOrder(ord);
 
 			// Create a position manager
-			PositionManagers.Add(new PositionManager(Instrument, position));
+			PositionManagers.Add(new PositionManagerNervious(this, position));
 		}
 
 		protected override void OnPositionClosed(Position position)

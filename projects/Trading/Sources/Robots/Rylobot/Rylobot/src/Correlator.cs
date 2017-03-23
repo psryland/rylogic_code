@@ -69,11 +69,14 @@ namespace Rylobot
 				sb.AppendLine("Net Profit:   ${0:N2}".Fmt(win_total));
 				sb.AppendLine("Net Loss:     ${0:N2}".Fmt(los_total));
 				sb.AppendLine("Nett:         ${0:N2}".Fmt(win_total + los_total));
-				sb.AppendLine("Profit Ratio:  {0:N3}".Fmt(win_total / los_total));
 				sb.AppendLine();
 				sb.AppendLine("Win Count:     {0}".Fmt(wins.Length));
 				sb.AppendLine("Loss Count:    {0}".Fmt(loss.Length));
 				sb.AppendLine("Win Ratio:     {0:N3}%".Fmt(100.0 * wins.Length / (wins.Length + loss.Length)));
+				sb.AppendLine();
+				sb.AppendLine("Avr $/Winner:  ${0:N3}".Fmt(win_total / wins.Length));
+				sb.AppendLine("Avr $/Loser:   ${0:N3}".Fmt(los_total / loss.Length));
+				sb.AppendLine("Avr $/Trade:   ${0:N3}".Fmt((win_total + los_total) / (wins.Length + loss.Length)));
 				sb.AppendLine();
 
 				sb.AppendLine("Correlations:");

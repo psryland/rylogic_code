@@ -136,11 +136,23 @@ namespace pr
 		// 'policy' can be a bitwise OR of both deferred and async
 		template <typename Func, typename... Args> inline void RunOnMainThread(std::launch policy, Func&& func, Args&&... args)
 		{
-			std::lock_guard<std::mutex> lock(m_mutex_task_queue);
-			m_task_queue.emplace_back(std::async(policy, func, args...));
-			if (!::PostMessageW(m_dummy_hwnd, pr::rdr::WM_BeginInvoke, WPARAM(this), LPARAM()))
 			{
-				auto msg = pr::HrMsg(GetLastError());
+				std::lock_guard<std::mutex> lock(m_mutex_task_queue);
+				m_task_queue.emplace_back(std::async(policy, func, args...));
+			}
+
+			// Post a message to notify of the new task
+			for (; !::PostMessageW(m_dummy_hwnd, pr::rdr::WM_BeginInvoke, WPARAM(this), LPARAM());)
+			{
+				auto err = GetLastError();
+				if (err == ERROR_NOT_ENOUGH_QUOTA)
+				{
+					// The message queue is full, just wait a bit. This is probably a deadlock though
+					std::this_thread::yield();
+					continue;
+				}
+
+				auto msg = pr::HrMsg(err);
 				throw std::exception(msg.c_str());
 			}
 		}

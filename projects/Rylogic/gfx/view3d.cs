@@ -684,6 +684,8 @@ namespace pr.gfx
 		}
 		public void Dispose()
 		{
+			Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
+
 			// Unsubscribe
 			View3D_GlobalErrorCBSet(m_error_cb, IntPtr.Zero, false);
 			View3D_AddFileProgressCBSet(m_add_file_progress_cb, IntPtr.Zero, false);
@@ -857,6 +859,7 @@ namespace pr.gfx
 			}
 			public void Dispose()
 			{
+				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
 				if (m_wnd == HWindow.Zero) return;
 				View3D_RenderingCB(m_wnd, m_render_cb, IntPtr.Zero, false);
 				View3D_SettingsChanged(m_wnd, m_settings_cb, IntPtr.Zero, false);
@@ -1610,6 +1613,7 @@ namespace pr.gfx
 			}
 			public virtual void Dispose()
 			{
+				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
 				if (m_handle == HObject.Zero) return;
 				if (m_owned) View3D_ObjectDelete(m_handle);
 				m_handle = HObject.Zero;
@@ -1795,6 +1799,7 @@ namespace pr.gfx
 			}
 			public virtual void Dispose()
 			{
+				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
 				if (m_handle == HObject.Zero) return;
 				View3D_GizmoDetachCB(m_handle, m_cb);
 				if (m_owned) View3D_GizmoDelete(m_handle);
@@ -1938,13 +1943,12 @@ namespace pr.gfx
 				View3D_TextureSetFilterAndAddrMode(m_handle, options.Filter, options.AddrU, options.AddrV);
 			}
 			
-			public void Dispose()
+			public virtual void Dispose()
 			{
-				if (m_handle != HTexture.Zero)
-				{
-					if (m_owned) View3D_TextureDelete(m_handle);
-					m_handle = HTexture.Zero;
-				}
+				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
+				if (m_handle == HTexture.Zero) return;
+				if (m_owned) View3D_TextureDelete(m_handle);
+				m_handle = HTexture.Zero;
 			}
 
 			/// <summary>Get/Set the texture size. Set does not preserve the texture content</summary>

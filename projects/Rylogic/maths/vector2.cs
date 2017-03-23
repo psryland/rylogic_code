@@ -468,6 +468,12 @@ namespace pr.maths
 		{
 			return IsFinite(vec.x) && IsFinite(vec.y);
 		}
+
+		/// <summary>Return 'a/b', or 'def' if 'b' is zero</summary>
+		public static v2 Div(v2 a, v2 b, v2 def)
+		{
+			return b != v2.Zero ? a / b : def;
+		}
 	}
 }
 

@@ -467,6 +467,11 @@ namespace pr.extn
 			if (left > right)
 				throw new Exception("invalid range");
 
+			// Swap a "random" element to 'list[left]' to improve performance
+			// for the case where list is mostly sorted
+			var count = right - left;
+			Swap((IList)list, left, left + (137 * (count + 13)) % count);
+
 			// Copy the pivot
 			T pivot = list[left];
 
@@ -578,16 +583,16 @@ namespace pr.extn
 		/// <summary>Return the nth element in the list as if the list was sorted</summary>
 		public static T NthElement<T>(this IList<T> list, int n, int left, int right, Cmp<T> comparer)
 		{
-			// get pivot position
-			int pivot = list.Partition(left, right, comparer);
-
-			// if pivot is less that k, select from the right part
-			if (pivot < n) return list.NthElement(n, pivot + 1, right, comparer);
-
-			// if pivot is greater than n, select from the left side
-			if (pivot > n) return list.NthElement(n, left, pivot - 1, comparer);
-
-			// if equal, return the value
+			// This has O(N^2) performance if 'list' is sorted.
+			// Todo: make linear
+			var pivot = right;
+			for (; left != right; )
+			{
+				pivot = list.Partition(left, right, comparer);
+				if      (pivot < n) left = pivot+1;
+				else if (pivot > n) right = pivot;
+				else break;
+			}
 			return list[pivot];
 		}
 		public static T NthElement<T>(this IList<T> list, int n, Cmp<T> comparer = null)
@@ -679,6 +684,7 @@ namespace pr.extn
 #if PR_UNITTESTS
 namespace pr.unittests
 {
+	using pr.maths;
 	[TestFixture] public class TestListExtns
 	{
 		[Test] public void List()
@@ -759,6 +765,39 @@ namespace pr.unittests
 
 			var l2 = lhs.ToList().Merge(rhs, List_.EMergeType.KeepBoth);
 			Assert.True(l2.SequenceEqual(new[] { 1, 1, 2, 3, 4, 5, 6, 7, 8, 8, 9, 10 }));
+		}
+		[Test] public void NthElement()
+		{
+			var arr0 = new int[] {0,1,2,3,4,5,6,7,8,9};
+			var arr1 = new int[] {0,1,2,3,4,5,6,7,8,9,10};
+
+			Assert.True(arr0.NthElement(0) == 0);
+			Assert.True(arr1.NthElement(0) == 0);
+			Assert.True(arr0.NthElement(5) == 5);
+			Assert.True(arr1.NthElement(5) == 5);
+			Assert.True(arr0.NthElement(8) == 8);
+			Assert.True(arr1.NthElement(8) == 8);
+
+			var rng = new Random(1);
+			Action<int[]> Shuffle = arr =>
+			{
+				for (int i = 0; i != 1000; ++i)
+				{
+					var a = rng.Int(0, arr.Length);
+					var b = rng.Int(0, arr.Length);
+					Maths.Swap(ref arr[a], ref arr[b]);
+				}
+			};
+
+			Shuffle(arr0);
+			Assert.True(arr0.NthElement(0) == 0);
+			Assert.True(arr0.NthElement(5) == 5);
+			Assert.True(arr0.NthElement(8) == 8);
+
+			Shuffle(arr1);
+			Assert.True(arr1.NthElement(0) == 0);
+			Assert.True(arr1.NthElement(5) == 5);
+			Assert.True(arr1.NthElement(8) == 8);
 		}
 	}
 }
