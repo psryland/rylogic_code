@@ -182,10 +182,6 @@ namespace Rylobot
 		{
 			var position = args.Position;
 
-			Debugging.LogTrade(args.Position, live:true, update_instrument:true);
-			Debugging.Trace("Idx={0},Tick={1} - Position Opened - {2} EP={3} Volume={4} {5}".Fmt(
-				Instrument.Count, Bot.TickNumber, position.TradeType, position.EntryPrice, position.Volume, position.Comment ?? string.Empty));
-
 			Correlator.Track(position, CorrFactor.SL, position.StopLossRel());
 			Correlator.Track(position, CorrFactor.TP, position.TakeProfitRel());
 			Correlator.Track(position, CorrFactor.RtR, position.TakeProfitRel() / position.StopLossRel());
@@ -201,10 +197,6 @@ namespace Rylobot
 		private void HandlePositionClosed(PositionClosedEventArgs args)
 		{
 			var position = args.Position;
-
-			Debugging.LogTrade(args.Position, live:false, update_instrument:true);
-			Debugging.Trace("Idx={0},Tick={1} - Position Closed - {2} EP={3} Volume={4} Profit=${5} Equity=${6} {7}".Fmt(
-				Instrument.Count, Bot.TickNumber, position.TradeType, position.EntryPrice, position.Volume, position.NetProfit, Equity, position.Comment));
 
 			// Track the trade result
 			Correlator.Result(position);

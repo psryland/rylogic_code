@@ -130,7 +130,7 @@ namespace Rylobot
 		{
 			// RMS of difference between the EMAs
 			var div = new Avr();
-			for (int i = min, iend = Math.Min(1, max); i != iend; ++i)
+			for (int i = (int)min, iend = (int)Math.Min(1, max); i != iend; ++i)
 				div.Add(Maths.Sqr(EMA0[i] - EMA1[i]));
 
 			if (max > 1)
@@ -139,7 +139,7 @@ namespace Rylobot
 				var future1 = Future1;
 				if (future0 != null && future1 != null)
 				{
-					for (int i = 1, iend = max; i != iend; ++i)
+					for (int i = 1, iend = (int)max; i != iend; ++i)
 						div.Add(Maths.Sqr(future0[i] - future1[i]));
 				}
 			}

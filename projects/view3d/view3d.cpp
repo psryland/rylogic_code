@@ -367,8 +367,7 @@ VIEW3D_API void __stdcall View3D_AddObjectsById(View3DWindow window, GUID const&
 
 		DllLockGuard;
 
-		pr::ldr::ScriptSources::Lock sslock(Dll().m_sources);
-		for (auto& obj : sslock.Objects())
+		for (auto& obj : Dll().m_sources.Objects())
 		{
 			if (obj->m_context_id != context_id) continue;
 			View3D_AddObject(window, obj.m_ptr);
@@ -415,14 +414,14 @@ VIEW3D_API void __stdcall View3D_RemoveGizmo(View3DWindow window, View3DGizmo gi
 }
 
 // Return the bounds of a scene
-VIEW3D_API View3DBBox __stdcall View3D_SceneBounds(View3DWindow window, EView3DSceneBounds bounds)
+VIEW3D_API View3DBBox __stdcall View3D_SceneBounds(View3DWindow window, EView3DSceneBounds bounds, int except_count, GUID const* except)
 {
 	try
 	{
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		return view3d::To<View3DBBox>(window->SceneBounds(bounds));
+		return view3d::To<View3DBBox>(window->SceneBounds(bounds, except_count, except));
 	}
 	CatchAndReport(View3D_RemoveGizmo, window, view3d::To<View3DBBox>(pr::BBoxUnit));
 }
@@ -1205,8 +1204,7 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(wchar_t const* ldr_scri
 		Dll().LoadScript(ldr_script, file != 0, context_id, GetIncludes(includes));
 
 		// Return the last object. expecting 'ldr_script' to define one object only
-		pr::ldr::ScriptSources::Lock sslock(Dll().m_sources);
-		auto& cont = sslock.Objects();
+		auto& cont = Dll().m_sources.Objects();
 		return !cont.empty() ? cont.back().m_ptr : nullptr;
 	}
 	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
@@ -1300,10 +1298,8 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreate(char const* name, View3DCo
 	
 		// Add to the sources
 		if (obj)
-		{
-			pr::ldr::ScriptSources::Lock sslock(Dll().m_sources);
-			sslock.Objects().push_back(obj);
-		}
+			Dll().m_sources.Add(obj);
+
 		return obj.m_ptr;
 	}
 	CatchAndReport(View3D_ObjectCreate, , nullptr);
@@ -1402,10 +1398,8 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreateEditCB(char const* name, Vi
 		pr::ldr::ObjectAttributes attr(pr::ldr::ELdrObject::Custom, name, pr::Colour32(colour));
 		auto obj = pr::ldr::CreateEditCB(Dll().m_rdr, attr, vcount, icount, ncount, ObjectEditCB, &cbdata, context_id);
 		if (obj)
-		{
-			pr::ldr::ScriptSources::Lock sslock(Dll().m_sources);
-			sslock.Objects().push_back(obj);
-		}
+			Dll().m_sources.Add(obj);
+
 		return obj.m_ptr;
 	}
 	CatchAndReport(View3D_ObjectCreateEditCB, , nullptr);
@@ -2229,8 +2223,7 @@ VIEW3D_API View3DGizmo __stdcall View3D_GizmoCreate(EView3DGizmoMode mode, View3
 	try
 	{
 		DllLockGuard;
-		auto giz = Dll().CreateGizmo(static_cast<LdrGizmo::EMode>(mode), view3d::To<pr::m4x4>(o2w));
-		return giz.m_ptr;
+		return Dll().CreateGizmo(static_cast<LdrGizmo::EMode>(mode), view3d::To<pr::m4x4>(o2w));
 	}
 	CatchAndReport(View3D_GizmoCreate, , nullptr);
 }
@@ -2617,10 +2610,9 @@ VIEW3D_API GUID __stdcall View3D_CreateDemoScene(View3DWindow window)
 		// Parse the string, and add all objects to the window
 		ParseResult out;
 		Parse(Dll().m_rdr, reader, out, GuidDemoSceneObjects);
-		ScriptSources::Lock sslock(Dll().m_sources);
 		for (auto& obj : out.m_objects)
 		{
-			sslock.Objects().push_back(obj);
+			Dll().m_sources.Add(obj);
 			View3D_AddObject(window, obj.m_ptr);
 		}
 

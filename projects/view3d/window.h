@@ -43,6 +43,7 @@ namespace view3d
 		EditorCont            m_editors;                  // User created editors
 		std::string           m_settings;                 // Allows a char const* to be returned
 		mutable pr::BBox      m_bbox_scene;               // Bounding box for all objects in the scene (Lazy updated)
+		std::thread::id       m_main_thread_id;           // The thread that created this window
 		pr::EventHandlerId    m_eh_store_updated;
 		pr::EventHandlerId    m_eh_file_removed;
 
@@ -89,42 +90,51 @@ namespace view3d
 			,m_editors()
 			,m_settings()
 			,m_bbox_scene(pr::BBoxReset)
+			,m_main_thread_id(std::this_thread::get_id())
 			,m_eh_store_updated()
 			,m_eh_file_removed()
 		{
-			// Attach the error handler
-			if (opts.m_error_cb != nullptr)
-				OnError += pr::StaticCallBack(opts.m_error_cb, opts.m_error_cb_ctx);
+			try
+			{
+				// Attach the error handler
+				if (opts.m_error_cb != nullptr)
+					OnError += pr::StaticCallBack(opts.m_error_cb, opts.m_error_cb_ctx);
 			
-			// Observe the dll object store for changes
-			m_eh_store_updated = m_dll->m_sources.OnStoreChanged += [&](pr::ldr::ScriptSources&, pr::ldr::ScriptSources::StoreChangedEventArgs const&)
+				// Observe the dll object store for changes
+				m_eh_store_updated = m_dll->m_sources.OnStoreChanged += [&](pr::ldr::ScriptSources&, pr::ldr::ScriptSources::StoreChangedEventArgs const&)
+				{
+					// Don't instigate a view reset here because the window doesn't know how the caller would
+					// like the view reset (e.g. all objects, just selected, etc). The caller can instead sign
+					// up to the StoreUpdated event on the content sources
+					InvalidateRect(nullptr, false);
+				};
+				m_eh_file_removed = m_dll->m_sources.OnFileRemoved += [&](pr::ldr::ScriptSources&, pr::ldr::ScriptSources::FileRemovedEventArgs const& args)
+				{
+					RemoveObjectsById(args.m_file_group_id, false);
+				};
+
+				// Set the initial aspect ratio
+				pr::iv2 client_area = m_wnd.RenderTargetSize();
+				m_camera.Aspect(client_area.x / float(client_area.y));
+
+				// The light for the scene
+				m_light.m_type           = pr::rdr::ELight::Directional;
+				m_light.m_ambient        = pr::Colour32(0x00101010U);
+				m_light.m_diffuse        = pr::Colour32(0xFF808080U);
+				m_light.m_specular       = pr::Colour32(0x00404040U);
+				m_light.m_specular_power = 1000.0f;
+				m_light.m_direction      = -pr::v4ZAxis;
+				m_light.m_on             = true;
+				m_light.m_cam_relative   = true;
+
+				// Create the stock models
+				CreateStockModels();
+			}
+			catch (...)
 			{
-				// Don't instigate a view reset here because the window doesn't know how the caller would
-				// like the view reset (e.g. all objects, just selected, etc). The caller can instead sign
-				// up to the StoreUpdated event on the content sources
-				InvalidateRect(nullptr, false);
-			};
-			m_eh_file_removed = m_dll->m_sources.OnFileRemoved += [&](pr::ldr::ScriptSources&, pr::ldr::ScriptSources::FileRemovedEventArgs const& args)
-			{
-				RemoveObjectsById(args.m_file_group_id, false);
-			};
-
-			// Set the initial aspect ratio
-			pr::iv2 client_area = m_wnd.RenderTargetSize();
-			m_camera.Aspect(client_area.x / float(client_area.y));
-
-			// The light for the scene
-			m_light.m_type           = pr::rdr::ELight::Directional;
-			m_light.m_ambient        = pr::Colour32(0x00101010U);
-			m_light.m_diffuse        = pr::Colour32(0xFF808080U);
-			m_light.m_specular       = pr::Colour32(0x00404040U);
-			m_light.m_specular_power = 1000.0f;
-			m_light.m_direction      = -pr::v4ZAxis;
-			m_light.m_on             = true;
-			m_light.m_cam_relative   = true;
-
-			// Create the stock models
-			CreateStockModels();
+				this->~Window();
+				throw;
+			}
 		}
 		Window(Window const&) = delete;
 		Window& operator=(Window const&) = delete;
@@ -153,6 +163,7 @@ namespace view3d
 		void Render()
 		{
 			using namespace pr::rdr;
+			assert(std::this_thread::get_id() == m_main_thread_id);
 
 			// Reset the drawlist
 			m_scene.ClearDrawlists();
@@ -307,6 +318,7 @@ namespace view3d
 		// Return true if 'object' is part of this scene
 		bool Has(pr::ldr::LdrObject* object) const
 		{
+			assert(std::this_thread::get_id() == m_main_thread_id);
 			return m_objects.find(object) != std::end(m_objects);
 		}
 		bool Has(pr::ldr::LdrGizmo* gizmo) const
@@ -317,6 +329,7 @@ namespace view3d
 		// Return the number of objects in this scene
 		int ObjectCount() const
 		{
+			assert(std::this_thread::get_id() == m_main_thread_id);
 			return int(m_objects.size());
 		}
 		int GizmoCount() const
@@ -327,6 +340,7 @@ namespace view3d
 		// Add/Remove an object to this window
 		void Add(pr::ldr::LdrObject* object)
 		{
+			assert(std::this_thread::get_id() == m_main_thread_id);
 			auto iter = m_objects.find(object);
 			if (iter == std::end(m_objects))
 			{
@@ -336,6 +350,7 @@ namespace view3d
 		}
 		void Remove(pr::ldr::LdrObject* object)
 		{
+			assert(std::this_thread::get_id() == m_main_thread_id);
 			m_objects.erase(object);
 			ObjectContainerChanged();
 		}
@@ -355,6 +370,7 @@ namespace view3d
 		// Remove all objects from this scene
 		void RemoveAllObjects()
 		{
+			assert(std::this_thread::get_id() == m_main_thread_id);
 			m_objects.clear();
 			ObjectContainerChanged();
 		}
@@ -362,6 +378,7 @@ namespace view3d
 		// Remove all objects from this window with the given context id (or not with)
 		void RemoveObjectsById(GUID const& context_id, bool all_except)
 		{
+			assert(std::this_thread::get_id() == m_main_thread_id);
 			if (all_except)
 				pr::erase_if(m_objects, [&](pr::ldr::LdrObject* p){ return p->m_context_id != context_id; });
 			else
@@ -371,13 +388,17 @@ namespace view3d
 		}
 
 		// Return a bounding box containing the scene objects
-		pr::BBox BBox(bool objects = true, bool gizmos = false) const
+		template <typename Pred> pr::BBox BBox(Pred pred, bool objects = true, bool gizmos = false) const
 		{
+			assert(std::this_thread::get_id() == m_main_thread_id);
 			auto bbox = pr::BBoxReset;
 			if (objects)
 			{
 				for (auto obj : m_objects)
+				{
+					if (!pred(*obj)) continue;
 					pr::Encompass(bbox, obj->BBoxWS(true));
+				}
 			}
 			if (gizmos)
 			{
@@ -391,7 +412,11 @@ namespace view3d
 			}
 			return bbox;
 		}
-
+		pr::BBox BBox() const
+		{
+			return BBox([](pr::ldr::LdrObject const&) { return true; });
+		}
+		
 		// Reset the scene camera, using it's current forward and up directions, to view all objects in the scene
 		void ResetView()
 		{
@@ -402,7 +427,7 @@ namespace view3d
 		// Reset the scene camera to view all objects in the scene
 		void ResetView(pr::v4 const& forward, pr::v4 const& up, float dist = 0, bool preserve_aspect = true, bool commit = true)
 		{
-			ResetView(SceneBounds(EView3DSceneBounds::All), forward, up, dist, preserve_aspect, commit);
+			ResetView(SceneBounds(EView3DSceneBounds::All, 0, nullptr), forward, up, dist, preserve_aspect, commit);
 		}
 
 		// Reset the camera to view a bbox
@@ -412,8 +437,11 @@ namespace view3d
 		}
 
 		// Return the bounding box of objects in this scene
-		pr::BBox SceneBounds(EView3DSceneBounds bounds)
+		pr::BBox SceneBounds(EView3DSceneBounds bounds, int except_count, GUID const* except)
 		{
+			assert(std::this_thread::get_id() == m_main_thread_id);
+			pr::array_view<GUID> except_arr(except, except_count);
+
 			pr::BBox bbox;
 			switch (bounds)
 			{
@@ -427,7 +455,9 @@ namespace view3d
 				{
 					// Update the scene bounding box if out of date
 					if (m_bbox_scene == pr::BBoxReset)
-						m_bbox_scene = BBox();
+						m_bbox_scene = except_count != 0
+							? BBox([&](pr::ldr::LdrObject const& obj){ return !pr::contains(except_arr, obj.m_context_id); })
+							: BBox();
 
 					bbox = m_bbox_scene;
 					break;
@@ -438,6 +468,7 @@ namespace view3d
 					for (auto& obj : m_objects)
 					{
 						if (!pr::AllSet(obj->m_flags, pr::ldr::ELdrFlags::Selected)) continue;
+						if (pr::contains(except_arr, obj->m_context_id)) continue;
 						pr::Encompass(bbox, obj->BBoxWS(true));
 					}
 					break;
@@ -447,6 +478,7 @@ namespace view3d
 					bbox = pr::BBoxReset;
 					for (auto& obj : m_objects)
 					{
+						if (pr::contains(except_arr, obj->m_context_id)) continue;
 						obj->Apply([&](pr::ldr::LdrObject* o)
 						{
 							pr::Encompass(bbox, o->BBoxWS(false));
@@ -507,6 +539,7 @@ namespace view3d
 		// Show/Hide the object manager for the scene
 		void ShowObjectManager(bool show)
 		{
+			assert(std::this_thread::get_id() == m_main_thread_id);
 			auto& ui = ObjectManagerUI();
 			ui.Show();
 			ui.Populate(m_objects);

@@ -222,7 +222,7 @@ namespace Rylobot
 
 				// Buy the lows, Sell the highs
 				var ep = Instrument.CurrentPrice(sign);
-				var risk = Risk / 2; // Divide the risk amongst the number of positions that can be opened
+				var risk = Risk / 2; // Divide the risk amongst the number of positions that can be opened (1 in each direction)
 				Debugging.Trace("Entry Trigger - {0} - prob={1:N3}".Fmt(sign > 0 ? "Buy" : "Sell", prob));
 				Debugging.Trace(" FastTrend = {0}, SlowTrend = {1}".Fmt(trend_sign_fast, trend_sign_slow));
 
@@ -237,12 +237,12 @@ namespace Rylobot
 					Debugging.Trace("  +No existing {0} position".Fmt(sign));
 
 					// Only open positions in the direction of the trend
-					if (sign != trend_sign_fast)
+					if (sign == -trend_sign_fast)
 					{
 						Debugging.Trace("  -Against the trend ({0})".Fmt(trend_sign_fast));
 						break;
 					}
-					Debugging.Trace("  +With the trend ({0})".Fmt(trend_sign_fast));
+					Debugging.Trace("  +Not against the trend ({0} vs. {1})".Fmt(sign, trend_sign_fast));
 
 					// Don't open positions too close together
 					if (Broker.NearbyPositions(Label, ep, Instrument.MCS * MinTradeSeparation, sign))
@@ -250,16 +250,16 @@ namespace Rylobot
 						Debugging.Trace("  -Nearby trades with the same sign ({0})".Fmt(sign));
 						break;
 					}
-					Debugging.Trace("  +No close trades with the same sign ({0})".Fmt(sign));
+					Debugging.Trace("  +No nearby trades with the same sign ({0})".Fmt(sign));
 
 					// Only open positions when the recent price has been heading in the direction we want to trade
-					var price_trend = Instrument.HighRes.FirstDerivative(-1);
+					var price_trend = Instrument.HighRes.FirstDerivative(-1) / Instrument.PipSize;
 					if (Math.Sign(price_trend) == -sign)
 					{
 						Debugging.Trace("  -Price trend ({0:N3}) against trade sign ({1})".Fmt(price_trend, sign));
 						break;
 					}
-					Debugging.Trace("  +Price trend ({0:N3} pips/tick) matches trade sign ({1})".Fmt(price_trend / Instrument.PipSize, sign));
+					Debugging.Trace("  +Price trend ({0:N3} pips/tick) matches trade sign ({1})".Fmt(price_trend, sign));
 
 					// Don't open a position if the MA's look like they're about to cross
 					// in a direction that would make the trade against the trend.
@@ -270,7 +270,7 @@ namespace Rylobot
 						Debugging.Trace("  -MA cross predicted in {0:N3} candles".Fmt(next_cross_idx.Value));
 						break;
 					}
-					Debugging.Trace("  +No MA cross predicted soon");
+					Debugging.Trace("  +No MA cross from {0} to {1} predicted soon ({2})".Fmt(ma_cross_sign, -ma_cross_sign, next_cross_idx != null ? ((double)next_cross_idx.Value).ToString("N3") : ">5"));
 
 					// Choose a SL based on SnR levels and the slow MA
 					var rel = Math.Abs(ep - MA1[0]) + mcs;
@@ -280,9 +280,9 @@ namespace Rylobot
 					var sl = ep - sign * rel;
 					var tp = ep + sign * rel * 1.5;
 					var vol = Broker.ChooseVolume(Instrument, rel, risk:risk);
-					var trade = new Trade(Instrument, tt, Label, ep, sl, tp, vol);
-					Debugging.LogTrade(trade);
-					//Broker.CreateOrder(trade);
+					var trade = new Trade(Instrument, tt, Label, ep, sl, tp, vol, result:Trade.EResult.Open);
+					//Debugging.LogTrade(trade);
+					Broker.CreateOrder(trade);
 					break;
 				}
 			}

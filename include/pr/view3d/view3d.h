@@ -339,7 +339,7 @@ extern "C"
 	VIEW3D_API void         __stdcall View3D_RemoveObjectsById  (View3DWindow window, BOOL all_except, GUID const& context_id);
 	VIEW3D_API void         __stdcall View3D_AddGizmo           (View3DWindow window, View3DGizmo giz);
 	VIEW3D_API void         __stdcall View3D_RemoveGizmo        (View3DWindow window, View3DGizmo giz);
-	VIEW3D_API View3DBBox   __stdcall View3D_SceneBounds        (View3DWindow window, EView3DSceneBounds bounds);
+	VIEW3D_API View3DBBox   __stdcall View3D_SceneBounds        (View3DWindow window, EView3DSceneBounds bounds, int except_count, GUID const* except);
 
 	// Camera
 	VIEW3D_API void         __stdcall View3D_CameraToWorld          (View3DWindow window, View3DM4x4& c2w);

@@ -65,6 +65,11 @@ namespace LDraw
 
 			base.OnKeyDown(e);
 		}
+		protected override void OnMouseMove(MouseEventArgs e)
+		{
+			base.OnMouseMove(e);
+			Model.Owner.PointerLocationStatus.Text = PointerLocationText;
+		}
 
 		/// <summary>The app logic</summary>
 		protected Model Model

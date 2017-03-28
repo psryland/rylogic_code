@@ -68,8 +68,8 @@ namespace Rylobot
 			{
 				if (Channel == null) return;
 				var ch = Channel.Value;
-				ldr.Rect("channel", 0xFF0000FF, AxisId.PosZ, ch.Idx.Sizei, ch.Price.Sizef, false,
-					new v4((float)ch.Idx.Midf, ch.Price.Midf, 0f, 1f));
+				ldr.Rect("channel", 0xFF0000FF, AxisId.PosZ, ch.Idx.Sizef, ch.Price.Sizef, false,
+					new v4(ch.Idx.Midf, ch.Price.Midf, 0f, 1f));
 			});
 		}
 
@@ -178,7 +178,7 @@ namespace Rylobot
 				var aspect = count * Instrument.PipSize / range.Size;
 				if (aspect > best_aspect)
 				{
-					var idx_range = new Range(i,1).Shift(-Instrument.IdxFirst);
+					var idx_range = new RangeF(i,1).Shift(-Instrument.IdxFirst);
 					
 					// Eliminate channels that are not preceded by a trend
 					var d = MA[i] - MA[2*i];
@@ -201,7 +201,7 @@ namespace Rylobot
 		}
 		private struct PriceChannel
 		{
-			public PriceChannel(Range calgo_idx, RangeF price, int preceding_trend_sign)
+			public PriceChannel(RangeF calgo_idx, RangeF price, int preceding_trend_sign)
 			{
 				Idx                = calgo_idx;
 				Price              = price;
@@ -209,7 +209,7 @@ namespace Rylobot
 			}
 
 			/// <summary>CAlgo index range</summary>
-			public Range Idx;
+			public RangeF Idx;
 
 			/// <summary>Price range of the channel</summary>
 			public RangeF Price;
@@ -257,8 +257,8 @@ namespace Rylobot
 			Debugging.Dump("channels.ldr", ldr =>
 			{
 				foreach (var ch in Channels)
-					ldr.Rect("channel", 0xFF0000FF, AxisId.PosZ, ch.Idx.Sizei, ch.Price.Sizef, false,
-						new v4((float)ch.Idx.Midf, ch.Price.Midf, 0f, 1f));
+					ldr.Rect("channel", 0xFF0000FF, AxisId.PosZ, ch.Idx.Sizef, ch.Price.Sizef, false,
+						new v4(ch.Idx.Midf, ch.Price.Midf, 0f, 1f));
 			});
 		}
 		List<PriceChannel> Channels = new List<PriceChannel>();

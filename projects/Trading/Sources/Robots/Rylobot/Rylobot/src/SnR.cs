@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using cAlgo.API;
 using pr.common;
 using pr.extn;
 using pr.maths;
@@ -20,7 +21,7 @@ namespace Rylobot
 		/// <param name="price">The centre price to centre the SnR level data around</param>
 		/// <param name="count">The number of candles that contribute to the SnR levels (only candles intersecting the range)</param>
 		/// <param name="range">The range of prices (above and below 'price') to check</param>
-		public SnR(Instrument instrument, QuoteCurrency? price = null, Idx? iend = null, int? count = null, QuoteCurrency? range = null, QuoteCurrency? bucket_size = null)
+		public SnR(Instrument instrument, QuoteCurrency? price = null, Idx? iend = null, int? count = null, QuoteCurrency? range = null, TimeFrame tf = null, QuoteCurrency? bucket_size = null)
 		{
 			price = price ?? instrument.LatestPrice.Mid;
 			iend = iend ?? 1;
@@ -28,8 +29,9 @@ namespace Rylobot
 			// Set the range based on the recent span of candles
 			if (range == null)
 			{
+				// Use a minimum of 5*MCS
 				var r = instrument.MCS * 5;
-				foreach (var c in instrument.CandleRange(iend.Value - instrument.Bot.Settings.LookBackCount, iend.Value))
+				foreach (var c in instrument.CandleRange(iend.Value - 200, iend.Value))
 				{
 					r = Math.Max(r, Math.Abs(c.High - price.Value));
 					r = Math.Max(r, Math.Abs(price.Value - c.Low));
@@ -44,7 +46,8 @@ namespace Rylobot
 			Count = count ?? instrument.Bot.Settings.SnRHistoryLength;
 			Range = range.Value;
 			Price = price.Value;
-			BucketSize = (double)(bucket_size ?? instrument.MCS);
+			BucketSize = bucket_size ?? instrument.MCS;
+			TimeFrame = tf ?? Instrument.TimeFrame.GetRelativeTimeFrame(16);
 
 			CalculateLevels();
 		}
@@ -74,6 +77,9 @@ namespace Rylobot
 		/// <summary>The number of candles that contribute to the SnR levels</summary>
 		public int Count { get; private set; }
 
+		/// <summary>The time frame to use when finding SnR levels</summary>
+		public TimeFrame TimeFrame { get; set; }
+
 		/// <summary>The centre price level</summary>
 		public QuoteCurrency Price
 		{
@@ -101,6 +107,224 @@ namespace Rylobot
 			get;
 			private set;
 		}
+
+		/// <summary>
+		/// Return the nearest significant support level above or below 'price'.
+		/// 'sign' is the direction to look for a level. +1 means above, -1 means below, 0 means either side.
+		/// 'min_dist' means the nearest SnR level >= price + sign * min_dist (default: 0 if sign=0, 0.25*MCS if sign=±1)
+		/// 'range' is a bound on the levels to check (default: no range limit)
+		/// 'radius' is a shortcut for Range(price - radius, price + radius). (Default: ignored) </summary>
+		public Level Nearest(QuoteCurrency price, int sign, QuoteCurrency? min_dist = null, RangeF? range = null, QuoteCurrency? radius = null, double? min_strength = 0.5)
+		{
+			// Set the range
+			if (radius != null && range == null)
+				range = new RangeF((double)(price - radius), (double)(price + radius));
+
+			// Set the minimum if not provided
+			min_dist = min_dist ?? (sign == 0 ? 0 : 0.25*Instrument.MCS);
+
+			// Get the threshold price
+			var thresh = price + sign * min_dist.Value;
+
+			// Find levels above/below the threshold
+			var levels = (IEnumerable<Level>)SnRLevels;
+			if (range != null)        levels = levels.Where(x => range.Value.Contains((double)x.Price));
+			if (sign != 0)            levels = levels.Where(x => Math.Sign(x.Price - thresh) == sign);
+			if (min_strength != null) levels = levels.Where(x => x.Strength >= min_strength.Value);
+
+			// Return the levels closed to 'price'
+			return levels.MinByOrDefault(x => Math.Abs(x.Price - price));
+		}
+
+		/// <summary>Return the price peaks and toughs in the instrument</summary>
+		public IEnumerable<StationaryPoint> StationaryPoints
+		{
+			get
+			{
+				// This is not really the right MCS to use, since we're batching
+				var mcs = Instrument.MCS;
+
+				// The number of candles that have contributed to the SnR calculation
+				var candle_count = 0;
+
+				// Start at the latest candle and work backwards
+				var candle0 = Instrument[0];
+				var sign = candle0.Sign;
+
+				// Find the stationary points in the higher time frame data
+				foreach (var candle1 in Instrument.BatchedCandleRange(Instrument.IdxFirst, End, TimeFrame, reverse:true))
+				{
+					Beg = Math.Min(Beg, candle1.Index + Instrument.IdxFirst);
+
+					// Only use candles that intersect the price range
+					if (candle1.Low  > Price + Range) continue;
+					if (candle1.High < Price - Range) continue;
+
+					// Track the number of contributing batch candles
+					if (++candle_count >= Count)
+						break;
+
+					// Look for a candle with a different sign
+					var candle_sign = candle1.Type(mcs).IsIndecision() ? 0 : candle1.Sign;
+					if (candle_sign != sign)
+					{
+						var p0 = candle0.WickLimit(candle_sign);
+						var p1 = candle1.WickLimit(candle_sign);
+						var p = candle_sign > 0 ? Math.Max(p0,p1) : candle_sign < 0 ? Math.Min(p0,p1) : candle1.BodyCentre;
+						yield return new StationaryPoint(candle1.Index + candle1.Width, p, candle_sign);
+
+						// Change sign
+						sign = candle1.Sign;
+					}
+
+					// Save the previous candle
+					candle0 = candle1;
+				}
+			}
+		}
+
+		/// <summary>Identify the support and resistance levels</summary>
+		private void CalculateLevels()
+		{
+			SnRLevels.Clear();
+			for (var loop = 2; loop-- != 0;)
+			{
+				var age_weight = 1.0;
+				var last_bucket = -1;
+
+				// Sort the stationary points into their nearest bucket
+				foreach (var sp in StationaryPoints)
+				{
+					// Find the nearest level to 'sp'
+					var idx = SnRLevels.BinarySearch(x => x.Price.CompareTo(sp.Price), find_insert_position:true);
+
+					// Require the price to move away from the last bucket to ensure
+					// periods of consolidation don't artificially strengthen an SnR level.
+					if (idx == last_bucket) continue;
+					last_bucket = idx;
+
+					// Find the closest bucket
+					// If the nearest bucket is further than the bucket size, insert a bucket
+					var d0 = idx >               0 ? (double)(sp.Price - SnRLevels[idx-1].Price) : BucketSize;
+					var d1 = idx < SnRLevels.Count ? (double)(SnRLevels[idx  ].Price - sp.Price) : BucketSize;
+					if (Math.Min(d0,d1) >= BucketSize)
+						SnRLevels.Insert(idx, new Level(sp.Price));
+					else
+						idx = d0 < d1 ? idx - 1 : idx;
+
+					// Add 'sp' to the average for the bucket
+					SnRLevels[idx].Average.Add(sp.Price);
+					SnRLevels[idx].Strength = age_weight;
+					age_weight *= 0.9;
+				}
+
+				// Adjust the prices to the mean for each bucket and remove empty buckets
+				var done = true;
+				var pip = Instrument.Symbol.PipSize;
+				SnRLevels.RemoveIf(x => x.Average.Count == 0);
+				foreach (var lvl in SnRLevels)
+				{
+					done &= Math.Abs(lvl.Price - lvl.Average.Mean) < pip;
+					lvl.Price = lvl.Average.Mean;
+					lvl.Strength *= lvl.Average.Count;
+					lvl.Average.Reset();
+				}
+
+				// All means are roughly unmoved
+				if (done)
+					break;
+			}
+
+			// Determine strength values for each SnR level
+			if (SnRLevels.Count != 0)
+			{
+				// Level strength depends on the number of stationary points used to form the level
+				// and on how recently the level was respected. Not the number of points relative to other levels.
+				const int StrongCount = 2;
+				foreach (var lvl in SnRLevels)
+					lvl.Strength = 0.5 * Maths.Sigmoid(lvl.Strength - StrongCount, StrongCount) + 0.5;
+			}
+
+			var digits = Instrument.Symbol.Digits;
+
+			// Round levels that are near 00 levels
+			foreach (var lvl in SnRLevels)
+			{
+				var price00 = Math.Round(lvl.Price, digits - 3);
+				var price0  = Math.Round(lvl.Price, digits - 2);
+	
+				if (Math.Abs(price00 - lvl.Price) < 0.25 * Instrument.MCS)
+					lvl.Price = price00;
+				else if (Math.Abs(price0 - lvl.Price) < 0.5 * Instrument.MCS)
+					lvl.Price = price0;
+			}
+
+			// Insert levels for the 000 levels
+			var pbeg = Math.Round(Price - Range, digits - 4);
+			var pend = Math.Round(Price + Range, digits - 4);
+			var pstep = Instrument.PipSize * 1000;
+			for (var p = pbeg; p <= pend; p += pstep)
+			{
+				if (p < Price - Range || p > Price + Range) continue;
+				var idx = SnRLevels.BinarySearch(x => x.Price.CompareTo(p), find_insert_position:true);
+				if ((idx < SnRLevels.Count && !Maths.FEql(p, SnRLevels[idx  ].Price)) ||
+					(idx > 0               && !Maths.FEql(p, SnRLevels[idx-1].Price)) ||
+					(idx == SnRLevels.Count))
+				{
+					SnRLevels.Insert(idx, new Level(p) { Strength = 0.8 });
+				}
+			}
+
+			// Sort the levels by strength
+			SnRLevels.Sort(Cmp<Level>.From((l,r) => -l.Strength.CompareTo(r.Strength)));
+		}
+
+		/// <summary>A stationary point in the price data</summary>
+		[DebuggerDisplay("{Index} {Price} Sign={Sign}")]
+		public class StationaryPoint
+		{
+			public StationaryPoint(Idx index, QuoteCurrency price, int sign)
+			{
+				Index = index;
+				Price = price;
+				Sign  = sign;
+			}
+
+			/// <summary>The CAlgo index in the instrument data of the stationary point</summary>
+			public Idx Index { get; private set; }
+
+			/// <summary>The price value at the stationary point</summary>
+			public QuoteCurrency Price { get; private set; }
+
+			/// <summary>Stationary point type, +1 = maximum, 0 = inflection, -1 = minimum</summary>
+			public int Sign { get; private set; }
+		}
+
+		/// <summary>An identified price level</summary>
+		[DebuggerDisplay("{Price} Str={Strength}")]
+		public class Level
+		{
+			public Level(QuoteCurrency price)
+			{
+				Price    = price;
+				Strength = 0;
+				Average  = new Avr();
+			}
+
+			/// <summary>The price level</summary>
+			public QuoteCurrency Price { get; set; }
+
+			/// <summary>The strength of the SnR level</summary>
+			public double Strength { get; set; }
+
+			/// <summary>The number of stationary points at this level</summary>
+			public Avr Average { get; set; }
+		}
+	}
+}
+
+
+#if false
 
 		/// <summary>Return the price peaks and toughs in the instrument</summary>
 		public IEnumerable<StationaryPoint> StationaryPoints
@@ -147,35 +371,7 @@ namespace Rylobot
 			}
 		}
 
-		/// <summary>
-		/// Return the nearest significant support level above or below 'price'.
-		/// 'sign' is the direction to look for a level. +1 means above, -1 means below, 0 means either side.
-		/// 'min_dist' means the nearest SnR level >= price + sign * min_dist (default: 0 if sign=0, 0.25*MCS if sign=±1)
-		/// 'range' is a bound on the levels to check (default: no range limit)
-		/// 'radius' is a shortcut for Range(price - radius, price + radius). (Default: ignored) </summary>
-		public Level Nearest(QuoteCurrency price, int sign, QuoteCurrency? min_dist = null, RangeF? range = null, QuoteCurrency? radius = null, double? min_strength = 0.5)
-		{
-			// Set the range
-			if (radius != null && range == null)
-				range = new RangeF((double)(price - radius), (double)(price + radius));
-
-			// Set the minimum if not provided
-			min_dist = min_dist ?? (sign == 0 ? 0 : 0.25*Instrument.MCS);
-
-			// Get the threshold price
-			var thresh = price + sign * min_dist.Value;
-
-			// Find levels above/below the threshold
-			var levels = (IEnumerable<Level>)SnRLevels;
-			if (range != null)        levels = levels.Where(x => range.Value.Contains((double)x.Price));
-			if (sign != 0)            levels = levels.Where(x => Math.Sign(x.Price - thresh) == sign);
-			if (min_strength != null) levels = levels.Where(x => x.Strength >= min_strength.Value);
-
-			// Return the levels closed to 'price'
-			return levels.MinByOrDefault(x => Math.Abs(x.Price - price));
-		}
-
-		/// <summary>Identify the support and resistance levels</summary>
+/// <summary>Identify the support and resistance levels</summary>
 		private void CalculateLevels()
 		{
 			SnRLevels.Clear();
@@ -235,50 +431,7 @@ namespace Rylobot
 				SnRLevels.Sort(Cmp<Level>.From((l,r) => -l.Strength.CompareTo(r.Strength)));
 			}
 		}
-
-		/// <summary>A stationary point in the price data</summary>
-		[DebuggerDisplay("{Index} {Price}")]
-		public class StationaryPoint
-		{
-			public StationaryPoint(Idx index, QuoteCurrency price, bool maximum)
-			{
-				Index   = index;
-				Price   = price;
-				Maximum = maximum;
-			}
-
-			/// <summary>The index in the instrument data of the stationary point</summary>
-			public Idx Index { get; private set; }
-
-			/// <summary>The price value at the stationary point</summary>
-			public QuoteCurrency Price { get; private set; }
-
-			/// <summary>True = A price maximum, otherwise a minimum</summary>
-			public bool Maximum { get; private set; }
-		}
-
-		/// <summary>An identified price level</summary>
-		[DebuggerDisplay("{Price} Str={Strength}")]
-		public class Level
-		{
-			public Level(QuoteCurrency price)
-			{
-				Price    = price;
-				Strength = 0;
-				Average  = new Avr();
-			}
-
-			/// <summary>The price level</summary>
-			public QuoteCurrency Price { get; set; }
-
-			/// <summary>The strength of the SnR level</summary>
-			public double Strength { get; set; }
-
-			/// <summary>The number of stationary points at this level</summary>
-			public Avr Average { get; set; }
-		}
-	}
-}
+#endif
 
 #if false // not sure about this
 		/// <summary>
@@ -544,212 +697,3 @@ namespace Rylobot
 
 	}
 #endif
-
-#if false // doesn't work
-	public class SnR :IDisposable
-	{
-		/// <summary>
-		/// Construct the price density data for a range of candles in 'instr'
-		/// 'ibeg' and 'iend' should be negative indices</summary>
-		public SnR(Instrument instr, int ibeg, int iend, int pips_per_bucket = 5)
-		{
-			Levels = new List<Bucket>();
-
-			Instrument = instr;
-			Range = new Range(ibeg, iend);
-			PipsPerBucket = pips_per_bucket;
-
-			CalculateLevels();
-		}
-		public virtual void Dispose()
-		{
-			Instrument = null;
-		}
-
-		/// <summary>The instrument on which the SnR levels have been calculated</summary>
-		public Instrument Instrument
-		{
-			get { return m_instrument; }
-			set
-			{
-				if (m_instrument == value) return;
-				m_instrument = value;
-			}
-		}
-		private Instrument m_instrument;
-
-		/// <summary>The candle range used</summary>
-		public Range Range
-		{
-			get { return m_range; }
-			set { m_range = value; }
-		}
-		private Range m_range;
-
-		/// <summary>The size of each bucket (in pips)</summary>
-		public int PipsPerBucket
-		{
-			get;
-			private set;
-		}
-
-		/// <summary>A sorted list of prices</summary>
-		public List<Bucket> Levels
-		{
-			[DebuggerStepThrough] get;
-			set;
-		}
-
-		/// <summary>The price range in each level (bucket)</summary>
-		public double BucketSize
-		{
-			get { return Instrument.Symbol.PipSize * PipsPerBucket; }
-		}
-
-		/// <summary>Return a price quantised to the bucket price levels</summary>
-		private double QuantisePrice(double price)
-		{
-			var bucket_size = BucketSize;
-			return (long)(price / bucket_size) * bucket_size;
-		}
-
-		/// <summary>Return the bucket index for a given price. Note: can exceed the Levels collection</summary>
-		private int BucketIndex(double price, List<Bucket> container)
-		{
-			Debug.Assert(container.Count != 0);
-			return (int)((price - container[0].Price) / BucketSize);
-		}
-
-		/// <summary>
-		/// Return the bucket index for a given price level.
-		/// If grow == false, indices can exceed the Levels collection.
-		/// If grow == true, successive calls can invalidate indices for lower price levels</summary>
-		private Range BucketIndexRange(double price0, double price1, List<Bucket> container, bool grow)
-		{
-			Debug.Assert(container.Count != 0);
-			var idx0 = BucketIndex(price0, container);
-			var idx1 = BucketIndex(price1, container);
-
-			// If the 'container' is not large enough, add more levels
-			if (grow)
-			{
-				var bucket_size = BucketSize;
-				if (idx0 < 0)
-				{
-					var cnt = -idx0;
-					var p = container.Front().Price - cnt * bucket_size;
-					container.InsertRange(0, int_.Range(cnt).Select(x => new Bucket(p + x * bucket_size)));
-					idx0 += cnt;
-					idx1 += cnt;
-				}
-				if (idx1 >= container.Count)
-				{
-					var cnt = idx1 - container.Count + 1;
-					var p = container.Back().Price + bucket_size;
-					container.InsertRange(container.Count, int_.Range(cnt).Select(x => new Bucket(p + x * bucket_size)));
-				}
-			}
-
-			return new Range(idx0, idx1);
-		}
-
-		/// <summary>Identify the support and resistance levels</summary>
-		private void CalculateLevels()
-		{
-			var container = Levels;
-
-			// Reset the data.
-			// The container must have at least one value, because the indices
-			// are calculated relative to the first element.
-			container.Clear();
-			container.Add(new Bucket(QuantisePrice(Instrument[Range.Begini].Median)));
-
-			// Record the maximum values so we can normalise
-			var max = new Bucket(0);
-
-			// Add the candle data over the range to 'container'
-			var candle_time = Instrument.TimeFrame.ToTicks();
-			for (int i = Range.Begini; i != Range.Endi; ++i)
-			{
-				var candle = Instrument[i];
-
-				// Find the index range (inclusive) spanned by 'candle'.
-				var idx = BucketIndexRange(candle.Low, candle.High, container, true);
-
-				// Add to the count of the bucket that contains the median
-				var median_idx = BucketIndex(candle.Median, container);
-				container[median_idx].Median++;
-				max.Median = Math.Max(max.Median, container[median_idx].Median);
-
-				// Scale the values by the range of buckets the candle spans.
-				// So, if a candle only covers one bucket, all candle data contributes to that bucket.
-				// If the candle spans N buckets, 1/N of the data is added to each bucket.
-				var scale = 1.0 / (idx.Count + 1);
-				for (int j = idx.Begini, jend = idx.Endi+1; j != jend; ++j)
-				{
-					container[j].Volume += candle.Volume * scale;
-					container[j].Time   += candle_time   * scale;
-
-					// Record the maximum for normalising later
-					max.Volume = Math.Max(max.Volume, container[j].Volume);
-					max.Time   = Math.Max(max.Time  , container[j].Time);
-				}
-			}
-
-			// Get the price range
-			var price0 = container.Front().Price;
-			var price1 = container.Back().Price + BucketSize;
-			var levels_range = BucketIndexRange(price0, price1, container, true);
-
-			// Normalise the data
-			for (int i = 0; i != container.Count; ++i)
-			{
-				var level = container[i];
-				level.Median = Maths.Div(level.Median, max.Median);
-				level.Volume = Maths.Div(level.Volume, max.Volume);
-				level.Time   = Maths.Div(level.Time  , max.Time  );
-			}
-		}
-
-		/// <summary>A single price level (bucket)</summary>
-		[DebuggerDisplay("{Price}  {Median}  {Volume}  {Time}")]
-		public class Bucket
-		{
-			public Bucket(double price)
-			{
-				Price    = price;
-				Median   = 0;
-				Volume   = 0;
-				Time     = 0;
-				AvrCount = 0;
-			}
-
-			/// <summary>The central price value of this bucket</summary>
-			public double Price { get; set; }
-
-			/// <summary>The number of candle median prices that fall within this bucket</summary>
-			public double Median { get; set; }
-
-			/// <summary>The volume of trades that occurred within this bucket</summary>
-			public double Volume { get; set; }
-
-			/// <summary>The amount of time (in ticks) the price spent within this bucket price range</summary>
-			public double Time { get; set; }
-
-			/// <summary>The number of times data has been added to this level (used for averaging)</summary>
-			public uint AvrCount { get; set; }
-
-			/// <summary>Returns true if the contained values are zero</summary>
-			public bool IsZero
-			{
-				get
-				{
-					return
-						Maths.FEql(Median, 0.0) &&
-						Maths.FEql(Volume, 0.0) &&
-						Maths.FEql(Time  , 0.0);
-				}
-			}
-		}
-	}
-	#endif

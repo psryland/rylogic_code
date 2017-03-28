@@ -370,6 +370,16 @@ namespace pr.maths
 			return Rotation(axis_norm, axis_sine_angle, cos_angle);
 		}
 
+		/// <summary>Create a scale matrix</summary>
+		public static m3x4 Scale(float s)
+		{
+			return new m3x4(s*v4.XAxis, s*v4.YAxis, s*v4.ZAxis);
+		}
+		public static m3x4 Scale(float sx, float sy, float sz)
+		{
+			return new m3x4(sx*v4.XAxis, sy*v4.YAxis, sz*v4.ZAxis);
+		}
+
 		/// <summary>Spherically interpolate between two rotations</summary>
 		public static m3x4 Slerp(m3x4 lhs, m3x4 rhs, float frac)
 		{

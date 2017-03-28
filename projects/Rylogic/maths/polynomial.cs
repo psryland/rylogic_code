@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -26,6 +27,7 @@ namespace pr.maths
 	}
 
 	/// <summary>'F(x) = Ax + B. a.k.a. Linear</summary>
+	[DebuggerDisplay("A={A} B={B}")]
 	public class Monic :IPolynomial
 	{
 		public double A;
@@ -117,6 +119,7 @@ namespace pr.maths
 	}
 
 	/// <summary>'F(x) = Ax² + Bx + C'</summary>
+	[DebuggerDisplay("A={A} B={B} C={C}")]
 	public class Quadratic :IPolynomial
 	{
 		public double A;
@@ -297,6 +300,7 @@ namespace pr.maths
 	}
 
 	/// <summary>'F(x) = Ax³ + Bx² + Cx + D'</summary>
+	[DebuggerDisplay("A={A} B={B} C={C} D={D}")]
 	public class Cubic :IPolynomial
 	{
 		public double A;

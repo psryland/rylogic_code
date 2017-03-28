@@ -1023,9 +1023,9 @@ namespace pr.gfx
 			}
 
 			/// <summary>Return a bounding box of the objects in this window</summary>
-			public BBox SceneBounds(ESceneBounds bounds)
+			public BBox SceneBounds(ESceneBounds bounds, Guid[] except = null)
 			{
-				return View3D_SceneBounds(m_wnd, bounds);
+				return View3D_SceneBounds(m_wnd, bounds, except?.Length ?? 0, except);
 			}
 
 			/// <summary>Show/Hide the focus point</summary>
@@ -1179,7 +1179,7 @@ namespace pr.gfx
 			}
 
 			/// <summary>Convert a screen space point to a normalised point</summary>
-			public v2 SSPointToNSSPoint(Point screen)
+			public v2 SSPointToNSSPoint(PointF screen)
 			{
 				return View3D_SSPointToNSSPoint(m_wnd, v2.From(screen));
 			}
@@ -1465,14 +1465,14 @@ namespace pr.gfx
 			{
 				return View3D_NSSPointToWSPoint(m_window.Handle, screen);
 			}
-			public v4 SSPointToWSPoint(Point screen)
+			public v4 SSPointToWSPoint(PointF screen)
 			{
 				var nss = SSPointToNSSPoint(screen);
 				return NSSPointToWSPoint(new v4(nss.x, nss.y, View3D_CameraFocusDistance(m_window.Handle), 1.0f));
 			}
 
 			/// <summary>Return the normalised screen space point corresponding to a screen space point</summary>
-			public v2 SSPointToNSSPoint(Point screen)
+			public v2 SSPointToNSSPoint(PointF screen)
 			{
 				return m_window.SSPointToNSSPoint(screen);
 			}
@@ -2257,7 +2257,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_RemoveObjectsById      (HWindow window, bool all_except, ref Guid context_id);
 		[DllImport(Dll)] private static extern void              View3D_AddGizmo               (HWindow window, HGizmo giz);
 		[DllImport(Dll)] private static extern void              View3D_RemoveGizmo            (HWindow window, HGizmo giz);
-		[DllImport(Dll)] private static extern BBox              View3D_SceneBounds            (HWindow window, ESceneBounds bounds);
+		[DllImport(Dll)] private static extern BBox              View3D_SceneBounds            (HWindow window, ESceneBounds bounds, int except_count, Guid[] except);
 
 		// Camera
 		[DllImport(Dll)] private static extern void              View3D_CameraToWorld          (HWindow window, out m4x4 c2w);

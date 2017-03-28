@@ -13,6 +13,7 @@ namespace Rylobot
 		{
 			Strategy           = strat;
 			Position           = pos;
+			CloseHalfAtMinRtR  = true;
 			MinRtR             = 1.0;
 			MinRtRCrossedIndex = null;
 			Closed             = false;
@@ -106,7 +107,7 @@ namespace Rylobot
 		private Position m_position;
 
 		/// <summary>The (CAlgo) index of when 'Position' was opened</summary>
-		public int EntryIndex { get; private set; }
+		public double EntryIndex { get; private set; }
 
 		/// <summary>The current profit value (basically NetProfit)</summary>
 		public AcctCurrency Profit { get; private set; }
@@ -118,10 +119,10 @@ namespace Rylobot
 		public AcctCurrency PeakProfit { get; private set; }
 
 		/// <summary>Where the peak profit was detected</summary>
-		public int PeakProfitIndex { get; private set; }
+		public double PeakProfitIndex { get; private set; }
 
 		/// <summary>Where the position was last profitable</summary>
-		public int LastProfitableIndex { get; private set; }
+		public double LastProfitableIndex { get; private set; }
 
 		/// <summary>The number of candles since a new peak was made</summary>
 		public int CandlesSincePeak { get; private set; }
@@ -143,6 +144,9 @@ namespace Rylobot
 
 		/// <summary>True if the current step is a gain in profit</summary>
 		public bool IsGain { get; private set; }
+
+		/// <summary>When profit gets to MinRtR, close half the volume and move the SL to break event</summary>
+		public bool CloseHalfAtMinRtR { get; set; }
 
 		/// <summary>The minimum reward to risk ratio for the position (i.e. don't take less profit than this)</summary>
 		public double MinRtR { get; set; }
@@ -180,33 +184,55 @@ namespace Rylobot
 			PeakProfitIndex = NewPeak ? Instrument.Count : PeakProfitIndex;
 
 			// How long since a new profit peak was made
-			CandlesSincePeak = NewPeak ? 0 : Instrument.Count - PeakProfitIndex;
+			CandlesSincePeak = NewPeak ? 0 : Instrument.Count - (int)PeakProfitIndex;
 			TicksSincePeak   = NewPeak ? 0 : TicksSincePeak + 1;
 
 			// How long since the trade was profitable at all
-			CandlesSinceProfitable = Profitable ? 0 : Instrument.Count - LastProfitableIndex;
+			CandlesSinceProfitable = Profitable ? 0 : Instrument.Count - (int)LastProfitableIndex;
 			TicksSinceProfitable   = Profitable ? 0 : TicksSinceProfitable + 1;
 
 			// Check whether 'MinRtR' has been exceeded
-			if (MinRtRCrossedIndex == null && MinRtRExceeded())
+			if (MinRtRCrossedIndex == null && MinRtRExceeded)
+			{
 				MinRtRCrossedIndex = Instrument.Count - 1;
+
+				// When the MinRtR is reached, close half the position and move the SL to break even
+				if (CloseHalfAtMinRtR)
+				{
+					var vol = Bot.Symbol.NormalizeVolume(Position.Volume / 2);
+					var sl = Position.EntryPrice + Position.Sign() * Instrument.Spread * 2.0;
+
+					// If the position was at the minimum volume, just close it
+					if (Position.Volume == vol)
+						Broker.ClosePosition(Position);
+					else
+						Broker.ModifyOrder(Instrument, Position, sl:sl, vol:vol);
+				}
+			}
 
 			StepCore();
 		}
 		protected abstract void StepCore();
 
 		/// <summary>True if the current value of the position exceeds the MinRtR value</summary>
-		protected bool MinRtRExceeded()
+		protected bool MinRtRExceeded
 		{
-			// Get the SL to determine the minimum TP
-			var sl_rel = Position.StopLossRel();
-			if (sl_rel <= 0)
-				return true;
+			get
+			{
+				// It's been exceeded in the past
+				if (MinRtRCrossedIndex != null)
+					return true;
 
-			// Compare the current value to the SL
-			var rel = Position.ValueAt(Instrument.LatestPrice);
-			var tp_rel = MinRtR * sl_rel;
-			return rel >= tp_rel;
+				// Get the SL to determine the minimum TP
+				var sl_rel = Position.StopLossRel();
+				if (sl_rel <= 0)
+					return true;
+
+				// Compare the current value to the SL
+				var rel = Position.ValueAt(Instrument.LatestPrice);
+				var tp_rel = MinRtR * sl_rel;
+				return rel >= tp_rel;
+			}
 		}
 
 		/// <summary>Handle position closed</summary>
@@ -476,20 +502,28 @@ namespace Rylobot
 			if (!Instrument.NewCandle)
 				return;
 
+			// Don't adjust the SL until the profit is better than MinRtR
+			if (!MinRtRExceeded)
+				return;
+
 			// Look at the last few candles to find the level for the SL
 			var range = Instrument.PriceRange(-NumCandles, 1);
+
+			// Don't set the SL above the current price
+			var sign = Position.Sign();
+			var min_sl = Instrument.CurrentPrice(-sign) - sign * Instrument.MCS;
 
 			// Choose the worst over the range and adjust the SL
 			if (Position.Sign() > 0)
 			{
 				var sl = range.Beg - 5 * Instrument.PipSize - Instrument.Spread;
-				if (sl > Position.StopLoss || Position.StopLoss == null)
+				if (sl < min_sl && (sl > Position.StopLoss || Position.StopLoss == null))
 					Broker.ModifyOrder(Instrument, Position, sl:sl);
 			}
 			else
 			{
 				var sl = range.End + 5 * Instrument.PipSize + Instrument.Spread;
-				if (sl < Position.StopLoss || Position.StopLoss == null)
+				if (sl > min_sl && (sl < Position.StopLoss || Position.StopLoss == null))
 					Broker.ModifyOrder(Instrument, Position, sl:sl);
 			}
 		}

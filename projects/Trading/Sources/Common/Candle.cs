@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using cAlgo.API;
 using pr.common;
 using pr.extn;
 
@@ -8,9 +9,10 @@ namespace Rylobot
 	public class Candle
 	{
 		public Candle() {}
-		public Candle(int index, long timestamp, double open, double high, double low, double close, double median, double volume)
+		public Candle(Idx calgo_index, long timestamp, double open, double high, double low, double close, double median, double volume, double width = 1.0)
 		{
-			Index     = index;
+			Index     = calgo_index;
+			Width     = width;
 			Timestamp = timestamp;
 			Open      = open;
 			High      = Math.Max(high, Math.Max(open, close));
@@ -32,7 +34,10 @@ namespace Rylobot
 		}
 
 		/// <summary>CAlgo index</summary>
-		public int Index { get; private set; }
+		public Idx Index { get; private set; }
+
+		/// <summary>The width of the candle in time frame units</summary>
+		public double Width { get; private set; }
 
 		/// <summary>The timestamp (in ticks) of when this candle opened</summary>
 		public long Timestamp { get; private set; }
@@ -264,6 +269,12 @@ namespace Rylobot
 			get { return TimeZone.CurrentTimeZone.ToLocalTime(TimestampUTC.DateTime); }
 		}
 
+		/// <summary>Return the timestamp in units of 'time_frame'</summary>
+		public double TFUnits(TimeFrame time_frame)
+		{
+			return (double)Timestamp / time_frame.ToTicks();
+		}
+
 		/// <summary>Debugging check for self consistency</summary>
 		public bool Valid()
 		{
@@ -278,7 +289,7 @@ namespace Rylobot
 		/// <summary>Friendly print</summary>
 		public override string ToString()
 		{
-			return string.Format("ts:{0} - ohlc:({1:G4} {2:G4} {3:G4} {4:G4}) - vol:{5}", new DateTimeOffset(Timestamp, TimeSpan.Zero).ToString(), Open, High, Low, Close, Volume);
+			return string.Format("{0} ts={1} ohlc=({2:G5} {3:G5} {4:G5} {5:G5}) vol={6}", Sign>0?"Bullish":Sign<0?"Bearish":"Indecision", new DateTimeOffset(Timestamp, TimeSpan.Zero).ToString(), Open, High, Low, Close, Volume);
 		}
 
 		#region Equals

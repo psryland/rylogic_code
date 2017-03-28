@@ -29,6 +29,7 @@
 #include "pr/common/multi_cast.h"
 #include "pr/common/cast.h"
 #include "pr/container/vector.h"
+#include "pr/container/array_view.h"
 #include "pr/filesys/fileex.h"
 #include "pr/filesys/filewatch.h"
 #include "pr/script/reader.h"

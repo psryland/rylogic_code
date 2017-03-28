@@ -33,14 +33,14 @@ namespace Rylobot
 		}
 
 		/// <summary>Create a trade with explicit values</summary>
-		public Trade(Instrument instr, TradeType tt, string label, QuoteCurrency ep, QuoteCurrency? sl, QuoteCurrency? tp, long volume, string comment = null, Idx? idx = null)
+		public Trade(Instrument instr, TradeType tt, string label, QuoteCurrency ep, QuoteCurrency? sl, QuoteCurrency? tp, long volume, string comment = null, Idx? idx = null, EResult result = EResult.Unknown)
 		{
 			CAlgoId    = null;
 			TradeIndex = m_trade_index++;
 			TradeType  = tt;
 			Instrument = instr;
-			Result     = EResult.Unknown;
-			EntryIndex = idx != null ? (double)(idx - instr.IdxFirst) : (double)instr.IdxNow;
+			Result     = result;
+			EntryIndex = (double)(idx ?? instr.IdxNow) - instr.IdxFirst;
 			ExitIndex  = EntryIndex;
 			Expiration = null;
 			Label      = label ?? string.Empty;
@@ -69,8 +69,8 @@ namespace Rylobot
 		/// <param name="risk">Optional. Scaling factor for the amount to risk. (default is 1.0)</param>
 		/// <param name="comment">Optional. A comment/tag associated with the trade</param>
 		/// <param name="idx">Optional. The instrument index of when the trade was created. (default is the current time)</param>
-		public Trade(Instrument instr, TradeType tt, string label = null, QuoteCurrency? ep = null, QuoteCurrency? sl = null, QuoteCurrency? tp = null, double? risk = null, string comment = null, Idx? idx = null)
-			:this(instr, tt, label, 0, null, null, 0, comment:comment, idx:idx)
+		public Trade(Instrument instr, TradeType tt, string label = null, QuoteCurrency? ep = null, QuoteCurrency? sl = null, QuoteCurrency? tp = null, double? risk = null, string comment = null, Idx? idx = null, EResult result = EResult.Unknown)
+			:this(instr, tt, label, 0, null, null, 0, comment:comment, idx:idx, result:result)
 		{
 			try
 			{
@@ -125,7 +125,7 @@ namespace Rylobot
 			CAlgoId = pos.Id;
 			Result = result;
 
-			EntryIndex = instr.IndexAt(pos.EntryTime) - instr.IdxFirst;
+			EntryIndex = instr.IndexAt(pos.EntryTime   ) - instr.IdxFirst;
 			ExitIndex  = instr.IndexAt(instr.Bot.UtcNow) - instr.IdxFirst;
 
 			// Buy at the bid price, then: loss = EP - ask, profit = ask - EP
@@ -153,6 +153,12 @@ namespace Rylobot
 		/// <summary>Incrementing trade index</summary>
 		public int TradeIndex { get; private set; }
 		private static int m_trade_index;
+
+		/// <summary>A name for this trade</summary>
+		public string Name
+		{
+			get { return "{0}_{1}".Fmt(Result == EResult.Pending ? "order" : "trade", Id); }
+		}
 
 		/// <summary>The CAlgo Id for this trade</summary>
 		public int Id

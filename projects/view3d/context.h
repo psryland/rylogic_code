@@ -17,7 +17,7 @@ namespace view3d
 		bool                      m_compatible; // True if the renderer will work on this system
 		pr::Renderer              m_rdr;        // The renderer
 		WindowCont                m_wnd_cont;   // The created windows
-		pr::ldr::ScriptSources    m_sources;    // A file watcher for loaded script source files
+		pr::ldr::ScriptSources    m_sources;    // A container of Ldr objects and a file watcher
 		pr::script::EmbeddedLua<> m_lua;
 		std::recursive_mutex      m_mutex;
 
@@ -87,65 +87,29 @@ namespace view3d
 		// Load/Add a script source
 		pr::Guid LoadScriptSource(wchar_t const* filepath, bool additional, pr::script::Includes<> const& includes)
 		{
-			// If this is not an additional load, clear the scene first
-			if (!additional)
-				ClearScriptSources();
-
-			// Add 'filepath' to the sources
-			return m_sources.AddFile(filepath, includes);
+			// Note: this can be called from a worker thread
+			return m_sources.AddFile(filepath, includes, additional);
 		}
 
 		// Load/Add ldr objects from a script string
 		pr::Guid LoadScript(wchar_t const* ldr_script, bool file, pr::Guid const* context_id, pr::script::Includes<> const& includes)
 		{
-			using namespace pr::script;
-
-			// Create a context id if none given
-			auto guid = pr::GenerateGUID();
-			if (context_id == nullptr)
-				context_id = &guid;
-
-			// Create a writeable includes handler
-			auto inc = includes;
-
-			// Parse the description
-			pr::ldr::ParseResult out;
-			if (file)
-			{
-				inc.AddSearchPath(pr::filesys::GetDirectory<pr::script::string>(ldr_script));
-
-				FileSrc src(ldr_script);
-				Reader reader(src, false, &inc, nullptr, &m_lua);
-				pr::ldr::Parse(m_rdr, reader, out, *context_id);
-			}
-			else // string
-			{
-				PtrW src(ldr_script);
-				Reader reader(src, false, &inc, nullptr, &m_lua);
-				pr::ldr::Parse(m_rdr, reader, out, *context_id);
-			}
-			{// Merge the results
-				pr::ldr::ScriptSources::Lock lock(m_sources);
-				for (auto& obj : out.m_objects)
-					lock.Objects().push_back(obj);
-			}
-			return *context_id;
+			// Note: this can be called from a worker thread
+			return m_sources.AddScript(ldr_script, file, context_id, includes);
 		}
 
 		// Reload script source files
 		void ReloadScriptSources()
 		{
-			{// Remove script source objects from all windows
-				pr::ldr::ScriptSources::Lock lock(m_sources);
-				for (auto src : lock.Files())
-				{
-					auto id = src.second.m_file_group_id;
-					DeleteAllObjectsById(id);
-				}
+			// Remove script source objects from all windows
+			for (auto src : m_sources.Files())
+			{
+				auto id = src.second.m_file_group_id;
+				DeleteAllObjectsById(id);
 			}
 
 			// Reload the source data
-			std::thread([&]{ m_sources.Reload(); }).detach();
+			m_sources.Reload();
 		}
 
 		// Poll for changed script source files, and reload any that have changed
@@ -187,27 +151,20 @@ namespace view3d
 		}
 
 		// Create a gizmo object and add it to the gizmo collection
-		pr::ldr::LdrGizmoPtr CreateGizmo(pr::ldr::LdrGizmo::EMode mode, pr::m4x4 const& o2w)
+		pr::ldr::LdrGizmo* CreateGizmo(pr::ldr::LdrGizmo::EMode mode, pr::m4x4 const& o2w)
 		{
-			using namespace pr::ldr;
-			auto giz = LdrGizmoPtr(new LdrGizmo(m_rdr, mode, o2w));
-			ScriptSources::Lock lock(m_sources);
-			lock.Gizmos().push_back(giz);
-			return giz.m_ptr;
+			return m_sources.CreateGizmo(mode, o2w);
 		}
 
 		// Destroy a gizmo
-		void DeleteGizmo(View3DGizmo gizmo)
+		void DeleteGizmo(pr::ldr::LdrGizmo* gizmo)
 		{
-			using namespace pr::ldr;
-
 			// Remove the gizmo from any windows it's in
 			for (auto wnd : m_wnd_cont)
 				View3D_RemoveGizmo(wnd, gizmo);
 		
-			// Delete the gizmo from the gizmo container (removing the last reference)
-			ScriptSources::Lock lock(m_sources);
-			pr::erase_first(lock.Gizmos(), [&](pr::ldr::LdrGizmoPtr p){ return p.m_ptr == gizmo; });
+			// Delete the gizmo from the sources
+			m_sources.RemoveGizmo(gizmo);
 		}
 	};
 }

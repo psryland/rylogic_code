@@ -80,8 +80,8 @@ namespace Rylobot
 				if (Count == 0) throw new IndexOutOfRangeException("");
 				var i0 = Maths.Clamp(idx - 1, IdxFirst, IdxLast-1);
 				var i1 = Maths.Clamp(idx    , IdxFirst, IdxLast-1);
-				var val0 = Source[i0 - IdxFirst];
-				var val1 = Source[i1 - IdxFirst];
+				var val0 = Source[(int)(i0 - IdxFirst)];
+				var val1 = Source[(int)(i1 - IdxFirst)];
 				var val = Maths.Lerp(val0, val1, (double)idx - (int)idx);
 				Debug.Assert(Maths.IsFinite(val));
 				return val;

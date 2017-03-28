@@ -8,12 +8,17 @@ using pr.maths;
 namespace Rylobot
 {
 	/// <summary>Types of patterns found using 'PricePeaks'</summary>
-	public enum EPeakPattern
+	[Flags] public enum EPeakPattern
 	{
-		BreakOutHigh,
-		BreakOutLow,
-		HighReversal,
-		LowReversal,
+		High     = 1 << 0,
+		Low      = 1 << 1,
+		BreakOut = 1 << 2,
+		Reversal = 1 << 3,
+
+		BreakOutHigh = BreakOut | High,
+		BreakOutLow  = BreakOut | Low,
+		HighReversal = Reversal | High,
+		LowReversal  = Reversal | Low,
 	}
 
 	/// <summary>Detects the highs and lows of the price</summary>
@@ -72,7 +77,7 @@ namespace Rylobot
 					if (last == null)
 					{
 						// Just save the peak
-						corr.Add((double)pk.Index, (double)pk.Price);
+						corr.Add(pk.Index, pk.Price);
 						peaks.Add(pk);
 					}
 					// The trend has not been broken
@@ -82,20 +87,20 @@ namespace Rylobot
 						if (trend == null)
 						{
 							// Form a trend line between the peaks
-							if (pk.High) TrendHigh = Monic.FromPoints((double)pk.Index, (double)pk.Price, (double)last.Index, (double)last.Price);
-							else         TrendLow  = Monic.FromPoints((double)pk.Index, (double)pk.Price, (double)last.Index, (double)last.Price);
-							corr.Add((double)pk.Index, (double)pk.Price);
+							if (pk.High) TrendHigh = Monic.FromPoints(pk.Index, pk.Price, last.Index, last.Price);
+							else         TrendLow  = Monic.FromPoints(pk.Index, pk.Price, last.Index, last.Price);
+							corr.Add(pk.Index, pk.Price);
 							peaks.Add(pk);
 						}
 						// 3+ peak encountered, confirm trend strength
 						else
 						{
 							// Get the predicted value from the trend line
-							var p = trend.F((double)pk.Index);
+							var p = trend.F(pk.Index);
 							if (Math.Abs(p - pk.Price) < threshold)
 							{
 								// If within tolerance, the trend is confirmed
-								corr.Add((double)pk.Index, (double)pk.Price);
+								corr.Add(pk.Index, pk.Price);
 								if (pk.High) TrendHigh = corr.LinearRegression;
 								else         TrendLow  = corr.LinearRegression;
 								peaks.Add(pk);
@@ -148,7 +153,7 @@ namespace Rylobot
 		/// <summary>The index of the first candle considered</summary>
 		public Idx Beg { get; private set; }
 
-		/// <summary>The index of the end candle considered</summary>
+		/// <summary>The index of the last candle considered</summary>
 		public Idx End { get; private set; }
 
 		/// <summary>The first peak encountered (possible break out)</summary>
@@ -212,7 +217,7 @@ namespace Rylobot
 			var threshold = ConfirmTrend * Instrument.MCS;
 			foreach (var c in Instrument.CandleRange(peaks.Back().Index, Instrument.IdxLast - WindowSize))
 			{
-				var p = trend.F((double)(c.Index + Instrument.IdxFirst));
+				var p = trend.F(c.Index + Instrument.IdxFirst);
 				if (c.High < p - threshold) continue;
 				if (c.Low  > p + threshold) continue;
 				above += Math.Max(0, c.High - p);
@@ -347,6 +352,7 @@ namespace Rylobot
 			for (Idx i = iend; i-- != Instrument.IdxFirst; d = (d+1) % WindowSize)
 			{
 				var candle = Instrument[i];
+				Beg = i;
 
 				// Add the new price values
 				price_hi[d] = candle.High;

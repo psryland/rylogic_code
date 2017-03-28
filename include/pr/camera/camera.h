@@ -720,9 +720,16 @@ namespace pr
 		}
 
 		// Position the camera so that all of 'bbox' is visible to the camera when looking 'forward' and 'up'
-		void View(pr::BBox const& bbox, pr::v4 const& forward, pr::v4 const& up, float focus_dist = 0, bool preserve_aspect = true, bool update_base = true)
+		void View(pr::BBox const& bbox_, pr::v4 const& forward, pr::v4 const& up, float focus_dist = 0, bool preserve_aspect = true, bool update_base = true)
 		{
-			if (bbox.empty()) return;
+			if (bbox_.empty())
+				return;
+
+			// Handle degenerate bounding boxes
+			auto bbox = bbox_;
+			if (FEql(bbox.m_radius.x, 0)) bbox.m_radius.x = 0.001f * Length(bbox.m_radius);
+			if (FEql(bbox.m_radius.y, 0)) bbox.m_radius.y = 0.001f * Length(bbox.m_radius);
+			if (FEql(bbox.m_radius.z, 0)) bbox.m_radius.z = 0.001f * Length(bbox.m_radius);
 
 			// This code projects 'bbox' onto a plane perpendicular to 'forward' and
 			// at the nearest point of the bbox to the camera. It then ensures a circle
@@ -752,25 +759,24 @@ namespace pr
 				auto bbox_cs = w2c * bbox;
 				auto width   = bbox_cs.SizeX();
 				auto height  = bbox_cs.SizeY();
-				if (!FEql(width,0) && !FEql(height, 0))
+				assert(!FEql(width,0) && !FEql(height, 0));
+
+				// Choose the fields of view. If 'focus_dist' is given, then that determines
+				// the X,Y field of view. If not, choose a focus distance based on a view size
+				// equal to the average of 'width' and 'height' using the default FOV.
+				if (focus_dist == 0)
 				{
-					// Choose the fields of view. If 'focus_dist' is given, then that determines
-					// the X,Y field of view. If not, choose a focus distance based on a view size
-					// equal to the average of 'width' and 'height' using the default FOV.
-					if (focus_dist == 0)
-					{
-						auto size = (width + height) / 2.0f;
-						focus_dist = (0.5f * size) / pr::Tan(0.5f * m_default_fovY);
-					}
-
-					// Set the aspect ratio
-					auto aspect = width / height;
-					auto d = focus_dist - sizez;
-
-					// Set the aspect and FOV based on the view of the bbox
-					Aspect(aspect);
-					FovY(2.0f * pr::ATan(0.5f * height / d));
+					auto size = (width + height) / 2.0f;
+					focus_dist = (0.5f * size) / pr::Tan(0.5f * m_default_fovY);
 				}
+
+				// Set the aspect ratio
+				auto aspect = width / height;
+				auto d = focus_dist - sizez;
+
+				// Set the aspect and FOV based on the view of the bbox
+				Aspect(aspect);
+				FovY(2.0f * pr::ATan(0.5f * height / d));
 			}
 			else
 			{

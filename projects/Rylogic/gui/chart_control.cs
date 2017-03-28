@@ -38,7 +38,6 @@ namespace pr.gui
 		// - Mouse wheel on an axis (changing the aspect ratio) changes the FoV
 
 		#region Constants
-		public static readonly Guid GridId = new Guid("1783F2BF-2782-4C39-98AF-C5935B1003E9");
 		private const float GridLinesZ = -0.001f;
 		#endregion
 
@@ -69,7 +68,7 @@ namespace pr.gui
 				Scene           = new ChartPanel(this); // Must come after 'Range'
 				MouseOperations = new MouseOps();
 				Tools           = new ChartTools(Options);
-				m_tt_show_value = new HintBalloon();
+				m_tt_show_value = new HintBalloon { AutoSizeMode = AutoSizeMode.GrowOnly };
 
 				Elements = new BindingListEx<Element> { PerItemClear = true, UseHashSet = true };
 				Selected = new BindingListEx<Element> { PerItemClear = false };
@@ -521,7 +520,7 @@ namespace pr.gui
 		/// <summary>Find the default range, then reset to the default range</summary>
 		public void AutoRange(View3d.ESceneBounds who = View3d.ESceneBounds.All)
 		{
-			var bbox = Window.SceneBounds(who);
+			var bbox = Window.SceneBounds(who, except:new[] { ChartTools.Id });
 			Camera.ResetView(bbox, Options.ResetForward, Options.ResetUp,
 				dist: 0f,//Options.NavigationMode == ENavMode.Chart2D ? Camera.FocusDist : 0,
 				preserve_aspect: LockAspect,
@@ -774,6 +773,19 @@ namespace pr.gui
 
 		/// <summary>True if users are allowed to select elements on the diagram</summary>
 		public bool AllowSelection { get; set; }
+
+		/// <summary>Return a string representation of a location on the chart</summary>
+		public string LocationText(Point location)
+		{
+			var pt = ClientToChart(location);
+			return "{0} , {1}".Fmt(XAxis.TickText(pt.X, 0.0), YAxis.TickText(pt.Y, 0.0));
+		}
+
+		/// <summary>Return the current mouse pointer location as a string</summary>
+		public string PointerLocationText
+		{
+			get { return LocationText(PointToClient(MousePosition)); }
+		}
 
 		#region Chart Panel
 		public class ChartPanel :Control
@@ -1190,7 +1202,7 @@ namespace pr.gui
 			}
 			private double? m_LockAspect;
 
-			/// <summary>The fill colour of the background of the chart</summary>
+			/// <summary>The fill colour of the non-chart area of the control (e.g. behind the axis labels)</summary>
 			public Color BkColour
 			{
 				get { return m_BkColour; }
@@ -1198,7 +1210,7 @@ namespace pr.gui
 			}
 			private Color m_BkColour;
 
-			/// <summary>The fill colour of the chart background</summary>
+			/// <summary>The fill colour of the chart plot area</summary>
 			public Color ChartBkColour
 			{
 				get { return m_ChartBkColour; }
@@ -3596,10 +3608,44 @@ namespace pr.gui
 						opt.Checked = m_show_value;
 						opt.Click += (s, a) =>
 						{
-							if (m_show_value) MouseMove -= OnMouseMoveTooltip;
+							if (m_show_value)
+							{
+								MouseMove -= OnMouseMoveTooltip;
+								MouseWheel -= OnMouseWheelTooltip;
+							}
 							m_show_value = !m_show_value;
+							m_tt_show_value.Size = m_tt_show_value.GetPreferredSize(Size.Empty);
 							m_tt_show_value.Visible = m_show_value;
-							if (m_show_value) MouseMove += OnMouseMoveTooltip;
+							if (m_show_value)
+							{
+								MouseMove += OnMouseMoveTooltip;
+								MouseWheel += OnMouseWheelTooltip;
+							}
+						};
+					}
+					#endregion
+					#region Show Cross Hair
+					{
+						var opt = tools_menu.DropDownItems.Add2(new ToolStripMenuItem("Show Cross Hair") { Name = CMenu.ToolsMenu.ShowXHair });
+						opt.Checked = m_show_cross_hair;
+						opt.Click += (s, a) =>
+						{
+							if (m_show_cross_hair)
+							{
+								MouseMove -= OnMouseMoveCrossHair;
+								MouseWheel -= OnMouseWheelCrossHair;
+								Scene.RemoveObject(m_tools.CrossHairH);
+								Scene.RemoveObject(m_tools.CrossHairV);
+							}
+							m_show_cross_hair = !m_show_cross_hair;
+							if (m_show_cross_hair)
+							{
+								Scene.AddObject(m_tools.CrossHairH);
+								Scene.AddObject(m_tools.CrossHairV);
+								MouseWheel += OnMouseWheelCrossHair;
+								MouseMove += OnMouseMoveCrossHair;
+							}
+							Invalidate();
 						};
 					}
 					#endregion
@@ -3724,17 +3770,64 @@ namespace pr.gui
 		/// <summary>Handle mouse move events while the tooltip is visible</summary>
 		private void OnMouseMoveTooltip(object sender, MouseEventArgs e)
 		{
-			if (Scene.Bounds.Contains(e.Location))
+			SetValueToolTip(e.Location);
+		}
+		private void OnMouseWheelTooltip(object sender, MouseEventArgs e)
+		{
+			SetValueToolTip(e.Location);
+		}
+
+		/// <summary>Update the text in the 'show value' hint balloon. 'location' is in client space</summary>
+		private void SetValueToolTip(Point location)
+		{
+			if (Scene.Bounds.Contains(location))
 			{
-				var pt = ClientToChart(e.Location);
-				m_tt_show_value.Text = "{0} {1}".Fmt(XAxis.TickText(pt.X, 0.0), YAxis.TickText(pt.Y, 0.0));
-				m_tt_show_value.Location = PointToScreen(e.Location);
+				m_tt_show_value.Text = LocationText(location);
+				m_tt_show_value.Location = PointToScreen(location);
 				m_tt_show_value.Owner = TopLevelControl as Form;
 				m_tt_show_value.Visible = true;
 			}
 			else
 			{
 				m_tt_show_value.Visible = false;
+			}
+		}
+
+		#endregion
+
+		#region Show Cross Hair
+
+		/// <summary>True while the cross hair is visible</summary>
+		private bool m_show_cross_hair;
+
+		/// <summary>Update the cross hair on mouse move</summary>
+		private void OnMouseMoveCrossHair(object sender, MouseEventArgs e)
+		{
+			SetCrossHair(e.Location);
+		}
+		private void OnMouseWheelCrossHair(object sender, MouseEventArgs e)
+		{
+			SetCrossHair(e.Location);
+		}
+
+		/// <summary>Update the cross hair position. 'location' is in client space</summary>
+		private void SetCrossHair(Point location)
+		{
+			if (Scene.Bounds.Contains(location))
+			{
+				// Position the cross hair
+				var ss_pt = Drawing_.Subtract(location, ChartBounds.TopLeft()).ToPoint();
+				var ws_pt = Camera.SSPointToWSPoint(ss_pt);
+				var o2w = new m4x4(Camera.O2W.rot, ws_pt);
+
+				// Scale to fill the view
+				var view = Camera.ViewArea(Camera.FocusDist);
+				if (m_tools.CrossHairH != null)
+					m_tools.CrossHairH.O2P = o2w * m3x4.Scale(view.x * 2f, 1f, 1f).m4x4;
+				if (m_tools.CrossHairV != null)
+					m_tools.CrossHairV.O2P = o2w * m3x4.Scale(1f, view.y * 2f, 1f).m4x4;
+
+				Invalidate();
 			}
 		}
 
@@ -3768,12 +3861,16 @@ namespace pr.gui
 				Options    = opts;
 				AreaSelect = CreateAreaSelect();
 				Resizer    = Util.NewArray(8, i => new ResizeGrabber(i));
+				CrossHairH = CreateCrossHair(true);
+				CrossHairV = CreateCrossHair(false);
 			}
 			public void Dispose()
 			{
 				Options = null;
 				AreaSelect = null;
 				Resizer = null;
+				CrossHairH = null;
+				CrossHairV = null;
 			}
 
 			/// <summary>Chart options</summary>
@@ -3879,11 +3976,50 @@ namespace pr.gui
 				public Action<BRect,float> Update;
 			}
 
+			/// <summary>A vertical and horizontal line</summary>
+			public View3d.Object CrossHairH
+			{
+				get { return m_cross_hair_h; }
+				private set
+				{
+					if (m_cross_hair_h == value) return;
+					Util.Dispose(ref m_cross_hair_h);
+					m_cross_hair_h = value;
+				}
+			}
+			public View3d.Object CrossHairV
+			{
+				get { return m_cross_hair_v; }
+				private set
+				{
+					if (m_cross_hair_v == value) return;
+					Util.Dispose(ref m_cross_hair_v);
+					m_cross_hair_v = value;
+				}
+			}
+			private View3d.Object m_cross_hair_h;
+			private View3d.Object m_cross_hair_v;
+			private View3d.Object CreateCrossHair(bool horiz)
+			{
+				var col = Options.ChartBkColour.ToV4().Length3 > 0.5 ? 0xFFFFFFFF : 0xFF000000;
+				var str = horiz
+					? Ldr.Line("chart_cross_hair_h", col, new v4(-1f, 0, 0, 1f), new v4(+1f, 0, 0, 1f))
+					: Ldr.Line("chart_cross_hair_v", col, new v4(0, -1f, 0, 1f), new v4(0, +1f, 0, 1f));
+				return new View3d.Object(str, false, Id, null);
+			}
+
 			/// <summary>Update the chart tools when the options change</summary>
 			private void HandleOptionsChanged(object sender, PropertyChangedEventArgs e)
 			{
 				if (e.PropertyName == nameof(RdrOptions.SelectionColour))
+				{
 					AreaSelect.ColourSet(Options.SelectionColour);
+				}
+				if (e.PropertyName == nameof(RdrOptions.ChartBkColour))
+				{
+					CrossHairH = CreateCrossHair(true);
+					CrossHairV = CreateCrossHair(false);
+				}
 			}
 		}
 
@@ -4062,6 +4198,7 @@ namespace pr.gui
 			public static class ToolsMenu
 			{
 				public const string ShowValue = "show_value";
+				public const string ShowXHair = "show_cross_hair";
 			}
 			public const string Zoom = "zoom";
 			public static class ZoomMenu

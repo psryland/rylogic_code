@@ -12,26 +12,27 @@ namespace Rylobot
 		// Note: differences return 'Idx' rather than double because casting an 
 		// 'Idx' to (int) correctly returns Math.Floor(idx)
 		private double value;
-		[DebuggerStepThrough] private Idx(double v)                               { value = v; }
-		[DebuggerStepThrough] public static implicit operator double(Idx neg_idx) { return neg_idx.value; }
-		[DebuggerStepThrough] public static implicit operator int(Idx neg_idx)    { return (int)Math.Floor(neg_idx.value); }
-		[DebuggerStepThrough] public static implicit operator Idx(int neg_idx)    { return new Idx(neg_idx); }
-		[DebuggerStepThrough] public static implicit operator Idx(double neg_idx) { return new Idx(neg_idx); }
-		[DebuggerStepThrough] public static bool operator == (Idx lhs, Idx rhs)   { return (int)lhs == (int)rhs; }
-		[DebuggerStepThrough] public static bool operator != (Idx lhs, Idx rhs)   { return (int)lhs != (int)rhs; }
-		[DebuggerStepThrough] public static bool operator <  (Idx lhs, Idx rhs)   { return lhs.value <  rhs.value; }
-		[DebuggerStepThrough] public static bool operator <= (Idx lhs, Idx rhs)   { return lhs.value <= rhs.value; }
-		[DebuggerStepThrough] public static bool operator >  (Idx lhs, Idx rhs)   { return lhs.value >  rhs.value; }
-		[DebuggerStepThrough] public static bool operator >= (Idx lhs, Idx rhs)   { return lhs.value >= rhs.value; }
-		[DebuggerStepThrough] public static Idx operator ++ (Idx lhs)             { return new Idx(++lhs.value); }
-		[DebuggerStepThrough] public static Idx operator -- (Idx lhs)             { return new Idx(--lhs.value); }
-		[DebuggerStepThrough] public static Idx operator + (Idx lhs, Idx rhs)     { return lhs.value + rhs.value; }
-		[DebuggerStepThrough] public static Idx operator - (Idx lhs, Idx rhs)     { return lhs.value - rhs.value; }
-		[DebuggerStepThrough] public override string ToString()                   { return value.ToString(); }
-		[DebuggerStepThrough] public override bool Equals(object obj)             { return value.Equals(obj); }
-		[DebuggerStepThrough] public override int GetHashCode()                   { return value.GetHashCode(); }
-		[DebuggerStepThrough] public int CompareTo(Idx other)                     { return value.CompareTo(other.value); }
-		[DebuggerStepThrough] public bool Within(Idx lhs, Idx rhs)                { return value.Within(lhs.value, rhs.value); }
+		[DebuggerStepThrough] private Idx(double v)                             { value = v; }
+		[DebuggerStepThrough] public static implicit operator double(Idx idx)   { return idx.value; }
+		[DebuggerStepThrough] public static implicit operator float(Idx idx)    { return (float)idx.value; }
+		[DebuggerStepThrough] public static explicit operator int(Idx idx)      { return (int)Math.Floor(idx.value); }
+		[DebuggerStepThrough] public static implicit operator Idx(int idx)      { return new Idx(idx); }
+		[DebuggerStepThrough] public static implicit operator Idx(double idx)   { return new Idx(idx); }
+		[DebuggerStepThrough] public static bool operator == (Idx lhs, Idx rhs) { return (int)lhs == (int)rhs; }
+		[DebuggerStepThrough] public static bool operator != (Idx lhs, Idx rhs) { return (int)lhs != (int)rhs; }
+		[DebuggerStepThrough] public static bool operator <  (Idx lhs, Idx rhs) { return lhs.value <  rhs.value; }
+		[DebuggerStepThrough] public static bool operator <= (Idx lhs, Idx rhs) { return lhs.value <= rhs.value; }
+		[DebuggerStepThrough] public static bool operator >  (Idx lhs, Idx rhs) { return lhs.value >  rhs.value; }
+		[DebuggerStepThrough] public static bool operator >= (Idx lhs, Idx rhs) { return lhs.value >= rhs.value; }
+		[DebuggerStepThrough] public static Idx operator ++ (Idx lhs)           { return new Idx(++lhs.value); }
+		[DebuggerStepThrough] public static Idx operator -- (Idx lhs)           { return new Idx(--lhs.value); }
+		[DebuggerStepThrough] public static Idx operator + (Idx lhs, Idx rhs)   { return lhs.value + rhs.value; }
+		[DebuggerStepThrough] public static Idx operator - (Idx lhs, Idx rhs)   { return lhs.value - rhs.value; }
+		[DebuggerStepThrough] public override string ToString()                 { return value.ToString(); }
+		[DebuggerStepThrough] public override bool Equals(object obj)           { return value.Equals(obj); }
+		[DebuggerStepThrough] public override int GetHashCode()                 { return value.GetHashCode(); }
+		[DebuggerStepThrough] public int CompareTo(Idx other)                   { return value.CompareTo(other.value); }
+		[DebuggerStepThrough] public bool Within(Idx lhs, Idx rhs)              { return value.Within(lhs.value, rhs.value); }
 	}
 
 	/// <summary>An index for a point in the future</summary>
@@ -53,7 +54,7 @@ namespace Rylobot
 		// Implicit conversion
 		[DebuggerStepThrough] public static implicit operator Idx(FutureIdx fi)    { return fi.Index; }
 		[DebuggerStepThrough] public static implicit operator double(FutureIdx fi) { return fi.Index; }
-		[DebuggerStepThrough] public static implicit operator int(FutureIdx fi)    { return fi.Index; }
+		[DebuggerStepThrough] public static explicit operator int(FutureIdx fi)    { return (int)fi.Index; }
 		[DebuggerStepThrough] public override string ToString()                    { return Index.ToString(); }
 		[DebuggerStepThrough] public bool Within(Idx min, Idx max)                 { return Index.Within(min, max); }
 	}

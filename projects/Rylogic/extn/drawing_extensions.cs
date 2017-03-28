@@ -503,6 +503,12 @@ namespace pr.extn
 			return HSV.FromColor(src);
 		}
 
+		/// <summary>Convert the colour to a vector. 'xyz' = 'rgb', 'w' = 'alpha'. (1,1,1,1) is white, (0,0,0,0) is transparent black</summary>
+		public static v4 ToV4(this Color col)
+		{
+			return new v4(col.R, col.G, col.B, col.A) / 255f;
+		}
+
 		/// <summary>Duplicate this font with the changes given</summary>
 		public static Font Dup(this Font prototype, FontStyle style)
 		{

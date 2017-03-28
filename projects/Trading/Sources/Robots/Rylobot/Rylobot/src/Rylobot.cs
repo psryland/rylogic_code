@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using cAlgo.API;
@@ -14,9 +15,6 @@ namespace Rylobot
 	[Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.FullAccess)]
 	public class Rylobot :Robot
 	{
-		[Parameter("Profit Threshold", DefaultValue = 0.05, MinValue = 0.001, MaxValue = 0.1, Step = 0.001)]
-		public double ProfitThreshold { get; set; }
-
 		/// <summary>Singleton access</summary>
 		public static Rylobot Instance { get; private set; }
 
@@ -43,12 +41,16 @@ namespace Rylobot
 			Broker = new Broker(this, Account);
 
 			// Enable capture of trades to Ldr files
-			Debugging.LogTrades(this, true);
+			Debugging.LogTrades = true;
+
+			// If capture price data is enabled, just do that
+			if (CapturePriceData(ECapturePriceData.Start))
+				return;
 
 			// Create the strategies to use
 			Strats = new List<Strategy>();
 			//Strats.Add(new StrategyMain(this));
-			Strats.Add(new StrategyPriceDistribution(this, 0.2)); // This is nearly working
+			//Strats.Add(new StrategyPriceDistribution(this, 0.2)); // This is nearly working
 			//Strats.Add(new StrategyMAExtreme(this, 0.2));
 			//Strats.Add(new StrategyBreakOut(this, 0.2));
 			//Strats.Add(new StrategyRevenge(this));
@@ -57,16 +59,23 @@ namespace Rylobot
 			//Strats.Add(new StrategyHedge2(this));
 			//Strats.Add(new StrategyEmaCross(this));
 			//Strats.Add(new StrategySpike(this));
-			//Strats.Add(new StrategyPeaks(this));
+			Strats.Add(new StrategyPeaks(this, 0.2));
 
+			// Todo:
+			// Track the profit of each strategy, if losing, automatically
+			// reduce it's risk allocation.
 			Debug.Assert(Strats.Sum(x => x.Risk) < 1.001);
 		}
 		protected override void OnStop()
 		{
+			// If capture price data is enabled, just do that
+			if (CapturePriceData(ECapturePriceData.Stop))
+				return;
+
 			Stopping.Raise(this);
 
 			// Stop capturing trades
-			Debugging.LogTrades(this, false);
+			Debugging.LogTrades = false;
 
 			Strats = null;
 			Broker = null;
@@ -80,6 +89,10 @@ namespace Rylobot
 		{
 			++TickNumber;
 			Debugging.BreakOnPointOfInterest();
+
+			// If capture price data is enabled, just do that
+			if (CapturePriceData(ECapturePriceData.Tick))
+				return;
 
 			// Emergency stop
 			var max_loss_ratio = (1.0 - 0.01*Settings.MaxRiskPC);
@@ -236,6 +249,111 @@ namespace Rylobot
 				return res;
 			}
 		}
+
+		#region Capture Price Data
+
+		/// <summary>Used to log price data to a file</summary>
+		private static bool CapturePriceDataEnabled = false;
+
+		/// <summary>States</summary>
+		private enum ECapturePriceData { Start, Tick, Stop }
+
+		/// <summary>File of price tick data</summary>
+		private StreamWriter m_pd_out;
+
+		/// <summary>File of candle tick data</summary>
+		private StreamWriter m_cd_out;
+
+		/// <summary>Log all price data to files</summary>
+		private bool CapturePriceData(ECapturePriceData state)
+		{
+			// Not enabled, return
+			if (!CapturePriceDataEnabled)
+				return false;
+
+			// Write a line to the candle data file
+			Action<int> WriteCandleTick = candle_index =>
+			{
+				m_cd_out.WriteLine(Str.Build(
+					TickNumber,",",
+					candle_index,",",
+					MarketSeries.OpenTime  [candle_index].Ticks,",",
+					MarketSeries.Open      [candle_index],",",
+					MarketSeries.High      [candle_index],",",
+					MarketSeries.Low       [candle_index],",",
+					MarketSeries.Close     [candle_index],",",
+					MarketSeries.Median    [candle_index],",",
+					MarketSeries.TickVolume[candle_index]));
+			};
+
+			// Write a line to the price tick data file
+			Action WritePriceTick = () =>
+			{
+				m_pd_out.WriteLine(Str.Build(
+					TickNumber,",",
+					UtcNow.Ticks,",",
+					Symbol.Ask,",",
+					Symbol.Bid));
+			};
+
+			switch (state)
+			{
+			case ECapturePriceData.Start:
+				{
+					var dir = Debugging.FP("Capture\\{0} - {1}".Fmt(Symbol.Code, TimeFrame.ToString()));
+					if (!Path_.DirExists(dir))
+						Directory.CreateDirectory(dir);
+
+					// Create a file for candle tick data
+					m_cd_out = new StreamWriter(new FileStream(Path_.CombinePath(dir,"candle_data.csv"), FileMode.Create, FileAccess.Write, FileShare.Read));
+					m_cd_out.WriteLine("TickNumber,CandleIndex,OpenTime,Open,High,Low,Close,Median,TickVolume");
+					
+					// Log the initial market series data
+					for (int i = 0; i != MarketSeries.OpenTime.Count; ++i)
+						WriteCandleTick(i);
+
+					// Create a file for the price tick data
+					m_pd_out = new StreamWriter(new FileStream(Path_.CombinePath(dir,"price_data.csv"), FileMode.Create, FileAccess.Write, FileShare.Read));
+					m_pd_out.WriteLine("TickNumber,Timestamp,Ask,Bid");
+
+					// Write the initial price
+					m_pd_out.WriteLine(Str.Build(TickNumber,",",UtcNow.Ticks,",",Symbol.Ask,",",Symbol.Bid));
+
+					// Create a file with symbol info
+					using (var sym = new StreamWriter(new FileStream(Path_.CombinePath(dir,"symbol.csv"), FileMode.Create, FileAccess.Write, FileShare.Read)))
+					{
+						sym.WriteLine(Str.Build("Code"           ,",", Symbol.Code           ));
+						sym.WriteLine(Str.Build("Digits"         ,",", Symbol.Digits         ));
+						sym.WriteLine(Str.Build("LotSize"        ,",", Symbol.LotSize        ));
+						sym.WriteLine(Str.Build("PipSize"        ,",", Symbol.PipSize        ));
+						sym.WriteLine(Str.Build("PipValue"       ,",", Symbol.PipValue       ));
+						sym.WriteLine(Str.Build("PreciseLeverage",",", Symbol.PreciseLeverage));
+						sym.WriteLine(Str.Build("TickSize"       ,",", Symbol.TickSize       ));
+						sym.WriteLine(Str.Build("TickValue"      ,",", Symbol.TickValue      ));
+						sym.WriteLine(Str.Build("VolumeMax"      ,",", Symbol.VolumeMax      ));
+						sym.WriteLine(Str.Build("VolumeMin"      ,",", Symbol.VolumeMin      ));
+						sym.WriteLine(Str.Build("VolumeStep"     ,",", Symbol.VolumeStep     ));
+					}
+					break;
+				}
+			case ECapturePriceData.Tick:
+				{
+					WriteCandleTick(MarketSeries.OpenTime.Count - 1);
+					WritePriceTick();
+					break;
+				}
+			case ECapturePriceData.Stop:
+				{
+					// Close files
+					Util.Dispose(ref m_pd_out);
+					Util.Dispose(ref m_cd_out);
+					break;
+				}
+			}
+			return true;
+		}
+
+		#endregion
 	}
 }
 

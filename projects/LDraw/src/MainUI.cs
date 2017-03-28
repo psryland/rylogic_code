@@ -108,6 +108,7 @@ namespace LDraw
 		private ToolStripMenuItem m_menu_file_options;
 		private ToolStripStatusLabel m_lbl_loading;
 		private ToolStripProgressBar m_pb_loading;
+		private ToolStripStatusLabel m_lbl_pointer_location;
 		private ToolStripMenuItem m_menu_file_save_as;
 		#endregion
 
@@ -270,6 +271,12 @@ namespace LDraw
 		public ToolStripStatusLabel Status
 		{
 			get { return m_status; }
+		}
+
+		/// <summary>The pointer location status label</summary>
+		public ToolStripStatusLabel PointerLocationStatus
+		{
+			get { return m_lbl_pointer_location; }
 		}
 
 		/// <summary>Lazy created camera properties UI</summary>
@@ -576,6 +583,11 @@ namespace LDraw
 			#endregion
 
 			#region Progress Bar
+			m_pb_loading.Alignment = ToolStripItemAlignment.Right;
+			#endregion
+
+			#region Pointer Location
+			m_lbl_pointer_location.Alignment = ToolStripItemAlignment.Right;
 			#endregion
 		}
 
@@ -777,13 +789,11 @@ namespace LDraw
 			var progress = Model.AddFileProgress;
 
 			// Show/Hide the progress indicators
-			m_pb_loading .Visible = progress != null;
-			m_lbl_loading.Visible = progress != null;
-
+			m_lbl_loading.Text = progress?.Filepath ?? string.Empty;
+			m_pb_loading.Visible = progress != null;
 			if (progress != null)
 			{
 				var finfo = new FileInfo(progress.Filepath);
-				m_lbl_loading.Text = progress.Filepath;
 				m_pb_loading.ValueFrac(finfo.Length != 0 ? Maths.Clamp((float)progress.FileOffset / finfo.Length, 0f, 1f) : 1f);
 			}
 		}
@@ -877,6 +887,7 @@ namespace LDraw
 			this.m_menu_window_example_script = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_window_about = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_lbl_pointer_location = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
@@ -911,7 +922,8 @@ namespace LDraw
 			this.m_ss.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_status,
             this.m_lbl_loading,
-            this.m_pb_loading});
+            this.m_pb_loading,
+            this.m_lbl_pointer_location});
 			this.m_ss.Location = new System.Drawing.Point(0, 0);
 			this.m_ss.Name = "m_ss";
 			this.m_ss.Size = new System.Drawing.Size(663, 22);
@@ -923,10 +935,10 @@ namespace LDraw
 			this.m_status.Size = new System.Drawing.Size(26, 17);
 			this.m_status.Text = "Idle";
 			// 
-			// m_lbl_spacer
+			// m_lbl_loading
 			// 
-			this.m_lbl_loading.Name = "m_lbl_spacer";
-			this.m_lbl_loading.Size = new System.Drawing.Size(389, 17);
+			this.m_lbl_loading.Name = "m_lbl_loading";
+			this.m_lbl_loading.Size = new System.Drawing.Size(367, 17);
 			this.m_lbl_loading.Spring = true;
 			this.m_lbl_loading.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			// 
@@ -1497,6 +1509,12 @@ namespace LDraw
 			this.m_menu_window_about.Name = "m_menu_window_about";
 			this.m_menu_window_about.Size = new System.Drawing.Size(151, 22);
 			this.m_menu_window_about.Text = "&About";
+			// 
+			// m_lbl_pointer_location
+			// 
+			this.m_lbl_pointer_location.Name = "m_lbl_pointer_location";
+			this.m_lbl_pointer_location.Size = new System.Drawing.Size(22, 17);
+			this.m_lbl_pointer_location.Text = "0,0";
 			// 
 			// MainUI
 			// 
