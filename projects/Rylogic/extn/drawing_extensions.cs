@@ -457,6 +457,14 @@ namespace pr.extn
 		{
 			return new SizeF(lhs.X - rhs.X, lhs.Y - rhs.Y);
 		}
+		public static Point Subtract(Point lhs, Size rhs)
+		{
+			return new Point(lhs.X - rhs.Width, lhs.Y - rhs.Height);
+		}
+		public static PointF Subtract(PointF lhs, SizeF rhs)
+		{
+			return new PointF(lhs.X - rhs.Width, lhs.Y - rhs.Height);
+		}
 
 		/// <summary>Linearly interpolate from this colour to 'dst' by 'frac'</summary>
 		public static Color Lerp(this Color src, Color dst, float frac)

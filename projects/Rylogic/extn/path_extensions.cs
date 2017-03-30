@@ -382,9 +382,8 @@ namespace pr.common
 			public FileData(string dir)
 			{
 				m_find_data = new Win32.WIN32_FIND_DATA();
-				var handle = FindFirstFile(dir, ref m_find_data);
-				if (handle.IsInvalid) throw new FileNotFoundException("Failed to get WIN32_FIND_Data for {0}".Fmt(dir));
-				handle.Close();
+				using (var handle = FindFirstFile(dir, ref m_find_data))
+					if (handle.IsInvalid) throw new FileNotFoundException("Failed to get WIN32_FIND_Data for {0}".Fmt(dir));
 				FullPath = dir;
 			}
 			public FileData(string dir, ref Win32.WIN32_FIND_DATA find_data)
@@ -479,28 +478,29 @@ namespace pr.common
 				// Use the win32 find files
 				var pattern = Path.Combine(dir, "*");
 				var find_data = new Win32.WIN32_FIND_DATA();
-				var handle = FindFirstFile(pattern, ref find_data);
-				for (var more = !handle.IsInvalid; more; more = FindNextFile(handle, ref find_data))
+				using (var handle = FindFirstFile(pattern, ref find_data))
 				{
-					// Exclude files with any of the exclude attributes
-					if ((find_data.Attributes & exclude) != 0)
-						continue;
-
-					// Filter if provided
-					if (find_data.FileName != "." && find_data.FileName != "..")
-						if (filter == null || filter.IsMatch(find_data.FileName))
-							yield return new FileData(dir, ref find_data);
-
-					// If the found object is a directory, see if we should be recursing
-					if (search_flags == SearchOption.AllDirectories && (find_data.Attributes & FileAttributes.Directory) == FileAttributes.Directory)
+					for (var more = !handle.IsInvalid; more; more = FindNextFile(handle, ref find_data))
 					{
-						if (find_data.FileName == "." || find_data.FileName == "..")
+						// Exclude files with any of the exclude attributes
+						if ((find_data.Attributes & exclude) != 0)
 							continue;
 
-						stack.Push(Path.Combine(dir, find_data.FileName));
+						// Filter if provided
+						if (find_data.FileName != "." && find_data.FileName != "..")
+							if (filter == null || filter.IsMatch(find_data.FileName))
+								yield return new FileData(dir, ref find_data);
+
+						// If the found object is a directory, see if we should be recursing
+						if (search_flags == SearchOption.AllDirectories && (find_data.Attributes & FileAttributes.Directory) == FileAttributes.Directory)
+						{
+							if (find_data.FileName == "." || find_data.FileName == "..")
+								continue;
+
+							stack.Push(Path.Combine(dir, find_data.FileName));
+						}
 					}
 				}
-				handle.Close();
 			}
 		}
 
@@ -569,7 +569,7 @@ namespace pr.common
 		}
 
 		/// <summary>Delete a directory and all contained files/subdirectories. Returns true if successful</summary>
-		public static bool DelTree(string root, EDelTreeOpts opts, Control parent)
+		public static bool DelTree(string root, EDelTreeOpts opts, Control parent, int timeout_ms = 1000)
 		{
 			for (;;)
 			{
@@ -612,7 +612,8 @@ namespace pr.common
 					// Try to delete the root directory. This can fail because the file system
 					// doesn't necessarily update as soon as the files are deleted. Try to delete,
 					// if that fails, wait a bit, then try again. If that fails, defer to the user.
-					for (int retries = 3; retries-- != 0;)
+					const int Attempts = 3;
+					for (int retries = Attempts; retries-- != 0;)
 					{
 						try
 						{
@@ -635,7 +636,7 @@ namespace pr.common
 						catch (IOException)
 						{
 							if (retries == 0) throw;
-							Thread.Sleep(500);
+							Thread.Sleep(Math.Max(100, timeout_ms / Attempts));
 						}
 					}
 				}

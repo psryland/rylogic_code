@@ -94,6 +94,8 @@ namespace pr.maths
 		public static m2x2 Identity { get { return m_identity; } }
 
 		// Functions
+		public override bool Equals(object o)               { return o is m2x2 && (m2x2)o == this; }
+		public override int GetHashCode()                   { unchecked { return x.GetHashCode() + y.GetHashCode(); } }
 		public static m2x2 operator * (m2x2 lhs, float rhs) { return new m2x2(lhs.x * rhs   , lhs.y * rhs   ); }
 		public static m2x2 operator + (m2x2 lhs, m2x2 rhs)  { return new m2x2(lhs.x + rhs.x , lhs.y + rhs.y ); }
 		public static m2x2 operator - (m2x2 lhs, m2x2 rhs)  { return new m2x2(lhs.x - rhs.x , lhs.y - rhs.y ); }
@@ -101,67 +103,107 @@ namespace pr.maths
 		public static m2x2 operator / (m2x2 lhs, float rhs) { return new m2x2(lhs.x / rhs   , lhs.y / rhs   ); }
 		public static bool operator ==(m2x2 lhs, m2x2 rhs)  { return lhs.x == rhs.x && lhs.y == rhs.y; }
 		public static bool operator !=(m2x2 lhs, m2x2 rhs)  { return !(lhs == rhs); }
-		public override bool Equals(object o)               { return o is m2x2 && (m2x2)o == this; }
-		public override int GetHashCode()                   { unchecked { return x.GetHashCode() + y.GetHashCode(); } }
+		public static v2 operator * (m2x2 lhs, v2 rhs)
+		{
+			v2 ans;
+			Transpose(ref lhs);
+			ans.x = v2.Dot2(lhs.x, rhs);
+			ans.y = v2.Dot2(lhs.y, rhs);
+			return ans;
+		}
+		public static m2x2 operator * (m2x2 lhs, m2x2 rhs)
+		{
+			m2x2 ans;
+			Transpose(ref lhs);
+			ans.x.x = v2.Dot2(lhs.x, rhs.x);
+			ans.x.y = v2.Dot2(lhs.y, rhs.x);
+			ans.y.x = v2.Dot2(lhs.x, rhs.y);
+			ans.y.y = v2.Dot2(lhs.y, rhs.y);
+			return ans;
+		}
 
-		public static void Transpose2x2(ref m2x2 m)
+		/// <summary>Compare matrices</summary>
+		public static bool FEql(m2x2 lhs, m2x2 rhs, float tol)
+		{
+			return v2.FEql2(lhs.x, rhs.x, tol) && v2.FEql2(lhs.y, rhs.y, tol);
+		}
+		public static bool FEql(m2x2 lhs, m2x2 rhs)
+		{
+			return FEql(lhs, rhs, Maths.TinyF);
+		}
+
+		/// <summary>Return the determinant of 'm'</summary>
+		public static float Determinant(m2x2 m)
+		{
+			return m.x.x*m.y.y - m.x.y*m.y.x;
+		}
+
+		/// <summary>Transpose 'm' in-place</summary>
+		public static void Transpose(ref m2x2 m)
 		{
 			Maths.Swap(ref m.x.y, ref m.y.x);
 		}
-		public static m2x2 Transpose2x2(m2x2 m)
+
+		/// <summary>Return the transpose of 'm'</summary>
+		public static m2x2 Transpose(m2x2 m)
 		{
-			Transpose2x2(ref m);
+			Transpose(ref m);
 			return m;
 		}
 
-		public static void InverseFast(ref m2x2 m)
+		/// <summary>Invert 'm' in place assuming m is orthonormal</summary>
+		public static void InvertFast(ref m2x2 m)
 		{
 			Debug.Assert(IsOrthonormal(m), "Matrix is not orthonormal");
-			Transpose2x2(ref m);
+			Transpose(ref m);
 		}
-		public static m2x2 InverseFast(m2x2 m)
+
+		/// <summary>Return the inverse of 'm' assuming m is orthonormal</summary>
+		public static m2x2 InvertFast(m2x2 m)
 		{
-			InverseFast(ref m);
+			InvertFast(ref m);
 			return m;
 		}
 
+		/// <summary>True if 'm' can be inverted</summary>
+		public static bool IsInvertable(m2x2 m)
+		{
+			return Determinant(m) != 0;
+		}
+
+		/// <summary>Return the inverse of 'm'</summary>
+		public static m2x2 Invert(m2x2 m)
+		{
+			Debug.Assert(IsInvertable(m), "Matrix has no inverse");
+
+			var det = Determinant(m);
+			var tmp = new m2x2(
+				new v2(m.y.y, -m.x.y) / det,
+				new v2(-m.y.x, m.x.x) / det);
+			return tmp;
+		}
+
+		/// <summary>Orthonormalise 'm' in-place</summary>
 		public static void Orthonormalise(ref m2x2 m)
 		{
 			m.x = v2.Normalise2(m.x);
 			m.y = v2.Normalise2(m.y - v2.Dot2(m.x,m.y) * m.x);
 		}
+
+		/// <summary>Return an orthonormalised version of 'm'</summary>
 		public static m2x2 Orthonormalise(m2x2 m)
 		{
 			Orthonormalise(ref m);
 			return m;
 		}
 
+		/// <summary>True if 'm' is orthonormal</summary>
 		public static bool IsOrthonormal(m2x2 m)
 		{
 			return
 				Maths.FEql(m.x.Length2Sq, 1f, 2*Maths.TinyF) &&
 				Maths.FEql(m.y.Length2Sq, 1f, 2*Maths.TinyF) &&
 				Maths.FEql(v2.Dot2(m.x, m.y), 0f, Maths.TinyF);
-		}
-
-		public static v2 operator * (m2x2 lhs, v2 rhs)
-		{
-			v2 ans;
-			Transpose2x2(ref lhs);
-			ans.x = v2.Dot2(lhs.x, rhs);
-			ans.y = v2.Dot2(lhs.y, rhs);
-			return ans;
-		}
-
-		public static m2x2 operator * (m2x2 lhs, m2x2 rhs)
-		{
-			m2x2 ans;
-			Transpose2x2(ref lhs);
-			ans.x.x = v2.Dot2(lhs.x, rhs.x);
-			ans.x.y = v2.Dot2(lhs.y, rhs.x);
-			ans.y.x = v2.Dot2(lhs.x, rhs.y);
-			ans.y.y = v2.Dot2(lhs.y, rhs.y);
-			return ans;
 		}
 
 		// Permute the rotation vectors in a matrix by 'n'
@@ -200,6 +242,28 @@ namespace pr.maths
 		//{
 		//	return new m3x4(from, to);
 		//}
+
+		#region Random
+
+		/// <summary>Create a random 3x4 matrix</summary>
+		public static m2x2 Random(Random r, float min_value, float max_value)
+		{
+			return new m2x2(
+				new v2(r.Float(min_value, max_value), r.Float(min_value, max_value)),
+				new v2(r.Float(min_value, max_value), r.Float(min_value, max_value)));
+		}
+
+		///// <summary>Create a random 2D rotation matrix</summary>
+		//public static m3x4 Random(Random r, float min_angle, float max_angle)
+		//{
+		//	return Rotation(axis, r.Float(min_angle, max_angle));
+		//}
+		//public static m3x4 Random(Random r)
+		//{
+		//	return Random(r, v4.Random3N(0.0f, r), 0.0f, (float)Maths.Tau);
+		//}
+
+		#endregion
 	}
 
 	public static partial class Maths
@@ -210,3 +274,50 @@ namespace pr.maths
 		}
 	}
 }
+
+#if PR_UNITTESTS
+namespace pr.unittests
+{
+	using maths;
+
+	[TestFixture] public class UnitTestM2x2
+	{
+		[Test] public void TestInversion()
+		{
+			var rng = new Random();
+			//{
+			//	var m = m2x2.Random(rng, v4.Random3N(0, rng), -(float)Maths.Tau, +(float)Maths.Tau);
+			//	var inv_m0 = m3x4.InvertFast(m);
+			//	var inv_m1 = m3x4.Invert(m);
+			//	Assert.True(m3x4.FEql(inv_m0, inv_m1, 0.001f));
+			//}
+			{
+				var m = m2x2.Random(rng, -5.0f, +5.0f);
+				var inv_m = m2x2.Invert(m);
+				var I0 = inv_m * m;
+				var I1 = m * inv_m;
+
+				Assert.True(m2x2.FEql(I1, m2x2.Identity, 0.0001f));
+				Assert.True(m2x2.FEql(I0, m2x2.Identity, 0.0001f));
+			}
+			{
+				var m = new m2x2(
+					new v2(4f, 7f),
+					new v2(2f, 6f));
+				var inv_m = m2x2.Invert(m);
+
+				var det = 4f*6f - 7f*2f;
+				var INV_M = new m2x2(
+					new v2(6f, -7f)/det,
+					new v2(-2f, 4f)/det);
+
+				Assert.True(m2x2.FEql(m*INV_M, m2x2.Identity, 0.00001f));
+				Assert.True(m2x2.FEql(inv_m, INV_M, 0.00001f));
+			}
+		}
+		[Test] public void TestQuatConversion()
+		{
+		}
+	}
+}
+#endif

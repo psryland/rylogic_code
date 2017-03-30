@@ -268,7 +268,7 @@ namespace pr.maths
 		/// <summary>True if 'mat' has an inverse</summary>
 		public static bool IsInvertable(m4x4 m)
 		{
-			return !Maths.FEql(Determinant4(m), 0);
+			return Determinant4(m) != 0;
 		}
 
 		/// <summary>Return 'm' inverted</summary>

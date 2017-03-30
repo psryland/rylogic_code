@@ -289,5 +289,17 @@ namespace pr.win32
 				public IntPtr hNameMappings; 
 				public string lpszProgressTitle; 
 		}
+
+		[StructLayout(LayoutKind.Sequential, CharSet=CharSet.Auto, Pack=1)] 
+		public struct COMBOBOXINFO
+		{
+			public Int32 cbSize;
+			public RECT rcItem;
+			public RECT rcButton;
+			public int buttonState;
+			public IntPtr hwndCombo;
+			public IntPtr hwndEdit;
+			public IntPtr hwndList;
+		}
 	}
 }

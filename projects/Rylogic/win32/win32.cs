@@ -814,6 +814,50 @@ namespace pr.win32
 		public const uint EM_SETSCROLLPOS                 = (WM_USER + 222);
 		#endregion
 
+		#region ListBox Messages
+		public const uint LB_ADDSTRING            = 0x0180;
+		public const uint LB_INSERTSTRING         = 0x0181;
+		public const uint LB_DELETESTRING         = 0x0182;
+		public const uint LB_SELITEMRANGEEX       = 0x0183;
+		public const uint LB_RESETCONTENT         = 0x0184;
+		public const uint LB_SETSEL               = 0x0185;
+		public const uint LB_SETCURSEL            = 0x0186;
+		public const uint LB_GETSEL               = 0x0187;
+		public const uint LB_GETCURSEL            = 0x0188;
+		public const uint LB_GETTEXT              = 0x0189;
+		public const uint LB_GETTEXTLEN           = 0x018A;
+		public const uint LB_GETCOUNT             = 0x018B;
+		public const uint LB_SELECTSTRING         = 0x018C;
+		public const uint LB_DIR                  = 0x018D;
+		public const uint LB_GETTOPINDEX          = 0x018E;
+		public const uint LB_FINDSTRING           = 0x018F;
+		public const uint LB_GETSELCOUNT          = 0x0190;
+		public const uint LB_GETSELITEMS          = 0x0191;
+		public const uint LB_SETTABSTOPS          = 0x0192;
+		public const uint LB_GETHORIZONTALEXTENT  = 0x0193;
+		public const uint LB_SETHORIZONTALEXTENT  = 0x0194;
+		public const uint LB_SETCOLUMNWIDTH       = 0x0195;
+		public const uint LB_ADDFILE              = 0x0196;
+		public const uint LB_SETTOPINDEX          = 0x0197;
+		public const uint LB_GETITEMRECT          = 0x0198;
+		public const uint LB_GETITEMDATA          = 0x0199;
+		public const uint LB_SETITEMDATA          = 0x019A;
+		public const uint LB_SELITEMRANGE         = 0x019B;
+		public const uint LB_SETANCHORINDEX       = 0x019C;
+		public const uint LB_GETANCHORINDEX       = 0x019D;
+		public const uint LB_SETCARETINDEX        = 0x019E;
+		public const uint LB_GETCARETINDEX        = 0x019F;
+		public const uint LB_SETITEMHEIGHT        = 0x01A0;
+		public const uint LB_GETITEMHEIGHT        = 0x01A1;
+		public const uint LB_FINDSTRINGEXACT      = 0x01A2;
+		public const uint LB_SETLOCALE            = 0x01A5;
+		public const uint LB_GETLOCALE            = 0x01A6;
+		public const uint LB_SETCOUNT             = 0x01A7;
+		public const uint LB_INITSTORAGE          = 0x01A8;
+		public const uint LB_ITEMFROMPOINT        = 0x01A9;
+		public const uint LB_GETLISTBOXINFO       = 0x01B2;
+		#endregion
+
 		#region ComboBox Messages
 		public const uint CB_GETEDITSEL            = 0x0140;
 		public const uint CB_LIMITTEXT             = 0x0141;

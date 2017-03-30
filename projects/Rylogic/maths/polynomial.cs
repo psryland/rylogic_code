@@ -116,6 +116,45 @@ namespace pr.maths
 				new v2((float)x0, (float)y0),
 				new v2((float)x1, (float)y1));
 		}
+
+		/// <summary>Create a best-fit quadratic for the given points</summary>
+		public static Monic FromLinearRegression(IList<v2> points)
+		{
+			// Minimise F = Sum{(ax + b - y)²} where x,y are the points in 'points' (of length N)
+			// The minimum of F is when dF/da == 0, and dF/db == 0
+			// Expand F and split the sum:
+			//    Sum{(ax + b - y)(ax + b - y)}
+			//  = Sum{(a²x² + abx - axy + abx + b² - by - axy - by + y²)}
+			//  = a²Sum{x²} + 2abSum{x} - 2aSum{xy} + b²Sum{} - 2bSum{y} + Sum{y²}
+			// Let Sij mean Sum{x^i*y^j}, e.g S40 = Sum{x^4*y^0}. Note: S00 = Sum{X^0*y^0} = N
+			//  = a²S20 + 2abS10 - 2aS11 + b²S00 - 2bS01 + S02
+			// Take partial derivatives w.r.t a,b:
+			//  dF/da = 2aS20 + 2bS10 - 2S11 == 0
+			//  dF/db = 2aS10 + 2bS00 - 2S01 == 0
+			// Solve the system of equations (divided through by 2)
+			//       M      *  a  =   b
+			//   [S20, S10]   [a]   [S11]
+			//   [S10, S00] * [b] = [S01]
+
+			var M = m2x2.Zero;
+			var b = v2.Zero;
+			foreach (var pt in points)
+			{
+				var x = pt.x;
+				var y = pt.y;
+
+				M.x.x += x * x; // S20
+				M.x.y += x;     // S10
+
+				b.x += x*y;  // S11
+				b.y += y;    // S01
+			}
+			M.y.x = M.x.y;
+			M.y.y = points.Count;
+
+			var a = m2x2.Invert(M) * b;
+			return new Monic(a.x, a.y);
+		}
 	}
 
 	/// <summary>'F(x) = Ax² + Bx + C'</summary>
@@ -249,6 +288,54 @@ namespace pr.maths
 				new v2((float)x0, (float)y0),
 				new v2((float)x1, (float)y1),
 				new v2((float)x2, (float)y2));
+		}
+
+		/// <summary>Create a best-fit quadratic for the given points</summary>
+		public static Quadratic FromLinearRegression(IList<v2> points)
+		{
+			// Minimise F = Sum{(ax² + bx + c - y)²} where x,y are the points in 'points' (of length N)
+			// The minimum of F is when dF/da == 0, dF/db == 0, and dF/dc == 0
+			// Expand F and split the sum:
+			//    Sum{(ax² + bx + c - y)(ax² + bx + c - y)}
+			//  = Sum{(a²x^4 + abx³ + acx² - ayx² + abx³ + b²x² + bcx - byx + acx² + bcx + c² - cy - ax²y - bxy - cy + y²)}
+			//  = a²Sum{x^4} + 2abSum{x³} + (b²+2ac)Sum{x²} - 2aSum{x²y} + 2bcSum{x} - 2bSum{yx} + Sum{c²} - 2cSum{y} + Sum{y²}
+			// Let Sij mean Sum{x^i*y^j}, e.g S40 = Sum{x^4*y^0}. Note: S00 = Sum{X^0*y^0} = N
+			//  = a²S40 + 2abS30 + (b²+2ac)S20 - 2aS21 + 2bcS10 - 2bS11 + c²S00 - 2cS01 + S02
+			// Take partial derivatives w.r.t a,b,c:
+			//  dF/da = 2aS40 + 2bS30 + 2cS20 - 2S21 == 0
+			//  dF/db = 2aS30 + 2bS20 + 2cS10 - 2S11 == 0
+			//  dF/dc = 2aS20 + 2bS10 + 2cS00 - 2S01 == 0
+			// Solve the system of equations (divided through by 2)
+			//         M         *  a  =   b
+			//   [S40, S30, S20]   [a]   [S21]
+			//   [S30, S20, S10] * [b] = [S11]
+			//   [S20, S10, S00]   [c]   [S01]
+
+			var M = m3x4.Zero;
+			var b = v3.Zero;
+			foreach (var pt in points)
+			{
+				var x = pt.x;
+				var y = pt.y;
+				var x2 = x * x;
+
+				M.x.x += x2 * x2; // S40
+				M.x.y += x2 * x;  // S30
+				M.y.y += x2;      // S20
+				M.y.z += x;       // S10
+
+				b.x += x2*y;  // S21
+				b.y += x*y;   // S11
+				b.z += y;     // S01
+			}
+			M.x.z = M.y.y;
+			M.z.x = M.y.y;
+			M.y.x = M.x.y;
+			M.z.y = M.y.z;
+			M.z.z = points.Count;
+
+			var a = m3x4.Invert(M) * b;
+			return new Quadratic(a.x, a.y, a.z);
 		}
 
 		#region Operators
@@ -466,6 +553,42 @@ namespace pr.unittests
 			Assert.AreEqual(q.F(a.x), a.y, Maths.TinyF);
 			Assert.AreEqual(q.F(b.x), b.y, Maths.TinyF);
 			Assert.AreEqual(q.F(c.x), c.y, Maths.TinyF);
+		}
+		[Test] public void FromLinearRegression()
+		{
+			{
+				var pts = new v2[]
+				{
+					new v2(0,15),
+					new v2(1,13),
+					new v2(2,10),
+					new v2(3, 7),
+					new v2(4, 4),
+					new v2(5, 1),
+				};
+				var m = Monic.FromLinearRegression(pts);
+				//Assert.True(Maths.FEql(m.A, 0.689393937587738));
+				//Assert.True(Maths.FEql(m.B, -6.10151338577271));
+			}
+			{
+				var pts = new v2[]
+				{
+					new v2(0,15),
+					new v2(1,13),
+					new v2(2,10),
+					new v2(3, 7),
+					new v2(4, 4),
+					new v2(5, 1),
+					new v2(6, 5),
+					new v2(7, 8),
+					new v2(8,13),
+					new v2(9,19),
+				};
+				var q = Quadratic.FromLinearRegression(pts);
+				Assert.True(Maths.FEql(q.A, 0.689393937587738, 0.00001f));
+				Assert.True(Maths.FEql(q.B, -6.10151338577271, 0.00001f));
+				Assert.True(Maths.FEql(q.C, 17.3090972900391 , 0.00001f));
+			}
 		}
 	}
 }

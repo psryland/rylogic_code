@@ -22,9 +22,9 @@ namespace pr.extn
 		}
 
 		/// <summary>Overload ToString with options for transforming the string</summary>
-		[DebuggerStepThrough] public static string ToString(this object obj, StrTxfm.ECapitalise word_start, StrTxfm.ECapitalise word_case = StrTxfm.ECapitalise.DontChange, StrTxfm.ESeparate word_sep = StrTxfm.ESeparate.DontChange, string sep = " ")
+		[DebuggerStepThrough] public static string ToString(this object obj, Str.ECapitalise word_start, Str.ECapitalise word_case = Str.ECapitalise.DontChange, Str.ESeparate word_sep = Str.ESeparate.DontChange, string sep = " ")
 		{
-			return StrTxfm.Apply(obj.ToString(), word_start, word_case, word_sep, sep);
+			return obj.ToString().Txfm(word_start, word_case, word_sep, sep);
 		}
 
 		/// <summary>Returns a string containing a description of this object and its member values</summary>

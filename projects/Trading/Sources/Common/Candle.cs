@@ -315,6 +315,7 @@ namespace Rylobot
 		#endregion
 	}
 
+	/// <summary>Candle extension methods</summary>
 	public static class Candle_
 	{
 		/// <summary>True if this is a trend indicating candle type</summary>
@@ -340,5 +341,46 @@ namespace Rylobot
 		{
 			return type == Candle.EType.Doji || type == Candle.EType.SpinningTop || type == Candle.EType.Hammer || type == Candle.EType.InvHammer;
 		}
+	}
+
+	/// <summary>Types of candle patterns (ordered by reliability)</summary>
+	public enum ECandlePattern
+	{
+		Spike,
+		Stall1,
+		Reversal1,
+		Engulfing1,
+		Stall2,
+		Reversal2,
+		Engulfing2,
+		Reversal3,
+	}
+
+	/// <summary>A located candle pattern</summary>
+	public class CandlePattern
+	{
+		public CandlePattern(ECandlePattern pattern, TradeType tt, RangeF range, Idx index, QuoteCurrency ep)
+		{
+			Pattern = pattern;
+			TT      = tt;
+			Range   = range;
+			Index   = index;
+			EP      = ep;
+		}
+
+		/// <summary>The pattern type</summary>
+		public ECandlePattern Pattern { get; private set; }
+
+		/// <summary>The trade direction implied by the pattern</summary>
+		public TradeType TT { get; private set; }
+
+		/// <summary>The candle range covering the pattern</summary>
+		public RangeF Range { get; private set; }
+
+		/// <summary>Index of the pivot candle</summary>
+		public Idx Index { get; private set; }
+
+		/// <summary>Suggested entry price</summary>
+		public QuoteCurrency EP { get; private set; }
 	}
 }

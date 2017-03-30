@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Globalization;
+using System.Linq;
 using pr.extn;
 using pr.maths;
 
@@ -341,6 +342,18 @@ namespace pr.common
 		public float Endf  { get { return (float)End;  } }
 		public float Sizef { get { return (float)Size; } }
 		public float Midf  { get { return (float)Mid;  } }
+
+		/// <summary>Enumerator for iterating over the range</summary>
+		public IEnumerable<double> Enumerate(double? step = null, double? count = null)
+		{
+			var d = step ?? (Size / (count ?? 100.0)); 
+			for (var i = Beg; i <= End; i += d)
+				yield return i;
+		}
+		public IEnumerable<float> Enumeratef(float? step = null, float? count = null)
+		{
+			return Enumerate(step, count).Select(x => (float)x);
+		}
 
 		/// <summary>Returns true if 'value' is within the range [Begin,End) (i.e. end exclusive)</summary>
 		[Pure] public bool Contains(double value)

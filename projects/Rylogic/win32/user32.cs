@@ -83,6 +83,8 @@ namespace pr.win32
 		[DllImport("user32.dll", EntryPoint="SendMessage", SetLastError=true)]                                public static extern IntPtr SendMessage(HWND hwnd, int msg, IntPtr wparam, IntPtr lparam);
 		[DllImport("user32.dll", EntryPoint="SendMessage", SetLastError=true)]                                public static extern IntPtr SendMessage(HWND hwnd, uint msg, IntPtr wparam, IntPtr lparam);
 		[DllImport("user32.dll", EntryPoint="SendMessage", SetLastError=true)]                                public static extern IntPtr SendMessage(HWND hwnd, uint msg, IntPtr wparam, ref POINT lparam);
+		[DllImport("user32.dll", EntryPoint="SendMessage", SetLastError=true)]                                public static extern IntPtr SendMessage(HWND hwnd, uint msg, IntPtr wparam, ref RECT lparam);
+		[DllImport("user32.dll", EntryPoint="SendMessage", SetLastError=true)]                                public static extern IntPtr SendMessage(HWND hwnd, uint msg, IntPtr wparam, out COMBOBOXINFO lparam);
 		[DllImport("user32.dll")]                                                                             public static extern IntPtr SetCursor(IntPtr cursor);
 		[DllImport("user32.dll")]                                                                             public static extern HWND   SetFocus(HWND hwnd);
 		[DllImport("user32.dll")]                                                                             public static extern bool   SetForegroundWindow(HWND hwnd);

@@ -1,11 +1,11 @@
 ﻿using System;
-using System.ComponentModel;
-using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using pr.common;
 using pr.extn;
 using pr.util;
+using pr.win32;
 
 namespace pr.gui
 {
@@ -45,6 +45,53 @@ namespace pr.gui
 			// Ensure the combo box has a binding context so that assigning
 			// to the DataSource property correctly initialises the Items collection. 
 			BindingContext = new BindingContext();
+		}
+		protected override void OnDropDown(EventArgs e)
+		{
+			 // Retrieve handle to the dynamically created drop-down list control
+			var info = new Win32.COMBOBOXINFO { cbSize = Marshal.SizeOf(typeof(Win32.COMBOBOXINFO)) };
+			Win32.SendMessage(Handle, Win32.CB_GETCOMBOBOXINFO, IntPtr.Zero, out info);
+			DropDownListCtrl = new DropDownListControl(this, info.hwndList);
+
+			base.OnDropDown(e);
+		}
+		protected override void OnDropDownClosed(EventArgs e)
+		{
+			DropDownListCtrl = null;
+			base.OnDropDownClosed(e);
+		}
+
+		/// <summary>The dynamically created drop down list control</summary>
+		internal DropDownListControl DropDownListCtrl
+		{
+			get { return m_dd_list_ctrl; }
+			private set
+			{
+				if (m_dd_list_ctrl == value) return;
+				m_dd_list_ctrl = value;
+			}
+		}
+		private DropDownListControl m_dd_list_ctrl;
+
+		/// <summary>Wrapper for the dynamically created combo box drop down list</summary>
+		internal class DropDownListControl :NativeWindow
+		{
+			// Notes:
+			//  - The list control is destroyed as soon as it loses focus. This
+			//    means any behaviour while the list is displayed must be modal.
+			//    Context menus cannot be modal, they use the parent window's
+			//    message queue.
+			private readonly ComboBox m_owner;
+			internal DropDownListControl(ComboBox owner, IntPtr handle)
+			{
+				m_owner = owner;
+				AssignHandle(handle);
+			}
+			protected override void WndProc(ref Message m)
+			{
+				// ToDo: handle window messages for the list box control
+				base.WndProc(ref m);
+			}
 		}
 
 		/// <summary>The index of the selected item in the drop down list</summary>

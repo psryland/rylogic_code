@@ -15,9 +15,60 @@ using pr.util;
 
 namespace pr.extn
 {
-	/// <summary>Extensions for strings</summary>
-	public static class StringExtensions
+	/// <summary>Helper string building functions</summary>
+	public static class Str
 	{
+		/// <summary>Get the text of the cached string builder'</summary>
+		public static string Text
+		{
+			[DebuggerStepThrough] get { return CachedSB.ToString(); }
+		}
+
+		/// <summary>A thread local string builder, cached for better memory performance</summary>
+		public static StringBuilder CachedSB { get { return m_cached_sb ?? (m_cached_sb = new StringBuilder()); } }
+		[ThreadStatic] private static StringBuilder m_cached_sb; // no initialised for thread statics
+
+		/// <summary>Reset the cached string builder'</summary>
+		[DebuggerStepThrough] public static void Reset()
+		{
+			CachedSB.Clear();
+		}
+
+		/// <summary>A helper for gluing strings together</summary>
+		[DebuggerStepThrough] public static string Build(params object[] parts)
+		{
+			return Build(CachedSB, parts);
+		}
+
+		/// <summary>Append object.ToString()s to 'sb'</summary>
+		[DebuggerStepThrough] public static void Append(params object[] parts)
+		{
+			Append(CachedSB, parts);
+		}
+
+		/// <summary>A helper for gluing strings together</summary>
+		[DebuggerStepThrough] public static string Build(StringBuilder sb, params object[] parts)
+		{
+			sb.Length = 0;
+			Append(sb, parts);
+			return sb.ToString();
+		}
+
+		/// <summary>Append object.ToString()s to 'sb'</summary>
+		[DebuggerStepThrough] public static void Append(StringBuilder sb, object part)
+		{
+			// Do not change this to automatically add white space,
+			if      (part is string     ) sb.Append((string)part);
+			else if (part is IEnumerable) foreach (var x in (IEnumerable)part) Append(sb, x);
+			else if (part != null       ) sb.Append(part.ToString());
+		}
+		[DebuggerStepThrough] public static void Append(StringBuilder sb, params object[] parts)
+		{
+			// Do not change this to automatically add white space,
+			foreach (var part in parts)
+				Append(sb, part);
+		}
+
 		/// <summary>Treats this string as a format string</summary>
 		[DebuggerStepThrough] public static string Fmt(this string fmt, params object[] args)
 		{
@@ -25,74 +76,9 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns true if this string is not null or empty</summary>
-		public static bool HasValue(this string str)
+		[DebuggerStepThrough] public static bool HasValue(this string str)
 		{
 			return !string.IsNullOrEmpty(str);
-		}
-
-		/// <summary>Return "this string" or "this str..."</summary>
-		public static string Summary(this string str, int max_length)
-		{
-			Debug.Assert(max_length >= 3);
-			return str.Length < max_length ? str : str.Substring(0, max_length - 3) + "...";
-		}
-
-		/// <summary>Return the first 'max_lines' in this string, with "..." appended if needed</summary>
-		public static string SummaryLines(this string str, int max_lines)
-		{
-			Debug.Assert(max_lines >= 1);
-			var idx = str.IndexOf(c => c == '\n' && --max_lines == 0);
-			return idx == -1 ? str : str.Substring(0, idx) + Environment.NewLine + "...";
-		}
-
-		/// <summary>Pluralise this string based on count.</summary>
-		public static string Plural(this string str, int count)
-		{
-			if (count == 1) return str;
-			if (!str.HasValue()) return str;
-
-			// Handle all caps
-			var caps = str.All(x => char.IsUpper(x));
-			if (caps) str = str.ToLower();
-
-			// Convert 'str' to it's plural form
-			var plural = (string)null;
-			if (m_mutated_plurals.TryGetValue(str, out plural))
-			{
-				// Test the special cases first, those that are exceptions to the following "rules"
-			}
-			if (str.EndsWith("ch") || str.EndsWith("x") || str.EndsWith("s"))
-			{
-				plural = str + "es";
-			}
-			else if (str.EndsWith("y"))
-			{
-				plural = str.Substring(0, str.Length-1) + "ies";
-			}
-			else
-			{
-				plural = str + "s";
-			}
-
-			// Convert back to caps
-			if (caps) plural = plural.ToUpper();
-			return plural;
-		}
-
-		// Add to this on demand... (*sigh*... English...)
-		private static Dictionary<string,string> m_mutated_plurals = new Dictionary<string, string>()
-			.Add2("barracks","barracks").Add2("child","children").Add2("goose","geese").Add2("man","men")
-			.Add2("mouse","mice").Add2("person","people").Add2("woman","women")
-			;
-
-		/// <summary>Transform this string into a "pretty" form</summary>
-		public static string MakePretty(this string str, StrTxfm.ECapitalise word_start, StrTxfm.ECapitalise word_case, StrTxfm.ESeparate word_sep, string sep, string delims = null)
-		{
-			return StrTxfm.Apply(str, word_start, word_case, word_sep, sep, delims);
-		}
-		public static string MakePretty(this string str, StrTxfm.EPrettyStyle style)
-		{
-			return StrTxfm.Apply(str, style);
 		}
 
 		/// <summary>Returns the substring contained between the first occurrence of 'start_pattern' and the following occurrence of 'end_pattern' (not inclusive). Use null to mean start/end of the string</summary>
@@ -172,6 +158,149 @@ namespace pr.extn
 		{
 			return new string(str.ToCharArray().Where(x => !pred(x)).ToArray());
 		}
+
+		public enum ECapitalise
+		{
+			DontChange = 0,
+			UpperCase  = 1,
+			LowerCase  = 2,
+		}
+		public enum ESeparate
+		{
+			DontChange = 0,
+			Add        = 1,
+			Remove     = 2,
+		}
+		public enum EPrettyStyle
+		{
+			/// <summary>Words start with capitals followed by lower case and are separated by spaces</summary>
+			Title,
+
+			/// <summary>Words are all upper case, separated with underscore</summary>
+			Macro,
+
+			/// <summary>Words are lower case, separated by underscore</summary>
+			LocalVar,
+
+			/// <summary>Words start with capitals followed by lower case and have no separators</summary>
+			TypeDecl,
+		}
+
+		/// <summary>Transforms a string by the given casing rules</summary>
+		public static string Txfm(this string str, ECapitalise word_start, ECapitalise word_case, ESeparate word_sep, string sep, string delims = null)
+		{
+			if (string.IsNullOrEmpty(str))
+				return str;
+
+			delims = delims ?? string.Empty;
+
+			var sb = new StringBuilder(str.Length);
+			for (var i = 0; i != str.Length; ++i)
+			{
+				// Skip over multiple delimiters
+				for (; delims.IndexOf(str[i]) != -1; ++i)
+				{
+					if (word_sep == ESeparate.DontChange)
+						sb.Append(str[i]);
+				}
+
+				// Detect word boundaries
+				var boundary = i == 0 ||                                  // first letter in the string
+					delims.IndexOf(str[i-1]) != -1 ||                     // previous char is a delimiter
+					(char.IsLower (str[i-1]) && char.IsUpper (str[i])) || // lower to upper case letters
+					(char.IsLetter(str[i-1]) && char.IsDigit (str[i])) || // letter to digit
+					(char.IsDigit (str[i-1]) && char.IsLetter(str[i])) || // digit to letter
+					(i < str.Length - 1 && char.IsUpper(str[i-1]) && char.IsUpper(str[i]) && char.IsLower(str[i+1]));
+				if (boundary)
+				{
+					if (i != 0 && word_sep == ESeparate.Add && sep != null)
+						sb.Append(sep);
+
+					switch (word_start)
+					{
+					default: throw new ArgumentOutOfRangeException("word_start");
+					case ECapitalise.DontChange: sb.Append(str[i]); break;
+					case ECapitalise.UpperCase:  sb.Append(char.ToUpper(str[i])); break;
+					case ECapitalise.LowerCase:  sb.Append(char.ToLower(str[i])); break;
+					}
+				}
+				else
+				{
+					switch (word_case)
+					{
+					default: throw new ArgumentOutOfRangeException("word_case");
+					case ECapitalise.DontChange: sb.Append(str[i]); break;
+					case ECapitalise.UpperCase:  sb.Append(char.ToUpper(str[i])); break;
+					case ECapitalise.LowerCase:  sb.Append(char.ToLower(str[i])); break;
+					}
+				}
+			}
+			return sb.ToString();
+		}
+		public static string Txfm(this string str, EPrettyStyle style, string delims = null)
+		{
+			switch (style)
+			{
+			default: throw new Exception("Unknown style");
+			case EPrettyStyle.Title:    return Txfm(str, ECapitalise.UpperCase, ECapitalise.LowerCase, ESeparate.Add, " ", delims);
+			case EPrettyStyle.Macro:    return Txfm(str, ECapitalise.UpperCase, ECapitalise.UpperCase, ESeparate.Add, "_", delims);
+			case EPrettyStyle.LocalVar: return Txfm(str, ECapitalise.LowerCase, ECapitalise.LowerCase, ESeparate.Add, "_", delims);
+			case EPrettyStyle.TypeDecl: return Txfm(str, ECapitalise.UpperCase, ECapitalise.LowerCase, ESeparate.Remove, "", delims);
+			}
+		}
+
+		/// <summary>Return "this string" or "this str..."</summary>
+		public static string Summary(this string str, int max_length)
+		{
+			Debug.Assert(max_length >= 3);
+			return str.Length < max_length ? str : str.Substring(0, max_length - 3) + "...";
+		}
+
+		/// <summary>Return the first 'max_lines' in this string, with "..." appended if needed</summary>
+		public static string SummaryLines(this string str, int max_lines)
+		{
+			Debug.Assert(max_lines >= 1);
+			var idx = str.IndexOf(c => c == '\n' && --max_lines == 0);
+			return idx == -1 ? str : str.Substring(0, idx) + Environment.NewLine + "...";
+		}
+
+		/// <summary>Pluralise this string based on count.</summary>
+		public static string Plural(this string str, int count)
+		{
+			if (count == 1) return str;
+			if (!str.HasValue()) return str;
+
+			// Handle all caps
+			var caps = str.All(x => char.IsUpper(x));
+			if (caps) str = str.ToLower();
+
+			// Convert 'str' to it's plural form
+			var plural = (string)null;
+			if (m_mutated_plurals.TryGetValue(str, out plural))
+			{
+				// Test the special cases first, those that are exceptions to the following "rules"
+			}
+			if (str.EndsWith("ch") || str.EndsWith("x") || str.EndsWith("s"))
+			{
+				plural = str + "es";
+			}
+			else if (str.EndsWith("y"))
+			{
+				plural = str.Substring(0, str.Length-1) + "ies";
+			}
+			else
+			{
+				plural = str + "s";
+			}
+
+			// Convert back to caps
+			if (caps) plural = plural.ToUpper();
+			return plural;
+		}
+		private static Dictionary<string,string> m_mutated_plurals = new Dictionary<string, string>()
+			.Add2("barracks","barracks").Add2("child","children").Add2("goose","geese").Add2("man","men")
+			.Add2("mouse","mice").Add2("person","people").Add2("woman","women")
+			; // Add to this on demand... (*sigh*... English...)
 
 		/// <summary>
 		/// Split the string into substrings at places where 'pred' returns >= 0.
@@ -435,61 +564,6 @@ namespace pr.extn
   //}
 	}
 
-	/// <summary>Helper string building functions</summary>
-	public static class Str
-	{
-		/// <summary>A thread local string builder, cached for better memory performance</summary>
-		public static StringBuilder CachedSB { get { return m_cached_sb ?? (m_cached_sb = new StringBuilder()); } }
-		[ThreadStatic] private static StringBuilder m_cached_sb; // no initialised for thread statics
-
-		/// <summary>Reset the cached string builder'</summary>
-		[DebuggerStepThrough] public static void Reset()
-		{
-			CachedSB.Clear();
-		}
-
-		/// <summary>A helper for gluing strings together</summary>
-		[DebuggerStepThrough] public static string Build(params object[] parts)
-		{
-			return Build(CachedSB, parts);
-		}
-
-		/// <summary>Append object.ToString()s to 'sb'</summary>
-		[DebuggerStepThrough] public static void Append(params object[] parts)
-		{
-			Append(CachedSB, parts);
-		}
-
-		/// <summary>Reset the cached string builder'</summary>
-		public static string Text
-		{
-			[DebuggerStepThrough] get { return CachedSB.ToString(); }
-		}
-
-		/// <summary>A helper for gluing strings together</summary>
-		[DebuggerStepThrough] public static string Build(StringBuilder sb, params object[] parts)
-		{
-			sb.Length = 0;
-			Append(sb, parts);
-			return sb.ToString();
-		}
-
-		/// <summary>Append object.ToString()s to 'sb'</summary>
-		[DebuggerStepThrough] public static void Append(StringBuilder sb, object part)
-		{
-			// Do not change this to automatically add white space,
-			if      (part is string     ) sb.Append((string)part);
-			else if (part is IEnumerable) foreach (var x in (IEnumerable)part) Append(sb, x);
-			else if (part != null       ) sb.Append(part.ToString());
-		}
-		[DebuggerStepThrough] public static void Append(StringBuilder sb, params object[] parts)
-		{
-			// Do not change this to automatically add white space,
-			foreach (var part in parts)
-				Append(sb, part);
-		}
-	}
-
 	/// <summary>An interface for string-like objects (typically StringBuilder or System.String)</summary>
 	public abstract class IString :IEnumerable<char>
 	{
@@ -691,6 +765,23 @@ namespace pr.unittests
 			Assert.AreEqual(func(s0, 6), 'W');
 			Assert.AreEqual(func(s1, 6), 'W');
 			Assert.AreEqual(func(s2, 6), 'W');
+		}
+		[Test] public void StringTransform()
+		{
+			const string str0 = "SOME_stringWith_weird_Casing_Number03";
+			string str;
+
+			str = str0.Txfm(Str.ECapitalise.LowerCase, Str.ECapitalise.LowerCase, Str.ESeparate.Add, "_", "_");
+			Assert.AreEqual("some_string_with_weird_casing_number_03", str);
+
+			str = str0.Txfm(Str.ECapitalise.UpperCase, Str.ECapitalise.LowerCase, Str.ESeparate.Remove, null, "_");
+			Assert.AreEqual("SomeStringWithWeirdCasingNumber03", str);
+
+			str = str0.Txfm(Str.ECapitalise.UpperCase, Str.ECapitalise.UpperCase, Str.ESeparate.Add, "^ ^", "_");
+			Assert.AreEqual("SOME^ ^STRING^ ^WITH^ ^WEIRD^ ^CASING^ ^NUMBER^ ^03", str);
+
+			str = "FieldCAPSBlah".Txfm(Str.ECapitalise.UpperCase, Str.ECapitalise.DontChange, Str.ESeparate.Add, " ");
+			Assert.AreEqual("Field CAPS Blah", str);
 		}
 	}
 }

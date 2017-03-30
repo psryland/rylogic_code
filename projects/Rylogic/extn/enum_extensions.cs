@@ -414,7 +414,7 @@ namespace pr.extn
 			// Otherwise pretty up the string name
 			else
 			{
-				desc = StrTxfm.Apply(args.ListItem.ToString(), StrTxfm.ECapitalise.UpperCase, StrTxfm.ECapitalise.LowerCase, StrTxfm.ESeparate.Add, " ");
+				desc = args.ListItem.ToString().Txfm(Str.ECapitalise.UpperCase, Str.ECapitalise.LowerCase, Str.ESeparate.Add, " ");
 				args.Value = desc;
 			}
 		}
@@ -445,7 +445,7 @@ namespace pr.extn
 		/// <summary>Convert the enum value to a string containing spaces</summary>
 		public static string ToPrettyString(this Enum e)
 		{
-			return StrTxfm.Apply(e.ToStringFast(), StrTxfm.ECapitalise.UpperCase, StrTxfm.ECapitalise.DontChange, StrTxfm.ESeparate.Add, " ");
+			return e.ToStringFast().Txfm(Str.ECapitalise.UpperCase, Str.ECapitalise.DontChange, Str.ESeparate.Add, " ");
 		}
 
 		/// <summary>A faster overload of ToString</summary>

@@ -6,6 +6,7 @@
 using System;
 using System.Collections;
 using System.ComponentModel;
+using pr.extn;
 
 namespace pr.util
 {
@@ -22,7 +23,7 @@ namespace pr.util
 	{
 		public override string ToString()
 		{
-			return StrTxfm.Apply(typeof(T).Name, StrTxfm.ECapitalise.UpperCase, StrTxfm.ECapitalise.LowerCase, StrTxfm.ESeparate.Add, " ", "");
+			return typeof(T).Name.Txfm(Str.ECapitalise.UpperCase, Str.ECapitalise.LowerCase, Str.ESeparate.Add, " ", "");
 		}
 		public override bool GetPropertiesSupported(ITypeDescriptorContext context)
 		{

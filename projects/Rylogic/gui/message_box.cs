@@ -195,8 +195,11 @@ namespace pr.gui
 			InitialLayout();
 			if (StartPosition == FormStartPosition.CenterParent)
 			{
-				if (Owner != null)
-					CenterToParent();
+				// Find the first parent window that is visible
+				var owner = Owner;
+				for (; owner != null && !owner.Visible; owner = owner.Owner) {}
+				if (owner != null)
+					Location = Drawing_.Subtract(owner.DesktopBounds.Centre(), Drawing_.Scaled(Size, 0.5f));
 				else
 					CenterToScreen();
 			}

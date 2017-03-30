@@ -139,6 +139,14 @@ namespace pr.maths
 		public static m3x4 operator / (m3x4 lhs, float rhs) { return new m3x4(lhs.x / rhs, lhs.y / rhs, lhs.z / rhs); }
 		public static bool operator ==(m3x4 lhs, m3x4 rhs)  { return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z; }
 		public static bool operator !=(m3x4 lhs, m3x4 rhs)  { return !(lhs == rhs); }
+		public static v3 operator * (m3x4 lhs, v3 rhs)
+		{
+			Transpose(ref lhs);
+			return new v3(
+				v3.Dot3(lhs.x.xyz, rhs),
+				v3.Dot3(lhs.y.xyz, rhs),
+				v3.Dot3(lhs.z.xyz, rhs));
+		}
 		public static v4 operator * (m3x4 lhs, v4 rhs)
 		{
 			Transpose(ref lhs);
@@ -188,14 +196,14 @@ namespace pr.maths
 			return m;
 		}
 
-		/// <summary>Invert 'm' in-place</summary>
+		/// <summary>Invert 'm' in-place assuming m is orthonormal</summary>
 		public static void InvertFast(ref m3x4 m)
 		{
 			Debug.Assert(IsOrthonormal(m), "Matrix is not orthonormal");
 			Transpose(ref m);
 		}
 
-		/// <summary>Return the inverse of 'm'</summary>
+		/// <summary>Return the inverse of 'm' assuming m is orthonormal</summary>
 		public static m3x4 InvertFast(m3x4 m)
 		{
 			InvertFast(ref m);
@@ -205,7 +213,7 @@ namespace pr.maths
 		/// <summary>True if 'm' can be inverted</summary>
 		public static bool IsInvertable(m3x4 m)
 		{
-			return !Maths.FEql(Determinant(m), 0.0f);
+			return Determinant(m) != 0;
 		}
 
 		/// <summary>Invert the matrix 'm'</summary>
