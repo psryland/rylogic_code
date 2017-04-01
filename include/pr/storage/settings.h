@@ -19,11 +19,11 @@
 #include "pr/common/assert.h"
 #include "pr/common/fmt.h"
 #include "pr/common/events.h"
-#include "pr/common/hash.h"
 #include "pr/common/colour.h"
 #include "pr/filesys/file.h"
 #include "pr/filesys/filesys.h"
 #include "pr/maths/maths.h"
+#include "pr/crypt/hash.h"
 #include "pr/script/reader.h"
 #include "pr/str/string.h"
 

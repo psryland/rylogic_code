@@ -26,7 +26,7 @@ namespace LDraw
 		private ToolStripSeparator toolStripSeparator2;
 		private ToolStrip m_ts;
 		#endregion
-
+//Todo: add a combo for selecting the scene that this script is rendered in
 		public ScriptUI(Model model, Guid? context_id = null)
 			:base(model, "Script")
 		{
@@ -197,7 +197,7 @@ namespace LDraw
 
 			// Remove any objects previously created by this script
 			Model.View3d.DeleteAllObjects(ContextId);
-			Model.Window.Invalidate();
+			Model.CurrentScene.Invalidate();
 		}
 
 		/// <summary>Render the script in this window</summary>
@@ -208,7 +208,7 @@ namespace LDraw
 			// Need a View3d method for rendering a string containing a scene
 			Model.View3d.LoadScript(Editor.Text, false, ContextId, null);
 			Model.ContextIds.Add(ContextId);
-			Model.Window.Invalidate();
+			Model.CurrentScene.Invalidate();
 		}
 
 		/// <summary>Handle the script changing</summary>

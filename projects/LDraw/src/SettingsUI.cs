@@ -77,24 +77,24 @@ namespace LDraw
 
 			// Use an exponential size function to scale x=[0,1] to Size=[0.1,10]
 			//   Size = 10^(2*(x - 0.5))  => x = 0.5*Log(Size) + 0.5
-			m_track_focus_point_size.ValueFrac(0.5f * (float)Math.Log(Settings.Camera.FocusPointSize) + 0.5f);
-			m_track_focus_point_size.ValueChanged += (s,a) =>
-			{
-				var size = (float)Math.Pow(10, 2 * (m_track_focus_point_size.ValueFrac() - 0.5));
-				Settings.Camera.FocusPointSize = size;
-			};
-
-			m_track_origin_point_size.ValueFrac(0.5f * (float)Math.Log(Settings.Camera.OriginPointSize) + 0.5f);
-			m_track_origin_point_size.ValueChanged += (s,a) =>
-			{
-				var size = (float)Math.Pow(10, 2 * (m_track_origin_point_size.ValueFrac() - 0.5));
-				Settings.Camera.OriginPointSize = size;
-			};
+	//		m_track_focus_point_size.ValueFrac(0.5f * (float)Math.Log(Settings.Camera.FocusPointSize) + 0.5f);
+	//		m_track_focus_point_size.ValueChanged += (s,a) =>
+	//		{
+	//			var size = (float)Math.Pow(10, 2 * (m_track_focus_point_size.ValueFrac() - 0.5));
+	//			Settings.Camera.FocusPointSize = size;
+	//		};
+	//
+	//		m_track_origin_point_size.ValueFrac(0.5f * (float)Math.Log(Settings.Camera.OriginPointSize) + 0.5f);
+	//		m_track_origin_point_size.ValueChanged += (s,a) =>
+	//		{
+	//			var size = (float)Math.Pow(10, 2 * (m_track_origin_point_size.ValueFrac() - 0.5));
+	//			Settings.Camera.OriginPointSize = size;
+	//		};
 
 			#endregion
 
 			// Rendering property grid
-			m_propgrid_rendering.SelectedObject = Settings.Scene;
+			m_propgrid_rendering.SelectedObject = Settings.Scenes;
 		}
 
 		#region Windows Form Designer generated code

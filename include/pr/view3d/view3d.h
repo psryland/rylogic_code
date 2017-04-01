@@ -394,6 +394,7 @@ extern "C"
 	VIEW3D_API void         __stdcall View3D_CheckForChangedSources   ();
 	VIEW3D_API void         __stdcall View3D_AddFileProgressCBSet     (View3D_AddFileProgressCB progress_cb, void* ctx, BOOL add);
 	VIEW3D_API void         __stdcall View3D_SourcesChangedCBSet      (View3D_SourcesChangedCB sources_changed_cb, void* ctx, BOOL add);
+	VIEW3D_API BOOL         __stdcall View3D_ContextIdFromFilepath    (wchar_t const* filepath, GUID& id);
 	VIEW3D_API void         __stdcall View3D_ObjectsDeleteAll         ();
 	VIEW3D_API void         __stdcall View3D_ObjectsDeleteById        (GUID const& context_id);
 	VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr          (wchar_t const* ldr_script, BOOL file, GUID const* context_id, View3DIncludes const* includes);

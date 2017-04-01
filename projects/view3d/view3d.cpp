@@ -1167,6 +1167,17 @@ VIEW3D_API void __stdcall View3D_SourcesChangedCBSet(View3D_SourcesChangedCB sou
 	CatchAndReport(View3D_SourcesChangedCBSet,,);
 }
 
+// Return the context id for objects created from 'filepath' (if filepath is an existing source)
+VIEW3D_API BOOL __stdcall View3D_ContextIdFromFilepath(wchar_t const* filepath, GUID& id)
+{
+	try
+	{
+		DllLockGuard;
+		return Dll().ContextIdFromFilepath(filepath, id);
+	}
+	CatchAndReport(View3D_ContextIdFromFilepath,,FALSE);
+}
+
 // Delete all objects
 VIEW3D_API void __stdcall View3D_ObjectsDeleteAll()
 {

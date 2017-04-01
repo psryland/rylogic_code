@@ -806,6 +806,13 @@ namespace pr.gfx
 			View3D_ObjectsDeleteById(ref id);
 		}
 
+		/// <summary>Return the context id for objects created from file 'filepath' (or null if 'filepath' is not an existing source)</summary>
+		public Guid? ContextIdFromFilepath(string filepath)
+		{
+			Guid id;
+			return View3D_ContextIdFromFilepath(filepath, out id) ? id : (Guid?)null;
+		}
+
 		/// <summary>Return the example Ldr script</summary>
 		public string ExampleScript
 		{
@@ -905,19 +912,22 @@ namespace pr.gfx
 			/// <summary>
 			/// Mouse navigation and/or object manipulation.
 			/// 'point' is a point in client rect space.
+			/// 'nav_op' is logical navigation operation to perform
 			/// 'mouse_btns' is the state of the mouse buttons (MK_LBUTTON etc)
-			/// 'nav_start_or_end' should be true on mouse button down or up, and false during mouse movement
+			/// 'nav_beg_or_end' should be true on mouse button down or up, and false during mouse movement
 			/// Returns true if the scene requires refreshing</summary>
-			public bool MouseNavigate(PointF point, ENavOp nav_op, bool nav_start_or_end)
+			public bool MouseNavigate(PointF point, ENavOp nav_op, bool nav_beg_or_end)
 			{
 				// This function is not in the CameraControls object because it is not solely used
 				// for camera navigation. It can also be used to manipulate objects in the scene.
-				return View3D_MouseNavigate(Handle, v2.From(point), nav_op, nav_start_or_end);
+				var args = new MouseNavigateEventArgs(point, nav_op, nav_beg_or_end);
+				MouseNavigating.Raise(this, args);
+				return View3D_MouseNavigate(Handle, v2.From(args.Point), args.NavOp, args.NavBegOrEnd);
 			}
-			public bool MouseNavigate(PointF point, MouseButtons btn, bool nav_start_or_end)
+			public bool MouseNavigate(PointF point, MouseButtons btn, bool nav_beg_or_end)
 			{
 				var op = CameraControls.MouseBtnToNavOp(btn);
-				return MouseNavigate(point, op, nav_start_or_end);
+				return MouseNavigate(point, op, nav_beg_or_end);
 			}
 
 			/// <summary>
@@ -928,7 +938,9 @@ namespace pr.gfx
 			/// Returns true if the scene requires refreshing</summary>
 			public bool MouseNavigateZ(PointF point, float delta, bool along_ray)
 			{
-				return View3D_MouseNavigateZ(Handle, v2.From(point), delta, along_ray);
+				var args = new MouseNavigateEventArgs(point, delta, along_ray);
+				MouseNavigating.Raise(this, args);
+				return View3D_MouseNavigateZ(Handle, v2.From(args.Point), args.Delta, args.AlongRay);
 			}
 
 			/// <summary>
@@ -939,6 +951,44 @@ namespace pr.gfx
 				// This function is not in the CameraControls object because it is not solely used
 				// for camera navigation. It can also be used to manipulate objects in the scene.
 				return View3D_Navigate(Handle, dx, dy, dz);
+			}
+
+			/// <summary>Raised just before a mouse navigation happens</summary>
+			public event EventHandler<MouseNavigateEventArgs> MouseNavigating;
+			public class MouseNavigateEventArgs :EventArgs
+			{
+				public MouseNavigateEventArgs(PointF point, ENavOp nav_op, bool nav_beg_or_end)
+				{
+					ZNavigation         = false;
+					Point       = point;
+					NavOp       = nav_op;
+					NavBegOrEnd = nav_beg_or_end;
+				}
+				public MouseNavigateEventArgs(PointF point, float delta, bool along_ray)
+				{
+					ZNavigation      = true;
+					Point    = point;
+					Delta    = delta;
+					AlongRay = along_ray;
+				}
+
+				/// <summary>True if this is a Z axis navigation</summary>
+				public bool ZNavigation { get; private set; }
+
+				/// <summary>The mouse pointer in client rect space</summary>
+				public PointF Point { get; private set; }
+
+				/// <summary>The navigation operation to perform</summary>
+				public ENavOp NavOp { get; private set; }
+
+				/// <summary>True if this is the beginning or end of the navigation, false if during</summary>
+				public bool NavBegOrEnd { get; private set; }
+
+				/// <summary>The mouse wheel scroll delta</summary>
+				public float Delta { get; private set; }
+
+				/// <summary>True if Z axis navigation moves the camera along a ray through the mouse pointer</summary>
+				public bool AlongRay { get; private set; }
 			}
 
 			/// <summary>Get the render target texture</summary>
@@ -2312,6 +2362,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_CheckForChangedSources   ();
 		[DllImport(Dll)] private static extern void              View3D_AddFileProgressCBSet     (AddFileProgressCB progress_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern void              View3D_SourcesChangedCBSet      (SourcesChangedCB sources_changed_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)] private static extern bool              View3D_ContextIdFromFilepath    ([MarshalAs(UnmanagedType.LPWStr)] string filepath, out Guid id);
 		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteAll         ();
 		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteById        (ref Guid context_id);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, ref View3DIncludes includes);

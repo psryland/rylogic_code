@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
@@ -19,18 +20,8 @@ namespace LDraw
 			RecentFiles = string.Empty;
 			AutoRefresh = false;
 			ResetOnLoad = true;
-			ShowBBoxes = false;
-
-			var light = new View3d.Light(0x00000000, 0xFF808080, 0xFFFFFFFF, 1000, direction:new v4(-1,-1,-10, 0)) { CameraRelative = true };
-			Light = light.ToXml(new XElement(nameof(View3d.Light)));
-
-			Scene = new ChartControl.RdrOptions();
-			Scene.AntiAliasing     = false;
-			Scene.ChartBkColour    = Color.FromArgb(0x00,0x00,0x00);
-			Scene.XAxis.GridColour = Color.FromArgb(0x20,0x20,0x20);
-			Scene.YAxis.GridColour = Color.FromArgb(0x20,0x20,0x20);
-
-			Camera = new CameraSettings();
+			LinkSceneCameras = false;
+			Scenes = new SceneSettings[1] { new SceneSettings() };
 			UI = new UISettings();
 
 			AutoSaveOnChanges = true;
@@ -51,8 +42,8 @@ namespace LDraw
 		/// <summary>Auto reload script sources when changes are detected</summary>
 		public bool AutoRefresh
 		{
-			get { return get(x => x.ShowBBoxes); }
-			set { set(x => x.ShowBBoxes, value); }
+			get { return get(x => x.AutoRefresh); }
+			set { set(x => x.AutoRefresh, value); }
 		}
 
 		/// <summary>True if the scene should auto range after loading files</summary>
@@ -62,36 +53,18 @@ namespace LDraw
 			set { set(x => x.ResetOnLoad, value); }
 		}
 
-		/// <summary>Show bounding boxes for objects</summary>
-		public bool ShowBBoxes
+		/// <summary>True if navigation actions are applied to all scenes</summary>
+		public bool LinkSceneCameras
 		{
-			get { return get(x => x.ShowBBoxes); }
-			set { set(x => x.ShowBBoxes, value); }
+			get { return get(x => x.LinkSceneCameras); }
+			set { set(x => x.LinkSceneCameras, value); }
 		}
 
-		/// <summary>Light settings</summary>
-		public XElement Light
+		/// <summary>Style options for scenes</summary>
+		public SceneSettings[] Scenes
 		{
-			get { return get(x => x.Light); }
-			set { set(x => x.Light, value); }
-		}
-
-		/// <summary>Style options for charts</summary>
-		public ChartControl.RdrOptions Scene
-		{
-			get { return get(x => x.Scene); }
-			set { set(x => x.Scene, value); }
-		}
-
-		/// <summary>Camera settings</summary>
-		public CameraSettings Camera
-		{
-			get { return get(x => x.Camera); }
-			set
-			{
-				if (value == null) throw new ArgumentNullException("Setting '{0}' cannot be null".Fmt(nameof(Camera)));
-				set(x => x.Camera, value);
-			}
+			get { return get(x => x.Scenes); }
+			set { set(x => x.Scenes, value); }
 		}
 
 		/// <summary>UI settings</summary>
@@ -177,6 +150,74 @@ namespace LDraw
 		}
 
 		private class TyConv :GenericTypeConverter<CameraSettings> {}
+	}
+
+	/// <summary>Settings for a scene</summary>
+	[TypeConverter(typeof(TyConv))]
+	public class SceneSettings :SettingsSet<SceneSettings>
+	{
+		public SceneSettings()
+			:this(null)
+		{}
+		public SceneSettings(string name)
+		{
+			Name = name ?? string.Empty;
+			ShowBBoxes = false;
+
+			Camera = new CameraSettings();
+
+			Options                  = new ChartControl.RdrOptions();
+			Options.AntiAliasing     = false;
+			Options.BkColour         = Color_.FromArgb(0xFFB9D1EA);
+			Options.ChartBkColour    = Color_.FromArgb(0xFF808080);
+			Options.XAxis.GridColour = Color_.FromArgb(0xFF8C8C8C);
+			Options.YAxis.GridColour = Color_.FromArgb(0xFF8C8C8C);
+			Options.GridZOffset      = -0.001f;
+
+			var light = new View3d.Light(0x00000000, 0xFF808080, 0xFFFFFFFF, 1000, direction:new v4(-1,-1,-10, 0)) { CameraRelative = true };
+			Light = light.ToXml(new XElement(nameof(View3d.Light)));
+		}
+
+		/// <summary>The name of the scene that this settings apply to</summary>
+		public string Name
+		{
+			get { return get(x => x.Name); }
+			set { set(x => x.Name, value); }
+		}
+
+		/// <summary>Show bounding boxes for objects</summary>
+		public bool ShowBBoxes
+		{
+			get { return get(x => x.ShowBBoxes); }
+			set { set(x => x.ShowBBoxes, value); }
+		}
+
+		/// <summary>Camera settings</summary>
+		public CameraSettings Camera
+		{
+			get { return get(x => x.Camera); }
+			set
+			{
+				if (value == null) throw new ArgumentNullException("Setting '{0}' cannot be null".Fmt(nameof(Camera)));
+				set(x => x.Camera, value);
+			}
+		}
+
+		/// <summary>Scene rendering options</summary>
+		public ChartControl.RdrOptions Options
+		{
+			get { return get(x => x.Options); }
+			set { set(x => x.Options, value); }
+		}
+
+		/// <summary>Light settings</summary>
+		public XElement Light
+		{
+			get { return get(x => x.Light); }
+			set { set(x => x.Light, value); }
+		}
+
+		private class TyConv :GenericTypeConverter<SceneSettings> {}
 	}
 
 	/// <summary>Settings associated with a connection to Rex via RexLink</summary>

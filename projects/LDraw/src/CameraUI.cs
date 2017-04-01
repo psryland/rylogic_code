@@ -12,7 +12,7 @@ namespace LDraw
 {
 	public class CameraUI :ToolForm
 	{
-		private readonly MainUI m_main_ui;
+		private readonly SceneUI m_scene;
 
 		#region UI Elements
 		private ValueBox m_tb_focus_point;
@@ -41,11 +41,12 @@ namespace LDraw
 		private Timer m_timer;
 		#endregion
 
-		public CameraUI(MainUI main_ui)
-			:base(main_ui.Model.Scene, EPin.Centre, Point.Empty)
+		public CameraUI(SceneUI scene)
+			:base(scene, EPin.Centre, Point.Empty)
 		{
 			InitializeComponent();
-			m_main_ui = main_ui;
+			m_scene = scene;
+			Camera = m_scene.Camera;
 
 			SetupUI();
 			UpdateUI();
@@ -64,7 +65,8 @@ namespace LDraw
 		/// <summary>The camera whose properties are displayed</summary>
 		private View3d.CameraControls Camera
 		{
-			get { return m_main_ui.Model.Scene.Scene.Camera; }
+			get;
+			set;
 		}
 
 		/// <summary>Set up UI Elements</summary>
@@ -90,7 +92,7 @@ namespace LDraw
 			{
 				if (!m_tb_focus_point.Focused) return;
 				Camera.FocusPoint = (v4)m_tb_focus_point.Value;
-				m_main_ui.Invalidate();
+				m_scene.Invalidate();
 			};
 
 			// Focus distance
@@ -102,7 +104,7 @@ namespace LDraw
 				var pt = Camera.FocusPoint;
 				Camera.FocusDist = (float)m_tb_focus_dist.Value;
 				Camera.FocusPoint = pt;
-				m_main_ui.Invalidate();
+				m_scene.Invalidate();
 			};
 
 			// Camera forward
@@ -126,7 +128,7 @@ namespace LDraw
 			{
 				if (!m_tb_zoom.Focused) return;
 				Camera.Zoom = (float)m_tb_zoom.Value;
-				m_main_ui.Invalidate();
+				m_scene.Invalidate();
 			};
 
 			// Near
@@ -136,7 +138,7 @@ namespace LDraw
 			{
 				if (!m_tb_near.Focused) return;
 				Camera.NearPlane = (float)m_tb_near.Value;
-				m_main_ui.Invalidate();
+				m_scene.Invalidate();
 			};
 
 			// Far
@@ -146,7 +148,7 @@ namespace LDraw
 			{
 				if (!m_tb_far.Focused) return;
 				Camera.FarPlane = (float)m_tb_far.Value;
-				m_main_ui.Invalidate();
+				m_scene.Invalidate();
 			};
 
 			// FovX
@@ -162,7 +164,7 @@ namespace LDraw
 				else
 					Camera.SetFov(fov, Camera.FovY);
 
-				m_main_ui.Invalidate();
+				m_scene.Invalidate();
 			};
 
 			// FovY
@@ -178,7 +180,7 @@ namespace LDraw
 				else
 					Camera.SetFov(Camera.FovX, fov);
 
-				m_main_ui.Invalidate();
+				m_scene.Invalidate();
 			};
 
 			// Aspect ratio
@@ -188,7 +190,7 @@ namespace LDraw
 			{
 				if (!m_tb_aspect.Focused) return;
 				Camera.Aspect = (float)m_tb_aspect.Value;
-				m_main_ui.Invalidate();
+				m_scene.Invalidate();
 			};
 
 			// Preserve aspect

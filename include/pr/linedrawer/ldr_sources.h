@@ -323,6 +323,23 @@ namespace pr
 				pr::erase_first(m_gizmos, [&](LdrGizmoPtr const& p){ return p.m_ptr == gizmo; });
 			}
 
+			// Return the file group id for objects created from 'filepath' (if filepath is an existing source)
+			bool ContextIdFromFilepath(wchar_t const* filepath, Guid& id) const
+			{
+				assert(std::this_thread::get_id() == m_main_thread_id);
+
+				// Find the file in the file list
+				auto fpath = pr::filesys::Standardise<filepath_t>(filepath);
+				auto iter = m_files.find(fpath);
+				if (iter == std::end(m_files))
+					return false;
+
+				// Return the file group id
+				auto& file = iter->second;
+				id = file.m_file_group_id;
+				return true;
+			}
+
 		private:
 
 			// 'filepath' is the name of the changed file

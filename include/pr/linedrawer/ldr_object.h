@@ -9,7 +9,6 @@
 #include <regex>
 #include "pr/macros/enum.h"
 #include "pr/common/min_max_fix.h"
-#include "pr/common/hash.h"
 #include "pr/common/new.h"
 #include "pr/common/guid.h"
 #include "pr/common/refcount.h"
@@ -19,6 +18,7 @@
 #include "pr/common/static_callback.h"
 #include "pr/container/vector.h"
 #include "pr/maths/maths.h"
+#include "pr/crypt/hash.h"
 #include "pr/str/string.h"
 #include "pr/script/reader.h"
 #include "pr/renderer11/instance.h"

@@ -37,10 +37,6 @@ namespace pr.gui
 		// - Mouse wheel moves the camera in the camera z direction
 		// - Mouse wheel on an axis (changing the aspect ratio) changes the FoV
 
-		#region Constants
-		private const float GridLinesZ = -0.001f;
-		#endregion
-
 		/// <summary>Axis type</summary>
 		[Flags] public enum EAxis
 		{

@@ -209,6 +209,7 @@
     <Compile Include="extn\event_extensions.cs" />
     <Compile Include="extn\exception_extensions.cs" />
     <Compile Include="extn\gfx_extensions.cs" />
+    <Compile Include="extn\guid_extensions.cs" />
     <Compile Include="extn\listbox_extensions.cs" />
     <Compile Include="extn\list_extensions.cs" />
     <Compile Include="extn\lock_extensions.cs" />
@@ -456,7 +457,6 @@
     <Compile Include="stream\stream_wrapper.cs" />
     <Compile Include="util\reflect.cs" />
     <Compile Include="util\scope.cs" />
-    <Compile Include="util\string_transform.cs" />
     <Compile Include="stream\uncloseable_stream.cs">
     </Compile>
     <Compile Include="util\ref.cs" />

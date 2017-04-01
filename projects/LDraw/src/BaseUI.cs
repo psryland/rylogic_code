@@ -48,9 +48,9 @@ namespace LDraw
 		private DockControl m_impl_dock_control;
 
 		/// <summary>Application settings</summary>
-		protected Settings Settings
+		public Settings Settings
 		{
-			get { return Model.Settings; }
+			[DebuggerStepThrough] get { return Model.Settings; }
 		}
 
 		/// <summary>The app logic</summary>
@@ -62,12 +62,12 @@ namespace LDraw
 				if (m_model == value) return;
 				if (m_model != null)
 				{
-					m_model.Window.OnRendering -= HandleSceneRendering;
+		//			m_model.Window.OnRendering -= HandleSceneRendering;
 				}
 				SetModelCore(value);
 				if (m_model != null)
 				{
-					m_model.Window.OnRendering += HandleSceneRendering;
+		//			m_model.Window.OnRendering += HandleSceneRendering;
 				}
 			}
 		}
@@ -79,13 +79,13 @@ namespace LDraw
 			m_model = model;
 		}
 
-		/// <summary>Add instances to the scene just prior to rendering</summary>
-		protected virtual void OnSceneRendering()
-		{ }
-		private void HandleSceneRendering(object sender, EventArgs e)
-		{
-			OnSceneRendering();
-		}
+		///// <summary>Add instances to the scene just prior to rendering</summary>
+		//protected virtual void OnSceneRendering()
+		//{ }
+		//private void HandleSceneRendering(object sender, EventArgs e)
+		//{
+		//	OnSceneRendering();
+		//}
 
 		/// <summary>Invalidate this control and all children</summary>
 		protected void Invalidate(object sender, EventArgs e)

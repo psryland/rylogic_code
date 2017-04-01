@@ -14,12 +14,12 @@
 #include <cassert>
 #include "pr/common/exception.h"
 #include "pr/common/fmt.h"
-#include "pr/common/hash.h"
 #include "pr/common/scope.h"
 #include "pr/common/expr_eval.h"
 #include "pr/container/vector.h"
 #include "pr/container/deque.h"
 #include "pr/container/stack.h"
+#include "pr/crypt/hash.h"
 #include "pr/macros/enum.h"
 #include "pr/str/string.h"
 #include "pr/str/string_core.h"

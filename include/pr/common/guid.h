@@ -12,6 +12,8 @@
 #include "pr/common/scope.h"
 #include "pr/common/hresult.h"
 #include "pr/str/string.h"
+#include "pr/crypt/md5.h"
+#include "pr/crypt/sha1.h"
 
 // Required lib: rpcrt4.lib
 #pragma comment(lib, "rpcrt4.lib")
@@ -22,12 +24,105 @@ namespace pr
 	const Guid GuidZero    = { 0x00000000, 0x0000, 0x0000, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	const Guid GuidInvalid = { 0x00000000, 0x0000, 0x0000, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
+	// The namespace for fully-qualified domain names (from RFC 4122, Appendix C).
+	const Guid GuidDnsNamespace = { 0x6ba7b810, 0x9dad, 0x11d1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8 };
+
+	// The namespace for URLs (from RFC 4122, Appendix C).
+	const Guid GuidUrlNamespace = { 0x6ba7b811, 0x9dad, 0x11d1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8 };
+
+	// The namespace for ISO OIDs (from RFC 4122, Appendix C).
+	const Guid GuidIsoOidNamespace = { 0x6ba7b812, 0x9dad, 0x11d1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8 };
+
+	// Guids from names
+	enum class EGuidVersion { MD5Hashing = 3, SHA1Hashing = 5 };
+
 	// Create a new GUID
 	inline Guid GenerateGUID()
 	{
 		Guid guid;
 		Throw(CoCreateGuid(&guid), "Failed to create GUID");
 		return guid;
+	}
+
+	// Creates a name-based UUID using the algorithm from RFC 4122 §4.3.
+	// namespaceId - The ID of the namespace.
+	// name - The name (within that namespace).
+	// version - The version number of the UUID to create; this value must be either 3 (for MD5 hashing) or 5 (for SHA-1 hashing).
+	// Returns a UUID derived from the namespace and name.
+	// See <a href="http://code.logos.com/blog/2011/04/generating_a_deterministic_guid.html">Generating a deterministic GUID</a>
+	inline Guid GenerateGUID(Guid namespace_id, char const* name, EGuidVersion version = EGuidVersion::SHA1Hashing)
+	{
+		using byte = unsigned char;
+
+		if (name == nullptr)
+			throw std::exception("name cannot be null");
+		if (version != EGuidVersion::MD5Hashing && version != EGuidVersion::SHA1Hashing)
+			throw std::exception("version must be either 3 or 5.");
+
+		// Converts a GUID (expressed as a byte array) to/from network order (MSB-first).
+		auto SwapByteOrder = [](byte* guid)
+		{
+			std::swap(guid[0], guid[3]);
+			std::swap(guid[1], guid[2]);
+			std::swap(guid[4], guid[5]);
+			std::swap(guid[6], guid[7]);
+		};
+
+		// Convert the name to a sequence of octets (as defined by the standard or conventions of its namespace) (step 3)
+		// ASSUME: UTF-8 encoding is always appropriate
+		auto name_bytes = reinterpret_cast<byte const*>(name);
+		auto name_bytes_len = int(strlen(name));
+
+		// Convert the namespace UUID to network order (step 3)
+		auto namespace_bytes = reinterpret_cast<unsigned char*>(&namespace_id);
+		auto namespace_bytes_len = int(sizeof(GUID));
+		SwapByteOrder(namespace_bytes);
+
+		byte new_guid[sizeof(GUID)];
+
+		// Compute the hash of the name space ID concatenated with the name (step 4)
+		switch (version)
+		{
+		default:
+			{
+				throw std::exception("Unknown name Guid version");
+			}
+		case EGuidVersion::MD5Hashing:
+			{
+				pr::hash::MD5 md5;
+				md5.Add(namespace_bytes, namespace_bytes_len);
+				md5.Add(name_bytes, name_bytes_len);
+				auto hash = md5.Final();
+
+				// Most bytes from the hash are copied straight to the bytes of the new GUID (steps 5-7, 9, 11-12)
+				memcpy(&new_guid, &hash[0], 16);
+				break;
+			}
+		case EGuidVersion::SHA1Hashing:
+			{
+				pr::hash::SHA1 sha1;
+				sha1.Add(namespace_bytes, namespace_bytes_len);
+				sha1.Add(name_bytes, name_bytes_len);
+				auto hash = sha1.Final();
+
+				// Most bytes from the hash are copied straight to the bytes of the new GUID (steps 5-7, 9, 11-12)
+				memcpy(&new_guid, &hash[0], 16);
+				break;
+			}
+		}
+
+		// Set the four most significant bits (bits 12 through 15) of the 'time_hi_and_version' field to
+		// the appropriate 4-bit version number from Section 4.1.3 (step 8)
+		new_guid[6] = byte((new_guid[6] & 0x0F) | (byte(version) << 4));
+
+		// Set the two most significant bits (bits 6 and 7) of the 'clock_seq_hi_and_reserved' to zero
+		// and one, respectively (step 10)
+		new_guid[8] = byte((new_guid[8] & 0x3F) | 0x80);
+
+		// Convert the resulting UUID to local byte order (step 13)
+		SwapByteOrder(new_guid);
+
+		return *reinterpret_cast<GUID*>(&new_guid);
 	}
 
 	// Conversion

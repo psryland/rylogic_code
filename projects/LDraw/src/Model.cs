@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using pr.common;
+using pr.container;
 using pr.extn;
 using pr.gfx;
 using pr.gui;
@@ -22,20 +23,25 @@ namespace LDraw
 		public Model(MainUI main_ui)
 		{
 			Owner        = main_ui;
+			View3d       = new View3d();
 			IncludePaths = new List<string>();
-			ContextIds   = new List<Guid>();
+			ContextIds   = new HashSet<Guid>();
 			SavedViews   = new List<SavedView>();
-			DragDrop     = new DragDrop();
-			Scene        = new SceneUI(this);
+			Scenes       = new BindingListEx<SceneUI>();
 			Log          = new LogUI(this);
+
+			// Add the default scene
+			CurrentScene = Scenes.Add2(new SceneUI("Scene", this));
 
 			// Apply initial settings
 			AutoRefreshSources = Settings.AutoRefresh;
+			LinkSceneCameras = Settings.LinkSceneCameras;
 		}
 		public void Dispose()
 		{
 			Log = null;
-			Scene = null;
+			Scenes = null;
+			View3d = null;
 		}
 
 		/// <summary>The UI that created this model</summary>
@@ -54,25 +60,19 @@ namespace LDraw
 		/// <summary>A view3d context reference that lives for the lifetime of the application</summary>
 		public View3d View3d
 		{
-			[DebuggerStepThrough] get { return Scene.View3d; }
-		}
-
-		/// <summary>The 3d scene</summary>
-		public SceneUI Scene
-		{
-			[DebuggerStepThrough] get { return m_scene; }
+			[DebuggerStepThrough] get { return m_view3d; }
 			private set
 			{
-				if (m_scene == value) return;
-				if (m_scene != null)
+				if (m_view3d == value) return;
+				if (m_view3d != null)
 				{
 					View3d.AddFileProgress -= HandleAddFileProgress;
 					View3d.OnSourcesChanged -= HandleSourcesChanged;
 					View3d.Error -= ReportError;
-					Util.Dispose(ref m_scene);
+					Util.Dispose(ref m_view3d);
 				}
-				m_scene = value;
-				if (m_scene != null)
+				m_view3d = value;
+				if (m_view3d != null)
 				{
 					View3d.Error += ReportError;
 					View3d.OnSourcesChanged += HandleSourcesChanged;
@@ -80,7 +80,75 @@ namespace LDraw
 				}
 			}
 		}
-		private SceneUI m_scene;
+		private View3d m_view3d;
+
+		/// <summary>The 3d scene views</summary>
+		public BindingListEx<SceneUI> Scenes
+		{
+			[DebuggerStepThrough] get { return m_scenes; }
+			private set
+			{
+				if (m_scenes == value) return;
+				if (m_scenes != null)
+				{
+					m_scenes.ListChanging -= HandleScenesListChanging;
+				}
+				m_scenes = value;
+				if (m_scenes != null)
+				{
+					m_scenes.ListChanging += HandleScenesListChanging;
+				}
+			}
+		}
+		private BindingListEx<SceneUI> m_scenes;
+		private void HandleScenesListChanging(object sender, ListChgEventArgs<SceneUI> e)
+		{
+			var scene = e.Item;
+			switch (e.ChangeType)
+			{
+			case ListChg.ItemRemoved:
+				{
+					Owner.DockContainer.Remove(scene);
+					scene.Window.MouseNavigating -= HandleMouseNavigating;
+					scene.Options.PropertyChanged -= Owner.UpdateUI;
+					Util.Dispose(ref scene);
+					break;
+				}
+			case ListChg.ItemAdded:
+				{
+					// Determine a dock location from the current scene
+					var dloc = new DockContainer.DockLocation();
+					if (CurrentScene != null)
+					{
+						var loc = CurrentScene.DockControl.CurrentDockLocation;
+						dloc.Address = loc.Address.Concat(CurrentScene.Bounds.Aspect() > 1 ? EDockSite.Right : EDockSite.Bottom).ToArray();
+					}
+					scene.Options.PropertyChanged += Owner.UpdateUI;
+					scene.Window.MouseNavigating += HandleMouseNavigating;
+					Owner.DockContainer.Add(scene, dloc);
+					break;
+				}
+			}
+		}
+
+		/// <summary>The scene with input focus (or the last to have input focus). Always non-null</summary>
+		public SceneUI CurrentScene
+		{
+			[DebuggerStepThrough] get { return m_current_scene; }
+			set
+			{
+				if (m_current_scene == value) return;
+				if (m_current_scene != null)
+				{
+				}
+				Debug.Assert(value != null);
+				m_current_scene = value;
+				if (m_current_scene != null)
+				{
+				}
+			}
+		}
+		private SceneUI m_current_scene;
 
 		/// <summary>The error log</summary>
 		public LogUI Log
@@ -89,23 +157,19 @@ namespace LDraw
 			private set
 			{
 				if (m_log == value) return;
-				Util.Dispose(ref m_log);
+				if (m_log != null)
+				{
+					Owner.DockContainer.Remove(m_log);
+					Util.Dispose(ref m_log);
+				}
 				m_log = value;
+				if (m_log != null)
+				{
+					Owner.DockContainer.Add(m_log);
+				}
 			}
 		}
 		private LogUI m_log;
-
-		/// <summary>The View3d scene</summary>
-		public View3d.Window Window
-		{
-			[DebuggerStepThrough] get { return Scene?.Scene?.Window; }
-		}
-
-		/// <summary>The View3d scene camera</summary>
-		public View3d.CameraControls Camera
-		{
-			[DebuggerStepThrough] get { return Scene.Scene.Camera; }
-		}
 
 		/// <summary>Application include paths</summary>
 		public List<string> IncludePaths
@@ -115,7 +179,7 @@ namespace LDraw
 		}
 
 		/// <summary>Context Ids of loaded script sources</summary>
-		public List<Guid> ContextIds
+		public HashSet<Guid> ContextIds
 		{
 			get;
 			private set;
@@ -128,119 +192,37 @@ namespace LDraw
 			private set;
 		}
 
-		/// <summary>Drag drop handler</summary>
-		public DragDrop DragDrop
+		/// <summary>Get/Set whether mouse navigation effects all scenes or just the active one</summary>
+		public bool LinkSceneCameras
 		{
-			get { return m_dd; }
-			private set
+			get { return m_link_scene_cameras; }
+			set
 			{
-				if (m_dd == value) return;
-				if (m_dd != null)
-				{
-					m_dd.DoDrop -= HandleDrop;
-				}
-				m_dd = value;
-				if (m_dd != null)
-				{
-					m_dd.DoDrop += HandleDrop;
-				}
+				if (m_link_scene_cameras == value) return;
+				Settings.LinkSceneCameras = value;
+				m_link_scene_cameras = value;
 			}
 		}
-		private DragDrop m_dd;
-		private bool HandleDrop(object sender, DragEventArgs args, DragDrop.EDrop mode)
+		private bool m_link_scene_cameras;
+
+		/// <summary>Return the settings for a scene with the given name</summary>
+		public SceneSettings SceneSettings(string name)
 		{
-			// File drop only
-			if (!args.Data.GetDataPresent(DataFormats.FileDrop))
-				return false;
+			var ss = Settings.Scenes.FirstOrDefault(x => x.Name == name);
+			if (ss != null)
+				return ss;
 
-			// The drop filepaths
-			var files = (string[])args.Data.GetData(DataFormats.FileDrop);
-			var extns = new string[] { ".ldr", ".csv", ".p3d", ".x" };
-			if (!files.All(x => extns.Contains(Path_.Extn(x).ToLowerInvariant())))
-				return false;
-
-			// Set the drop effect to indicate what will happen if the item is dropped here
-			// e.g. args.Effect = Ctrl is down ? DragDropEffects.Move : DragDropEffects.Copy;
-			var shift_down = (args.KeyState & Win32.MK_SHIFT) != 0;
-			args.Effect = shift_down ? DragDropEffects.Copy : DragDropEffects.Move;
-
-			// 'mode' == 'DragDrop.EDrop.Drop' when the item is actually dropped
-			if (mode == DragDrop.EDrop.Drop)
-			{
-				var add = shift_down;
-				foreach (var file in files)
-				{
-					OpenFile(file, add, false);
-					add = true;
-				}
-				Scene.AutoRange();
-			}
-
-			// Return true because dropping is allowed/supported by this handler
-			return true;
+			ss = new SceneSettings(name);
+			Settings.Scenes = Util.AddToHistoryList(Settings.Scenes, ss, 20, cmp:(l,r) => l.Name == r.Name);
+			return ss;
 		}
 
 		/// <summary>Handler for errors generated by View3d</summary>
 		public void ReportError(object sender, View3d.ErrorEventArgs arg)
 		{
 			// Handle background threads reporting errors
-			if (Scene.InvokeRequired) Scene.BeginInvoke(() => ReportError(sender, arg));
+			if (Owner.InvokeRequired) Owner.BeginInvoke(() => ReportError(sender, arg));
 			else Log.AddErrorMessage(arg.Message);
-		}
-
-		/// <summary>Add a file source</summary>
-		public void OpenFile(string filepath, bool additional, bool auto_range = true)
-		{
-			ThreadPool.QueueUserWorkItem(x =>
-			{
-				// Load a source file and save the context id for that file
-				var id = View3d.LoadScriptSource(filepath, additional, include_paths: IncludePaths.ToArray());
-				Owner.BeginInvoke(() =>
-				{
-					ContextIds.Add(id);
-					if (auto_range)
-					{
-						Scene.Populate();
-						Scene.AutoRange();
-					}
-				});
-			});
-		}
-
-		/// <summary>Reset the camera to view objects in the scene</summary>
-		public void ResetView(View3d.ESceneBounds bounds)
-		{
-			var bb = Window.SceneBounds(bounds);
-			Camera.ResetView(bb, Settings.Camera.ResetForward, Settings.Camera.ResetUp);
-		}
-
-		/// <summary>Set the camera looking in the direction of 'fwd'</summary>
-		public void CamForwardAxis(v4 fwd)
-		{
-			var c2w   = Camera.O2W;
-			var focus = Camera.FocusPoint;
-			var cam   = focus - fwd * Camera.FocusDist;
-
-			Settings.Camera.ResetForward = fwd;
-			Settings.Camera.ResetUp      = v4.Perpendicular(fwd, Settings.Camera.ResetUp);
-			Scene.Options.ResetUp        = Settings.Camera.ResetUp;
-			Scene.Options.ResetForward   = Settings.Camera.ResetForward;
-
-			Camera.SetPosition(cam, focus, Settings.Camera.ResetUp);
-		}
-
-		/// <summary>Align the camera to the given axis</summary>
-		public void AlignCamera(v4 axis)
-		{
-			Camera.AlignAxis = axis;
-			Settings.Camera.AlignAxis = axis;
-			if (axis != v4.Zero)
-			{
-				Settings.Camera.ResetForward = v4.Perpendicular(axis, Settings.Camera.ResetForward);
-				Settings.Camera.ResetUp      = axis;
-				Scene.Options.ResetUp        = Settings.Camera.ResetUp;
-				Scene.Options.ResetForward   = Settings.Camera.ResetForward;
-			}
 		}
 
 		/// <summary>Save the current camera position and view</summary>
@@ -251,12 +233,20 @@ namespace LDraw
 			{
 				dlg.ValueCtrl.SelectAll();
 				if (dlg.ShowDialog(Owner) != DialogResult.OK) return;
-				SavedViews.Add(new SavedView(dlg.Value, Camera));
+				SavedViews.Add(new SavedView(dlg.Value, CurrentScene.Camera));
 			}
 		}
 
-		/// <summary>Clear the scene</summary>
-		public void ClearScene()
+		/// <summary>Add a new scene</summary>
+		public void AddNewScene()
+		{
+			var highest = int_.TryParse(Scenes.Max(x => x.SceneName.SubstringRegex(@"Scene(\d*)").FirstOrDefault()));
+			var name = highest != null ? "Scene{0}".Fmt(highest.Value + 1) : "Scene";
+			Scenes.Add(new SceneUI(name, this));
+		}
+
+		/// <summary>Clear all scenes</summary>
+		public void ClearAllScenes()
 		{
 			// Remove and delete all objects (excluding focus points, selection boxes, etc)
 			foreach (var id in ContextIds)
@@ -272,22 +262,9 @@ namespace LDraw
 		/// <summary>Add a demo scene to the scene</summary>
 		public void CreateDemoScene()
 		{
-			// See, parsing in a worker thread!
-			ThreadPool.QueueUserWorkItem(x =>
-			{
-				var guid = Window.CreateDemoScene();
-				Owner.BeginInvoke(() =>
-				{
-					ContextIds.Add(guid);
-					Owner.Invalidate();
-				});
-			});
-		}
-
-		/// <summary>Cycle through to the next fill mode</summary>
-		public void CycleFillMode()
-		{
-			Scene.Options.FillMode = Enum<View3d.EFillMode>.Cycle(Scene.Options.FillMode);
+			var scene = Scenes.Add2(new SceneUI("Demo", this));
+			var id = scene.Window.CreateDemoScene();
+			scene.ContextIds.Add(id);
 		}
 
 		/// <summary>Enable/Disable auto refreshing of script sources</summary>
@@ -342,6 +319,29 @@ namespace LDraw
 				Owner.UpdateProgress();
 			});
 		}
+
+		/// <summary>Handle mouse navigation</summary>
+		private void HandleMouseNavigating(object sender, View3d.Window.MouseNavigateEventArgs e)
+		{
+			if (!LinkSceneCameras)
+				return;
+
+			if (m_in_handle_mouse_navigating != 0) return;
+			using (Scope.Create(() => ++m_in_handle_mouse_navigating, () => --m_in_handle_mouse_navigating))
+			{
+				foreach (var scene in Scenes.Where(x => x.Window != sender))
+				{
+					// Replicate navigation commands in the other scenes
+					if (!e.ZNavigation)
+						scene.Window.MouseNavigate(e.Point, e.NavOp, e.NavBegOrEnd);
+					else
+						scene.Window.MouseNavigateZ(e.Point, e.Delta, e.AlongRay);
+
+					scene.Invalidate();
+				}
+			}
+		}
+		private int m_in_handle_mouse_navigating;
 
 		public AddFileProgressData AddFileProgress { get; private set; }
 		public class AddFileProgressData

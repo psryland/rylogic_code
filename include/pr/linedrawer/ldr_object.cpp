@@ -12,7 +12,7 @@
 #include "pr/meta/optional.h"
 #include "pr/linedrawer/ldr_object.h"
 #include "pr/common/assert.h"
-#include "pr/common/hash.h"
+#include "pr/crypt/hash.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/convex_hull.h"
 #include "pr/renderer11/renderer.h"

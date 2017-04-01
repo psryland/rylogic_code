@@ -6,6 +6,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using pr.common;
 using pr.extn;
@@ -109,6 +110,10 @@ namespace LDraw
 		private ToolStripStatusLabel m_lbl_loading;
 		private ToolStripProgressBar m_pb_loading;
 		private ToolStripStatusLabel m_lbl_pointer_location;
+		private ToolStripMenuItem m_menu_window_new_scene;
+		private ToolStripSeparator toolStripSeparator15;
+		private ToolStrip m_ts;
+		private ToolStripButton m_btn_link_scene_cameras;
 		private ToolStripMenuItem m_menu_file_save_as;
 		#endregion
 
@@ -176,8 +181,8 @@ namespace LDraw
 			KeyPreview = true;
 
 			Settings = new Settings(Util.ResolveUserDocumentsPath("Rylogic", "LDraw", "settings.xml"));
-			Model = new Model(this);
 			DockContainer = new DockContainer();
+			Model = new Model(this);
 
 			SetupUI();
 			UpdateUI();
@@ -188,16 +193,16 @@ namespace LDraw
 		{
 			// The scripts and scene need to be disposed before view3d.
 			// The Scene owns the view3d Window and the Model owns the Scene.
-			CameraUI = null;
-			LightingUI = null;
-			DockContainer = null;
 			Model = null;
+			DockContainer = null;
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
 		protected override void OnInvalidated(InvalidateEventArgs e)
 		{
-			Model.Scene.Invalidate();
+			foreach (var scene in Model.Scenes)
+				scene.Invalidate();
+
 			base.OnInvalidated(e);
 		}
 		protected override void OnFormClosed(FormClosedEventArgs e)
@@ -222,9 +227,13 @@ namespace LDraw
 			// Cycle through fill modes
 			if (e.KeyCode == Keys.W && e.Control)
 			{
-				Model.Scene.Options.FillMode = Enum<View3d.EFillMode>.Cycle(Model.Scene.Options.FillMode);
-				Invalidate();
-				e.Handled = true;
+				var scene = Model.CurrentScene;
+				if (scene != null)
+				{
+					scene.Options.FillMode = Enum<View3d.EFillMode>.Cycle(scene.Options.FillMode);
+					scene.Invalidate();
+					e.Handled = true;
+				}
 			}
 			base.OnKeyDown(e);
 		}
@@ -254,13 +263,11 @@ namespace LDraw
 				if (m_impl_model == value) return;
 				if (m_impl_model != null)
 				{
-					m_impl_model.Scene.Options.PropertyChanged -= UpdateUI;
 					Util.Dispose(ref m_impl_model);
 				}
 				m_impl_model = value;
 				if (m_impl_model != null)
 				{
-					m_impl_model.Scene.Options.PropertyChanged += UpdateUI;
 				}
 				Update();
 			}
@@ -279,24 +286,8 @@ namespace LDraw
 			get { return m_lbl_pointer_location; }
 		}
 
-		/// <summary>Lazy created camera properties UI</summary>
-		public CameraUI CameraUI
-		{
-			get { return m_camera_ui ?? (m_camera_ui = new CameraUI(this)); }
-			set { Util.Dispose(ref m_camera_ui); }
-		}
-		private CameraUI m_camera_ui;
-
-		/// <summary>Lazy creating lighting UI</summary>
-		public LightingUI LightingUI
-		{
-			get { return m_lighting_ui ?? (m_lighting_ui = new LightingUI(this)); }
-			set { Util.Dispose(ref m_lighting_ui); }
-		}
-		private LightingUI m_lighting_ui;
-
 		/// <summary>The dock container control</summary>
-		private DockContainer DockContainer
+		public DockContainer DockContainer
 		{
 			get { return m_dc; }
 			set
@@ -306,10 +297,8 @@ namespace LDraw
 				{
 					// Remove the scene from the dock container before disposing it
 					// so that the scene is left for the model to dispose.
-					m_dc.ActiveContentChanged -= UpdateUI;
+					m_dc.ActiveContentChanged -= HandleActiveContentChanged;
 					m_tsc.ContentPanel.Controls.Remove(m_dc);
-					m_dc.Remove(Model.Scene);
-					m_dc.Remove(Model.Log);
 					Util.Dispose(ref m_dc);
 				}
 				m_dc = value;
@@ -318,14 +307,19 @@ namespace LDraw
 					m_dc.Dock = DockStyle.Fill;
 					m_dc.Options.TabStrip.AlwaysShowTabs = true;
 					m_dc.Options.TitleBar.ShowTitleBars = true;
-					m_dc.Add(Model.Scene);
-					m_dc.Add(Model.Log);
 					m_tsc.ContentPanel.Controls.Add(m_dc);
-					m_dc.ActiveContentChanged += UpdateUI;
+					m_dc.ActiveContentChanged += HandleActiveContentChanged;
 				}
 			}
 		}
 		private DockContainer m_dc;
+		private void HandleActiveContentChanged(object sender, ActiveContentChangedEventArgs e)
+		{
+			if (e.ContentNew is SceneUI)
+				Model.CurrentScene = (SceneUI)e.ContentNew;
+
+			UpdateUI();
+		}
 
 		/// <summary>Set up the UI</summary>
 		private void SetupUI()
@@ -377,67 +371,68 @@ namespace LDraw
 			};
 			m_menu_nav_reset_view_all.Click += (s,a) =>
 			{
-				Model.ResetView(View3d.ESceneBounds.All);
+				Model.CurrentScene.ResetView(View3d.ESceneBounds.All);
 				Invalidate();
 			};
 			m_menu_nav_reset_view_selected.Click += (s,a) =>
 			{
-				Model.ResetView(View3d.ESceneBounds.Selected);
+				Model.CurrentScene.ResetView(View3d.ESceneBounds.Selected);
 				Invalidate();
 			};
 			m_menu_nav_reset_view_visible.Click += (s,a) =>
 			{
-				Model.ResetView(View3d.ESceneBounds.Visible);
+				Model.CurrentScene.ResetView(View3d.ESceneBounds.Visible);
 				Invalidate();
 			};
 			m_menu_nav_view_xpos.Click += (s, a) =>
 			{
-				Model.CamForwardAxis(-v4.XAxis);
+				Model.CurrentScene.CamForwardAxis(-v4.XAxis);
 				Invalidate();
 			};
 			m_menu_nav_view_xneg.Click += (s, a) =>
 			{
-				Model.CamForwardAxis(+v4.XAxis);
+				Model.CurrentScene.CamForwardAxis(+v4.XAxis);
 				Invalidate();
 			};
 			m_menu_nav_view_ypos.Click += (s, a) =>
 			{
-				Model.CamForwardAxis(-v4.YAxis);
+				Model.CurrentScene.CamForwardAxis(-v4.YAxis);
 				Invalidate();
 			};
 			m_menu_nav_view_yneg.Click += (s, a) =>
 			{
-				Model.CamForwardAxis(+v4.YAxis);
+				Model.CurrentScene.CamForwardAxis(+v4.YAxis);
 				Invalidate();
 			};
 			m_menu_nav_view_zpos.Click += (s, a) =>
 			{
-				Model.CamForwardAxis(-v4.ZAxis);
+				Model.CurrentScene.CamForwardAxis(-v4.ZAxis);
 				Invalidate();
 			};
 			m_menu_nav_view_zneg.Click += (s, a) =>
 			{
-				Model.CamForwardAxis(+v4.ZAxis);
+				Model.CurrentScene.CamForwardAxis(+v4.ZAxis);
 				Invalidate();
 			};
 			m_menu_nav_view_xyz.Click += (s, a) =>
 			{
-				Model.CamForwardAxis(new v4(-0.577350f, -0.577350f, -0.577350f, 0));
+				Model.CurrentScene.CamForwardAxis(new v4(-0.577350f, -0.577350f, -0.577350f, 0));
 				Invalidate();
 			};
 			m_menu_nav_zoom_default.Click += (s,a) =>
 			{
-				Model.Scene.AutoRange();
+				Model.CurrentScene.AutoRange();
 				UpdateUI();
 			};
 			m_menu_nav_zoom_aspect11.Click += (s,a) =>
 			{
-				Model.Scene.Aspect = 1.0f;
+				Model.CurrentScene.Aspect = 1.0f;
+
 				UpdateUI();
 			};
 			m_menu_nav_zoom_lock_aspect.Click += (s,a) =>
 			{
-				Model.Scene.LockAspect = !Model.Scene.LockAspect;
+				Model.CurrentScene.LockAspect = !Model.CurrentScene.LockAspect;
 				UpdateUI();
 			};
 			m_menu_nav_align_none.Click += (s, a) =>
@@ -458,7 +453,7 @@ namespace LDraw
 			};
 			m_menu_nav_align_current.Click += (s, a) =>
 			{
-				AlignCamera(Model.Camera.O2W.y);
+				AlignCamera(Model.CurrentScene.Camera.O2W.y);
 			};
 			m_menu_nav_save_view.Click += (s,a) =>
 			{
@@ -492,19 +487,19 @@ namespace LDraw
 			};
 			m_menu_data_object_manager.Click += (s,a) =>
 			{
-				Model.Window.ShowObjectManager(true);
+				Model.CurrentScene.ShowObjectManager(true);
 			};
 			#endregion
 			#region Rendering Menu
 			m_menu_rendering_show_focus.Click += (s,a) =>
 			{
-				Model.Window.FocusPointVisible = !Model.Window.FocusPointVisible;
+				Model.CurrentScene.FocusPointVisible = !Model.CurrentScene.FocusPointVisible;
 				Invalidate();
 				UpdateUI();
 			};
 			m_menu_rendering_show_origin.Click += (s,a) =>
 			{
-				Model.Window.OriginPointVisible = !Model.Window.OriginPointVisible;
+				Model.CurrentScene.OriginPointVisible = !Model.CurrentScene.OriginPointVisible;
 				Invalidate();
 				UpdateUI();
 			};
@@ -513,49 +508,49 @@ namespace LDraw
 			};
 			m_menu_rendering_show_bounds.Click += (s,a) =>
 			{
-				Model.Window.BBoxesVisible = !Model.Window.BBoxesVisible;
+				Model.CurrentScene.BBoxesVisible = !Model.CurrentScene.BBoxesVisible;
 				Invalidate();
 				UpdateUI();
 			};
 			m_menu_rendering_fillmode_solid.Click += (s,a) =>
 			{
-				Model.Scene.Options.FillMode = View3d.EFillMode.Solid;
+				Model.CurrentScene.Options.FillMode = View3d.EFillMode.Solid;
 				Invalidate();
 				UpdateUI();
 			};
 			m_menu_rendering_fillmode_wireframe.Click += (s,a) =>
 			{
-				Model.Scene.Options.FillMode = View3d.EFillMode.Wireframe;
+				Model.CurrentScene.Options.FillMode = View3d.EFillMode.Wireframe;
 				Invalidate();
 				UpdateUI();
 			};
 			m_menu_rendering_fillmode_solidwire.Click += (s,a) =>
 			{
-				Model.Scene.Options.FillMode = View3d.EFillMode.SolidWire;
+				Model.CurrentScene.Options.FillMode = View3d.EFillMode.SolidWire;
 				Invalidate();
 				UpdateUI();
 			};
 			m_menu_rendering_cullmode_none.Click += (s,a) =>
 			{
-				Model.Scene.Options.CullMode = View3d.ECullMode.None;
+				Model.CurrentScene.Options.CullMode = View3d.ECullMode.None;
 				Invalidate();
 				UpdateUI();
 			};
 			m_menu_rendering_cullmode_back.Click += (s,a) =>
 			{
-				Model.Scene.Options.CullMode = View3d.ECullMode.Back;
+				Model.CurrentScene.Options.CullMode = View3d.ECullMode.Back;
 				Invalidate();
 				UpdateUI();
 			};
 			m_menu_rendering_cullmode_front.Click += (s,a) =>
 			{
-				Model.Scene.Options.CullMode = View3d.ECullMode.Front;
+				Model.CurrentScene.Options.CullMode = View3d.ECullMode.Front;
 				Invalidate();
 				UpdateUI();
 			};
 			m_menu_rendering_orthographic.Click += (s,a) =>
 			{
-				Model.Camera.Orthographic = !Model.Camera.Orthographic;
+				Model.CurrentScene.Camera.Orthographic = !Model.CurrentScene.Camera.Orthographic;
 				Invalidate();
 				UpdateUI();
 			};
@@ -565,7 +560,11 @@ namespace LDraw
 			};
 			#endregion
 			#region Window menu
-			m_menu_window.DropDownItems.Insert(0, m_dc.WindowsMenu());
+			m_menu_window_new_scene.Click += (s,a) =>
+			{
+				Model.AddNewScene();
+			};
+			m_menu_window.DropDownItems.Insert(1, m_dc.WindowsMenu());
 			m_menu_window_always_on_top.Click += (s,a) =>
 			{
 				TopMost = !TopMost;
@@ -582,6 +581,14 @@ namespace LDraw
 			#endregion
 			#endregion
 
+			#region Tool bar
+			m_btn_link_scene_cameras.Checked = Model.LinkSceneCameras;
+			m_btn_link_scene_cameras.CheckedChanged += (s,a) =>
+			{
+				Model.LinkSceneCameras = m_btn_link_scene_cameras.Checked;
+			};
+			#endregion
+
 			#region Progress Bar
 			m_pb_loading.Alignment = ToolStripItemAlignment.Right;
 			#endregion
@@ -592,29 +599,32 @@ namespace LDraw
 		}
 
 		/// <summary>Update UI elements</summary>
-		private void UpdateUI(object sender = null, EventArgs args = null)
+		public void UpdateUI(object sender = null, EventArgs args = null)
 		{
+			if (Model == null)
+				return;
+
 			// Update menu state
 			m_menu_file_save.Enabled    = m_dc.ActiveContent?.Owner is ScriptUI;
 			m_menu_file_save_as.Enabled = m_dc.ActiveContent?.Owner is ScriptUI;
 
 			// Set check marks next to visible things
 			m_menu_nav_reset_on_reload     .Checked = Settings.ResetOnLoad;
-			m_menu_nav_zoom_lock_aspect    .Checked = Model.Scene.LockAspect;
+			m_menu_nav_zoom_lock_aspect    .Checked = Model.CurrentScene.LockAspect;
 			m_menu_data_auto_refresh       .Checked = Model.AutoRefreshSources;
-			m_menu_rendering_show_focus    .Checked = Model.Window.FocusPointVisible;
-			m_menu_rendering_show_origin   .Checked = Model.Window.OriginPointVisible;
+			m_menu_rendering_show_focus    .Checked = Model.CurrentScene.FocusPointVisible;
+			m_menu_rendering_show_origin   .Checked = Model.CurrentScene.OriginPointVisible;
 			m_menu_rendering_show_selection.Checked = false;
-			m_menu_rendering_show_bounds   .Checked = Model.Window.BBoxesVisible;
-			m_menu_rendering_orthographic  .Checked = Model.Camera.Orthographic;
+			m_menu_rendering_show_bounds   .Checked = Model.CurrentScene.BBoxesVisible;
+			m_menu_rendering_orthographic  .Checked = Model.CurrentScene.Camera.Orthographic;
 
 			// Display the next fill mode
-			m_menu_rendering_fillmode_solid    .Checked = Model.Scene.Options.FillMode == View3d.EFillMode.Solid;
-			m_menu_rendering_fillmode_wireframe.Checked = Model.Scene.Options.FillMode == View3d.EFillMode.Wireframe;
-			m_menu_rendering_fillmode_solidwire.Checked = Model.Scene.Options.FillMode == View3d.EFillMode.SolidWire;
-			m_menu_rendering_cullmode_none     .Checked = Model.Scene.Options.CullMode == View3d.ECullMode.None;
-			m_menu_rendering_cullmode_back     .Checked = Model.Scene.Options.CullMode == View3d.ECullMode.Back;
-			m_menu_rendering_cullmode_front    .Checked = Model.Scene.Options.CullMode == View3d.ECullMode.Front;
+			m_menu_rendering_fillmode_solid    .Checked = Model.CurrentScene.Options.FillMode == View3d.EFillMode.Solid;
+			m_menu_rendering_fillmode_wireframe.Checked = Model.CurrentScene.Options.FillMode == View3d.EFillMode.Wireframe;
+			m_menu_rendering_fillmode_solidwire.Checked = Model.CurrentScene.Options.FillMode == View3d.EFillMode.SolidWire;
+			m_menu_rendering_cullmode_none     .Checked = Model.CurrentScene.Options.CullMode == View3d.ECullMode.None;
+			m_menu_rendering_cullmode_back     .Checked = Model.CurrentScene.Options.CullMode == View3d.ECullMode.Back;
+			m_menu_rendering_cullmode_front    .Checked = Model.CurrentScene.Options.CullMode == View3d.ECullMode.Front;
 
 			m_menu_window_always_on_top.Checked = TopMost;
 
@@ -661,7 +671,7 @@ namespace LDraw
 			m_recent_files.Add(filepath);
 
 			// Load the file source
-			Model.OpenFile(filepath, additional);
+			Model.CurrentScene.OpenFile(filepath, additional);
 
 			// Set the title to the last loaded file
 			if (Model.ContextIds.Count == 0 || !additional)
@@ -687,7 +697,7 @@ namespace LDraw
 		/// <summary>Clear or script sources</summary>
 		private void ClearScene()
 		{
-			Model.ClearScene();
+			Model.ClearAllScenes();
 			Text = "LDraw";
 			Invalidate();
 		}
@@ -699,8 +709,8 @@ namespace LDraw
 			m_menu_nav_align_x      .Checked = axis == v4.XAxis;
 			m_menu_nav_align_y      .Checked = axis == v4.YAxis;
 			m_menu_nav_align_z      .Checked = axis == v4.ZAxis;
-			m_menu_nav_align_current.Checked = axis == Model.Camera.O2W.y;
-			Model.AlignCamera(axis);
+			m_menu_nav_align_current.Checked = axis == Model.CurrentScene.Camera.O2W.y;
+			Model.CurrentScene.AlignCamera(axis);
 			Invalidate();
 		}
 
@@ -718,7 +728,7 @@ namespace LDraw
 				opt.ShortcutKeys = Keys.Control | (Keys)('1' + i++);
 				opt.Click += (s,a) =>
 				{
-					sv.Apply(Model.Camera);
+					sv.Apply(Model.CurrentScene.Camera);
 					Invalidate();
 				};
 				opt.MouseDown += (s,a) =>
@@ -742,13 +752,13 @@ namespace LDraw
 		/// <summary>Show the camera UI</summary>
 		private void ShowCameraUI()
 		{
-			CameraUI.Show(this);
+			Model.CurrentScene.CameraUI.Show(this);
 		}
 
 		/// <summary>Show the lighting UI</summary>
 		private void ShowLightingUI()
 		{
-			LightingUI.Show(this);
+			Model.CurrentScene.LightingUI.Show(this);
 		}
 
 		/// <summary>Restore the last window position</summary>
@@ -808,6 +818,7 @@ namespace LDraw
 			this.m_status = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_lbl_loading = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_pb_loading = new System.Windows.Forms.ToolStripProgressBar();
+			this.m_lbl_pointer_location = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_new = new System.Windows.Forms.ToolStripMenuItem();
@@ -882,17 +893,21 @@ namespace LDraw
 			this.toolStripSeparator10 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_rendering_lighting = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_window = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_window_new_scene = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator15 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_window_always_on_top = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator7 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_window_example_script = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_window_about = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_lbl_pointer_location = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_ts = new System.Windows.Forms.ToolStrip();
+			this.m_btn_link_scene_cameras = new System.Windows.Forms.ToolStripButton();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
 			this.m_ss.SuspendLayout();
 			this.m_menu.SuspendLayout();
+			this.m_ts.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// m_tsc
@@ -904,7 +919,7 @@ namespace LDraw
 			// 
 			// m_tsc.ContentPanel
 			// 
-			this.m_tsc.ContentPanel.Size = new System.Drawing.Size(663, 543);
+			this.m_tsc.ContentPanel.Size = new System.Drawing.Size(663, 518);
 			this.m_tsc.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_tsc.Location = new System.Drawing.Point(0, 0);
 			this.m_tsc.Name = "m_tsc";
@@ -915,6 +930,7 @@ namespace LDraw
 			// m_tsc.TopToolStripPanel
 			// 
 			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_menu);
+			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_ts);
 			// 
 			// m_ss
 			// 
@@ -938,7 +954,7 @@ namespace LDraw
 			// m_lbl_loading
 			// 
 			this.m_lbl_loading.Name = "m_lbl_loading";
-			this.m_lbl_loading.Size = new System.Drawing.Size(367, 17);
+			this.m_lbl_loading.Size = new System.Drawing.Size(398, 17);
 			this.m_lbl_loading.Spring = true;
 			this.m_lbl_loading.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			// 
@@ -948,6 +964,12 @@ namespace LDraw
 			this.m_pb_loading.Name = "m_pb_loading";
 			this.m_pb_loading.Size = new System.Drawing.Size(200, 16);
 			this.m_pb_loading.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
+			// 
+			// m_lbl_pointer_location
+			// 
+			this.m_lbl_pointer_location.Name = "m_lbl_pointer_location";
+			this.m_lbl_pointer_location.Size = new System.Drawing.Size(22, 17);
+			this.m_lbl_pointer_location.Text = "0,0";
 			// 
 			// m_menu
 			// 
@@ -1320,7 +1342,7 @@ namespace LDraw
 			// 
 			this.m_menu_data_clear_scene.Name = "m_menu_data_clear_scene";
 			this.m_menu_data_clear_scene.Size = new System.Drawing.Size(177, 22);
-			this.m_menu_data_clear_scene.Text = "&Clear Scene";
+			this.m_menu_data_clear_scene.Text = "&Clear All Scenes";
 			// 
 			// m_menu_data_auto_refresh
 			// 
@@ -1473,6 +1495,8 @@ namespace LDraw
 			// m_menu_window
 			// 
 			this.m_menu_window.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_window_new_scene,
+            this.toolStripSeparator15,
             this.m_menu_window_always_on_top,
             this.toolStripSeparator7,
             this.m_menu_window_example_script,
@@ -1481,6 +1505,17 @@ namespace LDraw
 			this.m_menu_window.Name = "m_menu_window";
 			this.m_menu_window.Size = new System.Drawing.Size(63, 20);
 			this.m_menu_window.Text = "&Window";
+			// 
+			// m_menu_window_new_scene
+			// 
+			this.m_menu_window_new_scene.Name = "m_menu_window_new_scene";
+			this.m_menu_window_new_scene.Size = new System.Drawing.Size(151, 22);
+			this.m_menu_window_new_scene.Text = "&New Scene";
+			// 
+			// toolStripSeparator15
+			// 
+			this.toolStripSeparator15.Name = "toolStripSeparator15";
+			this.toolStripSeparator15.Size = new System.Drawing.Size(148, 6);
 			// 
 			// m_menu_window_always_on_top
 			// 
@@ -1510,11 +1545,25 @@ namespace LDraw
 			this.m_menu_window_about.Size = new System.Drawing.Size(151, 22);
 			this.m_menu_window_about.Text = "&About";
 			// 
-			// m_lbl_pointer_location
+			// m_ts
 			// 
-			this.m_lbl_pointer_location.Name = "m_lbl_pointer_location";
-			this.m_lbl_pointer_location.Size = new System.Drawing.Size(22, 17);
-			this.m_lbl_pointer_location.Text = "0,0";
+			this.m_ts.Dock = System.Windows.Forms.DockStyle.None;
+			this.m_ts.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_btn_link_scene_cameras});
+			this.m_ts.Location = new System.Drawing.Point(3, 24);
+			this.m_ts.Name = "m_ts";
+			this.m_ts.Size = new System.Drawing.Size(35, 25);
+			this.m_ts.TabIndex = 1;
+			// 
+			// m_btn_nav_all_views
+			// 
+			this.m_btn_link_scene_cameras.CheckOnClick = true;
+			this.m_btn_link_scene_cameras.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_link_scene_cameras.Image = global::LDraw.Properties.Resources.locked;
+			this.m_btn_link_scene_cameras.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_link_scene_cameras.Name = "m_btn_nav_all_views";
+			this.m_btn_link_scene_cameras.Size = new System.Drawing.Size(23, 22);
+			this.m_btn_link_scene_cameras.ToolTipText = "Apply camera navigation to all views";
 			// 
 			// MainUI
 			// 
@@ -1536,6 +1585,8 @@ namespace LDraw
 			this.m_ss.PerformLayout();
 			this.m_menu.ResumeLayout(false);
 			this.m_menu.PerformLayout();
+			this.m_ts.ResumeLayout(false);
+			this.m_ts.PerformLayout();
 			this.ResumeLayout(false);
 
 		}

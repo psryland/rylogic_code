@@ -1,13 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using pr.extn;
 using pr.gfx;
 using pr.gui;
 using pr.maths;
@@ -16,7 +10,7 @@ namespace LDraw
 {
 	public class LightingUI :ToolForm
 	{
-		private readonly MainUI m_main_ui;
+		private readonly SceneUI m_scene_ui;
 
 		#region UI Elements
 		private RadioButton m_radio_spot;
@@ -49,14 +43,13 @@ namespace LDraw
 		private RadioButton m_radio_ambient;
 		#endregion
 
-		public LightingUI(MainUI main_ui)
-			:base(main_ui, EPin.Centre)
+		public LightingUI(SceneUI scene)
+			:base(scene, EPin.Centre)
 		{
 			InitializeComponent();
-			Icon = main_ui.Icon;
-
-			m_main_ui = main_ui;
-			Light = new View3d.Light(m_main_ui.Model.Window.LightProperties);
+			
+			m_scene_ui = scene;
+			Light = new View3d.Light(m_scene_ui.Window.LightProperties);
 
 			SetupUI();
 			UpdateUI();
@@ -68,7 +61,7 @@ namespace LDraw
 		protected override void OnVisibleChanged(EventArgs e)
 		{
 			base.OnVisibleChanged(e);
-			Light.Data = m_main_ui.Model.Window.LightProperties;
+			Light.Data = m_scene_ui.Window.LightProperties;
 		}
 
 		/// <summary>The light source</summary>
@@ -228,9 +221,9 @@ namespace LDraw
 			}
 
 			// Update the light
-			m_main_ui.Settings.Light = Light.ToXml(new XElement(nameof(View3d.Light)));
-			m_main_ui.Model.Window.LightProperties = Light;
-			m_main_ui.Model.Window.Invalidate();
+			m_scene_ui.Settings.Light = Light.ToXml(new XElement(nameof(View3d.Light)));
+			m_scene_ui.Window.LightProperties = Light;
+			m_scene_ui.Window.Invalidate();
 		}
 
 		/// <summary>Set the values in the UI based on the current light state</summary>

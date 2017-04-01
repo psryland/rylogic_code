@@ -46,6 +46,7 @@ namespace pr.gui
 		{
 			m_ofs = ofs;
 			m_pin = pin;
+			Icon = (target?.TopLevelControl as Form)?.Icon;
 			AutoScaleDimensions = new SizeF(6F, 13F);
 			AutoScaleMode = AutoScaleMode.Font;
 			StartPosition = FormStartPosition.Manual;

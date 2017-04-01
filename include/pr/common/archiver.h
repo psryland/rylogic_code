@@ -41,8 +41,8 @@
 #include <vector>
 #include <algorithm>
 #include <typeinfo>
-#include "pr/common/hash.h"
 #include "pr/common/fmt.h"
+#include "pr/crypt/hash.h"
 
 #ifndef PR_ASSERT
 #	define PR_ASSERT_STR_DEFINED
@@ -59,7 +59,7 @@ namespace pr
 {
 	namespace archive
 	{
-		// Builtin types
+		// Built-in types
 		namespace EType
 		{
 			enum Type

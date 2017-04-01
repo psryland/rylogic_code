@@ -103,12 +103,6 @@
     <ClCompile Include="..\include\pr\lua\lua_lib.c">
       <Filter>pr\lua</Filter>
     </ClCompile>
-    <ClCompile Include="..\include\pr\crypt\crypt.cpp">
-      <Filter>pr\crypt</Filter>
-    </ClCompile>
-    <ClCompile Include="..\include\pr\crypt\md5.cpp">
-      <Filter>pr\crypt</Filter>
-    </ClCompile>
     <ClCompile Include="..\sdk\sqlite\src\sqlite3.c">
       <Filter>sqlite3</Filter>
     </ClCompile>
@@ -212,9 +206,6 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\common\crc.h">
       <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\crypt\crypt.h">
-      <Filter>pr\crypt</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\storage\csv.h">
       <Filter>pr\storage</Filter>
@@ -325,9 +316,6 @@
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\common\hresult.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\common\hash.h">
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\common\guid.h">
@@ -974,6 +962,12 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\meta\optional.h">
       <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\crypt\sha1.h">
+      <Filter>pr\crypt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\crypt\hash.h">
+      <Filter>pr\crypt</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

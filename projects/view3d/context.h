@@ -150,6 +150,12 @@ namespace view3d
 			m_sources.Remove(object);
 		}
 
+		// Return the context id for objects created from 'filepath' (if filepath is an existing source)
+		bool ContextIdFromFilepath(wchar_t const* filepath, pr::Guid& id)
+		{
+			return m_sources.ContextIdFromFilepath(filepath, id);
+		}
+
 		// Create a gizmo object and add it to the gizmo collection
 		pr::ldr::LdrGizmo* CreateGizmo(pr::ldr::LdrGizmo::EMode mode, pr::m4x4 const& o2w)
 		{

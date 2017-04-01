@@ -2023,8 +2023,17 @@ namespace pr.gui
 				/// <summary>Get/Set whether this control is visible</summary>
 				public new bool Visible
 				{
-					get { return m_impl_visible && DockPane.DockContainer.Options.TitleBar.ShowTitleBars; }
-					set { base.Visible = m_impl_visible = value; }
+					get
+					{
+						return
+							m_impl_visible &&
+							(DockPane.VisibleContent?.ShowTitle ?? true) &&
+							DockPane.DockContainer.Options.TitleBar.ShowTitleBars;
+					}
+					set
+					{
+						base.Visible = m_impl_visible = value;
+					}
 				}
 				private bool m_impl_visible;
 
@@ -2533,6 +2542,12 @@ namespace pr.gui
 					get { return DockPane.Content.Count + (GhostTabContent != null ? 1 : 0); }
 				}
 
+				/// <summary>Get/Set the tab strip location within the pane</summary>
+				public override EDockSite StripLocation
+				{
+					get { return DockPane.VisibleContent?.TabStripLocation ?? base.StripLocation; }
+					set { base.StripLocation = value; }
+				}
 				/// <summary>Gets the content in 'DockPane' with 'GhostTab' inserted at the appropriate position</summary>
 				public override IEnumerable<DockControl> Content
 				{
@@ -2602,7 +2617,7 @@ namespace pr.gui
 				TabColoursInactive  = null;
 				TabFontActive       = null;
 				TabFontInactive     = null;
-				TabCMenu            = CreateDefaultTabCMenu();
+				TabCMenu            = DefaultTabCMenu();
 
 				DockAddresses = new Dictionary<Branch, EDockSite[]>();
 			}
@@ -2707,7 +2722,7 @@ namespace pr.gui
 			public event EventHandler PaneChanged;
 
 			/// <summary>Raised when this becomes the active content</summary>
-			public event EventHandler ActiveChanged;
+			public event EventHandler<ActiveContentChangedEventArgs> ActiveChanged;
 			private void HandleActiveContentChanged(object sender, ActiveContentChangedEventArgs e)
 			{
 				if (e.ContentNew == Owner || e.ContentOld == Owner)
@@ -2912,6 +2927,20 @@ namespace pr.gui
 			}
 			private Dictionary<Branch, EDockSite[]> DockAddresses { get; set; }
 
+			/// <summary>Get/Set whether the dock pane title control is visible while this content is active. Null means inherit default</summary>
+			public bool? ShowTitle
+			{
+				get;
+				set;
+			}
+
+			/// <summary>Get/Set whether the location of the tab strip control while this content is active. Null means inherit default</summary>
+			public EDockSite? TabStripLocation
+			{
+				get;
+				set;
+			}
+
 			/// <summary>The text to display on the tab. Defaults to 'Owner.Text'</summary>
 			public string TabText
 			{
@@ -3027,8 +3056,8 @@ namespace pr.gui
 			}
 			private ContextMenuStrip m_impl_tab_cmenu;
 
-			/// <summary>Return a default context menu for the tab</summary>
-			private ContextMenuStrip CreateDefaultTabCMenu()
+			/// <summary>Creates a default context menu for the tab. Use: TabCMenu = DefaultTabCMenu()</summary>
+			public ContextMenuStrip DefaultTabCMenu()
 			{
 				var cmenu = new ContextMenuStrip();
 				using (cmenu.SuspendLayout(true))
@@ -3892,7 +3921,7 @@ namespace pr.gui
 			}
 
 			/// <summary>The location of the tab strip within the dock pane, Only L,T,R,B are valid</summary>
-			public EDockSite StripLocation
+			public virtual EDockSite StripLocation
 			{
 				get { return m_impl_strip_loc; }
 				set

@@ -19,8 +19,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\include\pr\crypt\crypt.cpp" />
-    <ClCompile Include="..\include\pr\crypt\md5.cpp" />
     <ClCompile Include="..\projects\unittests\unittests.cpp">
       <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</PreprocessToFile>
     </ClCompile>
@@ -85,7 +83,6 @@
     <ClInclude Include="..\include\pr\common\flags_enum.h" />
     <ClInclude Include="..\include\pr\common\fmt.h" />
     <ClInclude Include="..\include\pr\common\guid.h" />
-    <ClInclude Include="..\include\pr\common\hash.h" />
     <ClInclude Include="..\include\pr\common\hresult.h" />
     <ClInclude Include="..\include\pr\common\ienumoutput.h" />
     <ClInclude Include="..\include\pr\common\imposter.h" />
@@ -144,9 +141,10 @@
     <ClInclude Include="..\include\pr\container\stack.h" />
     <ClInclude Include="..\include\pr\container\tri_table.h" />
     <ClInclude Include="..\include\pr\container\vector_map.h" />
-    <ClInclude Include="..\include\pr\crypt\crypt.h" />
+    <ClInclude Include="..\include\pr\crypt\hash.h" />
     <ClInclude Include="..\include\pr\crypt\md5.h" />
     <ClInclude Include="..\include\pr\crypt\rijndael.h" />
+    <ClInclude Include="..\include\pr\crypt\sha1.h" />
     <ClInclude Include="..\include\pr\filesys\autofile.h" />
     <ClInclude Include="..\include\pr\filesys\file.h" />
     <ClInclude Include="..\include\pr\filesys\fileex.h" />
