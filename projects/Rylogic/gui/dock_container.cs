@@ -816,6 +816,21 @@ namespace pr.gui
 			return sb.ToString();
 		}
 
+		/// <summary>Self consistency check (for debugging)</summary>
+		public bool ValidateTree()
+		{
+			try
+			{
+				Root.ValidateTree();
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Debug.WriteLine(ex.MessageFull());
+				return false;
+			}
+		}
+
 		#region Custom Controls
 
 		/// <summary>
@@ -899,15 +914,29 @@ namespace pr.gui
 			internal void PruneBranches()
 			{
 				// Depth-first recursive
-				foreach (var b in Child.Where(x => x.Ctrl is Branch).Select(x => x.Branch))
+				foreach (var b in Child.Where(x => x.Branch != null).Select(x => x.Branch))
 					b.PruneBranches();
+
+				// If any of the child branches only have a single child, replace the branch with it's child
+				foreach (var c in Child.Where(x => x.Branch != null))
+				{
+					// The child must, itself, have only one child
+					if (c.Branch.Child.Count != 1) continue;
+
+					// Replace the branch with it's single child
+					var child = c.Branch.Child[0];
+					var ctrl = child.Ctrl;
+					child.Ctrl = null;
+
+					c.Ctrl.Dispose();
+					c.Ctrl = ctrl;
+				}
 
 				// If any of L,R,T,B contain empty panes, prune them. Don't prune
 				// 'C', we need to leave somewhere for content to be dropped.
-				foreach (var c in Child)
+				foreach (var c in Child.Where(x => x.DockPane != null))
 				{
-					if (c.Ctrl is Branch) continue;
-					if (c.DockPane?.Content.Count == 0 && c.DockSite != EDockSite.Centre)
+					if (c.DockPane.Content.Count == 0 && c.DockSite != EDockSite.Centre)
 					{
 						// Dispose the pane
 						var pane = c.DockPane;
@@ -924,30 +953,11 @@ namespace pr.gui
 					Child[EDockSite.Centre].Ctrl = ctrl;
 				}
 
-				// If the branch has <= 1 child, then remove this branch and replace the slot in the parent with the child (if it exists)
-				if (Child.Count <= 1 && Parent is Branch)
-				{
-					var ds = DockSite;
-					var parent = (Branch)Parent;
+				// Ensure there is always a centre pane
+				if (Child[EDockSite.Centre].Ctrl == null)
+					Child[EDockSite.Centre].Ctrl = new DockPane(DockContainer);
 
-					// Find the single child
-					var child = Child.SingleOrDefault(x => x.Ctrl != null);
-					if (child != null)
-					{
-						var ctrl = child.Ctrl;
-						child.Ctrl = null;
-						parent.Child[ds].Ctrl = ctrl;
-					}
-
-					// Release this branch
-					Dispose();
-				}
-				else
-				{
-					// Ensure there is always a centre pane
-					if (Child[EDockSite.Centre].Ctrl == null)
-						Child[EDockSite.Centre].Ctrl = new DockPane(DockContainer);
-				}
+				Debug.Assert(DockContainer.ValidateTree());
 			}
 
 			/// <summary>Add branches to the tree until 'rest' is empty.</summary>
@@ -965,6 +975,8 @@ namespace pr.gui
 					// keep going down the centre dock site until a null or dock pane is reached
 					var b = this;
 					for (; b.Child[ds].Branch != null; b = b.Child[ds].Branch, ds = EDockSite.Centre) {}
+
+					Debug.Assert(DockContainer.ValidateTree());
 
 					last_ds = ds;
 					return b;
@@ -1437,7 +1449,7 @@ namespace pr.gui
 				}
 			}
 
-			/// <summary>Output the tree structure as a string</summary>
+			/// <summary>Output the tree structure as a string (Recursion method, call 'DockContainer.DumpTree()')</summary>
 			public void DumpTree(StringBuilder sb, int indent, string prefix)
 			{
 				sb.Append(' ', indent).Append(prefix).Append("Branch: ").AppendLine();
@@ -1449,6 +1461,35 @@ namespace pr.gui
 					else sb.Append(' ', indent + 4).Append("{0,-6} = <null>".Fmt(c.DockSite)).AppendLine();
 				}
 				sb.Append(' ', indent).Append("}").AppendLine();
+			}
+
+			/// <summary>Self consistency check (Recursion method, call 'DockContainer.ValidateTree()')</summary>
+			public void ValidateTree()
+			{
+				if (IsDisposed)
+					throw new ObjectDisposedException("This branch has been disposed");
+
+				// Check each child
+				foreach (var child in Child)
+				{
+					if (child.Ctrl == null)
+						continue;
+
+					if (Child[child.DockSite] != child)
+						throw new Exception("This child is not in it's appropriate child slot");
+
+					if (Child.Count(x => x == child) != 1)
+						throw new Exception("This child is in more than one slot");
+
+					if (Child.Count(x => x.Ctrl == child.Ctrl) != 1)
+						throw new Exception("This child's control is in more than one slot");
+
+					// Recursive check children
+					if (child.Branch != null)
+						child.Branch.ValidateTree();
+					if (child.DockPane != null)
+						child.DockPane.ValidateTree();
+				}
 			}
 
 			/// <summary>String description of the branch for debugging</summary>
@@ -1976,10 +2017,20 @@ namespace pr.gui
 					TabStripCtrl.StripLocation = strip_location.Value;
 			}
 
-			/// <summary>Output the tree structure as a string</summary>
+			/// <summary>Output the tree structure as a string. (Recursion method, call 'DockContainer.DumpTree()')</summary>
 			public void DumpTree(StringBuilder sb, int indent, string prefix)
 			{
 				sb.Append(' ',indent).Append(prefix).Append("Pane: ").Append(DumpDesc()).AppendLine();
+			}
+
+			/// <summary>Self consistency check (Recursion method, call 'DockContainer.ValidateTree()')</summary>
+			public void ValidateTree()
+			{
+				if (IsDisposed)
+					throw new ObjectDisposedException("This dock pane has been disposed");
+
+				if (Branch.Child[DockSite].DockPane != this)
+					throw new Exception("Dock pane parent does not link to this dock pane");
 			}
 
 			/// <summary>A string description of the pane</summary>
@@ -2726,7 +2777,7 @@ namespace pr.gui
 			private void HandleActiveContentChanged(object sender, ActiveContentChangedEventArgs e)
 			{
 				if (e.ContentNew == Owner || e.ContentOld == Owner)
-					ActiveChanged.Raise(this);
+					ActiveChanged.Raise(this, e);
 			}
 
 			/// <summary>The name to use for this instance when saving layout to XML</summary>
