@@ -291,6 +291,19 @@ namespace pr.gfx
 			Rotate    = 1 << 1,
 			Zoom      = 1 << 2,
 		}
+		[Flags] public enum ECameraLockMask
+		{
+			None           = 0,
+			TransX         = 1 << 0,
+			TransY         = 1 << 1,
+			TransZ         = 1 << 2,
+			RotX           = 1 << 3,
+			RotY           = 1 << 4,
+			RotZ           = 1 << 5,
+			Zoom           = 1 << 6,
+			CameraRelative = 1 << 7,
+			All            = (1 << 7) - 1, // Not including camera relative
+		}
 		public enum ELogLevel
 		{
 			Debug,
@@ -920,15 +933,22 @@ namespace pr.gfx
 			{
 				// This function is not in the CameraControls object because it is not solely used
 				// for camera navigation. It can also be used to manipulate objects in the scene.
-				var args = new MouseNavigateEventArgs(point, nav_op, nav_beg_or_end);
-				MouseNavigating.Raise(this, args);
-				return View3D_MouseNavigate(Handle, v2.From(args.Point), args.NavOp, args.NavBegOrEnd);
+				if (m_in_mouse_navigate != 0) return false;
+				using (Scope.Create(() => ++m_in_mouse_navigate, () => --m_in_mouse_navigate))
+				{
+					// Notify of navigating, allowing client code to make changes
+					var args = new MouseNavigateEventArgs(point, nav_op, nav_beg_or_end);
+					MouseNavigating.Raise(this, args);
+
+					return View3D_MouseNavigate(Handle, v2.From(args.Point), args.NavOp, args.NavBegOrEnd);
+				}
 			}
 			public bool MouseNavigate(PointF point, MouseButtons btn, bool nav_beg_or_end)
 			{
 				var op = CameraControls.MouseBtnToNavOp(btn);
 				return MouseNavigate(point, op, nav_beg_or_end);
 			}
+			private int m_in_mouse_navigate;
 
 			/// <summary>
 			/// Zoom using the mouse.
@@ -938,9 +958,15 @@ namespace pr.gfx
 			/// Returns true if the scene requires refreshing</summary>
 			public bool MouseNavigateZ(PointF point, float delta, bool along_ray)
 			{
-				var args = new MouseNavigateEventArgs(point, delta, along_ray);
-				MouseNavigating.Raise(this, args);
-				return View3D_MouseNavigateZ(Handle, v2.From(args.Point), args.Delta, args.AlongRay);
+				if (m_in_mouse_navigate != 0) return false;
+				using (Scope.Create(() => ++m_in_mouse_navigate, () => --m_in_mouse_navigate))
+				{
+					// Notify of navigating, allowing client code to make changes
+					var args = new MouseNavigateEventArgs(point, delta, along_ray);
+					MouseNavigating.Raise(this, args);
+
+					return View3D_MouseNavigateZ(Handle, v2.From(args.Point), args.Delta, args.AlongRay);
+				}
 			}
 
 			/// <summary>
@@ -1505,6 +1531,13 @@ namespace pr.gfx
 			{
 				get { return View3D_ZoomGet(m_window.Handle); }
 				set { View3D_ZoomSet(m_window.Handle, value); }
+			}
+
+			/// <summary>Get/Set the camera movement lock mask</summary>
+			public ECameraLockMask LockMask
+			{
+				get { return View3D_CameraLockMaskGet(m_window.Handle); }
+				set { View3D_CameraLockMaskSet(m_window.Handle, value); }
 			}
 
 			/// <summary>
@@ -2310,43 +2343,45 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern BBox              View3D_SceneBounds            (HWindow window, ESceneBounds bounds, int except_count, Guid[] except);
 
 		// Camera
-		[DllImport(Dll)] private static extern void              View3D_CameraToWorld          (HWindow window, out m4x4 c2w);
-		[DllImport(Dll)] private static extern void              View3D_SetCameraToWorld       (HWindow window, ref m4x4 c2w);
-		[DllImport(Dll)] private static extern void              View3D_PositionCamera         (HWindow window, v4 position, v4 lookat, v4 up);
-		[DllImport(Dll)] private static extern void              View3D_CameraCommit           (HWindow window);
-		[DllImport(Dll)] private static extern bool              View3D_CameraOrthographic     (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_CameraOrthographicSet  (HWindow window, bool on);
-		[DllImport(Dll)] private static extern float             View3D_CameraFocusDistance    (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_CameraSetFocusDistance (HWindow window, float dist);
-		[DllImport(Dll)] private static extern void              View3D_CameraSetViewRect      (HWindow window, float width, float height, float dist);
-		[DllImport(Dll)] private static extern float             View3D_CameraAspect           (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_CameraSetAspect        (HWindow window, float aspect);
-		[DllImport(Dll)] private static extern float             View3D_CameraFovXGet          (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_CameraFovXSet          (HWindow window, float fovX);
-		[DllImport(Dll)] private static extern float             View3D_CameraFovYGet          (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_CameraFovYSet          (HWindow window, float fovY);
-		[DllImport(Dll)] private static extern void              View3D_CameraSetFov           (HWindow window, float fovX, float fovY);
-		[DllImport(Dll)] private static extern void              View3D_CameraBalanceFov       (HWindow window, float fov);
-		[DllImport(Dll)] private static extern void              View3D_CameraClipPlanesGet    (HWindow window, out float near, out float far);
-		[DllImport(Dll)] private static extern void              View3D_CameraClipPlanesSet    (HWindow window, float near, float far, bool focus_relative);
-		[DllImport(Dll)] private static extern bool              View3D_MouseNavigate          (HWindow window, v2 ss_point, ENavOp nav_op, bool nav_start_or_end);
-		[DllImport(Dll)] private static extern bool              View3D_MouseNavigateZ         (HWindow window, v2 ss_point, float delta, bool along_ray);
-		[DllImport(Dll)] private static extern bool              View3D_Navigate               (HWindow window, float dx, float dy, float dz);
-		[DllImport(Dll)] private static extern void              View3D_ResetZoom              (HWindow window);
-		[DllImport(Dll)] private static extern float             View3D_ZoomGet                (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_ZoomSet                (HWindow window, float zoom);
-		[DllImport(Dll)] private static extern void              View3D_CameraAlignAxis        (HWindow window, out v4 axis);
-		[DllImport(Dll)] private static extern void              View3D_AlignCamera            (HWindow window, v4 axis);
-		[DllImport(Dll)] private static extern void              View3D_ResetView              (HWindow window, v4 forward, v4 up, float dist, bool preserve_aspect, bool commit);
-		[DllImport(Dll)] private static extern void              View3D_ResetViewBBox          (HWindow window, BBox bbox, v4 forward, v4 up, float dist, bool preserve_aspect, bool commit);
-		[DllImport(Dll)] private static extern v2                View3D_ViewArea               (HWindow window, float dist);
-		[DllImport(Dll)] private static extern void              View3D_GetFocusPoint          (HWindow window, out v4 position);
-		[DllImport(Dll)] private static extern void              View3D_SetFocusPoint          (HWindow window, v4 position);
-		[DllImport(Dll)] private static extern v2                View3D_SSPointToNSSPoint      (HWindow window, v2 screen);
-		[DllImport(Dll)] private static extern v4                View3D_NSSPointToWSPoint      (HWindow window, v4 screen);
-		[DllImport(Dll)] private static extern v4                View3D_WSPointToNSSPoint      (HWindow window, v4 world);
-		[DllImport(Dll)] private static extern void              View3D_NSSPointToWSRay        (HWindow window, v4 screen, out v4 ws_point, out v4 ws_direction);
-		[DllImport(Dll)] private static extern ENavOp            View3D_MouseBtnToNavOp        (int mk);
+		[DllImport(Dll)] private static extern void            View3D_CameraToWorld          (HWindow window, out m4x4 c2w);
+		[DllImport(Dll)] private static extern void            View3D_SetCameraToWorld       (HWindow window, ref m4x4 c2w);
+		[DllImport(Dll)] private static extern void            View3D_PositionCamera         (HWindow window, v4 position, v4 lookat, v4 up);
+		[DllImport(Dll)] private static extern void            View3D_CameraCommit           (HWindow window);
+		[DllImport(Dll)] private static extern bool            View3D_CameraOrthographic     (HWindow window);
+		[DllImport(Dll)] private static extern void            View3D_CameraOrthographicSet  (HWindow window, bool on);
+		[DllImport(Dll)] private static extern float           View3D_CameraFocusDistance    (HWindow window);
+		[DllImport(Dll)] private static extern void            View3D_CameraSetFocusDistance (HWindow window, float dist);
+		[DllImport(Dll)] private static extern void            View3D_CameraSetViewRect      (HWindow window, float width, float height, float dist);
+		[DllImport(Dll)] private static extern float           View3D_CameraAspect           (HWindow window);
+		[DllImport(Dll)] private static extern void            View3D_CameraSetAspect        (HWindow window, float aspect);
+		[DllImport(Dll)] private static extern float           View3D_CameraFovXGet          (HWindow window);
+		[DllImport(Dll)] private static extern void            View3D_CameraFovXSet          (HWindow window, float fovX);
+		[DllImport(Dll)] private static extern float           View3D_CameraFovYGet          (HWindow window);
+		[DllImport(Dll)] private static extern void            View3D_CameraFovYSet          (HWindow window, float fovY);
+		[DllImport(Dll)] private static extern void            View3D_CameraSetFov           (HWindow window, float fovX, float fovY);
+		[DllImport(Dll)] private static extern void            View3D_CameraBalanceFov       (HWindow window, float fov);
+		[DllImport(Dll)] private static extern void            View3D_CameraClipPlanesGet    (HWindow window, out float near, out float far);
+		[DllImport(Dll)] private static extern void            View3D_CameraClipPlanesSet    (HWindow window, float near, float far, bool focus_relative);
+		[DllImport(Dll)] private static extern bool            View3D_MouseNavigate          (HWindow window, v2 ss_point, ENavOp nav_op, bool nav_start_or_end);
+		[DllImport(Dll)] private static extern bool            View3D_MouseNavigateZ         (HWindow window, v2 ss_point, float delta, bool along_ray);
+		[DllImport(Dll)] private static extern bool            View3D_Navigate               (HWindow window, float dx, float dy, float dz);
+		[DllImport(Dll)] private static extern void            View3D_ResetZoom              (HWindow window);
+		[DllImport(Dll)] private static extern float           View3D_ZoomGet                (HWindow window);
+		[DllImport(Dll)] private static extern void            View3D_ZoomSet                (HWindow window, float zoom);
+		[DllImport(Dll)] private static extern ECameraLockMask View3D_CameraLockMaskGet      (HWindow window);
+		[DllImport(Dll)] private static extern void            View3D_CameraLockMaskSet      (HWindow window, ECameraLockMask mask);
+		[DllImport(Dll)] private static extern void            View3D_CameraAlignAxis        (HWindow window, out v4 axis);
+		[DllImport(Dll)] private static extern void            View3D_AlignCamera            (HWindow window, v4 axis);
+		[DllImport(Dll)] private static extern void            View3D_ResetView              (HWindow window, v4 forward, v4 up, float dist, bool preserve_aspect, bool commit);
+		[DllImport(Dll)] private static extern void            View3D_ResetViewBBox          (HWindow window, BBox bbox, v4 forward, v4 up, float dist, bool preserve_aspect, bool commit);
+		[DllImport(Dll)] private static extern v2              View3D_ViewArea               (HWindow window, float dist);
+		[DllImport(Dll)] private static extern void            View3D_GetFocusPoint          (HWindow window, out v4 position);
+		[DllImport(Dll)] private static extern void            View3D_SetFocusPoint          (HWindow window, v4 position);
+		[DllImport(Dll)] private static extern v2              View3D_SSPointToNSSPoint      (HWindow window, v2 screen);
+		[DllImport(Dll)] private static extern v4              View3D_NSSPointToWSPoint      (HWindow window, v4 screen);
+		[DllImport(Dll)] private static extern v4              View3D_WSPointToNSSPoint      (HWindow window, v4 world);
+		[DllImport(Dll)] private static extern void            View3D_NSSPointToWSRay        (HWindow window, v4 screen, out v4 ws_point, out v4 ws_direction);
+		[DllImport(Dll)] private static extern ENavOp          View3D_MouseBtnToNavOp        (int mk);
 
 		// Lights
 		[DllImport(Dll)] private static extern void              View3D_LightProperties          (HWindow window, out LightInfo light);

@@ -67,21 +67,19 @@ namespace pr
 		};
 
 		// Prevent translation/rotation on particular axes
-		struct LockMask :std::bitset<8>
+		enum class ELockMask
 		{
-			enum
-			{
-				TransX         = 0,
-				TransY         = 1,
-				TransZ         = 2,
-				RotX           = 3,
-				RotY           = 4,
-				RotZ           = 5,
-				Zoom           = 6,
-				CameraRelative = 7,
-				All            = (1 << 7) - 1, // Not including camera relative
-			};
-			operator bool() const { return (to_ulong() & All) != 0; }
+			None           = 0,
+			TransX         = 1 << 0,
+			TransY         = 1 << 1,
+			TransZ         = 1 << 2,
+			RotX           = 1 << 3,
+			RotY           = 1 << 4,
+			RotZ           = 1 << 5,
+			Zoom           = 1 << 6,
+			CameraRelative = 1 << 7,
+			All            = (1 << 7) - 1, // Not including camera relative
+			_bitwise_operators_allowed,
 		};
 
 		// Convert an MK_ value into the default navigation operation
@@ -104,7 +102,7 @@ namespace pr
 	struct Camera
 	{
 		using NavKeyBindings = camera::NavKeyBindings;
-		using LockMask       = camera::LockMask;
+		using ELockMask      = camera::ELockMask;
 		using ENavOp         = camera::ENavOp;
 
 		m4x4           m_base_c2w;          // The starting position during a mouse movement
@@ -123,7 +121,7 @@ namespace pr
 		v2             m_Rref;              // Movement start reference point for rotation
 		v2             m_Zref;              // Movement start reference point for zoom
 		NavKeyBindings m_key;               // Key bindings
-		LockMask       m_lock_mask;         // Locks on the allowed motion
+		ELockMask      m_lock_mask;         // Locks on the allowed motion
 		bool           m_orthographic;      // True for orthographic camera to screen transforms, false for perspective
 		bool           m_moved;             // Dirty flag for when the camera moves
 		bool           m_focus_rel_clip;    // True if the near/far clip planes should be relative to the focus point
@@ -496,6 +494,10 @@ namespace pr
 		// Returns true if the camera has moved
 		bool MouseControlZ(pr::v2 const& point, float delta, bool along_ray, bool commit = true)
 		{
+			// Ignore if Z motion is locked
+			if (AllSet(m_lock_mask, ELockMask::TransZ))
+				return false;
+
 			auto dist = delta / 120.0f;
 			if (KeyDown(m_key[camera::ENavKey::Accurate])) dist *= 0.1f;
 			if (KeyDown(m_key[camera::ENavKey::SuperAccurate])) dist *= 0.1f;
@@ -526,11 +528,11 @@ namespace pr
 				m_c2w.pos = pos;
 
 			// Apply non-camera relative locking
-			if (m_lock_mask && !m_lock_mask[camera::LockMask::CameraRelative])
+			if (m_lock_mask != ELockMask::None && !AllSet(m_lock_mask, ELockMask::CameraRelative))
 			{
-				if (m_lock_mask[camera::LockMask::TransX]) m_c2w.pos.x = m_base_c2w.pos.x;
-				if (m_lock_mask[camera::LockMask::TransY]) m_c2w.pos.y = m_base_c2w.pos.y;
-				if (m_lock_mask[camera::LockMask::TransZ]) m_c2w.pos.z = m_base_c2w.pos.z;
+				if (AllSet(m_lock_mask, ELockMask::TransX)) m_c2w.pos.x = m_base_c2w.pos.x;
+				if (AllSet(m_lock_mask, ELockMask::TransY)) m_c2w.pos.y = m_base_c2w.pos.y;
+				if (AllSet(m_lock_mask, ELockMask::TransZ)) m_c2w.pos.z = m_base_c2w.pos.z;
 			}
 
 			// Set the base values
@@ -544,11 +546,11 @@ namespace pr
 		// Returns true if the camera has moved (for consistency with MouseControl)
 		bool Translate(float dx, float dy, float dz, bool commit = true)
 		{
-			if (m_lock_mask && m_lock_mask[camera::LockMask::CameraRelative])
+			if (m_lock_mask != ELockMask::None && AllSet(m_lock_mask, ELockMask::CameraRelative))
 			{
-				if (m_lock_mask[camera::LockMask::TransX]) dx = 0.0f;
-				if (m_lock_mask[camera::LockMask::TransY]) dy = 0.0f;
-				if (m_lock_mask[camera::LockMask::TransZ]) dz = 0.0f;
+				if (AllSet(m_lock_mask, ELockMask::TransX)) dx = 0.0f;
+				if (AllSet(m_lock_mask, ELockMask::TransY)) dy = 0.0f;
+				if (AllSet(m_lock_mask, ELockMask::TransZ)) dz = 0.0f;
 			}
 			if (KeyDown(m_key[camera::ENavKey::Accurate]))
 			{
@@ -574,11 +576,11 @@ namespace pr
 				m_c2w.pos = pos;
 
 			// Apply non-camera relative locking
-			if (m_lock_mask && !m_lock_mask[camera::LockMask::CameraRelative])
+			if (m_lock_mask != ELockMask::None && !AllSet(m_lock_mask, ELockMask::CameraRelative))
 			{
-				if (m_lock_mask[camera::LockMask::TransX]) m_c2w.pos.x = m_base_c2w.pos.x;
-				if (m_lock_mask[camera::LockMask::TransY]) m_c2w.pos.y = m_base_c2w.pos.y;
-				if (m_lock_mask[camera::LockMask::TransZ]) m_c2w.pos.z = m_base_c2w.pos.z;
+				if (AllSet(m_lock_mask, ELockMask::TransX)) m_c2w.pos.x = m_base_c2w.pos.x;
+				if (AllSet(m_lock_mask, ELockMask::TransY)) m_c2w.pos.y = m_base_c2w.pos.y;
+				if (AllSet(m_lock_mask, ELockMask::TransZ)) m_c2w.pos.z = m_base_c2w.pos.z;
 			}
 
 			// Set the base values
@@ -592,11 +594,11 @@ namespace pr
 		// Returns true if the camera has moved (for consistency with MouseControl)
 		bool Rotate(float pitch, float yaw, float roll, bool commit = true)
 		{
-			if (m_lock_mask)
+			if (m_lock_mask != ELockMask::None)
 			{
-				if (m_lock_mask[camera::LockMask::RotX]) pitch	= 0.0f;
-				if (m_lock_mask[camera::LockMask::RotY]) yaw	= 0.0f;
-				if (m_lock_mask[camera::LockMask::RotZ]) roll	= 0.0f;
+				if (AllSet(m_lock_mask, ELockMask::RotX)) pitch	= 0.0f;
+				if (AllSet(m_lock_mask, ELockMask::RotY)) yaw	= 0.0f;
+				if (AllSet(m_lock_mask, ELockMask::RotZ)) roll	= 0.0f;
 			}
 			if (KeyDown(m_key[camera::ENavKey::Accurate]))
 			{
@@ -638,9 +640,9 @@ namespace pr
 		// Returns true if the camera has moved (for consistency with MouseControl)
 		bool Zoom(float zoom, bool commit = true)
 		{
-			if (m_lock_mask)
+			if (m_lock_mask != ELockMask::None)
 			{
-				if (m_lock_mask[camera::LockMask::Zoom]) return false;
+				if (AllSet(m_lock_mask, ELockMask::Zoom)) return false;
 			}
 			if (KeyDown(m_key[camera::ENavKey::Accurate]))
 			{

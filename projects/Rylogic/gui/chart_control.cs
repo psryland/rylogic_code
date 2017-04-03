@@ -2658,6 +2658,7 @@ namespace pr.gui
 					m_chart.Scene.Window.MouseNavigate(e.Location, View3d.ENavOp.Rotate, false);
 				}
 				m_chart.Invalidate();
+				m_chart.Update();
 			}
 			public override void MouseUp(MouseEventArgs e)
 			{
@@ -2810,6 +2811,7 @@ namespace pr.gui
 				m_chart.Scene.Window.MouseNavigate(drop_loc, View3d.ENavOp.Translate, false);
 				m_chart.SetRangeFromCamera();
 				m_chart.Invalidate();
+				m_chart.Update();
 			}
 			public override void MouseUp(MouseEventArgs e)
 			{

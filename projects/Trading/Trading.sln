@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylobot", "Rylobot\Rylobot.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylobot_CandlePatterns", "D:\Users\Paul\Documents\cAlgo\Sources\Robots\Rylobot_CandlePatterns\Rylobot_CandlePatterns\Rylobot_CandlePatterns.csproj", "{3586ED51-790F-4F8F-85FD-06A3FC0A3426}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylobot_MACD", "D:\Users\Paul\Documents\cAlgo\Sources\Robots\Rylobot_MACD\Rylobot_MACD\Rylobot_MACD.csproj", "{EA65A79A-7238-42F5-86EF-E77322492160}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,6 +47,10 @@ Global
 		{3586ED51-790F-4F8F-85FD-06A3FC0A3426}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3586ED51-790F-4F8F-85FD-06A3FC0A3426}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3586ED51-790F-4F8F-85FD-06A3FC0A3426}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EA65A79A-7238-42F5-86EF-E77322492160}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EA65A79A-7238-42F5-86EF-E77322492160}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EA65A79A-7238-42F5-86EF-E77322492160}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EA65A79A-7238-42F5-86EF-E77322492160}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

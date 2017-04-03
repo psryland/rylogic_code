@@ -804,6 +804,30 @@ VIEW3D_API void __stdcall View3D_ZoomSet(View3DWindow window, float zoom)
 	CatchAndReport(View3D_ZoomSet, window,);
 }
 
+// Get/Set the scene camera lock mask
+VIEW3D_API EView3DCameraLockMask __stdcall View3D_CameraLockMaskGet(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return static_cast<EView3DCameraLockMask>(window->m_camera.m_lock_mask);
+	}
+	CatchAndReport(View3D_CameraLockMaskGet, window, EView3DCameraLockMask::None);
+}
+VIEW3D_API void __stdcall View3D_CameraLockMaskSet(View3DWindow window, EView3DCameraLockMask mask)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_camera.m_lock_mask = static_cast<pr::camera::ELockMask>(mask);
+	}
+	CatchAndReport(View3D_CameraLockMaskSet, window,);
+}
+
 // Return the camera align axis
 VIEW3D_API void __stdcall View3D_CameraAlignAxis(View3DWindow window, View3DV4& axis)
 {
@@ -2765,6 +2789,21 @@ static_assert(int(EView3DGizmoEvent::Moving    ) == int(pr::ldr::ELdrGizmoEvent:
 static_assert(int(EView3DGizmoEvent::Commit    ) == int(pr::ldr::ELdrGizmoEvent::Commit    ), "");
 static_assert(int(EView3DGizmoEvent::Revert    ) == int(pr::ldr::ELdrGizmoEvent::Revert    ), "");
 
+static_assert(int(EView3DNavOp::None     ) == int(pr::camera::ENavOp::None     ), "");
+static_assert(int(EView3DNavOp::Translate) == int(pr::camera::ENavOp::Translate), "");
+static_assert(int(EView3DNavOp::Rotate   ) == int(pr::camera::ENavOp::Rotate   ), "");
+static_assert(int(EView3DNavOp::Zoom     ) == int(pr::camera::ENavOp::Zoom     ), "");
+
+static_assert(int(EView3DCameraLockMask::None          ) == int(pr::camera::ELockMask::None          ), "");
+static_assert(int(EView3DCameraLockMask::TransX        ) == int(pr::camera::ELockMask::TransX        ), "");
+static_assert(int(EView3DCameraLockMask::TransY        ) == int(pr::camera::ELockMask::TransY        ), "");
+static_assert(int(EView3DCameraLockMask::TransZ        ) == int(pr::camera::ELockMask::TransZ        ), "");
+static_assert(int(EView3DCameraLockMask::RotX          ) == int(pr::camera::ELockMask::RotX          ), "");
+static_assert(int(EView3DCameraLockMask::RotY          ) == int(pr::camera::ELockMask::RotY          ), "");
+static_assert(int(EView3DCameraLockMask::RotZ          ) == int(pr::camera::ELockMask::RotZ          ), "");
+static_assert(int(EView3DCameraLockMask::Zoom          ) == int(pr::camera::ELockMask::Zoom          ), "");
+static_assert(int(EView3DCameraLockMask::CameraRelative) == int(pr::camera::ELockMask::CameraRelative), "");
+static_assert(int(EView3DCameraLockMask::All           ) == int(pr::camera::ELockMask::All           ), "");
 
 static_assert(int(EView3DPrim::Invalid  ) == int(pr::rdr::EPrim::Invalid  ), "");
 static_assert(int(EView3DPrim::PointList) == int(pr::rdr::EPrim::PointList), "");

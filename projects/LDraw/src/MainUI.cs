@@ -113,7 +113,11 @@ namespace LDraw
 		private ToolStripMenuItem m_menu_window_new_scene;
 		private ToolStripSeparator toolStripSeparator15;
 		private ToolStrip m_ts;
-		private ToolStripButton m_btn_link_scene_cameras;
+		private ToolStripButton m_btn_link_camera_left_right;
+		private ToolStripLabel m_lbl_link_cameras;
+		private ToolStripButton m_btn_link_camera_up_down;
+		private ToolStripButton m_btn_link_camera_in_out;
+		private ToolStripButton m_btn_link_camera_rotate;
 		private ToolStripMenuItem m_menu_file_save_as;
 		#endregion
 
@@ -582,10 +586,25 @@ namespace LDraw
 			#endregion
 
 			#region Tool bar
-			m_btn_link_scene_cameras.Checked = Model.LinkSceneCameras;
-			m_btn_link_scene_cameras.CheckedChanged += (s,a) =>
+			m_btn_link_camera_left_right.Checked = Model.LinkCameras.HasFlag(ELinkCameras.LeftRight);
+			m_btn_link_camera_left_right.CheckedChanged += (s,a) =>
 			{
-				Model.LinkSceneCameras = m_btn_link_scene_cameras.Checked;
+				Model.LinkCameras = Bit.SetBits(Model.LinkCameras, ELinkCameras.LeftRight, m_btn_link_camera_left_right.Checked);
+			};
+			m_btn_link_camera_up_down.Checked = Model.LinkCameras.HasFlag(ELinkCameras.UpDown);
+			m_btn_link_camera_up_down.CheckedChanged += (s,a) =>
+			{
+				Model.LinkCameras = Bit.SetBits(Model.LinkCameras, ELinkCameras.UpDown, m_btn_link_camera_up_down.Checked);
+			};
+			m_btn_link_camera_in_out.Checked = Model.LinkCameras.HasFlag(ELinkCameras.InOut);
+			m_btn_link_camera_in_out.CheckedChanged += (s,a) =>
+			{
+				Model.LinkCameras = Bit.SetBits(Model.LinkCameras, ELinkCameras.InOut, m_btn_link_camera_in_out.Checked);
+			};
+			m_btn_link_camera_rotate.Checked = Model.LinkCameras.HasFlag(ELinkCameras.Rotate);
+			m_btn_link_camera_rotate.CheckedChanged += (s,a) =>
+			{
+				Model.LinkCameras = Bit.SetBits(Model.LinkCameras, ELinkCameras.Rotate, m_btn_link_camera_rotate.Checked);
 			};
 			#endregion
 
@@ -901,7 +920,11 @@ namespace LDraw
 			this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_window_about = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
-			this.m_btn_link_scene_cameras = new System.Windows.Forms.ToolStripButton();
+			this.m_lbl_link_cameras = new System.Windows.Forms.ToolStripLabel();
+			this.m_btn_link_camera_left_right = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_link_camera_up_down = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_link_camera_in_out = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_link_camera_rotate = new System.Windows.Forms.ToolStripButton();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
@@ -919,7 +942,7 @@ namespace LDraw
 			// 
 			// m_tsc.ContentPanel
 			// 
-			this.m_tsc.ContentPanel.Size = new System.Drawing.Size(663, 518);
+			this.m_tsc.ContentPanel.Size = new System.Drawing.Size(663, 498);
 			this.m_tsc.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_tsc.Location = new System.Drawing.Point(0, 0);
 			this.m_tsc.Name = "m_tsc";
@@ -1548,22 +1571,60 @@ namespace LDraw
 			// m_ts
 			// 
 			this.m_ts.Dock = System.Windows.Forms.DockStyle.None;
+			this.m_ts.ImageScalingSize = new System.Drawing.Size(38, 38);
 			this.m_ts.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_btn_link_scene_cameras});
+            this.m_lbl_link_cameras,
+            this.m_btn_link_camera_left_right,
+            this.m_btn_link_camera_up_down,
+            this.m_btn_link_camera_in_out,
+            this.m_btn_link_camera_rotate});
 			this.m_ts.Location = new System.Drawing.Point(3, 24);
 			this.m_ts.Name = "m_ts";
-			this.m_ts.Size = new System.Drawing.Size(35, 25);
+			this.m_ts.Size = new System.Drawing.Size(261, 45);
 			this.m_ts.TabIndex = 1;
 			// 
-			// m_btn_nav_all_views
+			// m_lbl_link_cameras
 			// 
-			this.m_btn_link_scene_cameras.CheckOnClick = true;
-			this.m_btn_link_scene_cameras.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_link_scene_cameras.Image = global::LDraw.Properties.Resources.locked;
-			this.m_btn_link_scene_cameras.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_btn_link_scene_cameras.Name = "m_btn_nav_all_views";
-			this.m_btn_link_scene_cameras.Size = new System.Drawing.Size(23, 22);
-			this.m_btn_link_scene_cameras.ToolTipText = "Apply camera navigation to all views";
+			this.m_lbl_link_cameras.Name = "m_lbl_link_cameras";
+			this.m_lbl_link_cameras.Size = new System.Drawing.Size(81, 42);
+			this.m_lbl_link_cameras.Text = "Link Cameras:";
+			// 
+			// m_btn_link_camera_left_right
+			// 
+			this.m_btn_link_camera_left_right.CheckOnClick = true;
+			this.m_btn_link_camera_left_right.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_link_camera_left_right.Image = global::LDraw.Properties.Resources.green_left_right;
+			this.m_btn_link_camera_left_right.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_link_camera_left_right.Name = "m_btn_link_camera_left_right";
+			this.m_btn_link_camera_left_right.Size = new System.Drawing.Size(42, 42);
+			this.m_btn_link_camera_left_right.ToolTipText = "Apply camera navigation to all views";
+			// 
+			// m_btn_link_camera_up_down
+			// 
+			this.m_btn_link_camera_up_down.CheckOnClick = true;
+			this.m_btn_link_camera_up_down.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_link_camera_up_down.Image = global::LDraw.Properties.Resources.green_up_down;
+			this.m_btn_link_camera_up_down.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_link_camera_up_down.Name = "m_btn_link_camera_up_down";
+			this.m_btn_link_camera_up_down.Size = new System.Drawing.Size(42, 42);
+			// 
+			// m_btn_link_camera_in_out
+			// 
+			this.m_btn_link_camera_in_out.CheckOnClick = true;
+			this.m_btn_link_camera_in_out.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_link_camera_in_out.Image = global::LDraw.Properties.Resources.green_in_out;
+			this.m_btn_link_camera_in_out.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_link_camera_in_out.Name = "m_btn_link_camera_in_out";
+			this.m_btn_link_camera_in_out.Size = new System.Drawing.Size(42, 42);
+			// 
+			// m_btn_link_camera_rotate
+			// 
+			this.m_btn_link_camera_rotate.CheckOnClick = true;
+			this.m_btn_link_camera_rotate.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_link_camera_rotate.Image = global::LDraw.Properties.Resources.green_rotate;
+			this.m_btn_link_camera_rotate.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_link_camera_rotate.Name = "m_btn_link_camera_rotate";
+			this.m_btn_link_camera_rotate.Size = new System.Drawing.Size(42, 42);
 			// 
 			// MainUI
 			// 

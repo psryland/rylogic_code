@@ -35,7 +35,7 @@ namespace LDraw
 
 			// Apply initial settings
 			AutoRefreshSources = Settings.AutoRefresh;
-			LinkSceneCameras = Settings.LinkSceneCameras;
+			LinkCameras = Settings.LinkCameras;
 		}
 		public void Dispose()
 		{
@@ -193,17 +193,17 @@ namespace LDraw
 		}
 
 		/// <summary>Get/Set whether mouse navigation effects all scenes or just the active one</summary>
-		public bool LinkSceneCameras
+		public ELinkCameras LinkCameras
 		{
-			get { return m_link_scene_cameras; }
+			get { return m_link_cameras; }
 			set
 			{
-				if (m_link_scene_cameras == value) return;
-				Settings.LinkSceneCameras = value;
-				m_link_scene_cameras = value;
+				if (m_link_cameras == value) return;
+				Settings.LinkCameras = value;
+				m_link_cameras = value;
 			}
 		}
-		private bool m_link_scene_cameras;
+		private ELinkCameras m_link_cameras;
 
 		/// <summary>Return the settings for a scene with the given name</summary>
 		public SceneSettings SceneSettings(string name)
@@ -240,8 +240,12 @@ namespace LDraw
 		/// <summary>Add a new scene</summary>
 		public void AddNewScene()
 		{
-			var highest = int_.TryParse(Scenes.Max(x => x.SceneName.SubstringRegex(@"Scene(\d*)").FirstOrDefault()));
-			var name = highest != null ? "Scene{0}".Fmt(highest.Value + 1) : "Scene";
+			var name = "Scene";
+			if (Scenes.Count >= 1)
+			{
+				var highest = int_.TryParse(Scenes.Max(x => x.SceneName.SubstringRegex(@"Scene(\d*)").FirstOrDefault())) ?? 1;
+				name = "Scene{0}".Fmt(highest + 1);
+			}
 			Scenes.Add(new SceneUI(name, this));
 		}
 
@@ -323,21 +327,36 @@ namespace LDraw
 		/// <summary>Handle mouse navigation</summary>
 		private void HandleMouseNavigating(object sender, View3d.Window.MouseNavigateEventArgs e)
 		{
-			if (!LinkSceneCameras)
+			if (LinkCameras == ELinkCameras.None)
 				return;
 
 			if (m_in_handle_mouse_navigating != 0) return;
 			using (Scope.Create(() => ++m_in_handle_mouse_navigating, () => --m_in_handle_mouse_navigating))
 			{
-				foreach (var scene in Scenes.Where(x => x.Window != sender))
+				// Replicate navigation commands in the other scenes
+				var scenes = Scenes.Where(x => x.Window != sender).ToArray();
+				foreach (var scene in scenes)
 				{
-					// Replicate navigation commands in the other scenes
-					if (!e.ZNavigation)
-						scene.Window.MouseNavigate(e.Point, e.NavOp, e.NavBegOrEnd);
-					else
-						scene.Window.MouseNavigateZ(e.Point, e.Delta, e.AlongRay);
+					// Use the camera lock to limit motion
+					using (Scope.Create(() => scene.Camera.LockMask, m => scene.Camera.LockMask = m))
+					{
+						var lock_mask = View3d.ECameraLockMask.All;
+						if (LinkCameras.HasFlag(ELinkCameras.LeftRight)) lock_mask = Bit.SetBits(lock_mask, View3d.ECameraLockMask.TransX, false);
+						if (LinkCameras.HasFlag(ELinkCameras.UpDown   )) lock_mask = Bit.SetBits(lock_mask, View3d.ECameraLockMask.TransY, false);
+						if (LinkCameras.HasFlag(ELinkCameras.InOut    )) lock_mask = Bit.SetBits(lock_mask, View3d.ECameraLockMask.TransZ|View3d.ECameraLockMask.Zoom, false);
+						if (LinkCameras.HasFlag(ELinkCameras.Rotate   )) lock_mask = Bit.SetBits(lock_mask, View3d.ECameraLockMask.RotX|View3d.ECameraLockMask.RotY|View3d.ECameraLockMask.RotZ, false);
+						scene.Camera.LockMask = lock_mask;
 
+						// Replicate the navigation command
+						if (!e.ZNavigation)
+							scene.Window.MouseNavigate(e.Point, e.NavOp, e.NavBegOrEnd);
+						else
+							scene.Window.MouseNavigateZ(e.Point, e.Delta, e.AlongRay);
+					}
+
+					scene.SetRangeFromCamera();
 					scene.Invalidate();
+					scene.Update();
 				}
 			}
 		}

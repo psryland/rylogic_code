@@ -20,7 +20,7 @@ namespace LDraw
 			RecentFiles = string.Empty;
 			AutoRefresh = false;
 			ResetOnLoad = true;
-			LinkSceneCameras = false;
+			LinkCameras = ELinkCameras.None;
 			Scenes = new SceneSettings[1] { new SceneSettings() };
 			UI = new UISettings();
 
@@ -53,11 +53,11 @@ namespace LDraw
 			set { set(x => x.ResetOnLoad, value); }
 		}
 
-		/// <summary>True if navigation actions are applied to all scenes</summary>
-		public bool LinkSceneCameras
+		/// <summary>Bitmask of the navigation actions that are applied to all scenes</summary>
+		public ELinkCameras LinkCameras
 		{
-			get { return get(x => x.LinkSceneCameras); }
-			set { set(x => x.LinkSceneCameras, value); }
+			get { return get(x => x.LinkCameras); }
+			set { set(x => x.LinkCameras, value); }
 		}
 
 		/// <summary>Style options for scenes</summary>

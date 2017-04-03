@@ -12,10 +12,10 @@ namespace Rylobot
 	public class Rylobot_MACD : Rylobot
 	{
 		#region Parameters
-		[Parameter(DefaultValue = 0.3)]
+		[Parameter(DefaultValue = 1.0)]
 		public double Hysteresis { get; set; }
 
-		[Parameter(DefaultValue = 0.5)]
+		[Parameter(DefaultValue = 1.05)]
 		public double SlopeThreshold { get; set; }
 		#endregion
 

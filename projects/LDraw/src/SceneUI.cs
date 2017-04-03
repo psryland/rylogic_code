@@ -16,6 +16,7 @@ using pr.win32;
 
 namespace LDraw
 {
+	[DebuggerDisplay("{SceneName}")]
 	public class SceneUI :ChartControl ,IDockable
 	{
 		private SceneUI() { InitializeComponent(); }
@@ -188,6 +189,7 @@ namespace LDraw
 		public void Clear()
 		{
 			ContextIds.Clear();
+			Invalidate();
 		}
 
 		/// <summary>Add a file source to this scene</summary>
@@ -390,9 +392,9 @@ namespace LDraw
 		}
 
 		/// <summary>Handle this scene gaining or losing focus</summary>
-		private void HandleSceneActive(object sender, EventArgs e)
+		private void HandleSceneActive(object sender, ActiveContentChangedEventArgs e)
 		{
-			Options.BkColour = DockControl.IsActiveContent ? Color.LightSteelBlue : Color.LightGray;
+			Options.BkColour = e.ContentNew == this ? Color.LightSteelBlue : Color.LightGray;
 			Invalidate();
 		}
 
