@@ -112,12 +112,16 @@ namespace LDraw
 		private ToolStripStatusLabel m_lbl_pointer_location;
 		private ToolStripMenuItem m_menu_window_new_scene;
 		private ToolStripSeparator toolStripSeparator15;
-		private ToolStrip m_ts;
+		private ToolStrip m_ts_multiview;
 		private ToolStripButton m_btn_link_camera_left_right;
 		private ToolStripLabel m_lbl_link_cameras;
 		private ToolStripButton m_btn_link_camera_up_down;
 		private ToolStripButton m_btn_link_camera_in_out;
 		private ToolStripButton m_btn_link_camera_rotate;
+		private ToolStripSeparator toolStripSeparator16;
+		private ToolStripLabel m_lbl_link_axes;
+		private ToolStripButton m_btn_link_xaxis;
+		private ToolStripButton m_btn_link_yaxis;
 		private ToolStripMenuItem m_menu_file_save_as;
 		#endregion
 
@@ -328,6 +332,11 @@ namespace LDraw
 		/// <summary>Set up the UI</summary>
 		private void SetupUI()
 		{
+			#region Dock Container
+			if (Settings.UI.UILayout != null)
+				m_dc.LoadLayout(Settings.UI.UILayout, c => Model.Scenes.Add2(new SceneUI(c, Model)).DockControl);
+			#endregion
+
 			#region Menu
 			#region File Menu
 			m_menu_file_new.Click += (s,a) =>
@@ -606,6 +615,17 @@ namespace LDraw
 			{
 				Model.LinkCameras = Bit.SetBits(Model.LinkCameras, ELinkCameras.Rotate, m_btn_link_camera_rotate.Checked);
 			};
+
+			m_btn_link_xaxis.Checked = Model.LinkAxes.HasFlag(ELinkAxes.XAxis);
+			m_btn_link_xaxis.CheckedChanged += (s,a) =>
+			{
+				Model.LinkAxes = Bit.SetBits(Model.LinkAxes, ELinkAxes.XAxis, m_btn_link_xaxis.Checked);
+			};
+			m_btn_link_yaxis.Checked = Model.LinkAxes.HasFlag(ELinkAxes.YAxis);
+			m_btn_link_yaxis.CheckedChanged += (s,a) =>
+			{
+				Model.LinkAxes = Bit.SetBits(Model.LinkAxes, ELinkAxes.YAxis, m_btn_link_yaxis.Checked);
+			};
 			#endregion
 
 			#region Progress Bar
@@ -646,6 +666,9 @@ namespace LDraw
 			m_menu_rendering_cullmode_front    .Checked = Model.CurrentScene.Options.CullMode == View3d.ECullMode.Front;
 
 			m_menu_window_always_on_top.Checked = TopMost;
+
+			// Display the multi scene tool-bar when there are multiple scenes
+			m_ts_multiview.Visible = Model.Scenes.Count > 1;
 
 			// Update file loading progress
 			UpdateProgress();
@@ -919,18 +942,22 @@ namespace LDraw
 			this.m_menu_window_example_script = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_window_about = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_ts = new System.Windows.Forms.ToolStrip();
+			this.m_ts_multiview = new System.Windows.Forms.ToolStrip();
 			this.m_lbl_link_cameras = new System.Windows.Forms.ToolStripLabel();
 			this.m_btn_link_camera_left_right = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_link_camera_up_down = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_link_camera_in_out = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_link_camera_rotate = new System.Windows.Forms.ToolStripButton();
+			this.toolStripSeparator16 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_lbl_link_axes = new System.Windows.Forms.ToolStripLabel();
+			this.m_btn_link_xaxis = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_link_yaxis = new System.Windows.Forms.ToolStripButton();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
 			this.m_ss.SuspendLayout();
 			this.m_menu.SuspendLayout();
-			this.m_ts.SuspendLayout();
+			this.m_ts_multiview.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// m_tsc
@@ -942,7 +969,7 @@ namespace LDraw
 			// 
 			// m_tsc.ContentPanel
 			// 
-			this.m_tsc.ContentPanel.Size = new System.Drawing.Size(663, 498);
+			this.m_tsc.ContentPanel.Size = new System.Drawing.Size(663, 508);
 			this.m_tsc.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_tsc.Location = new System.Drawing.Point(0, 0);
 			this.m_tsc.Name = "m_tsc";
@@ -953,7 +980,7 @@ namespace LDraw
 			// m_tsc.TopToolStripPanel
 			// 
 			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_menu);
-			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_ts);
+			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_ts_multiview);
 			// 
 			// m_ss
 			// 
@@ -1568,25 +1595,29 @@ namespace LDraw
 			this.m_menu_window_about.Size = new System.Drawing.Size(151, 22);
 			this.m_menu_window_about.Text = "&About";
 			// 
-			// m_ts
+			// m_ts_multiview
 			// 
-			this.m_ts.Dock = System.Windows.Forms.DockStyle.None;
-			this.m_ts.ImageScalingSize = new System.Drawing.Size(38, 38);
-			this.m_ts.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+			this.m_ts_multiview.Dock = System.Windows.Forms.DockStyle.None;
+			this.m_ts_multiview.ImageScalingSize = new System.Drawing.Size(28, 28);
+			this.m_ts_multiview.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_lbl_link_cameras,
             this.m_btn_link_camera_left_right,
             this.m_btn_link_camera_up_down,
             this.m_btn_link_camera_in_out,
-            this.m_btn_link_camera_rotate});
-			this.m_ts.Location = new System.Drawing.Point(3, 24);
-			this.m_ts.Name = "m_ts";
-			this.m_ts.Size = new System.Drawing.Size(261, 45);
-			this.m_ts.TabIndex = 1;
+            this.m_btn_link_camera_rotate,
+            this.toolStripSeparator16,
+            this.m_lbl_link_axes,
+            this.m_btn_link_xaxis,
+            this.m_btn_link_yaxis});
+			this.m_ts_multiview.Location = new System.Drawing.Point(3, 24);
+			this.m_ts_multiview.Name = "m_ts_multiview";
+			this.m_ts_multiview.Size = new System.Drawing.Size(381, 35);
+			this.m_ts_multiview.TabIndex = 1;
 			// 
 			// m_lbl_link_cameras
 			// 
 			this.m_lbl_link_cameras.Name = "m_lbl_link_cameras";
-			this.m_lbl_link_cameras.Size = new System.Drawing.Size(81, 42);
+			this.m_lbl_link_cameras.Size = new System.Drawing.Size(81, 32);
 			this.m_lbl_link_cameras.Text = "Link Cameras:";
 			// 
 			// m_btn_link_camera_left_right
@@ -1596,7 +1627,7 @@ namespace LDraw
 			this.m_btn_link_camera_left_right.Image = global::LDraw.Properties.Resources.green_left_right;
 			this.m_btn_link_camera_left_right.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_link_camera_left_right.Name = "m_btn_link_camera_left_right";
-			this.m_btn_link_camera_left_right.Size = new System.Drawing.Size(42, 42);
+			this.m_btn_link_camera_left_right.Size = new System.Drawing.Size(32, 32);
 			this.m_btn_link_camera_left_right.ToolTipText = "Apply camera navigation to all views";
 			// 
 			// m_btn_link_camera_up_down
@@ -1606,7 +1637,7 @@ namespace LDraw
 			this.m_btn_link_camera_up_down.Image = global::LDraw.Properties.Resources.green_up_down;
 			this.m_btn_link_camera_up_down.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_link_camera_up_down.Name = "m_btn_link_camera_up_down";
-			this.m_btn_link_camera_up_down.Size = new System.Drawing.Size(42, 42);
+			this.m_btn_link_camera_up_down.Size = new System.Drawing.Size(32, 32);
 			// 
 			// m_btn_link_camera_in_out
 			// 
@@ -1615,7 +1646,7 @@ namespace LDraw
 			this.m_btn_link_camera_in_out.Image = global::LDraw.Properties.Resources.green_in_out;
 			this.m_btn_link_camera_in_out.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_link_camera_in_out.Name = "m_btn_link_camera_in_out";
-			this.m_btn_link_camera_in_out.Size = new System.Drawing.Size(42, 42);
+			this.m_btn_link_camera_in_out.Size = new System.Drawing.Size(32, 32);
 			// 
 			// m_btn_link_camera_rotate
 			// 
@@ -1624,7 +1655,38 @@ namespace LDraw
 			this.m_btn_link_camera_rotate.Image = global::LDraw.Properties.Resources.green_rotate;
 			this.m_btn_link_camera_rotate.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_link_camera_rotate.Name = "m_btn_link_camera_rotate";
-			this.m_btn_link_camera_rotate.Size = new System.Drawing.Size(42, 42);
+			this.m_btn_link_camera_rotate.Size = new System.Drawing.Size(32, 32);
+			// 
+			// toolStripSeparator16
+			// 
+			this.toolStripSeparator16.Name = "toolStripSeparator16";
+			this.toolStripSeparator16.Size = new System.Drawing.Size(6, 35);
+			// 
+			// m_lbl_link_axes
+			// 
+			this.m_lbl_link_axes.Name = "m_lbl_link_axes";
+			this.m_lbl_link_axes.Size = new System.Drawing.Size(59, 32);
+			this.m_lbl_link_axes.Text = "Link Axes:";
+			// 
+			// m_btn_link_xaxis
+			// 
+			this.m_btn_link_xaxis.CheckOnClick = true;
+			this.m_btn_link_xaxis.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_link_xaxis.Image = global::LDraw.Properties.Resources.XAxis;
+			this.m_btn_link_xaxis.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_link_xaxis.Name = "m_btn_link_xaxis";
+			this.m_btn_link_xaxis.Size = new System.Drawing.Size(32, 32);
+			this.m_btn_link_xaxis.Text = "X";
+			// 
+			// m_btn_link_yaxis
+			// 
+			this.m_btn_link_yaxis.CheckOnClick = true;
+			this.m_btn_link_yaxis.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_link_yaxis.Image = global::LDraw.Properties.Resources.YAxis;
+			this.m_btn_link_yaxis.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_link_yaxis.Name = "m_btn_link_yaxis";
+			this.m_btn_link_yaxis.Size = new System.Drawing.Size(32, 32);
+			this.m_btn_link_yaxis.Text = "toolStripButton2";
 			// 
 			// MainUI
 			// 
@@ -1646,8 +1708,8 @@ namespace LDraw
 			this.m_ss.PerformLayout();
 			this.m_menu.ResumeLayout(false);
 			this.m_menu.PerformLayout();
-			this.m_ts.ResumeLayout(false);
-			this.m_ts.PerformLayout();
+			this.m_ts_multiview.ResumeLayout(false);
+			this.m_ts_multiview.PerformLayout();
 			this.ResumeLayout(false);
 
 		}

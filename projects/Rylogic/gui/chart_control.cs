@@ -3625,24 +3625,10 @@ namespace pr.gui
 					#region Show Cross Hair
 					{
 						var opt = tools_menu.DropDownItems.Add2(new ToolStripMenuItem("Show Cross Hair") { Name = CMenu.ToolsMenu.ShowXHair });
-						opt.Checked = m_show_cross_hair;
+						opt.Checked = CrossHairVisible;
 						opt.Click += (s, a) =>
 						{
-							if (m_show_cross_hair)
-							{
-								MouseMove -= OnMouseMoveCrossHair;
-								MouseWheel -= OnMouseWheelCrossHair;
-								Scene.RemoveObject(m_tools.CrossHairH);
-								Scene.RemoveObject(m_tools.CrossHairV);
-							}
-							m_show_cross_hair = !m_show_cross_hair;
-							if (m_show_cross_hair)
-							{
-								Scene.AddObject(m_tools.CrossHairH);
-								Scene.AddObject(m_tools.CrossHairV);
-								MouseWheel += OnMouseWheelCrossHair;
-								MouseMove += OnMouseMoveCrossHair;
-							}
+							CrossHairVisible = !CrossHairVisible;
 							Invalidate();
 						};
 					}
@@ -3796,7 +3782,61 @@ namespace pr.gui
 		#region Show Cross Hair
 
 		/// <summary>True while the cross hair is visible</summary>
-		private bool m_show_cross_hair;
+		public bool CrossHairVisible
+		{
+			get { return m_cross_hair_visible; }
+			set
+			{
+				if (m_cross_hair_visible == value) return;
+				if (m_cross_hair_visible)
+				{
+					MouseMove -= OnMouseMoveCrossHair;
+					MouseWheel -= OnMouseWheelCrossHair;
+					Scene.RemoveObject(m_tools.CrossHairH);
+					Scene.RemoveObject(m_tools.CrossHairV);
+				}
+				m_cross_hair_visible = value;
+				if (m_cross_hair_visible)
+				{
+					Scene.AddObject(m_tools.CrossHairH);
+					Scene.AddObject(m_tools.CrossHairV);
+					MouseWheel += OnMouseWheelCrossHair;
+					MouseMove += OnMouseMoveCrossHair;
+				}
+				Invalidate();
+			}
+		}
+		private bool m_cross_hair_visible;
+
+		/// <summary>The current location of the cross hair (world space point)</summary>
+		public v4 CrossHairLocation
+		{
+			get { return m_cross_hair_location; }
+			set
+			{
+				if (m_cross_hair_location == value) return;
+				m_cross_hair_location = value;
+
+				// Scale to fill the view
+				var view = Camera.ViewArea(Camera.FocusDist);
+				if (m_tools.CrossHairH != null)
+				{
+					var o2w = new m4x4(Camera.O2W.rot, new v4((float)XAxis.Centre, m_cross_hair_location.y, m_cross_hair_location.z, 1f));
+					m_tools.CrossHairH.O2P = o2w * m3x4.Scale(view.x * 2f, 1f, 1f).m4x4;
+				}
+				if (m_tools.CrossHairV != null)
+				{
+					var o2w = new m4x4(Camera.O2W.rot, new v4(m_cross_hair_location.x, (float)YAxis.Centre, m_cross_hair_location.z, 1f));
+					m_tools.CrossHairV.O2P = o2w * m3x4.Scale(1f, view.y * 2f, 1f).m4x4;
+				}
+
+				// Notify of the new cross hair location
+				CrossHairMoved.Raise(this);
+				Invalidate();
+				Update();
+			}
+		}
+		private v4 m_cross_hair_location;
 
 		/// <summary>Update the cross hair on mouse move</summary>
 		private void OnMouseMoveCrossHair(object sender, MouseEventArgs e)
@@ -3816,19 +3856,12 @@ namespace pr.gui
 				// Position the cross hair
 				var ss_pt = Drawing_.Subtract(location, ChartBounds.TopLeft()).ToPoint();
 				var ws_pt = Camera.SSPointToWSPoint(ss_pt);
-				var o2w = new m4x4(Camera.O2W.rot, ws_pt);
-
-				// Scale to fill the view
-				var view = Camera.ViewArea(Camera.FocusDist);
-				if (m_tools.CrossHairH != null)
-					m_tools.CrossHairH.O2P = o2w * m3x4.Scale(view.x * 2f, 1f, 1f).m4x4;
-				if (m_tools.CrossHairV != null)
-					m_tools.CrossHairV.O2P = o2w * m3x4.Scale(1f, view.y * 2f, 1f).m4x4;
-
-				Invalidate();
+				CrossHairLocation = ws_pt;
 			}
 		}
 
+		/// <summary>Raised when the cross hair is visible and moved</summary>
+		public event EventHandler CrossHairMoved;
 		#endregion
 
 		#region Tools

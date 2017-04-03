@@ -438,13 +438,6 @@ namespace pr.extn
 			ancestors.Reverse();
 			return string.Join("->", ancestors);
 		}
-
-		/// <summary>Convenience method for setting the visibility and enabled state of this control in one call. null means no change</summary>
-		public static void VisEnable(this Control ctrl, bool? visible, bool? enabled)
-		{
-			if (visible != null) ctrl.Visible = visible.Value;
-			if (enabled != null) ctrl.Enabled = enabled.Value;
-		}
 	}
 
 	/// <summary>Used to persist control locations and sizes in XML</summary>

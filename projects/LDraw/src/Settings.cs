@@ -21,8 +21,9 @@ namespace LDraw
 			AutoRefresh = false;
 			ResetOnLoad = true;
 			LinkCameras = ELinkCameras.None;
-			Scenes = new SceneSettings[1] { new SceneSettings() };
-			UI = new UISettings();
+			LinkAxes    = ELinkAxes.None;
+			Scenes      = new SceneSettings[1] { new SceneSettings() };
+			UI          = new UISettings();
 
 			AutoSaveOnChanges = true;
 		}
@@ -58,6 +59,13 @@ namespace LDraw
 		{
 			get { return get(x => x.LinkCameras); }
 			set { set(x => x.LinkCameras, value); }
+		}
+
+		/// <summary>Bitmask of linked grid axes in all scenes</summary>
+		public ELinkAxes LinkAxes
+		{
+			get { return get(x => x.LinkAxes); }
+			set { set(x => x.LinkAxes, value); }
 		}
 
 		/// <summary>Style options for scenes</summary>

@@ -109,9 +109,9 @@ namespace LDraw
 			case ListChg.ItemRemoved:
 				{
 					Owner.DockContainer.Remove(scene);
-					scene.Window.MouseNavigating -= HandleMouseNavigating;
 					scene.Options.PropertyChanged -= Owner.UpdateUI;
 					Util.Dispose(ref scene);
+					Owner.UpdateUI();
 					break;
 				}
 			case ListChg.ItemAdded:
@@ -124,8 +124,8 @@ namespace LDraw
 						dloc.Address = loc.Address.Concat(CurrentScene.Bounds.Aspect() > 1 ? EDockSite.Right : EDockSite.Bottom).ToArray();
 					}
 					scene.Options.PropertyChanged += Owner.UpdateUI;
-					scene.Window.MouseNavigating += HandleMouseNavigating;
 					Owner.DockContainer.Add(scene, dloc);
+					Owner.UpdateUI();
 					break;
 				}
 			}
@@ -140,11 +140,20 @@ namespace LDraw
 				if (m_current_scene == value) return;
 				if (m_current_scene != null)
 				{
+					m_current_scene.Window.MouseNavigating  -= HandleMouseNavigating;
+					m_current_scene.ChartMoved              -= HandleChartMoved;
+					m_current_scene.CrossHairMoved          -= HandleCrossHairMoved;
 				}
 				Debug.Assert(value != null);
 				m_current_scene = value;
 				if (m_current_scene != null)
 				{
+					m_current_scene.Window.MouseNavigating  += HandleMouseNavigating;
+					m_current_scene.ChartMoved              += HandleChartMoved;
+					m_current_scene.CrossHairMoved          += HandleCrossHairMoved;
+
+					LinkSceneAxes();
+					LinkSceneCrossHairs();
 				}
 			}
 		}
@@ -204,6 +213,20 @@ namespace LDraw
 			}
 		}
 		private ELinkCameras m_link_cameras;
+
+		/// <summary>Get/Set whether the X/Y axes of the scenes are linked</summary>
+		public ELinkAxes LinkAxes
+		{
+			get { return m_link_axes; }
+			set
+			{
+				if (m_link_axes == value) return;
+				Settings.LinkAxes = value;
+				m_link_axes = value;
+				LinkSceneAxes();
+			}
+		}
+		private ELinkAxes m_link_axes;
 
 		/// <summary>Return the settings for a scene with the given name</summary>
 		public SceneSettings SceneSettings(string name)
@@ -292,6 +315,79 @@ namespace LDraw
 		}
 		private Timer m_timer_refresh;
 
+		/// <summary>Apply the current scene axes to all other scenes if linked</summary>
+		private void LinkSceneAxes()
+		{
+			if (LinkAxes == ELinkAxes.None)
+				return;
+
+			// Set the axes ranges in the other scenes
+			foreach (var scene in Scenes.Except(CurrentScene).ToArray())
+			{
+				var update = false;
+				if (LinkAxes.HasFlag(ELinkAxes.XAxis))
+				{
+					scene.XAxis.Range = CurrentScene.XAxis.Range;
+					update = true;
+				}
+				if (LinkAxes.HasFlag(ELinkAxes.YAxis))
+				{
+					scene.YAxis.Range = CurrentScene.YAxis.Range;
+					update = true;
+				}
+				if (update)
+				{
+					scene.SetCameraFromRange();
+					scene.Invalidate();
+					scene.Update();
+				}
+			}
+		}
+
+		/// <summary>Apply navigation operations to all scenes</summary>
+		private void LinkSceneCameras(View3d.Window.MouseNavigateEventArgs e)
+		{
+			if (LinkCameras == ELinkCameras.None)
+				return;
+
+			// Replicate navigation commands in the other scenes
+			foreach (var scene in Scenes.Except(CurrentScene).ToArray())
+			{
+				// Use the camera lock to limit motion
+				using (Scope.Create(() => scene.Camera.LockMask, m => scene.Camera.LockMask = m))
+				{
+					var lock_mask = View3d.ECameraLockMask.All;
+					if (LinkCameras.HasFlag(ELinkCameras.LeftRight) && !LinkAxes.HasFlag(ELinkAxes.XAxis)) lock_mask = Bit.SetBits(lock_mask, View3d.ECameraLockMask.TransX, false);
+					if (LinkCameras.HasFlag(ELinkCameras.UpDown   ) && !LinkAxes.HasFlag(ELinkAxes.YAxis)) lock_mask = Bit.SetBits(lock_mask, View3d.ECameraLockMask.TransY, false);
+					if (LinkCameras.HasFlag(ELinkCameras.InOut    )) lock_mask = Bit.SetBits(lock_mask, View3d.ECameraLockMask.TransZ|View3d.ECameraLockMask.Zoom, false);
+					if (LinkCameras.HasFlag(ELinkCameras.Rotate   )) lock_mask = Bit.SetBits(lock_mask, View3d.ECameraLockMask.RotX|View3d.ECameraLockMask.RotY|View3d.ECameraLockMask.RotZ, false);
+					scene.Camera.LockMask = lock_mask;
+
+					// Replicate the navigation command
+					if (!e.ZNavigation)
+						scene.Window.MouseNavigate(e.Point, e.NavOp, e.NavBegOrEnd);
+					else
+						scene.Window.MouseNavigateZ(e.Point, e.Delta, e.AlongRay);
+
+					scene.SetRangeFromCamera();
+					scene.Invalidate();
+					scene.Update();
+				}
+			}
+		}
+
+		/// <summary>Synchronise the cross hairs in all scenes</summary>
+		private void LinkSceneCrossHairs()
+		{
+			// Position the cross hairs in other scenes
+			foreach (var scene in Scenes.Except(CurrentScene).ToArray())
+			{
+				scene.CrossHairVisible = CurrentScene.CrossHairVisible;
+				if (scene.CrossHairVisible)
+					scene.CrossHairLocation = CurrentScene.CrossHairLocation;
+			}
+		}
+
 		/// <summary>Handle notification that the script sources are about to be reloaded</summary>
 		private void HandleSourcesChanged(object sender, View3d.SourcesChangedEventArgs e)
 		{
@@ -327,41 +423,22 @@ namespace LDraw
 		/// <summary>Handle mouse navigation</summary>
 		private void HandleMouseNavigating(object sender, View3d.Window.MouseNavigateEventArgs e)
 		{
-			if (LinkCameras == ELinkCameras.None)
-				return;
-
-			if (m_in_handle_mouse_navigating != 0) return;
-			using (Scope.Create(() => ++m_in_handle_mouse_navigating, () => --m_in_handle_mouse_navigating))
-			{
-				// Replicate navigation commands in the other scenes
-				var scenes = Scenes.Where(x => x.Window != sender).ToArray();
-				foreach (var scene in scenes)
-				{
-					// Use the camera lock to limit motion
-					using (Scope.Create(() => scene.Camera.LockMask, m => scene.Camera.LockMask = m))
-					{
-						var lock_mask = View3d.ECameraLockMask.All;
-						if (LinkCameras.HasFlag(ELinkCameras.LeftRight)) lock_mask = Bit.SetBits(lock_mask, View3d.ECameraLockMask.TransX, false);
-						if (LinkCameras.HasFlag(ELinkCameras.UpDown   )) lock_mask = Bit.SetBits(lock_mask, View3d.ECameraLockMask.TransY, false);
-						if (LinkCameras.HasFlag(ELinkCameras.InOut    )) lock_mask = Bit.SetBits(lock_mask, View3d.ECameraLockMask.TransZ|View3d.ECameraLockMask.Zoom, false);
-						if (LinkCameras.HasFlag(ELinkCameras.Rotate   )) lock_mask = Bit.SetBits(lock_mask, View3d.ECameraLockMask.RotX|View3d.ECameraLockMask.RotY|View3d.ECameraLockMask.RotZ, false);
-						scene.Camera.LockMask = lock_mask;
-
-						// Replicate the navigation command
-						if (!e.ZNavigation)
-							scene.Window.MouseNavigate(e.Point, e.NavOp, e.NavBegOrEnd);
-						else
-							scene.Window.MouseNavigateZ(e.Point, e.Delta, e.AlongRay);
-					}
-
-					scene.SetRangeFromCamera();
-					scene.Invalidate();
-					scene.Update();
-				}
-			}
+			LinkSceneCameras(e);
 		}
-		private int m_in_handle_mouse_navigating;
 
+		/// <summary>Handle the scene moving</summary>
+		private void HandleChartMoved(object sender, ChartControl.ChartMovedEventArgs e)
+		{
+			LinkSceneAxes();
+		}
+
+		/// <summary>Handle the cross hair moving on the current scene</summary>
+		private void HandleCrossHairMoved(object sender, EventArgs e)
+		{
+			LinkSceneCrossHairs();
+		}
+
+		/// <summary>File loading progress data</summary>
 		public AddFileProgressData AddFileProgress { get; private set; }
 		public class AddFileProgressData
 		{

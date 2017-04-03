@@ -12,4 +12,12 @@ namespace LDraw
 		Rotate    = 1 << 3,
 		All       = ~None,
 	}
+
+	[Flags] public enum ELinkAxes
+	{
+		None  = 0,
+		XAxis = 1 << 0,
+		YAxis = 1 << 1,
+		All   = ~None,
+	}
 }
