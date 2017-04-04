@@ -325,12 +325,35 @@ namespace pr.gui
 				(float)(YAxis.Min - (client_point.Y - Scene.Bounds.Bottom) * YAxis.Span / Scene.Bounds.Height));
 		}
 
-		/// <summary>Returns a point in client space from a point in chart space. Inverse of PointToChart</summary>
+		/// <summary>Returns a point in client space from a point in chart space. Inverse of ClientToChart</summary>
 		public Point ChartToClient(PointF chart_point)
 		{
 			return new Point(
 				(int)(Scene.Bounds.Left   + (chart_point.X - XAxis.Min) * Scene.Bounds.Width  / XAxis.Span),
 				(int)(Scene.Bounds.Bottom - (chart_point.Y - YAxis.Min) * Scene.Bounds.Height / YAxis.Span));
+		}
+
+		/// <summary>Return a point in camera space from a point in chart space (Z = focus plane)</summary>
+		public v4 ChartToCamera(PointF chart_point)
+		{
+			// Remove the camera to origin offset
+			var origin_cs = Camera.W2O.pos.xy;
+			var pt = new v2(chart_point) + origin_cs;
+			return new v4(pt, -Camera.FocusDist, 1f);
+		}
+
+		/// <summary>Return a point in chart space from a point in camera space</summary>
+		public PointF CameraToChart(v4 camera_point)
+		{
+			Debug.Assert(camera_point.z != 0);
+
+			// Project the camera space point onto the focus plane
+			var proj = -Camera.FocusDist / camera_point.z;
+			var pt = new v2(camera_point.x * proj, camera_point.y * proj);
+
+			// Add the offset of the camera from the origin
+			var origin_cs = Camera.W2O.pos.xy;
+			return pt - origin_cs;
 		}
 
 		/// <summary>
@@ -2624,7 +2647,7 @@ namespace pr.gui
 			public override void MouseMove(MouseEventArgs e)
 			{
 				// If we haven't dragged, treat it as a click instead (i.e. ignore till it's a drag operation)
-				if (IsClick(e.Location))
+				if (IsClick(e.Location) && !m_selection_graphic_added)
 					return;
 
 				var drag_selected = m_chart.AllowEditing && m_hit_selected != null;
@@ -2728,20 +2751,59 @@ namespace pr.gui
 		/// <summary>A mouse operation for zooming (Middle Button)</summary>
 		public class MouseOpDefaultMButton :MouseOp
 		{
+			private HintBalloon m_tape_measure_balloon;
+			private bool m_tape_measure_graphic_added;
+
 			public MouseOpDefaultMButton(ChartControl chart) :base(chart)
-			{}
+			{
+				m_tape_measure_balloon = new HintBalloon
+				{
+					AutoSizeMode = AutoSizeMode.GrowOnly,
+					Font = new Font(FontFamily.GenericMonospace, 8f),
+					Owner = chart.TopLevelControl as Form,
+				};
+				m_tape_measure_graphic_added = false;
+			}
+			public override void Dispose()
+			{
+				base.Dispose();
+			}
 			public override void MouseDown(MouseEventArgs e)
 			{
+				// If mouse down occurred within the chart, record it
+				if (m_chart.ChartBounds.Contains(e.Location))
+				{
+					m_chart.Cursor = Cursors.CrossHair;
+				}
 			}
 			public override void MouseMove(MouseEventArgs e)
 			{
 				// If we haven't dragged, treat it as a click instead (i.e. ignore till it's a drag operation)
-				if (IsClick(e.Location))
+				if (IsClick(e.Location) && !m_tape_measure_graphic_added)
 					return;
 
-				// Todo zoom based on move while the middle button down
+				// Position the tape measure graphic
+				var pt0 = m_chart.Camera.O2W * m_chart.ChartToCamera(m_grab_chart);
+				var pt1 = m_chart.Camera.O2W * m_chart.ChartToCamera(m_chart.ClientToChart(e.Location));
+				var delta = pt1 - pt0;
+				m_chart.Tools.TapeMeasure.O2P = m4x4.OriFromDir(delta, AxisId.PosZ, pt0) * m4x4.Scale(1f, 1f, delta.Length3, v4.Origin);
+				m_tape_measure_balloon.Location = m_chart.PointToScreen(e.Location);
+				m_tape_measure_balloon.Text = Str.Build(
+					"dX: {0}\r\n".Fmt(delta.x),
+					"dY: {0}\r\n".Fmt(delta.y),
+					"dZ: {0}\r\n".Fmt(delta.z),
+					"Len: {0}\r\n".Fmt(delta.Length3));
+
+				// Show the tape measure graphic (after the text has been initialised)
+				if (!m_tape_measure_graphic_added)
+				{
+					m_chart.Scene.AddObject(m_chart.Tools.TapeMeasure);
+					m_tape_measure_graphic_added = true;
+					m_tape_measure_balloon.Visible = true;
+				}
 
 				m_chart.Invalidate();
+				m_chart.Update();
 			}
 			public override void MouseUp(MouseEventArgs e)
 			{
@@ -2767,6 +2829,13 @@ namespace pr.gui
 				// Otherwise this is a drag action
 				else
 				{
+				}
+
+				// Remove the tape measure graphic
+				if (m_tape_measure_graphic_added)
+				{
+					m_chart.Scene.RemoveObject(m_chart.Tools.TapeMeasure);
+					m_tape_measure_balloon.Visible = false;
 				}
 
 				m_chart.Cursor = Cursors.Default;
@@ -3808,8 +3877,8 @@ namespace pr.gui
 		}
 		private bool m_cross_hair_visible;
 
-		/// <summary>The current location of the cross hair (world space point)</summary>
-		public v4 CrossHairLocation
+		/// <summary>The chart-space location of the cross hair</summary>
+		public PointF CrossHairLocation
 		{
 			get { return m_cross_hair_location; }
 			set
@@ -3819,15 +3888,18 @@ namespace pr.gui
 
 				// Scale to fill the view
 				var view = Camera.ViewArea(Camera.FocusDist);
+				var pt_cs = ChartToCamera(m_cross_hair_location);
 				if (m_tools.CrossHairH != null)
 				{
-					var o2w = new m4x4(Camera.O2W.rot, new v4((float)XAxis.Centre, m_cross_hair_location.y, m_cross_hair_location.z, 1f));
-					m_tools.CrossHairH.O2P = o2w * m3x4.Scale(view.x * 2f, 1f, 1f).m4x4;
+					// Shift the position to the centre of the camera view
+					var o2w = new m4x4(Camera.O2W.rot, Camera.O2W * new v4(0, pt_cs.y, pt_cs.z, 1f));
+					m_tools.CrossHairH.O2P = o2w * m3x4.Scale(view.x, 1f, 1f).m4x4;
 				}
 				if (m_tools.CrossHairV != null)
 				{
-					var o2w = new m4x4(Camera.O2W.rot, new v4(m_cross_hair_location.x, (float)YAxis.Centre, m_cross_hair_location.z, 1f));
-					m_tools.CrossHairV.O2P = o2w * m3x4.Scale(1f, view.y * 2f, 1f).m4x4;
+					// Shift the position to the centre of the camera view
+					var o2w = new m4x4(Camera.O2W.rot, Camera.O2W * new v4(pt_cs.x, 0, pt_cs.z, 1f));
+					m_tools.CrossHairV.O2P = o2w * m3x4.Scale(1f, view.y, 1f).m4x4;
 				}
 
 				// Notify of the new cross hair location
@@ -3836,27 +3908,23 @@ namespace pr.gui
 				Update();
 			}
 		}
-		private v4 m_cross_hair_location;
+		private PointF m_cross_hair_location;
 
 		/// <summary>Update the cross hair on mouse move</summary>
 		private void OnMouseMoveCrossHair(object sender, MouseEventArgs e)
 		{
-			SetCrossHair(e.Location);
+			if (Scene.Bounds.Contains(e.Location))
+			{
+				CrossHairLocation = ClientToChart(e.Location);
+				Invalidate();
+			}
 		}
 		private void OnMouseWheelCrossHair(object sender, MouseEventArgs e)
 		{
-			SetCrossHair(e.Location);
-		}
-
-		/// <summary>Update the cross hair position. 'location' is in client space</summary>
-		private void SetCrossHair(Point location)
-		{
-			if (Scene.Bounds.Contains(location))
+			if (Scene.Bounds.Contains(e.Location))
 			{
-				// Position the cross hair
-				var ss_pt = Drawing_.Subtract(location, ChartBounds.TopLeft()).ToPoint();
-				var ws_pt = Camera.SSPointToWSPoint(ss_pt);
-				CrossHairLocation = ws_pt;
+				CrossHairLocation = ClientToChart(e.Location);
+				Invalidate();
 			}
 		}
 
@@ -3889,19 +3957,21 @@ namespace pr.gui
 				if (Util.IsInDesignMode)
 					return;
 
-				Options    = opts;
-				AreaSelect = CreateAreaSelect();
-				Resizer    = Util.NewArray(8, i => new ResizeGrabber(i));
-				CrossHairH = CreateCrossHair(true);
-				CrossHairV = CreateCrossHair(false);
+				Options     = opts;
+				AreaSelect  = CreateAreaSelect();
+				Resizer     = Util.NewArray(8, i => new ResizeGrabber(i));
+				CrossHairH  = CreateCrossHair(true);
+				CrossHairV  = CreateCrossHair(false);
+				TapeMeasure = CreateTapeMeasure();
 			}
 			public void Dispose()
 			{
-				Options = null;
-				AreaSelect = null;
-				Resizer = null;
-				CrossHairH = null;
-				CrossHairV = null;
+				Options     = null;
+				AreaSelect  = null;
+				Resizer     = null;
+				CrossHairH  = null;
+				CrossHairV  = null;
+				TapeMeasure = null;
 			}
 
 			/// <summary>Chart options</summary>
@@ -3950,7 +4020,7 @@ namespace pr.gui
 			private ResizeGrabber[] m_resizer;
 			public class ResizeGrabber :View3d.Object
 			{
-				public ResizeGrabber(int corner) :base("*Box {5}", false, Id, null)
+				public ResizeGrabber(int corner) :base("*Box resizer_{0} {{5}}".Fmt(corner), false, Id, null)
 				{
 					switch (corner)
 					{
@@ -4034,8 +4104,27 @@ namespace pr.gui
 			{
 				var col = Options.ChartBkColour.ToV4().Length3 > 0.5 ? 0xFFFFFFFF : 0xFF000000;
 				var str = horiz
-					? Ldr.Line("chart_cross_hair_h", col, new v4(-1f, 0, 0, 1f), new v4(+1f, 0, 0, 1f))
-					: Ldr.Line("chart_cross_hair_v", col, new v4(0, -1f, 0, 1f), new v4(0, +1f, 0, 1f));
+					? Ldr.Line("chart_cross_hair_h", col, new v4(-0.5f, 0, 0, 1f), new v4(+0.5f, 0, 0, 1f))
+					: Ldr.Line("chart_cross_hair_v", col, new v4(0, -0.5f, 0, 1f), new v4(0, +0.5f, 0, 1f));
+				return new View3d.Object(str, false, Id, null);
+			}
+
+			/// <summary>A line for measuring distances</summary>
+			public View3d.Object TapeMeasure
+			{
+				get { return m_tape_measure; }
+				private set
+				{
+					if (m_tape_measure == value) return;
+					Util.Dispose(ref m_tape_measure);
+					m_tape_measure = value;
+				}
+			}
+			public View3d.Object m_tape_measure;
+			private View3d.Object CreateTapeMeasure()
+			{
+				var col = Options.ChartBkColour.ToV4().Length3 > 0.5 ? 0xFFFFFFFF : 0xFF000000;
+				var str = Ldr.Line("tape_measure", col, new v4(0, 0, 0, 1f), new v4(0, 0, 1f, 1f));
 				return new View3d.Object(str, false, Id, null);
 			}
 
@@ -4182,6 +4271,7 @@ namespace pr.gui
 			public static readonly Cursor Arrow      = Resources.cursor_arrow.ToCursor(Point.Empty);
 			public static readonly Cursor ArrowPlus  = Resources.cursor_arrow_plus.ToCursor(Point.Empty);
 			public static readonly Cursor ArrowMinus = Resources.cursor_arrow_minus.ToCursor(Point.Empty);
+			public static readonly Cursor CrossHair  = System.Windows.Forms.Cursors.Cross;
 		}
 
 		///// <summary>String constants used in XML export/import</summary>

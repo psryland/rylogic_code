@@ -13,7 +13,6 @@ namespace Rylobot
 		{
 			Bot                = bot;
 			Position           = pos;
-			CloseHalfAtMinRtR  = true;
 			MinRtR             = 1.0;
 			MinRtRCrossedIndex = null;
 			Closed             = false;
@@ -139,9 +138,6 @@ namespace Rylobot
 		/// <summary>True if the current step is a gain in profit</summary>
 		public bool IsGain { get; private set; }
 
-		/// <summary>When profit gets to MinRtR, close half the volume and move the SL to break event</summary>
-		public bool CloseHalfAtMinRtR { get; set; }
-
 		/// <summary>The minimum reward to risk ratio for the position (i.e. don't take less profit than this)</summary>
 		public double MinRtR { get; set; }
 
@@ -187,22 +183,7 @@ namespace Rylobot
 
 			// Check whether 'MinRtR' has been exceeded
 			if (MinRtRCrossedIndex == null && MinRtRExceeded)
-			{
 				MinRtRCrossedIndex = Instrument.Count - 1;
-
-				// When the MinRtR is reached, close half the position and move the SL to break even
-				if (CloseHalfAtMinRtR)
-				{
-					var vol = Bot.Symbol.NormalizeVolume(Position.Volume / 2);
-					var sl = Position.EntryPrice + Position.Sign() * Instrument.Spread * 2.0;
-
-					// If the position was at the minimum volume, just close it
-					if (Position.Volume == vol)
-						Broker.ClosePosition(Position);
-					else
-						Broker.ModifyOrder(Instrument, Position, sl:sl, vol:vol);
-				}
-			}
 
 			StepCore();
 		}
@@ -227,6 +208,19 @@ namespace Rylobot
 				var tp_rel = MinRtR * sl_rel;
 				return rel >= tp_rel;
 			}
+		}
+
+		/// <summary>Close half the position and move the SL to break even</summary>
+		protected void CloseHalf()
+		{
+			var vol = Bot.Symbol.NormalizeVolume(Position.Volume / 2);
+			var sl = Position.EntryPrice + Position.Sign() * Instrument.Spread * 2.0;
+
+			// If the position was at the minimum volume, just close it
+			if (Position.Volume == vol)
+				Broker.ClosePosition(Position);
+			else
+				Broker.ModifyOrder(Instrument, Position, sl:sl, vol:vol);
 		}
 
 		/// <summary>Handle position closed</summary>

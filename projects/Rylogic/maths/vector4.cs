@@ -627,6 +627,16 @@ namespace pr.maths
 
 	public static partial class Maths
 	{
+		/// <summary>Approximate equal</summary>
+		public static bool FEql(v4 lhs, v4 rhs, float tol)
+		{
+			return v4.FEql4(lhs, rhs, tol);
+		}
+		public static bool FEql(v4 lhs, v4 rhs)
+		{
+			return v4.FEql4(lhs, rhs);
+		}
+
 		public static v4 Min(v4 lhs, v4 rhs)
 		{
 			return v4.Min(lhs,rhs);

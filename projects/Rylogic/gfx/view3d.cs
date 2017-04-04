@@ -1463,6 +1463,10 @@ namespace pr.gfx
 				get { m4x4 c2w; View3D_CameraToWorld(m_window.Handle, out c2w); return c2w; }
 				set { View3D_SetCameraToWorld(m_window.Handle, ref value); }
 			}
+			public m4x4 W2O
+			{
+				get { return m4x4.InvertFast(O2W); }
+			}
 
 			/// <summary>Set the current O2W transform as the reference point</summary>
 			public void Commit()

@@ -203,7 +203,7 @@ namespace Rylobot
 			return win > los ? win : -los;
 		}
 
-		/// <summary>A flag for orders that causes them to be considered as if they are active positions</summary>
+		/// <summary>True if this order should be considered for risk management as though it was an active position</summary>
 		public bool TreatAsActive { get; set; }
 	}
 }

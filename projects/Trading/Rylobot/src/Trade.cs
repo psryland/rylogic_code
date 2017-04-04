@@ -21,7 +21,8 @@ namespace Rylobot
 		public enum EResult
 		{
 			Unknown,
-			Pending,
+			StopEntryOrder,
+			LimitOrder,
 
 			// All below here are considered open
 			Open,
@@ -51,10 +52,10 @@ namespace Rylobot
 			TP         = tp;
 			Volume     = volume;
 
-			PeakProfit  = 0.0;
-			PeakLoss    = 0.0;
-			NetProfit   = 0.0;
-			GrossProfit = 0.0;
+			MaxFavourableExcursion = 0.0;
+			MaxAdverseExcursion    = 0.0;
+			NetProfit              = 0.0;
+			GrossProfit            = 0.0;
 		}
 
 		/// <summary>
@@ -128,21 +129,36 @@ namespace Rylobot
 			EntryIndex = instr.IndexAt(pos.EntryTime   ) - instr.IdxFirst;
 			ExitIndex  = instr.IndexAt(instr.Bot.UtcNow) - instr.IdxFirst;
 
-			// Buy at the bid price, then: loss = EP - ask, profit = ask - EP
-			// Sell at the ask price, then: loss = bid - EP, profit = EP - bid
-			PeakProfit = Math.Max(0.0, (double)(TradeType == TradeType.Buy ? (instr.LatestPrice.Ask - EP) : (EP - instr.LatestPrice.Bid)));
-			PeakLoss   = Math.Min(0.0, (double)(TradeType == TradeType.Buy ? (EP - instr.LatestPrice.Ask) : (instr.LatestPrice.Bid - EP)));
-
 			NetProfit   = pos.NetProfit;
 			GrossProfit = pos.GrossProfit;
+
+			// Buy at the bid price, then: loss = EP - ask, profit = ask - EP
+			// Sell at the ask price, then: loss = bid - EP, profit = EP - bid
+			MaxFavourableExcursion = 0.0;
+			MaxAdverseExcursion    = 0.0;
+			for (var i = (int)EntryIndex; i != (int)ExitIndex; ++i)
+			{
+				var hi = Instrument.Data.High[i];
+				var lo = Instrument.Data.Low [i];
+				if (Sign > 0)
+				{
+					MaxAdverseExcursion = Math.Max(MaxAdverseExcursion, EP - lo);
+					MaxFavourableExcursion = Math.Max(MaxFavourableExcursion, hi - EP);
+				}
+				else
+				{
+					MaxAdverseExcursion = Math.Max(MaxAdverseExcursion, hi - EP);
+					MaxFavourableExcursion = Math.Max(MaxFavourableExcursion, EP - lo);
+				}
+			}
 		}
 
 		/// <summary>Construct a trade from an existing pending order</summary>
-		public Trade(Instrument instr, PendingOrder ord, EResult result = EResult.Pending)
+		public Trade(Instrument instr, PendingOrder ord, EResult? result = null)
 			:this(instr, ord.TradeType, ord.Label, ord.TargetPrice, ord.StopLoss, ord.TakeProfit, ord.Volume, comment:ord.Comment)
 		{
 			CAlgoId = ord.Id;
-			Result = result;
+			Result = result ?? (ord.OrderType == PendingOrderType.Limit ? EResult.LimitOrder : EResult.StopEntryOrder);
 
 			var now = instr.Bot.UtcNow;
 			var fin = ord.ExpirationTime ?? (now + Instrument.TimeFrame.ToTimeSpan(num:10));
@@ -157,7 +173,7 @@ namespace Rylobot
 		/// <summary>A name for this trade</summary>
 		public string Name
 		{
-			get { return "{0}_{1}".Fmt(Result == EResult.Pending ? "order" : "trade", Id); }
+			get { return "{0}_{1}".Fmt(Result == EResult.Open ? "trade" : "order", Id); }
 		}
 
 		/// <summary>The CAlgo Id for this trade</summary>
@@ -241,7 +257,7 @@ namespace Rylobot
 		/// <summary>True if the trade has not been triggered yet</summary>
 		public bool IsPending
 		{
-			get { return Result >= EResult.Pending && Result < EResult.Open; }
+			get { return Result == EResult.LimitOrder || Result == EResult.StopEntryOrder; }
 		}
 
 		/// <summary>True if the trade has not closed</summary>
@@ -280,20 +296,25 @@ namespace Rylobot
 		/// <summary>The raw profit/loss of this trade based on price only</summary>
 		public AcctCurrency GrossProfit { get; private set; }
 
-		/// <summary>The highest profit seen over the duration of the trade (in quote currency, relative, positive = profit)</summary>
-		public QuoteCurrency PeakProfit { get; private set; }
+		/// <summary>The best price seen over the duration of the trade (in quote currency, relative, positive = profit, not scaled by volume)</summary>
+		public QuoteCurrency MaxFavourableExcursion { get; private set; }
 
-		/// <summary>The highest loss seen over the duration of the trade (in currency, relative, positive = loss)</summary>
-		public QuoteCurrency PeakLoss { get; private set; }
+		/// <summary>The worst price seen over the duration of the trade (in currency, relative, positive = loss, not scaled by volume)</summary>
+		public QuoteCurrency MaxAdverseExcursion { get; private set; }
 
-		/// <summary>The highest reward to risk seen over the duration of the trade</summary>
+		/// <summary>The reward to risk seen over the duration of the trade</summary>
 		public double PeakRtR
 		{
-			get { return Maths.Div(Math.Max(0.0, PeakProfit), Math.Max(Instrument.PipSize, PeakLoss)); }
+			get
+			{
+				var mfe = Math.Max(0.0, MaxFavourableExcursion);
+				var mae = Math.Max(0.0, MaxAdverseExcursion);
+				return Maths.Div(mfe, mae);
+			}
 		}
 
 		/// <summary>Find the normalised maximum adverse and favourable excursion of price from the entry point of this trade</summary>
-		public RangeF[] MaxExcursion(int periods)
+		public RangeF[] MaxExcursionNormalised(int periods)
 		{
 			// The max adverse/favourable excursion of price
 			// from the entry price for 'periods' candles after entry
@@ -328,64 +349,140 @@ namespace Rylobot
 			return excursion;
 		}
 
-		/// <summary>Incorporate a candle into this trade</summary>
-		public void AddCandle(Candle candle, Idx index)
+		///// <summary>Incorporate a candle into this trade</summary>
+		//public void AddCandle(Candle candle)
+		//{
+		//	// Adding a candle "open"s an unknown trade
+		//	if (Result == EResult.Unknown)
+		//		Result = EResult.Open;
+
+		//	// If the trade is pending, look for an entry trigger
+		//	if (Result == EResult.LimitOrder)
+		//	{
+
+		//		if ((TradeType == TradeType.Buy  && candle.Close >= EP) ||
+		//			(TradeType == TradeType.Sell && candle.Close <= EP))
+		//		{
+		//			Result = EResult.Open;
+		//			EntryIndex = candle.Index;
+		//		}
+		//	}
+		//	if (Result == EResult.StopEntryOrder)
+		//	{
+		//	}
+
+		//	// Trade has closed out
+		//	if (Result == EResult.HitSL || Result == EResult.HitTP)
+		//		return;
+
+		//	// Otherwise, if this is an open trade.
+		//	if (Result == EResult.Open)
+		//	{
+		//		// Assume the worst for order of prices within a candle
+		//		var prices = TradeType.Sign() > 0
+		//			? new[] {candle.Open, candle.Low, candle.High, candle.Close }
+		//			: new[] {candle.Open, candle.High, candle.Low, candle.Close };
+
+		//		// Check each price value against the trade
+		//		var sign = TradeType.Sign();
+		//		foreach (var p in prices)
+		//		{
+		//			// If the trade is a buy, then it closes at the bid price.
+		//			var price = sign > 0 ? (QuoteCurrency)p : p + Instrument.Spread;
+
+		//			// SL hit
+		//			if (SL != null && sign * (price - SL.Value) < 0)
+		//			{
+		//				NetProfit = sign * Instrument.Symbol.QuoteToAcct(SL.Value - EP) * Volume;
+		//				MaxAdverseExcursion  = sign * (EP - SL.Value);
+		//				Result = EResult.HitSL;
+		//				Expiration = candle.TimestampUTC.DateTime; 
+		//				break;
+		//			}
+
+		//			// TP hit
+		//			if (TP != null && sign * (price - TP.Value) > 0)
+		//			{
+		//				NetProfit = sign * Instrument.Symbol.QuoteToAcct(TP.Value - EP) * Volume;
+		//				MaxFavourableExcursion = sign * (TP.Value - EP);
+		//				Result = EResult.HitTP;
+		//				Expiration = candle.TimestampUTC.DateTime;
+		//				break;
+		//			}
+
+		//			// Update the current profit
+		//			NetProfit = sign * Instrument.Symbol.QuoteToAcct(price - EP) * Volume;
+
+		//			// Record the peaks
+		//			MaxFavourableExcursion = Math.Max(MaxFavourableExcursion, sign * (price - EP));
+		//			MaxAdverseExcursion = Math.Max(MaxAdverseExcursion, sign * (EP - price));
+		//		}
+
+		//		ExitIndex = candle.Index;
+		//	}
+		//}
+
+		/// <summary>Simulate the behaviour of this trade by adding a stream of price ticks</summary>
+		public void Simulate(PriceTick price)
 		{
-			// Adding a candle "open"s an unknown candle
+			var sign = TradeType.Sign();
+
+			// Adding a price tick 'open's an unknown trade
 			if (Result == EResult.Unknown)
 				Result = EResult.Open;
 
-			// If the trade is pending, look of an entry trigger
-			if (Result == EResult.Pending)
+			// If the trade is pending, look for an entry trigger
+			if ((Result == EResult.LimitOrder     && Math.Sign(EP - price.Price(sign)) == sign) ||
+				(Result == EResult.StopEntryOrder && Math.Sign(price.Price(sign) - EP) == sign))
 			{
-				if ((TradeType == TradeType.Buy  && candle.Close >= EP) ||
-					(TradeType == TradeType.Sell && candle.Close <= EP))
-				{
-					Result = EResult.Open;
-					EntryIndex = (double)(index - Instrument.IdxFirst);
-				}
+				Result = EResult.Open;
+				EntryIndex = price.Index;
 			}
 
 			// Trade has closed out
-			if (Result == EResult.HitSL || Result == EResult.HitTP)
+			if (Result == EResult.HitSL ||
+				Result == EResult.HitTP)
 				return;
 
 			// Otherwise, if this is an open trade.
 			if (Result == EResult.Open)
 			{
-				// Assume the worst for order of prices within a candle
-				var prices = TradeType.Sign() > 0
-					? new[] {candle.Open, candle.Low, candle.High, candle.Close }
-					: new[] {candle.Open, candle.High, candle.Low, candle.Close };
-
-				var sign = TradeType.Sign();
-				foreach (var p in prices)
+				// SL hit
+				if (SL != null && sign * (price.Price(-sign) - SL.Value) < 0)
 				{
-					// SL hit
-					if (SL != null && sign * (SL.Value - p) > 0)
-					{
-						PeakLoss = sign * (EP - SL.Value);
-						Result = EResult.HitSL;
-						Expiration = candle.TimestampUTC.DateTime; 
-						break;
-					}
-
-					// TP hit
-					if (TP != null && sign * (p - TP.Value) > 0)
-					{
-						PeakProfit = sign * (TP.Value - EP);
-						Result = EResult.HitTP;
-						Expiration = candle.TimestampUTC.DateTime;
-						break;
-					}
-
-					// Record the peaks
-					PeakProfit = Math.Max(PeakProfit, sign * (p - EP));
-					PeakLoss   = Math.Max(PeakLoss  , sign * (EP - p));
+					NetProfit = sign * Instrument.Symbol.QuoteToAcct(SL.Value - EP) * Volume;
+					MaxAdverseExcursion  = sign * (EP - SL.Value);
+					Result = EResult.HitSL;
+					Expiration = price.TimestampUTC.DateTime; 
 				}
 
-				ExitIndex = (double)(index - Instrument.IdxFirst);
+				// TP hit
+				else if (TP != null && sign * (price.Price(-sign) - TP.Value) > 0)
+				{
+					NetProfit = sign * Instrument.Symbol.QuoteToAcct(TP.Value - EP) * Volume;
+					MaxFavourableExcursion = sign * (TP.Value - EP);
+					Result = EResult.HitTP;
+					Expiration = price.TimestampUTC.DateTime;
+				}
+
+				// Update the current profit
+				else
+				{
+					NetProfit = sign * Instrument.Symbol.QuoteToAcct(price.Price(-sign) - EP) * Volume;
+
+					// Record the peaks
+					MaxFavourableExcursion = Math.Max(MaxFavourableExcursion, sign * (price.Price(-sign) - EP));
+					MaxAdverseExcursion    = Math.Max(MaxAdverseExcursion   , sign * (EP - price.Price(-sign)));
+				}
+
+				ExitIndex = price.Index;
 			}
+		}
+
+		/// <summary>Simulate this trade being closed at the current price</summary>
+		public void Close()
+		{
+			Result = EResult.Closed;
 		}
 
 		/// <summary>Debugger string</summary>

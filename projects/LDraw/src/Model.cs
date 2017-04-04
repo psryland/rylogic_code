@@ -108,6 +108,9 @@ namespace LDraw
 			{
 			case ListChg.ItemRemoved:
 				{
+					if (CurrentScene == scene)
+						CurrentScene = Scenes.Except(scene).FirstOrDefault();
+
 					Owner.DockContainer.Remove(scene);
 					scene.Options.PropertyChanged -= Owner.UpdateUI;
 					Util.Dispose(ref scene);

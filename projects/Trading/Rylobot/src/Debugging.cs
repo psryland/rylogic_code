@@ -379,7 +379,7 @@ namespace Rylobot
 			var mfe = Util.NewArray<AvrVar>(periods);
 			foreach (var trade in AllTrades.Values)
 			{
-				var excursion = trade.MaxExcursion(periods);
+				var excursion = trade.MaxExcursionNormalised(periods);
 				for (int i = 0; i != periods; ++i)
 				{
 					mae[i].Add(excursion[i].Beg);
@@ -403,17 +403,18 @@ namespace Rylobot
 		#region Dump to Ldr File
 
 		/// <summary>Output the current price levels</summary>
-		public void CurrentPrice(Instrument instr, int? mcs_range = null, LdrBuilder ldr_ = null)
+		public void CurrentPrice(Instrument instr, LdrBuilder ldr_ = null)
 		{
 			if (!DebuggingEnabled) return;
 			var ldr = ldr_ ?? new LdrBuilder();
 
 			// Find the MCS
-			var mcs = instr.MedianCandleSize(-(mcs_range ?? 50), 1);
+			var mcs = instr.EMATrueRange(-20, 1);
+			//var mcs = instr.MCS;
 
-			ldr.Line("ASK", 0xFF00FF00, new v4(0 - (int)instr.IdxFirst, (float)instr.Symbol.Ask, 0, 1f), new v4(20 - (int)instr.IdxFirst, (float)instr.LatestPrice.Ask, 0, 1f));
-			ldr.Line("BID", 0xFFFF0000, new v4(0 - (int)instr.IdxFirst, (float)instr.Symbol.Bid, 0, 1f), new v4(20 - (int)instr.IdxFirst, (float)instr.LatestPrice.Bid, 0, 1f));
-			ldr.Rect("MCS", 0xFFFF80FF, AxisId.PosZ, 1f, (float)mcs, false, new v4(10 - (int)instr.IdxFirst, (float)instr.LatestPrice.Mid, 0, 1f));
+			ldr.Line("ASK", 0xFF00FF00, new v4(instr.IdxNow - instr.IdxFirst, (float)instr.Symbol.Ask, 0, 1f), new v4(20.0 - instr.IdxFirst, (float)instr.LatestPrice.Ask, 0, 1f));
+			ldr.Line("BID", 0xFFFF0000, new v4(instr.IdxNow - instr.IdxFirst, (float)instr.Symbol.Bid, 0, 1f), new v4(20.0 - instr.IdxFirst, (float)instr.LatestPrice.Bid, 0, 1f));
+			ldr.Rect("MCS", 0xFFFF80FF, AxisId.PosZ, 1f, (float)mcs, true, new v4(10.0 - instr.IdxFirst, (float)instr.LatestPrice.Mid, 0, 1f));
 
 			if (ldr_ == null)
 				ldr.ToFile(FP("{0}_currentprice.ldr".Fmt(instr.SymbolCode)));
@@ -591,9 +592,9 @@ namespace Rylobot
 				var x1      = (float)Math.Max(trade.ExitIndex, x0 + 5.0);
 				var w       = (float)(x1 - x0);
 				var xmid    = (float)(trade.EntryIndex + w/2);
-				var colr    = trade.Result == Trade.EResult.Pending ? 0x4000007FU : 0x400000FFU;
-				var sl_colr = trade.Result == Trade.EResult.Pending ? 0x407F0000U : 0x40FF0000U;
-				var tp_colr = trade.Result == Trade.EResult.Pending ? 0x40007F00U : 0x4000FF00U;
+				var colr    = trade.Result == Trade.EResult.Open ? 0x400000FFU : 0x4000007FU;
+				var sl_colr = trade.Result == Trade.EResult.Open ? 0x40FF0000U : 0x407F0000U;
+				var tp_colr = trade.Result == Trade.EResult.Open ? 0x4000FF00U : 0x40007F00U;
 
 				// Draw green for profit, red for loss
 				switch (trade.Result)
@@ -635,7 +636,8 @@ namespace Rylobot
 						ldr.Line("EP", colr, new v4(x0, (float)trade.EP, 0f, 1f), new v4(x1, (float)trade.EP, +0.001f, 1f));
 						break;
 					}
-				case Trade.EResult.Pending:
+				case Trade.EResult.LimitOrder:
+				case Trade.EResult.StopEntryOrder:
 					{
 						// EP, SL, TP lines
 						ldr.Line("EP", colr, new v4(x0, (float)trade.EP, 0f, 1f), new v4(x1, (float)trade.EP, +0.001f, 1f));

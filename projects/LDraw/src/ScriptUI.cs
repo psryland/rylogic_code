@@ -194,10 +194,11 @@ namespace LDraw
 		private void ClearScript()
 		{
 			Model.ContextIds.Remove(ContextId);
-
+			Model.CurrentScene.ContextIds.Remove(ContextId);
+			Model.CurrentScene.Invalidate();
+			
 			// Remove any objects previously created by this script
 			Model.View3d.DeleteAllObjects(ContextId);
-			Model.CurrentScene.Invalidate();
 		}
 
 		/// <summary>Render the script in this window</summary>
@@ -207,7 +208,9 @@ namespace LDraw
 
 			// Need a View3d method for rendering a string containing a scene
 			Model.View3d.LoadScript(Editor.Text, false, ContextId, null);
+
 			Model.ContextIds.Add(ContextId);
+			Model.CurrentScene.ContextIds.Add(ContextId);
 			Model.CurrentScene.Invalidate();
 		}
 

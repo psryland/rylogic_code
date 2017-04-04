@@ -53,7 +53,12 @@ namespace Rylobot
 		}
 		private Rylobot m_bot;
 
-		/// <summary>Called when the instrument data has been updated</summary>
+		/// <summary>Raised whenever candles are added/modified in this instrument</summary>
+		public event EventHandler<DataEventArgs> DataChanged;
+		private void OnDataChanged(DataEventArgs args)
+		{
+			DataChanged.Raise(this, args);
+		}
 		private void HandleTick(object sender, EventArgs e)
 		{
 			// Get the latest candle
@@ -87,20 +92,11 @@ namespace Rylobot
 			OnDataChanged(new DataEventArgs(this, candle, NewCandle));
 		}
 
-		/// <summary>
-		/// Return this instrument at a higher or lower time frame (e.g. this=h1, ratio=2 => h2. this=h1, ratio=0.5 => m30)).
-		/// Note: can't use this with back testing</summary>
-		public Instrument RelativeTimeFrame(double ratio)
+		/// <summary>The instrument data source</summary>
+		public MarketSeries Data
 		{
-			var tf = TimeFrame.GetRelativeTimeFrame(ratio);
-			return new Instrument(Bot, Symbol, tf);
-		}
-
-		/// <summary>Raised whenever candles are added/modified in this instrument</summary>
-		public event EventHandler<DataEventArgs> DataChanged;
-		private void OnDataChanged(DataEventArgs args)
-		{
-			DataChanged.Raise(this, args);
+			get;
+			private set;
 		}
 
 		/// <summary>The CAlgo Symbol interface for this instrument</summary>
@@ -121,13 +117,6 @@ namespace Rylobot
 			get { return Data.TimeFrame; }
 		}
 
-		/// <summary>The instrument data source</summary>
-		public MarketSeries Data
-		{
-			get;
-			private set;
-		}
-
 		/// <summary>The high res data for the instrument.</summary>
 		public HighResCollection HighRes
 		{
@@ -141,6 +130,25 @@ namespace Rylobot
 			{
 				m_instr = instr;
 				MaxLength = max_length;
+			}
+
+			/// <summary>The nearest price tick value after 'idx'</summary>
+			public PriceTick this[Idx idx]
+			{
+				get
+				{
+					var i = idx - m_instr.IdxFirst;
+					var index = this.BinarySearch(x => x.Index.CompareTo(i), find_insert_position:true);
+					index = Maths.Clamp(index, 0, Count-1);
+
+					// If we have high res data at 'index' return it
+					if (index != 0)
+						return this[index];
+
+					// Otherwise, fall back to candle data, using the current spread
+					var candle = m_instr[idx];
+					return new PriceTick(i, candle.Timestamp, candle.Close + m_instr.Spread, candle.Close);
+				}
 			}
 
 			/// <summary>The maximum length the collection will grow to</summary>
@@ -396,6 +404,10 @@ namespace Rylobot
 		private long m_last_tick_time;
 
 		/// <summary>Clamps the given index range to a valid range within the data. i.e. [-Count,0]</summary>
+		public Range IndexRange()
+		{
+			return new Range((int)IdxFirst, (int)IdxLast);
+		}
 		public Range IndexRange(Idx min, Idx max)
 		{
 			Debug.Assert(min <= max);
@@ -529,13 +541,6 @@ namespace Rylobot
 			return MaxCandleSize(range.Begi, range.Endi);
 		}
 
-		/// <summary>A cached median candle size over the last 50 candles</summary>
-		public QuoteCurrency MCS
-		{
-			get { return (m_mcs ?? (m_mcs = MedianCandleSize(IdxLast - 50, IdxLast))).Value; }
-		}
-		private QuoteCurrency? m_mcs;
-
 		/// <summary>Return the median candle size (total length) of the given range</summary>
 		public QuoteCurrency MedianCandleSize(Idx min, Idx max)
 		{
@@ -548,6 +553,13 @@ namespace Rylobot
 		{
 			return MedianCandleSize(range.Begi, range.Endi);
 		}
+
+		/// <summary>A cached median candle size over the last 50 candles</summary>
+		public QuoteCurrency MCS
+		{
+			get { return (m_mcs ?? (m_mcs = MedianCandleSize(IdxLast - 50, IdxLast))).Value; }
+		}
+		private QuoteCurrency? m_mcs;
 
 		/// <summary>Return the number of ticks in the given range of candles</summary>
 		public long TradeVolume(Idx min, Idx max)
@@ -594,7 +606,7 @@ namespace Rylobot
 		}
 
 		/// <summary>Return the average true range for candles in [min,max)</summary>
-		public QuoteCurrency AverageTrueRange(Idx min, Idx max)
+		public QuoteCurrency SMATrueRange(Idx min, Idx max)
 		{
 			var avr = new Avr();
 			for (var i = min; i != max; ++i)
@@ -602,154 +614,13 @@ namespace Rylobot
 			return avr.Mean;
 		}
 
-		/// <summary>Return the average slope of all the EMAs over 'period_range'</summary>
-		public double EMASlope(Idx index, Range? period_range = null)
+		/// <summary>The exponential moving average of the true range for candles in [min, max)</summary>
+		public QuoteCurrency EMATrueRange(Idx min, Idx max)
 		{
-			period_range = period_range ?? new Range(1, 101);
-
-			// Integrate the area under the graph of slope vs. EMA period.
-			var sum = 0.0;
-			foreach (var r in period_range.Value)
-			{
-				var ema = Bot.Indicators.ExponentialMovingAverage(Data.Close, (int)r);
-				var slope = ema.Result.FirstDerivative(index);
-				sum += slope;
-			}
-			return sum / period_range.Value.Size;
-		}
-
-		/// <summary>Return the combined EMA slope interpreted as a trend in the range [-1,+1]</summary>
-		public double EMATrend(Idx index, Range? period_range = null)
-		{
-			return MeasureTrendFromSlope(EMASlope(index, period_range));
-		}
-
-		/// <summary>Return an appropriate stop loss, take profit, and volume for a trade at the given candle an entry price</summary>
-		public TradeExit ChooseTradeExit(TradeType tt, QuoteCurrency ep, Idx? idx = null, double? risk = null, int? look_back = null, double? rtr = null)
-		{
-			var exit = new TradeExit { EP = ep, SL = ep, TP = ep, Volume = Symbol.VolumeMin };
-			var sign = tt.Sign();
-			idx = idx ?? 0;
-
-			// Get the support and resistance levels
-			var snr = new SnR(this, ep, idx+1);
-			Bot.Debugging.Dump(snr);
-
-			#region SL
-
-			// Start with a minimum of the MCS
-			var sl_rel = MCS;
-
-			{
-				// Scan backwards looking for a peak in the stop loss direction.
-				look_back = look_back ?? Bot.Settings.LookBackCount;
-				foreach (var candle in CandleRange(idx.Value - look_back.Value, idx.Value))
-				{
-					var limit = candle.WickLimit(-sign);
-					var diff = ep - limit;
-					if (Math.Sign(diff) != sign) continue;
-					if (Math.Abs(diff) < sl_rel) continue;
-					sl_rel = Math.Abs(diff);
-				}
-
-				// Count the number of SnR levels between 'ep' and 'sl'.
-				// If there are two or more strong levels, reduce the SL to just beyond the 2nd level
-				var lvls = snr.SnRLevels
-					.Where(x => x.Strength > 0.5)                // strong
-					.Where(x => Math.Sign(ep - x.Price) == sign) // on the SL side
-					.Where(x => Math.Abs(ep - x.Price) < sl_rel) // between 'ep' and 'sl'
-					.OrderBy(x => x.Price)                       // sort by increasing price
-					.ToArray();
-				if (lvls.Length >= 2)
-				{
-					sl_rel = sign > 0
-						? Math.Abs(ep - lvls[lvls.Length-2].Price)
-						: Math.Abs(ep - lvls[1].Price);
-				}
-
-				//// 
-				//// In the case of strong trends this SL loss is too large, limit it to just past a strong SnR level
-				//var trend = MeasureTrend(idx);
-				//if (Math.Abs(trend) > 0.5)
-				//{
-				//	foreach (var lvl in snr.SnRLevels.Where(x => x.Strength > 0.5f))
-				//	{
-				//		var diff = (ep - lvl.Price) * 1.5f;
-				//		if (Misc.Sign(diff) != sign) continue;
-				//		if (Misc.Abs(diff) > sl_rel) continue;
-				//		sl_rel = Misc.Abs(diff);
-				//	}
-				//}
-
-				// For short trades, add the spread to the SL
-				sl_rel += (sign > 0 ? 0 : Spread);
-
-				// Add on a bit as a safety buffer
-				sl_rel *= 1.1f;
-
-				// Adjust the volume so that the risk is within the acceptable range.
-				// If the risk is too high reduce the volume first, down to the VolumeMin
-				// then reduce 'peak'. If the risk is low, increase volume to fit within 'risk'.
-				risk = risk ?? 1.0;
-				var balance_to_risk = Bot.Broker.BalanceToRisk * risk.Value;
-
-				// Find the account value risked at the current stop loss
-				var sl_acct = Symbol.QuoteToAcct(sl_rel);
-				var optimal_volume = balance_to_risk / sl_acct;
-
-				// If the risk is too high, reduce the stop loss
-				if (optimal_volume < Symbol.VolumeMin)
-				{
-					exit.Volume = Symbol.VolumeMin;
-					sl_rel = Symbol.AcctToQuote(balance_to_risk / exit.Volume);
-				}
-				// Otherwise, round down to the nearest volume multiple
-				else
-				{
-					exit.Volume = Symbol.NormalizeVolume(optimal_volume, RoundingMode.Down);
-				}
-
-				// Find the absolute price for the stop loss level
-				exit.SL = ep - sign * sl_rel;
-			}
-			#endregion
-			#region TP
-			// Start with a minimum of the MCS
-			var tp_rel = MCS;
-
-			{
-				// Look for a level on the profit side of the entry price
-				// If there are no levels, use a few typical candle sizes
-				var nearest = snr.Nearest(ep + sign * tp_rel, sign);
-				if (nearest != null)
-				{
-					tp_rel = Math.Abs(nearest.Price - ep);
-				}
-				else
-				{
-					tp_rel = 2 * MCS;
-				}
-
-				// Apply the minimum reward to risk ratio
-				if (rtr != null)
-				{
-					tp_rel = Math.Max(tp_rel, sl_rel * rtr.Value);
-				}
-
-				// Find the absolute price for the take profit level
-				exit.TP = ep + sign * tp_rel;
-			}
-			#endregion
-
-			return exit;
-		}
-		[DebuggerDisplay("ep={EP} sl={SL} tp={TP}")]
-		public struct TradeExit
-		{
-			public QuoteCurrency EP;
-			public QuoteCurrency SL;
-			public QuoteCurrency TP;
-			public long Volume;
+			var avr = new ExpMovingAvr();
+			for (var i = min; i != max; ++i)
+				avr.Add(TrueRange(i));
+			return avr.Mean;
 		}
 
 		/// <summary>Compress candles over the given range [idx_min,idx_max) into a single equivalent candle</summary>
@@ -908,6 +779,28 @@ namespace Rylobot
 			return MeasureTrendFromSlope(corr.LinearRegression.A);
 		}
 
+		/// <summary>Return the average slope of all the EMAs over 'period_range'</summary>
+		public double EMASlope(Idx index, Range? period_range = null)
+		{
+			period_range = period_range ?? new Range(1, 101);
+
+			// Integrate the area under the graph of slope vs. EMA period.
+			var sum = 0.0;
+			foreach (var r in period_range.Value)
+			{
+				var ema = Bot.Indicators.ExponentialMovingAverage(Data.Close, (int)r);
+				var slope = ema.Result.FirstDerivative(index);
+				sum += slope;
+			}
+			return sum / period_range.Value.Size;
+		}
+
+		/// <summary>Return the combined EMA slope interpreted as a trend in the range [-1,+1]</summary>
+		public double EMATrend(Idx index, Range? period_range = null)
+		{
+			return MeasureTrendFromSlope(EMASlope(index, period_range));
+		}
+
 		/// <summary>Compare a candle to a price value, returning the ratio above or below the value. Returns positive for 'candle' above 'price'</summary>
 		public double Compare(Candle candle, QuoteCurrency price, bool wicks)
 		{
@@ -930,6 +823,136 @@ namespace Rylobot
 		public double Compare(Candle candle, MovingAverage ma, bool wicks)
 		{
 			return Compare(candle, ma.Result[(int)candle.Index], wicks);
+		}
+
+		/// <summary>Return an appropriate stop loss, take profit, and volume for a trade at the given candle an entry price</summary>
+		public TradeExit ChooseTradeExit(TradeType tt, QuoteCurrency ep, Idx? idx = null, double? risk = null, int? look_back = null, double? rtr = null)
+		{
+			var exit = new TradeExit { EP = ep, SL = ep, TP = ep, Volume = Symbol.VolumeMin };
+			var sign = tt.Sign();
+			idx = idx ?? 0;
+
+			// Get the support and resistance levels
+			var snr = new SnR(this, ep, idx+1);
+			Bot.Debugging.Dump(snr);
+
+			#region SL
+
+			// Start with a minimum of the MCS
+			var sl_rel = MCS;
+
+			{
+				// Scan backwards looking for a peak in the stop loss direction.
+				look_back = look_back ?? Bot.Settings.LookBackCount;
+				foreach (var candle in CandleRange(idx.Value - look_back.Value, idx.Value))
+				{
+					var limit = candle.WickLimit(-sign);
+					var diff = ep - limit;
+					if (Math.Sign(diff) != sign) continue;
+					if (Math.Abs(diff) < sl_rel) continue;
+					sl_rel = Math.Abs(diff);
+				}
+
+				// Count the number of SnR levels between 'ep' and 'sl'.
+				// If there are two or more strong levels, reduce the SL to just beyond the 2nd level
+				var lvls = snr.SnRLevels
+					.Where(x => x.Strength > 0.5)                // strong
+					.Where(x => Math.Sign(ep - x.Price) == sign) // on the SL side
+					.Where(x => Math.Abs(ep - x.Price) < sl_rel) // between 'ep' and 'sl'
+					.OrderBy(x => x.Price)                       // sort by increasing price
+					.ToArray();
+				if (lvls.Length >= 2)
+				{
+					sl_rel = sign > 0
+						? Math.Abs(ep - lvls[lvls.Length-2].Price)
+						: Math.Abs(ep - lvls[1].Price);
+				}
+
+				//// 
+				//// In the case of strong trends this SL loss is too large, limit it to just past a strong SnR level
+				//var trend = MeasureTrend(idx);
+				//if (Math.Abs(trend) > 0.5)
+				//{
+				//	foreach (var lvl in snr.SnRLevels.Where(x => x.Strength > 0.5f))
+				//	{
+				//		var diff = (ep - lvl.Price) * 1.5f;
+				//		if (Misc.Sign(diff) != sign) continue;
+				//		if (Misc.Abs(diff) > sl_rel) continue;
+				//		sl_rel = Misc.Abs(diff);
+				//	}
+				//}
+
+				// For short trades, add the spread to the SL
+				sl_rel += (sign > 0 ? 0 : Spread);
+
+				// Add on a bit as a safety buffer
+				sl_rel *= 1.1f;
+
+				// Adjust the volume so that the risk is within the acceptable range.
+				// If the risk is too high reduce the volume first, down to the VolumeMin
+				// then reduce 'peak'. If the risk is low, increase volume to fit within 'risk'.
+				risk = risk ?? 1.0;
+				var balance_to_risk = Bot.Broker.BalanceToRisk * risk.Value;
+
+				// Find the account value risked at the current stop loss
+				var sl_acct = Symbol.QuoteToAcct(sl_rel);
+				var optimal_volume = balance_to_risk / sl_acct;
+
+				// If the risk is too high, reduce the stop loss
+				if (optimal_volume < Symbol.VolumeMin)
+				{
+					exit.Volume = Symbol.VolumeMin;
+					sl_rel = Symbol.AcctToQuote(balance_to_risk / exit.Volume);
+				}
+				// Otherwise, round down to the nearest volume multiple
+				else
+				{
+					exit.Volume = Symbol.NormalizeVolume(optimal_volume, RoundingMode.Down);
+				}
+
+				// Find the absolute price for the stop loss level
+				exit.SL = ep - sign * sl_rel;
+			}
+			#endregion
+			#region TP
+			// Start with a minimum of the MCS
+			var tp_rel = MCS;
+
+			{
+				// Look for a level on the profit side of the entry price
+				// If there are no levels, use a few typical candle sizes
+				var nearest = snr.Nearest(ep + sign * tp_rel, sign);
+				if (nearest != null)
+				{
+					tp_rel = Math.Abs(nearest.Price - ep);
+				}
+				else
+				{
+					tp_rel = 2 * MCS;
+				}
+
+				// Apply the minimum reward to risk ratio
+				if (rtr != null)
+				{
+					tp_rel = Math.Max(tp_rel, sl_rel * rtr.Value);
+				}
+
+				// Find the absolute price for the take profit level
+				exit.TP = ep + sign * tp_rel;
+			}
+			#endregion
+
+			return exit;
+		}
+
+		/// <summary>Trade exit data</summary>
+		[DebuggerDisplay("ep={EP} sl={SL} tp={TP}")]
+		public struct TradeExit
+		{
+			public QuoteCurrency EP;
+			public QuoteCurrency SL;
+			public QuoteCurrency TP;
+			public long Volume;
 		}
 
 		/// <summary>Categorise the market state over the range [min,max)</summary>
@@ -1484,6 +1507,30 @@ namespace Rylobot
 
 		/// <summary>The result of the last test for trade entry</summary>
 		public TradeType? LastTradeEntryResult { get; set; }
+
+		/// <summary>Returns non-null if the price at 'idx_' is greater/less than the high/low of the prior 'periods' candles</summary>
+		public TradeType? IsBreakOut(int periods, Idx? idx_ = null)
+		{
+			var idx = idx_ ?? 0;
+			var price = idx_ != null ? HighRes[idx] : LatestPrice;
+			var price_range = PriceRange(idx - periods, idx);
+
+			if (price.Bid > price_range.End)
+				return TradeType.Buy;
+			if (price.Ask < price_range.Beg)
+				return TradeType.Sell;
+
+			return null;
+		}
+
+		/// <summary>
+		/// Return this instrument at a higher or lower time frame (e.g. this=h1, ratio=2 => h2. this=h1, ratio=0.5 => m30)).
+		/// Note: can't use this with back testing</summary>
+		public Instrument RelativeTimeFrame(double ratio)
+		{
+			var tf = TimeFrame.GetRelativeTimeFrame(ratio);
+			return new Instrument(Bot, Symbol, tf);
+		}
 	}
 
 	/// <summary>States that the market can be in</summary>

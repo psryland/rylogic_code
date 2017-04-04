@@ -167,22 +167,22 @@ namespace LDraw
 		/// <summary>Get/Set whether the focus point is visible in this scene</summary>
 		public bool FocusPointVisible
 		{
-			get { return Window.FocusPointVisible; }
-			set { Window.FocusPointVisible = value; }
+			get { return Window?.FocusPointVisible ?? false; }
+			set { if (Window != null) Window.FocusPointVisible = value; }
 		}
 
 		/// <summary>Get/Set whether the origin point is visible in this scene</summary>
 		public bool OriginPointVisible
 		{
-			get { return Window.OriginPointVisible; }
-			set { Window.OriginPointVisible = value; }
+			get { return Window?.OriginPointVisible ?? false; }
+			set { if (Window != null) Window.OriginPointVisible = value; }
 		}
 
 		/// <summary>Get/Set whether bounding boxes are visible in this scene</summary>
 		public bool BBoxesVisible
 		{
-			get { return Window.BBoxesVisible; }
-			set { Window.BBoxesVisible = value; }
+			get { return Window?.BBoxesVisible ?? false; }
+			set { if (Window != null) Window.BBoxesVisible = value; }
 		}
 
 		/// <summary>Clear the instances from this scene</summary>
