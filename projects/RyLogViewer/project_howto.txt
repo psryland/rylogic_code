@@ -1,9 +1,9 @@
 General:
 	Publishing:
-		The 'deploy.py' script in the main project should be a one-click deploy
+		The 'deploy_rylogviewer.py' script in the main project should be a one-click deploy
 		producing:
-			P:\bin\rylogviewer\... uncompressed, ready for use with all docs, plugins, etc
-			P:\bin\rylogviewer.zip - zip of 'P:\bin\rylogviewer\'
+			P:\bin\RyLogViewer\... uncompressed, ready for use with all docs, plugins, etc
+			P:\bin\RyLogViewer.zip - zip of 'P:\bin\rylogviewer\'
 			P:\bin\RyLogViewerSetup.exe - one click installer
 
 	Folders:
@@ -41,7 +41,7 @@ Documentation:
 	- The reason for this system is that it allows simple html code sharing without dependencies on anything
 		other than python. I used a custom build tool called 'Rylogic.CustomTool.HtmlExpander' for a while
 		but that requires installation on the local PC which means I can't easily build the project on someone
-		elses PC. Another option could have been a pre build step that calls a BuildDocs.py script.
+		else's PC. Another option could have been a pre build step that calls a BuildDocs.py script.
 
 	- img/*.png files should be set to "Content" and "Copy If Newer"
 	- The output folder could contain a '.\docs\' folder with all the documentation needed.

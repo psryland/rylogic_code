@@ -96,15 +96,8 @@ namespace RyLogViewer
 			m_line_cache_count    = Settings.LineCacheCount;
 			m_tail_enabled        = Settings.TailEnabled;
 
-			// Setup the UI
-			SetupMenu();
-			SetupToolbar();
-			SetupScrollbar();
-			SetupStatus();
-			SetupGrid();
-			SetupFileWatch();
-			SetupFind();
-			SetupBookmarks();
+			// Set up the UI
+			SetupUI();
 
 			InitCache();
 			ApplySettings();
@@ -115,190 +108,6 @@ namespace RyLogViewer
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
-
-		/// <summary>App settings</summary>
-		public Settings Settings
-		{
-			get { return m_impl_settings; }
-			set
-			{
-				if (m_impl_settings == value) return;
-				if (m_impl_settings != null)
-				{
-					m_impl_settings.SettingChanged -= HandleSettingsChanged;
-				}
-				m_impl_settings = value;
-				if (m_impl_settings != null)
-				{
-					m_impl_settings.SettingChanged += HandleSettingsChanged;
-					ApplySettings();
-				}
-			}
-		}
-		private Settings m_impl_settings;
-		private void HandleSettingsChanged(object sender, SettingChangedEventArgs args)
-		{
-			Log.Info(this, "Setting {0} changed from {1} to {2}".Fmt(args.Key,args.OldValue,args.NewValue));
-		}
-
-		/// <summary>The main UI as a form for use as the parent of child dialogs</summary>
-		public Form MainWindow { get { return this; } }
-
-		/// <summary>The currently loaded file source</summary>
-		public IFileSource FileSource { get { return m_file; } }
-
-		/// <summary>Setup menu options</summary>
-		private void SetupMenu()
-		{
-			m_menu.Location = Point.Empty;
-			m_menu_file_open.Click                     += (s,a) => OpenSingleLogFile(null, true);
-			m_menu_file_wizards_androidlogcat.Click    += (s,a) => AndroidLogcatWizard();
-			m_menu_file_wizards_aggregatelogfile.Click += (s,a) => AggregateFileWizard();
-			m_menu_file_open_stdout.Click              += (s,a) => LogProgramOutput();
-			m_menu_file_open_serial_port.Click         += (s,a) => LogSerialPort();
-			m_menu_file_open_network.Click             += (s,a) => LogNetworkOutput();
-			m_menu_file_open_named_pipe.Click          += (s,a) => LogNamedPipeOutput();
-			m_menu_file_close.Click                    += (s,a) => CloseLogFile();
-			m_menu_file_export.Click                   += (s,a) => ShowExportDialog();
-			m_menu_file_exit.Click                     += (s,a) => Close();
-			m_menu_edit_selectall.Click                += (s,a) => DataGridViewEx.SelectAll(m_grid, new KeyEventArgs(Keys.Control|Keys.A));
-			m_menu_edit_copy.Click                     += (s,a) => DataGridViewEx.Copy(m_grid, new KeyEventArgs(Keys.Control|Keys.C));
-			m_menu_edit_jumpto.Click                   += (s,a) => JumpTo();
-			m_menu_edit_find.Click                     += (s,a) => ShowFindDialog();
-			m_menu_edit_find_next.Click                += (s,a) => FindNext(false);
-			m_menu_edit_find_prev.Click                += (s,a) => FindPrev(false);
-			m_menu_edit_toggle_bookmark.Click          += (s,a) => SetBookmark(SelectedRowIndex, Bit.EState.Toggle);
-			m_menu_edit_next_bookmark.Click            += (s,a) => NextBookmark();
-			m_menu_edit_prev_bookmark.Click            += (s,a) => PrevBookmark();
-			m_menu_edit_clearall_bookmarks.Click       += (s,a) => ClearAllBookmarks();
-			m_menu_edit_bookmarks.Click                += (s,a) => ShowBookmarksDialog();
-			m_menu_encoding_detect.Click               += (s,a) => SetEncoding(null);
-			m_menu_encoding_ascii.Click                += (s,a) => SetEncoding(Encoding.ASCII           );
-			m_menu_encoding_utf8.Click                 += (s,a) => SetEncoding(Encoding.UTF8            );
-			m_menu_encoding_ucs2_littleendian.Click    += (s,a) => SetEncoding(Encoding.Unicode         );
-			m_menu_encoding_ucs2_bigendian.Click       += (s,a) => SetEncoding(Encoding.BigEndianUnicode);
-			m_menu_line_ending_detect.Click            += (s,a) => SetLineEnding(ELineEnding.Detect);
-			m_menu_line_ending_cr.Click                += (s,a) => SetLineEnding(ELineEnding.CR    );
-			m_menu_line_ending_crlf.Click              += (s,a) => SetLineEnding(ELineEnding.CRLF  );
-			m_menu_line_ending_lf.Click                += (s,a) => SetLineEnding(ELineEnding.LF    );
-			m_menu_line_ending_custom.Click            += (s,a) => SetLineEnding(ELineEnding.Custom);
-			m_menu_tools_alwaysontop.Click             += (s,a) => SetAlwaysOnTop(!Settings.AlwaysOnTop);
-			m_menu_tools_monitor_mode.Click            += (s,a) => EnableMonitorMode(!m_menu_tools_monitor_mode.Checked);
-			m_menu_tools_clear_log_file.Click          += (s,a) => ClearLogFile();
-			m_menu_tools_highlights.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
-			m_menu_tools_filters.Click                 += (s,a) => ShowOptions(SettingsUI.ETab.Filters   );
-			m_menu_tools_transforms.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Transforms);
-			m_menu_tools_actions.Click                 += (s,a) => ShowOptions(SettingsUI.ETab.Actions   );
-			m_menu_tools_options.Click                 += (s,a) => ShowOptions(SettingsUI.ETab.General   );
-			m_menu_help_view_help.Click                += (s,a) => ShowHelp();
-			m_menu_help_firstruntutorial.Click         += (s,a) => ShowFirstRunTutorial();
-			m_menu_help_totd.Click                     += (s,a) => ShowTotD();
-			m_menu_help_visit_web_site.Click           += (s,a) => VisitWebSite();
-			m_menu_help_register.Click                 += (s,a) => ShowActivation();
-			m_menu_help_check_for_updates.Click        += (s,a) => CheckForUpdates(true);
-			m_menu_help_about.Click                    += (s,a) => ShowAbout();
-			m_menu_free_version.Click                  += ShowFreeVersionInfo;
-
-			// Recent files menu
-			m_recent = new RecentFiles(m_menu_file_recent, fp => OpenSingleLogFile(fp, true));
-			m_recent.Import(Settings.RecentFiles);
-		}
-
-		/// <summary>Setup the toolbar</summary>
-		private void SetupToolbar()
-		{
-			m_toolstrip.Location            = new Point(0,30);
-			m_btn_open_log.ToolTipText      = Resources.OpenLogFile;
-			m_btn_open_log.Click           += (s,a) => OpenSingleLogFile(null, true);
-			m_btn_refresh.ToolTipText       = Resources.ReloadLogFile;
-			m_btn_refresh.Click            += (s,a) => BuildLineIndex(m_filepos, true);
-			m_btn_quick_filter.ToolTipText  = Resources.QuickFilter;
-			m_btn_quick_filter.Click       += (s,a) => EnableQuickFilter(m_btn_quick_filter.Checked);
-			m_btn_highlights.ToolTipText    = Resources.ShowHighlightsDialog;
-			m_btn_highlights.Click         += (s,a) => EnableHighlights(m_btn_highlights.Checked);
-			m_btn_highlights.MouseDown     += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Highlights); };
-			m_btn_filters.ToolTipText       = Resources.ShowFiltersDialog;
-			m_btn_filters.Click            += (s,a) => EnableFilters(m_btn_filters.Checked);
-			m_btn_filters.MouseDown        += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Filters); };
-			m_btn_transforms.ToolTipText    = Resources.ShowTransformsDialog;
-			m_btn_transforms.Click         += (s,a) => EnableTransforms(m_btn_transforms.Checked);
-			m_btn_transforms.MouseDown     += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Transforms); };
-			m_btn_actions.ToolTipText       = Resources.ShowActionsDialog;
-			m_btn_actions.Click            += (s,a) => EnableActions(m_btn_actions.Checked);
-			m_btn_actions.MouseDown        += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Actions); };
-			m_btn_find.ToolTipText          = Resources.ShowFindDialog;
-			m_btn_find.Click               += (s,a) => ShowFindDialog();
-			m_btn_bookmarks.ToolTipText     = Resources.ShowBookmarksDialog;
-			m_btn_bookmarks.Click          += (s,a) => ShowBookmarksDialog();
-			m_btn_jump_to_start.ToolTipText = "Selected the first row in the log file";
-			m_btn_jump_to_start.Click      += (s,a) => JumpToStart();
-			m_btn_jump_to_end.ToolTipText   = "Selected the last row in the log file";
-			m_btn_jump_to_end.Click        += (s,a) => JumpToEnd();
-			m_btn_tail.ToolTipText          = Resources.WatchTail;
-			m_btn_tail.Click               += (s,a) => EnableTail(m_btn_tail.Checked);
-			m_btn_watch.ToolTipText         = Resources.WatchForUpdates;
-			m_btn_watch.Click              += (s,a) => EnableWatch(m_btn_watch.Checked);
-			m_btn_additive.ToolTipText      = Resources.AdditiveMode;
-			m_btn_additive.Click           += (s,a) => EnableAdditive(m_btn_additive.Checked);
-			ToolStripManager.Renderer       = new CheckedButtonRenderer();
-		}
-
-		/// <summary>Setup the side scrollbar</summary>
-		private void SetupScrollbar()
-		{
-			m_scroll_file.ToolTip(m_tt, "Indicates the currently cached position in the log file\r\nClicking within here moves the cached position within the log file");
-			m_scroll_file.MinThumbSize = 1;
-			m_scroll_file.ScrollEnd += OnScrollFileScrollEnd;
-		}
-
-		/// <summary>Setup the status bar</summary>
-		private void SetupStatus()
-		{
-			m_status.Location             = Point.Empty;
-			m_status_progress.ToolTipText = "Press escape to cancel";
-			m_status_progress.Minimum     = 0;
-			m_status_progress.Maximum     = 100;
-			m_status_progress.Visible     = false;
-			m_status_progress.Text        = "Test";
-		}
-
-		/// <summary>Setup the main grid</summary>
-		private void SetupGrid()
-		{
-			m_grid.RowCount                  = 0;
-			m_grid.AutoGenerateColumns       = false;
-			m_grid.KeyDown                  += DataGridViewEx.SelectAll;
-			m_grid.KeyDown                  += DataGridViewEx.Copy;
-			m_grid.KeyDown                  += GridKeyDown;
-			m_grid.MouseUp                  += (s,a) => GridMouseButton(a, false);
-			m_grid.MouseDown                += (s,a) => GridMouseButton(a, true);
-			m_grid.CellValueNeeded          += CellValueNeeded;
-			m_grid.RowPrePaint              += RowPrePaint;
-			m_grid.SelectionChanged         += GridSelectionChanged;
-			m_grid.CellDoubleClick          += CellDoubleClick;
-			m_grid.ColumnDividerDoubleClick += (s,a) => { SetGridColumnSizesImpl(); a.Handled = true; };
-			m_grid.RowHeightInfoNeeded      += RowHeightNeeded;
-			m_grid.DataError                += (s,a) => Debug.Assert(false);
-			m_grid.Scroll                   += (s,a) => GridScroll();
-
-			// Grid context menu
-			m_cmenu_grid.ItemClicked    += GridContextMenu;
-			m_cmenu_grid.VisibleChanged += SetGridContextMenuVisibility;
-		}
-
-		/// <summary>Setup the file watcher</summary>
-		private void SetupFileWatch()
-		{
-			m_watch_timer.Tick += (s,a)=>
-				{
-					if (ReloadInProgress) return;
-					if (WindowState == FormWindowState.Minimized) return;
-					try { m_watch.CheckForChangedFiles(); }
-					catch (Exception ex) { Log.Exception(this, ex, "CheckForChangedFiles failed"); }
-				};
-		}
-
-		// Handlers
 		protected override void OnShown(EventArgs e)
 		{
 			base.OnShown(e);
@@ -327,6 +136,277 @@ namespace RyLogViewer
 			base.OnDragDrop(e);
 			FileDrop(e, false);
 		}
+
+		/// <summary>App settings</summary>
+		public Settings Settings
+		{
+			get { return m_impl_settings; }
+			set
+			{
+				if (m_impl_settings == value) return;
+				if (m_impl_settings != null)
+				{
+					m_impl_settings.SettingChanged -= HandleSettingsChanged;
+				}
+				m_impl_settings = value;
+				if (m_impl_settings != null)
+				{
+					m_impl_settings.SettingChanged += HandleSettingsChanged;
+					ApplySettings();
+				}
+			}
+		}
+		private Settings m_impl_settings;
+		private void HandleSettingsChanged(object sender, SettingChangedEventArgs args)
+		{
+			Log.Info(this, "Setting {0} changed from {1} to {2}".Fmt(args.Key,args.OldValue,args.NewValue));
+		}
+
+		/// <summary>The main UI as a form for use as the parent of child dialogs</summary>
+		public Form MainWindow
+		{
+			get { return this; }
+		}
+
+		/// <summary>The currently loaded file source</summary>
+		public IFileSource FileSource
+		{
+			get { return m_file; }
+		}
+
+		/// <summary>Set up the UI Elements</summary>
+		private void SetupUI()
+		{
+			#region Menu
+			{
+				m_menu.Location = Point.Empty;
+				m_menu_file_open.Click                     += (s,a) => OpenSingleLogFile(null, true);
+				m_menu_file_wizards_androidlogcat.Click    += (s,a) => AndroidLogcatWizard();
+				m_menu_file_wizards_aggregatelogfile.Click += (s,a) => AggregateFileWizard();
+				m_menu_file_open_stdout.Click              += (s,a) => LogProgramOutput();
+				m_menu_file_open_serial_port.Click         += (s,a) => LogSerialPort();
+				m_menu_file_open_network.Click             += (s,a) => LogNetworkOutput();
+				m_menu_file_open_named_pipe.Click          += (s,a) => LogNamedPipeOutput();
+				m_menu_file_close.Click                    += (s,a) => CloseLogFile();
+				m_menu_file_export.Click                   += (s,a) => ShowExportDialog();
+				m_menu_file_exit.Click                     += (s,a) => Close();
+				m_menu_edit_selectall.Click                += (s,a) => DataGridViewEx.SelectAll(m_grid, new KeyEventArgs(Keys.Control|Keys.A));
+				m_menu_edit_copy.Click                     += (s,a) => DataGridViewEx.Copy(m_grid, new KeyEventArgs(Keys.Control|Keys.C));
+				m_menu_edit_jumpto.Click                   += (s,a) => JumpTo();
+				m_menu_edit_find.Click                     += (s,a) => ShowFindDialog();
+				m_menu_edit_find_next.Click                += (s,a) => FindNext(false);
+				m_menu_edit_find_prev.Click                += (s,a) => FindPrev(false);
+				m_menu_edit_toggle_bookmark.Click          += (s,a) => SetBookmark(SelectedRowIndex, Bit.EState.Toggle);
+				m_menu_edit_next_bookmark.Click            += (s,a) => NextBookmark();
+				m_menu_edit_prev_bookmark.Click            += (s,a) => PrevBookmark();
+				m_menu_edit_clearall_bookmarks.Click       += (s,a) => ClearAllBookmarks();
+				m_menu_edit_bookmarks.Click                += (s,a) => ShowBookmarksDialog();
+				m_menu_encoding_detect.Click               += (s,a) => SetEncoding(null);
+				m_menu_encoding_ascii.Click                += (s,a) => SetEncoding(Encoding.ASCII           );
+				m_menu_encoding_utf8.Click                 += (s,a) => SetEncoding(Encoding.UTF8            );
+				m_menu_encoding_ucs2_littleendian.Click    += (s,a) => SetEncoding(Encoding.Unicode         );
+				m_menu_encoding_ucs2_bigendian.Click       += (s,a) => SetEncoding(Encoding.BigEndianUnicode);
+				m_menu_line_ending_detect.Click            += (s,a) => SetLineEnding(ELineEnding.Detect);
+				m_menu_line_ending_cr.Click                += (s,a) => SetLineEnding(ELineEnding.CR    );
+				m_menu_line_ending_crlf.Click              += (s,a) => SetLineEnding(ELineEnding.CRLF  );
+				m_menu_line_ending_lf.Click                += (s,a) => SetLineEnding(ELineEnding.LF    );
+				m_menu_line_ending_custom.Click            += (s,a) => SetLineEnding(ELineEnding.Custom);
+				m_menu_tools_alwaysontop.Click             += (s,a) => SetAlwaysOnTop(!Settings.AlwaysOnTop);
+				m_menu_tools_monitor_mode.Click            += (s,a) => EnableMonitorMode(!m_menu_tools_monitor_mode.Checked);
+				m_menu_tools_clear_log_file.Click          += (s,a) => ClearLogFile();
+				m_menu_tools_highlights.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
+				m_menu_tools_filters.Click                 += (s,a) => ShowOptions(SettingsUI.ETab.Filters   );
+				m_menu_tools_transforms.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Transforms);
+				m_menu_tools_actions.Click                 += (s,a) => ShowOptions(SettingsUI.ETab.Actions   );
+				m_menu_tools_options.Click                 += (s,a) => ShowOptions(SettingsUI.ETab.General   );
+				m_menu_help_view_help.Click                += (s,a) => ShowHelp();
+				m_menu_help_firstruntutorial.Click         += (s,a) => ShowFirstRunTutorial();
+				m_menu_help_totd.Click                     += (s,a) => ShowTotD();
+				m_menu_help_visit_web_site.Click           += (s,a) => VisitWebSite();
+				m_menu_help_register.Click                 += (s,a) => ShowActivation();
+				m_menu_help_check_for_updates.Click        += (s,a) => CheckForUpdates(true);
+				m_menu_help_about.Click                    += (s,a) => ShowAbout();
+				m_menu_free_version.Click                  += ShowFreeVersionInfo;
+
+				// Recent files menu
+				m_recent = new RecentFiles(m_menu_file_recent, fp => OpenSingleLogFile(fp, true));
+				m_recent.Import(Settings.RecentFiles);
+			}
+			#endregion
+			#region Tool bar
+			{
+				m_toolstrip.Location            = new Point(0,30);
+				m_btn_open_log.ToolTipText      = Resources.OpenLogFile;
+				m_btn_open_log.Click           += (s,a) => OpenSingleLogFile(null, true);
+				m_btn_refresh.ToolTipText       = Resources.ReloadLogFile;
+				m_btn_refresh.Click            += (s,a) => BuildLineIndex(m_filepos, true);
+				m_btn_quick_filter.ToolTipText  = Resources.QuickFilter;
+				m_btn_quick_filter.Click       += (s,a) => EnableQuickFilter(m_btn_quick_filter.Checked);
+				m_btn_highlights.ToolTipText    = Resources.ShowHighlightsDialog;
+				m_btn_highlights.Click         += (s,a) => EnableHighlights(m_btn_highlights.Checked);
+				m_btn_highlights.MouseDown     += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Highlights); };
+				m_btn_filters.ToolTipText       = Resources.ShowFiltersDialog;
+				m_btn_filters.Click            += (s,a) => EnableFilters(m_btn_filters.Checked);
+				m_btn_filters.MouseDown        += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Filters); };
+				m_btn_transforms.ToolTipText    = Resources.ShowTransformsDialog;
+				m_btn_transforms.Click         += (s,a) => EnableTransforms(m_btn_transforms.Checked);
+				m_btn_transforms.MouseDown     += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Transforms); };
+				m_btn_actions.ToolTipText       = Resources.ShowActionsDialog;
+				m_btn_actions.Click            += (s,a) => EnableActions(m_btn_actions.Checked);
+				m_btn_actions.MouseDown        += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Actions); };
+				m_btn_find.ToolTipText          = Resources.ShowFindDialog;
+				m_btn_find.Click               += (s,a) => ShowFindDialog();
+				m_btn_bookmarks.ToolTipText     = Resources.ShowBookmarksDialog;
+				m_btn_bookmarks.Click          += (s,a) => ShowBookmarksDialog();
+				m_btn_jump_to_start.ToolTipText = "Selected the first row in the log file";
+				m_btn_jump_to_start.Click      += (s,a) => JumpToStart();
+				m_btn_jump_to_end.ToolTipText   = "Selected the last row in the log file";
+				m_btn_jump_to_end.Click        += (s,a) => JumpToEnd();
+				m_btn_tail.ToolTipText          = Resources.WatchTail;
+				m_btn_tail.Click               += (s,a) => EnableTail(m_btn_tail.Checked);
+				m_btn_watch.ToolTipText         = Resources.WatchForUpdates;
+				m_btn_watch.Click              += (s,a) => EnableWatch(m_btn_watch.Checked);
+				m_btn_additive.ToolTipText      = Resources.AdditiveMode;
+				m_btn_additive.Click           += (s,a) => EnableAdditive(m_btn_additive.Checked);
+				ToolStripManager.Renderer       = new CheckedButtonRenderer();
+			}
+			#endregion
+			#region Scroll bar
+			{
+				m_scroll_file.ToolTip(m_tt, "Indicates the currently cached position in the log file\r\nClicking within here moves the cached position within the log file");
+				m_scroll_file.MinThumbSize = 1;
+				m_scroll_file.ScrollEnd += OnScrollFileScrollEnd;
+			}
+			#endregion
+			#region Status
+			{
+				m_status.Location             = Point.Empty;
+				m_status_progress.ToolTipText = "Press escape to cancel";
+				m_status_progress.Minimum     = 0;
+				m_status_progress.Maximum     = 100;
+				m_status_progress.Visible     = false;
+				m_status_progress.Text        = "Test";
+			}
+			#endregion
+			#region Grid
+			{
+				m_grid.RowCount                  = 0;
+				m_grid.AutoGenerateColumns       = false;
+				m_grid.KeyDown                  += DataGridViewEx.SelectAll;
+				m_grid.KeyDown                  += DataGridViewEx.Copy;
+				m_grid.KeyDown                  += GridKeyDown;
+				m_grid.MouseUp                  += (s,a) => GridMouseButton(a, false);
+				m_grid.MouseDown                += (s,a) => GridMouseButton(a, true);
+				m_grid.CellValueNeeded          += CellValueNeeded;
+				m_grid.RowPrePaint              += RowPrePaint;
+				m_grid.SelectionChanged         += GridSelectionChanged;
+				m_grid.CellDoubleClick          += CellDoubleClick;
+				m_grid.ColumnDividerDoubleClick += (s,a) => { SetGridColumnSizesImpl(); a.Handled = true; };
+				m_grid.RowHeightInfoNeeded      += RowHeightNeeded;
+				m_grid.DataError                += (s,a) => Debug.Assert(false);
+				m_grid.Scroll                   += (s,a) => GridScroll();
+
+				// Grid context menu
+				m_cmenu_grid.ItemClicked    += GridContextMenu;
+				m_cmenu_grid.VisibleChanged += SetGridContextMenuVisibility;
+			}
+			#endregion
+			#region FileWatch
+			{
+				m_watch_timer.Tick += (s,a)=>
+					{
+						if (ReloadInProgress) return;
+						if (WindowState == FormWindowState.Minimized) return;
+						try { m_watch.CheckForChangedFiles(); }
+						catch (Exception ex) { Log.Exception(this, ex, "CheckForChangedFiles failed"); }
+					};
+			}
+			#endregion
+
+			SetupFind();
+			SetupBookmarks();
+		}
+
+		/// <summary>
+		/// Update the UI with the current line index.
+		/// This method should be called whenever a change occurs that requires
+		/// UI elements to be updated/redrawn. Note: it doesn't trigger a file reload.</summary>
+		private void UpdateUI(int row_delta = 0)
+		{
+			if (m_in_update_ui) return;
+			using (Scope.Create(() => m_in_update_ui = true, () => m_in_update_ui = false))
+			{
+				Log.Info(this, "UpdateUI. Row delta {0}".Fmt(row_delta));
+				using (m_grid.SuspendRedraw(true))//using (m_grid.SuspendLayout(true))
+				{
+					// Configure the grid
+					if (m_line_index.Count != 0)
+					{
+						// Ensure the grid has the correct number of rows
+						using (m_suspend_grid_events.Reference)
+							SetGridRowCount(m_line_index.Count, row_delta);
+					}
+					else
+					{
+						m_grid.ColumnHeadersVisible = false;
+						using (m_suspend_grid_events.Reference)
+							SetGridRowCount(0, 0);
+					}
+					SetGridColumnSizes(false);
+				}
+
+				// Configure menus
+				bool file_open                            = FileOpen;
+				string enc                                = Settings.Encoding;
+				string row_delim                          = Settings.RowDelimiter;
+				m_menu_file_export.Enabled                = file_open;
+				m_menu_file_close.Enabled                 = file_open;
+				m_menu_edit_selectall.Enabled             = file_open;
+				m_menu_edit_copy.Enabled                  = file_open;
+				m_menu_edit_jumpto.Enabled                = file_open;
+				m_menu_edit_find.Enabled                  = file_open;
+				m_menu_edit_find_next.Enabled             = file_open;
+				m_menu_edit_find_prev.Enabled             = file_open;
+				m_menu_edit_toggle_bookmark.Enabled       = file_open;
+				m_menu_edit_next_bookmark.Enabled         = file_open;
+				m_menu_edit_prev_bookmark.Enabled         = file_open;
+				m_menu_edit_clearall_bookmarks.Enabled    = file_open;
+				m_menu_edit_bookmarks.Enabled             = file_open;
+				m_menu_encoding_detect           .Checked = enc.Length == 0;
+				m_menu_encoding_ascii            .Checked = enc == Encoding.ASCII.EncodingName;
+				m_menu_encoding_utf8             .Checked = enc == Encoding.UTF8.EncodingName;
+				m_menu_encoding_ucs2_littleendian.Checked = enc == Encoding.Unicode.EncodingName;
+				m_menu_encoding_ucs2_bigendian   .Checked = enc == Encoding.BigEndianUnicode.EncodingName;
+				m_menu_line_ending_detect        .Checked = row_delim.Length == 0;
+				m_menu_line_ending_cr            .Checked = row_delim == "<CR>";
+				m_menu_line_ending_crlf          .Checked = row_delim == "<CR><LF>";
+				m_menu_line_ending_lf            .Checked = row_delim == "<LF>";
+				m_menu_line_ending_custom        .Checked = row_delim.Length != 0 && row_delim != "<CR>" && row_delim != "<CR><LF>" && row_delim != "<LF>";
+				m_menu_tools_alwaysontop         .Checked = Settings.AlwaysOnTop;
+				m_menu_tools_clear_log_file.Enabled = file_open;
+
+				// Reread the licence
+				m_license = new Licence(m_startup_options.LicenceFilepath);
+				m_menu_free_version.Visible = !m_license.Valid;
+
+				// Tool bar
+				m_btn_quick_filter.Checked = Settings.QuickFilterEnabled;
+				m_btn_highlights.Checked   = Settings.HighlightsEnabled;
+				m_btn_filters.Checked      = Settings.FiltersEnabled;
+				m_btn_transforms.Checked   = Settings.TransformsEnabled;
+				m_btn_actions.Checked      = Settings.ActionsEnabled;
+				m_btn_tail.Checked         = Settings.TailEnabled;
+				m_btn_watch.Checked        = Settings.WatchEnabled;
+				m_btn_additive.Checked     = Settings.FileChangesAdditive;
+
+				// Status and title
+				UpdateStatus();
+
+				// Make suggestions for typically confusing situations
+				HeuristicHints();
+			}
+		}
+		private bool m_in_update_ui;
 
 		/// <summary>Apply the startup options</summary>
 		private void ApplyStartupOptions()
@@ -430,6 +510,10 @@ namespace RyLogViewer
 			// Check for updates
 			if (Settings.CheckForUpdates)
 				CheckForUpdates(false);
+
+			// Set always on top
+			if (Settings.AlwaysOnTop)
+				TopMost = true;
 
 			Settings.FirstRun = false;
 		}
@@ -1818,87 +1902,6 @@ namespace RyLogViewer
 			InvalidateCache();
 			UpdateUI();
 		}
-
-		/// <summary>
-		/// Update the UI with the current line index.
-		/// This method should be called whenever a change occurs that requires
-		/// UI elements to be updated/redrawn. Note: it doesn't trigger a file reload.</summary>
-		private void UpdateUI(int row_delta = 0)
-		{
-			if (m_in_update_ui) return;
-			using (Scope.Create(() => m_in_update_ui = true, () => m_in_update_ui = false))
-			{
-				Log.Info(this, "UpdateUI. Row delta {0}".Fmt(row_delta));
-				using (m_grid.SuspendRedraw(true))//using (m_grid.SuspendLayout(true))
-				{
-					// Configure the grid
-					if (m_line_index.Count != 0)
-					{
-						// Ensure the grid has the correct number of rows
-						using (m_suspend_grid_events.Reference)
-							SetGridRowCount(m_line_index.Count, row_delta);
-					}
-					else
-					{
-						m_grid.ColumnHeadersVisible = false;
-						using (m_suspend_grid_events.Reference)
-							SetGridRowCount(0, 0);
-					}
-					SetGridColumnSizes(false);
-				}
-
-				// Configure menus
-				bool file_open                            = FileOpen;
-				string enc                                = Settings.Encoding;
-				string row_delim                          = Settings.RowDelimiter;
-				m_menu_file_export.Enabled                = file_open;
-				m_menu_file_close.Enabled                 = file_open;
-				m_menu_edit_selectall.Enabled             = file_open;
-				m_menu_edit_copy.Enabled                  = file_open;
-				m_menu_edit_jumpto.Enabled                = file_open;
-				m_menu_edit_find.Enabled                  = file_open;
-				m_menu_edit_find_next.Enabled             = file_open;
-				m_menu_edit_find_prev.Enabled             = file_open;
-				m_menu_edit_toggle_bookmark.Enabled       = file_open;
-				m_menu_edit_next_bookmark.Enabled         = file_open;
-				m_menu_edit_prev_bookmark.Enabled         = file_open;
-				m_menu_edit_clearall_bookmarks.Enabled    = file_open;
-				m_menu_edit_bookmarks.Enabled             = file_open;
-				m_menu_encoding_detect           .Checked = enc.Length == 0;
-				m_menu_encoding_ascii            .Checked = enc == Encoding.ASCII.EncodingName;
-				m_menu_encoding_utf8             .Checked = enc == Encoding.UTF8.EncodingName;
-				m_menu_encoding_ucs2_littleendian.Checked = enc == Encoding.Unicode.EncodingName;
-				m_menu_encoding_ucs2_bigendian   .Checked = enc == Encoding.BigEndianUnicode.EncodingName;
-				m_menu_line_ending_detect        .Checked = row_delim.Length == 0;
-				m_menu_line_ending_cr            .Checked = row_delim == "<CR>";
-				m_menu_line_ending_crlf          .Checked = row_delim == "<CR><LF>";
-				m_menu_line_ending_lf            .Checked = row_delim == "<LF>";
-				m_menu_line_ending_custom        .Checked = row_delim.Length != 0 && row_delim != "<CR>" && row_delim != "<CR><LF>" && row_delim != "<LF>";
-				m_menu_tools_clear_log_file.Enabled = file_open;
-				m_menu_tools_alwaysontop.Checked = Settings.AlwaysOnTop;
-
-				// Reread the licence
-				m_license = new Licence(m_startup_options.LicenceFilepath);
-				m_menu_free_version.Visible = !m_license.Valid;
-
-				// Toolbar
-				m_btn_quick_filter.Checked = Settings.QuickFilterEnabled;
-				m_btn_highlights.Checked   = Settings.HighlightsEnabled;
-				m_btn_filters.Checked      = Settings.FiltersEnabled;
-				m_btn_transforms.Checked   = Settings.TransformsEnabled;
-				m_btn_actions.Checked      = Settings.ActionsEnabled;
-				m_btn_tail.Checked         = Settings.TailEnabled;
-				m_btn_watch.Checked        = Settings.WatchEnabled;
-				m_btn_additive.Checked     = Settings.FileChangesAdditive;
-
-				// Status and title
-				UpdateStatus();
-
-				// Make suggestions for typically confusing situations
-				HeuristicHints();
-			}
-		}
-		private bool m_in_update_ui;
 
 		/// <summary>Update the status bar</summary>
 		private void UpdateStatus()
