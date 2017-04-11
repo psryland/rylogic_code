@@ -255,6 +255,21 @@ namespace pr.maths
 			return x | (y << 1);
 		}
 
+		/// <summary>Convert an array of signs to an index. signs[start] is the MSB, signs[start+length-1] is the LSB. "sign >= 0 ? 1 : 0"</summary>
+		public static int SignsToIndex(IList<int> signs)
+		{
+			return SignsToIndex(signs, 0, signs.Count);
+		}
+		public static int SignsToIndex(IList<int> signs, int start, int length)
+		{
+			var idx = 0;
+			for (int i = 0; i != length; ++i)
+			{
+				idx = (idx << 1) | (signs[start+i] >= 0 ? 1 : 0);
+			}
+			return idx;
+		}
+
 		/// <summary>Convert a string (e.g. "10010110101") into a uint</summary>
 		public static uint Parse(string bits)
 		{

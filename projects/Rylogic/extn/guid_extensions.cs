@@ -85,5 +85,12 @@ namespace pr.extn
 			guid[left] = guid[right];
 			guid[right] = temp;
 		}
+
+		/// <summary>Try parse a guid string</summary>
+		public static Guid? Parse(string guid_string)
+		{
+			Guid id;
+			return Guid.TryParse(guid_string, out id) ? id : (Guid?)null;
+		}
 	}
 }

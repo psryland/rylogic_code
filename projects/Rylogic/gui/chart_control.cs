@@ -91,6 +91,7 @@ namespace pr.gui
 			Tools = null;
 			Range = null;
 			Scene = null;
+			Options = null;
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
@@ -2819,7 +2820,7 @@ namespace pr.gui
 					if (!args.Handled)
 					{
 						if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.Chart))
-							m_chart.Camera.ResetZoom();
+						{ }
 						else if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.XAxis))
 						{ }
 						else if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.YAxis))

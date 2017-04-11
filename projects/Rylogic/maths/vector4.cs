@@ -420,7 +420,7 @@ namespace pr.maths
 		/// <summary>Returns a vector perpendicular to 'vec'</summary>
 		public static v4 Perpendicular(v4 vec)
 		{
-			Debug.Assert(!FEql3(vec, Zero), "Cannot make a perpendicular to a zero vector");
+			Debug.Assert(vec != Zero, "Cannot make a perpendicular to a zero vector");
 			var v = Cross3(vec, CreateNotParallelTo(vec));
 			v *= (float)Math.Sqrt(vec.Length3Sq / v.Length3Sq);
 			return v;

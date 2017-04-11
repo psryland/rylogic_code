@@ -255,7 +255,13 @@ namespace pr.maths
 		/// <summary>Quantise a value to 'scale'. For best results, 'scale' should be a power of 2, i.e. 256, 1024, 2048, etc</summary>
 		public static double Quantise(double x, int scale)
 		{
-			return (int)(x*scale) / (float)(scale);
+			return (long)(x*scale) / (double)scale;
+		}
+
+		/// <summary>Quantise a value to units of 'quantum'</summary>
+		public static double Quantise(double x, double quantum)
+		{
+			return (long)((x + 0.5*Sign(x)*quantum) / quantum) * quantum;
 		}
 
 		/// <summary>Convert a series of floating point values into a series of integers, preserving the remainders such that the sum of integers is within 1.0 of the sum of the floats</summary>

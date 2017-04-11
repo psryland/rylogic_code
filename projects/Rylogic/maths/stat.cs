@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using pr.common;
 using pr.extn;
 using pr.maths;
@@ -386,7 +387,7 @@ namespace pr.maths
 		protected int    m_count;
 
 		public ExpMovingAvr()
-			:this(0)
+			:this(int.MaxValue)
 		{}
 		public ExpMovingAvr(int window_size)
 		{
@@ -900,7 +901,7 @@ namespace pr.maths
 		/// <summary>The range of counts</summary>
 		public RangeF YRange
 		{
-			get { return new RangeF(0, Buckets.MaxCount * Normalisation); }
+			get { return new RangeF(Buckets.YRange.Beg * Normalisation, Buckets.YRange.End * Normalisation); }
 		}
 
 		/// <summary>The distribution data as an ordered list of buckets</summary>
@@ -975,12 +976,12 @@ namespace pr.maths
 				get { return m_buckets.Count != 0 ? new RangeF(m_buckets.Front().Value - m_bucket_size, m_buckets.Back().Value + m_bucket_size) : RangeF.Zero; }
 			}
 
-			/// <summary>The range of counts per bucket</summary>
-			internal double MaxCount
+			/// <summary>The span of bucket count values</summary>
+			internal RangeF YRange
 			{
-				get { return m_buckets.Count != 0 ? m_buckets.Max(x => x.Count) : 0.0; }
+				get { return m_buckets.Count != 0 ? new RangeF(Math.Max(0, m_buckets.Min(x => x.Count)), Math.Min(0, m_buckets.Max(x => x.Count))) : RangeF.Zero; }
 			}
-			
+
 			/// <summary>Set 'Normalisation' so that the maximum count returns a value of 'len' in 'this[i]'</summary>
 			internal double NormalisingFactor(double len)
 			{
@@ -1068,14 +1069,22 @@ namespace pr.maths
 		/// <summary>Add a value to the distribution</summary>
 		public void Add(double value)
 		{
-			++Buckets[value, true].Count;
+			Add(value, 1.0);
+		}
+		public void Add(double value, double count)
+		{
+			Buckets[value, true].Count += count;
 			++Count;
 		}
 
 		/// <summary>Remove a value from the distribution</summary>
 		public void Remove(double value)
 		{
-			--Buckets[value, true].Count;
+			Remove(value, 1.0);
+		}
+		public void Remove(double value, double count)
+		{
+			Buckets[value, true].Count -= count;
 			--Count;
 		}
 
@@ -1216,6 +1225,18 @@ namespace pr.maths
 				probabilities[i] /= probability;
 
 			return probabilities;
+		}
+
+		/// <summary>Output the distribution as CSV data</summary>
+		public string ToCSV()
+		{
+			var sb = new StringBuilder();
+
+			sb.AppendLine("Value,Count");
+			foreach (var b in Buckets.BucketRange())
+				sb.AppendLine("{0},{1}".Fmt(b.Value, b.Count));
+
+			return sb.ToString();
 		}
 
 		/// <summary>A range of values</summary>

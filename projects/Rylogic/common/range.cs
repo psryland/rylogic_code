@@ -343,10 +343,12 @@ namespace pr.common
 		public float Sizef { get { return (float)Size; } }
 		public float Midf  { get { return (float)Mid;  } }
 
-		/// <summary>Enumerator for iterating over the range</summary>
+		/// <summary>Enumerator for iterating over the range. 'step' is the step size, 'count' is the number of divisions. Use one or the other, not both. Defaults to step == 1.0</summary>
 		public IEnumerable<double> Enumerate(double? step = null, double? count = null)
 		{
-			var d = step ?? (Size / (count ?? 100.0)); 
+			var d = 1.0;
+			if (step  != null) d = step.Value;
+			if (count != null) d = Size / count.Value;
 			for (var i = Beg; i <= End; i += d)
 				yield return i;
 		}
@@ -390,8 +392,8 @@ namespace pr.common
 			End   = Math.Max(End   ,rng.End  );
 		}
 
-		/// <summary>Returns a range scaled by 'scale'. Begin and End are changed, the mid point of the range is unchanged</summary>
-		public RangeF Scale(double scale)
+		/// <summary>Returns a range inflated (i.e. multiplied) by 'scale'. Begin and End are changed, the mid point of the range is unchanged</summary>
+		public RangeF Inflate(double scale)
 		{
 			return new RangeF(Beg, Beg + Size*scale){Mid = Mid};
 		}

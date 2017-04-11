@@ -39,6 +39,7 @@ namespace LDraw
 		}
 		public void Dispose()
 		{
+			CurrentScene = null;
 			Log = null;
 			Scenes = null;
 			View3d = null;
@@ -134,7 +135,7 @@ namespace LDraw
 			}
 		}
 
-		/// <summary>The scene with input focus (or the last to have input focus). Always non-null</summary>
+		/// <summary>The scene with input focus (or the last to have input focus). Always non-null except when disposed</summary>
 		public SceneUI CurrentScene
 		{
 			[DebuggerStepThrough] get { return m_current_scene; }
@@ -147,7 +148,6 @@ namespace LDraw
 					m_current_scene.ChartMoved              -= HandleChartMoved;
 					m_current_scene.CrossHairMoved          -= HandleCrossHairMoved;
 				}
-				Debug.Assert(value != null);
 				m_current_scene = value;
 				if (m_current_scene != null)
 				{

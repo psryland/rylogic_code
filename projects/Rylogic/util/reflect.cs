@@ -100,6 +100,12 @@ namespace pr.util
 			return typeof(T).Name + "." + NameBkt<Ret>(expression, open, close);
 		}
 
+		/// <summary>Return the name of type 'T'</summary>
+		public static string NameOf
+		{
+			get { return typeof(T).Name; }
+		}
+
 		/// <summary>Return the size of type 'T' as determined by the interop marshaller</summary>
 		public static int SizeOf
 		{

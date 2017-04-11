@@ -21,6 +21,8 @@
 namespace pr
 {
 	using Guid = GUID;
+
+	// Constants
 	const Guid GuidZero    = { 0x00000000, 0x0000, 0x0000, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	const Guid GuidInvalid = { 0x00000000, 0x0000, 0x0000, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
@@ -168,6 +170,36 @@ namespace pr
 	template <typename Char, int L, bool F> struct Convert<pr::string<Char,L,F>,    Guid> :convert::GuidToString<pr::string<Char,L,F>> {};
 	template <typename TFrom>               struct Convert<Guid, TFrom>                   :convert::ToGuid {};
 }
+
+	// Operators (==, != already defined)
+	namespace impl
+	{
+		constexpr bool GuidLess(unsigned long const* lhs, unsigned long const* rhs)
+		{
+			return
+				lhs[0] != rhs[0] ? lhs[0] < rhs[0] :
+				lhs[1] != rhs[1] ? lhs[1] < rhs[1] :
+				lhs[2] != rhs[2] ? lhs[2] < rhs[2] :
+				lhs[3] != rhs[3] ? lhs[3] < rhs[3] :
+				false;
+		}
+	}
+	constexpr bool operator <  (GUID const& lhs, GUID const& rhs)
+	{
+		return impl::GuidLess(reinterpret_cast<unsigned long const*>(&lhs), reinterpret_cast<unsigned long const*>(&rhs));
+	}
+	constexpr bool operator >  (GUID const& lhs, GUID const& rhs)
+	{
+		return rhs < lhs;
+	}
+	constexpr bool operator <= (GUID const& lhs, GUID const& rhs)
+	{
+		return !(rhs < lhs);
+	}
+	constexpr bool operator >= (GUID const& lhs, GUID const& rhs)
+	{
+		return !(lhs < rhs);
+	}
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"

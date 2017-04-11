@@ -43,10 +43,10 @@ namespace LDraw
 			DefaultKeyboardShortcuts = true;
 
 			// Apply settings
-			Window.FocusPointVisible  = Settings.Camera.FocusPointVisible;
-			Window.OriginPointVisible = Settings.Camera.OriginPointVisible;
-			Window.FocusPointSize     = Settings.Camera.FocusPointSize;
-			Window.OriginPointSize    = Settings.Camera.OriginPointSize;
+			Window.FocusPointVisible  = Model.Settings.FocusPointVisible;
+			Window.OriginPointVisible = Model.Settings.OriginPointVisible;
+			Window.FocusPointSize     = Model.Settings.FocusPointSize;
+			Window.OriginPointSize    = Model.Settings.OriginPointSize;
 			Scene.Window.LightProperties  = new View3d.Light(Settings.Light);
 
 		}
@@ -122,13 +122,13 @@ namespace LDraw
 				if (m_model == value) return;
 				if (m_model != null)
 				{
-					Settings.SettingChanged -= HandleSettingChanged;
+					m_model.Settings.SettingChanged -= HandleSettingChanged;
 					Scene.View3d.OnSourcesChanged -= HandleSourcesChanged;
 				}
 				m_model = value;
 				if (m_model != null)
 				{
-					Settings.SettingChanged += HandleSettingChanged;
+					m_model.Settings.SettingChanged += HandleSettingChanged;
 					Scene.View3d.OnSourcesChanged += HandleSourcesChanged;
 				}
 			}
@@ -372,17 +372,17 @@ namespace LDraw
 		{
 			switch (e.Key)
 			{
-			case nameof(CameraSettings.FocusPointVisible):
-				Window.FocusPointVisible = Settings.Camera.FocusPointVisible;
+			case nameof(LDraw.Settings.FocusPointVisible):
+				Window.FocusPointVisible = Model.Settings.FocusPointVisible;
 				break;
-			case nameof(CameraSettings.FocusPointSize):
-				Window.FocusPointSize = Settings.Camera.FocusPointSize;
+			case nameof(LDraw.Settings.FocusPointSize):
+				Window.FocusPointSize = Model.Settings.FocusPointSize;
 				break;
-			case nameof(CameraSettings.OriginPointVisible):
-				Window.OriginPointVisible = Settings.Camera.OriginPointVisible;
+			case nameof(LDraw.Settings.OriginPointVisible):
+				Window.OriginPointVisible = Model.Settings.OriginPointVisible;
 				break;
-			case nameof(CameraSettings.OriginPointSize):
-				Window.OriginPointSize = Settings.Camera.OriginPointSize;
+			case nameof(LDraw.Settings.OriginPointSize):
+				Window.OriginPointSize = Model.Settings.OriginPointSize;
 				break;
 			case nameof(Settings.Light):
 				Scene.Window.LightProperties = new View3d.Light(Settings.Light);

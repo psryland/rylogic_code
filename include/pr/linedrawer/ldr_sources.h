@@ -9,7 +9,9 @@
 #include <string>
 #include <sstream>
 #include <unordered_map>
+#include <set>
 #include <mutex>
+#include "pr/common/guid.h"
 #include "pr/container/vector.h"
 #include "pr/script/forward.h"
 #include "pr/filesys/filewatch.h"
@@ -141,6 +143,7 @@ namespace pr
 			GizmoCont                    m_gizmos;  // The created ldr gizmos
 			pr::Renderer*                m_rdr;     // Renderer used to create models
 			pr::script::IEmbeddedCode*   m_embed;   // Embedded code handler
+			std::set<pr::Guid>           m_loading; // File group ids in the process of being reloaded
 			std::thread::id              m_main_thread_id;
 
 		public:
@@ -152,6 +155,7 @@ namespace pr
 				,m_gizmos()
 				,m_rdr(&rdr)
 				,m_embed(embed)
+				,m_loading()
 				,m_main_thread_id(std::this_thread::get_id())
 			{
 				m_watcher.OnFilesChanged += [&](FileWatch::FileCont&)
@@ -276,7 +280,18 @@ namespace pr
 				// Add each file again (asynchronously)
 				// Note: don't need to clear because each file will remove itself
 				for (auto& f : files)
-					std::thread([=]{ AddFile(f.second, EReason::Reload, true); }).detach();
+				{
+					auto file = f.second;
+
+					// Skip files that are in the process of loading
+					if (m_loading.find(file.m_file_group_id) != std::end(m_loading)) continue;
+					m_loading.insert(file.m_file_group_id);
+
+					std::thread([=]
+					{
+						AddFile(file, EReason::Reload, true);
+					}).detach();
+				}
 			}
 
 			// Check all file sources for modifications and reload any that have changed
@@ -352,11 +367,16 @@ namespace pr
 				if (iter == std::end(m_files)) return;
 				auto root_file = iter->second;
 
+				// Skip files that are in the process of loading
+				if (m_loading.find(root_file.m_file_group_id) != std::end(m_loading)) return;
+				m_loading.insert(root_file.m_file_group_id);
+
 				// Reload that file group (asynchronously)
 				std::thread([=]
 				{
 					auto id = AddFile(root_file, EReason::Reload, true);
-					if (id != pr::GuidZero) return;
+					if (id != pr::GuidZero)
+						return;
 
 					// On failure, mark the file as changed again
 					m_rdr->RunOnMainThread([=]
@@ -448,6 +468,9 @@ namespace pr
 						Clear();
 					else
 						RemoveFile(file.m_filepath.c_str());
+
+					// Remove from the 'loading' set
+					m_loading.erase(file.m_file_group_id);
 
 					// Add to the container of script sources
 					m_files[file.m_filepath] = file;

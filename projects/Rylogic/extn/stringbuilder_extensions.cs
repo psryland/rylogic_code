@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using pr.common;
 using pr.extn;
 
 namespace pr.extn
@@ -26,8 +27,13 @@ namespace pr.extn
 		}
 
 		/// <summary>Write this string to a file</summary>
-		public static void ToFile(this StringBuilder sb, string filepath, bool append = false)
+		public static void ToFile(this StringBuilder sb, string filepath, bool append = false, bool create_dir_if_necessary = true)
 		{
+			// Ensure the directory exists
+			var dir = Path_.Directory(filepath);
+			if (create_dir_if_necessary && !Path_.DirExists(dir))
+				Directory.CreateDirectory(dir);
+
 			using (var f = new StreamWriter(new FileStream(filepath, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.ReadWrite)))
 				f.Write(sb.ToString());
 		}

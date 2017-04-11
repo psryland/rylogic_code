@@ -11,7 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using pr.util;
+using pr.common;
 
 namespace pr.extn
 {
@@ -395,8 +395,13 @@ namespace pr.extn
 		}
 
 		/// <summary>Write this string to a file</summary>
-		public static void ToFile(this string str, string filepath, bool append = false)
+		public static void ToFile(this string str, string filepath, bool append = false, bool create_dir_if_necessary = true)
 		{
+			// Ensure the directory exists
+			var dir = Path_.Directory(filepath);
+			if (create_dir_if_necessary && !Path_.DirExists(dir))
+				Directory.CreateDirectory(dir);
+
 			using (var f = new StreamWriter(new FileStream(filepath, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.ReadWrite)))
 				f.Write(str);
 		}

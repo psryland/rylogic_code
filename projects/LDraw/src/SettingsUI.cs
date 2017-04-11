@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using pr.extn;
 using pr.gui;
+using pr.maths;
 using pr.util;
 
 namespace LDraw
@@ -75,21 +76,35 @@ namespace LDraw
 
 			#region Camera
 
-			// Use an exponential size function to scale x=[0,1] to Size=[0.1,10]
-			//   Size = 10^(2*(x - 0.5))  => x = 0.5*Log(Size) + 0.5
-	//		m_track_focus_point_size.ValueFrac(0.5f * (float)Math.Log(Settings.Camera.FocusPointSize) + 0.5f);
-	//		m_track_focus_point_size.ValueChanged += (s,a) =>
-	//		{
-	//			var size = (float)Math.Pow(10, 2 * (m_track_focus_point_size.ValueFrac() - 0.5));
-	//			Settings.Camera.FocusPointSize = size;
-	//		};
-	//
-	//		m_track_origin_point_size.ValueFrac(0.5f * (float)Math.Log(Settings.Camera.OriginPointSize) + 0.5f);
-	//		m_track_origin_point_size.ValueChanged += (s,a) =>
-	//		{
-	//			var size = (float)Math.Pow(10, 2 * (m_track_origin_point_size.ValueFrac() - 0.5));
-	//			Settings.Camera.OriginPointSize = size;
-	//		};
+			// Focus point visible
+			m_chk_focus_point_visible.Checked = Settings.FocusPointVisible;
+			m_chk_focus_point_visible.CheckedChanged += (s,a) =>
+			{
+				Settings.FocusPointVisible = m_chk_focus_point_visible.Checked;
+			};
+
+			// Use a quadratic to scale the point size
+			m_track_focus_point_size.ValueFrac(Maths.Sqrt(Settings.FocusPointSize));
+			m_track_focus_point_size.ValueChanged += (s,a) =>
+			{
+				var size = (float)Maths.Sqr(m_track_focus_point_size.ValueFrac());
+				Settings.FocusPointSize = size;
+			};
+
+			// Origin Point
+			m_chk_origin_point_visible.Checked = Settings.OriginPointVisible;
+			m_chk_origin_point_visible.CheckedChanged += (s,a) =>
+			{
+				Settings.OriginPointVisible = m_chk_origin_point_visible.Checked;
+			};
+
+			// Use a quadratic to scale the point size
+			m_track_origin_point_size.ValueFrac(Maths.Sqrt(Settings.OriginPointSize));
+			m_track_origin_point_size.ValueChanged += (s,a) =>
+			{
+				var size = (float)Maths.Sqr(m_track_origin_point_size.ValueFrac());
+				Settings.OriginPointSize = size;
+			};
 
 			#endregion
 

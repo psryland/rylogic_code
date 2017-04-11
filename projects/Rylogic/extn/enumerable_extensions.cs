@@ -28,6 +28,10 @@ namespace pr.extn
 		{
 			return source.Where(x => x != null);
 		}
+		public static IEnumerable<TSource?> NotNull<TSource>(this IEnumerable<TSource?> source) where TSource:struct
+		{
+			return source.Where(x => x != null);
+		}
 
 		/// <summary>Cast a collection to statically convertible type</summary>
 		public static IEnumerable<TResult> ConvertTo<TResult>(this IEnumerable source)

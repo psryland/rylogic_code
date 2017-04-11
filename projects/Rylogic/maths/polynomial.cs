@@ -117,43 +117,14 @@ namespace pr.maths
 				new v2((float)x1, (float)y1));
 		}
 
-		/// <summary>Create a best-fit quadratic for the given points</summary>
+		/// <summary>Create a best-fit monic for the given points</summary>
 		public static Monic FromLinearRegression(IList<v2> points)
 		{
-			// Minimise F = Sum{(ax + b - y)²} where x,y are the points in 'points' (of length N)
-			// The minimum of F is when dF/da == 0, and dF/db == 0
-			// Expand F and split the sum:
-			//    Sum{(ax + b - y)(ax + b - y)}
-			//  = Sum{(a²x² + abx - axy + abx + b² - by - axy - by + y²)}
-			//  = a²Sum{x²} + 2abSum{x} - 2aSum{xy} + b²Sum{} - 2bSum{y} + Sum{y²}
-			// Let Sij mean Sum{x^i*y^j}, e.g S40 = Sum{x^4*y^0}. Note: S00 = Sum{X^0*y^0} = N
-			//  = a²S20 + 2abS10 - 2aS11 + b²S00 - 2bS01 + S02
-			// Take partial derivatives w.r.t a,b:
-			//  dF/da = 2aS20 + 2bS10 - 2S11 == 0
-			//  dF/db = 2aS10 + 2bS00 - 2S01 == 0
-			// Solve the system of equations (divided through by 2)
-			//       M      *  a  =   b
-			//   [S20, S10]   [a]   [S11]
-			//   [S10, S00] * [b] = [S01]
-
-			var M = m2x2.Zero;
-			var b = v2.Zero;
+			var corr = new Correlation();
 			foreach (var pt in points)
-			{
-				var x = pt.x;
-				var y = pt.y;
+				corr.Add(pt.x, pt.y);
 
-				M.x.x += x * x; // S20
-				M.x.y += x;     // S10
-
-				b.x += x*y;  // S11
-				b.y += y;    // S01
-			}
-			M.y.x = M.x.y;
-			M.y.y = points.Count;
-
-			var a = m2x2.Invert(M) * b;
-			return new Monic(a.x, a.y);
+			return corr.LinearRegression;
 		}
 	}
 
@@ -532,6 +503,26 @@ namespace pr.maths
 		public static double[] Intersection(Quadratic lhs, Monic rhs)
 		{
 			return (lhs - rhs).Roots;
+		}
+		public static double[] Intersection(Monic lhs, Quadratic rhs)
+		{
+			return (lhs - rhs).Roots;
+		}
+		public static double[] Intersection(IPolynomial lhs, IPolynomial rhs)
+		{
+			if (lhs is Monic)
+			{
+				if (rhs is Monic    ) return Intersection((Monic)lhs, (Monic)rhs);
+				if (rhs is Quadratic) return Intersection((Monic)lhs, (Quadratic)rhs);
+				throw new NotSupportedException();
+			}
+			if (lhs is Quadratic)
+			{
+				if (rhs is Monic    ) return Intersection((Quadratic)lhs, (Monic)rhs);
+				if (rhs is Quadratic) return Intersection((Quadratic)lhs, (Quadratic)rhs);
+				throw new NotSupportedException();
+			}
+			throw new NotSupportedException();
 		}
 	}
 }

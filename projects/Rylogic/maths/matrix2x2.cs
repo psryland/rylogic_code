@@ -135,7 +135,7 @@ namespace pr.maths
 		/// <summary>Return the determinant of 'm'</summary>
 		public static float Determinant(m2x2 m)
 		{
-			return m.x.x*m.y.y - m.x.y*m.y.x;
+			return (float)((double)m.x.x*m.y.y - (double)m.x.y*m.y.x);
 		}
 
 		/// <summary>Transpose 'm' in-place</summary>

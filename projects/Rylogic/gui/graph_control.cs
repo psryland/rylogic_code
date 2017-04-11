@@ -201,8 +201,8 @@ namespace pr.gui
 			yrange = args.YRange;
 
 			// Scale up the ranges to leave a tasteful margin around the default range
-			if (xrange.Size > 0 && do_x) xrange = xrange.Scale(1.05f); else xrange = new RangeF(0.0, 1.0);
-			if (yrange.Size > 0 && do_y) yrange = yrange.Scale(1.05f); else yrange = new RangeF(0.0, 1.0);
+			if (xrange.Size > 0 && do_x) xrange = xrange.Inflate(1.05f); else xrange = new RangeF(0.0, 1.0);
+			if (yrange.Size > 0 && do_y) yrange = yrange.Inflate(1.05f); else yrange = new RangeF(0.0, 1.0);
 
 			// Save the default range
 			if (do_x) BaseRangeX = xrange;
