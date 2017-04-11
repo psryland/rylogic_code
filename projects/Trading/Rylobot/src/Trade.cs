@@ -100,7 +100,7 @@ namespace Rylobot
 				// Find the account currency value of the available risk
 				var balance_to_risk = bot.Broker.BalanceToRisk * risk.Value;
 				if (balance_to_risk == 0)
-					throw new Exception("Insufficient available risk. Current Risk: {0}%, Maximum Risk: {1}%".Fmt(bot.Broker.TotalRiskPC, bot.Settings.MaxRiskPC));
+					throw new Exception("Insufficient available risk. Current Risk: {0}%, Maximum Risk: {1}%".Fmt(100*bot.Broker.TotalRiskFrac, 100.0*bot.Settings.MaxRiskFrac));
 
 				// Require the SL to be at least 2 * the median candle size
 				var volatility = instr.Symbol.QuoteToAcct(2 * instr.MCS * instr.Symbol.VolumeMin);
@@ -173,7 +173,7 @@ namespace Rylobot
 		/// <summary>A name for this trade</summary>
 		public string Name
 		{
-			get { return "{0}_{1}".Fmt(Result == EResult.Open ? "trade" : "order", Id); }
+			get { return "trade_{0}".Fmt(Id); }
 		}
 
 		/// <summary>The CAlgo Id for this trade</summary>

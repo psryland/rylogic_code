@@ -28,9 +28,17 @@ namespace Rylobot
 			Data = series;
 			HighRes = new HighResCollection(this, 10000);
 		}
+		public Instrument(cAlgo.API.Indicator indi, MarketSeries series)
+		{
+			Bot = null;
+			Indicators = indi.Indicators;
+			Data = series;
+			HighRes = new HighResCollection(this, 10000);
+		}
 		public void Dispose()
 		{
 			Bot = null;
+			Indicators = null;
 		}
 
 		/// <summary>The App logic</summary>
@@ -43,10 +51,12 @@ namespace Rylobot
 				if (m_bot != null)
 				{
 					m_bot.Tick -= HandleTick;
+					Indicators = null;
 				}
 				m_bot = value;
 				if (m_bot != null)
 				{
+					Indicators = m_bot.Indicators;
 					m_bot.Tick += HandleTick;
 				}
 			}
@@ -71,7 +81,7 @@ namespace Rylobot
 			// Get the fractional CAlgo index for this tick
 			var index = IndexAt(now) - IdxFirst;
 			var price = new PriceTick(index, now.Ticks, Symbol.Ask, Symbol.Bid);
-			Debug.Assert(HighRes.Count == 0 || index > HighRes.Back().Index);
+			Debug.Assert(HighRes.Count == 0 || index >= HighRes.Back().Index);
 
 			// Capture the high res price data
 			HighRes.Add(price);
@@ -98,6 +108,9 @@ namespace Rylobot
 			get;
 			private set;
 		}
+
+		/// <summary>Access to the CAlgo indicator factor</summary>
+		public IIndicatorsAccessor Indicators { get; private set; }
 
 		/// <summary>The CAlgo Symbol interface for this instrument</summary>
 		public Symbol Symbol
@@ -132,6 +145,19 @@ namespace Rylobot
 				MaxLength = max_length;
 			}
 
+			/// <summary>The maximum length the collection will grow to</summary>
+			public int MaxLength
+			{
+				get;
+				set;
+			}
+
+			/// <summary>Get the index range of available data</summary>
+			public RangeF Available
+			{
+				get { return Count != 0 ? new RangeF(base[0].Index, base[Count-1].Index) : RangeF.Zero; }
+			}
+
 			/// <summary>The nearest price tick value after 'idx'</summary>
 			public PriceTick this[Idx idx]
 			{
@@ -143,19 +169,12 @@ namespace Rylobot
 
 					// If we have high res data at 'index' return it
 					if (index != 0)
-						return this[index];
+						return base[index];
 
 					// Otherwise, fall back to candle data, using the current spread
 					var candle = m_instr[idx];
 					return new PriceTick(i, candle.Timestamp, candle.Close + m_instr.Spread, candle.Close);
 				}
-			}
-
-			/// <summary>The maximum length the collection will grow to</summary>
-			public int MaxLength
-			{
-				get;
-				set;
 			}
 
 			/// <summary>Add to the collection</summary>
@@ -172,20 +191,17 @@ namespace Rylobot
 			/// 'step' is the increment size in indices to move with each returned value</summary>
 			public IEnumerable<PriceTick> Range(Idx min, Idx max, double? step = null)
 			{
-				var first = min - m_instr.IdxFirst;
-				var last  = max - m_instr.IdxFirst;
-
-				var istart = this.BinarySearch(x => x.Index.CompareTo(first), find_insert_position:true);
-				var iend   = this.BinarySearch(x => x.Index.CompareTo(last), find_insert_position:true);
-				if (istart == iend)
+				var ibeg = this.BinarySearch(x => x.Index.CompareTo(min - m_instr.IdxFirst), find_insert_position:true);
+				var iend = this.BinarySearch(x => x.Index.CompareTo(max - m_instr.IdxFirst), find_insert_position:true);
+				if (ibeg == iend)
 					yield break;
 
 				// The point to return
-				var pt = this[istart];
+				var pt = base[ibeg];
 
 				// Loop over the requested range
-				var X = this[istart].Index;
-				for (var i = istart; i < iend;)
+				var X = base[ibeg].Index;
+				for (var i = ibeg; i < iend;)
 				{
 					yield return pt;
 
@@ -193,7 +209,7 @@ namespace Rylobot
 					if (step == null)
 					{
 						if (++i < iend)
-							pt = this[i];
+							pt = base[i];
 					}
 					// Scan forward to the next price point to output
 					else
@@ -206,15 +222,15 @@ namespace Rylobot
 						pt = PriceTick.Invalid;
 						for (++i; i < iend; ++i)
 						{
-							pt.Index += this[i].Index;
-							pt.Ask = Math.Max(pt.Ask, this[i].Ask);
-							pt.Bid = Math.Min(pt.Bid, this[i].Bid);
+							pt.Index += base[i].Index;
+							pt.Ask = Math.Max(pt.Ask, base[i].Ask);
+							pt.Bid = Math.Min(pt.Bid, base[i].Bid);
 							++cnt;
 
-							if (this[i].Index > X)
+							if (base[i].Index > X)
 							{
 								pt.Index /= cnt;
-								X = this[i].Index;
+								X = base[i].Index;
 								break;
 							}
 						}
@@ -404,6 +420,31 @@ namespace Rylobot
 		private long m_last_tick_time;
 
 		/// <summary>Clamps the given index range to a valid range within the data. i.e. [-Count,0]</summary>
+		public RangeF IndexRangeF()
+		{
+			return new RangeF(IdxFirst, IdxLast);
+		}
+		public RangeF IndexRangeF(Idx min, Idx max)
+		{
+			Debug.Assert(min <= max);
+			var mn = Maths.Clamp(min, IdxFirst, IdxLast);
+			var mx = Maths.Clamp(max, min, IdxLast);
+			return new RangeF(mn, mx);
+		}
+		public RangeF IndexRangeF(RangeF range)
+		{
+			return IndexRangeF(range.Beg, range.End);
+		}
+		public RangeF IndexRangeF(Position pos)
+		{
+			return IndexRange(new RangeF(IndexAt(pos.EntryTime), IdxLast));
+		}
+		public RangeF IndexRangeF(HistoricalTrade pos)
+		{
+			return IndexRange(new RangeF(IndexAt(pos.EntryTime), IndexAt(pos.ClosingTime)));
+		}
+
+		/// <summary>Clamps the given index range to a valid range within the data. i.e. [-Count,0]</summary>
 		public Range IndexRange()
 		{
 			return new Range((int)IdxFirst, (int)IdxLast);
@@ -554,10 +595,11 @@ namespace Rylobot
 			return MedianCandleSize(range.Begi, range.Endi);
 		}
 
-		/// <summary>A cached median candle size over the last 50 candles</summary>
+		/// <summary>A cached approximate candle size over the recent candles</summary>
 		public QuoteCurrency MCS
 		{
-			get { return (m_mcs ?? (m_mcs = MedianCandleSize(IdxLast - 50, IdxLast))).Value; }
+			get { return (m_mcs ?? (m_mcs = EMATrueRange(IdxLast - 20, IdxLast))).Value; }
+			//get { return (m_mcs ?? (m_mcs = MedianCandleSize(IdxLast - 50, IdxLast))).Value; }
 		}
 		private QuoteCurrency? m_mcs;
 
@@ -755,7 +797,7 @@ namespace Rylobot
 		{
 			data = data ?? Data.Close;
 			ema_periods = ema_periods ?? Bot.Settings.SlowEMAPeriods;
-			var ema = Bot.Indicators.ExponentialMovingAverage(data, ema_periods.Value);
+			var ema = Indicators.ExponentialMovingAverage(data, ema_periods.Value);
 			var slope = ema.Result.FirstDerivative(idx);
 			Bot.Debugging.Slope(idx, slope);
 			return MeasureTrendFromSlope(slope);
@@ -779,26 +821,26 @@ namespace Rylobot
 			return MeasureTrendFromSlope(corr.LinearRegression.A);
 		}
 
-		/// <summary>Return the average slope of all the EMAs over 'period_range'</summary>
-		public double EMASlope(Idx index, Range? period_range = null)
+		/// <summary>Return the average slope at 'index' of the EMAs with periods 'ema_periods'</summary>
+		public double EMASlope(Idx index, Range? ema_periods = null)
 		{
-			period_range = period_range ?? new Range(1, 101);
+			ema_periods = ema_periods ?? new Range(1, 101);
 
 			// Integrate the area under the graph of slope vs. EMA period.
 			var sum = 0.0;
-			foreach (var r in period_range.Value)
+			foreach (var r in ema_periods.Value)
 			{
-				var ema = Bot.Indicators.ExponentialMovingAverage(Data.Close, (int)r);
+				var ema = Indicators.ExponentialMovingAverage(Data.Close, (int)r);
 				var slope = ema.Result.FirstDerivative(index);
 				sum += slope;
 			}
-			return sum / period_range.Value.Size;
+			return sum / ema_periods.Value.Size;
 		}
 
 		/// <summary>Return the combined EMA slope interpreted as a trend in the range [-1,+1]</summary>
-		public double EMATrend(Idx index, Range? period_range = null)
+		public double EMATrend(Idx index, Range? range = null)
 		{
-			return MeasureTrendFromSlope(EMASlope(index, period_range));
+			return MeasureTrendFromSlope(EMASlope(index, range));
 		}
 
 		/// <summary>Compare a candle to a price value, returning the ratio above or below the value. Returns positive for 'candle' above 'price'</summary>
@@ -1472,7 +1514,7 @@ namespace Rylobot
 			#region RSI
 			{
 				// Check for really over bought or over sold
-				var rsi = Bot.Indicators.RelativeStrengthIndex(Data.Close, 14);
+				var rsi = Indicators.RelativeStrengthIndex(Data.Close, 14);
 				var strength = Maths.Sigmoid(rsi.Result.LastValue - 50, 25);
 				var v = patn.TT.Sign() * strength;
 				Bot.Debugging.Trace("RSI strength (vote = {0})".Fmt(v));

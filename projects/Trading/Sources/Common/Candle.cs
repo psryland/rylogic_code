@@ -289,7 +289,7 @@ namespace Rylobot
 		/// <summary>Friendly print</summary>
 		public override string ToString()
 		{
-			return string.Format("{0} ts={1} ohlc=({2:G5} {3:G5} {4:G5} {5:G5}) vol={6}", Sign>0?"Bullish":Sign<0?"Bearish":"Indecision", new DateTimeOffset(Timestamp, TimeSpan.Zero).ToString(), Open, High, Low, Close, Volume);
+			return string.Format("{0} idx={1:N3} ohlc=({2:G5} {3:G5} {4:G5} {5:G5}) vol={6} ts={7}", Sign>0?"Bullish":Sign<0?"Bearish":"Indecision", Index, Open, High, Low, Close, Volume, new DateTimeOffset(Timestamp, TimeSpan.Zero).ToString());
 		}
 
 		#region Equals

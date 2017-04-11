@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Linq;
 using cAlgo.API;
+using pr.common;
 using pr.maths;
 
 namespace Rylobot
@@ -20,20 +22,27 @@ namespace Rylobot
 		/// <summary>SMA indicator</summary>
 		public static Indicator SMA(string name, Instrument instr, int periods, int? extrap_history = null)
 		{
-			return new Indicator(name, instr, new[] { instr.Bot.Indicators.SimpleMovingAverage(instr.Data.Close, periods).Result }, periods, extrap_history);
+			return new Indicator(name, instr, new[] { instr.Indicators.SimpleMovingAverage(instr.Data.Close, periods).Result }, periods, extrap_history);
 		}
 
 		/// <summary>EMA indicator</summary>
 		public static Indicator EMA(string name, Instrument instr, int periods, int? extrap_history = null)
 		{
-			return new Indicator(name, instr, new [] { instr.Bot.Indicators.ExponentialMovingAverage(instr.Data.Close, periods).Result } , periods, extrap_history);
+			return new Indicator(name, instr, new [] { instr.Indicators.ExponentialMovingAverage(instr.Data.Close, periods).Result } , periods, extrap_history);
 		}
 
 		/// <summary>MACD indicator</summary>
 		public static Indicator MACD(string name, Instrument instr, int long_cycle, int short_cycle, int periods, int? extrap_history = null)
 		{
-			var indi = instr.Bot.Indicators.MacdCrossOver(long_cycle, short_cycle, periods);
+			var indi = instr.Indicators.MacdCrossOver(long_cycle, short_cycle, periods);
 			return new Indicator(name, instr, new [] { indi.MACD, indi.Signal }, periods, extrap_history);
+		}
+
+		/// <summary>A Donchian channel indicator</summary>
+		public static Indicator Donchian(string name, Instrument instr, int periods, int? extrap_history = null)
+		{
+			var indi = instr.Indicators.DonchianChannel(periods);
+			return new Indicator(name, instr, new [] { indi.Top, indi.Middle, indi.Bottom }, periods, extrap_history);
 		}
 
 		/// <summary>An identifying name for the indicator</summary>
@@ -44,10 +53,10 @@ namespace Rylobot
 		}
 
 		/// <summary>The indicator series providing the data</summary>
-		public IndicatorDataSeries[] Source
+		private IndicatorDataSeries[] Source
 		{
 			get;
-			private set;
+			set;
 		}
 
 		/// <summary>The instrument this is an indicator on</summary>
@@ -55,6 +64,12 @@ namespace Rylobot
 		{
 			get;
 			private set;
+		}
+
+		/// <summary>The number of data series in this indicator</summary>
+		public int SourceCount
+		{
+			get { return Source.Length; }
 		}
 
 		/// <summary>The number of elements in this indicator</summary>
@@ -87,7 +102,7 @@ namespace Rylobot
 			get { return +1; }
 		}
 
-		/// <summary>The raw data. Idx = -(Count+1) is the oldest, Idx = 0 is the latest</summary>
+		/// <summary>The raw data. Idx = -(Count+1) is the oldest, Idx = 0 is the latest.</summary>
 		public double this[Idx idx, int series = 0]
 		{
 			get
@@ -98,7 +113,6 @@ namespace Rylobot
 				var val0 = Source[series][(int)(i0 - IdxFirst)];
 				var val1 = Source[series][(int)(i1 - IdxFirst)];
 				var val = Maths.Lerp(val0, val1, (double)idx - (int)idx);
-				Debug.Assert(Maths.IsFinite(val));
 				return val;
 			}
 		}
@@ -108,19 +122,11 @@ namespace Rylobot
 		{
 			return Source[series].FirstDerivative(idx);
 		}
-		public double FirstDerivative(int series = 0)
-		{
-			return Source[series].FirstDerivative();
-		}
 
 		/// <summary>Return the second derivative of the data series at 'index'</summary>
 		public double SecondDerivative(Idx idx, int series = 0)
 		{
 			return Source[series].SecondDerivative(idx);
-		}
-		public double SecondDerivative(int series = 0)
-		{
-			return Source[series].SecondDerivative();
 		}
 
 		/// <summary>Default extrapolation of the indicator</summary>
@@ -129,65 +135,35 @@ namespace Rylobot
 			get { return Extrapolate(2, ExtrapHistory); }
 		}
 
-		/// <summary>Return a polynomial approximation of the indicator values or null if no decent approximation could be made</summary>
-		public Extrapolation Extrapolate(int order, int history_count, int series = 0)
+		/// <summary>Return a polynomial approximation of the indicator values or null if no decent approximation could be made. 'order' is polynomial order (i.e. 1 or 2)</summary>
+		public Extrapolation Extrapolate(int order, int history_count, Idx? idx_ = null, int series = 0)
 		{
-			// Require a number of periods
-			if (Count < 10)
+			var idx = idx_ ?? IdxLast;
+
+			// Get the points to fit too
+			var range = Instrument.IndexRange(idx - history_count, idx);
+			var points = range
+				.Where(x => Maths.IsFinite(Source[series][(int)(x - IdxFirst)]))
+				.Select(x => new v2((float)x, (float)Source[series][(int)(x - IdxFirst)]))
+				.ToArray();
+
+			// Require a minimum number of points
+			if (points.Length <= order)
 				return null;
 
-			// Try combinations to get the best fit
-			var combos = new[]
-			{
-				new[] {-0,-1,-2 },
-				new[] {-0,-1,-3 },
-				new[] {-0,-2,-4 },
-				new[] {-0,-2,-5 },
-				new[] {-0,-3,-6 },
-				new[] {-0,-3,-7 },
-				new[] {-0,-4,-6 },
-				new[] {-0,-4,-8 },
-			};
-
-			// Test each quadratic, return the best fit
-			var best = (Extrapolation)null;
-			foreach (var combo in combos)
-			{
-				// Create a curve from the sample points
-				var curve = (IPolynomial)null;
-				switch (order)
-				{
-				default: throw new Exception("Unsupported polynomial order");
-				case 2:
-					curve = Quadratic.FromPoints(
-					combo[0], this[combo[0], series],
-					combo[1], this[combo[1], series],
-					combo[2], this[combo[2], series]);
-					break;
-				case 1:
-					curve = Monic.FromPoints(
-					combo[0], this[combo[0], series],
-					combo[2], this[combo[2], series]);
-					break;
-				}
-
-				// Measure the confidence of the curve as an approximation
-				var err = new Avr();
-				foreach (var c in Instrument.HighRes.Range(-history_count, 1))
-				{
-					var i = Instrument.IndexAt(c.TimestampUTC);
-					err.Add(Maths.Sqr(this[i, series] - curve.F(i)));
-				}
-				var error = Math.Sqrt(err.Mean);
-
-				// Map the error range to [0,+1], where > 0.5 is "good"
-				var conf = 1.0 - Maths.Sigmoid(error, (double)Instrument.MCS * 0.2);
-				if (best == null || best.Confidence < conf)
-					best = new Extrapolation(curve, conf);
+			// Create a curve using linear regression
+			var curve = (IPolynomial)null;
+			switch (order) {
+			default: throw new Exception("Unsupported polynomial order");
+			case 2: curve = Quadratic.FromLinearRegression(points); break;
+			case 1: curve = Monic.FromLinearRegression(points); break;
 			}
 
-			// Return the best guess
-			return best;
+			// Measure the confidence in the fit.
+			// Map the error range to [0,+1], where > 0.5 is "good"
+			var rms  = Math.Sqrt(points.Sum(x => Maths.Sqr(x.y - curve.F(x.x))));
+			var conf = 1.0 - Maths.Sigmoid(rms, Instrument.MCS * 0.2);
+			return new Extrapolation(curve, conf);
 		}
 	}
 

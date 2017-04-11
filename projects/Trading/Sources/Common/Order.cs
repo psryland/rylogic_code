@@ -142,6 +142,19 @@ namespace Rylobot
 			}
 		}
 
+		/// <summary>The string comment attached to the order</summary>
+		public string Comment
+		{
+			get
+			{
+				return 
+					Position     != null ? Position    .Comment :
+					PendingOrder != null ? PendingOrder.Comment :
+					Trade        != null ? Trade       .Comment :
+					string.Empty;
+			}
+		}
+
 		/// <summary>
 		/// Return the stop loss as a signed quote price value relative to the entry price.
 		/// Positive values mean on the losing side (e.g. buy => sign = +1, entry_price - sign*SL = lower price)

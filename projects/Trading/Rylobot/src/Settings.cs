@@ -13,7 +13,8 @@ namespace Rylobot
 		public Settings()
 		{
 			UILayout                 = null;
-			MaxRiskPC                = 10.0;
+			MaxDrawDownFrac          = 0.5;
+			MaxRiskFrac              = 0.01;
 			RewardToRisk             = new RangeF(0.1, 3.0);
 			LookBackCount            = 50;
 			SnRHistoryLength         = 200;
@@ -48,11 +49,18 @@ namespace Rylobot
 			set { set(x => x.UILayout, value); }
 		}
 
-		/// <summary>The percentage of the account balance to risk at any one time</summary>
-		public double MaxRiskPC
+		/// <summary>The maximum account draw down before emergency stop</summary>
+		public double MaxDrawDownFrac
 		{
-			get { return get(x => x.MaxRiskPC); }
-			set { set(x => x.MaxRiskPC, value); }
+			get { return get(x => x.MaxDrawDownFrac); }
+			set { set(x => x.MaxDrawDownFrac, value); }
+		}
+
+		/// <summary>The percentage of the account balance to risk at any one time</summary>
+		public double MaxRiskFrac
+		{
+			get { return get(x => x.MaxRiskFrac); }
+			set { set(x => x.MaxRiskFrac, value); }
 		}
 
 		/// <summary>The range of reward to risk ratios for a trade (reward/risk) </summary>

@@ -5,6 +5,8 @@ using cAlgo.API.Indicators;
 using cAlgo.API.Internals;
 using cAlgo.Indicators;
 using pr.common;
+using pr.extn;
+using pr.util;
 
 namespace Rylobot
 {
@@ -46,7 +48,7 @@ namespace Rylobot
 		{
 			var price = Instrument.LatestPrice;
 			var mcs = Instrument.MCS;
-			var slope = MACD.FirstDerivative() / Instrument.PipSize;
+			var slope = MACD.FirstDerivative(0) / Instrument.PipSize;
 
 			// Hold a trade in the direction of the MACD slope
 			// Use hysteresis to switch
@@ -66,7 +68,7 @@ namespace Rylobot
 				var sign = position.Sign();
 				if (Math.Abs(slope) < SlopeThreshold - Hysteresis)
 				{
-					Broker.ClosePosition(position);
+					Broker.ClosePosition(position, "{0} - Slope Changed".Fmt(R<Rylobot_MACD>.NameOf));
 				}
 			}
 		}

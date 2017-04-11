@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using cAlgo.API;
@@ -15,11 +16,25 @@ namespace Rylobot
 	public class Rylobot_MAExtreme : Rylobot
 	{
 		#region Parameters
-		[Parameter("Risk Factor", DefaultValue = 1.0, MaxValue = 1.0, MinValue = 0.01)]
+		/// <summary>The risk level to use for this bot</summary>
+		[Parameter("Account Risk", DefaultValue = 1.0, MaxValue = 1.0, MinValue = 0.01)]
 		public override double Risk { get; set; }
 
-		[Parameter("Strong Trend Threshold", DefaultValue = 0.8, MaxValue = 1.0, MinValue = 0.0, Step = 0.01)]
-		public double StrongTrend { get; set; }
+		/// <summary>The maximum number of open position sets</summary>
+		[Parameter("Max Position Sets", DefaultValue = 1, MinValue = 1)]
+		public override int MaxPositionSets { get; set; }
+
+		/// <summary>Fast MA</summary>
+		[Parameter("Fast MA Periods", DefaultValue = 10, MaxValue = 50, MinValue = 1)]
+		public int MAPeriods0 { get; set; }
+
+		/// <summary>Slow MA</summary>
+		[Parameter("Slow MA Periods", DefaultValue = 41, MaxValue = 100, MinValue = 5)]
+		public int MAPeriods1 { get; set; }
+
+		/// <summary>The stop loss multiple</summary>
+		[Parameter("Stop Loss Fraction", DefaultValue = 2.0)]
+		public double SLFrac { get; set; }
 
 		[Parameter("Open Distance", DefaultValue = 1.0, MaxValue = 5.0, MinValue = 0.0, Step = 0.1)]
 		public double OpenDistance { get; set; }
@@ -27,11 +42,16 @@ namespace Rylobot
 		[Parameter("Close Distance", DefaultValue = 0.0, MaxValue = +3.0, MinValue = -3.0, Step = 0.1)]
 		public double CloseDistance { get; set; }
 
-		[Parameter("Fast MA Periods", DefaultValue = 10, MaxValue = 50, MinValue = 1)]
-		public int MAPeriods0 { get; set; }
+		/// <summary>Close positions after a break of this many periods</summary>
+		[Parameter("Close Breakout Periods", DefaultValue = 8)]
+		public int CloseBreakoutPeriods { get; set; }
 
-		[Parameter("Slow MA Periods", DefaultValue = 41, MaxValue = 100, MinValue = 5)]
-		public int MAPeriods1 { get; set; }
+		/// <summary>Close positions if a new profit peak is not set within this many periods</summary>
+		[Parameter("Close TopDrop Count", DefaultValue = 8)]
+		public int CloseTopDropCount { get; set; }
+
+		[Parameter("Trend Weight", DefaultValue = 1.0)]
+		public double TrendWeight { get; set; }
 		#endregion
 
 		protected override void OnStart()
@@ -44,9 +64,6 @@ namespace Rylobot
 		}
 		protected override void OnStop()
 		{
-			// Log the whole instrument
-			Debugging.Dump(Instrument, mas:new[] { MA0, MA1 });
-
 			base.OnStop();
 		}
 
@@ -57,84 +74,88 @@ namespace Rylobot
 		/// <summary>Recent distribution of prices</summary>
 		public Distribution PriceDistribution { get; private set; }
 
-		/// <summary>Debugging output</summary>
 		public override void Dump()
 		{
 			Debugging.CurrentPrice(Instrument);
-			Debugging.Dump(Instrument, range:new Range(-100, 1), mas:new[] { MA0, MA1 });
+			Debugging.Dump(Instrument, range:new Range(-100, 1), indicators:new[] { MA0, MA1 });
 		}
-
-		/// <summary>Strategy step</summary>
 		protected override void Step()
 		{
-			// One position at a time
-			if (Positions.Any())
-				return;
-
-			var mcs = Instrument.MCS;
-			var price = Instrument.LatestPrice;
-
-			// Get the trend characteristics
-			var trend_sign = Math.Sign(MA0[0].CompareTo(MA1[0]));
-			var trend = Instrument.MeasureTrendFromSlope(MA0.FirstDerivative());
-
-			// If this is a strong trend, only enter when price is opposite the trend
-			if (Math.Abs(trend) > StrongTrend)
+			// Look for trade entry
+			var sets_count = PositionSets.Count + PendingOrders.Count();
+			if (sets_count < MaxPositionSets && EntryCooldown == 0)
 			{
+				var mcs = Instrument.MCS;
+				var price = Instrument.LatestPrice;
+				var trend_sign = Math.Sign(MA0[0].CompareTo(MA1[0]));
 
-			}
-			// Otherwise enter if price is a long way from the MA
-			else
-			{
-				var dist_ask = (MA0[0] - price.Ask) / mcs;
-				var dist_bid = (price.Bid - MA0[0]) / mcs;
-				if (dist_ask > OpenDistance)
+				for (;;)
 				{
-					var exit = Instrument.ChooseTradeExit(TradeType.Buy, price.Ask, risk:Risk);
-					var sl = exit.SL;
-					var tp = MA0[0] + CloseDistance * mcs;
-					var vol = exit.Volume;
-					var trade = new Trade(Instrument, TradeType.Buy, Label, price.Ask, sl, tp, vol);
-					Broker.CreateOrder(trade);
+					if (Math.Abs(MA1[0] - MA0[0]) < 0.5*mcs)
+						break;
+
+					{
+						var sign = trend_sign;
+						var ep = MA1[0];
+						var tt = CAlgo.SignToTradeType(sign);
+						var sl = ep - sign * mcs * SLFrac;
+						var tp = MA0[0];//(QuoteCurrency?)null;
+						var vol = Broker.ChooseVolume(Instrument, Math.Abs(ep - sl), risk:Risk);
+						var trade = new Trade(Instrument, tt, Label, ep, sl, tp, vol) { Expiration = Instrument.ExpirationTime(1) };
+						Broker.CreatePendingOrder(trade);
+						break;
+					}
 				}
-				if (dist_bid > OpenDistance)
-				{
-					var exit = Instrument.ChooseTradeExit(TradeType.Sell, price.Bid, risk:Risk);
-					var sl = exit.SL;
-					var tp = MA0[0] - CloseDistance * mcs;
-					var vol = exit.Volume;
-					var trade = new Trade(Instrument, TradeType.Sell, Label, price.Bid, sl, tp, vol);
-					Broker.CreateOrder(trade);
-				}
+
+				//var dist_ask = MA0[0] - price.Ask;
+				//var dist_bid = price.Bid - MA0[0];
+
+				//var trend0 = ((Monic)MA0.Extrapolate(1, 5).Curve).A;
+				//var trend1 = Instrument.EMASlope(0);
+				//	//((Monic)MA1.Extrapolate(1, 5).Curve).A;
+
+				//// Bias the price distance from the MA by the trend
+				//dist_ask += trend0 * TrendWeight;
+				//dist_bid -= trend0 * TrendWeight;
+
+				//if (dist_ask > OpenDistance*mcs && Math.Sign(trend1) > 0)
+				//{
+				//	var sign = +1;
+				//	var ep = price.Ask;
+				//	var tt = TradeType.Buy;
+				//	var sl = ep - sign * mcs * SLFrac;
+				//	var tp = (QuoteCurrency?)null;
+				//	var vol = Broker.ChooseVolume(Instrument, Math.Abs(ep - sl), risk:Risk);
+				//	var trade = new Trade(Instrument, tt, Label, price.Ask, sl, tp, vol);
+				//	Broker.CreateOrder(trade);
+				//}
+				//if (dist_bid > OpenDistance*mcs && Math.Sign(trend1) < 0)
+				//{
+				//	var sign = -1;
+				//	var ep = price.Bid;
+				//	var tt = TradeType.Sell;
+				//	var sl = ep - sign * mcs * SLFrac;
+				//	var tp = (QuoteCurrency?)null;
+				//	var vol = Broker.ChooseVolume(Instrument, Math.Abs(ep - sl), risk:Risk);
+				//	var trade = new Trade(Instrument, tt, Label, price.Bid, sl, tp, vol);
+				//	Broker.CreateOrder(trade);
+				//}
 			}
+
+			// Break point helper
+			if (Instrument.NewCandle)
+				Dump();
 		}
 		protected override void OnPositionOpened(Position position)
 		{
-			base.OnPositionOpened(position);
-			PositionManagers.Add(new PositionManagerCloseAtMA(this, position));
-		}
-	}
+			// Close positions if there is a breakout in the wrong direction
+	//		PositionManagers.Add(new PositionManagerBreakOut(this, position, CloseBreakoutPeriods, only_if_in_profit: true));
 
-	public class PositionManagerCloseAtMA :PositionManager
-	{
-		public PositionManagerCloseAtMA(Rylobot_MAExtreme bot, Position position)
-			:base(bot, position)
-		{}
+			// Close positions when they fail to make new peaks
+		//	PositionManagers.Add(new PositionManagerTopDrop(this, position, CloseTopDropCount, only_if_in_profit: true));
 
-		public new Rylobot_MAExtreme Bot
-		{
-			get { return (Rylobot_MAExtreme)base.Bot; }
-		}
-
-		protected override void StepCore()
-		{
-			var mcs = Instrument.MCS;
-
-			// Move the TP to the current MA0 value
-			var sign = Position.Sign();
-			var tp = Bot.MA0[0] + sign * Bot.CloseDistance * mcs;
-			if (Position.TakeProfit == null || Math.Abs(Position.TakeProfit.Value - tp) > Instrument.PipSize)
-				Broker.ModifyOrder(Instrument, Position, tp:tp);
+			//PositionManagers.Add(new PositionManagerCloseAtMA(this, position, MAPeriods0, CloseDistance));
+			EntryCooldown = 5;
 		}
 	}
 }

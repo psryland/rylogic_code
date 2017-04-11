@@ -18,3 +18,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 EndGlobal
+
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RyloIndi_MAChannel", "..\..\Indicators\RyloIndi_MAChannel\RyloIndi_MAChannel\RyloIndi_MAChannel.csproj", "{6C91FEB8-8151-442F-B00B-51CD3959DAA7}"
+EndProject

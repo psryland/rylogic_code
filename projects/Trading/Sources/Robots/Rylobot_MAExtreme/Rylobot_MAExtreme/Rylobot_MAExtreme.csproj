@@ -11,8 +11,7 @@
     <RootNamespace>cAlgo</RootNamespace>
     <AssemblyName>Rylobot_MAExtreme</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
-    <TargetFrameworkProfile>
-    </TargetFrameworkProfile>
+    <TargetFrameworkProfile></TargetFrameworkProfile>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -58,6 +57,10 @@
     <ProjectReference Include="P:\projects\Trading\Rylobot\Rylobot.csproj">
       <Project>{e3fc9b70-7fed-4f5d-aa30-e86a8192ab8e}</Project>
       <Name>Rylobot</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Indicators\RyloIndi_MAChannel\RyloIndi_MAChannel\RyloIndi_MAChannel.csproj">
+      <Project>{6C91FEB8-8151-442F-B00B-51CD3959DAA7}</Project>
+      <Name>RyloIndi_MAChannel</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

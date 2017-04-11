@@ -14,29 +14,30 @@ namespace Rylobot
 	public class Rylobot_Turtle : Rylobot
 	{
 		#region Parameters
-		[Parameter("Breakout Periods Entry", DefaultValue = 20)]
+		[Parameter("Breakout Periods Entry", DefaultValue = 15)]
 		public int System1_Entry{ get; set; }
 
-		[Parameter("Breakout Periods Exit", DefaultValue = 10)]
+		[Parameter("Breakout Periods Exit", DefaultValue = 15)]
 		public int System1_Exit{ get; set; }
 
 		[Parameter("Max Positions", DefaultValue = 4)]
 		public int MaxPositions { get; set; }
+
+		[Parameter("Add Position Frac", DefaultValue = 0.5)]
+		public double AddPositionFrac { get; set; }
+
+		[Parameter("Stop Loss Frac", DefaultValue = 2.0)]
+		public double StopLossFrac { get; set; }
 		#endregion
 
 		protected override void OnStart()
 		{
 			base.OnStart();
 			BreakoutsHistory = new List<Trade>();
-			ActiveBreakouts = new List<Trade>();
-		}
-		protected override void OnStop()
-		{
-			base.OnStop();
 		}
 
 		private List<Trade> BreakoutsHistory { get; set; }
-		private List<Trade> ActiveBreakouts { get; set; }
+		private Trade ActiveBreakout;
 
 		/// <summary>Debugging output</summary>
 		public override void Dump()
@@ -57,7 +58,7 @@ namespace Rylobot
 			//   Exit on 10-period break-out against the position.
 			//   Open 1 unit at entry, and add 1 unit every 0.5*MCS above entry, move all stops to 2*MCS below
 			var price = Instrument.LatestPrice;
-			var N = Instrument.EMATrueRange(-20, 1);
+			var mcs = Instrument.MCS;
 
 			var positions = Positions.ToArray();
 			if (positions.Length == 0)
@@ -66,23 +67,28 @@ namespace Rylobot
 				var tt = Instrument.IsBreakOut(System1_Entry);
 				if (tt != null)
 				{
-					Dump();
-
 					var sign = tt.Value.Sign();
 					var ep = price.Price(sign);
-					var sl = ep - sign * 2*N;
-					var vol = Broker.ChooseVolume(Instrument, 1*N, risk:0.1f);
+					var sl = ep - sign * mcs * StopLossFrac;
+					var vol = Broker.ChooseVolume(Instrument, 1*mcs, risk:1.0/MaxPositions);
 					var trade = new Trade(Instrument, tt.Value, Label, ep, sl, null, vol);
 
 					// Enter if the last breakout was not a winner
-					var last = BreakoutsHistory.LastOrDefault();
-					if (!Positions.Any() && (last == null || last.NetProfit < 0))
+				//	var last = BreakoutsHistory.LastOrDefault();
+				//	if (last == null || last.NetProfit < 0)
 					{
-						Broker.CreateOrder(trade);
-					}
+						Dump();
 
-					// Save each breakout, so we can tell if they are winners
-					ActiveBreakouts.Add(trade);
+						Broker.CreateOrder(trade);
+						ActiveBreakout = trade;
+					}
+				//	else if (ActiveBreakout == null)
+				//	{
+				//		Dump();
+				//
+				//		// Save each breakout, so we can tell if they are winners
+				//		ActiveBreakout = trade;
+				//	}
 				}
 			}
 
@@ -95,19 +101,19 @@ namespace Rylobot
 				var initial_ep = sign > 0 ? positions.Min(x => x.EntryPrice) : positions.Max(x => x.EntryPrice);
 
 				// Get the level the price needs to have crossed
-				var ep = initial_ep + sign * positions.Length * N / 2.0;
+				var ep = initial_ep + sign * positions.Length * mcs * AddPositionFrac;
 				 
-				// Add to the position every 0.5*N gain
+				// Add to the position every AddPositionFrac*N gain
 				if (Math.Sign(Instrument.LatestPrice.Price(sign) - ep) == sign)
 				{
 					Dump();
 
-					var sl = ep - sign * 2*N;
-					var vol = Broker.ChooseVolume(Instrument, 1*N, risk:0.1f);
+					var sl = ep - sign * mcs * StopLossFrac;
+					var vol = Broker.ChooseVolume(Instrument, 1*mcs, risk:1.0/MaxPositions);
 
 					// Adjust the SL on existing trades
 					foreach (var pos in positions)
-						Broker.ModifyOrder(Instrument, pos, sl:pos.StopLoss + sign * N/2.0);
+						Broker.ModifyOrder(Instrument, pos, sl:pos.StopLoss + sign * mcs * AddPositionFrac);
 
 					// Add to the position
 					var trade = new Trade(Instrument, CAlgo.SignToTradeType(sign), Label, ep, sl, null, vol);
@@ -116,21 +122,20 @@ namespace Rylobot
 			}
 
 			// Simulate each active 'trade'
-			foreach (var trade in ActiveBreakouts)
-				trade.Simulate(Instrument.LatestPrice);
-
-			// Look for exits on simulated trades
-			var exit_tt = Instrument.IsBreakOut(System1_Exit);
-			if (exit_tt != null)
+			if (ActiveBreakout != null)
 			{
-				// Close any trades where 'exit_tt' is opposes the trade direction
-				foreach (var trade in ActiveBreakouts.Where(x => x.TradeType != exit_tt.Value).ToArray())
+				ActiveBreakout.Simulate(Instrument.LatestPrice);
+
+				// Look for exits on the simulated trade
+				var exit_tt = Instrument.IsBreakOut(System1_Exit);
+				if (exit_tt != null && ActiveBreakout.TradeType != exit_tt.Value)
 				{
 					Dump();
 
-					trade.Close();
-					BreakoutsHistory.Add(trade);
-					ActiveBreakouts.Remove(trade);
+					// Close any trades where 'exit_tt' is opposes the trade direction
+					ActiveBreakout.Close();
+					BreakoutsHistory.Add(ActiveBreakout);
+					ActiveBreakout = null;
 				}
 			}
 		}
@@ -138,28 +143,7 @@ namespace Rylobot
 		protected override void OnPositionOpened(Position position)
 		{
 			base.OnPositionOpened(position);
-			PositionManagers.Add(new PositionManagerTurtle(this, position));
-		}
-	}
-
-	/// <summary>Position manager for the Turtle trading strategy</summary>
-	public class PositionManagerTurtle :PositionManager
-	{
-		public PositionManagerTurtle(Rylobot bot, Position position)
-			:base(bot, position)
-		{}
-
-		public new Rylobot_Turtle Bot
-		{
-			get { return (Rylobot_Turtle)base.Bot; }
-		}
-
-		protected override void StepCore()
-		{
-			// Look for an exit signal
-			var exit_tt = Instrument.IsBreakOut(Bot.System1_Exit);
-			if (exit_tt != null && exit_tt.Value != Position.TradeType)
-				Broker.ClosePosition(Position);
+			PositionManagers.Add(new PositionManagerBreakOut(this, position, System1_Exit, only_if_in_profit:false));
 		}
 	}
 }

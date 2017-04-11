@@ -76,7 +76,7 @@
     <Compile Include="D:\Users\Paul\Documents\cAlgo\Sources\Common\Typedefs.cs">
       <Link>src\common\Typedefs.cs</Link>
     </Compile>
-    <Compile Include="src\Correlator.cs" />
+    <Compile Include="src\TradeStats.cs" />
     <Compile Include="src\Indicator.cs" />
     <Compile Include="src\Peaks.cs" />
     <Compile Include="src\PositionManager.cs" />

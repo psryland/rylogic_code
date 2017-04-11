@@ -3,6 +3,7 @@ using System.Diagnostics;
 using cAlgo.API;
 using pr.extn;
 using pr.maths;
+using pr.util;
 
 namespace Rylobot
 {
@@ -15,7 +16,7 @@ namespace Rylobot
 			Position           = pos;
 			MinRtR             = 1.0;
 			MinRtRCrossedIndex = null;
-			Closed             = false;
+			Done             = false;
 		}
 		public virtual void Dispose()
 		{
@@ -144,8 +145,8 @@ namespace Rylobot
 		/// <summary>The (CAlgo) index that profit exceeded the MinRtR (or null)</summary>
 		public int? MinRtRCrossedIndex { get; private set; }
 
-		/// <summary>True once the position has closed</summary>
-		public bool Closed { get; private set; }
+		/// <summary>True once the position manager has done it's job</summary>
+		public bool Done { get; protected set; }
 
 		/// <summary>Output the current state</summary>
 		public virtual void Dump()
@@ -155,9 +156,9 @@ namespace Rylobot
 		}
 
 		/// <summary>Manage an open trade. This should be called on each tick</summary>
-		public virtual void Step()
+		public void Step()
 		{
-			if (Closed)
+			if (Done)
 				return;
 
 			LastProfit = Profit;
@@ -216,9 +217,12 @@ namespace Rylobot
 			var vol = Bot.Symbol.NormalizeVolume(Position.Volume / 2);
 			var sl = Position.EntryPrice + Position.Sign() * Instrument.Spread * 2.0;
 
+			// Record that close half was used
+			Bot.TradeStats.Event(Position, "CloseHalf");
+
 			// If the position was at the minimum volume, just close it
 			if (Position.Volume == vol)
-				Broker.ClosePosition(Position);
+				Broker.ClosePosition(Position, "CloseHalf - Min Volume");
 			else
 				Broker.ModifyOrder(Instrument, Position, sl:sl, vol:vol);
 		}
@@ -227,7 +231,102 @@ namespace Rylobot
 		private void HandlePositionClosed(object sender, PositionClosedEventArgs args)
 		{
 			if (args.Position.Id != Position.Id) return;
-			Closed = true;
+			Done = true;
+		}
+	}
+
+	/// <summary>Close a trade after a fixed number of candles</summary>
+	public class PositionManagerFixedTime :PositionManager
+	{
+		public PositionManagerFixedTime(Rylobot bot, Position pos, int num_candles)
+			:base(bot, pos)
+		{
+			NumCandles = num_candles;
+		}
+
+		/// <summary>The number of candles to hold the position for</summary>
+		public int NumCandles { get; set; }
+
+		/// <summary></summary>
+		protected override void StepCore()
+		{
+			if (!Instrument.NewCandle)
+				return;
+
+			if (Instrument.Count - EntryIndex >= NumCandles)
+				Bot.ClosePosition(Position);
+		}
+	}
+
+	/// <summary>Move the stop loss of a trade to break even at a given profit</summary>
+	public class PositionManagerMoveToBreakEven :PositionManager
+	{
+		private QuoteCurrency m_rel_price;
+		private QuoteCurrency? m_bias;
+
+		/// <summary>
+		/// 'rel_price' is the price in the profit direction that trips the break even. e.g. MCS would trip break even when the price is in profit by MCS.
+		/// 'bias' is the offset from break even</summary>
+		public PositionManagerMoveToBreakEven(Rylobot bot, Position position, QuoteCurrency rel_price, QuoteCurrency? bias = null)
+			:base(bot, position)
+		{
+			m_rel_price = rel_price;
+			m_bias = bias;
+		}
+		protected override void StepCore()
+		{
+			// Look for price exceeding the break even level
+			var price = Instrument.LatestPrice.Price(-Position.Sign());
+			var rel = Position.Sign() * (price - Position.EntryPrice);
+			if (rel > m_rel_price)
+				Broker.MoveToBreakEven(Instrument, Position, m_bias);
+		}
+	}
+
+	/// <summary>Take profit when the price drops to a percentage of the peak</summary>
+	public class PositionManagerPeakPC :PositionManager
+	{
+		public PositionManagerPeakPC(Rylobot bot, Position pos, double peak_frac = 0.7)
+			:base(bot, pos)
+		{
+			PeakFrac = peak_frac;
+		}
+
+		/// <summary>The pull back from the peak</summary>
+		public double PeakFrac
+		{
+			get;
+			private set;
+		}
+
+		/// <summary>True if the price got close to the threshold</summary>
+		private bool Nearly
+		{
+			get;
+			set;
+		}
+
+		protected override void StepCore()
+		{
+			// Only apply this when in profit and the TP has been crossed
+			if (Profit <= 0 || MinRtRCrossedIndex == null)
+				return;
+
+			// The fraction of the peak profit
+			var ratio = Profit / PeakProfit;
+			Bot.Debugging.Trace("PeakPC ratio: {0:N3}".Fmt(ratio));
+			if (ratio <= 0)
+				return;
+
+			// Watch for the price dipping to just above the threshold
+			if (ratio < PeakFrac + 0.1)
+				Nearly = true;
+
+			// Close if, we've passed the min RtR
+			// and the ratio is below the threshold,
+			// or we nearly closed and now the price is at a high again
+			if (ratio < PeakFrac || (Nearly && ratio > 0.95))
+				Bot.ClosePosition(Position);
 		}
 	}
 
@@ -382,7 +481,7 @@ namespace Rylobot
 					}
 					if (close)
 					{
-						Broker.ClosePosition(Position);
+						Broker.ClosePosition(Position, "{0} - Scalp".Fmt(R<PositionManagerNervious>.NameOf));
 						State = EState.PositionClosed;
 					}
 					break;
@@ -430,7 +529,7 @@ namespace Rylobot
 					// next time the profit peak is not set
 					if (!NewPeak)
 					{
-						Broker.ClosePosition(Position);
+						Broker.ClosePosition(Position, "{0} - Non-Peak".Fmt(R<PositionManagerNervious>.NameOf));
 						State = EState.PositionClosed;
 						Bot.Debugging.Trace("Position closed - non-peak");
 					}
@@ -442,7 +541,7 @@ namespace Rylobot
 					// Bail as soon as the profit decreases
 					if (!IsGain)
 					{
-						Broker.ClosePosition(Position);
+						Broker.ClosePosition(Position, "{0} - Next Profit Drop".Fmt(R<PositionManagerNervious>.NameOf));
 						State = EState.PositionClosed;
 						Bot.Debugging.Trace("Position closed - profit dropped");
 					}
@@ -458,7 +557,7 @@ namespace Rylobot
 					}
 					else if (Position.NetProfit > 0)
 					{
-						Broker.ClosePosition(Position);
+						Broker.ClosePosition(Position, "{0} - Bail With Profit".Fmt(R<PositionManagerNervious>.NameOf));
 						State = EState.PositionClosed;
 					}
 					else if (CandlesSinceProfitable > 4 * ColdFeetCount)
@@ -517,66 +616,16 @@ namespace Rylobot
 		}
 	}
 
-	/// <summary>Take profit when the price drops to a percentage of the peak</summary>
-	public class PositionManagerPeakPC :PositionManager
-	{
-		public PositionManagerPeakPC(Rylobot bot, Position pos, double peak_frac = 0.7)
-			:base(bot, pos)
-		{
-			PeakFrac = peak_frac;
-		}
-
-		/// <summary>The pull back from the peak</summary>
-		public double PeakFrac
-		{
-			get;
-			private set;
-		}
-
-		/// <summary>True if the price got close to the threshold</summary>
-		private bool Nearly
-		{
-			get;
-			set;
-		}
-
-		protected override void StepCore()
-		{
-			// Only apply this when in profit and the TP has been crossed
-			if (Profit <= 0 || MinRtRCrossedIndex == null)
-				return;
-
-			// The fraction of the peak profit
-			var ratio = Profit / PeakProfit;
-			Bot.Debugging.Trace("PeakPC ratio: {0:N3}".Fmt(ratio));
-			if (ratio <= 0)
-				return;
-
-			// Watch for the price dipping to just above the threshold
-			if (ratio < PeakFrac + 0.1)
-				Nearly = true;
-
-			// Close if, we've passed the min RtR
-			// and the ratio is below the threshold,
-			// or we nearly closed and now the price is at a high again
-			if (ratio < PeakFrac || (Nearly && ratio > 0.95))
-				Bot.ClosePosition(Position);
-		}
-	}
-
 	/// <summary>A position manager that tries to maximise profits</summary>
 	public class PositionManagerLetHerRun :PositionManager
 	{
+		/// <summary>A scalp threshold. If price spikes higher than this, close out immediately</summary>
+		private double m_peak_ratio;
 		public PositionManagerLetHerRun(Rylobot bot, Position pos)
 			:base(bot, pos)
 		{
-			PeakRatio = 0.0;
+			m_peak_ratio = 0.0;
 		}
-
-		/// <summary>A scalp threshold. If price spikes higher than this, close out immediately</summary>
-		public double PeakRatio { get; private set; }
-
-		/// <summary></summary>
 		protected override void StepCore()
 		{
 			// Determine the age of the trade (in fractional candles)
@@ -596,7 +645,7 @@ namespace Rylobot
 			if (rel < tp_rel)
 			{
 				if (MinRtRCrossedIndex != null && (MinRtRCrossedIndex.Value - EntryIndex) >= 1)
-					Broker.ClosePosition(Position);
+					Broker.ClosePosition(Position, "{0} - Min RtR".Fmt(R<PositionManagerLetHerRun>.NameOf));
 
 				return;
 			}
@@ -605,7 +654,7 @@ namespace Rylobot
 			var min_ratio = (double)tp_rel/ (Instrument.PipSize * age);
 			var ratio     = (double)rel   / (Instrument.PipSize * age);
 
-			PeakRatio = Math.Max(PeakRatio, ratio);
+			m_peak_ratio = Math.Max(m_peak_ratio, ratio);
 
 			Bot.Debugging.Trace("Ratio: {0}".Fmt(ratio));
 
@@ -625,26 +674,166 @@ namespace Rylobot
 		}
 	}
 
-	/// <summary>Close a trade after a fixed number of candles</summary>
-	public class PositionManagerFixedTime :PositionManager
+	/// <summary>Exit at a reversal candle pattern</summary>
+	public class PositionManagerCandlePattern :PositionManager
 	{
-		public PositionManagerFixedTime(Rylobot bot, Position pos, int num_candles)
-			:base(bot, pos)
-		{
-			NumCandles = num_candles;
-		}
-
-		/// <summary>The number of candles to hold the position for</summary>
-		public int NumCandles { get; set; }
-
-		/// <summary></summary>
+		public PositionManagerCandlePattern(Rylobot bot, Position position)
+			:base(bot, position)
+		{}
 		protected override void StepCore()
 		{
+			// Look for a candle pattern that indicators trend in the other direction
+			CandlePattern patn;
+			var pattern = Instrument.IsCandlePattern(out patn);
+			if (pattern != null && patn.TT != Position.TradeType)
+				Broker.ClosePosition(Position, "{0} - {1}".Fmt(R<PositionManagerCandlePattern>.NameOf, pattern.ToString()));
+		}
+	}
+
+	/// <summary>Close a trade when there is a breakout that opposes the trade direction</summary>
+	public class PositionManagerBreakOut :PositionManager
+	{
+		private int m_periods;
+		private bool m_only_if_in_profit;
+
+		public PositionManagerBreakOut(Rylobot bot, Position position, int periods, bool only_if_in_profit)
+			:base(bot, position)
+		{
+			m_periods = periods;
+			m_only_if_in_profit = only_if_in_profit;
+		}
+		protected override void StepCore()
+		{
+			// If not in profit when required
+			if (m_only_if_in_profit && Position.NetProfit < 0)
+				return;
+
+			// If not enough candles since open
+			if (Instrument.IdxLast - Instrument.IndexAt(Position.EntryTime) < m_periods)
+				return;
+
+			{// Look for an exit signal
+				var exit_tt = Instrument.IsBreakOut(m_periods);
+				if (exit_tt != null && exit_tt.Value != Position.TradeType)
+				{
+					Broker.ClosePosition(Position, "{0}-{1} - BreakOut".Fmt(R<PositionManagerBreakOut>.NameOf, m_periods));
+					Done = true;
+					return;
+				}
+			}
+		}
+	}
+
+	/// <summary>Close a position when it fails to make a new profit peak for a while</summary>
+	public class PositionManagerTopDrop :PositionManager
+	{
+		private int m_max_peak_separation;
+		private bool m_only_if_in_profit;
+
+		public PositionManagerTopDrop(Rylobot bot, Position position, int max_peak_separation, bool only_if_in_profit)
+			:base(bot, position)
+		{
+			m_max_peak_separation = max_peak_separation;
+			m_only_if_in_profit = only_if_in_profit;
+		}
+		protected override void StepCore()
+		{
+			// If not in profit when required
+			if (m_only_if_in_profit && Position.NetProfit < 0)
+				return;
+
+			// Check on new candles
 			if (!Instrument.NewCandle)
 				return;
 
-			if (Instrument.Count - EntryIndex >= NumCandles)
-				Bot.ClosePosition(Position);
+			// If not enough candles since open
+			if (Instrument.IdxLast - Instrument.IndexAt(Position.EntryTime) < m_max_peak_separation * 4 / 5)
+				return;
+
+			// Look for exit conditions
+			if (CandlesSincePeak >= m_max_peak_separation * 4 / 5)
+			{
+				// As we get near the max peak separation, try to close at a peak
+				var candle = Instrument[-1];
+				if (!candle.Type(Instrument.MCS).IsIndecision() && candle.Sign != Position.Sign())
+				{
+					Broker.ClosePosition(Position, "{0}-{1} - Same Sign Candle".Fmt(R<PositionManagerTopDrop>.NameOf, m_max_peak_separation));
+					Done = true;
+					return;
+				}
+
+				// Max peak separation
+				if (CandlesSincePeak >= m_max_peak_separation)
+				{
+					Broker.ClosePosition(Position, "{0}-{1} - Max Peak Separation".Fmt(R<PositionManagerTopDrop>.NameOf, m_max_peak_separation));
+					Done = true;
+					return;
+				}
+			}
+		}
+	}
+
+	/// <summary>Close after a sequence of adverse candles (ignoring indecision candles)</summary>
+	public class PositionManagerAdverseCandles :PositionManager
+	{
+		private int m_count;
+		public PositionManagerAdverseCandles(Rylobot bot, Position position, int count)
+			:base(bot, position)
+		{
+			m_count = count;
+		}
+		protected override void StepCore()
+		{
+			// Check on new candles
+			if (!Instrument.NewCandle)
+				return;
+
+			// If not enough candles since open
+			if (Instrument.IdxLast - Instrument.IndexAt(Position.EntryTime) < m_count)
+				return;
+
+			var sign = Position.Sign();
+			var mcs = Instrument.MCS;
+
+			// Look for exit conditions
+			var count = 0;
+			for (var i = Instrument.IdxLast; i-- != Instrument.IdxFirst;)
+			{
+				var candle = Instrument[i];
+				if (candle.Sign == sign) break;
+				if (candle.Type(mcs).IsIndecision()) continue;
+				++count;
+			}
+			if (count >= m_count)
+			{
+				Broker.ClosePosition(Position, "{0}-{1} - Adverse Candles".Fmt(R<PositionManagerAdverseCandles>.NameOf, m_count));
+				Done = true;
+				return;
+			}
+		}
+	}
+
+	/// <summary>Close after the price crosses a moving average by more than 'offset * MCS'</summary>
+	public class PositionManagerCloseAtMA :PositionManager
+	{
+
+		private Indicator m_ma;
+		private double m_offset;
+		public PositionManagerCloseAtMA(Rylobot bot, Position position, int ma_periods, double offset)
+			:base(bot, position)
+		{
+			m_ma     = Indicator.EMA("ma", Instrument, ma_periods);
+			m_offset = offset;
+		}
+		protected override void StepCore()
+		{
+			var mcs = Instrument.MCS;
+
+			// Move the TP to the current MA value
+			var sign = Position.Sign();
+			var tp = m_ma[0] + sign * m_offset * mcs;
+			if (Position.TakeProfit == null || Math.Abs(Position.TakeProfit.Value - tp) > Instrument.PipSize)
+				Broker.ModifyOrder(Instrument, Position, tp:tp);
 		}
 	}
 }

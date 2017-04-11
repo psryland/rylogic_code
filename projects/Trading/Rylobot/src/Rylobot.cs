@@ -25,11 +25,12 @@ namespace Rylobot
 			Debug.WriteLine("Rylobot is a {0} bit process".Fmt(Environment.Is64BitProcess?"64":"32"));
 			base.OnStart();
 
+			Label = "{0}_{1}".Fmt(GetType().Name, Guid.NewGuid());
+
 			Risk = 0.1;
 			TickNumber = 0;
 			BalanceMinimum = 0;
-			Label = GetType().Name;
-			PositionManagers = new List<PositionManager>();
+			EntryCooldown = 0;
 
 			// Load the global bot settings
 			Settings = new Settings(Settings.DefaultFilepath);
@@ -40,12 +41,17 @@ namespace Rylobot
 			// Create the main instrument
 			Instrument = new Instrument(this);
 
-			// The sets of positions/orders created by this bot
-			PositionIds = new HashSet<int>();
-			OrderIds = new HashSet<int>();
-
 			// Create the account manager and trade creator
 			Broker = new Broker(this, Account);
+
+			// Position Managers
+			PositionManagers = new List<PositionManager>();
+
+			// Position groups
+			PositionSets = new Dictionary<Guid, List<int>>();
+
+			// Stats for the trades
+			TradeStats = new TradeStats(this);
 
 			// Create a debugging helper
 			Debugging = new Debugging(this);
@@ -61,12 +67,10 @@ namespace Rylobot
 			base.Positions.Closed -= HandlePositionClosed;
 			base.Positions.Opened -= HandlePositionOpened;
 
-			// Output the edge for this strategy
-			Debugging.ReportEdge(100);
-
 			Util.DisposeAll(PositionManagers);
 			Debugging = null;
 			Broker = null;
+			TradeStats = null;
 			Instrument = null;
 			Util.Dispose(ref m_sym_cache);
 
@@ -78,13 +82,12 @@ namespace Rylobot
 			Debugging.BreakOnPointOfInterest();
 
 			// Emergency stop on large draw-down
-			var max_loss_ratio = (1.0 - 0.01*Settings.MaxRiskPC);
-			BalanceMinimum = Math.Max((double)BalanceMinimum, Account.Balance * max_loss_ratio);
+			BalanceMinimum = Math.Max((double)BalanceMinimum, Account.Balance * (1.0 - Settings.MaxDrawDownFrac));
 			if (Account.Equity < BalanceMinimum)
 			{
 				Debugging.Trace("Account equity (${0}) dropped below the balance minimum (${1}). Stopping".Fmt(Account.Equity, BalanceMinimum));
 				Print("Account equity (${0}) dropped below the balance minimum (${1}). Stopping".Fmt(Account.Equity, BalanceMinimum));
-				CloseAllPositions();
+				CloseAllPositions("Emergency Stop");
 				Stop();
 				return;
 			}
@@ -94,15 +97,35 @@ namespace Rylobot
 			base.OnTick();
 			Tick.Raise(this);
 
-			// Update the account info
-			Broker.Update();
+			try
+			{
+				// Update the account info
+				Broker.Update();
 
-			// Step active position managers
-			foreach (var pm in PositionManagers)
-				pm.Step();
+				// Remove position sets that don't have any active positions
+				var set_ids = Positions.Select(x => Guid_.Parse(x.Comment)).NotNull().ToHashSet(x => x.Value);
+				foreach (var set_id in PositionSets.Keys.ToArray())
+				{
+					if (set_ids.Contains(set_id)) continue;
+					PositionSets.Remove(set_id);
+				}
 
-			// Step the bot
-			Step();
+				// Step active position managers
+				foreach (var pm in PositionManagers)
+					pm.Step();
+
+				// Entry cool down
+				if (EntryCooldown != 0 && Instrument.NewCandle)
+					--EntryCooldown;
+
+				// Step the bot
+				Step();
+			}
+			catch (Exception ex)
+			{
+				Debugging.Trace(ex.Message);
+				Debugging.Trace(ex.StackTrace);
+			}
 		}
 
 		/// <summary>Step the strategy</summary>
@@ -173,11 +196,20 @@ namespace Rylobot
 		}
 		private Instrument m_instr;
 
-		/// <summary>The positions created by 'Bot'</summary>
-		public HashSet<int> PositionIds { get; private set; }
+		/// <summary>A helper for tracking decisions when creating trades</summary>
+		public TradeStats TradeStats
+		{
+			[DebuggerStepThrough]  get { return m_stats; }
+			private set
+			{
+				if (m_stats  == value) return;
+				m_stats = value;
+			}
+		}
+		private TradeStats m_stats;
 
-		/// <summary>The orders created by 'Bot'</summary>
-		public HashSet<int> OrderIds { get; private set; }
+		/// <summary>Position sets</summary>
+		public Dictionary<Guid, List<int>> PositionSets { get; private set; }
 
 		/// <summary>Active position managers</summary>
 		public List<PositionManager> PositionManagers
@@ -192,6 +224,9 @@ namespace Rylobot
 			get;
 			private set;
 		}
+
+		/// <summary>An entry cool down timer</summary>
+		public int EntryCooldown { get; protected set; }
 
 		/// <summary>All open positions on the account</summary>
 		public Positions AllPositions
@@ -220,13 +255,13 @@ namespace Rylobot
 		/// <summary>Return the positions created by this bot</summary>
 		public new IEnumerable<Position> Positions
 		{
-			get { return AllPositions.Where(x => PositionIds.Contains(x.Id)); }
+			get { return AllPositions.Where(x => x.Label == Label); }
 		}
 
 		/// <summary>Return pending orders created by this bot</summary>
 		public new IEnumerable<PendingOrder> PendingOrders
 		{
-			get { return AllPendingOrders.Where(x => OrderIds.Contains(x.Id)); }
+			get { return AllPendingOrders.Where(x => x.Label == Label); }
 		}
 
 		/// <summary>Positions and pending orders created by this bot</summary>
@@ -267,10 +302,12 @@ namespace Rylobot
 		}
 
 		/// <summary>The risk level to use for this bot</summary>
-		public virtual double Risk
-		{
-			get; set;
-		}
+		[Parameter("Account Risk", DefaultValue = 1.0, MaxValue = 1.0, MinValue = 0.01)]
+		public virtual double Risk { get; set; }
+
+		/// <summary>The maximum number of open position sets</summary>
+		[Parameter("Max Position Sets", DefaultValue = 1, MinValue = 1)]
+		public virtual int MaxPositionSets { get; set; }
 
 		/// <summary>Return the symbol for a given symbol code or null if invalid or unavailable</summary>
 		public Symbol GetSymbol(string symbol_code)
@@ -326,17 +363,30 @@ namespace Rylobot
 		{
 			// Only watch positions created by this bot
 			var position = args.Position;
-			if (!PositionIds.Contains(position.Id))
+			if (position.Label != Label)
 				return;
 
-			//Correlator.Track(position, CorrFactor.SL, position.StopLossRel());
-			//Correlator.Track(position, CorrFactor.TP, position.TakeProfitRel());
-			//Correlator.Track(position, CorrFactor.RtR, position.TakeProfitRel() / position.StopLossRel());
-			//Correlator.Track(position, CorrFactor.Volume, position.Volume);
+			try
+			{
+				// Add the position to the set it belongs to, or begin a new set
+				var id = Guid_.Parse(position.Comment);
+				if (id != null)
+				{
+					if (PositionSets.ContainsKey(id.Value))
+						PositionSets[id.Value].Add(position.Id);
+					else
+						PositionSets[id.Value] = new List<int>(new[] { position.Id });
+				}
 
-			// Notify position closed
-			if (PositionOpened != null) PositionOpened(this, args);
-			OnPositionOpened(position);
+				// Notify position closed
+				if (PositionOpened != null) PositionOpened(this, args);
+				OnPositionOpened(position);
+			}
+			catch (Exception ex)
+			{
+				Debugging.Trace(ex.Message);
+				Debugging.Trace(ex.StackTrace);
+			}
 		}
 
 		/// <summary>Called when a position closes</summary>
@@ -346,21 +396,32 @@ namespace Rylobot
 		{
 			// Only watch positions created by this strategy
 			var position = args.Position;
-			if (!PositionIds.Contains(position.Id))
+			if (position.Label != Label)
 				return;
 
-			//// Track the trade result
-			//Correlator.Result(position);
+			// Close all positions in the same set
+			var id = Guid_.Parse(position.Comment);
+			if (id != null && PositionSets.ContainsKey(id.Value))
+			{
+				var set = PositionSets[id.Value];
+				Broker.ClosePositions(Positions.Where(x => set.Contains(x.Id)), "Closing Set");
+				PositionSets.Remove(id.Value);
+			}
 
 			// Remove any position managers that are managing 'position'
 			PositionManagers.RemoveIf(x => x.Position.Id == position.Id);
 
-			// Notify position closed
-			if (PositionClosed != null) PositionClosed(this, args);
-			OnPositionClosed(position);
-
-			// Not one of ours now
-			PositionIds.Remove(position.Id);
+			try
+			{
+				// Notify position closed
+				if (PositionClosed != null) PositionClosed(this, args);
+				OnPositionClosed(position);
+			}
+			catch (Exception ex)
+			{
+				Debugging.Trace(ex.Message);
+				Debugging.Trace(ex.StackTrace);
+			}
 		}
 
 		/// <summary>Position, belonging to this bot, opened</summary>
@@ -375,9 +436,9 @@ namespace Rylobot
 		#region Position Operations
 
 		/// <summary>Close all positions created by this bot</summary>
-		public void CloseAllPositions()
+		public void CloseAllPositions(string reason)
 		{
-			Broker.ClosePositions(Positions);
+			Broker.ClosePositions(Positions, reason);
 		}
 
 		/// <summary>Cancel all pending orders created by this bot</summary>
@@ -433,8 +494,8 @@ namespace Rylobot
 					Debugging.Trace("Cancelling positions! Net: {0}".Fmt(bal));
 					Debug.Assert(bal >= 0.0);
 
-					Broker.ClosePositions(winners);
-					Broker.ClosePositions(losers);
+					Broker.ClosePositions(winners, "Cancel Winners/Losers");
+					Broker.ClosePositions(losers , "Cancel Winners/Losers");
 				}
 			}
 		}
@@ -446,6 +507,47 @@ namespace Rylobot
 				? Positions.Any(x => Math.Abs(x.EntryPrice - price) < min_trade_dist)
 				: Positions.Any(x => Math.Abs(x.EntryPrice - price) < min_trade_dist && x.Sign() == sign);
 		}
+
+		///// <summary>
+		///// Increase the current position on the instrument.
+		///// 'max_position' is a limit on the number of position increases that is allowed
+		///// 'step_fraction' is the fraction of 'MCS' at which an increase occurs
+		///// 'sl_fraction' is the multiple of 'MCS' to use as a stop loss</summary>
+		//protected void IncreasePosition(int max_positions, double step_fraction, double sl_fraction)
+		//{
+		//	// Get the existing positions
+		//	var positions = Positions.ToArray();
+		//	if (positions.Length == 0 || positions.Length == max_positions)
+		//		return;
+
+		//	// Get the trade direction
+		//	var sign = positions[0].Sign();
+		//	Debug.Assert(positions.All(x => x.Sign() == sign));
+
+		//	// Get the initial entry price
+		//	var initial_ep = sign > 0 ? positions.Min(x => x.EntryPrice) : positions.Max(x => x.EntryPrice);
+
+		//	// Get the level the price needs to have crossed
+		//	var mcs = Instrument.MCS;
+		//	var ep = initial_ep + sign * positions.Length * mcs * step_fraction;
+
+		//	// Add to the position every 'add_position_fraction * MCS' gain
+		//	if (Math.Sign(Instrument.LatestPrice.Price(sign) - ep) == sign)
+		//	{
+		//		Dump();
+
+		//		var sl = ep - sign * mcs * sl_fraction;
+		//		var vol = Broker.ChooseVolume(Instrument, mcs, risk:1.0 / max_positions);
+
+		//		// Adjust the SL on existing trades
+		//		foreach (var pos in positions)
+		//			Broker.ModifyOrder(Instrument, pos, sl:pos.StopLoss + sign * mcs * step_fraction);
+
+		//		// Add to the position
+		//		var trade = new Trade(Instrument, CAlgo.SignToTradeType(sign), Label, ep, sl, positions[0].TakeProfit, vol);
+		//		Broker.CreateOrder(trade);
+		//	}
+		//}
 
 		#endregion
 	}

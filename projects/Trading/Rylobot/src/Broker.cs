@@ -139,33 +139,28 @@ namespace Rylobot
 		}
 		private AcctCurrency m_pending_risk;
 
-		/// <summary>The total risk due to active and pending orders (as a percent of balance)</summary>
-		public double TotalRiskPC
+		/// <summary>The total risk due to active and pending orders (as a fraction of balance)</summary>
+		public double TotalRiskFrac
 		{
-			get { return 100.0 * (double)TotalRisk / (double)Balance; }
+			get { return (double)TotalRisk / (double)Balance; }
 		}
 
-		/// <summary>The risk due to open positions (as a percent of balance)</summary>
-		public double CurrentRiskPC
+		/// <summary>The risk due to open positions (as a fraction of balance)</summary>
+		public double CurrentRiskFrac
 		{
-			get { return 100.0 * (double)CurrentRisk / (double)Balance; }
+			get { return (double)CurrentRisk / (double)Balance; }
 		}
 
 		/// <summary>The risk due to pending orders (as a percent of balance)</summary>
-		public double PendingRiskPC
+		public double PendingRiskFrac
 		{
-			get { return 100.0 * (double)PendingRisk / (double)Balance; }
+			get { return (double)PendingRisk / (double)Balance; }
 		}
 
 		/// <summary>The maximum allowed risk at any one point in time</summary>
 		public AcctCurrency AllowedRisk
 		{
-			get
-			{
-				// Find the percentage of balance available to risk
-				var max_risk_pc = Bot.Settings.MaxRiskPC;
-				return Balance * max_risk_pc * 0.01;
-			}
+			get { return Balance * Bot.Settings.MaxRiskFrac; }
 		}
 
 		/// <summary>Returns the maximum amount (in account currency) to risk given the current balance and current existing risk</summary>
@@ -173,16 +168,13 @@ namespace Rylobot
 		{
 			get
 			{
-				// Find the percentage of balance available to risk
-				var max_risk_pc = Bot.Settings.MaxRiskPC;
-
 				// Determine how much room is left given existing risk
-				var available_risk_pc = max_risk_pc - TotalRiskPC;
-				if (available_risk_pc <= 0)
+				var available_risk_frac = Bot.Settings.MaxRiskFrac - TotalRiskFrac;
+				if (available_risk_frac <= 0)
 					return 0.0;
 
 				// Find the account currency value of the available risk
-				var balance_to_risk = Balance * available_risk_pc * 0.01;
+				var balance_to_risk = Balance * available_risk_frac;
 				return balance_to_risk;
 			}
 		}
@@ -197,7 +189,7 @@ namespace Rylobot
 					if (--m_suspend_risk_check != 0) return;
 					Debug.Assert(m_suspend_risk_check == 0);
 					if (!ignore_risk && MaxExistingRisk > AllowedRisk)
-						throw new Exception("Maximum risk exceeded");
+						throw new RiskExcededException("Maximum risk exceeded");
 				});
 		}
 		private int m_suspend_risk_check;
@@ -214,13 +206,19 @@ namespace Rylobot
 					return null;
 				}
 
+				// Sanity checks
+				if (trade.Volume == 0)
+					return null;
+				if (trade.SL != null && trade.TP != null && Math.Sign(trade.TP.Value - trade.SL.Value) != trade.Sign)
+					throw new Exception("Trade has invalid SL/TP levels");
+
 				// Check that placing this order will not exceed the maximum risk
 				if (m_suspend_risk_check == 0)
 				{
 					var trades = Bot.AllOrders.Concat(new Order(trade, active:true)).ToList();
 					var max_risk = FindMaxRisk(trades);
 					if (AllowedRisk - max_risk < -Maths.TinyD)
-						throw new Exception("Trade disallowed, exceeds allowable risk");
+						throw new RiskExcededException("Trade disallowed, exceeds allowable risk");
 				}
 
 				// Place the pending order.
@@ -230,7 +228,7 @@ namespace Rylobot
 				if ((trade.TradeType == TradeType.Buy  && trade.EP <= trade.Instrument.LatestPrice.Ask) ||
 					(trade.TradeType == TradeType.Sell && trade.EP >= trade.Instrument.LatestPrice.Bid))
 				{
-					r = Bot.PlaceLimitOrder(trade.TradeType, trade.Instrument.Symbol, trade.Volume, trade.EP, trade.Label, trade.SL_pips, trade.TP_pips, trade.Expiration);
+					r = Bot.PlaceLimitOrder(trade.TradeType, trade.Instrument.Symbol, trade.Volume, trade.EP, trade.Label, trade.SL_pips, trade.TP_pips, trade.Expiration, trade.Comment);
 					if (!r.IsSuccessful)
 						throw new Exception("Place limit order failed: {0}".Fmt(r.Error));
 				}
@@ -239,7 +237,7 @@ namespace Rylobot
 				if ((trade.TradeType == TradeType.Buy  && trade.EP >= trade.Instrument.LatestPrice.Ask) ||
 					(trade.TradeType == TradeType.Sell && trade.EP <= trade.Instrument.LatestPrice.Bid))
 				{
-					r = Bot.PlaceStopOrder(trade.TradeType, trade.Instrument.Symbol, trade.Volume, trade.EP, trade.Label, trade.SL_pips, trade.TP_pips, trade.Expiration);
+					r = Bot.PlaceStopOrder(trade.TradeType, trade.Instrument.Symbol, trade.Volume, trade.EP, trade.Label, trade.SL_pips, trade.TP_pips, trade.Expiration, trade.Comment);
 					if (!r.IsSuccessful)
 						throw new Exception("Place stop order failed: {0}".Fmt(r.Error));
 				}
@@ -247,9 +245,6 @@ namespace Rylobot
 				// Neither condition valid? not sure this is possible
 				if (r == null)
 					throw new Exception("Pending order not placed");
-
-				// Record the order
-				Bot.OrderIds.Add(r.PendingOrder.Id);
 
 				// Update the order
 				Bot.Debugging.LogOrder(r.PendingOrder, true);
@@ -262,6 +257,7 @@ namespace Rylobot
 			}
 			catch (Exception ex)
 			{
+				Bot.Debugging.Trace(ex.Message);
 				Bot.Print(ex.Message);
 				return null;
 			}
@@ -273,8 +269,12 @@ namespace Rylobot
 			try
 			{
 				// Must be an order belonging to 'Bot'
-				if (!Bot.OrderIds.Contains(ord.Id))
+				if (ord.Label != Bot.Label)
 					throw new Exception("Cannot modify orders that weren't created by Bot");
+
+				// Sanity checks
+				if (trade.SL != null && trade.TP != null && Math.Sign(trade.TP.Value - trade.SL.Value) != trade.Sign)
+					throw new Exception("Trade has invalid SL/TP levels");
 
 				// Check that changing this order will not exceed the maximum risk
 				if (m_suspend_risk_check == 0)
@@ -282,7 +282,7 @@ namespace Rylobot
 					var trades = Bot.AllOrders.Where(x => x.Id != ord.Id).Concat(new Order(trade, active:true)).ToList();
 					var max_risk = FindMaxRisk(trades);
 					if (max_risk > AllowedRisk)
-						throw new Exception("Modification disallowed, exceeds allowable risk");
+						throw new RiskExcededException("Modification disallowed, exceeds allowable risk");
 				}
 
 				// Modify the pending order
@@ -300,6 +300,7 @@ namespace Rylobot
 			}
 			catch (Exception ex)
 			{
+				Bot.Debugging.Trace(ex.Message);
 				Bot.Print(ex.Message);
 				return false;
 			}
@@ -327,6 +328,7 @@ namespace Rylobot
 			}
 			catch (Exception ex)
 			{
+				Bot.Debugging.Trace(ex.Message);
 				Bot.Print(ex.Message);
 				return null;
 			}
@@ -351,22 +353,25 @@ namespace Rylobot
 					return null;
 				}
 
+				// Sanity checks
+				if (trade.Volume == 0)
+					return null;
+				if (trade.SL != null && trade.TP != null && Math.Sign(trade.TP.Value - trade.SL.Value) != trade.Sign)
+					throw new Exception("Trade has invalid SL/TP levels");
+
 				// Check that placing this order will not exceed the maximum risk
 				if (m_suspend_risk_check == 0)
 				{
 					var trades = Bot.AllOrders.Concat(new Order(trade, active:true)).ToList();
 					var max_risk = FindMaxRisk(trades);
 					if (AllowedRisk - max_risk < -Maths.TinyD)
-						throw new Exception("Trade disallowed, exceeds allowable risk");
+						throw new RiskExcededException("Trade disallowed, exceeds allowable risk");
 				}
 
 				// Place the order
 				var r = Bot.ExecuteMarketOrder(trade.TradeType, trade.Instrument.Symbol, trade.Volume, trade.Label, (double?)trade.SL_pips, (double?)trade.TP_pips, null, trade.Comment);
 				if (!r.IsSuccessful)
 					throw new Exception("Execute market order failed: {0}".Fmt(r.Error));
-
-				// Record the order
-				Bot.PositionIds.Add(r.Position.Id);
 
 				// Output the order that was placed
 				Bot.Debugging.LogTrade(r.Position, live:true, update_instrument:true);
@@ -379,6 +384,7 @@ namespace Rylobot
 			}
 			catch (Exception ex)
 			{
+				Bot.Debugging.Trace(ex.Message);
 				Bot.Print(ex.Message);
 				return null;
 			}
@@ -390,9 +396,12 @@ namespace Rylobot
 			try
 			{
 				// Must be an order belonging to 'Bot'
-				if (!Bot.PositionIds.Contains(pos.Id))
+				if (pos.Label != Bot.Label)
 					throw new Exception("Cannot modify positions that weren't created by Bot");
 
+				// Sanity checks
+				if (trade.SL != null && trade.TP != null && Math.Sign(trade.TP.Value - trade.SL.Value) != trade.Sign)
+					throw new Exception("Trade has invalid SL/TP levels");
 				if (pos.Volume < trade.Volume)
 					throw new Exception("Cannot increase the volume of a position");
 
@@ -402,7 +411,7 @@ namespace Rylobot
 					var trades = Bot.AllOrders.Where(x => x.Id != pos.Id).Concat(new Order(trade, active:true)).ToList();
 					var max_risk = FindMaxRisk(trades);
 					if (max_risk > AllowedRisk)
-						throw new Exception("Modification disallowed, exceeds allowable risk");
+						throw new RiskExcededException("Modification disallowed, exceeds allowable risk");
 				}
 
 				// Modify the order
@@ -429,6 +438,7 @@ namespace Rylobot
 			}
 			catch (Exception ex)
 			{
+				Bot.Debugging.Trace(ex.Message);
 				Bot.Print(ex.Message);
 				return false;
 			}
@@ -448,12 +458,12 @@ namespace Rylobot
 		}
 
 		/// <summary>Close an open position</summary>
-		public Position ClosePosition(Position pos)
+		public Position ClosePosition(Position pos, string reason)
 		{
 			try
 			{
 				// Must be an order belonging to 'Bot'
-				if (!Bot.PositionIds.Contains(pos.Id))
+				if (pos.Label != Bot.Label)
 					throw new Exception("Cannot modify orders that weren't created by Bot");
 
 				// Allow closing null
@@ -463,9 +473,14 @@ namespace Rylobot
 				// Update the position
 				Bot.Debugging.LogTrade(pos, live:false, update_instrument:true);
 
+				// Close the position
 				var r = Bot.ClosePosition(pos);
 				if (!r.IsSuccessful)
 					throw new Exception("Close position failed: {0}".Fmt(r.Error));
+
+				// Record stats about this position being closed
+				Bot.TradeStats.Event(pos, reason);
+				Bot.Debugging.Trace(reason);
 
 				// Update the account balance
 				Update();
@@ -473,16 +488,17 @@ namespace Rylobot
 			}
 			catch (Exception ex)
 			{
+				Bot.Debugging.Trace(ex.Message);
 				Bot.Print(ex.Message);
 				return null;
 			}
 		}
 
 		/// <summary>Close a range of positions</summary>
-		public void ClosePositions(IEnumerable<Position> positions)
+		public void ClosePositions(IEnumerable<Position> positions, string reason)
 		{
 			foreach (var pos in positions.ToArray())
-				ClosePosition(pos);
+				ClosePosition(pos, reason);
 		}
 
 		/// <summary>
@@ -510,7 +526,7 @@ namespace Rylobot
 			// Move the stop loss to just past the current price
 			var trade = new Trade(instr, position) { SL = sl, TP = tp ?? position.TakeProfit };
 			if (!ModifyOrder(position, trade))
-				ClosePosition(position); // Something went wrong, just close now
+				ClosePosition(position, "CloseByStopLoss Failed"); // Something went wrong, just close now
 
 			return true;
 		}
@@ -519,6 +535,7 @@ namespace Rylobot
 		public void CloseAt(Instrument instr, Position position, QuoteCurrency price)
 		{
 			Debug.Assert(instr.SymbolCode == position.SymbolCode);
+			Bot.TradeStats.Event(position, "CloseAt");
 
 			var trade = (Trade)null;
 			if (position.TradeType == TradeType.Buy)
@@ -559,21 +576,24 @@ namespace Rylobot
 			else
 			{
 				// Close immediately if the price spread spans 'price'
-				ClosePosition(position);
+				ClosePosition(position, "CloseAt at current Price");
 			}
 		}
 
 		/// <summary>Move the SL so that position can only close at break even</summary>
-		public bool MoveToBreakEven(Instrument instr, Position position, AcctCurrency? profit = null)
+		public void MoveToBreakEven(Instrument instr, Position position, QuoteCurrency? bias = null)
 		{
-			profit = profit ?? 0;
-			if (position.NetProfit < profit)
-				return false;
+			bias = bias ?? instr.Spread * 2;
 
-			var sl = position.EntryPrice + position.Sign() * instr.Symbol.AcctToQuote(profit.Value / position.Volume);
-			var trade = new Trade(instr, position) { SL = sl };
-			ModifyOrder(position, trade);
-			return true;
+			// Ensure the current price is above the break even point
+			var sign = position.Sign();
+			var price = instr.LatestPrice.Price(-sign);
+			var rel = sign * (price - position.EntryPrice);
+			if (rel < bias)
+				return;
+
+			var sl = position.EntryPrice + sign * bias.Value;
+			ModifyOrder(instr, position, sl:sl);
 		}
 
 		/// <summary>Return the maximum SL value (in quote currency) for the given volume</summary>
@@ -606,6 +626,12 @@ namespace Rylobot
 			// Get this amount in quote currency
 			var volume = (risk ?? 1.0) * balance_to_risk / instr.Symbol.QuoteToAcct(sl_rel);
 			return instr.Symbol.NormalizeVolume(volume, RoundingMode.Down);
+		}
+
+		/// <summary>Convert a volume to one allowed by the instrument</summary>
+		public long NormaliseVolume(double volume)
+		{
+			return Bot.Symbol.NormalizeVolume(volume, RoundingMode.Down);
 		}
 
 		/// <summary>Calculate the maximum risk given the current positions/orders (in account currency). (positive is risk, negative is guaranteed win)</summary>
@@ -794,6 +820,16 @@ namespace Rylobot
 
 			PendingRisk = risk;
 		}
+	}
+
+	public class RiskExcededException :Exception
+	{
+		public RiskExcededException()
+			:base()
+		{ }
+		public RiskExcededException(string msg)
+			:base(msg)
+		{ }
 	}
 }
 

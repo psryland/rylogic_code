@@ -27,5 +27,8 @@ namespace Rylobot
 
 		/// <summary>A string label for the trade</summary>
 		string Label { get; }
+
+		/// <summary>A string comment for the trade</summary>
+		string Comment { get; }
 	}
 }
