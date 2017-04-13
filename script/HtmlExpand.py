@@ -179,21 +179,21 @@ def Expand(buf, srcpath):
 	# Return the expanded buffer
 	return buf
 
-# Expand 'srcpath', writing 'dstpath'
-def ExpandHtmlFile(srcpath, dstpath = None):
+# Expand 'srcpath', writing to 'dstdir'
+def ExpandHtmlFile(srcpath, dstdir = None):
 
 	# Split the source file path up
 	srcdir,file = os.path.split(srcpath)
 	fname,extn  = os.path.splitext(file)
 
-	# Handle optional dstpath
-	if dstpath is None:
-		dstpath = srcdir
-	elif not os.path.isabs(dstpath):
-		dstpath = os.path.join(srcdir, dstpath)
-	if not os.path.isfile(dstpath):
-		dstpath = os.path.join(dstpath, fname + ".html")
-	dstpath = os.path.realpath(dstpath)
+	# Handle optional 'dstpath'
+	if dstdir is None:
+		dstdir = srcdir
+	elif not os.path.isabs(dstdir):
+		dstdir = os.path.join(srcdir, dstdir)
+
+	# Construct the destination filepath
+	dstpath = os.path.realpath(os.path.join(dstdir, fname + ".html"))
 
 	# Start with a buffer filled from the source file
 	buf = []

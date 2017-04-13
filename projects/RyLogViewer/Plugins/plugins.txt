@@ -1,21 +1,21 @@
-RyLogViewer scans this directory for .NET 4.0 assemblies that implement
+RyLogViewer scans this directory for .NET 4.5.2 assemblies that implement
 the extensible parts of the application. For more details on using and
 creating plugins, see the help documentation.
 
 As a quick guide, the steps you need to take to create a plugin
 are as follows:
 
-1) Create a C# class library project
+1) Create a .NET 4.5.2 class library project
 2) Add references to:
-   RyLogViewer.Extensions.dll
-   Rylogic.dll
-   (Found in the same directory that contains RyLogViewer.exe)
+    RyLogViewer.Extensions.dll
+    Rylogic.dll
+    (Found in the same directory that contains RyLogViewer.exe)
 3) Create a class that implements 'RyLogViewer.ICustomLogDataSource' and mark it
    with the 'pr.common.PluginAttribute'. e.g.
        [pr.common.Plugin(typeof(ICustomLogDataSource))]
        public class MyCustomDataSource :ICustomLogDataSource
        {}
-4) Build your project and put the resulting assembly in the .\plugins\ directory.
+4) Build your project and put the resulting assembly in this "plugins" directory.
 5) Restart RyLogViewer
 
 If all was successful, your custom data source should appear as menu item under
@@ -28,4 +28,4 @@ Notes:
      ITransformSubstitution.cs
   are there for reference only, do not include them in your plugin project.
   They are built into the RyLogViewer.Extensions.dll and are available via that reference.
-  They are intended as supplimental documentation to aid plugin creation.
+  They are intended as supplemental documentation to aid plugin creation.

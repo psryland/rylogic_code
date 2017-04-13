@@ -188,6 +188,13 @@ namespace RyLogViewer
 		public const string NoGUI        = "-nogui";
 	}
 
+	public static class ExampleFiles
+	{
+		public const string LogFile             = "examples\\logfile.txt";
+		public const string CodeLookup          = "examples\\code lookup.xml";
+		public const string HighlightPatternSet = "examples\\highlights pattern set.rylog_highlights";
+	}
+
 	public static class Misc
 	{
 		/// <summary>Returns true if this is the main thread</summary>

@@ -28,7 +28,7 @@ namespace RyLogViewer
 				{
 					Title = "Getting Started",
 					Body  = "To begin experimenting with some of the features of RyLogViewer, load the " +
-							"<a href='"+Cmd.open_example_logfile+"'><i>example logfile.txt</i></a> from the " +
+							"<a href='"+Cmd.open_example_logfile+"'><i>example logfile</i></a> from the " +
 							"examples directory.<br/>"
 				}
 				,new Tip
@@ -42,7 +42,7 @@ namespace RyLogViewer
 				,new Tip
 				{
 					Title = "Tool Tips",
-					Body  = "Almost every UI element in RyLogViewer has a popup tool tip. If you're unsure about " +
+					Body  = "Almost every UI element in RyLogViewer has a pop-up tool tip. If you're unsure about " +
 							"any part of the application, hover your mouse over it to read a quick description. " +
 							"If you would like more information, the main application documentation is found under " +
 							"the help menu."
@@ -50,8 +50,8 @@ namespace RyLogViewer
 				,new Tip
 				{
 					Title = "Export",
-					Body  = "The export feature allows loaded data to be exported to a new file. Transforms and " +
-					        "filtering are applied during the export process, which means RyLogViewer can be used " +
+					Body  = "The export feature allows data to be exported to a new file. Transforms and filtering " +
+					        "are applied during the export process, which means that RyLogViewer can be used " +
 					        "as a powerful text data transformation tool. Exporting data is also supported from the " +
 							"command line allowing RyLogViewer to be used in batch files or scripting tasks."
 				}
@@ -213,7 +213,7 @@ namespace RyLogViewer
 				case Cmd.open_example_logfile:
 					m_main.SetLineEnding(ELineEnding.Detect);
 					m_main.SetEncoding(null);
-					m_main.OpenSingleLogFile(Util.ResolveAppPath(@"examples\example logfile.txt"), false);
+					m_main.OpenSingleLogFile(Util.ResolveAppPath(ExampleFiles.LogFile), false);
 					Close();
 					break;
 				case Cmd.show_pattern_sets:

@@ -35,6 +35,8 @@ namespace RyLogViewer
 
 		private readonly Main m_main;
 		private readonly Settings m_orig_settings;
+
+		#region UI Elements
 		private SettingsUI m_settings_ui;
 		private ETutPage m_page_index;
 		private PageBase m_current_page;
@@ -42,6 +44,7 @@ namespace RyLogViewer
 		private Button m_btn_next;
 		private Button m_btn_back;
 		private Panel m_panel;
+		#endregion
 
 		public FirstRunTutorial(Main main)
 			:base(main, EPin.TopRight, new Point(-200,80))
@@ -78,8 +81,6 @@ namespace RyLogViewer
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
-
-		// Handlers
 		protected override void OnShown(EventArgs e)
 		{
 			base.OnShown(e);
@@ -225,8 +226,6 @@ namespace RyLogViewer
 		#endregion
 	}
 
-	// Some of these classes are within 'Main' so that they can access it's privates
-
 	/// <summary>Base class for first run tutorial pages</summary>
 	public class PageBase :IDisposable
 	{
@@ -289,6 +288,7 @@ namespace RyLogViewer
 		protected virtual Point Offset { get { return new Point(-200, 80); } }
 	}
 
+	// These classes are within 'Main' so that they can access it's privates
 	public partial class Main
 	{
 		public sealed class TutOpenLogData :PageBase
@@ -324,7 +324,7 @@ namespace RyLogViewer
 				m_main.m_grid.TryScrollToRowIndex(0);
 				m_overlay.Attachee = m_main;
 
-				var path = Util.ResolveAppPath(@"examples\example logfile.txt");
+				var path = Util.ResolveAppPath(ExampleFiles.LogFile);
 				m_main.SetLineEnding(ELineEnding.Detect);
 				m_main.SetEncoding(null);
 				m_main.OpenSingleLogFile(path, false);
@@ -413,9 +413,9 @@ namespace RyLogViewer
 			public TutEnableTransforms(FirstRunTutorial tut, Main main) :base(tut, main)
 			{
 				m_overlay.SnapShotCaptured += (s,a) =>
-					{
-						PaintHighlight(a.Gfx, a.ClientRectangle, m_main.m_btn_transforms.ParentFormRectangle());
-					};
+				{
+					PaintHighlight(a.Gfx, a.ClientRectangle, m_main.m_btn_transforms.ParentFormRectangle());
+				};
 			}
 			public override void Enter()
 			{
@@ -559,7 +559,7 @@ namespace RyLogViewer
 			}
 			protected override string HtmlContent
 			{
-				get { return "This covers the basics of RyLogViewer. More detailed information can be found in the main documentation found here."; }
+				get { return "This covers the basics of RyLogViewer. More detailed information is available in the main documentation, found here."; }
 			}
 		}
 	}
@@ -596,8 +596,8 @@ namespace RyLogViewer
 				get
 				{
 					return
-						"This is the pattern editor used to create highlighting patterns. The pattern editor is identical for " +
-						"filters and actions, and very similar for transforms.";
+						"This is the pattern editor used to create highlighting, filtering, transform, and action patterns. " +
+						"The pattern is applied to text in the test area allowing complex patterns to be tested and refined.";
 				}
 			}
 			protected override Point Offset

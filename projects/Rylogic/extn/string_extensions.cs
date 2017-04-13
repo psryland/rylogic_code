@@ -406,6 +406,12 @@ namespace pr.extn
 				f.Write(str);
 		}
 
+		/// <summary>Return the contents of a file as a string</summary>
+		public static string FromFile(string filepath)
+		{
+			return File.ReadAllText(filepath);
+		}
+
 		/// <summary>
 		/// Returns the minimum edit distance between two strings.
 		/// Useful for determining how "close" two strings are to each other</summary>

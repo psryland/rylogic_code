@@ -28,130 +28,150 @@
 #   + Can be debugged using VS
 #   - It's gunna be a mofo of a script...
 
-import sys, os, re, string, uuid
+import sys, os, re, string, uuid, tempfile
 import xml.etree.ElementTree as xml
 import xml.dom.minidom as minidom
 sys.path.append(re.sub(r"(\w:[\\/]).*", r"\1script", __file__))
 import Rylogic as Tools
 import UserVars
 
+# Get a UUID suitable for an Id
+def Id():
+	return str(uuid.uuid1()).replace("-","").upper()
+
 # Add a single file component to 'elem'
-def CreateFileComponent(elem:xml.Element, filepath:str):
+def CreateFileComponent(elem:xml.Element, filepath:str, keypath:bool=True, directory_id:str=None):
 
 	# Get the file title from the full filepath
 	dir,file = os.path.split(filepath);
 	file,ext = os.path.splitext(file);
-	uid = str(uuid.uuid1()).replace("-","").upper()
+	file = file.replace(' ','_')
+	uid = Id()
 
 	# Create the component to contain the file
-	cmp = xml.SubElement(elem, "Component", {"Id":"Cmp_"+uid, "Guid":"*"})
-	fcp = xml.SubElement(cmp, "File", {"Id":file+"_"+uid, "KeyPath":"yes", "Vital":"yes", "Source":filepath})
+	cmp_attr = {}
+	cmp_attr["Id"] = "Cmp_"+file+"_"+uid
+	cmp_attr["Guid"] = "*"
+	if directory_id: cmp_attr["Directory"] = directory_id
+	cmp = xml.SubElement(elem, "Component", cmp_attr)
+
+	fcp_attr = {}
+	fcp_attr["Id"] = file+"_"+uid
+	fcp_attr["Source"] = filepath
+	if keypath: fcp_attr["KeyPath"] = "yes"
+	fcp = xml.SubElement(cmp, "File", fcp_attr)
 
 	return
 
 # Create a component group in 'frag'
-def CreateComponentGroup(frag:xml.Element, id:str, directory:str, filepaths:[]):
+def CreateComponentGroup(elem:xml.Element, id:str, directory:str, filepaths:[]):
 
 	# Create the 'ComponentGroup' XML element
-	cg = xml.SubElement(frag, "ComponentGroup", {"Id":id, "Directory":directory})
+	cg = xml.SubElement(elem, "ComponentGroup", {"Id":id, "Directory":directory})
 
 	# Add each component
+	keypath = True
 	for filepath in filepaths:
-		CreateFileComponent(cg, filepath)
+		CreateFileComponent(cg, filepath, keypath)
+		keypath = False
 	
 	return
 
-# Create files.wxs
-def CreateFilesWXS(targetdir:str, objdir:str):
+# Create an XML tree of a WiX fragment by enumerating the files within a directory
+# 'dir' is the directory to harvest
+def HarvestDirectory(dir:str):
 
-	# Generate a .wxs file containing fragments for the files to include in the install
 	root = xml.Element("Wix", {"xmlns":"http://schemas.microsoft.com/wix/2006/wi"})
 	frag = xml.SubElement(root, "Fragment")
-	xml.SubElement(frag, "DirectoryRef", {"Id":"INSTALLFOLDER"})
-	xml.SubElement(frag, "DirectoryRef", {"Id":"lib_x86"})
-	xml.SubElement(frag, "DirectoryRef", {"Id":"lib_x64"})
-	xml.SubElement(frag, "DirectoryRef", {"Id":"doc"})
 
-	# Create a component group for the binary files
-	dir = targetdir + "\\"
-	filepaths = [dir+f for f in os.listdir(dir) if f.lower().endswith(".dll")]
-	CreateComponentGroup(frag, "binaries", "INSTALLFOLDER", filepaths);
+	# The directory structure sub tree
+	dr = xml.SubElement(frag, "DirectoryRef", {"Id":"INSTALLFOLDER"})
 
-	# Create a component group for the native 32-bit dlls
-	dir = targetdir + "\\lib\\x86\\"
-	filepaths = [dir+f for f in os.listdir(dir)]
-	CreateComponentGroup(frag, "binaries_x86", "lib_x86", filepaths)
+	# The component group sub tree
+	group_id = os.path.split(dir)[1].replace(' ','_')
+	cg = xml.SubElement(frag, "ComponentGroup", {"Id":group_id})
 
-	# Create a component group for the native 32-bit dlls
-	dir = targetdir + "\\lib\\x64\\"
-	filepaths = [dir+f for f in os.listdir(dir)]
-	CreateComponentGroup(frag, "binaries_x64", "lib_x64", filepaths)
+	# Walk the directory recursively
+	def WalkDir(dtree:xml.Element, cg:xml.Element, dir:str):
+		directory_id = "Dir_" + Id()
+		dirname = os.path.split(dir)[1]
+		sub = xml.SubElement(dtree, "Directory", {"Id":directory_id, "Name":dirname})
+		for d,dnames,fnames in os.walk(dir):
+			for fname in fnames:
+				CreateFileComponent(cg, os.path.join(d, fname), directory_id=directory_id)
+			for dname in dnames:
+				WalkDir(sub, cg, os.path.join(d, dname))
+			break
+		return;
 
-	# Create a component group for the documentation files
-	dir = targetdir + "\\doc\\"
-	filepaths = [dir+f for f in os.listdir(dir)]
-	CreateComponentGroup(frag, "doc_files", "doc", filepaths)
+	WalkDir(dr, cg, dir);
+	return root;
 
-	# Save the .wxs file
-	wxs_files = objdir + "\\files.wxs"
-	xml.ElementTree(root).write(wxs_files);
-	#Tools.WriteXml(root, r"R:\dump\test.xml")
+# Build an installer .msi file
+# 'projname' is the name of the application (<projname>Installer_v<version>.msi is returned)
+# 'version' is the application version number
+# 'installer' is the full path to the main installer.wxs file
+# 'projdir' is the root folder of the project
+# 'targetdir' is the staging directory from where files are taken for the installer
+# 'dstdir' is the output directory for the installer file
+# 'harvest_directories' are root level directories that
+# Returns the installer full path
+def Build(projname:str, version:str, installer:str, projdir:str, targetdir:str, dstdir:str, harvest_directories:[]):
 
-	return wxs_files
-
-# Build the .msi file for 'projname'
-def BuildInstaller(projname:str):
-
-	print("\nCreating Installer for " + projname)
-
-	# Check the paths in UserVars are valid
-	Tools.CheckVersion(4)
-
-	slndir    = UserVars.root + "\\PC\\RexConfig"
-	projdir   = slndir + "\\" + projname
-	config    = "Release"
-	targetdir = projdir + "\\bin\\" + config
-	objdir    = projdir + "\\obj"
-	installer = projdir + "\\installer\\installer.wxs"
-	ui_name   = Tools.StrTxfm(projname, word_sep = Tools.ESeparate.Add, sep = " ")
-	version   = Tools.Extract(slndir + "\\AssemblyVersion.cs", "AssemblyVersion\(\"(.*)\"\)").group(1)
-
-	# Check the installer files exist
+	# Check the installer file exists
 	if not os.path.exists(installer):
-		raise Exception("installer.wsx file does not exist for project " + projname)
-	else:
-		Tools.Copy(installer, objdir) # make a copy of the installer file so we can update the version
-		installer = objdir + "\\installer.wxs"
+		raise Exception("'" + installer + "' does not exist")
 
-	# Update the parameters in the temporary copy of installer.wsx
-	Tools.UpdateFileByLine(installer, r'define\s+ProjDir\s*=\s*".*"', "define ProjDir = \"" + projdir + "\"", False)
-	Tools.UpdateFileByLine(installer, r'define\s+ProductVersion\s*=\s*"\d\.\d\.\d\.\d"', "define ProductVersion = \"" + version + "\"", False)
+	# Create a temporary working directory for the 'wixobj' files
+	objdir = tempfile.mkdtemp()
 
-	msi_filepath   = targetdir + "\\" + projname + "Installer_v" + version + ".msi"
-	wxs_files = CreateFilesWXS(targetdir, objdir);
+	# The .msi filename
+	msi_filename = projname + "Installer_v" + version + ".msi"
 
-	# Compile all of the .wxs files
-	Tools.Exec([UserVars.root + "\\SDK\\Wix\\candle.exe",
+	# Copy the main installer to the 'objdir' directory so that all the .wsx files are in the same folder
+	Tools.Copy(installer, objdir + "\\", quiet=True)
+	installer = os.path.split(installer)[1]
+
+	# Collect all the .wsx files to build
+	wsx_files = [installer]
+
+	# Create .wsx fragment files for the harvest directories
+	for dir in harvest_directories:
+		root = HarvestDirectory(os.path.join(targetdir, dir))
+		#Tools.WriteXml(root, r"P:\dump\test.xml")
+
+		# Save to a temporary file
+		wxs_file = dir + ".wxs"
+		xml.ElementTree(root).write(objdir + "\\" + wxs_file);
+
+		# Collect the .wxs files
+		wsx_files += [wxs_file]
+
+	# Compile all of the .wxs files to object files in 'objdir'
+	Tools.Exec([UserVars.wix_candle,
 		"-nologo",
-		"-arch","x86",
-		"-out",objdir+"\\",
-		installer,
-		wxs_files,
-		])
+		"-dProjDir="+projdir,
+		"-dTargetDir="+targetdir,
+		"-dProductVersion="+version,
+		"-arch", "x86",
+		"-out", objdir+"\\"] +
+		[objdir+"\\"+f for f in wsx_files])
 
 	# Create the .msi
-	Tools.Exec([UserVars.root + "\\SDK\Wix\\light.exe",
+	Tools.Exec([UserVars.wix_light,
 		"-nologo",
+		"-dProjDir="+projdir,
+		"-dTargetDir="+targetdir,
+		"-dProductVersion="+version,
 		"-ext", "WixUIExtension",
 		"-ext", "WixUtilExtension",
 		"-ext", "WixNetFxExtension",
-		"-out", msi_filepath,
-		objdir + "\\installer.wixobj",
-		objdir + "\\files.wixobj",
-		])
+		"-out", os.path.abspath(objdir + "\\" + msi_filename)] +
+		[objdir+"\\"+Tools.ChgExtn(f,".wixobj") for f in wsx_files])
 
-	return msi_filepath
+	# Copy the .msi file to the destination directory
+	Tools.Copy(objdir+"\\"+msi_filename, dstdir+"\\", quiet=True)
 
-# Run as standalone script
-#if __name__ == "__main__":
-#	BuildInstaller("TEMPLATE")
+	# Clean up
+	Tools.ShellDelete(objdir)
+	return os.path.abspath(dstdir + "\\" + msi_filename)

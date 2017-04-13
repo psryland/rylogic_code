@@ -1,21 +1,25 @@
 ﻿using System;
 using System.Drawing;
+using System.Net.Mail;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using pr.extn;
+using pr.gui;
+using pr.inet;
 using pr.util;
 
 namespace RyLogViewer
 {
 	public class Activation :Form
 	{
+		#region UI Elements
 		private readonly Licence m_licence;
 		private readonly ToolTip m_tt;
 		private readonly Timer m_timer;
-		private TextBox m_edit_name;
-		private TextBox m_edit_email;
-		private TextBox m_edit_company;
-		private TextBox m_edit_activation_code;
+		private ValueBox m_edit_name;
+		private ValueBox m_edit_email;
+		private ValueBox m_edit_company;
+		private ValueBox m_edit_activation_code;
 		private Button m_btn_ok;
 		private Button m_btn_cancel;
 		private Label m_lbl_company;
@@ -24,6 +28,7 @@ namespace RyLogViewer
 		private Label m_lbl_activation_code;
 		private LinkLabel m_lbl_forgotten;
 		private Label m_lbl_valid;
+		#endregion
 
 		public Activation(Licence licence)
 		{
@@ -31,78 +36,68 @@ namespace RyLogViewer
 			m_licence = licence;
 			m_tt = new ToolTip();
 
-			// Initialise fields from the licence
-			m_edit_name.ToolTip(m_tt, "The name of the license holder as given in the license information email");
-			m_edit_name.Text = m_licence.LicenceHolder;
-			m_edit_name.Validated += UpdateUI;
-
-			m_edit_email.ToolTip(m_tt, "The email address associated with the license as given in the license information email");
-			m_edit_email.Text = m_licence.EmailAddress;
-			m_edit_email.Validated += UpdateUI;
-
-			m_edit_company.ToolTip(m_tt, "The company name associated with the license");
-			m_edit_company.Text = m_licence.Company;
-			m_edit_company.Validated += UpdateUI;
-
-			m_edit_activation_code.ToolTip(m_tt, "Copy and paste the activation code given in your licence information email here");
-			m_edit_activation_code.Text = m_licence.ActivationCode;
-			m_edit_activation_code.Validated += UpdateUI;
-
-			m_lbl_forgotten.LinkClicked += HandleLostLink;
+			SetupUI();
+			UpdateUI();
 
 			// Start a timer to scan the clipboard for valid licence info
 			m_timer = new Timer{Interval = 500, Enabled = true};
 			m_timer.Tick += ScanClipboard;
-
-			UpdateUI();
 		}
 		protected override void Dispose(bool disposing)
 		{
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
-
 		protected override void OnShown(EventArgs e)
 		{
 			base.OnShown(e);
 			ScanClipboard();
 		}
 
-		/// <summary>Try to extract the license info from text data on the clipboard</summary>
-		private void ScanClipboard(object sender = null, EventArgs args = null)
+		/// <summary>Set up UI elements</summary>
+		private void SetupUI()
 		{
-			// Don't do anything if the license is valid
-			if (m_licence.Valid)
-				return;
-
-			try
+			// Licence holder name
+			m_edit_name.ToolTip(m_tt, "The name of the license holder as given in the license information email");
+			m_edit_name.UseValidityColours = true;
+			m_edit_name.ValidateText = t => t.HasValue();
+			m_edit_name.Value = m_licence.LicenceHolder;
+			m_edit_name.ValueCommitted += (s,a) =>
 			{
-				var lic = new Licence();
-				var text    = Clipboard.GetText(TextDataFormat.Text);
-				lic.LicenceHolder  = text.SubstringRegex(@"\s*License Holder:\s+", "($|<br/>)");
-				lic.EmailAddress   = text.SubstringRegex(@"\s*Email:\s+", "($|<br/>)");
-				lic.Company        = text.SubstringRegex(@"\s*Company:\s+", "($|<br/>)");
-				lic.ActivationCode = text.SubstringRegex(@"\s*Activation Code:\s+", "($|<br/>)", RegexOptions.Multiline);
-				if (lic.Valid)
-				{
-					m_edit_name.Text            = lic.LicenceHolder  ;
-					m_edit_email.Text           = lic.EmailAddress   ;
-					m_edit_company.Text         = lic.Company        ;
-					m_edit_activation_code.Text = lic.ActivationCode ;
-				}
-
+				m_licence.LicenceHolder = m_edit_name.Text;
 				UpdateUI();
-			}
-			catch (Exception ex)
+			};
+
+			// Associated email address
+			m_edit_email.ToolTip(m_tt, "The email address associated with the license as given in the license information email");
+			m_edit_email.ValidateText = t => { try { new MailAddress(t); return true; } catch { return false; } };
+			m_edit_email.Value = m_licence.EmailAddress;
+			m_edit_email.ValueCommitted += (s,a) =>
 			{
-				Log.Warn(this, "Exception during ScanClipboard\n{0}".Fmt(ex.Message));
-			}
-		}
+				m_licence.EmailAddress = m_edit_email.Text;
+				UpdateUI();
+			};
 
-		/// <summary>Navigate the 'request my license info again' page</summary>
-		private void HandleLostLink(object sender, LinkLabelLinkClickedEventArgs e)
-		{
+			// Optional company name
+			m_edit_company.ToolTip(m_tt, "The company name associated with the license. (Optional)");
+			m_edit_company.Value = m_licence.Company;
+			m_edit_company.ValueCommitted += (s,a) =>
+			{
+				m_licence.Company = m_edit_company.Text;
+				UpdateUI();
+			};
 
+			// Activation code
+			m_edit_activation_code.ToolTip(m_tt, "Copy and paste the activation code given in your licence information email here");
+			m_edit_activation_code.Value = m_licence.ActivationCode;
+			m_edit_activation_code.ValueCommitted += (s,a) =>
+			{
+				m_licence.ActivationCode = m_edit_activation_code.Text;
+				UpdateUI();
+			};
+
+			// Forgot licence link
+			m_lbl_forgotten.LinkClicked += HandleLostLink;
 		}
 
 		/// <summary>Update the UI</summary>
@@ -116,15 +111,84 @@ namespace RyLogViewer
 			}
 			else
 			{
-				m_licence.LicenceHolder  = m_edit_name.Text           ;
-				m_licence.EmailAddress   = m_edit_email.Text          ;
-				m_licence.Company        = m_edit_company.Text        ;
+				m_licence.LicenceHolder  = m_edit_name.Text;
+				m_licence.EmailAddress   = m_edit_email.Text;
+				m_licence.Company        = m_edit_company.Text;
 				m_licence.ActivationCode = m_edit_activation_code.Text;
 
 				var valid = m_licence.Valid;
 				m_lbl_valid.Text      = valid ? "Valid Licence" : "Invalid Licence";
 				m_lbl_valid.BackColor = valid ? Color.LightGreen : Color.LightSalmon;
 				m_btn_ok.Enabled      = valid;
+			}
+		}
+
+		/// <summary>Try to extract the license info from text data on the clipboard</summary>
+		private void ScanClipboard(object sender = null, EventArgs args = null)
+		{
+			// Don't do anything if the license is valid
+			if (m_licence.Valid)
+				return;
+
+			try
+			{
+				var lic = new Licence();
+				var text = Clipboard.GetText(TextDataFormat.Text);
+				lic.LicenceHolder  = text.SubstringRegex(@"\s*License Holder:\s+", "($|<br/>)");
+				lic.EmailAddress   = text.SubstringRegex(@"\s*Email:\s+", "($|<br/>)");
+				lic.Company        = text.SubstringRegex(@"\s*Company:\s+", "($|<br/>)");
+				lic.ActivationCode = text.SubstringRegex(@"\s*Activation Code:\s+", "($|<br/>)", RegexOptions.Multiline);
+				if (lic.Valid)
+				{
+					m_edit_name.Text            = lic.LicenceHolder  ;
+					m_edit_email.Text           = lic.EmailAddress   ;
+					m_edit_company.Text         = lic.Company        ;
+					m_edit_activation_code.Text = lic.ActivationCode ;
+					UpdateUI();
+				}
+			}
+			catch (Exception ex)
+			{
+				Log.Warn(this, "Exception during ScanClipboard\n{0}".Fmt(ex.Message));
+			}
+		}
+
+		/// <summary>Navigate the 'request my license info again' page</summary>
+		private void HandleLostLink(object sender, LinkLabelLinkClickedEventArgs e)
+		{
+			try
+			{
+				// Ensure the licence holder is possibly valid
+				if (!m_licence.LicenceHolder.HasValue() || m_licence.LicenceHolder == Constants.FreeLicence)
+				{
+					MsgBox.Show(this, "Please enter the name of the licence holder", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+					return;
+				}
+
+				// Ensure the email address is possibly valid
+				if (!m_licence.EmailAddress.HasValue())
+				{
+					MsgBox.Show(this, "Please enter the email address associated with the licence", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+					return;
+				}
+
+				// Try to create an email with the attachment ready to go
+				var email = new Email();
+				email.AddRecipient(Constants.SupportEmail, Email.MAPIRecipient.To);
+				email.Subject = Application.ProductName + " licence information request";
+				email.Body = Str.Build(
+					"To {0},\r\n".Fmt(Application.CompanyName),
+					"\r\n",
+					"Please resend my activation code:\r\n",
+					"\r\n",
+					"License Holder: {0}\r\n".Fmt(m_licence.LicenceHolder),
+					"Email: {0}\r\n".Fmt(m_licence.EmailAddress),
+					"Company: {0}".Fmt(m_licence.Company));
+				email.Send();
+			}
+			catch (Exception ex)
+			{
+				MsgBox.Show(this, ex.Message, Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 
@@ -142,14 +206,14 @@ namespace RyLogViewer
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Activation));
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_btn_cancel = new System.Windows.Forms.Button();
-			this.m_edit_company = new System.Windows.Forms.TextBox();
+			this.m_edit_company = new pr.gui.ValueBox();
 			this.m_lbl_company = new System.Windows.Forms.Label();
-			this.m_edit_name = new System.Windows.Forms.TextBox();
+			this.m_edit_name = new pr.gui.ValueBox();
 			this.m_lbl_name = new System.Windows.Forms.Label();
 			this.m_lbl_valid = new System.Windows.Forms.Label();
 			this.m_lbl_email = new System.Windows.Forms.Label();
-			this.m_edit_email = new System.Windows.Forms.TextBox();
-			this.m_edit_activation_code = new System.Windows.Forms.TextBox();
+			this.m_edit_email = new pr.gui.ValueBox();
+			this.m_edit_activation_code = new pr.gui.ValueBox();
 			this.m_lbl_activation_code = new System.Windows.Forms.Label();
 			this.m_lbl_forgotten = new System.Windows.Forms.LinkLabel();
 			this.SuspendLayout();

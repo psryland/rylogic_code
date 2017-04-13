@@ -238,7 +238,7 @@ namespace pr.gui
 		public static HelpUI CreateRegexHelpUI(Form parent)
 		{
 			Debug.Assert(parent != null);
-			var ui = HelpUI.From(parent, HelpUI.EContent.Html, "Regular Expressions Quick Reference", string.Empty, new Point(1,1) ,new Size(640,480) ,ToolForm.EPin.TopRight);
+			var ui = new HelpUI(parent, HelpUI.EContent.Html, "Regular Expressions Quick Reference", string.Empty, new Point(1,1) ,new Size(640,480) ,ToolForm.EPin.TopRight);
 			ui.Content = Resources.regex_quick_ref;
 			ui.RenderContent();
 			return ui;

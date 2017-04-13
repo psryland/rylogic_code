@@ -14,7 +14,7 @@
 					to jump to a description of each control.
 				</div>
 				<div>
-					<img class="centred" src="img/settings_general.png" alt="settings general tab" usemap="#settings_general_map"/>
+					<img class="centred" src="../img/settings_general.png" alt="settings general tab" usemap="#settings_general_map"/>
 					<map id="settings_general_map" name="settings_general_map">
 						<area shape="rect" coords="15,60,35,80" href="#settings_filepath" alt="" title="" onclick="HighlightListItem('settings_filepath')"/>
 						<area shape="rect" coords="16,89,36,109" href="#reset_settings" alt="" title="" onclick="HighlightListItem('reset_settings')"/>
@@ -54,7 +54,9 @@
 						<div id="reset_settings">
 							<div class="tag_label">Reset Settings</div>
 							<div class="content">
-								Use this button to reset data in the settings file to the default values.
+								Use this button to reset data in the settings file to the default values. This
+								will replace any highlighting, filtering, transform, or action patterns with
+								the default ones.
 							</div>
 						</div>
 					</li>
@@ -72,7 +74,9 @@
 							<div class="tag_label">Save Settings</div>
 							<div class="content">
 								Use the save button to save a copy of the current settings to a new location. Once
-								saved, the new file location is used for subsequent settings changes.
+								saved, the new file location is used for subsequent settings changes. Note: the new
+								settings file location is only used for the current session. Restarting RyLogViewer
+								will reset the settings file path to the default location.
 							</div>
 						</div>
 					</li>
@@ -98,7 +102,7 @@
 						<div id="show_totd">
 							<div class="tag_label">Show Tip of the Day</div>
 							<div class="content">
-								Check this option to have the 'Tip of the Day' dialog windows show when RyLogViewer opens.
+								Check this option to have the 'Tip of the Day' window shown on startup.
 							</div>
 						</div>
 					</li>
@@ -106,8 +110,7 @@
 						<div id="check_for_updates">
 							<div class="tag_label">Check for Updates</div>
 							<div class="content">
-								Check this option to have RyLogViewer contact the Rylogic Limited server and check for the
-								release of a newer version.
+								Check this option to have RyLogViewer check for newer versions on startup.
 							</div>
 						</div>
 					</li>
@@ -145,8 +148,8 @@
 								memory at any one time. The value chosen here for the number of cached log file lines
 								affects when RyLogViewer needs to load data from the log file. Specifying a larger number
 								for this option reduces how often RyLogViewer needs to load data, but increases the loading
-								time for reload operations (caused by jumping around in the file), and the amount of memory
-								used.<br/><br/>
+								time for reload operations, and the amount of memory used.<br/>
+								<br/>
 								When choosing a value for this setting it is best to experiment with a range of values. If
 								loading a log file that is located on a network shared drive, often a smaller value improves
 								loading performance.
@@ -157,7 +160,7 @@
 						<div id="loaded_data_limit">
 							<div class="tag_label">Maximum Data Loaded</div>
 							<div class="content">
-								This setting works in conjunction with the <i>Cached Lines Count</i> setting. Since the number
+								This setting works in conjunction with the <a href="#cached_lines">Cached Lines Count</a> setting. Since the number
 								of lines in a log file is not directly related to the actual size of the data loaded, it is
 								necessary to set an upper limit on the amount of data loaded. (This limit also prevents "run-away"
 								file loading if the <a href="main_window.html#line_ending">Line Endings</a> settings is incorrect
@@ -172,7 +175,7 @@
 						<div id="max_line_length">
 							<div class="tag_label">Maximum Line Length</div>
 							<div class="content">
-								This settings defines the upper limit on how long any one single line can be in the log file.
+								This settings defines the upper limit on how long any single line can be in the log file.
 								RyLogViewer does not display truncate lines. If this limit is ever reached an error message
 								will be displayed instructing the user to increase the limit or, as is more often the case,
 								check the <a href="main_window.html#line_ending">Line Endings</a> settings. An incorrect line
@@ -209,7 +212,7 @@
 							<div class="tag_label">Ignore Blank Lines</div>
 							<div class="content">
 								If checked, RyLogViewer will not display blank lines. The same effect can be achieved with a
-								filter, however selecting this option is often quicker and simpler.
+								filter, however selecting this option is often quicker and simpler for this common case.
 							</div>
 						</div>
 					</li>

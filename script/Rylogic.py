@@ -78,13 +78,20 @@ def ShellDelete(path, wait_time_ms = 100):
 		if os.path.exists(path):
 			raise Exception("Failed to delete '"+path+"'. Check for locked files")
 
+# Change the file extension on 'path'. 'extn' should include the dot
+def ChgExtn(path:str, extn:str):
+	dir_fname,ext = os.path.splitext(path)
+	return dir_fname + extn
+
 # Enumerate recursively through a directory
-def EnumFiles(root):
+# 'filter' can be a regex: e.g. EnumFiles(dir, filter=r".*(?<!include)\.htm$", flags=re.IGNORECASE):
+def EnumFiles(root, filter:str=None, flags=0):
 	for dirname, dirnames, filenames in os.walk(root):
 		# Return the files
 		# We could remove entries from 'dirnames' to
 		# prevent recursion into those folders...
 		for filename in filenames:
+			if filter and not re.match(filter, filename, flags): continue
 			yield os.path.join(dirname, filename)
 
 # Read the contents of a file into a buffer

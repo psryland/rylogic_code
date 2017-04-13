@@ -57,11 +57,6 @@ namespace RyLogViewer
 			if (!Directory.Exists(exe_dir))
 				throw new ArgumentException("Cannot determine the current executable directory");
 
-			// Get the app data directory
-			var app_dir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-			app_dir = Path.Combine(app_dir, Application.CompanyName);
-			app_dir = Path.Combine(app_dir, Application.ProductName);
-
 			// Determine whether to run the app in portable mode
 			PortableMode = Path_.FileExists(Path.Combine(exe_dir, "portable"));
 
@@ -97,7 +92,7 @@ namespace RyLogViewer
 			}
 
 			// Set the AppDataDir based on whether we're running in portable mode or not
-			AppDataDir = Path.GetFullPath(PortableMode ? exe_dir : app_dir);
+			AppDataDir = Path.GetFullPath(PortableMode ? exe_dir : Util.ResolveUserDocumentsPath("Rylogic", Application.ProductName));
 
 			// If we're in portable mode, check that we have write access to the local directory
 			if (PortableMode)

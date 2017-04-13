@@ -338,7 +338,7 @@ namespace RyLogViewer
 				: "Invalid match pattern - " + ex0.Message;
 			var ex1 = Pattern.ValidateReplace();
 			string tt1 = ex1 == null
-				? "The template for the transformed result.\r\nUse the capture groups created in the Match field"
+				? "The template for the transformed result.\r\nUse the capture groups (syntax: {1} or {tag}) created in the Match field"
 				: "Invalid replace template - " + ex1.Message;
 			m_lbl_match   .ToolTip(m_tt, tt0);
 			m_edit_match  .ToolTip(m_tt, tt0);
@@ -412,7 +412,7 @@ namespace RyLogViewer
 			get
 			{
 				Debug.Assert(ParentForm != null);
-				return m_dlg_help ?? (m_dlg_help = HelpUI.From(ParentForm, HelpUI.EContent.Html, "Transform Help", Resources.transform_quick_ref, new Point(1,1), new Size(640,480), ToolForm.EPin.TopRight));
+				return m_dlg_help ?? (m_dlg_help = new HelpUI(ParentForm, HelpUI.EContent.Html, "Transform Help", Resources.transform_quick_ref, new Point(1,1), new Size(640,480), ToolForm.EPin.TopRight));
 			}
 		}
 

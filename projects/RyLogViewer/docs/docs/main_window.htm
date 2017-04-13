@@ -8,7 +8,7 @@
 			<div class="title">Main Window</div>
 
 			<div>
-				<img class="centred" src="img/main_view.png" alt="main view" usemap="#main_view_map"/>
+				<img class="centred" src="../img/main_view.png" alt="main view" usemap="#main_view_map"/>
 				<map id="main_view_map" name="main_view_map">
 					<area shape="rect" coords="5,82,25,102" href="#log_view" alt="" title="" onclick="HighlightListItem('log_view')"/>
 					<area shape="rect" coords="3,54,23,74" href="#tool_bar" alt="" title="" onclick="HighlightListItem('tool_bar')"/>
@@ -32,7 +32,7 @@
 							not possible to select and copy the entire contents of very large files. Only the
 							portion of the file currently loaded is selected and copied.)
 						</div>
-						<img class="right_inset" src="img/main_view_context.png" alt="main view context menu"/>
+						<img class="right_inset" src="../img/main_view_context.png" alt="main view context menu"/>
 						<div class="content">
 							Right clicking in this view displays a context menu. The menu items are:
 							<table class="minor_list">
@@ -43,7 +43,7 @@
 									</tr>
 									<tr>
 										<td>Select All</td>
-										<td>Select all currently cached rows in the log file.</td>
+										<td>Select all log file data that is currently loaded into memory.</td>
 									</tr>
 									<tr>
 										<td>Copy</td>
@@ -51,7 +51,7 @@
 									</tr>
 									<tr>
 										<td><a href="#clear_log_file">Clear Log</a></td>
-										<td>Attempts to reset the contents of the log file.</td>
+										<td>Attempts<sup class="reference">[1]</sup> to reset the contents of the log file.</td>
 									</tr>
 									<tr>
 										<td>
@@ -80,6 +80,10 @@
 									</tr>
 								</tbody>
 							</table>
+							<div class="fine_print">
+								<sup class="reference">[1]</sup> Clearing the log file can fail if the application generating the log 
+								file does not allow write access to the file.
+							</div>
 						</div>
 					</div>
 				</li>
@@ -87,7 +91,7 @@
 				<li>
 					<div id="tool_bar">
 						<div class="section_title">Tool Bar</div>
-						<img class="centred" src="img/tool_bar.png" alt="tool bar"/>
+						<img class="centred" src="../img/tool_bar.png" alt="tool bar"/>
 						<div class="content">
 							The tool bar contains buttons that allow quick navigation to, and control of, various features of
 							RyLogViewer. In order from left to right, these are:
@@ -147,11 +151,11 @@
 									</tr>
 									<tr>
 										<td>Select First</td>
-										<td>Selects the first line in the log file causing the view to scroll to the top of the file.</td>
+										<td>Selects the first line in the log file causing the view to scroll to the top.</td>
 									</tr>
 									<tr>
 										<td>Select Last</td>
-										<td>Selects the last line in the log file causing the view to scroll to the end of the file.</td>
+										<td>Selects the last line in the log file causing the view to scroll to the end.</td>
 									</tr>
 									<tr>
 										<td>Tail</td>
@@ -161,7 +165,7 @@
 										<td>Watch File</td>
 										<td>
 											Enables or disables watching for file changes. If enabled, RyLogViewer will automatically
-											reload the current log file whenever it is changed.
+											display the new log data whenever it changes.
 										</td>
 									</tr>
 									<tr>
@@ -182,22 +186,24 @@
 					<div id="file_scroll">
 						<div class="section_title">File Scroll Indicator</div>
 						<div class="content">
-							The file scroll indicator serves two purposes. Primarily, it shows where the currently displayed text is
+							The file scroll indicator serves two purposes. Primarily, it shows where the currently displayed data is
 							located within the log file as a whole. Secondarily, it is used to quickly navigate to another location
 							within the file.<br/>
 							<br/>
-							The different colours within the file scroll indicator convey the following information. The associated
-							colours are set in the <a href="options_appearance.html#appearance_cached_colour">options dialog</a>.
+							The different colours within the file scroll indicator convey the following information. These are the
+							default colours, however the file scroll indicator colours can be changed in the
+							<a href="options_appearance.html#appearance_cached_colour">options dialog</a>.
 							<ul class="minor_list">
-								<li>the portion of the file that is cached in memory,</li>
-								<li>the portion of the file that is currently being displayed,</li>
-								<li>the selected rows,</li>
-								<li>the bookmark locations.</li>
+								<li><span style="background-color:#f0f0f0;padding:3px">white</span> - the regions of the log data not currently loaded into memory. This only occurs for large log files that cannot be fully cached in memory.</li>
+								<li><span style="background-color:#d9e7ec;padding:3px">pale blue</span> - the portion of the log data that is cached in memory.</li>
+								<li><span style="background-color:#adcbdd;padding:3px">light blue</span> - the portion of the file that is currently visible in the main window.</li>
+								<li><span style="background-color:#589d6b;padding:3px">green</span> - the selected rows.</li>
+								<li><span style="background-color:#dbaeee;padding:3px">light purple</span> - the bookmark locations.</li>
 							</ul>
 							Left clicking within the file scroll indicator selects the line at the corresponding position in the
 							log file.<br/>
 							<br/>
-							Side Note: When a small log file is loaded you may wonder why the selection indication on the file scroll
+							Note: When a small log file is loaded you may wonder why the selection indication on the file scroll
 							indicator changes size as different lines are selected. This is because the indicator represents the byte
 							range of the selected line within the file, longer lines correspond to larger byte ranges and therefore
 							a larger selection indicator.
@@ -210,9 +216,8 @@
 						<div class="section_title">Text Encoding</div>
 						<div class="content">
 							RyLogViewer supports four common text encodings; ASCII, UTF-8, UCS-2 little-endian, and UCS-2 big-endian.
-							The text encoding to use can be set under the <i>Encoding</i> menu. However, RyLogViewer also supports
-							automatic detection of the file text encoding, so it is usually not necessary to set the text encoding
-							explicitly.
+							The text encoding to use can be set under the <i>Encoding</i> menu. RyLogViewer supports automatic detection
+							of the file text encoding, however, so it is usually not necessary to set the text encoding explicitly.
 						</div>
 					</div>
 				</li>
@@ -271,16 +276,17 @@
 									and then search backward for the previous occurrence.
 								</li>
 							</ul>
-							<img class="right_inset" src="img/find.png" alt="find dialog"/>
+							<img class="right_inset" src="../img/find.png" alt="find dialog"/>
 							The find feature is based on the same algorithms as the other pattern matching features in RyLogViewer
 							(<a href="options_highlighting.html">highlighting</a>, <a href="options_filtering.html">filtering</a>, etc).
-							The function of most of the controls is the same as is described in the <a href="pattern_editor.html">pattern editor</a>
+							The controls function in the same way as described in the <a href="pattern_editor.html">pattern editor</a>
 							section, otherwise:
 							<ol class="minor_list">
-								<li>Drop down list of previous search patterns</li>
-								<li>A list of previous search patterns (for convenience when using a mouse)</li>
-								<li>Find Next button - searches forward from the currently selected line</li>
-								<li>Find Previous button - searches backward from the currently selected line</li>
+								<li>Drop down list of previous search patterns.</li>
+								<li>A list of previous search patterns (for convenience when using a mouse).</li>
+								<li>Find Next - searches forward from the currently selected line.</li>
+								<li>Find Previous - searches backward from the currently selected line.</li>
+								<li>Bookmark All - sets a bookmark on all lines that match the search pattern.</li>
 							</ol>
 							When a search reaches the start or end of the log file, a message is displayed in the
 							<a href="main_window.html#status">Status bar</a> that indicates that the <i>Start of File</i>,
@@ -332,35 +338,70 @@
 					</div>
 				</li>
 			</ol>
-			<div id="miscellaneous">
-				<div class="section_title">Other Menu Options</div>
-				<div id="clear_log_file">
-					<div class="tag_label">Clear Log File</div>
-					<div class="content">
-						This option attempts to reset the contents of the loaded log file. It is not always possible
-							for this operation to succeed as other applications may hold a write lock on the file. (Typically,
-							the application writing to the log file does). If the
-							<a href="data_sources.html#program_output">Log Program Output</a> feature is used, the program whose
-							output is being logged may be holding the file lock. When file locks permit this operation however,
-							it can be a handy feature.
-					</div>
-				</div>
+			<div id="tools_menu">
+				<div class="section_title">Tools Menu</div>
 				<div id="always_on_top">
 					<div class="tag_label">Always On Top</div>
 					<div class="content">
-						This option is located under the <i>Tools</i> menu. When enabled, it causes the RyLogViewer window
-							to stay above other currently open windows. This mode is helpful when monitoring log output while
-							working with other programs.
+						When enabled, causes the RyLogViewer window to stay above other currently open windows.
+						This mode is helpful when monitoring log output while working with other programs.
 					</div>
 				</div>
 				<div id="monitor_mode">
 					<div class="tag_label">Monitor Mode</div>
 					<div class="content">
 						As an extension of the <i>Always On Top</i> option, <i>Monitor Mode</i> allows RyLogViewer to be put
-							into a state where the main window frame, menu, tool bar, and file scroll indicator are all hidden,
-							maximising the area of the main log view. The window can also optionally be made semi-transparent, and
-							set to 'click-through' mode where keyboard and mouse events pass through to any windows below.
-							To exit <i>Monitor Mode</i> click on the RyLogViewer icon in the system tray.
+						into a state where the main window frame, menu, tool bar, and file scroll indicator are all hidden,
+						maximising the area of the main log view. The window can also optionally be made semi-transparent, and
+						set to 'click-through' mode where keyboard and mouse events pass through to any windows below.
+						To exit <i>Monitor Mode</i> click on the RyLogViewer icon in the system tray.
+					</div>
+				</div>
+				<div id="clear_log_file">
+					<div class="tag_label">Clear Log File</div>
+					<div class="content">
+						This option attempts to reset the contents of the loaded log file. It is not always possible
+						for this operation to succeed as other applications may hold a lock on the file preventing write access.
+						(Typically, the application writing to the log file does this). When file locks permit this operation however,
+						it can be a handy feature.
+					</div>
+				</div>
+				<div id="options_dialog">
+					<div class="tag_label">Options Dialog</div>
+					<div class="content">
+						This item opens the application options dialog.
+					</div>
+				</div>
+			</div>
+			<div id="help_menu">
+				<div class="section_title">Help Menu</div>
+				<div id="view_help">
+					<div class="tag_label">View Help</div>
+					<div class="content">
+						Opens the main application documentation. Documentation is in HTML format, so selecting this option
+						launches the default web browser.
+					</div>
+				</div>
+				<div id="first_run_tutorial">
+					<div class="tag_label">First-Run Tutorial</div>
+					<div class="content">
+						The first-run tutorial is a wizard-style walk through of the main features of RyLogViewer. It highlights
+						the various aspects of the application and provides a short description of usage.
+					</div>
+				</div>
+				<div id="tip_of_the_day">
+					<div class="tag_label">Tip of the Day</div>
+					<div class="content">
+						Tip-of-the-Day messages are typically displayed at startup and are used to convey features of RyLogViewer
+						that the user may be unaware of. They are brief descriptions of a feature, often with links to more information
+						provided in the main documentation.
+					</div>
+				</div>
+				<div id="activate_licence">
+					<div class="tag_label">Activate Licence</div>
+					<div class="content">
+						Opens a dialog that displays the current licence information. After purchasing a licence, RyLogViewer can
+						be <a href="licence_activation.html">activated</a> via this menu option.
 					</div>
 				</div>
 			</div>

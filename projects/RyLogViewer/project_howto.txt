@@ -1,66 +1,72 @@
 General:
-	Publishing:
-		The 'deploy_rylogviewer.py' script in the main project should be a one-click deploy
-		producing:
-			P:\bin\RyLogViewer\... uncompressed, ready for use with all docs, plugins, etc
-			P:\bin\RyLogViewer.zip - zip of 'P:\bin\rylogviewer\'
-			P:\bin\RyLogViewerSetup.exe - one click installer
-
 	Folders:
 		.\art - contains art assets in paint.net format containing layers etc.
-			Used to create the *.pngs for the documentation and project resourses
-		.\docs - contains generated documentation files (.html) - Content, copied to output
-		.\docs\img - image files - Content, copied to output
-		see Documentation.
+			Used to create the *.pngs for the documentation and project resources
+		.\docs
+			\docs - source user documentation files (.htm)
+			\img - image files for the user documentation
+			\inc - shared html fragments
+			\res - source documentation used for embedded resources (.htm)
+		.\examples - Source data used in the first run tutorial
+		.\installer - WIX script for creating the installer .msi file
+		.\plugins - 
+			\ExamplePlugin - A demo plugin used to test and illustrate the plugin system
+		.\Properties - Assembly version
+		.\res - Embedded resources
+		.\src - Source code
+		.\testing - helpers for testing log data sources
+
+	Publishing:
+		The 'deploy_rylogviewer.py' script in the main project should be a one-click deploy
+
 
 Documentation:
-	Documentation is copied to the build output and is part of the release.
-	Resources (which includes png and html files) are built into the assembly as embedded resources.
+	Documentation uses html. The '*.htm' files in the './docs' directory are source code for
+	the final '*.html' files. The html files are generated using HtmlExpand.py.
+	.\docs
+		\docs - These are the files that go into the user documentation
+		\res - These are files that are embedded in to the binary
+		\img - These are images used by the html files in either \docs\docs or \docs\res
+		\inc - These are include files that are substituted into 'htm' files in \docs\docs or \docs\res
 
-	- The documentation source files are in:
-		.\documentation\docs - source files for documentation html files
-		.\documentation\res - source files for embedded html resources
-		.\documentation\inc - shared included html snippets
-		These files are used to generate the html files in ./docs and ./Resources
+	'htm' files contain template fields such as: <!--#include file=""-->.
+	The HtmlExpand.py script creates an expanded version of the file with the .html extension.
 
-	- *.htm should have properties:
-		Build Action: PyScript
-		Copy To Output: never
+	The 'htm' files in the '\docs\docs\' folder are exported by the 'post_build.py' script. They are
+	generated directly in the target directory. The 'post_build.py' script also copies the necessary
+	images to the target directory
+
+	The 'htm' files in the '\docs\res\' folder are exported by a Build Action that creates the 'html'
+	files in the '.\res\' folder. These files are then embedded as resources via the Resources.resx
+	The '\docs\res\' files should have:
+	 	Build Action: PyScript
+		Copy To Output: Do Not Copy
 		Custom Tool: ..\..\script\HtmlExpand.py
-		Custom Tool Namespace: ..\..\..\docs\ or ..\..\..\Resources\
-		The PyScript build action is made available in the project by editing the csproj and adding
-		"<Import Project="$(ProjectDir)..\..\build\props\python_script.targets" />".
-		The PyScript build action passes the file to py.exe as follows:
-			py.exe <Custom Tool> <file> <Custom Tool Namespace>
-		So 'Custom Tool' should be the script to call
-		'Custom Tool Namespace' should contain additional arguments
+		Custom Tool Namespace: ..\..\res\
 
-	- *.htm files contain template fields such as: <!--#include file=""-->.
-		The HtmlExpand.py script creates an expanded version of the file with the .html extension.
+	The PyScript build action is made available in the project by editing the 'csproj' and adding
+	"<Import Project="$(ProjectDir)..\..\build\props\python_script.targets" />".
 
-	- The reason for this system is that it allows simple html code sharing without dependencies on anything
-		other than python. I used a custom build tool called 'Rylogic.CustomTool.HtmlExpander' for a while
-		but that requires installation on the local PC which means I can't easily build the project on someone
-		else's PC. Another option could have been a pre build step that calls a BuildDocs.py script.
+	The PyScript build action passes the file to py.exe as follows:
+		py.exe <Custom Tool> <file> <Custom Tool Namespace>
+	So 'Custom Tool' should be the script to call 'Custom Tool Namespace' should contain additional arguments
 
-	- img/*.png files should be set to "Content" and "Copy If Newer"
-	- The output folder could contain a '.\docs\' folder with all the documentation needed.
+	The reason for this system is that it allows simple html code sharing without dependencies on anything
+	other than Python. I used a custom build tool called 'Rylogic.CustomTool.HtmlExpander' for a while
+	but that requires installation on the local PC which means I can't easily build the project on someone
+	else's PC. Another option could have been a pre build step that calls a BuildDocs.py script.
+
+	Note: the 'Run Custom Tool' doesn't seem to work on selected files, but does work when the project is built.
 
 Resources:
 	Resources include: *.png, *.html files (used in ToTD, and quick ref windows)
-	- png files do not need to be included in the project\Resources\ folder, just in the Resources.resx file only.
 	- *.htm files should use the Custom Build Tool 'HtmlExpander', but not *.include.htm files.
 	- The resulting html files should be added to Resources.resx under 'Files'.
 	- If a png is used in the docs as well, edit the Resources.resx file and reference it directly from the ..\docs\ folder.
 
-HtmlExpander:
-	HtmlExpander is a compile time tool that works basically like server side includes,
-	it finds and text-replaces tokens such as:
-	   '<!--#include file=".\auto_refresh.include.htm"-->'.
+Installer:
 
-	- The resulting *.html files can contain template substitution fields [LikeThis]. These
-	are replaced at run time with other content (ToTD, etc). This is done by the Rylogic.dll
-	object 'TemplateReplacer'
+
 
 Licences:
 	- How licences work
@@ -69,11 +75,6 @@ Licences:
 Plugins:
 	- The interfaces
 	- The RyLogViewer.Extensions assembly
-
-
-Installer:
-	- Add the "Microsoft Visual Studio Installer Projects" extension for VS2013
-	- Open the 'installer.vdproj' in the ".\installer\" directory
 
 
 

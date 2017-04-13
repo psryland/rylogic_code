@@ -18,6 +18,10 @@ namespace RyLogViewer
 			if (m_license.Valid)
 				return;
 
+			// Wait till the main UI is visible
+			if (!Visible)
+				return;
+
 			// See if the feature is already monitored, if so, just update the interface
 			if (m_licensed_features.ContainsKey(key))
 			{

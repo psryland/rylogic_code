@@ -13,12 +13,6 @@ namespace pr.gui
 
 	public class HelpUI :ToolForm
 	{
-		/// <summary>Create a help dialog from plain text, rtf, or html</summary>
-		public static HelpUI From(Control parent, EContent type, string title, string content, Point? ofs = null, Size? size = null, EPin pin = EPin.TopRight)
-		{
-			return new HelpUI(parent, type, title, content, ofs, size, pin, false);
-		}
-
 		/// <summary>Show a modal help dialog from plain text, rtf, or html</summary>
 		public static DialogResult ShowDialog(Control parent, EContent type, string title, string content, Point? ofs = null, Size? size = null, EPin pin = EPin.TopRight)
 		{

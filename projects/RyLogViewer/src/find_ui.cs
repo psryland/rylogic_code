@@ -40,6 +40,7 @@ namespace RyLogViewer
 
 			// Find combo
 			m_combo_pattern.DataSource = history;
+			m_combo_pattern.DisplayMember = nameof(Pattern.Expr);
 			m_combo_pattern.DropDownClosed += (s,a)=>
 				{
 					var p = m_combo_pattern.SelectedItem;

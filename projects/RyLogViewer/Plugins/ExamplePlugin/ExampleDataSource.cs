@@ -31,7 +31,7 @@ namespace RyLogViewer.ExamplePlugin
 			m_size = 0;
 			ColumnCount = 16;
 		}
-		public void Dispose()
+		public virtual void Dispose()
 		{
 			CheckIsMainThread();
 
@@ -232,7 +232,7 @@ namespace RyLogViewer.ExamplePlugin
 			}
 		}
 
-		/// <summary>Checking multithreading..</summary>
+		/// <summary>Checking multi-threading..</summary>
 		[Conditional("DEBUG")] private void CheckIsMainThread()
 		{
 			// This debugging method serves to illustrate the thread contexts

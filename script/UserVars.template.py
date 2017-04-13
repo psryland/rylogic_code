@@ -73,6 +73,9 @@ rdmd = dmdroot + r"\windows\bin\rdmd.exe"
 csex = root + r"\bin\csex\csex.exe"
 elevate = root + r"\bin\elevate.exe"
 ziptool = root + r"\tools\7za.exe"
+wix_candle = root + r"\tools\WiX\candle.exe"
+wix_light = root + r"\tools\WiX\light.exe"
+wix_heat = root + r"\tools\WiX\heat.exe"
 
 # Location for temporary files
 dumpdir = r"P:\dump"

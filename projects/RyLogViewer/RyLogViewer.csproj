@@ -247,171 +247,93 @@
     <Compile Include="src\settings\transform_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Content Include="..\..\script\BuildInstaller.py">
-      <Link>installer\BuildInstaller.py</Link>
-    </Content>
-    <Content Include="build_docs.py" />
     <Content Include="deploy_rylogviewer.py" />
+    <None Include="docs\docs\command_line.htm" />
+    <None Include="docs\docs\data_sources.htm" />
+    <None Include="docs\docs\faq.htm" />
+    <None Include="docs\docs\installation.htm" />
+    <None Include="docs\docs\main_window.htm" />
+    <None Include="docs\docs\options_appearance.htm" />
+    <None Include="docs\docs\options_filtering.htm" />
+    <None Include="docs\docs\options_general.htm" />
+    <None Include="docs\docs\options_highlighting.htm" />
+    <None Include="docs\docs\options_transforms.htm" />
+    <None Include="docs\docs\overview.htm" />
+    <None Include="docs\docs\pattern_editor.htm" />
+    <None Include="docs\docs\welcome.htm" />
+    <Content Include="docs\docs\export.htm" />
+    <Content Include="docs\docs\ideas.htm" />
+    <Content Include="docs\docs\licence_activation.htm" />
+    <Content Include="docs\docs\options_actions.htm" />
+    <Content Include="docs\docs\ReadMe.txt" />
+    <Content Include="docs\docs\transform_editor.htm" />
+    <Content Include="docs\help.htm" />
+    <None Include="docs\inc\auto_refresh.include.htm" />
+    <PyScript Include="docs\res\firstrun.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\res\</CustomToolNamespace>
+    </PyScript>
+    <Content Include="docs\res\ReadMe.txt" />
+    <Content Include="examples\code lookup.xml" />
+    <Content Include="examples\logfile.txt" />
     <Content Include="post_build.py" />
     <Content Include="project_howto.txt" />
-    <Content Include="Resources\bookmark.png" />
-    <Content Include="Resources\bottom.png" />
-    <Content Include="Resources\command_line_ref.html" />
-    <Content Include="Resources\cripple_aggregate_files.html" />
-    <Content Include="Resources\cripple_filtering.html" />
-    <Content Include="Resources\cripple_highlighting.html" />
-    <Content Include="Resources\edit_add.png" />
-    <Content Include="Resources\edit_save.png" />
-    <Content Include="Resources\edit_save_needed.png" />
-    <Content Include="Resources\exchange.png" />
-    <Content Include="Resources\executable.png" />
-    <Content Include="Resources\Eyeball.png" />
-    <Content Include="Resources\filter.png" />
-    <Content Include="Resources\find_search.png" />
-    <Content Include="Resources\firstrun.html" />
-    <Content Include="Resources\folder_with_file.png" />
-    <Content Include="Resources\free_edition.html" />
-    <Content Include="Resources\gray_cross.png" />
-    <Content Include="Resources\green_down.png" />
-    <Content Include="Resources\green_tick.png" />
-    <Content Include="Resources\green_up.png" />
-    <Content Include="Resources\highlight.png" />
-    <Content Include="Resources\important.png" />
-    <Content Include="Resources\options.png" />
-    <Content Include="Resources\pencil.png" />
-    <Content Include="Resources\quick_filter.png" />
-    <Content Include="Resources\Refresh.png" />
-    <Content Include="Resources\swizzle_quick_ref.html" />
-    <Content Include="Resources\totd.html" />
-    <Content Include="Resources\transform_quick_ref.html" />
-    <EmbeddedResource Include="Resources\version_history.html" />
     <None Include="app.config" />
+    <None Include="examples\highlights pattern set.rylog_highlights" />
     <None Include="installer\installer.wxs" />
-    <None Include="documentation\inc\meta.include.htm" />
-    <PyScript Include="documentation\docs\aggregate_files.htm">
-      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
-      <Generator>..\..\script\HtmlExpand.py</Generator>
-    </PyScript>
-    <PyScript Include="documentation\docs\android_logcat.htm">
-      <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
-    </PyScript>
-    <None Include="documentation\inc\auto_refresh.include.htm" />
-    <PyScript Include="documentation\docs\command_line.htm">
-      <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
-    </PyScript>
-    <PyScript Include="documentation\docs\data_sources.htm">
-      <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
-    </PyScript>
-    <PyScript Include="documentation\docs\faq.htm">
-      <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
-    </PyScript>
-    <PyScript Include="documentation\docs\installation.htm">
-      <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
-    </PyScript>
-    <PyScript Include="documentation\docs\main_window.htm">
-      <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
-    </PyScript>
-    <PyScript Include="documentation\docs\options_appearance.htm">
-      <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
-    </PyScript>
-    <None Include="documentation\inc\options_dialog.include.htm" />
-    <PyScript Include="documentation\docs\options_filtering.htm">
-      <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
-    </PyScript>
-    <PyScript Include="documentation\docs\options_general.htm">
-      <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
-    </PyScript>
-    <PyScript Include="documentation\docs\options_highlighting.htm">
-      <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
-    </PyScript>
-    <PyScript Include="documentation\docs\options_transforms.htm">
-      <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
-    </PyScript>
-    <PyScript Include="documentation\docs\overview.htm">
-      <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
-    </PyScript>
-    <PyScript Include="documentation\docs\pattern_editor.htm">
-      <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
-    </PyScript>
-    <Content Include="examples\example_code_lookup.xml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <None Include="docs\inc\meta.include.htm" />
     <Content Include="gen_licence.py" />
-    <Content Include="examples\example_highlights_pattern_set.rylog_highlights">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
     <Content Include="plugins\plugins.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <None Include="documentation\inc\cripple_css.include.htm" />
-    <PyScript Include="documentation\res\firstrun.htm">
-      <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\Resources\</CustomToolNamespace>
-    </PyScript>
-    <PyScript Include="documentation\docs\welcome.htm">
-      <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
-    </PyScript>
-    <None Include="documentation\inc\help_title_panel.include.htm" />
-    <None Include="documentation\inc\help_index_panel.include.htm">
+    <None Include="docs\inc\cripple_css.include.htm" />
+    <None Include="docs\inc\help_title_panel.include.htm" />
+    <None Include="docs\inc\help_index_panel.include.htm">
       <SubType>Designer</SubType>
     </None>
-    <None Include="documentation\inc\help_head.include.htm">
+    <None Include="docs\inc\help_head.include.htm">
       <SubType>Designer</SubType>
     </None>
-    <None Include="documentation\inc\quick_ref_css.include.htm" />
-    <PyScript Include="documentation\res\cripple_filtering.htm">
+    <None Include="docs\inc\quick_ref_css.include.htm" />
+    <PyScript Include="docs\res\cripple_filtering.htm">
       <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\Resources\</CustomToolNamespace>
+      <CustomToolNamespace>..\..\res\</CustomToolNamespace>
     </PyScript>
-    <PyScript Include="documentation\res\cripple_highlighting.htm">
+    <PyScript Include="docs\res\cripple_highlighting.htm">
       <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\Resources\</CustomToolNamespace>
+      <CustomToolNamespace>..\..\res\</CustomToolNamespace>
     </PyScript>
-    <PyScript Include="documentation\res\cripple_aggregate_files.htm">
+    <PyScript Include="docs\res\cripple_aggregate_files.htm">
       <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\Resources\</CustomToolNamespace>
+      <CustomToolNamespace>..\..\res\</CustomToolNamespace>
     </PyScript>
-    <None Include="documentation\inc\cripple_meta.include.htm" />
-    <PyScript Include="documentation\res\free_edition.htm">
+    <None Include="docs\inc\cripple_meta.include.htm" />
+    <PyScript Include="docs\res\free_edition.htm">
       <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\Resources\</CustomToolNamespace>
+      <CustomToolNamespace>..\..\res\</CustomToolNamespace>
     </PyScript>
-    <None Include="documentation\inc\cripple_footer.include.htm">
+    <None Include="docs\inc\cripple_footer.include.htm">
       <SubType>Designer</SubType>
     </None>
-    <PyScript Include="documentation\res\swizzle_quick_ref.htm">
+    <PyScript Include="docs\res\swizzle_quick_ref.htm">
       <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\Resources\</CustomToolNamespace>
+      <CustomToolNamespace>..\..\res\</CustomToolNamespace>
     </PyScript>
-    <PyScript Include="documentation\res\command_line_ref.htm">
+    <PyScript Include="docs\res\command_line_ref.htm">
       <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\Resources\</CustomToolNamespace>
+      <CustomToolNamespace>..\..\res\</CustomToolNamespace>
     </PyScript>
-    <PyScript Include="documentation\res\totd.htm">
+    <PyScript Include="docs\res\totd.htm">
       <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\Resources\</CustomToolNamespace>
+      <CustomToolNamespace>..\..\res\</CustomToolNamespace>
     </PyScript>
-    <PyScript Include="documentation\res\transform_quick_ref.htm">
+    <PyScript Include="docs\res\transform_quick_ref.htm">
       <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\Resources\</CustomToolNamespace>
+      <CustomToolNamespace>..\..\res\</CustomToolNamespace>
     </PyScript>
-    <PyScript Include="documentation\res\version_history.htm">
+    <PyScript Include="docs\res\version_history.htm">
       <Generator>..\..\script\HtmlExpand.py</Generator>
-      <CustomToolNamespace>..\..\..\Resources\</CustomToolNamespace>
+      <CustomToolNamespace>..\..\res\</CustomToolNamespace>
     </PyScript>
     <EmbeddedResource Include="src\about.resx">
       <DependentUpon>about.cs</DependentUpon>
@@ -528,12 +450,8 @@
     <EmbeddedResource Include="RyLog.ico" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Resources\public_key.xml" />
     <None Include="Rylogic Limited Key File.pfx" />
     <None Include="src\licence\private_key.xml" />
-    <Content Include="examples\example logfile.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />

@@ -3,7 +3,7 @@ using RyLogViewer;
 
 namespace RyLogViewer.ExamplePlugin
 {
-	/// <summary>A substitution type that converts elements to lower case</summary>
+	/// <summary>A example transform substitution, accessed via the Options->Transforms tab</summary>
 	[pr.common.Plugin(typeof(ITransformSubstitution))]
 	public class ExampleSubstitution :TransformSubstitutionBase
 	{

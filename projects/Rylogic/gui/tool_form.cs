@@ -46,7 +46,8 @@ namespace pr.gui
 		{
 			m_ofs = ofs;
 			m_pin = pin;
-			Icon = (target?.TopLevelControl as Form)?.Icon;
+			Owner = target?.TopLevelControl as Form;
+			Icon = Owner?.Icon;
 			AutoScaleDimensions = new SizeF(6F, 13F);
 			AutoScaleMode = AutoScaleMode.Font;
 			StartPosition = FormStartPosition.Manual;
@@ -61,15 +62,15 @@ namespace pr.gui
 			PinWindow = true;
 			PinTarget = target;
 
-			CreateHandle();
+			// Calling CreateHandle here prevents this window appearing over the parent if the parent is TopMost
+			//if (!modal)
+			//	CreateHandle();
 		}
 		protected override void Dispose(bool disposing)
 		{
 			PinTarget = null;
 			base.Dispose(disposing);
 		}
-
-		/// <summary>Set up the system menu once the window is created</summary>
 		protected override void OnHandleCreated(EventArgs e)
 		{
 			base.OnHandleCreated(e);
@@ -80,10 +81,130 @@ namespace pr.gui
 			Win32.InsertMenu(m_sys_menu_handle, 6, Win32.MF_BYPOSITION|Win32.MF_STRING, m_menucmd_pin_window, "&Pin Window");
 			UpdatePinMenuCheckState();
 		}
+		protected override void OnLoad(EventArgs e)
+		{
+			base.OnLoad(e);
 
-		/// <summary>Handle the system menu options</summary>
+			// Close on accept button
+			var accept = AcceptButton as Button;
+			if (accept != null)
+				accept.Click += (s,a) =>
+				{
+					if (s.As<Button>().DialogResult == DialogResult.None) return;
+					DialogResult = s.As<Button>().DialogResult;
+					Close();
+				};
+
+			// Close on cancel button
+			var cancel = CancelButton as Button;
+			if (cancel != null)
+				cancel.Click += (s,a) =>
+				{
+					if (s.As<Button>().DialogResult == DialogResult.None) return;
+					DialogResult = s.As<Button>().DialogResult;
+					Close();
+				};
+
+			// On first load, set the position of the form based on the pin location
+			if (m_ofs == Point.Empty)
+			{
+				switch (m_pin)
+				{
+				default: throw new Exception("Unknown pin location '%d'".Fmt(m_pin));
+				case EPin.TopLeft:      m_ofs = new Point(-Size.Width   , 0); break;
+				case EPin.TopCentre:    m_ofs = new Point(-Size.Width/2 , 0); break;
+				case EPin.TopRight:     m_ofs = new Point(0             , 0); break;
+				case EPin.BottomLeft:   m_ofs = new Point(-Size.Width   , -Size.Height); break;
+				case EPin.BottomCentre: m_ofs = new Point(-Size.Width/2 , -Size.Height); break;
+				case EPin.BottomRight:  m_ofs = new Point(0             , -Size.Height); break;
+				case EPin.CentreLeft:   m_ofs = new Point(-Size.Width   , -Size.Height/2); break;
+				case EPin.Centre:       m_ofs = new Point(-Size.Width/2 , -Size.Height/2); break;
+				case EPin.CentreRight:  m_ofs = new Point(0             , -Size.Height/2); break;
+				}
+			}
+			UpdateLocation();
+		}
+		protected override void OnShown(EventArgs e)
+		{
+			base.OnShown(e);
+			WatchTopLevelControl();
+		}
+		protected override void OnKeyDown(KeyEventArgs e)
+		{
+			e.Handled = true;
+			if (e.KeyCode == Keys.Escape)
+			{
+				Close();
+				return;
+			}
+			if (e.KeyCode == Keys.Tab && e.Control && Owner != null)
+			{
+				Owner.Focus();
+				return;
+			}
+			e.Handled = false;
+			base.OnKeyDown(e);
+		}
+		protected override void OnMouseEnter(EventArgs e)
+		{
+			base.OnMouseEnter(e);
+			HandleAutoFade();
+		}
+		protected override void OnMouseLeave(EventArgs e)
+		{
+			base.OnMouseLeave(e);
+			HandleAutoFade();
+		}
+		protected override void OnMouseMove(MouseEventArgs e)
+		{
+			base.OnMouseMove(e);
+			HandleAutoFade();
+		}
+		protected override void OnMove(EventArgs e)
+		{
+			// Whenever this window moves, save it's offset from the owner
+			base.OnMove(e);
+			Snap();
+			RecordOffset();
+		}
+		protected override void OnLocationChanged(EventArgs e)
+		{
+			// Whenever this window moves, save it's offset from the owner
+			base.OnLocationChanged(e);
+			RecordOffset();
+		}
+		protected override void OnFormClosing(FormClosingEventArgs e)
+		{
+			// On closing, if non-modal just hide, otherwise remove the Move handler from the owner
+ 			base.OnFormClosing(e);
+			if (HideOnClose && e.CloseReason == CloseReason.UserClosing)
+			{
+				Hide();
+				e.Cancel = true;
+				if (Owner != null)
+					Owner.Focus();
+			}
+		}
+		protected override void OnFormClosed(FormClosedEventArgs e)
+		{
+ 			base.OnFormClosed(e);
+			Owner = null;
+		}
+		protected override void OnControlAdded(ControlEventArgs e)
+		{
+			base.OnControlAdded(e);
+			e.Control.MouseEnter += HandleAutoFade;
+			e.Control.MouseLeave += HandleAutoFade;
+		}
+		protected override void OnControlRemoved(ControlEventArgs e)
+		{
+			e.Control.MouseEnter -= HandleAutoFade;
+			e.Control.MouseLeave -= HandleAutoFade;
+			base.OnControlRemoved(e);
+		}
 		protected override void WndProc(ref Message m)
 		{
+			// Handle the system menu options
 			if (m.Msg == Win32.WM_SYSCOMMAND)
 			{
 				switch (m.WParam.ToInt32()) {
@@ -192,128 +313,6 @@ namespace pr.gui
 			base.Close();
 		}
 
-		/// <summary>Overrides</summary>
-		protected override void OnLoad(EventArgs e)
-		{
-			base.OnLoad(e);
-
-			// Close on accept button
-			var accept = AcceptButton as Button;
-			if (accept != null)
-				accept.Click += (s,a) =>
-				{
-					if (s.As<Button>().DialogResult == DialogResult.None) return;
-					DialogResult = s.As<Button>().DialogResult;
-					Close();
-				};
-
-			// Close on cancel button
-			var cancel = CancelButton as Button;
-			if (cancel != null)
-				cancel.Click += (s,a) =>
-				{
-					if (s.As<Button>().DialogResult == DialogResult.None) return;
-					DialogResult = s.As<Button>().DialogResult;
-					Close();
-				};
-
-			// On first load, set the position of the form based on the pin location
-			if (m_ofs == Point.Empty)
-			{
-				switch (m_pin)
-				{
-				default: throw new Exception("Unknown pin location '%d'".Fmt(m_pin));
-				case EPin.TopLeft:      m_ofs = new Point(-Size.Width   , 0); break;
-				case EPin.TopCentre:    m_ofs = new Point(-Size.Width/2 , 0); break;
-				case EPin.TopRight:     m_ofs = new Point(0             , 0); break;
-				case EPin.BottomLeft:   m_ofs = new Point(-Size.Width   , -Size.Height); break;
-				case EPin.BottomCentre: m_ofs = new Point(-Size.Width/2 , -Size.Height); break;
-				case EPin.BottomRight:  m_ofs = new Point(0             , -Size.Height); break;
-				case EPin.CentreLeft:   m_ofs = new Point(-Size.Width   , -Size.Height/2); break;
-				case EPin.Centre:       m_ofs = new Point(-Size.Width/2 , -Size.Height/2); break;
-				case EPin.CentreRight:  m_ofs = new Point(0             , -Size.Height/2); break;
-				}
-			}
-			UpdateLocation();
-		}
-		protected override void OnShown(EventArgs e)
-		{
-			WatchTopLevelControl();
-			base.OnShown(e);
-		}
-		protected override void OnKeyDown(KeyEventArgs e)
-		{
-			e.Handled = true;
-			if (e.KeyCode == Keys.Escape)
-			{
-				Close();
-				return;
-			}
-			if (e.KeyCode == Keys.Tab && e.Control && Owner != null)
-			{
-				Owner.Focus();
-				return;
-			}
-			e.Handled = false;
-			base.OnKeyDown(e);
-		}
-		protected override void OnMouseEnter(EventArgs e)
-		{
-			base.OnMouseEnter(e);
-			HandleAutoFade();
-		}
-		protected override void OnMouseLeave(EventArgs e)
-		{
-			base.OnMouseLeave(e);
-			HandleAutoFade();
-		}
-		protected override void OnMouseMove(MouseEventArgs e)
-		{
-			base.OnMouseMove(e);
-			HandleAutoFade();
-		}
-		protected override void OnMove(EventArgs e)
-		{
-			// Whenever this window moves, save it's offset from the owner
-			base.OnMove(e);
-			Snap();
-			RecordOffset();
-		}
-		protected override void OnLocationChanged(EventArgs e)
-		{
-			// Whenever this window moves, save it's offset from the owner
-			base.OnLocationChanged(e);
-			RecordOffset();
-		}
-		protected override void OnFormClosing(FormClosingEventArgs e)
-		{
-			// On closing, if non-modal just hide, otherwise remove the Move handler from the owner
- 			base.OnFormClosing(e);
-			if (HideOnClose && e.CloseReason == CloseReason.UserClosing)
-			{
-				Hide();
-				e.Cancel = true;
-				if (Owner != null)
-					Owner.Focus();
-			}
-		}
-		protected override void OnFormClosed(FormClosedEventArgs e)
-		{
- 			base.OnFormClosed(e);
-			Owner = null;
-		}
-		protected override void OnControlAdded(ControlEventArgs e)
-		{
-			base.OnControlAdded(e);
-			e.Control.MouseEnter += HandleAutoFade;
-			e.Control.MouseLeave += HandleAutoFade;
-		}
-		protected override void OnControlRemoved(ControlEventArgs e)
-		{
-			e.Control.MouseEnter -= HandleAutoFade;
-			e.Control.MouseLeave -= HandleAutoFade;
-			base.OnControlRemoved(e);
-		}
 
 		/// <summary>Set the form opacity based on where the mouse is</summary>
 		private void HandleAutoFade(object sender = null, EventArgs args = null)

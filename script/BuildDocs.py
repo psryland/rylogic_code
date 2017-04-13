@@ -7,27 +7,29 @@ import HtmlExpand
 import UserVars
 
 # Expands '*.htm' files in a directory and copies them to an output directory
-def BuildDocs(srcdir:str, dstdir:str):
+# 'src' can be a filepath or a directory. 'dst' must be a directory
+def BuildDocs(src:str, dst:str):
 
-	print("Building documentation... "+srcdir+" -> "+dstdir)
-	for filepath in Tools.EnumFiles(srcdir):
+	src = os.path.abspath(src)
+	dst = os.path.abspath(dst)
+
+	# Export a directory containing 'htm' files
+	if os.path.isdir(src):
 
 		# If the file is an '.htm' file, but not an 'include.htm' file
-		if re.match(r".*(?<!include)\.htm$", filepath, flags=re.IGNORECASE):
+		for filepath in Tools.EnumFiles(src, filter=r".*(?<!include)\.htm$", flags=re.IGNORECASE):
 
-			dir,fname = os.path.split(filepath)
-			ftitle,extn = os.path.splitext(fname)
-			outfilepath = dstdir + "\\" + ftitle + ".html"
+			# Maintain the relative directory structure in 'dstdir'
+			relpath = os.path.relpath(filepath, src)
+			dir,fname = os.path.split(relpath)
+			outdir = os.path.join(dst, dir)
 
-			# Expand the templates in the doc file
-			HtmlExpand.ExpandHtmlFile(filepath, outfilepath)
+			# Expand the 'htm' file
+			HtmlExpand.ExpandHtmlFile(filepath, outdir)
 
+	else:
 
-	#proj    = UserVars.root + r"\projects\RyLogViewer"
-	#docsdir = proj + r"\docs"
-	#resdir  = proj + r"\Resources"
-	#
-	##Process all non-include html template files in each directory
-	#ExportDirectory(docsdir)
-	#ExportDirectory(resdir)
+		# Expand the 'htm' file
+		HtmlExpand.ExpandHtmlFile(src, dst)
+
 	return

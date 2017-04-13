@@ -507,9 +507,6 @@ namespace Rylobot
 			// Note: Drawn with x = 0 == oldest (CAlgo indices) so that the X position doesn't change with updates
 			using (ldr.Group(instr.SymbolCode))
 			{
-				// Find the MCS
-				//var mcs = instr.MCS;
-
 				// Draw bullish/bearish candles
 				#region Candles
 				{
@@ -588,6 +585,13 @@ namespace Rylobot
 						if (lines.Count != 0 || faces.Count != 0)
 							ldr.Mesh(string.Empty, 0xFFFFFFFF, View3d.EGeom.Vert|View3d.EGeom.Colr, vbuf, faces:faces, lines:lines);
 					}
+				}
+				#endregion
+
+				// Volume
+				#region Volume
+				{
+
 				}
 				#endregion
 

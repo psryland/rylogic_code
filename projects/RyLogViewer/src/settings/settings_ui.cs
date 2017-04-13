@@ -930,7 +930,7 @@ namespace RyLogViewer
 			{
 			default: e.Value = string.Empty; break;
 			case ColumnNames.Pattern:
-				string val = pat.ToString();
+				string val = pat.Expr;
 				if (string.IsNullOrEmpty(val)) val = "<blank>";
 				if (string.IsNullOrWhiteSpace(val)) val = "'"+val+"'";
 				if (pt != null && pt.Invert) val = "not "+val;

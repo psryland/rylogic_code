@@ -5,11 +5,11 @@
 		<!--#include file="..\inc\help_title_panel.include.htm"-->
 		<!--#include file="..\inc\help_index_panel.include.htm"-->
 		<div id="content_panel">
-			<!--#var name="FeatureEnableTime" file="..\..\misc.cs" value="const int FeatureEnableTimeInMinutes\s+= (?P<value>\d+);"-->
-			<!--#var name="MaxHighlights"     file="..\..\misc.cs" value="const int MaxHighlights\s+= (?P<value>\d+);"-->
-			<!--#var name="MaxFilters"        file="..\..\misc.cs" value="const int MaxFilters\s+= (?P<value>\d+);"-->
-			<!--#var name="MaxTransforms"     file="..\..\misc.cs" value="const int MaxTransforms\s+= (?P<value>\d+);"-->
-			<!--#var name="MaxActions"        file="..\..\misc.cs" value="const int MaxActions\s+= (?P<value>\d+);"-->
+			<!--#var name="FeatureEnableTime" file="..\..\src\misc.cs" value="const int FeatureEnableTimeInMinutes\s+= (?P<value>\d+);"-->
+			<!--#var name="MaxHighlights"     file="..\..\src\misc.cs" value="const int MaxHighlights\s+= (?P<value>\d+);"-->
+			<!--#var name="MaxFilters"        file="..\..\src\misc.cs" value="const int MaxFilters\s+= (?P<value>\d+);"-->
+			<!--#var name="MaxTransforms"     file="..\..\src\misc.cs" value="const int MaxTransforms\s+= (?P<value>\d+);"-->
+			<!--#var name="MaxActions"        file="..\..\src\misc.cs" value="const int MaxActions\s+= (?P<value>\d+);"-->
 			<div class="title">Overview and Features</div>
 			<div class="content">
 				<div class="content">
@@ -20,10 +20,10 @@
 					make working with high-volume log data easier.<br/>
 					<br/>
 					The simplest, yet probably most useful, feature of RyLogViewer is the ability to highlight lines in the log
-					data based on a pattern. Patterns can be as simple as <i>"any line that contains the word 'error' "</i>
+					data based on a pattern. Patterns can be as simple as <i>"any line that contains the word 'error'"</i>,
 					to complex regular expressions. Once familiar with the pattern system, the same knowledge can be applied to
 					search for specific text in the log data, create filters to strip out unwanted noise, transform and rearrange
-					text into more meaningful/human-readable forms, and even setup actions to perform when double clicking on lines
+					text into more meaningful/human-readable forms, and even set up actions to perform when double clicking on lines
 					in the log data. (Check out the <a href="ideas.html">ideas section</a> for inspiration on ways in which RyLogViewer
 					 can be used).<br/>
 					<br/>
@@ -103,7 +103,7 @@
 							<div class="limited_feature">Limited in Free Edition</div>
 							<div class="content">
 								<a href="options_actions.html">Actions</a> allow custom behaviour to be executed when a particular
-								line in the log file is double clicked. For example, a <a href="pattern_editor.html">pattern</a>
+								line in the log file is double clicked with the mouse. For example, a <a href="pattern_editor.html">pattern</a>
 								that matches a file path and line number can be associated with an action that opens the file at
 								the given line number in a text editor, a useful feature when viewing application debug output.
 								In the free version, actions are limited to <!--#value name="MaxActions"-->
@@ -130,7 +130,7 @@
 							<div class="tag_label">Aggregate Files</div>
 							<div class="licensed_feature">Licensed feature</div>
 							<div class="content">
-								The <a href="aggregate_files.html">aggregate files</a> feature allows multiple files to be
+								The <a href="data_sources.html#aggregate_files">aggregate files</a> feature allows multiple files to be
 								viewed as though they are a single file. All features (including highlighting, searching,
 								filtering, etc) operate on the aggregate file in the same manor as they do for a single file.
 								This is particularly useful for systems that produce sequentially numbered log files, common
@@ -138,7 +138,7 @@
 								<br/>
 								In addition, the <a href="export.html">Export</a> function can by used to create a single
 								amalgamated file that is the result of all of the files concatenated together after filtering
-								and/or text transformations have been applied.<br/>
+								and text transformations have been applied.<br/>
 							</div>
 						</div>
 					</li>
@@ -149,7 +149,7 @@
 							<div class="content">
 								One of the targeted uses for RyLogViewer is to aid Android application development. The
 								Android operating system has a system wide logging feature that gives great insight into the
-								applications running on the device. The <a href="android_logcat.html">Android Logcat Wizard</a>
+								applications running on the device. The <a href="data_sources.html#android_logcat">Android Logcat Wizard</a>
 								simplifies the process of connecting and capturing this logcat data.
 							</div>
 						</div>
@@ -210,7 +210,7 @@
 								to a file applying all enabled filters and transforms. Exporting is therefore a flexible way
 								to transform a file and save the result. Exporting can also be performed by running RyLogViewer
 								from the <a href="command_line.html">command line</a> which allows RyLogViewer to be useful in
-								batch scripts.
+								scripts.
 							</div>
 						</div>
 					</li>

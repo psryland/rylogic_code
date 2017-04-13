@@ -1485,7 +1485,7 @@ namespace RyLogViewer
 		/// <summary>Launch a web browser in order to view the html documentation</summary>
 		private void ShowHelp()
 		{
-			const string HelpStartPage = @"docs\welcome.html";
+			const string HelpStartPage = @"docs\help.html";
 			try
 			{
 				var path = Util.ResolveAppPath(HelpStartPage);
@@ -1494,7 +1494,7 @@ namespace RyLogViewer
 			catch (Exception ex)
 			{
 				MsgBox.Show(this,
-					"Unable to display the help documentation do to an error.\r\n" +
+					"Unable to display the help documentation.\r\n" +
 					"Error Message: {0}\r\n".Fmt(ex.Message) +
 					"\r\n" +
 					"The expected location of the main documentation file is:\r\n" +
@@ -1633,9 +1633,11 @@ namespace RyLogViewer
 		/// <summary>Display info about the app being a free version</summary>
 		private void ShowFreeVersionInfo(object sender = null, EventArgs args = null)
 		{
-			var dlg = HelpUI.From(this, HelpUI.EContent.Html, "RyLogViewer Free Edition", Resources.free_version, Point.Empty, new Size(480,640), ToolForm.EPin.Centre);
-			dlg.FormBorderStyle = FormBorderStyle.Sizable;
-			dlg.ShowDialog(this);
+			using (var dlg = new HelpUI(this, HelpUI.EContent.Html, Application.ProductName, Resources.free_version, Point.Empty, new Size(480, 640), ToolForm.EPin.Centre, modal: true))
+			{
+				dlg.FormBorderStyle = FormBorderStyle.Sizable;
+				dlg.ShowDialog(this);
+			}
 		}
 
 		/// <summary>Convert an encoding name to encoding object</summary>
@@ -1809,6 +1811,9 @@ namespace RyLogViewer
 		public void ApplySettings()
 		{
 			Log.Info(this, "Applying settings");
+
+			// UI options
+			TopMost = Settings.AlwaysOnTop;
 
 			// Cached settings for performance, don't overwrite auto detected cached values though
 			m_encoding                 = GetEncoding(Settings.Encoding);

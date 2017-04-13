@@ -8,91 +8,88 @@
 			<!--#include file="..\inc\options_dialog.include.htm"-->
 			<div>
 				<span class="section_title">Highlighting Tab</span>
-				<!--
-					<div class="content">
-						Under the appearance tab you will find controls that affect how log data is displayed.
-						Click on the yellow boxes in the image below to jump to a description of each control.
-					</div>
-					<div>
-						<img class="centred" src="img/settings_appearance.png" alt="settings appearance tab" usemap="#settings_appearance_map"/>
-						<map id="settings_appearance_map" name="settings_appearance_map">
-							<area shape="rect" coords="100,63,120,83" href="#appearance_selection_colour" alt="" title="" onclick="HighlightListItem('appearance_selection_colour')"/>
-							<area shape="rect" coords="100,92,120,112" href="#appearance_log_text_colour" alt="" title="" onclick="HighlightListItem('appearance_log_text_colour')"/>
-							<area shape="rect" coords="13,121,33,141" href="#appearance_alternate_colours" alt="" title="" onclick="HighlightListItem('appearance_alternate_colours')"/>
-							<area shape="rect" coords="150,125,170,145" href="#appearance_alternate_colours" alt="" title="" onclick="HighlightListItem('appearance_alternate_colours')"/>
-							<area shape="rect" coords="100,153,120,173" href="#appearance_row_height" alt="" title="" onclick="HighlightListItem('appearance_row_height')"/>
-							<area shape="rect" coords="245,201,265,221" href="#appearance_font" alt="" title="" onclick="HighlightListItem('appearance_font')"/>
-							<area shape="rect" coords="424,67,444,87" href="#appearance_bar_width" alt="" title="" onclick="HighlightListItem('appearance_bar_width')"/>
-							<area shape="rect" coords="424,95,444,115" href="#appearance_cached_colour" alt="" title="" onclick="HighlightListItem('appearance_cached_colour')"/>
-							<area shape="rect" coords="424,123,444,143" href="#appearance_visible_colour" alt="" title="" onclick="HighlightListItem('appearance_visible_colour')"/>
-							<area shape="rect" coords="425,150,445,170" href="#appearance_bookmark_colour" alt="" title="" onclick="HighlightListItem('appearance_bookmark_colour')"/>
-						</map>
-					</div>
-					<ol>
-						<li class="child_list_elem" id="appearance_selection_colour">
-							<span class="tag_label">Selection Colour</span>
+				<div class="content">
+					Highlighting is one of the primary features of RyLogViewer. The purpose of highlighting 
+					is to make particular lines in the log file stand out based on their content. Many 
+					applications output data to log files and often important information can be hard 
+					to spot amongst the stream of regular output.
+				</div>
+				<div>
+					<img class="centred" src="../img/highlighting.png" alt="highlighting settings" usemap="#highlighting-map" />
+					<map id="highlighting-map" name="highlighting-map">
+						<area shape="rect" coords="3,47,20,60" href="#highlighting_pattern_editor" alt="" title="" onclick="HighlightListItem('highlighting_pattern_editor')"/>
+						<area shape="rect" coords="33,258,50,271" href="#highlighting_active" alt="" title="" onclick="HighlightListItem('highlighting_pattern_editor')"/>
+						<area shape="rect" coords="79,259,92,272" href="#highlighting_pattern" alt="" title="" onclick="HighlightListItem('highlighting_pattern')" />
+						<area shape="rect" coords="249,258,262,271" href="#highlighting_highlight" alt="" title="" onclick="HighlightListItem('highlighting_highlight')" />
+						<area shape="rect" coords="304,258,321,271" href="#highlighting_colours" alt="" title="" onclick="HighlightListItem('highlighting_colours')" />
+						<area shape="rect" coords="475,257,492,270" href="#highlighting_edit" alt="" title="" onclick="HighlightListItem('highlighting_edit')" />
+						<area shape="rect" coords="15,440,32,457" href="#highlighting_pattern_set" alt="" title="" onclick="HighlightListItem('highlighting_pattern_set')" />
+					</map>
+				</div>
+				<ol>
+					<li class="child_list_elem">
+						<div id="highlighting_pattern_editor">
+							<span class="tag_label">Pattern Editor</span>
 							<div class="content">
-								Sets the text and background colours of selected rows in the main log view.
+								The pattern editor is used to create and modify patterns that will match lines in the log data.
+								The pattern editor is described in greater detail <a href="pattern_editor.html">here</a>.
 							</div>
-						</li>
-						<li class="child_list_elem" id="appearance_log_text_colour">
-							<span class="tag_label">Log Text Colour</span>
+						</div>
+					</li>
+					<li>
+						<div id="highlighting_active">
+							<span class="tag_label">Active Patterns</span>
 							<div class="content">
-								Sets the text and background colours used by text in the main log view.
+								It is sometimes convenient to disable a pattern without deleting it. Highlighting patterns can
+								be enabled or disabled by clicking in this column
 							</div>
-						</li>
-						<li class="child_list_elem" id="appearance_alternate_colours">
-							<span class="tag_label">Alternate Line Colours</span>
+						</div>
+					</li>
+					<li>
+						<div id="highlighting_pattern">
+							<span class="tag_label">Expression</span>
 							<div class="content">
-								Check this option to have every alternate row display in a different colour to the main
-								<i>Log Text Colour</i>. The colour selection area ([4]) is used to set the colour used.
+								This column displays the text of the highlighting pattern.
 							</div>
-						</li>
-						<li class="child_list_elem" id="appearance_row_height">
-							<span class="tag_label">Row Height</span>
+						</div>
+					</li>
+					<li>
+						<div id="highlighting_highlight">
+							<span class="tag_label">Highlight Style</span>
 							<div class="content">
-								This value corresponds to the height of each line displayed in the main log view
+								The <i>Full</i> highlighting style means that the entire line in the log data is highlighted if
+								the pattern matches any part of the line. The <i>Partial</i> style means only the matching part
+								of the line is highlighted.
 							</div>
-						</li>
-						<li class="child_list_elem" id="appearance_font">
-							<span class="tag_label">Font</span>
+						</div>
+					</li>
+					<li>
+						<div id="highlighting_colours">
+							<span class="tag_label">Colours</span>
 							<div class="content">
-								Sets the font used to display the text in the main log view.
+								This column allows the highlighting colour scheme to be set for the pattern
 							</div>
-						</li>
-						<li class="child_list_elem" id="appearance_bar_width">
-							<span class="tag_label">File Scroll Bar Width</span>
+						</div>
+					</li>
+					<li>
+						<div id="highlighting_edit">
+							<span class="tag_label">Highlight Pattern Editing</span>
 							<div class="content">
-								The vertical bar on the right side of the main window is the
-								<a href="main_window.html#file_scroll">File Scroll Indicator</a>. It is used to display the
-								position of the currently cached portion of the log file, and to quickly navigate within the
-								log file. This setting controls its visual width on the main log view.
+								Clicking the icon in this column loads the pattern into the <a href="pattern_editor.html">pattern editor</a> to be modified.
 							</div>
-						</li>
-						<li class="child_list_elem" id="appearance_cached_colour">
-							<span class="tag_label">Cached Colour</span>
+						</div>
+					</li>
+					<li>
+						<div id="highlighting_pattern_set">
+							<span class="tag_label">Highlighting Pattern Sets</span>
 							<div class="content">
-								This control changes the colour of the cached file range indicator within the
-								<a href="main_window.html#file_scroll">File Scroll Indicator</a>.
+								<a href="pattern_editor.html#pattern_sets">Pattern sets</a> are used to save and load groups of patterns.
+								This is useful when RyLogViewer is used frequently for different types of logs. All of the highlighting patterns
+								can be easily switched by selecting a pattern set from the drop down menu.
 							</div>
-						</li>
-						<li class="child_list_elem" id="appearance_visible_colour">
-							<span class="tag_label">Visible Colour</span>
-							<div class="content">
-								This control changes the colour of the currently visible file range indicator with the
-								<a href="main_window.html#file_scroll">File Scroll Indicator</a>
-							</div>
-						</li>
-						<li class="child_list_elem" id="appearance_bookmark_colour">
-							<span class="tag_label">Bookmark Colour</span>
-							<div class="content">
-								This control changes the colour used to show bookmarked locations on the
-								<a href="main_window.html#file_scroll">File Scroll Indicator</a> also in the
-								main log view.
-							</div>
-						</li>
-					</ol>
-					-->
+						</div>
+					</li>
+				</ol>
 			</div>
 		</div>
 	</body>

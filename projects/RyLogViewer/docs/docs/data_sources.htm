@@ -9,7 +9,7 @@
 			<div class="content">
 				RyLogViewer can display log data from a wide variety of sources, ranging from log
 				files on the local hard drive, to data streamed over a named pipe. Each data source
-				is described below along with typical use scenarios.
+				is described below along with typical usage scenarios.
 			</div>
 
 			<div id="single_file">
@@ -27,8 +27,8 @@
 
 			<div id="program_output">
 				<div class="section_title">Program Output</div>
-				<img class="right_inset" src="img/program_output.png" alt="log program output"/>
 				<div class="content">
+					<img class="right_inset" src="../img/program_output.png" alt="log program output"/>
 					Many applications output log information to the standard streams; standard output (stdout),
 					and standard error (stderr). Using the <i>Log Program Output</i> option under the file menu,
 					RyLogViewer can launch an application and display any text data it writes to these streams.
@@ -47,7 +47,7 @@
 			<div id="serial_port">
 				<div class="section_title">Serial Port Connection</div>
 				<div class="content">
-					<img class="right_inset" src="img/serial_port_output.png" alt="log serial port"/>
+					<img class="right_inset" src="../img/serial_port_output.png" alt="log serial port"/>
 					A common scenario in embedded software development is for log data to be streamed over
 					a serial port connection. RyLogViewer can capture and display this output directly via the
 					<i>Log Serial Port</i> option under the file menu. The standard options for connecting to
@@ -70,8 +70,8 @@
 			<div id="tcpip">
 				<div class="section_title">TCP/UDP Network Connection</div>
 				<div class="content">
-					<img class="right_inset" src="img/network_output.png" alt="log network connection"/>
-					<ol>
+					<img class="right_inset" src="../img/network_output.png" alt="log network connection"/>
+					<ol class="minor_list">
 						<li>The network protocol to use.</li>
 						<li>The host name or IP address of the computer to receive data from.</li>
 						<li>The port number to use for the connection.</li>
@@ -89,11 +89,54 @@
 			<div id="named_pipe">
 				<div class="section_title">Named Pipe</div>
 				<div class="content">
-					<img class="right_inset" src="img/pipe_output.png" alt="log named pipe"/>
-					<ol>
+					<img class="right_inset" src="../img/pipe_output.png" alt="log named pipe"/>
+					<ol class="minor_list">
 						<li>The name of the named pipe to receive data from.</li>
 						<li>An optional file path to save any captured program output to.</li>
 						<li>Append captured output to the optional captured output file. This option is only available when an output file path is given.</li>
+					</ol>
+				</div>
+			</div>
+
+			<div id="aggregate_files">
+				<div class="section_title">Aggregate Files</div>
+				<div class="content">
+					<img class="right_inset" src="../img/aggregate_files.png" alt="aggregate files" />
+					The aggregate files interface allows a set of files to be treated as though they are a single
+					file. In many long running systems it is common to use "log roll over" where periodically the
+					system starts a new log file with a sequentially numbered file name. When reviewing the data
+					contained in these files it is often inconvenient to have to load each file separately.
+					Searching for specific log entries can also be difficult.<br />
+					<br />
+					RyLogViewer's aggregate files feature solves these issues by encapsulating the separate log files
+					such that they appear, to the rest of the application, to be a single file. This means all of
+					RyLogViewer's highlighting, filtering, transforming, searching and other features work seamlessly
+					across the multiple files.
+				</div>
+			</div>
+
+			<div id="android_logcat">
+				<div class="section_title">Android Logcat</div>
+				<div class="content">
+					<img class="right_inset" src="../img/android_logcat.png" alt="android logcat" />
+					The Android Logcat interface is really a specialised case of a <a href="data_sources.html#program_output">Program Output</a> data source.
+					The program that provides the output is the <i>Android Debug Bridge</i> command line tool (adb.exe).
+					<ol class="minor_list">
+						<li>
+							The full path to 'adb.exe' - This shows where the Android Debug Bridge tool was located on the computer.
+							If you have multiple instances of the Android SDK installed, confirm that this is the instance you would
+							like to use. If not, browse to the desired instance using the button to the right.
+							<b>Note: Multiple instances of adb.exe can be a source of problems. Different versions of adb.exe can
+							cause the adb service to be restarted, which will disconnect debugging sessions.</b>
+						</li>
+						<li>A list of the Android devices connected via the adb service.</li>
+						<li>The various streams of log output provided by Android Logcat</li>
+						<li>Filter specifications - filtering of the logcat data stream. See the Android Logcat documentation for more detail.</li>
+						<li>The pre-defined formats of the log data provided by Logcat</li>
+						<li>An optional file path to save any captured program output to.</li>
+						<li>The command line generated by the selected options that is used to run adb.exe</li>
+						<li>Repopulates the fields in the dialog using data collected using adb.exe</li>
+						<li>Resets the adb service. Can sometimes solve issues when connecting to Android devices</li>
 					</ol>
 				</div>
 			</div>

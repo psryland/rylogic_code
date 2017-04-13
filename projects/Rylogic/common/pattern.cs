@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
@@ -42,6 +43,7 @@ namespace pr.common
 	}
 
 	/// <summary>A handy regex helper that converts wildcard and substring searches into regex's as well</summary>
+	[DebuggerDisplay("{PatnType}: {Expr}")]
 	public class Pattern :IPattern
 	{
 		private static class XmlTag

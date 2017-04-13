@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Rylogic Limited")]
 [assembly: AssemblyProduct("RyLogViewer")]
-[assembly: AssemblyCopyright("Copyright (c)  2012")]
+[assembly: AssemblyCopyright("Copyright (c)  2017")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -22,5 +22,5 @@ using System.Runtime.InteropServices;
 [assembly: Guid("fb7dccea-775f-4061-8a11-07c3383fabe2")]
 
 // Version information
-[assembly: AssemblyVersion("1.0.0")]
-[assembly: AssemblyFileVersion("1.0.0")]
+[assembly: AssemblyVersion("1.0.1")]
+[assembly: AssemblyFileVersion("1.0.1")]

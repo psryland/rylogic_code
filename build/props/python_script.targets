@@ -1,10 +1,15 @@
 <!--
- Enables 'PyScript' as a build action.
- In the properties for a file, select PyScript for the build action.
- 'PyScript.Fullpath' is the name of the file that the custom build is operating on.
+  Enables 'PyScript' as a build action.
+  In the properties for a file, select PyScript for the build action.
+  'PyScript.Fullpath' is the name of the file that the custom build is operating on.
   It is passed as the first argument to the script
- Set 'Custom Tool' (i.e. PyScript.Generator) to the name of the script to run
- Set 'Custom Tool Namespace' to any addition arguments you want to pass to the script
+  Set 'Custom Tool' to the name of the script to run
+  Set 'Custom Tool Namespace' to any addition arguments you want to pass to the script
+  Note: the paths in 'Custom Tool' and 'Custom Tool Namespace' are relative to the file
+  that the build action is applied to
+  
+  The PyScript build action is made available in the project by editing the 'csproj' and adding
+  "<Import Project="$(ProjectDir)..\..\build\props\python_script.targets" />".
 -->
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 

@@ -6,6 +6,84 @@
 		<!--#include file="..\inc\help_index_panel.include.htm"-->
 		<div id="content_panel">
 			<!--#include file="..\inc\options_dialog.include.htm"-->
+			<div>
+				<span class="section_title">Filtering Tab</span>
+				<div class="content">
+					Filtering allows log data that is not currently relevant to be hidden. Typical use cases
+					for filtering are; to show only the error messages in a log, or hide all log entries of
+					a particular format. The order that filtering rules are applied is defined by the order
+					that the patterns are listed. This allows a complex set of rules for keeping or rejecting
+					lines from a log file to be constructed.
+				</div>
+				<div>
+					<img class="centred" src="../img/filtering.png" alt="filtering settings" usemap="#filtering-map" />
+					<map id="filtering-map" name="filtering-map">
+						<area shape="rect" coords="3,50,20,73" href="#filtering_pattern_editor" alt="" title="" onclick="HighlightListItem('filtering_pattern_editor')" />
+						<area shape="rect" coords="27,228,44,245" href="#filtering_active" alt="" title="" onclick="HighlightListItem('filtering_active')" />
+						<area shape="rect" coords="75,228,92,245" href="#filtering_if_match" alt="" title="" onclick="HighlightListItem('filtering_if_match')" />
+						<area shape="rect" coords="154,228,171,245" href="#filtering_pattern" alt="" title="" onclick="HighlightListItem('filtering_pattern')" />
+						<area shape="rect" coords="472,224,489,241" href="#filtering_edit" alt="" title="" onclick="HighlightListItem('filtering_edit')" />
+						<area shape="rect" coords="15,439,32,456" href="#filtering_pattern_set" alt="" title="" onclick="HighlightListItem('filtering_pattern_set')" />
+					</map>
+				</div>
+				<ol>
+					<li class="child_list_elem">
+						<div id="filtering_pattern_editor">
+							<span class="tag_label">Pattern Editor</span>
+							<div class="content">
+								The pattern editor is used to create and modify patterns that will match lines in the log data.
+								The pattern editor is described in greater detail <a href="pattern_editor.html">here</a>.
+							</div>
+						</div>
+					</li>
+					<li class="child_list_elem">
+						<div id="filtering_active">
+							<span class="tag_label">Active Patterns</span>
+							<div class="content">
+								It is sometimes convenient to disable a pattern without deleting it. Filtering patterns can
+								be enabled or disabled by clicking in this column
+							</div>
+						</div>
+					</li>
+					<li>
+						<div id="filtering_if_match">
+							<span class="tag_label">Filter Type</span>
+							<div class="content">
+								A filter of type <i>Keep</i> will prevent a log line from being hidden, where as a filter of type
+								<i>Reject</i> will prevent the log line from being displayed. Filters are applied in the order listed
+								so, depending on the order of filters and the state of the <i>Reject all rows by default</i> check box,
+								a complex set of rules for keeping and rejecting log data can be created.
+							</div>
+						</div>
+					</li>
+					<li>
+						<div id="filtering_pattern">
+							<span class="tag_label">Expression</span>
+							<div class="content">
+								This column displays the text of the filter pattern.
+							</div>
+						</div>
+					</li>
+					<li>
+						<div id="filtering_edit">
+							<span class="tag_label">Filter Pattern Editing</span>
+							<div class="content">
+								Clicking the icon in this column loads the pattern into the <a href="pattern_editor.html">pattern editor</a> to be modified.
+							</div>
+						</div>
+					</li>
+					<li>
+						<div id="filtering_pattern_set">
+							<span class="tag_label">Filtering Pattern Sets</span>
+							<div class="content">
+								<a href="pattern_editor.html#pattern_sets">Pattern sets</a> are used to save and load groups of patterns.
+								This is useful when RyLogViewer is used frequently for different types of logs. All of the filter patterns
+								can be easily switched by selecting a pattern set from the drop down menu.
+							</div>
+						</div>
+					</li>
+				</ol>
+			</div>
 		</div>
 	</body>
 </html>
