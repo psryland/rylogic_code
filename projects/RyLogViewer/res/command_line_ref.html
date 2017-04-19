@@ -117,187 +117,189 @@
 	</head>
 	<body>
 		<div id="title">Command Line Syntax</div>
-		<div class="heading">Syntax:</div>
-		<div class="mono" style="padding-left: 30px">rylogviewer [filepath] [options]</div>
-		<br/>
-		<div class="content">
-			Following are the valid command line options for RylogViewer. These options may
-			be given in any order. Note that there is no whitespace between options and their
-			associated parameter.
+		﻿<div>
+			<div class="heading">Syntax:</div>
+			<div class="mono" style="padding-left: 30px">RyLogViewer [filepath] [options]</div>
+			<br />
+			<div class="content">
+				Following are the valid command line options for RylogViewer. These options may
+				be given in any order. Note that there is no whitespace between options and their
+				associated parameter.
+			</div>
+			<table>
+				<tr><th>Option</th><th>Meaning</th></tr>
+				<tr>
+					<td>&quot;file path&quot;</td>
+					<td>
+						<div class="content">
+							The path to a file to load on startup.<br /><br />
+							Example:
+							<div class="example">
+								RyLogViewer "mylogfile.log"
+							</div>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td>-p</td>
+					<td>
+						<div class="content">
+							Run the application in portable mode.<br /><br />
+							In this mode the application can run from any location that allows file write
+							access, e.g. a USB drive. Settings are written to the same directory that the
+							application is running in. If a file with the name 'portable' is found in the
+							same directory as the executable then portable mode will be enabled by default.
+							Note that portable mode is equivalent to:
+							<div class="example">
+								RyLogViewer &#8209;s".\settings.xml"
+							</div><br />
+							Example:
+							<div class="example">
+								RyLogViewer &#8209;p
+							</div>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td>&#8209;s"settings file path"</td>
+					<td>
+						<div class="content">
+							Loads the log viewer using the specified settings file path.<br /><br />
+							This option is useful for running multiple instances of the application
+							without overwriting the settings of other instances.<br /><br />
+							Example:
+							<div class="example">
+								RyLogViewer &#8209;s"C:\temp\mysettings.xml"
+							</div>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td>&#8209;e"export file path"</td>
+					<td>
+						<div class="content">
+							Export a file using the current filter and transform settings.<br /><br />
+							This option instructs the log viewer to export a file to "export file path"
+							using the current filter and transform settings. "file path" must also be
+							given on the command line. It is often useful to use the '&#8209;fx' and '&#8209;tx'
+							options in addition to this option. The application main window is not
+							displayed during the export and, on completion, the returned exit code is
+							'0' for success, '1' for failure.<br /><br />
+							Examples:
+							<div class="example">
+								RyLogViewer ALogFile.log &#8209;e"C:\exported logs\ALogFile.Exported.txt"<br />
+								RyLogViewer ALogFile.log &#8209;ft"filters.rylog_filters" &#8209;tx&quot;transforms.rylog_transforms&quot; &#8209;e&quot;C:\exported logs\ALogFile.Exported.txt&quot;
+							</div>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td>&#8209;rdelim"row delimiter"</td>
+					<td>
+						<div class="content">
+							The row delimiter to use in the exported file.<br /><br />
+							This option specifies the row delimiter to use when exporting a file using the
+							'&#8209;e' option. If not given, the row delimiters from the input file are used. If
+							the &#8209;e option is not used, this option is ignored. Use the following special
+							strings to represent carrage return, line feed, and tab:
+							<ul class="mono">
+								<li>&lt;CR&gt; - carrage return</li>
+								<li>&lt;LF&gt; - line feed</li>
+								<li>&lt;TAB&gt; - tab</li>
+							</ul>
+							Example:
+							<div class="example">
+								RyLogViewer ALogFile.log &#8209;e"C:\exported logs\ALogFile.Exported.txt" &#8209;rdelim"&lt;CR&gt;&lt;LF&gt;"<br />
+							</div>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td>&#8209;cdelim"column delimiter"</td>
+					<td>
+						<div class="content">
+							This option specifies the column delimiter to use when exporting a file using the
+							'&#8209;e' option. If not given, the column delimiters from the input file are used. If
+							the &#8209;e option is not used, this option is ignored. Use the following special
+							strings to represent carrage return, line feed, and tab:
+							<ul class="mono">
+								<li>&lt;CR&gt; - carrage return</li>
+								<li>&lt;LF&gt; - line feed</li>
+								<li>&lt;TAB&gt; - tab</li>
+							</ul>
+							Example:
+							<div class="example">
+								RyLogViewer ALogFile.log &#8209;e"C:\exported logs\ALogFile.Exported.txt" &#8209;cdelim"&lt;TAB&gt;"<br />
+							</div>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td>&#8209;hl"highlight set file path"</td>
+					<td>
+						<div class="content">
+							Loads the specified highlight set, replacing any currently configured highlights<br /><br />
+							Example:
+							<div class="example">
+								RyLogViewer &#8209;hl"myhighlights.rylog_highlights"
+							</div>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td>&#8209;ft"filter set file path"</td>
+					<td>
+						<div class="content">
+							Loads the specified filter set, replacing any currently configured filters<br /><br />
+							Example:
+							<div class="example">
+								RyLogViewer &#8209;ft"myfilters.rylog_filters"
+							</div>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td>&#8209;tx"transform set file path"</td>
+					<td>
+						<div class="content">
+							Loads the specified transform set, replacing any currently configured transforms<br /><br />
+							Example:
+							<div class="example">
+								RyLogViewer &#8209;tx"mytransforms.rylog_transforms"
+							</div>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td>&#8209;nogui</td>
+					<td>
+						<div class="content">
+							Suppresses the displaying of any gui (e.g. progress dialogs) while running from the command line.
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td>&#8209;l"logging file path"</td>
+					<td>
+						<div class="content">
+							RyLogViewer has diagnostic logging built in but disabled by default. By specifying a log file path
+							logging can be enabled. This is mainly useful for diagnosing issues with RyLogViewer.<br /><br />
+							Example:
+							<div class="example">
+								RyLogViewer &#8209;l"C:\temp\rylogviewer.log"
+							</div>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td>&#8209;h or /?</td>
+					<td>
+						<div class="content">
+							Displays this help message.
+						</div>
+					</td>
+				</tr>
+			</table>
 		</div>
-		<table>
-			<tr><th>Option</th><th>Meaning</th></tr>
-			<tr>
-				<td>&quot;file path&quot;</td>
-				<td>
-					<div class="content">
-						The path to a file to load on startup.<br/><br/>
-						Example:
-						<div class="example">
-							rylogviewer "mylogfile.log"
-						</div>
-					</div>
-				</td>
-			</tr>
-			<tr>
-				<td>-p</td>
-				<td>
-					<div class="content">
-						Run the application in portable mode.<br/><br/>
-						In this mode the application can run from any location that allows file write
-						access, e.g. a USB drive. Settings are written to the same directory that the
-						application is running in. If a file with the name 'portable' is found in the
-						same directory as the executable then portable mode will be enabled by default.
-						Note that portable mode is equivalent to:
-						<div class="example">
-							rylogviewer &#8209;s".\settings.xml"
-						</div><br/>
-						Example:
-						<div class="example">
-							rylogviewer &#8209;p
-						</div>
-					</div>
-				</td>
-			</tr>
-			<tr>
-				<td>&#8209;s"settings file path"</td>
-				<td>
-					<div class="content">
-						Loads the log viewer using the specified settings file path.<br/><br/>
-						This option is useful for running multiple instances of the application
-						without overwriting the settings of other instances.<br/><br/>
-						Example:
-						<div class="example">
-							rylogviewer &#8209;s"C:\temp\mysettings.xml"
-						</div>
-					</div>
-				</td>
-			</tr>
-			<tr>
-				<td>&#8209;e"export file path"</td>
-				<td>
-					<div class="content">
-						Export a file using the current filter and transform settings.<br/><br/>
-						This option instructs the log viewer to export a file to "export file path"
-						using the current filter and transform settings. "file path" must also be
-						given on the command line. It is often useful to use the '&#8209;fx' and '&#8209;tx'
-						options in addition to this option. The application main window is not
-						displayed during the export and, on completion, the returned exit code is
-						'0' for success, '1' for failure.<br/><br/>
-						Examples:
-						<div class="example">
-							rylogviewer ALogFile.log &#8209;e"C:\exported logs\ALogFile.Exported.txt"<br/>
-							rylogviewer ALogFile.log &#8209;ft"filters.rylog_filters" &#8209;tx&quot;transforms.rylog_transforms&quot; &#8209;e&quot;C:\exported logs\ALogFile.Exported.txt&quot;
-						</div>
-					</div>
-				</td>
-			</tr>
-			<tr>
-				<td>&#8209;rdelim"row delimiter"</td>
-				<td>
-					<div class="content">
-						The row delimiter to use in the exported file.<br/><br/>
-						This option specifies the row delimiter to use when exporting a file using the
-						'&#8209;e' option. If not given, the row delimiters from the input file are used. If
-						the &#8209;e option is not used, this option is ignored. Use the following special
-						strings to represent carrage return, line feed, and tab:
-						<ul class="mono">
-							<li>&lt;CR&gt; - carrage return</li>
-							<li>&lt;LF&gt; - line feed</li>
-							<li>&lt;TAB&gt; - tab</li>
-						</ul>
-						Example:
-						<div class="example">
-							rylogviewer ALogFile.log &#8209;e"C:\exported logs\ALogFile.Exported.txt" &#8209;rdelim"&lt;CR&gt;&lt;LF&gt;"<br/>
-						</div>
-					</div>
-				</td>
-			</tr>
-			<tr>
-				<td>&#8209;cdelim"column delimiter"</td>
-				<td>
-					<div class="content">
-						This option specifies the column delimiter to use when exporting a file using the
-						'&#8209;e' option. If not given, the column delimiters from the input file are used. If
-						the &#8209;e option is not used, this option is ignored. Use the following special
-						strings to represent carrage return, line feed, and tab:
-						<ul class="mono">
-							<li>&lt;CR&gt; - carrage return</li>
-							<li>&lt;LF&gt; - line feed</li>
-							<li>&lt;TAB&gt; - tab</li>
-						</ul>
-						Example:
-						<div class="example">
-							rylogviewer ALogFile.log &#8209;e"C:\exported logs\ALogFile.Exported.txt" &#8209;cdelim"&lt;TAB&gt;"<br/>
-						</div>
-					</div>
-				</td>
-			</tr>
-			<tr>
-				<td>&#8209;hl"highlight set file path"</td>
-				<td>
-					<div class="content">
-						Loads the specified highlight set, replacing any currently configured highlights<br/><br/>
-						Example:
-						<div class="example">
-							rylogviewer &#8209;hl"myhighlights.rylog_highlights"
-						</div>
-					</div>
-				</td>
-			</tr>
-			<tr>
-				<td>&#8209;ft"filter set file path"</td>
-				<td>
-					<div class="content">
-						Loads the specified filter set, replacing any currently configured filters<br/><br/>
-						Example:
-						<div class="example">
-							rylogviewer &#8209;ft"myfilters.rylog_filters"
-						</div>
-					</div>
-				</td>
-			</tr>
-			<tr>
-				<td>&#8209;tx"transform set file path"</td>
-				<td>
-					<div class="content">
-						Loads the specified transform set, replacing any currently configured transforms<br/><br/>
-						Example:
-						<div class="example">
-							rylogviewer &#8209;tx"mytransforms.rylog_transforms"
-						</div>
-					</div>
-				</td>
-			</tr>
-			<tr>
-				<td>&#8209;nogui</td>
-				<td>
-					<div class="content">
-						Suppresses the displaying of any gui (e.g. progress dialogs) while running from the command line.
-					</div>
-				</td>
-			</tr>
-			<tr>
-				<td>&#8209;l"logging file path"</td>
-				<td>
-					<div class="content">
-						RyLogViewer has diagnostic logging built in but disabled by default. By specifying a log file path
-						logging can be enabled. This is mainly useful for diagnosing issues with RyLogViewer.<br /><br />
-						Example:
-						<div class="example">
-							rylogviewer &#8209;l"C:\temp\rylogviewer.log"
-						</div>
-					</div>
-				</td>
-			</tr>
-			<tr>
-				<td>&#8209;h or /?</td>
-				<td>
-					<div class="content">
-						Displays this help message.
-					</div>
-				</td>
-			</tr>
-		</table>
 	</body>
 </html>

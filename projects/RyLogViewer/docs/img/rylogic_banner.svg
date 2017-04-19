@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="228.10747mm"
+   height="24.90654mm"
+   viewBox="0 0 228.10747 24.90654"
+   version="1.1"
+   id="svg8"
+   inkscape:version="0.92.1 r15371"
+   sodipodi:docname="Rylogic Banner.svg">
+  <title
+     id="title4524">Rylogic Banner</title>
+  <defs
+     id="defs2" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.98994949"
+     inkscape:cx="278.73913"
+     inkscape:cy="-152.86755"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer4"
+     showgrid="false"
+     inkscape:measure-start="0,0"
+     inkscape:measure-end="0,0"
+     inkscape:window-width="1920"
+     inkscape:window-height="1177"
+     inkscape:window-x="1912"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title>Rylogic Banner</dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Background"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(152.6778,-6.4941163)">
+    <rect
+       style="fill:#9fd5f9;fill-opacity:1;stroke:none;stroke-width:0.21775016"
+       id="rect4486"
+       width="70.917366"
+       height="24.615286"
+       x="4.5122972"
+       y="6.7853689" />
+    <rect
+       style="fill:#fac99a;fill-opacity:1;stroke:none;stroke-width:0.15218385"
+       id="rect4486-3"
+       width="34.639587"
+       height="24.615286"
+       x="40.790077"
+       y="6.7853694" />
+    <ellipse
+       style="fill:#fac99a;fill-opacity:1;stroke:none;stroke-width:0.31322724"
+       id="path4507"
+       cx="40.774185"
+       cy="19.518229"
+       rx="6.6375084"
+       ry="7.0154848" />
+    <ellipse
+       style="fill:#9fd5f9;fill-opacity:1;stroke:none;stroke-width:0.19580482"
+       id="path4507-2"
+       cx="40.821426"
+       cy="19.754465"
+       rx="3.9916754"
+       ry="4.5586395" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer3"
+     inkscape:label="Lines"
+     transform="translate(157.19009,0.29125261)" />
+  <g
+     inkscape:groupmode="layer"
+     id="layer4"
+     inkscape:label="Circles"
+     transform="translate(157.19009,0.29125261)">
+    <circle
+       style="fill:none;fill-opacity:1;stroke:#9fd5f9;stroke-width:2;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="path4520"
+       cx="-138.157"
+       cy="4.9230118"
+       r="4.2142644" />
+    <path
+       style="fill:none;stroke:#9fd5f9;stroke-width:2.00408173;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M -134.41922,4.9136904 H -3.0562347"
+       id="path4603"
+       inkscape:connector-curvature="0" />
+    <circle
+       style="fill:none;fill-opacity:1;stroke:#9fd5f9;stroke-width:2;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="path4520-57"
+       cx="-151.97583"
+       cy="12.034623"
+       r="4.2142644" />
+    <path
+       style="fill:none;stroke:#9fd5f9;stroke-width:2.10549164;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M -148.23806,12.025302 H -3.2443302"
+       id="path4603-8"
+       inkscape:connector-curvature="0" />
+    <circle
+       style="fill:none;fill-opacity:1;stroke:#9fd5f9;stroke-width:2;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="path4520-59"
+       cx="-124.17981"
+       cy="19.245529"
+       r="4.2142644" />
+    <path
+       style="fill:none;stroke:#9fd5f9;stroke-width:1.89510417;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M -120.44203,19.236207 H -2.9770602"
+       id="path4603-3"
+       inkscape:connector-curvature="0" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer2"
+     inkscape:label="Text"
+     transform="translate(152.6778,-6.4941163)">
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.57777786px;line-height:1.25;font-family:Calibri;-inkscape-font-specification:Calibri;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="7.5595241"
+       y="24.857138"
+       id="text4490"><tspan
+         sodipodi:role="line"
+         id="tspan4488"
+         x="7.5595241"
+         y="24.857138"
+         style="font-size:22.57777786px;stroke-width:0.26458332">Rylogic</tspan></text>
+  </g>
+</svg>
