@@ -167,6 +167,14 @@ namespace pr.extn
 			list[index0] = list[index1];
 			list[index1] = tmp;
 		}
+		public static void Swap<T>(this IList<T> list, int index0, int index1)
+		{
+			((IList)list).Swap(index0, index1);
+		}
+		public static void Swap<T>(this List<T> list, int index0, int index1)
+		{
+			((IList)list).Swap(index0, index1);
+		}
 
 		/// <summary>Reverse the order of all elements in this list</summary>
 		public static IList Reverse(this IList list)
@@ -202,7 +210,7 @@ namespace pr.extn
 		}
 
 		/// <summary>Replaces 'replacee' with 'replacer' in this list. Throws if 'replacee' can't be found.</summary>
-		public static void Replace<T>(this IList list, T replacee, T replacer)
+		public static void Replace<T>(this IList<T> list, T replacee, T replacer)
 		{
 			if (ReferenceEquals(replacee, replacer)) return;
 			var idx = list.IndexOf(replacee);

@@ -488,36 +488,36 @@ namespace pr.unittests
 		{
 			var p = new Pattern(EPattern.Wildcard, "*test");
 			Check(p, "A test string",
-				new[]{"0"},
-				new[]{"A test"});
+				new[]{"0", "1"},
+				new[]{"A test", "A "});
 		}
 		[Test] public void WildcardMatches2()
 		{
 			var p = new Pattern(EPattern.Wildcard, "test*");
 			Check(p, "A test string",
-				new[]{"0"},
-				new[]{"test string"});
+				new[]{"0", "1"},
+				new[]{"test string", " string"});
 		}
 		[Test] public void WildcardMatches3()
 		{
 			var p = new Pattern(EPattern.Wildcard, "A * string");
 			Check(p, "A test string",
-				new[]{"0"},
-				new[]{"A test string"});
+				new[]{"0", "1"},
+				new[]{"A test string", "test"});
 		}
 		[Test] public void WildcardMatches4()
 		{
 			var p = new Pattern(EPattern.Wildcard, "b*e?g");
 			Check(p, "abcdefgh",
-				new[]{"0"},
-				new[]{"bcdefg"});
+				new[]{"0", "1", "2"},
+				new[]{"bcdefg", "cd", "f"});
 		}
 		[Test] public void WildcardMatches5()
 		{
 			var p = new Pattern(EPattern.Wildcard, "b*e?g");
 			Check(p, "1b2345e6g7",
-				new[]{"0"},
-				new[]{"b2345e6g"});
+				new[]{"0", "1", "2"},
+				new[]{"b2345e6g", "2345","6"});
 		}
 		[Test] public void WildcardMatches6()
 		{
@@ -526,8 +526,8 @@ namespace pr.unittests
 				null,
 				null);
 			Check(p, "b2345e6g",
-				new[]{"0"},
-				new[]{"b2345e6g"});
+				new[]{"0","1","2"},
+				new[]{"b2345e6g","2345","6"});
 		}
 		[Test] public void RegexMatches0()
 		{

@@ -258,20 +258,28 @@ namespace pr.common
 		public event EventHandler<SettingChangedEventArgs> SettingChanged;
 
 		/// <summary>Called just before a setting changes</summary>
-		public virtual void OnSettingChanging(SettingChangingEventArgs args)
+		protected virtual void OnSettingChanging(SettingChangingEventArgs args)
 		{
 			SettingChanging.Raise(this, args);
 			if (Parent == null) return;
 			Parent.OnSettingChanging(args);
 		}
+		void ISettingsSet.OnSettingChanging(SettingChangingEventArgs args)
+		{
+			OnSettingChanging(args);
+		}
 
 		/// <summary>Called just after a setting changes</summary>
-		public virtual void OnSettingChanged(SettingChangedEventArgs args)
+		protected virtual void OnSettingChanged(SettingChangedEventArgs args)
 		{
 			SettingChanged.Raise(this, args);
 			var me = (ISettingsSet)this;
 			if (me.Parent == null) return;
 			me.Parent.OnSettingChanged(args);
+		}
+		void ISettingsSet.OnSettingChanged(SettingChangedEventArgs args)
+		{
+			OnSettingChanged(args);
 		}
 
 		/// <summary>If 'nested' is not null, sets its Parent to this settings object</summary>
@@ -706,20 +714,28 @@ namespace pr.common
 		public event EventHandler<SettingChangedEventArgs> SettingChanged;
 
 		/// <summary>Called just before a setting changes</summary>
-		public virtual void OnSettingChanging(SettingChangingEventArgs args)
+		protected virtual void OnSettingChanging(SettingChangingEventArgs args)
 		{
 			SettingChanging.Raise(this, args);
 			if (Parent == null) return;
 			Parent.OnSettingChanging(args);
 		}
+		void ISettingsSet.OnSettingChanging(SettingChangingEventArgs args)
+		{
+			OnSettingChanging(args);
+		}
 
 		/// <summary>Called just after a setting changes</summary>
-		public virtual void OnSettingChanged(SettingChangedEventArgs args)
+		protected virtual void OnSettingChanged(SettingChangedEventArgs args)
 		{
 			SettingChanged.Raise(this, args);
 			var me = (ISettingsSet)this;
 			if (me.Parent == null) return;
 			me.Parent.OnSettingChanged(args);
+		}
+		void ISettingsSet.OnSettingChanged(SettingChangedEventArgs args)
+		{
+			OnSettingChanged(args);
 		}
 
 		/// <summary>Read a settings value</summary>
