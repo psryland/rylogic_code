@@ -1,6 +1,7 @@
 ﻿using System.Drawing;
 using System.Windows.Forms;
 using pr.gui;
+using pr.util;
 
 namespace RyLogViewer
 {
@@ -12,9 +13,10 @@ namespace RyLogViewer
 		private Label m_lbl_address;
 
 		public JumpToUi(Form owner, long min, long max)
-		:base(owner, EPin.Centre, Point.Empty, Size.Empty, false)
+			:base(owner, EPin.Centre, Point.Empty, Size.Empty, false)
 		{
 			InitializeComponent();
+
 			m_edit_address.Focus();
 			m_edit_address.Minimum = min;
 			m_edit_address.Maximum = max;
@@ -22,10 +24,7 @@ namespace RyLogViewer
 		}
 		protected override void Dispose(bool disposing)
 		{
-			if (disposing && (components != null))
-			{
-				components.Dispose();
-			}
+			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
 

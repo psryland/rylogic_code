@@ -180,9 +180,6 @@
     <Compile Include="src\monitor_mode_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\monitor_mode_ui.Designer.cs">
-      <DependentUpon>monitor_mode_ui.cs</DependentUpon>
-    </Compile>
     <Compile Include="src\settings\highlight.cs" />
     <Compile Include="src\line_cache.cs">
       <SubType>Form</SubType>
@@ -199,9 +196,6 @@
     </Compile>
     <Compile Include="src\new_version_form.cs">
       <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="src\new_version_form.Designer.cs">
-      <DependentUpon>new_version_form.cs</DependentUpon>
     </Compile>
     <Compile Include="src\main.cs">
       <SubType>Form</SubType>

@@ -106,22 +106,24 @@ namespace RyLogViewer
 		}
 		#endregion
 
-		private readonly Main m_main;
 		private readonly Random m_rng;
 		private readonly List<int> m_order;
+
+		#region UI Elements
 		private Panel m_panel;
 		private WebBrowser m_html;
 		private Button m_btn_ok;
 		private Button m_btn_next;
 		private Button m_btn_prev;
 		private CheckBox m_check_show_on_startup;
+		#endregion
 
 		public TipOfTheDay(Main main)
 		{
 			InitializeComponent();
-			m_main      = main;
+			Main        = main;
 			m_rng       = new Random();
-			m_order     = SetOrder(m_main.Settings.FirstRun);
+			m_order     = SetOrder(Main.Settings.FirstRun);
 			m_tip_index = 0;
 
 			m_html.Navigating += OnNavigating;
@@ -142,11 +144,28 @@ namespace RyLogViewer
 				TipIndex += m_order.Count - 1;
 				ShowTip();
 			};
-			Shown += (s,a) =>
-			{
-				ShowTip();
-			};
 		}
+		protected override void OnShown(EventArgs e)
+		{
+			base.OnShown(e);
+			ShowTip();
+		}
+
+		/// <summary>The main app</summary>
+		public Main Main
+		{
+			get { return m_impl_main; }
+			private set
+			{
+				if (m_impl_main == value) return;
+				if (m_impl_main != null)
+				{ }
+				m_impl_main = value;
+				if (m_impl_main != null)
+				{ }
+			}
+		}
+		private Main m_impl_main;
 
 		/// <summary>Get/Set the currently displayed tip. If the index supplied doesn't exist, the TotD0 is displayed</summary>
 		public int TipIndex
@@ -209,13 +228,13 @@ namespace RyLogViewer
 				switch (args.Url.ToString())
 				{
 				case Cmd.open_example_logfile:
-					m_main.SetLineEnding(ELineEnding.Detect);
-					m_main.SetEncoding(null);
-					m_main.OpenSingleLogFile(Util.ResolveAppPath(ExampleFiles.LogFile), false);
+					Main.SetLineEnding(ELineEnding.Detect);
+					Main.SetEncoding(null);
+					Main.OpenSingleLogFile(Util.ResolveAppPath(ExampleFiles.LogFile), false);
 					Close();
 					break;
 				case Cmd.show_column_delimiter_options:
-					m_main.ShowOptions(SettingsUI.ETab.General, SettingsUI.ESpecial.ShowColumnDelimiterTip);
+					Main.ShowOptions(SettingsUI.ETab.General, SettingsUI.ESpecial.ShowColumnDelimiterTip);
 					break;
 				}
 			}
