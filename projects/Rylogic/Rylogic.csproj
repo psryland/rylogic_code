@@ -258,6 +258,9 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="gui\dpi_scale.cs" />
+    <Compile Include="gui\feature_tree_ui.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="gui\find_ui.cs">
       <SubType>Form</SubType>
     </Compile>

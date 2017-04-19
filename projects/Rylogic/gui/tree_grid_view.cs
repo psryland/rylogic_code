@@ -14,6 +14,7 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using pr.extn;
+using pr.util;
 
 namespace pr.gui
 {
@@ -659,7 +660,7 @@ namespace pr.gui
 			get
 			{
 				var tree_cell = Cells.OfType<TreeGridCell>().FirstOrDefault();
-				Debug.Assert(tree_cell != null, "This grid does not have a 'TreeGridColumn'");
+				Debug.Assert(Util.IsInDesignMode || tree_cell != null, "This grid does not have a 'TreeGridColumn'");
 				return tree_cell;
 			}
 		}

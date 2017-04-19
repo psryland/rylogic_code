@@ -73,7 +73,7 @@ namespace pr.util
 			for (; junk.Count != 0; )
 			{
 				// We have to remove each item, because the list might be a binding list
-				// that performs some action when items are removemd.
+				// that performs some action when items are removed.
 				var j = junk.Back();
 				junk.RemoveAt(junk.Count - 1);
 				Dispose(ref j);
@@ -162,16 +162,21 @@ namespace pr.util
 		private static int m_main_thread_id = Thread.CurrentThread.ManagedThreadId;
 
 		/// <summary>True if the current thread has the name 'GC Finalizer Thread'</summary>
-		public static bool IsGCFinalizerThread { get { return Thread.CurrentThread.ManagedThreadId == GCThread.ManagedThreadId; } }
+		public static bool IsGCFinalizerThread { get { return Thread.CurrentThread.ManagedThreadId == GCThread?.ManagedThreadId; } }
 		public static Thread GCThread
 		{
 			get
 			{
-				// I have no idea why this doesn't work the first time
-				while (GCThreadGrabber.m_gc_thread == null)
+				// I have no idea why this doesn't work the first time.
+				for (int attempt = 0; attempt != 5 && GCThreadGrabber.m_gc_thread == null; ++attempt)
 				{
+					// This doesn't work if called from the GC thread.
+					if (!IsMainThread)
+						return null;
+
 					// Create the thread grabber, then collect it
-					new GCThreadGrabber();
+					var grabber = new GCThreadGrabber();
+					grabber = null;
 					GC.Collect();
 					GC.WaitForPendingFinalizers();
 				}

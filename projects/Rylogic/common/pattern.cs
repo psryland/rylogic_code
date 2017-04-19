@@ -197,7 +197,7 @@ namespace pr.common
 
 					// Replace wildcards with Regex equivalents
 					if (PatnType == EPattern.Wildcard)
-						expr = expr.Replace(@"\*", @".*").Replace(@"\?", @".");
+						expr = expr.Replace(@"\*", @"(.*)").Replace(@"\?", @"(.)");
 
 					// Replace the (now escaped) '{tag}' capture
 					// groups with named regular expression capture groups

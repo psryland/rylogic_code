@@ -168,7 +168,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Import recent files from a single string</summary>
-		public void Import(string str)
+		public RecentFiles Import(string str)
 		{
 			if (!string.IsNullOrEmpty(str))
 			{
@@ -177,6 +177,7 @@ namespace pr.gui
 				m_files.Reverse();
 			}
 			UpdateMenu();
+			return this;
 		}
 	}
 }

@@ -296,7 +296,7 @@ namespace pr.gui
 			this.m_image_list = new System.Windows.Forms.ImageList(this.components);
 			this.m_lbl_match = new System.Windows.Forms.Label();
 			this.m_edit_match = new System.Windows.Forms.TextBox();
-			this.m_edit_test = new RichTextBox();
+			this.m_edit_test = new pr.gui.RichTextBox();
 			this.m_btn_regex_help = new System.Windows.Forms.Button();
 			this.m_radio_substring = new System.Windows.Forms.RadioButton();
 			this.m_radio_wildcard = new System.Windows.Forms.RadioButton();
@@ -316,9 +316,9 @@ namespace pr.gui
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_grps)).BeginInit();
 			this.m_panel_flags.SuspendLayout();
 			this.SuspendLayout();
-			//
+			// 
 			// m_check_invert
-			//
+			// 
 			this.m_check_invert.AutoSize = true;
 			this.m_check_invert.Location = new System.Drawing.Point(166, 3);
 			this.m_check_invert.Name = "m_check_invert";
@@ -326,9 +326,9 @@ namespace pr.gui
 			this.m_check_invert.TabIndex = 3;
 			this.m_check_invert.Text = "&Invert Match";
 			this.m_check_invert.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_check_ignore_case
-			//
+			// 
 			this.m_check_ignore_case.AutoSize = true;
 			this.m_check_ignore_case.Location = new System.Drawing.Point(3, 3);
 			this.m_check_ignore_case.Name = "m_check_ignore_case";
@@ -336,9 +336,9 @@ namespace pr.gui
 			this.m_check_ignore_case.TabIndex = 2;
 			this.m_check_ignore_case.Text = "Ignore &Case";
 			this.m_check_ignore_case.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_btn_add
-			//
+			// 
 			this.m_btn_add.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_add.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
 			this.m_btn_add.ImageIndex = 0;
@@ -348,16 +348,16 @@ namespace pr.gui
 			this.m_btn_add.Size = new System.Drawing.Size(46, 46);
 			this.m_btn_add.TabIndex = 4;
 			this.m_btn_add.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_image_list
-			//
+			// 
 			this.m_image_list.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("m_image_list.ImageStream")));
 			this.m_image_list.TransparentColor = System.Drawing.Color.Transparent;
 			this.m_image_list.Images.SetKeyName(0, "edit_add.png");
 			this.m_image_list.Images.SetKeyName(1, "edit_save.png");
-			//
+			// 
 			// m_lbl_match
-			//
+			// 
 			this.m_lbl_match.AutoSize = true;
 			this.m_lbl_match.Location = new System.Drawing.Point(28, 32);
 			this.m_lbl_match.Name = "m_lbl_match";
@@ -365,28 +365,32 @@ namespace pr.gui
 			this.m_lbl_match.TabIndex = 14;
 			this.m_lbl_match.Text = "Pattern:";
 			this.m_lbl_match.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-			//
+			// 
 			// m_edit_match
-			//
-			this.m_edit_match.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-			| System.Windows.Forms.AnchorStyles.Right)));
+			// 
+			this.m_edit_match.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_match.Location = new System.Drawing.Point(73, 29);
 			this.m_edit_match.Name = "m_edit_match";
 			this.m_edit_match.Size = new System.Drawing.Size(235, 20);
 			this.m_edit_match.TabIndex = 0;
-			//
+			// 
 			// m_edit_test
-			//
+			// 
 			this.m_edit_test.BorderStyle = System.Windows.Forms.BorderStyle.None;
+			this.m_edit_test.CaretLocation = new System.Drawing.Point(0, 0);
+			this.m_edit_test.CurrentLineIndex = 0;
 			this.m_edit_test.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_edit_test.FirstVisibleLineIndex = 0;
+			this.m_edit_test.LineCount = 1;
 			this.m_edit_test.Location = new System.Drawing.Point(0, 0);
 			this.m_edit_test.Name = "m_edit_test";
 			this.m_edit_test.Size = new System.Drawing.Size(224, 110);
 			this.m_edit_test.TabIndex = 0;
 			this.m_edit_test.Text = "Enter text here to test your pattern";
-			//
+			// 
 			// m_btn_regex_help
-			//
+			// 
 			this.m_btn_regex_help.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_regex_help.Location = new System.Drawing.Point(311, 29);
 			this.m_btn_regex_help.Name = "m_btn_regex_help";
@@ -394,9 +398,9 @@ namespace pr.gui
 			this.m_btn_regex_help.TabIndex = 6;
 			this.m_btn_regex_help.Text = "?";
 			this.m_btn_regex_help.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_radio_substring
-			//
+			// 
 			this.m_radio_substring.AutoSize = true;
 			this.m_radio_substring.Location = new System.Drawing.Point(3, 3);
 			this.m_radio_substring.Name = "m_radio_substring";
@@ -406,9 +410,9 @@ namespace pr.gui
 			this.m_radio_substring.Text = "&Substring";
 			this.m_radio_substring.TextAlign = System.Drawing.ContentAlignment.TopRight;
 			this.m_radio_substring.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_radio_wildcard
-			//
+			// 
 			this.m_radio_wildcard.AutoSize = true;
 			this.m_radio_wildcard.Location = new System.Drawing.Point(72, 3);
 			this.m_radio_wildcard.Name = "m_radio_wildcard";
@@ -417,31 +421,31 @@ namespace pr.gui
 			this.m_radio_wildcard.TabStop = true;
 			this.m_radio_wildcard.Text = "Wil&dcard";
 			this.m_radio_wildcard.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_radio_regex
-			//
+			// 
 			this.m_radio_regex.AutoSize = true;
 			this.m_radio_regex.Location = new System.Drawing.Point(139, 3);
 			this.m_radio_regex.Margin = new System.Windows.Forms.Padding(0);
 			this.m_radio_regex.Name = "m_radio_regex";
-			this.m_radio_regex.Size = new System.Drawing.Size(102, 17);
+			this.m_radio_regex.Size = new System.Drawing.Size(116, 17);
 			this.m_radio_regex.TabIndex = 2;
 			this.m_radio_regex.TabStop = true;
-			this.m_radio_regex.Text = "&Reg. Expression";
+			this.m_radio_regex.Text = "&Regular Expression";
 			this.m_radio_regex.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_panel_patntype
-			//
+			// 
 			this.m_panel_patntype.Controls.Add(this.m_radio_substring);
 			this.m_panel_patntype.Controls.Add(this.m_radio_wildcard);
 			this.m_panel_patntype.Controls.Add(this.m_radio_regex);
 			this.m_panel_patntype.Location = new System.Drawing.Point(70, 3);
 			this.m_panel_patntype.Name = "m_panel_patntype";
-			this.m_panel_patntype.Size = new System.Drawing.Size(239, 23);
+			this.m_panel_patntype.Size = new System.Drawing.Size(259, 23);
 			this.m_panel_patntype.TabIndex = 5;
-			//
+			// 
 			// m_lbl_match_type
-			//
+			// 
 			this.m_lbl_match_type.AutoSize = true;
 			this.m_lbl_match_type.Location = new System.Drawing.Point(1, 8);
 			this.m_lbl_match_type.Name = "m_lbl_match_type";
@@ -449,29 +453,29 @@ namespace pr.gui
 			this.m_lbl_match_type.TabIndex = 15;
 			this.m_lbl_match_type.Text = "Pattern Type:";
 			this.m_lbl_match_type.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-			//
+			// 
 			// m_split
-			//
-			this.m_split.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-			| System.Windows.Forms.AnchorStyles.Left)
-			| System.Windows.Forms.AnchorStyles.Right)));
+			// 
+			this.m_split.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_split.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_split.Location = new System.Drawing.Point(3, 75);
 			this.m_split.Name = "m_split";
-			//
+			// 
 			// m_split.Panel1
-			//
+			// 
 			this.m_split.Panel1.Controls.Add(this.m_edit_test);
-			//
+			// 
 			// m_split.Panel2
-			//
+			// 
 			this.m_split.Panel2.Controls.Add(this.m_grid_grps);
 			this.m_split.Size = new System.Drawing.Size(376, 112);
 			this.m_split.SplitterDistance = 226;
 			this.m_split.TabIndex = 1;
-			//
+			// 
 			// m_grid_grps
-			//
+			// 
 			this.m_grid_grps.AllowUserToAddRows = false;
 			this.m_grid_grps.AllowUserToDeleteRows = false;
 			this.m_grid_grps.AllowUserToResizeRows = false;
@@ -501,9 +505,9 @@ namespace pr.gui
 			this.m_grid_grps.Size = new System.Drawing.Size(144, 110);
 			this.m_grid_grps.TabIndex = 0;
 			this.m_grid_grps.TabStop = false;
-			//
+			// 
 			// m_lbl_groups
-			//
+			// 
 			this.m_lbl_groups.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_lbl_groups.AutoSize = true;
 			this.m_lbl_groups.Location = new System.Drawing.Point(298, 60);
@@ -512,9 +516,9 @@ namespace pr.gui
 			this.m_lbl_groups.TabIndex = 17;
 			this.m_lbl_groups.Text = "Capture Groups";
 			this.m_lbl_groups.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-			//
+			// 
 			// m_check_whole_line
-			//
+			// 
 			this.m_check_whole_line.AutoSize = true;
 			this.m_check_whole_line.Location = new System.Drawing.Point(86, 3);
 			this.m_check_whole_line.Name = "m_check_whole_line";
@@ -522,9 +526,9 @@ namespace pr.gui
 			this.m_check_whole_line.TabIndex = 18;
 			this.m_check_whole_line.Text = "&Whole Line";
 			this.m_check_whole_line.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_panel_flags
-			//
+			// 
 			this.m_panel_flags.Controls.Add(this.m_check_ignore_case);
 			this.m_panel_flags.Controls.Add(this.m_check_whole_line);
 			this.m_panel_flags.Controls.Add(this.m_check_invert);
@@ -532,9 +536,9 @@ namespace pr.gui
 			this.m_panel_flags.Name = "m_panel_flags";
 			this.m_panel_flags.Size = new System.Drawing.Size(256, 21);
 			this.m_panel_flags.TabIndex = 19;
-			//
+			// 
 			// PatternUI
-			//
+			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.Controls.Add(this.m_panel_flags);
@@ -561,6 +565,7 @@ namespace pr.gui
 			this.m_panel_flags.PerformLayout();
 			this.ResumeLayout(false);
 			this.PerformLayout();
+
 		}
 		#endregion
 	}
