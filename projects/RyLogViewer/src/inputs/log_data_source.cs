@@ -56,12 +56,11 @@ namespace RyLogViewer
 			}
 		}
 
-		/// <summary>Setup the UI to receive streamed log data</summary>
+		/// <summary>Set up the UI to receive streamed log data</summary>
 		private void PrepareForStreamedData(string output_filepath)
 		{
 			System.Diagnostics.Debug.Assert(output_filepath != null);
 			Settings.OutputFilepathHistory = Util.AddToHistoryList(Settings.OutputFilepathHistory, output_filepath, true, Constants.MaxOutputFileHistoryLength);
-			ApplySettings();
 
 			EnableTail(true);
 			EnableWatch(true);

@@ -6,6 +6,8 @@ using System.Net.Sockets;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using pr.common;
+using pr.extn;
+using pr.gui;
 
 namespace RyLogViewer
 {
@@ -14,95 +16,118 @@ namespace RyLogViewer
 	{
 		public Settings()
 		{
-			RecentFiles                     = string.Empty;
-			Font                            = new Font("Consolas", 8.25f, GraphicsUnit.Point);
-			RestoreScreenLoc                = false; // False so that first runs start in the default window position
-			ScreenPosition                  = new Point(100, 100);
-			WindowSize                      = new Size(640, 480);
-			AlternateLineColours            = true;
-			LineSelectBackColour            = Color.DarkGreen;
-			LineSelectForeColour            = Color.White;
-			LineBackColour1                 = Color.WhiteSmoke;
-			LineBackColour2                 = Color.White;
-			LineForeColour1                 = Color.Black;
-			LineForeColour2                 = Color.Black;
-			FileScrollWidth                 = Constants.FileScrollWidthDefault;
-			ScrollBarFileRangeColour        = Color.FromArgb(0x80, Color.White);
-			ScrollBarCachedRangeColour      = Color.FromArgb(0x40, Color.LightBlue);
-			ScrollBarDisplayRangeColour     = Color.FromArgb(0x80, Color.SteelBlue);
-			BookmarkColour                  = Color.Violet;
-			RowHeight                       = Constants.RowHeightDefault;
-			LoadLastFile                    = false;
-			LastLoadedFile                  = string.Empty;
-			OpenAtEnd                       = true;
-			FullPathInTitle                 = true;
-			TabSizeInSpaces                 = 4;
-			FileChangesAdditive             = true;
-			IgnoreBlankLines                = false;
-			AlwaysOnTop                     = false;
-			FirstRun                        = true;
-			ShowTOTD                        = true;
-			CheckForUpdates                 = false;
-			CheckForUpdatesServer           = "http://www.rylogic.co.nz:80/";
-			UseWebProxy                     = false;
-			WebProxyHost                    = string.Empty;
-			WebProxyPort                    = Constants.PortNumberWebProxyDefault;
-			QuickFilterEnabled              = false;
-			HighlightsEnabled               = true;
-			FiltersEnabled                  = false;
-			TransformsEnabled               = false;
-			ActionsEnabled                  = false;
-			TailEnabled                     = true;
-			WatchEnabled                    = true;
-			FileBufSize                     = Constants.FileBufSizeDefault;
-			MaxLineLength                   = Constants.MaxLineLengthDefault;
-			LineCacheCount                  = Constants.LineCacheCountDefault;
-			HighlightPatterns               = DefaultHighlightingPatterns().ToArray();
-			FilterPatterns                  = DefaultFilters().ToArray();
-			TransformPatterns               = DefaultTransforms().ToArray();
-			ActionPatterns                  = DefaultClickActions().ToArray();
-			HighlightPatternSets            = "<root/>";
-			FilterPatternSets               = "<root/>";
-			TransformPatternSets            = "<root/>";
-			ActionPatternSets               = "<root/>";
-			RowDelimiter                    = string.Empty; // stored in humanised form, empty means auto detect
-			ColDelimiter                    = string.Empty; // stored in humanised form, empty means auto detect
-			ColumnCount                     = 1;
-			Encoding                        = string.Empty; // empty means auto detect
-			OutputFilepathHistory           = new string[0];
-			LogProgramOutputHistory         = new LaunchApp[0];
-			NetworkConnectionHistory        = new NetConn[0];
-			SerialConnectionHistory         = new SerialConn[0];
-			PipeConnectionHistory           = new PipeConn[0];
-			AndroidLogcat                   = new AndroidLogcat();
+			RecentFiles                 = string.Empty;
+			RecentPatternSets           = string.Empty;
+			Font                        = new Font("Consolas", 8.25f, GraphicsUnit.Point);
+			RestoreScreenLoc            = false; // False so that first runs start in the default window position
+			ScreenPosition              = new Point(100, 100);
+			WindowSize                  = new Size(640, 480);
+			AlternateLineColours        = true;
+			LineSelectBackColour        = Color.DarkGreen;
+			LineSelectForeColour        = Color.White;
+			LineBackColour1             = Color.WhiteSmoke;
+			LineBackColour2             = Color.White;
+			LineForeColour1             = Color.Black;
+			LineForeColour2             = Color.Black;
+			FileScrollWidth             = Constants.FileScrollWidthDefault;
+			ScrollBarFileRangeColour    = Color.FromArgb(0x80, Color.White);
+			ScrollBarCachedRangeColour  = Color.FromArgb(0x40, Color.LightBlue);
+			ScrollBarDisplayRangeColour = Color.FromArgb(0x80, Color.SteelBlue);
+			BookmarkColour              = Color.Violet;
+			RowHeight                   = Constants.RowHeightDefault;
+			LoadLastFile                = false;
+			LastLoadedFile              = string.Empty;
+			OpenAtEnd                   = true;
+			FullPathInTitle             = true;
+			TabSizeInSpaces             = 4;
+			FileChangesAdditive         = true;
+			IgnoreBlankLines            = false;
+			AlwaysOnTop                 = false;
+			FirstRun                    = true;
+			ShowTOTD                    = true;
+			CheckForUpdates             = false;
+			CheckForUpdatesServer       = "http://www.rylogic.co.nz:80/";
+			UseWebProxy                 = false;
+			WebProxyHost                = string.Empty;
+			WebProxyPort                = Constants.PortNumberWebProxyDefault;
+			QuickFilterEnabled          = false;
+			HighlightsEnabled           = true;
+			FiltersEnabled              = false;
+			TransformsEnabled           = false;
+			ActionsEnabled              = false;
+			TailEnabled                 = true;
+			WatchEnabled                = true;
+			FileBufSize                 = Constants.FileBufSizeDefault;
+			MaxLineLength               = Constants.MaxLineLengthDefault;
+			LineCacheCount              = Constants.LineCacheCountDefault;
+			Patterns                    = PatternSet.Default();
+			RowDelimiter                = string.Empty; // stored in humanised form, empty means auto detect
+			ColDelimiter                = string.Empty; // stored in humanised form, empty means auto detect
+			ColumnCount                 = 1;
+			Encoding                    = string.Empty; // empty means auto detect
+			OutputFilepathHistory       = new string[0];
+			LogProgramOutputHistory     = new LaunchApp[0];
+			NetworkConnectionHistory    = new NetConn[0];
+			SerialConnectionHistory     = new SerialConn[0];
+			PipeConnectionHistory       = new PipeConn[0];
+			AndroidLogcat               = new AndroidLogcat();
+
+			AutoSaveOnChanges = true;
 		}
-		public Settings(string filepath) :base(filepath) {}
-		public Settings(Settings rhs) :base(rhs) {}
+		public Settings(string filepath)
+			:base(filepath)
+		{
+			AutoSaveOnChanges = true;
+		}
+		public Settings(Settings rhs)
+			:base(rhs)
+		{
+			AutoSaveOnChanges = true;
+		}
 
 		/// <summary>The settings version, used to detect when 'Upgrade' is needed</summary>
-		protected override string Version { get { return "v1.3"; } }
+		protected override string Version
+		{
+			get { return "v1.3"; }
+		}
 
+		/// <summary>The recent log files list</summary>
 		public string RecentFiles
 		{
 			get { return get(x => x.RecentFiles); }
 			set { set(x => x.RecentFiles, value); }
 		}
-		public Font   Font
+
+		/// <summary>The recent pattern set files</summary>
+		public string RecentPatternSets
+		{
+			get { return get(x => x.RecentPatternSets); }
+			set { set(x => x.RecentPatternSets, value); }
+		}
+
+		/// <summary>Log view font</summary>
+		public Font Font
 		{
 			get { return get(x => x.Font); }
 			set { set(x => x.Font, value); }
 		}
-		public bool   RestoreScreenLoc
+
+		/// <summary>Restore the screen location on startup</summary>
+		public bool RestoreScreenLoc
 		{
 			get { return get(x => x.RestoreScreenLoc); }
 			set { set(x => x.RestoreScreenLoc, value); }
 		}
-		public Point  ScreenPosition
+
+		/// <summary>The main window position on screen</summary>
+		public Point ScreenPosition
 		{
 			get { return get(x => x.ScreenPosition); }
 			set { set(x => x.ScreenPosition, value); }
 		}
-		public Size   WindowSize
+
+		/// <summary>The size of the main window</summary>
+		public Size WindowSize
 		{
 			get { return get(x => x.WindowSize); }
 			set { set(x => x.WindowSize, value); }
@@ -297,46 +322,6 @@ namespace RyLogViewer
 			get { return get(x => x.LineCacheCount); }
 			set { set(x => x.LineCacheCount, value); }
 		}
-		public Highlight[] HighlightPatterns
-		{
-			get { return get(x => x.HighlightPatterns); }
-			set { set(x => x.HighlightPatterns, value); }
-		}
-		public Filter[] FilterPatterns
-		{
-			get { return get(x => x.FilterPatterns); }
-			set { set(x => x.FilterPatterns, value); }
-		}
-		public Transform[] TransformPatterns
-		{
-			get { return get(x => x.TransformPatterns); }
-			set { set(x => x.TransformPatterns, value); }
-		}
-		public ClkAction[] ActionPatterns
-		{
-			get { return get(x => x.ActionPatterns); }
-			set { set(x => x.ActionPatterns, value); }
-		}
-		public string HighlightPatternSets
-		{
-			get { return get(x => x.HighlightPatternSets); }
-			set { set(x => x.HighlightPatternSets, value); }
-		}
-		public string FilterPatternSets
-		{
-			get { return get(x => x.FilterPatternSets); }
-			set { set(x => x.FilterPatternSets, value); }
-		}
-		public string TransformPatternSets
-		{
-			get { return get(x => x.TransformPatternSets); }
-			set { set(x => x.TransformPatternSets, value); }
-		}
-		public string ActionPatternSets
-		{
-			get { return get(x => x.ActionPatternSets); }
-			set { set(x => x.ActionPatternSets, value); }
-		}
 		public string RowDelimiter
 		{
 			get { return get(x => x.RowDelimiter); }
@@ -357,11 +342,21 @@ namespace RyLogViewer
 			get { return get(x => x.Encoding); }
 			set { set(x => x.Encoding, value); }
 		}
+
+		/// <summary>Patterns</summary>
+		public PatternSet Patterns
+		{
+			get { return get(x => x.Patterns); }
+			set { set(x => x.Patterns, value); }
+		}
+
+		/// <summary>The output filepath for streamed data sources</summary>
 		public string[] OutputFilepathHistory
 		{
 			get { return get(x => x.OutputFilepathHistory); }
 			set { set(x => x.OutputFilepathHistory, value); }
 		}
+
 		public LaunchApp[] LogProgramOutputHistory
 		{
 			get { return get(x => x.LogProgramOutputHistory); }
@@ -386,109 +381,6 @@ namespace RyLogViewer
 		{
 			get { return get(x => x.AndroidLogcat); }
 			set { set(x => x.AndroidLogcat, value); }
-		}
-
-		/// <summary>Return the highlighting patterns for a default instance of the settings</summary>
-		private IEnumerable<Highlight> DefaultHighlightingPatterns()
-		{
-			yield return new Highlight
-				{
-					Expr        = @"(Error:)|(E/)",
-					PatnType    = EPattern.RegularExpression,
-					ForeColour  = Color.FromArgb(0xff,0xff,0xff,0xff),
-					BackColour  = Color.FromArgb(0xff,0x8b,0x00,0x00),
-					IgnoreCase  = false,
-					Invert      = false,
-					WholeLine   = false,
-					BinaryMatch = true,
-					Active      = true,
-				};
-			yield return new Highlight
-				{
-					Expr        = @"(Warn:)|(W/)",
-					PatnType    = EPattern.RegularExpression,
-					ForeColour  = Color.FromArgb(0xff,0x00,0x00,0x00),
-					BackColour  = Color.FromArgb(0xff,0xff,0xff,0x00),
-					IgnoreCase  = false,
-					Invert      = false,
-					WholeLine   = false,
-					BinaryMatch = true,
-					Active      = true,
-				};
-			yield return new Highlight
-				{
-					Expr        = @"(Info:)|(I/)",
-					PatnType    = EPattern.RegularExpression,
-					ForeColour  = Color.FromArgb(0xff,0x00,0x00,0x00),
-					BackColour  = Color.FromArgb(0xff,0xc4,0xff,0xff),
-					IgnoreCase  = false,
-					Invert      = false,
-					WholeLine   = false,
-					BinaryMatch = true,
-					Active      = true,
-				};
-			yield return new Highlight
-				{
-					Expr        = @"#",
-					PatnType    = EPattern.Substring,
-					ForeColour  = Color.FromArgb(0xff,0x00,0x00,0x00),
-					BackColour  = Color.FromArgb(0xff,0xc4,0xff,0xc7),
-					IgnoreCase  = false,
-					Invert      = false,
-					WholeLine   = false,
-					BinaryMatch = true,
-					Active      = true,
-				};
-			yield return new Highlight
-				{
-					Expr = @"\w+\.txt",
-					Active = true,
-					PatnType = EPattern.RegularExpression,
-					IgnoreCase = false,
-					Invert = false,
-					WholeLine = false,
-					ForeColour = Color.FromArgb(0xFF,0x2A,0x00,0xFF),
-					BackColour = Color.FromArgb(0xFF,0xB3,0xCD,0xF2),
-					BinaryMatch = false,
-				};
-		}
-
-		/// <summary>Return the filter patterns for a default instance of the settings</summary>
-		private IEnumerable<Filter> DefaultFilters()
-		{
-			yield return new Filter
-				{
-					Expr = @"##",
-					Active = true,
-					PatnType = EPattern.Substring,
-					IgnoreCase = false,
-					Invert = false,
-					WholeLine = false,
-					IfMatch = EIfMatch.Reject
-				};
-		}
-
-		/// <summary>Return the transforms for a default instance of the settings</summary>
-		private IEnumerable<Transform> DefaultTransforms()
-		{
-			yield break;
-		}
-
-		/// <summary>Return the click action patterns for a default instance of the settings</summary>
-		private IEnumerable<ClkAction> DefaultClickActions()
-		{
-			yield return new ClkAction
-				{
-					Expr = @"\w+\.txt",
-					Active = true,
-					PatnType = EPattern.RegularExpression,
-					IgnoreCase = false,
-					Invert = false,
-					WholeLine = false,
-					Executable = @"C:\windows\notepad.exe",
-					Arguments = @"{FilePath}",
-					WorkingDirectory = string.Empty
-				};
 		}
 
 		/// <summary>Perform validation on the loaded settings</summary>
@@ -561,7 +453,6 @@ namespace RyLogViewer
 			}
 		}
 
-		// ReSharper disable PossibleNullReferenceException
 		/// <summary>Example upgrade method</summary>
 		private string Upgrade_vXX_to_vYY(XElement settings)
 		{
@@ -571,6 +462,5 @@ namespace RyLogViewer
 			// Done, return the version
 			return "vY.Y";
 		}
-		// ReSharper restore PossibleNullReferenceException
 	}
 }

@@ -63,7 +63,7 @@ namespace RyLogViewer
 			// Grab a reference to the main settings then replace the
 			// main settings with a default instance
 			m_orig_settings = m_main.Settings;
-			m_main.Settings = new Settings();
+			m_main.Settings = new Settings() { AutoSaveOnChanges = false };
 
 			// Create a new settings UI for the tutorial
 			m_settings_ui = new SettingsUI(m_main, SettingsUI.ETab.Highlights){StartPosition = FormStartPosition.CenterParent, Owner = m_main};
@@ -136,7 +136,7 @@ namespace RyLogViewer
 			case ETutPage.FileScroll:       return new Main.TutFileScroll(this, m_main);
 			case ETutPage.PatternEditor:    return new SettingsUI.TutPatternEditor(this, m_main, m_settings_ui);
 			case ETutPage.PatternsList:     return new SettingsUI.TutPatternsList(this, m_main, m_settings_ui);
-			case ETutPage.PatternSets:      return new SettingsUI.TutPatternSets(this, m_main, m_settings_ui);
+			case ETutPage.PatternSets:      return new Main.TutPatternSets(this, m_main);
 			case ETutPage.HelpMenu:         return new Main.TutHelpMenu(this, m_main);
 			}
 		}
@@ -239,7 +239,7 @@ namespace RyLogViewer
 			m_main      = main;
 			m_overlay   = new Overlay();
 		}
-		public void Dispose()
+		public virtual void Dispose()
 		{
 			m_overlay.Dispose();
 		}
@@ -257,7 +257,22 @@ namespace RyLogViewer
 		{}
 
 		/// <summary>Return the window or control to pin the tutorial to</summary>
-		protected virtual Control PinTarget { get { return m_main; } }
+		protected virtual Control PinTarget
+		{
+			get { return m_main; }
+		}
+
+		/// <summary>The HTML to display in the tutorial window</summary>
+		protected virtual string HtmlContent
+		{
+			get { return string.Empty; }
+		}
+
+		/// <summary>The screen space position at which to display the tutorial window</summary>
+		protected virtual Point Offset
+		{
+			get { return new Point(-200, 80); }
+		}
 
 		/// <summary>Paints the overlay</summary>
 		protected void PaintHighlight(Graphics gfx, Rectangle win_rect, Rectangle highlight_rect)
@@ -280,12 +295,6 @@ namespace RyLogViewer
 				gfx.DrawRectangle(pen1, highlight_rect);
 			}
 		}
-
-		/// <summary>The HTML to display in the tutorial window</summary>
-		protected virtual string HtmlContent { get { return string.Empty; } }
-
-		/// <summary>The screen space position at which to display the tutorial window</summary>
-		protected virtual Point Offset { get { return new Point(-200, 80); } }
 	}
 
 	// These classes are within 'Main' so that they can access it's privates
@@ -296,22 +305,22 @@ namespace RyLogViewer
 			public TutOpenLogData(FirstRunTutorial tut, Main main) :base(tut, main)
 			{
 				m_overlay.SnapShotCaptured += (s,a) =>
+				{
+					using (a.Gfx.SaveState())
 					{
-						using (a.Gfx.SaveState())
-						{
-							m_main.m_menu_file.ShowDropDown();
-							m_main.m_menu_file_data_sources.ShowDropDown();
-							var pt1 = m_main.PointToClient(m_main.m_menu_file.DropDown.Bounds.Location);
-							var pt2 = m_main.PointToClient(m_main.m_menu_file_data_sources.DropDown.Bounds.Location);
-							m_main.m_menu_file.HideDropDown();
-							m_main.m_menu_file_data_sources.HideDropDown();
+						m_main.m_menu_file.ShowDropDown();
+						m_main.m_menu_file_data_sources.ShowDropDown();
+						var pt1 = m_main.PointToClient(m_main.m_menu_file.DropDown.Bounds.Location);
+						var pt2 = m_main.PointToClient(m_main.m_menu_file_data_sources.DropDown.Bounds.Location);
+						m_main.m_menu_file.HideDropDown();
+						m_main.m_menu_file_data_sources.HideDropDown();
 
-							// Fill the overlay with light blue, then redraw the file menu and drop downs
-							PaintHighlight(a.Gfx, a.ClientRectangle, m_main.m_menu_file.ParentFormRectangle());
-							a.Gfx.DrawImageUnscaled(m_main.m_menu_file.DropDown.ToBitmap(), pt1);
-							a.Gfx.DrawImageUnscaled(m_main.m_menu_file_data_sources.DropDown.ToBitmap(), pt2);
-						}
-					};
+						// Fill the overlay with light blue, then redraw the file menu and drop downs
+						PaintHighlight(a.Gfx, a.ClientRectangle, m_main.m_menu_file.ParentFormRectangle());
+						a.Gfx.DrawImageUnscaled(m_main.m_menu_file.DropDown.ToBitmap(), pt1);
+						a.Gfx.DrawImageUnscaled(m_main.m_menu_file_data_sources.DropDown.ToBitmap(), pt2);
+					}
+				};
 			}
 			public override void Enter()
 			{
@@ -538,6 +547,47 @@ namespace RyLogViewer
 				get { return new Point(-350,130); }
 			}
 		}
+		public sealed class TutPatternSets :PageBase
+		{
+			public TutPatternSets(FirstRunTutorial tut, Main main) :base(tut, main)
+			{
+				m_overlay.SnapShotCaptured += (s,a) =>
+				{
+					using (a.Gfx.SaveState())
+					{
+						m_main.m_menu_file.ShowDropDown();
+						m_main.m_menu_file_pattern_set.ShowDropDown();
+						var pt1 = m_main.PointToClient(m_main.m_menu_file.DropDown.Bounds.Location);
+						var pt2 = m_main.PointToClient(m_main.m_menu_file_pattern_set.DropDown.Bounds.Location);
+						m_main.m_menu_file.HideDropDown();
+						m_main.m_menu_file_pattern_set.HideDropDown();
+
+						// Fill the overlay with light blue, then redraw the file menu and drop downs
+						PaintHighlight(a.Gfx, a.ClientRectangle, m_main.m_menu_file.ParentFormRectangle());
+						a.Gfx.DrawImageUnscaled(m_main.m_menu_file.DropDown.ToBitmap(), pt1);
+						a.Gfx.DrawImageUnscaled(m_main.m_menu_file_pattern_set.DropDown.ToBitmap(), pt2);
+					}
+				};
+			}
+			public override void Enter()
+			{
+				base.Enter();
+				m_overlay.Attachee = m_main;
+			}
+			public override void Exit(bool forward)
+			{
+				base.Exit(forward);
+			}
+			protected override string HtmlContent
+			{
+				get
+				{
+					return
+						"These menu options are used to save and load sets of patterns. Pattern sets are a convenient way to " +
+						"store groups of patterns used for a particular log data format.";
+				}
+			}
+		}
 		public sealed class TutHelpMenu :PageBase
 		{
 			public TutHelpMenu(FirstRunTutorial tut, Main main) :base(tut, main)
@@ -626,8 +676,8 @@ namespace RyLogViewer
 			public override void Exit(bool forward)
 			{
 				base.Exit(forward);
-				m_main.Enabled = false;
-				m_ui.Visible = true;
+				m_main.Enabled = forward;
+				m_ui.Visible = !forward;
 			}
 			protected override Control PinTarget { get { return m_ui; } }
 			protected override string HtmlContent
@@ -638,44 +688,6 @@ namespace RyLogViewer
 						"This area contains the existing patterns. You can edit an individual pattern by clicking the pencil icon. " +
 						"The order can be changed by dragging rows (click and drag in the leftmost column). " +
 						"Patterns can be deleted by selecting rows and pressing the delete key.";
-				}
-			}
-			protected override Point Offset
-			{
-				get { return new Point(0,0); }
-			}
-		}
-		public sealed class TutPatternSets :PageBase
-		{
-			private readonly SettingsUI m_ui;
-			public TutPatternSets(FirstRunTutorial tut, Main main, SettingsUI ui) :base(tut, main)
-			{
-				m_ui = ui;
-				m_overlay.SnapShotCaptured += (s,a) =>
-					{
-						PaintHighlight(a.Gfx, a.ClientRectangle, m_ui.m_pattern_set_hl.ParentFormRectangle());
-					};
-			}
-			public override void Enter()
-			{
-				base.Enter();
-				m_ui.Visible = true;
-				m_overlay.Attachee = m_ui;
-			}
-			public override void Exit(bool forward)
-			{
-				base.Exit(forward);
-				m_ui.Visible = !forward;
-				m_main.Enabled = forward;
-			}
-			protected override Control PinTarget { get { return m_ui; } }
-			protected override string HtmlContent
-			{
-				get
-				{
-					return
-						"These controls are used to save and load sets of patterns. Pattern sets are a convenient way to " +
-						"store groups of patterns used for a particular log data format.";
 				}
 			}
 			protected override Point Offset

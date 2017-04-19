@@ -8,27 +8,10 @@ namespace RyLogViewer
 	/// <summary>A cached line from the log file</summary>
 	public class Line :ILogDataRow
 	{
-		/// <summary>A column value within a line</summary>
-		public class Col :ILogDataElement
+		public Line()
 		{
-			/// <summary>The text for the column</summary>
-			public string Text { get; private set; }
-
-			/// <summary>The highlights to use for this value. Stored in order of rendering, i.e. the last one will be the last rendered</summary>
-			public readonly List<Highlight> HL;
-
-			public Col(string text, IEnumerable<Highlight> hl)
-			{
-				Text = text;
-				HL = hl != null
-					? hl.Reverse().Where(h => h.IsMatch(text)).ToList()
-					: new List<Highlight>();
-			}
-
-			public override string ToString()
-			{
-				return Text;
-			}
+			LineStartAddr = -1;
+			Column = new List<Col>();
 		}
 
 		/// <summary>The file offset for the start of this cached line</summary>
@@ -50,12 +33,6 @@ namespace RyLogViewer
 		public Col this[int col_index]
 		{
 			get { return col_index >= 0 && col_index < Column.Count ? Column[col_index] : new Col("",null); }
-		}
-
-		public Line()
-		{
-			LineStartAddr = -1;
-			Column = new List<Col>();
 		}
 
 		/// <summary>Populate this line from a buffer</summary>
@@ -89,6 +66,29 @@ namespace RyLogViewer
 					s = e;
 				}
 				while (e != length);
+			}
+		}
+
+		/// <summary>A column value within a line</summary>
+		public class Col :ILogDataElement
+		{
+			public Col(string text, IEnumerable<Highlight> hl)
+			{
+				Text = text;
+				HL = hl != null
+					? hl.Reverse().Where(h => h.IsMatch(text)).ToList()
+					: new List<Highlight>();
+			}
+
+			/// <summary>The text for the column</summary>
+			public string Text { get; private set; }
+
+			/// <summary>The highlights to use for this value. Stored in order of rendering, i.e. the last one will be the last rendered</summary>
+			public readonly List<Highlight> HL;
+
+			public override string ToString()
+			{
+				return Text;
 			}
 		}
 	}

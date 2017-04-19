@@ -1,25 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Xml.Linq;
 using pr.common;
 using pr.extn;
+using pr.gui;
 
 namespace RyLogViewer
 {
-	public class Highlight :Pattern, IFilter
+	public class Highlight :Pattern, IFilter, IFeatureTreeItem
 	{
-		/// <summary>Defines what a match with this filter means</summary>
-		public EIfMatch IfMatch { get { return EIfMatch.Keep; } }
-
-		/// <summary>Foreground colour of highlight</summary>
-		public Color ForeColour { get; set; }
-
-		/// <summary>Background colour of highlight</summary>
-		public Color BackColour { get; set; }
-
-		/// <summary>True if a match anywhere on the row is considered a match for the full row</summary>
-		public bool BinaryMatch { get; set; }
-
 		public Highlight()
 		{
 			ForeColour  = Color.White;
@@ -39,16 +29,28 @@ namespace RyLogViewer
 			BinaryMatch = node.Element(XmlTag.Binary).As<bool>();
 		}
 
+		/// <summary>Foreground colour of highlight</summary>
+		public Color ForeColour { get; set; }
+
+		/// <summary>Background colour of highlight</summary>
+		public Color BackColour { get; set; }
+
+		/// <summary>True if a match anywhere on the row is considered a match for the full row</summary>
+		public bool BinaryMatch { get; set; }
+
+		/// <summary>Defines what a match with this filter means</summary>
+		public EIfMatch IfMatch
+		{
+			get { return EIfMatch.Keep; }
+		}
+
 		/// <summary>Export this highlight as xml</summary>
 		public override XElement ToXml(XElement node)
 		{
 			base.ToXml(node);
-			node.Add
-			(
-				ForeColour .ToXml(XmlTag.ForeColour, false),
-				BackColour .ToXml(XmlTag.BackColour, false),
-				BinaryMatch.ToXml(XmlTag.Binary    , false)
-			);
+			node.Add2(XmlTag.ForeColour, ForeColour, false);
+			node.Add2(XmlTag.BackColour, BackColour, false);
+			node.Add2(XmlTag.Binary, BinaryMatch, false);
 			return node;
 		}
 
@@ -84,7 +86,7 @@ namespace RyLogViewer
 			return MemberwiseClone();
 		}
 
-		/// <summary>Value equality test</summary>
+		#region Equals
 		public override bool Equals(object obj)
 		{
 			var rhs = obj as Highlight;
@@ -94,15 +96,27 @@ namespace RyLogViewer
 			    && Equals(BackColour, rhs.BackColour)
 			    && Equals(BinaryMatch, rhs.BinaryMatch);
 		}
-
-		/// <summary>Value hash code</summary>
 		public override int GetHashCode()
 		{
-			return
-				base.GetHashCode()^
-				ForeColour.GetHashCode()^
-				BackColour.GetHashCode()^
-				BinaryMatch.GetHashCode();
+			var hash = base.GetHashCode();
+			return new { hash, ForeColour, BackColour, BinaryMatch }.GetHashCode();
 		}
+		#endregion
+
+		#region IFeatureTreeItem
+		string IFeatureTreeItem.Name
+		{
+			get { return Expr; }
+		}
+		IEnumerable<IFeatureTreeItem> IFeatureTreeItem.Children
+		{
+			get { yield break; }
+		}
+		bool IFeatureTreeItem.Allowed
+		{
+			get;
+			set;
+		}
+		#endregion
 	}
 }

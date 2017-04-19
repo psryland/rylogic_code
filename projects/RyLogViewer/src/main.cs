@@ -29,7 +29,6 @@ namespace RyLogViewer
 	public sealed partial class Main :Form ,IMainUI
 	{
 		private readonly StartupOptions m_startup_options;  // The options provided at startup
-		private RecentFiles m_recent;              // Recent files
 		private readonly FileWatch m_watch;                 // A helper for watching files
 		private readonly Timer m_watch_timer;               // A timer for polling the file watcher
 		private readonly EventBatcher m_batch_set_col_size; // A call batcher for setting the column widths
@@ -40,7 +39,6 @@ namespace RyLogViewer
 		private readonly FindUI m_find_ui;                  // The find dialog
 		private readonly BookmarksUI m_bookmarks_ui;        // The bookmarks dialog
 		private readonly NotifyIcon m_notify_icon;          // A system tray icon
-		private ToolTip m_tt;                               // Tooltips
 		private readonly Form[] m_tab_cycle;                // The forms that Ctrl+Tab cycles through
 		private readonly RefCount m_suspend_grid_events;    // A ref count of nested calls that tell event handlers to ignore grid events
 		private List<Range> m_line_index;                   // Byte offsets (from file begin) to the byte range of a line
@@ -48,17 +46,20 @@ namespace RyLogViewer
 		private IFileSource m_file;                         // A file stream source
 		private Licence m_license;                          // License data
 		private byte[] m_row_delim;                         // The row delimiter converted from a string to a byte[] using the current encoding
-		private byte[] m_col_delim;                         // The column delimiter, cached to prevent m_settings access in CellNeeded
+		private byte[] m_col_delim;                         // The column delimiter, cached to prevent Settings access in CellNeeded
 		private int m_row_height;                           // The row height, cached to prevent settings lookups in CellNeeded
 		private long m_filepos;                             // The byte offset (from file begin) to the start of the last known line
 		private long m_fileend;                             // The last known size of the file
-		private long m_bufsize;                             // Cached value of m_settings.FileBufSize
+		private long m_bufsize;                             // Cached value of Settings.FileBufSize
 		private int m_line_cache_count;                     // The number of lines to scan about the currently selected row
 		private bool m_alternating_line_colours;            // Cache the alternating line colours setting for performance
 		private bool m_tail_enabled;                        // Cache whether tail mode is enabled
 		private bool m_quick_filter_enabled;                // True if only rows with highlights should be displayed
 		private bool m_first_row_is_odd;                    // Tracks whether the first row is odd or even for alternating row colours (not 100% accurate)
 		private StringFormat m_strfmt;                      // Caches the tab stop sizes for rendering
+		private RecentFiles m_recent_logfiles;              // Recent files
+		private RecentFiles m_recent_pattern_sets;          // Recent pattern sets
+		private ToolTip m_tt;                               // Tool tips
 
 		public Main(StartupOptions startup_options)
 		{
@@ -91,12 +92,11 @@ namespace RyLogViewer
 
 			InitializeComponent();
 
-			Settings              = new Settings(m_startup_options.SettingsPath){AutoSaveOnChanges = true};
+			Settings              = new Settings(m_startup_options.SettingsPath);
 			m_bufsize             = Settings.FileBufSize;
 			m_line_cache_count    = Settings.LineCacheCount;
 			m_tail_enabled        = Settings.TailEnabled;
 
-			// Set up the UI
 			SetupUI();
 
 			InitCache();
@@ -124,7 +124,10 @@ namespace RyLogViewer
 		protected override void OnFormClosing(FormClosingEventArgs e)
 		{
 			base.OnFormClosing(e);
-			Shutdown();
+
+			// Save the screen position
+			Settings.ScreenPosition = Location;
+			Settings.WindowSize = Size;
 		}
 		protected override void OnDragEnter(DragEventArgs e)
 		{
@@ -135,6 +138,11 @@ namespace RyLogViewer
 		{
 			base.OnDragDrop(e);
 			FileDrop(e, false);
+		}
+		protected override bool ProcessCmdKey(ref Message msg, Keys key_data)
+		{
+			if (HandleKeyDown(this, key_data)) return true;
+			return base.ProcessCmdKey(ref msg, key_data);
 		}
 
 		/// <summary>App settings</summary>
@@ -147,16 +155,22 @@ namespace RyLogViewer
 				if (m_impl_settings != null)
 				{
 					m_impl_settings.SettingChanged -= HandleSettingsChanged;
+					m_impl_settings.SettingsSaving -= HandleSettingsSaved;
 				}
 				m_impl_settings = value;
 				if (m_impl_settings != null)
 				{
+					m_impl_settings.SettingsSaving += HandleSettingsSaved;
 					m_impl_settings.SettingChanged += HandleSettingsChanged;
 					ApplySettings();
 				}
 			}
 		}
 		private Settings m_impl_settings;
+		private void HandleSettingsSaved(object sender, SettingsSavingEventArgs e)
+		{
+			ApplySettings();
+		}
 		private void HandleSettingsChanged(object sender, SettingChangedEventArgs args)
 		{
 			Log.Info(this, "Setting {0} changed from {1} to {2}".Fmt(args.Key,args.OldValue,args.NewValue));
@@ -180,6 +194,8 @@ namespace RyLogViewer
 			#region Menu
 			{
 				m_menu.Location = Point.Empty;
+
+				// File menu
 				m_menu_file_open.Click                     += (s,a) => OpenSingleLogFile(null, true);
 				m_menu_file_wizards_androidlogcat.Click    += (s,a) => AndroidLogcatWizard();
 				m_menu_file_wizards_aggregatelogfile.Click += (s,a) => AggregateFileWizard();
@@ -188,8 +204,17 @@ namespace RyLogViewer
 				m_menu_file_open_network.Click             += (s,a) => LogNetworkOutput();
 				m_menu_file_open_named_pipe.Click          += (s,a) => LogNamedPipeOutput();
 				m_menu_file_close.Click                    += (s,a) => CloseLogFile();
+				m_menu_file_load_pattern_set.Click         += (s,a) => LoadPatternSet(null);
+				m_menu_file_save_pattern_set.Click         += (s,a) => SavePatternSet(null);
+				m_menu_file_import_patterns.Click          += (s,a) => ImportPatterns(null);
+				m_recent_pattern_sets                       = new RecentFiles(m_menu_file_recent_pattern_sets, fp => LoadPatternSet(fp)).Import(Settings.RecentPatternSets);
+				m_recent_pattern_sets.RecentListChanged    += (s,a) => Settings.RecentPatternSets = m_recent_pattern_sets.Export();
 				m_menu_file_export.Click                   += (s,a) => ShowExportDialog();
+				m_recent_logfiles                           = new RecentFiles(m_menu_file_recent, fp => OpenSingleLogFile(fp, true)).Import(Settings.RecentFiles);
+				m_recent_logfiles.RecentListChanged        += (s,a) => Settings.RecentFiles = m_recent_logfiles.Export();
 				m_menu_file_exit.Click                     += (s,a) => Close();
+
+				// Edit menu
 				m_menu_edit_selectall.Click                += (s,a) => DataGridViewEx.SelectAll(m_grid, new KeyEventArgs(Keys.Control|Keys.A));
 				m_menu_edit_copy.Click                     += (s,a) => DataGridViewEx.Copy(m_grid, new KeyEventArgs(Keys.Control|Keys.C));
 				m_menu_edit_jumpto.Click                   += (s,a) => JumpTo();
@@ -201,16 +226,22 @@ namespace RyLogViewer
 				m_menu_edit_prev_bookmark.Click            += (s,a) => PrevBookmark();
 				m_menu_edit_clearall_bookmarks.Click       += (s,a) => ClearAllBookmarks();
 				m_menu_edit_bookmarks.Click                += (s,a) => ShowBookmarksDialog();
+
+				// Encoding menu
 				m_menu_encoding_detect.Click               += (s,a) => SetEncoding(null);
 				m_menu_encoding_ascii.Click                += (s,a) => SetEncoding(Encoding.ASCII           );
 				m_menu_encoding_utf8.Click                 += (s,a) => SetEncoding(Encoding.UTF8            );
 				m_menu_encoding_ucs2_littleendian.Click    += (s,a) => SetEncoding(Encoding.Unicode         );
 				m_menu_encoding_ucs2_bigendian.Click       += (s,a) => SetEncoding(Encoding.BigEndianUnicode);
+
+				// Line ending menu
 				m_menu_line_ending_detect.Click            += (s,a) => SetLineEnding(ELineEnding.Detect);
 				m_menu_line_ending_cr.Click                += (s,a) => SetLineEnding(ELineEnding.CR    );
 				m_menu_line_ending_crlf.Click              += (s,a) => SetLineEnding(ELineEnding.CRLF  );
 				m_menu_line_ending_lf.Click                += (s,a) => SetLineEnding(ELineEnding.LF    );
 				m_menu_line_ending_custom.Click            += (s,a) => SetLineEnding(ELineEnding.Custom);
+
+				// Tools menu
 				m_menu_tools_alwaysontop.Click             += (s,a) => SetAlwaysOnTop(!Settings.AlwaysOnTop);
 				m_menu_tools_monitor_mode.Click            += (s,a) => EnableMonitorMode(!m_menu_tools_monitor_mode.Checked);
 				m_menu_tools_clear_log_file.Click          += (s,a) => ClearLogFile();
@@ -219,6 +250,8 @@ namespace RyLogViewer
 				m_menu_tools_transforms.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Transforms);
 				m_menu_tools_actions.Click                 += (s,a) => ShowOptions(SettingsUI.ETab.Actions   );
 				m_menu_tools_options.Click                 += (s,a) => ShowOptions(SettingsUI.ETab.General   );
+
+				// Help menu
 				m_menu_help_view_help.Click                += (s,a) => ShowHelp();
 				m_menu_help_firstruntutorial.Click         += (s,a) => ShowFirstRunTutorial();
 				m_menu_help_totd.Click                     += (s,a) => ShowTotD();
@@ -227,10 +260,6 @@ namespace RyLogViewer
 				m_menu_help_check_for_updates.Click        += (s,a) => CheckForUpdates(true);
 				m_menu_help_about.Click                    += (s,a) => ShowAbout();
 				m_menu_free_version.Click                  += ShowFreeVersionInfo;
-
-				// Recent files menu
-				m_recent = new RecentFiles(m_menu_file_recent, fp => OpenSingleLogFile(fp, true));
-				m_recent.Import(Settings.RecentFiles);
 			}
 			#endregion
 			#region Tool bar
@@ -333,11 +362,11 @@ namespace RyLogViewer
 		/// UI elements to be updated/redrawn. Note: it doesn't trigger a file reload.</summary>
 		private void UpdateUI(int row_delta = 0)
 		{
-			if (m_in_update_ui) return;
-			using (Scope.Create(() => m_in_update_ui = true, () => m_in_update_ui = false))
+			if (m_in_update_ui != 0) return;
+			using (Scope.Create(() => ++m_in_update_ui, () => --m_in_update_ui))
 			{
 				Log.Info(this, "UpdateUI. Row delta {0}".Fmt(row_delta));
-				using (m_grid.SuspendRedraw(true))//using (m_grid.SuspendLayout(true))
+				using (m_grid.SuspendRedraw(true))
 				{
 					// Configure the grid
 					if (m_line_index.Count != 0)
@@ -404,9 +433,12 @@ namespace RyLogViewer
 
 				// Make suggestions for typically confusing situations
 				HeuristicHints();
+
+				// Redraw the grid
+				m_grid.Invalidate();
 			}
 		}
-		private bool m_in_update_ui;
+		private int m_in_update_ui;
 
 		/// <summary>Apply the startup options</summary>
 		private void ApplyStartupOptions()
@@ -421,48 +453,16 @@ namespace RyLogViewer
 				Size = Settings.WindowSize;
 			}
 
-			// If a pattern set file path is given, replace the patterns in 'm_settings'
-			// with the contents of the file
-			if (su.HighlightSetPath != null)
+			// If a pattern set file path is given, replace the patterns in 'Settings' with the contents of the file
+			if (su.PatternSetFilepath != null)
 			{
 				try
 				{
-					var doc = XDocument.Load(su.HighlightSetPath);
-					if (doc.Root == null) throw new InvalidDataException("Invalid highlight set, root xml node not found");
-					if (doc.Root.Element(XmlTag.Highlight) == null) throw new InvalidDataException("Highlight set file does not contain any highlight descriptions");
-					Settings.HighlightPatterns = Highlight.Import(doc.ToString(SaveOptions.None)).ToArray();
+					Settings.Patterns = PatternSet.Load(su.PatternSetFilepath);
 				}
 				catch (Exception ex)
 				{
-					Misc.ShowMessage(this, string.Format("Could not load highlight pattern set {0}.", su.HighlightSetPath), Resources.LoadPatternSetFailed, MessageBoxIcon.Error, ex);
-				}
-			}
-			if (su.FilterSetPath != null)
-			{
-				try
-				{
-					var doc = XDocument.Load(su.FilterSetPath);
-					if (doc.Root == null) throw new InvalidDataException("Invalid filter set, root xml node not found");
-					if (doc.Root.Element(XmlTag.Filter) == null) throw new InvalidDataException("Filter set file does not contain any filter descriptions");
-					Settings.FilterPatterns = Filter.Import(doc.ToString(SaveOptions.None)).ToArray();
-				}
-				catch (Exception ex)
-				{
-					Misc.ShowMessage(this, string.Format("Could not load filter pattern set {0}.", su.FilterSetPath), Resources.LoadPatternSetFailed, MessageBoxIcon.Error, ex);
-				}
-			}
-			if (su.TransformSetPath != null)
-			{
-				try
-				{
-					var doc = XDocument.Load(su.TransformSetPath);
-					if (doc.Root == null) throw new InvalidDataException("Invalid transform set, root xml node not found");
-					if (doc.Root.Element(XmlTag.Transform) == null) throw new InvalidDataException("Transform set file does not contain any transform descriptions");
-					Settings.TransformPatterns = Transform.Import(doc.ToString(SaveOptions.None)).ToArray();
-				}
-				catch (Exception ex)
-				{
-					Misc.ShowMessage(this, string.Format("Could not load transform pattern set {0}.", su.TransformSetPath), Resources.LoadPatternSetFailed, MessageBoxIcon.Error, ex);
+					Misc.ShowMessage(this, "Could not load highlight pattern set {0}.".Fmt(su.PatternSetFilepath), Resources.LoadPatternSetFailed, MessageBoxIcon.Error, ex);
 				}
 			}
 		}
@@ -518,14 +518,6 @@ namespace RyLogViewer
 			Settings.FirstRun = false;
 		}
 
-		/// <summary>Calls as the main form is closing</summary>
-		private void Shutdown()
-		{
-			Settings.ScreenPosition = Location;
-			Settings.WindowSize = Size;
-			Settings.RecentFiles = m_recent.Export();
-		}
-
 		/// <summary>Returns true if there is a log file currently open</summary>
 		public bool FileOpen
 		{
@@ -567,6 +559,105 @@ namespace RyLogViewer
 			this.BeginInvoke(() => UpdateUI());
 		}
 
+		/// <summary>Load a pattern set file</summary>
+		private void LoadPatternSet(string filepath)
+		{
+			// Prompt for a file if not given
+			if (!filepath.HasValue())
+			{
+				using (var dlg = new OpenFileDialog { Title = "Load Pattern Set", Filter = Constants.PatternSetFilter })
+				{
+					if (dlg.ShowDialog(this) != DialogResult.OK) return;
+					filepath = dlg.FileName;
+				}
+			}
+
+			try
+			{
+				Settings.Patterns = PatternSet.Load(filepath);
+				m_recent_pattern_sets.Add(filepath);
+			}
+			catch (Exception ex)
+			{
+				MsgBox.Show(this, Resources.LoadPatternSetFailedMsg.Fmt(ex.Message), Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
+		/// <summary>Save the current patterns as a pattern set</summary>
+		private void SavePatternSet(string filepath)
+		{
+			// Prompt for a file if not given
+			if (!filepath.HasValue())
+			{
+				using (var dlg = new SaveFileDialog { Title = "Save Pattern Set", Filter = Constants.PatternSetFilter })
+				{
+					if (dlg.ShowDialog(this) != DialogResult.OK) return;
+					filepath = dlg.FileName;
+				}
+			}
+
+			try
+			{
+				Settings.Patterns.Save(filepath);
+				m_recent_pattern_sets.Add(filepath, true);
+			}
+			catch (Exception ex)
+			{
+				MsgBox.Show(this, Resources.CreatePatternSetFailedMsg.Fmt(ex.Message), Resources.CreatePatternSetFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
+		/// <summary>Import patterns from a set</summary>
+		private void ImportPatterns(string filepath)
+		{
+			// Prompt for a file if not given
+			if (!filepath.HasValue())
+			{
+				using (var dlg = new OpenFileDialog { Title = "Import Patterns from Set", Filter = Constants.PatternSetFilter })
+				{
+					if (dlg.ShowDialog(this) != DialogResult.OK) return;
+					filepath = dlg.FileName;
+				}
+			}
+
+			try
+			{
+				var set = PatternSet.Load(filepath);
+				using (var dlg = new PatternSetUI(set) { StartPosition = FormStartPosition.CenterParent })
+				{
+					if (dlg.ShowDialog(this) != DialogResult.OK)
+						 return;
+
+					var patns = Settings.Patterns;
+					if (set.Highlights.As<IFeatureTreeItem>().Allowed)
+					{
+						foreach (var hl in set.Highlights.Where(x => x.As<IFeatureTreeItem>().Allowed))
+							patns.Highlights.AddIfUnique(hl);
+					}
+					if (set.Filters.As<IFeatureTreeItem>().Allowed)
+					{
+						foreach (var ft in set.Filters.Where(x => x.As<IFeatureTreeItem>().Allowed))
+							patns.Filters.AddIfUnique(ft);
+					}
+					if (set.Transforms.As<IFeatureTreeItem>().Allowed)
+					{
+						foreach (var tx in set.Transforms.Where(x => x.As<IFeatureTreeItem>().Allowed))
+							patns.Transforms.AddIfUnique(tx);
+					}
+					if (set.Actions.As<IFeatureTreeItem>().Allowed)
+					{
+						foreach (var ac in set.Actions.Where(x => x.As<IFeatureTreeItem>().Allowed))
+							patns.Actions.AddIfUnique(ac);
+					}
+					Settings.Save();
+				}
+			}
+			catch (Exception ex)
+			{
+				MsgBox.Show(this, "Failed to import patterns\r\n{0}".Fmt(ex.Message), Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
 		/// <summary>Checks each file in 'filepaths' is valid. Returns false and displays an error if not</summary>
 		private bool ValidateFilepaths(IEnumerable<string> filepaths)
 		{
@@ -582,11 +673,11 @@ namespace RyLogViewer
 				// Check that the file exists, this can take ages if 'filepath' is a network file
 				if (!Misc.FileExists(this, file))
 				{
-					if (m_recent.IsInRecents(file))
+					if (m_recent_logfiles.IsInRecents(file))
 					{
 						var res = MsgBox.Show(this, "File path '{0}' is invalid or does not exist\r\n\r\nRemove from recent files list?".Fmt(file), Resources.InvalidFilePath, MessageBoxButtons.YesNo,MessageBoxIcon.Error);
 						if (res == DialogResult.Yes)
-							m_recent.Remove(file, true);
+							m_recent_logfiles.Remove(file, true);
 					}
 					else
 					{
@@ -606,7 +697,7 @@ namespace RyLogViewer
 
 			m_filepos = Settings.OpenAtEnd ? m_file.Stream.Length : 0;
 
-			// Setup the watcher to watch for file changes
+			// Set up the watcher to watch for file changes
 			m_watch.Add(m_file.Filepaths, (fp,ctx) => { OnFileChanged(); return true; });
 			m_watch_timer.Enabled = FileOpen && Settings.WatchEnabled;
 
@@ -634,10 +725,10 @@ namespace RyLogViewer
 				if (!ValidateFilepaths(Enumerable.Repeat(filepath, 1)))
 					return;
 
+				// Add the file to the recent files list
 				if (add_to_recent)
 				{
-					m_recent.Add(filepath);
-					Settings.RecentFiles = m_recent.Export();
+					m_recent_logfiles.Add(filepath);
 					Settings.LastLoadedFile = filepath;
 				}
 
@@ -786,12 +877,6 @@ namespace RyLogViewer
 								// Paint the highlighted parts of the cell
 								using (var b = new SolidBrush(hl.BackColour))
 									gfx.FillRectangle(b, cellbounds);
-
-								//gfx.SetClip(cellbounds, CombineMode.Xor);
-
-								//// Paint the cell with the background colour
-								//using (var b = new SolidBrush(cs.BackColor))
-								//	gfx.FillRectangle(b, cellbounds);
 							}
 						}
 					}
@@ -1092,13 +1177,6 @@ namespace RyLogViewer
 				BuildLineIndex(LineStartIndexRange.End  , false);
 		}
 
-		/// <summary>Handle global command keys</summary>
-		protected override bool ProcessCmdKey(ref Message msg, Keys key_data)
-		{
-			if (HandleKeyDown(this, key_data)) return true;
-			return base.ProcessCmdKey(ref msg, key_data);
-		}
-
 		/// <summary>Handle key down events for the main form</summary>
 		public bool HandleKeyDown(Form caller, Keys keys)
 		{
@@ -1158,12 +1236,11 @@ namespace RyLogViewer
 			var ofs = has_selection ? SelectedRowByteRange.Beg : -1;
 
 			Settings.QuickFilterEnabled = enable;
-			ApplySettings();
 			BuildLineIndex(m_filepos, true, ()=>
-				{
-					if (has_selection)
-						SelectRowByAddr(ofs);
-				});
+			{
+				if (has_selection)
+					SelectRowByAddr(ofs);
+			});
 		}
 
 		/// <summary>Turn on/off highlights</summary>
@@ -1174,16 +1251,15 @@ namespace RyLogViewer
 			var ofs = has_selection && bli_needed ? SelectedRowByteRange.Beg : -1;
 
 			Settings.HighlightsEnabled = enable;
-			ApplySettings();
-			InvalidateCache();
+
 			m_grid.Refresh();
 			if (bli_needed)
 			{
 				BuildLineIndex(m_filepos, true, () =>
-					{
-						if (has_selection)
-							SelectRowByAddr(ofs);
-					});
+				{
+					if (has_selection)
+						SelectRowByAddr(ofs);
+				});
 			}
 		}
 
@@ -1194,19 +1270,17 @@ namespace RyLogViewer
 			var ofs = has_selection ? SelectedRowByteRange.Beg : -1;
 
 			Settings.FiltersEnabled = enable;
-			ApplySettings();
-			BuildLineIndex(m_filepos, true, ()=>
-				{
-					if (has_selection)
-						SelectRowByAddr(ofs);
-				});
+			BuildLineIndex(m_filepos, true, () =>
+			{
+				if (has_selection)
+					SelectRowByAddr(ofs);
+			});
 		}
 
 		/// <summary>Turn on/off transforms</summary>
 		public void EnableTransforms(bool enable)
 		{
 			Settings.TransformsEnabled = enable;
-			ApplySettings();
 			BuildLineIndex(m_filepos, true);
 		}
 
@@ -1214,7 +1288,6 @@ namespace RyLogViewer
 		public void EnableActions(bool enabled)
 		{
 			Settings.ActionsEnabled = enabled;
-			ApplySettings();
 		}
 
 		/// <summary>Jumps to a specific byte offset into the file</summary>
@@ -1252,14 +1325,12 @@ namespace RyLogViewer
 		{
 			if (enabled == m_tail_enabled) return;
 			Settings.TailEnabled = m_tail_enabled = enabled;
-			ApplySettings();
 		}
 
 		/// <summary>Turn on/off tail mode</summary>
 		public void EnableWatch(bool enable)
 		{
 			Settings.WatchEnabled = enable;
-			ApplySettings();
 			if (enable)
 				BuildLineIndex(m_filepos, Settings.FileChangesAdditive);
 		}
@@ -1268,7 +1339,6 @@ namespace RyLogViewer
 		public void EnableAdditive(bool enable)
 		{
 			Settings.FileChangesAdditive = enable;
-			ApplySettings();
 			if (!enable)
 				BuildLineIndex(m_filepos, true);
 		}
@@ -1391,7 +1461,6 @@ namespace RyLogViewer
 				m_encoding = encoding;
 
 			Settings.Encoding = enc_name;
-			ApplySettings();
 			BuildLineIndex(m_filepos, true);
 		}
 
@@ -1412,7 +1481,6 @@ namespace RyLogViewer
 			}
 			if (row_delim == Settings.RowDelimiter) return; // not changed
 			Settings.RowDelimiter = row_delim;
-			ApplySettings();
 			BuildLineIndex(m_filepos, true);
 		}
 
@@ -1434,7 +1502,7 @@ namespace RyLogViewer
 				row_text = test_text = ReadLine(init_row).RowText.Trim();
 
 			// Show the settings dialog, then reload the settings
-			//using (EventsSnapshot.Capture(m_settings, EventsSnapshot.Restore.AssertNoChange)) // Prevent 'm_settings' holding references to 'ui'
+			//using (EventsSnapshot.Capture(Settings, EventsSnapshot.Restore.AssertNoChange)) // Prevent 'Settings' holding references to 'ui'
 			using (var ui = new SettingsUI(this, tab, special))
 			{
 				switch (tab)
@@ -1461,7 +1529,6 @@ namespace RyLogViewer
 					break;
 				}
 				ui.ShowDialog(this);
-				ApplySettings();
 
 				// Show hints if patterns where added but there will be no visible
 				// change on the main view because that behaviour is disabled
@@ -1521,7 +1588,7 @@ namespace RyLogViewer
 		/// <summary>Show the TotD dialog</summary>
 		private void ShowTotD()
 		{
-			//using (EventsSnapshot.Capture(m_settings, EventsSnapshot.Restore.AssertNoChange))
+			//using (EventsSnapshot.Capture(Settings, EventsSnapshot.Restore.AssertNoChange))
 			using (var totd = new TipOfTheDay(this))
 				totd.ShowDialog(this);
 		}
@@ -1833,7 +1900,7 @@ namespace RyLogViewer
 			m_highlights.Clear();
 			if (Settings.HighlightsEnabled)
 			{
-				m_highlights.AddRange(Settings.HighlightPatterns.Where(x => x.Active));
+				m_highlights.AddRange(Settings.Patterns.Highlights.Where(x => x.Active));
 				UseLicensedFeature(FeatureName.Highlighting, new HighlightingCountLimiter(this));
 			}
 
@@ -1841,19 +1908,23 @@ namespace RyLogViewer
 			m_filters.Clear();
 			if (Settings.FiltersEnabled)
 			{
-				m_filters.AddRange(Settings.FilterPatterns.Where(x => x.Active));
+				m_filters.AddRange(Settings.Patterns.Filters.Where(x => x.Active));
 				UseLicensedFeature(FeatureName.Filtering, new FilteringCountLimiter(this));
 			}
 
 			// Transforms
 			m_transforms.Clear();
 			if (Settings.TransformsEnabled)
-				m_transforms.AddRange(Settings.TransformPatterns.Where(x => x.Active));
+			{
+				m_transforms.AddRange(Settings.Patterns.Transforms.Where(x => x.Active));
+			}
 
 			// Click Actions
 			m_clkactions.Clear();
 			if (Settings.ActionsEnabled)
-				m_clkactions.AddRange(Settings.ActionPatterns.Where(x => x.Active));
+			{
+				m_clkactions.AddRange(Settings.Patterns.Actions.Where(x => x.Active));
+			}
 
 			// Grid
 			int col_count = Settings.ColDelimiter.Length != 0 ? Maths.Clamp(Settings.ColumnCount, 1, 255) : 1;

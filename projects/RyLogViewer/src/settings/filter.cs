@@ -3,6 +3,7 @@ using System.Runtime.Serialization;
 using System.Xml.Linq;
 using pr.common;
 using pr.extn;
+using pr.gui;
 using pr.util;
 
 namespace RyLogViewer
@@ -22,11 +23,8 @@ namespace RyLogViewer
 		bool IsMatch(string text);
 	}
 
-	public class Filter :Pattern, IFilter
+	public class Filter :Pattern, IFilter, IFeatureTreeItem
 	{
-		/// <summary>Defines what a match with this filter means</summary>
-		public EIfMatch IfMatch { get; set; }
-
 		/// <summary>A static instance of a 'KeepAll' filter</summary>
 		public static readonly Filter KeepAll = new Filter{Expr = "", Invert = true, IfMatch = EIfMatch.Keep};
 
@@ -41,12 +39,13 @@ namespace RyLogViewer
 		{
 			IfMatch = rhs.IfMatch;
 		}
-
-		/// <summary>Construct from xml description</summary>
 		public Filter(XElement node) :base(node)
 		{
 			IfMatch = node.Element(XmlTag.IfMatch).As<EIfMatch>();
 		}
+
+		/// <summary>Defines what a match with this filter means</summary>
+		public EIfMatch IfMatch { get; set; }
 
 		/// <summary>Export this highlight as xml</summary>
 		public override XElement ToXml(XElement node)
@@ -88,7 +87,7 @@ namespace RyLogViewer
 			return new Filter(this);
 		}
 
-		/// <summary>Value equality test</summary>
+		#region Equals
 		public override bool Equals(object obj)
 		{
 			var rhs = obj as Filter;
@@ -96,14 +95,27 @@ namespace RyLogViewer
 				&& base.Equals(obj)
 				&& IfMatch.Equals(rhs.IfMatch);
 		}
-
-		/// <summary>Value hash code</summary>
 		public override int GetHashCode()
 		{
-			return
-				base.GetHashCode()
-				^IfMatch.GetHashCode()
-				;
+			var hash = base.GetHashCode();
+			return new { hash, IfMatch }.GetHashCode();
 		}
+		#endregion
+
+		#region IFeatureTreeItem
+		string IFeatureTreeItem.Name
+		{
+			get { return Expr; }
+		}
+		IEnumerable<IFeatureTreeItem> IFeatureTreeItem.Children
+		{
+			get { yield break; }
+		}
+		bool IFeatureTreeItem.Allowed
+		{
+			get;
+			set;
+		}
+		#endregion
 	}
 }

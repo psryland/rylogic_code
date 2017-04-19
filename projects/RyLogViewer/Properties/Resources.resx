@@ -1,426 +1,430 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
-  <!-- 
-    Microsoft ResX Schema 
+	<!-- 
+	Microsoft ResX Schema 
     
-    Version 2.0
+	Version 2.0
     
-    The primary goals of this format is to allow a simple XML format 
-    that is mostly human readable. The generation and parsing of the 
-    various data types are done through the TypeConverter classes 
-    associated with the data types.
+	The primary goals of this format is to allow a simple XML format 
+	that is mostly human readable. The generation and parsing of the 
+	various data types are done through the TypeConverter classes 
+	associated with the data types.
     
-    Example:
+	Example:
     
-    ... ado.net/XML headers & schema ...
-    <resheader name="resmimetype">text/microsoft-resx</resheader>
-    <resheader name="version">2.0</resheader>
-    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
-    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
-    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
-    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
-    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
-        <value>[base64 mime encoded serialized .NET Framework object]</value>
-    </data>
-    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
-        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
-        <comment>This is a comment</comment>
-    </data>
+	... ado.net/XML headers & schema ...
+	<resheader name="resmimetype">text/microsoft-resx</resheader>
+	<resheader name="version">2.0</resheader>
+	<resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+	<resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+	<data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+	<data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+	<data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+		<value>[base64 mime encoded serialized .NET Framework object]</value>
+	</data>
+	<data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+		<value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+		<comment>This is a comment</comment>
+	</data>
                 
-    There are any number of "resheader" rows that contain simple 
-    name/value pairs.
+	There are any number of "resheader" rows that contain simple 
+	name/value pairs.
     
-    Each data row contains a name, and value. The row also contains a 
-    type or mimetype. Type corresponds to a .NET class that support 
-    text/value conversion through the TypeConverter architecture. 
-    Classes that don't support this are serialized and stored with the 
-    mimetype set.
+	Each data row contains a name, and value. The row also contains a 
+	type or mimetype. Type corresponds to a .NET class that support 
+	text/value conversion through the TypeConverter architecture. 
+	Classes that don't support this are serialized and stored with the 
+	mimetype set.
     
-    The mimetype is used for serialized objects, and tells the 
-    ResXResourceReader how to depersist the object. This is currently not 
-    extensible. For a given mimetype the value must be set accordingly:
+	The mimetype is used for serialized objects, and tells the 
+	ResXResourceReader how to depersist the object. This is currently not 
+	extensible. For a given mimetype the value must be set accordingly:
     
-    Note - application/x-microsoft.net.object.binary.base64 is the format 
-    that the ResXResourceWriter will generate, however the reader can 
-    read any of the formats listed below.
+	Note - application/x-microsoft.net.object.binary.base64 is the format 
+	that the ResXResourceWriter will generate, however the reader can 
+	read any of the formats listed below.
     
-    mimetype: application/x-microsoft.net.object.binary.base64
-    value   : The object must be serialized with 
-            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
-            : and then encoded with base64 encoding.
+	mimetype: application/x-microsoft.net.object.binary.base64
+	value   : The object must be serialized with 
+			: System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+			: and then encoded with base64 encoding.
     
-    mimetype: application/x-microsoft.net.object.soap.base64
-    value   : The object must be serialized with 
-            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
-            : and then encoded with base64 encoding.
+	mimetype: application/x-microsoft.net.object.soap.base64
+	value   : The object must be serialized with 
+			: System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+			: and then encoded with base64 encoding.
 
-    mimetype: application/x-microsoft.net.object.bytearray.base64
-    value   : The object must be serialized into a byte array 
-            : using a System.ComponentModel.TypeConverter
-            : and then encoded with base64 encoding.
-    -->
-  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
-    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
-    <xsd:element name="root" msdata:IsDataSet="true">
-      <xsd:complexType>
-        <xsd:choice maxOccurs="unbounded">
-          <xsd:element name="metadata">
-            <xsd:complexType>
-              <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0" />
-              </xsd:sequence>
-              <xsd:attribute name="name" use="required" type="xsd:string" />
-              <xsd:attribute name="type" type="xsd:string" />
-              <xsd:attribute name="mimetype" type="xsd:string" />
-              <xsd:attribute ref="xml:space" />
-            </xsd:complexType>
-          </xsd:element>
-          <xsd:element name="assembly">
-            <xsd:complexType>
-              <xsd:attribute name="alias" type="xsd:string" />
-              <xsd:attribute name="name" type="xsd:string" />
-            </xsd:complexType>
-          </xsd:element>
-          <xsd:element name="data">
-            <xsd:complexType>
-              <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
-                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
-              </xsd:sequence>
-              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
-              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
-              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
-              <xsd:attribute ref="xml:space" />
-            </xsd:complexType>
-          </xsd:element>
-          <xsd:element name="resheader">
-            <xsd:complexType>
-              <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
-              </xsd:sequence>
-              <xsd:attribute name="name" type="xsd:string" use="required" />
-            </xsd:complexType>
-          </xsd:element>
-        </xsd:choice>
-      </xsd:complexType>
-    </xsd:element>
-  </xsd:schema>
-  <resheader name="resmimetype">
-    <value>text/microsoft-resx</value>
-  </resheader>
-  <resheader name="version">
-    <value>2.0</value>
-  </resheader>
-  <resheader name="reader">
-    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </resheader>
-  <resheader name="writer">
-    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </resheader>
-  <data name="ChooseOutputFileName" xml:space="preserve">
-    <value>Choose an output file name</value>
-  </data>
-  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="edit_save" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\edit_save.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="EncodingX" xml:space="preserve">
-    <value>Encoding: {0}</value>
-  </data>
-  <data name="IfMatch" xml:space="preserve">
-    <value>If Match...</value>
-    <comment>IfMatch column header</comment>
-  </data>
-  <data name="filter" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\filter.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="pattern_active" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\green_tick.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="AppTitle" xml:space="preserve">
-    <value>RyLogViewer</value>
-    <comment>The name of the app</comment>
-  </data>
-  <data name="Refresh" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\Refresh.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="ExportCompletedSuccessfully" xml:space="preserve">
-    <value>Export completed successfully</value>
-  </data>
-  <data name="NoFile" xml:space="preserve">
-    <value>No File</value>
-    <comment>No file currently loaded</comment>
-  </data>
-  <data name="Action" xml:space="preserve">
-    <value>Action</value>
-    <comment>Click action column header</comment>
-  </data>
-  <data name="DeleteFailed" xml:space="preserve">
-    <value>Delete Failed</value>
-  </data>
-  <data name="ClickToModifyHighlight" xml:space="preserve">
-    <value>Click to change colours</value>
-  </data>
-  <data name="folder_with_file" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\folder_with_file.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Pattern" xml:space="preserve">
-    <value>Pattern</value>
-  </data>
+	mimetype: application/x-microsoft.net.object.bytearray.base64
+	value   : The object must be serialized into a byte array 
+			: using a System.ComponentModel.TypeConverter
+			: and then encoded with base64 encoding.
+	-->
+	<xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+		<xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+		<xsd:element name="root" msdata:IsDataSet="true">
+			<xsd:complexType>
+				<xsd:choice maxOccurs="unbounded">
+					<xsd:element name="metadata">
+						<xsd:complexType>
+							<xsd:sequence>
+								<xsd:element name="value" type="xsd:string" minOccurs="0" />
+							</xsd:sequence>
+							<xsd:attribute name="name" use="required" type="xsd:string" />
+							<xsd:attribute name="type" type="xsd:string" />
+							<xsd:attribute name="mimetype" type="xsd:string" />
+							<xsd:attribute ref="xml:space" />
+						</xsd:complexType>
+					</xsd:element>
+					<xsd:element name="assembly">
+						<xsd:complexType>
+							<xsd:attribute name="alias" type="xsd:string" />
+							<xsd:attribute name="name" type="xsd:string" />
+						</xsd:complexType>
+					</xsd:element>
+					<xsd:element name="data">
+						<xsd:complexType>
+							<xsd:sequence>
+								<xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+								<xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+							</xsd:sequence>
+							<xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+							<xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+							<xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+							<xsd:attribute ref="xml:space" />
+						</xsd:complexType>
+					</xsd:element>
+					<xsd:element name="resheader">
+						<xsd:complexType>
+							<xsd:sequence>
+								<xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+							</xsd:sequence>
+							<xsd:attribute name="name" type="xsd:string" use="required" />
+						</xsd:complexType>
+					</xsd:element>
+				</xsd:choice>
+			</xsd:complexType>
+		</xsd:element>
+	</xsd:schema>
+	<resheader name="resmimetype">
+		<value>text/microsoft-resx</value>
+	</resheader>
+	<resheader name="version">
+		<value>2.0</value>
+	</resheader>
+	<resheader name="reader">
+		<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+	</resheader>
+	<resheader name="writer">
+		<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+	</resheader>
+	<assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+	<data name="ChooseOutputFileName" xml:space="preserve">
+	<value>Choose an output file name</value>
+	</data>
+	<data name="EncodingX" xml:space="preserve">
+	<value>Encoding: {0}</value>
+	</data>
+	<data name="IfMatch" xml:space="preserve">
+	<value>If Match...</value>
+	<comment>IfMatch column header</comment>
+	</data>
+	<data name="AppTitle" xml:space="preserve">
+	<value>RyLogViewer</value>
+	<comment>The name of the app</comment>
+	</data>
+	<data name="ExportCompletedSuccessfully" xml:space="preserve">
+	<value>Export completed successfully</value>
+	</data>
+	<data name="NoFile" xml:space="preserve">
+	<value>No File</value>
+	<comment>No file currently loaded</comment>
+	</data>
+	<data name="Action" xml:space="preserve">
+	<value>Action</value>
+	<comment>Click action column header</comment>
+	</data>
+	<data name="DeleteFailed" xml:space="preserve">
+	<value>Delete Failed</value>
+	</data>
+	<data name="ClickToModifyHighlight" xml:space="preserve">
+	<value>Click to change colours</value>
+	</data>
+	<data name="Pattern" xml:space="preserve">
+	<value>Pattern</value>
+	</data>
 	<data name="RowHighlight" xml:space="preserve">
-    <value>Highlight</value>
-  </data>
+	<value>Highlight</value>
+	</data>
 	<data name="ReadingXLineFromY" xml:space="preserve">
-    <value>Reading the last {0} lines from {1}</value>
-  </data>
-  <data name="InvalidFilePath" xml:space="preserve">
-    <value>Invalid File Path</value>
-    <comment>File path doesn't exist or is invalid</comment>
-  </data>
-  <data name="ChangeBackColour" xml:space="preserve">
-    <value>Change Background Colour</value>
-  </data>
-  <data name="XmlOrCsvFileFilter" xml:space="preserve">
-    <value>XML Files (*.xml)|*.xml|CSV Files (*.csv)|*.csv</value>
-  </data>
-  <data name="green_up" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\green_up.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="CreatePatternSetFailed" xml:space="preserve">
-    <value>Add Pattern Set Failed</value>
-  </data>
-  <data name="options" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\options.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Eyeball" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\Eyeball.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="OutputFileMissing" xml:space="preserve">
-    <value>Output file missing</value>
-  </data>
-  <data name="execute" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\executable.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="ShowHighlightsDialog" xml:space="preserve">
-    <value>Left click to enable/disable highlighting.
+	<value>Reading the last {0} lines from {1}</value>
+	</data>
+	<data name="InvalidFilePath" xml:space="preserve">
+	<value>Invalid File Path</value>
+	<comment>File path doesn't exist or is invalid</comment>
+	</data>
+	<data name="ChangeBackColour" xml:space="preserve">
+	<value>Change Background Colour</value>
+	</data>
+	<data name="XmlOrCsvFileFilter" xml:space="preserve">
+	<value>XML Files (*.xml)|*.xml|CSV Files (*.csv)|*.csv</value>
+	</data>
+	<data name="CreatePatternSetFailed" xml:space="preserve">
+	<value>Add Pattern Set Failed</value>
+	</data>
+	<data name="OutputFileMissing" xml:space="preserve">
+	<value>Output file missing</value>
+	</data>
+	<data name="ShowHighlightsDialog" xml:space="preserve">
+	<value>Left click to enable/disable highlighting.
 Right click to show the highlighting dialog</value>
-  </data>
-  <data name="Active" xml:space="preserve">
-    <value>Active</value>
-    <comment>Active column header</comment>
-  </data>
-  <data name="important" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\important.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="FailedToLoadFile" xml:space="preserve">
-    <value>Failed to load file</value>
-  </data>
-  <data name="Idle" xml:space="preserve">
-    <value>Idle</value>
-  </data>
-  <data name="exchange" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\exchange.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="DeletePatternSetFileX" xml:space="preserve">
-    <value>Delete pattern set file '{0}'?</value>
-  </data>
-  <data name="edit_save_needed" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\edit_save_needed.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="ExportComplete" xml:space="preserve">
-    <value>Export Complete</value>
-  </data>
-  <data name="book" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\docs\img\book.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="background" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\docs\img\background.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
+	</data>
+	<data name="Active" xml:space="preserve">
+	<value>Active</value>
+	<comment>Active column header</comment>
+	</data>
+	<data name="FailedToLoadFile" xml:space="preserve">
+	<value>Failed to load file</value>
+	</data>
+	<data name="Idle" xml:space="preserve">
+	<value>Idle</value>
+	</data>
+	<data name="DeletePatternSetFileX" xml:space="preserve">
+	<value>Delete pattern set file '{0}'?</value>
+	</data>
+	<data name="ExportComplete" xml:space="preserve">
+	<value>Export Complete</value>
+	</data>
+	<data name="CreatePatternSetFailedMsg" xml:space="preserve">
+	<value>Could not create a pattern set from the current patterns.
+{0}</value>
+	</data>
+	<data name="FailedToLaunchProcess" xml:space="preserve">
+	<value>Failed to Launch Process</value>
+	</data>
+	<data name="ClickToModifyAction" xml:space="preserve">
+	<value>Click here to modify action</value>
+	</data>
+	<data name="ReloadLogFile" xml:space="preserve">
+	<value>Reload the current log file</value>
+	</data>
+	<data name="QuickFilter" xml:space="preserve">
+	<value>Quick filter; keep highlighted rows only</value>
+	</data>
+	<data name="ReadingFileFailed" xml:space="preserve">
+	<value>Reading File Failed</value>
+	</data>
+	<data name="Colours" xml:space="preserve">
+	<value>Colours</value>
+	</data>
+	<data name="AdditiveMode" xml:space="preserve">
+	<value>Assume log file changes are additive only. If enabled, only additions to the
+file will be scanned allowing increased performance. The view may get out of sync if the
+log file is modified in a way that isn't additive (e.g. lines swapped, deleted, etc)</value>
+	</data>
+	<data name="PositionXofYBytes" xml:space="preserve">
+	<value>Position: {0} / {1} bytes</value>
+	<comment>current position within the file</comment>
+	</data>
+	<data name="ShowFiltersDialog" xml:space="preserve">
+	<value>Left click to enable/disable filters.
+Right click to show the filters dialog</value>
+	</data>
+	<data name="OpenLogFile" xml:space="preserve">
+	<value>Open a log file</value>
+	</data>
+	<data name="ShowTransformsDialog" xml:space="preserve">
+	<value>Left click to enable/disable transforms.
+Right click to show the transforms dialog</value>
+	</data>
+	<data name="WatchTail" xml:space="preserve">
+	<value>Automatically scroll to the bottom of the log as new data is loaded</value>
+	</data>
+	<data name="BuildLineIndexErrorMsg" xml:space="preserve">
+	<value>The was an error while parsing the log file.
+Error Details:
+{0}</value>
+	</data>
+	<data name="BuildingLineIndex" xml:space="preserve">
+	<value>Building line index</value>
+	</data>
+	<data name="ConfirmDelete" xml:space="preserve">
+	<value>Confirm Delete</value>
+	</data>
+	<data name="UnknownCmdLineOption" xml:space="preserve">
+	<value>Unknown command line option</value>
+	</data>
+	<data name="WatchForUpdates" xml:space="preserve">
+	<value>Watch the file and update automatically when it changes</value>
+	</data>
+	<data name="ChangeForeColour" xml:space="preserve">
+	<value>Change Foreground Colour</value>
+	</data>
+	<data name="ConfirmOverwrite" xml:space="preserve">
+	<value>Confirm Overwrite</value>
+	</data>
+	<data name="ClearLogFailed" xml:space="preserve">
+	<value>Clear Log Failed</value>
+	</data>
+	<data name="Exclude" xml:space="preserve">
+	<value>Exclude</value>
+	</data>
+	<data name="CouldNotDeletePatternSetFileX" xml:space="preserve">
+		<value>Could not delete pattern set file {0}.
+Error: {1}</value>
+	</data>
+	<data name="LineEndingX" xml:space="preserve">
+		<value>Line Ending: {0}</value>
+	</data>
+	<data name="ShowActionsDialog" xml:space="preserve">
+		<value>Left click to enable/disable actions.
+Right click to show the actions dialog</value>
+	</data>
+	<data name="OutputFileMissingMsg" xml:space="preserve">
+		<value>Output file missing. Please select a file to export to</value>
+	</data>
+	<data name="ConfirmClearLog" xml:space="preserve">
+		<value>Confirm Clear Log</value>
+	</data>
+	<data name="ExecutablesFilter" xml:space="preserve">
+		<value>Executables (*.exe;*.bat;*.cmd;*.com)|*.exe;*.bat;*.cmd;*.com|All files (*.*)|*.*</value>
+	</data>
+	<data name="SettingsFileFilter" xml:space="preserve">
+		<value>Settings Files (*.xml)|*.xml|All files (*.*)|*.*</value>
+	</data>
+	<data name="CSVFileFilter" xml:space="preserve">
+		<value>CSV Files (*.csv)|*.csv|All files (*.*)|*.*</value>
+	</data>
+	<data name="LoadPatternSetFailed" xml:space="preserve">
+		<value>Load Pattern Set Failed</value>
+	</data>
+	<data name="LoadPatternSetFailedMsg" xml:space="preserve">
+		<value>Could not load pattern set. {0}</value>
+	</data>
+	<data name="LogFileFilter" xml:space="preserve">
+	<value>Text Files (*.txt;*.log;*.csv)|*.txt;*.log;*.csv|All files (*.*)|*.*</value>
+	</data>
+	<data name="LineXofY" xml:space="preserve">
+	<value>Line: {0}/{1}</value>
+	</data>
+	<data name="Edit" xml:space="preserve">
+	<value>Edit</value>
+	</data>
+	<data name="BinaryMatch" xml:space="preserve">
+	<value>Binary Match</value>
+	</data>
+	<data name="ShowFindDialog" xml:space="preserve">
+	<value>Show the find dialog</value>
+	</data>
+	<data name="ShowBookmarksDialog" xml:space="preserve">
+	<value>Show the bookmarks dialog</value>
+	</data>
+	<data name="ExportFailed" xml:space="preserve">
+	<value>Export Failed</value>
+	</data>
+	
+	<data name="important" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\important.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="exchange" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\exchange.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="edit_save_needed" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\edit_save_needed.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="book" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\docs\img\book.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="background" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\docs\img\background.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
 	<data name="background2" type="System.Resources.ResXFileRef, System.Windows.Forms">
 		<value>..\docs\img\background2.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
 	</data>
-	<data name="CreatePatternSetFailedMsg" xml:space="preserve">
-    <value>Could not create a pattern set from the current patterns.
-Error: {0}</value>
-  </data>
-  <data name="FailedToLaunchProcess" xml:space="preserve">
-    <value>Failed to Launch Process</value>
-  </data>
-  <data name="ClickToModifyAction" xml:space="preserve">
-    <value>Click here to modify action</value>
-  </data>
-  <data name="ReloadLogFile" xml:space="preserve">
-    <value>Reload the current log file</value>
-  </data>
-  <data name="QuickFilter" xml:space="preserve">
-    <value>Quick filter; keep highlighted rows only</value>
-  </data>
-  <data name="ReadingFileFailed" xml:space="preserve">
-    <value>Reading File Failed</value>
-  </data>
-  <data name="bottom" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\bottom.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Colours" xml:space="preserve">
-    <value>Colours</value>
-  </data>
-  <data name="AdditiveMode" xml:space="preserve">
-    <value>Assume log file changes are additive only. If enabled, only additions to the
-file will be scanned allowing increased performance. The view may get out of sync if the
-log file is modified in a way that isn't additive (e.g. lines swapped, deleted, etc)</value>
-  </data>
-  <data name="PositionXofYBytes" xml:space="preserve">
-    <value>Position: {0} / {1} bytes</value>
-    <comment>current position within the file</comment>
-  </data>
-  <data name="ShowFiltersDialog" xml:space="preserve">
-    <value>Left click to enable/disable filters.
-Right click to show the filters dialog</value>
-  </data>
-  <data name="OpenLogFile" xml:space="preserve">
-    <value>Open a log file</value>
-  </data>
-  <data name="ShowTransformsDialog" xml:space="preserve">
-    <value>Left click to enable/disable transforms.
-Right click to show the transforms dialog</value>
-  </data>
-  <data name="WatchTail" xml:space="preserve">
-    <value>Automatically scroll to the bottom of the log as new data is loaded</value>
-  </data>
-  <data name="BuildLineIndexErrorMsg" xml:space="preserve">
-    <value>The was an error while parsing the log file.
-Error Details:
-{0}</value>
-  </data>
-  <data name="BuildingLineIndex" xml:space="preserve">
-    <value>Building line index</value>
-  </data>
-  <data name="ConfirmDelete" xml:space="preserve">
-    <value>Confirm Delete</value>
-  </data>
-  <data name="UnknownCmdLineOption" xml:space="preserve">
-    <value>Unknown command line option</value>
-  </data>
-  <data name="WatchForUpdates" xml:space="preserve">
-    <value>Watch the file and update automatically when it changes</value>
-  </data>
-  <data name="ChangeForeColour" xml:space="preserve">
-    <value>Change Foregroud Colour</value>
-  </data>
-  <data name="ConfirmOverwrite" xml:space="preserve">
-    <value>Confirm Overwrite</value>
-  </data>
-  <data name="ClearLogFailed" xml:space="preserve">
-    <value>Clear Log Failed</value>
-  </data>
-  <data name="Exclude" xml:space="preserve">
-    <value>Exclude</value>
-  </data>
-  <data name="CouldNotDeletePatternSetFileX" xml:space="preserve">
-    <value>Could not delete pattern set file {0}.
-Error: {1}</value>
-  </data>
-  <data name="LineEndingX" xml:space="preserve">
-    <value>Line Ending: {0}</value>
-  </data>
-  <data name="ShowActionsDialog" xml:space="preserve">
-    <value>Left click to enable/disable actions.
-Right click to show the actions dialog</value>
-  </data>
-  <data name="OutputFileMissingMsg" xml:space="preserve">
-    <value>Output file missing. Please select a file to export to</value>
-  </data>
-  <data name="ConfirmClearLog" xml:space="preserve">
-    <value>Confirm Clear Log</value>
-  </data>
-  <data name="edit_add" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\edit_add.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="ExecutablesFilter" xml:space="preserve">
-    <value>Executables (*.exe;*.bat;*.cmd;*.com)|*.exe;*.bat;*.cmd;*.com|All files (*.*)|*.*</value>
-  </data>
-  <data name="SettingsFileFilter" xml:space="preserve">
-    <value>Settings Files (*.xml)|*.xml|All files (*.*)|*.*</value>
-  </data>
-  <data name="CSVFileFilter" xml:space="preserve">
-    <value>CSV Files (*.csv)|*.csv|All files (*.*)|*.*</value>
-  </data>
-  <data name="pattern_inactive" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\gray_cross.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="LoadPatternSetFailed" xml:space="preserve">
-    <value>Load Pattern Set Failed</value>
-  </data>
-  <data name="LogFileFilter" xml:space="preserve">
-    <value>Text Files (*.txt;*.log;*.csv)|*.txt;*.log;*.csv|All files (*.*)|*.*</value>
-  </data>
-  <data name="LineXofY" xml:space="preserve">
-    <value>Line: {0}/{1}</value>
-  </data>
-  <data name="Edit" xml:space="preserve">
-    <value>Edit</value>
-  </data>
-  <data name="highlight" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\highlight.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="green_down" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\green_down.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="BinaryMatch" xml:space="preserve">
-    <value>Binary Match</value>
-  </data>
-  <data name="ShowFindDialog" xml:space="preserve">
-    <value>Show the find dialog</value>
-  </data>
-  <data name="ShowBookmarksDialog" xml:space="preserve">
-    <value>Show the bookmarks dialog</value>
-  </data>
-  <data name="ExportFailed" xml:space="preserve">
-    <value>Export Failed</value>
-  </data>
-  <data name="bookmark" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\bookmark.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="public_key" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\public_key.xml;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
-  </data>
-  <data name="pencil" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\pencil.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="find_search" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\find_search.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="quick_filter" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\quick_filter.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="version_history" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\version_history.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
-  </data>
-  <data name="transform_quick_ref" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\transform_quick_ref.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
-  </data>
-  <data name="command_line_ref" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\command_line_ref.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
-  </data>
-  <data name="swizzle_quick_ref" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\swizzle_quick_ref.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
-  </data>
-  <data name="free_version" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\free_edition.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
-  </data>
-  <data name="cripple_highlighting" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\cripple_highlighting.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
-  </data>
-  <data name="cripple_filtering" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\cripple_filtering.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
-  </data>
-  <data name="cripple_aggregate_files" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\cripple_aggregate_files.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
-  </data>
-  <data name="firstrun" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\firstrun.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
-  </data>
-  <data name="totd" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\res\totd.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
-  </data>
+	<data name="bottom" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\bottom.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="edit_add" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\edit_add.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="pattern_inactive" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\gray_cross.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="highlight" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\highlight.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="green_down" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\green_down.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="edit_save" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\edit_save.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="filter" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\filter.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="pattern_active" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\green_tick.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="Refresh" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\Refresh.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="folder_with_file" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\folder_with_file.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="green_up" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\green_up.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="options" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\options.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="Eyeball" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\Eyeball.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="execute" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\executable.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="bookmark" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\bookmark.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="public_key" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\public_key.xml;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+	</data>
+	<data name="pencil" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\pencil.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="find_search" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\find_search.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="quick_filter" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\quick_filter.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="version_history" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\version_history.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+	</data>
+	<data name="transform_quick_ref" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\transform_quick_ref.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+	</data>
+	<data name="command_line_ref" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\command_line_ref.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+	</data>
+	<data name="swizzle_quick_ref" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\swizzle_quick_ref.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+	</data>
+	<data name="free_version" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\free_edition.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+	</data>
+	<data name="cripple_highlighting" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\cripple_highlighting.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+	</data>
+	<data name="cripple_filtering" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\cripple_filtering.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+	</data>
+	<data name="cripple_aggregate_files" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\cripple_aggregate_files.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+	</data>
+	<data name="firstrun" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\firstrun.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+	</data>
+	<data name="totd" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\totd.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+	</data>
 </root>

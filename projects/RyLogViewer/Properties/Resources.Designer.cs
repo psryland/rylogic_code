@@ -187,7 +187,7 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Change Foregroud Colour.
+        ///   Looks up a localized string similar to Change Foreground Colour.
         /// </summary>
         public static string ChangeForeColour {
             get {
@@ -314,7 +314,7 @@ namespace RyLogViewer.Properties {
         
         /// <summary>
         ///   Looks up a localized string similar to Could not create a pattern set from the current patterns.
-        ///Error: {0}.
+        ///{0}.
         /// </summary>
         public static string CreatePatternSetFailedMsg {
             get {
@@ -745,6 +745,15 @@ namespace RyLogViewer.Properties {
         public static string LoadPatternSetFailed {
             get {
                 return ResourceManager.GetString("LoadPatternSetFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Could not load pattern set. {0}.
+        /// </summary>
+        public static string LoadPatternSetFailedMsg {
+            get {
+                return ResourceManager.GetString("LoadPatternSetFailedMsg", resourceCulture);
             }
         }
         

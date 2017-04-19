@@ -7,87 +7,13 @@ using System.Windows.Forms;
 using System.Xml.Linq;
 using pr.common;
 using pr.extn;
+using pr.gui;
 using pr.util;
 
 namespace RyLogViewer
 {
-	public class Transform :Pattern
+	public class Transform :Pattern, IFeatureTreeItem
 	{
-		/// <summary>Represents a captured element with a source string</summary>
-		public class Capture
-		{
-			/// <summary>The tag id for the capture</summary>
-			public readonly string Id;
-
-			/// <summary>The content of the captured character range from the source string</summary>
-			public readonly string Elem;
-
-			/// <summary>The character range for the capture in the source string</summary>
-			public readonly Range Span;
-
-			public Capture(string id, string elem)
-			{
-				Id   = id;
-				Elem = elem;
-			}
-			public Capture(string id, string elem, Range span)
-			{
-				Id   = id;
-				Elem = elem;
-				Span = span;
-			}
-			public override string ToString()
-			{
-				return string.Format("{0} {1} {2}", Id, Elem, Span);
-			}
-		}
-
-		/// <summary>Represents a {x} tag in the Match or Replace template strings</summary>
-		private class Tag
-		{
-			/// <summary>The id if the substitution to use on this tag</summary>
-			public readonly string Id;
-
-			/// <summary>The range of characters covered by this tag</summary>
-			public Range Span;
-
-			public Tag(string id, Range span)
-			{
-				Id = id;
-				Span = span;
-			}
-			public override string ToString()
-			{
-				return string.Format("{0} {1}", Id, Span);
-			}
-		}
-
-		/// <summary>The collection of available text transformation implementations</summary>
-		internal static List<ITransformSubstitution> Substitutors
-		{
-			get
-			{
-				if (m_substitutors == null)
-				{
-					m_substitutors = new List<ITransformSubstitution>();
-
-					// Add built in substitutions (before the plugins so that built in subs can be replaced)
-					{ var s = new SubNoChange();   m_substitutors.Add(s); }
-					{ var s = new SubToLower();    m_substitutors.Add(s); }
-					{ var s = new SubToUpper();    m_substitutors.Add(s); }
-					{ var s = new SubSwizzle();    m_substitutors.Add(s); }
-					{ var s = new SubCodeLookup(); m_substitutors.Add(s); }
-
-					// Loads dlls from the plugins directory looking for transform substitutions
-					var plugins = PluginLoader<ITransformSubstitution>.LoadWithUI(null, Util.ResolveAppPath("plugins"), null, true);
-					foreach (var sub in plugins.Plugins)
-						m_substitutors.Add(sub);
-				}
-				return m_substitutors;
-			}
-		}
-		private static List<ITransformSubstitution> m_substitutors;
-
 		public Transform() :this(EPattern.Substring, string.Empty, string.Empty) {}
 		public Transform(EPattern patn_type, string expr, string replace) :base(patn_type, expr)
 		{
@@ -96,7 +22,7 @@ namespace RyLogViewer
 			PatternChanged += HandlePatternChanged;
 			UpdateSubs();
 		}
-		private Transform(Transform rhs) :base(rhs)
+		public Transform(Transform rhs) :base(rhs)
 		{
 			Subs = new Dictionary<string, ITransformSubstitution>(rhs.Subs);
 			Replace = rhs.Replace;
@@ -161,6 +87,35 @@ namespace RyLogViewer
 			node.Add(subs);
 			return node;
 		}
+
+		/// <summary>The collection of available text transformation implementations</summary>
+		internal static List<ITransformSubstitution> Substitutors
+		{
+			get
+			{
+				if (m_substitutors == null)
+				{
+					m_substitutors = new List<ITransformSubstitution>();
+
+					// Add built in substitutions (before the plugins so that built in subs can be replaced)
+					{ var s = new SubNoChange();   m_substitutors.Add(s); }
+					{ var s = new SubToLower();    m_substitutors.Add(s); }
+					{ var s = new SubToUpper();    m_substitutors.Add(s); }
+					{ var s = new SubSwizzle();    m_substitutors.Add(s); }
+					{ var s = new SubCodeLookup(); m_substitutors.Add(s); }
+
+					// Loads dlls from the plugins directory looking for transform substitutions
+					if (!Util.IsInDesignMode)
+					{
+						var plugins = PluginLoader<ITransformSubstitution>.LoadWithUI(null, Util.ResolveAppPath("plugins"), null, true);
+						foreach (var sub in plugins.Plugins)
+							m_substitutors.Add(sub);
+					}
+				}
+				return m_substitutors;
+			}
+		}
+		private static List<ITransformSubstitution> m_substitutors;
 
 		/// <summary>A map from capture tag to the substitutions to apply</summary>
 		public Dictionary<string, ITransformSubstitution> Subs { get; private set; }
@@ -355,7 +310,12 @@ namespace RyLogViewer
 			return new Transform(this);
 		}
 
-		/// <summary>Value equality test</summary>
+		public override string ToString()
+		{
+			return Expr;
+		}
+
+		#region Equals
 		public override bool Equals(object obj)
 		{
 			var rhs = obj as Transform;
@@ -363,20 +323,76 @@ namespace RyLogViewer
 				&& base.Equals(obj)
 				&& Equals(Replace, rhs.Replace);
 		}
-
-		/// <summary>Value hash code</summary>
 		public override int GetHashCode()
 		{
-			// ReSharper disable NonReadonlyFieldInGetHashCode
-			return
-				base.GetHashCode()^
-				Replace.GetHashCode();
-			// ReSharper restore NonReadonlyFieldInGetHashCode
+			var hash = base.GetHashCode();
+			return new { hash, Replace }.GetHashCode();
+		}
+		#endregion
+
+		#region IFeatureTreeItem
+		string IFeatureTreeItem.Name
+		{
+			get { return Expr; }
+		}
+		IEnumerable<IFeatureTreeItem> IFeatureTreeItem.Children
+		{
+			get { yield break; }
+		}
+		bool IFeatureTreeItem.Allowed
+		{
+			get;
+			set;
+		}
+		#endregion
+
+		/// <summary>Represents a captured element with a source string</summary>
+		public class Capture
+		{
+			/// <summary>The tag id for the capture</summary>
+			public readonly string Id;
+
+			/// <summary>The content of the captured character range from the source string</summary>
+			public readonly string Elem;
+
+			/// <summary>The character range for the capture in the source string</summary>
+			public readonly Range Span;
+
+			public Capture(string id, string elem)
+			{
+				Id   = id;
+				Elem = elem;
+			}
+			public Capture(string id, string elem, Range span)
+			{
+				Id   = id;
+				Elem = elem;
+				Span = span;
+			}
+			public override string ToString()
+			{
+				return string.Format("{0} {1} {2}", Id, Elem, Span);
+			}
 		}
 
-		public override string ToString()
+		/// <summary>Represents a {x} tag in the Match or Replace template strings</summary>
+		private class Tag
 		{
-			return Expr;
+			/// <summary>The id if the substitution to use on this tag</summary>
+			public readonly string Id;
+
+			/// <summary>The range of characters covered by this tag</summary>
+			public Range Span;
+
+			public Tag(string id, Range span)
+			{
+				Id = id;
+				Span = span;
+			}
+			public override string ToString()
+			{
+				return string.Format("{0} {1}", Id, Span);
+			}
 		}
 	}
 }

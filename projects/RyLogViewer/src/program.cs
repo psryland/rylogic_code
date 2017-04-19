@@ -22,7 +22,7 @@ namespace RyLogViewer
 		[STAThread] [SecurityPermission(SecurityAction.Demand,Flags=SecurityPermissionFlag.ControlAppDomain)] // for the unhandled exception handler
 		static void Main(string[] args)
 		{
-			// Setup the unhandled exception handler
+			// Set up the unhandled exception handler
 			try { AppDomain.CurrentDomain.UnhandledException += HandleTheUnhandled; }
 			catch (Exception ex) { Log.Exception(null, ex, "Failed to set unhandled exception handler"); }
 

@@ -145,6 +145,10 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="src\line.cs" />
+    <Compile Include="src\pattern_set.cs" />
+    <Compile Include="src\pattern_set_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="src\selection.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -205,9 +209,6 @@
     <Compile Include="src\main.Designer.cs">
       <DependentUpon>main.cs</DependentUpon>
     </Compile>
-    <Compile Include="src\settings\pattern_set_ui.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
     <Compile Include="src\program.cs" />
     <Compile Include="src\inputs\program_output_ui.cs">
       <SubType>Form</SubType>
@@ -265,6 +266,7 @@
     <Content Include="docs\docs\ideas.htm" />
     <Content Include="docs\docs\licence_activation.htm" />
     <Content Include="docs\docs\options_actions.htm" />
+    <Content Include="docs\docs\plugins.htm" />
     <Content Include="docs\docs\ReadMe.txt" />
     <Content Include="docs\docs\transform_editor.htm" />
     <Content Include="docs\help.htm" />
@@ -273,6 +275,8 @@
       <Generator>..\..\script\HtmlExpand.py</Generator>
       <CustomToolNamespace>..\..\res\</CustomToolNamespace>
     </PyScript>
+    <Content Include="docs\inc\command_line_ref.include.htm" />
+    <Content Include="docs\inc\help_css.include.htm" />
     <Content Include="docs\res\ReadMe.txt" />
     <Content Include="examples\code lookup.xml" />
     <Content Include="examples\logfile.txt" />
@@ -387,11 +391,11 @@
     <EmbeddedResource Include="src\new_version_form.resx">
       <DependentUpon>new_version_form.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="src\pattern_set_ui.resx">
+      <DependentUpon>pattern_set_ui.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="src\settings\clkaction_ui.resx">
       <DependentUpon>clkaction_ui.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="src\settings\pattern_set_ui.resx">
-      <DependentUpon>pattern_set_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\inputs\program_output_ui.resx">
       <DependentUpon>program_output_ui.cs</DependentUpon>

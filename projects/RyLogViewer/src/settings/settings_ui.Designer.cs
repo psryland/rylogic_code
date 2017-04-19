@@ -94,7 +94,6 @@ namespace RyLogViewer
 			this.m_pattern_hl = new pr.gui.PatternUI();
 			this.m_table_hl = new System.Windows.Forms.TableLayoutPanel();
 			this.m_grid_highlight = new RyLogViewer.DataGridView();
-			this.m_pattern_set_hl = new RyLogViewer.PatternSetHL();
 			this.label2 = new System.Windows.Forms.Label();
 			this.m_tab_filter = new System.Windows.Forms.TabPage();
 			this.m_split_ft = new System.Windows.Forms.SplitContainer();
@@ -102,23 +101,21 @@ namespace RyLogViewer
 			this.m_table_ft = new System.Windows.Forms.TableLayoutPanel();
 			this.m_lbl_ft_grid_desc = new System.Windows.Forms.Label();
 			this.m_grid_filter = new RyLogViewer.DataGridView();
-			this.m_pattern_set_ft = new RyLogViewer.PatternSetFT();
-			this.m_check_reject_all_by_default = new System.Windows.Forms.CheckBox();
+			this.m_chk_reject_all_by_default = new System.Windows.Forms.CheckBox();
 			this.m_tab_transform = new System.Windows.Forms.TabPage();
 			this.m_split_tx = new System.Windows.Forms.SplitContainer();
 			this.m_pattern_tx = new RyLogViewer.TransformUI();
 			this.m_table_tx = new System.Windows.Forms.TableLayoutPanel();
 			this.label4 = new System.Windows.Forms.Label();
 			this.m_grid_transform = new RyLogViewer.DataGridView();
-			this.m_pattern_set_tx = new RyLogViewer.PatternSetTX();
 			this.m_tab_action = new System.Windows.Forms.TabPage();
 			this.m_split_ac = new System.Windows.Forms.SplitContainer();
 			this.m_pattern_ac = new pr.gui.PatternUI();
 			this.m_table_ac = new System.Windows.Forms.TableLayoutPanel();
 			this.label5 = new System.Windows.Forms.Label();
 			this.m_grid_action = new RyLogViewer.DataGridView();
-			this.m_pattern_set_ac = new RyLogViewer.PatternSetAC();
 			this.m_image_list = new System.Windows.Forms.ImageList(this.components);
+			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
 			this.m_tabctrl.SuspendLayout();
 			this.m_tab_general.SuspendLayout();
 			this.m_table_general0.SuspendLayout();
@@ -759,7 +756,7 @@ namespace RyLogViewer
 			this.m_lbl_line2_example.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_lbl_line2_example.Location = new System.Drawing.Point(148, 75);
 			this.m_lbl_line2_example.Name = "m_lbl_line2_example";
-			this.m_lbl_line2_example.Size = new System.Drawing.Size(165, 21);
+			this.m_lbl_line2_example.Size = new System.Drawing.Size(308, 21);
 			this.m_lbl_line2_example.TabIndex = 3;
 			this.m_lbl_line2_example.Text = "Click here to modify colours";
 			this.m_lbl_line2_example.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -771,7 +768,7 @@ namespace RyLogViewer
 			this.m_lbl_line1_example.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_lbl_line1_example.Location = new System.Drawing.Point(98, 45);
 			this.m_lbl_line1_example.Name = "m_lbl_line1_example";
-			this.m_lbl_line1_example.Size = new System.Drawing.Size(215, 21);
+			this.m_lbl_line1_example.Size = new System.Drawing.Size(308, 21);
 			this.m_lbl_line1_example.TabIndex = 1;
 			this.m_lbl_line1_example.Text = "Click here to modify colours";
 			this.m_lbl_line1_example.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -799,7 +796,7 @@ namespace RyLogViewer
 			this.m_lbl_selection_example.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_lbl_selection_example.Location = new System.Drawing.Point(98, 16);
 			this.m_lbl_selection_example.Name = "m_lbl_selection_example";
-			this.m_lbl_selection_example.Size = new System.Drawing.Size(215, 21);
+			this.m_lbl_selection_example.Size = new System.Drawing.Size(308, 21);
 			this.m_lbl_selection_example.TabIndex = 0;
 			this.m_lbl_selection_example.Text = "Click here to modify colours";
 			this.m_lbl_selection_example.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -1055,11 +1052,9 @@ namespace RyLogViewer
 			// 
 			// m_table_hl
 			// 
-			this.m_table_hl.CellBorderStyle = System.Windows.Forms.TableLayoutPanelCellBorderStyle.Single;
 			this.m_table_hl.ColumnCount = 1;
 			this.m_table_hl.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.m_table_hl.Controls.Add(this.m_grid_highlight, 0, 1);
-			this.m_table_hl.Controls.Add(this.m_pattern_set_hl, 0, 2);
 			this.m_table_hl.Controls.Add(this.label2, 0, 0);
 			this.m_table_hl.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_table_hl.Location = new System.Drawing.Point(0, 0);
@@ -1080,30 +1075,19 @@ namespace RyLogViewer
 			this.m_grid_highlight.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_grid_highlight.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
 			this.m_grid_highlight.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_grid_highlight.Location = new System.Drawing.Point(1, 34);
+			this.m_grid_highlight.Location = new System.Drawing.Point(0, 32);
 			this.m_grid_highlight.Margin = new System.Windows.Forms.Padding(0);
 			this.m_grid_highlight.MultiSelect = false;
 			this.m_grid_highlight.Name = "m_grid_highlight";
 			this.m_grid_highlight.RowHeadersWidth = 24;
 			this.m_grid_highlight.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_highlight.Size = new System.Drawing.Size(496, 172);
+			this.m_grid_highlight.Size = new System.Drawing.Size(498, 216);
 			this.m_grid_highlight.TabIndex = 0;
-			// 
-			// m_pattern_set_hl
-			// 
-			this.m_pattern_set_hl.AutoSize = true;
-			this.m_pattern_set_hl.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_pattern_set_hl.Location = new System.Drawing.Point(1, 207);
-			this.m_pattern_set_hl.Margin = new System.Windows.Forms.Padding(0);
-			this.m_pattern_set_hl.MinimumSize = new System.Drawing.Size(274, 38);
-			this.m_pattern_set_hl.Name = "m_pattern_set_hl";
-			this.m_pattern_set_hl.Size = new System.Drawing.Size(496, 40);
-			this.m_pattern_set_hl.TabIndex = 1;
 			// 
 			// label2
 			// 
 			this.label2.AutoSize = true;
-			this.label2.Location = new System.Drawing.Point(4, 1);
+			this.label2.Location = new System.Drawing.Point(3, 0);
 			this.label2.Name = "label2";
 			this.label2.Padding = new System.Windows.Forms.Padding(3);
 			this.label2.Size = new System.Drawing.Size(313, 32);
@@ -1139,7 +1123,7 @@ namespace RyLogViewer
 			// 
 			this.m_split_ft.Panel2.Controls.Add(this.m_table_ft);
 			this.m_split_ft.Size = new System.Drawing.Size(498, 428);
-			this.m_split_ft.SplitterDistance = 145;
+			this.m_split_ft.SplitterDistance = 176;
 			this.m_split_ft.TabIndex = 5;
 			// 
 			// m_pattern_ft
@@ -1150,7 +1134,7 @@ namespace RyLogViewer
 			this.m_pattern_ft.Margin = new System.Windows.Forms.Padding(0);
 			this.m_pattern_ft.MinimumSize = new System.Drawing.Size(336, 92);
 			this.m_pattern_ft.Name = "m_pattern_ft";
-			this.m_pattern_ft.Size = new System.Drawing.Size(498, 145);
+			this.m_pattern_ft.Size = new System.Drawing.Size(498, 176);
 			this.m_pattern_ft.TabIndex = 0;
 			this.m_pattern_ft.TestText = "Enter text here to test your pattern";
 			this.m_pattern_ft.Touched = false;
@@ -1162,8 +1146,7 @@ namespace RyLogViewer
 			this.m_table_ft.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
 			this.m_table_ft.Controls.Add(this.m_lbl_ft_grid_desc, 0, 0);
 			this.m_table_ft.Controls.Add(this.m_grid_filter, 0, 1);
-			this.m_table_ft.Controls.Add(this.m_pattern_set_ft, 0, 2);
-			this.m_table_ft.Controls.Add(this.m_check_reject_all_by_default, 1, 0);
+			this.m_table_ft.Controls.Add(this.m_chk_reject_all_by_default, 1, 0);
 			this.m_table_ft.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_table_ft.Location = new System.Drawing.Point(0, 0);
 			this.m_table_ft.Margin = new System.Windows.Forms.Padding(0);
@@ -1172,7 +1155,7 @@ namespace RyLogViewer
 			this.m_table_ft.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.m_table_ft.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.m_table_ft.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.m_table_ft.Size = new System.Drawing.Size(498, 279);
+			this.m_table_ft.Size = new System.Drawing.Size(498, 248);
 			this.m_table_ft.TabIndex = 4;
 			// 
 			// m_lbl_ft_grid_desc
@@ -1201,31 +1184,19 @@ namespace RyLogViewer
 			this.m_grid_filter.Name = "m_grid_filter";
 			this.m_grid_filter.RowHeadersWidth = 24;
 			this.m_grid_filter.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_filter.Size = new System.Drawing.Size(498, 207);
+			this.m_grid_filter.Size = new System.Drawing.Size(498, 216);
 			this.m_grid_filter.TabIndex = 0;
-			// 
-			// m_pattern_set_ft
-			// 
-			this.m_pattern_set_ft.AutoSize = true;
-			this.m_table_ft.SetColumnSpan(this.m_pattern_set_ft, 2);
-			this.m_pattern_set_ft.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_pattern_set_ft.Location = new System.Drawing.Point(0, 239);
-			this.m_pattern_set_ft.Margin = new System.Windows.Forms.Padding(0);
-			this.m_pattern_set_ft.MinimumSize = new System.Drawing.Size(274, 38);
-			this.m_pattern_set_ft.Name = "m_pattern_set_ft";
-			this.m_pattern_set_ft.Size = new System.Drawing.Size(498, 40);
-			this.m_pattern_set_ft.TabIndex = 1;
 			// 
 			// m_check_reject_all_by_default
 			// 
-			this.m_check_reject_all_by_default.Anchor = System.Windows.Forms.AnchorStyles.Left;
-			this.m_check_reject_all_by_default.AutoSize = true;
-			this.m_check_reject_all_by_default.Location = new System.Drawing.Point(351, 7);
-			this.m_check_reject_all_by_default.Name = "m_check_reject_all_by_default";
-			this.m_check_reject_all_by_default.Size = new System.Drawing.Size(144, 17);
-			this.m_check_reject_all_by_default.TabIndex = 4;
-			this.m_check_reject_all_by_default.Text = "Reject all rows by default";
-			this.m_check_reject_all_by_default.UseVisualStyleBackColor = true;
+			this.m_chk_reject_all_by_default.Anchor = System.Windows.Forms.AnchorStyles.Left;
+			this.m_chk_reject_all_by_default.AutoSize = true;
+			this.m_chk_reject_all_by_default.Location = new System.Drawing.Point(351, 7);
+			this.m_chk_reject_all_by_default.Name = "m_check_reject_all_by_default";
+			this.m_chk_reject_all_by_default.Size = new System.Drawing.Size(144, 17);
+			this.m_chk_reject_all_by_default.TabIndex = 4;
+			this.m_chk_reject_all_by_default.Text = "Reject all rows by default";
+			this.m_chk_reject_all_by_default.UseVisualStyleBackColor = true;
 			// 
 			// m_tab_transform
 			// 
@@ -1255,7 +1226,7 @@ namespace RyLogViewer
 			// 
 			this.m_split_tx.Panel2.Controls.Add(this.m_table_tx);
 			this.m_split_tx.Size = new System.Drawing.Size(498, 428);
-			this.m_split_tx.SplitterDistance = 163;
+			this.m_split_tx.SplitterDistance = 176;
 			this.m_split_tx.TabIndex = 0;
 			// 
 			// m_pattern_tx
@@ -1266,19 +1237,17 @@ namespace RyLogViewer
 			this.m_pattern_tx.Margin = new System.Windows.Forms.Padding(0);
 			this.m_pattern_tx.MinimumSize = new System.Drawing.Size(400, 150);
 			this.m_pattern_tx.Name = "m_pattern_tx";
-			this.m_pattern_tx.Size = new System.Drawing.Size(498, 163);
+			this.m_pattern_tx.Size = new System.Drawing.Size(498, 176);
 			this.m_pattern_tx.TabIndex = 0;
 			this.m_pattern_tx.TestText = "Enter text here to test your pattern";
 			this.m_pattern_tx.Touched = false;
 			// 
 			// m_table_tx
 			// 
-			this.m_table_tx.CellBorderStyle = System.Windows.Forms.TableLayoutPanelCellBorderStyle.Single;
 			this.m_table_tx.ColumnCount = 1;
 			this.m_table_tx.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.m_table_tx.Controls.Add(this.label4, 0, 0);
 			this.m_table_tx.Controls.Add(this.m_grid_transform, 0, 1);
-			this.m_table_tx.Controls.Add(this.m_pattern_set_tx, 0, 2);
 			this.m_table_tx.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_table_tx.Location = new System.Drawing.Point(0, 0);
 			this.m_table_tx.Margin = new System.Windows.Forms.Padding(0);
@@ -1287,13 +1256,13 @@ namespace RyLogViewer
 			this.m_table_tx.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.m_table_tx.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.m_table_tx.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.m_table_tx.Size = new System.Drawing.Size(498, 261);
+			this.m_table_tx.Size = new System.Drawing.Size(498, 248);
 			this.m_table_tx.TabIndex = 3;
 			// 
 			// label4
 			// 
 			this.label4.AutoSize = true;
-			this.label4.Location = new System.Drawing.Point(4, 1);
+			this.label4.Location = new System.Drawing.Point(3, 0);
 			this.label4.Name = "label4";
 			this.label4.Padding = new System.Windows.Forms.Padding(3);
 			this.label4.Size = new System.Drawing.Size(259, 32);
@@ -1309,25 +1278,14 @@ namespace RyLogViewer
 			this.m_grid_transform.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_grid_transform.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
 			this.m_grid_transform.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_grid_transform.Location = new System.Drawing.Point(1, 34);
+			this.m_grid_transform.Location = new System.Drawing.Point(0, 32);
 			this.m_grid_transform.Margin = new System.Windows.Forms.Padding(0);
 			this.m_grid_transform.MultiSelect = false;
 			this.m_grid_transform.Name = "m_grid_transform";
 			this.m_grid_transform.RowHeadersWidth = 24;
 			this.m_grid_transform.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_transform.Size = new System.Drawing.Size(496, 185);
+			this.m_grid_transform.Size = new System.Drawing.Size(498, 216);
 			this.m_grid_transform.TabIndex = 0;
-			// 
-			// m_pattern_set_tx
-			// 
-			this.m_pattern_set_tx.AutoSize = true;
-			this.m_pattern_set_tx.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_pattern_set_tx.Location = new System.Drawing.Point(1, 220);
-			this.m_pattern_set_tx.Margin = new System.Windows.Forms.Padding(0);
-			this.m_pattern_set_tx.MinimumSize = new System.Drawing.Size(274, 38);
-			this.m_pattern_set_tx.Name = "m_pattern_set_tx";
-			this.m_pattern_set_tx.Size = new System.Drawing.Size(496, 40);
-			this.m_pattern_set_tx.TabIndex = 1;
 			// 
 			// m_tab_action
 			// 
@@ -1357,7 +1315,7 @@ namespace RyLogViewer
 			// 
 			this.m_split_ac.Panel2.Controls.Add(this.m_table_ac);
 			this.m_split_ac.Size = new System.Drawing.Size(498, 428);
-			this.m_split_ac.SplitterDistance = 145;
+			this.m_split_ac.SplitterDistance = 176;
 			this.m_split_ac.TabIndex = 4;
 			// 
 			// m_pattern_ac
@@ -1368,19 +1326,17 @@ namespace RyLogViewer
 			this.m_pattern_ac.Margin = new System.Windows.Forms.Padding(0);
 			this.m_pattern_ac.MinimumSize = new System.Drawing.Size(336, 92);
 			this.m_pattern_ac.Name = "m_pattern_ac";
-			this.m_pattern_ac.Size = new System.Drawing.Size(498, 145);
+			this.m_pattern_ac.Size = new System.Drawing.Size(498, 176);
 			this.m_pattern_ac.TabIndex = 0;
 			this.m_pattern_ac.TestText = "Enter text here to test your pattern";
 			this.m_pattern_ac.Touched = false;
 			// 
 			// m_table_ac
 			// 
-			this.m_table_ac.CellBorderStyle = System.Windows.Forms.TableLayoutPanelCellBorderStyle.Single;
 			this.m_table_ac.ColumnCount = 1;
 			this.m_table_ac.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.m_table_ac.Controls.Add(this.label5, 0, 0);
 			this.m_table_ac.Controls.Add(this.m_grid_action, 0, 1);
-			this.m_table_ac.Controls.Add(this.m_pattern_set_ac, 0, 2);
 			this.m_table_ac.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_table_ac.Location = new System.Drawing.Point(0, 0);
 			this.m_table_ac.Margin = new System.Windows.Forms.Padding(0);
@@ -1389,13 +1345,13 @@ namespace RyLogViewer
 			this.m_table_ac.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.m_table_ac.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.m_table_ac.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.m_table_ac.Size = new System.Drawing.Size(498, 279);
+			this.m_table_ac.Size = new System.Drawing.Size(498, 248);
 			this.m_table_ac.TabIndex = 2;
 			// 
 			// label5
 			// 
 			this.label5.AutoSize = true;
-			this.label5.Location = new System.Drawing.Point(4, 1);
+			this.label5.Location = new System.Drawing.Point(3, 0);
 			this.label5.Name = "label5";
 			this.label5.Padding = new System.Windows.Forms.Padding(3);
 			this.label5.Size = new System.Drawing.Size(269, 32);
@@ -1411,25 +1367,14 @@ namespace RyLogViewer
 			this.m_grid_action.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_grid_action.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
 			this.m_grid_action.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_grid_action.Location = new System.Drawing.Point(1, 34);
+			this.m_grid_action.Location = new System.Drawing.Point(0, 32);
 			this.m_grid_action.Margin = new System.Windows.Forms.Padding(0);
 			this.m_grid_action.MultiSelect = false;
 			this.m_grid_action.Name = "m_grid_action";
 			this.m_grid_action.RowHeadersWidth = 24;
 			this.m_grid_action.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_action.Size = new System.Drawing.Size(496, 203);
+			this.m_grid_action.Size = new System.Drawing.Size(498, 216);
 			this.m_grid_action.TabIndex = 0;
-			// 
-			// m_pattern_set_ac
-			// 
-			this.m_pattern_set_ac.AutoSize = true;
-			this.m_pattern_set_ac.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_pattern_set_ac.Location = new System.Drawing.Point(1, 238);
-			this.m_pattern_set_ac.Margin = new System.Windows.Forms.Padding(0);
-			this.m_pattern_set_ac.MinimumSize = new System.Drawing.Size(274, 38);
-			this.m_pattern_set_ac.Name = "m_pattern_set_ac";
-			this.m_pattern_set_ac.Size = new System.Drawing.Size(496, 40);
-			this.m_pattern_set_ac.TabIndex = 1;
 			// 
 			// m_image_list
 			// 
@@ -1535,9 +1480,7 @@ namespace RyLogViewer
 		private System.Windows.Forms.SplitContainer m_split_ft;
 		private System.Windows.Forms.CheckBox m_check_show_totd;
 		private System.Windows.Forms.TableLayoutPanel m_table_hl;
-		private PatternSetHL m_pattern_set_hl;
 		private System.Windows.Forms.TableLayoutPanel m_table_ft;
-		private PatternSetFT m_pattern_set_ft;
 		private System.Windows.Forms.GroupBox m_group_line_ends;
 		private System.Windows.Forms.Label m_lbl_line_ends;
 		private System.Windows.Forms.TextBox m_edit_line_ends;
@@ -1576,7 +1519,6 @@ namespace RyLogViewer
 		private TransformUI m_pattern_tx;
 		private System.Windows.Forms.TableLayoutPanel m_table_tx;
 		private DataGridView m_grid_transform;
-		private PatternSetTX m_pattern_set_tx;
 		private System.Windows.Forms.Label m_lbl_max_line_len_kb;
 		private System.Windows.Forms.NumericUpDown m_spinner_max_line_length;
 		private System.Windows.Forms.Label m_lbl_max_line_length;
@@ -1592,12 +1534,11 @@ namespace RyLogViewer
 		private PatternUI m_pattern_ac;
 		private System.Windows.Forms.TableLayoutPanel m_table_ac;
 		private DataGridView m_grid_action;
-		private PatternSetAC m_pattern_set_ac;
 		private System.Windows.Forms.Label label2;
 		private System.Windows.Forms.Label m_lbl_ft_grid_desc;
 		private System.Windows.Forms.Label label4;
 		private System.Windows.Forms.Label label5;
-		private System.Windows.Forms.CheckBox m_check_reject_all_by_default;
+		private System.Windows.Forms.CheckBox m_chk_reject_all_by_default;
 		private System.Windows.Forms.Label m_lbl_web_proxy_port;
 		private System.Windows.Forms.Label m_lbl_web_proxy_host;
 		private System.Windows.Forms.NumericUpDown m_spinner_web_proxy_port;
@@ -1620,5 +1561,6 @@ namespace RyLogViewer
 		private System.Windows.Forms.TableLayoutPanel m_table_appearance2;
 		private System.Windows.Forms.Label m_lbl_tabsize;
 		private System.Windows.Forms.NumericUpDown m_spinner_tabsize;
+		private System.Windows.Forms.ToolTip m_tt;
 	}
 }

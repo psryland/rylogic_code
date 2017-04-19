@@ -12,7 +12,7 @@ namespace RyLogViewer
 	{
 		// Notes:
 		// -This interface represents the contract for a custom text transformation.
-		//  Custom text transformations appear in the dropdown lists in the 'Transform'
+		//  Custom text transformations appear in the drop-down lists in the 'Transform'
 		//  column of the transforms pattern editor. Custom text transformations allow
 		//  even greater flexibility when transforming log data.
 		// -RyLogViewer loads plugins using a background thread, however all methods
@@ -24,7 +24,7 @@ namespace RyLogViewer
 		Guid Guid { get; }
 
 		/// <summary>
-		/// The name that appears in the transform column dropdown
+		/// The name that appears in the transform column drop-down
 		/// for this text transformation.</summary>
 		string DropDownName { get; }
 
@@ -74,7 +74,7 @@ namespace RyLogViewer
 		public abstract Guid Guid { get; }
 
 		/// <summary>
-		/// The name that appears in the transform column dropdown
+		/// The name that appears in the transform column drop-down
 		/// for this text transformation.</summary>
 		public abstract string DropDownName { get; }
 

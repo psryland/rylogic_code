@@ -11,6 +11,7 @@ using System.Windows.Forms;
 using pr.common;
 using pr.gui;
 using pr.extn;
+using pr.util;
 
 namespace RyLogViewer
 {
@@ -21,6 +22,10 @@ namespace RyLogViewer
 		public const string AppIdentifier           = "rylogviewer";
 		public const string Purchase                = "purchase";
 		public const string StoreLink               = "http://store.kagi.com/cgi-bin/store.cgi?storeID=6FFFY_LIVE";
+
+		public const string PatternSetVersion          = "v1.0";
+		public static readonly string PatternSetFilter = Util.FileDialogFilter("Pattern Set Files", "*.pattern_set");
+
 		public const int MaxHistoryDefault          = 10;
 		public const int PortNumberMin              = 0;
 		public const int PortNumberWebProxyDefault  = 8080;
@@ -54,10 +59,10 @@ namespace RyLogViewer
 		public const int OneMB                      = 1024*1024;
 
 		public static readonly Color[] BkColors = new[]
-			{
-				Color.LightGreen, Color.LightBlue, Color.LightCoral, Color.LightSalmon, Color.Violet, Color.LightSkyBlue,
-				Color.Aquamarine, Color.Yellow, Color.Orchid, Color.GreenYellow, Color.PaleGreen, Color.Goldenrod, Color.MediumTurquoise
-			};
+		{
+			Color.LightGreen, Color.LightBlue, Color.LightCoral, Color.LightSalmon, Color.Violet, Color.LightSkyBlue,
+			Color.Aquamarine, Color.Yellow, Color.Orchid, Color.GreenYellow, Color.PaleGreen, Color.Goldenrod, Color.MediumTurquoise
+		};
 	}
 
 	public static class FreeEditionLimits
@@ -131,11 +136,15 @@ namespace RyLogViewer
 		public const string Invert         = "invert";
 		public const string WholeLine      = "wholeline";
 		public const string Binary         = "binary";
-		public const string Highlight      = "highlight";
 		public const string ForeColour     = "forecolour";
 		public const string BackColour     = "backcolour";
+		public const string Highlights     = "highlights";
+		public const string Highlight      = "highlight";
+		public const string Filters        = "filters";
 		public const string Filter         = "filter";
+		public const string Transforms     = "transforms";
 		public const string Transform      = "transform";
+		public const string ClkActions     = "clkactions";
 		public const string ClkAction      = "clkaction";
 		public const string Exclude        = "exclude";
 		public const string IfMatch        = "ifmatch";
@@ -179,9 +188,7 @@ namespace RyLogViewer
 		public const string SettingsPath = "-s";
 		public const string LogFilePath  = "-l";
 		public const string Portable     = "-p";
-		public const string HighlightSet = "-hl";
-		public const string FilterSet    = "-ft";
-		public const string TransformSet = "-tx";
+		public const string PatternSet   = "-ps";
 		public const string Export       = "-e";
 		public const string RDelim       = "-rdelim";
 		public const string CDelim       = "-cdelim";

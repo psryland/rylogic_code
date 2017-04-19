@@ -45,12 +45,19 @@
 			this.toolStripSeparator19 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_wizards_aggregatelogfile = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_wizards_androidlogcat = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_recent = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator18 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_file_export = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator16 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_close = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_sep1 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_menu_file_export = new System.Windows.Forms.ToolStripMenuItem();
-			this.toolStripSeparator5 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_menu_file_recent = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_pattern_set = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_load_pattern_set = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_save_pattern_set = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator21 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_file_import_patterns = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator20 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_file_recent_pattern_sets = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_sep2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_exit = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_edit = new System.Windows.Forms.ToolStripMenuItem();
@@ -354,12 +361,13 @@
 			this.m_menu_file.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_menu_file_open,
             this.m_menu_file_data_sources,
-            this.toolStripSeparator16,
-            this.m_menu_file_close,
-            this.m_sep1,
-            this.m_menu_file_export,
-            this.toolStripSeparator5,
             this.m_menu_file_recent,
+            this.toolStripSeparator18,
+            this.m_menu_file_close,
+            this.toolStripSeparator16,
+            this.m_menu_file_export,
+            this.m_sep1,
+            this.m_menu_file_pattern_set,
             this.m_sep2,
             this.m_menu_file_exit});
 			this.m_menu_file.Name = "m_menu_file";
@@ -428,6 +436,23 @@
 			this.m_menu_file_wizards_androidlogcat.Size = new System.Drawing.Size(216, 22);
 			this.m_menu_file_wizards_androidlogcat.Text = "&Android Logcat...";
 			// 
+			// m_menu_file_recent
+			// 
+			this.m_menu_file_recent.Name = "m_menu_file_recent";
+			this.m_menu_file_recent.Size = new System.Drawing.Size(190, 22);
+			this.m_menu_file_recent.Text = "&Recent Files";
+			// 
+			// toolStripSeparator18
+			// 
+			this.toolStripSeparator18.Name = "toolStripSeparator18";
+			this.toolStripSeparator18.Size = new System.Drawing.Size(187, 6);
+			// 
+			// m_menu_file_export
+			// 
+			this.m_menu_file_export.Name = "m_menu_file_export";
+			this.m_menu_file_export.Size = new System.Drawing.Size(190, 22);
+			this.m_menu_file_export.Text = "&Export...";
+			// 
 			// toolStripSeparator16
 			// 
 			this.toolStripSeparator16.Name = "toolStripSeparator16";
@@ -438,29 +463,59 @@
 			this.m_menu_file_close.Name = "m_menu_file_close";
 			this.m_menu_file_close.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.W)));
 			this.m_menu_file_close.Size = new System.Drawing.Size(190, 22);
-			this.m_menu_file_close.Text = "&Close";
+			this.m_menu_file_close.Text = "&Close Log";
 			// 
 			// m_sep1
 			// 
 			this.m_sep1.Name = "m_sep1";
 			this.m_sep1.Size = new System.Drawing.Size(187, 6);
 			// 
-			// m_menu_file_export
+			// m_menu_file_pattern_set
 			// 
-			this.m_menu_file_export.Name = "m_menu_file_export";
-			this.m_menu_file_export.Size = new System.Drawing.Size(190, 22);
-			this.m_menu_file_export.Text = "&Export...";
+			this.m_menu_file_pattern_set.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_file_load_pattern_set,
+            this.m_menu_file_save_pattern_set,
+            this.toolStripSeparator21,
+            this.m_menu_file_import_patterns,
+            this.toolStripSeparator20,
+            this.m_menu_file_recent_pattern_sets});
+			this.m_menu_file_pattern_set.Name = "m_menu_file_pattern_set";
+			this.m_menu_file_pattern_set.Size = new System.Drawing.Size(190, 22);
+			this.m_menu_file_pattern_set.Text = "Pattern Sets";
 			// 
-			// toolStripSeparator5
+			// m_menu_file_load_pattern_set
 			// 
-			this.toolStripSeparator5.Name = "toolStripSeparator5";
-			this.toolStripSeparator5.Size = new System.Drawing.Size(187, 6);
+			this.m_menu_file_load_pattern_set.Name = "m_menu_file_load_pattern_set";
+			this.m_menu_file_load_pattern_set.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_file_load_pattern_set.Text = "Load";
 			// 
-			// m_menu_file_recent
+			// m_menu_file_save_pattern_set
 			// 
-			this.m_menu_file_recent.Name = "m_menu_file_recent";
-			this.m_menu_file_recent.Size = new System.Drawing.Size(190, 22);
-			this.m_menu_file_recent.Text = "&Recent Files";
+			this.m_menu_file_save_pattern_set.Name = "m_menu_file_save_pattern_set";
+			this.m_menu_file_save_pattern_set.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_file_save_pattern_set.Text = "Save";
+			// 
+			// toolStripSeparator21
+			// 
+			this.toolStripSeparator21.Name = "toolStripSeparator21";
+			this.toolStripSeparator21.Size = new System.Drawing.Size(149, 6);
+			// 
+			// m_menu_file_import_patterns
+			// 
+			this.m_menu_file_import_patterns.Name = "m_menu_file_import_patterns";
+			this.m_menu_file_import_patterns.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_file_import_patterns.Text = "Import...";
+			// 
+			// toolStripSeparator20
+			// 
+			this.toolStripSeparator20.Name = "toolStripSeparator20";
+			this.toolStripSeparator20.Size = new System.Drawing.Size(149, 6);
+			// 
+			// m_menu_file_recent_pattern_sets
+			// 
+			this.m_menu_file_recent_pattern_sets.Name = "m_menu_file_recent_pattern_sets";
+			this.m_menu_file_recent_pattern_sets.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_file_recent_pattern_sets.Text = "Recent";
 			// 
 			// m_sep2
 			// 
@@ -700,70 +755,70 @@
             this.toolStripSeparator6,
             this.m_menu_tools_options});
 			this.m_menu_tools.Name = "m_menu_tools";
-			this.m_menu_tools.Size = new System.Drawing.Size(48, 20);
+			this.m_menu_tools.Size = new System.Drawing.Size(47, 20);
 			this.m_menu_tools.Text = "&Tools";
 			// 
 			// m_menu_tools_alwaysontop
 			// 
 			this.m_menu_tools_alwaysontop.Name = "m_menu_tools_alwaysontop";
-			this.m_menu_tools_alwaysontop.Size = new System.Drawing.Size(154, 22);
+			this.m_menu_tools_alwaysontop.Size = new System.Drawing.Size(153, 22);
 			this.m_menu_tools_alwaysontop.Text = "Always On &Top";
 			// 
 			// m_menu_tools_monitor_mode
 			// 
 			this.m_menu_tools_monitor_mode.Name = "m_menu_tools_monitor_mode";
-			this.m_menu_tools_monitor_mode.Size = new System.Drawing.Size(154, 22);
+			this.m_menu_tools_monitor_mode.Size = new System.Drawing.Size(153, 22);
 			this.m_menu_tools_monitor_mode.Text = "&Monitor Mode";
 			// 
 			// m_sep4
 			// 
 			this.m_sep4.Name = "m_sep4";
-			this.m_sep4.Size = new System.Drawing.Size(151, 6);
+			this.m_sep4.Size = new System.Drawing.Size(150, 6);
 			// 
 			// m_menu_tools_clear_log_file
 			// 
 			this.m_menu_tools_clear_log_file.Name = "m_menu_tools_clear_log_file";
-			this.m_menu_tools_clear_log_file.Size = new System.Drawing.Size(154, 22);
+			this.m_menu_tools_clear_log_file.Size = new System.Drawing.Size(153, 22);
 			this.m_menu_tools_clear_log_file.Text = "&Clear Log File";
 			// 
 			// m_sep5
 			// 
 			this.m_sep5.Name = "m_sep5";
-			this.m_sep5.Size = new System.Drawing.Size(151, 6);
+			this.m_sep5.Size = new System.Drawing.Size(150, 6);
 			// 
 			// m_menu_tools_highlights
 			// 
 			this.m_menu_tools_highlights.Name = "m_menu_tools_highlights";
-			this.m_menu_tools_highlights.Size = new System.Drawing.Size(154, 22);
+			this.m_menu_tools_highlights.Size = new System.Drawing.Size(153, 22);
 			this.m_menu_tools_highlights.Text = "&Highlights";
 			// 
 			// m_menu_tools_filters
 			// 
 			this.m_menu_tools_filters.Name = "m_menu_tools_filters";
-			this.m_menu_tools_filters.Size = new System.Drawing.Size(154, 22);
+			this.m_menu_tools_filters.Size = new System.Drawing.Size(153, 22);
 			this.m_menu_tools_filters.Text = "&Filters";
 			// 
 			// m_menu_tools_transforms
 			// 
 			this.m_menu_tools_transforms.Name = "m_menu_tools_transforms";
-			this.m_menu_tools_transforms.Size = new System.Drawing.Size(154, 22);
+			this.m_menu_tools_transforms.Size = new System.Drawing.Size(153, 22);
 			this.m_menu_tools_transforms.Text = "&Transforms";
 			// 
 			// m_menu_tools_actions
 			// 
 			this.m_menu_tools_actions.Name = "m_menu_tools_actions";
-			this.m_menu_tools_actions.Size = new System.Drawing.Size(154, 22);
+			this.m_menu_tools_actions.Size = new System.Drawing.Size(153, 22);
 			this.m_menu_tools_actions.Text = "&Actions";
 			// 
 			// toolStripSeparator6
 			// 
 			this.toolStripSeparator6.Name = "toolStripSeparator6";
-			this.toolStripSeparator6.Size = new System.Drawing.Size(151, 6);
+			this.toolStripSeparator6.Size = new System.Drawing.Size(150, 6);
 			// 
 			// m_menu_tools_options
 			// 
 			this.m_menu_tools_options.Name = "m_menu_tools_options";
-			this.m_menu_tools_options.Size = new System.Drawing.Size(154, 22);
+			this.m_menu_tools_options.Size = new System.Drawing.Size(153, 22);
 			this.m_menu_tools_options.Text = "&Options";
 			// 
 			// m_menu_help
@@ -917,7 +972,7 @@
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
 			this.m_status_message_trans.Name = "m_status_message_trans";
-			this.m_status_message_trans.Size = new System.Drawing.Size(109, 19);
+			this.m_status_message_trans.Size = new System.Drawing.Size(108, 19);
 			this.m_status_message_trans.Text = "Transient Message";
 			this.m_status_message_trans.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			this.m_status_message_trans.Visible = false;
@@ -996,86 +1051,86 @@
             this.toolStripSeparator14,
             this.m_cmenu_toggle_bookmark});
 			this.m_cmenu_grid.Name = "m_cmenu_grid";
-			this.m_cmenu_grid.Size = new System.Drawing.Size(169, 248);
+			this.m_cmenu_grid.Size = new System.Drawing.Size(168, 248);
 			// 
 			// m_cmenu_select_all
 			// 
 			this.m_cmenu_select_all.Name = "m_cmenu_select_all";
-			this.m_cmenu_select_all.Size = new System.Drawing.Size(168, 22);
+			this.m_cmenu_select_all.Size = new System.Drawing.Size(167, 22);
 			this.m_cmenu_select_all.Text = "Select &All";
 			// 
 			// m_cmenu_copy
 			// 
 			this.m_cmenu_copy.Name = "m_cmenu_copy";
-			this.m_cmenu_copy.Size = new System.Drawing.Size(168, 22);
+			this.m_cmenu_copy.Size = new System.Drawing.Size(167, 22);
 			this.m_cmenu_copy.Text = "&Copy";
 			// 
 			// toolStripSeparator15
 			// 
 			this.toolStripSeparator15.Name = "toolStripSeparator15";
-			this.toolStripSeparator15.Size = new System.Drawing.Size(165, 6);
+			this.toolStripSeparator15.Size = new System.Drawing.Size(164, 6);
 			// 
 			// m_cmenu_clear_log
 			// 
 			this.m_cmenu_clear_log.Name = "m_cmenu_clear_log";
-			this.m_cmenu_clear_log.Size = new System.Drawing.Size(168, 22);
+			this.m_cmenu_clear_log.Size = new System.Drawing.Size(167, 22);
 			this.m_cmenu_clear_log.Text = "C&lear Log";
 			// 
 			// toolStripSeparator10
 			// 
 			this.toolStripSeparator10.Name = "toolStripSeparator10";
-			this.toolStripSeparator10.Size = new System.Drawing.Size(165, 6);
+			this.toolStripSeparator10.Size = new System.Drawing.Size(164, 6);
 			// 
 			// m_cmenu_highlight_row
 			// 
 			this.m_cmenu_highlight_row.Name = "m_cmenu_highlight_row";
-			this.m_cmenu_highlight_row.Size = new System.Drawing.Size(168, 22);
+			this.m_cmenu_highlight_row.Size = new System.Drawing.Size(167, 22);
 			this.m_cmenu_highlight_row.Text = "&Highlight Row...";
 			// 
 			// m_cmenu_filter_row
 			// 
 			this.m_cmenu_filter_row.Name = "m_cmenu_filter_row";
-			this.m_cmenu_filter_row.Size = new System.Drawing.Size(168, 22);
+			this.m_cmenu_filter_row.Size = new System.Drawing.Size(167, 22);
 			this.m_cmenu_filter_row.Text = "&Filter Row...";
 			// 
 			// m_cmenu_transform_row
 			// 
 			this.m_cmenu_transform_row.Name = "m_cmenu_transform_row";
-			this.m_cmenu_transform_row.Size = new System.Drawing.Size(168, 22);
+			this.m_cmenu_transform_row.Size = new System.Drawing.Size(167, 22);
 			this.m_cmenu_transform_row.Text = "&Transform Row...";
 			// 
 			// m_cmenu_action_row
 			// 
 			this.m_cmenu_action_row.Name = "m_cmenu_action_row";
-			this.m_cmenu_action_row.Size = new System.Drawing.Size(168, 22);
+			this.m_cmenu_action_row.Size = new System.Drawing.Size(167, 22);
 			this.m_cmenu_action_row.Text = "&Action Row...";
 			// 
 			// toolStripSeparator4
 			// 
 			this.toolStripSeparator4.Name = "toolStripSeparator4";
-			this.toolStripSeparator4.Size = new System.Drawing.Size(165, 6);
+			this.toolStripSeparator4.Size = new System.Drawing.Size(164, 6);
 			// 
 			// m_cmenu_find_next
 			// 
 			this.m_cmenu_find_next.Name = "m_cmenu_find_next";
-			this.m_cmenu_find_next.Size = new System.Drawing.Size(168, 22);
+			this.m_cmenu_find_next.Size = new System.Drawing.Size(167, 22);
 			this.m_cmenu_find_next.Text = "Find &Next";
 			// 
 			// m_cmenu_find_prev
 			// 
 			this.m_cmenu_find_prev.Name = "m_cmenu_find_prev";
-			this.m_cmenu_find_prev.Size = new System.Drawing.Size(168, 22);
+			this.m_cmenu_find_prev.Size = new System.Drawing.Size(167, 22);
 			this.m_cmenu_find_prev.Text = "Find &Previous";
 			// 
 			// toolStripSeparator14
 			// 
 			this.toolStripSeparator14.Name = "toolStripSeparator14";
-			this.toolStripSeparator14.Size = new System.Drawing.Size(165, 6);
+			this.toolStripSeparator14.Size = new System.Drawing.Size(164, 6);
 			// 
 			// m_cmenu_toggle_bookmark
 			// 
 			this.m_cmenu_toggle_bookmark.Name = "m_cmenu_toggle_bookmark";
-			this.m_cmenu_toggle_bookmark.Size = new System.Drawing.Size(168, 22);
+			this.m_cmenu_toggle_bookmark.Size = new System.Drawing.Size(167, 22);
 			this.m_cmenu_toggle_bookmark.Text = "Toggle &Bookmark";
 			// 
 			// m_grid
@@ -1212,7 +1267,6 @@
 		private System.Windows.Forms.ToolStripMenuItem m_cmenu_copy;
 		private System.Windows.Forms.ToolStripMenuItem m_cmenu_select_all;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_export;
-		private System.Windows.Forms.ToolStripSeparator toolStripSeparator5;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator6;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_clear_log_file;
 		private System.Windows.Forms.ToolStripProgressBar m_status_progress;
@@ -1274,6 +1328,14 @@
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator19;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_edit_jumpto;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator17;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator18;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_pattern_set;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_load_pattern_set;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_save_pattern_set;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator21;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_import_patterns;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator20;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_recent_pattern_sets;
 	}
 }
 

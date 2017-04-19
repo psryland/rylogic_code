@@ -85,17 +85,15 @@ namespace RyLogViewer
 		/// <summary>True if the licensed feature is still currently in use</summary>
 		public virtual bool FeatureInUse
 		{
-			get { return m_main.Settings.HighlightPatterns.Length > FreeEditionLimits.MaxHighlights; }
+			get { return m_main.Settings.Patterns.Highlights.Count > FreeEditionLimits.MaxHighlights; }
 		}
 
 		/// <summary>Called to stop the use of the feature</summary>
 		public virtual void CloseFeature()
 		{
 			// Read the patterns from the settings to see if more than the max allowed are in use
-			var pats = m_main.Settings.HighlightPatterns.ToList();
-			pats.RemoveToEnd(FreeEditionLimits.MaxHighlights);
-			m_main.Settings.HighlightPatterns = pats.ToArray();
-			m_main.ApplySettings();
+			m_main.Settings.Patterns.Highlights.RemoveToEnd(FreeEditionLimits.MaxHighlights);
+			m_main.Settings.Save();
 		}
 	}
 
@@ -117,17 +115,15 @@ namespace RyLogViewer
 		/// <summary>True if the licensed feature is still currently in use</summary>
 		public virtual bool FeatureInUse
 		{
-			get { return m_main.Settings.FilterPatterns.Length> FreeEditionLimits.MaxFilters; }
+			get { return m_main.Settings.Patterns.Filters.Count > FreeEditionLimits.MaxFilters; }
 		}
 
 		/// <summary>Called to stop the use of the feature</summary>
 		public virtual void CloseFeature()
 		{
 			// Read the patterns from the settings to see if more than the max allowed are in use
-			var pats = m_main.Settings.FilterPatterns.ToList();
-			pats.RemoveToEnd(FreeEditionLimits.MaxFilters);
-			m_main.Settings.FilterPatterns = pats.ToArray();
-			m_main.ApplySettings();
+			m_main.Settings.Patterns.Filters.RemoveToEnd(FreeEditionLimits.MaxFilters);
+			m_main.Settings.Save();
 		}
 	}
 

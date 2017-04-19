@@ -34,10 +34,9 @@ namespace RyLogViewer
 				,new Tip
 				{
 					Title = "Pattern Sets",
-					Body  = "RyLogViewer allows the highlighting and filtering patterns that you use frequently " +
-							"to be saved as <a href='"+Cmd.show_pattern_sets+"'><i>Pattern Sets</i></a>. " +
-					        "Once saved these sets can be selected quickly from a drop-down list.<br/><br/>" +
-							"Highlighting and filtering patterns and pattern sets are configured under the Options menu.",
+					Body  = "RyLogViewer allows the patterns that you use frequently to be saved as Pattern Sets. "+
+							"Under the file menu, there are options to create and load pattern sets, or import patterns "+
+							"into the current set.",
 				}
 				,new Tip
 				{
@@ -60,7 +59,7 @@ namespace RyLogViewer
 					Title = "Command Line",
 					Body  = "RyLogViewer has a command line interface. The main purpose of this is to allow the " +
 					        "export functionality to be used in scripts or batch files. For more information about " +
-					        "the command line options type <span style='font-family:monospace'>rylogviewer -h</span> " +
+					        "the command line options type <span style='font-family:monospace'>RyLogViewer -h</span> " +
 					        "at a command prompt."
 				}
 				,new Tip
@@ -103,7 +102,6 @@ namespace RyLogViewer
 		private static class Cmd
 		{
 			public const string open_example_logfile          = "cmd://open_example_logfile/";
-			public const string show_pattern_sets             = "cmd://show_pattern_sets/";
 			public const string show_column_delimiter_options = "cmd://show_column_delimiter_options/";
 		}
 		#endregion
@@ -131,23 +129,23 @@ namespace RyLogViewer
 
 			m_check_show_on_startup.Checked = main.Settings.ShowTOTD;
 			m_check_show_on_startup.CheckedChanged += (s,a)=>
-				{
-					main.Settings.ShowTOTD = m_check_show_on_startup.Checked;
-				};
+			{
+				main.Settings.ShowTOTD = m_check_show_on_startup.Checked;
+			};
 			m_btn_next.Click += (s,a)=>
-				{
-					TipIndex++;
-					ShowTip();
-				};
+			{
+				TipIndex++;
+				ShowTip();
+			};
 			m_btn_prev.Click += (s,a) =>
-				{
-					TipIndex += m_order.Count - 1;
-					ShowTip();
-				};
+			{
+				TipIndex += m_order.Count - 1;
+				ShowTip();
+			};
 			Shown += (s,a) =>
-				{
-					ShowTip();
-				};
+			{
+				ShowTip();
+			};
 		}
 
 		/// <summary>Get/Set the currently displayed tip. If the index supplied doesn't exist, the TotD0 is displayed</summary>
@@ -170,7 +168,7 @@ namespace RyLogViewer
 			}
 		}
 
-		/// <summary>Show the totd for the current index</summary>
+		/// <summary>Show the TOTD for the current index</summary>
 		private void ShowTip()
 		{
 			var tip = m_tips[m_order[TipIndex]];
@@ -202,7 +200,7 @@ namespace RyLogViewer
 			return order;
 		}
 
-		/// <summary>Handle special navigation urls in totd's</summary>
+		/// <summary>Handle special navigation URLs in TOTD's</summary>
 		private void OnNavigating(object sender, WebBrowserNavigatingEventArgs args)
 		{
 			if (args.Url.Scheme == "cmd")
@@ -215,9 +213,6 @@ namespace RyLogViewer
 					m_main.SetEncoding(null);
 					m_main.OpenSingleLogFile(Util.ResolveAppPath(ExampleFiles.LogFile), false);
 					Close();
-					break;
-				case Cmd.show_pattern_sets:
-					m_main.ShowOptions(SettingsUI.ETab.Highlights, SettingsUI.ESpecial.ShowPatternSetsTip);
 					break;
 				case Cmd.show_column_delimiter_options:
 					m_main.ShowOptions(SettingsUI.ETab.General, SettingsUI.ESpecial.ShowColumnDelimiterTip);

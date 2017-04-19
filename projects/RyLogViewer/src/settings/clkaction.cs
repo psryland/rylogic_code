@@ -8,6 +8,7 @@ using System.Text;
 using System.Xml.Linq;
 using pr.common;
 using pr.extn;
+using pr.gui;
 
 namespace RyLogViewer
 {
@@ -22,20 +23,8 @@ namespace RyLogViewer
 	}
 
 	/// <summary>An action that occurs in response to a click on a row that matches a pattern</summary>
-	public class ClkAction :Pattern
+	public class ClkAction :Pattern, IFeatureTreeItem
 	{
-		/// <summary>The program to launch when activated</summary>
-		public string Executable { get; set; }
-
-		/// <summary>Arguments passed to the program to launch</summary>
-		public string Arguments { get; set; }
-
-		/// <summary>The working directory of the launched program</summary>
-		public string WorkingDirectory { get; set; }
-
-		/// <summary>Return a string description of the action</summary>
-		public string ActionString { get { return Executable + " " + Arguments; } }
-
 		public ClkAction()
 		{
 			Executable       = "";
@@ -54,6 +43,18 @@ namespace RyLogViewer
 			Arguments        = node.Element(XmlTag.Arguments ).As<string>();
 			WorkingDirectory = node.Element(XmlTag.WorkingDir).As<string>();
 		}
+
+		/// <summary>The program to launch when activated</summary>
+		public string Executable { get; set; }
+
+		/// <summary>Arguments passed to the program to launch</summary>
+		public string Arguments { get; set; }
+
+		/// <summary>The working directory of the launched program</summary>
+		public string WorkingDirectory { get; set; }
+
+		/// <summary>Return a string description of the action</summary>
+		public string ActionString { get { return Executable + " " + Arguments; } }
 
 		/// <summary>Export this ClkAction as xml</summary>
 		public override XElement ToXml(XElement node)
@@ -173,7 +174,7 @@ namespace RyLogViewer
 			return MemberwiseClone();
 		}
 
-		/// <summary>Value equality test</summary>
+		#region Equals
 		public override bool Equals(object obj)
 		{
 			var rhs = obj as ClkAction;
@@ -183,15 +184,27 @@ namespace RyLogViewer
 				&& Equals(Arguments       , rhs.Arguments       )
 				&& Equals(WorkingDirectory, rhs.WorkingDirectory);
 		}
-
-		/// <summary>Value hash code</summary>
 		public override int GetHashCode()
 		{
-			return
-				base.GetHashCode()^
-				Executable      .GetHashCode()^
-				Arguments       .GetHashCode()^
-				WorkingDirectory.GetHashCode();
+			var hash = base.GetHashCode();
+			return new { hash, Executable, Arguments, WorkingDirectory }.GetHashCode();
 		}
+		#endregion
+
+		#region IFeatureTreeItem
+		string IFeatureTreeItem.Name
+		{
+			get { return Expr; }
+		}
+		IEnumerable<IFeatureTreeItem> IFeatureTreeItem.Children
+		{
+			get { yield break; }
+		}
+		bool IFeatureTreeItem.Allowed
+		{
+			get;
+			set;
+		}
+		#endregion
 	}
 }
