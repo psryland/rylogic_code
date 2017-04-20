@@ -39,7 +39,7 @@
 		>
 
 		<!-- Package description -->
-		<Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+		<Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" InstallPrivileges="elevated" />
 		<MediaTemplate EmbedCab="yes"/>
 
 		<!-- Installer icon (must have an extension on the id)-->
@@ -80,15 +80,6 @@
 
 			<!-- Desktop shortcut -->
 			<Directory Id="DesktopFolder" SourceName="Desktop"/>
-
-			<!-- User Documents folder-->
-			<Directory Id="PersonalFolder">
-				<Directory Id="PersonalFolderVendorFolder" Name="$(var.Manufacturer)">
-					<Directory Id="PersonalFolderProductFolder" Name="$(var.ProjectName)">
-						<Directory Id="ExamplesDir" Name="examples"/>
-					</Directory>
-				</Directory>
-			</Directory>
 		</Directory>
 
 		<!-- This defines what is included in the MSI -->
@@ -101,22 +92,27 @@
 
 		<!-- The main executables -->
 		<ComponentGroup Id="executables">
-			<Component Id="Cmp_ProjName" Directory="INSTALLFOLDER" Guid="BF15AA61-1DAC-43F2-90EB-0E2EA9010565">
+			<Component Id="Cmp_ProjectName" Directory="INSTALLFOLDER" Guid="BF15AA61-1DAC-43F2-90EB-0E2EA9010565">
+				<!-- Create folders -->
 				<CreateFolder Directory="ProgramMenuVendorFolder"/>
 				<CreateFolder Directory="ProgramMenuProductFolder"/>
-				
-				<File Id="File_ProjName" KeyPath="yes" Source="$(var.TargetDir)\$(var.ProjectName).exe" Vital="yes">
+				<CreateFolder Directory="INSTALLFOLDER"/>
+
+				<!-- Clean up folders on uninstall -->
+				<RemoveFolder Id="Rm_INSTALLFOLDER"            Directory="INSTALLFOLDER" On="uninstall"/>
+				<RemoveFolder Id="Rm_ProgramMenuProductFolder" Directory="ProgramMenuProductFolder" On="uninstall" />
+				<RemoveFolder Id="Rm_ProgramMenuVendorFolder"  Directory="ProgramMenuVendorFolder" On="uninstall" />
+
+				<File Id="File_ProjectName" Source="$(var.TargetDir)\$(var.ProjectName).exe" Vital="yes" KeyPath="yes">
 					<Shortcut Id="Lnk_StartMenuProjName" Directory="ProgramMenuProductFolder" Name="$(var.ProductName)" Description="$(var.ProductDescription)" Icon="icon.ico" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
 					<Shortcut Id="Lnk_DesktopProjName" Directory="DesktopFolder" Name="$(var.ProductName)" Description="$(var.ProductDescription)" Icon="icon.ico" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
 				</File>
-				<File Id="File_Rylogic" Source="$(var.TargetDir)\Rylogic.dll" Vital="yes" />
-				<File Id="File_RyLogViewerExtensions" Source="$(var.TargetDir)\RyLogViewer.Extensions.dll" Vital="yes" />
-
-				<!-- Don't remove 'ManufacturerDir' because this may not be the only Rylogic product installed -->
-				<RemoveFolder Id="Rm_INSTALLFOLDER" Directory="INSTALLFOLDER" On="uninstall"/>
-				<RemoveFolder Id="Rm_ProgramMenuVendorFolder" Directory="ProgramMenuVendorFolder" On="uninstall" />
-				<RemoveFolder Id="Rm_ProgramMenuProductFolder" Directory="ProgramMenuProductFolder" On="uninstall" />
-				<RemoveFolder Id="Rm_DesktopFolder" Directory="DesktopFolder" On="uninstall" />
+			</Component>
+			<Component Id="Cmp_Rylogic" Directory="INSTALLFOLDER" Guid="*">
+				<File Id="File_Rylogic" Source="$(var.TargetDir)\Rylogic.dll" Vital="yes" KeyPath="yes"/>
+			</Component>
+			<Component Id="Cmp_RyLogViewerExtensions" Directory="INSTALLFOLDER" Guid="*">
+				<File Id="File_RyLogViewerExtensions" Source="$(var.TargetDir)\RyLogViewer.Extensions.dll" Vital="yes" KeyPath="yes" />
 			</Component>
 		</ComponentGroup>
 

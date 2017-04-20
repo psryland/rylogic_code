@@ -66,9 +66,9 @@ namespace RyLogViewer
 				{
 					Title = "Top Most & Monitor Mode",
 					Body  = "Under the tools menu there are the <i>Always On Top</i> and <i>Monitor Mode</i> options. " +
-					        "These options can be used to put RyLogViewer in a non-interactive, semi transparent, screen " +
-					        "overlay mode, handy if you want to have RyLogViewer visible and monitoring a data source as " +
-					        "you work with other applications."
+					        "These options can be used to put RyLogViewer into a non-interactive, semi transparent state, "+
+							"handy if you want to have RyLogViewer visible and monitoring a data source as you work with "+
+							"other applications."
 				}
 				,new Tip
 				{

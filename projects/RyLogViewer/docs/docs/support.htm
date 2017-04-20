@@ -1,18 +1,29 @@
-﻿<!DOCTYPE HTML>
+<!DOCTYPE HTML>
 <html xmlns="http://www.w3.org/1999/xhtml">
-	<!--#include file="..\inc\help_head.include.htm"-->
-	<body id="main_help">
-		<!--#include file="..\inc\help_title_panel.include.htm"-->
-		<!--#include file="..\inc\help_index_panel.include.htm"-->
-		<div id="content_panel">
-			<div class="title">F.A.Q.</div>
-			<div>
+<!--#include file="..\inc\help_head.include.htm"-->
+<body id="main_help">
+	<!--#include file="..\inc\help_title_panel.include.htm"-->
+	<!--#include file="..\inc\help_index_panel.include.htm"-->
+	<div id="content_panel">
+		<div class="title">Support</div>
+		<div class="content">
+	
+		</div>
+		<div id="licence_activation">
+			<div class="section_title">Licence</div>
+			<div class="content">
+
+			</div>
+		</div>
+		<div id="faq">
+			<div class="section_title">F.A.Q.</div>
+			<div class="content">
 				<div class="faq_question">RyLogViewer does not display modified files correctly</div>
 				<div class="faq_answer">
-					Check the state of <i>Additive File Changes</i> mode. (The green 'plus' button on the toolbar).<br/>
-					<img class="centred" src="img/tool_bar.png" alt="tool bar" />
+					Check the state of <i>Additive File Changes</i> mode. (The green 'plus' button on the tool bar).<br/>
+					<img class="centred" src="../img/tool_bar.png" alt="tool bar" />
 					When enabled, RyLogViewer assumes that data will only ever be added to the viewed file and so any
-					cached data it has will remain valid. This grealy improves performance for files or streamed data
+					cached data it has will remain valid. This greatly improves performance for files or streamed data
 					that are appended to only.<br/>
 					<br/>
 					However, if data in the file can be changed anywhere within the file, then <i>Additive File Changes</i>
@@ -36,5 +47,12 @@
 				</div>
 			</div>
 		</div>
-	</body>
+		<div id="version_history">
+			<div class="section_title">Version History</div>
+			<div class="content">
+				<!--#include file="..\inc\version_history.include.htm"-->
+			</div>
+		</div>
+	</div>
+</body>
 </html>

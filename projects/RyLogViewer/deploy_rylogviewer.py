@@ -37,7 +37,7 @@ def Deploy():
 
 	# Check versions
 	version = Tools.Extract(srcdir + "\\Version.cs", "AssemblyVersion\(\"(.*)\"\)").group(1)
-	vers_history = Tools.Extract(srcdir + "\\docs\\res\\version_history.htm", r"<span class='version_label'>Version (.*?)</span>").group(1)
+	vers_history = Tools.Extract(srcdir + "\\docs\\inc\\version_history.include.htm", r"<span class='version_label'>Version (.*?)</span>").group(1)
 	if vers_history != version:
 		raise Exception("Version History has not been updated")
 
@@ -64,7 +64,13 @@ def Deploy():
 		srcdir,
 		targetdir,
 		dstdir + "\\..",
-		["docs", "examples", "plugins"])
+		[
+			["docs"    ,"INSTALLFOLDER"],
+			["plugins" ,"INSTALLFOLDER"],
+			["examples","INSTALLFOLDER"],
+		])
+
+	#{"docs":"INSTALLFOLDER", "examples":"ExamplesDir"}
 
 	return
 

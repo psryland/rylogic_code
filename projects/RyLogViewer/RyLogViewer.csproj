@@ -246,7 +246,6 @@
     <Content Include="deploy_rylogviewer.py" />
     <None Include="docs\docs\command_line.htm" />
     <None Include="docs\docs\data_sources.htm" />
-    <None Include="docs\docs\faq.htm" />
     <None Include="docs\docs\installation.htm" />
     <None Include="docs\docs\main_window.htm" />
     <None Include="docs\docs\options_appearance.htm" />
@@ -259,10 +258,10 @@
     <None Include="docs\docs\welcome.htm" />
     <Content Include="docs\docs\export.htm" />
     <Content Include="docs\docs\ideas.htm" />
-    <Content Include="docs\docs\licence_activation.htm" />
     <Content Include="docs\docs\options_actions.htm" />
     <Content Include="docs\docs\plugins.htm" />
     <Content Include="docs\docs\ReadMe.txt" />
+    <Content Include="docs\docs\support.htm" />
     <Content Include="docs\docs\transform_editor.htm" />
     <Content Include="docs\help.htm" />
     <None Include="docs\inc\auto_refresh.include.htm" />
@@ -325,7 +324,7 @@
       <Generator>..\..\script\HtmlExpand.py</Generator>
       <CustomToolNamespace>..\..\res\</CustomToolNamespace>
     </PyScript>
-    <PyScript Include="docs\res\version_history.htm">
+    <PyScript Include="docs\inc\version_history.include.htm">
       <Generator>..\..\script\HtmlExpand.py</Generator>
       <CustomToolNamespace>..\..\res\</CustomToolNamespace>
     </PyScript>

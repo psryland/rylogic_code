@@ -198,9 +198,9 @@ namespace RyLogViewer
 
 	public static class ExampleFiles
 	{
-		public const string LogFile             = "examples\\logfile.txt";
-		public const string CodeLookup          = "examples\\code lookup.xml";
-		public const string HighlightPatternSet = "examples\\highlights pattern set.rylog_highlights";
+		public const string LogFile    = "examples\\logfile.txt";
+		public const string CodeLookup = "examples\\code lookup.xml";
+		public const string PatternSet = "examples\\pattern set.pattern_set";
 	}
 
 	public static class Misc

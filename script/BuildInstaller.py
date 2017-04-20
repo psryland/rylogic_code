@@ -79,13 +79,14 @@ def CreateComponentGroup(elem:xml.Element, id:str, directory:str, filepaths:[]):
 
 # Create an XML tree of a WiX fragment by enumerating the files within a directory
 # 'dir' is the directory to harvest
-def HarvestDirectory(dir:str):
+# 'install_dir' is the directory Id in the main installer
+def HarvestDirectory(dir:str, install_dir:str):
 
 	root = xml.Element("Wix", {"xmlns":"http://schemas.microsoft.com/wix/2006/wi"})
 	frag = xml.SubElement(root, "Fragment")
 
 	# The directory structure sub tree
-	dr = xml.SubElement(frag, "DirectoryRef", {"Id":"INSTALLFOLDER"})
+	dr = xml.SubElement(frag, "DirectoryRef", {"Id":install_dir})
 
 	# The component group sub tree
 	group_id = os.path.split(dir)[1].replace(' ','_')
@@ -114,9 +115,10 @@ def HarvestDirectory(dir:str):
 # 'projdir' is the root folder of the project
 # 'targetdir' is the staging directory from where files are taken for the installer
 # 'dstdir' is the output directory for the installer file
-# 'harvest_directories' are root level directories that
+# 'harvest' is a list of ['targetdir' relative directory, install directory] pairs.
+#   The install directory should be the Id of a <Directory/> in the 'installer'
 # Returns the installer full path
-def Build(projname:str, version:str, installer:str, projdir:str, targetdir:str, dstdir:str, harvest_directories:[]):
+def Build(projname:str, version:str, installer:str, projdir:str, targetdir:str, dstdir:str, harvest:[]):
 
 	# Check the installer file exists
 	if not os.path.exists(installer):
@@ -136,9 +138,9 @@ def Build(projname:str, version:str, installer:str, projdir:str, targetdir:str, 
 	wsx_files = [installer]
 
 	# Create .wsx fragment files for the harvest directories
-	for dir in harvest_directories:
-		root = HarvestDirectory(os.path.join(targetdir, dir))
-		#Tools.WriteXml(root, r"P:\dump\test.xml")
+	for dir,install_dir in harvest:
+		root = HarvestDirectory(os.path.join(targetdir, dir), install_dir)
+		Tools.WriteXml(root, "P:\\dump\\" + dir + ".wxs")
 
 		# Save to a temporary file
 		wxs_file = dir + ".wxs"
