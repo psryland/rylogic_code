@@ -714,77 +714,154 @@ namespace pr.common
 		}
 
 		/// <summary>Copy a file using a Shell file operation</summary>
-		public static bool ShellCopy(string src, string dst, EFileOpFlags flags = EFileOpFlags.None, string title = "Copying Files...")
+		public static bool ShellCopy(IntPtr hwnd, string src, string dst, EFileOpFlags flags = EFileOpFlags.None, string title = "Copying Files...")
 		{
-			return ShellCopy(new[] { src }, dst, flags, title);
+			return ShellCopy(hwnd, new[] { src }, dst, flags, title);
 		}
-		public static bool ShellCopy(IEnumerable<string> src, string dst, EFileOpFlags flags = EFileOpFlags.None, string title = "Copying Files...")
+		public static bool ShellCopy(IntPtr hwnd, IEnumerable<string> src, string dst, EFileOpFlags flags = EFileOpFlags.None, string title = "Copying Files...")
 		{
-			return ShellCopy(src, new[] { dst }, flags, title);
+			return ShellCopy(hwnd, src, new[] { dst }, flags, title);
 		}
-		public static bool ShellCopy(IEnumerable<string> src, IEnumerable<string> dst, EFileOpFlags flags = EFileOpFlags.None, string title = "Copying Files...")
+		public static bool ShellCopy(IntPtr hwnd, IEnumerable<string> src, IEnumerable<string> dst, EFileOpFlags flags = EFileOpFlags.None, string title = "Copying Files...")
 		{
+			// Get the list of files as an array
 			var src_list = src.ToArray();
 			var dst_list = dst.ToArray();
 
+			// Sanity check
 			if ((src_list.Length == 0 && dst_list.Length != 0) ||
 				(src_list.Length != 0 && dst_list.Length == 0) ||
 				(src_list.Length != 0 && dst_list.Length != 1 && dst_list.Length != src_list.Length))
 				throw new Exception("Illogical combination of source and destination file paths");
 
-			if (dst_list.Length > 1) flags |= EFileOpFlags.MultipleDstFiles;
+			// Add the multiple files flag
+			if (dst_list.Length > 1)
+				flags |= EFileOpFlags.MultipleDstFiles;
 
-			var shf = new Win32.SHFILEOPSTRUCT(); 
-			shf.wFunc = Win32.FO_COPY;
-			shf.fFlags = unchecked((short)flags);
-			shf.pFrom = string.Join("\0",src_list) + "\0\0";// ensure double null termination
-			shf.pTo   = string.Join("\0",dst_list) + "\0\0";// ensure double null termination
-			shf.lpszProgressTitle = title;
-			Win32.SHFileOperation(ref shf);
-			return !shf.fAnyOperationsAborted;
+			// Convert the filepaths to a byte buffer so that we can ensure double null termination.
+			// Interop as a string causes the double null not to be copied
+			var srcs = Encoding.Unicode.GetBytes(string.Join("\0",src_list) + "\0\0");// ensure double null termination
+			var dsts = Encoding.Unicode.GetBytes(string.Join("\0",dst_list) + "\0\0");// ensure double null termination
+			using (var spin = new PinnedObject<byte[]>(srcs, GCHandleType.Pinned))
+			using (var dpin = new PinnedObject<byte[]>(dsts, GCHandleType.Pinned))
+			{
+				if (Environment.Is64BitProcess)
+				{
+					var shf = new Win32.SHFILEOPSTRUCTW64();
+					shf.hwnd = hwnd;
+					shf.wFunc = Win32.FO_COPY;
+					shf.pFrom = spin.Pointer;
+					shf.pTo   = dpin.Pointer;
+					shf.fFlags = unchecked((ushort)flags);
+					shf.lpszProgressTitle = title;
+					Win32.SHFileOperationW(ref shf);
+					return shf.fAnyOperationsAborted == 0;
+				}
+				else
+				{
+					var shf = new Win32.SHFILEOPSTRUCTW32();
+					shf.hwnd = hwnd;
+					shf.wFunc = Win32.FO_COPY;
+					shf.pFrom = spin.Pointer;
+					shf.pTo   = dpin.Pointer;
+					shf.fFlags = unchecked((ushort)flags);
+					shf.lpszProgressTitle = title;
+					Win32.SHFileOperationW(ref shf);
+					return shf.fAnyOperationsAborted == 0;
+				}
+			}
 		}
 
 		/// <summary>Move a file using a Shell file operation</summary>
-		public static bool ShellMove(string src, string dst, EFileOpFlags flags = EFileOpFlags.None, string title = "Moving Files...")
+		public static bool ShellMove(IntPtr hwnd, string src, string dst, EFileOpFlags flags = EFileOpFlags.None, string title = "Moving Files...")
 		{
-			return ShellMove(new[] { src }, dst, flags, title);
+			return ShellMove(hwnd, new[] { src }, dst, flags, title);
 		}
-		public static bool ShellMove(IEnumerable<string> src, string dst, EFileOpFlags flags = EFileOpFlags.None, string title = "Moving Files...")
+		public static bool ShellMove(IntPtr hwnd, IEnumerable<string> src, string dst, EFileOpFlags flags = EFileOpFlags.None, string title = "Moving Files...")
 		{
-			return ShellMove(src, new[] { dst }, flags, title);
+			return ShellMove(hwnd, src, new[] { dst }, flags, title);
 		}
-		public static bool ShellMove(IEnumerable<string> src, IEnumerable<string> dst, EFileOpFlags flags = EFileOpFlags.None, string title = "Moving Files...")
+		public static bool ShellMove(IntPtr hwnd, IEnumerable<string> src, IEnumerable<string> dst, EFileOpFlags flags = EFileOpFlags.None, string title = "Moving Files...")
 		{
+			// Get the list of files as an array
 			var src_list = src.ToArray();
 			var dst_list = dst.ToArray();
 
+			// Sanity check
 			if ((src_list.Length == 0 && dst_list.Length != 0) ||
 				(src_list.Length != 0 && dst_list.Length == 0) ||
 				(src_list.Length != 0 && dst_list.Length != 1 && dst_list.Length != src_list.Length))
 				throw new Exception("Illogical combination of source and destination file paths");
 
-			if (dst_list.Length > 1) flags |= EFileOpFlags.MultipleDstFiles;
+			// Add the multiple files flag
+			if (dst_list.Length > 1)
+				flags |= EFileOpFlags.MultipleDstFiles;
 
-			var shf = new Win32.SHFILEOPSTRUCT(); 
-			shf.wFunc = Win32.FO_MOVE;
-			shf.fFlags = unchecked((short)flags);
-			shf.pFrom = string.Join("\0",src_list) + "\0\0";// ensure double null termination
-			shf.pTo   = string.Join("\0",dst_list) + "\0\0";// ensure double null termination;
-			shf.lpszProgressTitle = title;
-			Win32.SHFileOperation(ref shf);
-			return !shf.fAnyOperationsAborted;
+			// Convert the filepaths to a byte buffer so that we can ensure double null termination.
+			// Interop as a string causes the double null not to be copied
+			var srcs = Encoding.Unicode.GetBytes(string.Join("\0",src_list) + "\0\0");// ensure double null termination
+			var dsts = Encoding.Unicode.GetBytes(string.Join("\0",dst_list) + "\0\0");// ensure double null termination
+			using (var spin = new PinnedObject<byte[]>(srcs, GCHandleType.Pinned))
+			using (var dpin = new PinnedObject<byte[]>(dsts, GCHandleType.Pinned))
+			{
+				if (Environment.Is64BitProcess)
+				{
+					var shf = new Win32.SHFILEOPSTRUCTW64();
+					shf.hwnd = hwnd;
+					shf.wFunc = Win32.FO_MOVE;
+					shf.fFlags = unchecked((ushort)flags);
+					shf.pFrom = spin.Pointer;
+					shf.pTo   = dpin.Pointer;
+					shf.lpszProgressTitle = title;
+					Win32.SHFileOperationW(ref shf);
+					return shf.fAnyOperationsAborted == 0;
+				}
+				else
+				{
+					var shf = new Win32.SHFILEOPSTRUCTW32();
+					shf.hwnd = hwnd;
+					shf.wFunc = Win32.FO_MOVE;
+					shf.fFlags = unchecked((ushort)flags);
+					shf.pFrom = spin.Pointer;
+					shf.pTo   = dpin.Pointer;
+					shf.lpszProgressTitle = title;
+					Win32.SHFileOperationW(ref shf);
+					return shf.fAnyOperationsAborted == 0;
+				}
+			}
 		}
 
 		/// <summary>Delete a file to the recycle bin. 'flags' should be Win32.FOF_??? flags</summary>
-		public static bool ShellDelete(string filepath, EFileOpFlags flags = EFileOpFlags.AllowUndo, string title = "Deleting Files...")
+		public static bool ShellDelete(IntPtr hwnd, string filepath, EFileOpFlags flags = EFileOpFlags.AllowUndo, string title = "Deleting Files...")
 		{
-			var shf = new Win32.SHFILEOPSTRUCT(); 
-			shf.wFunc = Win32.FO_DELETE;
-			shf.fFlags = unchecked((short)flags);
-			shf.pFrom = filepath + "\0\0";// ensure double null termination
-			shf.lpszProgressTitle = title;
-			Win32.SHFileOperation(ref shf);
-			return !shf.fAnyOperationsAborted;
+			// Convert the filepath to a byte buffer so that we can ensure double null termination.
+			// Interop as a string causes the double null not to be copied
+			var srcs = Encoding.Unicode.GetBytes(filepath + "\0\0");
+			using (var spin = new PinnedObject<byte[]>(srcs, GCHandleType.Pinned))
+			{
+				if (Environment.Is64BitProcess)
+				{
+					var shf = new Win32.SHFILEOPSTRUCTW64(); 
+					shf.hwnd = hwnd;
+					shf.wFunc = Win32.FO_DELETE;
+					shf.fFlags = unchecked((ushort)flags);
+					shf.pFrom = spin.Pointer;
+					shf.lpszProgressTitle = title;
+					Win32.SHFileOperationW(ref shf);
+					return shf.fAnyOperationsAborted == 0;
+				}
+				else
+				{
+					var shf = new Win32.SHFILEOPSTRUCTW32();
+					shf.hwnd = hwnd;
+					shf.wFunc = Win32.FO_DELETE;
+					shf.fFlags = unchecked((ushort)flags);
+					shf.pFrom = spin.Pointer;
+					shf.lpszProgressTitle = title;
+					Win32.SHFileOperationW(ref shf);
+					return shf.fAnyOperationsAborted == 0;
+				}
+			}
 		}
 
 		/// <summary>

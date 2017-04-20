@@ -667,7 +667,7 @@ namespace pr.win32
 		[DllImport("shell32.dll", CharSet = CharSet.Unicode)] public static extern void DragAcceptFiles(IntPtr hwnd, bool accept);
 		[DllImport("shell32.dll", CharSet = CharSet.Unicode)] public static extern uint DragQueryFile(IntPtr hDrop, uint iFile, [Out] StringBuilder lpszFile, uint cch);
 		[DllImport("shell32.dll", CharSet = CharSet.Unicode)] private static extern int SHCreateItemFromParsingName([MarshalAs(UnmanagedType.LPWStr)] string pszPath, IntPtr pbc, ref Guid riid, [MarshalAs(UnmanagedType.Interface)] out object ppv);
-		[DllImport("shell32.dll", CharSet = CharSet.Auto)]    public static extern int SHFileOperation(ref SHFILEOPSTRUCT FileOp); 
-
+		[DllImport("shell32.dll", CharSet = CharSet.Unicode)] public static extern int SHFileOperationW(ref SHFILEOPSTRUCTW32 FileOp); 
+		[DllImport("shell32.dll", CharSet = CharSet.Unicode)] public static extern int SHFileOperationW(ref SHFILEOPSTRUCTW64 FileOp); 
 	}
 }

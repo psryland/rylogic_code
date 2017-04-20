@@ -277,17 +277,29 @@ namespace pr.win32
 			public IntPtr hbmColor;
 		}
 
-		[StructLayout(LayoutKind.Sequential, CharSet=CharSet.Auto, Pack=1)] 
-		public struct SHFILEOPSTRUCT 
+		[StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode, Pack=4)] 
+		public struct SHFILEOPSTRUCTW32
 		{
 				public IntPtr hwnd; 
-				[MarshalAs(UnmanagedType.U4)] public int wFunc; 
-				public string pFrom; 
-				public string pTo; 
-				public short fFlags; 
-				[MarshalAs(UnmanagedType.Bool)] public bool fAnyOperationsAborted; 
+				public UInt32 wFunc; 
+				public IntPtr pFrom; // Must be a double null terminated string, can't use strings because interop drops the double null
+				public IntPtr pTo;   // Must be a double null terminated string, can't use strings because interop drops the double null
+				public UInt16 fFlags; 
+				public Int32 fAnyOperationsAborted; 
 				public IntPtr hNameMappings; 
-				public string lpszProgressTitle; 
+				[MarshalAs(UnmanagedType.LPWStr)] public string lpszProgressTitle; 
+		}
+		[StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode, Pack=8)] 
+		public struct SHFILEOPSTRUCTW64
+		{
+				public IntPtr hwnd; 
+				public UInt32 wFunc; 
+				public IntPtr pFrom; // Must be a double null terminated string, can't use strings because interop drops the double null
+				public IntPtr pTo;   // Must be a double null terminated string, can't use strings because interop drops the double null
+				public UInt16 fFlags; 
+				public Int32 fAnyOperationsAborted; 
+				public IntPtr hNameMappings; 
+				[MarshalAs(UnmanagedType.LPWStr)] public string lpszProgressTitle; 
 		}
 
 		[StructLayout(LayoutKind.Sequential, CharSet=CharSet.Auto, Pack=1)] 

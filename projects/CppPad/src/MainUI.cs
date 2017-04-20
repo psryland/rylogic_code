@@ -315,7 +315,7 @@ namespace CppPad
 				{
 					var old = filepath;
 					var nue = Path_.CombinePath(Model.ProjectDirectory, Path_.FileName(filepath));
-					Path_.ShellCopy(old, nue);
+					Path_.ShellCopy(Handle, old, nue);
 					filepath = nue;
 				}
 
