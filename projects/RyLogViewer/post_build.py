@@ -30,17 +30,17 @@ try:
 	BuildDocs.BuildDocs(projdir + "\\docs\\docs"     , docsdir +"\\docs\\")
 	BuildDocs.BuildDocs(projdir + "\\docs\\help.htm" , docsdir +"\\")
 
-	Tools.Copy(projdir + "\\examples\\logfile.txt"                             , examplesdir + "\\")
-	Tools.Copy(projdir + "\\examples\\code lookup.xml"                         , examplesdir + "\\")
-	Tools.Copy(projdir + "\\examples\\highlights pattern set.rylog_highlights" , examplesdir + "\\")
+	Tools.Copy(projdir + "\\examples\\logfile.txt"                   , examplesdir + "\\")
+	Tools.Copy(projdir + "\\examples\\code lookup.xml"               , examplesdir + "\\")
+	Tools.Copy(projdir + "\\examples\\pattern set.pattern_set"       , examplesdir + "\\")
+	Tools.Copy(projdir + "\\examples\\ExamplePlugin\\*.cs"           , examplesdir + "\\ExamplePlugin\\")
+	Tools.Copy(projdir + "\\examples\\ExamplePlugin\\*.csproj"       , examplesdir + "\\ExamplePlugin\\")
+	Tools.Copy(projdir + "\\src\\plugins\\IMainUI.cs"                , examplesdir + "\\ReferenceSource\\")
+	Tools.Copy(projdir + "\\src\\plugins\\ITransformSubstitution.cs" , examplesdir + "\\ReferenceSource\\")
+	Tools.Copy(projdir + "\\src\\plugins\\ILogDataSource.cs"         , examplesdir + "\\ReferenceSource\\")
 
-	Tools.Copy(projdir + "\\plugins\\plugins.txt"                                       , pluginsdir + "\\")
-	Tools.Copy(projdir + "\\plugins\\IMainUI.cs"                                        , pluginsdir + "\\")
-	Tools.Copy(projdir + "\\plugins\\ITransformSubstitution.cs"                         , pluginsdir + "\\")
-	Tools.Copy(projdir + "\\plugins\\ILogDataSource.cs"                                 , pluginsdir + "\\")
-	Tools.Copy(projdir + "\\plugins\\ExamplePlugin\\*.cs"                               , pluginsdir + "\\ExamplePlugin\\")
-	Tools.Copy(projdir + "\\plugins\\ExamplePlugin\\*.csproj"                           , pluginsdir + "\\ExamplePlugin\\")
-	Tools.Copy(projdir + "\\plugins\\ExamplePlugin\\bin\\"+config+"\\ExamplePlugin.dll" , pluginsdir + "\\")
+	Tools.Copy(projdir + "\\plugins\\plugins.txt"                                        , pluginsdir + "\\")
+	Tools.Copy(projdir + "\\examples\\ExamplePlugin\\bin\\"+config+"\\ExamplePlugin.dll" , pluginsdir + "\\")
 
 	# Sign the binary
 	Tools.Exec([UserVars.csex, "-signfile", "-f", targetdir+"\\RyLogViewer.exe", "-pk", projdir+"\\src\\licence\\private_key.xml"])

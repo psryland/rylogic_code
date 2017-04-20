@@ -4,29 +4,6 @@ using System.IO;
 
 namespace RyLogViewer
 {
-	/// <summary>Interface for asynchronous access to a log data source</summary>
-	public interface ILogDataSource
-	{
-		// Notes:
-		//  These methods provide an interface the same as the BeginRead/EndRead
-		//  methods on System.IO.Stream and should be implemented with a behaviour
-		//  that mirrors that of System.IO.Stream.
-
-		/// <summary>
-		/// Begin an asynchronous read of the log data.
-		/// Buffer should be filled with the byte representation of the text from the
-		/// data source. (A byte[] is used since the text data can be of any of the
-		/// supported text encoding formats)
-		/// 'buffer' is where log data should be stored, beginning at 'offset',
-		/// and containing no more than 'count' bytes.
-		/// 'callback' should be called once the read is complete (unless EndRead is called first)
-		/// 'state' is a context object that is passed to the callback</summary>
-		IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state);
-
-		/// <summary>Completes an asynchronous read returning the number of bytes read</summary>
-		int EndRead(IAsyncResult async_result);
-	}
-
 	/// <summary>Interface to a component that manages reading a log data source</summary>
 	public interface ICustomLogDataSource :ILogDataSource ,IDisposable
 	{
@@ -66,6 +43,29 @@ namespace RyLogViewer
 		bool IsConnected { get; }
 	}
 
+	/// <summary>Interface for asynchronous access to a log data source</summary>
+	public interface ILogDataSource
+	{
+		// Notes:
+		//  These methods provide an interface the same as the BeginRead/EndRead
+		//  methods on System.IO.Stream and should be implemented with a behaviour
+		//  that mirrors that of System.IO.Stream.
+
+		/// <summary>
+		/// Begin an asynchronous read of the log data.
+		/// Buffer should be filled with the byte representation of the text from the
+		/// data source. (A byte[] is used since the text data can be of any of the
+		/// supported text encoding formats)
+		/// 'buffer' is where log data should be stored, beginning at 'offset',
+		/// and containing no more than 'count' bytes.
+		/// 'callback' should be called once the read is complete (unless EndRead is called first)
+		/// 'state' is a context object that is passed to the callback</summary>
+		IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state);
+
+		/// <summary>Completes an asynchronous read returning the number of bytes read</summary>
+		int EndRead(IAsyncResult async_result);
+	}
+
 	/// <summary>Interface for a line of log data</summary>
 	public interface ILogDataRow
 	{
@@ -89,17 +89,17 @@ namespace RyLogViewer
 	/// <summary>Data provided when configuring a custom log data source</summary>
 	public class LogDataSourceConfig
 	{
-		/// <summary>The form for the main window (to use as the parent for any dialogs)</summary>
-		public IMainUI MainUI { get; private set; }
-
-		/// <summary>The history of filepaths used as output files</summary>
-		public IEnumerable<string> OutputFilepathHistory { get; private set; }
-
 		public LogDataSourceConfig(IMainUI main_ui, IEnumerable<string> output_filepath_history)
 		{
 			MainUI = main_ui;
 			OutputFilepathHistory = output_filepath_history;
 		}
+
+		/// <summary>The form for the main window (to use as the parent for any dialogs)</summary>
+		public IMainUI MainUI { get; private set; }
+
+		/// <summary>The history of filepaths used as output files</summary>
+		public IEnumerable<string> OutputFilepathHistory { get; private set; }
 	}
 
 	/// <summary>Data returned after configuring a custom log data source</summary>
@@ -130,12 +130,11 @@ namespace RyLogViewer
 		}
 	}
 
-	/// <summary>Wrapper for Stream to implement the ILogDataSource interface</summary>
+	/// <summary>Wrapper for Stream that implements the ILogDataSource interface</summary>
 	public class StreamSource :ILogDataSource
 	{
-		// This is a helper class that wraps a stream and implements
-		// the ILogDataSource interface. Note, this object does not
-		// own the stream and therefore is not IDisposable.
+		// This is a helper class that wraps a stream and implements the ILogDataSource interface.
+		// Note, this object does not own the stream and therefore is not IDisposable.
 		private readonly Stream m_stream;
 		public StreamSource(Stream stream)
 		{

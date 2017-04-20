@@ -124,41 +124,41 @@ namespace RyLogViewer.ExamplePlugin
 			if (m_active_read != null) throw new InvalidOperationException("Only one read request at a time");
 			m_active_read = new TaskCompletionSource<int>(state);
 
-			// A cancelation token so this object can be disposed at any point
+			// A cancellation token so this object can be disposed at any point
 			if (m_cancel != null) { m_cancel.Dispose(); m_cancel = null; }
 			m_cancel = new CancellationTokenSource();
 
 			// Start the read task
 			var dispatcher = Dispatcher.CurrentDispatcher;
 			ThreadPool.QueueUserWorkItem(s =>
+			{
+				try
 				{
-					try
+					int read = 0;
+					while (read != count)
 					{
-						int read = 0;
-						while (read != count)
-						{
-							var b = ReadByte();
-							if (b == -1) break;
-							buffer[offset++] = (byte)b;
-							++read;
-							m_cancel.Token.ThrowIfCancellationRequested();
-						}
-						m_active_read.SetResult(read);
+						var b = ReadByte();
+						if (b == -1) break;
+						buffer[offset++] = (byte)b;
+						++read;
+						m_cancel.Token.ThrowIfCancellationRequested();
 					}
-					catch (OperationCanceledException)
-					{
-						m_active_read.SetCanceled();
-					}
-					catch (Exception ex)
-					{
-						m_active_read.SetException(ex);
-					}
-					finally
-					{
-						// Once the task is complete, call the callback
-						dispatcher.BeginInvoke(callback, m_active_read.Task);
-					}
-				});
+					m_active_read.SetResult(read);
+				}
+				catch (OperationCanceledException)
+				{
+					m_active_read.SetCanceled();
+				}
+				catch (Exception ex)
+				{
+					m_active_read.SetException(ex);
+				}
+				finally
+				{
+					// Once the task is complete, call the callback
+					dispatcher.BeginInvoke(callback, m_active_read.Task);
+				}
+			});
 
 			return m_active_read.Task;
 		}

@@ -80,6 +80,15 @@
 
 			<!-- Desktop shortcut -->
 			<Directory Id="DesktopFolder" SourceName="Desktop"/>
+
+			<!-- User Documents folder-->
+			<Directory Id="PersonalFolder">
+				<Directory Id="PersonalFolderVendorFolder" Name="$(var.Manufacturer)">
+					<Directory Id="PersonalFolderProductFolder" Name="$(var.ProjectName)">
+						<Directory Id="ExamplesDir" Name="examples"/>
+					</Directory>
+				</Directory>
+			</Directory>
 		</Directory>
 
 		<!-- This defines what is included in the MSI -->

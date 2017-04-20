@@ -14,7 +14,7 @@ import BuildInstaller
 def Deploy():
 	print(
 		"*************************************************************************\n"
-		"RylogViewer Deploy\n"
+		"RyLogViewer Deploy\n"
 		"Copyright (C) Rylogic Limited 2017\n"
 		"*************************************************************************")
 
@@ -36,7 +36,7 @@ def Deploy():
 	os.makedirs(dstdir)
 
 	# Check versions
-	version = Tools.Extract(srcdir + "\\Properties\\AssemblyInfo.cs", "AssemblyVersion\(\"(.*)\"\)").group(1)
+	version = Tools.Extract(srcdir + "\\Version.cs", "AssemblyVersion\(\"(.*)\"\)").group(1)
 	vers_history = Tools.Extract(srcdir + "\\docs\\res\\version_history.htm", r"<span class='version_label'>Version (.*?)</span>").group(1)
 	if vers_history != version:
 		raise Exception("Version History has not been updated")
@@ -47,13 +47,13 @@ def Deploy():
 
 	# Copy build products to the deploy dir
 	print("Copying files to " + dstdir + "...")
-	Tools.Copy(targetdir + "\\RylogViewer.exe"            , dstdir + "\\")
-	Tools.Copy(targetdir + "\\RylogViewer.exe.config"     , dstdir + "\\")
-	Tools.Copy(targetdir + "\\Rylogic.dll"                , dstdir + "\\")
-	Tools.Copy(targetdir + "\\RylogViewer.Extensions.dll" , dstdir + "\\")
+	Tools.Copy(targetdir + "\\RyLogViewer.exe"            , dstdir + "\\")
+	Tools.Copy(targetdir + "\\RyLogViewer.exe.config"     , dstdir + "\\")
+	Tools.Copy(targetdir + "\\RyLogic.dll"                , dstdir + "\\")
+	Tools.Copy(targetdir + "\\RyLogViewer.Extensions.dll" , dstdir + "\\")
 	Tools.Copy(targetdir + "\\docs"                       , dstdir + "\\docs\\")
-	Tools.Copy(targetdir + "\\examples"                   , dstdir + "\\examples\\")
 	Tools.Copy(targetdir + "\\plugins"                    , dstdir + "\\plugins\\")
+	Tools.Copy(targetdir + "\\examples"                   , dstdir + "\\examples\\")
 
 	# Build the installer
 	print("Building installer...")

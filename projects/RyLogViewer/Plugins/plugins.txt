@@ -22,10 +22,10 @@ If all was successful, your custom data source should appear as menu item under
 the File->Data Sources menu. Inspect the ExamplePlugin project as a working example.
 
 Notes:
-  The C# files in the plugins directory:
+  The C# files in the ".\examples\ReferenceSource" directory:
      ILogDataSource.cs
      IMainUI.cs
      ITransformSubstitution.cs
-  are there for reference only, do not include them in your plugin project.
-  They are built into the RyLogViewer.Extensions.dll and are available via that reference.
-  They are intended as supplemental documentation to aid plugin creation.
+  are there for reference only, do not include them in your plugin project. They are
+  built into the RyLogViewer.Extensions.dll and are available via that reference.
+  They are intended as supplemental documentation to aid in plugin creation.

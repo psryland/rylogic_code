@@ -565,9 +565,10 @@ namespace RyLogViewer
 			// Prompt for a file if not given
 			if (!filepath.HasValue())
 			{
-				using (var dlg = new OpenFileDialog { Title = "Load Pattern Set", Filter = Constants.PatternSetFilter })
+				using (var dlg = new OpenFileDialog { Title = "Load Pattern Set", Filter = Constants.PatternSetFilter, InitialDirectory = Settings.PatternSetDirectory })
 				{
 					if (dlg.ShowDialog(this) != DialogResult.OK) return;
+					Settings.PatternSetDirectory = Path_.Directory(dlg.FileName);
 					filepath = dlg.FileName;
 				}
 			}
@@ -589,9 +590,10 @@ namespace RyLogViewer
 			// Prompt for a file if not given
 			if (!filepath.HasValue())
 			{
-				using (var dlg = new SaveFileDialog { Title = "Save Pattern Set", Filter = Constants.PatternSetFilter })
+				using (var dlg = new SaveFileDialog { Title = "Save Pattern Set", Filter = Constants.PatternSetFilter, InitialDirectory = Settings.PatternSetDirectory })
 				{
 					if (dlg.ShowDialog(this) != DialogResult.OK) return;
+					Settings.PatternSetDirectory = Path_.Directory(dlg.FileName);
 					filepath = dlg.FileName;
 				}
 			}
@@ -613,9 +615,10 @@ namespace RyLogViewer
 			// Prompt for a file if not given
 			if (!filepath.HasValue())
 			{
-				using (var dlg = new OpenFileDialog { Title = "Import Patterns from Set", Filter = Constants.PatternSetFilter })
+				using (var dlg = new OpenFileDialog { Title = "Import Patterns from Set", Filter = Constants.PatternSetFilter, InitialDirectory = Settings.PatternSetDirectory })
 				{
 					if (dlg.ShowDialog(this) != DialogResult.OK) return;
+					Settings.PatternSetDirectory = Path_.Directory(dlg.FileName);
 					filepath = dlg.FileName;
 				}
 			}
@@ -702,10 +705,10 @@ namespace RyLogViewer
 			m_watch_timer.Enabled = FileOpen && Settings.WatchEnabled;
 
 			BuildLineIndex(m_filepos, true, ()=>
-				{
-					SelectedRowIndex = Settings.OpenAtEnd ? m_grid.RowCount - 1 : 0;
-					SetGridColumnSizes(true);
-				});
+			{
+				SelectedRowIndex = Settings.OpenAtEnd ? m_grid.RowCount - 1 : 0;
+				SetGridColumnSizes(true);
+			});
 		}
 
 		/// <summary>Open a single log file, prompting if 'filepath' is null</summary>
@@ -722,7 +725,7 @@ namespace RyLogViewer
 				}
 
 				// Check the filepath is valid
-				if (!ValidateFilepaths(Enumerable.Repeat(filepath, 1)))
+				if (!ValidateFilepaths(new[] { filepath }))
 					return;
 
 				// Add the file to the recent files list

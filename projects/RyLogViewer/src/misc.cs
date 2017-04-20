@@ -183,16 +183,17 @@ namespace RyLogViewer
 
 	public static class CmdLineOption
 	{
-		public const string ShowHelp     = "-h";
-		public const string ShowHelp2    = "/?";
-		public const string SettingsPath = "-s";
-		public const string LogFilePath  = "-l";
-		public const string Portable     = "-p";
-		public const string PatternSet   = "-ps";
-		public const string Export       = "-e";
+		// Order by longest option first
 		public const string RDelim       = "-rdelim";
 		public const string CDelim       = "-cdelim";
 		public const string NoGUI        = "-nogui";
+		public const string PatternSet   = "-ps";
+		public const string SettingsPath = "-s";
+		public const string LogFilePath  = "-l";
+		public const string Export       = "-e";
+		public const string Portable     = "-p";
+		public const string ShowHelp     = "-h";
+		public const string ShowHelp2    = "/?";
 	}
 
 	public static class ExampleFiles

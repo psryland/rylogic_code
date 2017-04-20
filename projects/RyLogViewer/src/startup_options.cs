@@ -21,11 +21,12 @@ namespace RyLogViewer
 			// Check the command line options
 			for (int i = 0, iend = args.Length; i != iend; ++i)
 			{
-				string arg = args[i].ToLowerInvariant();
+				var arg = args[i].ToLowerInvariant();
 
+				// No option character implies the file to load
 				if (arg[0] != '-' && arg[0] != '/')
 				{
-					if (FileToLoad != null) throw new ArgumentException("File to load already given");
+					if (FileToLoad != null) throw new ArgumentException("Command line should specify a single file path only. If the file path contains white space, remember to use quotes. e.g. RyLogViewer \"my file.txt\"");
 					FileToLoad = arg;
 					continue;
 				}
@@ -37,11 +38,11 @@ namespace RyLogViewer
 				if      (IsOption(CmdLineOption.RDelim       )) { RowDelim = arg.Substring(CmdLineOption.RDelim.Length); }
 				else if (IsOption(CmdLineOption.CDelim       )) { ColDelim = arg.Substring(CmdLineOption.CDelim.Length); }
 				else if (IsOption(CmdLineOption.NoGUI        )) { NoGUI = true; }
-				else if (IsOption(CmdLineOption.Portable     )) { PortableMode = true; }
 				else if (IsOption(CmdLineOption.PatternSet   )) { PatternSetFilepath = arg.Substring(CmdLineOption.PatternSet.Length); }
 				else if (IsOption(CmdLineOption.SettingsPath )) { SettingsPath = arg.Substring(CmdLineOption.SettingsPath.Length); }
 				else if (IsOption(CmdLineOption.LogFilePath  )) { LogFilePath = arg.Substring(CmdLineOption.LogFilePath.Length); }
 				else if (IsOption(CmdLineOption.Export       )) { ExportPath = arg.Substring(CmdLineOption.Export.Length); }
+				else if (IsOption(CmdLineOption.Portable     )) { PortableMode = true; }
 				else if (IsOption(CmdLineOption.ShowHelp     )) { ShowHelp = true; }
 				else if (IsOption(CmdLineOption.ShowHelp2    )) { ShowHelp = true; }
 				else throw new ArgumentException("Unknown command line option '"+arg+"'.");
@@ -53,13 +54,13 @@ namespace RyLogViewer
 			// If we're in portable mode, check that we have write access to the local directory
 			if (PortableMode)
 			{
-				if (!Directory.Exists(AppDataDir) || (new DirectoryInfo(AppDataDir).Attributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly)
+				if (!Path_.DirExists(AppDataDir) || (new DirectoryInfo(AppDataDir).Attributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly)
 					throw new IOException("Unable to run in portable mode as the directory ('"+AppDataDir+"') is readonly.");
 			}
 			// If not in portable mode, check the AppData directory exists (or can be created)
 			else
 			{
-				if (!Directory.Exists(AppDataDir))
+				if (!Path_.DirExists(AppDataDir))
 					Directory.CreateDirectory(AppDataDir);
 			}
 

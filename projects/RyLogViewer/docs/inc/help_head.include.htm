@@ -6,18 +6,28 @@
 	<!--#include file="./help_css.include.htm"-->
 	<script>
 		function HighlightListItem(item_id) {
+			// Get the list items
+			var elems = document.getElementsByTagName('li');
+
+			// Remove all highlights
+			for (var i = 0; i != elems.length; ++i) {
+				elems[i].className = elems[i].className.replace('highlight', '').trim();
+			}
+
+			// Get the item id from the location
 			if (item_id == null) {
 				if (window.location.hash == null || window.location.hash == "") return;
 				item_id = window.location.hash.substr(1);
 			}
 
-			var divs = document.getElementsByTagName('div');
-			for (var i = 0; i != divs.length; ++i) {
-				if (divs[i].id == item_id)
-					divs[i].className = divs[i].className + ' highlight';
-				else
-					divs[i].className = divs[i].className.replace(' highlight', '');
+			// Highlight the hash item
+			for (var i = 0; i != elems.length; ++i) {
+				if (elems[i].id == item_id) {
+					elems[i].className = ('highlight ' + elems[i].className).trim();
+				}
 			}
 		}
+		window.onload = function () { HighlightListItem(null) }
+		window.onhashchange = function () { HighlightListItem(null) }
 	</script>
 </head>

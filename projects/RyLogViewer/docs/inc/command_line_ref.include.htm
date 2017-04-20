@@ -1,9 +1,9 @@
 ﻿<div>
-	<div class="heading">Syntax:</div>
+	<div class="section_title">Syntax:</div>
 	<div class="mono" style="padding-left: 30px">RyLogViewer [filepath] [options]</div>
 	<br />
 	<div class="content">
-		Following are the valid command line options for RylogViewer. These options may
+		Following are the valid command line options for RyLogViewer. These options may
 		be given in any order. Note that there is no whitespace between options and their
 		associated parameter.
 	</div>
@@ -13,7 +13,8 @@
 			<td>&quot;file path&quot;</td>
 			<td>
 				<div class="content">
-					The path to a file to load on startup.<br /><br />
+					The path to the file to load on startup.<br />
+					<br />
 					Example:
 					<div class="example">
 						RyLogViewer "mylogfile.log"
@@ -25,15 +26,13 @@
 			<td>-p</td>
 			<td>
 				<div class="content">
-					Run the application in portable mode.<br /><br />
+					Run the application in portable mode.<br />
+					<br />
 					In this mode the application can run from any location that allows file write
-					access, e.g. a USB drive. Settings are written to the same directory that the
-					application is running in. If a file with the name 'portable' is found in the
-					same directory as the executable then portable mode will be enabled by default.
-					Note that portable mode is equivalent to:
-					<div class="example">
-						RyLogViewer &#8209;s".\settings.xml"
-					</div><br />
+					access, e.g. a USB drive. Settings are written to the directory that contains
+					the application. If a file with the name 'portable' is found in the same directory
+					as the executable then portable mode will be enabled by default.<br />
+					<br />
 					Example:
 					<div class="example">
 						RyLogViewer &#8209;p
@@ -45,9 +44,11 @@
 			<td>&#8209;s"settings file path"</td>
 			<td>
 				<div class="content">
-					Loads the log viewer using the specified settings file path.<br /><br />
+					Loads RyLogViewer using the specified settings file path.<br />
+					<br />
 					This option is useful for running multiple instances of the application
-					without overwriting the settings of other instances.<br /><br />
+					without overwriting the settings of other instances.<br />
+					<br />
 					Example:
 					<div class="example">
 						RyLogViewer &#8209;s"C:\temp\mysettings.xml"
@@ -60,7 +61,7 @@
 			<td>
 				<div class="content">
 					Export a file using the current filter and transform settings.<br /><br />
-					This option instructs the log viewer to export a file to "export file path"
+					This option instructs RyLogViewer to export a file to "export file path"
 					using the current filter and transform settings. "file path" must also be
 					given on the command line. It is often useful to use the '&#8209;fx' and '&#8209;tx'
 					options in addition to this option. The application main window is not

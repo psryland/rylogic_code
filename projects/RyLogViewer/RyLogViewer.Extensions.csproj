@@ -52,33 +52,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="plugins\ExamplePlugin\ExampleDataSource.cs">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="plugins\ExamplePlugin\ExampleSubstitution.cs">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <Compile Include="plugins\ILogDataSource.cs">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Compile>
-    <Compile Include="plugins\IMainUI.cs">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Compile>
-    <Compile Include="plugins\ITransformSubstitution.cs">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Compile>
-    <Compile Include="plugins\AssemblyInfo.cs" />
+    <Compile Include="src\plugins\AssemblyInfo.cs" />
+    <Compile Include="src\plugins\ILogDataSource.cs" />
+    <Compile Include="src\plugins\IMainUI.cs" />
+    <Compile Include="src\plugins\ITransformSubstitution.cs" />
+    <Compile Include="Version.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Rylogic Limited Key File.pfx" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="plugins\ExamplePlugin\RyLogViewer.ExamplePlugin.csproj">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="plugins\plugins.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />

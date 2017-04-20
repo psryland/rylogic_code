@@ -53,7 +53,7 @@ namespace RyLogViewer
 			if (StartupOptions.ShowHelp)
 			{
 				HelpUI.ShowDialog(null, HelpUI.EContent.Html, Resources.AppTitle,  Resources.command_line_ref);
-				Environment.ExitCode = 1;
+				Environment.ExitCode = 0;
 				return;
 			}
 
@@ -71,33 +71,29 @@ namespace RyLogViewer
 		/// <summary>Handle unhandled exceptions</summary>
 		private static void HandleTheUnhandled(object sender, UnhandledExceptionEventArgs args)
 		{
-			var res = MsgBox.Show(null, string.Format(
-				"{0} has shutdown with the following error.\r\n" +
-				"Error: {1}\r\n" +
-				"\r\n" +
-				"Deleting the applications settings file, '{2}', might prevent this problem.\r\n" +
-				"\r\n" +
-				"Generating a report and sending it to {3} will aid in the resolution of this issue. The generated report is a plain text file that you can review before sending.\r\n" +
-				"\r\n" +
-				"Would you like to generate the report?\r\n" +
-				"\r\n" +
-				"Alternatively, please contact  {4}  with information about this error so that it can be fixed.\r\n" +
-				"\r\n" +
-				"Apologies for any inconvenience caused.\r\n"
-				,Application.ProductName
-				,args.ExceptionObject.GetType().Name
-				,StartupOptions != null ? StartupOptions.SettingsPath : Path.GetFileName(Settings.Default.Filepath)
-				,Util.GetAssemblyAttribute<AssemblyCompanyAttribute>().Company
-				,Constants.SupportEmail)
+			var res = MsgBox.Show(null, Str.Build(
+				Application.ProductName, " has shutdown with the following error.\r\n",
+				"Error: ", args.ExceptionObject.GetType().Name, "\r\n",
+				"\r\n",
+				"Deleting the applications settings file, '", StartupOptions?.SettingsPath ?? Path_.FileName(Settings.Default.Filepath), "', might prevent this problem.\r\n",
+				"\r\n",
+				"Generating a report and sending it to ", Util.GetAssemblyAttribute<AssemblyCompanyAttribute>().Company, " will aid in the resolution of this issue. ",
+				"The generated report is a plain text file that you can review before sending.\r\n",
+				"\r\n",
+				"Would you like to generate the report?\r\n",
+				"\r\n",
+				"Alternatively, please contact ", Constants.SupportEmail, " with information about this error so that it can be fixed.\r\n",
+				"\r\n",
+				"Apologies for any inconvenience caused.\r\n")
 				,"Unexpected Termination"
 				,MessageBoxButtons.YesNo
 				,MessageBoxIcon.Error);
 			if (res == DialogResult.Yes)
 			{
-				var dg = new SaveFileDialog{Title = "Save Crash Report", FileName = Application.ProductName+"CrashReport", Filter = "Crash Report Files (*.txt)|*.txt|All files (*.*)|*.*", DefaultExt = "txt", CheckPathExists = true};
+				var dg = new SaveFileDialog{Title = "Save Crash Report", FileName = Application.ProductName+"CrashReport", Filter = Util.FileDialogFilter("Crash Report Files","*.txt", "All files","*.*"), DefaultExt = "txt", CheckPathExists = true};
 				if (dg.ShowDialog() == DialogResult.OK)
 				{
-					string settings = "Settings filepath unknown";
+					var settings = "Settings filepath unknown";
 					if (StartupOptions != null && Path_.FileExists(StartupOptions.SettingsPath))
 						settings = File.ReadAllText(StartupOptions.SettingsPath);
 
@@ -112,10 +108,8 @@ namespace RyLogViewer
 						.AppendLine()
 						.AppendLine("[General]")
 						.AppendLine("Application Version: {0}".Fmt(Util.AssemblyVersion()))
-						.AppendLine(Environment.OSVersion.VersionString);
-					if (StartupOptions != null) sb
-						.AppendLine(StartupOptions.Dump());
-					sb
+						.AppendLine(Environment.OSVersion.VersionString)
+						.AppendLine(StartupOptions?.Dump() ?? string.Empty)
 						.AppendLine()
 						.AppendLine("[Additional Comments]")
 						.AppendLine("Any additional information about what you were doing when this crash occurred would be extremely helpful and appreciated");

@@ -96,7 +96,7 @@
     <Compile Include="src\controls\output_filepath_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="src\control_subclasses.cs">
+    <Compile Include="src\controls\control_subclasses.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="src\cripple_ui.cs">
@@ -242,6 +242,7 @@
     <Compile Include="src\settings\transform_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Include="Version.cs" />
     <Content Include="deploy_rylogviewer.py" />
     <None Include="docs\docs\command_line.htm" />
     <None Include="docs\docs\data_sources.htm" />
@@ -270,20 +271,15 @@
       <CustomToolNamespace>..\..\res\</CustomToolNamespace>
     </PyScript>
     <Content Include="docs\inc\command_line_ref.include.htm" />
+    <Content Include="docs\inc\css.include.htm" />
     <Content Include="docs\inc\help_css.include.htm" />
     <Content Include="docs\res\ReadMe.txt" />
-    <Content Include="examples\code lookup.xml" />
-    <Content Include="examples\logfile.txt" />
     <Content Include="post_build.py" />
     <Content Include="project_howto.txt" />
     <None Include="app.config" />
-    <None Include="examples\highlights pattern set.rylog_highlights" />
     <None Include="installer\installer.wxs" />
     <None Include="docs\inc\meta.include.htm" />
     <Content Include="gen_licence.py" />
-    <Content Include="plugins\plugins.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
     <None Include="docs\inc\cripple_css.include.htm" />
     <None Include="docs\inc\help_title_panel.include.htm" />
     <None Include="docs\inc\help_index_panel.include.htm">
