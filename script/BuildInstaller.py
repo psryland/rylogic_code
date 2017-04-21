@@ -140,7 +140,7 @@ def Build(projname:str, version:str, installer:str, projdir:str, targetdir:str, 
 	# Create .wsx fragment files for the harvest directories
 	for dir,install_dir in harvest:
 		root = HarvestDirectory(os.path.join(targetdir, dir), install_dir)
-		Tools.WriteXml(root, "P:\\dump\\" + dir + ".wxs")
+		#Tools.WriteXml(root, "P:\\dump\\" + dir + ".wxs")
 
 		# Save to a temporary file
 		wxs_file = dir + ".wxs"

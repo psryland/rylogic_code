@@ -1,7 +1,6 @@
-﻿using System.ComponentModel;
-using System.Diagnostics;
-using System.Windows.Forms;
+﻿using System;
 using pr.common;
+using pr.container;
 using pr.extn;
 using pr.maths;
 using pr.util;
@@ -11,6 +10,12 @@ namespace RyLogViewer
 	/// <summary>A saved location within the file</summary>
 	public class Bookmark
 	{
+		public Bookmark(Range range, string text)
+		{
+			Range = range;
+			Text  = text;
+		}
+
 		/// <summary>The byte range of the bookmarked line</summary>
 		public Range Range { get; set; }
 
@@ -18,27 +23,66 @@ namespace RyLogViewer
 		public string Text { get; set; }
 
 		/// <summary>The begin address of the bookmarked line</summary>
-		public long Position { get { return Range.Beg; } }
-
-		public Bookmark(Range range, string text)
+		public long Position
 		{
-			Range = range;
-			Text  = text;
+			get { return Range.Beg; }
 		}
 	}
 
 	public partial class Main
 	{
-		private readonly BindingList<Bookmark> m_bookmarks;
-		private readonly BindingSource         m_bs_bookmarks;
-		private readonly EventBatcher          m_batch_refresh_bkmks;
+		/// <summary>The bookmarks dialog</summary>
+		private BookmarksUI BookmarksUI
+		{
+			get { return m_bookmark_ui; }
+			set
+			{
+				if (m_bookmark_ui == value) return;
+				if (m_bookmark_ui != null)
+				{
+					Util.Dispose(ref m_batch_refresh_bkmks);
+					Util.Dispose(ref m_bookmark_ui);
+				}
+				m_bookmark_ui = value;
+				if (m_bookmark_ui != null)
+				{
+					m_batch_refresh_bkmks = new EventBatcher(TimeSpan.FromMilliseconds(100));
+				}
+			}
+		}
+		private BookmarksUI m_bookmark_ui;
+		private EventBatcher m_batch_refresh_bkmks;
+
+		/// <summary>The collection of bookmarks</summary>
+		private BindingSource<Bookmark> Bookmarks
+		{
+			get { return m_bookmarks; }
+			set
+			{
+				if (m_bookmarks == value) return;
+				if (m_bookmarks != null)
+				{
+					m_bookmarks.PositionChanged -= HandleBookmarkPositionChanged;
+				}
+				m_bookmarks = value;
+				if (m_bookmarks != null)
+				{
+					m_bookmarks.PositionChanged += HandleBookmarkPositionChanged;
+				}
+			}
+		}
+		private BindingSource<Bookmark> m_bookmarks;
+		private void HandleBookmarkPositionChanged(object sender, PositionChgEventArgs e)
+		{
+			SelectBookmark(Bookmarks.Position);
+		}
 
 		/// <summary>Set up the app's bookmark support</summary>
 		private void SetupBookmarks()
 		{
-			m_bs_bookmarks.PositionChanged += (s,a) => SelectBookmark(m_bs_bookmarks.Position);
-			m_bookmarks_ui.NextBookmark    += NextBookmark;
-			m_bookmarks_ui.PrevBookmark    += PrevBookmark;
+			
+			BookmarksUI.NextBookmark    += NextBookmark;
+			BookmarksUI.PrevBookmark    += PrevBookmark;
 			m_batch_refresh_bkmks.Action   += RefreshBookmarks;
 		}
 
@@ -46,7 +90,7 @@ namespace RyLogViewer
 		private void ShowBookmarksDialog()
 		{
 			// Display the bookmarks window
-			m_bookmarks_ui.Show();
+			BookmarksUI.Show();
 		}
 
 		/// <summary>Add or remove a bookmark at 'row_index'</summary>
@@ -65,16 +109,16 @@ namespace RyLogViewer
 		private void SetBookmark(Range line, Bit.EState bookmarked)
 		{
 			// Look for the bookmark
-			var idx = m_bookmarks.BinarySearch(b => b.Position.CompareTo(line.Beg));
+			var idx = Bookmarks.BinarySearch(b => b.Position.CompareTo(line.Beg));
 			if (idx >= 0 && bookmarked != Bit.EState.Set)
 			{
 				// Bookmark was found, remove it
-				m_bookmarks.RemoveAt(idx);
+				Bookmarks.RemoveAt(idx);
 			}
 			else if (idx < 0 && bookmarked != Bit.EState.Clear)
 			{
 				// Bookmark not found, insert it
-				m_bookmarks.Insert(~idx, new Bookmark(line, ReadLine(line).RowText));
+				Bookmarks.Insert(~idx, new Bookmark(line, ReadLine(line).RowText));
 			}
 			m_batch_refresh_bkmks.Signal();
 		}
@@ -82,52 +126,52 @@ namespace RyLogViewer
 		/// <summary>Scroll to the next bookmark after the current selected row</summary>
 		private void NextBookmark()
 		{
-			if (m_bookmarks.Count == 0) return;
+			if (Bookmarks.Count == 0) return;
 
 			var row_index = SelectedRowIndex;
 			var line = row_index >= 0 && row_index < m_line_index.Count ? m_line_index[row_index] : Range.Zero;
 
 			// Look for the first bookmark after line.Begin
-			var idx = m_bookmarks.BinarySearch(b => b.Position.CompareTo(line.Beg + 1));
+			var idx = Bookmarks.BinarySearch(b => b.Position.CompareTo(line.Beg + 1));
 			if (idx < 0) idx = ~idx;
-			if (idx == m_bookmarks.Count) idx = 0;
+			if (idx == Bookmarks.Count) idx = 0;
 			SelectBookmark(idx);
 		}
 
 		/// <summary>Scroll to the previous bookmark before the current selected row</summary>
 		private void PrevBookmark()
 		{
-			if (m_bookmarks.Count == 0) return;
+			if (Bookmarks.Count == 0) return;
 
 			var row_index = SelectedRowIndex;
 			var line = row_index >= 0 && row_index < m_line_index.Count ? m_line_index[row_index] : Range.Zero;
 
 			// Look for the first bookmark after line.Begin
-			var idx = m_bookmarks.BinarySearch(b => b.Position.CompareTo(line.Beg));
+			var idx = Bookmarks.BinarySearch(b => b.Position.CompareTo(line.Beg));
 			if (idx < 0) idx = ~idx;
-			if (idx < 1) idx = m_bookmarks.Count;
+			if (idx < 1) idx = Bookmarks.Count;
 			SelectBookmark(idx - 1);
 		}
 
 		/// <summary>Move to the bookmark with index 'idx'</summary>
 		private void SelectBookmark(int idx)
 		{
-			if (idx < 0 || idx >= m_bookmarks.Count) return;
-			SelectRowByAddr(m_bookmarks[idx].Position);
-			m_bs_bookmarks.Position = idx;
+			if (idx < 0 || idx >= Bookmarks.Count) return;
+			SelectRowByAddr(Bookmarks[idx].Position);
+			Bookmarks.Position = idx;
 		}
 
 		/// <summary>Removes all bookmarks and updates the UI</summary>
 		private void ClearAllBookmarks()
 		{
-			m_bookmarks.Clear();
+			Bookmarks.Clear();
 			m_batch_refresh_bkmks.Signal();
 		}
 
 		/// <summary>Updates the UI after the bookmarks have changed</summary>
 		private void RefreshBookmarks()
 		{
-			m_bs_bookmarks.ResetBindings(false);
+			Bookmarks.ResetBindings(false);
 			UpdateUI();
 		}
 	}

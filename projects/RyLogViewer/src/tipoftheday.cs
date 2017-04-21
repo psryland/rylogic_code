@@ -15,95 +15,90 @@ namespace RyLogViewer
 		#region Tip Html
 		private struct Tip { public string Title; public string Body; }
 		private static readonly Tip[] m_tips = new[]
-			{
-				new Tip
-				{
-					Title = "Welcome!",
-					Body  = "RyLogViewer is designed to make the viewing of log files or streaming " +
-							"log data easier through the use of highlighting, filtering, and text transformations. " +
-							"That is just the beginning of what RyLogViewer can do however!<br/><br/>" +
-							"Click next to explore some of the features of RyLogViewer."
-				}
-				,new Tip
-				{
-					Title = "Getting Started",
-					Body  = "To begin experimenting with some of the features of RyLogViewer, load the " +
-							"<a href='"+Cmd.open_example_logfile+"'><i>example logfile</i></a> from the " +
-							"examples directory.<br/>"
-				}
-				,new Tip
-				{
-					Title = "Pattern Sets",
-					Body  = "RyLogViewer allows the patterns that you use frequently to be saved as Pattern Sets. "+
-							"Under the file menu, there are options to create and load pattern sets, or import patterns "+
-							"into the current set.",
-				}
-				,new Tip
-				{
-					Title = "Tool Tips",
-					Body  = "Almost every UI element in RyLogViewer has a pop-up tool tip. If you're unsure about " +
-							"any part of the application, hover your mouse over it to read a quick description. " +
-							"If you would like more information, the main application documentation is found under " +
-							"the help menu."
-				}
-				,new Tip
-				{
-					Title = "Export",
-					Body  = "The export feature allows data to be exported to a new file. Transforms and filtering " +
-					        "are applied during the export process, which means that RyLogViewer can be used " +
-					        "as a powerful text data transformation tool. Exporting data is also supported from the " +
-							"command line allowing RyLogViewer to be used in batch files or scripting tasks."
-				}
-				,new Tip
-				{
-					Title = "Command Line",
-					Body  = "RyLogViewer has a command line interface. The main purpose of this is to allow the " +
-					        "export functionality to be used in scripts or batch files. For more information about " +
-					        "the command line options type <span style='font-family:monospace'>RyLogViewer -h</span> " +
-					        "at a command prompt."
-				}
-				,new Tip
-				{
-					Title = "Top Most & Monitor Mode",
-					Body  = "Under the tools menu there are the <i>Always On Top</i> and <i>Monitor Mode</i> options. " +
-					        "These options can be used to put RyLogViewer into a non-interactive, semi transparent state, "+
-							"handy if you want to have RyLogViewer visible and monitoring a data source as you work with "+
-							"other applications."
-				}
-				,new Tip
-				{
-					Title = "Multi-Column Data",
-					Body  = "RyLogViewer can display multi-column data such as comma separated values (CSV). " +
-					        "On the general tab of the options dialog, <a href='"+Cmd.show_column_delimiter_options+"'>specify the column delimiter</a> and the number of " +
-					        "columns to display.<br/><br/> If you need more than one column delimiter, you can always use text " +
-					        "transforms to convert the column delimiters into a single unique character sequence, and " +
-					        "then use that as the column delimiter."
-				}
-				,new Tip
-				{
-					Title = "Recent Files",
-					Body  = "Under the file menu is the Recent Files sub menu that lists log files recently opened. " +
-					        "Right clicking on a file path within this menu brings up two useful options. The first is " +
-					        "<i>Remove</i> which allows the selected file to be removed from the recent files list. The " +
-					        "second is <i>Copy to Clipboard</i> which copies the file path to the system clipboard."
-				}
-				,new Tip
-				{
-					Title = "Keyboard Shortcuts",
-					Body  = "Here are a few handy keyboard shortcuts to make navigating through a log file easier:<br/>" +
-					        "<br/><i>Ctrl+PageUp</i><br/>Jump to the first line in the log file.<br/>" +
-							"<br/><i>Ctrl+PageDown</i><br/>Jump to the last line in the log file.<br/>" +
-							"<br/><i>Ctrl+F2</i><br/>Toggle a bookmark on the currently selected line<br/>" +
-							"<br/><i>F2</i>/<i>Shift+F2</i><br/>Jump to the next/previous bookmark<br/>" +
-							"<br/><i>Ctrl+F</i><br/>Show the Find dialog<br/>" +
-							"<br/><i>F3</i>/<i>Shift+F3</i><br/>Jump to the next/previous Find dialog match. (works even when the Find dialog is closed)<br/>"
-				}
-			};
-		private static class Cmd
 		{
-			public const string open_example_logfile          = "cmd://open_example_logfile/";
-			public const string show_column_delimiter_options = "cmd://show_column_delimiter_options/";
-		}
+			new Tip
+			{
+				Title = "Welcome!",
+				Body  = "RyLogViewer is designed to make the viewing of log files or streaming " +
+						"log data easier through the use of highlighting, filtering, and text transformations. " +
+						"That is just the beginning of what RyLogViewer can do however!<br/><br/>" +
+						"Click next to explore some of the features of RyLogViewer."
+			}
+			,new Tip
+			{
+				Title = "Getting Started",
+				Body  = "To begin experimenting with some of the features of RyLogViewer, load the " +
+						"<a href='"+Cmd.open_example_logfile+"'><i>example logfile</i></a> from the " +
+						"examples directory.<br/>"
+			}
+			,new Tip
+			{
+				Title = "Pattern Sets",
+				Body  = "RyLogViewer allows the patterns that you use frequently to be saved as Pattern Sets. "+
+						"Under the file menu, there are options to create and load pattern sets, or import patterns "+
+						"into the current set.",
+			}
+			,new Tip
+			{
+				Title = "Tool Tips",
+				Body  = "Almost every UI element in RyLogViewer has a pop-up tool tip. If you're unsure about " +
+						"any part of the application, hover your mouse over it to read a quick description. " +
+						"If you would like more information, the main application documentation is found under " +
+						"the help menu."
+			}
+			,new Tip
+			{
+				Title = "Export",
+				Body  = "The export feature allows data to be exported to a new file. Transforms and filtering " +
+					    "are applied during the export process, which means that RyLogViewer can be used " +
+					    "as a powerful text data transformation tool. Exporting data is also supported from the " +
+						"command line allowing RyLogViewer to be used in batch files or scripting tasks."
+			}
+			,new Tip
+			{
+				Title = "Command Line",
+				Body  = "RyLogViewer has a command line interface. The main purpose of this is to allow the " +
+					    "export functionality to be used in scripts or batch files. For more information about " +
+					    "the command line options type <span style='font-family:monospace'>RyLogViewer -h</span> " +
+					    "at a command prompt."
+			}
+			,new Tip
+			{
+				Title = "Top Most & Monitor Mode",
+				Body  = "Under the tools menu there are the <i>Always On Top</i> and <i>Monitor Mode</i> options. " +
+					    "These options can be used to put RyLogViewer into a non-interactive, semi transparent state, "+
+						"handy if you want to have RyLogViewer visible and monitoring a data source as you work with "+
+						"other applications."
+			}
+			,new Tip
+			{
+				Title = "Multi-Column Data",
+				Body  = "RyLogViewer can display multi-column data such as comma separated values (CSV). " +
+					    "On the general tab of the options dialog, <a href='"+Cmd.show_column_delimiter_options+"'>specify the column delimiter</a> and the number of " +
+					    "columns to display.<br/><br/> If you need more than one column delimiter, you can always use text " +
+					    "transforms to convert the column delimiters into a single unique character sequence, and " +
+					    "then use that as the column delimiter."
+			}
+			,new Tip
+			{
+				Title = "Recent Files",
+				Body  = "Under the file menu is the Recent Files sub menu that lists log files recently opened. " +
+					    "Right clicking on a file path within this menu brings up two useful options. The first is " +
+					    "<i>Remove</i> which allows the selected file to be removed from the recent files list. The " +
+					    "second is <i>Copy to Clipboard</i> which copies the file path to the system clipboard."
+			}
+			,new Tip
+			{
+				Title = "Keyboard Shortcuts",
+				Body  = "Here are a few handy keyboard shortcuts to make navigating through a log file easier:<br/>" +
+					    "<br/><i>Ctrl+PageUp</i><br/>Jump to the first line in the log file.<br/>" +
+						"<br/><i>Ctrl+PageDown</i><br/>Jump to the last line in the log file.<br/>" +
+						"<br/><i>Ctrl+F2</i><br/>Toggle a bookmark on the currently selected line<br/>" +
+						"<br/><i>F2</i>/<i>Shift+F2</i><br/>Jump to the next/previous bookmark<br/>" +
+						"<br/><i>Ctrl+F</i><br/>Show the Find dialog<br/>" +
+						"<br/><i>F3</i>/<i>Shift+F3</i><br/>Jump to the next/previous Find dialog match. (works even when the Find dialog is closed)<br/>"
+			}
+		};
 		#endregion
 
 		private readonly Random m_rng;

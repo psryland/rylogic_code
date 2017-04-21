@@ -24,7 +24,7 @@ namespace pr.crypt
 		/// <summary>Attaches a signature to the end of a file</summary>
 		public static void SignFile(string filepath, string private_key)
 		{
-			// Create the crypto service
+			// Create the 'Crypto' service
 			var alg = new RSACryptoServiceProvider();
 			alg.FromXmlString(private_key);
 			var key_size_bytes = alg.KeySize / 8;
@@ -45,7 +45,7 @@ namespace pr.crypt
 			
 			// Generate the signature
 			var buf = filebuf.Take(length).ToArray();
-			var sig = alg.SignData(buf, new SHA1CryptoServiceProvider());
+			var sig = alg.SignData(buf, new SHA256CryptoServiceProvider());
 			
 			// Append the signature to the end of the file
 			using (var fs = new FileStream(filepath, FileMode.Open, FileAccess.Write))
@@ -59,7 +59,7 @@ namespace pr.crypt
 		/// <summary>Verify that a file has a valid signature</summary>
 		public static bool Validate(string filepath, string public_key, bool thrw = true)
 		{
-			// Create the crypto service
+			// Create the 'Crypto' service
 			var alg = new RSACryptoServiceProvider();
 			alg.FromXmlString(public_key);
 			var key_size_bytes = alg.KeySize / 8;
@@ -85,7 +85,7 @@ namespace pr.crypt
 			// Validate the signature
 			var buf = filebuf.Take(length).ToArray();
 			var sig = filebuf.Skip(length + SignatureId.Length).Take(key_size_bytes).ToArray();
-			bool valid = alg.VerifyData(buf, new SHA1CryptoServiceProvider(), sig);
+			bool valid = alg.VerifyData(buf, new SHA256CryptoServiceProvider(), sig);
 			
 			if (thrw && !valid) throw new VerificationException("File signature incorrect");
 			return valid;

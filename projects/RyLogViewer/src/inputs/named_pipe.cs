@@ -67,7 +67,7 @@ namespace RyLogViewer
 				// Strictly, we don't have to close because OpenLogFile closes before opening
 				// however if the user reopens the same connection the existing connection will
 				// hold a lock on the capture file preventing the new connection being created.
-				CloseLogFile();
+				Src = null;
 
 				// Set options so that data always shows
 				PrepareForStreamedData(conn.OutputFilepath);
@@ -77,9 +77,9 @@ namespace RyLogViewer
 
 				// Give some UI feedback if the connection drops
 				buffered_pipeconn.ConnectionDropped += (s,a)=>
-					{
-						this.BeginInvoke(() => SetStaticStatusMessage("Connection dropped", Color.Black, Color.LightSalmon));
-					};
+				{
+					this.BeginInvoke(() => SetStaticStatusMessage("Connection dropped", Color.Black, Color.LightSalmon));
+				};
 
 				// Open the capture file
 				OpenSingleLogFile(buffered_pipeconn.Filepath, !buffered_pipeconn.TmpFile);
@@ -133,25 +133,26 @@ namespace RyLogViewer
 			}
 		}
 
-		/// <summary>Start asynchronously reading from the tcp client</summary>
+		/// <summary>Start asynchronously reading from the TCP client</summary>
 		public void Start(Main parent)
 		{
 			var connect = new ProgressForm("Connecting...", "Connecting to "+m_conn.PipeAddr, null, ProgressBarStyle.Marquee, (s,a,cb)=>
+			{
+				cb(new ProgressForm.UserState{ProgressBarVisible = false, Icon = parent.Icon});
+
+				while (!m_pipe.IsConnected && !s.CancelPending)
+					try { m_pipe.Connect(100); } catch (TimeoutException) {}
+
+				if (!s.CancelPending)
 				{
-					cb(new ProgressForm.UserState{ProgressBarVisible = false, Icon = parent.Icon});
-
-					while (!m_pipe.IsConnected && !s.CancelPending)
-						try { m_pipe.Connect(100); } catch (TimeoutException) {}
-
-					if (!s.CancelPending)
-					{
-						m_pipe.ReadMode = PipeTransmissionMode.Byte;
-						var src = new StreamSource(m_pipe);
-						src.BeginRead(m_buf, 0, m_buf.Length, DataRecv, new AsyncData(src, m_buf));
-					}
-				});
-			if (connect.ShowDialog(parent) != DialogResult.OK)
-				throw new OperationCanceledException("Connecting cancelled");
+					m_pipe.ReadMode = PipeTransmissionMode.Byte;
+					var src = new StreamSource(m_pipe);
+					src.BeginRead(m_buf, 0, m_buf.Length, DataRecv, new AsyncData(src, m_buf));
+				}
+			});
+			using (connect)
+				if (connect.ShowDialog(parent) != DialogResult.OK)
+					throw new OperationCanceledException("Connecting cancelled");
 		}
 
 		/// <summary>Returns true while the pipe is connected</summary>

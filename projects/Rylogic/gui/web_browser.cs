@@ -11,7 +11,7 @@ using pr.util;
 namespace pr.gui
 {
 	/// <remarks>
-	/// The standard winforms WebBrowser control is basically unusable except for
+	/// The standard win forms WebBrowser control is basically unusable except for
 	/// standard web page navigation. This replacement is intended for "virtual-mode"
 	/// use where content is supplied on demand.
 	/// </remarks>
@@ -29,16 +29,16 @@ namespace pr.gui
 			m_wb = new System.Windows.Forms.WebBrowser{Dock = DockStyle.Fill};
 			Controls.Add(m_wb);
 
-			// Setup the URL history
+			// Set up the URL history
 			m_url_history = new BindingListEx<Visit>();
 			UrlHistory = new BindingSource<Visit>{DataSource = m_url_history};
 			UrlHistory.PositionChanged += (s,a) =>
-				{
-					OnCanGoBackChanged(EventArgs.Empty);
-					OnCanGoForwardChanged(EventArgs.Empty);
-				};
+			{
+				OnCanGoBackChanged(EventArgs.Empty);
+				OnCanGoForwardChanged(EventArgs.Empty);
+			};
 
-			// Setup handlers on the web browser
+			// Set up handlers on the web browser
 			m_wb.Navigating += HandleNavigating;
 			m_wb.StatusTextChanged += (s,a) => StatusTextChanged.Raise(this, a);
 		}
@@ -55,7 +55,7 @@ namespace pr.gui
 			set { m_wb.AllowNavigation = value; }
 		}
 
-		/// <summary>The list if visited Urls</summary>
+		/// <summary>The list if visited URLs</summary>
 		[Browsable(false)]
 		public BindingSource<Visit> UrlHistory { get; private set; }
 		private BindingListEx<Visit> m_url_history;
@@ -68,7 +68,7 @@ namespace pr.gui
 			public override string ToString() { return Url.ToString(); }
 		}
 
-		/// <summary>Navigate to the given url</summary>
+		/// <summary>Navigate to the given URL</summary>
 		public void Navigate(string url)
 		{
 			Navigate(new Uri(url));
@@ -83,7 +83,7 @@ namespace pr.gui
 			if (erase_forward && UrlHistory.Position >= 0)
 				m_url_history.RemoveToEnd(UrlHistory.Position);
 
-			// Navigate to the given url
+			// Navigate to the given URL
 			m_wb.Navigate(to);
 		}
 
@@ -163,10 +163,10 @@ namespace pr.gui
 			{
 				var idx = UrlHistory.Position + 1;
 
-				// Add the selected url to the history
+				// Add the selected URL to the history
 				if (idx == UrlHistory.Count)
 				{
-					// Resolve the Url to content
+					// Resolve the URL to content
 					var a = new ResolveContentEventArgs(args.Url);
 					OnResolveContent(a);
 
@@ -175,7 +175,7 @@ namespace pr.gui
 				}
 				else if (!m_fwd_or_back || args.Url != UrlHistory[idx].Url)
 				{
-					// Resolve the Url to content
+					// Resolve the URL to content
 					var a = new ResolveContentEventArgs(args.Url);
 					OnResolveContent(a);
 
@@ -203,7 +203,7 @@ namespace pr.gui
 		private bool m_rdr_content;
 		private bool m_fwd_or_back;
 
-		/// <summary>Raised to resolve the content for a given url</summary>
+		/// <summary>Raised to resolve the content for a given URL</summary>
 		public event EventHandler<ResolveContentEventArgs> ResolveContent;
 		public class ResolveContentEventArgs :EventArgs
 		{
@@ -213,10 +213,10 @@ namespace pr.gui
 				Content = null;
 			}
 
-			/// <summary>The url for which content is required</summary>
+			/// <summary>The URL for which content is required</summary>
 			public Uri Url { get; private set; }
 
-			/// <summary>The html content for the given url. Leave as null for normal web page navigation</summary>
+			/// <summary>The html content for the given URL. Leave as null for normal web page navigation</summary>
 			public string Content { get; set; }
 		}
 		protected virtual void OnResolveContent(ResolveContentEventArgs args)

@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Drawing;
+using System.IO;
 using System.Net.Mail;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using pr.common;
 using pr.extn;
 using pr.gui;
 using pr.inet;
@@ -12,275 +14,238 @@ namespace RyLogViewer
 {
 	public class Activation :Form
 	{
+		private readonly Main m_main;
+
 		#region UI Elements
-		private readonly Licence m_licence;
-		private readonly ToolTip m_tt;
-		private readonly Timer m_timer;
-		private ValueBox m_edit_name;
-		private ValueBox m_edit_email;
-		private ValueBox m_edit_company;
-		private ValueBox m_edit_activation_code;
-		private Button m_btn_ok;
-		private Button m_btn_cancel;
-		private Label m_lbl_company;
+		private TextBox m_tb_versions;
+		private TextBox m_tb_company;
+		private TextBox m_tb_email;
+		private TextBox m_tb_name;
+		private Button m_btn_locate_licence;
+		private Label m_lbl_have_a_licence;
 		private Label m_lbl_name;
 		private Label m_lbl_email;
-		private Label m_lbl_activation_code;
-		private LinkLabel m_lbl_forgotten;
+		private Label m_lbl_company;
+		private Label m_lbl_versions;
 		private Label m_lbl_valid;
+		private LinkLabel m_lnk_purchase;
+		private Button m_btn_ok;
+		private ToolTip m_tt;
 		#endregion
 
-		public Activation(Licence licence)
+		public Activation(Main main)
 		{
 			InitializeComponent();
-			m_licence = licence;
-			m_tt = new ToolTip();
+			m_main = main;
 
 			SetupUI();
 			UpdateUI();
-
-			// Start a timer to scan the clipboard for valid licence info
-			m_timer = new Timer{Interval = 500, Enabled = true};
-			m_timer.Tick += ScanClipboard;
 		}
 		protected override void Dispose(bool disposing)
 		{
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
-		protected override void OnShown(EventArgs e)
-		{
-			base.OnShown(e);
-			ScanClipboard();
-		}
 
 		/// <summary>Set up UI elements</summary>
 		private void SetupUI()
 		{
-			// Licence holder name
-			m_edit_name.ToolTip(m_tt, "The name of the license holder as given in the license information email");
-			m_edit_name.UseValidityColours = true;
-			m_edit_name.ValidateText = t => t.HasValue();
-			m_edit_name.Value = m_licence.LicenceHolder;
-			m_edit_name.ValueCommitted += (s,a) =>
+			// Locate button
+			m_btn_locate_licence.ToolTip(m_tt, "Browse to the licence file you received after purchasing RyLogViewer");
+			m_btn_locate_licence.Click += (s,a) =>
 			{
-				m_licence.LicenceHolder = m_edit_name.Text;
+				LocateLicenceFile();
 				UpdateUI();
 			};
+
+			// Licence holder name
+			m_tb_name.ToolTip(m_tt, "The name of the licence holder as given in the licence information");
 
 			// Associated email address
-			m_edit_email.ToolTip(m_tt, "The email address associated with the license as given in the license information email");
-			m_edit_email.ValidateText = t => { try { new MailAddress(t); return true; } catch { return false; } };
-			m_edit_email.Value = m_licence.EmailAddress;
-			m_edit_email.ValueCommitted += (s,a) =>
-			{
-				m_licence.EmailAddress = m_edit_email.Text;
-				UpdateUI();
-			};
+			m_tb_email.ToolTip(m_tt, "The email address associated with the licence");
 
 			// Optional company name
-			m_edit_company.ToolTip(m_tt, "The company name associated with the license. (Optional)");
-			m_edit_company.Value = m_licence.Company;
-			m_edit_company.ValueCommitted += (s,a) =>
-			{
-				m_licence.Company = m_edit_company.Text;
-				UpdateUI();
-			};
+			m_tb_company.ToolTip(m_tt, "The company name associated with the licence. (Optional)");
 
-			// Activation code
-			m_edit_activation_code.ToolTip(m_tt, "Copy and paste the activation code given in your licence information email here");
-			m_edit_activation_code.Value = m_licence.ActivationCode;
-			m_edit_activation_code.ValueCommitted += (s,a) =>
-			{
-				m_licence.ActivationCode = m_edit_activation_code.Text;
-				UpdateUI();
-			};
+			// Version mask
+			m_tb_versions.ToolTip(m_tt, "The versions that the licence is valid for");
 
-			// Forgot licence link
-			m_lbl_forgotten.LinkClicked += HandleLostLink;
+			// Purchase licence link
+			m_lnk_purchase.LinkClicked += HandlePurchaseLink;
 		}
 
 		/// <summary>Update the UI</summary>
 		private void UpdateUI(object sender = null, EventArgs args = null)
 		{
-			if (m_edit_activation_code.Text.Length == 0)
-			{
-				m_lbl_valid.Text      = "Free Licence";
-				m_lbl_valid.BackColor = Color.LightGreen;
-				m_btn_ok.Enabled      = true;
-			}
-			else
-			{
-				m_licence.LicenceHolder  = m_edit_name.Text;
-				m_licence.EmailAddress   = m_edit_email.Text;
-				m_licence.Company        = m_edit_company.Text;
-				m_licence.ActivationCode = m_edit_activation_code.Text;
+			var lic = new Licence(m_main.StartupOptions.LicenceFilepath);
 
-				var valid = m_licence.Valid;
-				m_lbl_valid.Text      = valid ? "Valid Licence" : "Invalid Licence";
-				m_lbl_valid.BackColor = valid ? Color.LightGreen : Color.LightSalmon;
-				m_btn_ok.Enabled      = valid;
-			}
+			m_tb_name    .Text = lic.LicenceHolder;
+			m_tb_email   .Text = lic.EmailAddress;
+			m_tb_company .Text = lic.Company;
+			m_tb_versions.Text = lic.VersionMask;
+
+			m_lbl_valid.Text =
+				lic.Valid ? "Valid Licence" :
+				lic.IsFreeLicence ? "Free Licence" :
+				lic.NotForThisVersion ? "Old Licence" :
+				"Invalid licence";
+
+			m_lbl_valid.BackColor =
+				lic.Valid ? Color.LightGreen :
+				lic.IsFreeLicence ? Color.LightGreen :
+				Color.LightSalmon;
 		}
 
-		/// <summary>Try to extract the license info from text data on the clipboard</summary>
-		private void ScanClipboard(object sender = null, EventArgs args = null)
+		/// <summary>Browse to the licence file</summary>
+		private void LocateLicenceFile()
 		{
-			// Don't do anything if the license is valid
-			if (m_licence.Valid)
-				return;
+			// Prompt for the user to find the licence file
+			var filepath = (string)null;
+			using (var dlg = new OpenFileDialog { Title = "Locate Licence File", Filter = "RyLogViewer Licence File|licence.xml" })
+			{
+				if (dlg.ShowDialog(this) != DialogResult.OK) return;
+				filepath = dlg.FileName;
+			}
 
 			try
 			{
-				var lic = new Licence();
-				var text = Clipboard.GetText(TextDataFormat.Text);
-				lic.LicenceHolder  = text.SubstringRegex(@"\s*License Holder:\s+", "($|<br/>)");
-				lic.EmailAddress   = text.SubstringRegex(@"\s*Email:\s+", "($|<br/>)");
-				lic.Company        = text.SubstringRegex(@"\s*Company:\s+", "($|<br/>)");
-				lic.ActivationCode = text.SubstringRegex(@"\s*Activation Code:\s+", "($|<br/>)", RegexOptions.Multiline);
+				// Check the licence
+				var lic = new Licence(filepath);
 				if (lic.Valid)
 				{
-					m_edit_name.Text            = lic.LicenceHolder  ;
-					m_edit_email.Text           = lic.EmailAddress   ;
-					m_edit_company.Text         = lic.Company        ;
-					m_edit_activation_code.Text = lic.ActivationCode ;
-					UpdateUI();
+					// If there is an existing licence file, confirm overwrite
+					if (Path_.FileExists(m_main.StartupOptions.LicenceFilepath))
+					{
+						// Read the existing licence
+						var existing_lic = (Licence)null;
+						try { existing_lic = new Licence(m_main.StartupOptions.LicenceFilepath); } catch { }
+						if (existing_lic != null && existing_lic.Valid)
+						{
+							// Prompt if about to override an existing valid licence
+							var res = MsgBox.Show(this, Str.Build(
+								"An existing valid licence already exists:\r\n",
+								"Licence Holder: {0}\r\n".Fmt(existing_lic.LicenceHolder),
+								"Email Address: {0}\r\n".Fmt(existing_lic.EmailAddress),
+								"\r\n",
+								"Do you want to replace this licence?"),
+								Application.ProductName, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+							if (res != DialogResult.Yes)
+								return;
+						}
+
+						// Write the licence to the expected location
+						lic.WriteLicenceFile(m_main.StartupOptions.LicenceFilepath);
+						UpdateUI();
+
+						// Say thank you
+						MsgBox.Show(this,
+							"Thank you for activating "+Application.ProductName+".\r\n" +
+							"Your support is greatly appreciated."
+							,"Activation Successful"
+							,MessageBoxButtons.OK ,MessageBoxIcon.Information);
+					}
+					return;
 				}
+
+				// Valid licence but not for this version
+				if (lic.NotForThisVersion)
+				{
+					MsgBox.Show(this,
+						"This licence is for an older version of "+Application.ProductName+".\r\n" +
+						"Please consider purchasing a new licence for this version.\r\n" +
+						"If you believe this to be an error, please contact '"+Constants.SupportEmail+"' for support"
+						,"Licence Out of Date"
+						,MessageBoxButtons.OK, MessageBoxIcon.Information);
+					return;
+				}
+
+				// Do nothing with free licences
+				if (lic.IsFreeLicence)
+				{
+					MsgBox.Show(this,
+						"This licence is the free edition licence.\r\n" +
+						"Please consider purchasing a licence for this version.\r\n" +
+						"If you believe this to be an error, please contact '"+Constants.SupportEmail+"' for support"
+						,"Free Edition Licence"
+						,MessageBoxButtons.OK, MessageBoxIcon.Information);
+					return;
+				}
+
+				// Licence is invalid
+				MsgBox.Show(this,
+					"This licence file is invalid.\r\n" +
+					"If you believe this to be an error, please contact '"+Constants.SupportEmail+"' for support"
+					,"Activation Failed"
+					,MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 			catch (Exception ex)
 			{
-				Log.Warn(this, "Exception during ScanClipboard\n{0}".Fmt(ex.Message));
+				MsgBox.Show(this, "Failed to locate and import a valid licence file\r\n{0}".Fmt(ex.Message), Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 
-		/// <summary>Navigate the 'request my license info again' page</summary>
-		private void HandleLostLink(object sender, LinkLabelLinkClickedEventArgs e)
+		/// <summary>Navigate the 'purchase a licence' link</summary>
+		private void HandlePurchaseLink(object sender, LinkLabelLinkClickedEventArgs e)
 		{
-			try
-			{
-				// Ensure the licence holder is possibly valid
-				if (!m_licence.LicenceHolder.HasValue() || m_licence.LicenceHolder == Constants.FreeLicence)
-				{
-					MsgBox.Show(this, "Please enter the name of the licence holder", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Information);
-					return;
-				}
-
-				// Ensure the email address is possibly valid
-				if (!m_licence.EmailAddress.HasValue())
-				{
-					MsgBox.Show(this, "Please enter the email address associated with the licence", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Information);
-					return;
-				}
-
-				// Try to create an email with the attachment ready to go
-				var email = new Email();
-				email.AddRecipient(Constants.SupportEmail, Email.MAPIRecipient.To);
-				email.Subject = Application.ProductName + " licence information request";
-				email.Body = Str.Build(
-					"To {0},\r\n".Fmt(Application.CompanyName),
-					"\r\n",
-					"Please resend my activation code:\r\n",
-					"\r\n",
-					"License Holder: {0}\r\n".Fmt(m_licence.LicenceHolder),
-					"Email: {0}\r\n".Fmt(m_licence.EmailAddress),
-					"Company: {0}".Fmt(m_licence.Company));
-				email.Send();
-			}
-			catch (Exception ex)
-			{
-				MsgBox.Show(this, ex.Message, Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
+			m_main.VisitWebSite();
 		}
 
 		#region Windows Form Designer generated code
-
-		/// <summary>Required designer variable.</summary>
 		private System.ComponentModel.IContainer components = null;
-
-		/// <summary>
-		/// Required method for Designer support - do not modify
-		/// the contents of this method with the code editor.
-		/// </summary>
 		private void InitializeComponent()
 		{
+			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Activation));
 			this.m_btn_ok = new System.Windows.Forms.Button();
-			this.m_btn_cancel = new System.Windows.Forms.Button();
-			this.m_edit_company = new pr.gui.ValueBox();
 			this.m_lbl_company = new System.Windows.Forms.Label();
-			this.m_edit_name = new pr.gui.ValueBox();
 			this.m_lbl_name = new System.Windows.Forms.Label();
 			this.m_lbl_valid = new System.Windows.Forms.Label();
 			this.m_lbl_email = new System.Windows.Forms.Label();
-			this.m_edit_email = new pr.gui.ValueBox();
-			this.m_edit_activation_code = new pr.gui.ValueBox();
-			this.m_lbl_activation_code = new System.Windows.Forms.Label();
-			this.m_lbl_forgotten = new System.Windows.Forms.LinkLabel();
+			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
+			this.m_lbl_versions = new System.Windows.Forms.Label();
+			this.m_btn_locate_licence = new System.Windows.Forms.Button();
+			this.m_lbl_have_a_licence = new System.Windows.Forms.Label();
+			this.m_lnk_purchase = new System.Windows.Forms.LinkLabel();
+			this.m_tb_versions = new System.Windows.Forms.TextBox();
+			this.m_tb_company = new System.Windows.Forms.TextBox();
+			this.m_tb_email = new System.Windows.Forms.TextBox();
+			this.m_tb_name = new System.Windows.Forms.TextBox();
 			this.SuspendLayout();
 			// 
 			// m_btn_ok
 			// 
 			this.m_btn_ok.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this.m_btn_ok.Location = new System.Drawing.Point(166, 267);
+			this.m_btn_ok.Location = new System.Drawing.Point(238, 274);
 			this.m_btn_ok.Name = "m_btn_ok";
 			this.m_btn_ok.Size = new System.Drawing.Size(75, 23);
 			this.m_btn_ok.TabIndex = 5;
 			this.m_btn_ok.Text = "OK";
 			this.m_btn_ok.UseVisualStyleBackColor = true;
 			// 
-			// m_btn_cancel
-			// 
-			this.m_btn_cancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_cancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-			this.m_btn_cancel.Location = new System.Drawing.Point(248, 267);
-			this.m_btn_cancel.Name = "m_btn_cancel";
-			this.m_btn_cancel.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_cancel.TabIndex = 6;
-			this.m_btn_cancel.Text = "Cancel";
-			this.m_btn_cancel.UseVisualStyleBackColor = true;
-			// 
-			// m_edit_company
-			// 
-			this.m_edit_company.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_edit_company.Location = new System.Drawing.Point(13, 120);
-			this.m_edit_company.Name = "m_edit_company";
-			this.m_edit_company.Size = new System.Drawing.Size(310, 20);
-			this.m_edit_company.TabIndex = 2;
-			// 
 			// m_lbl_company
 			// 
 			this.m_lbl_company.AutoSize = true;
-			this.m_lbl_company.Location = new System.Drawing.Point(9, 102);
+			this.m_lbl_company.Location = new System.Drawing.Point(9, 137);
 			this.m_lbl_company.Name = "m_lbl_company";
 			this.m_lbl_company.Size = new System.Drawing.Size(85, 13);
 			this.m_lbl_company.TabIndex = 10;
 			this.m_lbl_company.Text = "Company Name:";
 			// 
-			// m_edit_name
-			// 
-			this.m_edit_name.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_edit_name.Location = new System.Drawing.Point(13, 28);
-			this.m_edit_name.Name = "m_edit_name";
-			this.m_edit_name.Size = new System.Drawing.Size(310, 20);
-			this.m_edit_name.TabIndex = 0;
-			// 
 			// m_lbl_name
 			// 
 			this.m_lbl_name.AutoSize = true;
-			this.m_lbl_name.Location = new System.Drawing.Point(9, 12);
+			this.m_lbl_name.Location = new System.Drawing.Point(9, 47);
 			this.m_lbl_name.Name = "m_lbl_name";
-			this.m_lbl_name.Size = new System.Drawing.Size(138, 13);
+			this.m_lbl_name.Size = new System.Drawing.Size(137, 13);
 			this.m_lbl_name.TabIndex = 8;
-			this.m_lbl_name.Text = "This software is licenced to:";
+			this.m_lbl_name.Text = "This software is licensed to:";
 			// 
 			// m_lbl_valid
 			// 
 			this.m_lbl_valid.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_lbl_valid.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.m_lbl_valid.Location = new System.Drawing.Point(12, 267);
+			this.m_lbl_valid.Location = new System.Drawing.Point(12, 274);
 			this.m_lbl_valid.Margin = new System.Windows.Forms.Padding(20);
 			this.m_lbl_valid.Name = "m_lbl_valid";
 			this.m_lbl_valid.Size = new System.Drawing.Size(100, 23);
@@ -291,73 +256,115 @@ namespace RyLogViewer
 			// m_lbl_email
 			// 
 			this.m_lbl_email.AutoSize = true;
-			this.m_lbl_email.Location = new System.Drawing.Point(9, 56);
+			this.m_lbl_email.Location = new System.Drawing.Point(9, 91);
 			this.m_lbl_email.Name = "m_lbl_email";
 			this.m_lbl_email.Size = new System.Drawing.Size(76, 13);
 			this.m_lbl_email.TabIndex = 17;
 			this.m_lbl_email.Text = "Email Address:";
 			// 
-			// m_edit_email
+			// m_lbl_versions
 			// 
-			this.m_edit_email.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+			this.m_lbl_versions.AutoSize = true;
+			this.m_lbl_versions.Location = new System.Drawing.Point(9, 185);
+			this.m_lbl_versions.Name = "m_lbl_versions";
+			this.m_lbl_versions.Size = new System.Drawing.Size(50, 13);
+			this.m_lbl_versions.TabIndex = 21;
+			this.m_lbl_versions.Text = "Versions:";
+			// 
+			// m_btn_locate_licence
+			// 
+			this.m_btn_locate_licence.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_edit_email.Location = new System.Drawing.Point(13, 72);
-			this.m_edit_email.Name = "m_edit_email";
-			this.m_edit_email.Size = new System.Drawing.Size(310, 20);
-			this.m_edit_email.TabIndex = 1;
+			this.m_btn_locate_licence.DialogResult = System.Windows.Forms.DialogResult.Cancel;
+			this.m_btn_locate_licence.Location = new System.Drawing.Point(197, 12);
+			this.m_btn_locate_licence.Name = "m_btn_locate_licence";
+			this.m_btn_locate_licence.Size = new System.Drawing.Size(119, 23);
+			this.m_btn_locate_licence.TabIndex = 23;
+			this.m_btn_locate_licence.Text = "Locate Licence File...";
+			this.m_btn_locate_licence.UseVisualStyleBackColor = true;
 			// 
-			// m_edit_activation_code
+			// m_lbl_have_a_licence
 			// 
-			this.m_edit_activation_code.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_edit_activation_code.Location = new System.Drawing.Point(13, 162);
-			this.m_edit_activation_code.Multiline = true;
-			this.m_edit_activation_code.Name = "m_edit_activation_code";
-			this.m_edit_activation_code.Size = new System.Drawing.Size(310, 82);
-			this.m_edit_activation_code.TabIndex = 18;
-			this.m_edit_activation_code.Text = "<paste your licence information here>";
-			// 
-			// m_lbl_activation_code
-			// 
-			this.m_lbl_activation_code.AutoSize = true;
-			this.m_lbl_activation_code.Location = new System.Drawing.Point(9, 146);
-			this.m_lbl_activation_code.Name = "m_lbl_activation_code";
-			this.m_lbl_activation_code.Size = new System.Drawing.Size(85, 13);
-			this.m_lbl_activation_code.TabIndex = 19;
-			this.m_lbl_activation_code.Text = "Activation Code:";
+			this.m_lbl_have_a_licence.AutoSize = true;
+			this.m_lbl_have_a_licence.Location = new System.Drawing.Point(9, 9);
+			this.m_lbl_have_a_licence.Name = "m_lbl_have_a_licence";
+			this.m_lbl_have_a_licence.Size = new System.Drawing.Size(182, 26);
+			this.m_lbl_have_a_licence.TabIndex = 24;
+			this.m_lbl_have_a_licence.Text = "Have a licence file for RyLogViewer?\r\nLocate it now to activate";
 			// 
 			// m_lbl_forgotten
 			// 
-			this.m_lbl_forgotten.AutoSize = true;
-			this.m_lbl_forgotten.Location = new System.Drawing.Point(12, 247);
-			this.m_lbl_forgotten.Name = "m_lbl_forgotten";
-			this.m_lbl_forgotten.Size = new System.Drawing.Size(259, 13);
-			this.m_lbl_forgotten.TabIndex = 20;
-			this.m_lbl_forgotten.TabStop = true;
-			this.m_lbl_forgotten.Text = "Lost your license information? Request it again here...";
+			this.m_lnk_purchase.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+			this.m_lnk_purchase.AutoSize = true;
+			this.m_lnk_purchase.Location = new System.Drawing.Point(12, 241);
+			this.m_lnk_purchase.Name = "m_lbl_forgotten";
+			this.m_lnk_purchase.Size = new System.Drawing.Size(238, 13);
+			this.m_lnk_purchase.TabIndex = 25;
+			this.m_lnk_purchase.TabStop = true;
+			this.m_lnk_purchase.Text = "To purchase a licence, please visit the web store";
+			// 
+			// m_tb_versions
+			// 
+			this.m_tb_versions.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_tb_versions.Location = new System.Drawing.Point(12, 201);
+			this.m_tb_versions.Name = "m_tb_versions";
+			this.m_tb_versions.ReadOnly = true;
+			this.m_tb_versions.Size = new System.Drawing.Size(300, 20);
+			this.m_tb_versions.TabIndex = 26;
+			// 
+			// m_tb_company
+			// 
+			this.m_tb_company.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_tb_company.Location = new System.Drawing.Point(12, 153);
+			this.m_tb_company.Name = "m_tb_company";
+			this.m_tb_company.ReadOnly = true;
+			this.m_tb_company.Size = new System.Drawing.Size(300, 20);
+			this.m_tb_company.TabIndex = 27;
+			// 
+			// m_tb_email
+			// 
+			this.m_tb_email.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_tb_email.Location = new System.Drawing.Point(12, 107);
+			this.m_tb_email.Name = "m_tb_email";
+			this.m_tb_email.ReadOnly = true;
+			this.m_tb_email.Size = new System.Drawing.Size(300, 20);
+			this.m_tb_email.TabIndex = 28;
+			// 
+			// m_tb_name
+			// 
+			this.m_tb_name.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_tb_name.Location = new System.Drawing.Point(12, 63);
+			this.m_tb_name.Name = "m_tb_name";
+			this.m_tb_name.ReadOnly = true;
+			this.m_tb_name.Size = new System.Drawing.Size(300, 20);
+			this.m_tb_name.TabIndex = 29;
 			// 
 			// Activation
 			// 
 			this.AcceptButton = this.m_btn_ok;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.CancelButton = this.m_btn_cancel;
-			this.ClientSize = new System.Drawing.Size(337, 298);
-			this.Controls.Add(this.m_lbl_forgotten);
-			this.Controls.Add(this.m_lbl_activation_code);
-			this.Controls.Add(this.m_edit_activation_code);
-			this.Controls.Add(this.m_edit_email);
+			this.ClientSize = new System.Drawing.Size(328, 305);
+			this.Controls.Add(this.m_tb_name);
+			this.Controls.Add(this.m_tb_email);
+			this.Controls.Add(this.m_tb_company);
+			this.Controls.Add(this.m_tb_versions);
+			this.Controls.Add(this.m_lnk_purchase);
+			this.Controls.Add(this.m_lbl_have_a_licence);
+			this.Controls.Add(this.m_btn_locate_licence);
+			this.Controls.Add(this.m_lbl_versions);
 			this.Controls.Add(this.m_lbl_email);
 			this.Controls.Add(this.m_lbl_valid);
 			this.Controls.Add(this.m_btn_ok);
-			this.Controls.Add(this.m_btn_cancel);
-			this.Controls.Add(this.m_edit_company);
 			this.Controls.Add(this.m_lbl_company);
-			this.Controls.Add(this.m_edit_name);
 			this.Controls.Add(this.m_lbl_name);
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+			this.MinimumSize = new System.Drawing.Size(344, 306);
 			this.Name = "Activation";
 			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
 			this.Text = "Activation";
@@ -365,7 +372,6 @@ namespace RyLogViewer
 			this.PerformLayout();
 
 		}
-
 		#endregion
 	}
 }

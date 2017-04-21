@@ -241,7 +241,7 @@ namespace pr.common
 			public static Rect Zero                 { get { return new Rect(0,0,0,0); } }
 		}
 
-		/// <summary>Represents the state of all rtf style control words</summary>
+		/// <summary>Represents the state of all RTF style control words</summary>
 		public class TextStyle
 		{
 			/// <summary>The default style</summary>

@@ -1,8 +1,8 @@
-﻿using System;
+﻿//#define TRAP_UNHANDLED_EXCEPTIONS
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Security.Permissions;
 using System.Text;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
@@ -19,12 +19,14 @@ namespace RyLogViewer
 		private static StartupOptions StartupOptions;
 
 		/// <summary>The main entry point for the application.</summary>
-		[STAThread] [SecurityPermission(SecurityAction.Demand,Flags=SecurityPermissionFlag.ControlAppDomain)] // for the unhandled exception handler
+		[STAThread]
 		static void Main(string[] args)
 		{
 			// Set up the unhandled exception handler
-			try { AppDomain.CurrentDomain.UnhandledException += HandleTheUnhandled; }
-			catch (Exception ex) { Log.Exception(null, ex, "Failed to set unhandled exception handler"); }
+			var unhandled = (Exception)null;
+			#if !DEBUG || TRAP_UNHANDLED_EXCEPTIONS
+			try {
+			#endif
 
 			Environment.ExitCode = 0;
 			Application.EnableVisualStyles();
@@ -41,9 +43,9 @@ namespace RyLogViewer
 				MsgBox.Show(null,
 					"There is an error in the startup options provided.\r\n"+
 					"Error Details:\r\n{0}".Fmt(err.Message)
-					,"Command Line Error"
-					,MessageBoxButtons.OK
-					,MessageBoxIcon.Error);
+					, "Command Line Error"
+					, MessageBoxButtons.OK
+					, MessageBoxIcon.Error);
 				HelpUI.ShowDialog(null, HelpUI.EContent.Html, Resources.AppTitle, Resources.command_line_ref);
 				Environment.ExitCode = 1;
 				return;
@@ -52,7 +54,7 @@ namespace RyLogViewer
 			// If they just want help displayed...
 			if (StartupOptions.ShowHelp)
 			{
-				HelpUI.ShowDialog(null, HelpUI.EContent.Html, Resources.AppTitle,  Resources.command_line_ref);
+				HelpUI.ShowDialog(null, HelpUI.EContent.Html, Resources.AppTitle, Resources.command_line_ref);
 				Environment.ExitCode = 0;
 				return;
 			}
@@ -66,14 +68,25 @@ namespace RyLogViewer
 
 			// Otherwise show the app
 			Application.Run(new Main(StartupOptions));
+
+			// To catch any Disposes in the 'GC Finializer' thread
+			GC.Collect();
+
+			#if !DEBUG || TRAP_UNHANDLED_EXCEPTIONS
+			} catch (Exception e) { unhandled = e; }
+			#endif
+
+			// Report unhandled exceptions
+			if (unhandled != null)
+				HandleTheUnhandled(unhandled);
 		}
 
 		/// <summary>Handle unhandled exceptions</summary>
-		private static void HandleTheUnhandled(object sender, UnhandledExceptionEventArgs args)
+		private static void HandleTheUnhandled(Exception ex)
 		{
 			var res = MsgBox.Show(null, Str.Build(
 				Application.ProductName, " has shutdown with the following error.\r\n",
-				"Error: ", args.ExceptionObject.GetType().Name, "\r\n",
+				"Error: ", ex.GetType().Name, "\r\n",
 				"\r\n",
 				"Deleting the applications settings file, '", StartupOptions?.SettingsPath ?? Path_.FileName(Settings.Default.Filepath), "', might prevent this problem.\r\n",
 				"\r\n",
@@ -101,7 +114,7 @@ namespace RyLogViewer
 						.Append(Application.ProductName).Append(" - Crash Report - ").Append(DateTime.UtcNow).AppendLine()
 						.AppendLine("---------------------------------------------------------------")
 						.AppendLine("[Unhandled Exception Type]")
-						.AppendLine(args.ExceptionObject.Dump())
+						.AppendLine(ex.MessageFull())
 						.AppendLine()
 						.AppendLine("[Settings File Contents]")
 						.AppendLine(settings)
@@ -143,7 +156,6 @@ namespace RyLogViewer
 				}
 			}
 			Environment.ExitCode = 1;
-			Application.Exit();
 		}
 	}
 }

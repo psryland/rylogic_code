@@ -21,7 +21,7 @@ namespace RyLogViewer
 		public const string FreeLicence             = "Free Edition Licence";
 		public const string AppIdentifier           = "rylogviewer";
 		public const string Purchase                = "purchase";
-		public const string StoreLink               = "http://store.kagi.com/cgi-bin/store.cgi?storeID=6FFFY_LIVE";
+		public const string StoreLink               = "http://www.rylogic.co.nz/rylogviewer/index.php";
 
 		public const string PatternSetVersion          = "v1.0";
 		public static readonly string PatternSetFilter = Util.FileDialogFilter("Pattern Set Files", "*.pattern_set");
@@ -126,7 +126,7 @@ namespace RyLogViewer
 		public const string LicenceHolder  = "licence_holder";
 		public const string EmailAddr      = "email_address";
 		public const string Company        = "company";
-		public const string AppVersion     = "app_version";
+		public const string VersionMask    = "versions";
 		public const string ActivationCode = "activation_code";
 		public const string Root           = "root";
 		public const string Expr           = "expr";
@@ -186,6 +186,7 @@ namespace RyLogViewer
 		// Order by longest option first
 		public const string RDelim       = "-rdelim";
 		public const string CDelim       = "-cdelim";
+		public const string Silent       = "-silent";
 		public const string NoGUI        = "-nogui";
 		public const string PatternSet   = "-ps";
 		public const string SettingsPath = "-s";
@@ -201,6 +202,13 @@ namespace RyLogViewer
 		public const string LogFile    = "examples\\logfile.txt";
 		public const string CodeLookup = "examples\\code lookup.xml";
 		public const string PatternSet = "examples\\pattern set.pattern_set";
+	}
+
+	public static class Cmd
+	{
+		public const string open_example_logfile          = "cmd://open_example_logfile/";
+		public const string show_column_delimiter_options = "cmd://show_column_delimiter_options/";
+		public const string visit_store                   = "cmd://visit_store/";
 	}
 
 	public static class Misc
@@ -241,7 +249,7 @@ namespace RyLogViewer
 			// Check that the file exists, this can take ages if 'filepath' is a network file
 			bool file_exists = false;
 			var dlg = new ProgressForm("Open File", "Opening file...", null, ProgressBarStyle.Marquee, (s,a,cb) => file_exists = Path_.FileExists(filepath));
-			dlg.ShowDialog(parent, 500);
+			using (dlg) dlg.ShowDialog(parent, 500);
 			return file_exists;
 		}
 

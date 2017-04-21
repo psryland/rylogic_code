@@ -200,9 +200,6 @@
     <Compile Include="src\main.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\main.Designer.cs">
-      <DependentUpon>main.cs</DependentUpon>
-    </Compile>
     <Compile Include="src\program.cs" />
     <Compile Include="src\inputs\program_output_ui.cs">
       <SubType>Form</SubType>
@@ -257,7 +254,6 @@
     <None Include="docs\docs\pattern_editor.htm" />
     <None Include="docs\docs\welcome.htm" />
     <Content Include="docs\docs\export.htm" />
-    <Content Include="docs\docs\ideas.htm" />
     <Content Include="docs\docs\options_actions.htm" />
     <Content Include="docs\docs\plugins.htm" />
     <Content Include="docs\docs\ReadMe.txt" />
@@ -272,6 +268,7 @@
     <Content Include="docs\inc\command_line_ref.include.htm" />
     <Content Include="docs\inc\css.include.htm" />
     <Content Include="docs\inc\help_css.include.htm" />
+    <Content Include="docs\inc\options_dialog.include.htm" />
     <Content Include="docs\res\ReadMe.txt" />
     <Content Include="post_build.py" />
     <Content Include="project_howto.txt" />

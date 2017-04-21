@@ -6,11 +6,10 @@ using System.Windows.Forms;
 using pr.extn;
 using pr.util;
 using pr.win32;
+using BrowserCtrl = pr.gui.WebBrowser;
 
 namespace pr.gui
 {
-	using BrowserCtrl = pr.gui.WebBrowser;
-
 	public class HelpUI :ToolForm
 	{
 		/// <summary>Show a modal help dialog from plain text, rtf, or html</summary>
@@ -20,7 +19,7 @@ namespace pr.gui
 				return ui.ShowDialog(parent);
 		}
 
-		/// <summary>A special url used to mean 'the current help content'</summary>
+		/// <summary>A special URL used to mean 'the current help content'</summary>
 		private static readonly Uri HelpUrl = new Uri("about:help");
 
 		#region UI Elements
@@ -112,7 +111,16 @@ namespace pr.gui
 		/// <summary>The control that displays the content</summary>
 		public Control TextCtrl { get; private set; }
 
-		/// <summary>The text,rtf,html to display in the window</summary>
+		/// <summary>The text control as a text box, or null</summary>
+		public TextBox TB { get { return TextCtrl as TextBox; } }
+
+		/// <summary>The text control as a rich text box, or null</summary>
+		public RichTextBox RTB { get { return TextCtrl as RichTextBox; } }
+
+		/// <summary>The text control as a web browser control, or null</summary>
+		public BrowserCtrl Html { get { return TextCtrl as BrowserCtrl; } }
+
+		/// <summary>The text,RTF,html to display in the window</summary>
 		public string Content { get; set; }
 
 		/// <summary>Show/Hide the navigation buttons</summary>

@@ -1,36 +1,32 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
+using pr.container;
+using pr.extn;
 using pr.gui;
+using pr.util;
 
 namespace RyLogViewer
 {
 	public class BookmarksUI :ToolForm
 	{
-		private readonly BindingSource m_marks;
+		#region UI Elements
 		private DataGridView m_grid;
+		#endregion
 
-		/// <summary>An event called whenever the dialog gets a NextBookmark command</summary>
-		public event Action NextBookmark;
-		public void RaiseNextBookmark() { if (NextBookmark != null) NextBookmark(); }
-
-		/// <summary>An event called whenever the dialog gets a FindPrev command</summary>
-		public event Action PrevBookmark;
-		public void RaisePrevBookmark() { if (PrevBookmark != null) PrevBookmark(); }
-
-		public BookmarksUI(Form owner, BindingSource marks)
-		:base(owner, EPin.TopRight, new Point(-200, +28), new Size(200,320), false)
+		public BookmarksUI(Form owner, BindingSource<Bookmark> marks)
+			:base(owner, EPin.TopRight, new Point(-200, +28), new Size(200,320), false)
 		{
 			InitializeComponent();
-			m_marks = marks;
-
-			m_grid.AutoGenerateColumns = false;
-			m_grid.Columns.Add(new DataGridViewTextBoxColumn{Name = "FilePos" ,HeaderText = "File Position" ,DataPropertyName = "Position", ReadOnly = true ,FillWeight=1});
-			m_grid.Columns.Add(new DataGridViewTextBoxColumn{Name = "Text"    ,HeaderText = "Line Text"     ,DataPropertyName = "Text"    , ReadOnly = true ,FillWeight=2});
-			m_grid.DataSource = m_marks;
+			Marks = marks;
+			SetupUI();
 		}
-
-		/// <summary>Handle global command keys</summary>
+		protected override void Dispose(bool disposing)
+		{
+			Marks = null;
+			Util.Dispose(ref components);
+			base.Dispose(disposing);
+		}
 		protected override bool ProcessCmdKey(ref Message msg, Keys key_data)
 		{
 			switch (key_data)
@@ -45,30 +41,43 @@ namespace RyLogViewer
 			}
 		}
 
-		#region Windows Form Designer generated code
-
-		/// <summary>
-		/// Required designer variable.
-		/// </summary>
-		private System.ComponentModel.IContainer components = null;
-
-		/// <summary>
-		/// Clean up any resources being used.
-		/// </summary>
-		/// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-		protected override void Dispose(bool disposing)
+		/// <summary>The collection of bookmarks</summary>
+		private BindingSource<Bookmark> Marks
 		{
-			if (disposing && (components != null))
+			get { return m_marks; }
+			set
 			{
-				components.Dispose();
+				if (m_marks == value) return;
+				m_marks = value;
 			}
-			base.Dispose(disposing);
+		}
+		private BindingSource<Bookmark> m_marks;
+
+		/// <summary>An event called whenever the dialog gets a NextBookmark command</summary>
+		public event Action NextBookmark;
+		public void RaiseNextBookmark()
+		{
+			NextBookmark.Raise();
 		}
 
-		/// <summary>
-		/// Required method for Designer support - do not modify
-		/// the contents of this method with the code editor.
-		/// </summary>
+		/// <summary>An event called whenever the dialog gets a FindPrev command</summary>
+		public event Action PrevBookmark;
+		public void RaisePrevBookmark()
+		{
+			PrevBookmark.Raise();
+		}
+
+		/// <summary>Set up UI elements</summary>
+		private void SetupUI()
+		{
+			m_grid.AutoGenerateColumns = false;
+			m_grid.Columns.Add(new DataGridViewTextBoxColumn{Name = "FilePos" ,HeaderText = "File Position" ,DataPropertyName = "Position", ReadOnly = true ,FillWeight=1});
+			m_grid.Columns.Add(new DataGridViewTextBoxColumn{Name = "Text"    ,HeaderText = "Line Text"     ,DataPropertyName = "Text"    , ReadOnly = true ,FillWeight=2});
+			m_grid.DataSource = Marks;
+		}
+
+		#region Windows Form Designer generated code
+		private System.ComponentModel.IContainer components = null;
 		private void InitializeComponent()
 		{
 			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();

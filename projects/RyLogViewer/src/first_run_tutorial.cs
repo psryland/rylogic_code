@@ -57,7 +57,7 @@ namespace RyLogViewer
 			// Close the current log file, save the user settings
 			// and load the default settings
 			m_main = main;
-			m_main.CloseLogFile();
+			m_main.Src = null;
 			m_page_index = ETutPage.First - 1;
 
 			// Grab a reference to the main settings then replace the
@@ -325,7 +325,7 @@ namespace RyLogViewer
 			public override void Enter()
 			{
 				base.Enter();
-				m_main.CloseLogFile();
+				m_main.Src = null;
 				m_main.EnableHighlights(false);
 				m_main.EnableFilters(false);
 				m_main.EnableTransforms(false);
@@ -342,7 +342,7 @@ namespace RyLogViewer
 			{
 				base.Exit(forward);
 				if (!forward)
-					m_main.CloseLogFile();
+					m_main.Src = null;
 			}
 			protected override string HtmlContent
 			{

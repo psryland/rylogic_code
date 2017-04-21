@@ -585,6 +585,7 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>vector.cs</LastGenOutput>
     </Content>
+    <Content Include="resources\regex_quick_ref.html" />
     <Content Include="run_tests.py" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

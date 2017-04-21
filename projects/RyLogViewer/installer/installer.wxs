@@ -125,7 +125,7 @@
 		<UI>
 			<UIRef Id="WixUI_InstallDir" />
 
-			<!-- Skip license dialog -->
+			<!-- Skip licence dialog -->
 			<Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="2">1</Publish>
 			<Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2">1</Publish>
 

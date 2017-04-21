@@ -80,7 +80,9 @@ namespace RyLogViewer
 			var uri = new Uri(DownloadUrl);
 			var installer_filepath = Path.Combine(Path.GetTempPath(), Path.GetFileName(DownloadUrl) ?? "RylogViewerSetup0.exe");
 
-			var dlg = new ProgressForm("Upgrading...", "Downloading latest version", Icon, ProgressBarStyle.Continuous, (form,args,cb) =>
+			try
+			{
+				var dlg = new ProgressForm("Upgrading...", "Downloading latest version", Icon, ProgressBarStyle.Continuous, (form,args,cb) =>
 				{
 					// Download the installer for the new version
 					using (var web = new WebClient{Proxy = Proxy})
@@ -89,7 +91,6 @@ namespace RyLogViewer
 						Exception error = null;
 						web.DownloadFileCompleted += (s,a) =>
 						{
-							// ReSharper disable AccessToDisposedClosure
 							try
 							{
 								error = a.Error;
@@ -97,7 +98,6 @@ namespace RyLogViewer
 							}
 							catch {}
 							finally { got.Set(); }
-							// ReSharper restore AccessToDisposedClosure
 						};
 						
 						web.DownloadFileAsync(uri, installer_filepath);
@@ -113,10 +113,9 @@ namespace RyLogViewer
 							throw new Exception("Failed to download installer for latest version", error);
 					}
 				});
-			try
-			{
-				if (dlg.ShowDialog(this) != DialogResult.OK)
-					return;
+				using (dlg)
+					if (dlg.ShowDialog(this) != DialogResult.OK)
+						return;
 
 				// Run the installer
 				Process.Start(installer_filepath);

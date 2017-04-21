@@ -15,9 +15,6 @@ namespace RyLogViewer
 			if (!Directory.Exists(exe_dir))
 				throw new ArgumentException("Cannot determine the current executable directory");
 
-			// Determine whether to run the app in portable mode
-			PortableMode = Path_.FileExists(Path.Combine(exe_dir, "portable"));
-
 			// Check the command line options
 			for (int i = 0, iend = args.Length; i != iend; ++i)
 			{
@@ -38,6 +35,7 @@ namespace RyLogViewer
 				if      (IsOption(CmdLineOption.RDelim       )) { RowDelim = arg.Substring(CmdLineOption.RDelim.Length); }
 				else if (IsOption(CmdLineOption.CDelim       )) { ColDelim = arg.Substring(CmdLineOption.CDelim.Length); }
 				else if (IsOption(CmdLineOption.NoGUI        )) { NoGUI = true; }
+				else if (IsOption(CmdLineOption.Silent       )) { Silent = true; }
 				else if (IsOption(CmdLineOption.PatternSet   )) { PatternSetFilepath = arg.Substring(CmdLineOption.PatternSet.Length); }
 				else if (IsOption(CmdLineOption.SettingsPath )) { SettingsPath = arg.Substring(CmdLineOption.SettingsPath.Length); }
 				else if (IsOption(CmdLineOption.LogFilePath  )) { LogFilePath = arg.Substring(CmdLineOption.LogFilePath.Length); }
@@ -48,20 +46,23 @@ namespace RyLogViewer
 				else throw new ArgumentException("Unknown command line option '"+arg+"'.");
 			}
 
-			// Set the AppDataDir based on whether we're running in portable mode or not
-			AppDataDir = Path.GetFullPath(PortableMode ? exe_dir : Util.ResolveUserDocumentsPath("Rylogic", Application.ProductName));
+			// Determine whether to run the app in portable mode
+			PortableMode = Path_.FileExists(Path.Combine(exe_dir, "portable"));
+
+			// Set the UserDataDir based on whether we're running in portable mode or not
+			UserDataDir = Path.GetFullPath(PortableMode ? exe_dir : Util.ResolveUserDocumentsPath("Rylogic", Application.ProductName));
 
 			// If we're in portable mode, check that we have write access to the local directory
 			if (PortableMode)
 			{
-				if (!Path_.DirExists(AppDataDir) || (new DirectoryInfo(AppDataDir).Attributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly)
-					throw new IOException("Unable to run in portable mode as the directory ('"+AppDataDir+"') is readonly.");
+				if (!Path_.DirExists(UserDataDir) || (new DirectoryInfo(UserDataDir).Attributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly)
+					throw new IOException("Unable to run in portable mode as the directory ('"+UserDataDir+"') is readonly.");
 			}
-			// If not in portable mode, check the AppData directory exists (or can be created)
+			// If not in portable mode, check the UserDataDir directory exists (or can be created)
 			else
 			{
-				if (!Path_.DirExists(AppDataDir))
-					Directory.CreateDirectory(AppDataDir);
+				if (!Path_.DirExists(UserDataDir))
+					Directory.CreateDirectory(UserDataDir);
 			}
 
 			// If the export option is given, a 'FileToLoad' must also be given
@@ -70,11 +71,16 @@ namespace RyLogViewer
 
 			// If a settings path has not been given, use the defaults
 			if (SettingsPath == null)
-				SettingsPath = Path.Combine(AppDataDir, "settings.xml");
+				SettingsPath = Path.Combine(UserDataDir, "settings.xml");
 
 			// Set the licence file path
-			if (LicenceFilepath == null)
-				LicenceFilepath = Path.Combine(AppDataDir, "licence.xml");
+			LicenceFilepath = PortableMode
+				? Path.Combine(exe_dir, "licence.xml")
+				: Path.Combine(UserDataDir, "licence.xml");
+
+			// If no licence file exists, create the free one
+			if (!Path_.FileExists(LicenceFilepath))
+				new Licence().WriteLicenceFile(LicenceFilepath);
 		}
 
 		/// <summary>The filepath to a file given on the command line</summary>
@@ -84,7 +90,7 @@ namespace RyLogViewer
 		public bool PortableMode { get; private set; }
 
 		/// <summary>A location that the app should read settings from and write to</summary>
-		public string AppDataDir { get; private set; }
+		public string UserDataDir { get; private set; }
 
 		/// <summary>The filepath to the settings file to use</summary>
 		public string SettingsPath { get; set; }
@@ -109,6 +115,9 @@ namespace RyLogViewer
 
 		/// <summary>True if the app should run without displaying any UI</summary>
 		public bool NoGUI { get; private set; }
+
+		/// <summary>True if the app shouldn't write anything to stdout</summary>
+		public bool Silent { get; private set; }
 
 		/// <summary>True if the command line help options should be displayed</summary>
 		public bool ShowHelp { get; private set; }

@@ -87,16 +87,18 @@ namespace pr.common
 			if (desc == null) desc = "Scanning for implementations of {0}".Fmt(typeof(TInterface).Name);
 
 			var dis = Dispatcher.CurrentDispatcher;
+
 			PluginLoader<TInterface> loader = null;
 			var progress = new ProgressForm(title, desc, icon, ProgressBarStyle.Continuous, (s,a,cb) =>
+			{
+				loader = new PluginLoader<TInterface>(directory, args, recursive, regex_pattern, (file,frac) =>
 				{
-					loader = new PluginLoader<TInterface>(directory, args, recursive, regex_pattern, (file,frac) =>
-						{
-							cb(new ProgressForm.UserState{Description = "{0}\r\n{1}".Fmt(desc, file), FractionComplete = frac});
-							if (s.CancelPending) throw new OperationCanceledException();
-						}, dis);
-				});
-			progress.ShowDialog(parent, delay);
+					cb(new ProgressForm.UserState{Description = "{0}\r\n{1}".Fmt(desc, file), FractionComplete = frac});
+					if (s.CancelPending) throw new OperationCanceledException();
+				}, dis);
+			});
+			using (progress)
+				progress.ShowDialog(parent, delay);
 
 			// Report any plugins that failed to load
 			if (loader.Failures.Count != 0)

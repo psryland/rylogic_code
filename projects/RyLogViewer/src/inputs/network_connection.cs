@@ -58,7 +58,7 @@ namespace RyLogViewer
 		private BufferedTcpNetConn m_buffered_tcp_netconn;
 		private BufferedUdpNetConn m_buffered_udp_netconn;
 
-		/// <summary>Open a tcp network connection and log anything read</summary>
+		/// <summary>Open a TCP network connection and log anything read</summary>
 		private void LogTcpNetConnection(NetConn conn)
 		{
 			BufferedTcpNetConn buffered_tcp_netconn = null;
@@ -68,7 +68,7 @@ namespace RyLogViewer
 				// Strictly, we don't have to close because OpenLogFile closes before opening
 				// however if the user reopens the same connection the existing connection will
 				// hold a lock on the capture file preventing the new connection being created.
-				CloseLogFile();
+				Src = null;
 
 				// Set options so that data always shows
 				PrepareForStreamedData(conn.OutputFilepath);
@@ -78,9 +78,9 @@ namespace RyLogViewer
 
 				// Give some UI feedback if the connection drops
 				buffered_tcp_netconn.ConnectionDropped += (s,a)=>
-					{
-						this.BeginInvoke(() => SetStaticStatusMessage("Connection dropped", Color.Black, Color.LightSalmon));
-					};
+				{
+					this.BeginInvoke(() => SetStaticStatusMessage("Connection dropped", Color.Black, Color.LightSalmon));
+				};
 
 				// Open the capture file created by buffered_process
 				OpenSingleLogFile(buffered_tcp_netconn.Filepath, !buffered_tcp_netconn.TmpFile);
@@ -115,7 +115,7 @@ namespace RyLogViewer
 				// Strictly, we don't have to close because OpenLogFile closes before opening
 				// however if the user reopens the same connection the existing connection will
 				// hold a lock on the capture file preventing the new connection being created.
-				CloseLogFile();
+				Src = null;
 
 				// Set options so that data always shows
 				PrepareForStreamedData(conn.OutputFilepath);
@@ -123,11 +123,11 @@ namespace RyLogViewer
 				// Launch the process with standard output/error redirected to the temporary file
 				buffered_udp_netconn = new BufferedUdpNetConn(conn);
 
-				// Give some UI feedback if the connection drops (not that there is a connection with Udp... on well..)
+				// Give some UI feedback if the connection drops (not that there is a connection with UDP... on well..)
 				buffered_udp_netconn.ConnectionDropped += (s,a)=>
-					{
-						this.BeginInvoke(() => SetStaticStatusMessage("Connection dropped", Color.Black, Color.LightSalmon));
-					};
+				{
+					this.BeginInvoke(() => SetStaticStatusMessage("Connection dropped", Color.Black, Color.LightSalmon));
+				};
 
 				// Open the capture file created by buffered_process
 				OpenSingleLogFile(buffered_udp_netconn.Filepath, !buffered_udp_netconn.TmpFile);
@@ -172,14 +172,14 @@ namespace RyLogViewer
 			{
 				lock (m_lock)
 				{
-					Log.Info(this, "Disposing tcp client {0}".Fmt(m_conn.Hostname));
+					Log.Info(this, "Disposing TCP client {0}".Fmt(m_conn.Hostname));
 					m_client.Close();
 					m_client = null;
 				}
 			}
 		}
 
-		/// <summary>Start asynchronously reading from the tcp client</summary>
+		/// <summary>Start asynchronously reading from the TCP client</summary>
 		public void Start(Main parent)
 		{
 			if (m_conn.Listener)
@@ -188,82 +188,75 @@ namespace RyLogViewer
 				StartClient(parent);
 		}
 
-		/// <summary>Start a tcp client that connects to a server that is producing log data</summary>
+		/// <summary>Start a TCP client that connects to a server that is producing log data</summary>
 		private void StartClient(Main parent)
 		{
-			var connect = new ProgressForm("Connecting..."
-				,string.Format("Connecting to remote host: {0}:{1}", m_conn.Hostname, m_conn.Port)
-				,null
-				,ProgressBarStyle.Marquee
-				,(s,a,cb)=>
+			var connect = new ProgressForm("Connecting...","Connecting to remote host: {0}:{1}".Fmt(m_conn.Hostname, m_conn.Port), parent.Icon, ProgressBarStyle.Marquee, (s,a,cb)=>
+			{
+				cb(new ProgressForm.UserState{ProgressBarVisible = false, Icon = parent.Icon});
+
+				m_client = new TcpClient();
+				var proxy = m_conn.ProxyType == Proxy.EType.None ? null
+					: Proxy.Create(m_conn.ProxyType, m_conn.ProxyHostname, m_conn.ProxyPort, m_conn.ProxyUserName, m_conn.ProxyPassword);
+
+				// Connect async
+				var ar = proxy != null
+					? proxy.BeginConnect(m_conn.Hostname, m_conn.Port)
+					: m_client.BeginConnect(m_conn.Hostname, m_conn.Port, null, null);
+
+				for (;!s.CancelPending && !ar.AsyncWaitHandle.WaitOne(500);){}
+				if (!s.CancelPending)
 				{
-					cb(new ProgressForm.UserState{ProgressBarVisible = false, Icon = parent.Icon});
+					if (proxy != null)
+						m_client = proxy.EndConnect(ar);
+					else
+						m_client.EndConnect(ar);
 
-					m_client = new TcpClient();
-					var proxy = m_conn.ProxyType == Proxy.EType.None ? null
-						: Proxy.Create(m_conn.ProxyType, m_conn.ProxyHostname, m_conn.ProxyPort, m_conn.ProxyUserName, m_conn.ProxyPassword);
+					var src = new StreamSource(m_client.GetStream());
+					src.BeginRead(m_buf, 0, m_buf.Length, DataRecv, new AsyncData(src, m_buf));
+				}
+			});
+			using (connect)
+				if (connect.ShowDialog(parent) != DialogResult.OK)
+					throw new OperationCanceledException("Connecting cancelled");
+		}
 
-					// Connect async
-					var ar = proxy != null
-						? proxy.BeginConnect(m_conn.Hostname, m_conn.Port)
-						: m_client.BeginConnect(m_conn.Hostname, m_conn.Port, null, null);
+		/// <summary>Start a TCP server that listens for incoming connections from clients</summary>
+		private void StartListener(Main parent)
+		{
+			var connect = new ProgressForm("Listening...", "Waiting for connections on port: {0}".Fmt(m_conn.Port), parent.Icon, ProgressBarStyle.Marquee, (s,a,cb) =>
+			{
+				cb(new ProgressForm.UserState{ProgressBarVisible = false, Icon = parent.Icon});
 
+				var listener = new TcpListener(IPAddress.Any, m_conn.Port);
+				listener.Start();
+
+				try
+				{
+					// Listen async
+					var ar = listener.BeginAcceptTcpClient(r => {}, null);
 					for (;!s.CancelPending && !ar.AsyncWaitHandle.WaitOne(500);){}
 					if (!s.CancelPending)
 					{
-						if (proxy != null)
-							m_client = proxy.EndConnect(ar);
-						else
-							m_client.EndConnect(ar);
+						m_client = listener.EndAcceptTcpClient(ar);
+						listener.Stop();
 
 						var src = new StreamSource(m_client.GetStream());
 						src.BeginRead(m_buf, 0, m_buf.Length, DataRecv, new AsyncData(src, m_buf));
 					}
-				});
-
-			if (connect.ShowDialog(parent) != DialogResult.OK)
-				throw new OperationCanceledException("Connecting cancelled");
-		}
-
-		/// <summary>Start a tcp server that listens for incoming connections from clients</summary>
-		private void StartListener(Main parent)
-		{
-			var connect = new ProgressForm("Listening..."
-				,string.Format("Waiting for connections on port: {0}", m_conn.Port)
-				,null
-				,ProgressBarStyle.Marquee
-				,(s,a,cb)=>
+				}
+				finally
 				{
-					cb(new ProgressForm.UserState{ProgressBarVisible = false, Icon = parent.Icon});
+					listener.Stop();
+				}
+			});
 
-					var listener = new TcpListener(IPAddress.Any, m_conn.Port);
-					listener.Start();
-
-					try
-					{
-						// Listen async
-						var ar = listener.BeginAcceptTcpClient(r => {}, null);
-						for (;!s.CancelPending && !ar.AsyncWaitHandle.WaitOne(500);){}
-						if (!s.CancelPending)
-						{
-							m_client = listener.EndAcceptTcpClient(ar);
-							listener.Stop();
-
-							var src = new StreamSource(m_client.GetStream());
-							src.BeginRead(m_buf, 0, m_buf.Length, DataRecv, new AsyncData(src, m_buf));
-						}
-					}
-					finally
-					{
-						listener.Stop();
-					}
-				});
-
-			if (connect.ShowDialog(parent) != DialogResult.OK)
-				throw new OperationCanceledException("Connecting cancelled");
+			using (connect)
+				if (connect.ShowDialog(parent) != DialogResult.OK)
+					throw new OperationCanceledException("Connecting cancelled");
 		}
 
-		/// <summary>Returns true if the tcp client is connected</summary>
+		/// <summary>Returns true if the TCP client is connected</summary>
 		protected override bool IsConnected
 		{
 			get { return m_client != null && m_client.Connected; }
@@ -293,7 +286,7 @@ namespace RyLogViewer
 			{
 				lock (m_lock)
 				{
-					Log.Info(this, "Disposing ucp client {0}".Fmt(m_conn.Hostname));
+					Log.Info(this, "Disposing UDP client {0}".Fmt(m_conn.Hostname));
 					m_udp.Close();
 					m_udp = null;
 				}
@@ -318,14 +311,14 @@ namespace RyLogViewer
 				: m_udp.Client.EndReceiveFrom(ar, ref src);
 		}
 
-		/// <summary>Start asynchronously reading from the tcp client</summary>
+		/// <summary>Start asynchronously reading from the TCP client</summary>
 		public void Start()
 		{
 			if (m_specific_host) m_udp.Connect(m_conn.Hostname, 0);
 			BeginRecv();
 		}
 
-		/// <summary>Returns true if the tcp client is connected</summary>
+		/// <summary>Returns true if the TCP client is connected</summary>
 		protected override bool IsConnected
 		{
 			get { return m_udp != null; }

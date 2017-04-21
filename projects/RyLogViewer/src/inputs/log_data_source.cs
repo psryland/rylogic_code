@@ -121,7 +121,7 @@ namespace RyLogViewer
 				// Strictly, we don't have to close because OpenLogFile closes before opening
 				// however if the user reopens the same process the existing process will hold
 				// a lock to the capture file preventing the new process being created.
-				CloseLogFile();
+				Src = null;
 
 				// Set options so that data always shows
 				PrepareForStreamedData(launch.OutputFilepath);
@@ -131,9 +131,9 @@ namespace RyLogViewer
 
 				// Give some UI feedback when the data source ends
 				buffered_src.ConnectionDropped += (s,a)=>
-					{
-						this.BeginInvoke(() => SetStaticStatusMessage(string.Format("{0} stopped", src.ShortName), Color.Black, Color.LightSalmon));
-					};
+				{
+					this.BeginInvoke(() => SetStaticStatusMessage(string.Format("{0} stopped", src.ShortName), Color.Black, Color.LightSalmon));
+				};
 
 				// Attach the optional selection changed handler
 				if (launch.HandleSelectionChanged != null)

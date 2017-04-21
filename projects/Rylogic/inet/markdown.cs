@@ -11,7 +11,7 @@
  *
  */
 
-#region Copyright and license
+#region Copyright and licence
 
 /*
 Copyright (c) 2003-2004 John Gruber

@@ -28,11 +28,11 @@ namespace pr.extn
 				dis.BeginInvoke(action);
 			else
 				new DispatcherTimer(delay, priority, (s,a) =>
-					{
-						var dt = s.As<DispatcherTimer>();
-						dt.Stop();
-						action();
-					}, dis).Start();
+				{
+					var dt = s.As<DispatcherTimer>();
+					dt.Stop();
+					action();
+				}, dis).Start();
 		}
 	}
 }

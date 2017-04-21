@@ -66,7 +66,7 @@ namespace RyLogViewer
 				// Strictly, we don't have to close because OpenLogFile closes before opening
 				// however if the user reopens the same connection the existing connection will
 				// hold a lock on the capture file preventing the new connection being created.
-				CloseLogFile();
+				Src = null;
 
 				// Set options so that data always shows
 				PrepareForStreamedData(conn.OutputFilepath);

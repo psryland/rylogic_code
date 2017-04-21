@@ -124,18 +124,18 @@ namespace pr.common
 
 				// Add a delayed call to Action. In the meantime, repeat calls will just increment 'm_count'
 				m_dispatcher.BeginInvokeDelayed(() =>
-					{
-						// After the delay period, see how many more times we've been signalled.
-						// If still only once, don't call Action again
-						var count = Interlocked.Exchange(ref m_count, 0);
+				{
+					// After the delay period, see how many more times we've been signalled.
+					// If still only once, don't call Action again
+					var count = Interlocked.Exchange(ref m_count, 0);
 
-						// If there's still an outstanding signal count, raise the action
-						if (count > 1 || (count == 1 && !TriggerOnFirst))
-						{
-							if (Action == null || m_shutdown) return;
-							Action();
-						}
-					}, Delay, Priority);
+					// If there's still an outstanding signal count, raise the action
+					if (count > 1 || (count == 1 && !TriggerOnFirst))
+					{
+						if (Action == null || m_shutdown) return;
+						Action();
+					}
+				}, Delay, Priority);
 			}
 		}
 

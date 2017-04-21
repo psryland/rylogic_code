@@ -726,7 +726,7 @@ namespace pr.win32
 		public const int ERROR_DRIVER_BLOCKED                    = 1275;//(0x4FB) This driver has been blocked from loading.
 		public const int ERROR_INVALID_IMPORT_OF_NON_DLL         = 1276;//(0x4FC) A dynamic link library (DLL) referenced a module that was neither a DLL nor the process's executable image.
 		public const int ERROR_ACCESS_DISABLED_WEBBLADE          = 1277;//(0x4FD) Windows cannot open this program since it has been disabled.
-		public const int ERROR_ACCESS_DISABLED_WEBBLADE_TAMPER   = 1278;//(0x4FE) Windows cannot open this program because the license enforcement system has been tampered with or become corrupted.
+		public const int ERROR_ACCESS_DISABLED_WEBBLADE_TAMPER   = 1278;//(0x4FE) Windows cannot open this program because the licence enforcement system has been tampered with or become corrupted.
 		public const int ERROR_RECOVERY_FAILURE                  = 1279;//(0x4FF) A transaction recover failed.
 		public const int ERROR_ALREADY_FIBER                     = 1280;//(0x500) The current thread has already been converted to a fiber.
 		public const int ERROR_ALREADY_THREAD                    = 1281;//(0x501) The current thread has already been converted from a fiber.

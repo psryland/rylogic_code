@@ -2,6 +2,7 @@
 using System.Drawing;
 using System.Windows.Forms;
 using pr.common;
+using pr.container;
 using pr.extn;
 using pr.gui;
 using pr.maths;
@@ -11,15 +12,38 @@ namespace RyLogViewer
 {
 	public partial class Main
 	{
-		private readonly BindingSource m_find_history;
+		/// <summary>The find dialog</summary>
+		private FindUI FindUI
+		{
+			get { return m_find_ui; }
+			set
+			{
+				if (m_find_ui == value) return;
+				Util.Dispose(ref m_find_ui);
+				m_find_ui = value;
+			}
+		}
+		private FindUI m_find_ui;
+
+		/// <summary>The history of find patterns</summary>
+		private BindingSource<Pattern> FindHistory
+		{
+			get { return m_find_history; }
+			set
+			{
+				if (m_find_history == value) return;
+				m_find_history = value;
+			}
+		}
+		private BindingSource<Pattern> m_find_history;
 
 		/// <summary>Set up the app's find search support</summary>
 		private void SetupFind()
 		{
 			// When the find events are fired on m_find_ui, trigger find next/prev
-			m_find_ui.FindNext += FindNext;
-			m_find_ui.FindPrev += FindPrev;
-			m_find_ui.BookmarkAll += FindBookmarkAll;
+			FindUI.FindNext += FindNext;
+			FindUI.FindPrev += FindPrev;
+			FindUI.BookmarkAll += FindBookmarkAll;
 		}
 
 		/// <summary>Show the find dialog</summary>
@@ -30,11 +54,11 @@ namespace RyLogViewer
 			if (row_index != -1)
 			{
 				var row_text = ReadLine(row_index).RowText.Trim();
-				m_find_ui.Pattern = new Pattern(EPattern.Substring, row_text);
+				FindUI.Pattern = new Pattern(EPattern.Substring, row_text);
 			}
 
 			// Display the find window
-			m_find_ui.Show();
+			FindUI.Show();
 		}
 
 		/// <summary>Update the current find pattern to the text from row 'row_index'</summary>
@@ -42,7 +66,7 @@ namespace RyLogViewer
 		{
 			if (row_index == -1) return;
 			var row_text = ReadLine(row_index).RowText.Trim();
-			m_find_ui.Pattern = new Pattern(EPattern.Substring, row_text);
+			FindUI.Pattern = new Pattern(EPattern.Substring, row_text);
 			if (find_next) FindNext(false);
 			else           FindPrev(false);
 		}
@@ -55,20 +79,20 @@ namespace RyLogViewer
 				return false;
 
 			// Check if m_find_ui has a valid find pattern
-			if (m_find_ui.Pattern.Expr.Length == 0 || !m_find_ui.Pattern.IsValid)
+			if (FindUI.Pattern.Expr.Length == 0 || !FindUI.Pattern.IsValid)
 				return false;
 
-			var pattern = new Pattern(m_find_ui.Pattern);
+			var pattern = new Pattern(FindUI.Pattern);
 
 			// Remove any patterns with the same expression as 'pattern'
-			m_find_history.RemoveIf<Pattern>(x => string.CompareOrdinal(x.Expr, pattern.Expr) == 0);
-			m_find_history.Insert(0, pattern);
-			m_find_history.Position = 0;
-			m_find_history.ResetBindings(false);
+			FindHistory.RemoveIf(x => string.CompareOrdinal(x.Expr, pattern.Expr) == 0);
+			FindHistory.Insert(0, pattern);
+			FindHistory.Position = 0;
+			FindHistory.ResetBindings(false);
 
 			// Cap the length of the find history
-			while (m_find_history.Count > Constants.MaxFindHistory)
-				m_find_history.RemoveAt(m_find_history.Count - 1);
+			while (FindHistory.Count > Constants.MaxFindHistory)
+				FindHistory.RemoveAt(FindHistory.Count - 1);
 
 			// Continue with the find
 			return true;
@@ -84,7 +108,7 @@ namespace RyLogViewer
 			Log.Info(this, "FindNext starting from {0}".Fmt(start));
 
 			long found;
-			if (Find(m_find_ui.Pattern, start, false, out found) && found == -1)
+			if (Find(FindUI.Pattern, start, false, out found) && found == -1)
 				SetTransientStatusMessage("End of file", Color.Azure, Color.Blue);
 		}
 
@@ -98,7 +122,7 @@ namespace RyLogViewer
 			Log.Info(this, "FindPrev starting from {0}".Fmt(start));
 
 			long found;
-			if (Find(m_find_ui.Pattern, start, true, out found) && found == -1)
+			if (Find(FindUI.Pattern, start, true, out found) && found == -1)
 				SetTransientStatusMessage("Start of file", Color.Azure, Color.Blue);
 		}
 
@@ -107,38 +131,41 @@ namespace RyLogViewer
 		/// is returned 'found' contains the file byte offset of the first match</returns>
 		private bool Find(Pattern pat, long start, bool backward, out long found)
 		{
-			var body = backward
-				? (start == FileByteRange.End
-					? "Searching backward from the end of the file..."
-					: "Searching backward from the current selection position...")
-				: (start == FileByteRange.Beg
-					? "Searching forward from the start of the file..."
-					: "Searching forward from the current selection position...");
-
-			// Although this search runs in a background thread, it's wrapped in a modal
-			// dialog box, so it should be ok to use class members directly
 			long at = -1;
-			var search = new ProgressForm("Searching...", body, null, ProgressBarStyle.Marquee, (s,a,cb)=>
+			DialogResult res = DialogResult.Cancel;
+			try
+			{
+				var body = backward
+					? (start == FileByteRange.End
+						? "Searching backward from the end of the file..."
+						: "Searching backward from the current selection position...")
+					: (start == FileByteRange.Beg
+						? "Searching forward from the start of the file..."
+						: "Searching forward from the current selection position...");
+
+				// Although this search runs in a background thread, it's wrapped in a modal
+				// dialog box, so it should be ok to use class members directly
+				var search = new ProgressForm("Searching...", body, null, ProgressBarStyle.Marquee, (s,a,cb)=>
 				{
-					var d = new BLIData(this, m_file, fileend_:m_fileend);
+					var d = new BLIData(this, Src, fileend_:m_fileend);
 					int last_progress = 0;
 					d.progress = (scanned, length) =>
+					{
+						int progress = (int)(100 * Maths.Frac(0,scanned,length!=0?length:1));
+						if (progress != last_progress)
 						{
-							int progress = (int)(100 * Maths.Frac(0,scanned,length!=0?length:1));
-							if (progress != last_progress)
-							{
-								cb(new ProgressForm.UserState{FractionComplete = progress * 0.01f});
-								last_progress = progress;
-							}
-							return !s.CancelPending;
-						};
+							cb(new ProgressForm.UserState{FractionComplete = progress * 0.01f});
+							last_progress = progress;
+						}
+						return !s.CancelPending;
+					};
 
 					// Searching....
 					DoFind(pat, start, backward, d, rng =>
-						{
-							at = rng.Beg;
-							return false;
-						});
+					{
+						at = rng.Beg;
+						return false;
+					});
 
 					// We can call BuildLineIndex in this thread context because we know
 					// we're in a modal dialog.
@@ -148,8 +175,9 @@ namespace RyLogViewer
 					}
 				}){StartPosition = FormStartPosition.CenterParent};
 
-			DialogResult res = DialogResult.Cancel;
-			try { res = search.ShowDialog(this, 500); }
+				using (search)
+					res = search.ShowDialog(this, 500);
+			}
 			catch (OperationCanceledException) {}
 			catch (Exception ex) { Misc.ShowMessage(this, "Find terminated by an error.", "Find error", MessageBoxIcon.Error, ex); }
 			found = at;
@@ -166,36 +194,37 @@ namespace RyLogViewer
 			{
 				Log.Info(this, "FindBookmarkAll");
 
-				var pat = m_find_ui.Pattern;
+				var pat = FindUI.Pattern;
 				const string body = "Bookmarking all found instances...";
 
 				// Although this search runs in a background thread, it's wrapped in a modal
 				// dialog box, so it should be ok to use class members directly
 				var search = new ProgressForm("Searching...", body, null, ProgressBarStyle.Marquee, (s,a,cb)=>
+				{
+					var d = new BLIData(this, Src, fileend_:m_fileend);
+
+					int last_progress = 0;
+					d.progress = (scanned, length) =>
 					{
-						var d = new BLIData(this, m_file, fileend_:m_fileend);
+						int progress = (int)(100 * Maths.Frac(0,scanned,length!=0?length:1));
+						if (progress != last_progress)
+						{
+							cb(new ProgressForm.UserState{FractionComplete = progress * 0.01f});
+							last_progress = progress;
+						}
+						return !s.CancelPending;
+					};
 
-						int last_progress = 0;
-						d.progress = (scanned, length) =>
-							{
-								int progress = (int)(100 * Maths.Frac(0,scanned,length!=0?length:1));
-								if (progress != last_progress)
-								{
-									cb(new ProgressForm.UserState{FractionComplete = progress * 0.01f});
-									last_progress = progress;
-								}
-								return !s.CancelPending;
-							};
+					// Searching....
+					DoFind(pat, 0, false, d, rng =>
+					{
+						this.BeginInvoke(() => SetBookmark(rng, Bit.EState.Set));
+						return true;
+					});
+				}){StartPosition = FormStartPosition.CenterParent};
 
-						// Searching....
-						DoFind(pat, 0, false, d, rng =>
-							{
-								this.BeginInvoke(() => SetBookmark(rng, Bit.EState.Set));
-								return true;
-							});
-					}){StartPosition = FormStartPosition.CenterParent};
-
-				search.ShowDialog(this, 500);
+				using (search)
+					search.ShowDialog(this, 500);
 			}
 			catch (OperationCanceledException) {}
 			catch (Exception ex)

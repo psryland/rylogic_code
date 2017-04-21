@@ -36,7 +36,7 @@ namespace RyLogViewer
 		/// <summary>Access info about a line (cached)</summary>
 		private Line ReadLine(Range rng)
 		{
-			Debug.Assert(FileOpen);
+			Debug.Assert(Src != null);
 
 			// Check if the line is already cached
 			Line line = m_line_cache[(int)(rng.Beg % m_line_cache.Count)];
@@ -47,9 +47,9 @@ namespace RyLogViewer
 			{
 				// Read the whole line into m_buf
 				//m_file.Flush(); why??
-				m_file.Stream.Seek(rng.Beg, SeekOrigin.Begin);
+				Src.Stream.Seek(rng.Beg, SeekOrigin.Begin);
 				m_line_buf = rng.Size <= m_line_buf.Length ? m_line_buf : new byte[rng.Size];
-				int read = m_file.Stream.Read(m_line_buf, 0, (int)rng.Size);
+				int read = Src.Stream.Read(m_line_buf, 0, (int)rng.Size);
 				if (read != rng.Size) throw new IOException("failed to read file over range [{0},{1}) ({2} bytes). Read {3}/{2} bytes.".Fmt(rng.Beg, rng.End, rng.Size, read));
 
 				// Cache data for the line

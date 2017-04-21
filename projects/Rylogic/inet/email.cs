@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.Mail;
 using System.Runtime.InteropServices;
 using System.Text;
 using pr.common;
@@ -25,7 +26,6 @@ namespace pr.inet
 			Cc,
 			Bcc
 		};
-
 		public enum MAPISendMethod
 		{
 			Popup = MAPI32.LogonUI | MAPI32.Dialog,
@@ -50,7 +50,7 @@ namespace pr.inet
 			m_recipients.Add(recipient);
 		}
 
-		/// <summary>Calls the Mail api to send this email</summary>
+		/// <summary>Calls the Mail API to send this email</summary>
 		public void Send(MAPISendMethod how = MAPISendMethod.Popup)
 		{
 			using (var recip_buf  = Marshal_.AllocHGlobal(typeof(MAPI32.RecipDesc), m_recipients.Count))
@@ -96,6 +96,13 @@ namespace pr.inet
 				var res = MAPI32.SendMail(IntPtr.Zero, IntPtr.Zero, msg, (int)how, 0);
 				if (res > 1) throw new Exception("MAPI32.SendMail failed. Result: " + MAPI32.ErrorString(res));
 			}
+		}
+
+		/// <summary>True if 'address' is a valid email address</summary>
+		public static bool ValidAddress(string address)
+		{
+			try { new MailAddress(address); return true; }
+			catch { return false; }
 		}
 	}
 
@@ -189,6 +196,8 @@ namespace pr.inet
 	/// <summary>Send an email etc via SendGrid</summary>
 	public class SendGrid
 	{
+		// This is no longer free :(
+
 		/// <summary>SendGrid email via HTTP POST</summary>
 		/// <remarks>https://sendgrid.com/docs/API_Reference/Web_API/mail.html</remarks>
 		public class Email
@@ -238,6 +247,70 @@ namespace pr.inet
 						"");
 					if (ToAddressName   != null) data += Str.Build("&toname=", ToAddressName);
 					if (FromAddressName != null) data += Str.Build("&fromname=", FromAddressName);
+					var data_bytes = Encoding.UTF8.GetBytes(data);
+					req.GetRequestStream().Write2(data_bytes, 0, data_bytes.Length).Close();
+
+					// Post, get reply
+					return (HttpWebResponse)req.GetResponse();
+				}
+				catch(WebException ex)
+				{
+					return (HttpWebResponse)ex.Response;
+				}
+			}
+		}
+	}
+
+	/// <summary>Send an email via MailGun</summary>
+	public class MailGun
+	{
+		/// <summary>MailGun email via HTTP POST</summary>
+		public class Email
+		{
+			public Email()
+			{
+				APIKey = "key-349ba1ff5262a885c634c36c4a465636";
+			}
+
+			/// <summary>An application specific key generated on the website: https://app.mailgun.com/app/account/security </summary>
+			public string APIKey { get; set; } // i.e. 'key-349ba1ff5262a885c634c36c4a465636'
+
+			/// <summary>The authentication string created by the website: https://app.mailgun.com/app/account/security when the API key was created</summary>
+			public string AuthString { get; set; } // i.e. 'pubkey-04d7794f8bda7a3312595bd95037dfc9'
+
+			/// <summary>The email address that the email will be sent to</summary>
+			public string ToAddress { get; set; }
+
+			/// <summary>The email address that the email will appear to be sent from</summary>
+			public string FromAddress { get; set; }
+
+			/// <summary>The email subject</summary>
+			public string Subject { get; set; }
+
+			/// <summary>The email body</summary>
+			public string Body { get; set; }
+
+			/// <summary>Send the email</summary>
+			public HttpWebResponse Send()
+			{
+				try
+				{
+					var auth = Convert.ToBase64String(Encoding.UTF8.GetBytes("api:"+APIKey));
+
+					// HTTP POST web request
+					var req = HttpWebRequest.Create("https://api.mailgun.net/v3/rylogic.co.nz/messages");
+					req.UseDefaultCredentials = false;
+					req.Headers.Add(HttpRequestHeader.Authorization, auth);
+					req.ContentType = "application/x-www-form-urlencoded";
+					req.Method = "POST";
+
+					// Parameters
+					var data = Str.Build(
+						"&to="      , ToAddress   ?? string.Empty,
+						"&from="    , FromAddress ?? string.Empty,
+						"&subject=" , Subject     ?? string.Empty,
+						"&text="    , Body        ?? string.Empty,
+						"");
 					var data_bytes = Encoding.UTF8.GetBytes(data);
 					req.GetRequestStream().Write2(data_bytes, 0, data_bytes.Length).Close();
 

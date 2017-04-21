@@ -17,31 +17,6 @@ namespace RyLogViewer
 {
 	public partial class Main
 	{
-		private class NoLinesException :Exception
-		{
-			private readonly int m_buf_size;
-			public NoLinesException(int buf_size) { m_buf_size = buf_size; }
-			public override string Message
-			{
-				get
-				{
-					return string.Format(
-						"No lines detected within a {0} byte block.\r\n" +
-						"\r\n" +
-						"There are several possible causes for this:\r\n" +
-						" - The log file may contain one or more lines that are longer than {0} bytes,\r\n" +
-						" - The line ending setting may be incorrect causing new lines not to be detected correctly,\r\n" +
-						" - The text encoding setting may be incorrect causing the log data to not be read correctly,\r\n" +
-						"\r\n" +
-						"If lines longer than {0} bytes are expected, increase the 'Maximum Line Length'\r\n" +
-						"option under settings. Otherwise, check the settings under the 'Line Ending' and\r\n" +
-						"'Encoding' menus. You may have to specify these values explicitly rather than\r\n" +
-						"using automatic detection."
-						, m_buf_size);
-				}
-			}
-		}
-
 		/// <summary>Returns the byte range of the complete file, last time we checked its length. Begin is always 0</summary>
 		private Range FileByteRange
 		{
@@ -275,7 +250,7 @@ namespace RyLogViewer
 			try
 			{
 				// No file open, nothing to do
-				if (!FileOpen)
+				if (Src == null)
 					return;
 
 				// Incremental updates cannot supplant reloads
@@ -289,7 +264,7 @@ namespace RyLogViewer
 				Log.Info(this, "build start request (id {0}, reload: {1})\n{2}".Fmt(m_build_issue, reload, string.Empty));//new StackTrace(0,true)));
 
 				// Make copies of variables for thread safety
-				var bli_data = new BLIData(this, m_file, filepos_:filepos, reload_:reload, build_issue_:m_build_issue);
+				var bli_data = new BLIData(this, Src, filepos_:filepos, reload_:reload, build_issue_:m_build_issue);
 
 				// Set up callbacks that marshal to the main thread
 				bli_data.progress = (scanned,length) =>
@@ -451,7 +426,7 @@ namespace RyLogViewer
 					on_success();
 
 				// On completion, check if the file has changed again and rerun if it has
-				m_watch.CheckForChangedFiles();
+				Watch.CheckForChangedFiles();
 
 				// Trigger a collect to free up memory, this also has the
 				// side effect of triggering a signing test of the exe because
@@ -469,7 +444,7 @@ namespace RyLogViewer
 				EnableWatch(false);
 				Misc.ShowHint(m_btn_watch, "File watching disabled due to error.");
 			}
-			Log.Exception(this, err, "Failed to build index list for {0}".Fmt(m_file.Name));
+			Log.Exception(this, err, "Failed to build index list for {0}".Fmt(Src.Name));
 			if (err is NoLinesException)
 			{
 				Misc.ShowMessage(this, err.Message, "Scanning file terminated", MessageBoxIcon.Information);
@@ -941,6 +916,34 @@ namespace RyLogViewer
 			if (filepos >= line_index.Last().End) return line_index.Count;
 			int idx = line_index.BinarySearch(line => Maths.Compare(line.Beg, filepos));
 			return idx >= 0 ? idx : ~idx - 1;
+		}
+	}
+
+	public class NoLinesException :Exception
+	{
+		private readonly int m_buf_size;
+		public NoLinesException(int buf_size)
+		{
+			m_buf_size = buf_size;
+		}
+		public override string Message
+		{
+			get
+			{
+				return string.Format(
+					"No lines detected within a {0} byte block.\r\n" +
+					"\r\n" +
+					"There are several possible causes for this:\r\n" +
+					" - The log file may contain one or more lines that are longer than {0} bytes,\r\n" +
+					" - The line ending setting may be incorrect causing new lines not to be detected correctly,\r\n" +
+					" - The text encoding setting may be incorrect causing the log data to not be read correctly,\r\n" +
+					"\r\n" +
+					"If lines longer than {0} bytes are expected, increase the 'Maximum Line Length'\r\n" +
+					"option under settings. Otherwise, check the settings under the 'Line Ending' and\r\n" +
+					"'Encoding' menus. You may have to specify these values explicitly rather than\r\n" +
+					"using automatic detection."
+					, m_buf_size);
+			}
 		}
 	}
 }

@@ -15,6 +15,7 @@ using System.Windows.Forms;
 using System.Windows.Forms.VisualStyles;
 using System.Xml.Linq;
 using pr.common;
+using pr.container;
 using pr.extn;
 using pr.gui;
 using pr.inet;
@@ -28,71 +29,188 @@ namespace RyLogViewer
 {
 	public sealed partial class Main :Form ,IMainUI
 	{
-		private readonly StartupOptions m_startup_options;  // The options provided at startup
-		private readonly FileWatch m_watch;                 // A helper for watching files
-		private readonly Timer m_watch_timer;               // A timer for polling the file watcher
-		private readonly EventBatcher m_batch_set_col_size; // A call batcher for setting the column widths
-		private readonly List<Highlight> m_highlights;      // A list of the active highlights only
-		private readonly List<Filter> m_filters;            // A list of the active filters only
-		private readonly List<Transform> m_transforms;      // A list of the active transforms only
-		private readonly List<ClkAction> m_clkactions;      // A list of the active click actions only
-		private readonly FindUI m_find_ui;                  // The find dialog
-		private readonly BookmarksUI m_bookmarks_ui;        // The bookmarks dialog
-		private readonly NotifyIcon m_notify_icon;          // A system tray icon
-		private readonly Form[] m_tab_cycle;                // The forms that Ctrl+Tab cycles through
-		private readonly RefCount m_suspend_grid_events;    // A ref count of nested calls that tell event handlers to ignore grid events
-		private List<Range> m_line_index;                   // Byte offsets (from file begin) to the byte range of a line
-		private Encoding m_encoding;                        // The file encoding
-		private IFileSource m_file;                         // A file stream source
-		private Licence m_license;                          // License data
-		private byte[] m_row_delim;                         // The row delimiter converted from a string to a byte[] using the current encoding
-		private byte[] m_col_delim;                         // The column delimiter, cached to prevent Settings access in CellNeeded
-		private int m_row_height;                           // The row height, cached to prevent settings lookups in CellNeeded
-		private long m_filepos;                             // The byte offset (from file begin) to the start of the last known line
-		private long m_fileend;                             // The last known size of the file
-		private long m_bufsize;                             // Cached value of Settings.FileBufSize
-		private int m_line_cache_count;                     // The number of lines to scan about the currently selected row
-		private bool m_alternating_line_colours;            // Cache the alternating line colours setting for performance
-		private bool m_tail_enabled;                        // Cache whether tail mode is enabled
-		private bool m_quick_filter_enabled;                // True if only rows with highlights should be displayed
-		private bool m_first_row_is_odd;                    // Tracks whether the first row is odd or even for alternating row colours (not 100% accurate)
-		private StringFormat m_strfmt;                      // Caches the tab stop sizes for rendering
-		private RecentFiles m_recent_logfiles;              // Recent files
-		private RecentFiles m_recent_pattern_sets;          // Recent pattern sets
-		private ToolTip m_tt;                               // Tool tips
+		private readonly List<Highlight> m_highlights;     // A list of the active highlights only
+		private readonly List<Filter> m_filters;           // A list of the active filters only
+		private readonly List<Transform> m_transforms;     // A list of the active transforms only
+		private readonly List<ClkAction> m_clkactions;     // A list of the active click actions only
+		private readonly NotifyIcon m_notify_icon;         // A system tray icon
+		private readonly Form[] m_tab_cycle;               // The forms that Ctrl+Tab cycles through
+		private readonly RefCount m_suspend_grid_events;   // A ref count of nested calls that tell event handlers to ignore grid events
+		private EventBatcher m_batch_set_col_size;         // A call batcher for setting the column widths
+		private List<Range> m_line_index;                  // Byte offsets (from file begin) to the byte range of a line
+		private Encoding m_encoding;                       // The file encoding
+		private byte[] m_row_delim;                        // The row delimiter converted from a string to a byte[] using the current encoding
+		private byte[] m_col_delim;                        // The column delimiter, cached to prevent Settings access in CellNeeded
+		private int m_row_height;                          // The row height, cached to prevent settings lookups in CellNeeded
+		private long m_filepos;                            // The byte offset (from file begin) to the start of the last known line
+		private long m_fileend;                            // The last known size of the file
+		private long m_bufsize;                            // Cached value of Settings.FileBufSize
+		private int m_line_cache_count;                    // The number of lines to scan about the currently selected row
+		private bool m_alternating_line_colours;           // Cache the alternating line colours setting for performance
+		private bool m_tail_enabled;                       // Cache whether tail mode is enabled
+		private bool m_quick_filter_enabled;               // True if only rows with highlights should be displayed
+		private bool m_first_row_is_odd;                   // Tracks whether the first row is odd or even for alternating row colours (not 100% accurate)
+		private StringFormat m_strfmt;                     // Caches the tab stop sizes for rendering
+		private RecentFiles m_recent_logfiles;             // Recent files
+		private RecentFiles m_recent_pattern_sets;         // Recent pattern sets
+
+		#region UI Elements
+		private System.Windows.Forms.ToolStrip m_toolstrip;
+		private System.Windows.Forms.ToolStripButton m_btn_open_log;
+		private System.Windows.Forms.MenuStrip m_menu;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_open;
+		private System.Windows.Forms.ToolStripSeparator m_sep1;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_exit;
+		private System.Windows.Forms.StatusStrip m_status;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_recent;
+		private System.Windows.Forms.ToolStripSeparator m_sep2;
+		private System.Windows.Forms.ToolStripButton m_btn_jump_to_end;
+		private System.Windows.Forms.ToolStripContainer m_toolstrip_cont;
+		private DataGridView m_grid;
+		private System.Windows.Forms.ToolStripSeparator m_sep;
+		private System.Windows.Forms.ToolStripButton m_btn_highlights;
+		private System.Windows.Forms.ToolStripButton m_btn_filters;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_close;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_edit;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_edit_selectall;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_edit_copy;
+		private System.Windows.Forms.ToolStripSeparator m_sep3;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_edit_find;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_edit_find_next;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_edit_find_prev;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_tools;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_alwaysontop;
+		private System.Windows.Forms.ToolStripSeparator m_sep4;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_highlights;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_filters;
+		private System.Windows.Forms.ToolStripSeparator m_sep5;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_options;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_help;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_help_about;
+		private System.Windows.Forms.ToolStripStatusLabel m_status_filesize;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
+		private System.Windows.Forms.ToolStripButton m_btn_refresh;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_help_totd;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator2;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding_ascii;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding_utf8;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding_ucs2_bigendian;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding_ucs2_littleendian;
+		private System.Windows.Forms.ToolStripStatusLabel m_status_spring;
+		private System.Windows.Forms.ToolStripStatusLabel m_status_message_trans;
+		private System.Windows.Forms.ToolStripStatusLabel m_status_line_end;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding_detect;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
+		private System.Windows.Forms.ToolStripStatusLabel m_status_encoding;
+		private pr.gui.SubRangeScroll m_scroll_file;
+		private System.Windows.Forms.TableLayoutPanel m_table;
+		private System.Windows.Forms.ToolStripButton m_btn_watch;
+		private System.Windows.Forms.ContextMenuStrip m_cmenu_grid;
+		private System.Windows.Forms.ToolStripMenuItem m_cmenu_copy;
+		private System.Windows.Forms.ToolStripMenuItem m_cmenu_select_all;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_export;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator6;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_clear_log_file;
+		private System.Windows.Forms.ToolStripProgressBar m_status_progress;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_line_ending;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_line_ending_detect;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator7;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_line_ending_cr;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_line_ending_crlf;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_line_ending_lf;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_line_ending_custom;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_monitor_mode;
+		private System.Windows.Forms.ToolStripButton m_btn_jump_to_start;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator8;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_help_check_for_updates;
+		private System.Windows.Forms.ToolStripButton m_btn_transforms;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator9;
+		private System.Windows.Forms.ToolStripButton m_btn_additive;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator10;
+		private System.Windows.Forms.ToolStripMenuItem m_cmenu_highlight_row;
+		private System.Windows.Forms.ToolStripMenuItem m_cmenu_filter_row;
+		private System.Windows.Forms.ToolStripMenuItem m_cmenu_transform_row;
+		private System.Windows.Forms.ToolStripMenuItem m_cmenu_action_row;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_transforms;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
+		private System.Windows.Forms.ToolStripMenuItem m_cmenu_find_next;
+		private System.Windows.Forms.ToolStripMenuItem m_cmenu_find_prev;
+		private System.Windows.Forms.ToolStripButton m_btn_actions;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_actions;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator11;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_help_visit_web_site;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_help_register;
+		private System.Windows.Forms.ToolStripButton m_btn_tail;
+		private System.Windows.Forms.ToolStripButton m_btn_bookmarks;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator13;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_edit_toggle_bookmark;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_edit_next_bookmark;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_edit_prev_bookmark;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_edit_clearall_bookmarks;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_edit_bookmarks;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator14;
+		private System.Windows.Forms.ToolStripMenuItem m_cmenu_toggle_bookmark;
+		private System.Windows.Forms.ToolStripMenuItem m_cmenu_clear_log;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator15;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_data_sources;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_wizards_androidlogcat;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator16;
+		private System.Windows.Forms.ToolStripButton m_btn_find;
+		private System.Windows.Forms.ToolStripButton m_btn_quick_filter;
+		private System.Windows.Forms.ToolStripStatusLabel m_status_message_fixed;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_wizards_aggregatelogfile;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_free_version;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_help_view_help;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator12;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_help_firstruntutorial;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_open_stdout;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_open_serial_port;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_open_network;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_open_named_pipe;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator19;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_edit_jumpto;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator17;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator18;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_pattern_set;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_load_pattern_set;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_save_pattern_set;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator21;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_import_patterns;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator20;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_recent_pattern_sets;
+		private System.Windows.Forms.ToolTip m_tt;
+		#endregion
 
 		public Main(StartupOptions startup_options)
 		{
 			Log.Register(startup_options.LogFilePath, false);
 			Log.Info(this, "App Startup: {0}".Fmt(DateTime.Now));
+			InitializeComponent();
 
-			m_startup_options     = startup_options;
-			m_license             = new Licence(m_startup_options.LicenceFilepath);
-			m_watch               = new FileWatch();
-			m_watch_timer         = new Timer{Interval = Constants.FilePollingRate};
-			m_batch_set_col_size  = new EventBatcher(SetGridColumnSizesImpl, TimeSpan.FromMilliseconds(100));
+			StartupOptions        = startup_options;
 			m_highlights          = new List<Highlight>();
 			m_filters             = new List<Filter>();
 			m_transforms          = new List<Transform>();
 			m_clkactions          = new List<ClkAction>();
-			m_find_history        = new BindingSource{DataSource = new BindingList<Pattern>()};
-			m_find_ui             = new FindUI(this, m_find_history){Visible = false};
-			m_bookmarks           = new BindingList<Bookmark>();
-			m_bs_bookmarks        = new BindingSource{DataSource = m_bookmarks};
-			m_batch_refresh_bkmks = new EventBatcher(TimeSpan.FromMilliseconds(100));
-			m_bookmarks_ui        = new BookmarksUI(this, m_bs_bookmarks){Visible = false};
-			m_tt                  = new ToolTip();
-			m_tab_cycle           = new Form[]{this, m_find_ui, m_bookmarks_ui};
-			m_notify_icon         = new NotifyIcon{Icon = Icon};
-			m_suspend_grid_events = new RefCount();
 			m_line_index          = new List<Range>();
-			m_file                = null;
+			m_suspend_grid_events = new RefCount();
+			m_batch_set_col_size  = new EventBatcher(SetGridColumnSizesImpl, TimeSpan.FromMilliseconds(100));
+			m_tab_cycle           = new Form[]{this, FindUI, BookmarksUI};
+			m_notify_icon         = new NotifyIcon{Icon = Icon};
+			Licence               = new Licence(StartupOptions.LicenceFilepath);
+			Watch                 = new FileWatch();
+			WatchTimer            = new Timer();
+			FindHistory           = new BindingSource<Pattern>{DataSource = new BindingListEx<Pattern>()};
+			Bookmarks             = new BindingSource<Bookmark>{DataSource = new BindingListEx<Bookmark>()};
+			FindUI                = new FindUI(this, FindHistory);
+			BookmarksUI           = new BookmarksUI(this, Bookmarks);
+			Settings              = new Settings(StartupOptions.SettingsPath);
+			Src                   = null;
 			m_filepos             = 0;
 			m_fileend             = 0;
 
-			InitializeComponent();
-
-			Settings              = new Settings(m_startup_options.SettingsPath);
 			m_bufsize             = Settings.FileBufSize;
 			m_line_cache_count    = Settings.LineCacheCount;
 			m_tail_enabled        = Settings.TailEnabled;
@@ -104,7 +222,12 @@ namespace RyLogViewer
 		}
 		protected override void Dispose(bool disposing)
 		{
-			Util.Dispose(ref m_tt);
+			Src = null;
+			FindUI = null;
+			BookmarksUI = null;
+			WatchTimer = null;
+			Watch = null;
+			Util.Dispose(ref m_batch_set_col_size);
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
@@ -145,6 +268,12 @@ namespace RyLogViewer
 			return base.ProcessCmdKey(ref msg, key_data);
 		}
 
+		/// <summary>The main UI as a form for use as the parent of child dialogs</summary>
+		public Form MainWindow
+		{
+			get { return this; }
+		}
+
 		/// <summary>App settings</summary>
 		public Settings Settings
 		{
@@ -176,17 +305,149 @@ namespace RyLogViewer
 			Log.Info(this, "Setting {0} changed from {1} to {2}".Fmt(args.Key,args.OldValue,args.NewValue));
 		}
 
-		/// <summary>The main UI as a form for use as the parent of child dialogs</summary>
-		public Form MainWindow
+		/// <summary>The options provided at startup</summary>
+		public StartupOptions StartupOptions
 		{
-			get { return this; }
+			[DebuggerStepThrough] get { return m_su_options; }
+			set
+			{
+				if (m_su_options == value) return;
+				m_su_options = value;
+			}
+		}
+		private StartupOptions m_su_options;
+
+		/// <summary>The currently loaded log data source</summary>
+		public IFileSource Src
+		{
+			[DebuggerStepThrough] get { return m_src; }
+			set
+			{
+				if (m_src == value) return;
+				if (m_src != null)
+				{
+					// Clear bookmarks
+					Bookmarks.Clear();
+
+					using (m_suspend_grid_events.Reference)
+					{
+						// Abort any BLI in progress
+						CancelBuildLineIndex();
+
+						// Stop watching related files
+						Watch.Remove(m_src.Filepaths);
+
+						SelectionChanged = null;
+						m_line_index.Clear();
+						m_grid.RowCount = 0;
+						m_last_hint = EHeuristicHint.None;
+
+						if (m_buffered_process    != null) m_buffered_process.Dispose();
+						if (m_buffered_tcp_netconn != null) m_buffered_tcp_netconn.Dispose();
+						if (m_buffered_udp_netconn != null) m_buffered_udp_netconn.Dispose();
+						if (m_buffered_serialconn != null) m_buffered_serialconn.Dispose();
+						if (m_buffered_pipeconn   != null) m_buffered_pipeconn.Dispose();
+						m_buffered_process = null;
+						m_buffered_tcp_netconn = null;
+						m_buffered_udp_netconn = null;
+						m_buffered_serialconn = null;
+						m_buffered_pipeconn = null;
+					}
+
+					// Clear status
+					SetTransientStatusMessage(null);
+					SetStaticStatusMessage(null);
+
+					Util.Dispose(ref m_src);
+					m_filepos = 0;
+					m_fileend = 0;
+				}
+				m_src = value;
+				if (m_src != null)
+				{
+					m_src.Open();
+					m_filepos = Settings.OpenAtEnd ? m_src.Stream.Length : 0;
+
+					// Set up the watcher to watch for file changes
+					Watch.Add(m_src.Filepaths, (fp,ctx) =>
+					{
+						OnFileChanged();
+						return true;
+					});
+					WatchTimer.Enabled = Settings.WatchEnabled;
+
+					// Start the initial load of log data
+					BuildLineIndex(m_filepos, true, () =>
+					{
+						SelectedRowIndex = Settings.OpenAtEnd ? m_grid.RowCount - 1 : 0;
+						SetGridColumnSizes(true);
+					});
+				}
+
+				// Initiate a UI update after any existing queued events
+				this.BeginInvoke(() => UpdateUI());
+			}
+		}
+		private IFileSource m_src;
+
+		/// <summary>A helper for watching files</summary>
+		private FileWatch Watch
+		{
+			get { return m_watch; }
+			set
+			{
+				if (m_watch == value) return;
+				m_watch = value;
+			}
+		}
+		private FileWatch m_watch;
+		
+		/// <summary>A timer for polling the file watcher</summary>
+		private Timer WatchTimer
+		{
+			get { return m_watch_timer; }
+			set
+			{
+				if (m_watch_timer == value) return;
+				if (m_watch_timer != null)
+				{
+					m_watch_timer.Tick -= HandleWatchTimerTick;
+				}
+				m_watch_timer = value;
+				if (m_watch_timer != null)
+				{
+					m_watch_timer.Interval = Constants.FilePollingRate;
+					m_watch_timer.Tick += HandleWatchTimerTick;
+				}
+			}
+		}
+		private Timer m_watch_timer;
+		private void HandleWatchTimerTick(object sender, EventArgs e)
+		{
+			if (ReloadInProgress) return;
+			if (WindowState == FormWindowState.Minimized) return;
+			try { Watch.CheckForChangedFiles(); }
+			catch (Exception ex)
+			{
+				Log.Exception(this, ex, "CheckForChangedFiles failed");
+			}
 		}
 
-		/// <summary>The currently loaded file source</summary>
-		public IFileSource FileSource
+		/// <summary>Licence data</summary>
+		public Licence Licence
 		{
-			get { return m_file; }
+			get { return m_lic; }
+			set
+			{
+				if (m_lic == value) return;
+				if (m_lic != null)
+				{}
+				m_lic = value;
+				if (m_lic != null)
+				{}
+			}
 		}
+		private Licence m_lic;
 
 		/// <summary>Set up the UI Elements</summary>
 		private void SetupUI()
@@ -203,7 +464,7 @@ namespace RyLogViewer
 				m_menu_file_open_serial_port.Click         += (s,a) => LogSerialPort();
 				m_menu_file_open_network.Click             += (s,a) => LogNetworkOutput();
 				m_menu_file_open_named_pipe.Click          += (s,a) => LogNamedPipeOutput();
-				m_menu_file_close.Click                    += (s,a) => CloseLogFile();
+				m_menu_file_close.Click                    += (s,a) => Src = null;
 				m_menu_file_load_pattern_set.Click         += (s,a) => LoadPatternSet(null);
 				m_menu_file_save_pattern_set.Click         += (s,a) => SavePatternSet(null);
 				m_menu_file_import_patterns.Click          += (s,a) => ImportPatterns(null);
@@ -340,28 +601,16 @@ namespace RyLogViewer
 				m_cmenu_grid.VisibleChanged += SetGridContextMenuVisibility;
 			}
 			#endregion
-			#region FileWatch
-			{
-				m_watch_timer.Tick += (s,a)=>
-					{
-						if (ReloadInProgress) return;
-						if (WindowState == FormWindowState.Minimized) return;
-						try { m_watch.CheckForChangedFiles(); }
-						catch (Exception ex) { Log.Exception(this, ex, "CheckForChangedFiles failed"); }
-					};
-			}
-			#endregion
 
 			SetupFind();
 			SetupBookmarks();
 		}
 
-		/// <summary>
-		/// Update the UI with the current line index.
-		/// This method should be called whenever a change occurs that requires
-		/// UI elements to be updated/redrawn. Note: it doesn't trigger a file reload.</summary>
+		/// <summary>Update the UI with the current line index.</summary>
 		private void UpdateUI(int row_delta = 0)
 		{
+			// This method should be called whenever a change occurs that requires UI elements
+			// to be updated/redrawn. Note: it doesn't trigger a file reload.
 			if (m_in_update_ui != 0) return;
 			using (Scope.Create(() => ++m_in_update_ui, () => --m_in_update_ui))
 			{
@@ -385,7 +634,7 @@ namespace RyLogViewer
 				}
 
 				// Configure menus
-				bool file_open                            = FileOpen;
+				bool file_open                            = Src != null;
 				string enc                                = Settings.Encoding;
 				string row_delim                          = Settings.RowDelimiter;
 				m_menu_file_export.Enabled                = file_open;
@@ -415,8 +664,8 @@ namespace RyLogViewer
 				m_menu_tools_clear_log_file.Enabled = file_open;
 
 				// Reread the licence
-				m_license = new Licence(m_startup_options.LicenceFilepath);
-				m_menu_free_version.Visible = !m_license.Valid;
+				Licence = new Licence(StartupOptions.LicenceFilepath);
+				m_menu_free_version.Visible = !Licence.Valid;
 
 				// Tool bar
 				m_btn_quick_filter.Checked = Settings.QuickFilterEnabled;
@@ -443,8 +692,6 @@ namespace RyLogViewer
 		/// <summary>Apply the startup options</summary>
 		private void ApplyStartupOptions()
 		{
-			StartupOptions su = m_startup_options;
-
 			AllowTransparency = true;
 			if (Settings.RestoreScreenLoc)
 			{
@@ -453,16 +700,19 @@ namespace RyLogViewer
 				Size = Settings.WindowSize;
 			}
 
+			// If delimiters are given, replace the delimiters in the settings
+			if (StartupOptions.RowDelim != null)
+				Settings.RowDelimiter = StartupOptions.RowDelim;
+			if (StartupOptions.ColDelim != null)
+				Settings.ColDelimiter = StartupOptions.ColDelim;
+
 			// If a pattern set file path is given, replace the patterns in 'Settings' with the contents of the file
-			if (su.PatternSetFilepath != null)
+			if (StartupOptions.PatternSetFilepath != null)
 			{
-				try
-				{
-					Settings.Patterns = PatternSet.Load(su.PatternSetFilepath);
-				}
+				try { Settings.Patterns = PatternSet.Load(StartupOptions.PatternSetFilepath); }
 				catch (Exception ex)
 				{
-					Misc.ShowMessage(this, "Could not load highlight pattern set {0}.".Fmt(su.PatternSetFilepath), Resources.LoadPatternSetFailed, MessageBoxIcon.Error, ex);
+					Misc.ShowMessage(this, "Could not load highlight pattern set {0}.".Fmt(StartupOptions.PatternSetFilepath), Resources.LoadPatternSetFailed, MessageBoxIcon.Error, ex);
 				}
 			}
 		}
@@ -470,8 +720,6 @@ namespace RyLogViewer
 		/// <summary>Called the first time the app is displayed</summary>
 		private void Startup()
 		{
-			StartupOptions su = m_startup_options;
-
 			// Startup options
 			ApplyStartupOptions();
 
@@ -479,9 +727,9 @@ namespace RyLogViewer
 			InitCustomDataSources();
 
 			// Parse command line
-			if (su.FileToLoad != null)
+			if (StartupOptions.FileToLoad != null)
 			{
-				OpenSingleLogFile(su.FileToLoad, true);
+				OpenSingleLogFile(StartupOptions.FileToLoad, true);
 			}
 			else if (Settings.LoadLastFile && Path_.FileExists(Settings.LastLoadedFile))
 			{
@@ -516,47 +764,6 @@ namespace RyLogViewer
 				TopMost = true;
 
 			Settings.FirstRun = false;
-		}
-
-		/// <summary>Returns true if there is a log file currently open</summary>
-		public bool FileOpen
-		{
-			get { return m_file != null; }
-		}
-
-		/// <summary>Close the current log file</summary>
-		public void CloseLogFile()
-		{
-			m_bookmarks.Clear();
-
-			using (m_suspend_grid_events.Reference)
-			{
-				CancelBuildLineIndex();
-				SelectionChanged = null;
-				m_line_index.Clear();
-				m_grid.RowCount = 0;
-				m_last_hint = EHeuristicHint.None;
-				if (FileOpen) m_watch.Remove(m_file.Filepaths);
-				if (m_buffered_process    != null) m_buffered_process.Dispose();
-				if (m_buffered_tcp_netconn != null) m_buffered_tcp_netconn.Dispose();
-				if (m_buffered_udp_netconn != null) m_buffered_udp_netconn.Dispose();
-				if (m_buffered_serialconn != null) m_buffered_serialconn.Dispose();
-				if (m_buffered_pipeconn   != null) m_buffered_pipeconn.Dispose();
-				m_buffered_process = null;
-				m_buffered_tcp_netconn = null;
-				m_buffered_udp_netconn = null;
-				m_buffered_serialconn = null;
-				m_buffered_pipeconn = null;
-				if (FileOpen) m_file.Dispose();
-				m_file = null;
-				m_filepos = 0;
-				m_fileend = 0;
-				SetTransientStatusMessage(null);
-				SetStaticStatusMessage(null);
-			}
-
-			// Initiate a UI update after any existing queued events
-			this.BeginInvoke(() => UpdateUI());
 		}
 
 		/// <summary>Load a pattern set file</summary>
@@ -692,25 +899,6 @@ namespace RyLogViewer
 			return true;
 		}
 
-		/// <summary>Adopt a new file source, closing any previously open file source</summary>
-		private void NewFileSource(IFileSource file)
-		{
-			CloseLogFile();
-			m_file = file.Open();
-
-			m_filepos = Settings.OpenAtEnd ? m_file.Stream.Length : 0;
-
-			// Set up the watcher to watch for file changes
-			m_watch.Add(m_file.Filepaths, (fp,ctx) => { OnFileChanged(); return true; });
-			m_watch_timer.Enabled = FileOpen && Settings.WatchEnabled;
-
-			BuildLineIndex(m_filepos, true, ()=>
-			{
-				SelectedRowIndex = Settings.OpenAtEnd ? m_grid.RowCount - 1 : 0;
-				SetGridColumnSizes(true);
-			});
-		}
-
 		/// <summary>Open a single log file, prompting if 'filepath' is null</summary>
 		public void OpenSingleLogFile(string filepath, bool add_to_recent)
 		{
@@ -736,12 +924,12 @@ namespace RyLogViewer
 				}
 
 				// Switch files - open the file to make sure it's accessible (and to hold a lock)
-				NewFileSource(new SingleFile(filepath));
+				Src = new SingleFile(filepath);
 			}
 			catch (Exception ex)
 			{
 				Misc.ShowMessage(this, "Failed to open file {0} due to an error.".Fmt(filepath), Resources.FailedToLoadFile, MessageBoxIcon.Error, ex);
-				CloseLogFile();
+				Src = null;
 			}
 		}
 
@@ -755,12 +943,12 @@ namespace RyLogViewer
 					return;
 
 				// Switch files - open the file to make sure it's accessible (and to hold a lock)
-				NewFileSource(new AggregateFile(filepaths));
+				Src = new AggregateFile(filepaths);
 			}
 			catch (Exception ex)
 			{
 				Misc.ShowMessage(this, "Failed to open aggregate log files due to an error.", Resources.FailedToLoadFile, MessageBoxIcon.Error, ex);
-				CloseLogFile();
+				Src = null;
 			}
 		}
 
@@ -781,17 +969,20 @@ namespace RyLogViewer
 		/// <summary>Called when the log file is noticed to have changed</summary>
 		private void OnFileChanged()
 		{
-			long len = m_file.Stream.Length;
-			Log.Info(this, "File {0} changed. File length: {1}".Fmt(m_file.Name, len));
-			long filepos = AutoScrollTail ? m_file.Stream.Length : m_filepos;
-			bool reload  = m_file.Stream.Length < m_fileend || !Settings.FileChangesAdditive;
+			long len = Src.Stream.Length;
+			Log.Info(this, "File {0} changed. File length: {1}".Fmt(Src.Name, len));
+			long filepos = AutoScrollTail ? Src.Stream.Length : m_filepos;
+			bool reload  = Src.Stream.Length < m_fileend || !Settings.FileChangesAdditive;
 			BuildLineIndex(filepos, reload);
 		}
 
 		/// <summary>Supply the grid with values</summary>
 		private void CellValueNeeded(object sender, DataGridViewCellValueEventArgs e)
 		{
-			if (!FileOpen || GridEventsBlocked) e.Value = null;
+			if (Src == null || GridEventsBlocked)
+			{
+				e.Value = null;
+			}
 			else
 			{
 				try { e.Value = ReadLine(e.RowIndex)[e.ColumnIndex].Text; }
@@ -831,7 +1022,7 @@ namespace RyLogViewer
 			var cs = RowCellStyle(row_index);
 
 			// If the line is bookmarked, use the bookmark colour
-			if (m_bookmarks.Count != 0 && m_bookmarks.BinarySearch(x => x.Position.CompareTo(line.LineStartAddr)) >= 0)
+			if (Bookmarks.Count != 0 && Bookmarks.BinarySearch(x => x.Position.CompareTo(line.LineStartAddr)) >= 0)
 			{
 				using (var b = new SolidBrush(Settings.BookmarkColour))
 					gfx.FillRectangle(b, row_bounds);
@@ -999,7 +1190,7 @@ namespace RyLogViewer
 				return;
 
 			// Leave rendering to the grid while events are suspended
-			if (GridEventsBlocked || !FileOpen)
+			if (GridEventsBlocked || Src == null)
 				return;
 
 			// Read the line from the cache
@@ -1054,7 +1245,7 @@ namespace RyLogViewer
 			foreach (var a in m_clkactions)
 			{
 				if (!a.IsMatch(text)) continue;
-				try { a.Execute(text, m_file.FilepathAt(line.LineStartAddr)); }
+				try { a.Execute(text, Src.FilepathAt(line.LineStartAddr)); }
 				catch { SetTransientStatusMessage("Action Failed", Color.Red, SystemColors.Control); }
 				break;
 			}
@@ -1110,8 +1301,8 @@ namespace RyLogViewer
 			if (args.ClickedItem == m_cmenu_action_row   ) { ShowOptions(SettingsUI.ETab.Actions   ); return; }
 
 			// Find operations
-			if (args.ClickedItem == m_cmenu_find_next) { m_find_ui.Pattern.Expr = ReadLine(hit.RowIndex).RowText; m_find_ui.RaiseFindNext(false); return; }
-			if (args.ClickedItem == m_cmenu_find_prev) { m_find_ui.Pattern.Expr = ReadLine(hit.RowIndex).RowText; m_find_ui.RaiseFindPrev(false); return; }
+			if (args.ClickedItem == m_cmenu_find_next) { FindUI.Pattern.Expr = ReadLine(hit.RowIndex).RowText; FindUI.RaiseFindNext(false); return; }
+			if (args.ClickedItem == m_cmenu_find_prev) { FindUI.Pattern.Expr = ReadLine(hit.RowIndex).RowText; FindUI.RaiseFindPrev(false); return; }
 
 			// Bookmarks
 			if (args.ClickedItem == m_cmenu_toggle_bookmark) { SetBookmark(hit.RowIndex, Bit.EState.Toggle); }
@@ -1349,7 +1540,7 @@ namespace RyLogViewer
 		/// <summary>Try to remove data from the log file</summary>
 		private void ClearLogFile()
 		{
-			var err = m_file.Clear();
+			var err = Src.Clear();
 			if (err == null)
 			{
 				InvalidateCache();
@@ -1364,7 +1555,7 @@ namespace RyLogViewer
 					"exclusive lock on the file. Stop any processes that are using the file " +
 					"and try again. Note, if you are using 'Log Program Output', the program " +
 					"you are running may be holding the file lock."
-					,m_file.Name
+					,Src.Name
 					,err.Message)
 					,Resources.ClearLogFailed
 					,MessageBoxButtons.OK
@@ -1616,32 +1807,33 @@ namespace RyLogViewer
 		{
 			// The callback to call when the check for updates results are in
 			Action<IAsyncResult> callback = ar =>
-				{
-					INet.CheckForUpdateResult res = null; Exception err = null;
-					try { res = INet.EndCheckForUpdate(ar); }
-					catch (OperationCanceledException) {}
-					catch (Exception ex) { err = ex; }
+			{
+				INet.CheckForUpdateResult res = null; Exception err = null;
+				try { res = INet.EndCheckForUpdate(ar); }
+				catch (OperationCanceledException) {}
+				catch (Exception ex) { err = ex; }
 
-					this.BeginInvoke(() => HandleCheckForUpdateResult(res, err, show_dialog));
-				};
+				this.BeginInvoke(() => HandleCheckForUpdateResult(res, err, show_dialog));
+			};
 
 			string update_url = Settings.CheckForUpdatesServer + "versions/rylogviewer.xml";
 
 			// Start the check for updates
 			if (show_dialog)
 			{
-				var dg = new ProgressForm("Checking for Updates", "Querying the server for latest version information...", null, ProgressBarStyle.Marquee, (s,a,cb)=>
-					{
-						cb(new ProgressForm.UserState{ProgressBarStyle = ProgressBarStyle.Marquee, Icon = Icon});
-						IAsyncResult async = INet.BeginCheckForUpdate(Constants.AppIdentifier, update_url, null, Proxy);
+				var dlg = new ProgressForm("Checking for Updates", "Querying the server for latest version information...", null, ProgressBarStyle.Marquee, (s,a,cb)=>
+				{
+					cb(new ProgressForm.UserState{ProgressBarStyle = ProgressBarStyle.Marquee, Icon = Icon});
+					IAsyncResult async = INet.BeginCheckForUpdate(Constants.AppIdentifier, update_url, null, Proxy);
 
-						// Wait till the operation completes, or until cancel is singled
-						for (;!s.CancelPending && !async.AsyncWaitHandle.WaitOne(500);) {}
+					// Wait till the operation completes, or until cancel is singled
+					for (;!s.CancelPending && !async.AsyncWaitHandle.WaitOne(500);) {}
 
-						if (!s.CancelPending) callback(async);
-						else INet.CancelCheckForUpdate(async);
-					});
-				dg.ShowDialog(this);
+					if (!s.CancelPending) callback(async);
+					else INet.CancelCheckForUpdate(async);
+				});
+				using (dlg)
+					dlg.ShowDialog(this);
 			}
 			else
 			{
@@ -1687,8 +1879,8 @@ namespace RyLogViewer
 					SetTransientStatusMessage("New Version Available!", Color.Green, SystemColors.Control);
 					if (show_dialog)
 					{
-						var dg = new NewVersionForm(this_version.ToString(), othr_version.ToString(), res.InfoURL, res.DownloadURL, Proxy);
-						dg.ShowDialog(this);
+						using (var dg = new NewVersionForm(this_version.ToString(), othr_version.ToString(), res.InfoURL, res.DownloadURL, Proxy))
+							dg.ShowDialog(this);
 					}
 				}
 			}
@@ -1697,7 +1889,7 @@ namespace RyLogViewer
 		/// <summary>Show the about dialog</summary>
 		private void ShowAbout()
 		{
-			new About(m_startup_options).ShowDialog(this);
+			new About(StartupOptions).ShowDialog(this);
 		}
 
 		/// <summary>Display info about the app being a free version</summary>
@@ -1706,6 +1898,16 @@ namespace RyLogViewer
 			using (var dlg = new HelpUI(this, HelpUI.EContent.Html, Application.ProductName, Resources.free_version, Point.Empty, new Size(480, 640), ToolForm.EPin.Centre, modal: true))
 			{
 				dlg.FormBorderStyle = FormBorderStyle.Sizable;
+				dlg.Html.ResolveContent += (s,a) =>
+				{
+					switch (a.Url.ToString())
+					{
+					case Cmd.visit_store:
+						VisitWebSite();
+						dlg.Close();
+						break;
+					}
+				};
 				dlg.ShowDialog(this);
 			}
 		}
@@ -1897,7 +2099,10 @@ namespace RyLogViewer
 			m_quick_filter_enabled     = Settings.QuickFilterEnabled;
 
 			// Tail
-			m_watch_timer.Enabled = FileOpen && Settings.WatchEnabled;
+			if (WatchTimer != null)
+			{
+				WatchTimer.Enabled = Src != null && Settings.WatchEnabled;
+			}
 
 			// Highlights;
 			m_highlights.Clear();
@@ -1986,7 +2191,7 @@ namespace RyLogViewer
 		private void UpdateStatus()
 		{
 			Debug.Assert(m_grid.RowCount == m_line_index.Count, "The grid is not up to date");
-			if (!FileOpen)
+			if (Src == null)
 			{
 				Text = Resources.AppTitle;
 				m_status_spring.Text      = Resources.NoFile;
@@ -1997,7 +2202,7 @@ namespace RyLogViewer
 			}
 			else
 			{
-				Text = "{0} - {1}".Fmt(Settings.FullPathInTitle ? m_file.PsuedoFilepath : m_file.Name, Resources.AppTitle);
+				Text = "{0} - {1}".Fmt(Settings.FullPathInTitle ? Src.PsuedoFilepath : Src.Name, Resources.AppTitle);
 				m_status_spring.Text = "";
 
 				// Add comma's to a large number
@@ -2058,7 +2263,7 @@ namespace RyLogViewer
 
 			// Add marks for the bookmarked positions
 			var bkmark_colour = Settings.BookmarkColour;
-			foreach (var bk in m_bookmarks)
+			foreach (var bk in Bookmarks)
 				m_scroll_file.AddIndicatorRange(bk.Range, bkmark_colour);
 
 			m_scroll_file.Refresh();
@@ -2184,5 +2389,1207 @@ namespace RyLogViewer
 				style.DrawEdge(e.Graphics, r, Edges.Left|Edges.Top|Edges.Right|Edges.Bottom ,EdgeStyle.Etched, EdgeEffects.Mono);
 			}
 		}
+
+		#region Windows Form Designer generated code
+		private System.ComponentModel.IContainer components = null;
+		private void InitializeComponent()
+		{
+			this.components = new System.ComponentModel.Container();
+			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Main));
+			this.m_toolstrip = new System.Windows.Forms.ToolStrip();
+			this.m_btn_open_log = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_refresh = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_quick_filter = new System.Windows.Forms.ToolStripButton();
+			this.m_sep = new System.Windows.Forms.ToolStripSeparator();
+			this.m_btn_highlights = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_filters = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_transforms = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_actions = new System.Windows.Forms.ToolStripButton();
+			this.toolStripSeparator9 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_btn_find = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_bookmarks = new System.Windows.Forms.ToolStripButton();
+			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_btn_jump_to_start = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_jump_to_end = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_tail = new System.Windows.Forms.ToolStripButton();
+			this.toolStripSeparator8 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_btn_watch = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_additive = new System.Windows.Forms.ToolStripButton();
+			this.m_menu = new System.Windows.Forms.MenuStrip();
+			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_open = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_data_sources = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_open_stdout = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_open_serial_port = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_open_network = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_open_named_pipe = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator19 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_file_wizards_aggregatelogfile = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_wizards_androidlogcat = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_recent = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator18 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_file_close = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator16 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_file_export = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_sep1 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_file_pattern_set = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_load_pattern_set = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_save_pattern_set = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator21 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_file_import_patterns = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator20 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_file_recent_pattern_sets = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_sep2 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_file_exit = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_edit = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_edit_selectall = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_edit_copy = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_sep3 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_edit_find = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_edit_find_next = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_edit_find_prev = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator13 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_edit_jumpto = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator17 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_edit_toggle_bookmark = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_edit_next_bookmark = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_edit_prev_bookmark = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_edit_clearall_bookmarks = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_edit_bookmarks = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_encoding = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_encoding_detect = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_encoding_ascii = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_encoding_utf8 = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_encoding_ucs2_littleendian = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_encoding_ucs2_bigendian = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_line_ending = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_line_ending_detect = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator7 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_line_ending_cr = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_line_ending_crlf = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_line_ending_lf = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_line_ending_custom = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_alwaysontop = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_monitor_mode = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_sep4 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_tools_clear_log_file = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_sep5 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_tools_highlights = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_filters = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_transforms = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_actions = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_tools_options = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_help = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_help_view_help = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_help_firstruntutorial = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_help_totd = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator11 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_help_visit_web_site = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_help_register = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator12 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_help_check_for_updates = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_help_about = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_free_version = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_status = new System.Windows.Forms.StatusStrip();
+			this.m_status_filesize = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_status_line_end = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_status_encoding = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_status_spring = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_status_progress = new System.Windows.Forms.ToolStripProgressBar();
+			this.m_status_message_trans = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_status_message_fixed = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_toolstrip_cont = new System.Windows.Forms.ToolStripContainer();
+			this.m_table = new System.Windows.Forms.TableLayoutPanel();
+			this.m_cmenu_grid = new System.Windows.Forms.ContextMenuStrip(this.components);
+			this.m_cmenu_select_all = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_cmenu_copy = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator15 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_cmenu_clear_log = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator10 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_cmenu_highlight_row = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_cmenu_filter_row = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_cmenu_transform_row = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_cmenu_action_row = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_cmenu_find_next = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_cmenu_find_prev = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator14 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_cmenu_toggle_bookmark = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_grid = new RyLogViewer.DataGridView();
+			this.m_scroll_file = new pr.gui.SubRangeScroll();
+			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
+			this.m_toolstrip.SuspendLayout();
+			this.m_menu.SuspendLayout();
+			this.m_status.SuspendLayout();
+			this.m_toolstrip_cont.BottomToolStripPanel.SuspendLayout();
+			this.m_toolstrip_cont.ContentPanel.SuspendLayout();
+			this.m_toolstrip_cont.TopToolStripPanel.SuspendLayout();
+			this.m_toolstrip_cont.SuspendLayout();
+			this.m_table.SuspendLayout();
+			this.m_cmenu_grid.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.m_grid)).BeginInit();
+			this.SuspendLayout();
+			// 
+			// m_toolstrip
+			// 
+			this.m_toolstrip.Dock = System.Windows.Forms.DockStyle.None;
+			this.m_toolstrip.ImageScalingSize = new System.Drawing.Size(24, 24);
+			this.m_toolstrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_btn_open_log,
+            this.m_btn_refresh,
+            this.m_btn_quick_filter,
+            this.m_sep,
+            this.m_btn_highlights,
+            this.m_btn_filters,
+            this.m_btn_transforms,
+            this.m_btn_actions,
+            this.toolStripSeparator9,
+            this.m_btn_find,
+            this.m_btn_bookmarks,
+            this.toolStripSeparator1,
+            this.m_btn_jump_to_start,
+            this.m_btn_jump_to_end,
+            this.m_btn_tail,
+            this.toolStripSeparator8,
+            this.m_btn_watch,
+            this.m_btn_additive});
+			this.m_toolstrip.Location = new System.Drawing.Point(3, 24);
+			this.m_toolstrip.Name = "m_toolstrip";
+			this.m_toolstrip.Size = new System.Drawing.Size(428, 31);
+			this.m_toolstrip.TabIndex = 0;
+			// 
+			// m_btn_open_log
+			// 
+			this.m_btn_open_log.AutoSize = false;
+			this.m_btn_open_log.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_open_log.Image = global::RyLogViewer.Properties.Resources.folder_with_file;
+			this.m_btn_open_log.ImageTransparentColor = System.Drawing.Color.Transparent;
+			this.m_btn_open_log.Margin = new System.Windows.Forms.Padding(0);
+			this.m_btn_open_log.Name = "m_btn_open_log";
+			this.m_btn_open_log.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_open_log.Text = "Open Log File";
+			// 
+			// m_btn_refresh
+			// 
+			this.m_btn_refresh.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_refresh.Image = global::RyLogViewer.Properties.Resources.Refresh;
+			this.m_btn_refresh.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_refresh.Name = "m_btn_refresh";
+			this.m_btn_refresh.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_refresh.Text = "Refresh";
+			// 
+			// m_btn_quick_filter
+			// 
+			this.m_btn_quick_filter.CheckOnClick = true;
+			this.m_btn_quick_filter.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_quick_filter.Image = global::RyLogViewer.Properties.Resources.quick_filter;
+			this.m_btn_quick_filter.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_quick_filter.Name = "m_btn_quick_filter";
+			this.m_btn_quick_filter.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_quick_filter.Text = "Quick Filter";
+			// 
+			// m_sep
+			// 
+			this.m_sep.Name = "m_sep";
+			this.m_sep.Size = new System.Drawing.Size(6, 31);
+			// 
+			// m_btn_highlights
+			// 
+			this.m_btn_highlights.CheckOnClick = true;
+			this.m_btn_highlights.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_highlights.Image = global::RyLogViewer.Properties.Resources.highlight;
+			this.m_btn_highlights.ImageTransparentColor = System.Drawing.Color.Transparent;
+			this.m_btn_highlights.Name = "m_btn_highlights";
+			this.m_btn_highlights.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_highlights.Text = "Highlights";
+			// 
+			// m_btn_filters
+			// 
+			this.m_btn_filters.CheckOnClick = true;
+			this.m_btn_filters.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_filters.Image = global::RyLogViewer.Properties.Resources.filter;
+			this.m_btn_filters.ImageTransparentColor = System.Drawing.Color.Transparent;
+			this.m_btn_filters.Name = "m_btn_filters";
+			this.m_btn_filters.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_filters.Text = "Filters";
+			// 
+			// m_btn_transforms
+			// 
+			this.m_btn_transforms.CheckOnClick = true;
+			this.m_btn_transforms.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_transforms.Image = global::RyLogViewer.Properties.Resources.exchange;
+			this.m_btn_transforms.ImageTransparentColor = System.Drawing.Color.Transparent;
+			this.m_btn_transforms.Name = "m_btn_transforms";
+			this.m_btn_transforms.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_transforms.Text = "Transforms";
+			// 
+			// m_btn_actions
+			// 
+			this.m_btn_actions.CheckOnClick = true;
+			this.m_btn_actions.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_actions.Image = global::RyLogViewer.Properties.Resources.execute;
+			this.m_btn_actions.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_actions.Name = "m_btn_actions";
+			this.m_btn_actions.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_actions.Text = "Actions";
+			// 
+			// toolStripSeparator9
+			// 
+			this.toolStripSeparator9.Name = "toolStripSeparator9";
+			this.toolStripSeparator9.Size = new System.Drawing.Size(6, 31);
+			// 
+			// m_btn_find
+			// 
+			this.m_btn_find.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_find.Image = global::RyLogViewer.Properties.Resources.find_search;
+			this.m_btn_find.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_find.Name = "m_btn_find";
+			this.m_btn_find.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_find.Text = "toolStripButton1";
+			// 
+			// m_btn_bookmarks
+			// 
+			this.m_btn_bookmarks.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_bookmarks.Image = global::RyLogViewer.Properties.Resources.bookmark;
+			this.m_btn_bookmarks.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_bookmarks.Name = "m_btn_bookmarks";
+			this.m_btn_bookmarks.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_bookmarks.Text = "Bookmarks";
+			// 
+			// toolStripSeparator1
+			// 
+			this.toolStripSeparator1.Name = "toolStripSeparator1";
+			this.toolStripSeparator1.Size = new System.Drawing.Size(6, 31);
+			// 
+			// m_btn_jump_to_start
+			// 
+			this.m_btn_jump_to_start.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_jump_to_start.Image = global::RyLogViewer.Properties.Resources.green_up;
+			this.m_btn_jump_to_start.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_jump_to_start.Name = "m_btn_jump_to_start";
+			this.m_btn_jump_to_start.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_jump_to_start.Text = "File Start";
+			this.m_btn_jump_to_start.ToolTipText = "Jump to the file start";
+			// 
+			// m_btn_jump_to_end
+			// 
+			this.m_btn_jump_to_end.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_jump_to_end.Image = global::RyLogViewer.Properties.Resources.green_down;
+			this.m_btn_jump_to_end.ImageTransparentColor = System.Drawing.Color.Transparent;
+			this.m_btn_jump_to_end.Name = "m_btn_jump_to_end";
+			this.m_btn_jump_to_end.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_jump_to_end.Text = "File End";
+			this.m_btn_jump_to_end.ToolTipText = "Jump to the file end";
+			// 
+			// m_btn_tail
+			// 
+			this.m_btn_tail.CheckOnClick = true;
+			this.m_btn_tail.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_tail.Image = global::RyLogViewer.Properties.Resources.bottom;
+			this.m_btn_tail.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_tail.Name = "m_btn_tail";
+			this.m_btn_tail.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_tail.Text = "Tail Mode";
+			// 
+			// toolStripSeparator8
+			// 
+			this.toolStripSeparator8.Name = "toolStripSeparator8";
+			this.toolStripSeparator8.Size = new System.Drawing.Size(6, 31);
+			// 
+			// m_btn_watch
+			// 
+			this.m_btn_watch.CheckOnClick = true;
+			this.m_btn_watch.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_watch.Image = global::RyLogViewer.Properties.Resources.Eyeball;
+			this.m_btn_watch.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_watch.Name = "m_btn_watch";
+			this.m_btn_watch.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_watch.Text = "Live Update";
+			// 
+			// m_btn_additive
+			// 
+			this.m_btn_additive.CheckOnClick = true;
+			this.m_btn_additive.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_additive.Image = global::RyLogViewer.Properties.Resources.edit_add;
+			this.m_btn_additive.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_additive.Name = "m_btn_additive";
+			this.m_btn_additive.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_additive.Text = "Additive Only";
+			// 
+			// m_menu
+			// 
+			this.m_menu.Dock = System.Windows.Forms.DockStyle.None;
+			this.m_menu.GripStyle = System.Windows.Forms.ToolStripGripStyle.Visible;
+			this.m_menu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_file,
+            this.m_menu_edit,
+            this.m_menu_encoding,
+            this.m_menu_line_ending,
+            this.m_menu_tools,
+            this.m_menu_help,
+            this.m_menu_free_version});
+			this.m_menu.Location = new System.Drawing.Point(0, 0);
+			this.m_menu.Name = "m_menu";
+			this.m_menu.Size = new System.Drawing.Size(835, 24);
+			this.m_menu.TabIndex = 1;
+			this.m_menu.Text = "m_menu";
+			// 
+			// m_menu_file
+			// 
+			this.m_menu_file.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_file_open,
+            this.m_menu_file_data_sources,
+            this.m_menu_file_recent,
+            this.toolStripSeparator18,
+            this.m_menu_file_close,
+            this.toolStripSeparator16,
+            this.m_menu_file_export,
+            this.m_sep1,
+            this.m_menu_file_pattern_set,
+            this.m_sep2,
+            this.m_menu_file_exit});
+			this.m_menu_file.Name = "m_menu_file";
+			this.m_menu_file.Size = new System.Drawing.Size(37, 20);
+			this.m_menu_file.Text = "&File";
+			// 
+			// m_menu_file_open
+			// 
+			this.m_menu_file_open.Name = "m_menu_file_open";
+			this.m_menu_file_open.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
+			this.m_menu_file_open.Size = new System.Drawing.Size(190, 22);
+			this.m_menu_file_open.Text = "&Open Log File";
+			// 
+			// m_menu_file_data_sources
+			// 
+			this.m_menu_file_data_sources.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_file_open_stdout,
+            this.m_menu_file_open_serial_port,
+            this.m_menu_file_open_network,
+            this.m_menu_file_open_named_pipe,
+            this.toolStripSeparator19,
+            this.m_menu_file_wizards_aggregatelogfile,
+            this.m_menu_file_wizards_androidlogcat});
+			this.m_menu_file_data_sources.Name = "m_menu_file_data_sources";
+			this.m_menu_file_data_sources.Size = new System.Drawing.Size(190, 22);
+			this.m_menu_file_data_sources.Text = "Data &Sources";
+			// 
+			// m_menu_file_open_stdout
+			// 
+			this.m_menu_file_open_stdout.Name = "m_menu_file_open_stdout";
+			this.m_menu_file_open_stdout.Size = new System.Drawing.Size(216, 22);
+			this.m_menu_file_open_stdout.Text = "Log &Program Output...";
+			// 
+			// m_menu_file_open_serial_port
+			// 
+			this.m_menu_file_open_serial_port.Name = "m_menu_file_open_serial_port";
+			this.m_menu_file_open_serial_port.Size = new System.Drawing.Size(216, 22);
+			this.m_menu_file_open_serial_port.Text = "Log &Serial Port...";
+			// 
+			// m_menu_file_open_network
+			// 
+			this.m_menu_file_open_network.Name = "m_menu_file_open_network";
+			this.m_menu_file_open_network.Size = new System.Drawing.Size(216, 22);
+			this.m_menu_file_open_network.Text = "Log Ne&twork Connection...";
+			// 
+			// m_menu_file_open_named_pipe
+			// 
+			this.m_menu_file_open_named_pipe.Name = "m_menu_file_open_named_pipe";
+			this.m_menu_file_open_named_pipe.Size = new System.Drawing.Size(216, 22);
+			this.m_menu_file_open_named_pipe.Text = "Log &Named Pipe...";
+			// 
+			// toolStripSeparator19
+			// 
+			this.toolStripSeparator19.Name = "toolStripSeparator19";
+			this.toolStripSeparator19.Size = new System.Drawing.Size(213, 6);
+			// 
+			// m_menu_file_wizards_aggregatelogfile
+			// 
+			this.m_menu_file_wizards_aggregatelogfile.Name = "m_menu_file_wizards_aggregatelogfile";
+			this.m_menu_file_wizards_aggregatelogfile.Size = new System.Drawing.Size(216, 22);
+			this.m_menu_file_wizards_aggregatelogfile.Text = "A&ggregate Log File...";
+			// 
+			// m_menu_file_wizards_androidlogcat
+			// 
+			this.m_menu_file_wizards_androidlogcat.Name = "m_menu_file_wizards_androidlogcat";
+			this.m_menu_file_wizards_androidlogcat.Size = new System.Drawing.Size(216, 22);
+			this.m_menu_file_wizards_androidlogcat.Text = "&Android Logcat...";
+			// 
+			// m_menu_file_recent
+			// 
+			this.m_menu_file_recent.Name = "m_menu_file_recent";
+			this.m_menu_file_recent.Size = new System.Drawing.Size(190, 22);
+			this.m_menu_file_recent.Text = "&Recent Files";
+			// 
+			// toolStripSeparator18
+			// 
+			this.toolStripSeparator18.Name = "toolStripSeparator18";
+			this.toolStripSeparator18.Size = new System.Drawing.Size(187, 6);
+			// 
+			// m_menu_file_close
+			// 
+			this.m_menu_file_close.Name = "m_menu_file_close";
+			this.m_menu_file_close.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.W)));
+			this.m_menu_file_close.Size = new System.Drawing.Size(190, 22);
+			this.m_menu_file_close.Text = "&Close Log";
+			// 
+			// toolStripSeparator16
+			// 
+			this.toolStripSeparator16.Name = "toolStripSeparator16";
+			this.toolStripSeparator16.Size = new System.Drawing.Size(187, 6);
+			// 
+			// m_menu_file_export
+			// 
+			this.m_menu_file_export.Name = "m_menu_file_export";
+			this.m_menu_file_export.Size = new System.Drawing.Size(190, 22);
+			this.m_menu_file_export.Text = "&Export...";
+			// 
+			// m_sep1
+			// 
+			this.m_sep1.Name = "m_sep1";
+			this.m_sep1.Size = new System.Drawing.Size(187, 6);
+			// 
+			// m_menu_file_pattern_set
+			// 
+			this.m_menu_file_pattern_set.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_file_load_pattern_set,
+            this.m_menu_file_save_pattern_set,
+            this.toolStripSeparator21,
+            this.m_menu_file_import_patterns,
+            this.toolStripSeparator20,
+            this.m_menu_file_recent_pattern_sets});
+			this.m_menu_file_pattern_set.Name = "m_menu_file_pattern_set";
+			this.m_menu_file_pattern_set.Size = new System.Drawing.Size(190, 22);
+			this.m_menu_file_pattern_set.Text = "Pattern Sets";
+			// 
+			// m_menu_file_load_pattern_set
+			// 
+			this.m_menu_file_load_pattern_set.Name = "m_menu_file_load_pattern_set";
+			this.m_menu_file_load_pattern_set.Size = new System.Drawing.Size(119, 22);
+			this.m_menu_file_load_pattern_set.Text = "Load";
+			// 
+			// m_menu_file_save_pattern_set
+			// 
+			this.m_menu_file_save_pattern_set.Name = "m_menu_file_save_pattern_set";
+			this.m_menu_file_save_pattern_set.Size = new System.Drawing.Size(119, 22);
+			this.m_menu_file_save_pattern_set.Text = "Save";
+			// 
+			// toolStripSeparator21
+			// 
+			this.toolStripSeparator21.Name = "toolStripSeparator21";
+			this.toolStripSeparator21.Size = new System.Drawing.Size(116, 6);
+			// 
+			// m_menu_file_import_patterns
+			// 
+			this.m_menu_file_import_patterns.Name = "m_menu_file_import_patterns";
+			this.m_menu_file_import_patterns.Size = new System.Drawing.Size(119, 22);
+			this.m_menu_file_import_patterns.Text = "Import...";
+			// 
+			// toolStripSeparator20
+			// 
+			this.toolStripSeparator20.Name = "toolStripSeparator20";
+			this.toolStripSeparator20.Size = new System.Drawing.Size(116, 6);
+			// 
+			// m_menu_file_recent_pattern_sets
+			// 
+			this.m_menu_file_recent_pattern_sets.Name = "m_menu_file_recent_pattern_sets";
+			this.m_menu_file_recent_pattern_sets.Size = new System.Drawing.Size(119, 22);
+			this.m_menu_file_recent_pattern_sets.Text = "Recent";
+			// 
+			// m_sep2
+			// 
+			this.m_sep2.Name = "m_sep2";
+			this.m_sep2.Size = new System.Drawing.Size(187, 6);
+			// 
+			// m_menu_file_exit
+			// 
+			this.m_menu_file_exit.Name = "m_menu_file_exit";
+			this.m_menu_file_exit.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.F4)));
+			this.m_menu_file_exit.Size = new System.Drawing.Size(190, 22);
+			this.m_menu_file_exit.Text = "E&xit";
+			// 
+			// m_menu_edit
+			// 
+			this.m_menu_edit.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_edit_selectall,
+            this.m_menu_edit_copy,
+            this.m_sep3,
+            this.m_menu_edit_find,
+            this.m_menu_edit_find_next,
+            this.m_menu_edit_find_prev,
+            this.toolStripSeparator13,
+            this.m_menu_edit_jumpto,
+            this.toolStripSeparator17,
+            this.m_menu_edit_toggle_bookmark,
+            this.m_menu_edit_next_bookmark,
+            this.m_menu_edit_prev_bookmark,
+            this.m_menu_edit_clearall_bookmarks,
+            this.m_menu_edit_bookmarks});
+			this.m_menu_edit.Name = "m_menu_edit";
+			this.m_menu_edit.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.F2)));
+			this.m_menu_edit.Size = new System.Drawing.Size(39, 20);
+			this.m_menu_edit.Text = "&Edit";
+			// 
+			// m_menu_edit_selectall
+			// 
+			this.m_menu_edit_selectall.Name = "m_menu_edit_selectall";
+			this.m_menu_edit_selectall.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.A)));
+			this.m_menu_edit_selectall.Size = new System.Drawing.Size(258, 22);
+			this.m_menu_edit_selectall.Text = "Select &All";
+			// 
+			// m_menu_edit_copy
+			// 
+			this.m_menu_edit_copy.Name = "m_menu_edit_copy";
+			this.m_menu_edit_copy.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.C)));
+			this.m_menu_edit_copy.Size = new System.Drawing.Size(258, 22);
+			this.m_menu_edit_copy.Text = "&Copy";
+			// 
+			// m_sep3
+			// 
+			this.m_sep3.Name = "m_sep3";
+			this.m_sep3.Size = new System.Drawing.Size(255, 6);
+			// 
+			// m_menu_edit_find
+			// 
+			this.m_menu_edit_find.Name = "m_menu_edit_find";
+			this.m_menu_edit_find.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.F)));
+			this.m_menu_edit_find.Size = new System.Drawing.Size(258, 22);
+			this.m_menu_edit_find.Text = "&Find...";
+			// 
+			// m_menu_edit_find_next
+			// 
+			this.m_menu_edit_find_next.Name = "m_menu_edit_find_next";
+			this.m_menu_edit_find_next.ShortcutKeys = System.Windows.Forms.Keys.F3;
+			this.m_menu_edit_find_next.Size = new System.Drawing.Size(258, 22);
+			this.m_menu_edit_find_next.Text = "Find &Next";
+			// 
+			// m_menu_edit_find_prev
+			// 
+			this.m_menu_edit_find_prev.Name = "m_menu_edit_find_prev";
+			this.m_menu_edit_find_prev.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Shift | System.Windows.Forms.Keys.F3)));
+			this.m_menu_edit_find_prev.Size = new System.Drawing.Size(258, 22);
+			this.m_menu_edit_find_prev.Text = "Find &Previous";
+			// 
+			// toolStripSeparator13
+			// 
+			this.toolStripSeparator13.Name = "toolStripSeparator13";
+			this.toolStripSeparator13.Size = new System.Drawing.Size(255, 6);
+			// 
+			// m_menu_edit_jumpto
+			// 
+			this.m_menu_edit_jumpto.Name = "m_menu_edit_jumpto";
+			this.m_menu_edit_jumpto.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.G)));
+			this.m_menu_edit_jumpto.Size = new System.Drawing.Size(258, 22);
+			this.m_menu_edit_jumpto.Text = "Jump to...";
+			// 
+			// toolStripSeparator17
+			// 
+			this.toolStripSeparator17.Name = "toolStripSeparator17";
+			this.toolStripSeparator17.Size = new System.Drawing.Size(255, 6);
+			// 
+			// m_menu_edit_toggle_bookmark
+			// 
+			this.m_menu_edit_toggle_bookmark.Name = "m_menu_edit_toggle_bookmark";
+			this.m_menu_edit_toggle_bookmark.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.F2)));
+			this.m_menu_edit_toggle_bookmark.Size = new System.Drawing.Size(258, 22);
+			this.m_menu_edit_toggle_bookmark.Text = "Toggle Bookmark";
+			// 
+			// m_menu_edit_next_bookmark
+			// 
+			this.m_menu_edit_next_bookmark.Name = "m_menu_edit_next_bookmark";
+			this.m_menu_edit_next_bookmark.ShortcutKeys = System.Windows.Forms.Keys.F2;
+			this.m_menu_edit_next_bookmark.Size = new System.Drawing.Size(258, 22);
+			this.m_menu_edit_next_bookmark.Text = "Next Bookmark";
+			// 
+			// m_menu_edit_prev_bookmark
+			// 
+			this.m_menu_edit_prev_bookmark.Name = "m_menu_edit_prev_bookmark";
+			this.m_menu_edit_prev_bookmark.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Shift | System.Windows.Forms.Keys.F2)));
+			this.m_menu_edit_prev_bookmark.Size = new System.Drawing.Size(258, 22);
+			this.m_menu_edit_prev_bookmark.Text = "Previous Bookmark";
+			// 
+			// m_menu_edit_clearall_bookmarks
+			// 
+			this.m_menu_edit_clearall_bookmarks.Name = "m_menu_edit_clearall_bookmarks";
+			this.m_menu_edit_clearall_bookmarks.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            | System.Windows.Forms.Keys.F2)));
+			this.m_menu_edit_clearall_bookmarks.Size = new System.Drawing.Size(258, 22);
+			this.m_menu_edit_clearall_bookmarks.Text = "Clear All Bookmarks";
+			// 
+			// m_menu_edit_bookmarks
+			// 
+			this.m_menu_edit_bookmarks.Name = "m_menu_edit_bookmarks";
+			this.m_menu_edit_bookmarks.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.B)));
+			this.m_menu_edit_bookmarks.Size = new System.Drawing.Size(258, 22);
+			this.m_menu_edit_bookmarks.Text = "Bookmarks...";
+			// 
+			// m_menu_encoding
+			// 
+			this.m_menu_encoding.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_encoding_detect,
+            this.toolStripSeparator3,
+            this.m_menu_encoding_ascii,
+            this.m_menu_encoding_utf8,
+            this.m_menu_encoding_ucs2_littleendian,
+            this.m_menu_encoding_ucs2_bigendian});
+			this.m_menu_encoding.Name = "m_menu_encoding";
+			this.m_menu_encoding.Size = new System.Drawing.Size(69, 20);
+			this.m_menu_encoding.Text = "E&ncoding";
+			// 
+			// m_menu_encoding_detect
+			// 
+			this.m_menu_encoding_detect.Name = "m_menu_encoding_detect";
+			this.m_menu_encoding_detect.Size = new System.Drawing.Size(185, 22);
+			this.m_menu_encoding_detect.Text = "&Detect Automatically";
+			// 
+			// toolStripSeparator3
+			// 
+			this.toolStripSeparator3.Name = "toolStripSeparator3";
+			this.toolStripSeparator3.Size = new System.Drawing.Size(182, 6);
+			// 
+			// m_menu_encoding_ascii
+			// 
+			this.m_menu_encoding_ascii.Name = "m_menu_encoding_ascii";
+			this.m_menu_encoding_ascii.Size = new System.Drawing.Size(185, 22);
+			this.m_menu_encoding_ascii.Text = "ASCII";
+			// 
+			// m_menu_encoding_utf8
+			// 
+			this.m_menu_encoding_utf8.Name = "m_menu_encoding_utf8";
+			this.m_menu_encoding_utf8.Size = new System.Drawing.Size(185, 22);
+			this.m_menu_encoding_utf8.Text = "UTF-8";
+			// 
+			// m_menu_encoding_ucs2_littleendian
+			// 
+			this.m_menu_encoding_ucs2_littleendian.Name = "m_menu_encoding_ucs2_littleendian";
+			this.m_menu_encoding_ucs2_littleendian.Size = new System.Drawing.Size(185, 22);
+			this.m_menu_encoding_ucs2_littleendian.Text = "UCS-2 (little endian)";
+			// 
+			// m_menu_encoding_ucs2_bigendian
+			// 
+			this.m_menu_encoding_ucs2_bigendian.Name = "m_menu_encoding_ucs2_bigendian";
+			this.m_menu_encoding_ucs2_bigendian.Size = new System.Drawing.Size(185, 22);
+			this.m_menu_encoding_ucs2_bigendian.Text = "UCS-2 (big endian)";
+			// 
+			// m_menu_line_ending
+			// 
+			this.m_menu_line_ending.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_line_ending_detect,
+            this.toolStripSeparator7,
+            this.m_menu_line_ending_cr,
+            this.m_menu_line_ending_crlf,
+            this.m_menu_line_ending_lf,
+            this.m_menu_line_ending_custom});
+			this.m_menu_line_ending.Name = "m_menu_line_ending";
+			this.m_menu_line_ending.Size = new System.Drawing.Size(81, 20);
+			this.m_menu_line_ending.Text = "&Line Ending";
+			// 
+			// m_menu_line_ending_detect
+			// 
+			this.m_menu_line_ending_detect.Name = "m_menu_line_ending_detect";
+			this.m_menu_line_ending_detect.Size = new System.Drawing.Size(185, 22);
+			this.m_menu_line_ending_detect.Text = "Detect &Automatically";
+			// 
+			// toolStripSeparator7
+			// 
+			this.toolStripSeparator7.Name = "toolStripSeparator7";
+			this.toolStripSeparator7.Size = new System.Drawing.Size(182, 6);
+			// 
+			// m_menu_line_ending_cr
+			// 
+			this.m_menu_line_ending_cr.Name = "m_menu_line_ending_cr";
+			this.m_menu_line_ending_cr.Size = new System.Drawing.Size(185, 22);
+			this.m_menu_line_ending_cr.Text = "CR";
+			// 
+			// m_menu_line_ending_crlf
+			// 
+			this.m_menu_line_ending_crlf.Name = "m_menu_line_ending_crlf";
+			this.m_menu_line_ending_crlf.Size = new System.Drawing.Size(185, 22);
+			this.m_menu_line_ending_crlf.Text = "CR+LF";
+			// 
+			// m_menu_line_ending_lf
+			// 
+			this.m_menu_line_ending_lf.Name = "m_menu_line_ending_lf";
+			this.m_menu_line_ending_lf.Size = new System.Drawing.Size(185, 22);
+			this.m_menu_line_ending_lf.Text = "LF";
+			// 
+			// m_menu_line_ending_custom
+			// 
+			this.m_menu_line_ending_custom.Name = "m_menu_line_ending_custom";
+			this.m_menu_line_ending_custom.Size = new System.Drawing.Size(185, 22);
+			this.m_menu_line_ending_custom.Text = "Custom";
+			// 
+			// m_menu_tools
+			// 
+			this.m_menu_tools.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_tools_alwaysontop,
+            this.m_menu_tools_monitor_mode,
+            this.m_sep4,
+            this.m_menu_tools_clear_log_file,
+            this.m_sep5,
+            this.m_menu_tools_highlights,
+            this.m_menu_tools_filters,
+            this.m_menu_tools_transforms,
+            this.m_menu_tools_actions,
+            this.toolStripSeparator6,
+            this.m_menu_tools_options});
+			this.m_menu_tools.Name = "m_menu_tools";
+			this.m_menu_tools.Size = new System.Drawing.Size(47, 20);
+			this.m_menu_tools.Text = "&Tools";
+			// 
+			// m_menu_tools_alwaysontop
+			// 
+			this.m_menu_tools_alwaysontop.Name = "m_menu_tools_alwaysontop";
+			this.m_menu_tools_alwaysontop.Size = new System.Drawing.Size(153, 22);
+			this.m_menu_tools_alwaysontop.Text = "Always On &Top";
+			// 
+			// m_menu_tools_monitor_mode
+			// 
+			this.m_menu_tools_monitor_mode.Name = "m_menu_tools_monitor_mode";
+			this.m_menu_tools_monitor_mode.Size = new System.Drawing.Size(153, 22);
+			this.m_menu_tools_monitor_mode.Text = "&Monitor Mode";
+			// 
+			// m_sep4
+			// 
+			this.m_sep4.Name = "m_sep4";
+			this.m_sep4.Size = new System.Drawing.Size(150, 6);
+			// 
+			// m_menu_tools_clear_log_file
+			// 
+			this.m_menu_tools_clear_log_file.Name = "m_menu_tools_clear_log_file";
+			this.m_menu_tools_clear_log_file.Size = new System.Drawing.Size(153, 22);
+			this.m_menu_tools_clear_log_file.Text = "&Clear Log File";
+			// 
+			// m_sep5
+			// 
+			this.m_sep5.Name = "m_sep5";
+			this.m_sep5.Size = new System.Drawing.Size(150, 6);
+			// 
+			// m_menu_tools_highlights
+			// 
+			this.m_menu_tools_highlights.Name = "m_menu_tools_highlights";
+			this.m_menu_tools_highlights.Size = new System.Drawing.Size(153, 22);
+			this.m_menu_tools_highlights.Text = "&Highlights";
+			// 
+			// m_menu_tools_filters
+			// 
+			this.m_menu_tools_filters.Name = "m_menu_tools_filters";
+			this.m_menu_tools_filters.Size = new System.Drawing.Size(153, 22);
+			this.m_menu_tools_filters.Text = "&Filters";
+			// 
+			// m_menu_tools_transforms
+			// 
+			this.m_menu_tools_transforms.Name = "m_menu_tools_transforms";
+			this.m_menu_tools_transforms.Size = new System.Drawing.Size(153, 22);
+			this.m_menu_tools_transforms.Text = "&Transforms";
+			// 
+			// m_menu_tools_actions
+			// 
+			this.m_menu_tools_actions.Name = "m_menu_tools_actions";
+			this.m_menu_tools_actions.Size = new System.Drawing.Size(153, 22);
+			this.m_menu_tools_actions.Text = "&Actions";
+			// 
+			// toolStripSeparator6
+			// 
+			this.toolStripSeparator6.Name = "toolStripSeparator6";
+			this.toolStripSeparator6.Size = new System.Drawing.Size(150, 6);
+			// 
+			// m_menu_tools_options
+			// 
+			this.m_menu_tools_options.Name = "m_menu_tools_options";
+			this.m_menu_tools_options.Size = new System.Drawing.Size(153, 22);
+			this.m_menu_tools_options.Text = "&Options";
+			// 
+			// m_menu_help
+			// 
+			this.m_menu_help.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_help_view_help,
+            this.m_menu_help_firstruntutorial,
+            this.m_menu_help_totd,
+            this.toolStripSeparator11,
+            this.m_menu_help_visit_web_site,
+            this.m_menu_help_register,
+            this.toolStripSeparator12,
+            this.m_menu_help_check_for_updates,
+            this.toolStripSeparator2,
+            this.m_menu_help_about});
+			this.m_menu_help.Name = "m_menu_help";
+			this.m_menu_help.Size = new System.Drawing.Size(44, 20);
+			this.m_menu_help.Text = "&Help";
+			// 
+			// m_menu_help_view_help
+			// 
+			this.m_menu_help_view_help.Name = "m_menu_help_view_help";
+			this.m_menu_help_view_help.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.F1)));
+			this.m_menu_help_view_help.Size = new System.Drawing.Size(173, 22);
+			this.m_menu_help_view_help.Text = "View &Help";
+			// 
+			// m_menu_help_firstruntutorial
+			// 
+			this.m_menu_help_firstruntutorial.Name = "m_menu_help_firstruntutorial";
+			this.m_menu_help_firstruntutorial.Size = new System.Drawing.Size(173, 22);
+			this.m_menu_help_firstruntutorial.Text = "&First Run Tutorial";
+			// 
+			// m_menu_help_totd
+			// 
+			this.m_menu_help_totd.Name = "m_menu_help_totd";
+			this.m_menu_help_totd.Size = new System.Drawing.Size(173, 22);
+			this.m_menu_help_totd.Text = "&Tip of the Day";
+			// 
+			// toolStripSeparator11
+			// 
+			this.toolStripSeparator11.Name = "toolStripSeparator11";
+			this.toolStripSeparator11.Size = new System.Drawing.Size(170, 6);
+			// 
+			// m_menu_help_visit_web_site
+			// 
+			this.m_menu_help_visit_web_site.Name = "m_menu_help_visit_web_site";
+			this.m_menu_help_visit_web_site.Size = new System.Drawing.Size(173, 22);
+			this.m_menu_help_visit_web_site.Text = "&Visit Web Site";
+			// 
+			// m_menu_help_register
+			// 
+			this.m_menu_help_register.Name = "m_menu_help_register";
+			this.m_menu_help_register.Size = new System.Drawing.Size(173, 22);
+			this.m_menu_help_register.Text = "&Activate Licence...";
+			// 
+			// toolStripSeparator12
+			// 
+			this.toolStripSeparator12.Name = "toolStripSeparator12";
+			this.toolStripSeparator12.Size = new System.Drawing.Size(170, 6);
+			// 
+			// m_menu_help_check_for_updates
+			// 
+			this.m_menu_help_check_for_updates.Name = "m_menu_help_check_for_updates";
+			this.m_menu_help_check_for_updates.Size = new System.Drawing.Size(173, 22);
+			this.m_menu_help_check_for_updates.Text = "Check for &Updates";
+			// 
+			// toolStripSeparator2
+			// 
+			this.toolStripSeparator2.Name = "toolStripSeparator2";
+			this.toolStripSeparator2.Size = new System.Drawing.Size(170, 6);
+			// 
+			// m_menu_help_about
+			// 
+			this.m_menu_help_about.Name = "m_menu_help_about";
+			this.m_menu_help_about.Size = new System.Drawing.Size(173, 22);
+			this.m_menu_help_about.Text = "&About";
+			// 
+			// m_menu_free_version
+			// 
+			this.m_menu_free_version.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
+			this.m_menu_free_version.ForeColor = System.Drawing.Color.Red;
+			this.m_menu_free_version.Name = "m_menu_free_version";
+			this.m_menu_free_version.Padding = new System.Windows.Forms.Padding(40, 0, 40, 0);
+			this.m_menu_free_version.Size = new System.Drawing.Size(244, 20);
+			this.m_menu_free_version.Text = "RyLogViewer - Free Edition ...";
+			// 
+			// m_status
+			// 
+			this.m_status.Dock = System.Windows.Forms.DockStyle.None;
+			this.m_status.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_status_filesize,
+            this.m_status_line_end,
+            this.m_status_encoding,
+            this.m_status_spring,
+            this.m_status_progress,
+            this.m_status_message_trans,
+            this.m_status_message_fixed});
+			this.m_status.Location = new System.Drawing.Point(0, 0);
+			this.m_status.Name = "m_status";
+			this.m_status.Size = new System.Drawing.Size(835, 24);
+			this.m_status.TabIndex = 3;
+			this.m_status.Text = "statusStrip1";
+			// 
+			// m_status_filesize
+			// 
+			this.m_status_filesize.BorderSides = ((System.Windows.Forms.ToolStripStatusLabelBorderSides)((((System.Windows.Forms.ToolStripStatusLabelBorderSides.Left | System.Windows.Forms.ToolStripStatusLabelBorderSides.Top) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
+			this.m_status_filesize.Name = "m_status_filesize";
+			this.m_status_filesize.Size = new System.Drawing.Size(128, 19);
+			this.m_status_filesize.Text = "Size: 2147483647 bytes";
+			this.m_status_filesize.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			// 
+			// m_status_line_end
+			// 
+			this.m_status_line_end.BorderSides = ((System.Windows.Forms.ToolStripStatusLabelBorderSides)((((System.Windows.Forms.ToolStripStatusLabelBorderSides.Left | System.Windows.Forms.ToolStripStatusLabelBorderSides.Top) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
+			this.m_status_line_end.Name = "m_status_line_end";
+			this.m_status_line_end.Size = new System.Drawing.Size(76, 19);
+			this.m_status_line_end.Text = "Line Ending:";
+			// 
+			// m_status_encoding
+			// 
+			this.m_status_encoding.BorderSides = ((System.Windows.Forms.ToolStripStatusLabelBorderSides)((((System.Windows.Forms.ToolStripStatusLabelBorderSides.Left | System.Windows.Forms.ToolStripStatusLabelBorderSides.Top) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
+			this.m_status_encoding.Name = "m_status_encoding";
+			this.m_status_encoding.Size = new System.Drawing.Size(64, 19);
+			this.m_status_encoding.Text = "Encoding:";
+			// 
+			// m_status_spring
+			// 
+			this.m_status_spring.BorderSides = ((System.Windows.Forms.ToolStripStatusLabelBorderSides)((((System.Windows.Forms.ToolStripStatusLabelBorderSides.Left | System.Windows.Forms.ToolStripStatusLabelBorderSides.Top) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
+			this.m_status_spring.Name = "m_status_spring";
+			this.m_status_spring.Size = new System.Drawing.Size(552, 19);
+			this.m_status_spring.Spring = true;
+			this.m_status_spring.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			// 
+			// m_status_progress
+			// 
+			this.m_status_progress.Name = "m_status_progress";
+			this.m_status_progress.Size = new System.Drawing.Size(100, 18);
+			this.m_status_progress.Visible = false;
+			// 
+			// m_status_message_trans
+			// 
+			this.m_status_message_trans.BorderSides = ((System.Windows.Forms.ToolStripStatusLabelBorderSides)((((System.Windows.Forms.ToolStripStatusLabelBorderSides.Left | System.Windows.Forms.ToolStripStatusLabelBorderSides.Top) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
+			this.m_status_message_trans.Name = "m_status_message_trans";
+			this.m_status_message_trans.Size = new System.Drawing.Size(108, 19);
+			this.m_status_message_trans.Text = "Transient Message";
+			this.m_status_message_trans.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			this.m_status_message_trans.Visible = false;
+			// 
+			// m_status_message_fixed
+			// 
+			this.m_status_message_fixed.BorderSides = ((System.Windows.Forms.ToolStripStatusLabelBorderSides)((((System.Windows.Forms.ToolStripStatusLabelBorderSides.Left | System.Windows.Forms.ToolStripStatusLabelBorderSides.Top) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
+			this.m_status_message_fixed.Name = "m_status_message_fixed";
+			this.m_status_message_fixed.Size = new System.Drawing.Size(89, 19);
+			this.m_status_message_fixed.Text = "Static Message";
+			this.m_status_message_fixed.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			this.m_status_message_fixed.Visible = false;
+			// 
+			// m_toolstrip_cont
+			// 
+			// 
+			// m_toolstrip_cont.BottomToolStripPanel
+			// 
+			this.m_toolstrip_cont.BottomToolStripPanel.Controls.Add(this.m_status);
+			// 
+			// m_toolstrip_cont.ContentPanel
+			// 
+			this.m_toolstrip_cont.ContentPanel.AutoScroll = true;
+			this.m_toolstrip_cont.ContentPanel.Controls.Add(this.m_table);
+			this.m_toolstrip_cont.ContentPanel.Margin = new System.Windows.Forms.Padding(0);
+			this.m_toolstrip_cont.ContentPanel.Size = new System.Drawing.Size(835, 413);
+			this.m_toolstrip_cont.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_toolstrip_cont.LeftToolStripPanelVisible = false;
+			this.m_toolstrip_cont.Location = new System.Drawing.Point(0, 0);
+			this.m_toolstrip_cont.Margin = new System.Windows.Forms.Padding(0);
+			this.m_toolstrip_cont.Name = "m_toolstrip_cont";
+			this.m_toolstrip_cont.RightToolStripPanelVisible = false;
+			this.m_toolstrip_cont.Size = new System.Drawing.Size(835, 492);
+			this.m_toolstrip_cont.TabIndex = 6;
+			this.m_toolstrip_cont.Text = "m_toolstrip_cont";
+			// 
+			// m_toolstrip_cont.TopToolStripPanel
+			// 
+			this.m_toolstrip_cont.TopToolStripPanel.Controls.Add(this.m_menu);
+			this.m_toolstrip_cont.TopToolStripPanel.Controls.Add(this.m_toolstrip);
+			// 
+			// m_table
+			// 
+			this.m_table.ColumnCount = 3;
+			this.m_table.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+			this.m_table.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
+			this.m_table.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
+			this.m_table.ContextMenuStrip = this.m_cmenu_grid;
+			this.m_table.Controls.Add(this.m_grid, 0, 0);
+			this.m_table.Controls.Add(this.m_scroll_file, 1, 0);
+			this.m_table.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_table.Location = new System.Drawing.Point(0, 0);
+			this.m_table.Name = "m_table";
+			this.m_table.RowCount = 1;
+			this.m_table.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+			this.m_table.Size = new System.Drawing.Size(835, 413);
+			this.m_table.TabIndex = 5;
+			// 
+			// m_cmenu_grid
+			// 
+			this.m_cmenu_grid.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_cmenu_select_all,
+            this.m_cmenu_copy,
+            this.toolStripSeparator15,
+            this.m_cmenu_clear_log,
+            this.toolStripSeparator10,
+            this.m_cmenu_highlight_row,
+            this.m_cmenu_filter_row,
+            this.m_cmenu_transform_row,
+            this.m_cmenu_action_row,
+            this.toolStripSeparator4,
+            this.m_cmenu_find_next,
+            this.m_cmenu_find_prev,
+            this.toolStripSeparator14,
+            this.m_cmenu_toggle_bookmark});
+			this.m_cmenu_grid.Name = "m_cmenu_grid";
+			this.m_cmenu_grid.Size = new System.Drawing.Size(168, 248);
+			// 
+			// m_cmenu_select_all
+			// 
+			this.m_cmenu_select_all.Name = "m_cmenu_select_all";
+			this.m_cmenu_select_all.Size = new System.Drawing.Size(167, 22);
+			this.m_cmenu_select_all.Text = "Select &All";
+			// 
+			// m_cmenu_copy
+			// 
+			this.m_cmenu_copy.Name = "m_cmenu_copy";
+			this.m_cmenu_copy.Size = new System.Drawing.Size(167, 22);
+			this.m_cmenu_copy.Text = "&Copy";
+			// 
+			// toolStripSeparator15
+			// 
+			this.toolStripSeparator15.Name = "toolStripSeparator15";
+			this.toolStripSeparator15.Size = new System.Drawing.Size(164, 6);
+			// 
+			// m_cmenu_clear_log
+			// 
+			this.m_cmenu_clear_log.Name = "m_cmenu_clear_log";
+			this.m_cmenu_clear_log.Size = new System.Drawing.Size(167, 22);
+			this.m_cmenu_clear_log.Text = "C&lear Log";
+			// 
+			// toolStripSeparator10
+			// 
+			this.toolStripSeparator10.Name = "toolStripSeparator10";
+			this.toolStripSeparator10.Size = new System.Drawing.Size(164, 6);
+			// 
+			// m_cmenu_highlight_row
+			// 
+			this.m_cmenu_highlight_row.Name = "m_cmenu_highlight_row";
+			this.m_cmenu_highlight_row.Size = new System.Drawing.Size(167, 22);
+			this.m_cmenu_highlight_row.Text = "&Highlight Row...";
+			// 
+			// m_cmenu_filter_row
+			// 
+			this.m_cmenu_filter_row.Name = "m_cmenu_filter_row";
+			this.m_cmenu_filter_row.Size = new System.Drawing.Size(167, 22);
+			this.m_cmenu_filter_row.Text = "&Filter Row...";
+			// 
+			// m_cmenu_transform_row
+			// 
+			this.m_cmenu_transform_row.Name = "m_cmenu_transform_row";
+			this.m_cmenu_transform_row.Size = new System.Drawing.Size(167, 22);
+			this.m_cmenu_transform_row.Text = "&Transform Row...";
+			// 
+			// m_cmenu_action_row
+			// 
+			this.m_cmenu_action_row.Name = "m_cmenu_action_row";
+			this.m_cmenu_action_row.Size = new System.Drawing.Size(167, 22);
+			this.m_cmenu_action_row.Text = "&Action Row...";
+			// 
+			// toolStripSeparator4
+			// 
+			this.toolStripSeparator4.Name = "toolStripSeparator4";
+			this.toolStripSeparator4.Size = new System.Drawing.Size(164, 6);
+			// 
+			// m_cmenu_find_next
+			// 
+			this.m_cmenu_find_next.Name = "m_cmenu_find_next";
+			this.m_cmenu_find_next.Size = new System.Drawing.Size(167, 22);
+			this.m_cmenu_find_next.Text = "Find &Next";
+			// 
+			// m_cmenu_find_prev
+			// 
+			this.m_cmenu_find_prev.Name = "m_cmenu_find_prev";
+			this.m_cmenu_find_prev.Size = new System.Drawing.Size(167, 22);
+			this.m_cmenu_find_prev.Text = "Find &Previous";
+			// 
+			// toolStripSeparator14
+			// 
+			this.toolStripSeparator14.Name = "toolStripSeparator14";
+			this.toolStripSeparator14.Size = new System.Drawing.Size(164, 6);
+			// 
+			// m_cmenu_toggle_bookmark
+			// 
+			this.m_cmenu_toggle_bookmark.Name = "m_cmenu_toggle_bookmark";
+			this.m_cmenu_toggle_bookmark.Size = new System.Drawing.Size(167, 22);
+			this.m_cmenu_toggle_bookmark.Text = "Toggle &Bookmark";
+			// 
+			// m_grid
+			// 
+			this.m_grid.AllowUserToAddRows = false;
+			this.m_grid.AllowUserToDeleteRows = false;
+			this.m_grid.AllowUserToOrderColumns = true;
+			this.m_grid.AllowUserToResizeRows = false;
+			this.m_grid.CellBorderStyle = System.Windows.Forms.DataGridViewCellBorderStyle.None;
+			this.m_grid.ClipboardCopyMode = System.Windows.Forms.DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
+			this.m_grid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+			this.m_grid.ContextMenuStrip = this.m_cmenu_grid;
+			this.m_grid.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_grid.EditMode = System.Windows.Forms.DataGridViewEditMode.EditProgrammatically;
+			this.m_grid.Location = new System.Drawing.Point(3, 3);
+			this.m_grid.Name = "m_grid";
+			this.m_grid.ReadOnly = true;
+			this.m_grid.RowHeadersVisible = false;
+			this.m_grid.RowTemplate.Height = 18;
+			this.m_grid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+			this.m_grid.ShowCellErrors = false;
+			this.m_grid.ShowCellToolTips = false;
+			this.m_grid.ShowEditingIcon = false;
+			this.m_grid.ShowRowErrors = false;
+			this.m_grid.Size = new System.Drawing.Size(805, 407);
+			this.m_grid.TabIndex = 3;
+			this.m_grid.VirtualMode = true;
+			// 
+			// m_scroll_file
+			// 
+			this.m_scroll_file.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_scroll_file.LargeChange = ((long)(1));
+			this.m_scroll_file.Location = new System.Drawing.Point(814, 3);
+			this.m_scroll_file.MinimumSize = new System.Drawing.Size(10, 10);
+			this.m_scroll_file.MinThumbSize = 20;
+			this.m_scroll_file.Name = "m_scroll_file";
+			this.m_scroll_file.Overlay = null;
+			this.m_scroll_file.OverlayAttributes = null;
+			this.m_scroll_file.Size = new System.Drawing.Size(18, 407);
+			this.m_scroll_file.SmallChange = ((long)(1));
+			this.m_scroll_file.TabIndex = 4;
+			this.m_scroll_file.ThumbColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(128)))), ((int)(((byte)(0)))));
+			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlLight;
+			// 
+			// Main
+			// 
+			this.AllowDrop = true;
+			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+			this.ClientSize = new System.Drawing.Size(835, 492);
+			this.Controls.Add(this.m_toolstrip_cont);
+			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+			this.KeyPreview = true;
+			this.MainMenuStrip = this.m_menu;
+			this.MinimumSize = new System.Drawing.Size(200, 220);
+			this.Name = "Main";
+			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+			this.Text = "Rylogic Log Viewer";
+			this.m_toolstrip.ResumeLayout(false);
+			this.m_toolstrip.PerformLayout();
+			this.m_menu.ResumeLayout(false);
+			this.m_menu.PerformLayout();
+			this.m_status.ResumeLayout(false);
+			this.m_status.PerformLayout();
+			this.m_toolstrip_cont.BottomToolStripPanel.ResumeLayout(false);
+			this.m_toolstrip_cont.BottomToolStripPanel.PerformLayout();
+			this.m_toolstrip_cont.ContentPanel.ResumeLayout(false);
+			this.m_toolstrip_cont.TopToolStripPanel.ResumeLayout(false);
+			this.m_toolstrip_cont.TopToolStripPanel.PerformLayout();
+			this.m_toolstrip_cont.ResumeLayout(false);
+			this.m_toolstrip_cont.PerformLayout();
+			this.m_table.ResumeLayout(false);
+			this.m_cmenu_grid.ResumeLayout(false);
+			((System.ComponentModel.ISupportInitialize)(this.m_grid)).EndInit();
+			this.ResumeLayout(false);
+
+		}
+		#endregion
 	}
 }

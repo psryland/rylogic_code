@@ -28,7 +28,8 @@ namespace RyLogViewer
 		public About(StartupOptions startup_options)
 		{
 			InitializeComponent();
-			m_licence = new Licence(startup_options.AppDataDir);
+
+			m_licence = new Licence(startup_options.LicenceFilepath);
 			m_installed_on = InstalledOn(startup_options);
 			m_timer = new Timer{Interval = 1000};
 
@@ -47,9 +48,9 @@ namespace RyLogViewer
 
 			// Version history
 			m_btn_version_history.Click += (s,a)=>
-				{
-					HelpUI.ShowDialog(this, HelpUI.EContent.Html, "Version History", Resources.version_history);
-				};
+			{
+				HelpUI.ShowDialog(this, HelpUI.EContent.Html, "Version History", Resources.version_history);
+			};
 
 			// Update the text fields
 			m_timer.Tick += (s,a) => UpdateUI();
@@ -70,7 +71,6 @@ namespace RyLogViewer
 				int m = duration.Minutes;
 				int s = duration.Seconds;
 
-				rtf.AppendLine();
 				rtf.Append(new Rtf.TextStyle(rtf.TextStyle){ForeColourIndex = rtf.ColourIndex(m_licence.Valid ? Color.Green : Color.Red)});
 				rtf.Append("Installed for: ");
 				if (d             != 0) rtf.Append(" {0} days".Fmt(d));
@@ -96,7 +96,7 @@ namespace RyLogViewer
 			try
 			{
 				// Look for folders that were created when the app was installed
-				var di = new DirectoryInfo(startup_options.AppDataDir);
+				var di = new DirectoryInfo(startup_options.UserDataDir);
 				return di.CreationTimeUtc;
 			}
 			catch (Exception ex)
@@ -137,12 +137,12 @@ namespace RyLogViewer
 			this.m_lbl_info = new System.Windows.Forms.Label();
 			this.m_lbl_licence = new System.Windows.Forms.Label();
 			this.m_btn_version_history = new System.Windows.Forms.Button();
-			this.m_edit_licence = new RichTextBox();
+			this.m_edit_licence = new pr.gui.RichTextBox();
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
 			this.SuspendLayout();
-			//
+			// 
 			// m_btn_ok
-			//
+			// 
 			this.m_btn_ok.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.OK;
 			this.m_btn_ok.Location = new System.Drawing.Point(255, 241);
@@ -151,13 +151,13 @@ namespace RyLogViewer
 			this.m_btn_ok.TabIndex = 11;
 			this.m_btn_ok.Text = "OK";
 			this.m_btn_ok.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_edit_version
-			//
+			// 
 			this.m_edit_version.AcceptsReturn = true;
 			this.m_edit_version.AcceptsTab = true;
-			this.m_edit_version.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-			| System.Windows.Forms.AnchorStyles.Right)));
+			this.m_edit_version.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_version.BackColor = System.Drawing.SystemColors.ControlLightLight;
 			this.m_edit_version.Location = new System.Drawing.Point(12, 64);
 			this.m_edit_version.Multiline = true;
@@ -167,9 +167,9 @@ namespace RyLogViewer
 			this.m_edit_version.TabIndex = 10;
 			this.m_edit_version.Text = "Rylogic\r\nVersion\r\nBuilt:\r\nAll Rights Reserved";
 			this.m_edit_version.WordWrap = false;
-			//
+			// 
 			// pictureBox1
-			//
+			// 
 			this.pictureBox1.Image = global::RyLogViewer.Properties.Resources.book;
 			this.pictureBox1.Location = new System.Drawing.Point(12, 11);
 			this.pictureBox1.Name = "pictureBox1";
@@ -177,9 +177,9 @@ namespace RyLogViewer
 			this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.AutoSize;
 			this.pictureBox1.TabIndex = 9;
 			this.pictureBox1.TabStop = false;
-			//
+			// 
 			// m_lbl_info
-			//
+			// 
 			this.m_lbl_info.AutoSize = true;
 			this.m_lbl_info.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
 			this.m_lbl_info.Location = new System.Drawing.Point(66, 23);
@@ -187,18 +187,18 @@ namespace RyLogViewer
 			this.m_lbl_info.Size = new System.Drawing.Size(123, 24);
 			this.m_lbl_info.TabIndex = 8;
 			this.m_lbl_info.Text = "RyLogViewer";
-			//
+			// 
 			// m_lbl_licence
-			//
+			// 
 			this.m_lbl_licence.AutoSize = true;
 			this.m_lbl_licence.Location = new System.Drawing.Point(9, 125);
 			this.m_lbl_licence.Name = "m_lbl_licence";
 			this.m_lbl_licence.Size = new System.Drawing.Size(69, 13);
 			this.m_lbl_licence.TabIndex = 14;
 			this.m_lbl_licence.Text = "Licence Info:";
-			//
+			// 
 			// m_btn_version_history
-			//
+			// 
 			this.m_btn_version_history.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_btn_version_history.Location = new System.Drawing.Point(12, 241);
 			this.m_btn_version_history.Name = "m_btn_version_history";
@@ -206,20 +206,24 @@ namespace RyLogViewer
 			this.m_btn_version_history.TabIndex = 15;
 			this.m_btn_version_history.Text = "Version History";
 			this.m_btn_version_history.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_edit_licence
-			//
-			this.m_edit_licence.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
-			| System.Windows.Forms.AnchorStyles.Right)));
+			// 
+			this.m_edit_licence.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_licence.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.m_edit_licence.CaretLocation = new System.Drawing.Point(0, 0);
+			this.m_edit_licence.CurrentLineIndex = 0;
+			this.m_edit_licence.FirstVisibleLineIndex = 0;
+			this.m_edit_licence.LineCount = 0;
 			this.m_edit_licence.Location = new System.Drawing.Point(12, 141);
 			this.m_edit_licence.Name = "m_edit_licence";
 			this.m_edit_licence.Size = new System.Drawing.Size(314, 94);
 			this.m_edit_licence.TabIndex = 16;
 			this.m_edit_licence.Text = "";
-			//
+			// 
 			// About
-			//
+			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(338, 274);
@@ -239,6 +243,7 @@ namespace RyLogViewer
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
 			this.ResumeLayout(false);
 			this.PerformLayout();
+
 		}
 
 		#endregion

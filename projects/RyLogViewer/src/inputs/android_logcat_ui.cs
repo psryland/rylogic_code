@@ -294,8 +294,11 @@ namespace RyLogViewer
 				@"C:\"
 			};
 
-			// Search for 'adb.exe'
-			var find_adb = new ProgressForm("Locating 'adb.exe'...", msg.Fmt(string.Empty), Icon, ProgressBarStyle.Marquee, (s,a,cb) =>
+			var res = DialogResult.Cancel;
+			try
+			{
+				// Search for 'adb.exe'
+				var find_adb = new ProgressForm("Locating 'adb.exe'...", msg.Fmt(string.Empty), Icon, ProgressBarStyle.Marquee, (s,a,cb) =>
 				{
 					foreach (var path in search_paths)
 					{
@@ -307,10 +310,10 @@ namespace RyLogViewer
 
 						cb(new ProgressForm.UserState{Description = msg.Fmt(path), ForceLayout = false});
 						Func<string,bool> progress = dir =>
-							{
-								cb(ProgressForm.UserState.Empty);
-								return !s.CancelPending;
-							};
+						{
+							cb(ProgressForm.UserState.Empty);
+							return !s.CancelPending;
+						};
 
 						foreach (var fi in Path_.EnumFileSystem(path, SearchOption.AllDirectories, regex_filter:@"adb\.exe", progress:progress))
 						{
@@ -324,9 +327,9 @@ namespace RyLogViewer
 					StartPosition = FormStartPosition.CenterParent,
 					ClientSize = new Size(640, 280),
 				};
-
-			var res = DialogResult.Cancel;
-			try { res = find_adb.ShowDialog(this); }
+				using (find_adb)
+					res = find_adb.ShowDialog(this);
+			}
 			catch (OperationCanceledException) {}
 			catch (Exception ex) { Misc.ShowMessage(this, "An error occurred while searching for 'adb.exe'", "Locating 'adb.exe' failed", MessageBoxIcon.Error, ex); }
 			if (res != DialogResult.OK)
@@ -360,9 +363,12 @@ namespace RyLogViewer
 		/// <summary>Run the adb app returning the output</summary>
 		private string Adb(string args)
 		{
-			string result = string.Empty;
+			var result = string.Empty;
 			var desc = "Executing:\r\n\r\n{0} {1}".Fmt(m_edit_adb_fullpath.Text, args);
-			var run = new ProgressForm("Adb Command Executing", desc, Icon, ProgressBarStyle.Marquee, (form,x,cb) =>
+
+			try
+			{
+				var run = new ProgressForm("Adb Command Executing", desc, Icon, ProgressBarStyle.Marquee, (form,x,cb) =>
 				{
 					// Determine the available devices
 					using (var proc = new Process())
@@ -409,10 +415,8 @@ namespace RyLogViewer
 						result = sb_out.ToString();
 					}
 				});
-
-			try
-			{
-				return run.ShowDialog(this, 500) == DialogResult.OK ? result : string.Empty;
+				using (run)
+					return run.ShowDialog(this, 500) == DialogResult.OK ? result : string.Empty;
 			}
 			catch (Exception ex)
 			{

@@ -15,7 +15,7 @@ namespace RyLogViewer
 		/// <summary>Call to begin or update a time limited feature</summary>
 		public void UseLicensedFeature(string key, ILicensedFeature use)
 		{
-			if (m_license.Valid)
+			if (Licence.Valid)
 				return;
 
 			// Wait till the main UI is visible
@@ -45,12 +45,12 @@ namespace RyLogViewer
 			// Otherwise, the user wants to use the feature
 			m_licensed_features[key] = use;
 			this.BeginInvokeDelayed((int)TimeSpan.FromMinutes(FreeEditionLimits.FeatureEnableTimeInMinutes).TotalMilliseconds, () =>
-				{
-					ILicensedFeature feat;
-					if (!m_licensed_features.TryGetValue(key, out feat)) return;
-					m_licensed_features.Remove(key);
-					UseLicensedFeature(key, feat);
-				});
+			{
+				ILicensedFeature feat;
+				if (!m_licensed_features.TryGetValue(key, out feat)) return;
+				m_licensed_features.Remove(key);
+				UseLicensedFeature(key, feat);
+			});
 		}
 	}
 
@@ -150,7 +150,7 @@ namespace RyLogViewer
 			get
 			{
 				return
-					m_main != null && m_main.FileSource is AggregateFile ||
+					m_main != null && m_main.Src is AggregateFile ||
 					m_ui != null && m_ui.Visible;
 			}
 		}
@@ -158,8 +158,8 @@ namespace RyLogViewer
 		/// <summary>Called to stop the use of the feature</summary>
 		public void CloseFeature()
 		{
-			if (m_main != null && m_main.FileSource is AggregateFile)
-				m_main.CloseLogFile();
+			if (m_main != null && m_main.Src is AggregateFile)
+				m_main.Src = null;
 			if (m_ui != null && m_ui.Visible)
 				m_ui.Close();
 		}

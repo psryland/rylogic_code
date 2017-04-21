@@ -30,7 +30,10 @@ namespace Csex
 		}
 
 		/// <summary>Handle anything not preceded by '-'. Return true to continue parsing, false to stop</summary>
-		public virtual bool CmdLineData(string data, string[] args, ref int arg) { return true; }
+		public virtual bool CmdLineData(string data, string[] args, ref int arg)
+		{
+			return true;
+		}
 
 		/// <summary>Return true if all required options have been given</summary>
 		public abstract bool OptionsValid();

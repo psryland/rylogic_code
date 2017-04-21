@@ -30,6 +30,17 @@ namespace RyLogViewer
 				// Load an instance of the app and the options.
 				var m = new Main(startup_options);
 
+				// Override settings passed on the command line
+				if (startup_options.RowDelim != null) m.Settings.RowDelimiter = startup_options.RowDelim;
+				if (startup_options.ColDelim != null) m.Settings.ColDelimiter = startup_options.ColDelim;
+				if (startup_options.PatternSetFilepath != null)
+				{
+					// Specifying a pattern set implies the filters and transforms should be enabled
+					m.Settings.Patterns = PatternSet.Load(startup_options.PatternSetFilepath);
+					m.Settings.FiltersEnabled = true;
+					m.Settings.TransformsEnabled = true;
+				}
+
 				// Do the export
 				using (var outp = new StreamWriter(new FileStream(startup_options.ExportPath, FileMode.Create, FileAccess.Write, FileShare.Read)))
 				{
@@ -39,37 +50,38 @@ namespace RyLogViewer
 						using (d.file)
 						{
 							var rng = new[] { new Range(0, long.MaxValue) };
-							string row_delimiter = Misc.Robitise(startup_options.RowDelim ?? m.Settings.RowDelimiter);
-							string col_delimiter = Misc.Robitise(startup_options.ColDelim ?? m.Settings.ColDelimiter);
+							var row_delimiter = Misc.Robitise(m.Settings.RowDelimiter);
+							var col_delimiter = Misc.Robitise(m.Settings.ColDelimiter);
 
 							if (startup_options.NoGUI)
 							{
 								using (var done = new ManualResetEvent(false))
 								{
 									ThreadPool.QueueUserWorkItem(x =>
-										{
-											// ReSharper disable AccessToDisposedClosure
-											d.progress = (c,l) => true;
-											DoExport(d, rng, row_delimiter, col_delimiter, outp);
-											done.Set();
-											// ReSharper restore AccessToDisposedClosure
-										});
+									{
+										d.progress = (c,l) => true;
+										DoExport(d, rng, row_delimiter, col_delimiter, outp);
+										done.Set();
+									});
 
 									done.WaitOne();
-									Console.WriteLine(Resources.ExportCompletedSuccessfully);
+									if (!startup_options.Silent)
+										Console.WriteLine(Resources.ExportCompletedSuccessfully);
 								}
 							}
 							else
 							{
 								if (m.DoExportWithProgress(d, rng, row_delimiter, col_delimiter, outp))
-									Console.WriteLine(Resources.ExportCompletedSuccessfully);
+									if (!startup_options.Silent)
+										Console.WriteLine(Resources.ExportCompletedSuccessfully);
 							}
 						}
 					}
 					catch (Exception ex)
 					{
 						Environment.ExitCode = 1;
-						Console.WriteLine("Export failed.\r\nError: {0}", ex.Message);
+						if (!startup_options.Silent)
+							Console.WriteLine("Export failed.\r\n{0}".Fmt(ex.Message));
 					}
 				}
 			}
@@ -83,40 +95,45 @@ namespace RyLogViewer
 		/// <summary>Show the export dialog</summary>
 		private void ShowExportDialog()
 		{
-			if (!FileOpen) return;
-			var dg = new ExportUI(
-				Path.ChangeExtension(m_file.PsuedoFilepath, ".exported" + Path.GetExtension(m_file.PsuedoFilepath)),
+			if (Src == null)
+				return;
+
+			var dlg = new ExportUI(
+				Path.ChangeExtension(Src.PsuedoFilepath, ".exported" + Path.GetExtension(Src.PsuedoFilepath)),
 				Misc.Humanise(m_encoding.GetString(m_row_delim)),
 				Misc.Humanise(m_encoding.GetString(m_col_delim)),
 				FileByteRange);
-			if (dg.ShowDialog(this) != DialogResult.OK)
-				return;
-
-			IEnumerable<Range> rng;
-			switch (dg.RangeToExport)
+			using (dlg)
 			{
-			default: throw new ArgumentOutOfRangeException();
-			case ExportUI.ERangeToExport.WholeFile: rng = new[] { FileByteRange }; break;
-			case ExportUI.ERangeToExport.Selection: rng = SelectedRowRanges; break;
-			case ExportUI.ERangeToExport.ByteRange: rng = new[] { dg.ByteRange }; break;
-			}
+				if (dlg.ShowDialog(this) != DialogResult.OK)
+					return;
 
-			string row_delimiter = Misc.Robitise(dg.RowDelim);
-			string col_delimiter = Misc.Robitise(dg.ColDelim);
-
-			// Do the export
-			using (var outp = new StreamWriter(new FileStream(dg.OutputFilepath, FileMode.Create, FileAccess.Write, FileShare.Read)))
-			{
-				try
+				IEnumerable<Range> rng;
+				switch (dlg.RangeToExport)
 				{
-					var d = new BLIData(this, m_file);
-					if (DoExportWithProgress(d, rng, row_delimiter, col_delimiter, outp))
-						MsgBox.Show(this, Resources.ExportCompletedSuccessfully, Resources.ExportComplete, MessageBoxButtons.OK);
+				default: throw new ArgumentOutOfRangeException();
+				case ExportUI.ERangeToExport.WholeFile: rng = new[] { FileByteRange }; break;
+				case ExportUI.ERangeToExport.Selection: rng = SelectedRowRanges; break;
+				case ExportUI.ERangeToExport.ByteRange: rng = new[] { dlg.ByteRange }; break;
 				}
-				catch (Exception ex)
+
+				string row_delimiter = Misc.Robitise(dlg.RowDelim);
+				string col_delimiter = Misc.Robitise(dlg.ColDelim);
+
+				// Do the export
+				using (var outp = new StreamWriter(new FileStream(dlg.OutputFilepath, FileMode.Create, FileAccess.Write, FileShare.Read)))
 				{
-					Log.Exception(this, ex, "Export failed");
-					MsgBox.Show(this, string.Format("Export failed.\r\nError: {0}", ex.Message), Resources.ExportFailed, MessageBoxButtons.OK);
+					try
+					{
+						var d = new BLIData(this, Src);
+						if (DoExportWithProgress(d, rng, row_delimiter, col_delimiter, outp))
+							MsgBox.Show(this, Resources.ExportCompletedSuccessfully, Resources.ExportComplete, MessageBoxButtons.OK);
+					}
+					catch (Exception ex)
+					{
+						Log.Exception(this, ex, "Export failed");
+						MsgBox.Show(this, string.Format("Export failed.\r\nError: {0}", ex.Message), Resources.ExportFailed, MessageBoxButtons.OK);
+					}
 				}
 			}
 		}
@@ -131,36 +148,39 @@ namespace RyLogViewer
 		/// <param name="outp">The stream to write the exported file to</param>
 		private bool DoExportWithProgress(BLIData d, IEnumerable<Range> ranges, string row_delimiter, string col_delimiter, StreamWriter outp)
 		{
-			// Although this search runs in a background thread, it's wrapped in a modal
-			// dialog box, so it should be ok to use class members directly
-			var export = new ProgressForm("Exporting...", null, null, ProgressBarStyle.Continuous, (s, a, cb) =>
+			DialogResult res = DialogResult.Cancel;
+			try
+			{
+				// Although this search runs in a background thread, it's wrapped in a modal
+				// dialog box, so it should be ok to use class members directly
+				var export = new ProgressForm("Exporting...", null, null, ProgressBarStyle.Continuous, (s, a, cb) =>
 				{
 					// Report progress and test for cancel
 					int last_progress = -1;
 					d.progress = (scanned, length) =>
+					{
+						int progress = (int)(100 * Maths.Frac(0, scanned, length!=0?length:1));
+						if (progress != last_progress)
 						{
-							int progress = (int)(100 * Maths.Frac(0, scanned, length!=0?length:1));
-							if (progress != last_progress)
-							{
-								cb(new ProgressForm.UserState { FractionComplete = progress * 0.01f });
-								last_progress = progress;
-							}
-							return !s.CancelPending;
-						};
+							cb(new ProgressForm.UserState { FractionComplete = progress * 0.01f });
+							last_progress = progress;
+						}
+						return !s.CancelPending;
+					};
 
 					// Do the export
 					DoExport(d, ranges, row_delimiter, col_delimiter, outp);
 				}) { StartPosition = FormStartPosition.CenterParent };
 
-			DialogResult res = DialogResult.Cancel;
-			try { res = export.ShowDialog(this); }
+				using (export)
+					res = export.ShowDialog(this);
+			}
 			catch (OperationCanceledException) { }
 			catch (Exception ex) { Misc.ShowMessage(this, "Exporting terminated due to an error.", "Export error", MessageBoxIcon.Error, ex); }
 			return res == DialogResult.OK;
 		}
 
-		/// <summary>Export 'filepath' to 'outp'. This method uses the 'm_settings' object, so should
-		/// only be called from a background thread, if the main thread is effectively blocked.</summary>
+		/// <summary>Export 'filepath' to 'outp'.</summary>
 		/// <param name="d">A copy of the data needed to do the export</param>
 		/// <param name="ranges">Byte ranges within the input file to export</param>
 		/// <param name="row_delimiter">The row delimiter to use in the output file (robitised)</param>
@@ -172,21 +192,21 @@ namespace RyLogViewer
 
 			// Call back for adding lines to the export result
 			AddLineFunc add_line = (line_rng, baddr, fend, bf, enc) =>
-				{
-					if (line_rng.Empty && d.ignore_blanks)
-						return true;
-
-					// Parse the line from the buffer
-					line.Read(baddr + line_rng.Beg, bf, (int)line_rng.Beg, (int)line_rng.Size, d.encoding, d.col_delim, null, d.transforms);
-
-					// Keep searching while the text is filtered out or doesn't match the pattern
-					if (!PassesFilters(line.RowText, d.filters)) return true;
-
-					// Write to the output file
-					outp.Write(string.Join(col_delimiter, line.Column));
-					outp.Write(row_delimiter);
+			{
+				if (line_rng.Empty && d.ignore_blanks)
 					return true;
-				};
+
+				// Parse the line from the buffer
+				line.Read(baddr + line_rng.Beg, bf, (int)line_rng.Beg, (int)line_rng.Size, d.encoding, d.col_delim, null, d.transforms);
+
+				// Keep searching while the text is filtered out or doesn't match the pattern
+				if (!PassesFilters(line.RowText, d.filters)) return true;
+
+				// Write to the output file
+				outp.Write(string.Join(col_delimiter, line.Column));
+				outp.Write(row_delimiter);
+				return true;
+			};
 
 			byte[] buf = new byte[d.max_line_length];
 			foreach (var rng in ranges)
