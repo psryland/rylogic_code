@@ -28,7 +28,7 @@
 			<div id="program_output">
 				<div class="section_title">Program Output</div>
 				<div class="content">
-					<img class="right_inset" src="../img/program_output.png" alt="log program output"/>
+					<img class="right_inset" src="../img/log_program_output.png" alt="log program output"/>
 					Many applications output log information to the standard streams; standard output (stdout),
 					and standard error (stderr). Using the <i>Log Program Output</i> option under the file menu,
 					RyLogViewer can launch an application and display any text data it writes to these streams.
@@ -47,7 +47,7 @@
 			<div id="serial_port">
 				<div class="section_title">Serial Port Connection</div>
 				<div class="content">
-					<img class="right_inset" src="../img/serial_port_output.png" alt="log serial port"/>
+					<img class="right_inset" src="../img/log_serial_port_output.png" alt="log serial port"/>
 					A common scenario in embedded software development is for log data to be streamed over
 					a serial port connection. RyLogViewer can capture and display this output directly via the
 					<i>Log Serial Port</i> option under the file menu. The standard options for connecting to
@@ -70,10 +70,11 @@
 			<div id="tcpip">
 				<div class="section_title">TCP/UDP Network Connection</div>
 				<div class="content">
-					<img class="right_inset" src="../img/network_output.png" alt="log network connection"/>
+					<img class="right_inset" src="../img/log_network_output.png" alt="log network connection"/>
 					<ol class="minor_list">
 						<li>The network protocol to use.</li>
-						<li>The host name or IP address of the computer to receive data from.</li>
+						<li>In <i>Listen</i> mode, RyLogViewer acts as a server listening for incoming connections on the given port</li>
+						<li>The host name or IP address of the computer to connect to and receive data from.</li>
 						<li>The port number to use for the connection.</li>
 						<li>The type of optional proxy server to use.</li>
 						<li>The host name or IP address of the proxy server to use.</li>
@@ -89,7 +90,7 @@
 			<div id="named_pipe">
 				<div class="section_title">Named Pipe</div>
 				<div class="content">
-					<img class="right_inset" src="../img/pipe_output.png" alt="log named pipe"/>
+					<img class="right_inset" src="../img/log_named_pipe_output.png" alt="log named pipe"/>
 					<ol class="minor_list">
 						<li>The name of the named pipe to receive data from.</li>
 						<li>An optional file path to save any captured program output to.</li>
@@ -109,7 +110,7 @@
 					Searching for specific log entries can also be difficult.<br />
 					<br />
 					RyLogViewer's aggregate files feature solves these issues by encapsulating the separate log files
-					such that they appear, to the rest of the application, to be a single file. This means all of
+					so that they appear, to the rest of the application, to be a single file. This means all of
 					RyLogViewer's highlighting, filtering, transforming, searching and other features work seamlessly
 					across the multiple files.
 				</div>

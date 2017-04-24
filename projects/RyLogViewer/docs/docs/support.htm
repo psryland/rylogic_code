@@ -5,15 +5,16 @@
 	<!--#include file="..\inc\help_title_panel.include.htm"-->
 	<!--#include file="..\inc\help_index_panel.include.htm"-->
 	<div id="content_panel">
+		<!--#var name="SupportEmail" file="..\..\src\misc.cs" value="const string SupportEmail\s+= .(?P<value>.*).;"-->
 		<div class="title">Support</div>
 		<div class="content">
-	
-		</div>
-		<div id="licence_activation">
-			<div class="section_title">Licence</div>
-			<div class="content">
-
-			</div>
+			Rylogic Limited is committed to providing quality, bug-free software. If you experience any problems with our software,
+			or find any bugs, please don't hesitate to email <i><!--#value name="SupportEmail"--></i> with a detailed description of
+			the problem. Be sure to include which operating system you are using, the version of the software, any relevant screen
+			captures, and files that demonstrate the issue.<br />
+			<br />
+			If you have any other inquires, comments, ideas, or suggestions on things you would like RyLogViewer to do, please email
+			'feedback@rylogic.co.nz'. Your input is of great value!
 		</div>
 		<div id="faq">
 			<div class="section_title">F.A.Q.</div>
@@ -33,7 +34,7 @@
 					A frequent cause of corrupted file data being displayed occurs when <i>Additive File Changes</i>
 					mode is enabled, but the file has been changed in a way other than by appending data.
 				</div>
-				<div class="faq_question">Other programs that use adb.exe disconnect when running RyLogViewer</div>
+				<div class="faq_question">Other programs that use adb.exe disconnect when RyLogViewer starts</div>
 				<div class="faq_answer">
 					Check whether you have more than one instance of adb.exe installed on your system and verify
 					that RyLogViewer is running the same version of adb.exe as the other programs.

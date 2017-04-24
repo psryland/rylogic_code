@@ -269,6 +269,7 @@
     <Content Include="docs\inc\css.include.htm" />
     <Content Include="docs\inc\help_css.include.htm" />
     <Content Include="docs\inc\options_dialog.include.htm" />
+    <Content Include="docs\docs\RylogicSingleUserLicence.htm" />
     <Content Include="docs\res\ReadMe.txt" />
     <Content Include="post_build.py" />
     <Content Include="project_howto.txt" />

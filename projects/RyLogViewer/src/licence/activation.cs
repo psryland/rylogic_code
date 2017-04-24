@@ -152,8 +152,9 @@ namespace RyLogViewer
 				{
 					MsgBox.Show(this,
 						"This licence is for an older version of "+Application.ProductName+".\r\n" +
+						"\r\n" +
 						"Please consider purchasing a new licence for this version.\r\n" +
-						"If you believe this to be an error, please contact '"+Constants.SupportEmail+"' for support"
+						"If you believe this to be an error, please contact '"+Constants.SupportEmail+"' for support."
 						,"Licence Out of Date"
 						,MessageBoxButtons.OK, MessageBoxIcon.Information);
 					return;
@@ -164,8 +165,9 @@ namespace RyLogViewer
 				{
 					MsgBox.Show(this,
 						"This licence is the free edition licence.\r\n" +
+						"\r\n" +
 						"Please consider purchasing a licence for this version.\r\n" +
-						"If you believe this to be an error, please contact '"+Constants.SupportEmail+"' for support"
+						"If you believe this to be an error, please contact '"+Constants.SupportEmail+"' for support."
 						,"Free Edition Licence"
 						,MessageBoxButtons.OK, MessageBoxIcon.Information);
 					return;
@@ -174,7 +176,8 @@ namespace RyLogViewer
 				// Licence is invalid
 				MsgBox.Show(this,
 					"This licence file is invalid.\r\n" +
-					"If you believe this to be an error, please contact '"+Constants.SupportEmail+"' for support"
+					"\r\n" +
+					"If you believe this to be an error, please contact '"+Constants.SupportEmail+"' for support."
 					,"Activation Failed"
 					,MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}

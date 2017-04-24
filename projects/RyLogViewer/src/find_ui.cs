@@ -194,6 +194,7 @@ namespace RyLogViewer
 			};
 			m_cb_pattern.TextChanged += (s,a)=>
 			{
+				if (Pattern == null) return;
 				Pattern.Expr = m_cb_pattern.Text;
 			};
 			m_cb_pattern.KeyDown += (s,a) =>
@@ -266,15 +267,16 @@ namespace RyLogViewer
 		/// <summary>Set the state of the controls</summary>
 		private void UpdateUI()
 		{
+			if (Pattern == null) return;
 			if (m_in_update_ui != 0) return;
 			using (Scope.Create(() => ++m_in_update_ui, () => --m_in_update_ui))
 			{
-				m_cb_pattern.Text           = Pattern?.Expr ?? string.Empty;
-				m_radio_substring.Checked   = Pattern?.PatnType == EPattern.Substring;
-				m_radio_wildcard .Checked   = Pattern?.PatnType == EPattern.Wildcard;
-				m_radio_regex    .Checked   = Pattern?.PatnType == EPattern.RegularExpression;
-				m_check_ignore_case.Checked = Pattern?.IgnoreCase ?? false;
-				m_check_invert.Checked      = Pattern?.Invert ?? false;
+				m_cb_pattern.Text           = Pattern.Expr;
+				m_radio_substring.Checked   = Pattern.PatnType == EPattern.Substring;
+				m_radio_wildcard .Checked   = Pattern.PatnType == EPattern.Wildcard;
+				m_radio_regex    .Checked   = Pattern.PatnType == EPattern.RegularExpression;
+				m_check_ignore_case.Checked = Pattern.IgnoreCase;
+				m_check_invert.Checked      = Pattern.Invert;
 			}
 		}
 		private int m_in_update_ui;

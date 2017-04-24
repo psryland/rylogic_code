@@ -127,9 +127,9 @@
 					Create a class that implements the <i>ITransformSubstitution</i> interface, and mark it with the <i>pr.common.Plugin</i>
 					attribute. This attribute is what RyLogViewer uses to find the plugin implementation.
 <pre class="cscode">
-<code><span class="com">/// &lt;summary&gt;Interface to a transform substitution plugin&lt;/summary&gt;</span>
-[TypeConverter(<span class="key">typeof</span>(TransformSubstitutionTypeConverter))]
-<span class="key">public</span> <span class="key">interface</span> ITransformSubstitution
+<code><span class="com">/// &lt;summary&gt;>A text transform substitution, accessed via the Options-&gt;Transforms tab&lt;/summary&gt;</span>
+[pr.common.Plugin(<span class="key">typeof</span>(ITransformSubstitution))]
+<span class="key">public</span> <span class="key">class</span> ExampleSubstitution :ITransformSubstitution
 </code></pre>
 				</div>
 			</li>
@@ -148,6 +148,7 @@
 						</li>
 						<li>
 							<span class="code">ShowConfigUI</span> - Called when the user clicks the pencil icon associated with the plugin.
+							The plugin should show a modal dialog that allows the settings for the transform to be changed.
 						</li>
 						<li>
 							<span class="code">ToXml</span> - Called to serialise state for the plugin that will be stored in the application settings.
