@@ -45,22 +45,22 @@ namespace RyLogViewer
 			m_edit_adb_fullpath.Text = prompt_text;
 			m_edit_adb_fullpath.ForeColor = Color.LightGray;
 			m_edit_adb_fullpath.GotFocus += (s,a) =>
-				{
-					if (m_edit_adb_fullpath.ForeColor != Color.LightGray) return;
-					m_edit_adb_fullpath.Text = string.Empty;
-					m_edit_adb_fullpath.ForeColor = Color.Black;
-				};
+			{
+				if (m_edit_adb_fullpath.ForeColor != Color.LightGray) return;
+				m_edit_adb_fullpath.Text = string.Empty;
+				m_edit_adb_fullpath.ForeColor = Color.Black;
+			};
 			m_edit_adb_fullpath.LostFocus += (s,a) =>
-				{
-					if (m_edit_adb_fullpath.Text.HasValue()) return;
-					m_edit_adb_fullpath.ForeColor = Color.LightGray;
-					m_edit_adb_fullpath.Text = prompt_text;
-				};
+			{
+				if (m_edit_adb_fullpath.Text.HasValue()) return;
+				m_edit_adb_fullpath.ForeColor = Color.LightGray;
+				m_edit_adb_fullpath.Text = prompt_text;
+			};
 			m_edit_adb_fullpath.TextChanged += (s,a) =>
-				{
-					if (!((TextBox)s).Modified) return;
-					SetAdbPath(m_edit_adb_fullpath.Text);
-				};
+			{
+				if (!((TextBox)s).Modified) return;
+				SetAdbPath(m_edit_adb_fullpath.Text);
+			};
 
 			// The version info printed by adb
 			UpdateAdbVersionInfo(false);
