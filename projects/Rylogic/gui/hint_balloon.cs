@@ -337,6 +337,8 @@ namespace pr.gui
 				PinTo   = pin_to;
 				Owner   = pin_to != null ? pin_to.TopLevelControl as Form : null;
 				TopMost = Owner == null;
+				Location = pin_to != null ? pin_to.PointToScreen(Target) : Target;
+				Win32.ShowWindow(Handle, Win32.SW_SHOWNOACTIVATE);
 
 				if (PinTo != null)
 				{
@@ -350,8 +352,6 @@ namespace pr.gui
 					Owner.FormClosed += DetachFromOwner;
 				}
 
-				Win32.ShowWindow(Handle, Win32.SW_SHOWNOACTIVATE);
-				Win32.SetWindowPos(Handle, Win32.HWND_TOP, 0, 0, 0, 0, Win32.SWP_NOACTIVATE|Win32.SWP_NOMOVE|Win32.SWP_NOSIZE);
 				this.BeginInvokeDelayed(Duration, () => HideHintInternal(issue));
 			}
 		}
