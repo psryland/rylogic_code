@@ -115,7 +115,7 @@ namespace RyLogViewer
 			this.m_btn_browse_output.Location = new System.Drawing.Point(217, 14);
 			this.m_btn_browse_output.Name = "m_btn_browse_output";
 			this.m_btn_browse_output.Size = new System.Drawing.Size(34, 23);
-			this.m_btn_browse_output.TabIndex = 57;
+			this.m_btn_browse_output.TabIndex = 1;
 			this.m_btn_browse_output.Text = "...";
 			this.m_btn_browse_output.UseVisualStyleBackColor = true;
 			// 
@@ -125,19 +125,19 @@ namespace RyLogViewer
 			this.m_check_append.Location = new System.Drawing.Point(16, 43);
 			this.m_check_append.Name = "m_check_append";
 			this.m_check_append.Size = new System.Drawing.Size(113, 17);
-			this.m_check_append.TabIndex = 58;
+			this.m_check_append.TabIndex = 2;
 			this.m_check_append.Text = "Append to existing";
 			this.m_check_append.UseVisualStyleBackColor = true;
 			// 
-			// m_combo_filepaths
+			// m_cb_filepaths
 			// 
 			this.m_cb_filepaths.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_cb_filepaths.FormattingEnabled = true;
 			this.m_cb_filepaths.Location = new System.Drawing.Point(16, 16);
-			this.m_cb_filepaths.Name = "m_combo_filepaths";
+			this.m_cb_filepaths.Name = "m_cb_filepaths";
 			this.m_cb_filepaths.Size = new System.Drawing.Size(195, 21);
-			this.m_cb_filepaths.TabIndex = 60;
+			this.m_cb_filepaths.TabIndex = 0;
 			// 
 			// OutputFilepathUI
 			// 

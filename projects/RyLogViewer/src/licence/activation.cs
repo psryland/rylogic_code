@@ -222,7 +222,7 @@ namespace RyLogViewer
 			this.m_btn_ok.Location = new System.Drawing.Point(238, 274);
 			this.m_btn_ok.Name = "m_btn_ok";
 			this.m_btn_ok.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_ok.TabIndex = 5;
+			this.m_btn_ok.TabIndex = 8;
 			this.m_btn_ok.Text = "OK";
 			this.m_btn_ok.UseVisualStyleBackColor = true;
 			// 
@@ -252,7 +252,7 @@ namespace RyLogViewer
 			this.m_lbl_valid.Margin = new System.Windows.Forms.Padding(20);
 			this.m_lbl_valid.Name = "m_lbl_valid";
 			this.m_lbl_valid.Size = new System.Drawing.Size(100, 23);
-			this.m_lbl_valid.TabIndex = 4;
+			this.m_lbl_valid.TabIndex = 7;
 			this.m_lbl_valid.Text = "Licence Accepted";
 			this.m_lbl_valid.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
 			// 
@@ -282,7 +282,7 @@ namespace RyLogViewer
 			this.m_btn_locate_licence.Location = new System.Drawing.Point(197, 12);
 			this.m_btn_locate_licence.Name = "m_btn_locate_licence";
 			this.m_btn_locate_licence.Size = new System.Drawing.Size(119, 23);
-			this.m_btn_locate_licence.TabIndex = 23;
+			this.m_btn_locate_licence.TabIndex = 0;
 			this.m_btn_locate_licence.Text = "Locate Licence File...";
 			this.m_btn_locate_licence.UseVisualStyleBackColor = true;
 			// 
@@ -295,14 +295,14 @@ namespace RyLogViewer
 			this.m_lbl_have_a_licence.TabIndex = 24;
 			this.m_lbl_have_a_licence.Text = "Have a licence file for RyLogViewer?\r\nLocate it now to activate";
 			// 
-			// m_lbl_forgotten
+			// m_lnk_purchase
 			// 
 			this.m_lnk_purchase.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_lnk_purchase.AutoSize = true;
 			this.m_lnk_purchase.Location = new System.Drawing.Point(12, 241);
-			this.m_lnk_purchase.Name = "m_lbl_forgotten";
+			this.m_lnk_purchase.Name = "m_lnk_purchase";
 			this.m_lnk_purchase.Size = new System.Drawing.Size(238, 13);
-			this.m_lnk_purchase.TabIndex = 25;
+			this.m_lnk_purchase.TabIndex = 6;
 			this.m_lnk_purchase.TabStop = true;
 			this.m_lnk_purchase.Text = "To purchase a licence, please visit the web store";
 			// 
@@ -314,7 +314,7 @@ namespace RyLogViewer
 			this.m_tb_versions.Name = "m_tb_versions";
 			this.m_tb_versions.ReadOnly = true;
 			this.m_tb_versions.Size = new System.Drawing.Size(300, 20);
-			this.m_tb_versions.TabIndex = 26;
+			this.m_tb_versions.TabIndex = 5;
 			// 
 			// m_tb_company
 			// 
@@ -324,7 +324,7 @@ namespace RyLogViewer
 			this.m_tb_company.Name = "m_tb_company";
 			this.m_tb_company.ReadOnly = true;
 			this.m_tb_company.Size = new System.Drawing.Size(300, 20);
-			this.m_tb_company.TabIndex = 27;
+			this.m_tb_company.TabIndex = 4;
 			// 
 			// m_tb_email
 			// 
@@ -334,7 +334,7 @@ namespace RyLogViewer
 			this.m_tb_email.Name = "m_tb_email";
 			this.m_tb_email.ReadOnly = true;
 			this.m_tb_email.Size = new System.Drawing.Size(300, 20);
-			this.m_tb_email.TabIndex = 28;
+			this.m_tb_email.TabIndex = 3;
 			// 
 			// m_tb_name
 			// 
@@ -344,7 +344,7 @@ namespace RyLogViewer
 			this.m_tb_name.Name = "m_tb_name";
 			this.m_tb_name.ReadOnly = true;
 			this.m_tb_name.Size = new System.Drawing.Size(300, 20);
-			this.m_tb_name.TabIndex = 29;
+			this.m_tb_name.TabIndex = 2;
 			// 
 			// Activation
 			// 

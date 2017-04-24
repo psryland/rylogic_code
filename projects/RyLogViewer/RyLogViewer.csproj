@@ -170,9 +170,6 @@
     <Compile Include="src\export_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\export_ui.Designer.cs">
-      <DependentUpon>export_ui.cs</DependentUpon>
-    </Compile>
     <Compile Include="src\settings\filter.cs" />
     <Compile Include="src\find_ui.cs">
       <SubType>Form</SubType>

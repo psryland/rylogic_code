@@ -200,29 +200,29 @@ namespace RyLogViewer
 		private void InitializeComponent()
 		{
 			this.m_btn_ok = new System.Windows.Forms.Button();
-			this.m_grid = new DataGridView();
+			this.m_grid = new RyLogViewer.DataGridView();
 			this.m_btn_import = new System.Windows.Forms.Button();
 			this.m_btn_export = new System.Windows.Forms.Button();
 			this.m_btn_cancel = new System.Windows.Forms.Button();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).BeginInit();
 			this.SuspendLayout();
-			//
+			// 
 			// m_btn_ok
-			//
+			// 
 			this.m_btn_ok.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.OK;
 			this.m_btn_ok.Location = new System.Drawing.Point(257, 167);
 			this.m_btn_ok.Name = "m_btn_ok";
 			this.m_btn_ok.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_ok.TabIndex = 22;
+			this.m_btn_ok.TabIndex = 4;
 			this.m_btn_ok.Text = "OK";
 			this.m_btn_ok.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_grid
-			//
+			// 
 			this.m_grid.AllowUserToResizeRows = false;
-			this.m_grid.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
+			this.m_grid.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_grid.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_grid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
@@ -232,41 +232,41 @@ namespace RyLogViewer
 			this.m_grid.RowTemplate.Height = 18;
 			this.m_grid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
 			this.m_grid.Size = new System.Drawing.Size(335, 153);
-			this.m_grid.TabIndex = 24;
-			//
+			this.m_grid.TabIndex = 0;
+			// 
 			// m_btn_import
-			//
+			// 
 			this.m_btn_import.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_btn_import.Location = new System.Drawing.Point(93, 167);
 			this.m_btn_import.Name = "m_btn_import";
 			this.m_btn_import.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_import.TabIndex = 25;
+			this.m_btn_import.TabIndex = 2;
 			this.m_btn_import.Text = "&Import";
 			this.m_btn_import.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_btn_export
-			//
+			// 
 			this.m_btn_export.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_btn_export.Location = new System.Drawing.Point(12, 167);
 			this.m_btn_export.Name = "m_btn_export";
 			this.m_btn_export.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_export.TabIndex = 26;
+			this.m_btn_export.TabIndex = 1;
 			this.m_btn_export.Text = "&Export";
 			this.m_btn_export.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_btn_cancel
-			//
+			// 
 			this.m_btn_cancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_cancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
 			this.m_btn_cancel.Location = new System.Drawing.Point(176, 167);
 			this.m_btn_cancel.Name = "m_btn_cancel";
 			this.m_btn_cancel.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_cancel.TabIndex = 29;
+			this.m_btn_cancel.TabIndex = 3;
 			this.m_btn_cancel.Text = "Cancel";
 			this.m_btn_cancel.UseVisualStyleBackColor = true;
-			//
+			// 
 			// CodeLookupUI
-			//
+			// 
 			this.AcceptButton = this.m_btn_ok;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -286,6 +286,7 @@ namespace RyLogViewer
 			this.Text = "Configure Code Lookup";
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).EndInit();
 			this.ResumeLayout(false);
+
 		}
 
 		#endregion

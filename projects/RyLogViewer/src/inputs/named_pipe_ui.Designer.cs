@@ -29,14 +29,14 @@
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(NamedPipeUI));
-			this.m_combo_output_filepath = new ComboBox();
+			this.m_combo_output_filepath = new RyLogViewer.ComboBox();
 			this.m_lbl_output_file = new System.Windows.Forms.Label();
 			this.m_btn_browse_output = new System.Windows.Forms.Button();
 			this.m_check_append = new System.Windows.Forms.CheckBox();
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_btn_cancel = new System.Windows.Forms.Button();
 			this.m_lbl_pipe_name = new System.Windows.Forms.Label();
-			this.m_combo_pipe_name = new ComboBox();
+			this.m_combo_pipe_name = new RyLogViewer.ComboBox();
 			this.SuspendLayout();
 			// 
 			// m_combo_output_filepath
@@ -125,7 +125,7 @@
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.CancelButton = this.m_btn_cancel;
-			this.ClientSize = new System.Drawing.Size(307, 162);
+			this.ClientSize = new System.Drawing.Size(307, 161);
 			this.Controls.Add(this.m_lbl_pipe_name);
 			this.Controls.Add(this.m_combo_pipe_name);
 			this.Controls.Add(this.m_combo_output_filepath);

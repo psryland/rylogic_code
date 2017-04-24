@@ -582,9 +582,67 @@ namespace pr.extn
 		}
 	}
 
+	/// <summary>NumericUpDown control extensions</summary>
+	public static class Spinner_
+	{
+		/// <summary>Set the value, min, and max on the spinner in a way that won't throw</summary>
+		public static void Set(this NumericUpDown spinner, decimal val, decimal min, decimal max)
+		{
+			if (min > max)
+				throw new Exception("Minimum value is greater than the maximum value");
+			if (val != Maths.Clamp(min, val, max))
+				throw new Exception("Value is not within the given range of values");
+
+			// Setting to Minimum/Maximum values first to avoids problems if min > Value or max < Value
+			spinner.Minimum = decimal.MinValue;
+			spinner.Maximum = decimal.MaxValue;
+
+			// Setting Value before Min/Max avoids setting Value twice when Value < MinDate or Value > MaxDate
+			spinner.Value = val;
+			spinner.Minimum = min;
+			spinner.Maximum = max;
+		}
+
+		/// <summary>Return the value of the track bar as a normalised fraction</summary>
+		public static double ValueFrac(this NumericUpDown spinner)
+		{
+			return Maths.Frac((double)spinner.Minimum, (double)spinner.Value, (double)spinner.Maximum);
+		}
+
+		/// <summary>Return the value of the track bar as a normalised fraction of the min-max range</summary>
+		public static void ValueFrac(this NumericUpDown spinner, float frac)
+		{
+			spinner.Value = Maths.Lerp(spinner.Minimum, spinner.Maximum, frac);
+		}
+
+		/// <summary>Set the value of track bar, clamping it to the min/max range</summary>
+		public static decimal ValueClamped(this NumericUpDown spinner, decimal value)
+		{
+			return spinner.Value = Maths.Clamp(value, spinner.Minimum, spinner.Maximum);
+		}
+	}
+
 	/// <summary>Track bar extensions</summary>
 	public static class TrackBar_
 	{
+		/// <summary>Set the value, min, and max on the spinner in a way that won't throw</summary>
+		public static void Set(this TrackBar tb, int val, int min, int max)
+		{
+			if (min > max)
+				throw new Exception("Minimum value is greater than the maximum value");
+			if (val != Maths.Clamp(min, val, max))
+				throw new Exception("Value is not within the given range of values");
+
+			// Setting to Minimum/Maximum values first to avoids problems if min > Value or max < Value
+			tb.Minimum = int.MinValue;
+			tb.Maximum = int.MaxValue;
+
+			// Setting Value before Min/Max avoids setting Value twice when Value < MinDate or Value > MaxDate
+			tb.Value = val;
+			tb.Minimum = min;
+			tb.Maximum = max;
+		}
+
 		/// <summary>Return the value of the track bar as a normalised fraction</summary>
 		public static double ValueFrac(this TrackBar tb)
 		{
@@ -607,6 +665,40 @@ namespace pr.extn
 	/// <summary>Progress bar extensions</summary>
 	public static class ProgressBar_
 	{
+		/// <summary>Set the value, min, and max on the spinner in a way that won't throw</summary>
+		public static void Set(this ProgressBar pb, int val, int min, int max)
+		{
+			if (min > max)
+				throw new Exception("Minimum value is greater than the maximum value");
+			if (val != Maths.Clamp(min, val, max))
+				throw new Exception("Value is not within the given range of values");
+
+			// Setting to Minimum/Maximum values first to avoids problems if min > Value or max < Value
+			pb.Minimum = int.MinValue;
+			pb.Maximum = int.MaxValue;
+
+			// Setting Value before Min/Max avoids setting Value twice when Value < MinDate or Value > MaxDate
+			pb.Value = val;
+			pb.Minimum = min;
+			pb.Maximum = max;
+		}
+		public static void Set(this ToolStripProgressBar pb, int val, int min, int max)
+		{
+			if (min > max)
+				throw new Exception("Minimum value is greater than the maximum value");
+			if (val != Maths.Clamp(min, val, max))
+				throw new Exception("Value is not within the given range of values");
+
+			// Setting to Minimum/Maximum values first to avoids problems if min > Value or max < Value
+			pb.Minimum = int.MinValue;
+			pb.Maximum = int.MaxValue;
+
+			// Setting Value before Min/Max avoids setting Value twice when Value < MinDate or Value > MaxDate
+			pb.Value = val;
+			pb.Minimum = min;
+			pb.Maximum = max;
+		}
+
 		/// <summary>Return the value of the progress bar as a normalised fraction</summary>
 		public static double ValueFrac(this ProgressBar pb)
 		{

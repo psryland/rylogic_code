@@ -43,20 +43,20 @@
 			this.m_check_dtr_enable = new System.Windows.Forms.CheckBox();
 			this.m_check_rts_enable = new System.Windows.Forms.CheckBox();
 			this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
-			this.panel1 = new System.Windows.Forms.Panel();
-			this.panel2 = new System.Windows.Forms.Panel();
 			this.panel3 = new System.Windows.Forms.Panel();
 			this.m_combo_output_filepath = new RyLogViewer.ComboBox();
+			this.panel2 = new System.Windows.Forms.Panel();
 			this.m_combo_commport = new RyLogViewer.ComboBox();
 			this.m_combo_databits = new RyLogViewer.ComboBox();
 			this.m_combo_parity = new RyLogViewer.ComboBox();
+			this.panel1 = new System.Windows.Forms.Panel();
 			this.m_combo_stopbits = new RyLogViewer.ComboBox();
 			this.m_combo_flow_control = new RyLogViewer.ComboBox();
 			this.m_combo_baudrate = new RyLogViewer.ComboBox();
 			this.tableLayoutPanel1.SuspendLayout();
-			this.panel1.SuspendLayout();
-			this.panel2.SuspendLayout();
 			this.panel3.SuspendLayout();
+			this.panel2.SuspendLayout();
+			this.panel1.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// m_lbl_commport
@@ -92,7 +92,7 @@
 			this.m_lbl_output_file.Location = new System.Drawing.Point(3, 3);
 			this.m_lbl_output_file.Name = "m_lbl_output_file";
 			this.m_lbl_output_file.Size = new System.Drawing.Size(149, 13);
-			this.m_lbl_output_file.TabIndex = 50;
+			this.m_lbl_output_file.TabIndex = 0;
 			this.m_lbl_output_file.Text = "File to write program output to:";
 			// 
 			// m_btn_browse_output
@@ -101,7 +101,7 @@
 			this.m_btn_browse_output.Location = new System.Drawing.Point(225, 18);
 			this.m_btn_browse_output.Name = "m_btn_browse_output";
 			this.m_btn_browse_output.Size = new System.Drawing.Size(34, 23);
-			this.m_btn_browse_output.TabIndex = 7;
+			this.m_btn_browse_output.TabIndex = 2;
 			this.m_btn_browse_output.Text = "...";
 			this.m_btn_browse_output.UseVisualStyleBackColor = true;
 			// 
@@ -111,7 +111,7 @@
 			this.m_check_append.Location = new System.Drawing.Point(33, 45);
 			this.m_check_append.Name = "m_check_append";
 			this.m_check_append.Size = new System.Drawing.Size(113, 17);
-			this.m_check_append.TabIndex = 8;
+			this.m_check_append.TabIndex = 3;
 			this.m_check_append.Text = "Append to existing";
 			this.m_check_append.UseVisualStyleBackColor = true;
 			// 
@@ -122,7 +122,7 @@
 			this.m_btn_ok.Location = new System.Drawing.Point(111, 224);
 			this.m_btn_ok.Name = "m_btn_ok";
 			this.m_btn_ok.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_ok.TabIndex = 9;
+			this.m_btn_ok.TabIndex = 0;
 			this.m_btn_ok.Text = "OK";
 			this.m_btn_ok.UseVisualStyleBackColor = true;
 			// 
@@ -133,7 +133,7 @@
 			this.m_btn_cancel.Location = new System.Drawing.Point(192, 224);
 			this.m_btn_cancel.Name = "m_btn_cancel";
 			this.m_btn_cancel.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_cancel.TabIndex = 10;
+			this.m_btn_cancel.TabIndex = 1;
 			this.m_btn_cancel.Text = "Cancel";
 			this.m_btn_cancel.UseVisualStyleBackColor = true;
 			// 
@@ -170,7 +170,7 @@
 			this.m_check_dtr_enable.Location = new System.Drawing.Point(137, 96);
 			this.m_check_dtr_enable.Name = "m_check_dtr_enable";
 			this.m_check_dtr_enable.Size = new System.Drawing.Size(85, 17);
-			this.m_check_dtr_enable.TabIndex = 58;
+			this.m_check_dtr_enable.TabIndex = 0;
 			this.m_check_dtr_enable.Text = "DTR Enable";
 			this.m_check_dtr_enable.UseVisualStyleBackColor = true;
 			// 
@@ -180,7 +180,7 @@
 			this.m_check_rts_enable.Location = new System.Drawing.Point(137, 119);
 			this.m_check_rts_enable.Name = "m_check_rts_enable";
 			this.m_check_rts_enable.Size = new System.Drawing.Size(84, 17);
-			this.m_check_rts_enable.TabIndex = 59;
+			this.m_check_rts_enable.TabIndex = 1;
 			this.m_check_rts_enable.Text = "RTS Enable";
 			this.m_check_rts_enable.UseVisualStyleBackColor = true;
 			// 
@@ -207,34 +207,6 @@
 			this.tableLayoutPanel1.Size = new System.Drawing.Size(269, 212);
 			this.tableLayoutPanel1.TabIndex = 60;
 			// 
-			// panel1
-			// 
-			this.panel1.Controls.Add(this.m_lbl_baudrate);
-			this.panel1.Controls.Add(this.m_lbl_stopbits);
-			this.panel1.Controls.Add(this.m_combo_stopbits);
-			this.panel1.Controls.Add(this.m_lbl_flow_control);
-			this.panel1.Controls.Add(this.m_combo_flow_control);
-			this.panel1.Controls.Add(this.m_combo_baudrate);
-			this.panel1.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.panel1.Location = new System.Drawing.Point(137, 3);
-			this.panel1.Name = "panel1";
-			this.panel1.Size = new System.Drawing.Size(129, 87);
-			this.panel1.TabIndex = 61;
-			// 
-			// panel2
-			// 
-			this.panel2.Controls.Add(this.m_combo_commport);
-			this.panel2.Controls.Add(this.m_combo_databits);
-			this.panel2.Controls.Add(this.m_lbl_databits);
-			this.panel2.Controls.Add(this.m_lbl_commport);
-			this.panel2.Controls.Add(this.m_lbl_parity);
-			this.panel2.Controls.Add(this.m_combo_parity);
-			this.panel2.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.panel2.Location = new System.Drawing.Point(3, 3);
-			this.panel2.Name = "panel2";
-			this.panel2.Size = new System.Drawing.Size(128, 87);
-			this.panel2.TabIndex = 61;
-			// 
 			// panel3
 			// 
 			this.tableLayoutPanel1.SetColumnSpan(this.panel3, 2);
@@ -256,7 +228,21 @@
 			this.m_combo_output_filepath.Location = new System.Drawing.Point(15, 20);
 			this.m_combo_output_filepath.Name = "m_combo_output_filepath";
 			this.m_combo_output_filepath.Size = new System.Drawing.Size(204, 21);
-			this.m_combo_output_filepath.TabIndex = 6;
+			this.m_combo_output_filepath.TabIndex = 1;
+			// 
+			// panel2
+			// 
+			this.panel2.Controls.Add(this.m_combo_commport);
+			this.panel2.Controls.Add(this.m_combo_databits);
+			this.panel2.Controls.Add(this.m_lbl_databits);
+			this.panel2.Controls.Add(this.m_lbl_commport);
+			this.panel2.Controls.Add(this.m_lbl_parity);
+			this.panel2.Controls.Add(this.m_combo_parity);
+			this.panel2.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.panel2.Location = new System.Drawing.Point(3, 3);
+			this.panel2.Name = "panel2";
+			this.panel2.Size = new System.Drawing.Size(128, 87);
+			this.panel2.TabIndex = 61;
 			// 
 			// m_combo_commport
 			// 
@@ -276,7 +262,7 @@
 			this.m_combo_databits.Location = new System.Drawing.Point(67, 34);
 			this.m_combo_databits.Name = "m_combo_databits";
 			this.m_combo_databits.Size = new System.Drawing.Size(58, 21);
-			this.m_combo_databits.TabIndex = 2;
+			this.m_combo_databits.TabIndex = 1;
 			// 
 			// m_combo_parity
 			// 
@@ -287,7 +273,21 @@
 			this.m_combo_parity.Location = new System.Drawing.Point(67, 62);
 			this.m_combo_parity.Name = "m_combo_parity";
 			this.m_combo_parity.Size = new System.Drawing.Size(58, 21);
-			this.m_combo_parity.TabIndex = 3;
+			this.m_combo_parity.TabIndex = 2;
+			// 
+			// panel1
+			// 
+			this.panel1.Controls.Add(this.m_lbl_baudrate);
+			this.panel1.Controls.Add(this.m_lbl_stopbits);
+			this.panel1.Controls.Add(this.m_combo_stopbits);
+			this.panel1.Controls.Add(this.m_lbl_flow_control);
+			this.panel1.Controls.Add(this.m_combo_flow_control);
+			this.panel1.Controls.Add(this.m_combo_baudrate);
+			this.panel1.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.panel1.Location = new System.Drawing.Point(137, 3);
+			this.panel1.Name = "panel1";
+			this.panel1.Size = new System.Drawing.Size(129, 87);
+			this.panel1.TabIndex = 61;
 			// 
 			// m_combo_stopbits
 			// 
@@ -298,7 +298,7 @@
 			this.m_combo_stopbits.Location = new System.Drawing.Point(68, 34);
 			this.m_combo_stopbits.Name = "m_combo_stopbits";
 			this.m_combo_stopbits.Size = new System.Drawing.Size(57, 21);
-			this.m_combo_stopbits.TabIndex = 4;
+			this.m_combo_stopbits.TabIndex = 1;
 			// 
 			// m_combo_flow_control
 			// 
@@ -309,7 +309,7 @@
 			this.m_combo_flow_control.Location = new System.Drawing.Point(75, 62);
 			this.m_combo_flow_control.Name = "m_combo_flow_control";
 			this.m_combo_flow_control.Size = new System.Drawing.Size(51, 21);
-			this.m_combo_flow_control.TabIndex = 5;
+			this.m_combo_flow_control.TabIndex = 2;
 			// 
 			// m_combo_baudrate
 			// 
@@ -319,13 +319,13 @@
 			this.m_combo_baudrate.Location = new System.Drawing.Point(68, 3);
 			this.m_combo_baudrate.Name = "m_combo_baudrate";
 			this.m_combo_baudrate.Size = new System.Drawing.Size(57, 21);
-			this.m_combo_baudrate.TabIndex = 1;
+			this.m_combo_baudrate.TabIndex = 0;
 			// 
 			// SerialConnectionUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(277, 259);
+			this.ClientSize = new System.Drawing.Size(277, 258);
 			this.Controls.Add(this.tableLayoutPanel1);
 			this.Controls.Add(this.m_btn_ok);
 			this.Controls.Add(this.m_btn_cancel);
@@ -337,12 +337,12 @@
 			this.Text = "Serial Port Connection";
 			this.tableLayoutPanel1.ResumeLayout(false);
 			this.tableLayoutPanel1.PerformLayout();
-			this.panel1.ResumeLayout(false);
-			this.panel1.PerformLayout();
-			this.panel2.ResumeLayout(false);
-			this.panel2.PerformLayout();
 			this.panel3.ResumeLayout(false);
 			this.panel3.PerformLayout();
+			this.panel2.ResumeLayout(false);
+			this.panel2.PerformLayout();
+			this.panel1.ResumeLayout(false);
+			this.panel1.PerformLayout();
 			this.ResumeLayout(false);
 
 		}

@@ -67,7 +67,7 @@
 			this.m_edit_output.Location = new System.Drawing.Point(48, 56);
 			this.m_edit_output.Name = "m_edit_output";
 			this.m_edit_output.Size = new System.Drawing.Size(219, 20);
-			this.m_edit_output.TabIndex = 11;
+			this.m_edit_output.TabIndex = 2;
 			// 
 			// m_edit_source
 			// 
@@ -77,7 +77,7 @@
 			this.m_edit_source.Location = new System.Drawing.Point(48, 34);
 			this.m_edit_source.Name = "m_edit_source";
 			this.m_edit_source.Size = new System.Drawing.Size(219, 20);
-			this.m_edit_source.TabIndex = 10;
+			this.m_edit_source.TabIndex = 1;
 			// 
 			// m_edit_result
 			// 
@@ -88,7 +88,7 @@
 			this.m_edit_result.Name = "m_edit_result";
 			this.m_edit_result.ReadOnly = true;
 			this.m_edit_result.Size = new System.Drawing.Size(219, 20);
-			this.m_edit_result.TabIndex = 16;
+			this.m_edit_result.TabIndex = 3;
 			// 
 			// m_lbl_result
 			// 
@@ -116,7 +116,7 @@
 			this.m_edit_test.Location = new System.Drawing.Point(48, 12);
 			this.m_edit_test.Name = "m_edit_test";
 			this.m_edit_test.Size = new System.Drawing.Size(219, 20);
-			this.m_edit_test.TabIndex = 14;
+			this.m_edit_test.TabIndex = 0;
 			this.m_edit_test.Text = "Swizzle mapping test text";
 			// 
 			// m_btn_ok
@@ -126,7 +126,7 @@
 			this.m_btn_ok.Location = new System.Drawing.Point(139, 108);
 			this.m_btn_ok.Name = "m_btn_ok";
 			this.m_btn_ok.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_ok.TabIndex = 20;
+			this.m_btn_ok.TabIndex = 5;
 			this.m_btn_ok.Text = "OK";
 			this.m_btn_ok.UseVisualStyleBackColor = true;
 			// 
@@ -137,7 +137,7 @@
 			this.m_btn_cancel.Location = new System.Drawing.Point(220, 108);
 			this.m_btn_cancel.Name = "m_btn_cancel";
 			this.m_btn_cancel.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_cancel.TabIndex = 21;
+			this.m_btn_cancel.TabIndex = 6;
 			this.m_btn_cancel.Text = "Cancel";
 			this.m_btn_cancel.UseVisualStyleBackColor = true;
 			// 
@@ -147,7 +147,7 @@
 			this.m_btn_help.Location = new System.Drawing.Point(273, 12);
 			this.m_btn_help.Name = "m_btn_help";
 			this.m_btn_help.Size = new System.Drawing.Size(22, 21);
-			this.m_btn_help.TabIndex = 22;
+			this.m_btn_help.TabIndex = 4;
 			this.m_btn_help.Text = "?";
 			this.m_btn_help.UseVisualStyleBackColor = true;
 			// 

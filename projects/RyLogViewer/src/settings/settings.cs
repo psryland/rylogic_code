@@ -24,6 +24,7 @@ namespace RyLogViewer
 			ScreenPosition              = new Point(100, 100);
 			WindowSize                  = new Size(640, 480);
 			PatternSetDirectory         = Util.ResolveUserDocumentsPath("Rylogic", Application.ProductName);
+			ExportFilepath              = null;
 			AlternateLineColours        = true;
 			LineSelectBackColour        = Color.DarkGreen;
 			LineSelectForeColour        = Color.White;
@@ -140,6 +141,13 @@ namespace RyLogViewer
 		{
 			get { return get(x => x.PatternSetDirectory); }
 			set { set(x => x.PatternSetDirectory, value); }
+		}
+
+		/// <summary>The last filepath used in the export dialog</summary>
+		public string ExportFilepath
+		{
+			get { return get(x => x.ExportFilepath); }
+			set { set(x => x.ExportFilepath, value); }
 		}
 
 		/// <summary>Alternating line colours in the main view</summary>

@@ -191,7 +191,7 @@ namespace RyLogViewer
 			this.m_btn_ok.Location = new System.Drawing.Point(328, 161);
 			this.m_btn_ok.Name = "m_btn_ok";
 			this.m_btn_ok.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_ok.TabIndex = 3;
+			this.m_btn_ok.TabIndex = 1;
 			this.m_btn_ok.Text = "Later";
 			this.m_btn_ok.UseVisualStyleBackColor = true;
 			// 
@@ -289,7 +289,7 @@ namespace RyLogViewer
 			this.m_btn_install.Location = new System.Drawing.Point(247, 161);
 			this.m_btn_install.Name = "m_btn_install";
 			this.m_btn_install.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_install.TabIndex = 5;
+			this.m_btn_install.TabIndex = 0;
 			this.m_btn_install.Text = "Install Now";
 			this.m_btn_install.UseVisualStyleBackColor = true;
 			// 

@@ -270,31 +270,31 @@ namespace RyLogViewer
 			this.m_btn_prev = new System.Windows.Forms.Button();
 			this.m_panel.SuspendLayout();
 			this.SuspendLayout();
-			//
+			// 
 			// m_btn_next
-			//
+			// 
 			this.m_btn_next.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_next.Location = new System.Drawing.Point(185, 244);
 			this.m_btn_next.Name = "m_btn_next";
 			this.m_btn_next.Size = new System.Drawing.Size(63, 23);
-			this.m_btn_next.TabIndex = 0;
+			this.m_btn_next.TabIndex = 2;
 			this.m_btn_next.Text = "&Next";
 			this.m_btn_next.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_check_show_on_startup
-			//
+			// 
 			this.m_check_show_on_startup.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_check_show_on_startup.AutoSize = true;
 			this.m_check_show_on_startup.Location = new System.Drawing.Point(12, 248);
 			this.m_check_show_on_startup.MinimumSize = new System.Drawing.Size(103, 17);
 			this.m_check_show_on_startup.Name = "m_check_show_on_startup";
 			this.m_check_show_on_startup.Size = new System.Drawing.Size(103, 17);
-			this.m_check_show_on_startup.TabIndex = 1;
+			this.m_check_show_on_startup.TabIndex = 0;
 			this.m_check_show_on_startup.Text = "Show on startup";
 			this.m_check_show_on_startup.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_html
-			//
+			// 
 			this.m_html.AllowWebBrowserDrop = false;
 			this.m_html.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_html.IsWebBrowserContextMenuEnabled = false;
@@ -303,10 +303,10 @@ namespace RyLogViewer
 			this.m_html.Name = "m_html";
 			this.m_html.ScriptErrorsSuppressed = true;
 			this.m_html.Size = new System.Drawing.Size(321, 233);
-			this.m_html.TabIndex = 2;
-			//
+			this.m_html.TabIndex = 0;
+			// 
 			// m_btn_ok
-			//
+			// 
 			this.m_btn_ok.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.Cancel;
 			this.m_btn_ok.Location = new System.Drawing.Point(254, 244);
@@ -315,11 +315,11 @@ namespace RyLogViewer
 			this.m_btn_ok.TabIndex = 3;
 			this.m_btn_ok.Text = "&Close";
 			this.m_btn_ok.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_panel
-			//
-			this.m_panel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
+			// 
+			this.m_panel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_panel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_panel.Controls.Add(this.m_html);
@@ -327,19 +327,19 @@ namespace RyLogViewer
 			this.m_panel.Name = "m_panel";
 			this.m_panel.Size = new System.Drawing.Size(323, 235);
 			this.m_panel.TabIndex = 5;
-			//
+			// 
 			// m_btn_prev
-			//
+			// 
 			this.m_btn_prev.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_prev.Location = new System.Drawing.Point(116, 244);
 			this.m_btn_prev.Name = "m_btn_prev";
 			this.m_btn_prev.Size = new System.Drawing.Size(63, 23);
-			this.m_btn_prev.TabIndex = 6;
+			this.m_btn_prev.TabIndex = 1;
 			this.m_btn_prev.Text = "&Previous";
 			this.m_btn_prev.UseVisualStyleBackColor = true;
-			//
+			// 
 			// TipOfTheDay
-			//
+			// 
 			this.AcceptButton = this.m_btn_ok;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -359,6 +359,7 @@ namespace RyLogViewer
 			this.m_panel.ResumeLayout(false);
 			this.ResumeLayout(false);
 			this.PerformLayout();
+
 		}
 
 		#endregion

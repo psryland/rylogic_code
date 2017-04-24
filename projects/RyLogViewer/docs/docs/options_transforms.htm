@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE HTML>
 <html xmlns="http://www.w3.org/1999/xhtml">
 	<!--#include file="..\inc\help_head.include.htm"-->
-	<body id="main_help" onload="HighlightListItem(null)">
+	<body id="main_help">
 		<!--#include file="..\inc\help_title_panel.include.htm"-->
 		<!--#include file="..\inc\help_index_panel.include.htm"-->
 		<div id="content_panel">
@@ -17,56 +17,46 @@
 				<div>
 					<img class="centred" src="../img/transforms.png" alt="transforms settings" usemap="#transform_map" />
 					<map id="transform_map" name="transform_map">
-						<area shape="rect" coords="7,45,24,62" href="#transform_editor" alt="" title="" onclick="HighlightListItem('transform_editor')" />
-						<area shape="rect" coords="30,245,47,262" href="#transform_active" alt="" title="" onclick="HighlightListItem('transform_active')" />
-						<area shape="rect" coords="77,245,94,262" href="#transform_pattern" alt="" title="" onclick="HighlightListItem('transform_pattern')" />
-						<area shape="rect" coords="471,245,488,262" href="#transform_edit" alt="" title="" onclick="HighlightListItem('transform_edit')" />
-						<area shape="rect" coords="15,439,32,456" href="#transform_pattern_set" alt="" title="" onclick="HighlightListItem('transform_pattern_set')" />
+						<area shape="rect" coords="7,45,24,62"      href="#transform_editor"      alt=""/>
+						<area shape="rect" coords="30,245,47,262"   href="#transform_active"      alt=""/>
+						<area shape="rect" coords="77,245,94,262"   href="#transform_pattern"     alt=""/>
+						<area shape="rect" coords="471,245,488,262" href="#transform_edit"        alt=""/>
+						<area shape="rect" coords="15,439,32,456"   href="#transform_pattern_set" alt=""/>
 					</map>
 				</div>
-				<ol>
-					<li class="child_list_elem">
-						<div id="transform_editor">
-							<span class="tag_label">Transform Editor</span>
-							<div class="content">
-								The transform editor is used to create and modify patterns that will match lines in the log data and apply
-								text transformations to them. The transform editor is described in greater detail <a href="transform_editor.html">here</a>.
-							</div>
+				<ol class="major_list">
+					<li id="transform_editor">
+						<span class="tag_label">Transform Editor</span>
+						<div class="content">
+							The transform editor is used to create and modify patterns that will match lines in the log data and apply
+							text transformations to them. The transform editor is described in greater detail <a href="transform_editor.html">here</a>.
 						</div>
 					</li>
-					<li>
-						<div id="transform_active">
-							<span class="tag_label">Active Transforms</span>
-							<div class="content">
-								It is sometimes convenient to disable a transform without deleting it. Transform patterns can
-								be enabled or disabled by clicking in this column
-							</div>
+					<li id="transform_active">
+						<span class="tag_label">Active Transforms</span>
+						<div class="content">
+							It is sometimes convenient to disable a transform without deleting it. Transform patterns can
+							be enabled or disabled by clicking in this column
 						</div>
 					</li>
-					<li>
-						<div id="transform_pattern">
-							<span class="tag_label">Expression</span>
-							<div class="content">
-								This column displays the text of the transform pattern.
-							</div>
+					<li id="transform_pattern">
+						<span class="tag_label">Expression</span>
+						<div class="content">
+							This column displays the text of the transform pattern.
 						</div>
 					</li>
-					<li>
-						<div id="transform_edit">
-							<span class="tag_label">Transform Pattern Editing</span>
-							<div class="content">
-								Clicking the icon in this column loads the transform into the <a href="transform_editor.html">transform editor</a> to be modified.
-							</div>
+					<li id="transform_edit">
+						<span class="tag_label">Transform Pattern Editing</span>
+						<div class="content">
+							Clicking the icon in this column loads the transform into the <a href="transform_editor.html">transform editor</a> to be modified.
 						</div>
 					</li>
-					<li>
-						<div id="transform_pattern_set">
-							<span class="tag_label">Transform Pattern Sets</span>
-							<div class="content">
-								<a href="pattern_editor.html#pattern_sets">Pattern sets</a> are used to save and load groups of patterns.
-								This is useful when RyLogViewer is used frequently for different types of logs. All of the transform patterns
-								can be easily switched by selecting a pattern set from the drop down menu.
-							</div>
+					<li id="transform_pattern_set">
+						<span class="tag_label">Transform Pattern Sets</span>
+						<div class="content">
+							<a href="pattern_editor.html#pattern_sets">Pattern sets</a> are used to save and load groups of patterns.
+							This is useful when RyLogViewer is used frequently for different types of logs. All of the transform patterns
+							can be easily switched by selecting a pattern set from the drop down menu.
 						</div>
 					</li>
 				</ol>

@@ -98,8 +98,13 @@ namespace RyLogViewer
 			if (Src == null)
 				return;
 
-			var dlg = new ExportUI(
-				Path.ChangeExtension(Src.PsuedoFilepath, ".exported" + Path.GetExtension(Src.PsuedoFilepath)),
+			// Determine the export file path
+			var filepath = Settings.ExportFilepath;
+			if (!filepath.HasValue())
+				filepath = Path.ChangeExtension(Src.PsuedoFilepath, ".exported" + Path.GetExtension(Src.PsuedoFilepath));
+
+			// Prompt for export settings
+			var dlg = new ExportUI(filepath,
 				Misc.Humanise(m_encoding.GetString(m_row_delim)),
 				Misc.Humanise(m_encoding.GetString(m_col_delim)),
 				FileByteRange);
@@ -108,6 +113,10 @@ namespace RyLogViewer
 				if (dlg.ShowDialog(this) != DialogResult.OK)
 					return;
 
+				// Save the export filepath to the settings
+				Settings.ExportFilepath = dlg.OutputFilepath;
+
+				// Find the range to export
 				IEnumerable<Range> rng;
 				switch (dlg.RangeToExport)
 				{
@@ -117,8 +126,9 @@ namespace RyLogViewer
 				case ExportUI.ERangeToExport.ByteRange: rng = new[] { dlg.ByteRange }; break;
 				}
 
-				string row_delimiter = Misc.Robitise(dlg.RowDelim);
-				string col_delimiter = Misc.Robitise(dlg.ColDelim);
+				// Delimiters
+				var row_delimiter = Misc.Robitise(dlg.RowDelim);
+				var col_delimiter = Misc.Robitise(dlg.ColDelim);
 
 				// Do the export
 				using (var outp = new StreamWriter(new FileStream(dlg.OutputFilepath, FileMode.Create, FileAccess.Write, FileShare.Read)))

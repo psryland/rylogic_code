@@ -78,7 +78,7 @@ namespace RyLogViewer
 			this.m_btn_cancel.Location = new System.Drawing.Point(294, 249);
 			this.m_btn_cancel.Name = "m_btn_cancel";
 			this.m_btn_cancel.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_cancel.TabIndex = 0;
+			this.m_btn_cancel.TabIndex = 2;
 			this.m_btn_cancel.Text = "Cancel";
 			this.m_btn_cancel.UseVisualStyleBackColor = true;
 			// 
@@ -118,7 +118,7 @@ namespace RyLogViewer
 			this.m_tree.SelectedImageIndex = 0;
 			this.m_tree.ShowRoot = false;
 			this.m_tree.Size = new System.Drawing.Size(357, 231);
-			this.m_tree.TabIndex = 4;
+			this.m_tree.TabIndex = 0;
 			// 
 			// PatternSetUI
 			// 

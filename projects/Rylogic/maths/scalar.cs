@@ -85,10 +85,12 @@ namespace pr.maths
 		public static long      Lerp(long lhs, long rhs, double frac)           { return (long)Math.Round(Lerp((double)lhs, (double)rhs, frac), 0); }
 		public static float     Lerp(float lhs, float rhs, double frac)         { return (float)Lerp((double)lhs, (double)rhs, frac); }
 		public static double    Lerp(double lhs, double rhs, double frac)       { return lhs * (1.0 - frac) + rhs * (frac); }
+		public static decimal   Lerp(decimal lhs, decimal rhs, double frac)     { return lhs * (decimal)(1.0 - frac) + rhs * (decimal)(frac); }
 		public static float     Frac(int min, int x, int max)                   { Debug.Assert(max != min); return (float)(x - min) / (max - min); }
 		public static double    Frac(long min, long x, long max)                { Debug.Assert(max != min); return (double)(x - min) / (max - min); }
 		public static float     Frac(float min, float x, float max)             { Debug.Assert(Math.Abs(max - min) > float .Epsilon); return (x - min) / (max - min); }
 		public static double    Frac(double min, double x, double max)          { Debug.Assert(Math.Abs(max - min) > double.Epsilon); return (x - min) / (max - min); }
+		public static decimal   Frac(decimal min, decimal x, decimal max)       { Debug.Assert(Math.Abs(max - min) > 0); return (x - min) / (max - min); }
 		public static int       Compare(int lhs, int rhs)                       { return (lhs < rhs) ? -1 : (lhs > rhs) ? 1 : 0; }
 		public static int       Compare(uint lhs, uint rhs)                     { return (lhs < rhs) ? -1 : (lhs > rhs) ? 1 : 0; }
 		public static int       Compare(long lhs, long rhs)                     { return (lhs < rhs) ? -1 : (lhs > rhs) ? 1 : 0; }

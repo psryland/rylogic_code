@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE HTML>
 <html xmlns="http://www.w3.org/1999/xhtml">
 	<!--#include file="..\inc\help_head.include.htm"-->
-	<body id="main_help" onload="HighlightListItem(null)">
+	<body id="main_help">
 		<!--#include file="..\inc\help_title_panel.include.htm"-->
 		<!--#include file="..\inc\help_index_panel.include.htm"-->
 		<div id="content_panel">
@@ -16,66 +16,54 @@
 				<div>
 					<img class="centred" src="../img/actions.png" alt="action settings" usemap="#action_map" />
 					<map id="action_map" name="action_map">
-						<area shape="rect" coords="6,47,23,64" href="#actions_pattern_editor" alt="" title="" onclick="HighlightListItem('actions_pattern_editor')" />
-						<area shape="rect" coords="32,227,49,244" href="#action_active" alt="" title="" onclick="HighlightListItem('action_active')" />
-						<area shape="rect" coords="77,227,94,244" href="#action_pattern" alt="" title="" onclick="HighlightListItem('action_pattern')" />
-						<area shape="rect" coords="275,227,292,244" href="#action_command" alt="" title="" onclick="HighlightListItem('action_command')" />
-						<area shape="rect" coords="470,227,487,244" href="#action_edit" alt="" title="" onclick="HighlightListItem('action_edit')" />
-						<area shape="rect" coords="10,432,27,449" href="#action_pattern_set" alt="" title="" onclick="HighlightListItem('action_pattern_set')" />
+						<area shape="rect" coords="6,47,23,64"      href="#actions_pattern_editor" alt=""/>
+						<area shape="rect" coords="32,227,49,244"   href="#action_active"          alt=""/>
+						<area shape="rect" coords="77,227,94,244"   href="#action_pattern"         alt=""/>
+						<area shape="rect" coords="275,227,292,244" href="#action_command"         alt=""/>
+						<area shape="rect" coords="470,227,487,244" href="#action_edit"            alt=""/>
+						<area shape="rect" coords="10,432,27,449"   href="#action_pattern_set"     alt=""/>
 					</map>
 				</div>
-				<ol>
-					<li class="child_list_elem">
-						<div id="actions_pattern_editor">
-							<span class="tag_label">Pattern Editor</span>
-							<div class="content">
-								The pattern editor is used to create and modify patterns that will match lines in the log data.
-								The pattern editor is described in greater detail <a href="pattern_editor.html">here</a>.
-							</div>
+				<ol class="major_list">
+					<li id="actions_pattern_editor">
+						<span class="tag_label">Pattern Editor</span>
+						<div class="content">
+							The pattern editor is used to create and modify patterns that will match lines in the log data.
+							The pattern editor is described in greater detail <a href="pattern_editor.html">here</a>.
 						</div>
 					</li>
-					<li>
-						<div id="action_active">
-							<span class="tag_label">Active Patterns</span>
-							<div class="content">
-								It is sometimes convenient to disable a pattern without deleting it. Action patterns can
-								be enabled or disabled by clicking in this column
-							</div>
+					<li id="action_active">
+						<span class="tag_label">Active Patterns</span>
+						<div class="content">
+							It is sometimes convenient to disable a pattern without deleting it. Action patterns can
+							be enabled or disabled by clicking in this column
 						</div>
 					</li>
-					<li>
-						<div id="action_pattern">
-							<span class="tag_label">Expression</span>
-							<div class="content">
-								This column displays the text of the action pattern.
-							</div>
+					<li id="action_pattern">
+						<span class="tag_label">Expression</span>
+						<div class="content">
+							This column displays the text of the action pattern.
 						</div>
 					</li>
-					<li>
-						<div id="action_command">
-							<span class="tag_label">Action Command</span>
-							<div class="content">
-								The command to execute when the action pattern matches. This command can start another application or run a script
-								using data extracted via capture groups from the selected log line. Click in the column to edit the command for the action.
-							</div>
+					<li id="action_command">
+						<span class="tag_label">Action Command</span>
+						<div class="content">
+							The command to execute when the action pattern matches. This command can start another application or run a script
+							using data extracted via capture groups from the selected log line. Click in the column to edit the command for the action.
 						</div>
 					</li>
-					<li>
-						<div id="action_edit">
-							<span class="tag_label">Action Pattern Editing</span>
-							<div class="content">
-								Clicking the icon in this column loads the pattern into the <a href="pattern_editor.html">pattern editor</a> to be modified.
-							</div>
+					<li id="action_edit">
+						<span class="tag_label">Action Pattern Editing</span>
+						<div class="content">
+							Clicking the icon in this column loads the pattern into the <a href="pattern_editor.html">pattern editor</a> to be modified.
 						</div>
 					</li>
-					<li>
-						<div id="action_pattern_set">
-							<span class="tag_label">Action Pattern Sets</span>
-							<div class="content">
-								<a href="pattern_editor.html#pattern_sets">Pattern sets</a> are used to save and load groups of patterns.
-								This is useful when RyLogViewer is used frequently for different types of logs. All of the action patterns
-								can be easily switched by selecting a pattern set from the drop down menu.
-							</div>
+					<li id="action_pattern_set">
+						<span class="tag_label">Action Pattern Sets</span>
+						<div class="content">
+							<a href="pattern_editor.html#pattern_sets">Pattern sets</a> are used to save and load groups of patterns.
+							This is useful when RyLogViewer is used frequently for different types of logs. All of the action patterns
+							can be easily switched by selecting a pattern set from the drop down menu.
 						</div>
 					</li>
 				</ol>

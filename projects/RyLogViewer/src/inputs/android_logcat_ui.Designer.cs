@@ -81,7 +81,7 @@
 			this.m_btn_browse_adb.Location = new System.Drawing.Point(358, 10);
 			this.m_btn_browse_adb.Name = "m_btn_browse_adb";
 			this.m_btn_browse_adb.Size = new System.Drawing.Size(40, 23);
-			this.m_btn_browse_adb.TabIndex = 2;
+			this.m_btn_browse_adb.TabIndex = 1;
 			this.m_btn_browse_adb.Text = "...";
 			this.m_btn_browse_adb.UseVisualStyleBackColor = true;
 			// 
@@ -94,7 +94,7 @@
 			this.m_listbox_devices.Location = new System.Drawing.Point(9, 29);
 			this.m_listbox_devices.Name = "m_listbox_devices";
 			this.m_listbox_devices.Size = new System.Drawing.Size(125, 74);
-			this.m_listbox_devices.TabIndex = 3;
+			this.m_listbox_devices.TabIndex = 0;
 			// 
 			// label2
 			// 
@@ -113,7 +113,7 @@
 			this.m_edit_adb_command.Multiline = true;
 			this.m_edit_adb_command.Name = "m_edit_adb_command";
 			this.m_edit_adb_command.Size = new System.Drawing.Size(386, 34);
-			this.m_edit_adb_command.TabIndex = 5;
+			this.m_edit_adb_command.TabIndex = 2;
 			// 
 			// m_lbl_logcat_command
 			// 
@@ -132,7 +132,7 @@
 			this.m_btn_ok.Location = new System.Drawing.Point(242, 300);
 			this.m_btn_ok.Name = "m_btn_ok";
 			this.m_btn_ok.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_ok.TabIndex = 7;
+			this.m_btn_ok.TabIndex = 5;
 			this.m_btn_ok.Text = "OK";
 			this.m_btn_ok.UseVisualStyleBackColor = true;
 			// 
@@ -143,7 +143,7 @@
 			this.m_btn_cancel.Location = new System.Drawing.Point(323, 300);
 			this.m_btn_cancel.Name = "m_btn_cancel";
 			this.m_btn_cancel.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_cancel.TabIndex = 8;
+			this.m_btn_cancel.TabIndex = 6;
 			this.m_btn_cancel.Text = "Cancel";
 			this.m_btn_cancel.UseVisualStyleBackColor = true;
 			// 
@@ -177,7 +177,7 @@
 			this.m_btn_connect.Location = new System.Drawing.Point(9, 107);
 			this.m_btn_connect.Name = "m_btn_connect";
 			this.m_btn_connect.Size = new System.Drawing.Size(125, 23);
-			this.m_btn_connect.TabIndex = 22;
+			this.m_btn_connect.TabIndex = 1;
 			this.m_btn_connect.Text = "Add Device...";
 			this.m_btn_connect.UseVisualStyleBackColor = true;
 			// 
@@ -188,7 +188,7 @@
 			this.m_check_append.Location = new System.Drawing.Point(304, 132);
 			this.m_check_append.Name = "m_check_append";
 			this.m_check_append.Size = new System.Drawing.Size(79, 17);
-			this.m_check_append.TabIndex = 21;
+			this.m_check_append.TabIndex = 6;
 			this.m_check_append.Text = "Append file";
 			this.m_check_append.UseVisualStyleBackColor = true;
 			// 
@@ -200,7 +200,7 @@
 			this.m_combo_output_file.Location = new System.Drawing.Point(27, 151);
 			this.m_combo_output_file.Name = "m_combo_output_file";
 			this.m_combo_output_file.Size = new System.Drawing.Size(306, 21);
-			this.m_combo_output_file.TabIndex = 20;
+			this.m_combo_output_file.TabIndex = 7;
 			// 
 			// m_lbl_log_format
 			// 
@@ -219,7 +219,7 @@
 			this.m_combo_log_format.Location = new System.Drawing.Point(279, 109);
 			this.m_combo_log_format.Name = "m_combo_log_format";
 			this.m_combo_log_format.Size = new System.Drawing.Size(100, 21);
-			this.m_combo_log_format.TabIndex = 18;
+			this.m_combo_log_format.TabIndex = 4;
 			// 
 			// m_lbl_filterspec
 			// 
@@ -242,7 +242,7 @@
 			this.m_grid_filterspec.Name = "m_grid_filterspec";
 			this.m_grid_filterspec.RowHeadersWidth = 24;
 			this.m_grid_filterspec.Size = new System.Drawing.Size(169, 74);
-			this.m_grid_filterspec.TabIndex = 16;
+			this.m_grid_filterspec.TabIndex = 3;
 			// 
 			// m_listbox_log_buffers
 			// 
@@ -254,7 +254,7 @@
 			this.m_listbox_log_buffers.Name = "m_listbox_log_buffers";
 			this.m_listbox_log_buffers.SelectionMode = System.Windows.Forms.SelectionMode.MultiSimple;
 			this.m_listbox_log_buffers.Size = new System.Drawing.Size(61, 74);
-			this.m_listbox_log_buffers.TabIndex = 15;
+			this.m_listbox_log_buffers.TabIndex = 2;
 			// 
 			// m_lbl_log_buffers
 			// 
@@ -271,7 +271,7 @@
 			this.m_btn_browse_output_file.Location = new System.Drawing.Point(339, 149);
 			this.m_btn_browse_output_file.Name = "m_btn_browse_output_file";
 			this.m_btn_browse_output_file.Size = new System.Drawing.Size(40, 23);
-			this.m_btn_browse_output_file.TabIndex = 13;
+			this.m_btn_browse_output_file.TabIndex = 8;
 			this.m_btn_browse_output_file.Text = "...";
 			this.m_btn_browse_output_file.UseVisualStyleBackColor = true;
 			// 
@@ -292,7 +292,7 @@
 			this.m_btn_refresh.Location = new System.Drawing.Point(15, 300);
 			this.m_btn_refresh.Name = "m_btn_refresh";
 			this.m_btn_refresh.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_refresh.TabIndex = 10;
+			this.m_btn_refresh.TabIndex = 3;
 			this.m_btn_refresh.Text = "Refresh";
 			this.m_btn_refresh.UseVisualStyleBackColor = true;
 			// 
@@ -312,7 +312,7 @@
 			this.m_btn_resetadb.Location = new System.Drawing.Point(96, 300);
 			this.m_btn_resetadb.Name = "m_btn_resetadb";
 			this.m_btn_resetadb.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_resetadb.TabIndex = 13;
+			this.m_btn_resetadb.TabIndex = 4;
 			this.m_btn_resetadb.Text = "Reset Adb";
 			this.m_btn_resetadb.UseVisualStyleBackColor = true;
 			// 

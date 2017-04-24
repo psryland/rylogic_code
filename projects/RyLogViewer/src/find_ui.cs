@@ -315,7 +315,7 @@ namespace RyLogViewer
 			this.m_btn_find_next.Location = new System.Drawing.Point(157, 102);
 			this.m_btn_find_next.Name = "m_btn_find_next";
 			this.m_btn_find_next.Size = new System.Drawing.Size(94, 23);
-			this.m_btn_find_next.TabIndex = 8;
+			this.m_btn_find_next.TabIndex = 10;
 			this.m_btn_find_next.Text = "Find &Next";
 			this.m_btn_find_next.UseVisualStyleBackColor = true;
 			// 
@@ -325,7 +325,7 @@ namespace RyLogViewer
 			this.m_btn_find_prev.Location = new System.Drawing.Point(157, 73);
 			this.m_btn_find_prev.Name = "m_btn_find_prev";
 			this.m_btn_find_prev.Size = new System.Drawing.Size(94, 23);
-			this.m_btn_find_prev.TabIndex = 7;
+			this.m_btn_find_prev.TabIndex = 9;
 			this.m_btn_find_prev.Text = "Find &Previous";
 			this.m_btn_find_prev.UseVisualStyleBackColor = true;
 			// 
@@ -344,7 +344,7 @@ namespace RyLogViewer
 			this.m_check_ignore_case.Location = new System.Drawing.Point(10, 65);
 			this.m_check_ignore_case.Name = "m_check_ignore_case";
 			this.m_check_ignore_case.Size = new System.Drawing.Size(83, 17);
-			this.m_check_ignore_case.TabIndex = 4;
+			this.m_check_ignore_case.TabIndex = 5;
 			this.m_check_ignore_case.Text = "Ignore &Case";
 			this.m_check_ignore_case.UseVisualStyleBackColor = true;
 			// 
@@ -354,7 +354,7 @@ namespace RyLogViewer
 			this.m_check_invert.Location = new System.Drawing.Point(95, 65);
 			this.m_check_invert.Name = "m_check_invert";
 			this.m_check_invert.Size = new System.Drawing.Size(56, 30);
-			this.m_check_invert.TabIndex = 5;
+			this.m_check_invert.TabIndex = 7;
 			this.m_check_invert.Text = "&Invert \r\nMatch";
 			this.m_check_invert.UseVisualStyleBackColor = true;
 			// 
@@ -434,7 +434,7 @@ namespace RyLogViewer
 			this.m_btn_bookmarkall.Location = new System.Drawing.Point(28, 99);
 			this.m_btn_bookmarkall.Name = "m_btn_bookmarkall";
 			this.m_btn_bookmarkall.Size = new System.Drawing.Size(94, 23);
-			this.m_btn_bookmarkall.TabIndex = 31;
+			this.m_btn_bookmarkall.TabIndex = 8;
 			this.m_btn_bookmarkall.Text = "&Bookmark All";
 			this.m_btn_bookmarkall.UseVisualStyleBackColor = true;
 			// 
@@ -444,7 +444,7 @@ namespace RyLogViewer
 			this.m_check_whole_line.Location = new System.Drawing.Point(10, 81);
 			this.m_check_whole_line.Name = "m_check_whole_line";
 			this.m_check_whole_line.Size = new System.Drawing.Size(80, 17);
-			this.m_check_whole_line.TabIndex = 30;
+			this.m_check_whole_line.TabIndex = 6;
 			this.m_check_whole_line.Text = "&Whole Line";
 			this.m_check_whole_line.UseVisualStyleBackColor = true;
 			// 
@@ -453,7 +453,7 @@ namespace RyLogViewer
 			this.m_btn_regex_help.Location = new System.Drawing.Point(230, 43);
 			this.m_btn_regex_help.Name = "m_btn_regex_help";
 			this.m_btn_regex_help.Size = new System.Drawing.Size(21, 21);
-			this.m_btn_regex_help.TabIndex = 6;
+			this.m_btn_regex_help.TabIndex = 4;
 			this.m_btn_regex_help.Text = "?";
 			this.m_btn_regex_help.UseVisualStyleBackColor = true;
 			// 
@@ -466,13 +466,13 @@ namespace RyLogViewer
 			this.m_lbl_prev_find_patterns.TabIndex = 29;
 			this.m_lbl_prev_find_patterns.Text = "Previous Search Patterns:";
 			// 
-			// m_combo_pattern
+			// m_cb_pattern
 			// 
 			this.m_cb_pattern.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_cb_pattern.FormattingEnabled = true;
 			this.m_cb_pattern.Location = new System.Drawing.Point(4, 20);
-			this.m_cb_pattern.Name = "m_combo_pattern";
+			this.m_cb_pattern.Name = "m_cb_pattern";
 			this.m_cb_pattern.Size = new System.Drawing.Size(247, 21);
 			this.m_cb_pattern.TabIndex = 0;
 			// 

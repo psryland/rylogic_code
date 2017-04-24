@@ -82,12 +82,12 @@ namespace RyLogViewer
 		{
 			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(BookmarksUI));
-			this.m_grid = new DataGridView();
+			this.m_grid = new RyLogViewer.DataGridView();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).BeginInit();
 			this.SuspendLayout();
-			//
+			// 
 			// m_grid
-			//
+			// 
 			this.m_grid.AllowUserToAddRows = false;
 			this.m_grid.AllowUserToResizeRows = false;
 			dataGridViewCellStyle1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(240)))), ((int)(((byte)(240)))), ((int)(((byte)(240)))));
@@ -104,9 +104,9 @@ namespace RyLogViewer
 			this.m_grid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
 			this.m_grid.Size = new System.Drawing.Size(284, 262);
 			this.m_grid.TabIndex = 0;
-			//
+			// 
 			// BookmarksUI
-			//
+			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(284, 262);
@@ -117,6 +117,7 @@ namespace RyLogViewer
 			this.Text = "Bookmarks";
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).EndInit();
 			this.ResumeLayout(false);
+
 		}
 
 		#endregion

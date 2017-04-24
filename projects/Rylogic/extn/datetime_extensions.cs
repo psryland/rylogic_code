@@ -7,8 +7,15 @@ using pr.win32;
 
 namespace pr.extn
 {
-	public static class DateTimeEx
+	public static class DateTime_
 	{
+		// Notes:
+		//  If a DateTime has kind == unspecified, calling ToUniversalTime() causes it to assume that the time is
+		//  local and returns the time converted to UTC. Calling ToLocalTime() causes it to assume that the time
+		//  is UTC and returns the time converted to Local.
+		//
+		// Rule of thumb: Don't use 'ToLocalTime' or 'ToUniversalTime', use 'To' instead
+
 		/// <summary>
 		/// Set the MinDate, MaxDate, and Value members all at once, avoiding out of range exceptions.
 		/// val, min, max must all have a specified 'Kind' value.
@@ -47,16 +54,6 @@ namespace pr.extn
 			if (dtp is pr.gui.DateTimePicker) ((pr.gui.DateTimePicker)dtp).Kind = kind;
 			dtp.Set(val, min, max);
 		}
-	}
-	
-	public static class DateTime_
-	{
-		// Notes:
-		//  If a DateTime has kind == unspecified, calling ToUniversalTime() causes it to assume that the time is
-		//  local and returns the time converted to UTC. Calling ToLocalTime() causes it to assume that the time
-		//  is UTC and returns the time converted to Local.
-		//
-		// Rule of thumb: Don't use 'ToLocalTime' or 'ToUniversalTime', use 'To' instead
 
 		/// <summary>Converts this date time to 'kind'. Note: throws if Kind == Unspecified</summary>
 		public static DateTime To(this DateTime dt, DateTimeKind kind)

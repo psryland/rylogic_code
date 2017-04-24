@@ -148,7 +148,7 @@ namespace RyLogViewer
 			this.m_btn_ok.Location = new System.Drawing.Point(255, 241);
 			this.m_btn_ok.Name = "m_btn_ok";
 			this.m_btn_ok.Size = new System.Drawing.Size(71, 21);
-			this.m_btn_ok.TabIndex = 11;
+			this.m_btn_ok.TabIndex = 3;
 			this.m_btn_ok.Text = "OK";
 			this.m_btn_ok.UseVisualStyleBackColor = true;
 			// 
@@ -164,7 +164,7 @@ namespace RyLogViewer
 			this.m_edit_version.Name = "m_edit_version";
 			this.m_edit_version.ReadOnly = true;
 			this.m_edit_version.Size = new System.Drawing.Size(314, 58);
-			this.m_edit_version.TabIndex = 10;
+			this.m_edit_version.TabIndex = 0;
 			this.m_edit_version.Text = "Rylogic\r\nVersion\r\nBuilt:\r\nAll Rights Reserved";
 			this.m_edit_version.WordWrap = false;
 			// 
@@ -203,7 +203,7 @@ namespace RyLogViewer
 			this.m_btn_version_history.Location = new System.Drawing.Point(12, 241);
 			this.m_btn_version_history.Name = "m_btn_version_history";
 			this.m_btn_version_history.Size = new System.Drawing.Size(92, 21);
-			this.m_btn_version_history.TabIndex = 15;
+			this.m_btn_version_history.TabIndex = 2;
 			this.m_btn_version_history.Text = "Version History";
 			this.m_btn_version_history.UseVisualStyleBackColor = true;
 			// 
@@ -219,7 +219,7 @@ namespace RyLogViewer
 			this.m_edit_licence.Location = new System.Drawing.Point(12, 141);
 			this.m_edit_licence.Name = "m_edit_licence";
 			this.m_edit_licence.Size = new System.Drawing.Size(314, 94);
-			this.m_edit_licence.TabIndex = 16;
+			this.m_edit_licence.TabIndex = 1;
 			this.m_edit_licence.Text = "";
 			// 
 			// About

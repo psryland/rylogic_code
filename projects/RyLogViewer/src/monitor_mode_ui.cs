@@ -119,11 +119,11 @@ namespace RyLogViewer
 			((System.ComponentModel.ISupportInitialize)(this.m_trk_opacity)).BeginInit();
 			this.SuspendLayout();
 			// 
-			// m_track_opacity
+			// m_trk_opacity
 			// 
 			this.m_trk_opacity.Location = new System.Drawing.Point(11, 23);
 			this.m_trk_opacity.Maximum = 100;
-			this.m_trk_opacity.Name = "m_track_opacity";
+			this.m_trk_opacity.Name = "m_trk_opacity";
 			this.m_trk_opacity.Size = new System.Drawing.Size(243, 45);
 			this.m_trk_opacity.TabIndex = 0;
 			this.m_trk_opacity.TickFrequency = 10;
@@ -136,7 +136,7 @@ namespace RyLogViewer
 			this.m_btn_enable.Location = new System.Drawing.Point(98, 155);
 			this.m_btn_enable.Name = "m_btn_enable";
 			this.m_btn_enable.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_enable.TabIndex = 2;
+			this.m_btn_enable.TabIndex = 3;
 			this.m_btn_enable.Text = "Enable";
 			this.m_btn_enable.UseVisualStyleBackColor = true;
 			// 
@@ -147,7 +147,7 @@ namespace RyLogViewer
 			this.m_btn_cancel.Location = new System.Drawing.Point(179, 155);
 			this.m_btn_cancel.Name = "m_btn_cancel";
 			this.m_btn_cancel.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_cancel.TabIndex = 3;
+			this.m_btn_cancel.TabIndex = 4;
 			this.m_btn_cancel.Text = "Cancel";
 			this.m_btn_cancel.UseVisualStyleBackColor = true;
 			// 
@@ -160,13 +160,13 @@ namespace RyLogViewer
 			this.m_lbl_transparency.TabIndex = 4;
 			this.m_lbl_transparency.Text = "Transparency:";
 			// 
-			// m_check_click_thru
+			// m_chk_click_thru
 			// 
 			this.m_chk_click_thru.AutoSize = true;
 			this.m_chk_click_thru.Location = new System.Drawing.Point(12, 87);
-			this.m_chk_click_thru.Name = "m_check_click_thru";
+			this.m_chk_click_thru.Name = "m_chk_click_thru";
 			this.m_chk_click_thru.Size = new System.Drawing.Size(127, 17);
-			this.m_chk_click_thru.TabIndex = 1;
+			this.m_chk_click_thru.TabIndex = 2;
 			this.m_chk_click_thru.Text = "\"Click-through\" mode";
 			this.m_chk_click_thru.UseVisualStyleBackColor = true;
 			// 
@@ -179,13 +179,13 @@ namespace RyLogViewer
 			this.label1.TabIndex = 5;
 			this.label1.Text = "Exit \'monitor mode\' by clicking on the\r\n RyLogViewer icon in the system tray";
 			// 
-			// m_check_always_on_top
+			// m_chk_always_on_top
 			// 
 			this.m_chk_always_on_top.AutoSize = true;
 			this.m_chk_always_on_top.Location = new System.Drawing.Point(11, 64);
-			this.m_chk_always_on_top.Name = "m_check_always_on_top";
+			this.m_chk_always_on_top.Name = "m_chk_always_on_top";
 			this.m_chk_always_on_top.Size = new System.Drawing.Size(92, 17);
-			this.m_chk_always_on_top.TabIndex = 6;
+			this.m_chk_always_on_top.TabIndex = 1;
 			this.m_chk_always_on_top.Text = "Always on top";
 			this.m_chk_always_on_top.UseVisualStyleBackColor = true;
 			// 

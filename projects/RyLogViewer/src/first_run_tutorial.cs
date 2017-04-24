@@ -158,29 +158,29 @@ namespace RyLogViewer
 			this.m_panel = new System.Windows.Forms.Panel();
 			this.m_panel.SuspendLayout();
 			this.SuspendLayout();
-			//
+			// 
 			// m_btn_next
-			//
+			// 
 			this.m_btn_next.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_next.Location = new System.Drawing.Point(154, 236);
 			this.m_btn_next.Name = "m_btn_next";
 			this.m_btn_next.Size = new System.Drawing.Size(118, 28);
-			this.m_btn_next.TabIndex = 0;
+			this.m_btn_next.TabIndex = 1;
 			this.m_btn_next.Text = "&Next";
 			this.m_btn_next.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_btn_back
-			//
+			// 
 			this.m_btn_back.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_back.Location = new System.Drawing.Point(30, 236);
 			this.m_btn_back.Name = "m_btn_back";
 			this.m_btn_back.Size = new System.Drawing.Size(118, 28);
-			this.m_btn_back.TabIndex = 1;
+			this.m_btn_back.TabIndex = 0;
 			this.m_btn_back.Text = "&Cancel";
 			this.m_btn_back.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_html
-			//
+			// 
 			this.m_html.AllowNavigation = false;
 			this.m_html.AllowWebBrowserDrop = false;
 			this.m_html.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -190,13 +190,13 @@ namespace RyLogViewer
 			this.m_html.Name = "m_html";
 			this.m_html.ScrollBarsEnabled = false;
 			this.m_html.Size = new System.Drawing.Size(261, 216);
-			this.m_html.TabIndex = 2;
+			this.m_html.TabIndex = 0;
 			this.m_html.WebBrowserShortcutsEnabled = false;
-			//
+			// 
 			// m_panel
-			//
-			this.m_panel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
+			// 
+			this.m_panel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_panel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_panel.Controls.Add(this.m_html);
@@ -204,9 +204,9 @@ namespace RyLogViewer
 			this.m_panel.Name = "m_panel";
 			this.m_panel.Size = new System.Drawing.Size(263, 218);
 			this.m_panel.TabIndex = 3;
-			//
+			// 
 			// FirstRunTutorial
-			//
+			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(284, 274);
@@ -221,6 +221,7 @@ namespace RyLogViewer
 			this.Name = "FirstRunTutorial";
 			this.m_panel.ResumeLayout(false);
 			this.ResumeLayout(false);
+
 		}
 
 		#endregion

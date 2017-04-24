@@ -31,12 +31,22 @@ namespace pr.common
 		{
 			try
 			{
-				if (!filepath.HasValue()) return false;
-				var dir = Path.GetDirectoryName(filepath) ?? string.Empty;
-				var fname = Path.GetFileName(filepath) ?? string.Empty;
+				// 'Directory' and 'FileName' don't necessarily get all of the string e.g. "P:\\dump\\file.tx##:t"
+				// returns 'P:\\dump' for directory and 't' for filename. Use substring to ensure the entire string
+				// is tested
+
+				if (!filepath.HasValue())
+					return false;
+
+				// Get the directory and filename
+				var dir = Directory(filepath) ?? string.Empty;
+				var fname = filepath.Substring(dir.Length, filepath.Length - dir.Length);
+				if (fname.Length > 0 && (fname[0] == Path.DirectorySeparatorChar || fname[0] == Path.AltDirectorySeparatorChar))
+					fname = fname.Substring(1, fname.Length - 1);
+
 				var invalid_chars = Path.GetInvalidFileNameChars();
 				return
-					fname.HasValue() &&                         // no filename
+					fname.Length > 0 &&                         // Cannot be an empty filename
 					IsValidDirectory(dir, require_rooted) &&    // directory isn't valid
 					fname.IndexOfAny(invalid_chars) == -1 &&    // has invalid chars
 					!DirExists(filepath);                       // already exists as a directory
@@ -921,6 +931,11 @@ namespace pr.unittests
 			Assert.True(Path_.IsValidFilepath(@".\dir1\..\.\dir2\file", false));
 			Assert.False(Path_.IsValidFilepath(@".\dir1\", false));
 			Assert.False(Path_.IsValidFilepath(@".\dir1\file*.txt", false));
+
+			Assert.False(Path_.IsValidFilepath(@"P:\dump\file.tx##:t", false));
+			Assert.False(Path_.IsValidFilepath(@"P:\dump\fi:.txt", false));
+			Assert.False(Path_.IsValidFilepath(@"P:\dump\f*.txt", false));
+			Assert.False(Path_.IsValidFilepath(@"P:\dump\f?.txt", false));
 		}
 		[Test] public void TestPathNames()
 		{

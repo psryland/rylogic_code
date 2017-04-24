@@ -56,10 +56,10 @@
 			this.panel3 = new System.Windows.Forms.Panel();
 			this.m_combo_proxy_type = new RyLogViewer.ComboBox();
 			this.panel1 = new System.Windows.Forms.Panel();
+			this.m_check_listener = new System.Windows.Forms.CheckBox();
 			this.m_combo_protocol_type = new RyLogViewer.ComboBox();
 			this.panel2 = new System.Windows.Forms.Panel();
 			this.m_combo_hostname = new RyLogViewer.ComboBox();
-			this.m_check_listener = new System.Windows.Forms.CheckBox();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_port)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_proxy_port)).BeginInit();
 			this.tableLayoutPanel1.SuspendLayout();
@@ -78,7 +78,7 @@
 			this.m_check_append.Location = new System.Drawing.Point(23, 44);
 			this.m_check_append.Name = "m_check_append";
 			this.m_check_append.Size = new System.Drawing.Size(113, 17);
-			this.m_check_append.TabIndex = 10;
+			this.m_check_append.TabIndex = 3;
 			this.m_check_append.Text = "Append to existing";
 			this.m_check_append.UseVisualStyleBackColor = true;
 			// 
@@ -98,7 +98,7 @@
 			this.m_edit_proxy_hostname.Location = new System.Drawing.Point(33, 18);
 			this.m_edit_proxy_hostname.Name = "m_edit_proxy_hostname";
 			this.m_edit_proxy_hostname.Size = new System.Drawing.Size(145, 20);
-			this.m_edit_proxy_hostname.TabIndex = 4;
+			this.m_edit_proxy_hostname.TabIndex = 0;
 			// 
 			// m_lbl_port
 			// 
@@ -116,7 +116,7 @@
 			this.m_btn_browse_output.Location = new System.Drawing.Point(202, 17);
 			this.m_btn_browse_output.Name = "m_btn_browse_output";
 			this.m_btn_browse_output.Size = new System.Drawing.Size(34, 23);
-			this.m_btn_browse_output.TabIndex = 7;
+			this.m_btn_browse_output.TabIndex = 2;
 			this.m_btn_browse_output.Text = "...";
 			this.m_btn_browse_output.UseVisualStyleBackColor = true;
 			// 
@@ -126,7 +126,7 @@
 			this.m_lbl_output_file.Location = new System.Drawing.Point(3, 3);
 			this.m_lbl_output_file.Name = "m_lbl_output_file";
 			this.m_lbl_output_file.Size = new System.Drawing.Size(149, 13);
-			this.m_lbl_output_file.TabIndex = 31;
+			this.m_lbl_output_file.TabIndex = 0;
 			this.m_lbl_output_file.Text = "File to write program output to:";
 			// 
 			// m_lbl_hostname
@@ -145,7 +145,7 @@
 			this.m_btn_cancel.Location = new System.Drawing.Point(174, 301);
 			this.m_btn_cancel.Name = "m_btn_cancel";
 			this.m_btn_cancel.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_cancel.TabIndex = 12;
+			this.m_btn_cancel.TabIndex = 1;
 			this.m_btn_cancel.Text = "Cancel";
 			this.m_btn_cancel.UseVisualStyleBackColor = true;
 			// 
@@ -156,7 +156,7 @@
 			this.m_btn_ok.Location = new System.Drawing.Point(93, 301);
 			this.m_btn_ok.Name = "m_btn_ok";
 			this.m_btn_ok.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_ok.TabIndex = 11;
+			this.m_btn_ok.TabIndex = 0;
 			this.m_btn_ok.Text = "OK";
 			this.m_btn_ok.UseVisualStyleBackColor = true;
 			// 
@@ -208,7 +208,7 @@
             0});
 			this.m_spinner_proxy_port.Name = "m_spinner_proxy_port";
 			this.m_spinner_proxy_port.Size = new System.Drawing.Size(51, 20);
-			this.m_spinner_proxy_port.TabIndex = 5;
+			this.m_spinner_proxy_port.TabIndex = 1;
 			this.m_spinner_proxy_port.Value = new decimal(new int[] {
             65535,
             0,
@@ -231,7 +231,7 @@
 			this.m_edit_proxy_username.Location = new System.Drawing.Point(33, 19);
 			this.m_edit_proxy_username.Name = "m_edit_proxy_username";
 			this.m_edit_proxy_username.Size = new System.Drawing.Size(80, 20);
-			this.m_edit_proxy_username.TabIndex = 43;
+			this.m_edit_proxy_username.TabIndex = 0;
 			// 
 			// m_edit_proxy_password
 			// 
@@ -240,7 +240,7 @@
 			this.m_edit_proxy_password.Location = new System.Drawing.Point(18, 19);
 			this.m_edit_proxy_password.Name = "m_edit_proxy_password";
 			this.m_edit_proxy_password.Size = new System.Drawing.Size(96, 20);
-			this.m_edit_proxy_password.TabIndex = 44;
+			this.m_edit_proxy_password.TabIndex = 0;
 			this.m_edit_proxy_password.UseSystemPasswordChar = true;
 			// 
 			// m_lbl_proxy_username
@@ -309,7 +309,7 @@
 			this.m_combo_output_filepath.Location = new System.Drawing.Point(23, 18);
 			this.m_combo_output_filepath.Name = "m_combo_output_filepath";
 			this.m_combo_output_filepath.Size = new System.Drawing.Size(173, 21);
-			this.m_combo_output_filepath.TabIndex = 6;
+			this.m_combo_output_filepath.TabIndex = 1;
 			// 
 			// panel6
 			// 
@@ -362,7 +362,7 @@
 			this.m_combo_proxy_type.Location = new System.Drawing.Point(72, 3);
 			this.m_combo_proxy_type.Name = "m_combo_proxy_type";
 			this.m_combo_proxy_type.Size = new System.Drawing.Size(105, 21);
-			this.m_combo_proxy_type.TabIndex = 42;
+			this.m_combo_proxy_type.TabIndex = 0;
 			// 
 			// panel1
 			// 
@@ -376,6 +376,17 @@
 			this.panel1.Size = new System.Drawing.Size(239, 27);
 			this.panel1.TabIndex = 48;
 			// 
+			// m_check_listener
+			// 
+			this.m_check_listener.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_check_listener.AutoSize = true;
+			this.m_check_listener.Location = new System.Drawing.Point(182, 5);
+			this.m_check_listener.Name = "m_check_listener";
+			this.m_check_listener.Size = new System.Drawing.Size(54, 17);
+			this.m_check_listener.TabIndex = 1;
+			this.m_check_listener.Text = "Listen";
+			this.m_check_listener.UseVisualStyleBackColor = true;
+			// 
 			// m_combo_protocol_type
 			// 
 			this.m_combo_protocol_type.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
@@ -383,7 +394,7 @@
 			this.m_combo_protocol_type.Location = new System.Drawing.Point(84, 3);
 			this.m_combo_protocol_type.Name = "m_combo_protocol_type";
 			this.m_combo_protocol_type.Size = new System.Drawing.Size(93, 21);
-			this.m_combo_protocol_type.TabIndex = 2;
+			this.m_combo_protocol_type.TabIndex = 0;
 			// 
 			// panel2
 			// 
@@ -408,24 +419,13 @@
 			this.m_combo_hostname.Size = new System.Drawing.Size(156, 21);
 			this.m_combo_hostname.TabIndex = 0;
 			// 
-			// m_check_listener
-			// 
-			this.m_check_listener.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_check_listener.AutoSize = true;
-			this.m_check_listener.Location = new System.Drawing.Point(182, 5);
-			this.m_check_listener.Name = "m_check_listener";
-			this.m_check_listener.Size = new System.Drawing.Size(54, 17);
-			this.m_check_listener.TabIndex = 41;
-			this.m_check_listener.Text = "Listen";
-			this.m_check_listener.UseVisualStyleBackColor = true;
-			// 
 			// NetworkConnectionUI
 			// 
 			this.AcceptButton = this.m_btn_ok;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.CancelButton = this.m_btn_cancel;
-			this.ClientSize = new System.Drawing.Size(258, 336);
+			this.ClientSize = new System.Drawing.Size(258, 335);
 			this.Controls.Add(this.tableLayoutPanel1);
 			this.Controls.Add(this.m_btn_ok);
 			this.Controls.Add(this.m_btn_cancel);

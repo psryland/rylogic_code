@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE HTML>
 <html xmlns="http://www.w3.org/1999/xhtml">
 	<!--#include file="..\inc\help_head.include.htm"-->
-	<body id="main_help" onload="HighlightListItem(null)">
+	<body id="main_help">
 		<!--#include file="..\inc\help_title_panel.include.htm"-->
 		<!--#include file="..\inc\help_index_panel.include.htm"-->
 		<div id="content_panel">
@@ -17,76 +17,62 @@
 				<div>
 					<img class="centred" src="../img/highlighting.png" alt="highlighting settings" usemap="#highlighting-map" />
 					<map id="highlighting-map" name="highlighting-map">
-						<area shape="rect" coords="3,47,20,60" href="#highlighting_pattern_editor" alt="" title="" onclick="HighlightListItem('highlighting_pattern_editor')"/>
-						<area shape="rect" coords="33,258,50,271" href="#highlighting_active" alt="" title="" onclick="HighlightListItem('highlighting_pattern_editor')"/>
-						<area shape="rect" coords="79,259,92,272" href="#highlighting_pattern" alt="" title="" onclick="HighlightListItem('highlighting_pattern')" />
-						<area shape="rect" coords="249,258,262,271" href="#highlighting_highlight" alt="" title="" onclick="HighlightListItem('highlighting_highlight')" />
-						<area shape="rect" coords="304,258,321,271" href="#highlighting_colours" alt="" title="" onclick="HighlightListItem('highlighting_colours')" />
-						<area shape="rect" coords="475,257,492,270" href="#highlighting_edit" alt="" title="" onclick="HighlightListItem('highlighting_edit')" />
-						<area shape="rect" coords="15,440,32,457" href="#highlighting_pattern_set" alt="" title="" onclick="HighlightListItem('highlighting_pattern_set')" />
+						<area shape="rect" coords="3,47,20,60"      href="#highlighting_pattern_editor" alt=""/>
+						<area shape="rect" coords="33,258,50,271"   href="#highlighting_active"         alt=""/>
+						<area shape="rect" coords="79,259,92,272"   href="#highlighting_pattern"        alt=""/>
+						<area shape="rect" coords="249,258,262,271" href="#highlighting_highlight"      alt=""/>
+						<area shape="rect" coords="304,258,321,271" href="#highlighting_colours"        alt=""/>
+						<area shape="rect" coords="475,257,492,270" href="#highlighting_edit"           alt=""/>
+						<area shape="rect" coords="15,440,32,457"   href="#highlighting_pattern_set"    alt=""/>
 					</map>
 				</div>
-				<ol>
-					<li class="child_list_elem">
-						<div id="highlighting_pattern_editor">
-							<span class="tag_label">Pattern Editor</span>
-							<div class="content">
-								The pattern editor is used to create and modify patterns that will match lines in the log data.
-								The pattern editor is described in greater detail <a href="pattern_editor.html">here</a>.
-							</div>
+				<ol class="major_list">
+					<li id="highlighting_pattern_editor">
+						<span class="tag_label">Pattern Editor</span>
+						<div class="content">
+							The pattern editor is used to create and modify patterns that will match lines in the log data.
+							The pattern editor is described in greater detail <a href="pattern_editor.html">here</a>.
 						</div>
 					</li>
-					<li>
-						<div id="highlighting_active">
-							<span class="tag_label">Active Patterns</span>
-							<div class="content">
-								It is sometimes convenient to disable a pattern without deleting it. Highlighting patterns can
-								be enabled or disabled by clicking in this column
-							</div>
+					<li id="highlighting_active">
+						<span class="tag_label">Active Patterns</span>
+						<div class="content">
+							It is sometimes convenient to disable a pattern without deleting it. Highlighting patterns can
+							be enabled or disabled by clicking in this column
 						</div>
 					</li>
-					<li>
-						<div id="highlighting_pattern">
-							<span class="tag_label">Expression</span>
-							<div class="content">
-								This column displays the text of the highlighting pattern.
-							</div>
+					<li id="highlighting_pattern">
+						<span class="tag_label">Expression</span>
+						<div class="content">
+							This column displays the text of the highlighting pattern.
 						</div>
 					</li>
-					<li>
-						<div id="highlighting_highlight">
-							<span class="tag_label">Highlight Style</span>
-							<div class="content">
-								The <i>Full</i> highlighting style means that the entire line in the log data is highlighted if
-								the pattern matches any part of the line. The <i>Partial</i> style means only the matching part
-								of the line is highlighted.
-							</div>
+					<li id="highlighting_highlight">
+						<span class="tag_label">Highlight Style</span>
+						<div class="content">
+							The <i>Full</i> highlighting style means that the entire line in the log data is highlighted if
+							the pattern matches any part of the line. The <i>Partial</i> style means only the matching part
+							of the line is highlighted.
 						</div>
 					</li>
-					<li>
-						<div id="highlighting_colours">
-							<span class="tag_label">Colours</span>
-							<div class="content">
-								This column allows the highlighting colour scheme to be set for the pattern
-							</div>
+					<li id="highlighting_colours">
+						<span class="tag_label">Colours</span>
+						<div class="content">
+							This column allows the highlighting colour scheme to be set for the pattern
 						</div>
 					</li>
-					<li>
-						<div id="highlighting_edit">
-							<span class="tag_label">Highlight Pattern Editing</span>
-							<div class="content">
-								Clicking the icon in this column loads the pattern into the <a href="pattern_editor.html">pattern editor</a> to be modified.
-							</div>
+					<li id="highlighting_edit">
+						<span class="tag_label">Highlight Pattern Editing</span>
+						<div class="content">
+							Clicking the icon in this column loads the pattern into the <a href="pattern_editor.html">pattern editor</a> to be modified.
 						</div>
 					</li>
-					<li>
-						<div id="highlighting_pattern_set">
-							<span class="tag_label">Highlighting Pattern Sets</span>
-							<div class="content">
-								<a href="pattern_editor.html#pattern_sets">Pattern sets</a> are used to save and load groups of patterns.
-								This is useful when RyLogViewer is used frequently for different types of logs. All of the highlighting patterns
-								can be easily switched by selecting a pattern set from the drop down menu.
-							</div>
+					<li id="highlighting_pattern_set">
+						<span class="tag_label">Highlighting Pattern Sets</span>
+						<div class="content">
+							<a href="pattern_editor.html#pattern_sets">Pattern sets</a> are used to save and load groups of patterns.
+							This is useful when RyLogViewer is used frequently for different types of logs. All of the highlighting patterns
+							can be easily switched by selecting a pattern set from the drop down menu.
 						</div>
 					</li>
 				</ol>

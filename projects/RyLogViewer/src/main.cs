@@ -2433,12 +2433,12 @@ namespace RyLogViewer
 			this.m_menu_file_export = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_sep1 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_pattern_set = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_recent_pattern_sets = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator20 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_load_pattern_set = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_save_pattern_set = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator21 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_import_patterns = new System.Windows.Forms.ToolStripMenuItem();
-			this.toolStripSeparator20 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_menu_file_recent_pattern_sets = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_sep2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_exit = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_edit = new System.Windows.Forms.ToolStripMenuItem();
@@ -2855,49 +2855,49 @@ namespace RyLogViewer
 			// m_menu_file_pattern_set
 			// 
 			this.m_menu_file_pattern_set.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_file_recent_pattern_sets,
+            this.toolStripSeparator20,
             this.m_menu_file_load_pattern_set,
             this.m_menu_file_save_pattern_set,
             this.toolStripSeparator21,
-            this.m_menu_file_import_patterns,
-            this.toolStripSeparator20,
-            this.m_menu_file_recent_pattern_sets});
+            this.m_menu_file_import_patterns});
 			this.m_menu_file_pattern_set.Name = "m_menu_file_pattern_set";
 			this.m_menu_file_pattern_set.Size = new System.Drawing.Size(190, 22);
 			this.m_menu_file_pattern_set.Text = "Pattern Sets";
 			// 
+			// m_menu_file_recent_pattern_sets
+			// 
+			this.m_menu_file_recent_pattern_sets.Name = "m_menu_file_recent_pattern_sets";
+			this.m_menu_file_recent_pattern_sets.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_file_recent_pattern_sets.Text = "Recent";
+			// 
+			// toolStripSeparator20
+			// 
+			this.toolStripSeparator20.Name = "toolStripSeparator20";
+			this.toolStripSeparator20.Size = new System.Drawing.Size(149, 6);
+			// 
 			// m_menu_file_load_pattern_set
 			// 
 			this.m_menu_file_load_pattern_set.Name = "m_menu_file_load_pattern_set";
-			this.m_menu_file_load_pattern_set.Size = new System.Drawing.Size(119, 22);
+			this.m_menu_file_load_pattern_set.Size = new System.Drawing.Size(152, 22);
 			this.m_menu_file_load_pattern_set.Text = "Load";
 			// 
 			// m_menu_file_save_pattern_set
 			// 
 			this.m_menu_file_save_pattern_set.Name = "m_menu_file_save_pattern_set";
-			this.m_menu_file_save_pattern_set.Size = new System.Drawing.Size(119, 22);
+			this.m_menu_file_save_pattern_set.Size = new System.Drawing.Size(152, 22);
 			this.m_menu_file_save_pattern_set.Text = "Save";
 			// 
 			// toolStripSeparator21
 			// 
 			this.toolStripSeparator21.Name = "toolStripSeparator21";
-			this.toolStripSeparator21.Size = new System.Drawing.Size(116, 6);
+			this.toolStripSeparator21.Size = new System.Drawing.Size(149, 6);
 			// 
 			// m_menu_file_import_patterns
 			// 
 			this.m_menu_file_import_patterns.Name = "m_menu_file_import_patterns";
-			this.m_menu_file_import_patterns.Size = new System.Drawing.Size(119, 22);
+			this.m_menu_file_import_patterns.Size = new System.Drawing.Size(152, 22);
 			this.m_menu_file_import_patterns.Text = "Import...";
-			// 
-			// toolStripSeparator20
-			// 
-			this.toolStripSeparator20.Name = "toolStripSeparator20";
-			this.toolStripSeparator20.Size = new System.Drawing.Size(116, 6);
-			// 
-			// m_menu_file_recent_pattern_sets
-			// 
-			this.m_menu_file_recent_pattern_sets.Name = "m_menu_file_recent_pattern_sets";
-			this.m_menu_file_recent_pattern_sets.Size = new System.Drawing.Size(119, 22);
-			this.m_menu_file_recent_pattern_sets.Text = "Recent";
 			// 
 			// m_sep2
 			// 

@@ -255,14 +255,14 @@ namespace RyLogViewer
 			this.m_text_settings.Name = "m_text_settings";
 			this.m_text_settings.ReadOnly = true;
 			this.m_text_settings.Size = new System.Drawing.Size(474, 20);
-			this.m_text_settings.TabIndex = 5;
+			this.m_text_settings.TabIndex = 0;
 			// 
 			// m_btn_settings_reset
 			// 
 			this.m_btn_settings_reset.Location = new System.Drawing.Point(8, 40);
 			this.m_btn_settings_reset.Name = "m_btn_settings_reset";
 			this.m_btn_settings_reset.Size = new System.Drawing.Size(122, 23);
-			this.m_btn_settings_reset.TabIndex = 3;
+			this.m_btn_settings_reset.TabIndex = 1;
 			this.m_btn_settings_reset.Text = "Reset to Defaults";
 			this.m_btn_settings_reset.UseVisualStyleBackColor = true;
 			// 
@@ -272,7 +272,7 @@ namespace RyLogViewer
 			this.m_btn_settings_save.Location = new System.Drawing.Point(410, 40);
 			this.m_btn_settings_save.Name = "m_btn_settings_save";
 			this.m_btn_settings_save.Size = new System.Drawing.Size(72, 23);
-			this.m_btn_settings_save.TabIndex = 2;
+			this.m_btn_settings_save.TabIndex = 3;
 			this.m_btn_settings_save.Text = "Save As";
 			this.m_btn_settings_save.UseVisualStyleBackColor = true;
 			// 
@@ -282,7 +282,7 @@ namespace RyLogViewer
 			this.m_btn_settings_load.Location = new System.Drawing.Point(332, 40);
 			this.m_btn_settings_load.Name = "m_btn_settings_load";
 			this.m_btn_settings_load.Size = new System.Drawing.Size(72, 23);
-			this.m_btn_settings_load.TabIndex = 0;
+			this.m_btn_settings_load.TabIndex = 2;
 			this.m_btn_settings_load.Text = "Load";
 			this.m_btn_settings_load.UseVisualStyleBackColor = true;
 			// 
@@ -453,7 +453,7 @@ namespace RyLogViewer
             0});
 			this.m_spinner_max_line_length.Name = "m_spinner_max_line_length";
 			this.m_spinner_max_line_length.Size = new System.Drawing.Size(44, 20);
-			this.m_spinner_max_line_length.TabIndex = 8;
+			this.m_spinner_max_line_length.TabIndex = 2;
 			this.m_spinner_max_line_length.Value = new decimal(new int[] {
             100,
             0,
@@ -549,7 +549,7 @@ namespace RyLogViewer
 			this.m_check_file_changes_additive.Location = new System.Drawing.Point(13, 130);
 			this.m_check_file_changes_additive.Name = "m_check_file_changes_additive";
 			this.m_check_file_changes_additive.Size = new System.Drawing.Size(181, 17);
-			this.m_check_file_changes_additive.TabIndex = 3;
+			this.m_check_file_changes_additive.TabIndex = 4;
 			this.m_check_file_changes_additive.Text = "Assume file changes are additive";
 			this.m_check_file_changes_additive.UseVisualStyleBackColor = true;
 			// 
@@ -559,7 +559,7 @@ namespace RyLogViewer
 			this.m_check_open_at_end.Location = new System.Drawing.Point(14, 106);
 			this.m_check_open_at_end.Name = "m_check_open_at_end";
 			this.m_check_open_at_end.Size = new System.Drawing.Size(124, 17);
-			this.m_check_open_at_end.TabIndex = 2;
+			this.m_check_open_at_end.TabIndex = 3;
 			this.m_check_open_at_end.Text = "Open files at the end";
 			this.m_check_open_at_end.UseVisualStyleBackColor = true;
 			// 
@@ -945,7 +945,7 @@ namespace RyLogViewer
 			this.m_lbl_fs_edit_cached_colour.Location = new System.Drawing.Point(98, 43);
 			this.m_lbl_fs_edit_cached_colour.Name = "m_lbl_fs_edit_cached_colour";
 			this.m_lbl_fs_edit_cached_colour.Size = new System.Drawing.Size(55, 21);
-			this.m_lbl_fs_edit_cached_colour.TabIndex = 18;
+			this.m_lbl_fs_edit_cached_colour.TabIndex = 1;
 			this.m_lbl_fs_edit_cached_colour.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
 			// 
 			// m_lbl_fs_bookmark_colour
@@ -965,7 +965,7 @@ namespace RyLogViewer
 			this.m_lbl_fs_edit_bookmark_colour.Location = new System.Drawing.Point(98, 100);
 			this.m_lbl_fs_edit_bookmark_colour.Name = "m_lbl_fs_edit_bookmark_colour";
 			this.m_lbl_fs_edit_bookmark_colour.Size = new System.Drawing.Size(55, 21);
-			this.m_lbl_fs_edit_bookmark_colour.TabIndex = 16;
+			this.m_lbl_fs_edit_bookmark_colour.TabIndex = 3;
 			this.m_lbl_fs_edit_bookmark_colour.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
 			// 
 			// m_lbl_fs_visible_colour
@@ -985,7 +985,7 @@ namespace RyLogViewer
 			this.m_lbl_fs_edit_visible_colour.Location = new System.Drawing.Point(98, 72);
 			this.m_lbl_fs_edit_visible_colour.Name = "m_lbl_fs_edit_visible_colour";
 			this.m_lbl_fs_edit_visible_colour.Size = new System.Drawing.Size(55, 21);
-			this.m_lbl_fs_edit_visible_colour.TabIndex = 9;
+			this.m_lbl_fs_edit_visible_colour.TabIndex = 2;
 			this.m_lbl_fs_edit_visible_colour.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
 			// 
 			// m_spinner_file_scroll_width
@@ -995,7 +995,7 @@ namespace RyLogViewer
 			this.m_spinner_file_scroll_width.Location = new System.Drawing.Point(98, 17);
 			this.m_spinner_file_scroll_width.Name = "m_spinner_file_scroll_width";
 			this.m_spinner_file_scroll_width.Size = new System.Drawing.Size(55, 20);
-			this.m_spinner_file_scroll_width.TabIndex = 5;
+			this.m_spinner_file_scroll_width.TabIndex = 0;
 			// 
 			// m_lbl_file_scroll_width
 			// 
@@ -1187,12 +1187,12 @@ namespace RyLogViewer
 			this.m_grid_filter.Size = new System.Drawing.Size(498, 216);
 			this.m_grid_filter.TabIndex = 0;
 			// 
-			// m_check_reject_all_by_default
+			// m_chk_reject_all_by_default
 			// 
 			this.m_chk_reject_all_by_default.Anchor = System.Windows.Forms.AnchorStyles.Left;
 			this.m_chk_reject_all_by_default.AutoSize = true;
 			this.m_chk_reject_all_by_default.Location = new System.Drawing.Point(351, 7);
-			this.m_chk_reject_all_by_default.Name = "m_check_reject_all_by_default";
+			this.m_chk_reject_all_by_default.Name = "m_chk_reject_all_by_default";
 			this.m_chk_reject_all_by_default.Size = new System.Drawing.Size(144, 17);
 			this.m_chk_reject_all_by_default.TabIndex = 4;
 			this.m_chk_reject_all_by_default.Text = "Reject all rows by default";

@@ -234,9 +234,9 @@ namespace RyLogViewer
 			this.m_lbl_preview = new System.Windows.Forms.Label();
 			this.m_text_preview = new System.Windows.Forms.TextBox();
 			this.SuspendLayout();
-			//
+			// 
 			// m_lbl_exec
-			//
+			// 
 			this.m_lbl_exec.AutoSize = true;
 			this.m_lbl_exec.Location = new System.Drawing.Point(16, 11);
 			this.m_lbl_exec.Name = "m_lbl_exec";
@@ -244,9 +244,9 @@ namespace RyLogViewer
 			this.m_lbl_exec.TabIndex = 0;
 			this.m_lbl_exec.Text = "Execute:";
 			this.m_lbl_exec.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-			//
+			// 
 			// m_lbl_args
-			//
+			// 
 			this.m_lbl_args.AutoSize = true;
 			this.m_lbl_args.Location = new System.Drawing.Point(5, 35);
 			this.m_lbl_args.Name = "m_lbl_args";
@@ -254,9 +254,9 @@ namespace RyLogViewer
 			this.m_lbl_args.TabIndex = 1;
 			this.m_lbl_args.Text = "Arguments:";
 			this.m_lbl_args.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-			//
+			// 
 			// m_lbl_startin
-			//
+			// 
 			this.m_lbl_startin.AutoSize = true;
 			this.m_lbl_startin.Location = new System.Drawing.Point(22, 61);
 			this.m_lbl_startin.Name = "m_lbl_startin";
@@ -264,36 +264,36 @@ namespace RyLogViewer
 			this.m_lbl_startin.TabIndex = 2;
 			this.m_lbl_startin.Text = "Start in:";
 			this.m_lbl_startin.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-			//
+			// 
 			// m_edit_exec
-			//
-			this.m_edit_exec.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+			// 
+			this.m_edit_exec.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_exec.Location = new System.Drawing.Point(71, 8);
 			this.m_edit_exec.Name = "m_edit_exec";
 			this.m_edit_exec.Size = new System.Drawing.Size(315, 20);
-			this.m_edit_exec.TabIndex = 2;
-			//
+			this.m_edit_exec.TabIndex = 0;
+			// 
 			// m_edit_args
-			//
-			this.m_edit_args.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+			// 
+			this.m_edit_args.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_args.Location = new System.Drawing.Point(71, 33);
 			this.m_edit_args.Name = "m_edit_args";
 			this.m_edit_args.Size = new System.Drawing.Size(315, 20);
-			this.m_edit_args.TabIndex = 3;
-			//
+			this.m_edit_args.TabIndex = 2;
+			// 
 			// m_edit_startin
-			//
-			this.m_edit_startin.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+			// 
+			this.m_edit_startin.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_startin.Location = new System.Drawing.Point(71, 58);
 			this.m_edit_startin.Name = "m_edit_startin";
 			this.m_edit_startin.Size = new System.Drawing.Size(315, 20);
 			this.m_edit_startin.TabIndex = 4;
-			//
+			// 
 			// m_btn_ok
-			//
+			// 
 			this.m_btn_ok.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.OK;
 			this.m_btn_ok.Location = new System.Drawing.Point(269, 124);
@@ -302,9 +302,9 @@ namespace RyLogViewer
 			this.m_btn_ok.TabIndex = 5;
 			this.m_btn_ok.Text = "OK";
 			this.m_btn_ok.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_btn_cancel
-			//
+			// 
 			this.m_btn_cancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_cancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
 			this.m_btn_cancel.Location = new System.Drawing.Point(350, 124);
@@ -313,29 +313,29 @@ namespace RyLogViewer
 			this.m_btn_cancel.TabIndex = 6;
 			this.m_btn_cancel.Text = "Cancel";
 			this.m_btn_cancel.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_btn_browse
-			//
+			// 
 			this.m_btn_browse.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_browse.Location = new System.Drawing.Point(392, 6);
 			this.m_btn_browse.Name = "m_btn_browse";
 			this.m_btn_browse.Size = new System.Drawing.Size(33, 23);
-			this.m_btn_browse.TabIndex = 0;
+			this.m_btn_browse.TabIndex = 1;
 			this.m_btn_browse.Text = "...";
 			this.m_btn_browse.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_btn_capture_groups
-			//
+			// 
 			this.m_btn_capture_groups.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_capture_groups.Location = new System.Drawing.Point(392, 30);
 			this.m_btn_capture_groups.Name = "m_btn_capture_groups";
 			this.m_btn_capture_groups.Size = new System.Drawing.Size(33, 24);
-			this.m_btn_capture_groups.TabIndex = 1;
+			this.m_btn_capture_groups.TabIndex = 3;
 			this.m_btn_capture_groups.Text = ">";
 			this.m_btn_capture_groups.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_lbl_preview
-			//
+			// 
 			this.m_lbl_preview.AutoSize = true;
 			this.m_lbl_preview.Location = new System.Drawing.Point(16, 86);
 			this.m_lbl_preview.Name = "m_lbl_preview";
@@ -343,10 +343,10 @@ namespace RyLogViewer
 			this.m_lbl_preview.TabIndex = 7;
 			this.m_lbl_preview.Text = "Preview:";
 			this.m_lbl_preview.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-			//
+			// 
 			// m_text_preview
-			//
-			this.m_text_preview.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+			// 
+			this.m_text_preview.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_text_preview.Location = new System.Drawing.Point(71, 83);
 			this.m_text_preview.Multiline = true;
@@ -355,14 +355,14 @@ namespace RyLogViewer
 			this.m_text_preview.Size = new System.Drawing.Size(315, 35);
 			this.m_text_preview.TabIndex = 8;
 			this.m_text_preview.TabStop = false;
-			//
+			// 
 			// ClkActionUI
-			//
+			// 
 			this.AcceptButton = this.m_btn_ok;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.CancelButton = this.m_btn_cancel;
-			this.ClientSize = new System.Drawing.Size(437, 156);
+			this.ClientSize = new System.Drawing.Size(437, 151);
 			this.Controls.Add(this.m_text_preview);
 			this.Controls.Add(this.m_lbl_preview);
 			this.Controls.Add(this.m_btn_capture_groups);
@@ -384,6 +384,7 @@ namespace RyLogViewer
 			this.Text = "Configure Click Action";
 			this.ResumeLayout(false);
 			this.PerformLayout();
+
 		}
 
 		#endregion

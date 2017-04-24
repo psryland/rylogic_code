@@ -34,9 +34,9 @@ namespace RyLogViewer
 			rng.End   = filepos + hbuf;
 
 			// Any overflow, add to the other range
-			if ((ovr = 0     - rng.Beg) > 0) { rng.Beg += ovr; rng.End   += ovr; }
+			if ((ovr = 0       - rng.Beg) > 0) { rng.Beg += ovr; rng.End   += ovr; }
 			if ((ovr = rng.End - fileend) > 0) { rng.End   -= ovr; rng.Beg -= ovr; }
-			if ((ovr = 0     - rng.Beg) > 0) { rng.Beg += ovr; }
+			if ((ovr = 0       - rng.Beg) > 0) { rng.Beg += ovr; }
 
 			Debug.Assert(rng.Beg >= 0 && rng.End <= fileend && rng.Beg <= rng.End);
 			return rng;
@@ -518,8 +518,8 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Buffer a maximum of 'count' bytes from 'stream' into 'buf' (note,
-		/// automatically capped at buf.Length). If 'backward' is true the stream is seeked
-		/// backward from the current position before reading and then seeked backward again
+		/// automatically capped at buf.Length). If 'backward' is true the stream is 'seek'ed
+		/// backward from the current position before reading and then 'seek'ed backward again
 		/// after reading so that conceptually the file position moves in the direction of
 		/// the read. Returns the number of bytes buffered in 'buf'</summary>
 		private static int Buffer(IFileSource file, long count, long fileend, Encoding encoding, bool backward, byte[] buf, out bool eof)
@@ -558,22 +558,22 @@ namespace RyLogViewer
 				else file.Stream.Seek(pos, SeekOrigin.Begin);
 
 				// UTF-8 encoding:
-				//Bits Last code point  Byte 1    Byte 2    Byte 3    Byte 4    Byte 5   Byte 6
-				//  7     U+007F        0xxxxxxx
-				// 11     U+07FF        110xxxxx  10xxxxxx
-				// 16     U+FFFF        1110xxxx  10xxxxxx  10xxxxxx
-				// 21     U+1FFFFF      11110xxx  10xxxxxx  10xxxxxx  10xxxxxx
-				// 26     U+3FFFFFF     111110xx  10xxxxxx  10xxxxxx  10xxxxxx  10xxxxxx
-				// 31     U+7FFFFFFF    1111110x  10xxxxxx  10xxxxxx  10xxxxxx  10xxxxxx  10xxxxxx
+				// Bits Last code point  Byte 1    Byte 2    Byte 3    Byte 4    Byte 5   Byte 6
+				//   7     U+007F        0xxxxxxx
+				//  11     U+07FF        110xxxxx  10xxxxxx
+				//  16     U+FFFF        1110xxxx  10xxxxxx  10xxxxxx
+				//  21     U+1FFFFF      11110xxx  10xxxxxx  10xxxxxx  10xxxxxx
+				//  26     U+3FFFFFF     111110xx  10xxxxxx  10xxxxxx  10xxxxxx  10xxxxxx
+				//  31     U+7FFFFFFF    1111110x  10xxxxxx  10xxxxxx  10xxxxxx  10xxxxxx  10xxxxxx
 				const int encode_mask = 0xC0; // 11000000
 				const int encode_char = 0x80; // 10000000
-				for (; ; )
+				for (;;)
 				{
 					int b = file.Stream.ReadByte();
 					if (b == -1) return 0; // End of file
 					if ((b & encode_mask) == encode_char) continue; // If 'b' is a byte halfway through an encoded char, keep reading
 
-					// Otherwise it's an ascii char or the start of a multibyte char
+					// Otherwise it's an ASCII char or the start of a multi-byte char
 					// save the byte we read, and read the remainder of 'count'
 					file.Stream.Seek(-1, SeekOrigin.Current);
 					break;
@@ -581,7 +581,13 @@ namespace RyLogViewer
 			}
 
 			// Buffer file data
-			Debug.Assert(count >= file.Stream.Position - pos);
+			// We don't add the BOM to the buffer because the purpose of this function is to return lines of text from the file source.
+			// If we've been asked to read from filepos == 0 and  'count' is less than the BOM.Length then return 0 bytes read. This
+			// means that if a UTF-8 BOM is present, reading 1 byte => read=0, reading 2 bytes => read=0, reading 3 bytes =>read=0,
+			// reading 4 bytes => read = 4, reading 5 bytes => read=5, etc
+			if (count < file.Stream.Position - pos)
+				return 0;
+
 			count -= file.Stream.Position - pos;
 			int read = file.Stream.Read(buf, 0, (int)Math.Min(count, buf.Length));
 			if (read != count) throw new IOException("failed to read file over range [{0},{1}) ({2} bytes). Read {3}/{2} bytes.".Fmt(pos, pos + count, count, read));

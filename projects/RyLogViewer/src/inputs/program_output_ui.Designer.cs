@@ -210,7 +210,7 @@
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.CancelButton = this.m_btn_cancel;
-			this.ClientSize = new System.Drawing.Size(280, 286);
+			this.ClientSize = new System.Drawing.Size(280, 285);
 			this.Controls.Add(this.m_combo_output_filepath);
 			this.Controls.Add(this.m_check_show_window);
 			this.Controls.Add(this.m_check_append);

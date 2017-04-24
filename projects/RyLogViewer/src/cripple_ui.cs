@@ -75,9 +75,9 @@ namespace RyLogViewer
 			this.m_html = new System.Windows.Forms.WebBrowser();
 			this.m_panel.SuspendLayout();
 			this.SuspendLayout();
-			//
+			// 
 			// m_btn_enable
-			//
+			// 
 			this.m_btn_enable.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_btn_enable.DialogResult = System.Windows.Forms.DialogResult.OK;
 			this.m_btn_enable.Location = new System.Drawing.Point(13, 239);
@@ -86,9 +86,9 @@ namespace RyLogViewer
 			this.m_btn_enable.TabIndex = 0;
 			this.m_btn_enable.Text = "Enable this Feature for a Limited Time";
 			this.m_btn_enable.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_btn_close
-			//
+			// 
 			this.m_btn_close.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_close.DialogResult = System.Windows.Forms.DialogResult.Cancel;
 			this.m_btn_close.Location = new System.Drawing.Point(356, 239);
@@ -97,11 +97,11 @@ namespace RyLogViewer
 			this.m_btn_close.TabIndex = 1;
 			this.m_btn_close.Text = "Close";
 			this.m_btn_close.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_panel
-			//
-			this.m_panel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
+			// 
+			this.m_panel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_panel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_panel.Controls.Add(this.m_html);
@@ -109,9 +109,9 @@ namespace RyLogViewer
 			this.m_panel.Name = "m_panel";
 			this.m_panel.Size = new System.Drawing.Size(423, 221);
 			this.m_panel.TabIndex = 4;
-			//
+			// 
 			// m_html
-			//
+			// 
 			this.m_html.AllowNavigation = false;
 			this.m_html.AllowWebBrowserDrop = false;
 			this.m_html.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -123,9 +123,9 @@ namespace RyLogViewer
 			this.m_html.Size = new System.Drawing.Size(421, 219);
 			this.m_html.TabIndex = 0;
 			this.m_html.WebBrowserShortcutsEnabled = false;
-			//
+			// 
 			// CrippleUI
-			//
+			// 
 			this.AcceptButton = this.m_btn_enable;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -141,6 +141,7 @@ namespace RyLogViewer
 			this.Text = "Free Edition Limited Feature";
 			this.m_panel.ResumeLayout(false);
 			this.ResumeLayout(false);
+
 		}
 
 		#endregion
