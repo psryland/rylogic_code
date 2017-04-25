@@ -1254,7 +1254,8 @@ namespace RyLogViewer
 		/// <summary>Handle key presses on the grid</summary>
 		private void GridKeyDown(object s, KeyEventArgs e)
 		{
-			if (e.KeyCode == Keys.Up || e.KeyCode == Keys.Down)
+			if (e.KeyCode == Keys.Up || e.KeyCode == Keys.Down ||
+				e.KeyCode == Keys.PageUp || e.KeyCode == Keys.PageDown)
 				LoadNearBoundary();
 		}
 
