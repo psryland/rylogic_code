@@ -13,6 +13,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using pr.extn;
 
 namespace pr.common
 {
@@ -539,7 +540,7 @@ namespace pr.common
 			{
 				// Try to append the text to the last paragraph
 				Paragraph para = null;
-				bool merge = m_root.Content.Count != 0 && (para = m_root.Content.Last() as Paragraph) != null && ReferenceEquals(para.ParaStyle, DefaultParaStyle);
+				bool merge = m_root.Content.Count != 0 && (para = m_root.Content.Back() as Paragraph) != null && ReferenceEquals(para.ParaStyle, DefaultParaStyle);
 				if (!merge) para = new Paragraph(DefaultParaStyle, TextStyle);
 
 				// Concatenate the text
@@ -733,7 +734,7 @@ namespace pr.common
 			public Paragraph Append(TextSpan text)
 			{
 				// Try to merge the content to the last one added
-				if (m_spans.Count != 0 && m_spans.Last().Merge(text))
+				if (m_spans.Count != 0 && m_spans.Back().Merge(text))
 					return this;
 
 				m_spans.Add(text);

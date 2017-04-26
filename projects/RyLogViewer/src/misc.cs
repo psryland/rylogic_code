@@ -36,7 +36,7 @@ namespace RyLogViewer
 		public const int MaxLineLengthMin           = 1 * OneKB;
 		public const int MaxLineLengthDefault       = 16 * OneKB;
 		public const int MaxLineLengthMax           = 128 * OneKB;
-		public const int LineCacheCountMin          = 1;
+		public const int LineCacheCountMin          = 3;
 		public const int LineCacheCountDefault      = 1000;
 		public const int LineCacheCountMax          = 99999999;
 		public const int ColumnCountMin             = 1;
@@ -48,7 +48,6 @@ namespace RyLogViewer
 		public const int RowHeightMinHeight         = 1;
 		public const int RowHeightMaxHeight         = 200;
 		public const int RowHeightDefault           = 18;
-		public const int AutoScrollAtBoundaryLimit  = 10;
 		public const int FilePollingRate            = 100;
 		public const int MaxProgramHistoryLength    = 10;
 		public const int MaxNetConnHistoryLength    = 10;

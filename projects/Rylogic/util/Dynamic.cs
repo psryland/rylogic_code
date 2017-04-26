@@ -10,6 +10,7 @@ using System.Reflection.Emit;
 using System.Threading;
 using System.Runtime.CompilerServices;
 using System.Collections;
+using pr.extn;
 
 namespace System.Linq.Dynamic
 {
@@ -1400,13 +1401,13 @@ namespace System.Linq.Dynamic
 				typeArgs = new Type[] { elementType, args[0].Type };
 				break;
 			case "Select":
-				typeArgs = new Type[] { elementType, args[0].Type.GetGenericArguments().Last() };
+				typeArgs = new Type[] { elementType, args[0].Type.GetGenericArguments().Back() };
 				break;
 			case "OrderBy":
-				typeArgs = new Type[] { elementType, args[0].Type.GetGenericArguments().Last() };
+				typeArgs = new Type[] { elementType, args[0].Type.GetGenericArguments().Back() };
 				break;
 			case "OrderByDescending":
-				typeArgs = new Type[] { elementType, args[0].Type.GetGenericArguments().Last() };
+				typeArgs = new Type[] { elementType, args[0].Type.GetGenericArguments().Back() };
 				break;
 			default:
 				typeArgs = new Type[] { elementType };
@@ -1424,8 +1425,8 @@ namespace System.Linq.Dynamic
 				}
 				else
 				{
-					if (signature.GetParameters().Last().ParameterType == typeof(System.Linq.IQueryable)
-                       || signature.GetParameters().Last().ParameterType == typeof(IEnumerable)
+					if (signature.GetParameters().Back().ParameterType == typeof(System.Linq.IQueryable)
+                       || signature.GetParameters().Back().ParameterType == typeof(IEnumerable)
                        || args[0] is LambdaExpression)
 					{
 						args = new Expression[] { instance, args[0] };

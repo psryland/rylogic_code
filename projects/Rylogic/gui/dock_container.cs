@@ -4980,7 +4980,7 @@ namespace pr.gui
 					var pane = target.DockPane;
 					if (pane == null)
 					{
-						var docksite = DropAddress.Last();
+						var docksite = DropAddress.Back();
 						var rect = DockSiteBounds(docksite, branch.ClientRectangle, branch.DockedMask | (EDockMask)(1 << (int)docksite), branch.DockSizes);
 						bounds = branch.RectangleToScreen(rect);
 						region = new Region(bounds.Size.ToRect());

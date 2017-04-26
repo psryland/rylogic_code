@@ -142,7 +142,7 @@ namespace pr.common
 				foreach (var x in Defs)
 				{
 					x.GenerateContent(sb, tabs, NewLine);
-					if (x != Defs.Last() && NewLine.HasValue())
+					if (x != Defs.Back() && NewLine.HasValue())
 						sb.Append(NewLine).Append('\t', indent >= 0 ? indent : 0);
 				}
 			}
@@ -318,8 +318,8 @@ namespace pr.common
 				//content = WebUtility.HtmlEncode(content);
 			}
 
-			if (m_elems.Count != 0 && m_elems.Last() is Str)
-				m_elems.Last().As<Str>().Content.Append(content);
+			if (m_elems.Count != 0 && m_elems.Back() is Str)
+				m_elems.Back().As<Str>().Content.Append(content);
 			else
 				Add(new Str(content));
 			return this;
@@ -447,7 +447,7 @@ namespace pr.common
 			foreach (var x in m_elems)
 			{
 				x.Generate(sb, indent);
-				if (x != m_elems.Last() && NewLine.HasValue())
+				if (x != m_elems.Back() && NewLine.HasValue())
 					sb.Append(NewLine).Append('\t', indent >= 0 ? indent : 0);
 			}
 		}

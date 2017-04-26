@@ -647,8 +647,8 @@ namespace pr.gui
 				if (!IsInGrid) return -1;
 				if (IsExpanded && Nodes.Count != 0)
 				{
-					Debug.Assert(Nodes.Last().IsInGrid);
-					return Nodes.Last().NextRowIndex;
+					Debug.Assert(Nodes.Back().IsInGrid);
+					return Nodes.Back().NextRowIndex;
 				}
 				return RowIndex + 1;
 			}

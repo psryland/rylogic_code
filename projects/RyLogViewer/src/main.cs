@@ -37,7 +37,6 @@ namespace RyLogViewer
 		private readonly Form[] m_tab_cycle;               // The forms that Ctrl+Tab cycles through
 		private readonly RefCount m_suspend_grid_events;   // A ref count of nested calls that tell event handlers to ignore grid events
 		private EventBatcher m_batch_set_col_size;         // A call batcher for setting the column widths
-		private List<Range> m_line_index;                  // Byte offsets (from file begin) to the byte range of a line
 		private Encoding m_encoding;                       // The file encoding
 		private byte[] m_row_delim;                        // The row delimiter converted from a string to a byte[] using the current encoding
 		private byte[] m_col_delim;                        // The column delimiter, cached to prevent Settings access in CellNeeded
@@ -194,7 +193,6 @@ namespace RyLogViewer
 			m_filters             = new List<Filter>();
 			m_transforms          = new List<Transform>();
 			m_clkactions          = new List<ClkAction>();
-			m_line_index          = new List<Range>();
 			m_suspend_grid_events = new RefCount();
 			m_batch_set_col_size  = new EventBatcher(SetGridColumnSizesImpl, TimeSpan.FromMilliseconds(100));
 			m_tab_cycle           = new Form[]{this, FindUI, BookmarksUI};
@@ -1117,7 +1115,7 @@ namespace RyLogViewer
 				{
 					// Only paint the cell content once, using the last highlight
 					// This is because overdrawing the text looks shit
-					var hl = col.HL.Last();
+					var hl = col.HL.Back();
 					{
 						// Binary match patterns highlight the whole cell
 						if (hl.BinaryMatch)
@@ -1254,9 +1252,10 @@ namespace RyLogViewer
 		/// <summary>Handle key presses on the grid</summary>
 		private void GridKeyDown(object s, KeyEventArgs e)
 		{
-			if (e.KeyCode == Keys.Up || e.KeyCode == Keys.Down ||
-				e.KeyCode == Keys.PageUp || e.KeyCode == Keys.PageDown)
-				LoadNearBoundary();
+			if (e.KeyCode == Keys.Up || e.KeyCode == Keys.PageUp)
+				LoadNearBoundary(-1);
+			if (e.KeyCode == Keys.Down || e.KeyCode == Keys.PageDown)
+				LoadNearBoundary(+1);
 		}
 
 		/// <summary>Handler for mouse down/up events on the grid</summary>
@@ -1265,7 +1264,7 @@ namespace RyLogViewer
 			switch (args.Button)
 			{
 			case MouseButtons.Left:
-				if (!button_down) LoadNearBoundary();
+				if (!button_down) LoadNearBoundary(0);
 				break;
 			case MouseButtons.Right:
 				if (button_down && SelectedRowCount <= 1)
@@ -1357,19 +1356,30 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Tests whether the currently selected row is near the start or end of the line range and causes a reload if it is</summary>
-		private void LoadNearBoundary()
+		private void LoadNearBoundary(int direction)
 		{
-			if (m_grid.RowCount < Constants.AutoScrollAtBoundaryLimit)
-				return;
+			// Do nothing if there is no selected row
 			if (SelectedRowIndex < 0 || SelectedRowIndex >= m_grid.RowCount)
 				return;
 
-			const float Limit = 1f / Constants.AutoScrollAtBoundaryLimit;
-			float ratio = Maths.Frac(0, SelectedRowIndex, m_grid.RowCount - 1);
-			if (ratio < 0f + Limit && LineIndexRange.Beg > m_encoding.GetPreamble().Length)
-				BuildLineIndex(LineStartIndexRange.Beg, false);
-			if (ratio > 1f - Limit && LineIndexRange.End < m_fileend - m_row_delim.Length)
-				BuildLineIndex(LineStartIndexRange.End  , false);
+			// If the RowCount doesn't fill the grid, scroll when the first/last row is selected
+			if (m_grid.RowCount <= m_grid.DisplayedRowCount(true))
+			{
+				if (direction <= 0 && LineIndexRange.Beg > m_encoding.GetPreamble().Length && SelectedRowIndex == 0)
+					BuildLineIndex(LineStartIndexRange.Beg, false);
+				if (direction >= 0 && LineIndexRange.End < m_fileend - m_row_delim.Length && SelectedRowIndex == m_grid.RowCount-1)
+					BuildLineIndex(LineStartIndexRange.End, false);
+			}
+			// Otherwise, scroll when the first/last row is displayed
+			else
+			{
+				var first_displayed = m_grid.FirstDisplayedScrollingRowIndex;
+				var last_displayed = first_displayed + m_grid.DisplayedRowCount(false);
+				if (direction <= 0 && LineIndexRange.Beg > m_encoding.GetPreamble().Length && first_displayed == 0)
+					BuildLineIndex(LineStartIndexRange.Beg, false);
+				if (direction >= 0 && LineIndexRange.End < m_fileend - m_row_delim.Length && last_displayed == m_grid.RowCount-1)
+					BuildLineIndex(LineStartIndexRange.End, false);
+			}
 		}
 
 		/// <summary>Handle key down events for the main form</summary>
@@ -1982,6 +1992,7 @@ namespace RyLogViewer
 				int first_vis = m_grid.FirstDisplayedScrollingRowIndex;
 				var selected = SelectedRowIndex;
 				var selected_rows = m_grid.SelectedRows.Cast<DataGridViewRow>().Select(x => x.Index).OrderBy(x => x).ToList();
+				var selection_anchor = m_grid.SelectionAnchorCell;
 				SelectedRowIndex = -1;
 				m_grid.ClearSelection();
 
@@ -2019,13 +2030,18 @@ namespace RyLogViewer
 						// Select the rows that were previously selected.
 						// Find the index of the first selected row that is within the new range
 						int rd = row_delta; // modified closure...
-						int i = selected_rows.BinarySearch(x => x.CompareTo(-rd));
-						for (i = (i >= 0) ? i : ~i; i != selected_rows.Count; ++i)
+						int i = selected_rows.BinarySearch(x => x.CompareTo(-rd), find_insert_position:true);
+						for (; i != selected_rows.Count; ++i)
 						{
 							var s = selected_rows[i] + row_delta;
 							if (s >= count) break; // can stop at the first selected row outside the new range
 							m_grid.Rows[s].Selected = true;
 						}
+
+						// Set the anchor cell to preserve shift-selections
+						if (selection_anchor.Y != -1)
+							selection_anchor.Y = Maths.Clamp(selection_anchor.Y + row_delta, 0, m_grid.RowCount - 1);
+						m_grid.SelectionAnchorCell = selection_anchor;
 
 						// Restore the first visible row after setting the current selected row, because
 						// changing the 'CurrentCell' also changes the scroll position

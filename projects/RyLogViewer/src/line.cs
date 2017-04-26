@@ -2,10 +2,12 @@
 using System.Linq;
 using System.Text;
 using System.Drawing;
+using System.Diagnostics;
 
 namespace RyLogViewer
 {
 	/// <summary>A cached line from the log file</summary>
+	[DebuggerDisplay("[{LineStartAddr}] {RowText}")]
 	public class Line :ILogDataRow
 	{
 		public Line()
