@@ -2330,7 +2330,7 @@ namespace RyLogViewer
 				// Selection
 				var sel_range = m_grid.SelectedRowIndexRange();
 				var rg = (r != -1) ? new Range(m_line_index[sel_range.Begi].Beg, m_line_index[sel_range.Endi].End) : SelectedRowByteRange;
-				m_status_selection.Text = "Selection: [{0:N0} {1:N0}) ({2} bytes)".Fmt(rg.Beg, rg.End, rg.Size);
+				m_status_selection.Text = "Selection: [{0:N0} - {1:N0}] ({2} bytes)".Fmt(rg.Beg, rg.End, rg.Size);
 				m_status_selection.Visible = true;
 
 				// Line ending characters
