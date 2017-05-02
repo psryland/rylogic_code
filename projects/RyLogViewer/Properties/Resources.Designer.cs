@@ -61,44 +61,6 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Action.
-        /// </summary>
-        public static string Action {
-            get {
-                return ResourceManager.GetString("Action", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Active.
-        /// </summary>
-        public static string Active {
-            get {
-                return ResourceManager.GetString("Active", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Assume log file changes are additive only. If enabled, only additions to the
-        ///file will be scanned allowing increased performance. The view may get out of sync if the
-        ///log file is modified in a way that isn&apos;t additive (e.g. lines swapped, deleted, etc).
-        /// </summary>
-        public static string AdditiveMode {
-            get {
-                return ResourceManager.GetString("AdditiveMode", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to RyLogViewer.
-        /// </summary>
-        public static string AppTitle {
-            get {
-                return ResourceManager.GetString("AppTitle", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
         public static System.Drawing.Bitmap background {
@@ -115,15 +77,6 @@ namespace RyLogViewer.Properties {
             get {
                 object obj = ResourceManager.GetObject("background2", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Binary Match.
-        /// </summary>
-        public static string BinaryMatch {
-            get {
-                return ResourceManager.GetString("BinaryMatch", resourceCulture);
             }
         }
         
@@ -158,89 +111,6 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Building line index.
-        /// </summary>
-        public static string BuildingLineIndex {
-            get {
-                return ResourceManager.GetString("BuildingLineIndex", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to The was an error while parsing the log file.
-        ///Error Details:
-        ///{0}.
-        /// </summary>
-        public static string BuildLineIndexErrorMsg {
-            get {
-                return ResourceManager.GetString("BuildLineIndexErrorMsg", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Change Background Colour.
-        /// </summary>
-        public static string ChangeBackColour {
-            get {
-                return ResourceManager.GetString("ChangeBackColour", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Change Foreground Colour.
-        /// </summary>
-        public static string ChangeForeColour {
-            get {
-                return ResourceManager.GetString("ChangeForeColour", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Choose an output file name.
-        /// </summary>
-        public static string ChooseOutputFileName {
-            get {
-                return ResourceManager.GetString("ChooseOutputFileName", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Clear Log Failed.
-        /// </summary>
-        public static string ClearLogFailed {
-            get {
-                return ResourceManager.GetString("ClearLogFailed", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Click here to modify action.
-        /// </summary>
-        public static string ClickToModifyAction {
-            get {
-                return ResourceManager.GetString("ClickToModifyAction", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Click to change colours.
-        /// </summary>
-        public static string ClickToModifyHighlight {
-            get {
-                return ResourceManager.GetString("ClickToModifyHighlight", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Colours.
-        /// </summary>
-        public static string Colours {
-            get {
-                return ResourceManager.GetString("Colours", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to ﻿&lt;!DOCTYPE HTML&gt;
         ///&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
         ///	&lt;head&gt;
@@ -254,71 +124,18 @@ namespace RyLogViewer.Properties {
         ///		&lt;style type=&quot;text/css&quot;&gt;
         ///			* {
         ///				font-family: sans-serif;
-        ///				font-size: 12pt;
+        ///				font-size: 100%;
+        ///				font-weight: normal;
         ///			}
         ///		
-        ///			body {
-        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xh [rest of string was truncated]&quot;;.
+        ///			table {
+        ///				border: 1px solid #006000;
+        ///				border-collapse: collapse;
+        ///				width: 100% [rest of string was truncated]&quot;;.
         /// </summary>
         public static string command_line_ref {
             get {
                 return ResourceManager.GetString("command_line_ref", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Confirm Clear Log.
-        /// </summary>
-        public static string ConfirmClearLog {
-            get {
-                return ResourceManager.GetString("ConfirmClearLog", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Confirm Delete.
-        /// </summary>
-        public static string ConfirmDelete {
-            get {
-                return ResourceManager.GetString("ConfirmDelete", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Confirm Overwrite.
-        /// </summary>
-        public static string ConfirmOverwrite {
-            get {
-                return ResourceManager.GetString("ConfirmOverwrite", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Could not delete pattern set file {0}.
-        ///Error: {1}.
-        /// </summary>
-        public static string CouldNotDeletePatternSetFileX {
-            get {
-                return ResourceManager.GetString("CouldNotDeletePatternSetFileX", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Add Pattern Set Failed.
-        /// </summary>
-        public static string CreatePatternSetFailed {
-            get {
-                return ResourceManager.GetString("CreatePatternSetFailed", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Could not create a pattern set from the current patterns.
-        ///{0}.
-        /// </summary>
-        public static string CreatePatternSetFailedMsg {
-            get {
-                return ResourceManager.GetString("CreatePatternSetFailedMsg", resourceCulture);
             }
         }
         
@@ -407,42 +224,6 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to CSV Files (*.csv)|*.csv|All files (*.*)|*.*.
-        /// </summary>
-        public static string CSVFileFilter {
-            get {
-                return ResourceManager.GetString("CSVFileFilter", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Delete Failed.
-        /// </summary>
-        public static string DeleteFailed {
-            get {
-                return ResourceManager.GetString("DeleteFailed", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Delete pattern set file &apos;{0}&apos;?.
-        /// </summary>
-        public static string DeletePatternSetFileX {
-            get {
-                return ResourceManager.GetString("DeletePatternSetFileX", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Edit.
-        /// </summary>
-        public static string Edit {
-            get {
-                return ResourceManager.GetString("Edit", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
         public static System.Drawing.Bitmap edit_add {
@@ -473,39 +254,12 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Encoding: {0}.
-        /// </summary>
-        public static string EncodingX {
-            get {
-                return ResourceManager.GetString("EncodingX", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
         public static System.Drawing.Bitmap exchange {
             get {
                 object obj = ResourceManager.GetObject("exchange", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Exclude.
-        /// </summary>
-        public static string Exclude {
-            get {
-                return ResourceManager.GetString("Exclude", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Executables (*.exe;*.bat;*.cmd;*.com)|*.exe;*.bat;*.cmd;*.com|All files (*.*)|*.*.
-        /// </summary>
-        public static string ExecutablesFilter {
-            get {
-                return ResourceManager.GetString("ExecutablesFilter", resourceCulture);
             }
         }
         
@@ -520,57 +274,12 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Export Complete.
-        /// </summary>
-        public static string ExportComplete {
-            get {
-                return ResourceManager.GetString("ExportComplete", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Export completed successfully.
-        /// </summary>
-        public static string ExportCompletedSuccessfully {
-            get {
-                return ResourceManager.GetString("ExportCompletedSuccessfully", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Export Failed.
-        /// </summary>
-        public static string ExportFailed {
-            get {
-                return ResourceManager.GetString("ExportFailed", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
         public static System.Drawing.Bitmap Eyeball {
             get {
                 object obj = ResourceManager.GetObject("Eyeball", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Failed to Launch Process.
-        /// </summary>
-        public static string FailedToLaunchProcess {
-            get {
-                return ResourceManager.GetString("FailedToLaunchProcess", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Failed to load file.
-        /// </summary>
-        public static string FailedToLoadFile {
-            get {
-                return ResourceManager.GetString("FailedToLoadFile", resourceCulture);
             }
         }
         
@@ -685,24 +394,6 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Idle.
-        /// </summary>
-        public static string Idle {
-            get {
-                return ResourceManager.GetString("Idle", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to If Match....
-        /// </summary>
-        public static string IfMatch {
-            get {
-                return ResourceManager.GetString("IfMatch", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
         public static System.Drawing.Bitmap important {
@@ -713,111 +404,12 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Invalid File Path.
-        /// </summary>
-        public static string InvalidFilePath {
-            get {
-                return ResourceManager.GetString("InvalidFilePath", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Line Ending: {0}.
-        /// </summary>
-        public static string LineEndingX {
-            get {
-                return ResourceManager.GetString("LineEndingX", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Line: {0}/{1}.
-        /// </summary>
-        public static string LineXofY {
-            get {
-                return ResourceManager.GetString("LineXofY", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Load Pattern Set Failed.
-        /// </summary>
-        public static string LoadPatternSetFailed {
-            get {
-                return ResourceManager.GetString("LoadPatternSetFailed", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Could not load pattern set. {0}.
-        /// </summary>
-        public static string LoadPatternSetFailedMsg {
-            get {
-                return ResourceManager.GetString("LoadPatternSetFailedMsg", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Text Files (*.txt;*.log;*.csv)|*.txt;*.log;*.csv|All files (*.*)|*.*.
-        /// </summary>
-        public static string LogFileFilter {
-            get {
-                return ResourceManager.GetString("LogFileFilter", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to No File.
-        /// </summary>
-        public static string NoFile {
-            get {
-                return ResourceManager.GetString("NoFile", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Open a log file.
-        /// </summary>
-        public static string OpenLogFile {
-            get {
-                return ResourceManager.GetString("OpenLogFile", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
         public static System.Drawing.Bitmap options {
             get {
                 object obj = ResourceManager.GetObject("options", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Output file missing.
-        /// </summary>
-        public static string OutputFileMissing {
-            get {
-                return ResourceManager.GetString("OutputFileMissing", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Output file missing. Please select a file to export to.
-        /// </summary>
-        public static string OutputFileMissingMsg {
-            get {
-                return ResourceManager.GetString("OutputFileMissingMsg", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Pattern.
-        /// </summary>
-        public static string Pattern {
-            get {
-                return ResourceManager.GetString("Pattern", resourceCulture);
             }
         }
         
@@ -852,15 +444,6 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Position: {0} / {1} bytes.
-        /// </summary>
-        public static string PositionXofYBytes {
-            get {
-                return ResourceManager.GetString("PositionXofYBytes", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
         ///&lt;RSAKeyValue&gt;
         ///  &lt;Modulus&gt;miDmCy/hXV9YZFFc3sOKcYDDV2e49MeRvCb2ghpJBQFnSRVCeAmRtc8Vfm4meMuye/tnDGcYWf1t5J1llYstA1+26/AuTPDCrTXEU/FObmIWUwfpzlWfh4ZBzx0hBDJFUpWbncCKXvOxIubc1NhMDK1yuYLG2FEucx6V/yLcEiU=&lt;/Modulus&gt;
@@ -884,124 +467,12 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Quick filter; keep highlighted rows only.
-        /// </summary>
-        public static string QuickFilter {
-            get {
-                return ResourceManager.GetString("QuickFilter", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Reading File Failed.
-        /// </summary>
-        public static string ReadingFileFailed {
-            get {
-                return ResourceManager.GetString("ReadingFileFailed", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Reading the last {0} lines from {1}.
-        /// </summary>
-        public static string ReadingXLineFromY {
-            get {
-                return ResourceManager.GetString("ReadingXLineFromY", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
         public static System.Drawing.Bitmap Refresh {
             get {
                 object obj = ResourceManager.GetObject("Refresh", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Reload the current log file.
-        /// </summary>
-        public static string ReloadLogFile {
-            get {
-                return ResourceManager.GetString("ReloadLogFile", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Highlight.
-        /// </summary>
-        public static string RowHighlight {
-            get {
-                return ResourceManager.GetString("RowHighlight", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Settings Files (*.xml)|*.xml|All files (*.*)|*.*.
-        /// </summary>
-        public static string SettingsFileFilter {
-            get {
-                return ResourceManager.GetString("SettingsFileFilter", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Left click to enable/disable actions.
-        ///Right click to show the actions dialog.
-        /// </summary>
-        public static string ShowActionsDialog {
-            get {
-                return ResourceManager.GetString("ShowActionsDialog", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Show the bookmarks dialog.
-        /// </summary>
-        public static string ShowBookmarksDialog {
-            get {
-                return ResourceManager.GetString("ShowBookmarksDialog", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Left click to enable/disable filters.
-        ///Right click to show the filters dialog.
-        /// </summary>
-        public static string ShowFiltersDialog {
-            get {
-                return ResourceManager.GetString("ShowFiltersDialog", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Show the find dialog.
-        /// </summary>
-        public static string ShowFindDialog {
-            get {
-                return ResourceManager.GetString("ShowFindDialog", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Left click to enable/disable highlighting.
-        ///Right click to show the highlighting dialog.
-        /// </summary>
-        public static string ShowHighlightsDialog {
-            get {
-                return ResourceManager.GetString("ShowHighlightsDialog", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Left click to enable/disable transforms.
-        ///Right click to show the transforms dialog.
-        /// </summary>
-        public static string ShowTransformsDialog {
-            get {
-                return ResourceManager.GetString("ShowTransformsDialog", resourceCulture);
             }
         }
         
@@ -1018,11 +489,15 @@ namespace RyLogViewer.Properties {
         ///		&lt;style type=&quot;text/css&quot;&gt;
         ///			* {
         ///				font-family: sans-serif;
-        ///				font-size: 12pt;
+        ///				font-size: 100%;
+        ///				font-weight: normal;
         ///			}
         ///		
-        ///			body {
-        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhBQAAAAlwSFl [rest of string was truncated]&quot;;.
+        ///			table {
+        ///				border: 1px solid #006000;
+        ///				border-collapse: collapse;
+        ///				width: 100%;
+        ///				marg [rest of string was truncated]&quot;;.
         /// </summary>
         public static string swizzle_quick_ref {
             get {
@@ -1068,24 +543,18 @@ namespace RyLogViewer.Properties {
         ///		&lt;style type=&quot;text/css&quot;&gt;
         ///			* {
         ///				font-family: sans-serif;
-        ///				font-size: 12pt;
+        ///				font-size: 100%;
+        ///				font-weight: normal;
         ///			}
         ///		
-        ///			body {
-        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUE [rest of string was truncated]&quot;;.
+        ///			table {
+        ///				border: 1px solid #006000;
+        ///				border-collapse: collapse;
+        ///				wi [rest of string was truncated]&quot;;.
         /// </summary>
         public static string transform_quick_ref {
             get {
                 return ResourceManager.GetString("transform_quick_ref", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Unknown command line option.
-        /// </summary>
-        public static string UnknownCmdLineOption {
-            get {
-                return ResourceManager.GetString("UnknownCmdLineOption", resourceCulture);
             }
         }
         
@@ -1103,42 +572,19 @@ namespace RyLogViewer.Properties {
         ///		&lt;style type=&quot;text/css&quot;&gt;
         ///			* {
         ///				font-family: sans-serif;
-        ///				font-size: 12pt;
+        ///				font-size: 100%;
+        ///				font-weight: normal;
         ///			}
         ///		
-        ///			body {
-        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhBQAAA [rest of string was truncated]&quot;;.
+        ///			table {
+        ///				border: 1px solid #006000;
+        ///				border-collapse: collapse;
+        ///				width: 100%;
+        ///		 [rest of string was truncated]&quot;;.
         /// </summary>
         public static string version_history {
             get {
                 return ResourceManager.GetString("version_history", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Watch the file and update automatically when it changes.
-        /// </summary>
-        public static string WatchForUpdates {
-            get {
-                return ResourceManager.GetString("WatchForUpdates", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Automatically scroll to the bottom of the log as new data is loaded.
-        /// </summary>
-        public static string WatchTail {
-            get {
-                return ResourceManager.GetString("WatchTail", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to XML Files (*.xml)|*.xml|CSV Files (*.csv)|*.csv.
-        /// </summary>
-        public static string XmlOrCsvFileFilter {
-            get {
-                return ResourceManager.GetString("XmlOrCsvFileFilter", resourceCulture);
             }
         }
     }

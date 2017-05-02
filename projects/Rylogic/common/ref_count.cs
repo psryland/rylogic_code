@@ -18,9 +18,10 @@ namespace pr.common
 		}
 
 		/// <summary>Returns a disposable object that increases the reference count and decreases it on disposing. Use in a using block</summary>
-		public Scope Reference
+		public Scope Scope()
 		{
-			get { return Scope.Create(() => ++Count, () => --Count); }
+			// Not a property so references aren't added by the debugger
+			return util.Scope.Create(() => ++Count, () => --Count);
 		}
 
 		/// <summary>Explicitly add a reference</summary>

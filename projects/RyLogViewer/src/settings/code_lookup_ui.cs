@@ -59,7 +59,7 @@ namespace RyLogViewer
 		private void ExportCodeLookupList()
 		{
 			// Prompt for the file to save
-			var dg = new SaveFileDialog {Title = "Export code lookup list", Filter = Resources.XmlOrCsvFileFilter};
+			var dg = new SaveFileDialog {Title = "Export code lookup list", Filter = Constants.XmlOrCsvFileFilter};
 			if (dg.ShowDialog(this) != DialogResult.OK) return;
 
 			try
@@ -114,7 +114,7 @@ namespace RyLogViewer
 			}
 
 			// Prompt for the file to load
-			var dg = new OpenFileDialog {Title = "Import code lookup list", Filter = Resources.XmlOrCsvFileFilter};
+			var dg = new OpenFileDialog {Title = "Import code lookup list", Filter = Constants.XmlOrCsvFileFilter};
 			if (dg.ShowDialog(this) != DialogResult.OK) return;
 
 			try

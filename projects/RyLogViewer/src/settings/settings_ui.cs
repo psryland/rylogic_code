@@ -450,7 +450,7 @@ namespace RyLogViewer
 				var dg = new OpenFileDialog
 				{
 					Title = "Choose a settings file to load",
-					Filter = Resources.SettingsFileFilter,
+					Filter = Constants.SettingsFileFilter,
 					CheckFileExists = true,
 					InitialDirectory = Path.GetDirectoryName(Settings.Filepath)
 				};
@@ -471,7 +471,7 @@ namespace RyLogViewer
 				var dg = new SaveFileDialog
 				{
 					Title = "Save current settings",
-					Filter = Resources.SettingsFileFilter,
+					Filter = Constants.SettingsFileFilter,
 					CheckPathExists = true,
 					InitialDirectory = Path.GetDirectoryName(Settings.Filepath)
 				};
@@ -638,11 +638,11 @@ namespace RyLogViewer
 			m_grid_highlight.VirtualMode         = true;
 			m_grid_highlight.AutoGenerateColumns = false;
 			m_grid_highlight.ColumnCount         = m_grid_highlight.RowCount = 0;
-			m_grid_highlight.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Active    ,HeaderText = Resources.Active       ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Active});
-			m_grid_highlight.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Pattern   ,HeaderText = Resources.Pattern      ,FillWeight = 100 ,ReadOnly = true ,ToolTipText = ColumnTT.Pattern});
-			m_grid_highlight.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Highlight ,HeaderText = Resources.RowHighlight ,FillWeight = 30  ,ReadOnly = true ,ToolTipText = ColumnTT.Highlight});
-			m_grid_highlight.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Colours   ,HeaderText = Resources.Colours      ,FillWeight = 100 ,ReadOnly = true ,DefaultCellStyle = hl_style ,ToolTipText = ColumnTT.Colours});
-			m_grid_highlight.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Edit      ,HeaderText = Resources.Edit         ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Edit});
+			m_grid_highlight.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Active    ,HeaderText = "Active"   ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Active});
+			m_grid_highlight.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Pattern   ,HeaderText = "Pattern"  ,FillWeight = 100 ,ReadOnly = true ,ToolTipText = ColumnTT.Pattern});
+			m_grid_highlight.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Highlight ,HeaderText = "Highlight",FillWeight = 30  ,ReadOnly = true ,ToolTipText = ColumnTT.Highlight});
+			m_grid_highlight.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Colours   ,HeaderText = "Colours"  ,FillWeight = 100 ,ReadOnly = true ,DefaultCellStyle = hl_style ,ToolTipText = ColumnTT.Colours});
+			m_grid_highlight.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Edit      ,HeaderText = "Edit"     ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Edit});
 			m_grid_highlight.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_highlight.KeyDown                    += DataGridViewEx.Copy;
 			m_grid_highlight.KeyDown                    += DataGridViewEx.SelectAll;
@@ -675,10 +675,10 @@ namespace RyLogViewer
 			m_grid_filter.VirtualMode         = true;
 			m_grid_filter.AutoGenerateColumns = false;
 			m_grid_filter.ColumnCount         = m_grid_filter.RowCount = 0;
-			m_grid_filter.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Active    ,HeaderText = Resources.Active  ,FillWeight = 25  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Active});
-			m_grid_filter.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Behaviour ,HeaderText = Resources.IfMatch ,FillWeight = 25  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ToolTipText = ColumnTT.Behaviour});
-			m_grid_filter.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Pattern   ,HeaderText = Resources.Pattern ,FillWeight = 100 ,ReadOnly = true ,ToolTipText = ColumnTT.Pattern});
-			m_grid_filter.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Edit      ,HeaderText = Resources.Edit    ,FillWeight = 15  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Edit});
+			m_grid_filter.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Active    ,HeaderText = "Active"      ,FillWeight = 25  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Active});
+			m_grid_filter.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Behaviour ,HeaderText = "If Match..." ,FillWeight = 25  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ToolTipText = ColumnTT.Behaviour});
+			m_grid_filter.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Pattern   ,HeaderText = "Pattern"     ,FillWeight = 100 ,ReadOnly = true ,ToolTipText = ColumnTT.Pattern});
+			m_grid_filter.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Edit      ,HeaderText = "Edit"        ,FillWeight = 15  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Edit});
 			m_grid_filter.ClipboardCopyMode   = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_filter.KeyDown            += DataGridViewEx.Copy;
 			m_grid_filter.KeyDown            += DataGridViewEx.SelectAll;
@@ -722,9 +722,9 @@ namespace RyLogViewer
 			m_grid_transform.VirtualMode         = true;
 			m_grid_transform.AutoGenerateColumns = false;
 			m_grid_transform.ColumnCount         = m_grid_transform.RowCount = 0;
-			m_grid_transform.Columns.Add(new DataGridViewImageColumn  {Name = ColumnNames.Active  ,HeaderText = Resources.Active  ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Active});
-			m_grid_transform.Columns.Add(new DataGridViewTextBoxColumn{Name = ColumnNames.Pattern ,HeaderText = Resources.Pattern ,FillWeight = 100 ,ReadOnly = true ,ToolTipText = ColumnTT.Pattern});
-			m_grid_transform.Columns.Add(new DataGridViewImageColumn  {Name = ColumnNames.Edit    ,HeaderText = Resources.Edit    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Edit});
+			m_grid_transform.Columns.Add(new DataGridViewImageColumn  {Name = ColumnNames.Active  ,HeaderText = "Active"  ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Active});
+			m_grid_transform.Columns.Add(new DataGridViewTextBoxColumn{Name = ColumnNames.Pattern ,HeaderText = "Pattern" ,FillWeight = 100 ,ReadOnly = true ,ToolTipText = ColumnTT.Pattern});
+			m_grid_transform.Columns.Add(new DataGridViewImageColumn  {Name = ColumnNames.Edit    ,HeaderText = "Edit"    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Edit});
 			m_grid_transform.ClipboardCopyMode   = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_transform.KeyDown            += DataGridViewEx.Copy;
 			m_grid_transform.KeyDown            += DataGridViewEx.SelectAll;
@@ -757,10 +757,10 @@ namespace RyLogViewer
 			m_grid_action.VirtualMode         = true;
 			m_grid_action.AutoGenerateColumns = false;
 			m_grid_action.ColumnCount         = m_grid_action.RowCount = 0;
-			m_grid_action.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Active      ,HeaderText = Resources.Active  ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Active});
-			m_grid_action.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Pattern     ,HeaderText = Resources.Pattern ,FillWeight = 100 ,ReadOnly = true ,ToolTipText = ColumnTT.Pattern});
-			m_grid_action.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.ClickAction ,HeaderText = Resources.Action  ,FillWeight = 100 ,ReadOnly = true ,ToolTipText = ColumnTT.ClickAction});
-			m_grid_action.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Edit        ,HeaderText = Resources.Edit    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Edit});
+			m_grid_action.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Active      ,HeaderText = "Active" ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Active});
+			m_grid_action.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Pattern     ,HeaderText = "Pattern" ,FillWeight = 100 ,ReadOnly = true ,ToolTipText = ColumnTT.Pattern});
+			m_grid_action.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.ClickAction ,HeaderText = "Action" ,FillWeight = 100 ,ReadOnly = true ,ToolTipText = ColumnTT.ClickAction});
+			m_grid_action.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Edit        ,HeaderText = "Edit"    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Edit});
 			m_grid_action.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_action.KeyDown                    += DataGridViewEx.Copy;
 			m_grid_action.KeyDown                    += DataGridViewEx.SelectAll;
@@ -812,25 +812,25 @@ namespace RyLogViewer
 			m_grid_highlight.CurrentCell = null;
 			m_grid_highlight.RowCount = 0;
 			m_grid_highlight.RowCount = Settings.Patterns.Highlights.Count;
-			m_grid_highlight.SelectRow(selected);
+			m_grid_highlight.SelectSingleRow(selected);
 
 			selected = m_grid_filter.FirstSelectedRowIndex();
 			m_grid_filter.CurrentCell = null;
 			m_grid_filter.RowCount = 0;
 			m_grid_filter.RowCount = Settings.Patterns.Filters.Count;
-			m_grid_filter.SelectRow(selected);
+			m_grid_filter.SelectSingleRow(selected);
 
 			selected = m_grid_transform.FirstSelectedRowIndex();
 			m_grid_transform.CurrentCell = null;
 			m_grid_transform.RowCount = 0;
 			m_grid_transform.RowCount = Settings.Patterns.Transforms.Count;
-			m_grid_transform.SelectRow(selected);
+			m_grid_transform.SelectSingleRow(selected);
 
 			selected = m_grid_action.FirstSelectedRowIndex();
 			m_grid_action.CurrentCell = null;
 			m_grid_action.RowCount = 0;
 			m_grid_action.RowCount = Settings.Patterns.Actions.Count;
-			m_grid_action.SelectRow(selected);
+			m_grid_action.SelectSingleRow(selected);
 
 			m_text_settings.Text = Settings.Filepath;
 
@@ -1020,7 +1020,7 @@ namespace RyLogViewer
 				e.Value = val;
 				break;
 			case ColumnNames.Colours:
-				e.Value = Resources.ClickToModifyHighlight;
+				e.Value = "Click to change colours";
 				cell.Style.BackColor = cell.Style.SelectionBackColor = hl != null ? Gfx.Blend(Color.FromArgb(255, hl.BackColour), Color.White, 1f - hl.BackColour.A/255f) : Color.White;
 				cell.Style.ForeColor = cell.Style.SelectionForeColor = hl != null ? hl.ForeColour : Color.White;
 				break;
@@ -1036,7 +1036,7 @@ namespace RyLogViewer
 				}
 				break;
 			case ColumnNames.ClickAction:
-				e.Value = ac != null && !string.IsNullOrEmpty(ac.Executable) ? ac.ActionString : Resources.ClickToModifyAction;
+				e.Value = ac != null && !string.IsNullOrEmpty(ac.Executable) ? ac.ActionString : "Click here to modify action";
 				break;
 			}
 		}

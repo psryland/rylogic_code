@@ -6,6 +6,7 @@ using pr.extn;
 using pr.gui;
 using pr.util;
 using ListBox = pr.gui.ListBox;
+using DataGridView = pr.gui.DataGridView;
 
 namespace TestCS
 {

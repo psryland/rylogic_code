@@ -66,14 +66,14 @@ namespace RyLogViewer
 
 									done.WaitOne();
 									if (!startup_options.Silent)
-										Console.WriteLine(Resources.ExportCompletedSuccessfully);
+										Console.WriteLine("Export completed successfully.");
 								}
 							}
 							else
 							{
 								if (m.DoExportWithProgress(d, rng, row_delimiter, col_delimiter, outp))
 									if (!startup_options.Silent)
-										Console.WriteLine(Resources.ExportCompletedSuccessfully);
+										Console.WriteLine("Export completed successfully.");
 							}
 						}
 					}
@@ -137,12 +137,12 @@ namespace RyLogViewer
 					{
 						var d = new BLIData(this, Src);
 						if (DoExportWithProgress(d, rng, row_delimiter, col_delimiter, outp))
-							MsgBox.Show(this, Resources.ExportCompletedSuccessfully, Resources.ExportComplete, MessageBoxButtons.OK);
+							MsgBox.Show(this, "Export completed successfully.", Application.ProductName, MessageBoxButtons.OK);
 					}
 					catch (Exception ex)
 					{
 						Log.Exception(this, ex, "Export failed");
-						MsgBox.Show(this, string.Format("Export failed.\r\nError: {0}", ex.Message), Resources.ExportFailed, MessageBoxButtons.OK);
+						MsgBox.Show(this, string.Format("Export failed.\r\n{0}", ex.Message), Application.ProductName, MessageBoxButtons.OK);
 					}
 				}
 			}

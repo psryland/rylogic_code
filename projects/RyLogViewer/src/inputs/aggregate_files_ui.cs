@@ -1,73 +1,143 @@
 ﻿using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using RyLogViewer.Properties;
 using pr.extn;
 using pr.util;
+using System;
+using pr.container;
 
 namespace RyLogViewer
 {
 	public sealed class AggregateFilesUI :Form
 	{
-		private readonly BindingList<FileInfo> m_filepaths;
-		private readonly BindingSource m_bs_filepaths;
-		private readonly DragDrop m_dragdrop;
+		#region UI Elements
 		private DataGridView m_grid;
 		private Label m_lbl_instructions;
 		private Button m_btn_ok;
 		private Button m_btn_add_files;
 		private Button m_btn_cancel;
-		private readonly ToolTip m_tt;
-
-		/// <summary>The selected filepaths</summary>
-		public IEnumerable<string> Filepaths { get { return m_filepaths.Select(x => x.FullName); } }
+		private ToolTip m_tt;
+		#endregion
 
 		public AggregateFilesUI(Main main)
 		{
 			InitializeComponent();
-			m_filepaths = new BindingList<FileInfo>();
-			m_bs_filepaths = new BindingSource{DataSource = m_filepaths};
-			m_tt = new ToolTip();
-
-			m_dragdrop = new DragDrop();
-			m_dragdrop.DoDrop += DropFiles;
-			m_dragdrop.DoDrop += DataGridViewEx.DragDrop_DoDropMoveRow;
-
-			// Allow file drop on the form
 			AllowDrop = true;
-			m_dragdrop.Attach(this);
+			Main = main;
+			FileInfos = new BindingSource<FileInfo> { DataSource = new BindingListEx<FileInfo>() };
+			DD = new DragDrop();
 
+			SetupUI();
+		}
+		protected override void Dispose(bool disposing)
+		{
+			DD = null;
+			FileInfos = null;
+			Main = null;
+			Util.Dispose(ref components);
+			base.Dispose(disposing);
+		}
+		protected override void OnShown(EventArgs e)
+		{
+			base.OnShown(e);
+			Main.UseLicensedFeature(FeatureName.AggregateFiles, new AggregateFileLimiter(Main, this));
+		}
+		protected override void OnClosed(EventArgs e)
+		{
+			base.OnClosed(e);
+			Main.UseLicensedFeature(FeatureName.AggregateFiles, new AggregateFileLimiter(Main, null));
+		}
+
+		/// <summary>The main app</summary>
+		private Main Main
+		{
+			get { return m_main; }
+			set
+			{
+				if (m_main == value) return;
+				m_main = value;
+			}
+		}
+		private Main m_main;
+
+		/// <summary>The selected filepaths</summary>
+		public IEnumerable<string> Filepaths
+		{
+			get { return FileInfos.Select(x => x.FullName); }
+		}
+
+		/// <summary>The filepaths that make up the aggregate file</summary>
+		private BindingSource<FileInfo> FileInfos
+		{
+			get { return m_fileinfo; }
+			set
+			{
+				if (m_fileinfo == value) return;
+				if (m_fileinfo != null)
+				{
+					m_fileinfo.ListChanging -= HandleFileInfosListChanging;
+				}
+				m_fileinfo = value;
+				if (m_fileinfo != null)
+				{
+					m_fileinfo.ListChanging += HandleFileInfosListChanging;
+				}
+			}
+		}
+		private BindingSource<FileInfo> m_fileinfo;
+		private void HandleFileInfosListChanging(object sender, ListChgEventArgs<FileInfo> e)
+		{
+			m_btn_ok.Enabled = FileInfos.Count != 0;
+		}
+
+		/// <summary>Drag drop handler</summary>
+		private DragDrop DD
+		{
+			get { return m_dd; }
+			set
+			{
+				if (m_dd == value) return;
+				if (m_dd != null)
+				{
+					m_dd.DoDrop -= DataGridViewEx.DragDrop_DoDropMoveRow;
+					m_dd.DoDrop -= DropFiles;
+					m_dd.Detach(m_grid);
+					m_dd.Detach(this);
+				}
+				m_dd = value;
+				if (m_dd != null)
+				{
+					m_dd.Attach(this);
+					m_dd.Attach(m_grid);
+					m_dd.DoDrop += DropFiles;
+					m_dd.DoDrop += DataGridViewEx.DragDrop_DoDropMoveRow;
+				}
+			}
+		}
+		private DragDrop m_dd;
+
+		/// <summary>Set up UI elements</summary>
+		private void SetupUI()
+		{
+			// Files grid
 			m_grid.AllowDrop = true;
 			m_grid.AutoGenerateColumns = false;
 			m_grid.Columns.Add(new DataGridViewTextBoxColumn{HeaderText = "File Path", DataPropertyName = nameof(FileInfo.FullName)});
-			m_grid.DataSource = m_bs_filepaths;
+			m_grid.DataSource = FileInfos;
 			m_grid.MouseDown += DataGridViewEx.DragDrop_DragRow;
-			m_dragdrop.Attach(m_grid);
 
+			// Add files
 			m_btn_add_files.ToolTip(m_tt, "Browse for files to add");
 			m_btn_add_files.Click += (s,a) =>
-				{
-					var dlg = new OpenFileDialog{Filter = Resources.LogFileFilter, Multiselect = true};
-					if (dlg.ShowDialog(this) != DialogResult.OK) return;
-					m_filepaths.AddRange(dlg.FileNames.Select(x => new FileInfo(x)));
-				};
+			{
+				var dlg = new OpenFileDialog{Filter = Constants.LogFileFilter, Multiselect = true};
+				if (dlg.ShowDialog(this) != DialogResult.OK) return;
+				FileInfos.AddRange(dlg.FileNames.Select(x => new FileInfo(x)));
+			};
 
-			// Enabled the ok button when there is one or more files
+			// Disable OK till there are files
 			m_btn_ok.Enabled = false;
-			m_bs_filepaths.ListChanged += (s,a) =>
-				{
-					m_btn_ok.Enabled = m_bs_filepaths.Count != 0;
-				};
-
-			Shown  += (s,a) => main.UseLicensedFeature(FeatureName.AggregateFiles, new AggregateFileLimiter(main,this));
-			Closed += (s,a) => main.UseLicensedFeature(FeatureName.AggregateFiles, new AggregateFileLimiter(main,null));
-
-			Disposed += (s,a) =>
-				{
-					m_tt.Dispose();
-				};
 		}
 
 		/// <summary>Drop file paths into the grid</summary>
@@ -82,47 +152,28 @@ namespace RyLogViewer
 				return true;
 
 			var filepaths = (string[])args.Data.GetData(DataFormats.FileDrop);
-			m_filepaths.AddRange(filepaths.Select(x => new FileInfo(x)));
+			FileInfos.AddRange(filepaths.Select(x => new FileInfo(x)));
 			return true;
 		}
 
 		#region Windows Form Designer generated code
-
-		/// <summary>
-		/// Required designer variable.
-		/// </summary>
 		private System.ComponentModel.IContainer components = null;
-
-		/// <summary>
-		/// Clean up any resources being used.
-		/// </summary>
-		/// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing && (components != null))
-			{
-				components.Dispose();
-			}
-			base.Dispose(disposing);
-		}
-
-		/// <summary>
-		/// Required method for Designer support - do not modify
-		/// the contents of this method with the code editor.
-		/// </summary>
 		private void InitializeComponent()
 		{
+			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(AggregateFilesUI));
 			this.m_grid = new RyLogViewer.DataGridView();
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_btn_cancel = new System.Windows.Forms.Button();
 			this.m_lbl_instructions = new System.Windows.Forms.Label();
 			this.m_btn_add_files = new System.Windows.Forms.Button();
+			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).BeginInit();
 			this.SuspendLayout();
 			// 
 			// m_grid
 			// 
+			this.m_grid.AllowUserToAddRows = false;
 			this.m_grid.AllowUserToResizeRows = false;
 			this.m_grid.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
@@ -201,7 +252,6 @@ namespace RyLogViewer
 			this.PerformLayout();
 
 		}
-
 		#endregion
 	}
 }

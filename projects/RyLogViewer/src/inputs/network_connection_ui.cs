@@ -147,7 +147,7 @@ namespace RyLogViewer
 			// Browse output file
 			m_btn_browse_output.Click += (s,a)=>
 				{
-					var dg = new SaveFileDialog{Filter = Resources.LogFileFilter, CheckPathExists = true, OverwritePrompt = false};
+					var dg = new SaveFileDialog{Filter = Constants.LogFileFilter, CheckPathExists = true, OverwritePrompt = false};
 					if (dg.ShowDialog(this) != DialogResult.OK) return;
 					Conn.OutputFilepath = dg.FileName;
 					UpdateUI();

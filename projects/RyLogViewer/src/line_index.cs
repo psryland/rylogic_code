@@ -45,6 +45,14 @@ namespace RyLogViewer
 			return rng;
 		}
 
+		/// <summary>Returns the number of lines that would be each side of the cache centre for 'num_lines'</summary>
+		private static Range CalcLineRange(long num_lines)
+		{
+			 var bwd_lines = Math.Max(1, num_lines / 2);
+			 var fwd_lines = Math.Max(2, num_lines - bwd_lines);
+			return new Range(bwd_lines, fwd_lines);
+		}
+
 		/// <summary>Returns the full byte range currently represented by 'm_line_index'</summary>
 		private Range LineIndexRange
 		{
@@ -77,9 +85,9 @@ namespace RyLogViewer
 		{
 			get
 			{
-				int row_index = -1;
-				Range rng = Range.Invalid;
-				foreach (DataGridViewRow r in m_grid.SelectedRows.Cast<DataGridViewRow>().OrderBy(x => x.Index))
+				var row_index = -1;
+				var rng = Range.Invalid;
+				foreach (var r in m_grid.SelectedRows().OrderBy(x => x.Index))
 				{
 					if (row_index + 1 != r.Index)
 					{
@@ -316,8 +324,9 @@ namespace RyLogViewer
 					// Determine the range to scan and the number of lines in each direction
 					var scan_backward = (d.fileend - d.filepos) > (d.filepos - 0); // scan in the most bound direction first
 					var scan_range = CalcBufferRange(d.filepos, d.fileend, d.file_buffer_size);
-					var bwd_lines = Math.Max(1, d.line_cache_count / 2);
-					var fwd_lines = Math.Max(2, d.line_cache_count - bwd_lines);
+					var line_range = CalcLineRange(d.line_cache_count);
+					var bwd_lines = line_range.Begi;
+					var fwd_lines = line_range.Endi;
 
 					// Incremental loading - only load what isn't already cached.
 					// If the 'filepos' is left of the cache centre, try to extent in left direction first.
@@ -417,7 +426,7 @@ namespace RyLogViewer
 
 							lbd.line_buf = scan_backward ? bwd_line_buf : fwd_line_buf;
 							lbd.line_limit += scan_backward ? bwd_lines : fwd_lines;
-							if (lbd.line_buf.Count < lbd.line_limit)
+							if ((bwd_line_buf.Count + fwd_line_buf.Count) < lbd.line_limit)
 							{
 								var length = scan_backward ? scan_from - scan_range.Beg : scan_range.End - scan_from;
 								FindLines(d.file, scan_from, d.fileend, scan_backward, length, add_line, d.encoding, d.row_delim, buf, progress);
@@ -764,7 +773,7 @@ namespace RyLogViewer
 			}
 
 			// The new range is to the left of the old range
-			else if (new_rng.End <= old_rng.End)
+			else if (new_rng.Beg < old_rng.Beg && new_rng.End <= old_rng.End)
 			{
 				Log.Info(this, "Merging results front. Results contain {0} lines. File position {1}/{2}".Fmt(line_index.Count, filepos, fileend));
 
@@ -786,7 +795,7 @@ namespace RyLogViewer
 			}
 
 			// The new range is to the right of the old range
-			else if (new_rng.Beg >= old_rng.Beg)
+			else if (new_rng.Beg >= old_rng.Beg && new_rng.End > old_rng.End)
 			{
 				Log.Info(this, "Merging results back. Results contain {0} lines. File position {1}/{2}".Fmt(line_index.Count, filepos, fileend));
 

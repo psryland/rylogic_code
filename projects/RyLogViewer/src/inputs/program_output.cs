@@ -90,7 +90,7 @@ namespace RyLogViewer
 			catch (Exception ex)
 			{
 				Log.Exception(this, ex, "Failed to launch child process {0} {1} -> {2}".Fmt(conn.Executable, conn.Arguments, conn.OutputFilepath));
-				Misc.ShowMessage(this, string.Format("Failed to launch child process {0}.",conn.Executable),Resources.FailedToLaunchProcess, MessageBoxIcon.Error, ex);
+				Misc.ShowMessage(this, string.Format("Failed to launch child process {0}.",conn.Executable), Application.ProductName, MessageBoxIcon.Error, ex);
 			}
 			finally
 			{

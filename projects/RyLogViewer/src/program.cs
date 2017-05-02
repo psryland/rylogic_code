@@ -46,7 +46,7 @@ namespace RyLogViewer
 					, "Command Line Error"
 					, MessageBoxButtons.OK
 					, MessageBoxIcon.Error);
-				HelpUI.ShowDialog(null, HelpUI.EContent.Html, Resources.AppTitle, Resources.command_line_ref);
+				HelpUI.ShowDialog(null, HelpUI.EContent.Html, Application.ProductName, Resources.command_line_ref);
 				Environment.ExitCode = 1;
 				return;
 			}
@@ -54,7 +54,7 @@ namespace RyLogViewer
 			// If they just want help displayed...
 			if (StartupOptions.ShowHelp)
 			{
-				HelpUI.ShowDialog(null, HelpUI.EContent.Html, Resources.AppTitle, Resources.command_line_ref);
+				HelpUI.ShowDialog(null, HelpUI.EContent.Html, Application.ProductName, Resources.command_line_ref);
 				Environment.ExitCode = 0;
 				return;
 			}

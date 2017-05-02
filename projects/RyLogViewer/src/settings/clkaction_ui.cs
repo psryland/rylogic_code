@@ -86,7 +86,7 @@ namespace RyLogViewer
 			m_btn_browse.ToolTip(m_tt, "Browse for an executable to run");
 			m_btn_browse.Click += (s,a)=>
 				{
-					var dg = new OpenFileDialog{Title = "Select an Executable", CheckPathExists = true, Filter = Resources.ExecutablesFilter};
+					var dg = new OpenFileDialog{Title = "Select an Executable", CheckPathExists = true, Filter = Constants.ExecutablesFilter};
 					if (dg.ShowDialog(this) != DialogResult.OK) return;
 					m_edit_exec.Text = dg.FileName;
 					UpdateUI();

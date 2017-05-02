@@ -96,7 +96,7 @@ namespace RyLogViewer
 			catch (Exception ex)
 			{
 				Log.Exception(this, ex, "Failed to connect {0}:{1} -> {2}".Fmt(conn.Hostname, conn.Port, conn.OutputFilepath));
-				Misc.ShowMessage(this, "Failed to connect to {0}:{1}.".Fmt(conn.Hostname,conn.Port),Resources.FailedToLaunchProcess, MessageBoxIcon.Error, ex);
+				Misc.ShowMessage(this, "Failed to connect to {0}:{1}.".Fmt(conn.Hostname,conn.Port), Application.ProductName, MessageBoxIcon.Error, ex);
 			}
 			finally
 			{
@@ -143,7 +143,7 @@ namespace RyLogViewer
 			catch (Exception ex)
 			{
 				Log.Exception(this, ex, "Failed to open connection {0}:{1} -> {2}".Fmt(conn.Hostname, conn.Port, conn.OutputFilepath));
-				Misc.ShowMessage(this, "Failed to open connected to {0}:{1}.".Fmt(conn.Hostname,conn.Port),Resources.FailedToLaunchProcess, MessageBoxIcon.Error, ex);
+				Misc.ShowMessage(this, "Failed to open connected to {0}:{1}.".Fmt(conn.Hostname,conn.Port), Application.ProductName, MessageBoxIcon.Error, ex);
 			}
 			finally
 			{

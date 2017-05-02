@@ -95,7 +95,7 @@ namespace RyLogViewer
 			catch (Exception ex)
 			{
 				Log.Exception(this, ex, "Failed to connect {0} -> {1}".Fmt(conn.PipeAddr, conn.OutputFilepath));
-				Misc.ShowMessage(this, "Failed to connect to {0}.".Fmt(conn.PipeAddr) ,Resources.FailedToLaunchProcess, MessageBoxIcon.Error, ex);
+				Misc.ShowMessage(this, "Failed to connect to {0}.".Fmt(conn.PipeAddr), Application.ProductName, MessageBoxIcon.Error, ex);
 			}
 			finally
 			{

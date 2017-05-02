@@ -66,8 +66,7 @@ namespace RyLogViewer
 			// Browse output file
 			m_btn_browse_output.Click += (s,a)=>
 			{
-				const string LogFileFilter = "Text Files (*.txt;*.log;*.csv)|*.txt;*.log;*.csv|All files (*.*)|*.*";
-				var dg = new SaveFileDialog{Filter = LogFileFilter, CheckPathExists = true, OverwritePrompt = false};
+				var dg = new SaveFileDialog{Filter = Constants.LogFileFilter, CheckPathExists = true, OverwritePrompt = false};
 				if (dg.ShowDialog(this) != DialogResult.OK) return;
 				OutputFilepath = dg.FileName;
 			};

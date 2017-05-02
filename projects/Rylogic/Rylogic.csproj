@@ -251,6 +251,9 @@
     <Compile Include="gui\combo_box.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="gui\data_grid_view.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="gui\date_time_picker.cs">
       <SubType>Component</SubType>
     </Compile>

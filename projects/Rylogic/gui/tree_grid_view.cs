@@ -403,7 +403,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Removed from the interface</summary>
-		private new DataGridView DataGridView
+		private new System.Windows.Forms.DataGridView DataGridView
 		{
 			[DebuggerStepThrough] get { return base.DataGridView; }
 		}

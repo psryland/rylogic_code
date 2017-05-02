@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Drawing;
-using System.Reflection;
 using System.Windows.Forms;
 using pr.common;
 using pr.extn;
@@ -36,7 +35,7 @@ namespace pr.gui
 		public virtual void PrepareEditingControlForEdit(bool select_all) {}
 
 		/// <summary>caches the grid that uses this editing control</summary>
-		public virtual DataGridView EditingControlDataGridView { get; set; }
+		public virtual System.Windows.Forms.DataGridView EditingControlDataGridView { get; set; }
 
 		/// <summary>represents the row in which the editing control resides</summary>
 		public virtual int EditingControlRowIndex { get; set; }

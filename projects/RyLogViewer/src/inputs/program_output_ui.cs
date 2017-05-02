@@ -72,7 +72,7 @@ namespace RyLogViewer
 			// Browse executable
 			m_btn_browse_exec.Click += (s,a)=>
 				{
-					var dg = new OpenFileDialog{Filter = Resources.ExecutablesFilter, CheckFileExists = true};
+					var dg = new OpenFileDialog{Filter = Constants.ExecutablesFilter, CheckFileExists = true};
 					if (dg.ShowDialog(this) != DialogResult.OK) return;
 					Launch.Executable = dg.FileName;
 					Launch.WorkingDirectory = Path.GetDirectoryName(dg.FileName);
@@ -82,7 +82,7 @@ namespace RyLogViewer
 			// Browse output file
 			m_btn_browse_output.Click += (s,a)=>
 				{
-					var dg = new SaveFileDialog{Filter = Resources.LogFileFilter, CheckPathExists = true, OverwritePrompt = false};
+					var dg = new SaveFileDialog{Filter = Constants.LogFileFilter, CheckPathExists = true, OverwritePrompt = false};
 					if (dg.ShowDialog(this) != DialogResult.OK) return;
 					Launch.OutputFilepath = dg.FileName;
 					UpdateUI();

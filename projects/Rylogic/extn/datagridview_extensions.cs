@@ -19,6 +19,7 @@ using pr.gui;
 using pr.maths;
 using pr.util;
 using pr.win32;
+using DataGridView = System.Windows.Forms.DataGridView;
 
 namespace pr.extn
 {
@@ -756,13 +757,6 @@ namespace pr.extn
 			grid.ColumnHeadersVisible = grid.ColumnCount > 1;
 		}
 
-		/// <summary>Return the first selected row, regardless of multi-select grids</summary>
-		public static DataGridViewRow FirstSelectedRow(this DataGridView grid)
-		{
-			var i = grid.Rows.GetFirstRow(DataGridViewElementStates.Selected);
-			return i != -1 ? grid.Rows[i] : null;
-		}
-
 		/// <summary>Attempts to scroll the grid to 'first_row_index' clamped by the number of rows in the grid</summary>
 		public static void TryScrollToRowIndex(this DataGridView grid, int first_row_index)
 		{
@@ -835,26 +829,14 @@ namespace pr.extn
 			}
 		}
 
-		/// <summary>Returns an enumerator for accessing rows with the given property</summary>
-		public static IEnumerable<DataGridViewRow> GetRowsWithState(this DataGridView grid, DataGridViewElementStates state)
-		{
-			for (var i = grid.Rows.GetFirstRow(state); i != -1; i = grid.Rows.GetNextRow(i, state))
-				yield return grid.Rows[i];
-		}
-
-		/// <summary>Returns an enumerator for accessing columns with the given property</summary>
-		public static IEnumerable<DataGridViewColumn> GetColumnsWithState(this DataGridView grid, DataGridViewElementStates state, DataGridViewElementStates excl = DataGridViewElementStates.None)
-		{
-			for (var i = grid.Columns.GetFirstColumn(state, excl); i != null; i = grid.Columns.GetNextColumn(i, state, excl))
-				yield return i;
-		}
-
 		/// <summary>
 		/// Sets the selection to row 'index'. If the grid has rows, clamps 'index' to [-1,RowCount).
 		/// If index == -1, the selection is cleared. Returns the row actually selected.
 		/// If 'make_displayed' is true, scrolls the grid to make 'index' displayed</summary>
-		public static int SelectRow(this DataGridView grid, int index, bool make_displayed = false)
+		[Obsolete]public static int SelectRow(this DataGridView grid, int index, bool make_displayed = false)
 		{
+			// This method is too specific for an extension.
+			// Implement it in all needed places
 			grid.ClearSelection();
 			if (grid.RowCount == 0 || index == -1)
 			{
@@ -873,11 +855,90 @@ namespace pr.extn
 			return index;
 		}
 
-		/// <summary>Return the index of the first selected row (or -1) if no rows are selected</summary>
+		/// <summary>Returns an enumerator for accessing rows with the given property.</summary>
+		public static IEnumerable<DataGridViewRow> GetRowsWithState(this DataGridView grid, DataGridViewElementStates state)
+		{
+			for (var i = grid.Rows.GetFirstRow(state); i != -1; i = grid.Rows.GetNextRow(i, state))
+				yield return grid.Rows[i];
+		}
+
+		/// <summary>Returns an enumerator for accessing columns with the given property</summary>
+		public static IEnumerable<DataGridViewColumn> GetColumnsWithState(this DataGridView grid, DataGridViewElementStates state, DataGridViewElementStates excl = DataGridViewElementStates.None)
+		{
+			for (var i = grid.Columns.GetFirstColumn(state, excl); i != null; i = grid.Columns.GetNextColumn(i, state, excl))
+				yield return i;
+		}
+
+		/// <summary>Return the number of selected rows (up to 'max_count') (i.e. efficiently test for multiple selections)</summary>
+		public static int SelectedRowCount(this DataGridView grid, int max_count = int.MaxValue)
+		{
+			return grid.SelectedRows().CountAtMost(max_count);
+		}
+
+		/// <summary>Return the number of selected columns (up to 'max_count') (i.e. efficiently test for multiple selections)</summary>
+		public static int SelectedColumnCount(this DataGridView grid, int max_count = int.MaxValue)
+		{
+			return grid.SelectedColumns().CountAtMost(max_count);
+		}
+
+		/// <summary>Return the selected rows. Note: 'SelectedRows' allocates and populates a collection on every call! This is way more efficient</summary>
+		public static IEnumerable<DataGridViewRow> SelectedRows(this DataGridView grid)
+		{
+			foreach (var r in grid.GetRowsWithState(DataGridViewElementStates.Selected))
+				yield return r;
+		}
+
+		/// <summary>Return the selected columns. Note: 'SelectedColumns' allocates and populates a collection on every call! This is way more efficient</summary>
+		public static IEnumerable<DataGridViewColumn> SelectedColumns(this DataGridView grid)
+		{
+			foreach (var c in grid.GetColumnsWithState(DataGridViewElementStates.Selected))
+				yield return c;
+		}
+
+		/// <summary>Return the indices of the selected rows. Note: 'SelectedRows' allocates and populates a collection on every call! This is way more efficient</summary>
+		public static IEnumerable<int> SelectedRowIndices(this DataGridView grid)
+		{
+			foreach (var r in grid.SelectedRows())
+				yield return r.Index;
+		}
+
+		/// <summary>Return the indices of the selected columns. Note: 'SelectedColumns' allocates and populates a collection on every call! This is way more efficient</summary>
+		public static IEnumerable<int> SelectedColumnIndices(this DataGridView grid)
+		{
+			foreach (var r in grid.SelectedColumns())
+				yield return r.Index;
+		}
+
+		/// <summary>Return the index of the first selected row (or -1 if no rows are selected). This is the selected row with the minimum row index, *not* the same as SelectedRows[0]</summary>
 		public static int FirstSelectedRowIndex(this DataGridView grid)
 		{
-			var row = FirstSelectedRow(grid);
-			return row != null ? row.Index : -1;
+			return grid.Rows.GetFirstRow(DataGridViewElementStates.Selected);
+		}
+
+		/// <summary>Return the index of the last selected row (or -1 if no rows are selected). This is the selected row with the maximum row index, *not* the same as SelectedRows[count-1]</summary>
+		public static int LastSelectedRowIndex(this DataGridView grid)
+		{
+			return grid.Rows.GetLastRow(DataGridViewElementStates.Selected);
+		}
+
+		/// <summary>Return the (inclusive) bounds of the selected rows (or [-1,-1] if no rows are selected). Warning: 'Empty' means only 1 row is selected (unless it's -1). Note: independent of the order of SelectedRows</summary>
+		public static Range SelectedRowIndexRange(this DataGridView grid)
+		{
+			return new Range(grid.FirstSelectedRowIndex(), grid.LastSelectedRowIndex());
+		}
+
+		/// <summary>Return the first selected row, regardless of multi-select grids</summary>
+		public static DataGridViewRow FirstSelectedRow(this DataGridView grid)
+		{
+			var i = grid.FirstSelectedRowIndex();
+			return i != -1 ? grid.Rows[i] : null;
+		}
+
+		/// <summary>Return the last selected row, regardless of multi-select grids</summary>
+		public static DataGridViewRow LastSelectedRow(this DataGridView grid)
+		{
+			var i = grid.LastSelectedRowIndex();
+			return i != -1 ? grid.Rows[i] : null;
 		}
 
 		/// <summary>Checks if the given column/row are within the grid and returns the associated column and cell</summary>
@@ -1209,7 +1270,7 @@ namespace pr.extn
 				var drop_idx = hit.InsertIndex;
 				if (grab_idx != drop_idx)
 				{
-					// Allow for the index value to change when grap_idx is removed
+					// Allow for the index value to change when 'grap_idx' is removed
 					if (drop_idx > grab_idx)
 						--drop_idx;
 

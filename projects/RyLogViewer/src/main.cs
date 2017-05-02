@@ -179,6 +179,7 @@ namespace RyLogViewer
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_import_patterns;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator20;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_recent_pattern_sets;
+		private ToolStripStatusLabel m_status_selection;
 		private System.Windows.Forms.ToolTip m_tt;
 		#endregion
 
@@ -327,7 +328,7 @@ namespace RyLogViewer
 					// Clear bookmarks
 					Bookmarks.Clear();
 
-					using (m_suspend_grid_events.Reference)
+					using (m_suspend_grid_events.Scope())
 					{
 						// Abort any BLI in progress
 						CancelBuildLineIndex();
@@ -524,37 +525,39 @@ namespace RyLogViewer
 			#region Tool bar
 			{
 				m_toolstrip.Location            = new Point(0,30);
-				m_btn_open_log.ToolTipText      = Resources.OpenLogFile;
+				m_btn_open_log.ToolTipText      = "Open a log file.";
 				m_btn_open_log.Click           += (s,a) => OpenSingleLogFile(null, true);
-				m_btn_refresh.ToolTipText       = Resources.ReloadLogFile;
+				m_btn_refresh.ToolTipText       = "Reload the current log file.";
 				m_btn_refresh.Click            += (s,a) => BuildLineIndex(m_filepos, true);
-				m_btn_quick_filter.ToolTipText  = Resources.QuickFilter;
+				m_btn_quick_filter.ToolTipText  = "Quick filter; keep highlighted rows only.";
 				m_btn_quick_filter.Click       += (s,a) => EnableQuickFilter(m_btn_quick_filter.Checked);
-				m_btn_highlights.ToolTipText    = Resources.ShowHighlightsDialog;
+				m_btn_highlights.ToolTipText    = "Left click to enable/disable highlighting.\r\nRight click to show the highlighting dialog.";
 				m_btn_highlights.Click         += (s,a) => EnableHighlights(m_btn_highlights.Checked);
 				m_btn_highlights.MouseDown     += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Highlights); };
-				m_btn_filters.ToolTipText       = Resources.ShowFiltersDialog;
+				m_btn_filters.ToolTipText       = "Left click to enable/disable filters.\r\nRight click to show the filters dialog.";
 				m_btn_filters.Click            += (s,a) => EnableFilters(m_btn_filters.Checked);
 				m_btn_filters.MouseDown        += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Filters); };
-				m_btn_transforms.ToolTipText    = Resources.ShowTransformsDialog;
+				m_btn_transforms.ToolTipText    = "Left click to enable/disable transforms.\r\nRight click to show the transforms dialog.";
 				m_btn_transforms.Click         += (s,a) => EnableTransforms(m_btn_transforms.Checked);
 				m_btn_transforms.MouseDown     += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Transforms); };
-				m_btn_actions.ToolTipText       = Resources.ShowActionsDialog;
+				m_btn_actions.ToolTipText       = "Left click to enable/disable actions.\r\nRight click to show the actions dialog.";
 				m_btn_actions.Click            += (s,a) => EnableActions(m_btn_actions.Checked);
 				m_btn_actions.MouseDown        += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Actions); };
-				m_btn_find.ToolTipText          = Resources.ShowFindDialog;
+				m_btn_find.ToolTipText          = "Show the find dialog.";
 				m_btn_find.Click               += (s,a) => ShowFindDialog();
-				m_btn_bookmarks.ToolTipText     = Resources.ShowBookmarksDialog;
+				m_btn_bookmarks.ToolTipText     = "Show the bookmarks dialog.";
 				m_btn_bookmarks.Click          += (s,a) => ShowBookmarksDialog();
-				m_btn_jump_to_start.ToolTipText = "Selected the first row in the log file";
+				m_btn_jump_to_start.ToolTipText = "Selected the first row in the log file.";
 				m_btn_jump_to_start.Click      += (s,a) => JumpToStart();
-				m_btn_jump_to_end.ToolTipText   = "Selected the last row in the log file";
+				m_btn_jump_to_end.ToolTipText   = "Selected the last row in the log file.";
 				m_btn_jump_to_end.Click        += (s,a) => JumpToEnd();
-				m_btn_tail.ToolTipText          = Resources.WatchTail;
+				m_btn_tail.ToolTipText          = "Automatically scroll to the bottom of the log as new data is loaded.";
 				m_btn_tail.Click               += (s,a) => EnableTail(m_btn_tail.Checked);
-				m_btn_watch.ToolTipText         = Resources.WatchForUpdates;
+				m_btn_watch.ToolTipText         = "Watch the file and update automatically when it changes.";
 				m_btn_watch.Click              += (s,a) => EnableWatch(m_btn_watch.Checked);
-				m_btn_additive.ToolTipText      = Resources.AdditiveMode;
+				m_btn_additive.ToolTipText      = "Assume log file changes are additive only. If enabled, only additions to the\r\n" +
+												  "file will be scanned allowing increased performance. The view may get out of sync if the\r\n"+
+												  "log file is modified in a way that isn't additive (e.g. lines swapped, deleted, etc)";
 				m_btn_additive.Click           += (s,a) => EnableAdditive(m_btn_additive.Checked);
 				ToolStripManager.Renderer       = new CheckedButtonRenderer();
 			}
@@ -585,10 +588,11 @@ namespace RyLogViewer
 				m_grid.KeyDown                  += GridKeyDown;
 				m_grid.MouseUp                  += (s,a) => GridMouseButton(a, false);
 				m_grid.MouseDown                += (s,a) => GridMouseButton(a, true);
+				m_grid.MouseMove                += (s,a) => GridMouseMove(a);
+				m_grid.CellDoubleClick          += CellDoubleClick;
 				m_grid.CellValueNeeded          += CellValueNeeded;
 				m_grid.RowPrePaint              += RowPrePaint;
 				m_grid.SelectionChanged         += GridSelectionChanged;
-				m_grid.CellDoubleClick          += CellDoubleClick;
 				m_grid.ColumnDividerDoubleClick += (s,a) => { SetGridColumnSizesImpl(); a.Handled = true; };
 				m_grid.RowHeightInfoNeeded      += RowHeightNeeded;
 				m_grid.DataError                += (s,a) => Debug.Assert(false);
@@ -619,13 +623,13 @@ namespace RyLogViewer
 					if (m_line_index.Count != 0)
 					{
 						// Ensure the grid has the correct number of rows
-						using (m_suspend_grid_events.Reference)
+						using (m_suspend_grid_events.Scope())
 							SetGridRowCount(m_line_index.Count, row_delta);
 					}
 					else
 					{
 						m_grid.ColumnHeadersVisible = false;
-						using (m_suspend_grid_events.Reference)
+						using (m_suspend_grid_events.Scope())
 							SetGridRowCount(0, 0);
 					}
 					SetGridColumnSizes(false);
@@ -710,7 +714,7 @@ namespace RyLogViewer
 				try { Settings.Patterns = PatternSet.Load(StartupOptions.PatternSetFilepath); }
 				catch (Exception ex)
 				{
-					Misc.ShowMessage(this, "Could not load highlight pattern set {0}.".Fmt(StartupOptions.PatternSetFilepath), Resources.LoadPatternSetFailed, MessageBoxIcon.Error, ex);
+					Misc.ShowMessage(this, "Could not load highlight pattern set {0}.".Fmt(StartupOptions.PatternSetFilepath), Application.ProductName, MessageBoxIcon.Error, ex);
 				}
 			}
 		}
@@ -785,7 +789,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				MsgBox.Show(this, Resources.LoadPatternSetFailedMsg.Fmt(ex.Message), Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MsgBox.Show(this, "Could not load pattern set.\r\n{0}".Fmt(ex.Message), Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 
@@ -810,7 +814,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				MsgBox.Show(this, Resources.CreatePatternSetFailedMsg.Fmt(ex.Message), Resources.CreatePatternSetFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MsgBox.Show(this, "Could not create a pattern set from the current patterns.\r\n{0}".Fmt(ex.Message), Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 
@@ -874,7 +878,7 @@ namespace RyLogViewer
 				// Reject invalid file paths
 				if (!file.HasValue())
 				{
-					MsgBox.Show(this, "File path is invalid", Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
+					MsgBox.Show(this, "File path is invalid", Application.ProductName, MessageBoxButtons.OK,MessageBoxIcon.Error);
 					return false;
 				}
 
@@ -883,13 +887,13 @@ namespace RyLogViewer
 				{
 					if (m_recent_logfiles.IsInRecents(file))
 					{
-						var res = MsgBox.Show(this, "File path '{0}' is invalid or does not exist\r\n\r\nRemove from recent files list?".Fmt(file), Resources.InvalidFilePath, MessageBoxButtons.YesNo,MessageBoxIcon.Error);
+						var res = MsgBox.Show(this, "File path '{0}' is invalid or does not exist\r\n\r\nRemove from recent files list?".Fmt(file), Application.ProductName, MessageBoxButtons.YesNo,MessageBoxIcon.Error);
 						if (res == DialogResult.Yes)
 							m_recent_logfiles.Remove(file, true);
 					}
 					else
 					{
-						MsgBox.Show(this, "File path '{0}' is invalid or does not exist".Fmt(file), Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
+						MsgBox.Show(this, "File path '{0}' is invalid or does not exist".Fmt(file), Application.ProductName, MessageBoxButtons.OK,MessageBoxIcon.Error);
 					}
 					return false;
 				}
@@ -905,7 +909,7 @@ namespace RyLogViewer
 				// Prompt for a file if none provided
 				if (filepath == null)
 				{
-					var fd = new OpenFileDialog{Filter = Resources.LogFileFilter, Multiselect = false};
+					var fd = new OpenFileDialog{Filter = Constants.LogFileFilter, Multiselect = false};
 					if (fd.ShowDialog() != DialogResult.OK) return;
 					filepath = fd.FileName;
 				}
@@ -926,7 +930,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Misc.ShowMessage(this, "Failed to open file {0} due to an error.".Fmt(filepath), Resources.FailedToLoadFile, MessageBoxIcon.Error, ex);
+				Misc.ShowMessage(this, "Failed to open file {0} due to an error.".Fmt(filepath), Application.ProductName, MessageBoxIcon.Error, ex);
 				Src = null;
 			}
 		}
@@ -945,7 +949,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Misc.ShowMessage(this, "Failed to open aggregate log files due to an error.", Resources.FailedToLoadFile, MessageBoxIcon.Error, ex);
+				Misc.ShowMessage(this, "Failed to open aggregate log files due to an error.", Application.ProductName, MessageBoxIcon.Error, ex);
 				Src = null;
 			}
 		}
@@ -953,15 +957,18 @@ namespace RyLogViewer
 		/// <summary>Show the aggregate log file wizard</summary>
 		private void AggregateFileWizard()
 		{
-			var dg = new AggregateFilesUI(this);
-			if (dg.ShowDialog(this) != DialogResult.OK) return;
+			using (var dg = new AggregateFilesUI(this))
+			{
+				if (dg.ShowDialog(this) != DialogResult.OK)
+					return;
 
-			var filepaths = dg.Filepaths.ToList();
-			if (filepaths.Count == 0) return;
-			if (filepaths.Count == 1)
-				OpenSingleLogFile(filepaths[0], true);
-			else
-				OpenAggregateLogFile(filepaths);
+				var filepaths = dg.Filepaths.ToList();
+				if (filepaths.Count == 0) return;
+				if (filepaths.Count == 1)
+					OpenSingleLogFile(filepaths[0], true);
+				else
+					OpenAggregateLogFile(filepaths);
+			}
 		}
 
 		/// <summary>Called when the log file is noticed to have changed</summary>
@@ -1212,6 +1219,11 @@ namespace RyLogViewer
 			if (m_tail_enabled && SelectedRowIndex != m_grid.RowCount - 1)
 				EnableTail(false);
 
+			// Can't move the cache on selection change because the selection is changed
+			// when the cache moves (in a different message). This means the cache move has
+			// to be handled by key down, mouse down, mouse move events.
+			// LoadNearBoundary();
+
 			// We need to invalidate the selected rows because of the selection border.
 			// Without this bits of the selection border get left behind because the rendering
 			// process goes:
@@ -1253,9 +1265,9 @@ namespace RyLogViewer
 		private void GridKeyDown(object s, KeyEventArgs e)
 		{
 			if (e.KeyCode == Keys.Up || e.KeyCode == Keys.PageUp)
-				LoadNearBoundary(-1);
+				LoadNearBoundary();
 			if (e.KeyCode == Keys.Down || e.KeyCode == Keys.PageDown)
-				LoadNearBoundary(+1);
+				LoadNearBoundary();
 		}
 
 		/// <summary>Handler for mouse down/up events on the grid</summary>
@@ -1264,16 +1276,44 @@ namespace RyLogViewer
 			switch (args.Button)
 			{
 			case MouseButtons.Left:
-				if (!button_down) LoadNearBoundary(0);
+				if (button_down)
+				{
+					m_move_cache_on_mouse_up = true;
+				}
+				else
+				{
+					if (m_move_cache_on_mouse_up)
+						LoadNearBoundary();
+				}
 				break;
 			case MouseButtons.Right:
 				if (button_down && SelectedRowCount <= 1)
 				{
 					var hit = m_grid.HitTest(args.X, args.Y);
-					if (hit.RowIndex >= 0 && hit.RowIndex < m_grid.RowCount)
+					if (hit.RowIndex.Within(0, m_grid.RowCount))
 						SelectedRowIndex = hit.RowIndex;
 				}
 				break;
+			}
+		}
+		private bool m_move_cache_on_mouse_up;
+
+		/// <summary>Handler for mouse move events on the grid</summary>
+		private void GridMouseMove(MouseEventArgs a)
+		{
+			if (m_grid.RowCount == 0)
+				return;
+
+			// The grid captures the mouse during mouse selection
+			if (a.Button == MouseButtons.Left)
+			{
+				var row0 = m_grid.Rows[0];
+				var row1 = m_grid.Rows[m_grid.RowCount-1];
+				if (row0.Selected || row1.Selected)
+				{
+					LoadNearBoundary();
+					m_move_cache_on_mouse_up = false;
+				}
 			}
 		}
 
@@ -1333,6 +1373,9 @@ namespace RyLogViewer
 			UpdateFileScroll();
 			SetGridColumnSizes(false);
 
+			// Move the cache if the first or last row becomes visible
+			LoadNearBoundary();
+
 			// Selected rows use transparency so we need to invalidate the entire row
 			foreach (var r in m_grid.GetRowsWithState(DataGridViewElementStates.Displayed|DataGridViewElementStates.Selected))
 				m_grid.InvalidateRow(r.Index);
@@ -1353,33 +1396,6 @@ namespace RyLogViewer
 			var pt = m_scroll_file.PointToClient(MousePosition);
 			var sel_pos = (long)(Maths.Frac(1, pt.Y, m_scroll_file.Height - 1) * FileByteRange.Size);
 			BuildLineIndex(pos, false, () => { SelectRowByAddr(sel_pos); });
-		}
-
-		/// <summary>Tests whether the currently selected row is near the start or end of the line range and causes a reload if it is</summary>
-		private void LoadNearBoundary(int direction)
-		{
-			// Do nothing if there is no selected row
-			if (SelectedRowIndex < 0 || SelectedRowIndex >= m_grid.RowCount)
-				return;
-
-			// If the RowCount doesn't fill the grid, scroll when the first/last row is selected
-			if (m_grid.RowCount <= m_grid.DisplayedRowCount(true))
-			{
-				if (direction <= 0 && LineIndexRange.Beg > m_encoding.GetPreamble().Length && SelectedRowIndex == 0)
-					BuildLineIndex(LineStartIndexRange.Beg, false);
-				if (direction >= 0 && LineIndexRange.End < m_fileend - m_row_delim.Length && SelectedRowIndex == m_grid.RowCount-1)
-					BuildLineIndex(LineStartIndexRange.End, false);
-			}
-			// Otherwise, scroll when the first/last row is displayed
-			else
-			{
-				var first_displayed = m_grid.FirstDisplayedScrollingRowIndex;
-				var last_displayed = first_displayed + m_grid.DisplayedRowCount(false);
-				if (direction <= 0 && LineIndexRange.Beg > m_encoding.GetPreamble().Length && first_displayed == 0)
-					BuildLineIndex(LineStartIndexRange.Beg, false);
-				if (direction >= 0 && LineIndexRange.End < m_fileend - m_row_delim.Length && last_displayed == m_grid.RowCount-1)
-					BuildLineIndex(LineStartIndexRange.End, false);
-			}
 		}
 
 		/// <summary>Handle key down events for the main form</summary>
@@ -1560,7 +1576,7 @@ namespace RyLogViewer
 			{
 				MsgBox.Show(this, string.Format(
 					"Clearing file {0} failed.\r\n" +
-					"Reason: {1}\r\n" +
+					"{1}\r\n" +
 					"\r\n" +
 					"Usually clearing the log file fails if another application holds an " +
 					"exclusive lock on the file. Stop any processes that are using the file " +
@@ -1568,7 +1584,7 @@ namespace RyLogViewer
 					"you are running may be holding the file lock."
 					,Src.Name
 					,err.Message)
-					,Resources.ClearLogFailed
+					,Application.ProductName
 					,MessageBoxButtons.OK
 					,MessageBoxIcon.Information);
 			}
@@ -1982,38 +1998,90 @@ namespace RyLogViewer
 			get { return m_suspend_grid_events.Count != 0; }
 		}
 
+		/// <summary>Tests whether the currently selected row is near the start or end of the cached line range and causes a reload if it is</summary>
+		private void LoadNearBoundary()
+		{
+			// Want to be able to drag select across a cache move.
+			if (m_grid.RowCount == 0)
+				return;
+
+			// The centre of the new cache range
+			var centre_row = -1;
+
+			// If the displayed row count is less than half the cache size scroll
+			// when the first/last row is selected. This prevents the selected row "jumping".
+			if (m_line_index.Count / 2 < m_grid.DisplayedRowCount(true))
+			{
+				var selected = SelectedRowIndex;
+				if (selected == 0 && LineIndexRange.Beg > m_encoding.GetPreamble().Length)
+					centre_row = 0;
+				if (selected == m_grid.RowCount-1 && LineIndexRange.End < m_fileend - m_row_delim.Length)
+					centre_row = m_line_index.Count-1;
+			}
+			// Otherwise, scroll when the first/last row is displayed
+			else
+			{
+				var first = m_grid.FirstDisplayedScrollingRowIndex;
+				var last  = first + m_grid.DisplayedRowCount(false) - 1;
+				if (first == 0 && LineIndexRange.Beg > m_encoding.GetPreamble().Length)
+					centre_row = 0;
+				if (last >= m_grid.RowCount-1 && LineIndexRange.End < m_fileend - m_row_delim.Length)
+					centre_row = m_line_index.Count-1;
+			}
+
+			// Not moving the cache?
+			if (centre_row == -1L)
+				return;
+
+			// Detect when mouse selection is happening
+			var hti = m_grid.HitTestEx(m_grid.PointToClient(MousePosition));
+
+			// We don't want to move the cache if doing so will cause selected rows to move out of memory.
+			var sel_range = m_grid.SelectedRowIndexRange();
+			var line_range = CalcLineRange(Settings.LineCacheCount);
+			var limit_cache_move = sel_range.Count > 1 ||
+				(MouseButtons == MouseButtons.Left && hti.Type != DataGridViewHitTestType.HorizontalScrollBar && hti.Type != DataGridViewHitTestType.VerticalScrollBar);
+
+			// Clamp the cache move
+			if (limit_cache_move)
+			{
+				if (centre_row == m_line_index.Count-1) centre_row = (int)Math.Min(m_line_index.Count-1, sel_range.Beg + line_range.Begi    ); // shift cache centre down
+				if (centre_row == 0                   ) centre_row = (int)Math.Max(0                   , sel_range.End - line_range.Endi + 1); // shift cache centre up
+			}
+
+			// Move the cache range
+			var cache_centre = m_line_index[centre_row].Beg;
+			BuildLineIndex(cache_centre, false);
+		}
+
 		/// <summary>Helper for setting the grid row count without event handlers being fired</summary>
 		private void SetGridRowCount(int count, int row_delta)
 		{
 			bool auto_scroll_tail = AutoScrollTail;
 			if (m_grid.RowCount != count || row_delta != 0)
 			{
+				Log.Info(this, "RowCount changed {0} -> {1}.".Fmt(m_grid.RowCount, count));
+				Log.Info(this, "Row delta {0}.".Fmt(row_delta));
+
 				// Record data so that we can preserve the selected rows and first visible rows
-				int first_vis = m_grid.FirstDisplayedScrollingRowIndex;
-				var selected = SelectedRowIndex;
-				var selected_rows = m_grid.SelectedRows.Cast<DataGridViewRow>().Select(x => x.Index).OrderBy(x => x).ToList();
-				var selection_anchor = m_grid.SelectionAnchorCell;
-				SelectedRowIndex = -1;
-				m_grid.ClearSelection();
+				var selected_rows = m_grid.SelectedRowIndices().ToArray();
+				int first_vis     = m_grid.FirstDisplayedScrollingRowIndex;
+				var cell_addr     = m_grid.CurrentCellAddress;
+				var anchor        = m_grid.SelectionAnchorCell;
+				var selected      = SelectedRowIndex;
+
+				// Clear selection
+				SelectedRowIndex  = -1;
 
 				// We need to set the row count even if it hasn't changed, because doing so
 				// has the side effect of the grid recalculating it's scroll bar sizes from
 				// the (now possibly different) row heights.
 				var row_diff = count - m_grid.RowCount;
-				Log.Info(this, "RowCount changed {0} -> {1}.".Fmt(m_grid.RowCount, count));
-				m_grid.RowCount = 0;
-				m_grid.RowCount = count;
-
-				// If the number of rows added to the grid is not equal to the row delta
-				// then the oddness of grid row zero depends on the difference
-				if (row_diff != -row_delta)
+				using (m_grid.SuspendLayout(true))
 				{
-					// Give the illusion that the alternating row colour is moving with the overall file
-					var row_zero_shift = Math.Max(-row_delta - row_diff, 0);
-					if ((row_zero_shift & 1) == 1)
-						m_first_row_is_odd = !m_first_row_is_odd;
+					m_grid.RowCount = 0;
+					m_grid.RowCount = count;
 				}
-				Log.Info(this, "Row delta {0}.".Fmt(row_delta));
 
 				// Restore the selected row, and the first visible row
 				if (count != 0)
@@ -2025,29 +2093,61 @@ namespace RyLogViewer
 					}
 					else if (selected != -1)
 					{
-						m_grid.SelectRow(selected + row_delta);
-
-						// Select the rows that were previously selected.
-						// Find the index of the first selected row that is within the new range
-						int rd = row_delta; // modified closure...
-						int i = selected_rows.BinarySearch(x => x.CompareTo(-rd), find_insert_position:true);
-						for (; i != selected_rows.Count; ++i)
+						// If this is during a mouse drag selection, select from the anchor to the mouse pointer
+						if (MouseButtons == MouseButtons.Left && m_grid.Capture)
 						{
-							var s = selected_rows[i] + row_delta;
-							if (s >= count) break; // can stop at the first selected row outside the new range
-							m_grid.Rows[s].Selected = true;
-						}
+							// Clamp the mouse point to within the horizontal range of the grid.
+							var pt = new Point(m_grid.RightToLeft == RightToLeft.Yes ? m_grid.Width-1 : 1, m_grid.PointToClient(MousePosition).Y);
 
-						// Set the anchor cell to preserve shift-selections
-						if (selection_anchor.Y != -1)
-							selection_anchor.Y = Maths.Clamp(selection_anchor.Y + row_delta, 0, m_grid.RowCount - 1);
-						m_grid.SelectionAnchorCell = selection_anchor;
+							// Adjust the anchor row
+							var anchor_y = Maths.Clamp(anchor.Y + row_delta, 0, count-1);
+
+							// Find the row under the mouse (or nearest to it)
+							var hti = m_grid.HitTestEx(pt);
+							var row_index = hti.RowIndex.Within(0, count) ? hti.RowIndex : pt.Y < 0 ? 0 : count - 1;
+
+							// Clear the selection and set the current cell
+							m_grid.SelectSingleRow(row_index);
+							m_grid.SelectionAnchorCell = new Point(anchor.X, anchor_y);
+							m_grid.TrackRow = anchor_y;
+							m_grid.TrackRowEdge = row_index;
+
+							// Select rows from the anchor row to the current mouse position
+							var selfirst = Math.Min(anchor_y,  row_index);
+							var selcount = Math.Abs(anchor_y - row_index) + 1;
+							using (m_grid.SuspendSelectionChanged())
+								for (var i = 0; i != selcount; ++i)
+									m_grid.Rows[selfirst + i].Selected = true;
+						}
+						else
+						{
+							// Clear the selection and set the current row
+							m_grid.SelectSingleRow(selected + row_delta);
+
+							// Select the rows that were previously selected.
+							selected_rows.Sort();
+							var ibeg = selected_rows.BinarySearch(x => (x + row_delta).CompareTo(    0), find_insert_position:true);
+							var iend = selected_rows.BinarySearch(x => (x + row_delta).CompareTo(count), find_insert_position:true);
+							using (m_grid.SuspendSelectionChanged())
+								for (var i = ibeg; i != iend; ++i)
+									m_grid.Rows[selected_rows[i] + row_delta].Selected = true;
+						}
 
 						// Restore the first visible row after setting the current selected row, because
 						// changing the 'CurrentCell' also changes the scroll position
 						if (first_vis != -1)
 							m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(first_vis + row_delta, 0, m_grid.RowCount - 1);
 					}
+				}
+
+				// If the number of rows added to the grid is not equal to the row delta
+				// then the oddness of grid row zero depends on the difference
+				if (row_diff != -row_delta)
+				{
+					// Give the illusion that the alternating row colour is moving with the overall file
+					var row_zero_shift = Math.Max(-row_delta - row_diff, 0);
+					if ((row_zero_shift & 1) == 1)
+						m_first_row_is_odd = !m_first_row_is_odd;
 				}
 			}
 			if (auto_scroll_tail) ShowLastRow();
@@ -2207,11 +2307,10 @@ namespace RyLogViewer
 		/// <summary>Update the status bar</summary>
 		private void UpdateStatus()
 		{
-			Debug.Assert(m_grid.RowCount == m_line_index.Count, "The grid is not up to date");
-			if (Src == null)
+			if (Src == null || m_grid.RowCount == 0 || m_grid.RowCount != m_line_index.Count)
 			{
-				Text = Resources.AppTitle;
-				m_status_spring.Text      = Resources.NoFile;
+				Text = Application.ProductName;
+				m_status_spring.Text = "No File or Data Source";
 				m_status_filesize.Visible = false;
 				m_status_line_end.Visible = false;
 				m_status_encoding.Visible = false;
@@ -2219,28 +2318,26 @@ namespace RyLogViewer
 			}
 			else
 			{
-				Text = "{0} - {1}".Fmt(Settings.FullPathInTitle ? Src.PsuedoFilepath : Src.Name, Resources.AppTitle);
-				m_status_spring.Text = "";
+				Text = "{0} - {1}".Fmt(Settings.FullPathInTitle ? Src.PsuedoFilepath : Src.Name, Application.ProductName);
+				m_status_spring.Text = string.Empty;
 
-				// Add comma's to a large number
-				Func<StringBuilder,StringBuilder> pretty = sb=>
-					{
-						for (int i = sb.Length, j = 0; i-- != 0; ++j)
-							if ((j%3) == 2 && i != 0) sb.Insert(i, ',');
-						return sb;
-					};
-
-				// Get current file position
-				int r = SelectedRowIndex;
-				long p = (r != -1) ? m_line_index[r].Beg : 0;
-				StringBuilder pos = pretty(new StringBuilder(p.ToString(CultureInfo.InvariantCulture)));
-				StringBuilder len = pretty(new StringBuilder(FileByteRange.End.ToString(CultureInfo.InvariantCulture)));
-
-				m_status_filesize.Text = string.Format(Resources.PositionXofYBytes, pos, len);
+				// Get current file position / selection
+				var r = SelectedRowIndex;
+				var pos = (r != -1) ? m_line_index[r].Beg : 0;
+				m_status_filesize.Text = "Position: {0:N0} / {1:N0} bytes".Fmt(pos, FileByteRange.End);
 				m_status_filesize.Visible = true;
-				m_status_line_end.Text = string.Format(Resources.LineEndingX, m_row_delim == null ? "unknown" : Misc.Humanise(m_encoding.GetString(m_row_delim)));
+
+				// Selection
+				var rg = SelectedRowByteRange;
+				m_status_selection.Text = "Selection: [{0:N0} {1:N0}) ({2} bytes)".Fmt(rg.Beg, rg.End, rg.Size);
+				m_status_selection.Visible = true;
+
+				// Line ending characters
+				m_status_line_end.Text = "Line Ending: {0}".Fmt(m_row_delim == null ? "unknown" : Misc.Humanise(m_encoding.GetString(m_row_delim)));
 				m_status_line_end.Visible = true;
-				m_status_encoding.Text = string.Format(Resources.EncodingX, m_encoding.EncodingName);
+
+				// Encoding characters
+				m_status_encoding.Text = "Encoding: {0}".Fmt(m_encoding.EncodingName);
 				m_status_encoding.Visible = true;
 			}
 
@@ -2539,6 +2636,7 @@ namespace RyLogViewer
 			this.m_grid = new RyLogViewer.DataGridView();
 			this.m_scroll_file = new pr.gui.SubRangeScroll();
 			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
+			this.m_status_selection = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -2885,35 +2983,35 @@ namespace RyLogViewer
 			// m_menu_file_recent_pattern_sets
 			// 
 			this.m_menu_file_recent_pattern_sets.Name = "m_menu_file_recent_pattern_sets";
-			this.m_menu_file_recent_pattern_sets.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_file_recent_pattern_sets.Size = new System.Drawing.Size(119, 22);
 			this.m_menu_file_recent_pattern_sets.Text = "Recent";
 			// 
 			// toolStripSeparator20
 			// 
 			this.toolStripSeparator20.Name = "toolStripSeparator20";
-			this.toolStripSeparator20.Size = new System.Drawing.Size(149, 6);
+			this.toolStripSeparator20.Size = new System.Drawing.Size(116, 6);
 			// 
 			// m_menu_file_load_pattern_set
 			// 
 			this.m_menu_file_load_pattern_set.Name = "m_menu_file_load_pattern_set";
-			this.m_menu_file_load_pattern_set.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_file_load_pattern_set.Size = new System.Drawing.Size(119, 22);
 			this.m_menu_file_load_pattern_set.Text = "Load";
 			// 
 			// m_menu_file_save_pattern_set
 			// 
 			this.m_menu_file_save_pattern_set.Name = "m_menu_file_save_pattern_set";
-			this.m_menu_file_save_pattern_set.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_file_save_pattern_set.Size = new System.Drawing.Size(119, 22);
 			this.m_menu_file_save_pattern_set.Text = "Save";
 			// 
 			// toolStripSeparator21
 			// 
 			this.toolStripSeparator21.Name = "toolStripSeparator21";
-			this.toolStripSeparator21.Size = new System.Drawing.Size(149, 6);
+			this.toolStripSeparator21.Size = new System.Drawing.Size(116, 6);
 			// 
 			// m_menu_file_import_patterns
 			// 
 			this.m_menu_file_import_patterns.Name = "m_menu_file_import_patterns";
-			this.m_menu_file_import_patterns.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_file_import_patterns.Size = new System.Drawing.Size(119, 22);
 			this.m_menu_file_import_patterns.Text = "Import...";
 			// 
 			// m_sep2
@@ -3309,6 +3407,7 @@ namespace RyLogViewer
 			this.m_status.Dock = System.Windows.Forms.DockStyle.None;
 			this.m_status.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_status_filesize,
+            this.m_status_selection,
             this.m_status_line_end,
             this.m_status_encoding,
             this.m_status_spring,
@@ -3355,7 +3454,7 @@ namespace RyLogViewer
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
 			this.m_status_spring.Name = "m_status_spring";
-			this.m_status_spring.Size = new System.Drawing.Size(552, 19);
+			this.m_status_spring.Size = new System.Drawing.Size(163, 19);
 			this.m_status_spring.Spring = true;
 			this.m_status_spring.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
@@ -3573,6 +3672,15 @@ namespace RyLogViewer
 			this.m_scroll_file.TabIndex = 4;
 			this.m_scroll_file.ThumbColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(128)))), ((int)(((byte)(0)))));
 			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlLight;
+			// 
+			// m_status_selection
+			// 
+			this.m_status_selection.BorderSides = ((System.Windows.Forms.ToolStripStatusLabelBorderSides)((((System.Windows.Forms.ToolStripStatusLabelBorderSides.Left | System.Windows.Forms.ToolStripStatusLabelBorderSides.Top) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
+			this.m_status_selection.Name = "m_status_selection";
+			this.m_status_selection.Size = new System.Drawing.Size(59, 19);
+			this.m_status_selection.Text = "Selection";
 			// 
 			// Main
 			// 

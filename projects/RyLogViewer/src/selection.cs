@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows.Forms;
 using pr.common;
 using pr.extn;
+using pr.maths;
 using pr.util;
 
 namespace RyLogViewer
@@ -15,17 +16,22 @@ namespace RyLogViewer
 		private event EventHandler<SelectionEventArgs> SelectionChanged;
 		private class SelectionEventArgs :EventArgs
 		{
-			/// <summary>The selected rows</summary>
-			public IEnumerable<ILogDataRow> Rows { get; private set; }
+			private readonly Main m_main;
 			public SelectionEventArgs(Main main)
 			{
-				Rows = main.m_grid.GetRowsWithState(DataGridViewElementStates.Selected).Select(x => main.ReadLine(x.Index));
+				m_main = main;
+			}
+
+			/// <summary>The selected rows</summary>
+			public IEnumerable<ILogDataRow> Rows
+			{
+				get { return m_main.m_grid.GetRowsWithState(DataGridViewElementStates.Selected).Select(x => m_main.ReadLine(x.Index)); }
 			}
 		}
 		private void RaiseSelectionChanged()
 		{
-			if (SelectionChanged == null) return;
-			SelectionChanged(this, new SelectionEventArgs(this));
+			var args = new SelectionEventArgs(this);
+			SelectionChanged.Raise(this, args);
 		}
 
 		/// <summary>Select the row in the file that contains the byte offset 'addr'</summary>
@@ -44,26 +50,35 @@ namespace RyLogViewer
 
 		/// <summary>
 		/// Get/Set the currently selected grid row. Get returns -1 if there are no rows in the grid.
-		/// Setting the selected row clamps to the range [0,RowCount) and makes it visible in the grid (if possible)</summary>
+		/// Setting the selected row clamps to the range [0,RowCount) and clears all other selected rows</summary>
 		private int SelectedRowIndex
 		{
 			get
 			{
 				// If the current row is selected, return that
 				var row = m_grid.CurrentRow;
-				if (row != null && row.Selected) return row.Index;
+				if (row != null && row.Selected)
+					return row.Index;
+
 				return -1;
 			}
 			set
 			{
-				using (m_suspend_grid_events.Reference)
-				{
-					value = m_grid.SelectRow(value);
-					Log.Info(this, "Row {0} selected".Fmt(value));
-					if (m_grid.RowCount != 0 && value != -1)
-						UpdateStatus();
-				}
+				Log.Info(this, "Row {0} selected".Fmt(value));
+				using (m_suspend_grid_events.Scope())
+					m_grid.SelectSingleRow(value);
+
+				UpdateStatus();
 			}
+		}
+
+		/// <summary>Make 'index' visible (if not already)</summary>
+		private void DisplayRow(int index)
+		{
+			//	if (make_displayed && !row.Displayed)
+			//				grid.FirstDisplayedScrollingRowIndex = index;
+			//		}
+			//return index;
 		}
 
 		/// <summary>Returns the number of selected rows</summary>
@@ -81,6 +96,19 @@ namespace RyLogViewer
 				if (idx == -1) idx = 0;
 				Debug.Assert(idx >= 0 && idx < m_line_index.Count, "SelectedRowByteOffset should not be called when there are no lines");
 				return m_line_index[idx];
+			}
+		}
+
+		/// <summary>Returns the byte range that includes all selected rows (even if there are holes in the selection)</summary>
+		private Range SelectedRowsByteRange
+		{
+			get
+			{
+				var r = m_grid.SelectedRowIndexRange();
+				if (r.Empty) return SelectedRowByteRange; // 0 or 1 row selected
+				return new Range(
+					m_line_index[r.Begi].Beg,
+					m_line_index[r.Endi].End + 1);
 			}
 		}
 	}

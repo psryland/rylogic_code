@@ -8,6 +8,7 @@ using System.Windows.Forms;
 using pr.common;
 using pr.extn;
 using RichTextBox = pr.gui.RichTextBox;
+using DataGridView = pr.gui.DataGridView;
 
 namespace pr.gui
 {
@@ -304,7 +305,7 @@ namespace pr.gui
 			this.m_panel_patntype = new System.Windows.Forms.Panel();
 			this.m_lbl_match_type = new System.Windows.Forms.Label();
 			this.m_split = new System.Windows.Forms.SplitContainer();
-			this.m_grid_grps = new System.Windows.Forms.DataGridView();
+			this.m_grid_grps = new pr.gui.DataGridView();
 			this.m_lbl_groups = new System.Windows.Forms.Label();
 			this.m_check_whole_line = new System.Windows.Forms.CheckBox();
 			this.m_panel_flags = new System.Windows.Forms.Panel();

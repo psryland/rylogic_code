@@ -168,7 +168,7 @@ namespace RyLogViewer
 				var filter = Util.FileDialogFilter("Text Files","*.txt","Comma Separated Values","*.csv","All Files","*.*");
 				var dg = new SaveFileDialog
 				{
-					Title = Resources.ChooseOutputFileName,
+					Title = "Choose an output file name",
 					FileName = OutputFilepath,
 					Filter = filter,
 				};

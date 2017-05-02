@@ -93,7 +93,7 @@ namespace RyLogViewer
 			catch (Exception ex)
 			{
 				Log.Exception(this, ex, "Failed to connect {0}:{1} -> {2}".Fmt(conn.CommPort, conn.BaudRate, conn.OutputFilepath));
-				Misc.ShowMessage(this, "Failed to connect to {0}:{1}.".Fmt(conn.CommPort,conn.BaudRate),Resources.FailedToLaunchProcess, MessageBoxIcon.Error, ex);
+				Misc.ShowMessage(this, "Failed to connect to {0}:{1}.".Fmt(conn.CommPort,conn.BaudRate), Application.ProductName, MessageBoxIcon.Error, ex);
 			}
 			finally
 			{
