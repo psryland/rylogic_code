@@ -321,7 +321,12 @@ namespace RyLogViewer
 			// Web proxy host
 			m_tb_web_proxy_host.ToolTip(m_tt, "The host name or IP address of the web proxy server");
 			m_tb_web_proxy_host.ValueType = typeof(string);
-			m_tb_web_proxy_host.ValidateText = t => { var ty = Uri.CheckHostName(t); return ty == UriHostNameType.IPv4 || ty == UriHostNameType.Dns; };
+			m_tb_web_proxy_host.ValidateText = t =>
+			{
+				if (!t.HasValue()) return true;
+				var ty = Uri.CheckHostName(t);
+				return ty == UriHostNameType.IPv4 || ty == UriHostNameType.Dns;
+			};
 			m_tb_web_proxy_host.Text = Settings.WebProxyHost;
 			m_tb_web_proxy_host.ValueCommitted += (s,a)=>
 			{

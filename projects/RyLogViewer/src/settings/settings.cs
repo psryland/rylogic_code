@@ -66,7 +66,7 @@ namespace RyLogViewer
 			Patterns                    = PatternSet.Default();
 			RowDelimiter                = string.Empty; // stored in humanised form, empty means auto detect
 			ColDelimiter                = string.Empty; // stored in humanised form, empty means auto detect
-			ColumnCount                 = 1;
+			ColumnCount                 = 2;
 			Encoding                    = string.Empty; // empty means auto detect
 			OutputFilepathHistory       = new string[0];
 			LogProgramOutputHistory     = new LaunchApp[0];

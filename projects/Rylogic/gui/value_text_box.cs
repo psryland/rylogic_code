@@ -115,7 +115,6 @@ namespace pr.gui
 			{
 				return m_validate_text ?? (x =>
 				{
-					if (!x.HasValue()) return false;
 					try { Convert.ChangeType(x, ValueType); return true; }
 					catch { return false; }
 				});

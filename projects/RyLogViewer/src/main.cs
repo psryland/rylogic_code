@@ -1233,8 +1233,8 @@ namespace RyLogViewer
 			foreach (var r in m_grid.GetRowsWithState(DataGridViewElementStates.Displayed|DataGridViewElementStates.Selected))
 				m_grid.InvalidateRow(r.Index);
 
-			UpdateStatus();
-			CycleColours();
+			// Update the status bar (after current row has been set)
+			this.BeginInvoke(UpdateStatus);
 
 			// Raise an event whenever the selection changes
 			RaiseSelectionChanged();
@@ -2328,7 +2328,8 @@ namespace RyLogViewer
 				m_status_filesize.Visible = true;
 
 				// Selection
-				var rg = SelectedRowByteRange;
+				var sel_range = m_grid.SelectedRowIndexRange();
+				var rg = (r != -1) ? new Range(m_line_index[sel_range.Begi].Beg, m_line_index[sel_range.Endi].End) : SelectedRowByteRange;
 				m_status_selection.Text = "Selection: [{0:N0} {1:N0}) ({2} bytes)".Fmt(rg.Beg, rg.End, rg.Size);
 				m_status_selection.Visible = true;
 
@@ -2474,17 +2475,6 @@ namespace RyLogViewer
 		{
 			SetStaticStatusMessage(text, SystemColors.ControlText, SystemColors.Control);
 		}
-
-		/// <summary>Cycles colours for the 'free edition' menu item</summary>
-		private void CycleColours()
-		{
-			//return; //hack
-			//if (!m_menu_free_version.Visible) return;
-			//m_free_version_menu_colour.H += 0.01f;
-			//if (m_free_version_menu_colour.H > 1f) m_free_version_menu_colour.H = 0f;
-			//m_menu_free_version.ForeColor = m_free_version_menu_colour.ToColor();
-		}
-		//private HSV m_free_version_menu_colour = HSV.FromColor(Color.Red);
 
 		/// <summary>Custom button renderer because the office 'checked' state buttons look crap</summary>
 		private class CheckedButtonRenderer :ToolStripProfessionalRenderer

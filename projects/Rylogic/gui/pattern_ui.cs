@@ -31,7 +31,7 @@ namespace pr.gui
 			Color.Aquamarine, Color.Yellow, Color.Orchid, Color.GreenYellow, Color.PaleGreen, Color.Goldenrod, Color.MediumTurquoise
 		};
 
-		private HelpUI         m_dlg_help;
+		#region UI Elements
 		private ImageList      m_image_list;
 		private Button         m_btn_regex_help;
 		private CheckBox       m_check_ignore_case;
@@ -50,6 +50,7 @@ namespace pr.gui
 		private Label          m_lbl_groups;
 		private Panel          m_panel_flags;
 		private RichTextBox    m_edit_test;
+		#endregion
 
 		/// <summary>Creates a Pattern edit control.</summary>
 		public PatternUI()
@@ -60,100 +61,100 @@ namespace pr.gui
 			// Pattern
 			// Tool tip set in UpdateUI
 			m_edit_match.TextChanged += (s,a)=>
-				{
-					if (!((TextBox)s).Modified) return;
-					Pattern.Expr = m_edit_match.Text;
-					Touched = true;
-					UpdateUI();
-				};
+			{
+				if (!((TextBox)s).Modified) return;
+				Pattern.Expr = m_edit_match.Text;
+				Touched = true;
+				UpdateUI();
+			};
 			m_edit_match.KeyDown += (s,a)=>
-				{
-					a.Handled = a.KeyCode == Keys.Enter;
-					if (a.Handled) m_btn_add.PerformClick();
-				};
+			{
+				a.Handled = a.KeyCode == Keys.Enter;
+				if (a.Handled) m_btn_add.PerformClick();
+			};
 
 			// Regex help
 			m_btn_regex_help.ToolTip(m_tt, "Displays a quick help guide for regular expressions");
 			m_btn_regex_help.Click += (s,a)=>
-				{
-					RegexHelpUI.Show();
-				};
+			{
+				RegexHelpUI.Show();
+			};
 
 			// Add/Update
 			m_btn_add.ToolTip(m_tt, "Adds a new pattern, or updates an existing pattern");
 			m_btn_add.Click += (s,a)=>
-				{
-					if (!CommitEnabled) return;
-					RaiseCommitEvent();
-				};
+			{
+				if (!CommitEnabled) return;
+				RaiseCommitEvent();
+			};
 
 			// Substring
 			m_radio_substring.ToolTip(m_tt, "Match any occurrence of the pattern as a substring");
 			m_radio_substring.Click += (s,a)=>
-				{
-					if (m_radio_substring.Checked) Pattern.PatnType = EPattern.Substring;
-					UpdateUI();
-				};
+			{
+				if (m_radio_substring.Checked) Pattern.PatnType = EPattern.Substring;
+				UpdateUI();
+			};
 
 			// Wildcard
 			m_radio_wildcard.ToolTip(m_tt, "Match using wildcards, where '*' matches any number of characters and '?' matches any single character");
 			m_radio_wildcard.Click += (s,a)=>
-				{
-					if (m_radio_wildcard.Checked) Pattern.PatnType = EPattern.Wildcard;
-					UpdateUI();
-				};
+			{
+				if (m_radio_wildcard.Checked) Pattern.PatnType = EPattern.Wildcard;
+				UpdateUI();
+			};
 
 			// Regex
 			m_radio_regex.ToolTip(m_tt, "Match using a regular expression");
 			m_radio_regex.Click += (s,a)=>
-				{
-					if (m_radio_regex.Checked) Pattern.PatnType = EPattern.RegularExpression;
-					UpdateUI();
-				};
+			{
+				if (m_radio_regex.Checked) Pattern.PatnType = EPattern.RegularExpression;
+				UpdateUI();
+			};
 
 			// Ignore case
 			m_check_ignore_case.ToolTip(m_tt, "Enable to have the pattern ignore case when matching");
 			m_check_ignore_case.CheckedChanged += (s,a)=>
-				{
-					Pattern.IgnoreCase = m_check_ignore_case.Checked;
-					Touched = true;
-					UpdateUI();
-				};
+			{
+				Pattern.IgnoreCase = m_check_ignore_case.Checked;
+				Touched = true;
+				UpdateUI();
+			};
 
 			// Whole line
 			m_check_whole_line.ToolTip(m_tt, "If checked, the entire line must match the pattern for it to be considered a match");
 			m_check_whole_line.CheckedChanged += (s,a) =>
-				{
-					Pattern.WholeLine = m_check_whole_line.Checked;
-					Touched = true;
-					UpdateUI();
-				};
+			{
+				Pattern.WholeLine = m_check_whole_line.Checked;
+				Touched = true;
+				UpdateUI();
+			};
 
 			// Invert
 			m_check_invert.ToolTip(m_tt, "Invert the match result. e.g the pattern 'a' matches anything without the letter 'a' when this option is checked");
 			m_check_invert.CheckedChanged += (s,a)=>
-				{
-					Pattern.Invert = m_check_invert.Checked;
-					Touched = true;
-					UpdateUI();
-				};
+			{
+				Pattern.Invert = m_check_invert.Checked;
+				Touched = true;
+				UpdateUI();
+			};
 
 			// Test text
 			m_edit_test.ToolTip(m_tt, "An area for testing your pattern.\r\nAdd any text you like here");
 			m_edit_test.Text = DefaultTestText;
 			m_edit_test.TextChanged += (s,a)=>
-				{
-					if (!((RichTextBox)s).Modified) return;
-					UpdateUI();
-				};
+			{
+				if (!((RichTextBox)s).Modified) return;
+				UpdateUI();
+			};
 			int last_selected_line = -1;
 			m_edit_test.SelectionChanged += (s,a) =>
-				{
-					if (m_edit_test.SelectionLength != 0) return;
-					var idx = m_edit_test.GetLineFromCharIndex(m_edit_test.SelectionStart);
-					if (last_selected_line != idx) last_selected_line = idx; else return;
-					UpdateUI();
-				};
+			{
+				if (m_edit_test.SelectionLength != 0) return;
+				var idx = m_edit_test.GetLineFromCharIndex(m_edit_test.SelectionStart);
+				if (last_selected_line != idx) last_selected_line = idx; else return;
+				UpdateUI();
+			};
 
 			// Groups
 			m_grid_grps.AutoGenerateColumns = false;
@@ -184,6 +185,7 @@ namespace pr.gui
 			m_radio_wildcard.Checked    = Pattern.PatnType == EPattern.Wildcard;
 			m_radio_regex.Checked       = Pattern.PatnType == EPattern.RegularExpression;
 			m_check_ignore_case.Checked = Pattern.IgnoreCase;
+			m_check_whole_line.Checked  = Pattern.WholeLine;
 			m_check_invert.Checked      = Pattern.Invert;
 
 			m_btn_add.ToolTip(m_tt, IsNew ? "Add this new pattern" : "Save changes to this pattern");
@@ -267,7 +269,8 @@ namespace pr.gui
 		{
 			get { return m_dlg_help ?? (m_dlg_help = CreateRegexHelpUI(ParentForm)); }
 		}
-
+		private HelpUI m_dlg_help;
+		
 		#region Component Designer generated code
 
 		/// <summary>Required designer variable.</summary>
@@ -628,8 +631,6 @@ namespace pr.gui
 	public abstract class PatternUIBase<TPattern> :UserControl ,IPatternUI where TPattern:class, IPattern, new()
 	{
 		protected readonly ToolTip m_tt;
-		protected TPattern m_original;
-		protected TPattern m_pattern;
 
 		protected PatternUIBase()
 		{
@@ -652,10 +653,12 @@ namespace pr.gui
 		/// <summary>The pattern being edited by this UI</summary>
 		[Browsable(false)] public TPattern Pattern { get { return m_pattern; } }
 		IPattern IPatternUI.Pattern { get { return Pattern; } }
+		protected TPattern m_pattern;
 
 		/// <summary>The original pattern provided to the UI for editing</summary>
 		[Browsable(false)] public TPattern Original { get { return m_original; } }
 		IPattern IPatternUI.Original { get { return Original; } }
+		protected TPattern m_original;
 
 		/// <summary>True if the pattern currently contained is a new instance, vs editing an existing pattern</summary>
 		public bool IsNew { get { return ReferenceEquals(m_original,null); } }
