@@ -40,8 +40,7 @@
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <PropertyGroup>
-    <AssemblyOriginatorKeyFile>
-    </AssemblyOriginatorKeyFile>
+    <AssemblyOriginatorKeyFile>Rylogic.pfx</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationIcon>SmilingGekko140x110.ico</ApplicationIcon>
@@ -579,6 +578,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\Smiling gekko 140x110 nobkgd.png" />
+    <None Include="Rylogic Limited Key File.pfx" />
+    <None Include="Rylogic.pfx" />
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\licence.txt" />
@@ -588,8 +589,8 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>vector.cs</LastGenOutput>
     </Content>
+    <Content Include="post_build.py" />
     <Content Include="resources\regex_quick_ref.html" />
-    <Content Include="run_tests.py" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="..\..\build\props\python_script.targets" />
@@ -603,8 +604,7 @@
   <PropertyGroup>
     <PreBuildEvent>
     </PreBuildEvent>
-    <PostBuildEvent>$(ProjectDir)..\..\script\deploylib.py $(TargetPath) $(PlatformName) $(ConfigurationName)
-$(ProjectDir)run_tests.py $(TargetPath)
+    <PostBuildEvent>$(ProjectDir)post_build.py $(ProjectDir) $(TargetDir) $(ConfigurationName)
 </PostBuildEvent>
   </PropertyGroup>
 </Project>

@@ -31,7 +31,6 @@ namespace RyLogViewer
 		}
 		public Transform(XElement node) :base(node)
 		{
-			// ReSharper disable PossibleNullReferenceException
 			Replace = node.Element(XmlTag.Replace).Value;
 
 			Subs = new Dictionary<string, ITransformSubstitution>();
@@ -53,17 +52,13 @@ namespace RyLogViewer
 				catch (Exception ex)
 				{
 					Log.Warn(this, ex, "Text transform '{0}' ({1}) failed to load".Fmt(name, guid));
-					Misc.ShowMessage(null,
-						"Text transform '{0}' ({1}) failed to load\r\n".Fmt(name, guid) +
-						"Reason:\r\n" + ex.Message,
-						"Text Transform Load Failure", MessageBoxIcon.Information);
+					Misc.ShowMessage(null, "Text transform '{0}' ({1}) failed to load\r\n{2}".Fmt(name, guid, ex.Message),Application.ProductName, MessageBoxIcon.Information);
 					Subs.Add(tag, new SubNoChange());
 				}
 			}
 
 			PatternChanged += HandlePatternChanged;
 			UpdateSubs();
-			// ReSharper restore PossibleNullReferenceException
 		}
 
 		/// <summary>Export this type to an xml node</summary>

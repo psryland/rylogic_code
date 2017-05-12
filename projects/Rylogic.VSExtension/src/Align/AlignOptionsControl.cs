@@ -76,41 +76,41 @@ namespace Rylogic.VSExtension
 
 			// When the selected item in the groups grid changes, update the data source of the pattern grid
 			m_bs_groups.PositionChanged += (s,a) =>
-				{
-					SetPatternsDataSource();
-					UpdateButtonStates();
-				};
+			{
+				SetPatternsDataSource();
+				UpdateButtonStates();
+			};
 
-			// Setup add/remove/order buttons
+			// Set up add/remove/order buttons
 			m_btn_new.ToolTip(m_tt, "Add a new alignment group");
 			m_btn_new.Click += (s,a) =>
-				{
-					m_bs_groups.AddNew();
-					m_grid_groups.FirstDisplayedScrollingRowIndex = m_grid_groups.RowCount - m_grid_groups.DisplayedRowCount(false);
-					m_grid_groups.SelectRow(m_grid_groups.RowCount - 1);
-					m_grid_groups.BeginEdit(true);
-				};
+			{
+				m_bs_groups.AddNew();
+				m_grid_groups.FirstDisplayedScrollingRowIndex = m_grid_groups.RowCount - m_grid_groups.DisplayedRowCount(false);
+				m_grid_groups.SelectRow(m_grid_groups.RowCount - 1);
+				m_grid_groups.BeginEdit(true);
+			};
 			m_btn_del.ToolTip(m_tt, "Delete the selected alignment group");
 			m_btn_del.Click += (s,a) =>
-				{
-					m_bs_groups.RemoveCurrent();
-				};
+			{
+				m_bs_groups.RemoveCurrent();
+			};
 			m_btn_move_up.ToolTip(m_tt, "Move the selected alignment group up in the priority order");
 			m_btn_move_up.Click += (s,a) =>
-				{
-					var x = m_bs_groups.Position;
-					if (x <= 0) return;
-					m_bs_groups.List.Swap(x, x-1);
-					m_grid_groups.SelectRow(x - 1);
-				};
+			{
+				var x = m_bs_groups.Position;
+				if (x <= 0) return;
+				m_bs_groups.List.Swap(x, x-1);
+				m_grid_groups.SelectRow(x - 1);
+			};
 			m_btn_move_down.ToolTip(m_tt, "Move the selected alignment group down in the priority order");
 			m_btn_move_down.Click += (s,a) =>
-				{
-					var x = m_bs_groups.Position;
-					if (x >= m_bs_groups.Count - 1) return;
-					m_bs_groups.List.Swap(x, x+1);
-					m_grid_groups.SelectRow(x + 1);
-				};
+			{
+				var x = m_bs_groups.Position;
+				if (x >= m_bs_groups.Count - 1) return;
+				m_bs_groups.List.Swap(x, x+1);
+				m_grid_groups.SelectRow(x + 1);
+			};
 
 			// Setup the help button for groups
 			m_btn_help_groups.Click += (s,a) =>

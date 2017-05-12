@@ -20,6 +20,7 @@ arch = "x64"
 
 # Location of the root for the code library (i.e. the directory containing build, include, projects, etc) (No trailing '\')
 root = "P:"
+wwwroot = "Z:\\WWW\\rylogic.co.nz"
 
 # MSBuild path. Used by build scripts
 msbuild_dir = r"C:\Program Files (x86)\MSBuild\14.0"

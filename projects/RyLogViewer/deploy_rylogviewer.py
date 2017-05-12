@@ -30,8 +30,11 @@ def Deploy():
 	objdir = srcdir + "\\obj\\" + config
 	sln = srcdir + "\\RyLogViewer.sln"
 
+	# Publish to WWW
+	publish = input("Publish to web site?")
+
 	# Ensure output directories exist and are empty
-	print("Cleaning deploy directory: " + dstdir)
+	print("\nCleaning deploy directory: " + dstdir)
 	Tools.ShellDelete(dstdir)
 	os.makedirs(dstdir)
 
@@ -42,11 +45,11 @@ def Deploy():
 		raise Exception("Version History has not been updated")
 
 	# Build the project
-	print("Building...")
+	print("\nBuilding...")
 	Tools.MSBuild(sln, [], ["Any CPU"], [config], False, True)
 
 	# Copy build products to the deploy dir
-	print("Copying files to " + dstdir + "...")
+	print("\nCopying files to " + dstdir + "...")
 	Tools.Copy(targetdir + "\\RyLogViewer.exe"            , dstdir + "\\")
 	Tools.Copy(targetdir + "\\RyLogViewer.exe.config"     , dstdir + "\\")
 	Tools.Copy(targetdir + "\\RyLogic.dll"                , dstdir + "\\")
@@ -56,8 +59,8 @@ def Deploy():
 	Tools.Copy(targetdir + "\\examples"                   , dstdir + "\\examples\\")
 
 	# Build the installer
-	print("Building installer...")
-	BuildInstaller.Build(
+	print("\nBuilding installer...")
+	msi = BuildInstaller.Build(
 		"RyLogViewer",
 		version,
 		srcdir + "\\installer\\installer.wxs",
@@ -70,7 +73,10 @@ def Deploy():
 			["examples","INSTALLFOLDER"],
 		])
 
-	#{"docs":"INSTALLFOLDER", "examples":"ExamplesDir"}
+	# Publish to WWW
+	if publish:
+		print("\nPublishing to web site...")
+		Tools.Copy(msi, UserVars.wwwroot + "\\rylogviewer\\")
 
 	return
 

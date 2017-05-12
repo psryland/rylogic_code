@@ -78,7 +78,7 @@ namespace RyLogViewer
 		{
 			// Generate a temporary file for the installed
 			var uri = new Uri(DownloadUrl);
-			var installer_filepath = Path.Combine(Path.GetTempPath(), Path.GetFileName(DownloadUrl) ?? "RylogViewerSetup0.exe");
+			var installer_filepath = Path.Combine(Path.GetTempPath(), Path.GetFileName(DownloadUrl) ?? "RyLogViewerInstaller.exe");
 
 			try
 			{

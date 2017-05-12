@@ -1843,7 +1843,7 @@ namespace RyLogViewer
 				this.BeginInvoke(() => HandleCheckForUpdateResult(res, err, show_dialog));
 			};
 
-			string update_url = Settings.CheckForUpdatesServer + "versions/rylogviewer.xml";
+			var update_url = Settings.CheckForUpdatesServer + "rylogviewer/latest_version.xml";
 
 			// Start the check for updates
 			if (show_dialog)
@@ -1851,9 +1851,9 @@ namespace RyLogViewer
 				var dlg = new ProgressForm("Checking for Updates", "Querying the server for latest version information...", null, ProgressBarStyle.Marquee, (s,a,cb)=>
 				{
 					cb(new ProgressForm.UserState{ProgressBarStyle = ProgressBarStyle.Marquee, Icon = Icon});
-					IAsyncResult async = INet.BeginCheckForUpdate(Constants.AppIdentifier, update_url, null, Proxy);
+					var async = INet.BeginCheckForUpdate(Constants.AppIdentifier, update_url, null, Proxy);
 
-					// Wait till the operation completes, or until cancel is singled
+					// Wait till the operation completes, or until cancel is signalled
 					for (;!s.CancelPending && !async.AsyncWaitHandle.WaitOne(500);) {}
 
 					if (!s.CancelPending) callback(async);
@@ -1875,31 +1875,31 @@ namespace RyLogViewer
 			if (error != null)
 			{
 				SetTransientStatusMessage("Check for updates error", Color.Red, SystemColors.Control);
-				if (show_dialog) Misc.ShowMessage(this, "Check for updates failed", "Check for Updates", MessageBoxIcon.Error, error);
+				if (show_dialog) Misc.ShowMessage(this, "Check for updates failed", Application.ProductName, MessageBoxIcon.Error, error);
 			}
 			else
 			{
 				Version this_version, othr_version;
 				try
 				{
-					this_version = Assembly.GetExecutingAssembly().GetName().Version;
+					this_version = new Version(Util.AppVersion);
 					othr_version = new Version(res.Version);
 				}
 				catch (Exception)
 				{
 					SetTransientStatusMessage("Version Information Unavailable");
-					if (show_dialog) MsgBox.Show(this, "The server was contacted but version information was not available", "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
+					if (show_dialog) MsgBox.Show(this, "The server was contacted but version information was not available", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Information);
 					return;
 				}
 				if (this_version.CompareTo(othr_version) >  0)
 				{
 					SetTransientStatusMessage("Development version running");
-					if (show_dialog) MsgBox.Show(this, "This version is newer than the latest version", "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
+					if (show_dialog) MsgBox.Show(this, "This version is newer than the latest version", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Information);
 				}
 				else if (this_version.CompareTo(othr_version) == 0)
 				{
 					SetTransientStatusMessage("Latest version running");
-					if (show_dialog) MsgBox.Show(this, "This is the latest version", "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
+					if (show_dialog) MsgBox.Show(this, "This is the latest version", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Information);
 				}
 				else
 				{

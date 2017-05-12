@@ -43,6 +43,9 @@ try:
 	Tools.Copy(projdir + "\\examples\\ExamplePlugin\\bin\\"+config+"\\ExamplePlugin.dll" , pluginsdir + "\\")
 
 	# Sign the binary
+	#todo replace this with proper windows signing, and investigate buying a Cert
+	#signtool = UserVars.winsdk + "\\bin\\signtool.exe"
+	#Tools.Exec([])
 	Tools.Exec([UserVars.csex, "-signfile", "-f", targetdir+"\\RyLogViewer.exe", "-pk", projdir+"\\src\\licence\\private_key.xml"])
 
 except Exception as ex:

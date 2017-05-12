@@ -49,7 +49,7 @@ namespace RyLogViewer
 			FirstRun                    = true;
 			ShowTOTD                    = true;
 			CheckForUpdates             = false;
-			CheckForUpdatesServer       = "http://www.rylogic.co.nz:80/";
+			CheckForUpdatesServer       = "http://www.rylogic.co.nz/";
 			UseWebProxy                 = false;
 			WebProxyHost                = string.Empty;
 			WebProxyPort                = Constants.PortNumberWebProxyDefault;

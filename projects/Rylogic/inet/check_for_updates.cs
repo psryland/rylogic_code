@@ -69,7 +69,7 @@ namespace pr.inet
 		/// <param name="identifier">The identifier for the application whose version is being checked</param>
 		/// <param name="url">The URL of the version xml file</param>
 		/// <param name="callback">A callback called (on success or failure) with the results of the version check</param>
-		/// <param name="proxy">A optional proxy server</param>
+		/// <param name="proxy">An optional proxy server</param>
 		public static IAsyncResult BeginCheckForUpdate(string identifier, string url, Action<IAsyncResult> callback, IWebProxy proxy)
 		{
 			var async = new CheckForUpdateAsyncData();
@@ -79,20 +79,19 @@ namespace pr.inet
 			{
 				try
 				{
-					// Check the update url is valid
-					Uri uri = new Uri(url);
+					// Check the update URL is valid
+					var uri = new Uri(url);
 					if (!Uri.IsWellFormedUriString(uri.AbsoluteUri, UriKind.Absolute))
 						throw new ArgumentException("Update URL is invalid");
 
 					// Create a web client and grab the version xml data
-					string latest_version_xml = "";
-					Exception error = null;
-					using (WebClient web = new WebClient{Proxy = proxy})
-					using (ManualResetEvent got = new ManualResetEvent(false))
+					var latest_version_xml = "";
+					var error = (Exception)null;
+					using (var web = new WebClient{Proxy = proxy})
+					using (var got = new ManualResetEvent(false))
 					{
 						web.DownloadStringCompleted += (s,a) =>
 						{
-							// ReSharper disable AccessToDisposedClosure
 							try
 							{
 								error = a.Error;
@@ -101,7 +100,6 @@ namespace pr.inet
 							}
 							catch { }
 							finally { got.Set(); }
-							// ReSharper restore AccessToDisposedClosure
 						};
 						web.DownloadStringAsync(uri);
 
@@ -121,8 +119,8 @@ namespace pr.inet
 						throw new Exception("No update information returned from server");
 
 					// Load the version info string
-					XElement root = XDocument.Parse(latest_version_xml).Root;
-					XElement info = root != null ? root.Element(identifier) : null;
+					var root = XDocument.Parse(latest_version_xml).Root;
+					var info = root != null ? root.Element(identifier) : null;
 					if (info != null)
 					{
 						XElement elem;
