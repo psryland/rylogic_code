@@ -3,7 +3,7 @@
 # Use:
 #  post_build.py $(ProjectDir) $(TargetDir) $(ConfigurationName)
 import sys, os, shutil, re
-sys.path.append(re.sub(r"(\w:[\\/]).*", r"\1script", __file__))
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + "\\..\\..\\script"))
 import Rylogic as Tools
 import DeployLib
 import UserVars
