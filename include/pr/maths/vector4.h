@@ -415,6 +415,7 @@ namespace pr
 	// Returns true if 'a' and 'b' parallel
 	inline bool Parallel(v4 const& v0, v4 const& v1, float tol = maths::tiny)
 	{
+		// '<=' to allow for 'tol' == 0.0
 		return Length3Sq(Cross3(v0, v1)) <= Sqr(tol);
 	}
 

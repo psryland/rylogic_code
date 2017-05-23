@@ -427,7 +427,7 @@ namespace pr
 	// True if 'mat' can be inverted
 	inline bool IsInvertable(m3x4 const& mat)
 	{
-		return !FEql(Determinant(mat), 0.0f);
+		return Determinant(mat) != 0.0f;
 	}
 
 	// Invert the orthonormal matrix 'mat'

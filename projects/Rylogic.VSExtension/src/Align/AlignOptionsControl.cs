@@ -69,7 +69,7 @@ namespace Rylogic.VSExtension
 			base.Dispose(disposing);
 		}
 
-		/// <summary>Setup the grid of alignment groups</summary>
+		/// <summary>Set up the grid of alignment groups</summary>
 		private void SetupGroupsGrid()
 		{
 			m_grid_groups.Data = m_bs_groups;
@@ -87,7 +87,7 @@ namespace Rylogic.VSExtension
 			{
 				m_bs_groups.AddNew();
 				m_grid_groups.FirstDisplayedScrollingRowIndex = m_grid_groups.RowCount - m_grid_groups.DisplayedRowCount(false);
-				m_grid_groups.SelectRow(m_grid_groups.RowCount - 1);
+				m_grid_groups.SelectSingleRow(m_grid_groups.RowCount - 1);
 				m_grid_groups.BeginEdit(true);
 			};
 			m_btn_del.ToolTip(m_tt, "Delete the selected alignment group");
@@ -101,7 +101,7 @@ namespace Rylogic.VSExtension
 				var x = m_bs_groups.Position;
 				if (x <= 0) return;
 				m_bs_groups.List.Swap(x, x-1);
-				m_grid_groups.SelectRow(x - 1);
+				m_grid_groups.SelectSingleRow(x - 1);
 			};
 			m_btn_move_down.ToolTip(m_tt, "Move the selected alignment group down in the priority order");
 			m_btn_move_down.Click += (s,a) =>
@@ -109,54 +109,54 @@ namespace Rylogic.VSExtension
 				var x = m_bs_groups.Position;
 				if (x >= m_bs_groups.Count - 1) return;
 				m_bs_groups.List.Swap(x, x+1);
-				m_grid_groups.SelectRow(x + 1);
+				m_grid_groups.SelectSingleRow(x + 1);
 			};
 
-			// Setup the help button for groups
+			// Set up the help button for groups
 			m_btn_help_groups.Click += (s,a) =>
-				{
-					const string tt1 =
-						"Each group contains patterns that are all considered equivalent. " +
-						"Select a group to show its patterns in the table below. " +
-						"The order of groups defines the preferred order when looking for " +
-						"potential alignment candidates. Change the order by selecting a group " +
-						"and clicking the up/down arrows. 'LeadingSpace' is the number of white " +
-						"space characters added in front of the aligned text.";
-					m_hint_balloon.Show(m_grid_groups, m_grid_groups.ClientRectangle.TopLeft().Shifted(10,10), tt1, 10000);
-				};
+			{
+				const string tt1 =
+					"Each group contains patterns that are all considered equivalent. " +
+					"Select a group to show its patterns in the table below. " +
+					"The order of groups defines the preferred order when looking for " +
+					"potential alignment candidates. Change the order by selecting a group " +
+					"and clicking the up/down arrows. 'LeadingSpace' is the number of white " +
+					"space characters added in front of the aligned text.";
+				m_hint_balloon.Show(m_grid_groups, m_grid_groups.ClientRectangle.TopLeft().Shifted(10,10), tt1, 10000);
+			};
 
-			// Setup reset button
+			// Set up reset button
 			m_btn_reset.ToolTip(m_tt, "Resets the alignment groups to the defaults");
 			m_btn_reset.Click += (s,a) =>
-				{
-					var r = MsgBox.Show(this, "Reset all alignment groups/patterns to defaults?", "Reset to Default", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
-					if (r != DialogResult.OK) return;
-					m_options.ResetSettings();
-					m_options.SaveSettingsToStorage();
-					m_bs_groups.ResetBindings(false);
-					m_bs_patterns.ResetBindings(false);
-				};
+			{
+				var r = MsgBox.Show(this, "Reset all alignment groups/patterns to defaults?", "Reset to Default", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+				if (r != DialogResult.OK) return;
+				m_options.ResetSettings();
+				m_options.SaveSettingsToStorage();
+				m_bs_groups.ResetBindings(false);
+				m_bs_patterns.ResetBindings(false);
+			};
 
 			UpdateButtonStates();
 		}
 
-		/// <summary>Setup the grid of patterns</summary>
+		/// <summary>Set up the grid of patterns</summary>
 		private void SetupPatternsGrid()
 		{
 			m_grid_patterns.Data                = m_bs_patterns;
 			m_grid_patterns.ShowEditPatternDlg  = ShowEditPatternDlg;
 			m_grid_patterns.CloseEditPatternDlg = CloseEditPatternDlg;
 
-			// Setup the help button for patterns
+			// Set up the help button for patterns
 			m_btn_help_patterns.Click += (s,a) =>
-				{
-					const string tt2 =
-						"A pattern can be a simple substring or a regular expression. " +
-						"The 'Offset' column controls the relative position of matching text " +
-						"to the other patterns in the group. The 'MinWidth' column controls " +
-						"how much extra padding is added after the matching text.";
-					m_hint_balloon.Show(m_grid_patterns, m_grid_patterns.ClientRectangle.TopLeft().Shifted(10,10), tt2, 10000);
-				};
+			{
+				const string tt2 =
+					"A pattern can be a simple substring or a regular expression. " +
+					"The 'Offset' column controls the relative position of matching text " +
+					"to the other patterns in the group. The 'MinWidth' column controls " +
+					"how much extra padding is added after the matching text.";
+				m_hint_balloon.Show(m_grid_patterns, m_grid_patterns.ClientRectangle.TopLeft().Shifted(10,10), tt2, 10000);
+			};
 		}
 
 		/// <summary>Update the enabled states of the group buttons</summary>

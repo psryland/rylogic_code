@@ -43,7 +43,8 @@ namespace pr
 		}
 		inline char*    dtostr (double from, char*    buf, int count)
 		{
-			auto n = ::_snprintf (buf, count,  "%f", from);
+			// Have to use %g otherwise converting to a string loses precision
+			auto n = ::_snprintf (buf, count,  "%g", from);
 			if (n <= 0) throw std::exception("conversion from floating point value to string failed");
 			if (n >= count) throw std::exception("conversion from floating point value to string was truncated");
 			buf[count-1] = 0;
@@ -51,7 +52,8 @@ namespace pr
 		}
 		inline wchar_t* dtostr (double from, wchar_t* buf, int count)
 		{
-			auto n = ::_snwprintf(buf, count, L"%f", from);
+			// Have to use %g otherwise converting to a string loses precision
+			auto n = ::_snwprintf(buf, count, L"%g", from);
 			if (n <= 0) throw std::exception("conversion from floating point value to string failed");
 			if (n >= count) throw std::exception("conversion from floating point value to string was truncated");
 			buf[count-1] = 0;
@@ -263,7 +265,7 @@ namespace pr
 			PR_CHECK(pr::To<std::wstring>(pcstr), swstr);
 			PR_CHECK(pr::To<std::wstring>(pwstr), swstr);
 
-			PR_CHECK(pr::To<std::string>(3.14), "3.140000");
+			PR_CHECK(pr::To<std::string>(3.14), "3.14");
 			PR_CHECK(pr::To<std::wstring>(42), L"42");
 			PR_CHECK(pr::To<std_cstr>("literal cstr"), "literal cstr");
 			PR_CHECK(pr::To<std_wstr>("literal cstr"), L"literal cstr");

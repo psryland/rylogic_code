@@ -761,7 +761,7 @@ namespace pr
 				auto bbox_cs = w2c * bbox;
 				auto width   = bbox_cs.SizeX();
 				auto height  = bbox_cs.SizeY();
-				assert(!FEql(width,0) && !FEql(height, 0));
+				assert(width != 0 && height != 0);
 
 				// Choose the fields of view. If 'focus_dist' is given, then that determines
 				// the X,Y field of view. If not, choose a focus distance based on a view size

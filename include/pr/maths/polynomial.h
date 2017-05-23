@@ -6,6 +6,7 @@
 
 #include "pr/maths/forward.h"
 #include "pr/maths/maths_core.h"
+#include "pr/maths/matrix.h"
 
 namespace pr
 {
@@ -190,10 +191,21 @@ namespace pr
 			}
 			static Quadratic FromPoints(double x0, double y0, double x1, double y1, double x2, double y2)
 			{
-				return FromPoints(
-					v2(float(x0), float(y0)),
-					v2(float(x1), float(y1)),
-					v2(float(x2), float(y2)));
+				auto M = Matrix<double>(3,3,
+				{
+					x0*x0, x0, 1,
+					x1*x1, x1, 1,
+					x2*x2, x2, 1,
+				}, true);
+				
+				auto y = Matrix<double>(1,3,{y0, y1, y2},false);
+				auto x = Invert(M) * y;
+
+				return Quadratic(x(0,0), x(0,1), x(0,2));
+			}
+			static Quadratic FromPoints(double const* pts)
+			{
+				return FromPoints(pts[0], pts[1], pts[2], pts[3], pts[4], pts[5]);
 			}
 		};
 
@@ -476,6 +488,16 @@ namespace pr
 				PR_CHECK(FEql(float(q.F(a.x)), a.y), true);
 				PR_CHECK(FEql(float(q.F(b.x)), b.y), true);
 				PR_CHECK(FEql(float(q.F(c.x)), c.y), true);
+			}
+			{ // FromPoints
+				double a[] = {0.5,  0.3};
+				double b[] = {0.7, -0.2};
+				double c[] = {1.0,  0.6};
+
+				auto q = Quadratic::FromPoints(a[0], a[1], b[0], b[1], c[0], c[1]);
+				PR_CHECK(FEql(q.F(a[0]), a[1]), true);
+				PR_CHECK(FEql(q.F(b[0]), b[1]), true);
+				PR_CHECK(FEql(q.F(c[0]), c[1]), true);
 			}
 		}
 	}

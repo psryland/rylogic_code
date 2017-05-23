@@ -16,6 +16,7 @@
 #include "pr/filesys/file.h"
 #include "pr/filesys/fileex.h"
 #include "pr/maths/maths.h"
+#include "pr/maths/polynomial.h"
 #include "pr/maths/conversion.h"
 #include "pr/geometry/closest_point.h"
 
@@ -92,9 +93,17 @@ namespace pr
 		{
 			return AppendSpace(str).append(pr::To<TStr>(f));
 		}
+		inline TStr& Append(TStr& str, double f)
+		{
+			return AppendSpace(str).append(pr::To<TStr>(f));
+		}
 		inline TStr& Append(TStr& str, Col c)
 		{
 			return AppendSpace(str).append(pr::To<TStr>(c.c));
+		}
+		inline TStr& Append(TStr& str, AxisId id)
+		{
+			return AppendSpace(str).append(pr::To<TStr>(int(id)));
 		}
 		inline TStr& Append(TStr& str, pr::Colour32 c)
 		{
@@ -176,9 +185,11 @@ namespace pr
 			if (t0 != 0.0f || t1 != 1.0f) Append(str,"*Param{",t0,t1,"}");
 			return Append(str,"}\n");
 		}
-		inline TStr& LineD(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& start, v4 const& direction)
+		inline TStr& LineD(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& start, v4 const& direction, float t0 = 0.0f, float t1 = 1.0f)
 		{
-			return Append(str, "*LineD", name, colour, "{", start.xyz ,direction.xyz, "}\n");
+			Append(str, "*LineD", name, colour, "{", start.xyz ,direction.xyz);
+			if (t0 != 0.0f || t1 != 1.0f) Append(str,"*Param{",t0,t1,"}");
+			return Append(str, "}\n");
 		}
 		inline TStr& LineStrip(TStr& str, typename TStr::value_type const* name, Col colour, int width, int count, v4 const* points)
 		{
@@ -187,7 +198,7 @@ namespace pr
 			for (int i = 0; i != count; ++i) Append(str, points[i].xyz);
 			return Append(str, "}\n");
 		}
-		inline TStr& Rect(TStr& str, typename TStr::value_type const* name, Col colour, int axis, float w, float h, bool solid, m4x4 const& o2w)
+		inline TStr& Rect(TStr& str, typename TStr::value_type const* name, Col colour, AxisId axis, float w, float h, bool solid, m4x4 const& o2w)
 		{
 			return Append(str,"*Rect",name,colour,"{",axis, w, h, solid?"*solid":"",O2W(o2w),"}\n");
 		}
@@ -208,6 +219,21 @@ namespace pr
 		inline TStr& Spline(TStr& str, typename TStr::value_type const* name, Col colour, pr::Spline const& spline)
 		{
 			return Append(str,"*Spline",name,colour,"{",spline.x.xyz,spline.y.xyz,spline.z.xyz,spline.w.xyz,"}\n");
+		}
+		inline TStr& Curve(TStr& str, typename TStr::value_type const* name, Col colour, pr::polynomial::Quadratic const& curve, float x0, float x1, int steps, O2W const& o2w)
+		{
+			Append(str,"*LineStrip",name,colour,"{");
+
+			auto x = x0;
+			auto dx = (x1 - x0) / steps;
+			for (auto i = 0; i != steps; ++i, x += dx)
+				Append(str, x, curve.F(x), 0);
+
+			return Append(str, o2w, "}\n");
+		}
+		inline TStr& Curve(TStr& str, typename TStr::value_type const* name, Col colour, pr::polynomial::Quadratic const& curve, float x0, float x1, int steps)
+		{
+			return Curve(str, name, colour, curve, x0, x1, steps, m4x4Identity);
 		}
 		inline TStr& Ellipse(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& centre, int axis_id, float major, float minor)
 		{
@@ -239,7 +265,7 @@ namespace pr
 		{
 			return Append(str,"*LineBox",name,colour,"{",dim.xyz,O2W(position),"}\n");
 		}
-		inline TStr& FrustumFA(TStr& str, typename TStr::value_type const* name, Col colour, int axis, float fovY, float aspect, float nplane, float fplane, m4x4 const& o2w)
+		inline TStr& FrustumFA(TStr& str, typename TStr::value_type const* name, Col colour, AxisId axis, float fovY, float aspect, float nplane, float fplane, m4x4 const& o2w)
 		{
 			return Append(str,"*FrustumFA",name,colour,"{",axis,pr::RadiansToDegrees(fovY),aspect,nplane,fplane,O2W(o2w),"}\n");
 		}
@@ -407,11 +433,11 @@ namespace pr
 
 			std::string str;
 			Append(str,"*Box b",pr::Colour32Green,"{",pr::v3(1.0f,2.0f,3.0f),O2W(pr::m4x4Identity),"}");
-			PR_CHECK(str, "*Box b ff00ff00 {1.000000 2.000000 3.000000}");
+			PR_CHECK(str, "*Box b ff00ff00 {1 2 3}");
 
 			str.resize(0);
 			Append(str,"*Box b",pr::Colour32Red,"{",1.5f,O2W(pr::v4ZAxis.w1()),"}");
-			PR_CHECK(str, "*Box b ffff0000 {1.500000 *o2w{*pos{0.000000 0.000000 1.000000}}}");
+			PR_CHECK(str, "*Box b ffff0000 {1.5 *o2w{*pos{0 0 1}}}");
 		}
 	}
 }

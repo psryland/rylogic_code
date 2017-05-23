@@ -428,8 +428,8 @@ namespace pr
 			:Matrix<Real>(m) // Note: after construction base != m
 			,DetOfP(1.0f)
 			,pi(std::make_unique<int[]>(m.rows()))
-			,L(*this)
-			,U(*this)
+			,L(This())
+			,U(This())
 		{
 			if (!m.IsSquare())
 				throw std::exception("LU decomposition is only possible on square matrices");
@@ -483,6 +483,12 @@ namespace pr
 		}
 
 	private:
+
+		// Work around to prevent warning
+		Matrix const& This() const
+		{
+			return *this;
+		}
 
 		// Protect the array access operator, since it doesn't make
 		// sense for callers to write to the matrix elements
@@ -881,7 +887,7 @@ namespace pr
 	// True if 'm' has an inverse
 	template <typename Real> inline bool IsInvertable(MatrixLU<Real> const& m)
 	{
-		return !FEql(Determinant(m), 0);
+		return Determinant(m) != 0;
 	}
 	template <typename Real> inline bool IsInvertable(Matrix<Real> const& m)
 	{

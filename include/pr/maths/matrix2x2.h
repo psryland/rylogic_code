@@ -168,7 +168,7 @@ namespace pr
 	// Returns true if 'mat' has an inverse
 	inline bool IsInvertable(m2x2 const& mat)
 	{
-		return !FEql(Determinant(mat), 0);
+		return Determinant(mat) != 0;
 	}
 
 	// Returns the inverse of 'mat' assuming is it a pure rotation matrix

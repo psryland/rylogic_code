@@ -186,7 +186,7 @@ def ExpandHtmlFile(srcpath, dstdir = None):
 	srcdir,file = os.path.split(srcpath)
 	fname,extn  = os.path.splitext(file)
 
-	# Handle optional 'dstpath'
+	# Handle optional 'dstdir'
 	if dstdir is None:
 		dstdir = srcdir
 	elif not os.path.isabs(dstdir):

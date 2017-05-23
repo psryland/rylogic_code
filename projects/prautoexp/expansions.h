@@ -65,6 +65,7 @@ extern "C"
 	ADDIN_API HRESULT WINAPI AddIn_m3x4               (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
 	ADDIN_API HRESULT WINAPI AddIn_m4x4               (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
 	ADDIN_API HRESULT WINAPI AddIn_m6x8               (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
+	ADDIN_API HRESULT WINAPI AddIn_Matrix             (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
 	ADDIN_API HRESULT WINAPI AddIn_MAXMatrix3         (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
 	ADDIN_API HRESULT WINAPI AddIn_stdvector          (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
 	ADDIN_API HRESULT WINAPI AddIn_stdstring          (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);

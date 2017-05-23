@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -986,7 +987,7 @@ namespace RyLogViewer
 			var pat = (T)args.Data.GetData(typeof(T));
 			var idx1 = patterns.IndexOf(pat);
 			var idx2 = hit.RowIndex;
-			patterns.Swap(idx1, idx2);
+			((IList)patterns).Swap(idx1, idx2);
 			grid.InvalidateRow(idx1);
 			grid.InvalidateRow(idx2);
 

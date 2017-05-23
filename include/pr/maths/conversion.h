@@ -17,9 +17,9 @@ namespace pr
 		struct VMToString
 		{
 			// To String
-			static Str To(v2 const& x) { return pr::Fmt(PR_STRLITERAL(Char, "%f %f"), x.x, x.y); }
-			static Str To(v3 const& x) { return pr::Fmt(PR_STRLITERAL(Char, "%f %f %f"), x.x, x.y, x.z); }
-			static Str To(v4 const& x) { return pr::Fmt(PR_STRLITERAL(Char, "%f %f %f %f"), x.x, x.y, x.z, x.w); }
+			static Str To(v2 const& x) { return pr::Fmt(PR_STRLITERAL(Char, "%g %g"), x.x, x.y); }
+			static Str To(v3 const& x) { return pr::Fmt(PR_STRLITERAL(Char, "%g %g %g"), x.x, x.y, x.z); }
+			static Str To(v4 const& x) { return pr::Fmt(PR_STRLITERAL(Char, "%g %g %g %g"), x.x, x.y, x.z, x.w); }
 			static Str To(iv2 const& x) { return pr::Fmt(PR_STRLITERAL(Char, "%d %d"), x.x, x.y); }
 			static Str To(iv4 const& x) { return pr::Fmt(PR_STRLITERAL(Char, "%d %d %d %d"), x.x, x.y, x.z, x,w); }
 			static Str To(m2x2 const& m) { Char const _[] = {' ','\0'}; return To(m.x) + _ + To(m.y); }

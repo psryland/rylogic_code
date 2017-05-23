@@ -423,7 +423,7 @@ VIEW3D_API View3DBBox __stdcall View3D_SceneBounds(View3DWindow window, EView3DS
 		DllLockGuard;
 		return view3d::To<View3DBBox>(window->SceneBounds(bounds, except_count, except));
 	}
-	CatchAndReport(View3D_RemoveGizmo, window, view3d::To<View3DBBox>(pr::BBoxUnit));
+	CatchAndReport(View3D_SceneBounds, window, view3d::To<View3DBBox>(pr::BBoxUnit));
 }
 
 //  ********************************************************

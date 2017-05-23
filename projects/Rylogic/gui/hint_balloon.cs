@@ -119,7 +119,7 @@ namespace pr.gui
 					}
 
 					// Update the shape of the balloon form
-					if (update_path)
+					if (update_path || m_path == null)
 					{
 						m_path = GeneratePath(false);
 						Region = new Region(GeneratePath(true));

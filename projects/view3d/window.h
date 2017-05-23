@@ -360,11 +360,15 @@ namespace view3d
 		{
 			auto iter = m_gizmos.find(gizmo);
 			if (iter == std::end(m_gizmos))
+			{
 				m_gizmos.insert(iter, gizmo);
+				ObjectContainerChanged();
+			}
 		}
 		void Remove(pr::ldr::LdrGizmo* gizmo)
 		{
 			m_gizmos.erase(gizmo);
+			ObjectContainerChanged();
 		}
 
 		// Remove all objects from this scene

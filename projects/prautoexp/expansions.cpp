@@ -247,6 +247,16 @@ ADDIN_API HRESULT WINAPI AddIn_m6x8(DWORD, DbgHelper* pHelper, int, BOOL, char *
 	return S_OK;
 }
 
+// Expand a Matrix
+ADDIN_API HRESULT WINAPI AddIn_Matrix(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
+{
+	ReentryGuard guard;
+	pr::Matrix<double> mat;
+	if (FAILED(pHelper->Read(mat))) return E_FAIL;
+	//todo: how to deal with float vs. double?
+	return S_OK;
+}
+
 // Expand a MAX Matrix3
 ADDIN_API HRESULT WINAPI AddIn_MAXMatrix3(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 {

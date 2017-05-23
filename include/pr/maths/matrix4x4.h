@@ -231,7 +231,8 @@ namespace pr
 		static Mat4x4 LookAt(v4 const& eye, v4 const& at, v4 const& up)
 		{
 			assert("Invalid position/direction vectors passed to LookAt" && eye.w == 1.0f && at.w == 1.0f && up.w == 0.0f);
-			assert("LookAt point and up axis are aligned" && !pr::Parallel(at - eye, up));
+			assert("LookAt 'eye' and 'at' positions are coincident" && eye - at != v4Zero);
+			assert("LookAt 'forward' and 'up' axes are aligned" && !pr::Parallel(eye - at, up, 0.0));
 			auto mat = Mat4x4{};
 			mat.z = Normalise3(eye - at);
 			mat.x = Normalise3(Cross3(up, mat.z));
@@ -574,7 +575,7 @@ namespace pr
 	// True if 'mat' has an inverse
 	inline bool IsInvertable(m4x4 const& mat)
 	{
-		return !FEql(Determinant4(mat), 0.0f);
+		return Determinant4(mat) != 0;
 	}
 
 	// Return the inverse of 'mat' (assuming an orthonormal matrix)

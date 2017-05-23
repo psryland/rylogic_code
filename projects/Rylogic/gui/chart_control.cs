@@ -798,7 +798,11 @@ namespace pr.gui
 		public string LocationText(Point location)
 		{
 			var pt = ClientToChart(location);
-			return "{0} , {1}".Fmt(XAxis.TickText(pt.X, 0.0), YAxis.TickText(pt.Y, 0.0));
+
+			double min, max, step;
+			XAxis.GridLines(out min, out max, out step); var xtick = XAxis.TickText(pt.X, step);
+			YAxis.GridLines(out min, out max, out step); var ytick = YAxis.TickText(pt.Y, step);
+			return "{0} , {1}".Fmt(xtick, ytick);
 		}
 
 		/// <summary>Return the current mouse pointer location as a string</summary>
@@ -1810,8 +1814,8 @@ namespace pr.gui
 					AllowScroll     = true;
 					AllowZoom       = true;
 					LockRange       = false;
-					TickText        = (x,step) => Math.Round(x, 4, MidpointRounding.AwayFromZero).ToString("G8");
-					MeasureTickText = (gfx,w)  => Options.MinTickSize;
+					TickText        = DefaultTickText;
+					MeasureTickText = DefaultMeasureTickText;
 				}
 				public Axis(Axis rhs)
 				{
@@ -2118,6 +2122,19 @@ namespace pr.gui
 					cmenu.Items.TidySeparators();
 					if (cmenu.Items.Count != 0)
 						cmenu.Show(Owner, location);
+				}
+
+				/// <summary>Default value to text conversion</summary>
+				public string DefaultTickText(double x, double step)
+				{
+					return Maths.RoundSF(x, 4).ToString("G8");
+				}
+
+				/// <summary>Default tick text measurement</summary>
+				public float DefaultMeasureTickText(Graphics gfx, bool width)
+				{
+					var area = gfx.MeasureString("0.000E+00", Options.TickFont);
+					return width ? area.Width : area.Height;
 				}
 
 				/// <summary>Friendly string view</summary>

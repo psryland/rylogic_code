@@ -167,14 +167,14 @@ namespace pr.extn
 			list[index0] = list[index1];
 			list[index1] = tmp;
 		}
-		public static void Swap<T>(this IList<T> list, int index0, int index1)
-		{
-			((IList)list).Swap(index0, index1);
-		}
-		public static void Swap<T>(this List<T> list, int index0, int index1)
-		{
-			((IList)list).Swap(index0, index1);
-		}
+		//public static void Swap<T>(this IList<T> list, int index0, int index1)
+		//{
+		//	((IList)list).Swap(index0, index1);
+		//}
+		//public static void Swap<T>(this List<T> list, int index0, int index1)
+		//{
+		//	((IList)list).Swap(index0, index1);
+		//}
 
 		/// <summary>Reverse the order of all elements in this list</summary>
 		public static IList Reverse(this IList list)

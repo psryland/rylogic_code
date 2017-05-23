@@ -48,27 +48,6 @@ namespace Rylogic.VSExtension
 		}
 		private BindingSource m_data = new BindingSource();
 
-		/// <summary>Select a single row</summary>
-		public int SelectRow(int index, bool make_displayed = false)
-		{
-			ClearSelection();
-			if (RowCount == 0 || index == -1)
-			{
-				index = -1;
-				CurrentCell = null;
-			}
-			else
-			{
-				index = Maths.Clamp(index, 0, RowCount - 1);
-				var row = Rows[index];
-				row.Selected = true;
-				CurrentCell = row.Cells[0];
-				if (make_displayed && !row.Displayed)
-					FirstDisplayedScrollingRowIndex = index;
-			}
-			return index;
-		}
-
 		/// <summary>Forces the control to invalidate its client area and immediately redraw itself and any child controls.</summary>
 		public override void Refresh()
 		{

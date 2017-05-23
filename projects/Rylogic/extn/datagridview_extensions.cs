@@ -830,25 +830,32 @@ namespace pr.extn
 		}
 
 		/// <summary>
-		/// Sets the selection to row 'index'. If the grid has rows, clamps 'index' to [-1,RowCount).
+		/// Sets the selection to row 'index' and the current cell to the first cell of that row.
+		/// Clears all other selection.
+		/// If the grid has rows, clamps 'index' to [-1,RowCount).
 		/// If index == -1, the selection is cleared. Returns the row actually selected.
 		/// If 'make_displayed' is true, scrolls the grid to make 'index' displayed</summary>
-		[Obsolete]public static int SelectRow(this DataGridView grid, int index, bool make_displayed = false)
+		public static int SelectSingleRow(this DataGridView grid, int index, bool make_displayed = false)
 		{
-			// This method is too specific for an extension.
-			// Implement it in all needed places
+			// Clear the current selection
 			grid.ClearSelection();
+
+			// If there are no rows, select nothing
 			if (grid.RowCount == 0 || index == -1)
 			{
 				index = -1;
 				grid.CurrentCell = null;
 			}
+
+			// Otherwise, select the row index and set the current cell
 			else
 			{
 				index = Maths.Clamp(index, 0, grid.RowCount - 1);
 				var row = grid.Rows[index];
 				row.Selected = true;
 				grid.CurrentCell = row.Cells[0];
+
+				// Scroll the row into view
 				if (make_displayed && !row.Displayed)
 					grid.FirstDisplayedScrollingRowIndex = index;
 			}
