@@ -277,8 +277,9 @@ namespace pr
 			// The value used to initialize dbghelp.dll. We always use the Process id here, so it will work on 95/98/Me
 			static HANDLE Process()
 			{
-				DWORD id = GetCurrentProcessId();
-				return reinterpret_cast<const HANDLE&>(id);
+				return GetCurrentProcess();
+				//DWORD id = GetCurrentProcessId();
+				//return reinterpret_cast<const HANDLE&>(id);
 			}
 
 			// Helper function for getting the full path and file name for a module. Returns std::string() on error
@@ -368,6 +369,7 @@ namespace pr
 
 				CallSource result;
 
+				// 'SymGetLineFromAddr64' fails if the address is not found in the PDB
 				Line64 line;
 				DWORD displacement;
 				if (dbghelp.SymGetLineFromAddr64(dbghelp.Process(), reinterpret_cast<DWORD64>(p.m_address), &displacement, &line))
