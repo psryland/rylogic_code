@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
-#ifndef PR_RDR_MATERIALS_TEXTURE_2D_H
-#define PR_RDR_MATERIALS_TEXTURE_2D_H
 
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/config/config.h"
@@ -59,19 +57,25 @@ namespace pr
 
 			// Get/Release the DC (prefer the Gfx class for RAII)
 			// Note: Only works for textures created with GDI compatibility
-			HDC GetDC();
+			HDC GetDC(bool discard);
 			void ReleaseDC();
 
 			#ifdef _GDIPLUS_H
 			// A scoped device context to allow GDI+ edits of the texture
 			class Gfx :public Gdiplus::Graphics
 			{
-				Texture2DPtr m_tex;
-				Gfx(Gfx const&);
-				Gfx& operator=(Gfx const&);
+				Texture2D* m_tex;
 			public:
-				Gfx(Texture2DPtr& tex) :Gdiplus::Graphics(tex->GetDC()) ,m_tex(tex) {}
-				~Gfx() { m_tex->ReleaseDC(); }
+				Gfx(Texture2D* tex, bool discard)
+					:Gdiplus::Graphics(tex->GetDC(discard))
+					,m_tex(tex)
+				{}
+				~Gfx()
+				{
+					m_tex->ReleaseDC();
+				}
+				Gfx(Gfx const&) = delete;
+				Gfx& operator=(Gfx const&) = delete;
 			};
 			#endif
 
@@ -81,5 +85,3 @@ namespace pr
 		};
 	}
 }
-
-#endif

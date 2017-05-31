@@ -28,6 +28,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "renderer11", "renderer11.vcxproj", "{6EC3B435-2551-48FE-84F4-EDED821A48D0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RyLogViewer", "..\projects\RyLogViewer\RyLogViewer.csproj", "{6446F4F8-F2D3-4FA2-9CED-43F917B0B233}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C054B079-AC66-4C7E-A201-D57E32FB4F89} = {C054B079-AC66-4C7E-A201-D57E32FB4F89}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic", "..\projects\Rylogic\Rylogic.csproj", "{1735C773-5477-45E6-9CBF-5F2B6DC707EF}"
 	ProjectSection(ProjectDependencies) = postProject

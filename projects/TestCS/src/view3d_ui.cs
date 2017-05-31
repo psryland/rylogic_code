@@ -56,7 +56,7 @@ namespace TestCS
 
 			// Create a texture and assign it to an object
 			m_tex0 = new View3d.Texture(100,100);
-			using (var tex = new View3d.Texture.Lock(m_tex0))
+			using (var tex = new View3d.Texture.Lock(m_tex0, discard:true))
 			{
 				tex.Gfx.Clear(Color.DarkBlue);
 				tex.Gfx.FillEllipse(Brushes.RoyalBlue, 10,10,80,80);

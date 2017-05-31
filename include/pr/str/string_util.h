@@ -205,8 +205,8 @@ namespace pr
 
 		// Replace instances of 'what' with 'with' in-place
 		// Returns the number of instances of 'what' that where replaced
-		template <typename Str1, typename Str2, typename Str3, typename Char1 = traits<Str1>::value_type>
-		size_t Replace(Str1& str, Str2 const& what, Str3 const& with)
+		template <typename Str1, typename Str2, typename Str3, typename Pred, typename Char1 = traits<Str1>::value_type>
+		size_t Replace(Str1& str, Str2 const& what, Str3 const& with, Pred cmp)
 		{
 			if (Empty(str))
 				return 0;
@@ -223,7 +223,7 @@ namespace pr
 				auto out = &str[0];
 				for (auto s = &str[0]; *s;)
 				{
-					if (!EqualN(s, what, what_len))        { *out++ = *s++; continue; }
+					if (!cmp(s, what, what_len))           { *out++ = *s++; continue; }
 					for (size_t i = 0; i != with_len; ++i) { *out++ = with[i]; }
 					s += what_len;
 					++count;
@@ -247,18 +247,44 @@ namespace pr
 				{
 					// Back fill chars until s - what_len points to 'what'
 					// Note: s - what_len >= &str[0] because there is >0 instances of 'what' in str
-					if (!EqualN(s - what_len, what, what_len)) { *(--out) = *(--s); continue; }
-					for (auto i = with_len; i-- != 0;)         { *(--out) = with[i]; } // Insert 'with' into 'str'
+					if (!cmp(s - what_len, what, what_len)) { *(--out) = *(--s); continue; }
+					for (auto i = with_len; i-- != 0;)      { *(--out) = with[i]; } // Insert 'with' into 'str'
 					s -= what_len;
 				}
 			}
 			return count;
 		}
+		template <typename Str1, typename Str2, typename Str3, typename Pred>
+		size_t Replace(Str1 const& src, Str1& dst, Str2 const& what, Str3 const& with, Pred cmp)
+		{
+			Assign(dst, BeginC(src), EndC(src));
+			return Replace(dst, what, with, cmp);
+		}
+
+		// Replace all instances of 'what' with 'with' (case sensitive)
+		template <typename Str1, typename Str2, typename Str3, typename Char1 = traits<Str1>::value_type>
+		size_t Replace(Str1& str, Str2 const& what, Str3 const& with)
+		{
+			return Replace(str, what, with, EqualN<Char1 const*, Str2>);
+		}
 		template <typename Str1, typename Str2, typename Str3>
 		size_t Replace(Str1 const& src, Str1& dst, Str2 const& what, Str3 const& with)
 		{
 			Assign(dst, BeginC(src), EndC(src));
-			return Replace(dst, what, with);
+			return Replace(dst, what, with, EqualN<Char1 const*, Str2>);
+		}
+
+		// Replace all instances of 'what' with 'with' (case insensitive)
+		template <typename Str1, typename Str2, typename Str3, typename Char1 = traits<Str1>::value_type>
+		size_t ReplaceI(Str1& str, Str2 const& what, Str3 const& with)
+		{
+			return Replace(str, what, with, EqualNI<Char1 const*, Str2>);
+		}
+		template <typename Str1, typename Str2, typename Str3>
+		size_t ReplaceI(Str1 const& src, Str1& dst, Str2 const& what, Str3 const& with)
+		{
+			Assign(dst, BeginC(src), EndC(src));
+			return Replace(dst, what, with, EqualNI<Char1 const*, Str2>);
 		}
 
 		//// Hash the contents of a string using crc32
@@ -584,6 +610,8 @@ namespace pr
 				PR_CHECK(src, res1);
 				PR_CHECK(Replace(src, "arse", "donkey"), size_t(2));
 				PR_CHECK(src, res2);
+				PR_CHECK(ReplaceI(src, "DONKEY", "arse"), size_t(2));
+				PR_CHECK(src, res1);
 			}
 			{//ConvertToCString
 				char const str[] = "Not a \"Cstring\". \a \b \f \n \r \t \v \\ \? \' ";

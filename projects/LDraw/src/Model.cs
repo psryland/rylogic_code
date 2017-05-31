@@ -2,18 +2,13 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using pr.common;
 using pr.container;
 using pr.extn;
 using pr.gfx;
 using pr.gui;
 using pr.maths;
 using pr.util;
-using pr.win32;
 using Timer = System.Windows.Forms.Timer;
 
 namespace LDraw
@@ -23,7 +18,7 @@ namespace LDraw
 		public Model(MainUI main_ui)
 		{
 			Owner        = main_ui;
-			View3d       = new View3d();
+			View3d       = new View3d(gdi_compatibility:false);
 			IncludePaths = new List<string>();
 			ContextIds   = new HashSet<Guid>();
 			SavedViews   = new List<SavedView>();

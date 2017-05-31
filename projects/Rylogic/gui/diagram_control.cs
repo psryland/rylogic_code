@@ -1050,10 +1050,7 @@ namespace pr.gui
 				private set
 				{
 					if (m_impl_gfx == value) return;
-					if (m_impl_gfx != null)
-					{
-						Util.Dispose(ref m_impl_gfx);
-					}
+					Util.Dispose(ref m_impl_gfx);
 					m_impl_gfx = value;
 				}
 			}
@@ -1190,7 +1187,7 @@ namespace pr.gui
 			/// <summary>Update the texture surface. Default implementation renders the text</summary>
 			protected virtual void UpdateNodeTexture()
 			{
-				using (var tex = Gfx.LockSurface())
+				using (var tex = Gfx.LockSurface(discard:true))
 				{
 					tex.Gfx.CompositingMode    = CompositingMode.SourceOver;
 					tex.Gfx.CompositingQuality = CompositingQuality.HighQuality;
@@ -1367,9 +1364,9 @@ namespace pr.gui
 			protected View3d.Object Gfx { get { return m_gfx; } }
 
 			/// <summary>The surface to draw on for the node</summary>
-			public View3d.Texture.Lock LockSurface()
+			public View3d.Texture.Lock LockSurface(bool discard)
 			{
-				return m_gfx.LockSurface();
+				return m_gfx.LockSurface(discard);
 			}
 
 			/// <summary>Update the graphics and object transforms associated with this element</summary>
@@ -2109,9 +2106,9 @@ namespace pr.gui
 			}
 
 			/// <summary>Lock the texture for drawing on</summary>
-			public View3d.Texture.Lock LockSurface()
+			public View3d.Texture.Lock LockSurface(bool discard)
 			{
-				return Surface.LockSurface();
+				return Surface.LockSurface(discard);
 			}
 
 			/// <summary>Get/Set the size of the quad and texture</summary>
@@ -3470,13 +3467,13 @@ namespace pr.gui
 		/// <summary>A 'mixin' class for elements containing a texture</summary>
 		public class Surface :IDisposable
 		{
-			public Surface(uint sx, uint sy, uint texture_scale = 2)
+			public Surface(uint sx, uint sy, uint texture_scale = 2, string dbg_name = null)
 			{
 				Debug.Assert(texture_scale != 0);
 				TextureScale = texture_scale;
 				sx = Math.Max(1, sx * TextureScale);
 				sy = Math.Max(1, sy * TextureScale);
-				Surf = new View3d.Texture(sx, sy, new View3d.TextureOptions(true){Filter=View3d.EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR });// D3D11_FILTER_ANISOTROPIC});
+				Surf = new View3d.Texture(sx, sy, new View3d.TextureOptions(true){ Filter=View3d.EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR, DbgName=dbg_name});// D3D11_FILTER_ANISOTROPIC});
 			}
 			public Surface(XElement node)
 			{
@@ -3530,9 +3527,9 @@ namespace pr.gui
 			/// <summary>
 			/// Lock the texture for drawing on.
 			/// Draw in logical surface area units, ignore texture scale</summary>
-			public View3d.Texture.Lock LockSurface()
+			public View3d.Texture.Lock LockSurface(bool discard)
 			{
-				var lck = Surf.LockSurface();
+				var lck = Surf.LockSurface(discard);
 				lck.Gfx.ScaleTransform(TextureScale, TextureScale);
 				return lck;
 			}
@@ -3863,7 +3860,9 @@ namespace pr.gui
 
 				if (this.IsInDesignMode()) return;
 
-				m_view3d = new View3d();
+				// We don't need GDI compatibility in the swap chain,
+				// it's only textures that we're using with the GDI.
+				m_view3d = new View3d(gdi_compatibility:false);
 				m_window = new View3d.Window(m_view3d, Handle, new View3d.WindowOptions(false, null, IntPtr.Zero) { DbgName = "Diagram" });
 				m_tools  = new Tools();
 				m_camera = m_window.Camera;

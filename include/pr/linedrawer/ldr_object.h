@@ -167,31 +167,32 @@ namespace pr
 		#pragma region Enums
 
 		// Simple animation styles
-		#define PR_ENUM(x)\
-			x(NoAnimation)\
-			x(PlayOnce)\
-			x(PlayReverse)\
-			x(PingPong)\
-			x(PlayContinuous)
-		PR_DEFINE_ENUM1(EAnimStyle, PR_ENUM);
-		#undef PR_ENUM
+		enum class EAnimStyle
+		{
+			NoAnimation,
+			PlayOnce,
+			PlayReverse,
+			PingPong,
+			PlayContinuous,
+		};
 
 		// Flags for partial update of a model
-		#define PR_ENUM(x)\
-			x(None       ,= 0)\
-			x(All        ,= ~0U)\
-			x(Name       ,= 1 << 0)\
-			x(Model      ,= 1 << 1)\
-			x(Transform  ,= 1 << 2)\
-			x(Children   ,= 1 << 3)\
-			x(Colour     ,= 1 << 4)\
-			x(ColourMask ,= 1 << 5)\
-			x(Wireframe  ,= 1 << 6)\
-			x(Visibility ,= 1 << 7)\
-			x(Animation  ,= 1 << 8)\
-			x(StepData   ,= 1 << 9)
-		PR_DEFINE_ENUM2_FLAGS(EUpdateObject, PR_ENUM);
-		#undef PR_ENUM
+		enum class EUpdateObject :unsigned int
+		{
+			None       = 0U,
+			All        = ~0U,
+			Name       = 1 << 0,
+			Model      = 1 << 1,
+			Transform  = 1 << 2,
+			Children   = 1 << 3,
+			Colour     = 1 << 4,
+			ColourMask = 1 << 5,
+			Wireframe  = 1 << 6,
+			Visibility = 1 << 7,
+			Animation  = 1 << 8,
+			StepData   = 1 << 9,
+			_bitwise_operators_allowed,
+		};
 
 		// Flags for extra behaviour of an object
 		enum class ELdrFlags

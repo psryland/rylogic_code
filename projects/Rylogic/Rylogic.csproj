@@ -203,6 +203,7 @@
     <Compile Include="extn\exception_extensions.cs" />
     <Compile Include="extn\gfx_extensions.cs" />
     <Compile Include="extn\guid_extensions.cs" />
+    <Compile Include="extn\hashset_extensions.cs" />
     <Compile Include="extn\listbox_extensions.cs" />
     <Compile Include="extn\list_extensions.cs" />
     <Compile Include="extn\lock_extensions.cs" />

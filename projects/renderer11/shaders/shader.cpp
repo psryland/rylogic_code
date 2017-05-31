@@ -60,7 +60,7 @@ namespace pr
 			// Check for a new shader
 			wstring256 cso_filepath = iter->second;
 			time_t last_mod, newest = check.m_last_modified;
-			if (pr::filesys::FileExists(cso_filepath) && (last_mod = pr::filesys::GetFileTimeStats(cso_filepath).m_last_modified) > check.m_last_modified)
+			if (pr::filesys::FileExists(cso_filepath) && (last_mod = pr::filesys::FileTimeStats(cso_filepath).m_last_modified) > check.m_last_modified)
 			{
 				std::vector<pr::uint8> buf;
 				if (pr::FileToBuffer(cso_filepath.c_str(), buf) && !buf.empty())

@@ -66,7 +66,7 @@ namespace pr
 			View3DPanel() :View3DPanel(View3DPanelParams()) {}
 			View3DPanel(View3DPanelParams const& p)
 				:Panel(p)
-				,m_ctx(View3D_Initialise(p.m_error_cb, p.m_error_ctx))
+				,m_ctx(View3D_Initialise(p.m_error_cb, p.m_error_ctx, p.m_gdi_compat))
 				,m_win(View3D_CreateWindow(CreateHandle(), View3DWindowOptions{p.m_error_cb, p.m_error_ctx, p.m_gdi_compat, 4, "vrex_gui"}))
 			{
 				//View3D_CreateDemoScene(m_win);

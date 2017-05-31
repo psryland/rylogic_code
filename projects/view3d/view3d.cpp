@@ -113,13 +113,13 @@ namespace pr
 // Initialise calls are reference counted and must be matched with Shutdown calls
 // 'initialise_error_cb' is used to report dll initialisation errors only (i.e. it isn't stored)
 // Note: this function is not thread safe, avoid race calls
-VIEW3D_API View3DContext __stdcall View3D_Initialise(View3D_ReportErrorCB initialise_error_cb, void* ctx)
+VIEW3D_API View3DContext __stdcall View3D_Initialise(View3D_ReportErrorCB initialise_error_cb, void* ctx, BOOL gdi_compatibility)
 {
 	try
 	{
 		// Create the dll context on the first call
 		if (g_ctx == nullptr)
-			g_ctx = new Context(g_hInstance);
+			g_ctx = new Context(g_hInstance, gdi_compatibility);
 
 		// Generate a unique handle per Initialise call, used to match up with Shutdown calls
 		static View3DContext context = nullptr;
@@ -1340,98 +1340,15 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreate(char const* name, View3DCo
 	CatchAndReport(View3D_ObjectCreate, , nullptr);
 }
 
-// Callback function called from pr::ldr::CreateEditCB to populate the model data
-struct ObjectEditCBData { View3D_EditObjectCB edit_cb; void* ctx; };
-void __stdcall ObjectEditCB(ModelPtr model, void* ctx, pr::Renderer&)
-{
-	PR_ASSERT(PR_DBG, model != nullptr, "");
-	if (!model) throw std::exception("model is null");
-	ObjectEditCBData& cbdata = *static_cast<ObjectEditCBData*>(ctx);
-
-	// Create buffers to be filled by the user callback
-	// Note: We can't fill the buffers with the existing model data because that requires
-	// reading from video memory (slow, or not possible for some model types).
-	auto vrange = model->m_vrange;
-	auto irange = model->m_irange;
-	pr::vector<View3DVertex> verts   (vrange.size());
-	pr::vector<pr::uint16>   indices (irange.size());
-	pr::vector<View3DNugget> nuggets;
-
-	// If the model already has nuggets, initialise 'nuggets' with them
-	if (!model->m_nuggets.empty())
-	{
-		for (auto& nug : model->m_nuggets)
-		{
-			View3DNugget n = {};
-			n.m_topo = static_cast<EView3DPrim>(nug.m_topo);
-			n.m_geom = static_cast<EView3DGeom>(nug.m_geom);
-			n.m_v0 = pr::s_cast<UINT32>(nug.m_vrange.begin());
-			n.m_v1 = pr::s_cast<UINT32>(nug.m_vrange.end());
-			n.m_i0 = pr::s_cast<UINT32>(nug.m_irange.begin());
-			n.m_i1 = pr::s_cast<UINT32>(nug.m_irange.end());
-			n.m_mat.m_diff_tex = nug.m_tex_diffuse.m_ptr;
-			n.m_mat.m_env_map = nullptr;
-			nuggets.push_back(n);
-		}
-	}
-	else
-	{
-		nuggets.push_back(View3DNugget());
-	}
-
-	// Get the user to generate/update the model
-	UINT32 new_vcount, new_icount, new_ncount;
-	cbdata.edit_cb(UINT32(vrange.size()), UINT32(irange.size()), UINT32(nuggets.size()), &verts[0], &indices[0], &nuggets[0], new_vcount, new_icount, new_ncount, cbdata.ctx);
-	PR_ASSERT(PR_DBG, new_vcount <= vrange.size(), "");
-	PR_ASSERT(PR_DBG, new_icount <= irange.size(), "");
-	PR_ASSERT(PR_DBG, new_ncount <= nuggets.size(), "");
-
-	{// Lock and update the model
-		MLock mlock(model, D3D11_MAP_WRITE_DISCARD);
-		model->m_bbox.reset();
-
-		// Copy the model data into the model
-		auto vin = std::begin(verts);
-		auto vout = mlock.m_vlock.ptr<Vert>();
-		for (size_t i = 0; i != new_vcount; ++i, ++vin)
-		{
-			SetPCNT(*vout++, view3d::To<pr::v4>(vin->pos), pr::Colour32(vin->col), view3d::To<pr::v4>(vin->norm), view3d::To<pr::v2>(vin->tex));
-			pr::Encompass(model->m_bbox, view3d::To<pr::v4>(vin->pos));
-		}
-		auto iin = std::begin(indices);
-		auto iout = mlock.m_ilock.ptr<pr::uint16>();
-		for (size_t i = 0; i != new_icount; ++i, ++iin)
-		{
-			*iout++ = *iin;
-		}
-	}
-	{// Update the model nuggets
-		model->DeleteNuggets();
-
-		for (auto& nug : nuggets)
-		{
-			NuggetProps mat;
-			mat.m_topo = static_cast<EPrim>(nug.m_topo);
-			mat.m_geom = static_cast<EGeom>(nug.m_geom);
-			mat.m_vrange = vrange;
-			mat.m_irange = irange;
-			mat.m_vrange.resize(new_vcount);
-			mat.m_irange.resize(new_icount);
-			mat.m_tex_diffuse = nug.m_mat.m_diff_tex;
-			model->CreateNugget(mat);
-		}
-	}
-}
-
 // Create an object via callback
 VIEW3D_API View3DObject __stdcall View3D_ObjectCreateEditCB(char const* name, View3DColour colour, int vcount, int icount, int ncount, View3D_EditObjectCB edit_cb, void* ctx, GUID const& context_id)
 {
 	try
 	{
 		DllLockGuard;
-		ObjectEditCBData cbdata = {edit_cb, ctx};
+		Context::ObjectEditCBData cbdata = {edit_cb, ctx};
 		pr::ldr::ObjectAttributes attr(pr::ldr::ELdrObject::Custom, name, pr::Colour32(colour));
-		auto obj = pr::ldr::CreateEditCB(Dll().m_rdr, attr, vcount, icount, ncount, ObjectEditCB, &cbdata, context_id);
+		auto obj = pr::ldr::CreateEditCB(Dll().m_rdr, attr, vcount, icount, ncount, Context::ObjectEditCB, &cbdata, context_id);
 		if (obj)
 			Dll().m_sources.Add(obj);
 
@@ -1448,24 +1365,20 @@ VIEW3D_API void __stdcall View3D_ObjectEdit(View3DObject object, View3D_EditObje
 		if (!object) throw std::exception("Object is null");
 
 		DllLockGuard;
-		ObjectEditCBData cbdata = {edit_cb, ctx};
-		pr::ldr::Edit(Dll().m_rdr, object, ObjectEditCB, &cbdata);
+		Dll().EditObject(object, edit_cb, ctx);
 	}
 	CatchAndReport(View3D_ObjectEdit, ,);
 }
 
 // Replace the model and all child objects of 'obj' with the results of 'ldr_script'
-VIEW3D_API void __stdcall View3D_ObjectUpdate(View3DObject object, char const* ldr_script, EView3DUpdateObject flags)
+VIEW3D_API void __stdcall View3D_ObjectUpdate(View3DObject object, wchar_t const* ldr_script, EView3DUpdateObject flags)
 {
 	try
 	{
 		if (!object) throw std::exception("object is null");
 
 		DllLockGuard;
-
-		pr::script::PtrA src(ldr_script);
-		pr::script::Reader reader(src, false);
-		pr::ldr::Update(Dll().m_rdr, object, reader, static_cast<pr::ldr::EUpdateObject::Enum_>(flags));
+		Dll().UpdateObject(object, ldr_script, static_cast<pr::ldr::EUpdateObject>(flags));
 	}
 	CatchAndReport(View3D_ObjectUpdate, ,);
 }
@@ -1723,7 +1636,7 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureCreate(UINT32 width, UINT32 hei
 }
 
 // Load a texture from file. Specify width == 0, height == 0 to use the dimensions of the file
-VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromFile(char const* tex_filepath, UINT32 width, UINT32 height, View3DTextureOptions const& options)
+VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromFile(wchar_t const* tex_filepath, UINT32 width, UINT32 height, View3DTextureOptions const& options)
 {
 	try
 	{
@@ -1745,12 +1658,12 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromFile(char const* tex_
 }
 
 // Get/Release a DC for the texture. Must be a TextureGdi texture
-VIEW3D_API HDC __stdcall View3D_TextureGetDC(View3DTexture tex)
+VIEW3D_API HDC __stdcall View3D_TextureGetDC(View3DTexture tex, BOOL discard)
 {
 	try
 	{
 		if (!tex) throw std::exception("Texture is null");
-		return tex->GetDC();
+		return tex->GetDC(discard != 0);
 	}
 	CatchAndReport(View3D_TextureGetDC, , nullptr);
 }

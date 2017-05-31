@@ -3091,7 +3091,7 @@ namespace pr
 				// though, if new members are added I'm bound to forget to consider them here :-/
 
 				// RdrInstance
-				if (flags & EUpdateObject::Model)
+				if (AllSet(flags, EUpdateObject::Model))
 				{
 					std::swap(object->m_model, rhs->m_model);
 					std::swap(object->m_sko, rhs->m_sko);
@@ -3099,32 +3099,32 @@ namespace pr
 					std::swap(object->m_dsb, rhs->m_dsb);
 					std::swap(object->m_rsb, rhs->m_rsb);
 				}
-				if (flags & EUpdateObject::Transform)
+				if (AllSet(flags, EUpdateObject::Transform))
 					std::swap(object->m_i2w, rhs->m_i2w);
-				if (flags & EUpdateObject::Colour)
+				if (AllSet(flags, EUpdateObject::Colour))
 					std::swap(object->m_colour, rhs->m_colour);
 
 				// LdrObject
 				std::swap(object->m_type, rhs->m_type);
-				if (flags & EUpdateObject::Name)
+				if (AllSet(flags, EUpdateObject::Name))
 					std::swap(object->m_name, rhs->m_name);
-				if (flags & EUpdateObject::Transform)
+				if (AllSet(flags, EUpdateObject::Transform))
 					std::swap(object->m_o2p, rhs->m_o2p);
-				if (flags & EUpdateObject::Wireframe)
+				if (AllSet(flags, EUpdateObject::Wireframe))
 					std::swap(object->m_wireframe, rhs->m_wireframe);
-				if (flags & EUpdateObject::Visibility)
+				if (AllSet(flags, EUpdateObject::Visibility))
 					std::swap(object->m_visible, rhs->m_visible);
-				if (flags & EUpdateObject::Animation)
+				if (AllSet(flags, EUpdateObject::Animation))
 					std::swap(object->m_anim, rhs->m_anim);
-				if (flags & EUpdateObject::StepData)
+				if (AllSet(flags, EUpdateObject::StepData))
 					std::swap(object->m_step, rhs->m_step);
-				if (flags & EUpdateObject::ColourMask)
+				if (AllSet(flags, EUpdateObject::ColourMask))
 					std::swap(object->m_colour_mask, rhs->m_colour_mask);
-				if (flags & EUpdateObject::Colour)
+				if (AllSet(flags, EUpdateObject::Colour))
 					std::swap(object->m_base_colour, rhs->m_base_colour);
 
 				// Transfer the child objects
-				if (flags & EUpdateObject::Children)
+				if (AllSet(flags, EUpdateObject::Children))
 				{
 					object->RemoveAllChildren();
 					while (!rhs->m_child.empty())

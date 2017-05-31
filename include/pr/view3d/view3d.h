@@ -331,7 +331,7 @@ extern "C"
 		void* ctx);              // User context data
 
 	// Initialise/shutdown the dll
-	VIEW3D_API View3DContext __stdcall View3D_Initialise       (View3D_ReportErrorCB initialise_error_cb, void* ctx);
+	VIEW3D_API View3DContext __stdcall View3D_Initialise       (View3D_ReportErrorCB initialise_error_cb, void* ctx, BOOL gdi_compatibility);
 	VIEW3D_API void          __stdcall View3D_Shutdown         (View3DContext context);
 	VIEW3D_API void          __stdcall View3D_GlobalErrorCBSet (View3D_ReportErrorCB error_cb, void* ctx, BOOL add);
 
@@ -416,7 +416,7 @@ extern "C"
 	VIEW3D_API View3DObject __stdcall View3D_ObjectCreate             (char const* name, View3DColour colour, int vcount, int icount, int ncount, View3DVertex const* verts, UINT16 const* indices, View3DNugget const* nuggets, GUID const& context_id);
 	VIEW3D_API View3DObject __stdcall View3D_ObjectCreateEditCB       (char const* name, View3DColour colour, int vcount, int icount, int ncount, View3D_EditObjectCB edit_cb, void* ctx, GUID const& context_id);
 	VIEW3D_API void         __stdcall View3D_ObjectEdit               (View3DObject object, View3D_EditObjectCB edit_cb, void* ctx);
-	VIEW3D_API void         __stdcall View3D_ObjectUpdate             (View3DObject object, char const* ldr_script, EView3DUpdateObject flags);
+	VIEW3D_API void         __stdcall View3D_ObjectUpdate             (View3DObject object, wchar_t const* ldr_script, EView3DUpdateObject flags);
 	VIEW3D_API void         __stdcall View3D_ObjectDelete             (View3DObject object);
 	VIEW3D_API View3DObject __stdcall View3D_ObjectGetParent          (View3DObject object);
 	VIEW3D_API View3DObject __stdcall View3D_ObjectGetChild           (View3DObject object, char const* name);
@@ -436,13 +436,13 @@ extern "C"
 
 	// Materials
 	VIEW3D_API View3DTexture __stdcall View3D_TextureCreate               (UINT32 width, UINT32 height, void const* data, UINT32 data_size, View3DTextureOptions const& options);
-	VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromFile       (char const* tex_filepath, UINT32 width, UINT32 height, View3DTextureOptions const& options);
+	VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromFile       (wchar_t const* tex_filepath, UINT32 width, UINT32 height, View3DTextureOptions const& options);
 	VIEW3D_API void          __stdcall View3D_TextureLoadSurface          (View3DTexture tex, int level, char const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, UINT32 filter, View3DColour colour_key);
 	VIEW3D_API void          __stdcall View3D_TextureDelete               (View3DTexture tex);
 	VIEW3D_API void          __stdcall View3D_TextureGetInfo              (View3DTexture tex, View3DImageInfo& info);
 	VIEW3D_API EView3DResult __stdcall View3D_TextureGetInfoFromFile      (char const* tex_filepath, View3DImageInfo& info);
 	VIEW3D_API void          __stdcall View3D_TextureSetFilterAndAddrMode (View3DTexture tex, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV);
-	VIEW3D_API HDC           __stdcall View3D_TextureGetDC                (View3DTexture tex);
+	VIEW3D_API HDC           __stdcall View3D_TextureGetDC                (View3DTexture tex, BOOL discard);
 	VIEW3D_API void          __stdcall View3D_TextureReleaseDC            (View3DTexture tex);
 	VIEW3D_API void          __stdcall View3D_TextureResize               (View3DTexture tex, UINT32 width, UINT32 height, BOOL all_instances, BOOL preserve);
 	VIEW3D_API View3DTexture __stdcall View3D_TextureRenderTarget         (View3DWindow window);

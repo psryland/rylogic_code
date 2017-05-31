@@ -51,6 +51,7 @@ namespace pr
 			,m_stock_textures()
 			,m_gdiplus()
 			,m_mutex()
+			,m_gdi_dc_ref_count()
 		{
 			CreateStockTextures();
 		}
@@ -151,6 +152,7 @@ namespace pr
 				throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Texture Id '%d' is already in use", id));
 
 			// Validate
+			// Note: GDI compatible textures do not require the main swap chain to be GDI compatible.
 			if (tdesc.Format != DXGI_FORMAT_B8G8R8A8_UNORM &&
 				tdesc.Format != DXGI_FORMAT_B8G8R8A8_UNORM_SRGB)
 				throw pr::Exception<HRESULT>(E_FAIL, "GDI textures must use the B8G8R8A8 format");
@@ -336,6 +338,10 @@ namespace pr
 				PR_INFO_IF(PR_DBG_RDR, pr::PtrRefCount(iter->second) != 1, pr::FmtS("External references to texture %d - %s still exist", iter->second->m_id, iter->second->m_name.c_str()));
 				iter->second->Release();
 			}
+		}
+		void TextureManager::OnEvent(Evt_Resize const&)
+		{
+			PR_ASSERT(PR_DBG_RDR, m_gdi_dc_ref_count == 0, "Outstanding DC references during resize");
 		}
 	}
 }

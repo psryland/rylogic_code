@@ -56,6 +56,12 @@ namespace pr
 			{
 				auto device = rdr.Device();
 
+				// Validate settings
+				if (AllSet(settings.m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) && !AllSet(m_rdr->Settings().m_device_layers, D3D11_CREATE_DEVICE_BGRA_SUPPORT))
+					pr::Throw(false, "D3D device has not been created with GDI compatibility");
+				if (AllSet(settings.m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) && settings.m_multisamp.Count != 1)
+					pr::Throw(false, "GDI compatibility does not support multi-sampling");
+
 				// Check feature support
 				m_multisamp.Validate(device, settings.m_mode.Format);
 				m_multisamp.Validate(device, settings.m_depth_format);
@@ -396,6 +402,7 @@ namespace pr
 			// Get the description of the existing swap chain
 			DXGI_SWAP_CHAIN_DESC sd = {0};
 			pr::Throw(m_swap_chain->GetDesc(&sd), "Failed to get current swap chain description");
+			pr::Throw(!AllSet(sd.Flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) || ms.Count == 1, "GDI compatibility cannot be used with multi-sampling");
 
 			// Check for feature support
 			ms.Validate(device, sd.BufferDesc.Format);

@@ -482,7 +482,7 @@ namespace pr.gfx
 				ErrorCB       = error_cb;
 				ErrorCBCtx    = error_cb_ctx;
 				GdiCompatible = gdi_compatible;
-				Multisampling = 4;
+				Multisampling = gdi_compatible ? 1 : 4;
 				DbgName       = string.Empty;
 			}
 		}
@@ -650,7 +650,7 @@ namespace pr.gfx
 		private AddFileProgressCB     m_add_file_progress_cb; // Reference to callback
 		private SourcesChangedCB      m_sources_changed_cb;   // Reference to callback
 
-		public View3d()
+		public View3d(bool gdi_compatibility)
 		{
 			if (!ModuleLoaded)
 				throw new Exception("View3d.dll has not been loaded");
@@ -662,7 +662,7 @@ namespace pr.gfx
 			// Initialise view3d
 			string init_error = null;
 			ReportErrorCB error_cb = (ctx,msg) => init_error = msg;
-			m_context = View3D_Initialise(error_cb, IntPtr.Zero);
+			m_context = View3D_Initialise(error_cb, IntPtr.Zero, gdi_compatibility);
 			if (m_context == HContext.Zero)
 				throw new Exception(init_error ?? "Failed to initialised View3d");
 
@@ -2024,7 +2024,7 @@ namespace pr.gfx
 			public Texture(string tex_filepath, uint width, uint height, TextureOptions options)
 			{
 				m_owned = true;
-				m_handle = View3D_TextureCreateFromFile(tex_filepath, width, height, options.Mips, options.Filter, options.Filter, options.ColourKey);
+				m_handle = View3D_TextureCreateFromFile(tex_filepath, width, height, ref options);
 				if (m_handle == HTexture.Zero) throw new Exception("Failed to create texture from {0}".Fmt(tex_filepath));
 				View3D_TextureGetInfo(m_handle, out m_info);
 				View3D_TextureSetFilterAndAddrMode(m_handle, options.Filter, options.AddrU, options.AddrV);
@@ -2097,16 +2097,13 @@ namespace pr.gfx
 			{
 				private readonly HTexture m_tex;
 
-				/// <summary>GDI+ graphics interface</summary>
-				public Graphics Gfx { get; private set; }
-
 				/// <summary>
 				/// Lock 'tex' making 'Gfx' available.
 				/// Note: if 'tex' is the render target of a window, you need to call Window.RestoreRT when finished</summary>
-				public Lock(Texture tex)
+				public Lock(Texture tex, bool discard)
 				{
 					m_tex = tex.m_handle;
-					var dc = View3D_TextureGetDC(m_tex);
+					var dc = View3D_TextureGetDC(m_tex, discard);
 					if (dc == IntPtr.Zero) throw new Exception("Failed to get Texture DC. Check the texture is a GdiCompatible texture");
 					Gfx = Graphics.FromHdc(dc);
 				}
@@ -2114,14 +2111,17 @@ namespace pr.gfx
 				{
 					View3D_TextureReleaseDC(m_tex);
 				}
+
+				/// <summary>GDI+ graphics interface</summary>
+				public Graphics Gfx { get; private set; }
 			}
 
 			/// <summary>Lock the texture for drawing on</summary>
 			[DebuggerHidden]
-			public Lock LockSurface()
+			public Lock LockSurface(bool discard)
 			{
 				// This is a method to prevent the debugger evaluating it cause multiple GetDC calls
-				return new Lock(this);
+				return new Lock(this, discard);
 			}
 
 			public override bool Equals(object obj) { return obj is Texture && m_handle.Equals(((Texture)obj).m_handle); }
@@ -2323,7 +2323,7 @@ namespace pr.gfx
 		}
 
 		// Initialise / shutdown the dll
-		[DllImport(Dll)] private static extern HContext          View3D_Initialise             (ReportErrorCB initialise_error_cb, IntPtr ctx);
+		[DllImport(Dll)] private static extern HContext          View3D_Initialise             (ReportErrorCB initialise_error_cb, IntPtr ctx, bool gdi_compatibility);
 		[DllImport(Dll)] private static extern void              View3D_Shutdown               (HContext context);
 		[DllImport(Dll)] private static extern void              View3D_GlobalErrorCBSet       (ReportErrorCB error_cb, IntPtr ctx, bool add);
 
@@ -2407,7 +2407,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, ref View3DIncludes includes);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreate             (string name, uint colour, int vcount, int icount, int ncount, IntPtr verts, IntPtr indices, IntPtr nuggets, ref Guid context_id);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateEditCB       (string name, uint colour, int vcount, int icount, int ncount, EditObjectCB edit_cb, IntPtr ctx, ref Guid context_id);
-		[DllImport(Dll)] private static extern void              View3D_ObjectUpdate             (HObject obj, string ldr_script, EUpdateObject flags);
+		[DllImport(Dll)] private static extern void              View3D_ObjectUpdate             (HObject obj, [MarshalAs(UnmanagedType.LPWStr)] string ldr_script, EUpdateObject flags);
 		[DllImport(Dll)] private static extern void              View3D_ObjectEdit               (HObject obj, EditObjectCB edit_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern void              View3D_ObjectDelete             (HObject obj);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectGetParent          (HObject obj);
@@ -2428,13 +2428,13 @@ namespace pr.gfx
 
 		// Materials
 		[DllImport(Dll)] private static extern HTexture          View3D_TextureCreate               (uint width, uint height, IntPtr data, uint data_size, ref TextureOptions options);
-		[DllImport(Dll)] private static extern HTexture          View3D_TextureCreateFromFile       (string tex_filepath, uint width, uint height, uint mips, EFilter filter, EFilter mip_filter, uint colour_key);
+		[DllImport(Dll)] private static extern HTexture          View3D_TextureCreateFromFile       ([MarshalAs(UnmanagedType.LPWStr)] string tex_filepath, uint width, uint height, ref TextureOptions options);
 		[DllImport(Dll)] private static extern void              View3D_TextureLoadSurface          (HTexture tex, int level, string tex_filepath, Rectangle[] dst_rect, Rectangle[] src_rect, EFilter filter, uint colour_key);
 		[DllImport(Dll)] private static extern void              View3D_TextureDelete               (HTexture tex);
 		[DllImport(Dll)] private static extern void              View3D_TextureGetInfo              (HTexture tex, out ImageInfo info);
 		[DllImport(Dll)] private static extern EResult           View3D_TextureGetInfoFromFile      (string tex_filepath, out ImageInfo info);
 		[DllImport(Dll)] private static extern void              View3D_TextureSetFilterAndAddrMode (HTexture tex, EFilter filter, EAddrMode addrU, EAddrMode addrV);
-		[DllImport(Dll)] private static extern IntPtr            View3D_TextureGetDC                (HTexture tex);
+		[DllImport(Dll)] private static extern IntPtr            View3D_TextureGetDC                (HTexture tex, bool discard);
 		[DllImport(Dll)] private static extern void              View3D_TextureReleaseDC            (HTexture tex);
 		[DllImport(Dll)] private static extern void              View3D_TextureResize               (HTexture tex, uint width, uint height, bool all_instances, bool preserve);
 		[DllImport(Dll)] private static extern HTexture          View3D_TextureRenderTarget         (HWindow window);

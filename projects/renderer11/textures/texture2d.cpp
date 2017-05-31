@@ -181,21 +181,23 @@ namespace pr
 		}
 
 		// Get the GDI DC from the surface
-		HDC Texture2D::GetDC()
+		HDC Texture2D::GetDC(bool discard)
 		{
 			HDC dc;
-			D3DPtr<IDXGISurface1> surf;
-			pr::Throw(m_tex->QueryInterface(__uuidof(IDXGISurface1), (void **)&surf.m_ptr));
-			pr::Throw(surf->GetDC(TRUE, &dc), "GetDC can only be called for textures that were created with the D3D11_RESOURCE_MISC_GDI_COMPATIBLE flag");
+			D3DPtr<IDXGISurface2> surf;
+			pr::Throw(m_tex->QueryInterface(__uuidof(IDXGISurface2), (void **)&surf.m_ptr));
+			pr::Throw(surf->GetDC(discard, &dc), "GetDC can only be called for textures that were created with the D3D11_RESOURCE_MISC_GDI_COMPATIBLE flag");
+			++m_mgr->m_gdi_dc_ref_count;
 			return dc;
 		}
 
 		// Release the GDI DC from the surface
 		void Texture2D::ReleaseDC()
 		{
-			D3DPtr<IDXGISurface1> surf;
-			pr::Throw(m_tex->QueryInterface(__uuidof(IDXGISurface1), (void **)&surf.m_ptr));
+			D3DPtr<IDXGISurface2> surf;
+			pr::Throw(m_tex->QueryInterface(__uuidof(IDXGISurface2), (void **)&surf.m_ptr));
 			pr::Throw(surf->ReleaseDC(nullptr));
+			--m_mgr->m_gdi_dc_ref_count;
 			// Note: the main RT must be restored once all ReleaseDC's have been called
 		}
 

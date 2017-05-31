@@ -31,7 +31,7 @@ namespace cex
 		
 		int Run() override
 		{
-			std::transform(m_str.begin(), m_str.end(), m_str.begin(), tolower);
+			std::transform(m_str.begin(), m_str.end(), m_str.begin(), [](char ch){ return static_cast<char>(tolower(ch)); });
 			if (!m_str.empty()) std::cout << m_str;
 			return 0;
 		}

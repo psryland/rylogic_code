@@ -18,6 +18,7 @@ namespace pr
 	{
 		class TextureManager
 			:pr::events::IRecv<Evt_RendererDestroy>
+			,pr::events::IRecv<Evt_Resize>
 		{
 			typedef Lookup<RdrId, Texture2D*>       TextureLookup;
 			typedef Lookup<RdrId, ID3D11Texture2D*> TexFileLookup;
@@ -41,7 +42,8 @@ namespace pr
 			TexFileLookup              m_lookup_fname;   // A map from hash of filepath to an existing dx texture
 			pr::vector<Texture2DPtr>   m_stock_textures; // A collection of references to the stock textures
 			pr::GdiPlus                m_gdiplus;
-			std::recursive_mutex       m_mutex;          // Sync's access to texture creation
+			std::recursive_mutex       m_mutex;            // Sync's access to texture creation
+			int                        m_gdi_dc_ref_count; // Used to detect outstanding DC references
 
 			friend struct Texture2D;
 			friend struct TextureGdi;
@@ -59,6 +61,7 @@ namespace pr
 
 			// Handle events
 			void OnEvent(Evt_RendererDestroy const& e) override;
+			void OnEvent(Evt_Resize const& e) override;
 
 		public:
 			TextureManager(MemFuncs& mem, D3DPtr<ID3D11Device>& device, D3DPtr<ID2D1Factory>& d2dfactory);
@@ -78,7 +81,7 @@ namespace pr
 			// 'sam_desc' is an optional sampler state description to set on the clone.
 			Texture2DPtr CloneTexture2D(RdrId id, Texture2DPtr const& existing, SamplerDesc const* sam_desc = nullptr, char const* name = nullptr);
 
-			// Create a texture instance from a dds file.
+			// Create a texture instance from a DDS file.
 			// 'filepath' can be a special string identifying a stock texture (e.g.  #black, #white, #checker, etc)
 			// Throws if creation fails. On success returns a pointer to the created texture.
 			Texture2DPtr CreateTexture2D(RdrId id, SamplerDesc const& sam_desc, wchar_t const* filepath, char const* name = nullptr);
@@ -91,7 +94,7 @@ namespace pr
 				return i != m_lookup_tex.end() ? i->second : 0;
 			}
 
-			// Create a Gdi texture instance
+			// Create a GDI texture instance
 			// 'id' is the id to assign to the created texture instance. Use 'AutoId' to auto generate an id
 			// 'src' is the initialisation data
 			// 'tdesc' is a description of the texture to be created

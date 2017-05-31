@@ -31,8 +31,7 @@ namespace pr.gui
 			if (this.IsInDesignMode()) return;
 			SetStyle(ControlStyles.Selectable, false);
 
-			m_impl_view3d = new View3d();
-
+			m_impl_view3d = new View3d(gdi_compatibility:gdi_compat);
 			var opts = new View3d.WindowOptions(gdi_compat, HandleReportError, IntPtr.Zero) { DbgName = dbg_name ?? string.Empty };
 			m_impl_wnd = new View3d.Window(View3d, Handle, opts);
 

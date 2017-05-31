@@ -64,7 +64,7 @@ namespace pr
 				return false;
 
 			// Throw for other errors
-			throw std::runtime_error(Fmt("Resource '%S' not found. (0x%08X) %s", name, last_error, pr::HrMsg(last_error)));
+			throw std::runtime_error(Fmt("Resource '%S' not found. (0x%08X) %s", name, last_error, pr::HrMsg(last_error).c_str()));
 		}
 
 		// Return const access to an embedded resource
@@ -78,7 +78,7 @@ namespace pr
 			if (!handle)
 			{
 				auto last_error = ::GetLastError();
-				throw std::runtime_error(Fmt("Resource '%S' not found. (0x%08X) %s", name, last_error, pr::HrMsg(last_error)));
+				throw std::runtime_error(Fmt("Resource '%S' not found. (0x%08X) %s", name, last_error, pr::HrMsg(last_error).c_str()));
 			}
 
 			// Get the size in bytes of the resource
@@ -91,7 +91,7 @@ namespace pr
 			if (!mem)
 			{
 				auto last_error = GetLastError();
-				throw std::runtime_error(Fmt("Loading resource '%S' failed. (0x%08X) %s", name, last_error, pr::HrMsg(last_error)));
+				throw std::runtime_error(Fmt("Loading resource '%S' failed. (0x%08X) %s", name, last_error, pr::HrMsg(last_error).c_str()));
 			}
 
 			// Get a pointer to the resource.

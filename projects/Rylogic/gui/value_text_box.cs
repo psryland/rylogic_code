@@ -46,6 +46,7 @@ namespace pr.gui
 		//       if (!m_tb.Focused) return;
 		//       MyValue = (float)m_tb.Value;
 		//   };
+		private int m_in_set_text;
 
 		public ValueBox()
 		{
@@ -64,6 +65,25 @@ namespace pr.gui
 				TryCommitValue();
 
 			return base.PreProcessMessage(ref m);
+		}
+		protected override void OnTextChanged(EventArgs e)
+		{
+			// Invalidate the cached 'valid' state whenever the text changes
+			m_valid = null;
+
+			// Prevent reentrancy
+			if (m_in_set_text != 0) return;
+			using (Scope.Create(() => ++m_in_set_text, () => --m_in_set_text))
+				TextToValueIfValid();
+
+			base.OnTextChanged(e);
+		}
+		protected override void OnLostFocus(EventArgs e)
+		{
+			base.OnLostFocus(e);
+			TryCommitValue();
+			var text = ValueToText(Value);
+			Text = text;
 		}
 
 		/// <summary>Get/Set whether the background colours are set based on value validity</summary>
@@ -267,30 +287,6 @@ namespace pr.gui
 		protected virtual void OnValueChanged()
 		{
 			ValueChanged.Raise(this);
-		}
-
-		/// <summary>The string representation of the value</summary>
-		protected override void OnTextChanged(EventArgs e)
-		{
-			base.OnTextChanged(e);
-
-			// Invalidate the cached 'valid' state whenever the text changes
-			m_valid = null;
-
-			// Prevent reentrancy
-			if (m_in_set_text != 0) return;
-			using (Scope.Create(() => ++m_in_set_text, () => --m_in_set_text))
-				TextToValueIfValid();
-		}
-		private int m_in_set_text;
-
-		/// <summary>Ensure the text matches the value on focus lost</summary>
-		protected override void OnLostFocus(EventArgs e)
-		{
-			base.OnLostFocus(e);
-			TryCommitValue();
-			var text = ValueToText(Value);
-			Text = text;
 		}
 	}
 }

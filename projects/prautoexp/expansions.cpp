@@ -254,6 +254,7 @@ ADDIN_API HRESULT WINAPI AddIn_Matrix(DWORD, DbgHelper* pHelper, int, BOOL, char
 	pr::Matrix<double> mat;
 	if (FAILED(pHelper->Read(mat))) return E_FAIL;
 	//todo: how to deal with float vs. double?
+	(void)pResult,max;
 	return S_OK;
 }
 
