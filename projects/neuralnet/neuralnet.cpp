@@ -33,17 +33,17 @@ namespace pr
 
 			std::random_device rd;
 			std::mt19937 gen(rd());
-			std::normal_distribution<float> gaus_rand(0.0f, 1.0f);
+			std::normal_distribution<double> gaus_rand(0.0, 1.0);
 
 			// Initialise the weights and biases using guassian distributed random numbers
 			// with a mean of 0 and sd of 1 (for now)
 			for (auto& layer : m_weights)
 				for (auto& w : layer)
-					w = gaus_rand(gen);
+					w = static_cast<float>(gaus_rand(gen));
 
 			for (auto& layer : m_biases)
 				for (auto& b : layer)
-					b = gaus_rand(gen);
+					b = static_cast<float>(gaus_rand(gen));
 		}
 
 		// Given an input vector, find the output vector

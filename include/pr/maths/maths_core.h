@@ -1392,14 +1392,16 @@ namespace pr
 				PR_CHECK(FEql(+0.0f, -0.00001f, _6dp), false);
 
 				// Comparisons involving extreme values (overflow potential)
-				PR_CHECK(FEql(+maths::float_max, +maths::float_max, _6dp), true);
-				PR_CHECK(FEql(+maths::float_max, -maths::float_max, _6dp), false);
-				PR_CHECK(FEql(-maths::float_max, +maths::float_max, _6dp), false);
-				PR_CHECK(FEql(-maths::float_max, -maths::float_max, _6dp), true);
-				PR_CHECK(FEql(+maths::float_max, +maths::float_max / 2, _6dp), false);
-				PR_CHECK(FEql(+maths::float_max, -maths::float_max / 2, _6dp), false);
-				PR_CHECK(FEql(-maths::float_max, +maths::float_max / 2, _6dp), false);
-				PR_CHECK(FEql(-maths::float_max, -maths::float_max / 2, _6dp), false);
+				auto float_hi = maths::float_max;
+				auto float_lo = maths::float_lowest;
+				PR_CHECK(FEql(float_hi, float_hi, _6dp), true);
+				PR_CHECK(FEql(float_hi, float_lo, _6dp), false);
+				PR_CHECK(FEql(float_lo, float_hi, _6dp), false);
+				PR_CHECK(FEql(float_lo, float_lo, _6dp), true);
+				PR_CHECK(FEql(float_hi, float_hi / 2, _6dp), false);
+				PR_CHECK(FEql(float_hi, float_lo / 2, _6dp), false);
+				PR_CHECK(FEql(float_lo, float_hi / 2, _6dp), false);
+				PR_CHECK(FEql(float_lo, float_lo / 2, _6dp), false);
 
 				// Comparisons involving infinities
 				PR_CHECK(FEql(+maths::float_inf, +maths::float_inf, _6dp), true);

@@ -132,7 +132,7 @@ namespace pr
 					for (++e; e != end && *e != '"'; ++e) {}
 					if (*e != '"') throw std::exception("Partial literal string");
 					token_cb(s, e + !remove_quotes);
-					s = ++e;
+					s = e;
 					continue;
 				}
 

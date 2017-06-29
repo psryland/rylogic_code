@@ -377,7 +377,7 @@ namespace pr
 			}
 			{
 				pr::optional<Thing> a;
-				static_assert(sizeof(a) == sizeof(Thing) + 4, "");
+				static_assert(sizeof(a) == sizeof(Thing) + sizeof(Thing*), "");
 				PR_CHECK(Thing::ref_count() == 0, true);
 
 				a = Thing();

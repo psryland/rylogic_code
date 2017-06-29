@@ -212,7 +212,7 @@ namespace pr
 			std::condition_variable m_cv_idle;
 			bool m_idle;
 
-			// A callback function use in immediate mode
+			// A callback function used in immediate mode
 			std::function<void(log::Event const&)> m_log_cb;
 
 			// The worker thread that forwards log events to the callback function

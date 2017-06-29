@@ -152,6 +152,7 @@ namespace pr
 			x(Lines                ,= HashI("Lines"               ))\
 			x(Faces                ,= HashI("Faces"               ))\
 			x(Tetra                ,= HashI("Tetra"               ))\
+			x(Part                 ,= HashI("Part"                ))\
 			x(GenerateNormals      ,= HashI("GenerateNormals"     ))\
 			x(BakeTransform        ,= HashI("BakeTransform"       ))\
 			x(Step                 ,= HashI("Step"                ))\

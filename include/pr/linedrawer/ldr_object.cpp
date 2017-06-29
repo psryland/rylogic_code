@@ -2640,6 +2640,7 @@ namespace pr
 		{
 			wstring256 m_filepath;
 			m4x4 m_bake;
+			int m_part;
 			float m_gen_normals;
 
 			ObjectCreator(ParseParams& p)
@@ -2656,6 +2657,11 @@ namespace pr
 			{
 				switch (kw) {
 				default: return IObjectCreator::ParseKeyword(kw);
+				case EKeyword::Part:
+					{
+						p.m_reader.IntS(m_part, 10);
+						return true;
+					}
 				case EKeyword::GenerateNormals:
 					{
 						p.m_reader.RealS(m_gen_normals);
@@ -3788,9 +3794,9 @@ LR"(// A mesh of lines, faces, or tetrahedra.
 // Supported formats: *.3ds
 //*Model model_from_file FFFFFFFF
 //{
-//	"filepath"           // The file to create the model from
-//	*Part { n }          // For model formats that contain multiple models, allows a specific one to be selected
-//	*GenerateNormals     // Generate normals for the model
+//	"filepath"            // The file to create the model from
+//	*Part { n }           // For model formats that contain multiple models, allows a specific one to be selected
+//	*GenerateNormals {30} // Generate normals for the model (smoothing angle between faces)
 //}
 
 // Create a chart from a table of values.

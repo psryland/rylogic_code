@@ -52,6 +52,7 @@ namespace pr
 		constexpr int64 const   int64_max    = limits<int64>::max();
 		constexpr uint64 const  uint64_min   = limits<uint64>::min();
 		constexpr uint64 const  uint64_max   = limits<uint64>::max();
+		constexpr float const   float_lowest = limits<float>::lowest();
 		constexpr float const   float_min    = limits<float>::min();
 		constexpr float const   float_max    = limits<float>::max();
 		constexpr float const   float_eps    = limits<float>::epsilon();

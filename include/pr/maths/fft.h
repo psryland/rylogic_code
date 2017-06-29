@@ -528,7 +528,7 @@ namespace pr
 					std::string s_out;
 					for (int i = 0, iend = int(freq.size()/2); i != iend; ++i)
 					{
-						auto x = dft::FreqAt(double(i), SampFreq, freq.size());
+						auto x = dft::FreqAt(double(i), SampFreq, int(freq.size()));
 						auto y = Length(freq[i]);
 						s_out.append(pr::FmtS("%f, %f\n", x, y));
 					}

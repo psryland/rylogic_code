@@ -159,7 +159,7 @@ namespace cex
 				// Get the 3ds code to extract the verts/faces/normals/nuggets
 				// We may regenerate the normals later
 				max_3ds::CreateModel(o, matlookup,
-					[&](max_3ds::Material const& mat, EGeom geom, pr::Range<pr::uint16> vrange, pr::Range<pr::uint16> irange) // nugget out
+					[&](max_3ds::Material const& mat, EGeom geom, pr::Range<pr::uint16> vrange, pr::Range<pr::uint32> irange) // nugget out
 					{
 						p3d::Nugget nug = {};
 						nug.m_topo = EPrim::TriList;

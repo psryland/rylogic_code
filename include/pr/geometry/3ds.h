@@ -588,7 +588,7 @@ namespace pr
 			void CreateModel(max_3ds::Object const& obj, TMatLookup mats, TNuggetOut nugget_out, TVertOut v_out, TIdxOut i_out)
 			{
 				// Validate 'obj'
-				if (obj.m_mesh.m_vert.size() != obj.m_mesh.m_uv.size())
+				if (!obj.m_mesh.m_uv.empty() && obj.m_mesh.m_vert.size() != obj.m_mesh.m_uv.size())
 					throw std::exception("invalid 3DS object. Number of UVs != number of verts");
 				if (obj.m_mesh.m_face.size() != obj.m_mesh.m_smoothing_groups.size())
 					throw std::exception("invalid 3DS object. Number of faces != number of smoothing groups");
@@ -624,7 +624,7 @@ namespace pr
 
 						// If the smoothing group intersects, accumulate 'norm'
 						// and return the vertex index of this vert
-						if ((sg == 0 && vert.m_smooth == 0) || (sg & vert.m_smooth) || vert.m_norm == v4Zero)
+						if ((sg == 0 && vert.m_smooth == 0) || (sg & vert.m_smooth) != 0 || (vert.m_norm == v4Zero))
 						{
 							vert.m_norm += norm;
 							vert.m_col = col;
@@ -649,9 +649,14 @@ namespace pr
 					verts.emplace_back(i, i, v4Zero, ColourWhite, 0);
 
 				// Loop over material groups, each material group is a nugget
-				pr::Range<pr::uint16> vrange, irange = pr::Range<pr::uint16>::Zero();
+				auto vrange = pr::Range<pr::uint16>::Zero();
+				auto irange = pr::Range<pr::uint32>::Zero();
 				for (auto const& mgrp : obj.m_mesh.m_matgroup)
 				{
+					// Ignore material groups that aren't used in the model
+					if (mgrp.m_face.empty())
+						continue;
+
 					// Find the material
 					max_3ds::Material const& mat = mats(mgrp.m_name);
 
@@ -685,7 +690,7 @@ namespace pr
 						vrange.encompass(i0);
 						vrange.encompass(i1);
 						vrange.encompass(i2);
-						irange.m_end += 3;
+						irange.m_end = checked_cast<pr::uint32>(irange.m_end + 3);
 
 						// Write out face indices
 						i_out(i0, i1, i2);
@@ -702,7 +707,7 @@ namespace pr
 					auto  p = obj.m_mesh.m_vert[vert.m_orig_index].w1();
 					auto& c = vert.m_col;
 					auto  n = Normalise3(vert.m_norm, v4Zero);
-					auto& t = obj.m_mesh.m_uv[vert.m_orig_index];
+					auto& t = !obj.m_mesh.m_uv.empty() ? obj.m_mesh.m_uv[vert.m_orig_index] : v2Zero;
 					v_out(p, c, n, t);
 				}
 			}
