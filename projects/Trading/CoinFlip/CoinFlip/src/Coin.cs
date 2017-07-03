@@ -36,24 +36,23 @@ namespace CoinFlip
 			return Symbol;
 		}
 
+		/// <summary>Allow implicit conversion to string symbol name</summary>
+		[DebuggerStepThrough] public static implicit operator string(Coin coin)
+		{
+			return coin?.Symbol;
+		}
+
 		#region Equals
-		public static bool operator == (Coin coin, string symbol)
-		{
-			return coin?.Symbol == symbol;
-		}
-		public static bool operator != (Coin coin, string symbol)
-		{
-			return !(coin == symbol);
-		}
-		public bool Equals(Coin coin)
+		public bool Equals(Coin rhs)
 		{
 			return
-				Symbol == coin.Symbol &&
-				Exchange == coin.Exchange;
+				rhs != null &&
+				Symbol == rhs.Symbol &&
+				Exchange == rhs.Exchange;
 		}
 		public override bool Equals(object obj)
 		{
-			return obj is Coin && Equals((Coin)obj);
+			return Equals(obj as Coin);
 		}
 		public override int GetHashCode()
 		{

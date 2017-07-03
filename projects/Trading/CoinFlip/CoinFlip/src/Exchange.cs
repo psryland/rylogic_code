@@ -1,30 +1,60 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows.Forms;
+using pr.container;
 using pr.extn;
-using Cryptopia.API;
-using Cryptopia.API.DataObjects;
-using System.Net.Http;
-using System.Text;
-using System.Security.Cryptography;
-using System.Net.Http.Headers;
-using System.Web;
-using System.Diagnostics;
+using pr.util;
 
 namespace CoinFlip
 {
+	// Notes:
+	//  - Pairs should be given as Base/Quote.
+	//  - Orders have the price in Quote currency and the Volume in Base currency.
+	//  - Typically, the more common currency is the Quote currency,
+	//      e.g NZDUSD => price = 0.72USD/1NZD, volume in NZD
+	//      "buy 1000NZD = Base*Price = 720USD"
+
 	/// <summary>Base class for exchanges</summary>
 	public abstract class Exchange
 	{
-		public Exchange(Model model)
+		public Exchange(Model model, decimal transaction_fee, int poll_period)
 		{
 			Model = model;
+			TransactionFee = transaction_fee;
+			PollPeriod = poll_period;
+			Heart = new Timer();
+			Coins = new CoinCollection();
+			Pairs = new PairCollection();
+			Balance = new BalanceCollection(this);
+			Positions = new PositionsCollection();
+			Status = EStatus.Offline;
 		}
 		public virtual void Dispose()
 		{
+			Heart = null;
 			Model = null;
 		}
+
+		/// <summary>The name of this exchange</summary>
+		public string Name
+		{
+			get { return GetType().Name; }
+		}
+
+		/// <summary>The connection status of the exchange</summary>
+		public EStatus Status
+		{
+			get { return m_status; }
+			protected set
+			{
+				if (m_status == value) return;
+				m_status = value;
+				OnStatusChanged();
+			}
+		}
+		private EStatus m_status;
 
 		/// <summary>App logic</summary>
 		public Model Model
@@ -33,16 +63,343 @@ namespace CoinFlip
 			private set
 			{
 				if (m_model == value) return;
-				m_model = value;
+				SetModel(value);
+			}
+		}
+		protected virtual void SetModel(Model model)
+		{
+			if (m_model != null)
+			{
+				m_model.CoinsOfInterest.ListChanging -= HandleCoinsOfInterestedChanging;
+			}
+			m_model = model;
+			if (m_model != null)
+			{
+				m_model.CoinsOfInterest.ListChanging += HandleCoinsOfInterestedChanging;
 			}
 		}
 		private Model m_model;
 
-		/// <summary>Exchanges update their trade data and account balances</summary>
-		public abstract Task UpdateTradeDataAsync();
+		/// <summary>The coins associated with this exchange</summary>
+		public CoinCollection Coins { [DebuggerStepThrough] get; private set; }
+		public class CoinCollection :BindingDict<string, Coin>
+		{
+			public CoinCollection()
+			{
+				KeyFrom = x => x.Symbol;
+			}
+			public override Coin this[string sym]
+			{
+				get { return TryGetValue(sym, out var coin) ? coin : null; }
+				set { base[sym] = value; }
+			}
+		}
 
-		/// <summary>Return the account balance for the given coin type</summary>
-		public abstract Balance Balance(Coin coin);
+		/// <summary>The pairs associated with this exchange</summary>
+		public PairCollection Pairs { [DebuggerStepThrough] get; private set; }
+		public class PairCollection :BindingDict<string, TradePair>
+		{
+			public PairCollection()
+			{
+				KeyFrom = x => x.UniqueKey;
+			}
+
+			/// <summary>Return a pair involving the given symbols (in either order)</summary>
+			public TradePair this[string sym0, string sym1]
+			{
+				get
+				{
+					TradePair pair;
+					if (TryGetValue(TradePair.MakeKey(sym0, sym1), out pair)) return pair;
+					if (TryGetValue(TradePair.MakeKey(sym1, sym0), out pair)) return pair;
+					return null;
+				}
+			}
+
+			/// <summary>Return a pair involving the given symbol and the two exchanges (in either order)</summary>
+			public TradePair this[string sym, Exchange exch0, Exchange exch1]
+			{
+				get
+				{
+					TradePair pair;
+					if (TryGetValue(TradePair.MakeKey(sym, sym, exch0, exch1), out pair)) return pair;
+					if (TryGetValue(TradePair.MakeKey(sym, sym, exch1, exch0), out pair)) return pair;
+					return null;
+				}
+			}
+		}
+
+		/// <summary>The balance of the given coin on this exchange</summary>
+		public BalanceCollection Balance { [DebuggerStepThrough] get; private set; }
+		public class BalanceCollection :BindingDict<Coin, Balance>
+		{
+			private readonly Exchange m_exch;
+			public BalanceCollection(Exchange exch)
+			{
+				m_exch = exch;
+				KeyFrom = x => x.Coin;
+				SupportsSorting = false;
+			}
+			public override Balance this[Coin coin]
+			{
+				get
+				{
+					if (coin.Exchange != m_exch) throw new Exception("Currency not associated with this exchange");
+					return TryGetValue(coin, out var bal) ? bal : new Balance(coin);
+				}
+				set
+				{
+					if (coin.Exchange != m_exch) throw new Exception("Currency not associated with this exchange");
+					base[coin] = value;
+				}
+			}
+			public Balance this[string sym]
+			{
+				get { return base[m_exch.Coins[sym]]; }
+				set { base[m_exch.Coins[sym]] = value; }
+			}
+		}
+
+		/// <summary>Open positions held on this exchange, keyed on order ID</summary>
+		public PositionsCollection Positions { [DebuggerStepThrough] get; private set; }
+		public class PositionsCollection :BindingDict<ulong, Position>
+		{
+			public PositionsCollection()
+			{
+				KeyFrom = x => x.OrderId;
+			}
+		}
+
+		/// <summary>The percentage fee charged when performing exchanges</summary>
+		public decimal TransactionFee
+		{
+			get;
+			private set;
+		}
+
+		/// <summary>The number of coins available on this exchange</summary>
+		public int CoinsAvailable
+		{
+			get { return Coins.Count; }
+		}
+
+		/// <summary>The number of trading pairs available</summary>
+		public int PairsAvailable
+		{
+			get { return Pairs.Count; }
+		}
+
+		/// <summary>Raised when the 'Status' value changes</summary>
+		public event EventHandler StatusChanged;
+		protected virtual void OnStatusChanged()
+		{
+			// Status change can happen from any thread
+			Model.RunOnGuiThread(() =>
+			{
+				StatusChanged.Raise(this);
+				Model.Exchanges.ResetItem(this, ignore_missing:true);
+			});
+		}
+
+		/// <summary>The rate that 'Heart' beats at</summary>
+		public int PollPeriod
+		{
+			get { return m_poll_period; }
+			set
+			{
+				SetPollPeriod(value);
+				if (Heart != null)
+				{
+					Heart.Interval = value;
+					Heart.Enabled = value != 0;
+				}
+			}
+		}
+		protected virtual void SetPollPeriod(int period)
+		{
+			m_poll_period = period;
+		}
+		private int m_poll_period;
+
+		/// <summary>Heart beat</summary>
+		public Timer Heart
+		{
+			get { return m_heart; }
+			private set
+			{
+				if (m_heart == value) return;
+				if (m_heart != null)
+				{
+					m_heart.Tick -= HeartBeat;
+					Util.Dispose(ref m_heart);
+				}
+				m_heart = value;
+				if (m_heart != null)
+				{
+					m_heart.Tick += HeartBeat;
+					m_heart.Interval = PollPeriod != 0 ? PollPeriod : 60000;
+					m_heart.Enabled = PollPeriod != 0;
+				}
+			}
+		}
+		private async void HeartBeat(object sender, EventArgs e)
+		{
+			if (m_heart_beat != 0) return;
+			using (Scope.Create(() => ++m_heart_beat, () => --m_heart_beat))
+				await UpdateData();
+		}
+		private int m_heart_beat;
+		private Timer m_heart;
+
+		/// <summary>
+		/// Open the connection to the exchange and gather data.
+		/// This method is expected to be asynchronous.</summary>
+		public abstract void Start();
+
+		/// <summary>Place an order to convert 'volume' (base currency) to quote currency at 'price' (Quote/Base)</summary>
+		public async Task CreateB2QOrder(TradePair pair, Unit<decimal> volume, Unit<decimal>? price = null)
+		{
+			// Check units
+			if (volume < 0m._(pair.Base))
+				throw new Exception("Invalid trade volume: {0}".Fmt(volume));
+			if (price != null && price <= 0m._(pair.Quote)/1m._(pair.Base))
+				throw new Exception("Invalid exchange rate: {0}".Fmt(price.Value));
+
+			// If the price isn't given, get it from the pair
+			price = price ?? pair.Bid.FirstOrDefault().Price;
+
+			// Place the order on the exchange.
+			// Exchanges buy/sell base currency, so B2Q is a sell of base currency
+			await CreateOrder(pair, ETradeType.Sell, volume, price.Value);
+		}
+
+		/// <summary>Place an order to convert 'volume' (quote currency) to base currency at 'price' (Base/Quote)</summary>
+		public async Task CreateQ2BOrder(TradePair pair, Unit<decimal> volume, Unit<decimal>? price = null)
+		{
+			// Check units
+			if (volume < 0m._(pair.Quote))
+				throw new Exception("Invalid trade volume: {0}".Fmt(volume));
+			if (price != null && price <= 0m._(pair.Base)/1m._(pair.Quote))
+				throw new Exception("Invalid exchange rate: {0}".Fmt(price.Value));
+
+			// If the price isn't given, get it from the pair
+			price = price ??  pair.Ask.FirstOrDefault().Price;
+
+			// Place the order on the exchange.
+			// Exchanges buy/sell base currency, so Q2B is a buy of base currency
+			await CreateOrder(pair, ETradeType.Buy, volume * price.Value, 1m / price.Value);
+		}
+
+		/// <summary>Place an order on the exchange to buy or sell 'volume' (in base currency). i.e. Sell = Base->Quote, Buy = Quote->Base</summary>
+		public async Task CreateOrder(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal>? price = null)
+		{
+			if (pair.Exchange != this)
+				throw new Exception("Pair {0} is not provided by this exchange".Fmt(pair));
+			if (volume < 0m._(pair.Base))
+				throw new Exception("Invalid trade volume: {0}".Fmt(volume));
+			if (price != null && price <= 0m._(pair.Quote)/1m._(pair.Base))
+				throw new Exception("Invalid exchange rate: {0}".Fmt(price.Value));
+
+			// If price isn't given, get it from the pair
+			if (price == null)
+			{
+				if (tt == ETradeType.Sell) price = pair.Ask.FirstOrDefault().Price;
+				if (tt == ETradeType.Buy ) price = pair.Bid.FirstOrDefault().Price;
+				if (price == null) throw new Exception("Market rate could not be determined");
+			}
+
+			// Place the order
+			await CreateOrderInternal(pair, tt, volume, price.Value);
+
+			// Log the event
+			Model.Log.Write(ELogLevel.Info, "{0} Order Created: {1} {2} -> {3} {4} @ {5}".Fmt(
+				tt,
+				tt == ETradeType.Sell ? volume    : volume * price.Value,
+				tt == ETradeType.Sell ? pair.Base : pair.Quote,
+				tt == ETradeType.Buy  ? volume    : volume * price.Value,
+				tt == ETradeType.Buy  ? pair.Base : pair.Quote,
+				price.Value));
+
+			// Invalidate the pair to prevent accidental use
+			pair.Invalidate();
+		}
+		protected abstract Task CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> rate);
+
+		/// <summary>Remove Coins/Pairs that are not associated with coins of interest or open positions</summary>
+		protected void Sweep()
+		{
+			// Get the coins of interest
+			var coi = Model.CoinsOfInterestSet.ToHashSet(); // Make a copy
+
+			// Add coins from the open positions
+			foreach (var pos in Positions.Values)
+			{
+				coi.Add(pos.Pair.Base);
+				coi.Add(pos.Pair.Quote);
+			}
+
+			// Remove all pairs that do not involve coins from 'coi'
+			Pairs.RemoveIf(x => !coi.Contains(x.Base) || !coi.Contains(x.Quote));
+
+			// Remove all coins not in 'coi'
+			Coins.RemoveIf(x => !coi.Contains(x));
+
+			// Remove all balances for coins not in 'coi'
+			Balance.RemoveIf(x => !coi.Contains(x.Coin));
+		}
+
+		/// <summary>Add the pairs for this exchange to the model (based on coins of interest)</summary>
+		protected virtual Task AddPairsToModel()
+		{
+			// The set of coins of interest
+			var coi = Model.CoinsOfInterestSet;
+
+			// The existing pairs in the model that belong to this exchange
+			var existing = Model.Pairs.Where(x => x.Exchange == this).ToHashSet();
+
+			// Add our pairs (involving the coins of interest) that are not already in the model.
+			// The model will have already removed pairs that are no longer of interest.
+			// The pairs that are associated with open positions are not added to the model.
+			var new_pairs = Pairs.Values.Where(x => !existing.Contains(x) && coi.Contains(x.Base) && coi.Contains(x.Quote)).ToArray();
+			if (new_pairs.Length != 0)
+				using (Model.Pairs.SuspendEvents(reset_bindings_on_resume: true))
+					Model.Pairs.AddRange(new_pairs);
+
+			return Misc.CompletedTask;
+		}
+
+		/// <summary>Update the market data, balances, and open positions</summary>
+		protected virtual Task UpdateData()
+		{
+			return Misc.CompletedTask;
+		}
+
+		/// <summary>Get an existing 'Coin' or add one to the 'Coins' collection for 'sym'</summary>
+		protected Coin GetOrAddCoin(string sym)
+		{
+			return Coins.GetOrAdd(sym, k => new Coin(k, this));
+		}
+
+		/// <summary>Create a trade pair from currency symbols, adding Coins if necessary</summary>
+		protected TradePair CreateTradePair(string base_symbol, string quote_symbol, int? trade_pair_id = null)
+		{
+			// Get the coins involved in the pair.
+			var base_ = GetOrAddCoin(base_symbol);
+			var quote = GetOrAddCoin(quote_symbol);
+
+			// Add the trade pair
+			return new TradePair(base_, quote, this){ TradePairId = trade_pair_id };
+		}
+
+		/// <summary>Handle the coins of interest changing</summary>
+		private void HandleCoinsOfInterestedChanging(object sender, ListChgEventArgs<string> e)
+		{
+			if (e.IsDataChanged)
+			{
+				Sweep();
+				AddPairsToModel();
+			}
+		}
 
 		/// <summary></summary>
 		public override string ToString()
@@ -50,475 +407,5 @@ namespace CoinFlip
 			return GetType().Name;
 		}
 	}
-
-	/// <summary>Cryptopia Exchange</summary>
-	public class Cryptopia :Exchange
-	{
-		private const string ApiKey    = "429162d7138f4275b5e9dd09ff6362fd";
-		private const string ApiSecret = "Dt6k0ZC3zqbNCxpDSsHqX7VIR21PEPO7vNeKDbQIKcI=";
-
-		private CryptopiaApiPublic m_pub;
-		private CryptopiaApiPrivate m_priv;
-		private Dictionary<Coin, Balance> m_balance;
-
-		public Cryptopia(Model model)
-			:base(model)
-		{
-			m_pub = new CryptopiaApiPublic();
-			m_priv = new CryptopiaApiPrivate(ApiKey, ApiSecret);
-			m_balance = new Dictionary<Coin, Balance>();
-			Task.Run(() => PopulateAsync());
-		}
-
-		/// <summary>Get the trading pairs</summary>
-		private async void PopulateAsync()
-		{
-			// Get all available trading pairs
-			var msg = await m_pub.GetTradePairs();
-			if (!msg.Success)
-				throw new Exception("Cryptopia: Failed to read available trading pairs. {0}".Fmt(msg.Error));
-
-			// Build a set of the pairs that involve the coins of interest
-			var coi = Model.CoinsOfInterest.ToHashSet(x => x);
-			var pairs = msg.Data.Where(x => coi.Contains(x.Symbol) && coi.Contains(x.BaseSymbol)).ToArray();
-
-			// Create the trade pairs and associated coins
-			var coins = new Dictionary<string, Coin>();
-			var instr = new List<TradePair>();
-			foreach (var pair in pairs)
-			{
-				// Get the coins involved in the pair.
-				// Note: Cryptopia has Base/Quote backwards
-				var quote = coins.GetOrAdd(pair.BaseSymbol, k => new Coin(k, this));
-				var base_ = coins.GetOrAdd(pair.Symbol    , k => new Coin(k, this));
-
-				// Add the trade pair
-				instr.Add(new TradePair(base_, quote){ TradePairId = pair.Id });
-			}
-
-			// Add the coins and pairs to the model
-			Model.Coins.AddRange(coins.Values);
-			Model.Pairs.AddRange(instr);
-		}
-
-		/// <summary>Exchanges update their trade data and account balances</summary>
-		public async override Task UpdateTradeDataAsync()
-		{
-			// Get the pairs associated with this exchange, no pairs, then don't need other data either
-			var pairs = Model.Pairs.Where(x => x.Base.Exchange == this && x.Quote.Exchange == this).ToArray();
-			if (pairs.Length == 0)
-				return;
-
-			// Request the market data for all of the pairs
-			var market_data = m_pub.GetMarketOrderGroups(new MarketOrderGroupsRequest(pairs.Select(x => x.TradePairId).ToArray()));
-
-			// Request the account data
-			//var balances_data = await m_priv.GetBalances(new BalanceRequest(100));
-			//		JsonQueryAsync<int>("https://www.cryptopia.co.nz/Api/GetBalance", new{ Currency = "DOT" });
-
-			/// <summary>Make a private API web request</summary>
-			{
-				// Create a request message
-				var url = "https://www.cryptopia.co.nz/Api/GetBalance";
-				var req = new HttpRequestMessage(HttpMethod.Post, url);
-
-				using (var hmac = new HMACSHA256(Convert.FromBase64String(ApiSecret)))
-				using (var md5 = MD5.Create())
-				{
-					// Set the POST parameters
-					////	req.Content = new System.Net.Http.ObjectContent(typeof(object), post_data, new JsonMediaTypeFormatter());
-					//string requestContentBase64String = string.Empty;
-					//if (req.Content != null)
-					//{
-					//	// Hash content to ensure message integrity
-					//	using (var md5 = MD5.Create())
-					//		requestContentBase64String = Convert.ToBase64String(md5.ComputeHash(await req.Content.ReadAsByteArrayAsync()));
-					//}
-					var post_params = string.Empty;
-					var hashed_post_params = md5.ComputeHash(Encoding.UTF8.GetBytes(post_params));
-
-					// Create a random nonce for each request
-					var nonce = Guid.NewGuid().ToString("N");
-
-					// Create the request signature
-					var sig = ApiKey + "POST" + url + nonce + Convert.ToBase64String(hashed_post_params);
-					var signature = hmac.ComputeHash(Encoding.UTF8.GetBytes(sig));
-
-					// Authentication
-					var parm = "{0}:{1}:{2}".Fmt(ApiKey, Convert.ToBase64String(signature), nonce);
-					req.Headers.Authorization = new AuthenticationHeaderValue("amx", parm);
-				}
-
-				// Serialise the message to a string so we can calculate the signature
-				//var url = HttpUtility.UrlEncode(req.RequestUri.AbsoluteUri.ToLower());
-
-
-				// Send Request
-				using (var client = new HttpClient())
-				{
-					var res = await client.SendAsync(req);
-					if (!res.IsSuccessStatusCode) throw new Exception("Cryptopia: Private API request failed");
-					//return await Deserialise<T>(res);
-					var content = await res.Content.ReadAsStringAsync();
-					Debug.WriteLine(content);
-				}
-			}
-
-
-			// Process the market data and update the pairs
-			#region
-			{
-				var msg = await market_data;
-				if (!msg.Success)
-					throw new Exception("Cryptopia: Failed to update trading pairs. {0}".Fmt(msg.Error));
-
-				// Update the market orders
-				foreach (var orders in msg.Data)
-				{
-					// Get the currencies involved in the pair
-					var coin = orders.Market.Split('_');
-
-					// Find the pair to update
-					var pair = pairs.First(x =>
-						(x.Base == coin[0] && x.Quote == coin[1]) ||
-						(x.Base == coin[1] && x.Quote == coin[0]));
-
-					// Update the depth of market data
-					pair.Ask.Offers.Clear();
-					foreach (var sell in orders.Sell)
-						pair.Ask.Offers.Add(new Orders.Offer(sell.Price, sell.Volume));
-
-					// Update the depth of market data
-					pair.Bid.Offers.Clear();
-					foreach (var buy in orders.Buy)
-						pair.Bid.Offers.Add(new Orders.Offer(buy.Price, buy.Volume));
-				}
-			}
-			#endregion
-
-			// Process the account data and update the balances
-			#region
-			//{
-			//	var msg = await balances_data;
-			//	if (!msg.Success)
-			//		throw new Exception("Cryptopia: Failed to update account balances pairs. {0}".Fmt(msg.Error));
-
-			//	// Update the account balance
-			//	foreach (var b in msg.Data)
-			//	{
-			//		// Find the currency that this balance is for
-			//		var coin = Model.Coins.First(x => x.Exchange == this && x.Symbol == b.Symbol);
-
-			//		// Update the balance
-			//		var bal = new Balance(coin, b.Total, b.Available, b.Unconfirmed, b.HeldForTrades, b.PendingWithdraw);
-			//		m_balance[coin] = bal;
-			//	}
-			//}
-			#endregion
-		}
-
-		/// <summary>Return the account balance for the given coin type</summary>
-		public override Balance Balance(Coin coin)
-		{
-			if (coin.Exchange != this)
-				throw new Exception("Currency not associated with this exchange");
-
-			Balance bal;
-			return m_balance.TryGetValue(coin, out bal) ? bal : new Balance(coin, 0, 0, 0, 0, 0);
-		}
-	}
-
-	/// <summary>Poloniex Exchange</summary>
-	public class Poloniex :Exchange
-	{
-		public Poloniex(Model model)
-			:base(model)
-		{
-
-		}
-
-		/// <summary>Exchanges update their trade data</summary>
-		public async override Task UpdateTradeDataAsync()
-		{
-		//	var msg = await JsonQueryAsync<>("https://www.cryptopia.co.nz/api/GetMarketOrders/100");
-		}
-
-		/// <summary>Return the account balance for the given coin type</summary>
-		public override Balance Balance(Coin coin)
-		{
-			return new Balance(coin, 0, 0, 0, 0, 0);
-		}
-	}
 }
-
-
-
-#if false
-
-		#region Messages
-
-		///// <summary>Make a web request and return the response as an object</summary>
-		//private async Task<T> JsonQueryAsync<T>(string request) where T:IMsg
-		//{
-		//	var req = new HttpRequestMessage(HttpMethod.Get, request);
-		//	using (var client = new HttpClient())
-		//	{
-		//		var res = await client.SendAsync(req);
-		//		if (!res.IsSuccessStatusCode) throw new Exception("Cryptopia: Public API request failed");
-		//		return await Deserialise<T>(res);
-		//	}
-		//}
-
-		///// <summary>Make a private API web request</summary>
-		//private async Task<T> JsonQueryAsync<T>(string request, object post_data) where T:IMsg // var post_data = new{ Currency = "DOT" };
-		//{
-		//	// Create a request message
-		//	var req = new HttpRequestMessage(HttpMethod.Post, request);
-		////	req.Content = new System.Net.Http.ObjectContent(typeof(object), post_data, new JsonMediaTypeFormatter());
-
-		////	// Authentication
-		////	string requestContentBase64String = string.Empty;
-		////	if (req.Content != null)
-		////	{
-		////		// Hash content to ensure message integrity
-		////		using (var md5 = MD5.Create())
-		////			requestContentBase64String = Convert.ToBase64String(md5.ComputeHash(await req.Content.ReadAsByteArrayAsync()));
-		////	}
-
-		////	// Create a random nonce for each request
-		////	var nonce = Guid.NewGuid().ToString("N");
-
-		////	// Serialise the message to a string so we can calculate the signature
-		////	var signature = Encoding.UTF8.GetBytes(string.Concat(ApiKey, HttpMethod.Post, HttpUtility.UrlEncode(req.RequestUri.AbsoluteUri.ToLower()), nonce, requestContentBase64String));
-		////	using (var hmac = new HMACSHA256(Convert.FromBase64String(ApiSecret)))
-		////		req.Headers.Authorization = new AuthenticationHeaderValue("amx", "{0}:{1}:{2}".Fmt(ApiKey, Convert.ToBase64String(hmac.ComputeHash(signature)), nonce));
-
-		//	// Send Request
-		//	using (var client = new HttpClient())
-		//	{
-		//		var res = await client.SendAsync(req);
-		//		if (!res.IsSuccessStatusCode) throw new Exception("Cryptopia: Private API request failed");
-		//		return await Deserialise<T>(res);
-		//	}
-		//}
-
-		///// <summary>Unpack a JSON message to an object</summary>
-		//private async Task<T> Deserialise<T>(HttpResponseMessage res) where T:IMsg
-		//{
-		//	// Deserialise the JSON into the object 'T'
-		//	var serializer = new JsonSerializer();
-		//	using (var sr = new StreamReader(await res.Content.ReadAsStreamAsync()))
-		//	using (var jr = new JsonTextReader(sr))
-		//	{
-		//		var msg = serializer.Deserialize<T>(jr);
-		//		if (!msg.Success)
-		//			throw new Exception("Cryptopia: Failed to read response of type {0}. {1}".Fmt(typeof(T).Name, msg.Message));
-
-		//		// Return the de-serialised message
-		//		return msg;
-		//	}
-		//}
-
-		///// <summary>Common interface for all message response types</summary>
-		//private interface IMsg
-		//{
-		//	bool Success { get; }
-		//	string Message { get; }
-		//}
-
-		///// <summary>Response to the GetCurrencies method</summary>
-		//private class MsgCurrencies :IMsg
-		//{
-		//	[JsonProperty] public bool Success { get; set; }
-		//	[JsonProperty] public string Message { get; set; }
-		//	[JsonProperty] public List<Currency> Data { get; set; }
-
-		//	public class Currency
-		//	{
-		//		[JsonProperty] public int Id { get; set; }
-		//		[JsonProperty] public string Name { get; set; }
-		//		[JsonProperty] public string Symbol { get; set; }
-		//		[JsonProperty] public string Algorithm { get; set; }
-		//		[JsonProperty] public decimal WithdrawFee { get; set; }
-		//		[JsonProperty] public decimal MinWithdraw { get; set; }
-		//		[JsonProperty] public decimal MinBaseTrade { get; set; }
-		//		[JsonProperty] public bool IsTipEnabled { get; set; }
-		//		[JsonProperty] public decimal MinTip { get; set; }
-		//		[JsonProperty] public int DepositConfirmations { get; set; }
-		//		[JsonProperty] public string Status { get; set; }
-		//		[JsonProperty] public string StatusMessage { get; set; }
-		//		[JsonProperty] public string ListingStatus { get; set; }
-		//	}
-		//}
-
-		///// <summary>Response to the GetTradePairs method</summary>
-		//private class MsgTradePairs :IMsg
-		//{
-		//	[JsonProperty] public bool Success { get; set; }
-		//	[JsonProperty] public string Message { get; set; }
-		//	[JsonProperty] public List<Pair> Data { get; set; }
-		//	[JsonProperty] public string Error { get; set; }
-
-		//	public class Pair
-		//	{
-		//		[JsonProperty] public int Id { get; set; }
-		//		[JsonProperty] public string Label { get; set; }
-		//		[JsonProperty] public string Currency { get; set; }
-		//		[JsonProperty] public string Symbol { get; set; }
-		//		[JsonProperty] public string BaseCurrency { get; set; }
-		//		[JsonProperty] public string BaseSymbol { get; set; }
-		//		[JsonProperty] public string Status { get; set; }
-		//		[JsonProperty] public string StatusMessage { get; set; }
-		//		[JsonProperty] public decimal TradeFee { get; set; }
-		//		[JsonProperty] public decimal MinimumTrade { get; set; }
-		//		[JsonProperty] public decimal MaximumTrade { get; set; }
-		//		[JsonProperty] public decimal MinimumBaseTrade { get; set; }
-		//		[JsonProperty] public decimal MaximumBaseTrade { get; set; }
-		//		[JsonProperty] public decimal MinimumPrice { get; set; }
-		//		[JsonProperty] public decimal MaximumPrice { get; set; }
-		//	}
-		//}
-
-		///// <summary>Response to the GetMarketOrders method</summary>
-		//private class MsgMarketOrders :IMsg
-		//{
-		//	[JsonProperty] public bool Success { get; set; }
-		//	[JsonProperty] public string Message { get; set; }
-		//	[JsonProperty] public List<Orders> Data { get; set; }
-		//	[JsonProperty] public string Error { get; set; }
-
-		//	public class Orders
-		//	{
-		//		[JsonProperty] public int TradePairId { get; set; }
-		//		[JsonProperty] public string Market { get; set; }
-		//		[JsonProperty] public List<Buy> Buy { get; set; }
-		//		[JsonProperty] public List<Sell> Sell { get; set; }
-		//	}
-		//	public class Buy
-		//	{
-		//		[JsonProperty] public int TradePairId { get; set; }
-		//		[JsonProperty] public string Label { get; set; }
-		//		[JsonProperty] public decimal Price { get; set; }
-		//		[JsonProperty] public decimal Volume { get; set; }
-		//		[JsonProperty] public decimal Total { get; set; }
-		//	}
-		//	public class Sell
-		//	{
-		//		[JsonProperty] public int TradePairId { get; set; }
-		//		[JsonProperty] public string Label { get; set; }
-		//		[JsonProperty] public decimal Price { get; set; }
-		//		[JsonProperty] public decimal Volume { get; set; }
-		//		[JsonProperty] public decimal Total { get; set; }
-		//	}
-		//}
-		#endregion
-
-			Connect();
-
-			m_btn.Click += (s,a) =>
-			{
-				Subscribe();
-			};
-
-			UpdateUI();
-
-		/// <summary>Connection to the data source</summary>
-		private IWampRealmProxy Realm
-		{
-			get { return m_realm; }
-			set
-			{
-				if (m_realm == value) return;
-				if (m_realm != null)
-				{
-				}
-				m_realm = value;
-				if (m_realm != null)
-				{
-				}
-				UpdateUI();
-			}
-		}
-		private IWampRealmProxy m_realm;
-
-		/// <summary></summary>
-		private async void Connect()
-		{
-			try
-			{
-				var factory = new DefaultWampChannelFactory();
-				var channel = factory.CreateJsonChannel("wss://api.poloniex.com", "realm1");
-				await channel.Open();
-
-				Realm = channel.RealmProxy;
-			}
-			catch (Exception ex)
-			{
-				Debug.Write(ex.Message);
-			}
-		}
-
-		private async void Subscribe()
-		{
-			if (Realm == null)
-				return;
-
-			//var sub = Realm.Services.RegisterSubscriber(new Ticker());
-			//var dis = await sub;
-			////await dis.DisposeAsync();
-
-			var count = 0;
-			var subject = Realm.Services.GetSubject("ticker");
-			var subscription = (IDisposable)null;
-			subject.Subscribe(x =>
-				{
-					if (++count >= 10)
-						Util.Dispose(ref subscription);
-					else
-						foreach (var arg in x.Arguments)
-							Debug.Write(arg.Deserialize<dynamic>().ToString());
-						Debug.WriteLine("");
-				});
-
-				//var channel = factory.CreateMsgpackChannel("wss://api.poloniex.com:443", "realm1");
-				//await channel.Open();
-
-				//var realmProxy = channel.RealmProxy;
-				//Console.WriteLine("Connection established");
-
-				//int received = 0;
-				//IDisposable subscription = null;
-
-				//subscription = realmProxy.Services.GetSubject("ticker")
-				//	.Subscribe(x =>
-				//	{
-				//		Console.WriteLine("Got Event: " + x);
-				//		received++;
-				//		if (received > 5)
-				//		{
-				//			Console.WriteLine("Closing ..");
-				//			subscription.Dispose();
-				//		}
-				//	});
-		}
-
-		/// <summary></summary>
-		private void UpdateUI()
-		{
-			m_btn.Enabled = Realm != null;
-		}
-	public interface ITicker
-	{
-		[WampTopic("ticker")]
-		void OnTick(PriceTick price_tick);
-	}
-
-	public class Ticker :ITicker
-	{
-		public void OnTick(PriceTick price_tick)
-		{
-			Debug.WriteLine("Tick: {0}".Fmt(price_tick));
-		}
-	}
-#endif
 

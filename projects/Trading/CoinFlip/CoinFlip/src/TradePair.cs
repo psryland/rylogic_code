@@ -1,37 +1,51 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using pr.extn;
+using pr.util;
 
 namespace CoinFlip
 {
 	/// <summary>The Ask/Bid prices between two coins</summary>
-	[DebuggerDisplay("{Base.Symbol}/{Quote.Symbol}")]
-	public class TradePair :IDisposable
+	[DebuggerDisplay("{Name,nq}")]
+	public class TradePair :IComparable<TradePair>, IComparable
 	{
 		// Notes:
 		// - Links two coins together by their Ask/Bid prices
 		// - Currency pair: Base/Quote e.g. BTC/USDT = $2500
 		//   "1 unit of base currency (BTC) == 2500 units of quote currency (USDT)"
+		//   Note, this means the units of the BTC/USDT rate are USDT-per-BTC, counter intuitively :-/
+		//   since X(BTC) * price(USDT/BTC) = Y(USDT)
 
-		public TradePair(Coin base_, Coin quote)
+		public TradePair(Coin base_, Coin quote, Exchange exchange)
 		{
 			Base  = base_;
 			Quote = quote;
+			Exchange = exchange;
 
-			Ask = new Orders(+1);
-			Bid = new Orders(-1);
+			Ask = new OrderBook(base_, quote);
+			Bid = new OrderBook(base_, quote);
 		}
-		public virtual void Dispose()
+
+		/// <summary>The name of this pair. Format Base/Quote</summary>
+		public string Name
 		{
-			Quote = null;
-			Base = null;
+			get { return "{0}/{1}".Fmt(Base?.Symbol ?? "---", Quote?.Symbol ?? "---"); }
+		}
+		public string NameWithExchange
+		{
+			get { return "{0} - {1}".Fmt(Name, Exchange.Name); }
+		}
+
+		/// <summary>Return a unique key string for this pair</summary>
+		public string UniqueKey
+		{
+			get { return MakeKey(this); }
 		}
 
 		/// <summary>An UID for the trade pair (Exchange dependent value)</summary>
-		public int TradePairId
+		public int? TradePairId
 		{
 			get;
 			set;
@@ -77,6 +91,18 @@ namespace CoinFlip
 		}
 		private Coin m_base;
 
+		/// <summary>The exchange offering this trade</summary>
+		public Exchange Exchange
+		{
+			[DebuggerStepThrough] get { return m_exchange; }
+			private set
+			{
+				if (m_exchange == value) return;
+				m_exchange = value;
+			}
+		}
+		private Exchange m_exchange;
+
 		/// <summary>Return the other coin involved in the trade pair</summary>
 		public Coin OtherCoin(Coin coin)
 		{
@@ -85,66 +111,194 @@ namespace CoinFlip
 			throw new Exception("'coin' is not in this pair");
 		}
 
-		/// <summary>The Ask price offers</summary>
-		public Orders Ask
+		/// <summary>The Ask price offers (Prices for converting Quote to Base. First price is a minimum)</summary>
+		public OrderBook Ask
 		{
-			get;
+			[DebuggerStepThrough] get;
 			private set;
 		}
 
-		/// <summary>The Ask price offers</summary>
-		public Orders Bid
+		/// <summary>The Bid price offers (Prices for converting Base to Quote. First price is a maximum)</summary>
+		public OrderBook Bid
 		{
-			get;
-			private set;
-		}
-	}
-
-	/// <summary>Depth of market</summary>
-	public class Orders
-	{
-		public Orders(int sign)
-		{
-			Sign = sign;
-			Offers = new List<Offer>();
-		}
-
-		/// <summary>The direction of market depth. +1 = Ask (sell orders), -1 = Bid (buy orders)</summary>
-		public int Sign
-		{
-			get;
+			[DebuggerStepThrough] get;
 			private set;
 		}
 
-		/// <summary>Return the price for the given volume (null if there are no offers)</summary>
-		public decimal? Price(decimal volume = 0)
+		/// <summary>Return the Fee charged when trading this pair</summary>
+		public decimal Fee
 		{
-			foreach (var o in Offers)
+			get
 			{
-				volume -= o.Volume;
-				if (volume <= 0)
-					return o.Price;
+				// When the pairs are on different exchanges there is no fee
+				return Base.Exchange == Quote.Exchange
+					? Base.Exchange.TransactionFee
+					: 0;
 			}
-			return null;
 		}
 
-		/// <summary>The available offers ordered by price. (Increasing for Ask, Decreasing for Bid)</summary>
-		public List<Offer> Offers { get; private set; }
-
-		[DebuggerDisplay("Price={Price} Vol={Volume}")]
-		public struct Offer
+		/// <summary>Return the units for the conversion rate from Base to Quote (i.e. Quote/Base)</summary>
+		public string RateUnits
 		{
-			public Offer(decimal price, decimal volume)
-			{
-				Price = price;
-				Volume = volume;
+			get { return "{0}/{1}".Fmt(Quote, Base); }
+		}
+
+		/// <summary>Invalidate the pair data so that the pair will not be traded until updated with the latest data</summary>
+		public void Invalidate()
+		{
+			Ask.Clear();
+			Bid.Clear();
+		}
+
+		/// <summary>Return the current best price for the given trade type</summary>
+		public Unit<decimal> CurrentPrice(ETradeType tt)
+		{
+			switch (tt) {
+			default: throw new Exception("Unknown trade type: {0}".Fmt(tt));
+			case ETradeType.Buy:  return Bid.Orders.Count != 0 ? Bid.Orders[0].Price : 0m._(RateUnits);
+			case ETradeType.Sell: return Ask.Orders.Count != 0 ? Ask.Orders[0].Price : 0m._(RateUnits);
 			}
+		}
 
-			/// <summary>The price (to buy or sell) (in quote currency)</summary>
-			public decimal Price { get; set; }
+		/// <summary>Differential update the list of buy/sell orders</summary>
+		public void UpdateOrderBook(Order[] buys, Order[] sells)
+		{
+			using (Bid.Orders.SuspendEvents(reset_bindings_on_resume: true))
+			{
+				Bid.Orders.Clear();
+				Bid.Orders.AddRange(buys);
+			}
+			using (Ask.Orders.SuspendEvents(reset_bindings_on_resume: true))
+			{
+				Ask.Orders.Clear();
+				Ask.Orders.AddRange(sells);
+			}
+		}
 
-			/// <summary>The volume offered (in base currency)</summary>
-			public decimal Volume { get; set; }
+		/// <summary>
+		/// Convert a volume of 'Base' currency to 'Quote' currency using the available orders.
+		/// If there is insufficient liquidity, returns the amount traded from what was available.
+		/// Also returns the price at which the conversion would happen.</summary>
+		public Order BaseToQuote(Unit<decimal> volume)
+		{
+			if (volume < 0m._(Base))
+				throw new Exception("Invalid volume");
+
+			// Determine the best price and volume in quote currency
+			var order = new Order(0m._(Quote)/1m._(Base), 0m._(Quote));
+			foreach (var x in Bid)
+			{
+				if (x.VolumeBase > volume)
+				{
+					order.Price = x.Price;
+					order.VolumeBase += x.Price * volume;
+					break;
+				}
+				else
+				{
+					order.VolumeBase += x.Price * x.VolumeBase;
+					volume -= x.VolumeBase;
+				}
+			}
+			return order;
+		}
+
+		/// <summary>
+		/// Convert a volume of 'Quote' currency to 'Base' currency using the available orders.
+		/// If there is insufficient liquidity, returns the amount traded from what was available.
+		/// Also returns the price at which the conversion would happen.</summary>
+		public Order QuoteToBase(Unit<decimal> volume)
+		{
+			if (volume < 0m._(Quote))
+				throw new Exception("Invalid volume");
+
+			// Determine the best price and volume in base currency
+			var order = new Order(0m._(Base)/1m._(Quote), 0m._(Base));
+			foreach (var x in Ask)
+			{
+				if (x.Price * x.VolumeBase > volume)
+				{
+					order.Price = 1m / x.Price;
+					order.VolumeBase += volume / x.Price;
+					break;
+				}
+				else
+				{
+					order.VolumeBase += x.VolumeBase;
+					volume -= x.Price * x.VolumeBase;
+				}
+			}
+			return order;
+		}
+
+		/// <summary>Place an order to buy or sell 'volume' (in base currency) on the exchange that offers this pair</summary>
+		public async Task CreateOrder(ETradeType tt, Unit<decimal> volume, Unit<decimal>? price = null)
+		{
+			await Exchange.CreateOrder(this, tt, volume, price);
+		}
+
+		/// <summary>Place an order to convert 'volume' (base currency) to quote currency at 'price' (Quote/Base)</summary>
+		public async Task CreateB2QOrder(Unit<decimal> volume, Unit<decimal>? price = null)
+		{
+			await Exchange.CreateB2QOrder(this, volume, price);
+		}
+
+		/// <summary>Place an order to convert 'volume' (quote currency) to base currency at 'price' (Base/Quote)</summary>
+		public async Task CreateQ2BOrder(Unit<decimal> volume, Unit<decimal>? price = null)
+		{
+			await Exchange.CreateQ2BOrder(this, volume, price);
+		}
+
+		/// <summary></summary>
+		public override string ToString()
+		{
+			return Name;
+		}
+
+		#region Equal
+		public bool Equals(TradePair rhs)
+		{
+			return
+				rhs != null &&
+				Base.Equals(rhs.Base) &&
+				Quote.Equals(rhs.Quote) &&
+				Exchange == rhs.Exchange;
+		}
+		public override bool Equals(object obj)
+		{
+			return Equals(obj as TradePair);
+		}
+		public override int GetHashCode()
+		{
+			return new { Base, Quote, Exchange }.GetHashCode();
+		}
+		#endregion
+
+		#region IComparable
+		public int CompareTo(TradePair rhs)
+		{
+			return Name.CompareTo(rhs.Name);
+		}
+		int IComparable.CompareTo(object obj)
+		{
+			return CompareTo((TradePair)obj);
+		}
+		#endregion
+
+		/// <summary>Convert two currency symbols into a unique key for this pair</summary>
+		public static string MakeKey(string sym0, string sym1)
+		{
+			return "{0}/{1}".Fmt(sym0, sym1);
+		}
+		public static string MakeKey(string sym0, string sym1, Exchange exch0, Exchange exch1)
+		{
+			return MakeKey(sym0, sym1) + " {0}/{1}".Fmt(exch0.Name, exch1.Name);
+		}
+		public static string MakeKey(TradePair pair)
+		{
+			return pair.Base.Exchange != pair.Quote.Exchange
+				? MakeKey(pair.Base.Symbol, pair.Quote.Symbol, pair.Base.Exchange, pair.Quote.Exchange)
+				: MakeKey(pair.Base.Symbol, pair.Quote.Symbol);
 		}
 	}
 }
