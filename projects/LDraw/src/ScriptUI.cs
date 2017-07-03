@@ -6,6 +6,7 @@ using pr.extn;
 using pr.gui;
 using pr.util;
 using ToolStripContainer = pr.gui.ToolStripContainer;
+using ToolStripComboBox = pr.gui.ToolStripComboBox;
 
 namespace LDraw
 {
@@ -24,9 +25,11 @@ namespace LDraw
 		private ToolStripButton m_btn_save;
 		private ToolStripSeparator toolStripSeparator1;
 		private ToolStripSeparator toolStripSeparator2;
+		private ToolStripSeparator toolStripSeparator3;
+		private ToolStripComboBox m_cb_scene;
 		private ToolStrip m_ts;
 		#endregion
-//Todo: add a combo for selecting the scene that this script is rendered in
+
 		public ScriptUI(Model model, Guid? context_id = null)
 			:base(model, "Script")
 		{
@@ -125,6 +128,11 @@ namespace LDraw
 				ClearScript();
 			};
 
+			// Render to scene
+			m_cb_scene.ToolTipText = "The scene to render to";
+			m_cb_scene.ComboBox.DataSource = Model.Scenes;
+			m_cb_scene.ComboBox.DisplayMember = nameof(SceneUI.SceneName);
+
 			#endregion
 		}
 
@@ -208,10 +216,12 @@ namespace LDraw
 
 			// Need a View3d method for rendering a string containing a scene
 			Model.View3d.LoadScript(Editor.Text, false, ContextId, null);
-
 			Model.ContextIds.Add(ContextId);
-			Model.CurrentScene.ContextIds.Add(ContextId);
-			Model.CurrentScene.Invalidate();
+
+			// Add the script content to the selected scene
+			var scene = m_cb_scene.ComboBox.SelectedItem as SceneUI ?? Model.CurrentScene;
+			scene.ContextIds.Add(ContextId);
+			scene.Invalidate();
 		}
 
 		/// <summary>Handle the script changing</summary>
@@ -239,7 +249,8 @@ namespace LDraw
 			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_clear = new System.Windows.Forms.ToolStripButton();
 			this.m_il_toolbar = new System.Windows.Forms.ImageList(this.components);
-			this.m_tsc.ContentPanel.SuspendLayout();
+			this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_cb_scene = new pr.gui.ToolStripComboBox();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
 			this.m_menu.SuspendLayout();
@@ -289,14 +300,14 @@ namespace LDraw
 			// 
 			this.m_menu_shortcuts_render.Name = "m_menu_shortcuts_render";
 			this.m_menu_shortcuts_render.ShortcutKeys = System.Windows.Forms.Keys.F5;
-			this.m_menu_shortcuts_render.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_shortcuts_render.Size = new System.Drawing.Size(143, 22);
 			this.m_menu_shortcuts_render.Text = "&Render";
 			// 
 			// m_menu_shortcuts_clear
 			// 
 			this.m_menu_shortcuts_clear.Name = "m_menu_shortcuts_clear";
 			this.m_menu_shortcuts_clear.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.D)));
-			this.m_menu_shortcuts_clear.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_shortcuts_clear.Size = new System.Drawing.Size(143, 22);
 			this.m_menu_shortcuts_clear.Text = "&Clear";
 			// 
 			// m_ts
@@ -309,10 +320,12 @@ namespace LDraw
             this.toolStripSeparator1,
             this.m_btn_render,
             this.toolStripSeparator2,
-            this.m_btn_clear});
+            this.m_btn_clear,
+            this.toolStripSeparator3,
+            this.m_cb_scene});
 			this.m_ts.Location = new System.Drawing.Point(3, 24);
 			this.m_ts.Name = "m_ts";
-			this.m_ts.Size = new System.Drawing.Size(136, 31);
+			this.m_ts.Size = new System.Drawing.Size(296, 31);
 			this.m_ts.TabIndex = 0;
 			// 
 			// m_btn_open
@@ -371,12 +384,22 @@ namespace LDraw
 			this.m_il_toolbar.ImageSize = new System.Drawing.Size(16, 16);
 			this.m_il_toolbar.TransparentColor = System.Drawing.Color.Transparent;
 			// 
+			// toolStripSeparator3
+			// 
+			this.toolStripSeparator3.Name = "toolStripSeparator3";
+			this.toolStripSeparator3.Size = new System.Drawing.Size(6, 31);
+			// 
+			// m_cb_scene
+			// 
+			this.m_cb_scene.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+			this.m_cb_scene.Name = "m_cb_scene";
+			this.m_cb_scene.Size = new System.Drawing.Size(121, 31);
+			// 
 			// ScriptUI
 			// 
 			this.Controls.Add(this.m_tsc);
 			this.Name = "ScriptUI";
 			this.Size = new System.Drawing.Size(495, 630);
-			this.m_tsc.ContentPanel.ResumeLayout(false);
 			this.m_tsc.TopToolStripPanel.ResumeLayout(false);
 			this.m_tsc.TopToolStripPanel.PerformLayout();
 			this.m_tsc.ResumeLayout(false);

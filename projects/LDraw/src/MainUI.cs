@@ -334,7 +334,19 @@ namespace LDraw
 		{
 			#region Dock Container
 			if (Settings.UI.UILayout != null)
-				m_dc.LoadLayout(Settings.UI.UILayout, c => Model.Scenes.Add2(new SceneUI(c, Model)).DockControl);
+			{
+				m_dc.LoadLayout(Settings.UI.UILayout, (name,ty) =>
+				{
+					if (ty == typeof(SceneUI).FullName)
+						return Model.Scenes.Add2(new SceneUI(name, Model)).DockControl;
+					
+					// Don't add script UIs because we can't restore the text content
+					// and they don't get cleaned up properly
+					//if (ty == typeof(ScriptUI).FullName)
+					//	return new ScriptUI(Model).DockControl;
+					return null;
+				});
+			}
 			#endregion
 
 			#region Menu
