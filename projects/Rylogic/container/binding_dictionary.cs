@@ -1,322 +1,727 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Runtime.Serialization;
-using System.Security;
-using System.Text;
-using pr.extn;
-using pr.util;
+using System.Diagnostics;
+using System.Reflection;
 
 namespace pr.container
 {
-	/// <summary>Extension to BindingList that notifies *before* an item is removed</summary>
-	[DataContract] public class BindingDictionary<TKey,TValue> :IDictionary<TKey, TValue>
+	[DebuggerDisplay("Count={Count}")]
+	public class BindingDict<TKey, TValue>
+		:IDictionary<TKey, TValue>
+		,IBindingList, IList<TValue>, IList, IReadOnlyList<TValue>, IListChanging<TValue>, IItemChanged<TValue>
+		,ICollection<TValue>, ICollection, IReadOnlyCollection<TValue>
+		,ICancelAddNew
 	{
-		private Dictionary<TKey,TValue> m_dic;
-		public BindingDictionary()
+		// Notes:
+		//  - Hybrid container:
+		//     Conceptually, this is a dictionary with an array that defines the order of values.
+		//     Dictionary provides O(NLogN) Insert/Remove/Lookup
+		//     List provides Order/Sorting/Binding events. Basically maps index to TKey.
+		//  - IBindingList, IList is a list of 'TValue'
+		//  - AddNew functionality requires the 'KeyFrom' member to be valid
+
+		private Dictionary<TKey, TValue> m_dict;
+		private List<TKey> m_keys;
+
+		public BindingDict()
 		{
-			m_dic = new Dictionary<TKey,TValue>();
+			m_dict = new Dictionary<TKey, TValue>();
+			m_keys = new List<TKey>();
 			Init();
 		}
-		public BindingDictionary(IDictionary<TKey, TValue> dictionary)
+		public BindingDict(int capacity)
 		{
-			m_dic = new Dictionary<TKey,TValue>(dictionary);
+			m_dict = new Dictionary<TKey, TValue>(capacity);
+			m_keys = new List<TKey>(capacity);
 			Init();
 		}
-		public BindingDictionary(IEqualityComparer<TKey> comparer)
+		public BindingDict(IDictionary<TKey, TValue> dictionary)
 		{
-			m_dic = new Dictionary<TKey,TValue>(comparer);
+			m_dict = new Dictionary<TKey, TValue>(dictionary);
+			m_keys = new List<TKey>(dictionary.Keys);
 			Init();
 		}
-		public BindingDictionary(int capacity)
+		public BindingDict(IEqualityComparer<TKey> comparer)
 		{
-			m_dic = new Dictionary<TKey,TValue>(capacity);
+			m_dict = new Dictionary<TKey, TValue>(comparer);
+			m_keys = new List<TKey>();
 			Init();
 		}
-		public BindingDictionary(IDictionary<TKey, TValue> dictionary, IEqualityComparer<TKey> comparer)
+		public BindingDict(IDictionary<TKey, TValue> dictionary, IEqualityComparer<TKey> comparer)
 		{
-			m_dic = new Dictionary<TKey,TValue>(dictionary, comparer);
+			m_dict = new Dictionary<TKey, TValue>(dictionary, comparer);
+			m_keys = new List<TKey>(dictionary.Keys);
 			Init();
 		}
-		public BindingDictionary(int capacity, IEqualityComparer<TKey> comparer)
+		public BindingDict(int capacity, IEqualityComparer<TKey> comparer)
 		{
-			m_dic = new Dictionary<TKey,TValue>(capacity, comparer);
+			m_dict = new Dictionary<TKey, TValue>(capacity, comparer);
+			m_keys = new List<TKey>(capacity);
 			Init();
 		}
-		private void Init()
+		public void Init()
 		{
-			//// ResetBindings and ResetItem aren't overridable.
-			//// Attach handlers to ensure we always receive the Reset event.
-			//// Calling the 'new' method will cause the Pre events to be raised as well
-			//m_dic.Changed += (s,a) =>
-			//	{
-			//		if (a.ListChangedType == ListChangedType.Reset)
-			//			DictChanging.Raise(this, new DictChgEventArgs<TKey,TValue>(DictChg.Reset, default(TKey), default(TValue)));
-			//		if (a.ListChangedType == ListChangedType.ItemChanged)
-			//			DictChanging.Raise(this, new DictChgEventArgs<TKey,TValue>(DictChg.ItemReset, a.NewIndex, this[a.NewIndex]));
-			//	};
+			SupportsSorting = true;
+			RaiseListChangedEvents = true;
 		}
 
-		/// <summary>Gets the System.Collections.Generic.IEqualityComparer<T> that is used to determine equality of keys for the dictionary.</summary>
-		public IEqualityComparer<TKey> Comparer
+		/// <summary>A function to return the key from a value</summary>
+		[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+		public Func<TValue, TKey> KeyFrom
 		{
-			get { return m_dic.Comparer; }
+			get;
+			set;
 		}
 
-		/// <summary>Gets the number of key/value pairs contained in the System.Collections.Generic.Dictionary<TKey,TValue></summary>
+		/// <summary>The number of items in the collection</summary>
 		public int Count
 		{
-			get { return m_dic.Count; }
+			get { return m_dict.Count; }
 		}
 
-		/// <summary>Gets a collection containing the keys in the System.Collections.Generic.Dictionary<TKey,TValue></summary>
-		public Dictionary<TKey, TValue>.KeyCollection Keys
-		{
-			get { return m_dic.Keys; }
-		}
-
-		/// <summary>Gets a collection containing the values in the System.Collections.Generic.Dictionary<TKey,TValue></summary>
-		public Dictionary<TKey, TValue>.ValueCollection Values
-		{
-			get { return m_dic.Values; }
-		}
-
-		/// <summary>Gets or sets the value associated with the specified key.</summary>
-		public TValue this[TKey key]
-		{
-			get { return m_dic[key]; }
-			set
-			{
-				var old = m_dic[key];
-				if (RaiseDictChangedEvents)
-				{
-					var args = new DictChgEventArgs<TKey,TValue>(DictChg.ItemPreRemove, key, old);
-					DictChanging.Raise(this, args);
-					if (args.Cancel)
-						return;
-				}
-				if (RaiseDictChangedEvents)
-				{
-					var args = new DictChgEventArgs<TKey,TValue>(DictChg.ItemPreAdd, key, value);
-					DictChanging.Raise(this, args);
-					if (args.Cancel)
-						return;
-				}
-
-				m_dic[key] = value;
-
-				//if (RaiseDictChangedEvents)
-				//	ItemChanged.Raise(this, new ItemChgEventArgs<T>(index, old, item));
-
-				if (RaiseDictChangedEvents)
-					DictChanging.Raise(this, new DictChgEventArgs<TKey,TValue>(DictChg.ItemRemoved, key, old));
-				if (RaiseDictChangedEvents)
-					DictChanging.Raise(this, new DictChgEventArgs<TKey,TValue>(DictChg.ItemAdded, key, value));
-			}
-		}
-
-		/// <summary>Adds the specified key and value to the dictionary.</summary>
-		public void Add(TKey key, TValue value)
-		{
-			if (RaiseDictChangedEvents)
-			{
-				var args = new DictChgEventArgs<TKey,TValue>(DictChg.ItemPreAdd, key, value);
-				DictChanging.Raise(this, args);
-				if (args.Cancel)
-					return;
-
-				// Allow PreAdd to modify 'key' and 'value'
-				key   = args.Key;
-				value = args.Value;
-			}
-
-			m_dic.Add(key, value);
-
-			if (RaiseDictChangedEvents)
-				DictChanging.Raise(this, new DictChgEventArgs<TKey,TValue>(DictChg.ItemAdded, key, value));
-		}
-
-		/// <summary>Removes all keys and values from the System.Collections.Generic.Dictionary<TKey,TValue>.</summary>
+		/// <summary>Reset the collection</summary>
 		public void Clear()
 		{
-			if (RaiseDictChangedEvents)
-			{
-				var args = new DictChgEventArgs<TKey,TValue>(DictChg.PreReset, default(TKey), default(TValue));
-				DictChanging.Raise(this, args);
-				if (args.Cancel)
-					return;
-			}
-
-			m_dic.Clear();
-
-			if (RaiseDictChangedEvents)
-				DictChanging.Raise(this, new DictChgEventArgs<TKey,TValue>(DictChg.Reset, default(TKey), default(TValue)));
+			ClearItems();
 		}
 
-		/// <summary>Determines whether the System.Collections.Generic.Dictionary<TKey,TValue> contains the specified key.</summary>
+		/// <summary>Associative access</summary>
+		public virtual TValue this[TKey key]
+		{
+			get { return m_dict[key]; }
+			set
+			{
+				// If 'key' is already in the dictionary, just update the value.
+				// Otherwise, insert 'key:value' at the end of the collection
+				if (m_dict.ContainsKey(key))
+					SetItem(key, value, m_keys.IndexOf(key));
+				else
+					InsertItem(key, value, m_keys.Count);
+			}
+		}
+
+		/// <summary>Random access</summary>
+		public virtual TValue At(int index)
+		{
+			// Can't create overload this[int index] because TKey can be 'int', which is ambiguous
+			return this[m_keys[index]];
+		}
+
+		/// <summary>The keys collection</summary>
+		public ICollection<TKey> Keys
+		{
+			get { return m_dict.Keys; }
+		}
+
+		/// <summary>The values collection</summary>
+		public ICollection<TValue> Values
+		{
+			get { return m_dict.Values; }
+		}
+
+		/// <summary>List changed notification</summary>
+		public event ListChangedEventHandler ListChanged;
+
+		/// <summary>Raised whenever items are added or about to be removed from the list</summary>
+		public event EventHandler<ListChgEventArgs<TValue>> ListChanging;
+
+		/// <summary>Raised whenever an element in the list is changed</summary>
+		public event EventHandler<ItemChgEventArgs<TValue>> ItemChanged;
+
+		/// <summary>Gets/Sets a value indicating whether adding or removing items within the list raises ListChanged events.</summary>
+		public bool RaiseListChangedEvents
+		{
+			get;
+			set;
+		}
+
+		/// <summary>True if the collection is read only</summary>
+		public bool IsReadOnly
+		{
+			get;
+			set;
+		}
+
+		/// <summary>True if 'key' is a key in this collection</summary>
 		public bool ContainsKey(TKey key)
 		{
-			return m_dic.ContainsKey(key);
+			return m_dict.ContainsKey(key);
 		}
 
-		/// <summary>Determines whether the System.Collections.Generic.Dictionary<TKey,TValue> contains a specific value.</summary>
+		/// <summary>True if 'value' is a value in this collection</summary>
 		public bool ContainsValue(TValue value)
 		{
-			return m_dic.ContainsValue(value);
+			return m_dict.ContainsValue(value);
 		}
 
-		/// <summary>Returns an enumerator that iterates through the System.Collections.Generic.Dictionary<TKey,TValue>.</summary>
-		public Dictionary<TKey, TValue>.Enumerator GetEnumerator()
+		/// <summary>The index of 'item' if found in the collection, otherwise -1.</summary>
+		public int IndexOf(TValue value)
 		{
-			return m_dic.GetEnumerator();
+			for (var i = 0; i != m_keys.Count; ++i)
+			{
+				var key = m_keys[i];
+				if (!Equals(m_dict[key], value)) continue;
+				return i;
+			}
+			return -1;
 		}
 
-		/// <summary>
-		/// Implements the System.Runtime.Serialization.ISerializable interface and returns
-		/// the data needed to serialize the System.Collections.Generic.Dictionary<TKey,TValue>
-		/// instance.</summary>
-		[SecurityCritical]
-		public virtual void GetObjectData(SerializationInfo info, StreamingContext context)
+		/// <summary>Add 'value' to the end of the collection. Requires 'KeyFrom'</summary>
+		public void Add(TValue value)
 		{
-			m_dic.GetObjectData(info, context);
+			AssertListAccess();
+			Insert(KeyFrom(value), value, m_keys.Count);
 		}
 
-		/// <summary>
-		/// Implements the System.Runtime.Serialization.ISerializable interface and raises
-		/// the deserialization event when the deserialization is complete.</summary>
-		public virtual void OnDeserialization(object sender)
+		/// <summary>Add 'key:value' to the end of the collection</summary>
+		public void Add(TKey key, TValue value)
 		{
-			m_dic.OnDeserialization(sender);
+			Insert(key, value, m_keys.Count);
 		}
 
-		/// <summary>Removes the value with the specified key from the System.Collections.Generic.Dictionary<TKey,TValue>.</summary>
+		/// <summary>Add 'key:value' to the collection with index position 'index'</summary>
+		public void Insert(TKey key, TValue value, int index)
+		{
+			InsertItem(key, value, index);
+		}
+
+		/// <summary>Remove the object at index position 'index'</summary>
+		public void RemoveAt(int index)
+		{
+			RemoveItem(m_keys[index], index);
+		}
+
+		/// <summary>Remove the object associated with 'key'</summary>
 		public bool Remove(TKey key)
 		{
-			var item = m_dic[key];
-			if (RaiseDictChangedEvents)
-			{
-				var args = new DictChgEventArgs<TKey,TValue>(DictChg.ItemPreRemove, key, item);
-				DictChanging.Raise(this, args);
-				if (args.Cancel)
-					return false;
-			}
+			if (!ContainsKey(key))
+				return false;
 
-			var r = m_dic.Remove(key);
-
-			if (RaiseDictChangedEvents)
-				DictChanging.Raise(this, new DictChgEventArgs<TKey,TValue>(DictChg.ItemRemoved, key, item));
-
-			return r;
+			var idx = m_keys.IndexOf(key);
+			RemoveItem(key, idx);
+			return true;
 		}
 
-		/// <summary>Gets the value associated with the specified key.</summary>
+		/// <summary>Remove the object associated with 'key'</summary>
+		public bool Remove(TValue value)
+		{
+			var idx = IndexOf(value);
+			if (idx == -1) return false;
+			RemoveItem(m_keys[idx], idx);
+			return true;
+		}
+
+		/// <summary>Test for 'key' in the collection and, if so, return the associated value</summary>
 		public bool TryGetValue(TKey key, out TValue value)
 		{
-			return m_dic.TryGetValue(key, out value);
+			return m_dict.TryGetValue(key, out value);
 		}
-		
-		///// <summary>Get/Set readonly for this list</summary>
-		//public bool ReadOnly
-		//{
-		//	get { return !AllowNew && !AllowEdit && !AllowRemove; }
-		//	set
-		//	{
-		//		// For some reason, setting these causes list changed events...
-		//		using (SuspendEvents())
-		//			AllowNew = AllowEdit = AllowRemove = !value;
-		//	}
-		//}
 
-		/// <summary>Raised whenever items are added or about to be removed from the collection</summary>
-		public event EventHandler<DictChgEventArgs<TKey,TValue>> DictChanging;
+		/// <summary>Get/Set if sorting is supported</summary>
+		public bool SupportsSorting
+		{
+			get;
+			set;
+		}
 
-		/// <summary>Notify observers of the entire collection changing</summary>
+		/// <summary>True if sorted</summary>
+		public bool IsSorted
+		{
+			get;
+			private set;
+		}
+
+		/// <summary>The property that sort is done on</summary>
+		public PropertyDescriptor SortProperty
+		{
+			get;
+			set;
+		}
+
+		/// <summary>The direction to sort</summary>
+		public ListSortDirection SortDirection
+		{
+			get;
+			set;
+		}
+
+		/// <summary>Notify observers of the entire list changing</summary>
 		public void ResetBindings()
 		{
-			if (RaiseDictChangedEvents)
+			if (RaiseListChangedEvents)
 			{
-				var args = new DictChgEventArgs<TKey,TValue>(DictChg.Reset, default(TKey), default(TValue));
-				DictChanging.Raise(this, args);
+				var args = new ListChgEventArgs<TValue>(this, ListChg.PreReset, -1, default(TValue));
+				ListChanging?.Invoke(this, args);
 				if (args.Cancel)
 					return;
 			}
+			if (RaiseListChangedEvents)
+			{
+				ListChanging?.Invoke(this, new ListChgEventArgs<TValue>(this, ListChg.Reset, -1, default(TValue)));
+				ListChanged?.Invoke(this, new ListChangedEventArgs(ListChangedType.Reset, -1));
+			}
 		}
-		
+
 		/// <summary>Notify observers of a specific item changing</summary>
 		public void ResetItem(TKey key)
 		{
-			if (RaiseDictChangedEvents)
+			var index = m_keys.IndexOf(key);
+			ResetItem(key, index);
+		}
+	
+		/// <summary>Notify observers of a specific item changing</summary>
+		public void ResetItem(TValue value)
+		{
+			var idx = IndexOf(value);
+			if (idx < 0 || idx >= Count)
+				throw new Exception("Item is not within this container");
+
+			ResetItem(m_keys[idx], idx);
+		}
+
+		/// <summary>Notify observers of a specific item changing</summary>
+		private void ResetItem(TKey key, int index)
+		{
+			if (RaiseListChangedEvents)
 			{
-				var args = new DictChgEventArgs<TKey,TValue>(DictChg.ItemReset, key, m_dic[key]);
-				DictChanging.Raise(this, args);
+				var args = new ListChgEventArgs<TValue>(this, ListChg.ItemPreReset, index, m_dict[key]);
+				ListChanging?.Invoke(this, args);
 				if (args.Cancel)
 					return;
 			}
+			if (RaiseListChangedEvents)
+			{
+				ListChanging?.Invoke(this, new ListChgEventArgs<TValue>(this, ListChg.ItemReset, index, m_dict[key]));
+				ListChanged?.Invoke(this, new ListChangedEventArgs(ListChangedType.ItemChanged, index));
+			}
 		}
 
-		/// <summary>Allow/Disallow Dict changed events</summary>
-		public bool RaiseDictChangedEvents { get; set; }
-
-		/// <summary>RAII object for suspending list events</summary>
-		public Scope SuspendEvents(bool reset_bindings_on_resume = false)
+		/// <summary>Reset the collection</summary>
+		private void ClearItems()
 		{
-			return Scope.Create(
-				() =>
-				{
-					RaiseDictChangedEvents = false;
-				},
-				() =>
-				{
-					RaiseDictChangedEvents = true;
-					if (reset_bindings_on_resume)
-						ResetBindings();
-				});
-		}
+			if (RaiseListChangedEvents)
+			{
+				var args = new ListChgEventArgs<TValue>(this, ListChg.PreReset, -1, default(TValue));
+				ListChanging?.Invoke(this, args);
+				if (args.Cancel)
+					return;
+			}
 
-		/// <summary>RAII object for suspending list events</summary>
-		public Scope SuspendEvents(Func<bool> reset_bindings_on_resume)
+			ClearItemsCore();
+
+			if (RaiseListChangedEvents)
+			{
+				ListChanging?.Invoke(this, new ListChgEventArgs<TValue>(this, ListChg.Reset, -1, default(TValue)));
+				ListChanged?.Invoke(this, new ListChangedEventArgs(ListChangedType.Reset, -1));
+			}
+		}
+		protected virtual void ClearItemsCore()
 		{
-			return Scope.Create(
-				() =>
-				{
-					RaiseDictChangedEvents = false;
-				},
-				() =>
-				{
-					RaiseDictChangedEvents = true;
-					if (reset_bindings_on_resume())
-						ResetBindings();
-				});
+			m_dict.Clear();
+			m_keys.Clear();
 		}
 
-		#region IDictionary<TKey,TValue>
-		ICollection<TKey> IDictionary<TKey,TValue>.Keys { get { return Keys; } }
-		ICollection<TValue> IDictionary<TKey,TValue>.Values { get { return Values; } }
-		void IDictionary<TKey,TValue>.Add(TKey key, TValue value) { Add(key, value); }
-		bool IDictionary<TKey,TValue>.ContainsKey(TKey key) { return ContainsKey(key); }
-		bool IDictionary<TKey,TValue>.Remove(TKey key) { return Remove(key); }
-		bool IDictionary<TKey,TValue>.TryGetValue(TKey key, out TValue value) { return TryGetValue(key, out value); }
+		/// <summary>Insert a key:value pair into the collection</summary>
+		private void InsertItem(TKey key, TValue value, int index)
+		{
+			if (RaiseListChangedEvents)
+			{
+				var args = new ListChgEventArgs<TValue>(this, ListChg.ItemPreAdd, index, value);
+				ListChanging?.Invoke(this, args);
+				if (args.Cancel)
+					return;
+
+				// Allow PreAdd to modify 'item' and 'index'
+				value = args.Item;
+				index = args.Index;
+			}
+
+			InsertItemCore(key, value, index);
+
+			if (RaiseListChangedEvents)
+			{
+				ListChanging?.Invoke(this, new ListChgEventArgs<TValue>(this, ListChg.ItemAdded, index, value));
+				ListChanged?.Invoke(this, new ListChangedEventArgs(ListChangedType.ItemAdded, index));
+			}
+		}
+		protected virtual void InsertItemCore(TKey key, TValue value, int index)
+		{
+			if (ContainsKey(key))
+				throw new InvalidOperationException(string.Format("Key:Value pair ({0},{1}) is already in the collection", key, value));
+
+			m_dict[key] = value;
+			m_keys.Insert(index, key);
+		}
+
+		/// <summary>Remove the item associated with 'key' with the expected index 'index' in 'm_keys'</summary>
+		private void RemoveItem(TKey key, int index)
+		{
+			var item = m_dict[key];
+			if (RaiseListChangedEvents)
+			{
+				var args = new ListChgEventArgs<TValue>(this, ListChg.ItemPreRemove, index, item);
+				ListChanging?.Invoke(this, args);
+				if (args.Cancel)
+					return;
+			}
+
+			RemoveItemCore(key, index);
+	
+			if (RaiseListChangedEvents)
+			{
+				ListChanging?.Invoke(this, new ListChgEventArgs<TValue>(this, ListChg.ItemRemoved, -1, item));
+				ListChanged?.Invoke(this, new ListChangedEventArgs(ListChangedType.ItemDeleted, index));
+			}
+		}
+		protected virtual void RemoveItemCore(TKey key, int index)
+		{
+			Debug.Assert(Equals(m_keys[index], key));
+			m_keys.RemoveAt(index);
+			m_dict.Remove(key);
+		}
+		
+		/// <summary>Replace an existing item in the collection</summary>
+		private void SetItem(TKey key, TValue value, int index)
+		{
+			var old = m_dict[key];
+			if (RaiseListChangedEvents)
+			{
+				var args = new ListChgEventArgs<TValue>(this, ListChg.ItemPreRemove, index, old);
+				ListChanging?.Invoke(this, args);
+				if (args.Cancel)
+					return;
+			}
+			if (RaiseListChangedEvents)
+			{
+				var args = new ListChgEventArgs<TValue>(this, ListChg.ItemPreAdd, index, value);
+				ListChanging?.Invoke(this, args);
+				if (args.Cancel)
+					return;
+			}
+
+			// Replace the item
+			SetItemCore(key, value);
+
+			if (RaiseListChangedEvents)
+			{
+				ItemChanged?.Invoke(this, new ItemChgEventArgs<TValue>(index, old, value));
+				ListChanged?.Invoke(this, new ListChangedEventArgs(ListChangedType.ItemChanged, index));
+			}
+			if (RaiseListChangedEvents)
+				ListChanging?.Invoke(this, new ListChgEventArgs<TValue>(this, ListChg.ItemRemoved, index, old));
+			if (RaiseListChangedEvents)
+				ListChanging?.Invoke(this, new ListChgEventArgs<TValue>(this, ListChg.ItemAdded, index, value));
+		}
+		protected virtual void SetItemCore(TKey key, TValue value)
+		{
+			m_dict[key] = value;
+		}
+
+		/// <summary>Test for support for accessing this container like a list</summary>
+		private void AssertListAccess()
+		{
+			if (KeyFrom != null) return;
+			throw new NotSupportedException("List-like access requires the 'KeyFrom' member to be valid");
+		}
+
+		#region IBindingList
+
+		/// <summary>Allow items to be added to the collection</summary>
+		[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+		bool IBindingList.AllowNew
+		{
+			get { return KeyFrom != null; }
+		}
+
+		/// <summary>Allow items in the collection to be changed</summary>
+		[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+		bool IBindingList.AllowEdit
+		{
+			get { return true; }
+		}
+
+		/// <summary>Allow items to be removed from the collection</summary>
+		[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+		bool IBindingList.AllowRemove
+		{
+			get { return true; }
+		}
+
+		/// <summary>True because this is a binding collection</summary>
+		[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+		bool IBindingList.SupportsChangeNotification
+		{
+			get { return true; }
+		}
+
+		/// <summary>True, can be searched</summary>
+		[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+		bool IBindingList.SupportsSearching
+		{
+			get { return true; }
+		}
+
+		/// <summary></summary>
+		void IBindingList.AddIndex(PropertyDescriptor property)
+		{
+			// todo
+			throw new NotImplementedException();
+		}
+
+		/// <summary>Add a new default item to the collection</summary>
+		object IBindingList.AddNew()
+		{
+			AssertListAccess();
+
+			// Can only add new items if we can generate the key from the value
+			var value = Activator.CreateInstance<TValue>();
+			var key = KeyFrom(value);
+
+			// Add the new item to the collection
+			Add(key, value);
+			return value;
+		}
+
+		/// <summary>Sort the collection based on 'property'</summary>
+		void IBindingList.ApplySort(PropertyDescriptor property, ListSortDirection direction)
+		{
+			m_keys.Sort(new Comparison<TKey>((l,r) =>
+			{
+				var v0 = property.GetValue(m_dict[l]);
+				var v1 = property.GetValue(m_dict[r]);
+				return direction == ListSortDirection.Ascending ? Comparer.Default.Compare(v0, v1) : Comparer.Default.Compare(v1, v0);
+			}));
+		}
+
+		/// <summary></summary>
+		int IBindingList.Find(PropertyDescriptor property, object key)
+		{
+			// todo
+			throw new NotImplementedException();
+		}
+
+		/// <summary></summary>
+		void IBindingList.RemoveIndex(PropertyDescriptor property)
+		{
+			// todo
+			throw new NotImplementedException();
+		}
+
+		/// <summary></summary>
+		void IBindingList.RemoveSort()
+		{
+			// todo
+			throw new NotImplementedException();
+		}
+
 		#endregion
 
-		#region ICollection<KeyValuePair<TKey,TValue>>
-		int ICollection<KeyValuePair<TKey,TValue>>.Count { get { return Count; } }
-		bool ICollection<KeyValuePair<TKey,TValue>>.IsReadOnly { get { return false; } }
-		void ICollection<KeyValuePair<TKey,TValue>>.Add(KeyValuePair<TKey,TValue> item) { Add(item.Key, item.Value); }
-		void ICollection<KeyValuePair<TKey,TValue>>.Clear() { Clear(); }
-		bool ICollection<KeyValuePair<TKey,TValue>>.Contains(KeyValuePair<TKey,TValue> item) { return ContainsKey(item.Key) && ContainsValue(item.Value); }
-		void ICollection<KeyValuePair<TKey,TValue>>.CopyTo(KeyValuePair<TKey,TValue>[] array, int arrayIndex) { throw new NotImplementedException(); }
-		bool ICollection<KeyValuePair<TKey,TValue>>.Remove(KeyValuePair<TKey,TValue> item) { return Remove(item.Key); }
+		#region ICancelAddNew
+
+		/// <summary>Discards a pending new item from the collection.</summary>
+		void ICancelAddNew.CancelNew(int itemIndex)
+		{
+			RemoveItem(m_keys[itemIndex], itemIndex);
+		}
+
+		/// <summary>Commits a pending new item to the collection.</summary>
+		void ICancelAddNew.EndNew(int itemIndex)
+		{
+			// Nothing to do, it's already in there
+		}
+
 		#endregion
 
-		#region IEnumerable<KeyValuePair<TKey,TValue>>
-		System.Collections.Generic.IEnumerator<KeyValuePair<TKey,TValue>> System.Collections.Generic.IEnumerable<KeyValuePair<TKey,TValue>>.GetEnumerator() { return m_dic.GetEnumerator(); }
+		#region IList
+
+		/// <summary>Array access</summary>
+		object IList.this[int index]
+		{
+			get { return ((IList<TValue>)this)[index]; }
+			set { ((IList<TValue>)this)[index] = (TValue)value; }
+		}
+
+		/// <summary>False, dynamically resizing</summary>
+		[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+		bool IList.IsFixedSize
+		{
+			get { return false; }
+		}
+
+		/// <summary>Add an object to the collection</summary>
+		int IList.Add(object value)
+		{
+			Add((TValue)value);
+			return m_keys.Count - 1;
+		}
+
+		/// <summary>True if 'value' is in this collection</summary>
+		bool IList.Contains(object value)
+		{
+			if (value is TValue)
+				return ContainsValue((TValue)value);
+			if (value is TKey)
+				return ContainsKey((TKey)value);
+			if (value is KeyValuePair<TKey,TValue>)
+				return ((ICollection<KeyValuePair<TKey, TValue>>)this).Contains((KeyValuePair<TKey,TValue>)value);
+			return false;
+		}
+
+		/// <summary>The index of the given value (O(N²LogN) search)</summary>
+		int IList.IndexOf(object value)
+		{
+			return IndexOf((TValue)value);
+		}
+
+		/// <summary>Insert an object at 'index' into the collection</summary>
+		void IList.Insert(int index, object value)
+		{
+			((IList<TValue>)this).Insert(index, (TValue)value);
+		}
+
+		/// <summary>Remove an object from the collection</summary>
+		void IList.Remove(object value)
+		{
+			var idx = ((IList)this).IndexOf(value);
+			RemoveAt(idx);
+		}
+
+		#endregion
+
+		#region IList<TValue>
+
+		/// <summary>Array access</summary>
+		TValue IList<TValue>.this[int index]
+		{
+			get { return At(index); }
+			set { this[m_keys[index]] = value; }
+		}
+
+		/// <summary>Insert 'item' into the collection. Requires 'KeyFrom'</summary>
+		void IList<TValue>.Insert(int index, TValue value)
+		{
+			AssertListAccess();
+
+			var key = KeyFrom(value);
+			Insert(key, value, index);
+		}
+
+		#endregion
+
+		#region IReadOnlyList<TValue>
+
+		/// <summary>Array access</summary>
+		TValue IReadOnlyList<TValue>.this[int index]
+		{
+			get { return At(index); }
+		}
+
+		#endregion
+
+		#region ICollection
+
+		/// <summary>Gets an object that can be used to synchronize access to the System.Collections.ICollection.</summary>
+		[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+		object ICollection.SyncRoot
+		{
+			get { return ((ICollection)m_dict).SyncRoot; }
+		}
+
+		/// <summary>Gets a value indicating whether access to the System.Collections.ICollection is synchronized (thread safe).</summary>
+		[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+		bool ICollection.IsSynchronized
+		{
+			get { return ((ICollection)m_dict).IsSynchronized; }
+		}
+
+		/// <summary>Copies the elements of the System.Collections.ICollection to an System.Array, starting at a particular System.Array index.</summary>
+		void ICollection.CopyTo(Array array, int index)
+		{
+			((ICollection)m_dict).CopyTo(array, index);
+		}
+
+		#endregion
+
+		#region ICollection<TValue>
+
+		/// <summary>True if 'value' is in this collection</summary>
+		bool ICollection<TValue>.Contains(TValue value)
+		{
+			return ContainsValue(value);
+		}
+
+		/// <summary>Copies the elements of the System.Collections.ICollection to an System.Array, starting at a particular System.Array index.</summary>
+		void ICollection<TValue>.CopyTo(TValue[] array, int index)
+		{
+			for (int i = index; i != m_keys.Count; ++i)
+				array[i] = m_dict[m_keys[i]];
+		}
+
+		#endregion
+
+		#region ICollection<KeyValuePair<TKey, TValue>>
+
+		/// <summary>Add a 'key:value' pair</summary>
+		void ICollection<KeyValuePair<TKey, TValue>>.Add(KeyValuePair<TKey, TValue> item)
+		{
+			Add(item.Key, item.Value);
+		}
+
+		/// <summary>Remove 'item' from the collection</summary>
+		bool ICollection<KeyValuePair<TKey, TValue>>.Remove(KeyValuePair<TKey, TValue> item)
+		{
+			if (!((ICollection<KeyValuePair<TKey, TValue>>)this).Contains(item))
+				return false;
+
+			return Remove(item.Key);
+		}
+
+		/// <summary>True if the 'key:value' pair is in the collection</summary>
+		bool ICollection<KeyValuePair<TKey, TValue>>.Contains(KeyValuePair<TKey, TValue> item)
+		{
+			return ContainsKey(item.Key) && Equals(m_dict[item.Key], item.Value);
+		}
+
+		/// <summary>Copy to buffer</summary>
+		void ICollection<KeyValuePair<TKey, TValue>>.CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
+		{
+			((ICollection<KeyValuePair<TKey, TValue>>)m_dict).CopyTo(array, arrayIndex);
+		}
+
 		#endregion
 
 		#region IEnumerable
-		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() { return m_dic.GetEnumerator(); }
-		#endregion IEnumerable
+
+		/// <summary>Enumerate pairs</summary>
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return ((IEnumerable)m_dict).GetEnumerator();
+		}
+
+		#endregion
+
+		#region IEnumerable<TValue>
+
+		/// <summary>Enumerate pairs</summary>
+		IEnumerator<TValue> IEnumerable<TValue>.GetEnumerator()
+		{
+			foreach (var key in m_keys)
+				yield return m_dict[key];
+		}
+
+		#endregion
+
+		#region IEnumerable<KeyValuePair<TKey, TValue>>
+
+		/// <summary>Enumerate pairs</summary>
+		IEnumerator<KeyValuePair<TKey, TValue>> IEnumerable<KeyValuePair<TKey, TValue>>.GetEnumerator()
+		{
+			return ((IEnumerable<KeyValuePair<TKey, TValue>>)this).GetEnumerator();
+		}
+
+		#endregion
 	}
 }
 
@@ -324,21 +729,32 @@ namespace pr.container
 namespace pr.unittests
 {
 	using System.Collections.Generic;
-	using System.Linq;
 	using container;
 
 	[TestFixture] public class TestBindingDictionary
 	{
+		private class Stats
+		{
+			public int Adds;
+		}
+
 		[Test] public void BindingDictionary()
 		{
-			var a0 = new BindingDictionary<int,double>();
-			var a1 = new BindingDictionary<int,double>();
+			var stats = new Stats();
+
+			var a0 = new BindingDict<int,double>();
+			var s0 = new BindingSource<double>{ DataSource = a0 };
+
+			s0.ListChanging += (s,a) =>
+			{
+				if (a.ChangeType == ListChg.ItemAdded)
+					++stats.Adds;
+			};
 
 			for (int i = 0; i != 5; ++i)
-			{
 				a0.Add(i, i * 1.1);
-				a1.Add(i, i + 1.1);
-			}
+
+			Assert.AreEqual(stats.Adds, 5);
 		}
 	}
 }

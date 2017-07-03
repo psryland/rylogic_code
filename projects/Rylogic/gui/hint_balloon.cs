@@ -581,7 +581,7 @@ namespace pr.unittests
 
 	[TestFixture] public class TestTooltip
 	{
-		[Test] public void Test()
+		/*[Test] */public void Test()// Disabled cause the pop up is annoying
 		{
 			const string text =
 				"Short Msg\r\n"+
@@ -594,6 +594,7 @@ namespace pr.unittests
 			//var icon = MessageBoxIcon.Question;
 			//var line = string.Join(" "  , Enumerable.Range(0, 30).Select(x => "123456789"));
 			//var msg = string.Join("\r\n", Enumerable.Range(0, 30).Select(x => line));
+
 			new HintBalloon(target:new Point(500,500), msg:text).Show();
 		}
 	}

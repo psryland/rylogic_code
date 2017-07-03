@@ -11,7 +11,7 @@ using pr.util;
 namespace pr.container
 {
 	/// <summary>Extension to BindingList that notifies *before* an item is removed</summary>
-	[DataContract] public class BindingListEx<T> :BindingList<T> ,IEnumerable<T>
+	[DataContract] public class BindingListEx<T> :BindingList<T>, IEnumerable<T>, IListChanging<T>, IItemChanged<T>
 	{
 		public BindingListEx() :base()
 		{

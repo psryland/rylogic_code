@@ -48,18 +48,18 @@ namespace pr.gui
 		}
 		public ScintillaCtrl()
 		{
-			if (!DesignMode)
+			if (Sci.ScintillaAvailable)
 				CreateHandle();
 		}
 		protected override CreateParams CreateParams
 		{
 			get
 			{
-				if (DesignMode)
-					return base.CreateParams;
-
 				if (!Sci.ScintillaAvailable)
-					throw new Exception("Scintilla dll not loaded");
+				{
+					Debug.WriteLine("Scintilla dll not loaded");
+					return base.CreateParams;
+				}
 
 				var cp = base.CreateParams;
 				cp.ClassName = "Scintilla";
@@ -68,7 +68,7 @@ namespace pr.gui
 		}
 		protected override void OnHandleCreated(EventArgs e)
 		{
-			if (!DesignMode)
+			if (Sci.ScintillaAvailable)
 			{
 				// Get the function pointer for direct calling the WndProc (rather than windows messages)
 				var func = Win32.SendMessage(Handle, Sci.SCI_GETDIRECTFUNCTION, IntPtr.Zero, IntPtr.Zero);
@@ -92,6 +92,13 @@ namespace pr.gui
 			m_func = null;
 			m_ptr = IntPtr.Zero;
 			base.OnHandleDestroyed(e);
+		}
+		protected override void OnPaint(PaintEventArgs e)
+		{
+			if (!Sci.ScintillaAvailable)
+				e.Graphics.Clear(Color.Gray);
+			else
+				base.OnPaint(e);
 		}
 		protected override void WndProc(ref Message m)
 		{

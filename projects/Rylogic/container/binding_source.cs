@@ -9,12 +9,16 @@ using System.Reflection;
 using System.Windows.Forms;
 using pr.common;
 using pr.extn;
+using pr.maths;
 using pr.util;
 
 namespace pr.container
 {
 	/// <summary>Type-safe version of BindingSource</summary>
-	public class BindingSource<TItem> :Component, IEnumerable<TItem>, IList<TItem>, IBindingListView, IBindingList, IList, ICollection, IEnumerable, ITypedList, ICancelAddNew, ISupportInitializeNotification, ISupportInitialize, ICurrencyManagerProvider
+	public class BindingSource<TItem>
+		:Component, IEnumerable<TItem>, IList<TItem>, IBindingListView, IBindingList, IList,
+		ICollection, IEnumerable, ITypedList, ICancelAddNew, ISupportInitializeNotification,
+		ISupportInitialize, ICurrencyManagerProvider, IListChanging<TItem>, IItemChanged<TItem>
 	{
 		// Notes:
 		// Reset methods invoked on this object do not cause the equivalent
@@ -269,18 +273,10 @@ namespace pr.container
 				RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.PreReset, -1, default(TItem)));
 
 				// Unhook
-				var bl = m_bs.DataSource as BindingListEx<TItem>;
-				if (bl != null)
-				{
-					bl.ListChanging -= RaiseListChanging;
-					bl.ItemChanged  -= RaiseItemChanged;
-				}
-				var bs = m_bs.DataSource as BindingSource<TItem>;
-				if (bs != null)
-				{
-					bs.ListChanging -= RaiseListChanging;
-					bs.ItemChanged  -= RaiseItemChanged;
-				}
+				if (m_bs.DataSource is IListChanging<TItem> lc0)
+					lc0.ListChanging -= RaiseListChanging;
+				if (m_bs.DataSource is IItemChanged<TItem> ic0)
+					ic0.ItemChanged  -= RaiseItemChanged;
 
 				// Set new data source
 				// Don't set to null because that causes controls with 'DisplayMember' properties to throw exceptions
@@ -295,20 +291,12 @@ namespace pr.container
 				//m_bs.DataSource = value;
 
 				// Hookup
-				bl = m_bs.DataSource as BindingListEx<TItem>;
-				if (bl != null)
-				{
-					bl.ListChanging += RaiseListChanging;
-					bl.ItemChanged  += RaiseItemChanged;
-					RaiseListChangedEvents = bl.RaiseListChangedEvents;
-				}
-				bs = m_bs.DataSource as BindingSource<TItem>;
-				if (bs != null)
-				{
-					bs.ListChanging += RaiseListChanging;
-					bs.ItemChanged  += RaiseItemChanged;
-					RaiseListChangedEvents = bs.RaiseListChangedEvents;
-				}
+				if (m_bs.DataSource is IItemChanged<TItem> ic1)
+					ic1.ItemChanged  += RaiseItemChanged;
+				if (m_bs.DataSource is IListChanging<TItem> lc1)
+					lc1.ListChanging += RaiseListChanging;
+				if (m_bs.DataSource is IListChanging<TItem> lc2)
+					RaiseListChangedEvents = lc2.RaiseListChangedEvents;
 
 				RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.Reset, -1, default(TItem)));
 			}
@@ -387,18 +375,12 @@ namespace pr.container
 		{
 			get
 			{
-				var bl = m_bs.DataSource as BindingListEx<TItem>;
-				if (bl != null) return bl.RaiseListChangedEvents;
-				var bs = m_bs.DataSource as BindingSource<TItem>;
-				if (bs != null) return bs.RaiseListChangedEvents;
+				if (m_bs.DataSource is IListChanging<TItem> lc) return lc.RaiseListChangedEvents;
 				return m_bs.RaiseListChangedEvents;
 			}
 			set
 			{
-				var bl = m_bs.DataSource as BindingListEx<TItem>;
-				if (bl != null) bl.RaiseListChangedEvents = value;
-				var bs = m_bs.DataSource as BindingSource<TItem>;
-				if (bs != null) bs.RaiseListChangedEvents = value;
+				if (m_bs.DataSource is IListChanging<TItem> lc) lc.RaiseListChangedEvents = value;
 				m_bs.RaiseListChangedEvents = value;
 			}
 		}
@@ -860,6 +842,12 @@ namespace pr.container
 			}
 		}
 
+		/// <summary>RAII object to restore the current position</summary>
+		public Scope PreservePosition()
+		{
+			return Scope.Create(() => Position, p => Position = Count != 0 ? Maths.Clamp(p, 0, Count-1) : -1);
+		}
+
 		/// <summary>Occurs when the underlying list changes or an item in the list changes.</summary>
 		private event ListChangedEventHandler ListChanged
 		{
@@ -867,7 +855,7 @@ namespace pr.container
 			remove { m_bs.ListChanged -= value; }
 		}
 
-		/// <summary>Raised *only* if 'DataSource' is a BindingListEx</summary>
+		/// <summary>Raised *only* if 'DataSource' is 'IListChanging<TItem>'</summary>
 		public event EventHandler<ListChgEventArgs<TItem>> ListChanging;
 		private void RaiseListChanging(object sender, ListChgEventArgs<TItem> args)
 		{
@@ -886,7 +874,7 @@ namespace pr.container
 			}
 		}
 
-		/// <summary>Raised *only* if 'DataSource' is a BindingListEx</summary>
+		/// <summary>Raised *only* if 'DataSource' is 'IListChanging<TItem></summary>
 		public event EventHandler<ItemChgEventArgs<TItem>> ItemChanged;
 		private void RaiseItemChanged(object sender, ItemChgEventArgs<TItem> args)
 		{
@@ -900,7 +888,10 @@ namespace pr.container
 			PositionChanged.Raise(this, args);
 		}
 
-		public override string ToString() { return "{0} Current: {1}".Fmt(Count, Current); }
+		public override string ToString()
+		{
+			return "{0} Current: {1}".Fmt(Count, Current);
+		}
 
 		#region IList<TItem>
 		int IList<TItem>.IndexOf(TItem item)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 
 namespace pr.container
@@ -38,6 +39,21 @@ namespace pr.container
 
 		/// <summary>Flags the change type as 'pre' the change</summary>
 		Pre = 0x8000,
+	}
+
+	/// <summary>Supports the ListChanging event</summary>
+	public interface IListChanging<T>
+	{
+		/// <summary>Gets/Sets a value indicating whether adding or removing items within the collection raises ListChanged events.</summary>
+		bool RaiseListChangedEvents { get; set; }
+
+		/// <summary>Raised whenever items are added or about to be removed from a collection</summary>
+		event EventHandler<ListChgEventArgs<T>> ListChanging;
+	}
+	public interface IItemChanged<T>
+	{
+		/// <summary>Raised whenever an element in the collection is changed</summary>
+		event EventHandler<ItemChgEventArgs<T>> ItemChanged;
 	}
 
 	/// <summary>Args for the event raised whenever the list is changed</summary>

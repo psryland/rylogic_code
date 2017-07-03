@@ -109,6 +109,44 @@ namespace pr.extn
 			}
 		}
 
+		/// <summary>Resize this item to fit the available space in the container</summary>
+		public static void StretchToFit(this ToolStripItem item, int minimum_width)
+		{
+			// Notes:
+			//  - Set 'AutoSize = false' on the tool strip item
+			//  - ts.Layout += (s,a) => ts_item.StretchToFit(250);
+
+			// Ignore if vertical or on overflow, or no owner
+			if (item.IsOnOverflow || item.Owner.Orientation == Orientation.Vertical || item.Owner == null)
+				return;
+
+			// Width accumulator
+			var width = item.Owner.DisplayRectangle.Width;
+
+			// Subtract the width of the overflow button if it is displayed. 
+			if (item.Owner.OverflowButton.Visible)
+				width -= item.Owner.OverflowButton.Width + item.Owner.OverflowButton.Margin.Horizontal;
+
+			// Subtract the grip width if visible
+			if (item.Owner.GripStyle == ToolStripGripStyle.Visible)
+				width -= item.Owner.GripRectangle.Width + item.Owner.GripMargin.Horizontal;
+
+			// Subtract the width of the other items in the container
+			foreach (ToolStripItem other in item.Owner.Items)
+			{
+				if (other.IsOnOverflow) continue;
+				if (other == item) continue;
+				width -= other.Width + other.Margin.Horizontal;
+			}
+
+			// If the available width is less than the default width, use the
+			// default width, forcing one or more items onto the overflow menu.
+			width = Math.Max(minimum_width, width);
+
+			// Set the new size
+			item.Size = new Size(width, item.Height);
+		}
+
 		/// <summary>ToolStripMenuItem comparer for alphabetical order</summary>
 		public static readonly Cmp<ToolStripMenuItem> AlphabeticalOrder = Cmp<ToolStripMenuItem>.From((l,r) => string.Compare(l.Text, r.Text, true));
 

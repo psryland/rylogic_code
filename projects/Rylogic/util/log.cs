@@ -1,5 +1,5 @@
 //***************************************************
-// Log File Helper
+// Log Helper
 //  Copyright (c) Rylogic Ltd 2011
 //***************************************************
 // Usage:
@@ -14,9 +14,12 @@
 // To output to nowhere, Register with null or an empty string
 
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using pr.common;
 using pr.extn;
 
@@ -28,32 +31,40 @@ namespace pr.util
 		Info,
 		Warn,
 		Error,
+	}
+	public enum ELogOutputLevel
+	{
+		Debug,
+		Info,
+		Warn,
+		Error,
 		Exception,
 		Silent,
 	}
-
 	public interface ILogWriter
 	{
 		/// <summary>Write a message to the log. Filtering already applied</summary>
 		void Write(string msg);
 	}
 
+	/// <summary>Static log instance for basic diagnostic logging</summary>
 	public static class Log
 	{
 		public const string ToDebugConsole = "DebugConsole";
+		public const char EntryDelimiter = '\u001b';
 
 		static Log()
 		{
 			Writer = new NullLogger();
 			#if DEBUG
-			Level = ELogLevel.Debug;
+			Level = ELogOutputLevel.Debug;
 			#else
-			Level = ELogLevel.Info;
+			Level = ELogOutputLevel.Info;
 			#endif
 		}
 
 		/// <summary>Set the log level. Messages below this level aren't logged</summary>
-		public static ELogLevel Level { get; set; }
+		public static ELogOutputLevel Level { get; set; }
 
 		/// <summary>Where log output is sent</summary>
 		public static ILogWriter Writer { get; set; }
@@ -85,51 +96,51 @@ namespace pr.util
 		/// <summary>Write debug trace statements into the log</summary>
 		public static void Debug(object sender, string str)
 		{
-			Write(ELogLevel.Debug, sender, str);
+			Write(ELogOutputLevel.Debug, sender, str);
 		}
 		public static void Debug(object sender, Exception ex, string str)
 		{
-			Write(ELogLevel.Debug, sender, str, ex);
+			Write(ELogOutputLevel.Debug, sender, str, ex);
 		}
 
 		/// <summary>Write info to the current log</summary>
 		public static void Info(object sender, string str)
 		{
-			Write(ELogLevel.Info, sender, str);
+			Write(ELogOutputLevel.Info, sender, str);
 		}
 		public static void Info(object sender, Exception ex, string str)
 		{
-			Write(ELogLevel.Info, sender, str, ex);
+			Write(ELogOutputLevel.Info, sender, str, ex);
 		}
 
 		/// <summary>Write info to the current log</summary>
 		public static void Warn(object sender, string str)
 		{
-			Write(ELogLevel.Warn, sender, str);
+			Write(ELogOutputLevel.Warn, sender, str);
 		}
 		public static void Warn(object sender, Exception ex, string str)
 		{
-			Write(ELogLevel.Warn, sender, str, ex);
+			Write(ELogOutputLevel.Warn, sender, str, ex);
 		}
 
 		/// <summary>Write info to the current log</summary>
 		public static void Error(object sender, string str)
 		{
-			Write(ELogLevel.Error, sender, str);
+			Write(ELogOutputLevel.Error, sender, str);
 		}
 		public static void Error(object sender, Exception ex, string str)
 		{
-			Write(ELogLevel.Error, sender, str, ex);
+			Write(ELogOutputLevel.Error, sender, str, ex);
 		}
 
 		/// <summary>Write info to the current log</summary>
 		public static void Exception(object sender, Exception ex, string str)
 		{
-			Write(ELogLevel.Exception, sender, str, ex);
+			Write(ELogOutputLevel.Exception, sender, str, ex);
 		}
 
 		/// <summary>Single method for filtering and formatting log messages</summary>
-		private static void Write(ELogLevel level, object sender, string str, Exception ex = null)
+		private static void Write(ELogOutputLevel level, object sender, string str, Exception ex = null)
 		{
 			// Below the log level, ignore
 			if (level < Level)
@@ -212,4 +223,395 @@ namespace pr.util
 		}
 		#endregion
 	}
+
+	/// <summary>Asynchronous logging instance</summary>
+	public class Logger :IDisposable
+	{
+		public Logger(string tag, ILogWriter log_cb, int occurrences_batch_size = 1)
+		{
+			Tag = tag;
+			Context = new SharedContext(log_cb, occurrences_batch_size);
+			Enabled = true;
+		}
+		public Logger(string tag, Logger rhs)
+		{
+			Tag = tag;
+			Context = rhs.Context;
+			Enabled = true;
+		}
+		public virtual void Dispose()
+		{
+			Context = null;
+		}
+
+		/// <summary>The log entry tag for this instance</summary>
+		public string Tag
+		{
+			get;
+			set;
+		}
+
+		/// <summary>Access the shared context</summary>
+		private SharedContext Context
+		{
+			[DebuggerStepThrough] get { return m_ctx; }
+			set
+			{
+				if (m_ctx == value) return;
+				if (m_ctx != null)
+				{
+					m_ctx.RefCount.ReleaseRef();
+				}
+				m_ctx = value;
+				if (m_ctx != null)
+				{
+					m_ctx.RefCount.AddRef();
+				}
+			}
+		}
+		private SharedContext m_ctx;
+
+		/// <summary>The object that log data is written to</summary>
+		public ILogWriter LogCB
+		{
+			[DebuggerStepThrough] get { return Context.LogCB; }
+		}
+
+		/// <summary>On/Off switch for logging</summary>
+		public bool Enabled
+		{
+			get;
+			set;
+		}
+
+		// Log a message
+		public void Write(ELogLevel level, string msg, string file = null, int? line = null)
+		{
+			if (!Enabled) return;
+			var evt = new LogEvent(level, Context.TimeZero, Tag, msg, file, line);
+			Context.Enqueue(evt);
+		}
+
+		// Log an exception with message 'msg'
+		public void Write(ELogLevel level, Exception ex, string msg, string file = null, int? line = null)
+		{
+			if (!Enabled) return;
+			var evt = new LogEvent(level, Context.TimeZero, Tag, string.Concat(msg, " - Exception: ", ex.Message), file, line);
+			Context.Enqueue(evt);
+		}
+
+		// Block the caller until the logger is idle
+		public void Flush()
+		{
+			if (!Enabled) return;
+			Context.WaitTillIdle();
+		}
+
+		/// <summary>Logger context. A single Context is shared by many instances of a Logger</summary>
+		private class SharedContext :IDisposable
+		{
+			private LogEvent m_end_marker;
+
+			public SharedContext(ILogWriter log_cb, int occurrences_batch_size)
+			{
+				m_end_marker = new LogEvent();
+
+				// Clean up when there are no more loggers referencing this context
+				RefCount = new RefCount(0);
+				RefCount.ZeroCount += Dispose;
+
+				Queue = new ConcurrentQueue<LogEvent>();
+				Idle = new ManualResetEvent(true);
+				LogCB = log_cb;
+				OccurrencesBatchSize = occurrences_batch_size;
+
+				TimeZero = DateTimeOffset.Now;
+				LogConsumerThreadActive = true;
+			}
+			public void Dispose()
+			{
+				LogConsumerThreadActive = false;
+			}
+
+			/// <summary>References to this shared context</summary>
+			public RefCount RefCount { get; private set; }
+
+			/// <summary>The time point when logging started</summary>
+			public DateTimeOffset TimeZero
+			{
+				get;
+				private set;
+			}
+
+			/// <summary>Queue of log events to report</summary>
+			public ConcurrentQueue<LogEvent> Queue
+			{
+				get;
+				private set;
+			}
+
+			/// <summary>A flag to indicate when the logger is idle</summary>
+			public ManualResetEvent Idle { get; private set; }
+
+			// A callback function used in immediate mode
+			public ILogWriter LogCB { get; private set; }
+
+			/// <summary>The maximum number of identical events per batch</summary>
+			public int OccurrencesBatchSize { get; private set; }
+
+			// The worker thread that forwards log events to the callback function
+			private bool LogConsumerThreadActive
+			{
+				get { return m_thread != null; }
+				set
+				{
+					if (LogConsumerThreadActive == value) return;
+					if (m_thread != null)
+					{
+						Queue.Enqueue(m_end_marker);
+						if (m_thread.IsAlive)
+							m_thread.Join();
+					}
+					m_thread = value ? new Thread(new ThreadStart(() => LogConsumerThread(this, LogCB, OccurrencesBatchSize))) : null;
+					if (m_thread != null)
+					{
+						m_thread.Start();
+					}
+				}
+			}
+			private void LogConsumerThread(SharedContext ctx, ILogWriter log_cb, int occurrences_batch_size = 0)
+			{
+				try
+				{
+					Thread.CurrentThread.Name = "pr::Logger";
+
+					LogEvent ev, last = new LogEvent();
+					for (;ctx.Dequeue(out ev);)
+					{
+						// Exit on end marker
+						if (ev == m_end_marker)
+							break;
+
+						var is_same = LogEvent.Same(ev, last);
+
+						// Same event as last time? add it to the batch
+						if (is_same && last.Occurrences < occurrences_batch_size)
+						{
+							++last.Occurrences;
+							last.Timestamp = ev.Timestamp;
+							continue;
+						}
+
+						// Have events been batched? Report them now
+						if (last.Occurrences != 0)
+						{
+							log_cb.Write(last.ToString());
+							last.Occurrences = 0;
+						}
+
+						// Start of the next batch (and batching is enabled)? Add it to the batch
+						if (is_same && occurrences_batch_size != 0)
+						{
+							last.Occurrences = 1;
+							last.Timestamp = ev.Timestamp;
+						}
+						else
+						{
+							log_cb.Write(ev.ToString());
+							last = ev;
+							last.Occurrences = 0;
+						}
+					}
+				}
+				catch (Exception ex)
+				{
+					Debug.Assert(false, "Unknown exception in log thread: {0}".Fmt(ex.Message));
+				}
+			}
+			private Thread m_thread;
+
+			/// <summary>
+			/// Enable/Disable immediate mode.
+			/// In immediate mode, log events are written to 'log_cb' instead of being queued for processing
+			/// by the background thread. Useful when you want the log to be written in sync with debugging.</summary>
+			public void ImmediateWrite(ILogWriter log_cb)
+			{
+				LogCB = log_cb;
+			}
+
+			/// <summary>Queue a log event for writing to the log callback function</summary>
+			public void Enqueue(LogEvent ev)
+			{
+				if (LogCB != null)
+				{
+					LogCB.Write(ev.ToString());
+				}
+				else
+				{
+					Idle.Reset();
+					Queue.Enqueue(ev);
+				}
+			}
+
+			// Pull an event from the queue of log events
+			private bool Dequeue(out LogEvent ev)
+			{
+				var r = Queue.TryDequeue(out ev);
+				if (!r) Idle.Set();
+				return r;
+			}
+
+			// Wait for the log event queue to become empty
+			public void WaitTillIdle()
+			{
+				Idle.WaitOne();
+			}
+		}
+
+		/// <summary>An individual log event</summary>
+		public class LogEvent
+		{
+			public LogEvent()
+			{
+				Level       = ELogLevel.Error;
+				Timestamp   = TimeSpan.Zero;
+				Context     = string.Empty;
+				Msg         = string.Empty;
+				File        = string.Empty;
+				Line        = 0;
+				Occurrences = 0;
+			}
+			public LogEvent(ELogLevel level, DateTimeOffset tzero, string ctx, string msg, string file, int? line)
+			{
+				Level       = level;
+				Timestamp   = DateTimeOffset.Now - tzero;
+				Context     = ctx;
+				Msg         = msg.TrimEnd('\n','\r',' ','\t');
+				File        = file;
+				Line        = line;
+				Occurrences = 1;
+			}
+
+			/// <summary>The importance of the log event</summary>
+			public ELogLevel Level { get; private set; }
+
+			/// <summary>When the log event was recorded (relative to the start time of the context)</summary>
+			public TimeSpan Timestamp { get; internal set; }
+
+			/// <summary>The tag of the logger through which the event was added</summary>
+			public string Context { get; private set; }
+
+			/// <summary>The log message</summary>
+			public string Msg { get; private set; }
+
+			/// <summary>The associated file (if appropriate)</summary>
+			public string File { get; private set; }
+
+			/// <summary>The associated line number (if appropriate)</summary>
+			public int? Line { get; private set; }
+
+			/// <summary>The number of occurrences of the same log event</summary>
+			public int Occurrences { get; internal set; }
+
+			/// <summary>Convert the log event to a string</summary>
+			public override string ToString()
+			{
+				var sb = new StringBuilder();
+				sb.Append(Log.EntryDelimiter);
+				var delim = (string)null;
+				if (File.HasValue()) { sb.Append(File); delim = " "; }
+				if (Line != null)    { sb.Append("({0}):".Fmt(Line.Value)); delim = " "; }
+				if (delim != null)   { sb.Append(delim); }
+				sb.Append("{0:8}|{1}|{2}|{3}\n".Fmt(Context, Level, Timestamp.ToString("c"), Msg));
+				return sb.ToString();
+			}
+			public static bool Same(LogEvent lhs, LogEvent rhs)
+			{
+				return
+					lhs.Level   == rhs.Level   &&
+					lhs.Context == rhs.Context &&
+					lhs.File    == rhs.File    &&
+					lhs.Line    == rhs.Line    &&
+					lhs.Msg     == rhs.Msg;
+			}
+		}
+	}
+
+	/// <summary>Log writer that writes to a file</summary>
+	public class LogToFile :ILogWriter ,IDisposable
+	{
+		private FileStream m_outf;
+
+		public LogToFile(string filepath, bool append)
+		{
+			Filepath = filepath;
+			append &= File.Exists(filepath);
+			m_outf = new FileStream(Filepath, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+		}
+		public virtual void Dispose()
+		{
+			Util.Dispose(ref m_outf);
+		}
+		public string Filepath
+		{
+			get;
+			private set;
+		}
+		public void Write(string text)
+		{
+			var bytes = Encoding.UTF8.GetBytes(text);
+			m_outf.Seek(0, SeekOrigin.End);
+			m_outf.Write(bytes, 0, bytes.Length);
+			m_outf.Flush();
+		}
+	}
+
+	/// <summary>Log writer that writes to a string</summary>
+	public class LogToString :ILogWriter
+	{
+		public LogToString()
+		{
+			Str = new StringBuilder();
+		}
+		public StringBuilder Str
+		{
+			get;
+			private set;
+		}
+		public void Write(string text)
+		{
+			Str.Append(text);
+		}
+	}
 }
+
+#if PR_UNITTESTS
+namespace pr.unittests
+{
+	using util;
+	using System.Text.RegularExpressions;
+
+	[TestFixture] public class TestLogger
+	{
+		[Test] public void Logger()
+		{
+			var l2s = new LogToString();
+
+			var log0 = new Logger("Thing1", l2s, 1);
+			var log1 = new Logger("Thing2", log0);
+
+			log0.Write(ELogLevel.Error, "Error message", "A:\\file.txt", 32);
+			log1.Write(ELogLevel.Info, "Info message");
+			log0.Write(ELogLevel.Warn, new Exception("Exception"), "Exception message");
+
+			log0.Flush();
+
+			// Overwrite the timestamp so its the same for all unit tests
+			var lines = l2s.Str.ToString().Split(new[]{"\n" }, StringSplitOptions.RemoveEmptyEntries);
+			Assert.True(Regex.IsMatch(lines[0], @"\u001bA:\\file\.txt\(32\): Thing1\|Error\|[.:\d]+\|Error message"));
+			Assert.True(Regex.IsMatch(lines[1], @"\u001bThing2\|Info\|[.:\d]+\|Info message"));
+			Assert.True(Regex.IsMatch(lines[2], @"\u001bThing1\|Warn\|[.:\d]+\|Exception message - Exception: Exception"));
+		}
+	}
+}
+#endif

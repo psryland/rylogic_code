@@ -38,6 +38,7 @@ namespace TestCS
 		private ToolStripMenuItem m_menu_tests_chart;
 		private ToolStripMenuItem m_menu_tests_listbox;
 		private ToolStripMenuItem m_menu_tests_bluetooth_ui;
+		private ToolStripMenuItem m_menu_tests_log_ui;
 		private ToolStripMenuItem m_menu_tests_graphcontrol;
 
 		/// <summary>The main entry point for the application.</summary>
@@ -137,6 +138,11 @@ namespace TestCS
 				new ListBoxUI().Show(this);
 			};
 
+			m_menu_tests_log_ui.Click += (s,a) =>
+			{
+				new LogUI().Show(this);
+			};
+
 			m_menu_tests_message_box.Click += (s,a) =>
 			{
 				using (var dlg = new MsgBox("This is a MsgBox", "Title", MessageBoxButtons.AbortRetryIgnore, MessageBoxIcon.Information))
@@ -230,6 +236,7 @@ namespace TestCS
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_exit = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tests_bluetooth_ui = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_chart = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_checked_groupbox = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_checked_listbox = new System.Windows.Forms.ToolStripMenuItem();
@@ -253,7 +260,7 @@ namespace TestCS
 			this.m_menu_tests_view3d_editor = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_vt100 = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_web_browser = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_tests_bluetooth_ui = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tests_log_ui = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -298,6 +305,7 @@ namespace TestCS
             this.m_menu_tests_helpui,
             this.m_menu_tests_hintballoon,
             this.m_menu_tests_listbox,
+            this.m_menu_tests_log_ui,
             this.m_menu_tests_message_box,
             this.m_menu_tests_rtb,
             this.m_menu_tests_scintilla,
@@ -312,6 +320,12 @@ namespace TestCS
 			this.m_menu_tests.Name = "m_menu_tests";
 			this.m_menu_tests.Size = new System.Drawing.Size(45, 20);
 			this.m_menu_tests.Text = "&Tests";
+			// 
+			// m_menu_tests_bluetooth_ui
+			// 
+			this.m_menu_tests_bluetooth_ui.Name = "m_menu_tests_bluetooth_ui";
+			this.m_menu_tests_bluetooth_ui.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_tests_bluetooth_ui.Text = "&BluetoothUI";
 			// 
 			// m_menu_tests_chart
 			// 
@@ -451,11 +465,11 @@ namespace TestCS
 			this.m_menu_tests_web_browser.Size = new System.Drawing.Size(180, 22);
 			this.m_menu_tests_web_browser.Text = "&Web Browser";
 			// 
-			// m_menu_tests_bluetooth_ui
+			// m_tests_logui
 			// 
-			this.m_menu_tests_bluetooth_ui.Name = "m_menu_tests_bluetooth_ui";
-			this.m_menu_tests_bluetooth_ui.Size = new System.Drawing.Size(180, 22);
-			this.m_menu_tests_bluetooth_ui.Text = "&BluetoothUI";
+			this.m_menu_tests_log_ui.Name = "m_tests_logui";
+			this.m_menu_tests_log_ui.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_tests_log_ui.Text = "&Log UI";
 			// 
 			// MainUI
 			// 

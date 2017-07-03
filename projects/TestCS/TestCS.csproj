@@ -86,6 +86,12 @@
     <Compile Include="src\list_box_ui.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\log_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\log_ui.Designer.cs">
+      <DependentUpon>log_ui.cs</DependentUpon>
+    </Compile>
     <Compile Include="src\rich_text_box_ui.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -149,6 +155,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="src\list_box_ui.resx">
       <DependentUpon>list_box_ui.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\log_ui.resx">
+      <DependentUpon>log_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\main_ui.resx">
       <DependentUpon>main_ui.cs</DependentUpon>

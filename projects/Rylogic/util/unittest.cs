@@ -47,13 +47,13 @@ namespace pr.unittests
 						try { inst = Activator.CreateInstance(fixture); }
 						catch (Exception ex)
 						{
-							outp.WriteLine("{0} - Failed to create an instance of test fixture\n{1}".Fmt(fixture.Name, ex.Message));
+							outp.WriteLine("{0} - Failed to create an instance of test fixture\n{1}".Fmt(fixture.Name, ex.MessageFull()));
 							outp.Flush();
 							++failed;
 							continue;
 						}
 
-						// Call the fixture setup method
+						// Call the fixture set up method
 						var setup = fixture.FindMethodsWithAttribute<TestFixtureSetUpAttribute>().FirstOrDefault();
 						if (setup != null) try
 						{
@@ -61,13 +61,13 @@ namespace pr.unittests
 						}
 						catch (Exception ex)
 						{
-							outp.WriteLine("{0} - Test fixture setup function threw\n{1}".Fmt(fixture.Name, ex.Message));
+							outp.WriteLine("{0} - Test fixture set up function threw\n{1}".Fmt(fixture.Name, ex.MessageFull()));
 							outp.Flush();
 							++failed;
 							continue;
 						}
 
-						// Find the setup/cleanup method to call before each unit test
+						// Find the set up/clean up method to call before each unit test
 						var test_setup = fixture.FindMethodsWithAttribute<SetUpAttribute>().FirstOrDefault();
 						var test_clean = fixture.FindMethodsWithAttribute<TearDownAttribute>().FirstOrDefault();
 
@@ -77,14 +77,14 @@ namespace pr.unittests
 						{
 							try
 							{
-								// Call setup for the test
+								// Call set up for the test
 								if (test_setup != null)
 									test_setup.Invoke(inst, null);
 
 								// Run the test
 								test.Invoke(inst, null);
 
-								// Call cleanup for the test
+								// Call clean up for the test
 								if (test_clean != null)
 									test_clean.Invoke(inst, null);
 
@@ -99,7 +99,7 @@ namespace pr.unittests
 							}
 						}
 
-						// Call the fixture cleanup method
+						// Call the fixture clean up method
 						var cleanup = fixture.FindMethodsWithAttribute<TestFixtureTearDownAttribute>().FirstOrDefault();
 						if (cleanup != null) try
 						{
@@ -107,7 +107,7 @@ namespace pr.unittests
 						}
 						catch (Exception ex)
 						{
-							outp.WriteLine("{0} - Test fixture cleanup function threw\n{1}".Fmt(fixture.Name, ex.Message));
+							outp.WriteLine("{0} - Test fixture clean up function threw\n{1}".Fmt(fixture.Name, ex.MessageFull()));
 							outp.Flush();
 							++failed;
 							continue;

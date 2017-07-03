@@ -512,7 +512,7 @@ namespace pr.unittests
 		}
 		[Test] public void CreateFrom()
 		{
-			var rnd = new Random();
+			var rnd = new Random(123456789);
 			var V1 = v4.Random3(0.0f, 10.0f, 1.0f, rnd);
 			var a2b = m4x4.Transform(v4.Random3N(0.0f, rnd), rnd.FloatC(0, (float)Maths.TauBy2), v4.Random3(0.0f, 10.0f, 1.0f, rnd));
 			var b2c = m4x4.Transform(v4.Random3N(0.0f, rnd), rnd.FloatC(0, (float)Maths.TauBy2), v4.Random3(0.0f, 10.0f, 1.0f, rnd));
@@ -533,7 +533,7 @@ namespace pr.unittests
 			Assert.True(m4x4.IsOrthonormal(m2));
 			Assert.True(m4x4.FEql(m1, m2));
 
-			var rng = new Random();
+			var rng = new Random(123456879);
 			var ang = rng.FloatC(0.0f,1.0f);
 			var axis = v4.Random3N(0.0f, rng);
 			m1 = m4x4.Transform(axis, ang, v4.Origin);

@@ -36,12 +36,9 @@ namespace pr.common
 		public  EventBatcher(TimeSpan delay, Dispatcher dispatcher)                :this(delay, dispatcher,null)                      {}
 		private EventBatcher(TimeSpan delay, Dispatcher dispatcher, Action action)
 		{
-			if (dispatcher == null)
-				throw new ArgumentNullException("dispatcher","dispatcher can't be null");
-			
 			m_lock           = new object();
 			m_shutdown       = false;
-			m_dispatcher     = dispatcher;
+			m_dispatcher     = dispatcher ?? throw new ArgumentNullException("dispatcher","dispatcher can't be null");
 			m_delay          = delay;
 			m_count          = 0;
 			Immediate        = false;

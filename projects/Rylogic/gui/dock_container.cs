@@ -750,8 +750,9 @@ namespace pr.gui
 
 		/// <summary>
 		/// Update the layout of this dock container using the data in 'node'
-		/// Use 'content_factory' to create content on demand during loading.</summary>
-		public virtual void LoadLayout(XElement node, Func<string,DockControl> content_factory = null)
+		/// Use 'content_factory' to create content on demand during loading.
+		/// 'content_factory(persistence_name, type_name)'</summary>
+		public virtual void LoadLayout(XElement node, Func<string, string, DockControl> content_factory = null)
 		{
 			if (node.Name != XmlTag.DockContainerLayout)
 				throw new Exception("XML data does not contain dock container layout information");
@@ -768,8 +769,8 @@ namespace pr.gui
 				{
 					// Find a content object with a matching persistence name
 					var name = content_node.Element(XmlTag.Name).As<string>();
-					if (all_content.TryGetValue(name, out content) ||
-						content_factory != null && (content = content_factory(name)) != null)
+					var type = content_node.Element(XmlTag.Type).As<string>(string.Empty);
+					if (all_content.TryGetValue(name, out content) || (content = content_factory?.Invoke(name, type)) != null)
 					{
 						var loc = new DockLocation(content_node);
 						if (loc.Address.First() != EDockSite.None)
@@ -3153,6 +3154,7 @@ namespace pr.gui
 			{
 				// Add the name to identify the content
 				node.Add2(XmlTag.Name, PersistName, false);
+				node.Add2(XmlTag.Type, Owner.GetType().FullName, false);
 				CurrentDockLocation.ToXml(node);
 				return node;
 			}
@@ -6062,6 +6064,7 @@ namespace pr.gui
 			public const string DockContainerLayout = "DockContainerLayout";
 			public const string Version = "version";
 			public const string Name = "name";
+			public const string Type = "type";
 			public const string Id = "id";
 			public const string Index = "index";
 			public const string DockPane = "pane";

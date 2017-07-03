@@ -79,9 +79,9 @@ namespace pr.util
 		public FileWatch()
 		{
 			m_files          = new List<WatchedFile>();
+			m_changed_files  = new List<WatchedFile>();
 			m_timer          = new Timer{Interval = 1000, Enabled = false};
 			m_timer.Tick    += CheckForChangedFiles;
-			m_changed_files  = new List<WatchedFile>();
 		}
 		public FileWatch(FileChangedHandler on_changed, params string[] files)
 			:this(on_changed, 0, null, files)
@@ -102,8 +102,22 @@ namespace pr.util
 		/// <summary>Get/Set the auto-polling period. If the period is 0 polling is disabled</summary>
 		public int PollPeriod
 		{
-			get { return m_timer.Enabled ? m_timer.Interval : 0; }
-			set { if (value == 0) m_timer.Enabled = false; else { m_timer.Interval = value; m_timer.Enabled = true; } }
+			get
+			{
+				return m_timer.Enabled ? m_timer.Interval : 0;
+			}
+			set
+			{
+				if (value == 0)
+				{
+					m_timer.Enabled = false;
+				}
+				else
+				{
+					m_timer.Interval = value;
+					m_timer.Enabled = true;
+				}
+			}
 		}
 
 		/// <summary>Add a file to be watched.</summary>

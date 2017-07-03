@@ -610,7 +610,7 @@ namespace pr.extn
 		}
 
 		/// <summary>Merge a collection into this list. Note: this is a linear operation, this list and 'others' are expected to be ordered</summary>
-		public static IList<T> Merge<T>(this IList<T> list, IEnumerable<T> others, EMergeType merge_type, Cmp<T> comparer = null)
+		public static IList<T> Merge<T>(this IList<T> list, IEnumerable<T> others, EMergeType merge_type, int sign = +1, Cmp<T> comparer = null)
 		{
 			comparer = comparer ?? Cmp<T>.Default;
 
@@ -621,7 +621,7 @@ namespace pr.extn
 			{
 				var lhs = list[i];
 				var rhs = j.Current;
-				var cmp = comparer.Compare(lhs, rhs);
+				var cmp = sign * comparer.Compare(lhs, rhs);
 
 				// lhs < rhs, advance the left iterator
 				if (cmp < 0)
@@ -773,6 +773,11 @@ namespace pr.unittests
 
 			var l2 = lhs.ToList().Merge(rhs, List_.EMergeType.KeepBoth);
 			Assert.True(l2.SequenceEqual(new[] { 1, 1, 2, 3, 4, 5, 6, 7, 8, 8, 9, 10 }));
+
+			var shl = new[] { 8, 7, 4, 2, 1 };
+			var shr = new[] {10, 9, 8, 6, 5, 3, 1 };
+			var l3 = shl.ToList().Merge(shr, List_.EMergeType.KeepLeft, sign:-1);
+			Assert.True(l3.SequenceEqual(new[] { 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 }));
 		}
 		[Test] public void NthElement()
 		{

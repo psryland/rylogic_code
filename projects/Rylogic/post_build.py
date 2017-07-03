@@ -22,20 +22,27 @@ try:
 	# Set this to false to disable running tests on compiling
 	RunTests = True
 
+	dll = targetdir + "\\Rylogic.dll"
+	exe = targetdir + "\\Rylogic.exe"
+
 	# Run unit tests
 	if RunTests:
-		target = targetdir + "\\Rylogic.dll"
-		print("Unit Testing: " + target)
+		target = dll if os.path.exists(dll) else exe
+		if os.path.exists(target):
+			print("Unit Testing: " + target)
 
-		# Use the power shell to run the unit tests
-		res,outp = Tools.Run(["powershell", "-noninteractive", "-noprofile", "-sta", "-nologo", "-command", "[Reflection.Assembly]::LoadFile('"+target+"')|Out-Null;exit [pr.Program]::Main();"])
-		outp = re.sub(r"Attempting to perform the InitializeDefaultDrives operation on the 'FileSystem' provider failed.\n(.*)", r"\1", outp)
-		print(outp)
-		if not res:
-			raise Exception("   **** Unit tests failed ****   ")
+			# Use the power shell to run the unit tests
+			res,outp = Tools.Run(["powershell", "-noninteractive", "-noprofile", "-sta", "-nologo", "-command", "[Reflection.Assembly]::LoadFile('"+target+"')|Out-Null;exit [pr.Program]::Main();"])
+			outp = re.sub(r"Attempting to perform the InitializeDefaultDrives operation on the 'FileSystem' provider failed.\n(.*)", r"\1", outp)
+			print(outp)
+			if not res:
+				raise Exception("   **** Unit tests failed ****   ")
+		else:
+			print("Rylogic assembly not found.   **** Unit tests skipped ****")
 
 	# Copy to the lib directory
-	DeployLib.DeployLib(targetdir + "\\Rylogic.dll", "AnyCPU", config)
+	if os.path.exists(dll):
+		DeployLib.DeployLib(dll, "AnyCPU", config)
 
 except Exception as ex:
 	Tools.OnException(ex)

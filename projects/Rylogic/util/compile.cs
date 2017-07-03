@@ -56,7 +56,7 @@ namespace pr.util
 		/// <summary>Compile source into an in-memory assembly</summary>
 		private RuntimeAssembly(string inst_name, string source, string[] assemblies)
 		{
-			m_mi_cache = new Cache<string,MethodInfo>();
+			m_mi_cache = new Cache<string,MethodInfo>{ ThreadSafe = true };
 
 			var provider = new CSharpCodeProvider(new Dictionary<string, string>{{"CompilerVersion", "v4.0"}});
 			var compilerParams = new CompilerParameters(assemblies)
@@ -83,6 +83,11 @@ namespace pr.util
 		{
 			var mi = m_mi_cache.Get(function, k => Instance.GetType().GetMethod(k));
 			return (TResult)mi.Invoke(Instance, args);
+		}
+		public void Invoke(string function, params object[] args)
+		{
+			var mi = m_mi_cache.Get(function, k => Instance.GetType().GetMethod(k));
+			mi.Invoke(Instance, args);
 		}
 	}
 

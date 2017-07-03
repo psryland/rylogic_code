@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,7 +7,7 @@ using System.Text;
 namespace pr.container
 {
 	/// <summary>Bi-directional dictionary</summary>
-	public class BiDictionary<T0,T1>
+	public class BiDictionary<T0,T1> :IDictionary<T0,T1>
 	{
 		private readonly Dictionary<T0, T1> m_forward = new Dictionary<T0, T1>();
 		private readonly Dictionary<T1, T0> m_reverse = new Dictionary<T1, T0>();
@@ -32,13 +33,21 @@ namespace pr.container
 			get { return m_forward.Count; }
 		}
 
-		public Dictionary<T0,T1>.KeyCollection Values0
+		public Dictionary<T0,T1>.KeyCollection Keys0
 		{
 			get { return m_forward.Keys; }
 		}
-		public Dictionary<T1,T0>.KeyCollection Values1
+		public Dictionary<T1,T0>.KeyCollection Keys1
 		{
 			get { return m_reverse.Keys; }
+		}
+		public Dictionary<T0,T1>.ValueCollection Values0
+		{
+			get { return m_forward.Values; }
+		}
+		public Dictionary<T1,T0>.ValueCollection Values1
+		{
+			get { return m_reverse.Values; }
 		}
 
 		public T1 this[T0 key]
@@ -122,5 +131,76 @@ namespace pr.container
 		{
 			return m_forward.GetEnumerator();
 		}
+
+		#region IDictionary<T0,T1>
+		ICollection<T0> IDictionary<T0, T1>.Keys
+		{
+			get { return Keys0; }
+		}
+		ICollection<T1> IDictionary<T0, T1>.Values
+		{
+			get { return Values0; }
+		}
+		int ICollection<KeyValuePair<T0, T1>>.Count
+		{
+			get { return Count; }
+		}
+		bool ICollection<KeyValuePair<T0, T1>>.IsReadOnly
+		{
+			get { return false; }
+		}
+		T1 IDictionary<T0, T1>.this[T0 key]
+		{
+			get { return this[key]; }
+			set { this[key] = value; }
+		}
+		bool IDictionary<T0, T1>.ContainsKey(T0 key)
+		{
+			return ContainsKey(key);
+		}
+		void IDictionary<T0, T1>.Add(T0 key, T1 value)
+		{
+			Add(key, value);
+		}
+		bool IDictionary<T0, T1>.Remove(T0 key)
+		{
+			return Remove(key);
+		}
+		bool IDictionary<T0, T1>.TryGetValue(T0 key, out T1 value)
+		{
+			return TryGetValue(key, out value);
+		}
+		void ICollection<KeyValuePair<T0, T1>>.Add(KeyValuePair<T0, T1> item)
+		{
+			((ICollection<KeyValuePair<T0, T1>>)m_forward).Add(item);
+			((ICollection<KeyValuePair<T1, T0>>)m_reverse).Add(new KeyValuePair<T1,T0>(item.Value, item.Key));
+		}
+		bool ICollection<KeyValuePair<T0, T1>>.Remove(KeyValuePair<T0, T1> item)
+		{
+			return
+			((ICollection<KeyValuePair<T1, T0>>)m_reverse).Remove(new KeyValuePair<T1,T0>(item.Value, item.Key)) &&
+			((ICollection<KeyValuePair<T0, T1>>)m_forward).Remove(item);
+		}
+		void ICollection<KeyValuePair<T0, T1>>.Clear()
+		{
+			Clear();
+		}
+		bool ICollection<KeyValuePair<T0, T1>>.Contains(KeyValuePair<T0, T1> item)
+		{
+			return m_forward.Contains(item);
+		}
+		void ICollection<KeyValuePair<T0, T1>>.CopyTo(KeyValuePair<T0, T1>[] array, int arrayIndex)
+		{
+			((ICollection<KeyValuePair<T0, T1>>)m_forward).CopyTo(array, arrayIndex);
+		}
+		IEnumerator<KeyValuePair<T0, T1>> IEnumerable<KeyValuePair<T0, T1>>.GetEnumerator()
+		{
+			return ((IEnumerable<KeyValuePair<T0, T1>>)m_forward).GetEnumerator();
+		}
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return GetEnumerator();
+		}
+		#endregion
 	}
 }

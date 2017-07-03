@@ -430,6 +430,12 @@ namespace pr.util
 			return (alignment - (size % alignment)) % alignment;
 		}
 
+		/// <summary>Returns 'size' rounded up to a multiple of 'alignment'</summary>
+		public static int PadTo(int size, int alignment)
+		{
+			return size + Pad(size, alignment);
+		}
+
 		/// <summary>Helper for returning the number of fields in an enum</summary>
 		public static int Count(Type enum_type)
 		{
