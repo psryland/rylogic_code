@@ -56,12 +56,12 @@ namespace Poloniex.API
 		}
 	}
 
-	/// <summary>Data type received from the WAMP order book channel</summary>
+	/// <summary>Data type received from the WAMP order book and trade update channel</summary>
 	public class OrderBookUpdate
 	{
 		public enum EUpdateType
 		{
-			New,
+			NewTrade,
 			Modify,
 			Remove,
 		}
@@ -74,7 +74,7 @@ namespace Poloniex.API
 			{
 				switch (value) {
 				default: throw new Exception(string.Format("Unknown update type: {0}", value));
-				case "newTrade":        Type = EUpdateType.New; break;
+				case "newTrade":        Type = EUpdateType.NewTrade; break;
 				case "orderBookModify": Type = EUpdateType.Modify; break;
 				case "orderBookRemove": Type = EUpdateType.Remove; break;
 				}
@@ -102,10 +102,14 @@ namespace Poloniex.API
 		/// <summary>A unique ID assigned to the order</summary>
 		[JsonProperty("orderNumber")]
 		public ulong OrderId { get; private set; }
+		[JsonProperty("tradeID")] private ulong TradeId
+		{
+			set { OrderId = value; }
+		}
 
 		/// <summary>A Buy or Sell order</summary>
 		public EOrderType Type { get; private set; }
-		[JsonProperty("type")] internal string TypeInternal
+		[JsonProperty("type")] private string TypeInternal
 		{
 			set { Type = Misc.ToOrderType(value); }
 		}

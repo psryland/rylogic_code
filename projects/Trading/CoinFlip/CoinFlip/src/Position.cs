@@ -13,7 +13,7 @@ namespace CoinFlip
 			Pair      = pair;
 			TradeType = tt;
 			Rate      = rate;
-			Volume    = volume;
+			VolumeBase    = volume;
 			Remaining = remaining;
 			TimeStamp = timestamp;
 		}
@@ -31,8 +31,11 @@ namespace CoinFlip
 		public Unit<decimal> Rate { get; set; }
 
 		/// <summary>The volume of the trade (in base currency)</summary>
-		public Unit<decimal> Volume { get; set; }
-			
+		public Unit<decimal> VolumeBase { get; set; }
+
+		/// <summary>The volume of the trade (in quote currency) based on the trade price</summary>
+		public Unit<decimal> VolumeQuote { get { return VolumeBase * Rate; } }
+
 		/// <summary>The remaining volume to be traded</summary>
 		public Unit<decimal> Remaining { get; set; }
 

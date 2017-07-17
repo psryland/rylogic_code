@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using pr.extn;
 
 namespace CoinFlip
 {
@@ -20,8 +21,20 @@ namespace CoinFlip
 		/// <summary>Coin name</summary>
 		public string Symbol { get; private set; }
 
+		/// <summary>Return the Coin with the exchange</summary>
+		public string SymbolWithExchange
+		{
+			get { return "{0} - {1}".Fmt(Symbol, Exchange.Name); }
+		}
+
 		/// <summary>The Exchange trading this coin</summary>
 		public Exchange Exchange { get; private set; }
+
+		/// <summary>Return the balance for this coin on its associated exchange</summary>
+		public Balance Balance
+		{
+			get { return Exchange.Balance[this]; }
+		}
 
 		/// <summary>Trade pairs involving this coin</summary>
 		public HashSet<TradePair> Pairs

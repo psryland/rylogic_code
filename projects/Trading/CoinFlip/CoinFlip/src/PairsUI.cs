@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
@@ -37,6 +38,7 @@ namespace CoinFlip
 		{
 			InitializeComponent();
 			Model = model;
+
 			Pairs = new BindingSource<TradePair>();
 			Sells = new BindingSource<Order>();
 			Buys = new BindingSource<Order>();
@@ -56,19 +58,15 @@ namespace CoinFlip
 		/// <summary>App logic</summary>
 		public Model Model
 		{
-			get { return m_model; }
+			[DebuggerStepThrough] get { return m_model; }
 			private set
 			{
 				if (m_model == value) return;
 				if (m_model != null)
-				{
-					m_model.Pairs.ListChanging -= HandlePairsListChanged;
-				}
+				{}
 				m_model = value;
 				if (m_model != null)
-				{
-					m_model.Pairs.ListChanging += HandlePairsListChanged;
-				}
+				{}
 			}
 		}
 		private Model m_model;
@@ -88,7 +86,7 @@ namespace CoinFlip
 				m_pairs = value;
 				if (m_pairs != null)
 				{
-					m_pairs.DataSource = new BindingListEx<TradePair>();
+					m_pairs.DataSource = Model.Pairs;
 					m_pairs.PositionChanged += HandleCurrentPairChanged;
 				}
 			}
@@ -98,42 +96,16 @@ namespace CoinFlip
 		/// <summary>Binding source for Sell(Ask) orders</summary>
 		private BindingSource<Order> Sells
 		{
-			get { return m_sells; }
-			set
-			{
-				if (m_sells == value) return;
-				if (m_sells != null)
-				{
-					m_sells.DataSource = null;
-				}
-				m_sells = value;
-				if (m_sells != null)
-				{
-					m_sells.DataSource = Model.Pairs.Current?.Ask.Orders;
-				}
-			}
+			get;
+			set;
 		}
-		private BindingSource<Order> m_sells;
 
 		/// <summary>Binding source for Buy(Bid) orders</summary>
 		private BindingSource<Order> Buys
 		{
-			get { return m_buys; }
-			set
-			{
-				if (m_buys == value) return;
-				if (m_buys != null)
-				{
-					m_buys.DataSource = null;
-				}
-				m_buys = value;
-				if (m_buys != null)
-				{
-					m_buys.DataSource = Model.Pairs.Current?.Bid.Orders;
-				}
-			}
+			get;
+			set;
 		}
-		private BindingSource<Order> m_buys;
 
 		/// <summary>Set up UI Elements</summary>
 		private void SetupUI()
@@ -202,17 +174,6 @@ namespace CoinFlip
 			};
 			m_grid_buys.DataSource = Buys;
 			#endregion
-		}
-
-		/// <summary>Handle the main pairs list changing</summary>
-		private void HandlePairsListChanged(object sender, ListChgEventArgs<TradePair> e)
-		{
-			if (!e.IsDataChanged) return;
-			using (Pairs.PreservePosition())
-			{
-				Pairs.Clear();
-				Pairs.AddRange(e.List.OrderBy(x => x.Name));
-			}
 		}
 
 		/// <summary>Handle the selected pair changing</summary>

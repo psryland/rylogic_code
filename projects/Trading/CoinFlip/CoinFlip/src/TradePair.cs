@@ -2,13 +2,14 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using pr.common;
 using pr.extn;
 using pr.util;
 
 namespace CoinFlip
 {
 	/// <summary>The Ask/Bid prices between two coins</summary>
-	[DebuggerDisplay("{Name,nq}")]
+	[DebuggerDisplay("{NameWithExchange,nq}")]
 	public class TradePair :IComparable<TradePair>, IComparable
 	{
 		// Notes:
@@ -18,11 +19,20 @@ namespace CoinFlip
 		//   Note, this means the units of the BTC/USDT rate are USDT-per-BTC, counter intuitively :-/
 		//   since X(BTC) * price(USDT/BTC) = Y(USDT)
 
-		public TradePair(Coin base_, Coin quote, Exchange exchange)
+		public TradePair(Coin base_, Coin quote, Exchange exchange,
+			int? trade_pair_id = null,
+			RangeF<Unit<decimal>>? volume_range_base = null,
+			RangeF<Unit<decimal>>? volume_range_quote = null,
+			RangeF<Unit<decimal>>? price_range = null)
 		{
 			Base  = base_;
 			Quote = quote;
 			Exchange = exchange;
+
+			TradePairId = trade_pair_id;
+			VolumeRangeBase = volume_range_base;
+			VolumeRangeQuote = volume_range_quote;
+			PriceRange = price_range;
 
 			Ask = new OrderBook(base_, quote);
 			Bid = new OrderBook(base_, quote);
@@ -125,6 +135,27 @@ namespace CoinFlip
 			private set;
 		}
 
+		/// <summary>The allowable range of volume for </summary>
+		public RangeF<Unit<decimal>>? VolumeRangeBase
+		{
+			get;
+			private set;
+		}
+
+		/// <summary>The allowable range of volume for </summary>
+		public RangeF<Unit<decimal>>? VolumeRangeQuote
+		{
+			get;
+			private set;
+		}
+
+		/// <summary>The allowed price range when trading this pair</summary>
+		public RangeF<Unit<decimal>>? PriceRange
+		{
+			get;
+			private set;
+		}
+
 		/// <summary>Return the Fee charged when trading this pair</summary>
 		public decimal Fee
 		{
@@ -173,6 +204,7 @@ namespace CoinFlip
 				Ask.Orders.Clear();
 				Ask.Orders.AddRange(sells);
 			}
+			Debug.Assert(AssertOrdersValid());
 		}
 
 		/// <summary>
@@ -184,7 +216,9 @@ namespace CoinFlip
 			if (volume < 0m._(Base))
 				throw new Exception("Invalid volume");
 
-			// Determine the best price and volume in quote currency
+			// Determine the best price and volume in quote currency.
+			// Note, the units are not the typical units for an order because
+			// I'm just using 'Order' to pass back a price and volume pair.
 			var order = new Order(0m._(Quote)/1m._(Base), 0m._(Quote));
 			foreach (var x in Bid)
 			{
@@ -213,6 +247,8 @@ namespace CoinFlip
 				throw new Exception("Invalid volume");
 
 			// Determine the best price and volume in base currency
+			// Note, the units are not the typical units for an order because
+			// I'm just using 'Order' to pass back a price and volume pair.
 			var order = new Order(0m._(Base)/1m._(Quote), 0m._(Base));
 			foreach (var x in Ask)
 			{
@@ -231,23 +267,23 @@ namespace CoinFlip
 			return order;
 		}
 
-		/// <summary>Place an order to buy or sell 'volume' (in base currency) on the exchange that offers this pair</summary>
-		public async Task CreateOrder(ETradeType tt, Unit<decimal> volume, Unit<decimal>? price = null)
+		/// <summary>Place an order to convert 'volume_base' (base currency) to quote currency at 'price' (Quote/Base)</summary>
+		public async Task CreateB2QOrder(Unit<decimal> volume_base, Unit<decimal>? price = null)
 		{
-			await Exchange.CreateOrder(this, tt, volume, price);
+			await Exchange.CreateB2QOrder(this, volume_base, price);
 		}
 
-		/// <summary>Place an order to convert 'volume' (base currency) to quote currency at 'price' (Quote/Base)</summary>
-		public async Task CreateB2QOrder(Unit<decimal> volume, Unit<decimal>? price = null)
+		/// <summary>Place an order to convert 'volume_quote' (quote currency) to base currency at 'price' (Base/Quote)</summary>
+		public async Task CreateQ2BOrder(Unit<decimal> volume_quote, Unit<decimal>? price = null)
 		{
-			await Exchange.CreateB2QOrder(this, volume, price);
+			await Exchange.CreateQ2BOrder(this, volume_quote, price);
 		}
 
-		/// <summary>Place an order to convert 'volume' (quote currency) to base currency at 'price' (Base/Quote)</summary>
-		public async Task CreateQ2BOrder(Unit<decimal> volume, Unit<decimal>? price = null)
-		{
-			await Exchange.CreateQ2BOrder(this, volume, price);
-		}
+		///// <summary>Place an order to buy or sell 'volume' (in base currency) on the exchange that offers this pair</summary>
+		//public async Task CreateOrder(ETradeType tt, Unit<decimal> volume, Unit<decimal>? price = null)
+		//{
+		//	await Exchange.CreateOrder(this, tt, volume, price);
+		//}
 
 		/// <summary></summary>
 		public override string ToString()
@@ -284,6 +320,22 @@ namespace CoinFlip
 			return CompareTo((TradePair)obj);
 		}
 		#endregion
+
+		/// <summary>Check the orders are in the correct order</summary>
+		public bool AssertOrdersValid()
+		{
+			// Asking price should increase
+			for (int i = 1; i < Ask.Count; ++i)
+				if (Ask[i-1].Price > Ask[i].Price)
+					return false;
+
+			// Bid price should decrease
+			for (int i = 1; i < Bid.Count; ++i)
+				if (Bid[i-1].Price < Bid[i].Price)
+					return false;
+
+			return true;
+		}
 
 		/// <summary>Convert two currency symbols into a unique key for this pair</summary>
 		public static string MakeKey(string sym0, string sym1)

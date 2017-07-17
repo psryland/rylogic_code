@@ -72,16 +72,11 @@ namespace Cryptopia.API
 			where T : IResponse, new()
 		{
 			var response = await _client.GetStringAsync(string.Format("{0}/Api/{1}{2}", _apiBaseAddress, call, requestData));
-			if (string.IsNullOrEmpty(response))
-			{
-				return new T() { Success = false, Error = "No Response." };
-			}
-			return GetObject<T>(response);
-		}
 
-		private T GetObject<T>(string jsonData)
-		{
-			using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(jsonData)))
+			if (string.IsNullOrEmpty(response))
+				return new T() { Success = false, Error = "No Response." };
+
+			using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(response)))
 			{
 				var serializer = new DataContractJsonSerializer(typeof(T));
 				return (T)(object)serializer.ReadObject(stream);

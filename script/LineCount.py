@@ -10,10 +10,12 @@ try:
 	Tools.AssertVersion(1)
 
 	dirs = [
+		r"P:\projects",
+		r"P:\include",
 		#r"R:\software\PC\RexConfig",
 		#r"R:\software\STM32",
 		#r"R:\software\ARM7",
-		r"R:\software\SDK\pr",
+		#r"R:\software\SDK\pr",
 		#r"R:\software\SDK\pr\projects\Rylogic",
 		]
 

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Poloniex.API;
+using pr.common;
 using pr.extn;
 using pr.util;
 
@@ -64,65 +65,72 @@ namespace CoinFlip
 		}
 		private PoloniexApiPrivate m_priv;
 
-		/// <summary>Open the connection to the exchange and gather data</summary>
-		public override void Start()
-		{
-			Status = EStatus.Connecting;
-			Model.RunOnGuiThread(async () =>
-			{
-				await AddPairsToModel();
-				await UpdateData();
-
-				//Pub.SubscribeTicker();
-				Pub.Start();
-
-				//Heart.Enabled = true;
-			});
-		}
-
 		/// <summary>Open a trade</summary>
-		protected override Task CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> rate)
+		protected async override Task CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> rate)
 		{
-			return Misc.CompletedTask;
+			// Obey the global trade switch
+			if (Model.AllowTrades)
+			{
+				// Place the trade order
+				await Priv.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), Misc.ToPoloniexTT(tt), rate, volume);
+			}
 		}
 
 		/// <summary>Update this exchange's set of trading pairs</summary>
-		protected async override Task AddPairsToModel()
+		public async override Task UpdatePairs(HashSet<string> coi) // Worker thread context
 		{
 			// Get all available trading pairs
 			var msg = await Pub.GetTradePairs();
 
-			// The set of coins of interest
-			var coi = Model.CoinsOfInterestSet;
-
-			// Create the trade pairs and associated coins
-			var pairs = msg.Select(x => new { Id = x.Value.Id, Coins = x.Key.Split('_') }).Where(x => coi.Contains(x.Coins[0]) && coi.Contains(x.Coins[1]));
-			foreach (var p in pairs)
+			// Add an action to integrate the data
+			Model.MarketUpdates.Add(() =>
 			{
-				// Add the trade pair. Poloniex gives pairs as "Quote_Base"
-				var pair = CreateTradePair(p.Coins[1], p.Coins[0], p.Id);
-				Pairs[pair.UniqueKey] = pair;
-			}
+				var nue = new HashSet<string>();
 
-			// Add 'Balance' objects for each coin type
-			foreach (var c in Coins.Values)
-				Balance.GetOrAdd(c, x => new Balance(c));
+				// Create the trade pairs and associated coins
+				var pairs = msg.Select(x => new { Id = x.Value.Id, Coins = x.Key.Split('_') }).Where(x => coi.Contains(x.Coins[0]) && coi.Contains(x.Coins[1]));
+				foreach (var p in pairs)
+				{
+					// Poloniex gives pairs as "Quote_Base"
+					var base_ = Coins.GetOrAdd(p.Coins[1]);
+					var quote = Coins.GetOrAdd(p.Coins[0]);
 
-			// Ensure we're subscribed to the order book streams for each pair
-			foreach (var p in Pairs.Values)
-				Pub.SubscribePair(new CurrencyPair(p.Base, p.Quote));
+					// Add the trade pair.
+					var instr = new TradePair(base_, quote, this, p.Id,
+						volume_range_base:new RangeF<Unit<decimal>>(0.0001m._(base_), 10000000m._(base_)),
+						volume_range_quote:new RangeF<Unit<decimal>>(0.0001m._(quote), 10000000m._(quote)),
+						price_range:null);
+					Pairs[instr.UniqueKey] = instr;
 
-			// Add the pairs to the model
-			await base.AddPairsToModel();
+					// Save the names of the pairs,coins returned
+					nue.Add(instr.Name);
+					nue.Add(instr.Base.Symbol);
+					nue.Add(instr.Quote.Symbol);
+				}
+
+				// Remove pairs not in 'nue'
+				Pairs.RemoveIf(p => !nue.Contains(p.Name));
+
+				// Remove coins not in 'nue'
+				Coins.RemoveIf(c => !nue.Contains(c.Symbol));
+
+				// Ensure a 'Balance' object exists for each coin type
+				foreach (var c in Coins.Values)
+					Balance.GetOrAdd(c);
+
+				// Currently not working on the Poloniex site
+				//' // Ensure we're subscribed to the order book streams for each pair
+				//' foreach (var p in Pairs.Values)
+				//' 	Pub.SubscribePair(new CurrencyPair(p.Base, p.Quote));
+			});
 		}
 
 		/// <summary>Update the market data, balances, and open positions</summary>
-		protected async override Task UpdateData()
+		protected async override Task UpdateData() // Worker thread context
 		{
 			try
 			{
 				// Request order book data for all of the pairs
-				// Only if we're not getting WAMP updates
 				var order_book = Pub.GetOrderBook(depth:50);
 
 				// Request the account data
@@ -131,92 +139,98 @@ namespace CoinFlip
 				// Request the existing orders
 				var existing_orders = Priv.GetOpenOrders();
 
-				// Process the order book data and update the pairs
-				#region Order Book
-				if (order_book != null)
+				// Wait for replies for all queries
+				await Task.WhenAll(order_book, balance_data, existing_orders);
+
+				// Queue integration of the market data
+				Model.MarketUpdates.Add(() =>
 				{
-					var msg = await order_book;
-					foreach (var orders in msg)
+					// Process the order book data and update the pairs
+					#region Order Book
+					if (order_book != null)
 					{
-						var coin = orders.Key.Split('_');
-
-						// Find the pair to update.
-						// The pair may have been removed between the request and the reply.
-						// Pair's may have been added as well, we'll get those next heart beat.
-						var pair = Pairs[coin[1], coin[0]];
-						if (pair == null)
-							continue;
-
-						// Update the depth of market data
-						var buys  = orders.Value.BuyOrders .Select(x => new Order(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
-						var sells = orders.Value.SellOrders.Select(x => new Order(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
-						pair.UpdateOrderBook(buys, sells);
-					}
-				}
-				#endregion
-
-				// Process the account data and update the balances
-				#region Balance
-				{
-					var msg = await balance_data;
-
-					// Update the account balance
-					using (Model.Balances.PreservePosition())
-					{
-						var coi = Model.CoinsOfInterestSet;
-						foreach (var b in msg.Where(x => x.Value.Available != 0 || coi.Contains(x.Key)))
+						var msg = order_book.Result;
+						foreach (var orders in msg)
 						{
-							// Find the currency that this balance is for. If it's not a coin of interest, ignore
-							var coin = GetOrAddCoin(b.Key);
+							var cp = CurrencyPair.Parse(orders.Key);
 
-							// Update the balance
-							var bal = new Balance(coin, b.Value.HeldForTrades + b.Value.Available, b.Value.Available, 0, b.Value.HeldForTrades, 0);
-							Balance[coin] = bal;
+							// Find the pair to update.
+							// The pair may have been removed between the request and the reply.
+							// Pair's may have been added as well, we'll get those next heart beat.
+							var pair = Pairs[cp.Base, cp.Quote];
+							if (pair == null)
+								continue;
+
+							// Update the depth of market data
+							var buys  = orders.Value.BuyOrders .Select(x => new Order(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
+							var sells = orders.Value.SellOrders.Select(x => new Order(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
+							pair.UpdateOrderBook(buys, sells);
 						}
 					}
-				}
-				#endregion
+					#endregion
 
-				// Process the existing orders
-				#region Current Orders
-				if (existing_orders != null)
-				{
-					var msg = await existing_orders;
-				
-					// Update the collection of existing orders
-					var order_ids = new HashSet<ulong>();
-					using (Model.Positions.PreservePosition())
+					// Process the account data and update the balances
+					#region Balance
 					{
-						// For each trading pair with active orders
-						foreach (var instr in msg.Where(x => x.Value.Count != 0))
+						var msg = balance_data.Result;
+
+						// Update the account balance
+						using (Model.Balances.PreservePosition())
 						{
-							// Get the associated trade pair (add the pair if it doesn't exist)
-							var cp = CurrencyPair.Parse(instr.Key);
-							var pair = Pairs[cp.Base, cp.Quote] ?? Pairs.Add2(CreateTradePair(cp.Base, cp.Quote));
-			
-							// Add each order
-							foreach (var order in instr.Value)
+							foreach (var b in msg.Where(x => x.Value.Available != 0 || Coins.ContainsKey(x.Key)))
 							{
-								var id = order.OrderId;
-								var type = Misc.TradeType(order.Type);
-								var rate = order.Price._(pair.RateUnits);
-								var volume = order.VolumeBase._(pair.Base);
-								//var remaining = o.Remaining._(sym[0]);
-								var ts = order.Timestamp;
-			
-								// Add the position to the collection
-								var pos = new Position(id, pair, type, rate, volume, volume, ts);
-								Positions[id] = pos;
-								order_ids.Add(id);
+								// Find the currency that this balance is for. If it's not a coin of interest, ignore
+								var coin = Coins.GetOrAdd(b.Key);
+
+								// Update the balance
+								var bal = new Balance(coin, b.Value.HeldForTrades + b.Value.Available, b.Value.Available, 0, b.Value.HeldForTrades, 0);
+								Balance[coin] = bal;
 							}
 						}
-			
-						// Remove any positions that are no longer valid
-						foreach (var id in Positions.Keys.Where(x => !order_ids.Contains(x)).ToArray())
-							Positions.Remove(id);
 					}
-				}
-				#endregion
+					#endregion
+
+					// Process the existing orders
+					#region Current Orders
+					if (existing_orders != null)
+					{
+						var msg = existing_orders.Result;
+				
+						// Update the collection of existing orders
+						var order_ids = new HashSet<ulong>();
+						using (Model.Positions.PreservePosition())
+						{
+							// For each trading pair with active orders
+							foreach (var instr in msg.Where(x => x.Value.Count != 0))
+							{
+								// Get the associated trade pair (add the pair if it doesn't exist)
+								var cp = CurrencyPair.Parse(instr.Key);
+								var pair = Pairs[cp.Base, cp.Quote] ?? Pairs.Add2(new TradePair(Coins.GetOrAdd(cp.Base), Coins.GetOrAdd(cp.Quote), this));
+			
+								// Add each order
+								foreach (var order in instr.Value)
+								{
+									var id = order.OrderId;
+									var type = Misc.TradeType(order.Type);
+									var rate = order.Price._(pair.RateUnits);
+									var volume = order.VolumeBase._(pair.Base);
+									//var remaining = o.Remaining._(sym[0]);
+									var ts = order.Timestamp;
+			
+									// Add the position to the collection
+									var pos = new Position(id, pair, type, rate, volume, volume, ts);
+									Positions[id] = pos;
+									order_ids.Add(id);
+								}
+							}
+			
+							// Remove any positions that are no longer valid
+							foreach (var id in Positions.Keys.Where(x => !order_ids.Contains(x)).ToArray())
+								Positions.Remove(id);
+						}
+					}
+					#endregion
+				});
 
 				Status = EStatus.Connected;
 			}
@@ -225,8 +239,6 @@ namespace CoinFlip
 				Model.Log.Write(ELogLevel.Error, ex, "Poloniex UpdateData() failed");
 				Status = EStatus.Error;
 			}
-	
-			await base.UpdateData();
 		}
 
 		/// <summary>Handle connection to Poloniex</summary>
@@ -238,6 +250,12 @@ namespace CoinFlip
 		/// <summary>Handle market data updates</summary>
 		private void HandleOrdersChanged(object sender, OrderBookChangedEventArgs args)
 		{
+			// This is currently broken on the Poloniex site
+
+			// Don't care about trade history at this point
+			if (args.Update.Type == OrderBookUpdate.EUpdateType.NewTrade)
+				return;
+
 			// Look for the associated pair, ignore if not found
 			var pair = Pairs[args.Pair.Base, args.Pair.Quote];
 			if (pair == null)
@@ -252,31 +270,26 @@ namespace CoinFlip
 			var sign = 0;
 			switch (ty) {
 			default: throw new Exception(string.Format("Unknown order update type: {0}", ty));
-			case EOrderType.Buy:  book = pair.Bid; sign = -1; break;
-			case EOrderType.Sell: book = pair.Ask; sign = +1; break;
+			case EOrderType.Sell: book = pair.Bid; sign = -1; break;
+			case EOrderType.Buy:  book = pair.Ask; sign = +1; break;
 			}
 
 			// Find the position in 'book.Orders' of where the update applies
 			var idx = book.Orders.BinarySearch(x => sign * x.Price.CompareTo(order.Price));
+			if (idx < 0 && ~idx >= book.Orders.Count)
+				return;
 
 			// Apply the update.
 			switch (args.Update.Type)
 			{
 			default: throw new Exception(string.Format("Unknown order book update type: {0}", args.Update.Type));
-			case OrderBookUpdate.EUpdateType.New:
-				{
-					// "New" means insert a new order
-					if (idx < 0)
-						book.Orders.Insert(~idx, order);
-					break;
-				}
 			case OrderBookUpdate.EUpdateType.Modify:
 				{
 					// "Modify" means insert or replace the order with the matching price.
 					if (idx >= 0)
 						book.Orders[idx] = order;
-					else
-						book.Orders.Insert(~idx, order);
+					//else
+					//	book.Orders.Insert(~idx, order);
 					break;
 				}
 			case OrderBookUpdate.EUpdateType.Remove:
@@ -287,6 +300,8 @@ namespace CoinFlip
 					break;
 				}
 			}
+
+			Debug.Assert(pair.AssertOrdersValid());
 		}
 	}
 }

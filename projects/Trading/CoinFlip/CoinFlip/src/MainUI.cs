@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using CoinFlip.Properties;
 using pr.container;
 using pr.extn;
 using pr.gui;
@@ -37,6 +38,7 @@ namespace CoinFlip
 		private ToolStripMenuItem m_menu_file_show_pairs;
 		private ToolStripSeparator toolStripSeparator1;
 		private SplitContainer m_split2;
+		private SplitContainer m_split3;
 		private LogUI m_log;
 		#endregion
 
@@ -187,36 +189,73 @@ namespace CoinFlip
 			#region Exchanges grid
 			{
 				m_grid_exchanges.AutoGenerateColumns = false;
+				m_grid_exchanges.Columns.Add(new DataGridViewImageColumn
+				{
+					Name = nameof(Exchange.Active),
+					HeaderText = "Active",
+					DataPropertyName = nameof(Exchange.Active),
+					AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader,
+					ImageLayout = DataGridViewImageCellLayout.Normal,
+					DefaultCellStyle = new DataGridViewCellStyle{ Padding = new Padding(5) },
+					FillWeight = 0.1f,
+				});
 				m_grid_exchanges.Columns.Add(new DataGridViewTextBoxColumn
 				{
 					Name = nameof(Exchange.Name),
 					HeaderText = "Exchange",
 					DataPropertyName = nameof(Exchange.Name),
+					FillWeight = 1.0f,
 				});
 				m_grid_exchanges.Columns.Add(new DataGridViewTextBoxColumn
 				{
 					Name = nameof(Exchange.Status),
 					HeaderText = "Status",
 					DataPropertyName = nameof(Exchange.Status),
+					FillWeight = 1.0f,
 				});
 				m_grid_exchanges.Columns.Add(new DataGridViewTextBoxColumn
 				{
 					Name = nameof(Exchange.CoinsAvailable),
 					HeaderText = "Coins",
 					DataPropertyName = nameof(Exchange.CoinsAvailable),
+					FillWeight = 0.5f,
 				});
 				m_grid_exchanges.Columns.Add(new DataGridViewTextBoxColumn
 				{
 					Name = nameof(Exchange.PairsAvailable),
 					HeaderText = "Pairs",
 					DataPropertyName = nameof(Exchange.PairsAvailable),
+					FillWeight = 0.5f,
 				});
+				m_grid_exchanges.CellClick += (s,a) =>
+				{
+					if (!m_grid_exchanges.Within(a.ColumnIndex, a.RowIndex, out DataGridViewColumn col)) return;
+					var exch = Model.Exchanges[a.RowIndex];
+
+					switch (col.Name) {
+					case nameof(Exchange.Active):
+						{
+							exch.Active = !exch.Active;
+							break;
+						}
+					}
+				};
 				m_grid_exchanges.CellFormatting += (s,a) =>
 				{
-					if (!a.RowIndex.Within(0, Model.Exchanges.Count)) return;
+					if (!m_grid_exchanges.Within(a.ColumnIndex, a.RowIndex, out DataGridViewColumn col)) return;
 					var exch = Model.Exchanges[a.RowIndex];
+
+					switch (col.Name) {
+					case nameof(Exchange.Active):
+						{
+							a.Value = exch.Active ? Res.Active : Res.Inactive;
+							break;
+						}
+					}
+
 					a.CellStyle.BackColor =
 						exch.Status.HasFlag(EStatus.Error     ) ? Color.Red :
+						exch.Status.HasFlag(EStatus.Stopped   ) ? Color.LightYellow :
 						exch.Status.HasFlag(EStatus.Connected ) ? Color.LightGreen :
 						exch.Status.HasFlag(EStatus.Connecting) ? Color.PaleGoldenrod :
 						exch.Status.HasFlag(EStatus.Offline   ) ? Color.LightGray :
@@ -247,12 +286,18 @@ namespace CoinFlip
 					SortMode = DataGridViewColumnSortMode.Automatic,
 					FillWeight = 0.6f,
 				});
-				m_grid_balances.DataSource = Model.Balances;
 				m_grid_balances.CellFormatting += (s,a) =>
 				{
+					var col = m_grid_balances.Columns[a.ColumnIndex];
+					if (Model.Exchanges.Current is CrossExchange && col.Name == nameof(Balance.Coin))
+					{
+						a.Value = Model.Balances[a.RowIndex].Coin.SymbolWithExchange;
+						a.FormattingApplied = true;
+					}
 					a.CellStyle.SelectionBackColor = a.CellStyle.BackColor.Lerp(Color.Gray, 0.5f);
 					a.CellStyle.SelectionForeColor = a.CellStyle.ForeColor;
 				};
+				m_grid_balances.DataSource = Model.Balances;
 			}
 			#endregion
 
@@ -286,8 +331,16 @@ namespace CoinFlip
 				});
 				m_grid_positions.Columns.Add(new DataGridViewTextBoxColumn
 				{
+					Name = nameof(Position.Rate),
+					HeaderText = "Trade at Rate",
+					DataPropertyName = nameof(Position.Rate),
+					SortMode = DataGridViewColumnSortMode.NotSortable,
+					FillWeight = 1.0f,
+				});
+				m_grid_positions.Columns.Add(new DataGridViewTextBoxColumn
+				{
 					Name = nameof(ColumnNames.LivePrice),
-					HeaderText = "Price",
+					HeaderText = "Live Price",
 					DataPropertyName = nameof(ColumnNames.LivePrice),
 					SortMode = DataGridViewColumnSortMode.NotSortable,
 					FillWeight = 1.0f,
@@ -302,17 +355,17 @@ namespace CoinFlip
 				});
 				m_grid_positions.Columns.Add(new DataGridViewTextBoxColumn
 				{
-					Name = nameof(Position.Rate),
-					HeaderText = "Rate",
-					DataPropertyName = nameof(Position.Rate),
+					Name = nameof(Position.VolumeBase),
+					HeaderText = "Volume (Base)",
+					DataPropertyName = nameof(Position.VolumeBase),
 					SortMode = DataGridViewColumnSortMode.NotSortable,
 					FillWeight = 1.0f,
 				});
 				m_grid_positions.Columns.Add(new DataGridViewTextBoxColumn
 				{
-					Name = nameof(Position.Volume),
-					HeaderText = "Volume",
-					DataPropertyName = nameof(Position.Volume),
+					Name = nameof(Position.VolumeQuote),
+					HeaderText = "Volume (Quote)",
+					DataPropertyName = nameof(Position.VolumeQuote),
 					SortMode = DataGridViewColumnSortMode.NotSortable,
 					FillWeight = 1.0f,
 				});
@@ -333,37 +386,49 @@ namespace CoinFlip
 					{
 					case nameof(Position.TradeType):
 						{
-							a.FormattingApplied = true;
 							a.Value = "{0}→{1} ({2})".Fmt(
 								pos.TradeType == ETradeType.Buy ? pos.Pair.Base : pos.Pair.Quote,
 								pos.TradeType == ETradeType.Buy ? pos.Pair.Quote : pos.Pair.Base,
 								pos.TradeType);
+							a.FormattingApplied = true;
+							break;
+						}
+					case nameof(Position.Rate):
+						{
+							a.Value = "{0:G8}".Fmt((decimal)pos.Rate);
+							a.FormattingApplied = true;
 							break;
 						}
 					case nameof(ColumnNames.LivePrice):
 						{
+							a.Value = "{0:G8}".Fmt((decimal)pos.Pair.CurrentPrice(pos.TradeType));
 							a.FormattingApplied = true;
-							a.Value = pos.Pair.CurrentPrice(pos.TradeType).ToString();
 							break;
 						}
 					case nameof(ColumnNames.PriceDist):
 						{
+							a.Value = "{0:G8}".Fmt(
+								pos.TradeType == ETradeType.Sell ? (decimal)(pos.Rate - pos.Pair.CurrentPrice(ETradeType.Sell)) :
+								pos.TradeType == ETradeType.Buy  ? (decimal)(pos.Pair.CurrentPrice(ETradeType.Buy) - pos.Rate) :
+								0m);
 							a.FormattingApplied = true;
-							a.Value = (
-								pos.TradeType == ETradeType.Sell ? (pos.Rate - pos.Pair.CurrentPrice(ETradeType.Sell)) :
-								pos.TradeType == ETradeType.Buy  ? (pos.Pair.CurrentPrice(ETradeType.Buy) - pos.Rate) :
-								0m._()).ToString();
 							break;
 						}
-					case nameof(Position.Volume):
+					case nameof(Position.VolumeBase):
 						{
+							a.Value = "{0:G8} {1}".Fmt((decimal)pos.VolumeBase, pos.Pair.Base);
 							a.FormattingApplied = true;
-							a.Value = "{0} {1}".Fmt(pos.Volume, pos.Pair.Base);
+							break;
+						}
+					case nameof(Position.VolumeQuote):
+						{
+							a.Value = "{0:G8} {1}".Fmt((decimal)pos.VolumeQuote, pos.Pair.Quote);
+							a.FormattingApplied = true;
 							break;
 						}
 					case nameof(Position.Remaining):
 						{
-							a.Value = "{0} {1}".Fmt(pos.Remaining, pos.Pair.Base);
+							a.Value = "{0:G8} {1}".Fmt((decimal)pos.Remaining, pos.Pair.Base);
 							a.FormattingApplied = true;
 							break;
 						}
@@ -444,12 +509,18 @@ namespace CoinFlip
 			public const string LivePrice = "LivePrice";
 			public const string PriceDist = "PriceDist";
 		}
+		private static class Res
+		{
+			public static readonly Image Active   = new Bitmap(Resources.active, new Size(28,28));
+			public static readonly Image Inactive = new Bitmap(Resources.inactive, new Size(28,28));
+		}
+
 		#region Windows Form Designer generated code
 		private System.ComponentModel.IContainer components = null;
 		private void InitializeComponent()
 		{
-			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
 			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
+			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
 			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle3 = new System.Windows.Forms.DataGridViewCellStyle();
 			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle4 = new System.Windows.Forms.DataGridViewCellStyle();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainUI));
@@ -475,6 +546,7 @@ namespace CoinFlip
 			this.m_menu_file_test = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_sep0 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_exit = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_split3 = new System.Windows.Forms.SplitContainer();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.ContentPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
@@ -498,6 +570,10 @@ namespace CoinFlip
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_balances)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_positions)).BeginInit();
 			this.m_menu.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.m_split3)).BeginInit();
+			this.m_split3.Panel1.SuspendLayout();
+			this.m_split3.Panel2.SuspendLayout();
+			this.m_split3.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// m_chk_run
@@ -506,9 +582,9 @@ namespace CoinFlip
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_chk_run.Appearance = System.Windows.Forms.Appearance.Button;
-			this.m_chk_run.Location = new System.Drawing.Point(595, 3);
+			this.m_chk_run.Location = new System.Drawing.Point(422, 3);
 			this.m_chk_run.Name = "m_chk_run";
-			this.m_chk_run.Size = new System.Drawing.Size(60, 63);
+			this.m_chk_run.Size = new System.Drawing.Size(65, 63);
 			this.m_chk_run.TabIndex = 1;
 			this.m_chk_run.Text = "Start";
 			this.m_chk_run.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -565,7 +641,7 @@ namespace CoinFlip
 			// 
 			// m_split0.Panel1
 			// 
-			this.m_split0.Panel1.Controls.Add(this.m_table0);
+			this.m_split0.Panel1.Controls.Add(this.m_split3);
 			// 
 			// m_split0.Panel2
 			// 
@@ -576,14 +652,13 @@ namespace CoinFlip
 			// 
 			// m_table0
 			// 
-			this.m_table0.ColumnCount = 3;
-			this.m_table0.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 25F));
-			this.m_table0.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 75F));
-			this.m_table0.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 66F));
-			this.m_table0.Controls.Add(this.m_chk_allow_trades, 0, 1);
-			this.m_table0.Controls.Add(this.m_grid_exchanges, 1, 0);
-			this.m_table0.Controls.Add(this.m_chk_run, 2, 0);
-			this.m_table0.Controls.Add(this.m_grid_coins, 0, 0);
+			this.m_table0.ColumnCount = 2;
+			this.m_table0.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+			this.m_table0.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 71F));
+			this.m_table0.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 20F));
+			this.m_table0.Controls.Add(this.m_grid_exchanges, 0, 0);
+			this.m_table0.Controls.Add(this.m_chk_run, 1, 0);
+			this.m_table0.Controls.Add(this.m_chk_allow_trades, 1, 1);
 			this.m_table0.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_table0.Location = new System.Drawing.Point(0, 0);
 			this.m_table0.Margin = new System.Windows.Forms.Padding(0);
@@ -591,7 +666,7 @@ namespace CoinFlip
 			this.m_table0.RowCount = 2;
 			this.m_table0.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
 			this.m_table0.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
-			this.m_table0.Size = new System.Drawing.Size(658, 138);
+			this.m_table0.Size = new System.Drawing.Size(490, 138);
 			this.m_table0.TabIndex = 1;
 			// 
 			// m_chk_allow_trades
@@ -600,9 +675,9 @@ namespace CoinFlip
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_chk_allow_trades.Appearance = System.Windows.Forms.Appearance.Button;
-			this.m_chk_allow_trades.Location = new System.Drawing.Point(595, 72);
+			this.m_chk_allow_trades.Location = new System.Drawing.Point(422, 72);
 			this.m_chk_allow_trades.Name = "m_chk_allow_trades";
-			this.m_chk_allow_trades.Size = new System.Drawing.Size(60, 63);
+			this.m_chk_allow_trades.Size = new System.Drawing.Size(65, 63);
 			this.m_chk_allow_trades.TabIndex = 3;
 			this.m_chk_allow_trades.Text = "Enable Trading";
 			this.m_chk_allow_trades.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -619,24 +694,24 @@ namespace CoinFlip
 			this.m_grid_exchanges.BackgroundColor = System.Drawing.SystemColors.Window;
 			this.m_grid_exchanges.CellBorderStyle = System.Windows.Forms.DataGridViewCellBorderStyle.None;
 			this.m_grid_exchanges.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-			dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-			dataGridViewCellStyle1.BackColor = System.Drawing.SystemColors.Window;
-			dataGridViewCellStyle1.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-			dataGridViewCellStyle1.ForeColor = System.Drawing.SystemColors.ControlText;
-			dataGridViewCellStyle1.SelectionBackColor = System.Drawing.SystemColors.Highlight;
-			dataGridViewCellStyle1.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
-			dataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
-			this.m_grid_exchanges.DefaultCellStyle = dataGridViewCellStyle1;
+			dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+			dataGridViewCellStyle2.BackColor = System.Drawing.SystemColors.Window;
+			dataGridViewCellStyle2.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+			dataGridViewCellStyle2.ForeColor = System.Drawing.SystemColors.ControlText;
+			dataGridViewCellStyle2.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+			dataGridViewCellStyle2.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
+			dataGridViewCellStyle2.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+			this.m_grid_exchanges.DefaultCellStyle = dataGridViewCellStyle2;
 			this.m_grid_exchanges.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_grid_exchanges.EditMode = System.Windows.Forms.DataGridViewEditMode.EditProgrammatically;
-			this.m_grid_exchanges.Location = new System.Drawing.Point(148, 0);
+			this.m_grid_exchanges.Location = new System.Drawing.Point(0, 0);
 			this.m_grid_exchanges.Margin = new System.Windows.Forms.Padding(0);
 			this.m_grid_exchanges.Name = "m_grid_exchanges";
 			this.m_grid_exchanges.ReadOnly = true;
 			this.m_grid_exchanges.RowHeadersVisible = false;
 			this.m_table0.SetRowSpan(this.m_grid_exchanges, 2);
 			this.m_grid_exchanges.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_exchanges.Size = new System.Drawing.Size(444, 138);
+			this.m_grid_exchanges.Size = new System.Drawing.Size(419, 138);
 			this.m_grid_exchanges.TabIndex = 0;
 			// 
 			// m_grid_coins
@@ -650,23 +725,22 @@ namespace CoinFlip
 			this.m_grid_coins.BackgroundColor = System.Drawing.SystemColors.Window;
 			this.m_grid_coins.CellBorderStyle = System.Windows.Forms.DataGridViewCellBorderStyle.None;
 			this.m_grid_coins.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-			dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-			dataGridViewCellStyle2.BackColor = System.Drawing.SystemColors.Window;
-			dataGridViewCellStyle2.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-			dataGridViewCellStyle2.ForeColor = System.Drawing.SystemColors.ControlText;
-			dataGridViewCellStyle2.SelectionBackColor = System.Drawing.SystemColors.Highlight;
-			dataGridViewCellStyle2.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
-			dataGridViewCellStyle2.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
-			this.m_grid_coins.DefaultCellStyle = dataGridViewCellStyle2;
+			dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+			dataGridViewCellStyle1.BackColor = System.Drawing.SystemColors.Window;
+			dataGridViewCellStyle1.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+			dataGridViewCellStyle1.ForeColor = System.Drawing.SystemColors.ControlText;
+			dataGridViewCellStyle1.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+			dataGridViewCellStyle1.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
+			dataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+			this.m_grid_coins.DefaultCellStyle = dataGridViewCellStyle1;
 			this.m_grid_coins.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_grid_coins.Location = new System.Drawing.Point(0, 0);
 			this.m_grid_coins.Margin = new System.Windows.Forms.Padding(0);
 			this.m_grid_coins.Name = "m_grid_coins";
 			this.m_grid_coins.ReadOnly = true;
 			this.m_grid_coins.RowHeadersVisible = false;
-			this.m_table0.SetRowSpan(this.m_grid_coins, 2);
 			this.m_grid_coins.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_coins.Size = new System.Drawing.Size(148, 138);
+			this.m_grid_coins.Size = new System.Drawing.Size(164, 138);
 			this.m_grid_coins.TabIndex = 2;
 			// 
 			// m_split1
@@ -834,6 +908,24 @@ namespace CoinFlip
 			this.m_menu_file_exit.Size = new System.Drawing.Size(138, 22);
 			this.m_menu_file_exit.Text = "E&xit";
 			// 
+			// m_split3
+			// 
+			this.m_split3.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_split3.Location = new System.Drawing.Point(0, 0);
+			this.m_split3.Margin = new System.Windows.Forms.Padding(0);
+			this.m_split3.Name = "m_split3";
+			// 
+			// m_split3.Panel1
+			// 
+			this.m_split3.Panel1.Controls.Add(this.m_grid_coins);
+			// 
+			// m_split3.Panel2
+			// 
+			this.m_split3.Panel2.Controls.Add(this.m_table0);
+			this.m_split3.Size = new System.Drawing.Size(658, 138);
+			this.m_split3.SplitterDistance = 164;
+			this.m_split3.TabIndex = 2;
+			// 
 			// MainUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -872,6 +964,10 @@ namespace CoinFlip
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_positions)).EndInit();
 			this.m_menu.ResumeLayout(false);
 			this.m_menu.PerformLayout();
+			this.m_split3.Panel1.ResumeLayout(false);
+			this.m_split3.Panel2.ResumeLayout(false);
+			((System.ComponentModel.ISupportInitialize)(this.m_split3)).EndInit();
+			this.m_split3.ResumeLayout(false);
 			this.ResumeLayout(false);
 
 		}

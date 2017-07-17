@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using pr.container;
 using pr.extn;
+using pr.maths;
 using pr.util;
 
 namespace CoinFlip
@@ -52,6 +53,24 @@ namespace CoinFlip
 		public Order this[int index]
 		{
 			get { return Orders[index]; }
+		}
+
+		/// <summary>Remove orders up to 'price' or 'volume' (simulating them being filled)</summary>
+		public void RemoveOrders(Unit<decimal> volume, Unit<decimal> price)
+		{
+			var count = 0;
+			foreach (var order in Orders)
+			{
+				if (order.Price > price) break;
+				if (order.VolumeBase > volume) break;
+				volume -= order.VolumeBase;
+				++count;
+			}
+
+			// Remove the orders that have been filled and reduce that 
+			Orders.RemoveRange(0, count);
+			if (volume != 0m._(volume) && Orders.Count != 0 && Orders[0].Price <= price)
+				Orders[0] = new Order(Orders[0].Price, Orders[0].VolumeBase - volume);
 		}
 
 		/// <summary>Enumerable Orders</summary>

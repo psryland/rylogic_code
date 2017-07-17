@@ -71,8 +71,18 @@ namespace Poloniex.API
 			return await PostData<List<Order>>("returnOpenOrders", new KV("currencyPair", pair.Id));
 		}
 
+		/// <summary>Cancel an order</summary>
+		public async Task<bool> CancelTrade(CurrencyPair pair, ulong order_id)
+		{
+			var res = await PostData<JObject>("cancelOrder",
+				new KV("currencyPair", pair.Id),
+				new KV("orderNumber", order_id));
+
+			return res.Value<byte>("success") == 1;
+		}
+
 		/// <summary>Create an order to buy/sell. Returns a unique order ID</summary>
-		public async Task<ulong> CreateOrder(CurrencyPair pair, EOrderType type, decimal price_per_coin, decimal volume_quote)
+		public async Task<ulong> SubmitTrade(CurrencyPair pair, EOrderType type, decimal price_per_coin, decimal volume_quote)
 		{
 			var res = await PostData<JObject>(Misc.ToString(type),
 				new KV("currencyPair", pair.Id),
@@ -80,16 +90,6 @@ namespace Poloniex.API
 				new KV("amount", volume_quote));
 
 			return res.Value<ulong>("orderNumber");
-		}
-
-		/// <summary>Cancel an order</summary>
-		public async Task<bool> CancelOrder(CurrencyPair pair, ulong order_id)
-		{
-			var res = await PostData<JObject>("cancelOrder",
-				new KV("currencyPair", pair.Id),
-				new KV("orderNumber", order_id));
-
-			return res.Value<byte>("success") == 1;
 		}
 
 		/// <summary>Helper for POSTs</summary>
@@ -120,18 +120,20 @@ namespace Poloniex.API
 
 					// Submit the request
 					var response = m_client.PostAsync(m_client.BaseAddress, content).Result;
+					if (!response.IsSuccessStatusCode)
+						throw new Exception(response.ReasonPhrase);
 
 					// Interpret the reply
 					var reply = response.Content.ReadAsStringAsync().Result;
-					using (var tr = new JsonTextReader(new StringReader(reply)))
+					try
 					{
-						var obj = m_json.Deserialize<JObject>(tr);
-						if (obj["error"]
-						obj.ToObject<T>()
-						if (!response.IsSuccessStatusCode)
-							throw new Exception(m_json.Deserialize<ErrorResult>(tr).Message);
-						else
+						using (var tr = new JsonTextReader(new StringReader(reply)))
 							return m_json.Deserialize<T>(tr);
+					}
+					catch
+					{
+						using (var tr = new JsonTextReader(new StringReader(reply)))
+							throw new Exception(m_json.Deserialize<ErrorResult>(tr).Message);
 					}
 				}
 			});

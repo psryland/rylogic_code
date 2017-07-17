@@ -8,13 +8,7 @@ namespace CoinFlip
 	{
 		public TestExchange(Model model)
 			:base(model, 0.002m, 0)
-		{}
-
-		/// <summary>Open the connection to the exchange and gather data</summary>
-		public override void Start()
 		{
-			Status = EStatus.Connected;
-
 			// Create the coins
 			Coins.Add(new Coin("BTC", this));
 			Coins.Add(new Coin("LTC", this));
@@ -73,14 +67,11 @@ namespace CoinFlip
 			// Set the balances
 			#region Balance
 			{
-				Balance["LTC"] = new Balance(Coins["LTC"], 1m, 1m, 0m, 0m, 0m);
-				Balance["BTC"] = new Balance(Coins["BTC"], 1m, 1m, 0m, 0m, 0m);
-				Balance["ETC"] = new Balance(Coins["ETC"], 1m, 1m, 0m, 0m, 0m);
+				Balance[Coins["LTC"]] = new Balance(Coins["LTC"], 1m, 1m, 0m, 0m, 0m);
+				Balance[Coins["BTC"]] = new Balance(Coins["BTC"], 1m, 1m, 0m, 0m, 0m);
+				Balance[Coins["ETC"]] = new Balance(Coins["ETC"], 1m, 1m, 0m, 0m, 0m);
 			}
 			#endregion
-
-			// Add the interesting pairs to the model
-			AddPairsToModel();
 		}
 
 		/// <summary>Open a trade</summary>

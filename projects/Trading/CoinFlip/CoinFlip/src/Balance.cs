@@ -36,5 +36,12 @@ namespace CoinFlip
 
 		/// <summary>Amount pending withdraw from the account</summary>
 		public Unit<decimal> PendingWithdraw { [DebuggerStepThrough] get; private set; }
+
+		/// <summary>Place 'volume' into holding</summary>
+		public void Hold(Unit<decimal> volume)
+		{
+			HeldForTrades += volume;
+			Available -= volume;
+		}
 	}
 }

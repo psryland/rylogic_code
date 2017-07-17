@@ -10,16 +10,16 @@ namespace CoinFlip
 	[DebuggerDisplay("{CoinsString(Direction)}")]
 	public class Loop
 	{
-		public Loop(TradePair pair, int index)
+		public Loop(TradePair pair)
 		{
 			Pairs = new List<TradePair>();
 			Coins = new List<Coin>();
+			Insufficient = new List<InsufficientCoin>();
 			Rate = null;
 			TradeScale = 1m;
 			TradeVolume = 0m._();
 			Direction = 0;
-			Profitability = 0;
-			LastPairIndex = index;
+			ProfitRatio = 0;
 
 			Pairs.Add(pair);
 			Coins.Add(pair.Base);
@@ -27,21 +27,21 @@ namespace CoinFlip
 		}
 		public Loop(Loop rhs)
 		{
-			Pairs         = rhs.Pairs.ToList();
-			Coins         = rhs.Coins.ToList();
-			Rate          = rhs.Rate;
-			TradeScale    = rhs.TradeScale;
-			TradeVolume   = rhs.TradeVolume;
-			Direction     = rhs.Direction;
-			Profitability = rhs.Profitability;
-			LastPairIndex = rhs.LastPairIndex;
+			Pairs        = rhs.Pairs.ToList();
+			Coins        = rhs.Coins.ToList();
+			Insufficient = rhs.Insufficient.ToList();
+			Rate         = rhs.Rate;
+			TradeScale   = rhs.TradeScale;
+			TradeVolume  = rhs.TradeVolume;
+			Direction    = rhs.Direction;
+			ProfitRatio  = rhs.ProfitRatio;
 		}
 		public Loop(Loop loop, OrderBook rate, int direction, decimal profitability)
 			:this(loop)
 		{
 			Rate = rate;
 			Direction = direction;
-			Profitability = profitability;
+			ProfitRatio = profitability;
 		}
 
 		/// <summary>An ordered sequence of trading pairs</summary>
@@ -82,14 +82,27 @@ namespace CoinFlip
 		/// <summary>The direction to go around the loop</summary>
 		public int Direction { get; private set; }
 
-		/// <summary>The volume weighted profitability of this loop</summary>
-		public decimal Profitability { get; set; }
+		/// <summary>The gain in volume of this loop</summary>
+		public Unit<decimal> Profit { get; set; }
 
-		/// <summary>The index of the last pair added to 'Pairs'. (Note, not the index of Pairs.Back() because the collection is ordered)</summary>
-		internal int LastPairIndex
+		/// <summary>The profitability of this loop as a ratio (volume final / volume initial)</summary>
+		public decimal ProfitRatio { get; set; }
+
+		/// <summary>The currencies that are preventing the loop executing</summary>
+		public List<InsufficientCoin> Insufficient { get; set; }
+		public class InsufficientCoin
 		{
-			get;
-			set;
+			public InsufficientCoin(Coin coin, Unit<decimal> required)
+			{
+				Coin = coin;
+				Required = required;
+			}
+
+			/// <summary>The coin that there isn't enough of if the TradeScale is 0</summary>
+			public Coin Coin { get; set; }
+
+			/// <summary>The volume that would be required to execute the loop</summary>
+			public Unit<decimal> Required { get; set; }
 		}
 
 		/// <summary>Enumerate the coins forward or backward around the loop</summary>
@@ -125,5 +138,45 @@ namespace CoinFlip
 		{
 			return string.Join("→", EnumCoins(direction).Select(x => x.Symbol).Concat(Beg.Symbol));
 		}
+
+		#region Equals
+		public bool Equals(Loop rhs)
+		{
+			if (rhs == null) return false;
+			if (ReferenceEquals(this, rhs)) return true;
+			if (Coins.Count != rhs.Coins.Count) return false;
+			Debug.Assert(Coins.Count >= 2);
+
+			// If the loops are equal, rhs should have the same coins
+			var ofs = rhs.Coins.IndexOf(Coins[0]);
+			if (ofs == -1)
+				return false;
+
+			// Two Loops are equal if they cycle through the
+			// same sequence of coins (in either direction).
+			int i,count = Coins.Count;
+			for (i = 1; i != count; ++i)
+			{
+				if (Coins[i] == rhs.Coins[(i + ofs) % count]) continue;
+				break;
+			}
+			if (i == count) return true;
+			for (i = 1; i != count; ++i)
+			{
+				if (Coins[count-i] == rhs.Coins[(i + ofs) % count]) continue;
+				break;
+			}
+			if (i == count) return true;
+			return false;
+		}
+		public override bool Equals(object obj)
+		{
+			return Equals(obj as Loop);
+		}
+		public override int GetHashCode()
+		{
+			return new { Coins, Pairs }.GetHashCode();
+		}
+		#endregion
 	}
 }
