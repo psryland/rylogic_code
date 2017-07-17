@@ -12,6 +12,7 @@ using System.Globalization;
 using System.Linq;
 using pr.extn;
 using pr.maths;
+using pr.util;
 
 namespace pr.common
 {
@@ -380,16 +381,16 @@ namespace pr.common
 		/// <summary>Grow the bounds of this range to include 'value'</summary>
 		public void Encompass(double value)
 		{
-			Beg = Math.Min(Beg , value);
-			End   = Math.Max(End   , value);
+			Beg = Math.Min(Beg, value);
+			End = Math.Max(End, value);
 		}
 
 		/// <summary>Grow the bounds of this range to include 'range'</summary>
 		public void Encompass(RangeF rng)
 		{
 			Debug.Assert(rng.Size >= 0.0, "'rng' is inside out");
-			Beg = Math.Min(Beg ,rng.Beg);
-			End   = Math.Max(End   ,rng.End  );
+			Beg = Math.Min(Beg, rng.Beg);
+			End = Math.Max(End, rng.End);
 		}
 
 		/// <summary>Returns a range inflated (i.e. multiplied) by 'scale'. Begin and End are changed, the mid point of the range is unchanged</summary>
@@ -483,7 +484,7 @@ namespace pr.common
 		}
 		public override int GetHashCode()
 		{
-			unchecked { return (Beg.GetHashCode()*397) ^ End.GetHashCode(); }
+			return new { Beg, End }.GetHashCode();
 		}
 		#endregion
 
@@ -498,6 +499,236 @@ namespace pr.common
 			if (v.Length != 2) throw new FormatException("RangeF.Parse() string argument does not represent a 2 component range");
 			return new RangeF(v[0], v[1]);
 		}
+
+		#endregion
+	}
+
+	/// <summary>A floating point range over [Begin,End) on type 'T'</summary>
+	[DebuggerDisplay("{Beg} {End} ({Size})")]
+	public struct RangeF<T> where T:IComparable<T>
+	{
+		/// <summary>The value of the first element in the range</summary>
+		public T Beg;
+
+		/// <summary>The value of one past the last element in the range</summary>
+		public T End;
+
+		/// <summary>The default empty range</summary>
+		public static readonly RangeF<T> Zero = new RangeF<T>{Beg = default(T), End = default(T)};
+
+		/// <summary>An invalid range. Used as an initialiser when finding a bounding range</summary>
+		public static readonly RangeF<T> Invalid = new RangeF<T>{Beg = Operators<T>.MaxValue, End = Operators<T>.MinValue};
+
+		/// <summary>Create a range from a Start and Length</summary>
+		public static RangeF<T> FromStartLength(T start, T length)
+		{
+			return new RangeF<T>(start, Operators<T>.Add(start, length));
+		}
+
+		/// <summary>Create a range from a centre value and + or - a radius</summary>
+		public static RangeF<T> FromCentreRadius(T centre, T radius)
+		{
+			return new RangeF<T>(Operators<T>.Sub(centre, radius), Operators<T>.Add(centre, radius));
+		}
+
+		/// <summary>Construct from a range</summary>
+		public RangeF(T begin, T end)
+		{
+			Beg = begin;
+			End = end;
+		}
+
+		/// <summary>True if the range spans zero elements</summary>
+		public bool Empty
+		{
+			get { return Equals(Beg,End); }
+		}
+
+		/// <summary>Get/Set the number of elements in the range. Setting changes 'End' only</summary>
+		public T Size
+		{
+			get { return Operators<T>.Sub(End, Beg); }
+			set { End = Operators<T>.Add(Beg, value); }
+		}
+
+		/// <summary>Get/Set the middle of the range. Setting the middle point does not change 'Size', i.e. 'Begin' and 'End' are both potentially moved</summary>
+		public T Mid
+		{
+			get { return Operators<T,double>.Mul(Operators<T>.Add(Beg, End), 0.5); }
+			set
+			{
+				var hsize = Operators<T,double>.Mul(Size, 0.5);
+				Beg = Operators<T>.Sub(value, hsize);
+				End = Operators<T>.Add(value, hsize);
+			}
+		}
+
+		/// <summary>Empty the range and reset to [0,0)</summary>
+		public void Clear()
+		{
+			Beg = End = default(T);
+		}
+
+	//	// Casting helpers
+	//	public float Begf  { get { return (float)Beg;  } }
+	//	public float Endf  { get { return (float)End;  } }
+	//	public float Sizef { get { return (float)Size; } }
+	//	public float Midf  { get { return (float)Mid;  } }
+
+	//	/// <summary>Enumerator for iterating over the range. 'step' is the step size, 'count' is the number of divisions. Use one or the other, not both. Defaults to step == 1.0</summary>
+	//	public IEnumerable<T> Enumerate(T? step = null, T? count = null)
+	//	{
+	//		var d = 1.0;
+	//		if (step  != null) d = step.Value;
+	//		if (count != null) d = Size / count.Value;
+	//		for (var i = Beg; i <= End; i += d)
+	//			yield return i;
+	//	}
+	//	public IEnumerable<float> Enumeratef(float? step = null, float? count = null)
+	//	{
+	//		return Enumerate(step, count).Select(x => (float)x);
+	//	}
+
+		/// <summary>Returns true if 'value' is within the range [Begin,End) (i.e. end exclusive)</summary>
+		[Pure] public bool Contains(T value)
+		{
+			return Beg.CompareTo(value) <= 0 && value.CompareTo(End) < 0;
+		}
+
+		/// <summary>Returns true if 'value' is within the range [Begin,End] (i.e. end inclusive)</summary>
+		[Pure] public bool ContainsInclusive(T value)
+		{
+			return Beg.CompareTo(value) <= 0 && value.CompareTo(End) <= 0;
+		}
+
+		/// <summary>Returns true if 'rng' is entirely within this range</summary>
+		[Pure] public bool Contains(RangeF<T> rng)
+		{
+			Debug.Assert(Size.CompareTo(default(T)) >= 0, "this range is inside out");
+			Debug.Assert(rng.Size.CompareTo(default(T)) >= 0, "'rng' is inside out");
+			return Beg.CompareTo(rng.Beg) <= 0 && rng.End.CompareTo(End) <= 0;
+		}
+
+		/// <summary>Grow the bounds of this range to include 'value'</summary>
+		public void Encompass(T value)
+		{
+			Beg = Maths.Min(Beg, value);
+			End = Maths.Max(End, value);
+		}
+
+		/// <summary>Grow the bounds of this range to include 'range'</summary>
+		public void Encompass(RangeF<T> rng)
+		{
+			Debug.Assert(rng.Size.CompareTo(default(T)) >= 0, "'rng' is inside out");
+			Beg = Maths.Min(Beg, rng.Beg);
+			End = Maths.Max(End, rng.End);
+		}
+
+		/// <summary>Returns a range inflated (i.e. multiplied) by 'scale'. Begin and End are changed, the mid point of the range is unchanged</summary>
+	//	public RangeF<T> Inflate(double scale)
+	//	{
+	//		return new RangeF(Beg, Beg + Size*scale){Mid = Mid};
+	//	}
+
+		/// <summary>
+		/// Returns a range that is the union of this range with 'rng'
+		/// (basically the same as 'Encompass' except this range isn't modified.</summary>
+		public RangeF<T> Union(RangeF<T> rng)
+		{
+			Debug.Assert(Size.CompareTo(default(T)) >= 0, "this range is inside out");
+			Debug.Assert(rng.Size.CompareTo(default(T)) >= 0, "'rng' is inside out");
+			return new RangeF<T>(Maths.Min(Beg, rng.Beg), Maths.Max(End, rng.End));
+		}
+
+		/// <summary>
+		/// Returns the intersection of this range with 'rng'.
+		/// If there is no intersection, returns [b,b) or [e,e). Note: this means
+		/// A.Intersect(B) != B.Intersect(A)</summary>
+		public RangeF<T> Intersect(RangeF<T> rng)
+		{
+			Debug.Assert(Size.CompareTo(default(T)) >= 0, "this range is inside out");
+			Debug.Assert(rng.Size.CompareTo(default(T)) >= 0, "'rng' is inside out");
+			if (rng.End.CompareTo(Beg) <= 0) return new RangeF<T>(Beg, Beg);
+			if (rng.Beg.CompareTo(End) >= 0) return new RangeF<T>(End, End);
+			return new RangeF<T>(Maths.Max(Beg, rng.Beg), Maths.Min(End, rng.End));
+		}
+
+		/// <summary>Move the range by an offset</summary>
+		public RangeF<T> Shift(T ofs)
+		{
+			return new RangeF<T>(Operators<T>.Add(Beg, ofs), Operators<T>.Add(End, ofs));
+		}
+
+		/// <summary>Returns 'x' clamped by 'range'</summary>
+		public static RangeF<T> Clamp(RangeF<T> x, RangeF<T> range)
+		{
+			return new RangeF<T>(
+				Maths.Clamp(x.Beg, range.Beg, range.End),
+				Maths.Clamp(x.End, range.Beg, range.End));
+		}
+
+		/// <summary>Returns 'x' constrained by 'range'. i.e 'x' will be fitted within 'range' and only resized if x.Size > range.Size</summary>
+		public static RangeF<T> Constrain(RangeF<T> x, RangeF<T> range)
+		{
+			if (x.Beg.CompareTo(range.Beg) < 0) x = x.Shift(Operators<T>.Sub(range.Beg, x.Beg));
+			if (x.End.CompareTo(range.End) > 0) x = x.Shift(Operators<T>.Sub(range.End, x.End));
+			if (x.Beg.CompareTo(range.Beg) < 0) x.Beg = range.Beg;
+			return x;
+		}
+
+		/// <summary>String representation of the range</summary>
+		public override string ToString()
+		{
+			return "[{0},{1})".Fmt(Beg,End);
+		}
+
+	//	/// <summary>Allow implicit cast from 'Range'</summary>
+	//	public static implicit operator RangeF<T>(Range<T> r)
+	//	{
+	//		return new RangeF<T>(r.Beg, r.End);
+	//	}
+
+	//	/// <summary>Allow explicit cast to 'Range<U>'</summary>
+	//	public static explicit operator Range<U>(RangeF<T> r)
+	//	{
+	//		return new Range<T>((U)r.Beg, (U)r.End);
+	//	}
+
+		#region Equals
+		public static bool operator == (RangeF<T> lhs, RangeF<T> rhs)
+		{
+			return lhs.Equals(rhs);
+		}
+		public static bool operator != (RangeF<T> lhs, RangeF<T> rhs)
+		{
+			return !(lhs == rhs);
+		}
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			return obj is RangeF<T> r && Equals(r);
+		}
+		public bool Equals(RangeF<T> rhs)
+		{
+			return Equals(Beg, rhs.Beg) && Equals(End, rhs.End);
+		}
+		public override int GetHashCode()
+		{
+			return new { Beg, End }.GetHashCode();
+		}
+		#endregion
+
+		#region Parse
+
+		/// <summary>
+		/// Convert a string to a range
+		/// Examples: '1 2' '[1:2)' '-1,+1' '[-1,+1]' </summary>
+	//	public static RangeF<T> Parse(string s)
+	//	{
+	//		var v = double_.ParseArray(s, NumberStyles.Float, new[] { " ","\t",",",";",":","[","]","(",")" }, StringSplitOptions.RemoveEmptyEntries);
+	//		if (v.Length != 2) throw new FormatException("RangeF.Parse() string argument does not represent a 2 component range");
+	//		return new RangeF<T>(v[0], v[1]);
+	//	}
 
 		#endregion
 	}
@@ -605,6 +836,51 @@ namespace pr.unittests
 			Assert.AreEqual( 7.0, r.End);
 			Assert.AreEqual( 1.0, r3.Beg);
 			Assert.AreEqual( 7.0, r3.End);
+		}
+		[Test] public void IntersectFGen()
+		{
+			var a = new RangeF<decimal>(-4.0m, -1.0m);
+			var b = new RangeF<decimal>(-1.0m,  3.0m);
+			var c = new RangeF<decimal>( 0.0m,  5.0m);
+			var d = new RangeF<decimal>( 7.0m, 12.0m);
+
+			// Intersect
+			Assert.AreEqual(a                    , a.Intersect(a));
+			Assert.AreEqual(new RangeF<decimal>(-1.0m,-1.0m), a.Intersect(b));
+			Assert.AreEqual(new RangeF<decimal>(-1.0m,-1.0m), a.Intersect(c));
+			Assert.AreEqual(new RangeF<decimal>(-1.0m,-1.0m), b.Intersect(a));
+			Assert.AreEqual(new RangeF<decimal>( 0.0m, 3.0m), b.Intersect(c));
+			Assert.AreEqual(new RangeF<decimal>( 3.0m, 3.0m), b.Intersect(d));
+			Assert.AreEqual(new RangeF<decimal>( 0.0m, 0.0m), c.Intersect(a));
+			Assert.AreEqual(new RangeF<decimal>( 0.0m, 3.0m), c.Intersect(b));
+			Assert.AreEqual(new RangeF<decimal>( 5.0m, 5.0m), c.Intersect(d));
+		}
+		[Test] public void EncompassFGen()
+		{
+			var r = RangeF<decimal>.Invalid;
+			r.Encompass(4);
+			Assert.AreEqual(4.0m, r.Beg);
+			Assert.AreEqual(4.0m, r.End);
+
+			r.Encompass(-2);
+			Assert.AreEqual(-2.0m, r.Beg);
+			Assert.AreEqual( 4.0m, r.End);
+
+			r.Encompass(new RangeF<decimal>(1m,7m));
+			Assert.AreEqual(-2.0m, r.Beg);
+			Assert.AreEqual( 7.0m, r.End);
+
+			var r2 = r.Union(new RangeF<decimal>(-3,2));
+			Assert.AreEqual(-2.0m, r.Beg);
+			Assert.AreEqual( 7.0m, r.End);
+			Assert.AreEqual(-3.0m, r2.Beg);
+			Assert.AreEqual( 7.0m, r2.End);
+
+			var r3 = r.Intersect(new RangeF<decimal>(1,10));
+			Assert.AreEqual(-2.0m, r.Beg);
+			Assert.AreEqual( 7.0m, r.End);
+			Assert.AreEqual( 1.0m, r3.Beg);
+			Assert.AreEqual( 7.0m, r3.End);
 		}
 	}
 }

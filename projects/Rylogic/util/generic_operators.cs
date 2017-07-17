@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace pr.util
 {
@@ -11,6 +12,30 @@ namespace pr.util
 		//  signatures for 'Plus', 'Neg' are not the same as for types >= 'int' (i.e. +(byte)1 returns an int)
 		static Operators()
 		{
+			#region MaxValue
+			{
+				var mi = typeof(T).GetProperty("MaxValue", BindingFlags.Public|BindingFlags.Static|BindingFlags.FlattenHierarchy)?.GetGetMethod();
+				var fi = typeof(T).GetField("MaxValue", BindingFlags.Public|BindingFlags.Static|BindingFlags.FlattenHierarchy);
+				if (mi != null)
+					m_max_value = () => (T)mi.Invoke(null, null);
+				else if (fi != null)
+					m_max_value = () => (T)fi.GetValue(null);
+				else
+					m_max_value = () => { throw new Exception($"Type {typeof(T).Name} has no static property or field named 'MaxValue'"); };
+			}
+			#endregion
+			#region MinValue
+			{
+				var mi = typeof(T).GetProperty("MinValue", BindingFlags.Public|BindingFlags.Static|BindingFlags.FlattenHierarchy)?.GetGetMethod();
+				var fi = typeof(T).GetField("MinValue", BindingFlags.Public|BindingFlags.Static|BindingFlags.FlattenHierarchy);
+				if (mi != null)
+					m_min_value = () => (T)mi.Invoke(null, null);
+				else if (fi != null)
+					m_min_value = () => (T)fi.GetValue(null);
+				else
+					m_min_value = () => { throw new Exception($"Type {typeof(T).Name} has no static property or field named 'MinValue'"); };
+			}
+			#endregion
 			#region Plus
 			{
 				var paramA = Expression.Parameter(typeof(T), "a");
@@ -91,6 +116,14 @@ namespace pr.util
 			#endregion
 		}
 
+		/// <summary>Return the maximum value</summary>
+		public static T MaxValue { get { return m_max_value(); } }
+		private static Func<T> m_max_value;
+
+		/// <summary>Return the maximum value</summary>
+		public static T MinValue { get { return m_min_value(); } }
+		private static Func<T> m_min_value;
+
 		/// <summary>+a</summary>
 		public static T Plus(T a) { return m_plus(a); }
 		private static Func<T,T> m_plus;
@@ -135,6 +168,36 @@ namespace pr.util
 		/// <summary>a >= b</summary>
 		public static bool GreaterEql(T a, T b) { return !Less(a,b); }
 	}
+	public static class Operators<T,U>
+	{
+		static Operators()
+		{
+			#region Multiply
+			{
+				var paramA = Expression.Parameter(typeof(T), "a");
+				var paramB = Expression.Parameter(typeof(U), "b");
+				var body = Expression.Multiply(paramA, Expression.ConvertChecked(paramB, typeof(T)));
+				m_mul = Expression.Lambda<Func<T, U, T>>(body, paramA, paramB).Compile();
+			}
+			#endregion
+			#region Divide
+			{
+				var paramA = Expression.Parameter(typeof(T), "a");
+				var paramB = Expression.Parameter(typeof(U), "b");
+				var body = Expression.Divide(paramA, Expression.ConvertChecked(paramB, typeof(T)));
+				m_div = Expression.Lambda<Func<T, U, T>>(body, paramA, paramB).Compile();
+			}
+			#endregion
+		}
+
+		/// <summary>a * b</summary>
+		public static T Mul(T a, U b) { return m_mul(a,b); }
+		private static Func<T,U,T> m_mul;
+
+		/// <summary>a / b</summary>
+		public static T Div(T a, U b) { return m_div(a,b); }
+		private static Func<T,U,T> m_div;
+	}
 }
 
 #if PR_UNITTESTS
@@ -154,6 +217,9 @@ namespace pr.unittests
 			Operators<float  >.Eql(123, 124);
 			Operators<double >.Eql(123, 124);
 			Operators<decimal>.Eql(123, 124);
+
+			Assert.AreEqual(Operators<decimal>.MaxValue, decimal.MaxValue);
+			Assert.AreEqual(Operators<decimal>.MinValue, decimal.MinValue);
 
 			Assert.AreEqual(Operators<short  >.Plus(412)       , (short)+412 );
 			Assert.AreEqual(Operators<long   >.Neg(512)        , -512L       );
@@ -178,6 +244,9 @@ namespace pr.unittests
 			Assert.AreEqual(Operators<float  >.GreaterEql(1.23f, 1.24f) , 1.23f >= 1.24f );
 			Assert.AreEqual(Operators<float  >.GreaterEql(1.23f, 1.23f) , 1.23f >= 1.23f );
 			Assert.AreEqual(Operators<float  >.GreaterEql(1.23f, 1.22f) , 1.23f >= 1.22f );
+
+			Assert.AreEqual(Operators<float,int>.Mul(1.23f, 45), 1.23f * 45);
+			Assert.AreEqual(Operators<float,int>.Div(1.23f, 45), 1.23f / 45);
 		}
 	}
 }

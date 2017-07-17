@@ -8,6 +8,32 @@ namespace pr.extn
 {
 	public static class TypeExtensions
 	{
+		/// <summary>Return a default instance of this type</summary>
+		public static object DefaultInstance(this Type type)
+		{
+			// If no Type was supplied, if the Type was a reference type, or if the Type was a System.Void, return null
+			if (type == null || !type.IsValueType || type == typeof(void))
+				return null;
+
+			// If the supplied Type has generic parameters, its default value cannot be determined
+			if (type.ContainsGenericParameters)
+				throw new ArgumentException($"{type.FullName} contains generic parameters, so the default value cannot be retrieved");
+
+			// If the Type is a primitive type, or if it is another publicly-visible
+			// value type (i.e. struct/enum), return a default instance of the value type
+			if (type.IsPrimitive || !type.IsNotPublic)
+			{
+				try { return Activator.CreateInstance(type); }
+				catch (Exception e)
+				{
+					throw new ArgumentException($"Activator.CreateInstance could not create a default instance of {type.FullName}. {e.Message}", e);
+				}
+			}
+
+			// Fail with exception
+			throw new ArgumentException($"{type.FullName} is not a publicly-visible type, so the default value cannot be retrieved");
+		}
+			
 		/// <summary>Resolve a type name to a type</summary>
 		public static Type Resolve(string name, bool throw_on_error = true)
 		{

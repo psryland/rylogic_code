@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -11,6 +13,8 @@ using pr.win32;
 
 namespace pr.gui
 {
+	[Serializable]
+	[DebuggerDisplay("Value={Value} Text={Text} Valid={Valid}")]
 	public class ComboBox :System.Windows.Forms.ComboBox
 	{
 		// Replacement for the forms combo box that doesn't throw a first chance
@@ -54,6 +58,7 @@ namespace pr.gui
 
 			ValueType = typeof(object);
 			UseValidityColours = true;
+			CommitValueOnFocusLost = true;
 			ForeColorValid = Color.Black;
 			BackColorValid = Color.White;
 			ForeColorInvalid = Color.Gray;
@@ -142,34 +147,33 @@ namespace pr.gui
 			if (DropDownStyle != ComboBoxStyle.DropDownList)
 			{
 				// Commit the value when the selection is changed
-				Text = GetItemText(SelectedItem);
+				Value = SelectedItem;
+			}
+		}
+		protected override void SetItemsCore(IList list)
+		{
+			base.SetItemsCore(list);
+			if (ValueType == typeof(object) && list != null)
+			{
+				var ty = list.GetType();
+				if (ty.IsArray)
+					ValueType = ty.GetElementType();
+				else if (ty.IsGenericType)
+					ValueType = ty.GetGenericArguments()[0];
+				else if (list.Count != 0 && list[0] != null)
+					ValueType = list[0].GetType();
 			}
 		}
 		protected override void OnLostFocus(EventArgs e)
 		{
 			base.OnLostFocus(e);
 
-			if (DropDownStyle != ComboBoxStyle.DropDownList)
+			if (DropDownStyle != ComboBoxStyle.DropDownList && CommitValueOnFocusLost && !ContainsFocus)
 			{
 				// Commit the value on focus lost
 				TryCommitValue();
 				var text = ValueToText(Value);
 				Text = text;
-			}
-		}
-		protected override void OnFormat(ListControlConvertEventArgs e)
-		{
-			// Display using the 'DisplayProperty' if specified
-			if (DisplayProperty.HasValue())
-			{
-				m_disp_prop = m_disp_prop ?? e.ListItem.GetType().GetProperty(DisplayProperty, BindingFlags.Public|BindingFlags.Instance);
-				e.Value = m_disp_prop.GetValue(e.ListItem).ToString();
-			}
-
-			// Otherwise, fall back to the other methods
-			else
-			{
-				base.OnFormat(e);
 			}
 		}
 		protected override void OnDropDown(EventArgs e)
@@ -186,6 +190,37 @@ namespace pr.gui
 			DropDownListCtrl = null;
 			base.OnDropDownClosed(e);
 		}
+		protected override void OnFormat(ListControlConvertEventArgs e)
+		{
+			// Display using the 'DisplayProperty' if specified
+			if (DisplayProperty.HasValue())
+			{
+				m_disp_prop = m_disp_prop ?? e.ListItem.GetType().GetProperty(DisplayProperty, BindingFlags.Public|BindingFlags.Instance);
+				e.Value = m_disp_prop.GetValue(e.ListItem).ToString();
+			}
+
+			// Otherwise, fall back to the other methods
+			else
+			{
+				base.OnFormat(e);
+			}
+		}
+
+		/// <summary>The property of the data bound items to display</summary>
+		public string DisplayProperty
+		{
+			// Prefer this over 'DisplayMember' because DisplayMember throws
+			// an exception when the data bound collection is empty.
+			get { return m_impl_disp_prop; }
+			set
+			{
+				if (m_impl_disp_prop == value) return;
+				m_impl_disp_prop = value;
+				m_disp_prop = null;
+			}
+		}
+		private string m_impl_disp_prop;
+		private PropertyInfo m_disp_prop;
 
 		/// <summary>The text color for valid values</summary>
 		public Color ForeColorValid
@@ -218,6 +253,9 @@ namespace pr.gui
 		/// <summary>Get/Set whether the background colours are set based on value validity</summary>
 		public bool UseValidityColours { get; set; }
 
+		/// <summary>Control whether focus lost results in a ValueCommited event</summary>
+		public bool CommitValueOnFocusLost { get; set; }
+
 		/// <summary>The type of 'Value'</summary>
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -236,8 +274,24 @@ namespace pr.gui
 			{
 				return m_validate_text ?? (x =>
 				{
-					try { Convert.ChangeType(x, ValueType); return true; }
-					catch { return false; }
+					// For built in types, validate the text. For user types
+					// assume the text is valid (even tho we may not be able to
+					// convert the text to an instance of the user type).
+					if (!x.HasValue()) return false;
+					switch (ValueType.Name) {
+					default: return true;
+					case nameof(Byte   ): return byte   .TryParse(x, out var b);
+					case nameof(Char   ): return char   .TryParse(x, out var c);
+					case nameof(Int16  ): return short  .TryParse(x, out var s);
+					case nameof(UInt16 ): return ushort .TryParse(x, out var us);
+					case nameof(Int32  ): return int    .TryParse(x, out var i);
+					case nameof(UInt32 ): return uint   .TryParse(x, out var ui);
+					case nameof(Int64  ): return long   .TryParse(x, out var l);
+					case nameof(UInt64 ): return ulong  .TryParse(x, out var ul);
+					case nameof(Single ): return float  .TryParse(x, out var f);
+					case nameof(Double ): return double .TryParse(x, out var d);
+					case nameof(Decimal): return decimal.TryParse(x, out var ld);
+					}
 				});
 			}
 			set
@@ -257,9 +311,24 @@ namespace pr.gui
 			{
 				return m_text_to_value ?? (x =>
 				{
+					// For built in types, convert the text to the type.
+					// For user types, assume the text is a description of the type
+					// and not convertible to the type.
 					if (!x.HasValue()) return null;
-					try { return Convert.ChangeType(x, ValueType); }
-					catch { return null; }
+					switch (ValueType.Name) {
+					default: return Value;
+					case nameof(Byte   ): return byte   .Parse(x);
+					case nameof(Char   ): return char   .Parse(x);
+					case nameof(Int16  ): return short  .Parse(x);
+					case nameof(UInt16 ): return ushort .Parse(x);
+					case nameof(Int32  ): return int    .Parse(x);
+					case nameof(UInt32 ): return uint   .Parse(x);
+					case nameof(Int64  ): return long   .Parse(x);
+					case nameof(UInt64 ): return ulong  .Parse(x);
+					case nameof(Single ): return float  .Parse(x);
+					case nameof(Double ): return double .Parse(x);
+					case nameof(Decimal): return decimal.Parse(x);
+					}
 				});
 			}
 			set
@@ -279,7 +348,13 @@ namespace pr.gui
 			{
 				return m_value_to_text ?? (x =>
 				{
-					return x?.ToString() ?? string.Empty;
+					if (x == null) return string.Empty;
+					if (DisplayMember.HasValue())
+					{
+						var mi = x.GetType().GetProperty(DisplayMember).GetGetMethod();
+						return mi.Invoke(x, null).ToString();
+					}
+					return x.ToString();
 				});
 			}
 			set
@@ -293,7 +368,7 @@ namespace pr.gui
 		/// <summary>The value represented in the control</summary>
 		public object Value
 		{
-			get { return m_value ?? (!ValueType.IsClass ? Activator.CreateInstance(ValueType) : null); }
+			get { return m_value ?? ValueType.DefaultInstance(); }
 			set
 			{
 				if (Equals(m_value, value)) return;
@@ -310,8 +385,8 @@ namespace pr.gui
 				ValueType = value.GetType();
 
 			// Null is equivalent to the default type for structs
-			if (!ValueType.IsClass && value == null)
-				value = Activator.CreateInstance(ValueType);
+			if (ValueType.IsValueType && value == null)
+				value = ValueType.DefaultInstance();
 
 			// Check the assigned value has the correct type
 			if (value != null && !ValueType.IsAssignableFrom(value.GetType()))
@@ -326,6 +401,36 @@ namespace pr.gui
 
 			// Notify value changed
 			OnValueChanged();
+		}
+
+		/// <summary>A smarter set text that does sensible things with the selection position</summary>
+		public void SetText(string text)
+		{
+			if (PreserveSelectionThruFocusChange)
+				RestoreTextSelection(m_selection);
+
+			var idx = SelectionStart;
+			SelectedText = text;
+			SelectionStart = idx + text.Length;
+		}
+
+		/// <summary>A smarter set text that does sensible things with the selection position</summary>
+		public void AppendText(string text)
+		{
+			if (PreserveSelectionThruFocusChange)
+				RestoreTextSelection(m_selection);
+
+			var carot_at_end = SelectionStart == Text.Length && SelectionLength == 0;
+			if (carot_at_end)
+			{
+				SelectedText = text;
+				SelectionStart = Text.Length;
+			}
+			else
+			{
+				using (this.SelectionScope())
+					AppendText(text);
+			}
 		}
 
 		/// <summary>True if the control contains a valid value</summary>
@@ -451,7 +556,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Preserves the selected index in the combo</summary>
-		public Scope SelectedIndexScope()
+		public Scope PreserveSelectedIndex()
 		{
 			return Scope.Create(
 				() => SelectedIndex,
@@ -459,11 +564,11 @@ namespace pr.gui
 		}
 
 		/// <summary>Preserves the selected item in the combo</summary>
-		public Scope SelectedItemScope()
+		public Scope PreserveSelectedItem(bool unless_null = false)
 		{
 			return Scope.Create(
 				() => SelectedItem,
-				si => SelectedItem = si);
+				si => SelectedItem = si != null || !unless_null ? si : SelectedItem);
 		}
 
 		/// <summary>
@@ -518,36 +623,6 @@ namespace pr.gui
 			}
 		}
 
-		/// <summary>A smarter set text that does sensible things with the selection position</summary>
-		public void SetText(string text)
-		{
-			if (PreserveSelectionThruFocusChange)
-				RestoreTextSelection(m_selection);
-
-			var idx = SelectionStart;
-			SelectedText = text;
-			SelectionStart = idx + text.Length;
-		}
-
-		/// <summary>A smarter set text that does sensible things with the selection position</summary>
-		public void AppendText(string text)
-		{
-			if (PreserveSelectionThruFocusChange)
-				RestoreTextSelection(m_selection);
-
-			var carot_at_end = SelectionStart == Text.Length && SelectionLength == 0;
-			if (carot_at_end)
-			{
-				SelectedText = text;
-				SelectionStart = Text.Length;
-			}
-			else
-			{
-				using (this.SelectionScope())
-					AppendText(text);
-			}
-		}
-
 		/// <summary>Set to true to have the text selection preserved while the combo doesn't have focus</summary>
 		public bool PreserveSelectionThruFocusChange
 		{
@@ -561,22 +636,8 @@ namespace pr.gui
 		private bool m_preserve_selection;
 		private Range m_selection; // don't use a Scope for this. We save selection more than restoring it and disposed old scopes will restore the selection.
 
-		/// <summary>The property of the data bound items to display</summary>
-		public string DisplayProperty
-		{
-			get { return m_impl_disp_prop; }
-			set
-			{
-				if (m_impl_disp_prop == value) return;
-				m_impl_disp_prop = value;
-				m_disp_prop = null;
-			}
-		}
-		private string m_impl_disp_prop;
-		private PropertyInfo m_disp_prop;
-
 		/// <summary>Preserve the selection in the combo</summary>
-		public Scope TextSelectionScope()
+		public Scope PreserveTextSelection()
 		{
 			return Scope.Create(
 				() => SaveTextSelection(),

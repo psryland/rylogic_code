@@ -301,9 +301,15 @@ namespace pr.util
 			for (;llength != 0 && rlength != 0; ++lstart, ++rstart, --llength, --rlength)
 			{
 				if (lhs[lstart] == rhs[rstart]) continue;
-				return Maths.Compare(lhs[lstart], rhs[rstart]);
+				return
+					lhs[lstart] < rhs[rstart] ? -1 :
+					lhs[lstart] > rhs[rstart] ? +1 :
+					0;
 			}
-			return Maths.Compare(llength, rlength);
+			return
+				llength < rlength ? -1 :
+				llength > rlength ? +1 :
+				0;
 		}
 
 		/// <summary>Convert a collection of 'U' into a collection of 'T' using 'conv' to do the conversion</summary>
@@ -311,15 +317,6 @@ namespace pr.util
 		{
 			foreach (U i in collection) yield return conv(i);
 		}
-
-		// use the int_. static class
-		///// <summary>Parse and return 'val' as type 'T' or return ' def' on parse error</summary>
-		//public static byte   ParseOrDefault(string val, byte   def) { byte   o; return byte  .TryParse(val, out o) ? o : def; }
-		//public static short  ParseOrDefault(string val, short  def) { short  o; return short .TryParse(val, out o) ? o : def; }
-		//public static int    ParseOrDefault(string val, int    def) { int    o; return int   .TryParse(val, out o) ? o : def; }
-		//public static uint   ParseOrDefault(string val, uint   def) { uint   o; return uint  .TryParse(val, out o) ? o : def; }
-		//public static float  ParseOrDefault(string val, float  def) { float  o; return float .TryParse(val, out o) ? o : def; }
-		//public static double ParseOrDefault(string val, double def) { double o; return double.TryParse(val, out o) ? o : def; }
 
 		/// <summary>Attempts to robustly convert 'value' into type 'result_type' using reflection and a load of special cases</summary>
 		public static object ConvertTo(object value, Type result_type, bool ignore_case = false)

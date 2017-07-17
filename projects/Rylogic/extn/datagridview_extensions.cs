@@ -381,7 +381,7 @@ namespace pr.extn
 			PasteReplace(sender, e);
 		}
 
-		/// <summary>Create a context menu with basic Copy,Cut,Paste,Delete options</summary>
+		/// <summary>Create a context menu with basic Copy,Cut,Paste,Delete options. Assign to ContextMenuStrip</summary>
 		public static ContextMenuStrip CMenu(DataGridView grid, EEditOptions edit_options)
 		{
 			var cmenu = new ContextMenuStrip();

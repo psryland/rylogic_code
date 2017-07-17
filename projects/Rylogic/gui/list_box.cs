@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Drawing;
 using System.Reflection;
 using System.Windows.Forms;
@@ -65,9 +66,11 @@ namespace pr.gui
 				}
 			}
 			base.OnPaint(e);
-		}  
+		}
 
 		/// <summary>The property of the data bound items to display</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public string DisplayProperty
 		{
 			get { return m_impl_disp_prop; }

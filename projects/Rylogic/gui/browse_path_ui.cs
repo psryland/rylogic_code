@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
+using pr.common;
 using pr.extn;
 using pr.maths;
 using pr.util;
@@ -18,6 +19,7 @@ namespace pr.gui
 		public BrowsePathUI()
 		{
 			SetStyle(ControlStyles.ContainerControl, true);
+
 			m_cb_path = new ComboBox
 			{
 				Name = "m_cb_path",
@@ -45,11 +47,16 @@ namespace pr.gui
 			{
 				Controls.Add(m_cb_path);
 				Controls.Add(m_btn_browse);
+				Margin = new Padding(3);
+				Padding = new Padding(1);
 			}
 
-			Type = EType.File;
+			Type = EType.OpenFile;
 			m_path = string.Empty;
 			m_history = new string[0];
+			m_file_filter = string.Empty;
+
+			Title = "Choose a file";
 
 			SetupUI();
 		}
@@ -65,7 +72,12 @@ namespace pr.gui
 
 		/// <summary>Set whether Path is a file or a folder</summary>
 		public EType Type { get; set; }
-		public enum EType { File, Directory }
+		public enum EType
+		{
+			OpenFile,
+			SaveFile,
+			SelectDirectory,
+		}
 
 		/// <summary>The path currently displayed</summary>
 		public string Path
@@ -81,6 +93,18 @@ namespace pr.gui
 		}
 		private string m_path;
 
+		/// <summary>The filter string to use when choosing filepaths</summary>
+		public string FileFilter
+		{
+			get { return m_file_filter; }
+			set
+			{
+				if (m_file_filter == value) return;
+				m_file_filter = value;
+			}
+		}
+		private string m_file_filter;
+
 		/// <summary>The value to show in the combo box</summary>
 		public string[] History
 		{
@@ -95,14 +119,21 @@ namespace pr.gui
 		}
 		private string[] m_history;
 
+		/// <summary>The title of the open file dialog</summary>
+		public string Title { get; set; }
+
 		/// <summary>Access to the path combo box</summary>
-		[Browsable(false)] public ComboBox ComboBox
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public ComboBox ComboBox
 		{
 			get { return m_cb_path; }
 		}
 
 		/// <summary>Access to the browse button</summary>
-		[Browsable(false)] public Button Button
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public Button Button
 		{
 			get { return m_btn_browse; }
 		}
@@ -114,9 +145,11 @@ namespace pr.gui
 		private void SetupUI()
 		{
 			// Path combo
-			m_cb_path.TextUpdate += (s,a) =>
+			m_cb_path.ValueType = typeof(string);
+			m_cb_path.ValidateText = t => Path_.IsValidFilepath(t, false);
+			m_cb_path.ValueCommitted += (s,a) =>
 			{
-				Path = m_cb_path.Text;
+				Path = (string)m_cb_path.Value;
 			};
 
 			// Browse for a path
@@ -132,9 +165,9 @@ namespace pr.gui
 			switch (Type)
 			{
 			default: throw new Exception("Unknown path type");
-			case EType.File:
+			case EType.OpenFile:
 				{
-					using (var dlg = new OpenFileDialog())
+					using (var dlg = new OpenFileDialog { Title = Title, Filter = FileFilter })
 					{
 						dlg.FileName = Path;
 						if (dlg.ShowDialog(this) != DialogResult.OK) break;
@@ -142,9 +175,19 @@ namespace pr.gui
 					}
 					break;
 				}
-			case EType.Directory:
+			case EType.SaveFile:
 				{
-					using (var dlg = new OpenFolderUI { })
+					using (var dlg = new SaveFileDialog { Title = Title, Filter = FileFilter })
+					{
+						dlg.FileName = Path;
+						if (dlg.ShowDialog(this) != DialogResult.OK) break;
+						Path = dlg.FileName;
+					}
+					break;
+				}
+			case EType.SelectDirectory:
+				{
+					using (var dlg = new OpenFolderUI { Title = Title })
 					{
 						dlg.SelectedPath = Path;
 						if (dlg.ShowDialog(this) != DialogResult.OK) break;

@@ -29,6 +29,10 @@ namespace pr.util
 		internal int UnitId;
 
 		#region Operators
+		// Constants
+		public static readonly Unit<T> MaxValue = Operators<T>.MaxValue;
+		public static readonly Unit<T> MinValue = Operators<T>.MinValue;
+
 		// Conversion
 		[DebuggerStepThrough] public static implicit operator T(Unit<T> u)
 		{
@@ -210,10 +214,16 @@ namespace pr.util
 			#if UNITS_ENABLED
 			// Unit ids are always positive, so the sign bit is free
 			Debug.Assert(lhs >= 0 && rhs >= 0);
+
+			// Combine the units into a cache key.
+			// If 'divide' is false then the order doesn't matter so,
+			// put the smallest index at the top
 			var x = (ulong)lhs;
 			var y = (ulong)rhs;
-			var key = x < y ? (x << 32) | y : (y << 32) | x;
-			if (divide) key |= 1UL << 63;
+			var key =
+				divide  ? (x << 32) | y | (1UL << 63) :
+				(x < y) ? (x << 32) | y :
+				          (y << 32) | x;
 
 			return m_cache_combined_types.GetOrAdd(key, k =>
 			{
@@ -365,6 +375,7 @@ namespace pr.unittests
 			Assert.AreEqual(5m / v1, (5m / 0.456m)._("1/A"));
 			Assert.AreEqual(v0 / v1, (0.123m / 0.456m)._(""));
 			Assert.AreEqual(v0 / v2, (0.123m / 0.456m)._("A/B"));
+			Assert.AreEqual(v2 / v0, (0.456m / 0.123m)._("B/A"));
 
 			// Comparisons
 			Assert.True(v0 == 0.123m._("A"));

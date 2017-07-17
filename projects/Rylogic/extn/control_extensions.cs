@@ -582,6 +582,42 @@ namespace pr.extn
 		}
 	}
 
+	public static class ComboBox_
+	{
+		/// <summary>Return the auto-sized with of the drop down menu from it's current content</summary>
+		public static int DropDownWidthAutoSize(this ComboBox cb)
+		{
+			// Notes: attach to 
+			//  cb.DropDown += (s,a) => cb.DropDownWidth = DropDownWidthAutoSize();
+
+			var mi = (MethodInfo)null;
+			return !cb.DisplayMember.HasValue()
+				? cb.DropDownWidthAutoSize(x => x.ToString())
+				: cb.DropDownWidthAutoSize(x =>
+				{
+					mi = mi ?? (x.GetType().GetProperty(cb.DisplayMember).GetGetMethod());
+					return mi.Invoke(x, null).ToString();
+				});
+		}
+		private static int DropDownWidthAutoSize(this ComboBox cb, Func<object, string> description)
+		{
+			// Calculate the width of the items (includes DataSource)
+			var width = cb.Width;
+			foreach (var obj in cb.Items)
+				width = Math.Max(width, TextRenderer.MeasureText(description(obj), cb.Font).Width);
+
+			// Return the calculated width (plus room for the scroll bar)
+			return width + (cb.Items.Count > cb.MaxDropDownItems ? SystemInformation.VerticalScrollBarWidth : 0);
+		}
+
+		/// <summary>Auto size the drop down list to the content. Attach to 'cb.DropDown'</summary>
+		public static void DropDownWidthAutoSize(object sender, EventArgs args)
+		{
+			var cb = (ComboBox)sender;
+			cb.DropDownWidth = DropDownWidthAutoSize(cb);
+		}
+	}
+
 	/// <summary>NumericUpDown control extensions</summary>
 	public static class Spinner_
 	{

@@ -6099,6 +6099,38 @@ namespace pr.gui
 		public DockControl(Control owner, string persist_name)
 			:base(owner, persist_name)
 		{}
+
+		// Cut'n'Paste
+		// Inherit:
+		//   IDockable
+		//
+		// Constructor:
+		//  DockControl = new DockControl(this, name)
+		//  {
+		//  	TabText = name, // optional
+		//  	ShowTitle = false, // optional
+		//  	DefaultDockLocation = new DockContainer.DockLocation(new[]{EDockSite.Centre}, 1), // optional
+		//  	TabCMenu = CreateTabCMenu(), // optional
+		//  };
+		//
+		// Destructor:
+		//  DockControl = null;
+		//
+		// Property:
+		//  /// <summary>Provides support for the DockContainer</summary>
+		//  [Browsable(false)]
+		//  [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		//  public DockControl DockControl
+		//  {
+		//  	[DebuggerStepThrough] get { return m_dock_control; }
+		//  	private set
+		//  	{
+		//  		if (m_dock_control == value) return;
+		//  		Util.Dispose(ref m_dock_control);
+		//  		m_dock_control = value;
+		//  	}
+		//  }
+		//  private DockControl m_dock_control;
 	}
 
 	/// <summary>A wrapper control that hosts a control and implements IDockable</summary>

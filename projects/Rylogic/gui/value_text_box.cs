@@ -49,14 +49,16 @@ namespace pr.gui
 		private int m_in_set_text;
 
 		public ValueBox()
+			:base()
 		{
 			ValueType = typeof(object);
-			Value = null;
 			UseValidityColours = true;
+			CommitValueOnFocusLost = true;
 			ForeColorValid = Color.Black;
 			BackColorValid = Color.White;
 			ForeColorInvalid = Color.Gray;
 			BackColorInvalid = Color.White;
+			Value = null;
 		}
 		public override bool PreProcessMessage(ref Message m)
 		{
@@ -81,13 +83,13 @@ namespace pr.gui
 		protected override void OnLostFocus(EventArgs e)
 		{
 			base.OnLostFocus(e);
-			TryCommitValue();
-			var text = ValueToText(Value);
-			Text = text;
+			if (CommitValueOnFocusLost && !ContainsFocus)
+			{
+				TryCommitValue();
+				var text = ValueToText(Value);
+				Text = text;
+			}
 		}
-
-		/// <summary>Get/Set whether the background colours are set based on value validity</summary>
-		public bool UseValidityColours { get; set; }
 
 		/// <summary>The text color for valid values</summary>
 		public Color ForeColorValid
@@ -117,6 +119,12 @@ namespace pr.gui
 			set;
 		}
 
+		/// <summary>Get/Set whether the background colours are set based on value validity</summary>
+		public bool UseValidityColours { get; set; }
+
+		/// <summary>Control whether focus lost results in a ValueCommited event</summary>
+		public bool CommitValueOnFocusLost { get; set; }
+
 		/// <summary>The type of 'Value'</summary>
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -135,8 +143,24 @@ namespace pr.gui
 			{
 				return m_validate_text ?? (x =>
 				{
-					try { Convert.ChangeType(x, ValueType); return true; }
-					catch { return false; }
+					// For built in types, validate the text. For user types
+					// assume the text is valid (even tho we may not be able to
+					// convert the text to an instance of the user type).
+					if (!x.HasValue()) return false;
+					switch (ValueType.Name) {
+					default: return true;
+					case nameof(Byte   ): return byte   .TryParse(x, out var b);
+					case nameof(Char   ): return char   .TryParse(x, out var c);
+					case nameof(Int16  ): return short  .TryParse(x, out var s);
+					case nameof(UInt16 ): return ushort .TryParse(x, out var us);
+					case nameof(Int32  ): return int    .TryParse(x, out var i);
+					case nameof(UInt32 ): return uint   .TryParse(x, out var ui);
+					case nameof(Int64  ): return long   .TryParse(x, out var l);
+					case nameof(UInt64 ): return ulong  .TryParse(x, out var ul);
+					case nameof(Single ): return float  .TryParse(x, out var f);
+					case nameof(Double ): return double .TryParse(x, out var d);
+					case nameof(Decimal): return decimal.TryParse(x, out var ld);
+					}
 				});
 			}
 			set
@@ -156,9 +180,24 @@ namespace pr.gui
 			{
 				return m_text_to_value ?? (x =>
 				{
+					// For built in types, convert the text to the type.
+					// For user types, assume the text is a description of the type
+					// and not convertible to the type.
 					if (!x.HasValue()) return null;
-					try { return Convert.ChangeType(x, ValueType); }
-					catch { return null; }
+					switch (ValueType.Name) {
+					default: return Value;
+					case nameof(Byte   ): return byte   .Parse(x);
+					case nameof(Char   ): return char   .Parse(x);
+					case nameof(Int16  ): return short  .Parse(x);
+					case nameof(UInt16 ): return ushort .Parse(x);
+					case nameof(Int32  ): return int    .Parse(x);
+					case nameof(UInt32 ): return uint   .Parse(x);
+					case nameof(Int64  ): return long   .Parse(x);
+					case nameof(UInt64 ): return ulong  .Parse(x);
+					case nameof(Single ): return float  .Parse(x);
+					case nameof(Double ): return double .Parse(x);
+					case nameof(Decimal): return decimal.Parse(x);
+					}
 				});
 			}
 			set
@@ -192,7 +231,7 @@ namespace pr.gui
 		/// <summary>The value represented in the text box</summary>
 		public object Value
 		{
-			get { return m_value ?? (!ValueType.IsClass ? Activator.CreateInstance(ValueType) : null); }
+			get { return m_value ?? ValueType.DefaultInstance(); }
 			set
 			{
 				if (Equals(m_value, value)) return;
@@ -210,7 +249,7 @@ namespace pr.gui
 
 			// Null is equivalent to the default type for structs
 			if (!ValueType.IsClass && value == null)
-				value = Activator.CreateInstance(ValueType);
+				value = ValueType.DefaultInstance();
 
 			// Check the assigned value has the correct type
 			if (value != null && !ValueType.IsAssignableFrom(value.GetType()))

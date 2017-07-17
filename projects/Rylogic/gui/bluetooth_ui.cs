@@ -613,7 +613,6 @@ namespace pr.gui
 			// 
 			// m_cb_radio
 			// 
-			this.m_cb_radio.DisplayProperty = null;
 			this.m_cb_radio.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
 			this.m_cb_radio.FormattingEnabled = true;
 			this.m_cb_radio.Location = new System.Drawing.Point(9, 14);

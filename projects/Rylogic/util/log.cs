@@ -27,6 +27,7 @@ namespace pr.util
 {
 	public enum ELogLevel
 	{
+		NoLevel,
 		Debug,
 		Info,
 		Warn,
@@ -227,7 +228,7 @@ namespace pr.util
 	/// <summary>Asynchronous logging instance</summary>
 	public class Logger :IDisposable
 	{
-		public Logger(string tag, ILogWriter log_cb, int occurrences_batch_size = 1)
+		public Logger(string tag, ILogWriter log_cb, int occurrences_batch_size = 0)
 		{
 			Tag = tag;
 			Context = new SharedContext(log_cb, occurrences_batch_size);
@@ -249,6 +250,31 @@ namespace pr.util
 		{
 			get;
 			set;
+		}
+
+		/// <summary>The character sequence that separates log entries</summary>
+		public char EntryDelimiter
+		{
+			get { return Context.EntryDelimiter; }
+			set { Context.EntryDelimiter = value; }
+		}
+
+		/// <summary>True if each log entry is time stamped</summary>
+		public bool AddTimestamp
+		{
+			get { return Context.AddTimestamp; }
+			set { Context.AddTimestamp = value; }
+		}
+
+		/// <summary>The method that converts a log entry into a string</summary>
+		public Func<LogEvent, string> Serialise
+		{
+			get { return Context.Serialise; }
+			set { Context.Serialise = value; }
+		}
+		public string DefaultSerialise(LogEvent evt)
+		{
+			return Context.DefaultSerialise(evt);
 		}
 
 		/// <summary>Access the shared context</summary>
@@ -284,6 +310,16 @@ namespace pr.util
 			set;
 		}
 
+		/// <summary>
+		/// Enable/Disable immediate mode.
+		/// In immediate mode, log events are written to 'log_cb' instead of being queued for processing
+		/// by the background thread. Useful when you want the log to be written in sync with debugging.</summary>
+		public bool ImmediateWrite
+		{
+			get { return Context.ImmediateWrite; }
+			set { Context.ImmediateWrite = value; }
+		}
+
 		// Log a message
 		public void Write(ELogLevel level, string msg, string file = null, int? line = null)
 		{
@@ -307,20 +343,35 @@ namespace pr.util
 			Context.WaitTillIdle();
 		}
 
+		/// <summary>Convert a log entry to a string</summary>
+		public static string DefaultSerialise(StringBuilder sb, LogEvent evt, char entry_delimiter, bool timestamp)
+		{
+			var pre = string.Empty;
+			if (entry_delimiter != '\0')        { Str.Build(sb, entry_delimiter); }
+			if (evt.File.HasValue())            { Str.Append(sb, evt.File); pre = " "; }
+			if (evt.Line != null)               { Str.Append(sb, "(", evt.Line.Value, "):"); pre = " "; }
+			if (evt.Context.HasValue())         { Str.Append(sb, pre, "{0:8}".Fmt(evt.Context)); pre = "|"; }
+			if (evt.Level != ELogLevel.NoLevel) { Str.Append(sb, pre, evt.Level); pre = "|"; }
+			if (timestamp)                      { Str.Append(sb, pre, evt.Timestamp.ToString("c")); pre = "|"; }
+			Str.Append(sb, pre, evt.Msg);
+			return sb.ToString();
+		}
+
 		/// <summary>Logger context. A single Context is shared by many instances of a Logger</summary>
 		private class SharedContext :IDisposable
 		{
-			private LogEvent m_end_marker;
-
 			public SharedContext(ILogWriter log_cb, int occurrences_batch_size)
 			{
-				m_end_marker = new LogEvent();
+				SB = new StringBuilder();
+				EntryDelimiter = Log.EntryDelimiter;
+				AddTimestamp = true;
+				Serialise = DefaultSerialise;
 
 				// Clean up when there are no more loggers referencing this context
 				RefCount = new RefCount(0);
 				RefCount.ZeroCount += Dispose;
 
-				Queue = new ConcurrentQueue<LogEvent>();
+				Queue = new BlockingCollection<LogEvent>();
 				Idle = new ManualResetEvent(true);
 				LogCB = log_cb;
 				OccurrencesBatchSize = occurrences_batch_size;
@@ -333,6 +384,12 @@ namespace pr.util
 				LogConsumerThreadActive = false;
 			}
 
+			/// <summary>The character sequence that separates log entries</summary>
+			public char EntryDelimiter { get; set; }
+
+			/// <summary>True if each log entry is time stamped</summary>
+			public bool AddTimestamp { get; set; }
+
 			/// <summary>References to this shared context</summary>
 			public RefCount RefCount { get; private set; }
 
@@ -344,7 +401,7 @@ namespace pr.util
 			}
 
 			/// <summary>Queue of log events to report</summary>
-			public ConcurrentQueue<LogEvent> Queue
+			public BlockingCollection<LogEvent> Queue
 			{
 				get;
 				private set;
@@ -359,6 +416,20 @@ namespace pr.util
 			/// <summary>The maximum number of identical events per batch</summary>
 			public int OccurrencesBatchSize { get; private set; }
 
+			/// <summary>The method that converts a log entry into a string</summary>
+			public Func<LogEvent, string> Serialise { get; set; }
+			public string DefaultSerialise(LogEvent evt)
+			{
+				return Logger.DefaultSerialise(SB, evt, EntryDelimiter, AddTimestamp);
+			}
+			public StringBuilder SB;
+
+			/// <summary>
+			/// Enable/Disable immediate mode.
+			/// In immediate mode, log events are written to 'log_cb' instead of being queued for processing
+			/// by the background thread. Useful when you want the log to be written in sync with debugging.</summary>
+			public bool ImmediateWrite { get; set; }
+
 			// The worker thread that forwards log events to the callback function
 			private bool LogConsumerThreadActive
 			{
@@ -368,7 +439,7 @@ namespace pr.util
 					if (LogConsumerThreadActive == value) return;
 					if (m_thread != null)
 					{
-						Queue.Enqueue(m_end_marker);
+						Queue.CompleteAdding();
 						if (m_thread.IsAlive)
 							m_thread.Join();
 					}
@@ -385,17 +456,11 @@ namespace pr.util
 				{
 					Thread.CurrentThread.Name = "pr::Logger";
 
-					LogEvent ev, last = new LogEvent();
-					for (;ctx.Dequeue(out ev);)
+					for (var last = new LogEvent(); Dequeue(out var ev);)
 					{
-						// Exit on end marker
-						if (ev == m_end_marker)
-							break;
-
-						var is_same = LogEvent.Same(ev, last);
-
 						// Same event as last time? add it to the batch
-						if (is_same && last.Occurrences < occurrences_batch_size)
+						bool is_same = false;
+						if (last.Occurrences < occurrences_batch_size && (is_same = LogEvent.Same(ev, last)) == true)
 						{
 							++last.Occurrences;
 							last.Timestamp = ev.Timestamp;
@@ -405,19 +470,19 @@ namespace pr.util
 						// Have events been batched? Report them now
 						if (last.Occurrences != 0)
 						{
-							log_cb.Write(last.ToString());
+							log_cb.Write(Serialise(last));
 							last.Occurrences = 0;
 						}
 
 						// Start of the next batch (and batching is enabled)? Add it to the batch
-						if (is_same && occurrences_batch_size != 0)
+						if (occurrences_batch_size != 0 && is_same)
 						{
 							last.Occurrences = 1;
 							last.Timestamp = ev.Timestamp;
 						}
 						else
 						{
-							log_cb.Write(ev.ToString());
+							log_cb.Write(Serialise(ev));
 							last = ev;
 							last.Occurrences = 0;
 						}
@@ -430,41 +495,48 @@ namespace pr.util
 			}
 			private Thread m_thread;
 
-			/// <summary>
-			/// Enable/Disable immediate mode.
-			/// In immediate mode, log events are written to 'log_cb' instead of being queued for processing
-			/// by the background thread. Useful when you want the log to be written in sync with debugging.</summary>
-			public void ImmediateWrite(ILogWriter log_cb)
-			{
-				LogCB = log_cb;
-			}
-
 			/// <summary>Queue a log event for writing to the log callback function</summary>
 			public void Enqueue(LogEvent ev)
 			{
-				if (LogCB != null)
+				if (ImmediateWrite)
 				{
-					LogCB.Write(ev.ToString());
+					LogCB.Write(Serialise(ev));
 				}
 				else
 				{
 					Idle.Reset();
-					Queue.Enqueue(ev);
+					Queue.Add(ev);
 				}
 			}
 
 			// Pull an event from the queue of log events
 			private bool Dequeue(out LogEvent ev)
 			{
-				var r = Queue.TryDequeue(out ev);
-				if (!r) Idle.Set();
-				return r;
+				try
+				{
+					if (!Queue.TryTake(out ev))
+					{
+						Idle.Set();
+						ev = Queue.Take(); // Blocks
+						Idle.Reset();
+					}
+					return true;
+				}
+				catch (InvalidOperationException) // means take called on completed collection
+				{
+					ev = null;
+					return false;
+				}
 			}
 
 			// Wait for the log event queue to become empty
 			public void WaitTillIdle()
 			{
 				Idle.WaitOne();
+			}
+			public bool WaitTillIdle(int timeout_ms)
+			{
+				return Idle.WaitOne(timeout_ms);
 			}
 		}
 
@@ -486,7 +558,7 @@ namespace pr.util
 				Level       = level;
 				Timestamp   = DateTimeOffset.Now - tzero;
 				Context     = ctx;
-				Msg         = msg.TrimEnd('\n','\r',' ','\t');
+				Msg         = msg;
 				File        = file;
 				Line        = line;
 				Occurrences = 1;
@@ -516,15 +588,10 @@ namespace pr.util
 			/// <summary>Convert the log event to a string</summary>
 			public override string ToString()
 			{
-				var sb = new StringBuilder();
-				sb.Append(Log.EntryDelimiter);
-				var delim = (string)null;
-				if (File.HasValue()) { sb.Append(File); delim = " "; }
-				if (Line != null)    { sb.Append("({0}):".Fmt(Line.Value)); delim = " "; }
-				if (delim != null)   { sb.Append(delim); }
-				sb.Append("{0:8}|{1}|{2}|{3}\n".Fmt(Context, Level, Timestamp.ToString("c"), Msg));
-				return sb.ToString();
+				return DefaultSerialise(new StringBuilder(), this, '\0', true);
 			}
+
+			/// <summary>Compare log events for equality</summary>
 			public static bool Same(LogEvent lhs, LogEvent rhs)
 			{
 				return
@@ -597,7 +664,7 @@ namespace pr.unittests
 		{
 			var l2s = new LogToString();
 
-			var log0 = new Logger("Thing1", l2s, 1);
+			var log0 = new Logger("Thing1", l2s, 1){ AddTimestamp = false };
 			var log1 = new Logger("Thing2", log0);
 
 			log0.Write(ELogLevel.Error, "Error message", "A:\\file.txt", 32);
@@ -607,10 +674,10 @@ namespace pr.unittests
 			log0.Flush();
 
 			// Overwrite the timestamp so its the same for all unit tests
-			var lines = l2s.Str.ToString().Split(new[]{"\n" }, StringSplitOptions.RemoveEmptyEntries);
-			Assert.True(Regex.IsMatch(lines[0], @"\u001bA:\\file\.txt\(32\): Thing1\|Error\|[.:\d]+\|Error message"));
-			Assert.True(Regex.IsMatch(lines[1], @"\u001bThing2\|Info\|[.:\d]+\|Info message"));
-			Assert.True(Regex.IsMatch(lines[2], @"\u001bThing1\|Warn\|[.:\d]+\|Exception message - Exception: Exception"));
+			var lines = l2s.Str.ToString().Split(new[]{"\u001b"}, StringSplitOptions.RemoveEmptyEntries);
+			Assert.True(lines[0] == "A:\\file.txt(32): Thing1|Error|Error message");
+			Assert.True(lines[1] == "Thing2|Info|Info message");
+			Assert.True(lines[2] == "Thing1|Warn|Exception message - Exception: Exception");
 		}
 	}
 }
