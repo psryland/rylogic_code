@@ -186,6 +186,7 @@ namespace pr.gui
 					if (!x.HasValue()) return null;
 					switch (ValueType.Name) {
 					default: return Value;
+					case nameof(String ): return x;
 					case nameof(Byte   ): return byte   .Parse(x);
 					case nameof(Char   ): return char   .Parse(x);
 					case nameof(Int16  ): return short  .Parse(x);

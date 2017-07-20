@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using CoinFlip.Properties;
 using pr.container;
@@ -45,6 +47,7 @@ namespace CoinFlip
 		public MainUI()
 		{
 			InitializeComponent();
+
 			Model = new Model(this);
 			LoopsUI = new LoopsUI(Model, this);
 			PairsUI = new PairsUI(Model, this);
@@ -59,10 +62,22 @@ namespace CoinFlip
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
-		protected override void OnClosed(EventArgs e)
+		protected async override void OnClosing(CancelEventArgs e)
 		{
-			m_chk_run.Checked = false;
-			base.OnClosed(e);
+			// Disable 'Run' mode
+			Model.Run = false;
+
+			// Form shutdown is a PITA when using async methods.
+			// Disable the form while we wait for shutdown to be allowed
+			Enabled = false;
+			if (!Model.CanShutdown)
+			{
+				e.Cancel = true;
+				await Model.Shutdown();
+				Close();
+				return;
+			}
+			base.OnClosing(e);
 		}
 
 		/// <summary>App logic</summary>
@@ -77,16 +92,24 @@ namespace CoinFlip
 					m_model.Pairs.ListChanging           -= HandlePairsChanging;
 					m_model.CoinsOfInterest.ListChanging -= HandleCoinsOfInterestChanging;
 					m_model.Exchanges.ListChanging       -= HandleExchangesChanging;
-					m_model.HeartBeat                    -= HandleHeatBeat;
+					m_model.MarketDataChanged            -= HandleHeatBeat;
+					m_model.AllowTradesChanged           -= UpdateUI;
+					m_model.RunChanged                   -= UpdateUI;
+					m_grid_coins.DataSource               = null;
+					m_grid_exchanges.DataSource           = null;
+					m_grid_balances.DataSource            = null;
+					m_grid_positions.DataSource           = null;
 					Util.Dispose(ref m_model);
 				}
 				m_model = value;
 				if (m_model != null)
 				{
-					m_model.HeartBeat                    += HandleHeatBeat;
+					m_model.MarketDataChanged            += HandleHeatBeat;
 					m_model.Exchanges.ListChanging       += HandleExchangesChanging;
 					m_model.CoinsOfInterest.ListChanging += HandleCoinsOfInterestChanging;
 					m_model.Pairs.ListChanging           += HandlePairsChanging;
+					m_model.AllowTradesChanged           += UpdateUI;
+					m_model.RunChanged                   += UpdateUI;
 				}
 			}
 		}
@@ -150,39 +173,45 @@ namespace CoinFlip
 					HeaderText = "Currency",
 					SortMode = DataGridViewColumnSortMode.Automatic,
 				});
-				m_grid_coins.DataSource = Model.CoinsOfInterest;
 				m_grid_coins.CellFormatting += (s,a) =>
 				{
+					if (Model == null) return;
 					if (!a.RowIndex.Within(0, Model.CoinsOfInterest.Count)) return;
+
 					a.Value = Model.CoinsOfInterest[a.RowIndex];
 					a.CellStyle.BackColor = Color.White;
 					a.CellStyle.SelectionForeColor = a.CellStyle.ForeColor;
 					a.CellStyle.SelectionBackColor = a.CellStyle.BackColor.Lerp(Color.Gray, 0.5f);
 				};
-				m_grid_coins.ContextMenuStrip = new ContextMenuStrip();
+				m_grid_coins.ContextMenuStrip = new Func<ContextMenuStrip>(() =>
 				{
-					var opt = m_grid_coins.ContextMenuStrip.Items.Add2(new ToolStripMenuItem("Add Coin"));
-					opt.Click += (s,a) =>
+					var cmenu = new ContextMenuStrip();
 					{
-						using (var prompt = new PromptForm { Title = "Currency Symbol", PromptText = string.Empty })
+						var opt = cmenu.Items.Add2(new ToolStripMenuItem("Add Coin"));
+						opt.Click += (s,a) =>
 						{
-							if (prompt.ShowDialog(this) != DialogResult.OK) return;
-							Model.CoinsOfInterest.Add(prompt.Value.ToUpperInvariant());
-						}
-					};
-				}
-				{
-					var opt = m_grid_coins.ContextMenuStrip.Items.Add2(new ToolStripMenuItem("Delete"));
-					m_grid_coins.ContextMenuStrip.Opening += (s,a) =>
+							using (var prompt = new PromptForm { Title = "Currency Symbol", PromptText = string.Empty })
+							{
+								if (prompt.ShowDialog(this) != DialogResult.OK) return;
+								Model.CoinsOfInterest.Add(prompt.Value.ToUpperInvariant());
+							}
+						};
+					}
 					{
-						opt.Enabled = m_grid_coins.SelectedRows.Count != 0;
-					};
-					opt.Click += (s,a) =>
-					{
-						var doomed = m_grid_coins.SelectedRows.Cast<DataGridViewRow>().Select(x => (string)x.DataBoundItem).ToHashSet();
-						Model.CoinsOfInterest.RemoveAll(doomed);
-					};
-				}
+						var opt = cmenu.Items.Add2(new ToolStripMenuItem("Delete"));
+						cmenu.Opening += (s,a) =>
+						{
+							opt.Enabled = m_grid_coins.SelectedRows.Count != 0;
+						};
+						opt.Click += (s,a) =>
+						{
+							var doomed = m_grid_coins.SelectedRows.Cast<DataGridViewRow>().Select(x => (string)x.DataBoundItem).ToHashSet();
+							Model.CoinsOfInterest.RemoveAll(doomed);
+						};
+					}
+					return cmenu;
+				})();
+				m_grid_coins.DataSource = Model.CoinsOfInterest;
 			}
 			#endregion
 
@@ -230,7 +259,8 @@ namespace CoinFlip
 				m_grid_exchanges.CellClick += (s,a) =>
 				{
 					if (!m_grid_exchanges.Within(a.ColumnIndex, a.RowIndex, out DataGridViewColumn col)) return;
-					var exch = Model.Exchanges[a.RowIndex];
+					var exch = Model?.Exchanges[a.RowIndex];
+					if (exch == null) return;
 
 					switch (col.Name) {
 					case nameof(Exchange.Active):
@@ -243,17 +273,18 @@ namespace CoinFlip
 				m_grid_exchanges.CellFormatting += (s,a) =>
 				{
 					if (!m_grid_exchanges.Within(a.ColumnIndex, a.RowIndex, out DataGridViewColumn col)) return;
-					var exch = Model.Exchanges[a.RowIndex];
+					var exch = Model?.Exchanges[a.RowIndex];
 
 					switch (col.Name) {
 					case nameof(Exchange.Active):
 						{
-							a.Value = exch.Active ? Res.Active : Res.Inactive;
+							a.Value = (exch?.Active ?? false) ? Res.Active : Res.Inactive;
 							break;
 						}
 					}
 
 					a.CellStyle.BackColor =
+						exch == null ? Color.White :
 						exch.Status.HasFlag(EStatus.Error     ) ? Color.Red :
 						exch.Status.HasFlag(EStatus.Stopped   ) ? Color.LightYellow :
 						exch.Status.HasFlag(EStatus.Connected ) ? Color.LightGreen :
@@ -444,9 +475,8 @@ namespace CoinFlip
 			#region Log control
 			{
 				m_log.LogFilepath = ((LogToFile)Model.Log.LogCB).Filepath;
-				m_log.LogEntryPattern = new Regex(@"^.*?\|(?<Level>.*?)\|(?<Timestamp>.*?)\|(?<Message>.*)\n"
+				m_log.LogEntryPattern = new Regex(@"^(?<Level>.*?)\|(?<Timestamp>.*?)\|(?<Message>.*)"
 					,RegexOptions.Singleline|RegexOptions.Multiline|RegexOptions.CultureInvariant|RegexOptions.Compiled);
-				m_log.Freeze = true;
 			}
 			#endregion
 
@@ -471,6 +501,13 @@ namespace CoinFlip
 				};
 			}
 			#endregion
+		}
+
+		/// <summary>Handle the model properties changing</summary>
+		private void UpdateUI(object sender, EventArgs e)
+		{
+			m_chk_allow_trades.Checked = Model.AllowTrades;
+			m_chk_run.Checked = Model.Run;
 		}
 
 		/// <summary>Model heart beat event handler</summary>

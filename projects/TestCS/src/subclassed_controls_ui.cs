@@ -241,7 +241,7 @@ namespace TestCS
 			this.m_browse_path.Path = "";
 			this.m_browse_path.Size = new System.Drawing.Size(356, 32);
 			this.m_browse_path.TabIndex = 7;
-			this.m_browse_path.Type = pr.gui.BrowsePathUI.EType.File;
+			this.m_browse_path.Type = pr.gui.BrowsePathUI.EType.OpenFile;
 			// 
 			// m_pb
 			// 

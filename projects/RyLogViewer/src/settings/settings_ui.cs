@@ -347,7 +347,11 @@ namespace RyLogViewer
 			};
 
 			// Line endings
-			m_tb_line_ends.ToolTip(m_tt, "Set the line ending characters to expect in the log data.\r\nUse '<CR>' for carriage return, '<LF>' for line feed.\r\nLeave blank to auto detect");
+			m_tb_line_ends.ToolTip(m_tt,
+				"Set the line ending characters to expect in the log data.\r\n"+
+				"Use '<CR>' for carriage return, '<LF>' for line feed, '<TAB>' for tab characters.\r\n"+
+				"Specify UNICODE characters using the form \\uXXXX\r\n"+
+				"Leave blank to auto detect");
 			m_tb_line_ends.ValueType = typeof(string);
 			m_tb_line_ends.Text = Settings.RowDelimiter;
 			m_tb_line_ends.ValueCommitted += (s,a) =>
@@ -932,8 +936,9 @@ namespace RyLogViewer
 			case ESpecial.ShowLineEndingTip:
 				{
 					Misc.ShowHint(m_tb_line_ends,
-						"Set the line ending characters to expect in the log data.\r\n" +
-						"Use '<CR>' for carriage return, '<LF>' for line feed.\r\n" +
+						"Set the line ending characters to expect in the log data.\r\n"+
+						"Use '<CR>' for carriage return, '<LF>' for line feed, '<TAB>' for tab characters.\r\n"+
+						"Specify UNICODE characters using the form \\uXXXX\r\n"+
 						"Leave blank to auto detect", 7000);
 					break;
 				}

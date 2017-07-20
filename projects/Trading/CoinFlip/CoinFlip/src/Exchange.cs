@@ -24,7 +24,7 @@ namespace CoinFlip
 	//    reads are allowed because the main thread carefully controls when reading happens.
 
 	/// <summary>Base class for exchanges</summary>
-	public abstract class Exchange
+	public abstract class Exchange :IDisposable
 	{
 		public Exchange(Model model, decimal transaction_fee, int poll_period)
 		{
@@ -32,9 +32,9 @@ namespace CoinFlip
 			TransactionFee = transaction_fee;
 			PollPeriod = poll_period;
 			Coins = new CoinCollection(this);
-			Pairs = new PairCollection();
+			Pairs = new PairCollection(this);
 			Balance = new BalanceCollection(this);
-			Positions = new PositionsCollection();
+			Positions = new PositionsCollection(this);
 			Status = EStatus.Offline;
 		}
 		public virtual void Dispose()
@@ -76,12 +76,11 @@ namespace CoinFlip
 		{
 			if (m_model != null)
 			{
-		//		m_model.CoinsOfInterest.ListChanging -= HandleCoinsOfInterestedChanging;
+				Debug.Assert(Active == false, "Should not be nulling 'Model' when the thread is running");
 			}
 			m_model = model;
 			if (m_model != null)
 			{
-		//		m_model.CoinsOfInterest.ListChanging += HandleCoinsOfInterestedChanging;
 			}
 		}
 		private Model m_model;
@@ -98,51 +97,45 @@ namespace CoinFlip
 		}
 		protected virtual void SetActive(bool active)
 		{
-			// If previously active, stop the thread
+			// If previously active
 			if (Active)
 			{
+				// Stop the thread
 				m_heart_thread_exit = true;
 				if (m_heart.IsAlive)
 					m_heart.Join();
+
+				// Invalidate the loops when an exchange is disabled
+				Model.RebuildLoops = true;
 			}
 
 			// Start the heart beat thread, if active
-			m_heart_thread_exit = false;
 			Status = active ? EStatus.Connecting : EStatus.Stopped;
 			m_heart = active ? new Thread(new ThreadStart(HeartBeatThreadEntry)) : null;
 
-			// On enable, restore the pairs to the model and update data
+			// On enable...
 			if (Active)
 			{
-				// Model.RunOnGuiThread(async () =>
-				// {
-				// 	try
-				// 	{
-				// 		await AddPairsToModel();
-				// 		await UpdateData();
-				// 		Status = EStatus.Connected;
-				// 	}
-				// 	catch (Exception ex)
-				// 	{
-				// 		Model.Log.Write(ELogLevel.Error, ex, $"Activation exchange {Name} failed");
-				// 		Active = false;
-				// 	}
-				// });
-				
-			}
-			// On disable, remove all pairs associated with this exchange from the model
-			else
-			{
-				//var pairs = Model.Pairs.Where(x => x.Exchange == this).ToHashSet();
-				//Model.Pairs.RemoveAll(pairs);
+				Debug.Assert(Model != null, "Should not be starting the thread when 'Model' is null");
+
+				// Invalidate the loops when an exchange is enabled
+				Model.RebuildLoops = true;
+
+				m_heart_thread_exit = false;
+				m_heart.Start();
 			}
 		}
 		private async void HeartBeatThreadEntry()
 		{
 			try
 			{
-				for (;!m_heart_thread_exit; Thread.Sleep(PollPeriod))
+				Thread.CurrentThread.Name = Name;
+				for (;!m_heart_thread_exit;)
+				{
 					await UpdateData();
+					if (Model.ShutdownToken.IsCancellationRequested) break;
+					Thread.Sleep(PollPeriod);
+				}
 			}
 			catch (Exception ex)
 			{
@@ -200,19 +193,19 @@ namespace CoinFlip
 			}
 			public Coin GetOrAdd(string sym)
 			{
-				Debug.Assert(Misc.AssertMainThread());
+				Debug.Assert(m_exch.Model.AssertMarketDataWrite());
 				return this.GetOrAdd(sym, k => new Coin(k, m_exch));
 			}
 			public override Coin this[string sym]
 			{
 				get
 				{
-					Debug.Assert(Misc.AssertReadOnly());
+					Debug.Assert(m_exch.Model.AssertMarketDataRead());
 					return TryGetValue(sym, out var coin) ? coin : null;
 				}
 				set
 				{
-					Debug.Assert(Misc.AssertMainThread());
+					Debug.Assert(m_exch.Model.AssertMarketDataWrite());
 					base[sym] = value;
 				}
 			}
@@ -222,8 +215,10 @@ namespace CoinFlip
 		public PairCollection Pairs { get; private set; }
 		public class PairCollection :BindingDict<string, TradePair>
 		{
-			public PairCollection()
+			private readonly Exchange m_exch;
+			public PairCollection(Exchange exch)
 			{
+				m_exch = exch;
 				KeyFrom = x => x.UniqueKey;
 			}
 
@@ -232,7 +227,7 @@ namespace CoinFlip
 			{
 				get
 				{
-					Debug.Assert(Misc.AssertReadOnly());
+					Debug.Assert(m_exch.Model.AssertMarketDataRead());
 
 					TradePair pair;
 					if (TryGetValue(TradePair.MakeKey(sym0, sym1), out pair)) return pair;
@@ -246,7 +241,7 @@ namespace CoinFlip
 			{
 				get
 				{
-					Debug.Assert(Misc.AssertMainThread());
+					Debug.Assert(m_exch.Model.AssertMarketDataRead());
 
 					TradePair pair;
 					if (TryGetValue(TradePair.MakeKey(sym, sym, exch0, exch1), out pair)) return pair;
@@ -269,20 +264,20 @@ namespace CoinFlip
 			}
 			public Balance GetOrAdd(Coin coin)
 			{
-				Debug.Assert(Misc.AssertMainThread());
+				Debug.Assert(m_exch.Model.AssertMarketDataWrite());
 				return this.GetOrAdd(coin, x => new Balance(x));
 			}
 			public override Balance this[Coin coin]
 			{
 				get
 				{
-					Debug.Assert(Misc.AssertReadOnly());
+					Debug.Assert(m_exch.Model.AssertMarketDataRead());
 					if (coin.Exchange != m_exch && !(m_exch is CrossExchange)) throw new Exception("Currency not associated with this exchange");
 					return TryGetValue(coin, out var bal) ? bal : new Balance(coin);
 				}
 				set
 				{
-					Debug.Assert(Misc.AssertMainThread());
+					Debug.Assert(m_exch.Model.AssertMarketDataWrite());
 					if (coin.Exchange != m_exch && !(m_exch is CrossExchange)) throw new Exception("Currency not associated with this exchange");
 					base[coin] = value;
 				}
@@ -299,20 +294,22 @@ namespace CoinFlip
 		public PositionsCollection Positions { get; private set; }
 		public class PositionsCollection :BindingDict<ulong, Position>
 		{
-			public PositionsCollection()
+			private readonly Exchange m_exch;
+			public PositionsCollection(Exchange exch)
 			{
+				m_exch = exch;
 				KeyFrom = x => x.OrderId;
 			}
 			public override Position this[ulong key]
 			{
 				get
 				{
-					Debug.Assert(Misc.AssertReadOnly());
+					Debug.Assert(m_exch.Model.AssertMarketDataRead());
 					return base[key];
 				}
 				set
 				{
-					Debug.Assert(Misc.AssertMainThread());
+					Debug.Assert(m_exch.Model.AssertMarketDataWrite());
 					base[key]=value;
 				}
 			}
@@ -325,6 +322,7 @@ namespace CoinFlip
 			// Status change can happen from any thread
 			Model.RunOnGuiThread(() =>
 			{
+				if (Model == null) return;
 				StatusChanged.Raise(this);
 				Model.Exchanges.ResetItem(this, ignore_missing:true);
 			});
@@ -444,66 +442,6 @@ namespace CoinFlip
 		{
 			return GetType().Name;
 		}
-
-
-
-#if false
-		/// <summary>Remove Coins/Pairs that are not associated with coins of interest or open positions</summary>
-		protected void Sweep()
-		{
-			// Get the coins of interest
-			var coi = Model.CoinsOfInterestSet.ToHashSet(); // Make a copy
-
-			// Add coins from the open positions
-			foreach (var pos in Positions.Values)
-			{
-				coi.Add(pos.Pair.Base);
-				coi.Add(pos.Pair.Quote);
-			}
-
-			// Remove all pairs that do not involve coins from 'coi'
-			Pairs.RemoveIf(x => !coi.Contains(x.Base) || !coi.Contains(x.Quote));
-
-			// Remove all coins not in 'coi'
-			Coins.RemoveIf(x => !coi.Contains(x));
-
-			// Remove all balances for coins not in 'coi'
-			Balance.RemoveIf(x => !coi.Contains(x.Coin));
-		}
-
-		/// <summary>Add the pairs for this exchange to the model (based on coins of interest)</summary>
-		protected virtual Task AddPairsToModel()
-		{
-			if (Active)
-			{
-				// The set of coins of interest
-				var coi = Model.CoinsOfInterestSet;
-
-				// The existing pairs in the model that belong to this exchange
-				var existing = Model.Pairs.Where(x => x.Exchange == this).ToHashSet();
-
-				// Add our pairs (involving the coins of interest) that are not already in the model.
-				// The model will have already removed pairs that are no longer of interest.
-				// The pairs that are associated with open positions are not added to the model.
-				var new_pairs = Pairs.Values.Where(x => !existing.Contains(x) && coi.Contains(x.Base) && coi.Contains(x.Quote)).ToArray();
-				if (new_pairs.Length != 0)
-					using (Model.Pairs.SuspendEvents(reset_bindings_on_resume: true))
-						Model.Pairs.AddRange(new_pairs);
-			}
-			return Misc.CompletedTask;
-		}
-
-
-		/// <summary>Handle the coins of interest changing</summary>
-		private void HandleCoinsOfInterestedChanging(object sender, ListChgEventArgs<string> e)
-		{
-			if (e.IsDataChanged)
-			{
-				Sweep();
-				AddPairsToModel();
-			}
-		}
-#endif
 	}
 }
 

@@ -10,11 +10,11 @@ namespace CoinFlip
 	{
 		public Settings()
 		{
-			CoinsOfInterest           = new[]{"BTC", "ETH", "LTC"};
-			MaximumLoopCount          = 5;
-			FindProfitableLoopsPeriod = 500;
-			Cryptopia                 = new CrypotopiaSettings();
-			Poloniex                  = new PoloniexSettings();
+			CoinsOfInterest  = new[]{"BTC", "ETH", "LTC"};
+			MaximumLoopCount = 5;
+			MainLoopPeriod   = 500;
+			Cryptopia        = new CrypotopiaSettings();
+			Poloniex         = new PoloniexSettings();
 
 			AutoSaveOnChanges = true;
 		}
@@ -39,10 +39,10 @@ namespace CoinFlip
 		}
 
 		/// <summary>The period at which searches for profitable loops occur</summary>
-		public int FindProfitableLoopsPeriod
+		public int MainLoopPeriod
 		{
-			get { return get(x => x.FindProfitableLoopsPeriod); }
-			set { set(x => x.FindProfitableLoopsPeriod, value); }
+			get { return get(x => x.MainLoopPeriod); }
+			set { set(x => x.MainLoopPeriod, value); }
 		}
 
 		/// <summary>Cryptopia exchange settings</summary>

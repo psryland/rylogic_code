@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using Newtonsoft.Json;
@@ -11,17 +12,21 @@ namespace Poloniex.API
 {
 	public class PoloniexApiPublic :IDisposable
 	{
-		private const string UrlBaseAddress = "https://poloniex.com/";
-		private const string UrlWssAddress = "wss://api.poloniex.com";
+		private string UrlBaseAddress;
+		private string UrlWssAddress;
 		private HttpClient m_client;
 		private JsonSerializer m_json;
+		private CancellationToken m_cancel_token;
 
-		public PoloniexApiPublic()
+		public PoloniexApiPublic(CancellationToken cancel_token, string base_address = "https://poloniex.com/", string wss_address = "wss://api.poloniex.com")
 		{
-			m_client = HttpClientFactory.Create();
-			m_json = new JsonSerializer { NullValueHandling = NullValueHandling.Ignore };
+			m_cancel_token      = cancel_token;
+			UrlBaseAddress      = base_address;
+			UrlWssAddress       = wss_address;
+			m_client            = HttpClientFactory.Create();
+			m_json              = new JsonSerializer { NullValueHandling = NullValueHandling.Ignore };
 			ActiveSubscriptions = new Dictionary<string, Subscription>();
-			Dispatcher = Dispatcher.CurrentDispatcher;
+			Dispatcher          = Dispatcher.CurrentDispatcher;
 		}
 		public virtual void Dispose()
 		{
@@ -291,12 +296,13 @@ namespace Poloniex.API
 			var url = string.Format("{0}public?command={1}{2}", UrlBaseAddress, command, (parameters.Length != 0 ? "&" + string.Join("&", parameters) : string.Empty));
 
 			// Submit the request
-			var response = await m_client.GetStringAsync(url);
-			if (string.IsNullOrEmpty(response))
-				throw new Exception("No Response");
+			var response = await m_client.GetAsync(url, m_cancel_token);
+			if (!response.IsSuccessStatusCode)
+				throw new Exception(response.ReasonPhrase);
 
 			// Interpret the reply
-			using (var tr = new JsonTextReader(new StringReader(response)))
+			var reply = await response.Content.ReadAsStringAsync();
+			using (var tr = new JsonTextReader(new StringReader(reply)))
 				return (T)m_json.Deserialize(tr, typeof(T));
 		}
 		

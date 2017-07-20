@@ -923,7 +923,7 @@ namespace RyLogViewer
 			// it could be in the last line, or after the last line.
 			if (line_index.Count == 0) return 0;
 			if (filepos >= line_index.Back().End) return line_index.Count;
-			int idx = line_index.BinarySearch(line => Maths.Compare(line.Beg, filepos));
+			int idx = line_index.BinarySearch(line => line.Beg.CompareTo(filepos));
 			return idx >= 0 ? idx : ~idx - 1;
 		}
 	}

@@ -42,7 +42,15 @@ namespace CoinFlip
 			private set
 			{
 				if (m_model == value) return;
+				if (m_model != null)
+				{
+					m_model.MarketDataChanged -= HandleMarketDataChanged;
+				}
 				m_model = value;
+				if (m_model != null)
+				{
+					m_model.MarketDataChanged += HandleMarketDataChanged;
+				}
 			}
 		}
 		private Model m_model;
@@ -58,9 +66,20 @@ namespace CoinFlip
 					HeaderText = "Loops",
 					DataPropertyName = nameof(Loop.LoopDescription),
 				});
+				m_grid_loops.Columns.Add(new DataGridViewTextBoxColumn
+				{
+					HeaderText = "Profit Ratio",
+					DataPropertyName = nameof(Loop.ProfitRatio),
+				});
 				m_grid_loops.DataSource = Model.Loops;
 			}
 			#endregion
+		}
+
+		/// <summary>Handle new market data</summary>
+		private void HandleMarketDataChanged(object sender, EventArgs e)
+		{
+			m_grid_loops.InvalidateColumn(1);
 		}
 
 		#region Windows Form Designer generated code
@@ -76,7 +95,6 @@ namespace CoinFlip
 			// 
 			this.m_grid_loops.AllowUserToAddRows = false;
 			this.m_grid_loops.AllowUserToDeleteRows = false;
-			this.m_grid_loops.AllowUserToResizeColumns = false;
 			this.m_grid_loops.AllowUserToResizeRows = false;
 			this.m_grid_loops.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_grid_loops.CellBorderStyle = System.Windows.Forms.DataGridViewCellBorderStyle.None;

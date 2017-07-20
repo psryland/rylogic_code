@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace Cryptopia.API
 {
@@ -15,14 +16,24 @@ namespace Cryptopia.API
 	{
 		private HttpClient _client;
 		private string _apiBaseAddress;
+		private CancellationToken m_cancel_token;
 
-		public CryptopiaApiPublic(string apiBaseAddress = "https://www.cryptopia.co.nz")
+		public CryptopiaApiPublic(CancellationToken cancel_token, string apiBaseAddress = "https://www.cryptopia.co.nz")
 		{
+			m_cancel_token = cancel_token;
 			_apiBaseAddress = apiBaseAddress;
 			_client = HttpClientFactory.Create();
 		}
+		public void Dispose()
+		{
+			if (_client != null)
+			{
+				_client.Dispose();
+				_client = null;
+			}
+		}
 
-		#region Api Calls
+		#region API Calls
 
 		public async Task<CurrenciesResponse> GetCurrencies()
 		{
@@ -64,30 +75,23 @@ namespace Cryptopia.API
 			return await GetResult<MarketOrderGroupsResponse>(PublicApiCall.GetMarketOrderGroups, query);
 		}
 
-		#endregion
-
-		#region public Members
-
-		public async Task<T> GetResult<T>(PublicApiCall call, string requestData)
-			where T : IResponse, new()
+		/// <summary>Helper for GETs</summary>
+		public async Task<T> GetResult<T>(PublicApiCall call, string requestData) where T : IResponse, new()
 		{
-			var response = await _client.GetStringAsync(string.Format("{0}/Api/{1}{2}", _apiBaseAddress, call, requestData));
+			// Create the URL for the command + parameters
+			var url = string.Format("{0}/Api/{1}{2}", _apiBaseAddress, call, requestData);
 
-			if (string.IsNullOrEmpty(response))
-				return new T() { Success = false, Error = "No Response." };
+			// Submit the request
+			var response = await _client.GetAsync(url, m_cancel_token);
+			if (!response.IsSuccessStatusCode)
+				throw new Exception(response.ReasonPhrase);
 
-			using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(response)))
+			// Interpret the reply
+			var reply = await response.Content.ReadAsStringAsync();
+			using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(reply)))
 			{
 				var serializer = new DataContractJsonSerializer(typeof(T));
 				return (T)(object)serializer.ReadObject(stream);
-			}
-		}
-
-		public void Dispose()
-		{
-			if (_client != null)
-			{
-				_client.Dispose();
 			}
 		}
 

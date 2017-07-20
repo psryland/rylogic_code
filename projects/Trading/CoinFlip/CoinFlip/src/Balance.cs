@@ -9,6 +9,9 @@ namespace CoinFlip
 		public Balance(Coin coin)
 			:this(coin, 0m, 0m, 0m, 0m, 0m)
 		{}
+		public Balance(Coin coin, decimal total)
+			:this(coin, total, total, 0m, 0m, 0m)
+		{}
 		public Balance(Coin coin, decimal total, decimal available, decimal uncomfirmed, decimal held_for_trades, decimal pending_withdraw)
 		{
 			Coin            = coin;

@@ -19,8 +19,8 @@ namespace CoinFlip
 		public Poloniex(Model model)
 			:base(model, 0.0025m, model.Settings.Poloniex.PollPeriod)
 		{
-			Pub = new PoloniexApiPublic();
-			Priv = new PoloniexApiPrivate(ApiKey, ApiSecret);
+			Pub = new PoloniexApiPublic(Model.ShutdownToken.Token);
+			Priv = new PoloniexApiPrivate(ApiKey, ApiSecret, Model.ShutdownToken.Token);
 		}
 		public override void Dispose()
 		{
@@ -79,50 +79,63 @@ namespace CoinFlip
 		/// <summary>Update this exchange's set of trading pairs</summary>
 		public async override Task UpdatePairs(HashSet<string> coi) // Worker thread context
 		{
-			// Get all available trading pairs
-			var msg = await Pub.GetTradePairs();
-
-			// Add an action to integrate the data
-			Model.MarketUpdates.Add(() =>
+			try
 			{
-				var nue = new HashSet<string>();
+				// Get all available trading pairs
+				var msg = await Pub.GetTradePairs();
 
-				// Create the trade pairs and associated coins
-				var pairs = msg.Select(x => new { Id = x.Value.Id, Coins = x.Key.Split('_') }).Where(x => coi.Contains(x.Coins[0]) && coi.Contains(x.Coins[1]));
-				foreach (var p in pairs)
+				// Add an action to integrate the data
+				Model.MarketUpdates.Add(() =>
 				{
-					// Poloniex gives pairs as "Quote_Base"
-					var base_ = Coins.GetOrAdd(p.Coins[1]);
-					var quote = Coins.GetOrAdd(p.Coins[0]);
+					var nue = new HashSet<string>();
 
-					// Add the trade pair.
-					var instr = new TradePair(base_, quote, this, p.Id,
-						volume_range_base:new RangeF<Unit<decimal>>(0.0001m._(base_), 10000000m._(base_)),
-						volume_range_quote:new RangeF<Unit<decimal>>(0.0001m._(quote), 10000000m._(quote)),
-						price_range:null);
-					Pairs[instr.UniqueKey] = instr;
+					// Create the trade pairs and associated coins
+					var pairs = msg.Select(x => new { Id = x.Value.Id, Coins = x.Key.Split('_') }).Where(x => coi.Contains(x.Coins[0]) && coi.Contains(x.Coins[1]));
+					foreach (var p in pairs)
+					{
+						// Poloniex gives pairs as "Quote_Base"
+						var base_ = Coins.GetOrAdd(p.Coins[1]);
+						var quote = Coins.GetOrAdd(p.Coins[0]);
 
-					// Save the names of the pairs,coins returned
-					nue.Add(instr.Name);
-					nue.Add(instr.Base.Symbol);
-					nue.Add(instr.Quote.Symbol);
+						// Add the trade pair.
+						var instr = new TradePair(base_, quote, this, p.Id,
+							volume_range_base:new RangeF<Unit<decimal>>(0.0001m._(base_), 10000000m._(base_)),
+							volume_range_quote:new RangeF<Unit<decimal>>(0.0001m._(quote), 10000000m._(quote)),
+							price_range:null);
+						Pairs[instr.UniqueKey] = instr;
+
+						// Save the names of the pairs,coins returned
+						nue.Add(instr.Name);
+						nue.Add(instr.Base.Symbol);
+						nue.Add(instr.Quote.Symbol);
+					}
+
+					// Remove pairs not in 'nue'
+					Pairs.RemoveIf(p => !nue.Contains(p.Name));
+
+					// Remove coins not in 'nue'
+					Coins.RemoveIf(c => !nue.Contains(c.Symbol));
+
+					// Ensure a 'Balance' object exists for each coin type
+					foreach (var c in Coins.Values)
+						Balance.GetOrAdd(c);
+
+					// Currently not working on the Poloniex site
+					//' // Ensure we're subscribed to the order book streams for each pair
+					//' foreach (var p in Pairs.Values)
+					//' 	Pub.SubscribePair(new CurrencyPair(p.Base, p.Quote));
+				});
+			}
+			catch (Exception ex)
+			{
+				if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
+				if (ex is OperationCanceledException) {}
+				else
+				{
+					Model.Log.Write(ELogLevel.Error, ex, "Poloniex UpdatePairs() failed");
+					Status = EStatus.Error;
 				}
-
-				// Remove pairs not in 'nue'
-				Pairs.RemoveIf(p => !nue.Contains(p.Name));
-
-				// Remove coins not in 'nue'
-				Coins.RemoveIf(c => !nue.Contains(c.Symbol));
-
-				// Ensure a 'Balance' object exists for each coin type
-				foreach (var c in Coins.Values)
-					Balance.GetOrAdd(c);
-
-				// Currently not working on the Poloniex site
-				//' // Ensure we're subscribed to the order book streams for each pair
-				//' foreach (var p in Pairs.Values)
-				//' 	Pub.SubscribePair(new CurrencyPair(p.Base, p.Quote));
-			});
+			}
 		}
 
 		/// <summary>Update the market data, balances, and open positions</summary>
@@ -236,8 +249,13 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				Model.Log.Write(ELogLevel.Error, ex, "Poloniex UpdateData() failed");
-				Status = EStatus.Error;
+				if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
+				if (ex is OperationCanceledException) {}
+				else
+				{
+					Model.Log.Write(ELogLevel.Error, ex, "Poloniex UpdateData() failed");
+					Status = EStatus.Error;
+				}
 			}
 		}
 

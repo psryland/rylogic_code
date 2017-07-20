@@ -12,6 +12,7 @@ using pr.common;
 using pr.gui;
 using pr.extn;
 using pr.util;
+using System.Globalization;
 
 namespace RyLogViewer
 {
@@ -235,15 +236,39 @@ namespace RyLogViewer
 		/// <summary>Replace the \r,\n,\t characters with '&lt;CR&gt;', '&lt;LF&gt;', and '&lt;TAB&gt;'</summary>
 		public static string Humanise(string str)
 		{
-			return str.Replace("\r","<CR>").Replace("\n","<LF>").Replace("\t","<TAB>");
+			// Substitute control characters for "<CR>,<LF>,<TAB>"
+			str = str.Replace("\r","<CR>");
+			str = str.Replace("\n","<LF>");
+			str = str.Replace("\t","<TAB>");
+
+			// Substitute UNICODE characters for a pseudo escaped characters
+			str = Regex.Replace(str, @"[^\x20-\x7E]", new MatchEvaluator(m =>
+			{
+				var ch = (int)m.Groups[0].Value[0];
+				return
+					ch > 0xFFFF ? "\\u{0:x6}".Fmt(ch) :
+					ch > 0xFF   ? "\\u{0:x4}".Fmt(ch) :
+					"\\u{0:x2}".Fmt(ch);
+			}));
+			return str;
 		}
 
 		/// <summary>Replace the '&lt;CR&gt;', '&lt;LF&gt;', and '&lt;TAB&gt;' strings with \r,\n,\t characters</summary>
 		public static string Robitise(string str)
 		{
+			// Substitute "<CR>,<LF>,<TAB>" for the actual characters
 			str = Regex.Replace(str, Regex.Escape("<CR>" ), "\r", RegexOptions.IgnoreCase);
 			str = Regex.Replace(str, Regex.Escape("<LF>" ), "\n", RegexOptions.IgnoreCase);
 			str = Regex.Replace(str, Regex.Escape("<TAB>"), "\t", RegexOptions.IgnoreCase);
+
+			// Substitute "\uXXXX" for the UNICODE characters
+			str = Regex.Replace(str, @"\\u([\da-f]+)", new MatchEvaluator(m =>
+			{
+				var xxxx = m.Groups[1].Value;
+				var code = int.Parse(xxxx, NumberStyles.HexNumber);
+				return new string((char)code, 1);
+			}), RegexOptions.IgnoreCase);
+
 			return str;
 		}
 

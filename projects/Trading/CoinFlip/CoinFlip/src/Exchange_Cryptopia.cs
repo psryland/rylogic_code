@@ -23,8 +23,8 @@ namespace CoinFlip
 		public Cryptopia(Model model)
 			:base(model, 0.002m, model.Settings.Cryptopia.PollPeriod)
 		{
-			Pub = new CryptopiaApiPublic();
-			Priv = new CryptopiaApiPrivate(ApiKey, ApiSecret);
+			Pub = new CryptopiaApiPublic(Model.ShutdownToken.Token);
+			Priv = new CryptopiaApiPrivate(ApiKey, ApiSecret, Model.ShutdownToken.Token);
 			m_pair_ids = new List<int>();
 		}
 
@@ -44,53 +44,66 @@ namespace CoinFlip
 		/// <summary>Update the collections of coins and pairs</summary>
 		public async override Task UpdatePairs(HashSet<string> coi) // Worker thread context
 		{
-			// Get all available trading pairs
-			var msg = await Pub.GetTradePairs();
-			if (!msg.Success)
-				throw new Exception("Cryptopia: Failed to read available trading pairs. {0}".Fmt(msg.Error));
-
-			// Add an action to add/update the pairs,coins
-			Model.MarketUpdates.Add(() =>
+			try
 			{
-				var nue = new HashSet<string>();
+				// Get all available trading pairs
+				var msg = await Pub.GetTradePairs();
+				if (!msg.Success)
+					throw new Exception("Cryptopia: Failed to read available trading pairs. {0}".Fmt(msg.Error));
 
-				// Create the trade pairs and associated coins
-				var pairs = msg.Data.Where(x => coi.Contains(x.SymbolBase) && coi.Contains(x.SymbolQuote));
-				foreach (var p in pairs)
+				// Add an action to add/update the pairs,coins
+				Model.MarketUpdates.Add(() =>
 				{
-					var base_ = Coins.GetOrAdd(p.SymbolBase);
-					var quote = Coins.GetOrAdd(p.SymbolQuote);
+					var nue = new HashSet<string>();
 
-					// Add the trade pair.
-					var instr = new TradePair(base_, quote, this, p.Id,
-						volume_range_base:new RangeF<Unit<decimal>>(p.MinimumTradeBase ._(p.SymbolBase ), p.MaximumTradeBase ._(p.SymbolBase )),
-						volume_range_quote:new RangeF<Unit<decimal>>(p.MinimumTradeQuote._(p.SymbolQuote), p.MaximumTradeQuote._(p.SymbolQuote)),
-						price_range:null);
-					Pairs[instr.UniqueKey] = instr;
+					// Create the trade pairs and associated coins
+					var pairs = msg.Data.Where(x => coi.Contains(x.SymbolBase) && coi.Contains(x.SymbolQuote));
+					foreach (var p in pairs)
+					{
+						var base_ = Coins.GetOrAdd(p.SymbolBase);
+						var quote = Coins.GetOrAdd(p.SymbolQuote);
 
-					// Save the names of the pairs,coins returned
-					nue.Add(instr.Name);
-					nue.Add(instr.Base.Symbol);
-					nue.Add(instr.Quote.Symbol);
-				}
+						// Add the trade pair.
+						var instr = new TradePair(base_, quote, this, p.Id,
+							volume_range_base:new RangeF<Unit<decimal>>(p.MinimumTradeBase ._(p.SymbolBase ), p.MaximumTradeBase ._(p.SymbolBase )),
+							volume_range_quote:new RangeF<Unit<decimal>>(p.MinimumTradeQuote._(p.SymbolQuote), p.MaximumTradeQuote._(p.SymbolQuote)),
+							price_range:null);
+						Pairs[instr.UniqueKey] = instr;
 
-				// Remove pairs not in 'nue'
-				Pairs.RemoveIf(p => !nue.Contains(p.Name));
+						// Save the names of the pairs,coins returned
+						nue.Add(instr.Name);
+						nue.Add(instr.Base.Symbol);
+						nue.Add(instr.Quote.Symbol);
+					}
 
-				// Remove coins not in 'nue'
-				Coins.RemoveIf(c => !nue.Contains(c.Symbol));
+					// Remove pairs not in 'nue'
+					Pairs.RemoveIf(p => !nue.Contains(p.Name));
 
-				// Ensure a 'Balance' object exists for each coin type
-				foreach (var c in Coins.Values)
-					Balance.GetOrAdd(c);
+					// Remove coins not in 'nue'
+					Coins.RemoveIf(c => !nue.Contains(c.Symbol));
 
-				// Record the pair Ids
-				lock (m_pair_ids)
+					// Ensure a 'Balance' object exists for each coin type
+					foreach (var c in Coins.Values)
+						Balance.GetOrAdd(c);
+
+					// Record the pair Ids
+					lock (m_pair_ids)
+					{
+						m_pair_ids.Clear();
+						m_pair_ids.AddRange(Pairs.Values.Select(x => x.TradePairId.Value));
+					}
+				});
+			}
+			catch (Exception ex)
+			{
+				if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
+				if (ex is OperationCanceledException) {}
+				else
 				{
-					m_pair_ids.Clear();
-					m_pair_ids.AddRange(Pairs.Values.Select(x => x.TradePairId.Value));
+					Model.Log.Write(ELogLevel.Error, ex, "Cryptopia UpdatePairs() failed");
+					Status = EStatus.Error;
 				}
-			});
+			}
 		}
 
 		/// <summary>Update the market data, balances, and open positions</summary>
@@ -106,7 +119,7 @@ namespace CoinFlip
 				// Request the order book data for all of the pairs
 				var order_book = ids.Length != 0 
 					? Pub.GetMarketOrderGroups(new MarketOrderGroupsRequest(ids))
-					: Task.FromResult<MarketOrderGroupsResponse>(null);
+					: Task.FromResult(new MarketOrderGroupsResponse());
 
 				// Request the account data
 				var balance_data = Priv.GetBalances(new BalanceRequest());
@@ -124,7 +137,7 @@ namespace CoinFlip
 					#region Order Book
 					{
 						var msg = order_book.Result;
-						if (msg == null || !msg.Success)
+						if (!msg.Success)
 							throw new Exception("Cryptopia: Failed to update trading pairs. {0}".Fmt(msg?.Error ?? string.Empty));
 
 						// Update the market orders
@@ -158,6 +171,7 @@ namespace CoinFlip
 						// Update the account balance
 						using (Model.Balances.PreservePosition())
 						{
+							var nue = new HashSet<Coin>();
 							foreach (var b in msg.Data.Where(x => x.Available != 0 || Coins.ContainsKey(x.Symbol)))
 							{
 								// Find the currency that this balance is for
@@ -166,7 +180,11 @@ namespace CoinFlip
 								// Update the balance
 								var bal = new Balance(coin, b.Total, b.Available, b.Unconfirmed, b.HeldForTrades, b.PendingWithdraw);
 								Balance[coin] = bal;
+								nue.Add(coin);
 							}
+
+							// Remove balances that aren't of interest
+							Balance.RemoveIf(x => !nue.Contains(x.Coin));
 						}
 					}
 					#endregion
@@ -211,8 +229,13 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				Model.Log.Write(ELogLevel.Error, ex, "Cryptopia UpdateData() failed");
-				Status = EStatus.Error;
+				if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
+				if (ex is OperationCanceledException) {}
+				else
+				{
+					Model.Log.Write(ELogLevel.Error, ex, "Cryptopia UpdateData() failed");
+					Status = EStatus.Error;
+				}
 			}
 		}
 	}

@@ -8,12 +8,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
-using pr.common;
 using pr.container;
 using pr.extn;
 using pr.maths;
 using pr.util;
-using Timer = System.Windows.Forms.Timer;
 
 namespace CoinFlip
 {
@@ -50,8 +48,8 @@ namespace CoinFlip
 
 			UI = main_ui;
 			Settings = new Settings(Util.ResolveUserDocumentsPath("Rylogic", "CoinFlip", "settings.xml"));
+			ShutdownToken  = new CancellationTokenSource();
 			m_dispatcher = Dispatcher.CurrentDispatcher;
-			Misc.m_main_thread_id = Thread.CurrentThread.ManagedThreadId;
 
 			// Start the log
 			Log = new Logger("", new LogToFile(Util.ResolveUserDocumentsPath("Rylogic", "CoinFlip", "log.txt"), append:false));
@@ -64,7 +62,6 @@ namespace CoinFlip
 			Positions       = new BindingSource<Position> { DataSource = null };
 			Loops           = new BindingSource<Loop> { DataSource = new BindingListEx<Loop>() };
 			MarketUpdates   = new BlockingCollection<Action>();
-			Heart           = new Timer();
 	
 			// Add exchanges
 			//Exchanges.Add(new TestExchange(this));
@@ -78,10 +75,14 @@ namespace CoinFlip
 			// Start each exchange
 			foreach (var exch in Exchanges)
 				RunOnGuiThread(() => exch.Active = true);
+
+			// Run the async main loop
+			MainLoop();
 		}
 		public virtual void Dispose()
 		{
-			Heart = null;
+			Debug.Assert(ShutdownToken.IsCancellationRequested);
+			Debug.Assert(m_main_loop_exit.WaitOne(0));
 			Exchanges = null;
 			CoinsOfInterest = null;
 			Log = null;
@@ -107,13 +108,45 @@ namespace CoinFlip
 		private Logger m_log;
 
 		/// <summary>True when the set of loops needs regenerating</summary>
-		public bool RebuildLoops { get; set; }
+		public bool RebuildLoops
+		{
+			get { return m_rebuild_loops; }
+			set
+			{
+				m_rebuild_loops = value;
+				if (value) ++m_rebuild_loops_issue;
+			}
+		}
+		private bool m_rebuild_loops;
+		private int m_rebuild_loops_issue;
 
 		/// <summary>A global switch to control actually placing orders</summary>
-		public bool AllowTrades { get; set; }
+		public bool AllowTrades
+		{
+			get { return m_allow_trades; }
+			set
+			{
+				if (m_allow_trades == value) return;
+				m_allow_trades = value;
+				AllowTradesChanged.Raise(this);
+			}
+		}
+		public event EventHandler AllowTradesChanged;
+		private bool m_allow_trades;
 
 		/// <summary>Start/Stop finding loops</summary>
-		public bool Run { get; set; }
+		public bool Run
+		{
+			get { return m_run; }
+			set
+			{
+				if (m_run == value) return;
+				m_run = value;
+				RunChanged.Raise(this);
+			}
+		}
+		public event EventHandler RunChanged;
+		private bool m_run;
 
 		/// <summary>The coins to search</summary>
 		public BindingSource<string> CoinsOfInterest
@@ -138,6 +171,7 @@ namespace CoinFlip
 				}
 			}
 		}
+		private BindingSource<string> m_coins_of_interest;
 		private void HandleCOIChanging(object sender, ListChgEventArgs<string> e)
 		{
 			if (e.IsDataChanged)
@@ -148,20 +182,8 @@ namespace CoinFlip
 				// Flag that the COI have changed, we'll need to rebuild
 				// pairs and loops.
 				RebuildLoops = true;
-
-//				// Invalidate the cached hash set
-//				CoinsOfInterestSet = null;
-
-//				// Remove pairs that no longer involve the coins of interest.
-//				// Exchanges will add new pairs that are of interest
-//				var coi = CoinsOfInterest.ToHashSet();//CoinsOfInterestSet;
-//				Pairs.RemoveIf(x => !coi.Contains(x.Base) || !coi.Contains(x.Quote));
-//
-//				// Update exchange details
-//				UpdateExchangeDetails();
 			}
 		}
-		private BindingSource<string> m_coins_of_interest;
 
 		/// <summary>The exchanges</summary>
 		public BindingSource<Exchange> Exchanges
@@ -174,6 +196,7 @@ namespace CoinFlip
 				{
 					m_exchanges.ListChanging -= HandleExchangesListChanging;
 					m_exchanges.PositionChanged -= HandleCurrentExchangeChanged;
+					Util.DisposeAll(ref m_exchanges);
 				}
 				m_exchanges = value;
 				if (m_exchanges != null)
@@ -192,10 +215,6 @@ namespace CoinFlip
 				Log.Write(ELogLevel.Info, "Exchange Removed: {0}".Fmt(e.Item.Name));
 
 			RebuildLoops = true;
-		//	// Update the loops on exchanges changed.
-		//	// Run 'FindLoops' after all handlers of list changing have been processed
-		//	if (e.IsDataChanged)
-		//		RunOnGuiThread(FindLoops);
 		
 			// Update the bindings to the current exchange
 			if (e.Item == Exchanges.Current)
@@ -210,97 +229,116 @@ namespace CoinFlip
 		private CrossExchange CrossExchange { get; set; }
 
 		/// <summary>Debugging flag for detecting misuse of the market data</summary>
-		internal bool ReadOnlyMarketData { get; private set; }
+		internal bool MarketDataLocked { get; private set; }
 
-		/// <summary>Heart beat</summary>
-		private Timer Heart
+		/// <summary>A cancellation token for graceful shutdown</summary>
+		public CancellationTokenSource ShutdownToken { get; private set; }
+
+		/// <summary>True if the Model can be closed gracefully</summary>
+		public bool CanShutdown
 		{
-			get { return m_heart; }
-			set
-			{
-				if (m_heart == value) return;
-				if (m_heart != null)
-				{
-					m_heart.Tick -= HandleHeartBeatTick;
-					Util.Dispose(ref m_heart);
-				}
-				m_heart = value;
-				if (m_heart != null)
-				{
-					m_heart.Enabled = true;
-					m_heart.Interval = Settings.FindProfitableLoopsPeriod;
-					m_heart.Tick += HandleHeartBeatTick;
-				}
-			}
+			get { return m_main_loop_exit.WaitOne(0); }
 		}
-		private Timer m_heart;
-		private async void HandleHeartBeatTick(object sender = null, EventArgs args = null)
-		{
-			if (m_in_heart_beat != 0) return;
-			using (Scope.Create(() => ++m_in_heart_beat, () => --m_in_heart_beat))
-			{
-				try
-				{
-					// When the coins of interest, available pairs, etc change, rebuild the collection of loops
-					if (RebuildLoops)
-					{
-						// Get each exchange to update it's available pairs/coins
-						var coi = CoinsOfInterest.ToHashSet();
-						await Task.WhenAll(Exchanges.Except(CrossExchange).Select(x => x.UpdatePairs(coi)));
-						await CrossExchange.UpdatePairs(coi);
 
-						// Merge data in the main thread
+		/// <summary>Async shutdown</summary>
+		public Task Shutdown()
+		{
+			// Signal shutdown
+			ShutdownToken.Cancel();
+
+			// Wait for async methods to exit
+			return Task.Run(() => m_main_loop_exit.WaitOne());
+		}
+
+		/// <summary>Application main loop
+		private async void MainLoop()
+		{
+			m_main_loop_exit = new ManualResetEvent(false);
+			using (Scope.Create(null, () => m_main_loop_exit.Set()))
+			{
+				// Infinite loop till shutdown
+				for (;;)
+				{
+					var shutdown = ShutdownToken.Token.WaitHandle;
+					var exit = await Task.Run(() => shutdown.WaitOne(Settings.MainLoopPeriod));
+					if (exit) break;
+
+					try
+					{
+						// When the coins of interest, available pairs, etc change, rebuild the collection of loops
+						for (; RebuildLoops;)
+						{
+							var rebuild_loops_issue = m_rebuild_loops_issue;
+
+							// Get each exchange to update it's available pairs/coins
+							var coi = CoinsOfInterest.ToHashSet();
+							await Task.WhenAll(Exchanges.Except(CrossExchange).Select(x => x.UpdatePairs(coi)));
+							await CrossExchange.UpdatePairs(coi);
+							Debug.Assert(AssertMainThread());
+
+							// If the loops have been invalidated in the meantime, go round again
+							if (rebuild_loops_issue != m_rebuild_loops_issue)
+								continue;
+
+							// Merge data in the main thread
+							IntegrateMarketUpdates();
+
+							// Copy the pairs from each exchange to the Model's collection
+							Pairs.Clear();
+							foreach (var exch in Exchanges.Where(x => x.Active))
+								Pairs.AddRange(exch.Pairs.Values.Where(x => coi.Contains(x.Base) && coi.Contains(x.Quote)));
+
+							// Update the collection of loops
+							await FindLoops();
+
+							// If the loops have been invalidated in the meantime, go round again
+							if (rebuild_loops_issue != m_rebuild_loops_issue)
+								continue;
+
+							RebuildLoops = false;
+						}
+
+						// Process any pending market data updates
 						IntegrateMarketUpdates();
 
-						// Copy the pairs from each exchange to the Model's collection
-						Pairs.Clear();
-						foreach (var exch in Exchanges)
-							Pairs.AddRange(exch.Pairs.Values.Where(x => coi.Contains(x.Base) && coi.Contains(x.Quote)));
-
-						// Update the collection of loops
-						await FindLoops();
-						RebuildLoops = false;
-					}
-
-					// Process any pending market data updates
-					IntegrateMarketUpdates();
-
-					// Test the loops for profitability, and execute the best
-					if (Run)
-					{
-						// Check the loops collection for profitable loops
-						var profitable_loops = await FindProfitableLoops();
-
-						// Execute the most profitable loop
-						foreach (var loop in profitable_loops)
+						// Test the loops for profitability, and execute the best
+						if (Run)
 						{
-							if (loop.TradeScale == 0)
+							using (Scope.Create(() => MarketDataLocked = true, () => MarketDataLocked = false))
 							{
-								var exchanges = string.Join(",", loop.Coins.Select(x => x.Exchange.Name).Distinct());
-								var missing = string.Join(",", loop.Insufficient.Select(x => x.Coin));
-								Log.Write(ELogLevel.Info, $"Potential Loop {loop.LoopDescription} ({exchanges}). Profit Ratio: {loop.ProfitRatio}. Missing Currencies: {missing}");
-								continue;
+								// Check the loops collection for profitable loops
+								var profitable_loops = await FindProfitableLoops();
+
+								// Execute the most profitable loop
+								foreach (var loop in profitable_loops)
+								{
+									if (loop.TradeScale == 0)
+									{
+										var exchanges = string.Join(",", loop.Coins.Select(x => x.Exchange.Name).Distinct());
+										var missing = string.Join(",", loop.Insufficient.Select(x => x.Coin.SymbolWithExchange));
+										Log.Write(ELogLevel.Info, $"Potential Loop {loop.LoopDescription} ({exchanges}). Profit Ratio: {loop.ProfitRatio}. Missing Currencies: {missing}");
+										continue;
+									}
+
+									// Execute the loop
+									await ExecuteLoop(loop);
+
+									// Execute one loop only
+									break;
+								}
 							}
-
-							// Execute the loop
-							await ExecuteLoop(loop);
-
-							// Execute one loop only
-							break;
 						}
 					}
-
-					// Notify heart beat
-					HeartBeat.Raise(this);
-				}
-				catch (Exception ex)
-				{
-					Log.Write(ELogLevel.Error, ex, "Error during step.");
+					catch (Exception ex)
+					{
+						if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
+						if (ex is OperationCanceledException) { }
+						else Log.Write(ELogLevel.Error, ex, "Error during step.");
+					}
 				}
 			}
 		}
-		public event EventHandler HeartBeat;
-		private int m_in_heart_beat;
+		private ManualResetEvent m_main_loop_exit;
 
 		/// <summary>The available trade pairs (the model does not own the pairs, the exchanges do)</summary>
 		public BindingSource<TradePair> Pairs
@@ -325,11 +363,6 @@ namespace CoinFlip
 		{
 			// Ensure the list is unique
 			Debug.Assert(e.ChangeType != ListChg.ItemAdded || Pairs.Count(x => x == e.Item) == 1);
-
-		//	// Update the loops on trade-pairs changed
-		//	// Run 'FindLoops' after all handlers of list changing have been processed
-		//	if (e.IsDataChanged)
-		//		RunOnGuiThread(FindLoops);
 		}
 
 		/// <summary>The balances on the current exchange</summary>
@@ -376,64 +409,57 @@ namespace CoinFlip
 		/// <summary>Find the available trade loops</summary>
 		private async Task FindLoops()
 		{
-			// The trading pairs are the edges in an undirected graph.
-			// We want to identify all of the cycles in the graph. This
-			// can take a while, so do it in a worker thread.
-			var max_loop_count = Settings.MaximumLoopCount;
+			// Local copy of shared variables
 			var pairs = Pairs.ToList();
-			Debug.Assert(pairs.Distinct().Count() == pairs.Count);
+			var max_loop_count = Settings.MaximumLoopCount;
+			Log.Write(ELogLevel.Info, "Finding loops .....");
 
-			// A worker thread for updating the loops collection
+			// A collection of complete loops
+			var result = new ConcurrentDictionary<string, Loop>();
+
+			// Run the background process
 			await Task.Run(() =>
 			{
-				// Use two buffers, one buffer contains the partial loops
-				// from the previous round, the other collects the partial
-				// (but bigger) loops for the next round.
-				var loops0 = new List<Loop>();
-				var loops1 = new List<Loop>();
-				var result = new List<Loop>();
+				// Create a producer/consumer queue of partial loops
+				var queue = new BlockingCollection<Loop>();
+				foreach (var pair in pairs)
+					queue.Add(new Loop(pair));
 
-				// Start each loop with a single edge, one for each trading pair
-				for (var i = 0; i != pairs.Count; ++i)
-					loops0.Add(new Loop(pairs[i]));
-
-				// Find closed loops within the graph, starting with the smallest
-				// and building up to the largest.
-				for (var k = 0;; ++k)
+				// Stop when there are no more partial loops to process
+				var tasks = new List<Task>();
+				for (;;)
 				{
-					var prev = (k%2) == 0 ? loops0 : loops1;
-					var next = (k%2) == 0 ? loops1 : loops0;
-
-					// Quit when there are no more partial loops
-					// or the maximum loop length is exceeded.
-					if (prev.Count == 0 || k == max_loop_count) break;
-					next.Clear();
-
-					// Extend the partial loops
-					for (var j = 0; j != prev.Count; ++j)
+					// Take a partial loop from the queue
+					if (!queue.TryTake(out var loop, TimeSpan.FromSeconds(1.0)))
 					{
-						var loop = prev[j];
+						// If there are no partial loops to process and
+						// no running tasks we must be done.
+						tasks.RemoveIf(x => x.IsCompleted);
+						if (tasks.Count == 0) break;
+						continue;
+					}
 
-						// Starting from the next pair, see if it can be appended to
-						// the partial loop. If 'pair' closes the loop, add it to the
-						// loops to be tested for profit.
-						for (var i = 0; i != pairs.Count; ++i)
+					// If the loop is too long, ignore it
+					if (loop.Coins.Count >= max_loop_count)
+						continue;
+
+					// Process the partial loop in a worker thread
+					tasks.Add(Task.Run(() =>
+					{
+						// Look for a pair that completes or extends the loop
+						var existing_pairs = loop.Pairs.ToHashSet();
+						foreach (var pair in pairs.Where(x => !existing_pairs.Contains(x)))
 						{
-							var pair = pairs[i];
-
-							// A loop can only have each pair once
-							if (loop.Pairs.Contains(pair))
-								continue;
-
 							// Does 'pair' close the loop?
-							if ((pair.Base == loop.Beg && pair.Quote == loop.End) ||
-								(pair.Base == loop.End && pair.Quote == loop.Beg))
+							if (((pair.Base == loop.Beg && pair.Quote == loop.End) ||
+								 (pair.Base == loop.End && pair.Quote == loop.Beg)) &&
+								 !loop.Pairs.Contains(pair))
 							{
 								// Yes, save the complete loop to the results
 								var l = new Loop(loop);
 								l.Pairs.Add(pair);
-								if (result.Find(q => q.Equals(l)) == null)
-									result.Add(l);
+								l.Canonicalise();
+								result.TryAdd(l.LoopDescription, l);
 								continue;
 							}
 
@@ -446,22 +472,24 @@ namespace CoinFlip
 							if (pair.Quote == loop.End && !loop.Coins.Contains(pair.Base )) { bk = true;  coin = pair.Base; }
 							if (coin != null)
 							{
-								// Yes, add the slightly longer loop to the 'next' collection
+								// Yes, add the slightly longer loop to the 'queue' collection
 								var l = new Loop(loop);
 								l.Pairs.Insert(bk ? l.Pairs.Count : 0, pair);
 								l.Coins.Insert(bk ? l.Coins.Count : 0, coin);
-								next.Add(l);
+								queue.Add(l);
 								continue;
 							}
 						}
-					}
+					}, ShutdownToken.Token));
 				}
+			}, ShutdownToken.Token);
+			Debug.Assert(AssertMainThread());
 
-				// Update the loops collection
-				Loops.Clear();
-				Loops.AddRange(result);
-				Log.Write(ELogLevel.Info, "{0} trading pair loops found".Fmt(result.Count));
-			});
+			// Reduce the bag to a unique set of loops
+			var loops = result.Values.ToArray();
+			Loops.Clear();
+			Loops.AddRange(loops);
+			Log.Write(ELogLevel.Info, "{0} trading pair loops found".Fmt(result.Count));
 		}
 
 		/// <summary>Check the loops collection for profitable loops</summary>
@@ -470,184 +498,162 @@ namespace CoinFlip
 			// Find the potentially profitable loops ignoring account balances and fees.
 			// Test each loop in parallel.
 			var bag = new ConcurrentBag<Loop>();
-			using (Scope.Create(() => ReadOnly = true, () => ReadOnly = false))
-				await Task.WhenAll(Loops.Select(x => AddLoopIfProfitable(x, bag)));
-
-			// Simulate each loop based on current balances and fees to determine actual profitability
-			var profitable = new List<Loop>();
-			foreach (var loop in bag.ToArray())
+			var tasks = new List<Task>();
+			foreach (var loop in Loops)
 			{
-				var coin = loop.Beg;
+				loop.ProfitRatio = 0;
+				//tasks.Add(Task.Run(() => AddLoopIfProfitable(loop, true , bag), ShutdownToken.Token));
+				//tasks.Add(Task.Run(() => AddLoopIfProfitable(loop, false, bag), ShutdownToken.Token));
 
-				// Find the maximum profitable volume to trade
-				var volume = 0m._(coin);
-				foreach (var ordr in loop.Rate.Where(x => x.Price > 1))
-					volume += ordr.VolumeBase;
-
-				// Initialise the maximum profitable trade volume and scaling
-				// factor that allows for the available balance.
-				loop.TradeVolume = volume;
-				loop.TradeScale = 1m;
-
-				// Calculate the effective fee in initial coin currency.
-				// Do all trades assuming no fee, but accumulate the fee separately
-				var fee = 0m._(coin);
-				var initial_volume = volume;
-
-				// Trade each pair in the loop (in the given direction) to check we have enough
-				// balance for each trade, and that the trade is still profitable after fees.
-				foreach (var pair in loop.EnumPairs(loop.Direction))
-				{
-					// If we trade 'volume' using 'pair' that will result in a new volume
-					// in the new currency. There will also be a fee charged (in quote currency).
-					// If we're trading to quote currency, the new volume is reduced by the fee.
-					// If we're trading to base currency, the cost is increased by the fee.
-
-					// Calculate the result of the trade
-					var new_coin = pair.OtherCoin(coin);
-					var converted = pair.Base == coin
-						? pair.BaseToQuote(volume)
-						: pair.QuoteToBase(volume);
-
-					// Get the balance available for this trade and determine a trade scaling factor.
-					// Reduce the available balance by the fee so that we know there's enough balance for the trade.
-					var bal = coin.Balance.Available * (1 - pair.Fee);
-					if (bal < volume)
-					{
-						// Scale the trade volume
-						var scale = (decimal)(bal / volume);
-						loop.TradeScale = Maths.Clamp(scale, 0, loop.TradeScale);
-
-						// If the volume to trade multiplied by the trade scale is outside the
-						// allowed range of trading volume, set the scale to zero. This is to
-						// prevent loops being traded where part of the loop would be rejected.
-						if (pair.Base == coin)
-						{
-							if (!(pair.VolumeRangeBase?.Contains(volume * scale) ?? true))
-							{
-								loop.Insufficient.Add(new Loop.InsufficientCoin(coin, 0));
-								loop.TradeScale = 0m;
-							}
-							if (!(pair.VolumeRangeQuote?.Contains(converted.VolumeBase * scale) ?? true))
-							{
-								loop.Insufficient.Add(new Loop.InsufficientCoin(new_coin, 0));
-								loop.TradeScale = 0m;
-							}
-						}
-						else
-						{
-							if (!(pair.VolumeRangeQuote?.Contains(volume * scale) ?? true))
-							{
-								loop.Insufficient.Add(new Loop.InsufficientCoin(new_coin, 0));
-								loop.TradeScale = 0m;
-							}
-							if (!(pair.VolumeRangeBase?.Contains(converted.VolumeBase * scale) ?? true))
-							{
-								loop.Insufficient.Add(new Loop.InsufficientCoin(coin, 0));
-								loop.TradeScale = 0m;
-							}
-						}
-
-						// Apply the price limits. I don't really expect this to ever be hit because we're trading
-						// existing offers that must have valid prices already.
-						if (!(pair.PriceRange?.Contains(converted.Price) ?? true))
-							loop.TradeScale = 0m;
-					}
-
-					// Convert the fee to the new coin using the effective rate, and add on the fee
-					var rate = converted.VolumeBase / volume;
-					fee = fee * rate + converted.VolumeBase * pair.Fee;
-
-					coin = new_coin;
-					volume = converted.VolumeBase;
-				}
-
-				// If the new volume is greater than the initial volume, WIN!
-				// Update the profitability of the loop now we've accounted for fees.
-				loop.Profit = (volume - fee) - initial_volume;
-				loop.ProfitRatio = (volume - fee) / initial_volume;
-				if (loop.ProfitRatio > 1m)
-					profitable.Add(loop);
+				AddLoopIfProfitable(loop, true , bag);
+				AddLoopIfProfitable(loop, false, bag);
 			}
+			await Task.WhenAll(tasks);
 
-			// Sort the loops by profitability by available balances
-			profitable.Sort(new Comparison<Loop>((l,r) => -l.ProfitRatio.CompareTo(r.ProfitRatio)));
-
-			return profitable;
+			// Return the profitable loops in order of most profitable
+			return bag.OrderByDescending(x => x.ProfitRatio).ToList();
 		}
 
 		/// <summary>Determine if executing trades in 'loop' should result in a profit</summary>
-		private async Task AddLoopIfProfitable(Loop loop, ConcurrentBag<Loop> profitable_loops)
+		private void AddLoopIfProfitable(Loop loop, bool forward, ConcurrentBag<Loop> profitable_loops) // Worker thread context
 		{
-			await Task.Run(() =>
+			// How to think about this:
+			// - We want to see what happens if we convert some currency to each of the coins
+			//   in the loop, ending up back at the initial currency. If the result is more than
+			//   we started with, then it's a profitable loop.
+			// - We can go in either direction around the loop.
+			// - We want to execute each trade around a profitable loop at the same time, so we're
+			//   limited to the smallest balance for the coins in the loop.
+			// - The rate by volume does not depend on our account balance. We calculate the effective
+			//   rate at each of the offered volumes then determine if any of those volumes are profitable
+			//   and whether we have enough balance for the given volumes.
+			// - The 'Bid' table contains the amounts of base currency people want to buy, ordered by price.
+			// - The 'Ask' table contains the amounts of base currency people want to sell, ordered by price.
+			var coin = loop.Beg;
+			var dir = forward ? +1 : -1;
+
+			// Debugging helper
+			if (loop.CoinsString(+1) == TrapLoopDescription ||
+				loop.CoinsString(-1) == TrapLoopDescription)
+				Debugger.Break();
+
+			// Construct an "order book" of volumes and complete-loop prices (e.g. BTC to BTC price for each volume)
+			var obk = new OrderBook(coin, coin){ new Order(1m, decimal.MaxValue._(coin.Symbol)) };
+			foreach (var pair in loop.EnumPairs(dir))
 			{
-				// How to think about this:
-				// - We want to see what happens if we convert some currency to each of the coins
-				//   in the loop, ending up back at the initial currency. If the result is more than
-				//   we started with, then it's a profitable loop.
-				// - We can go in either direction around the loop.
-				// - We want to execute each trade around a profitable loop at the same time, so we're
-				//   limited to the smallest balance for the coins in the loop.
-				// - The rate by volume does not depend on our account balance. We calculate the effective
-				//   rate at each of the offered volumes then determine any of those volumes are profitable
-				//   and whether we have enough balance for the given volumes
-				// - The 'Bid' table contains the amounts of base currency people want to buy, ordered by price.
-				// - The 'Ask' table contains the amounts of base currency people want to sell, ordered by price.
-				var coin = loop.Beg;
+				// Limit the volume calculated, there's no point in calculating large volumes if we can't trade them
+				var bal = coin.Balance;
 
-				// Forward pass around the loop.
-				{
-					var fwd = new OrderBook(coin, coin);
-					fwd.Add(new Order(1m._(""), decimal.MaxValue._(coin.Symbol)));
-					foreach (var pair in loop.EnumPairs(+1))
-					{
-						// Limit the volume calculated, there's no point in calculating large volumes if we can't trade them
-						var bal = coin.Balance;
+				// Note: the trade prices are in quote currency
+				if (pair.Base == coin)
+					obk = MergeRates(obk, pair.Bid, bal.Available, invert:false);
+				else
+					obk = MergeRates(obk, pair.Ask, bal.Available, invert:true);
 
-						// Note: the trade prices are in quote currency
-						if (pair.Base == coin)
-							fwd = MergeRates(fwd, pair.Bid, bal.Available, invert:false);
-						else
-							fwd = MergeRates(fwd, pair.Ask, bal.Available, invert:true);
+				// Get the next coin in the loop
+				coin = pair.OtherCoin(coin);
+			}
+			if (obk.Count == 0)
+				return;
 
-						// Get the next coin in the loop
-						coin = pair.OtherCoin(coin);
-					}
+			// Save the best profit ratio for this loop (as an indication)
+			loop.ProfitRatio = Math.Max(loop.ProfitRatio, obk[0].Price);
 
-					// Test for profitability
-					var fwd_profit = fwd.Where(x => x.Price > 1).Sum(x => x.Price * x.VolumeBase);
-					if (fwd_profit != 0)
-						profitable_loops.Add(new Loop(loop, fwd, +1, fwd_profit));
-				}
+			// Look for any volumes that have a nett gain
+			var volume_gain = obk.Where(x => x.Price > 1).Sum(x => x.Price * x.VolumeBase);
+			if (volume_gain == 0)
+				return;
 
-				coin = loop.Beg;
+			// Create a copy of the loop for editing (with the direction set)
+			loop = new Loop(loop, obk, dir);
 
-				// Backward pass around the loop.
-				{
-					var bck = new OrderBook(coin, coin);
-					bck.Add(new Order(1m._(""),  decimal.MaxValue._(coin.Symbol)));
-					foreach (var pair in loop.EnumPairs(-1))
-					{
-						// Limit the volume calculated, there's no point in calculating large volumes if we can't trade them
-						var bal = coin.Balance;
+			// Find the maximum profitable volume to trade
+			Debug.Assert(coin == loop.Beg);
+			var volume = 0m._(coin);
+			foreach (var ordr in loop.Rate.Where(x => x.Price > 1))
+				volume += ordr.VolumeBase;
 
-						// Note: the trade prices are in quote currency
-						if (pair.Base == coin)
-							bck = MergeRates(bck, pair.Bid, bal.Available, invert:false);
-						else
-							bck = MergeRates(bck, pair.Ask, bal.Available, invert:true);
+			// Calculate the effective fee in initial coin currency.
+			// Do all trades assuming no fee, but accumulate the fee separately
+			var fee = 0m._(coin);
+			var initial_volume = volume;
 
-						// Get the next coin in the loop
-						coin = pair.OtherCoin(coin);
-					}
+			// Trade each pair in the loop (in the given direction) to check 
+			// that the trade is still profitable after fees. Record each trade
+			// so that we can determine the trade scale
+			var trades = new List<Trade>();
+			foreach (var pair in loop.EnumPairs(loop.Direction))
+			{
+				// If we trade 'volume' using 'pair' that will result in a new volume
+				// in the new currency. There will also be a fee charged (in quote currency).
+				// If we're trading to quote currency, the new volume is reduced by the fee.
+				// If we're trading to base currency, the cost is increased by the fee.
 
-					// Test for profitability
-					var bck_profit = bck.Where(x => x.Price > 1).Sum(x => x.Price * x.VolumeBase);
-					if (bck_profit != 0)
-						profitable_loops.Add(new Loop(loop, bck, -1, bck_profit));
-				}
-			});
+				// Calculate the result of the trade
+				var new_coin = pair.OtherCoin(coin);
+				var converted = pair.Base == coin
+					? pair.BaseToQuote(volume)
+					: pair.QuoteToBase(volume);
+
+				// Record the trade amount.
+				trades.Add(new Trade(coin, pair, volume, converted.VolumeBase, converted.Price));
+
+				// Convert the fee so far to the new coin using the effective rate,
+				// and add on the fee for this trade.
+				var rate = converted.VolumeBase / volume;
+				fee = fee * rate + converted.VolumeBase * pair.Fee;
+
+				// Advance to the next pair
+				coin = new_coin;
+				volume = converted.VolumeBase;
+			}
+
+			// Record the volume to trade, the scale, and the expected profit.
+			// If the new volume is greater than the initial volume, WIN!
+			// Update the profitability of the loop now we've accounted for fees.
+			loop.TradeVolume = initial_volume;
+			loop.Profit = (volume - fee) - initial_volume;
+			loop.ProfitRatio = (volume - fee) / initial_volume;
+			if (loop.ProfitRatio <= 1m)
+				return;
+
+			// Determine the trade scale based on the available balances
+			loop.TradeScale = 1m;
+			foreach (var trade in trades)
+			{
+				var pair = trade.Pair;
+
+				// Get the balance available for this trade and determine a trade scaling factor.
+				// Decrease the available balance by the fee that would be charged to ensure we have enough funds;
+				var bal = trade.Coin.Balance.Available - (trade.VolumeIn * pair.Fee);
+				var scale = Maths.Clamp((decimal)(bal / trade.VolumeIn), 0m, 1m);
+				loop.TradeScale = Maths.Clamp(scale, 0, loop.TradeScale);
+
+				// Check that the trade volumes, scaled by the trade scale, are within the legal volume sizes.
+				var rangeI = pair.Base == trade.Coin ? pair.VolumeRangeBase : pair.VolumeRangeQuote;
+				var rangeO = pair.Base == trade.Coin ? pair.VolumeRangeQuote : pair.VolumeRangeBase;
+				if (!rangeI.Contains(trade.VolumeIn  * scale))
+					loop.Insufficient.Add(new InsufficientCoin(trade.Coin, "Not enough to trade"));
+				else if (!rangeO.Contains(trade.VolumeOut * scale))
+					loop.Insufficient.Add(new InsufficientCoin(pair.OtherCoin(trade.Coin), "Trade result too small"));
+
+				// Apply the price limits. I don't really expect this to ever be hit because we're trading
+				// existing offers that must have valid prices already.
+				var price = pair.Base == trade.Coin ? trade.Price : 1m / trade.Price;
+				if (!pair.PriceRange.Contains(price))
+					loop.Insufficient.Add(new InsufficientCoin(trade.Coin, "Price out of range"));
+			}
+
+			// If the volume to trade, multiplied by the trade scale, is outside the allowed range of
+			// trading volume, set the scale to zero. This is to prevent loops being traded where part
+			// of the loop would be rejected.
+			if (loop.Insufficient.Count != 0)
+				loop.TradeScale = 0m;
+
+			// Save the profitable loop (even if scaled to 0)
+			profitable_loops.Add(loop);
 		}
+		private static string TrapLoopDescription = string.Empty;
 
 		/// <summary>Determine the exchange rate based on volume</summary>
 		private static OrderBook MergeRates(OrderBook rates, OrderBook orders, Unit<decimal> balance, bool invert)
@@ -662,15 +668,16 @@ namespace CoinFlip
 			var new_coin = invert ? orders.Base : orders.Quote;
 			var ret = new OrderBook(new_coin, new_coin);
 
+			// Volume accumulators for the 'rates' and 'orders' order books.
 			var R_vol = 0m._(rates.Base.Symbol);
-			var D_vol = 0m._(rates.Base.Symbol);
+			var O_vol = 0m._(rates.Base.Symbol);
 
 			// The maximum volume available to trade is the minimum of the 'rates' and 'orders'
 			// volumes, hence this loop ends when the last order in either set is reached.
-			for (int r = 0, d = 0; r != rates.Count && d != orders.Count;)
+			for (int r = 0, o = 0; r != rates.Count && o != orders.Count;)
 			{
 				var rate = rates[r];
-				var ordr = orders[d];
+				var ordr = orders[o];
 
 				// Get the offer price and volume to convert to the current coin currency
 				var price = invert ? 1m/ordr.Price : ordr.Price;
@@ -685,11 +692,22 @@ namespace CoinFlip
 				// Record the volume and the combined rate
 				ret.Add(new Order(rate.Price * price, vol1), validate:false);
 
+				// Move to the next order in the set with the lowest accumulative volume.
 				// If the same accumulative volume is in both sets, move to the next order in both sets.
-				if (R_vol + rate.VolumeBase <= D_vol + volume) { ++r; R_vol += rate.VolumeBase; }
-				if (R_vol + rate.VolumeBase >= D_vol + volume) { ++d; D_vol += volume; }
+				// Need to be careful with overflow, because special case values use decimal.MaxValue.
+				// Only advance to the next order if the accumulative volume is less than MaxValue.
+				var adv_R =
+					(R_vol < decimal.MaxValue - rate.VolumeBase) && // if 'R_vol + rate.VolumeBase' does not overflow
+					(R_vol - O_vol <= volume - rate.VolumeBase);    // and 'R_vol + rate.VolumeBase' <= 'O_vol + volume'
+				var adv_O =
+					(O_vol < decimal.MaxValue - volume) &&          // if 'O_vol + volume' does not overflow
+					(R_vol - O_vol >= volume - rate.VolumeBase);    // and 'R_vol + rate.VolumeBase' >= 'O_vol + volume'
+				if (adv_R) { ++r; R_vol += rate.VolumeBase; }
+				if (adv_O) { ++o; O_vol += volume; }
+				if (!adv_R && !adv_O)
+					break;
 
-				// Don't both calculating for volumes that exceed the current balance
+				// Don't bother calculating for volumes that exceed the current balance
 				if (rates.Count > 5 && R_vol > balance)
 					break;
 			}
@@ -761,6 +779,10 @@ namespace CoinFlip
 
 				// Wait for all orders to complete
 				await Task.WhenAll(tasks);
+
+//HACK
+AllowTrades = false;
+Run = false;
 			}
 			catch (Exception ex)
 			{
@@ -782,7 +804,13 @@ namespace CoinFlip
 					Log.Write(ELogLevel.Error, ex, "Market data integration error");
 				}
 			}
+
+			// Notify market data updated
+			MarketDataChanged.Raise(this);
 		}
+
+		/// <summary>Raised when market data changes</summary>
+		public event EventHandler MarketDataChanged;
 
 		/// <summary>Execute 'action' in the GUI thread context</summary>
 		public void RunOnGuiThread(Action action, bool block = false)
@@ -800,6 +828,29 @@ namespace CoinFlip
 			var exch = Exchanges.Current;
 			Balances.DataSource = exch?.Balance;
 			Positions.DataSource = exch?.Positions;
+		}
+
+		/// <summary>Assert that it is valid to read market data in the current thread</summary>
+		public bool AssertMarketDataRead()
+		{
+			if (Thread.CurrentThread.ManagedThreadId == m_dispatcher.Thread.ManagedThreadId) return true;
+			if (MarketDataLocked) return true;
+			throw new Exception("Invalid access to market data");
+		}
+
+		/// <summary>Assert that it is valid to write market data in the current thread</summary>
+		public bool AssertMarketDataWrite()
+		{
+			// Only the main thread can write to the market data
+			if (Thread.CurrentThread.ManagedThreadId == m_dispatcher.Thread.ManagedThreadId) return true;
+			throw new Exception("Invalid access to market data");
+		}
+
+		/// <summary>Assert that the current thread is the main thread</summary>
+		public bool AssertMainThread()
+		{
+			if (Thread.CurrentThread.ManagedThreadId == m_dispatcher.Thread.ManagedThreadId) return true;
+			throw new Exception("Cross-thread call detected");
 		}
 
 		/// <summary>Debugging test</summary>
@@ -825,3 +876,187 @@ namespace CoinFlip
 		}
 	}
 }
+
+
+
+#if false
+		/// <summary>Determine if executing trades in 'loop' should result in a profit</summary>
+		private Task AddLoopIfProfitable(Loop loop, ConcurrentBag<Loop> profitable_loops)
+		{
+			return Task.Run(() =>
+			{
+				// How to think about this:
+				// - We want to see what happens if we convert some currency to each of the coins
+				//   in the loop, ending up back at the initial currency. If the result is more than
+				//   we started with, then it's a profitable loop.
+				// - We can go in either direction around the loop.
+				// - We want to execute each trade around a profitable loop at the same time, so we're
+				//   limited to the smallest balance for the coins in the loop.
+				// - The rate by volume does not depend on our account balance. We calculate the effective
+				//   rate at each of the offered volumes then determine any of those volumes are profitable
+				//   and whether we have enough balance for the given volumes
+				// - The 'Bid' table contains the amounts of base currency people want to buy, ordered by price.
+				// - The 'Ask' table contains the amounts of base currency people want to sell, ordered by price.
+				var coin = loop.Beg;
+				loop.ProfitRatio = 0;
+
+				// Forward pass around the loop.
+				{
+					var fwd = new OrderBook(coin, coin);
+					fwd.Add(new Order(1m._(""), decimal.MaxValue._(coin.Symbol)));
+					foreach (var pair in loop.EnumPairs(+1))
+					{
+						// Limit the volume calculated, there's no point in calculating large volumes if we can't trade them
+						var bal = coin.Balance;
+
+						// Note: the trade prices are in quote currency
+						if (pair.Base == coin)
+							fwd = MergeRates(fwd, pair.Bid, bal.Available, invert:false);
+						else
+							fwd = MergeRates(fwd, pair.Ask, bal.Available, invert:true);
+
+						// Get the next coin in the loop
+						coin = pair.OtherCoin(coin);
+					}
+					loop.ProfitRatio = fwd.Count != 0 ? Math.Max(loop.ProfitRatio, fwd[0].Price) : 0;
+
+					// Test for profitability
+					var fwd_profit = fwd.Where(x => x.Price > 1).Sum(x => x.Price * x.VolumeBase);
+					if (fwd_profit != 0)
+						profitable_loops.Add(new Loop(loop, fwd, +1, fwd_profit));
+				}
+
+				coin = loop.Beg;
+
+				// Backward pass around the loop.
+				{
+					var bck = new OrderBook(coin, coin);
+					bck.Add(new Order(1m._(""),  decimal.MaxValue._(coin.Symbol)));
+					foreach (var pair in loop.EnumPairs(-1))
+					{
+						// Limit the volume calculated, there's no point in calculating large volumes if we can't trade them
+						var bal = coin.Balance;
+
+						// Note: the trade prices are in quote currency
+						if (pair.Base == coin)
+							bck = MergeRates(bck, pair.Bid, bal.Available, invert:false);
+						else
+							bck = MergeRates(bck, pair.Ask, bal.Available, invert:true);
+
+						// Get the next coin in the loop
+						coin = pair.OtherCoin(coin);
+					}
+					loop.ProfitRatio = bck.Count != 0 ? Math.Max(loop.ProfitRatio, bck[0].Price) : 0;
+
+					// Test for profitability
+					var bck_profit = bck.Where(x => x.Price > 1).Sum(x => x.Price * x.VolumeBase);
+					if (bck_profit != 0)
+						profitable_loops.Add(new Loop(loop, bck, -1, bck_profit));
+				}
+			});
+		}
+#endif
+
+#if false
+			// Simulate each loop based on current balances and fees to determine actual profitability
+			var profitable = new List<Loop>();
+			foreach (var loop in bag.ToArray())
+			{
+				var coin = loop.Beg;
+
+				// Find the maximum profitable volume to trade
+				var volume = 0m._(coin);
+				foreach (var ordr in loop.Rate.Where(x => x.Price > 1))
+					volume += ordr.VolumeBase;
+
+				// Initialise the maximum profitable trade volume and scaling
+				// factor that allows for the available balance.
+				loop.TradeVolume = volume;
+				loop.TradeScale = 1m;
+
+				// Calculate the effective fee in initial coin currency.
+				// Do all trades assuming no fee, but accumulate the fee separately
+				var fee = 0m._(coin);
+				var initial_volume = volume;
+
+				// Trade each pair in the loop (in the given direction) to check we have enough
+				// balance for each trade, and that the trade is still profitable after fees.
+				foreach (var pair in loop.EnumPairs(loop.Direction))
+				{
+					// If we trade 'volume' using 'pair' that will result in a new volume
+					// in the new currency. There will also be a fee charged (in quote currency).
+					// If we're trading to quote currency, the new volume is reduced by the fee.
+					// If we're trading to base currency, the cost is increased by the fee.
+
+					// Calculate the result of the trade
+					var new_coin = pair.OtherCoin(coin);
+					var converted = pair.Base == coin
+						? pair.BaseToQuote(volume)
+						: pair.QuoteToBase(volume);
+
+					// Get the balance available for this trade and determine a trade scaling factor.
+					// Reduce the available balance by the fee so that we know there's enough balance for the trade.
+					var bal = coin.Balance.Available * (1 - pair.Fee);
+					if (bal < volume)
+					{
+						// Scale the trade volume
+						var scale = (decimal)(bal / volume);
+						loop.TradeScale = Maths.Clamp(scale, 0, loop.TradeScale);
+
+						// If the volume to trade multiplied by the trade scale is outside the
+						// allowed range of trading volume, set the scale to zero. This is to
+						// prevent loops being traded where part of the loop would be rejected.
+						if (pair.Base == coin)
+						{
+							if (!(pair.VolumeRangeBase?.Contains(volume * scale) ?? true))
+							{
+								loop.Insufficient.Add(new InsufficientCoin(coin, 0));
+								loop.TradeScale = 0m;
+							}
+							if (!(pair.VolumeRangeQuote?.Contains(converted.VolumeBase * scale) ?? true))
+							{
+								loop.Insufficient.Add(new InsufficientCoin(new_coin, 0));
+								loop.TradeScale = 0m;
+							}
+						}
+						else
+						{
+							if (!(pair.VolumeRangeQuote?.Contains(volume * scale) ?? true))
+							{
+								loop.Insufficient.Add(new InsufficientCoin(new_coin, 0));
+								loop.TradeScale = 0m;
+							}
+							if (!(pair.VolumeRangeBase?.Contains(converted.VolumeBase * scale) ?? true))
+							{
+								loop.Insufficient.Add(new InsufficientCoin(coin, 0));
+								loop.TradeScale = 0m;
+							}
+						}
+
+						// Apply the price limits. I don't really expect this to ever be hit because we're trading
+						// existing offers that must have valid prices already.
+						if (!(pair.PriceRange?.Contains(converted.Price) ?? true))
+							loop.TradeScale = 0m;
+					}
+
+					// Convert the fee to the new coin using the effective rate, and add on the fee
+					var rate = converted.VolumeBase / volume;
+					fee = fee * rate + converted.VolumeBase * pair.Fee;
+
+					coin = new_coin;
+					volume = converted.VolumeBase;
+				}
+
+				// If the new volume is greater than the initial volume, WIN!
+				// Update the profitability of the loop now we've accounted for fees.
+				loop.Profit = (volume - fee) - initial_volume;
+				loop.ProfitRatio = (volume - fee) / initial_volume;
+				if (loop.ProfitRatio > 1m)
+					profitable.Add(loop);
+			}
+
+			// Sort the loops by profitability by available balances
+			profitable.Sort(new Comparison<Loop>((l,r) => -l.ProfitRatio.CompareTo(r.ProfitRatio)));
+
+			return profitable;
+#endif

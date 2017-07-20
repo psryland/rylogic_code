@@ -341,7 +341,18 @@ namespace pr.gui
 				return;
 
 			// If the view has a 'Level' column, use that to colour the row
-			//var entry = LogEntries[idx];
+			var entry = LogEntries[idx];
+
+			e.CellStyle.BackColor =
+				entry.Text.StartsWith("Error") ? Color.LightSalmon :
+				entry.Text.StartsWith("Warn")  ? Color.LightYellow :
+				Color.White;
+			e.CellStyle.ForeColor =
+				entry.Text.StartsWith("Debug") ? Color.Gray :
+				Color.Black;
+
+			e.CellStyle.SelectionBackColor = e.CellStyle.BackColor.Lerp(Color.Gray, 0.5f);
+			e.CellStyle.SelectionForeColor = e.CellStyle.ForeColor;
 		}
 
 		/// <summary>Handle the list of log entries changing</summary>
@@ -350,8 +361,20 @@ namespace pr.gui
 			if (!e.IsPostEvent || !e.IsDataChanged)
 				return;
 
+			// Auto tail
+			var auto_tail = m_view.CurrentCell?.RowIndex == m_view.RowCount - 1;
+
 			// Update the row count to the number of log entries
 			m_view.RowCount = Math.Min(MaxLines, LogEntries.Count);
+
+			// Auto scroll to the last row
+			if (auto_tail && m_view.RowCount != 0)
+			{
+				var displayed_rows = m_view.DisplayedRowCount(false);
+				var first_row = Math.Max(0, m_view.RowCount - displayed_rows);
+				m_view.TryScrollToRowIndex(first_row);
+				m_view.CurrentCell = m_view[m_view.CurrentCell.ColumnIndex, m_view.RowCount - 1];
+			}
 
 			// If a log entry was added, pop-out.
 			if (e.ChangeType == ListChg.ItemAdded && DockControl?.DockContainer != null)
@@ -430,21 +453,16 @@ namespace pr.gui
 							// Find the start of the next log entry
 							for (e = s+1; e != len && m_buf[e] != LineDelimiter; ++e) {}
 
-							// [s,e) is a log entry. If 'line[e]' is not the delimiter then it may be a partial entry
-							var entry = new LogEntry(s, Encoding.UTF8.GetString(m_buf, s+1, e-s-1), true);
+							// [s,e) is a log entry. If 'm_buf[e]' is not the delimiter then it may be a partial entry
+							var entry = new LogEntry(fstart + s, Encoding.UTF8.GetString(m_buf, s+1, e-s-1), true);
 
-							// Add to the log entries collection
-							if (LogEntries.Count == 0 || LogEntries.Back().FPos < fpos)
-							{
-								LogEntries.Add(entry);
-							}
-							else
-							{
-								// Replace the partial log entry
-								int i = LogEntries.Count;
-								for (;i-- != 0 && (!LogEntries[i].FromFile || LogEntries[i].FPos > fpos);) {}
+							// Add to the log entries collection. Replace any partial log entry
+							int i = LogEntries.Count;
+							for (; i-- != 0 && (!LogEntries[i].FromFile || LogEntries[i].FPos > fpos);) {}
+							if (i >= 0 && LogEntries[i].FPos == entry.FPos)
 								LogEntries[i] = entry;
-							}
+							else
+								LogEntries.Add(entry);
 
 							// If we haven't read to the end of the file, re-read from 's'.
 							// If we have read to the end of the file, exit the loop.
@@ -488,7 +506,7 @@ namespace pr.gui
 		private void InitializeComponent()
 		{
 			this.components = new System.ComponentModel.Container();
-			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
+			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
 			this.m_tsc = new pr.gui.ToolStripContainer();
 			this.m_view = new pr.gui.DataGridView();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
@@ -530,14 +548,14 @@ namespace pr.gui
 			this.m_view.AutoSizeRowsMode = System.Windows.Forms.DataGridViewAutoSizeRowsMode.AllCells;
 			this.m_view.CellBorderStyle = System.Windows.Forms.DataGridViewCellBorderStyle.None;
 			this.m_view.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-			dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-			dataGridViewCellStyle2.BackColor = System.Drawing.SystemColors.Window;
-			dataGridViewCellStyle2.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-			dataGridViewCellStyle2.ForeColor = System.Drawing.SystemColors.ControlText;
-			dataGridViewCellStyle2.SelectionBackColor = System.Drawing.SystemColors.Highlight;
-			dataGridViewCellStyle2.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
-			dataGridViewCellStyle2.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
-			this.m_view.DefaultCellStyle = dataGridViewCellStyle2;
+			dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopLeft;
+			dataGridViewCellStyle1.BackColor = System.Drawing.SystemColors.Window;
+			dataGridViewCellStyle1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+			dataGridViewCellStyle1.ForeColor = System.Drawing.SystemColors.ControlText;
+			dataGridViewCellStyle1.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+			dataGridViewCellStyle1.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
+			dataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
+			this.m_view.DefaultCellStyle = dataGridViewCellStyle1;
 			this.m_view.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_view.EditMode = System.Windows.Forms.DataGridViewEditMode.EditProgrammatically;
 			this.m_view.Location = new System.Drawing.Point(0, 0);

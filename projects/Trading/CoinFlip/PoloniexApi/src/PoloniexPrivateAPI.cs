@@ -3,11 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Linq;
-using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -23,10 +19,11 @@ namespace Poloniex.API
 		private const string UrlBaseAddress = "https://poloniex.com/";
 		private HttpClient m_client;
 		private JsonSerializer m_json;
+		private CancellationToken m_cancel_token;
 		private readonly string m_key;
 		private readonly string m_secret;
 
-		public PoloniexApiPrivate(string key, string secret)
+		public PoloniexApiPrivate(string key, string secret, CancellationToken cancel_token)
 		{
 			m_key = key;
 			m_secret = secret;
@@ -34,6 +31,7 @@ namespace Poloniex.API
 			m_json = new JsonSerializer { NullValueHandling = NullValueHandling.Ignore };
 			m_client = new HttpClient { BaseAddress = new Uri(UrlBaseAddress + "tradingApi") };
 			m_client.DefaultRequestHeaders.Add("Key", m_key);
+			m_cancel_token = cancel_token;
 			Dispatcher = Dispatcher.CurrentDispatcher;
 		}
 		public virtual void Dispose()
@@ -119,7 +117,7 @@ namespace Poloniex.API
 					content.Headers.Add("Sign", signature);
 
 					// Submit the request
-					var response = m_client.PostAsync(m_client.BaseAddress, content).Result;
+					var response = m_client.PostAsync(m_client.BaseAddress, content, m_cancel_token).Result;
 					if (!response.IsSuccessStatusCode)
 						throw new Exception(response.ReasonPhrase);
 
@@ -136,7 +134,7 @@ namespace Poloniex.API
 							throw new Exception(m_json.Deserialize<ErrorResult>(tr).Message);
 					}
 				}
-			});
+			}, m_cancel_token);
 		}
 		private object m_post_lock = new object();
 

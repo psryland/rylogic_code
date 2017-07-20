@@ -1,11 +1,8 @@
 ﻿using Cryptopia.API.DataObjects;
 using Cryptopia.API.Implementation;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace Cryptopia.API
 {
@@ -13,11 +10,21 @@ namespace Cryptopia.API
 	{
 		private HttpClient _client;
 		private string _apiBaseAddress;
+		private CancellationToken m_cancel_token;
 
-		public CryptopiaApiPrivate(string key, string secret, string apiBaseAddress = "https://www.cryptopia.co.nz")
+		public CryptopiaApiPrivate(string key, string secret, CancellationToken cancel_token, string apiBaseAddress = "https://www.cryptopia.co.nz")
 		{
+			m_cancel_token = cancel_token;
 			_apiBaseAddress = apiBaseAddress;
 			_client = HttpClientFactory.Create(new AuthDelegatingHandler(key, secret));
+		}
+		public void Dispose()
+		{
+			if (_client != null)
+			{
+				_client.Dispose();
+				_client = null;
+			}
 		}
 
 		#region Api Calls
@@ -67,24 +74,13 @@ namespace Cryptopia.API
 			return await GetResult<SubmitWithdrawResponse, SubmitWithdrawRequest>(PrivateApiCall.SubmitWithdraw, request);
 		}
 
-		#endregion
-
-		#region public Members
-
 		public async Task<T> GetResult<T, U>(PrivateApiCall call, U requestData)
 			where T : IResponse
 			where U : IRequest
 		{
-			var response = await _client.PostAsJsonAsync<U>(string.Format("{0}/Api/{1}", _apiBaseAddress.TrimEnd('/'), call), requestData);
-			return await response.Content.ReadAsAsync<T>();
-		}
-
-		public void Dispose()
-		{
-			if (_client != null)
-			{
-				_client.Dispose();
-			}
+			var url = string.Format("{0}/Api/{1}", _apiBaseAddress.TrimEnd('/'), call);
+			var response = await _client.PostAsJsonAsync(url, requestData, m_cancel_token);
+			return await response.Content.ReadAsAsync<T>(m_cancel_token);
 		}
 
 		#endregion

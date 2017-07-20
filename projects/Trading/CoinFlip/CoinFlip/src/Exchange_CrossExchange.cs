@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using pr.container;
+using pr.maths;
 using pr.util;
 
 namespace CoinFlip
@@ -85,13 +86,10 @@ namespace CoinFlip
 							var coin0 = pair.Base;
 							var coin1 = pair.Quote;
 
-							// Get the available balance for each coin
-							var bal0 = coin0.Balance;
-							var bal1 = coin1.Balance;
-
-							// Each order book as one entry for the maximum amount available on each exchange
-							var buys  = new[]{ new Order(1m._(pair.RateUnits), bal0.Available) };
-							var sells = new[]{ new Order(1m._(pair.RateUnits), bal1.Available) };
+							// Each order book as one entry for infinite volume.
+							// Available balance is applied after the loop is identified.
+							var buys  = new[]{ new Order(1m._(), decimal.MaxValue._(coin0)) };
+							var sells = new[]{ new Order(1m._(), decimal.MaxValue._(coin1)) };
 							pair.UpdateOrderBook(buys, sells);
 						}
 					}

@@ -30,22 +30,6 @@ namespace CoinFlip
 		/// <summary>Helper for task no-ops</summary>
 		public static readonly Task CompletedTask = Task.FromResult(false);
 
-		/// <summary>Check that the current thread is the main thread</summary>
-		public static bool AssertMainThread()
-		{
-			if (Thread.CurrentThread.ManagedThreadId == m_main_thread_id) return true;
-			throw new Exception("Cross-Thread call detected");
-		}
-		internal static int m_main_thread_id;
-
-		/// <summary>Check that the current thread is not access data that might be changing</summary>
-		public static bool AssertReadOnly()
-		{
-			if (m_read_only || AssertMainThread()) return true;
-			throw new Exception("Read during non-read only phase");
-		}
-		internal static bool m_read_only;
-
 		/// <summary>Convert a trade type string to the enumeration value</summary>
 		public static ETradeType TradeType(string trade_type)
 		{

@@ -29,10 +29,10 @@ namespace CoinFlip
 			Quote = quote;
 			Exchange = exchange;
 
-			TradePairId = trade_pair_id;
-			VolumeRangeBase = volume_range_base;
-			VolumeRangeQuote = volume_range_quote;
-			PriceRange = price_range;
+			TradePairId      = trade_pair_id;
+			VolumeRangeBase  = volume_range_base  ?? new RangeF<Unit<decimal>>(0m._(Base), decimal.MaxValue._(Base));
+			VolumeRangeQuote = volume_range_quote ?? new RangeF<Unit<decimal>>(0m._(Quote), decimal.MaxValue._(Quote));
+			PriceRange       = price_range        ?? new RangeF<Unit<decimal>>(0m._(RateUnits), decimal.MaxValue._(RateUnits));
 
 			Ask = new OrderBook(base_, quote);
 			Bid = new OrderBook(base_, quote);
@@ -136,21 +136,21 @@ namespace CoinFlip
 		}
 
 		/// <summary>The allowable range of volume for </summary>
-		public RangeF<Unit<decimal>>? VolumeRangeBase
+		public RangeF<Unit<decimal>> VolumeRangeBase
 		{
 			get;
 			private set;
 		}
 
 		/// <summary>The allowable range of volume for </summary>
-		public RangeF<Unit<decimal>>? VolumeRangeQuote
+		public RangeF<Unit<decimal>> VolumeRangeQuote
 		{
 			get;
 			private set;
 		}
 
 		/// <summary>The allowed price range when trading this pair</summary>
-		public RangeF<Unit<decimal>>? PriceRange
+		public RangeF<Unit<decimal>> PriceRange
 		{
 			get;
 			private set;
@@ -171,7 +171,7 @@ namespace CoinFlip
 		/// <summary>Return the units for the conversion rate from Base to Quote (i.e. Quote/Base)</summary>
 		public string RateUnits
 		{
-			get { return "{0}/{1}".Fmt(Quote, Base); }
+			get { return Base.Symbol != Quote.Symbol ? "{0}/{1}".Fmt(Quote, Base) : string.Empty; }
 		}
 
 		/// <summary>Invalidate the pair data so that the pair will not be traded until updated with the latest data</summary>
@@ -230,6 +230,7 @@ namespace CoinFlip
 				}
 				else
 				{
+					order.Price = x.Price;
 					order.VolumeBase += x.Price * x.VolumeBase;
 					volume -= x.VolumeBase;
 				}
@@ -260,6 +261,7 @@ namespace CoinFlip
 				}
 				else
 				{
+					order.Price = 1m / x.Price;
 					order.VolumeBase += x.VolumeBase;
 					volume -= x.Price * x.VolumeBase;
 				}
