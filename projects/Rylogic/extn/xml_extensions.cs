@@ -76,6 +76,7 @@ namespace pr.extn
 				this[typeof(ulong          )] = ToXmlDefault;
 				this[typeof(float          )] = ToXmlDefault;
 				this[typeof(double         )] = ToXmlDefault;
+				this[typeof(decimal        )] = ToXmlDefault;
 				this[typeof(Enum           )] = ToXmlDefault;
 				this[typeof(Guid           )] = ToXmlDefault;
 				this[typeof(DateTimeOffset)] = (obj, node) =>
@@ -481,6 +482,10 @@ namespace pr.extn
 				this[typeof(double)] = (elem, type, ctor) =>
 				{
 					return double.Parse(elem.Value);
+				};
+				this[typeof(decimal)] = (elem, type, ctor) =>
+				{
+					return decimal.Parse(elem.Value);
 				};
 				this[typeof(Enum)] = (elem, type, ctor) =>
 				{

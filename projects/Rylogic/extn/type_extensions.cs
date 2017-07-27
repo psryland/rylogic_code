@@ -385,13 +385,9 @@ namespace pr.extn
 		}
 
 		/// <summary>Try parse a double from a string</summary>
-		/// <param name="val"></param>
-		/// <param name="style"></param>
-		/// <returns></returns>
 		public static double? TryParse(string val, NumberStyles style = NumberStyles.Float)
 		{
-			double o;
-			return double.TryParse(val, style, null, out o) ? (double?)o : null;
+			return double.TryParse(val, style, null, out var o) ? (double?)o : null;
 		}
 
 		/// <summary>Parse an array of floating point values separated by delimiters given in 'delim'</summary>
@@ -412,6 +408,45 @@ namespace pr.extn
 				: x >= end && x <= beg;
 		}
 		public static bool Within(this double? x, double beg, double end)
+		{
+			return x.HasValue && x.Value.Within(beg,end);
+		}
+	}
+
+	/// <summary>'decimal' type extensions</summary>
+	public static class decimal_
+	{
+		/// <summary>Enumerate values in the range [beg, end) with a step size of 'step'</summary>
+		public static IEnumerable<decimal> Range(decimal beg, decimal end, decimal step)
+		{
+			for (;beg < end; beg += step)
+				yield return beg;
+		}
+
+		/// <summary>Try parse a decimal from a string</summary>
+		public static decimal? TryParse(string val, NumberStyles style = NumberStyles.Float)
+		{
+			return decimal.TryParse(val, style, null, out var o) ? (decimal?)o : null;
+		}
+
+		/// <summary>Parse an array of values separated by delimiters given in 'delim'</summary>
+		/// <param name="val">The string containing the array of floating point values</param>
+		/// <param name="delim">The set of delimiters. If null, then " ", "\t", "," are used</param>
+		/// <returns>An array of the parsed floating point values</returns>
+		public static decimal[] ParseArray(string val, NumberStyles style = NumberStyles.Float, string[] delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
+		{
+			var strs = val.Split(delim ?? new[]{" ","\t",","}, opts);
+			return strs.Select(s => decimal.Parse(s, style, null)).ToArray();
+		}
+
+		/// <summary>True if this value is in the range [beg,end] or [end,beg] (whichever is a positive range)</summary>
+		public static bool Within(this decimal x, decimal beg, decimal end)
+		{
+			return beg <= end
+				? x >= beg && x <= end
+				: x >= end && x <= beg;
+		}
+		public static bool Within(this decimal? x, decimal beg, decimal end)
 		{
 			return x.HasValue && x.Value.Within(beg,end);
 		}

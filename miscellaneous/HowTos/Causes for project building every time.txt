@@ -4,7 +4,13 @@ Turn on: Options -> Projects and Solutions -> Build and Run -> MSBuild project b
 Build the project (twice, the first build is a legitimate change)
 Scroll to the top, the reason for the rebuild should be shown.
 
+If not shown, search of 'is newer' to find causes of a rebuild
+
 Note:
   The line "'unsuccessfulbuild' because "AlwaysCreate" was specified" (or similar) happens when
   MSBuild has detected a change. MSBuild creates the unsuccessfulbuild file as part of the build
   process to force a rebuild. It is not the original cause of the rebuild.
+  
+Note:
+  After a windows update, I was seeing project rebuilds because 'c:\windows\system32\tzres.dll' had
+  a modified time 24 hours in the future. Must be a MS bug.

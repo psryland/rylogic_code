@@ -49,7 +49,22 @@ namespace pr.gui
 
 			base.OnSelectionChanged(e);
 		}
-
+		protected override bool SetCurrentCellAddressCore(int columnIndex, int rowIndex, bool setAnchorCellAddress, bool validateCurrentCell, bool throughMouseClick)
+		{
+			if (BindingContext != null && DataSource != null)
+			{
+				// If the currency manager has no current value, set the current cell address to -1,-1
+				// This prevents an IndexOutOfRange exception when the data source has Count != 0 but Position == -1.
+				var cm = BindingContext[DataSource] as CurrencyManager;
+				if (cm != null && cm.Position == -1)
+				{
+					columnIndex = -1;
+					rowIndex = -1;
+				}
+			}
+			return base.SetCurrentCellAddressCore(columnIndex, rowIndex, setAnchorCellAddress, validateCurrentCell, throughMouseClick);
+		}
+		
 		/// <summary>Add rows to the selection </summary>
 		public void SelectRowRange(int index, int count, bool select)
 		{

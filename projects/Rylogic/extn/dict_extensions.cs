@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace pr.extn
 {
-	public static class DictExtensions
+	public static class Dictionary_
 	{
 		/// <summary>Try to get an element from this dictionary, returning null if not available</summary>
 		public static V TryGetValue<K,V>(this IDictionary<K,V> dic, K key) where V : class

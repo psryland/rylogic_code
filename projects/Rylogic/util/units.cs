@@ -141,10 +141,22 @@ namespace pr.util
 		}		
 		#endregion
 
-		/// <summary></summary>
+		/// <summary>ToString</summary>
 		public override string ToString()
 		{
 			return Value.ToString();
+		}
+		public string ToString(IFormatProvider fp)
+		{
+			return Operators<T>.ToString(Value, fp);
+		}
+		public string ToString(string fmt)
+		{
+			return Operators<T>.ToString(Value, fmt);
+		}
+		public string ToString(string fmt, IFormatProvider fp)
+		{
+			return Operators<T>.ToString(Value, fmt, fp);
 		}
 		public string ToStringWithUnits()
 		{
@@ -330,6 +342,18 @@ namespace pr.util
 		public static Unit<T> _<T>(this Unit<T> x, Unit<T> unit) where T:IComparable
 		{
 			return new Unit<T>(x, unit.UnitId);
+		}
+
+		/// <summary>True if this value is in the range [beg,end) or [end,beg) (whichever is a positive range)</summary>
+		public static bool Within<T>(this Unit<T> x, Unit<T> beg, Unit<T> end) where T:IComparable
+		{
+			return beg <= end
+				? x >= beg && x < end
+				: x >= end && x < beg;
+		}
+		public static bool Within<T>(this Unit<T>? x, Unit<T> beg, Unit<T> end) where T:IComparable
+		{
+			return x.HasValue && x.Value.Within(beg, end);
 		}
 	}
 }

@@ -438,6 +438,14 @@ namespace pr.extn
 			ancestors.Reverse();
 			return string.Join("->", ancestors);
 		}
+
+		/// <summary>RAII initialise scope</summary>
+		public static Scope InitialiseScope(this ISupportInitialize si)
+		{
+			return Scope.Create(
+				() => si.BeginInit(),
+				() => si.EndInit());
+		}
 	}
 
 	/// <summary>Used to persist control locations and sizes in XML</summary>

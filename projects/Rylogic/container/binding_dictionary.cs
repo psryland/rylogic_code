@@ -21,6 +21,7 @@ namespace pr.container
 		//     List provides Order/Sorting/Binding events. Basically maps index to TKey.
 		//  - IBindingList, IList is a list of 'TValue'
 		//  - AddNew functionality requires the 'KeyFrom' member to be valid
+		//  - This is analogous to BindingList, *NOT* BindingSource. i.e. there's not concept of 'Current'
 
 		private Dictionary<TKey, TValue> m_dict;
 		private List<TKey> m_keys;
@@ -694,17 +695,17 @@ namespace pr.container
 
 		#region IEnumerable
 
-		/// <summary>Enumerate pairs</summary>
+		/// <summary>Enumerate values</summary>
 		IEnumerator IEnumerable.GetEnumerator()
 		{
-			return ((IEnumerable)m_dict).GetEnumerator();
+			return m_dict.Values.GetEnumerator();
 		}
 
 		#endregion
 
 		#region IEnumerable<TValue>
 
-		/// <summary>Enumerate pairs</summary>
+		/// <summary>Enumerate values</summary>
 		IEnumerator<TValue> IEnumerable<TValue>.GetEnumerator()
 		{
 			foreach (var key in m_keys)

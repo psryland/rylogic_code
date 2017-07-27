@@ -1,0 +1,360 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Drawing;
+using System.Linq;
+using System.Threading.Tasks;
+using Cryptopia.API;
+using Cryptopia.API.DataObjects;
+using pr.common;
+using pr.extn;
+using pr.util;
+
+namespace CoinFlip
+{
+	/// <summary>Cryptopia Exchange</summary>
+	public class Cryptopia :Exchange
+	{
+		private const string ApiKey    = "429162d7138f4275b5e9dd09ff6362fd";
+		private const string ApiSecret = "Dt6k0ZC3zqbNCxpDSsHqX7VIR21PEPO7vNeKDbQIKcI=";
+
+		private CryptopiaApiPublic Pub;
+		private CryptopiaApiPrivate Priv;
+		private List<int> m_pair_ids;
+
+		public Cryptopia(Model model)
+			:base(model, model.Settings.Cryptopia)
+		{
+			Pub = new CryptopiaApiPublic(Model.ShutdownToken.Token);
+			Priv = new CryptopiaApiPrivate(ApiKey, ApiSecret, Model.ShutdownToken.Token);
+			m_pair_ids = new List<int>();
+
+			// Start the exchange
+			if (Model.Settings.Cryptopia.Active)
+				Model.RunOnGuiThread(() => Active = true);
+		}
+
+		/// <summary>Open a trade</summary>
+		protected async override Task<ulong> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> rate)
+		{
+			// Place the trade order
+			var msg = await Priv.SubmitTrade(new SubmitTradeRequest(pair.TradePairId.Value, tt.ToCryptopiaTT(), volume, rate));
+			if (!msg.Success)
+				throw new Exception(
+					"Cryptopia: Submit trade failed. {0}\n".Fmt(msg.Error) +
+					"{0} Pair: {1}  Vol: {2} @ {3}".Fmt(tt, pair.Name, volume, rate));
+
+			return (ulong)msg.Data.OrderId.Value;
+		}
+
+		/// <summary>Cancel an open trade</summary>
+		protected async override Task CancelOrderInternal(TradePair pair, ulong order_id)
+		{
+			var msg = await Priv.CancelTrade(new CancelTradeRequest((int)order_id));
+			if (!msg.Success)
+				throw new Exception(
+					"Cryptopia: Cancel trade failed. {0}\n".Fmt(msg.Error) +
+					"Order Id: {0}".Fmt(order_id));
+		}
+
+		/// <summary>Update the collections of coins and pairs</summary>
+		public async override Task UpdatePairs(HashSet<string> coi) // Worker thread context
+		{
+			try
+			{
+				// Get all available trading pairs
+				var msg = await Pub.GetTradePairs();
+				if (!msg.Success)
+					throw new Exception("Cryptopia: Failed to read available trading pairs. {0}".Fmt(msg.Error));
+
+				// Add an action to add/update the pairs,coins
+				Model.MarketUpdates.Add(() =>
+				{
+					var nue = new HashSet<string>();
+
+					// Create the trade pairs and associated coins
+					var pairs = msg.Data.Where(x => coi.Contains(x.SymbolBase) && coi.Contains(x.SymbolQuote));
+					foreach (var p in pairs)
+					{
+						var base_ = Coins.GetOrAdd(p.SymbolBase);
+						var quote = Coins.GetOrAdd(p.SymbolQuote);
+
+						// Add the trade pair.
+						var instr = new TradePair(base_, quote, this, p.Id,
+							volume_range_base:new RangeF<Unit<decimal>>(p.MinimumTradeBase ._(p.SymbolBase ), p.MaximumTradeBase ._(p.SymbolBase )),
+							volume_range_quote:new RangeF<Unit<decimal>>(p.MinimumTradeQuote._(p.SymbolQuote), p.MaximumTradeQuote._(p.SymbolQuote)),
+							price_range:null);
+						Pairs[instr.UniqueKey] = instr;
+
+						// Save the names of the pairs,coins returned
+						nue.Add(instr.Name);
+						nue.Add(instr.Base.Symbol);
+						nue.Add(instr.Quote.Symbol);
+					}
+
+					// Remove pairs not in 'nue'
+					Pairs.RemoveIf(p => !nue.Contains(p.Name));
+
+					// Remove coins not in 'nue'
+					Coins.RemoveIf(c => !nue.Contains(c.Symbol));
+
+					// Ensure a 'Balance' object exists for each coin type
+					foreach (var c in Coins.Values)
+						Balance.GetOrAdd(c);
+
+					// Record the pair Ids
+					lock (m_pair_ids)
+					{
+						m_pair_ids.Clear();
+						m_pair_ids.AddRange(Pairs.Values.Select(x => x.TradePairId.Value));
+					}
+				});
+			}
+			catch (Exception ex)
+			{
+				if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
+				if (ex is OperationCanceledException) {}
+				else
+				{
+					Model.Log.Write(ELogLevel.Error, ex, "Cryptopia UpdatePairs() failed");
+					Status = EStatus.Error;
+				}
+			}
+		}
+
+		/// <summary>Update the market data, balances, and open positions</summary>
+		protected async override Task UpdateData() // Worker thread context
+		{
+			try
+			{
+				// Record the time just before the query to the server
+				var timestamp = DateTimeOffset.Now;
+
+				// Get the trade pair ids
+				int[] ids;
+				lock (m_pair_ids)
+					ids = m_pair_ids.ToArray();
+
+				// Request the order book data for all of the pairs
+				var order_book = ids.Length != 0 
+					? await Pub.GetMarketOrderGroups(new MarketOrderGroupsRequest(ids, orderCount:10))
+					: await Task.FromResult(new MarketOrderGroupsResponse());
+
+				// Queue integration of the market data
+				Model.MarketUpdates.Add(() =>
+				{
+					// Process the order book data and update the pairs
+					var msg = order_book;
+					if (!msg.Success)
+						throw new Exception("Cryptopia: Failed to update trading pairs. {0}".Fmt(msg?.Error ?? string.Empty));
+
+					// Update the market orders
+					foreach (var orders in msg.Data)
+					{
+						// Get the currencies involved in the pair
+						var coin = orders.Market.Split('_');
+
+						// Find the pair to update.
+						// The pair may have been removed between the request and the reply.
+						// Pair's may have been added as well, we'll get those next heart beat.
+						var pair = Pairs[coin[0], coin[1]];
+						if (pair == null)
+							continue;
+
+						// Update the depth of market data
+						var buys  = orders.Buy .Select(x => new Order(x.Price._(pair.RateUnits), x.Volume._(pair.Base))).ToArray();
+						var sells = orders.Sell.Select(x => new Order(x.Price._(pair.RateUnits), x.Volume._(pair.Base))).ToArray();
+						pair.UpdateOrderBook(buys, sells);
+					}
+
+					// Notify updated
+					MarketDataUpdatedTime.NotifyAll(timestamp);
+				});
+			}
+			catch (Exception ex)
+			{
+				if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
+				if (ex is OperationCanceledException) {}
+				else
+				{
+					Model.Log.Write(ELogLevel.Error, ex, "Cryptopia UpdateData() failed");
+					Status = EStatus.Error;
+				}
+			}
+		}
+
+		/// <summary>Update account balance data</summary>
+		protected async override Task UpdateBalances()
+		{
+			try
+			{
+				// Record the time just before the query to the server
+				var timestamp = DateTimeOffset.Now;
+
+				// Request the account data
+				var balance_data = await Priv.GetBalances(new BalanceRequest());
+
+				// Queue integration of the market data
+				Model.MarketUpdates.Add(() =>
+				{
+					// Process the account data and update the balances
+					var msg = balance_data;
+					if (!msg.Success)
+						throw new Exception("Cryptopia: Failed to update account balances pairs. {0}".Fmt(msg.Error));
+
+					// Update the account balance
+					using (Model.Balances.PreservePosition())
+					{
+						var nue = new HashSet<Coin>();
+						foreach (var b in msg.Data.Where(x => x.Available != 0 || Coins.ContainsKey(x.Symbol)))
+						{
+							// Find the currency that this balance is for
+							var coin = Coins.GetOrAdd(b.Symbol);
+
+							// Update the balance
+							var bal = new Balance(coin, b.Total, b.Available, b.Unconfirmed, b.HeldForTrades, b.PendingWithdraw);
+							Balance[coin] = bal;
+							nue.Add(coin);
+						}
+
+						// Remove balances that aren't of interest
+						Balance.RemoveIf(x => !nue.Contains(x.Coin));
+					}
+
+					// Notify updated
+					BalanceUpdatedTime.NotifyAll(timestamp);
+				});
+			}
+			catch (Exception ex)
+			{
+				if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
+				if (ex is OperationCanceledException) {}
+				else
+				{
+					Model.Log.Write(ELogLevel.Error, ex, "Cryptopia UpdateBalances() failed");
+					Status = EStatus.Error;
+				}
+			}
+		}
+
+		/// <summary>Update open positions</summary>
+		protected async override Task UpdatePositions() // Worker thread context
+		{
+			try
+			{
+				// Record the time just before the query to the server
+				var timestamp = DateTimeOffset.Now;
+
+				// Request the existing orders
+				var existing_orders = await Priv.GetOpenOrders(new OpenOrdersRequest());
+
+				// Process the existing orders
+				var msg = existing_orders;
+				if (!msg.Success)
+					throw new Exception("Cryptopia: Failed to received existing orders. {0}".Fmt(msg.Error));
+
+				// Queue integration of the market data
+				Model.MarketUpdates.Add(() =>
+				{
+					Debug.Assert(Model.AssertMainThread());
+
+					// Update the collection of existing orders
+					var order_ids = new HashSet<ulong>();
+					foreach (var order in existing_orders.Data)
+					{
+						// Add the position to the collection
+						var pos = PositionFrom(order);
+						Positions[pos.OrderId] = pos;
+						order_ids.Add(pos.OrderId);
+					}
+
+					// Remove any positions that are no longer valid.
+					foreach (var pos in Positions.Values.Where(x => !order_ids.Contains(x.OrderId)).ToArray())
+						Positions.Remove(pos.OrderId);
+
+					// Notify updated
+					PositionUpdatedTime.NotifyAll(timestamp);
+				});
+			}
+			catch (Exception ex)
+			{
+				if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
+				if (ex is OperationCanceledException) {}
+				else
+				{
+					Model.Log.Write(ELogLevel.Error, ex, "Cryptopia UpdatePositions() failed");
+					Status = EStatus.Error;
+				}
+			}
+		}
+
+		/// <summary>Update the trade history</summary>
+		protected async override Task UpdateTradeHistory() // Worker thread context
+		{
+			try
+			{
+				// Record the time just before the query to the server
+				var timestamp = DateTimeOffset.Now;
+
+				// Request the history
+				var msg = await Priv.GetTradeHistory(new TradeHistoryRequest());
+				if (!msg.Success)
+					throw new Exception("Cryptopia: Failed to received trade history. {0}".Fmt(msg.Error));
+
+				// Queue integration of the market data
+				Model.MarketUpdates.Add(() =>
+				{
+					var history = msg.Data;
+					foreach (var order in history)
+					{
+						var pos = PositionFrom(order);
+						var fill = History.GetOrAdd(pos.OrderId, pos.TradeType, pos.Pair);
+						fill.Trades[pos.TradeId] = pos;
+					}
+
+					// Notify updated
+					TradeHistoryUpdatedTime.NotifyAll(timestamp);
+				});
+			}
+			catch (Exception ex)
+			{
+				if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
+				if (ex is OperationCanceledException) {}
+				else
+				{
+					Model.Log.Write(ELogLevel.Error, ex, "Cryptopia UpdateTradeHistory() failed");
+					Status = EStatus.Error;
+				}
+			}
+		}
+
+		/// <summary>Convert a Cryptopia open order result into a position object</summary>
+		private Position PositionFrom(global::Cryptopia.API.Models.OpenOrderResult order)
+		{
+			// Get the associated trade pair (add the pair if it doesn't exist)
+			var order_id = unchecked((ulong)order.OrderId);
+			var sym = order.Market.Split('/');
+			var pair = Pairs[sym[0], sym[1]] ?? Pairs.Add2(new TradePair(Coins.GetOrAdd(sym[0]), Coins.GetOrAdd(sym[1]), this, order.TradePairId));
+			var rate = order.Rate._(pair.RateUnits);
+			var volume = order.Amount._(pair.Base);
+			var remaining = order.Remaining._(pair.Base);
+			var ts = order.TimeStamp.As(DateTimeKind.Utc);
+			return new Position(order_id, 0, pair, Misc.TradeType(order.Type), rate, volume, remaining, ts);
+		}
+
+		/// <summary>Convert a Cryptopia trade history result into a position object</summary>
+		private Position PositionFrom(global::Cryptopia.API.Models.TradeHistoryResult order)
+		{
+			// Get the associated trade pair (add the pair if it doesn't exist)
+			var order_id = unchecked((ulong)order.OrderId);
+			var trade_id = unchecked((ulong)order.TradeId);
+			var sym = order.Market.Split('/');
+			var pair = Pairs[sym[0], sym[1]] ?? Pairs.Add2(new TradePair(Coins.GetOrAdd(sym[0]), Coins.GetOrAdd(sym[1]), this, order.TradePairId));
+			var rate = order.Rate._(pair.RateUnits);
+			var volume = order.Amount._(pair.Base);
+			var ts = order.TimeStamp.As(DateTimeKind.Utc);
+			return new Position(order_id, trade_id, pair, Misc.TradeType(order.Type), rate, volume, 0, ts);
+		}
+	}
+}
+

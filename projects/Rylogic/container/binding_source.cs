@@ -6,6 +6,9 @@ using System.Diagnostics;
 using System.Drawing.Design;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
 using System.Windows.Forms;
 using pr.common;
 using pr.extn;
@@ -69,6 +72,12 @@ namespace pr.container
 				This = @this; 
 				m_impl_previous_position = -1;
 				m_impl_listposition = typeof(CurrencyManager).GetField("listposition", BindingFlags.NonPublic|BindingFlags.Instance);
+
+				// CurrencyManager.Current
+				// I *REALLY* wanted to replace the CurrencyManager.Current property to return null instead of throwing
+				// when Position == -1, however I haven't found a way to do this yet. This exception causes DataGridView
+				// to fail when 'AllowNoCurrent' is true. However, it seems overriding 'SetCurrentCellAddressCore' is a
+				// work around.
 			}
 			public new int Position
 			{
@@ -103,7 +112,6 @@ namespace pr.container
 			{
 				get { return Position >= 0 && Position < Count ? (TItem)base.Current : default(TItem); }
 			}
-
 			protected override void OnPositionChanged(EventArgs e)
 			{
 				// Set the previous position before calling the event
@@ -857,9 +865,13 @@ namespace pr.container
 
 		/// <summary>Raised *only* if 'DataSource' is 'IListChanging<TItem>'</summary>
 		public event EventHandler<ListChgEventArgs<TItem>> ListChanging;
-		private void RaiseListChanging(object sender, ListChgEventArgs<TItem> args)
+		protected virtual void OnListChanging(object sender, ListChgEventArgs<TItem> args)
 		{
 			ListChanging.Raise(sender, args);
+		}
+		private void RaiseListChanging(object sender, ListChgEventArgs<TItem> args)
+		{
+			OnListChanging(sender, args);
 
 			// If we're about to remove all items, set Position to -1
 			if (args.ChangeType == ListChg.PreReset)
@@ -876,16 +888,24 @@ namespace pr.container
 
 		/// <summary>Raised *only* if 'DataSource' is 'IListChanging<TItem></summary>
 		public event EventHandler<ItemChgEventArgs<TItem>> ItemChanged;
-		private void RaiseItemChanged(object sender, ItemChgEventArgs<TItem> args)
+		protected virtual void OnItemChanged(object sender, ItemChgEventArgs<TItem> args)
 		{
 			ItemChanged.Raise(sender, args);
+		}
+		private void RaiseItemChanged(object sender, ItemChgEventArgs<TItem> args)
+		{
+			OnItemChanged(sender, args);
 		}
 
 		/// <summary>Raised after the current list position changes (includes the previous position)</summary>
 		public event EventHandler<PositionChgEventArgs> PositionChanged;
-		private void RaisePositionChanged(object sender, PositionChgEventArgs args)
+		protected virtual void OnPositionChanged(object sender, PositionChgEventArgs args)
 		{
 			PositionChanged.Raise(this, args);
+		}
+		private void RaisePositionChanged(object sender, PositionChgEventArgs args)
+		{
+			OnPositionChanged(sender, args);
 		}
 
 		public override string ToString()

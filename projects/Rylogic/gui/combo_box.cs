@@ -474,7 +474,9 @@ namespace pr.gui
 		/// <summary>Set the Fore and Back colours for the value box based on the current text</summary>
 		public void UpdateTextColours()
 		{
-			if (!UseValidityColours)
+			if (DropDownStyle == ComboBoxStyle.DropDownList ||
+				!UseValidityColours ||
+				Util.IsInDesignMode)
 				return;
 
 			// Set the text colour based on whether the value matches the text

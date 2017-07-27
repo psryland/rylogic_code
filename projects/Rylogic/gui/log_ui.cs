@@ -39,17 +39,22 @@ namespace pr.gui
 		#endregion
 
 		public LogUI()
+			:this("Log","Log")
+		{}
+		public LogUI(string title, string persist_name)
 		{
 			InitializeComponent();
 			m_watch = new FileWatch{ PollPeriod = FilePollPeriod };
 
-			Title = "LogControl";
+			Title = title;
 
 			// Support for dock container controls
-			DockControl = new DockControl(this, Title) { TabText = Title };
-			DockControl.DefaultDockLocation = new DockContainer.DockLocation(auto_hide:EDockSite.Right);
-			DockControl.TabColoursActive = new DockContainer.OptionData().TabStrip.ActiveTab;
-			DockControl.ActiveChanged += HandleActiveChanged;
+			DockControl = new DockControl(this, persist_name)
+			{
+				TabText             = Title,
+				DefaultDockLocation = new DockContainer.DockLocation(auto_hide:EDockSite.Right),
+				TabColoursActive    = new DockContainer.OptionData().TabStrip.ActiveTab,
+			};
 
 			// When docked in an auto-hide panel, pop out on new messages
 			PopOutOnNewMessages = true;
@@ -95,6 +100,7 @@ namespace pr.gui
 				if (m_impl_dock_control == value) return;
 				if (m_impl_dock_control != null)
 				{
+					m_impl_dock_control.ActiveChanged -= HandleActiveChanged;
 					m_impl_dock_control.DockContainerChanged -= HandleDockContainerChanged;
 					Util.Dispose(ref m_impl_dock_control);
 				}
@@ -102,6 +108,7 @@ namespace pr.gui
 				if (m_impl_dock_control != null)
 				{
 					m_impl_dock_control.DockContainerChanged += HandleDockContainerChanged;
+					m_impl_dock_control.ActiveChanged += HandleActiveChanged;
 				}
 			}
 		}
@@ -122,7 +129,12 @@ namespace pr.gui
 		}
 		private string m_title;
 
+		/// <summary>If docked in a doc container, pop-out when new messages are added to the log</summary>
+		public bool PopOutOnNewMessages { get; set; }
+
 		/// <summary>A buffer of the log entries</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public BindingListEx<LogEntry> LogEntries
 		{
 			[DebuggerStepThrough] get { return m_log_entries; }
@@ -143,12 +155,18 @@ namespace pr.gui
 		private BindingListEx<LogEntry> m_log_entries;
 
 		/// <summary>The maximum number of lines to show in the log</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public int MaxLines { get; set; }
 
 		/// <summary>The maximum number of bytes to read from the log file</summary>
-		private int MaxFileBytes { get; set; }
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public int MaxFileBytes { get; set; }
 
 		/// <summary>Get/Set the log file to display. Setting a filepath sets the control to the 'file tail' mode</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public string LogFilepath
 		{
 			get { return m_log_filepath; }
@@ -174,6 +192,8 @@ namespace pr.gui
 		private string m_log_filepath;
 
 		/// <summary>A regex expression for extracting lines from the log file</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public Regex LogEntryPattern
 		{
 			[DebuggerStepThrough] get { return m_log_entry_pattern; }
@@ -205,12 +225,35 @@ namespace pr.gui
 		private Regex m_log_entry_pattern;
 
 		/// <summary>A special character used to mark the start of a log entry. Must be a 1-byte UTF8 character</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public char LineDelimiter { get; set; }
 
-		/// <summary>If docked in a doc container, pop-out when new messages are added to the log</summary>
-		public bool PopOutOnNewMessages { get; set; }
+		/// <summary></summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public bool Freeze
+		{
+			get { return m_freeze; }
+			set
+			{
+				if (m_freeze == value) return;
+				if (m_freeze)
+				{
+					m_watch.PollPeriod = FilePollPeriod;
+				}
+				m_freeze = value;
+				if (m_freeze)
+				{
+					m_watch.PollPeriod = 0;
+				}
+			}
+		}
+		private bool m_freeze;
 
 		/// <summary>Access to the DGV containing the log data</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public DataGridView LogPanel
 		{
 			get { return m_view; }
@@ -286,25 +329,20 @@ namespace pr.gui
 			LogEntries.Add(new LogEntry(fpos, text, false));
 		}
 
-		/// <summary></summary>
-		public bool Freeze
+		/// <summary>Format the cell background on the log view</summary>
+		public virtual void Format(LogEntry entry, DataGridViewCellFormattingEventArgs e)
 		{
-			get { return m_freeze; }
-			set
-			{
-				if (m_freeze == value) return;
-				if (m_freeze)
-				{
-					m_watch.PollPeriod = FilePollPeriod;
-				}
-				m_freeze = value;
-				if (m_freeze)
-				{
-					m_watch.PollPeriod = 0;
-				}
-			}
+			e.CellStyle.BackColor =
+				entry.Text.StartsWith("Error") ? Color.LightSalmon :
+				entry.Text.StartsWith("Warn")  ? Color.Yellow :
+				Color.White;
+			e.CellStyle.ForeColor =
+				entry.Text.StartsWith("Debug") ? Color.Gray :
+				Color.Black;
+
+			e.CellStyle.SelectionBackColor = e.CellStyle.BackColor.Lerp(Color.Gray, 0.5f);
+			e.CellStyle.SelectionForeColor = e.CellStyle.ForeColor;
 		}
-		private bool m_freeze;
 
 		/// <summary>Handle cell values needed for the log view</summary>
 		private void HandleCellValueNeeded(object sender, DataGridViewCellValueEventArgs e)
@@ -340,19 +378,8 @@ namespace pr.gui
 			if (!idx.Within(0, LogEntries.Count))
 				return;
 
-			// If the view has a 'Level' column, use that to colour the row
-			var entry = LogEntries[idx];
-
-			e.CellStyle.BackColor =
-				entry.Text.StartsWith("Error") ? Color.LightSalmon :
-				entry.Text.StartsWith("Warn")  ? Color.LightYellow :
-				Color.White;
-			e.CellStyle.ForeColor =
-				entry.Text.StartsWith("Debug") ? Color.Gray :
-				Color.Black;
-
-			e.CellStyle.SelectionBackColor = e.CellStyle.BackColor.Lerp(Color.Gray, 0.5f);
-			e.CellStyle.SelectionForeColor = e.CellStyle.ForeColor;
+			// Format the log entry
+			Format(LogEntries[idx], e);
 		}
 
 		/// <summary>Handle the list of log entries changing</summary>

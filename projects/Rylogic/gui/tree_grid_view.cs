@@ -402,11 +402,6 @@ namespace pr.gui
 			return r;
 		}
 
-		/// <summary>Removed from the interface</summary>
-		private new System.Windows.Forms.DataGridView DataGridView
-		{
-			[DebuggerStepThrough] get { return base.DataGridView; }
-		}
 
 		/// <summary>An item that this row is bound to</summary>
 		public new object DataBoundItem
@@ -440,6 +435,10 @@ namespace pr.gui
 				}
 			}
 		}
+		public new TreeGridView DataGridView
+		{
+			[DebuggerStepThrough] get { return Grid; }
+		}
 		private TreeGridView m_impl_grid;
 
 		/// <summary>
@@ -449,7 +448,7 @@ namespace pr.gui
 		/// You can use node.Parent.IsRoot or node.Level == 0 to find root level tree items</summary>
 		public TreeGridNode Parent
 		{
-			get { return m_impl_parent; }
+			[DebuggerStepThrough] get { return m_impl_parent; }
 			set
 			{
 				if (m_impl_parent == value) return;
@@ -633,8 +632,9 @@ namespace pr.gui
 		{
 			get { return Index; }
 		}
-		private new int Index // hide the Index property of the row
+		private new int Index
 		{
+			// hide the Index property of the row
 			get { return IsInGrid ? base.Index : -1; }
 		}
 
@@ -831,39 +831,36 @@ namespace pr.gui
 	/// displayed and expanded.</summary>
 	public class TreeGridNodeCollection :IList<TreeGridNode>, IList
 	{
-		private readonly TreeGridNode       m_owner; // The node that this collection belongs to
-		private readonly List<TreeGridNode> m_list;  // The collection of child nodes
-
 		public TreeGridNodeCollection(TreeGridNode owner)
 		{
-			m_owner = owner;
-			m_list = new List<TreeGridNode>();
+			Owner = owner;
+			List = new List<TreeGridNode>();
 		}
 
 		/// <summary>The node that this collection belongs to</summary>
-		public TreeGridNode Owner
-		{
-			get { return m_owner; }
-		}
+		public TreeGridNode Owner { get; private set; }
 
+		/// <summary>The collection of child nodes</summary>
+		private List<TreeGridNode> List { get; set; } 
+		
 		/// <summary>Add 'node' to the collection</summary>
 		internal void AddInternal(TreeGridNode node)
 		{
-			Debug.Assert(node.Parent == m_owner);
-			m_list.Add(node);
+			Debug.Assert(node.Parent == Owner);
+			List.Add(node);
 		}
 
 		/// <summary>Add a node to this collection causing it to be parented to the node that owns this collection</summary>
 		public TreeGridNode Add(TreeGridNode node)
 		{
-			node.Parent = m_owner;
+			node.Parent = Owner;
 			return node;
 		}
 
 		/// <summary>Add a node with values for the following grid columns</summary>
 		public TreeGridNode Add(params object[] values)
 		{
-			return Insert(m_list.Count, values);
+			return Insert(List.Count, values);
 		}
 
 		/// <summary>Insert a node into the collection at 'index'</summary>
@@ -872,11 +869,11 @@ namespace pr.gui
 			// Setting parent inserts 'node' at the end of the collection
 			// If 'index' is not at the end we need to remove 'node' from the
 			// end and insert it at the correct index.
-			node.Parent = m_owner;
-			if (index != m_list.Count - 1)
+			node.Parent = Owner;
+			if (index != List.Count - 1)
 			{
-				m_list.RemoveAt(m_list.Count-1);
-				m_list.Insert(index, node);
+				List.RemoveAt(List.Count-1);
+				List.Insert(index, node);
 			}
 			return node;
 		}
@@ -884,8 +881,8 @@ namespace pr.gui
 		/// <summary>Add a node with values for the following grid columns</summary>
 		public TreeGridNode Insert(int index, params object[] values)
 		{
-			Debug.Assert(m_owner.Grid != null, "Can only use this method after the owner node has been added to the tree grid");
-			TreeGridNode node = Insert(index, new TreeGridNode(m_owner.Grid, is_root:false, item:null));
+			Debug.Assert(Owner.Grid != null, "Can only use this method after the owner node has been added to the tree grid");
+			TreeGridNode node = Insert(index, new TreeGridNode(Owner.Grid, is_root:false, item:null));
 			int iend = Math.Min(values.Length, node.Cells.Count);
 			for (int i = 0; i != iend; ++i) node.Cells[i].Value = values[i];
 			return node;
@@ -894,20 +891,20 @@ namespace pr.gui
 		/// <summary>Add a node based on an object that will provide the values for the columns in the grid (available as DataBoundItem)</summary>
 		public TreeGridNode Bind(object data)
 		{
-			return Insert(m_list.Count, new TreeGridNode(m_owner.Grid, is_root:false, item:data));
+			return Insert(List.Count, new TreeGridNode(Owner.Grid, is_root:false, item:data));
 		}
 
 		/// <summary>Remove node from this collection</summary>
 		internal void RemoveInternal(TreeGridNode node)
 		{
-			Debug.Assert(node.Parent == m_owner);
-			m_list.Remove(node);
+			Debug.Assert(node.Parent == Owner);
+			List.Remove(node);
 		}
 
 		/// <summary>Remove 'node' from this collection</summary>
 		public bool Remove(TreeGridNode node)
 		{
-			if (!m_list.Contains(node)) return false;
+			if (!List.Contains(node)) return false;
 			node.Parent = null; // This will remove 'node' from our collection
 			return true;
 		}
@@ -915,32 +912,32 @@ namespace pr.gui
 		/// <summary>Remove the node at 'index' from the collection</summary>
 		public void RemoveAt(int index)
 		{
-			m_list[index].Parent = null; // This will remove 'node' from our collection
+			List[index].Parent = null; // This will remove 'node' from our collection
 		}
 
 		/// <summary>Remove all nodes from the collection</summary>
 		public void Clear()
 		{
-			for (int i = m_list.Count; i-- != 0;)
-				m_list[i].Parent = null;
+			for (int i = List.Count; i-- != 0;)
+				List[i].Parent = null;
 		}
 
 		/// <summary>Return the index of a node in the collection</summary>
 		public int IndexOf(TreeGridNode node)
 		{
-			return m_list.IndexOf(node);
+			return List.IndexOf(node);
 		}
 
 		/// <summary>The number of items in the collection</summary>
 		public int Count
 		{
-			get{ return m_list.Count; }
+			get{ return List.Count; }
 		}
 
 		/// <summary>Returns true if 'node' is in this collection</summary>
 		public bool Contains(TreeGridNode node)
 		{
-			return m_list.Contains(node);
+			return List.Contains(node);
 		}
 
 		/// <summary>Always false, the list is not readonly</summary>
@@ -952,7 +949,7 @@ namespace pr.gui
 		/// <summary>Get/Set the node at a given index</summary>
 		public TreeGridNode this[int index]
 		{
-			get { return m_list[index]; }
+			get { return List[index]; }
 			set
 			{
 				RemoveAt(index);
@@ -963,11 +960,11 @@ namespace pr.gui
 		/// <summary>Copy the node collection to an array</summary>
 		public void CopyTo(TreeGridNode[] array, int arrayIndex)
 		{
-			m_list.CopyTo(array, arrayIndex);
+			List.CopyTo(array, arrayIndex);
 		}
 
 		// Generic IList interface
-		int  IList<TreeGridNode>.IndexOf(TreeGridNode item)           { return m_list.IndexOf(item); }
+		int  IList<TreeGridNode>.IndexOf(TreeGridNode item)           { return List.IndexOf(item); }
 		void IList<TreeGridNode>.Insert(int index, TreeGridNode node) { Insert(index, node); }
 
 		// IList interface
@@ -983,7 +980,7 @@ namespace pr.gui
 		object IList.this[int index]                                  { get {return this[index];} set {this[index] = value as TreeGridNode;} }
 
 		// Enumerator/Enumerable methods
-		public IEnumerator<TreeGridNode> GetEnumerator() { return m_list.GetEnumerator(); }
+		public IEnumerator<TreeGridNode> GetEnumerator() { return List.GetEnumerator(); }
 		IEnumerator IEnumerable.GetEnumerator()          { return GetEnumerator(); }
 
 		// ICollection Members

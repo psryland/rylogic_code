@@ -8,6 +8,7 @@ namespace TestCS
 	public class TreeGridUI :Form
 	{
 		private TreeGridView m_tree_grid;
+		private ImageList m_image_list;
 
 		public TreeGridUI()
 		{
@@ -39,8 +40,6 @@ namespace TestCS
 			
 			m_tree_grid.Nodes.Add("node3", "frank", Color.Orange);
 		}
-
-		private ImageList m_image_list;
 
 		#region Windows Form Designer generated code
 

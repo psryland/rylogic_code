@@ -114,6 +114,19 @@ namespace pr.util
 				m_less = Expression.Lambda<Func<T, T, bool>>(body, paramA, paramB).Compile();
 			}
 			#endregion
+			#region ToString
+			{
+				var mi1 = typeof(T).GetMethod("ToString", new[]{typeof(IFormatProvider)});
+				var mi2 = typeof(T).GetMethod("ToString", new[]{typeof(string)});
+				var mi3 = typeof(T).GetMethod("ToString", new[]{typeof(string), typeof(IFormatProvider)});
+				if (mi1 != null) m_tostring1 = (a,fp) => (string)mi1.Invoke(a, new object[]{ fp });
+				else             m_tostring1 = (a,fp) => { throw new Exception($"Type {typeof(T).Name} has no ToString(IFormatProvider) overload"); };
+				if (mi2 != null) m_tostring2 = (a,fmt) => (string)mi2.Invoke(a, new object[]{ fmt });
+				else             m_tostring2 = (a,fmt) => { throw new Exception($"Type {typeof(T).Name} has no ToString(string) overload"); };
+				if (mi3 != null) m_tostring3 = (a,fmt,fp) => (string)mi3.Invoke(a, new object[]{ fmt, fp });
+				else             m_tostring3 = (a,fmt,fp) => { throw new Exception($"Type {typeof(T).Name} has no ToString(string, IFormatProvider) overload"); };
+			}
+			#endregion
 		}
 
 		/// <summary>Return the maximum value</summary>
@@ -167,6 +180,15 @@ namespace pr.util
 
 		/// <summary>a >= b</summary>
 		public static bool GreaterEql(T a, T b) { return !Less(a,b); }
+
+		/// <summary>ToString with formatting</summary>
+		public static string ToString(T a)                                 { return a.ToString(); }
+		public static string ToString(T a, IFormatProvider fp)             { return m_tostring1(a, fp); }
+		public static string ToString(T a, string fmt)                     { return m_tostring2(a, fmt); }
+		public static string ToString(T a, string fmt, IFormatProvider fp) { return m_tostring3(a, fmt, fp); }
+		private static Func<T,IFormatProvider,string>        m_tostring1;
+		private static Func<T,string,string>                 m_tostring2;
+		private static Func<T,string,IFormatProvider,string> m_tostring3;
 	}
 	public static class Operators<T,U>
 	{
@@ -247,6 +269,8 @@ namespace pr.unittests
 
 			Assert.AreEqual(Operators<float,int>.Mul(1.23f, 45), 1.23f * 45);
 			Assert.AreEqual(Operators<float,int>.Div(1.23f, 45), 1.23f / 45);
+
+			Assert.AreEqual(Operators<float>.ToString(1.23f, "C") , 1.23f.ToString("C"));
 		}
 	}
 }

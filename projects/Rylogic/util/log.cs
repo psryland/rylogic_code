@@ -266,6 +266,13 @@ namespace pr.util
 			set { Context.AddTimestamp = value; }
 		}
 
+		/// <summary>Get/Set the zero time for the log</summary>
+		public DateTimeOffset TimeZero
+		{
+			get { return Context.TimeZero; }
+			set { Context.TimeZero = value; }
+		}
+
 		/// <summary>The method that converts a log entry into a string</summary>
 		public Func<LogEvent, string> Serialise
 		{
@@ -394,11 +401,7 @@ namespace pr.util
 			public RefCount RefCount { get; private set; }
 
 			/// <summary>The time point when logging started</summary>
-			public DateTimeOffset TimeZero
-			{
-				get;
-				private set;
-			}
+			public DateTimeOffset TimeZero { get; set; }
 
 			/// <summary>Queue of log events to report</summary>
 			public BlockingCollection<LogEvent> Queue

@@ -17,22 +17,31 @@ namespace pr.container
 		{
 			Init();
 		}
+		
+		/// <summary>Careful: this constructor doesn't copy 'list' it wraps it. So sort/readonly/etc depend on the given list</summary>
 		public BindingListEx(IList<T> list) :base(list)
 		{
 			Init();
 		}
+		
+		/// <summary>Careful: this constructor doesn't copy 'collection' it wraps it. So sort/readonly/etc depend on the given list</summary>
 		public BindingListEx(IEnumerable<T> collection) :base(collection.ToList())
 		{
 			Init();
 		}
-		public BindingListEx(int initial_count, Func<int,T> gen) :base(Enumerable.Range(0, initial_count).Select(i => gen(i)).ToList())
+		
+		/// <summary>Construct using a generator function</summary>
+		public BindingListEx(int initial_count, Func<int,T> gen) :base(int_.Range(initial_count).Select(i => gen(i)).ToList())
 		{
 			Init();
 		}
+
+		/// <summary>Construct from a single value repeated 'initial_count' times</summary>
 		public BindingListEx(int initial_count, T value = default(T)) :base(Enumerable.Repeat(value, initial_count).ToList())
 		{
 			Init();
 		}
+
 		private void Init()
 		{
 			PerItemClear = false;
@@ -204,8 +213,14 @@ namespace pr.container
 		#region Sorting
 
 		/// <summary>True if the list supports sorting; otherwise, false. The default is false.</summary>
-		public bool SupportsSorting { get { return AllowSort && SortComparer != null; } }
-		protected override bool SupportsSortingCore { get { return SupportsSorting; } }
+		public bool SupportsSorting
+		{
+			get { return AllowSort && SortComparer != null; }
+		}
+		protected override bool SupportsSortingCore
+		{
+			get { return SupportsSorting; }
+		}
 
 		/// <summary>The comparer used for sorting</summary>
 		public IComparer SortComparer
@@ -221,15 +236,24 @@ namespace pr.container
 
 		/// <summary>Get/Set the direction the list is sorted. The default is ListSortDirection.Ascending.</summary>
 		public ListSortDirection SortDirection { get; set; }
-		protected override ListSortDirection SortDirectionCore { get { return SortDirection; } }
+		protected override ListSortDirection SortDirectionCore
+		{
+			get { return SortDirection; }
+		}
 
 		/// <summary>Get/Set the property descriptor that is used for sorting the list.</summary>
 		public PropertyDescriptor SortProperty { get; set; }
-		protected override PropertyDescriptor SortPropertyCore { get { return SortProperty; } }
+		protected override PropertyDescriptor SortPropertyCore
+		{
+			get { return SortProperty; }
+		}
 
 		/// <summary>true if the list is sorted; otherwise, false. The default is false.</summary>
 		public bool IsSorted { get; private set; }
-		protected override bool IsSortedCore { get { return IsSorted; } }
+		protected override bool IsSortedCore
+		{
+			get { return IsSorted; }
+		}
 
 		/// <summary>Reorders the list</summary>
 		protected override void ApplySortCore(PropertyDescriptor prop, ListSortDirection direction)
