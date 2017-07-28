@@ -69,9 +69,9 @@ namespace CoinFlip
 			// Set the balances
 			#region Balance
 			{
-				Balance[Coins["LTC"]] = new Balance(Coins["LTC"], 1m, 1m, 0m, 0m, 0m);
-				Balance[Coins["BTC"]] = new Balance(Coins["BTC"], 1m, 1m, 0m, 0m, 0m);
-				Balance[Coins["ETC"]] = new Balance(Coins["ETC"], 1m, 1m, 0m, 0m, 0m);
+				Balance[Coins["LTC"]] = new Balance(Coins["LTC"], 1m, 1m, 0m, 0m, 0m, DateTimeOffset.Now);
+				Balance[Coins["BTC"]] = new Balance(Coins["BTC"], 1m, 1m, 0m, 0m, 0m, DateTimeOffset.Now);
+				Balance[Coins["ETC"]] = new Balance(Coins["ETC"], 1m, 1m, 0m, 0m, 0m, DateTimeOffset.Now);
 			}
 			#endregion
 
@@ -80,9 +80,9 @@ namespace CoinFlip
 		}
 
 		/// <summary>Open a trade</summary>
-		protected override Task<ulong> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> rate)
+		protected override Task<TradeResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> rate)
 		{
-			return Task.FromResult(++m_order_id);
+			return Task.FromResult(new TradeResult(++m_order_id));
 		}
 		private ulong m_order_id;
 

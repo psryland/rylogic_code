@@ -16,7 +16,7 @@ using pr.util;
 
 namespace CoinFlip
 {
-	public class Model :IDisposable
+	public class Model :IDisposable, IShutdownAsync
 	{
 		// Notes:
 		//  - The model builds the loops collection whenever new pairs are added.
@@ -50,7 +50,6 @@ namespace CoinFlip
 
 			UI = main_ui;
 			m_dispatcher = Dispatcher.CurrentDispatcher;
-			m_main_loop_exit = new ManualResetEvent(false);
 			ShutdownToken  = new CancellationTokenSource();
 
 			// Start the log
@@ -62,7 +61,7 @@ namespace CoinFlip
 			Exchanges     = new BindingSource<Exchange>     { DataSource = new BindingListEx<Exchange>() };
 			Pairs         = new BindingSource<TradePair>    { DataSource = new BindingListEx<TradePair>() };
 			Loops         = new BindingSource<Loop>         { DataSource = new BindingListEx<Loop>() };
-			Fishing       = new BindingSource<Fishing>      { DataSource = new BindingListEx<Fishing>() };
+			Fishing       = new BindingSource<Fishing>      { DataSource = new BindingListEx<Fishing>(Settings.Fishing.Select(x => new Fishing(this, x)).ToList()) };
 			Balances      = new BindingSource<Balance>      { DataSource = null, AllowNoCurrent = true };
 			Positions     = new BindingSource<Position>     { DataSource = null, AllowNoCurrent = true };
 			History       = new BindingSource<PositionFill> { DataSource = null, AllowNoCurrent = true };
@@ -85,9 +84,121 @@ namespace CoinFlip
 		{
 			// Main loops needs to have shutdown before here
 			Debug.Assert(ShutdownToken.IsCancellationRequested);
-			Debug.Assert(m_main_loop_exit.IsSignalled());
+			Debug.Assert(!Running);
 			Exchanges = null;
 			Log = null;
+		}
+
+		/// <summary>Async shutdown</summary>
+		public async Task ShutdownAsync()
+		{
+			// Signal shutdown
+			ShutdownToken.Cancel();
+
+			// Shutdown fishing instances
+			await Task.WhenAll(Fishing.Select(x => x.ShutdownAsync()));
+
+			// Wait for async methods to exit
+			await Task_.WaitWhile(() => Running);
+		}
+
+		/// <summary>A cancellation token for graceful shutdown</summary>
+		public CancellationTokenSource ShutdownToken { get; private set; }
+
+		/// <summary>Application main loop
+		private async void MainLoop(CancellationToken shutdown)
+		{
+			using (Scope.Create(() => ++m_main_loop_running, () => --m_main_loop_running))
+			{
+				// Infinite loop till shutdown
+				for (;;)
+				{
+					try
+					{
+						var exit = await Task.Run(() => shutdown.WaitHandle.WaitOne(Settings.MainLoopPeriod), shutdown);
+						if (exit) break;
+
+						shutdown.ThrowIfCancellationRequested();
+
+						// When the coins of interest, available pairs, etc change, rebuild the collection of loops
+						for (; RebuildLoops;)
+						{
+							var rebuild_loops_issue = m_rebuild_loops_issue;
+
+							// Get each exchange to update it's available pairs/coins
+							var coi = Coins.Where(x => x.OfInterest).ToHashSet(x => x.Symbol);
+							await Task.WhenAll(Exchanges.Except(CrossExchange).Select(x => x.UpdatePairs(coi)));
+							await CrossExchange.UpdatePairs(coi);
+							Debug.Assert(AssertMainThread());
+
+							// If the loops have been invalidated in the meantime, go round again
+							if (rebuild_loops_issue != m_rebuild_loops_issue)
+								continue;
+
+							// Merge data in the main thread
+							IntegrateMarketUpdates();
+
+							// Copy the pairs from each exchange to the Model's collection
+							Pairs.Clear();
+							foreach (var exch in Exchanges.Where(x => x.Active))
+								Pairs.AddRange(exch.Pairs.Values.Where(x => coi.Contains(x.Base) && coi.Contains(x.Quote)));
+
+							// Update the collection of loops
+							await FindLoops();
+
+							// If the loops have been invalidated in the meantime, go round again
+							if (rebuild_loops_issue != m_rebuild_loops_issue)
+								continue;
+
+							RebuildLoops = false;
+						}
+
+						// Process any pending market data updates
+						IntegrateMarketUpdates();
+
+						// Test the loops for profitability, and execute the best
+						if (RunLoopFinder)
+						{
+							using (Scope.Create(() => MarketDataLocked = true, () => MarketDataLocked = false))
+							{
+								// Check the loops collection for profitable loops
+								var profitable_loops = await FindProfitableLoops();
+
+								// Execute the most profitable loop
+								foreach (var loop in profitable_loops)
+								{
+									if (loop.TradeScale == 0)
+									{
+										var exchanges = string.Join(",", loop.Coins.Select(x => x.Exchange.Name).Distinct());
+										var missing = string.Join(",", loop.Insufficient.Select(x => x.Coin.SymbolWithExchange));
+										Log.Write(ELogLevel.Info, "Potential Loop {0} ({1}). Profit Ratio: {2:G6}. Missing Currencies: {3}".Fmt(loop.LoopDescription, exchanges, loop.ProfitRatio, missing));
+										continue;
+									}
+
+									// Execute the loop
+									await ExecuteLoop(loop);
+
+									// Execute one loop only
+									break;
+								}
+							}
+						}
+					}
+					catch (Exception ex)
+					{
+						if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
+						if (ex is OperationCanceledException) { break; }
+						else Log.Write(ELogLevel.Error, ex, "Error during main loop.");
+					}
+				}
+			}
+		}
+		private int m_main_loop_running;
+
+		/// <summary>True if the Model can be closed gracefully</summary>
+		public bool Running
+		{
+			get { return m_main_loop_running != 0; }
 		}
 
 		/// <summary>The main UI</summary>
@@ -165,6 +276,24 @@ namespace CoinFlip
 					}
 				}
 				return worth;
+			}
+		}
+
+		/// <summary>Return the sum of all tokens</summary>
+		public decimal TokenTotal
+		{
+			get
+			{
+				var sum = 0m;
+				foreach (var exch in Exchanges.Except(CrossExchange))
+				{
+					foreach (var bal in exch.Balance.Values)
+					{
+						var amount = bal.Total;
+						sum += amount;
+					}
+				}
+				return sum;
 			}
 		}
 
@@ -260,115 +389,6 @@ namespace CoinFlip
 		/// <summary>Debugging flag for detecting misuse of the market data</summary>
 		internal bool MarketDataLocked { get; private set; }
 
-		/// <summary>A cancellation token for graceful shutdown</summary>
-		public CancellationTokenSource ShutdownToken { get; private set; }
-
-		/// <summary>True if the Model can be closed gracefully</summary>
-		public bool CanShutdown
-		{
-			get { return m_main_loop_exit.WaitOne(0); }
-		}
-
-		/// <summary>Async shutdown</summary>
-		public Task Shutdown()
-		{
-			// Signal shutdown
-			ShutdownToken.Cancel();
-
-			// Wait for async methods to exit
-			return Task.Run(() => m_main_loop_exit.WaitOne());
-		}
-
-		/// <summary>Application main loop
-		private async void MainLoop(CancellationToken shutdown)
-		{
-			using (Scope.Create(null, () => m_main_loop_exit.Set()))
-			{
-				// Infinite loop till shutdown
-				for (;;)
-				{
-					try
-					{
-						var exit = await Task.Run(() => shutdown.WaitHandle.WaitOne(Settings.MainLoopPeriod), shutdown);
-						if (exit) break;
-
-						shutdown.ThrowIfCancellationRequested();
-
-						// When the coins of interest, available pairs, etc change, rebuild the collection of loops
-						for (; RebuildLoops;)
-						{
-							var rebuild_loops_issue = m_rebuild_loops_issue;
-
-							// Get each exchange to update it's available pairs/coins
-							var coi = Coins.Where(x => x.OfInterest).ToHashSet(x => x.Symbol);
-							await Task.WhenAll(Exchanges.Except(CrossExchange).Select(x => x.UpdatePairs(coi)));
-							await CrossExchange.UpdatePairs(coi);
-							Debug.Assert(AssertMainThread());
-
-							// If the loops have been invalidated in the meantime, go round again
-							if (rebuild_loops_issue != m_rebuild_loops_issue)
-								continue;
-
-							// Merge data in the main thread
-							IntegrateMarketUpdates();
-
-							// Copy the pairs from each exchange to the Model's collection
-							Pairs.Clear();
-							foreach (var exch in Exchanges.Where(x => x.Active))
-								Pairs.AddRange(exch.Pairs.Values.Where(x => coi.Contains(x.Base) && coi.Contains(x.Quote)));
-
-							// Update the collection of loops
-							await FindLoops();
-
-							// If the loops have been invalidated in the meantime, go round again
-							if (rebuild_loops_issue != m_rebuild_loops_issue)
-								continue;
-
-							RebuildLoops = false;
-						}
-
-						// Process any pending market data updates
-						IntegrateMarketUpdates();
-
-						// Test the loops for profitability, and execute the best
-						if (RunLoopFinder)
-						{
-							using (Scope.Create(() => MarketDataLocked = true, () => MarketDataLocked = false))
-							{
-								// Check the loops collection for profitable loops
-								var profitable_loops = await FindProfitableLoops();
-
-								// Execute the most profitable loop
-								foreach (var loop in profitable_loops)
-								{
-									if (loop.TradeScale == 0)
-									{
-										var exchanges = string.Join(",", loop.Coins.Select(x => x.Exchange.Name).Distinct());
-										var missing = string.Join(",", loop.Insufficient.Select(x => x.Coin.SymbolWithExchange));
-										Log.Write(ELogLevel.Info, "Potential Loop {0} ({1}). Profit Ratio: {2:G6}. Missing Currencies: {3}".Fmt(loop.LoopDescription, exchanges, loop.ProfitRatio, missing));
-										continue;
-									}
-
-									// Execute the loop
-									await ExecuteLoop(loop);
-
-									// Execute one loop only
-									break;
-								}
-							}
-						}
-					}
-					catch (Exception ex)
-					{
-						if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
-						if (ex is OperationCanceledException) { break; }
-						else Log.Write(ELogLevel.Error, ex, "Error during main loop.");
-					}
-				}
-			}
-		}
-		private ManualResetEvent m_main_loop_exit;
-
 		/// <summary>The available trade pairs (the model does not own the pairs, the exchanges do)</summary>
 		public BindingSource<TradePair> Pairs
 		{
@@ -452,8 +472,21 @@ namespace CoinFlip
 			private set
 			{
 				if (m_fishing == value) return;
+				if (m_fishing != null)
+				{
+					m_fishing.ListChanging -= HandleFishingListChanging;
+				}
 				m_fishing = value;
+				if (m_fishing != null)
+				{
+					m_fishing.ListChanging += HandleFishingListChanging;
+				}
 			}
+		}
+		private void HandleFishingListChanging(object sender, ListChgEventArgs<Fishing> e)
+		{
+			if (e.IsDataChanged)
+				Settings.Fishing = Fishing.Select(x => x.Settings).ToArray();
 		}
 		private BindingSource<Fishing> m_fishing;
 

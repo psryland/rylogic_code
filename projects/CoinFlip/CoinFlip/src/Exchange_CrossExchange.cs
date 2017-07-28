@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
-using pr.container;
-using pr.maths;
 using pr.util;
 
 namespace CoinFlip
@@ -21,9 +18,9 @@ namespace CoinFlip
 		}
 
 		/// <summary>Open a trade</summary>
-		protected override Task<ulong> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> rate)
+		protected override Task<TradeResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> rate)
 		{
-			return Task.FromResult(0UL);
+			return Task.FromResult(new TradeResult());
 		}
 
 		/// <summary>Cancel an open trade</summary>

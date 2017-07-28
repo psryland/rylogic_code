@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using pr.container;
 
 namespace CoinFlip
@@ -11,12 +7,13 @@ namespace CoinFlip
 	/// <summary>A collection of trades associated with filling an order</summary>
 	public class PositionFill
 	{
-		public PositionFill(ulong order_id, ETradeType tt, TradePair pair)
+		public PositionFill(ulong order_id, ETradeType tt, TradePair pair, DateTimeOffset created)
 		{
-			OrderId = order_id;
+			OrderId   = order_id;
 			TradeType = tt;
-			Pair = pair;
-			Trades = new PositionsCollection(this);
+			Pair      = pair;
+			Created   = created;
+			Trades    = new PositionsCollection(this);
 		}
 
 		/// <summary>The Id of the order that was filled by this collection of trades</summary>
@@ -27,6 +24,9 @@ namespace CoinFlip
 
 		/// <summary>The pair traded</summary>
 		public TradePair Pair { get; private set; }
+
+		/// <summary>The timestamp of when the original order was created</summary>
+		public DateTimeOffset Created { get; private set; }
 
 		/// <summary>The trades associated with filling a single order</summary>
 		public PositionsCollection Trades { get; private set; }

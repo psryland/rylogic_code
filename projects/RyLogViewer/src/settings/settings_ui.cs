@@ -654,8 +654,8 @@ namespace RyLogViewer
 			m_grid_highlight.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Colours   ,HeaderText = "Colours"  ,FillWeight = 100 ,ReadOnly = true ,DefaultCellStyle = hl_style ,ToolTipText = ColumnTT.Colours});
 			m_grid_highlight.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Edit      ,HeaderText = "Edit"     ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Edit});
 			m_grid_highlight.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
-			m_grid_highlight.KeyDown                    += DataGridViewEx.Copy;
-			m_grid_highlight.KeyDown                    += DataGridViewEx.SelectAll;
+			m_grid_highlight.KeyDown                    += DataGridView_.Copy;
+			m_grid_highlight.KeyDown                    += DataGridView_.SelectAll;
 			m_grid_highlight.UserDeletingRow            += (s,a)=> OnDeletingRow    (m_grid_highlight, Settings.Patterns.Highlights, m_pattern_hl, a.Row.Index);
 			m_grid_highlight.MouseDown                  += (s,a)=> OnMouseDown      (m_grid_highlight, Settings.Patterns.Highlights, a);
 			m_grid_highlight.DragOver                   += (s,a)=> DoDragDrop       (m_grid_highlight, Settings.Patterns.Highlights, a, false);
@@ -690,8 +690,8 @@ namespace RyLogViewer
 			m_grid_filter.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Pattern   ,HeaderText = "Pattern"     ,FillWeight = 100 ,ReadOnly = true ,ToolTipText = ColumnTT.Pattern});
 			m_grid_filter.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Edit      ,HeaderText = "Edit"        ,FillWeight = 15  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Edit});
 			m_grid_filter.ClipboardCopyMode   = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
-			m_grid_filter.KeyDown            += DataGridViewEx.Copy;
-			m_grid_filter.KeyDown            += DataGridViewEx.SelectAll;
+			m_grid_filter.KeyDown            += DataGridView_.Copy;
+			m_grid_filter.KeyDown            += DataGridView_.SelectAll;
 			m_grid_filter.UserDeletingRow    += (s,a)=> OnDeletingRow    (m_grid_filter, Settings.Patterns.Filters, m_pattern_ft, a.Row.Index);
 			m_grid_filter.MouseDown          += (s,a)=> OnMouseDown      (m_grid_filter, Settings.Patterns.Filters, a);
 			m_grid_filter.DragOver           += (s,a)=> DoDragDrop       (m_grid_filter, Settings.Patterns.Filters, a, false);
@@ -736,8 +736,8 @@ namespace RyLogViewer
 			m_grid_transform.Columns.Add(new DataGridViewTextBoxColumn{Name = ColumnNames.Pattern ,HeaderText = "Pattern" ,FillWeight = 100 ,ReadOnly = true ,ToolTipText = ColumnTT.Pattern});
 			m_grid_transform.Columns.Add(new DataGridViewImageColumn  {Name = ColumnNames.Edit    ,HeaderText = "Edit"    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Edit});
 			m_grid_transform.ClipboardCopyMode   = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
-			m_grid_transform.KeyDown            += DataGridViewEx.Copy;
-			m_grid_transform.KeyDown            += DataGridViewEx.SelectAll;
+			m_grid_transform.KeyDown            += DataGridView_.Copy;
+			m_grid_transform.KeyDown            += DataGridView_.SelectAll;
 			m_grid_transform.UserDeletingRow    += (s,a)=> OnDeletingRow    (m_grid_transform, Settings.Patterns.Transforms, m_pattern_tx, a.Row.Index);
 			m_grid_transform.MouseDown          += (s,a)=> OnMouseDown      (m_grid_transform, Settings.Patterns.Transforms, a);
 			m_grid_transform.DragOver           += (s,a)=> DoDragDrop       (m_grid_transform, Settings.Patterns.Transforms, a, false);
@@ -772,8 +772,8 @@ namespace RyLogViewer
 			m_grid_action.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.ClickAction ,HeaderText = "Action" ,FillWeight = 100 ,ReadOnly = true ,ToolTipText = ColumnTT.ClickAction});
 			m_grid_action.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Edit        ,HeaderText = "Edit"    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Edit});
 			m_grid_action.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
-			m_grid_action.KeyDown                    += DataGridViewEx.Copy;
-			m_grid_action.KeyDown                    += DataGridViewEx.SelectAll;
+			m_grid_action.KeyDown                    += DataGridView_.Copy;
+			m_grid_action.KeyDown                    += DataGridView_.SelectAll;
 			m_grid_action.UserDeletingRow            += (s,a)=> OnDeletingRow    (m_grid_action, Settings.Patterns.Actions, m_pattern_ac, a.Row.Index);
 			m_grid_action.MouseDown                  += (s,a)=> OnMouseDown      (m_grid_action, Settings.Patterns.Actions, a);
 			m_grid_action.DragOver                   += (s,a)=> DoDragDrop       (m_grid_action, Settings.Patterns.Actions, a, false);

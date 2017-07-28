@@ -54,9 +54,14 @@ namespace CoinFlip
 		}
 		protected override void Dispose(bool disposing)
 		{
-			Model = null;
 			DockControl = null;
+			Model = null;
 			base.Dispose(disposing);
+		}
+		protected override void OnMouseDown(MouseEventArgs e)
+		{
+			base.OnMouseDown(e);
+			DataGridView_.RightMouseSelect(this, e);
 		}
 
 		/// <summary>Provides support for the DockContainer</summary>
@@ -137,9 +142,14 @@ namespace CoinFlip
 		}
 		protected override void Dispose(bool disposing)
 		{
-			Model = null;
 			DockControl = null;
+			Model = null;
 			base.Dispose(disposing);
+		}
+		protected override void OnMouseDown(MouseEventArgs e)
+		{
+			base.OnMouseDown(e);
+			DataGridView_.RightMouseSelect(this, e);
 		}
 
 		/// <summary>Provides support for the DockContainer</summary>

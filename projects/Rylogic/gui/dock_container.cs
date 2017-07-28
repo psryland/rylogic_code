@@ -347,11 +347,13 @@ namespace pr.gui
 				// If an auto hide site is given, add to the auto hide panel
 				var side = loc.AutoHide.Value;
 				pane = m_auto_hide[(int)side].Root.Add(dc, loc.Index, loc.Address);
+				dc.DefaultDockLocation.AutoHide = loc.AutoHide;
 			}
 			else
 			{
 				// Otherwise, dock to the dock container
 				pane = Root.Add(dc, loc.Index, loc.Address);
+				dc.DefaultDockLocation.AutoHide = null;
 			}
 			return pane;
 		}
@@ -5267,7 +5269,7 @@ namespace pr.gui
 		{
 			public FloatingWindow(DockContainer dc) :base(dc)
 			{
-				ShowInTaskbar = false;
+				ShowInTaskbar = true;
 				FormBorderStyle = FormBorderStyle.Sizable;
 				HideOnClose = true;
 				Text = string.Empty;
@@ -5477,14 +5479,16 @@ namespace pr.gui
 				// Save the ID assigned to this window
 				node.Add2(XmlTag.Id, Id, false);
 
-				// Save the screen-space location of the floating window
-				node.Add2(XmlTag.Bounds, Bounds, false);
+				// Save whether the floating window is pinned to the dock container
+				node.Add2(XmlTag.Pinned, PinWindow, false);
+
+				// Save the screen-space location of the floating window. If pinned, save the offset bounds
+				var bnds = Bounds;
+				if (PinWindow) bnds = bnds.Shifted(-TargetFrame.Left, -TargetFrame.Top);
+				node.Add2(XmlTag.Bounds, bnds, false);
 
 				// Save whether the floating window is shown or now
 				node.Add2(XmlTag.Visible, Visible, false);
-
-				// Save whether the floating window is pinned to the dock container
-				node.Add2(XmlTag.Pinned, PinWindow, false);
 
 				// Save the tree structure of the floating window
 				node.Add2(XmlTag.Tree, Root, false);
@@ -5494,25 +5498,30 @@ namespace pr.gui
 			/// <summary>Apply state to this floating window</summary>
 			public void ApplyState(XElement node)
 			{
-				// Move the floating window to the saved position (clamped by the virtual screen)
-				var bounds = node.Element(XmlTag.Bounds)?.As<Rectangle>();
-				if (bounds != null)
-					Bounds = Util.OnScreen(bounds.Value);
-
-				// Restore visibility
-				var visible = node.Element(XmlTag.Visible)?.As<bool>();
-				if (visible != null)
-					Visible = visible.Value;
-
 				// Restore the pinned state
 				var pinned = node.Element(XmlTag.Pinned)?.As<bool>();
 				if (pinned != null)
 					PinWindow = pinned.Value;
 
+				// Move the floating window to the saved position (clamped by the virtual screen)
+				var bounds = node.Element(XmlTag.Bounds)?.As<Rectangle>();
+				if (bounds != null)
+				{
+					// If 'PinWindow' is set, then the bounds are relative to the parent window
+					var bnds = bounds.Value;
+					if (PinWindow) bnds = bnds.Shifted(TargetFrame.Left, TargetFrame.Top);
+					Bounds = Util.OnScreen(bnds);
+				}
+
 				// Update the tree layout
 				var tree_node = node.Element(XmlTag.Tree);
 				if (tree_node != null)
 					Root.ApplyState(tree_node);
+
+				// Restore visibility
+				var visible = node.Element(XmlTag.Visible)?.As<bool>();
+				if (visible != null)
+					Visible = visible.Value;
 			}
 		}
 

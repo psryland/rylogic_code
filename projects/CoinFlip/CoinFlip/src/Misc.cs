@@ -86,5 +86,6 @@ namespace CoinFlip
 	{
 		public static readonly Image Active   = new Bitmap(Resources.active, new Size(28,28));
 		public static readonly Image Inactive = new Bitmap(Resources.inactive, new Size(28,28));
+		public static readonly Image Changing = new Bitmap(Resources.changing, new Size(28,28));
 	}
 }

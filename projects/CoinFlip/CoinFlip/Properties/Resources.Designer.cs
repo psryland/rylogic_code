@@ -73,6 +73,16 @@ namespace CoinFlip.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap changing {
+            get {
+                object obj = ResourceManager.GetObject("changing", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap inactive {
             get {
                 object obj = ResourceManager.GetObject("inactive", resourceCulture);

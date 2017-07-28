@@ -219,6 +219,7 @@
     <Compile Include="extn\stream_extensions.cs" />
     <Compile Include="extn\stringbuilder_extensions.cs" />
     <Compile Include="extn\string_extensions.cs" />
+    <Compile Include="extn\task_extensions.cs" />
     <Compile Include="extn\textbox_extensions.cs" />
     <Compile Include="extn\thread_extensions.cs" />
     <Compile Include="extn\toolstrip_extensions.cs" />
@@ -474,6 +475,7 @@
     <Compile Include="util\ref.cs" />
     <Compile Include="undo\undo.cs" />
     <Compile Include="script\template_replacer.cs" />
+    <Compile Include="util\shutdown_async.cs" />
     <Compile Include="util\units.cs" />
     <Compile Include="util\unittest.cs" />
     <Compile Include="util\user_data.cs" />

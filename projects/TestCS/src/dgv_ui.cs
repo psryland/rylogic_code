@@ -220,8 +220,8 @@ namespace TestCS
 
 			// Drag drop
 			m_dd = new DragDrop(m_grid);
-			m_dd.DoDrop += DataGridViewEx.DragDrop_DoDropMoveRow;
-			m_grid.MouseDown += DataGridViewEx.DragDrop_DragRow;
+			m_dd.DoDrop += DataGridView_.DragDrop_DoDropMoveRow;
+			m_grid.MouseDown += DataGridView_.DragDrop_DragRow;
 
 			// log list
 			m_events.ContextMenuStrip = new ContextMenuStrip();
@@ -276,14 +276,14 @@ namespace TestCS
 			m_grid.DataSource = m_bs;
 
 			// Automatic column sizing
-			m_grid.SizeChanged += DataGridViewEx.FitToDisplayWidth;
-			m_grid.ColumnWidthChanged += DataGridViewEx.FitToDisplayWidth;
-			m_grid.RowHeadersWidthChanged += DataGridViewEx.FitToDisplayWidth;
-			m_grid.SetGridColumnSizes(DataGridViewEx.EColumnSizeOptions.FitToDisplayWidth);
+			m_grid.SizeChanged += DataGridView_.FitToDisplayWidth;
+			m_grid.ColumnWidthChanged += DataGridView_.FitToDisplayWidth;
+			m_grid.RowHeadersWidthChanged += DataGridView_.FitToDisplayWidth;
+			m_grid.SetGridColumnSizes(DataGridView_.EColumnSizeOptions.FitToDisplayWidth);
 
 			// Column filtering
 			m_grid.ColumnFilters(true);
-			m_grid.KeyDown += DataGridViewEx.ColumnFilters;
+			m_grid.KeyDown += DataGridView_.ColumnFilters;
 		}
 		protected override void Dispose(bool disposing)
 		{

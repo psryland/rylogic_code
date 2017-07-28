@@ -23,9 +23,9 @@ namespace CoinFlip
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Position.TimeStamp),
+				Name = nameof(Position.CreationTime),
 				HeaderText = "Date",
-				DataPropertyName = nameof(Position.TimeStamp),
+				DataPropertyName = nameof(Position.CreationTime),
 				SortMode = DataGridViewColumnSortMode.Automatic,
 				FillWeight = 1.0f,
 			});
@@ -49,7 +49,7 @@ namespace CoinFlip
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				Name = nameof(Position.Price),
-				HeaderText = "Trade at Rate",
+				HeaderText = "Price",
 				DataPropertyName = nameof(Position.Price),
 				SortMode = DataGridViewColumnSortMode.NotSortable,
 				FillWeight = 1.0f,
@@ -99,7 +99,7 @@ namespace CoinFlip
 		protected override void OnMouseDown(MouseEventArgs e)
 		{
 			base.OnMouseDown(e);
-			DataGridViewEx.ColumnVisibility(this, e);
+			DataGridView_.ColumnVisibility(this, e);
 		}
 		protected override void OnCellFormatting(DataGridViewCellFormattingEventArgs a)
 		{
@@ -111,6 +111,12 @@ namespace CoinFlip
 
 			switch (col.Name)
 			{
+			case nameof(Position.CreationTime):
+				{
+					a.Value = pos.CreationTime?.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty;
+					a.FormattingApplied = true;
+					break;
+				}
 			case nameof(Position.TradeType):
 				{
 					a.Value = "{0}→{1} ({2})".Fmt(

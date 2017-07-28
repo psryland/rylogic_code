@@ -86,7 +86,7 @@
     </Compile>
     <Compile Include="src\Misc.cs" />
     <Compile Include="src\Model.cs" />
-    <Compile Include="src\NewFishingUI.cs">
+    <Compile Include="src\EditFishingUI.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="src\OrderBook.cs" />
@@ -113,8 +113,8 @@
     <EmbeddedResource Include="src\MainUI.resx">
       <DependentUpon>MainUI.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\NewFishingUI.resx">
-      <DependentUpon>NewFishingUI.cs</DependentUpon>
+    <EmbeddedResource Include="src\EditFishingUI.resx">
+      <DependentUpon>EditFishingUI.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\PairsUI.resx">
       <DependentUpon>PairsUI.cs</DependentUpon>

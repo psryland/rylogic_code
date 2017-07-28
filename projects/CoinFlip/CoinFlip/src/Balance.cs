@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using pr.util;
 
 namespace CoinFlip
@@ -7,12 +8,12 @@ namespace CoinFlip
 	public class Balance
 	{
 		public Balance(Coin coin)
-			:this(coin, 0m, 0m, 0m, 0m, 0m)
+			:this(coin, 0m, 0m, 0m, 0m, 0m, DateTimeOffset.Now)
 		{}
 		public Balance(Coin coin, decimal total)
-			:this(coin, total, total, 0m, 0m, 0m)
+			:this(coin, total, total, 0m, 0m, 0m, DateTimeOffset.Now)
 		{}
-		public Balance(Coin coin, decimal total, decimal available, decimal uncomfirmed, decimal held_for_trades, decimal pending_withdraw)
+		public Balance(Coin coin, decimal total, decimal available, decimal uncomfirmed, decimal held_for_trades, decimal pending_withdraw, DateTimeOffset timestamp)
 		{
 			Coin            = coin;
 			Total           = total._(coin.Symbol);
@@ -20,6 +21,7 @@ namespace CoinFlip
 			Unconfirmed     = uncomfirmed._(coin.Symbol);
 			HeldForTrades   = held_for_trades._(coin.Symbol);
 			PendingWithdraw = pending_withdraw._(coin.Symbol);
+			TimeStamp       = timestamp;
 		}
 
 		/// <summary>The currency that the balance is in</summary>
@@ -32,13 +34,16 @@ namespace CoinFlip
 		public Unit<decimal> Available { [DebuggerStepThrough] get; private set; }
 
 		/// <summary>Deposits that have not been confirmed yet</summary>
-		public Unit<decimal> Unconfirmed { [DebuggerStepThrough] get; private set; }
+		public Unit<decimal> Unconfirmed { get; private set; }
 
 		/// <summary>Amount set aside for pending orders</summary>
-		public Unit<decimal> HeldForTrades { [DebuggerStepThrough] get; private set; }
+		public Unit<decimal> HeldForTrades { get; private set; }
 
 		/// <summary>Amount pending withdraw from the account</summary>
-		public Unit<decimal> PendingWithdraw { [DebuggerStepThrough] get; private set; }
+		public Unit<decimal> PendingWithdraw { get; private set; }
+
+		/// <summary>The time when this balance was last updated</summary>
+		public DateTimeOffset TimeStamp { get; private set; }
 
 		/// <summary>Get the value of this balance</summary>
 		public decimal Value
@@ -49,6 +54,7 @@ namespace CoinFlip
 		/// <summary>Place 'volume' into holding</summary>
 		public void Hold(Unit<decimal> volume)
 		{
+			TimeStamp = DateTimeOffset.Now;
 			HeldForTrades += volume;
 			Available -= volume;
 		}

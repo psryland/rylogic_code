@@ -136,7 +136,7 @@ namespace Csex
 		/// <summary>Handle keyboard shortcuts</summary>
 		protected override void OnKeyDown(KeyEventArgs e)
 		{
-			DataGridViewEx.CutCopyPasteReplace(this, e);
+			DataGridView_.CutCopyPasteReplace(this, e);
 
 			if (e.KeyCode >= Keys.D0 && e.KeyCode <= Keys.D9 && Nodes.Count != 0 && !IsCurrentCellInEditMode)
 			{
@@ -164,7 +164,7 @@ namespace Csex
 		protected override void OnMouseDown(MouseEventArgs e)
 		{
 			base.OnMouseDown(e);
-			DataGridViewEx.ColumnVisibility(this, e);
+			DataGridView_.ColumnVisibility(this, e);
 
 			if (e.Button == MouseButtons.Right)
 			{

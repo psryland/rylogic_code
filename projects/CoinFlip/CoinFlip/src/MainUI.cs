@@ -42,6 +42,9 @@ namespace CoinFlip
 		private ToolStripLabel m_lbl_nett_worth;
 		private ToolStripTextBox m_tb_nett_worth;
 		private ToolStripMenuItem m_menu_tools_test;
+		private ToolStripLabel m_lbl_token_total;
+		private ToolStripTextBox m_tb_token_total;
+		private ToolStripSeparator toolStripSeparator1;
 		private LogUI m_log;
 		#endregion
 
@@ -83,10 +86,10 @@ namespace CoinFlip
 			// Form shutdown is a PITA when using async methods.
 			// Disable the form while we wait for shutdown to be allowed
 			Enabled = false;
-			if (!Model.CanShutdown)
+			if (Model.Running)
 			{
 				e.Cancel = true;
-				await Model.Shutdown();
+				await Model.ShutdownAsync();
 				Close();
 				return;
 			}
@@ -261,16 +264,10 @@ namespace CoinFlip
 			}
 			else
 			{
-				StartPosition  = FormStartPosition.Manual;
-				Bounds         = Settings.UI.WindowPosition;
-				WindowState    = Settings.UI.WindowMaximised ? FormWindowState.Maximized : FormWindowState.Normal;
-
 				// Ensure the Bounds are at least partially within the desktop
-				var desktop = SystemInformation.VirtualScreen.Inflated(-50, -50, -50, -50);
-				if (Bounds.Left > desktop.Right) Bounds = Bounds.Shifted(desktop.Right - Bounds.Left, 0);
-				if (Bounds.Right < desktop.Left) Bounds = Bounds.Shifted(desktop.Left - Bounds.Right, 0);
-				if (Bounds.Top > desktop.Bottom) Bounds = Bounds.Shifted(0, desktop.Bottom - Bounds.Top);
-				if (Bounds.Bottom < desktop.Top) Bounds = Bounds.Shifted(0, desktop.Top - Bounds.Bottom);
+				StartPosition  = FormStartPosition.Manual;
+				Bounds         = Util.OnScreen(Settings.UI.WindowPosition);;
+				WindowState    = Settings.UI.WindowMaximised ? FormWindowState.Maximized : FormWindowState.Normal;
 			}
 		}
 
@@ -291,6 +288,9 @@ namespace CoinFlip
 
 				// Update the nett worth value
 				m_tb_nett_worth.Text = Model.NettWorth.ToString("c");
+
+				// Update the sum of tokens
+				m_tb_token_total.Text = Model.TokenTotal.ToString("G6");
 			}
 		}
 
@@ -328,16 +328,19 @@ namespace CoinFlip
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_exit = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_show_pairs = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_show_loops = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_test = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
 			this.m_chk_run = new System.Windows.Forms.ToolStripButton();
 			this.m_chk_allow_trades = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_lbl_nett_worth = new System.Windows.Forms.ToolStripLabel();
 			this.m_tb_nett_worth = new System.Windows.Forms.ToolStripTextBox();
-			this.toolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_tools_show_pairs = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_tools_show_loops = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_tools_test = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_lbl_token_total = new System.Windows.Forms.ToolStripLabel();
+			this.m_tb_token_total = new System.Windows.Forms.ToolStripTextBox();
+			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.ContentPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
@@ -425,21 +428,52 @@ namespace CoinFlip
 			// m_menu_file_exit
 			// 
 			this.m_menu_file_exit.Name = "m_menu_file_exit";
-			this.m_menu_file_exit.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_file_exit.Size = new System.Drawing.Size(92, 22);
 			this.m_menu_file_exit.Text = "E&xit";
+			// 
+			// toolsToolStripMenuItem
+			// 
+			this.toolsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_tools_show_pairs,
+            this.m_menu_tools_show_loops,
+            this.m_menu_tools_test});
+			this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
+			this.toolsToolStripMenuItem.Size = new System.Drawing.Size(47, 20);
+			this.toolsToolStripMenuItem.Text = "&Tools";
+			// 
+			// m_menu_tools_show_pairs
+			// 
+			this.m_menu_tools_show_pairs.Name = "m_menu_tools_show_pairs";
+			this.m_menu_tools_show_pairs.Size = new System.Drawing.Size(138, 22);
+			this.m_menu_tools_show_pairs.Text = "&Show Pairs";
+			// 
+			// m_menu_tools_show_loops
+			// 
+			this.m_menu_tools_show_loops.Name = "m_menu_tools_show_loops";
+			this.m_menu_tools_show_loops.Size = new System.Drawing.Size(138, 22);
+			this.m_menu_tools_show_loops.Text = "&Show Loops";
+			// 
+			// m_menu_tools_test
+			// 
+			this.m_menu_tools_test.Name = "m_menu_tools_test";
+			this.m_menu_tools_test.Size = new System.Drawing.Size(138, 22);
+			this.m_menu_tools_test.Text = "&TEST";
 			// 
 			// m_ts
 			// 
 			this.m_ts.Dock = System.Windows.Forms.DockStyle.None;
 			this.m_ts.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_chk_run,
             this.m_chk_allow_trades,
             this.toolStripSeparator2,
             this.m_lbl_nett_worth,
-            this.m_tb_nett_worth});
+            this.m_tb_nett_worth,
+            this.m_lbl_token_total,
+            this.m_tb_token_total,
+            this.toolStripSeparator1,
+            this.m_chk_run});
 			this.m_ts.Location = new System.Drawing.Point(3, 24);
 			this.m_ts.Name = "m_ts";
-			this.m_ts.Size = new System.Drawing.Size(345, 25);
+			this.m_ts.Size = new System.Drawing.Size(595, 25);
 			this.m_ts.TabIndex = 1;
 			// 
 			// m_chk_run
@@ -448,8 +482,8 @@ namespace CoinFlip
 			this.m_chk_run.Image = global::CoinFlip.Properties.Resources.power_gray;
 			this.m_chk_run.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_chk_run.Name = "m_chk_run";
-			this.m_chk_run.Size = new System.Drawing.Size(51, 22);
-			this.m_chk_run.Text = "Start";
+			this.m_chk_run.Size = new System.Drawing.Size(91, 22);
+			this.m_chk_run.Text = "Trade Loops";
 			// 
 			// m_chk_allow_trades
 			// 
@@ -477,33 +511,23 @@ namespace CoinFlip
 			this.m_tb_nett_worth.ReadOnly = true;
 			this.m_tb_nett_worth.Size = new System.Drawing.Size(100, 25);
 			// 
-			// toolsToolStripMenuItem
+			// m_lbl_token_total
 			// 
-			this.toolsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_menu_tools_show_pairs,
-            this.m_menu_tools_show_loops,
-            this.m_menu_tools_test});
-			this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
-			this.toolsToolStripMenuItem.Size = new System.Drawing.Size(47, 20);
-			this.toolsToolStripMenuItem.Text = "&Tools";
+			this.m_lbl_token_total.Name = "m_lbl_token_total";
+			this.m_lbl_token_total.Size = new System.Drawing.Size(71, 22);
+			this.m_lbl_token_total.Text = "Token Total:";
 			// 
-			// m_menu_tools_show_pairs
+			// m_tb_token_total
 			// 
-			this.m_menu_tools_show_pairs.Name = "m_menu_tools_show_pairs";
-			this.m_menu_tools_show_pairs.Size = new System.Drawing.Size(152, 22);
-			this.m_menu_tools_show_pairs.Text = "&Show Pairs";
+			this.m_tb_token_total.BorderStyle = System.Windows.Forms.BorderStyle.None;
+			this.m_tb_token_total.Name = "m_tb_token_total";
+			this.m_tb_token_total.ReadOnly = true;
+			this.m_tb_token_total.Size = new System.Drawing.Size(100, 25);
 			// 
-			// m_menu_tools_show_loops
+			// toolStripSeparator1
 			// 
-			this.m_menu_tools_show_loops.Name = "m_menu_tools_show_loops";
-			this.m_menu_tools_show_loops.Size = new System.Drawing.Size(152, 22);
-			this.m_menu_tools_show_loops.Text = "&Show Loops";
-			// 
-			// m_menu_tools_test
-			// 
-			this.m_menu_tools_test.Name = "m_menu_tools_test";
-			this.m_menu_tools_test.Size = new System.Drawing.Size(152, 22);
-			this.m_menu_tools_test.Text = "&TEST";
+			this.toolStripSeparator1.Name = "toolStripSeparator1";
+			this.toolStripSeparator1.Size = new System.Drawing.Size(6, 25);
 			// 
 			// MainUI
 			// 

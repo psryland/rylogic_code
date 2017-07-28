@@ -31,7 +31,7 @@ namespace pr.extn
 	///   m_grid.KeyDown += DataGridViewEx.Cut;
 	///   m_grid.ContextMenuStrip.Items.Add("Copy", null, (s,a) => DataGridViewEx.Copy(m_grid, a));
 	/// </summary>
-	public static class DataGridViewEx
+	public static class DataGridView_
 	{
 		[Flags] public enum EEditOptions
 		{
@@ -488,6 +488,35 @@ namespace pr.extn
 				// Right mouse on a column header displays a context menu for hiding/showing columns
 				if (hit.Type == DataGridViewHitTestType.ColumnHeader || hit.Type == DataGridViewHitTestType.None)
 					grid.ColumnVisibilityContextMenu(hit.GridPoint);
+			}
+		}
+
+		/// <summary>Select the cell or row when right clicking on the grid (before context menus are displayed). Attach to MouseDown</summary>
+		public static void RightMouseSelect(object sender, MouseEventArgs args)
+		{
+			var grid = (DataGridView)sender;
+
+			// Hit test at the click location
+			var hit = grid.HitTestEx(args.X, args.Y);
+
+			// On right mouse, selected the cell or row
+			if (args.Button == MouseButtons.Right)
+			{
+				if (grid.SelectionMode == DataGridViewSelectionMode.CellSelect && hit.Cell != null && !hit.Cell.Selected)
+				{
+					grid.ClearSelection();
+					hit.Cell.Selected = true;
+				}
+				if (grid.SelectionMode == DataGridViewSelectionMode.FullRowSelect && hit.Row != null && !hit.Row.Selected)
+				{
+					grid.ClearSelection();
+					hit.Row.Selected = true;
+				}
+				if (grid.SelectionMode == DataGridViewSelectionMode.FullColumnSelect && hit.Column != null && !hit.Column.Selected)
+				{
+					grid.ClearSelection();
+					hit.Column.Selected = true;
+				}
 			}
 		}
 

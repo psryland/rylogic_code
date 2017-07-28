@@ -7,20 +7,22 @@ namespace CoinFlip
 	[DebuggerDisplay("{Description,nq}")]
 	public class Position
 	{
-		public Position(ulong order_id, ulong trade_id, TradePair pair, ETradeType tt, Unit<decimal> price, Unit<decimal> volume, Unit<decimal> remaining, DateTimeOffset? timestamp)
+		public Position(ulong order_id, ulong trade_id, TradePair pair, ETradeType tt, Unit<decimal> price, Unit<decimal> volume, Unit<decimal> remaining, DateTimeOffset? created, DateTimeOffset updated)
 		{
-			OrderId    = order_id;
-			TradeId    = trade_id;
-			Pair       = pair;
-			TradeType  = tt;
-			Price      = price;
-			VolumeBase = volume;
-			Remaining  = remaining;
-			TimeStamp  = timestamp;
+			OrderId      = order_id;
+			TradeId      = trade_id;
+			Pair         = pair;
+			TradeType    = tt;
+			Price        = price;
+			VolumeBase   = volume;
+			Remaining    = remaining;
+			CreationTime = created;
+			UpdatedTime  = updated;
 		}
 
 		/// <summary>Unique Id for the open position on an exchange</summary>
 		public ulong OrderId { get; private set; }
+		public ulong OrderIdHACK { set { OrderId = value; } }
 
 		/// <summary>Unique Id for a completed trade. 0 means not completed</summary>
 		public ulong TradeId { get; private set; }
@@ -44,7 +46,10 @@ namespace CoinFlip
 		public Unit<decimal> Remaining { get; private set; }
 
 		/// <summary>When the order was created</summary>
-		public DateTimeOffset? TimeStamp { get; private set; }
+		public DateTimeOffset? CreationTime { get; private set; }
+
+		/// <summary>When this object was last updated from the server</summary>
+		public DateTimeOffset UpdatedTime { get; private set; }
 
 		/// <summary>Description string for the trade</summary>
 		public string Description

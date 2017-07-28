@@ -69,10 +69,6 @@ namespace pr.maths
 		public static v4        RadiansToDegrees(v4 degrees)                    { return new v4(RadiansToDegrees(degrees.x), RadiansToDegrees(degrees.y), RadiansToDegrees(degrees.z), RadiansToDegrees(degrees.w)); }
 
 		public static void      Swap<T>(ref T lhs, ref T rhs)                   { var tmp = lhs; lhs = rhs; rhs = tmp; }
-		//public static void      Swap(ref int lhs, ref int rhs)                  { var tmp = lhs; lhs = rhs; rhs = tmp; }
-		//public static void      Swap(ref long lhs, ref long rhs)                { var tmp = lhs; lhs = rhs; rhs = tmp; }
-		//public static void      Swap(ref float lhs, ref float rhs)              { var tmp = lhs; lhs = rhs; rhs = tmp; }
-		//public static void      Swap(ref double lhs, ref double rhs)            { var tmp = lhs; lhs = rhs; rhs = tmp; }
 		public static int       Lerp(int lhs, int rhs, double frac)             { return (int)Math.Round(Lerp((float)lhs, (float)rhs, frac), 0); }
 		public static long      Lerp(long lhs, long rhs, double frac)           { return (long)Math.Round(Lerp((double)lhs, (double)rhs, frac), 0); }
 		public static float     Lerp(float lhs, float rhs, double frac)         { return (float)Lerp((double)lhs, (double)rhs, frac); }
@@ -83,11 +79,6 @@ namespace pr.maths
 		public static float     Frac(float min, float x, float max)             { Debug.Assert(Math.Abs(max - min) > float .Epsilon); return (x - min) / (max - min); }
 		public static double    Frac(double min, double x, double max)          { Debug.Assert(Math.Abs(max - min) > double.Epsilon); return (x - min) / (max - min); }
 		public static decimal   Frac(decimal min, decimal x, decimal max)       { Debug.Assert(Math.Abs(max - min) > 0); return (x - min) / (max - min); }
-		//public static int       Compare(int lhs, int rhs)                       { return (lhs < rhs) ? -1 : (lhs > rhs) ? 1 : 0; }
-		//public static int       Compare(uint lhs, uint rhs)                     { return (lhs < rhs) ? -1 : (lhs > rhs) ? 1 : 0; }
-		//public static int       Compare(long lhs, long rhs)                     { return (lhs < rhs) ? -1 : (lhs > rhs) ? 1 : 0; }
-		//public static int       Compare(float lhs, float rhs)                   { return (lhs < rhs) ? -1 : (lhs > rhs) ? 1 : 0; }
-		//public static int       Compare(double lhs, double rhs)                 { return (lhs < rhs) ? -1 : (lhs > rhs) ? 1 : 0; }
 		public static float     Len2Sq(float x, float y)                        { return Sqr(x) + Sqr(y); }
 		public static float     Len2(float x, float y)                          { return Sqrt(Len2Sq(x,y)); }
 		public static float     Len3Sq(float x, float y, float z)               { return Sqr(x) + Sqr(y) + Sqr(z); }
@@ -131,17 +122,9 @@ namespace pr.maths
 		}
 
 		/// <summary>Return 'a/b', or 'def' if 'b' is zero</summary>
-		public static int Div(int a, int b, int def = 0)
+		public static T Div<T>(T a, T b, T def = default(T))
 		{
-			return b != 0 ? a/b : def;
-		}
-		public static float Div(float a, float b, float def = 0)
-		{
-			return b != 0 ? a/b : def;
-		}
-		public static double Div(double a, double b, double def = 0)
-		{
-			return b != 0 ? a/b : def;
+			return !Equals(b, default(T)) ? Operators<T>.Div(a,b) : def;
 		}
 
 		/// <summary>Minimum value</summary>
@@ -182,25 +165,6 @@ namespace pr.maths
 			max = Operators<T>.Add(max, tol);
 			return x.CompareTo(min) >= 0 && x.CompareTo(max) <= 0;
 		}
-
-		//public static bool Within(int min, int x, int max, int tol = 0)
-		//{
-		//	min -= tol;
-		//	max += tol;
-		//	return x >= min && x <= max;
-		//}
-		//public static bool Within(float min, float x, float max, float tol = 0f)
-		//{
-		//	min -= tol;
-		//	max += tol;
-		//	return x >= min && x <= max;
-		//}
-		//public static bool Within(double min, double x, double max, double tol = 0.0)
-		//{
-		//	min -= tol;
-		//	max += tol;
-		//	return x >= min && x <= max;
-		//}
 
 		/// <summary>
 		/// Return the greatest common factor between 'a' and 'b'

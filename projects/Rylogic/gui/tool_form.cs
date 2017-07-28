@@ -313,7 +313,6 @@ namespace pr.gui
 			base.Close();
 		}
 
-
 		/// <summary>Set the form opacity based on where the mouse is</summary>
 		private void HandleAutoFade(object sender = null, EventArgs args = null)
 		{
@@ -361,9 +360,9 @@ namespace pr.gui
 			get
 			{
 				Debug.Assert(PinTarget != null);
-				return PinTarget.TopLevelControl == PinTarget
-					? PinTarget.Bounds
-					: PinTarget.RectangleToScreen(PinTarget.Bounds);
+				return PinTarget.TopLevelControl != PinTarget
+					? PinTarget.TopLevelControl.RectangleToScreen(PinTarget.Bounds)
+					: PinTarget.Bounds;
 			}
 		}
 

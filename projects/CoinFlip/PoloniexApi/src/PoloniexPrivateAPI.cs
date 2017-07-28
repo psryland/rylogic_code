@@ -30,7 +30,6 @@ namespace Poloniex.API
 			m_secret = secret;
 			m_cancel_token = cancel_token;
 			UrlBaseAddress = base_address;
-			Dispatcher = Dispatcher.CurrentDispatcher;
 			Hasher = new HMACSHA512(Encoding.ASCII.GetBytes(m_secret));
 			m_json = new JsonSerializer { NullValueHandling = NullValueHandling.Ignore };
 			m_client = new HttpClient { BaseAddress = new Uri(UrlBaseAddress + "tradingApi") };
@@ -47,9 +46,6 @@ namespace Poloniex.API
 				m_client = null;
 			}
 		}
-
-		/// <summary>For marshalling to the main thread</summary>
-		private Dispatcher Dispatcher { get; set; }
 
 		/// <summary>Hasher</summary>
 		private HMACSHA512 Hasher { get; set; }
@@ -124,14 +120,12 @@ namespace Poloniex.API
 		}
 
 		/// <summary>Create an order to buy/sell. Returns a unique order ID</summary>
-		public async Task<ulong> SubmitTrade(CurrencyPair pair, EOrderType type, decimal price_per_coin, decimal volume_quote)
+		public Task<TradeResult> SubmitTrade(CurrencyPair pair, EOrderType type, decimal price_per_coin, decimal volume_quote)
 		{
-			var res = await PostData<JObject>(Misc.ToString(type),
+			return PostData<TradeResult>(Misc.ToString(type),
 				new KV("currencyPair", pair.Id),
 				new KV("rate", price_per_coin),
 				new KV("amount", volume_quote));
-
-			return res.Value<ulong>("orderNumber");
 		}
 
 		/// <summary>Helper for POSTs</summary>

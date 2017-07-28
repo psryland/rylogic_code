@@ -53,7 +53,7 @@ namespace CoinFlip
 		private BittrexApiPublic m_pub;
 
 		/// <summary>Open a trade</summary>
-		protected override Task<ulong> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> rate)
+		protected override Task<TradeResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> rate)
 		{
 			throw new NotImplementedException();
 			//// Place the trade order
@@ -253,11 +253,9 @@ namespace CoinFlip
 				{
 			//		// Process the existing orders
 			//		var msg = existing_orders;
-			//	
-			//		// Update the collection of existing orders
-			//		var order_ids = new HashSet<ulong>();
-			//
-			//		// For each trading pair with active orders
+
+					// For each trading pair with active orders
+					var order_ids = new HashSet<ulong>();
 			//		foreach (var instr in msg.Where(x => x.Value.Count != 0))
 			//		{
 			//			// Get the associated trade pair (add the pair if it doesn't exist)
@@ -280,10 +278,9 @@ namespace CoinFlip
 			//				order_ids.Add(id);
 			//			}
 			//		}
-			//
-			//		// Remove any positions that are no longer valid
-			//		foreach (var id in Positions.Keys.Where(x => !order_ids.Contains(x)).ToArray())
-			//			Positions.Remove(id);
+
+					// Remove any positions that are no longer valid.
+					RemovePositionsNotIn(order_ids, timestamp);
 
 					// Notify updated
 					PositionUpdatedTime.NotifyAll(timestamp);

@@ -39,7 +39,7 @@ namespace Csex
 			ParentNode = elem.Parent;
 
 			m_dd = new DragDrop();
-			m_dd.DoDrop += DataGridViewEx.DragDrop_DoDropMoveRow;
+			m_dd.DoDrop += DataGridView_.DragDrop_DoDropMoveRow;
 
 			var name = TabName;
 			DockControl = new DockControl(this, name) { TabText = name, TabCMenu = new ContextMenuStrip() };
@@ -172,8 +172,8 @@ namespace Csex
 		protected override void OnMouseDown(MouseEventArgs e)
 		{
 			base.OnMouseDown(e);
-			DataGridViewEx.ColumnVisibility(this, e);
-			DataGridViewEx.DragDrop_DragRow(this, e);
+			DataGridView_.ColumnVisibility(this, e);
+			DataGridView_.DragDrop_DragRow(this, e);
 		}
 
 		/// <summary>Update all row heights together</summary>

@@ -35,16 +35,17 @@ namespace CoinFlip
 		}
 
 		/// <summary>Open a trade</summary>
-		protected async override Task<ulong> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> rate)
+		protected async override Task<TradeResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> price)
 		{
 			// Place the trade order
-			var msg = await Priv.SubmitTrade(new SubmitTradeRequest(pair.TradePairId.Value, tt.ToCryptopiaTT(), volume, rate));
+			var msg = await Priv.SubmitTrade(new SubmitTradeRequest(pair.TradePairId.Value, tt.ToCryptopiaTT(), volume, price));
 			if (!msg.Success)
 				throw new Exception(
-					"Cryptopia: Submit trade failed. {0}\n".Fmt(msg.Error) +
-					"{0} Pair: {1}  Vol: {2} @ {3}".Fmt(tt, pair.Name, volume, rate));
+					"Cryptopia: Submit order failed. {0}\n".Fmt(msg.Error) +
+					"{0} Pair: {1}  Vol: {2} @ {3}".Fmt(tt, pair.Name, volume, price));
 
-			return (ulong)msg.Data.OrderId.Value;
+			// Return the result
+			return new TradeResult((ulong?)msg.Data.OrderId, msg.Data.FilledOrders.Cast<ulong>());
 		}
 
 		/// <summary>Cancel an open trade</summary>
@@ -212,7 +213,7 @@ namespace CoinFlip
 							var coin = Coins.GetOrAdd(b.Symbol);
 
 							// Update the balance
-							var bal = new Balance(coin, b.Total, b.Available, b.Unconfirmed, b.HeldForTrades, b.PendingWithdraw);
+							var bal = new Balance(coin, b.Total, b.Available, b.Unconfirmed, b.HeldForTrades, b.PendingWithdraw, timestamp);
 							Balance[coin] = bal;
 							nue.Add(coin);
 						}
@@ -263,14 +264,13 @@ namespace CoinFlip
 					foreach (var order in existing_orders.Data)
 					{
 						// Add the position to the collection
-						var pos = PositionFrom(order);
+						var pos = PositionFrom(order, timestamp);
 						Positions[pos.OrderId] = pos;
 						order_ids.Add(pos.OrderId);
 					}
 
 					// Remove any positions that are no longer valid.
-					foreach (var pos in Positions.Values.Where(x => !order_ids.Contains(x.OrderId)).ToArray())
-						Positions.Remove(pos.OrderId);
+					RemovePositionsNotIn(order_ids, timestamp);
 
 					// Notify updated
 					PositionUpdatedTime.NotifyAll(timestamp);
@@ -297,7 +297,7 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the history
-				var msg = await Priv.GetTradeHistory(new TradeHistoryRequest());
+				var msg = await Priv.GetTradeHistory(new TradeHistoryRequest(count:10));
 				if (!msg.Success)
 					throw new Exception("Cryptopia: Failed to received trade history. {0}".Fmt(msg.Error));
 
@@ -307,9 +307,16 @@ namespace CoinFlip
 					var history = msg.Data;
 					foreach (var order in history)
 					{
-						var pos = PositionFrom(order);
-						var fill = History.GetOrAdd(pos.OrderId, pos.TradeType, pos.Pair);
-						fill.Trades[pos.TradeId] = pos;
+						var his = PositionFrom(order, timestamp);
+
+						// Hack until history contains original order id
+						var fill = History.Values.FirstOrDefault(x => x.Pair == his.Pair && x.Created == his.CreationTime);
+						if (fill == null) fill = History.GetOrAdd(his.TradeId, his.TradeType, his.Pair, his.CreationTime.Value);
+						his.OrderIdHACK = fill.OrderId;
+						fill.Trades[his.TradeId] = his;
+
+						//var fill = History.GetOrAdd(his.OrderId, his.TradeType, his.Pair);
+						//fill.Trades[his.TradeId] = his;
 					}
 
 					// Notify updated
@@ -329,7 +336,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Convert a Cryptopia open order result into a position object</summary>
-		private Position PositionFrom(global::Cryptopia.API.Models.OpenOrderResult order)
+		private Position PositionFrom(global::Cryptopia.API.Models.OpenOrderResult order, DateTimeOffset updated)
 		{
 			// Get the associated trade pair (add the pair if it doesn't exist)
 			var order_id = unchecked((ulong)order.OrderId);
@@ -338,12 +345,12 @@ namespace CoinFlip
 			var rate = order.Rate._(pair.RateUnits);
 			var volume = order.Amount._(pair.Base);
 			var remaining = order.Remaining._(pair.Base);
-			var ts = order.TimeStamp.As(DateTimeKind.Utc);
-			return new Position(order_id, 0, pair, Misc.TradeType(order.Type), rate, volume, remaining, ts);
+			var created = order.TimeStamp.As(DateTimeKind.Utc);
+			return new Position(order_id, 0, pair, Misc.TradeType(order.Type), rate, volume, remaining, created, updated);
 		}
 
 		/// <summary>Convert a Cryptopia trade history result into a position object</summary>
-		private Position PositionFrom(global::Cryptopia.API.Models.TradeHistoryResult order)
+		private Position PositionFrom(global::Cryptopia.API.Models.TradeHistoryResult order, DateTimeOffset updated)
 		{
 			// Get the associated trade pair (add the pair if it doesn't exist)
 			var order_id = unchecked((ulong)order.OrderId);
@@ -352,8 +359,8 @@ namespace CoinFlip
 			var pair = Pairs[sym[0], sym[1]] ?? Pairs.Add2(new TradePair(Coins.GetOrAdd(sym[0]), Coins.GetOrAdd(sym[1]), this, order.TradePairId));
 			var rate = order.Rate._(pair.RateUnits);
 			var volume = order.Amount._(pair.Base);
-			var ts = order.TimeStamp.As(DateTimeKind.Utc);
-			return new Position(order_id, trade_id, pair, Misc.TradeType(order.Type), rate, volume, 0, ts);
+			var created = order.TimeStamp.As(DateTimeKind.Utc);
+			return new Position(order_id, trade_id, pair, Misc.TradeType(order.Type), rate, volume, 0, created, updated);
 		}
 	}
 }

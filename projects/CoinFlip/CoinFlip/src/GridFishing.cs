@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using pr.extn;
 using pr.util;
@@ -12,23 +13,23 @@ namespace CoinFlip
 		{
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Fishing.Pair0),
+				Name = nameof(Fishing.PairName),
 				HeaderText = "Pair",
-				DataPropertyName = nameof(Fishing.Pair0),
+				DataPropertyName = nameof(Fishing.PairName),
 				FillWeight = 0.7f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Fishing.Exch0),
+				Name = nameof(Fishing.ExchName0),
 				HeaderText = "Ref Exchange",
-				DataPropertyName = nameof(Fishing.Exch0),
+				DataPropertyName = nameof(Fishing.ExchName0),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Fishing.Exch1),
+				Name = nameof(Fishing.ExchName1),
 				HeaderText = "Target Exchange",
-				DataPropertyName = nameof(Fishing.Exch1),
+				DataPropertyName = nameof(Fishing.ExchName1),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewImageColumn
@@ -64,30 +65,17 @@ namespace CoinFlip
 
 			var fisher = Model.Fishing[e.RowIndex];
 			switch (col.DataPropertyName) {
-			case nameof(Fishing.Pair0):
-				{
-					e.Value = fisher.Pair0.Name;
-					e.FormattingApplied = true;
-					break;
-				}
-			case nameof(Fishing.Exch0):
-				{
-					e.Value = fisher.Exch0.Name;
-					e.FormattingApplied = true;
-					break;
-				}
-			case nameof(Fishing.Exch1):
-				{
-					e.Value = fisher.Exch1.Name;
-					e.FormattingApplied = true;
-					break;
-				}
 			case nameof(Fishing.Active):
 				{
 					e.Value = fisher.Active ? Res.Active : Res.Inactive;
 					break;
 				}
 			}
+
+			e.CellStyle.ForeColor = Color.Black;
+			e.CellStyle.BackColor = fisher.Settings.Valid ? Color.White : Color.LightSalmon;
+			e.CellStyle.SelectionForeColor = e.CellStyle.ForeColor;
+			e.CellStyle.SelectionBackColor = e.CellStyle.BackColor.Lerp(Color.Gray, 0.5f);
 		}
 
 		/// <summary>Create the context menu for the grid</summary>
@@ -98,10 +86,10 @@ namespace CoinFlip
 				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Go Fish"));
 				opt.Click += (s,a) =>
 				{
-					using (var dlg = new NewFishingUI(Model))
+					using (var dlg = new EditFishingUI(Model))
 					{
 						if (dlg.ShowDialog(this) != DialogResult.OK) return;
-						Model.Fishing.Add(dlg.Fishing);
+						Model.Fishing.Add(new Fishing(Model, dlg.FishingData));
 					}
 				};
 			}
@@ -116,6 +104,26 @@ namespace CoinFlip
 					var doomed = SelectedRows.Cast<DataGridViewRow>().Select(x => (Fishing)x.DataBoundItem).ToHashSet();
 					Model.Fishing.RemoveAll(doomed);
 					Util.DisposeAll(doomed);
+				};
+			}
+			{
+				cmenu.Items.AddSeparator();
+			}
+			{
+				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Properties"));
+				cmenu.Opening += (s,a) =>
+				{
+					opt.Enabled = SelectedRows.Count == 1;
+				};
+				opt.Click += (s,a) =>
+				{
+					var fisher = SelectedRows.Cast<DataGridViewRow>().Select(x => (Fishing)x.DataBoundItem).First();
+					using (var dlg = new EditFishingUI(Model, fisher.Settings))
+					{
+						if (dlg.ShowDialog(this) != DialogResult.OK) return;
+						fisher.Settings = dlg.FishingData;
+						Model.Fishing.ResetItem(fisher);
+					}
 				};
 			}
 			return cmenu;

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 using Poloniex.API;
@@ -71,13 +70,13 @@ namespace CoinFlip
 		private PoloniexApiPrivate m_priv;
 
 		/// <summary>Open a trade</summary>
-		protected async override Task<ulong> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> rate)
+		protected async override Task<TradeResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> rate)
 		{
 			try
 			{
 				// Place the trade order
-				var order_number = await Priv.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), Misc.ToPoloniexTT(tt), rate, volume);
-				return order_number;
+				var res = await Priv.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), Misc.ToPoloniexTT(tt), rate, volume);
+				return new TradeResult(res.OrderId, res.FilledOrders.Select(x => x.TradeId));
 			}
 			catch (Exception ex)
 			{
@@ -235,7 +234,7 @@ namespace CoinFlip
 							var coin = Coins.GetOrAdd(b.Key);
 
 							// Update the balance
-							var bal = new Balance(coin, b.Value.HeldForTrades + b.Value.Available, b.Value.Available, 0, b.Value.HeldForTrades, 0);
+							var bal = new Balance(coin, b.Value.HeldForTrades + b.Value.Available, b.Value.Available, 0, b.Value.HeldForTrades, 0, timestamp);
 							Balance[coin] = bal;
 						}
 					}
@@ -277,14 +276,13 @@ namespace CoinFlip
 					foreach (var order in existing_orders.Values.Where(x => x.Count != 0).SelectMany(x => x))
 					{
 						// Add the position to the collection
-						var pos = PositionFrom(order);
+						var pos = PositionFrom(order, timestamp);
 						Positions[pos.OrderId] = pos;
 						order_ids.Add(pos.OrderId);
 					}
 
 					// Remove any positions that are no longer valid.
-					foreach (var pos in Positions.Values.Where(x => !order_ids.Contains(x.OrderId)).ToArray())
-						Positions.Remove(pos.OrderId);
+					RemovePositionsNotIn(order_ids, timestamp);
 
 					// Notify updated
 					PositionUpdatedTime.NotifyAll(timestamp);
@@ -311,17 +309,20 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the history
-				var history = await Priv.GetTradeHistory(beg:DateTimeOffset.Now - TimeSpan.FromDays(7), end:DateTimeOffset.Now);
+				var history = await Priv.GetTradeHistory(beg:new DateTimeOffset(HistoryInterval.End, TimeSpan.Zero), end:timestamp);
 		
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
 				{
 					foreach (var order in history.Values.SelectMany(x => x))
 					{
-						var pos = PositionFrom(order);
-						var fill = History.GetOrAdd(pos.OrderId, pos.TradeType, pos.Pair);
-						fill.Trades[pos.TradeId] = pos;
+						var his = PositionFrom(order, timestamp);
+						var fill = History.GetOrAdd(his.OrderId, his.TradeType, his.Pair, his.CreationTime.Value);
+						fill.Trades[his.TradeId] = his;
 					}
+
+					// Save the history range
+					HistoryInterval = new Range(HistoryInterval.Beg, timestamp.Ticks);
 
 					// Notify updated
 					TradeHistoryUpdatedTime.NotifyAll(timestamp);
@@ -340,7 +341,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Convert a Poloniex order into a position</summary>
-		private Position PositionFrom(global::Poloniex.API.Position pos)
+		private Position PositionFrom(global::Poloniex.API.Position pos, DateTimeOffset updated)
 		{
 			var pair = Pairs[pos.Pair.Base, pos.Pair.Quote] ??
 				Pairs.Add2(new TradePair(
@@ -352,12 +353,12 @@ namespace CoinFlip
 			var type = Misc.TradeType(pos.Type);
 			var rate = pos.Price._(pair.RateUnits);
 			var volume = pos.VolumeBase._(pair.Base);
-			var ts = pos.Timestamp;
-			return new Position(order_id, 0, pair, type, rate, volume, volume, ts);
+			var created = pos.Timestamp;
+			return new Position(order_id, 0, pair, type, rate, volume, volume, created, updated);
 		}
 
 		/// <summary>Convert a Poloniex trade history result into a position object</summary>
-		private Position PositionFrom(global::Poloniex.API.Historic his)
+		private Position PositionFrom(global::Poloniex.API.Historic his, DateTimeOffset updated)
 		{
 			var pair = Pairs[his.Pair.Base, his.Pair.Quote] ??
 				Pairs.Add2(new TradePair(
@@ -370,8 +371,8 @@ namespace CoinFlip
 			var type = Misc.TradeType(his.Type);
 			var rate = his.Price._(pair.RateUnits);
 			var volume = his.VolumeBase._(pair.Base);
-			var ts = his.Timestamp;
-			return new Position(order_id, trade_id, pair, type, rate, volume, 0, ts);
+			var created = his.Timestamp;
+			return new Position(order_id, trade_id, pair, type, rate, volume, 0, created, updated);
 		}
 
 		/// <summary>Handle connection to Poloniex</summary>

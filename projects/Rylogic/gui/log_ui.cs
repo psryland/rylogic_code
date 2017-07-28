@@ -210,7 +210,11 @@ namespace pr.gui
 					for (int i = 0; i != names.Length; ++i)
 					{
 						m_view.Columns[i].HeaderText = names[i];
-						m_view.Columns[i].FillWeight = names[i] == "Message" ? 5 : 1;
+						m_view.Columns[i].FillWeight =
+							names[i] == "Level"     ? 0.3f :
+							names[i] == "Timestamp" ? 0.6f :
+							names[i] == "Message"   ? 5f :
+							1f;
 					}
 
 					m_view.ColumnHeadersVisible = true;
@@ -280,7 +284,7 @@ namespace pr.gui
 			m_view.ColumnHeadersVisible = false;
 			m_view.CellValueNeeded += HandleCellValueNeeded;
 			m_view.CellFormatting += HandleCellFormatting;
-			m_view.MouseDown += DataGridViewEx.ColumnVisibility;
+			m_view.MouseDown += DataGridView_.ColumnVisibility;
 			m_view.VirtualMode = true;
 			m_view.ColumnCount = 1;
 			m_view.RowCount = 0;

@@ -6,7 +6,7 @@ namespace Cryptopia.API.Implementation
 {
 	public interface ICryptopiaApiPrivate : IDisposable
 	{
-		Task<T> GetResult<T, U>(PrivateApiCall call, U requestData)
+		Task<T> PostData<T, U>(PrivateApiCall call, U requestData)
 			where T : IResponse
 			where U : IRequest;
 		Task<CancelTradeResponse> CancelTrade(CancelTradeRequest request);

@@ -24,9 +24,9 @@ namespace CoinFlip
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Position.TimeStamp),
+				Name = nameof(Position.CreationTime),
 				HeaderText = "Date",
-				DataPropertyName = nameof(Position.TimeStamp),
+				DataPropertyName = nameof(Position.CreationTime),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
@@ -75,7 +75,7 @@ namespace CoinFlip
 		protected override void OnMouseDown(MouseEventArgs e)
 		{
 			base.OnMouseDown(e);
-			DataGridViewEx.ColumnVisibility(this, e);
+			DataGridView_.ColumnVisibility(this, e);
 		}
 		protected override void OnCellFormatting(DataGridViewCellFormattingEventArgs a)
 		{
@@ -96,11 +96,13 @@ namespace CoinFlip
 					a.Value = fill?.OrderId ?? trade.TradeId;
 					break;
 				}
-			case nameof(Position.TimeStamp):
+			case nameof(Position.CreationTime):
 				{
-					a.Value = fill != null
-						? fill.Trades.Values.Min(x => x.TimeStamp)
-						: trade.TimeStamp;
+					var ts = (fill != null
+						? fill.Trades.Values.Min(x => x.CreationTime)
+						: trade.CreationTime);
+					a.Value = ts?.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty;
+					a.FormattingApplied = true;
 					break;
 				}
 			case nameof(Position.TradeType):

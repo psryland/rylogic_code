@@ -100,7 +100,7 @@ namespace RyLogViewer
 				if (m_dd == value) return;
 				if (m_dd != null)
 				{
-					m_dd.DoDrop -= DataGridViewEx.DragDrop_DoDropMoveRow;
+					m_dd.DoDrop -= DataGridView_.DragDrop_DoDropMoveRow;
 					m_dd.DoDrop -= DropFiles;
 					m_dd.Detach(m_grid);
 					m_dd.Detach(this);
@@ -111,7 +111,7 @@ namespace RyLogViewer
 					m_dd.Attach(this);
 					m_dd.Attach(m_grid);
 					m_dd.DoDrop += DropFiles;
-					m_dd.DoDrop += DataGridViewEx.DragDrop_DoDropMoveRow;
+					m_dd.DoDrop += DataGridView_.DragDrop_DoDropMoveRow;
 				}
 			}
 		}
@@ -125,7 +125,7 @@ namespace RyLogViewer
 			m_grid.AutoGenerateColumns = false;
 			m_grid.Columns.Add(new DataGridViewTextBoxColumn{HeaderText = "File Path", DataPropertyName = nameof(FileInfo.FullName)});
 			m_grid.DataSource = FileInfos;
-			m_grid.MouseDown += DataGridViewEx.DragDrop_DragRow;
+			m_grid.MouseDown += DataGridView_.DragDrop_DragRow;
 
 			// Add files
 			m_btn_add_files.ToolTip(m_tt, "Browse for files to add");

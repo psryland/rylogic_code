@@ -293,7 +293,7 @@ namespace pr.gui
 			using (Scope.Create(() => m_block_column_width_events = true, () => m_block_column_width_events = false))
 			{
 				this.SetFillWeightsOnColumnWidthChanged(e.Column.Index);
-				this.SetGridColumnSizes(DataGridViewEx.EColumnSizeOptions.GrowToDisplayWidth);
+				this.SetGridColumnSizes(DataGridView_.EColumnSizeOptions.GrowToDisplayWidth);
 			}
 		}
 		private bool m_block_column_width_events;
@@ -301,7 +301,7 @@ namespace pr.gui
 		/// <summary>Resize columns on layout</summary>
 		protected override void OnLayout(LayoutEventArgs e)
 		{
-			this.SetGridColumnSizes(DataGridViewEx.EColumnSizeOptions.GrowToDisplayWidth);
+			this.SetGridColumnSizes(DataGridView_.EColumnSizeOptions.GrowToDisplayWidth);
 			base.OnLayout(e);
 		}
 

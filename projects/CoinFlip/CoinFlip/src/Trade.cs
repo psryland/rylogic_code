@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
+using pr.maths;
 using pr.util;
 
 namespace CoinFlip
@@ -42,7 +45,14 @@ namespace CoinFlip
 
 		/// <summary>The price of the trade (in VolumeOut/VolumeIn units)</summary>
 		public Unit<decimal> Price { get; set; }
-		public Unit<decimal> PriceInv { get { return 1m / Price; } }
+		public Unit<decimal> PriceInv
+		{
+			get { return Price != 0m._(Price) ? (1m / Price) : (0m._(VolumeOut) / 1m._(VolumeIn)); }
+		}
+		public Unit<decimal> PriceQ2B
+		{
+			get { return TradeType == ETradeType.B2Q ? Price : PriceInv; }
+		}
 
 		/// <summary>The coin type being sold</summary>
 		public Coin CoinIn
@@ -63,7 +73,7 @@ namespace CoinFlip
 			{
 				var sym0 = TradeType == ETradeType.B2Q ? Pair.Base : Pair.Quote;
 				var sym1 = TradeType == ETradeType.B2Q ? Pair.Quote : Pair.Base;
-				return $"{VolumeIn} {sym0} → {VolumeOut} {sym1} @ {Price}"; }
+				return $"{VolumeIn.ToString("G6")} {sym0} → {VolumeOut.ToString("G6")} {sym1} @ {Price.ToString("G6")}"; }
 		}
 
 		/// <summary>Check whether the given trade is an allowed trade</summary>
@@ -80,25 +90,54 @@ namespace CoinFlip
 				result |= EValidation.VolumeOutOutOfRange;
 
 			// Check the price limits.
-			var price  = TradeType == ETradeType.B2Q ? Price : 1m / Price;
+			var price = TradeType == ETradeType.B2Q ? Price : 1m / Price;
 			if (!Pair.PriceRange.Contains(price))
 				result |= EValidation.PriceOutOfRange;
+
+			// Check the balances (allowing for fees)
+			var bal = TradeType == ETradeType.B2Q ? Pair.Base.Balance.Available : Pair.Quote.Balance.Available;
+			if (bal < VolumeIn * (1.0000001m + Pair.Fee))
+				result |= EValidation.InsufficientBalance;
 
 			return result;
 		}
 
 		/// <summary>Create this trade on the Exchange that owns 'Pair'</summary>
-		public Task<ulong> CreateOrder()
+		public Task<TradeResult> CreateOrder()
 		{
 			return Pair.Exchange.CreateOrder(TradeType, Pair, VolumeIn, Price);
 		}
 
 		[Flags] public enum EValidation
 		{
-			Valid             = 0,
+			Valid               = 0,
 			VolumeInOutOfRange  = 1 << 0,
 			VolumeOutOutOfRange = 1 << 1,
 			PriceOutOfRange     = 1 << 2,
+			InsufficientBalance = 1 << 3,
 		}
+	}
+
+	/// <summary>The result of a submit trade request</summary>
+	[DebuggerDisplay("{OrderId} [{TradeIds}]")]
+	public class TradeResult
+	{
+		public TradeResult()
+			:this(null)
+		{}
+		public TradeResult(ulong? order_id)
+			:this(order_id, null)
+		{}
+		public TradeResult(ulong? order_id, IEnumerable<ulong> trade_ids)
+		{
+			OrderId = order_id;
+			TradeIds = trade_ids?.ToList() ?? new List<ulong>();
+		}
+
+		/// <summary>The ID of an order that has been added to the order book of a pair</summary>
+		public ulong? OrderId { get; private set; }
+
+		/// <summary>Filled orders as a result of a submitted trade</summary>
+		public List<ulong> TradeIds { get; private set; }
 	}
 }

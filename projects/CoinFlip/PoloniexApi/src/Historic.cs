@@ -15,9 +15,13 @@ namespace Poloniex.API
 		/// <summary>The pair that this position is held on</summary>
 		public CurrencyPair Pair { get; internal set; }
 
-		/// <summary>A unique ID assigned to the order</summary>
+		/// <summary>The ID of the order that this trade is associated with</summary>
 		[JsonProperty("orderNumber")]
 		public ulong OrderId { get; internal set; }
+
+		/// <summary>A unique ID for the trade</summary>
+		[JsonProperty("tradeID")]
+		public ulong TradeId { get; internal set; }
 
 		/// <summary>A Buy or Sell order</summary>
 		public EOrderType Type { get; private set; }
@@ -29,10 +33,6 @@ namespace Poloniex.API
 		/// <summary></summary>
 		[JsonProperty("globalTradeID")]
 		public ulong GlobalTradeId { get; internal set; }
-
-		/// <summary></summary>
-		[JsonProperty("tradeID")]
-		public ulong TradeId { get; internal set; }
 
 		/// <summary>The trade price (in quote currency)</summary>
 		[JsonProperty("rate")]

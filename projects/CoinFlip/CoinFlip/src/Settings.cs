@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Xml.Linq;
 using pr.common;
+using pr.extn;
 using pr.util;
 
 namespace CoinFlip
@@ -16,6 +18,7 @@ namespace CoinFlip
 			MaximumLoopCount  = 5;
 			MainLoopPeriod    = 500;
 			Coins             = new CoinData[0];
+			Fishing           = new FishingData[0];
 			UI                = new UISettings();
 			Cryptopia         = new CrypotopiaSettings();
 			Poloniex          = new PoloniexSettings();
@@ -48,6 +51,13 @@ namespace CoinFlip
 		{
 			get { return get(x => x.Coins); }
 			set { set(x => x.Coins, value); }
+		}
+
+		/// <summary>The fishing instances</summary>
+		public FishingData[] Fishing
+		{
+			get { return get(x => x.Fishing); }
+			set { set(x => x.Fishing, value); }
 		}
 
 		/// <summary>UI settings</summary>
@@ -281,6 +291,90 @@ namespace CoinFlip
 			}
 
 			private class TyConv :GenericTypeConverter<CrossExchangeSettings> {}
+		}
+
+		/// <summary>Data needed to save a fishing instance in the settings</summary>
+		[Serializable]
+		[DebuggerDisplay("{Pair} {Exch0} {Exch1}")]
+		public class FishingData
+		{
+			public FishingData(string pair, string exch0, string exch1, decimal scale, decimal volume_limit_base, decimal volume_limit_quote, RangeF price_offset)
+			{
+				Pair         = pair;
+				Exch0        = exch0;
+				Exch1        = exch1;
+				Scale        = scale;
+				VolumeLimitB = volume_limit_base;
+				VolumeLimitQ = volume_limit_quote;
+				PriceOffset  = price_offset;
+			}
+			public FishingData(FishingData rhs)
+			{
+				Pair         = rhs.Pair;
+				Exch0        = rhs.Exch0;
+				Exch1        = rhs.Exch1;
+				Scale        = rhs.Scale;
+				VolumeLimitB = rhs.VolumeLimitB;
+				VolumeLimitQ = rhs.VolumeLimitQ;
+				PriceOffset  = rhs.PriceOffset;
+			}
+			public FishingData(XElement node)
+			{
+				Pair         = node.Element(nameof(Pair )).As(Pair );
+				Exch0        = node.Element(nameof(Exch0)).As(Exch0);
+				Exch1        = node.Element(nameof(Exch1)).As(Exch1);
+				Scale        = node.Element(nameof(Scale)).As(Scale);
+				VolumeLimitB = node.Element(nameof(VolumeLimitB)).As(VolumeLimitB);
+				VolumeLimitQ = node.Element(nameof(VolumeLimitQ)).As(VolumeLimitQ);
+				PriceOffset  = node.Element(nameof(PriceOffset)).As(PriceOffset);
+			}
+			public XElement ToXml(XElement node)
+			{
+				node.Add2(nameof(Pair), Pair, false);
+				node.Add2(nameof(Exch0), Exch0, false);
+				node.Add2(nameof(Exch1), Exch1, false);
+				node.Add2(nameof(Scale), Scale, false);
+				node.Add2(nameof(VolumeLimitB), VolumeLimitB, false);
+				node.Add2(nameof(VolumeLimitQ), VolumeLimitQ, false);
+				node.Add2(nameof(PriceOffset), PriceOffset, false);
+				return node;
+			}
+
+			/// <summary>The name of the pair to trade</summary>
+			public string Pair { get; set; }
+
+			/// <summary>The name of the reference exchange</summary>
+			public string Exch0 { get; set; }
+
+			/// <summary>The name of the target exchange</summary>
+			public string Exch1 { get; set; }
+
+			/// <summary>The trade scale to use</summary>
+			public decimal Scale { get; set; }
+
+			/// <summary>The volume limit on the base currency</summary>
+			public decimal VolumeLimitB { get; set; }
+
+			/// <summary>The volume limit on the quote currency</summary>
+			public decimal VolumeLimitQ { get; set; }
+
+			/// <summary>The price offset range (as a fraction of the reference price)</summary>
+			public RangeF PriceOffset { get; set; }
+
+			/// <summary>True if this object contains valid data</summary>
+			public bool Valid
+			{
+				get
+				{
+					return 
+						Exch0 != Exch1 &&
+						Pair.HasValue() &&
+						Scale.Within(0m, 1m) &&
+						PriceOffset.Beg < PriceOffset.End &&
+						VolumeLimitB >= 0 &&
+						VolumeLimitQ >= 0;
+				}
+			}
 		}
 	}
 
