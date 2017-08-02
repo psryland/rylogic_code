@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using pr.container;
 using pr.extn;
+using pr.maths;
 using pr.util;
 
 namespace CoinFlip
@@ -89,7 +90,7 @@ namespace CoinFlip
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				Name = nameof(Position.Remaining),
-				HeaderText = "Remaining",
+				HeaderText = "Remaining (%)",
 				DataPropertyName = nameof(Position.Remaining),
 				SortMode = DataGridViewColumnSortMode.NotSortable,
 				FillWeight = 1.0f,
@@ -161,7 +162,8 @@ namespace CoinFlip
 				}
 			case nameof(Position.Remaining):
 				{
-					a.Value = "{0:G8} {1}".Fmt((decimal)pos.Remaining, pos.Pair.Base);
+					var pc = 100m * Maths.Div((decimal)pos.Remaining, (decimal)pos.VolumeBase, 0m);
+					a.Value = "{0:G4} %".Fmt((decimal)pc);
 					a.FormattingApplied = true;
 					break;
 				}

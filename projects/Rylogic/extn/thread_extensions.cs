@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -21,6 +22,13 @@ namespace pr.extn
 			return timeout != null
 				? evt.WaitOne(timeout.Value)
 				: evt.WaitOne(0);
+		}
+
+		/// <summary>Helper to construct and start a stop watch</summary>
+		public static Stopwatch Start2(this Stopwatch sw)
+		{
+			sw.Start();
+			return sw;
 		}
 	}
 }

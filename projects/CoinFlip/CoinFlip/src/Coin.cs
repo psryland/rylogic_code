@@ -72,6 +72,16 @@ namespace CoinFlip
 		}
 
 		#region Equals
+		[DebuggerStepThrough] public static bool operator == (Coin lhs, Coin rhs)
+		{
+			if ((object)lhs == null && (object)rhs == null) return true;
+			if ((object)lhs == null || (object)rhs == null) return false;
+			return lhs.Equals(rhs);
+		}
+		[DebuggerStepThrough] public static bool operator != (Coin lhs, Coin rhs)
+		{
+			return !(lhs == rhs);
+		}
 		public bool Equals(Coin rhs)
 		{
 			return

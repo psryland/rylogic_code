@@ -10,5 +10,15 @@ namespace pr.extn
 			set.Add(item);
 			return set;
 		}
+
+		/// <summary>Add a range of items to this set. Returns true if all added</summary>
+		public static bool AddRange<T>(this HashSet<T> set, IEnumerable<T> items)
+		{
+			var all = true;
+			foreach (var item in items)
+				all &= set.Add(item);
+
+			return all;
+		}
 	}
 }

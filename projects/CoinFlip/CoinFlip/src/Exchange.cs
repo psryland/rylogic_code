@@ -33,6 +33,7 @@ namespace CoinFlip
 			Model = model;
 			Settings = settings;
 			Colour = Colours[m_colour_index++ % Colours.Length];
+			m_pace_maker = new AutoResetEvent(false);
 			Coins = new CoinCollection(this);
 			Pairs = new PairCollection(this);
 			Balance = new BalanceCollection(this);
@@ -69,8 +70,15 @@ namespace CoinFlip
 			protected set
 			{
 				if (m_status == value) return;
-				m_status = value;
-				OnStatusChanged();
+				Model.RunOnGuiThread(() =>
+				{
+					m_status = value;
+					OnStatusChanged();
+
+					// Disable in the event of an error
+					if (m_status == EStatus.Error)
+						Active = false;
+				});
 			}
 		}
 		private EStatus m_status;
@@ -113,6 +121,8 @@ namespace CoinFlip
 		}
 		protected virtual void SetActive(bool active)
 		{
+			Debug.Assert(Model.AssertMainThread());
+
 			// If previously active
 			if (Active)
 			{
@@ -121,9 +131,6 @@ namespace CoinFlip
 				m_pace_maker.Set();
 				if (m_heart.IsAlive)
 					m_heart.Join();
-
-				// Clean up the heart beat trigger event
-				Util.Dispose(ref m_pace_maker);
 
 				// Invalidate the loops when an exchange is disabled
 				Model.RebuildLoops = true;
@@ -141,9 +148,6 @@ namespace CoinFlip
 
 				// Invalidate the loops when an exchange is enabled
 				Model.RebuildLoops = true;
-
-				// Create a trigger event to trigger a heartbeat sooner than the default poll period
-				m_pace_maker = new AutoResetEvent(false);
 
 				// Trigger a positions and balances update
 				PositionUpdateRequired = true;
@@ -443,7 +447,8 @@ namespace CoinFlip
 			}
 			public Balance Get(string sym)
 			{
-				return base[m_exch.Coins[sym]];
+				var coin = m_exch.Coins[sym];
+				return this[coin];
 			}
 			// Don't provide this, the Coin implicit cast is favoured over the overloaded method
 			//public Balance this[string sym]
@@ -514,12 +519,9 @@ namespace CoinFlip
 		protected virtual void OnStatusChanged()
 		{
 			// Status change can happen from any thread
-			Model.RunOnGuiThread(() =>
-			{
-				if (Model == null) return;
-				StatusChanged.Raise(this);
-				Model.Exchanges.ResetItem(this, ignore_missing:true);
-			});
+			if (Model == null) return;
+			StatusChanged.Raise(this);
+			Model.Exchanges.ResetItem(this, ignore_missing:true);
 		}
 
 		/// <summary>Place an order to convert 'volume' (base currency) to quote currency at 'price' (Quote/Base)</summary>
@@ -589,13 +591,6 @@ namespace CoinFlip
 			var volume = tt == ETradeType.B2Q ? volume_ : (price_ * volume_);
 			var price  = tt == ETradeType.B2Q ? price_  : (1m / price_);
 
-			// Log the event
-			Model.Log.Write(ELogLevel.Info, "{0}: {1} {2} → {3} {4} @ {5} {6}".Fmt(
-				Name,
-				(volume_         ).ToString("G6"), tt == ETradeType.B2Q ? pair.Base  : pair.Quote,
-				(volume_ * price_).ToString("G6"), tt == ETradeType.B2Q ? pair.Quote : pair.Base,
-				price.ToString("G6"), pair.RateUnits));
-
 			// Make the trade
 			// This can have the following results:
 			// 1) the entire trade is added to the order book for the pair -> a single order number is returned
@@ -604,6 +599,13 @@ namespace CoinFlip
 			var order_result = Model.AllowTrades // Obey the global trade switch
 				? await CreateOrderInternal(pair, tt, volume, price)
 				: new TradeResult(++m_fake_order_number, new ulong[0]);
+
+			// Log the event
+			Model.Log.Write(ELogLevel.Info, "{0}: (id={1}) {2} {3} → {4} {5} @ {6} {7}".Fmt(
+				Name, order_result.OrderId ?? 0,
+				(volume_         ).ToString("G6"), tt == ETradeType.B2Q ? pair.Base  : pair.Quote,
+				(volume_ * price_).ToString("G6"), tt == ETradeType.B2Q ? pair.Quote : pair.Base,
+				price.ToString("G6"), pair.RateUnits));
 
 			// Add the position to the Positions collection so that there is no race condition
 			// between placing an order and checking 'Positions' for the order just placed.

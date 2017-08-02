@@ -19,8 +19,7 @@ namespace CoinFlip
 		public Poloniex(Model model)
 			:base(model, model.Settings.Poloniex)
 		{
-			Pub = new PoloniexApiPublic(Model.ShutdownToken.Token);
-			Priv = new PoloniexApiPrivate(ApiKey, ApiSecret, Model.ShutdownToken.Token);
+			Api = new PoloniexApi(ApiKey, ApiSecret, Model.ShutdownToken);
 
 			// Start the exchange
 			if (Model.Settings.Poloniex.Active)
@@ -28,61 +27,47 @@ namespace CoinFlip
 		}
 		public override void Dispose()
 		{
-			Pub = null;
-			Priv = null;
+			Api = null;
 			base.Dispose();
 		}
 
 		/// <summary>The public data interface</summary>
-		private PoloniexApiPublic Pub
+		private PoloniexApi Api
 		{
-			[DebuggerStepThrough] get { return m_pub; }
+			[DebuggerStepThrough] get { return m_api; }
 			set
 			{
-				if (m_pub == value) return;
-				if (m_pub != null)
+				if (m_api == value) return;
+				if (m_api != null)
 				{
-					m_pub.OnOrdersChanged -= HandleOrdersChanged;
-					m_pub.OnConnectionChanged -= HandleConnectionEstablished;
-					Util.Dispose(ref m_pub);
+					m_api.OnOrdersChanged -= HandleOrdersChanged;
+					m_api.OnConnectionChanged -= HandleConnectionEstablished;
+					Util.Dispose(ref m_api);
 				}
-				m_pub = value;
-				if (m_pub != null)
+				m_api = value;
+				if (m_api != null)
 				{
-					m_pub.OnConnectionChanged += HandleConnectionEstablished;
-					m_pub.OnOrdersChanged += HandleOrdersChanged;
+					m_api.OnConnectionChanged += HandleConnectionEstablished;
+					m_api.OnOrdersChanged += HandleOrdersChanged;
 				}
 			}
 		}
-		private PoloniexApiPublic m_pub;
-
-		/// <summary>The private data interface</summary>
-		private PoloniexApiPrivate Priv
-		{
-			[DebuggerStepThrough] get { return m_priv; }
-			set
-			{
-				if (m_priv == value) return;
-				Util.Dispose(ref m_priv);
-				m_priv = value;
-			}
-		}
-		private PoloniexApiPrivate m_priv;
+		private PoloniexApi m_api;
 
 		/// <summary>Open a trade</summary>
-		protected async override Task<TradeResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> rate)
+		protected async override Task<TradeResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> price)
 		{
 			try
 			{
 				// Place the trade order
-				var res = await Priv.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), Misc.ToPoloniexTT(tt), rate, volume);
+				var res = await Api.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), Misc.ToPoloniexTT(tt), price, volume);
 				return new TradeResult(res.OrderId, res.FilledOrders.Select(x => x.TradeId));
 			}
 			catch (Exception ex)
 			{
 				throw new Exception(
 					"Poloniex: Submit trade failed. {0}\n".Fmt(ex.Message) +
-					"{0} Pair: {1}  Vol: {2} @ {3}".Fmt(tt, pair.Name, volume, rate), ex);
+					"{0} Pair: {1}  Vol: {2} @ {3}".Fmt(tt, pair.Name, volume, price), ex);
 			}
 		}
 
@@ -92,7 +77,7 @@ namespace CoinFlip
 			try
 			{
 				// Cancel the trade
-				await Priv.CancelTrade(new CurrencyPair(pair.Base, pair.Quote), order_id);
+				await Api.CancelTrade(new CurrencyPair(pair.Base, pair.Quote), order_id);
 			}
 			catch (Exception ex)
 			{
@@ -108,7 +93,9 @@ namespace CoinFlip
 			try
 			{
 				// Get all available trading pairs
-				var msg = await Pub.GetTradePairs();
+				var msg = await Api.GetTradePairs();
+				if (msg == null)
+					throw new Exception("Poloniex: Failed to read market data.");
 
 				// Add an action to integrate the data
 				Model.MarketUpdates.Add(() =>
@@ -116,15 +103,14 @@ namespace CoinFlip
 					var nue = new HashSet<string>();
 
 					// Create the trade pairs and associated coins
-					var pairs = msg.Select(x => new { Id = x.Value.Id, Coins = x.Key.Split('_') }).Where(x => coi.Contains(x.Coins[0]) && coi.Contains(x.Coins[1]));
-					foreach (var p in pairs)
+					foreach (var p in msg.Where(x => coi.Contains(x.Value.Pair.Base) && coi.Contains(x.Value.Pair.Quote)))
 					{
 						// Poloniex gives pairs as "Quote_Base"
-						var base_ = Coins.GetOrAdd(p.Coins[1]);
-						var quote = Coins.GetOrAdd(p.Coins[0]);
+						var base_ = Coins.GetOrAdd(p.Value.Pair.Base);
+						var quote = Coins.GetOrAdd(p.Value.Pair.Quote);
 
 						// Add the trade pair.
-						var instr = new TradePair(base_, quote, this, p.Id,
+						var instr = new TradePair(base_, quote, this, p.Value.Id,
 							volume_range_base:new RangeF<Unit<decimal>>(0.0001m._(base_), 10000000m._(base_)),
 							volume_range_quote:new RangeF<Unit<decimal>>(0.0001m._(quote), 10000000m._(quote)),
 							price_range:null);
@@ -175,7 +161,7 @@ namespace CoinFlip
 				// Request order book data for all of the pairs
 				// Poloniex only allows 6 API calls per second, so even though it's more unnecessary data
 				// it's better to get all order books in one call.
-				var order_book = await Pub.GetOrderBook(depth:10);
+				var order_book = await Api.GetOrderBook(depth:10);
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
@@ -209,7 +195,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update account balance data</summary>
-		protected async override Task UpdateBalances()
+		protected async override Task UpdateBalances() // Worker thread context
 		{
 			try
 			{
@@ -217,7 +203,7 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the account data
-				var balance_data = await Priv.GetBalances();
+				var balance_data = await Api.GetBalances();
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
@@ -264,7 +250,7 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the existing orders
-				var existing_orders = await Priv.GetOpenOrders();
+				var existing_orders = await Api.GetOpenOrders();
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
@@ -309,7 +295,7 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the history
-				var history = await Priv.GetTradeHistory(beg:new DateTimeOffset(HistoryInterval.End, TimeSpan.Zero), end:timestamp);
+				var history = await Api.GetTradeHistory(beg:new DateTimeOffset(HistoryInterval.End, TimeSpan.Zero), end:timestamp);
 		
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
@@ -353,7 +339,7 @@ namespace CoinFlip
 			var type = Misc.TradeType(pos.Type);
 			var rate = pos.Price._(pair.RateUnits);
 			var volume = pos.VolumeBase._(pair.Base);
-			var created = pos.Timestamp;
+			var created = pos.Created;
 			return new Position(order_id, 0, pair, type, rate, volume, volume, created, updated);
 		}
 
@@ -378,7 +364,7 @@ namespace CoinFlip
 		/// <summary>Handle connection to Poloniex</summary>
 		private void HandleConnectionEstablished(object sender, EventArgs e)
 		{
-			Status = Pub.IsConnected ? EStatus.Connected : EStatus.Offline;
+			Status = Api.IsConnected ? EStatus.Connected : EStatus.Offline;
 		}
 
 		/// <summary>Handle market data updates</summary>

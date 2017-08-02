@@ -18,6 +18,7 @@ namespace CoinFlip
 				HeaderText = "Currency",
 				DataPropertyName = nameof(CoinData.Symbol),
 				SortMode = DataGridViewColumnSortMode.Automatic,
+				FillWeight = 0.5f,
 				ReadOnly = true,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
@@ -25,18 +26,28 @@ namespace CoinFlip
 				Name = nameof(CoinData.Value),
 				HeaderText = "Value",
 				DataPropertyName = nameof(CoinData.Value),
+				FillWeight = 0.6f,
+			});
+			Columns.Add(new DataGridViewTextBoxColumn
+			{
+				Name = nameof(ColumnNames.Available),
+				HeaderText = "Available",
+				DataPropertyName = nameof(ColumnNames.Available),
+				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				Name = nameof(ColumnNames.Total),
 				HeaderText = "Total",
 				DataPropertyName = nameof(ColumnNames.Total),
+				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewImageColumn
 			{
 				Name = nameof(CoinData.OfInterest),
 				HeaderText = "Flip",
 				DataPropertyName = nameof(CoinData.OfInterest),
+				FillWeight = 0.3f,
 			});
 			ContextMenuStrip = CreateCMenu();
 			DataSource = Model.Coins;
@@ -52,6 +63,7 @@ namespace CoinFlip
 			case nameof(CoinData.OfInterest):
 				{
 					cd.OfInterest = !cd.OfInterest;
+					Model.RebuildLoops = true;
 					break;
 				}
 			}
@@ -64,9 +76,15 @@ namespace CoinFlip
 
 			var cd = Model.Coins[a.RowIndex];
 			switch (col.DataPropertyName) {
+			case nameof(ColumnNames.Available):
+				{
+					a.Value = Model.SumOfAvailable(cd.Symbol).ToString();
+					a.FormattingApplied = true;
+					break;
+				}
 			case nameof(ColumnNames.Total):
 				{
-					a.Value = Model.SumOf(cd.Symbol).ToString();
+					a.Value = Model.SumOfTotal(cd.Symbol).ToString();
 					a.FormattingApplied = true;
 					break;
 				}
@@ -116,6 +134,7 @@ namespace CoinFlip
 		public static class ColumnNames
 		{
 			public const int Total = 0;
+			public const int Available = 0;
 		}
 	}
 }

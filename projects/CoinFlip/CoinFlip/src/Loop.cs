@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Cryptography;
 using pr.extn;
 using pr.util;
 
@@ -11,10 +13,12 @@ namespace CoinFlip
 	[DebuggerDisplay("{CoinsString(Direction)}")]
 	public class Loop
 	{
+		// Note: a closed loop is one that starts and ends at the same currency
+		// but not necessarily on the same exchange.
+
 		public Loop(TradePair pair)
 		{
 			Pairs        = new List<TradePair>();
-			Coins        = new List<Coin>();
 			Insufficient = new List<InsufficientCoin>();
 			Rate         = null;
 			Direction    = 0;
@@ -24,13 +28,10 @@ namespace CoinFlip
 			ProfitRatio  = 0;
 
 			Pairs.Add(pair);
-			Coins.Add(pair.Base);
-			Coins.Add(pair.Quote);
 		}
 		public Loop(Loop rhs)
 		{
 			Pairs        = rhs.Pairs.ToList();
-			Coins        = rhs.Coins.ToList();
 			Insufficient = rhs.Insufficient.ToList();
 			Rate         = rhs.Rate;
 			Direction    = rhs.Direction;
@@ -47,29 +48,26 @@ namespace CoinFlip
 		}
 
 		/// <summary>An ordered sequence of trading pairs</summary>
-		public List<TradePair> Pairs
-		{
-			get;
-			private set;
-		}
+		public List<TradePair> Pairs { get; private set; }
 
-		/// <summary>An ordered sequence of the currencies cycled through in this loop</summary>
-		public List<Coin> Coins
-		{
-			get;
-			private set;
-		}
-
-		/// <summary>The first coin in the (partial) loop</summary>
+		/// <summary>The first coin in the (possibly partial) loop</summary>
 		public Coin Beg
 		{
-			get { return Coins.Front(); }
+			get { return Direction >= 0 ? BegInternal : EndInternal; }
+		}
+		private Coin BegInternal
+		{
+			get { return Pairs.Count > 1 ? Pairs.Front().OtherCoin(TradePair.CommonCoin(Pairs.Front(0), Pairs.Front(1))) : Pairs.Front().Base; }
 		}
 
-		/// <summary>The last coin in the (partial) loop</summary>
+		/// <summary>The last coin in the (possibly partial) loop</summary>
 		public Coin End
 		{
-			get { return Coins.Back(); }
+			get { return Direction >= 0 ? EndInternal : BegInternal; }
+		}
+		private Coin EndInternal
+		{
+			get { return Pairs.Count > 1 ? Pairs.Back().OtherCoin(TradePair.CommonCoin(Pairs.Back(0), Pairs.Back(1))) : Pairs.Back().Quote; }
 		}
 
 		/// <summary>The accumulated exchange rate when cycling forward/backward around this loop (indicated by Direction)</summary>
@@ -96,62 +94,10 @@ namespace CoinFlip
 		/// <summary>The currencies that are preventing the loop executing</summary>
 		public List<InsufficientCoin> Insufficient { get; private set; }
 
-		/// <summary>Enumerate the coins forward or backward around the loop</summary>
-		public IEnumerable<Coin> EnumCoins(int direction)
+		/// <summary>True if all the exchanges involved in this loop are active</summary>
+		public bool AllExchangesActive
 		{
-			if (direction >= 0)
-				for (int i = 0; i != Coins.Count; ++i)
-					yield return Coins[i];
-			else
-				for (int i = 0; i != Coins.Count; ++i)
-					yield return Coins[(Coins.Count - i) % Coins.Count];
-		}
-
-		/// <summary>Enumerate the pairs forward or backward around the loop</summary>
-		public IEnumerable<TradePair> EnumPairs(int direction)
-		{
-			if (direction > 0)
-				for (int i = 0; i != Pairs.Count; ++i)
-					yield return Pairs[i];
-			else
-				for (int i = Pairs.Count; i-- != 0;)
-					yield return Pairs[i];
-		}
-
-		/// <summary>Roll the pairs in the loop to a standardised order</summary>
-		public void Canonicalise()
-		{
-			Debug.Assert(Coins.Count == Pairs.Count, "Only do this on closed loops");
-			var count = Coins.Count;
-			if (count <= 1)
-				return;
-
-			// Find the lexicographically lowest coin name
-			var idx = Coins.IndexOfMinBy(x => x.Symbol);
-
-			// Decide if the loop direction should be reversed
-			var prev = Coins[(idx + count - 1) % count].Symbol;
-			var next = Coins[(idx + count + 1) % count].Symbol;
-			var reverse = prev.CompareTo(next) < 0;
-
-			// Roll the collections around so the lowest coin name is at the front
-			for (int i = 0; i != idx; ++i)
-			{
-				Coins.Add(Coins[i]);
-				Pairs.Add(Pairs[i]);
-			}
-			Coins.RemoveRange(0, idx);
-			Pairs.RemoveRange(0, idx);
-
-			// Reverse the order
-			if (reverse)
-			{
-				Coins.Reverse();
-				Pairs.Reverse();
-				Coins.Insert(0, Coins.Back());
-				Coins.RemoveAt(Coins.Count-1);
-				Direction *= -1;
-			}
+			get { return Pairs.All(x => x.Exchange.Active); }
 		}
 
 		/// <summary>The loop described as a string</summary>
@@ -163,48 +109,68 @@ namespace CoinFlip
 		/// <summary>Return a string describing the loop</summary>
 		public string CoinsString(int direction)
 		{
-			return string.Join("→", EnumCoins(direction).Select(x => x.Symbol).Concat(Beg.Symbol));
+			return string.Join("→", EnumCoins(direction).Select(x => x.Symbol));
 		}
 
-		//#region Equals
-		//public bool Equals(Loop rhs)
-		//{
-		//	if (rhs == null) return false;
-		//	if (ReferenceEquals(this, rhs)) return true;
-		//	if (Coins.Count != rhs.Coins.Count) return false;
-		//	Debug.Assert(Coins.Count >= 2);
+		/// <summary>Enumerate the pairs forward or backward around the loop</summary>
+		public IEnumerable<TradePair> EnumPairs(int direction)
+		{
+			if (direction >= 0)
+				for (int i = 0; i != Pairs.Count; ++i)
+					yield return Pairs[i];
+			else
+				for (int i = Pairs.Count; i-- != 0;)
+					yield return Pairs[i];
+		}
 
-		//	// If the loops are equal, rhs should have the same coins
-		//	var ofs = rhs.Coins.IndexOf(Coins[0]);
-		//	if (ofs == -1)
-		//		return false;
+		///// <summary>Enumerate the coins forward or backward around the loop</summary>
+		public IEnumerable<Coin> EnumCoins(int direction)
+		{
+			var c = direction >= 0 ? BegInternal : EndInternal;
+			yield return c;
+			foreach (var pair in EnumPairs(direction))
+			{
+				c = pair.OtherCoin(c);
+				yield return c;
+			}
+		}
 
-		//	// Two Loops are equal if they cycle through the
-		//	// same sequence of coins (in either direction).
-		//	int i,count = Coins.Count;
-		//	for (i = 1; i != count; ++i)
-		//	{
-		//		if (Coins[i] == rhs.Coins[(i + ofs) % count]) continue;
-		//		break;
-		//	}
-		//	if (i == count) return true;
-		//	for (i = 1; i != count; ++i)
-		//	{
-		//		if (Coins[count-i] == rhs.Coins[(i + ofs) % count]) continue;
-		//		break;
-		//	}
-		//	if (i == count) return true;
-		//	return false;
-		//}
-		//public override bool Equals(object obj)
-		//{
-		//	return Equals(obj as Loop);
-		//}
-		//public override int GetHashCode()
-		//{
-		//	return new { Coins, Pairs }.GetHashCode();
-		//}
-		//#endregion
+		/// <summary>Generate a unique key for all distinct loops</summary>
+		public int HashKey
+		{
+			get
+			{
+				var hash0 = FNV1a.Hash(0);
+				var hash1 = FNV1a.Hash(0);
+
+				// Closed loops start and finish with the same coin on the same exchange.
+				// "Open" loops start and finish with the same currency, but not on the same exchange.
+				// We test for profitability in both directions around the loop.
+				// Actually, all loops are closed because all open loops have an implicit cross-exchange
+				// pair that links End -> Beg. This means all loops with the same order, in either direction
+				// are equivalent.
+
+				var closed = Beg == End;
+				
+				// Loop equivalents: [A→B→C] == [B→C→A] == [C→B→A]
+				var len = Pairs.Count + (closed ? 0 : 1);
+				var coins = EnumCoins(+1).Take(len).Select(x => x.SymbolWithExchange).ToArray();
+
+				// Find the lexicographically lowest coin name
+				var idx = coins.IndexOfMinBy(x => x);
+
+				// Calculate the hash going in both directions and choose the lowest
+				for (int i = 0; i != len; ++i)
+				{
+					var s0 = coins[(idx + i + 2*len) % len];
+					var s1 = coins[(idx - i + 2*len) % len];
+					hash0 = FNV1a.Hash(s0, hash0);
+					hash1 = FNV1a.Hash(s1, hash1);
+				}
+
+				return Math.Min(hash0, hash1);
+			}
+		}
 	}
 
 	[DebuggerDisplay("{Coin} {Msg}")]

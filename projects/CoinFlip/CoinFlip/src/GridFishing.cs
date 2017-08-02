@@ -8,9 +8,16 @@ namespace CoinFlip
 {
 	public class GridFishing :GridBase
 	{
+		private DragDrop m_dd;
 		public GridFishing(Model model, string title, string name)
 			:base(model, title, name)
 		{
+			m_dd = new DragDrop(this);
+			m_dd.DoDrop += DataGridView_.DragDrop_DoDropMoveRow;
+
+			AllowDrop = true;
+			RowHeadersVisible = true;
+			RowHeadersWidth = 20;
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				Name = nameof(Fishing.PairName),
@@ -41,6 +48,11 @@ namespace CoinFlip
 			});
 			ContextMenuStrip = CreateCMenu();
 			DataSource = Model.Fishing;
+		}
+		protected override void OnMouseDown(MouseEventArgs e)
+		{
+			base.OnMouseDown(e);
+			DataGridView_.DragDrop_DragRow(this, e);
 		}
 		protected override void OnCellClick(DataGridViewCellEventArgs a)
 		{
@@ -97,7 +109,8 @@ namespace CoinFlip
 				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Delete"));
 				cmenu.Opening += (s,a) =>
 				{
-					opt.Enabled = SelectedRows.Count != 0;
+					var doomed = SelectedRows.Cast<DataGridViewRow>().Select(x => (Fishing)x.DataBoundItem).ToHashSet();
+					opt.Enabled = doomed.Count != 0 && doomed.All(x => !x.Active);
 				};
 				opt.Click += (s,a) =>
 				{
@@ -110,10 +123,27 @@ namespace CoinFlip
 				cmenu.Items.AddSeparator();
 			}
 			{
+				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Log"));
+				cmenu.Opening += (s,a) =>
+				{
+					var fisher = SelectedRows.Cast<DataGridViewRow>().Select(x => (Fishing)x.DataBoundItem).FirstOrDefault();
+					opt.Enabled = SelectedRows.Count == 1 && fisher != null;
+				};
+				opt.Click += (s,a) =>
+				{
+					var fisher = SelectedRows.Cast<DataGridViewRow>().Select(x => (Fishing)x.DataBoundItem).First();
+					fisher.LogUI.Show(TopLevelControl);
+				};
+			}
+			{
+				cmenu.Items.AddSeparator();
+			}
+			{
 				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Properties"));
 				cmenu.Opening += (s,a) =>
 				{
-					opt.Enabled = SelectedRows.Count == 1;
+					var fisher = SelectedRows.Cast<DataGridViewRow>().Select(x => (Fishing)x.DataBoundItem).FirstOrDefault();
+					opt.Enabled = SelectedRows.Count == 1 && fisher != null && !fisher.Active;
 				};
 				opt.Click += (s,a) =>
 				{

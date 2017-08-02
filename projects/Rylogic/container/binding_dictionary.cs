@@ -124,12 +124,24 @@ namespace pr.container
 
 		/// <summary>List changed notification</summary>
 		public event ListChangedEventHandler ListChanged;
+		protected virtual void OnListChanged(ListChangedEventArgs args)
+		{
+			ListChanged?.Invoke(this, args);
+		}
 
 		/// <summary>Raised whenever items are added or about to be removed from the list</summary>
 		public event EventHandler<ListChgEventArgs<TValue>> ListChanging;
+		protected virtual void OnListChanging(ListChgEventArgs<TValue> args)
+		{
+			ListChanging?.Invoke(this, args);
+		}
 
 		/// <summary>Raised whenever an element in the list is changed</summary>
 		public event EventHandler<ItemChgEventArgs<TValue>> ItemChanged;
+		protected virtual void OnItemChanged(ItemChgEventArgs<TValue> args)
+		{
+			ItemChanged?.Invoke(this, args);
+		}
 
 		/// <summary>Gets/Sets a value indicating whether adding or removing items within the list raises ListChanged events.</summary>
 		public bool RaiseListChangedEvents
@@ -254,14 +266,14 @@ namespace pr.container
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<TValue>(this, ListChg.PreReset, -1, default(TValue));
-				ListChanging?.Invoke(this, args);
+				OnListChanging(args);
 				if (args.Cancel)
 					return;
 			}
 			if (RaiseListChangedEvents)
 			{
-				ListChanging?.Invoke(this, new ListChgEventArgs<TValue>(this, ListChg.Reset, -1, default(TValue)));
-				ListChanged?.Invoke(this, new ListChangedEventArgs(ListChangedType.Reset, -1));
+				OnListChanging(new ListChgEventArgs<TValue>(this, ListChg.Reset, -1, default(TValue)));
+				OnListChanged(new ListChangedEventArgs(ListChangedType.Reset, -1));
 			}
 		}
 
@@ -288,14 +300,14 @@ namespace pr.container
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<TValue>(this, ListChg.ItemPreReset, index, m_dict[key]);
-				ListChanging?.Invoke(this, args);
+				OnListChanging(args);
 				if (args.Cancel)
 					return;
 			}
 			if (RaiseListChangedEvents)
 			{
-				ListChanging?.Invoke(this, new ListChgEventArgs<TValue>(this, ListChg.ItemReset, index, m_dict[key]));
-				ListChanged?.Invoke(this, new ListChangedEventArgs(ListChangedType.ItemChanged, index));
+				OnListChanging(new ListChgEventArgs<TValue>(this, ListChg.ItemReset, index, m_dict[key]));
+				OnListChanged(new ListChangedEventArgs(ListChangedType.ItemChanged, index));
 			}
 		}
 
@@ -305,7 +317,7 @@ namespace pr.container
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<TValue>(this, ListChg.PreReset, -1, default(TValue));
-				ListChanging?.Invoke(this, args);
+				OnListChanging(args);
 				if (args.Cancel)
 					return;
 			}
@@ -314,8 +326,8 @@ namespace pr.container
 
 			if (RaiseListChangedEvents)
 			{
-				ListChanging?.Invoke(this, new ListChgEventArgs<TValue>(this, ListChg.Reset, -1, default(TValue)));
-				ListChanged?.Invoke(this, new ListChangedEventArgs(ListChangedType.Reset, -1));
+				OnListChanging(new ListChgEventArgs<TValue>(this, ListChg.Reset, -1, default(TValue)));
+				OnListChanged(new ListChangedEventArgs(ListChangedType.Reset, -1));
 			}
 		}
 		protected virtual void ClearItemsCore()
@@ -330,7 +342,7 @@ namespace pr.container
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<TValue>(this, ListChg.ItemPreAdd, index, value);
-				ListChanging?.Invoke(this, args);
+				OnListChanging(args);
 				if (args.Cancel)
 					return;
 
@@ -343,8 +355,8 @@ namespace pr.container
 
 			if (RaiseListChangedEvents)
 			{
-				ListChanging?.Invoke(this, new ListChgEventArgs<TValue>(this, ListChg.ItemAdded, index, value));
-				ListChanged?.Invoke(this, new ListChangedEventArgs(ListChangedType.ItemAdded, index));
+				OnListChanging(new ListChgEventArgs<TValue>(this, ListChg.ItemAdded, index, value));
+				OnListChanged(new ListChangedEventArgs(ListChangedType.ItemAdded, index));
 			}
 		}
 		protected virtual void InsertItemCore(TKey key, TValue value, int index)
@@ -363,7 +375,7 @@ namespace pr.container
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<TValue>(this, ListChg.ItemPreRemove, index, item);
-				ListChanging?.Invoke(this, args);
+				OnListChanging(args);
 				if (args.Cancel)
 					return;
 			}
@@ -372,8 +384,8 @@ namespace pr.container
 	
 			if (RaiseListChangedEvents)
 			{
-				ListChanging?.Invoke(this, new ListChgEventArgs<TValue>(this, ListChg.ItemRemoved, -1, item));
-				ListChanged?.Invoke(this, new ListChangedEventArgs(ListChangedType.ItemDeleted, index));
+				OnListChanging(new ListChgEventArgs<TValue>(this, ListChg.ItemRemoved, -1, item));
+				OnListChanged(new ListChangedEventArgs(ListChangedType.ItemDeleted, index));
 			}
 		}
 		protected virtual void RemoveItemCore(TKey key, int index)
@@ -390,14 +402,14 @@ namespace pr.container
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<TValue>(this, ListChg.ItemPreRemove, index, old);
-				ListChanging?.Invoke(this, args);
+				OnListChanging(args);
 				if (args.Cancel)
 					return;
 			}
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<TValue>(this, ListChg.ItemPreAdd, index, value);
-				ListChanging?.Invoke(this, args);
+				OnListChanging(args);
 				if (args.Cancel)
 					return;
 			}
@@ -407,13 +419,13 @@ namespace pr.container
 
 			if (RaiseListChangedEvents)
 			{
-				ItemChanged?.Invoke(this, new ItemChgEventArgs<TValue>(index, old, value));
-				ListChanged?.Invoke(this, new ListChangedEventArgs(ListChangedType.ItemChanged, index));
+				OnItemChanged(new ItemChgEventArgs<TValue>(index, old, value));
+				OnListChanged(new ListChangedEventArgs(ListChangedType.ItemChanged, index));
 			}
 			if (RaiseListChangedEvents)
-				ListChanging?.Invoke(this, new ListChgEventArgs<TValue>(this, ListChg.ItemRemoved, index, old));
+				OnListChanging(new ListChgEventArgs<TValue>(this, ListChg.ItemRemoved, index, old));
 			if (RaiseListChangedEvents)
-				ListChanging?.Invoke(this, new ListChgEventArgs<TValue>(this, ListChg.ItemAdded, index, value));
+				OnListChanging(new ListChgEventArgs<TValue>(this, ListChg.ItemAdded, index, value));
 		}
 		protected virtual void SetItemCore(TKey key, TValue value)
 		{

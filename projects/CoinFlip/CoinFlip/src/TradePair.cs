@@ -348,5 +348,16 @@ namespace CoinFlip
 				? MakeKey(pair.Base.Symbol, pair.Quote.Symbol, pair.Base.Exchange, pair.Quote.Exchange)
 				: MakeKey(pair.Base.Symbol, pair.Quote.Symbol);
 		}
+
+		/// <summary>Return the coin that is common between the given two pairs (or null)</summary>
+		public static Coin CommonCoin(TradePair lhs, TradePair rhs)
+		{
+			return
+				lhs.Base == rhs.Base ? lhs.Base :
+				lhs.Base == rhs.Quote ? lhs.Base :
+				lhs.Quote == rhs.Base ? lhs.Quote :
+				lhs.Quote == rhs.Quote ? lhs.Quote :
+				null;
+		}
 	}
 }

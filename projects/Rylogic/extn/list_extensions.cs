@@ -37,9 +37,17 @@ namespace pr.extn
 			return list[list.Count - 1];
 		}
 
+		/// <summary>Return the list element at 'index'. i.e '0' is the first item, '-1' is off the beginning</summary>
+		public static T Front<T>(this IList<T> list, int index)
+		{
+			Debug.Assert(list.Count != 0);
+			return list[index];
+		}
+
 		/// <summary>Return the list element at 'list.Count - index - 1'. i.e '0' is the last item, '-1' is off the end</summary>
 		public static T Back<T>(this IList<T> list, int index)
 		{
+			Debug.Assert(list.Count != 0);
 			return list[list.Count - index - 1];
 		}
 

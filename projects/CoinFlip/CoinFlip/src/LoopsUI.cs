@@ -1,11 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using pr.extn;
 using pr.gui;
@@ -24,6 +18,7 @@ namespace CoinFlip
 			:base(parent, EPin.Centre)
 		{
 			InitializeComponent();
+			DoubleBuffered = true;
 			Model = model;
 			HideOnClose = true;
 
@@ -34,6 +29,12 @@ namespace CoinFlip
 			Model = null;
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
+		}
+		protected async override void OnVisibleChanged(EventArgs e)
+		{
+			base.OnVisibleChanged(e);
+			if (Visible)
+				await Model.RebuildLoopsAsync(Model.ShutdownToken);
 		}
 
 		/// <summary>App logic</summary>
@@ -67,12 +68,16 @@ namespace CoinFlip
 					Name = nameof(Loop.LoopDescription),
 					HeaderText = "Loops",
 					DataPropertyName = nameof(Loop.LoopDescription),
+					SortMode = DataGridViewColumnSortMode.Programmatic,
+					FillWeight = 2,
 				});
 				m_grid_loops.Columns.Add(new DataGridViewTextBoxColumn
 				{
 					Name = nameof(Loop.ProfitRatio),
 					HeaderText = "Profit Ratio",
 					DataPropertyName = nameof(Loop.ProfitRatio),
+					SortMode = DataGridViewColumnSortMode.Programmatic,
+					FillWeight = 1,
 				});
 				m_grid_loops.CellFormatting += (s,a) =>
 				{
@@ -92,15 +97,22 @@ namespace CoinFlip
 							var y = (float)a.CellBounds.Top;
 							var arrow_sz = a.Graphics.MeasureString("→", a.CellStyle.Font);
 							a.PaintBackground(a.ClipBounds, cell.Selected);
-							foreach (var coin in loop.EnumCoins(loop.Direction))
+
+							Action<Coin, bool> WriteCoin = (Coin coin, bool arrow) =>
 							{
 								var sz = a.Graphics.MeasureString(coin.Symbol, a.CellStyle.Font);
 								using (var bsh = new SolidBrush(coin.Exchange.Colour))
 								{
-									a.Graphics.DrawString(coin.Symbol, a.CellStyle.Font, bsh  , new PointF(x, y + (a.CellBounds.Height - sz.Height      ) / 2)); x += sz.Width;
+									a.Graphics.DrawString(coin.Symbol, a.CellStyle.Font, bsh  , new PointF(x, y + (a.CellBounds.Height - sz.Height) / 2)); x += sz.Width;
+									if (!arrow) return;
 									a.Graphics.DrawString("→", a.CellStyle.Font, Brushes.Black, new PointF(x, y + (a.CellBounds.Height - arrow_sz.Height) / 2)); x += arrow_sz.Width;
 								}
-							}
+							};
+
+							var i = loop.Pairs.Count + 1;
+							foreach (var coin in loop.EnumCoins(loop.Direction))
+								WriteCoin(coin, --i != 0);
+
 							a.Handled = true;
 							break;
 						}
@@ -116,6 +128,7 @@ namespace CoinFlip
 		private void HandleMarketDataChanging(object sender, MarketDataChangingEventArgs e)
 		{
 			if (!e.Done) return;
+			m_grid_loops.InvalidateColumn(0);
 			m_grid_loops.InvalidateColumn(1);
 		}
 
@@ -143,14 +156,14 @@ namespace CoinFlip
 			this.m_grid_loops.ReadOnly = true;
 			this.m_grid_loops.RowHeadersVisible = false;
 			this.m_grid_loops.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_loops.Size = new System.Drawing.Size(280, 401);
+			this.m_grid_loops.Size = new System.Drawing.Size(559, 407);
 			this.m_grid_loops.TabIndex = 0;
 			// 
 			// LoopsUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(280, 401);
+			this.ClientSize = new System.Drawing.Size(559, 407);
 			this.Controls.Add(this.m_grid_loops);
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
 			this.Name = "LoopsUI";

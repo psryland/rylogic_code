@@ -48,11 +48,11 @@ namespace Poloniex.API
 		[JsonProperty("total")]
 		public decimal Total { get; private set; }
 
-		/// <summary>The order time stamp</summary>
-		public DateTimeOffset Timestamp { get; private set; }
-		[JsonProperty("date")] private string TimestampInternal
+		/// <summary>The order creation time stamp</summary>
+		public DateTimeOffset Created { get; private set; }
+		[JsonProperty("date")] private string CreatedInternal
 		{
-			set { Timestamp = DateTimeOffset.ParseExact(value, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture); }
+			set { Created = DateTimeOffset.ParseExact(value, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture); }
 		}
 
 		/// <summary>Leverage</summary>

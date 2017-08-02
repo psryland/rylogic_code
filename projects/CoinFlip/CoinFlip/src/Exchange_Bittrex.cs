@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Bittrex.API;
 using pr.common;
+using pr.container;
 using pr.extn;
 using pr.util;
 
@@ -14,10 +15,15 @@ namespace CoinFlip
 {
 	public class Bittrex :Exchange
 	{
+		private const string ApiKey    = "dc2582c37e354244a6056c76f9e8e1f7"; 
+		private const string ApiSecret = "feb0ae42fcbf42fa8d42944fda308033";
+		private BiDictionary<ulong, Guid> m_order_id_lookup;
+
 		public Bittrex(Model model)
 			:base(model, model.Settings.Bittrex)
 		{
-			Pub = new BittrexApiPublic(Model.ShutdownToken.Token);
+			Api = new BittrexApi(ApiKey, ApiSecret, Model.ShutdownToken);
+			m_order_id_lookup = new BiDictionary<ulong, Guid>();
 
 			// Start the exchange
 			if (Model.Settings.Bittrex.Active)
@@ -25,50 +31,58 @@ namespace CoinFlip
 		}
 		public override void Dispose()
 		{
-			Pub = null;
+			Api = null;
 			base.Dispose();
 		}
 
 		/// <summary>The public data interface</summary>
-		private BittrexApiPublic Pub
+		private BittrexApi Api
 		{
-			[DebuggerStepThrough] get { return m_pub; }
+			[DebuggerStepThrough] get { return m_api; }
 			set
 			{
-				if (m_pub == value) return;
-				if (m_pub != null)
-				{
-//					m_pub.OnOrdersChanged -= HandleOrdersChanged;
-//					m_pub.OnConnectionChanged -= HandleConnectionEstablished;
-					Util.Dispose(ref m_pub);
-				}
-				m_pub = value;
-				if (m_pub != null)
-				{
-//					m_pub.OnConnectionChanged += HandleConnectionEstablished;
-//					m_pub.OnOrdersChanged += HandleOrdersChanged;
-				}
+				if (m_api == value) return;
+				Util.Dispose(ref m_api);
+				m_api = value;
 			}
 		}
-		private BittrexApiPublic m_pub;
+		private BittrexApi m_api;
 
 		/// <summary>Open a trade</summary>
-		protected override Task<TradeResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> rate)
+		protected async override Task<TradeResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> price)
 		{
-			throw new NotImplementedException();
-			//// Place the trade order
-			//var msg = await Priv.SubmitTrade(new SubmitTradeRequest(pair.TradePairId.Value, tt.ToCryptopiaTT(), volume, rate));
-			//if (!msg.Success)
-			//	throw new Exception(
-			//		"Cryptopia: Submit trade failed. {0}\n".Fmt(msg.Error) +
-			//		"{0} Pair: {1}  Vol: {2} @ {3}".Fmt(tt, pair.Name, volume, rate));
+			try
+			{
+				// Place the trade order
+				var res = await Api.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), Misc.ToBittrexTT(tt), price, volume);
+				var order_id = ToOrderId(res.Data.Id);
+				return new TradeResult(order_id);
+			}
+			catch (Exception ex)
+			{
+				throw new Exception(
+					"Bittrex: Submit trade failed. {0}\n".Fmt(ex.Message) +
+					"{0} Pair: {1}  Vol: {2} @ {3}".Fmt(tt, pair.Name, volume, price), ex);
+			}
 		}
 
 		/// <summary>Cancel an open trade</summary>
-		protected override Task CancelOrderInternal(TradePair pair, ulong order_id)
+		protected async override Task CancelOrderInternal(TradePair pair, ulong order_id)
 		{
-			throw new NotImplementedException();
-			//await Misc.CompletedTask;
+			try
+			{
+				// Cancel the trade
+				var uuid = ToUuid(order_id);
+				var msg = await Api.CancelTrade(new CurrencyPair(pair.Base, pair.Quote), uuid);
+				if (!msg.Success && msg.Message != "ORDER_NOT_OPEN")
+					throw new Exception(msg.Message);
+			}
+			catch (Exception ex)
+			{
+				throw new Exception(
+					"Bittrex: Cancel trade failed. {0}\n".Fmt(ex.Message) +
+					"Order Id: {0}".Fmt(order_id));
+			}
 		}
 
 		/// <summary>Update this exchange's set of trading pairs</summary>
@@ -77,7 +91,7 @@ namespace CoinFlip
 			try
 			{
 				// Get all available trading pairs
-				var msg = await Pub.GetMarkets();
+				var msg = await Api.GetMarkets();
 				if (!msg.Success)
 					throw new Exception("Bittrex: Failed to read market data. {0}".Fmt(msg.Message));
 
@@ -141,10 +155,17 @@ namespace CoinFlip
 				// Request order book data for all of the pairs
 				var order_books = new List<Task<OrderBookResponse>>();
 				foreach (var pair in Pairs.Values)
-					order_books.Add(Pub.GetOrderBook(new CurrencyPair(pair.Base, pair.Quote), BittrexApiPublic.EGetOrderBookType.Both, depth:20));
+					order_books.Add(Api.GetOrderBook(new CurrencyPair(pair.Base, pair.Quote), BittrexApi.EGetOrderBookType.Both, depth:20));
 
 				// Wait for replies for all queries
 				await Task.WhenAll(order_books);
+
+				// Check the responses
+				foreach (var ob in order_books)
+				{
+					if (!ob.Result.Success)
+						throw new Exception("Bittrex: Failed to update trading pairs. {0}".Fmt(ob.Result.Message));
+				}
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
@@ -152,11 +173,8 @@ namespace CoinFlip
 					// Process the order book data and update the pairs
 					foreach (var ob in order_books)
 					{
-						var msg = ob.Result;
-						if (!msg.Success)
-							throw new Exception("Bittrex: Failed to update trading pairs. {0}".Fmt(msg.Message));
-
-						var orders = msg.Data;
+						Debug.Assert(ob.Result.Success);
+						var orders = ob.Result.Data;
 						var cp = orders.Pair;
 
 						// Find the pair to update.
@@ -189,7 +207,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update account balance data</summary>
-		protected async override Task UpdateBalances()
+		protected async override Task UpdateBalances() // Worker thread context
 		{
 			try
 			{
@@ -197,28 +215,31 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the account data
-			//	var balance_data = Priv.GetBalances();
-				await Misc.CompletedTask;
+				var msg = await Api.GetBalances();
+				if (!msg.Success)
+					throw new Exception("Bittrex: Failed to read account balances. {0}".Fmt(msg.Message));
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
 				{
-			//		// Process the account data and update the balances
-			//		var msg = balance_data.Result;
-			//		
-			//		// Update the account balance
-			//		using (Model.Balances.PreservePosition())
-			//		{
-			//			foreach (var b in msg.Where(x => x.Value.Available != 0 || Coins.ContainsKey(x.Key)))
-			//			{
-			//				// Find the currency that this balance is for. If it's not a coin of interest, ignore
-			//				var coin = Coins.GetOrAdd(b.Key);
-			//		
-			//				// Update the balance
-			//				var bal = new Balance(coin, b.Value.HeldForTrades + b.Value.Available, b.Value.Available, 0, b.Value.HeldForTrades, 0);
-			//				Balance[coin] = bal;
-			//			}
-			//		}
+					// Update the account balance
+					using (Model.Balances.PreservePosition())
+					{
+						var nue = new HashSet<Coin>();
+						foreach (var b in msg.Data.Where(x => x.Available != 0 || Coins.ContainsKey(x.Symbol)))
+						{
+							// Find the currency that this balance is for
+							var coin = Coins.GetOrAdd(b.Symbol);
+
+							// Update the balance
+							var bal = new Balance(coin, b.Total, b.Available, b.Pending, b.Total - b.Available, 0, timestamp);
+							Balance[coin] = bal;
+							nue.Add(coin);
+						}
+
+						// Remove balances that aren't of interest
+						Balance.RemoveIf(x => !nue.Contains(x.Coin));
+					}
 
 					// Notify updated
 					BalanceUpdatedTime.NotifyAll(timestamp);
@@ -245,39 +266,22 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the existing orders
-			//	var existing_orders = await Priv.GetOpenOrders();
-				await Misc.CompletedTask;
+				var msg = await Api.GetOpenOrders();
+				if (!msg.Success)
+					throw new Exception("Bittrex: Failed to read open orders. {0}".Fmt(msg.Message));
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
 				{
-			//		// Process the existing orders
-			//		var msg = existing_orders;
-
-					// For each trading pair with active orders
+					// Update the collection of existing orders
 					var order_ids = new HashSet<ulong>();
-			//		foreach (var instr in msg.Where(x => x.Value.Count != 0))
-			//		{
-			//			// Get the associated trade pair (add the pair if it doesn't exist)
-			//			var cp = CurrencyPair.Parse(instr.Key);
-			//			var pair = Pairs[cp.Base, cp.Quote] ?? Pairs.Add2(new TradePair(Coins.GetOrAdd(cp.Base), Coins.GetOrAdd(cp.Quote), this));
-			//
-			//			// Add each order
-			//			foreach (var order in instr.Value)
-			//			{
-			//				var id = order.OrderId;
-			//				var type = Misc.TradeType(order.Type);
-			//				var rate = order.Price._(pair.RateUnits);
-			//				var volume = order.VolumeBase._(pair.Base);
-			//				//var remaining = o.Remaining._(sym[0]);
-			//				var ts = order.Timestamp;
-			//
-			//				// Add the position to the collection
-			//				var pos = new Position(id, pair, type, rate, volume, volume, ts);
-			//				Positions[id] = pos;
-			//				order_ids.Add(id);
-			//			}
-			//		}
+					foreach (var order in msg.Data)
+					{
+						// Add the position to the collection
+						var pos = PositionFrom(order, timestamp);
+						Positions[pos.OrderId] = pos;
+						order_ids.Add(pos.OrderId);
+					}
 
 					// Remove any positions that are no longer valid.
 					RemovePositionsNotIn(order_ids, timestamp);
@@ -296,6 +300,95 @@ namespace CoinFlip
 					Status = EStatus.Error;
 				}
 			}
+		}
+
+		/// <summary>Update the trade history</summary>
+		protected async override Task UpdateTradeHistory() // Worker thread context
+		{
+			try
+			{
+				// Record the time just before the query to the server
+				var timestamp = DateTimeOffset.Now;
+
+				// Request the history
+				var msg = await Api.GetTradeHistory();
+				if (!msg.Success)
+					throw new Exception("Cryptopia: Failed to received trade history. {0}".Fmt(msg.Message));
+
+				// Queue integration of the market data
+				Model.MarketUpdates.Add(() =>
+				{
+					foreach (var order in msg.Data)
+					{
+						var his = PositionFrom(order, timestamp);
+						var fill = History.GetOrAdd(his.OrderId, his.TradeType, his.Pair, timestamp);
+						fill.Trades[his.TradeId] = his;
+					}
+
+					// Notify updated
+					TradeHistoryUpdatedTime.NotifyAll(timestamp);
+				});
+			}
+			catch (Exception ex)
+			{
+				if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
+				if (ex is OperationCanceledException) {}
+				else
+				{
+					Model.Log.Write(ELogLevel.Error, ex, "Cryptopia UpdateTradeHistory() failed");
+					Status = EStatus.Error;
+				}
+			}
+		}
+
+		/// <summary>Convert a Cryptopia open order result into a position object</summary>
+		private Position PositionFrom(global::Bittrex.API.Position order, DateTimeOffset updated)
+		{
+			// Get the associated trade pair (add the pair if it doesn't exist)
+			var order_id = ToOrderId(order.OrderId);
+			var pair = Pairs[order.Pair.Base, order.Pair.Quote] ?? Pairs.Add2(new TradePair(Coins.GetOrAdd(order.Pair.Base), Coins.GetOrAdd(order.Pair.Quote), this));
+			var price = order.Limit._(pair.RateUnits);
+			var volume = order.VolumeBase._(pair.Base);
+			var remaining = order.RemainingBase._(pair.Base);
+			var created = order.Created;
+			return new Position(order_id, 0, pair, Misc.TradeType(order.Type), price, volume, remaining, created, updated);
+		}
+
+		/// <summary>Convert a Cryptopia trade history result into a position object</summary>
+		private Position PositionFrom(global::Bittrex.API.Historic order, DateTimeOffset updated)
+		{
+			// Get the associated trade pair (add the pair if it doesn't exist)
+			// Bittrex doesn't use trade ids. Make them up using the Remaining
+			// volume so that each trade for a given order is unique (ish).
+			var order_id = ToOrderId(order.OrderId);
+			var trade_id = unchecked((ulong)(order.RemainingBase * 1_000_000 / order.VolumeBase));
+			var pair = Pairs[order.Pair.Base, order.Pair.Quote] ?? Pairs.Add2(new TradePair(Coins.GetOrAdd(order.Pair.Base), Coins.GetOrAdd(order.Pair.Quote), this));
+			var price = order.Price._(pair.RateUnits);
+			var volume = order.VolumeBase._(pair.Base);
+			var created = order.Created;
+			return new Position(order_id, trade_id, pair, Misc.TradeType(order.Type), price, volume, 0, created, updated);
+		}
+
+		/// <summary>Convert a bittrex UUID to a CoinFlip order id (ULONG)</summary>
+		private ulong ToOrderId(Guid guid)
+		{
+			// Create a new order if for GUID's we haven't seen before
+			if (!m_order_id_lookup.TryGetValue(guid, out var order_id))
+			{
+				// Try to make a number that matches the GUID (for debugging helpfulness)
+				order_id = BitConverter.ToUInt32(guid.ToByteArray(), 0);
+
+				// Handle key collisions
+				for (; m_order_id_lookup.ContainsKey(order_id); ++order_id) {}
+				m_order_id_lookup[guid] = order_id;
+			}
+			return order_id;
+		}
+
+		/// <summary>Convert a CoinFlip order id (ULONG) to a bittrex UUID</summary>
+		private Guid ToUuid(ulong order_id)
+		{
+			return m_order_id_lookup[order_id];
 		}
 	}
 }

@@ -298,7 +298,7 @@ namespace CoinFlip
 		[DebuggerDisplay("{Pair} {Exch0} {Exch1}")]
 		public class FishingData
 		{
-			public FishingData(string pair, string exch0, string exch1, decimal scale, decimal volume_limit_base, decimal volume_limit_quote, RangeF price_offset)
+			public FishingData(string pair, string exch0, string exch1, decimal scale, decimal volume_limit_base, decimal volume_limit_quote, decimal price_offset, ETradeDirection direction)
 			{
 				Pair         = pair;
 				Exch0        = exch0;
@@ -307,6 +307,7 @@ namespace CoinFlip
 				VolumeLimitB = volume_limit_base;
 				VolumeLimitQ = volume_limit_quote;
 				PriceOffset  = price_offset;
+				Direction    = direction;
 			}
 			public FishingData(FishingData rhs)
 			{
@@ -317,6 +318,7 @@ namespace CoinFlip
 				VolumeLimitB = rhs.VolumeLimitB;
 				VolumeLimitQ = rhs.VolumeLimitQ;
 				PriceOffset  = rhs.PriceOffset;
+				Direction    = rhs.Direction;
 			}
 			public FishingData(XElement node)
 			{
@@ -327,6 +329,7 @@ namespace CoinFlip
 				VolumeLimitB = node.Element(nameof(VolumeLimitB)).As(VolumeLimitB);
 				VolumeLimitQ = node.Element(nameof(VolumeLimitQ)).As(VolumeLimitQ);
 				PriceOffset  = node.Element(nameof(PriceOffset)).As(PriceOffset);
+				Direction    = node.Element(nameof(Direction)).As(Direction);
 			}
 			public XElement ToXml(XElement node)
 			{
@@ -337,6 +340,7 @@ namespace CoinFlip
 				node.Add2(nameof(VolumeLimitB), VolumeLimitB, false);
 				node.Add2(nameof(VolumeLimitQ), VolumeLimitQ, false);
 				node.Add2(nameof(PriceOffset), PriceOffset, false);
+				node.Add2(nameof(Direction), Direction, false);
 				return node;
 			}
 
@@ -359,7 +363,16 @@ namespace CoinFlip
 			public decimal VolumeLimitQ { get; set; }
 
 			/// <summary>The price offset range (as a fraction of the reference price)</summary>
-			public RangeF PriceOffset { get; set; }
+			public decimal PriceOffset { get; set; }
+
+			/// <summary>The directions to fish in</summary>
+			public ETradeDirection Direction { get; set; }
+
+			/// <summary>An identifying name for this fishing instance</summary>
+			public string Name
+			{
+				get { return $"{Pair.Replace("/",string.Empty)}-{Exch0}-{Exch1}"; }
+			}
 
 			/// <summary>True if this object contains valid data</summary>
 			public bool Valid
@@ -370,9 +383,26 @@ namespace CoinFlip
 						Exch0 != Exch1 &&
 						Pair.HasValue() &&
 						Scale.Within(0m, 1m) &&
-						PriceOffset.Beg < PriceOffset.End &&
+						PriceOffset > 0 &&
 						VolumeLimitB >= 0 &&
-						VolumeLimitQ >= 0;
+						VolumeLimitQ >= 0 &&
+						Direction != ETradeDirection.None;
+				}
+			}
+
+			/// <summary>Return the string description of why 'Valid' is false</summary>
+			public string ReasonInvalid
+			{
+				get
+				{
+					return Str.Build(
+						Exch0 == Exch1                    ? "Exchanges are the same\r\n"          : string.Empty,
+						!Pair.HasValue()                  ? "No trading pair\r\n"                 : string.Empty,
+						!Scale.Within(0m, 1m)             ? "Scale outside range [0,1]\r\n"       : string.Empty,
+						PriceOffset <= 0                  ? "Price offset invalid\r\n"            : string.Empty,
+						VolumeLimitB < 0                  ? "Volume limit (base) is invalid\r\n"  : string.Empty,
+						VolumeLimitQ < 0                  ? "Volume limit (quote) is invalid\r\n" : string.Empty,
+						Direction == ETradeDirection.None ? "No trading direction\r\n"            : string.Empty);
 				}
 			}
 		}

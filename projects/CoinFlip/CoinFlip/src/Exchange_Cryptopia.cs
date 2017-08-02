@@ -20,14 +20,14 @@ namespace CoinFlip
 
 		private CryptopiaApiPublic Pub;
 		private CryptopiaApiPrivate Priv;
-		private List<int> m_pair_ids;
+		private HashSet<int> m_pair_ids;
 
 		public Cryptopia(Model model)
 			:base(model, model.Settings.Cryptopia)
 		{
-			Pub = new CryptopiaApiPublic(Model.ShutdownToken.Token);
-			Priv = new CryptopiaApiPrivate(ApiKey, ApiSecret, Model.ShutdownToken.Token);
-			m_pair_ids = new List<int>();
+			Pub = new CryptopiaApiPublic(Model.ShutdownToken);
+			Priv = new CryptopiaApiPrivate(ApiKey, ApiSecret, Model.ShutdownToken);
+			m_pair_ids = new HashSet<int>();
 
 			// Start the exchange
 			if (Model.Settings.Cryptopia.Active)
@@ -45,7 +45,7 @@ namespace CoinFlip
 					"{0} Pair: {1}  Vol: {2} @ {3}".Fmt(tt, pair.Name, volume, price));
 
 			// Return the result
-			return new TradeResult((ulong?)msg.Data.OrderId, msg.Data.FilledOrders.Cast<ulong>());
+			return new TradeResult((ulong?)msg.Data.OrderId, msg.Data.FilledOrders.Select(x => (ulong)x));
 		}
 
 		/// <summary>Cancel an open trade</summary>
@@ -72,6 +72,7 @@ namespace CoinFlip
 				Model.MarketUpdates.Add(() =>
 				{
 					var nue = new HashSet<string>();
+					var ids = new HashSet<int>();
 
 					// Create the trade pairs and associated coins
 					var pairs = msg.Data.Where(x => coi.Contains(x.SymbolBase) && coi.Contains(x.SymbolQuote));
@@ -91,6 +92,7 @@ namespace CoinFlip
 						nue.Add(instr.Name);
 						nue.Add(instr.Base.Symbol);
 						nue.Add(instr.Quote.Symbol);
+						ids.Add(p.Id);
 					}
 
 					// Remove pairs not in 'nue'
@@ -107,7 +109,7 @@ namespace CoinFlip
 					lock (m_pair_ids)
 					{
 						m_pair_ids.Clear();
-						m_pair_ids.AddRange(Pairs.Values.Select(x => x.TradePairId.Value));
+						m_pair_ids.AddRange(ids);
 					}
 				});
 			}
@@ -185,7 +187,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update account balance data</summary>
-		protected async override Task UpdateBalances()
+		protected async override Task UpdateBalances() // Worker thread context
 		{
 			try
 			{
@@ -193,16 +195,13 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the account data
-				var balance_data = await Priv.GetBalances(new BalanceRequest());
+				var msg = await Priv.GetBalances(new BalanceRequest());
+				if (!msg.Success)
+					throw new Exception("Cryptopia: Failed to update account balances. {0}".Fmt(msg.Error));
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
 				{
-					// Process the account data and update the balances
-					var msg = balance_data;
-					if (!msg.Success)
-						throw new Exception("Cryptopia: Failed to update account balances pairs. {0}".Fmt(msg.Error));
-
 					// Update the account balance
 					using (Model.Balances.PreservePosition())
 					{
@@ -247,26 +246,24 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the existing orders
-				var existing_orders = await Priv.GetOpenOrders(new OpenOrdersRequest());
-
-				// Process the existing orders
-				var msg = existing_orders;
+				var msg = await Priv.GetOpenOrders(new OpenOrdersRequest());
 				if (!msg.Success)
 					throw new Exception("Cryptopia: Failed to received existing orders. {0}".Fmt(msg.Error));
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
 				{
-					Debug.Assert(Model.AssertMainThread());
+					var order_ids = new HashSet<ulong>();
+					var pair_ids = new HashSet<int>();
 
 					// Update the collection of existing orders
-					var order_ids = new HashSet<ulong>();
-					foreach (var order in existing_orders.Data)
+					foreach (var order in msg.Data)
 					{
 						// Add the position to the collection
 						var pos = PositionFrom(order, timestamp);
 						Positions[pos.OrderId] = pos;
 						order_ids.Add(pos.OrderId);
+						pair_ids.Add(pos.Pair.TradePairId.Value);
 					}
 
 					// Remove any positions that are no longer valid.
@@ -274,6 +271,10 @@ namespace CoinFlip
 
 					// Notify updated
 					PositionUpdatedTime.NotifyAll(timestamp);
+
+					// Update the trade pair ids
+					lock (m_pair_ids)
+						m_pair_ids.AddRange(pair_ids);
 				});
 			}
 			catch (Exception ex)
@@ -304,8 +305,7 @@ namespace CoinFlip
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
 				{
-					var history = msg.Data;
-					foreach (var order in history)
+					foreach (var order in msg.Data)
 					{
 						var his = PositionFrom(order, timestamp);
 
@@ -357,10 +357,10 @@ namespace CoinFlip
 			var trade_id = unchecked((ulong)order.TradeId);
 			var sym = order.Market.Split('/');
 			var pair = Pairs[sym[0], sym[1]] ?? Pairs.Add2(new TradePair(Coins.GetOrAdd(sym[0]), Coins.GetOrAdd(sym[1]), this, order.TradePairId));
-			var rate = order.Rate._(pair.RateUnits);
+			var price = order.Rate._(pair.RateUnits);
 			var volume = order.Amount._(pair.Base);
 			var created = order.TimeStamp.As(DateTimeKind.Utc);
-			return new Position(order_id, trade_id, pair, Misc.TradeType(order.Type), rate, volume, 0, created, updated);
+			return new Position(order_id, trade_id, pair, Misc.TradeType(order.Type), price, volume, 0, created, updated);
 		}
 	}
 }

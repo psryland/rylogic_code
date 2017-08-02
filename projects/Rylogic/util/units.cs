@@ -321,25 +321,25 @@ namespace pr.util
 		}
 
 		/// <summary>Convert this raw value into a type with a known unit</summary>
-		public static Unit<T> _<T>(this T x, string unit) where T:IComparable
+		[DebuggerStepThrough] public static Unit<T> _<T>(this T x, string unit) where T:IComparable
 		{
 			return new Unit<T>(x, UnitId(unit));
 		}
-		public static Unit<T> _<T>(this T x, Unit<T> unit) where T:IComparable
+		[DebuggerStepThrough] public static Unit<T> _<T>(this T x, Unit<T> unit) where T:IComparable
 		{
 			return new Unit<T>(x, unit.UnitId);
 		}
-		public static Unit<T> _<T>(this T x) where T:IComparable
+		[DebuggerStepThrough] public static Unit<T> _<T>(this T x) where T:IComparable
 		{
 			return new Unit<T>(x, NoUnitsId);
 		}
 
 		/// <summary>Cast one unit to another</summary>
-		public static Unit<T> _<T>(this Unit<T> x, string unit) where T:IComparable
+		[DebuggerStepThrough] public static Unit<T> _<T>(this Unit<T> x, string unit) where T:IComparable
 		{
 			return new Unit<T>(x, UnitId(unit));
 		}
-		public static Unit<T> _<T>(this Unit<T> x, Unit<T> unit) where T:IComparable
+		[DebuggerStepThrough] public static Unit<T> _<T>(this Unit<T> x, Unit<T> unit) where T:IComparable
 		{
 			return new Unit<T>(x, unit.UnitId);
 		}

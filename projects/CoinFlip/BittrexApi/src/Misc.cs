@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using System.Reflection;
 using System.Text;
-using Newtonsoft.Json;
+using System.Threading.Tasks;
 
-namespace Poloniex.API
+namespace Bittrex.API
 {
 	/// <summary>Represents the type of an order.</summary>
 	public enum EOrderType
@@ -16,28 +17,6 @@ namespace Poloniex.API
 
 		/// <summary>A.k.a B2Q, Ask, Long</summary>
 		Sell,
-	}
-
-	/// <summary>Represents a time frame of a market.</summary>
-	public enum MarketPeriod
-	{
-		/// <summary>A time interval of 5 minutes.</summary>
-		Minutes5 = 300,
-
-		/// <summary>A time interval of 15 minutes.</summary>
-		Minutes15 = 900,
-
-		/// <summary>A time interval of 30 minutes.</summary>
-		Minutes30 = 1800,
-
-		/// <summary>A time interval of 2 hours.</summary>
-		Hours2 = 7200,
-
-		/// <summary>A time interval of 4 hours.</summary>
-		Hours4 = 14400,
-
-		/// <summary>A time interval of a day.</summary>
-		Day = 86400
 	}
 
 	/// <summary>Global functions</summary>
@@ -70,20 +49,20 @@ namespace Poloniex.API
 		/// <summary>Parse the buy/sell string</summary>
 		public static EOrderType ToOrderType(string value)
 		{
-			switch (value) {
+			switch (value.ToLowerInvariant()) {
 			default: throw new ArgumentOutOfRangeException("value");
-			case "buy": return EOrderType.Buy;
-			case "bid": return EOrderType.Buy;
-			case "sell": return EOrderType.Sell;
-			case "ask": return EOrderType.Sell;
+			case "limit_buy":  return EOrderType.Buy;
+			case "buylimit":   return EOrderType.Buy;
+			case "limit_sell": return EOrderType.Sell;
+			case "selllimit":  return EOrderType.Sell;
 			}
 		}
 		public static string ToString(EOrderType order_type)
 		{
 			switch (order_type) {
 			default: throw new ArgumentException("order_type");
-			case EOrderType.Buy: return "buy";
-			case EOrderType.Sell: return "sell";
+			case EOrderType.Buy: return "buylimit";
+			case EOrderType.Sell: return "selllimit";
 			}
 		}
 
@@ -148,12 +127,5 @@ namespace Poloniex.API
 		}
 		public string Key;
 		public object Value;
-	}
-
-	/// <summary>Helper for decoding error responses</summary>
-	internal class ErrorResult
-	{
-		[JsonProperty("error")]
-		public string Message { get; private set; }
 	}
 }

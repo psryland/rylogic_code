@@ -7,6 +7,8 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using System.Xml.Linq;
+using pr.common;
 using pr.container;
 using pr.extn;
 using pr.util;
@@ -69,6 +71,9 @@ namespace pr.gui
 				//	,RegexOptions.Singleline|RegexOptions.Multiline|RegexOptions.CultureInvariant|RegexOptions.Compiled);
 				//new Regex(@"^\u001b(?<lvl>\d),(?<time>.*?),(?<name>.*?),""(?<msg>.*?)"",""(?<except>.*?)"",(?<count>\d+)\s*\n"
 				//	,RegexOptions.Singleline|RegexOptions.Multiline|RegexOptions.CultureInvariant|RegexOptions.Compiled);
+
+			// Highlighting patterns
+			Highlighting = new BindingListEx<HLPattern>();
 
 			// The log entry delimiter
 			LineDelimiter = Log.EntryDelimiter;
@@ -263,6 +268,11 @@ namespace pr.gui
 			get { return m_view; }
 		}
 
+		/// <summary>Access to the DGV containing the log data</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public BindingListEx<HLPattern> Highlighting { get; private set; }
+
 		/// <summary>Set up UI Elements</summary>
 		private void SetupUI()
 		{
@@ -336,14 +346,15 @@ namespace pr.gui
 		/// <summary>Format the cell background on the log view</summary>
 		public virtual void Format(LogEntry entry, DataGridViewCellFormattingEventArgs e)
 		{
-			e.CellStyle.BackColor =
-				entry.Text.StartsWith("Error") ? Color.LightSalmon :
-				entry.Text.StartsWith("Warn")  ? Color.Yellow :
-				Color.White;
-			e.CellStyle.ForeColor =
-				entry.Text.StartsWith("Debug") ? Color.Gray :
-				Color.Black;
+			foreach (var hl in Highlighting)
+			{
+				if (!hl.IsMatch(entry.Text))
+					continue;
 
+				e.CellStyle.BackColor = hl.BackColour;
+				e.CellStyle.ForeColor = hl.ForeColour;
+				break;
+			}
 			e.CellStyle.SelectionBackColor = e.CellStyle.BackColor.Lerp(Color.Gray, 0.5f);
 			e.CellStyle.SelectionForeColor = e.CellStyle.ForeColor;
 		}
@@ -530,6 +541,48 @@ namespace pr.gui
 
 			/// <summary>True if this log entry was read from a log file</summary>
 			public bool FromFile;
+		}
+
+		/// <summary>Patterns for highlighting rows in the log</summary>
+		public class HLPattern :Pattern
+		{
+			public HLPattern(Color bk, Color fr)
+				:base()
+			{
+				BackColour = bk;
+				ForeColour = fr;
+			}
+			public HLPattern(Color bk, Color fr, EPattern patn_type, string expr)
+				:base(patn_type, expr)
+			{
+				BackColour = bk;
+				ForeColour = fr;
+			}
+			public HLPattern(HLPattern rhs)
+				:base(rhs)
+		{
+				BackColour = rhs.BackColour;
+				ForeColour = rhs.ForeColour;
+			}
+			public HLPattern(XElement node)
+				:base(node)
+			{
+				BackColour = node.Element(nameof(BackColour)).As<Color>();
+				ForeColour = node.Element(nameof(ForeColour)).As<Color>();
+			}
+			public override XElement ToXml(XElement node)
+			{
+				base.ToXml(node);
+				node.Add2(nameof(BackColour), BackColour, false);
+				node.Add2(nameof(ForeColour), ForeColour, false);
+				return node;
+			}
+
+			/// <summary>Background colour when the pattern is a match</summary>
+			public Color BackColour { get; set; }
+
+			/// <summary>Foreground colour when the pattern is a match</summary>
+			public Color ForeColour { get; set; }
 		}
 
 		#region Component Designer generated code

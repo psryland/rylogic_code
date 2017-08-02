@@ -124,15 +124,22 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns elements from this collection that aren't also in 'rhs'. Note: The MS version of this function doesn't work</summary>
-		public static IEnumerable<TSource> Except<TSource>(this IEnumerable<TSource> source, IEqualityComparer<TSource> comparer, params TSource[] rhs)
+		public static IEnumerable<TSource> Except<TSource>(this IEnumerable<TSource> source, IEqualityComparer<TSource> comparer, HashSet<TSource> exclude)
 		{
 			comparer = comparer ?? Eql<TSource>.Default;
-			var exclude = rhs.ToHashSet();
 			return source.Where(x => !exclude.Contains(x, comparer));
+		}
+		public static IEnumerable<TSource> Except<TSource>(this IEnumerable<TSource> source, IEqualityComparer<TSource> comparer, params TSource[] rhs)
+		{
+			return Except(source, comparer, rhs.ToHashSet());
 		}
 		public static IEnumerable<TSource> Except<TSource>(this IEnumerable<TSource> source, params TSource[] rhs)
 		{
-			return Except(source, Eql<TSource>.Default, rhs);
+			return Except(source, null, rhs);
+		}
+		public static IEnumerable<TSource> Except<TSource>(this IEnumerable<TSource> source, HashSet<TSource> rhs)
+		{
+			return Except(source, null, rhs);
 		}
 
 		/// <summary>Return the index of the first occurrence of 'pred(x) == true' or -1</summary>

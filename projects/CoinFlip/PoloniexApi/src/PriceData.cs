@@ -6,7 +6,10 @@ namespace Poloniex.API
 	[DebuggerDisplay("Ask={OrderTopSell} Bid={OrderTopBuy}")]
 	public class PriceData
 	{
-		/// <summary></summary>
+		/// <summary>The currency pair that the data is for</summary>
+		public CurrencyPair Pair { get; internal set; }
+
+		/// <summary>The trade pair id</summary>
 		[JsonProperty("id")]
 		public int Id { get; internal set; }
 

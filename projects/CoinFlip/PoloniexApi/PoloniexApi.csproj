@@ -31,23 +31,23 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Castle.Core, Version=4.1.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
-      <HintPath>..\..\projects\Trading\CoinFlip\packages\Castle.Core.4.1.0\lib\net45\Castle.Core.dll</HintPath>
+      <HintPath>..\packages\Castle.Core.4.1.0\lib\net45\Castle.Core.dll</HintPath>
     </Reference>
     <Reference Include="MsgPack, Version=0.6.0.0, Culture=neutral, PublicKeyToken=a2625990d5dc0167, processorArchitecture=MSIL">
-      <HintPath>..\..\projects\Trading\CoinFlip\packages\MsgPack.Cli.0.6.2\lib\net45\MsgPack.dll</HintPath>
+      <HintPath>..\packages\MsgPack.Cli.0.6.2\lib\net45\MsgPack.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\..\projects\Trading\CoinFlip\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Msgpack, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\projects\Trading\CoinFlip\packages\Newtonsoft.Msgpack.0.1.10\lib\net45\Newtonsoft.Msgpack.dll</HintPath>
+      <HintPath>..\packages\Newtonsoft.Msgpack.0.1.10\lib\net45\Newtonsoft.Msgpack.dll</HintPath>
     </Reference>
     <Reference Include="SuperSocket.ClientEngine, Version=0.8.0.6, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\projects\Trading\CoinFlip\packages\SuperSocket.ClientEngine.Core.0.8.0.6\lib\net45\SuperSocket.ClientEngine.dll</HintPath>
+      <HintPath>..\packages\SuperSocket.ClientEngine.Core.0.8.0.6\lib\net45\SuperSocket.ClientEngine.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Collections.Immutable, Version=1.2.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\projects\Trading\CoinFlip\packages\System.Collections.Immutable.1.2.0\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
+      <HintPath>..\packages\System.Collections.Immutable.1.2.0\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
     </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.Net" />
@@ -63,22 +63,22 @@
     </Reference>
     <Reference Include="System.Numerics" />
     <Reference Include="System.Reactive, Version=4.0.0.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263, processorArchitecture=MSIL">
-      <HintPath>..\..\projects\Trading\CoinFlip\packages\System.Reactive.4.0.0-preview00001\lib\net45\System.Reactive.dll</HintPath>
+      <HintPath>..\packages\System.Reactive.4.0.0-preview00001\lib\net45\System.Reactive.dll</HintPath>
     </Reference>
     <Reference Include="System.Reactive.Core, Version=3.0.1000.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263, processorArchitecture=MSIL">
-      <HintPath>..\..\projects\Trading\CoinFlip\packages\System.Reactive.Core.4.0.0-preview00001\lib\net45\System.Reactive.Core.dll</HintPath>
+      <HintPath>..\packages\System.Reactive.Core.4.0.0-preview00001\lib\net45\System.Reactive.Core.dll</HintPath>
     </Reference>
     <Reference Include="System.Reactive.Interfaces, Version=3.0.1000.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263, processorArchitecture=MSIL">
-      <HintPath>..\..\projects\Trading\CoinFlip\packages\System.Reactive.Interfaces.4.0.0-preview00001\lib\net45\System.Reactive.Interfaces.dll</HintPath>
+      <HintPath>..\packages\System.Reactive.Interfaces.4.0.0-preview00001\lib\net45\System.Reactive.Interfaces.dll</HintPath>
     </Reference>
     <Reference Include="System.Reactive.Linq, Version=3.0.1000.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263, processorArchitecture=MSIL">
-      <HintPath>..\..\projects\Trading\CoinFlip\packages\System.Reactive.Linq.4.0.0-preview00001\lib\net45\System.Reactive.Linq.dll</HintPath>
+      <HintPath>..\packages\System.Reactive.Linq.4.0.0-preview00001\lib\net45\System.Reactive.Linq.dll</HintPath>
     </Reference>
     <Reference Include="System.Threading.Tasks.Dataflow, Version=4.6.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\projects\Trading\CoinFlip\packages\System.Threading.Tasks.Dataflow.4.6.0\lib\netstandard1.1\System.Threading.Tasks.Dataflow.dll</HintPath>
+      <HintPath>..\packages\System.Threading.Tasks.Dataflow.4.6.0\lib\netstandard1.1\System.Threading.Tasks.Dataflow.dll</HintPath>
     </Reference>
     <Reference Include="System.ValueTuple, Version=4.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\..\projects\Trading\CoinFlip\packages\System.ValueTuple.4.0.0-rc3-24212-01\lib\netstandard1.1\System.ValueTuple.dll</HintPath>
+      <HintPath>..\packages\System.ValueTuple.4.0.0-rc3-24212-01\lib\netstandard1.1\System.ValueTuple.dll</HintPath>
     </Reference>
     <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq" />
@@ -87,22 +87,22 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
     <Reference Include="WampSharp, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\projects\Trading\CoinFlip\packages\WampSharp.1.2.5.36-beta\lib\net45\WampSharp.dll</HintPath>
+      <HintPath>..\packages\WampSharp.1.2.5.36-beta\lib\net45\WampSharp.dll</HintPath>
     </Reference>
     <Reference Include="WampSharp.Default.Client, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\projects\Trading\CoinFlip\packages\WampSharp.Default.Client.1.2.5.36-beta\lib\net45\WampSharp.Default.Client.dll</HintPath>
+      <HintPath>..\packages\WampSharp.Default.Client.1.2.5.36-beta\lib\net45\WampSharp.Default.Client.dll</HintPath>
     </Reference>
     <Reference Include="WampSharp.NewtonsoftJson, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\projects\Trading\CoinFlip\packages\WampSharp.NewtonsoftJson.1.2.5.36-beta\lib\net45\WampSharp.NewtonsoftJson.dll</HintPath>
+      <HintPath>..\packages\WampSharp.NewtonsoftJson.1.2.5.36-beta\lib\net45\WampSharp.NewtonsoftJson.dll</HintPath>
     </Reference>
     <Reference Include="WampSharp.NewtonsoftMsgpack, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\projects\Trading\CoinFlip\packages\WampSharp.NewtonsoftMsgpack.1.2.5.36-beta\lib\net45\WampSharp.NewtonsoftMsgpack.dll</HintPath>
+      <HintPath>..\packages\WampSharp.NewtonsoftMsgpack.1.2.5.36-beta\lib\net45\WampSharp.NewtonsoftMsgpack.dll</HintPath>
     </Reference>
     <Reference Include="WampSharp.WebSocket4Net, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\projects\Trading\CoinFlip\packages\WampSharp.WebSocket4Net.1.2.5.36-beta\lib\net45\WampSharp.WebSocket4Net.dll</HintPath>
+      <HintPath>..\packages\WampSharp.WebSocket4Net.1.2.5.36-beta\lib\net45\WampSharp.WebSocket4Net.dll</HintPath>
     </Reference>
     <Reference Include="WebSocket4Net, Version=0.15.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\projects\Trading\CoinFlip\packages\WebSocket4Net.0.15.0-beta4\lib\net45\WebSocket4Net.dll</HintPath>
+      <HintPath>..\packages\WebSocket4Net.0.15.0-beta4\lib\net45\WebSocket4Net.dll</HintPath>
     </Reference>
     <Reference Include="WindowsBase" />
   </ItemGroup>
@@ -113,10 +113,9 @@
     <Compile Include="src\MarketChartData.cs" />
     <Compile Include="src\Misc.cs" />
     <Compile Include="src\OrderBook.cs" />
-    <Compile Include="src\PoloniexPrivateAPI.cs" />
+    <Compile Include="src\PoloniexApi.cs" />
     <Compile Include="src\Position.cs" />
     <Compile Include="src\PriceData.cs" />
-    <Compile Include="src\PoloniexPublicAPI.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="src\Trade.cs" />
     <Compile Include="src\TradeResult.cs" />

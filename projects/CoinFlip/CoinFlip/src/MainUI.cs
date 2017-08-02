@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using CoinFlip.Properties;
+using pr.common;
 using pr.container;
 using pr.extn;
 using pr.gui;
@@ -42,8 +43,6 @@ namespace CoinFlip
 		private ToolStripLabel m_lbl_nett_worth;
 		private ToolStripTextBox m_tb_nett_worth;
 		private ToolStripMenuItem m_menu_tools_test;
-		private ToolStripLabel m_lbl_token_total;
-		private ToolStripTextBox m_tb_token_total;
 		private ToolStripSeparator toolStripSeparator1;
 		private LogUI m_log;
 		#endregion
@@ -195,7 +194,7 @@ namespace CoinFlip
 				m_chk_run.CheckedChanged += (s,a) =>
 				{
 					Model.RunLoopFinder = m_chk_run.Checked;
-					m_chk_run.Text = m_chk_run.Checked ? "Stop" : "Start";
+					m_chk_run.Text = m_chk_run.Checked ? "Stop Loop Trading" : "Trade Loops";
 					m_chk_run.Image = m_chk_run.Checked ? Resources.power_blue : Resources.power_gray;
 					m_chk_run.BackColor = m_chk_run.Checked ? Color.LightGreen : SystemColors.Control;
 				};
@@ -221,10 +220,12 @@ namespace CoinFlip
 
 			#region Log control
 			{
-				m_log = new LogUI("Log", nameof(m_log));
-				m_log.LogFilepath = ((LogToFile)Model.Log.LogCB).Filepath;
-				m_log.LogEntryPattern = new Regex(@"^(?<Level>.*?)\|(?<Timestamp>.*?)\|(?<Message>.*)"
-					,RegexOptions.Singleline|RegexOptions.Multiline|RegexOptions.CultureInvariant|RegexOptions.Compiled);
+				m_log = new LogUI("Log", nameof(m_log))
+				{
+					LogFilepath = ((LogToFile)Model.Log.LogCB).Filepath,
+					LogEntryPattern = Misc.LogEntryPattern
+				};
+				m_log.Highlighting.AddRange(Misc.LogHighlighting);
 			}
 			#endregion
 
@@ -285,12 +286,10 @@ namespace CoinFlip
 				m_grid_positions.InvalidateColumn(m_grid_positions.Columns[nameof(GridPositions.ColumnNames.LivePrice)].Index);
 				m_grid_positions.InvalidateColumn(m_grid_positions.Columns[nameof(GridPositions.ColumnNames.PriceDist)].Index);
 				m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Total)].Index);
+				m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Available)].Index);
 
 				// Update the nett worth value
 				m_tb_nett_worth.Text = Model.NettWorth.ToString("c");
-
-				// Update the sum of tokens
-				m_tb_token_total.Text = Model.TokenTotal.ToString("G6");
 			}
 		}
 
@@ -333,14 +332,12 @@ namespace CoinFlip
 			this.m_menu_tools_show_loops = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_test = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
-			this.m_chk_run = new System.Windows.Forms.ToolStripButton();
 			this.m_chk_allow_trades = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_lbl_nett_worth = new System.Windows.Forms.ToolStripLabel();
 			this.m_tb_nett_worth = new System.Windows.Forms.ToolStripTextBox();
-			this.m_lbl_token_total = new System.Windows.Forms.ToolStripLabel();
-			this.m_tb_token_total = new System.Windows.Forms.ToolStripTextBox();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_chk_run = new System.Windows.Forms.ToolStripButton();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.ContentPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
@@ -467,23 +464,12 @@ namespace CoinFlip
             this.toolStripSeparator2,
             this.m_lbl_nett_worth,
             this.m_tb_nett_worth,
-            this.m_lbl_token_total,
-            this.m_tb_token_total,
             this.toolStripSeparator1,
             this.m_chk_run});
 			this.m_ts.Location = new System.Drawing.Point(3, 24);
 			this.m_ts.Name = "m_ts";
-			this.m_ts.Size = new System.Drawing.Size(595, 25);
+			this.m_ts.Size = new System.Drawing.Size(422, 25);
 			this.m_ts.TabIndex = 1;
-			// 
-			// m_chk_run
-			// 
-			this.m_chk_run.CheckOnClick = true;
-			this.m_chk_run.Image = global::CoinFlip.Properties.Resources.power_gray;
-			this.m_chk_run.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_chk_run.Name = "m_chk_run";
-			this.m_chk_run.Size = new System.Drawing.Size(91, 22);
-			this.m_chk_run.Text = "Trade Loops";
 			// 
 			// m_chk_allow_trades
 			// 
@@ -511,23 +497,19 @@ namespace CoinFlip
 			this.m_tb_nett_worth.ReadOnly = true;
 			this.m_tb_nett_worth.Size = new System.Drawing.Size(100, 25);
 			// 
-			// m_lbl_token_total
-			// 
-			this.m_lbl_token_total.Name = "m_lbl_token_total";
-			this.m_lbl_token_total.Size = new System.Drawing.Size(71, 22);
-			this.m_lbl_token_total.Text = "Token Total:";
-			// 
-			// m_tb_token_total
-			// 
-			this.m_tb_token_total.BorderStyle = System.Windows.Forms.BorderStyle.None;
-			this.m_tb_token_total.Name = "m_tb_token_total";
-			this.m_tb_token_total.ReadOnly = true;
-			this.m_tb_token_total.Size = new System.Drawing.Size(100, 25);
-			// 
 			// toolStripSeparator1
 			// 
 			this.toolStripSeparator1.Name = "toolStripSeparator1";
 			this.toolStripSeparator1.Size = new System.Drawing.Size(6, 25);
+			// 
+			// m_chk_run
+			// 
+			this.m_chk_run.CheckOnClick = true;
+			this.m_chk_run.Image = global::CoinFlip.Properties.Resources.power_gray;
+			this.m_chk_run.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_chk_run.Name = "m_chk_run";
+			this.m_chk_run.Size = new System.Drawing.Size(91, 22);
+			this.m_chk_run.Text = "Trade Loops";
 			// 
 			// MainUI
 			// 

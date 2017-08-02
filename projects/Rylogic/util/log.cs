@@ -232,12 +232,19 @@ namespace pr.util
 		{
 			Tag = tag;
 			Context = new SharedContext(log_cb, occurrences_batch_size);
+			ForwardLog = null;
 			Enabled = true;
+		}
+		public Logger(string tag, ILogWriter log_cb, Logger fwd, int occurrences_batch_size = 0)
+			:this(tag, log_cb, occurrences_batch_size)
+		{
+			ForwardLog = fwd;
 		}
 		public Logger(string tag, Logger rhs)
 		{
 			Tag = tag;
 			Context = rhs.Context;
+			ForwardLog = rhs.ForwardLog;
 			Enabled = true;
 		}
 		public virtual void Dispose()
@@ -304,6 +311,9 @@ namespace pr.util
 		}
 		private SharedContext m_ctx;
 
+		/// <summary>A log instance to forward log entries to</summary>
+		public Logger ForwardLog { get; set; }
+
 		/// <summary>The object that log data is written to</summary>
 		public ILogWriter LogCB
 		{
@@ -327,23 +337,31 @@ namespace pr.util
 			set { Context.ImmediateWrite = value; }
 		}
 
-		// Log a message
+		/// <summary>Log a message</summary>
 		public void Write(ELogLevel level, string msg, string file = null, int? line = null)
 		{
 			if (!Enabled) return;
 			var evt = new LogEvent(level, Context.TimeZero, Tag, msg, file, line);
-			Context.Enqueue(evt);
+			Write(evt);
+			ForwardLog?.Write(evt);
 		}
 
-		// Log an exception with message 'msg'
+		/// <summary>Log an exception with message 'msg'</summary>
 		public void Write(ELogLevel level, Exception ex, string msg, string file = null, int? line = null)
 		{
 			if (!Enabled) return;
 			var evt = new LogEvent(level, Context.TimeZero, Tag, string.Concat(msg, " - Exception: ", ex.Message), file, line);
+			Write(evt);
+			ForwardLog?.Write(evt);
+		}
+
+		/// <summary>Write a log entry</summary>
+		private void Write(LogEvent evt)
+		{
 			Context.Enqueue(evt);
 		}
 
-		// Block the caller until the logger is idle
+		/// <summary>Block the caller until the logger is idle</summary>
 		public void Flush()
 		{
 			if (!Enabled) return;
@@ -413,7 +431,7 @@ namespace pr.util
 			/// <summary>A flag to indicate when the logger is idle</summary>
 			public ManualResetEvent Idle { get; private set; }
 
-			// A callback function used in immediate mode
+			/// <summary>A callback function used in immediate mode</summary>
 			public ILogWriter LogCB { get; private set; }
 
 			/// <summary>The maximum number of identical events per batch</summary>

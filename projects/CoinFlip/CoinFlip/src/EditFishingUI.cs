@@ -24,19 +24,21 @@ namespace CoinFlip
 		private TextBox m_tb_balances0;
 		private TextBox m_tb_balances1;
 		private TableLayoutPanel m_table1;
-		private ValueBox m_tb_price_offset_min;
+		private ValueBox m_tb_price_offset;
 		private Label m_lbl_price_offset;
-		private ValueBox m_tb_price_offset_max;
 		private Label m_lbl_volume_limit_base;
 		private Label m_lbl_volume_limit_quote;
 		private ValueBox m_tb_volume_limit_base;
 		private ValueBox m_tb_volume_limit_quote;
 		private ToolTip m_tt;
+		private CheckBox m_chk_b2q;
+		private CheckBox m_chk_q2b;
+		private Label m_lbl_info;
 		private ValueBox m_tb_scale;
 		#endregion
 
 		public EditFishingUI(Model model)
-			:this(model, new Settings.FishingData(string.Empty, string.Empty, string.Empty, 1m, 1m, 1m, new RangeF(0.002, 0.008)))
+			:this(model, new Settings.FishingData(string.Empty, string.Empty, string.Empty, 1m, 1m, 1m, 0.005m, ETradeDirection.Both))
 		{ }
 		public EditFishingUI(Model model, Settings.FishingData fishing_data)
 		{
@@ -84,8 +86,9 @@ namespace CoinFlip
 				m_tb_scale.Value = m_fishing.Scale;
 				m_tb_volume_limit_base.Value = m_fishing.VolumeLimitB;
 				m_tb_volume_limit_quote.Value = m_fishing.VolumeLimitQ;
-				m_tb_price_offset_min.Value = m_fishing.PriceOffset.Beg;
-				m_tb_price_offset_max.Value = m_fishing.PriceOffset.End;
+				m_tb_price_offset.Value = m_fishing.PriceOffset;
+				m_chk_q2b.Checked = m_fishing.Direction.HasFlag(ETradeDirection.Q2B);
+				m_chk_b2q.Checked = m_fishing.Direction.HasFlag(ETradeDirection.B2Q);
 			}
 		}
 		private Settings.FishingData m_fishing;
@@ -127,9 +130,20 @@ namespace CoinFlip
 		}
 
 		/// <summary>Bait price offset</summary>
-		public RangeF PriceOffset
+		public decimal PriceOffset
 		{
-			get { return new RangeF((double)m_tb_price_offset_min.Value, (double)m_tb_price_offset_max.Value); }
+			get { return (decimal)m_tb_price_offset.Value; }
+		}
+
+		/// <summary>The trade direction</summary>
+		public ETradeDirection TradeDirection
+		{
+			get
+			{
+				return
+					(m_chk_q2b.Checked ? ETradeDirection.Q2B : 0) |
+					(m_chk_b2q.Checked ? ETradeDirection.B2Q : 0);
+			}
 		}
 
 		/// <summary>Set up UI Elements</summary>
@@ -167,20 +181,12 @@ namespace CoinFlip
 			m_tb_scale.TextChanged += UpdateUI;
 
 			// Price offset min
-			m_tb_price_offset_min.ToolTip(m_tt, "The lower bound on the distance from the reference price for the fishing trade price");
-			m_tb_price_offset_min.ValueType = typeof(double);
-			m_tb_price_offset_min.ValidateText = t => { var v = double_.TryParse(t); return v != null && v >= 0.0; };
-			m_tb_price_offset_min.Value = FishingData.PriceOffset.Beg;
-			m_tb_price_offset_min.ValueCommitted += UpdateData;
-			m_tb_price_offset_min.TextChanged += UpdateUI;
-
-			// Price offset max
-			m_tb_price_offset_max.ToolTip(m_tt, "The upper bound on the distance from the reference price for the fishing trade price");
-			m_tb_price_offset_max.ValueType = typeof(double);
-			m_tb_price_offset_max.ValidateText = t => { var v = double_.TryParse(t); return v != null && v >= 0.0; };
-			m_tb_price_offset_max.Value = FishingData.PriceOffset.End;
-			m_tb_price_offset_max.ValueCommitted += UpdateData;
-			m_tb_price_offset_max.TextChanged += UpdateUI;
+			m_tb_price_offset.ToolTip(m_tt, "The minimum distance from the reference price for the bait trade price");
+			m_tb_price_offset.ValueType = typeof(decimal);
+			m_tb_price_offset.ValidateText = t => { var v = decimal_.TryParse(t); return v != null && v > 0m; };
+			m_tb_price_offset.Value = FishingData.PriceOffset;
+			m_tb_price_offset.ValueCommitted += UpdateData;
+			m_tb_price_offset.ValueChanged += UpdateUI;
 
 			// Volume base max
 			m_tb_volume_limit_base.ToolTip(m_tt, "The maximum amount of base currency to trade");
@@ -188,7 +194,7 @@ namespace CoinFlip
 			m_tb_volume_limit_base.ValidateText = t => { var v = decimal_.TryParse(t); return v != null && v >= 0m; };
 			m_tb_volume_limit_base.Value = FishingData.VolumeLimitB;
 			m_tb_volume_limit_base.ValueCommitted += UpdateData;
-			m_tb_volume_limit_base.TextChanged += UpdateUI;
+			m_tb_volume_limit_base.ValueChanged += UpdateUI;
 
 			// Volume quote max
 			m_tb_volume_limit_quote.ToolTip(m_tt, "The maximum amount of quote currency to trade");
@@ -196,7 +202,18 @@ namespace CoinFlip
 			m_tb_volume_limit_quote.ValidateText = t => { var v = decimal_.TryParse(t); return v != null && v >= 0m; };
 			m_tb_volume_limit_quote.Value = FishingData.VolumeLimitQ;
 			m_tb_volume_limit_quote.ValueCommitted += UpdateData;
-			m_tb_volume_limit_quote.TextChanged += UpdateUI;
+			m_tb_volume_limit_quote.ValueChanged += UpdateUI;
+
+			// Trade direction
+			m_chk_b2q.ToolTip(m_tt, "Trade Base currency to Quote currency on the target exchange");
+			m_chk_b2q.Checked = FishingData.Direction.HasFlag(ETradeDirection.B2Q);
+			m_chk_b2q.CheckedChanged += UpdateData;
+			m_chk_b2q.CheckedChanged += UpdateUI;
+
+			m_chk_q2b.ToolTip(m_tt, "Trade Quote currency to Base currency on the target exchange");
+			m_chk_q2b.Checked = FishingData.Direction.HasFlag(ETradeDirection.Q2B);
+			m_chk_q2b.CheckedChanged += UpdateData;
+			m_chk_q2b.CheckedChanged += UpdateUI;
 		}
 
 		/// <summary></summary>
@@ -219,6 +236,10 @@ namespace CoinFlip
 				// Update Max volume labels
 				m_lbl_volume_limit_base.Text = $"Max {coins[0]}:";
 				m_lbl_volume_limit_quote.Text = $"Max {coins[1]}:";
+
+				// Update trade direction
+				m_chk_b2q.Text = $"{coins[0]} → {coins[1]}";
+				m_chk_q2b.Text = $"{coins[1]} → {coins[0]}";
 			}
 			else
 			{
@@ -226,16 +247,23 @@ namespace CoinFlip
 				m_tb_balances1.Text = string.Empty;
 				m_lbl_volume_limit_base.Text  = $"Max Base:";
 				m_lbl_volume_limit_quote.Text = $"Max Quote:";
+				m_chk_b2q.Text = $"Base → Quote";
+				m_chk_q2b.Text = $"Quote → Base";
 			}
 
 			// Enable the OK button
 			m_btn_ok.Enabled =
 				m_tb_scale.Valid &&
-				m_tb_price_offset_min.Valid &&
-				m_tb_price_offset_max.Valid &&
+				m_tb_price_offset.Valid &&
 				m_tb_volume_limit_base.Valid &&
 				m_tb_volume_limit_quote.Valid &&
 				FishingData.Valid;
+			m_lbl_info.Text = Str.Build(
+				!m_tb_scale.Valid              ? "Trade scale is invalid\r\n" : string.Empty,
+				!m_tb_price_offset.Valid       ? "Price offset is invalid\r\n" : string.Empty,
+				!m_tb_volume_limit_base.Valid  ? "Base volume limit is invalid\r\n" : string.Empty,
+				!m_tb_volume_limit_quote.Valid ? "Quote volume limit is invalid\r\n" : string.Empty,
+				!FishingData.Valid             ? FishingData.ReasonInvalid : string.Empty);
 		}
 
 		/// <summary>Repopulate the fishing data from the current control values</summary>
@@ -248,6 +276,7 @@ namespace CoinFlip
 			FishingData.PriceOffset  = PriceOffset;
 			FishingData.VolumeLimitB = VolumeLimitB;
 			FishingData.VolumeLimitQ = VolumeLimitQ;
+			FishingData.Direction    = TradeDirection;
 		}
 
 		/// <summary>Update the data source for the list of trading pairs</summary>
@@ -278,14 +307,16 @@ namespace CoinFlip
 			this.m_tb_balances0 = new System.Windows.Forms.TextBox();
 			this.m_tb_balances1 = new System.Windows.Forms.TextBox();
 			this.m_table1 = new System.Windows.Forms.TableLayoutPanel();
-			this.m_tb_price_offset_min = new pr.gui.ValueBox();
+			this.m_tb_price_offset = new pr.gui.ValueBox();
 			this.m_lbl_price_offset = new System.Windows.Forms.Label();
-			this.m_tb_price_offset_max = new pr.gui.ValueBox();
 			this.m_lbl_volume_limit_base = new System.Windows.Forms.Label();
 			this.m_lbl_volume_limit_quote = new System.Windows.Forms.Label();
 			this.m_tb_volume_limit_base = new pr.gui.ValueBox();
 			this.m_tb_volume_limit_quote = new pr.gui.ValueBox();
 			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
+			this.m_chk_b2q = new System.Windows.Forms.CheckBox();
+			this.m_chk_q2b = new System.Windows.Forms.CheckBox();
+			this.m_lbl_info = new System.Windows.Forms.Label();
 			this.m_table1.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -315,7 +346,7 @@ namespace CoinFlip
 			this.m_cb_exch0.Location = new System.Drawing.Point(24, 22);
 			this.m_cb_exch0.Name = "m_cb_exch0";
 			this.m_cb_exch0.PreserveSelectionThruFocusChange = false;
-			this.m_cb_exch0.Size = new System.Drawing.Size(300, 21);
+			this.m_cb_exch0.Size = new System.Drawing.Size(294, 21);
 			this.m_cb_exch0.TabIndex = 0;
 			this.m_cb_exch0.UseValidityColours = true;
 			this.m_cb_exch0.Value = null;
@@ -324,7 +355,7 @@ namespace CoinFlip
 			// 
 			this.m_btn_ok.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this.m_btn_ok.Location = new System.Drawing.Point(168, 326);
+			this.m_btn_ok.Location = new System.Drawing.Point(162, 329);
 			this.m_btn_ok.Name = "m_btn_ok";
 			this.m_btn_ok.Size = new System.Drawing.Size(75, 23);
 			this.m_btn_ok.TabIndex = 8;
@@ -335,7 +366,7 @@ namespace CoinFlip
 			// 
 			this.m_btn_cancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_cancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-			this.m_btn_cancel.Location = new System.Drawing.Point(249, 326);
+			this.m_btn_cancel.Location = new System.Drawing.Point(243, 329);
 			this.m_btn_cancel.Name = "m_btn_cancel";
 			this.m_btn_cancel.Size = new System.Drawing.Size(75, 23);
 			this.m_btn_cancel.TabIndex = 9;
@@ -368,7 +399,7 @@ namespace CoinFlip
 			this.m_cb_exch1.Location = new System.Drawing.Point(24, 62);
 			this.m_cb_exch1.Name = "m_cb_exch1";
 			this.m_cb_exch1.PreserveSelectionThruFocusChange = false;
-			this.m_cb_exch1.Size = new System.Drawing.Size(300, 21);
+			this.m_cb_exch1.Size = new System.Drawing.Size(294, 21);
 			this.m_cb_exch1.TabIndex = 1;
 			this.m_cb_exch1.UseValidityColours = true;
 			this.m_cb_exch1.Value = null;
@@ -399,7 +430,7 @@ namespace CoinFlip
 			this.m_cb_pair.Location = new System.Drawing.Point(86, 94);
 			this.m_cb_pair.Name = "m_cb_pair";
 			this.m_cb_pair.PreserveSelectionThruFocusChange = false;
-			this.m_cb_pair.Size = new System.Drawing.Size(238, 21);
+			this.m_cb_pair.Size = new System.Drawing.Size(232, 21);
 			this.m_cb_pair.TabIndex = 2;
 			this.m_cb_pair.UseValidityColours = true;
 			this.m_cb_pair.Value = null;
@@ -407,7 +438,7 @@ namespace CoinFlip
 			// m_lbl_scale
 			// 
 			this.m_lbl_scale.AutoSize = true;
-			this.m_lbl_scale.Location = new System.Drawing.Point(12, 124);
+			this.m_lbl_scale.Location = new System.Drawing.Point(12, 156);
 			this.m_lbl_scale.Name = "m_lbl_scale";
 			this.m_lbl_scale.Size = new System.Drawing.Size(68, 13);
 			this.m_lbl_scale.TabIndex = 10;
@@ -422,9 +453,9 @@ namespace CoinFlip
 			this.m_tb_scale.ForeColor = System.Drawing.Color.Black;
 			this.m_tb_scale.ForeColorInvalid = System.Drawing.Color.Gray;
 			this.m_tb_scale.ForeColorValid = System.Drawing.Color.Black;
-			this.m_tb_scale.Location = new System.Drawing.Point(86, 121);
+			this.m_tb_scale.Location = new System.Drawing.Point(86, 153);
 			this.m_tb_scale.Name = "m_tb_scale";
-			this.m_tb_scale.Size = new System.Drawing.Size(150, 20);
+			this.m_tb_scale.Size = new System.Drawing.Size(73, 20);
 			this.m_tb_scale.TabIndex = 3;
 			this.m_tb_scale.UseValidityColours = true;
 			this.m_tb_scale.Value = null;
@@ -439,7 +470,7 @@ namespace CoinFlip
 			this.m_tb_balances0.Multiline = true;
 			this.m_tb_balances0.Name = "m_tb_balances0";
 			this.m_tb_balances0.ReadOnly = true;
-			this.m_tb_balances0.Size = new System.Drawing.Size(150, 115);
+			this.m_tb_balances0.Size = new System.Drawing.Size(147, 106);
 			this.m_tb_balances0.TabIndex = 11;
 			this.m_tb_balances0.Text = "Balances";
 			// 
@@ -449,11 +480,11 @@ namespace CoinFlip
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_tb_balances1.BorderStyle = System.Windows.Forms.BorderStyle.None;
-			this.m_tb_balances1.Location = new System.Drawing.Point(159, 3);
+			this.m_tb_balances1.Location = new System.Drawing.Point(156, 3);
 			this.m_tb_balances1.Multiline = true;
 			this.m_tb_balances1.Name = "m_tb_balances1";
 			this.m_tb_balances1.ReadOnly = true;
-			this.m_tb_balances1.Size = new System.Drawing.Size(150, 115);
+			this.m_tb_balances1.Size = new System.Drawing.Size(147, 106);
 			this.m_tb_balances1.TabIndex = 12;
 			this.m_tb_balances1.Text = "Balances";
 			// 
@@ -467,58 +498,42 @@ namespace CoinFlip
 			this.m_table1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
 			this.m_table1.Controls.Add(this.m_tb_balances0, 0, 0);
 			this.m_table1.Controls.Add(this.m_tb_balances1, 1, 0);
-			this.m_table1.Location = new System.Drawing.Point(12, 199);
+			this.m_table1.Location = new System.Drawing.Point(12, 211);
 			this.m_table1.Name = "m_table1";
 			this.m_table1.RowCount = 1;
 			this.m_table1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
-			this.m_table1.Size = new System.Drawing.Size(312, 121);
+			this.m_table1.Size = new System.Drawing.Size(306, 112);
 			this.m_table1.TabIndex = 13;
 			// 
 			// m_tb_price_offset_min
 			// 
-			this.m_tb_price_offset_min.BackColor = System.Drawing.Color.White;
-			this.m_tb_price_offset_min.BackColorInvalid = System.Drawing.Color.White;
-			this.m_tb_price_offset_min.BackColorValid = System.Drawing.Color.White;
-			this.m_tb_price_offset_min.CommitValueOnFocusLost = true;
-			this.m_tb_price_offset_min.ForeColor = System.Drawing.Color.Black;
-			this.m_tb_price_offset_min.ForeColorInvalid = System.Drawing.Color.Gray;
-			this.m_tb_price_offset_min.ForeColorValid = System.Drawing.Color.Black;
-			this.m_tb_price_offset_min.Location = new System.Drawing.Point(86, 147);
-			this.m_tb_price_offset_min.Name = "m_tb_price_offset_min";
-			this.m_tb_price_offset_min.Size = new System.Drawing.Size(75, 20);
-			this.m_tb_price_offset_min.TabIndex = 4;
-			this.m_tb_price_offset_min.UseValidityColours = true;
-			this.m_tb_price_offset_min.Value = null;
+			this.m_tb_price_offset.BackColor = System.Drawing.Color.White;
+			this.m_tb_price_offset.BackColorInvalid = System.Drawing.Color.White;
+			this.m_tb_price_offset.BackColorValid = System.Drawing.Color.White;
+			this.m_tb_price_offset.CommitValueOnFocusLost = true;
+			this.m_tb_price_offset.ForeColor = System.Drawing.Color.Black;
+			this.m_tb_price_offset.ForeColorInvalid = System.Drawing.Color.Gray;
+			this.m_tb_price_offset.ForeColorValid = System.Drawing.Color.Black;
+			this.m_tb_price_offset.Location = new System.Drawing.Point(86, 179);
+			this.m_tb_price_offset.Name = "m_tb_price_offset_min";
+			this.m_tb_price_offset.Size = new System.Drawing.Size(73, 20);
+			this.m_tb_price_offset.TabIndex = 4;
+			this.m_tb_price_offset.UseValidityColours = true;
+			this.m_tb_price_offset.Value = null;
 			// 
 			// m_lbl_price_offset
 			// 
 			this.m_lbl_price_offset.AutoSize = true;
-			this.m_lbl_price_offset.Location = new System.Drawing.Point(12, 150);
+			this.m_lbl_price_offset.Location = new System.Drawing.Point(15, 182);
 			this.m_lbl_price_offset.Name = "m_lbl_price_offset";
 			this.m_lbl_price_offset.Size = new System.Drawing.Size(65, 13);
 			this.m_lbl_price_offset.TabIndex = 15;
 			this.m_lbl_price_offset.Text = "Price Offset:";
 			// 
-			// m_tb_price_offset_max
-			// 
-			this.m_tb_price_offset_max.BackColor = System.Drawing.Color.White;
-			this.m_tb_price_offset_max.BackColorInvalid = System.Drawing.Color.White;
-			this.m_tb_price_offset_max.BackColorValid = System.Drawing.Color.White;
-			this.m_tb_price_offset_max.CommitValueOnFocusLost = true;
-			this.m_tb_price_offset_max.ForeColor = System.Drawing.Color.Black;
-			this.m_tb_price_offset_max.ForeColorInvalid = System.Drawing.Color.Gray;
-			this.m_tb_price_offset_max.ForeColorValid = System.Drawing.Color.Black;
-			this.m_tb_price_offset_max.Location = new System.Drawing.Point(167, 147);
-			this.m_tb_price_offset_max.Name = "m_tb_price_offset_max";
-			this.m_tb_price_offset_max.Size = new System.Drawing.Size(69, 20);
-			this.m_tb_price_offset_max.TabIndex = 5;
-			this.m_tb_price_offset_max.UseValidityColours = true;
-			this.m_tb_price_offset_max.Value = null;
-			// 
 			// m_lbl_volume_limit_base
 			// 
 			this.m_lbl_volume_limit_base.AutoSize = true;
-			this.m_lbl_volume_limit_base.Location = new System.Drawing.Point(20, 176);
+			this.m_lbl_volume_limit_base.Location = new System.Drawing.Point(171, 156);
 			this.m_lbl_volume_limit_base.Name = "m_lbl_volume_limit_base";
 			this.m_lbl_volume_limit_base.Size = new System.Drawing.Size(57, 13);
 			this.m_lbl_volume_limit_base.TabIndex = 17;
@@ -527,7 +542,7 @@ namespace CoinFlip
 			// m_lbl_volume_limit_quote
 			// 
 			this.m_lbl_volume_limit_quote.AutoSize = true;
-			this.m_lbl_volume_limit_quote.Location = new System.Drawing.Point(167, 176);
+			this.m_lbl_volume_limit_quote.Location = new System.Drawing.Point(166, 182);
 			this.m_lbl_volume_limit_quote.Name = "m_lbl_volume_limit_quote";
 			this.m_lbl_volume_limit_quote.Size = new System.Drawing.Size(62, 13);
 			this.m_lbl_volume_limit_quote.TabIndex = 18;
@@ -542,7 +557,7 @@ namespace CoinFlip
 			this.m_tb_volume_limit_base.ForeColor = System.Drawing.Color.Black;
 			this.m_tb_volume_limit_base.ForeColorInvalid = System.Drawing.Color.Gray;
 			this.m_tb_volume_limit_base.ForeColorValid = System.Drawing.Color.Black;
-			this.m_tb_volume_limit_base.Location = new System.Drawing.Point(86, 173);
+			this.m_tb_volume_limit_base.Location = new System.Drawing.Point(230, 153);
 			this.m_tb_volume_limit_base.Name = "m_tb_volume_limit_base";
 			this.m_tb_volume_limit_base.Size = new System.Drawing.Size(75, 20);
 			this.m_tb_volume_limit_base.TabIndex = 6;
@@ -558,12 +573,43 @@ namespace CoinFlip
 			this.m_tb_volume_limit_quote.ForeColor = System.Drawing.Color.Black;
 			this.m_tb_volume_limit_quote.ForeColorInvalid = System.Drawing.Color.Gray;
 			this.m_tb_volume_limit_quote.ForeColorValid = System.Drawing.Color.Black;
-			this.m_tb_volume_limit_quote.Location = new System.Drawing.Point(235, 173);
+			this.m_tb_volume_limit_quote.Location = new System.Drawing.Point(230, 179);
 			this.m_tb_volume_limit_quote.Name = "m_tb_volume_limit_quote";
 			this.m_tb_volume_limit_quote.Size = new System.Drawing.Size(75, 20);
 			this.m_tb_volume_limit_quote.TabIndex = 7;
 			this.m_tb_volume_limit_quote.UseValidityColours = true;
 			this.m_tb_volume_limit_quote.Value = null;
+			// 
+			// m_chk_b2q
+			// 
+			this.m_chk_b2q.AutoSize = true;
+			this.m_chk_b2q.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
+			this.m_chk_b2q.Location = new System.Drawing.Point(65, 127);
+			this.m_chk_b2q.Name = "m_chk_b2q";
+			this.m_chk_b2q.Size = new System.Drawing.Size(94, 17);
+			this.m_chk_b2q.TabIndex = 19;
+			this.m_chk_b2q.Text = "Base to Quote";
+			this.m_chk_b2q.UseVisualStyleBackColor = true;
+			// 
+			// m_chk_q2b
+			// 
+			this.m_chk_q2b.AutoSize = true;
+			this.m_chk_q2b.Location = new System.Drawing.Point(169, 127);
+			this.m_chk_q2b.Name = "m_chk_q2b";
+			this.m_chk_q2b.Size = new System.Drawing.Size(94, 17);
+			this.m_chk_q2b.TabIndex = 20;
+			this.m_chk_q2b.Text = "Quote to Base";
+			this.m_chk_q2b.UseVisualStyleBackColor = true;
+			// 
+			// m_lbl_info
+			// 
+			this.m_lbl_info.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_lbl_info.Location = new System.Drawing.Point(12, 329);
+			this.m_lbl_info.Name = "m_lbl_info";
+			this.m_lbl_info.Size = new System.Drawing.Size(147, 26);
+			this.m_lbl_info.TabIndex = 21;
+			this.m_lbl_info.Text = "Info";
 			// 
 			// EditFishingUI
 			// 
@@ -571,13 +617,15 @@ namespace CoinFlip
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.CancelButton = this.m_btn_cancel;
-			this.ClientSize = new System.Drawing.Size(336, 361);
+			this.ClientSize = new System.Drawing.Size(330, 364);
+			this.Controls.Add(this.m_lbl_info);
+			this.Controls.Add(this.m_chk_q2b);
+			this.Controls.Add(this.m_chk_b2q);
 			this.Controls.Add(this.m_tb_volume_limit_quote);
 			this.Controls.Add(this.m_tb_volume_limit_base);
 			this.Controls.Add(this.m_lbl_volume_limit_quote);
 			this.Controls.Add(this.m_lbl_volume_limit_base);
-			this.Controls.Add(this.m_tb_price_offset_max);
-			this.Controls.Add(this.m_tb_price_offset_min);
+			this.Controls.Add(this.m_tb_price_offset);
 			this.Controls.Add(this.m_lbl_price_offset);
 			this.Controls.Add(this.m_table1);
 			this.Controls.Add(this.m_tb_scale);

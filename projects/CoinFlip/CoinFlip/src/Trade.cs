@@ -47,7 +47,7 @@ namespace CoinFlip
 		public Unit<decimal> Price { get; set; }
 		public Unit<decimal> PriceInv
 		{
-			get { return Price != 0m._(Price) ? (1m / Price) : (0m._(VolumeOut) / 1m._(VolumeIn)); }
+			get { return Price != 0m._(Price) ? (1m / Price) : (0m._(VolumeIn) / 1m._(VolumeOut)); }
 		}
 		public Unit<decimal> PriceQ2B
 		{
@@ -73,7 +73,7 @@ namespace CoinFlip
 			{
 				var sym0 = TradeType == ETradeType.B2Q ? Pair.Base : Pair.Quote;
 				var sym1 = TradeType == ETradeType.B2Q ? Pair.Quote : Pair.Base;
-				return $"{VolumeIn.ToString("G6")} {sym0} → {VolumeOut.ToString("G6")} {sym1} @ {Price.ToString("G6")}"; }
+				return $"{VolumeIn.ToString("G6")} {sym0} → {VolumeOut.ToString("G6")} {sym1} @ {PriceQ2B.ToString("G6")}"; }
 		}
 
 		/// <summary>Check whether the given trade is an allowed trade</summary>
@@ -82,17 +82,31 @@ namespace CoinFlip
 			var result = EValidation.Valid;
 
 			// Check that the trade volumes
-			var rangeI = TradeType == ETradeType.B2Q ? Pair.VolumeRangeBase  : Pair.VolumeRangeQuote;
-			var rangeO = TradeType == ETradeType.B2Q ? Pair.VolumeRangeQuote : Pair.VolumeRangeBase;
-			if (!rangeI.Contains(VolumeIn))
-				result |= EValidation.VolumeInOutOfRange;
-			if (!rangeO.Contains(VolumeOut))
-				result |= EValidation.VolumeOutOutOfRange;
+			if (VolumeIn <= 0m._(VolumeIn))
+			{
+				result |= EValidation.VolumeInIsInvalid;
+			}
+			else
+			{
+				var rangeI = TradeType == ETradeType.B2Q ? Pair.VolumeRangeBase  : Pair.VolumeRangeQuote;
+				var rangeO = TradeType == ETradeType.B2Q ? Pair.VolumeRangeQuote : Pair.VolumeRangeBase;
+				if (!rangeI.Contains(VolumeIn))
+					result |= EValidation.VolumeInOutOfRange;
+				if (!rangeO.Contains(VolumeOut))
+					result |= EValidation.VolumeOutOutOfRange;
+			}
 
 			// Check the price limits.
-			var price = TradeType == ETradeType.B2Q ? Price : 1m / Price;
-			if (!Pair.PriceRange.Contains(price))
-				result |= EValidation.PriceOutOfRange;
+			if (Price == 0m._(Price))
+			{
+				result |= EValidation.PriceIsInvalid;
+			}
+			else
+			{
+				var price = TradeType == ETradeType.B2Q ? Price : 1m / Price;
+				if (!Pair.PriceRange.Contains(price))
+					result |= EValidation.PriceOutOfRange;
+			}
 
 			// Check the balances (allowing for fees)
 			var bal = TradeType == ETradeType.B2Q ? Pair.Base.Balance.Available : Pair.Quote.Balance.Available;
@@ -115,6 +129,8 @@ namespace CoinFlip
 			VolumeOutOutOfRange = 1 << 1,
 			PriceOutOfRange     = 1 << 2,
 			InsufficientBalance = 1 << 3,
+			PriceIsInvalid      = 1 << 4,
+			VolumeInIsInvalid   = 1 << 5,
 		}
 	}
 
@@ -131,7 +147,7 @@ namespace CoinFlip
 		public TradeResult(ulong? order_id, IEnumerable<ulong> trade_ids)
 		{
 			OrderId = order_id;
-			TradeIds = trade_ids?.ToList() ?? new List<ulong>();
+			TradeIds = trade_ids?.Cast<ulong>().ToList() ?? new List<ulong>();
 		}
 
 		/// <summary>The ID of an order that has been added to the order book of a pair</summary>

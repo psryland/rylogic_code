@@ -52,7 +52,6 @@ namespace pr.maths
 		public static double    Sign(double x)                                  { return SignD(x >= 0.0); }
 		public static int       OneIfZero(int x)                                { return x != 0 ? x : 1; }
 		public static float     OneIfZero(float x)                              { return x != 0f ? x : 1f; }
-		public static double    Abs(double d)                                   { return Math.Abs(d); }
 		public static float     Sqr(float x)                                    { return x * x; }
 		public static double    Sqr(double x)                                   { return x * x; }
 		public static float     Sqrt(float x)                                   { return (float)Sqrt((double)x); }
@@ -119,6 +118,12 @@ namespace pr.maths
 
 			// Test relative error as a fraction of the largest value
 			return Math.Abs(a - b) < tol * Math.Max(Math.Abs(a), Math.Abs(b));
+		}
+
+		/// <summary>Absolute value of 'a'</summary>
+		public static T Abs<T>(T a)
+		{
+			return Operators<T>.GreaterEql(a, default(T)) ? a : Operators<T>.Neg(a);
 		}
 
 		/// <summary>Return 'a/b', or 'def' if 'b' is zero</summary>

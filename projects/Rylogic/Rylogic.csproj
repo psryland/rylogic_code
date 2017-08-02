@@ -457,6 +457,7 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="util\Dynamic.cs" />
+    <Compile Include="util\fnv_hash.cs" />
     <Compile Include="util\generic_operators.cs" />
     <Compile Include="util\LoadSaveTag.cs" />
     <Compile Include="util\sherlock.cs" />

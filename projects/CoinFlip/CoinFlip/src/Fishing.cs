@@ -2,11 +2,15 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Drawing;
 using System.Linq;
+using System.Media;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using pr.common;
 using pr.extn;
+using pr.gui;
 using pr.maths;
 using pr.util;
 
@@ -21,10 +25,14 @@ namespace CoinFlip
 		{
 			Model = model;
 			Settings = data;
+			Log = new Logger(string.Empty, new LogToFile(Util.ResolveUserDocumentsPath("Rylogic", "CoinFlip", $"log_{data.Name}.txt"), append:false), Model.Log);
+			LogUI = new LogView(this, Model.UI);
 		}
 		public virtual void Dispose()
 		{
 			Debug.Assert(!Active, "Main loop must be shutdown before Disposing");
+			Log = null;
+			LogUI = null;
 			Model = null;
 		}
 
@@ -59,7 +67,7 @@ namespace CoinFlip
 					Pair0.Quote.Symbol != Pair1.Quote.Symbol)
 					throw new Exception("Pairs must be for the same currencies but on different exchanges");
 
-				Model.Log.Write(ELogLevel.Info, $"Fishing started - {Pair0.Name} on {Pair1.Exchange.Name}");
+				Log.Write(ELogLevel.Info, $"Fishing started - {Pair0.Name} on {Pair1.Exchange.Name}");
 
 				// Infinite loop till Shutdown called
 				for (;;)
@@ -77,7 +85,7 @@ namespace CoinFlip
 					{
 						if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
 						if (ex is OperationCanceledException) { break; }
-						else Model.Log.Write(ELogLevel.Error, ex, $"Fishing instance {Exch0.Name} -> {Exch1.Name} update failed.\r\n{ex.StackTrace}");
+						else Log.Write(ELogLevel.Error, ex, $"Fishing instance {Exch0.Name} -> {Exch1.Name} update failed.\r\n{ex.StackTrace}");
 					}
 				}
 
@@ -92,14 +100,27 @@ namespace CoinFlip
 				{
 					if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
 					if (ex is OperationCanceledException) {}
-					else Model.Log.Write(ELogLevel.Error, ex, $"Fishing instance {Exch0.Name} -> {Exch1.Name} ClosePositions failed.\r\n{ex.StackTrace}");
+					else Log.Write(ELogLevel.Error, ex, $"Fishing instance {Exch0.Name} -> {Exch1.Name} ClosePositions failed.\r\n{ex.StackTrace}");
 				}
 
-				Model.Log.Write(ELogLevel.Info, $"Fishing stopped - {Pair0.Name} on {Pair1.Exchange.Name}");
+				Log.Write(ELogLevel.Info, $"Fishing stopped - {Pair0.Name} on {Pair1.Exchange.Name}");
 			}
 		}
 		private CancellationTokenSource m_main_loop_shutdown;
 		private int m_active;
+
+		/// <summary>A log for this fishing instance</summary>
+		private Logger Log
+		{
+			[DebuggerStepThrough] get { return m_log; }
+			set
+			{
+				if (m_log == value) return;
+				Util.Dispose(ref m_log);
+				m_log = value;
+			}
+		}
+		private Logger m_log;
 
 		/// <summary>Enable/Disable fishing using this instance</summary>
 		public bool Active
@@ -162,6 +183,19 @@ namespace CoinFlip
 		/// <summary>The trading pair that we have an order waiting to be taken on</summary>
 		public TradePair Pair1 { [DebuggerStepThrough] get; private set; }
 
+		/// <summary>A window showing the log for this fishing instance only</summary>
+		public LogView LogUI
+		{
+			get { return m_log_ui; }
+			private set
+			{
+				if (m_log_ui == value) return;
+				Util.Dispose(ref m_log_ui);
+				m_log_ui = value;
+			}
+		}
+		private LogView m_log_ui;
+
 		/// <summary>The order held on the target exchange to trade Base to Quote</summary>
 		private FishingTrade BaitB2Q { get; set; }
 
@@ -183,7 +217,10 @@ namespace CoinFlip
 				{
 					// Create the bait order
 					var order_result = await trade1.CreateOrder();
-					Model.Log.Write(ELogLevel.Info, $"{trade1.TradeType} bait order (id={order_result.OrderId}) created.   {trade1.PriceQ2B.ToString("G6")} vs ref: {trade0.PriceQ2B.ToString("G6")} {Pair1.RateUnits}");
+					Log.Write(ELogLevel.Info,
+						$"Bait order (id={order_result.OrderId}) on {Exch1.Name} created. ({trade1.Description}) " +
+						$"ref={trade0.PriceQ2B.ToString("G6")} {Pair1.RateUnits} - " +
+						$"{(100m * Math.Abs(1m - trade1.PriceQ2B/trade0.PriceQ2B)):G4}%");
 
 					// Create the fishing trade
 					return new FishingTrade(this, order_result, trade0, trade1);
@@ -192,10 +229,10 @@ namespace CoinFlip
 				{
 					if (!suppress_not_created)
 					{
-						var msg = $"{trade1.TradeType} bait order not created. ";
-						if (validate0 != Trade.EValidation.Valid) msg += $"Ref Trade: {trade0.Description} ({validate0}). ";
-						if (validate1 != Trade.EValidation.Valid) msg += $"Bait Trade: {trade1.Description} ({validate1}). ";
-						Model.Log.Write(ELogLevel.Warn, msg);
+						var msg = $"Bait order on {Exch1.Name} not created for {trade1.TradeType}. ";
+						if (validate1 != Trade.EValidation.Valid) msg += $"\n  Bait Trade: {trade1.Description} ({validate1}). ";
+						if (validate0 != Trade.EValidation.Valid) msg += $"\n   Ref Trade: {trade0.Description} ({validate0}). ";
+						Log.Write(ELogLevel.Warn, msg);
 					}
 					return null;
 				}
@@ -221,25 +258,32 @@ namespace CoinFlip
 				// Create a bait order for B -> Q of VolumeB @ P0 * 1.05 on Exch1
 				// When bait is taken
 				// Create a match order for Q -> B of the volume taken @ P0 on Exch0
+				if (Settings.Direction.HasFlag(ETradeDirection.B2Q) &&
+					Pair0.Q2B.Orders.Count != 0 &&
+					Pair1.B2Q.Orders.Count != 0)
+				{
+					// Determine the current price on Exch0 for converting Quote to Base
+					var volumeQ = Maths.Min(Settings.Scale * Pair0.Quote.Balance.Available / (1.000001m + Pair0.Fee), Settings.VolumeLimitQ._(Pair0.Quote));
+					var trade = Pair0.QuoteToBase(volumeQ);
 
-				// Determine the current price on Exch0 for converting Quote to Base
-				var volumeQ = Maths.Min(Settings.Scale * Pair0.Quote.Balance.Available / (1.000001m + Pair0.Fee), Settings.VolumeLimitQ._(Pair0.Quote));
-				var trade = Pair0.QuoteToBase(volumeQ);
+					// This tells us the equivalent volume of base currency we would get on Exch0.
+					// Choose the volume of base currency to trade as the minimum of this and our available on Exch1
+					var volumeB = Maths.Min(Settings.Scale * Pair1.Base.Balance.Available / (1.000001m + Pair1.Fee), Settings.VolumeLimitB._(Pair1.Base));
+					var volume = Maths.Min(trade.VolumeOut, volumeB);
 
-				// This tells us the equivalent volume of base currency we would get on Exch0.
-				// Choose the volume of base currency to trade as the minimum of this and our available on Exch1
-				var volumeB = Maths.Min(Settings.Scale * Pair1.Base.Balance.Available / (1.000001m + Pair1.Fee), Settings.VolumeLimitB._(Pair1.Base));
-				var volume = Maths.Min(trade.VolumeOut, volumeB);
+					// Find the price on Exch1 for trading Base to Quote.
+					// If the price is within the price offset range, use this price, otherwise use the middle of the offset range
+					var current = Pair1.BaseToQuote(volume);
+					var min = trade.PriceInv * (1m + Settings.PriceOffset);
+					var price = current.Price > min ? current.Price : (min * 1.001m);
 
-				// Set the bait trade price
-				var price = trade.PriceInv * (decimal)(1.0 + Settings.PriceOffset.Mid);
+					// Create trade objects to represent the trades we intend to make
+					var trade0 = new Trade(ETradeType.Q2B, Pair0, volume*trade.PriceInv, volume, trade.Price);
+					var trade1 = new Trade(ETradeType.B2Q, Pair1, volume, volume*price, price);
 
-				// Create trade objects to represent the trades we intend to make
-				var trade0 = new Trade(ETradeType.Q2B, Pair0, volume*trade.PriceInv, volume, trade.Price);
-				var trade1 = new Trade(ETradeType.B2Q, Pair1, volume, volume*price, price);
-
-				BaitB2Q = await CreateBaitOrder(trade0, trade1, m_suppress_not_created_b2q);
-				m_suppress_not_created_b2q = BaitB2Q == null;
+					BaitB2Q = await CreateBaitOrder(trade0, trade1, m_suppress_not_created_b2q);
+					m_suppress_not_created_b2q = BaitB2Q == null;
+				}
 			}
 			else
 			{
@@ -257,25 +301,32 @@ namespace CoinFlip
 				//  on Exch1:  Q -> B @ P1  <--- this is out bait trade
 				//  on Exch0:  B -> Q @ P0  <--- this is the trade we'll use to match
 				//      need:  P1 > P0  => P1 = P0 * 1.05
+				if (Settings.Direction.HasFlag(ETradeDirection.Q2B) &&
+					Pair0.B2Q.Orders.Count != 0 &&
+					Pair1.Q2B.Orders.Count != 0)
+				{
+					// Determine the current price on Exch0 for converting Base to Quote
+					var volumeB = Maths.Min(Settings.Scale * Pair0.Base.Balance.Available / (1.000001m + Pair0.Fee), Settings.VolumeLimitB._(Pair0.Base));
+					var trade = Pair0.BaseToQuote(volumeB);
 
-				// Determine the current price on Exch0 for converting Base to Quote
-				var volumeB = Maths.Min(Settings.Scale * Pair0.Base.Balance.Available / (1.000001m + Pair0.Fee), Settings.VolumeLimitB._(Pair0.Base));
-				var trade = Pair0.BaseToQuote(volumeB);
+					// This tells us the equivalent volume of quote currency we would get on Exch0.
+					// Choose the volume of quote currency to trade as the minimum of this and our available on Exch1
+					var volumeQ = Maths.Min(Settings.Scale * Pair1.Quote.Balance.Available / (1.000001m + Pair1.Fee), Settings.VolumeLimitQ._(Pair1.Quote));
+					var volume = Maths.Min(trade.VolumeOut, volumeQ);
 
-				// This tells us the equivalent volume of quote currency we would get on Exch0.
-				// Choose the volume of quote currency to trade as the minimum of this and our available on Exch1
-				var volumeQ = Maths.Min(Settings.Scale * Pair1.Quote.Balance.Available / (1.000001m + Pair1.Fee), Settings.VolumeLimitQ._(Pair1.Quote));
-				var volume = Maths.Min(trade.VolumeOut, volumeQ);
+					// Find the price on Exch1 for trading Quote to Base.
+					// If the price is within the price offset range, use this price, otherwise use the middle of the offset range
+					var current = Pair1.QuoteToBase(volume);
+					var min = trade.PriceInv * (1m + Settings.PriceOffset);
+					var price = current.Price > min ? current.Price : (min * 1.001m);
 
-				// Set the bait trade price
-				var price = trade.PriceInv * (decimal)(1.0 + Settings.PriceOffset.Mid);
+					// Create trade objects to represent the trades we intend to make
+					var trade0 = new Trade(ETradeType.B2Q, Pair0, volume*trade.PriceInv, volume, trade.Price);
+					var trade1 = new Trade(ETradeType.Q2B, Pair1, volume, volume*price, price);
 
-				// Create trade objects to represent the trades we intend to make
-				var trade0 = new Trade(ETradeType.B2Q, Pair0, volume*trade.PriceInv, volume, trade.Price);
-				var trade1 = new Trade(ETradeType.Q2B, Pair1, volume, volume*price, price);
-
-				BaitQ2B = await CreateBaitOrder(trade0, trade1, m_suppress_not_created_q2b);
-				m_suppress_not_created_q2b = BaitQ2B == null;
+					BaitQ2B = await CreateBaitOrder(trade0, trade1, m_suppress_not_created_q2b);
+					m_suppress_not_created_q2b = BaitQ2B == null;
+				}
 			}
 			else
 			{
@@ -292,54 +343,61 @@ namespace CoinFlip
 		/// <summary>Manages a fishing trade in a single direction</summary>
 		private class FishingTrade :IDisposable
 		{
-			private readonly Fishing m_fishing;
-			public FishingTrade(Fishing fishing, TradeResult order_result, Trade trade0, Trade trade1)
+			private readonly Fishing m_fisher;
+			public FishingTrade(Fishing fisher, TradeResult order_result, Trade trade0, Trade trade1)
 			{
-				m_fishing = fishing;
+				m_fisher = fisher;
 				BaitId = order_result.OrderId ?? 0;
 				Trade0 = trade0;
 				Trade1 = trade1;
-				Result = order_result.OrderId != null ? EResult.Fishing : EResult.Taken;
+				MatchVolumeFrac = 0m;
+				Result = order_result.OrderId != null ? EResult.Fishing : EResult.Complete;
 			}
 			public void Dispose()
 			{
-				Debug.Assert(Result == EResult.Cancelled || Result == EResult.Profit);
+				Debug.Assert(Done);
 			}
 	
 			/// <summary>App logic</summary>
 			public Model Model
 			{
-				get { return m_fishing.Model; }
+				get { return m_fisher.Model; }
+			}
+
+			/// <summary>The logger instance to write to</summary>
+			private Logger Log
+			{
+				[DebuggerStepThrough] get { return m_fisher.Log; }
 			}
 
 			/// <summary>The pair on Exch0</summary>
 			public TradePair Pair0
 			{
-				get { return m_fishing.Pair0; }
+				get { return m_fisher.Pair0; }
 			}
 
 			/// <summary>The pair on Exch1</summary>
 			public TradePair Pair1
 			{
-				get { return m_fishing.Pair1; }
+				get { return m_fisher.Pair1; }
 			}
 
 			/// <summary>The reference exchange</summary>
 			public Exchange Exch0
 			{
-				get { return m_fishing.Exch0; }
+				get { return m_fisher.Exch0; }
 			}
 
 			/// <summary>The target exchange</summary>
 			public Exchange Exch1
 			{
-				get { return m_fishing.Exch1; }
+				get { return m_fisher.Exch1; }
 			}
 
 			/// <summary>The offset from the reference price to the bait price</summary>
-			public RangeF PriceOffset
+			public decimal PriceOffset
 			{
-				get { return m_fishing.Settings.PriceOffset; }
+				get { return m_fisher.Settings.PriceOffset; }
 			}
 
 			/// <summary>The trade to make on Exch0 when the bait trade is filled</summary>
@@ -354,64 +412,53 @@ namespace CoinFlip
 			/// <summary>The order if of the matched trade on 'Exch0' once the bait has been taken</summary>
 			public ulong? MatchId { get; private set; }
 
+			/// <summary>The fraction of Trade1 that has been completed. This is needed to match partially completed trades</summary>
+			private decimal MatchVolumeFrac { get; set; }
+
 			/// <summary>The result of fishing</summary>
 			public EResult Result { get; private set; }
 
 			/// <summary>True when there's no point in calling Update any more</summary>
 			public bool Done
 			{
-				get { return Result == EResult.Cancelled || Result == EResult.Profit; }
+				get { return Result == EResult.Complete; }
 			}
 
 			/// <summary>Cancel this fishing trade</summary>
 			public async Task Cancel()
 			{
 				if (Result == EResult.Fishing)
+					Result = EResult.Cancel;
+
+				try { await Update(); }
+				catch (Exception ex)
 				{
-					try
-					{
-						var pos = Exch1.Positions[BaitId];
-						if (pos != null)
-						{
-							Model.Log.Write(ELogLevel.Info, $"Cancelling bait order (id={BaitId}) {Trade1.CoinIn} -> {Trade1.CoinOut}.");
-							await Exch1.CancelOrder(Pair1, BaitId);
-						}
-						else
-						{
-							Model.Log.Write(ELogLevel.Info, $"Cancelling bait order (id={BaitId}) {Trade1.CoinIn} -> {Trade1.CoinOut}. - Skipped. Order does not exist");
-						}
-					}
-					catch (Exception ex)
-					{
-						if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
-						if (ex is OperationCanceledException) { }
-						else Model.Log.Write(ELogLevel.Error, ex, $"Failed to cancel bait order (id={BaitId})");
-					}
-					Result = EResult.Cancelled;
+					if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
+					if (ex is OperationCanceledException) { }
+					else Log.Write(ELogLevel.Error, ex, $"Failed to cancel bait order (id={BaitId})");
 				}
 			}
-
-			bool AssumeGoneMeansFilled = true;
 
 			/// <summary>Check the bait</summary>
 			public async Task Update()
 			{
-				for (var done = false; !done;)
+				// State machine - gone round till the state stops changing
+				for (var result = EResult.Unknown; Result != result;)
 				{
-					done = true;
+					result = Result;
 					switch (Result)
 					{
 					case EResult.Fishing:
 						{
-							// Check that the position still exists.
-							// If the position no longer exists, check our
-							// trade history to confirm the trade has been made.
+							// Check that the position still exists, if not, then it may have been filled.
 							var pos = Exch1.Positions[BaitId];
 							if (pos == null)
 							{
+								// Update the volume to be matched (only if the trade was filled)
 								if (AssumeGoneMeansFilled)
 								{
-									Result = EResult.Taken;
+									// Trade has gone, assume it was filled
+									MatchVolumeFrac = 1m;
 								}
 								else
 								{
@@ -420,64 +467,87 @@ namespace CoinFlip
 
 									// If there is a historic trade matching the bait order then the order has been filled.
 									var his = Exch1.History[BaitId];
-									Result = his != null ? EResult.Taken : EResult.Cancelled;
-								}
-							
-								// If the order was filled, place the matching order on 'Exch0'
-								if (Result == EResult.Taken)
-								{
-									Model.Log.Write(ELogLevel.Warn, $"{Trade1.TradeType} bait order (id={BaitId}) filled at {Trade1.PriceQ2B.ToString("G6")}");
-
-									// Submit the matching order
-									var match_result = await Trade0.CreateOrder();
-									MatchId = match_result.OrderId ?? 0;
-									if (match_result.OrderId != null)
-									{
-										Model.Log.Write(ELogLevel.Info, $"{Trade0.TradeType} match order (id={MatchId}) created at {Trade0.PriceQ2B}");
-									}
-									else
-									{
-										Model.Log.Write(ELogLevel.Info, $"{Trade0.TradeType} match order (id={MatchId}) created and filled at {Trade0.PriceQ2B.ToString("G6")}. !Profit!");
-										Result = EResult.Profit;
-									}
+									if (his != null)
+										MatchVolumeFrac = 1m;
 								}
 
-								// Go round again
-								done = false;
+								// The bait trade may have just been cancelled externally
+								if (MatchVolumeFrac != 0m)
+									Log.Write(ELogLevel.Warn, $"Bait order (id={BaitId}) on {Exch1.Name} filled. ({Trade1.Description})");
+
+								Result = EResult.Taken;
 							}
 
 							// If the position does still exist, check that it's within
 							// the range of the reference price plus the offset.
 							else
 							{
+								// Update the volume to be matched
+								MatchVolumeFrac = 1m - (pos.Remaining / pos.VolumeBase);
+
 								// Get the current price for trading on Exch0
 								Trade0 = Trade0.TradeType == ETradeType.B2Q
 									? Pair0.BaseToQuote(Trade0.VolumeIn)
 									: Pair0.QuoteToBase(Trade0.VolumeIn);
 
-								// If the bait trade price is outside the allowed range
-								// cancel it, and create it again at the new price.
-								var min = Trade0.PriceInv * (decimal)(1.0 + PriceOffset.Beg);
-								var max = Trade0.PriceInv * (decimal)(1.0 + PriceOffset.End);
-								min = Trade0.TradeType == ETradeType.B2Q ? 1m/min : min;
-								max = Trade0.TradeType == ETradeType.B2Q ? 1m/max : max;
-								if (!pos.Price.Within(min, max))
+								// If the bait trade price is too close to the reference price, cancel it and create it again
+								var ratio = Math.Abs(Trade0.PriceQ2B - pos.Price) / (decimal)Trade0.PriceQ2B;
+								if (ratio <= PriceOffset)
 								{
-									Model.Log.Write(ELogLevel.Info, $"{Trade1.TradeType} bait order (id={BaitId}) price no longer within allowed reference price range: {pos.Price.ToString("G6")} vs [{min} , {max}]");
-
-									// Cancel the bait trade
-									await Exch1.CancelOrder(Pair1, BaitId);
-									Result = EResult.Cancelled;
-									BaitId = 0;
-
-									// Go round again
-									done = false;
+									Log.Write(ELogLevel.Info, $"Bait order (id={BaitId}) on {Exch1.Name} price is too close to the reference price: {pos.Price.ToString("G6")} vs {Trade0.PriceQ2B.ToString("G6")}");
+									Result = EResult.Taken;
 								}
 							}
 
 							break;
 						}
 					case EResult.Taken:
+					case EResult.Cancel:
+						{
+							// Close the bait trade (if it still exists)
+							var pos = Exch1.Positions[BaitId];
+							if (pos != null)
+							{
+								await Exch1.CancelOrder(Pair1, BaitId);
+								Log.Write(ELogLevel.Info, $"Bait order (id={BaitId}) on {Exch1.Name} cancelled. ({Trade1.Description})");
+								BaitId = 0;
+							}
+
+							if (MatchVolumeFrac == 0m)
+							{
+								// No partial trade to match
+								Result = EResult.Complete;
+							}
+							else
+							{
+								// Adjust the matching trade by the volume fraction
+								Trade0 = MatchVolumeFrac == 1m ? Trade0 : new Trade(Trade0, MatchVolumeFrac);
+
+								// Match any partial trade
+								var validation0 = Trade0.Validate();
+								if (validation0 == Trade.EValidation.Valid)
+								{
+									var match_result = await Trade0.CreateOrder();
+									MatchId = match_result.OrderId ?? 0;
+									Log.Write(ELogLevel.Info, $"Match order (id={MatchId}) on {Exch0.Name} created. Volume match={(100*MatchVolumeFrac).ToString("G5")}%. ({Trade0.Description})");
+
+									// The matched order may be filled immediately.
+									// If we're cancelling, set-and-forget the matched order.
+									Result =
+										Result == EResult.Cancel ? EResult.Complete :
+										match_result.OrderId != null ? EResult.Matched :
+										EResult.Profit;
+								}
+								else
+								{
+									Log.Write(ELogLevel.Info, $"Match order on {Exch0.Name} ignored because invalid ({validation0}). Volume match={(100*MatchVolumeFrac).ToString("G5")}%. ({Trade0.Description})");
+									Result = EResult.Complete;
+								}
+							}
+
+							break;
+						}
+					case EResult.Matched:
 						{
 							// The bait trade was filled and a matching trade has been created.
 							// Wait for the matching trade to be filled
@@ -486,6 +556,7 @@ namespace CoinFlip
 							{
 								if (AssumeGoneMeansFilled)
 								{
+									// Trade has gone, assume it was filled
 									Result = EResult.Profit;
 								}
 								else
@@ -495,21 +566,28 @@ namespace CoinFlip
 
 									// If there is a historic trade matching the match order then the order has been filled.
 									var his = Exch1.History[MatchId.Value];
-									Result = his != null ? EResult.Profit : EResult.Cancelled;
-								}
 
-								if (Result == EResult.Profit)
-								{
-									Model.Log.Write(ELogLevel.Warn, $"{Trade0.TradeType} matched order filled at {Trade0.PriceQ2B}. !Profit!");
+									// The trade was taken if we can see it in the history
+									Result = his != null ? EResult.Profit : EResult.Complete;
 								}
-
-								// Go round again
-								done = false;
 							}
 							break;
 						}
 					case EResult.Profit:
-					case EResult.Cancelled:
+						{
+							// Calculate the nett profit
+							var a = Trade1.VolumeOut - Trade0.VolumeIn;
+							var b = Trade0.VolumeOut - Trade1.VolumeIn;
+							Log.Write(ELogLevel.Warn,
+								$"Matched order (id={MatchId}) on {Exch0.Name} filled. ({Trade0.Description}).   !Profit!\n"+
+								$"   Nett {Trade0.CoinIn}: {a.ToString("G6")}\n"+
+								$"   Nett {Trade1.CoinIn}: {b.ToString("G6")}\n");
+
+							Res.Coins.Play();
+							Result = EResult.Complete;
+							break;
+						}
+					case EResult.Complete:
 						{
 							// Do nothing
 							break;
@@ -517,21 +595,57 @@ namespace CoinFlip
 					}
 				}
 			}
+			bool AssumeGoneMeansFilled = true;
 
 			/// <summary>Watched trade result</summary>
 			public enum EResult
 			{
+				Unknown,
+
 				/// <summary>Still waiting for the bait trade to be filled</summary>
 				Fishing,
 
-				/// <summary>The bait trade has been filled and the matched trade has been placed</summary>
+				/// <summary>Close the bait position, matching any partial trade that may have occurred</summary>
 				Taken,
 
-				/// <summary>The bait trade was cancelled. No matched trade placed</summary>
-				Cancelled,
+				/// <summary>Close the bait position, matching any partial trade that may have occurred but skip to complete without monitoring the matched position</summary>
+				Cancel,
+
+				/// <summary>The matched trade has been placed, and we're waiting for it to be filled</summary>
+				Matched,
 
 				/// <summary>The bait trade was taken, and the matched trade has been filled resulting in profit!</summary>
 				Profit,
+
+				/// <summary>Fish landed or trade cancelled.</summary>
+				Complete,
+			}
+		}
+
+		/// <summary>Log view UI</summary>
+		public class LogView :ToolForm
+		{
+			private readonly Fishing m_fisher;
+			private LogUI m_log_ui;
+
+			public LogView(Fishing fisher, Control parent)
+				:base(parent, EPin.Centre)
+			{
+				m_fisher = fisher;
+				Size = new Size(600, 300);
+				Icon = (parent as Form)?.Icon;
+				Text = m_fisher.Settings.Name;
+				FormBorderStyle = FormBorderStyle.Sizable;
+				StartPosition = FormStartPosition.CenterParent;
+				HideOnClose = false;
+
+				m_log_ui = Controls.Add2(new LogUI(m_fisher.Settings.Name, m_fisher.Settings.Name)
+				{
+					Dock = DockStyle.Fill,
+					LogFilepath = (m_fisher.Log.LogCB as LogToFile).Filepath,
+					LogEntryPattern = Misc.LogEntryPattern,
+				});
+				m_log_ui.Highlighting.AddRange(Misc.LogHighlighting);
 			}
 		}
 	}
