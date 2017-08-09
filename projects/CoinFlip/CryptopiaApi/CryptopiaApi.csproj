@@ -98,6 +98,7 @@
     <Compile Include="Implementation\PrivateApiCall.cs" />
     <Compile Include="Implementation\PublicApiCall.cs" />
     <Compile Include="Models\BalanceResult.cs" />
+    <Compile Include="Models\CurrencyPair.cs" />
     <Compile Include="Models\CurrencyResult.cs" />
     <Compile Include="Models\MarketHistoryResult.cs" />
     <Compile Include="Models\MarketOrderGroupsResult.cs" />

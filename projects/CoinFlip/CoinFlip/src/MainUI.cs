@@ -13,6 +13,7 @@ using pr.container;
 using pr.extn;
 using pr.gui;
 using pr.util;
+using pr.win32;
 using ToolStripContainer = pr.gui.ToolStripContainer;
 
 namespace CoinFlip
@@ -44,6 +45,7 @@ namespace CoinFlip
 		private ToolStripTextBox m_tb_nett_worth;
 		private ToolStripMenuItem m_menu_tools_test;
 		private ToolStripSeparator toolStripSeparator1;
+		private ToolStripButton m_chk_live;
 		private LogUI m_log;
 		#endregion
 
@@ -73,6 +75,16 @@ namespace CoinFlip
 			base.OnResizeEnd(e);
 			Settings.UI.WindowPosition = Bounds;
 			Settings.UI.UILayout = m_dc.SaveLayout();
+		}
+		protected override void WndProc(ref Message m)
+		{
+			base.WndProc(ref m);
+			if (m.Msg == Win32.WM_SYSCOMMAND)
+			{
+				var wp = (uint)m.WParam & 0xFFF0;
+				if (wp == Win32.SC_MAXIMIZE || wp == Win32.SC_RESTORE || wp == Win32.SC_MINIMIZE)
+					Settings.UI.WindowMaximised = WindowState == FormWindowState.Maximized;
+			}
 		}
 		protected async override void OnClosing(CancelEventArgs e)
 		{
@@ -204,6 +216,11 @@ namespace CoinFlip
 					m_chk_allow_trades.Text = m_chk_allow_trades.Checked ? "Disable Trading" : "Enable Trading";
 					m_chk_allow_trades.BackColor = m_chk_allow_trades.Checked ? Color.LightGreen : SystemColors.Control;
 				};
+				m_chk_live.Checked = Settings.ShowLivePrices;
+				m_chk_live.CheckedChanged += (s,a) =>
+				{
+					Settings.ShowLivePrices = m_chk_live.Checked;
+				};
 			}
 			#endregion
 
@@ -223,7 +240,8 @@ namespace CoinFlip
 				m_log = new LogUI("Log", nameof(m_log))
 				{
 					LogFilepath = ((LogToFile)Model.Log.LogCB).Filepath,
-					LogEntryPattern = Misc.LogEntryPattern
+					LogEntryPattern = Misc.LogEntryPattern,
+					PopOutOnNewMessages = false,
 				};
 				m_log.Highlighting.AddRange(Misc.LogHighlighting);
 			}
@@ -283,10 +301,12 @@ namespace CoinFlip
 				// Invalidate the live price data 
 				m_grid_exchanges.InvalidateColumn(m_grid_exchanges.Columns[nameof(Exchange.NettWorth)].Index);
 				m_grid_balances .InvalidateColumn(m_grid_balances.Columns[nameof(Balance.Available)].Index);
+				m_grid_balances .InvalidateColumn(m_grid_balances.Columns[nameof(Balance.Value)].Index);
 				m_grid_positions.InvalidateColumn(m_grid_positions.Columns[nameof(GridPositions.ColumnNames.LivePrice)].Index);
 				m_grid_positions.InvalidateColumn(m_grid_positions.Columns[nameof(GridPositions.ColumnNames.PriceDist)].Index);
 				m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Total)].Index);
 				m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Available)].Index);
+				m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Value)].Index);
 
 				// Update the nett worth value
 				m_tb_nett_worth.Text = Model.NettWorth.ToString("c");
@@ -294,7 +314,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Coins of interest changed</summary>
-		private void HandleCoinsListChanging(object sender, ListChgEventArgs<CoinData> e)
+		private void HandleCoinsListChanging(object sender, ListChgEventArgs<Settings.CoinData> e)
 		{
 			m_grid_coins.Invalidate();
 			m_grid_balances.Invalidate();
@@ -338,6 +358,7 @@ namespace CoinFlip
 			this.m_tb_nett_worth = new System.Windows.Forms.ToolStripTextBox();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_chk_run = new System.Windows.Forms.ToolStripButton();
+			this.m_chk_live = new System.Windows.Forms.ToolStripButton();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.ContentPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
@@ -464,11 +485,12 @@ namespace CoinFlip
             this.toolStripSeparator2,
             this.m_lbl_nett_worth,
             this.m_tb_nett_worth,
+            this.m_chk_live,
             this.toolStripSeparator1,
             this.m_chk_run});
 			this.m_ts.Location = new System.Drawing.Point(3, 24);
 			this.m_ts.Name = "m_ts";
-			this.m_ts.Size = new System.Drawing.Size(422, 25);
+			this.m_ts.Size = new System.Drawing.Size(454, 25);
 			this.m_ts.TabIndex = 1;
 			// 
 			// m_chk_allow_trades
@@ -510,6 +532,16 @@ namespace CoinFlip
 			this.m_chk_run.Name = "m_chk_run";
 			this.m_chk_run.Size = new System.Drawing.Size(91, 22);
 			this.m_chk_run.Text = "Trade Loops";
+			// 
+			// m_chk_live
+			// 
+			this.m_chk_live.CheckOnClick = true;
+			this.m_chk_live.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+			this.m_chk_live.Image = ((System.Drawing.Image)(resources.GetObject("m_chk_live.Image")));
+			this.m_chk_live.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_chk_live.Name = "m_chk_live";
+			this.m_chk_live.Size = new System.Drawing.Size(32, 22);
+			this.m_chk_live.Text = "Live";
 			// 
 			// MainUI
 			// 

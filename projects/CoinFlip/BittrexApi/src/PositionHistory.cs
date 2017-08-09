@@ -37,7 +37,7 @@ namespace Bittrex.API
 
 		/// <summary></summary>
 		[JsonProperty("Quantity")]
-		public decimal VolumeBase { get; internal set; }
+		public decimal QuantityBase { get; internal set; }
 
 		/// <summary></summary>
 		[JsonProperty("QuantityRemaining")]

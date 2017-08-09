@@ -33,7 +33,7 @@ namespace Bittrex.API
 			m_secret = secret;
 			m_cancel_token = cancel_token;
 			UrlBaseAddress = base_address;
-			m_client = HttpClientFactory.Create();
+			m_client = new HttpClient { BaseAddress = new Uri(UrlBaseAddress), Timeout = TimeSpan.FromSeconds(10) };
 			m_json = new JsonSerializer { NullValueHandling = NullValueHandling.Ignore };
 			Hasher = m_secret != null ? new HMACSHA512(Encoding.ASCII.GetBytes(m_secret)) : null;
 			m_request_sw = new Stopwatch();

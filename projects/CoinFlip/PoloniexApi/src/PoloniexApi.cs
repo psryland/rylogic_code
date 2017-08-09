@@ -37,7 +37,7 @@ namespace Poloniex.API
 			ActiveSubscriptions = new Dictionary<string, Subscription>();
 			Hasher = new HMACSHA512(Encoding.ASCII.GetBytes(m_secret));
 			m_json = new JsonSerializer { NullValueHandling = NullValueHandling.Ignore };
-			m_client = new HttpClient { BaseAddress = new Uri(UrlBaseAddress + "tradingApi") };
+			m_client = new HttpClient { BaseAddress = new Uri(UrlBaseAddress + "tradingApi"), Timeout = TimeSpan.FromSeconds(10) };
 			m_client.DefaultRequestHeaders.Add("Key", m_key);
 			m_request_sw = new Stopwatch();
 			m_request_sw.Start();

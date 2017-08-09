@@ -22,8 +22,9 @@ namespace CoinFlip
 		public Bittrex(Model model)
 			:base(model, model.Settings.Bittrex)
 		{
-			Api = new BittrexApi(ApiKey, ApiSecret, Model.ShutdownToken);
 			m_order_id_lookup = new BiDictionary<ulong, Guid>();
+			Api = new BittrexApi(ApiKey, ApiSecret, Model.ShutdownToken);
+			TradeHistoryUseful = true;
 
 			// Start the exchange
 			if (Model.Settings.Bittrex.Active)
@@ -55,6 +56,9 @@ namespace CoinFlip
 			{
 				// Place the trade order
 				var res = await Api.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), Misc.ToBittrexTT(tt), price, volume);
+				if (!res.Success)
+					throw new Exception(res.Message);
+
 				var order_id = ToOrderId(res.Data.Id);
 				return new TradeResult(order_id);
 			}
@@ -98,34 +102,22 @@ namespace CoinFlip
 				// Add an action to integrate the data
 				Model.MarketUpdates.Add(() =>
 				{
-					var nue = new HashSet<string>();
-					var markets = msg.Data;
-
 					// Create the trade pairs and associated coins
+					var markets = msg.Data;
 					foreach (var m in markets.Where(x => coi.Contains(x.Pair.Base) && coi.Contains(x.Pair.Quote)))
 					{
 						var base_ = Coins.GetOrAdd(m.Pair.Base);
 						var quote = Coins.GetOrAdd(m.Pair.Quote);
 
-						// Add the trade pair.
+						// Add/Update the trade pair.
+						// Note: m.MinTradeSize is not valid, 50,000 Satoshi is the minimum trade size
 						var instr = new TradePair(base_, quote, this,
 							trade_pair_id:null,
-							volume_range_base: new RangeF<Unit<decimal>>(((decimal)m.MinTradeSize)._(base_), 10000000m._(base_)),
-							volume_range_quote:new RangeF<Unit<decimal>>(((decimal)m.MinTradeSize)._(quote), 10000000m._(quote)),
+							volume_range_base: new RangeF<Unit<decimal>>(0.0005m._(base_), 10000000m._(base_)),
+							volume_range_quote:new RangeF<Unit<decimal>>(0.0005m._(quote), 10000000m._(quote)),
 							price_range:null);
 						Pairs[instr.UniqueKey] = instr;
-
-						// Save the names of the pairs,coins returned
-						nue.Add(instr.Name);
-						nue.Add(instr.Base.Symbol);
-						nue.Add(instr.Quote.Symbol);
 					}
-
-					// Remove pairs not in 'nue'
-					Pairs.RemoveIf(p => !nue.Contains(p.Name));
-
-					// Remove coins not in 'nue'
-					Coins.RemoveIf(c => !nue.Contains(c.Symbol));
 
 					// Ensure a 'Balance' object exists for each coin type
 					foreach (var c in Coins.Values)
@@ -178,8 +170,6 @@ namespace CoinFlip
 						var cp = orders.Pair;
 
 						// Find the pair to update.
-						// The pair may have been removed between the request and the reply.
-						// Pair's may have been added as well, we'll get those next heart beat.
 						var pair = Pairs[cp.Base, cp.Quote];
 						if (pair == null)
 							continue;
@@ -225,7 +215,6 @@ namespace CoinFlip
 					// Update the account balance
 					using (Model.Balances.PreservePosition())
 					{
-						var nue = new HashSet<Coin>();
 						foreach (var b in msg.Data.Where(x => x.Available != 0 || Coins.ContainsKey(x.Symbol)))
 						{
 							// Find the currency that this balance is for
@@ -234,11 +223,7 @@ namespace CoinFlip
 							// Update the balance
 							var bal = new Balance(coin, b.Total, b.Available, b.Pending, b.Total - b.Available, 0, timestamp);
 							Balance[coin] = bal;
-							nue.Add(coin);
 						}
-
-						// Remove balances that aren't of interest
-						Balance.RemoveIf(x => !nue.Contains(x.Coin));
 					}
 
 					// Notify updated
@@ -320,8 +305,8 @@ namespace CoinFlip
 				{
 					foreach (var order in msg.Data)
 					{
-						var his = PositionFrom(order, timestamp);
-						var fill = History.GetOrAdd(his.OrderId, his.TradeType, his.Pair, timestamp);
+						var his = HistoricFrom(order, timestamp);
+						var fill = History.GetOrAdd(his.OrderId, his.TradeType, his.Pair);
 						fill.Trades[his.TradeId] = his;
 					}
 
@@ -346,27 +331,30 @@ namespace CoinFlip
 		{
 			// Get the associated trade pair (add the pair if it doesn't exist)
 			var order_id = ToOrderId(order.OrderId);
-			var pair = Pairs[order.Pair.Base, order.Pair.Quote] ?? Pairs.Add2(new TradePair(Coins.GetOrAdd(order.Pair.Base), Coins.GetOrAdd(order.Pair.Quote), this));
+			var pair = Pairs.GetOrAdd(order.Pair.Base, order.Pair.Quote);
 			var price = order.Limit._(pair.RateUnits);
 			var volume = order.VolumeBase._(pair.Base);
 			var remaining = order.RemainingBase._(pair.Base);
 			var created = order.Created;
-			return new Position(order_id, 0, pair, Misc.TradeType(order.Type), price, volume, remaining, created, updated);
+			return new Position(order_id, pair, Misc.TradeType(order.Type), price, volume, remaining, created, updated);
 		}
 
 		/// <summary>Convert a Cryptopia trade history result into a position object</summary>
-		private Position PositionFrom(global::Bittrex.API.Historic order, DateTimeOffset updated)
+		private Historic HistoricFrom(global::Bittrex.API.Historic his, DateTimeOffset updated)
 		{
 			// Get the associated trade pair (add the pair if it doesn't exist)
 			// Bittrex doesn't use trade ids. Make them up using the Remaining
 			// volume so that each trade for a given order is unique (ish).
-			var order_id = ToOrderId(order.OrderId);
-			var trade_id = unchecked((ulong)(order.RemainingBase * 1_000_000 / order.VolumeBase));
-			var pair = Pairs[order.Pair.Base, order.Pair.Quote] ?? Pairs.Add2(new TradePair(Coins.GetOrAdd(order.Pair.Base), Coins.GetOrAdd(order.Pair.Quote), this));
-			var price = order.Price._(pair.RateUnits);
-			var volume = order.VolumeBase._(pair.Base);
-			var created = order.Created;
-			return new Position(order_id, trade_id, pair, Misc.TradeType(order.Type), price, volume, 0, created, updated);
+			var order_id    = ToOrderId(his.OrderId);
+			var trade_id    = unchecked((ulong)(his.RemainingBase * 1_000_000 / his.QuantityBase));
+			var tt          = Misc.TradeType(his.Type);
+			var pair        = Pairs.GetOrAdd(his.Pair.Base, his.Pair.Quote);
+			var price       = tt == ETradeType.B2Q ? his.PricePerUnit._(pair.RateUnits) : (1m / his.PricePerUnit._(pair.RateUnits));
+			var volume_in   = tt == ETradeType.B2Q ? his.QuantityBase._(pair.Base)      : (his.Price._(pair.Quote) + his.Commission);
+			var volume_out  = tt == ETradeType.B2Q ? his.Price._(pair.Quote)            : (volume_in * price);
+			var commission  = tt == ETradeType.B2Q ? his.Commission._(pair.Quote)       : (volume_out - his.QuantityBase._(pair.Base));
+			var created     = his.Created;
+			return new Historic(order_id, trade_id, pair, tt, price, volume_in, volume_out, commission, created, updated);
 		}
 
 		/// <summary>Convert a bittrex UUID to a CoinFlip order id (ULONG)</summary>

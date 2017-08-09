@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using pr.container;
 using pr.extn;
@@ -24,9 +25,9 @@ namespace CoinFlip
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Position.CreationTime),
+				Name = nameof(Position.Created),
 				HeaderText = "Date",
-				DataPropertyName = nameof(Position.CreationTime),
+				DataPropertyName = nameof(Position.Created),
 				SortMode = DataGridViewColumnSortMode.Automatic,
 				FillWeight = 1.0f,
 			});
@@ -95,6 +96,7 @@ namespace CoinFlip
 				SortMode = DataGridViewColumnSortMode.NotSortable,
 				FillWeight = 1.0f,
 			});
+			ContextMenuStrip = CreateCMenu();
 			DataSource = Model.Positions;
 		}
 		protected override void OnMouseDown(MouseEventArgs e)
@@ -112,9 +114,9 @@ namespace CoinFlip
 
 			switch (col.Name)
 			{
-			case nameof(Position.CreationTime):
+			case nameof(Position.Created):
 				{
-					a.Value = pos.CreationTime?.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty;
+					a.Value = pos.Created?.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty;
 					a.FormattingApplied = true;
 					break;
 				}
@@ -135,7 +137,7 @@ namespace CoinFlip
 				}
 			case nameof(ColumnNames.LivePrice):
 				{
-					a.Value = "{0:G8}".Fmt((decimal)pos.Pair.CurrentPrice(pos.TradeType));
+					a.Value = pos.Pair.CurrentPrice(pos.TradeType).ToString("G8");
 					a.FormattingApplied = true;
 					break;
 				}
@@ -143,7 +145,7 @@ namespace CoinFlip
 				{
 					a.Value = "{0:G8}".Fmt(
 						pos.TradeType == ETradeType.B2Q ? (decimal)(pos.Price - pos.Pair.CurrentPrice(ETradeType.B2Q)) :
-						pos.TradeType == ETradeType.Q2B  ? (decimal)(pos.Pair.CurrentPrice(ETradeType.Q2B) - pos.Price) :
+						pos.TradeType == ETradeType.Q2B ? (decimal)(pos.Pair.CurrentPrice(ETradeType.Q2B) - pos.Price) :
 						0m);
 					a.FormattingApplied = true;
 					break;
@@ -170,6 +172,40 @@ namespace CoinFlip
 			}
 			a.CellStyle.SelectionBackColor = a.CellStyle.BackColor.Lerp(Color.Gray, 0.5f);
 			a.CellStyle.SelectionForeColor = a.CellStyle.ForeColor;
+		}
+
+		/// <summary>Create the context menu for the grid</summary>
+		private ContextMenuStrip CreateCMenu()
+		{
+			var cmenu = new ContextMenuStrip();
+			{
+				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Cancel Order"));
+				cmenu.Opening += (s,a) =>
+				{
+					opt.Enabled = SelectedRows.Count == 1;
+				};
+				opt.Click += async (s,a) =>
+				{
+					var pos = SelectedRows.Cast<DataGridViewRow>().Select(x => (Position)x.DataBoundItem).First();
+					await pos.CancelOrder();
+				};
+			}
+			if (!Model.AllowTrades)
+			{
+				var opt = cmenu.Items.Add2(new ToolStripMenuItem("\"Fill\" order"));
+				cmenu.Opening += (s,a) =>
+				{
+					var pos = SelectedRows.Cast<DataGridViewRow>().Select(x => (Position)x.DataBoundItem).FirstOrDefault();
+					opt.Visible = pos != null && pos.Fake;
+				};
+				opt.Click += async (s,a) =>
+				{
+					// Cancel the order and create a fake history entry to simulate the fake order being filled
+					var pos = SelectedRows.Cast<DataGridViewRow>().Select(x => (Position)x.DataBoundItem).First();
+					await pos.FillFakeOrder();
+				};
+			}
+			return cmenu;
 		}
 
 		public static class ColumnNames

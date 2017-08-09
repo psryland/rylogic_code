@@ -123,16 +123,15 @@ namespace CoinFlip
 				cmenu.Items.AddSeparator();
 			}
 			{
-				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Log"));
+				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Monitor"));
 				cmenu.Opening += (s,a) =>
 				{
-					var fisher = SelectedRows.Cast<DataGridViewRow>().Select(x => (Fishing)x.DataBoundItem).FirstOrDefault();
-					opt.Enabled = SelectedRows.Count == 1 && fisher != null;
+					opt.Enabled = SelectedRows.Count == 1;
 				};
 				opt.Click += (s,a) =>
 				{
 					var fisher = SelectedRows.Cast<DataGridViewRow>().Select(x => (Fishing)x.DataBoundItem).First();
-					fisher.LogUI.Show(TopLevelControl);
+					DockControl.DockContainer.Add(fisher.DetailsUI);
 				};
 			}
 			{

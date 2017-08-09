@@ -142,6 +142,10 @@ namespace view3d
 		{
 			m_dll->m_sources.OnStoreChanged -= m_eh_store_updated;
 			m_dll->m_sources.OnFileRemoved -= m_eh_file_removed;
+			m_scene.RemoveInstance(m_focus_point);
+			m_scene.RemoveInstance(m_origin_point);
+			m_scene.RemoveInstance(m_bbox_model);
+			m_scene.RemoveInstance(m_selection_box);
 		}
 
 		// Error event. Can be called in a worker thread context

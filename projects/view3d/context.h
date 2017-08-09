@@ -84,14 +84,14 @@ namespace view3d
 			m_sources.Clear();
 		}
 
-		// Load/Add a script source
+		// Load/Add a script source. Returns the Guid of the context that the objects were added to.
 		pr::Guid LoadScriptSource(wchar_t const* filepath, bool additional, pr::script::Includes<> const& includes)
 		{
 			// Note: this can be called from a worker thread
 			return m_sources.AddFile(filepath, includes, additional);
 		}
 
-		// Load/Add ldr objects from a script string
+		// Load/Add ldr objects from a script string. Returns the Guid of the context that the objects were added to.
 		pr::Guid LoadScript(wchar_t const* ldr_script, bool file, pr::Guid const* context_id, pr::script::Includes<> const& includes)
 		{
 			// Note: this can be called from a worker thread

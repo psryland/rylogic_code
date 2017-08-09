@@ -1700,7 +1700,7 @@ namespace pr.gfx
 			}
 			public virtual void Dispose()
 			{
-				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
+				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finaliser thread");
 				if (m_handle == HObject.Zero) return;
 				if (m_owned) View3D_ObjectDelete(m_handle);
 				m_handle = HObject.Zero;

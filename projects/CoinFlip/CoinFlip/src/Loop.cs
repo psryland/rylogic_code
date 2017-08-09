@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Security.Cryptography;
 using pr.extn;
 using pr.util;
 
@@ -18,27 +16,27 @@ namespace CoinFlip
 
 		public Loop(TradePair pair)
 		{
-			Pairs        = new List<TradePair>();
-			Insufficient = new List<InsufficientCoin>();
-			Rate         = null;
-			Direction    = 0;
-			TradeScale   = 1m;
-			TradeVolume  = 0m._(pair.Base);
-			Profit       = 0m._(pair.Base);
-			ProfitRatio  = 0;
+			Pairs          = new List<TradePair>();
+			Rate           = null;
+			Direction      = 0;
+			TradeScale     = 1m;
+			TradeVolume    = 0m._(pair.Base);
+			Profit         = 0m._(pair.Base);
+			ProfitRatioFwd = 0;
+			ProfitRatioBck = 0;
 
 			Pairs.Add(pair);
 		}
 		public Loop(Loop rhs)
 		{
-			Pairs        = rhs.Pairs.ToList();
-			Insufficient = rhs.Insufficient.ToList();
-			Rate         = rhs.Rate;
-			Direction    = rhs.Direction;
-			TradeScale   = rhs.TradeScale;
-			TradeVolume  = rhs.TradeVolume;
-			Profit       = rhs.Profit;
-			ProfitRatio  = rhs.ProfitRatio;
+			Pairs          = rhs.Pairs.ToList();
+			Rate           = rhs.Rate;
+			Direction      = rhs.Direction;
+			TradeScale     = rhs.TradeScale;
+			TradeVolume    = rhs.TradeVolume;
+			Profit         = rhs.Profit;
+			ProfitRatioFwd = rhs.ProfitRatioFwd;
+			ProfitRatioBck = rhs.ProfitRatioBck;
 		}
 		public Loop(Loop loop, OrderBook rate, int direction)
 			:this(loop)
@@ -85,14 +83,20 @@ namespace CoinFlip
 		/// <summary>The gain in volume of this loop</summary>
 		public Unit<decimal> Profit { get; set; }
 
-		/// <summary>The profitability of this loop as a ratio (volume final / volume initial)</summary>
-		public decimal ProfitRatio { get; set; }
+		/// <summary>The profitability of this loop as a ratio when going forward around the loop (volume final / volume initial)</summary>
+		public decimal ProfitRatioFwd { get; set; }
+
+		/// <summary>The profitability of this loop as a ratio when going backward around the loop (volume final / volume initial)</summary>
+		public decimal ProfitRatioBck { get; set; }
+
+		/// <summary>The maximum profit ratio</summary>
+		public decimal ProfitRatio
+		{
+			get { return Math.Max(ProfitRatioFwd, ProfitRatioBck); }
+		}
 
 		/// <summary>The trading pair that limits the volume </summary>
 		public Coin LimitingCoin { get; set; }
-
-		/// <summary>The currencies that are preventing the loop executing</summary>
-		public List<InsufficientCoin> Insufficient { get; private set; }
 
 		/// <summary>True if all the exchanges involved in this loop are active</summary>
 		public bool AllExchangesActive
@@ -101,10 +105,13 @@ namespace CoinFlip
 		}
 
 		/// <summary>The loop described as a string</summary>
-		public string LoopDescription
+		public string Description
 		{
 			get { return CoinsString(Direction); }
 		}
+
+		/// <summary>A string description of why this loop is trade-able or not</summary>
+		public string Tradeability { get; set; }
 
 		/// <summary>Return a string describing the loop</summary>
 		public string CoinsString(int direction)

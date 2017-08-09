@@ -308,6 +308,7 @@ namespace pr
 
 			// Add a file source
 			// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
+			// Returns the Guid of the context that the objects were added to.
 			pr::Guid AddFile(wchar_t const* filepath, pr::script::Includes<> const& includes, bool additional)
 			{
 				File file(filepath, pr::GenerateGUID(), includes);
@@ -316,6 +317,7 @@ namespace pr
 
 			// Add ldr objects from a script string or file (but not as a script source)
 			// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
+			// Returns the Guid of the context that the objects were added to.
 			pr::Guid AddScript(wchar_t const* ldr_script, bool file, pr::Guid const* context_id, pr::script::Includes<> const& includes)
 			{
 				// Create a context id if none given
@@ -389,6 +391,7 @@ namespace pr
 			// Internal add file.
 			// Note: 'file' not passed by reference because it can be a file already in the collection, so we need a local copy.
 			// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
+			// Returns the Guid of the context that the objects were added to.
 			pr::Guid AddFile(File file, EReason reason, bool additional)
 			{
 				// Note: worker thread context
@@ -503,6 +506,7 @@ namespace pr
 			// Internal add script
 			// Add ldr objects from a script string or file (but not as a script source)
 			// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
+			// Returns the Guid of the context that the objects were added to
 			pr::Guid AddScript(wchar_t const* ldr_script, bool file, EReason reason, pr::Guid const& context_id, pr::script::Includes<> const& includes)
 			{
 				using namespace pr::script;
@@ -555,6 +559,10 @@ namespace pr
 
 					// Notify of the object container change
 					OnStoreChanged(*this, StoreChangedEventArgs(m_objects, new_count, *out, reason));
+
+					// Throw on errors
+					if (!errors.m_msg.empty())
+						throw std::exception(Narrow(errors.m_msg).c_str());
 				};
 
 				// Marshal to the main thread if this is a worker thread context

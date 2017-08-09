@@ -109,36 +109,36 @@ namespace pr.util
 		{
 			// Comparing different units is an error. A == B cannot have
 			// different behaviour depending on whether checking is enabled or not.
-			if (lhs.UnitId != rhs.UnitId) throw new Exception("Unit types don't match");
-			return Operators<T>.Eql(lhs.Value, rhs.Value);
+			if (lhs.UnitId != rhs.UnitId && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
+			return lhs.Value.CompareTo(rhs.Value) == 0;
 		}
 		[DebuggerStepThrough] public static bool operator != (Unit<T> lhs, Unit<T> rhs)
 		{
 			// Comparing different units is an error. A == B cannot have
 			// different behaviour depending on whether checking is enabled or not.
-			if (lhs.UnitId != rhs.UnitId) throw new Exception("Unit types don't match");
-			return Operators<T>.NEql(lhs.Value, rhs.Value);
+			if (lhs.UnitId != rhs.UnitId && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
+			return lhs.Value.CompareTo(rhs.Value) != 0;
 		}
 		[DebuggerStepThrough] public static bool operator <  (Unit<T> lhs, Unit<T> rhs)
 		{
-			if (lhs.UnitId != rhs.UnitId) throw new Exception("Unit types don't match");
-			return Operators<T>.Less(lhs.Value, rhs.Value);
+			if (lhs.UnitId != rhs.UnitId && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
+			return lhs.Value.CompareTo(rhs.Value) < 0;
 		}
 		[DebuggerStepThrough] public static bool operator >  (Unit<T> lhs, Unit<T> rhs)
 		{
-			if (lhs.UnitId != rhs.UnitId) throw new Exception("Unit types don't match");
-			return Operators<T>.Greater(lhs.Value, rhs.Value);
+			if (lhs.UnitId != rhs.UnitId && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
+			return lhs.Value.CompareTo(rhs.Value) > 0;
 		}
 		[DebuggerStepThrough] public static bool operator <= (Unit<T> lhs, Unit<T> rhs)
 		{
-			if (lhs.UnitId != rhs.UnitId) throw new Exception("Unit types don't match");
-			return Operators<T>.LessEql(lhs.Value, rhs.Value);
+			if (lhs.UnitId != rhs.UnitId && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
+			return lhs.Value.CompareTo(rhs.Value) <= 0;
 		}
 		[DebuggerStepThrough] public static bool operator >= (Unit<T> lhs, Unit<T> rhs)
 		{
-			if (lhs.UnitId != rhs.UnitId) throw new Exception("Unit types don't match");
-			return Operators<T>.GreaterEql(lhs.Value, rhs.Value);
-		}		
+			if (lhs.UnitId != rhs.UnitId && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
+			return lhs.Value.CompareTo(rhs.Value) >= 0;
+		}
 		#endregion
 
 		/// <summary>ToString</summary>
@@ -168,7 +168,7 @@ namespace pr.util
 		{
 			// Comparing different units is an error. A == B cannot have
 			// different behaviour depending on whether checking is enabled or not.
-			if (UnitId != rhs.UnitId) throw new Exception("Unit types don't match");
+			if (UnitId != rhs.UnitId && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
 			return Value.Equals(rhs.Value);
 		}
 		[DebuggerStepThrough] public override bool Equals(object rhs)
@@ -181,7 +181,7 @@ namespace pr.util
 		}
 		[DebuggerStepThrough] public int CompareTo(Unit<T> rhs)
 		{
-			if (UnitId != rhs.UnitId) throw new Exception("Unit types don't match");
+			if (UnitId != rhs.UnitId && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
 			return Value.CompareTo(rhs.Value);
 		}
 		[DebuggerStepThrough] public int CompareTo(T rhs)
@@ -191,6 +191,12 @@ namespace pr.util
 		int IComparable.CompareTo(object obj)
 		{
 			return CompareTo((Unit<T>)obj);
+		}
+
+		/// <summary>True if this unit is '0' with no units</summary>
+		private bool IsScalarZero
+		{
+			get { return UnitId == Unit_.NoUnitsId && Equals(Value, default(T)); }
 		}
 	}
 

@@ -20,11 +20,13 @@ namespace pr
 		#undef PR_ENUM
 
 		#define PR_ENUM(x) \
-			x(Invalid ,= InvalidId)\
-			x(Black   ,)\
-			x(White   ,)\
-			x(Gray    ,)\
-			x(Checker ,)
+			x(Invalid  ,= InvalidId)\
+			x(Black    ,)\
+			x(White    ,)\
+			x(Gray     ,)\
+			x(Checker  ,)\
+			x(Checker2 ,)\
+			x(Checker3 ,)
 		PR_DEFINE_ENUM2(EStockTexture, PR_ENUM);
 		#undef PR_ENUM
 

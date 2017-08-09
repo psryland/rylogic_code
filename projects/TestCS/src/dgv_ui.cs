@@ -276,9 +276,9 @@ namespace TestCS
 			m_grid.DataSource = m_bs;
 
 			// Automatic column sizing
-			m_grid.SizeChanged += DataGridView_.FitToDisplayWidth;
-			m_grid.ColumnWidthChanged += DataGridView_.FitToDisplayWidth;
-			m_grid.RowHeadersWidthChanged += DataGridView_.FitToDisplayWidth;
+			m_grid.SizeChanged += DataGridView_.FitColumnsToDisplayWidth;
+			m_grid.ColumnWidthChanged += DataGridView_.FitColumnsToDisplayWidth;
+			m_grid.RowHeadersWidthChanged += DataGridView_.FitColumnsToDisplayWidth;
 			m_grid.SetGridColumnSizes(DataGridView_.EColumnSizeOptions.FitToDisplayWidth);
 
 			// Column filtering

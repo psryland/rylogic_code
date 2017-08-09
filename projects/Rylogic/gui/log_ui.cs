@@ -11,6 +11,7 @@ using System.Xml.Linq;
 using pr.common;
 using pr.container;
 using pr.extn;
+using pr.maths;
 using pr.util;
 
 namespace pr.gui
@@ -37,6 +38,9 @@ namespace pr.gui
 		private ToolStripButton m_btn_log_filepath;
 		private ToolStripTextBox m_tb_log_filepath;
 		private DataGridView m_view;
+		private ToolStripButton m_btn_tail;
+		private ToolTip m_tt;
+		private ToolStripButton m_chk_line_wrap;
 		private FileWatch m_watch;
 		#endregion
 
@@ -61,6 +65,9 @@ namespace pr.gui
 			// When docked in an auto-hide panel, pop out on new messages
 			PopOutOnNewMessages = true;
 
+			// Line wrap default
+			SetLineWrap(false);
+
 			// A buffer of the log entries.
 			// This is populated by calls to AddMessage or from the log file.
 			LogEntries = new BindingListEx<LogEntry>();
@@ -83,7 +90,6 @@ namespace pr.gui
 			MaxFileBytes = 2 * 1024 * 1024;
 
 			SetupUI();
-			UpdateUI();
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -136,6 +142,18 @@ namespace pr.gui
 
 		/// <summary>If docked in a doc container, pop-out when new messages are added to the log</summary>
 		public bool PopOutOnNewMessages { get; set; }
+
+		/// <summary>Line wrap mode</summary>
+		public bool LineWrap
+		{
+			get { return m_line_wrap; }
+			set
+			{
+				if (m_line_wrap == value) return;
+				SetLineWrap(value);
+			}
+		}
+		private bool m_line_wrap;
 
 		/// <summary>A buffer of the log entries</summary>
 		[Browsable(false)]
@@ -214,21 +232,27 @@ namespace pr.gui
 					m_view.ColumnCount = names.Length;
 					for (int i = 0; i != names.Length; ++i)
 					{
+						m_view.Columns[i].Name = names[i];
 						m_view.Columns[i].HeaderText = names[i];
+						m_view.Columns[i].DefaultCellStyle.WrapMode = DataGridViewTriState.False;
 						m_view.Columns[i].FillWeight =
-							names[i] == "Level"     ? 0.3f :
-							names[i] == "Timestamp" ? 0.6f :
-							names[i] == "Message"   ? 5f :
+							names[i] == ColumnNames.Level     ? 0.3f :
+							names[i] == ColumnNames.Timestamp ? 0.6f :
+							names[i] == ColumnNames.Message   ? 5f :
 							1f;
 					}
-
 					m_view.ColumnHeadersVisible = true;
 				}
 				else
 				{
 					m_view.ColumnCount = 1;
+					m_view.Columns[0].Name = ColumnNames.Message;
+					m_view.Columns[0].HeaderText = ColumnNames.Message;
+					m_view.Columns[0].DefaultCellStyle.WrapMode = DataGridViewTriState.False;
 					m_view.ColumnHeadersVisible = false;
 				}
+
+				SetLineWrap(LineWrap);
 			}
 		}
 		private Regex m_log_entry_pattern;
@@ -284,25 +308,43 @@ namespace pr.gui
 
 			// Resize the log file path text box
 			m_tb_log_filepath.AutoSize = false;
+			m_ts.CanOverflow = true;
 			m_ts.Layout += (s,a) =>
 			{
 				m_tb_log_filepath.StretchToFit(250);
 			};
 
-			// Set up the grid for displaying log entries
-			m_view.AutoGenerateColumns = false;
-			m_view.ColumnHeadersVisible = false;
-			m_view.CellValueNeeded += HandleCellValueNeeded;
-			m_view.CellFormatting += HandleCellFormatting;
-			m_view.MouseDown += DataGridView_.ColumnVisibility;
-			m_view.VirtualMode = true;
-			m_view.ColumnCount = 1;
-			m_view.RowCount = 0;
-		}
+			// Jump to the bottom of the log
+			m_btn_tail.ToolTip(m_tt, "Jump to the last log entry");
+			m_btn_tail.Overflow = ToolStripItemOverflow.Never;
+			m_btn_tail.Click += (s,a) =>
+			{
+				TailScroll();
+			};
 
-		/// <summary>Update the state of UI Elements</summary>
-		private void UpdateUI(object sender = null, EventArgs args = null)
-		{
+			// Line Wrap mode
+			m_chk_line_wrap.Checked = LineWrap;
+			m_chk_line_wrap.Overflow = ToolStripItemOverflow.Never;
+			m_chk_line_wrap.CheckedChanged += (s,a) =>
+			{
+				LineWrap = m_chk_line_wrap.Checked;
+			};
+			SetLineWrap(LineWrap);
+
+			// Set up the grid for displaying log entries
+			m_view.AutoGenerateColumns         = false;
+			m_view.ColumnHeadersVisible        = false;
+			m_view.CellValueNeeded            += HandleCellValueNeeded;
+			m_view.CellFormatting             += HandleCellFormatting;
+			m_view.ColumnWidthChanged         += DataGridView_.FitColumnsWithNoLineWrap;
+			m_view.RowHeadersWidthChanged     += DataGridView_.FitColumnsWithNoLineWrap;
+			m_view.AutoSizeColumnsModeChanged += DataGridView_.FitColumnsWithNoLineWrap;
+			m_view.SizeChanged                += DataGridView_.FitColumnsWithNoLineWrap;
+			m_view.Scroll                     += DataGridView_.FitColumnsWithNoLineWrap;
+			m_view.MouseDown                  += DataGridView_.ColumnVisibility;
+			m_view.VirtualMode                 = true;
+			m_view.ColumnCount                 = 1;
+			m_view.RowCount                    = 0;
 		}
 
 		/// <summary>Invalidate this control and all children</summary>
@@ -359,19 +401,52 @@ namespace pr.gui
 			e.CellStyle.SelectionForeColor = e.CellStyle.ForeColor;
 		}
 
+		/// <summary>Scroll to make the last row visible and select it (i.e. enter tail scroll mode)</summary>
+		private void TailScroll()
+		{
+			if (m_view.RowCount == 0)
+				return;
+
+			var displayed_rows = m_view.DisplayedRowCount(false);
+			var first_row = Math.Max(0, m_view.RowCount - displayed_rows);
+			m_view.TryScrollToRowIndex(first_row);
+			m_view.CurrentCell = m_view[m_view.CurrentCell.ColumnIndex, m_view.RowCount - 1];
+		}
+
+		/// <summary>Enable/Disable line wrap</summary>
+		private void SetLineWrap(bool line_wrap)
+		{
+			foreach (var col in m_view.Columns.Cast<DataGridViewColumn>())
+			{
+				col.DefaultCellStyle.WrapMode = line_wrap && (col.Name == ColumnNames.Message || m_view.ColumnCount == 1)
+					? DataGridViewTriState.True
+					: DataGridViewTriState.NotSet;
+			}
+			m_view.AutoSizeColumnsMode = line_wrap ? DataGridViewAutoSizeColumnsMode.Fill : DataGridViewAutoSizeColumnsMode.None;
+			m_chk_line_wrap.Checked = line_wrap;
+			m_line_wrap = line_wrap;
+		}
+
+		/// <summary>Return the log entry for the given grid row index</summary>
+		private LogEntry LEFromRowIndex(int row_index)
+		{
+			// Find the log entry index
+			var idx = LogEntries.Count - (m_view.RowCount - row_index);
+			return idx.Within(0, LogEntries.Count) ? LogEntries[idx] : null;
+		}
+
 		/// <summary>Handle cell values needed for the log view</summary>
 		private void HandleCellValueNeeded(object sender, DataGridViewCellValueEventArgs e)
 		{
-			// Find the log entry index
-			var idx = LogEntries.Count - (m_view.RowCount - e.RowIndex);
-			if (!idx.Within(0, LogEntries.Count))
+			// Find the log entry
+			var entry = LEFromRowIndex(e.RowIndex);
+			if (entry == null)
 			{
 				e.Value = string.Empty;
 				return;
 			}
 
 			Match m;
-			var entry = LogEntries[idx];
 
 			// Apply the log entry pattern to the log entry to get the column values
 			if (LogEntryPattern != null && (m = LogEntryPattern.Match(entry.Text)).Success)
@@ -404,19 +479,14 @@ namespace pr.gui
 				return;
 
 			// Auto tail
-			var auto_tail = m_view.CurrentCell?.RowIndex == m_view.RowCount - 1;
+			var auto_tail = m_view.CurrentCell?.RowIndex == m_view.RowCount - 1 || m_view.RowCount == 0;
 
 			// Update the row count to the number of log entries
 			m_view.RowCount = Math.Min(MaxLines, LogEntries.Count);
 
 			// Auto scroll to the last row
-			if (auto_tail && m_view.RowCount != 0)
-			{
-				var displayed_rows = m_view.DisplayedRowCount(false);
-				var first_row = Math.Max(0, m_view.RowCount - displayed_rows);
-				m_view.TryScrollToRowIndex(first_row);
-				m_view.CurrentCell = m_view[m_view.CurrentCell.ColumnIndex, m_view.RowCount - 1];
-			}
+			if (auto_tail)
+				TailScroll();
 
 			// If a log entry was added, pop-out.
 			if (e.ChangeType == ListChg.ItemAdded && DockControl?.DockContainer != null)
@@ -585,18 +655,29 @@ namespace pr.gui
 			public Color ForeColour { get; set; }
 		}
 
+		public static class ColumnNames
+		{
+			public const string Level     = "Level";
+			public const string Timestamp = "Timestamp";
+			public const string Message   = "Message";
+		}
+
 		#region Component Designer generated code
 		private IContainer components = null;
 		private void InitializeComponent()
 		{
 			this.components = new System.ComponentModel.Container();
-			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
+			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
+			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(LogUI));
 			this.m_tsc = new pr.gui.ToolStripContainer();
 			this.m_view = new pr.gui.DataGridView();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
 			this.m_btn_log_filepath = new System.Windows.Forms.ToolStripButton();
 			this.m_tb_log_filepath = new System.Windows.Forms.ToolStripTextBox();
 			this.m_il_toolbar = new System.Windows.Forms.ImageList(this.components);
+			this.m_btn_tail = new System.Windows.Forms.ToolStripButton();
+			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
+			this.m_chk_line_wrap = new System.Windows.Forms.ToolStripButton();
 			this.m_tsc.ContentPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
@@ -628,18 +709,17 @@ namespace pr.gui
 			this.m_view.AllowUserToDeleteRows = false;
 			this.m_view.AllowUserToOrderColumns = true;
 			this.m_view.AllowUserToResizeRows = false;
-			this.m_view.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_view.AutoSizeRowsMode = System.Windows.Forms.DataGridViewAutoSizeRowsMode.AllCells;
 			this.m_view.CellBorderStyle = System.Windows.Forms.DataGridViewCellBorderStyle.None;
 			this.m_view.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-			dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopLeft;
-			dataGridViewCellStyle1.BackColor = System.Drawing.SystemColors.Window;
-			dataGridViewCellStyle1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-			dataGridViewCellStyle1.ForeColor = System.Drawing.SystemColors.ControlText;
-			dataGridViewCellStyle1.SelectionBackColor = System.Drawing.SystemColors.Highlight;
-			dataGridViewCellStyle1.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
-			dataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
-			this.m_view.DefaultCellStyle = dataGridViewCellStyle1;
+			dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopLeft;
+			dataGridViewCellStyle2.BackColor = System.Drawing.SystemColors.Window;
+			dataGridViewCellStyle2.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+			dataGridViewCellStyle2.ForeColor = System.Drawing.SystemColors.ControlText;
+			dataGridViewCellStyle2.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+			dataGridViewCellStyle2.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
+			dataGridViewCellStyle2.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
+			this.m_view.DefaultCellStyle = dataGridViewCellStyle2;
 			this.m_view.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_view.EditMode = System.Windows.Forms.DataGridViewEditMode.EditProgrammatically;
 			this.m_view.Location = new System.Drawing.Point(0, 0);
@@ -655,7 +735,9 @@ namespace pr.gui
 			this.m_ts.Dock = System.Windows.Forms.DockStyle.None;
 			this.m_ts.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_btn_log_filepath,
-            this.m_tb_log_filepath});
+            this.m_tb_log_filepath,
+            this.m_btn_tail,
+            this.m_chk_line_wrap});
 			this.m_ts.Location = new System.Drawing.Point(0, 0);
 			this.m_ts.Name = "m_ts";
 			this.m_ts.Size = new System.Drawing.Size(398, 25);
@@ -669,7 +751,8 @@ namespace pr.gui
 			this.m_btn_log_filepath.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_log_filepath.Name = "m_btn_log_filepath";
 			this.m_btn_log_filepath.Size = new System.Drawing.Size(23, 22);
-			this.m_btn_log_filepath.Text = "toolStripButton1";
+			this.m_btn_log_filepath.Text = "Browse";
+			this.m_btn_log_filepath.ToolTipText = "Browse for the log file to display";
 			// 
 			// m_tb_log_filepath
 			// 
@@ -682,6 +765,25 @@ namespace pr.gui
 			this.m_il_toolbar.ColorDepth = System.Windows.Forms.ColorDepth.Depth32Bit;
 			this.m_il_toolbar.ImageSize = new System.Drawing.Size(24, 24);
 			this.m_il_toolbar.TransparentColor = System.Drawing.Color.Transparent;
+			// 
+			// m_btn_tail
+			// 
+			this.m_btn_tail.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_tail.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_tail.Image")));
+			this.m_btn_tail.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_tail.Name = "m_btn_tail";
+			this.m_btn_tail.Size = new System.Drawing.Size(23, 22);
+			this.m_btn_tail.Text = "Tail";
+			// 
+			// m_chk_line_wrap
+			// 
+			this.m_chk_line_wrap.CheckOnClick = true;
+			this.m_chk_line_wrap.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_chk_line_wrap.Image = ((System.Drawing.Image)(resources.GetObject("m_chk_line_wrap.Image")));
+			this.m_chk_line_wrap.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_chk_line_wrap.Name = "m_chk_line_wrap";
+			this.m_chk_line_wrap.Size = new System.Drawing.Size(23, 22);
+			this.m_chk_line_wrap.Text = "Line Wrap";
 			// 
 			// LogUI
 			// 

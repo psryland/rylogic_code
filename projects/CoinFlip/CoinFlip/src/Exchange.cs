@@ -43,6 +43,7 @@ namespace CoinFlip
 			BalanceUpdatedTime = new ConditionVariable<DateTimeOffset>(DateTimeOffset.Now);
 			PositionUpdatedTime = new ConditionVariable<DateTimeOffset>(DateTimeOffset.Now);
 			TradeHistoryUpdatedTime = new ConditionVariable<DateTimeOffset>(DateTimeOffset.Now);
+			TradeHistoryUseful = false;
 
 			var history_start = (DateTimeOffset.Now - TimeSpan.FromDays(5)).Ticks;
 			HistoryInterval = new Range(history_start, history_start);
@@ -76,8 +77,9 @@ namespace CoinFlip
 					OnStatusChanged();
 
 					// Disable in the event of an error
-					if (m_status == EStatus.Error)
-						Active = false;
+					// Don't do this because it stops the bot
+					//if (m_status == EStatus.Error)
+					//	Active = false;
 				});
 			}
 		}
@@ -157,7 +159,7 @@ namespace CoinFlip
 				m_heart.Start();
 			}
 		}
-		private void HeartBeatThreadEntry()
+		private async void HeartBeatThreadEntry()
 		{
 			try
 			{
@@ -197,9 +199,9 @@ namespace CoinFlip
 
 					// Update trade history
 					const int TradeHistoryUpdatePeriodMS = 1000;
-					if (TradeHistoryUpdateRequired || (sw.ElapsedMilliseconds - last_trade_history_update) > TradeHistoryUpdatePeriodMS)
+					if (HistoryUpdateRequired || (sw.ElapsedMilliseconds - last_trade_history_update) > TradeHistoryUpdatePeriodMS)
 					{
-						TradeHistoryUpdateRequired = false;
+						HistoryUpdateRequired = false;
 						tasks.Add(UpdateTradeHistory());
 						last_trade_history_update = sw.ElapsedMilliseconds;
 					}
@@ -212,7 +214,7 @@ namespace CoinFlip
 						last_market_update = sw.ElapsedMilliseconds;
 					}
 
-					Task.WhenAll(tasks).Wait();
+					await Task.WhenAll(tasks);
 				}
 				Status = EStatus.Stopped;
 			}
@@ -295,7 +297,7 @@ namespace CoinFlip
 		protected ConditionVariable<DateTimeOffset> PositionUpdatedTime { get; private set; }
 
 		/// <summary>Dirty flag for updating trade history data</summary>
-		public bool TradeHistoryUpdateRequired
+		public bool HistoryUpdateRequired
 		{
 			get { return m_trade_history_update_required; }
 			set
@@ -309,13 +311,16 @@ namespace CoinFlip
 		public Task TradeHistoryUpdated()
 		{
 			var now = DateTimeOffset.Now;
-			TradeHistoryUpdateRequired = true;
+			HistoryUpdateRequired = true;
 			return Task.Run(() => TradeHistoryUpdatedTime.Wait(ts => ts > now));
 		}
 		protected ConditionVariable<DateTimeOffset> TradeHistoryUpdatedTime { get; private set; }
 
+		/// <summary>True if TradeHistory can be mapped to previous order id's</summary>
+		public bool TradeHistoryUseful { get; protected set; }
+
 		/// <summary>The percentage fee charged when performing exchanges</summary>
-		public decimal TransactionFee
+		public decimal Fee
 		{
 			get { return Settings.TransactionFee; }
 		}
@@ -323,7 +328,13 @@ namespace CoinFlip
 		/// <summary>The value of all coins held on this exchange</summary>
 		public decimal NettWorth
 		{
-			get { return !(this is CrossExchange) ? Balance.Values.Sum(x => x.Total * x.Coin.NormalisedValue) : 0m; }
+			get
+			{
+				if (this is CrossExchange) return 0m;
+				return Model.Settings.ShowLivePrices
+					? Balance.Values.Sum(x => x.Coin.LiveValue(x.Total))
+					: Balance.Values.Sum(x => x.Coin.ApproximateValue(x.Total));
+			}
 		}
 
 		/// <summary>The number of coins available on this exchange</summary>
@@ -384,6 +395,32 @@ namespace CoinFlip
 				KeyFrom = x => x.UniqueKey;
 			}
 
+			/// <summary>Get or add the pair associated with the given symbols</summary>
+			public TradePair GetOrAdd(string base_, string quote, int? trade_pair_id = null)
+			{
+				var coinB = m_exch.Coins.GetOrAdd(base_);
+				var coinQ = m_exch.Coins.GetOrAdd(quote);
+				return this[base_, quote] ?? this.Add2(new TradePair(coinB, coinQ, m_exch, trade_pair_id));
+			}
+
+			/// <summary>Get/Set the pair</summary>
+			public override TradePair this[string key]
+			{
+				get
+				{
+					Debug.Assert(m_exch.Model.AssertMarketDataRead());
+					return TryGetValue(key, out var pair) ? pair : null;
+				}
+				set
+				{
+					Debug.Assert(m_exch.Model.AssertMarketDataWrite());
+					if (ContainsKey(key))
+						base[key].Update(value);
+					else
+						base[key] = value;
+				}
+			}
+
 			/// <summary>Return a pair involving the given symbols (in either order)</summary>
 			public TradePair this[string sym0, string sym1]
 			{
@@ -410,6 +447,16 @@ namespace CoinFlip
 					if (TryGetValue(TradePair.MakeKey(sym, sym, exch1, exch0), out pair)) return pair;
 					return null;
 				}
+			}
+
+			/// <summary>Safety check that we're not removing Pairs that are in use</summary>
+			protected override void RemoveItemCore(string key, int index)
+			{
+				throw new Exception("Don't remove pairs, references are being held");
+			}
+			protected override void SetItemCore(string key, TradePair value)
+			{
+				throw new Exception("Don't replace existing pairs, references are being held");
 			}
 		}
 
@@ -442,6 +489,7 @@ namespace CoinFlip
 					Debug.Assert(m_exch.Model.AssertMarketDataWrite());
 					if (coin.Exchange != m_exch && !(m_exch is CrossExchange)) throw new Exception("Currency not associated with this exchange");
 					if (TryGetValue(coin, out var bal) && bal.TimeStamp > value.TimeStamp) return; // Ignore out of date data
+					if (bal != null) foreach (var hold in bal.Holds.Where(x => x.StillNeeded(value))) value.Holds.Add(hold); // Transfer the 'holds' to 'value'
 					base[coin] = value;
 				}
 			}
@@ -478,7 +526,7 @@ namespace CoinFlip
 				set
 				{
 					Debug.Assert(m_exch.Model.AssertMarketDataWrite());
-					if (TryGetValue(key, out var pos) && pos.UpdatedTime > value.UpdatedTime) return; // Ignore out of date data
+					if (TryGetValue(key, out var pos) && pos.Updated > value.Updated) return; // Ignore out of date data
 					base[key] = value;
 				}
 			}
@@ -494,10 +542,10 @@ namespace CoinFlip
 				m_exch = exch;
 				KeyFrom = x => x.OrderId;
 			}
-			public PositionFill GetOrAdd(ulong key, ETradeType tt, TradePair pair, DateTimeOffset created)
+			public PositionFill GetOrAdd(ulong key, ETradeType tt, TradePair pair)
 			{
 				Debug.Assert(m_exch.Model.AssertMarketDataWrite());
-				return this.GetOrAdd(key, x => new PositionFill(key, tt, pair, created));
+				return this.GetOrAdd(key, x => new PositionFill(key, tt, pair));
 			}
 			public override PositionFill this[ulong key]
 			{
@@ -535,7 +583,7 @@ namespace CoinFlip
 
 			// If the price isn't given, get it from the pair.
 			// We're selling base currency, at the most competitive asking price.
-			price = price ?? pair.Q2B.FirstOrDefault().Price;
+			price = price ?? pair.QuoteToBase(0m._(pair.Quote)).Price;
 
 			// Place the order on the exchange.
 			// Exchanges buy/sell base currency, so B2Q is a sell of base currency
@@ -591,6 +639,22 @@ namespace CoinFlip
 			var volume = tt == ETradeType.B2Q ? volume_ : (price_ * volume_);
 			var price  = tt == ETradeType.B2Q ? price_  : (1m / price_);
 
+			// Set the Id for this fake order
+			if (!Model.AllowTrades)
+				++m_fake_order_number;
+
+			// Put a hold on the balance we're about to trade to prevent a race condition
+			// with other trades being placed while we wait for this one to go through.
+			// Only reduce balances, don't assume the trade has completed.
+			// If we're live trading, remove the balance until the next balance update is received.
+			// If not live trading, hold the balance until the fake order is removed.
+			var bal = tt == ETradeType.B2Q ? pair.Base.Balance : pair.Quote.Balance;
+			var hold = tt == ETradeType.B2Q ? volume : (volume * price);
+			if (Model.AllowTrades)
+				bal.Hold(hold);
+			else
+				bal.Hold(hold, b => Positions[m_fake_order_number] != null);
+
 			// Make the trade
 			// This can have the following results:
 			// 1) the entire trade is added to the order book for the pair -> a single order number is returned
@@ -598,7 +662,11 @@ namespace CoinFlip
 			// 3) some of the trade can be met by existing orders -> a single order number and a collection of trade IDs are returned.
 			var order_result = Model.AllowTrades // Obey the global trade switch
 				? await CreateOrderInternal(pair, tt, volume, price)
-				: new TradeResult(++m_fake_order_number, new ulong[0]);
+				: new TradeResult(m_fake_order_number, new ulong[0]);
+
+			// Simulate the delay of submitting a trade when 'AllowTrades' is not enabled
+			if (!Model.AllowTrades)
+				await Task.Delay(800);
 
 			// Log the event
 			Model.Log.Write(ELogLevel.Info, "{0}: (id={1}) {2} {3} → {4} {5} @ {6} {7}".Fmt(
@@ -610,34 +678,26 @@ namespace CoinFlip
 			// Add the position to the Positions collection so that there is no race condition
 			// between placing an order and checking 'Positions' for the order just placed.
 			if (order_result.OrderId != null)
-				Positions.Add(new Position(order_result.OrderId.Value, 0, pair, tt, price, volume, volume, DateTimeOffset.Now, DateTimeOffset.Now));
+				Positions.Add(new Position(order_result.OrderId.Value, pair, tt, price, volume, volume, DateTimeOffset.Now, DateTimeOffset.Now, fake:!Model.AllowTrades));
 
 			// The order may have also been completed or partially filled. Add the filled orders to the trade history
 			foreach (var tid in order_result.TradeIds)
 			{
-				//HACK
-				var order_id = order_result.OrderId ?? tid;
-				var fill = History.GetOrAdd(order_id, tt, pair, DateTimeOffset.Now);
-				fill.Trades[tid] = new Position(order_id, tid, pair, tt, price, volume, volume, DateTimeOffset.Now, DateTimeOffset.Now);
+				var order_id = order_result.OrderId ?? tid; //hack - all order_results should return an order id, except Cryptopia doesn't
+				var fill = History.GetOrAdd(order_id, tt, pair);
+				fill.Trades[tid] = new Historic(order_id, tid, pair, tt, price, volume, volume*price, volume*price*Fee, DateTimeOffset.Now, DateTimeOffset.Now);
 			}
 
-			// Update the balances immediately to prevent accidental use of funds that aren't available
-			// because of the trade we just placed. Only reduce balances, don't assume the trade has completed.
-			// Also, remove any orders we might have filled from the order book.
+			// Remove any orders we might have filled from the order book.
 			if (tt == ETradeType.B2Q)
-			{
-				pair.Base.Balance.Hold(volume);
 				pair.B2Q.RemoveOrders(-1, volume, price);
-			}
 			else
-			{
-				pair.Quote.Balance.Hold(volume * price);
 				pair.Q2B.RemoveOrders(+1, volume, price);
-			}
 
 			// Trigger a positions and balances update
 			PositionUpdateRequired = true;
 			BalanceUpdateRequired = true;
+			HistoryUpdateRequired = true;
 
 			return order_result;
 		}
@@ -705,7 +765,7 @@ namespace CoinFlip
 			// Remove any positions that are no longer valid.
 			foreach (var pos in Positions.Values.Where(x => !order_ids.Contains(x.OrderId)).ToArray())
 			{
-				if (pos.CreationTime >= timestamp) continue;
+				if (pos.Created >= timestamp) continue;
 				if (Model.AllowTrades == false && pos.OrderId < 100) continue; // Hack for fake positions
 				Positions.Remove(pos.OrderId);
 			}

@@ -15,6 +15,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BittrexApi", "BittrexApi\Bi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic", "..\Rylogic\Rylogic.csproj", "{1735C773-5477-45E6-9CBF-5F2B6DC707EF}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Items", "Items", "{EDAC592F-AF43-4DD7-BC8F-06D125E3A9C1}"
+	ProjectSection(SolutionItems) = preProject
+		deploy_coinflip.py = deploy_coinflip.py
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

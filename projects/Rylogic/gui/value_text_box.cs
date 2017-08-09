@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
+using pr.common;
 using pr.extn;
 using pr.util;
 using pr.win32;
@@ -242,7 +243,7 @@ namespace pr.gui
 		private object m_value;
 
 		/// <summary>Set the value explicitly (i.e. not ignored if equal to the current value)</summary>
-		public void SetValue(object value)
+		public void SetValue(object value, bool notify = true)
 		{
 			// Adopt the type from the value if 'ValueType' is currently 'object'
 			if (ValueType == typeof(object) && value != null)
@@ -264,7 +265,8 @@ namespace pr.gui
 			ValueToTextIfNotFocused();
 
 			// Notify value changed
-			OnValueChanged();
+			if (notify)
+				OnValueChanged(new ValueEventArgs(Value));
 		}
 
 		/// <summary>True if the control contains a valid value</summary>
@@ -300,7 +302,7 @@ namespace pr.gui
 		public bool TryCommitValue()
 		{
 			var r = TextToValueIfValid();
-			if (r) OnValueCommitted();
+			if (r) OnValueCommitted(new ValueEventArgs(Value));
 			return r;
 		}
 
@@ -316,17 +318,17 @@ namespace pr.gui
 		}
 
 		/// <summary>Raised when the value is changed to a valid value by Enter pressed or focus lost</summary>
-		public event EventHandler ValueCommitted;
-		protected virtual void OnValueCommitted()
+		public event EventHandler<ValueEventArgs> ValueCommitted;
+		protected virtual void OnValueCommitted(ValueEventArgs args)
 		{
-			ValueCommitted.Raise(this);
+			ValueCommitted.Raise(this, args);
 		}
 
 		/// <summary>Raised when the value changes</summary>
-		public event EventHandler ValueChanged;
-		protected virtual void OnValueChanged()
+		public event EventHandler<ValueEventArgs> ValueChanged;
+		protected virtual void OnValueChanged(ValueEventArgs args)
 		{
-			ValueChanged.Raise(this);
+			ValueChanged.Raise(this, args);
 		}
 	}
 }

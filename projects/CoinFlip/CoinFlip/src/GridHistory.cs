@@ -20,49 +20,63 @@ namespace CoinFlip
 				HeaderText = "Order/Trade Id",
 				DataPropertyName = nameof(PositionFill.OrderId),
 				SortMode = DataGridViewColumnSortMode.Automatic,
-				FillWeight = 1.0f,
+				FillWeight = 0.6f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Position.CreationTime),
+				Name = nameof(Historic.Created),
 				HeaderText = "Date",
-				DataPropertyName = nameof(Position.CreationTime),
+				DataPropertyName = nameof(Historic.Created),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Position.TradeType),
+				Name = nameof(Historic.TradeType),
 				HeaderText = "Type",
-				DataPropertyName = nameof(Position.TradeType),
+				DataPropertyName = nameof(Historic.TradeType),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Position.Pair),
+				Name = nameof(Historic.Pair),
 				HeaderText = "Pair",
-				DataPropertyName = nameof(Position.Pair),
+				DataPropertyName = nameof(Historic.Pair),
 				FillWeight = 0.5f,
 				Visible = false,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Position.Price),
+				Name = nameof(Historic.PriceQ2B),
 				HeaderText = "Price",
-				DataPropertyName = nameof(Position.Price),
+				DataPropertyName = nameof(Historic.PriceQ2B),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Position.VolumeBase),
-				HeaderText = "Volume (Base)",
-				DataPropertyName = nameof(Position.VolumeBase),
+				Name = nameof(Historic.VolumeIn),
+				HeaderText = "Volume In",
+				DataPropertyName = nameof(Historic.VolumeIn),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Position.VolumeQuote),
-				HeaderText = "Volume (Quote)",
-				DataPropertyName = nameof(Position.VolumeQuote),
+				Name = nameof(Historic.VolumeOut),
+				HeaderText = "Volume Out",
+				DataPropertyName = nameof(Historic.VolumeOut),
+				FillWeight = 1.0f,
+			});
+			Columns.Add(new DataGridViewTextBoxColumn
+			{
+				Name = nameof(Historic.VolumeNett),
+				HeaderText = "Volume Nett",
+				DataPropertyName = nameof(Historic.VolumeNett),
+				FillWeight = 1.0f,
+			});
+			Columns.Add(new DataGridViewTextBoxColumn
+			{
+				Name = nameof(Historic.Commission),
+				HeaderText = "Commission",
+				DataPropertyName = nameof(Historic.Commission),
 				FillWeight = 1.0f,
 			});
 			DataSource = Model.History;
@@ -85,7 +99,7 @@ namespace CoinFlip
 
 			var node  = (TreeGridNode)Rows[a.RowIndex];
 			var fill  = node.DataBoundItem as PositionFill;
-			var trade = node.DataBoundItem as Position;
+			var trade = node.DataBoundItem as Historic;
 			var tt    = fill?.TradeType ?? trade.TradeType;
 			var pair  = fill?.Pair      ?? trade.Pair;
 
@@ -93,19 +107,17 @@ namespace CoinFlip
 			{
 			case nameof(PositionFill.OrderId):
 				{
-					a.Value = fill?.OrderId ?? trade.TradeId;
+					a.Value = fill?.OrderId ?? trade?.TradeId ?? 0UL;
 					break;
 				}
-			case nameof(Position.CreationTime):
+			case nameof(Historic.Created):
 				{
-					var ts = (fill != null
-						? fill.Trades.Values.Min(x => x.CreationTime)
-						: trade.CreationTime);
-					a.Value = ts?.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty;
+					var ts = fill?.Created ?? trade?.Created ?? DateTimeOffset.MinValue;
+					a.Value = ts.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss");
 					a.FormattingApplied = true;
 					break;
 				}
-			case nameof(Position.TradeType):
+			case nameof(Historic.TradeType):
 				{
 					a.Value = "{0}→{1} ({2})".Fmt(
 						tt == ETradeType.Q2B ? pair.Quote : pair.Base ,
@@ -114,47 +126,48 @@ namespace CoinFlip
 					a.FormattingApplied = true;
 					break;
 				}
-			case nameof(Position.Pair):
+			case nameof(Historic.Pair):
 				{
 					a.Value = pair.Name;
 					a.FormattingApplied = true;
 					break;
 				}
-			case nameof(Position.Price):
+			case nameof(Historic.PriceQ2B):
 				{
-					var price = 0m;
-					if (fill != null && fill.Trades.Count != 0)
-					{
-						price = tt == ETradeType.B2Q
-							? fill.Trades.Values.Max(x => (decimal)x.Price)
-							: fill.Trades.Values.Min(x => (decimal)x.Price);
-					}
-					else if (trade != null)
-					{
-						price = trade.Price;
-					}
-
-					a.Value = "{0:G8} {1}".Fmt(price, pair.RateUnits);
+					var price = fill?.PriceQ2B ?? trade?.PriceQ2B ?? 0m;
+					a.Value = $"{price.ToString("G8")} {pair.RateUnits}";
 					a.FormattingApplied = true;
 					break;
 				}
-			case nameof(Position.VolumeBase):
+			case nameof(Historic.VolumeIn):
 				{
-					var vol = fill != null
-						? fill.Trades.Values.Sum(x => (decimal)x.VolumeBase)
-						: (decimal)trade.VolumeBase;
-
-					a.Value = "{0:G8} {1}".Fmt(vol, pair.Base);
+					var vol = fill?.VolumeIn ?? trade?.VolumeIn ?? 0m;
+					var coin = fill?.CoinIn ?? trade?.CoinIn ?? string.Empty;
+					a.Value = $"{vol.ToString("G8")} {coin}";
 					a.FormattingApplied = true;
 					break;
 				}
-			case nameof(Position.VolumeQuote):
+			case nameof(Historic.VolumeOut):
 				{
-					var vol = fill != null
-						? fill.Trades.Values.Sum(x => (decimal)x.VolumeQuote)
-						: (decimal)trade.VolumeQuote;
-
-					a.Value = "{0:G8} {1}".Fmt(vol, pair.Quote);
+					var vol = fill?.VolumeOut ?? trade?.VolumeOut ?? 0m;
+					var coin = fill?.CoinOut ?? trade?.CoinOut ?? string.Empty;
+					a.Value = $"{vol.ToString("G8")} {coin}";
+					a.FormattingApplied = true;
+					break;
+				}
+			case nameof(Historic.VolumeNett):
+				{
+					var vol = fill?.VolumeNett ?? trade?.VolumeNett ?? 0m;
+					var coin = fill?.CoinOut ?? trade?.CoinOut ?? string.Empty;
+					a.Value = $"{vol.ToString("G8")} {coin}";
+					a.FormattingApplied = true;
+					break;
+				}
+			case nameof(Historic.Commission):
+				{
+					var fees = fill?.Commission ?? trade?.Commission ?? 0m;
+					var coin = fill?.CoinOut ?? trade?.CoinOut ?? string.Empty;
+					a.Value = $"{fees.ToString("G8")} {coin}";
 					a.FormattingApplied = true;
 					break;
 				}

@@ -62,22 +62,41 @@ namespace CoinFlip
 		{
 			#region Loops Grid
 			{
+				m_grid_loops.DoubleBuffered(true);
 				m_grid_loops.AutoGenerateColumns = false;
 				m_grid_loops.Columns.Add(new DataGridViewTextBoxColumn
 				{
-					Name = nameof(Loop.LoopDescription),
+					Name = nameof(Loop.Description),
 					HeaderText = "Loops",
-					DataPropertyName = nameof(Loop.LoopDescription),
+					DataPropertyName = nameof(Loop.Description),
 					SortMode = DataGridViewColumnSortMode.Programmatic,
-					FillWeight = 2,
+					FillWeight = 6,
 				});
 				m_grid_loops.Columns.Add(new DataGridViewTextBoxColumn
 				{
-					Name = nameof(Loop.ProfitRatio),
-					HeaderText = "Profit Ratio",
-					DataPropertyName = nameof(Loop.ProfitRatio),
+					Name = nameof(Loop.ProfitRatioFwd),
+					HeaderText = "Profit Ratio Forward",
+					DataPropertyName = nameof(Loop.ProfitRatioFwd),
 					SortMode = DataGridViewColumnSortMode.Programmatic,
+					DefaultCellStyle = new DataGridViewCellStyle{ Format = "G4" },
 					FillWeight = 1,
+				});
+				m_grid_loops.Columns.Add(new DataGridViewTextBoxColumn
+				{
+					Name = nameof(Loop.ProfitRatioBck),
+					HeaderText = "Profit Ratio Backward",
+					DataPropertyName = nameof(Loop.ProfitRatioBck),
+					SortMode = DataGridViewColumnSortMode.Programmatic,
+					DefaultCellStyle = new DataGridViewCellStyle{ Format = "G4" },
+					FillWeight = 1,
+				});
+				m_grid_loops.Columns.Add(new DataGridViewTextBoxColumn
+				{
+					Name = nameof(Loop.Tradeability),
+					HeaderText = "Trade-ability",
+					DataPropertyName = nameof(Loop.Tradeability),
+					SortMode = DataGridViewColumnSortMode.Programmatic,
+					FillWeight = 2,
 				});
 				m_grid_loops.CellFormatting += (s,a) =>
 				{
@@ -91,7 +110,7 @@ namespace CoinFlip
 
 					switch (col.Name) {
 					default: a.Handled = false; break;
-					case nameof(Loop.LoopDescription):
+					case nameof(Loop.Description):
 						{
 							var x = (float)a.CellBounds.Left;
 							var y = (float)a.CellBounds.Top;
@@ -128,8 +147,7 @@ namespace CoinFlip
 		private void HandleMarketDataChanging(object sender, MarketDataChangingEventArgs e)
 		{
 			if (!e.Done) return;
-			m_grid_loops.InvalidateColumn(0);
-			m_grid_loops.InvalidateColumn(1);
+			m_grid_loops.Invalidate();
 		}
 
 		#region Windows Form Designer generated code

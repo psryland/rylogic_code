@@ -28,8 +28,8 @@ namespace pr.extn
 	/// Use: add for each function you want supported
 	///   e.g.
 	///   m_grid.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
-	///   m_grid.KeyDown += DataGridViewEx.Cut;
-	///   m_grid.ContextMenuStrip.Items.Add("Copy", null, (s,a) => DataGridViewEx.Copy(m_grid, a));
+	///   m_grid.KeyDown += DataGridView_.Cut;
+	///   m_grid.ContextMenuStrip.Items.Add("Copy", null, (s,a) => DataGridView_.Copy(m_grid, a));
 	/// </summary>
 	public static class DataGridView_
 	{
@@ -558,7 +558,7 @@ namespace pr.extn
 		private static int GridDisplayWidth(DataGridView grid)
 		{
 			const int GridDisplayRectMargin = 2;
-			var width = grid.DisplayRectangle.Width - GridDisplayRectMargin;
+			var width = grid.DisplayRectangle.Width - GridDisplayRectMargin; // DisplayRectangle includes scroll bar width
 			if (grid.RowHeadersVisible) width -= grid.RowHeadersWidth;
 			return Math.Max(width, 0);
 		}
@@ -570,10 +570,10 @@ namespace pr.extn
 				return;
 
 			// Grid column auto sizing only works when the grid isn't trying to resize itself
-			Debug.Assert(grid.AutoSizeColumnsMode == DataGridViewAutoSizeColumnsMode.None);
-			Debug.Assert(
-				grid.Columns[column_index].AutoSizeMode == DataGridViewAutoSizeColumnMode.None ||
-				grid.Columns[column_index].AutoSizeMode == DataGridViewAutoSizeColumnMode.NotSet);
+			if (grid.AutoSizeColumnsMode != DataGridViewAutoSizeColumnsMode.None || (
+				grid.Columns[column_index].AutoSizeMode != DataGridViewAutoSizeColumnMode.None &&
+				grid.Columns[column_index].AutoSizeMode != DataGridViewAutoSizeColumnMode.NotSet))
+				return;
 				
 			// Get the display area width and the column widths
 			var columns         = grid.Columns.Cast<DataGridViewColumn>();
@@ -619,6 +619,13 @@ namespace pr.extn
 				grid.Columns[i].FillWeight = widths[i] / total_width;
 		}
 
+		// Column Width Sizing:
+		//   grid.ColumnWidthChanged         += DataGridView_.FitColumnsWithNoLineWrap; // or FitColumnsToDisplayWidth
+		//   grid.RowHeadersWidthChanged     += DataGridView_.FitColumnsWithNoLineWrap; // or FitColumnsToDisplayWidth
+		//   grid.AutoSizeColumnsModeChanged += DataGridView_.FitColumnsWithNoLineWrap; // or FitColumnsToDisplayWidth
+		//   grid.SizeChanged                += DataGridView_.FitColumnsWithNoLineWrap; // or FitColumnsToDisplayWidth
+		//   grid.Scroll                     += DataGridView_.FitColumnsWithNoLineWrap; // or FitColumnsToDisplayWidth
+
 		/// <summary>Options for smart column resizing</summary>
 		[Flags] public enum EColumnSizeOptions
 		{
@@ -658,29 +665,42 @@ namespace pr.extn
 
 			// Measure each column's preferred width
 			var pref_widths = widths.ToArray();
-			
-			// Return the cell's preferred size
-			Func<DataGridViewCell,float> MeasurePreferredWidth = (cell) =>
+			using (var gfx = grid.CreateGraphics())
 			{
-				var sz = cell.PreferredSize;
-				var w = Maths.Clamp(sz.Width, 30, 64000); // DGV throws if width is greater than 65535
-				return w;
-			};
-
-			// Measure the column header cells,
-			if (opts.HasFlag(EColumnSizeOptions.IncludeColumnHeaders))
-			{
-				foreach (var col in columns.Where(x => x.Visible))
-					pref_widths[col.Index] = Math.Max(pref_widths[col.Index], MeasurePreferredWidth(col.HeaderCell));
-			}
-
-			// Measure the cells in the displayed rows only
-			foreach (var row in grid.GetRowsWithState(DataGridViewElementStates.Displayed))
-			{
-				for (int i = 0, iend = Math.Min(grid.ColumnCount, row.Cells.Count); i != iend; ++i)
+				// Return the cell's preferred size
+				Func<DataGridViewCell,float> MeasurePreferredWidth = (cell) =>
 				{
-					if (!grid.Columns[i].Visible) continue;
-					pref_widths[i] = Math.Max(pref_widths[i], MeasurePreferredWidth(row.Cells[i]));
+					if (cell.Value is string text)
+					{
+						// For some reason, cell.GetPreferredSize or col.GetPreferredWidth don't return correct values
+						var sz = gfx.MeasureString(text, cell.InheritedStyle.Font);
+						var w = sz.Width + cell.InheritedStyle.Padding.Horizontal; 
+						return Maths.Clamp(w, 30, 64000); // DGV throws if width is greater than 65535
+					}
+					else
+					{
+						// Default to the cell preferred size
+						var sz = cell.PreferredSize;
+						var w = sz.Width;
+						return Maths.Clamp(w, 30, 64000); // DGV throws if width is greater than 65535
+					}
+				};
+
+				// Measure the column header cells,
+				if (opts.HasFlag(EColumnSizeOptions.IncludeColumnHeaders))
+				{
+					foreach (var col in columns.Where(x => x.Visible))
+						pref_widths[col.Index] = Math.Max(pref_widths[col.Index], MeasurePreferredWidth(col.HeaderCell));
+				}
+
+				// Measure the cells in the displayed rows only
+				foreach (var row in grid.GetRowsWithState(DataGridViewElementStates.Displayed))
+				{
+					for (int i = 0, iend = Math.Min(grid.ColumnCount, row.Cells.Count); i != iend; ++i)
+					{
+						if (!grid.Columns[i].Visible) continue;
+						pref_widths[i] = Math.Max(pref_widths[i], MeasurePreferredWidth(row.Cells[i]));
+					}
 				}
 			}
 
@@ -719,24 +739,30 @@ namespace pr.extn
 			}
 		}
 
-		/// <summary>
-		/// Resize the columns intelligently based on column content, visibility, and fill weights.
-		/// To handle user resized columns, call SetFillWeightsOnColumnWidthChanged() in the OnColumnWidthChanged()
-		/// handler like this: <para/>
-		///    if (!dgv.SettingGridColumnWidths()) <para/>
-		///    { <para/>
-		///        dgv.SetFillWeightsOnColumnWidthChanged(a.Column.Index); <para/>
-		///        dgv.SetGridColumnSizes(); <para/>
-		///    } <para/>
-		///</summary>
+		/// <summary>Resize the columns intelligently based on column content, visibility, and fill weights.</summary>
 		public static void SetGridColumnSizes(this DataGridView grid, EColumnSizeOptions opts)
 		{
+			// To handle user resized columns, call SetFillWeightsOnColumnWidthChanged() in the OnColumnWidthChanged()
+			// handler like this:
+			//    if (!dgv.SettingGridColumnWidths())
+			//    {
+			//        dgv.SetFillWeightsOnColumnWidthChanged(a.Column.Index);
+			//        dgv.SetGridColumnSizes();
+			//    }
+			//
+			// See 'FitColumnsToDisplayWidth' for the case where all columns fit the available width,
+			//  or 'FitColumnsWithNoLineWrap' for the log viewer case.
+
 			// Prevent reentrancy
 			if (m_set_grid_columns_sizes != null) return;
 			using (Scope.Create(() => m_set_grid_columns_sizes = grid, () => m_set_grid_columns_sizes = null))
 			{
 				// No columns, nothing to resize
 				if (grid.ColumnCount == 0)
+					return;
+
+				// No resizing unless in AutoSizeColumnsMode.None
+				if (grid.AutoSizeColumnsMode != DataGridViewAutoSizeColumnsMode.None)
 					return;
 
 				// Get the column widths
@@ -759,24 +785,55 @@ namespace pr.extn
 			return m_set_grid_columns_sizes == grid;
 		}
 		[ThreadStatic] private static object m_set_grid_columns_sizes;
+		[ThreadStatic] private static bool m_fit_columns_pending;
 
 		/// <summary>
 		/// An event handler that resizes the columns in a grid to fill the available space, while preserving user column size changes.
-		/// Attach this handler to 'ColumnWidthChanged' and 'RowHeadersWidthChanged' and 'SizeChanged'</summary>
-		public static void FitToDisplayWidth(object sender, EventArgs args = null)
+		/// Attach this handler to 'ColumnWidthChanged', 'RowHeadersWidthChanged', 'AutoSizeColumnsModeChanged', and 'SizeChanged'</summary>
+		public static void FitColumnsToDisplayWidth(object sender, EventArgs args = null)
 		{
 			var grid = (DataGridView)sender;
-			if (!grid.SettingGridColumnWidths())
+			if (grid.SettingGridColumnWidths() || m_fit_columns_pending || !grid.IsHandleCreated)
+				return;
+
+			// Delay the column resize until the last triggering event (particularly scroll events)
+			m_fit_columns_pending = true;
+			grid.BeginInvokeDelayed(10, () =>
 			{
 				// If this event is a column/row header width changed event,
 				// record the user column widths before resizing.
-				var a = args as DataGridViewColumnEventArgs;
-				if (a != null)
+				if (args is DataGridViewColumnEventArgs a)
 					grid.SetFillWeightsOnColumnWidthChanged(a.Column.Index);
 
 				// Resize columns to fit
 				grid.SetGridColumnSizes(EColumnSizeOptions.FitToDisplayWidth);
-			}
+				m_fit_columns_pending = false;
+			});
+		}
+
+		/// <summary>
+		/// An event handler that resizes the columns in a grid to fill the available space and
+		/// ensure each column does not wrap, while preserving user column size changes.
+		/// Attach this handler to 'ColumnWidthChanged', 'RowHeadersWidthChanged', 'AutoSizeColumnsModeChanged', and 'SizeChanged'</summary>
+		public static void FitColumnsWithNoLineWrap(object sender, EventArgs args = null)
+		{
+			var grid = (DataGridView)sender;
+			if (grid.SettingGridColumnWidths() || m_fit_columns_pending || !grid.IsHandleCreated)
+				return;
+		
+			// Delay the column resize until the last triggering event (particularly scroll events)
+			m_fit_columns_pending = true;
+			grid.BeginInvokeDelayed(10, () =>
+			{
+				// If this event is a column/row header width changed event,
+				// record the user column widths before resizing.
+				if (args is DataGridViewColumnEventArgs a)
+					grid.SetFillWeightsOnColumnWidthChanged(a.Column.Index);
+
+				// Resize columns to fit
+				grid.SetGridColumnSizes(EColumnSizeOptions.GrowToDisplayWidth|EColumnSizeOptions.Preferred);
+				m_fit_columns_pending = false;
+			});
 		}
 
 		/// <summary>An event handler for auto hiding the column header text when there is only one column visible in the grid</summary>
@@ -2024,7 +2081,7 @@ namespace pr.extn
 		#endregion
 	}
 
-	/// <summary>Event args for sorting a DGV using the DataGridViewEx</summary>
+	/// <summary>Event args for sorting a DGV using the DataGridView_</summary>
 	public class DGVSortEventArgs :EventArgs
 	{
 		public DGVSortEventArgs(int column_index, SortOrder direction)

@@ -4,6 +4,8 @@ using System.Linq;
 using System.Windows.Forms;
 using pr.extn;
 using pr.gui;
+using pr.maths;
+using pr.util;
 
 namespace CoinFlip
 {
@@ -14,39 +16,40 @@ namespace CoinFlip
 		{
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(CoinData.Symbol),
 				HeaderText = "Currency",
-				DataPropertyName = nameof(CoinData.Symbol),
+				Name = nameof(Settings.CoinData.Symbol),
+				DataPropertyName = nameof(Settings.CoinData.Symbol),
 				SortMode = DataGridViewColumnSortMode.Automatic,
 				FillWeight = 0.5f,
 				ReadOnly = true,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(CoinData.Value),
 				HeaderText = "Value",
-				DataPropertyName = nameof(CoinData.Value),
+				Name = nameof(ColumnNames.Value),
+				DataPropertyName = nameof(ColumnNames.Value),
+				DefaultCellStyle = new DataGridViewCellStyle{ Format = "C" },
 				FillWeight = 0.6f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(ColumnNames.Available),
 				HeaderText = "Available",
+				Name = nameof(ColumnNames.Available),
 				DataPropertyName = nameof(ColumnNames.Available),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(ColumnNames.Total),
 				HeaderText = "Total",
+				Name = nameof(ColumnNames.Total),
 				DataPropertyName = nameof(ColumnNames.Total),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewImageColumn
 			{
-				Name = nameof(CoinData.OfInterest),
 				HeaderText = "Flip",
-				DataPropertyName = nameof(CoinData.OfInterest),
+				Name = nameof(Settings.CoinData.OfInterest),
+				DataPropertyName = nameof(Settings.CoinData.OfInterest),
 				FillWeight = 0.3f,
 			});
 			ContextMenuStrip = CreateCMenu();
@@ -60,7 +63,7 @@ namespace CoinFlip
 
 			var cd = Model.Coins[a.RowIndex];
 			switch (col.DataPropertyName) {
-			case nameof(CoinData.OfInterest):
+			case nameof(Settings.CoinData.OfInterest):
 				{
 					cd.OfInterest = !cd.OfInterest;
 					Model.RebuildLoops = true;
@@ -76,6 +79,22 @@ namespace CoinFlip
 
 			var cd = Model.Coins[a.RowIndex];
 			switch (col.DataPropertyName) {
+			case nameof(ColumnNames.Value):
+				{
+					if (cd.OfInterest && Model.Settings.ShowLivePrices)
+					{
+						var value = 0m._(cd.Symbol);
+						foreach (var exch in Model.Exchanges.Except(Model.CrossExchange))
+						{
+							var coin = exch.Coins[cd.Symbol];
+							if (coin == null) continue;
+							value = Math.Max(value, coin.LiveValue(1m._(cd.Symbol)));
+						}
+						a.Value = value.ToString("C");
+						a.FormattingApplied = true;
+					}
+					break;
+				}
 			case nameof(ColumnNames.Available):
 				{
 					a.Value = Model.SumOfAvailable(cd.Symbol).ToString();
@@ -88,7 +107,7 @@ namespace CoinFlip
 					a.FormattingApplied = true;
 					break;
 				}
-			case nameof(CoinData.OfInterest):
+			case nameof(Settings.CoinData.OfInterest):
 				{
 					a.Value = cd.OfInterest ? Res.Active : Res.Inactive;
 					break;
@@ -112,7 +131,7 @@ namespace CoinFlip
 					{
 						if (prompt.ShowDialog(this) != DialogResult.OK) return;
 						var sym = prompt.Value.ToUpperInvariant();
-						Model.Coins.Add(new CoinData(sym, 1m));
+						Model.Coins.Add(new Settings.CoinData(sym, 1m));
 					}
 				};
 			}
@@ -124,8 +143,27 @@ namespace CoinFlip
 				};
 				opt.Click += (s,a) =>
 				{
-					var doomed = SelectedRows.Cast<DataGridViewRow>().Select(x => (CoinData)x.DataBoundItem).ToHashSet();
+					var doomed = SelectedRows.Cast<DataGridViewRow>().Select(x => (Settings.CoinData)x.DataBoundItem).ToHashSet();
 					Model.Coins.RemoveAll(doomed);
+				};
+			}
+			{
+				cmenu.Items.AddSeparator();
+			}
+			{
+				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Live Value Conversion"));
+				cmenu.Opening += (s,a) =>
+				{
+					opt.Enabled = SelectedRows.Count == 1;
+				};
+				opt.Click += (s,a) =>
+				{
+					var meta = SelectedRows.Cast<DataGridViewRow>().Select(x => (Settings.CoinData)x.DataBoundItem).First();
+					using (var dlg = new PromptForm { Title = "Live Price Conversion", PromptText = "Set the symbols used to convert to a live price value (comma separated)", Value = meta.LivePriceSymbols })
+					{
+						if (dlg.ShowDialog(this) != DialogResult.OK) return;
+						meta.LivePriceSymbols = dlg.Value;
+					}
 				};
 			}
 			return cmenu;
@@ -133,6 +171,7 @@ namespace CoinFlip
 
 		public static class ColumnNames
 		{
+			public const int Value = 0;
 			public const int Total = 0;
 			public const int Available = 0;
 		}

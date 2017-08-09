@@ -53,6 +53,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="src\ArbitrageLoops.cs" />
     <Compile Include="src\Balance.cs" />
     <Compile Include="src\Coin.cs" />
     <Compile Include="src\Exchange_Bittrex.cs" />
@@ -60,6 +61,9 @@
     <Compile Include="src\Exchange_Cryptopia.cs" />
     <Compile Include="src\Exchange.cs" />
     <Compile Include="src\Fishing.cs" />
+    <Compile Include="src\FishingDetailsUI.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="src\GridBalances.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -79,6 +83,7 @@
     <Compile Include="src\GridPositions.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="src\Historic.cs" />
     <Compile Include="src\PositionFill.cs" />
     <Compile Include="src\Loop.cs" />
     <Compile Include="src\LoopsUI.cs">
@@ -109,6 +114,9 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\FishingDetailsUI.resx">
+      <DependentUpon>FishingDetailsUI.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\LoopsUI.resx">
       <DependentUpon>LoopsUI.cs</DependentUpon>

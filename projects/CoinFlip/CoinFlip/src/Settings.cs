@@ -17,6 +17,7 @@ namespace CoinFlip
 		{
 			MaximumLoopCount  = 5;
 			MainLoopPeriod    = 500;
+			ShowLivePrices    = false;
 			Coins             = new CoinData[0];
 			Fishing           = new FishingData[0];
 			UI                = new UISettings();
@@ -44,6 +45,13 @@ namespace CoinFlip
 		{
 			get { return get(x => x.MainLoopPeriod); }
 			set { set(x => x.MainLoopPeriod, value); }
+		}
+
+		/// <summary>Display the nett worth as a live price</summary>
+		public bool ShowLivePrices
+		{
+			get { return get(x => x.ShowLivePrices); }
+			set { set(x => x.ShowLivePrices, value); }
 		}
 
 		/// <summary>Meta data for known coins</summary>
@@ -293,19 +301,92 @@ namespace CoinFlip
 			private class TyConv :GenericTypeConverter<CrossExchangeSettings> {}
 		}
 
+		/// <summary>Meta data for a coin</summary>
+		[Serializable]
+		[DebuggerDisplay("{Symbol} {Value} {OfInterest}")]
+		public class CoinData :INotifyPropertyChanged
+		{
+			public CoinData(string symbol, decimal value)
+			{
+				Symbol = symbol;
+				Value = value;
+				OfInterest = false;
+				AutoTradingLimit = 1m;
+				LivePriceSymbols = string.Empty;
+			}
+			public CoinData(XElement node)
+			{
+				Symbol           = node.Element(nameof(Symbol)).As(Symbol);
+				Value            = node.Element(nameof(Value)).As(Value);
+				OfInterest       = node.Element(nameof(OfInterest)).As(OfInterest);
+				AutoTradingLimit = node.Element(nameof(AutoTradingLimit)).As(AutoTradingLimit);
+				LivePriceSymbols = node.Element(nameof(LivePriceSymbols)).As(LivePriceSymbols);
+			}
+			public XElement ToXml(XElement node)
+			{
+				node.Add2(nameof(Symbol), Symbol, false);
+				node.Add2(nameof(Value), Value, false);
+				node.Add2(nameof(OfInterest), OfInterest, false);
+				node.Add2(nameof(AutoTradingLimit), AutoTradingLimit, false);
+				node.Add2(nameof(LivePriceSymbols), LivePriceSymbols, false);
+				return node;
+			}
+
+			/// <summary>The symbol name for the coin</summary>
+			public string Symbol { get; private set; }
+
+			/// <summary>Value assigned to this coin</summary>
+			public decimal Value
+			{
+				get { return m_value; }
+				set { SetProp(ref m_value, value, nameof(Value)); }
+			}
+			private decimal m_value;
+
+			/// <summary>True if coins of this type should be included in loops</summary>
+			public bool OfInterest
+			{
+				get { return m_of_interest; }
+				set { SetProp(ref m_of_interest, value, nameof(OfInterest)); }
+			}
+			private bool m_of_interest;
+
+			/// <summary>The maximum amount of this coin to automatically trade in one go</summary>
+			public decimal AutoTradingLimit
+			{
+				get { return m_auto_trade_limit; }
+				set { SetProp(ref m_auto_trade_limit, value, nameof(AutoTradingLimit)); }
+			}
+			private decimal m_auto_trade_limit;
+
+			/// <summary>A comma separated list of currencies used to convert this coin to a live price value</summary>
+			public string LivePriceSymbols
+			{
+				get { return m_live_price_symbols; }
+				set { SetProp(ref m_live_price_symbols, value, nameof(LivePriceSymbols)); }
+			}
+			private string m_live_price_symbols;
+
+			/// <summary>Property changed</summary>
+			public event PropertyChangedEventHandler PropertyChanged;
+			private void SetProp<T>(ref T prop, T value, string name)
+			{
+				if (Equals(prop, value)) return;
+				prop = value;
+				PropertyChanged.Raise(this, new PropertyChangedEventArgs(name));
+			}
+		}
+
 		/// <summary>Data needed to save a fishing instance in the settings</summary>
 		[Serializable]
 		[DebuggerDisplay("{Pair} {Exch0} {Exch1}")]
 		public class FishingData
 		{
-			public FishingData(string pair, string exch0, string exch1, decimal scale, decimal volume_limit_base, decimal volume_limit_quote, decimal price_offset, ETradeDirection direction)
+			public FishingData(string pair, string exch0, string exch1, decimal price_offset, ETradeDirection direction)
 			{
 				Pair         = pair;
 				Exch0        = exch0;
 				Exch1        = exch1;
-				Scale        = scale;
-				VolumeLimitB = volume_limit_base;
-				VolumeLimitQ = volume_limit_quote;
 				PriceOffset  = price_offset;
 				Direction    = direction;
 			}
@@ -314,9 +395,6 @@ namespace CoinFlip
 				Pair         = rhs.Pair;
 				Exch0        = rhs.Exch0;
 				Exch1        = rhs.Exch1;
-				Scale        = rhs.Scale;
-				VolumeLimitB = rhs.VolumeLimitB;
-				VolumeLimitQ = rhs.VolumeLimitQ;
 				PriceOffset  = rhs.PriceOffset;
 				Direction    = rhs.Direction;
 			}
@@ -325,9 +403,6 @@ namespace CoinFlip
 				Pair         = node.Element(nameof(Pair )).As(Pair );
 				Exch0        = node.Element(nameof(Exch0)).As(Exch0);
 				Exch1        = node.Element(nameof(Exch1)).As(Exch1);
-				Scale        = node.Element(nameof(Scale)).As(Scale);
-				VolumeLimitB = node.Element(nameof(VolumeLimitB)).As(VolumeLimitB);
-				VolumeLimitQ = node.Element(nameof(VolumeLimitQ)).As(VolumeLimitQ);
 				PriceOffset  = node.Element(nameof(PriceOffset)).As(PriceOffset);
 				Direction    = node.Element(nameof(Direction)).As(Direction);
 			}
@@ -336,9 +411,6 @@ namespace CoinFlip
 				node.Add2(nameof(Pair), Pair, false);
 				node.Add2(nameof(Exch0), Exch0, false);
 				node.Add2(nameof(Exch1), Exch1, false);
-				node.Add2(nameof(Scale), Scale, false);
-				node.Add2(nameof(VolumeLimitB), VolumeLimitB, false);
-				node.Add2(nameof(VolumeLimitQ), VolumeLimitQ, false);
 				node.Add2(nameof(PriceOffset), PriceOffset, false);
 				node.Add2(nameof(Direction), Direction, false);
 				return node;
@@ -352,15 +424,6 @@ namespace CoinFlip
 
 			/// <summary>The name of the target exchange</summary>
 			public string Exch1 { get; set; }
-
-			/// <summary>The trade scale to use</summary>
-			public decimal Scale { get; set; }
-
-			/// <summary>The volume limit on the base currency</summary>
-			public decimal VolumeLimitB { get; set; }
-
-			/// <summary>The volume limit on the quote currency</summary>
-			public decimal VolumeLimitQ { get; set; }
 
 			/// <summary>The price offset range (as a fraction of the reference price)</summary>
 			public decimal PriceOffset { get; set; }
@@ -382,10 +445,7 @@ namespace CoinFlip
 					return 
 						Exch0 != Exch1 &&
 						Pair.HasValue() &&
-						Scale.Within(0m, 1m) &&
 						PriceOffset > 0 &&
-						VolumeLimitB >= 0 &&
-						VolumeLimitQ >= 0 &&
 						Direction != ETradeDirection.None;
 				}
 			}
@@ -398,10 +458,7 @@ namespace CoinFlip
 					return Str.Build(
 						Exch0 == Exch1                    ? "Exchanges are the same\r\n"          : string.Empty,
 						!Pair.HasValue()                  ? "No trading pair\r\n"                 : string.Empty,
-						!Scale.Within(0m, 1m)             ? "Scale outside range [0,1]\r\n"       : string.Empty,
 						PriceOffset <= 0                  ? "Price offset invalid\r\n"            : string.Empty,
-						VolumeLimitB < 0                  ? "Volume limit (base) is invalid\r\n"  : string.Empty,
-						VolumeLimitQ < 0                  ? "Volume limit (quote) is invalid\r\n" : string.Empty,
 						Direction == ETradeDirection.None ? "No trading direction\r\n"            : string.Empty);
 				}
 			}

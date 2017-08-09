@@ -40,9 +40,9 @@ namespace Poloniex.API
 
 		/// <summary>The trade volume remaining (in base currency)</summary>
 		[JsonProperty("amount")]
-		public decimal VolumeBase { get; private set; }
+		public decimal Amount { get; private set; }
 
-		/// <summary>The value of the trade (equal to Price * VolumeBase) (in quote currency)</summary>
+		/// <summary>The value of the trade (equal to Price * VolumeBase) *NOT* including fees (in quote currency)</summary>
 		[JsonProperty("total")]
 		public decimal Total { get; private set; }
 

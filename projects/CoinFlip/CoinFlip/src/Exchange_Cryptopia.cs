@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Cryptopia.API;
 using Cryptopia.API.DataObjects;
+using CryptopiaApi.Models;
 using pr.common;
 using pr.extn;
 using pr.util;
@@ -25,9 +27,10 @@ namespace CoinFlip
 		public Cryptopia(Model model)
 			:base(model, model.Settings.Cryptopia)
 		{
+			m_pair_ids = new HashSet<int>();
 			Pub = new CryptopiaApiPublic(Model.ShutdownToken);
 			Priv = new CryptopiaApiPrivate(ApiKey, ApiSecret, Model.ShutdownToken);
-			m_pair_ids = new HashSet<int>();
+			TradeHistoryUseful = false;
 
 			// Start the exchange
 			if (Model.Settings.Cryptopia.Active)
@@ -52,7 +55,7 @@ namespace CoinFlip
 		protected async override Task CancelOrderInternal(TradePair pair, ulong order_id)
 		{
 			var msg = await Priv.CancelTrade(new CancelTradeRequest((int)order_id));
-			if (!msg.Success)
+			if (!msg.Success && !Regex.IsMatch(msg.Error, @"Trade #\d+ does not exist"))
 				throw new Exception(
 					"Cryptopia: Cancel trade failed. {0}\n".Fmt(msg.Error) +
 					"Order Id: {0}".Fmt(order_id));
@@ -71,35 +74,23 @@ namespace CoinFlip
 				// Add an action to add/update the pairs,coins
 				Model.MarketUpdates.Add(() =>
 				{
-					var nue = new HashSet<string>();
 					var ids = new HashSet<int>();
 
-					// Create the trade pairs and associated coins
+					// Create/Update the trade pairs and associated coins
 					var pairs = msg.Data.Where(x => coi.Contains(x.SymbolBase) && coi.Contains(x.SymbolQuote));
 					foreach (var p in pairs)
 					{
 						var base_ = Coins.GetOrAdd(p.SymbolBase);
 						var quote = Coins.GetOrAdd(p.SymbolQuote);
 
-						// Add the trade pair.
+						// Update the trade pairs
 						var instr = new TradePair(base_, quote, this, p.Id,
 							volume_range_base:new RangeF<Unit<decimal>>(p.MinimumTradeBase ._(p.SymbolBase ), p.MaximumTradeBase ._(p.SymbolBase )),
 							volume_range_quote:new RangeF<Unit<decimal>>(p.MinimumTradeQuote._(p.SymbolQuote), p.MaximumTradeQuote._(p.SymbolQuote)),
 							price_range:null);
 						Pairs[instr.UniqueKey] = instr;
-
-						// Save the names of the pairs,coins returned
-						nue.Add(instr.Name);
-						nue.Add(instr.Base.Symbol);
-						nue.Add(instr.Quote.Symbol);
 						ids.Add(p.Id);
 					}
-
-					// Remove pairs not in 'nue'
-					Pairs.RemoveIf(p => !nue.Contains(p.Name));
-
-					// Remove coins not in 'nue'
-					Coins.RemoveIf(c => !nue.Contains(c.Symbol));
 
 					// Ensure a 'Balance' object exists for each coin type
 					foreach (var c in Coins.Values)
@@ -107,10 +98,7 @@ namespace CoinFlip
 
 					// Record the pair Ids
 					lock (m_pair_ids)
-					{
-						m_pair_ids.Clear();
 						m_pair_ids.AddRange(ids);
-					}
 				});
 			}
 			catch (Exception ex)
@@ -134,7 +122,7 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Get the trade pair ids
-				int[] ids;
+				var ids = (int[])null;
 				lock (m_pair_ids)
 					ids = m_pair_ids.ToArray();
 
@@ -205,7 +193,6 @@ namespace CoinFlip
 					// Update the account balance
 					using (Model.Balances.PreservePosition())
 					{
-						var nue = new HashSet<Coin>();
 						foreach (var b in msg.Data.Where(x => x.Available != 0 || Coins.ContainsKey(x.Symbol)))
 						{
 							// Find the currency that this balance is for
@@ -214,11 +201,7 @@ namespace CoinFlip
 							// Update the balance
 							var bal = new Balance(coin, b.Total, b.Available, b.Unconfirmed, b.HeldForTrades, b.PendingWithdraw, timestamp);
 							Balance[coin] = bal;
-							nue.Add(coin);
 						}
-
-						// Remove balances that aren't of interest
-						Balance.RemoveIf(x => !nue.Contains(x.Coin));
 					}
 
 					// Notify updated
@@ -307,11 +290,11 @@ namespace CoinFlip
 				{
 					foreach (var order in msg.Data)
 					{
-						var his = PositionFrom(order, timestamp);
+						var his = HistoricFrom(order, timestamp);
 
 						// Hack until history contains original order id
-						var fill = History.Values.FirstOrDefault(x => x.Pair == his.Pair && x.Created == his.CreationTime);
-						if (fill == null) fill = History.GetOrAdd(his.TradeId, his.TradeType, his.Pair, his.CreationTime.Value);
+						var fill = History.Values.FirstOrDefault(x => x.Pair == his.Pair && x.Created == his.Created);
+						if (fill == null) fill = History.GetOrAdd(his.TradeId, his.TradeType, his.Pair);
 						his.OrderIdHACK = fill.OrderId;
 						fill.Trades[his.TradeId] = his;
 
@@ -341,26 +324,29 @@ namespace CoinFlip
 			// Get the associated trade pair (add the pair if it doesn't exist)
 			var order_id = unchecked((ulong)order.OrderId);
 			var sym = order.Market.Split('/');
-			var pair = Pairs[sym[0], sym[1]] ?? Pairs.Add2(new TradePair(Coins.GetOrAdd(sym[0]), Coins.GetOrAdd(sym[1]), this, order.TradePairId));
+			var pair = Pairs.GetOrAdd(sym[0], sym[1], trade_pair_id:order.TradePairId);
 			var rate = order.Rate._(pair.RateUnits);
 			var volume = order.Amount._(pair.Base);
 			var remaining = order.Remaining._(pair.Base);
 			var created = order.TimeStamp.As(DateTimeKind.Utc);
-			return new Position(order_id, 0, pair, Misc.TradeType(order.Type), rate, volume, remaining, created, updated);
+			return new Position(order_id, pair, Misc.TradeType(order.Type), rate, volume, remaining, created, updated);
 		}
 
 		/// <summary>Convert a Cryptopia trade history result into a position object</summary>
-		private Position PositionFrom(global::Cryptopia.API.Models.TradeHistoryResult order, DateTimeOffset updated)
+		private Historic HistoricFrom(global::Cryptopia.API.Models.TradeHistoryResult his, DateTimeOffset updated)
 		{
 			// Get the associated trade pair (add the pair if it doesn't exist)
-			var order_id = unchecked((ulong)order.OrderId);
-			var trade_id = unchecked((ulong)order.TradeId);
-			var sym = order.Market.Split('/');
-			var pair = Pairs[sym[0], sym[1]] ?? Pairs.Add2(new TradePair(Coins.GetOrAdd(sym[0]), Coins.GetOrAdd(sym[1]), this, order.TradePairId));
-			var price = order.Rate._(pair.RateUnits);
-			var volume = order.Amount._(pair.Base);
-			var created = order.TimeStamp.As(DateTimeKind.Utc);
-			return new Position(order_id, trade_id, pair, Misc.TradeType(order.Type), price, volume, 0, created, updated);
+			var order_id   = unchecked((ulong)his.OrderId);
+			var trade_id   = unchecked((ulong)his.TradeId);
+			var tt         = Misc.TradeType(his.Type);
+			var sym        = CurrencyPair.Parse(his.Market);
+			var pair       = Pairs.GetOrAdd(sym.Base, sym.Quote, trade_pair_id:his.TradePairId);
+			var price      = tt == ETradeType.B2Q ? his.Rate._(pair.RateUnits) : (1m / his.Rate._(pair.RateUnits));
+			var volume_in  = tt == ETradeType.B2Q ? his.Amount._(pair.Base)    : (his.Total._(pair.Quote) + his.Fee._(pair.Quote));
+			var volume_out = tt == ETradeType.B2Q ? his.Total._(pair.Quote)    : (volume_in * price);
+			var commission = tt == ETradeType.B2Q ? his.Fee._(pair.Quote)      : (volume_out - his.Amount._(pair.Base));
+			var created    = his.TimeStamp.As(DateTimeKind.Utc);
+			return new Historic(order_id, trade_id, pair, tt, price, volume_in, volume_out, commission, created, updated);
 		}
 	}
 }

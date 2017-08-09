@@ -297,6 +297,48 @@ namespace pr
 				auto sam = SamplerDesc::LinearWrap();
 				sam.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 				m_stock_textures.push_back(CreateTexture2D(EStockTexture::Checker, src, tdesc, sam, "#checker"));
+			}{
+				pr::uint const data[] =
+				{
+					#define X 0xFFFFFFFF
+					#define O 0xFFAAAAAA
+					X,X,O,O,X,X,O,O,
+					X,X,O,O,X,X,O,O,
+					O,O,X,X,O,O,X,X,
+					O,O,X,X,O,O,X,X,
+					X,X,O,O,X,X,O,O,
+					X,X,O,O,X,X,O,O,
+					O,O,X,X,O,O,X,X,
+					O,O,X,X,O,O,X,X,
+					#undef X
+					#undef O
+				};
+				Image src(8, 8, data, DXGI_FORMAT_R8G8B8A8_UNORM);
+				TextureDesc tdesc(src, 0, D3D11_USAGE_IMMUTABLE);
+				auto sam = SamplerDesc::LinearWrap();
+				sam.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+				m_stock_textures.push_back(CreateTexture2D(EStockTexture::Checker2, src, tdesc, sam, "#checker2"));
+			}{
+				pr::uint const data[] =
+				{
+					#define O 0xFFFFFFFF
+					#define X 0xFFEEEEEE
+					X,X,O,O,X,X,O,O,
+					X,X,O,O,X,X,O,O,
+					O,O,X,X,O,O,X,X,
+					O,O,X,X,O,O,X,X,
+					X,X,O,O,X,X,O,O,
+					X,X,O,O,X,X,O,O,
+					O,O,X,X,O,O,X,X,
+					O,O,X,X,O,O,X,X,
+					#undef X
+					#undef O
+				};
+				Image src(8, 8, data, DXGI_FORMAT_R8G8B8A8_UNORM);
+				TextureDesc tdesc(src, 0, D3D11_USAGE_IMMUTABLE);
+				auto sam = SamplerDesc::LinearWrap();
+				sam.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+				m_stock_textures.push_back(CreateTexture2D(EStockTexture::Checker3, src, tdesc, sam, "#checker3"));
 			}
 		}
 

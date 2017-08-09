@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using pr.extn;
 using pr.maths;
 using pr.util;
 
@@ -11,15 +12,31 @@ namespace CoinFlip
 	[DebuggerDisplay("{Description,nq}")]
 	public class Trade
 	{
+		// Notes:
+		//  - VolumeIn * Price does not have to equal VolumeOut, because 'Trade' is used
+		//    with the order book to calculate the best price for trading 'volume_in'.
+
 		public Trade(ETradeType tt, TradePair pair, Unit<decimal> volume_in, Unit<decimal> volume_out, Unit<decimal> price)
 		{
 			// Check trade volumes and units
-			if (tt == ETradeType.B2Q && (volume_in < 0m._(pair.Base) || volume_out < 0m._(pair.Quote)))
-				throw new Exception("Invalid trade volumes");
-			if (tt == ETradeType.Q2B && (volume_in < 0m._(pair.Quote) || volume_out < 0m._(pair.Base)))
-				throw new Exception("Invalid trade volumes");
-			if (price < 0m._(volume_out)/1m._(volume_in))
-				throw new Exception("Invalid trade price");
+			if (tt == ETradeType.B2Q)
+			{
+				if (volume_in < 0m._(pair.Base))
+					throw new Exception("Invalid trade volume in");
+				if (volume_out < 0m._(pair.Quote))
+					throw new Exception("Invalid trade volume out");
+				if (price < 0m._(pair.RateUnits))
+					throw new Exception("Invalid trade price");
+			}
+			if (tt == ETradeType.Q2B)
+			{
+				if (volume_in < 0m._(pair.Quote))
+					throw new Exception("Invalid trade volume in");
+				if (volume_out < 0m._(pair.Base))
+					throw new Exception("Invalid trade volume out");
+				if (price < 0m._(pair.RateUnitsInv))
+					throw new Exception("Invalid trade price");
+			}
 
 			TradeType = tt;
 			Pair      = pair;
@@ -43,6 +60,12 @@ namespace CoinFlip
 		/// <summary>The volume being bought</summary>
 		public Unit<decimal> VolumeOut { get; set; }
 
+		/// <summary>The volume being bought after commissions</summary>
+		public Unit<decimal> VolumeNett
+		{
+			get { return VolumeOut * (1 - Pair.Fee); }
+		}
+
 		/// <summary>The price of the trade (in VolumeOut/VolumeIn units)</summary>
 		public Unit<decimal> Price { get; set; }
 		public Unit<decimal> PriceInv
@@ -52,6 +75,26 @@ namespace CoinFlip
 		public Unit<decimal> PriceQ2B
 		{
 			get { return TradeType == ETradeType.B2Q ? Price : PriceInv; }
+		}
+
+		/// <summary>The effective price after fees</summary>
+		public Unit<decimal> PriceNett
+		{
+			get { return VolumeNett / VolumeIn; }
+		}
+		public Unit<decimal> PriceNettInv
+		{
+			get { return PriceNett != 0m._(PriceNett) ? (1m / PriceNett) : (0m._(VolumeIn) / 1m._(VolumeNett)); }
+		}
+		public Unit<decimal> PriceNettQ2B
+		{
+			get { return TradeType == ETradeType.B2Q ? PriceNett : PriceNettInv; }
+		}
+
+		/// <summary>The position of this trade in the order book for the trade type</summary>
+		public int OrderBookIndex
+		{
+			get { return Pair.OrderBookIndex(TradeType, PriceQ2B); }
 		}
 
 		/// <summary>The coin type being sold</summary>
@@ -73,11 +116,11 @@ namespace CoinFlip
 			{
 				var sym0 = TradeType == ETradeType.B2Q ? Pair.Base : Pair.Quote;
 				var sym1 = TradeType == ETradeType.B2Q ? Pair.Quote : Pair.Base;
-				return $"{VolumeIn.ToString("G6")} {sym0} → {VolumeOut.ToString("G6")} {sym1} @ {PriceQ2B.ToString("G6")}"; }
+				return $"{VolumeIn.ToString("G6")} {sym0} → {VolumeOut.ToString("G6")} {sym1} @ {PriceQ2B.ToString("G6")} {Pair.RateUnits}"; }
 		}
 
 		/// <summary>Check whether the given trade is an allowed trade</summary>
-		public EValidation Validate()
+		public EValidation Validate(Guid? reserved_balance = null)
 		{
 			var result = EValidation.Valid;
 
@@ -109,8 +152,9 @@ namespace CoinFlip
 			}
 
 			// Check the balances (allowing for fees)
-			var bal = TradeType == ETradeType.B2Q ? Pair.Base.Balance.Available : Pair.Quote.Balance.Available;
-			if (bal < VolumeIn * (1.0000001m + Pair.Fee))
+			var bal = TradeType == ETradeType.B2Q ? Pair.Base.Balance : Pair.Quote.Balance;
+			var available = bal.Available + (reserved_balance != null ? bal.Reserved(reserved_balance.Value) : 0m._(bal.Coin));
+			if (available < VolumeIn * (1.0000001m + Pair.Fee))
 				result |= EValidation.InsufficientBalance;
 
 			return result;

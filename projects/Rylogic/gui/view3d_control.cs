@@ -28,6 +28,7 @@ namespace pr.gui
 		public View3dControl() :this(false, string.Empty) {}
 		public View3dControl(bool gdi_compat, string dbg_name)
 		{
+			BackColor = Color.Gray;
 			if (this.IsInDesignMode()) return;
 			SetStyle(ControlStyles.Selectable, false);
 

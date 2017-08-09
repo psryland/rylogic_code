@@ -338,9 +338,9 @@ namespace pr.gui
 			{
 				// If a floating window id is given, locate the floating window and add to that
 				var id = loc.FloatingWindowId.Value;
-				var fw = GetOrAddFloatingWindow(x => x.Id == id);
+				var fw = GetOrAddFloatingWindow(id);
 				pane = fw.Add(dc, loc.Index, loc.Address);
-				fw.Id = id;
+				fw.Show(this);
 			}
 			else if (loc.AutoHide != null)
 			{
@@ -463,6 +463,14 @@ namespace pr.gui
 		public FloatingWindow GetFloatingWindow(int id)
 		{
 			return FloatingWindows.FirstOrDefault(x => x.Id == id);
+		}
+
+		/// <summary>Returns an existing floating window with id 'id', or a new floating window with the Id set to 'id'</summary>
+		private FloatingWindow GetOrAddFloatingWindow(int id)
+		{
+			var fw = GetOrAddFloatingWindow(x => x.Id == id);
+			fw.Id = id;
+			return fw;
 		}
 
 		/// <summary>Returns an existing floating window that satisfies 'pred', or a new floating window</summary>
@@ -791,7 +799,7 @@ namespace pr.gui
 				foreach (var fw_node in node.Elements(XmlTag.FloatingWindows, XmlTag.FloatingWindow))
 				{
 					var id = fw_node.Element(XmlTag.Id).As<int>();
-					var fw = GetOrAddFloatingWindow(x => x.Id == id);
+					var fw = GetOrAddFloatingWindow(id);
 					if (fw != null)
 						fw.ApplyState(fw_node);
 				}
@@ -5271,6 +5279,7 @@ namespace pr.gui
 			{
 				ShowInTaskbar = true;
 				FormBorderStyle = FormBorderStyle.Sizable;
+				StartPosition = FormStartPosition.CenterParent;
 				HideOnClose = true;
 				Text = string.Empty;
 				ShowIcon = false;

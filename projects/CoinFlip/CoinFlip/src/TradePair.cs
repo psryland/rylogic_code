@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -151,26 +152,18 @@ namespace CoinFlip
 		/// <summary>Return the Fee charged when trading this pair</summary>
 		public decimal Fee
 		{
-			get
-			{
-				// When the pairs are on different exchanges there is no fee
-				return Base.Exchange == Quote.Exchange
-					? Base.Exchange.TransactionFee
-					: 0;
-			}
+			// When the pairs are on different exchanges there is no fee
+			get { return Base.Exchange == Quote.Exchange ? Base.Exchange.Fee : 0; }
 		}
 
 		/// <summary>Return the units for the conversion rate from Base to Quote (i.e. Quote/Base)</summary>
 		public string RateUnits
 		{
-			get { return Base.Symbol != Quote.Symbol ? "{0}/{1}".Fmt(Quote, Base) : string.Empty; }
+			get { return Base.Symbol != Quote.Symbol ? $"{Quote}/{Base}" : string.Empty; }
 		}
-
-		/// <summary>Invalidate the pair data so that the pair will not be traded until updated with the latest data</summary>
-		public void Invalidate()
+		public string RateUnitsInv
 		{
-			Q2B.Clear();
-			B2Q.Clear();
+			get { return Base.Symbol != Quote.Symbol ? $"{Base}/{Quote}" : string.Empty; }
 		}
 
 		/// <summary>Return the current best price for the given trade type</summary>
@@ -178,31 +171,16 @@ namespace CoinFlip
 		{
 			switch (tt) {
 			default: throw new Exception("Unknown trade type: {0}".Fmt(tt));
-			case ETradeType.Q2B:  return B2Q.Orders.Count != 0 ? B2Q.Orders[0].Price : 0m._(RateUnits);
+			case ETradeType.Q2B: return B2Q.Orders.Count != 0 ? B2Q.Orders[0].Price : 0m._(RateUnits);
 			case ETradeType.B2Q: return Q2B.Orders.Count != 0 ? Q2B.Orders[0].Price : 0m._(RateUnits);
 			}
-		}
-
-		/// <summary>Update the list of buy/sell orders</summary>
-		public void UpdateOrderBook(Order[] buys, Order[] sells)
-		{
-			using (B2Q.Orders.SuspendEvents(reset_bindings_on_resume: true))
-			{
-				B2Q.Orders.Clear();
-				B2Q.Orders.AddRange(buys);
-			}
-			using (Q2B.Orders.SuspendEvents(reset_bindings_on_resume: true))
-			{
-				Q2B.Orders.Clear();
-				Q2B.Orders.AddRange(sells);
-			}
-			Debug.Assert(AssertOrdersValid());
 		}
 
 		/// <summary>
 		/// Convert a volume of 'Base' currency to 'Quote' currency using the available orders.
 		/// If there is insufficient liquidity, returns the amount traded from what was available.
-		/// Also returns the price at which the conversion would happen.</summary>
+		/// Also returns the price at which the conversion would happen.
+		/// Use 'volume' = 0 to get the spot price</summary>
 		public Trade BaseToQuote(Unit<decimal> volume)
 		{
 			if (volume < 0m._(Base))
@@ -233,7 +211,8 @@ namespace CoinFlip
 		/// <summary>
 		/// Convert a volume of 'Quote' currency to 'Base' currency using the available orders.
 		/// If there is insufficient liquidity, returns the amount traded from what was available.
-		/// Also returns the price at which the conversion would happen.</summary>
+		/// Also returns the price at which the conversion would happen.
+		/// Use 'volume' = 0 to get the spot price</summary>
 		public Trade QuoteToBase(Unit<decimal> volume)
 		{
 			if (volume < 0m._(Quote))
@@ -263,23 +242,48 @@ namespace CoinFlip
 			return trade;
 		}
 
-		///// <summary>Place an order to convert 'volume_base' (base currency) to quote currency at 'price' (Quote/Base)</summary>
-		//public Task<ulong> CreateB2QOrder(Unit<decimal> volume_base, Unit<decimal>? price = null)
-		//{
-		//	return Exchange.CreateB2QOrder(this, volume_base, price);
-		//}
+		/// <summary>The position of this trade in the order book for the trade type</summary>
+		public int OrderBookIndex(ETradeType tt, Unit<decimal> price)
+		{
+			// Check units
+			if (price < 0m._(RateUnits))
+				throw new Exception("Invalid price");
 
-		///// <summary>Place an order to convert 'volume_quote' (quote currency) to base currency at 'price' (Base/Quote)</summary>
-		//public Task<ulong> CreateQ2BOrder(Unit<decimal> volume_quote, Unit<decimal>? price = null)
-		//{
-		//	return Exchange.CreateQ2BOrder(this, volume_quote, price);
-		//}
+			return tt == ETradeType.B2Q
+				? Q2B.Orders.BinarySearch(x => +x.Price.CompareTo(price), find_insert_position:true)
+				: B2Q.Orders.BinarySearch(x => -x.Price.CompareTo(price), find_insert_position:true);
+		}
 
-		///// <summary>Place an order to buy or sell 'volume_base' at 'price'</summary>
-		//public Task<ulong> CreateOrder(ETradeType tt, Unit<decimal> volume_base, Unit<decimal>? price = null)
-		//{
-		//	return Exchange.CreateOrder(this, tt, volume_base, price);
-		//}
+		/// <summary>Update this pair using the contents of 'rhs'</summary>
+		public void Update(TradePair rhs)
+		{
+			// Sanity check
+			if (Base != rhs.Base || Quote != rhs.Quote || Exchange != rhs.Exchange)
+				throw new Exception("Update for the wrong trading pair");
+
+			// Update the update-able parts
+			TradePairId      = rhs.TradePairId;
+			VolumeRangeBase  = rhs.VolumeRangeBase;
+			VolumeRangeQuote = rhs.VolumeRangeQuote;
+			PriceRange       = rhs.PriceRange;
+			UpdateOrderBook(rhs.B2Q.Orders, rhs.Q2B.Orders);
+		}
+
+		/// <summary>Update the list of buy/sell orders</summary>
+		public void UpdateOrderBook(IEnumerable<Order> buys, IEnumerable<Order> sells)
+		{
+			using (B2Q.Orders.SuspendEvents(reset_bindings_on_resume: true))
+			{
+				B2Q.Orders.Clear();
+				B2Q.Orders.AddRange(buys);
+			}
+			using (Q2B.Orders.SuspendEvents(reset_bindings_on_resume: true))
+			{
+				Q2B.Orders.Clear();
+				Q2B.Orders.AddRange(sells);
+			}
+			Debug.Assert(AssertOrdersValid());
+		}
 
 		/// <summary></summary>
 		public override string ToString()
@@ -358,6 +362,57 @@ namespace CoinFlip
 				lhs.Quote == rhs.Base ? lhs.Quote :
 				lhs.Quote == rhs.Quote ? lhs.Quote :
 				null;
+		}
+
+		/// <summary>Convert a string 'base/quote' into the PairNames helper object</summary>
+		public static PairNames Parse(string pair_name)
+		{
+			return new PairNames(pair_name);
+		}
+	}
+
+	/// <summary>Helper for handling 'base/quote' pair name strings</summary>
+	public class PairNames
+	{
+		public PairNames(string base_, string quote)
+		{
+			Base = base_;
+			Quote = quote;
+		}
+		public PairNames(string pair_name)
+		{
+			string[] coins;
+			if (!pair_name.HasValue() || (coins = pair_name.Split('/')).Length != 2)
+				throw new ArgumentException("Invalid pair name", nameof(pair_name));
+
+			Base = coins[0];
+			Quote = coins[1];
+		}
+		public PairNames(TradePair pair)
+		{
+			if (pair == null)
+				throw new ArgumentNullException(nameof(pair));
+
+			Base = pair.Base.Symbol;
+			Quote = pair.Quote.Symbol;
+		}
+
+		/// <summary></summary>
+		public string Base { get; private set; }
+
+		/// <summary></summary>
+		public string Quote { get; private set; }
+
+		/// <summary>The name of the pair</summary>
+		public string Name
+		{
+			get { return $"{Base}/{Quote}"; }
+		}
+
+		/// <summary></summary>
+		public override string ToString()
+		{
+			return Name;
 		}
 	}
 }

@@ -5,6 +5,7 @@ namespace TestCS
 {
 	public class LogUI :Form
 	{
+		private pr.gui.LogUI m_log_ui;
 		public LogUI()
 		{
 			InitializeComponent();
@@ -19,31 +20,30 @@ namespace TestCS
 		private System.ComponentModel.IContainer components = null;
 		private void InitializeComponent()
 		{
-			this.logUI1 = new pr.gui.LogUI();
+			this.m_log_ui = new pr.gui.LogUI();
 			this.SuspendLayout();
 			// 
-			// logUI1
+			// m_log_ui
 			// 
-			this.logUI1.Location = new System.Drawing.Point(12, 12);
-			this.logUI1.Name = "logUI1";
-			this.logUI1.PopOutOnNewMessages = true;
-			this.logUI1.Size = new System.Drawing.Size(515, 632);
-			this.logUI1.TabIndex = 0;
-			this.logUI1.Title = "LogControl";
+			this.m_log_ui.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_log_ui.Location = new System.Drawing.Point(0, 0);
+			this.m_log_ui.Name = "m_log_ui";
+			this.m_log_ui.PopOutOnNewMessages = true;
+			this.m_log_ui.Size = new System.Drawing.Size(539, 656);
+			this.m_log_ui.TabIndex = 0;
+			this.m_log_ui.Title = "LogControl";
 			// 
 			// LogUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(539, 656);
-			this.Controls.Add(this.logUI1);
+			this.Controls.Add(this.m_log_ui);
 			this.Name = "LogUI";
 			this.Text = "log_ui";
 			this.ResumeLayout(false);
 
 		}
 		#endregion
-
-		private pr.gui.LogUI logUI1;
 	}
 }

@@ -20,6 +20,7 @@ namespace CoinFlip
 			:base(model, model.Settings.Poloniex)
 		{
 			Api = new PoloniexApi(ApiKey, ApiSecret, Model.ShutdownToken);
+			TradeHistoryUseful = true;
 
 			// Start the exchange
 			if (Model.Settings.Poloniex.Active)
@@ -100,8 +101,6 @@ namespace CoinFlip
 				// Add an action to integrate the data
 				Model.MarketUpdates.Add(() =>
 				{
-					var nue = new HashSet<string>();
-
 					// Create the trade pairs and associated coins
 					foreach (var p in msg.Where(x => coi.Contains(x.Value.Pair.Base) && coi.Contains(x.Value.Pair.Quote)))
 					{
@@ -115,18 +114,7 @@ namespace CoinFlip
 							volume_range_quote:new RangeF<Unit<decimal>>(0.0001m._(quote), 10000000m._(quote)),
 							price_range:null);
 						Pairs[instr.UniqueKey] = instr;
-
-						// Save the names of the pairs,coins returned
-						nue.Add(instr.Name);
-						nue.Add(instr.Base.Symbol);
-						nue.Add(instr.Quote.Symbol);
 					}
-
-					// Remove pairs not in 'nue'
-					Pairs.RemoveIf(p => !nue.Contains(p.Name));
-
-					// Remove coins not in 'nue'
-					Coins.RemoveIf(c => !nue.Contains(c.Symbol));
 
 					// Ensure a 'Balance' object exists for each coin type
 					foreach (var c in Coins.Values)
@@ -302,8 +290,8 @@ namespace CoinFlip
 				{
 					foreach (var order in history.Values.SelectMany(x => x))
 					{
-						var his = PositionFrom(order, timestamp);
-						var fill = History.GetOrAdd(his.OrderId, his.TradeType, his.Pair, his.CreationTime.Value);
+						var his = HistoricFrom(order, timestamp);
+						var fill = History.GetOrAdd(his.OrderId, his.TradeType, his.Pair);
 						fill.Trades[his.TradeId] = his;
 					}
 
@@ -329,36 +317,28 @@ namespace CoinFlip
 		/// <summary>Convert a Poloniex order into a position</summary>
 		private Position PositionFrom(global::Poloniex.API.Position pos, DateTimeOffset updated)
 		{
-			var pair = Pairs[pos.Pair.Base, pos.Pair.Quote] ??
-				Pairs.Add2(new TradePair(
-					Coins.GetOrAdd(pos.Pair.Base),
-					Coins.GetOrAdd(pos.Pair.Quote),
-					this));
-
 			var order_id = pos.OrderId;
-			var type = Misc.TradeType(pos.Type);
-			var rate = pos.Price._(pair.RateUnits);
-			var volume = pos.VolumeBase._(pair.Base);
-			var created = pos.Created;
-			return new Position(order_id, 0, pair, type, rate, volume, volume, created, updated);
+			var tt       = Misc.TradeType(pos.Type);
+			var pair     = Pairs.GetOrAdd(pos.Pair.Base, pos.Pair.Quote);
+			var price    = pos.Price._(pair.RateUnits);
+			var volume   = pos.VolumeBase._(pair.Base);
+			var created  = pos.Created;
+			return new Position(order_id, pair, tt, price, volume, volume, created, updated);
 		}
 
 		/// <summary>Convert a Poloniex trade history result into a position object</summary>
-		private Position PositionFrom(global::Poloniex.API.Historic his, DateTimeOffset updated)
+		private Historic HistoricFrom(global::Poloniex.API.Historic his, DateTimeOffset updated)
 		{
-			var pair = Pairs[his.Pair.Base, his.Pair.Quote] ??
-				Pairs.Add2(new TradePair(
-					Coins.GetOrAdd(his.Pair.Base),
-					Coins.GetOrAdd(his.Pair.Quote),
-					this));
-
-			var order_id = his.OrderId;
-			var trade_id = his.GlobalTradeId;
-			var type = Misc.TradeType(his.Type);
-			var rate = his.Price._(pair.RateUnits);
-			var volume = his.VolumeBase._(pair.Base);
-			var created = his.Timestamp;
-			return new Position(order_id, trade_id, pair, type, rate, volume, 0, created, updated);
+			var order_id   = his.OrderId;
+			var trade_id   = his.GlobalTradeId;
+			var tt         = Misc.TradeType(his.Type);
+			var pair       = Pairs.GetOrAdd(his.Pair.Base, his.Pair.Quote);
+			var price      = tt == ETradeType.B2Q ? his.Price._(pair.RateUnits) : (1m / his.Price._(pair.RateUnits));
+			var volume_in  = tt == ETradeType.B2Q ? his.Amount._(pair.Base)     : his.Total._(pair.Quote);
+			var volume_out = tt == ETradeType.B2Q ? his.Total._(pair.Quote)     : his.Amount._(pair.Base);
+			var commission = volume_out * his.Fee;
+			var created    = his.Timestamp;
+			return new Historic(order_id, trade_id, pair, tt, price, volume_in, volume_out, commission, created, updated);
 		}
 
 		/// <summary>Handle connection to Poloniex</summary>

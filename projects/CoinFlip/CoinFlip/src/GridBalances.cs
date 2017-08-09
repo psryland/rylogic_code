@@ -36,8 +36,8 @@ namespace CoinFlip
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Balance.Value),
 				HeaderText = "Value",
+				Name = nameof(Balance.Value),
 				DataPropertyName = nameof(Balance.Value),
 				DefaultCellStyle = new DataGridViewCellStyle{ Format = "C" },
 				SortMode = DataGridViewColumnSortMode.Automatic,
