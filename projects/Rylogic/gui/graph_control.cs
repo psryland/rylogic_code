@@ -260,6 +260,19 @@ namespace pr.gui
 		/// <summary>Graph data points</summary>
 		[Serializable] public struct GraphValue
 		{
+			public GraphValue(double x, double y)                           :this(x, y, 0, 0, null)       {}
+			public GraphValue(double x, double y, object tag)               :this(x, y, 0, 0, tag)        {}
+			public GraphValue(double x, double y, double y_lo, double y_hi) :this(x, y, y_lo, y_hi, null) {}
+			public GraphValue(double x, double y, double y_lo, double y_hi, object tag)
+			{
+				Debug.Assert(Maths.IsFinite(x) && Maths.IsFinite(y));
+				this.x     = x;
+				this.y     = y;
+				this.ylo   = y_lo;
+				this.yhi   = y_hi;
+				this.m_tag = tag;
+			}
+
 			/// <summary>Data point X value</summary>
 			public double x;
 
@@ -275,25 +288,14 @@ namespace pr.gui
 			/// <summary>Allow users to attach data to each value in the graph</summary>
 			public object m_tag;
 
-			public GraphValue(double x, double y)                           :this(x, y, 0, 0, null)       {}
-			public GraphValue(double x, double y, object tag)               :this(x, y, 0, 0, tag)        {}
-			public GraphValue(double x, double y, double y_lo, double y_hi) :this(x, y, y_lo, y_hi, null) {}
-			public GraphValue(double x, double y, double y_lo, double y_hi, object tag)
-			{
-				Debug.Assert(Maths.IsFinite(x) && Maths.IsFinite(y));
-				this.x       = x;
-				this.y       = y;
-				this.ylo    = y_lo;
-				this.yhi    = y_hi;
-				this.m_tag   = tag;
-			}
+			/// <summary></summary>
 			public override string ToString()
 			{
-				return "({0},{1})".Fmt(x,y);
+				return $"({x},{y})";
 			}
 			public static Comparer<GraphValue> SortX
 			{
-				get { return Cmp<GraphValue>.From((lhs,rhs) => (lhs.x > rhs.x ? 1 : 0) - (lhs.x < rhs.x ? 1 : 0)); }
+				get { return Comparer<GraphValue>.Create((lhs,rhs) => lhs.x.CompareTo(rhs.x)); }
 			}
 		}
 

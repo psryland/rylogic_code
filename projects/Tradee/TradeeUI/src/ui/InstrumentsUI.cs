@@ -8,6 +8,7 @@ using pr.gui;
 using pr.maths;
 using pr.util;
 using Tradee.Properties;
+using DataGridView = pr.gui.DataGridView;
 
 namespace Tradee
 {
@@ -90,10 +91,10 @@ namespace Tradee
 			// Support drag and drop from the 'all' to the 'favourites' list
 			// and for re-ordering the favourites list
 			m_dd = new DragDrop(m_grid_fav);
-			m_dd.DoDrop += DataGridViewEx.DragDrop_DoDropMoveRow;
+			m_dd.DoDrop += DataGridView_.DragDrop_DoDropMoveRow;
 			m_dd.DoDrop += (s,a,m) =>
 			{
-				var ddd = (DataGridViewEx.DragDropData)a.Data.GetData(typeof(DataGridViewEx.DragDropData));
+				var ddd = (DataGridView_.DragDropData)a.Data.GetData(typeof(DataGridView_.DragDropData));
 				if (ddd == null)
 					return false;
 
@@ -120,8 +121,8 @@ namespace Tradee
 				return true;
 			};
 			m_grid_fav.AllowDrop = true;
-			m_grid_all.MouseDown += DataGridViewEx.DragDrop_DragRow;
-			m_grid_fav.MouseDown += DataGridViewEx.DragDrop_DragRow;
+			m_grid_all.MouseDown += DataGridView_.DragDrop_DragRow;
+			m_grid_fav.MouseDown += DataGridView_.DragDrop_DragRow;
 
 			// Allow delete on the favourites grid
 			m_grid_fav.AllowUserToDeleteRows = true;
@@ -256,8 +257,8 @@ namespace Tradee
 		private void InitializeComponent()
 		{
 			this.m_split = new System.Windows.Forms.SplitContainer();
-			this.m_grid_fav = new System.Windows.Forms.DataGridView();
-			this.m_grid_all = new System.Windows.Forms.DataGridView();
+			this.m_grid_fav = new pr.gui.DataGridView();
+			this.m_grid_all = new pr.gui.DataGridView();
 			this.m_panel_add_instrument = new System.Windows.Forms.Panel();
 			this.m_cb_symbols = new pr.gui.ComboBox();
 			this.m_btn_add_instrument = new System.Windows.Forms.Button();

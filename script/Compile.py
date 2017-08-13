@@ -60,15 +60,15 @@ DefaultDefines = [
 	"NOMINMAX",
 	]
 	
-PrSwitches = DefaultSwitches + [
-	]
+PrSwitches = [
+	] + DefaultSwitches
 PrIncludes = [
-	UserVars.root + r"\projects",
-	UserVars.root + r"\include",
-	UserVars.root + r"\sdk",
-	UserVars.root + r"\sdk\sqlite\include",
-	UserVars.root + r"\sdk\lua\lua\src",
-	UserVars.root + r"\sdk\lua",
+	Tools.AssertPath(UserVars.root + r"\projects"),
+	Tools.AssertPath(UserVars.root + r"\include"),
+	Tools.AssertPath(UserVars.root + r"\sdk"),
+	Tools.AssertPath(UserVars.root + r"\sdk\sqlite\include"),
+	Tools.AssertPath(UserVars.root + r"\sdk\lua\lua\src"),
+	Tools.AssertPath(UserVars.root + r"\sdk\lua"),
 	] + DefaultIncludes
 PrLibs = [
 	UserVars.root+"\\lib\\$(platform)\\$(config)",
@@ -80,89 +80,61 @@ PrDefines = [
 	
 # Set environment variables needed for cl.exe to work
 def SetupVCEnvironment(_32bit = True):
-	if UserVars.winsdkvers == "8.1":
-		os.environ["INCLUDE"] = (
-			UserVars.vs_dir + "\\VC\\INCLUDE;" +
-			UserVars.vs_dir + "\\VC\\ATLMFC\\INCLUDE;" +
-			UserVars.winsdk + "\\include\\um;" +
-			UserVars.winsdk + "\\include\\shared;" +
-			UserVars.winsdk + "\\include\\winrt;" +
+	os.environ["INCLUDE"] = (
+		Tools.AssertPath(UserVars.vs_platform_dir + "\\include") + ";" +
+		Tools.AssertPath(UserVars.winsdk_include)                + ";" +
+		Tools.AssertPath(UserVars.winsdk_include + "\\ucrt")     + ";" +
+		Tools.AssertPath(UserVars.winsdk_include + "\\shared")   + ";" +
+		Tools.AssertPath(UserVars.winsdk_include + "\\um")       + ";" +
+		Tools.AssertPath(UserVars.winsdk_include + "\\winrt")    + ";" +
+		#Tools.AssertPath(UserVars.winsdk + "\\..\\NETFXSDK\\4.6\\include\\um") + ";" +
+		"")
+	if _32bit:
+		os.environ["LIB"] = (
+			Tools.AssertPath(UserVars.vs_platform_dir + "\\lib\\x86") + ";" +
+			Tools.AssertPath(UserVars.winsdk_lib + "\\ucrt\\x86")     + ";" +
+			Tools.AssertPath(UserVars.winsdk_lib + "\\um\\x86")       + ";" +
 			"")
-		if _32bit:
-			os.environ["LIB"] = (
-				UserVars.vs_dir + "\\VC\\LIB;" +
-				UserVars.vs_dir + "\\VC\\ATLMFC\\LIB;" +
-				UserVars.winsdk + "\\lib\\8.1\\lib\\winv6.3\\um\\x86;" +
-				"")
-		else:
-			os.environ["LIB"] = (
-				UserVars.vs_dir + "\\VC\\LIB\\amd64;" +
-				UserVars.vs_dir + "\\VC\\ATLMFC\\LIB\\amd64;" +
-				UserVars.winsdk + "\\lib\\8.1\\lib\\winv6.3\\um\\x64;" +
-				"")
-	elif UserVars.winsdkvers in ["10.0.10150.0", "10.0.10240.0", "10.0.10586.0"]:
-		os.environ["INCLUDE"] = (
-			UserVars.vs_dir + "\\VC\\INCLUDE;" +
-			UserVars.vs_dir + "\\VC\\ATLMFC\\INCLUDE;" +
-			UserVars.winsdk + "\\include\\" + UserVars.winsdkvers + "\\ucrt;" +
-			UserVars.winsdk + "\\include\\" + UserVars.winsdkvers + "\\shared;" +
-			UserVars.winsdk + "\\include\\" + UserVars.winsdkvers + "\\um;" +
-			UserVars.winsdk + "\\include\\" + UserVars.winsdkvers + "\\winrt;" +
-			UserVars.winsdk + "\\..\\NETFXSDK\\4.6\\include\\um;" +
-			"")
-		if _32bit:
-			os.environ["LIB"] = (
-				UserVars.vs_dir + "\\VC\\LIB;" +
-				UserVars.vs_dir + "\\VC\\ATLMFC\\LIB;" +
-				UserVars.winsdk + "\\lib\\" + UserVars.winsdkvers + "\\ucrt\\x86;" +
-				UserVars.winsdk + "\\lib\\" + UserVars.winsdkvers + "\\um\\x86;" +
-				"")
-		else:
-			os.environ["LIB"] = (
-				UserVars.vs_dir + "\\VC\\LIB\\amd64;" +
-				UserVars.vs_dir + "\\VC\\ATLMFC\\LIB\\amd64;" +
-				UserVars.winsdk + "\\lib\\" + UserVars.winsdkvers + "\\ucrt\\x64;" +
-				UserVars.winsdk + "\\lib\\" + UserVars.winsdkvers + "\\um\\x64;" +
-				"")
 	else:
-		raise Exception("Unknown windows SDK version")
-
+		os.environ["LIB"] = (
+			Tools.AssertPath(UserVars.vs_platform_dir + "\\lib\\x64") + ";" +
+			Tools.AssertPath(UserVars.winsdk_lib + "\\ucrt\\x64")     + ";" +
+			Tools.AssertPath(UserVars.winsdk_lib + "\\um\\x64")       + ";" +
+			"")
 	os.environ["LIBPATH"] = (
-		UserVars.dotnet + ";" +
-		UserVars.vs_dir + "\\VC\\LIB;" +
-		UserVars.vs_dir + "\\VC\\ATLMFC\\LIB;" +
-		UserVars.winsdk + "\\UnionMetadata;" +
-		UserVars.winsdk + "\\References;" +
-		UserVars.winsdk + "\\References\\Windows.Foundation.UniversalApiContract\\1.0.0.0;" +
-		UserVars.winsdk + "\\References\\Windows.Foundation.FoundationContract\\1.0.0.0;" +
-		UserVars.winsdk + "\\References\\Windows.Networking.Connectivity.WwanContract\\1.0.0.0;" +
-		UserVars.winsdk + "\\ExtensionSDKs\\Microsoft.VCLibs\\14.0\\References\\CommonConfiguration\\neutral;" +
+		Tools.AssertPath(UserVars.dotnet)                                                                        + ";" +
+		Tools.AssertPath(UserVars.winsdk_references)                                                             + ";" +
+		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Foundation.UniversalApiContract\\4.0.0.0")      + ";" +
+		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Foundation.FoundationContract\\3.0.0.0")        + ";" +
+		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Networking.Connectivity.WwanContract\\1.0.0.0") + ";" +
+		#Tools.AssertPath(UserVars.winsdk + "\\UnionMetadata" + UserVars.winsdkvers)                                             + ";" +
+		#Tools.AssertPath(UserVars.winsdk + "\\ExtensionSDKs\\Microsoft.VCLibs\\14.0\\References\\CommonConfiguration\\neutral") + ";" +
 		"")
 	os.environ["WindowsLibPath"] = (
-		UserVars.winsdk + "\\UnionMetadata;" +
-		UserVars.winsdk + "\\References;" +
-		UserVars.winsdk + "\\References\\Windows.Foundation.UniversalApiContract\\1.0.0.0;" +
-		UserVars.winsdk + "\\References\\Windows.Foundation.FoundationContract\\1.0.0.0;" +
-		UserVars.winsdk + "\\References\\Windows.Networking.Connectivity.WwanContract\\1.0.0.0;" +
+		Tools.AssertPath(UserVars.winsdk_references) + ";"                                                       +
+		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Foundation.UniversalApiContract\\4.0.0.0")      + ";" +
+		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Foundation.FoundationContract\\3.0.0.0")        + ";" +
+		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Networking.Connectivity.WwanContract\\1.0.0.0") + ";" +
+		#Tools.AssertPath(UserVars.winsdk + "\\UnionMetadata\\" + UserVars.winsdkvers) + ";" +
 		"")
-	os.environ["DevEnvDir"         ] = UserVars.vs_dir + "\\Common7\\IDE\\"
-	os.environ["ExtensionSdkDir"   ] = UserVars.winsdk + "\\Extension SDKs"
+	os.environ["DevEnvDir"         ] = Tools.AssertPath(UserVars.vs_dir + "\\Common7\\IDE\\")
+	os.environ["ExtensionSdkDir"   ] = Tools.AssertPath(UserVars.winsdk + "\\Extension SDKs")
 	os.environ["Framework40Version"] = "v4.0"
-	os.environ["FrameworkDir"      ] = UserVars.dotnetdir + "\\"
-	os.environ["FrameworkDIR32"    ] = UserVars.dotnetdir + "\\"
+	os.environ["FrameworkDir"      ] = Tools.AssertPath(UserVars.dotnetdir + "\\")
+	os.environ["FrameworkDIR32"    ] = Tools.AssertPath(UserVars.dotnetdir + "\\")
 	os.environ["FrameworkVersion"  ] = "v4.0.30319"
 	os.environ["FrameworkVersion32"] = "v4.0.30319"
-	os.environ["NETFXSDKDir"        ] = UserVars.winsdk + "\\..\\NETFXSDK\\4.6\\"
+	os.environ["NETFXSDKDir"        ] = Tools.AssertPath(UserVars.winsdk + "\\..\\NETFXSDK\\4.6\\")
 	os.environ["UCRTVersion"        ] = UserVars.winsdkvers
-	os.environ["UniversalCRTSdkDir" ] = UserVars.winsdk + "\\"
-	os.environ["VCINSTALLDIR"       ] = UserVars.vs_dir + "\\VC\\"
+	os.environ["UniversalCRTSdkDir" ] = Tools.AssertPath(UserVars.winsdk + "\\")
+	os.environ["VCINSTALLDIR"       ] = Tools.AssertPath(UserVars.vs_dir + "\\VC\\")
 	os.environ["VisualStudioVersion"] = UserVars.vs_vers
-	os.environ["VSINSTALLDIR"       ] = UserVars.vs_dir + "\\"
-	os.environ["WindowsSdkDir"                ] = UserVars.winsdk + "\\"
-	os.environ["WindowsSDKLibVersion"         ] = UserVars.vs_vers + "\\"
-	os.environ["WindowsSDKVersion"            ] = UserVars.vs_vers + "\\"
-	os.environ["WindowsSDK_ExecutablePath_x64"] = r"C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v10.0A\\bin\\NETFX 4.6 Tools\\x64\\"
-	os.environ["WindowsSDK_ExecutablePath_x86"] = r"C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v10.0A\\bin\\NETFX 4.6 Tools\\"
+	os.environ["VSINSTALLDIR"       ] = Tools.AssertPath(UserVars.vs_dir + "\\")
+	os.environ["WindowsSdkDir"                ] = Tools.AssertPath(UserVars.winsdk + "\\")
+	os.environ["WindowsSDKLibVersion"         ] = UserVars.vs_vers
+	os.environ["WindowsSDKVersion"            ] = UserVars.vs_vers
+	#os.environ["WindowsSDK_ExecutablePath_x64"] = r"C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v10.0A\\bin\\NETFX 4.6 Tools\\x64\\"
+	#os.environ["WindowsSDK_ExecutablePath_x86"] = r"C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v10.0A\\bin\\NETFX 4.6 Tools\\"
 
 # Opens a C++ source file and scans for lines beginning with:
 #  //@ = cl.exe command line option
@@ -191,15 +163,13 @@ def ExtractFileOptions(filepath:str):
 
 # Return the full path to 'cl.exe' for 32 or 64 bit
 def CompilerPath(_32bit:bool):
-	path = UserVars.vs_dir + "\\VC\\bin\\cl.exe" if _32bit else UserVars.vs_dir + "\\VC\\bin\\amd64\\cl.exe"
-	Tools.AssertPathsExist([path])
-	return path
+	path = UserVars.vs_compiler32 if _32bit else UserVars.vs_compiler64
+	return Tools.AssertPath(path)
 
 # Return the full path to 'link.exe' for 32 or 64 bit
 def LinkerPath(_32bit:bool):
-	path = UserVars.vs_dir + "\\VC\\bin\\link.exe" if _32bit else UserVars.vs_dir + "\\VC\\bin\\amd64\\link.exe"
-	Tools.AssertPathsExist([path])
-	return path
+	path = UserVars.vs_linker32 if _32bit else UserVars.vs_linker64
+	return Tools.AssertPath(path)
 
 # Compile the given C++ file
 # The source file can specify additional compiler switches by having special
@@ -318,7 +288,6 @@ def CompilePR(
 if __name__ == "__main__":
 	try:
 		Tools.AssertVersion(1)
-		Tools.AssertPathsExist([UserVars.root])
 		#print(sys.argv)
 
 		# Get the source file to build

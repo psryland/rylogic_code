@@ -221,11 +221,11 @@ namespace CppPad
 				// If no file name is given, prompt for one
 				if (filename == null)
 				{
-					var dlg = new PromptForm { Title = "New Source File", PromptText =  "Name:", InputType = PromptForm.EInputType.Filename };
+					var dlg = new PromptUI { Title = "New Source File", PromptText =  "Name:", InputType = PromptUI.EInputType.Filename };
 					using (dlg)
 					{
 						if (dlg.ShowDialog(Owner) != DialogResult.OK) return;
-						filename = dlg.Value;
+						filename = (string)dlg.Value;
 					}
 				}
 

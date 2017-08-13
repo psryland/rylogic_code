@@ -413,15 +413,57 @@ namespace pr
 		struct EmitCount
 		{
 			int m_value;
-			EmitCount(int value = 0) :m_value(value) {}
-			operator size_t() const                  { return size_t(m_value); }
-			EmitCount& operator = (int n)            { m_value = n > 0 ? n : 0; return *this; }
-			EmitCount& operator ++()                 { return *this = m_value + 1; }
-			EmitCount& operator --()                 { return *this = m_value - 1; }
-			EmitCount  operator ++(int)              { auto x = *this; ++*this; return x; }
-			EmitCount  operator --(int)              { auto x = *this; --*this; return x; }
-			EmitCount& operator +=(int n)            { return *this = m_value + n; }
-			EmitCount& operator -=(int n)            { return *this = m_value - n; }
+
+			EmitCount()
+				:m_value()
+			{}
+			explicit EmitCount(int value)
+				:EmitCount()
+			{
+				assert(value >= 0);
+				assign(value);
+			}
+			EmitCount& operator = (int n)
+			{
+				return assign(n);
+			}
+			EmitCount& operator ++()
+			{
+				return assign(m_value + 1);
+			}
+			EmitCount& operator --()
+			{
+				return assign(m_value - 1);
+			}
+			EmitCount  operator ++(int)
+			{
+				auto x = *this;
+				++*this;
+				return x;
+			}
+			EmitCount  operator --(int)
+			{
+				auto x = *this;
+				--*this;
+				return x;
+			}
+			EmitCount& operator += (int n)
+			{
+				return assign(m_value + n);
+			}
+			EmitCount& operator -= (int n)
+			{
+				return assign(m_value - n);
+			}
+			operator size_t() const
+			{
+				return size_t(m_value);
+			}
+			EmitCount& assign(int value)
+			{
+				m_value = (value > 0) ? value : 0;
+				return *this;
+			}
 		};
 
 		// Src buffer. Provides random access within a buffered range.
@@ -432,11 +474,14 @@ namespace pr
 			using value_type = typename TBuf::value_type;
 			using buffer_type = TBuf;
 
-			mutable TBuf m_buf;       // The buffered stream data read from 'm_src'
-			Src* m_src;              // The character stream that feeds 'm_buf'
-			NullSrc m_null;           // Used when 'm_src' == nullptr;
+			mutable TBuf m_buf; // The buffered stream data read from 'm_src'
+			Src* m_src;         // The character stream that feeds 'm_buf'
+			NullSrc m_null;     // Used when 'm_src' == nullptr;
 
-			Buffer(ESrcType type = ESrcType::Buffered)
+			Buffer()
+				:Buffer(ESrcType::Buffered)
+			{}
+			explicit Buffer(ESrcType type)
 				:Src(type, Location())
 				,m_buf()
 				,m_src(&m_null)
@@ -462,17 +507,51 @@ namespace pr
 				buffer_all(ptr);
 			}
 			Buffer(Buffer&& rhs)
-				:Src(std::move(rhs))
-				,m_buf(std::move(rhs.m_buf))
-				,m_src(rhs.m_src)
+				:Src(rhs)
+				,m_buf()
+				,m_src(&m_null)
 				,m_null()
-			{}
+			{
+				std::swap(m_buf, rhs.m_buf);
+				std::swap(m_src, rhs.m_src);
+				if (m_src == &rhs.m_null)
+					m_src = &m_null;
+				if (rhs.m_src == &m_null)
+					rhs.m_src = &rhs.m_null;
+			}
 			Buffer(Buffer const& rhs)
 				:Src(rhs)
 				,m_buf(rhs.m_buf)
 				,m_src(rhs.m_src)
 				,m_null()
-			{}
+			{
+				if (m_src == &rhs.m_null)
+					m_src = &m_null;
+			}
+			Buffer& operator = (Buffer&& rhs)
+			{
+				if (this != &rhs)
+				{
+					std::swap(m_buf, rhs.m_buf);
+					std::swap(m_src, rhs.m_src);
+					if (m_src == &rhs.m_null)
+						m_src = &m_null;
+					if (rhs.m_src == &m_null)
+						rhs.m_src = &rhs.m_null;
+				}
+				return *this;
+			}
+			Buffer& operator = (Buffer const& rhs)
+			{
+				if (this != &rhs)
+				{
+					m_buf = rhs.m_buf;
+					m_src = rhs.m_src;
+					if (m_src == &rhs.m_null)
+						m_src = &m_null;
+				}
+				return *this;
+			}
 
 			// Set the source. Note, doesn't reset any buffered data
 			void Source(Src& src)
@@ -571,13 +650,16 @@ namespace pr
 			// Push a character onto the front of the buffer (making it the next character read)
 			void push_front(value_type ch)
 			{
-				m_buf.push_front(ch);
+				//m_buf.push_front(ch);
+				m_buf.insert(std::begin(m_buf), ch);
 			}
 
 			// Pop n characters from the front of the buffer
 			void pop_front()
 			{
-				m_buf.pop_front();
+				//m_buf.pop_front();
+				auto first = std::begin(m_buf);
+				m_buf.erase(first, first + 1);
 			}
 			void pop_front(size_t n)
 			{

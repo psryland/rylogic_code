@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using pr.gui;
 using pr.util;
+using DataGridView = pr.gui.DataGridView;
 using ToolStripContainer = pr.gui.ToolStripContainer;
 
 namespace Tradee
@@ -65,7 +66,7 @@ namespace Tradee
 			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(AlarmClockUI));
 			this.m_tsc = new pr.gui.ToolStripContainer();
-			this.m_grid = new System.Windows.Forms.DataGridView();
+			this.m_grid = new pr.gui.DataGridView();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
 			this.m_btn_add_reminder = new System.Windows.Forms.ToolStripButton();
 			this.m_il = new System.Windows.Forms.ImageList(this.components);

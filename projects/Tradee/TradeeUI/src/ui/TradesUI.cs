@@ -1,14 +1,14 @@
 ﻿using System;
-using System.Windows.Forms;
-using pr.util;
-using pr.gui;
-using pr.extn;
-using pr.maths;
-using pr.container;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using System.Collections.Generic;
-using System.Windows.Threading;
+using System.Windows.Forms;
+using pr.container;
+using pr.extn;
+using pr.gui;
+using pr.maths;
+using pr.util;
+using DataGridView = pr.gui.DataGridView;
 
 namespace Tradee
 {
@@ -333,7 +333,7 @@ namespace Tradee
 		}
 
 		/// <summary>Display the trades grid context menu</summary>
-		private void ShowContextMenu(DataGridViewEx.HitTestInfo hit, Trade trade, Order order)
+		private void ShowContextMenu(DataGridView_.HitTestInfo hit, Trade trade, Order order)
 		{
 			var cmenu = new ContextMenuStrip();
 			if (trade != null)

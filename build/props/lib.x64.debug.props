@@ -32,6 +32,7 @@
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <AdditionalOptions>/Zm200</AdditionalOptions>
       <MinimalRebuild>false</MinimalRebuild>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <PostBuildEvent>
       <Command>..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>

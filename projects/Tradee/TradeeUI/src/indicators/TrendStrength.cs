@@ -61,7 +61,7 @@ namespace Tradee
 			// Get the visible X axis range, and convert it to positive indices
 			var first_idx = Instrument.FirstIdx;
 			var rng = Instrument.IndexRange((int)(Chart.XAxis.Min - 1), (int)(Chart.XAxis.Max + 1));
-			rng.Begin = Maths.Clamp(rng.Begin - first_idx, 0, m_trend.Count);
+			rng.Beg = Maths.Clamp(rng.Beg - first_idx, 0, m_trend.Count);
 			rng.End   = Maths.Clamp(rng.End   - first_idx, 0, m_trend.Count);
 			if (rng.Counti == 0)
 			{
@@ -76,7 +76,7 @@ namespace Tradee
 			var bullish_colour = Settings.BullishColour.ToArgbU();
 			var bearish_colour = Settings.BearishColour.ToArgbU();
 			var y_scale = Chart.YAxis.Span * Settings.Scale;
-			for (var i = rng.Begini; i < rng.Endi - 1; ++i)
+			for (var i = rng.Begi; i < rng.Endi - 1; ++i)
 			{
 				var trend0 = m_trend[i  ];
 				var trend1 = m_trend[i+1];

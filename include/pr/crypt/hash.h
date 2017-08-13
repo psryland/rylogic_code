@@ -164,7 +164,7 @@ namespace pr
 			return r;
 		}
 
-		// Hash a POD
+		// Hash a POD. WARNING: Be careful with hidden padding in 'Ty'
 		template <typename Ty> inline HashValue HashObj(Ty const& obj)
 		{
 			auto ptr = static_cast<char const*>(static_cast<void const*>(&obj));
@@ -362,10 +362,10 @@ namespace pr
 				PR_CHECK(h0 == h1, true);
 			}
 			{// Hash POD
-				struct POD { int i; char c; float f; };
-				auto pod0 = POD{32,'A',6.28f};
-				auto pod1 = POD{31,'B',3.14f};
-				auto pod2 = POD{32,'A',6.28f};
+				struct POD { int i; char c[4]; float f; };
+				auto pod0 = POD{32,{ 'A','B','C','D' },6.28f};
+				auto pod1 = POD{31,{ 'D','C','B','A' },3.14f};
+				auto pod2 = POD{32,{ 'A','B','C','D' },6.28f};
 				const auto h0 = HashObj(pod0);
 				const auto h1 = HashObj(pod1);
 				const auto h2 = HashObj(pod2);

@@ -64,7 +64,11 @@ namespace pr.gui
 			}
 			return base.SetCurrentCellAddressCore(columnIndex, rowIndex, setAnchorCellAddress, validateCurrentCell, throughMouseClick);
 		}
-		
+		public void Invalidate(object sender, EventArgs args)
+		{
+			Invalidate();
+		}
+
 		/// <summary>Add rows to the selection </summary>
 		public void SelectRowRange(int index, int count, bool select)
 		{

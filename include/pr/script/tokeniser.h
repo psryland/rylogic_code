@@ -30,7 +30,6 @@ namespace pr
 		};
 		
 		// C Tokeniser
-		template <typename FailPolicy = ThrowOnFailure>
 		struct Tokeniser :TokenSrc
 		{
 			using Buffer = Buffer<pr::deque<wchar_t>>;
@@ -81,7 +80,7 @@ namespace pr
 				switch (*src)
 				{
 				default:
-					return FailPolicy::Fail(EResult::SyntaxError, src.Loc(), "Tokeniser failed to understand code starting here");
+				throw Exception(EResult::SyntaxError, src.Loc(), "Tokeniser failed to understand code starting here");
 
 				case 0:
 					m_tok = Token(EToken::EndOfStream);
@@ -159,7 +158,7 @@ namespace pr
 					{
 						pr::Number num;
 						if (!pr::str::ExtractNumber(num, src))
-							return FailPolicy::Fail(EResult::SyntaxError, src.Loc(), "Invalid numeric constant");
+							throw Exception(EResult::SyntaxError, src.Loc(), "Invalid numeric constant");
 
 						m_tok = num.m_type == Number::EType::FP ? Token(EConstant::FloatingPoint, num.db()) : Token(EConstant::Integral, num.ll());
 						break;
@@ -174,7 +173,7 @@ namespace pr
 						auto is_char = *src == '\'';
 						
 						string str;
-						if (!pr::str::ExtractString(str, src, '\\')) return FailPolicy::Fail(EResult::SyntaxError, src.Loc(), "Invalid literal constant");
+						if (!pr::str::ExtractString(str, src, '\\')) throw Exception(EResult::SyntaxError, src.Loc(), "Invalid literal constant");
 						if      (is_char) m_tok = Token(EConstant::Integral, Token::int64(str[0])); // char literals are actually integral constants
 						else if (is_wide) m_tok = Token(EConstant::WStringLiteral, str);
 						else              m_tok = Token(EConstant::StringLiteral, str);
@@ -325,7 +324,7 @@ namespace pr
 				;
 
 			PtrA src(str_in);
-			Tokeniser<> tkr(src);
+			Tokeniser tkr(src);
 			PR_CHECK(*tkr == EKeyword::Auto     , true); ++tkr;
 			PR_CHECK(*tkr == EKeyword::Double   , true); ++tkr;
 			PR_CHECK(*tkr == EKeyword::Int      , true); ++tkr;

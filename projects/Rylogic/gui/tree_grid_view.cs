@@ -18,7 +18,6 @@ using pr.util;
 
 namespace pr.gui
 {
-	[DesignerCategory("Code")]
 	[ComplexBindingProperties]
 	[Docking(DockingBehavior.Ask)]
 	public class TreeGridView :DataGridView

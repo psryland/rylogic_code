@@ -63,7 +63,7 @@ namespace pr
 				,m_src()
 				,m_reg()
 			{}
-			Filter(Src& src)
+			explicit Filter(Src& src)
 				:Filter()
 			{
 				Source(src);
@@ -127,12 +127,10 @@ namespace pr
 		};
 
 		// Removes line continuation sequences in a character stream
-		template <typename FailPolicy = ThrowOnFailure> struct StripLineContinuations :Filter<BufW4>
+		struct StripLineContinuations :Filter<BufW4>
 		{
-			using base = Filter<BufW4>;
-
-			StripLineContinuations(Src& src)
-				:base(src)
+			explicit StripLineContinuations(Src& src)
+				:Filter<BufW4>(src)
 			{
 				seek(0);
 			}
@@ -151,13 +149,12 @@ namespace pr
 		};
 
 		// Removes C++ style comments from a character stream
-		template <typename FailPolicy = ThrowOnFailure> struct StripComments :Filter<BufW2>
+		struct StripComments :Filter<BufW2>
 		{
-			using base = Filter<BufW2>;
 			StringLit m_literal;
 			
-			StripComments(Src& src)
-				:base(src)
+			explicit StripComments(Src& src)
+				:Filter<BufW2>(src)
 				,m_literal()
 			{
 				seek(0);
@@ -186,7 +183,7 @@ namespace pr
 						{
 							auto loc_beg = m_src->Loc();
 							for (next(2); *src && !(src[0] == L'*' && src[1] == L'/'); next(1)) {}
-							if (*src) next(2); else return FailPolicy::Fail(EResult::SyntaxError, loc_beg, "Unmatched block comment");
+							if (*src) next(2); else throw Exception(EResult::SyntaxError, loc_beg, "Unmatched block comment");
 							continue;
 						}
 					}
@@ -198,10 +195,8 @@ namespace pr
 		};
 
 		// Removes newlines from a character stream
-		template <typename FailPolicy = ThrowOnFailure> struct StripNewLines :Filter<BufW2>
+		struct StripNewLines :Filter<BufW2>
 		{
-			using base = Filter<BufW2>;
-
 			Buffer<> m_lines;
 			size_t m_lines_max;
 			size_t m_lines_min;
@@ -209,7 +204,7 @@ namespace pr
 			EmitCount m_emit;
 
 			StripNewLines()
-				:base()
+				:Filter<BufW2>()
 				,m_lines()
 				,m_lines_max()
 				,m_lines_min()
@@ -325,7 +320,7 @@ namespace pr
 				char const* str_out = "Li					on";
 
 				PtrA src(str_in);
-				StripLineContinuations<> strip(src);
+				StripLineContinuations strip(src);
 				for (;*strip; ++strip, ++str_out)
 				{
 					if (*strip == *str_out) continue;
@@ -362,8 +357,8 @@ namespace pr
 					"\n";
 
 				PtrA src(str_in);
-				StripLineContinuations<> cont(src);
-				StripComments<> strip(cont);
+				StripLineContinuations cont(src);
+				StripComments strip(cont);
 				for (;*strip; ++strip, ++str_out)
 				{
 					if (*strip == *str_out) continue;
@@ -394,7 +389,7 @@ namespace pr
 						"string \"     abc  ";
 
 					PtrA src(str_in);
-					StripNewLines<> strip(src,0,0);
+					StripNewLines strip(src,0,0);
 					for (; *strip; ++strip, ++str_out)
 					{
 						if (*strip == *str_out) continue;
@@ -413,7 +408,7 @@ namespace pr
 						"";
 
 					PtrA src(str_in);
-					StripNewLines<> strip(src);
+					StripNewLines strip(src);
 					for (; *strip; ++strip, ++str_out)
 					{
 						if (*strip == *str_out) continue;
@@ -429,7 +424,7 @@ namespace pr
 						"string \"     abc  ";
 
 					PtrA src(str_in);
-					StripNewLines<> strip(src, 0, 0);
+					StripNewLines strip(src, 0, 0);
 					for (; *strip; ++strip, ++str_out)
 					{
 						if (*strip == *str_out) continue;
@@ -452,7 +447,7 @@ namespace pr
 						"";
 
 					PtrA src(str_in);
-					StripNewLines<> strip(src,2,2);
+					StripNewLines strip(src,2,2);
 					for (; *strip; ++strip, ++str_out)
 					{
 						if (*strip == *str_out) continue;

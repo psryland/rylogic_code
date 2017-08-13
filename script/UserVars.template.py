@@ -22,27 +22,32 @@ arch = "x64"
 root = "P:"
 wwwroot = "Z:\\WWW\\rylogic.co.nz"
 
-# MSBuild path. Used by build scripts
-msbuild_dir = r"C:\Program Files (x86)\MSBuild\14.0"
-msbuild = msbuild_dir + r"\Bin\MSBuild.exe"
-
-# MSBuild root build script path.
-msbuild_props = "" #r"/p:VCTargetsPath=C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120"
-
-# The build system version. VS2013 == v120, VS2012 = v110, etc
-platform_toolset = "v140"
-
 # The full path to the windows sdk
-winsdk =r"C:\Program Files (x86)\Windows Kits\8.1"
-winsdkvers = "8.1"
+winsdkvers = "10.0.15063.0"
+winsdk = r"C:\Program Files (x86)\Windows Kits\10"
+winsdk_include    = winsdk + "\\Include\\"    + winsdkvers
+winsdk_lib        = winsdk + "\\Lib\\"        + winsdkvers
+winsdk_references = winsdk + "\\References\\" + winsdkvers
 
 # The root of the .NET framework directory
 dotnetdir = r"C:\Windows\Microsoft.NET\Framework"
 dotnet = dotnetdir + "\\v4.0.30319"
 
+# MSBuild path. Used by build scripts
+msbuild_dir = r"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\MSBuild\15.0"
+msbuild = msbuild_dir + r"\Bin\MSBuild.exe"
+
+# The build system version. VS2013 == v120, VS2012 = v110, etc
+platform_toolset = "v141"
+
 # The full path to the Visual Studio install
-vs_dir = r"C:\Program Files (x86)\Microsoft Visual Studio 14.0"
-vs_vers = "14.0"
+vs_dir = r"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community"
+vs_platform_dir = vs_dir + r"\VC\Tools\MSVC\14.10.25017"
+vs_compiler32 = vs_platform_dir + r"\bin\HostX86\x86\cl.exe"
+vs_compiler64 = vs_platform_dir + r"\bin\HostX86\x64\cl.exe"
+vs_linker32   = vs_platform_dir + r"\bin\HostX86\x86\link.exe"
+vs_linker64   = vs_platform_dir + r"\bin\HostX86\x64\link.exe"
+vs_vers = "15.0"
 
 # The full path to the android SDK
 android_sdkdir = r"D:\android\android-sdk"

@@ -17,6 +17,7 @@ namespace pr.gui
 	[DebuggerDisplay("Value={Value} Text={Text} Valid={Valid}")]
 	public class ComboBox :System.Windows.Forms.ComboBox
 	{
+		// ValueBox is very similar to this class, maintain both.
 		// Replacement for the forms combo box that doesn't throw a first chance
 		// exception when the data source is empty
 		//
@@ -75,6 +76,11 @@ namespace pr.gui
 			}
 
 			return base.PreProcessMessage(ref m);
+		}
+		protected override void OnInvalidated(InvalidateEventArgs e)
+		{
+			m_valid = null;
+			base.OnInvalidated(e);
 		}
 		protected override void OnMouseUp(MouseEventArgs e)
 		{
@@ -654,7 +660,7 @@ namespace pr.gui
 			// Only allow selection setting for editable combo box styles
 			if (DropDownStyle != ComboBoxStyle.DropDownList)
 			{
-				//System.Diagnostics.Trace.WriteLine("Restoring Selection: [{0},{1}]".Fmt(selection.Begini, selection.Sizei));
+				//System.Diagnostics.Trace.WriteLine("Restoring Selection: [{0},{1}]".Fmt(selection.Begi, selection.Sizei));
 				Select(selection.Begi, selection.Sizei);
 				//System.Diagnostics.Trace.WriteLine("Selection is now: [{0},{1}]".Fmt(SelectionStart, SelectionLength));
 			}
@@ -665,7 +671,7 @@ namespace pr.gui
 		{
 			var selection = Range.FromStartLength(SelectionStart, SelectionLength);
 			//System.Diagnostics.Trace.WriteLine("Selection Saved: [{0},{1}]\n\t{2}"
-			//	.Fmt(selection.Value.Begini, selection.Value.Sizei,
+			//	.Fmt(selection.Value.Begi, selection.Value.Sizei,
 			//	string.Join("\n\t", new System.Diagnostics.StackTrace().GetFrames().Take(5).Select(x => x.GetMethod()))));
 			return selection;
 		}

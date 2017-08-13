@@ -2761,6 +2761,8 @@ namespace pr.gui
 						m_impl_pane.Content.Add(this);
 					}
 					PaneChanged.Raise(this);
+					if (m_impl_pane == null)
+						Closed.Raise(this);
 				}
 			}
 			private DockPane m_impl_pane;
@@ -2782,6 +2784,9 @@ namespace pr.gui
 
 			/// <summary>Raised when the pane this dockable is on is changing (possibly to null)</summary>
 			public event EventHandler PaneChanged;
+
+			/// <summary>Raised when the dockable is not in a pane (i.e. when DockPane becomes null)</summary>
+			public event EventHandler Closed;
 
 			/// <summary>Raised when this becomes the active content</summary>
 			public event EventHandler<ActiveContentChangedEventArgs> ActiveChanged;

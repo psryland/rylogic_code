@@ -224,7 +224,7 @@ namespace Tradee
 			// Scan from [-window_size, index] to determine S&R levels over the window
 			var candle_time = Misc.TimeFrameToTicks(1.0, Instrument.TimeFrame);
 			var range = Instrument.IndexRange(index - window_size + 1, index + 1);
-			for (int i = range.Begini; i != range.Endi; ++i)
+			for (int i = range.Begi; i != range.Endi; ++i)
 			{
 				var candle = Instrument[i];
 
@@ -241,7 +241,7 @@ namespace Tradee
 				// If the candle spans N buckets, 1/N of the data is added to each bucket.
 				// Also, we want to weight latest values as more important than historic values.
 				var scale = 1.0 / (idx.Count + 1);
-				for (int j = idx.Begini, jend = idx.Endi+1; j != jend; ++j)
+				for (int j = idx.Begi, jend = idx.Endi+1; j != jend; ++j)
 				{
 					Window[j].Volume += candle.Volume * scale;
 					Window[j].Time   += candle_time   * scale;
@@ -259,7 +259,7 @@ namespace Tradee
 			// Normalise each level value, and then average them into the main 'Levels' data
 			for (int i = 0; i != Window.Count; ++i)
 			{
-				var j = i + levels_range.Begini;
+				var j = i + levels_range.Begi;
 				var level = Levels[j];
 				Debug.Assert(level.Price == Window[i].Price);
 				level.Median += Maths.Div(Window[i].Median, max.Median);//Avr.Running(Maths.Div(Window[i].Median, max.Median), level.Median, level.AvrCount);
@@ -285,7 +285,7 @@ namespace Tradee
 
 			// Exclude the latest candle, cause it's not finished yet
 			var range = Instrument.IndexRange(-history_length, 0);
-			for (int i = range.Begini + window_size - 1; i != range.Endi; ++i)
+			for (int i = range.Begi + window_size - 1; i != range.Endi; ++i)
 				CalculateLevels(i, window_size);
 		}
 

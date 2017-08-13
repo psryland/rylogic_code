@@ -36,6 +36,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <SDLCheck>true</SDLCheck>
       <AdditionalOptions>/Zm200</AdditionalOptions>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <PostBuildEvent>
       <Command>..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>

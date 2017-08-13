@@ -432,7 +432,7 @@ extern "C"
 	VIEW3D_API void         __stdcall View3D_ObjectColourSet          (View3DObject object, View3DColour colour, UINT32 mask, char const* name);
 	VIEW3D_API void         __stdcall View3D_ObjectResetColour        (View3DObject object, char const* name);
 	VIEW3D_API void         __stdcall View3D_ObjectSetTexture         (View3DObject object, View3DTexture tex, char const* name);
-	VIEW3D_API View3DBBox   __stdcall View3D_ObjectBBoxMS             (View3DObject object);
+	VIEW3D_API View3DBBox   __stdcall View3D_ObjectBBoxMS             (View3DObject object, int include_children);
 
 	// Materials
 	VIEW3D_API View3DTexture __stdcall View3D_TextureCreate               (UINT32 width, UINT32 height, void const* data, UINT32 data_size, View3DTextureOptions const& options);

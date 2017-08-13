@@ -18,16 +18,15 @@ namespace pr
 	{
 		// Takes a character stream and performs preprocessing on it.
 		// This is a super-set of a C/C++ preprocessor.
-		template<typename FailPolicy = ThrowOnFailure>
 		struct Preprocessor :Src
 		{
 		private:
 			// A source wrapper that strips line continuations and comments
 			struct PPSource :Src
 			{
-				using LnCnt   = StripLineContinuations<Src>;
-				using CmtStrp = StripComments<FailPolicy>;
 				using BufType = pr::deque<wchar_t>;
+				using LnCnt   = StripLineContinuations;
+				using CmtStrp = StripComments;
 				using OutSrc  = Buffer<BufType>;
 				using Emit    = EmitCount;
 
@@ -64,23 +63,30 @@ namespace pr
 					m_slc.m_src = m_in;
 					m_sc.m_src  = &m_slc;
 					m_out.m_src = &m_sc;
-					rhs.m_in    = nullptr;
-					rhs.m_del   = false;
+
+					rhs.m_in  = nullptr;
+					rhs.m_del = false;
 				}
 				PPSource(PPSource const&) = delete;
 				PPSource& operator =(PPSource&& rhs)
 				{
 					if (this != &rhs)
 					{
+						Src::operator=(std::move(rhs));
 						std::swap(m_in  , rhs.m_in);
 						std::swap(m_del , rhs.m_del);
 						std::swap(m_slc , rhs.m_slc);
 						std::swap(m_sc  , rhs.m_sc);
 						std::swap(m_out , rhs.m_out);
 						std::swap(m_emit, rhs.m_emit);
+						
 						m_slc.m_src = m_in;
 						m_sc.m_src  = &m_slc;
 						m_out.m_src = &m_sc;
+
+						rhs.m_slc.m_src = rhs.m_in;
+						rhs.m_sc.m_src  = &rhs.m_slc;
+						rhs.m_out.m_src = &rhs.m_sc;
 					}
 					return *this;
 				}
@@ -101,12 +107,30 @@ namespace pr
 				}
 
 				// Pointer-like interface
-				wchar_t operator * () const override { return *m_out; }
-				PPSource& operator ++() override     { ++m_out; --m_emit; return *this; }
+				wchar_t operator * () const override
+				{
+					return *m_out;
+				}
+				PPSource& operator ++() override
+				{
+					++m_out;
+
+					// This must be a compiler bug:
+					// '--m_emit' causes a buffer overrun error on x64 release builds
+					// 'm_emit.assign(int(m_emit) - 1);' doesn't...
+					m_emit.assign(int(m_emit) - 1); //--m_emit;
+					return *this;
+				}
 
 				// Array access to the buffered data. Buffer size grows to accommodate 'i'
-				wchar_t operator [](size_t i) const { return m_out[i]; }
-				wchar_t& operator [](size_t i)      { return m_out[i]; }
+				wchar_t operator [](size_t i) const
+				{
+					return m_out[i];
+				}
+				wchar_t& operator [](size_t i)
+				{
+					return m_out[i];
+				}
 
 				// Push a character back onto the stream
 				void push_front(wchar_t ch)
@@ -142,9 +166,13 @@ namespace pr
 				// Erase a range within the buffered characters
 				void erase(size_t ofs = 0, size_t count = ~size_t())
 				{
-					if (count == ~size_t()) count = m_emit;
+					if (count == ~size_t())
+						count = m_emit;
+					
 					m_out.erase(ofs, count);
-					if (m_emit >= ofs) m_emit -= int(count);
+					
+					if (m_emit >= ofs)
+						m_emit -= int(count);
 				}
 
 				// sub-string match
@@ -177,15 +205,16 @@ namespace pr
 			BitStack m_if_stack;
 
 			// Default handlers
-			MacroDB<> m_def_macros;
-			Includes<FailPolicy> m_def_includes;
-			EmbeddedCode<FailPolicy> m_def_embedded;
+			MacroDB m_def_macros;
+			Includes m_def_includes;
+			EmbeddedCode m_def_embedded;
 
 			// Debugging helpers for the watch window
 			SrcConstPtr m_dbg_src;
 			typename PPSource::OutSrc::buffer_type const* m_dbg_buf;
 
 		public:
+
 			Preprocessor(IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, IEmbeddedCode* emb = nullptr)
 				:Src(ESrcType::Preprocessor, Location())
 				,m_stack()
@@ -199,11 +228,6 @@ namespace pr
 				,Includes(inc ? inc : &m_def_includes)
 				,EmbeddedCode(emb ? emb : &m_def_embedded)
 			{}
-			Preprocessor(Preprocessor&& rhs) = delete;
-			Preprocessor(Preprocessor const&) = delete;
-			Preprocessor& operator =(Preprocessor&& rhs) = delete;
-			Preprocessor& operator =(Preprocessor const& rhs) = delete;
-
 			Preprocessor(Src* src, bool delete_on_pop, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, IEmbeddedCode* emb = nullptr)
 				:Preprocessor(inc, mac, emb)
 			{
@@ -220,6 +244,10 @@ namespace pr
 			{
 				Push(src);
 			}
+			Preprocessor(Preprocessor&& rhs) = delete;
+			Preprocessor(Preprocessor const&) = delete;
+			Preprocessor& operator =(Preprocessor&& rhs) = delete;
+			Preprocessor& operator =(Preprocessor const& rhs) = delete;
 
 			// Access the macro handler
 			IMacroHandler* Macros;
@@ -347,7 +375,7 @@ namespace pr
 							// Buffer the literal string or char
 							auto beg = src.Loc();
 							BufferLiteral(src, emit, *src);
-							if (src[emit] != 0) ++emit; else return FailPolicy::Fail(EResult::SyntaxError, Loc(), pr::Fmt("Unclosed literal string or character\n%s", Narrow(beg.ToString()).c_str()));
+							if (src[emit] != 0) ++emit; else throw Exception(EResult::SyntaxError, Loc(), pr::Fmt("Unclosed literal string or character\n%s", Narrow(beg.ToString()).c_str()));
 							break;
 						}
 						#pragma endregion
@@ -387,7 +415,7 @@ namespace pr
 								#pragma region Else
 								if (src.match_adv(L"else"))
 								{
-									if (m_if_stack.empty()) return FailPolicy::Fail(EResult::UnmatchedPreprocessorDirective, loc_beg, "unmatched #else");
+									if (m_if_stack.empty()) throw Exception(EResult::UnmatchedPreprocessorDirective, loc_beg, "unmatched #else");
 									if (m_if_stack.top()) { SkipPreprocessorBlock(loc_beg); }
 									else                  { m_if_stack.top() = true; EatLine(src, 0, 1); }
 									continue;
@@ -396,7 +424,7 @@ namespace pr
 								#pragma region ElIf
 								if (src.match_adv(L"elif"))
 								{
-									if (m_if_stack.empty()) return FailPolicy::Fail(EResult::UnmatchedPreprocessorDirective, loc_beg, "unmatched #elif");
+									if (m_if_stack.empty()) throw Exception(EResult::UnmatchedPreprocessorDirective, loc_beg, "unmatched #elif");
 									if (m_if_stack.top())  { SkipPreprocessorBlock(loc_beg); }
 									else if (!PPDefined()) { SkipPreprocessorBlock(loc_beg); }
 									else                   { m_if_stack.top() = true; EatLine(src, 0, 1); }
@@ -406,7 +434,7 @@ namespace pr
 								#pragma region EndIf
 								if (src.match_adv(L"endif"))
 								{
-									if (m_if_stack.empty()) return FailPolicy::Fail(EResult::UnmatchedPreprocessorDirective, loc_beg, "unmatched #endif");
+									if (m_if_stack.empty()) throw Exception(EResult::UnmatchedPreprocessorDirective, loc_beg, "unmatched #endif");
 									m_if_stack.pop();
 									EatLine(src, 0, 1);
 									continue;
@@ -419,14 +447,14 @@ namespace pr
 									string expr;
 
 									// Extract text between '{' and '}'
-									if (*src == '{') ++src; else return FailPolicy::Fail(EResult::ExpressionSyntaxError, loc_beg, "Expected the form: #eval{expression}");
+									if (*src == '{') ++src; else throw Exception(EResult::ExpressionSyntaxError, loc_beg, "Expected the form: #eval{expression}");
 									for (int nest = 1; *src; expr.push_back(*src), ++src)
 									{
 										nest += *src == '{';
 										nest -= *src == '}';
 										if (nest == 0) break;
 									}
-									if (*src == '}') ++src; else return FailPolicy::Fail(EResult::ExpressionSyntaxError, loc_beg, "No matching '}' found following #eval");
+									if (*src == '}') ++src; else throw Exception(EResult::ExpressionSyntaxError, loc_beg, "No matching '}' found following #eval");
 
 									// Expand any macros in the expression
 									RecursiveExpandMacros(expr, Macro::Ancestor(nullptr, nullptr), loc_beg);
@@ -439,7 +467,7 @@ namespace pr
 									// Evaluate the expression and push the result as a string onto the stack
 									double result;
 									if (!pr::Evaluate(expr.c_str(), result))
-										return FailPolicy::Fail(EResult::ExpressionSyntaxError, loc_beg, "#eval expression cannot be evaluated");
+										throw Exception(EResult::ExpressionSyntaxError, loc_beg, "#eval expression cannot be evaluated");
 
 									// Convert the result to a string
 									expr = (static_cast<long long>(result) == result) ? pr::FmtS(L"%lld", static_cast<long long>(result)) : pr::FmtS(L"%f", result);
@@ -456,9 +484,9 @@ namespace pr
 								{
 									// Read the embedded language used
 									string lang;
-									if (*src == L'(') ++src; else return FailPolicy::Fail(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang) ... #end");
-									if (BufferIdentifier(src, emit)) lang = src.pop_str(); else return FailPolicy::Fail(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang) ... #end");
-									if (*src == L')') ++src; else return FailPolicy::Fail(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang) ... #end");
+									if (*src == L'(') ++src; else throw Exception(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang) ... #end");
+									if (BufferIdentifier(src, emit)) lang = src.pop_str(); else throw Exception(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang) ... #end");
+									if (*src == L')') ++src; else throw Exception(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang) ... #end");
 
 									// Do not include the whitespace or blank line that follows #embedded(lang)
 									EatLineSpace(src, 0,0);
@@ -469,7 +497,7 @@ namespace pr
 
 									// Buffer the code section up to (but not including) the #end
 									if (!BufferTo(src, emit, L"#end", false))
-										return FailPolicy::Fail(EResult::UnmatchedPreprocessorDirective, loc_beg, "Embedded code section '#embedded(lang)' does not have a closing '#end' marker");
+										throw Exception(EResult::UnmatchedPreprocessorDirective, loc_beg, "Embedded code section '#embedded(lang)' does not have a closing '#end' marker");
 
 									// 'code' will contain the result of executing the code, which we want to treat like an expanded macro
 									auto code = src.pop_str();
@@ -481,7 +509,7 @@ namespace pr
 									// Get the code handler to transform the code into a result
 									// Note, the code handler is expected to work or throw
 									if (!EmbeddedCode->Execute(lang, code, code_beg, result))
-										return FailPolicy::Fail(EResult::EmbeddedCodeNotSupported, loc_beg, "No support for embedded code available");
+										throw Exception(EResult::EmbeddedCodeNotSupported, loc_beg, "No support for embedded code available");
 
 									// Push the code result as a source
 									auto code_src = std::make_unique<Buffer<>>(ESrcType::EmbeddedCode, std::begin(result), std::end(result));
@@ -495,7 +523,7 @@ namespace pr
 								{
 									EatLineSpace(src, 0,0);
 									BufferLine(src, emit);
-									return FailPolicy::Fail(EResult::PreprocessError, loc_beg, Narrow(src.str()));
+									throw Exception(EResult::PreprocessError, loc_beg, Narrow(src.str()));
 								}
 								#pragma endregion
 								break;
@@ -504,7 +532,7 @@ namespace pr
 								if (src.match_adv(L"ifndef"))
 								{
 									EatLineSpace(src, 0, 0);
-									if (!BufferIdentifier(src, emit)) return FailPolicy::Fail(EResult::InvalidPreprocessorDirective, src.Loc(), "An identifier was expected");
+									if (!BufferIdentifier(src, emit)) throw Exception(EResult::InvalidPreprocessorDirective, src.Loc(), "An identifier was expected");
 									if (Macros->Find(Hash(src.pop_str()))) { m_if_stack.push(false); SkipPreprocessorBlock(loc_beg); }
 									else                                   { m_if_stack.push(true); EatLine(src, 0, 1); }
 									continue;
@@ -514,7 +542,7 @@ namespace pr
 								if (src.match_adv(L"ifdef"))
 								{
 									EatLineSpace(src, 0, 0);
-									if (!BufferIdentifier(src, emit)) return FailPolicy::Fail(EResult::InvalidPreprocessorDirective, src.Loc(), "An identifier was expected");
+									if (!BufferIdentifier(src, emit)) throw Exception(EResult::InvalidPreprocessorDirective, src.Loc(), "An identifier was expected");
 									if (Macros->Find(Hash(src.pop_str()))) { m_if_stack.push(true); EatLine(src, 0, 1); }
 									else                                   { m_if_stack.push(false); SkipPreprocessorBlock(loc_beg); }
 									continue;
@@ -534,12 +562,12 @@ namespace pr
 								{
 									EatLineSpace(src, 1, 0);
 									if (*src != L'<' && *src != L'\"')
-										return FailPolicy::Fail(EResult::InvalidInclude, src.Loc(), "expected a string following #include_path");
+										throw Exception(EResult::InvalidInclude, src.Loc(), "expected a string following #include_path");
 
 									// Buffer up the include path
 									auto end = *src == L'<' ? L'>' : L'\"';
 									BufferLiteral(src, emit, end);
-									if (src[emit] == end) ++emit; else return FailPolicy::Fail(EResult::InvalidInclude, src.Loc(), "include path string incomplete");
+									if (src[emit] == end) ++emit; else throw Exception(EResult::InvalidInclude, src.Loc(), "include path string incomplete");
 
 									// Add the path to the include paths
 									auto path = src.str(1, emit - 2); src.pop();
@@ -557,12 +585,12 @@ namespace pr
 									loc_beg = src.Loc();
 
 									if (*src != L'<' && *src != L'\"')
-										return FailPolicy::Fail(EResult::InvalidInclude, loc_beg, "expected a string following #include");
+										throw Exception(EResult::InvalidInclude, loc_beg, "expected a string following #include");
 
 									// Buffer up the include filepath
 									auto end = *src == L'<' ? L'>' : L'\"';
 									BufferLiteral(src, emit, end);
-									if (src[emit] == end) ++emit; else return FailPolicy::Fail(EResult::InvalidInclude, loc_beg, "include string incomplete");
+									if (src[emit] == end) ++emit; else throw Exception(EResult::InvalidInclude, loc_beg, "include string incomplete");
 
 									// Open the include
 									auto path = src.str(1, emit - 2); src.pop();
@@ -585,7 +613,7 @@ namespace pr
 
 									// Buffer a literal section up to (but not including) the #end
 									if (!BufferTo(src, emit, L"#end", false))
-										return FailPolicy::Fail(EResult::UnmatchedPreprocessorDirective, loc_beg, "Literal section '#lit' does not have a closing '#end' marker");
+										throw Exception(EResult::UnmatchedPreprocessorDirective, loc_beg, "Literal section '#lit' does not have a closing '#end' marker");
 
 									continue;
 								}
@@ -635,7 +663,7 @@ namespace pr
 
 							// Unknown pp command
 							auto msg = pr::Fmt(L"Unknown preprocessor command '%s'\n%s", src.str().c_str(), src.Loc().ToString().c_str());
-							return FailPolicy::Fail(EResult::UnknownPreprocessorCommand, Loc(), pr::Narrow(msg));
+							throw Exception(EResult::UnknownPreprocessorCommand, Loc(), pr::Narrow(msg));
 						}
 						#pragma endregion
 					default:
@@ -744,7 +772,7 @@ namespace pr
 
 					// Read the macro or keyword identifier
 					if (!BufferIdentifier(src, emit))
-						return FailPolicy::Fail(EResult::InvalidPreprocessorDirective, src.Loc(), "An identifier was expected"), false;
+						throw Exception(EResult::InvalidPreprocessorDirective, src.Loc(), "An identifier was expected");
 
 					// If the identifier is the keyword 'defined' then it should be followed
 					// by an identifier optionally enclosed within '(' and ')'
@@ -757,11 +785,11 @@ namespace pr
 						if (wrapped) ++src;
 
 						// Read the identifier within the defined() expression
-						if (!BufferIdentifier(src, emit)) return FailPolicy::Fail(EResult::InvalidPreprocessorDirective, src.Loc(), "An identifier was expected"), false;
+						if (!BufferIdentifier(src, emit)) throw Exception(EResult::InvalidPreprocessorDirective, src.Loc(), "An identifier was expected");
 						auto hash = Hash(src.pop_str());
 
 						// Check the optional brackets are matched
-						if (wrapped) if (*src == ')') ++src; else return FailPolicy::Fail(EResult::InvalidPreprocessorDirective, src.Loc(), "unmatched ')'"), false;
+						if (wrapped) if (*src == ')') ++src; else throw Exception(EResult::InvalidPreprocessorDirective, src.Loc(), "unmatched ')'");
 
 						// If the macro is defined, add a 1 to the expression
 						expr.push_back(Macros->Find(hash) != nullptr ? '1' : '0');
@@ -771,13 +799,13 @@ namespace pr
 					else
 					{
 						auto macro = Macros->Find(Hash(src.str()));
-						if (!macro) return FailPolicy::Fail(EResult::InvalidPreprocessorDirective, src.Loc(), pr::FmtS("Identifier '%s' is not defined", pr::Narrow(exp).c_str())), false;
+						if (!macro) throw Exception(EResult::InvalidPreprocessorDirective, src.Loc(), pr::FmtS("Identifier '%s' is not defined", pr::Narrow(exp).c_str()));
 						src.pop();
 
 						// Read macro parameters if it has them
 						Macro::Params params;
 						if (!macro->ReadParams<false>(src, params, src.Loc()))
-							return FailPolicy::Fail(EResult::ParameterCountMismatch, src.Loc(), pr::FmtS("Missing parameters for macro %s. Expected %d", pr::Narrow(exp).c_str(), macro->m_params.size())), false;
+							throw Exception(EResult::ParameterCountMismatch, src.Loc(), pr::FmtS("Missing parameters for macro %s. Expected %d", pr::Narrow(exp).c_str(), macro->m_params.size()));
 
 						// Expand the macro with the given parameters
 						exp.resize(0);
@@ -793,7 +821,7 @@ namespace pr
 
 				// Evaluate the expression
 				int res;
-				if (!pr::EvaluateI(expr.c_str(), res)) return FailPolicy::Fail(EResult::InvalidPreprocessorDirective, src.Loc(), "Failed to evaluate conditional expression"), false;
+				if (!pr::EvaluateI(expr.c_str(), res)) throw Exception(EResult::InvalidPreprocessorDirective, src.Loc(), "Failed to evaluate conditional expression");
 				return res != 0;
 			}
 
@@ -805,7 +833,7 @@ namespace pr
 				{
 					if (*src == L'\"')
 					{
-						if (!EatLiteralString(src)) FailPolicy::Fail(EResult::InvalidString, src.Loc(), "Literal string expected");
+						if (!EatLiteralString(src)) throw Exception(EResult::InvalidString, src.Loc(), "Literal string expected");
 						continue;
 					}
 					if (*src != L'#')  { ++src; continue; }
@@ -825,7 +853,7 @@ namespace pr
 					++src;
 				}
 				if (*src == 0)
-					return FailPolicy::Fail(EResult::UnmatchedPreprocessorDirective, beg, "Unmatched #if, #ifdef, #ifndef, #else, or #elid");
+					throw Exception(EResult::UnmatchedPreprocessorDirective, beg, "Unmatched #if, #ifdef, #ifndef, #else, or #elid");
 			}
 		};
 	}
@@ -849,7 +877,7 @@ namespace pr
 			wchar_t const* src2 = L"123";
 			pr::string<wchar_t> str1;
 
-			Preprocessor<> pp(src1);
+			Preprocessor pp(src1);
 			str1.push_back(*pp); ++pp;
 			str1.push_back(*pp); ++pp;
 			pp.Push(src2);
@@ -873,7 +901,7 @@ namespace pr
 					"\"#if ignore #define this stuff\"\n"
 					;
 
-				Preprocessor<> pp(str_in);
+				Preprocessor pp(str_in);
 				for (;*pp && *str_out; ++pp, ++str_out)
 				{
 					if (*pp == *str_out) continue;
@@ -895,7 +923,7 @@ namespace pr
 					"(bob + 1)\r\n"
 				;
 
-				Preprocessor<> pp(str_in);
+				Preprocessor pp(str_in);
 				for (;*pp && *str_out; ++pp, ++str_out)
 				{
 					if (*pp == *str_out) continue;
@@ -920,7 +948,7 @@ namespace pr
 					"2\n"
 					;
 
-				Preprocessor<> pp(str_in);
+				Preprocessor pp(str_in);
 				for (;*pp && *str_out; ++pp, ++str_out)
 				{
 					if (*pp == *str_out) continue;
@@ -937,7 +965,7 @@ namespace pr
 				char const* str_out =
 					"MULTILINE";
 
-				Preprocessor<> pp(str_in);
+				Preprocessor pp(str_in);
 				for (;*pp && *str_out; ++pp, ++str_out)
 				{
 					if (*pp == *str_out) continue;
@@ -955,7 +983,7 @@ namespace pr
 					"(1)+((2,3)) xx 01 _0x\n"
 					;
 
-				Preprocessor<> pp(str_in);
+				Preprocessor pp(str_in);
 				for (;*pp && *str_out; ++pp, ++str_out)
 				{
 					if (*pp == *str_out) continue;
@@ -974,7 +1002,7 @@ namespace pr
 					"A(1) B(1) C(1)\n"
 					;
 
-				Preprocessor<> pp(str_in);
+				Preprocessor pp(str_in);
 				for (;*pp && *str_out; ++pp, ++str_out)
 				{
 					if (*pp == *str_out) continue;
@@ -990,7 +1018,7 @@ namespace pr
 					"3\n"
 					;
 
-				Preprocessor<> pp(str_in);
+				Preprocessor pp(str_in);
 				for (;*pp && *str_out; ++pp, ++str_out)
 				{
 					if (*pp == *str_out) continue;
@@ -1007,7 +1035,7 @@ namespace pr
 				char const* str_out =
 					"8\n";
 
-				Preprocessor<> pp(str_in);
+				Preprocessor pp(str_in);
 				for (;*pp && *str_out; ++pp, ++str_out)
 				{
 					if (*pp == *str_out) continue;
@@ -1057,7 +1085,7 @@ namespace pr
 					"1\n"
 					;
 
-				Preprocessor<> pp(str_in);
+				Preprocessor pp(str_in);
 				for (;*pp && *str_out; ++pp, ++str_out)
 				{
 					if (*pp == *str_out) continue;
@@ -1074,9 +1102,9 @@ namespace pr
 					"included 1\n"
 					;
 
-				Includes<> inc; inc.AddString(L"inc", "included ONE");
+				Includes inc; inc.AddString(L"inc", "included ONE");
 				PtrA src(str_in);
-				Preprocessor<> pp(&src, false, &inc);
+				Preprocessor pp(&src, false, &inc);
 				for (;*pp && *str_out; ++pp, ++str_out)
 				{
 					if (*pp == *str_out) continue;
@@ -1108,9 +1136,9 @@ namespace pr
 					"hello world\n"
 					;
 
-				Includes<> inc;
-				EmbeddedLua<> emb;
-				Preprocessor<> pp(str_in, &inc, nullptr, &emb);
+				Includes inc;
+				EmbeddedLua emb;
+				Preprocessor pp(str_in, &inc, nullptr, &emb);
 				for (;*pp && *str_out; ++pp, ++str_out)
 				{
 					if (*pp == *str_out) continue;
@@ -1128,7 +1156,7 @@ namespace pr
 					;
 
 				Buffer<> buf(ESrcType::Buffered, str_in);
-				Preprocessor<> pp(&buf, false);
+				Preprocessor pp(&buf, false);
 				for (;*pp && *str_out; ++pp, ++str_out)
 				{
 					if (*pp == *str_out) continue;
@@ -1150,7 +1178,7 @@ namespace pr
 				char const* str_out =
 					"One = \"One\"	Two = \"Two\"	Three = \"Three\"\n"
 					;
-				Preprocessor<> pp(str_in);
+				Preprocessor pp(str_in);
 				for (;*pp && *str_out; ++pp, ++str_out)
 				{
 					if (*pp == *str_out) continue;

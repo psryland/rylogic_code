@@ -18,7 +18,7 @@ namespace pr
 		struct Reader
 		{
 		private:
-			Preprocessor<> m_pp;
+			Preprocessor m_pp;
 			string m_delim;
 			string m_last_keyword;
 			bool m_case_sensitive;
@@ -572,7 +572,7 @@ namespace pr
 			// Allow subclasses report errors
 			virtual bool ReportError(EResult result, Location const& loc, char const* msg)
 			{
-				return ThrowOnFailure::Fail(result, loc, msg, false);
+				throw Exception(result, loc, msg);
 			}
 			bool ReportError(EResult result, char const* msg)
 			{

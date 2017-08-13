@@ -78,6 +78,7 @@ namespace pr
 	}
 
 	// Floating point comparisons
+	#pragma warning (disable:4756) // Constant overflow in floating point arithmetic
 	inline bool FEql(float a, float b, float tol = maths::tiny)
 	{
 		// Floating point compare is dangerous and subtle.
@@ -97,8 +98,11 @@ namespace pr
 		// Handle infinities and exact values
 		if (a == b) return true;
 
+		// When float operations are performed at compile time, the compiler warnings about 'inf'
+		auto diff = a - b;
+
 		// Test relative error as a fraction of the largest value
-		return std::abs(a - b) < tol * std::max(std::abs(a), std::abs(b));
+		return std::abs(diff) < tol * std::max(std::abs(a), std::abs(b));
 	}
 	inline bool FEql(double a, double b, double tol = maths::tinyd)
 	{
@@ -110,8 +114,11 @@ namespace pr
 		// Handle infinities and exact values
 		if (a == b) return true;
 
+		// When float operations are performed at compile time, the compiler warnings about 'inf'
+		auto diff = a - b;
+
 		// Test relative error as a fraction of the largest value
-		return std::abs(a - b) < tol * std::max(std::abs(a), std::abs(b));
+		return std::abs(diff) < tol * std::max(std::abs(a), std::abs(b));
 	}
 	template <typename T, typename = maths::enable_if_vN<T>> inline bool FEql(T const& a, T const& b, float tol = maths::tiny)
 	{
@@ -140,6 +147,7 @@ namespace pr
 			FEql(z_as<float>(lhs), z_as<float>(rhs), tol) &&
 			FEql(w_as<float>(lhs), w_as<float>(rhs), tol);
 	}
+	#pragma warning (default:4756)
 
 	// Float inequalities
 	inline bool FGtr(float a, float b, float tol = maths::tiny)
@@ -317,7 +325,7 @@ namespace pr
 	template <typename T, typename = maths::enable_if_vN<T>> inline T Abs(T const& v)
 	{
 		// Note: arrays as vectors cannot use this function because arrays cannot be returned by value
-		T r = {};
+		T r;
 		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Abs(v[i]);
 		return r;
 	}

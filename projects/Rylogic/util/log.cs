@@ -378,7 +378,7 @@ namespace pr.util
 			if (evt.Context.HasValue())         { Str.Append(sb, pre, "{0:8}".Fmt(evt.Context)); pre = "|"; }
 			if (evt.Level != ELogLevel.NoLevel) { Str.Append(sb, pre, evt.Level); pre = "|"; }
 			if (timestamp)                      { Str.Append(sb, pre, evt.Timestamp.ToString("c")); pre = "|"; }
-			Str.Append(sb, pre, evt.Msg);
+			Str.Append(sb, pre, evt.Message);
 			return sb.ToString();
 		}
 
@@ -569,7 +569,7 @@ namespace pr.util
 				Level       = ELogLevel.Error;
 				Timestamp   = TimeSpan.Zero;
 				Context     = string.Empty;
-				Msg         = string.Empty;
+				Message     = string.Empty;
 				File        = string.Empty;
 				Line        = 0;
 				Occurrences = 0;
@@ -579,7 +579,7 @@ namespace pr.util
 				Level       = level;
 				Timestamp   = DateTimeOffset.Now - tzero;
 				Context     = ctx;
-				Msg         = msg;
+				Message     = msg;
 				File        = file;
 				Line        = line;
 				Occurrences = 1;
@@ -595,7 +595,7 @@ namespace pr.util
 			public string Context { get; private set; }
 
 			/// <summary>The log message</summary>
-			public string Msg { get; private set; }
+			public string Message { get; private set; }
 
 			/// <summary>The associated file (if appropriate)</summary>
 			public string File { get; private set; }
@@ -620,7 +620,7 @@ namespace pr.util
 					lhs.Context == rhs.Context &&
 					lhs.File    == rhs.File    &&
 					lhs.Line    == rhs.Line    &&
-					lhs.Msg     == rhs.Msg;
+					lhs.Message == rhs.Message;
 			}
 		}
 	}

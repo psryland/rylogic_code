@@ -370,6 +370,10 @@ namespace pr.maths
 		}
 
 		/// <summary>Create a rotation/translation matrix</summary>
+		public static m4x4 Transform(m3x4 rot, v4 translation)
+		{
+			return new m4x4(rot, translation);
+		}
 		public static m4x4 Transform(float pitch, float yaw, float roll, v4 translation)
 		{
 			return new m4x4(m3x4.Rotation(pitch, yaw, roll), translation);
@@ -477,6 +481,12 @@ namespace pr.maths
 		public static bool IsFinite(m4x4 vec)
 		{
 			return IsFinite(vec.x) && IsFinite(vec.y) && IsFinite(vec.z) && IsFinite(vec.w);
+		}
+
+		/// <summary>Spherically interpolate between two affine transforms</summary>
+		public static m4x4 Slerp(m4x4 lhs, m4x4 rhs, float frac)
+		{
+			return m4x4.Slerp(lhs, rhs, frac);
 		}
 	}
 }

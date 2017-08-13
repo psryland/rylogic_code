@@ -17,7 +17,6 @@ namespace pr
 	{
 		// An embedded code handler that supports lua code
 		// Serves as the default for Preprocessor and as an interface definition.
-		template <typename FailPolicy = ThrowOnFailure>
 		struct EmbeddedLua :IEmbeddedCode
 		{
 			pr::lua::Lua m_lua;
@@ -41,11 +40,11 @@ namespace pr
 				// Convert the lua code to a compiled chunk
 				pr::string<> error_msg;
 				if (pr::lua::PushLuaChunk(m_lua, Narrow(code), error_msg) != pr::lua::EResult::Success)
-					return FailPolicy::Fail(EResult::EmbeddedCodeSyntaxError, loc, error_msg.c_str()), false;
+					throw Exception(EResult::EmbeddedCodeSyntaxError, loc, error_msg.c_str());
 
 				// Execute the chunk
 				if (!pr::lua::CallLuaChunk(m_lua, 0, false))
-					return FailPolicy::Fail(EResult::EmbeddedCodeExecutionFailed, loc, "Error while attempting to execute lua code"), false;
+					throw Exception(EResult::EmbeddedCodeExecutionFailed, loc, "Error while attempting to execute lua code");
 
 				// If there's something still on the stack, copy it to result
 				if (lua_gettop(m_lua) != base && !lua_isnil(m_lua, -1))

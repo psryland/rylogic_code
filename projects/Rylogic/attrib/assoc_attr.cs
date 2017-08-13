@@ -15,22 +15,58 @@ namespace pr.attrib
 	[AttributeUsage(AttributeTargets.Enum|AttributeTargets.Property|AttributeTargets.Field, AllowMultiple=true)]
 	public sealed class AssocAttribute :Attribute
 	{
+		/// <summary>Associate an instance of a constant value</summary>
 		public AssocAttribute(object t)
-		{
-			Name = null;
-			AssocItem = t;
-		}
+			:this(null, t)
+		{}
+
+		/// <summary>Associate a named instance of a constant value</summary>
 		public AssocAttribute(string name, object t)
+			:this(name, t.GetType(), () => t)
+		{}
+
+		/// <summary>Associate a property or field via reflection</summary>
+		public AssocAttribute(Type ty, string prop_or_field_name, bool non_public = false)
+			:this(null, ty, prop_or_field_name, non_public)
+		{}
+
+		/// <summary>Associate a named property or field via reflection</summary>
+		public AssocAttribute(string name, Type ty, string prop_or_field_name, bool non_public = false)
+			:this(name, ty, null)
+		{
+			var mi = ty.GetProperty(prop_or_field_name, BindingFlags.Static|BindingFlags.Public|(non_public?BindingFlags.NonPublic:0))?.GetGetMethod(non_public);
+			if (mi != null)
+			{
+				m_get = () => mi.Invoke(null, null);
+				return;
+			}
+
+			var fi = ty.GetField(prop_or_field_name, BindingFlags.Static|BindingFlags.Public|(non_public?BindingFlags.NonPublic:0));
+			if (fi != null)
+			{
+				m_get = () => fi.GetValue(null);
+				return;
+			}
+
+			throw new Exception("AssocAttribute: Cannot match named static property or field");
+		}
+		private AssocAttribute(string name, Type ty, Func<object> get)
 		{
 			Name = name;
-			AssocItem = t;
+			Type = ty;
+			m_get = get;
 		}
 
 		/// <summary>A name to identify the associated type</summary>
 		public string Name { get; private set; }
 
+		/// <summary>The type of the associated value</summary>
+		public Type Type { get; private set; }
+
 		/// <summary>The instance associated with the owning property/enum value/field</summary>
-		public object AssocItem { get; private set; }
+		public object AssocItem { get { return m_get(); } }
+		private Func<object> m_get;
+
 	}
 
 	/// <summary>Access class for AssocAttribute</summary>
@@ -43,7 +79,7 @@ namespace pr.attrib
 			return mi
 				.GetCustomAttributes(typeof(AssocAttribute), false)
 				.Cast<AssocAttribute>()
-				.FirstOrDefault(x => x.Name == name && (x.AssocItem is T || x.AssocItem == null));
+				.FirstOrDefault(x => x.Name == name && (x.AssocItem == null || x.AssocItem is T));
 		}
 
 		/// <summary>Returns the AssocItem instance associated with an enum value</summary>
@@ -101,6 +137,7 @@ namespace pr.attrib
 #if PR_UNITTESTS
 namespace pr.unittests
 {
+	using System.Drawing;
 	using attrib;
 
 	[TestFixture] public class TestAssocAttr
@@ -113,6 +150,12 @@ namespace pr.unittests
 			[Assoc("#", 1)] A = 3,
 			[Assoc("#", 2)] B = 2,
 			[Assoc("#", 3)] C = 1,
+		}
+		public enum EType2
+		{
+			[Assoc(typeof(Color), nameof(Color.Red))]   R = 0,
+			[Assoc(typeof(Color), nameof(Color.Green))] G = 1,
+			[Assoc(typeof(Color), nameof(Color.Blue))]  B = 2,
 		}
 
 		public class Whatsit
@@ -143,6 +186,11 @@ namespace pr.unittests
 			var e = EType.B;
 			Assert.AreEqual(EType.A.Assoc<int>("#"), 1);
 			Assert.AreEqual(e.Assoc<int>("#"), 2);
+
+			// Associated reflected type
+			Assert.AreEqual(Color.Red  , EType2.R.Assoc<Color>());
+			Assert.AreEqual(Color.Green, EType2.G.Assoc<Color>());
+			Assert.AreEqual(Color.Blue , EType2.B.Assoc<Color>());
 		}
 	}
 }

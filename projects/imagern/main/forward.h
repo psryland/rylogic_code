@@ -8,7 +8,6 @@
 
 // Change these values to use different versions
 #define  WINVER       0x0600//0x0501//0x0400//
-#define _WIN32_WINNT  0x0600//0x0501//0x0400//
 #define _WIN32_IE     0x0700//0x0501//0x0400//
 #define _RICHEDIT_VER 0x0300//0x0200
 

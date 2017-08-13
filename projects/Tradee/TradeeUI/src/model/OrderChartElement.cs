@@ -53,7 +53,7 @@ namespace Tradee
 				? (int)new TFTime(t1.ExactUTC - Instrument.Latest.TimestampUTC, Instrument.TimeFrame).IntgTF : 0;
 
 			// Determine the width and position of the order
-			var x = (float)(range.Begini - range.Endi);
+			var x = (float)(range.Begi - range.Endi);
 			var w = (float)(range.Sizei + t2);
 
 			// Get the entry price, stop loss, and take profit values

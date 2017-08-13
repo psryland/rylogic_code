@@ -154,9 +154,6 @@ namespace pr
 			ParseParams& operator = (ParseParams const&) = delete;
 
 			// Report an error in the script
-			// After calling this, set the incorrect value to a safe value so that
-			// parsing can continue. This function may or may not throw based on the
-			// script error handling policy.
 			void ReportError(EResult result)
 			{
 				m_reader.ReportError(result);
@@ -686,7 +683,6 @@ namespace pr
 						if (m_point.size() < 2)
 						{
 							p.ReportError(EResult::Failed, "No preceding line to apply parametric values to");
-							return true;
 						}
 						auto& p0 = m_point[m_point.size() - 2];
 						auto& p1 = m_point[m_point.size() - 1];
@@ -2316,7 +2312,6 @@ namespace pr
 			void Parse() override
 			{
 				p.ReportError(EResult::UnknownValue, "Mesh object description invalid");
-				p.m_reader.FindSectionEnd();
 			}
 		};
 
@@ -2331,7 +2326,6 @@ namespace pr
 			void Parse() override
 			{
 				p.ReportError(EResult::UnknownValue, "Convex hull object description invalid");
-				p.m_reader.FindSectionEnd();
 			}
 			void CreateModel(LdrObject* obj) override
 			{

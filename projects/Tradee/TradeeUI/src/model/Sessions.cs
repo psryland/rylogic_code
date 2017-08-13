@@ -52,8 +52,8 @@ namespace Tradee
 		/// <summary>Returns time ranges that are within trading hours for the given time interval</summary>
 		public IEnumerable<Range> ClipToTradingHours(Range time_range_utc)
 		{
-			var t0 = new DateTimeOffset(time_range_utc.Begin, TimeSpan.Zero);
-			var t1 = new DateTimeOffset(time_range_utc.End  , TimeSpan.Zero);
+			var t0 = new DateTimeOffset(time_range_utc.Beg, TimeSpan.Zero);
+			var t1 = new DateTimeOffset(time_range_utc.End, TimeSpan.Zero);
 
 			// Find the first opening or closing time before 't0'
 			var prev_open  = PrecedingDate(t0, OpenedDay, OpenedTime);

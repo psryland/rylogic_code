@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using pr.common;
 using pr.container;
+using pr.db;
 using pr.extn;
 using pr.maths;
 using pr.util;
@@ -257,7 +258,7 @@ namespace Tradee
 				if (m_oldest == null && TimeFrame != ETimeFrame.None)
 				{
 					// If the cache covers the latest candle, return it from the cache otherwise get it from the DB.
-					if (m_index_range.Counti != 0 && m_index_range.Begini == 0)
+					if (m_index_range.Counti != 0 && m_index_range.Begi == 0)
 					{
 						m_oldest = m_cache.Front();
 					}
@@ -291,18 +292,18 @@ namespace Tradee
 				{
 					// Otherwise, reload the cache centred on the requested index
 					var new_range = new Range((long)pos_idx - CacheSize/2, (long)pos_idx + CacheSize/2);
-					if (new_range.Begin <   0) new_range = new_range.Shift(0   - new_range.Begin);
+					if (new_range.Beg <   0) new_range = new_range.Shift(0   - new_range.Beg);
 					if (new_range.End > Count) new_range = new_range.Shift(Count - new_range.End);
-					if (new_range.Begin <   0) new_range.Begin = 0;
+					if (new_range.Beg <   0) new_range.Beg = 0;
 
 					// Populate the cache from the database
 					// Order by timestamp so that the oldest is first, and the newest is at the end.
 					var sql = Str.Build("select * from ",TimeFrame," order by [",nameof(Candle.Timestamp),"] limit ?,?");
-					m_cache.AddRange(m_db.EnumRows<Candle>(sql, 1, new object[] { new_range.Begini, new_range.Sizei }));
+					m_cache.AddRange(m_db.EnumRows<Candle>(sql, 1, new object[] { new_range.Begi, new_range.Sizei }));
 					m_index_range = new_range;
 				}
 
-				return m_cache[(int)pos_idx - m_index_range.Begini];
+				return m_cache[(int)pos_idx - m_index_range.Begi];
 			}
 		}
 
@@ -316,7 +317,7 @@ namespace Tradee
 			{
 				var idx = m_cache.BinarySearch(x => x.Timestamp.CompareTo(ticks));
 				if (idx < 0) idx = ~idx;
-				return (m_index_range.Begini + idx) + FirstIdx;
+				return (m_index_range.Begi + idx) + FirstIdx;
 			}
 			// Otherwise use database queries to determine the index
 			else
@@ -349,7 +350,7 @@ namespace Tradee
 		public IEnumerable<Candle> CandleRange(NegIdx idx_min, NegIdx idx_max)
 		{
 			var r = IndexRange(idx_min, idx_max);
-			for (var i = r.Begini; i != r.Endi; ++i)
+			for (var i = r.Begi; i != r.Endi; ++i)
 				yield return this[i];
 		}
 
@@ -357,7 +358,7 @@ namespace Tradee
 		public IEnumerable<Candle> CandleRange(TFTime time_min, TFTime time_max)
 		{
 			var range = TimeToIndexRange(time_min, time_max);
-			return CandleRange(range.Begini, range.Endi);
+			return CandleRange(range.Begi, range.Endi);
 		}
 
 		/// <summary>Enumerate all available candles in this instrument</summary>
@@ -607,7 +608,7 @@ namespace Tradee
 					foreach (var hole in Model.Sessions.ClipToTradingHours(time_range))
 					{
 						Debug.Assert(hole.Size != 0);
-						msg.TimeRanges.Add(hole.Begin);
+						msg.TimeRanges.Add(hole.Beg);
 						msg.TimeRanges.Add(hole.End);
 					}
 				}
@@ -627,10 +628,10 @@ namespace Tradee
 			if (only_if_missing)
 			{
 				var range = IndexRange(i_oldest, i_newest);
-				if (i_oldest < range.Begin)
+				if (i_oldest < range.Beg)
 				{
 					msg.IndexRanges.Add(i_oldest);
-					msg.IndexRanges.Add(Math.Min(range.Begini, i_newest));
+					msg.IndexRanges.Add(Math.Min(range.Begi, i_newest));
 				}
 				if (i_newest > range.End)
 				{
@@ -793,7 +794,7 @@ namespace Tradee
 		/// <summary>Price EMA</summary>
 		public class EMA :ExpMovingAvr
 		{
-			public EMA(uint window_size)
+			public EMA(int window_size)
 				:base(window_size)
 			{}
 
@@ -805,10 +806,10 @@ namespace Tradee
 			}
 
 			/// <summary>Extend the mean to include the gradient of the mean</summary>
-			public override void Add(double value)
+			protected override void AddInternal(double value)
 			{
 				var prev = Mean;
-				base.Add(value);
+				base.AddInternal(value);
 				Slope = (Mean - prev) / 1.0;
 			}
 		}
@@ -846,7 +847,7 @@ namespace Tradee
 		/// <summary>Initialise the EMAs</summary>
 		private void ResetEma()
 		{
-			var window_sizes = new uint[] { 5, 8, 13, 21, 34, 55, 89, 144, 233, };
+			var window_sizes = new int[] { 5, 8, 13, 21, 34, 55, 89, 144, 233, };
 			Ema = window_sizes.Select(x => new EMA(x)).ToArray();
 		}
 

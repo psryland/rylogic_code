@@ -10,6 +10,9 @@ using pr.win32;
 
 namespace pr.gui
 {
+	// Notes:
+	//  ComboBox is very similar to this class, maintain both.
+
 	[Serializable]
 	[DebuggerDisplay("Value={Value} Text={Text} Valid={Valid}")]
 	public class ValueBox :TextBox
@@ -90,6 +93,11 @@ namespace pr.gui
 				var text = ValueToText(Value);
 				Text = text;
 			}
+		}
+		protected override void OnInvalidated(InvalidateEventArgs e)
+		{
+			m_valid = null;
+			base.OnInvalidated(e);
 		}
 
 		/// <summary>The text color for valid values</summary>

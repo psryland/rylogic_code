@@ -346,7 +346,7 @@
     <Compile Include="gui\progress_form.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="gui\prompt_form.cs">
+    <Compile Include="gui\prompt_ui.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="gui\recent_files.cs" />
@@ -370,7 +370,9 @@
     <Compile Include="gui\tool_form.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="gui\tree_grid_view.cs" />
+    <Compile Include="gui\tree_grid_view.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="gui\view3d_control.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -570,8 +572,8 @@
     <EmbeddedResource Include="gui\pattern_ui.resx">
       <DependentUpon>pattern_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="gui\prompt_form.resx">
-      <DependentUpon>prompt_form.cs</DependentUpon>
+    <EmbeddedResource Include="gui\prompt_ui.resx">
+      <DependentUpon>prompt_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="gui\hint_balloon.resx">
       <DependentUpon>hint_balloon.cs</DependentUpon>

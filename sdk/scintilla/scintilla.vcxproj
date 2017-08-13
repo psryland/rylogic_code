@@ -61,20 +61,20 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>..\..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
-    <IntDir>..\..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
+    <OutDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
+    <IntDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>..\..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
-    <IntDir>..\..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
+    <OutDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
+    <IntDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>..\..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
-    <IntDir>..\..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
+    <OutDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
+    <IntDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>..\..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
-    <IntDir>..\..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
+    <OutDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
+    <IntDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile />
@@ -97,7 +97,7 @@ $(ProjectDir)scripts\HFacer.py
 </Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration) .\lib</Command>
     </PostBuildEvent>
     <Link>
       <AdditionalDependencies>imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -123,7 +123,7 @@ $(ProjectDir)scripts\HFacer.py
 </Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration) .\lib</Command>
     </PostBuildEvent>
     <Link>
       <AdditionalDependencies>imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -146,7 +146,7 @@ $(ProjectDir)scripts\HFacer.py
 </Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration) .\lib</Command>
     </PostBuildEvent>
     <Lib>
       <TargetMachine>MachineX86</TargetMachine>
@@ -172,7 +172,7 @@ $(ProjectDir)scripts\HFacer.py
 </Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration) .\lib</Command>
     </PostBuildEvent>
     <Link>
       <AdditionalDependencies>imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>

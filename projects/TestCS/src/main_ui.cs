@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
+using pr.db;
 using pr.extn;
 using pr.gfx;
 using pr.gui;
@@ -39,22 +40,22 @@ namespace TestCS
 		private ToolStripMenuItem m_menu_tests_listbox;
 		private ToolStripMenuItem m_menu_tests_bluetooth_ui;
 		private ToolStripMenuItem m_menu_tests_log_ui;
+		private ToolStripMenuItem m_menu_tests_prompt_ui;
 		private ToolStripMenuItem m_menu_tests_graphcontrol;
 
 		/// <summary>The main entry point for the application.</summary>
-		[STAThread]
-		static void Main()
+		[STAThread] static void Main()
 		{
 			// Note! Running this in the debugger causes this to be run as a 32bit
 			// process regardless of the selected solution platform
 			Debug.WriteLine("\n    {0} is a {1}bit process\n".Fmt(Application.ExecutablePath, Environment.Is64BitProcess ? "64" : "32"));
 
-			View3d.LoadDll(".\\lib\\$(platform)\\$(config)");
-			Sci.LoadDll(".\\lib\\$(platform)\\$(config)");
+			Sci.LoadDll();
+			Sqlite.LoadDll();
+			View3d.LoadDll();
 
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
-
 			Application.Run(new MainUI());
 			//Application.Run(new DgvUI());
 		}
@@ -155,6 +156,25 @@ namespace TestCS
 				}
 			};
 
+			m_menu_tests_prompt_ui.Click += (s,a) =>
+			{
+				var combo = new PromptUI
+				{
+					Title = "Input Mode",
+					PromptText = "Select the input mode",
+					Mode = PromptUI.EMode.OptionSelect,
+					Options = Enum<PromptUI.EInputType>.Values,
+				};
+				combo.ShowDialog(this);
+				var value = new PromptUI
+				{
+					Title = "Value Input",
+					PromptText = "Type in something",
+					InputType = (PromptUI.EInputType)combo.Value,
+				};
+				value.ShowDialog(this);
+			};
+
 			m_menu_tests_scintilla.Click += (s, a) =>
 			{
 				new ScintillaUI().Show(this);
@@ -249,6 +269,7 @@ namespace TestCS
 			this.m_menu_tests_helpui = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_hintballoon = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_listbox = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tests_log_ui = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_message_box = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_rtb = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_scintilla = new System.Windows.Forms.ToolStripMenuItem();
@@ -260,7 +281,7 @@ namespace TestCS
 			this.m_menu_tests_view3d_editor = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_vt100 = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_web_browser = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_tests_log_ui = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tests_prompt_ui = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -307,6 +328,7 @@ namespace TestCS
             this.m_menu_tests_listbox,
             this.m_menu_tests_log_ui,
             this.m_menu_tests_message_box,
+            this.m_menu_tests_prompt_ui,
             this.m_menu_tests_rtb,
             this.m_menu_tests_scintilla,
             this.m_menu_tests_subclassed_controls,
@@ -399,6 +421,12 @@ namespace TestCS
 			this.m_menu_tests_listbox.Size = new System.Drawing.Size(180, 22);
 			this.m_menu_tests_listbox.Text = "&ListBox";
 			// 
+			// m_menu_tests_log_ui
+			// 
+			this.m_menu_tests_log_ui.Name = "m_menu_tests_log_ui";
+			this.m_menu_tests_log_ui.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_tests_log_ui.Text = "&Log UI";
+			// 
 			// m_menu_tests_message_box
 			// 
 			this.m_menu_tests_message_box.Name = "m_menu_tests_message_box";
@@ -465,11 +493,11 @@ namespace TestCS
 			this.m_menu_tests_web_browser.Size = new System.Drawing.Size(180, 22);
 			this.m_menu_tests_web_browser.Text = "&Web Browser";
 			// 
-			// m_tests_logui
+			// m_menu_tests_prompt_ui
 			// 
-			this.m_menu_tests_log_ui.Name = "m_tests_logui";
-			this.m_menu_tests_log_ui.Size = new System.Drawing.Size(180, 22);
-			this.m_menu_tests_log_ui.Text = "&Log UI";
+			this.m_menu_tests_prompt_ui.Name = "m_menu_tests_prompt_ui";
+			this.m_menu_tests_prompt_ui.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_tests_prompt_ui.Text = "&Prompt UI";
 			// 
 			// MainUI
 			// 

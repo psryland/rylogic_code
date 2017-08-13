@@ -408,10 +408,10 @@ namespace LDraw
 					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Rename"));
 					opt.Click += (s,a) =>
 					{
-						using (var dlg = new PromptForm { Title = "Rename", PromptText = "Enter a name for the scene", Value = DockControl.TabText })
+						using (var dlg = new PromptUI { Title = "Rename", PromptText = "Enter a name for the scene", Value = DockControl.TabText })
 						{
 							dlg.ShowDialog(this);
-							SceneName = dlg.Value;
+							SceneName = (string)dlg.Value;
 						}
 					};
 				}

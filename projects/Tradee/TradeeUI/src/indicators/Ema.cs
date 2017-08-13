@@ -62,8 +62,8 @@ namespace Tradee
 			// Get the visible X axis range, and convert it to positive indices
 			var first_idx = Instrument.FirstIdx;
 			var rng = Instrument.IndexRange((int)(Chart.XAxis.Min - 1), (int)(Chart.XAxis.Max + 1));
-			rng.Begin = Maths.Clamp(rng.Begin - first_idx, 0, m_ema.Count);
-			rng.End   = Maths.Clamp(rng.End   - first_idx, 0, m_ema.Count);
+			rng.Beg = Maths.Clamp(rng.Beg - first_idx, 0, m_ema.Count);
+			rng.End = Maths.Clamp(rng.End - first_idx, 0, m_ema.Count);
 			if (rng.Counti == 0)
 			{
 				Gfx = null;
@@ -170,7 +170,7 @@ namespace Tradee
 			m_ema.Clear();
 			m_ema.Capacity = Instrument.Count;
 
-			var ema = new EmaPt((uint)Settings.WindowSize);
+			var ema = new EmaPt(Settings.WindowSize);
 			foreach (var candle in Instrument)
 			{
 				// Candle data must be strictly ordered by timestamp because I'm using binary search
@@ -208,7 +208,7 @@ namespace Tradee
 			// If this is a new candle, add to the EMA collection
 			if (e.NewCandle)
 			{
-				var ema = m_ema.Count != 0 ? new EmaPt(m_ema.Back()) : new EmaPt((uint)Settings.WindowSize);
+				var ema = m_ema.Count != 0 ? new EmaPt(m_ema.Back()) : new EmaPt(Settings.WindowSize);
 				var prev = Instrument[-1];
 
 				ema.Timestamp = prev.Timestamp;
@@ -226,7 +226,7 @@ namespace Tradee
 
 				// Recalculate all EMA values from 'idx' forwards
 				m_ema.Resize(idx);
-				var prev = idx > 0 ? m_ema[idx-1] : new EmaPt((uint)Settings.WindowSize);
+				var prev = idx > 0 ? m_ema[idx-1] : new EmaPt(Settings.WindowSize);
 				for (; idx != Instrument.Count; ++idx)
 				{
 					var ema = new EmaPt(prev);
@@ -255,7 +255,7 @@ namespace Tradee
 		/// <summary>Extend the EMA type to include a timestamp</summary>
 		private class EmaPt :ExpMovingAvr
 		{
-			public EmaPt(uint window_size)
+			public EmaPt(int window_size)
 				:base(window_size)
 			{}
 			public EmaPt(EmaPt rhs)

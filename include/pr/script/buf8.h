@@ -19,7 +19,8 @@ namespace pr
 	namespace script
 	{
 		// Generic character shift register
-		template <typename Derived, typename TStore, typename Char> struct Buf
+		template <typename Derived, typename TStore, typename Char>
+		struct Buf
 		{
 			using value_type = Char;
 
@@ -185,9 +186,7 @@ namespace pr
 		// A "shift register" of 8 narrow characters
 		struct Buf8 :Buf<Buf8, unsigned long long, char>
 		{
-			using base = Buf<Buf8, unsigned long long, char>;
-			Buf8() :base() {}
-			Buf8(Buf8&& rhs) :base(std::move<base&>(rhs)) {}
+			Buf8() :Buf() {}
 			template <typename Ptr> explicit Buf8(Ptr const& src) :Buf(src) {}
 			template <typename Ptr> explicit Buf8(Ptr& src) :Buf(src) {}
 		};
@@ -195,9 +194,7 @@ namespace pr
 		// A "shift register" of 2 wide characters
 		struct BufW2 :Buf<BufW2, unsigned int, wchar_t>
 		{
-			using base = Buf<BufW2, unsigned int, wchar_t>;
-			BufW2() :base() {}
-			BufW2(BufW2&& rhs) :base(std::move<base&>(rhs)) {}
+			BufW2() :Buf() {}
 			template <typename Ptr> explicit BufW2(Ptr const& src) :Buf(src) {}
 			template <typename Ptr> explicit BufW2(Ptr& src) :Buf(src) {}
 		};
@@ -205,9 +202,7 @@ namespace pr
 		// A "shift register" of 4 wide characters
 		struct BufW4 :Buf<BufW4, unsigned long long, wchar_t>
 		{
-			using base = Buf<BufW4, unsigned long long, wchar_t>;
-			BufW4() :base() {}
-			BufW4(BufW4&& rhs) :base(std::move<base&>(rhs)) {}
+			BufW4() :Buf() {}
 			template <typename Ptr> explicit BufW4(Ptr const& src) :Buf(src) {}
 			template <typename Ptr> explicit BufW4(Ptr& src) :Buf(src) {}
 		};
@@ -215,9 +210,7 @@ namespace pr
 		// A "shift register" of 8 wide characters
 		struct alignas(16) BufW8 :Buf<BufW8, __m128i, wchar_t>
 		{
-			using base = Buf<BufW8, __m128i, wchar_t>;
-			BufW8() :base() {}
-			BufW8(BufW8&& rhs) :base(std::move<base&>(rhs)) {}
+			BufW8() :Buf() {}
 			template <typename Ptr> explicit BufW8(Ptr const& src) :Buf(src) {}
 			template <typename Ptr> explicit BufW8(Ptr& src) :Buf(src) {}
 

@@ -250,11 +250,11 @@ namespace LDraw
 		public void SaveView()
 		{
 			// Prompt for a name
-			using (var dlg = new PromptForm { Title = "View Name:", Value = "View{0}".Fmt(SavedViews.Count + 1) })
+			using (var dlg = new PromptUI { Title = "View Name:", Value = $"View{SavedViews.Count+1}" })
 			{
 				dlg.ValueCtrl.SelectAll();
 				if (dlg.ShowDialog(Owner) != DialogResult.OK) return;
-				SavedViews.Add(new SavedView(dlg.Value, CurrentScene.Camera));
+				SavedViews.Add(new SavedView((string)dlg.Value, CurrentScene.Camera));
 			}
 		}
 

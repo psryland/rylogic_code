@@ -30,7 +30,6 @@ namespace pr
 
 		// An embedded code handler that doesn't handle any code.
 		// Serves as the default for Preprocessor and as an interface definition.
-		template <typename FailPolicy = ThrowOnFailure>
 		struct EmbeddedCode :IEmbeddedCode
 		{
 			std::vector<IEmbeddedCode*> Handler;

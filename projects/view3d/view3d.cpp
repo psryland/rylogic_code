@@ -1087,11 +1087,11 @@ VIEW3D_API void __stdcall View3D_ShowLightingDlg(View3DWindow window)
 // Objects **********************************************************
 
 // Create an include handler that can load from directories or embedded resources
-pr::script::Includes<> GetIncludes(View3DIncludes const* includes)
+pr::script::Includes GetIncludes(View3DIncludes const* includes)
 {
 	using namespace pr::script;
 
-	Includes<> inc(Includes<>::EType::None);
+	Includes inc(Includes::EType::None);
 	if (includes != nullptr)
 	{
 		if (includes->m_include_paths != nullptr)
@@ -1584,14 +1584,14 @@ VIEW3D_API void __stdcall View3D_ObjectSetTexture(View3DObject object, View3DTex
 }
 
 // Return the model space bounding box for 'object'
-VIEW3D_API View3DBBox __stdcall View3D_ObjectBBoxMS(View3DObject object)
+VIEW3D_API View3DBBox __stdcall View3D_ObjectBBoxMS(View3DObject object, int include_children)
 {
 	try
 	{
 		if (!object) throw std::exception("Object is null");
 
 		DllLockGuard;
-		return view3d::To<View3DBBox>(object->BBoxMS(true));
+		return view3d::To<View3DBBox>(object->BBoxMS(include_children != 0));
 	}
 	CatchAndReport(View3D_ObjectBBoxMS, , view3d::To<View3DBBox>(pr::BBoxUnit));
 }

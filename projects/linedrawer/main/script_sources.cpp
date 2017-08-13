@@ -123,7 +123,7 @@ namespace ldr
 			{
 				Buffer<> src(ESrcType::Buffered, pr::FmtS("*Model {\"%s\"}", fpath.c_str()));
 
-				Includes<> inc;
+				Includes inc;
 				inc.FileOpened += add_watch;
 				inc.m_ignore_missing_includes = m_settings.m_IgnoreMissingIncludes;
 				inc.AddSearchPath(pr::filesys::GetDirectory(fpath));
@@ -136,7 +136,7 @@ namespace ldr
 				pr::LockFile lock(file.m_filepath, 10, 5000);
 				FileSrc src(file.m_filepath.c_str());
 
-				Includes<> inc;
+				Includes inc;
 				inc.FileOpened += add_watch;
 				inc.m_ignore_missing_includes = m_settings.m_IgnoreMissingIncludes;
 				inc.AddSearchPath(pr::filesys::GetDirectory(fpath));

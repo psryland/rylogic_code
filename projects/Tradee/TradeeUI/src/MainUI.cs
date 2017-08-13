@@ -4,10 +4,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
-using pr.common;
+using pr.db;
 using pr.extn;
 using pr.gfx;
 using pr.gui;
+using pr.scintilla;
 using pr.util;
 using pr.win32;
 using ToolStripContainer = pr.gui.ToolStripContainer;
@@ -71,7 +72,7 @@ namespace Tradee
 
 			Settings = new Settings(@"Settings.xml"){AutoSaveOnChanges = true};
 			Model = new MainModel(this, Settings);
-			m_view3d = new View3d();
+			m_view3d = new View3d(gdi_compatibility:false);
 
 			SetupUI();
 			UpdateUI();
@@ -217,9 +218,9 @@ namespace Tradee
 				try
 				{
 					// Load the layout, create charts on demand
-					m_dc.LoadLayout(Settings.UI.UILayout, name =>
+					m_dc.LoadLayout(Settings.UI.UILayout, (persistence_name, type_name) =>
 					{
-						var sym = ChartUI.ToSymbolCode(name);
+						var sym = ChartUI.ToSymbolCode(persistence_name);
 						var instr = Model.MarketData.GetOrCreateInstrument(sym);
 						return new ChartUI(Model, instr).DockControl;
 					});

@@ -242,9 +242,19 @@ namespace pr
 			++TestCount();
 			bool threw = false;
 			bool threw_expected = false;
-			try             { func(); }
-			catch (TExcept) { threw = true; threw_expected = true; }
-			catch (...)     { threw = true; }
+			try
+			{
+				func();
+			}
+			catch (TExcept const&)
+			{
+				threw = true;
+				threw_expected = true;
+			}
+			catch (...)
+			{
+				threw = true;
+			}
 			if (threw_expected) return;
 			std::wstringstream ss; ss << file << "(" << line << "): '" << expr << "' " << (threw
 				? "threw an exception of an unexpected type"

@@ -42,16 +42,16 @@ namespace pr
 			// A watched file
 			struct File
 			{
-				filepath_t             m_filepath;      // The file to watch
-				pr::Guid               m_file_group_id; // Id for the group of files that this object is part of
-				pr::script::Includes<> m_includes;      // Include paths to use with this file
+				filepath_t           m_filepath;      // The file to watch
+				pr::Guid             m_file_group_id; // Id for the group of files that this object is part of
+				pr::script::Includes m_includes;      // Include paths to use with this file
 
 				File()
 					:m_filepath()
 					,m_file_group_id(pr::GuidZero)
 					,m_includes()
 				{}
-				File(wchar_t const* filepath, pr::Guid const& file_group_id, pr::script::Includes<> const& includes)
+				File(wchar_t const* filepath, pr::Guid const& file_group_id, pr::script::Includes const& includes)
 					:m_filepath(pr::filesys::Standardise<filepath_t>(filepath))
 					,m_file_group_id(file_group_id)
 					,m_includes(includes)
@@ -309,7 +309,7 @@ namespace pr
 			// Add a file source
 			// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 			// Returns the Guid of the context that the objects were added to.
-			pr::Guid AddFile(wchar_t const* filepath, pr::script::Includes<> const& includes, bool additional)
+			pr::Guid AddFile(wchar_t const* filepath, pr::script::Includes const& includes, bool additional)
 			{
 				File file(filepath, pr::GenerateGUID(), includes);
 				return AddFile(file, EReason::NewData, additional);
@@ -318,7 +318,7 @@ namespace pr
 			// Add ldr objects from a script string or file (but not as a script source)
 			// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 			// Returns the Guid of the context that the objects were added to.
-			pr::Guid AddScript(wchar_t const* ldr_script, bool file, pr::Guid const* context_id, pr::script::Includes<> const& includes)
+			pr::Guid AddScript(wchar_t const* ldr_script, bool file, pr::Guid const* context_id, pr::script::Includes const& includes)
 			{
 				// Create a context id if none given
 				auto guid = context_id ? *context_id : pr::GenerateGUID();
@@ -507,7 +507,7 @@ namespace pr
 			// Add ldr objects from a script string or file (but not as a script source)
 			// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 			// Returns the Guid of the context that the objects were added to
-			pr::Guid AddScript(wchar_t const* ldr_script, bool file, EReason reason, pr::Guid const& context_id, pr::script::Includes<> const& includes)
+			pr::Guid AddScript(wchar_t const* ldr_script, bool file, EReason reason, pr::Guid const& context_id, pr::script::Includes const& includes)
 			{
 				using namespace pr::script;
 

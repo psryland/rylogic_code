@@ -748,7 +748,7 @@ namespace pr
 		// http://www.sqlite.org/syntaxdiagrams.html#column-constraint
 		template <typename RecordType> struct ColumnMetaData
 		{
-			char const* Name;        // The column name (Will be bracketted, i.e. [Item])
+			char const* Name;        // The column name (Will be bracketed, i.e. [Item])
 			char const* DataType;    //
 			char const* Constraints; //
 			bool        IsNotNull;   //
@@ -771,6 +771,8 @@ namespace pr
 				if (IsAutoInc && !IsPK)
 					throw Exception(SQLITE_MISUSE, "Only a primary key column can have the auto increment constraint", false);
 			}
+			ColumnMetaData(ColumnMetaData const&) = delete;
+			ColumnMetaData& operator=(ColumnMetaData const&) = delete;
 
 			// Return the column definition for this column
 			std::string ColumnDef() const
@@ -813,6 +815,7 @@ namespace pr
 			virtual void Read(sqlite3_stmt* stmt, int col, RecordType& item) const = 0;
 
 		protected:
+
 			virtual std::type_info const& ColumnTypeInfo() const = 0;
 
 			// Set the value of this column in 'item' from 'value'.
@@ -828,9 +831,6 @@ namespace pr
 
 			// Set 'value' (assumed to be of type ColumnType) from 'stmt'
 			virtual void ReadImpl(sqlite3_stmt* stmt, int col, void* value) const = 0;
-
-			ColumnMetaData(ColumnMetaData const&); // no copying
-			ColumnMetaData& operator=(ColumnMetaData const&);
 		};
 
 		// This implementation of ColumnMetaData uses a provided adapter struct
@@ -862,6 +862,7 @@ namespace pr
 			}
 
 		protected:
+
 			// Returns the type info for the column type
 			std::type_info const& ColumnTypeInfo() const
 			{
@@ -909,10 +910,10 @@ namespace pr
 		private:
 			char const*  m_table_name;        // The name of the table
 			char const*  m_table_constraints; // Table constraints
-			ColumnCont   m_col;               // All columns of this table (including pks, autoincs, etc) (owns the allocations)
+			ColumnCont   m_col;               // All columns of this table (including 'pks', 'autoincs', etc) (owns the allocations)
 			ColumnCont   m_pks;               // The primary keys of this table
 			ColumnCont   m_npks;              // The columns that aren't primary keys
-			ColumnCont   m_ninc;              // The columns that aren't autoincrement columns
+			ColumnCont   m_ninc;              // The columns that aren't 'autoincrement' columns
 			ColMetaData* m_autoinc;           // The auto increment column (if there is one, null otherwise)
 			char const*  m_pk_col_names;      // A pointer into 'm_table_constraints' to the list of primary key column names
 
@@ -957,6 +958,8 @@ namespace pr
 					if (*pk != 0) m_pk_col_names = pk + 1;
 				}
 			}
+			TableMetaData(TableMetaData const&) = delete;
+			TableMetaData& operator=(TableMetaData const&) = delete;
 			~TableMetaData()
 			{
 				for (auto i = begin(m_col), iend = end(m_col); i != iend; ++i)
@@ -1032,10 +1035,6 @@ namespace pr
 				// Check the primary key constraint uses bracketed column names
 				assert((m_pk_col_names == nullptr || !m_pks.empty()) && "Primary key constraint was given, but no primary key columns found.");
 			}
-
-		private:
-			TableMetaData(TableMetaData const&); // no copying
-			TableMetaData& operator=(TableMetaData const&);
 		};
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1044,9 +1043,6 @@ namespace pr
 		class Query
 		{
 			mutable sqlite3_stmt* m_stmt; // Sqlite managed memory for this query. Mutable because the interface isn't const correct
-
-			Query(Query const&); // no copying
-			Query& operator=(Query const&);
 
 		public:
 			Query()
@@ -1063,16 +1059,18 @@ namespace pr
 			{
 				rhs.m_stmt = 0;
 			}
-			virtual ~Query()
-			{
-				try { Finalize(); } catch (...) {}
-			}
+			Query(Query const&) = delete;
 			Query& operator=(Query&& rhs)
 			{
 				if (this == &rhs) return *this;
 				m_stmt      = rhs.m_stmt;
 				rhs.m_stmt  = 0;
 				return *this;
+			}
+			Query& operator=(Query const&) = delete;
+			virtual ~Query()
+			{
+				try { Finalize(); } catch (...) {}
 			}
 
 			// Call when done with this query
@@ -1401,9 +1399,6 @@ namespace pr
 			mutable sqlite3*    m_db;  // The database connection
 			mutable std::string m_sql; // A string for reducing memory allocations when constructing sql queries
 
-			Database(Database const&); // no copying
-			Database& operator= (Database const&);
-
 		public:
 			// Version number info
 			static char const* SQLiteVersion()    { return SQLITE_VERSION; }
@@ -1418,13 +1413,15 @@ namespace pr
 			{
 				Open(db_file, flags, vfs);
 			}
+			Database(Database const&) = delete;
+			Database& operator= (Database const&) = delete;
 			virtual ~Database()
 			{
 				try { Close(); }
 				catch (...) {}
 			}
 
-			// Make this type convertable to sqlite3* so it can be used in the standard C library functions
+			// Make this type convertible to sqlite3* so it can be used in the standard C library functions
 			operator sqlite3*() const
 			{
 				return m_db;
@@ -1805,11 +1802,11 @@ namespace pr
 				try { table.Insert(Record(1, 'c'), EOnConstraint::Reject); }
 				catch (pr::sqlite::Exception const& ex) { PR_CHECK(ex.code(), SQLITE_CONSTRAINT); }
 
-				// Ignore, should ignore constraints volations
+				// Ignore, should ignore constraints violations
 				PR_CHECK(table.Insert(Record(1, 'd'), EOnConstraint::Ignore), 0);
 				PR_CHECK(table.Get(PKs(1)).m_char, 'a');
 
-				// Replace, should replace on constraint volation
+				// Replace, should replace on constraint violation
 				PR_CHECK(table.Insert(Record(1, 'e'), EOnConstraint::Replace), 1);
 				PR_CHECK(table.Get(PKs(1)).m_char, 'e');
 			}

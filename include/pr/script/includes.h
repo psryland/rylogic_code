@@ -66,7 +66,6 @@ namespace pr
 
 		#pragma region General Includes
 		// An include handler that tries to open include files from resources, search paths, or a string table
-		template <typename FailPolicy = ThrowOnFailure>
 		struct Includes :IIncludeHandler
 		{
 			using Paths = pr::vector<string>;
@@ -237,10 +236,9 @@ namespace pr
 				if (m_ignore_missing_includes)
 					return string();
 
-				auto msg = !searched_paths.empty()
+				throw Exception(EResult::MissingInclude, loc, !searched_paths.empty()
 					? pr::FmtS("Failed to resolve include '%S'\n\nNot found in these search paths:\n%S", include.c_str(), searched_paths.c_str())
-					: pr::FmtS("Failed to resolve include '%S'", include.c_str());
-				return FailPolicy::Fail(EResult::MissingInclude, loc, msg, string());
+					: pr::FmtS("Failed to resolve include '%S'", include.c_str()));
 			}
 
 			// Resolve an include into a full path
@@ -324,11 +322,9 @@ namespace pr
 					return std::make_unique<PtrA>("");
 				}
 
-				auto msg = !searched_paths.empty()
+				throw Exception(EResult::MissingInclude, loc, !searched_paths.empty()
 					? pr::FmtS("Failed to open include '%S'\n\nFile not found in search paths:\n%S", include.c_str(), searched_paths.c_str())
-					: pr::FmtS("Failed to open include '%S'", include.c_str());
-
-				return FailPolicy::Fail(EResult::MissingInclude, loc, msg, std::unique_ptr<Src>());
+					: pr::FmtS("Failed to open include '%S'", include.c_str()));
 			}
 
 			// Open 'include' as an ASCII stream
@@ -358,10 +354,9 @@ namespace pr
 					return std::make_unique<std::istringstream>(i->second);
 				}
 
-				auto msg = !searched_paths.empty()
+				throw Exception(EResult::MissingInclude, loc, !searched_paths.empty()
 					? pr::FmtS("Failed to resolve include '%S'\n\nFile not found in search paths:\n%S", include.c_str(), searched_paths.c_str())
-					: pr::FmtS("Failed to resolve include '%S'", include.c_str());
-				return FailPolicy::Fail(EResult::MissingInclude, loc, msg, std::unique_ptr<std::istream>());
+					: pr::FmtS("Failed to resolve include '%S'", include.c_str()));
 			}
 
 			// Raised whenever a file is opened
@@ -371,13 +366,12 @@ namespace pr
 
 		#pragma region No Includes
 		// An include handler that doesn't handle any includes.
-		template <typename FailPolicy = ThrowOnFailure>
 		struct NoIncludes :IIncludeHandler
 		{
 			// Resolve an include into a full path
 			string ResolveInclude(string const&, EFlags, Location const& loc = Location()) override
 			{
-				return FailPolicy::Fail(EResult::IncludesNotSupported, loc, "#include is not supported", string());
+				throw Exception(EResult::IncludesNotSupported, loc, "#include is not supported");
 			}
 
 			// Returns a 'Src' corresponding to the string "include".
@@ -385,13 +379,13 @@ namespace pr
 			// 'loc' is where in the current source the include comes from.
 			std::unique_ptr<Src> Open(string const&, EFlags, Location const& loc = Location()) override
 			{
-				return FailPolicy::Fail(EResult::IncludesNotSupported, loc, "#include is not supported", std::unique_ptr<Src>());
+				throw Exception(EResult::IncludesNotSupported, loc, "#include is not supported");
 			}
 
 			// Open 'include' as an ASCII stream
 			std::unique_ptr<std::istream> OpenStreamA(string const&, EFlags, Location const& loc = Location()) override
 			{
-				return FailPolicy::Fail(EResult::IncludesNotSupported, loc, "#include is not supported", std::unique_ptr<std::istream>());
+				throw Exception(EResult::IncludesNotSupported, loc, "#include is not supported");
 			}
 		};
 		#pragma endregion
@@ -419,7 +413,7 @@ namespace pr
 				fout.write(reinterpret_cast<char const*>(&data[0]), sizeof(data));
 			}
 			{
-				Includes<> inc;
+				Includes inc;
 				inc.AddSearchPath(pr::filesys::GetDirectory(pr::win32::ExePath<string>()));
 				inc.AddSearchPath(pr::filesys::CurrentDirectory<string>());
 

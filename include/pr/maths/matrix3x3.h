@@ -196,8 +196,8 @@ namespace pr
 		// Create a transform from one basis axis to another
 		template <typename = void> static Mat3x4 Rotation(AxisId from_axis, AxisId to_axis)
 		{
-			// Get the rotation from Z to 'from_axis' = o2f
-			// Get the rotation from Z to 'to_axis' = o2t
+			// 'o2f' = the rotation from Z to 'from_axis'
+			// 'o2t' = the rotation from Z to 'to_axis'
 			// 'f2t' = o2t * Invert(o2f)
 			Mat3x4 o2f, o2t;
 			switch (from_axis)

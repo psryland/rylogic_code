@@ -14,20 +14,20 @@ Escape Velocity:
   transporting as many of your population as possible before your solar system is destroyed.
   (Time frame = time till super nova, points = number of population saved)
 
- Gameplay:
-  Each game is different due to a randomly choosen number of electrons per orbital for the elements in the game universe.
+ Game-play:
+  Each game is different due to a randomly chosen number of electrons per orbital for the elements in the game universe.
   All materials are the combination of two elements only (in the required ratios to produce stable combinations).
   The player starts with a set of materials that they can combine to produce new materials. The combination
   processes model real chemical reaction processes so that the player is able to roughly predict the outcome
   of reacting two materials.
   The materials the player is trying to find are:
    - a strong ship building material (strongly bonded material with low atomic weight, highly ionic)
-   - two materials that react vigously to use as fuel (materials that produce a strong exothermic reaction and hence
+   - two materials that react vigorously to use as fuel (materials that produce a strong exothermic reaction and hence
      produce a high exhaust velocity). Atomic weight of the fuel is also important as it effects the mass of the ship.
-  The names of the elements are choosen randomly. The material names are then derived based on the ratio of elements
+  The names of the elements are chosen randomly. The material names are then derived based on the ratio of elements
    in the material. e.g. moronium (Mr) and bananite (Ba) in MrBa2 = moronium-di-bananite
   The reaction of two materials can be endothermic or exothermic. Endothermic reactions require energy input which
-   defines the rate that that material can be produced, exothermic reactions happen instantly. Players will likely
+   defines the rate that the material can be produced, exothermic reactions happen instantly. Players will likely
    need endothermic reactions to produce the two elements needed for fuel.
 
  Game Views:
@@ -89,26 +89,26 @@ Escape Velocity:
   Stability of a material depends on how close to filling the valence levels the element combination is
   
   The ideal material to build the space craft out of is a strong/light metal alloy. There doesn't seem to be any
-  periodic table inspired pattern for what makes an allow strong, so pick a light metal and the elements that froms the
+  periodic table inspired pattern for what makes an allow strong, so pick a light metal and the elements that from the
   highest total bond energy
 
  Game Systems:
   Start with a random set of materials with random properties.
   Inventory of materials increases with time based on rarity and time since discovered.
-  Player chooses combinations of known materials with a limited set of ratios, ie. 1:1, 1:2, 1:3, 1:4, 1:5 in the hope
+  Player chooses combinations of known materials with a limited set of ratios, i.e. 1:1, 1:2, 1:3, 1:4, 1:5 in the hope
    of discovering new materials.
-  Certain combinations of materials result in discoveries, once a material is discovered it becauses a known material.
+  Certain combinations of materials result in discoveries, once a material is discovered it becomes a known material.
   Player has a set of variables for the space craft spec. They choose when to test the design. An iterative physical
    simulation determines the viability of the craft. A percentage of the materials used in the test craft are consumed
  The materials that can be discovered are generated randomly on game start by starting with four ideal materials and
   generating backwards to produce enough intermediate materials (game difficulty control, more = harder)
 
  Material generation:
-  Start with four materials suitably choosen to save 1000 people given the star mass and distance from star
+  Start with four materials suitably chosen to save 1000 people given the star mass and distance from star
   Create an empty set of starting materials
   Create an empty set of allowed materials
   Generate a random material M1.
-  Choose M2, such that Combine(a * M1, b * M2) = IdealFuel (a,b are randomly choosen combination ratios)
+  Choose M2, such that Combine(a * M1, b * M2) = IdealFuel (a,b are randomly chosen combination ratios)
   Add IdealFuel to allowed materials, M1,M2 to starting materials
   Generate a random material or choose from starting materials, call it M3 (may want to bias this)
   Choose M4, such that Combine(a * M3, b * M4) = IdealMetal
@@ -127,6 +127,6 @@ Escape Velocity:
  At game start, star mass, and distance from star are not known. These must be researched in order to 
   determine required ship specs.
 
- Game intro start with a message from a solar observatry saying "Feck, Star's a gonner.." (to that effect)
+ Game intro start with a message from a solar observatory saying "Feck, Star's a gonner.." (to that effect)
 
 

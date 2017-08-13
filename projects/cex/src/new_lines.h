@@ -16,7 +16,7 @@ namespace cex
 		std::string m_lineends;
 		bool m_replace_infile;
 		pr::script::FileSrc m_filesrc;
-		pr::script::StripNewLines<> m_filter;
+		pr::script::StripNewLines m_filter;
 		pr::script::Src* m_src;
 
 		NewLines()

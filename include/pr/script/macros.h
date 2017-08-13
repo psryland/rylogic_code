@@ -47,12 +47,12 @@ namespace pr
 			Location m_loc;       // The source location of where the macro was defined
 
 			// Return a macro tag from 'src' (or fail)
-			template <typename Iter, typename FailPolicy = ThrowOnFailure>
+			template <typename Iter>
 			static string ReadTag(Iter& src, Location const& loc)
 			{
 				string tag;
 				if (!pr::str::ExtractIdentifier(tag, src))
-					FailPolicy::Fail(EResult::InvalidIdentifier, loc, "invalid macro name");
+					throw Exception(EResult::InvalidIdentifier, loc, "invalid macro name");
 				return tag;
 			}
 
@@ -97,7 +97,7 @@ namespace pr
 			// of parameters where given, false if the macro takes parameters but none were given
 			// Basically, 'false' means, don't treat this macro as matching because no params were given
 			// If false is returned the buffer will contain anything read during this method.
-			template <bool Identifiers, typename TBuf, typename FailPolicy = ThrowOnFailure>
+			template <bool Identifiers, typename TBuf>
 			bool ReadParams(TBuf& buf, Params& params, Location const& loc) const
 			{
 				#pragma warning(push)
@@ -127,7 +127,7 @@ namespace pr
 					{
 						param.resize(0);
 						if (!pr::str::ExtractIdentifier(param, buf))
-							return FailPolicy::Fail(EResult::InvalidIdentifier, loc, "invalid macro identifier"), false;
+							throw Exception(EResult::InvalidIdentifier, loc, "invalid macro identifier");
 					}
 
 					// Read parameters being passed to the macro
@@ -135,7 +135,7 @@ namespace pr
 					{
 						for (int nest = 0; (*buf != L',' && *buf != L')') || nest; ++buf)
 						{
-							if (*buf == 0) return FailPolicy::Fail(EResult::UnexpectedEndOfFile, loc, "macro parameter list incomplete"), false;
+							if (*buf == 0) throw Exception(EResult::UnexpectedEndOfFile, loc, "macro parameter list incomplete");
 							param.push_back(*buf);
 							nest += *buf == L'(';
 							nest -= *buf == L')';
@@ -156,7 +156,7 @@ namespace pr
 
 				// Check enough parameters have been given
 				if (!Identifiers && m_params.size() != params.size())
-					return FailPolicy::Fail(EResult::ParameterCountMismatch, loc, "incorrect number of macro parameters"), false;
+					throw Exception(EResult::ParameterCountMismatch, loc, "incorrect number of macro parameters");
 
 				return true;
 				#pragma warning(pop)
@@ -244,7 +244,6 @@ namespace pr
 
 		// A collection of preprocessor macros
 		// Note: to programmatically define macros, subclass this type and extend the 'Find' method.
-		template <typename FailPolicy = ThrowOnFailure>
 		struct MacroDB :IMacroHandler
 		{
 			// The database of macro definitions
@@ -259,7 +258,7 @@ namespace pr
 				if (i != std::end(m_db))
 				{
 					if (i->second == macro) return; // Already defined, but the same definition... allowed
-					return FailPolicy::Fail(EResult::MacroAlreadyDefined, macro.m_loc, "macro already defined");
+					throw Exception(EResult::MacroAlreadyDefined, macro.m_loc, "macro already defined");
 				}
 
 				m_db.insert(i, DB::value_type(macro.m_hash, macro));

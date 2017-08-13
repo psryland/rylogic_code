@@ -378,6 +378,36 @@ namespace pr.maths
 			return Rotation(axis_norm, axis_sine_angle, cos_angle);
 		}
 
+		/// <summary>Create a rotation transform that maps 'from' to 'to'</summary>
+		public static m3x4 Rotation(AxisId from, AxisId to)
+		{
+			// 'o2f' = the rotation from Z to 'from_axis'
+			// 'o2t' = the rotation from Z to 'to_axis'
+			// 'f2t' = o2t * Invert(o2f)
+			m3x4 o2f, o2t;
+			switch (from)
+			{
+			default: throw new Exception("axis_id must one of ±1, ±2, ±3");
+			case -1: o2f = Rotation(0f, (float)+Maths.TauBy4, 0f); break;
+			case +1: o2f = Rotation(0f, (float)-Maths.TauBy4, 0f); break;
+			case -2: o2f = Rotation((float)+Maths.TauBy4, 0f, 0f); break;
+			case +2: o2f = Rotation((float)-Maths.TauBy4, 0f, 0f); break;
+			case -3: o2f = Rotation(0f, (float)+Maths.TauBy2, 0f); break;
+			case +3: o2f = Identity; break;
+			}
+			switch (to)
+			{
+			default: throw new Exception("axis_id must one of ±1, ±2, ±3");
+			case -1: o2t = Rotation(0f, (float)-Maths.TauBy4, 0f); break; // I know this sign looks wrong, but it isn't. Must be something to do with signs passed to cos()/sin()
+			case +1: o2t = Rotation(0f, (float)+Maths.TauBy4, 0f); break;
+			case -2: o2t = Rotation((float)+Maths.TauBy4, 0f, 0f); break;
+			case +2: o2t = Rotation((float)-Maths.TauBy4, 0f, 0f); break;
+			case -3: o2t = Rotation(0f, (float)+Maths.TauBy2, 0f); break;
+			case +3: o2t = Identity; break;
+			}
+			return o2t * InvertFast(o2f);
+		}
+
 		/// <summary>Create a scale matrix</summary>
 		public static m3x4 Scale(float s)
 		{

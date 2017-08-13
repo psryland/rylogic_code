@@ -6,7 +6,7 @@ using System.Windows.Threading;
 using pr.container;
 using pr.extn;
 using pr.maths;
-using static pr.common.Sqlite;
+using static pr.db.Sqlite;
 
 namespace Tradee
 {

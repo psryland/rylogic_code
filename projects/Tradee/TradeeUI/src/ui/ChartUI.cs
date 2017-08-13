@@ -331,7 +331,7 @@ namespace Tradee
 			m_chart.YAxis.TickText = HandleChartYAxisTickText;
 			m_chart.YAxis.MeasureTickText = HandleChartYAxisMeasureTickText;
 
-			m_chart.FindingDefaultRange += HandleFindingDefaultRange;
+			//m_chart.FindingDefaultRange += HandleFindingDefaultRange;
 			m_chart.ChartRendering      += HandleChartRendering;
 			m_chart.KeyDown             += HandleChartKeyDown;
 			m_chart.MouseDown           += HandleChartMouseDown;
@@ -348,9 +348,9 @@ namespace Tradee
 			m_chart.ChartAreaSelect += (s,a) =>
 			{
 				// Area select zoom if control is held down
-				var rect = new RectangleF(a.SelectionArea.MinX, a.SelectionArea.MinY, a.SelectionArea.SizeX, a.SelectionArea.SizeY);
-				if (rect.Width > 0 && rect.Height > 0 && ModifierKeys == Keys.Shift)
-					m_chart.ZoomArea(rect, false);
+//fixme			var rect = new RectangleF(a.SelectionArea.MinX, a.SelectionArea.MinY, a.SelectionArea.SizeX, a.SelectionArea.SizeY);
+//fixme			if (rect.Width > 0 && rect.Height > 0 && ModifierKeys == Keys.Shift)
+//fixme				m_chart.ZoomArea(rect, false);
 
 				a.Handled = true;
 			};
@@ -379,8 +379,8 @@ namespace Tradee
 		/// <summary>Set the X,Y Axis to the default range</summary>
 		public void ResetToDefaultRange()
 		{
-			m_chart.FindDefaultRange(false);
-			m_chart.ResetToDefaultRange();
+//fixme			m_chart.FindDefaultRange(false);
+//fixme			m_chart.ResetToDefaultRange();
 		}
 
 		/// <summary>Scroll the chart Y Axis so that the latest price is on screen</summary>
@@ -415,7 +415,7 @@ namespace Tradee
 
 				// Get the series data over the time range specified
 				var rng = Instrument.IndexRange(
-					Instrument.FirstIdx + gfx.m_db_idx_range.Begini,
+					Instrument.FirstIdx + gfx.m_db_idx_range.Begi,
 					Instrument.FirstIdx + gfx.m_db_idx_range.Endi);
 				if (rng.Counti == 0)
 					return gfx;
@@ -428,7 +428,7 @@ namespace Tradee
 				//  |____\|
 				//     |
 				// Dividing the index buffer into [bodies, wicks]
-				var candles = Instrument.CandleRange(rng.Begini, rng.Endi);
+				var candles = Instrument.CandleRange(rng.Begi, rng.Endi);
 				var count = rng.Counti;
 
 				// Resize the cache buffers
@@ -491,7 +491,7 @@ namespace Tradee
 				m_nbuf[nugt++] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert|View3d.EGeom.Colr, 0, (uint)vert, (uint)body, (uint)wick);
 
 				// Create the graphics
-				gfx.m_obj = new View3d.Object("Candles-[{0},{1})".Fmt(gfx.m_db_idx_range.Begini,gfx.m_db_idx_range.Endi), 0xFFFFFFFF, vert, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray());
+				gfx.m_obj = new View3d.Object("Candles-[{0},{1})".Fmt(gfx.m_db_idx_range.Begi,gfx.m_db_idx_range.Endi), 0xFFFFFFFF, vert, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray());
 				return gfx;
 			});
 		}
@@ -653,8 +653,8 @@ namespace Tradee
 			var range = Instrument.IndexRange((int)(m_chart.XAxis.Min - 1), (int)(m_chart.XAxis.Max + 1));
 
 			// Convert the index range into a cache index range
-			var cache0 = (range.Begini - Instrument.FirstIdx) / GfxModelBatchSize;
-			var cache1 = (range.Endi   - Instrument.FirstIdx) / GfxModelBatchSize;
+			var cache0 = (range.Begi - Instrument.FirstIdx) / GfxModelBatchSize;
+			var cache1 = (range.Endi - Instrument.FirstIdx) / GfxModelBatchSize;
 			for (int i = cache0; i <= cache1; ++i)
 			{
 				// Get the graphics model that contains candle 'i'
@@ -662,7 +662,7 @@ namespace Tradee
 				if (gfx.m_obj != null)
 				{
 					// Position the graphics object relative to 'x == 0'
-					var x = Instrument.FirstIdx + gfx.m_db_idx_range.Begini;
+					var x = Instrument.FirstIdx + gfx.m_db_idx_range.Begi;
 					gfx.m_obj.O2P = m4x4.Translation(new v4(x, 0.0f, 0.0f, 1.0f));
 					e.AddToScene(gfx.m_obj);
 				}
@@ -723,9 +723,9 @@ namespace Tradee
 		private void HandleFindingDefaultRange(object sender, ChartControl.FindingDefaultRangeEventArgs e)
 		{
 			// Get the initial range values (since XRange,YRange are structs)
-			var xmin = e.XRange.Begin;
+			var xmin = e.XRange.Beg;
 			var xmax = e.XRange.End;
-			var ymin = e.YRange.Begin;
+			var ymin = e.YRange.Beg;
 			var ymax = e.YRange.End;
 
 			// Set the x range to a minimum of the preferred candle view count
@@ -765,8 +765,8 @@ namespace Tradee
 				}
 			case Keys.F7:
 				{
-					m_chart.FindDefaultRange(false);
-					m_chart.ResetToDefaultRange();
+//fixme					m_chart.FindDefaultRange(false);
+//fixme					m_chart.ResetToDefaultRange();
 					break;
 				}
 			}

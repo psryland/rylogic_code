@@ -48,10 +48,16 @@ def AssertPathsExist(paths):
 		if not os.path.exists(path):
 			missing.append(path)
 	if (len(missing) != 0):
-		msg = "Missing paths detected. Check your UserVars.py file\n"
-		for p in missing: msg += p + "\n"
+		msg = "Missing paths detected:\n"
+		for p in missing: msg += "\t"+p+"\n"
+		msg += "Check your UserVars.py file\n"
 		raise FileExistsError(msg)
 
+# Validate that a single path exists. Returns the path for method chaining
+def AssertPath(path):
+	AssertPathsExist([path])
+	return path
+	
 # Convert a relative or full filepath that might be wrapped in quotes into a full file path
 def NormaliseFilepath(filepath):
 	filepath = filepath.replace('"','')
@@ -446,11 +452,11 @@ def CheckDependencies(deps, touch_file):
 #	platforms = ["x64","x86","AnyCPU"]
 #	configs = ["release","debug"]
 #	Tools.MSBuild(sln_or_proj_file, projects, platforms, configs, True, True)
-def MSBuild(sln_or_proj_file, projects, platforms, configs, parallel=False, same_window=True):
+def MSBuild(sln_or_proj_file, projects, platforms, configs, parallel=False, same_window=True, msbuild_props=[]):
 	
 	# Build the arguments list
 	AssertPathsExist([UserVars.msbuild])
-	args_base = [UserVars.msbuild, UserVars.msbuild_props, sln_or_proj_file, "/m", "/verbosity:minimal", "/nologo"]
+	args_base = [UserVars.msbuild, msbuild_props, sln_or_proj_file, "/m", "/verbosity:minimal", "/nologo"]
 	if len(projects) != 0: args_base += ["/t:" + ";".join(projects)]
 	
 	procs = []

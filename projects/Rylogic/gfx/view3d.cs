@@ -1726,9 +1726,9 @@ namespace pr.gfx
 			}
 
 			/// <summary>Get the model space bounding box of this object</summary>
-			public BBox BBoxMS
+			public BBox BBoxMS(bool include_children)
 			{
-				get { return View3D_ObjectBBoxMS(m_handle); }
+				return View3D_ObjectBBoxMS(m_handle, include_children);
 			}
 
 			/// <summary>Return the object that is the immediate parent of this object</summary>
@@ -2424,7 +2424,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_ObjectColourSet          (HObject obj, uint colour, uint mask, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectResetColour        (HObject obj, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectSetTexture         (HObject obj, HTexture tex, string name);
-		[DllImport(Dll)] private static extern BBox              View3D_ObjectBBoxMS             (HObject obj);
+		[DllImport(Dll)] private static extern BBox              View3D_ObjectBBoxMS             (HObject obj, bool include_children);
 
 		// Materials
 		[DllImport(Dll)] private static extern HTexture          View3D_TextureCreate               (uint width, uint height, IntPtr data, uint data_size, ref TextureOptions options);

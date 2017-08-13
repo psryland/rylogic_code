@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
@@ -81,6 +82,18 @@ namespace pr.gui
 
 			// Highlighting patterns
 			Highlighting = new BindingListEx<HLPattern>();
+
+			// Column fill weights
+			FillWeights = new Dictionary<string, float>
+			{
+				{ColumnNames.Level       , 0.3f},
+				{ColumnNames.Timestamp   , 0.6f},
+				{ColumnNames.Context     , 0.3f},
+				{ColumnNames.Message     , 5.0f},
+				{ColumnNames.File        , 2.0f},
+				{ColumnNames.Line        , 0.02f},
+				{ColumnNames.Occurrences , 0.02f},
+			};
 
 			// The log entry delimiter
 			LineDelimiter = Log.EntryDelimiter;
@@ -224,35 +237,7 @@ namespace pr.gui
 			{
 				if (m_log_entry_pattern == value) return;
 				m_log_entry_pattern = value;
-
-				// Set the number of columns based on group names in the pattern
-				var names = m_log_entry_pattern?.GetGroupNames().Skip(1).ToArray();
-				if (names != null && names.Length != 0)
-				{
-					m_view.ColumnCount = names.Length;
-					for (int i = 0; i != names.Length; ++i)
-					{
-						m_view.Columns[i].Name = names[i];
-						m_view.Columns[i].HeaderText = names[i];
-						m_view.Columns[i].DefaultCellStyle.WrapMode = DataGridViewTriState.False;
-						m_view.Columns[i].FillWeight =
-							names[i] == ColumnNames.Level     ? 0.3f :
-							names[i] == ColumnNames.Timestamp ? 0.6f :
-							names[i] == ColumnNames.Message   ? 5f :
-							1f;
-					}
-					m_view.ColumnHeadersVisible = true;
-				}
-				else
-				{
-					m_view.ColumnCount = 1;
-					m_view.Columns[0].Name = ColumnNames.Message;
-					m_view.Columns[0].HeaderText = ColumnNames.Message;
-					m_view.Columns[0].DefaultCellStyle.WrapMode = DataGridViewTriState.False;
-					m_view.ColumnHeadersVisible = false;
-				}
-
-				SetLineWrap(LineWrap);
+				CreateColumns();
 			}
 		}
 		private Regex m_log_entry_pattern;
@@ -296,6 +281,11 @@ namespace pr.gui
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public BindingListEx<HLPattern> Highlighting { get; private set; }
+
+		/// <summary>Column names to fill weights for those columns</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public Dictionary<string, float> FillWeights { get; private set; }
 
 		/// <summary>Set up UI Elements</summary>
 		private void SetupUI()
@@ -385,20 +375,34 @@ namespace pr.gui
 			LogEntries.Add(new LogEntry(fpos, text, false));
 		}
 
-		/// <summary>Format the cell background on the log view</summary>
-		public virtual void Format(LogEntry entry, DataGridViewCellFormattingEventArgs e)
+		/// <summary>Use the log entry pattern to create columns</summary>
+		private void CreateColumns()
 		{
-			foreach (var hl in Highlighting)
+			// Set the number of columns based on group names in the pattern.
+			// Group names should match the values in 'ColumnNames' to support non-string values
+			var names = m_log_entry_pattern?.GetGroupNames().Skip(1).ToArray();
+			if (names != null && names.Length != 0)
 			{
-				if (!hl.IsMatch(entry.Text))
-					continue;
-
-				e.CellStyle.BackColor = hl.BackColour;
-				e.CellStyle.ForeColor = hl.ForeColour;
-				break;
+				m_view.ColumnCount = names.Length;
+				for (int i = 0; i != names.Length; ++i)
+				{
+					m_view.Columns[i].Name = names[i];
+					m_view.Columns[i].HeaderText = names[i];
+					m_view.Columns[i].DefaultCellStyle.WrapMode = DataGridViewTriState.False;
+					m_view.Columns[i].FillWeight = FillWeights.TryGetValue(names[i], out float fw) ? fw : 1f;
+				}
+				m_view.ColumnHeadersVisible = true;
 			}
-			e.CellStyle.SelectionBackColor = e.CellStyle.BackColor.Lerp(Color.Gray, 0.5f);
-			e.CellStyle.SelectionForeColor = e.CellStyle.ForeColor;
+			else
+			{
+				m_view.ColumnCount = 1;
+				m_view.Columns[0].Name = ColumnNames.Message;
+				m_view.Columns[0].HeaderText = ColumnNames.Message;
+				m_view.Columns[0].DefaultCellStyle.WrapMode = DataGridViewTriState.False;
+				m_view.ColumnHeadersVisible = false;
+			}
+
+			SetLineWrap(LineWrap);
 		}
 
 		/// <summary>Scroll to make the last row visible and select it (i.e. enter tail scroll mode)</summary>
@@ -451,8 +455,26 @@ namespace pr.gui
 			// Apply the log entry pattern to the log entry to get the column values
 			if (LogEntryPattern != null && (m = LogEntryPattern.Match(entry.Text)).Success)
 			{
-				var grp = m_view.Columns[e.ColumnIndex].HeaderText;
-				e.Value = m.Groups[grp]?.Value ?? string.Empty;
+				var grp = m_view.Columns[e.ColumnIndex].Name;
+				var value = m.Groups[grp]?.Value ?? string.Empty;
+				try
+				{
+					switch (grp)
+					{
+					default:                      e.Value = value; break;
+					case ColumnNames.Level:       e.Value = Enum<ELogLevel>.Parse(value); break;
+					case ColumnNames.Timestamp:   e.Value = TimeSpan.Parse(value); break;
+					case ColumnNames.Context:     e.Value = value; break;
+					case ColumnNames.Message:     e.Value = value; break;
+					case ColumnNames.File:        e.Value = value; break;
+					case ColumnNames.Line:        e.Value = int.Parse(value); break;
+					case ColumnNames.Occurrences: e.Value = int.Parse(value); break;
+					}
+				}
+				catch (Exception)
+				{
+					e.Value = value;
+				}
 			}
 			else
 			{
@@ -471,6 +493,32 @@ namespace pr.gui
 			// Format the log entry
 			Format(LogEntries[idx], e);
 		}
+
+		/// <summary>Format the cell background on the log view</summary>
+		public virtual void Format(LogEntry entry, DataGridViewCellFormattingEventArgs e)
+		{
+			foreach (var hl in Highlighting)
+			{
+				if (!hl.IsMatch(entry.Text))
+					continue;
+
+				e.CellStyle.BackColor = hl.BackColour;
+				e.CellStyle.ForeColor = hl.ForeColour;
+				break;
+			}
+			e.CellStyle.SelectionBackColor = e.CellStyle.BackColor.Lerp(Color.Gray, 0.5f);
+			e.CellStyle.SelectionForeColor = e.CellStyle.ForeColor;
+
+			// Raise an event to allow formatting
+			if (m_view.Within(e.ColumnIndex, e.RowIndex, out DataGridViewColumn col, out DataGridViewCell cell))
+			{
+				var args = new FormattingEventArgs(entry, col.Name, e.Value, e.DesiredType, e.FormattingApplied, e.CellStyle);
+				Formatting.Raise(this, args);
+				e.Value = args.Value;
+				e.FormattingApplied = args.FormattingApplied;
+			}
+		}
+		public event EventHandler<FormattingEventArgs> Formatting;
 
 		/// <summary>Handle the list of log entries changing</summary>
 		private void HandleLogEntriesChanging(object sender, ListChgEventArgs<LogEntry> e)
@@ -614,6 +662,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Patterns for highlighting rows in the log</summary>
+		[DebuggerDisplay("{Expr}")]
 		public class HLPattern :Pattern
 		{
 			public HLPattern(Color bk, Color fr)
@@ -655,13 +704,49 @@ namespace pr.gui
 			public Color ForeColour { get; set; }
 		}
 
+		/// <summary>Typical column names</summary>
 		public static class ColumnNames
 		{
-			public const string Level     = "Level";
-			public const string Timestamp = "Timestamp";
-			public const string Message   = "Message";
+			public const string Level       = nameof(Logger.LogEvent.Level);
+			public const string Timestamp   = nameof(Logger.LogEvent.Timestamp);
+			public const string Context     = nameof(Logger.LogEvent.Context);
+			public const string Message     = nameof(Logger.LogEvent.Message);
+			public const string File        = nameof(Logger.LogEvent.File);
+			public const string Line        = nameof(Logger.LogEvent.Line);
+			public const string Occurrences = nameof(Logger.LogEvent.Occurrences);
 		}
 
+		/// <summary>Formatting event args</summary>
+		public class FormattingEventArgs :EventArgs
+		{
+			public FormattingEventArgs(LogUI.LogEntry entry, string column_name, object value, Type desired_type, bool formatting_applied, DataGridViewCellStyle cell_style)
+			{
+				LogEntry          = entry;
+				ColumnName        = column_name;
+				DesiredType       = desired_type;
+				Value             = value;
+				FormattingApplied = formatting_applied;
+				CellStyle         = cell_style;
+			}
+
+			/// <summary>The log entry being displayed</summary>
+			public LogUI.LogEntry LogEntry { get; private set; }
+
+			/// <summary>The name of the column that the formatting is for</summary>
+			public string ColumnName { get; private set; }
+
+			/// <summary>The Type that the grid is expecting for this cell</summary>
+			public Type DesiredType { get; private set; }
+
+			/// <summary>Get/Set the value to be displayed</summary>
+			public object Value { get; set; }
+
+			/// <summary>True if 'Value' has been converted to a string already</summary>
+			public bool FormattingApplied { get; set; }
+
+			/// <summary>Get/Set the cell style</summary>
+			public DataGridViewCellStyle CellStyle { get; private set; }
+		}
 		#region Component Designer generated code
 		private IContainer components = null;
 		private void InitializeComponent()
@@ -806,212 +891,3 @@ namespace pr.gui
 		#endregion
 	}
 }
-
-#if false
-
-
-		/// <summary>Copy data to the 'UpdateLog' thread</summary>
-		private LoggerProps LogProps
-		{
-			get
-			{
-				return new LoggerProps
-				{
-					Filepath     = LogFilepath,
-					Pattern      = LogEntryPattern,
-					LineDelim    = LineDelimiter,
-					Level        = ELogLevel.Debug,
-					MaxLines     = 500,
-					MaxFileBytes = 2*1024*1024,
-				};
-			}
-		}
-
-		/// <summary>Data to copy between GUI and UpdateLog thread</summary>
-		private struct LoggerProps
-		{
-			public string Filepath;
-			public Regex Pattern;
-			public char LineDelim;
-			public ELogLevel Level;
-			public int MaxLines;
-			public int MaxFileBytes;
-		}
-
-		/// <summary>Enable/Disable the worker thread that displays the log file contents</summary>
-		public bool UpdateLogViewThreadActive
-		{
-			get { return m_thread != null; }
-			private set
-			{
-				if (UpdateLogViewThreadActive == value) return;
-				if (m_thread != null)
-				{
-					m_thread_exit = true;
-					lock (m_lock) Monitor.Pulse(m_lock);
-					if (m_thread.IsAlive)
-						m_thread.Join();
-				}
-				m_thread = value ? new Thread(new ThreadStart(UpdateLogViewThreadEntryPoint)) : null;
-				if (m_thread != null)
-				{
-					m_thread_exit = false;
-					m_thread.Start();
-				}
-			}
-		}
-		private void UpdateLogViewThreadEntryPoint()
-		{
-			var buf = new byte[8192];
-			var sb = new StringBuilder();
-			var no_remainder = new byte[0];
-			var cells = new Sci.BackFillCellBuf();
-
-			// Limit how often we spam the UI thread with error messages
-			//var time_of_last_msg = 0;
-			//var max_ui_message_rate = 2000;
-
-			LoggerProps props;
-			for (;!m_thread_exit;)
-			{
-				// Sleep until exit, or the cell buffer is available again, or update required
-				lock (m_lock)
-				{
-					if (m_thread_exit) return;
-					if (cells == null)       { Monitor.Wait(m_lock); continue; }
-					if (!m_refresh_log_view) { Monitor.Wait(m_lock); continue; }
-					props = LogProps;
-					m_refresh_log_view = false;
-				}
-
-				try
-				{
-					// Ignore log files that don't exist
-					if (!File.Exists(props.Filepath))
-						continue;
-
-					// Open the file
-					using (var file = new FileStream(props.Filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite|FileShare.Delete))
-					{
-						// Get the file length (remember this is changing all the time)
-						var fend = file.Seek(0, SeekOrigin.End);
-						long pos = fend;
-						cells.Length = 0;
-
-						// Read from the end of the file backwards, extracting log lines
-						var remainder = no_remainder;
-						for (var line_count = 0; line_count < props.MaxLines && pos != 0 && fend - pos < props.MaxFileBytes;)
-						{
-							// If the log file format is invalid, we mightn't find any lines
-							// and the "remainder" will be the entire buffer. In this case abort.
-							if (remainder.Length == buf.Length)
-								throw new Exception("Log file format is invalid, no log entries detected within {0} bytes of data".Fmt(remainder.Length));
-
-							// Read a chunk from the end of the file
-							var len = (int)Math.Min(pos, buf.Length - remainder.Length);
-							file.Position = pos -= len;
-							if (file.Read(buf, 0, len) != len)
-								throw new Exception("Failed to read file");
-
-							// Append the remainder from last time
-							Array.Copy(remainder, 0, buf, len, remainder.Length);
-							len += remainder.Length;
-							remainder = no_remainder;
-
-							// Scan backwards finding log lines.
-							for (int e = len, s = e; e != 0; e = s, --s)
-							{
-								// Log lines start with the ESC character \u001b
-								for (; s-- != 0 && buf[s] != props.LineDelim;) {}
-								if (s == -1) // No log lines found
-								{
-									// If the buffer contains a partial line, save it as the remainder and read the next block
-									remainder = buf.Dup(0, e);
-									break;
-								}
-
-								// The first characters after the ESC character is the log level
-								// Skip lines whose log level is below the threshold
-								{
-									var lvl = buf[s+1] - '0';
-									if (lvl < (int)props.Level)
-										continue;
-								}
-
-								sb.Length = 0;
-								byte style = 0;
-
-								// Add valid lines to the cell buffer
-								var line = Encoding.ASCII.GetString(buf, s, e - s);
-								var match = props.Pattern.Match(line);
-								try
-								{
-									if (!match.Success || match.Groups.Count != 7)
-										throw new Exception("Format mismatch");
-
-									//var line    = match.Groups[0     ].Value;
-									var lvl     = match.Groups["lvl"   ]?.Value ?? "0";
-									var time    = match.Groups["time"  ]?.Value ?? string.Empty;
-									var name    = match.Groups["name"  ]?.Value ?? string.Empty;
-									var msg     = match.Groups["msg"   ]?.Value ?? string.Empty;
-									var except  = match.Groups["except"]?.Value ?? string.Empty;
-									var repeats = match.Groups["count" ]?.Value ?? string.Empty;
-
-									sb.Append(time).Append(" | ").Append(name).Append(" | ").Append(msg);
-									if (except.HasValue()) sb.Append(" - ").Append(except);
-									if (repeats.HasValue() && repeats != "1") sb.Append("[").Append(repeats).Append("]");
-									sb.AppendLine();
-
-									style = (byte)int.Parse(lvl);
-								}
-								catch (Exception ex)
-								{
-									sb.Length = 0;
-									sb.Append("<log error - ").Append(ex.Message).Append(">").AppendLine();
-
-									//style = (byte)RexBionics.RexLink.LogLevel.Application;
-								}
-
-								// Fill the cells buffer
-								cells.Add(sb.ToString(), style);
-								++line_count;
-							}
-						}
-
-						// Once done, BeginInvoke to update the view.
-						// Pass the reference to 'cells' to the GUI thread. When it's done it will restore
-						// the reference back to its original value and signal the condition variable.
-						var c = cells; cells = null;
-						this.BeginInvoke(() =>
-						{
-							m_text.UpdateView(c);
-							lock (m_lock)
-							{
-								cells = c; // Restore the reference
-								Monitor.Pulse(m_lock);
-							}
-						});
-					}
-				}
-				catch (Exception ex)
-				{
-		//			// Limit how often we spam the UI thread with error messages
-		//			var now = Environment.TickCount;
-		//			if (now - time_of_last_msg > max_ui_message_rate)
-		//			{
-		//				time_of_last_msg = now;
-		//				var msg = "Failed to update log view. {0}".Fmt(ex.MessageFull());
-		//				this.BeginInvoke(() =>
-		//					{
-		//						Status.SetStatusMessage(msg:msg, fr_color:Color.Red, display_time:TimeSpan.FromSeconds(5));
-		//					});
-		//			}
-				}
-			}
-		}
-		private bool m_thread_exit;
-		private Thread m_thread;
-		private object m_lock;
-
-
-#endif

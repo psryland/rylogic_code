@@ -9,6 +9,15 @@
 #include <type_traits>
 #include <cassert>
 
+#define PR_DBG_MEMORY_ALLOC 0
+#ifndef PR_DBG_MEMORY_ALLOC
+#ifdef NDEBUG
+#define PR_DBG_MEMORY_ALLOC 0 
+#else
+#define PR_DBG_MEMORY_ALLOC 1
+#endif 
+#endif
+
 namespace pr
 {
 	// A C++ standards compliant allocator for use in containers
@@ -37,7 +46,7 @@ namespace pr
 		pointer allocate(size_type n, void const* = 0)
 		{
 			if (n == 0) return nullptr; // Avoid the undefined behaviour of _aligned_malloc(0)
-			#ifndef NDEBUG
+			#if PR_DBG_MEMORY_ALLOC
 			auto ptr = static_cast<T*>(_aligned_malloc_dbg(n * sizeof(T), value_alignment, __FILE__, __LINE__));
 			#else
 			auto ptr = static_cast<T*>(_aligned_malloc(n * sizeof(T), value_alignment));
@@ -47,7 +56,7 @@ namespace pr
 		}
 		void deallocate(pointer p, size_type)
 		{
-			#ifndef NDEBUG
+			#if PR_DBG_MEMORY_ALLOC
 			_aligned_free_dbg(p);
 			#else
 			_aligned_free(p);
@@ -75,7 +84,7 @@ namespace pr
 		template <class U, typename = enable_if_pod<U>> void destroy(U* p, char = 0)
 		{
 			if (p == nullptr) return;
-			#ifndef NDEBUG
+			#if PR_DBG_MEMORY_ALLOC
 			::memset(p, 0xdd, sizeof(U));
 			#endif
 		}
@@ -97,7 +106,7 @@ namespace pr
 		{
 			if (p == nullptr) return;
 			p->~U();
-			#ifndef NDEBUG
+			#if PR_DBG_MEMORY_ALLOC
 			::memset(p, 0xdd, sizeof(U));
 			#endif
 		}

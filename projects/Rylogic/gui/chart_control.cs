@@ -1431,7 +1431,7 @@ namespace pr.gui
 				{
 					AxisColour     = Color.Black;
 					LabelColour    = Color.Black;
-					GridColour     = Color.Gray;
+					GridColour     = Color.WhiteSmoke;
 					TickColour     = Color.Black;
 					LabelFont      = new Font("tahoma", 10, FontStyle.Regular);
 					TickFont       = new Font("tahoma", 8, FontStyle.Regular);

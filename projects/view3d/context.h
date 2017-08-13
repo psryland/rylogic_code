@@ -13,13 +13,13 @@ namespace view3d
 	{
 		using InitSet = std::set<View3DContext>;
 
-		InitSet                   m_inits;      // A unique id assigned to each Initialise call
-		bool                      m_compatible; // True if the renderer will work on this system
-		pr::Renderer              m_rdr;        // The renderer
-		WindowCont                m_wnd_cont;   // The created windows
-		pr::ldr::ScriptSources    m_sources;    // A container of Ldr objects and a file watcher
-		pr::script::EmbeddedLua<> m_lua;
-		std::recursive_mutex      m_mutex;
+		InitSet                 m_inits;      // A unique id assigned to each Initialise call
+		bool                    m_compatible; // True if the renderer will work on this system
+		pr::Renderer            m_rdr;        // The renderer
+		WindowCont              m_wnd_cont;   // The created windows
+		pr::ldr::ScriptSources  m_sources;    // A container of Ldr objects and a file watcher
+		pr::script::EmbeddedLua m_lua;
+		std::recursive_mutex    m_mutex;
 
 		explicit Context(HINSTANCE instance, BOOL gdi_compatible)
 			:m_inits()
@@ -85,14 +85,14 @@ namespace view3d
 		}
 
 		// Load/Add a script source. Returns the Guid of the context that the objects were added to.
-		pr::Guid LoadScriptSource(wchar_t const* filepath, bool additional, pr::script::Includes<> const& includes)
+		pr::Guid LoadScriptSource(wchar_t const* filepath, bool additional, pr::script::Includes const& includes)
 		{
 			// Note: this can be called from a worker thread
 			return m_sources.AddFile(filepath, includes, additional);
 		}
 
 		// Load/Add ldr objects from a script string. Returns the Guid of the context that the objects were added to.
-		pr::Guid LoadScript(wchar_t const* ldr_script, bool file, pr::Guid const* context_id, pr::script::Includes<> const& includes)
+		pr::Guid LoadScript(wchar_t const* ldr_script, bool file, pr::Guid const* context_id, pr::script::Includes const& includes)
 		{
 			// Note: this can be called from a worker thread
 			return m_sources.AddScript(ldr_script, file, context_id, includes);

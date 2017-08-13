@@ -82,7 +82,9 @@
     <Compile Include="Cmd\XmlEdit\XmlTable.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="Cmd\XmlEdit\XmlTree.cs" />
+    <Compile Include="Cmd\XmlEdit\XmlTree.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
