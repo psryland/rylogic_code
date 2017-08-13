@@ -59,6 +59,20 @@ namespace CoinFlip
 			new LogUI.HLPattern(Color_.FromArgb(0xffff7e39), Color.Black, EPattern.Substring, "ignored"),
 		};
 
+		/// <summary>Formatting for log entries</summary>
+		public static void LogFormatting(object sender, LogUI.FormattingEventArgs args)
+		{
+			switch (args.ColumnName)
+			{
+			case LogUI.ColumnNames.Timestamp:
+				{
+					args.Value = args.Value != null ? ((TimeSpan)args.Value).ToString(@"hh\:mm\:ss") : string.Empty;
+					args.FormattingApplied = true;
+					break;
+				}
+			}
+		}
+
 		/// <summary>Convert a trade type string to the enumeration value</summary>
 		public static ETradeType TradeType(string trade_type)
 		{

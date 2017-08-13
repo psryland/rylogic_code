@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Xml.Linq;
 using pr.common;
 using pr.extn;
+using pr.gui;
 using pr.util;
 
 namespace CoinFlip
@@ -20,6 +21,7 @@ namespace CoinFlip
 			ShowLivePrices    = false;
 			Coins             = new CoinData[0];
 			Fishing           = new FishingData[0];
+			Charts            = new ChartSettings[0];
 			UI                = new UISettings();
 			Cryptopia         = new CrypotopiaSettings();
 			Poloniex          = new PoloniexSettings();
@@ -66,6 +68,13 @@ namespace CoinFlip
 		{
 			get { return get(x => x.Fishing); }
 			set { set(x => x.Fishing, value); }
+		}
+
+		/// <summary>The chart instance settings</summary>
+		public ChartSettings[] Charts
+		{
+			get { return get(x => x.Charts); }
+			set { set(x => x.Charts, value); }
 		}
 
 		/// <summary>UI settings</summary>
@@ -462,6 +471,46 @@ namespace CoinFlip
 						Direction == ETradeDirection.None ? "No trading direction\r\n"            : string.Empty);
 				}
 			}
+		}
+
+		/// <summary>Settings for a chart</summary>
+		[Serializable]
+		public class ChartSettings
+		{
+			public ChartSettings(string symbol_code = null)
+			{
+				SymbolCode = symbol_code ?? string.Empty;
+				TimeFrame  = ETimeFrame.Hour12;
+				Style = new ChartControl.RdrOptions();
+			}
+			public ChartSettings(ChartSettings rhs)
+			{
+				SymbolCode = rhs.SymbolCode;
+				TimeFrame  = rhs.TimeFrame;
+				Style      = rhs.Style;
+			}
+			public ChartSettings(XElement node)
+			{
+				SymbolCode = node.Element(nameof(SymbolCode)).As(SymbolCode);
+				TimeFrame  = node.Element(nameof(TimeFrame )).As(TimeFrame );
+				Style      = node.Element(nameof(Style     )).As(Style     );
+			}
+			public XElement ToXml(XElement node)
+			{
+				node.Add2(nameof(SymbolCode), SymbolCode, false);
+				node.Add2(nameof(TimeFrame ), TimeFrame , false);
+				node.Add2(nameof(Style     ), Style     , false);
+				return node;
+			}
+
+			/// <summary>The symbol code for the chart these settings are for</summary>
+			public string SymbolCode { get; set; }
+
+			/// <summary>The time frame displayed</summary>
+			public ETimeFrame TimeFrame { get; set; }
+
+			/// <summary>Chart style options</summary>
+			public ChartControl.RdrOptions Style { get; set; }
 		}
 	}
 

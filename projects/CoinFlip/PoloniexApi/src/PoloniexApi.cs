@@ -462,23 +462,26 @@ namespace Poloniex.API
 					for (; m_request_sw.ElapsedMilliseconds - m_last_request_ms < request_period_ms; Thread.Yield()){}
 					m_last_request_ms = m_request_sw.ElapsedMilliseconds;
 
+					// Add the command parameter
+					var kv = new List<KV>();
+					kv.Add(new KV("command", command));
+					kv.Add(new KV("nonce", Misc.Nonce));
+					kv.AddRange(parameters);
+
 					// Create the post data
-					var post_data_string = new StringBuilder();
-					post_data_string.Append("&command=").Append(command);
-					post_data_string.Append("&nonce=").Append(Misc.Nonce);
-					foreach (var kv in parameters)
-					{
-						var value = (kv.Value as string)?.Replace(' ','+') ?? kv.Value;
-						post_data_string.Append("&").Append(kv.Key).Append("=").Append(value);
-					}
+					var post_data_string = Misc.UrlEncode(kv).TrimStart('?');
 
 					// Create the content to POST
-					var content = new StringContent(post_data_string.ToString(), Encoding.UTF8, "application/x-www-form-urlencoded");
-					var msg_hash = Hasher.ComputeHash(Encoding.UTF8.GetBytes(post_data_string.ToString()));
+					var content = new StringContent(post_data_string, Encoding.UTF8, "application/x-www-form-urlencoded");
+					var msg_hash = Hasher.ComputeHash(Encoding.UTF8.GetBytes(post_data_string));
 					var signature = Misc.ToStringHex(msg_hash);
 					content.Headers.Add("Sign", signature);
 
 					// Submit the request
+					// Result Codes:
+					//  - 422 Un-processable Entity:
+					//    Status code is directly reported by Poloniex server. It means the server understands the content type of the request entity,
+					//    and the syntax of the request entity is correct, but was unable to process the contained instructions.
 					var response = m_client.PostAsync(m_client.BaseAddress, content, m_cancel_token).Result;
 					if (!response.IsSuccessStatusCode)
 						throw new Exception(response.ReasonPhrase);

@@ -350,9 +350,9 @@ namespace CoinFlip
 			var tt          = Misc.TradeType(his.Type);
 			var pair        = Pairs.GetOrAdd(his.Pair.Base, his.Pair.Quote);
 			var price       = tt == ETradeType.B2Q ? his.PricePerUnit._(pair.RateUnits) : (1m / his.PricePerUnit._(pair.RateUnits));
-			var volume_in   = tt == ETradeType.B2Q ? his.QuantityBase._(pair.Base)      : (his.Price._(pair.Quote) + his.Commission);
-			var volume_out  = tt == ETradeType.B2Q ? his.Price._(pair.Quote)            : (volume_in * price);
-			var commission  = tt == ETradeType.B2Q ? his.Commission._(pair.Quote)       : (volume_out - his.QuantityBase._(pair.Base));
+			var volume_in   = tt == ETradeType.B2Q ? his.FilledBase._(pair.Base)        : (his.FilledQuote + his.Commission)._(pair.Quote);
+			var volume_out  = tt == ETradeType.B2Q ? his.FilledQuote._(pair.Quote)      : (his.FilledBase)._(pair.Base);
+			var commission  = tt == ETradeType.B2Q ? his.Commission._(pair.Quote)       : (his.Commission / his.PricePerUnit)._(pair.Base);
 			var created     = his.Created;
 			return new Historic(order_id, trade_id, pair, tt, price, volume_in, volume_out, commission, created, updated);
 		}

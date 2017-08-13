@@ -331,9 +331,7 @@ namespace CoinFlip
 			get
 			{
 				if (this is CrossExchange) return 0m;
-				return Model.Settings.ShowLivePrices
-					? Balance.Values.Sum(x => x.Coin.LiveValue(x.Total))
-					: Balance.Values.Sum(x => x.Coin.ApproximateValue(x.Total));
+				return Balance.Values.Sum(x => x.Coin.Value(x.Total));
 			}
 		}
 
@@ -638,6 +636,7 @@ namespace CoinFlip
 			// Convert the volume to base currency and the price to quote/base
 			var volume = tt == ETradeType.B2Q ? volume_ : (price_ * volume_);
 			var price  = tt == ETradeType.B2Q ? price_  : (1m / price_);
+			var now = DateTimeOffset.Now;
 
 			// Set the Id for this fake order
 			if (!Model.AllowTrades)
@@ -678,14 +677,19 @@ namespace CoinFlip
 			// Add the position to the Positions collection so that there is no race condition
 			// between placing an order and checking 'Positions' for the order just placed.
 			if (order_result.OrderId != null)
-				Positions.Add(new Position(order_result.OrderId.Value, pair, tt, price, volume, volume, DateTimeOffset.Now, DateTimeOffset.Now, fake:!Model.AllowTrades));
+			{
+				// It is possible for the 'Positions' collection to be updated between 'CreateOrderInternal'
+				// and here, therefore we can't use 'Add' because the key may already be in the dictionary
+				var pos = new Position(order_result.OrderId.Value, pair, tt, price, volume, volume, now, now, fake:!Model.AllowTrades);
+				Positions[order_result.OrderId.Value] = pos;
+			}
 
 			// The order may have also been completed or partially filled. Add the filled orders to the trade history
 			foreach (var tid in order_result.TradeIds)
 			{
 				var order_id = order_result.OrderId ?? tid; //hack - all order_results should return an order id, except Cryptopia doesn't
 				var fill = History.GetOrAdd(order_id, tt, pair);
-				fill.Trades[tid] = new Historic(order_id, tid, pair, tt, price, volume, volume*price, volume*price*Fee, DateTimeOffset.Now, DateTimeOffset.Now);
+				fill.Trades[tid] = new Historic(order_id, tid, pair, tt, price, volume, volume*price, volume*price*Fee, now, now);
 			}
 
 			// Remove any orders we might have filled from the order book.

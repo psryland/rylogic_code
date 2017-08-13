@@ -139,6 +139,7 @@ namespace Poloniex.API
 	}
 
 	/// <summary>Helper for passing Key/Value pair parameters</summary>
+	[DebuggerDisplay("{Key}={Value}")]
 	internal struct KV
 	{
 		[DebuggerStepThrough] public KV(string key, object value)

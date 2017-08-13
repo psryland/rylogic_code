@@ -1,17 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.Drawing;
+using System.IO;
 using System.Linq;
-using System.Media;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 using pr.attrib;
 using pr.common;
 using pr.extn;
-using pr.gui;
 using pr.maths;
 using pr.util;
 
@@ -24,9 +20,13 @@ namespace CoinFlip
 		//  If the orders on 'exch1' are filled, offset the trade with the reverse trade on 'exch0'
 		public Fishing(Model model, Settings.FishingData data)
 		{
+			var logname = Util.IsDebug ? $"log_{data.Name}_debug.txt" : $"log_{data.Name}.txt";
+			var logpath = Util.ResolveUserDocumentsPath("Rylogic", "CoinFlip", $"Logs\\{logname}");
+			Directory.CreateDirectory(Path_.Directory(logpath));
+
 			Model = model;
 			Settings = data;
-			Log = new Logger(string.Empty, new LogToFile(Util.ResolveUserDocumentsPath("Rylogic", "CoinFlip", Util.IsDebug ? $"log_{data.Name}_debug.txt" : $"log_{data.Name}.txt"), append:false), Model.Log);
+			Log = new Logger(string.Empty, new LogToFile(logpath, append:false), Model.Log);
 			Log.TimeZero = Log.TimeZero - Log.TimeZero .TimeOfDay;
 			DetailsUI = new FishingDetailsUI(this);
 		}
@@ -677,24 +677,28 @@ namespace CoinFlip
 					case EResult.Profit:
 						{
 							// Calculate the nett profit
-							var a = Trade0.VolumeNett - Trade1.VolumeIn;
-							var b = Trade1.VolumeNett - Trade0.VolumeIn;
-							var profit0 = a + b * Trade0.Price;
-							var profit1 = b + a * Trade1.Price;
-							var	nett0 = (decimal)Trade0.VolumeNett;
-							var nett1 = (decimal)Trade1.VolumeNett;
+							var out0 = (decimal)Trade0.VolumeNett;
+							var out1 = (decimal)Trade1.VolumeNett;
+
+							var nett0 = out0 - Trade1.VolumeIn;
+							var nett1 = out1 - Trade0.VolumeIn;
+
+							var value0 = Trade0.CoinOut.Value(nett0);
+							var value1 = Trade1.CoinOut.Value(nett1);
+							var sum = value0 + value1;
+
 							var effective_price0 = (decimal)Trade0.PriceNettQ2B;
 							var effective_price1 = (decimal)Trade1.PriceNettQ2B;
 							var ratio = Math.Abs(effective_price0 - effective_price1) / effective_price0;
 
 							Log.Write(ELogLevel.Warn, Str.Build(
 								$"!Profit!\n",
-								$" Match order on {Exch0.Name}: {Trade0.Description} (After Fees: {nett0:G6} @ {effective_price0:G6})\n",
-								$"  Bait order on {Exch1.Name}: {Trade1.Description} (After Fees: {nett1:G6} @ {effective_price1:G6})\n",
+								$"  Bait order on {Exch1.Name}: {Trade1.Description} (After Fees: {out1:G6} @ {effective_price1:G6})\n",
+								$" Match order on {Exch0.Name}: {Trade0.Description} (After Fees: {out0:G6} @ {effective_price0:G6})\n",
 								$"\n",
-								$"    Nett {Trade0.CoinOut}: {profit0:G8}  ({Trade0.CoinOut.LiveValue(profit0):C})\n",
-								$" or Nett {Trade1.CoinOut}: {profit1:G8}  ({Trade1.CoinOut.LiveValue(profit1):C})\n",
-								$" Ratio: {100*ratio:G6}%"));
+								$"  Nett {Trade0.CoinOut}: {nett0:G8}  ({value0:C})\n",
+								$"  Nett {Trade1.CoinOut}: {nett1:G8}  ({value1:C})\n",
+								$"  Total: {sum:C}  Ratio: {100*ratio:G6}%"));
 
 							Res.Coins.Play();
 							Result = EResult.Complete;

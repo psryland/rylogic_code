@@ -31,6 +31,12 @@ namespace CoinFlip
 		/// <summary>The currency that the balance is in</summary>
 		public Coin Coin { [DebuggerStepThrough] get; private set; }
 
+		/// <summary>App logic</summary>
+		public Model Model
+		{
+			get { return Exchange.Model; }
+		}
+
 		/// <summary>The exchange that this balance is on</summary>
 		public Exchange Exchange
 		{
@@ -77,12 +83,7 @@ namespace CoinFlip
 		/// <summary>Get the value of this balance</summary>
 		public decimal Value
 		{
-			get
-			{
-				return Exchange.Model.Settings.ShowLivePrices
-					? Coin.LiveValue(Total)
-					: Coin.ApproximateValue(Total);
-			}
+			get { return Coin.Value(Total); }
 		}
 
 		/// <summary>Reserve 'volume' until the next balance update</summary>

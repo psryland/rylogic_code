@@ -45,6 +45,13 @@ namespace CoinFlip
 				DataPropertyName = nameof(ColumnNames.Total),
 				FillWeight = 1.0f,
 			});
+			Columns.Add(new DataGridViewTextBoxColumn
+			{
+				HeaderText = "Balance",
+				Name = nameof(ColumnNames.Balance),
+				DataPropertyName = nameof(ColumnNames.Balance),
+				FillWeight = 1.0f,
+			});
 			Columns.Add(new DataGridViewImageColumn
 			{
 				HeaderText = "Flip",
@@ -81,18 +88,9 @@ namespace CoinFlip
 			switch (col.DataPropertyName) {
 			case nameof(ColumnNames.Value):
 				{
-					if (cd.OfInterest && Model.Settings.ShowLivePrices)
-					{
-						var value = 0m._(cd.Symbol);
-						foreach (var exch in Model.Exchanges.Except(Model.CrossExchange))
-						{
-							var coin = exch.Coins[cd.Symbol];
-							if (coin == null) continue;
-							value = Math.Max(value, coin.LiveValue(1m._(cd.Symbol)));
-						}
-						a.Value = value.ToString("C");
-						a.FormattingApplied = true;
-					}
+					// Find the maximum price for the available exchanges
+					a.Value = Model.MaxLiveValue(cd.Symbol).ToString("C");
+					a.FormattingApplied = true;
 					break;
 				}
 			case nameof(ColumnNames.Available):
@@ -104,6 +102,14 @@ namespace CoinFlip
 			case nameof(ColumnNames.Total):
 				{
 					a.Value = Model.SumOfTotal(cd.Symbol).ToString();
+					a.FormattingApplied = true;
+					break;
+				}
+			case nameof(ColumnNames.Balance):
+				{
+					var value = Model.MaxLiveValue(cd.Symbol);
+					var total = Model.SumOfTotal(cd.Symbol);
+					a.Value = (total * value).ToString("C");
 					a.FormattingApplied = true;
 					break;
 				}
@@ -127,10 +133,10 @@ namespace CoinFlip
 				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Add Coin"));
 				opt.Click += (s,a) =>
 				{
-					using (var prompt = new PromptForm { Title = "Currency Symbol", PromptText = string.Empty })
+					using (var prompt = new PromptUI { Title = "Currency Symbol", PromptText = string.Empty })
 					{
 						if (prompt.ShowDialog(this) != DialogResult.OK) return;
-						var sym = prompt.Value.ToUpperInvariant();
+						var sym = ((string)prompt.Value).ToUpperInvariant();
 						Model.Coins.Add(new Settings.CoinData(sym, 1m));
 					}
 				};
@@ -159,10 +165,10 @@ namespace CoinFlip
 				opt.Click += (s,a) =>
 				{
 					var meta = SelectedRows.Cast<DataGridViewRow>().Select(x => (Settings.CoinData)x.DataBoundItem).First();
-					using (var dlg = new PromptForm { Title = "Live Price Conversion", PromptText = "Set the symbols used to convert to a live price value (comma separated)", Value = meta.LivePriceSymbols })
+					using (var dlg = new PromptUI{ Title = "Live Price Conversion", PromptText = "Set the symbols used to convert to a live price value (comma separated)", Value = meta.LivePriceSymbols })
 					{
 						if (dlg.ShowDialog(this) != DialogResult.OK) return;
-						meta.LivePriceSymbols = dlg.Value;
+						meta.LivePriceSymbols = (string)dlg.Value;
 					}
 				};
 			}
@@ -174,6 +180,7 @@ namespace CoinFlip
 			public const int Value = 0;
 			public const int Total = 0;
 			public const int Available = 0;
+			public const int Balance = 0;
 		}
 	}
 }

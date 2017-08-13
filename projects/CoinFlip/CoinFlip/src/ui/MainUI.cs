@@ -5,13 +5,17 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using CoinFlip.Properties;
 using pr.common;
 using pr.container;
+using pr.db;
 using pr.extn;
+using pr.gfx;
 using pr.gui;
+using pr.scintilla;
 using pr.util;
 using pr.win32;
 using ToolStripContainer = pr.gui.ToolStripContainer;
@@ -30,6 +34,7 @@ namespace CoinFlip
 		private GridPositions m_grid_positions;
 		private GridHistory m_grid_history;
 		private GridFishing m_grid_fishing;
+		private GridArbitrage m_grid_arbitrage;
 		private MenuStrip m_menu;
 		private ToolStripMenuItem m_menu_file;
 		private ToolStripMenuItem m_menu_file_exit;
@@ -46,6 +51,8 @@ namespace CoinFlip
 		private ToolStripMenuItem m_menu_tools_test;
 		private ToolStripSeparator toolStripSeparator1;
 		private ToolStripButton m_chk_live;
+		private ToolStripSeparator toolStripSeparator3;
+		private ToolStripMenuItem m_menu_tools_chart;
 		private LogUI m_log;
 		#endregion
 
@@ -56,6 +63,7 @@ namespace CoinFlip
 			Model = new Model(this);
 			LoopsUI = new LoopsUI(Model, this);
 			PairsUI = new PairsUI(Model, this);
+			Charts = new List<ChartUI>();
 
 			SetupUI();
 			UpdateUI();
@@ -66,6 +74,7 @@ namespace CoinFlip
 		{
 			LoopsUI = null;
 			PairsUI = null;
+			Charts = null;
 			Model = null;
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
@@ -175,11 +184,28 @@ namespace CoinFlip
 		}
 		private PairsUI m_pairs_ui;
 
+		/// <summary>Chart instances</summary>
+		public List<ChartUI> Charts
+		{
+			get { return m_charts; }
+			private set
+			{
+				if (m_charts == value) return;
+				Util.DisposeAll(m_charts);
+				m_charts = value;
+			}
+		}
+		private List<ChartUI> m_charts;
+
 		/// <summary>Wire up the UI</summary>
 		private void SetupUI()
 		{
 			#region Menu
 			{
+				m_menu_file_exit.Click += (s,a) =>
+				{
+					Close();
+				};
 				m_menu_tools_show_pairs.Click += (s,a) =>
 				{
 					PairsUI.Show();
@@ -193,9 +219,9 @@ namespace CoinFlip
 				{
 					Model.Test();
 				};
-				m_menu_file_exit.Click += (s,a) =>
+				m_menu_tools_chart.Click += (s,a) =>
 				{
-					Close();
+					NewChart();
 				};
 				m_menu.Items.Add(m_dc.WindowsMenu());
 			}
@@ -232,6 +258,7 @@ namespace CoinFlip
 				m_grid_positions = new GridPositions(Model, "Positions", nameof(m_grid_positions));
 				m_grid_history = new GridHistory(Model, "History", nameof(m_grid_history));
 				m_grid_fishing = new GridFishing(Model, "Fishing", nameof(m_grid_fishing));
+				m_grid_arbitrage = new GridArbitrage(Model, "Arbitrage", nameof(m_grid_arbitrage));
 			}
 			#endregion
 
@@ -244,19 +271,21 @@ namespace CoinFlip
 					PopOutOnNewMessages = false,
 				};
 				m_log.Highlighting.AddRange(Misc.LogHighlighting);
+				m_log.Formatting += Misc.LogFormatting;
 			}
 			#endregion
 
 			#region Dock Container
 
 			// Add content
-			m_dc.Add(m_grid_positions, EDockSite.Centre);
-			m_dc.Add(m_grid_history, EDockSite.Centre);
+			m_dc.Add(m_log, EDockSite.Centre);
+			m_dc.Add(m_grid_positions, EDockSite.Bottom);
+			m_dc.Add(m_grid_history, EDockSite.Bottom);
 			m_dc.Add(m_grid_exchanges, EDockSite.Top);
-			m_dc.Add(m_log, EDockSite.Bottom);
 			m_dc.Add(m_grid_coins, EDockSite.Left);
-			m_dc.Add(m_grid_balances, EDockSite.Bottom);
-			m_dc.Add(m_grid_fishing, new DockContainer.DockLocation(auto_hide:EDockSite.Right));
+			m_dc.Add(m_grid_balances, EDockSite.Left, EDockSite.Bottom);
+			m_dc.Add(m_grid_arbitrage, EDockSite.Left, EDockSite.Bottom);
+			m_dc.Add(m_grid_fishing, EDockSite.Right);
 
 			// Load layout
 			if (Settings.UI.UILayout != null)
@@ -272,6 +301,18 @@ namespace CoinFlip
 		{
 			m_chk_allow_trades.Checked = Model.AllowTrades;
 			m_chk_run.Checked = Model.RunLoopFinder;
+		}
+
+		/// <summary>Create a new chart instance</summary>
+		private void NewChart()
+		{
+			var chart = new ChartUI(Model);
+			m_dc.Add(chart, EDockSite.Centre);
+			chart.Closed += (s,a) =>
+			{
+				m_dc.Remove(chart);
+				Util.Dispose(chart);
+			};
 		}
 
 		/// <summary>Restore the last window position</summary>
@@ -356,9 +397,11 @@ namespace CoinFlip
 			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_lbl_nett_worth = new System.Windows.Forms.ToolStripLabel();
 			this.m_tb_nett_worth = new System.Windows.Forms.ToolStripTextBox();
+			this.m_chk_live = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_chk_run = new System.Windows.Forms.ToolStripButton();
-			this.m_chk_live = new System.Windows.Forms.ToolStripButton();
+			this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_tools_chart = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.ContentPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
@@ -454,7 +497,9 @@ namespace CoinFlip
 			this.toolsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_menu_tools_show_pairs,
             this.m_menu_tools_show_loops,
-            this.m_menu_tools_test});
+            this.m_menu_tools_test,
+            this.toolStripSeparator3,
+            this.m_menu_tools_chart});
 			this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
 			this.toolsToolStripMenuItem.Size = new System.Drawing.Size(47, 20);
 			this.toolsToolStripMenuItem.Text = "&Tools";
@@ -462,19 +507,19 @@ namespace CoinFlip
 			// m_menu_tools_show_pairs
 			// 
 			this.m_menu_tools_show_pairs.Name = "m_menu_tools_show_pairs";
-			this.m_menu_tools_show_pairs.Size = new System.Drawing.Size(138, 22);
+			this.m_menu_tools_show_pairs.Size = new System.Drawing.Size(152, 22);
 			this.m_menu_tools_show_pairs.Text = "&Show Pairs";
 			// 
 			// m_menu_tools_show_loops
 			// 
 			this.m_menu_tools_show_loops.Name = "m_menu_tools_show_loops";
-			this.m_menu_tools_show_loops.Size = new System.Drawing.Size(138, 22);
+			this.m_menu_tools_show_loops.Size = new System.Drawing.Size(152, 22);
 			this.m_menu_tools_show_loops.Text = "&Show Loops";
 			// 
 			// m_menu_tools_test
 			// 
 			this.m_menu_tools_test.Name = "m_menu_tools_test";
-			this.m_menu_tools_test.Size = new System.Drawing.Size(138, 22);
+			this.m_menu_tools_test.Size = new System.Drawing.Size(152, 22);
 			this.m_menu_tools_test.Text = "&TEST";
 			// 
 			// m_ts
@@ -490,7 +535,7 @@ namespace CoinFlip
             this.m_chk_run});
 			this.m_ts.Location = new System.Drawing.Point(3, 24);
 			this.m_ts.Name = "m_ts";
-			this.m_ts.Size = new System.Drawing.Size(454, 25);
+			this.m_ts.Size = new System.Drawing.Size(423, 25);
 			this.m_ts.TabIndex = 1;
 			// 
 			// m_chk_allow_trades
@@ -519,6 +564,16 @@ namespace CoinFlip
 			this.m_tb_nett_worth.ReadOnly = true;
 			this.m_tb_nett_worth.Size = new System.Drawing.Size(100, 25);
 			// 
+			// m_chk_live
+			// 
+			this.m_chk_live.CheckOnClick = true;
+			this.m_chk_live.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+			this.m_chk_live.Image = ((System.Drawing.Image)(resources.GetObject("m_chk_live.Image")));
+			this.m_chk_live.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_chk_live.Name = "m_chk_live";
+			this.m_chk_live.Size = new System.Drawing.Size(32, 22);
+			this.m_chk_live.Text = "Live";
+			// 
 			// toolStripSeparator1
 			// 
 			this.toolStripSeparator1.Name = "toolStripSeparator1";
@@ -533,15 +588,17 @@ namespace CoinFlip
 			this.m_chk_run.Size = new System.Drawing.Size(91, 22);
 			this.m_chk_run.Text = "Trade Loops";
 			// 
-			// m_chk_live
+			// toolStripSeparator3
 			// 
-			this.m_chk_live.CheckOnClick = true;
-			this.m_chk_live.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
-			this.m_chk_live.Image = ((System.Drawing.Image)(resources.GetObject("m_chk_live.Image")));
-			this.m_chk_live.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_chk_live.Name = "m_chk_live";
-			this.m_chk_live.Size = new System.Drawing.Size(32, 22);
-			this.m_chk_live.Text = "Live";
+			this.toolStripSeparator3.Name = "toolStripSeparator3";
+			this.toolStripSeparator3.Size = new System.Drawing.Size(149, 6);
+			// 
+			// m_menu_tools_chart
+			// 
+			this.m_menu_tools_chart.Name = "m_menu_tools_chart";
+			this.m_menu_tools_chart.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_tools_chart.Text = "&Chart";
+			this.m_menu_tools_chart.ToolTipText = "Open a new chart window";
 			// 
 			// MainUI
 			// 
@@ -570,6 +627,43 @@ namespace CoinFlip
 
 		}
 		#endregion
+
+		/// <summary>The main entry point for the application.</summary>
+		[STAThread] static void Main()
+		{
+			try
+			{
+				// Create an event handle to prevent multiple instances
+				using (var app_running = new EventWaitHandle(true, EventResetMode.AutoReset, "CoinFlip", out var was_created))
+				{
+					// Only run the app if we created the event handle
+					if (was_created)
+					{
+						// Ensure required dlls are loaded
+						Sci.LoadDll();
+						Sqlite.LoadDll();
+						View3d.LoadDll();
+
+						// A view3d context reference the lives for the lifetime of the application
+						using (var view3d = new View3d(gdi_compatibility: false))
+						{
+							Application.EnableVisualStyles();
+							Application.SetCompatibleTextRenderingDefault(false);
+							Application.Run(new MainUI());
+						}
+					}
+					else
+					{
+						// Find the order instance and bring it to the front
+						//todo
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				MsgBox.Show(null, ex.MessageFull(), "Crash!", MessageBoxButtons.OK);
+			}
+		}
 	}
 
 	#region Helper Structs

@@ -27,11 +27,11 @@ namespace Bittrex.API
 			set { Type = Misc.ToOrderType(value); }
 		}
 
-		/// <summary>The trade price (in quote currency)</summary>
+		/// <summary>The absolute value of the change in the account balance, after fees (in quote currency)</summary>
 		[JsonProperty("Price")]
-		public decimal Price { get; internal set; }
+		public decimal BalanceChange { get; internal set; }
 
-		/// <summary>The trade price (in quote currency)</summary>
+		/// <summary>The price that the trade was filled at. Typically less than 'Limit' (in quote currency)</summary>
 		[JsonProperty("PricePerUnit")]
 		public decimal PricePerUnit { get; internal set; }
 
@@ -42,6 +42,18 @@ namespace Bittrex.API
 		/// <summary></summary>
 		[JsonProperty("QuantityRemaining")]
 		public decimal RemainingBase { get; internal set; }
+
+		/// <summary>The amount filled in this trade (in base currency)</summary>
+		public decimal FilledBase
+		{
+			get { return QuantityBase - RemainingBase; }
+		}
+
+		/// <summary>The amount filled in this trade (in quote currency)</summary>
+		public decimal FilledQuote
+		{
+			get { return FilledBase * PricePerUnit; }
+		}
 
 		/// <summary></summary>
 		[JsonProperty("Limit")]

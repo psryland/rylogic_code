@@ -112,6 +112,7 @@ namespace CoinFlip
 			m_log_ui.LogFilepath = (Fisher.Log.LogCB as LogToFile).Filepath;
 			m_log_ui.LogEntryPattern = Misc.LogEntryPattern;
 			m_log_ui.Highlighting.AddRange(Misc.LogHighlighting);
+			m_log_ui.Formatting += Misc.LogFormatting;
 			m_log_ui.PopOutOnNewMessages = false;
 
 			// Remove the borders

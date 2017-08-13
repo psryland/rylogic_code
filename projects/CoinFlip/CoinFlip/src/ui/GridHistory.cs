@@ -167,7 +167,7 @@ namespace CoinFlip
 				{
 					var fees = fill?.Commission ?? trade?.Commission ?? 0m;
 					var coin = fill?.CoinOut ?? trade?.CoinOut ?? string.Empty;
-					a.Value = $"{fees.ToString("G8")} {coin}";
+					a.Value = $"{fees.ToString("G10")} {coin}";
 					a.FormattingApplied = true;
 					break;
 				}

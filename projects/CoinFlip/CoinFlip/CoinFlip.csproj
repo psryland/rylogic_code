@@ -34,6 +34,9 @@
   <PropertyGroup>
     <ApplicationIcon>money.ico</ApplicationIcon>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject>CoinFlip.MainUI</StartupObject>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -53,81 +56,100 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="src\ArbitrageLoops.cs" />
-    <Compile Include="src\Balance.cs" />
-    <Compile Include="src\Coin.cs" />
-    <Compile Include="src\Exchange_Bittrex.cs" />
-    <Compile Include="src\Exchange_CrossExchange.cs" />
-    <Compile Include="src\Exchange_Cryptopia.cs" />
-    <Compile Include="src\Exchange.cs" />
-    <Compile Include="src\Fishing.cs" />
-    <Compile Include="src\FishingDetailsUI.cs">
+    <Compile Include="src\loops\ArbitrageLoops.cs" />
+    <Compile Include="src\model\Balance.cs" />
+    <Compile Include="src\model\Candle.cs" />
+    <Compile Include="src\model\Coin.cs" />
+    <Compile Include="src\exchange\Exchange_Bittrex.cs" />
+    <Compile Include="src\exchange\Exchange_CrossExchange.cs" />
+    <Compile Include="src\exchange\Exchange_Cryptopia.cs" />
+    <Compile Include="src\exchange\Exchange.cs" />
+    <Compile Include="src\fishing\Fishing.cs" />
+    <Compile Include="src\model\Instrument.cs" />
+    <Compile Include="src\model\TimeFrame.cs" />
+    <Compile Include="src\ui\BaseUI.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="src\GridBalances.cs">
+    <Compile Include="src\ui\ChartUI.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="src\ui\FishingDetailsUI.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="src\ui\GridArbitrage.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="src\GridBase.cs">
+    <Compile Include="src\ui\GridBalances.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="src\GridCoins.cs">
+    <Compile Include="src\ui\GridBase.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="src\GridExchanges.cs">
+    <Compile Include="src\ui\GridCoins.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="src\GridFishing.cs">
+    <Compile Include="src\ui\GridExchanges.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="src\GridHistory.cs" />
-    <Compile Include="src\GridPositions.cs">
+    <Compile Include="src\ui\GridFishing.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="src\Historic.cs" />
-    <Compile Include="src\PositionFill.cs" />
-    <Compile Include="src\Loop.cs" />
-    <Compile Include="src\LoopsUI.cs">
+    <Compile Include="src\ui\GridHistory.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="src\ui\GridPositions.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="src\model\Historic.cs" />
+    <Compile Include="src\model\PositionFill.cs" />
+    <Compile Include="src\loops\Loop.cs" />
+    <Compile Include="src\loops\LoopsUI.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\MainUI.cs">
+    <Compile Include="src\ui\MainUI.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="src\Misc.cs" />
-    <Compile Include="src\Model.cs" />
-    <Compile Include="src\EditFishingUI.cs">
+    <Compile Include="src\model\Model.cs" />
+    <Compile Include="src\ui\EditFishingUI.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\OrderBook.cs" />
-    <Compile Include="src\PairsUI.cs">
+    <Compile Include="src\model\OrderBook.cs" />
+    <Compile Include="src\ui\PairsUI.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\Exchange_Poloniex.cs" />
-    <Compile Include="src\Position.cs" />
-    <Compile Include="src\PriceTick.cs" />
-    <Compile Include="src\Program.cs" />
+    <Compile Include="src\exchange\Exchange_Poloniex.cs" />
+    <Compile Include="src\model\Position.cs" />
+    <Compile Include="src\model\PriceTick.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="src\Settings.cs" />
-    <Compile Include="src\Exchange_TestExchange.cs" />
-    <Compile Include="src\Trade.cs" />
-    <Compile Include="src\TradePair.cs" />
+    <Compile Include="src\exchange\Exchange_TestExchange.cs" />
+    <Compile Include="src\model\Trade.cs" />
+    <Compile Include="src\model\TradePair.cs" />
+    <Compile Include="src\ui\TreeBase.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\FishingDetailsUI.resx">
+    <EmbeddedResource Include="src\ui\ChartUI.resx">
+      <DependentUpon>ChartUI.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\ui\FishingDetailsUI.resx">
       <DependentUpon>FishingDetailsUI.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\LoopsUI.resx">
+    <EmbeddedResource Include="src\loops\LoopsUI.resx">
       <DependentUpon>LoopsUI.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\MainUI.resx">
+    <EmbeddedResource Include="src\ui\MainUI.resx">
       <DependentUpon>MainUI.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\EditFishingUI.resx">
+    <EmbeddedResource Include="src\ui\EditFishingUI.resx">
       <DependentUpon>EditFishingUI.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\PairsUI.resx">
+    <EmbeddedResource Include="src\ui\PairsUI.resx">
       <DependentUpon>PairsUI.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="packages.config" />

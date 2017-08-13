@@ -27,10 +27,11 @@ namespace CoinFlip
 				throw new Exception("Negative commission");
 		}
 		public Historic(ulong trade_id, Position pos, DateTimeOffset updated)
-			:this(pos.OrderId, trade_id, pos.Pair, pos.TradeType, pos.Price,
-				 pos.TradeType == ETradeType.B2Q ? pos.VolumeBase : pos.VolumeQuote, 
-				 pos.TradeType == ETradeType.Q2B ? pos.VolumeQuote : pos.VolumeBase,
-				 pos.TradeType == ETradeType.Q2B ? (pos.VolumeQuote * pos.Pair.Fee) : (pos.VolumeBase * pos.Pair.Fee),
+			:this(pos.OrderId, trade_id, pos.Pair, pos.TradeType,
+				 pos.TradeType == ETradeType.B2Q ? pos.Price : (1m / pos.Price),
+				 pos.TradeType == ETradeType.B2Q ? pos.VolumeBase : pos.VolumeQuote,
+				 pos.TradeType == ETradeType.B2Q ? pos.VolumeQuote : pos.VolumeBase,
+				 pos.TradeType == ETradeType.B2Q ? (pos.VolumeQuote * pos.Pair.Fee) : (pos.VolumeBase * pos.Pair.Fee),
 				 pos.Created.Value, updated)
 		{ }
 

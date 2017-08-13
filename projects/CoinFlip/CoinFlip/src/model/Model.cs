@@ -172,6 +172,12 @@ namespace CoinFlip
 		/// <summary>App settings</summary>
 		public Settings Settings { get; private set; }
 
+		/// <summary>The current time (in UTC).</summary>
+		public DateTimeOffset UtcNow
+		{
+			get { return DateTimeOffset.UtcNow; } // Might use this for back-testing one day
+		}
+
 		/// <summary>Application log</summary>
 		public Logger Log
 		{
@@ -257,12 +263,7 @@ namespace CoinFlip
 				foreach (var exch in Exchanges.Except(CrossExchange))
 				{
 					foreach (var bal in exch.Balance.Values)
-					{
-						var amount = Settings.ShowLivePrices
-							? bal.Coin.LiveValue(bal.Total)
-							: bal.Coin.ApproximateValue(bal.Total);
-						worth += amount;
-					}
+						worth += bal.Coin.Value(bal.Total);
 				}
 				return worth;
 			}
@@ -584,6 +585,19 @@ namespace CoinFlip
 						await pos.FillFakeOrder();
 				}
 			}
+		}
+
+		/// <summary>Find the maximum price for the given currency on the available exchanges</summary>
+		public decimal MaxLiveValue(string sym)
+		{
+			var value = 0m._(sym);
+			foreach (var exch in Exchanges.Except(CrossExchange))
+			{
+				var coin = exch.Coins[sym];
+				if (coin == null) continue;
+				value = Math.Max(value, coin.Value(1m._(sym)));
+			}
+			return value;
 		}
 
 		/// <summary>Execute 'action' in the GUI thread context</summary>

@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Windows.Forms;
 using pr.extn;
+using pr.gui;
 using pr.util;
 
 namespace CoinFlip
@@ -130,8 +131,14 @@ namespace CoinFlip
 				};
 				opt.Click += (s,a) =>
 				{
+					// Add the details UI to the same position as the log
 					var fisher = SelectedRows.Cast<DataGridViewRow>().Select(x => (Fishing)x.DataBoundItem).First();
-					DockControl.DockContainer.Add(fisher.DetailsUI);
+					var logui = DockControl.DockContainer.AllContent.FirstOrDefault(x => x is LogUI ui && ui.Name == "Log");
+					var pane = logui?.DockControl.DockPane;
+					if (pane != null)
+						pane.Content.Add(fisher.DetailsUI.DockControl);
+					else
+						DockControl.DockContainer.Add(fisher.DetailsUI);
 				};
 			}
 			{

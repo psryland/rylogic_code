@@ -12,24 +12,24 @@ namespace CoinFlip
 			ReadOnly = true;
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Balance.Coin),
 				HeaderText = "Currency",
+				Name = nameof(Balance.Coin),
 				DataPropertyName = nameof(Balance.Coin),
 				SortMode = DataGridViewColumnSortMode.Automatic,
 				FillWeight = 0.3f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Balance.Available),
 				HeaderText = "Available",
+				Name = nameof(Balance.Available),
 				DataPropertyName = nameof(Balance.Available),
 				SortMode = DataGridViewColumnSortMode.Automatic,
 				FillWeight = 0.6f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Balance.Total),
 				HeaderText = "Total",
+				Name = nameof(Balance.Total),
 				DataPropertyName = nameof(Balance.Total),
 				SortMode = DataGridViewColumnSortMode.Automatic,
 				FillWeight = 0.6f,

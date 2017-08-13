@@ -17,7 +17,6 @@ namespace CoinFlip
 				DataPropertyName = nameof(Exchange.Active),
 				AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader,
 				ImageLayout = DataGridViewImageCellLayout.Normal,
-				DefaultCellStyle = new DataGridViewCellStyle{ Padding = new Padding(5) },
 				FillWeight = 0.1f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
