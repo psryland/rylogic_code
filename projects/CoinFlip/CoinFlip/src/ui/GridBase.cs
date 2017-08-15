@@ -12,6 +12,7 @@ namespace CoinFlip
 	{
 		public GridBase(Model model, string title, string name)
 		{
+			m_model = model;
 			using (((ISupportInitialize)this).InitialiseScope())
 			{
 				AutoGenerateColumns         = false;
@@ -48,7 +49,10 @@ namespace CoinFlip
 			// Support for dock container controls
 			DockControl = new DockControl(this, name) { TabText = title };
 
-			Model = model;
+			// Even though the model has been set, set it again to give
+			// sub classes a chance to hook up event handlers
+			CreateHandle();
+			this.BeginInvoke(() => SetModelCore(model));
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -84,15 +88,13 @@ namespace CoinFlip
 			set
 			{
 				if (m_model == value) return;
-				if (m_model != null)
-				{
-				}
-				m_model = value;
-				if (m_model != null)
-				{
-				}
+				SetModelCore(value);
 			}
 		}
 		private Model m_model;
+		protected virtual void SetModelCore(Model model)
+		{
+			m_model = model;
+		}
 	}
 }

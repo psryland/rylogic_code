@@ -22,7 +22,7 @@ namespace Poloniex.API
 		public string Id
 		{
 			// Poloniex pairs are given as 'Quote_Base'.. :-/
-			get { return string.Format("{0}_{1}", Quote, Base); }
+			get { return $"{Quote}_{Base}"; }
 		}
 
 		/// <summary>Parse the base/quote currency from a string</summary>

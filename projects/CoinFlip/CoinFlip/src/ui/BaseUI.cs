@@ -14,7 +14,7 @@ namespace CoinFlip
 		private BaseUI() {}
 		public BaseUI(Model model, string name)
 		{
-			Model = model;
+			m_model = model;
 			DockControl = new DockControl(this, name) { TabText = name };
 
 			// Even though the model has been set, set it again to give

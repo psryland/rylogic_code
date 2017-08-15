@@ -138,6 +138,24 @@ namespace CoinFlip
 			}
 		}
 
+		/// <summary>True if this exchange supports retrieving chart data</summary>
+		public override IEnumerable<ETimeFrame> ChartDataAvailable(TradePair pair)
+		{
+			if (pair.Exchange != this) throw new Exception($"Trade pair {pair.NameWithExchange} is not provided by this exchange ({Name})");
+			return Enum<MarketPeriod>.Values.Select(x => ToTimeFrame(x));
+		}
+
+		/// <summary>Return the chart data for a given pair, over a given time range</summary>
+		protected async override Task<List<Candle>> ChartDataInternal(TradePair pair, ETimeFrame timeframe, DateTimeOffset beg, DateTimeOffset end)
+		{
+			// Get the chart data
+			var data = await Api.GetChartData(new CurrencyPair(pair.Base, pair.Quote), ToMarketPeriod(timeframe), beg, end);
+
+			// Convert it to candles
+			var candles = data.Select(x => new Candle(x.Time.Ticks, (double)x.Open, (double)x.High, (double)x.Low, (double)x.Close, (double)x.WeightedAverage, (double)x.VolumeBase)).ToList();
+			return candles;
+		}
+
 		/// <summary>Update the market data, balances, and open positions</summary>
 		protected async override Task UpdateData() // Worker thread context
 		{
@@ -402,6 +420,36 @@ namespace CoinFlip
 			}
 
 			Debug.Assert(pair.AssertOrdersValid());
+		}
+
+		/// <summary>Convert a time frame to a market period</summary>
+		private MarketPeriod ToMarketPeriod(ETimeFrame tf)
+		{
+			switch (tf)
+			{
+			default:               return MarketPeriod.None;
+			case ETimeFrame.Min5:  return MarketPeriod.Minutes5;
+			case ETimeFrame.Min15: return MarketPeriod.Minutes15;
+			case ETimeFrame.Min30: return MarketPeriod.Minutes30;
+			case ETimeFrame.Hour2: return MarketPeriod.Hours2;
+			case ETimeFrame.Hour4: return MarketPeriod.Hours4;
+			case ETimeFrame.Day1:  return MarketPeriod.Day;
+			}
+		}
+
+		/// <summary>Convert a market period to a time frame</summary>
+		private ETimeFrame ToTimeFrame(MarketPeriod mp)
+		{
+			switch (mp)
+			{
+			default:                     return ETimeFrame.None;
+			case MarketPeriod.Minutes5:  return ETimeFrame.Min5;
+			case MarketPeriod.Minutes15: return ETimeFrame.Min15;
+			case MarketPeriod.Minutes30: return ETimeFrame.Min30;
+			case MarketPeriod.Hours2:    return ETimeFrame.Hour2;
+			case MarketPeriod.Hours4:    return ETimeFrame.Hour4;
+			case MarketPeriod.Day:       return ETimeFrame.Day1;
+			}
 		}
 	}
 }

@@ -137,11 +137,13 @@ namespace CoinFlip
 					m_model.MarketDataChanging     -= HandleMarketDataChanging;
 					m_model.AllowTradesChanged     -= UpdateUI;
 					m_model.RunChanged             -= UpdateUI;
-					m_grid_coins.DataSource         = null;
-					m_grid_exchanges.DataSource     = null;
-					m_grid_balances.DataSource      = null;
-					m_grid_positions.DataSource     = null;
-					m_grid_history.DataSource       = null;
+					Util.Dispose(ref m_grid_coins    );
+					Util.Dispose(ref m_grid_exchanges);
+					Util.Dispose(ref m_grid_balances );
+					Util.Dispose(ref m_grid_positions);
+					Util.Dispose(ref m_grid_history  );
+					Util.Dispose(ref m_grid_fishing  );
+					Util.Dispose(ref m_grid_arbitrage);
 					Util.Dispose(ref m_model);
 				}
 				m_model = value;
@@ -301,6 +303,21 @@ namespace CoinFlip
 		{
 			m_chk_allow_trades.Checked = Model.AllowTrades;
 			m_chk_run.Checked = Model.RunLoopFinder;
+
+			// Invalidate the live price data 
+			m_grid_exchanges.InvalidateColumn(m_grid_exchanges.Columns[nameof(Exchange.NettWorth)].Index);
+			m_grid_balances .InvalidateColumn(m_grid_balances.Columns[nameof(Balance.Available)].Index);
+			m_grid_balances .InvalidateColumn(m_grid_balances.Columns[nameof(Balance.Value)].Index);
+			m_grid_positions.InvalidateColumn(m_grid_positions.Columns[nameof(GridPositions.ColumnNames.LivePrice)].Index);
+			m_grid_positions.InvalidateColumn(m_grid_positions.Columns[nameof(GridPositions.ColumnNames.PriceDist)].Index);
+			m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Total)].Index);
+			m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Available)].Index);
+			m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Value)].Index);
+			m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Balance)].Index);
+			m_grid_arbitrage.Invalidate();
+
+			// Update the nett worth value
+			m_tb_nett_worth.Text = Model.NettWorth.ToString("c");
 		}
 
 		/// <summary>Create a new chart instance</summary>
@@ -334,24 +351,8 @@ namespace CoinFlip
 		/// <summary>Model heart beat event handler</summary>
 		private void HandleMarketDataChanging(object sender, MarketDataChangingEventArgs e)
 		{
-			if (!e.Done)
-			{
-			}
-			else
-			{
-				// Invalidate the live price data 
-				m_grid_exchanges.InvalidateColumn(m_grid_exchanges.Columns[nameof(Exchange.NettWorth)].Index);
-				m_grid_balances .InvalidateColumn(m_grid_balances.Columns[nameof(Balance.Available)].Index);
-				m_grid_balances .InvalidateColumn(m_grid_balances.Columns[nameof(Balance.Value)].Index);
-				m_grid_positions.InvalidateColumn(m_grid_positions.Columns[nameof(GridPositions.ColumnNames.LivePrice)].Index);
-				m_grid_positions.InvalidateColumn(m_grid_positions.Columns[nameof(GridPositions.ColumnNames.PriceDist)].Index);
-				m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Total)].Index);
-				m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Available)].Index);
-				m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Value)].Index);
-
-				// Update the nett worth value
-				m_tb_nett_worth.Text = Model.NettWorth.ToString("c");
-			}
+			if (e.Done)
+				UpdateUI();
 		}
 
 		/// <summary>Coins of interest changed</summary>
@@ -637,7 +638,7 @@ namespace CoinFlip
 				using (var app_running = new EventWaitHandle(true, EventResetMode.AutoReset, "CoinFlip", out var was_created))
 				{
 					// Only run the app if we created the event handle
-					if (was_created)
+					if (was_created || Util.IsDebug)
 					{
 						// Ensure required dlls are loaded
 						Sci.LoadDll();

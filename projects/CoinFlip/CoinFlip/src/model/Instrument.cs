@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using pr.common;
 using pr.db;
@@ -18,10 +19,6 @@ namespace CoinFlip
 	{
 		// Notes:
 		// - This class is basically an array with an indexer and Count.
-		//   However the public interface is for indices that range from (-Count,0].
-		//   All methods that deal with indices should expect values in this range.
-		// - PosIdx is a positive index in the range [0, Count) where 0 = oldest
-		// - NegIdx is a negative index in the range (-Count,0] where 0 = newest
 
 		/// <summary>A database of price data for this instrument</summary>
 		private Sqlite.Database m_db;
@@ -32,13 +29,13 @@ namespace CoinFlip
 		private const int CacheSize = 10000;
 		private const int MaxCacheSize = 15000;
 
-		public Instrument(Model model, string symbol)
+		public Instrument(Model model, TradePair pair, ETimeFrame time_frame)
 		{
-			m_cache = new List<Candle>(CacheSize);
-
 			Model = model;
-			SymbolCode = symbol;
-//			SupportResistLevels = new BindingSource<SnRLevel> { DataSource = new BindingListEx<SnRLevel>() };
+			Pair = pair;
+
+			// The database filepath
+			m_db_filepath = CacheDBFilePath(Pair.NameWithExchange);
 
 			// Load the sqlite database of historic price data
 			m_db = new Sqlite.Database(DBFilepath);
@@ -47,9 +44,6 @@ namespace CoinFlip
 			m_db.Execute(Sqlite.Sql("PRAGMA synchronous = OFF"));
 			m_db.Execute(Sqlite.Sql("PRAGMA journal_mode = MEMORY"));
 
-//			// Create a table for the price data info
-//			m_db.Execute(SqlExpr.PriceDataTable());
-
 			// Ensure tables exist for each of the time frames.
 			// Note: timestamp is not the row id. Row Ids should not have any
 			// meaning. It's more efficient to let the DB do the sorting
@@ -57,35 +51,26 @@ namespace CoinFlip
 			foreach (var tf in Enum<ETimeFrame>.Values.Except(ETimeFrame.None))
 				m_db.Execute(SqlExpr.CandleTable(tf));
 
-//			// Create a table for the SnR levels
-//			m_db.Execute(SqlExpr.SnRLevelsTable());
+			// A cache of candle data read from the db
+			m_cache = new List<Candle>(CacheSize);
 
 			// Initialise from the DB, so don't write back to the db
 			using (Scope.Create(() => ++m_suspend_db_updates, () => --m_suspend_db_updates))
 			{
-//				// Select the default time frame to begin with
-//				TimeFrame = Settings.General.DefaultTimeFrame;
-
-//				// Load the last known price data for the instrument
-//				PriceData = m_db.EnumRows<PriceData>(SqlExpr.GetPriceData()).FirstOrDefault() ?? new PriceData();
-
-//				// Load the known support and resistance levels
-//				SupportResistLevels.AddRange(m_db.EnumRows<SnRLevel>(SqlExpr.GetSnRLevelData()));
-
-//				// Set up the EMAs
-//				ResetEma();
+				// Select the time frame to begin with
+				TimeFrame = time_frame;
 			}
 		}
 		public Instrument(Instrument rhs, ETimeFrame time_frame)
-			:this(rhs.Model, rhs.SymbolCode)
-		{
-			TimeFrame = time_frame;
-		}
+			:this(rhs.Model, rhs.Pair, time_frame)
+		{}
 		public virtual void Dispose()
 		{
+			UpdateThreadActive = false;
 			TimeFrame = ETimeFrame.None;
-			Util.Dispose(ref m_db);
+			Pair = null;
 			Model = null;
+			Util.Dispose(ref m_db);
 		}
 
 		/// <summary>The App logic</summary>
@@ -112,8 +97,29 @@ namespace CoinFlip
 			[DebuggerStepThrough] get { return Model.Settings; }
 		}
 
+		/// <summary>The currency pair this instrument represents</summary>
+		public TradePair Pair
+		{
+			get { return m_pair; }
+			private set
+			{
+				if (m_pair == value) return;
+				m_pair = value;
+			}
+		}
+		private TradePair m_pair;
+
+		/// <summary>The exchange hosting this instrument</summary>
+		public Exchange Exchange
+		{
+			get { return Pair.Exchange; }
+		}
+
 		/// <summary>The instrument name (symbol name) BASEQUOTE</summary>
-		public string SymbolCode { [DebuggerStepThrough] get; private set; }
+		public string SymbolCode
+		{
+			[DebuggerStepThrough] get { return Pair.Name.Strip('/'); }
+		}
 
 		/// <summary>The active time frame</summary>
 		public ETimeFrame TimeFrame
@@ -123,20 +129,23 @@ namespace CoinFlip
 			{
 				if (m_time_frame == value) return;
 
-				// Set the new time frame and flush any cached data
+				// Stop the update thread while changing time frame
+				UpdateThreadActive = false;
+
+				// Set the new time frame
 				m_time_frame = value;
+
+				// Flush any cached data
 				InvalidateCachedData();
 
 				// Set the last updated time to the timestamp of the last candle
-				if (m_time_frame != ETimeFrame.None)
-				{
-					// Ensure data is being sent for this time frame
-//					StartDataRequest();
-					LastUpdatedUTC = Latest.TimestampUTC;
-				}
+				LastUpdatedUTC = Latest.TimestampUTC;
 
 				// Notify time frame changed
 				OnTimeFrameChanged();
+
+				// Start the update thread for non-none time frames
+				UpdateThreadActive = m_time_frame != ETimeFrame.None;
 			}
 		}
 		private ETimeFrame m_time_frame;
@@ -151,9 +160,12 @@ namespace CoinFlip
 		{
 			get
 			{
+				if (TimeFrame == ETimeFrame.None)
+					return 0;
+
+				// Cache the total count value
 				if (m_impl_count == null)
 				{
-					Debug.Assert(TimeFrame != ETimeFrame.None);
 					var sql = Str.Build("select count(*) from ",TimeFrame," where [",nameof(Candle.Timestamp),"] <= ?");
 					m_impl_count = m_db.ExecuteScalar(sql, 1, new object[] { Model.UtcNow.Ticks });
 				}
@@ -262,14 +274,14 @@ namespace CoinFlip
 
 		#region Candle Cache
 
-		/// <summary>The cached price data database file location</summary>
-		public string DBFilepath
+		/// <summary>The instrument database file location.</summary>
+		public string DBFilepath { get { return m_db_filepath; } }
+		private readonly string m_db_filepath; // Shared across threads
+
+		/// <summary>Generate a filepath for the given pair name</summary>
+		public static string CacheDBFilePath(string pair_name)
 		{
-			get { return CacheDBFilePath(SymbolCode); }
-		}
-		public static string CacheDBFilePath(string sym)
-		{
-			var dbpath = Util.ResolveUserDocumentsPath("Rylogic", "CoinFlip", $"PriceData\\{sym}.db");
+			var dbpath = Util.ResolveUserDocumentsPath("Rylogic", "CoinFlip", $"PriceData\\{pair_name}.db");
 			Directory.CreateDirectory(Path_.Directory(dbpath));
 			return dbpath;
 		}
@@ -299,6 +311,74 @@ namespace CoinFlip
 			{
 				if (m_cache.Count == 0) return Range.Zero;
 				return new Range(m_cache.Front().Timestamp, m_cache.Back().Timestamp);
+			}
+		}
+
+		/// <summary>The background thread for performing instrument data updates</summary>
+		private bool UpdateThreadActive
+		{
+			get { return m_update_thread != null; }
+			set
+			{
+				if (UpdateThreadActive == value) return;
+				if (UpdateThreadActive)
+				{
+					m_update_thread_exit.Set();
+					if (m_update_thread.IsAlive)
+						m_update_thread.Join();
+				}
+				Util.Dispose(ref m_update_thread_exit);
+				m_update_thread = value ? new Thread(new ThreadStart(UpdateThreadEntryPoint)) : null;
+				if (UpdateThreadActive)
+				{
+					m_update_thread_exit = new ManualResetEvent(false);
+					m_update_thread.Start();
+				}
+			}
+		}
+		private Thread m_update_thread;
+		private ManualResetEvent m_update_thread_exit;
+		private void UpdateThreadEntryPoint()
+		{
+			try
+			{
+				var exch = Exchange;
+				var pair = Pair;
+				var tf   = TimeFrame;
+				Debug.Assert(tf != ETimeFrame.None);
+
+				using (var db = new Sqlite.Database(DBFilepath))
+				{
+					// Find the time range of data available in the db
+					var beg = DateTimeOffset.MinValue;
+					var end = DateTimeOffset.Now;
+
+					for (; !m_update_thread_exit.IsSignalled();)
+					{
+						// Query for chart data
+						{
+							var data = exch.ChartData(pair, tf, beg, end).Result;
+						}
+
+						// Add the received data to the database
+						{
+						}
+
+						// Notify new data available
+						Model.RunOnGuiThread(() =>
+						{
+						});
+
+						// Sleep for a bit
+						m_update_thread_exit.WaitOne(TimeSpan.FromMilliseconds(500));
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
+				if (ex is OperationCanceledException) {}
+				else Model.Log.Write(ELogLevel.Error, ex, $"Instrument {SymbolCode} update thread exit\r\n.{ex.StackTrace}");
 			}
 		}
 

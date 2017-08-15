@@ -20,7 +20,7 @@ namespace CoinFlip
 				Name = nameof(Settings.CoinData.Symbol),
 				DataPropertyName = nameof(Settings.CoinData.Symbol),
 				SortMode = DataGridViewColumnSortMode.Automatic,
-				FillWeight = 0.5f,
+				FillWeight = 0.7f,
 				ReadOnly = true,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
@@ -29,7 +29,7 @@ namespace CoinFlip
 				Name = nameof(ColumnNames.Value),
 				DataPropertyName = nameof(ColumnNames.Value),
 				DefaultCellStyle = new DataGridViewCellStyle{ Format = "C" },
-				FillWeight = 0.6f,
+				FillWeight = 0.8f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
@@ -57,7 +57,7 @@ namespace CoinFlip
 				HeaderText = "Flip",
 				Name = nameof(Settings.CoinData.OfInterest),
 				DataPropertyName = nameof(Settings.CoinData.OfInterest),
-				FillWeight = 0.3f,
+				FillWeight = 0.4f,
 			});
 			ContextMenuStrip = CreateCMenu();
 			DataSource = Model.Coins;

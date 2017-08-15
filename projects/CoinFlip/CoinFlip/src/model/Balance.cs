@@ -26,6 +26,7 @@ namespace CoinFlip
 			PendingWithdraw = pending_withdraw._(coin.Symbol);
 			TimeStamp       = timestamp;
 			Holds           = new List<FundHold>();
+			FakeCash        = new List<decimal>();
 		}
 
 		/// <summary>The currency that the balance is in</summary>
@@ -44,7 +45,16 @@ namespace CoinFlip
 		}
 
 		/// <summary>The net account value</summary>
-		public Unit<decimal> Total { [DebuggerStepThrough] get; private set; }
+		public Unit<decimal> Total
+		{
+			[DebuggerStepThrough] get
+			{
+				var fake = Model.AllowTrades ? 0m : FakeCash.Sum(x => x);
+				return m_total + fake._(Coin);
+			}
+			private set { m_total = value; }
+		}
+		private Unit<decimal> m_total;
 
 		/// <summary>The nett available balance</summary>
 		public Unit<decimal> Available
@@ -53,7 +63,8 @@ namespace CoinFlip
 			{
 				Holds.RemoveAll(x => !x.StillNeeded(this));
 				var held = Holds.Sum(x => x.Volume);
-				return Maths.Max(0m._(Coin), m_available - held._(Coin));
+				var fake = Model.AllowTrades ? 0m : FakeCash.Sum(x => x);
+				return Maths.Max(0m._(Coin), m_available + fake._(Coin) - held._(Coin));
 			}
 			private set { m_available = value; }
 		}
@@ -119,12 +130,39 @@ namespace CoinFlip
 		/// <summary>A collection of reserved balance</summary>
 		public List<FundHold> Holds { get; private set; }
 
+		/// <summary>A collection of fake additional balance, for testing</summary>
+		public List<decimal> FakeCash { get; private set; }
+
 		[DebuggerDisplay("{Volume}")]
 		public class FundHold
 		{
 			public Guid Id;
 			public Unit<decimal> Volume;
 			public Func<Balance,bool> StillNeeded;
+		}
+
+		/// <summary>Update this balance using 'rhs'</summary>
+		public void Update(Balance rhs)
+		{
+			// Sanity check
+			if (Coin != rhs.Coin)
+				throw new Exception("Update for the wrong balance");
+
+			// Update the update-able parts
+			Total           = rhs.Total;
+			Available       = rhs.Available;
+			HeldForTrades   = rhs.HeldForTrades;
+			Unconfirmed     = rhs.Unconfirmed;
+			PendingWithdraw = rhs.PendingWithdraw;
+			TimeStamp       = rhs.TimeStamp;
+
+			// Transfer the 'holds' to 'value'
+			foreach (var hold in rhs.Holds.Where(x => x.StillNeeded(rhs)))
+				Holds.Add(hold);
+
+			// Transfer the 'fake cash' to 'value'
+			foreach (var fake in rhs.FakeCash)
+				FakeCash.Add(fake);
 		}
 	}
 }

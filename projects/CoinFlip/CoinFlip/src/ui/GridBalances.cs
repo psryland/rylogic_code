@@ -1,6 +1,8 @@
 ﻿using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using pr.extn;
+using pr.gui;
 
 namespace CoinFlip
 {
@@ -43,6 +45,7 @@ namespace CoinFlip
 				SortMode = DataGridViewColumnSortMode.Automatic,
 				FillWeight = 0.6f,
 			});
+			ContextMenuStrip = CreateCMenu();
 			DataSource = Model.Balances;
 		}
 		protected override void OnCellFormatting(DataGridViewCellFormattingEventArgs a)
@@ -56,6 +59,28 @@ namespace CoinFlip
 			}
 			a.CellStyle.SelectionBackColor = a.CellStyle.BackColor.Lerp(Color.Gray, 0.5f);
 			a.CellStyle.SelectionForeColor = a.CellStyle.ForeColor;
+		}
+		private ContextMenuStrip CreateCMenu()
+		{
+			var cmenu = new ContextMenuStrip();
+			{
+				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Add \"Fake\" Cash"));
+				cmenu.Opening += (s,a) =>
+				{
+					opt.Visible = Model.AllowTrades == false;
+					opt.Enabled = SelectedRows.Count == 1;
+				};
+				opt.Click += (s,a) =>
+				{
+					var bal = SelectedRows.Cast<DataGridViewRow>().Select(x => (Balance)x.DataBoundItem).First();
+					using (var dlg = new PromptUI { Title = "Add Fake Cash!", PromptText = "Add additional funds for testing", InputType = PromptUI.EInputType.Number, ValueType = typeof(decimal) })
+					{
+						if (dlg.ShowDialog(this) != DialogResult.OK) return;
+						bal.FakeCash.Add((decimal)dlg.Value);
+					}
+				};
+			}
+			return cmenu;
 		}
 	}
 }

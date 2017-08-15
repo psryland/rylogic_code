@@ -61,7 +61,13 @@ namespace CoinFlip
 		/// <summary>String description of the trade</summary>
 		public string Description
 		{
-			get { return $"[Id:{OrderId}] {VolumeBase.ToString("G6")} {Pair.Base} → {VolumeQuote.ToString("G6")} {Pair.Quote} @ {Price.ToString("G6")}"; }
+			get
+			{
+				var volI = TradeType == ETradeType.B2Q ? VolumeBase : VolumeQuote;
+				var volO = TradeType == ETradeType.B2Q ? VolumeQuote : VolumeBase;
+				var sym0 = TradeType == ETradeType.B2Q ? Pair.Base : Pair.Quote;
+				var sym1 = TradeType == ETradeType.B2Q ? Pair.Quote : Pair.Base;
+				return $"[Id:{OrderId}] {volI.ToString("G6")} {sym0} → {volO.ToString("G6")} {sym1} @ {Price.ToString("G6")} {Pair.RateUnits}"; }
 		}
 
 		/// <summary>Cancel this position</summary>

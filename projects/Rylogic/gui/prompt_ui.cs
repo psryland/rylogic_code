@@ -199,6 +199,13 @@ namespace pr.gui
 			set { m_cb_value.DisplayProperty = value; }
 		}
 
+		/// <summary>Set the value type of the value box</summary>
+		public Type ValueType
+		{
+			get { return m_tb_value.ValueType; }
+			set { m_tb_value.ValueType = value; }
+		}
+
 		/// <summary>Access to the edit control used to set the value</summary>
 		public TextBox ValueCtrl
 		{

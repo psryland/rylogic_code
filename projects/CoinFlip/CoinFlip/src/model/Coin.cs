@@ -29,7 +29,7 @@ namespace CoinFlip
 		/// <summary>Coin name</summary>
 		public string Symbol
 		{
-			get { return Meta.Symbol; }
+			[DebuggerStepThrough] get { return Meta.Symbol; }
 		}
 
 		/// <summary>Return the Coin with the exchange</summary>
@@ -59,7 +59,7 @@ namespace CoinFlip
 				// Calculate the live price using the sequence of currencies in the meta data
 				var coin = this;
 				var valid = true;
-				var value = amount;
+				var value = amount._(coin);
 				var symbols = Meta.LivePriceSymbols.Split(new[]{','}, StringSplitOptions.RemoveEmptyEntries);
 				foreach (var sym in symbols)
 				{
@@ -73,8 +73,8 @@ namespace CoinFlip
 
 					// Use spot prices
 					value = (coin == pair.Base)
-						? value * pair.BaseToQuote(0m._(value)).Price
-						: value * pair.QuoteToBase(0m._(value)).Price;
+						? value * pair.BaseToQuote(0m._(pair.Base)).Price
+						: value * pair.QuoteToBase(0m._(pair.Quote)).Price;
 
 					coin = pair.OtherCoin(coin);
 				}

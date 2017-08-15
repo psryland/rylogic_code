@@ -1,18 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Drawing;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
+using pr.attrib;
 using pr.common;
 using pr.container;
+using pr.extn;
 using pr.gfx;
 using pr.gui;
 using pr.util;
-using ToolStripContainer = pr.gui.ToolStripContainer;
 using ToolStripComboBox = pr.gui.ToolStripComboBox;
-using pr.extn;
-using System.Drawing;
+using ToolStripContainer = pr.gui.ToolStripContainer;
 
 namespace CoinFlip
 {
@@ -33,7 +34,8 @@ namespace CoinFlip
 		private ToolStripComboBox m_cb_pair;
 		private ToolStripSeparator m_sep0;
 		private ToolStrip m_ts;
-		private ToolStripSplitButton m_splitbtn_timeframes;
+		private ToolStripLabel m_lbl_time_frame;
+		private ToolStripComboBox m_cb_time_frame;
 		private ChartControl m_chart;
 		#endregion
 
@@ -47,25 +49,104 @@ namespace CoinFlip
 			m_nbuf = new List<View3d.Nugget>();
 			m_gfx_cache = new Cache<int, CachedGfx>();
 
+			// Create the chart control
 			m_chart = new ChartControl(string.Empty, new ChartControl.RdrOptions());
-			Pairs = new BindingSource<TradePair>{ DataSource = Model.Pairs.Distinct().ToArray() };
+
+			// Create the collections of pairs/time frames for which chart data is available
+			TimeFrames = new BindingSource<ETimeFrame>();
+			Pairs = new BindingSource<TradePair>();
 
 			SetupUI();
 		}
 		protected override void Dispose(bool disposing)
 		{
+			TimeFrames = null;
+			Pairs = null;
 			ChartSettings = null;
 			Instrument = null;
+			Util.Dispose(ref m_chart);
 			Util.Dispose(ref m_gfx_cache);
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
+		}
+		protected override void SetModelCore(Model model)
+		{
+			if (Model != null)
+			{
+				Model.Pairs.ListChanging -= HandlePairsListChanging;
+			}
+			base.SetModelCore(model);
+			if (Model != null)
+			{
+				Model.Pairs.ListChanging += HandlePairsListChanging;
+				HandlePairsListChanging();
+			}
+		}
+		private void HandlePairsListChanging(object sender = null, ListChgEventArgs<TradePair> e = null)
+		{
+			// Update the available pairs
+			Pairs.DataSource = Model.Pairs
+				.Where(x => x.Exchange.ChartDataAvailable(x).Any())
+				.ToArray();
 		}
 
 		/// <summary>Settings for this chart instance</summary>
 		public Settings.ChartSettings ChartSettings { get; private set; }
 
-		/// <summary>The available pairs</summary>
-		private BindingSource<TradePair> Pairs { get; set; }
+		/// <summary>The pairs with chart data available</summary>
+		private BindingSource<TradePair> Pairs
+		{
+			get { return m_pairs; }
+			set
+			{
+				if (m_pairs == value) return;
+				if (m_pairs != null)
+				{
+					m_pairs.PositionChanged -= HandleCurrentPairChanged;
+				}
+				m_pairs = value;
+				if (m_pairs != null)
+				{
+					m_pairs.PositionChanged += HandleCurrentPairChanged;
+				}
+			}
+		}
+		private BindingSource<TradePair> m_pairs;
+		private void HandleCurrentPairChanged(object sender = null, EventArgs e = null)
+		{
+			var pair = Pairs.Current;
+
+			// Update the available time frames
+			TimeFrames.DataSource = pair?.Exchange.ChartDataAvailable(pair).ToArray()
+				?? new []{ ETimeFrame.None };
+
+			// Select the data source
+			SetInstrument(pair);
+		}
+
+		/// <summary>The available time frames for the current pair</summary>
+		private BindingSource<ETimeFrame> TimeFrames
+		{
+			get { return m_time_frames; }
+			set
+			{
+				if (m_time_frames == value) return;
+				if (m_time_frames != null)
+				{
+					m_time_frames.PositionChanged -= HandleCurrentTimeFrameChanged;
+				}
+				m_time_frames = value;
+				if (m_time_frames != null)
+				{
+					m_time_frames.PositionChanged += HandleCurrentTimeFrameChanged;
+				}
+			}
+		}
+		private BindingSource<ETimeFrame> m_time_frames;
+		private void HandleCurrentTimeFrameChanged(object sender = null, PositionChgEventArgs e = null)
+		{
+			TimeFrame = TimeFrames.Current;
+		}
 
 		/// <summary>The currency pair displayed in the chart</summary>
 		private Instrument Instrument
@@ -91,7 +172,7 @@ namespace CoinFlip
 			ChartSettings = null;
 
 			// Create the new instrument
-			Instrument = new Instrument(Model, pair.Name);
+			Instrument = new Instrument(Model, pair, TimeFrame);
 
 			// Find the chart settings associated with this instrument
 			var settings = Model.Settings.Charts.FirstOrDefault(x => x.SymbolCode == pair.Name);
@@ -105,16 +186,36 @@ namespace CoinFlip
 		}
 		private Instrument m_instrument;
 
+		/// <summary>The selected time frame</summary>
+		public ETimeFrame TimeFrame
+		{
+			[DebuggerStepThrough] get { return Instrument?.TimeFrame ?? ETimeFrame.None; }
+			set
+			{
+				if (TimeFrame == value) return;
+				if (Instrument == null) return;
+				Instrument.TimeFrame = value;
+				//DockControl.TabText = ChartTitle;
+				//m_gfx_cache.Flush();
+				//ResetToDefaultRange();
+				//UpdateUI();
+			}
+		}
+
 		/// <summary>Set up UI elements</summary>
 		private void SetupUI()
 		{
 			#region Tool bar
+			
+			// Combo for choosing the pair to display
 			m_cb_pair.ToolTipText = "Select the currency pair to display";
+			m_cb_pair.ComboBox.DisplayProperty = nameof(TradePair.NameWithExchange);
 			m_cb_pair.ComboBox.DataSource = Pairs;
-			m_cb_pair.SelectedIndexChanged += (s,a) =>
-			{
-				SetInstrument((TradePair)m_cb_pair.SelectedItem);
-			};
+
+			// Combo for choosing the time frame
+			m_cb_time_frame.ToolTipText = "Select the time frame to display";
+			m_cb_time_frame.ComboBox.DataSource = TimeFrames;
+
 			#endregion
 
 			#region Chart
@@ -248,13 +349,13 @@ namespace CoinFlip
 		private System.ComponentModel.IContainer components = null;
 		private void InitializeComponent()
 		{
-			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ChartUI));
 			this.m_tsc = new pr.gui.ToolStripContainer();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
 			this.m_lbl_pair = new System.Windows.Forms.ToolStripLabel();
 			this.m_cb_pair = new pr.gui.ToolStripComboBox();
 			this.m_sep0 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_splitbtn_timeframes = new System.Windows.Forms.ToolStripSplitButton();
+			this.m_lbl_time_frame = new System.Windows.Forms.ToolStripLabel();
+			this.m_cb_time_frame = new pr.gui.ToolStripComboBox();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
 			this.m_ts.SuspendLayout();
@@ -265,7 +366,7 @@ namespace CoinFlip
 			// 
 			// m_tsc.ContentPanel
 			// 
-			this.m_tsc.ContentPanel.Size = new System.Drawing.Size(766, 712);
+			this.m_tsc.ContentPanel.Size = new System.Drawing.Size(766, 711);
 			this.m_tsc.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_tsc.Location = new System.Drawing.Point(0, 0);
 			this.m_tsc.Name = "m_tsc";
@@ -284,37 +385,49 @@ namespace CoinFlip
             this.m_lbl_pair,
             this.m_cb_pair,
             this.m_sep0,
-            this.m_splitbtn_timeframes});
+            this.m_lbl_time_frame,
+            this.m_cb_time_frame});
 			this.m_ts.Location = new System.Drawing.Point(3, 0);
 			this.m_ts.Name = "m_ts";
-			this.m_ts.Size = new System.Drawing.Size(312, 25);
+			this.m_ts.Size = new System.Drawing.Size(394, 26);
 			this.m_ts.TabIndex = 0;
 			// 
 			// m_lbl_pair
 			// 
 			this.m_lbl_pair.Name = "m_lbl_pair";
-			this.m_lbl_pair.Size = new System.Drawing.Size(30, 22);
+			this.m_lbl_pair.Size = new System.Drawing.Size(30, 23);
 			this.m_lbl_pair.Text = "Pair:";
 			// 
 			// m_cb_pair
 			// 
 			this.m_cb_pair.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+			this.m_cb_pair.FlatStyle = System.Windows.Forms.FlatStyle.Standard;
 			this.m_cb_pair.Name = "m_cb_pair";
-			this.m_cb_pair.Size = new System.Drawing.Size(121, 25);
+			this.m_cb_pair.SelectedIndex = -1;
+			this.m_cb_pair.SelectedItem = null;
+			this.m_cb_pair.SelectedText = "";
+			this.m_cb_pair.Size = new System.Drawing.Size(121, 23);
 			// 
 			// m_sep0
 			// 
 			this.m_sep0.Name = "m_sep0";
-			this.m_sep0.Size = new System.Drawing.Size(6, 25);
+			this.m_sep0.Size = new System.Drawing.Size(6, 26);
 			// 
-			// m_splitbtn_timeframes
+			// m_lbl_time_frame
 			// 
-			this.m_splitbtn_timeframes.Image = ((System.Drawing.Image)(resources.GetObject("m_splitbtn_timeframes.Image")));
-			this.m_splitbtn_timeframes.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_splitbtn_timeframes.Name = "m_splitbtn_timeframes";
-			this.m_splitbtn_timeframes.Size = new System.Drawing.Size(141, 22);
-			this.m_splitbtn_timeframes.Text = "Select Time Frames";
-			this.m_splitbtn_timeframes.ToolTipText = "Select Time Frames\r\nShift-Click to insert a tool bar button\r\n";
+			this.m_lbl_time_frame.Name = "m_lbl_time_frame";
+			this.m_lbl_time_frame.Size = new System.Drawing.Size(73, 23);
+			this.m_lbl_time_frame.Text = "Time Frame:";
+			// 
+			// m_cb_time_frame
+			// 
+			this.m_cb_time_frame.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+			this.m_cb_time_frame.FlatStyle = System.Windows.Forms.FlatStyle.Standard;
+			this.m_cb_time_frame.Name = "m_cb_time_frame";
+			this.m_cb_time_frame.SelectedIndex = -1;
+			this.m_cb_time_frame.SelectedItem = null;
+			this.m_cb_time_frame.SelectedText = "";
+			this.m_cb_time_frame.Size = new System.Drawing.Size(121, 23);
 			// 
 			// ChartUI
 			// 

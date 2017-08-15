@@ -559,35 +559,57 @@ namespace CoinFlip
 									? Pair0.BaseToQuote(Trade0.VolumeIn)
 									: Pair0.QuoteToBase(Trade0.VolumeIn);
 
+								// Find the current price that we could fill Trade1 at
+								var current_best_price = Trade1.TradeType == ETradeType.B2Q
+									? Pair1.BaseToQuote(Trade1.VolumeIn).PriceQ2B
+									: Pair1.QuoteToBase(Trade1.VolumeIn).PriceQ2B;
+
 								// Determine the price to reference price ratio.
-								var ratio = Maths.Div(Math.Abs(Trade0.PriceQ2B - pos.Price), (decimal)Trade0.PriceQ2B, 0m);
+								var sign = pos.TradeType == ETradeType.B2Q ? +1 : -1;
+								var fishing_ratio = sign * Maths.Div((decimal)(         pos.Price - Trade0.PriceQ2B), (decimal)Trade0.PriceQ2B, 0m);
+								var current_ratio = sign * Maths.Div((decimal)(current_best_price - Trade0.PriceQ2B), (decimal)Trade0.PriceQ2B, 0m);
 								var validation0 = Trade0.Validate(m_balance_hold);
 
-								// If the bait trade price is too close to the reference price, cancel it and create it again
-								if (ratio <= PriceOffset)
+								// If an update fails, and Trade0.PriceQ2B becomes zero, because the order books are empty, abort
+								if (Trade0.Price == 0m)
 								{
-									Log.Write(ELogLevel.Info, $"Bait order (id={BaitId}) on {Exch1.Name} price is too close to the reference price: {pos.Price.ToString("G6")} vs {Trade0.PriceQ2B.ToString("G6")} ({100*ratio:G6}%)");
-									Result = EResult.Taken;
+									Log.Write(ELogLevel.Info, $"Match order price is zero, probably due to an update failure. Aborting fishing trade");
+									Result = EResult.Cancel;
 								}
+
+								// If the bait trade price is too close to the reference price, cancel it and create it again
+								else if (fishing_ratio <= PriceOffset)
+								{
+									Log.Write(ELogLevel.Info, $"Bait order (id={BaitId}) on {Exch1.Name} price is too close to the reference price: {pos.Price.ToString("G6")} vs {Trade0.PriceQ2B.ToString("G6")} ({100*fishing_ratio:G6}%)");
+									Result = EResult.Cancel;
+								}
+
 								// If the bait trade price is too far away from the reference price,
 								// and a long way down the order book, cancel it.
-								else if (ratio > 2 * PriceOffset)
+								else if (fishing_ratio > 2 * PriceOffset)
 								{
 									// A B2Q trade means we need someone else to trade Q2B. Q2B.Orders are the currently offered Q2B trades.
 									// We need to look at what is being offered for Q2B to see where the bait price fits in.
 									var idx = Trade1.OrderBookIndex;
 									if (idx >= 10)
 									{
-										Log.Write(ELogLevel.Info, $"Bait order (id={BaitId}) on {Exch1.Name} price is too far from the reference price: {pos.Price.ToString("G6")} vs {Trade0.PriceQ2B.ToString("G6")}, order book index: {idx} ({100*ratio:G6}%)");
-										Result = EResult.Taken;
+										Log.Write(ELogLevel.Info, $"Bait order (id={BaitId}) on {Exch1.Name} price is too far from the reference price: {pos.Price.ToString("G6")} vs {Trade0.PriceQ2B.ToString("G6")}, order book index: {idx} ({100*fishing_ratio:G6}%)");
+										Result = EResult.Cancel;
 									}
 								}
+
 								// If, for some reason, the matching trade is no longer valid (e.g. lack of funds)
 								// cancel the bait trade, because we won't be able to match it.
 								else if (validation0 != Trade.EValidation.Valid)
 								{
 									Log.Write(ELogLevel.Info, $"Bait order (id={BaitId}) on {Exch1.Name} can not be matched on {Exch0.Name}: {validation0} ({Trade0.Description})");
 									Result = EResult.Cancel;
+								}
+
+								// If the profit ratio for the current price is above the minimum, take the win
+								if (current_ratio > PriceOffset)
+								{
+									Log.Write(ELogLevel.Debug, $"Could fill at {current_best_price}, ratio {current_ratio}");
 								}
 							}
 
@@ -605,6 +627,7 @@ namespace CoinFlip
 							}
 							BaitId = 0;
 
+							// Match any partial trade that may have occurred
 							if (MatchVolumeFrac == 0m)
 							{
 								// No partial trade to match

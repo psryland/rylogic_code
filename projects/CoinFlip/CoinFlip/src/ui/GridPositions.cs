@@ -67,7 +67,7 @@ namespace CoinFlip
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				Name = nameof(ColumnNames.PriceDist),
-				HeaderText = "Distance",
+				HeaderText = "Distance (Index)",
 				DataPropertyName = nameof(ColumnNames.PriceDist),
 				SortMode = DataGridViewColumnSortMode.NotSortable,
 				FillWeight = 1.0f,
@@ -143,10 +143,11 @@ namespace CoinFlip
 				}
 			case nameof(ColumnNames.PriceDist):
 				{
-					a.Value = "{0:G8}".Fmt(
+					a.Value = "{0:G8} ({1})".Fmt(
 						pos.TradeType == ETradeType.B2Q ? (decimal)(pos.Price - pos.Pair.CurrentPrice(ETradeType.B2Q)) :
 						pos.TradeType == ETradeType.Q2B ? (decimal)(pos.Pair.CurrentPrice(ETradeType.Q2B) - pos.Price) :
-						0m);
+						0m,
+						pos.Pair.OrderBookIndex(pos.TradeType, pos.Price));
 					a.FormattingApplied = true;
 					break;
 				}

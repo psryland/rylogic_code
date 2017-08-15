@@ -234,6 +234,7 @@ namespace CoinFlip
 			{
 				if (m_allow_trades == value) return;
 				m_allow_trades = value;
+				ResetFakeCash();
 				AllowTradesChanged.Raise(this);
 			}
 		}
@@ -579,12 +580,19 @@ namespace CoinFlip
 			{
 				foreach (var pos in exch.Positions.Values.Where(x => x.Fake).ToArray())
 				{
-					if (pos.TradeType == ETradeType.B2Q && pos.Pair.QuoteToBase(pos.VolumeQuote).PriceQ2B > pos.Price)
+					if (pos.TradeType == ETradeType.B2Q && pos.Pair.QuoteToBase(pos.VolumeQuote).PriceQ2B > pos.Price * 1.00000000000001m)
 						await pos.FillFakeOrder();
-					if (pos.TradeType == ETradeType.Q2B && pos.Pair.BaseToQuote(pos.VolumeBase).PriceQ2B < pos.Price)
+					if (pos.TradeType == ETradeType.Q2B && pos.Pair.BaseToQuote(pos.VolumeBase).PriceQ2B < pos.Price * 0.999999999999999m)
 						await pos.FillFakeOrder();
 				}
 			}
+		}
+
+		/// <summary>Remove the fake cash from all exchange balances</summary>
+		private void ResetFakeCash()
+		{
+			foreach (var bal in Exchanges.SelectMany(x => x.Balance.Values))
+				bal.FakeCash.Clear();
 		}
 
 		/// <summary>Find the maximum price for the given currency on the available exchanges</summary>

@@ -487,8 +487,10 @@ namespace CoinFlip
 					Debug.Assert(m_exch.Model.AssertMarketDataWrite());
 					if (coin.Exchange != m_exch && !(m_exch is CrossExchange)) throw new Exception("Currency not associated with this exchange");
 					if (TryGetValue(coin, out var bal) && bal.TimeStamp > value.TimeStamp) return; // Ignore out of date data
-					if (bal != null) foreach (var hold in bal.Holds.Where(x => x.StillNeeded(value))) value.Holds.Add(hold); // Transfer the 'holds' to 'value'
-					base[coin] = value;
+					if (bal != null)
+						bal.Update(value);
+					else
+						base[coin] = value;
 				}
 			}
 			public Balance Get(string sym)
@@ -711,7 +713,8 @@ namespace CoinFlip
 		/// <summary>Cancel an existing position</summary>
 		public async Task CancelOrder(TradePair pair, ulong order_id)
 		{
-			if (Model.AllowTrades) // Obey the global trade switch
+			// Obey the global trade switch
+			if (Model.AllowTrades)
 				await CancelOrderInternal(pair, order_id);
 
 			// Remove the position from the Positions collection so that there is no race condition
@@ -730,6 +733,22 @@ namespace CoinFlip
 			// then use 'RunOnGuiThread' to copy data to the Exchange's main collections.
 			Model.RunOnGuiThread(() => { }, block:true);
 			return Misc.CompletedTask;
+		}
+
+		/// <summary>Returns the time frames for which chart data is available for 'pair'</summary>
+		public virtual IEnumerable<ETimeFrame> ChartDataAvailable(TradePair pair)
+		{
+			yield break;
+		}
+
+		/// <summary>Return the chart data for a given pair, over a given time range</summary>
+		public async Task<List<Candle>> ChartData(TradePair pair, ETimeFrame timeframe, DateTimeOffset beg, DateTimeOffset end)
+		{
+			return await ChartDataInternal(pair, timeframe, beg, end);
+		}
+		protected virtual Task<List<Candle>> ChartDataInternal(TradePair pair, ETimeFrame timeframe, DateTimeOffset beg, DateTimeOffset end)
+		{
+			return Task.FromResult(new List<Candle>());
 		}
 
 		/// <summary>Update the market data, balances, and open positions</summary>

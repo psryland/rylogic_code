@@ -21,6 +21,8 @@ namespace Poloniex.API
 	/// <summary>Represents a time frame of a market.</summary>
 	public enum MarketPeriod
 	{
+		None = 0,
+
 		/// <summary>A time interval of 5 minutes.</summary>
 		Minutes5 = 300,
 
@@ -52,7 +54,7 @@ namespace Poloniex.API
 		/// <summary>Convert a timestamp to Unix time</summary>
 		public static ulong ToUnixTime(DateTimeOffset dt)
 		{
-			return (ulong)Math.Floor(dt.Subtract(UnixEpochStart).TotalSeconds);
+			return (ulong)Math.Max(0, Math.Floor(dt.Subtract(UnixEpochStart).TotalSeconds));
 		}
 
 		/// <summary>Convert a Unix time to a date time offset</summary>

@@ -65,7 +65,7 @@ namespace CoinFlip
 		/// <summary>The quote currency</summary>
 		public Coin Quote
 		{
-			get { return m_quote; }
+			[DebuggerStepThrough] get { return m_quote; }
 			private set
 			{
 				if (m_quote == value) return;
@@ -85,7 +85,7 @@ namespace CoinFlip
 		/// <summary>The base currency</summary>
 		public Coin Base
 		{
-			get { return m_base; }
+			[DebuggerStepThrough] get { return m_base; }
 			private set
 			{
 				if (m_base == value) return;
