@@ -3789,6 +3789,7 @@ namespace pr.db
 namespace pr.unittests
 {
 	using System.IO;
+	using System.Text.RegularExpressions;
 	using db;
 
 	[TestFixture] public class TestSqlite3
@@ -4126,7 +4127,8 @@ namespace pr.unittests
 
 		[TestFixtureSetUp] public void Setup()
 		{
-			Sqlite.LoadDll(@"p:\sdk\sqlite\lib\$(platform)\$(config)");
+			var dir = Directory.GetCurrentDirectory();
+			Sqlite.LoadDll(Regex.Replace(dir, @"^(.*\\pr\\).*", @"$1sdk\sqlite\lib\$(platform)\$(config)"));
 
 			// Register custom type bind/read methods
 			Sqlite.Bind.FunctionMap.Add(typeof(Custom), Custom.SqliteBind);

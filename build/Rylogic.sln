@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.16
+VisualStudioVersion = 15.0.26730.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "script", "script", "{35F27363-2AFF-455F-A38F-9FE3452EC620}"
 	ProjectSection(SolutionItems) = preProject
@@ -29,6 +29,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "renderer11", "renderer11.vc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RyLogViewer", "..\projects\RyLogViewer\RyLogViewer.csproj", "{6446F4F8-F2D3-4FA2-9CED-43F917B0B233}"
 	ProjectSection(ProjectDependencies) = postProject
+		{7F52A774-6015-43DA-AD5B-A3289EDD6690} = {7F52A774-6015-43DA-AD5B-A3289EDD6690}
 		{C054B079-AC66-4C7E-A201-D57E32FB4F89} = {C054B079-AC66-4C7E-A201-D57E32FB4F89}
 	EndProjectSection
 EndProject
@@ -58,6 +59,11 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic.VSExtension", "..\projects\Rylogic.VSExtension\Rylogic.VSExtension.csproj", "{852C66A1-A9AA-4BD9-A762-C94B61838F96}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestCS", "..\projects\TestCS\TestCS.csproj", "{9B271143-7D07-4E5F-85F7-0F0F1D8F4BF5}"
+	ProjectSection(ProjectDependencies) = postProject
+		{F4A1B209-47CA-4F5D-A80E-87004C91D52E} = {F4A1B209-47CA-4F5D-A80E-87004C91D52E}
+		{599D9118-2445-476A-9877-060417FE5FA5} = {599D9118-2445-476A-9877-060417FE5FA5}
+		{363D015B-B545-4623-A5CE-61245C9BF1F8} = {363D015B-B545-4623-A5CE-61245C9BF1F8}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "imagern", "imagern.vcxproj", "{D84F8457-9E20-477A-8594-D0384FB62FA5}"
 EndProject
@@ -499,5 +505,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7DD34DBC-7EE6-40E2-8641-CDA6D05E7838}
 	EndGlobalSection
 EndGlobal

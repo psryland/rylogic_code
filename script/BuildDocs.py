@@ -1,7 +1,7 @@
 ﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os, sys, imp, re
-sys.path.append(re.sub(r"(\w:[\\/]).*", r"\1script", __file__))
+sys.path.append(re.sub(r"^(.*\\pr\\).*", r"\1script", sys.path[0]))
 import Rylogic as Tools
 import HtmlExpand
 import UserVars

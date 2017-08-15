@@ -3,7 +3,7 @@
 # Use:
 #  post_build.py $(ProjectDir) $(TargetDir) $(ConfigurationName)
 import sys, os, shutil, re
-sys.path.append(re.sub(r"^(.:[\\/]).*", r"\1script", sys.path[0]))
+sys.path.append(re.sub(r"^(.*\\pr\\).*", r"\1script", sys.path[0]))
 import Rylogic as Tools
 import UserVars
 import BuildDocs

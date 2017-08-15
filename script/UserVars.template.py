@@ -19,7 +19,7 @@ machine = "Rylogic"
 arch = "x64"
 
 # Location of the root for the code library (i.e. the directory containing build, include, projects, etc) (No trailing '\')
-root = "P:"
+root = "P:\\pr"
 wwwroot = "Z:\\WWW\\rylogic.co.nz"
 
 # The full path to the windows sdk

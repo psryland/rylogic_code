@@ -3,7 +3,7 @@
 # pre_build.py $(TargetPath) $(PlatformTarget) $(ConfigurationName)
 
 import sys, os, shutil, re
-sys.path.append(os.path.realpath(os.path.dirname(__file__) + "\\..\\..\\script"))
+sys.path.append(re.sub(r"^(.*\\pr\\).*", r"\1script", sys.path[0]))
 import Rylogic as Tools
 import UserVars
 

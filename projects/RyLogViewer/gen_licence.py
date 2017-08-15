@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*- 
 import sys, os
 import xml.etree.ElementTree as xml
-sys.path.append(os.path.realpath(os.path.dirname(__file__) + "\\..\\..\\script"))
+sys.path.append(re.sub(r"^(.*\\pr\\).*", r"\1script", sys.path[0]))
 import Rylogic as Tools
 import UserVars
 

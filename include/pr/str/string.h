@@ -1521,7 +1521,7 @@ namespace pr
 	};
 }
 
-// Specialise std types for pr::string
+// Specialise std:: types for pr::string
 namespace std
 {
 	// Specialise hash functor for pr::string
@@ -1530,10 +1530,15 @@ namespace std
 	{
 		typedef pr::string<T,L,F,A> _Kty;
 
-		// hash 'key' to a size_t value by pseudorandomizing transform
+		// hash 'key' to a size_t value by pseudo-randomizing transform
 		size_t operator()(_Kty const& key) const
 		{
-			return _Hash_seq(reinterpret_cast<unsigned char const *>(key.c_str()), key.size() * sizeof(_Kty::value_type));
+			auto hash = size_t{0};
+			const size_t prime = 31;
+			for (auto c : key)
+				hash = size_t(c) + hash * prime;
+
+			return hash;
 		}
 	};
 }

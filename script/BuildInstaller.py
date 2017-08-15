@@ -31,7 +31,7 @@
 import sys, os, re, string, uuid, tempfile
 import xml.etree.ElementTree as xml
 import xml.dom.minidom as minidom
-sys.path.append(re.sub(r"(\w:[\\/]).*", r"\1script", __file__))
+sys.path.append(re.sub(r"^(.*\\pr\\).*", r"\1script", sys.path[0]))
 import Rylogic as Tools
 import UserVars
 

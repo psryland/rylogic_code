@@ -3,7 +3,7 @@
 # Use:
 #  post_build.py $(ProjectDir) $(TargetDir) $(ConfigurationName)
 import sys, os, shutil, re
-sys.path.append(re.sub(r"^(.:[\\/]).*", r"\1script", sys.path[0]))
+sys.path.append(re.sub(r"^(.*\\pr\\).*", r"\1script", sys.path[0]))
 import Rylogic as Tools
 import UserVars
 import BuildDocs
@@ -46,6 +46,7 @@ try:
 	#todo replace this with proper windows signing, and investigate buying a Cert
 	#signtool = UserVars.winsdk + "\\bin\\signtool.exe"
 	#Tools.Exec([])
+	Tools.AssertPath(UserVars.csex)
 	Tools.Exec([UserVars.csex, "-signfile", "-f", targetdir+"\\RyLogViewer.exe", "-pk", projdir+"\\src\\licence\\private_key.xml"])
 
 except Exception as ex:

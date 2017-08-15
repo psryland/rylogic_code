@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*- 
 # deploy.py [nowait]
 import sys, os, shutil, re
-sys.path.append(os.path.splitdrive(os.path.realpath(__file__))[0] + r"\script")
+sys.path.append(re.sub(r"^(.*\\pr\\).*", r"\1script", sys.path[0]))
 import Rylogic as Tools
 import UserVars
 

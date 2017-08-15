@@ -4,8 +4,8 @@
 # Execute unit tests
 # Use:
 #   run_tests $(TargetPath)
-import sys, os
-sys.path.append(os.path.realpath(os.path.dirname(__file__) + "\\..\\..\\script"))
+import sys, os, re
+sys.path.append(re.sub(r"^(.*\\pr\\).*", r"\1script", sys.path[0]))
 import Rylogic as Tools
 import UserVars
 

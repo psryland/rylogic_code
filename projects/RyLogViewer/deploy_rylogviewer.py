@@ -6,7 +6,7 @@
 # If projects have moved/changed/etc they'll need sorting in this solution
 
 import sys, os, shutil, re
-sys.path.append(re.sub(r"(\w:[\\/]).*", r"\1script", __file__))
+sys.path.append(re.sub(r"^(.*\\pr\\).*", r"\1script", sys.path[0]))
 import Rylogic as Tools
 import UserVars
 import BuildInstaller

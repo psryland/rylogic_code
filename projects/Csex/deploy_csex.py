@@ -1,7 +1,7 @@
 ﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 import os, sys, imp, re, subprocess, shutil
-sys.path.append(os.path.realpath(os.path.dirname(__file__) + "\\..\\..\\script"))
+sys.path.append(re.sub(r"^(.*\\pr\\).*", r"\1script", sys.path[0]))
 import Rylogic as Tools
 import UserVars
 
@@ -32,7 +32,7 @@ try:
 
 	#Invoke MSBuild
 	print("Building the exe...")
-	Tools.Exec([UserVars.msbuild, UserVars.msbuild_props, proj, "/t:Rebuild", "/p:Configuration="+config+";Platform=AnyCPU"])
+	Tools.Exec([UserVars.msbuild, proj, "/t:Rebuild", "/p:Configuration="+config+";Platform=AnyCPU"])
 
 	#Ensure directories exist and are empty
 	if os.path.exists(dst): shutil.rmtree(dst)
