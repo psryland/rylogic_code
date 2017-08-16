@@ -47,7 +47,8 @@ namespace pr.unittests
 						try { inst = Activator.CreateInstance(fixture); }
 						catch (Exception ex)
 						{
-							outp.WriteLine("{0} - Failed to create an instance of test fixture\n{1}".Fmt(fixture.Name, ex.MessageFull()));
+							if (ex is TargetInvocationException) ex = ex.InnerException;
+							outp.WriteLine($"{fixture.Name} - Failed to create an instance of test fixture\n{ex.MessageFull()}\n{ex.StackTrace}");
 							outp.Flush();
 							++failed;
 							continue;
@@ -61,7 +62,8 @@ namespace pr.unittests
 						}
 						catch (Exception ex)
 						{
-							outp.WriteLine("{0} - Test fixture set up function threw\n{1}".Fmt(fixture.Name, ex.MessageFull()));
+							if (ex is TargetInvocationException) ex = ex.InnerException;
+							outp.WriteLine($"{fixture.Name} - Test fixture set up function threw\n{ex.MessageFull()}\n{ex.StackTrace}");
 							outp.Flush();
 							++failed;
 							continue;
@@ -93,7 +95,7 @@ namespace pr.unittests
 							catch (Exception ex)
 							{
 								if (ex is TargetInvocationException) ex = ex.InnerException;
-								outp.WriteLine("\r\nTest {0} Failed\r\n{1}\r\n{2}".Fmt(test.Name, ex.MessageFull(), ex.StackTrace));
+								outp.WriteLine($"\r\nTest {test.Name} Failed\n{ex.MessageFull()}\n{ex.StackTrace}");
 								outp.Flush();
 								++failed;
 							}
@@ -107,7 +109,8 @@ namespace pr.unittests
 						}
 						catch (Exception ex)
 						{
-							outp.WriteLine("{0} - Test fixture clean up function threw\n{1}".Fmt(fixture.Name, ex.MessageFull()));
+							if (ex is TargetInvocationException) ex = ex.InnerException;
+							outp.WriteLine($"{fixture.Name} - Test fixture clean up function threw\n{ex.MessageFull()}\n{ex.StackTrace}");
 							outp.Flush();
 							++failed;
 							continue;

@@ -162,7 +162,6 @@ namespace pr.gui
 		protected override void Dispose(bool disposing)
 		{
 			using (this.SuspendLayout(false))
-			//using (this.SuspendRedraw(false))
 			{
 				if (Options.DisposeContent)
 					using (this.SuspendLayout(false))
@@ -2761,8 +2760,6 @@ namespace pr.gui
 						m_impl_pane.Content.Add(this);
 					}
 					PaneChanged.Raise(this);
-					if (m_impl_pane == null)
-						Closed.Raise(this);
 				}
 			}
 			private DockPane m_impl_pane;
@@ -3130,7 +3127,11 @@ namespace pr.gui
 				using (cmenu.SuspendLayout(true))
 				{
 					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Close"));
-					opt.Click += (s,a) => DockPane = null;
+					opt.Click += (s,a) =>
+					{
+						DockPane = null;
+						Closed.Raise(this);
+					};
 				}
 				return cmenu;
 			}

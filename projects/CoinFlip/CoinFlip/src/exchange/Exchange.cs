@@ -742,11 +742,11 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the chart data for a given pair, over a given time range</summary>
-		public async Task<List<Candle>> ChartData(TradePair pair, ETimeFrame timeframe, DateTimeOffset beg, DateTimeOffset end)
+		public async Task<List<Candle>> ChartData(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end)
 		{
-			return await ChartDataInternal(pair, timeframe, beg, end);
+			return await ChartDataInternal(pair, timeframe, time_beg, time_end);
 		}
-		protected virtual Task<List<Candle>> ChartDataInternal(TradePair pair, ETimeFrame timeframe, DateTimeOffset beg, DateTimeOffset end)
+		protected virtual Task<List<Candle>> ChartDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end)
 		{
 			return Task.FromResult(new List<Candle>());
 		}

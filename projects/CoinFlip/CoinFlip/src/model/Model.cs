@@ -12,6 +12,7 @@ using System.Windows.Threading;
 using pr.common;
 using pr.container;
 using pr.extn;
+using pr.gui;
 using pr.maths;
 using pr.util;
 
@@ -85,8 +86,11 @@ namespace CoinFlip
 		public virtual void Dispose()
 		{
 			// Main loops needs to have shutdown before here
-			Debug.Assert(ShutdownToken.IsCancellationRequested);
-			Debug.Assert(!Running);
+			if (!ShutdownToken.IsCancellationRequested)
+				throw new Exception("Disposing before ShutdownAsync has completed");
+			if (Running)
+				throw new Exception("Disposing while process loops are still running");
+
 			Loops = null;
 			Fishing = null;
 			Positions = null;
@@ -241,6 +245,18 @@ namespace CoinFlip
 		public event EventHandler AllowTradesChanged;
 		private bool m_allow_trades;
 
+		/// <summary>True while back testing</summary>
+		public bool BackTesting
+		{
+			get { return m_back_testing; }
+			set
+			{
+				if (m_back_testing == value) return;
+				m_back_testing = value;
+			}
+		}
+		private bool m_back_testing;
+
 		/// <summary>Start/Stop finding loops</summary>
 		public bool RunLoopFinder
 		{
@@ -261,7 +277,7 @@ namespace CoinFlip
 			get
 			{
 				var worth = 0m;
-				foreach (var exch in Exchanges.Except(CrossExchange))
+				foreach (var exch in TradingExchanges)
 				{
 					foreach (var bal in exch.Balance.Values)
 						worth += bal.Coin.Value(bal.Total);
@@ -276,7 +292,7 @@ namespace CoinFlip
 			get
 			{
 				var sum = 0m;
-				foreach (var exch in Exchanges.Except(CrossExchange))
+				foreach (var exch in TradingExchanges)
 				{
 					foreach (var bal in exch.Balance.Values)
 					{
@@ -292,7 +308,7 @@ namespace CoinFlip
 		public decimal SumOfTotal(string sym)
 		{
 			var sum = 0m;
-			foreach (var exch in Exchanges.Except(CrossExchange))
+			foreach (var exch in TradingExchanges)
 			{
 				var coin = exch.Coins[sym];
 				sum += coin?.Balance.Total ?? 0;
@@ -304,7 +320,7 @@ namespace CoinFlip
 		public decimal SumOfAvailable(string sym)
 		{
 			var sum = 0m;
-			foreach (var exch in Exchanges.Except(CrossExchange))
+			foreach (var exch in TradingExchanges)
 			{
 				var coin = exch.Coins[sym];
 				sum += coin?.Balance.Available ?? 0;
@@ -312,11 +328,14 @@ namespace CoinFlip
 			return sum;
 		}
 
+		/// <summary>"Real" exchanges</summary>
+		public IEnumerable<Exchange> TradingExchanges
+		{
+			get { return Exchanges.Except(CrossExchange); }
+		}
+
 		/// <summary>The special case cross exchange</summary>
 		public CrossExchange CrossExchange { get; private set; }
-
-		/// <summary>Debugging flag for detecting misuse of the market data</summary>
-		internal bool MarketDataLocked { get; private set; }
 
 		/// <summary>Meta data for the known coins</summary>
 		public CoinDataTable Coins { [DebuggerStepThrough] get; private set; }
@@ -505,6 +524,9 @@ namespace CoinFlip
 		/// <summary>Pending market data updates awaiting integration at the right time</summary>
 		public BlockingCollection<Action> MarketUpdates { get; private set; }
 
+		/// <summary>Debugging flag for detecting misuse of the market data</summary>
+		internal bool MarketDataLocked { get; private set; }
+
 		/// <summary>Process any pending market data updates</summary>
 		private void IntegrateMarketUpdates()
 		{
@@ -554,7 +576,7 @@ namespace CoinFlip
 				var coi = Coins.Where(x => x.OfInterest).ToHashSet(x => x.Symbol);
 
 				// Get each exchange to update it's available pairs/coins
-				await Task.WhenAll(Exchanges.Except(CrossExchange).Where(x => x.Active).Select(x => x.UpdatePairs(coi)));
+				await Task.WhenAll(TradingExchanges.Where(x => x.Active).Select(x => x.UpdatePairs(coi)));
 				if (CrossExchange.Active) await CrossExchange.UpdatePairs(coi);
 				IntegrateMarketUpdates();
 
@@ -599,7 +621,7 @@ namespace CoinFlip
 		public decimal MaxLiveValue(string sym)
 		{
 			var value = 0m._(sym);
-			foreach (var exch in Exchanges.Except(CrossExchange))
+			foreach (var exch in TradingExchanges)
 			{
 				var coin = exch.Coins[sym];
 				if (coin == null) continue;
@@ -655,6 +677,11 @@ namespace CoinFlip
 		{
 			try
 			{
+				var pair = Pairs.FirstOrDefault(x => x.Name == "BTC/USDT");
+				using (var dlg = new MsgBox())
+				using (var instr = new Instrument(this, pair, ETimeFrame.Min30))
+					dlg.ShowDialog(UI);
+
 				await Misc.CompletedTask;
 			}
 			catch (Exception ex)

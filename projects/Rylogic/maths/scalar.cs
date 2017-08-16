@@ -42,6 +42,26 @@ namespace pr.maths
 		public const double InvRoot2  = 1.0 / 1.4142135623730950488016887242097;
 		public const double InvRoot3  = 1.0 / 1.7320508075688772935274463415059;
 
+		public const float PhiF       = (float)Phi;
+		public const float TauF       = (float)Tau;
+		public const float InvTauF    = (float)InvTau;
+		public const float TauBy2F    = (float)TauBy2;
+		public const float TauBy3F    = (float)TauBy3;
+		public const float TauBy4F    = (float)TauBy4;
+		public const float TauBy5F    = (float)TauBy5;
+		public const float TauBy6F    = (float)TauBy6;
+		public const float TauBy7F    = (float)TauBy7;
+		public const float TauBy8F    = (float)TauBy8;
+		public const float TauBy10F   = (float)TauBy10;
+		public const float TauBy16F   = (float)TauBy16;
+		public const float TauBy32F   = (float)TauBy32;
+		public const float TauBy360F  = (float)TauBy360;
+		public const float _360ByTauF = (float)_360ByTau;
+		public const float Root2F     = (float)Root2;
+		public const float Root3F     = (float)Root3;
+		public const float InvRoot2F  = (float)InvRoot2;
+		public const float InvRoot3F  = (float)InvRoot3;
+
 		public static bool      IsFinite(float x)                               { return !float.IsInfinity(x) && !float.IsNaN(x); }
 		public static bool      IsFinite(double x)                              { return !double.IsInfinity(x) && !double.IsNaN(x); }
 		public static int       SignI(bool positive)                            { return positive ? 1 : -1; }

@@ -37,8 +37,10 @@ try:
 	#  separate projects with ';'
 	#  the ':Rebuild' is optional after the project name
 	#  projects with dots in the name should have the dots replaced with underscores
-	print("Building the exe...")
-	Tools.Exec([UserVars.msbuild, UserVars.msbuild_props, sln_or_proj, "/t:MyProject", "/p:Configuration="+config+";Platform="+platform, "/m", "/verbosity:minimal", "/nologo"])
+	print("Building...")
+	Tools.MSBuild(sln, ["proj1", "proj2",], ["x86","x64"], ["release"], False, True)
+	Tools.MSBuild(sln, ["proj3"], ["Any CPU"], ["release"], False, True)
+	Tools.Exec([UserVars.msbuild, sln_or_proj, "/t:MyProject", "/p:Configuration="+config+";Platform="+platform, "/m", "/verbosity:minimal", "/nologo"])
 
 	#Ensure directories exist and are empty
 	Tools.ShellDelete(dst)

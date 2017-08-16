@@ -21,14 +21,13 @@ def DeployLib(targetpath:str, platform:str, config:str, dstdir:str=""):
 	Tools.AssertVersion(1)
 	Tools.AssertPathsExist([UserVars.root])
 
-	dstdir = dstdir if dstdir != "" else UserVars.root + "\\lib"
 	if platform.lower() == "win32": platform = "x86"
+	dstdir = dstdir.lower().rstrip("/\\") if dstdir != "" else UserVars.root + "\\lib"
 
 	targetpath  = os.path.abspath(targetpath) # don't change the filename case
 	platform    = platform.lower()
 	config      = config.lower()
-	dstdir      = dstdir.lower().rstrip("/\\") + "\\" + platform + "\\" + config
-	symdir      = UserVars.root + "\\local\\symbols\\" + platform + "\\" + config
+	dstdir      = dstdir + "\\" + platform + "\\" + config
 	srcdir,file = os.path.split(targetpath)
 	fname,extn  = os.path.splitext(file)
 
@@ -37,12 +36,6 @@ def DeployLib(targetpath:str, platform:str, config:str, dstdir:str=""):
 
 	# Copy the library file to the lib folder
 	Tools.Copy(targetpath, dstfname + extn)
-
-	# If there's an associated PDB file copy that too
-	if os.path.exists(srcfname + ".pdb"):
-		Tools.Copy(srcfname + ".pdb", dstfname + ".pdb")
-		if not os.path.exists(symdir): os.makedirs(symdir)
-		Tools.Copy(srcfname + ".pdb", symdir)
 
 	# If the lib is a dll, look for an import library and copy that too, if it exists
 	if extn == ".dll":

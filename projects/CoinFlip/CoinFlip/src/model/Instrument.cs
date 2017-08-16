@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using pr.common;
 using pr.db;
 using pr.extn;
+using pr.maths;
 using pr.util;
 
 namespace CoinFlip
@@ -174,10 +175,10 @@ namespace CoinFlip
 		}
 		private int? m_impl_count;
 
-		/// <summary>The total number of data points in the cache.</summary>
-		private int Total
+		/// <summary>The total number of candles in the database.</summary>
+		private int DBCandleCount
 		{
-			// This is different to Count when the simulation time is less than the current time.
+			// This is different to 'Count' when the simulation time is less than the current time.
 			// It allows finding the index of the last candle < Model.UtcNow
 			get { return m_impl_total ?? (m_impl_total = m_db.ExecuteScalar(Str.Build("select count(*) from ",TimeFrame))).Value; }
 		}
@@ -242,6 +243,8 @@ namespace CoinFlip
 				// Shift the cached range if needed
 				if (!m_index_range.Contains(idx))
 				{
+					m_cache.Clear();
+
 					// Reload the cache centred on the requested index
 					var new_range = new Range((long)idx - CacheSize/2, (long)idx + CacheSize/2);
 					if (new_range.Beg <     0) new_range = new_range.Shift(0     - new_range.Beg);
@@ -272,6 +275,93 @@ namespace CoinFlip
 			get { return TimeZone.CurrentTimeZone.ToLocalTime(LastUpdatedUTC.DateTime); }
 		}
 
+		/// <summary>Raised whenever candles are added/modified in this instrument</summary>
+		public event EventHandler<DataEventArgs> DataChanged;
+		protected virtual void OnDataChanged(DataEventArgs args)
+		{
+			DataChanged.Raise(this, args);
+		}
+
+		#region Price Data
+
+		/// <summary>The current spot price for Quote to Base trades</summary>
+		public double Q2BPrice
+		{
+			get { return (double)(decimal)Pair.QuoteToBase(0m._(Pair.Quote)).PriceQ2B; }
+		}
+
+		/// <summary>The current spot price for Base to Quote trades</summary>
+		public double B2QPrice
+		{
+			get { return (double)(decimal)Pair.BaseToQuote(0m._(Pair.Base)).PriceQ2B; }
+		}
+
+		/// <summary>Get all positions on this instruction</summary>
+		public IEnumerable<Position> AllPositions
+		{
+			get { return Model.TradingExchanges.SelectMany(x => x.Positions.Values).Where(x => x.Pair.Name == Pair.Name); }
+		}
+
+
+		#endregion
+
+		#region Ranges and Indexing
+
+		/// <summary>Return the index of the candle at or immediately before 'time_stamp'</summary>
+		public int IndexAt(TimeFrameTime time_stamp)
+		{
+			var ticks = time_stamp.ExactTicks;
+
+			// If the time stamp is within the cached range, binary search the cache for the index position
+			if (CachedTimeRange.Contains(ticks))
+			{
+				var idx = m_cache.BinarySearch(x => x.Timestamp.CompareTo(ticks), find_insert_position:true);
+				return m_index_range.Begi + idx;
+			}
+			// Otherwise use database queries to determine the index
+			else
+			{
+				var sql = $"select count(*)-1 from {TimeFrame} where [{nameof(Candle.Timestamp)}] <= ? order by [{nameof(Candle.Timestamp)}]";
+				var idx = m_db.ExecuteScalar(sql, 1, new object[] { ticks });
+				return idx;
+			}
+		}
+
+		/// <summary>Clamps the given index range to a valid range within the data. [0, Count]</summary>
+		public Range IndexRange(int idx_min, int idx_max)
+		{
+			Debug.Assert(idx_min <= idx_max);
+			var min = Maths.Clamp(idx_min, 0, Count);
+			var max = Maths.Clamp(idx_max, min, Count);
+			return new Range(min, max);
+		}
+
+		/// <summary>Convert a time frame time range to an index range. [0, Count]</summary>
+		public Range TimeToIndexRange(TimeFrameTime time_min, TimeFrameTime time_max)
+		{
+			Debug.Assert(time_min <= time_max);
+			var idx_min = IndexAt(time_min);
+			var idx_max = IndexAt(time_max);
+			return new Range(idx_min, idx_max);
+		}
+
+		/// <summary>Enumerate the candles within an index range. [idx_max,idx_max)</summary>
+		public IEnumerable<Candle> CandleRange(int idx_min, int idx_max)
+		{
+			var r = IndexRange(idx_min, idx_max);
+			for (var i = r.Begi; i != r.Endi; ++i)
+				yield return this[i];
+		}
+
+		/// <summary>Enumerate the candles within a time range (given in time-frame units)</summary>
+		public IEnumerable<Candle> CandleRange(TimeFrameTime time_min, TimeFrameTime time_max)
+		{
+			var range = TimeToIndexRange(time_min, time_max);
+			return CandleRange(range.Begi, range.Endi);
+		}
+
+		#endregion
+
 		#region Candle Cache
 
 		/// <summary>The instrument database file location.</summary>
@@ -281,7 +371,7 @@ namespace CoinFlip
 		/// <summary>Generate a filepath for the given pair name</summary>
 		public static string CacheDBFilePath(string pair_name)
 		{
-			var dbpath = Util.ResolveUserDocumentsPath("Rylogic", "CoinFlip", $"PriceData\\{pair_name}.db");
+			var dbpath = Util.ResolveUserDocumentsPath("Rylogic", "CoinFlip", $"PriceData\\{Path_.SanitiseFileName(pair_name)}.db");
 			Directory.CreateDirectory(Path_.Directory(dbpath));
 			return dbpath;
 		}
@@ -315,7 +405,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>The background thread for performing instrument data updates</summary>
-		private bool UpdateThreadActive
+		public bool UpdateThreadActive
 		{
 			get { return m_update_thread != null; }
 			set
@@ -326,9 +416,11 @@ namespace CoinFlip
 					m_update_thread_exit.Set();
 					if (m_update_thread.IsAlive)
 						m_update_thread.Join();
+
+					Util.Dispose(ref m_update_thread_exit);
 				}
-				Util.Dispose(ref m_update_thread_exit);
-				m_update_thread = value ? new Thread(new ThreadStart(UpdateThreadEntryPoint)) : null;
+				var args = new UpdateTreadData(this);
+				m_update_thread = value ? new Thread(() => UpdateThreadEntryPoint(args)) : null;
 				if (UpdateThreadActive)
 				{
 					m_update_thread_exit = new ManualResetEvent(false);
@@ -338,36 +430,36 @@ namespace CoinFlip
 		}
 		private Thread m_update_thread;
 		private ManualResetEvent m_update_thread_exit;
-		private void UpdateThreadEntryPoint()
+
+		/// <summary>Thread entry point for the instrument update thread</summary>
+		private void UpdateThreadEntryPoint(UpdateTreadData utd)
 		{
 			try
 			{
-				var exch = Exchange;
-				var pair = Pair;
-				var tf   = TimeFrame;
-				Debug.Assert(tf != ETimeFrame.None);
-
+				Debug.Assert(utd.TimeFrame != ETimeFrame.None);
 				using (var db = new Sqlite.Database(DBFilepath))
 				{
-					// Find the time range of data available in the db
-					var beg = DateTimeOffset.MinValue;
-					var end = DateTimeOffset.Now;
-
+					var beg = utd.TimeRange.Beg;
+					var end = utd.TimeRange.End;
 					for (; !m_update_thread_exit.IsSignalled();)
 					{
 						// Query for chart data
+						var data = utd.Exchange.ChartData(utd.Pair, utd.TimeFrame, end, DateTimeOffset.Now.Ticks).Result;
+						if (data.Count != 0)
 						{
-							var data = exch.ChartData(pair, tf, beg, end).Result;
-						}
+							// Update the end time range to include the returned data
+							end = data.Back().Timestamp;
 
-						// Add the received data to the database
-						{
+							// Add the received data to the database
+							Model.RunOnGuiThread(() =>
+							{
+								if (!UpdateThreadActive) return;
+								if (data.Count == 1)
+									Add(utd.TimeFrame, data[0]);
+								else
+									Add(utd.TimeFrame, data);
+							});
 						}
-
-						// Notify new data available
-						Model.RunOnGuiThread(() =>
-						{
-						});
 
 						// Sleep for a bit
 						m_update_thread_exit.WaitOne(TimeSpan.FromMilliseconds(500));
@@ -380,6 +472,121 @@ namespace CoinFlip
 				if (ex is OperationCanceledException) {}
 				else Model.Log.Write(ELogLevel.Error, ex, $"Instrument {SymbolCode} update thread exit\r\n.{ex.StackTrace}");
 			}
+		}
+		private class UpdateTreadData
+		{
+			public UpdateTreadData(Instrument instr)
+			{
+				Exchange  = instr.Exchange;
+				Pair      =  instr.Pair;
+				TimeFrame = instr.TimeFrame;
+				TimeRange = new Range(instr.Oldest.Timestamp, instr.Latest.Timestamp);
+			}
+
+			/// <summary>The exchange that the pair is hosted on</summary>
+			public Exchange Exchange { get; private set; }
+
+			/// <summary>The pair this instrument represents</summary>
+			public TradePair Pair { get; private set; }
+
+			/// <summary>The time frame to update</summary>
+			public ETimeFrame TimeFrame { get; private set; }
+
+			/// <summary>The time range available in the DB already</summary>
+			public Range TimeRange { get; private set; }
+		}
+
+		/// <summary>Add a candle value to the data</summary>
+		private void Add(ETimeFrame tf, Candle candle)
+		{
+			// Sanity check
+			Debug.Assert(candle.Valid());
+			Debug.Assert(candle.Timestamp != 0);
+			Debug.Assert(tf != ETimeFrame.None);
+
+			// If this candle is the newest we've seen, then a new candle has started.
+			// Get the latest candle before inserting 'candle' into the database
+			var new_candle = tf == TimeFrame && candle.Timestamp > Latest.Timestamp;
+
+			// Insert the candle into the database if the sim isn't running.
+			// The sim draws it's data from the database, so there's no point in writing
+			// the same data back in. Plus it might in the future do things to emulate sub-candle
+			// updates, which I don't want to overwrite the actual data.
+			if (!Model.BackTesting)
+				m_db.Execute(SqlExpr.InsertCandle(tf), 1, SqlExpr.InsertCandleParams(candle));
+
+			// If the candle is for the current time frame and within the
+			// cached data range, update the cache to avoid invalidating it.
+			if (tf == TimeFrame)
+			{
+				// Within the currently cached data?
+				// Note: this is false if 'candle' is the start of a new candle
+				if (!new_candle)
+				{
+					// Find the index in the cache for 'candle'. If not an existing cache item, then just reset the cache
+					var cache_idx = m_cache.BinarySearch(x => x.Timestamp.CompareTo(candle.Timestamp));
+					if (cache_idx >= 0)
+						m_cache[cache_idx].Update(candle);
+					else if ((~cache_idx).Within(0, m_cache.Count))
+						InvalidateCachedData();
+				}
+				// If the cached range ends at the latest candle (excluding the new candle)
+				// then we can preserve the cache and append the new candle to the cache data
+				else if (m_index_range.Endi == Count)
+				{
+					// If adding 'candle' will make the cache too big, just flush
+					if (m_cache.Count > MaxCacheSize)
+					{
+						InvalidateCachedData();
+					}
+					// Otherwise, append the new candle to the cache
+					else
+					{
+						m_cache.Add(candle);
+						m_index_range.End++;
+						m_impl_count = null;
+						m_impl_total = null;
+						m_latest = null;
+					}
+				}
+				// Otherwise the candle is not within the cache, just invalidate
+				else
+				{
+					InvalidateCachedData();
+				}
+			}
+
+			// Record the last time data was received
+			LastUpdatedUTC = Model.UtcNow;
+
+			// Notify data added/changed
+			OnDataChanged(new DataEventArgs(this, tf, candle, new_candle));
+		}
+
+		/// <summary>Add a batch of candles</summary>
+		private void Add(ETimeFrame tf, IEnumerable<Candle> candles)
+		{
+			// Insert the candles into the database
+			using (var t = m_db.NewTransaction())
+			using (var query = new Sqlite.Query(m_db, SqlExpr.InsertCandle(tf)))
+			{
+				foreach (var candle in candles)
+				{
+					query.Reset();
+					query.BindParms(1, SqlExpr.InsertCandleParams(candle));
+					query.Run();
+				}
+				t.Commit();
+			}
+
+			// Don't bother maintaining the cache, just invalidate it
+			InvalidateCachedData();
+
+			// Record the last time data was received
+			LastUpdatedUTC = Model.UtcNow;
+
+			// Notify data added/changed
+			OnDataChanged(new DataEventArgs(this, tf, null, false));
 		}
 
 		#endregion
@@ -534,4 +741,36 @@ namespace CoinFlip
 			#endregion
 		}
 	}
+
+	#region EventArgs
+	/// <summary>Event args for when data is changed</summary>
+	public class DataEventArgs :EventArgs
+	{
+		public DataEventArgs(Instrument instr, ETimeFrame tf, Candle candle, bool new_candle)
+		{
+			Instrument = instr;
+			TimeFrame  = tf;
+			Candle     = candle;
+			NewCandle  = new_candle;
+		}
+
+		/// <summary>The symbol that changed</summary>
+		public string SymbolCode
+		{
+			get { return Instrument?.SymbolCode ?? string.Empty; }
+		}
+
+		/// <summary>The time frame that changed (Note: not necessarily Instrument.TimeFrame)</summary>
+		public ETimeFrame TimeFrame { get; private set; }
+
+		/// <summary>The instrument containing the changes</summary>
+		public Instrument Instrument { get; private set; }
+
+		/// <summary>The candle that was added to 'Table'</summary>
+		public Candle Candle { get; private set; }
+
+		/// <summary>True if 'Candle' is a new candle and the previous candle as just closed</summary>
+		public bool NewCandle { get; private set; }
+	}
+	#endregion
 }

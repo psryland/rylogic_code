@@ -455,7 +455,7 @@ def CheckDependencies(deps, touch_file):
 def MSBuild(sln_or_proj_file, projects, platforms, configs, parallel=False, same_window=True, msbuild_props=[]):
 	
 	# Build the arguments list
-	AssertPathsExist([UserVars.msbuild])
+	AssertPath(UserVars.msbuild)
 	args_base = [UserVars.msbuild, msbuild_props, sln_or_proj_file, "/m", "/verbosity:minimal", "/nologo"]
 	if len(projects) != 0: args_base += ["/t:" + ";".join(projects)]
 	

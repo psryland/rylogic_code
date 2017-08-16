@@ -1168,7 +1168,7 @@ namespace pr.gui
 				/// <summary>Set the range without risk of an assert if 'min' is greater than 'Max' or visa versa</summary>
 				public void Set(double min, double max)
 				{
-					Debug.Assert(min < max, "Range must be positive and non-zero");
+					if (min >= max) throw new Exception("Range must be positive and non-zero");
 					var zoomed = !Maths.FEql(max - min, m_max - m_min);
 					var scroll = !Maths.FEql((max + min)*0.5, (m_max + m_min)*0.5);
 

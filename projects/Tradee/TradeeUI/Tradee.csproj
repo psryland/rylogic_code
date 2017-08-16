@@ -181,7 +181,7 @@
       <Project>{454ffeef-22b5-4115-b000-40c40195d7bf}</Project>
       <Name>TradeeService</Name>
     </ProjectReference>
-    <ProjectReference Include="P:\projects\Rylogic\Rylogic.csproj">
+    <ProjectReference Include="..\..\Rylogic\Rylogic.csproj">
       <Project>{1735c773-5477-45e6-9cbf-5f2b6dc707ef}</Project>
       <Name>Rylogic</Name>
     </ProjectReference>

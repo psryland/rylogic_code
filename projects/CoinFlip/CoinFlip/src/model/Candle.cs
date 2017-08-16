@@ -6,6 +6,7 @@ using pr.maths;
 namespace CoinFlip
 {
 	/// <summary>The core data of a single candle</summary>
+	[DebuggerDisplay("{Description}")]
 	public class Candle
 	{
 		public static readonly Candle Default = new Candle();
@@ -86,7 +87,7 @@ namespace CoinFlip
 		/// <summary>Returns the age of this candle as a normalised fraction of the time frame</summary>
 		public double Age(Instrument instr)
 		{
-			var one = TimeFrame.TimeFrameToTicks(1.0, instr.TimeFrame);
+			var one = Misc.TimeFrameToTicks(1.0, instr.TimeFrame);
 			var age_ticks = instr.Model.UtcNow.Ticks - Timestamp;
 			if (age_ticks < 0) return 0.0;
 			if (age_ticks > one) return 1.0;
@@ -207,10 +208,16 @@ namespace CoinFlip
 				Volume    >= 0.0; // empty candles?
 		}
 
+		/// <summary>A nice string description of the candle</summary>
+		public string Description
+		{
+			get { return $"Time={new DateTimeOffset(Timestamp, TimeSpan.Zero)} OHLC=({Open:G4} {High:G4} {Low:G4} {Close:G4}) Vol={Volume}"; }
+		}
+
 		/// <summary>Friendly print</summary>
 		public override string ToString()
 		{
-			return $"Time:{new DateTimeOffset(Timestamp, TimeSpan.Zero)} - OHLC:({Open:G4} {High:G4} {Low:G4} {Close:G4}) - Vol:{Volume}";
+			return Description;
 		}
 
 		#region Equals

@@ -325,32 +325,32 @@ namespace pr
 	template <typename T, typename = maths::enable_if_vN<T>> inline T Abs(T const& v)
 	{
 		// Note: arrays as vectors cannot use this function because arrays cannot be returned by value
-		T r;
-		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Abs(v[i]);
+		auto r = v;
+		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Abs(r[i]);
 		return r;
 	}
 	template <typename T, typename = maths::enable_if_v4<T>> inline T Abs4(T const& v)
 	{
 		auto r = v;
-		r[0] = Abs(x_cp(v));
-		r[1] = Abs(y_cp(v));
-		r[2] = Abs(z_cp(v));
-		r[3] = Abs(w_cp(v));
+		r[0] = Abs(x_cp(r));
+		r[1] = Abs(y_cp(r));
+		r[2] = Abs(z_cp(r));
+		r[3] = Abs(w_cp(r));
 		return r;
 	}
 	template <typename T, typename = maths::enable_if_v3<T>> inline T Abs3(T const& v)
 	{
 		auto r = v;
-		r[0] = Abs(x_cp(v));
-		r[1] = Abs(y_cp(v));
-		r[2] = Abs(z_cp(v));
+		r[0] = Abs(x_cp(r));
+		r[1] = Abs(y_cp(r));
+		r[2] = Abs(z_cp(r));
 		return r;
 	}
 	template <typename T, typename = maths::enable_if_v2<T>> inline T Abs2(T const& v)
 	{
 		auto r = v;
-		r[0] = Abs(x_cp(v));
-		r[1] = Abs(y_cp(v));
+		r[0] = Abs(x_cp(r));
+		r[1] = Abs(y_cp(r));
 		return r;
 	}
 
@@ -399,7 +399,7 @@ namespace pr
 	}
 	template <typename T, typename = maths::enable_if_vN<T>> inline T Sign(T const& v, bool zero_is_positive = true)
 	{
-		T r = {};
+		T r;
 		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i)
 			r[i] = Sign(v[i], zero_is_positive);
 		return r;
@@ -433,7 +433,7 @@ namespace pr
 	}
 	template <typename T, typename = maths::enable_if_vN<T>> inline T Trunc(T const& x, ETruncType ty = ETruncType::TowardZero)
 	{
-		T r = {};
+		T r;
 		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i)
 			r[i] = Trunc(x[i], ty);
 		return r;
@@ -452,7 +452,7 @@ namespace pr
 	}
 	template <typename T, typename = maths::enable_if_vN<T>> inline T Frac(T const& x)
 	{
-		T r = {};
+		T r;
 		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i)
 			r[i] = Frac(x[i]);
 		return r;
@@ -513,7 +513,7 @@ namespace pr
 	}
 	template <typename T, typename = maths::enable_if_vN<T>> inline T SqrtCmp(T const& x) // Component Sqrt
 	{
-		T r = {};
+		T r;
 		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Sqrt(x[i]);
 		return r;
 	}
@@ -740,7 +740,7 @@ namespace pr
 	}
 	template <typename T, typename V = maths::is_vec<T>::elem_type, typename = maths::enable_if_vN<T>> inline V LengthSq(T const& x)
 	{
-		auto r = V{};
+		V r = 0;
 		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r += Sqr(x[i]);
 		return r;
 	}
@@ -797,25 +797,25 @@ namespace pr
 	}
 	template <typename T, typename = maths::enable_if_vN<T>> inline T Min(T const& x, T const& y)
 	{
-		auto r = T{};
+		T r;
 		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Min(x[i], y[i]);
 		return r;
 	}
 	template <typename T, typename = maths::enable_if_vN<T>> inline T Max(T const& x, T const& y)
 	{
-		auto r = T{};
+		T r;
 		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Max(x[i], y[i]);
 		return r;
 	}
 	template <typename T, typename = maths::enable_if_vN<T>> inline T Clamp(T const& x, T const& mn, T const& mx)
 	{
-		auto r = T{};
+		T r;
 		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Clamp(x[i], mn[i], mx[i]);
 		return r;
 	}
 	template <typename T, typename = maths::enable_if_vN<T>> inline T Clamp(T const& x, typename maths::is_vec<T>::cp_type mn, typename maths::is_vec<T>::cp_type mx)
 	{
-		auto r = T{};
+		T r;
 		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Clamp(x[i], mn, mx);
 		return r;
 	}
@@ -1012,7 +1012,7 @@ namespace pr
 	// Sum the elements in a vector
 	template <typename T, typename V = maths::is_vec<T>::elem_type, typename = maths::enable_if_vN<T>> inline V Sum(T const& v)
 	{
-		auto r = V{};
+		V r;
 		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r += v[i];
 		return r;
 	}
@@ -1020,7 +1020,7 @@ namespace pr
 	// Sum the result of applying 'pred' to each element in a vector
 	template <typename T, typename Pred, typename V = maths::is_vec<T>::elem_type, typename = maths::enable_if_vN<T>> inline int Sum(T const& v, Pred pred)
 	{
-		auto r = 0;
+		int r = 0;
 		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r += pred(v[i]);
 		return r;
 	}
@@ -1040,7 +1040,7 @@ namespace pr
 	}
 	template <typename T, typename V = maths::is_vec<T>::elem_type, typename = maths::enable_if_vN<T>> inline V Dot(T const& a, T const& b)
 	{
-		auto r = V{}
+		V r;
 		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Dot(a[i], b[i]);
 		return r;
 	}
@@ -1089,7 +1089,7 @@ namespace pr
 	}
 	template <typename T, typename = maths::enable_if_fp_vec<T>> inline T Quantise(T const& x, int scale)
 	{
-		auto r = T{};
+		T r;
 		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i)
 			r[i] = Quantise(x[i], scale);
 		return r;
@@ -1321,7 +1321,7 @@ namespace pr
 	};
 }
 
-// Specialise std
+// Specialise ::std
 namespace std
 {
 	template <typename T, typename = pr::maths::enable_if_vN<T>> inline T min(T const& lhs, T const& rhs)

@@ -11,6 +11,7 @@ namespace CoinFlip
 		public Position(ulong order_id, TradePair pair, ETradeType tt, Unit<decimal> price, Unit<decimal> volume, Unit<decimal> remaining, DateTimeOffset? created, DateTimeOffset updated, bool fake = false)
 		{
 			OrderId    = order_id;
+			UniqueKey  = Guid.NewGuid();
 			Pair       = pair;
 			TradeType  = tt;
 			Price      = price;
@@ -24,6 +25,9 @@ namespace CoinFlip
 		/// <summary>Unique Id for the open position on an exchange</summary>
 		public ulong OrderId { get; private set; }
 		public ulong OrderIdHACK { set { OrderId = value; } }
+
+		/// <summary>A unique key assigned to this position (local only)</summary>
+		public Guid UniqueKey { get; private set; }
 
 		/// <summary>The pair being traded</summary>
 		public TradePair Pair { get; private set; }

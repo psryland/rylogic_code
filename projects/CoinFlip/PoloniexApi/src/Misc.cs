@@ -54,7 +54,12 @@ namespace Poloniex.API
 		/// <summary>Convert a timestamp to Unix time</summary>
 		public static ulong ToUnixTime(DateTimeOffset dt)
 		{
-			return (ulong)Math.Max(0, Math.Floor(dt.Subtract(UnixEpochStart).TotalSeconds));
+			return ToUnixTime(dt.Ticks);
+		}
+		public static ulong ToUnixTime(long ticks)
+		{
+			var unix_ticks = Math.Max(0L, ticks - UnixEpochStart.Ticks);
+			return (ulong)TimeSpan.FromTicks(unix_ticks).TotalSeconds;
 		}
 
 		/// <summary>Convert a Unix time to a date time offset</summary>

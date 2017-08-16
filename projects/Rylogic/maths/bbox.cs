@@ -180,38 +180,6 @@ namespace pr.maths
 			return new v4(m_centre.x + x*m_radius.x, m_centre.y + y*m_radius.y, m_centre.z + z*m_radius.z, 1.0f);
 		}
 
-		/// <summary>Expands the bounding box to include 'point'</summary>
-		public void Encompass(v4 point)
-		{
-			for (int i = 0; i != 3; ++i)
-			{
-				if (m_radius[i] < 0.0f)
-				{
-					m_centre[i] = point[i];
-					m_radius[i] = 0.0f;
-				}
-				else
-				{
-					float signed_dist = point[i] - m_centre[i];
-					float length      = Math.Abs(signed_dist);
-					if (length > m_radius[i])
-					{
-						float new_radius = (length + m_radius[i]) / 2.0f;
-						m_centre[i] += signed_dist * (new_radius - m_radius[i]) / length;
-						m_radius[i] = new_radius;
-					}
-				}
-			}
-		}
-
-		/// <summary>Expands the bounding box to include 'rhs'</summary>
-		public void Encompass(BBox rhs)
-		{
-			Debug.Assert(rhs.IsValid, "Encompasing an invalid bounding box");
-			Encompass(rhs.m_centre + rhs.m_radius);
-			Encompass(rhs.m_centre - rhs.m_radius);
-		}
-
 		/// <summary>Returns true if 'point' is within this bounding box (within 'tol'erance)</summary>
 		public bool IsWithin(v4 point, float tol)
 		{
@@ -226,6 +194,47 @@ namespace pr.maths
 			return  Math.Abs(bbox.m_centre.x - m_centre.x) <= (m_radius.x - bbox.m_radius.x + tol) &&
 					Math.Abs(bbox.m_centre.y - m_centre.y) <= (m_radius.y - bbox.m_radius.y + tol) &&
 					Math.Abs(bbox.m_centre.z - m_centre.z) <= (m_radius.z - bbox.m_radius.z + tol);
+		}
+
+		/// <summary>Expands the bounding box to include 'point'</summary>
+		public static BBox Encompass(BBox bbox, v4 point)
+		{
+			// Note:
+			// This is not a member function because it's dangerous.
+			// Calling: 'thing.BBox.Encompass(v4)' does not change 'BBox' because it's a value type
+			// Use: 'thing.BBox = BBox.Encompass(thing.BBox, v4)' instead
+
+			var bb = bbox;
+			for (int i = 0; i != 3; ++i)
+			{
+				if (bb.m_radius[i] < 0.0f)
+				{
+					bb.m_centre[i] = point[i];
+					bb.m_radius[i] = 0.0f;
+				}
+				else
+				{
+					float signed_dist = point[i] - bb.m_centre[i];
+					float length      = Math.Abs(signed_dist);
+					if (length > bb.m_radius[i])
+					{
+						float new_radius = (length + bb.m_radius[i]) / 2.0f;
+						bb.m_centre[i] += signed_dist * (new_radius - bb.m_radius[i]) / length;
+						bb.m_radius[i] = new_radius;
+					}
+				}
+			}
+			return bb;
+		}
+
+		/// <summary>Expands the bounding box to include 'rhs'</summary>
+		public static BBox Encompass(BBox lhs, BBox rhs)
+		{
+			Debug.Assert(rhs.IsValid, "Encompassing an invalid bounding box");
+			var bb = lhs;
+			bb = Encompass(bb, rhs.m_centre + rhs.m_radius);
+			bb = Encompass(bb, rhs.m_centre - rhs.m_radius);
+			return bb;
 		}
 
 		/// <summary>Returns true if 'rhs' intersects with this bounding box</summary>

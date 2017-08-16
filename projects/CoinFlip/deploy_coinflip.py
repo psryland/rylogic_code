@@ -37,6 +37,7 @@ def Deploy():
 
 	# Build the project
 	print("\nBuilding...")
+	Tools.MSBuild(sln, ["scintilla", "sqlite3", "renderer11", "view3d"], ["x86","x64"], [config], False, True)
 	Tools.MSBuild(sln, [], ["Any CPU"], [config], False, True)
 
 	# Copy build products to the deploy dir

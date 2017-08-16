@@ -315,9 +315,17 @@ namespace Poloniex.API
 		}
 
 		/// <summary></summary>
-		public Task<List<MarketChartData>> GetChartData(CurrencyPair pair, MarketPeriod period, DateTimeOffset start_time, DateTimeOffset end_time)
+		public Task<List<MarketChartData>> GetChartData(CurrencyPair pair, MarketPeriod period, DateTimeOffset time_beg, DateTimeOffset time_end)
 		{
-			return GetData<List<MarketChartData>>("returnChartData", new KV("currencyPair", pair.Id), new KV("start", Misc.ToUnixTime(start_time)), new KV("end", Misc.ToUnixTime(end_time)), new KV("period", (int)period));
+			return GetChartData(pair, period, time_beg.Ticks, time_end.Ticks);
+		}
+		public Task<List<MarketChartData>> GetChartData(CurrencyPair pair, MarketPeriod period, long time_beg, long time_end)
+		{
+			return GetData<List<MarketChartData>>("returnChartData",
+				new KV("currencyPair", pair.Id),
+				new KV("start", Misc.ToUnixTime(time_beg)),
+				new KV("end", Misc.ToUnixTime(time_end)),
+				new KV("period", (int)period));
 		}
 
 		#endregion

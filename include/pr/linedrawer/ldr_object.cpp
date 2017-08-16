@@ -1555,7 +1555,6 @@ namespace pr
 				if (Abs(m_dim) != m_dim)
 				{
 					p.ReportError(EResult::InvalidValue, "Circle dimensions contain a negative value");
-					m_dim = Abs(m_dim);
 				}
 			}
 			void CreateModel(LdrObject* obj) override
@@ -1642,7 +1641,6 @@ namespace pr
 				if (Abs(m_dim) != m_dim)
 				{
 					p.ReportError(EResult::InvalidValue, "Rect dimensions contain a negative value");
-					m_dim = Abs(m_dim);
 				}
 			}
 			bool ParseKeyword(EKeyword kw) override

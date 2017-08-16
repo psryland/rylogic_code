@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
+using System.Reflection;
 using System.Xml.Linq;
 using pr.common;
 using pr.extn;
@@ -19,6 +20,7 @@ namespace CoinFlip
 			MaximumLoopCount  = 5;
 			MainLoopPeriod    = 500;
 			ShowLivePrices    = false;
+			ChartTemplate     = new ChartSettings();
 			Coins             = new CoinData[0];
 			Fishing           = new FishingData[0];
 			Charts            = new ChartSettings[0];
@@ -54,6 +56,13 @@ namespace CoinFlip
 		{
 			get { return get(x => x.ShowLivePrices); }
 			set { set(x => x.ShowLivePrices, value); }
+		}
+
+		/// <summary>Default settings for charts</summary>
+		public ChartSettings ChartTemplate
+		{
+			get { return get(x => x.ChartTemplate); }
+			set { set(x => x.ChartTemplate, value); }
 		}
 
 		/// <summary>Meta data for known coins</summary>
@@ -479,29 +488,45 @@ namespace CoinFlip
 		{
 			public ChartSettings(string symbol_code = null)
 			{
-				SymbolCode = symbol_code ?? string.Empty;
-				TimeFrame  = ETimeFrame.Hour12;
-				Style = new ChartControl.RdrOptions();
+				SymbolCode       = symbol_code ?? string.Empty;
+				TimeFrame        = ETimeFrame.Hour12;
+				m_style          = null;
+				m_ask_colour     = null;
+				m_bid_colour     = null;
+				m_show_positions = null;
 			}
 			public ChartSettings(ChartSettings rhs)
 			{
-				SymbolCode = rhs.SymbolCode;
-				TimeFrame  = rhs.TimeFrame;
-				Style      = rhs.Style;
+				Inherit          = rhs.Inherit;
+				SymbolCode       = rhs.SymbolCode;
+				TimeFrame        = rhs.TimeFrame;
+				m_style          = rhs.m_style;
+				m_ask_colour     = rhs.m_ask_colour;
+				m_bid_colour     = rhs.m_bid_colour;
+				m_show_positions = rhs.m_show_positions;
 			}
 			public ChartSettings(XElement node)
 			{
-				SymbolCode = node.Element(nameof(SymbolCode)).As(SymbolCode);
-				TimeFrame  = node.Element(nameof(TimeFrame )).As(TimeFrame );
-				Style      = node.Element(nameof(Style     )).As(Style     );
+				SymbolCode       = node.Element(nameof(SymbolCode   )).As(SymbolCode      );
+				TimeFrame        = node.Element(nameof(TimeFrame    )).As(TimeFrame       );
+				m_style          = node.Element(nameof(Style        )).As(m_style         );
+				m_ask_colour     = node.Element(nameof(AskColour    )).As(m_ask_colour    );
+				m_bid_colour     = node.Element(nameof(BidColour    )).As(m_bid_colour    );
+				m_show_positions = node.Element(nameof(ShowPositions)).As(m_show_positions);
 			}
 			public XElement ToXml(XElement node)
 			{
-				node.Add2(nameof(SymbolCode), SymbolCode, false);
-				node.Add2(nameof(TimeFrame ), TimeFrame , false);
-				node.Add2(nameof(Style     ), Style     , false);
+				node.Add2(nameof(SymbolCode   ), SymbolCode      , false);
+				node.Add2(nameof(TimeFrame    ), TimeFrame       , false);
+				node.Add2(nameof(Style        ), m_style         , false);
+				node.Add2(nameof(AskColour    ), m_ask_colour    , false);
+				node.Add2(nameof(BidColour    ), m_bid_colour    , false);
+				node.Add2(nameof(ShowPositions), m_show_positions, false);
 				return node;
 			}
+
+			/// <summary>Setting to inherit</summary>
+			public ChartSettings Inherit { get; set; }
 
 			/// <summary>The symbol code for the chart these settings are for</summary>
 			public string SymbolCode { get; set; }
@@ -510,7 +535,67 @@ namespace CoinFlip
 			public ETimeFrame TimeFrame { get; set; }
 
 			/// <summary>Chart style options</summary>
-			public ChartControl.RdrOptions Style { get; set; }
+			public ChartControl.RdrOptions Style
+			{
+				get { return m_style ?? Inherit?.m_style ?? m_def_style; }
+				set { SetProp(nameof(m_style), value, m_def_style); }
+			}
+			private ChartControl.RdrOptions m_style;
+			private static readonly ChartControl.RdrOptions m_def_style = new ChartControl.RdrOptions{AntiAliasing = false};
+
+			/// <summary>The colour to draw 'Bullish/Ask/Buy' things</summary>
+			public Color AskColour
+			{
+				get { return BullishColour; }
+			}
+			public Color BullishColour
+			{
+				get { return m_ask_colour ?? Inherit?.m_ask_colour ?? m_def_ask_colour; }
+				set { SetProp(nameof(m_ask_colour), value, m_def_ask_colour); }
+			}
+			private Color? m_ask_colour;
+			private static readonly Color m_def_ask_colour = Color_.FromArgb(0xff00843b);
+
+			/// <summary>The colour to draw 'Bearish/Bid/Sell' things</summary>
+			public Color BidColour
+			{
+				get { return BearishColour; }
+			}
+			public Color BearishColour
+			{
+				get { return m_bid_colour ?? Inherit?.m_bid_colour ?? m_def_bid_colour; }
+				set { SetProp(nameof(m_bid_colour), value, m_def_bid_colour); }
+			}
+			private Color? m_bid_colour;
+			private static readonly Color m_def_bid_colour = Color_.FromArgb(0xfff15923);
+
+			/// <summary>Show current trades</summary>
+			public bool ShowPositions
+			{
+				get { return m_show_positions ?? Inherit?.m_show_positions ?? m_def_show_positions; }
+				set { SetProp(nameof(m_show_positions), value, m_def_show_positions); }
+			}
+			private bool? m_show_positions;
+			private const bool m_def_show_positions = false;
+
+			/// <summary>Helper for setting inherited fields</summary>
+			private void SetProp<T>(string field, T value, T def)
+			{
+				var fi = GetType().GetField(field, BindingFlags.NonPublic|BindingFlags.Instance);
+				if (Inherit != null && Equals(fi.GetValue(Inherit), value))
+				{
+					fi.SetValue(this, null);
+					Inherit.SetProp(field, value, def);
+				}
+				else if (Equals(value, def))
+				{
+					fi.SetValue(this, null);
+				}
+				else
+				{
+					fi.SetValue(this, value);
+				}
+			}
 		}
 	}
 

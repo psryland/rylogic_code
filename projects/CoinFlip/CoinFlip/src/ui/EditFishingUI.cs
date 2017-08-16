@@ -140,14 +140,14 @@ namespace CoinFlip
 		{
 			// Reference exchange
 			m_cb_exch0.ToolTip(m_tt, "The exchange used to determine the reference buy/sell prices");
-			m_cb_exch0.DataSource = Model.Exchanges.Except(Model.CrossExchange).ToList();
+			m_cb_exch0.DataSource = Model.TradingExchanges.ToList();
 			m_cb_exch0.SelectedItem = Model.Exchanges.FirstOrDefault(x => x.Name == FishingData.Exch0);
 			m_cb_exch0.SelectedIndexChanged += HandleExchangeChanged;
 			m_cb_exch0.SelectedIndexChanged += UpdateUI;
 
 			// Target exchange
 			m_cb_exch1.ToolTip(m_tt, "The exchange that fishing orders are placed on");
-			m_cb_exch1.DataSource = Model.Exchanges.Except(Model.CrossExchange).ToList();
+			m_cb_exch1.DataSource = Model.TradingExchanges.ToList();
 			m_cb_exch1.SelectedItem = Model.Exchanges.FirstOrDefault(x => x.Name == FishingData.Exch1);
 			m_cb_exch1.SelectedIndexChanged += HandleExchangeChanged;
 			m_cb_exch1.SelectedIndexChanged += UpdateUI;

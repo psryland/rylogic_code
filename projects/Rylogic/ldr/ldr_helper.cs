@@ -572,7 +572,7 @@ namespace pr.ldr
 		{
 			var bbox = BBox.Reset;
 			foreach (var d in data)
-				bbox.Encompass(d);
+				bbox = BBox.Encompass(bbox, d);
 
 			using (Group(name))
 			{

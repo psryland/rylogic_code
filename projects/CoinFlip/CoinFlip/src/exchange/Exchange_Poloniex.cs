@@ -146,13 +146,13 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the chart data for a given pair, over a given time range</summary>
-		protected async override Task<List<Candle>> ChartDataInternal(TradePair pair, ETimeFrame timeframe, DateTimeOffset beg, DateTimeOffset end)
+		protected async override Task<List<Candle>> ChartDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end)
 		{
 			// Get the chart data
-			var data = await Api.GetChartData(new CurrencyPair(pair.Base, pair.Quote), ToMarketPeriod(timeframe), beg, end);
+			var data = await Api.GetChartData(new CurrencyPair(pair.Base, pair.Quote), ToMarketPeriod(timeframe), time_beg, time_end);
 
-			// Convert it to candles
-			var candles = data.Select(x => new Candle(x.Time.Ticks, (double)x.Open, (double)x.High, (double)x.Low, (double)x.Close, (double)x.WeightedAverage, (double)x.VolumeBase)).ToList();
+			// Convert it to candles (yes, Polo gets the base/quote backwards for 'Volume')
+			var candles = data.Select(x => new Candle(x.Time.Ticks, (double)x.Open, (double)x.High, (double)x.Low, (double)x.Close, (double)x.WeightedAverage, (double)x.VolumeQuote)).ToList();
 			return candles;
 		}
 

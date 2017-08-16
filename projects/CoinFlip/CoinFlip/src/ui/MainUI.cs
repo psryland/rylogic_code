@@ -22,7 +22,7 @@ using ToolStripContainer = pr.gui.ToolStripContainer;
 
 namespace CoinFlip
 {
-	public class MainUI :Form
+	public class MainUI :Form ,IShutdownAsync
 	{
 		#region UI Elements
 		private ToolStripContainer m_tsc;
@@ -75,9 +75,9 @@ namespace CoinFlip
 			LoopsUI = null;
 			PairsUI = null;
 			Charts = null;
-			Model = null;
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
+			Model = null;
 		}
 		protected override void OnResizeEnd(EventArgs e)
 		{
@@ -109,11 +109,22 @@ namespace CoinFlip
 			if (Model.Running)
 			{
 				e.Cancel = true;
-				await Model.ShutdownAsync();
+				await ShutdownAsync();
 				Close();
 				return;
 			}
 			base.OnClosing(e);
+		}
+
+		/// <summary>Async shutdown</summary>
+		public async Task ShutdownAsync()
+		{
+			// Disable the background thread in each chart
+			foreach (var chart in Charts)
+				chart.UpdateThreadActive = false;
+
+			// Begin shutdown of the model
+			await Model.ShutdownAsync();
 		}
 
 		/// <summary>App settings</summary>
@@ -137,13 +148,6 @@ namespace CoinFlip
 					m_model.MarketDataChanging     -= HandleMarketDataChanging;
 					m_model.AllowTradesChanged     -= UpdateUI;
 					m_model.RunChanged             -= UpdateUI;
-					Util.Dispose(ref m_grid_coins    );
-					Util.Dispose(ref m_grid_exchanges);
-					Util.Dispose(ref m_grid_balances );
-					Util.Dispose(ref m_grid_positions);
-					Util.Dispose(ref m_grid_history  );
-					Util.Dispose(ref m_grid_fishing  );
-					Util.Dispose(ref m_grid_arbitrage);
 					Util.Dispose(ref m_model);
 				}
 				m_model = value;
@@ -280,6 +284,7 @@ namespace CoinFlip
 			#region Dock Container
 
 			// Add content
+			NewChart();
 			m_dc.Add(m_log, EDockSite.Centre);
 			m_dc.Add(m_grid_positions, EDockSite.Bottom);
 			m_dc.Add(m_grid_history, EDockSite.Bottom);
@@ -295,6 +300,9 @@ namespace CoinFlip
 				try { m_dc.LoadLayout(Settings.UI.UILayout); }
 				catch (Exception ex) { Model.Log.Write(ELogLevel.Error, ex, "Failed to restore UI layout"); }
 			}
+
+			// Clean up
+			m_dc.Options.DisposeContent = true;
 			#endregion
 		}
 
@@ -323,10 +331,11 @@ namespace CoinFlip
 		/// <summary>Create a new chart instance</summary>
 		private void NewChart()
 		{
-			var chart = new ChartUI(Model);
+			var chart = Charts.Add2(new ChartUI(Model));
 			m_dc.Add(chart, EDockSite.Centre);
 			chart.Closed += (s,a) =>
 			{
+				Charts.Remove(chart);
 				m_dc.Remove(chart);
 				Util.Dispose(chart);
 			};

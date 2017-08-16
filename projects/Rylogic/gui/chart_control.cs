@@ -314,6 +314,18 @@ namespace pr.gui
 				OnAddOverlaysOnPaint(args);
 		}
 
+		/// <summary>Called during AutoRange to allow handlers to set the auto range</summary>
+		public event EventHandler<AutoRangeEventArgs> AutoRanging;
+		protected virtual void OnAutoRanging(AutoRangeEventArgs args)
+		{
+			AutoRanging.Raise(this, args);
+		}
+		private void RaiseOnAutoRanging(AutoRangeEventArgs args)
+		{
+			if (!AutoRanging.IsSuspended())
+				OnAutoRanging(args);
+		}
+
 		/// <summary>Returns a point in chart space from a point in client space. Use to convert mouse (client-space) locations to chart coordinates</summary>
 		public PointF ClientToChart(Point client_point)
 		{
@@ -540,12 +552,22 @@ namespace pr.gui
 		/// <summary>Find the default range, then reset to the default range</summary>
 		public void AutoRange(View3d.ESceneBounds who = View3d.ESceneBounds.All)
 		{
-			var bbox = Window.SceneBounds(who, except:new[] { ChartTools.Id });
+			// Allow the auto range to be handled by event
+			var args = new AutoRangeEventArgs(who);
+			RaiseOnAutoRanging(args);
+
+			// Get the bounding box to fit into the view
+			var bbox = args.Handled
+				? args.ViewBBox
+				: Window.SceneBounds(who, except:new[] { ChartTools.Id });
+
+			// Position the camera to view the bounding box
 			Camera.ResetView(bbox, Options.ResetForward, Options.ResetUp,
-				dist: 0f,//Options.NavigationMode == ENavMode.Chart2D ? Camera.FocusDist : 0,
+				dist: 0f,
 				preserve_aspect: LockAspect,
 				commit: true);
 
+			// Set the axis range from the camera position
 			SetRangeFromCamera();
 			Invalidate();
 		}
@@ -4540,6 +4562,26 @@ namespace pr.gui
 
 			/// <summary>Transform from Chart space to client space</summary>
 			public m4x4 ChartToClient { get; private set; }
+		}
+
+		/// <summary>Event args for the auto range event</summary>
+		public class AutoRangeEventArgs :EventArgs
+		{
+			public AutoRangeEventArgs(View3d.ESceneBounds who)
+			{
+				Who = who;
+				ViewBBox = BBox.Reset;
+				Handled = false;
+			}
+
+			/// <summary>The scene elements to be auto ranged</summary>
+			public View3d.ESceneBounds Who { get; private set; }
+
+			/// <summary>The bounding box of the range to view</summary>
+			public BBox ViewBBox { get; set; }
+
+			/// <summary>Set to true to indicate that the provided range should be used</summary>
+			public bool Handled { get; set; }
 		}
 
 		#endregion

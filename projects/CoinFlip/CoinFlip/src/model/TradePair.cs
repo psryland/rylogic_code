@@ -42,11 +42,11 @@ namespace CoinFlip
 		/// <summary>The name of this pair. Format Base/Quote</summary>
 		public string Name
 		{
-			get { return "{0}/{1}".Fmt(Base?.Symbol ?? "---", Quote?.Symbol ?? "---"); }
+			get { return $"{Base?.Symbol ?? "---"}/{Quote?.Symbol ?? "---"}"; }
 		}
 		public string NameWithExchange
 		{
-			get { return "{0} - {1}".Fmt(Name, Exchange.Name); }
+			get { return $"{Name} - {Exchange.Name}"; }
 		}
 
 		/// <summary>Return a unique key string for this pair</summary>

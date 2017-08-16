@@ -7,6 +7,7 @@ using pr.common;
 using pr.extn;
 using pr.gfx;
 using pr.maths;
+using pr.util;
 using pr.win32;
 
 namespace pr.gui
@@ -404,6 +405,7 @@ namespace pr.gui
 			case EPin.Centre:       Location = new Point((frame.Left+frame.Right)/2 , (frame.Top+frame.Bottom)/2) + m_ofs.ToSize(); break;
 			case EPin.CentreRight:  Location = new Point(frame.Right                , (frame.Top+frame.Bottom)/2) + m_ofs.ToSize(); break;
 			}
+			Location = Util.OnScreen(Location, Size);
 		}
 
 		/// <summary>Update the check mark next to the Pin Window menu option</summary>

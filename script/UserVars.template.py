@@ -20,11 +20,10 @@ arch = "x64"
 
 # Location of the root for the code library (i.e. the directory containing build, include, projects, etc) (No trailing '\')
 root = "P:\\pr"
-wwwroot = "Z:\\WWW\\rylogic.co.nz"
 
 # The full path to the windows sdk
 winsdkvers = "10.0.15063.0"
-winsdk = r"C:\Program Files (x86)\Windows Kits\10"
+winsdk            = r"C:\Program Files (x86)\Windows Kits\10"
 winsdk_include    = winsdk + "\\Include\\"    + winsdkvers
 winsdk_lib        = winsdk + "\\Lib\\"        + winsdkvers
 winsdk_references = winsdk + "\\References\\" + winsdkvers
@@ -49,13 +48,6 @@ vs_linker32   = vs_platform_dir + r"\bin\HostX86\x86\link.exe"
 vs_linker64   = vs_platform_dir + r"\bin\HostX86\x64\link.exe"
 vs_vers = "15.0"
 
-# The full path to the android SDK
-android_sdkdir = r"D:\android\android-sdk"
-adb = android_sdkdir + r"\platform-tools\adb.exe"
-
-# The full path the the java sdk
-java_sdkdir = r"D:\Program Files\Java\jdk1.8.0_20"
-
 # Text editor path
 # Note: scripts expect notepad++, so they probably won't work if you use a different tool
 textedit = r"C:\Program Files (x86)\Notepad++\notepad++.exe"
@@ -70,6 +62,13 @@ linqpad = r"D:\Program Files (x86)\LinqPad4\LINQPad.exe"
 # Text templating
 ttbuild = r"C:\Program Files (x86)\Common Files\Microsoft Shared\TextTemplating\12.0\TextTransform.exe"
 
+# The full path to the android SDK
+android_sdkdir = r"D:\android\android-sdk"
+adb = android_sdkdir + r"\platform-tools\adb.exe"
+
+# The full path the the java sdk
+java_sdkdir = r"D:\Program Files\Java\jdk1.8.0_20"
+
 # The Digital Mars D compiler install path
 dmdroot = root + r"\dlang\latest\dmd2"
 dmd = dmdroot + r"\windows\bin\dmd.exe"
@@ -82,6 +81,9 @@ ziptool = root + r"\tools\7za.exe"
 wix_candle = root + r"\tools\WiX\candle.exe"
 wix_light = root + r"\tools\WiX\light.exe"
 wix_heat = root + r"\tools\WiX\heat.exe"
+
+# Web site root
+wwwroot = "Z:\\WWW\\rylogic.co.nz"
 
 # Location for temporary files
 dumpdir = r"P:\dump"

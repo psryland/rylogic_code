@@ -47,7 +47,7 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 	if trace: print("File: " + fname + extn)
 
 	outdir = UserVars.root + "\\projects\\renderer11\\shaders\\hlsl\\compiled\\" + config
-	if not os.path.exists(outdir): os.makedirs(outdir)
+	os.makedirs(outdir, exist_ok=True)
 	if trace: print("Output directory: " + outdir)
 
 	keys = [

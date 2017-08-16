@@ -205,7 +205,7 @@ def ExpandHtmlFile(srcpath, dstdir = None):
 
 	# Write the expanded buffer to 'dst'
 	dstdir,dstfile = os.path.split(dstpath)
-	if not os.path.exists(dstdir): os.makedirs(dstdir)
+	os.makedirs(dstdir, exist_ok=True)
 	with open(dstpath, mode='w', encoding="utf-8-sig") as f:
 		f.write(buf)
 

@@ -118,7 +118,7 @@ namespace CoinFlip
 				Columns.RemoveAt(1);
 
 			// Add new columns
-			foreach (var exch in Model.Exchanges.Except(Model.CrossExchange))
+			foreach (var exch in Model.TradingExchanges)
 			{
 				Columns.Add(new DataGridViewTextBoxColumn
 				{

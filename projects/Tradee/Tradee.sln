@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic", "P:\projects\Rylogic\Rylogic.csproj", "{1735C773-5477-45E6-9CBF-5F2B6DC707EF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic", "..\Rylogic\Rylogic.csproj", "{1735C773-5477-45E6-9CBF-5F2B6DC707EF}"
 	ProjectSection(ProjectDependencies) = postProject
 		{F4A1B209-47CA-4F5D-A80E-87004C91D52E} = {F4A1B209-47CA-4F5D-A80E-87004C91D52E}
 		{363D015B-B545-4623-A5CE-61245C9BF1F8} = {363D015B-B545-4623-A5CE-61245C9BF1F8}

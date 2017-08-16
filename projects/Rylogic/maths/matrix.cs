@@ -4,7 +4,9 @@
 //***************************************************
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using pr.extn;
@@ -12,7 +14,7 @@ using pr.extn;
 namespace pr.maths
 {
 	/// <summary>A dynamic NxM matrix</summary>
-	[DebuggerDisplay("{m_rows}x{m_cols}) {m_data}")]
+	[DebuggerDisplay("{m_rows}x{m_cols} {m_data}")]
 	public struct Matrix
 	{
 		public int m_rows;
@@ -24,6 +26,28 @@ namespace pr.maths
 			m_rows = row_count;
 			m_cols = col_count;
 			m_data = new double[m_rows * m_cols];
+		}
+		public Matrix(int row_count, int col_count, IEnumerable<double> data)
+			:this(row_count, col_count)
+		{
+			var k = 0;
+			foreach (var d in data)
+			{
+				if (k == m_data.Length)
+					throw new Exception("Excess data when initialising Matrix");
+				m_data[k++] = d;
+			}
+			if (k != m_data.Length)
+				throw new Exception("Insufficient data when initialising Matrix");
+		}
+		public Matrix(int row_count, int col_count, IEnumerable<float> data)
+			:this(row_count, col_count, data.Select(x => (double)x))
+		{}
+		public Matrix(IList<IList<double>> data)
+			:this(data.Count, data.Max(x => x.Count))
+		{
+			for (var j = 0; j != m_rows; ++j)
+				data[j].CopyTo(m_data, j * m_cols);
 		}
 		public Matrix(Matrix rhs)
 			:this(rhs.m_rows, rhs.m_cols)
@@ -59,7 +83,7 @@ namespace pr.maths
 		}
 
 		/// <summary>Access this matrix by row</summary>
-		public RowProxy row { get { return new RowProxy(this); } }
+		public RowProxy Row { get { return new RowProxy(this); } }
 		public class RowProxy
 		{
 			private Matrix mat;
@@ -83,7 +107,7 @@ namespace pr.maths
 		}
 
 		/// <summary>Access this matrix by column</summary>
-		public ColProxy col { get { return new ColProxy(this); } }
+		public ColProxy Col { get { return new ColProxy(this); } }
 		public class ColProxy
 		{
 			private Matrix mat;
@@ -172,7 +196,7 @@ namespace pr.maths
 			return MatrixLU.IsInvertable(new MatrixLU(m));
 		}
 
-		/// <summary>Solves for x in 'Ax = v'</summary>
+		/// <summary>Solves for x in 'A.x = v'</summary>
 		public static Matrix Solve(Matrix A, Matrix v)
 		{
 			return MatrixLU.Solve(new MatrixLU(A), v);
@@ -324,7 +348,7 @@ namespace pr.maths
 			}
 			else
 			{
-				// 'Strassen Multiply'
+				// "Strassen Multiply"
 				int size = 1; int n = 0;
 				while (msize > size) { size *= 2; n++; };
 				int h = size / 2;
@@ -647,7 +671,7 @@ namespace pr.maths
 			get { return m_mat[0].m_cols; }
 		}
 
-		/// <summary>Accesser for the lower diagonal matrix</summary>
+		/// <summary>Accessor for the lower diagonal matrix</summary>
 		public LProxy L;
 		public struct LProxy
 		{
@@ -667,7 +691,7 @@ namespace pr.maths
 			}
 		};
 
-		/// <summary>Accesser for the upper diagonal matrix</summary>
+		/// <summary>Accessor for the upper diagonal matrix</summary>
 		public UProxy U;
 		public struct UProxy
 		{
@@ -724,7 +748,7 @@ namespace pr.maths
 			return !Maths.FEql(Determinant(lu), 0);
 		}
 
-		/// <summary>Solves for x in 'Ax = v'</summary>
+		/// <summary>Solves for x in 'A.x = v'</summary>
 		public static Matrix Solve(MatrixLU A, Matrix v)
 		{
 			if (A.m_rows != v.m_rows)
@@ -737,7 +761,7 @@ namespace pr.maths
 			for (int i = 0; i != A.m_rows; ++i)
 				a[i,0] = v[A.pi[i], 0];
 
-			// Solve for x in 'Lx = b' assuming 'L' is a lower triangular matrix
+			// Solve for x in 'L.x = b' assuming 'L' is a lower triangular matrix
 			{
 				for (int i = 0; i != A.m_rows; ++i)
 				{
@@ -751,7 +775,7 @@ namespace pr.maths
 
 			a = b;
 
-			// Solve for x in 'Ux = b' assuming 'U' is an upper triangular matrix
+			// Solve for x in 'U.x = b' assuming 'U' is an upper triangular matrix
 			{
 				for (int i = A.m_rows; i-- != 0;)
 				{
@@ -776,7 +800,7 @@ namespace pr.maths
 			for (int i = 0; i != lu.m_rows; ++i)
 			{
 				elem[i,0] = 1;
-				inv.col[i] = Solve(lu, elem);
+				inv.Col[i] = Solve(lu, elem);
 				elem[i,0] = 0;
 			}
 			return inv;

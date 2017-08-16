@@ -15,10 +15,11 @@ try:
 		"*************************************************************************")
 
 	Tools.AssertVersion(1)
-	Tools.AssertPathsExist([UserVars.root, UserVars.csex, UserVars.msbuild, UserVars.vs_dir])
+	Tools.AssertPathsExist([UserVars.root, UserVars.csex])
 
 	srcdir = UserVars.root + "\\projects\\LDraw"
 	dstdir = UserVars.root + "\\bin\\ldraw"
+	sln    = UserVars.root + "\\build\\Rylogic.sln"
 
 	# Ensure output directories exist and are empty
 	Tools.ShellDelete(dstdir)
@@ -26,21 +27,8 @@ try:
 
 	# Build the project
 	print("Building...")
-	projects = [
-		"renderer11",
-		"scintilla",
-		"view3d",
-		"LDraw",
-		]
-	configs = [
-		"release",
-		]
-	platforms = [
-		"x86",
-		"x64",
-		]
-	if not Tools.MSBuild(UserVars.root + "\\build\\Rylogic.sln", projects, platforms, configs, False, True):
-		Tools.OnError("Errors occurred")
+	Tools.MSBuild(sln, ["scintilla", "renderer11", "view3d"], ["x86","x64"], ["release"], False, True)
+	Tools.MSBuild(sln, ["LDraw"], ["Any CPU"], ["release"], False, True)
 
 	# Copy build products to the output directory
 	print("Copying files to " + dstdir)

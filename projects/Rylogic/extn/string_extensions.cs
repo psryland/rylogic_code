@@ -15,6 +15,26 @@ using pr.common;
 
 namespace pr.extn
 {
+	public static class Regex_
+	{
+		/// <summary>A pattern for matching full file paths, optionally in quotes</summary>
+		public const string FullPathPattern =
+			@"(?n)"+                                 // Only capture named groups
+			@"(?<![""'])(?('|"")"+                   // If the path starts with a quote (and is not the next character after a quote)
+			@"("+                                    //
+				@"(?<q>['""])"+                      // Capture the quote type
+				@"(?<drive>[A-Za-z]:)"+              // Match a drive letter followed by :
+				@"(?<dir>[\\/]([^""<>|]+[\\/])*)"+   // Match 0 or more directory paths, starting and ending with \ or /
+				@"(?<file>[^""<>|:*?\\/]+?)"+        // Match a filename (with extension) up to the quote character
+				@"\k<q>"+                            // Match the closing quote
+			@")|("+                                  //
+				@"(?<drive>[A-Za-z]:)"+              // Match a drive letter followed by :
+				@"(?<dir>[\\/]([^\s""<>|]+[\\/])*)"+ // Match 0 or more directory paths (excluding whitespace), starting and ending with \ or /
+				@"(?<file>[^\s""<>|:*?\\/]+?)"+      // Match a filename (with extension) (excluding whitespace)
+				@"(?=\s|$)"+                         // Match the first whitespace or string end (but don't include in match result)
+			@"))";                                   //
+	}
+
 	/// <summary>Helper string building functions</summary>
 	public static class Str
 	{
@@ -793,6 +813,178 @@ namespace pr.unittests
 
 			str = "FieldCAPSBlah".Txfm(Str.ECapitalise.UpperCase, Str.ECapitalise.DontChange, Str.ESeparate.Add, " ");
 			Assert.AreEqual("Field CAPS Blah", str);
+		}
+		[Test] public void RegexPatterns()
+		{
+			var tests = new []
+			{
+				// Quoted path, not at the start of a string, with white spaces, and non word but legal path characters
+				new
+				{
+					Str    = @"words ""p:\path with space -,\file with space.extn"" : 412",
+					Match0 = @"""p:\path with space -,\file with space.extn""",
+					Drive  = @"p:",
+					Dir    = @"\path with space -,\",
+					File   = @"file with space.extn",
+					Quote  = @"""",
+					Valid  = true,
+				},
+
+				// Same as above, but in single quotes
+				new
+				{
+					Str    = @"words 'p:\path with space -,\file with space.extn' : 412",
+					Match0 = @"'p:\path with space -,\file with space.extn'",
+					Drive  = @"p:",
+					Dir    = @"\path with space -,\",
+					File   = @"file with space.extn",
+					Quote  = @"'",
+					Valid  = true,
+				},
+
+				// Illegal path
+				new
+				{
+					Str    = @"words ""p:\path invalid-<>\file.extn"" : 412",
+					Match0 = @"",
+					Drive  = @"",
+					Dir    = @"",
+					File   = @"",
+					Quote  = @"",
+					Valid  = false,
+				},
+
+				// Path without quotes
+				new
+				{
+					Str    = @"words p:\path\file.extn (412) words",
+					Match0 = @"p:\path\file.extn",
+					Drive  = @"p:",
+					Dir    = @"\path\",
+					File   = @"file.extn",
+					Quote  = @"",
+					Valid  = true,
+				},
+
+				// Path without a directory, or quotes
+				new
+				{
+					Str    = @"words p:\file.extn (412) words",
+					Match0 = @"p:\file.extn",
+					Drive  = @"p:",
+					Dir    = @"\",
+					File   = @"file.extn",
+					Quote  = @"",
+					Valid  = true,
+				},
+
+				// Path without quotes, with spaces in the path
+				new
+				{
+					Str    = @"words p:\path\path\broke n\file.extn (412) words",
+					Match0 = @"p:\path\path\broke",
+					Drive  = @"p:",
+					Dir    = @"\path\path\",
+					File   = @"broke",
+					Quote  = @"",
+					Valid  = true,
+				},
+
+				// Relative path
+				new
+				{
+					Str    = @"..\path\file.extn",
+					Match0 = @"",
+					Drive  = @"",
+					Dir    = @"",
+					File   = @"",
+					Quote  = @"",
+					Valid  = false,
+				},
+
+				// Relative path
+				new
+				{
+					Str = @".\path\file.extn",
+					Match0 = @"",
+					Drive  = @"",
+					Dir    = @"",
+					File   = @"",
+					Quote  = @"",
+					Valid  = false,
+				},
+
+				// Relative path
+				new
+				{
+					Str = @".\file.extn",
+					Match0 = @"",
+					Drive  = @"",
+					Dir    = @"",
+					File   = @"",
+					Quote  = @"",
+					Valid  = false,
+				},
+
+				// Full path at the start of a string
+				new
+				{
+					Str    = @"p:\path\path\path\file.extn",
+					Match0 = @"p:\path\path\path\file.extn",
+					Drive  = @"p:",
+					Dir    = @"\path\path\path\",
+					File   = @"file.extn",
+					Quote  = @"",
+					Valid  = true,
+				},
+
+				// Full path at the start of a string contains white space
+				new
+				{
+					Str    = @"p:\path\path\broke n\file.extn",
+					Match0 = @"p:\path\path\broke",
+					Drive  = @"p:",
+					Dir    = @"\path\path\",
+					File   = @"broke",
+					Quote  = @"",
+					Valid  = true,
+				},
+
+				// Full path at the start of a string, in quotes
+				new
+				{
+					Str = @"""p:\path\file.extn""",
+					Match0 = @"""p:\path\file.extn""",
+					Drive  = @"p:",
+					Dir    = @"\path\",
+					File   = @"file.extn",
+					Quote  = @"""",
+					Valid  = true,
+				},
+
+				// Full path at the start of a string followed by words
+				new
+				{
+					Str = @"p:\path\path\path\file.extn (412) words",
+					Match0 = @"p:\path\path\path\file.extn",
+					Drive  = @"p:",
+					Dir    = @"\path\path\path\",
+					File   = @"file.extn",
+					Quote  = @"",
+					Valid  = true,
+				},
+			};
+			
+			foreach (var test in tests)
+			{
+				var m = Regex.Match(test.Str, Regex_.FullPathPattern);
+				Assert.AreEqual(m.Success              , test.Valid);
+				Assert.AreEqual(m.Groups[0      ].Value, test.Match0);
+				Assert.AreEqual(m.Groups["drive"].Value, test.Drive);
+				Assert.AreEqual(m.Groups["dir"  ].Value, test.Dir);
+				Assert.AreEqual(m.Groups["file" ].Value, test.File);
+				Assert.AreEqual(m.Groups["q"    ].Value, test.Quote);
+			}
 		}
 	}
 }

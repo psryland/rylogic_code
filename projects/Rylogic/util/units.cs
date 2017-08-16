@@ -38,7 +38,7 @@ namespace pr.util
 		{
 			return new Unit<T>(v, Unit_.NoUnitsId);
 		}
-		
+
 		// Unary operators
 		[DebuggerStepThrough] public static Unit<T> operator + (Unit<T> lhs)
 		{

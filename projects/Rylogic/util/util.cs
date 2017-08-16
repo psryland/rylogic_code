@@ -1006,6 +1006,30 @@ namespace pr.util
 			return sb.ToString();
 		}
 
+		/// <summary>Format a multi-line string that probably contains file/line info so that it becomes click-able in the debugger output window</summary>
+		public static string FormatForOutputWindow(string text)
+		{
+			var sb = new StringBuilder();
+			var lines = text.Split('\n');
+			foreach (var line in lines.Select(x => x.TrimEnd('\r')))
+			{
+				var m = Regex.Match(line, Regex_.FullPathPattern);
+				if (m.Success)
+				{
+					var cap = m.Groups[0];
+					sb.Append(cap.Value.Trim('"', '\''));
+					sb.Append(": ");
+					sb.Append(line.Substring(0, cap.Index));
+					sb.Append(line.Substring(cap.Index + cap.Length));
+				}
+				else
+				{
+					sb.AppendLine(line);
+				}
+			}
+			return sb.ToString();
+		}
+
 		/// <summary>Return a sub range of an array of T</summary>
 		public static T[] SubRange<T>(T[] arr, int start, int length)
 		{
@@ -1174,6 +1198,10 @@ namespace pr.util
 			if (r.Left   < scn.Left  ) r.X = scn.Left;
 			if (r.Top    < scn.Top   ) r.Y = scn.Top;
 			return r;
+		}
+		public static Point OnScreen(Point location, Size size)
+		{
+			return OnScreen(new Rectangle(location, size)).Location;
 		}
 
 		/// <summary>Convert this mouse button flag into an index of first button that is down</summary>

@@ -290,6 +290,8 @@ namespace Tradee
 				// Shift the cached range if needed
 				if (!m_index_range.Contains(pos_idx))
 				{
+					m_cache.Clear();
+
 					// Otherwise, reload the cache centred on the requested index
 					var new_range = new Range((long)pos_idx - CacheSize/2, (long)pos_idx + CacheSize/2);
 					if (new_range.Beg <   0) new_range = new_range.Shift(0   - new_range.Beg);
