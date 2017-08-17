@@ -327,15 +327,23 @@ namespace pr.gui
 		}
 
 		/// <summary>Returns a point in chart space from a point in client space. Use to convert mouse (client-space) locations to chart coordinates</summary>
-		public PointF ClientToChart(Point client_point)
-		{
-			return ClientToChart(new PointF(client_point.X, client_point.Y));
-		}
 		public PointF ClientToChart(PointF client_point)
 		{
 			return new PointF(
 				(float)(XAxis.Min + (client_point.X - Scene.Bounds.Left  ) * XAxis.Span / Scene.Bounds.Width ),
 				(float)(YAxis.Min - (client_point.Y - Scene.Bounds.Bottom) * YAxis.Span / Scene.Bounds.Height));
+		}
+		public SizeF ClientToChart(SizeF client_size)
+		{
+			return new SizeF(
+				(float)(client_size.Width  * XAxis.Span / Scene.Bounds.Width ),
+				(float)(client_size.Height * YAxis.Span / Scene.Bounds.Height));
+		}
+		public RectangleF ClientToChart(RectangleF client_rect)
+		{
+			return new RectangleF(
+				ClientToChart(client_rect.Location),
+				ClientToChart(client_rect.Size));
 		}
 
 		/// <summary>Returns a point in client space from a point in chart space. Inverse of ClientToChart</summary>
@@ -344,6 +352,18 @@ namespace pr.gui
 			return new Point(
 				(int)(Scene.Bounds.Left   + (chart_point.X - XAxis.Min) * Scene.Bounds.Width  / XAxis.Span),
 				(int)(Scene.Bounds.Bottom - (chart_point.Y - YAxis.Min) * Scene.Bounds.Height / YAxis.Span));
+		}
+		public Size ChartToClient(SizeF chart_size)
+		{
+			return new Size(
+				(int)(chart_size.Width  * Scene.Bounds.Width  / XAxis.Span),
+				(int)(chart_size.Height * Scene.Bounds.Height / YAxis.Span));
+		}
+		public Rectangle ChartToClient(RectangleF chart_rect)
+		{
+			return new Rectangle(
+				ChartToClient(chart_rect.Location),
+				ChartToClient(chart_rect.Size));
 		}
 
 		/// <summary>Return a point in camera space from a point in chart space (Z = focus plane)</summary>
@@ -730,15 +750,14 @@ namespace pr.gui
 					using (var pen = new Pen(XAxis.Options.TickColour))
 					using (var bsh = new SolidBrush(XAxis.Options.TickColour))
 					{
-						double min, max, step;
-						XAxis.GridLines(out min, out max, out step);
+						XAxis.GridLines(out var min, out var max, out var step);
 						for (var x = min; x < max; x += step)
 						{
 							var X = (int)(dims.ChartArea.Left + x * dims.ChartArea.Width / XAxis.Span);
 							var s = XAxis.TickText(x + XAxis.Min, step);
 							var r = gfx.MeasureString(s, XAxis.Options.TickFont);
 							if (XAxis.Options.DrawTickLabels)
-								gfx.DrawString(s, XAxis.Options.TickFont, bsh, new PointF(X - r.Width*0.5f, lbly));
+								gfx.DrawString(s, XAxis.Options.TickFont, bsh, new PointF(X, lbly), new StringFormat{Alignment = StringAlignment.Center});
 							if (XAxis.Options.DrawTickMarks)
 								gfx.DrawLine(pen, X, dims.ChartArea.Top + dims.ChartArea.Height, X, dims.ChartArea.Top + dims.ChartArea.Height + XAxis.Options.TickLength);
 						}
@@ -749,15 +768,14 @@ namespace pr.gui
 					using (var pen = new Pen(YAxis.Options.TickColour))
 					using (var bsh = new SolidBrush(YAxis.Options.TickColour))
 					{
-						double min, max, step;
-						YAxis.GridLines(out min, out max, out step);
+						YAxis.GridLines(out var min, out var max, out var step);
 						for (var y = min; y < max; y += step)
 						{
 							var Y = (int)(dims.ChartArea.Top + dims.ChartArea.Height - y * dims.ChartArea.Height / YAxis.Span);
 							var s = YAxis.TickText(y + YAxis.Min, step);
 							var r = gfx.MeasureString(s, YAxis.Options.TickFont);
 							if (YAxis.Options.DrawTickLabels)
-								gfx.DrawString(s, YAxis.Options.TickFont, bsh, new PointF(lblx - r.Width, Y - r.Height*0.5f));
+								gfx.DrawString(s, YAxis.Options.TickFont, bsh, new PointF(lblx - r.Width, Y), new StringFormat{LineAlignment = StringAlignment.Center});
 							if (YAxis.Options.DrawTickMarks)
 								gfx.DrawLine(pen, dims.ChartArea.Left - YAxis.Options.TickLength, Y, dims.ChartArea.Left, Y);
 						}
@@ -1760,8 +1778,7 @@ namespace pr.gui
 				// Grid lines are modelled from the bottom left corner
 				if (XAxis.Owner.Options.ShowGridLines && XAxis.Options.ShowGridLines)
 				{
-					double min, max, step;
-					XAxis.GridLines(out min, out max, out step);
+					XAxis.GridLines(out var min, out var max, out var step);
 
 					var o2w = cam.O2W;
 					o2w.pos = cam.FocusPoint - o2w * new v4((float)(wh.x/2 - min), wh.y/2, -Owner.Options.GridZOffset, 0);
@@ -1771,8 +1788,7 @@ namespace pr.gui
 				}
 				if (YAxis.Owner.Options.ShowGridLines && YAxis.Options.ShowGridLines)
 				{
-					double min, max, step;
-					YAxis.GridLines(out min, out max, out step);
+					YAxis.GridLines(out var min, out var max, out var step);
 
 					var o2w = cam.O2W;
 					o2w.pos = cam.FocusPoint - o2w * new v4(wh.x/2, (float)(wh.y/2 - min), -Owner.Options.GridZOffset, 0);
@@ -2149,7 +2165,9 @@ namespace pr.gui
 				/// <summary>Default value to text conversion</summary>
 				public string DefaultTickText(double x, double step)
 				{
-					return Maths.RoundSF(x, 4).ToString("G8");
+					// Quantise 'x' scaled by the Axis span.
+					// This solves the rounding problem for values near zero when the axis span could be anything
+					return !Maths.FEql(x / Span, 0.0) ? Maths.RoundSF(x, 4).ToString("G8") : "0";
 				}
 
 				/// <summary>Default tick text measurement</summary>

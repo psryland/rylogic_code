@@ -34,16 +34,6 @@ namespace CoinFlip
 		{
 			Model.MarketUpdates.Add(() =>
 			{
-				// Remove any coins that don't involve the coins of interest
-				var old_coins = Coins.Values.Where(x => !coi.Contains(x.Symbol)).ToArray();
-				foreach (var coin in old_coins)
-					Coins.Remove(coin);
-
-				// Remove any existing pairs that don't involve coins of interest
-				var old_pairs = Pairs.Values.Where(x => !coi.Contains(x.Base) || !coi.Contains(x.Quote)).ToArray();
-				foreach (var pair in old_pairs)
-					Pairs.Remove(pair);
-
 				// Create cross-exchange pairs for each coin of interest
 				foreach (var cd in Model.Coins.Where(x => x.OfInterest))
 				{

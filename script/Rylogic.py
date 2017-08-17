@@ -478,22 +478,6 @@ def MSBuild(sln_or_proj_file, projects, platforms, configs, parallel=False, same
 	print("\n")
 	return not errors
 
-# Deploy a bin tool - depreciated, just put Tool.Copy in the deploy script
-#def DeployToBin(appname, files, platforms, config, CopyForArch=False):
-#	AssertPathsExist([UserVars.root])
-#	print("Deploying...")
-#	for platform in platforms:
-#		srcdir = UserVars.root + "\\obj\\v120\\" + appname + "\\" + platform + "\\" + config
-#		dstdir = UserVars.root + "\\bin\\" + appname + "\\" + platform
-#		for file in files:
-#			Copy(srcdir+"\\"+file, dstdir+"\\"+file)
-#	
-#	# If this is a single file tool, copy the version for this platform to \bin
-#	if CopyForArch:
-#		srcdir = UserVars.root + "\\bin\\" + appname + "\\" + UserVars.arch
-#		for file in files:
-#			Copy(srcdir+"\\"+file, UserVars.root+"\\bin\\"+file)
-
 # Create a zip of a directory
 def ZipDirectory(zip_path, root_dir):
 	zipf = zipfile.ZipFile(zip_path, 'w')

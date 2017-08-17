@@ -14,7 +14,7 @@ using pr.extn;
 namespace pr.maths
 {
 	/// <summary>A dynamic NxM matrix</summary>
-	[DebuggerDisplay("{m_rows}x{m_cols} {m_data}")]
+	[DebuggerDisplay("{Description}")]
 	public struct Matrix
 	{
 		public int m_rows;
@@ -128,6 +128,29 @@ namespace pr.maths
 						mat[i,k] = value[i,0];
 				}
 			}
+		}
+
+		/// <summary>A pretty string description of the matrix</summary>
+		public string Description
+		{
+			get
+			{
+				var s = new StringBuilder();
+				s.AppendLine($"[{m_cols}x{m_rows}]");
+				for (int i = 0; i != m_rows; ++i)
+				{
+					for (int j = 0; j != m_cols; ++j)
+						s.Append($"{this[i,j],5:0.00} ");
+					s.AppendLine();
+				}
+				return s.ToString();
+			}
+		}
+
+		/// <summary>ToString</summary>
+		public override string ToString()
+		{
+			return Description;
 		}
 
 		#region Functions
@@ -273,20 +296,6 @@ namespace pr.maths
 					m[i,j] = double.Parse(nums[j]);
 			}
 			return m;
-		}
-
-		/// <summary>ToString</summary>
-		public override string ToString()
-		{
-			var s = new StringBuilder();
-			for (int i = 0; i < m_rows; i++)
-			{
-				for (int j = 0; j < m_cols; j++)
-					s.Append("{0,5:0.00} ".Fmt(this[i,j]));
-
-				s.AppendLine();
-			}
-			return s.ToString();
 		}
 
 		#endregion

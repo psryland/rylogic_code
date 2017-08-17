@@ -607,9 +607,11 @@ namespace CoinFlip
 								}
 
 								// If the profit ratio for the current price is above the minimum, take the win
-								if (current_ratio > PriceOffset)
+								if (current_ratio > 1.5m * PriceOffset)
 								{
-									Log.Write(ELogLevel.Debug, $"Could fill at {current_best_price}, ratio {current_ratio}");
+									// how?
+									//await Exch1.
+									//Log.Write(ELogLevel.Debug, $"Could fill at {current_best_price}, ratio {current_ratio}");
 								}
 							}
 

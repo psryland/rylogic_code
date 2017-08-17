@@ -260,7 +260,13 @@ namespace pr
 			ws_direction = pr::Normalise3(pt - ws_point);
 		}
 
-		// Set the distances to the near and far clip planes
+		// Get/Set the distances to the near and far clip planes
+		v2 ClipPlanes(bool focus_relative_clip)
+		{
+			return v2(
+				focus_relative_clip ? m_near : Near(),
+				focus_relative_clip ? m_far  : Far());
+		}
 		void ClipPlanes(float near_, float far_, bool focus_relative_clip)
 		{
 			m_near = near_;

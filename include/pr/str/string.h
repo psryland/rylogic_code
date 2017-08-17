@@ -1526,9 +1526,9 @@ namespace std
 {
 	// Specialise hash functor for pr::string
 	template <typename T, int L, bool F, typename A>
-	struct hash<pr::string<T,L,F,A>> :public unary_function<pr::string<T,L,F,A>, size_t>
+	struct hash<pr::string<T,L,F,A>>
 	{
-		typedef pr::string<T,L,F,A> _Kty;
+		using _Kty = pr::string<T,L,F,A>;
 
 		// hash 'key' to a size_t value by pseudo-randomizing transform
 		size_t operator()(_Kty const& key) const

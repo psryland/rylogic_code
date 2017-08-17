@@ -632,6 +632,7 @@ namespace pr
 			VCont& m_point;
 			ICont& m_index;
 			CCont& m_color;
+			v2     m_dashed;
 			float  m_line_width;
 			bool   m_per_line_colour;
 			bool   m_smooth;
@@ -644,6 +645,7 @@ namespace pr
 				,m_index(p.m_cache.m_index)
 				,m_color(p.m_cache.m_color)
 				,m_line_width()
+				,m_dashed(v2XAxis)
 				,m_per_line_colour()
 				,m_smooth()
 				,m_linestrip(linestrip)
@@ -668,6 +670,12 @@ namespace pr
 						return true;
 					}
 					#pragma endregion
+				case EKeyword::Dashed:
+					#pragma region
+					{
+						p.m_reader.Vector2S(m_dashed);
+						return true;
+					}
 				case EKeyword::Width:
 					#pragma region
 					{
@@ -717,6 +725,25 @@ namespace pr
 					pr::Smooth(points, m_point);
 				}
 
+				// Convert lines to dashed lines
+				if (m_dashed != v2XAxis)
+				{
+					VCont points;
+					std::swap(points, m_point);
+
+					if (m_linestrip)
+					{
+						// 'Dashing' a line turns it into a line list
+						DashLineStrip(points, m_point, m_dashed);
+						m_linestrip = false;
+					}
+					else if (!m_linemesh)
+					{
+						// Convert each line segment to dashed lines
+						DashLineList(points, m_point, m_dashed);
+					}
+				}
+
 				// Create the model
 				if (m_linemesh)
 				{
@@ -746,6 +773,45 @@ namespace pr
 					shdr->m_default_width = m_line_width;
 					for (auto& nug : obj->m_model->m_nuggets)
 						nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
+				}
+			}
+			void DashLineStrip(VCont const& in, VCont& out, v2 const& dash)
+			{
+				assert(int(in.size()) >= 2);
+
+				// Turn the sequence of line segments into a single dashed line
+				auto t = 0.0f;
+				for (int i = 1, iend = int(in.size()); i != iend; ++i)
+				{
+					auto d = in[i] - in[i-1];
+					auto len = Length3(d);
+
+					// Emit dashes over the length of the line segment
+					for (;t < len; t += dash.x + dash.y)
+					{
+						out.push_back(in[i-1] + d * Clamp(t         , 0.0f, len) / len);
+						out.push_back(in[i-1] + d * Clamp(t + dash.x, 0.0f, len) / len);
+					}
+					t -= len + dash.x + dash.y;
+				}
+			}
+			void DashLineList(VCont const& in, VCont& out, v2 const& dash)
+			{
+				assert(int(in.size()) >= 2 && int(in.size() & 1) == 0);
+
+				// Turn the line list 'in' into dashed lines
+				// Turn the sequence of line segments into a single dashed line
+				for (int i = 0, iend = int(in.size()); i != iend; i += 2)
+				{
+					auto d  = in[i+1] - in[i];
+					auto len = Length3(d);
+
+					// Emit dashes over the length of the line segment
+					for (auto t = 0.0f; t < len; t += dash.x + dash.y)
+					{
+						out.push_back(in[i] + d * Clamp(t, 0.0f, len) / len);
+						out.push_back(in[i] + d * Clamp(t + dash.x, 0.0f, len) / len);
+					}
 				}
 			}
 		};
@@ -3390,8 +3456,9 @@ LR"(// *************************************************************************
 
 // Line modifiers:
 //   *Coloured - The lines have an aarrggbb colour after each one. Must occur before line data if used.
-//   *Width - Render the lines with the thickness specified (in pixels).
-//   *Param - Clip the previous line to the parametric values given.
+//   *Width {w} - Render the lines with the thickness 'w' specified (in pixels).
+//   *Param {t0 t1} - Clip/Extend the previous line to the parametric values given.
+//   *dashed {on off} - Convert the line to a dashed line with dashes of length 'on' and gaps of length 'off'
 
 // A model containing an arbitrary list of line segments
 *Line lines
@@ -3423,6 +3490,7 @@ LR"(// *************************************************************************
 	1 1 1 FFFFFF00
 	1 1 0 FF00FFFF
 	1 0 0 FFFFFFFF
+	*dashed {0.1 0.05}
 }
 
 // A cuboid made from lines
@@ -4210,54 +4278,3 @@ LR"(// *************************************************************************
 		#pragma endregion
 	}
 }
-
-
-
-		#if 0
-
-
-		// Parse the ldr script in 'reader' adding the results to 'out'
-		// If 'async' is true, a progress dialog is displayed and parsing is done in a background thread.
-		void Parse(pr::Renderer& rdr, pr::script::Reader& reader, ParseResult& out, bool async, pr::Guid const& context_id)
-		{
-			// Does the work of parsing objects and adds them to 'models'
-			// 'total' is the total number of objects added
-			auto ParseObjects = [&](pr::gui::ProgressUI* dlg, ParseResult& out)
-			{
-				// Note: your application needs to have called CoInitialise() before here
-				auto start_time = GetTickCount();
-				auto last_update = start_time;
-				ParseLdrObjects(rdr, reader, context_id, out, [&](LdrObjectPtr& obj)
-				{
-					// See if it's time for a progress update
-					if (dlg == nullptr) return true;
-					auto now = GetTickCount();
-					if (now - start_time < 200 || now - last_update < 100)
-						return true;
-
-					last_update = now;
-					char const* type = obj ? ELdrObject::ToStringA(obj->m_type) : "";
-					std::string name = obj ? obj->m_name : "";
-					return dlg->Progress(-1.0f, pr::FmtS(L"Parsing scene...\r\nObject count: %d\r\n%S %S", out.m_objects.size(), type, name.c_str()));
-				});
-			};
-
-			if (async)
-			{
-				// Run the adding process as a background task while displaying a progress dialog
-				pr::gui::ProgressUI dlg(L"Processing script", L"", ParseObjects, std::ref(out));
-
-				// Set the window icon to match the parent
-				auto parent = ::GetActiveWindow();
-				auto hicon = (HICON)SendMessageW(parent, WM_GETICON, ICON_SMALL, 0);
-				if (hicon != nullptr) dlg.Icon(hicon, false);
-
-				// Display the dialog after a while
-				dlg.ShowDialog(parent, 1000);
-			}
-			else
-			{
-				ParseObjects(nullptr, out);
-			}
-		}
-		#endif

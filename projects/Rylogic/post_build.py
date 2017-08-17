@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 # Use:
-#  post_build.py $(ProjectDir) $(TargetDir) $(ConfigurationName)
+#  post_build.py $(ProjectDir) $(TargetDir) $(PlatformName) $(ConfigurationName)
 import sys, os, shutil, re
 sys.path.append(re.sub(r"^(.*\\pr\\).*", r"\1script", sys.path[0]))
 import Rylogic as Tools
@@ -13,7 +13,12 @@ try:
 
 	projdir   = sys.argv[1].rstrip("\\") if len(sys.argv) > 1 else UserVars.root + "\\projects\\Rylogic"
 	targetdir = sys.argv[2].rstrip("\\") if len(sys.argv) > 2 else UserVars.root + "\\projects\\Rylogic\\bin\\Debug"
-	config    = sys.argv[3]              if len(sys.argv) > 3 else "Debug"
+	platform  = sys.argv[3]              if len(sys.argv) > 3 else "AnyCPU"
+	config    = sys.argv[4]              if len(sys.argv) > 4 else "Debug"
+	platform = platform if platform != "AnyCPU" else "x86"
+
+	# Ensure directories exist
+	os.makedirs(targetdir, exist_ok=True);
 
 	# Sign the assembly
 	#signtool = UserVars.winsdk + "\\bin\\signtool.exe"
@@ -29,10 +34,9 @@ try:
 	if RunTests:
 		target = dll if os.path.exists(dll) else exe
 		if os.path.exists(target):
-			print("Unit Testing: " + target)
-
 			# Use the power shell to run the unit tests
-			res,outp = Tools.Run(["powershell", "-noninteractive", "-noprofile", "-sta", "-nologo", "-command", "[Reflection.Assembly]::LoadFile('"+target+"')|Out-Null;exit [pr.Program]::Main();"])
+			powershell = UserVars.powershell64 if platform == "x64" else UserVars.powershell32
+			res,outp = Tools.Run([powershell, "-noninteractive", "-noprofile", "-sta", "-nologo", "-command", "[Reflection.Assembly]::LoadFile('"+target+"')|Out-Null;exit [pr.Program]::Main();"])
 			outp = re.sub(r"Attempting to perform the InitializeDefaultDrives operation on the 'FileSystem' provider failed.\n(.*)", r"\1", outp)
 			print(outp)
 			if not res:

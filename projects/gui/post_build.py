@@ -19,8 +19,8 @@ try:
 	if platform.lower() == "win32": platform = "x86"
 
 	# Copy dependencies to 'targetdir'
-	Tools.Copy(UserVars.root+"\\lib\\"+platform+"\\"+config+"\\view3d.dll", targetdir+"\\", only_if_modified=True)
-	Tools.Copy(UserVars.root+"\\sdk\\scintilla\\lib\\"+platform+"\\"+config+"\\scintilla.dll", targetdir+"\\", only_if_modified=True)
+	Tools.Copy(UserVars.root+"\\lib\\"+platform+"\\"+config+"\\view3d.dll"   , targetdir+"\\", only_if_modified=True)
+	Tools.Copy(UserVars.root+"\\lib\\"+platform+"\\"+config+"\\scintilla.dll", targetdir+"\\", only_if_modified=True)
 
 except Exception as ex:
 	Tools.OnException(ex)

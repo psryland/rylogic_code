@@ -177,18 +177,21 @@ namespace CoinFlip
 			Instrument = null;
 			ChartSettings = null;
 
-			// Create the new instrument
-			Instrument = new Instrument(Model, pair, TimeFrame);
-
-			// Find the chart settings associated with this instrument
-			ChartSettings = Model.Settings.Charts.FirstOrDefault(x => x.SymbolCode == pair.Name);
-			if (ChartSettings == null)
+			if (pair != null)
 			{
-				ChartSettings = new Settings.ChartSettings(pair.Name);
-				Model.Settings.Charts = Model.Settings.Charts.Concat(ChartSettings).ToArray();
+				// Create the new instrument
+				Instrument = new Instrument(Model, pair, TimeFrame);
+
+				// Find the chart settings associated with this instrument
+				ChartSettings = Model.Settings.Charts.FirstOrDefault(x => x.SymbolCode == pair.Name);
+				if (ChartSettings == null)
+				{
+					ChartSettings = new Settings.ChartSettings(pair.Name);
+					Model.Settings.Charts = Model.Settings.Charts.Concat(ChartSettings).ToArray();
+				}
+				ChartSettings.Inherit = Model.Settings.ChartTemplate;
+				m_chart.Options = ChartSettings.Style;
 			}
-			ChartSettings.Inherit = Model.Settings.ChartTemplate;
-			m_chart.Options = ChartSettings.Style;
 		}
 		private void HandleDataChanged(object sender, DataEventArgs e)
 		{
@@ -346,7 +349,7 @@ namespace CoinFlip
 			if (Instrument == null)
 				return string.Empty;
 
-			const string long_fmt  = "ddd dd-MMM-yy'\r\n'HH:mm";
+			const string long_fmt  = "HH:mm'\r\n'ddd dd-MMM-yy";
 			const string short_fmt = "HH:mm";
 
 			// The range of indices
@@ -582,8 +585,8 @@ namespace CoinFlip
 			var idx_max = Instrument.Count + 20;
 			foreach (var candle in Instrument.CandleRange(idx_min, idx_max))
 			{
-				bb = BBox.Encompass(bb, new v4(idx_min, (float)candle.Low , Z.Min, 1f));
-				bb = BBox.Encompass(bb, new v4(idx_max, (float)candle.High, Z.Max, 1f));
+				bb = BBox.Encompass(bb, new v4(idx_min, (float)candle.Low , -Z.Max, 1f));
+				bb = BBox.Encompass(bb, new v4(idx_max, (float)candle.High, +Z.Max, 1f));
 			}
 
 			// Include trades
@@ -602,7 +605,7 @@ namespace CoinFlip
 		/// <summary>Handle the chart about to render</summary>
 		private void HandleChartRendering(object sender, ChartControl.ChartRenderingEventArgs e)
 		{
-			if (Instrument == null)
+			if (Instrument == null || TimeFrame == ETimeFrame.None)
 				return;
 
 			#region Candles
@@ -621,7 +624,7 @@ namespace CoinFlip
 					if (gfx.Gfx != null)
 					{
 						// Position the graphics object
-						gfx.Gfx.O2P = m4x4.Translation(new v4(gfx.DBIndexRange.Begi, 0.0f, 0.0f, 1.0f));
+						gfx.Gfx.O2P = m4x4.Translation(new v4(gfx.DBIndexRange.Begi, 0.0f, Z.Candles, 1.0f));
 						e.AddToScene(gfx.Gfx);
 					}
 				}
@@ -804,8 +807,8 @@ namespace CoinFlip
 					// Prevent degenerate triangles
 					if (o == c)
 					{
-						o *= 1.0005f;
-						c *= 0.9995f;
+						o += m_chart.ClientToChart(new SizeF(0, 0.25f)).Height;
+						c -= m_chart.ClientToChart(new SizeF(0, 0.25f)).Height;
 					}
 
 					// Candle verts

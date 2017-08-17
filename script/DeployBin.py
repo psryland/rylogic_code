@@ -8,14 +8,13 @@ import sys, os
 import Rylogic as Tools
 import UserVars
 
-# Deploy a single binary to the \Bin folder
+# Deploy a single binary to the bin folder
 def DeployBin(targetpath:str, platform:str, config:str, dstsubdir:str):
 
 	Tools.AssertVersion(1)
 	Tools.AssertPathsExist([UserVars.root])
 
 	if platform.lower() == "win32": platform = "x86"
-
 	targetpath  = os.path.abspath(targetpath) # don't change the filename case
 	srcdir,file = os.path.split(targetpath)
 	fname,extn  = os.path.splitext(file)

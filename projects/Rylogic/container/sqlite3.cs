@@ -4128,7 +4128,7 @@ namespace pr.unittests
 		[TestFixtureSetUp] public void Setup()
 		{
 			var dir = Directory.GetCurrentDirectory();
-			Sqlite.LoadDll(Regex.Replace(dir, @"^(.*\\pr\\).*", @"$1sdk\sqlite\lib\$(platform)\$(config)"));
+			Sqlite.LoadDll(Regex.Replace(dir, @"^(.*\\pr\\).*", @"$1lib\$(platform)\$(config)"));
 
 			// Register custom type bind/read methods
 			Sqlite.Bind.FunctionMap.Add(typeof(Custom), Custom.SqliteBind);

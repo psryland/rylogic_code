@@ -1230,10 +1230,6 @@ namespace pr.win32
 					return TryLoad(dll_path);
 			}
 
-			if (Util.IsInDesignMode)
-			{
-			}
-
 			throw new DllNotFoundException("Could not find dependent library '{0}'\r\nLocations searched:\r\n{1}".Fmt(dllname, string.Join("\r\n", searched.ToArray())));
 		}
 

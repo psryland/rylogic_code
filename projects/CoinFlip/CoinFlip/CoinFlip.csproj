@@ -183,6 +183,6 @@
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>$(ProjectDir)post_build.py $(ProjectDir) $(TargetDir) $(ConfigurationName)</PostBuildEvent>
+    <PostBuildEvent>$(ProjectDir)post_build.py $(ProjectDir) $(TargetDir) $(PlatformName) $(ConfigurationName)</PostBuildEvent>
   </PropertyGroup>
 </Project>

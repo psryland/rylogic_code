@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using pr.util;
 
 namespace pr.extn
 {
@@ -169,6 +171,13 @@ namespace pr.extn
 		public static IEnumerable<MethodInfo> FindMethodsWithAttribute<T>(this Type type, BindingFlags flags = BindingFlags.Public|BindingFlags.Instance) where T:Attribute
 		{
 			return type.FindMethodsWithAttribute(typeof(T), flags);
+		}
+
+		/// <summary>Reformat the stack trace string to suit the debugger output window</summary>
+		public static string OutputWindowFormat(this StackTrace st)
+		{
+			const string file_pattern = @" in " + Regex_.FullPathPattern + @":line\s(?<line>\d+)";
+			return Util.FormatForOutputWindow(st.ToString(), file_pattern);
 		}
 	}
 

@@ -41,12 +41,16 @@ platform_toolset = "v141"
 
 # The full path to the Visual Studio install
 vs_dir = r"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community"
-vs_platform_dir = vs_dir + r"\VC\Tools\MSVC\14.10.25017"
+vs_platform_dir = vs_dir + r"\VC\Tools\MSVC\14.11.25503"
 vs_compiler32 = vs_platform_dir + r"\bin\HostX86\x86\cl.exe"
 vs_compiler64 = vs_platform_dir + r"\bin\HostX86\x64\cl.exe"
 vs_linker32   = vs_platform_dir + r"\bin\HostX86\x86\link.exe"
 vs_linker64   = vs_platform_dir + r"\bin\HostX86\x64\link.exe"
 vs_vers = "15.0"
+
+# Power shell paths
+powershell64 = r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+powershell32 = r"C:\Windows\SysWOW64\WindowsPowerShell\v1.0\powershell.exe"
 
 # Text editor path
 # Note: scripts expect notepad++, so they probably won't work if you use a different tool

@@ -22,10 +22,10 @@ try:
 
 	# Copy the support dlls for both platforms
 	# These are the native dlls that visual studio doesn't automatically handle
-	Tools.Copy(UserVars.root + "\\lib\\x86\\"+config+"\\view3d.dll", targetdir+"\\lib\\x86\\", only_if_modified=True)
-	Tools.Copy(UserVars.root + "\\lib\\x64\\"+config+"\\view3d.dll", targetdir+"\\lib\\x64\\", only_if_modified=True)
-	Tools.Copy(UserVars.root + "\\sdk\\scintilla\\lib\\x86\\"+config+"\\scintilla.dll", targetdir+"\\lib\\x86\\", only_if_modified=True)
-	Tools.Copy(UserVars.root + "\\sdk\\scintilla\\lib\\x64\\"+config+"\\scintilla.dll", targetdir+"\\lib\\x64\\", only_if_modified=True)
+	Tools.Copy(UserVars.root + "\\lib\\x86\\"+config+"\\view3d.dll"   , targetdir+"\\lib\\x86\\", only_if_modified=True)
+	Tools.Copy(UserVars.root + "\\lib\\x64\\"+config+"\\view3d.dll"   , targetdir+"\\lib\\x64\\", only_if_modified=True)
+	Tools.Copy(UserVars.root + "\\lib\\x86\\"+config+"\\scintilla.dll", targetdir+"\\lib\\x86\\", only_if_modified=True)
+	Tools.Copy(UserVars.root + "\\lib\\x64\\"+config+"\\scintilla.dll", targetdir+"\\lib\\x64\\", only_if_modified=True)
 
 except Exception as ex:
 	Tools.OnException(ex)

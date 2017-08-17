@@ -96,6 +96,7 @@ namespace CoinFlip
 					HeaderText = "Trade-ability",
 					DataPropertyName = nameof(Loop.Tradeability),
 					SortMode = DataGridViewColumnSortMode.Programmatic,
+					ToolTipText = "Reasons this trade could not be executed (i.e. lack of funds, which currencies, etc)",
 					FillWeight = 2,
 				});
 				m_grid_loops.CellFormatting += (s,a) =>

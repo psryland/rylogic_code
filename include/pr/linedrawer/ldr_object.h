@@ -133,6 +133,7 @@ namespace pr
 			x(Lock                 ,= HashI("Lock"                ))\
 			x(Coloured             ,= HashI("Coloured"            ))\
 			x(Width                ,= HashI("Width"               ))\
+			x(Dashed               ,= HashI("Dashed"              ))\
 			x(Smooth               ,= HashI("Smooth"              ))\
 			x(XAxis                ,= HashI("XAxis"               ))\
 			x(YAxis                ,= HashI("YAxis"               ))\

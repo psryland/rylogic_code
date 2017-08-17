@@ -575,12 +575,27 @@ namespace pr.util
 		}
 		public static T GetAssemblyAttribute<T>() { return GetAssemblyAttribute<T>(null); }
 
+		/// <summary>Return the main assembly for the currently running application</summary>
+		public static Assembly MainAssembly
+		{
+			get
+			{
+				Assembly ass = null;
+				if (ass == null) ass = Assembly.GetEntryAssembly();
+				if (ass == null) ass = Assembly.GetExecutingAssembly();
+				return ass;
+			}
+		}
+		public static string MainAssemblyName
+		{
+			get { return MainAssembly?.GetName().Name ?? string.Empty; }
+		}
+
 		/// <summary>Return the version number for an assembly</summary>
 		public static Version AssemblyVersion(Assembly ass)
 		{
-			if (ass == null) ass = Assembly.GetEntryAssembly();
-			if (ass == null) ass = Assembly.GetExecutingAssembly();
-			return ass.GetName().Version;
+			ass = ass ?? MainAssembly;
+			return ass?.GetName().Version ?? new Version();
 		}
 		public static Version AssemblyVersion(Type type)
 		{
@@ -601,10 +616,9 @@ namespace pr.util
 			const int PeHeaderOffset = 60;
 			const int LinkerTimestampOffset = 8;
 
-			byte[] b = new byte[2048];
-			if (ass == null) ass = Assembly.GetEntryAssembly();
-			if (ass == null) ass = Assembly.GetExecutingAssembly();
-			using (Stream s = new FileStream(ass.Location, FileMode.Open, FileAccess.Read))
+			var b = new byte[2048];
+			ass = ass ?? MainAssembly;
+			using (var s = new FileStream(ass.Location, FileMode.Open, FileAccess.Read))
 				s.Read(b, 0, 2048);
 
 			DateTime ts = new DateTime(1970, 1, 1, 0, 0, 0);
@@ -628,8 +642,7 @@ namespace pr.util
 		/// <summary>Return the copyright string from an assembly</summary>
 		public static string AssemblyCopyright(Assembly ass)
 		{
-			if (ass == null) ass = Assembly.GetEntryAssembly();
-			if (ass == null) ass = Assembly.GetExecutingAssembly();
+			ass = ass ?? MainAssembly;
 			return ass.CustomAttributes.First(x => x.AttributeType == typeof(AssemblyCopyrightAttribute)).ConstructorArguments[0].Value.ToString();
 		}
 		public static string AssemblyCopyright(Type type)
@@ -648,8 +661,7 @@ namespace pr.util
 		/// <summary>Return the company string from an assembly</summary>
 		public static string AssemblyCompany(Assembly ass)
 		{
-			if (ass == null) ass = Assembly.GetEntryAssembly();
-			if (ass == null) ass = Assembly.GetExecutingAssembly();
+			ass = ass ?? MainAssembly;
 			return ass.CustomAttributes.First(x => x.AttributeType == typeof(AssemblyCompanyAttribute)).ConstructorArguments[0].Value.ToString();
 		}
 		public static string AssemblyCompany(Type type)
@@ -1007,20 +1019,27 @@ namespace pr.util
 		}
 
 		/// <summary>Format a multi-line string that probably contains file/line info so that it becomes click-able in the debugger output window</summary>
-		public static string FormatForOutputWindow(string text)
+		public static string FormatForOutputWindow(string text, string pattern = null)
 		{
+			pattern = pattern ?? Regex_.FullPathPattern;
+
 			var sb = new StringBuilder();
 			var lines = text.Split('\n');
 			foreach (var line in lines.Select(x => x.TrimEnd('\r')))
 			{
-				var m = Regex.Match(line, Regex_.FullPathPattern);
+				var m = Regex.Match(line, pattern);
 				if (m.Success)
 				{
-					var cap = m.Groups[0];
-					sb.Append(cap.Value.Trim('"', '\''));
-					sb.Append(": ");
-					sb.Append(line.Substring(0, cap.Index));
-					sb.Append(line.Substring(cap.Index + cap.Length));
+					var cap0 = m.Groups[0];
+					var path = m.Groups["path"];
+					var lnum = m.Groups["line"];
+
+					Str.Build();
+					var pre = string.Empty;
+					if (path != null) { Str.Append(path.Value.Trim('"', '\'')); pre = ": "; }
+					if (lnum != null) { Str.Append($"({lnum.Value})");          pre = ": "; }
+					Str.Append(pre, line.Remove(cap0.Index, cap0.Length));
+					sb.AppendLine(Str.CachedSB.ToString());
 				}
 				else
 				{

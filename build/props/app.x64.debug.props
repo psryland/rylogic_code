@@ -39,7 +39,7 @@
       <TargetMachine>MachineX64</TargetMachine>
     </Lib>
     <Link>
-      <AdditionalLibraryDirectories>..\lib\$(PlatformTarget)\$(Configuration);..\sdk\scintilla\lib\$(PlatformTarget)\$(Configuration);..\sdk\sqlite\lib\$(PlatformTarget)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\lib\$(PlatformTarget)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>

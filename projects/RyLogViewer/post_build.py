@@ -20,10 +20,10 @@ try:
 	pluginsdir  = targetdir + "\\plugins"
 
 	# Create the directories in the target directory
-	if not os.path.exists(targetdir):   os.makedirs(targetdir)
-	if not os.path.exists(docsdir):     os.makedirs(docsdir)
-	if not os.path.exists(examplesdir): os.makedirs(examplesdir)
-	if not os.path.exists(pluginsdir):  os.makedirs(pluginsdir)
+	os.makedirs(targetdir, exist_ok=True)
+	os.makedirs(docsdir, exist_ok=True)
+	os.makedirs(examplesdir, exist_ok=True)
+	os.makedirs(pluginsdir, exist_ok=True)
 
 	# Build docs and copy additional files to the target directory
 	Tools.Copy(projdir + "\\docs\\img"               , docsdir + "\\img\\")
@@ -46,6 +46,7 @@ try:
 	#todo replace this with proper windows signing, and investigate buying a Cert
 	#signtool = UserVars.winsdk + "\\bin\\signtool.exe"
 	#Tools.Exec([])
+
 	Tools.AssertPath(UserVars.csex)
 	Tools.Exec([UserVars.csex, "-signfile", "-f", targetdir+"\\RyLogViewer.exe", "-pk", projdir+"\\src\\licence\\private_key.xml"])
 

@@ -16,22 +16,9 @@ try:
 	Tools.AssertPathsExist([UserVars.root])
 
 	sln = UserVars.root + "\\sdk\\sqlite\\sqlite3.sln"
-	projects = [ # e.g: "\"folder\proj_name:Rebuild\""
-		"sqlite3"
-		]
-	platforms = [
-		"x86",
-		"x64"
-		]
-	configs = [
-		"debug",
-		"release"
-		]
 
-	if not Tools.MSBuild(sln, projects, platforms, configs, parallel=True, same_window=True):
-		Tools.OnError("Errors occurred")
-
+	Tools.MSBuild(sln, ["sqlite3"], ["x86","x64"], ["debug","release"], parallel=True, same_window=True)
 	Tools.OnSuccess()
 
 except Exception as ex:
-	Tools.OnError("ERROR: " + str(ex))
+	Tools.OnException(ex)

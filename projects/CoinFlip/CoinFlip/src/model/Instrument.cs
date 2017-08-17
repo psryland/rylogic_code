@@ -310,6 +310,9 @@ namespace CoinFlip
 		/// <summary>Return the index of the candle at or immediately before 'time_stamp'</summary>
 		public int IndexAt(TimeFrameTime time_stamp)
 		{
+			if (TimeFrame == ETimeFrame.None)
+				throw new Exception("Time frame is none");
+
 			var ticks = time_stamp.ExactTicks;
 
 			// If the time stamp is within the cached range, binary search the cache for the index position

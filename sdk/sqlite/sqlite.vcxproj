@@ -86,8 +86,9 @@
     <Link>
       <ModuleDefinitionFile>src\sqlite3.def</ModuleDefinitionFile>
     </Link>
+    <PostBuildEvent />
     <PostBuildEvent>
-      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration) .\lib</Command>
+      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -101,8 +102,9 @@
     <Link>
       <ModuleDefinitionFile>src\sqlite3.def</ModuleDefinitionFile>
     </Link>
+    <PostBuildEvent />
     <PostBuildEvent>
-      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration) .\lib</Command>
+      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -120,8 +122,9 @@
       <OptimizeReferences>true</OptimizeReferences>
       <ModuleDefinitionFile>src\sqlite3.def</ModuleDefinitionFile>
     </Link>
+    <PostBuildEvent />
     <PostBuildEvent>
-      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration) .\lib</Command>
+      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -139,8 +142,9 @@
       <OptimizeReferences>true</OptimizeReferences>
       <ModuleDefinitionFile>src\sqlite3.def</ModuleDefinitionFile>
     </Link>
+    <PostBuildEvent />
     <PostBuildEvent>
-      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration) .\lib</Command>
+      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

@@ -1415,24 +1415,24 @@ namespace pr.gfx
 				View3D_CameraBalanceFov(m_window.Handle, fov);
 			}
 
-			/// <summary>Get/Set the camera near plane distance</summary>
+			/// <summary>Get/Set the camera near plane distance. Focus relative</summary>
 			public float NearPlane
 			{
-				get { float n,f; ; ClipPlanes(out n, out f); return n; }
+				get { ClipPlanes(out var n, out var f, true); return n; }
 				set { ClipPlanes(value, FarPlane, true); }
 			}
 
-			/// <summary>Get/Set the camera far plane distance</summary>
+			/// <summary>Get/Set the camera far plane distance. Focus relative</summary>
 			public float FarPlane
 			{
-				get { float n,f; ClipPlanes(out n, out f); return f; }
+				get { ClipPlanes(out var n, out var f, true); return f; }
 				set { ClipPlanes(NearPlane, value, true); }
 			}
 
 			/// <summary>Get/Set the camera clip plane distances</summary>
-			public void ClipPlanes(out float near, out float far)
+			public void ClipPlanes(out float near, out float far, bool focus_relative)
 			{
-				View3D_CameraClipPlanesGet(m_window.Handle, out near, out far);
+				View3D_CameraClipPlanesGet(m_window.Handle, out near, out far, focus_relative);
 			}
 			public void ClipPlanes(float near, float far, bool focus_relative)
 			{
@@ -2364,7 +2364,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void            View3D_CameraFovYSet          (HWindow window, float fovY);
 		[DllImport(Dll)] private static extern void            View3D_CameraSetFov           (HWindow window, float fovX, float fovY);
 		[DllImport(Dll)] private static extern void            View3D_CameraBalanceFov       (HWindow window, float fov);
-		[DllImport(Dll)] private static extern void            View3D_CameraClipPlanesGet    (HWindow window, out float near, out float far);
+		[DllImport(Dll)] private static extern void            View3D_CameraClipPlanesGet    (HWindow window, out float near, out float far, bool focus_relative);
 		[DllImport(Dll)] private static extern void            View3D_CameraClipPlanesSet    (HWindow window, float near, float far, bool focus_relative);
 		[DllImport(Dll)] private static extern bool            View3D_MouseNavigate          (HWindow window, v2 ss_point, ENavOp nav_op, bool nav_start_or_end);
 		[DllImport(Dll)] private static extern bool            View3D_MouseNavigateZ         (HWindow window, v2 ss_point, float delta, bool along_ray);

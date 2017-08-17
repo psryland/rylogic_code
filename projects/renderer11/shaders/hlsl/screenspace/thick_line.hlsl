@@ -19,12 +19,12 @@ void main(line PSIn In[2], inout TriangleStream<PSIn> OutStream)
 	if (p0.z < 0.0f)
 	{
 		float t = -p0.z / (p1.z - p0.z);
-		In[0].ss_vert = p0 = lerp(p0,p1,t);//(1-t)*p0 + (t)*p1;
+		In[0].ss_vert = p0 = lerp(p0,p1,t);
 	}
 	if (p1.z < 0.0f)
 	{
 		float t = -p1.z / (p0.z - p1.z);
-		In[1].ss_vert = p1 = lerp(p1,p0,t);//(1-t)*p1 + (t)*p0;
+		In[1].ss_vert = p1 = lerp(p1,p0,t);
 	}
 
 	// Normalise the screen space points

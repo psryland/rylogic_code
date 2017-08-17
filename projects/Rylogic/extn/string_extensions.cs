@@ -20,7 +20,9 @@ namespace pr.extn
 		/// <summary>A pattern for matching full file paths, optionally in quotes</summary>
 		public const string FullPathPattern =
 			@"(?n)"+                                 // Only capture named groups
-			@"(?<![""'])(?('|"")"+                   // If the path starts with a quote (and is not the next character after a quote)
+			@"(?<![""'])"+                           // Is not the next character after a quote
+			@"(?<path>"+                             // Capture group for the whole path
+			@"(?('|"")"+                             // If the path starts with a quote
 			@"("+                                    //
 				@"(?<q>['""])"+                      // Capture the quote type
 				@"(?<drive>[A-Za-z]:)"+              // Match a drive letter followed by :
@@ -31,8 +33,8 @@ namespace pr.extn
 				@"(?<drive>[A-Za-z]:)"+              // Match a drive letter followed by :
 				@"(?<dir>[\\/]([^\s""<>|]+[\\/])*)"+ // Match 0 or more directory paths (excluding whitespace), starting and ending with \ or /
 				@"(?<file>[^\s""<>|:*?\\/]+?)"+      // Match a filename (with extension) (excluding whitespace)
-				@"(?=\s|$)"+                         // Match the first whitespace or string end (but don't include in match result)
-			@"))";                                   //
+				@"(?=[\s""<>|:*?\\/]|$)"+            // Match the first whitespace, invalid filename character, or string end (but don't include in match result)
+			@")))";                                  //
 	}
 
 	/// <summary>Helper string building functions</summary>

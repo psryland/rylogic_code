@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Runtime.Serialization;
 using pr.extn;
 using pr.stream;
+using pr.util;
 
 namespace pr.unittests
 {
@@ -38,6 +39,9 @@ namespace pr.unittests
 				int failed = 0;
 				using (var outp = new StreamWriter(new UncloseableStream(outstream)))
 				{
+					outp.WriteLine($"Unit Testing:  {ass.GetName().Name}.dll  Platform={(Environment.Is64BitProcess ? "x64" : "x86")}  Config={(Util.IsDebug ? "Debug" : "Release")}  Version={ass.GetName().Version}");
+					const string file_pattern = @" in " + Regex_.FullPathPattern + @":line\s(?<line>\d+)";
+
 					// Look for test fixtures
 					var test_fixtures = FindTestFixtures(ass).ToList();
 					foreach (var fixture in test_fixtures)
@@ -48,7 +52,7 @@ namespace pr.unittests
 						catch (Exception ex)
 						{
 							if (ex is TargetInvocationException) ex = ex.InnerException;
-							outp.WriteLine($"{fixture.Name} - Failed to create an instance of test fixture\n{ex.MessageFull()}\n{ex.StackTrace}");
+							outp.WriteLine($"{fixture.Name} - Failed to create an instance of test fixture\n{ex.MessageFull()}\n{Util.FormatForOutputWindow(ex.StackTrace,file_pattern)}");
 							outp.Flush();
 							++failed;
 							continue;
@@ -63,7 +67,7 @@ namespace pr.unittests
 						catch (Exception ex)
 						{
 							if (ex is TargetInvocationException) ex = ex.InnerException;
-							outp.WriteLine($"{fixture.Name} - Test fixture set up function threw\n{ex.MessageFull()}\n{ex.StackTrace}");
+							outp.WriteLine($"{fixture.Name} - Test fixture set up function threw\n{ex.MessageFull()}\n{Util.FormatForOutputWindow(ex.StackTrace,file_pattern)}");
 							outp.Flush();
 							++failed;
 							continue;
@@ -95,7 +99,7 @@ namespace pr.unittests
 							catch (Exception ex)
 							{
 								if (ex is TargetInvocationException) ex = ex.InnerException;
-								outp.WriteLine($"\r\nTest {test.Name} Failed\n{ex.MessageFull()}\n{ex.StackTrace}");
+								outp.WriteLine($"\r\nTest {test.Name} Failed\n{ex.MessageFull()}\n{Util.FormatForOutputWindow(ex.StackTrace,file_pattern)}");
 								outp.Flush();
 								++failed;
 							}
@@ -110,7 +114,7 @@ namespace pr.unittests
 						catch (Exception ex)
 						{
 							if (ex is TargetInvocationException) ex = ex.InnerException;
-							outp.WriteLine($"{fixture.Name} - Test fixture clean up function threw\n{ex.MessageFull()}\n{ex.StackTrace}");
+							outp.WriteLine($"{fixture.Name} - Test fixture clean up function threw\n{ex.MessageFull()}\n{Util.FormatForOutputWindow(ex.StackTrace,file_pattern)}");
 							outp.Flush();
 							++failed;
 							continue;

@@ -554,7 +554,7 @@ namespace CoinFlip
 				set { SetProp(nameof(m_ask_colour), value, m_def_ask_colour); }
 			}
 			private Color? m_ask_colour;
-			private static readonly Color m_def_ask_colour = Color_.FromArgb(0xff00843b);
+			private static readonly Color m_def_ask_colour = Color_.FromArgb(0xff22b14c);// Green
 
 			/// <summary>The colour to draw 'Bearish/Bid/Sell' things</summary>
 			public Color BidColour
@@ -567,7 +567,7 @@ namespace CoinFlip
 				set { SetProp(nameof(m_bid_colour), value, m_def_bid_colour); }
 			}
 			private Color? m_bid_colour;
-			private static readonly Color m_def_bid_colour = Color_.FromArgb(0xfff15923);
+			private static readonly Color m_def_bid_colour = Color_.FromArgb(0xffed1c24); // Red
 
 			/// <summary>Show current trades</summary>
 			public bool ShowPositions

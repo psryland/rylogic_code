@@ -648,15 +648,16 @@ VIEW3D_API void __stdcall View3D_CameraBalanceFov(View3DWindow window, float fov
 }
 
 // Get/Set the near and far clip planes for the camera
-VIEW3D_API void __stdcall View3D_CameraClipPlanesGet(View3DWindow window, float& near_, float& far_)
+VIEW3D_API void __stdcall View3D_CameraClipPlanesGet(View3DWindow window, float& near_, float& far_, BOOL focus_relative)
 {
 	try
 	{
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		near_ = window->m_camera.Near();
-		far_  = window->m_camera.Far();
+		auto cp = window->m_camera.ClipPlanes(focus_relative != 0);
+		near_ = cp.x;
+		far_  = cp.y;
 	}
 	CatchAndReport(View3D_CameraClipPlanesGet, window,);
 }

@@ -132,22 +132,26 @@ namespace LDraw
 			};
 
 			// Near
-			m_tb_near.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0 && v.Value < Camera.FarPlane; };
+			m_tb_near.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0; };
 			m_tb_near.Value = Camera.NearPlane;
 			m_tb_near.ValueChanged += (s,a) =>
 			{
 				if (!m_tb_near.Focused) return;
 				Camera.NearPlane = (float)m_tb_near.Value;
+				if (Camera.FarPlane <= Camera.NearPlane)
+					Camera.FarPlane = Camera.NearPlane * 100f;
 				m_scene.Invalidate();
 			};
 
 			// Far
-			m_tb_far.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0 && v.Value > Camera.NearPlane; };
+			m_tb_far.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0; };
 			m_tb_far.Value = Camera.FarPlane;
 			m_tb_far.ValueChanged += (s,a) =>
 			{
 				if (!m_tb_far.Focused) return;
 				Camera.FarPlane = (float)m_tb_far.Value;
+				if (Camera.NearPlane >= Camera.FarPlane)
+					Camera.NearPlane = Camera.FarPlane * 0.01f;
 				m_scene.Invalidate();
 			};
 

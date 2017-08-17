@@ -624,7 +624,7 @@
   <PropertyGroup>
     <PreBuildEvent>
     </PreBuildEvent>
-    <PostBuildEvent>$(ProjectDir)post_build.py $(ProjectDir) $(TargetDir) $(ConfigurationName)
+    <PostBuildEvent>$(ProjectDir)post_build.py $(ProjectDir) $(TargetDir) $(PlatformName) $(ConfigurationName)
 </PostBuildEvent>
   </PropertyGroup>
 </Project>
