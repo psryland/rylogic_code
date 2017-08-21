@@ -142,9 +142,9 @@ namespace pr
 		,m_mdl_mgr(m_settings.m_mem, This())
 		,m_shdr_mgr(m_settings.m_mem, This())
 		,m_tex_mgr(m_settings.m_mem, This())
-		,m_bs_mgr(m_settings.m_mem, *m_d3d_device.get())
-		,m_ds_mgr(m_settings.m_mem, *m_d3d_device.get())
-		,m_rs_mgr(m_settings.m_mem, *m_d3d_device.get())
+		,m_bs_mgr(m_settings.m_mem, m_d3d_device.get())
+		,m_ds_mgr(m_settings.m_mem, m_d3d_device.get())
+		,m_rs_mgr(m_settings.m_mem, m_d3d_device.get())
 	{
 		try
 		{

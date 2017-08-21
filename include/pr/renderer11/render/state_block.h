@@ -105,19 +105,18 @@ namespace pr
 			using base = StateManager<TStateBlock, TD3DInterface>;
 			using Lookup = Lookup<size_t, TD3DInterface*>;
 			
-			ID3D11Device& m_d3d_device;
+			ID3D11Device* m_d3d_device;
 			Lookup m_lookup;
 
-			StateManager(pr::rdr::MemFuncs& mem, ID3D11Device& d3d_device)
+			StateManager(pr::rdr::MemFuncs& mem, ID3D11Device* d3d_device)
 				:m_d3d_device(d3d_device)
 				,m_lookup(mem)
 			{}
+			StateManager(StateManager const&) = delete;
 			~StateManager()
 			{
 				Flush(0);
 			}
-			StateManager(StateManager const&) = delete;
-			StateManager& operator = (StateManager const&) = delete;
 
 			// Get/Create a state buffer for 'desc'
 			template <typename CreateFunc>

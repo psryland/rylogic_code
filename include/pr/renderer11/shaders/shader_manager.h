@@ -64,9 +64,8 @@ namespace pr
 		public:
 
 			ShaderManager(MemFuncs& mem, Renderer& rdr);
-			~ShaderManager();
 			ShaderManager(ShaderManager const&) = delete;
-			ShaderManager& operator = (ShaderManager const&) = delete;
+			~ShaderManager();
 
 			// Get or Create a dx shader.
 			// If 'id' does not already exist, 'desc' must not be null.

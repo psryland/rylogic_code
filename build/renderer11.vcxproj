@@ -162,7 +162,6 @@
     <ClInclude Include="..\include\pr\renderer11\steps\shadow_map.h" />
     <ClInclude Include="..\include\pr\renderer11\textures\image.h" />
     <ClInclude Include="..\include\pr\renderer11\textures\projected_texture.h" />
-    <ClInclude Include="..\include\pr\renderer11\textures\texture_gdi.h" />
     <ClInclude Include="..\include\pr\renderer11\textures\texture2d.h" />
     <ClInclude Include="..\include\pr\renderer11\models\model.h" />
     <ClInclude Include="..\include\pr\renderer11\models\model_buffer.h" />
@@ -235,7 +234,6 @@
     <ClCompile Include="..\projects\renderer11\steps\render_step.cpp" />
     <ClCompile Include="..\projects\renderer11\steps\shadow_map.cpp" />
     <ClCompile Include="..\projects\renderer11\textures\dds_texture_loader.cpp" />
-    <ClCompile Include="..\projects\renderer11\textures\texture_gdi.cpp" />
     <ClCompile Include="..\projects\renderer11\textures\texture2d.cpp" />
     <ClCompile Include="..\projects\renderer11\models\model.cpp" />
     <ClCompile Include="..\projects\renderer11\models\model_buffer.cpp" />

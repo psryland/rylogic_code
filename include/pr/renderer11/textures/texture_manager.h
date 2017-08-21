@@ -10,7 +10,6 @@
 #include "pr/renderer11/util/lookup.h"
 #include "pr/renderer11/util/event_types.h"
 #include "pr/renderer11/textures/texture2d.h"
-#include "pr/renderer11/textures/texture_gdi.h"
 
 namespace pr
 {
@@ -35,7 +34,6 @@ namespace pr
 			// existing texture and create a new dx resource for the texture.
 
 			Allocator<Texture2D>     m_alex_tex2d;
-			Allocator<TextureGdi>    m_alex_texgdi;
 			Renderer&                m_rdr;
 			TextureLookup            m_lookup_tex;     // A map from texture id to existing texture instances
 			TexFileLookup            m_lookup_fname;   // A map from hash of filepath to an existing dx texture
@@ -99,9 +97,9 @@ namespace pr
 			// 'src' is the initialisation data
 			// 'tdesc' is a description of the texture to be created
 			// 'sdesc' is a description of the sampler to use
-			TextureGdiPtr CreateTextureGdi(RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, char const* name = nullptr);
-			TextureGdiPtr CreateTextureGdi(RdrId id, Image const& src, char const* name = nullptr);
-			TextureGdiPtr CreateTextureGdi(RdrId id, int w, int h, char const* name = nullptr);
+			Texture2DPtr CreateTextureGdi(RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, char const* name = nullptr);
+			Texture2DPtr CreateTextureGdi(RdrId id, Image const& src, char const* name = nullptr);
+			Texture2DPtr CreateTextureGdi(RdrId id, int w, int h, char const* name = nullptr);
 
 			// Create a new texture instance that wraps an existing dx texture.
 			// 'id' is the id to assign to this new texture instance. Use 'AutoId' to auto generate an id

@@ -126,7 +126,7 @@ namespace pr
 		class BlendStateManager :private StateManager<BSBlock, ID3D11BlendState>
 		{
 		public:
-			BlendStateManager(pr::rdr::MemFuncs& mem, ID3D11Device& d3d_device)
+			BlendStateManager(pr::rdr::MemFuncs& mem, ID3D11Device* d3d_device)
 				:base(mem, d3d_device)
 			{}
 
@@ -136,7 +136,7 @@ namespace pr
 				return base::GetState(desc, [this](pr::rdr::BlendStateDesc const& d)
 				{
 					ID3D11BlendState* bs;
-					pr::Throw(m_d3d_device.CreateBlendState(&d, &bs));
+					pr::Throw(m_d3d_device->CreateBlendState(&d, &bs));
 					return bs;
 				});
 			}

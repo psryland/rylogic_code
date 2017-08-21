@@ -3698,7 +3698,6 @@ LR"(// *************************************************************************
 	1 2 3
 }
 
-
 // Line modifiers:
 //   *Coloured - The lines have an aarrggbb colour after each one. Must occur before line data if used.
 //   *Width {w} - Render the lines with the thickness 'w' specified (in pixels).
@@ -4476,7 +4475,10 @@ LR"(// *************************************************************************
 			{
 				if (o->m_model == nullptr) return true;
 				for (auto& nug : o->m_model->m_nuggets)
+				{
 					nug.m_tex_diffuse = tex;
+					nug.UpdateAlphaStates();
+				}
 
 				return true;
 			}, name);

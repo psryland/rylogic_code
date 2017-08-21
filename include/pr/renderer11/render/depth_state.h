@@ -144,7 +144,7 @@ namespace pr
 		class DepthStateManager :private StateManager<DSBlock, ID3D11DepthStencilState>
 		{
 		public:
-			DepthStateManager(MemFuncs& mem, ID3D11Device& d3d_device)
+			DepthStateManager(MemFuncs& mem, ID3D11Device* d3d_device)
 				:base(mem, d3d_device)
 			{}
 
@@ -154,7 +154,7 @@ namespace pr
 				return base::GetState(desc, [this](DepthStateDesc const& d)
 				{
 					ID3D11DepthStencilState* ds;
-					pr::Throw(m_d3d_device.CreateDepthStencilState(&d, &ds));
+					pr::Throw(m_d3d_device->CreateDepthStencilState(&d, &ds));
 					return ds;
 				});
 			}

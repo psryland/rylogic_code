@@ -122,7 +122,7 @@ namespace pr
 		class RasterStateManager :private StateManager<RSBlock, ID3D11RasterizerState>
 		{
 		public:
-			RasterStateManager(MemFuncs& mem, ID3D11Device& d3d_device)
+			RasterStateManager(MemFuncs& mem, ID3D11Device* d3d_device)
 				:base(mem, d3d_device)
 			{}
 
@@ -132,7 +132,7 @@ namespace pr
 				return base::GetState(desc, [this](RasterStateDesc const& d)
 				{
 					ID3D11RasterizerState* rs;
-					pr::Throw(m_d3d_device.CreateRasterizerState(&d, &rs));
+					pr::Throw(m_d3d_device->CreateRasterizerState(&d, &rs));
 					return rs;
 				});
 			}

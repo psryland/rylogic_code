@@ -198,9 +198,6 @@
     <ClInclude Include="..\include\pr\renderer11\textures\image.h">
       <Filter>textures</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\renderer11\textures\texture_gdi.h">
-      <Filter>textures</Filter>
-    </ClInclude>
     <ClInclude Include="..\projects\renderer11\render\state_stack.h">
       <Filter>render</Filter>
     </ClInclude>
@@ -357,9 +354,6 @@
       <Filter>textures</Filter>
     </ClCompile>
     <ClCompile Include="..\projects\renderer11\textures\wic_texture_loader.cpp">
-      <Filter>textures</Filter>
-    </ClCompile>
-    <ClCompile Include="..\projects\renderer11\textures\texture_gdi.cpp">
       <Filter>textures</Filter>
     </ClCompile>
     <ClCompile Include="..\projects\renderer11\render\state_stack.cpp">
