@@ -144,19 +144,19 @@ namespace pr
 		class DepthStateManager :private StateManager<DSBlock, ID3D11DepthStencilState>
 		{
 		public:
-			DepthStateManager(pr::rdr::MemFuncs& mem, D3DPtr<ID3D11Device>& device)
-				:base(mem, device)
+			DepthStateManager(MemFuncs& mem, ID3D11Device& d3d_device)
+				:base(mem, d3d_device)
 			{}
 
 			// Get/Create a state object for 'desc'
-			D3DPtr<ID3D11DepthStencilState> State(pr::rdr::DSBlock const& desc)
+			D3DPtr<ID3D11DepthStencilState> State(DSBlock const& desc)
 			{
-				return base::GetState(desc, [this](pr::rdr::DepthStateDesc const& d)
-					{
-						ID3D11DepthStencilState* ds;
-						pr::Throw(m_device->CreateDepthStencilState(&d, &ds));
-						return ds;
-					});
+				return base::GetState(desc, [this](DepthStateDesc const& d)
+				{
+					ID3D11DepthStencilState* ds;
+					pr::Throw(m_d3d_device.CreateDepthStencilState(&d, &ds));
+					return ds;
+				});
 			}
 
 			// Called to limit the number of pooled state objects

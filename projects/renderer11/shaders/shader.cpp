@@ -25,16 +25,16 @@ namespace pr
 		void RegisterRuntimeShader(RdrId id, char const* cso_filepath)
 		{
 			#ifdef NDEBUG
-			char const* compile_shader_dir = R"(P:\projects\renderer11\shaders\hlsl\compiled\release)";
+			char const* compile_shader_dir = R"(P:\pr\projects\renderer11\shaders\hlsl\compiled\release)";
 			#else
-			char const* compile_shader_dir = R"(P:\projects\renderer11\shaders\hlsl\compiled\debug)";
+			char const* compile_shader_dir = R"(P:\pr\projects\renderer11\shaders\hlsl\compiled\debug)";
 			#endif
 
 			shader_cso[id] = pr::To<wstring256>(pr::FmtS("%s\\%s",compile_shader_dir,cso_filepath));
 		}
 		#endif
 	
-		void ShaderBase::Setup(D3DPtr<ID3D11DeviceContext>& dc, DeviceState&)
+		void ShaderBase::Setup(ID3D11DeviceContext* dc, DeviceState&)
 		{
 			#if !PR_RDR_RUNTIME_SHADERS
 			(void)dc;
@@ -84,6 +84,12 @@ namespace pr
 			#endif
 		}
 
+		// Access to the d3d device
+		ID3D11Device* ShaderBase::D3DDevice() const
+		{
+			return m_mgr->m_rdr.D3DDevice();
+		}
+		
 		// Return the input layout associated with this shader.
 		// Note, returns null for all shaders except vertex shaders
 		D3DPtr<ID3D11InputLayout> ShaderBase::IpLayout() const

@@ -40,13 +40,13 @@ namespace pr
 			PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "thick_line_gs.cso"));
 		}
 
-		// Setup the shader ready to be used on 'dle'
-		void ThickLineListShaderGS::Setup(D3DPtr<ID3D11DeviceContext>& dc, DeviceState& state)
+		// Set up the shader ready to be used on 'dle'
+		void ThickLineListShaderGS::Setup(ID3D11DeviceContext* dc, DeviceState& state)
 		{
-			base::Setup(dc,state);
+			base::Setup(dc, state);
 			hlsl::ss::CbufFrame cb = {};
 			SetScreenSpaceConstants(state, m_default_width, cb);
-			WriteConstants(dc, m_cbuf_model, cb, EShaderType::GS);
+			WriteConstants(dc, m_cbuf_model.get(), cb, EShaderType::GS);
 		}
 
 		// Create the thick line shaders
@@ -73,14 +73,14 @@ namespace pr
 			PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "arrow_head_gs.cso"));
 		}
 
-		// Setup the shader ready to be used on 'dle'
-		void ArrowHeadShaderGS::Setup(D3DPtr<ID3D11DeviceContext>& dc, DeviceState& state)
+		// Set up the shader ready to be used on 'dle'
+		void ArrowHeadShaderGS::Setup(ID3D11DeviceContext* dc, DeviceState& state)
 		{
-			base::Setup(dc,state);
+			base::Setup(dc, state);
 			hlsl::ss::CbufFrame cb = {};
 			SetViewConstants(state.m_rstep->m_scene->m_view, cb.m_cam);
 			SetScreenSpaceConstants(state, m_default_width, cb);
-			WriteConstants(dc, m_cbuf_model, cb, EShaderType::GS);
+			WriteConstants(dc, m_cbuf_model.get(), cb, EShaderType::GS);
 		}
 
 		// Create the thick line shaders

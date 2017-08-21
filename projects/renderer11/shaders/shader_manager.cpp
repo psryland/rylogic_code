@@ -7,6 +7,7 @@
 #include "pr/renderer11/shaders/shader.h"
 #include "pr/renderer11/render/drawlist_element.h"
 #include "pr/renderer11/render/sortkey.h"
+#include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/util/event_types.h"
 #include "renderer11/util/forward_private.h"
 
@@ -14,8 +15,11 @@ namespace pr
 {
 	namespace rdr
 	{
-		ShaderManager::ShaderManager(MemFuncs& mem, D3DPtr<ID3D11Device>& device)
+		ShaderManager::ShaderManager(MemFuncs& mem, Renderer& rdr)
 			:m_mem(mem)
+			,m_dbg_mem()
+			,m_rdr(rdr)
+			,m_d3d_device(rdr.D3DDevice())
 			,m_lookup_ip(mem)
 			,m_lookup_vs(mem)
 			,m_lookup_ps(mem)
@@ -23,13 +27,12 @@ namespace pr
 			,m_lookup_shader(mem)
 			,m_lookup_cbuf(mem)
 			,m_mutex()
-			,m_device(device)
 		{
 			CreateStockShaders();
 		}
 		ShaderManager::~ShaderManager()
 		{
-			auto dc = ImmediateDC(m_device);
+			auto dc = ImmediateDC(m_rdr.D3DDevice());
 
 			// Clear all shaders
 			dc->VSSetShader(0, 0, 0);
@@ -112,7 +115,7 @@ namespace pr
 					throw pr::Exception<HRESULT>(E_FAIL, "Input layout description not provided");
 
 				D3DPtr<ID3D11InputLayout> ip;
-				pr::Throw(m_device->CreateInputLayout(desc->m_iplayout, UINT(desc->m_iplayout_count), desc->m_data, desc->m_size, &ip.m_ptr));
+				pr::Throw(m_d3d_device->CreateInputLayout(desc->m_iplayout, UINT(desc->m_iplayout_count), desc->m_data, desc->m_size, &ip.m_ptr));
 				return ip;
 			});
 		}
@@ -132,7 +135,7 @@ namespace pr
 				
 				// Attach the input layout as private data to the vertex shader
 				D3DPtr<ID3D11VertexShader> vs;
-				pr::Throw(m_device->CreateVertexShader(desc->m_data, desc->m_size, 0, &vs.m_ptr));
+				pr::Throw(m_d3d_device->CreateVertexShader(desc->m_data, desc->m_size, 0, &vs.m_ptr));
 				return vs;
 			});
 		}
@@ -149,7 +152,7 @@ namespace pr
 
 				// Create the pixel shader
 				D3DPtr<ID3D11PixelShader> ps;
-				pr::Throw(m_device->CreatePixelShader(desc->m_data, desc->m_size, 0, &ps.m_ptr));
+				pr::Throw(m_d3d_device->CreatePixelShader(desc->m_data, desc->m_size, 0, &ps.m_ptr));
 				return ps;
 			});
 		}
@@ -166,7 +169,7 @@ namespace pr
 
 				// Create the pixel shader
 				D3DPtr<ID3D11GeometryShader> gs;
-				pr::Throw(m_device->CreateGeometryShader(desc->m_data, desc->m_size, 0, &gs.m_ptr));
+				pr::Throw(m_d3d_device->CreateGeometryShader(desc->m_data, desc->m_size, 0, &gs.m_ptr));
 				return gs;
 			});
 		}

@@ -64,8 +64,7 @@ namespace pr
 			m_rtv = nullptr;
 			m_srv = nullptr;
 
-			auto device = m_scene->m_wnd->Device();
-			auto dc = m_scene->m_wnd->ImmediateDC();
+			auto device = m_scene->m_wnd->D3DDevice();
 
 			// Create the smap texture
 			TextureDesc tdesc;
@@ -155,7 +154,7 @@ namespace pr
 		// Perform the render step
 		void ShadowMap::ExecuteInternal(StateStack& ss)
 		{
-			auto& dc = ss.m_dc;
+			auto dc = ss.m_dc;
 
 			// Sort the draw list if needed
 			SortIfNeeded();
@@ -187,7 +186,7 @@ namespace pr
 
 				cb.m_frust_dim = shadow_frustum.Dim();
 				cb.m_frust_dim.w = m_scene->m_view.m_shadow_max_caster_dist;
-				WriteConstants(dc, m_cbuf_frame, cb, EShaderType::VS|EShaderType::GS|EShaderType::PS);
+				WriteConstants(dc, m_cbuf_frame.get(), cb, EShaderType::VS|EShaderType::GS|EShaderType::PS);
 			}
 			
 			// Loop over the elements in the draw list
@@ -200,7 +199,7 @@ namespace pr
 				// Set the per-nugget constants
 				hlsl::smap::CBufNugget cb = {};
 				SetTxfm(*dle.m_instance, m_scene->m_view, cb);
-				WriteConstants(dc, m_cbuf_nugget, cb, EShaderType::VS);
+				WriteConstants(dc, m_cbuf_nugget.get(), cb, EShaderType::VS);
 
 				Nugget const& nugget = *dle.m_nugget;
 				dc->DrawIndexed(

@@ -74,6 +74,7 @@ namespace pr
 			x(Model      ,= HashI("Model"     ))\
 			x(Chart      ,= HashI("Chart"     ))\
 			x(Group      ,= HashI("Group"     ))\
+			x(Text       ,= HashI("Text"      ))\
 			x(Instance   ,= HashI("Instance"  ))\
 			x(DirLight   ,= HashI("DirLight"  ))\
 			x(PointLight ,= HashI("PointLight"))\
@@ -97,12 +98,21 @@ namespace pr
 			x(RandPos              ,= HashI("RandPos"             ))\
 			x(RandOri              ,= HashI("RandOri"             ))\
 			x(Euler                ,= HashI("Euler"               ))\
+			x(Dim                  ,= HashI("Dim"                 ))\
 			x(Scale                ,= HashI("Scale"               ))\
+			x(Size                 ,= HashI("Size"                ))\
 			x(Transpose            ,= HashI("Transpose"           ))\
 			x(Inverse              ,= HashI("Inverse"             ))\
 			x(Normalise            ,= HashI("Normalise"           ))\
 			x(Orthonormalise       ,= HashI("Orthonormalise"      ))\
 			x(Colour               ,= HashI("Colour"              ))\
+			x(ForeColour           ,= HashI("ForeColour"          ))\
+			x(BackColour           ,= HashI("BackColour"          ))\
+			x(Font                 ,= HashI("Font"                ))\
+			x(Stretch              ,= HashI("Stretch"             ))\
+			x(Underline            ,= HashI("Underline"           ))\
+			x(Strikeout            ,= HashI("Strikeout"           ))\
+			x(CString              ,= HashI("CString"             ))\
 			x(Solid                ,= HashI("Solid"               ))\
 			x(Facets               ,= HashI("Facets"              ))\
 			x(CornerRadius         ,= HashI("CornerRadius"        ))\
@@ -110,6 +120,7 @@ namespace pr
 			x(ColourMask           ,= HashI("ColourMask"          ))\
 			x(Animation            ,= HashI("Animation"           ))\
 			x(Style                ,= HashI("Style"               ))\
+			x(Format               ,= HashI("Format"              ))\
 			x(Period               ,= HashI("Period"              ))\
 			x(Velocity             ,= HashI("Velocity"            ))\
 			x(AngVelocity          ,= HashI("AngVelocity"         ))\

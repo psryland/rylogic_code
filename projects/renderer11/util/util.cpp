@@ -25,7 +25,7 @@ namespace pr
 		static_assert(int(EPrim::TriStrip ) == int(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP), "EPrim::TriStrip  value out of sync with dx11");
 		
 		// The number of supported quality levels for the given format and sample count
-		UINT MultisampleQualityLevels(D3DPtr<ID3D11Device>& device, DXGI_FORMAT format, UINT sample_count)
+		UINT MultisampleQualityLevels(ID3D11Device* device, DXGI_FORMAT format, UINT sample_count)
 		{
 			UINT num_quality_levels;
 			pr::Throw(device->CheckMultisampleQualityLevels(format, sample_count, &num_quality_levels));

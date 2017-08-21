@@ -69,7 +69,7 @@ namespace pr
 		// Perform the render step
 		void DSLighting::ExecuteInternal(StateStack& ss)
 		{
-			auto& dc = ss.m_dc;
+			auto dc = ss.m_dc;
 
 			// Sort the draw list if needed
 			SortIfNeeded();
@@ -81,12 +81,12 @@ namespace pr
 				hlsl::ds::CBufCamera cb = {};
 				SetViewConstants(m_scene->m_view, cb.m_cam);
 				SetFrustumCorners(m_scene->m_view, cb);
-				WriteConstants(dc, m_cbuf_camera, cb, EShaderType::VS|EShaderType::PS);
+				WriteConstants(dc, m_cbuf_camera.get(), cb, EShaderType::VS|EShaderType::PS);
 			}
 			{// Set lighting constants
 				hlsl::ds::CBufLighting cb = {};
 				SetLightingConstants(m_scene->m_global_light, cb.m_light);
-				WriteConstants(dc, m_cbuf_lighting, cb, EShaderType::PS);
+				WriteConstants(dc, m_cbuf_lighting.get(), cb, EShaderType::PS);
 			}
 
 			// Draw the full screen quad

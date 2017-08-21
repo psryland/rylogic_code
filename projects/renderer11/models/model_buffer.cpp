@@ -6,6 +6,7 @@
 #include "pr/renderer11/models/model_buffer.h"
 #include "pr/renderer11/models/model_manager.h"
 #include "pr/renderer11/models/model_settings.h"
+#include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/util/lock.h"
 #include "pr/renderer11/util/wrappers.h"
 #include "pr/renderer11/util/util.h"
@@ -71,9 +72,8 @@ namespace pr
 			// If no sub range is given, use the entire buffer
 			if (vrange == RangeZero) vrange = m_vb.m_used;
 
-			D3DPtr<ID3D11DeviceContext> dc = ImmediateDC(m_mdl_mgr->m_device);
-			D3DPtr<ID3D11Resource> res = m_vb;
-			return lock.Map(dc, res, 0, map_type, flags, m_vb.m_stride, vrange);
+			auto dc = ImmediateDC(m_mdl_mgr->m_rdr.D3DDevice());
+			return lock.Map(dc.get(), m_vb.get(), 0, map_type, flags, m_vb.m_stride, vrange);
 		}
 		bool ModelBuffer::MapIndices(Lock& lock, D3D11_MAP map_type, UINT flags, Range irange)
 		{
@@ -83,9 +83,8 @@ namespace pr
 			// If no sub range is given, use the entire buffer
 			if (irange == RangeZero) irange = m_ib.m_used;
 
-			D3DPtr<ID3D11DeviceContext> dc = ImmediateDC(m_mdl_mgr->m_device);
-			D3DPtr<ID3D11Resource> res = m_ib;
-			return lock.Map(dc, res, 0, map_type, flags, BytesPerPixel(m_ib.m_format), irange);
+			auto dc = ImmediateDC(m_mdl_mgr->m_rdr.D3DDevice());
+			return lock.Map(dc.get(), m_ib.get(), 0, map_type, flags, BytesPerPixel(m_ib.m_format), irange);
 		}
 
 		// Ref counting clean up function

@@ -34,7 +34,12 @@ namespace pr
 		BBox(v4 const& centre, v4 const& radius)
 			:m_centre(centre)
 			,m_radius(radius)
-		{}
+		{
+			// Catch invalid bbox radii (make an exception for the 'Reset' bbox)
+			assert("Invalid bounding box" && (
+				(radius.x >= 0.0f && radius.y >= 0.0f && radius.z >= 0.0f) ||
+				(radius.x == -1.f && radius.y == -1.f && radius.z == -1.f)));
+		}
 
 		// Reset this bbox to an invalid interval
 		BBox& reset()

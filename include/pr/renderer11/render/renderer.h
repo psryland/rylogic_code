@@ -38,7 +38,7 @@ namespace pr
 			D3DPtr<IDXGIAdapter>          m_adapter;               // The adapter to use. nullptr means use the default
 			D3D_DRIVER_TYPE               m_driver_type;           // HAL, REF, etc
 			UINT                          m_device_layers;         // Add layers over the basic device (see D3D11_CREATE_DEVICE_FLAG)
-			pr::vector<D3D_FEATURE_LEVEL> m_feature_levels;        // Features to support. Empty implies 9.1 -> 11.0
+			pr::vector<D3D_FEATURE_LEVEL> m_feature_levels;        // Features to support. Empty implies 9.1 -> 11.1
 			bool                          m_fallback_to_sw_device; // True to use a software device if 'm_driver_type' fails
 
 			// Keep this inline so that m_build_options can be verified.
@@ -54,8 +54,8 @@ namespace pr
 			{
 				// Add the debug layer in debug mode
 				// Note: this automatically disables multi-sampling as well
-				//PR_EXPAND(PR_DBG_RDR, m_device_layers |= D3D11_CREATE_DEVICE_DEBUG);
-				//#pragma message(PR_LINK "WARNING: ************************************************** D3D11_CREATE_DEVICE_DEBUG enabled")
+				PR_EXPAND(PR_DBG_RDR, m_device_layers |= D3D11_CREATE_DEVICE_DEBUG);
+				#pragma message(PR_LINK "WARNING: ************************************************** D3D11_CREATE_DEVICE_DEBUG enabled")
 			}
 		};
 
@@ -64,9 +64,11 @@ namespace pr
 		{
 			RdrSettings                    m_settings;
 			D3D_FEATURE_LEVEL              m_feature_level;
-			D3DPtr<ID3D11Device>           m_device;
+			D3DPtr<ID3D11Device>           m_d3d_device;
 			D3DPtr<ID3D11DeviceContext>    m_immediate;
-			D3DPtr<ID2D1Factory>           m_d2dfactory;
+			D3DPtr<ID2D1Factory2>          m_d2dfactory;
+			D3DPtr<IDWriteFactory2>        m_dwrite;
+			D3DPtr<ID2D1Device1>           m_d2d_device;
 
 			RdrState(RdrSettings const& settings);
 			~RdrState();
@@ -81,8 +83,11 @@ namespace pr
 		std::mutex m_mutex_task_queue;
 		TaskQueue m_task_queue;
 		HWND m_dummy_hwnd;
+		
+		Renderer& This() { return *this; }
 
 	public:
+
 		// These manager classes form part of the public interface of the renderer
 		rdr::ModelManager       m_mdl_mgr;
 		rdr::ShaderManager      m_shdr_mgr;
@@ -94,28 +99,46 @@ namespace pr
 		Renderer(rdr::RdrSettings const& settings);
 		~Renderer();
 
-		// Return the dx device
-		D3DPtr<ID3D11Device> Device() const
+		// Return the D3D device
+		ID3D11Device* D3DDevice() const
 		{
-			return m_device;
+			return m_d3d_device.get();
 		}
 
 		// Return the immediate device context
-		D3DPtr<ID3D11DeviceContext> ImmediateDC() const
+		ID3D11DeviceContext* ImmediateDC() const
 		{
-			return m_immediate;
+			return m_immediate.get();
 		}
 
 		// Create a new deferred device context
-		D3DPtr<ID3D11DeviceContext> DeferredDC() const
+		ID3D11DeviceContext* DeferredDC() const
 		{
-			return nullptr;
+			throw std::exception("not supported");
+		}
+
+		// Return the D2D device
+		ID2D1Device1* D2DDevice() const
+		{
+			return m_d2d_device.get();
 		}
 
 		// Return the direct2d factory
-		D3DPtr<ID2D1Factory> D2DFactory() const
+		ID2D1Factory2* D2DFactory() const
 		{
-			return m_d2dfactory;
+			return m_d2dfactory.get();
+		}
+
+		// Return the direct write factory
+		IDWriteFactory2* DWrite() const
+		{
+			return m_dwrite.get();
+		}
+
+		// Return the associated HWND. Note: this is not associated with any particular window. 'Window' objects have an hwnd.
+		HWND DummyHwnd() const
+		{
+			return m_dummy_hwnd;
 		}
 
 		// Returns an allocator object suitable for allocating instances of 'T'

@@ -6,6 +6,7 @@
 #include "pr/renderer11/textures/texture2d.h"
 #include "pr/renderer11/textures/texture_manager.h"
 #include "renderer11/directxtex/directxtex.h"
+#include "pr/renderer11/render/renderer.h"
 
 namespace pr
 {
@@ -29,7 +30,7 @@ namespace pr
 				tex->GetDesc(&tdesc);
 				ShaderResViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
 				srvdesc.Texture2D.MipLevels = tdesc.MipLevels;
-				pr::Throw(m_mgr->m_device->CreateShaderResourceView(tex.m_ptr, &srvdesc, &srv.m_ptr));
+				pr::Throw(mgr->m_rdr.D3DDevice()->CreateShaderResourceView(tex.m_ptr, &srvdesc, &srv.m_ptr));
 			}
 			SamDesc(sam_desc);
 		}
@@ -80,6 +81,7 @@ namespace pr
 		{
 			D3DPtr<ID3D11Texture2D> tex;
 			D3DPtr<ID3D11ShaderResourceView> srv;
+			auto device = m_mgr->m_rdr.D3DDevice();
 
 			// If initialisation data is provided, see if we need to generate mip-maps
 			if (src.m_pixels != nullptr)
@@ -104,18 +106,18 @@ namespace pr
 				}
 
 				D3DPtr<ID3D11Resource> res;
-				pr::Throw(DirectX::CreateTexture(m_mgr->m_device.m_ptr, scratch.GetImages(), scratch.GetImageCount(), scratch.GetMetadata(), &res.m_ptr));
+				pr::Throw(DirectX::CreateTexture(device, scratch.GetImages(), scratch.GetImageCount(), scratch.GetMetadata(), &res.m_ptr));
 				pr::Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex.m_ptr));
 				
 				if (srvdesc)
-					pr::Throw(m_mgr->m_device->CreateShaderResourceView(tex.m_ptr, srvdesc, &srv.m_ptr));
+					pr::Throw(device->CreateShaderResourceView(tex.m_ptr, srvdesc, &srv.m_ptr));
 				else
-					pr::Throw(DirectX::CreateShaderResourceView(m_mgr->m_device.m_ptr, scratch.GetImages(), scratch.GetImageCount(), scratch.GetMetadata(), &srv.m_ptr));
+					pr::Throw(DirectX::CreateShaderResourceView(device, scratch.GetImages(), scratch.GetImageCount(), scratch.GetMetadata(), &srv.m_ptr));
 			}
 			else
 			{
-				pr::Throw(m_mgr->m_device->CreateTexture2D(&tdesc, nullptr, &tex.m_ptr));
-				pr::Throw(m_mgr->m_device->CreateShaderResourceView(tex.m_ptr, srvdesc, &srv.m_ptr));
+				pr::Throw(device->CreateTexture2D(&tdesc, nullptr, &tex.m_ptr));
+				pr::Throw(device->CreateShaderResourceView(tex.m_ptr, srvdesc, &srv.m_ptr));
 			}
 
 			// Copy the surface data from the existing texture
@@ -127,7 +129,7 @@ namespace pr
 				//  - Make a render target texture of the same format as the new texture,
 				//  - Use a shader set up for rendering one texture into another,
 				//  - Push render states,
-				//  - call 'dc->Draw()'
+				//  - call 'DC->Draw()'
 				//  - Restore render states
 				TextureDesc existing_desc; m_tex->GetDesc(&existing_desc);
 				if (existing_desc.Width != tdesc.Width || existing_desc.Height != tdesc.Height)
@@ -135,7 +137,7 @@ namespace pr
 
 				// Copy unscaled content from 
 				D3DPtr<ID3D11DeviceContext> dc;
-				m_mgr->m_device->GetImmediateContext(&dc.m_ptr);
+				device->GetImmediateContext(&dc.m_ptr);
 				if (existing_desc.SampleDesc == tdesc.SampleDesc)
 				{
 					dc->CopyResource(tex.m_ptr, m_tex.m_ptr);
@@ -164,7 +166,7 @@ namespace pr
 		void Texture2D::SamDesc(SamplerDesc const& desc)
 		{
 			D3DPtr<ID3D11SamplerState> samp_state;
-			pr::Throw(m_mgr->m_device->CreateSamplerState(&desc, &samp_state.m_ptr));
+			pr::Throw(m_mgr->m_rdr.D3DDevice()->CreateSamplerState(&desc, &samp_state.m_ptr));
 			m_samp = samp_state;
 		}
 
@@ -199,6 +201,58 @@ namespace pr
 			pr::Throw(surf->ReleaseDC(nullptr));
 			--m_mgr->m_gdi_dc_ref_count;
 			// Note: the main RT must be restored once all ReleaseDC's have been called
+		}
+
+		// Get the DXGI surface within this texture
+		D3DPtr<IDXGISurface> Texture2D::GetSurface()
+		{
+			D3DPtr<IDXGISurface> surf;
+			pr::Throw(m_tex->QueryInterface(&surf.m_ptr));
+			return surf;
+		}
+
+		// Get a d2d render target for the DXGI surface within this texture
+		D3DPtr<ID2D1RenderTarget> Texture2D::GetD2DRenderTarget()
+		{
+			auto surf = GetSurface();
+			auto d2dfactory = m_mgr->m_rdr.D2DFactory();
+
+			// Create render target properties
+			auto props = D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_DEFAULT, D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_PREMULTIPLIED));
+			d2dfactory->GetDesktopDpi(&props.dpiX, &props.dpiY);
+
+			// Create a D2D render target which can draw into our off screen D3D surface.
+			// Given that we use a constant size for the texture, we fix the DPI at 96.
+			D3DPtr<ID2D1RenderTarget> rt;
+			pr::Throw(d2dfactory->CreateDxgiSurfaceRenderTarget(surf.m_ptr, props, &rt.m_ptr));
+			return rt;
+		}
+
+		// Get a D2D device context for the DXGI surface within this texture
+		D3DPtr<ID2D1DeviceContext> Texture2D::GetD2DeviceContext()
+		{
+			auto surf = GetSurface();
+			auto d3d_device = m_mgr->m_rdr.D3DDevice();
+			auto d2d_device = m_mgr->m_rdr.D2DDevice();
+			auto d2dfactory = m_mgr->m_rdr.D2DFactory();
+
+			// Get the DXGI Device from the d3d device
+			D3DPtr<IDXGIDevice> dxgi_device;
+			pr::Throw(d3d_device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgi_device.m_ptr));
+
+			// Create a device context
+			D3DPtr<ID2D1DeviceContext> d2d_dc;
+			pr::Throw(d2d_device->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &d2d_dc.m_ptr));
+
+			// Create a bitmap wrapper for 'surf'
+			D3DPtr<ID2D1Bitmap1> target;
+			auto bp = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_PREMULTIPLIED));
+			d2dfactory->GetDesktopDpi(&bp.dpiX, &bp.dpiY);
+			pr::Throw(d2d_dc->CreateBitmapFromDxgiSurface(surf.m_ptr, bp, &target.m_ptr));
+			
+			// Set the render target
+			d2d_dc->SetTarget(target.get());
+			return d2d_dc;
 		}
 
 		// Ref counting clean up function

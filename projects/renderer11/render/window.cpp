@@ -15,7 +15,7 @@ namespace pr
 			:m_hwnd(hwnd)
 			,m_windowed(windowed)
 			,m_mode(client_area)
-			,m_multisamp(4)
+			,m_multisamp(gdi_compat ? 1 : 4)
 			,m_buffer_count(2)
 			,m_swap_effect(DXGI_SWAP_EFFECT_DISCARD)// DXGI_SWAP_EFFECT_SEQUENTIAL <- cannot use with multi-sampling
 			,m_swap_chain_flags(DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH|(gdi_compat ? DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE : 0))
@@ -47,6 +47,7 @@ namespace pr
 			,m_main_rtv()
 			,m_main_srv()
 			,m_main_dsv()
+			,m_d2d_dc()
 			,m_main_tex()
 			,m_idle(false)
 			,m_name(settings.m_name)
@@ -54,12 +55,12 @@ namespace pr
 		{
 			try
 			{
-				auto device = rdr.Device();
+				auto device = rdr.D3DDevice();
 
 				// Validate settings
-				if (AllSet(settings.m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) && !AllSet(m_rdr->Settings().m_device_layers, D3D11_CREATE_DEVICE_BGRA_SUPPORT))
+				if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) && !AllSet(m_rdr->Settings().m_device_layers, D3D11_CREATE_DEVICE_BGRA_SUPPORT))
 					pr::Throw(false, "D3D device has not been created with GDI compatibility");
-				if (AllSet(settings.m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) && settings.m_multisamp.Count != 1)
+				if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) && settings.m_multisamp.Count != 1)
 					pr::Throw(false, "GDI compatibility does not support multi-sampling");
 
 				// Check feature support
@@ -77,7 +78,7 @@ namespace pr
 				// Uses the flag 'DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE' to enable an application to
 				// render using GDI on a swap chain or a surface. This will allow the application
 				// to call IDXGISurface1::GetDC on the 0th back buffer or a surface.
-				DXGI_SWAP_CHAIN_DESC sd = {0};
+				DXGI_SWAP_CHAIN_DESC sd = {};
 				sd.BufferCount  = settings.m_buffer_count;
 				sd.BufferDesc   = settings.m_mode;
 				sd.SampleDesc   = m_multisamp;
@@ -86,11 +87,18 @@ namespace pr
 				sd.Windowed     = settings.m_windowed;
 				sd.SwapEffect   = settings.m_swap_effect;
 				sd.Flags        = settings.m_swap_chain_flags;
-				pr::Throw(factory->CreateSwapChain(device.m_ptr, &sd, &m_swap_chain.m_ptr));
+				pr::Throw(factory->CreateSwapChain(device, &sd, &m_swap_chain.m_ptr));
 				PR_EXPAND(PR_DBG_RDR, NameResource(m_swap_chain , pr::FmtS("swap chain")));
 
 				// Make DXGI monitor for Alt-Enter and switch between windowed and full screen
 				pr::Throw(factory->MakeWindowAssociation(settings.m_hwnd, settings.m_allow_alt_enter ? 0 : DXGI_MWA_NO_ALT_ENTER));
+
+				// If D2D is enabled, Connect D2D to the same render target as D3D
+				if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE))
+				{
+					// Create a D2D device context
+					pr::Throw(rdr.D2DDevice()->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS, &m_d2d_dc.m_ptr));
+				}
 
 				InitRT();
 			}
@@ -102,10 +110,20 @@ namespace pr
 		}
 		Window::~Window()
 		{
+			PR_EXPAND(PR_DBG_RDR, int rcnt);
+
 			m_main_rtv = nullptr;
 			m_main_dsv = nullptr;
 			m_main_srv = nullptr;
 			m_main_tex = nullptr;
+
+			// Destroy the D2D device context
+			if (m_d2d_dc != nullptr)
+			{
+				PR_ASSERT(PR_DBG_RDR, (rcnt = m_d2d_dc.RefCount()) == 1, "Outstanding references to the immediate device context");
+				m_d2d_dc->SetTarget(nullptr);
+				m_d2d_dc = nullptr;
+			}
 
 			// Destroying a Swap Chain:
 			// You may not release a swap chain in full-screen mode because doing so may create thread contention
@@ -113,23 +131,10 @@ namespace pr
 			// switch to windowed mode (using IDXGISwapChain::SetFullscreenState( FALSE, NULL )) and then call IUnknown::Release.
 			if (m_swap_chain != nullptr)
 			{
-				PR_EXPAND(PR_DBG_RDR, int rcnt);
 				PR_ASSERT(PR_DBG_RDR, (rcnt = m_swap_chain.RefCount()) == 1, "Outstanding references to the swap chain");
 				m_swap_chain->SetFullscreenState(FALSE, nullptr);
 				m_swap_chain = nullptr;
 			}
-		}
-
-		// Return the DX device
-		D3DPtr<ID3D11Device> Window::Device() const
-		{
-			return m_rdr->Device();
-		}
-
-		// Return the immediate device context
-		D3DPtr<ID3D11DeviceContext> Window::ImmediateDC() const
-		{
-			return m_rdr->ImmediateDC();
 		}
 
 		// Access the renderer manager classes
@@ -158,10 +163,22 @@ namespace pr
 			return m_rdr->m_rs_mgr;
 		}
 
+		// Return the DX device
+		ID3D11Device* Window::D3DDevice() const
+		{
+			return m_rdr->D3DDevice();
+		}
+
+		// Return the immediate device context
+		ID3D11DeviceContext* Window::ImmediateDC() const
+		{
+			return m_rdr->ImmediateDC();
+		}
+
 		// Create a render target from the swap-chain
 		void Window::InitRT()
 		{
-			auto device = m_rdr->Device();
+			auto device = D3DDevice();
 
 			// Get the back buffer so we can copy its properties
 			D3DPtr<ID3D11Texture2D> back_buffer;
@@ -206,8 +223,52 @@ namespace pr
 			dsv_desc.Texture2D.MipSlice = 0;
 			pr::Throw(device->CreateDepthStencilView(depth_stencil.m_ptr, &dsv_desc, &m_main_dsv.m_ptr));
 
+			// Re-link the D2D device context to the back buffer
+			if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE))
+			{
+				// Direct2D needs the DXGI version of the back buffer
+				D3DPtr<IDXGISurface> dxgi_back_buffer;
+				pr::Throw(m_swap_chain->GetBuffer(0, __uuidof(IDXGISurface), (void**)&dxgi_back_buffer.m_ptr));
+
+				// Create bitmap properties for the bitmap view of the back buffer
+				auto bp = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE));
+				m_rdr->D2DFactory()->GetDesktopDpi(&bp.dpiX, &bp.dpiY);
+
+				// Wrap the back buffer as a bitmap for D2D
+				D3DPtr<ID2D1Bitmap1> d2d_render_target;
+				pr::Throw(m_d2d_dc->CreateBitmapFromDxgiSurface(dxgi_back_buffer.get(), &bp, &d2d_render_target.m_ptr));
+
+				// Set the bitmap as the render target
+				m_d2d_dc->SetTarget(d2d_render_target.get());
+			}
+
 			// Bind the main render target and depth buffer to the OM
 			RestoreRT();
+		}
+
+		// Draw text directly to the back buffer
+		void Window::DrawString(wchar_t const* text, float x, float y)
+		{
+			// Proof of concept so far...
+			using namespace D2D1;
+			auto dwrite = m_rdr->DWrite();
+
+			// Create a solid brush
+			D3DPtr<ID2D1SolidColorBrush> brush;
+			pr::Throw(m_d2d_dc->CreateSolidColorBrush(ColorF(ColorF::Blue), &brush.m_ptr));
+
+			// Create a text format
+			D3DPtr<IDWriteTextFormat> text_format;
+			pr::Throw(dwrite->CreateTextFormat(L"tahoma", nullptr, DWRITE_FONT_WEIGHT_LIGHT, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 20.0f, L"en-GB", &text_format.m_ptr));
+
+			// Create a text layout
+			D3DPtr<IDWriteTextLayout> text_layout;
+			pr::Throw(dwrite->CreateTextLayout(text, UINT32(wcslen(text)), text_format.get(), 100.0f, 100.0f, &text_layout.m_ptr));
+
+			// Draw the string
+			m_d2d_dc->BeginDraw();
+			m_d2d_dc->DrawTextLayout(Point2F(x, y), text_layout.get(), brush.get());
+			pr::Throw(m_d2d_dc->EndDraw());
 		}
 
 		// Binds the main render target and depth buffer to the OM
@@ -217,9 +278,10 @@ namespace pr
 		}
 
 		// Binds the given render target and depth buffer views to the OM
-		void Window::SetRT(D3DPtr<ID3D11RenderTargetView>& rtv, D3DPtr<ID3D11DepthStencilView>& dsv)
+		void Window::SetRT(ID3D11RenderTargetView* rtv, ID3D11DepthStencilView* dsv)
 		{
-			ImmediateDC()->OMSetRenderTargets(1, &rtv.m_ptr, dsv.m_ptr);
+			ID3D11RenderTargetView* targets[] = {rtv};
+			ImmediateDC()->OMSetRenderTargets(1, targets, dsv);
 		}
 
 		// Set the viewport to all of the render target
@@ -359,7 +421,8 @@ namespace pr
 			// Receivers need to ensure they don't have any outstanding references to the swap chain resources
 			pr::events::Send(rdr::Evt_Resize(this, false, area)); // notify before changing the RT (with the old size)
 
-			// Drop the render targets from the immediate context
+			// Drop the render targets from the immediate context and D2D
+			if (m_d2d_dc != nullptr) m_d2d_dc->SetTarget(nullptr);
 			dc->OMSetRenderTargets(0, nullptr, nullptr);
 			dc->ClearState();
 
@@ -395,8 +458,8 @@ namespace pr
 		}
 		void Window::MultiSampling(MultiSamp ms)
 		{
-			auto device = m_rdr->Device();
-			auto dc = m_rdr->ImmediateDC();
+			auto device = D3DDevice();
+			auto dc = ImmediateDC();
 			auto area = RenderTargetSize();
 
 			// Get the description of the existing swap chain
@@ -434,7 +497,7 @@ namespace pr
 			// Uses the flag 'DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE' to enable an application to
 			// render using GDI on a swap chain or a surface. This will allow the application
 			// to call IDXGISurface1::GetDC on the 0th back buffer or a surface.
-			pr::Throw(factory->CreateSwapChain(device.m_ptr, &sd, &m_swap_chain.m_ptr));
+			pr::Throw(factory->CreateSwapChain(device, &sd, &m_swap_chain.m_ptr));
 			PR_EXPAND(PR_DBG_RDR, NameResource(m_swap_chain , pr::FmtS("swap chain")));
 
 			m_multisamp = ms;
@@ -488,7 +551,7 @@ namespace pr
 			// This happens in situations like, laptop un-docked, or remote desktop connect etc.
 			// We'll just through so the app can shutdown/reset/whatever
 			case DXGI_ERROR_DEVICE_REMOVED:
-				throw pr::Exception<HRESULT>(m_rdr->Device()->GetDeviceRemovedReason(), "Graphics adapter no longer available");
+				throw pr::Exception<HRESULT>(D3DDevice()->GetDeviceRemovedReason(), "Graphics adapter no longer available");
 			}
 		}
 	}

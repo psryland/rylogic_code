@@ -1267,7 +1267,7 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreate(char const* name, View3DCo
 			nug.m_geom = static_cast<EGeom>(n->m_geom);
 			nug.m_vrange = n->m_v0 != n->m_v1 ? Range(n->m_v0, n->m_v1) : Range(0, vcount);
 			nug.m_irange = n->m_i0 != n->m_i1 ? Range(n->m_i0, n->m_i1) : Range(0, icount);
-			nug.m_has_alpha = n->m_has_alpha != 0;
+			nug.m_geometry_has_alpha = n->m_has_alpha != 0;
 			nug.m_tex_diffuse = n->m_mat.m_diff_tex;
 			switch (n->m_mat.m_shader)
 			{
@@ -1767,7 +1767,7 @@ VIEW3D_API void __stdcall View3D_TextureSetFilterAndAddrMode(View3DTexture tex, 
 		desc.AddressV = addrV;
 
 		D3DPtr<ID3D11SamplerState> samp;
-		pr::Throw(Dll().m_rdr.Device()->CreateSamplerState(&desc, &samp.m_ptr));
+		pr::Throw(Dll().m_rdr.D3DDevice()->CreateSamplerState(&desc, &samp.m_ptr));
 		tex->m_samp = samp;
 	}
 	CatchAndReport(View3D_TextureGetInfoFromFile, ,);
@@ -1864,7 +1864,7 @@ VIEW3D_API void __stdcall View3D_RenderTo(View3DWindow window, View3DTexture ren
 
 		// Get a render target view of the render target texture
 		D3DPtr<ID3D11RenderTargetView> rtv;
-		pr::Throw(wnd.Device()->CreateRenderTargetView(render_target->m_tex.m_ptr, nullptr, &rtv.m_ptr));
+		pr::Throw(wnd.D3DDevice()->CreateRenderTargetView(render_target->m_tex.m_ptr, nullptr, &rtv.m_ptr));
 
 		// If no depth buffer is given, create a temporary depth buffer
 		D3DPtr<ID3D11Texture2D> db;
@@ -1879,7 +1879,7 @@ VIEW3D_API void __stdcall View3D_RenderTo(View3DWindow window, View3DTexture ren
 			dbdesc.BindFlags      = D3D11_BIND_DEPTH_STENCIL;
 			dbdesc.CPUAccessFlags = 0;
 			dbdesc.MiscFlags      = 0;
-			pr::Throw(wnd.Device()->CreateTexture2D(&dbdesc, nullptr, &db.m_ptr));
+			pr::Throw(wnd.D3DDevice()->CreateTexture2D(&dbdesc, nullptr, &db.m_ptr));
 		}
 		else
 		{
@@ -1888,10 +1888,10 @@ VIEW3D_API void __stdcall View3D_RenderTo(View3DWindow window, View3DTexture ren
 
 		// Create a depth stencil view of the depth buffer
 		D3DPtr<ID3D11DepthStencilView> dsv = nullptr;
-		pr::Throw(wnd.Device()->CreateDepthStencilView(db.m_ptr, nullptr, &dsv.m_ptr));
+		pr::Throw(wnd.D3DDevice()->CreateDepthStencilView(db.m_ptr, nullptr, &dsv.m_ptr));
 
 		// Set the render target
-		wnd.SetRT(rtv, dsv);
+		wnd.SetRT(rtv.get(), dsv.get());
 
 		// Render the scene
 		window->Render();

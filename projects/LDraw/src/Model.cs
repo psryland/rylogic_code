@@ -18,7 +18,7 @@ namespace LDraw
 		public Model(MainUI main_ui)
 		{
 			Owner        = main_ui;
-			View3d       = new View3d(gdi_compatibility:false);
+			View3d       = new View3d(gdi_compatibility:true);
 			IncludePaths = new List<string>();
 			ContextIds   = new HashSet<Guid>();
 			SavedViews   = new List<SavedView>();

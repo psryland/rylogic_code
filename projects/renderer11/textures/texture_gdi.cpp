@@ -26,49 +26,25 @@ namespace pr
 		//   method on the device prior to Direct3D rendering after GDI rendering.
 		// - Prior to resizing buffers you must release all outstanding DCs.
 		// - If you're going to use it in the back buffer, remember to re-bind render target
-		//   after you've called ReleaseDC. It is not neccessary to manually unbind RT before
+		//   after you've called ReleaseDC. It is not necessary to manually unbind RT before
 		//   calling GetDC as this method does that for you.
 		// - You can not use any Direct3D drawing between GetDC() and ReleaseDC() calls as the
-		//   surface is excusively locked out by DXGI for GDI. However you can mix GDI and D3D
+		//   surface is exclusively locked out by DXGI for GDI. However you can mix GDI and D3D
 		//   rendering provided that you call GetDC()/ReleaseDC() every time you need to use GDI,
 		//   before moving on to D3D.
 		//
 		// This last bit may sounds easy, but you'd be surprised how many developers fall into
 		// this issue
 		// - when you draw with GDI on the back buffer, remember that this is the back buffer,
-		//   not a framebuffer, so in order to actually see what you've drawn, you have to
-		//   re-bind RT to OM and call swapChain->Present() method so the backbuffer will
-		//   become a framebuffer and its contents will be displayed on the screen.
+		//   not a frame buffer, so in order to actually see what you've drawn, you have to
+		//   re-bind RT to OM and call swapChain->Present() method so the back buffer will
+		//   become a frame buffer and its contents will be displayed on the screen.
 
 		TextureGdi::TextureGdi(TextureManager* mgr, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, ShaderResViewDesc const* srvdesc)
 			:Texture2D(mgr, src, tdesc, sdesc, sort_id, srvdesc)
 		{}
 
-		// Get the dxgi surface within this texture
-		D3DPtr<IDXGISurface> TextureGdi::GetSurface()
-		{
-			D3DPtr<IDXGISurface> surf;
-			pr::Throw(m_tex->QueryInterface(&surf.m_ptr));
-			return surf;
-		}
-
-		// Get a d2d rendertarget for the dxgi surface within this texture
-		D3DPtr<ID2D1RenderTarget> TextureGdi::GetD2DRenderTarget()
-		{
-			auto surf = GetSurface();
-			
-			float dpiX, dpiY;
-			m_mgr->m_d2dfactory->GetDesktopDpi(&dpiX, &dpiY);
-
-			// Create a D2D render target which can draw into our offscreen D3D surface.
-			// Given that we use a constant size for the texture, we fix the DPI at 96.
-			D3DPtr<ID2D1RenderTarget> rt;
-			auto props = D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_DEFAULT, D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_PREMULTIPLIED), dpiX, dpiY);
-			pr::Throw(m_mgr->m_d2dfactory->CreateDxgiSurfaceRenderTarget(surf.m_ptr, props, &rt.m_ptr));
-			return rt;
-		}
-
-		// Refcounting cleanup function
+		// Ref-counting clean up function
 		void TextureGdi::Delete()
 		{
 			m_mgr->Delete(this);

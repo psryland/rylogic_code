@@ -173,7 +173,7 @@ namespace pr
 						auto is_char = *src == '\'';
 						
 						string str;
-						if (!pr::str::ExtractString(str, src, '\\')) throw Exception(EResult::SyntaxError, src.Loc(), "Invalid literal constant");
+						if (!pr::str::ExtractString(str, src, L'\\', nullptr)) throw Exception(EResult::SyntaxError, src.Loc(), "Invalid literal constant");
 						if      (is_char) m_tok = Token(EConstant::Integral, Token::int64(str[0])); // char literals are actually integral constants
 						else if (is_wide) m_tok = Token(EConstant::WStringLiteral, str);
 						else              m_tok = Token(EConstant::StringLiteral, str);

@@ -47,6 +47,7 @@ namespace pr
 			D3DPtr<ID3D11RenderTargetView>   m_main_rtv;         // Render target view of the render target
 			D3DPtr<ID3D11ShaderResourceView> m_main_srv;         // Shader resource view of the render target
 			D3DPtr<ID3D11DepthStencilView>   m_main_dsv;         // Depth buffer
+			D3DPtr<ID2D1DeviceContext1>      m_d2d_dc;           // The device context for D2D
 			Texture2DPtr                     m_main_tex;         // The render target as a texture
 			bool                             m_idle;             // True while the window is occluded
 			string32                         m_name;             // A debugging name for the window
@@ -54,12 +55,6 @@ namespace pr
 
 			Window(Renderer& rdr, WndSettings const& settings);
 			~Window();
-
-			// Return the DX device
-			D3DPtr<ID3D11Device> Device() const;
-
-			// Return the immediate device context
-			D3DPtr<ID3D11DeviceContext> ImmediateDC() const;
 
 			// Access the renderer manager classes
 			ModelManager& mdl_mgr();
@@ -69,6 +64,15 @@ namespace pr
 			DepthStateManager& ds_mgr();
 			RasterStateManager& rs_mgr();
 
+			// Return the DX device
+			ID3D11Device* D3DDevice() const;
+
+			// Return the immediate device context
+			ID3D11DeviceContext* ImmediateDC() const;
+
+			// Draw text directly to the back buffer
+			void DrawString(wchar_t const* text, float x, float y);
+
 			// Create the render target and depth buffer
 			void InitRT();
 
@@ -76,7 +80,7 @@ namespace pr
 			void RestoreRT();
 
 			// Binds the given render target and depth buffer views to the OM
-			void SetRT(D3DPtr<ID3D11RenderTargetView>& rtv, D3DPtr<ID3D11DepthStencilView>& dsv);
+			void SetRT(ID3D11RenderTargetView* rtv, ID3D11DepthStencilView* dsv);
 
 			// Set the viewport to all of the render target
 			void RestoreFullViewport();

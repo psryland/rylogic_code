@@ -21,7 +21,7 @@ namespace pr
 
 		#pragma region Extract Utility Functions
 
-		// A helper type that takes a pointer to a char stream and outputs a wchar_t stream
+		// A helper type that takes a pointer to a char stream and outputs a 'wchar_t' stream
 		template <typename Ptr> struct wchar_ptr
 		{
 			Ptr& m_ptr;
@@ -86,7 +86,7 @@ namespace pr
 			if (!AdvanceToNonDelim(src, delim))
 				return;
 
-			// Promote the character stream to wchar_t's.
+			// Promote the character stream to 'wchar_t's.
 			wchar_ptr<Ptr> wsrc(src);
 			auto append = [&](wchar_t ch)
 			{
@@ -237,7 +237,7 @@ namespace pr
 		#pragma endregion
 
 		#pragma region Extract Line
-		// Extract a contiguous block of characters upto (and possibly including) a new line character
+		// Extract a contiguous block of characters up to (and possibly including) a new line character
 		template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractLine(Str& line, Ptr& src, bool inc_cr, Char const* newline = nullptr)
 		{
 			if (newline == nullptr) newline = PR_STRLITERAL(Char,"\n");
@@ -274,7 +274,7 @@ namespace pr
 		#pragma endregion
 
 		#pragma region Extract Identifier
-		// Extract a contiguous block of identifier characers from 'src' incrementing 'src'
+		// Extract a contiguous block of identifier characters from 'src' incrementing 'src'
 		template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractIdentifier(Str& id, Ptr& src, Char const* delim = nullptr)
 		{
 			delim = Delim(delim);
@@ -302,7 +302,15 @@ namespace pr
 		// Extract a quoted (") string
 		// if 'escape' is not 0, it is treated as the escape character
 		// if 'quote' is not nullptr, it is treated as the accepted quote characters
-		template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractString(Str& str, Ptr& src, char escape = 0, Char const* quotes = nullptr, Char const* delim = nullptr)
+		template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractString(Str& str, Ptr& src, Char const* delim = nullptr)
+		{
+			return ExtractString(str, src, Char(0), nullptr, delim);
+		}
+		template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractString(Str& str, Ptr& src, Char escape, std::nullptr_t quotes, Char const* delim = nullptr)
+		{
+			return ExtractString(str, src, escape, static_cast<Char const*>(quotes), delim);
+		}
+		template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractString(Str& str, Ptr& src, Char escape, Char const* quotes, Char const* delim = nullptr)
 		{
 			delim = Delim(delim);
 
@@ -349,7 +357,7 @@ namespace pr
 						case '2':
 						case '3':
 							{
-								// ascii character in octal
+								// ASCII character in octal
 								wchar_t oct[9] = {};
 								for (int i = 0; i != 8 && IsOctDigit(*src); ++i, ++src) oct[i] = wchar_t(*src);
 								Append(str, len++, Char(::wcstoul(oct, nullptr, 8)));
@@ -357,7 +365,7 @@ namespace pr
 							}
 						case 'x':
 							{
-								// ascii or unicode character in hex
+								// ASCII or UNICODE character in hex
 								wchar_t hex[9] = {};
 								for (int i = 0; i != 8 && IsHexDigit(*src); ++i, ++src) hex[i] = wchar_t(*src);
 								Append(str, len++, Char(::wcstoul(hex, nullptr, 16)));
@@ -382,9 +390,17 @@ namespace pr
 			if (*src == quote) ++src; else return false;
 			return true;
 		}
-		template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractStringC(Str& str, Ptr src, char escape = 0, Char const* delim = nullptr)
+		template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractStringC(Str& str, Ptr src, Char const* delim = nullptr)
 		{
-			return ExtractString(str, src, escape, delim);
+			return ExtractStringC(str, src, Char(0), nullptr, delim);
+		}
+		template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractStringC(Str& str, Ptr src, Char escape, std::nullptr_t quotes, Char const* delim = nullptr)
+		{
+			return ExtractString(str, src, escape, static_cast<Char const*>(quotes), delim);
+		}
+		template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractStringC(Str& str, Ptr src, Char escape, Char const* quotes, Char const* delim = nullptr)
+		{
+			return ExtractString(str, src, escape, quotes, delim);
 		}
 		#pragma endregion
 
@@ -403,17 +419,17 @@ namespace pr
 			if (!AdvanceToNonDelim(src, delim))
 				return false;
 
-			// Convert a char to a lower case wchar_t
+			// Convert a char to a lower case 'wchar_t'
 			auto lwr = [](Char ch){ return char_traits<wchar_t>::lwr(wchar_t(ch)); };
 
 			// Extract the boolean
 			switch (lwr(*src))
 			{
 			default : return false;
-			case L'0': bool_ = static_cast<Bool>(false); return !IsIdentifier(*++src, false);
-			case L'1': bool_ = static_cast<Bool>(true ); return !IsIdentifier(*++src, false);
-			case L't': bool_ = static_cast<Bool>(true ); return lwr(*++src) == L'r' && lwr(*++src) == L'u' && lwr(*++src) == L'e'                        && !IsIdentifier(*++src, false);
-			case L'f': bool_ = static_cast<Bool>(false); return lwr(*++src) == L'a' && lwr(*++src) == L'l' && lwr(*++src) == L's' && lwr(*++src) == L'e' && !IsIdentifier(*++src, false);
+			case '0': bool_ = static_cast<Bool>(false); return !IsIdentifier(*++src, false);
+			case '1': bool_ = static_cast<Bool>(true ); return !IsIdentifier(*++src, false);
+			case 't': bool_ = static_cast<Bool>(true ); return lwr(*++src) == 'r' && lwr(*++src) == 'u' && lwr(*++src) == 'e'                       && !IsIdentifier(*++src, false);
+			case 'f': bool_ = static_cast<Bool>(false); return lwr(*++src) == 'a' && lwr(*++src) == 'l' && lwr(*++src) == 's' && lwr(*++src) == 'e' && !IsIdentifier(*++src, false);
 			}
 		}
 		template <typename Bool, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractBoolC(Bool& bool_, Ptr src, Char const* delim = nullptr)
@@ -432,7 +448,7 @@ namespace pr
 		#pragma endregion
 
 		#pragma region Extract Int
-		// Extract an integral number from 'src' (basically strtol)
+		// Extract an integral number from 'src' (basically 'strtol')
 		// Expects 'src' to point to a string of the following form:
 		// [delim] [{+|–}][0[{x|X|b|B}]][digits]
 		// The first character that does not fit this form stops the scan.
@@ -674,16 +690,16 @@ namespace pr
 				std::wstring wstr;
 
 				s = src;
-				PR_CHECK(ExtractString(aarr, s, '\\') && Equal(aarr, "string1") && *s == L' ', true);
-				PR_CHECK(ExtractStringC(aarr, ++s, '\\') && Equal(aarr, R"(string1str"i\ng2)") && *s == L'"', true);
+				PR_CHECK(ExtractString(aarr, s, L'\\', nullptr) && Equal(aarr, "string1") && *s == L' ', true);
+				PR_CHECK(ExtractStringC(aarr, ++s, L'\\', nullptr) && Equal(aarr, R"(string1str"i\ng2)") && *s == L'"', true);
 
 				s = src;
 				PR_CHECK(ExtractString(warr, s) && Equal(warr, "string1") && *s == L' ', true);
 				PR_CHECK(ExtractStringC(warr, ++s) && Equal(warr, R"(string1str\)") && *s == L'"', true);
 
 				s = src;
-				PR_CHECK(ExtractString(astr, s, '\\') && Equal(astr, "string1") && *s == L' ', true);
-				PR_CHECK(ExtractStringC(astr, ++s, '\\') && Equal(astr, R"(string1str"i\ng2)") && *s == L'"', true);
+				PR_CHECK(ExtractString(astr, s, L'\\', nullptr) && Equal(astr, "string1") && *s == L' ', true);
+				PR_CHECK(ExtractStringC(astr, ++s, L'\\', nullptr) && Equal(astr, R"(string1str"i\ng2)") && *s == L'"', true);
 
 				s = src;
 				PR_CHECK(ExtractString(wstr, s) && Equal(wstr, "string1") && *s == L' ', true);

@@ -22,7 +22,7 @@ namespace pr
 			AllocationsTracker<ModelBuffer> m_dbg_mem_mdlbuf;
 			AllocationsTracker<Model>       m_dbg_mem_mdl;
 			AllocationsTracker<Nugget>      m_dbg_mem_nugget;
-			D3DPtr<ID3D11Device>            m_device;
+			Renderer&                       m_rdr;
 			std::recursive_mutex            m_mutex;
 
 			// Delete methods that models/model buffers call to clean themselves up
@@ -40,7 +40,7 @@ namespace pr
 
 			// Models and ModelBuffers must be created by the ModelManager
 			// because the model manager has the allocator
-			ModelManager(MemFuncs& mem, D3DPtr<ID3D11Device>& device);
+			ModelManager(MemFuncs& mem, Renderer& rdr);
 			ModelManager(ModelManager const&) = delete;
 			ModelManager& operator =(ModelManager const&) = delete;
 

@@ -76,7 +76,7 @@
 namespace pr
 {
 	// Import the 'Gdiplus' namespace into 'pr::gdi'
-	namespace gdi { using namespace Gdiplus; }
+	namespace gdi = Gdiplus;
 	namespace gui
 	{
 		static_assert(_WIN32_WINNT >= _WIN32_WINNT_WIN6, "Windows version not >= win6");

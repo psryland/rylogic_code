@@ -4,6 +4,7 @@
 //*********************************************
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/render/scene.h"
+#include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/shaders/input_layout.h"
 #include "pr/renderer11/steps/render_step.h"
@@ -36,37 +37,37 @@ namespace pr
 		struct DSLightingShaderPS :Shader<ID3D11PixelShader, DSLightingShaderPS>
 		{
 			typedef Shader<ID3D11PixelShader, DSLightingShaderPS> base;
-			D3DPtr<ID3D11SamplerState> m_point_sampler; // A point sampler used to sample the gbuffer
+			D3DPtr<ID3D11SamplerState> m_point_sampler; // A point sampler used to sample the GBuffer
 
 			DSLightingShaderPS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11PixelShader> shdr)
 				:base(mgr, id, name, shdr)
 				,m_point_sampler()
 			{
-				// Create a gbuffer sampler
+				// Create a GBuffer sampler
 				auto sdesc = SamplerDesc::PointClamp();
-				pr::Throw(mgr->m_device->CreateSamplerState(&sdesc, &m_point_sampler.m_ptr));
+				pr::Throw(D3DDevice()->CreateSamplerState(&sdesc, &m_point_sampler.m_ptr));
 				PR_EXPAND(PR_DBG_RDR, NameResource(m_point_sampler, "dslighting point sampler"));
 
 				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "dslighting_ps.cso"));
 			}
 
-			// Setup the shader ready to be used on 'dle'
+			// Set up the shader ready to be used on 'dle'
 			// Note, shaders are set/cleared by the state stack.
 			// Only per-model constants, textures, and samplers need to be set here.
-			void Setup(D3DPtr<ID3D11DeviceContext>& dc, DeviceState& state) override
+			void Setup(ID3D11DeviceContext* dc, DeviceState& state) override
 			{
 				base::Setup(dc, state);
 
-				// Get the gbuffer render step and bind the gbuffer render targets to the PS
+				// Get the GBuffer render step and bind the GBuffer render targets to the PS
 				auto& gbuffer = state.m_rstep->as<DSLighting>().m_gbuffer;
 				dc->PSSetShaderResources(0, GBuffer::RTCount, (ID3D11ShaderResourceView* const*)gbuffer.m_srv);
 				dc->PSSetSamplers(0, 1, &m_point_sampler.m_ptr);
 			}
 
-			// Undo any changes made by this shader on the dc
+			// Undo any changes made by this shader on the DC
 			// Note, shaders are set/cleared by the state stack.
 			// This method is only needed to clear texture/sampler slots
-			void Cleanup(D3DPtr<ID3D11DeviceContext>& dc) override
+			void Cleanup(ID3D11DeviceContext* dc) override
 			{
 				ID3D11ShaderResourceView* null_srv[GBuffer::RTCount] = {};
 				dc->PSSetShaderResources(0, GBuffer::RTCount, null_srv);

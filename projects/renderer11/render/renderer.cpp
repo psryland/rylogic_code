@@ -36,16 +36,18 @@ namespace pr
 		RdrState::RdrState(RdrSettings const& settings)
 			:m_settings(settings)
 			,m_feature_level()
-			,m_device()
+			,m_d3d_device()
 			,m_immediate()
 			,m_d2dfactory()
+			,m_dwrite()
+			,m_d2d_device()
 		{
 			// Check for incompatible build settings
 			RdrSettings::BuildOptions bo;
 			pr::CheckBuildOptions(bo, settings.m_build_options);
 
-			PR_INFO_IF(PR_DBG_RDR, (m_settings.m_device_layers & D3D11_CREATE_DEVICE_DEBUG       ) != 0, "D3D11_CREATE_DEVICE_DEBUG is enabled");
-			PR_INFO_IF(PR_DBG_RDR, (m_settings.m_device_layers & D3D11_CREATE_DEVICE_BGRA_SUPPORT) != 0, "D3D11_CREATE_DEVICE_BGRA_SUPPORT is enabled");
+			PR_INFO_IF(PR_DBG_RDR, AllSet(m_settings.m_device_layers, D3D11_CREATE_DEVICE_DEBUG       ), "D3D11_CREATE_DEVICE_DEBUG is enabled");
+			PR_INFO_IF(PR_DBG_RDR, AllSet(m_settings.m_device_layers, D3D11_CREATE_DEVICE_BGRA_SUPPORT), "D3D11_CREATE_DEVICE_BGRA_SUPPORT is enabled");
 
 			// Create the device interface
 			auto hr = D3D11CreateDevice(
@@ -56,7 +58,7 @@ namespace pr
 				m_settings.m_feature_levels.empty() ? nullptr : &m_settings.m_feature_levels[0],
 				static_cast<UINT>(m_settings.m_feature_levels.size()),
 				D3D11_SDK_VERSION,
-				&m_device.m_ptr,
+				&m_d3d_device.m_ptr,
 				&m_feature_level,
 				&m_immediate.m_ptr);
 
@@ -71,13 +73,13 @@ namespace pr
 					m_settings.m_feature_levels.empty() ? nullptr : &m_settings.m_feature_levels[0],
 					static_cast<UINT>(m_settings.m_feature_levels.size()),
 					D3D11_SDK_VERSION,
-					&m_device.m_ptr,
+					&m_d3d_device.m_ptr,
 					&m_feature_level,
 					&m_immediate.m_ptr);
 			}
 			pr::Throw(hr);
-			PR_EXPAND(PR_DBG_RDR, NameResource(m_device, "dx device"));
-			PR_EXPAND(PR_DBG_RDR, NameResource(m_immediate, "immed dc"));
+			PR_EXPAND(PR_DBG_RDR, NameResource(m_d3d_device, "D3D device"));
+			PR_EXPAND(PR_DBG_RDR, NameResource(m_immediate, "immediate DC"));
 
 			// Check dlls,dx features,etc required to run the renderer are available
 			// Check the given settings are valid for the current adaptor
@@ -85,21 +87,48 @@ namespace pr
 				throw std::exception("Graphics hardware does not meet the required feature level.\r\nFeature level 10.0 required\r\n\r\n(e.g. Shader Model 4.0, non power-of-two texture sizes)");
 
 			// Create the direct2d factory
-			if (m_settings.m_device_layers & D3D11_CREATE_DEVICE_BGRA_SUPPORT)
-				pr::Throw(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &m_d2dfactory.m_ptr));
+			D2D1_FACTORY_OPTIONS d2dfactory_options;
+			d2dfactory_options.debugLevel = AllSet(m_settings.m_device_layers, D3D11_CREATE_DEVICE_DEBUG) ? D2D1_DEBUG_LEVEL_INFORMATION  : D2D1_DEBUG_LEVEL_NONE;
+			pr::Throw(D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, __uuidof(ID2D1Factory2), &d2dfactory_options, (void**)&m_d2dfactory.m_ptr));
+
+			// Create the direct write factory
+			pr::Throw(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory2), (IUnknown**)&m_dwrite.m_ptr));
+
+			// Creating a D2D device for drawing 2D to the back buffer requires 'D3D11_CREATE_DEVICE_BGRA_SUPPORT'
+			if (AllSet(m_settings.m_device_layers, D3D11_CREATE_DEVICE_BGRA_SUPPORT))
+			{
+				// Get the DXGI Device from the d3d device
+				D3DPtr<IDXGIDevice> dxgi_device;
+				pr::Throw(m_d3d_device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgi_device.m_ptr));
+
+				// Create a D2D device
+				pr::Throw(m_d2dfactory->CreateDevice(dxgi_device.get(), &m_d2d_device.m_ptr));
+			}
 		}
 
 		// Renderer state destruction
 		RdrState::~RdrState()
 		{
 			PR_EXPAND(PR_DBG_RDR, int rcnt);
-			PR_ASSERT(PR_DBG_RDR, (rcnt = m_immediate.RefCount()) == 1, "Outstanding references to the immediate device context");
-			m_immediate->OMSetRenderTargets(0, 0, 0);
-			m_immediate = nullptr;
-			m_d2dfactory = nullptr;
 
-			PR_ASSERT(PR_DBG_RDR, (rcnt = m_device.RefCount()) == 1, "Outstanding references to the dx device");
-			m_device = nullptr;
+			if (m_d2d_device != nullptr)
+			{
+				PR_ASSERT(PR_DBG_RDR, (rcnt = m_d2d_device.RefCount()) == 1, "Outstanding references to the d2d device");
+				m_d2d_device = nullptr;
+			}
+			if (m_immediate != nullptr)
+			{
+				PR_ASSERT(PR_DBG_RDR, (rcnt = m_immediate.RefCount()) == 1, "Outstanding references to the immediate device context");
+				m_immediate->OMSetRenderTargets(0, 0, 0);
+				m_immediate = nullptr;
+			}
+			if (m_d3d_device != nullptr)
+			{
+				PR_ASSERT(PR_DBG_RDR, (rcnt = m_d3d_device.RefCount()) == 1, "Outstanding references to the dx device");
+				m_d3d_device = nullptr;
+			}
+			m_d2dfactory = nullptr;
+			m_dwrite = nullptr;
 		}
 	}
 
@@ -110,12 +139,12 @@ namespace pr
 		,m_mutex_task_queue()
 		,m_task_queue()
 		,m_dummy_hwnd()
-		,m_mdl_mgr(m_settings.m_mem, m_device)
-		,m_shdr_mgr(m_settings.m_mem, m_device)
-		,m_tex_mgr(m_settings.m_mem, m_device, m_d2dfactory)
-		,m_bs_mgr(m_settings.m_mem, m_device)
-		,m_ds_mgr(m_settings.m_mem, m_device)
-		,m_rs_mgr(m_settings.m_mem, m_device)
+		,m_mdl_mgr(m_settings.m_mem, This())
+		,m_shdr_mgr(m_settings.m_mem, This())
+		,m_tex_mgr(m_settings.m_mem, This())
+		,m_bs_mgr(m_settings.m_mem, *m_d3d_device.get())
+		,m_ds_mgr(m_settings.m_mem, *m_d3d_device.get())
+		,m_rs_mgr(m_settings.m_mem, *m_d3d_device.get())
 	{
 		try
 		{

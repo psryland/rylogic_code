@@ -18,7 +18,7 @@ namespace pr
 		#include PR_RDR_SHADER_COMPILED_DIR(gbuffer_vs.h)
 		#include PR_RDR_SHADER_COMPILED_DIR(gbuffer_ps.h)
 
-		// gbuffer creation vertex shader
+		// GBuffer creation vertex shader
 		struct GBufferShaderVS :Shader<ID3D11VertexShader, GBufferShaderVS>
 		{
 			typedef Shader<ID3D11VertexShader, GBufferShaderVS> base;
@@ -29,7 +29,7 @@ namespace pr
 			}
 		};
 
-		// gbuffer creation pixel shader
+		// GBuffer creation pixel shader
 		struct GBufferShaderPS :Shader<ID3D11PixelShader, GBufferShaderPS>
 		{
 			typedef Shader<ID3D11PixelShader, GBufferShaderPS> base;
@@ -40,7 +40,7 @@ namespace pr
 			}
 		};
 
-		// Create the gbuffer shaders
+		// Create the GBuffer shaders
 		template <> void ShaderManager::CreateShader<GBufferShaderVS>()
 		{
 			VShaderDesc desc(gbuffer_vs, Vert());

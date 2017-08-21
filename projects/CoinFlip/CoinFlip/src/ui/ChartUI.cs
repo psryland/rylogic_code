@@ -30,6 +30,7 @@ namespace CoinFlip
 		private ToolStripComboBox m_cb_time_frame;
 		private ToolStripSeparator toolStripSeparator1;
 		private ToolStripButton m_chk_show_positions;
+		private ToolStripButton m_chk_show_depth;
 		private ChartControl m_chart;
 		#endregion
 
@@ -812,14 +813,14 @@ namespace CoinFlip
 					}
 
 					// Candle verts
-					m_vbuf[vert++] = new View3d.Vertex(new v4(x        , h, Z.Candles, 1f), col);
-					m_vbuf[vert++] = new View3d.Vertex(new v4(x        , o, Z.Candles, 1f), col);
-					m_vbuf[vert++] = new View3d.Vertex(new v4(x - 0.4f , o, Z.Candles, 1f), col);
-					m_vbuf[vert++] = new View3d.Vertex(new v4(x + 0.4f , o, Z.Candles, 1f), col);
-					m_vbuf[vert++] = new View3d.Vertex(new v4(x - 0.4f , c, Z.Candles, 1f), col);
-					m_vbuf[vert++] = new View3d.Vertex(new v4(x + 0.4f , c, Z.Candles, 1f), col);
-					m_vbuf[vert++] = new View3d.Vertex(new v4(x        , c, Z.Candles, 1f), col);
-					m_vbuf[vert++] = new View3d.Vertex(new v4(x        , l, Z.Candles, 1f), col);
+					m_vbuf[vert++] = new View3d.Vertex(new v4(x        , h, 0f, 1f), col);
+					m_vbuf[vert++] = new View3d.Vertex(new v4(x        , o, 0f, 1f), col);
+					m_vbuf[vert++] = new View3d.Vertex(new v4(x - 0.4f , o, 0f, 1f), col);
+					m_vbuf[vert++] = new View3d.Vertex(new v4(x + 0.4f , o, 0f, 1f), col);
+					m_vbuf[vert++] = new View3d.Vertex(new v4(x - 0.4f , c, 0f, 1f), col);
+					m_vbuf[vert++] = new View3d.Vertex(new v4(x + 0.4f , c, 0f, 1f), col);
+					m_vbuf[vert++] = new View3d.Vertex(new v4(x        , c, 0f, 1f), col);
+					m_vbuf[vert++] = new View3d.Vertex(new v4(x        , l, 0f, 1f), col);
 
 					// Candle body
 					m_ibuf[body++] = (ushort)(v + 3);
@@ -874,6 +875,7 @@ namespace CoinFlip
 			this.m_cb_time_frame = new pr.gui.ToolStripComboBox();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_chk_show_positions = new System.Windows.Forms.ToolStripButton();
+			this.m_chk_show_depth = new System.Windows.Forms.ToolStripButton();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
 			this.m_ts.SuspendLayout();
@@ -906,10 +908,11 @@ namespace CoinFlip
             this.m_lbl_time_frame,
             this.m_cb_time_frame,
             this.toolStripSeparator1,
-            this.m_chk_show_positions});
+            this.m_chk_show_positions,
+            this.m_chk_show_depth});
 			this.m_ts.Location = new System.Drawing.Point(3, 0);
 			this.m_ts.Name = "m_ts";
-			this.m_ts.Size = new System.Drawing.Size(372, 26);
+			this.m_ts.Size = new System.Drawing.Size(395, 26);
 			this.m_ts.TabIndex = 0;
 			// 
 			// m_lbl_pair
@@ -963,6 +966,15 @@ namespace CoinFlip
 			this.m_chk_show_positions.Name = "m_chk_show_positions";
 			this.m_chk_show_positions.Size = new System.Drawing.Size(23, 23);
 			this.m_chk_show_positions.Text = "Show Positions";
+			// 
+			// m_chk_show_depth
+			// 
+			this.m_chk_show_depth.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_chk_show_depth.Image = ((System.Drawing.Image)(resources.GetObject("m_chk_show_depth.Image")));
+			this.m_chk_show_depth.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_chk_show_depth.Name = "m_chk_show_depth";
+			this.m_chk_show_depth.Size = new System.Drawing.Size(23, 23);
+			this.m_chk_show_depth.Text = "Show Market Depth";
 			// 
 			// ChartUI
 			// 

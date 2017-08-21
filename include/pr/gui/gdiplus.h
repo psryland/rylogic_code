@@ -22,11 +22,8 @@ static_assert(GDIPVER == 0x0110, "");
 
 namespace pr
 {
-	namespace gdi
-	{
-		// Import the 'Gdiplus' namespace into 'pr::gdi'
-		using namespace Gdiplus;
-	}
+	// Import the 'Gdiplus' namespace into 'pr::gdi'
+	namespace gdi = Gdiplus;
 
 	// RAII object for initialised/shutting down the GdiPlus framework
 	struct GdiPlus
@@ -89,59 +86,65 @@ namespace pr
 	template <typename TFrom> struct Convert<gdi::RectF, TFrom> :convert_gdi::ToGdiRectF {};
 	template <> struct Convert<RECT, gdi::RectF> :convert_gdi::ToRECT {};
 	template <> struct Convert<RECT, gdi::Rect> :convert_gdi::ToRECT {};
+}
 
-	namespace gdi
+namespace Gdiplus
+{
+	// Singleton for accessing image codecs
+	class ImageCodec
 	{
-		// Singleton for accessing image codecs
-		class ImageCodec
+		std::vector<ImageCodecInfo> m_codecs;
+		ImageCodec()
 		{
-			std::vector<ImageCodecInfo> m_codecs;
-			ImageCodec()
-			{
-				UINT num = 0;  // number of image encoders
-				UINT size = 0; // size of the image encoder array in bytes
-				if (GetImageEncodersSize(&num, &size) != pr::gdi::Status::Ok)
-					throw std::exception("GDI+ Image encoders not available");
+			UINT num = 0;  // number of image encoders
+			UINT size = 0; // size of the image encoder array in bytes
+			if (GetImageEncodersSize(&num, &size) != pr::gdi::Status::Ok)
+				throw std::exception("GDI+ Image encoders not available");
 
-				if (size != 0)
-				{
-					m_codecs.resize(size);
-					GetImageEncoders(num, size, m_codecs.data());
-				}
-			}
-			static ImageCodec const& This()
+			if (size != 0)
 			{
-				static ImageCodec inst;
-				return inst;
+				m_codecs.resize(size);
+				GetImageEncoders(num, size, m_codecs.data());
 			}
-
-		public:
-			static ImageCodecInfo const& Info(wchar_t const* mime)
-			{
-				for (auto& codec : This().m_codecs)
-				{
-					if (wcscmp(codec.MimeType, mime) != 0) continue;
-					return codec;
-				}
-				throw std::exception("Image codec not found");
-			}
-			static CLSID const& Clsid(wchar_t const* mime)
-			{
-				return Info(mime).Clsid;
-			}
-		};
-
-		// Helper for saving GDI Images that infers the codec from the file extension
-		inline Status Save(Image const& image, wchar_t const* filepath)
+		}
+		static ImageCodec const& This()
 		{
-			auto extn = pr::filesys::GetExtensionInPlace(filepath);
-			if (*extn == 0)
-				throw std::exception("Image save could not infer the image format from the file extension");
-
-			auto mime = std::wstring(L"image/").append(extn);
-			return const_cast<Image&>(image).Save(filepath, &ImageCodec::Clsid(mime.c_str()));
+			static ImageCodec inst;
+			return inst;
 		}
 
+	public:
+		static ImageCodecInfo const& Info(wchar_t const* mime)
+		{
+			for (auto& codec : This().m_codecs)
+			{
+				if (wcscmp(codec.MimeType, mime) != 0) continue;
+				return codec;
+			}
+			throw std::exception("Image codec not found");
+		}
+		static CLSID const& Clsid(wchar_t const* mime)
+		{
+			return Info(mime).Clsid;
+		}
+	};
+
+	// Helper for saving GDI Images that infers the codec from the file extension
+	inline Status Save(Image const& image, wchar_t const* filepath)
+	{
+		auto extn = pr::filesys::GetExtensionInPlace(filepath);
+		if (*extn == 0)
+			throw std::exception("Image save could not infer the image format from the file extension");
+
+		auto mime = std::wstring(L"image/").append(extn);
+		return const_cast<Image&>(image).Save(filepath, &ImageCodec::Clsid(mime.c_str()));
+	}
+
+	// Helper for checking GDI return codes
+	inline void Throw(Status result, char const* message)
+	{
+		if (result == Status::Ok) return;
+		throw std::exception(message);
 	}
 }
 

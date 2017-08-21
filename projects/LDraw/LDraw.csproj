@@ -24,6 +24,7 @@
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <UseVSHostingProcess>true</UseVSHostingProcess>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -130,28 +131,28 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\obj\v140\view3d\x64\Debug\view3d.dll">
+    <None Include="..\..\lib\x64\Debug\view3d.dll">
       <Link>lib\x64\debug\view3d.dll</Link>
     </None>
-    <None Include="..\..\obj\v140\view3d\x64\Release\view3d.dll">
+    <None Include="..\..\lib\x64\Release\view3d.dll">
       <Link>lib\x64\release\view3d.dll</Link>
     </None>
-    <None Include="..\..\obj\v140\view3d\x86\Debug\view3d.dll">
+    <None Include="..\..\lib\x86\Debug\view3d.dll">
       <Link>lib\x86\debug\view3d.dll</Link>
     </None>
-    <None Include="..\..\obj\v140\view3d\x86\Release\view3d.dll">
+    <None Include="..\..\lib\x86\Release\view3d.dll">
       <Link>lib\x86\release\view3d.dll</Link>
     </None>
-    <None Include="..\..\obj\v140\scintilla\x64\Debug\scintilla.dll">
+    <None Include="..\..\lib\x64\Debug\scintilla.dll">
       <Link>lib\x64\debug\scintilla.dll</Link>
     </None>
-    <None Include="..\..\obj\v140\scintilla\x64\Release\scintilla.dll">
+    <None Include="..\..\lib\x64\Release\scintilla.dll">
       <Link>lib\x64\release\scintilla.dll</Link>
     </None>
-    <None Include="..\..\obj\v140\scintilla\x86\Debug\scintilla.dll">
+    <None Include="..\..\lib\x86\Debug\scintilla.dll">
       <Link>lib\x86\debug\scintilla.dll</Link>
     </None>
-    <None Include="..\..\obj\v140\scintilla\x86\Release\scintilla.dll">
+    <None Include="..\..\lib\x86\Release\scintilla.dll">
       <Link>lib\x86\release\scintilla.dll</Link>
     </None>
     <Content Include="deploy_ldraw.py" />

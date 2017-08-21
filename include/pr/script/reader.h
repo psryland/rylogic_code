@@ -334,7 +334,7 @@ namespace pr
 			{
 				auto& src = m_pp;
 				pr::str::Resize(string, 0);
-				if (pr::str::ExtractString(string, src, 0, m_delim.c_str())) return true;
+				if (pr::str::ExtractString<StrType>(string, src, m_delim.c_str())) return true;
 				return ReportError(EResult::TokenNotFound, "string expected");
 			}
 			template <typename StrType> bool StringS(StrType& string)
@@ -347,7 +347,7 @@ namespace pr
 			{
 				auto& src = m_pp;
 				pr::str::Resize(cstring, 0);
-				if (pr::str::ExtractString(cstring, src, '\\', m_delim.c_str())) return true;
+				if (pr::str::ExtractString<StrType>(cstring, src, L'\\', nullptr, m_delim.c_str())) return true;
 				return ReportError(EResult::TokenNotFound, "'cstring' expected");
 			}
 			template <typename StrType> bool CStringS(StrType& cstring)

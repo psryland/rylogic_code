@@ -173,13 +173,14 @@ namespace pr
 					,m_ncont(ncount)
 					,m_bbox(BBoxReset)
 				{}
-				void AddNugget(EPrim topo, EGeom geom, bool has_alpha, NuggetProps const* mat = nullptr)
+				void AddNugget(EPrim topo, EGeom geom, bool geometry_has_alpha, bool tint_has_alpha, NuggetProps const* mat = nullptr)
 				{
 					NuggetProps nug;
 					if (mat) nug = *mat;
 					nug.m_topo = topo;
 					nug.m_geom = geom;
-					nug.m_has_alpha = has_alpha;
+					nug.m_geometry_has_alpha |= geometry_has_alpha;
+					nug.m_tint_has_alpha |= tint_has_alpha;
 					m_ncont.push_back(nug);
 				}
 			};
@@ -335,7 +336,7 @@ namespace pr
 				auto& cont = CacheCont(vcount, icount);
 				auto props = pr::geometry::Lines(num_lines, points, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::LineList, props.m_geom, props.m_has_alpha, mat);
+				cont.AddNugget(EPrim::LineList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
 				return Create(rdr, cont);
@@ -350,7 +351,7 @@ namespace pr
 				auto& cont = CacheCont(vcount, icount);
 				auto props = pr::geometry::LinesD(num_lines, points, directions, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::LineList, props.m_geom, props.m_has_alpha, mat);
+				cont.AddNugget(EPrim::LineList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
 				return Create(rdr, cont);
@@ -365,7 +366,7 @@ namespace pr
 				auto& cont = CacheCont(vcount, icount);
 				auto props = pr::geometry::LinesStrip(num_lines, points, num_colours, colour, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::LineStrip, props.m_geom, props.m_has_alpha, mat);
+				cont.AddNugget(EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
 				return Create(rdr, cont);
@@ -382,7 +383,7 @@ namespace pr
 				auto& cont = CacheCont(vcount, icount);
 				auto props = pr::geometry::Quad(num_quads, verts, num_colours, colours, t2q, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, mat);
+				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
 				return Create(rdr, cont);
@@ -397,12 +398,12 @@ namespace pr
 				auto& cont = CacheCont(vcount, icount);
 				auto props = pr::geometry::Quad(origin, quad_x, quad_z, divisions, colour, t2q, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, mat);
+				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
 				return Create(rdr, cont);
 			}
-			static ModelPtr Quad(Renderer& rdr, float width, float height, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, NuggetProps const* mat = nullptr)
+			static ModelPtr Quad(Renderer& rdr, AxisId axis_id, float width, float height, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, m4x4 const& t2q = m4x4Identity, NuggetProps const* mat = nullptr)
 			{
 				// Calculate the required buffer sizes
 				int vcount, icount;
@@ -410,9 +411,9 @@ namespace pr
 
 				// Generate the geometry
 				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::Quad(width, height, divisions, colour, std::begin(cont.m_vcont), std::begin(cont.m_icont));
+				auto props = pr::geometry::Quad(axis_id, width, height, divisions, colour, t2q, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, mat);
+				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
 				return Create(rdr, cont);
@@ -427,7 +428,7 @@ namespace pr
 				auto& cont = CacheCont(vcount, icount);
 				auto props = pr::geometry::Quad(centre, forward, top, width, height, divisions, colour, tex_origin, tex_dim, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, mat);
+				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
 				return Create(rdr, cont);
@@ -442,7 +443,7 @@ namespace pr
 				auto& cont = CacheCont(vcount, icount);
 				auto props = pr::geometry::QuadStrip(num_quads, verts, width, num_normals, normals, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriStrip, props.m_geom, props.m_has_alpha, mat);
+				cont.AddNugget(EPrim::TriStrip, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
 				return Create(rdr, cont);
@@ -459,7 +460,7 @@ namespace pr
 				auto& cont = CacheCont(vcount, icount);
 				auto props = pr::geometry::Ellipse(dimx, dimy, solid, facets, colour, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(solid ? EPrim::TriStrip : EPrim::LineStrip, props.m_geom, props.m_has_alpha, mat);
+				cont.AddNugget(solid ? EPrim::TriStrip : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
 				return Create(rdr, cont, o2w);
@@ -474,7 +475,7 @@ namespace pr
 				auto& cont = CacheCont(vcount, icount);
 				auto props = pr::geometry::Pie(dimx, dimy, ang0, ang1, radius0, radius1, solid, facets, colour, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(solid ? EPrim::TriStrip : EPrim::LineStrip, props.m_geom, props.m_has_alpha, mat);
+				cont.AddNugget(solid ? EPrim::TriStrip : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
 				return Create(rdr, cont, o2w);
@@ -489,7 +490,7 @@ namespace pr
 				auto& cont = CacheCont(vcount, icount);
 				auto props = pr::geometry::RoundedRectangle(dimx, dimy, solid, corner_radius, facets, colour, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(solid ? EPrim::TriStrip : EPrim::LineStrip, props.m_geom, props.m_has_alpha, mat);
+				cont.AddNugget(solid ? EPrim::TriStrip : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
 				return Create(rdr, cont, o2w);
@@ -504,7 +505,7 @@ namespace pr
 				auto& cont = CacheCont(vcount, icount);
 				auto props = pr::geometry::Polygon(num_points, points, solid, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(solid ? EPrim::TriList : EPrim::LineStrip, props.m_geom, props.m_has_alpha, mat);
+				cont.AddNugget(solid ? EPrim::TriList : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
 				return Create(rdr, cont, o2w);
@@ -521,7 +522,7 @@ namespace pr
 				auto& cont = CacheCont(vcount, icount);
 				auto props = pr::geometry::Boxes(num_boxes, points, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, mat);
+				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
 				return Create(rdr, cont);
@@ -536,7 +537,7 @@ namespace pr
 				auto& cont = CacheCont(vcount, icount);
 				auto props = pr::geometry::Boxes(num_boxes, points, o2w, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, mat);
+				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
 				return Create(rdr, cont);
@@ -551,7 +552,7 @@ namespace pr
 				auto& cont = CacheCont(vcount, icount);
 				auto props = pr::geometry::Box(rad, o2w, colour, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, mat);
+				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
 				return Create(rdr, cont);
@@ -570,7 +571,7 @@ namespace pr
 				auto& cont = CacheCont(vcount, icount);
 				auto props = pr::geometry::BoxList(num_boxes, positions, rad, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, mat);
+				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
 				return Create(rdr, cont);
@@ -587,7 +588,7 @@ namespace pr
 				auto& cont = CacheCont(vcount, icount);
 				auto props = pr::geometry::Geosphere(radius, divisions, colour, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, mat);
+				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
 				return Create(rdr, cont);
@@ -606,7 +607,7 @@ namespace pr
 				auto& cont = CacheCont(vcount, icount);
 				auto props = pr::geometry::Sphere(radius, wedges, layers, colour, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, mat);
+				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
 				return Create(rdr, cont);
@@ -627,7 +628,7 @@ namespace pr
 				auto& cont = CacheCont(vcount, icount);
 				auto props = pr::geometry::Cylinder(radius0, radius1, height, xscale, yscale, wedges, layers, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, mat);
+				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
 				return Create(rdr, cont, o2w);
@@ -639,7 +640,7 @@ namespace pr
 			//ModelPtr    CapsuleHRxy(MLock& mlock  ,MaterialManager& matmgr ,float height ,float xradius ,float yradius ,m4x4 const& o2w = pr::m4x4Identity ,int divisions = 3 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
 			//ModelPtr    CapsuleHRxy(Renderer& rdr                          ,float height ,float xradius ,float yradius ,m4x4 const& o2w = pr::m4x4Identity ,int divisions = 3 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
 
-			// Extrude *******************************************************************************
+			// Extrude ****************************************************************************
 			static ModelPtr Extrude(Renderer& rdr, int cs_count, v2 const* cs, int path_count, v4 const* path, bool closed, bool smooth_cs, int num_colours = 0, Colour32 const* colours = nullptr, m4x4 const* o2w = nullptr, NuggetProps const* mat = nullptr)
 			{
 				// Calculate the required buffer sizes
@@ -671,7 +672,7 @@ namespace pr
 				auto& cont = CacheCont(vcount, icount);
 				auto props = pr::geometry::Extrude(cs_count, cs, path_count, make_path, closed, smooth_cs, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, mat);
+				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
 				return Create(rdr, cont, o2w);
@@ -690,7 +691,7 @@ namespace pr
 				auto& cont = CacheCont(vcount, icount);
 				auto props = pr::geometry::Extrude(cs_count, cs, path_count, make_path, closed, smooth_cs, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, mat);
+				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
 				return Create(rdr, cont, o2w);
@@ -806,7 +807,7 @@ namespace pr
 				auto nout = [&](Material const& mat, EGeom geom, Range vrange, Range irange)
 				{
 					NuggetProps ddata(EPrim::TriList, geom, nullptr, vrange, irange);
-					ddata.m_has_alpha = !FEql(mat.m_diffuse.a, 1.0f);
+					ddata.m_geometry_has_alpha = !FEql(mat.m_diffuse.a, 1.0f);
 
 					// Register any materials with the renderer
 					if (!mat.m_textures.empty())
@@ -859,6 +860,71 @@ namespace pr
 				case EModelFileFormat::P3D:    return LoadP3DModel(rdr, src, mesh_name, bake, gen_normals);
 				case EModelFileFormat::Max3DS: return Load3DSModel(rdr, src, mesh_name, bake, gen_normals);
 				}
+			}
+
+			// Text *******************************************************************************
+			// Create a quad containing text
+			// 'max_width','max_height' define the area of the layout box (in DIP units, where 96 = inch)
+			static ModelPtr Text(Renderer& rdr, IDWriteTextLayout* text, AxisId axis_id, Colour32 fr_colour, Colour32 bk_colour)
+			{
+				// Get the text layout to measure the string
+				DWRITE_TEXT_METRICS metrics;
+				pr::Throw(text->GetMetrics(&metrics));
+
+				// Create a texture large enough to contain the text, and render the text into it
+				TextureDesc tdesc(size_t(metrics.width + 0.5f), size_t(metrics.height + 0.5f), 1, DXGI_FORMAT_R8G8B8A8_UNORM);
+				tdesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+				auto tex = rdr.m_tex_mgr.CreateTexture2D(AutoId, Image(), tdesc, SamplerDesc::LinearClamp());
+				tex->m_has_alpha = bk_colour.a != 0xff || fr_colour.a != 0xff;
+
+				// Get a D2D device context to draw on
+				auto dc = tex->GetD2DeviceContext();
+				auto fr = pr::To<D3DCOLORVALUE>(fr_colour);
+				auto bk = pr::To<D3DCOLORVALUE>(bk_colour);
+
+				// Create a solid brush
+				D3DPtr<ID2D1SolidColorBrush> brush;
+				pr::Throw(dc->CreateSolidColorBrush(fr, &brush.m_ptr));
+				brush->SetOpacity(fr_colour.a);
+
+				// Draw the string
+				dc->BeginDraw();
+				dc->Clear(&bk);
+				//dc->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_ALIASED);
+				dc->DrawTextLayout(D2D1::Point2F(0, 0), text, brush.get(), D2D1_DRAW_TEXT_OPTIONS_NONE);
+				pr::Throw(dc->EndDraw());
+
+				// Create a quad using this texture
+				int vcount, icount;
+				pr::geometry::QuadSize(1, vcount, icount);
+
+				// Use the current DPI to determine the size of the quad
+				float dpix, dpiy;
+				rdr.D2DFactory()->GetDesktopDpi(&dpix, &dpiy);
+				auto w = metrics.width / dpix;
+				auto h = metrics.height/ dpiy;
+
+				// Create a quad with this size
+				NuggetProps mat(EPrim::TriList);
+				mat.m_tex_diffuse = tex;
+				auto t2q = m4x4::Transform(static_cast<v4>(axis_id), float(maths::tau_by_2), v4(1.0f, 1.0f, 0.0f, 1.0f));
+				return Quad(rdr, axis_id, w, h, iv2Zero, Colour32White, t2q, &mat);
+			}
+			static ModelPtr Text(Renderer& rdr, wchar_t const* text, int length, AxisId axis_id, Colour32 fr_colour, Colour32 bk_colour, float max_width, float max_height)
+			{
+				using namespace D2D1;
+				auto dwrite = rdr.DWrite();
+
+				// Create the "font", a.k.a text format
+				D3DPtr<IDWriteTextFormat> text_format;
+				pr::Throw(dwrite->CreateTextFormat(L"tahoma", nullptr, DWRITE_FONT_WEIGHT_LIGHT, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 20.0f, L"en-GB", &text_format.m_ptr));
+
+				// Create the 'format" a.k.a text layout
+				D3DPtr<IDWriteTextLayout> text_layout;
+				pr::Throw(dwrite->CreateTextLayout(text, UINT32(length), text_format.get(), max_width, max_height, &text_layout.m_ptr));
+
+				// Create the text model
+				return Text(rdr, text_layout.get(), axis_id, fr_colour, bk_colour);
 			}
 		};
 	}

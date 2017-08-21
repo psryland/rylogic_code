@@ -23,10 +23,10 @@
 // To use runtime shaders:
 //  - Set PR_RDR_RUNTIME_SHADERS=1 in the preprocessor defines.
 //  - Rebuild
-//  - Edit the HLSL files in 'P:\projects\renderer11\shaders\hlsl'
-//  - Run 'P:\script\BuildShader.py <hlsl_filepath> x86 debug dbg' to build the HLSL file (with .cso files)
-//  - Note: Runtime shaders are hard coded to read from P:\projects\renderer\shaders\hlsl\compiled\
-//  - Put a break point in 'P:\projects\renderer11\shaders\shader.cpp:66' to ensure the compiled shader is being loaded
+//  - Edit the HLSL files in '\projects\renderer11\shaders\hlsl'
+//  - Run '\script\BuildShader.py <hlsl_filepath> x86 debug dbg' to build the HLSL file (with .cso files)
+//  - Note: Runtime shaders are hard coded to read from '\projects\renderer\shaders\hlsl\compiled\'
+//  - Put a break point in '\projects\renderer11\shaders\shader.cpp:66' to ensure the compiled shader is being loaded
 
 #ifndef PR_RDR_RUNTIME_SHADERS
 #define PR_RDR_RUNTIME_SHADERS 0

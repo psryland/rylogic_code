@@ -57,14 +57,16 @@ namespace pr
 		// Nugget data. Common base for NuggetProps and Nugget
 		struct NuggetData
 		{
-			EPrim        m_topo;        // The primitive topology for this nugget
-			EGeom        m_geom;        // The valid geometry components within this range
-			ShaderMap    m_smap;        // The shaders to use (optional, some render steps use their own shaders)
-			Texture2DPtr m_tex_diffuse; // Diffuse texture
-			BSBlock      m_bsb;         // Rendering states
-			DSBlock      m_dsb;         // Rendering states
-			RSBlock      m_rsb;         // Rendering states
-			SortKey      m_sort_key;    // A base sort key for this nugget (typically leave as 0, tex id, alpha, group added automatically if 0)
+			EPrim        m_topo;               // The primitive topology for this nugget
+			EGeom        m_geom;               // The valid geometry components within this range
+			ShaderMap    m_smap;               // The shaders to use (optional, some render steps use their own shaders)
+			Texture2DPtr m_tex_diffuse;        // Diffuse texture
+			BSBlock      m_bsb;                // Rendering states
+			DSBlock      m_dsb;                // Rendering states
+			RSBlock      m_rsb;                // Rendering states
+			SortKey      m_sort_key;           // A base sort key for this nugget (typically leave as 0, tex id, alpha, group added automatically if 0)
+			bool         m_geometry_has_alpha; // Set to true if the geometry data for the nugget contains alpha colours
+			bool         m_tint_has_alpha;     // Set to true if the tint colour contains alpha
 
 			// When passed in to Model->CreateNugget(), these ranges should be relative to the model.
 			// When copied to the nugget collection for the model they are converted to model buffer relative ranges.
@@ -83,9 +85,6 @@ namespace pr
 			// passes, but for simple models, it's usually an error if the nugget ranges
 			// overlap, but in advanced cases it isn't.
 			bool m_range_overlaps;
-
-			// Set this flag to true if the nugget should be set up for alpha blending
-			bool m_has_alpha;
 
 			NuggetProps(EPrim topo = EPrim::Invalid, EGeom geom = EGeom::Invalid, ShaderMap* smap = nullptr, Range vrange = Range(), Range irange = Range());
 			NuggetProps(NuggetData const& data);
@@ -136,7 +135,15 @@ namespace pr
 					nug.AddToDrawlist(drawlist, inst, sko, id, sset);
 			}
 
-			// Enable/Disable alpha for this nugget
+			// True if this nugget requires alpha blending
+			bool RequiresAlpha() const;
+			void UpdateAlphaStates();
+
+		private:
+
+			// Enable/Disable alpha for this nugget.
+			// Alpha can be enabled or disabled independently to the geometry colours or diffuse texture colour.
+			// When setting 'Alpha(enable)' be sure to consider all sources of alpha.
 			bool Alpha() const;
 			void Alpha(bool enable);
 		};

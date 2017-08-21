@@ -26,6 +26,7 @@
 #include <d3d11_1.h>
 #include <d3d11sdklayers.h>
 #include <d2d1_2.h>
+#include <dwrite_2.h>
 
 #include "pr/macros/link.h"
 #include "pr/macros/count_of.h"

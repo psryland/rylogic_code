@@ -40,7 +40,10 @@ namespace pr
 			// Add a drawlist element for each nugget in the instance's model
 			drawlist.reserve(drawlist.size() + nuggets.size());
 			for (auto& nug : nuggets)
+			{
+				PR_ASSERT(PR_DBG_RDR, nug.RequiresAlpha() == nug.m_alpha_enabled, "Alpha states disagree with alpha flags"); // remove this 
 				nug.AddToDrawlist(drawlist, inst, sko, Id, m_sset);
+			}
 
 			m_sort_needed = true;
 		}
@@ -48,7 +51,7 @@ namespace pr
 		// Perform the render step
 		void ForwardRender::ExecuteInternal(StateStack& ss)
 		{
-			auto& dc = ss.m_dc;
+			auto dc = ss.m_dc;
 
 			// Sort the draw list if needed
 			SortIfNeeded();
@@ -80,7 +83,7 @@ namespace pr
 			SetViewConstants(m_scene->m_view, cb0.m_cam);
 			SetLightingConstants(m_scene->m_global_light, cb0.m_global_light);
 			SetShadowMapConstants(m_scene->m_view, smap_rstep != nullptr ? 1 : 0, cb0.m_shadow);
-			WriteConstants(dc, m_cbuf_frame, cb0, EShaderType::VS|EShaderType::PS);
+			WriteConstants(dc, m_cbuf_frame.get(), cb0, EShaderType::VS|EShaderType::PS);
 
 			Lock lock(*this);
 			for (auto& dle : lock.drawlist())
@@ -88,16 +91,17 @@ namespace pr
 				StateStack::DleFrame frame(ss, dle);
 				ss.Commit();
 
+				auto const& nugget = *dle.m_nugget;
+
 				// Set the per-nugget constants
 				hlsl::fwd::CBufModel cb1 = {};
-				SetGeomType(*dle.m_nugget, cb1);
+				SetGeomType(nugget, cb1);
 				SetTxfm(*dle.m_instance, m_scene->m_view, cb1);
 				SetTint(*dle.m_instance, cb1);
-				SetTexDiffuse(*dle.m_nugget, cb1);
-				WriteConstants(dc, m_cbuf_nugget, cb1, EShaderType::VS|EShaderType::PS);
+				SetTexDiffuse(nugget, cb1);
+				WriteConstants(dc, m_cbuf_nugget.get(), cb1, EShaderType::VS|EShaderType::PS);
 
 				// Draw the nugget
-				Nugget const& nugget = *dle.m_nugget;
 				dc->DrawIndexed(
 					UINT(nugget.m_irange.size()),
 					UINT(nugget.m_irange.m_beg),

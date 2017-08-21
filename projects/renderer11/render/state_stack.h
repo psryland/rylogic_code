@@ -51,33 +51,34 @@ namespace pr
 				DeviceState m_restore;
 				Frame(StateStack& ss) :m_ss(ss) ,m_restore(m_ss.m_pending) {}
 				~Frame() { m_ss.m_pending = m_restore; }
-				PR_NO_COPY(Frame);
+				Frame(Frame const&) = delete;
 			};
 			struct RSFrame :Frame
 			{
 				RSFrame(StateStack& ss, RenderStep const& rstep);
-				PR_NO_COPY(RSFrame);
+				RSFrame(RSFrame const&) = delete;
 			};
 			struct DleFrame :Frame
 			{
 				DleFrame(StateStack& ss, DrawListElement const& dle);
-				PR_NO_COPY(DleFrame);
+				DleFrame(DleFrame const&) = delete;
 			};
 			struct SmapFrame :Frame
 			{
 				SmapFrame(StateStack& ss, ShadowMap const* rstep);
-				PR_NO_COPY(SmapFrame);
+				SmapFrame(SmapFrame const&) = delete;
 			};
 
-			D3DPtr<ID3D11DeviceContext> m_dc;
-			Scene&                      m_scene;
-			DeviceState                 m_init_state;
-			DeviceState                 m_pending;
-			DeviceState                 m_current;
-			Texture2DPtr                m_tex_default;  // A default texture to use in shaders that expect a texture/sampler but have no texture/sampler bound
+			ID3D11DeviceContext* m_dc;
+			Scene&               m_scene;
+			DeviceState          m_init_state;
+			DeviceState          m_pending;
+			DeviceState          m_current;
+			Texture2DPtr         m_tex_default;  // A default texture to use in shaders that expect a texture/sampler but have no texture/sampler bound
 			D3DPtr<ID3DUserDefinedAnnotation> m_dbg; // nullptr unless PR_DBG_RDR is 1
 
-			StateStack(D3DPtr<ID3D11DeviceContext> dc, Scene& scene);
+			StateStack(ID3D11DeviceContext* dc, Scene& scene);
+			StateStack(StateStack const&) = delete;
 			~StateStack();
 
 			// Apply the current state to the device
@@ -85,7 +86,6 @@ namespace pr
 		
 		private:
 
-			PR_NO_COPY(StateStack);
 			void ApplyState(DeviceState& current, DeviceState& pending, bool force);
 			void SetupIA(DeviceState& current, DeviceState& pending, bool force);
 			void SetupRS(DeviceState& current, DeviceState& pending, bool force);

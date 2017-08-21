@@ -121,7 +121,7 @@ namespace pr
 			#if PR_DBG_RDR
 			{
 				// Check a render target has been set
-				// Note: if you've called GetDC() you need to call ReleaseDC() and Window.RestoreRT() or rtv will be null
+				// Note: if you've called GetDC() you need to call ReleaseDC() and Window.RestoreRT() or RTV will be null
 				D3DPtr<ID3D11RenderTargetView> rtv;
 				D3DPtr<ID3D11DepthStencilView> dsv;
 				m_wnd->ImmediateDC()->OMGetRenderTargets(1, &rtv.m_ptr, &dsv.m_ptr);

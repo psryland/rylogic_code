@@ -7,27 +7,29 @@
 #include "pr/renderer11/textures/texture2d.h"
 #include "pr/renderer11/textures/image.h"
 #include "pr/renderer11/render/sortkey.h"
+#include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/util/allocator.h"
 #include "pr/renderer11/util/stock_resources.h"
 #include "pr/renderer11/util/util.h"
 #include "renderer11/textures/dds_texture_loader.h"
 #include "renderer11/textures/wic_texture_loader.h"
+
 namespace pr
 {
 	namespace rdr
 	{
-		// Create a DX texture from a 'dds,jpg,png,tga,gif,bmp' file
-		void LoadTextureFromFile(D3DPtr<ID3D11Device>& device, wchar_t const* filepath, D3DPtr<ID3D11Texture2D>& tex, D3DPtr<ID3D11ShaderResourceView>& srv)
+		// Create a DX texture from a 'DDS,JPG,PNG,TGA,GIF,BMP' file
+		void LoadTextureFromFile(ID3D11Device* device, wchar_t const* filepath, D3DPtr<ID3D11Texture2D>& tex, D3DPtr<ID3D11ShaderResourceView>& srv)
 		{
 			using namespace DirectX;
 			auto extn = pr::filesys::GetExtensionInPlace(filepath);
 
 			// If the file is a DDS file, use the faster DDS loader
-			if (_wcsicmp(extn, L"dds") == 0)
+			if (_wcsicmp(extn, L"DDS") == 0)
 			{
 				// This does not support some DDS formats tho, so might be worth trying the 'directxtex' DDS loader
 				D3DPtr<ID3D11Resource> res;
-				pr::Throw(DirectX::CreateDDSTextureFromFile(device.m_ptr, filepath, &res.m_ptr, &srv.m_ptr));
+				pr::Throw(DirectX::CreateDDSTextureFromFile(device, filepath, &res.m_ptr, &srv.m_ptr));
 				pr::Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex.m_ptr));
 			}
 			else
@@ -37,15 +39,14 @@ namespace pr
 
 				// Otherwise, use the WIC loader
 				D3DPtr<ID3D11Resource> res;
-				pr::Throw(DirectX::CreateWICTextureFromFile(device.m_ptr, dc.m_ptr, filepath, &res.m_ptr, &srv.m_ptr));
+				pr::Throw(DirectX::CreateWICTextureFromFile(device, dc.m_ptr, filepath, &res.m_ptr, &srv.m_ptr));
 			}
 		}
 
-		TextureManager::TextureManager(MemFuncs& mem, D3DPtr<ID3D11Device>& device, D3DPtr<ID2D1Factory>& d2dfactory)
+		TextureManager::TextureManager(MemFuncs& mem, Renderer& rdr)
 			:m_alex_tex2d(Allocator<Texture2D>(mem))
 			,m_alex_texgdi(Allocator<TextureGdi>(mem))
-			,m_device(device)
-			,m_d2dfactory(d2dfactory)
+			,m_rdr(rdr)
 			,m_lookup_tex(mem)
 			,m_lookup_fname(mem)
 			,m_stock_textures()
@@ -120,7 +121,7 @@ namespace pr
 			}
 			else // Otherwise, if not loaded already, load now
 			{
-				LoadTextureFromFile(m_device, filepath, tex, srv);
+				LoadTextureFromFile(m_rdr.D3DDevice(), filepath, tex, srv);
 				AddLookup(m_lookup_fname, texfile_id, tex.m_ptr);
 			}
 
@@ -158,7 +159,7 @@ namespace pr
 				throw pr::Exception<HRESULT>(E_FAIL, "GDI textures must use the B8G8R8A8 format");
 			if (!pr::AllSet(tdesc.MiscFlags, D3D11_RESOURCE_MISC_GDI_COMPATIBLE))
 				throw pr::Exception<HRESULT>(E_FAIL, "GDI textures require the GDI compatible flag");
-			if (!tdesc.MipLevels == 1)
+			if (tdesc.MipLevels != 1)
 				throw pr::Exception<HRESULT>(E_FAIL, "GDI textures require the MipLevels == 1");
 
 			// Allocate a new texture instance and dx texture resource

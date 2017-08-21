@@ -37,7 +37,7 @@ namespace pr
 		}
 
 		// Return the immediate device context for a device
-		inline D3DPtr<ID3D11DeviceContext> ImmediateDC(D3DPtr<ID3D11Device>& device)
+		inline D3DPtr<ID3D11DeviceContext> ImmediateDC(ID3D11Device* device)
 		{
 			D3DPtr<ID3D11DeviceContext> dc;
 			device->GetImmediateContext(&dc.m_ptr);
@@ -45,14 +45,14 @@ namespace pr
 		}
 
 		// Return the device from a device context
-		inline D3DPtr<ID3D11Device> Device(D3DPtr<ID3D11DeviceContext>& dc)
+		inline D3DPtr<ID3D11Device> Device(ID3D11DeviceContext* dc)
 		{
 			D3DPtr<ID3D11Device> device;
 			dc->GetDevice(&device.m_ptr);
 			return device;
 		}
 
-		// Compile time type to dxgi_format conversion
+		// Compile time type to 'DXGI_FORMAT' conversion
 		template <typename Idx> struct DxFormat { static const DXGI_FORMAT value = DXGI_FORMAT_UNKNOWN; };
 		template <> struct DxFormat<pr::uint16> { static const DXGI_FORMAT value = DXGI_FORMAT_R16_UINT; };
 		template <> struct DxFormat<pr::uint32> { static const DXGI_FORMAT value = DXGI_FORMAT_R32_UINT; };
@@ -78,7 +78,7 @@ namespace pr
 		template <> struct DxShaderType<EShaderType::DS> { typedef ID3D11DomainShader   type; };
 		
 		// The number of supported quality levels for the given format and sample count
-		UINT MultisampleQualityLevels(D3DPtr<ID3D11Device>& device, DXGI_FORMAT format, UINT sample_count);
+		UINT MultisampleQualityLevels(ID3D11Device* device, DXGI_FORMAT format, UINT sample_count);
 
 		// Returns the number of primitives implied by an index count and geometry topology
 		size_t PrimCount(size_t icount, EPrim topo);

@@ -19,6 +19,8 @@ namespace pr
 			,m_dsb()
 			,m_rsb()
 			,m_sort_key()
+			,m_geometry_has_alpha(false)
+			,m_tint_has_alpha(false)
 			,m_vrange(vrange)
 			,m_irange(irange)
 		{}
@@ -26,12 +28,10 @@ namespace pr
 		NuggetProps::NuggetProps(EPrim topo, EGeom geom, ShaderMap* smap, Range vrange, Range irange)
 			:NuggetData(topo, geom, smap, vrange, irange)
 			,m_range_overlaps(false)
-			,m_has_alpha(false)
 		{}
 		NuggetProps::NuggetProps(NuggetData const& data)
 			:NuggetData(data)
 			,m_range_overlaps(false)
-			,m_has_alpha(false)
 		{}
 
 		Nugget::Nugget(NuggetProps const& props, ModelBuffer* model_buffer, Model* owner)
@@ -42,7 +42,8 @@ namespace pr
 			,m_nuggets()
 			,m_alpha_enabled(false)
 		{
-			Alpha(props.m_has_alpha);
+			// Enable alpha if the geometry or the diffuse texture map contains alpha
+			Alpha(RequiresAlpha());
 		}
 		Nugget::~Nugget()
 		{
@@ -80,11 +81,22 @@ namespace pr
 			return sk;
 		}
 
-		// Enable/Disable alpha for this nugget
-		bool Nugget::Alpha() const
+		// True if this nugget requires alpha blending
+		bool Nugget::RequiresAlpha() const
 		{
-			return m_alpha_enabled;
+			return
+				m_geometry_has_alpha ||
+				m_tint_has_alpha ||
+				(m_tex_diffuse != nullptr ? m_tex_diffuse->m_has_alpha : false);
 		}
+
+		// Set the alpha state based on the current has_alpha flags
+		void Nugget::UpdateAlphaStates()
+		{
+			Alpha(RequiresAlpha());
+		}
+
+		// Enable/Disable alpha for this nugget
 		void Nugget::Alpha(bool enable)
 		{
 			if (m_alpha_enabled == enable) return;
@@ -101,16 +113,15 @@ namespace pr
 				m_rsb.Set(ERS::CullMode       ,D3D11_CULL_BACK);
 
 				// Create a dependent nugget to do the back faces
-				NuggetProps props = *this;
-				auto& nug = *MdlMgr().CreateNugget(props, m_model_buffer, m_owner);
-				nug.m_sort_key.Group(ESortGroup::AlphaBack);
-				nug.m_bsb.Set(EBS::BlendEnable    ,TRUE                      ,0);
-				nug.m_bsb.Set(EBS::BlendOp        ,D3D11_BLEND_OP_ADD        ,0);
-				nug.m_bsb.Set(EBS::SrcBlend       ,D3D11_BLEND_SRC_ALPHA     ,0);
-				nug.m_bsb.Set(EBS::DestBlend      ,D3D11_BLEND_INV_SRC_ALPHA ,0);
-				nug.m_dsb.Set(EDS::DepthWriteMask ,D3D11_DEPTH_WRITE_MASK_ZERO);
-				nug.m_rsb.Set(ERS::CullMode       ,D3D11_CULL_FRONT);
-				m_nuggets.push_back(nug);
+				if (m_owner != nullptr)
+				{
+					NuggetProps props = *this;
+					auto& nug = *MdlMgr().CreateNugget(props, m_model_buffer, nullptr);
+					nug.m_sort_key.Group(ESortGroup::AlphaBack);
+					nug.m_rsb.Set(ERS::CullMode, D3D11_CULL_FRONT);
+					nug.m_owner = m_owner;
+					m_nuggets.push_back(nug);
+				}
 			}
 			else
 			{

@@ -6,6 +6,7 @@
 #include "pr/renderer11/models/model_manager.h"
 #include "pr/renderer11/models/model_settings.h"
 #include "pr/renderer11/shaders/input_layout.h"
+#include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/util/event_types.h"
 #include "pr/renderer11/util/allocator.h"
 #include "pr/renderer11/util/wrappers.h"
@@ -15,19 +16,16 @@ namespace pr
 {
 	namespace rdr
 	{
-		ModelManager::ModelManager(MemFuncs& mem, D3DPtr<ID3D11Device>& device)
+		ModelManager::ModelManager(MemFuncs& mem, Renderer& rdr)
 			:m_alex_mdlbuf(Allocator<ModelBuffer>(mem))
 			,m_alex_model (Allocator<Model>(mem))
 			,m_alex_nugget(Allocator<Nugget>(mem))
 			,m_dbg_mem_mdlbuf()
 			,m_dbg_mem_mdl()
 			,m_dbg_mem_nugget()
-			,m_device(device)
+			,m_rdr(rdr)
 			,m_mutex()
 		{
-			PR_ASSERT(PR_DBG_RDR, m_device != 0, "Null DirectX device");
-
-			// Create stock models
 			CreateStockModels();
 		}
 
@@ -47,19 +45,19 @@ namespace pr
 			mb->m_mdl_mgr = this;
 			{// Create a vertex buffer
 				SubResourceData init(settings.m_vb.Data, 0, UINT(settings.m_vb.SizeInBytes()));
-				Throw(m_device->CreateBuffer(&settings.m_vb, settings.m_vb.Data != 0 ? &init : 0, &mb->m_vb.m_ptr));
+				Throw(m_rdr.D3DDevice()->CreateBuffer(&settings.m_vb, settings.m_vb.Data != 0 ? &init : 0, &mb->m_vb.m_ptr));
 				mb->m_vb.m_range.set(0, settings.m_vb.ElemCount);
 				mb->m_vb.m_used.set(0, 0);
 				mb->m_vb.m_stride = settings.m_vb.StructureByteStride;
-				PR_EXPAND(PR_DBG_RDR, NameResource(mb->m_vb, FmtS("model vbuffer <V:%d,I:%d>", settings.m_vb.ElemCount, settings.m_ib.ElemCount)));
+				PR_EXPAND(PR_DBG_RDR, NameResource(mb->m_vb, FmtS("model VBuffer <V:%d,I:%d>", settings.m_vb.ElemCount, settings.m_ib.ElemCount)));
 			}
 			{// Create an index buffer
 				SubResourceData init(settings.m_ib.Data, 0, UINT(settings.m_ib.SizeInBytes()));
-				Throw(m_device->CreateBuffer(&settings.m_ib, settings.m_ib.Data != 0 ? &init : 0, &mb->m_ib.m_ptr));
+				Throw(m_rdr.D3DDevice()->CreateBuffer(&settings.m_ib, settings.m_ib.Data != 0 ? &init : 0, &mb->m_ib.m_ptr));
 				mb->m_ib.m_range.set(0, settings.m_ib.ElemCount);
 				mb->m_ib.m_used.set(0, 0);
 				mb->m_ib.m_format = settings.m_ib.Format;
-				PR_EXPAND(PR_DBG_RDR, NameResource(mb->m_ib, FmtS("model ibuffer <V:%d,I:%d>", settings.m_vb.ElemCount, settings.m_ib.ElemCount)));
+				PR_EXPAND(PR_DBG_RDR, NameResource(mb->m_ib, FmtS("model IBuffer <V:%d,I:%d>", settings.m_vb.ElemCount, settings.m_ib.ElemCount)));
 			}
 			return mb;
 		}

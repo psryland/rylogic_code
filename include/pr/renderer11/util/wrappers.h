@@ -151,10 +151,10 @@ namespace pr
 				Count   = count;
 				Quality = quality;
 			}
-			void Validate(D3DPtr<ID3D11Device>& device, DXGI_FORMAT format)
+			void Validate(ID3D11Device* device, DXGI_FORMAT format)
 			{
 				UINT quality = 0;
-				for (; Count > 1 && (quality = pr::rdr::MultisampleQualityLevels(device, format, Count)) == 0; Count >>= 1) {}
+				for (; Count > 1 && (quality = MultisampleQualityLevels(device, format, Count)) == 0; Count >>= 1) {}
 				if (quality != 0 && Quality >= quality) Quality = quality - 1;
 			}
 		};

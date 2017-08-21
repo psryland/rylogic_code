@@ -1040,7 +1040,7 @@ namespace pr
 							(!m_colours.empty() ? EGeom::Colr : EGeom::None);
 						nug.m_vrange = pr::rdr::Range::Reset();
 						nug.m_irange = pr::rdr::Range(m_indices.size(), m_indices.size());
-						nug.m_has_alpha = false;
+						nug.m_geometry_has_alpha = false;
 
 						int r = 1;
 						p.m_reader.SectionStart();
@@ -1073,7 +1073,7 @@ namespace pr
 							(!m_texs.empty()    ? EGeom::Tex0 : EGeom::None);
 						nug.m_vrange = pr::rdr::Range::Reset();
 						nug.m_irange = pr::rdr::Range(m_indices.size(), m_indices.size());
-						nug.m_has_alpha = false;
+						nug.m_geometry_has_alpha = false;
 
 						int r = 1;
 						p.m_reader.SectionStart();
@@ -1108,7 +1108,7 @@ namespace pr
 							(!m_texs.empty()    ? EGeom::Tex0 : EGeom::None);
 						nug.m_vrange = pr::rdr::Range::Reset();
 						nug.m_irange = pr::rdr::Range(m_indices.size(), m_indices.size());
-						nug.m_has_alpha = false;
+						nug.m_geometry_has_alpha = false;
 
 						int r = 1;
 						p.m_reader.SectionStart();
@@ -1190,7 +1190,7 @@ namespace pr
 						for (auto i = nug.m_irange.begin(); i != nug.m_irange.end(); ++i)
 						{
 							if (m_colours[m_indices[i]].a == 0xFF) continue;
-							nug.m_has_alpha = true;
+							nug.m_geometry_has_alpha = true;
 							break;
 						}
 					}
@@ -1464,7 +1464,7 @@ namespace pr
 				pr::geometry::Props props;
 
 				// Colour interpolation iterator
-				auto col = pr::CreateLerpRepeater(m_color.data(), m_color.size(), m_point.size(), pr::Colour32White);
+				auto col = pr::CreateLerpRepeater(m_color.data(), int(m_color.size()), int(m_point.size()), pr::Colour32White);
 				auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a != 0xff; return c; };
 
 				// Model bounding box
@@ -1526,7 +1526,7 @@ namespace pr
 					nug.m_smap[ERenderStep::ForwardRender].m_gs = arw_shdr;
 					nug.m_vrange = vrange;
 					nug.m_irange = irange;
-					nug.m_has_alpha = cont.m_vcont[0].m_diff.a != 1.0f;
+					nug.m_geometry_has_alpha = cont.m_vcont[0].m_diff.a != 1.0f;
 					obj->m_model->CreateNugget(nug);
 				}
 				{
@@ -1537,7 +1537,7 @@ namespace pr
 					nug.m_smap[ERenderStep::ForwardRender].m_gs = m_line_width != 0 ? static_cast<ShaderPtr>(thk_shdr) : ShaderPtr();
 					nug.m_vrange = vrange;
 					nug.m_irange = irange;
-					nug.m_has_alpha = props.m_has_alpha;
+					nug.m_geometry_has_alpha = props.m_has_alpha;
 					obj->m_model->CreateNugget(nug);
 				}
 				if (m_type & EArrowType::Fwd)
@@ -1549,7 +1549,7 @@ namespace pr
 					nug.m_smap[ERenderStep::ForwardRender].m_gs = arw_shdr;
 					nug.m_vrange = vrange;
 					nug.m_irange = irange;
-					nug.m_has_alpha = cont.m_vcont.back().m_diff.a != 1.0f;
+					nug.m_geometry_has_alpha = cont.m_vcont.back().m_diff.a != 1.0f;
 					obj->m_model->CreateNugget(nug);
 				}
 			}
@@ -2813,7 +2813,7 @@ namespace pr
 			}
 		};
 
-		//ELdrObject::Group
+		// ELdrObject::Group
 		template <> struct ObjectCreator<ELdrObject::Group> :IObjectCreator
 		{
 			ObjectCreator(ParseParams& p)
@@ -2834,6 +2834,209 @@ namespace pr
 				// Apply visibility to all children
 				if (!obj->m_visible)
 					obj->Visible(obj->m_visible, "");
+			}
+		};
+
+		// ELdrObject::Text
+		template <> struct ObjectCreator<ELdrObject::Text> :IObjectCreator
+		{
+			struct Font
+			{
+				wstring256 m_name;
+				float m_size;
+				DWRITE_FONT_WEIGHT m_weight;
+				DWRITE_FONT_STRETCH m_stretch;
+				DWRITE_FONT_STYLE m_style;
+				bool m_underline;
+				bool m_strikeout;
+
+				Font()
+					:m_name(L"tahoma")
+					,m_size(12.0f)
+					,m_weight(DWRITE_FONT_WEIGHT_NORMAL)
+					,m_stretch(DWRITE_FONT_STRETCH_NORMAL)
+					,m_style(DWRITE_FONT_STYLE_NORMAL)
+					,m_underline(false)
+					,m_strikeout(false)
+				{}
+			};
+			struct Layout
+			{
+				DWRITE_TEXT_ALIGNMENT m_align_h;
+				DWRITE_PARAGRAPH_ALIGNMENT m_align_v;
+				DWRITE_WORD_WRAPPING m_word_wrapping;
+
+				Layout()
+					:m_align_h(DWRITE_TEXT_ALIGNMENT_LEADING)
+					,m_align_v(DWRITE_PARAGRAPH_ALIGNMENT_NEAR)
+					,m_word_wrapping(DWRITE_WORD_WRAPPING_WRAP)
+				{}
+			};
+
+			std::wstring m_text;
+			Colour32 m_fr_colour;
+			Colour32 m_bk_colour;
+			Font m_font;
+			Layout m_layout;
+			v2 m_dim;
+			v2 m_pos;
+			AxisId m_axis_id;
+			wchar_t const* m_newline;
+
+			ObjectCreator(ParseParams& p)
+				:IObjectCreator(p)
+				,m_text()
+				,m_fr_colour(0xFFFFFFFF)
+				,m_bk_colour(0x00000000)
+				,m_font()
+				,m_layout()
+				,m_dim(512.0f, 128.0f)
+				,m_pos()
+				,m_axis_id(AxisId::PosZ)
+				,m_newline(L"")
+			{}
+			void Parse() override
+			{
+				// Successive strings have an implicit newline between them.
+				wstring256 text;
+				p.m_reader.String(text);
+				m_text.append(m_newline).append(text);
+				m_newline = L"\r\n";
+			}
+			bool ParseKeyword(EKeyword kw) override
+			{
+				switch (kw) {
+				default: return IObjectCreator::ParseKeyword(kw);
+				case EKeyword::CString:
+					{
+						p.m_reader.SectionStart();
+						for (std::wstring text; !p.m_reader.IsSectionEnd(); text.resize(0))
+						{
+							// Successive C-Strings don't have an implicit new line between
+							// them because they can be added with escaped character sequences.
+							p.m_reader.CString(text);
+							m_text.append(m_newline).append(text);
+							m_newline = L"";
+						}
+						p.m_reader.SectionEnd();
+						return true;
+					}
+				case EKeyword::ForeColour:
+					{
+						p.m_reader.IntS(m_fr_colour.argb, 16);
+						return true;
+					}
+				case EKeyword::BackColour:
+					{
+						p.m_reader.IntS(m_bk_colour.argb, 16);
+						return true;
+					}
+				case EKeyword::Font:
+					{
+						string32 ident;
+						p.m_reader.SectionStart();
+						p.m_reader.String(m_font.m_name);
+						p.m_reader.Real(m_font.m_size);
+						p.m_reader.Int(m_font.m_weight, 10);
+						for (;p.m_reader.IsKeyword();)
+						{
+							// Parse optional font parameters
+							switch ((EKeyword)p.m_reader.NextKeywordH())
+							{
+							default:
+								{
+									p.m_reader.ReportError(pr::script::EResult::UnknownToken);
+									break;
+								}
+							case EKeyword::Style:
+								{
+									p.m_reader.IdentifierS(ident);
+									if (str::EqualI(ident, "normal" )) m_font.m_style = DWRITE_FONT_STYLE_NORMAL;
+									if (str::EqualI(ident, "italic" )) m_font.m_style = DWRITE_FONT_STYLE_ITALIC;
+									if (str::EqualI(ident, "oblique")) m_font.m_style = DWRITE_FONT_STYLE_OBLIQUE;
+									break;
+								}
+							case EKeyword::Stretch:
+								{
+									p.m_reader.IntS(m_font.m_stretch, 10);
+									break;
+								}
+							case EKeyword::Underline:
+								{
+									m_font.m_underline = true;
+									break;
+								}
+							case EKeyword::Strikeout:
+								{
+									m_font.m_strikeout = true;
+									break;
+								}
+							}
+						}
+						p.m_reader.SectionEnd();
+						return true;
+					}
+				case EKeyword::Format:
+					{
+						string32 ident;
+						p.m_reader.SectionStart();
+						for (; !p.m_reader.IsSectionEnd(); )
+						{
+							p.m_reader.Identifier(ident            );
+							if (str::EqualI(ident, "left"          )) m_layout.m_align_h = DWRITE_TEXT_ALIGNMENT_LEADING;
+							if (str::EqualI(ident, "centreh"       )) m_layout.m_align_h = DWRITE_TEXT_ALIGNMENT_CENTER;
+							if (str::EqualI(ident, "right"         )) m_layout.m_align_h = DWRITE_TEXT_ALIGNMENT_TRAILING;
+							if (str::EqualI(ident, "top"           )) m_layout.m_align_v = DWRITE_PARAGRAPH_ALIGNMENT_NEAR;
+							if (str::EqualI(ident, "centrev"       )) m_layout.m_align_v = DWRITE_PARAGRAPH_ALIGNMENT_CENTER;
+							if (str::EqualI(ident, "bottom"        )) m_layout.m_align_v = DWRITE_PARAGRAPH_ALIGNMENT_FAR;
+							if (str::EqualI(ident, "wrap"          )) m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_WRAP;
+							if (str::EqualI(ident, "nowrap"        )) m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_NO_WRAP;
+							if (str::EqualI(ident, "wholeword"     )) m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_WHOLE_WORD;
+							if (str::EqualI(ident, "character"     )) m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_CHARACTER;
+							if (str::EqualI(ident, "emergencybreak")) m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_EMERGENCY_BREAK;
+						}
+						p.m_reader.SectionEnd();
+						return true;
+					}
+				case EKeyword::Pos:
+					{
+						p.m_reader.Vector2S(m_pos);
+						return true;
+					}
+				case EKeyword::Dim:
+					{
+						p.m_reader.Vector2S(m_dim);
+						return true;
+					}
+				case EKeyword::Axis:
+					{
+						p.m_reader.IntS(m_axis_id.value, 10);
+						return true;
+					}
+				}
+			}
+			void CreateModel(LdrObject* obj) override
+			{
+				auto dwrite = p.m_rdr.DWrite();
+
+				// Create the "font", a.k.a text format
+				D3DPtr<IDWriteTextFormat> text_format;
+				pr::Throw(dwrite->CreateTextFormat(m_font.m_name.c_str(), nullptr, m_font.m_weight, m_font.m_style, m_font.m_stretch, m_font.m_size, L"en-US", &text_format.m_ptr));
+				text_format->SetTextAlignment(m_layout.m_align_h);
+				text_format->SetParagraphAlignment(m_layout.m_align_v);
+				text_format->SetWordWrapping(m_layout.m_word_wrapping);
+
+				// Create the 'format" a.k.a text layout
+				D3DPtr<IDWriteTextLayout> text_layout;
+				pr::Throw(dwrite->CreateTextLayout(m_text.c_str(), UINT32(m_text.size()), text_format.get(), m_dim.x, m_dim.y, &text_layout.m_ptr));
+				if (m_font.m_underline)
+					text_layout->SetUnderline(TRUE, DWRITE_TEXT_RANGE{ 0U, UINT32(m_text.size()) });
+				if (m_font.m_strikeout)
+					text_layout->SetStrikethrough(TRUE, DWRITE_TEXT_RANGE{ 0U, UINT32(m_text.size()) });
+
+				// Create the model
+				obj->m_model = ModelGenerator<>::Text(p.m_rdr, text_layout.get(), m_axis_id, m_fr_colour, m_bk_colour);
+				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
 
@@ -2968,6 +3171,7 @@ namespace pr
 			case ELdrObject::PointLight: Parse<ELdrObject::PointLight>(p); break;
 			case ELdrObject::SpotLight:  Parse<ELdrObject::SpotLight >(p); break;
 			case ELdrObject::Group:      Parse<ELdrObject::Group     >(p); break;
+			case ELdrObject::Text:       Parse<ELdrObject::Text      >(p); break;
 			case ELdrObject::Instance:   Parse<ELdrObject::Instance  >(p); break;
 			}
 
@@ -3453,6 +3657,47 @@ LR"(// *************************************************************************
 // Objects
 // ************************************************************************************
 // Below is an example of every supported object type with notes on their syntax
+
+// Text box
+*Text words FFFFFFFF
+{
+	"Normal multi-"
+	"line text string"          // Normal text string, everything between quotes (including new lines)
+	                           // Text data is appended together
+	*CString                   // Alternative. Text is a C-Style string that uses escape characters
+	{
+		"\nWords Words NewLine "
+		"Words \"Quotes\" more Words" // Everything between matched quotes (including new lines)
+	}
+
+	*ForeColour {FFFFFFFF}
+	*BackColour {10000000}
+	*Font
+	{
+		"tahoma"  // Font name
+		40        // Font size (in points)
+		300       // Font weight (100 = ultra light, 300 = normal, 900 = heavy)
+		//*Style{Normal} // Style. One of: Normal Italic Oblique
+		//*Stretch{5}    // Stretch. 1 = condensed, 5 = normal, 9 = expanded
+		//*Underline
+		//*Strikeout
+	}
+	*Format
+	{
+	    Left        // Horizontal alignment. One of: Left, CentreH, Right
+		Top         // Vertical Alignment. One of: Top, CentreV, Bottom
+	    Wrap      // Text wrapping. One of: NoWrap, Wrap, WholeWord, Character, EmergencyBreak
+	}
+
+	*Dim {512 128}  // Optional. The size used to determine the layout area
+	*Pos {100,50}    // Optional. Screen space position. If omitted, the quad is a standard 3D object that uses *o2w
+	*Axis {+3}      // Optional. Set the direction of the quad normal. One of: X = ±1, Y = ±2, Z = ±3
+}
+*Box box 8000FF00
+{
+	1 2 3
+}
+
 
 // Line modifiers:
 //   *Coloured - The lines have an aarrggbb colour after each one. Must occur before line data if used.
@@ -4191,9 +4436,12 @@ LR"(// *************************************************************************
 				o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, colour.argb);
 				if (o->m_model == nullptr) return true;
 
-				auto has_alpha = o->m_colour.a != 0xFF;
+				auto tint_has_alpha = o->m_colour.a != 0xFF;
 				for (auto& nug : o->m_model->m_nuggets)
-					nug.Alpha(has_alpha);
+				{
+					nug.m_tint_has_alpha = tint_has_alpha;
+					nug.UpdateAlphaStates();
+				}
 
 				return true;
 			}, name);
@@ -4209,7 +4457,10 @@ LR"(// *************************************************************************
 
 				auto has_alpha = o->m_colour.a != 0xFF;
 				for (auto& nug : o->m_model->m_nuggets)
-					nug.Alpha(has_alpha);
+				{
+					nug.m_tint_has_alpha = has_alpha;
+					nug.UpdateAlphaStates();
+				}
 
 				return true;
 			}, name);
@@ -4225,10 +4476,8 @@ LR"(// *************************************************************************
 			{
 				if (o->m_model == nullptr) return true;
 				for (auto& nug : o->m_model->m_nuggets)
-				{
 					nug.m_tex_diffuse = tex;
-					nug.Alpha(tex->m_has_alpha);
-				}
+
 				return true;
 			}, name);
 		}

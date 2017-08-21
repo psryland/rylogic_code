@@ -125,7 +125,7 @@ namespace pr
 		}
 
 		// Lock and write 'cb' into 'cbuf'. The set 'cbuf' as the constants for the shaders
-		template <typename TCBuf> void WriteConstants(D3DPtr<ID3D11DeviceContext>& dc, D3DPtr<ID3D11Buffer>& cbuf, TCBuf const& cb, EShaderType shdr_types)
+		template <typename TCBuf> void WriteConstants(ID3D11DeviceContext* dc, ID3D11Buffer* cbuf, TCBuf const& cb, EShaderType shdr_types)
 		{
 			{// Copy the buffer to the dx buffer
 				LockT<TCBuf> lock(dc, cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0);
@@ -133,11 +133,12 @@ namespace pr
 			}
 
 			// Bind the constants to the shaders
-			if (shdr_types & EShaderType::VS) dc->VSSetConstantBuffers(TCBuf::slot, 1, &cbuf.m_ptr);
-			if (shdr_types & EShaderType::PS) dc->PSSetConstantBuffers(TCBuf::slot, 1, &cbuf.m_ptr);
-			if (shdr_types & EShaderType::GS) dc->GSSetConstantBuffers(TCBuf::slot, 1, &cbuf.m_ptr);
-			if (shdr_types & EShaderType::HS) dc->HSSetConstantBuffers(TCBuf::slot, 1, &cbuf.m_ptr);
-			if (shdr_types & EShaderType::DS) dc->DSSetConstantBuffers(TCBuf::slot, 1, &cbuf.m_ptr);
+			ID3D11Buffer* buffers[] = {cbuf};
+			if (shdr_types & EShaderType::VS) dc->VSSetConstantBuffers(TCBuf::slot, 1, buffers);
+			if (shdr_types & EShaderType::PS) dc->PSSetConstantBuffers(TCBuf::slot, 1, buffers);
+			if (shdr_types & EShaderType::GS) dc->GSSetConstantBuffers(TCBuf::slot, 1, buffers);
+			if (shdr_types & EShaderType::HS) dc->HSSetConstantBuffers(TCBuf::slot, 1, buffers);
+			if (shdr_types & EShaderType::DS) dc->DSSetConstantBuffers(TCBuf::slot, 1, buffers);
 		}
 	}
 }

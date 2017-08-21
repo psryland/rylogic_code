@@ -28,22 +28,21 @@ namespace pr
 			// that internally points to a ID3D11TextureX. When a user calls CreateTextureX
 			// they can provide the RdrId of an existing texture inst to create a copy of that
 			// texture instance. That copy will have a pointer to the same underlying DX texture.
-			// Additionally, if the texture is created from file, the m_lookup_fname map allows
-			// the manager to find an existing dx texture for that file. Think of the fname lookup
-			// as mapping from fname to RdrId, and then using the tex lookup to map RdrId to dx texture.
+			// Additionally, if the texture is created from file, the 'm_lookup_fname' map allows
+			// the manager to find an existing dx texture for that file. Think of the 'fname' lookup
+			// as mapping from 'fname' to RdrId, and then using the tex lookup to map RdrId to dx texture.
 			// 'AutoId' is a special value that tells the create texture functions to not look for an
 			// existing texture and create a new dx resource for the texture.
 
-			Allocator<Texture2D>       m_alex_tex2d;
-			Allocator<TextureGdi>      m_alex_texgdi;
-			D3DPtr<ID3D11Device>       m_device;
-			D3DPtr<ID2D1Factory>       m_d2dfactory;
-			TextureLookup              m_lookup_tex;     // A map from texture id to existing texture instances
-			TexFileLookup              m_lookup_fname;   // A map from hash of filepath to an existing dx texture
-			pr::vector<Texture2DPtr>   m_stock_textures; // A collection of references to the stock textures
-			pr::GdiPlus                m_gdiplus;
-			std::recursive_mutex       m_mutex;            // Sync's access to texture creation
-			int                        m_gdi_dc_ref_count; // Used to detect outstanding DC references
+			Allocator<Texture2D>     m_alex_tex2d;
+			Allocator<TextureGdi>    m_alex_texgdi;
+			Renderer&                m_rdr;
+			TextureLookup            m_lookup_tex;     // A map from texture id to existing texture instances
+			TexFileLookup            m_lookup_fname;   // A map from hash of filepath to an existing dx texture
+			pr::vector<Texture2DPtr> m_stock_textures; // A collection of references to the stock textures
+			pr::GdiPlus              m_gdiplus;
+			std::recursive_mutex     m_mutex;            // Sync's access to texture creation
+			int                      m_gdi_dc_ref_count; // Used to detect outstanding DC references
 
 			friend struct Texture2D;
 			friend struct TextureGdi;
@@ -52,7 +51,7 @@ namespace pr
 			// Generates the stock textures
 			void CreateStockTextures();
 
-			// Updates the texture and srv pointers in 'existing' to those provided.
+			// Updates the texture and SRV pointers in 'existing' to those provided.
 			// If 'all_instances' is true, 'm_lookup_tex' is searched for Texture instances that point to the same
 			// dx resource as 'existing'. All are updated to point to the given 'tex' and 'srv' and the RdrId remains unchanged.
 			// If 'all_instances' is false, effectively a new entry is added to 'm_lookup_tex'. The RdrId in 'existing' is changed
@@ -64,13 +63,14 @@ namespace pr
 			void OnEvent(Evt_Resize const& e) override;
 
 		public:
-			TextureManager(MemFuncs& mem, D3DPtr<ID3D11Device>& device, D3DPtr<ID2D1Factory>& d2dfactory);
+
+			TextureManager(MemFuncs& mem, Renderer& rdr);
 			TextureManager(TextureManager const&) = delete;
 			TextureManager& operator = (TextureManager const&) = delete;
 
 			// Create a new texture instance.
 			// 'id' is the id to assign to the created texture instance. Use 'AutoId' to auto generate an id
-			// 'src' is the initialisation data
+			// 'src' is the initialisation data. Use 'Image()' to create the texture without initialisation.
 			// 'tdesc' is a description of the texture to be created
 			// 'sdesc' is a description of the sampler to use
 			Texture2DPtr CreateTexture2D(RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, char const* name = nullptr);
@@ -101,7 +101,7 @@ namespace pr
 			// 'sdesc' is a description of the sampler to use
 			TextureGdiPtr CreateTextureGdi(RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, char const* name = nullptr);
 			TextureGdiPtr CreateTextureGdi(RdrId id, Image const& src, char const* name = nullptr);
-			TextureGdiPtr CreateTextureGdi(RdrId id, int w, int h, char const* name);
+			TextureGdiPtr CreateTextureGdi(RdrId id, int w, int h, char const* name = nullptr);
 
 			// Create a new texture instance that wraps an existing dx texture.
 			// 'id' is the id to assign to this new texture instance. Use 'AutoId' to auto generate an id

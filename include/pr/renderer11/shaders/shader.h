@@ -89,10 +89,10 @@ namespace pr
 
 			// Set up the shader ready to be used on 'dle'
 			// This needs to take the state stack and set things via that, to prevent unnecessary state changes
-			virtual void Setup(D3DPtr<ID3D11DeviceContext>& dc, DeviceState& state);
+			virtual void Setup(ID3D11DeviceContext* dc, DeviceState& state);
 
 			// Undo any changes made by this shader
-			virtual void Cleanup(D3DPtr<ID3D11DeviceContext>&) {}
+			virtual void Cleanup(ID3D11DeviceContext*) {}
 
 			// Create a clone of this shader
 			ShaderPtr Clone(RdrId new_id, char const* new_name = nullptr)
@@ -130,6 +130,9 @@ namespace pr
 				,m_name(name ? name : "")
 				,m_orig_id(m_id)
 			{}
+
+			// Access to the d3d device
+			ID3D11Device* D3DDevice() const;
 
 			// Create a new shader that is a copy of this shader
 			virtual ShaderPtr MakeClone(RdrId new_id, char const* new_name) = 0;

@@ -30,6 +30,8 @@ namespace pr
 
 			MemFuncs             m_mem;           // Not using an allocator here, because the Shader type isn't known until 'CreateShader' is called
 			AllocationsTracker   m_dbg_mem;       // Allocation tracker
+			Renderer&            m_rdr;           // The owner renderer instance
+			ID3D11Device*        m_d3d_device;    // Access the d3d device without having to include renderer.h
 			IPLookup             m_lookup_ip;     // Map from id to D3D input layout
 			VSLookup             m_lookup_vs;     // Map from id to D3D vertex shader
 			PSLookup             m_lookup_ps;     // Map from id to D3D pixel shader
@@ -61,13 +63,10 @@ namespace pr
 
 		public:
 
-			// dx device
-			D3DPtr<ID3D11Device> m_device;
-
-			ShaderManager(MemFuncs& mem, D3DPtr<ID3D11Device>& device);
+			ShaderManager(MemFuncs& mem, Renderer& rdr);
+			~ShaderManager();
 			ShaderManager(ShaderManager const&) = delete;
 			ShaderManager& operator = (ShaderManager const&) = delete;
-			~ShaderManager();
 
 			// Get or Create a dx shader.
 			// If 'id' does not already exist, 'desc' must not be null.
@@ -130,7 +129,7 @@ namespace pr
 				// Create the 'cbuffer', add it to the lookup, and return it
 				D3DPtr<ID3D11Buffer> cbuf;
 				CBufferDesc cbdesc(sizeof(TCBuf));
-				pr::Throw(m_device->CreateBuffer(&cbdesc, 0, &cbuf.m_ptr));
+				pr::Throw(m_d3d_device->CreateBuffer(&cbdesc, 0, &cbuf.m_ptr));
 				PR_EXPAND(PR_DBG_RDR, NameResource(cbuf, name)); (void)name;
 				m_lookup_cbuf[id] = cbuf;
 				return cbuf;

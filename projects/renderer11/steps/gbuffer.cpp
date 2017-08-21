@@ -36,7 +36,7 @@ namespace pr
 			m_rsb = RSBlock::SolidCullBack();
 		}
 
-		// Create render targets for the gbuffer based on the current render target size
+		// Create render targets for the GBuffer based on the current render target size
 		void GBuffer::InitRT(bool create_buffers)
 		{
 			// Release any existing RTs
@@ -51,9 +51,8 @@ namespace pr
 			if (!create_buffers)
 				return;
 
-			auto dc = m_scene->m_wnd->ImmediateDC();
+			auto device = m_scene->m_wnd->D3DDevice();
 			auto size = m_scene->m_wnd->RenderTargetSize();
-			auto device = m_scene->m_wnd->Device();
 
 			// Create texture buffers that we will use as the render targets in the GBuffer
 			TextureDesc tdesc;
@@ -67,7 +66,7 @@ namespace pr
 			tdesc.CPUAccessFlags     = 0;
 			tdesc.MiscFlags          = 0;
 
-			// Create a texture for each layer in the gbuffer
+			// Create a texture for each layer in the GBuffer
 			// and get the render target view of each texture buffer
 			DXGI_FORMAT fmt[GBuffer::RTCount] =
 			{
@@ -80,7 +79,7 @@ namespace pr
 				// Create the resource
 				tdesc.Format = fmt[i];
 				pr::Throw(device->CreateTexture2D(&tdesc, 0, &m_tex[i].m_ptr));
-				PR_EXPAND(PR_DBG_RDR, NameResource(m_tex[i], FmtS("gbuffer %s tex", ToString((GBuffer::RTEnum_)i))));
+				PR_EXPAND(PR_DBG_RDR, NameResource(m_tex[i], FmtS("GBuffer %s tex", ToString((GBuffer::RTEnum_)i))));
 
 				// Get the render target view
 				RenderTargetViewDesc rtvdesc(tdesc.Format, D3D11_RTV_DIMENSION_TEXTURE2D);
@@ -95,19 +94,19 @@ namespace pr
 			}
 
 			// We need to create our own depth buffer to ensure it has the same dimensions
-			// and multisampling properties as the g-buffer RTs.
+			// and multi-sampling properties as the g-buffer RTs.
 			D3DPtr<ID3D11Texture2D> dtex;
 			tdesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 			tdesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
 			pr::Throw(device->CreateTexture2D(&tdesc, 0, &dtex.m_ptr));
-			PR_EXPAND(PR_DBG_RDR, NameResource(dtex, "gbuffer dsv"));
+			PR_EXPAND(PR_DBG_RDR, NameResource(dtex, "GBuffer DSV"));
 
 			DepthStencilViewDesc dsvdesc(tdesc.Format);
 			dsvdesc.Texture2D.MipSlice = 0;
 			pr::Throw(device->CreateDepthStencilView(dtex.m_ptr, &dsvdesc, &m_dsv.m_ptr));
 		}
 
-		// Bind the gbuffer RTs to the output merger
+		// Bind the GBuffer RTs to the output merger
 		void GBuffer::BindRT(bool bind)
 		{
 			auto dc = m_scene->m_wnd->ImmediateDC();
@@ -151,7 +150,7 @@ namespace pr
 		// Perform the render step
 		void GBuffer::ExecuteInternal(StateStack& ss)
 		{
-			auto& dc = ss.m_dc;
+			auto dc = ss.m_dc;
 
 			// Sort the draw list
 			SortIfNeeded();
@@ -174,7 +173,7 @@ namespace pr
 			// Set the frame constants and bind them to the shaders
 			hlsl::ds::CBufCamera cb0 = {};
 			SetViewConstants(m_scene->m_view, cb0.m_cam);
-			WriteConstants(dc, m_cbuf_camera, cb0, EShaderType::VS|EShaderType::PS);
+			WriteConstants(dc, m_cbuf_camera.get(), cb0, EShaderType::VS|EShaderType::PS);
 
 			// Loop over the elements in the draw list
 			Lock lock(*this);
@@ -189,7 +188,7 @@ namespace pr
 				SetTxfm(*dle.m_instance, m_scene->m_view, cb1);
 				SetTint(*dle.m_instance, cb1);
 				SetTexDiffuse(*dle.m_nugget, cb1);
-				WriteConstants(dc, m_cbuf_nugget, cb1, EShaderType::VS|EShaderType::PS);
+				WriteConstants(dc, m_cbuf_nugget.get(), cb1, EShaderType::VS|EShaderType::PS);
 
 				// Add the nugget to the device context
 				Nugget const& nugget = *dle.m_nugget;

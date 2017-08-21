@@ -37,11 +37,11 @@ namespace pr
 			// Get the description of the current texture pointed to by 'm_tex'
 			TextureDesc TexDesc() const;
 
-			// Set a new texture description and re-create/reinitialise the texture and the srv.
+			// Set a new texture description and re-create/reinitialise the texture and the SRV.
 			// 'all_instances' - if true, all Texture2D objects that refer to the same underlying
 			//  dx texture get updated as well. If false, then this texture becomes a unique instance
 			//  and 'm_id' is changed.
-			// 'perserve' - if true, the content of the current texture is stretch blted to the new texture
+			// 'perserve' - if true, the content of the current texture is stretch copied to the new texture
 			//  if possible. If not possible, an exception is thrown
 			// 'srvdesc' - if not null, causes the new shader resource view to be created using this description
 			void TexDesc(Image const& src, TextureDesc const& tdesc, bool all_instances, bool preserve, ShaderResViewDesc const* srvdesc = nullptr);
@@ -60,14 +60,34 @@ namespace pr
 			HDC GetDC(bool discard);
 			void ReleaseDC();
 
-			#ifdef _GDIPLUS_H
-			// A scoped device context to allow GDI+ edits of the texture
-			class Gfx :public Gdiplus::Graphics
+			// A scope object for the device context
+			struct DC
 			{
 				Texture2D* m_tex;
+				HDC m_hdc;
+
+				DC(Texture2D* tex, bool discard)
+					:m_tex(tex)
+					,m_hdc(tex->GetDC(discard))
+				{}
+				~DC()
+				{
+					m_tex->ReleaseDC();
+				}
+				DC(DC const&) = delete;
+				DC& operator=(DC const&) = delete;
+			};
+
+
+			// A scoped device context to allow GDI+ edits of the texture
+			#ifdef _GDIPLUS_H
+			class Gfx :public gdi::Graphics
+			{
+				Texture2D* m_tex;
+
 			public:
 				Gfx(Texture2D* tex, bool discard)
-					:Gdiplus::Graphics(tex->GetDC(discard))
+					:gdi::Graphics(tex->GetDC(discard))
 					,m_tex(tex)
 				{}
 				~Gfx()
@@ -78,6 +98,15 @@ namespace pr
 				Gfx& operator=(Gfx const&) = delete;
 			};
 			#endif
+
+			// Get the DXGI surface within this texture
+			D3DPtr<IDXGISurface> GetSurface();
+
+			// Get a d2d render target for the DXGI surface within this texture
+			D3DPtr<ID2D1RenderTarget> GetD2DRenderTarget();
+
+			// Get a D2D device context for the DXGI surface within this texture
+			D3DPtr<ID2D1DeviceContext> GetD2DeviceContext();
 
 			// Ref counting clean up
 			static void RefCountZero(pr::RefCount<Texture2D>* doomed);

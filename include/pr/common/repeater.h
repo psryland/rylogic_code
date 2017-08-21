@@ -13,22 +13,22 @@ namespace pr
 	template <typename TCIter, typename TItem, typename Interp = typename Interpolate<TItem>::Point>
 	struct Repeater
 	{
-		Interp      m_interp;   // The interpolation functor
-		TCIter      m_iter;     // The source iterator
-		std::size_t m_count;    // The number of items available through 'm_iter'
-		std::size_t m_output;   // The total number of items to return
-		std::size_t m_i;        // The current item number
-		std::size_t m_r;        // The current repeat number
-		TItem       m_default;  // A default item to use when 'm_iter' is exhausted
-		TItem       m_curr;     // The value of the current item
-		TItem       m_next;     // The value of the next item
-		TItem       m_item;     // The interpolated value
+		Interp m_interp;   // The interpolation functor
+		TCIter m_iter;     // The source iterator
+		int    m_count;    // The number of items available through 'm_iter'
+		int    m_output;   // The total number of items to return
+		int    m_i;        // The current item number
+		int    m_r;        // The current repeat number
+		TItem  m_default;  // A default item to use when 'm_iter' is exhausted
+		TItem  m_curr;     // The value of the current item
+		TItem  m_next;     // The value of the next item
+		TItem  m_item;     // The interpolated value
 		
 		// 'iter' is the src iterator
 		// 'count' is the number of available items pointed to by 'iter'
 		// 'output_count' is the number items to be output from the iterator
 		// 'def' is the value to return when 'iter' is exhausted
-		Repeater(TCIter iter, std::size_t count, std::size_t output_count, TItem const& def, Interp interp = Interp())
+		Repeater(TCIter iter, int count, int output_count, TItem const& def, Interp interp = Interp())
 			:m_interp(interp)
 			,m_iter(iter)
 			,m_count(count)
@@ -97,7 +97,7 @@ namespace pr
 	// 'def' is the value to return when 'iter' is exhausted
 	template <typename TCIter, typename TItem>
 	Repeater<TCIter,TItem,typename Interpolate<TItem>::Point>
-	CreateRepeater(TCIter iter, std::size_t count, std::size_t output_count, TItem const& def)
+	CreateRepeater(TCIter iter, int count, int output_count, TItem const& def)
 	{
 		return Repeater<TCIter,TItem,typename Interpolate<TItem>::Point>(iter, count, output_count, def);
 	}
@@ -109,7 +109,7 @@ namespace pr
 	// 'def' is the value to return when 'iter' is exhausted
 	template <typename TCIter, typename TItem>
 	Repeater<TCIter,TItem,typename Interpolate<TItem>::Linear>
-	CreateLerpRepeater(TCIter iter, std::size_t count, std::size_t output_count, TItem const& def)
+	CreateLerpRepeater(TCIter iter, int count, int output_count, TItem const& def)
 	{
 		return Repeater<TCIter,TItem,typename Interpolate<TItem>::Linear>(iter, count, output_count, def);
 	}
@@ -129,7 +129,7 @@ namespace pr
 				vec.push_back(1);
 				vec.push_back(2);
 
-				auto rep = pr::CreateRepeater(begin(vec), vec.size(), 6, -1);
+				auto rep = pr::CreateRepeater(begin(vec), int(vec.size()), 6, -1);
 				PR_CHECK(*(rep  ),  0);
 				PR_CHECK(*(++rep),  0);
 				PR_CHECK(*(++rep),  0);
@@ -147,7 +147,7 @@ namespace pr
 				vec.push_back(0.5f);
 				vec.push_back(1.0f);
 
-				auto rep = pr::CreateLerpRepeater(begin(vec), vec.size(), 6, 1.0f);
+				auto rep = pr::CreateLerpRepeater(begin(vec), int(vec.size()), 6, 1.0f);
 				PR_CHECK(*rep++, 0.0f);
 				PR_CHECK(*rep++, 0.2f);
 				PR_CHECK(*rep++, 0.4f);
@@ -162,7 +162,7 @@ namespace pr
 				vec.push_back(0.0f);
 				vec.push_back(1.0f);
 				
-				auto rep = pr::CreateLerpRepeater(begin(vec), vec.size(), 6, -1.0f);
+				auto rep = pr::CreateLerpRepeater(begin(vec), int(vec.size()), 6, -1.0f);
 				PR_CHECK(*rep++, 0.0f);
 				PR_CHECK(*rep++, 0.2f);
 				PR_CHECK(*rep++, 0.4f);

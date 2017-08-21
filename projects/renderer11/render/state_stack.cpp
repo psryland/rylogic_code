@@ -17,7 +17,7 @@ namespace pr
 {
 	namespace rdr
 	{
-		StateStack::StateStack(D3DPtr<ID3D11DeviceContext> dc, Scene& scene)
+		StateStack::StateStack(ID3D11DeviceContext* dc, Scene& scene)
 			:m_dc(dc)
 			,m_scene(scene)
 			,m_init_state()
@@ -54,7 +54,7 @@ namespace pr
 			current = pending;
 		}
 
-		// Setup the input assembler
+		// Set up the input assembler
 		void StateStack::SetupIA(DeviceState& current, DeviceState& pending, bool force)
 		{
 			// Render nugget v/i ranges are relative to the model buffer, not the model
@@ -155,7 +155,7 @@ namespace pr
 			}
 		}
 
-		// Setup a shader
+		// Set up a shader
 		void StateStack::SetupShdrs(DeviceState& current, DeviceState& pending, bool force)
 		{
 			if (current.m_shdrs != pending.m_shdrs || force)
@@ -168,8 +168,8 @@ namespace pr
 				m_dc->PSSetShader(pending.m_shdrs.PS().m_ptr, nullptr, 0);
 			}
 
-			// Always call setup on the pending shaders even if they
-			// haven't changed. They may have per-nugget setup to do
+			// Always call set up on the pending shaders even if they
+			// haven't changed. They may have per-nugget set up to do
 			for (auto& s : pending.m_shdrs.Enumerate())
 				if (s) s->Setup(m_dc, pending);
 		}
@@ -219,11 +219,11 @@ namespace pr
 			m_ss.m_pending.m_rstep = &rstep;
 		}
 
-		// State stack frame for a dle
+		// State stack frame for a DLE
 		StateStack::DleFrame::DleFrame(StateStack& ss, DrawListElement const& dle)
 			:Frame(ss)
 		{
-			// Save the dle
+			// Save the DLE
 			m_ss.m_pending.m_dle = &dle;
 
 			// Get the shaders involved

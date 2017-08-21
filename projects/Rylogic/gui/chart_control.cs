@@ -865,9 +865,16 @@ namespace pr.gui
 
 				try
 				{
-					var opts = new View3d.WindowOptions(false, null, IntPtr.Zero) { DbgName = "Chart", Multisampling = owner.Options.AntiAliasing ? 4 : 1 };
+					// No GDI compatibility, cause we want anti aliasing...
+					var gdi_compatible = false;
+					var opts = new View3d.WindowOptions(gdi_compatible, null, IntPtr.Zero)
+					{
+						DbgName = "Chart",
+						Multisampling = (!gdi_compatible && owner.Options.AntiAliasing) ? 4 : 1,
+					};
+
 					m_owner = owner;
-					m_view3d = new View3d(gdi_compatibility:false);
+					m_view3d = new View3d(opts.GdiCompatible);
 					m_window = new View3d.Window(m_view3d, Handle, opts);
 					m_window.LightProperties = View3d.LightInfo.Directional(-v4.ZAxis, Colour32.Zero, Colour32.Gray, Colour32.Zero, 0f, 0f);
 					m_window.FocusPointVisible = false;

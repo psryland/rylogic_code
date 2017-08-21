@@ -11,7 +11,7 @@ namespace pr
 {
 	namespace rdr
 	{
-		// A geometry shader for creating thick lines from linelist geometry
+		// A geometry shader for creating thick lines from line list geometry
 		struct ThickLineListShaderGS :Shader<ID3D11GeometryShader, ThickLineListShaderGS>
 		{
 			typedef Shader<ID3D11GeometryShader, ThickLineListShaderGS> base;
@@ -19,10 +19,10 @@ namespace pr
 			float m_default_width;
 			
 			ThickLineListShaderGS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11GeometryShader> shdr);
-			void Setup(D3DPtr<ID3D11DeviceContext>& dc, DeviceState& state) override;
+			void Setup(ID3D11DeviceContext* dc, DeviceState& state) override;
 		};
 
-		// A geometry shader for creating arrow heads from pointlist geometry
+		// A geometry shader for creating arrow heads from point list geometry
 		struct ArrowHeadShaderGS :Shader<ID3D11GeometryShader, ArrowHeadShaderGS>
 		{
 			typedef Shader<ID3D11GeometryShader, ArrowHeadShaderGS> base;
@@ -30,7 +30,7 @@ namespace pr
 			float m_default_width;
 
 			ArrowHeadShaderGS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11GeometryShader> shdr);
-			void Setup(D3DPtr<ID3D11DeviceContext>& dc, DeviceState& state) override;
+			void Setup(ID3D11DeviceContext* dc, DeviceState& state) override;
 		};
 	}
 }

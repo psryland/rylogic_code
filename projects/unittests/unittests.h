@@ -144,6 +144,7 @@
 #include "pr\geometry\shape2d.h"
 #include "pr\geometry\sphere.h"
 #include "pr\geometry\tetramesh.h"
+#include "pr\geometry\text.h"
 #include "pr\geometry\triangle.h"
 #include "pr\geometry\utility.h"
 #include "pr\geometry\volume.h"
