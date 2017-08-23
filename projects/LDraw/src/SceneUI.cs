@@ -54,6 +54,7 @@ namespace LDraw
 		{
 			CameraUI = null;
 			LightingUI = null;
+			ObjectManagerUI = null;
 			DragDropCtx = null;
 			DockControl = null;
 			Model = null;
@@ -114,7 +115,7 @@ namespace LDraw
 		}
 
 		/// <summary>The app logic</summary>
-		protected Model Model
+		public Model Model
 		{
 			[DebuggerStepThrough] get { return m_model; }
 			set
@@ -162,6 +163,12 @@ namespace LDraw
 		{
 			get;
 			private set;
+		}
+
+		/// <summary>Enumerate all root objects in this scene</summary>
+		public IList<View3d.Object> Objects
+		{
+			get { return Window.Objects; }
 		}
 
 		/// <summary>Get/Set whether the focus point is visible in this scene</summary>
@@ -280,7 +287,8 @@ namespace LDraw
 		/// <summary>Show the object manager for this scene</summary>
 		public void ShowObjectManager(bool show)
 		{
-			Window.ShowObjectManager(show);
+			//Window.ShowObjectManager(show);
+			ObjectManagerUI.Show(TopLevelControl);
 		}
 
 		/// <summary>Lazy created camera properties UI</summary>
@@ -298,6 +306,14 @@ namespace LDraw
 			set { Util.Dispose(ref m_lighting_ui); }
 		}
 		private LightingUI m_lighting_ui;
+
+		/// <summary></summary>
+		public ObjectManagerUI ObjectManagerUI
+		{
+			get { return m_obj_mgr_ui ?? (m_obj_mgr_ui = new ObjectManagerUI(this)); }
+			set { Util.Dispose(ref m_obj_mgr_ui); }
+		}
+		private ObjectManagerUI m_obj_mgr_ui;
 
 		/// <summary>Drag drop handler</summary>
 		private DragDrop DragDropCtx

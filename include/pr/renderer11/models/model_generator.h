@@ -899,10 +899,9 @@ namespace pr
 				pr::geometry::QuadSize(1, vcount, icount);
 
 				// Use the current DPI to determine the size of the quad
-				float dpix, dpiy;
-				rdr.D2DFactory()->GetDesktopDpi(&dpix, &dpiy);
-				auto w = metrics.width / dpix;
-				auto h = metrics.height/ dpiy;
+				auto dpi = rdr.Dpi();
+				auto w = metrics.width / dpi.x;
+				auto h = metrics.height/ dpi.y;
 
 				// Create a quad with this size
 				NuggetProps mat(EPrim::TriList);

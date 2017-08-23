@@ -4,6 +4,7 @@
 //*********************************************
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/render/scene.h"
+#include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/render/drawlist_element.h"
 #include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/shaders/input_layout.h"

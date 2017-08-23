@@ -68,23 +68,25 @@ namespace pr
 		{
 			PR_ASSERT(PR_DBG_RDR, m_vb, "This model buffer has not been created");
 			PR_ASSERT(PR_DBG_RDR, lock.m_res == 0, "This lock has already been used, make a new one");
+			Renderer::Lock rdrlock(m_mdl_mgr->m_rdr);
 
 			// If no sub range is given, use the entire buffer
 			if (vrange == RangeZero) vrange = m_vb.m_used;
 
-			auto dc = ImmediateDC(m_mdl_mgr->m_rdr.D3DDevice());
-			return lock.Map(dc.get(), m_vb.get(), 0, map_type, flags, m_vb.m_stride, vrange);
+			auto dc = rdrlock.ImmediateDC();
+			return lock.Map(dc, m_vb.get(), 0, map_type, flags, m_vb.m_stride, vrange);
 		}
 		bool ModelBuffer::MapIndices(Lock& lock, D3D11_MAP map_type, UINT flags, Range irange)
 		{
 			PR_ASSERT(PR_DBG_RDR, m_ib, "This model buffer has not been created");
 			PR_ASSERT(PR_DBG_RDR, lock.m_res == 0, "This lock has already been used, make a new one");
+			Renderer::Lock rdrlock(m_mdl_mgr->m_rdr);
 
 			// If no sub range is given, use the entire buffer
 			if (irange == RangeZero) irange = m_ib.m_used;
 
-			auto dc = ImmediateDC(m_mdl_mgr->m_rdr.D3DDevice());
-			return lock.Map(dc.get(), m_ib.get(), 0, map_type, flags, BytesPerPixel(m_ib.m_format), irange);
+			auto dc = rdrlock.ImmediateDC();
+			return lock.Map(dc, m_ib.get(), 0, map_type, flags, BytesPerPixel(m_ib.m_format), irange);
 		}
 
 		// Ref counting clean up function

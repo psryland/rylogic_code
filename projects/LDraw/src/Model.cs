@@ -116,12 +116,10 @@ namespace LDraw
 			case ListChg.ItemAdded:
 				{
 					// Determine a dock location from the current scene
-					var dloc = new DockContainer.DockLocation();
-					if (CurrentScene != null)
-					{
-						var loc = CurrentScene.DockControl.CurrentDockLocation;
-						dloc.Address = loc.Address.Concat(CurrentScene.Bounds.Aspect() > 1 ? EDockSite.Right : EDockSite.Bottom).ToArray();
-					}
+					var dloc =
+						CurrentScene?.DockControl.CurrentDockLocation ??
+						new DockContainer.DockLocation();
+
 					scene.Options.PropertyChanged += Owner.UpdateUI;
 					Owner.DockContainer.Add(scene, dloc);
 					Owner.UpdateUI();
@@ -290,6 +288,7 @@ namespace LDraw
 			var scene = Scenes.Add2(new SceneUI("Demo", this));
 			var id = scene.Window.CreateDemoScene();
 			scene.ContextIds.Add(id);
+			scene.DockControl.IsActiveContent = true;
 		}
 
 		/// <summary>Enable/Disable auto refreshing of script sources</summary>

@@ -127,14 +127,6 @@ namespace pr.util
 				doomed[i] = Dispose((IDisposable)doomed[i]);
 		}
 
-		/// <summary>
-		/// State test for design mode.
-		/// Note: Use the Component extension method for a more reliable test</summary>
-		public static bool IsInDesignMode
-		{
-			get { return LicenseManager.UsageMode == LicenseUsageMode.Designtime; }
-		}
-
 		/// <summary>Blocks until the debugger is attached</summary>
 		public static void WaitForDebugger()
 		{

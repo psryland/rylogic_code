@@ -23,7 +23,6 @@ namespace pr
 			AllocationsTracker<Model>       m_dbg_mem_mdl;
 			AllocationsTracker<Nugget>      m_dbg_mem_nugget;
 			Renderer&                       m_rdr;
-			std::recursive_mutex            m_mutex;
 
 			// Delete methods that models/model buffers call to clean themselves up
 			friend struct ModelBuffer;

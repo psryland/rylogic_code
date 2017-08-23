@@ -41,6 +41,8 @@ namespace pr
 			,m_d2dfactory()
 			,m_dwrite()
 			,m_d2d_device()
+			,m_dpi_x()
+			,m_dpi_y()
 		{
 			// Check for incompatible build settings
 			RdrSettings::BuildOptions bo;
@@ -89,10 +91,10 @@ namespace pr
 			// Create the direct2d factory
 			D2D1_FACTORY_OPTIONS d2dfactory_options;
 			d2dfactory_options.debugLevel = AllSet(m_settings.m_device_layers, D3D11_CREATE_DEVICE_DEBUG) ? D2D1_DEBUG_LEVEL_INFORMATION  : D2D1_DEBUG_LEVEL_NONE;
-			pr::Throw(D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, __uuidof(ID2D1Factory2), &d2dfactory_options, (void**)&m_d2dfactory.m_ptr));
+			pr::Throw(D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, __uuidof(ID2D1Factory1), &d2dfactory_options, (void**)&m_d2dfactory.m_ptr));
 
 			// Create the direct write factory
-			pr::Throw(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory2), (IUnknown**)&m_dwrite.m_ptr));
+			pr::Throw(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&m_dwrite.m_ptr));
 
 			// Creating a D2D device for drawing 2D to the back buffer requires 'D3D11_CREATE_DEVICE_BGRA_SUPPORT'
 			if (AllSet(m_settings.m_device_layers, D3D11_CREATE_DEVICE_BGRA_SUPPORT))
@@ -104,6 +106,9 @@ namespace pr
 				// Create a D2D device
 				pr::Throw(m_d2dfactory->CreateDevice(dxgi_device.get(), &m_d2d_device.m_ptr));
 			}
+
+			// Save the desktop DPI
+			m_d2dfactory->GetDesktopDpi(&m_dpi_x, &m_dpi_y);
 		}
 
 		// Renderer state destruction
@@ -136,15 +141,16 @@ namespace pr
 	Renderer::Renderer(rdr::RdrSettings const& settings)
 		:RdrState(settings)
 		,m_main_thread_id(GetCurrentThreadId())
+		, m_d3d_mutex()
 		,m_mutex_task_queue()
 		,m_task_queue()
 		,m_dummy_hwnd()
 		,m_mdl_mgr(m_settings.m_mem, This())
 		,m_shdr_mgr(m_settings.m_mem, This())
 		,m_tex_mgr(m_settings.m_mem, This())
-		,m_bs_mgr(m_settings.m_mem, m_d3d_device.get())
-		,m_ds_mgr(m_settings.m_mem, m_d3d_device.get())
-		,m_rs_mgr(m_settings.m_mem, m_d3d_device.get())
+		,m_bs_mgr(m_settings.m_mem, This())
+		,m_ds_mgr(m_settings.m_mem, This())
+		,m_rs_mgr(m_settings.m_mem, This())
 	{
 		try
 		{

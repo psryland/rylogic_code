@@ -136,25 +136,6 @@ namespace LDraw
 				Debug.WriteLine("{0} is a {1}bit process".Fmt(Application.ExecutablePath, Environment.Is64BitProcess?"64":"32"));
 				Application.EnableVisualStyles();
 				Application.SetCompatibleTextRenderingDefault(false);
-
-				#if DEBUG
-				pr.util.Util.WaitForDebugger();
-				#endif
-
-				// Load dlls
-				try { View3d.LoadDll(); }
-				catch (DllNotFoundException ex)
-				{
-					if (Util.IsInDesignMode) return;
-					MessageBox.Show(ex.Message);
-				}
-				try { Sci.LoadDll(); }
-				catch (DllNotFoundException ex)
-				{
-					if (Util.IsInDesignMode) return;
-					MessageBox.Show(ex.Message);
-				}
-
 				Application.Run(new MainUI());
 
 				// To catch any Disposes in the 'GC Finializer' thread
@@ -185,6 +166,24 @@ namespace LDraw
 		}
 		public MainUI()
 		{
+			#if DEBUG
+			pr.util.Util.WaitForDebugger();
+			#endif
+
+			// Load dlls
+			try { View3d.LoadDll(); }
+			catch (DllNotFoundException ex)
+			{
+				if (this.IsInDesignMode()) return;
+				MessageBox.Show(ex.Message);
+			}
+			try { Sci.LoadDll(); }
+			catch (DllNotFoundException ex)
+			{
+				if (this.IsInDesignMode()) return;
+				MessageBox.Show(ex.Message);
+			}
+
 			InitializeComponent();
 			KeyPreview = true;
 

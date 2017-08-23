@@ -33,6 +33,23 @@ namespace pr.extn
 			return result;
 		}
 
+		/// <summary>Resize an array filling new elements using 'factory'</summary>
+		public static T[] Resize<T>(this T[] arr, int new_size, Func<int,T> factory = null)
+		{
+			var old_size = arr.Length;
+			Array.Resize(ref arr, new_size);
+
+			// Fill new elements
+			if (factory != null)
+			{
+				for (int i = old_size; i < new_size; ++i)
+					arr[i] = factory(i);
+			}
+
+			// Return for method chaining
+			return arr;
+		}
+
 		/// <summary>Returns the index of 'what' in the array</summary>
 		public static int IndexOf<T>(this T[] arr, T what)
 		{

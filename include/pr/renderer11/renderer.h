@@ -43,9 +43,7 @@
 #include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/render/window.h"
 #include "pr/renderer11/render/scene.h"
-#include "pr/renderer11/render/blend_state.h"
-#include "pr/renderer11/render/depth_state.h"
-#include "pr/renderer11/render/raster_state.h"
+#include "pr/renderer11/render/state_block.h"
 #include "pr/renderer11/render/sortkey.h"
 
 // Render Steps

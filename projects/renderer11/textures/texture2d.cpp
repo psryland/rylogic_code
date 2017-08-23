@@ -28,9 +28,12 @@ namespace pr
 			{
 				TextureDesc tdesc;
 				tex->GetDesc(&tdesc);
+
 				ShaderResViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
 				srvdesc.Texture2D.MipLevels = tdesc.MipLevels;
-				pr::Throw(mgr->m_rdr.D3DDevice()->CreateShaderResourceView(tex.m_ptr, &srvdesc, &srv.m_ptr));
+
+				Renderer::Lock lock(mgr->m_rdr);
+				pr::Throw(lock.D3DDevice()->CreateShaderResourceView(tex.m_ptr, &srvdesc, &srv.m_ptr));
 			}
 			SamDesc(sam_desc);
 		}
@@ -81,7 +84,8 @@ namespace pr
 		{
 			D3DPtr<ID3D11Texture2D> tex;
 			D3DPtr<ID3D11ShaderResourceView> srv;
-			auto device = m_mgr->m_rdr.D3DDevice();
+			Renderer::Lock lock(m_mgr->m_rdr);
+			auto device = lock.D3DDevice();
 
 			// If initialisation data is provided, see if we need to generate mip-maps
 			if (src.m_pixels != nullptr)
@@ -165,9 +169,25 @@ namespace pr
 		}
 		void Texture2D::SamDesc(SamplerDesc const& desc)
 		{
+			Renderer::Lock lock(m_mgr->m_rdr);
 			D3DPtr<ID3D11SamplerState> samp_state;
-			pr::Throw(m_mgr->m_rdr.D3DDevice()->CreateSamplerState(&desc, &samp_state.m_ptr));
+			pr::Throw(lock.D3DDevice()->CreateSamplerState(&desc, &samp_state.m_ptr));
 			m_samp = samp_state;
+		}
+
+		// Set the filtering and address mode for this texture
+		void Texture2D::SetFilterAndAddrMode(D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV)
+		{
+			SamplerDesc desc;
+			m_samp->GetDesc(&desc);
+			desc.Filter = filter;
+			desc.AddressU = addrU;
+			desc.AddressV = addrV;
+
+			Renderer::Lock lock(m_mgr->m_rdr);
+			D3DPtr<ID3D11SamplerState> samp;
+			pr::Throw(lock.D3DDevice()->CreateSamplerState(&desc, &samp.m_ptr));
+			m_samp = samp;
 		}
 
 		// Resize this texture to 'size' optionally applying the resize to all instances of this
@@ -214,8 +234,9 @@ namespace pr
 		// Get a d2d render target for the DXGI surface within this texture
 		D3DPtr<ID2D1RenderTarget> Texture2D::GetD2DRenderTarget()
 		{
+			Renderer::Lock lock(m_mgr->m_rdr); 
 			auto surf = GetSurface();
-			auto d2dfactory = m_mgr->m_rdr.D2DFactory();
+			auto d2dfactory = lock.D2DFactory();
 
 			// Create render target properties
 			auto props = D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_DEFAULT, D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_PREMULTIPLIED));
@@ -231,10 +252,11 @@ namespace pr
 		// Get a D2D device context for the DXGI surface within this texture
 		D3DPtr<ID2D1DeviceContext> Texture2D::GetD2DeviceContext()
 		{
+			Renderer::Lock lock(m_mgr->m_rdr);
 			auto surf = GetSurface();
-			auto d3d_device = m_mgr->m_rdr.D3DDevice();
-			auto d2d_device = m_mgr->m_rdr.D2DDevice();
-			auto d2dfactory = m_mgr->m_rdr.D2DFactory();
+			auto d3d_device = lock.D3DDevice();
+			auto d2d_device = lock.D2DDevice();
+			auto d2dfactory = lock.D2DFactory();
 
 			// Get the DXGI Device from the d3d device
 			D3DPtr<IDXGIDevice> dxgi_device;

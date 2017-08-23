@@ -146,8 +146,6 @@
     <ClInclude Include="..\include\pr\renderer11\instances\instance.h" />
     <ClInclude Include="..\include\pr\renderer11\lights\light.h" />
     <ClInclude Include="..\include\pr\renderer11\lights\light_ui.h" />
-    <ClInclude Include="..\include\pr\renderer11\render\blend_state.h" />
-    <ClInclude Include="..\include\pr\renderer11\render\depth_state.h" />
     <ClInclude Include="..\include\pr\renderer11\render\state_block.h" />
     <ClInclude Include="..\include\pr\renderer11\render\window.h" />
     <ClInclude Include="..\include\pr\renderer11\shaders\input_layout.h" />
@@ -172,7 +170,6 @@
     <ClInclude Include="..\include\pr\renderer11\renderer.h" />
     <ClInclude Include="..\include\pr\renderer11\render\drawlist_element.h" />
     <ClInclude Include="..\include\pr\renderer11\render\renderer.h" />
-    <ClInclude Include="..\include\pr\renderer11\render\raster_state.h" />
     <ClInclude Include="..\include\pr\renderer11\render\scene.h" />
     <ClInclude Include="..\include\pr\renderer11\render\scene_view.h" />
     <ClInclude Include="..\include\pr\renderer11\render\sortkey.h" />
@@ -198,6 +195,7 @@
     <ClInclude Include="..\projects\renderer11\util\forward_private.h" />
     <ClInclude Include="..\projects\renderer11\util\stdafx.h" />
     <ClCompile Include="..\projects\renderer11\models\nugget.cpp" />
+    <ClCompile Include="..\projects\renderer11\render\state_block.cpp" />
     <ClCompile Include="..\projects\renderer11\util\util.cpp" />
     <ClCompile Include="..\projects\renderer11\config\config.cpp" />
     <ClCompile Include="..\projects\renderer11\directxtex\BC.cpp" />

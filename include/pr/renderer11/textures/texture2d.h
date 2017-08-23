@@ -51,6 +51,9 @@ namespace pr
 			SamplerDesc SamDesc() const;
 			void SamDesc(SamplerDesc const& desc);
 
+			// Set the filtering and address mode for this texture
+			void SetFilterAndAddrMode(D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV);
+
 			// Resize this texture to 'size' optionally applying the resize to all instances of this
 			// texture and optionally preserving the current content of the texture
 			void Resize(size_t width, size_t height, bool all_instances, bool preserve);
@@ -77,7 +80,6 @@ namespace pr
 				DC(DC const&) = delete;
 				DC& operator=(DC const&) = delete;
 			};
-
 
 			// A scoped device context to allow GDI+ edits of the texture
 			#ifdef _GDIPLUS_H

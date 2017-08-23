@@ -5,6 +5,7 @@
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/render/window.h"
 #include "pr/renderer11/render/scene.h"
+#include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/steps/gbuffer.h"
 #include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/shaders/shader.h"
@@ -51,7 +52,8 @@ namespace pr
 			if (!create_buffers)
 				return;
 
-			auto device = m_scene->m_wnd->D3DDevice();
+			Renderer::Lock lock(*m_scene->m_wnd->m_rdr);
+			auto device = lock.D3DDevice();
 			auto size = m_scene->m_wnd->RenderTargetSize();
 
 			// Create texture buffers that we will use as the render targets in the GBuffer
@@ -109,7 +111,8 @@ namespace pr
 		// Bind the GBuffer RTs to the output merger
 		void GBuffer::BindRT(bool bind)
 		{
-			auto dc = m_scene->m_wnd->ImmediateDC();
+			Renderer::Lock lock(*m_scene->m_wnd->m_rdr);
+			auto dc = lock.ImmediateDC();
 			if (bind)
 			{
 				// Save a reference to the main render target/depth buffer

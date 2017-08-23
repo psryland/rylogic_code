@@ -21,11 +21,11 @@ namespace pr
 			D3DPtr<ID3D11RenderTargetView>   m_rtv;
 			D3DPtr<ID3D11ShaderResourceView> m_srv;
 			D3DPtr<ID3D11SamplerState>       m_samp;
-			D3DPtr<ID3D11RenderTargetView>   m_main_rtv;        // The main RT for restoring after the rstep
-			D3DPtr<ID3D11DepthStencilView>   m_main_dsv;        // The main DB for restoring after the rstep
+			D3DPtr<ID3D11RenderTargetView>   m_main_rtv;        // The main RT for restoring after the 'rstep'
+			D3DPtr<ID3D11DepthStencilView>   m_main_dsv;        // The main DB for restoring after the 'rstep'
 			D3DPtr<ID3D11Buffer>             m_cbuf_frame;      // Per-frame constant buffer
 			D3DPtr<ID3D11Buffer>             m_cbuf_nugget;     // Per-nugget constant buffer
-			pr::iv2                          m_smap_size;       // Dimensions of the smap texture
+			pr::iv2                          m_smap_size;       // Dimensions of the 'smap' texture
 			ShaderPtr                        m_vs;
 			ShaderPtr                        m_ps;
 			ShaderPtr                        m_gs_face;
@@ -41,7 +41,7 @@ namespace pr
 			// The type of render step this is
 			ERenderStep::Enum_ GetId() const override { return Id; }
 
-			// Create render targets for the gbuffer based on the current render target size
+			// Create render targets for the GBuffer based on the current render target size
 			void InitRT(pr::iv2 size);
 
 			// Set the g-buffer as the render target
@@ -62,11 +62,11 @@ namespace pr
 			// 'c2w' - the camera to world (and => shadow_frustum to world) transform
 			// 'max_range' - is the maximum distance of any shadow casting object from the shadow frustum
 			// plane. Effectively the projection near plane for directional lights or for point lights further
-			// than this distance. Objects further than this distance don't result in pixels in the smap.
+			// than this distance. Objects further than this distance don't result in pixels in the 'smap'.
 			// This should be the distance that depth information is normalised into the range [0,1) by.
 			bool CreateProjection(pr::Frustum const& shadow_frustum, int face, Light const& light, pr::m4x4 const& c2w, float max_range, pr::m4x4& w2s);
 		
-			// Method used to debug smaps
+			// Method used to debug 'smaps'
 			void Debugging(StateStack& ss);
 		};
 	}

@@ -5,9 +5,7 @@
 #pragma once
 
 #include "pr/renderer11/forward.h"
-#include "pr/renderer11/render/blend_state.h"
-#include "pr/renderer11/render/raster_state.h"
-#include "pr/renderer11/render/depth_state.h"
+#include "pr/renderer11/render/state_block.h"
 #include "pr/renderer11/render/sortkey.h"
 #include "pr/renderer11/render/drawlist_element.h"
 #include "pr/renderer11/shaders/shader_set.h"
@@ -23,7 +21,7 @@ namespace pr
 		// There is some data that is model specific and used by multiple shaders (e.g. topo, geom type, diffuse texture),
 		//  these data might as well be in the nuggets to prevent duplication in each shader.
 		// Usability requires that we can add a model (i.e. a collection of nuggets) to any/all render steps automatically.
-		// Noramlly, render steps have a shader they want to use but sometimes we need to override the shader a render step uses.
+		// Normally, render steps have a shader they want to use but sometimes we need to override the shader a render step uses.
 		// We don't want to have to resolve the shaders per frame
 		//
 		// Render Steps:
@@ -34,19 +32,19 @@ namespace pr
 		// ShaderBase derived objects are light weight instances of dx shaders. These shader instances contain per-nugget data
 		// (such as line width, projection texture, etc). They can be duplicated as needed.
 		//
-		// Drawlist Sorting and sortkeys:
-		// Since there is a drawlist per render step, each nugget needs a sortkey per drawlist. These are composed on demand
+		// Drawlist Sorting and sort keys:
+		// Since there is a drawlist per render step, each nugget needs a sort key per drawlist. These are composed on demand
 		// when the nuggets are added to the render steps:
-		//  - nugget sortkey has sort group, alpha, and diff texture id set
+		//  - nugget sort key has sort group, alpha, and diff texture id set
 		//  - per render step (aka drawlist)
-		//    - hash the sort ids of all shaders together into a shader id and set that in the sortkey
+		//    - hash the sort ids of all shaders together into a shader id and set that in the sort key
 		//    - apply sort key overrides from the owning instance (these are needed because the instance might tint with alpha)
 		//
 		// ShaderMap:
 		// A nugget contains a collection of ShaderPtrs as well as model specific data. The shader map contains the pointers
 		// to the shaders to be used by each render step. Users can set these pointers as needed for specific functionally or
 		// leave them as null. When a nugget is added to a render step, the render step ensures that there are appropriate
-		// shaders in the shader map for it to be rendererd by that render step. If they're missing it adds them.
+		// shaders in the shader map for it to be rendered by that render step. If they're missing it adds them.
 		//
 		// ModelBufferPtr:
 		// Nuggets can only reference the model buffer, not the model, because if they contained
@@ -114,7 +112,7 @@ namespace pr
 			// Add this nugget and any dependent nuggets to a drawlist
 			template <typename TDrawList> void AddToDrawlist(TDrawList& drawlist, BaseInstance const& inst, SKOverride const* sko, ERenderStep id, ShaderSet sset)
 			{
-				// Ensure the nugget contains gbuffer shaders vs/ps
+				// Ensure the nugget contains GBuffer shaders VS/PS
 				// Note, the nugget may contain other shaders that are used by this render step as well
 				if (!m_smap[id].m_vs) m_smap[id].m_vs = sset.m_vs;
 				if (!m_smap[id].m_gs) m_smap[id].m_gs = sset.m_gs;

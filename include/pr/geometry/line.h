@@ -13,13 +13,13 @@ namespace pr
 		// Returns the number of verts and number of indices needed to hold geometry for an
 		// array of 'num_lines' lines. (Lines given as start point, end point pairs)
 		template <typename Tvr, typename Tir>
-		void LineSize(std::size_t num_lines, Tvr& vcount, Tir& icount)
+		void LineSize(int num_lines, Tvr& vcount, Tir& icount)
 		{
 			vcount = checked_cast<Tvr>(2 * num_lines);
 			icount = checked_cast<Tir>(2 * num_lines);
 		}
 		template <typename Tvr, typename Tir>
-		void LineStripSize(std::size_t num_lines, Tvr& vcount, Tir& icount)
+		void LineStripSize(int num_lines, Tvr& vcount, Tir& icount)
 		{
 			vcount = checked_cast<Tvr>(1 + num_lines);
 			icount = checked_cast<Tir>(1 + num_lines);
@@ -33,7 +33,7 @@ namespace pr
 		// 'out_verts' is an output iterator to receive the [vert,colour] data
 		// 'out_indices' is an output iterator to receive the index data
 		template <typename TVertIter, typename TIdxIter>
-		Props Lines(std::size_t num_lines, v4 const* points, std::size_t num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices)
+		Props Lines(int num_lines, v4 const* points, int num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices)
 		{
 			using VIdx = typename std::remove_reference<decltype(*out_indices)>::type;
 			Props props;
@@ -51,7 +51,7 @@ namespace pr
 			TIdxIter  i_out = out_indices;
 			VIdx index = 0;
 
-			for (std::size_t i = 0; i != num_lines; ++i)
+			for (int i = 0; i != num_lines; ++i)
 			{
 				SetPC(*v_out++, bb(*v_in++), cc(*col++)); *i_out++ = index++;
 				SetPC(*v_out++, bb(*v_in++), cc(*col++)); *i_out++ = index++;
@@ -62,11 +62,11 @@ namespace pr
 
 		// Create lines using collections of points and directions
 		template <typename TVertCIter, typename TColCIter, typename TVertIter, typename TIdxIter>
-		inline Props LinesD(std::size_t num_lines, TVertCIter points, TVertCIter directions, std::size_t num_colours, TColCIter colours, TVertIter out_verts, TIdxIter out_indices)
+		inline Props LinesD(int num_lines, TVertCIter points, TVertCIter directions, int num_colours, TColCIter colours, TVertIter out_verts, TIdxIter out_indices)
 		{
 			std::vector<v4> buf(num_lines * 2);
 			auto dst = begin(buf);
-			for (std::size_t i = 0; i != num_lines; ++i, ++points, ++directions)
+			for (int i = 0; i != num_lines; ++i, ++points, ++directions)
 			{
 				*dst++ = *points;
 				*dst++ = *points + *directions;
@@ -76,7 +76,7 @@ namespace pr
 
 		// Create a line strip
 		template <typename TVertCIter, typename TColCIter, typename TVertIter, typename TIdxIter>
-		inline Props LinesStrip(std::size_t num_lines, TVertCIter points, std::size_t num_colours, TColCIter colours, TVertIter out_verts, TIdxIter out_indices)
+		inline Props LinesStrip(int num_lines, TVertCIter points, int num_colours, TColCIter colours, TVertIter out_verts, TIdxIter out_indices)
 		{
 			using VIdx = typename std::remove_reference<decltype(*out_indices)>::type;
 			Props props;
@@ -94,7 +94,7 @@ namespace pr
 			auto i_out = out_indices;
 			VIdx index = 0;
 
-			for (std::size_t i = 0; i != num_lines + 1; ++i)
+			for (int i = 0; i != num_lines + 1; ++i)
 			{
 				SetPC(*v_out++, bb(*v_in++), cc(*col++));
 				*i_out++ = index++;

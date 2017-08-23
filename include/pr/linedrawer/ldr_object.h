@@ -444,6 +444,9 @@ namespace pr
 			// Get the first child object of this object that matches 'name' (see Apply)
 			LdrObjectPtr Child(char const* name) const;
 
+			// Get a child object of this object by index
+			LdrObjectPtr Child(int index) const;
+
 			// Get/Set the object to world transform of this object or the first child object matching 'name' (see Apply)
 			// Note, it is more efficient to set O2P.
 			pr::m4x4 O2W(char const* name = nullptr) const;

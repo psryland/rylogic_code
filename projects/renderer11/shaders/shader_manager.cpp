@@ -19,7 +19,6 @@ namespace pr
 			:m_mem(mem)
 			,m_dbg_mem()
 			,m_rdr(rdr)
-			,m_d3d_device(rdr.D3DDevice())
 			,m_lookup_ip(mem)
 			,m_lookup_vs(mem)
 			,m_lookup_ps(mem)
@@ -32,7 +31,8 @@ namespace pr
 		}
 		ShaderManager::~ShaderManager()
 		{
-			auto dc = ImmediateDC(m_rdr.D3DDevice());
+			Renderer::Lock lock(m_rdr);
+			auto dc = lock.ImmediateDC();
 
 			// Clear all shaders
 			dc->VSSetShader(0, 0, 0);
@@ -113,9 +113,10 @@ namespace pr
 			{
 				if (desc == nullptr)
 					throw pr::Exception<HRESULT>(E_FAIL, "Input layout description not provided");
-
+				
+				Renderer::Lock lock(m_rdr);
 				D3DPtr<ID3D11InputLayout> ip;
-				pr::Throw(m_d3d_device->CreateInputLayout(desc->m_iplayout, UINT(desc->m_iplayout_count), desc->m_data, desc->m_size, &ip.m_ptr));
+				pr::Throw(lock.D3DDevice()->CreateInputLayout(desc->m_iplayout, UINT(desc->m_iplayout_count), desc->m_data, desc->m_size, &ip.m_ptr));
 				return ip;
 			});
 		}
@@ -134,8 +135,9 @@ namespace pr
 				GetIP(id, desc);
 				
 				// Attach the input layout as private data to the vertex shader
+				Renderer::Lock lock(m_rdr);
 				D3DPtr<ID3D11VertexShader> vs;
-				pr::Throw(m_d3d_device->CreateVertexShader(desc->m_data, desc->m_size, 0, &vs.m_ptr));
+				pr::Throw(lock.D3DDevice()->CreateVertexShader(desc->m_data, desc->m_size, 0, &vs.m_ptr));
 				return vs;
 			});
 		}
@@ -151,8 +153,9 @@ namespace pr
 					throw pr::Exception<HRESULT>(E_FAIL, "Pixel shader description not provided");
 
 				// Create the pixel shader
+				Renderer::Lock lock(m_rdr);
 				D3DPtr<ID3D11PixelShader> ps;
-				pr::Throw(m_d3d_device->CreatePixelShader(desc->m_data, desc->m_size, 0, &ps.m_ptr));
+				pr::Throw(lock.D3DDevice()->CreatePixelShader(desc->m_data, desc->m_size, 0, &ps.m_ptr));
 				return ps;
 			});
 		}
@@ -168,8 +171,9 @@ namespace pr
 					throw pr::Exception<HRESULT>(E_FAIL, "Geometry shader description not provided");
 
 				// Create the pixel shader
+				Renderer::Lock lock(m_rdr);
 				D3DPtr<ID3D11GeometryShader> gs;
-				pr::Throw(m_d3d_device->CreateGeometryShader(desc->m_data, desc->m_size, 0, &gs.m_ptr));
+				pr::Throw(lock.D3DDevice()->CreateGeometryShader(desc->m_data, desc->m_size, 0, &gs.m_ptr));
 				return gs;
 			});
 		}
@@ -234,6 +238,24 @@ namespace pr
 				throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Existing shader with id %d not found", id));
 
 			return existing->Clone(new_id, new_name);
+		}
+
+		// Get or create a 'cbuffer' object for given type 'TCBuf'
+		D3DPtr<ID3D11Buffer> ShaderManager::GetCBuf(char const* name, RdrId id, size_t sz)
+		{
+			auto iter = m_lookup_cbuf.find(id);
+			if (iter != end(m_lookup_cbuf))
+				return iter->second;
+
+			Renderer::Lock lock(m_rdr);
+
+			// Create the 'cbuffer', add it to the lookup, and return it
+			D3DPtr<ID3D11Buffer> cbuf;
+			CBufferDesc cbdesc(sz);
+			pr::Throw(lock.D3DDevice()->CreateBuffer(&cbdesc, 0, &cbuf.m_ptr));
+			PR_EXPAND(PR_DBG_RDR, NameResource(cbuf, name)); (void)name;
+			m_lookup_cbuf[id] = cbuf;
+			return cbuf;
 		}
 
 		//// Return a pointer to a shader that is best suited for rendering geometry with the vertex structure described by 'geom_mask'

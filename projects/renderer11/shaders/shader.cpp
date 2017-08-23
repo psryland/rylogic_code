@@ -84,11 +84,6 @@ namespace pr
 			#endif
 		}
 
-		// Access to the d3d device
-		ID3D11Device* ShaderBase::D3DDevice() const
-		{
-			return m_mgr->m_rdr.D3DDevice();
-		}
 		
 		// Return the input layout associated with this shader.
 		// Note, returns null for all shaders except vertex shaders

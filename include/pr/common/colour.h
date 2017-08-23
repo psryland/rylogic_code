@@ -32,6 +32,22 @@ namespace pr
 	{
 		using elem_type = float;
 	};
+
+	namespace maths
+	{
+		template <> struct is_vec<Colour32> :std::true_type
+		{
+			using elem_type = uint8;
+			using cp_type = uint8;
+			static int const dim = 4;
+		};
+		template <> struct is_vec<Colour> :std::true_type
+		{
+			using elem_type = float;
+			using cp_type = float;
+			static int const dim = 4;
+		};
+	}
 	#pragma endregion
 
 	#pragma region Predefined Windows Colours
@@ -275,6 +291,11 @@ namespace pr
 	inline float b_cp(Colour32 v) { return v.b / 255.0f; }
 	inline float a_cp(Colour32 v) { return v.a / 255.0f; }
 
+	inline float x_cp(Colour32 v) { return r_cp(v); }
+	inline float y_cp(Colour32 v) { return g_cp(v); }
+	inline float z_cp(Colour32 v) { return b_cp(v); }
+	inline float w_cp(Colour32 v) { return a_cp(v); }
+
 	#pragma region Constants
 	Colour32 const Colour32Zero   = { 0x00000000 };
 	Colour32 const Colour32One    = { 0xFFFFFFFF };
@@ -517,6 +538,11 @@ namespace pr
 	inline float pr_vectorcall g_cp(Colour_cref v) { return v.g; }
 	inline float pr_vectorcall b_cp(Colour_cref v) { return v.b; }
 	inline float pr_vectorcall a_cp(Colour_cref v) { return v.a; }
+
+	inline float pr_vectorcall x_cp(Colour_cref v) { return r_cp(v); }
+	inline float pr_vectorcall y_cp(Colour_cref v) { return g_cp(v); }
+	inline float pr_vectorcall z_cp(Colour_cref v) { return b_cp(v); }
+	inline float pr_vectorcall w_cp(Colour_cref v) { return a_cp(v); }
 
 	#pragma region Constants
 	Colour const ColourZero   = {0.0f, 0.0f, 0.0f, 0.0f};

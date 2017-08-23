@@ -5,6 +5,7 @@
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/render/window.h"
 #include "pr/renderer11/render/scene.h"
+#include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/steps/shadow_map.h"
 #include "pr/renderer11/lights/light.h"
@@ -26,7 +27,7 @@ namespace pr
 		// - Use no depth buffer with blend mode min to avoid depth buffer issues
 		// - Render the scene writing distance-to-frustum data. (this solves the problem of directional
 		//   lights being at infinity)
-		// - In the lighting pass, project ray from ws_pos to frustum, measure distance and compare to
+		// - In the lighting pass, project ray from 'ws_pos' to frustum, measure distance and compare to
 		//   texture to detect shadow
 
 		ShadowMap::ShadowMap(Scene& scene, Light& light, pr::iv2 size)
@@ -64,7 +65,8 @@ namespace pr
 			m_rtv = nullptr;
 			m_srv = nullptr;
 
-			auto device = m_scene->m_wnd->D3DDevice();
+			Renderer::Lock lock(*m_scene->m_wnd->m_rdr);
+			auto device = lock.D3DDevice();
 
 			// Create the smap texture
 			TextureDesc tdesc;
@@ -102,7 +104,8 @@ namespace pr
 		// Bind the smap RT to the output merger
 		void ShadowMap::BindRT(bool bind)
 		{
-			auto dc = m_scene->m_wnd->ImmediateDC();
+			Renderer::Lock lock(*m_scene->m_wnd->m_rdr);
+			auto dc = lock.ImmediateDC();
 			if (bind)
 			{
 				// Save a reference to the main render target/depth buffer

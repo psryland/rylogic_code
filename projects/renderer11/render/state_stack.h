@@ -5,9 +5,7 @@
 #pragma once
 
 #include "pr/renderer11/forward.h"
-#include "pr/renderer11/render/blend_state.h"
-#include "pr/renderer11/render/raster_state.h"
-#include "pr/renderer11/render/depth_state.h"
+#include "pr/renderer11/render/state_block.h"
 #include "pr/renderer11/shaders/shader_set.h"
 #include <d3d11_1.h>
 

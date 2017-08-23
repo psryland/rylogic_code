@@ -41,7 +41,10 @@ namespace pr.gfx
 		}
 
 		/// <summary>ToString</summary>
-		public override string ToString() { return string.Format("a={0} h={1} s={2} v={3}", A, H, S, V); }
+		public override string ToString()
+		{
+			return string.Format("a={0} h={1} s={2} v={3}", A, H, S, V);
+		}
 
 		/// <summary>Convert this HSV to RGB</summary>
 		public Color ToColor()

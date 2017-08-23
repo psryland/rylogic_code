@@ -65,6 +65,7 @@ namespace view3d
 	using AddFileProgressCB = pr::StaticCB<bool, pr::Guid const&, wchar_t const*, long long, BOOL>;
 	using SourcesChangedCB  = pr::StaticCB<void, ESourcesChangedReason, BOOL>;
 	using RenderingCB       = pr::StaticCB<void, Window*>;
+	using SceneChangedCB    = pr::StaticCB<void, Window*>;
 	using ReportErrorCB     = pr::StaticCB<void, wchar_t const*>;
 
 	// An instance type for other models used in LDraw

@@ -159,15 +159,6 @@
       <Filter>geometry</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\renderer11\instance.h" />
-    <ClInclude Include="..\include\pr\renderer11\render\raster_state.h">
-      <Filter>render</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\renderer11\render\blend_state.h">
-      <Filter>render</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\renderer11\render\depth_state.h">
-      <Filter>render</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\renderer11\render\state_block.h">
       <Filter>render</Filter>
     </ClInclude>
@@ -400,6 +391,9 @@
     </ClCompile>
     <ClCompile Include="..\projects\renderer11\models\nugget.cpp">
       <Filter>models</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\render\state_block.cpp">
+      <Filter>render</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

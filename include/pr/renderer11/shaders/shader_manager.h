@@ -31,7 +31,6 @@ namespace pr
 			MemFuncs             m_mem;           // Not using an allocator here, because the Shader type isn't known until 'CreateShader' is called
 			AllocationsTracker   m_dbg_mem;       // Allocation tracker
 			Renderer&            m_rdr;           // The owner renderer instance
-			ID3D11Device*        m_d3d_device;    // Access the d3d device without having to include renderer.h
 			IPLookup             m_lookup_ip;     // Map from id to D3D input layout
 			VSLookup             m_lookup_vs;     // Map from id to D3D vertex shader
 			PSLookup             m_lookup_ps;     // Map from id to D3D pixel shader
@@ -61,6 +60,9 @@ namespace pr
 				Allocator<ShaderType>(m_mem).Delete(shdr);
 			}
 
+			// Get or create a 'cbuffer' object for 'id' of size 'sz'
+			D3DPtr<ID3D11Buffer> GetCBuf(char const* name, RdrId id, size_t sz);
+
 		public:
 
 			ShaderManager(MemFuncs& mem, Renderer& rdr);
@@ -89,6 +91,9 @@ namespace pr
 			// Return the shader corresponding to 'id' or null if not found
 			ShaderPtr FindShader(RdrId id);
 
+			// Create a copy of an existing shader.
+			ShaderPtr CloneShader(RdrId id, RdrId new_id, char const* new_name);
+
 			// Return the shader corresponding to 'id' or null if not found
 			template <typename ShaderType> pr::RefPtr<ShaderType> FindShader(RdrId id)
 			{
@@ -109,9 +114,6 @@ namespace pr
 				return FindShader<ShaderType>(id, base_id, name);
 			}
 
-			// Create a copy of an existing shader.
-			ShaderPtr CloneShader(RdrId id, RdrId new_id, char const* new_name);
-
 			// Get or create a 'cbuffer' object for given type 'TCBuf'
 			template <typename TCBuf> D3DPtr<ID3D11Buffer> GetCBuf(char const* name = nullptr)
 			{
@@ -120,18 +122,8 @@ namespace pr
 				// For each instantiation of this method, create a new id
 				static RdrId id = MonotonicId();
 
-				// See if a 'cbuffer' already exists for this type
-				auto iter = m_lookup_cbuf.find(id);
-				if (iter != end(m_lookup_cbuf))
-					return iter->second;
-
-				// Create the 'cbuffer', add it to the lookup, and return it
-				D3DPtr<ID3D11Buffer> cbuf;
-				CBufferDesc cbdesc(sizeof(TCBuf));
-				pr::Throw(m_d3d_device->CreateBuffer(&cbdesc, 0, &cbuf.m_ptr));
-				PR_EXPAND(PR_DBG_RDR, NameResource(cbuf, name)); (void)name;
-				m_lookup_cbuf[id] = cbuf;
-				return cbuf;
+				// Get the buffer for 'id'
+				return GetCBuf(name, id, sizeof(TCBuf));
 			}
 		};
 	}

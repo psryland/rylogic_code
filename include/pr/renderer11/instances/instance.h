@@ -20,8 +20,7 @@
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/models/model.h"
 #include "pr/renderer11/render/sortkey.h"
-#include "pr/renderer11/render/blend_state.h"
-#include "pr/renderer11/render/raster_state.h"
+#include "pr/renderer11/render/state_block.h"
 
 namespace pr
 {

@@ -39,7 +39,6 @@ namespace pr
 			TexFileLookup            m_lookup_fname;   // A map from hash of filepath to an existing dx texture
 			pr::vector<Texture2DPtr> m_stock_textures; // A collection of references to the stock textures
 			pr::GdiPlus              m_gdiplus;
-			std::recursive_mutex     m_mutex;            // Sync's access to texture creation
 			int                      m_gdi_dc_ref_count; // Used to detect outstanding DC references
 
 			friend struct Texture2D;

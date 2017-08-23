@@ -47,7 +47,7 @@ namespace LDraw
 			:base(scene, EPin.Centre)
 		{
 			InitializeComponent();
-			
+
 			m_scene_ui = scene;
 			Light = new View3d.Light(m_scene_ui.Window.LightProperties);
 

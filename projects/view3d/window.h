@@ -105,7 +105,7 @@ namespace view3d
 				{
 					// Don't instigate a view reset here because the window doesn't know how the caller would
 					// like the view reset (e.g. all objects, just selected, etc). The caller can instead sign
-					// up to the StoreUpdated event on the content sources
+					// up to the OnSceneChanged event
 					InvalidateRect(nullptr, false);
 				};
 				m_eh_file_removed = m_dll->m_sources.OnFileRemoved += [&](pr::ldr::ScriptSources&, pr::ldr::ScriptSources::FileRemovedEventArgs const& args)
@@ -156,6 +156,9 @@ namespace view3d
 
 		// Rendering event
 		pr::MultiCast<RenderingCB> OnRendering;
+
+		// Scene changed event
+		pr::MultiCast<SceneChangedCB> OnSceneChanged;
 
 		// Report an error for this window
 		void ReportError(wchar_t const* msg)
@@ -341,6 +344,17 @@ namespace view3d
 			return int(m_gizmos.size());
 		}
 
+		// Enumerate the objects associated with 'window'
+		void EnumObjects(View3D_EnumObjectsCB enum_objects_cb, void* ctx)
+		{
+			assert(std::this_thread::get_id() == m_main_thread_id);
+			for (auto& object : m_objects)
+			{
+				if (enum_objects_cb(ctx, object)) continue;
+				break;
+			}
+		}
+
 		// Add/Remove an object to this window
 		void Add(pr::ldr::LdrObject* object)
 		{
@@ -362,6 +376,7 @@ namespace view3d
 		// Add/Remove a gizmo to this window
 		void Add(pr::ldr::LdrGizmo* gizmo)
 		{
+			assert(std::this_thread::get_id() == m_main_thread_id);
 			auto iter = m_gizmos.find(gizmo);
 			if (iter == std::end(m_gizmos))
 			{
@@ -542,6 +557,9 @@ namespace view3d
 
 			// Invalidate cached members
 			m_bbox_scene = pr::BBoxReset;
+
+			// Notify scene changed
+			OnSceneChanged.Raise(this);
 		}
 
 		// Show/Hide the object manager for the scene

@@ -17,15 +17,13 @@ namespace pr.maths
 	[DebuggerDisplay("{Description}")]
 	public struct Matrix
 	{
-		public int m_rows;
-		public int m_cols;
-		public double[] m_data;
+		private double[] m_data;
 
 		public Matrix(int row_count, int col_count)
 		{
-			m_rows = row_count;
-			m_cols = col_count;
-			m_data = new double[m_rows * m_cols];
+			Rows = row_count;
+			Cols = col_count;
+			m_data = new double[Rows * Cols];
 		}
 		public Matrix(int row_count, int col_count, IEnumerable<double> data)
 			:this(row_count, col_count)
@@ -43,42 +41,43 @@ namespace pr.maths
 		public Matrix(int row_count, int col_count, IEnumerable<float> data)
 			:this(row_count, col_count, data.Select(x => (double)x))
 		{}
+		public Matrix(bool row, IList<double> data)
+			:this(row ? 1 : data.Count, row ? data.Count : 1)
+		{
+			data.CopyTo(m_data, 0);
+		}
 		public Matrix(IList<IList<double>> data)
 			:this(data.Count, data.Max(x => x.Count))
 		{
-			for (var j = 0; j != m_rows; ++j)
-				data[j].CopyTo(m_data, j * m_cols);
+			for (var j = 0; j != Rows; ++j)
+				data[j].CopyTo(m_data, j * Cols);
 		}
 		public Matrix(Matrix rhs)
-			:this(rhs.m_rows, rhs.m_cols)
+			:this(rhs.Rows, rhs.Cols)
 		{
 			Array.Copy(rhs.m_data, m_data, rhs.m_data.Length);
 		}
 
-		/// <summary>Return an identity matrix of the given dimensions</summary>
-		public static Matrix Identity(int row_count, int col_count)
-		{
-			var m = new Matrix(row_count, col_count);
-			for (int i = 0, iend = Math.Min(row_count, col_count); i != iend; ++i)
-				m[i, i] = 1;
+		/// <summary>The number of rows in this matrix</summary>
+		public int Rows { get; private set; }
 
-			return m;
-		}
+		/// <summary>The number of columns in this matrix</summary>
+		public int Cols { get; private set; }
 
 		/// <summary>Access this matrix as a 2D array</summary>
 		public double this[int row, int col]
 		{
 			get
 			{
-				Debug.Assert(row >= 0 && row < m_rows);
-				Debug.Assert(col >= 0 && col < m_cols);
-				return m_data[row * m_cols + col];
+				Debug.Assert(row >= 0 && row < Rows);
+				Debug.Assert(col >= 0 && col < Cols);
+				return m_data[row * Cols + col];
 			}
 			set
 			{
-				Debug.Assert(row >= 0 && row < m_rows);
-				Debug.Assert(col >= 0 && col < m_cols);
-				m_data[row * m_cols + col] = value;
+				Debug.Assert(row >= 0 && row < Rows);
+				Debug.Assert(col >= 0 && col < Cols);
+				m_data[row * Cols + col] = value;
 			}
 		}
 
@@ -92,16 +91,17 @@ namespace pr.maths
 			{
 				get
 				{
-					var m = new Matrix(1, mat.m_cols);
-					for (int i = 0; i < mat.m_cols; i++)
-						m[0,i] = mat[k,i];
+					var m = new Matrix(1, mat.Cols);
+					for (int i = 0; i != mat.Cols; ++i)
+						m[0, i] = mat[k, i];
 
 					return m;
 				}
 				set
 				{
-					for (int i = 0; i < mat.m_rows; i++)
-						mat[k,i] = value[0,i];
+					if (value.Cols != mat.Cols) throw new Exception("Incorrect number of columns");
+					for (int i = 0; i != mat.Cols; ++i)
+						mat[k, i] = value[0, i];
 				}
 			}
 		}
@@ -116,16 +116,17 @@ namespace pr.maths
 			{
 				get
 				{
-					var m = new Matrix(mat.m_rows, 1);
-					for (int i = 0; i < mat.m_rows; i++)
-						m[i,0] = mat[i,k];
+					var m = new Matrix(mat.Rows, 1);
+					for (int i = 0; i != mat.Rows; ++i)
+						m[i, 0] = mat[i, k];
 
 					return m;
 				}
 				set
 				{
-					for (int i = 0; i < mat.m_rows; i++)
-						mat[i,k] = value[i,0];
+					if (value.Rows != mat.Rows) throw new Exception("Incorrect number of rows");
+					for (int i = 0; i != mat.Rows; ++i)
+						mat[i, k] = value[i, 0];
 				}
 			}
 		}
@@ -136,10 +137,10 @@ namespace pr.maths
 			get
 			{
 				var s = new StringBuilder();
-				s.AppendLine($"[{m_cols}x{m_rows}]");
-				for (int i = 0; i != m_rows; ++i)
+				s.AppendLine($"[{Cols}x{Rows}]");
+				for (int i = 0; i != Rows; ++i)
 				{
-					for (int j = 0; j != m_cols; ++j)
+					for (int j = 0; j != Cols; ++j)
 						s.Append($"{this[i,j],5:0.00} ");
 					s.AppendLine();
 				}
@@ -153,13 +154,35 @@ namespace pr.maths
 			return Description;
 		}
 
+		/// <summary>Return an identity matrix of the given dimensions</summary>
+		public static Matrix Identity(int row_count, int col_count)
+		{
+			var m = new Matrix(row_count, col_count);
+			for (int i = 0, iend = Math.Min(row_count, col_count); i != iend; ++i)
+				m[i, i] = 1;
+
+			return m;
+		}
+
+		/// <summary>Return a row vector from a list of values</summary>
+		public static Matrix AsRow(params double[] values)
+		{
+			return new Matrix(true, values);
+		}
+
+		/// <summary>Return a column vector from a list of values</summary>
+		public static Matrix AsCol(params double[] values)
+		{
+			return new Matrix(false, values);
+		}
+
 		#region Functions
 
 		/// <summary>Special case equality operators</summary>
 		public static bool FEql(Matrix lhs, Matrix rhs)
 		{
-			if (lhs.m_rows != rhs.m_rows) return false;
-			if (lhs.m_cols != rhs.m_cols) return false;
+			if (lhs.Rows != rhs.Rows) return false;
+			if (lhs.Cols != rhs.Cols) return false;
 			for (int i = 0; i != lhs.m_data.Length; ++i)
 				if (!Maths.FEql(lhs.m_data[i], rhs.m_data[i]))
 					return false;
@@ -168,7 +191,7 @@ namespace pr.maths
 		}
 		public static bool FEql(Matrix lhs, m4x4 rhs)
 		{
-			if (lhs.m_rows != 4 && lhs.m_cols != 4) return false;
+			if (lhs.Rows != 4 && lhs.Cols != 4) return false;
 			return
 				Maths.FEql((float)lhs.m_data[ 0], rhs.x.x) &&
 				Maths.FEql((float)lhs.m_data[ 1], rhs.x.y) &&
@@ -194,15 +217,15 @@ namespace pr.maths
 		/// <summary>True if the matrix is square</summary>
 		public bool IsSquare
 		{
-			get { return m_rows == m_cols; }
+			get { return Rows == Cols; }
 		}
 
 		/// <summary>Find the transpose of matrix 'm'</summary>
 		public static Matrix Transpose(Matrix m)
 		{
-			var t = new Matrix(m.m_cols, m.m_rows);
-			for (int i = 0; i < m.m_rows; i++)
-				for (int j = 0; j < m.m_cols; j++)
+			var t = new Matrix(m.Cols, m.Rows);
+			for (int i = 0; i < m.Rows; i++)
+				for (int j = 0; j < m.Cols; j++)
 					t[j, i] = m[i, j];
 			return t;
 		}
@@ -235,13 +258,13 @@ namespace pr.maths
 		public static Matrix Power(Matrix m, int pow)
 		{
 			if (pow == +1) return m;
-			if (pow ==  0) return Identity(m.m_rows, m.m_cols);
+			if (pow ==  0) return Identity(m.Rows, m.Cols);
 			if (pow == -1) return Invert(m);
 
 			var x = pow < 0 ? Invert(m) : m;
 			if (pow < 0) pow *= -1;
 
-			var ret = Identity(m.m_rows, m.m_cols);
+			var ret = Identity(m.Rows, m.Cols);
 			while (pow != 0)
 			{
 				if ((pow & 1) == 1) ret *= x;
@@ -315,24 +338,24 @@ namespace pr.maths
 		// Addition/Subtraction
 		public static Matrix operator + (Matrix lhs, Matrix rhs)
 		{
-			if (lhs.m_rows != rhs.m_rows || lhs.m_cols != rhs.m_cols)
+			if (lhs.Rows != rhs.Rows || lhs.Cols != rhs.Cols)
 				throw new Exception("Matrices must have the same dimensions!");
 
-			var r = new Matrix(lhs.m_rows, lhs.m_cols);
-			for (int i = 0; i != r.m_rows; ++i)
-				for (int j = 0; j != r.m_cols; ++j)
+			var r = new Matrix(lhs.Rows, lhs.Cols);
+			for (int i = 0; i != r.Rows; ++i)
+				for (int j = 0; j != r.Cols; ++j)
 					r[i,j] = lhs[i,j] + rhs[i,j];
 
 			return r;
 		}
 		public static Matrix operator - (Matrix lhs, Matrix rhs)
 		{
-			if (lhs.m_rows != rhs.m_rows || lhs.m_cols != rhs.m_cols)
+			if (lhs.Rows != rhs.Rows || lhs.Cols != rhs.Cols)
 				throw new Exception("Matrices must have the same dimensions!");
 
-			var r = new Matrix(lhs.m_rows, lhs.m_cols);
-			for (int i = 0; i != r.m_rows; ++i)
-				for (int j = 0; j != r.m_cols; ++j)
+			var r = new Matrix(lhs.Rows, lhs.Cols);
+			for (int i = 0; i != r.Rows; ++i)
+				for (int j = 0; j != r.Cols; ++j)
 					r[i,j] = lhs[i,j] - rhs[i,j];
 
 			return r;
@@ -341,18 +364,18 @@ namespace pr.maths
 		/// <summary>Matrix product</summary>
 		public static Matrix operator * (Matrix lhs, Matrix rhs)
 		{
-			if (lhs.m_cols != rhs.m_rows)
+			if (lhs.Cols != rhs.Rows)
 				throw new Exception("Wrong dimension of matrix!");
 
 			Matrix R;
-			int msize = Math.Max(Math.Max(lhs.m_rows, lhs.m_cols), Math.Max(rhs.m_rows, rhs.m_cols));
+			int msize = Math.Max(Math.Max(lhs.Rows, lhs.Cols), Math.Max(rhs.Rows, rhs.Cols));
 			if (msize < 32)
 			{
 				// Small matrix multiply
-				R = new Matrix(lhs.m_rows, rhs.m_cols);
-				for (int i = 0; i < R.m_rows; i++)
-					for (int j = 0; j < R.m_cols; j++)
-						for (int k = 0; k < lhs.m_cols; k++)
+				R = new Matrix(lhs.Rows, rhs.Cols);
+				for (int i = 0; i < R.Rows; i++)
+					for (int j = 0; j < R.Cols; j++)
+						for (int k = 0; k < lhs.Cols; k++)
 							R[i, j] += lhs[i, k] * rhs[k, j];
 			}
 			else
@@ -382,8 +405,8 @@ namespace pr.maths
 						for (int j = 0; j < sz; j++) // cols
 						{
 							C[i, j] = 0;
-							if (xa + j < A.m_cols && ya + i < A.m_rows) C[i, j] += A[ya + i, xa + j];
-							if (xb + j < B.m_cols && yb + i < B.m_rows) C[i, j] += B[yb + i, xb + j];
+							if (xa + j < A.Cols && ya + i < A.Rows) C[i, j] += A[ya + i, xa + j];
+							if (xb + j < B.Cols && yb + i < B.Rows) C[i, j] += B[yb + i, xb + j];
 						}
 					}
 				};
@@ -394,8 +417,8 @@ namespace pr.maths
 						for (int j = 0; j < sz; j++) // cols
 						{
 							C[i, j] = 0;
-							if (xa + j < A.m_cols && ya + i < A.m_rows) C[i, j] += A[ya + i, xa + j];
-							if (xb + j < B.m_cols && yb + i < B.m_rows) C[i, j] -= B[yb + i, xb + j];
+							if (xa + j < A.Cols && ya + i < A.Rows) C[i, j] += A[ya + i, xa + j];
+							if (xb + j < B.Cols && yb + i < B.Rows) C[i, j] -= B[yb + i, xb + j];
 						}
 					}
 				};
@@ -406,7 +429,7 @@ namespace pr.maths
 						for (int j = 0; j < sz; j++) // cols
 						{
 							C[i, j] = 0;
-							if (xa + j < A.m_cols && ya + i < A.m_rows) C[i, j] += A[ya + i, xa + j];
+							if (xa + j < A.Cols && ya + i < A.Rows) C[i, j] += A[ya + i, xa + j];
 						}
 					}
 				};
@@ -433,15 +456,15 @@ namespace pr.maths
 				{
 					// A * B into C, level of recursion, matrix field
 					// function for square matrix 2^N x 2^N
-					var sz = A.m_rows;
+					var sz = A.Rows;
 					if (sz < 32)
 					{
-						for (int i = 0; i < C.m_rows; i++)
+						for (int i = 0; i < C.Rows; i++)
 						{
-							for (int j = 0; j < C.m_cols; j++)
+							for (int j = 0; j < C.Cols; j++)
 							{
 								C[i, j] = 0;
-								for (int k = 0; k < A.m_cols; k++)
+								for (int k = 0; k < A.Cols; k++)
 									C[i, j] += A[i, k] * B[k, j];
 							}
 						}
@@ -527,26 +550,26 @@ namespace pr.maths
 				SafeAplusBintoC(rhs, 0, h, rhs, h, h, field[0, 1], h);
 				StrassenMultiplyRun(field[0, 0], field[0, 1], field[0, 1 + 7], 1, field); // (A12 - A22) * (B21 + B22);
 
-				R = new Matrix(lhs.m_rows, rhs.m_cols); // result
+				R = new Matrix(lhs.Rows, rhs.Cols); // result
 
 				// C11
-				for (int i = 0; i < Math.Min(h, R.m_rows); i++) // rows
-					for (int j = 0; j < Math.Min(h, R.m_cols); j++) // cols
+				for (int i = 0; i < Math.Min(h, R.Rows); i++) // rows
+					for (int j = 0; j < Math.Min(h, R.Cols); j++) // cols
 						R[i, j] = field[0, 1 + 1][i, j] + field[0, 1 + 4][i, j] - field[0, 1 + 5][i, j] + field[0, 1 + 7][i, j];
 
 				// C12
-				for (int i = 0; i < Math.Min(h, R.m_rows); i++) // rows
-					for (int j = h; j < Math.Min(2 * h, R.m_cols); j++) // cols
+				for (int i = 0; i < Math.Min(h, R.Rows); i++) // rows
+					for (int j = h; j < Math.Min(2 * h, R.Cols); j++) // cols
 						R[i, j] = field[0, 1 + 3][i, j - h] + field[0, 1 + 5][i, j - h];
 
 				// C21
-				for (int i = h; i < Math.Min(2 * h, R.m_rows); i++) // rows
-					for (int j = 0; j < Math.Min(h, R.m_cols); j++) // cols
+				for (int i = h; i < Math.Min(2 * h, R.Rows); i++) // rows
+					for (int j = 0; j < Math.Min(h, R.Cols); j++) // cols
 						R[i, j] = field[0, 1 + 2][i - h, j] + field[0, 1 + 4][i - h, j];
 
 				// C22
-				for (int i = h; i < Math.Min(2 * h, R.m_rows); i++) // rows
-					for (int j = h; j < Math.Min(2 * h, R.m_cols); j++) // cols
+				for (int i = h; i < Math.Min(2 * h, R.Rows); i++) // rows
+					for (int j = h; j < Math.Min(2 * h, R.Cols); j++) // cols
 						R[i, j] = field[0, 1 + 1][i - h, j - h] - field[0, 1 + 2][i - h, j - h] + field[0, 1 + 3][i - h, j - h] + field[0, 1 + 6][i - h, j - h];
 			}
 			return R;
@@ -555,9 +578,9 @@ namespace pr.maths
 		/// <summary>Matrix times scalar</summary>
 		public static Matrix operator * (double s, Matrix mat)
 		{
-			var r = new Matrix(mat.m_rows, mat.m_cols);
-			for (int i = 0; i < mat.m_rows; i++)
-				for (int j = 0; j < mat.m_cols; j++)
+			var r = new Matrix(mat.Rows, mat.Cols);
+			for (int i = 0; i < mat.Rows; i++)
+				for (int j = 0; j < mat.Cols; j++)
 					r[i, j] = mat[i, j] * s;
 			return r;
 		}
@@ -583,7 +606,7 @@ namespace pr.maths
 		}
 		public override int GetHashCode()
 		{
-			return new { m_rows, m_cols, m_data }.GetHashCode();
+			return new { Rows, Cols, m_data }.GetHashCode();
 		}
 		#endregion
 	}
@@ -598,7 +621,7 @@ namespace pr.maths
 			m_mat = new Matrix[1];
 			L = new LProxy(m_mat);
 			U = new UProxy(m_mat);
-			pi = new int[m.m_rows];
+			pi = new int[m.Rows];
 			DetOfP = 1;
 
 			if (!m.IsSquare)
@@ -607,19 +630,19 @@ namespace pr.maths
 			// We will store both the L and U matrices in 'mat' since we know
 			// L has the form: [1 0] and U has the form: [U U]
 			//                 [L 1]                     [0 U]
-			var LL = Matrix.Identity(m.m_rows, m.m_cols);
+			var LL = Matrix.Identity(m.Rows, m.Cols);
 			var UU = new Matrix(m);
 
 			// Initialise the permutation vector
-			for (int i = 0; i < m.m_rows; i++)
+			for (int i = 0; i < m.Rows; i++)
 				pi[i] = i;
 
 			// Decompose 'm' into 'LL' and 'UU'
-			for (int k = 0, k0 = 0, kend = m.m_cols - 1; k != kend; k++)
+			for (int k = 0, k0 = 0, kend = m.Cols - 1; k != kend; k++)
 			{
 				// Find the row with the biggest pivot
 				var p = 0.0;
-				for (int i = k; i != m.m_rows; ++i)
+				for (int i = k; i != m.Rows; ++i)
 				{
 					if (Math.Abs(UU[i, k]) <= p) continue;
 					p = Math.Abs(UU[i, k]);
@@ -643,7 +666,7 @@ namespace pr.maths
 					DetOfP *= -1;
 
 				// Switch rows in U
-				for (int i = 0; i != m.m_cols; ++i)
+				for (int i = 0; i != m.Cols; ++i)
 				{
 					var tmp = UU[k, i];
 					UU[k, i] = UU[k0, i];
@@ -651,16 +674,16 @@ namespace pr.maths
 				}
 
 				// Gaussian eliminate the remaining rows
-				for (int i = k + 1; i < m.m_rows; ++i)
+				for (int i = k + 1; i < m.Rows; ++i)
 				{
 					LL[i,k] = UU[i,k] / UU[k,k];
-					for (int j = k; j < m.m_cols; ++j)
+					for (int j = k; j < m.Cols; ++j)
 						UU[i,j] = UU[i,j] - LL[i,k] * UU[k,j];
 				}
 			}
 
 			// Store 'LL' in the zero part of 'UU'
-			for (int r = 1; r < m.m_rows; ++r)
+			for (int r = 1; r < m.Rows; ++r)
 				for (int c = 0; c != r; ++c)
 					UU[r,c] = LL[r,c];
 
@@ -671,13 +694,13 @@ namespace pr.maths
 		/// <summary>Row count</summary>
 		public int m_rows
 		{
-			get { return m_mat[0].m_rows; }
+			get { return m_mat[0].Rows; }
 		}
 
 		/// <summary>Column count</summary>
 		public int m_cols
 		{
-			get { return m_mat[0].m_cols; }
+			get { return m_mat[0].Cols; }
 		}
 
 		/// <summary>Accessor for the lower diagonal matrix</summary>
@@ -693,8 +716,8 @@ namespace pr.maths
 			{
 				get
 				{
-					Debug.Assert(row >= 0 && row < m_mat[0].m_rows);
-					Debug.Assert(col >= 0 && col < m_mat[0].m_cols);
+					Debug.Assert(row >= 0 && row < m_mat[0].Rows);
+					Debug.Assert(col >= 0 && col < m_mat[0].Cols);
 					return row > col ? m_mat[0][row, col] : row == col ? 1 : 0;
 				}
 			}
@@ -713,8 +736,8 @@ namespace pr.maths
 			{
 				get
 				{
-					Debug.Assert(row >= 0 && row < m_mat[0].m_rows);
-					Debug.Assert(col >= 0 && col < m_mat[0].m_cols);
+					Debug.Assert(row >= 0 && row < m_mat[0].Rows);
+					Debug.Assert(col >= 0 && col < m_mat[0].Cols);
 					return row <= col ? m_mat[0][row, col] : 0;
 				}
 			}
@@ -760,7 +783,7 @@ namespace pr.maths
 		/// <summary>Solves for x in 'A.x = v'</summary>
 		public static Matrix Solve(MatrixLU A, Matrix v)
 		{
-			if (A.m_rows != v.m_rows)
+			if (A.m_rows != v.Rows)
 				throw new Exception("Solution vector has the wrong dimensions");
 
 			var a = new Matrix(A.m_rows, 1);
@@ -861,8 +884,8 @@ namespace pr.unittests
 			var m = new Matrix(SZ,SZ);
 			for (int k = 0; k != 10; ++k)
 			{
-				for (int i = 0; i != m.m_rows; ++i)
-					for (int j = 0; j != m.m_cols; ++j)
+				for (int i = 0; i != m.Rows; ++i)
+					for (int j = 0; j != m.Cols; ++j)
 						m[i,j] = rng.Double(-5.0, +5.0);
 
 				if (Matrix.IsInvertable(m))

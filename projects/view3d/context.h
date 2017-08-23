@@ -57,7 +57,7 @@ namespace view3d
 		~Context()
 		{
 			while (!m_wnd_cont.empty())
-				View3D_DestroyWindow(*m_wnd_cont.begin());
+				View3D_WindowDestroy(*m_wnd_cont.begin());
 		}
 		Context(Context const&) = delete;
 		Context& operator=(Context const&) = delete;
@@ -123,7 +123,7 @@ namespace view3d
 		{
 			// Remove the object from any windows it might be in
 			for (auto wnd : m_wnd_cont)
-				View3D_RemoveObject(wnd, object);
+				View3D_WindowRemoveObject(wnd, object);
 
 			// Callback to edit the geometry
 			ObjectEditCBData cbdata = { edit_cb, ctx };
@@ -135,7 +135,7 @@ namespace view3d
 		{
 			// Remove the object from any windows it might be in
 			for (auto wnd : m_wnd_cont)
-				View3D_RemoveObject(wnd, object);
+				View3D_WindowRemoveObject(wnd, object);
 
 			// Update the object model
 			pr::script::PtrW src(ldr_script);
@@ -148,7 +148,7 @@ namespace view3d
 		{
 			// Remove the objects from any windows they're in
 			for (auto wnd : m_wnd_cont)
-				View3D_RemoveAllObjects(wnd);
+				View3D_WindowRemoveAllObjects(wnd);
 		
 			// Clear the object container. The unique pointers should delete the objects
 			m_sources.ClearAll();
@@ -159,7 +159,7 @@ namespace view3d
 		{
 			// Remove objects from any windows they might be assigned to
 			for (auto wnd : m_wnd_cont)
-				View3D_RemoveObjectsById(wnd, false, context_id);
+				View3D_WindowRemoveObjectsById(wnd, false, context_id);
 
 			m_sources.Remove(context_id);
 		}
@@ -169,7 +169,7 @@ namespace view3d
 		{
 			// Remove the object from any windows it's in
 			for (auto wnd : m_wnd_cont)
-				View3D_RemoveObject(wnd, object);
+				View3D_WindowRemoveObject(wnd, object);
 		
 			// Delete the object from the object container
 			m_sources.Remove(object);
@@ -192,7 +192,7 @@ namespace view3d
 		{
 			// Remove the gizmo from any windows it's in
 			for (auto wnd : m_wnd_cont)
-				View3D_RemoveGizmo(wnd, gizmo);
+				View3D_WindowRemoveGizmo(wnd, gizmo);
 		
 			// Delete the gizmo from the sources
 			m_sources.RemoveGizmo(gizmo);

@@ -11,8 +11,10 @@ using System.Drawing;
 using System.Drawing.Design;
 using System.Drawing.Drawing2D;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
+using pr.container;
 using pr.extn;
 using pr.util;
 
@@ -22,6 +24,15 @@ namespace pr.gui
 	[Docking(DockingBehavior.Ask)]
 	public class TreeGridView :DataGridView
 	{
+		// Notes:
+		//  - DataBinding works if the data type implements 'ITreeItem' or a 'DataBinder' method is
+		//    provided that converts DataSource objects to 'ITreeItem'.
+		//  - 'DataSource' does not use 'base.DataSource' because the DataGridView internals are set
+		//    up for one row per item in the data source. In this tree the DataSource is used as the
+		//    source of the top level items. The 'ITreeItem' interface is used to access child nodes.
+		//  - The 'DataBinder' method is never null, but may return null if the data object does not
+		//    implement 'ITreeItem'.
+
 		public TreeGridView()
 		{
 			// Control when edit occurs because edit mode shouldn't start when expanding/collapsing
@@ -31,12 +42,138 @@ namespace pr.gui
 			AllowUserToAddRows = false;
 			AllowUserToDeleteRows = false;
 			ShowLines = true;
+			DataBinder = null;
+			DataProperty = new Dictionary<string, PropertyInfo>();
+			RowTemplate = new TreeGridNode(this);
 
 			// Create the root of the tree
-			m_root = new TreeGridNode(this, is_root:true, item:null);
+			RootNode = new TreeGridNode(this);
+			RootNode.Expand();
 
-			// Causes all rows to be unshared
-			base.Rows.CollectionChanged += (s,e)=>{};
+			// Cause all rows to be unshared
+			base.Rows.CollectionChanged += (s,e) => {};
+		}
+		protected override void Dispose(bool disposing)
+		{
+			DataSource = null;
+			base.Dispose(disposing);
+		}
+		protected override void OnDataSourceChanged(EventArgs e)
+		{
+			// We're not using 'base.DataSource' because it expects one row per item
+			throw new Exception($"Data binding only works when accessed via {nameof(TreeGridView)}.{nameof(DataSource)}");
+		}
+		protected override void OnColumnDataPropertyNameChanged(DataGridViewColumnEventArgs e)
+		{
+			// Invalidate the cached data property accessors in the tree column
+			DataProperty.Clear();
+			base.OnColumnDataPropertyNameChanged(e);
+		}
+		protected override void OnCellValueNeeded(DataGridViewCellValueEventArgs e)
+		{
+			// If the tree is data bound, read the value from the data source
+			if (DataSource != null && this.Within(e.ColumnIndex, e.RowIndex, out DataGridViewColumn col))
+			{
+				// Get the data bound object
+				var item = ((TreeGridNode)Rows[e.RowIndex]).DataBoundItem;
+
+				// If a data property name has been set, access the property value
+				if (col.DataPropertyName != null)
+				{
+					var pi = DataProperty.GetOrAdd(col.DataPropertyName, name => item.GetType().GetProperty(name));
+					if (pi != null)
+						e.Value = pi.GetValue(item);
+				}
+			}
+			base.OnCellValueNeeded(e);
+		}
+		protected override void OnCellValuePushed(DataGridViewCellValueEventArgs e)
+		{
+			// If the tree is data bound, write the value to the data source
+			if (DataSource != null && this.Within(e.ColumnIndex, e.RowIndex, out DataGridViewColumn col))
+			{
+				// Don't modify read only collections
+				if (!m_data_source.IsReadOnly)
+				{
+					// Invalidate the row to be changed
+					InvalidateRow(e.RowIndex);
+				
+					// If a data property name has been set, access the property
+					if (col.DataPropertyName != null)
+					{
+						// Get the data bound object
+						var item = ((TreeGridNode)Rows[e.RowIndex]).DataBoundItem;
+
+						var pi = DataProperty.GetOrAdd(col.DataPropertyName, name => item.GetType().GetProperty(name));
+						if (pi != null)
+							pi.SetValue(item, e.Value);
+					}
+				}
+			}
+			base.OnCellValuePushed(e);
+		}
+		protected override void OnCurrentCellChanged(EventArgs e)
+		{
+			if (DataSource is ICurrencyManagerProvider src)
+			{
+				// Find the top level item for the current row
+				if (CurrentCell == null)
+					src.CurrencyManager.Position = -1;
+				else
+					src.CurrencyManager.Position = ((TreeGridNode)CurrentCell.OwningRow).TopLevelNode.RowIndex;
+			}
+			base.OnCurrentCellChanged(e);
+		}
+
+		/// <summary>If items do not implement 'ITreeItem', use this function to wrap the contained objects</summary>
+		public Func<object, ITreeItem> DataBinder
+		{
+			get { return m_data_binder; }
+			set { m_data_binder = value ?? (x => x as ITreeItem); }
+		}
+		private Func<object, ITreeItem> m_data_binder;
+
+		/// <summary>Data binding source.</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public new object DataSource
+		{
+			[DebuggerStepThrough] get { return m_data_source; }
+			set
+			{
+				if (m_data_source == value) return;
+
+				// Unhook
+				if (m_data_source is IBindingList lc0)
+					lc0.ListChanged -= HandleDataSourceChanged;
+
+				// Change the data source
+				m_data_source =
+					(value is IBindingList bl) ? bl :
+					(value != null) ? new BindingSource{ DataSource = value } :
+					null;
+
+				// Hookup
+				if (m_data_source is IBindingList lc1)
+					lc1.ListChanged += HandleDataSourceChanged;
+
+				// Use virtual mode so that cell values can be provided by overridden methods
+				base.VirtualMode = m_data_source != null;
+			}
+		}
+		internal IBindingList m_data_source;
+		private void HandleDataSourceChanged(object sender, ListChangedEventArgs e)
+		{
+			// Nodes do not contain the data source items, so all
+			// we need is the same number, the order doesn't matter.
+			using (this.SuspendLayout(false))
+			{
+				RowCount = m_data_source.Count;
+
+				// Invalidate affected rows
+				if (e.NewIndex.Within(0, RowCount)) InvalidateRow(Nodes[e.NewIndex].RowIndex);
+				if (e.OldIndex.Within(0, RowCount)) InvalidateRow(Nodes[e.OldIndex].RowIndex);
+			}
 		}
 
 		/// <summary>The collection of nodes in the grid</summary>
@@ -45,23 +182,31 @@ namespace pr.gui
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
 		public TreeGridNodeCollection Nodes
 		{
-			get { return m_root.Nodes; }
+			get { return RootNode.Nodes; }
 		}
 
 		/// <summary>Get/Set the number of top level nodes in the grid </summary>
 		public int NodeCount
 		{
 			get { return RowCount; }
-			set { RowCount = value; }
+			set
+			{
+				// Don't let clients set the row count when data binding is in use
+				if (DataSource != null)
+					throw new Exception("Do not set the node count when data binding is used");
+
+				if (value == RowCount) return;
+				RowCount = value;
+			}
 		}
 		private new int RowCount // hide the row count property
 		{
 			get { return Nodes.Count; }
 			set
 			{
-				if (value == 0) Nodes.Clear();
-				for (int i = RowCount; i > value; --i) Nodes.RemoveAt(i-1);
-				for (int i = RowCount; i < value; ++i) Nodes.Add(new TreeGridNode(this, is_root:false, item:null));
+				// Nodes do not contain the data source items, so all
+				// when need is the same number, the order doesn't matter.
+				Nodes.Resize(value);
 			}
 		}
 
@@ -76,11 +221,13 @@ namespace pr.gui
 		}
 
 		/// <summary>The internal root of the tree. Note: not visible in the tree</summary>
-		public TreeGridNode RootNode
+		public TreeGridNode RootNode { [DebuggerStepThrough] get; private set; }
+
+		/// <summary>True if data binding is in use</summary>
+		public bool IsDataBound
 		{
-			[DebuggerStepThrough] get { return m_root; }
+			get { return DataSource != null; }
 		}
-		private readonly TreeGridNode  m_root;
 
 		/// <summary>Show/hide the tree lines</summary>
 		public bool ShowLines
@@ -96,11 +243,45 @@ namespace pr.gui
 		private bool m_show_lines;
 
 		/// <summary>"Causes nodes to always show as expandable. Use the NodeExpanding event to add nodes</summary>
-		[Description("Causes nodes to always show as expandable. Use the NodeExpanding event to add nodes.")]
-		public bool VirtualNodes { get; set; }
+		public bool VirtualNodes
+		{
+			[DebuggerStepThrough] get { return m_virtual_nodes; }
+			set
+			{
+				if (m_virtual_nodes == value) return;
+				m_virtual_nodes = value;
+				Invalidate();
+			}
+		}
+		private bool m_virtual_nodes;
 
 		/// <summary>Get/Set the associated image list</summary>
-		public ImageList ImageList { get; set; }
+		public ImageList ImageList
+		{
+			get { return m_image_list; }
+			set
+			{
+				if (m_image_list == value) return;
+				Util.Dispose(ref m_image_list);
+				m_image_list = value;
+				Invalidate();
+			}
+		}
+		private ImageList m_image_list;
+
+		/// <summary>Recursively expand all nodes in the tree</summary>
+		public void ExpandAll()
+		{
+			foreach (var node in Nodes)
+				node.Expand(true);
+		}
+
+		/// <summary>Recursively collapse all nodes in the tree</summary>
+		public void CollapseAll()
+		{
+			foreach (var node in Nodes)
+				node.Collapse(true);
+		}
 
 		/// <summary>Called just before a node is expanded</summary>
 		public event EventHandler<ExpandingEventArgs> NodeExpanding;
@@ -117,10 +298,12 @@ namespace pr.gui
 		/// <summary>Prepare the grid for a node collapse.</summary>
 		internal bool BeginCollapseNode(TreeGridNode node)
 		{
-			// Raise the collapsing event
+			// Raise the collapsing event to allow cancel
 			var args = new CollapsingEventArgs(node);
 			OnNodeCollapsing(args);
-			if (args.Cancel) return false;
+			if (args.Cancel)
+				return false;
+
 			return true;
 		}
 
@@ -128,14 +311,29 @@ namespace pr.gui
 		internal void EndCollapseNode(TreeGridNode node)
 		{
 			OnNodeCollapsed(new CollapsedEventArgs(node));
+
+			// If data binding is used, remove the child nodes of 'node'
+			if (DataSource != null)
+				node.Nodes.Resize(0);
 		}
 
 		/// <summary>Prepare the grid for a node expansion</summary>
 		internal bool BeginExpandNode(TreeGridNode node)
 		{
+			// Allow expand to be cancelled
 			var exp = new ExpandingEventArgs(node);
 			OnNodeExpanding(exp);
-			if (exp.Cancel) return false;
+			if (exp.Cancel)
+				return false;
+
+			// If data binding is used, populate the child nodes of 'node' from the data source
+			if (DataSource != null)
+			{
+				var tree_item = node.DataBoundTreeItem;
+				if (tree_item != null)
+					node.Nodes.Resize(tree_item.ChildCount);
+			}
+
 			return true;
 		}
 
@@ -192,7 +390,7 @@ namespace pr.gui
 				};
 
 				// Sort within node levels
-				sort(m_root);
+				sort(RootNode);
 			}
 		}
 
@@ -306,34 +504,6 @@ namespace pr.gui
 			NodeCollapsed(this, e);
 		}
 
-		/// <summary>No support for data binding</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		[EditorBrowsable(EditorBrowsableState.Never)]
-		public new object DataSource
-		{
-			get { return null; }
-			set { throw new NotSupportedException("The TreeGridView does not support data-binding"); }
-		}
-
-		/// <summary>No support for data binding</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		[EditorBrowsable(EditorBrowsableState.Never)]
-		public new object DataMember
-		{
-			get { return null; }
-			set { throw new NotSupportedException("The TreeGridView does not support data-binding"); }
-		}
-
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		[EditorBrowsable(EditorBrowsableState.Never)]
-		public new DataGridViewRowCollection Rows
-		{
-			get { return base.Rows; }
-		}
-
 		/// <summary>No support for virtual mode</summary>
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -341,75 +511,115 @@ namespace pr.gui
 		public new bool VirtualMode
 		{
 			get { return false; }
-			set { throw new NotSupportedException("The TreeGridView does not support virtual mode"); }
+			private set { throw new NotSupportedException("The TreeGridView does not support virtual mode"); }
 		}
 
 		/// <summary>None of the rows/nodes created use the row template, so it is hidden.</summary>
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
-		private new DataGridViewRow RowTemplate
+		public new TreeGridNode RowTemplate
 		{
-			get { return base.RowTemplate; }
+			get { return (TreeGridNode)base.RowTemplate; }
 			set { base.RowTemplate = value; }
 		}
-		
-		/// <summary>Recursively expand all nodes in the tree</summary>
-		public void ExpandAll()
-		{
-			foreach (var node in Nodes)
-				node.Expand(true);
-		}
 
-		/// <summary>Recursively collapse all nodes in the tree</summary>
-		public void CollapseAll()
-		{
-			foreach (var node in Nodes)
-				node.Collapse(true);
-		}
+		/// <summary>A cache of Property Info for by property name</summary>
+		private Dictionary<string, PropertyInfo> DataProperty { get; set; }
 	}
 
 	/// <summary>A node/row in the tree grid view control</summary>
 	[ToolboxItem(false)]
 	[DesignTimeVisible(false)]
+	[DebuggerDisplay("Level={Level} Index={NodeIndex}")]
 	public class TreeGridNode :DataGridViewRow
 	{
 		/// <summary>Construct the node</summary>
-		internal TreeGridNode(TreeGridView grid, bool is_root, object item)
+		internal TreeGridNode(TreeGridView grid)
 		{
-			Grid          = grid;
-			Parent        = null;
-			ImageIndex    = -1;
-			IsExpanded    = is_root;
+			Nodes = new TreeGridNodeCollection(grid, this);
+
+			Grid = grid;
+			Parent = null;
+			ImageIndex = -1;
 			VirtualNodes  = false;
-			DataBoundItem = item;
+		}
+		internal TreeGridNode(TreeGridView grid, params object[] values)
+		{
+			Nodes = new TreeGridNodeCollection(grid, this);
+
+			// Initialise the cells in the row
+			if (values.Length < grid.ColumnCount)
+				values.Resize(grid.ColumnCount, i => string.Empty);
+
+			CreateCells(grid, values);
+
+			Grid = grid;
+			Parent = null;
+			ImageIndex = -1;
+			VirtualNodes  = false;
 		}
 
 		/// <summary>A clone method must be provided for types derived from DataGridViewRow</summary>
 		public override object Clone()
 		{
-			var r = (TreeGridNode)base.Clone();
-			if (r != null)
-			{
-				r.Grid       = Grid;
-				r.Parent     = null;
-				r.Image      = Image;
-				r.ImageIndex = ImageIndex;
-				r.IsExpanded = IsExpanded;
-				r.IsInGrid   = false;
-			}
+			var r = new TreeGridNode(Grid);
+			r.Grid       = Grid;
+			r.Parent     = null;
+			r.Image      = Image;
+			r.ImageIndex = ImageIndex;
+			r.IsExpanded = IsExpanded;
+			r.IsInGrid   = false;
 			return r;
 		}
 
+		/// <summary>True if data binding is in use</summary>
+		public bool IsDataBound
+		{
+			get { return Grid?.IsDataBound ?? false; }
+		}
 
 		/// <summary>An item that this row is bound to</summary>
 		public new object DataBoundItem
 		{
-			// This is dangerous, but I can't think of a better way to attach
-			// data to a tree grid node
-			get;
-			private set;
+			get
+			{
+				// Nothing is ever bound to the root item. It's not logical to access it's DataBoundItem property
+				if (IsRoot)
+					throw new Exception("The root node is never data bound.");
+
+				// If a data source has been set, read the object from the data source
+				if (Grid.DataSource is IList src)
+				{
+					// If this is a top level node, read from the DataSource (end recursion)
+					if (IsTopLevel)
+						return src[NodeIndex];
+
+					// Otherwise get the parent object from the data source and return the child associated with this node
+					var parent_tree_item = Parent.DataBoundTreeItem;
+					if (parent_tree_item != null)
+						return parent_tree_item.Child(NodeIndex);
+
+					// Otherwise, a DataSource has been set, but we can't access the child nodes of the DataSource items.
+					throw new Exception($"{nameof(TreeGridView)} data source items do not implement {nameof(ITreeItem)}. Child tree nodes cannot access their DataBoundItem");
+				}
+
+				// Otherwise return 'm_item' assuming this node was explicitly bound (using the Bind() method).
+				return m_item;
+			}
+			internal set { m_item = value; }
 		}
+		internal ITreeItem DataBoundTreeItem
+		{
+			get
+			{
+				var item = DataBoundItem;
+				if (item is ITreeItem ti) return ti;
+				if (item != null) return Grid.DataBinder(item);
+				return null;
+			}
+		}
+		private object m_item;
 
 		/// <summary>Get/Set the grid that this node belongs to. Only root nodes can be assigned to a grid</summary>
 		public TreeGridView Grid
@@ -439,6 +649,23 @@ namespace pr.gui
 			[DebuggerStepThrough] get { return Grid; }
 		}
 		private TreeGridView m_impl_grid;
+		private void HandleRowCollectionChanged(object sender, CollectionChangeEventArgs e)
+		{
+			switch (e.Action)
+			{
+			case CollectionChangeAction.Add:
+				if (e.Element == this)
+					IsInGrid = true;
+				break;
+			case CollectionChangeAction.Remove:
+				if (e.Element == this)
+					IsInGrid = false;
+				break;
+			case CollectionChangeAction.Refresh:
+				IsInGrid = Grid.Rows.Contains(this);
+				break;
+			}
+		}
 
 		/// <summary>
 		/// Get/Set the parent node for this node.
@@ -472,7 +699,7 @@ namespace pr.gui
 				}
 
 				// Assign the new parent
-				m_impl_parent = value;
+				SetParentCore(value);
 
 				if (m_impl_parent != null)
 				{
@@ -491,6 +718,10 @@ namespace pr.gui
 				}
 			}
 		}
+		internal void SetParentCore(TreeGridNode parent)
+		{
+			m_impl_parent = parent;
+		}
 		private TreeGridNode m_impl_parent;
 		
 		/// <summary>
@@ -503,7 +734,21 @@ namespace pr.gui
 			get
 			{
 				var n = this;
-				while (n.Parent != null) n = n.Parent;
+				for (; n.Parent != null; n = n.Parent) {}
+				return n;
+			}
+		}
+
+		/// <summary>Return the top-most parent of this node below the root node</summary>
+		public TreeGridNode TopLevelNode
+		{
+			get
+			{
+				if (IsRoot)
+					throw new Exception("The root node does not have a top level node. It's children are the top level nodes");
+
+				var n = this;
+				for (var root = RootNode; n.Parent != null && n.Parent != root; n = n.Parent) {}
 				return n;
 			}
 		}
@@ -551,12 +796,18 @@ namespace pr.gui
 
 		/// <summary>
 		/// True if this node has no parent.
-		/// Note: The tree grid contains an internal root node, so this will be false for what appear
-		/// to be root level items in the tree.
+		/// Note: The tree grid contains an internal root node, so this
+		/// will be false for what appear to be root level items in the tree.
 		/// You can use node.Parent.IsRoot or node.Level == 0 to find root level tree items</summary>
 		public bool IsRoot
 		{
 			get { return Parent == null; }
+		}
+
+		/// <summary>True if the parent of this node is the root node</summary>
+		public bool IsTopLevel
+		{
+			get { return Parent == null || Parent.IsRoot; }
 		}
 
 		/// <summary>True if the node is expanded, false if collapsed</summary>
@@ -585,7 +836,12 @@ namespace pr.gui
 		/// <summary>True if this node has children</summary>
 		public bool HasChildren
 		{
-			get { return Nodes.Count != 0; }
+			get
+			{
+				return 
+					IsDataBound ? (DataBoundTreeItem?.ChildCount ?? 0) != 0 :
+					Nodes.Count != 0;
+			}
 		}
 
 		/// <summary>True if a '+' should be rendered next to this node even if it has no children. It's expected that children will be added in the NodeExpanding event</summary>
@@ -659,7 +915,9 @@ namespace pr.gui
 			get
 			{
 				var tree_cell = Cells.OfType<TreeGridCell>().FirstOrDefault();
-				Debug.Assert(Util.IsInDesignMode || tree_cell != null, "This grid does not have a 'TreeGridColumn'");
+				if (!DataGridView.IsInDesignMode() && tree_cell == null)
+					throw new Exception("This grid does not have a 'TreeGridColumn'");
+
 				return tree_cell;
 			}
 		}
@@ -668,28 +926,7 @@ namespace pr.gui
 		[Category("Data")]
 		[Description("The collection of child nodes for this node")]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
-		public TreeGridNodeCollection Nodes
-		{
-			get { return m_impl_nodes ?? (m_impl_nodes = new TreeGridNodeCollection(this)); }
-		}
-		private TreeGridNodeCollection m_impl_nodes;
-
-		/// <summary>The Cells of this node/row</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public new DataGridViewCellCollection Cells
-		{
-			get
-			{
-				if (!m_impl_cells_created && DataGridView == null)
-				{
-					CreateCells(Grid);
-					m_impl_cells_created = true;
-				}
-				return base.Cells;
-			}
-		}
-		private bool m_impl_cells_created; // True once the cells for this node have been created
+		public TreeGridNodeCollection Nodes { get; private set; }
 
 		/// <summary>The cell values for this row/node</summary>
 		public IEnumerable Values
@@ -752,6 +989,18 @@ namespace pr.gui
 			}
 		}
 
+		/// <summary>True if this node should display the '+' or '-' glyph</summary>
+		internal bool GlyphVisible
+		{
+			get
+			{
+				if (HasChildren) return true;
+				if (VirtualNodes) return true;
+				if (DataBoundTreeItem is ITreeItem ti) return ti.ChildCount != 0;
+				return false;
+			}
+		}
+
 		/// <summary>Remove this node from the grid.</summary>
 		internal void RemoveRowsFromGrid()
 		{
@@ -784,25 +1033,6 @@ namespace pr.gui
 					child.DisplayRowsInGrid(ref row_index);
 		}
 
-		/// <summary>Handle the Rows collection changing in the owning grid</summary>
-		private void HandleRowCollectionChanged(object sender, CollectionChangeEventArgs e)
-		{
-			switch (e.Action)
-			{
-			case CollectionChangeAction.Add:
-				if (e.Element == this)
-					IsInGrid = true;
-				break;
-			case CollectionChangeAction.Remove:
-				if (e.Element == this)
-					IsInGrid = false;
-				break;
-			case CollectionChangeAction.Refresh:
-				IsInGrid = Grid.Rows.Contains(this);
-				break;
-			}
-		}
-
 		/// <summary>A useful string version of this node</summary>
 		public override string ToString()
 		{
@@ -823,30 +1053,43 @@ namespace pr.gui
 		}
 	}
 
-	/// <summary>A collection of nodes.
-	/// The node collection controls the parenting of nodes since it is the
-	/// only place that the child order is known. When a node is added to the
-	/// collection it will be displayed in the grid if the parent node is also
-	/// displayed and expanded.</summary>
+	/// <summary>
+	/// A collection of nodes (a.k.a rows).
+	/// The node collection controls the parenting of nodes since it is the only place that the
+	/// child order is known. When a node is added to the collection it will be displayed in the
+	/// grid if the parent node is also displayed and expanded.</summary>
 	public class TreeGridNodeCollection :IList<TreeGridNode>, IList
 	{
-		public TreeGridNodeCollection(TreeGridNode owner)
+		public TreeGridNodeCollection(TreeGridView grid, TreeGridNode owner)
 		{
+			Grid = grid;
 			Owner = owner;
 			List = new List<TreeGridNode>();
 		}
+
+		/// <summary>The grid that this collection belongs to</summary>
+		public TreeGridView Grid { get; private set; }
 
 		/// <summary>The node that this collection belongs to</summary>
 		public TreeGridNode Owner { get; private set; }
 
 		/// <summary>The collection of child nodes</summary>
 		private List<TreeGridNode> List { get; set; } 
-		
-		/// <summary>Add 'node' to the collection</summary>
-		internal void AddInternal(TreeGridNode node)
+
+		/// <summary>The number of items in the collection</summary>
+		public int Count
 		{
-			Debug.Assert(node.Parent == Owner);
-			List.Add(node);
+			get{ return List.Count; }
+		}
+
+		/// <summary>Remove all nodes from the collection</summary>
+		public void Clear()
+		{
+			using (Grid.SuspendLayout(true))
+			{
+				for (int i = List.Count; i-- != 0;)
+					List[i].Parent = null;
+			}
 		}
 
 		/// <summary>Add a node to this collection causing it to be parented to the node that owns this collection</summary>
@@ -880,24 +1123,19 @@ namespace pr.gui
 		/// <summary>Add a node with values for the following grid columns</summary>
 		public TreeGridNode Insert(int index, params object[] values)
 		{
-			Debug.Assert(Owner.Grid != null, "Can only use this method after the owner node has been added to the tree grid");
-			TreeGridNode node = Insert(index, new TreeGridNode(Owner.Grid, is_root:false, item:null));
-			int iend = Math.Min(values.Length, node.Cells.Count);
-			for (int i = 0; i != iend; ++i) node.Cells[i].Value = values[i];
-			return node;
+			if (Owner.Grid == null)
+				throw new Exception("Can only insert child nodes after this node has been added to the tree grid");
+			if (Owner.Grid.DataSource != null)
+				throw new Exception($"{nameof(TreeGridView)} is data bound. Do not modify the node collection explicitly");
+
+			return Insert(index, new TreeGridNode(Owner.Grid, values));
 		}
 
 		/// <summary>Add a node based on an object that will provide the values for the columns in the grid (available as DataBoundItem)</summary>
 		public TreeGridNode Bind(object data)
 		{
-			return Insert(List.Count, new TreeGridNode(Owner.Grid, is_root:false, item:data));
-		}
-
-		/// <summary>Remove node from this collection</summary>
-		internal void RemoveInternal(TreeGridNode node)
-		{
-			Debug.Assert(node.Parent == Owner);
-			List.Remove(node);
+			var node = new TreeGridNode(Owner.Grid){ DataBoundItem = data };
+			return Insert(List.Count, node);
 		}
 
 		/// <summary>Remove 'node' from this collection</summary>
@@ -911,26 +1149,48 @@ namespace pr.gui
 		/// <summary>Remove the node at 'index' from the collection</summary>
 		public void RemoveAt(int index)
 		{
-			List[index].Parent = null; // This will remove 'node' from our collection
+			// This will remove 'node' from our collection
+			List[index].Parent = null;
 		}
 
-		/// <summary>Remove all nodes from the collection</summary>
-		public void Clear()
+		/// <summary>Add 'node' to the collection</summary>
+		internal void AddInternal(TreeGridNode node)
 		{
-			for (int i = List.Count; i-- != 0;)
-				List[i].Parent = null;
+			Debug.Assert(node.Parent == Owner);
+			List.Add(node);
+		}
+
+		/// <summary>Remove node from this collection</summary>
+		internal void RemoveInternal(TreeGridNode node)
+		{
+			Debug.Assert(node.Parent == Owner);
+			List.Remove(node);
+		}
+
+		/// <summary>Resize the collection</summary>
+		internal void Resize(int new_count)
+		{
+			using (Grid.SuspendLayout(true))
+			{
+				if (new_count == 0) Clear();
+				for (int i = Count; i > new_count; --i)
+				{
+					RemoveAt(i-1);
+				}
+				for (int i = Count; i < new_count; ++i)
+				{
+					var node = (TreeGridNode)Grid.RowTemplate.Clone();
+					node.SetParentCore(Owner);
+					AddInternal(node);
+				}
+				Grid.InvalidateRow(Owner.RowIndex);
+			}
 		}
 
 		/// <summary>Return the index of a node in the collection</summary>
 		public int IndexOf(TreeGridNode node)
 		{
 			return List.IndexOf(node);
-		}
-
-		/// <summary>The number of items in the collection</summary>
-		public int Count
-		{
-			get{ return List.Count; }
 		}
 
 		/// <summary>Returns true if 'node' is in this collection</summary>
@@ -962,43 +1222,133 @@ namespace pr.gui
 			List.CopyTo(array, arrayIndex);
 		}
 
-		// Generic IList interface
-		int  IList<TreeGridNode>.IndexOf(TreeGridNode item)           { return List.IndexOf(item); }
-		void IList<TreeGridNode>.Insert(int index, TreeGridNode node) { Insert(index, node); }
-
-		// IList interface
-		void IList.Remove(object value)                               { Remove(value as TreeGridNode); }
-		int  IList.Add(object value)                                  { var item = (TreeGridNode)value; Add(item); return item.NodeIndex; }
-		void IList.Insert(int index, object node)                     { Insert(index, (TreeGridNode )node); }
-		void IList.RemoveAt(int index)                                { RemoveAt(index); }
-		void IList.Clear()                                            { Clear(); }
-		bool IList.IsReadOnly                                         { get {return IsReadOnly;} }
-		bool IList.IsFixedSize                                        { get {return false;} }
-		int  IList.IndexOf(object item)                               { return IndexOf(item as TreeGridNode); }
-		bool IList.Contains(object value)                             { return Contains(value as TreeGridNode); }
-		object IList.this[int index]                                  { get {return this[index];} set {this[index] = value as TreeGridNode;} }
-
-		// Enumerator/Enumerable methods
-		public IEnumerator<TreeGridNode> GetEnumerator() { return List.GetEnumerator(); }
-		IEnumerator IEnumerable.GetEnumerator()          { return GetEnumerator(); }
-
-		// ICollection Members
-		void ICollection<TreeGridNode>.Add(TreeGridNode node) { Add(node); }
-		int  ICollection.Count                                { get {return Count;} }
-		void ICollection.CopyTo(Array array, int index)       { CopyTo((TreeGridNode[])array, index); }
-		bool ICollection.IsSynchronized                       { get {throw new Exception("The method or operation is not implemented.");} }
-		object ICollection.SyncRoot                           { get {throw new Exception("The method or operation is not implemented.");} }
-
+		/// <summary></summary>
 		public override string ToString()
 		{
-			return "Node Count: {0}".Fmt(Count);
+			return $"Nodes={Count}";
+		}
+
+		#region IList<TreeGridNode>
+		int  IList<TreeGridNode>.IndexOf(TreeGridNode item)
+		{
+			return List.IndexOf(item);
+		}
+		void IList<TreeGridNode>.Insert(int index, TreeGridNode node)
+		{
+			Insert(index, node);
+		}
+		#endregion
+
+		#region IList
+		void IList.Remove(object value)
+		{
+			Remove(value as TreeGridNode);
+		}
+		int IList.Add(object value)
+		{
+			return Add((TreeGridNode)value).NodeIndex;
+		}
+		void IList.Insert(int index, object node)
+		{
+			Insert(index, (TreeGridNode)node);
+		}
+		void IList.RemoveAt(int index)
+		{
+			RemoveAt(index);
+		}
+		void IList.Clear()
+		{
+			Clear();
+		}
+		bool IList.IsReadOnly
+		{
+			get { return IsReadOnly; }
+		}
+		bool IList.IsFixedSize
+		{
+			get { return false; }
+		}
+		int IList.IndexOf(object item)
+		{
+			return IndexOf((TreeGridNode)item);
+		}
+		bool IList.Contains(object value)
+		{
+			return Contains((TreeGridNode)value);
+		}
+		object IList.this[int index]
+		{
+			get { return this[index]; }
+			set { this[index] = (TreeGridNode)value; }
+		}
+		#endregion
+
+		#region IEnumerable
+		public IEnumerator<TreeGridNode> GetEnumerator()
+		{
+			return List.GetEnumerator();
+		}
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return GetEnumerator();
+		}
+		#endregion
+
+		#region ICollection
+		void ICollection<TreeGridNode>.Add(TreeGridNode node)
+		{
+			Add(node);
+		}
+		int ICollection.Count
+		{
+			get { return Count; }
+		}
+		void ICollection.CopyTo(Array array, int index)
+		{
+			CopyTo((TreeGridNode[])array, index);
+		}
+		bool ICollection.IsSynchronized
+		{
+			get { throw new Exception("The method or operation is not implemented."); }
+		}
+		object ICollection.SyncRoot
+		{
+			get { throw new Exception("The method or operation is not implemented."); }
+		}
+		#endregion
+	}
+
+	/// <summary>Column type for the tree column</summary>
+	public class TreeGridColumn : DataGridViewTextBoxColumn
+	{
+		public TreeGridColumn()
+		{
+			CellTemplate = new TreeGridCell();
+		}
+		
+		/// <summary></summary>
+		public Image DefaultNodeImage { get; set; }
+
+		/// <summary></summary>
+		public override object Clone()
+		{
+			// Need to override Clone for design-time support
+			var c = (TreeGridColumn)base.Clone();
+			if (c != null) { c.DefaultNodeImage = DefaultNodeImage; }
+			return c;
 		}
 	}
 
 	/// <summary>A cell within the tree column of a TreeGridView</summary>
 	public class TreeGridCell :DataGridViewTextBoxCell
 	{
+		public TreeGridCell()
+			:base()
+		{}
+
 		/// <summary>Data controlling the indenting behaviour of tree cells</summary>
+		private Indenting m_indent = DefaultIndenting; // Indenting parameters
+		public static Indenting DefaultIndenting = new Indenting();
 		public class Indenting
 		{
 			/// <summary>The size (in pixels) of the glyph '+' or '-' plus line leading to the text or image</summary>
@@ -1017,15 +1367,13 @@ namespace pr.gui
 				m_width       = width;
 			}
 		}
-		public static Indenting DefaultIndenting = new Indenting();
 
-		private Indenting m_indent = DefaultIndenting; // Indenting parameters
-		private bool m_calc_padding;                   // Dirty flag for when the cell padding needs calculating
-
+		/// <summary>Flag the cell as needing layout</summary>
 		public bool Dirty
 		{
 			set { m_calc_padding |= value; }
 		}
+		private bool m_calc_padding; 
 
 		/// <summary>Duplicate this cell</summary>
 		public override object Clone()
@@ -1079,10 +1427,14 @@ namespace pr.gui
 		}
 
 		/// <summary>Paint the tree column cell</summary>
-		protected override void Paint(Graphics graphics, Rectangle clip_bounds, Rectangle cell_bounds, int rowIndex, DataGridViewElementStates cellState, object value, object formattedValue, string errorText, DataGridViewCellStyle cell_style, DataGridViewAdvancedBorderStyle advancedBorderStyle, DataGridViewPaintParts paintParts)
+		protected override void Paint(Graphics graphics, Rectangle clip_bounds, Rectangle cell_bounds, int row_index, DataGridViewElementStates cell_state, object value, object formatted_value, string error_text, DataGridViewCellStyle cell_style, DataGridViewAdvancedBorderStyle advanced_border_style, DataGridViewPaintParts paint_parts)
 		{
-			TreeGridNode node = OwningNode;
-			if (node == null) return;
+			var node = OwningNode;
+			if (node == null)
+			{
+				base.Paint(graphics, clip_bounds, cell_bounds, row_index, cell_state, value, formatted_value, error_text, cell_style, advanced_border_style, paint_parts);
+				return;
+			}
 
 			var img = node.Image;
 			var img_h = img != null ? Math.Min(img.Height, cell_bounds.Height) : 0;
@@ -1096,7 +1448,7 @@ namespace pr.gui
 			}
 
 			// Paint the cell normally (including background and text)
-			base.Paint(graphics, clip_bounds, cell_bounds, rowIndex, cellState, value, formattedValue, errorText, cell_style, advancedBorderStyle, paintParts);
+			base.Paint(graphics, clip_bounds, cell_bounds, row_index, cell_state, value, formatted_value, error_text, cell_style, advanced_border_style, paint_parts);
 
 			// The rectangle in which the lines and glyphs are drawn
 			var glyph_rect = new Rectangle(cell_bounds.Left + m_indent.m_margin + (Level * m_indent.m_width), cell_bounds.Top, m_indent.m_glyph_width, cell_bounds.Height - 1);
@@ -1131,7 +1483,7 @@ namespace pr.gui
 			}
 
 			// Paint node glyphs
-			if (node.HasChildren || node.VirtualNodes)
+			if (node.GlyphVisible)
 			{
 				var glyph = new Rectangle(glyph_rect.X, glyph_rect.Y + (glyph_rect.Height / 2) - 4, 10, 10);
 				int midx = glyph.Left + glyph.Width / 2, midy = glyph.Top + glyph.Height / 2;
@@ -1155,27 +1507,28 @@ namespace pr.gui
 		}
 	}
 
-	/// <summary>Column type for the tree column</summary>
-	public sealed class TreeGridColumn : DataGridViewTextBoxColumn
+	/// <summary>An interface for tree item.</summary>
+	public interface ITreeItem
 	{
-		private Image m_default_node_image;
+		// Notes:
+		//  - The backing data for the tree does not have to implement this interface,
+		//    but if it does, then data binding can be supported.
+		//  - You might expect 'Child' and 'Parent' to return 'ITreeItem' but that would
+		//    require the items used in the tree to implement 'ITreeItem' which isn't
+		//    possible for third party types. 'object' is used along with the 'DataBinder'
+		//    function to traverse the tree
 
-		public TreeGridColumn()
-		{
-			CellTemplate = new TreeGridCell();
-		}
-		public Image DefaultNodeImage
-		{
-			get { return m_default_node_image; }
-			set { m_default_node_image = value; }
-		}
-		public override object Clone() // Need to override Clone for design-time support.
-		{
-			var c = (TreeGridColumn)base.Clone();
-			if (c != null) { c.m_default_node_image = m_default_node_image; }
-			return c;
-		}
+		/// <summary>Return the number of children this tree item has</summary>
+		int ChildCount { get; }
+
+		/// <summary>Return a child of this item by index</summary>
+		object Child(int index);
+
+		/// <summary>Return the parent item of this tree item</summary>
+		object Parent { get; }
 	}
+
+	#region EventArgs
 
 	/// <summary>Arguments for node collapsing events</summary>
 	public class CollapsingEventArgs :CancelEventArgs
@@ -1208,6 +1561,8 @@ namespace pr.gui
 		public ExpandedEventArgs(TreeGridNode node) { m_node = node; }
 		public TreeGridNode Node                    { get {return m_node;} }
 	}
+
+	#endregion
 }
 
 #if PR_UNITTESTS

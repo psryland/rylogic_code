@@ -3017,7 +3017,8 @@ namespace pr
 			}
 			void CreateModel(LdrObject* obj) override
 			{
-				auto dwrite = p.m_rdr.DWrite();
+				Renderer::Lock lock(p.m_rdr);
+				auto dwrite = lock.DWrite();
 
 				// Create the "font", a.k.a text format
 				D3DPtr<IDWriteTextFormat> text_format;
@@ -4324,6 +4325,10 @@ LR"(// *************************************************************************
 			LdrObjectPtr obj = nullptr;
 			Apply([&](LdrObject* o){ obj = o; return false; }, name);
 			return obj;
+		}
+		LdrObjectPtr LdrObject::Child(int index) const
+		{
+			return m_child[index];
 		}
 
 		// Get/Set the object to world transform of this object or the first child object matching 'name' (see Apply)

@@ -3140,7 +3140,11 @@ namespace pr.gui
 			public bool IsActiveContent
 			{
 				get { return DockContainer?.ActiveContent == this; }
-				set { if (value && DockContainer != null) DockContainer.ActiveContent = this; }
+				set
+				{
+					if (value && DockContainer != null)
+						DockContainer.ActiveContent = this;
+				}
 			}
 
 			/// <summary>True if this content is the active content within its containing dock pane</summary>

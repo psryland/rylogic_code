@@ -292,7 +292,7 @@ namespace pr
 			SetPCNT(*v_out++, bb(v1 + bi*hwidth), cc(c1), n1, t00); *i_out++ = index++;
 			SetPCNT(*v_out++, bb(v1 - bi*hwidth), cc(c1), n1, t10); *i_out++ = index++;
 
-			for (size_t i = 0; i != num_quads - 1; ++i)
+			for (int i = 0; i != num_quads - 1; ++i)
 			{
 				v0 = v1; v1 = v2; v2 = *verts++;
 				n0 = n1; n1 = n2; n2 = *norm++;

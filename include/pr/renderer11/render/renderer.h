@@ -9,9 +9,7 @@
 #include "pr/renderer11/models/model_manager.h"
 #include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/textures/texture_manager.h"
-#include "pr/renderer11/render/blend_state.h"
-#include "pr/renderer11/render/depth_state.h"
-#include "pr/renderer11/render/raster_state.h"
+#include "pr/renderer11/render/state_block.h"
 #include "pr/renderer11/util/allocator.h"
 
 namespace pr
@@ -42,13 +40,13 @@ namespace pr
 			bool                          m_fallback_to_sw_device; // True to use a software device if 'm_driver_type' fails
 
 			// Keep this inline so that m_build_options can be verified.
-			RdrSettings(HINSTANCE inst, BOOL gdi_compat)
+			RdrSettings(HINSTANCE inst, BOOL bgra_support)
 				:m_instance(inst)
 				,m_build_options()
 				,m_mem()
 				,m_adapter()
 				,m_driver_type(D3D_DRIVER_TYPE_HARDWARE)
-				,m_device_layers(gdi_compat ? D3D11_CREATE_DEVICE_BGRA_SUPPORT : 0)
+				,m_device_layers(bgra_support ? D3D11_CREATE_DEVICE_BGRA_SUPPORT : 0)
 				,m_feature_levels()
 				,m_fallback_to_sw_device(true)
 			{
@@ -62,13 +60,15 @@ namespace pr
 		// Renderer state variables
 		struct RdrState
 		{
-			RdrSettings                    m_settings;
-			D3D_FEATURE_LEVEL              m_feature_level;
-			D3DPtr<ID3D11Device>           m_d3d_device;
-			D3DPtr<ID3D11DeviceContext>    m_immediate;
-			D3DPtr<ID2D1Factory2>          m_d2dfactory;
-			D3DPtr<IDWriteFactory2>        m_dwrite;
-			D3DPtr<ID2D1Device1>           m_d2d_device;
+			RdrSettings                 m_settings;
+			D3D_FEATURE_LEVEL           m_feature_level;
+			D3DPtr<ID3D11Device>        m_d3d_device;
+			D3DPtr<ID3D11DeviceContext> m_immediate;
+			D3DPtr<ID2D1Factory1>       m_d2dfactory;
+			D3DPtr<IDWriteFactory>      m_dwrite;
+			D3DPtr<ID2D1Device>         m_d2d_device;
+			float                       m_dpi_x;
+			float                       m_dpi_y;
 
 			RdrState(RdrSettings const& settings);
 			~RdrState();
@@ -80,6 +80,7 @@ namespace pr
 	{
 		using TaskQueue = pr::vector<std::future<void>>;
 		DWORD m_main_thread_id;
+		std::recursive_mutex m_d3d_mutex;
 		std::mutex m_mutex_task_queue;
 		TaskQueue m_task_queue;
 		HWND m_dummy_hwnd;
@@ -89,56 +90,76 @@ namespace pr
 	public:
 
 		// These manager classes form part of the public interface of the renderer
-		rdr::ModelManager       m_mdl_mgr;
-		rdr::ShaderManager      m_shdr_mgr;
-		rdr::TextureManager     m_tex_mgr;
-		rdr::BlendStateManager  m_bs_mgr;
-		rdr::DepthStateManager  m_ds_mgr;
+		rdr::ModelManager m_mdl_mgr;
+		rdr::ShaderManager m_shdr_mgr;
+		rdr::TextureManager m_tex_mgr;
+		rdr::BlendStateManager m_bs_mgr;
+		rdr::DepthStateManager m_ds_mgr;
 		rdr::RasterStateManager m_rs_mgr;
 
 		Renderer(rdr::RdrSettings const& settings);
 		~Renderer();
 
-		// Return the D3D device
-		ID3D11Device* D3DDevice() const
+		// Synchronise access to D3D/D2D interfaces
+		class Lock
 		{
-			return m_d3d_device.get();
-		}
+			Renderer& m_rdr;
+			std::lock_guard<std::recursive_mutex> m_lock;
 
-		// Return the immediate device context
-		ID3D11DeviceContext* ImmediateDC() const
-		{
-			return m_immediate.get();
-		}
+		public:
 
-		// Create a new deferred device context
-		ID3D11DeviceContext* DeferredDC() const
-		{
-			throw std::exception("not supported");
-		}
+			Lock(Renderer& rdr)
+				:m_rdr(rdr)
+				,m_lock(rdr.m_d3d_mutex)
+			{}
 
-		// Return the D2D device
-		ID2D1Device1* D2DDevice() const
-		{
-			return m_d2d_device.get();
-		}
+			// Return the D3D device
+			ID3D11Device* D3DDevice() const
+			{
+				return m_rdr.m_d3d_device.get();
+			}
 
-		// Return the direct2d factory
-		ID2D1Factory2* D2DFactory() const
-		{
-			return m_d2dfactory.get();
-		}
+			// Return the immediate device context
+			ID3D11DeviceContext* ImmediateDC() const
+			{
+				return m_rdr.m_immediate.get();
+			}
 
-		// Return the direct write factory
-		IDWriteFactory2* DWrite() const
-		{
-			return m_dwrite.get();
-		}
+			// Create a new deferred device context
+			ID3D11DeviceContext* DeferredDC() const
+			{
+				throw std::exception("not supported");
+			}
+
+			// Return the D2D device
+			ID2D1Device* D2DDevice() const
+			{
+				return m_rdr.m_d2d_device.get();
+			}
+
+			// Return the direct2d factory
+			ID2D1Factory* D2DFactory() const
+			{
+				return m_rdr.m_d2dfactory.get();
+			}
+
+			// Return the direct write factory
+			IDWriteFactory* DWrite() const
+			{
+				return m_rdr.m_dwrite.get();
+			}
+		};
 
 		// Return the associated HWND. Note: this is not associated with any particular window. 'Window' objects have an hwnd.
 		HWND DummyHwnd() const
 		{
 			return m_dummy_hwnd;
+		}
+
+		// Return the current desktop DPI
+		v2 Dpi() const
+		{
+			return v2(m_dpi_x, m_dpi_y);
 		}
 
 		// Returns an allocator object suitable for allocating instances of 'T'

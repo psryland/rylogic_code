@@ -37,6 +37,7 @@ namespace pr
 			{
 				NewData,
 				Reload,
+				Removal,
 			};
 
 			// A watched file
@@ -206,6 +207,9 @@ namespace pr
 				m_gizmos.clear();
 				m_files.clear();
 				m_watcher.RemoveAll();
+
+				// Notify of the object container change
+				OnStoreChanged(*this, StoreChangedEventArgs(m_objects, 0, ParseResult(), ScriptSources::EReason::Removal));
 			}
 
 			// Remove all file sources
@@ -220,6 +224,9 @@ namespace pr
 					pr::ldr::Remove(m_objects, &file.second.m_file_group_id, 1, 0, 0);
 				}
 
+				// Notify of the object container change
+				OnStoreChanged(*this, StoreChangedEventArgs(m_objects, 0, ParseResult(), ScriptSources::EReason::Removal));
+
 				// Remove all file watches
 				m_files.clear();
 				m_watcher.RemoveAll();
@@ -230,6 +237,9 @@ namespace pr
 			{
 				assert(std::this_thread::get_id() == m_main_thread_id);
 				pr::ldr::Remove(m_objects, object);
+
+				// Notify of the object container change
+				OnStoreChanged(*this, StoreChangedEventArgs(m_objects, 0, ParseResult(), ScriptSources::EReason::Removal));
 			}
 
 			// Remove all objects associated with 'file_group_id'
@@ -242,6 +252,9 @@ namespace pr
 
 				// Delete all objects belonging to this file group
 				pr::ldr::Remove(m_objects, &file_group_id, 1, 0, 0);
+
+				// Notify of the object container change
+				OnStoreChanged(*this, StoreChangedEventArgs(m_objects, 0, ParseResult(), ScriptSources::EReason::Removal));
 
 				// Delete all associated file watches
 				m_watcher.RemoveAll(file_group_id);
@@ -304,6 +317,9 @@ namespace pr
 			void Add(LdrObjectPtr object)
 			{
 				m_objects.push_back(object);
+
+				// Notify of the object container change
+				OnStoreChanged(*this, StoreChangedEventArgs(m_objects, 1, ParseResult(), ScriptSources::EReason::NewData));
 			}
 
 			// Add a file source

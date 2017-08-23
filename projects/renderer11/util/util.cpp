@@ -7,9 +7,7 @@
 #include "pr/renderer11/util/wrappers.h"
 #include "pr/renderer11/util/event_types.h"
 #include "pr/renderer11/models/nugget.h"
-#include "pr/renderer11/render/blend_state.h"
-#include "pr/renderer11/render/depth_state.h"
-#include "pr/renderer11/render/raster_state.h"
+#include "pr/renderer11/render/state_block.h"
 #include "renderer11/directxtex/directxtex.h"
 
 namespace pr

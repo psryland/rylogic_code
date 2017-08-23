@@ -5,9 +5,7 @@
 #pragma once
 
 #include "pr/renderer11/forward.h"
-#include "pr/renderer11/render/blend_state.h"
-#include "pr/renderer11/render/raster_state.h"
-#include "pr/renderer11/render/depth_state.h"
+#include "pr/renderer11/render/state_block.h"
 #include "pr/renderer11/util/wrappers.h"
 
 namespace pr
@@ -76,6 +74,7 @@ namespace pr
 			D3DPtr<ID3D11DeviceChild> m_shdr;      // Pointer to the dx shader
 			EShaderType               m_shdr_type; // The type of shader this is
 			ShaderManager*            m_mgr;       // The shader manager that created this shader
+			Renderer*                 m_rdr;       // The renderer
 			RdrId                     m_id;        // Id for this shader
 			EGeom                     m_geom;      // Required geometry format for this shader
 			SortKeyId                 m_sort_id;   // A key used to order shaders next to each other in the drawlist
@@ -121,6 +120,7 @@ namespace pr
 				,m_shdr(dx_shdr)
 				,m_shdr_type(ShaderTypeId<DxShaderType>::value)
 				,m_mgr(mgr)
+				,m_rdr(&mgr->m_rdr)
 				,m_id(id == AutoId ? MakeId(this) : id)
 				,m_geom()
 				,m_sort_id()
@@ -130,9 +130,6 @@ namespace pr
 				,m_name(name ? name : "")
 				,m_orig_id(m_id)
 			{}
-
-			// Access to the d3d device
-			ID3D11Device* D3DDevice() const;
 
 			// Create a new shader that is a copy of this shader
 			virtual ShaderPtr MakeClone(RdrId new_id, char const* new_name) = 0;

@@ -483,7 +483,7 @@ namespace pr.gui
 		{
 			if (DropDownStyle == ComboBoxStyle.DropDownList ||
 				!UseValidityColours ||
-				Util.IsInDesignMode)
+				this.IsInDesignMode())
 				return;
 
 			// Set the text colour based on whether the value matches the text

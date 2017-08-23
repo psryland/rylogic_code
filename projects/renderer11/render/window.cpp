@@ -11,21 +11,21 @@ namespace pr
 	namespace rdr
 	{
 		// Default WndSettings
-		WndSettings::WndSettings(HWND hwnd, bool windowed, bool gdi_compat, pr::iv2 const& client_area)
+		WndSettings::WndSettings(HWND hwnd, bool windowed, bool bgra_support, pr::iv2 const& client_area)
 			:m_hwnd(hwnd)
 			,m_windowed(windowed)
 			,m_mode(client_area)
-			,m_multisamp(gdi_compat ? 1 : 4)
+			,m_multisamp(4)
 			,m_buffer_count(2)
 			,m_swap_effect(DXGI_SWAP_EFFECT_DISCARD)// DXGI_SWAP_EFFECT_SEQUENTIAL <- cannot use with multi-sampling
-			,m_swap_chain_flags(DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH|(gdi_compat ? DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE : 0))
+			,m_swap_chain_flags(DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH|(bgra_support ? DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE : 0))
 			,m_depth_format(DXGI_FORMAT_D24_UNORM_S8_UINT)
 			,m_usage(DXGI_USAGE_RENDER_TARGET_OUTPUT|DXGI_USAGE_SHADER_INPUT)
 			,m_vsync(1)
 			,m_allow_alt_enter(false)
 			,m_name()
 		{
-			if (gdi_compat)
+			if (bgra_support)
 			{
 				// Must use B8G8R8A8_UNORM for GDI compatibility
 				m_mode.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -55,7 +55,8 @@ namespace pr
 		{
 			try
 			{
-				auto device = rdr.D3DDevice();
+				Renderer::Lock lock(rdr);
+				auto device = lock.D3DDevice();
 
 				// Validate settings
 				if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) && !AllSet(m_rdr->Settings().m_device_layers, D3D11_CREATE_DEVICE_BGRA_SUPPORT))
@@ -97,7 +98,7 @@ namespace pr
 				if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE))
 				{
 					// Create a D2D device context
-					pr::Throw(rdr.D2DDevice()->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS, &m_d2d_dc.m_ptr));
+					pr::Throw(lock.D2DDevice()->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS, &m_d2d_dc.m_ptr));
 				}
 
 				InitRT();
@@ -163,22 +164,11 @@ namespace pr
 			return m_rdr->m_rs_mgr;
 		}
 
-		// Return the DX device
-		ID3D11Device* Window::D3DDevice() const
-		{
-			return m_rdr->D3DDevice();
-		}
-
-		// Return the immediate device context
-		ID3D11DeviceContext* Window::ImmediateDC() const
-		{
-			return m_rdr->ImmediateDC();
-		}
-
 		// Create a render target from the swap-chain
 		void Window::InitRT()
 		{
-			auto device = D3DDevice();
+			Renderer::Lock lock(*m_rdr);
+			auto device = lock.D3DDevice();
 
 			// Get the back buffer so we can copy its properties
 			D3DPtr<ID3D11Texture2D> back_buffer;
@@ -232,7 +222,7 @@ namespace pr
 
 				// Create bitmap properties for the bitmap view of the back buffer
 				auto bp = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE));
-				m_rdr->D2DFactory()->GetDesktopDpi(&bp.dpiX, &bp.dpiY);
+				lock.D2DFactory()->GetDesktopDpi(&bp.dpiX, &bp.dpiY);
 
 				// Wrap the back buffer as a bitmap for D2D
 				D3DPtr<ID2D1Bitmap1> d2d_render_target;
@@ -246,16 +236,22 @@ namespace pr
 			RestoreRT();
 		}
 
+		// Binds the main render target and depth buffer to the OM
+		void Window::RestoreRT()
+		{
+			Renderer::Lock lock(*m_rdr);
+			lock.ImmediateDC()->OMSetRenderTargets(1, &m_main_rtv.m_ptr, m_main_dsv.m_ptr);
+		}
+
 		// Draw text directly to the back buffer
 		void Window::DrawString(wchar_t const* text, float x, float y)
 		{
-			// Proof of concept so far...
-			using namespace D2D1;
-			auto dwrite = m_rdr->DWrite();
+			Renderer::Lock lock(*m_rdr);
+			auto dwrite = lock.DWrite();
 
 			// Create a solid brush
 			D3DPtr<ID2D1SolidColorBrush> brush;
-			pr::Throw(m_d2d_dc->CreateSolidColorBrush(ColorF(ColorF::Blue), &brush.m_ptr));
+			pr::Throw(m_d2d_dc->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Blue), &brush.m_ptr));
 
 			// Create a text format
 			D3DPtr<IDWriteTextFormat> text_format;
@@ -267,29 +263,64 @@ namespace pr
 
 			// Draw the string
 			m_d2d_dc->BeginDraw();
-			m_d2d_dc->DrawTextLayout(Point2F(x, y), text_layout.get(), brush.get());
+			m_d2d_dc->DrawTextLayout(D2D1::Point2F(x, y), text_layout.get(), brush.get());
 			pr::Throw(m_d2d_dc->EndDraw());
-		}
-
-		// Binds the main render target and depth buffer to the OM
-		void Window::RestoreRT()
-		{
-			ImmediateDC()->OMSetRenderTargets(1, &m_main_rtv.m_ptr, m_main_dsv.m_ptr);
 		}
 
 		// Binds the given render target and depth buffer views to the OM
 		void Window::SetRT(ID3D11RenderTargetView* rtv, ID3D11DepthStencilView* dsv)
 		{
-			ID3D11RenderTargetView* targets[] = {rtv};
-			ImmediateDC()->OMSetRenderTargets(1, targets, dsv);
+			Renderer::Lock lock(*m_rdr);
+			ID3D11RenderTargetView* targets[] = { rtv };
+			lock.ImmediateDC()->OMSetRenderTargets(1, targets, dsv);
+		}
+
+		// Render this window into 'render_target;
+		// 'render_target' is the texture that is rendered onto
+		// 'depth_buffer' is an optional texture that will receive the depth information (can be null)
+		// 'depth_buffer' will be created if not provided.
+		void Window::SetRT(D3DPtr<ID3D11Texture2D>& render_target, D3DPtr<ID3D11Texture2D>& depth_buffer)
+		{
+			Renderer::Lock lock(*m_rdr);
+
+			// Get the description of the render target texture
+			TextureDesc rtdesc;
+			render_target->GetDesc(&rtdesc);
+
+			// Get a render target view of the render target texture
+			D3DPtr<ID3D11RenderTargetView> rtv;
+			pr::Throw(lock.D3DDevice()->CreateRenderTargetView(render_target.get(), nullptr, &rtv.m_ptr));
+
+			// If no depth buffer is given, create a temporary depth buffer
+			if (depth_buffer == nullptr)
+			{
+				TextureDesc dbdesc;
+				dbdesc.Width = rtdesc.Width;
+				dbdesc.Height = rtdesc.Height;
+				dbdesc.Format = m_db_format;
+				dbdesc.SampleDesc = rtdesc.SampleDesc;
+				dbdesc.Usage = D3D11_USAGE_DEFAULT;
+				dbdesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+				dbdesc.CPUAccessFlags = 0;
+				dbdesc.MiscFlags = 0;
+				pr::Throw(lock.D3DDevice()->CreateTexture2D(&dbdesc, nullptr, &depth_buffer.m_ptr));
+			}
+
+			// Create a depth stencil view of the depth buffer
+			D3DPtr<ID3D11DepthStencilView> dsv = nullptr;
+			pr::Throw(lock.D3DDevice()->CreateDepthStencilView(depth_buffer.get(), nullptr, &dsv.m_ptr));
+
+			// Set the render target
+			SetRT(rtv.get(), dsv.get());
 		}
 
 		// Set the viewport to all of the render target
 		void Window::RestoreFullViewport()
 		{
+			Renderer::Lock lock(*m_rdr);
 			auto sz = RenderTargetSize();
 			Viewport vp(float(sz.x), float(sz.y));
-			ImmediateDC()->RSSetViewports(1, &vp);
+			lock.ImmediateDC()->RSSetViewports(1, &vp);
 		}
 
 		// Get/Set full screen mode
@@ -415,7 +446,8 @@ namespace pr
 				return;
 
 			PR_ASSERT(PR_DBG_RDR, size.x >= 0 && size.y >= 0, "Size should be positive definite");
-			auto dc = m_rdr->ImmediateDC();
+			Renderer::Lock lock(*m_rdr);
+			auto dc = lock.ImmediateDC();
 
 			// Notify that a resize of the swap chain is about to happen.
 			// Receivers need to ensure they don't have any outstanding references to the swap chain resources
@@ -458,8 +490,9 @@ namespace pr
 		}
 		void Window::MultiSampling(MultiSamp ms)
 		{
-			auto device = D3DDevice();
-			auto dc = ImmediateDC();
+			Renderer::Lock lock(*m_rdr);
+			auto device = lock.D3DDevice();
+			auto dc = lock.ImmediateDC();
 			auto area = RenderTargetSize();
 
 			// Get the description of the existing swap chain
@@ -551,7 +584,10 @@ namespace pr
 			// This happens in situations like, laptop un-docked, or remote desktop connect etc.
 			// We'll just through so the app can shutdown/reset/whatever
 			case DXGI_ERROR_DEVICE_REMOVED:
-				throw pr::Exception<HRESULT>(D3DDevice()->GetDeviceRemovedReason(), "Graphics adapter no longer available");
+				{
+					Renderer::Lock lock(*m_rdr);
+					throw pr::Exception<HRESULT>(lock.D3DDevice()->GetDeviceRemovedReason(), "Graphics adapter no longer available");
+				}
 			}
 		}
 	}

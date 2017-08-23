@@ -42,7 +42,7 @@ namespace pr
 			// The type of render step this is
 			ERenderStep::Enum_ GetId() const override { return Id; }
 
-			// Create render targets for the gbuffer based on the current render target size
+			// Create render targets for the GBuffer based on the current render target size
 			void InitRT(bool create_buffers);
 
 			// Set the g-buffer as the render target

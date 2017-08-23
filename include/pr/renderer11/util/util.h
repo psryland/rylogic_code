@@ -36,22 +36,6 @@ namespace pr
 			return pr::hash::Hash(str);
 		}
 
-		// Return the immediate device context for a device
-		inline D3DPtr<ID3D11DeviceContext> ImmediateDC(ID3D11Device* device)
-		{
-			D3DPtr<ID3D11DeviceContext> dc;
-			device->GetImmediateContext(&dc.m_ptr);
-			return dc;
-		}
-
-		// Return the device from a device context
-		inline D3DPtr<ID3D11Device> Device(ID3D11DeviceContext* dc)
-		{
-			D3DPtr<ID3D11Device> device;
-			dc->GetDevice(&device.m_ptr);
-			return device;
-		}
-
 		// Compile time type to 'DXGI_FORMAT' conversion
 		template <typename Idx> struct DxFormat { static const DXGI_FORMAT value = DXGI_FORMAT_UNKNOWN; };
 		template <> struct DxFormat<pr::uint16> { static const DXGI_FORMAT value = DXGI_FORMAT_R16_UINT; };

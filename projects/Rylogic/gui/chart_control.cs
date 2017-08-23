@@ -63,7 +63,7 @@ namespace pr.gui
 				BaseRangeY      = new RangeF(0.0, 1.0);
 				Scene           = new ChartPanel(this); // Must come after 'Range'
 				MouseOperations = new MouseOps();
-				Tools           = new ChartTools(Options);
+				Tools           = new ChartTools(this, Options);
 				m_tt_show_value = new HintBalloon { AutoSizeMode = AutoSizeMode.GrowOnly };
 
 				Elements = new BindingListEx<Element> { PerItemClear = true, UseHashSet = true };
@@ -4017,9 +4017,9 @@ namespace pr.gui
 		{
 			public static readonly Guid Id = new Guid("62D495BB-36D1-4B52-A067-1B7DB4011831");
 
-			public ChartTools(RdrOptions opts)
+			internal ChartTools(ChartControl owner, RdrOptions opts)
 			{
-				if (Util.IsInDesignMode)
+				if (owner.IsInDesignMode())
 					return;
 
 				Options     = opts;

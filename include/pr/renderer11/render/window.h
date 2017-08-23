@@ -31,7 +31,7 @@ namespace pr
 			//   BitBlt modes: 0 = present immediately, 1,2,3,.. present after the nth vertical blank (has the effect of locking the frame rate to a fixed multiple of the VSync rate)
 			//   Flip modes (Sequential): 0 = drop this frame if there is a new frame waiting, n > 0 = same as bitblt case
 
-			WndSettings(HWND hwnd = 0, bool windowed = true, bool gdi_compat = false, iv2 const& client_area = iv2(1024,768));
+			WndSettings(HWND hwnd = 0, bool windowed = true, bool bgra_support = false, iv2 const& client_area = iv2(1024,768));
 		};
 
 		// Renderer window.
@@ -47,7 +47,7 @@ namespace pr
 			D3DPtr<ID3D11RenderTargetView>   m_main_rtv;         // Render target view of the render target
 			D3DPtr<ID3D11ShaderResourceView> m_main_srv;         // Shader resource view of the render target
 			D3DPtr<ID3D11DepthStencilView>   m_main_dsv;         // Depth buffer
-			D3DPtr<ID2D1DeviceContext1>      m_d2d_dc;           // The device context for D2D
+			D3DPtr<ID2D1DeviceContext>       m_d2d_dc;           // The device context for D2D
 			Texture2DPtr                     m_main_tex;         // The render target as a texture
 			bool                             m_idle;             // True while the window is occluded
 			string32                         m_name;             // A debugging name for the window
@@ -64,23 +64,22 @@ namespace pr
 			DepthStateManager& ds_mgr();
 			RasterStateManager& rs_mgr();
 
-			// Return the DX device
-			ID3D11Device* D3DDevice() const;
-
-			// Return the immediate device context
-			ID3D11DeviceContext* ImmediateDC() const;
-
-			// Draw text directly to the back buffer
-			void DrawString(wchar_t const* text, float x, float y);
-
 			// Create the render target and depth buffer
 			void InitRT();
 
 			// Binds the render target and depth buffer to the OM
 			void RestoreRT();
 
+			// Draw text directly to the back buffer
+			void DrawString(wchar_t const* text, float x, float y);
+
 			// Binds the given render target and depth buffer views to the OM
 			void SetRT(ID3D11RenderTargetView* rtv, ID3D11DepthStencilView* dsv);
+
+			// Render this window into 'render_target;
+			// 'render_target' is the texture that is rendered onto
+			// 'depth_buffer' is an optional texture that will receive the depth information (can be null)
+			void SetRT(D3DPtr<ID3D11Texture2D>& render_target, D3DPtr<ID3D11Texture2D>& depth_buffer);
 
 			// Set the viewport to all of the render target
 			void RestoreFullViewport();

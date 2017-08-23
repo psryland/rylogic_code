@@ -13,7 +13,7 @@ namespace pr
 		// Returns the number of verts and number of indices needed to hold geometry for an
 		// array of 'num_boxes' boxes.
 		template <typename Tvr, typename Tir>
-		void BoxSize(std::size_t num_boxes, Tvr& vcount, Tir& icount)
+		void BoxSize(int num_boxes, Tvr& vcount, Tir& icount)
 		{
 			vcount = checked_cast<Tvr>(24 * num_boxes);
 			icount = checked_cast<Tir>(36 * num_boxes);
@@ -40,7 +40,7 @@ namespace pr
 		// The texture coordinates set on the box have the 'walls' with Y as up.
 		// On top (-x,+y,-z) is the top left corner, on the bottom (-x,-y,+z) is the top left corner
 		template <typename TVertCIter, typename TVertIter, typename TIdxIter>
-		Props Boxes(std::size_t num_boxes, TVertCIter points, std::size_t num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices)
+		Props Boxes(int num_boxes, TVertCIter points, int num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices)
 		{
 			using VIdx = typename std::remove_reference<decltype(*out_indices)>::type;
 
@@ -53,8 +53,8 @@ namespace pr
 				6,4,5,7, // +Z
 				3,1,0,2, // -Z
 			};
-			std::size_t vcount = sizeof(vidx)/sizeof(vidx[0]);
-			std::size_t const indices[] =
+			int vcount = sizeof(vidx)/sizeof(vidx[0]);
+			int const indices[] =
 			{
 				0, 1, 2,  0, 2, 3,  //  0 -  6
 				4, 5, 6,  4, 6, 7,  //  6 - 12
@@ -63,13 +63,13 @@ namespace pr
 				16,17,18, 16,18,19, // 24 - 30
 				20,21,22, 20,22,23, // 30 - 36
 			};
-			std::size_t const icount = sizeof(indices)/sizeof(indices[0]);
+			int const icount = sizeof(indices)/sizeof(indices[0]);
 
 			// Texture coords
-			v2 const t00 = v2(0.0f, 0.0f);
-			v2 const t01 = v2(0.0f, 1.0f);
-			v2 const t10 = v2(1.0f, 0.0f);
-			v2 const t11 = v2(1.0f, 1.0f);
+			auto t00 = v2(0.0f, 0.0f);
+			auto t01 = v2(0.0f, 1.0f);
+			auto t10 = v2(1.0f, 0.0f);
+			auto t11 = v2(1.0f, 1.0f);
 
 			Props props;
 			props.m_geom = EGeom::Vert | (colours ? EGeom::Colr : EGeom::None) | EGeom::Norm | EGeom::Tex0;
@@ -84,22 +84,22 @@ namespace pr
 			// Bounding box
 			auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
 
-			TVertCIter v_in  = points;
-			TVertIter  v_out = out_verts;
-			TIdxIter   i_out = out_indices;
-			for (std::size_t i = 0; i != num_boxes; ++i)
+			auto v_in  = points;
+			auto v_out = out_verts;
+			auto i_out = out_indices;
+			for (int i = 0; i != num_boxes; ++i)
 			{
 				// Read 8 points from the vertex and colour streams
 				struct { v4 pt; Colour32 cl; } vert[8];
-				for (std::size_t j = 0; j != 8; ++j)
+				for (int j = 0; j != 8; ++j)
 				{
 					vert[j].pt = bb(*v_in++);
 					vert[j].cl = cc(*col++);
 				}
 
 				// Set the verts
-				int const* vi = vidx;
-				for (std::size_t j = 0; j != vcount/4; ++j)
+				auto vi = vidx;
+				for (int j = 0; j != vcount/4; ++j)
 				{
 					auto& a = vert[*vi++];
 					auto& b = vert[*vi++];
@@ -112,9 +112,9 @@ namespace pr
 				}
 
 				// Set the faces
-				std::size_t const* ii = indices;
-				std::size_t ibase = i * 24;
-				for (std::size_t j = 0; j != icount/6; ++j)
+				auto ii = indices;
+				auto ibase = i * 24;
+				for (int j = 0; j != icount/6; ++j)
 				{
 					*i_out++ = checked_cast<VIdx>(ibase + *ii++);
 					*i_out++ = checked_cast<VIdx>(ibase + *ii++);
@@ -129,14 +129,14 @@ namespace pr
 
 		// Create a transformed box
 		template <typename TVertCIter, typename TVertIter, typename TIdxIter>
-		Props Boxes(std::size_t num_boxes, TVertCIter points, m4x4 const& o2w, std::size_t num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices)
+		Props Boxes(int num_boxes, TVertCIter points, m4x4 const& o2w, int num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices)
 		{
 			if (o2w == m4x4Identity)
 				return Boxes(num_boxes, points, num_colours, colours, out_verts, out_indices);
 
 			// An iterator wrapper for applying a transform to 'points'
 			Transformer<TVertCIter> tx(points, o2w);
-			Props props = Boxes(num_boxes, tx, num_colours, colours, out_verts, out_indices);
+			auto props = Boxes(num_boxes, tx, num_colours, colours, out_verts, out_indices);
 			return props;
 		}
 
@@ -161,12 +161,12 @@ namespace pr
 
 		// Create boxes at each point in 'positions' with side half lengths = rad.x,rad.y,rad.z
 		template <typename TVertCIter, typename TVertIter, typename TIdxIter>
-		Props BoxList(std::size_t num_boxes, TVertCIter positions, v4 const& rad, std::size_t num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices)
+		Props BoxList(int num_boxes, TVertCIter positions, v4 const& rad, int num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices)
 		{
 			TVertCIter pos = positions;
 			pr::vector<v4,64> points(8*num_boxes);
-			v4* pt = &points[0];
-			for (std::size_t i = 0; i != num_boxes; ++i, ++pos)
+			auto pt = &points[0];
+			for (int i = 0; i != num_boxes; ++i, ++pos)
 			{
 				*pt++ = v4(pos->x - rad.x, pos->y - rad.y, pos->z - rad.z, 1.0f);
 				*pt++ = v4(pos->x + rad.x, pos->y - rad.y, pos->z - rad.z, 1.0f);

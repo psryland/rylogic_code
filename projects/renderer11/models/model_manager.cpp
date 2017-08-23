@@ -24,7 +24,6 @@ namespace pr
 			,m_dbg_mem_mdl()
 			,m_dbg_mem_nugget()
 			,m_rdr(rdr)
-			,m_mutex()
 		{
 			CreateStockModels();
 		}
@@ -37,7 +36,7 @@ namespace pr
 			if (settings.m_ib.ElemCount == 0)
 				throw std::exception("Attempt to create 0-length model index buffer");
 
-			std::lock_guard<std::recursive_mutex> lock(m_mutex);
+			Renderer::Lock lock(m_rdr);
 
 			// Create a new model buffer
 			ModelBufferPtr mb(m_alex_mdlbuf.New());
@@ -45,7 +44,7 @@ namespace pr
 			mb->m_mdl_mgr = this;
 			{// Create a vertex buffer
 				SubResourceData init(settings.m_vb.Data, 0, UINT(settings.m_vb.SizeInBytes()));
-				Throw(m_rdr.D3DDevice()->CreateBuffer(&settings.m_vb, settings.m_vb.Data != 0 ? &init : 0, &mb->m_vb.m_ptr));
+				Throw(lock.D3DDevice()->CreateBuffer(&settings.m_vb, settings.m_vb.Data != 0 ? &init : 0, &mb->m_vb.m_ptr));
 				mb->m_vb.m_range.set(0, settings.m_vb.ElemCount);
 				mb->m_vb.m_used.set(0, 0);
 				mb->m_vb.m_stride = settings.m_vb.StructureByteStride;
@@ -53,7 +52,7 @@ namespace pr
 			}
 			{// Create an index buffer
 				SubResourceData init(settings.m_ib.Data, 0, UINT(settings.m_ib.SizeInBytes()));
-				Throw(m_rdr.D3DDevice()->CreateBuffer(&settings.m_ib, settings.m_ib.Data != 0 ? &init : 0, &mb->m_ib.m_ptr));
+				Throw(lock.D3DDevice()->CreateBuffer(&settings.m_ib, settings.m_ib.Data != 0 ? &init : 0, &mb->m_ib.m_ptr));
 				mb->m_ib.m_range.set(0, settings.m_ib.ElemCount);
 				mb->m_ib.m_used.set(0, 0);
 				mb->m_ib.m_format = settings.m_ib.Format;
@@ -75,8 +74,8 @@ namespace pr
 		{
 			PR_ASSERT(PR_DBG_RDR, model_buffer->IsCompatible(settings), "Incompatible model buffer provided");
 			PR_ASSERT(PR_DBG_RDR, model_buffer->IsRoomFor(settings.m_vb.ElemCount, settings.m_ib.ElemCount), "Insufficient room for a model of this size in this model buffer");
+			Renderer::Lock lock(m_rdr);
 
-			std::lock_guard<std::recursive_mutex> lock(m_mutex);
 			ModelPtr ptr(m_alex_model.New(settings, model_buffer));
 			assert(m_dbg_mem_mdl.add(ptr.m_ptr));
 			return ptr;
@@ -85,7 +84,7 @@ namespace pr
 		// Create a nugget using our allocator
 		Nugget* ModelManager::CreateNugget(NuggetProps props, ModelBuffer* model_buffer, Model* model)
 		{
-			std::lock_guard<std::recursive_mutex> lock(m_mutex);
+			Renderer::Lock lock(m_rdr);
 			Nugget* ptr(m_alex_nugget.New(props, model_buffer, model));
 			assert(m_dbg_mem_nugget.add(ptr));
 			return ptr;
@@ -95,7 +94,7 @@ namespace pr
 		void ModelManager::Delete(ModelBuffer* model_buffer)
 		{
 			if (!model_buffer) return;
-			std::lock_guard<std::recursive_mutex> lock(m_mutex);
+			Renderer::Lock lock(m_rdr);
 			assert(m_dbg_mem_mdlbuf.remove(model_buffer));
 			m_alex_mdlbuf.Delete(model_buffer);
 		}
@@ -105,7 +104,7 @@ namespace pr
 		{
 			if (!model) return;
 			pr::events::Send(Evt_ModelDestroy(*model));
-			std::lock_guard<std::recursive_mutex> lock(m_mutex);
+			Renderer::Lock lock(m_rdr);
 			assert(m_dbg_mem_mdl.remove(model));
 			m_alex_model.Delete(model);
 		}
@@ -114,7 +113,7 @@ namespace pr
 		void ModelManager::Delete(Nugget* nugget)
 		{
 			if (!nugget) return;
-			std::lock_guard<std::recursive_mutex> lock(m_mutex);
+			Renderer::Lock lock(m_rdr);
 			assert(m_dbg_mem_nugget.remove(nugget));
 			m_alex_nugget.Delete(nugget);
 		}

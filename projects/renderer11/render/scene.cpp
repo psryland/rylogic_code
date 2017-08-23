@@ -5,6 +5,7 @@
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/render/scene.h"
 #include "pr/renderer11/render/window.h"
+#include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/instances/instance.h"
 #include "pr/renderer11/steps/forward_render.h"
 #include "pr/renderer11/steps/gbuffer.h"
@@ -115,6 +116,8 @@ namespace pr
 		// Render the scene
 		void Scene::Render()
 		{
+			Renderer::Lock lock(*m_wnd->m_rdr);
+
 			// Don't call 'm_wnd->RestoreRT();' here because we might be rendering to
 			// an off-screen texture. However, if the app contains multiple windows
 			// each window will need to call 'm_wnd->RestoreRT()' before rendering.
@@ -124,14 +127,14 @@ namespace pr
 				// Note: if you've called GetDC() you need to call ReleaseDC() and Window.RestoreRT() or RTV will be null
 				D3DPtr<ID3D11RenderTargetView> rtv;
 				D3DPtr<ID3D11DepthStencilView> dsv;
-				m_wnd->ImmediateDC()->OMGetRenderTargets(1, &rtv.m_ptr, &dsv.m_ptr);
+				lock.ImmediateDC()->OMGetRenderTargets(1, &rtv.m_ptr, &dsv.m_ptr);
 				PR_ASSERT(PR_DBG_RDR, rtv != nullptr, "Render target is null."); // Ensure RestoreRT has been called
 				PR_ASSERT(PR_DBG_RDR, dsv != nullptr, "Depth buffer is null."); // Ensure RestoreRT has been called
 			}
 			#endif
 
 			// Invoke each render step in order
-			StateStack ss(m_wnd->ImmediateDC(), *this);
+			StateStack ss(lock.ImmediateDC(), *this);
 			for (auto& rs : m_render_steps)
 				rs->Execute(ss);
 		}

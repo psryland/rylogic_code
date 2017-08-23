@@ -21,7 +21,9 @@ namespace pr.container
 	public class BindingSource<TItem>
 		:Component, IEnumerable<TItem>, IList<TItem>, IBindingListView, IBindingList, IList,
 		ICollection, IEnumerable, ITypedList, ICancelAddNew, ISupportInitializeNotification,
-		ISupportInitialize, ICurrencyManagerProvider, IListChanging<TItem>, IItemChanged<TItem>
+		ISupportInitialize, ICurrencyManagerProvider,
+		IListChanging<TItem>, IItemChanged<TItem>,
+		IListChanging, IItemChanged
 	{
 		// Notes:
 		// Reset methods invoked on this object do not cause the equivalent
@@ -140,11 +142,6 @@ namespace pr.container
 			get { return this[(int)index]; }
 			set { this[(int)index] = value; }
 		}
-		object IList.this[int index]
-		{
-			get { return this[index]; }
-			set { this[index] = (TItem)value; }
-		}
 
 		/// <summary>Gets a value indicating whether items in the underlying list can be edited.</summary>
 		/// <returns>true to indicate list items can be edited; otherwise, false.</returns>
@@ -178,19 +175,15 @@ namespace pr.container
 		{
 			get
 			{
-				var bl = m_bs.DataSource as BindingListEx<TItem>;
-				if (bl != null) return bl.AllowSort;
-				var bs = m_bs.DataSource as BindingSource<TItem>;
-				if (bs != null) return bs.AllowSort;
+				if (m_bs.DataSource is BindingListEx<TItem> bl) return bl.AllowSort;
+				if (m_bs.DataSource is BindingSource<TItem> bs) return bs.AllowSort;
 				return m_impl_allow_sort;
 			}
 			set
 			{
 				m_impl_allow_sort = value;
-				var bl = m_bs.DataSource as BindingListEx<TItem>;
-				if (bl != null) { bl.AllowSort = value; return; }
-				var bs = m_bs.DataSource as BindingSource<TItem>;
-				if (bs != null) { bs.AllowSort = value; return; }
+				if (m_bs.DataSource is BindingListEx<TItem> bl) { bl.AllowSort = value; return; }
+				if (m_bs.DataSource is BindingSource<TItem> bs) { bs.AllowSort = value; return; }
 			}
 		}
 		private bool m_impl_allow_sort;
@@ -203,15 +196,13 @@ namespace pr.container
 		{
 			get
 			{
-				var bs = m_bs.DataSource as BindingSource<TItem>;
-				if (bs != null) return bs.AllowNoCurrent;
+				if (m_bs.DataSource is BindingSource<TItem> bs) return bs.AllowNoCurrent;
 				return m_impl_allow_no_current;
 			}
 			set
 			{
 				m_impl_allow_no_current = value;
-				var bs = m_bs.DataSource as BindingSource<TItem>;
-				if (bs != null) { bs.AllowNoCurrent = value; return; }
+				if (m_bs.DataSource is BindingSource<TItem> bs) { bs.AllowNoCurrent = value; return; }
 			}
 		}
 		private bool m_impl_allow_no_current;
@@ -979,6 +970,11 @@ namespace pr.container
 		{
 			RemoveAt(index);
 		}
+		object IList.this[int index]
+		{
+			get { return this[index]; }
+			set { this[index] = (TItem)value; }
+		}
 		#endregion
 
 		#region ICollection
@@ -1068,6 +1064,54 @@ namespace pr.container
 		}
 		#endregion
 
+		#region IListChanging
+		bool IListChanging.RaiseListChangedEvents
+		{
+			get { return RaiseListChangedEvents; }
+			set { RaiseListChangedEvents = value; }
+		}
+
+		event EventHandler<ListChgEventArgs> IListChanging.ListChanging
+		{
+			add
+			{
+				if (m_list_changing_0 == null) ListChanging += HandleListChanging0;
+				m_list_changing_0 += value;
+			}
+			remove
+			{
+				m_list_changing_0 -= value;
+				if (m_list_changing_0 == null) ListChanging -= HandleListChanging0;
+			}
+		}
+		private event EventHandler<ListChgEventArgs> m_list_changing_0;
+		private void HandleListChanging0(object sender, ListChgEventArgs<TItem> e)
+		{
+			m_list_changing_0.Raise(sender, new ListChgEventArgs(this, e.ChangeType, e.Index, e.Item));
+		}
+		#endregion
+
+		#region IItemChanged
+		event EventHandler<ItemChgEventArgs> IItemChanged.ItemChanged
+		{
+			add
+			{
+				if (m_item_changed_0 == null) ItemChanged += HandleItemChanged0;
+				m_item_changed_0 += value;
+			}
+			remove
+			{
+				m_item_changed_0 -= value;
+				if (m_item_changed_0 == null) ItemChanged -= HandleItemChanged0;
+			}
+		}
+		private event EventHandler<ItemChgEventArgs> m_item_changed_0;
+		private void HandleItemChanged0(object sender, ItemChgEventArgs<TItem> e)
+		{
+			m_item_changed_0.Raise(sender, new ItemChgEventArgs(e.Index, e.OldItem, e.NewItem));
+		}
+		#endregion
+
 		#region ICancelAddNew
 		void ICancelAddNew.CancelNew(int itemIndex)
 		{
@@ -1094,6 +1138,7 @@ namespace pr.container
 		{
 			get { return ((ISupportInitializeNotification)m_bs).IsInitialized; }
 		}
+
 		event EventHandler ISupportInitializeNotification.Initialized
 		{
 			add { ((ISupportInitializeNotification)m_bs).Initialized += value; }

@@ -61,7 +61,7 @@ namespace pr.extn
 		/// <summary>Tests if this component is being used by the VS designer</summary>
 		public static bool IsInDesignMode<TComponent>(this TComponent c) where TComponent:Component
 		{
-			if (Util.IsInDesignMode)
+			if (LicenseManager.UsageMode == LicenseUsageMode.Designtime)
 				return true;
 
 			// Test the protected DesignMode component property

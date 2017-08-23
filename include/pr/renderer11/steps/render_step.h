@@ -5,9 +5,7 @@
 #pragma once
 
 #include "pr/renderer11/forward.h"
-#include "pr/renderer11/render/blend_state.h"
-#include "pr/renderer11/render/raster_state.h"
-#include "pr/renderer11/render/depth_state.h"
+#include "pr/renderer11/render/state_block.h"
 #include "pr/renderer11/render/drawlist_element.h"
 #include "pr/renderer11/util/stock_resources.h"
 #include "pr/renderer11/util/event_types.h"
