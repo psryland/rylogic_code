@@ -21,8 +21,8 @@ struct MainUI :Form
 		,m_body0()
 		,m_body1()
 	{
-		View3D_AddObject(m_view3d.m_win, m_body0.m_gfx);
-		View3D_AddObject(m_view3d.m_win, m_body1.m_gfx);
+		View3D_WindowAddObject(m_view3d.m_win, m_body0.m_gfx);
+		View3D_WindowAddObject(m_view3d.m_win, m_body1.m_gfx);
 
 		//View3D_PositionCamera(m_view3d.m_win, View3DV4{1,1,-2,1}, View3DV4{1,1,0,1}, View3DV4{0,1,0,0});
 		Reset();

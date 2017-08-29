@@ -244,31 +244,20 @@ namespace pr
 			{
 				Push(src);
 			}
+
 			Preprocessor(Preprocessor&& rhs) = delete;
 			Preprocessor(Preprocessor const&) = delete;
 			Preprocessor& operator =(Preprocessor&& rhs) = delete;
 			Preprocessor& operator =(Preprocessor const& rhs) = delete;
 
 			// Access the macro handler
-			IMacroHandler* Macros;
+			IMacroHandler* const Macros;
 
 			// Access the include handler
-			IIncludeHandler* Includes;
+			IIncludeHandler* const Includes;
 
 			// Access the embedded code handler
-			IEmbeddedCode* EmbeddedCode;
-
-			// Push a source onto the input stack
-			void Push(Src* src, bool delete_on_pop)
-			{
-				m_stack.emplace_back(src, delete_on_pop);
-
-				// Assign helper pointer for the watch windows
-				m_dbg_src = m_stack.back().m_out.DbgPtr();
-				m_dbg_buf = m_stack.back().m_out.DbgBuf();
-
-				seek(0);
-			}
+			IEmbeddedCode* const EmbeddedCode;
 
 			// Push a source owned externally onto the input stack
 			void Push(Src& src)
@@ -280,6 +269,18 @@ namespace pr
 			template <typename Char> void Push(Char const* src)
 			{
 				Push(new Ptr<Char const*>(src), true);
+			}
+
+			// Push a source onto the input stack
+			void Push(Src* src, bool delete_on_pop)
+			{
+				m_stack.emplace_back(src, delete_on_pop);
+
+				// Assign helper pointer for the watch windows
+				m_dbg_src = m_stack.back().m_out.DbgPtr();
+				m_dbg_buf = m_stack.back().m_out.DbgBuf();
+
+				seek(0);
 			}
 
 			// Pop the top source off the input stack
@@ -322,391 +323,425 @@ namespace pr
 
 		private:
 
-			// Advance by 'n' characters, popping from the input stack as needed
-			void next(int n = 1)
-			{
-				for (;!m_stack.empty();)
-				{
-					auto& src = m_stack.back();
-
-					// If the source has expired, pop from the stack until we find the next non-expired source
-					if (*src == 0)
-					{
-						Pop();
-						continue;
-					}
-
-					// Pop a character from the source
-					if (n--)
-					{
-						++src;
-						continue;
-					}
-					break;
-				}
-				assert(m_stack.empty() || *m_stack.back() != 0 && "Should never return an end of stream from here");
-			}
-
-			// Advance the source by at least 'n' preprocessed characters ensuring
-			// the next character to be returned is a valid preprocessed character
+			// Advance by 'n' preprocessed characters, popping from the input stack as needed.
+			// Moves the source to the 'nth' preprocessed character from the current position.
 			void seek(int n)
 			{
 				// Use in watch windows:
-				//  m_dbg_buf  <- buffered characters
-				//  m_dbg_src  <- input stream
-				next(n);
+				//  'm_dbg_buf' <- buffered characters
+				//  'm_dbg_src' <- input stream
 
 				// Emit characters while 'm_emit' is > 0.
 				// 'm_emit' is a count of the number of characters that have been confirmed as ok to use.
-				for (; !m_stack.empty() && m_stack.back().m_emit == 0; )
+				for (;!m_stack.empty();)
 				{
-					// This reference can't be used after 'next' has been called.
+					// This reference can't be used after 'Pop' has been called.
 					// However, none of these tokens should span source boundaries.
 					auto& src = m_stack.back();
 					auto& emit = src.m_emit;
 
-					// Cases should end with 'continue' to go round again or break to emit the current character
-					switch (*src)
+					// If the source has expired, pop from the stack until we find the next non-expired source
+					if (*src == 0)
 					{
-					case L'\"':
-					case L'\'':
-						#pragma region Literal String/Char
-						{
-							// Buffer the literal string or char
-							auto beg = src.Loc();
-							BufferLiteral(src, emit, *src);
-							if (src[emit] != 0) ++emit; else throw Exception(EResult::SyntaxError, Loc(), pr::Fmt("Unclosed literal string or character\n%s", Narrow(beg.ToString()).c_str()));
+						assert(src.m_emit == 0);
+						Pop();
+						continue;
+					}
+
+					// Parse the next character
+					if (src.m_emit != 0 || IsOutputChar(src, emit))
+					{
+						// Consumed enough characters?
+						if (n-- == 0)
 							break;
-						}
-						#pragma endregion
-					case L'#':
-						#pragma region PP Command
+						else
+							++src;
+					}
+				}
+				assert(m_stack.empty() || *m_stack.back() != 0 && "Should never return an end of stream from here");
+			}
+
+			// Parse the character pointed to by 'src' as a possible preprocessor command.
+			// Returns true if the current position of 'src' is a character that should be emitted.
+			bool IsOutputChar(PPSource& src, EmitCount& emit)
+			{
+				auto is_output = true;
+				switch (*src)
+				{
+				case '\"':
+				case '\'':
+					#pragma region Literal String/Char
+					{
+						// Buffer the literal string or char
+						auto beg = src.Loc();
+						BufferLiteral(src, emit, *src);
+						if (src[emit] != 0) ++emit; else throw Exception(EResult::SyntaxError, Loc(), pr::Fmt("Unclosed literal string or character\n%s", Narrow(beg.ToString()).c_str()));
+						break;
+					}
+					#pragma endregion
+				case '#':
+					#pragma region PP Command
+					{
+						// Record the start of the PP command
+						auto loc_beg = src.Loc();
+
+						// Eat optional whitespace between the # and the keyword
+						EatLineSpace(src, 1, 0);
+
+						// Match the preprocessor command
+						switch (*src)
 						{
-							// Record the start of the PP command
-							auto loc_beg = src.Loc();
-
-							// Eat optional whitespace between the # and the keyword
-							EatLineSpace(src, 1, 0);
-
-							// Match the preprocessor command
-							switch (*src)
+						case 'd':
+							#pragma region Define
+							if (src.match_adv(L"define"))
 							{
-							case L'd':
-								#pragma region Define
-								if (src.match_adv(L"define"))
-								{
-									EatLineSpace(src, 0, 0);
-									Macros->Add(Macro(src, src.Loc()));
-									continue;
-								}
-								#pragma endregion
-								#pragma region DefIfNDef
-								if (src.match_adv(L"defifndef"))
-								{
-									EatLineSpace(src, 0, 0);
-									Macro macro(src, src.Loc());
-									if (!Macros->Find(macro.m_hash))
-										Macros->Add(macro);
-									continue;
-								}
-								#pragma endregion
+								EatLineSpace(src, 0, 0);
+								Macros->Add(Macro(src, src.Loc()));
+								is_output = false;
 								break;
-							case L'e':
-								#pragma region Else
-								if (src.match_adv(L"else"))
+							}
+							#pragma endregion
+							#pragma region DefIfNDef
+							if (src.match_adv(L"defifndef"))
+							{
+								EatLineSpace(src, 0, 0);
+								Macro macro(src, src.Loc());
+								if (!Macros->Find(macro.m_hash))
+									Macros->Add(macro);
+								is_output = false;
+								break;
+							}
+							#pragma endregion
+							break;
+						case 'e':
+							#pragma region Else
+							if (src.match_adv(L"else"))
+							{
+								if (m_if_stack.empty()) throw Exception(EResult::UnmatchedPreprocessorDirective, loc_beg, "unmatched #else");
+								if (m_if_stack.top()) { SkipPreprocessorBlock(loc_beg); }
+								else { m_if_stack.top() = true; EatLine(src, 0, 1); }
+								is_output = false;
+								break;
+							}
+							#pragma endregion
+							#pragma region ElIf
+							if (src.match_adv(L"elif"))
+							{
+								if (m_if_stack.empty()) throw Exception(EResult::UnmatchedPreprocessorDirective, loc_beg, "unmatched #elif");
+								if (m_if_stack.top()) { SkipPreprocessorBlock(loc_beg); }
+								else if (!PPDefined()) { SkipPreprocessorBlock(loc_beg); }
+								else { m_if_stack.top() = true; EatLine(src, 0, 1); }
+								is_output = false;
+								break;
+							}
+							#pragma endregion
+							#pragma region EndIf
+							if (src.match_adv(L"endif"))
+							{
+								if (m_if_stack.empty()) throw Exception(EResult::UnmatchedPreprocessorDirective, loc_beg, "unmatched #endif");
+								m_if_stack.pop();
+								EatLine(src, 0, 1);
+								is_output = false;
+								break;
+							}
+							#pragma endregion
+							#pragma region Eval
+							if (src.match_adv(L"eval"))
+							{
+								EatLineSpace(src, 0, 0);
+								string expr;
+
+								// Extract text between '{' and '}'
+								if (*src == '{') ++src; else throw Exception(EResult::ExpressionSyntaxError, loc_beg, "Expected the form: #eval{expression}");
+								for (int nest = 1; *src; expr.push_back(*src), ++src)
 								{
-									if (m_if_stack.empty()) throw Exception(EResult::UnmatchedPreprocessorDirective, loc_beg, "unmatched #else");
-									if (m_if_stack.top()) { SkipPreprocessorBlock(loc_beg); }
-									else                  { m_if_stack.top() = true; EatLine(src, 0, 1); }
-									continue;
+									nest += *src == '{';
+									nest -= *src == '}';
+									if (nest == 0) break;
 								}
-								#pragma endregion
-								#pragma region ElIf
-								if (src.match_adv(L"elif"))
+								if (*src == '}') ++src; else throw Exception(EResult::ExpressionSyntaxError, loc_beg, "No matching '}' found following #eval");
+
+								// Expand any macros in the expression
+								RecursiveExpandMacros(expr, Macro::Ancestor(nullptr, nullptr), loc_beg);
+
+								// Replace any nested '#eval{exp}' with (exp)
+								pr::str::Replace(expr, L"#eval", L"");
+								pr::str::Replace(expr, L"{", L"(");
+								pr::str::Replace(expr, L"}", L")");
+
+								// Evaluate the expression and push the result as a string onto the stack
+								double result;
+								if (!pr::Evaluate(expr.c_str(), result))
+									throw Exception(EResult::ExpressionSyntaxError, loc_beg, "#eval expression cannot be evaluated");
+
+								// Convert the result to a string
+								expr = (static_cast<long long>(result) == result) ? pr::FmtS(L"%lld", static_cast<long long>(result)) : pr::FmtS(L"%f", result);
+
+								// Push the 'eval' source onto the input stack
+								auto eval_src = std::make_unique<Buffer<>>(ESrcType::Eval, std::begin(expr), std::end(expr));
+								Push(eval_src.get(), true);
+								eval_src.release();
+								is_output = false;
+								break;
+							}
+							#pragma endregion
+							#pragma region Embedded
+							if (src.match_adv(L"embedded"))
+							{
+								// Read the embedded language used
+								string lang;
+								if (*src == L'(') ++src; else throw Exception(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang) ... #end");
+								if (BufferIdentifier(src, emit)) lang = src.pop_str(); else throw Exception(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang) ... #end");
+								if (*src == L')') ++src; else throw Exception(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang) ... #end");
+
+								// Do not include the whitespace or blank line that follows #embedded(lang)
+								EatLineSpace(src, 0, 0);
+								if (pr::str::IsNewLine(*src)) ++src;
+
+								// Record the source location for the start of the code
+								auto code_beg = src.Loc();
+
+								// Buffer the code section up to (but not including) the #end
+								if (!BufferTo(src, emit, L"#end", false))
+									throw Exception(EResult::UnmatchedPreprocessorDirective, loc_beg, "Embedded code section '#embedded(lang)' does not have a closing '#end' marker");
+
+								// 'code' will contain the result of executing the code, which we want to treat like an expanded macro
+								auto code = src.pop_str();
+
+								// Expand any macros in the buffered text
+								RecursiveExpandMacros(code, Macro::Ancestor(nullptr, nullptr), loc_beg);
+
+								// Get the code handler to transform the code into a result
+								// Note, the code handler is expected to work or throw
+								string result;
+								try
 								{
-									if (m_if_stack.empty()) throw Exception(EResult::UnmatchedPreprocessorDirective, loc_beg, "unmatched #elif");
-									if (m_if_stack.top())  { SkipPreprocessorBlock(loc_beg); }
-									else if (!PPDefined()) { SkipPreprocessorBlock(loc_beg); }
-									else                   { m_if_stack.top() = true; EatLine(src, 0, 1); }
-									continue;
+									if (!EmbeddedCode->Execute(lang, code, result))
+										throw Exception(EResult::EmbeddedCodeNotSupported, loc_beg, pr::FmtS("No support for embedded '%S' code available", lang.c_str()));
 								}
-								#pragma endregion
-								#pragma region EndIf
-								if (src.match_adv(L"endif"))
+								catch (Exception const&)
 								{
-									if (m_if_stack.empty()) throw Exception(EResult::UnmatchedPreprocessorDirective, loc_beg, "unmatched #endif");
-									m_if_stack.pop();
-									EatLine(src, 0, 1);
-									continue;
+									throw;
 								}
-								#pragma endregion
-								#pragma region Eval
-								if (src.match_adv(L"eval"))
+								catch (std::exception const& ex)
 								{
-									EatLineSpace(src, 0, 0);
-									string expr;
-
-									// Extract text between '{' and '}'
-									if (*src == '{') ++src; else throw Exception(EResult::ExpressionSyntaxError, loc_beg, "Expected the form: #eval{expression}");
-									for (int nest = 1; *src; expr.push_back(*src), ++src)
-									{
-										nest += *src == '{';
-										nest -= *src == '}';
-										if (nest == 0) break;
-									}
-									if (*src == '}') ++src; else throw Exception(EResult::ExpressionSyntaxError, loc_beg, "No matching '}' found following #eval");
-
-									// Expand any macros in the expression
-									RecursiveExpandMacros(expr, Macro::Ancestor(nullptr, nullptr), loc_beg);
-
-									// Replace any nested #eval{exp} with (exp)
-									pr::str::Replace(expr, L"#eval", L"" );
-									pr::str::Replace(expr, L"{"    , L"(");
-									pr::str::Replace(expr, L"}"    , L")");
-
-									// Evaluate the expression and push the result as a string onto the stack
-									double result;
-									if (!pr::Evaluate(expr.c_str(), result))
-										throw Exception(EResult::ExpressionSyntaxError, loc_beg, "#eval expression cannot be evaluated");
-
-									// Convert the result to a string
-									expr = (static_cast<long long>(result) == result) ? pr::FmtS(L"%lld", static_cast<long long>(result)) : pr::FmtS(L"%f", result);
-
-									// Push the eval source onto the input stack
-									auto eval_src = std::make_unique<Buffer<>>(ESrcType::Eval, std::begin(expr), std::end(expr));
-									Push(eval_src.get(), true);
-									eval_src.release();
-									continue;
+									throw Exception(EResult::EmbeddedCodeError, code_beg, ex.what());
 								}
-								#pragma endregion
-								#pragma region Embedded
-								if (src.match_adv(L"embedded"))
+								if (!result.empty())
 								{
-									// Read the embedded language used
-									string lang;
-									if (*src == L'(') ++src; else throw Exception(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang) ... #end");
-									if (BufferIdentifier(src, emit)) lang = src.pop_str(); else throw Exception(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang) ... #end");
-									if (*src == L')') ++src; else throw Exception(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang) ... #end");
-
-									// Do not include the whitespace or blank line that follows #embedded(lang)
-									EatLineSpace(src, 0,0);
-									if (pr::str::IsNewLine(*src)) ++src;
-
-									// Record the source location for the start of the code
-									auto code_beg = src.Loc();
-
-									// Buffer the code section up to (but not including) the #end
-									if (!BufferTo(src, emit, L"#end", false))
-										throw Exception(EResult::UnmatchedPreprocessorDirective, loc_beg, "Embedded code section '#embedded(lang)' does not have a closing '#end' marker");
-
-									// 'code' will contain the result of executing the code, which we want to treat like an expanded macro
-									auto code = src.pop_str();
-									string result;
-
-									// Expand any macros in the buffered text
-									RecursiveExpandMacros(code, Macro::Ancestor(nullptr, nullptr), loc_beg);
-
-									// Get the code handler to transform the code into a result
-									// Note, the code handler is expected to work or throw
-									if (!EmbeddedCode->Execute(lang, code, code_beg, result))
-										throw Exception(EResult::EmbeddedCodeNotSupported, loc_beg, "No support for embedded code available");
-
 									// Push the code result as a source
 									auto code_src = std::make_unique<Buffer<>>(ESrcType::EmbeddedCode, std::begin(result), std::end(result));
 									Push(code_src.get(), true);
 									code_src.release();
-									continue;
 								}
-								#pragma endregion
-								#pragma region Error
-								if (src.match_adv(L"error"))
-								{
-									EatLineSpace(src, 0,0);
-									BufferLine(src, emit);
-									throw Exception(EResult::PreprocessError, loc_beg, Narrow(src.str()));
-								}
-								#pragma endregion
-								break;
-							case L'i':
-								#pragma region IfNDef
-								if (src.match_adv(L"ifndef"))
-								{
-									EatLineSpace(src, 0, 0);
-									if (!BufferIdentifier(src, emit)) throw Exception(EResult::InvalidPreprocessorDirective, src.Loc(), "An identifier was expected");
-									if (Macros->Find(Hash(src.pop_str()))) { m_if_stack.push(false); SkipPreprocessorBlock(loc_beg); }
-									else                                   { m_if_stack.push(true); EatLine(src, 0, 1); }
-									continue;
-								}
-								#pragma endregion
-								#pragma region IfDef
-								if (src.match_adv(L"ifdef"))
-								{
-									EatLineSpace(src, 0, 0);
-									if (!BufferIdentifier(src, emit)) throw Exception(EResult::InvalidPreprocessorDirective, src.Loc(), "An identifier was expected");
-									if (Macros->Find(Hash(src.pop_str()))) { m_if_stack.push(true); EatLine(src, 0, 1); }
-									else                                   { m_if_stack.push(false); SkipPreprocessorBlock(loc_beg); }
-									continue;
-								}
-								#pragma endregion
-								#pragma region If
-								if (src.match_adv(L"if"))
-								{
-									EatLineSpace(src, 0, 0);
-									if (PPDefined()) { m_if_stack.push(true);  EatLine(src, 0, 1); }
-									else             { m_if_stack.push(false); SkipPreprocessorBlock(loc_beg); }
-									continue;
-								}
-								#pragma endregion
-								#pragma region Include Path
-								if (src.match_adv(L"include_path"))
-								{
-									EatLineSpace(src, 1, 0);
-									if (*src != L'<' && *src != L'\"')
-										throw Exception(EResult::InvalidInclude, src.Loc(), "expected a string following #include_path");
-
-									// Buffer up the include path
-									auto end = *src == L'<' ? L'>' : L'\"';
-									BufferLiteral(src, emit, end);
-									if (src[emit] == end) ++emit; else throw Exception(EResult::InvalidInclude, src.Loc(), "include path string incomplete");
-
-									// Add the path to the include paths
-									auto path = src.str(1, emit - 2); src.pop();
-									Includes->AddSearchPath(path);
-
-									// Eat the rest of the line
-									EatLine(src, 0, 1);
-									continue;
-								}
-								#pragma endregion
-								#pragma region Include
-								if (src.match_adv(L"include"))
-								{
-									EatLineSpace(src, 1, 0);
-									loc_beg = src.Loc();
-
-									if (*src != L'<' && *src != L'\"')
-										throw Exception(EResult::InvalidInclude, loc_beg, "expected a string following #include");
-
-									// Buffer up the include filepath
-									auto end = *src == L'<' ? L'>' : L'\"';
-									BufferLiteral(src, emit, end);
-									if (src[emit] == end) ++emit; else throw Exception(EResult::InvalidInclude, loc_beg, "include string incomplete");
-
-									// Open the include
-									auto path = src.str(1, emit - 2); src.pop();
-									auto flags = end == L'\"' ? IIncludeHandler::EFlags::IncludeLocalDir : IIncludeHandler::EFlags::None;
-									auto inc = Includes->Open(path, flags, src.Loc());
-									if (inc)
-										Push(inc.release(), true);
-
-									continue;
-								}
-								#pragma endregion
-								break;
-							case L'l':
-								#pragma region Lit
-								if (src.match_adv(L"lit"))
-								{
-									// Do not include the single whitespace or blank line that follows #lit
-									EatLineSpace(src, 0,0);
-									if (pr::str::IsNewLine(*src)) ++src;
-
-									// Buffer a literal section up to (but not including) the #end
-									if (!BufferTo(src, emit, L"#end", false))
-										throw Exception(EResult::UnmatchedPreprocessorDirective, loc_beg, "Literal section '#lit' does not have a closing '#end' marker");
-
-									continue;
-								}
-								#pragma endregion
-								#pragma region Line
-								if (src.match_adv(L"line"))
-								{
-									EatLine(src, 0, 1);
-									continue;
-								}
-								#pragma endregion
-								break;
-							case L'p':
-								#pragma region Pragma
-								if (src.match_adv(L"pragma"))
-								{
-									EatLine(src, 0, 1);
-									continue;
-								}
-								#pragma endregion
-								break;
-							case L'u':
-								#pragma region Undef
-								if (src.match_adv(L"undef"))
-								{
-									EatLineSpace(src, 0, 0);
-
-									// Read the macro tag
-									auto tag = Macro::ReadTag(src, src.Loc());
-									Macros->Remove(Hash(tag));
-
-									EatLine(src, 0, 1);
-									continue;
-								}
-								#pragma endregion
-								break;
-							case L'w':
-								#pragma region Warning
-								if (src.match_adv(L"warning"))
-								{
-									EatLine(src, 0, 1);
-									continue;
-								}
-								#pragma endregion
+								is_output = false;
 								break;
 							}
+							#pragma endregion
+							#pragma region Error
+							if (src.match_adv(L"error"))
+							{
+								EatLineSpace(src, 0, 0);
+								BufferLine(src, emit);
+								throw Exception(EResult::PreprocessError, loc_beg, Narrow(src.str()));
+							}
+							#pragma endregion
+							break;
+						case 'i':
+							#pragma region IfNDef
+							if (src.match_adv(L"ifndef"))
+							{
+								EatLineSpace(src, 0, 0);
+								if (!BufferIdentifier(src, emit)) throw Exception(EResult::InvalidPreprocessorDirective, src.Loc(), "An identifier was expected");
+								if (Macros->Find(Hash(src.pop_str()))) { m_if_stack.push(false); SkipPreprocessorBlock(loc_beg); }
+								else { m_if_stack.push(true); EatLine(src, 0, 1); }
+								is_output = false;
+								break;
+							}
+							#pragma endregion
+							#pragma region IfDef
+							if (src.match_adv(L"ifdef"))
+							{
+								EatLineSpace(src, 0, 0);
+								if (!BufferIdentifier(src, emit)) throw Exception(EResult::InvalidPreprocessorDirective, src.Loc(), "An identifier was expected");
+								if (Macros->Find(Hash(src.pop_str()))) { m_if_stack.push(true); EatLine(src, 0, 1); }
+								else { m_if_stack.push(false); SkipPreprocessorBlock(loc_beg); }
+								is_output = false;
+								break;
+							}
+							#pragma endregion
+							#pragma region If
+							if (src.match_adv(L"if"))
+							{
+								EatLineSpace(src, 0, 0);
+								if (PPDefined()) { m_if_stack.push(true);  EatLine(src, 0, 1); }
+								else { m_if_stack.push(false); SkipPreprocessorBlock(loc_beg); }
+								is_output = false;
+								break;
+							}
+							#pragma endregion
+							#pragma region Include Path
+							if (src.match_adv(L"include_path"))
+							{
+								EatLineSpace(src, 1, 0);
+								if (*src != L'<' && *src != L'\"')
+									throw Exception(EResult::InvalidInclude, src.Loc(), "expected a string following #include_path");
 
-							// Unknown pp command
+								// Buffer up the include path
+								auto end = *src == L'<' ? L'>' : L'\"';
+								BufferLiteral(src, emit, end);
+								if (src[emit] == end) ++emit; else throw Exception(EResult::InvalidInclude, src.Loc(), "include path string incomplete");
+
+								// Add the path to the include paths
+								auto path = src.str(1, emit - 2); src.pop();
+								Includes->AddSearchPath(path);
+
+								// Eat the rest of the line
+								EatLine(src, 0, 1);
+								is_output = false;
+								break;
+							}
+							#pragma endregion
+							#pragma region Include
+							if (src.match_adv(L"include"))
+							{
+								EatLineSpace(src, 1, 0);
+								loc_beg = src.Loc();
+
+								if (*src != L'<' && *src != L'\"')
+									throw Exception(EResult::InvalidInclude, loc_beg, "expected a string following #include");
+
+								// Buffer up the include filepath
+								auto end = *src == L'<' ? L'>' : L'\"';
+								BufferLiteral(src, emit, end);
+								if (src[emit] == end) ++emit; else throw Exception(EResult::InvalidInclude, loc_beg, "include string incomplete");
+
+								// Open the include
+								auto path = src.str(1, emit - 2); src.pop();
+								auto flags = end == L'\"' ? IIncludeHandler::EFlags::IncludeLocalDir : IIncludeHandler::EFlags::None;
+								auto inc = Includes->Open(path, flags, src.Loc());
+								if (inc)
+									Push(inc.release(), true);
+
+								is_output = false;
+								break;
+							}
+							#pragma endregion
+							break;
+						case 'l':
+							#pragma region Lit
+							if (src.match_adv(L"lit"))
+							{
+								// Do not include the single whitespace or blank line that follows #lit
+								EatLineSpace(src, 0, 0);
+								if (pr::str::IsNewLine(*src)) ++src;
+
+								// Buffer a literal section up to (but not including) the #end
+								if (!BufferTo(src, emit, L"#end", false))
+									throw Exception(EResult::UnmatchedPreprocessorDirective, loc_beg, "Literal section '#lit' does not have a closing '#end' marker");
+
+								is_output = false;
+								break;
+							}
+							#pragma endregion
+							#pragma region Line
+							if (src.match_adv(L"line"))
+							{
+								EatLine(src, 0, 1);
+								is_output = false;
+								break;
+							}
+							#pragma endregion
+							break;
+						case 'p':
+							#pragma region Pragma
+							if (src.match_adv(L"pragma"))
+							{
+								EatLine(src, 0, 1);
+								is_output = false;
+								break;
+							}
+							#pragma endregion
+							break;
+						case 'u':
+							#pragma region Undef
+							if (src.match_adv(L"undef"))
+							{
+								EatLineSpace(src, 0, 0);
+
+								// Read the macro tag
+								auto tag = Macro::ReadTag(src, src.Loc());
+								Macros->Remove(Hash(tag));
+
+								EatLine(src, 0, 1);
+								is_output = false;
+								break;
+							}
+							#pragma endregion
+							break;
+						case 'w':
+							#pragma region Warning
+							if (src.match_adv(L"warning"))
+							{
+								EatLine(src, 0, 1);
+								is_output = false;
+								break;
+							}
+							#pragma endregion
+							break;
+						}
+
+						// Unknown pp command
+						if (is_output)
+						{
 							auto msg = pr::Fmt(L"Unknown preprocessor command '%s'\n%s", src.str().c_str(), src.Loc().ToString().c_str());
 							throw Exception(EResult::UnknownPreprocessorCommand, Loc(), pr::Narrow(msg));
 						}
-						#pragma endregion
-					default:
-						#pragma region Expand Macros
-						// Look for possible macro identifiers in the source (not within expanded macros)
-						if (src.Type() != ESrcType::Macro && pr::str::IsIdentifier(*src, true))
+
+						break;
+					}
+					#pragma endregion
+				default:
+					#pragma region Expand Macros
+					// Look for possible macro identifiers in the source (not within expanded macros)
+					if (src.Type() != ESrcType::Macro && pr::str::IsIdentifier(*src, true))
+					{
+						assert(emit == 0);
+
+						// Buffer the identifier
+						BufferIdentifier(src, emit);
+
+						// See if the identifier matches any macro definitions
+						auto macro = Macros->Find(Hash(src.str()));
+						if (macro)
 						{
-							assert(emit == 0);
+							// This is a macro, so remove the macro identifier from the buffer
+							src.pop();
 
-							// Buffer the identifier
-							BufferIdentifier(src, emit);
-
-							// See if the identifier matches any macro definitions
-							auto macro = Macros->Find(Hash(src.str()));
-							if (macro)
+							// If the macro requires parameters see if we can read them from the source
+							Macro::Params params;
+							if (macro->ReadParams<false>(src, params, src.Loc()))
 							{
-								// This is a macro, so remove the macro identifier from the buffer
-								src.pop();
+								// Create a buffered string source for the expanded macro
+								// and get the macro to generate it's expanded version.
+								string exp;
+								macro->Expand(exp, params);
+								RecursiveExpandMacros(exp, Macro::Ancestor(macro, nullptr), src.Loc());
 
-								// If the macro requires parameters see if we can read them from the source
-								Macro::Params params;
-								if (macro->ReadParams<false>(src, params, src.Loc()))
-								{
-									// Create a buffered string source for the expanded macro
-									// and get the macro to generate it's expanded version.
-									string exp;
-									macro->Expand(exp, params);
-									RecursiveExpandMacros(exp, Macro::Ancestor(macro, nullptr), src.Loc());
-
-									// Push the expanded macro as a source
-									auto macro_src = std::make_unique<Buffer<>>(ESrcType::Macro, std::begin(exp), std::end(exp));
-									Push(macro_src.get(), true);
-									macro_src.release();
-								}
+								// Push the expanded macro as a source
+								auto macro_src = std::make_unique<Buffer<>>(ESrcType::Macro, std::begin(exp), std::end(exp));
+								Push(macro_src.get(), true);
+								macro_src.release();
+								is_output = false;
 							}
 						}
-						break;
-						#pragma endregion
 					}
-
-					// If we get here, then 'src[0]' is a valid output character
 					break;
+					#pragma endregion
 				}
+
+				// 'is_output' is true if '*src' is a character that should be returned from the pre-processor stream.
+				return is_output;
 			}
 
 			// Recursively expand the expression in 'exp' with macro substitutions

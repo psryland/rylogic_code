@@ -19,8 +19,9 @@ extern "C"
 	#include "lua/src/lualib.h"
 	#include "lua/src/lauxlib.h"
 }
-#include <varargs.h>
 #include <string>
+#include <algorithm>
+#include <varargs.h>
 #include "pr/common/assert.h"
 #include "pr/common/fmt.h"
 #include "pr/str/string_util.h"
@@ -551,29 +552,45 @@ namespace pr
 		
 			// Create the lua state
 			Lua()
-			:m_state(luaL_newstate())
-			,m_owned(true)
+				:m_state(luaL_newstate())
+				,m_owned(true)
 			{
 				Setup();
 				SetOutputFuncs(ConsolePrint, ConsolePrint, LuaDumpStack, LuaDumpTable);
 			}
-	
-			// Attach to a lua state
-			Lua(lua_State* lua_state)
-			:m_state(lua_state)
-			,m_owned(false)
+			explicit Lua(lua_State* lua_state)
+				:m_state(lua_state)
+				,m_owned(false)
 			{
+				// Attach to a lua state
 				Setup();
 			}
-	
-			// Destroy the lua state
+			Lua(Lua&& rhs)
+				:m_state()
+				,m_owned()
+			{
+				*this = std::move(rhs);
+			}
+			Lua(Lua const&) = delete;
 			~Lua()
 			{
 				if (m_owned && m_state)
 					lua_close(m_state);
 			}
-	
-			// Allow this object to be used inplace of lua_State*'s
+
+			// Move assignment
+			Lua& operator = (Lua&& rhs)
+			{
+				if (this != &rhs)
+				{
+					std::swap(m_state, rhs.m_state);
+					std::swap(m_owned, rhs.m_owned);
+				}
+				return *this;
+			}
+			Lua& operator = (Lua const&) = delete;
+
+			// Allow this object to be used in-place of lua_State*'s
 			operator lua_State* ()
 			{
 				return m_state;
@@ -591,8 +608,7 @@ namespace pr
 				PR_EXPAND(PR_DBG_LUA, dbg_lua() = m_state);
 			}
 	
-			// Set some default mapping functions. By default assume this is a console app
-			// '0' means don't change
+			// Set some default mapping functions. By default assume this is a console app. '0' means don't change.
 			void SetOutputFuncs(MappingFunction print_cb, MappingFunction luamsg_cb, MappingFunction dumpstack_cb, MappingFunction dumptable_cb)
 			{
 				if (luamsg_cb)    lua_atpanic (m_state, luamsg_cb);
@@ -603,19 +619,45 @@ namespace pr
 			}
 		};
 
-		inline int  LuaMessage(Lua& lua)                                                            { return LuaMessage(lua.m_state); }
-		inline int  LuaPrint(Lua& lua)                                                              { return LuaPrint(lua.m_state); }
-		inline std::string DumpStack(Lua& lua)                                                      { return DumpStack(lua.m_state); }
-		inline std::string DumpTable(Lua& lua, int table_index)                                     { return DumpTable(lua.m_state, table_index); }
-		inline void AddUserPointer(Lua& lua, char const* name, void* user)                          { return AddUserPointer(lua.m_state, name, user); }
-		template <typename T> T* GetUserPointer(Lua& lua, char const* name)                         { return GetUserPointer<T>(lua.m_state, name); }
-		inline bool DoString(Lua& lua, char const* string)                                          { return DoString(lua.m_state, string); }
-		inline bool DoFile(Lua& lua, char const* filename)                                          { return DoFile(lua.m_state, filename); }
-		inline void Register(Lua& lua, char const* function_name, MappingFunction mapping_function) { return Register(lua.m_state, function_name, mapping_function); }
-		inline bool Call(Lua& lua, char const* function, char const* signiture, ... )               { va_list arg_list; va_start(arg_list, signiture); bool result = Call(lua.m_state, function, signiture, arg_list, true); va_end(arg_list); return result; }
-		inline bool CallQ(Lua& lua, char const* function, char const* signiture, ... )              { va_list arg_list; va_start(arg_list, signiture); bool result = Call(lua.m_state, function, signiture, arg_list, false); va_end(arg_list); return result; }
-		inline int  TracebackCallStack(Lua& lua)                                                    { return TracebackCallStack(lua.m_state); }
-		inline EResult::Type StepConsole(Lua& lua, std::string const& input, std::string& err_msg)  { return StepConsole(lua.m_state, input, err_msg); }
+		inline int  LuaMessage(Lua& lua) {
+			return LuaMessage(lua.m_state);
+		}
+		inline int  LuaPrint(Lua& lua) {
+			return LuaPrint(lua.m_state);
+		}
+		inline std::string DumpStack(Lua& lua) {
+			return DumpStack(lua.m_state);
+		}
+		inline std::string DumpTable(Lua& lua, int table_index) {
+			return DumpTable(lua.m_state, table_index);
+		}
+		inline void AddUserPointer(Lua& lua, char const* name, void* user) {
+			return AddUserPointer(lua.m_state, name, user);
+		}
+		template <typename T> T* GetUserPointer(Lua& lua, char const* name) {
+			return GetUserPointer<T>(lua.m_state, name);
+		}
+		inline bool DoString(Lua& lua, char const* string) {
+			return DoString(lua.m_state, string);
+		}
+		inline bool DoFile(Lua& lua, char const* filename) {
+			return DoFile(lua.m_state, filename);
+		}
+		inline void Register(Lua& lua, char const* function_name, MappingFunction mapping_function) {
+			return Register(lua.m_state, function_name, mapping_function);
+		}
+		inline bool Call(Lua& lua, char const* function, char const* signiture, ...) {
+			va_list arg_list; va_start(arg_list, signiture); bool result = Call(lua.m_state, function, signiture, arg_list, true); va_end(arg_list); return result;
+		}
+		inline bool CallQ(Lua& lua, char const* function, char const* signiture, ...) {
+			va_list arg_list; va_start(arg_list, signiture); bool result = Call(lua.m_state, function, signiture, arg_list, false); va_end(arg_list); return result;
+		}
+		inline int  TracebackCallStack(Lua& lua) {
+			return TracebackCallStack(lua.m_state);
+		}
+		inline EResult::Type StepConsole(Lua& lua, std::string const& input, std::string& err_msg) {
+			return StepConsole(lua.m_state, input, err_msg);
+		}
 	}
 }
 	

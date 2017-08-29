@@ -14,7 +14,7 @@ namespace pr
 {
 	namespace script
 	{
-		// Interface to a stream of wchar_t's, essentially a pointer-like interface
+		// Interface to a stream of 'wchar_t's, essentially a pointer-like interface
 		struct Src
 		{
 		protected:
@@ -192,30 +192,30 @@ namespace pr
 			// It uses 'std::string' internally. Instead, treat the file as a binary stream and convert
 			// characters as needed.
 
-			mutable std::ifstream  m_file;    // The file stream source
-			pr::vector<char, 1024> m_buf;     // A local buffer of file data
 			char const*            m_ptr;     // The current position in 'm_buf'
 			char const*            m_end;     // The end position of valid data in 'm_buf'
+			mutable std::ifstream  m_file;    // The file stream source
+			pr::vector<char, 1024> m_buf;     // A local buffer of file data
 			EEncoding              m_enc;     // The detected file encoding
 			mutable wchar_t        m_ch;      // Cached converted char
 			mutable int            m_ch_len;  // The number of bytes used to get 'm_ch'
 
 			FileSrc()
 				:Src(ESrcType::File, Location())
-				,m_file()
-				,m_buf()
 				,m_ptr()
 				,m_end()
+				,m_file()
+				,m_buf()
 				,m_enc()
 				,m_ch()
 				,m_ch_len(-1)
 			{}
 			explicit FileSrc(string const& filepath, std::streamsize ofs = 0, EEncoding enc = EEncoding::auto_detect, Location* loc = nullptr)
 				:Src(ESrcType::File, loc ? *loc : Location(filepath, ofs))
-				,m_file()
-				,m_buf()
 				,m_ptr()
 				,m_end()
+				,m_file()
+				,m_buf()
 				,m_enc()
 				,m_ch()
 				,m_ch_len(-1)

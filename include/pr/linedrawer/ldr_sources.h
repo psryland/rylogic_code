@@ -396,11 +396,12 @@ namespace pr
 					if (id != pr::GuidZero)
 						return;
 
-					// On failure, mark the file as changed again
-					m_rdr->RunOnMainThread([=]
-					{
-						m_watcher.MarkAsChanged(root_file.m_filepath.c_str());
-					});
+					// Don't do this, because it leaves LDraw in an infinite loop trying to load a broken file
+					//// On failure, mark the file as changed again.
+					//m_rdr->RunOnMainThread([=]
+					//{
+					//	m_watcher.MarkAsChanged(root_file.m_filepath.c_str());
+					//});
 				}).detach();
 			}
 
@@ -469,11 +470,11 @@ namespace pr
 				}
 				catch (pr::script::Exception const& ex)
 				{
-					errors = ErrorEventArgs(pr::FmtS(L"Script error found while parsing source file '%s'.\r\n%S", file.m_filepath.c_str(), ex.what()));
+					errors = ErrorEventArgs(pr::Fmt(L"Script error found while parsing source file '%s'.\r\n", file.m_filepath.c_str()) + Widen(ex.what()));
 				}
 				catch (std::exception const& ex)
 				{
-					errors = ErrorEventArgs(pr::FmtS(L"Error found while parsing source file '%s'.\r\n%S", file.m_filepath.c_str(), ex.what()));
+					errors = ErrorEventArgs(pr::Fmt(L"Error found while parsing source file '%s'.\r\n", file.m_filepath.c_str()) + Widen(ex.what()));
 				}
 				#pragma endregion
 
@@ -647,7 +648,7 @@ struct LuaSource :pr::script::IEmbeddedCode
 		//m_lua.DoFile(filepath);
 	}
 
-	bool Execute(pr::script::string const& lang, pr::script::string const& code, pr::script::Location const& loc, pr::script::string& result) override
+	bool Execute(pr::script::string const& lang, pr::script::string const& code, pr::script::string& result) override
 	{
 		// We only handle lua code
 		if (!pr::str::Equal(lang, "lua"))
@@ -659,7 +660,7 @@ struct LuaSource :pr::script::IEmbeddedCode
 		// Convert the lua code to a compiled chunk
 		pr::string<> error_msg;
 		if (pr::lua::PushLuaChunk<pr::string<>>(m_lua, pr::Narrow(code), error_msg) != pr::lua::EResult::Success)
-			throw pr::script::Exception(pr::script::EResult::EmbeddedCodeSyntaxError, loc, error_msg.c_str());
+			throw std::exception(error_msg.c_str());
 
 		// Execute the chunk
 		if (!pr::lua::CallLuaChunk(m_lua, 0, false))

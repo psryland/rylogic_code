@@ -135,8 +135,7 @@ namespace pr
 			x(SyntaxError                     ,)\
 			x(ExpressionSyntaxError           ,)\
 			x(EmbeddedCodeNotSupported        ,)\
-			x(EmbeddedCodeSyntaxError         ,)\
-			x(EmbeddedCodeExecutionFailed     ,)\
+			x(EmbeddedCodeError               ,)\
 			x(TokenNotFound                   ,)\
 			x(UnknownKeyword                  ,)\
 			x(UnknownToken                    ,)\

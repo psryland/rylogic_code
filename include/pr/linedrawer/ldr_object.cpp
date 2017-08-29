@@ -4164,6 +4164,23 @@ LR"(// A mesh of lines, faces, or tetrahedra.
 	#embedded(lua) return make_boxes() #end
 }
 
+// Embedded C# code can be used also when used via View3D
+// Use 'CSharpImpl' for support code, 'CSharp' for code to execute.
+#embedded(CSharpImpl)
+	Random m_rng = new Random();
+	m4x4 O2W
+	{
+		get { return m4x4.Random4x4(v4.Origin, 2.0f, m_rng); }
+	}
+#end
+
+*Group csharp_spheres
+{
+	#embedded(CSharp)
+	Out.AppendLine(Ldr.Box("CS_Box", 0xFFFF0080, 0.4f, O2W));
+	#end
+}
+
 )"
 LR"(// ************************************************************************************
 // Ldr script syntax and features:

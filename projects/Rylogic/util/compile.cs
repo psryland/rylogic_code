@@ -69,7 +69,13 @@ namespace pr.util
 			if (Results.Errors.Count != 0)
 				throw new CompileException(Results.Errors);
 
-			Instance = Results.CompiledAssembly.CreateInstance(inst_name);
+			if (inst_name.HasValue())
+			{
+				if (!Results.CompiledAssembly.ExportedTypes.Any(x => x.FullName == inst_name))
+					throw new Exception($"Runtime assembly does not export a type called ${inst_name}");
+
+				Instance = Results.CompiledAssembly.CreateInstance(inst_name);
+			}
 		}
 
 		/// <summary>The main instance</summary>
@@ -81,11 +87,13 @@ namespace pr.util
 		/// <summary>Execute a method on 'Instance'</summary>
 		public TResult Invoke<TResult>(string function, params object[] args)
 		{
+			if (Instance == null) throw new Exception($"Invoke requires an instance");
 			var mi = m_mi_cache.Get(function, k => Instance.GetType().GetMethod(k));
 			return (TResult)mi.Invoke(Instance, args);
 		}
 		public void Invoke(string function, params object[] args)
 		{
+			if (Instance == null) throw new Exception($"Invoke requires an instance");
 			var mi = m_mi_cache.Get(function, k => Instance.GetType().GetMethod(k));
 			mi.Invoke(Instance, args);
 		}

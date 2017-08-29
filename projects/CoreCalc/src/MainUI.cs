@@ -50,20 +50,6 @@ namespace CoreCalc
 				pr.util.Util.WaitForDebugger();
 				#endif
 
-				// Load dlls
-				try { View3d.LoadDll(); }
-				catch (DllNotFoundException ex)
-				{
-					if (Util.IsInDesignMode) return;
-					MessageBox.Show(ex.Message);
-				}
-				try { Sci.LoadDll(); }
-				catch (DllNotFoundException ex)
-				{
-					if (Util.IsInDesignMode) return;
-					MessageBox.Show(ex.Message);
-				}
-
 				Application.Run(new MainUI());
 
 				// To catch any Disposes in the 'GC Finializer' thread
@@ -94,6 +80,20 @@ namespace CoreCalc
 		}
 		public MainUI()
 		{
+			// Load dlls
+			try { View3d.LoadDll(); }
+			catch (DllNotFoundException ex)
+			{
+				if (this.IsInDesignMode()) return;
+				MessageBox.Show(ex.Message);
+			}
+			try { Sci.LoadDll(); }
+			catch (DllNotFoundException ex)
+			{
+				if (this.IsInDesignMode()) return;
+				MessageBox.Show(ex.Message);
+			}
+
 			InitializeComponent();
 			Model = new Model(this);
 

@@ -14,6 +14,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
+using pr.common;
 using pr.container;
 using pr.extn;
 using pr.util;
@@ -124,6 +125,11 @@ namespace pr.gui
 			}
 			base.OnCurrentCellChanged(e);
 		}
+		public void InvalidateNode(int node_index, bool recursive)
+		{
+			if (node_index.Within(0, Nodes.Count))
+				Nodes[node_index].Invalidate(recursive);
+		}
 
 		/// <summary>If items do not implement 'ITreeItem', use this function to wrap the contained objects</summary>
 		public Func<object, ITreeItem> DataBinder
@@ -159,20 +165,54 @@ namespace pr.gui
 
 				// Use virtual mode so that cell values can be provided by overridden methods
 				base.VirtualMode = m_data_source != null;
+				Nodes.Count = m_data_source != null ? m_data_source.Count : 0;
 			}
 		}
 		internal IBindingList m_data_source;
 		private void HandleDataSourceChanged(object sender, ListChangedEventArgs e)
 		{
-			// Nodes do not contain the data source items, so all
-			// we need is the same number, the order doesn't matter.
+			// When the data source changes we need to update the top level nodes.
 			using (this.SuspendLayout(false))
 			{
-				RowCount = m_data_source.Count;
+				switch (e.ListChangedType)
+				{
+				case ListChangedType.Reset:
+					{
+						Nodes.Count = m_data_source.Count;
+						break;
+					}
+				case ListChangedType.ItemAdded:
+					{
+						Nodes.Insert(e.NewIndex, new TreeGridNode(this));
+						break;
+					}
+				case ListChangedType.ItemDeleted:
+					{
+						Nodes.RemoveAt(e.NewIndex);
+						break;
+					}
+				case ListChangedType.ItemMoved:
+					{
+						var node = Nodes[e.OldIndex];
+						Nodes.RemoveAt(e.OldIndex);
+						Nodes.Insert(e.NewIndex + (e.OldIndex < e.NewIndex ? 1 : 0), node);
+						break;
+					}
+				}
 
 				// Invalidate affected rows
-				if (e.NewIndex.Within(0, RowCount)) InvalidateRow(Nodes[e.NewIndex].RowIndex);
-				if (e.OldIndex.Within(0, RowCount)) InvalidateRow(Nodes[e.OldIndex].RowIndex);
+				if (e.NewIndex.Within(0, Nodes.Count))
+				{
+					var range = Nodes[e.NewIndex].RowIndexRange;
+					foreach (var r in range)
+						InvalidateRow((int)r);
+				}
+				if (e.OldIndex != e.NewIndex && e.OldIndex.Within(0, Nodes.Count))
+				{
+					var range = Nodes[e.OldIndex].RowIndexRange;
+					foreach (var r in range)
+						InvalidateRow((int)r);
+				}
 			}
 		}
 
@@ -188,25 +228,26 @@ namespace pr.gui
 		/// <summary>Get/Set the number of top level nodes in the grid </summary>
 		public int NodeCount
 		{
-			get { return RowCount; }
+			get { return Nodes.Count; }
 			set
 			{
 				// Don't let clients set the row count when data binding is in use
 				if (DataSource != null)
 					throw new Exception("Do not set the node count when data binding is used");
 
-				if (value == RowCount) return;
-				RowCount = value;
+				if (value == NodeCount) return;
+				Nodes.Count = value;
 			}
 		}
-		private new int RowCount // hide the row count property
+
+		/// <summary>Get the number of rows in the grid</summary>
+		public new int RowCount
 		{
-			get { return Nodes.Count; }
-			set
+			get { return base.RowCount; }
+			private set
 			{
-				// Nodes do not contain the data source items, so all
-				// when need is the same number, the order doesn't matter.
-				Nodes.Resize(value);
+				// The number of rows in the grid should only be changed by the setter on 'GridTreeNode.Parent'
+				throw new Exception("Do not set RowCount explicitly. RowCount is determined from the NodeCount and the expanded nodes");
 			}
 		}
 
@@ -314,7 +355,7 @@ namespace pr.gui
 
 			// If data binding is used, remove the child nodes of 'node'
 			if (DataSource != null)
-				node.Nodes.Resize(0);
+				node.Nodes.Count = 0;
 		}
 
 		/// <summary>Prepare the grid for a node expansion</summary>
@@ -331,7 +372,7 @@ namespace pr.gui
 			{
 				var tree_item = node.DataBoundTreeItem;
 				if (tree_item != null)
-					node.Nodes.Resize(tree_item.ChildCount);
+					node.Nodes.Count = tree_item.ChildCount;
 			}
 
 			return true;
@@ -559,6 +600,18 @@ namespace pr.gui
 			ImageIndex = -1;
 			VirtualNodes  = false;
 		}
+		public void Invalidate(bool recursive)
+		{
+			if (!IsInGrid)
+				return;
+
+			Grid.InvalidateRow(RowIndex);
+			if (recursive && IsExpanded)
+			{
+				foreach (var child in Nodes)
+					child.Invalidate(recursive);
+			}
+		}
 
 		/// <summary>A clone method must be provided for types derived from DataGridViewRow</summary>
 		public override object Clone()
@@ -604,7 +657,7 @@ namespace pr.gui
 					throw new Exception($"{nameof(TreeGridView)} data source items do not implement {nameof(ITreeItem)}. Child tree nodes cannot access their DataBoundItem");
 				}
 
-				// Otherwise return 'm_item' assuming this node was explicitly bound (using the Bind() method).
+				// Otherwise return 'm_item', assuming this node was explicitly bound (using the Bind() method).
 				return m_item;
 			}
 			internal set { m_item = value; }
@@ -669,8 +722,8 @@ namespace pr.gui
 
 		/// <summary>
 		/// Get/Set the parent node for this node.
-		/// Note: The tree grid contains an internal root node. Root level tree items will
-		/// return this internal node.
+		/// Note: The tree grid contains an internal root node.
+		/// Root level tree items will return this internal node.
 		/// You can use node.Parent.IsRoot or node.Level == 0 to find root level tree items</summary>
 		public TreeGridNode Parent
 		{
@@ -678,11 +731,13 @@ namespace pr.gui
 			set
 			{
 				if (m_impl_parent == value) return;
+
+				// Check parented to the correct grid
 				if (value != null && Grid != value.Grid)
 					throw new InvalidOperationException("Assigned parent must be within the same grid");
 
 				// Check for circular connections
-				for (TreeGridNode p = value; p != null; p = p.Parent)
+				for (var p = value; p != null; p = p.Parent)
 					if (p == this) throw new InvalidOperationException("Assigned parent is a child of this node");
 
 				// Remove the rows of this node from the grid
@@ -699,7 +754,7 @@ namespace pr.gui
 				}
 
 				// Assign the new parent
-				SetParentCore(value);
+				m_impl_parent = value;
 
 				if (m_impl_parent != null)
 				{
@@ -709,7 +764,7 @@ namespace pr.gui
 					m_impl_parent.Nodes.AddInternal(this);
 
 					// Refresh the glyph next to the parent node
-					if (m_impl_parent.IsInGrid && m_impl_parent.Nodes.Count == 1 && !m_impl_parent.IsRoot)
+					if (!m_impl_parent.IsRoot && m_impl_parent.IsInGrid && m_impl_parent.GlyphVisible)
 						Grid.InvalidateRow(m_impl_parent.RowIndex);
 
 					// If this node should be visible in the grid then display it
@@ -717,10 +772,6 @@ namespace pr.gui
 						DisplayRowsInGrid(ref row_index);
 				}
 			}
-		}
-		internal void SetParentCore(TreeGridNode parent)
-		{
-			m_impl_parent = parent;
 		}
 		private TreeGridNode m_impl_parent;
 		
@@ -893,8 +944,7 @@ namespace pr.gui
 			get { return IsInGrid ? base.Index : -1; }
 		}
 
-		/// <summary>Gets the index of the row after this node and its children (if visible in the grid).
-		/// The number of rows used by this node is NextRowIndex - RowIndex</summary>
+		/// <summary>Gets the index of the row after this node and its children (if visible in the grid). The number of rows used by this node is NextRowIndex - RowIndex</summary>
 		private int NextRowIndex
 		{
 			get
@@ -907,6 +957,12 @@ namespace pr.gui
 				}
 				return RowIndex + 1;
 			}
+		}
+
+		/// <summary>The range of row indices required by this node</summary>
+		public Range RowIndexRange
+		{
+			get { return new Range(RowIndex, NextRowIndex); }
 		}
 
 		/// <summary>Return the tree cell in this row</summary>
@@ -1029,7 +1085,7 @@ namespace pr.gui
 
 			// If this node is expanded add all of it's children
 			if (IsExpanded)
-				foreach (TreeGridNode child in Nodes)
+				foreach (var child in Nodes)
 					child.DisplayRowsInGrid(ref row_index);
 		}
 
@@ -1043,8 +1099,16 @@ namespace pr.gui
 		}
 
 		/// <summary>Debugging helper for visualising the node tree</summary>
-		public void DumpTreeC() { Console.Write(DumpTree()); }
-		public string DumpTree() { var sb = new StringBuilder(); DumpTree(this, sb); return sb.ToString(); }
+		public void DumpTreeC()
+		{
+			Console.Write(DumpTree());
+		}
+		public string DumpTree()
+		{
+			var sb = new StringBuilder();
+			DumpTree(this, sb);
+			return sb.ToString();
+		}
 		private static void DumpTree(TreeGridNode node, StringBuilder sb)
 		{
 			for (int i = node.Level; i-- != 0;) sb.Append(' ');
@@ -1080,16 +1144,23 @@ namespace pr.gui
 		public int Count
 		{
 			get{ return List.Count; }
+			set
+			{
+				if (Count == value) return;
+				using (Grid.SuspendLayout(true))
+				{
+					for (int i = Count; i > value; --i)
+						List[i-1].Parent = null;
+					for (int i = Count; i < value; ++i)
+						((TreeGridNode)Grid.RowTemplate.Clone()).Parent = Owner;
+				}
+			}
 		}
 
 		/// <summary>Remove all nodes from the collection</summary>
 		public void Clear()
 		{
-			using (Grid.SuspendLayout(true))
-			{
-				for (int i = List.Count; i-- != 0;)
-					List[i].Parent = null;
-			}
+			Count = 0;
 		}
 
 		/// <summary>Add a node to this collection causing it to be parented to the node that owns this collection</summary>
@@ -1165,26 +1236,6 @@ namespace pr.gui
 		{
 			Debug.Assert(node.Parent == Owner);
 			List.Remove(node);
-		}
-
-		/// <summary>Resize the collection</summary>
-		internal void Resize(int new_count)
-		{
-			using (Grid.SuspendLayout(true))
-			{
-				if (new_count == 0) Clear();
-				for (int i = Count; i > new_count; --i)
-				{
-					RemoveAt(i-1);
-				}
-				for (int i = Count; i < new_count; ++i)
-				{
-					var node = (TreeGridNode)Grid.RowTemplate.Clone();
-					node.SetParentCore(Owner);
-					AddInternal(node);
-				}
-				Grid.InvalidateRow(Owner.RowIndex);
-			}
 		}
 
 		/// <summary>Return the index of a node in the collection</summary>

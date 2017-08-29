@@ -136,9 +136,12 @@ namespace pr
 		#pragma endregion
 
 	private:
-		typedef typename std::aligned_storage<sizeof(Type), std::alignment_of<Type>::value>::type TLocalStore;
-		TLocalStore m_local[LocalLength]; // Local cache for small arrays
+
+		// Use aligned storage so that we don't construct 'Type's in the local array.
+		using TLocalStore = typename std::aligned_storage<sizeof(Type), std::alignment_of<Type>::value>::type;
+
 		Type*       m_ptr;                // Pointer to the array of data
+		TLocalStore m_local[LocalLength]; // Local cache for small arrays
 		size_type   m_capacity;           // The reserved space for elements. m_capacity * sizeof(Type) = size in bytes pointed to by m_ptr.
 		size_type   m_count;              // The number of used elements in the array + 1 for the null term
 		Allocator   m_allocator;          // The memory allocator

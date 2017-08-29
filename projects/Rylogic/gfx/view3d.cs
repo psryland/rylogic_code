@@ -6,7 +6,9 @@ using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Windows.Forms;
+using System.Windows.Threading;
 using System.Xml.Linq;
 using pr.common;
 using pr.extn;
@@ -15,13 +17,11 @@ using pr.util;
 using pr.win32;
 using HContext = System.IntPtr;
 using HGizmo = System.IntPtr;
+using HMODULE = System.IntPtr;
 using HObject = System.IntPtr;
 using HTexture = System.IntPtr;
 using HWindow = System.IntPtr;
 using HWND = System.IntPtr;
-using HMODULE = System.IntPtr;
-using System.Windows.Threading;
-using System.Threading;
 
 namespace pr.gfx
 {
@@ -620,34 +620,6 @@ namespace pr.gfx
 			public Exception(string message, EResult code) :base(message) { m_code = code; }
 		}
 
-		/// <summary>Report errors callback</summary>
-		public delegate void ReportErrorCB(IntPtr ctx, [MarshalAs(UnmanagedType.LPWStr)] string msg);
-
-		/// <summary>Report settings changed callback</summary>
-		public delegate void SettingsChangedCB(IntPtr ctx, HWindow wnd);
-
-		/// <summary>Enumerate objects callback</summary>
-		public delegate bool EnumObjectsCB(IntPtr ctx, HObject obj);
-
-		/// <summary>Callback for progress updates during AddFile / Reload</summary>
-		public delegate bool AddFileProgressCB(IntPtr ctx, Guid context_id, [MarshalAs(UnmanagedType.LPWStr)] string filepath, long file_offset, bool complete);
-
-		/// <summary>Callback when the sources are reloaded</summary>
-		public delegate void SourcesChangedCB(IntPtr ctx, ESourcesChangedReason reason, bool before);
-
-		/// <summary>Called just prior to rendering</summary>
-		public delegate void RenderCB(IntPtr ctx, HWindow wnd);
-
-		/// <summary>Callback for when the collection of objects associated with a window changes</summary>
-		public delegate void SceneChangedCB(IntPtr ctx, HWindow wnd);
-
-		/// <summary>Edit object callback</summary>
-		public delegate void EditObjectCB(int vcount, int icount, int ncount,
-			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=0)][Out] Vertex[] verts,
-			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=1)][Out] ushort[] indices,
-			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=2)][Out] Nugget[] nuggets,
-			out int new_vcount, out int new_icount, out int new_ncount, IntPtr ctx);
-
 		private readonly List<Window> m_windows;              // Groups of objects to render
 		private readonly HContext     m_context;              // Unique id per Initialise call
 		private readonly Dispatcher   m_dispatcher;           // Thread marshaller
@@ -655,6 +627,7 @@ namespace pr.gfx
 		private ReportErrorCB         m_error_cb;             // Reference to callback
 		private AddFileProgressCB     m_add_file_progress_cb; // Reference to callback
 		private SourcesChangedCB      m_sources_changed_cb;   // Reference to callback
+		private EmbeddedCSHandler     m_embedded_cs_handler;  // Handler object for embedded C# code
 
 		public View3d(bool gdi_compatibility)
 		{
@@ -667,7 +640,7 @@ namespace pr.gfx
 
 			// Initialise view3d
 			string init_error = null;
-			ReportErrorCB error_cb = (ctx,msg) => init_error = msg;
+			ReportErrorCB error_cb = (ctx, msg) => init_error = msg;
 			m_context = View3D_Initialise(error_cb, IntPtr.Zero, gdi_compatibility);
 			if (m_context == HContext.Zero)
 				throw new Exception(init_error ?? "Failed to initialised View3d");
@@ -690,9 +663,9 @@ namespace pr.gfx
 				return args.Cancel;
 			};
 			View3D_AddFileProgressCBSet(m_add_file_progress_cb, IntPtr.Zero, true);
-			
+
 			// Sign up for notification of the sources changing
-			m_sources_changed_cb = (ctx,reason,before) =>
+			m_sources_changed_cb = (ctx, reason, before) =>
 			{
 				if (m_thread_id != Thread.CurrentThread.ManagedThreadId)
 					m_dispatcher.BeginInvoke(m_sources_changed_cb, ctx, reason, before);
@@ -700,15 +673,19 @@ namespace pr.gfx
 					OnSourcesChanged.Raise(this, new SourcesChangedEventArgs(reason, before));
 			};
 			View3D_SourcesChangedCBSet(m_sources_changed_cb, IntPtr.Zero, true);
+
+			// Install a C# embedded code handler
+			m_embedded_cs_handler = new EmbeddedCSHandler(this);
 		}
 		public void Dispose()
 		{
 			Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
 
 			// Unsubscribe
-			View3D_GlobalErrorCBSet(m_error_cb, IntPtr.Zero, false);
-			View3D_AddFileProgressCBSet(m_add_file_progress_cb, IntPtr.Zero, false);
+			Util.Dispose(ref m_embedded_cs_handler);
 			View3D_SourcesChangedCBSet(m_sources_changed_cb, IntPtr.Zero, false);
+			View3D_AddFileProgressCBSet(m_add_file_progress_cb, IntPtr.Zero, false);
+			View3D_GlobalErrorCBSet(m_error_cb, IntPtr.Zero, false);
 
 			while (m_windows.Count != 0)
 				m_windows[0].Dispose();
@@ -718,58 +695,12 @@ namespace pr.gfx
 
 		/// <summary>Event call on errors. Note: can be called in a background thread context</summary>
 		public event EventHandler<ErrorEventArgs> Error;
-		public class ErrorEventArgs :EventArgs
-		{
-			public ErrorEventArgs(string msg)
-			{
-				Message = msg;
-			}
-
-			/// <summary>The error message</summary>
-			public string Message { get; private set; }
-		}
 
 		/// <summary>Progress update when a file is being parsed</summary>
 		public event EventHandler<AddFileProgressEventArgs> AddFileProgress;
-		public class AddFileProgressEventArgs :CancelEventArgs
-		{
-			public AddFileProgressEventArgs(Guid context_id, string filepath, long file_offset, bool complete)
-			{
-				ContextId  = context_id;
-				Filepath   = filepath;
-				FileOffset = file_offset;
-				Complete   = complete;
-			}
-
-			/// <summary>An anonymous pointer unique to each 'AddFile' call</summary>
-			public Guid ContextId { get; private set; }
-
-			/// <summary>The file currently being parsed</summary>
-			public string Filepath { get; private set; }
-
-			/// <summary>How far through the current file parsing is up to</summary>
-			public long FileOffset { get; private set; }
-
-			/// <summary>Last progress update notification</summary>
-			public bool Complete { get; private set; }
-		}
 
 		/// <summary>Event notifying whenever sources are loaded/reloaded</summary>
 		public event EventHandler<SourcesChangedEventArgs> OnSourcesChanged;
-		public class SourcesChangedEventArgs :EventArgs
-		{
-			public SourcesChangedEventArgs(ESourcesChangedReason reason, bool before)
-			{
-				Reason = reason;
-				Before = before;
-			}
-
-			/// <summary>The cause of the source changes</summary>
-			public ESourcesChangedReason Reason { get; private set; }
-
-			/// <summary>True if files are about to change</summary>
-			public bool Before { get; private set; }
-		}
 
 		/// <summary>
 		/// Create multiple objects from a source script file and store the script file in the collection of sources.
@@ -842,6 +773,7 @@ namespace pr.gfx
 		public class Window :IDisposable
 		{
 			private readonly View3d m_view;
+			private readonly WindowOptions m_opts;              // The options used to create the window (contains references to the user provided error cb)
 			private readonly ReportErrorCB m_error_cb;          // A reference to prevent the GC from getting it
 			private readonly SettingsChangedCB m_settings_cb;   // A local reference to prevent the callback being garbage collected
 			private readonly RenderCB m_render_cb;              // A local reference to prevent the callback being garbage collected
@@ -851,11 +783,7 @@ namespace pr.gfx
 			public Window(View3d view, HWND hwnd, WindowOptions opts)
 			{
 				m_view = view;
-
-				// Create a default error callback
-				if (opts.ErrorCB == null)
-					opts.ErrorCB = (c,m) => { throw new Exception(m); };
-				m_error_cb = opts.ErrorCB;
+				m_opts = opts;
 
 				// Create the window
 				m_wnd = View3D_WindowCreate(hwnd, ref opts);
@@ -2388,18 +2316,159 @@ namespace pr.gfx
 			public static implicit operator LightInfo(Light light) { return light.m_info; }
 		}
 
+		/// <summary>A wrapper class for handling embedded C# in ldr script</summary>
+		private class EmbeddedCSHandler :IDisposable
+		{
+			private StringBuilder m_support;
+			private EmbeddedCodeHandlerCB m_cb;  // Callback reference
+
+			public EmbeddedCSHandler(View3d view3d)
+			{
+				m_support = new StringBuilder();
+				View3D_EmbeddedCodeCBSet(m_cb = Handler, IntPtr.Zero, true);
+			}
+			public void Dispose()
+			{
+				View3D_EmbeddedCodeCBSet(m_cb, IntPtr.Zero, false);
+			}
+
+			/// <summary>Ldr script embedded C# code handler</summary>
+			private bool Handler(IntPtr ctx, bool reset, string lang, string code, out string result, out string errors)
+			{
+				result = null;
+				errors = null;
+
+				// If reset is requested, reset
+				if (reset)
+				{
+					m_support.Clear();
+					return true;
+				}
+
+				// Check we handle this language
+				lang = lang.ToLowerInvariant();
+				if (!lang.StartsWith("csharp"))
+					return false;
+
+				// IF the embedded code is support code, there is nothing to execute
+				if (lang == "csharpimpl")
+				{
+					m_support.Append(code);
+					return true;
+				}
+
+				try
+				{
+					var src =
+						#region Embedded C# Source
+$@"//
+//Assembly: System.dll
+//Assembly: System.Drawing.dll
+//Assembly: System.IO.dll
+//Assembly: System.Linq.dll
+//Assembly: System.Windows.Forms.dll
+//Assembly: System.Xml.dll
+//Assembly: System.Xml.Linq.dll
+//Assembly: Rylogic.dll
+using System;
+using System.Drawing;
+using System.IO;
+using System.Text;
+using System.Text.RegularExpressions;
+using pr.common;
+using pr.container;
+using pr.extn;
+using pr.ldr;
+using pr.maths;
+using pr.util;
+
+namespace ldr
+{{
+	public class EmbeddedScriptGen
+	{{
+		private StringBuilder Out = new StringBuilder();
+		{m_support.ToString()}
+		public string Execute()
+		{{
+			{code}
+			return Out.ToString();
+		}}
+	}}
+}}
+";
+					#endregion
+
+					// Create a runtime assembly from the embedded code
+					var ass = RuntimeAssembly.FromString("ldr.EmbeddedScriptGen", src);
+					result = ass.Invoke<string>("Execute");
+				}
+				catch (CompileException ex)
+				{
+					errors = ex.ErrorReport();
+				}
+				catch (System.Exception ex)
+				{
+					errors = ex.Message;
+				}
+				return true;
+			}
+		}
+
+		#region Event Args
+		public class ErrorEventArgs :EventArgs
+		{
+			public ErrorEventArgs(string msg)
+			{
+				Message = msg;
+			}
+
+			/// <summary>The error message</summary>
+			public string Message { get; private set; }
+		}
+
+		public class AddFileProgressEventArgs :CancelEventArgs
+		{
+			public AddFileProgressEventArgs(Guid context_id, string filepath, long file_offset, bool complete)
+			{
+				ContextId  = context_id;
+				Filepath   = filepath;
+				FileOffset = file_offset;
+				Complete   = complete;
+			}
+
+			/// <summary>An anonymous pointer unique to each 'AddFile' call</summary>
+			public Guid ContextId { get; private set; }
+
+			/// <summary>The file currently being parsed</summary>
+			public string Filepath { get; private set; }
+
+			/// <summary>How far through the current file parsing is up to</summary>
+			public long FileOffset { get; private set; }
+
+			/// <summary>Last progress update notification</summary>
+			public bool Complete { get; private set; }
+		}
+
+		public class SourcesChangedEventArgs :EventArgs
+		{
+			public SourcesChangedEventArgs(ESourcesChangedReason reason, bool before)
+			{
+				Reason = reason;
+				Before = before;
+			}
+
+			/// <summary>The cause of the source changes</summary>
+			public ESourcesChangedReason Reason { get; private set; }
+
+			/// <summary>True if files are about to change</summary>
+			public bool Before { get; private set; }
+		}
+		#endregion
+
 		#region DLL extern functions
 
-		// A good idea is to add a static method in the class that is using this class
-		// e.g.
-		//  static MyThing()
-		//  {
-		//      View3d.LoadDll(@".\libs\$(platform)");
-		//  }
-
-		private const string Dll = "view3d";
-
 		/// <summary>True if the view3d dll has been loaded</summary>
+		private const string Dll = "view3d";
 		public static bool ModuleLoaded { get { return m_module != IntPtr.Zero; } }
 		private static IntPtr m_module = IntPtr.Zero;
 
@@ -2409,6 +2478,42 @@ namespace pr.gfx
 			if (ModuleLoaded) return;
 			m_module = Win32.LoadDll(Dll+".dll", dir);
 		}
+
+		/// <summary>Report errors callback</summary>
+		public delegate void ReportErrorCB(IntPtr ctx, [MarshalAs(UnmanagedType.LPWStr)] string msg);
+
+		/// <summary>Report settings changed callback</summary>
+		public delegate void SettingsChangedCB(IntPtr ctx, HWindow wnd);
+
+		/// <summary>Enumerate objects callback</summary>
+		public delegate bool EnumObjectsCB(IntPtr ctx, HObject obj);
+
+		/// <summary>Callback for progress updates during AddFile / Reload</summary>
+		public delegate bool AddFileProgressCB(IntPtr ctx, Guid context_id, [MarshalAs(UnmanagedType.LPWStr)] string filepath, long file_offset, bool complete);
+
+		/// <summary>Callback when the sources are reloaded</summary>
+		public delegate void SourcesChangedCB(IntPtr ctx, ESourcesChangedReason reason, bool before);
+
+		/// <summary>Called just prior to rendering</summary>
+		public delegate void RenderCB(IntPtr ctx, HWindow wnd);
+
+		/// <summary>Callback for when the collection of objects associated with a window changes</summary>
+		public delegate void SceneChangedCB(IntPtr ctx, HWindow wnd);
+
+		/// <summary>Edit object callback</summary>
+		public delegate void EditObjectCB(IntPtr ctx, int vcount, int icount, int ncount,
+			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=0)][Out] Vertex[] verts,
+			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=1)][Out] ushort[] indices,
+			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=2)][Out] Nugget[] nuggets,
+			out int new_vcount, out int new_icount, out int new_ncount);
+
+		/// <summary>Embedded code handler callback</summary>
+		public delegate bool EmbeddedCodeHandlerCB(IntPtr ctx,
+			bool reset,
+			[MarshalAs(UnmanagedType.LPWStr)] string lang,
+			[MarshalAs(UnmanagedType.LPWStr)] string code,
+			[MarshalAs(UnmanagedType.BStr)] out string result,
+			[MarshalAs(UnmanagedType.BStr)] out string errors);
 
 		// Initialise / shutdown the dll
 		[DllImport(Dll)] private static extern HContext        View3D_Initialise             (ReportErrorCB initialise_error_cb, IntPtr ctx, bool gdi_compatibility);
@@ -2491,6 +2596,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_CheckForChangedSources   ();
 		[DllImport(Dll)] private static extern void              View3D_AddFileProgressCBSet     (AddFileProgressCB progress_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern void              View3D_SourcesChangedCBSet      (SourcesChangedCB sources_changed_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)] private static extern void              View3D_EmbeddedCodeCBSet        (EmbeddedCodeHandlerCB embedded_code_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern bool              View3D_ContextIdFromFilepath    ([MarshalAs(UnmanagedType.LPWStr)] string filepath, out Guid id);
 		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteAll         ();
 		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteById        (ref Guid context_id);

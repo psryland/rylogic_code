@@ -204,8 +204,11 @@ namespace pr
 		typedef typename pr::impl::vector::aligned_storage<TypeSizeInBytes, TypeAlignment>::type TLocalStore;
 		static_assert((std::alignment_of<TLocalStore>::value % TypeAlignment) == 0, "Local storage doesn't have the correct alignment");
 
-		TLocalStore m_local[LocalLength]; // Local cache for small arrays
+		union {
+		Type      (*m_data)[LocalLength]; // Debugging helper for viewing the data as an array
 		Type*       m_ptr;                // Pointer to the array of data
+		};
+		TLocalStore m_local[LocalLength]; // Local cache for small arrays
 		size_type   m_capacity;           // The reserved space for elements. m_capacity * sizeof(Type) = size in bytes pointed to by m_ptr.
 		size_type   m_count;              // The number of used elements in the array
 		Allocator   m_allocator;          // The memory allocator

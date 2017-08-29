@@ -1219,6 +1219,34 @@ VIEW3D_API void __stdcall View3D_SourcesChangedCBSet(View3D_SourcesChangedCB sou
 	CatchAndReport(View3D_SourcesChangedCBSet,,);
 }
 
+// Add/Remove a callback for handling embedded code within scripts
+VIEW3D_API void __stdcall View3D_EmbeddedCodeCBSet(View3D_EmbeddedCodeHandlerCB embedded_code_cb, void* ctx, BOOL add)
+{
+	try
+	{
+		DllLockGuard;
+		auto& handlers = Dll().EmbeddedCodeHandlers;
+		
+		auto cb = pr::StaticCallBack(embedded_code_cb, ctx);
+		if (add)
+		{
+			handlers.push_back(std::make_unique<EmbeddedCodeHandler>(cb));
+		}
+		else
+		{
+			// 'handlers' is a collection of pointers to IEmbeddedCode interfaces
+			// Need to dynamic cast to find EmbeddedCodeHandler instances.
+			pr::erase_first(handlers, [=](auto& x)
+			{
+				auto ech = dynamic_cast<EmbeddedCodeHandler*>(x.get());
+				if (ech == nullptr) return false;
+				return ech->m_handler == cb;
+			});
+		}
+	}
+	CatchAndReport(View3D_EmbeddedCodeCBSet, , );
+}
+
 // Return the context id for objects created from 'filepath' (if filepath is an existing source)
 VIEW3D_API BOOL __stdcall View3D_ContextIdFromFilepath(wchar_t const* filepath, GUID& id)
 {
@@ -2606,7 +2634,7 @@ VIEW3D_API GUID __stdcall View3D_CreateDemoScene(View3DWindow window)
 		// Get the string of all LDR objects
 		auto scene = CreateDemoScene();
 		PtrW src(scene.c_str());
-		Reader reader(src, false, nullptr, nullptr, &Dll().m_lua);
+		Reader reader(src, false, nullptr, nullptr, &Dll());
 
 		// Parse the string, and add all objects to the window
 		ParseResult out;

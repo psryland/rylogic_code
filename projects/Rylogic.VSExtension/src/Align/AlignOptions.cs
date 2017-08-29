@@ -81,6 +81,9 @@ namespace Rylogic.VSExtension
 
 			Groups.Add(new AlignGroup("Comma delimiter", 1,
 				new AlignPattern(EPattern.Substring, @",")));
+
+			Groups.Add(new AlignGroup("Members", 0,
+				new AlignPattern(EPattern.RegularExpression, @"(?<![~^])(?<=\s)m_[0-9a-zA-Z]*", 0, 1, "Matches class members that being with 'm_'")));
 		}
 
 		/// <summary>Save the patterns to the registry</summary>

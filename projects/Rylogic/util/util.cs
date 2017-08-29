@@ -1226,6 +1226,12 @@ namespace pr.util
 			return 0;
 		}
 		public const int MouseButtonCount = 6;
+
+		/// <summary>Test for design mode. Note: Prefer the Control extension method over this. This is just for non-Control classes</summary>
+		public static bool InDesignMode
+		{
+			get { return LicenseManager.UsageMode == LicenseUsageMode.Designtime; }
+		}
 	}
 
 	/// <summary>Type specific utility methods</summary>

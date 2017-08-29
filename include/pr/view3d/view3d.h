@@ -313,24 +313,31 @@ extern "C"
 		// (ToDo) A string lookup table
 	};
 
-	using View3D_SettingsChangedCB = void (__stdcall *)(void* ctx, View3DWindow window);
-	using View3D_EnumObjectsCB     = bool (__stdcall *)(void* ctx, View3DObject object);
-	using View3D_AddFileProgressCB = bool (__stdcall *)(void* ctx, GUID const& context_id, wchar_t const* filepath, long long file_offset, BOOL complete);
-	using View3D_SourcesChangedCB  = void (__stdcall *)(void* ctx, ESourcesChangedReason reason, BOOL before);
-	using View3D_RenderCB          = void (__stdcall *)(void* ctx, View3DWindow window);
-	using View3D_SceneChangedCB    = void (__stdcall *)(void* ctx, View3DWindow window);
-	using View3D_GizmoMovedCB      = void (__stdcall *)(void* ctx, View3DGizmoEvent const& args);
-	using View3D_EditObjectCB = void (__stdcall *)(
-		UINT32 vcount,           // The maximum size of 'verts'
-		UINT32 icount,           // The maximum size of 'indices'
-		UINT32 ncount,           // The maximum size of 'nuggets'
-		View3DVertex* verts,     // The vert buffer to be filled
-		UINT16* indices,         // The index buffer to be filled
-		View3DNugget* nuggets,   // The nugget buffer to be filled
-		UINT32& new_vcount,      // The number of verts in the updated model
-		UINT32& new_icount,      // The number indices in the updated model
-		UINT32& new_ncount,      // The number nuggets in the updated model
-		void* ctx);              // User context data
+	using View3D_SettingsChangedCB     = void (__stdcall *)(void* ctx, View3DWindow window);
+	using View3D_EnumObjectsCB         = BOOL (__stdcall *)(void* ctx, View3DObject object);
+	using View3D_AddFileProgressCB     = BOOL (__stdcall *)(void* ctx, GUID const& context_id, wchar_t const* filepath, long long file_offset, BOOL complete);
+	using View3D_SourcesChangedCB      = void (__stdcall *)(void* ctx, ESourcesChangedReason reason, BOOL before);
+	using View3D_RenderCB              = void (__stdcall *)(void* ctx, View3DWindow window);
+	using View3D_SceneChangedCB        = void (__stdcall *)(void* ctx, View3DWindow window);
+	using View3D_GizmoMovedCB          = void (__stdcall *)(void* ctx, View3DGizmoEvent const& args);
+	using View3D_EditObjectCB          = void (__stdcall *)(
+		void* ctx,             // User callback context pointer
+		UINT32 vcount,         // The maximum size of 'verts'
+		UINT32 icount,         // The maximum size of 'indices'
+		UINT32 ncount,         // The maximum size of 'nuggets'
+		View3DVertex* verts,   // The vert buffer to be filled
+		UINT16* indices,       // The index buffer to be filled
+		View3DNugget* nuggets, // The nugget buffer to be filled
+		UINT32& new_vcount,    // The number of verts in the updated model
+		UINT32& new_icount,    // The number indices in the updated model
+		UINT32& new_ncount);  // The number nuggets in the updated model
+	using View3D_EmbeddedCodeHandlerCB = BOOL (__stdcall *)(
+		void* ctx,           // User callback context pointer
+		BOOL reset,          // If true, reset the embedded code handler state.
+		wchar_t const* lang, // The language of the embedded code.
+		wchar_t const* code, // The source code from the embedded code block.
+		BSTR& result,        // The string result of running the source code (execution code blocks only)
+		BSTR& errors);       // Any errors in the compilation of the code
 
 	// Initialise/shutdown the dll
 	VIEW3D_API View3DContext __stdcall View3D_Initialise       (View3D_ReportErrorCB initialise_error_cb, void* ctx, BOOL gdi_compatibility);
@@ -413,6 +420,7 @@ extern "C"
 	VIEW3D_API void         __stdcall View3D_CheckForChangedSources   ();
 	VIEW3D_API void         __stdcall View3D_AddFileProgressCBSet     (View3D_AddFileProgressCB progress_cb, void* ctx, BOOL add);
 	VIEW3D_API void         __stdcall View3D_SourcesChangedCBSet      (View3D_SourcesChangedCB sources_changed_cb, void* ctx, BOOL add);
+	VIEW3D_API void         __stdcall View3D_EmbeddedCodeCBSet        (View3D_EmbeddedCodeHandlerCB embedded_code_cb, void* ctx, BOOL add);
 	VIEW3D_API BOOL         __stdcall View3D_ContextIdFromFilepath    (wchar_t const* filepath, GUID& id);
 	VIEW3D_API void         __stdcall View3D_ObjectsDeleteAll         ();
 	VIEW3D_API void         __stdcall View3D_ObjectsDeleteById        (GUID const& context_id);

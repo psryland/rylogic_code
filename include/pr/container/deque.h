@@ -94,7 +94,7 @@ namespace pr
 				// Note: assumes that m_ptr[m_first][0] == element index zero, remember to add 'm_first'
 				difference_type block_index(difference_type element_index) const
 				{
-					return element_index >= 0 ? element_index / CountPerBlock : -element_index / CountPerBlock - 1;
+					return element_index >= 0 ? (element_index / CountPerBlock) : (-element_index / CountPerBlock - 1);
 				}
 
 				// Return the block for the given element index. Automatically grows the map.
@@ -367,14 +367,13 @@ namespace pr
 		typedef typename BlockPtrMap::const_reference const_reference;
 		typedef typename BlockPtrMap::reference reference;
 
-		enum
-		{
-			TypeSizeInBytes  = sizeof(Type),
-			TypeIsPod        = std::is_pod<Type>::value,
-			TypeAlignment    = std::alignment_of<Type>::value,
-			CountPerBlock    = BlockSize,
-			BlockSizeInBytes = BlockSize * TypeSizeInBytes,
-		};
+		static_assert(((BlockSize - 1) & BlockSize) == 0, "BlockSize must be a power of two");
+		static bool const TypeIsPod               = std::is_pod<Type>::value;
+		static std::size_t const TypeSizeInBytes  = sizeof(Type);
+		static std::size_t const TypeAlignment    = std::alignment_of<Type>::value;
+		static std::size_t const CountPerBlock    = BlockSize;
+		static std::size_t const BlockSizeInBytes = BlockSize * TypeSizeInBytes;
+		static std::size_t const BlockIndexMask   = BlockSize - 1U;
 
 	private:
 
@@ -394,8 +393,8 @@ namespace pr
 		};
 		template <> struct base_traits<true>
 		{
-			static void destruct     (Allocator&, Type*, size_type)                              {}
-			static void construct    (Allocator&, Type*, size_type)                              {}
+			static void destruct     (Allocator&, Type* first, size_type count)                  { assert((::memset(first, 0xdd, sizeof(Type) * count), true)); (void)first,count; }
+			static void construct    (Allocator&, Type* first, size_type count)                  { assert((::memset(first, 0xcd, sizeof(Type) * count), true)); (void)first,count; }
 			static void copy_constr  (Allocator&, Type* first, Type const* src, size_type count) { ::memcpy(first, src, sizeof(Type) * count); }
 			static void move_constr  (Allocator&, Type* first, Type* src, size_type count)       { ::memcpy(first, src, sizeof(Type) * count); }
 			static void copy_assign  (Type* first, Type const* src, size_type count)             { ::memcpy(first, src, sizeof(Type) * count); }
@@ -425,11 +424,26 @@ namespace pr
 			}
 		};
 
+		// Debugging view
+		#ifndef NDEBUG
+		template <typename T> struct DbgPtr { using type = T const (*)[CountPerBlock]; };
+		template <> struct DbgPtr<char>     { using type = char const *; };
+		template <> struct DbgPtr<wchar_t>  { using type = wchar_t const *; };
+		typename DbgPtr<Type>::type m_data;
+		bool set_dbg_ptr()
+		{
+			auto ptr = &m_map[m_first][m_first & BlockIndexMask];
+			m_data = reinterpret_cast<DbgPtr<Type>::type>(ptr);
+			return true;
+		}
+		#endif
+
 		BlockPtrMap m_map; // The array of block pointers
 		size_type m_first; // Element index of the first element == The offset from 'm_map.m_ptr' to the first element
 		size_type m_last;  // Element index of the last+1 element == The offset from 'm_map.m_ptr' to one passed the last element
 
 	public:
+
 		// The memory allocator
 		Allocator const& allocator() const { return m_map.m_alloc_type; }
 		Allocator&       allocator()       { return m_map.m_alloc_type; }
@@ -439,7 +453,9 @@ namespace pr
 			:m_map(allocator_type())
 			,m_first()
 			,m_last()
-		{}
+		{
+			assert(set_dbg_ptr());
+		}
 		~deque()
 		{
 			clear();
@@ -450,7 +466,9 @@ namespace pr
 			:m_map(allocator)
 			,m_first()
 			,m_last()
-		{}
+		{
+			assert(set_dbg_ptr());
+		}
 
 		// construct from count * Type()
 		explicit deque(size_type count)
@@ -459,6 +477,7 @@ namespace pr
 			,m_last()
 		{
 			resize(count);
+			assert(set_dbg_ptr());
 		}
 
 		// construct from count * val
@@ -469,6 +488,7 @@ namespace pr
 		{
 			for (; count-- != 0;)
 				push_back(val);
+			assert(set_dbg_ptr());
 		}
 
 		// copy construct (explicit copy constructor needed to prevent auto generated one even tho there's a template one that would work)
@@ -479,6 +499,7 @@ namespace pr
 		{
 			for (auto& r : right)
 				push_back(r);
+			assert(set_dbg_ptr()); 
 		}
 
 		// copy construct from any pr::deque type
@@ -489,6 +510,7 @@ namespace pr
 		{
 			for (auto& r : right)
 				push_back(r);
+			assert(set_dbg_ptr()); 
 		}
 
 		// construct from [first, last), with optional allocator
@@ -499,6 +521,7 @@ namespace pr
 		{
 			for (;!(first == last); ++first)
 				push_back(*first);
+			assert(set_dbg_ptr()); 
 		}
 
 		// construct from initialiser list
@@ -508,6 +531,7 @@ namespace pr
 			,m_last()
 		{
 			insert(begin(), list.begin(), list.end());
+			assert(set_dbg_ptr()); 
 		}
 
 		// construct from another container-like object
@@ -519,6 +543,7 @@ namespace pr
 		{
 			for (auto& elem : rhs)
 				emplace_back(elem);
+			assert(set_dbg_ptr()); 
 		}
 
 		// construct by moving right
@@ -528,6 +553,7 @@ namespace pr
 			,m_last()
 		{
 			*this = std::move(rhs);
+			assert(set_dbg_ptr()); 
 		}
 
 		// construct by moving right with allocator
@@ -537,6 +563,7 @@ namespace pr
 			,m_last()
 		{
 			*this = std::move(rhs);
+			assert(set_dbg_ptr()); 
 		}
 
 		// assign by moving rhs
@@ -544,6 +571,7 @@ namespace pr
 		{
 			if (this != &rhs)
 				impl_assign(std::move(rhs));
+			assert(set_dbg_ptr()); 
 			return *this;
 		}
 
@@ -551,6 +579,7 @@ namespace pr
 		template <size_type B> deque& operator = (deque<Type,B,Allocator>&& rhs)
 		{
 			impl_assign(std::move(rhs));
+			assert(set_dbg_ptr());
 			return *this;
 		}
 
@@ -559,6 +588,7 @@ namespace pr
 		{
 			if (this != &rhs)
 				impl_assign(rhs);
+			assert(set_dbg_ptr()); 
 			return *this;
 		}
 
@@ -566,12 +596,14 @@ namespace pr
 		template <size_type B> deque& operator = (deque<Type,B,Allocator> const& rhs)
 		{
 			impl_assign(rhs);
+			assert(set_dbg_ptr());
 			return *this;
 		}
 
 		// assign initializer_list
 		deque& operator = (std::initializer_list<value_type> list)
 		{
+			assert(set_dbg_ptr());
 			assign(list.begin(), list.end());
 			return *this;
 		}
@@ -593,13 +625,13 @@ namespace pr
 		{
 			assert(idx < size() && "out of range");
 			idx += m_first;
-			return m_map[idx][idx % CountPerBlock];
+			return m_map[idx][idx & BlockIndexMask];
 		}
 		reference at(size_type idx)
 		{
 			assert(idx < size() && "out of range");
 			idx += m_first;
-			return m_map[idx][idx % CountPerBlock];
+			return m_map[idx][idx & BlockIndexMask];
 		}
 
 		// index operator
@@ -703,7 +735,7 @@ namespace pr
 		void push_back(value_type const& val)
 		{
 			auto block = m_map[m_last];
-			auto idx = m_last % CountPerBlock;
+			auto idx = m_last & BlockIndexMask;
 			traits::copy_constr(allocator(), block + idx, &val, 1);
 			++m_last;
 		}
@@ -712,7 +744,7 @@ namespace pr
 		template<class... Args> void emplace_back(Args&&... args)
 		{
 			auto block = m_map[m_last];
-			auto idx = m_last % CountPerBlock;
+			auto idx = m_last & BlockIndexMask;
 			traits::constr(allocator(), block + idx, std::forward<Args>(args)...);
 			++m_last;
 		}
@@ -721,7 +753,7 @@ namespace pr
 		void push_front(value_type const& val)
 		{
 			auto block = m_map[m_first - 1];
-			auto idx = (m_first - 1 + CountPerBlock) % CountPerBlock;
+			auto idx = (m_first - 1 + CountPerBlock) & BlockIndexMask;
 			traits::copy_constr(allocator(), block + idx, &val, 1);
 			if (m_first == 0) { m_first += CountPerBlock; m_last += CountPerBlock; }
 			--m_first;
@@ -731,7 +763,7 @@ namespace pr
 		template<class... Args> void emplace_front(Args&&... args)
 		{
 			auto block = m_map[m_first - 1];
-			auto idx = (m_first - 1 + CountPerBlock) % CountPerBlock;
+			auto idx = (m_first - 1 + CountPerBlock) & BlockIndexMask;
 			traits::constr(allocator(), block + idx, std::forward<Args>(args)...);
 			if (m_first == 0) { m_first += CountPerBlock; m_last += CountPerBlock; }
 			--m_first;
@@ -742,7 +774,7 @@ namespace pr
 		{
 			assert(!empty() && "pop_back() on empty deque");
 			auto block = m_map[m_last - 1];
-			auto idx = (m_last - 1 + CountPerBlock) % CountPerBlock;
+			auto idx = (m_last - 1 + CountPerBlock) & BlockIndexMask;
 			traits::destruct(allocator(), block + idx, 1);
 			--m_last; // last can't be 0 unless m_first > m_last
 			if (m_first == m_last) m_first = m_last = 0;
@@ -753,7 +785,7 @@ namespace pr
 		{	
 			assert(!empty() && "pop_front() on empty deque");
 			auto block = m_map[m_first];
-			auto idx = m_first % CountPerBlock;
+			auto idx = m_first & BlockIndexMask;
 			traits::destruct(allocator(), block + idx, 1);
 			++m_first;
 			if (m_first == m_last) m_first = m_last = 0;

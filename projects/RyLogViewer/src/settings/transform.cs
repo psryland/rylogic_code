@@ -100,7 +100,7 @@ namespace RyLogViewer
 					{ var s = new SubCodeLookup(); m_substitutors.Add(s); }
 
 					// Loads dlls from the plugins directory looking for transform substitutions
-					if (!Util.IsInDesignMode)
+					if (!Util.InDesignMode)
 					{
 						var plugins = PluginLoader<ITransformSubstitution>.LoadWithUI(null, Util.ResolveAppPath("plugins"), null, true);
 						foreach (var sub in plugins.Plugins)

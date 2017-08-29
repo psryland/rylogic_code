@@ -141,7 +141,7 @@ namespace pr
 	}
 
 	// Returns true if 'n' is a exact power of two
-	template <typename T> inline bool IsPowerOfTwo(T n)
+	template <typename T> constexpr inline bool IsPowerOfTwo(T n)
 	{
 		return ((n - 1) & n) == 0;
 	}

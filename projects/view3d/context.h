@@ -9,25 +9,23 @@
 namespace view3d
 {
 	// Global data for this dll
-	struct Context :pr::AlignTo<16>
+	struct Context :pr::AlignTo<16> , pr::script::IEmbeddedCode
 	{
 		using InitSet = std::set<View3DContext>;
 
-		InitSet                 m_inits;      // A unique id assigned to each Initialise call
-		bool                    m_compatible; // True if the renderer will work on this system
-		pr::Renderer            m_rdr;        // The renderer
-		WindowCont              m_wnd_cont;   // The created windows
-		pr::ldr::ScriptSources  m_sources;    // A container of Ldr objects and a file watcher
-		pr::script::EmbeddedLua m_lua;
-		std::recursive_mutex    m_mutex;
+		InitSet                  m_inits;         // A unique id assigned to each Initialise call
+		bool                     m_compatible;    // True if the renderer will work on this system
+		pr::Renderer             m_rdr;           // The renderer
+		WindowCont               m_wnd_cont;      // The created windows
+		pr::ldr::ScriptSources   m_sources;       // A container of Ldr objects and a file watcher
+		std::recursive_mutex     m_mutex;
 
 		explicit Context(HINSTANCE instance, BOOL gdi_compatible)
 			:m_inits()
 			,m_compatible(pr::rdr::TestSystemCompatibility())
 			,m_rdr(pr::rdr::RdrSettings(instance, gdi_compatible))
 			,m_wnd_cont()
-			,m_sources(m_rdr, &m_lua)
-			,m_lua()
+			,m_sources(m_rdr, This())
 			,m_mutex()
 		{
 			PR_ASSERT(PR_DBG, pr::meta::is_aligned_to<16>(this), "dll data not aligned");
@@ -53,6 +51,9 @@ namespace view3d
 			{
 				ReportError(args.m_msg.c_str());
 			};
+
+			// Create code handlers
+			EmbeddedCodeHandlers.push_back(std::make_unique<pr::script::EmbeddedLua>());
 		}
 		~Context()
 		{
@@ -61,6 +62,7 @@ namespace view3d
 		}
 		Context(Context const&) = delete;
 		Context& operator=(Context const&) = delete;
+		Context* This() { return this; }
 
 		// Error event. Can be called in a worker thread context
 		pr::MultiCast<ReportErrorCB> OnError;
@@ -70,6 +72,9 @@ namespace view3d
 
 		// Event raised when the script sources are updated
 		pr::MultiCast<SourcesChangedCB> OnSourcesChanged;
+
+		// Embedded code handler objects
+		std::vector<CodeHandlerPtr> EmbeddedCodeHandlers;
 
 		// Report an error to the global error handler
 		void ReportError(wchar_t const* msg)
@@ -241,7 +246,7 @@ namespace view3d
 
 			// Get the user to generate/update the model
 			UINT32 new_vcount, new_icount, new_ncount;
-			cbdata.edit_cb(UINT32(vrange.size()), UINT32(irange.size()), UINT32(nuggets.size()), &verts[0], &indices[0], &nuggets[0], new_vcount, new_icount, new_ncount, cbdata.ctx);
+			cbdata.edit_cb(cbdata.ctx, UINT32(vrange.size()), UINT32(irange.size()), UINT32(nuggets.size()), &verts[0], &indices[0], &nuggets[0], new_vcount, new_icount, new_ncount);
 			PR_ASSERT(PR_DBG, new_vcount <= vrange.size(), "");
 			PR_ASSERT(PR_DBG, new_icount <= irange.size(), "");
 			PR_ASSERT(PR_DBG, new_ncount <= nuggets.size(), "");
@@ -281,6 +286,23 @@ namespace view3d
 					model->CreateNugget(mat);
 				}
 			}
+		}
+
+		// Reset the embedded code handlers
+		void pr::script::IEmbeddedCode::Reset()
+		{
+			for (auto& handler : EmbeddedCodeHandlers)
+				handler->Reset();
+		}
+
+		// Handle embedded code within ldr script
+		bool pr::script::IEmbeddedCode::Execute(pr::script::string const& lang, pr::script::string const& code, pr::script::string& result)
+		{
+			for (auto& handler : EmbeddedCodeHandlers)
+				if (handler->Execute(lang, code, result))
+					return true;
+
+			return false;
 		}
 	};
 }

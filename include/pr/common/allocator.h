@@ -9,7 +9,7 @@
 #include <type_traits>
 #include <cassert>
 
-#define PR_DBG_MEMORY_ALLOC 0
+//#define PR_DBG_MEMORY_ALLOC 0
 #ifndef PR_DBG_MEMORY_ALLOC
 #ifdef NDEBUG
 #define PR_DBG_MEMORY_ALLOC 0 

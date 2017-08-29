@@ -54,19 +54,21 @@
 
 namespace view3d
 {
-	using EditorPtr         = std::unique_ptr<pr::ldr::ScriptEditorUI>;
-	using ObjectSet         = std::set<View3DObject>;
-	using GizmoSet          = std::set<View3DGizmo>;
-	using WindowCont        = std::set<View3DWindow>;
-	using EditorCont        = std::set<EditorPtr>;
-	using LockGuard         = std::lock_guard<std::recursive_mutex>;
-	using ReportErrorCB     = pr::StaticCB<void, wchar_t const*>;
-	using SettingsChangedCB = pr::StaticCB<void, Window*>;
-	using AddFileProgressCB = pr::StaticCB<bool, pr::Guid const&, wchar_t const*, long long, BOOL>;
-	using SourcesChangedCB  = pr::StaticCB<void, ESourcesChangedReason, BOOL>;
-	using RenderingCB       = pr::StaticCB<void, Window*>;
-	using SceneChangedCB    = pr::StaticCB<void, Window*>;
-	using ReportErrorCB     = pr::StaticCB<void, wchar_t const*>;
+	using EditorPtr             = std::unique_ptr<pr::ldr::ScriptEditorUI>;
+	using CodeHandlerPtr        = std::unique_ptr<pr::script::IEmbeddedCode>;
+	using ObjectSet             = std::set<View3DObject>;
+	using GizmoSet              = std::set<View3DGizmo>;
+	using WindowCont            = std::set<View3DWindow>;
+	using EditorCont            = std::set<EditorPtr>;
+	using LockGuard             = std::lock_guard<std::recursive_mutex>;
+	using ReportErrorCB         = pr::StaticCB<void, wchar_t const*>;
+	using SettingsChangedCB     = pr::StaticCB<void, Window*>;
+	using AddFileProgressCB     = pr::StaticCB<BOOL, pr::Guid const&, wchar_t const*, long long, BOOL>;
+	using SourcesChangedCB      = pr::StaticCB<void, ESourcesChangedReason, BOOL>;
+	using EmbeddedCodeHandlerCB = pr::StaticCB<BOOL, BOOL, wchar_t const*, wchar_t const*, BSTR&, BSTR&>;
+	using RenderingCB           = pr::StaticCB<void, Window*>;
+	using SceneChangedCB        = pr::StaticCB<void, Window*>;
+	using ReportErrorCB         = pr::StaticCB<void, wchar_t const*>;
 
 	// An instance type for other models used in LDraw
 	#define PR_RDR_INST(x)\
@@ -82,5 +84,61 @@ namespace view3d
 		x(pr::rdr::ModelPtr ,m_model ,pr::rdr::EInstComp::ModelPtr)
 	PR_RDR_DEFINE_INSTANCE(PointInstance, PR_RDR_INST)
 	#undef PR_RDR_INST
-	
+
+	// Helper for cleaning up BStr
+	struct BStr
+	{
+		BSTR m_str;
+
+		BStr()
+			:m_str()
+		{}
+		BStr(wchar_t const* str, int len)
+			:m_str(::SysAllocStringLen(str, UINT(len)))
+		{}
+		~BStr()
+		{
+			if (m_str == nullptr) return;
+			::SysFreeString(m_str);
+		}
+		operator BSTR&()
+		{
+			return m_str;
+		}
+	};
+
+	// Embedded code handler
+	struct EmbeddedCodeHandler :pr::script::IEmbeddedCode
+	{
+		EmbeddedCodeHandlerCB m_handler;
+		EmbeddedCodeHandler(EmbeddedCodeHandlerCB handler)
+			:m_handler(handler)
+		{}
+
+		// Reset the state of the code handler
+		void Reset() override
+		{
+			BStr res, err;
+			m_handler(TRUE, nullptr, nullptr, res, err);
+		}
+
+		// Execute the code handler
+		bool Execute(pr::script::string const& lang, pr::script::string const& code, pr::script::string& result) override
+		{
+			// Return false if 'm_handler' does not handle the given code
+			BStr res, err;
+			if (m_handler(FALSE, lang.c_str(), code.c_str(), res, err) == 0)
+				return false;
+
+			// If errors are reported, raise them as an exception
+			if (err.m_str != nullptr)
+				throw std::exception(pr::Narrow(err.m_str).c_str());
+
+			// Add the string result to 'result'
+			if (res.m_str != nullptr)
+				result.append(res.m_str);
+
+			return true;
+		}
+	};
 }
