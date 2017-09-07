@@ -31,7 +31,7 @@ def Deploy():
 	sln = srcdir + "\\RyLogViewer.sln"
 
 	# Publish to WWW
-	publish = input("Publish to web site?")
+	publish = input("Publish to web site?") == "y"
 
 	# Ensure output directories exist and are empty
 	print("\nCleaning deploy directory: " + dstdir)
@@ -72,6 +72,8 @@ def Deploy():
 			["plugins" ,"INSTALLFOLDER"],
 			["examples","INSTALLFOLDER"],
 		])
+	print(msi + " created.")
+
 
 	# Publish to WWW
 	if publish:

@@ -123,6 +123,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="installer\installer.wxs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Rylogic\Rylogic.csproj">
