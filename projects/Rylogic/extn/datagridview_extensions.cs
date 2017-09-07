@@ -8,6 +8,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
@@ -419,6 +420,28 @@ namespace pr.extn
 			return cmenu;
 		}
 
+		/// <summary>Cycle to the next sort direction</summary>
+		public static SortOrder Next(this SortOrder so, bool three_state = true)
+		{
+			switch (so)
+			{
+			default: throw new Exception($"Unknown sort order: {so}");
+			case SortOrder.Ascending:  return SortOrder.Descending;
+			case SortOrder.Descending: return three_state ? SortOrder.None : SortOrder.Ascending;
+			case SortOrder.None:       return SortOrder.Ascending;
+			}
+		}
+		public static ListSortDirection NextDirection(this SortOrder so)
+		{
+			switch (so)
+			{
+			default: throw new Exception($"Unknown sort order: {so}");
+			case SortOrder.Ascending:  return ListSortDirection.Descending;
+			case SortOrder.Descending: return ListSortDirection.Ascending;
+			case SortOrder.None:       return ListSortDirection.Ascending;
+			}
+		}
+
 		/// <summary>
 		/// Handle column sorting for grids with data sources that don't support sorting by default.
 		/// 'handle_sort' will be called after the column header glyph has changed.
@@ -430,26 +453,26 @@ namespace pr.extn
 			// DGVSortDelegate could also contain the reference to 'handle_sort'
 
 			grid.ColumnHeaderMouseClick += (s,a) =>
+			{
+				var dgv = s.As<DataGridView>();
+				if (a.Button == MouseButtons.Left && Control.ModifierKeys == Keys.None)
 				{
-					var dgv = s.As<DataGridView>();
-					if (a.Button == MouseButtons.Left && Control.ModifierKeys == Keys.None)
+					// Reset the sort glyph for the other columns
+					foreach (var c in dgv.Columns.Cast<DataGridViewColumn>())
 					{
-						// Reset the sort glyph for the other columns
-						foreach (var c in dgv.Columns.Cast<DataGridViewColumn>())
-						{
-							if (c.Index == a.ColumnIndex) continue;
-							c.HeaderCell.SortGlyphDirection = SortOrder.None;
-						}
-
-						// Set the glyph on the selected column
-						var col = dgv.Columns[a.ColumnIndex];
-						var hdr = col.HeaderCell;
-						hdr.SortGlyphDirection = Enum<SortOrder>.Cycle(hdr.SortGlyphDirection);
-
-						// Apply the sort
-						handle_sort.Raise(dgv, new DGVSortEventArgs(a.ColumnIndex, hdr.SortGlyphDirection));
+						if (c.Index == a.ColumnIndex) continue;
+						c.HeaderCell.SortGlyphDirection = SortOrder.None;
 					}
-				};
+
+					// Set the glyph on the selected column
+					var col = dgv.Columns[a.ColumnIndex];
+					var hdr = col.HeaderCell;
+					hdr.SortGlyphDirection = Enum<SortOrder>.Cycle(hdr.SortGlyphDirection);
+
+					// Apply the sort
+					handle_sort.Raise(dgv, new DGVSortEventArgs(a.ColumnIndex, hdr.SortGlyphDirection));
+				}
+			};
 		}
 
 		/// <summary>Display a context menu for showing/hiding columns in the grid (at 'location' relative to the grid).</summary>
@@ -486,7 +509,7 @@ namespace pr.extn
 			if (args.Button == MouseButtons.Right)
 			{
 				// Right mouse on a column header displays a context menu for hiding/showing columns
-				if (hit.Type == DataGridViewHitTestType.ColumnHeader || hit.Type == DataGridViewHitTestType.None)
+				if (hit.Type == HitTestInfo.EType.ColumnHeader || hit.Type == HitTestInfo.EType.None)
 					grid.ColumnVisibilityContextMenu(hit.GridPoint);
 			}
 		}
@@ -1123,12 +1146,42 @@ namespace pr.extn
 		}
 		public class HitTestInfo
 		{
+			public enum EType
+			{
+				None                = DataGridViewHitTestType.None                ,
+				Cell                = DataGridViewHitTestType.Cell                ,
+				ColumnHeader        = DataGridViewHitTestType.ColumnHeader        ,
+				RowHeader           = DataGridViewHitTestType.RowHeader           ,
+				TopLeftHeader       = DataGridViewHitTestType.TopLeftHeader       ,
+				HorizontalScrollBar = DataGridViewHitTestType.HorizontalScrollBar ,
+				VerticalScrollBar   = DataGridViewHitTestType.VerticalScrollBar   ,
+				ColumnDivider,
+				RowDivider,
+			}
+
 			private readonly DataGridView.HitTestInfo m_info;
 			public HitTestInfo(DataGridView grid, Point pt)
 			{
 				Grid = grid;
 				GridPoint = pt;
 				m_info = grid.HitTest(pt.X, pt.Y);
+				Type = (EType)m_info.Type;
+
+				// Check for clicks on column dividers
+				var col = Column;
+				if (col != null && m_info.Type == DataGridViewHitTestType.ColumnHeader && grid.AllowUserToResizeColumns)
+				{
+					if (grid.Cursor == Cursors.SizeWE)
+						Type = EType.ColumnDivider;
+				}
+
+				// Check for clicks on row dividers
+				var row = Row;
+				if (row != null && m_info.Type == DataGridViewHitTestType.RowHeader && grid.AllowUserToResizeRows)
+				{
+					if (grid.Cursor == Cursors.SizeNS)
+						Type = EType.RowDivider;
+				}
 			}
 
 			/// <summary>The grid that was hit tested</summary>
@@ -1141,7 +1194,11 @@ namespace pr.extn
 			public Point CellPoint { get { return new Point(GridPoint.X - ColumnX, GridPoint.Y - RowY); } }
 
 			/// <summary>What was hit</summary>
-			public DataGridViewHitTestType Type { get { return m_info.Type; } }
+			public EType Type
+			{
+				get;
+				private set;
+			}
 
 			/// <summary>True if a column or row divider was hit</summary>
 			public bool Divider
@@ -1157,19 +1214,34 @@ namespace pr.extn
 			}
 
 			/// <summary>Gets the index of the column that contains the hit test point</summary>
-			public int ColumnIndex { get { return m_info.ColumnIndex; } }
+			public int ColumnIndex
+			{
+				get { return m_info.ColumnIndex; }
+			}
 
 			/// <summary>Gets the index of the row that contains the hit test point</summary>
-			public int RowIndex { get { return m_info.RowIndex; } }
+			public int RowIndex
+			{
+				get { return m_info.RowIndex; }
+			}
 
 			/// <summary>Gets the x-coordinate of the column 'ColumnIndex'</summary>
-			public int ColumnX { get { return m_info.ColumnX; } }
+			public int ColumnX
+			{
+				get { return m_info.ColumnX; }
+			}
 
 			/// <summary>Gets the y-coordinate of the row 'RowIndex'</summary>
-			public int RowY { get { return m_info.RowY; } }
+			public int RowY
+			{
+				get { return m_info.RowY; }
+			}
 
 			/// <summary>The X,Y grid-relative coordinate of the hit cell</summary>
-			public Point CellPosition { get { return new Point(ColumnX, RowY); } }
+			public Point CellPosition
+			{
+				get { return new Point(ColumnX, RowY); }
+			}
 
 			/// <summary>
 			/// Gets the index of the row that is closest to the hit location.
@@ -1279,7 +1351,7 @@ namespace pr.extn
 					Size = new Size(10,10);
 					Ofs = new Size(10, 5);
 					Owner = owner;
-					Region = GfxExtensions.MakeRegion(0,0, Ofs.Width,Ofs.Height, 0,Ofs.Height*2);
+					Region = Gfx_.MakeRegion(0,0, Ofs.Width,Ofs.Height, 0,Ofs.Height*2);
 					CreateHandle();
 				}
 				protected override CreateParams CreateParams
@@ -1406,7 +1478,7 @@ namespace pr.extn
 			// Set the drop effect
 			var hit = grid.HitTestEx(pt.X, pt.Y);
 			args.Effect =
-				hit.Type == DataGridViewHitTestType.RowHeader &&
+				hit.Type == HitTestInfo.EType.RowHeader &&
 				hit.RowIndex >= 0 && hit.RowIndex < row_count && hit.RowIndex != data.Row.Index
 				? DragDropEffects.Move : DragDropEffects.None;
 			if (args.Effect != DragDropEffects.Move)
@@ -1687,7 +1759,7 @@ namespace pr.extn
 					// If the mouse down position is within a FilterHeaderCell
 					var pt = Win32.LParamToPoint(m.LParam);
 					var hit = m_dgv.HitTestEx(pt);
-					if (hit.Type == DataGridViewHitTestType.ColumnHeader && hit.HeaderCell is FilterHeaderCell)
+					if (hit.Type == HitTestInfo.EType.ColumnHeader && hit.HeaderCell is FilterHeaderCell)
 					{
 						// If the mouse down position is within the filter field of the header cell
 						var filter_cell = (FilterHeaderCell)hit.HeaderCell;
@@ -1965,10 +2037,19 @@ namespace pr.extn
 							if ( args.Shift && prev != null) DGV.BeginInvoke(prev.EditFilter);
 						}
 
-						// Close on these keys
-						if (args.KeyCode == Keys.Enter || args.KeyCode == Keys.Escape || args.KeyCode == Keys.Tab || (args.KeyCode == m_cfd.ShortcutKey && args.Control))
+						// Close the editing control on these keys
+						if (args.KeyCode == Keys.Enter ||
+							args.KeyCode == Keys.Escape ||
+							args.KeyCode == Keys.Tab)
 						{
 							Hide();
+						}
+
+						// Close the editing control and hide the column filters
+						if (args.KeyCode == m_cfd.ShortcutKey && args.Control)
+						{
+							Hide();
+							m_cfd.Enabled = false;
 						}
 					}
 				}
@@ -2018,8 +2099,7 @@ namespace pr.extn
 		/// Column filters are automatically disposed when the associated grid is disposed</summary>
 		public static ColumnFiltersData ColumnFilters(this DataGridView grid, bool create_if_necessary = false)
 		{
-			ColumnFiltersData column_filters;
-			if (m_column_filters.TryGetValue(grid, out column_filters)) return column_filters;
+			if (m_column_filters.TryGetValue(grid, out var column_filters)) return column_filters;
 			if (create_if_necessary) return m_column_filters[grid] = new ColumnFiltersData(grid);
 			return null;
 		}
@@ -2035,8 +2115,7 @@ namespace pr.extn
 				return; // not enabled
 
 			// If this is a KeyDown handler, check for the required shortcut keys
-			var ke = args as KeyEventArgs;
-			if (ke != null)
+			if (args is KeyEventArgs ke)
 			{
 				if (ke.Handled) return; // already handled
 				if (!(ke.Control && ke.KeyCode == cf.ShortcutKey)) return; // wrong key shortcut

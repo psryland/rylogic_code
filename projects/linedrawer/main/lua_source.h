@@ -15,7 +15,9 @@ namespace ldr
 	class LuaSource :public pr::script::IEmbeddedCode
 	{
 		pr::lua::Lua m_lua;
-		bool Execute(pr::script::string const& lang, pr::script::string const& code, pr::script::Location const& loc, pr::script::string& result) override;
+
+		void Reset() override;
+		bool Execute(pr::script::string const& lang, pr::script::string const& code, pr::script::string& result) override;
 
 	public:
 		LuaSource();

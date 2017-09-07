@@ -42,9 +42,14 @@ namespace ldr
 		//m_lua.DoFile(filepath);
 	}
 
+	void LuaSource::Reset()
+	{
+		m_lua = pr::lua::Lua();
+	}
+
 	// Execute a string containing lua code.
 	// The code is expected to leave a string on the lua stack
-	bool LuaSource::Execute(pr::script::string const& lang, pr::script::string const& code, pr::script::Location const& loc, pr::script::string& result)
+	bool LuaSource::Execute(pr::script::string const& lang, pr::script::string const& code, pr::script::string& result)
 	{
 		// We only handle lua code
 		if (!pr::str::Equal(lang, "lua"))
@@ -56,7 +61,7 @@ namespace ldr
 		// Convert the lua code to a compiled chunk
 		pr::string<> error_msg;
 		if (pr::lua::PushLuaChunk<pr::string<>>(m_lua, pr::Narrow(code), error_msg) != pr::lua::EResult::Success)
-			throw pr::script::Exception(pr::script::EResult::EmbeddedCodeSyntaxError, loc, error_msg.c_str());
+			throw std::exception(error_msg.c_str());
 
 		// Execute the chunk
 		if (!pr::lua::CallLuaChunk(m_lua, 0, false))

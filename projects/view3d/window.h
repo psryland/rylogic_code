@@ -36,6 +36,7 @@ namespace view3d
 		bool                  m_focus_point_visible;      // True if we should draw the focus point
 		bool                  m_origin_point_visible;     // True if we should draw the origin point
 		bool                  m_bboxes_visible;           // True if we should draw object bounding boxes
+		bool                  m_selection_box_visible;    // True if we should draw the selection box
 		ScriptEditorUIPtr     m_editor_ui;                // A editor for editing Ldr script
 		LdrObjectManagerUIPtr m_obj_cont_ui;              // Object manager for objects added to this window
 		LdrMeasureUIPtr       m_measure_tool_ui;          // A UI for measuring distances between points within the 3d environment
@@ -83,6 +84,7 @@ namespace view3d
 			,m_focus_point_visible(false)
 			,m_origin_point_visible(false)
 			,m_bboxes_visible(false)
+			,m_selection_box_visible(false)
 			,m_editor_ui()
 			,m_obj_cont_ui()
 			,m_measure_tool_ui()
@@ -110,7 +112,7 @@ namespace view3d
 				};
 				m_eh_file_removed = m_dll->m_sources.OnFileRemoved += [&](pr::ldr::ScriptSources&, pr::ldr::ScriptSources::FileRemovedEventArgs const& args)
 				{
-					RemoveObjectsById(args.m_file_group_id, false);
+					RemoveObjectsById(&args.m_file_group_id, 1);
 				};
 
 				// Set the initial aspect ratio
@@ -220,7 +222,19 @@ namespace view3d
 			if (m_bboxes_visible)
 			{
 				for (auto& obj : m_objects)
+				{
+					if (pr::AllSet(obj->m_flags, pr::ldr::ELdrFlags::BBoxInvisible)) continue;
 					obj->AddBBoxToScene(m_scene, m_bbox_model.m_model);
+				}
+			}
+
+			// Selection box
+			if (m_selection_box_visible)
+			{
+				// Transform is updated by the user or by a call to SetSelectionBoxToSelected()
+				// 'm_selection_box.m_i2w.pos.w' is zero when there is no selection.
+				if (m_selection_box.m_i2w.pos.w != 0)
+					m_scene.AddInstance(m_selection_box);
 			}
 
 			// Set the view and projection matrices
@@ -354,6 +368,17 @@ namespace view3d
 				break;
 			}
 		}
+		void EnumObjects(View3D_EnumObjectsCB enum_objects_cb, void* ctx, GUID const* context_id, int count, bool all_except = false)
+		{
+			assert(std::this_thread::get_id() == m_main_thread_id);
+			for (auto& object : m_objects)
+			{
+				if (!all_except && !pr::contains(context_id, context_id+count, object->m_context_id)) continue;
+				if ( all_except &&  pr::contains(context_id, context_id+count, object->m_context_id)) continue;
+				if (enum_objects_cb(ctx, object)) continue;
+				break;
+			}
+		}
 
 		// Add/Remove an object to this window
 		void Add(pr::ldr::LdrObject* object)
@@ -363,14 +388,14 @@ namespace view3d
 			if (iter == std::end(m_objects))
 			{
 				m_objects.insert(iter, object);
-				ObjectContainerChanged();
+				ObjectContainerChanged(&object->m_context_id, 1);
 			}
 		}
 		void Remove(pr::ldr::LdrObject* object)
 		{
 			assert(std::this_thread::get_id() == m_main_thread_id);
 			m_objects.erase(object);
-			ObjectContainerChanged();
+			ObjectContainerChanged(&object->m_context_id, 1);
 		}
 
 		// Add/Remove a gizmo to this window
@@ -381,33 +406,62 @@ namespace view3d
 			if (iter == std::end(m_gizmos))
 			{
 				m_gizmos.insert(iter, gizmo);
-				ObjectContainerChanged();
+				ObjectContainerChanged(nullptr, 0);
 			}
 		}
 		void Remove(pr::ldr::LdrGizmo* gizmo)
 		{
 			m_gizmos.erase(gizmo);
-			ObjectContainerChanged();
+			ObjectContainerChanged(nullptr, 0);
 		}
 
 		// Remove all objects from this scene
 		void RemoveAllObjects()
 		{
 			assert(std::this_thread::get_id() == m_main_thread_id);
+			
+			std::vector<GUID> context_ids;
+			for (auto obj : m_objects)
+				context_ids.push_back(obj->m_context_id);
+
 			m_objects.clear();
-			ObjectContainerChanged();
+			ObjectContainerChanged(context_ids.data(), int(context_ids.size()));
 		}
 
-		// Remove all objects from this window with the given context id (or not with)
-		void RemoveObjectsById(GUID const& context_id, bool all_except)
+		// Add/Remove all objects to this window with the given context id (or not with)
+		void AddObjectsById(GUID const* context_id, int count, bool all_except = false)
 		{
 			assert(std::this_thread::get_id() == m_main_thread_id);
-			if (all_except)
-				pr::erase_if(m_objects, [&](pr::ldr::LdrObject* p){ return p->m_context_id != context_id; });
-			else
-				pr::erase_if(m_objects, [&](pr::ldr::LdrObject* p){ return p->m_context_id == context_id; });
-			
-			ObjectContainerChanged();
+			auto changed = false;
+			for (auto& obj : m_dll->m_sources.Objects())
+			{
+				if (!all_except && !pr::contains(context_id, context_id+count, obj->m_context_id)) continue;
+				if ( all_except &&  pr::contains(context_id, context_id+count, obj->m_context_id)) continue;
+
+				// Only add if not already added
+				auto iter = m_objects.find(obj.get());
+				if (iter == std::end(m_objects))
+				{
+					m_objects.insert(iter, obj.get());
+					changed = true;
+				}
+			}
+			if (changed)
+				ObjectContainerChanged(context_id, count);
+		}
+		void RemoveObjectsById(GUID const* context_id, int count, bool all_except = false)
+		{
+			assert(std::this_thread::get_id() == m_main_thread_id);
+			auto changed = false;
+			pr::erase_if(m_objects, [&](pr::ldr::LdrObject* obj)
+			{
+				if (!all_except && !pr::contains(context_id, context_id+count, obj->m_context_id)) return false;
+				if ( all_except &&  pr::contains(context_id, context_id+count, obj->m_context_id)) return false;
+				changed = true;
+				return true;
+			});
+			if (changed)
+				ObjectContainerChanged(context_id, count);
 		}
 
 		// Return a bounding box containing the scene objects
@@ -514,6 +568,42 @@ namespace view3d
 			return !bbox.empty() ? bbox : pr::BBoxUnit;
 		}
 
+		// Set the position and size of the selection box. If 'bbox' is 'BBoxReset' the selection box is not shown
+		void SetSelectionBox(pr::BBox const& bbox, pr::m3x4 const& ori = pr::m3x4Identity)
+		{
+			if (bbox == pr::BBoxReset)
+			{
+				// Flag to not include the selection box
+				m_selection_box.m_i2w.pos.w = 0;
+			}
+			else
+			{
+				m_selection_box.m_i2w =
+					pr::m4x4(ori, pr::v4Origin) *
+					pr::m4x4::Scale(bbox.m_radius.x, bbox.m_radius.y, bbox.m_radius.z, bbox.m_centre);
+			}
+		}
+
+		// Position the selection box to include the selected objects
+		void SelectionBoxFitToSelected()
+		{
+			// Find the bounds of the selected objects
+			auto bbox = pr::BBoxReset;
+			for (auto& obj : m_objects)
+			{
+				obj->Apply([&](pr::ldr::LdrObject const* c)
+				{
+					if (!pr::AllSet(c->m_flags, pr::ldr::ELdrFlags::Selected))
+						return true;
+
+					auto bb = c->BBoxWS(true);
+					pr::Encompass(bbox, bb);
+					return false;
+				}, "");
+			}
+			SetSelectionBox(bbox);
+		}
+
 		// Return the focus point of the camera in this draw set
 		static pr::v4 __stdcall ReadPoint(void* ctx)
 		{
@@ -550,7 +640,7 @@ namespace view3d
 		}
 
 		// Called when objects are added/removed from this window
-		void ObjectContainerChanged()
+		void ObjectContainerChanged(GUID const* context_ids, int count)
 		{
 			// Reset the drawlists so that removed objects are no longer in the drawlist
 			m_scene.ClearDrawlists();
@@ -559,7 +649,7 @@ namespace view3d
 			m_bbox_scene = pr::BBoxReset;
 
 			// Notify scene changed
-			OnSceneChanged.Raise(this);
+			OnSceneChanged.Raise(this, context_ids, count);
 		}
 
 		// Show/Hide the object manager for the scene
@@ -608,16 +698,18 @@ namespace view3d
 			}
 			{
 				// Create the selection box model
+				static float const sz = 1.0f;
+				static float const dd = 0.8f;
 				static pr::v4 const verts[] =
 				{
-					pr::v4(-0.5f, -0.5f, -0.5f, 1.0f), pr::v4(-0.4f, -0.5f, -0.5f, 1.0f), pr::v4(-0.5f, -0.4f, -0.5f, 1.0f), pr::v4(-0.5f, -0.5f, -0.4f, 1.0f),
-					pr::v4( 0.5f, -0.5f, -0.5f, 1.0f), pr::v4( 0.5f, -0.4f, -0.5f, 1.0f), pr::v4( 0.4f, -0.5f, -0.5f, 1.0f), pr::v4( 0.5f, -0.5f, -0.4f, 1.0f),
-					pr::v4( 0.5f,  0.5f, -0.5f, 1.0f), pr::v4( 0.4f,  0.5f, -0.5f, 1.0f), pr::v4( 0.5f,  0.4f, -0.5f, 1.0f), pr::v4( 0.5f,  0.5f, -0.4f, 1.0f),
-					pr::v4(-0.5f,  0.5f, -0.5f, 1.0f), pr::v4(-0.5f,  0.4f, -0.5f, 1.0f), pr::v4(-0.4f,  0.5f, -0.5f, 1.0f), pr::v4(-0.5f,  0.5f, -0.4f, 1.0f),
-					pr::v4(-0.5f, -0.5f,  0.5f, 1.0f), pr::v4(-0.4f, -0.5f,  0.5f, 1.0f), pr::v4(-0.5f, -0.4f,  0.5f, 1.0f), pr::v4(-0.5f, -0.5f,  0.4f, 1.0f),
-					pr::v4( 0.5f, -0.5f,  0.5f, 1.0f), pr::v4( 0.5f, -0.4f,  0.5f, 1.0f), pr::v4( 0.4f, -0.5f,  0.5f, 1.0f), pr::v4( 0.5f, -0.5f,  0.4f, 1.0f),
-					pr::v4( 0.5f,  0.5f,  0.5f, 1.0f), pr::v4( 0.4f,  0.5f,  0.5f, 1.0f), pr::v4( 0.5f,  0.4f,  0.5f, 1.0f), pr::v4( 0.5f,  0.5f,  0.4f, 1.0f),
-					pr::v4(-0.5f,  0.5f,  0.5f, 1.0f), pr::v4(-0.5f,  0.4f,  0.5f, 1.0f), pr::v4(-0.4f,  0.5f,  0.5f, 1.0f), pr::v4(-0.5f,  0.5f,  0.4f, 1.0f),
+					pr::v4(-sz, -sz, -sz, 1.0f), pr::v4(-dd, -sz, -sz, 1.0f), pr::v4(-sz, -dd, -sz, 1.0f), pr::v4(-sz, -sz, -dd, 1.0f),
+					pr::v4( sz, -sz, -sz, 1.0f), pr::v4( sz, -dd, -sz, 1.0f), pr::v4( dd, -sz, -sz, 1.0f), pr::v4( sz, -sz, -dd, 1.0f),
+					pr::v4( sz,  sz, -sz, 1.0f), pr::v4( dd,  sz, -sz, 1.0f), pr::v4( sz,  dd, -sz, 1.0f), pr::v4( sz,  sz, -dd, 1.0f),
+					pr::v4(-sz,  sz, -sz, 1.0f), pr::v4(-sz,  dd, -sz, 1.0f), pr::v4(-dd,  sz, -sz, 1.0f), pr::v4(-sz,  sz, -dd, 1.0f),
+					pr::v4(-sz, -sz,  sz, 1.0f), pr::v4(-dd, -sz,  sz, 1.0f), pr::v4(-sz, -dd,  sz, 1.0f), pr::v4(-sz, -sz,  dd, 1.0f),
+					pr::v4( sz, -sz,  sz, 1.0f), pr::v4( sz, -dd,  sz, 1.0f), pr::v4( dd, -sz,  sz, 1.0f), pr::v4( sz, -sz,  dd, 1.0f),
+					pr::v4( sz,  sz,  sz, 1.0f), pr::v4( dd,  sz,  sz, 1.0f), pr::v4( sz,  dd,  sz, 1.0f), pr::v4( sz,  sz,  dd, 1.0f),
+					pr::v4(-sz,  sz,  sz, 1.0f), pr::v4(-sz,  dd,  sz, 1.0f), pr::v4(-dd,  sz,  sz, 1.0f), pr::v4(-sz,  sz,  dd, 1.0f),
 				};
 				static pr::uint16 const indices[] =
 				{

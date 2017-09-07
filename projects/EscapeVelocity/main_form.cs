@@ -94,11 +94,16 @@ namespace EscapeVelocity
 			var series_electronegativity = new GraphControl.Series("Electronegativity");
 			var series_atomic_radius = new GraphControl.Series("Atomic Radius");
 			var series_atomic_density = new GraphControl.Series("Solid Density");
-			foreach (var e in m_inst.ChemLab.KnownElements.Cast<Element>())
+			using (var s_en = series_electronegativity.Lock)
+			using (var s_ar = series_atomic_radius.Lock)
+			using (var s_ad = series_atomic_density.Lock)
 			{
-				series_electronegativity.Add(new GraphControl.GraphValue(e.AtomicNumber, e.Electronegativity));
-				series_atomic_radius.Add(new GraphControl.GraphValue(e.AtomicNumber, e.ValenceOrbitalRadius));
-				series_atomic_density.Add(new GraphControl.GraphValue(e.AtomicNumber, e.SolidDensity));
+				foreach (var e in m_inst.ChemLab.KnownElements.Cast<Element>())
+				{
+					s_en.Data.Add(new GraphControl.GraphValue(e.AtomicNumber, e.Electronegativity));
+					s_ar.Data.Add(new GraphControl.GraphValue(e.AtomicNumber, e.ValenceOrbitalRadius));
+					s_ad.Data.Add(new GraphControl.GraphValue(e.AtomicNumber, e.SolidDensity));
+				}
 			}
 			m_graph.Graph.Data.Add(series_electronegativity);
 			m_graph.Graph.Data.Add(series_atomic_radius);

@@ -9,7 +9,7 @@ using pr.util;
 
 namespace pr.extn
 {
-	public static class ToolStripExtensions
+	public static class ToolStrip_
 	{
 		/// <summary>Add and return an item to this collection</summary>
 		public static T Add2<T>(this ToolStripItemCollection items, T item) where T:ToolStripItem
@@ -113,8 +113,9 @@ namespace pr.extn
 		public static void StretchToFit(this ToolStripItem item, int minimum_width)
 		{
 			// Notes:
-			//  - Set 'AutoSize = false' on the tool strip item
-			//  - ts.Layout += (s,a) => ts_item.StretchToFit(250);
+			//  - tool_strip.Stretch = true;
+			//  - tool_strip.AutoSize = false;
+			//  - tool_strip.Layout += (s,a) => tool_strip_item.StretchToFit(250);
 
 			// Ignore if vertical or on overflow, or no owner
 			if (item.IsOnOverflow || item.Owner.Orientation == Orientation.Vertical || item.Owner == null)
@@ -311,6 +312,13 @@ namespace pr.extn
 			var parent = item.GetCurrentParent();
 			if (parent == null) return item.Bounds;
 			return parent.RectangleToScreen(item.Bounds);
+		}
+
+		/// <summary>Converts a point in item space to screen space</summary>
+		public static Point PointToScreen(this ToolStripItem item, Point pt)
+		{
+			var origin = item.ScreenLocation();
+			return pt.Shifted(origin.X, origin.Y);
 		}
 
 		/// <summary>

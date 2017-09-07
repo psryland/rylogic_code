@@ -219,11 +219,14 @@ namespace pr.gui
 					continue;
 
 				// Note: series.Sorted doesn't help because we still need to scan all the Y values.
-				foreach (var value in series.Values(i0, i1))
+				using (var s = series.Lock)
 				{
-					var v = selector(value);
-					if (v < range.Beg) range.Beg = v;
-					if (v > range.End) range.End = v;
+					foreach (var value in s.Values(i0, i1))
+					{
+						var v = selector(value);
+						if (v < range.Beg) range.Beg = v;
+						if (v > range.End) range.End = v;
+					}
 				}
 			}
 
@@ -300,78 +303,46 @@ namespace pr.gui
 		}
 
 		/// <summary>Graph data series</summary>
-		[Serializable] public class Series :List<GraphValue>
+		[Serializable] public class Series
 		{
-			public Series() :this(string.Empty) {}
-			public Series(string name) :this(string.Empty, 100) {}
-			public Series(string name, int capacity) :this(name, capacity, new RdrOptions()) {}
-			public Series(string name, int capacity, RdrOptions rdr_opts) :base(capacity)
+			private List<GraphValue> m_data;
+			private bool m_sorted;
+			private object m_lock;
+
+			public Series()
+				:this(string.Empty)
+			{}
+			public Series(string name)
+				:this(string.Empty, 100)
+			{}
+			public Series(string name, int capacity)
+				:this(name, capacity, new RdrOptions())
+			{}
+			public Series(string name, int capacity, RdrOptions rdr_opts)
+				:this(name, capacity, rdr_opts, new GraphValue[0])
+			{}
+			public Series(string name, int capacity, RdrOptions rdr_opts, IEnumerable<GraphValue> data)
 			{
-				Name          = name;
-				Options = rdr_opts;
-				AllowDelete   = false;
-				Sorted        = true; // Assume sorted because this is more efficient for rendering
-				UserData      = new UserData();
+				m_data = new List<GraphValue>(capacity);
+				m_data.AddRange(data);
+
+				m_sorted    = true; // Assume sorted because this is more efficient for rendering
+				m_lock      = new object();
+				Name        = name;
+				Options     = rdr_opts;
+				AllowDelete = false;
+				UserData    = new UserData();
 			}
-			public Series(Series rhs) :base(rhs)
+			public Series(Series rhs)
+				:this(rhs.Name, rhs.m_data.Capacity, new RdrOptions(rhs.Options))
 			{
-				Name        = rhs.Name;
-				Options     = new RdrOptions(rhs.Options);
-				AllowDelete = rhs.AllowDelete;
-				Sorted      = rhs.Sorted;
-				UserData    = new UserData(rhs.UserData);
-			}
-
-			///<summary>
-			/// Return the range of indices that need to be considered when plotting from 'xmin' to 'xmax'
-			/// Note: in general, this range should include one point to the left of 'xmin' and one to the right
-			/// of 'xmax' so that line graphs plot a line up to the border of the plot area</summary>
-			public void IndexRange(double xmin, double xmax, out int imin, out int imax)
-			{
-				var lwr = new GraphValue(xmin, 0.0f);
-				var upr = new GraphValue(xmax, 0.0f);
-
-				imin = BinarySearch(0, Count, lwr, GraphValue.SortX);
-				if (imin < 0) imin = ~imin;
-				if (imin != 0) --imin;
-
-				imax = BinarySearch(imin, Count - imin, upr, GraphValue.SortX);
-				if (imax < 0) imax = ~imax;
-				if (imax != Count) ++imax;
-			}
-
-			/// <summary>Enumerable access to the data given an index range</summary>
-			public IEnumerable<GraphValue> Values(int i0 = 0, int i1 = int.MaxValue)
-			{
-				Debug.Assert(i0 >= 0 && i0 <= Count);
-				Debug.Assert(i1 >= i0);
-				for (int i = i0, iend = Math.Min(i1, Count); i != iend; ++i)
+				using (var s = rhs.Lock)
 				{
-					var gv = this[i];
-					yield return gv;
+					m_data.AddRange(rhs.m_data);
+					m_sorted = rhs.m_sorted;
 				}
-			}
-
-			/// <summary>
-			/// Returns the range of series data to consider when plotting from 'xmin' to 'xmax'
-			/// Note: in general, this range should include one point to the left of 'xmin' and one to
-			/// the right of 'xmax' so that line graphs plot a line up to the border of the plot area</summary>
-			public IEnumerable<GraphValue> Values(double xmin, double xmax)
-			{
-				int i0,i1;
-				IndexRange(xmin, xmax, out i0, out i1);
-				return Values(i0, i1);
-			}
-
-			/// <summary>
-			/// Returns the range of indices to consider when plotting from 'xmin' to 'xmax'
-			/// Note: in general, this range should include one point to the left of 'xmin' and one to
-			/// the right of 'xmax' so that line graphs plot a line up to the border of the plot area</summary>
-			public IEnumerable<int> Indices(double xmin, double xmax)
-			{
-				int i0,i1;
-				IndexRange(xmin, xmax, out i0, out i1);
-				return Enumerable.Range(i0, i1 - i0);
+				UserData = new UserData(rhs.UserData);
+				AllowDelete = rhs.AllowDelete;
 			}
 
 			/// <summary>A label for the series</summary>
@@ -405,26 +376,125 @@ namespace pr.gui
 			[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 			public RdrOptions Options { get; set; }
 
-			/// <summary></summary>
+			/// <summary>Allow delete from this series</summary>
 			public bool AllowDelete { get; set; }
-
-			/// <summary>True if this series can be considered sorted (on X)</summary>
-			public bool Sorted { get; set; }
 
 			/// <summary>Allow users to attach additional data to the series</summary>
 			public UserData UserData { get; private set; }
 
-			/// <summary>Sort the series by it's X value</summary>
-			public void SortX()
+			/// <summary>Sync access to the series data</summary>
+			public LockData Lock { get { return new LockData(this); } }
+			public class LockData :IDisposable
 			{
-				Sort(Cmp<GraphValue>.From((l,r) => l.x < r.x));
-				Sorted = true;
+				private readonly Series m_series;
+
+				public LockData(Series series)
+				{
+					m_series = series;
+					Monitor.Enter(m_series.m_lock);
+				}
+				public void Dispose()
+				{
+					Monitor.Exit(m_series.m_lock);
+				}
+
+				/// <summary>The number of items in the series</summary>
+				public int Count
+				{
+					get { return Data.Count; }
+				}
+
+				/// <summary>Reset the series</summary>
+				public void Clear()
+				{
+					Data.Clear();
+				}
+
+				/// <summary>Access the container of graph values</summary>
+				public List<GraphValue> Data
+				{
+					get { return m_series.m_data; }
+				}
+
+				///<summary>
+				/// Return the range of indices that need to be considered when plotting from 'xmin' to 'xmax'
+				/// Note: in general, this range should include one point to the left of 'xmin' and one to the right
+				/// of 'xmax' so that line graphs plot a line up to the border of the plot area</summary>
+				public void IndexRange(double xmin, double xmax, out int imin, out int imax)
+				{
+					var lwr = new GraphValue(xmin, 0.0f);
+					var upr = new GraphValue(xmax, 0.0f);
+
+					imin = Data.BinarySearch(0, Count, lwr, GraphValue.SortX);
+					if (imin < 0) imin = ~imin;
+					if (imin != 0) --imin;
+
+					imax = Data.BinarySearch(imin, Count - imin, upr, GraphValue.SortX);
+					if (imax < 0) imax = ~imax;
+					if (imax != Count) ++imax;
+				}
+
+				/// <summary>Enumerable access to the data given an index range</summary>
+				public IEnumerable<GraphValue> Values(int i0 = 0, int i1 = int.MaxValue)
+				{
+					Debug.Assert(i0 >= 0 && i0 <= Count);
+					Debug.Assert(i1 >= i0);
+					for (int i = i0, iend = Math.Min(i1, Count); i != iend; ++i)
+					{
+						var gv = Data[i];
+						yield return gv;
+					}
+				}
+
+				/// <summary>
+				/// Returns the range of series data to consider when plotting from 'xmin' to 'xmax'
+				/// Note: in general, this range should include one point to the left of 'xmin' and one to
+				/// the right of 'xmax' so that line graphs plot a line up to the border of the plot area</summary>
+				public IEnumerable<GraphValue> Values(double xmin, double xmax)
+				{
+					IndexRange(xmin, xmax, out var i0, out var i1);
+					return Values(i0, i1);
+				}
+
+				/// <summary>
+				/// Returns the range of indices to consider when plotting from 'xmin' to 'xmax'
+				/// Note: in general, this range should include one point to the left of 'xmin' and one to
+				/// the right of 'xmax' so that line graphs plot a line up to the border of the plot area</summary>
+				public IEnumerable<int> Indices(double xmin, double xmax)
+				{
+					IndexRange(xmin, xmax, out var i0, out var i1);
+					return Enumerable.Range(i0, i1 - i0);
+				}
+
+				/// <summary>Sort the series by it's X value</summary>
+				public void SortX()
+				{
+					Data.Sort(Cmp<GraphValue>.From((l,r) => l.x < r.x));
+					Sorted = true;
+				}
+
+				/// <summary>True if this series can be considered sorted (on X)</summary>
+				public bool Sorted
+				{
+					get { return m_series.m_sorted; }
+					set { m_series.m_sorted = value; }
+				}
+			}
+
+			/// <summary>Thread-safe helper for adding data</summary>
+			public void AddRange(IEnumerable<GraphValue> data, bool clear = false)
+			{
+				using (var s = Lock)
+				{
+					if (clear) s.Data.Clear();
+					s.Data.AddRange(data);
+				}
 			}
 
 			/// <summary>ToString</summary>
 			public override string ToString()
 			{
-				return "{0} - count:{1}".Fmt(Name, Count);
+				return "{0} - count:{1}".Fmt(Name, m_data.Count);
 			}
 
 			/// <summary>Plot colour generator</summary>
@@ -523,30 +593,32 @@ namespace pr.gui
 			if (series_index < 0 || series_index >= Data.Count)
 				throw new Exception("series index out of range");
 
-			// Binary search on X for the nearest data point
-			var series = Data[series_index];
-			if (series.Count == 0)
-				return 0;
-
-			// Find the index range that contains 'x'
-			int i0,i1;
-			series.IndexRange(x, x, out i0, out i1);
-
-			// Search for the nearest on the left and right of 'x'
-			// (note: not assuming the series is sorted here)
-			var lhs = 0;
-			var rhs = series.Count - 1;
-			for (var i = i0; i != i1; ++i)
+			using (var s = Data[series_index].Lock)
 			{
-				var tmp = series[i];
-				if (series[lhs].x < tmp.x && tmp.x < x) lhs = i;
-				if (series[rhs].x > tmp.x && tmp.x > x) rhs = i;
+				// Binary search on X for the nearest data point
+				var series = s.Data;
+				if (series.Count == 0)
+					return 0;
+
+				// Find the index range that contains 'x'
+				s.IndexRange(x, x, out var i0, out var i1);
+
+				// Search for the nearest on the left and right of 'x'
+				// (note: not assuming the series is sorted here)
+				var lhs = 0;
+				var rhs = series.Count - 1;
+				for (var i = i0; i != i1; ++i)
+				{
+					var tmp = series[i];
+					if (series[lhs].x < tmp.x && tmp.x < x) lhs = i;
+					if (series[rhs].x > tmp.x && tmp.x > x) rhs = i;
+				}
+				if (series[lhs].x > x && series[rhs].x < x) return 0;
+				if (series[lhs].x > x) return series[rhs].y;
+				if (series[rhs].x < x) return series[lhs].y;
+				var t = (x - series[lhs].x) / (series[rhs].x - series[lhs].x);
+				return (1f - t) * series[lhs].y + (t) * series[rhs].y;
 			}
-			if (series[lhs].x > x && series[rhs].x < x) return 0;
-			if (series[lhs].x > x) return series[rhs].y;
-			if (series[rhs].x < x) return series[lhs].y;
-			var t = (x - series[lhs].x) / (series[rhs].x - series[lhs].x);
-			return (1f - t) * series[lhs].y + (t) * series[rhs].y;
 		}
 
 		/// <summary>Returns the nearest graph data point to 'location' given
@@ -557,22 +629,24 @@ namespace pr.gui
 			if (series_index < 0 || series_index >= Data.Count)
 				throw new Exception("series index out of range");
 
-			var series = Data[series_index];
-			var tol = px_tol * m_plot_area.Width / XAxis.Span;
-			var dist_sq = tol * tol;
-
-			gv = new GraphValue();
-			foreach (var v in series.Values(pt.X - tol, pt.X + tol))
+			using (var s = Data[series_index].Lock)
 			{
-				var tmp = new v2((float)v.x, (float)v.y);
-				var d = (tmp - pt).Length2Sq;
-				if (d < dist_sq)
+				var tol = px_tol * m_plot_area.Width / XAxis.Span;
+				var dist_sq = tol * tol;
+
+				gv = new GraphValue();
+				foreach (var v in s.Values(pt.X - tol, pt.X + tol))
 				{
-					dist_sq = d;
-					gv = v;
+					var tmp = new v2((float)v.x, (float)v.y);
+					var d = (tmp - pt).Length2Sq;
+					if (d < dist_sq)
+					{
+						dist_sq = d;
+						gv = v;
+					}
 				}
+				return dist_sq < tol * tol;
 			}
-			return dist_sq < tol * tol;
 		}
 
 		#endregion
@@ -2045,17 +2119,18 @@ namespace pr.gui
 					using (var bsh_bar  = new SolidBrush(opts.BarColour))
 					using (var bsh_err  = new SolidBrush(opts.ErrorBarColour))
 					using (var pen_line = new Pen(opts.LineColour, opts.LineWidth))
-					using (var pen_bar  = new Pen(opts.BarColour, 0.0f))
+					using (var pen_bar = new Pen(opts.BarColour, 0.0f))
+					using (var s = series.Lock)
 					{
 						// Loop over data points
-						var indices = series.Indices(XAxis.Min, XAxis.Max);
+						var indices = s.Indices(XAxis.Min, XAxis.Max);
 						for (var iter = indices.GetIterator(); !iter.AtEnd;)
 						{
 							if (m_rdr_cancel)
 								break;
 
 							// Get the next data point
-							var pt = new ScreenPoint(series, plot_area, g2c, iter);
+							var pt = new ScreenPoint(s.Data, plot_area, g2c, iter);
 
 							// Render the data point
 							switch (opts.PlotType)
@@ -2080,11 +2155,10 @@ namespace pr.gui
 						// Add a moving average line
 						if (opts.DrawMovingAvr)
 						{
-							int i0, i1;
-							series.IndexRange(XAxis.Min, XAxis.Max, out i0, out i1);
-							i0 = Math.Max(0           , i0 - opts.MAWindowSize);
-							i1 = Math.Min(series.Count, i1 + opts.MAWindowSize);
-							PlotMovingAverage(gfx, opts, g2c, series.Values(i0,i1).GetIterator());
+							s.IndexRange(XAxis.Min, XAxis.Max, out var i0, out var i1);
+							i0 = Math.Max(0, i0 - opts.MAWindowSize);
+							i1 = Math.Min(s.Data.Count, i1 + opts.MAWindowSize);
+							PlotMovingAverage(gfx, opts, g2c, s.Values(i0, i1).GetIterator());
 						}
 					}
 				}
@@ -2165,23 +2239,23 @@ namespace pr.gui
 		/// <summary>A helper for rendering that finds the bounds of all points at the same screen space X position</summary>
 		private class ScreenPoint
 		{
-			public Series    m_series;       // The series that this point came from
-			public Rectangle m_plot_area;    // The screen space area that the point must be within
-			public Matrix3x3 m_g2c;          // Graph to client space transform
-			public int       m_imin, m_imax; // The index range in 'm_series' of the data points included
-			public double    m_xmin, m_xmax; // The graph-space X-range of data values that fall on the same client space X position
-			public double    m_ymin, m_ymax; // The graph-space Y-range of data values that fall on the same client space X position
-			public double    m_ylo , m_yhi ; // The graph-space bounds on the error bars of the Y values
+			public IList<GraphValue> m_data;         // The series that this point came from
+			public Rectangle         m_plot_area;    // The screen space area that the point must be within
+			public Matrix3x3         m_g2c;          // Graph to client space transform
+			public int               m_imin, m_imax; // The index range in 'm_series' of the data points included
+			public double            m_xmin, m_xmax; // The graph-space X-range of data values that fall on the same client space X position
+			public double            m_ymin, m_ymax; // The graph-space Y-range of data values that fall on the same client space X position
+			public double            m_ylo , m_yhi ; // The graph-space bounds on the error bars of the Y values
 
 			/// <summary>Scan 'iter' forward to the next data point that has a screen space X value not equal to that of the 'iter' data point</summary>
-			public ScreenPoint(Series series, Rectangle plot_area, Matrix3x3 g2c, Iterator<int> iter)
+			public ScreenPoint(IList<GraphValue> data, Rectangle plot_area, Matrix3x3 g2c, Iterator<int> iter)
 			{
 				// Get the data point
-				var gv0 = series[iter.Current];
+				var gv0 = data[iter.Current];
 				var cx0 = (long)(gv0.x * g2c.x.x);
 
 				// Init members
-				m_series    = series;
+				m_data      = data;
 				m_plot_area = plot_area;
 				m_g2c       = g2c;
 				m_imin      = m_imax = iter.Current;
@@ -2196,7 +2270,7 @@ namespace pr.gui
 				{
 					// Get the next data value, and find it's client space X value
 					// If the client-space X value is not equal to 'cx0' then leave.
-					var gv1 = series[iter.Current];
+					var gv1 = data[iter.Current];
 					var cx1 = (long)(gv1.x * g2c.x.x);
 					if (cx1 != cx0) break;
 
@@ -2246,12 +2320,12 @@ namespace pr.gui
 					// the display doesn't alias like crazy when zoomed right out.
 					if (m_imin != 0)
 					{
-						var prev_x = m_series[m_imin - 1].x;
+						var prev_x = m_data[m_imin - 1].x;
 						lhs = (float)Math.Max(0, 0.5*(m_xmin - prev_x) * m_g2c.x.x * width_scale);
 					}
-					if (m_imax+1 != m_series.Count)
+					if (m_imax+1 != m_data.Count)
 					{
-						var next_x = m_series[m_imax + 1].x;
+						var next_x = m_data[m_imax + 1].x;
 						rhs = (float)Math.Max(1, 0.5*(next_x - m_xmax) * m_g2c.x.x * width_scale);
 					}
 					if (lhs == 0) lhs = rhs; // i_min == 0 case
@@ -2304,8 +2378,8 @@ namespace pr.gui
 				// Draw the line from the previous point
 				if (pt.m_imin != 0) // if this is not the first point
 				{
-					var prev = pt.m_g2c.TransformPoint(pt.m_series[pt.m_imin - 1], 1.0).ToPointF();
-					var curr = pt.m_g2c.TransformPoint(pt.m_series[pt.m_imin    ], 1.0).ToPointF();
+					var prev = pt.m_g2c.TransformPoint(pt.m_data[pt.m_imin - 1], 1.0).ToPointF();
+					var curr = pt.m_g2c.TransformPoint(pt.m_data[pt.m_imin    ], 1.0).ToPointF();
 					gfx.DrawLine(pen_line, prev.X, prev.Y, curr.X, curr.Y);
 				}
 
@@ -3290,7 +3364,8 @@ namespace pr.gui
 			{
 				exp.m_list_series_list.Items.Add(series.Name, true);
 			}
-			if (exp.ShowDialog() != DialogResult.OK) return;
+			if (exp.ShowDialog() != DialogResult.OK)
+				return;
 
 			// Write the file
 			try
@@ -3306,8 +3381,9 @@ namespace pr.gui
 
 						file.WriteLine(Data[i].Name);
 						file.WriteLine(XAxis.Label+","+YAxis.Label+",Lower Bound,Upper Bound");
-						foreach (var gv in Data[i].Values())
-							file.WriteLine(gv.x+","+gv.y+","+gv.ylo+","+gv.yhi);
+						using (var s = Data[i].Lock)
+							foreach (var gv in s.Data)
+								file.WriteLine(gv.x+","+gv.y+","+gv.ylo+","+gv.yhi);
 					}
 				}
 			}
@@ -3331,46 +3407,65 @@ namespace pr.gui
 			{
 				try
 				{
-					using (TextReader file = new StreamReader(filename))
+					using (var fs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read))
+					using (var sr = new StreamReader(fs))
 					{
-						var series = new Series();
-						Action<Series> AddSeries = s =>
+						for (;;)
 						{
-							if (s.Count == 0) return;
-							Data.Add(s);
-						};
-
-						// Read a line from the file,
-						for (var line = file.ReadLine(); line != null; line = file.ReadLine())
-						{
-							// how many tokens can it be split into?
-							var tokens = line.Split(',', '\n');
-
-							// 1->a title/name, the start of another series
-							if (tokens.Length == 1)
+							var series = new Series{ AllowDelete = true };
+							using (var s = series.Lock)
 							{
-								AddSeries(series);
-								series = new Series { Name = tokens[0], AllowDelete = true };
-							}
+								// Peek at the first line
+								var fpos = fs.Position;
+								var line = sr.ReadLine();
+								if (line == null) break;
 
-							// 4-> data
-							else if (tokens.Length == 4)
-							{
-								double v0, v1, v2, v3;
-								if (double.TryParse(tokens[0], out v0) &&
-									double.TryParse(tokens[1], out v1) &&
-									double.TryParse(tokens[2], out v2) &&
-									double.TryParse(tokens[3], out v3))
-									series.Add(new GraphValue(v0, v1, v2, v3, null));
+								// How many tokens can it be split into?
+								var tokens = line.Split(',', '\n');
+
+								// If there is only 1 token, then this is the series name
+								// Otherwise, there is no series name and the first line is probably data
+								if (tokens.Length == 1)
+									series.Name = tokens[0];
+								else
+									fs.Position = fpos;
+
+								// Read the rest of the series data
+								for (;;)
+								{
+									fpos = fs.Position;
+									line = sr.ReadLine();
+									if (line == null) break;
+
+									// How many tokens can it be split into?
+									tokens = line.Split(',', '\n');
+									if (tokens.Length == 1)
+									{
+										// One token is the start of the next series
+										fs.Position = fpos;
+										break;
+									}
+									else if (tokens.Length == 4)
+									{
+										if (double.TryParse(tokens[0], out var v0) &&
+											double.TryParse(tokens[1], out var v1) &&
+											double.TryParse(tokens[2], out var v2) &&
+											double.TryParse(tokens[3], out var v3))
+											s.Data.Add(new GraphValue(v0, v1, v2, v3, null));
+									}
+								}
+
+								// Add the series
+								if (s.Data.Count != 0)
+									Data.Add(series);
 							}
 						}
-						AddSeries(series);
 					}
 				}
 				catch (Exception ex)
 				{
 					if (ImportCSVError != null) ImportCSVError(ex);
-					else MessageBox.Show(this, "Import failed for '" + filename + "'.\nReason: " + ex.Message, "Import Failed", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+					else MessageBox.Show(this, $"Import failed for '{filename}'.\n{ex.Message}", "Import Failed", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
 				}
 			}
 			FindDefaultRange();

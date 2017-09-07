@@ -8,8 +8,11 @@ namespace pr.gui
 	/// and also doesn't throw a first chance exception when then the combo box data source is set to null</summary>
 	public class ToolStripComboBox :ToolStripControlHost
 	{
-		public ToolStripComboBox() :this(string.Empty) {}
-		public ToolStripComboBox(string name) :base(new ComboBox { Name = name }, name)
+		public ToolStripComboBox()
+			:this(string.Empty)
+		{ }
+		public ToolStripComboBox(string name)
+			:base(new ComboBox { Name = name }, name)
 		{}
 
 		/// <summary>Apply the control name to the combo box as well</summary>

@@ -201,7 +201,7 @@ namespace LDraw
 		/// <summary>Remove any objects associated with this script</summary>
 		private void ClearScript()
 		{
-			Model.ContextIds.Remove(ContextId);
+			Model.SourceContextIds.Remove(ContextId);
 			Model.CurrentScene.ContextIds.Remove(ContextId);
 			Model.CurrentScene.Invalidate();
 			
@@ -216,7 +216,7 @@ namespace LDraw
 
 			// Need a View3d method for rendering a string containing a scene
 			Model.View3d.LoadScript(Editor.Text, false, ContextId, null);
-			Model.ContextIds.Add(ContextId);
+			Model.SourceContextIds.Add(ContextId);
 
 			// Add the script content to the selected scene
 			var scene = m_cb_scene.ComboBox.SelectedItem as SceneUI ?? Model.CurrentScene;

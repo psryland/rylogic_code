@@ -309,6 +309,22 @@ VIEW3D_API void __stdcall View3d_WindowSceneChangedCB(View3DWindow window, View3
 	CatchAndReport(View3d_WindowSceneChangedCB, window, );
 }
 
+// Suspend/Resume the scene changed notification event. Typically used during rendering a frame
+VIEW3D_API void __stdcall View3D_WindowSceneChangedSuspend(View3DWindow window, BOOL suspend)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		pr::MultiCast<SceneChangedCB>::Lock lock(window->OnSceneChanged);
+		if (suspend != 0)
+			lock.suspend();
+		else
+			lock.resume();
+	}
+	CatchAndReport(View3D_WindowSceneChangedSuspend, window, );
+}
+
 // Add/Remove objects to/from a window
 VIEW3D_API void __stdcall View3D_WindowAddObject(View3DWindow window, View3DObject object)
 {
@@ -384,32 +400,38 @@ VIEW3D_API void __stdcall View3D_WindowEnumObjects(View3DWindow window, View3D_E
 	}
 	CatchAndReport(View3D_WindowEnumObjects, window, );
 }
-
-// Add/Remove objects by context id
-VIEW3D_API void __stdcall View3D_WindowAddObjectsById(View3DWindow window, GUID const& context_id)
+VIEW3D_API void __stdcall View3D_WindowEnumObjectsById(View3DWindow window, View3D_EnumObjectsCB enum_objects_cb, void* ctx, GUID const* context_id, int count, BOOL all_except)
 {
 	try
 	{
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
+		window->EnumObjects(enum_objects_cb, ctx, context_id, count, all_except != 0);
+	}
+	CatchAndReport(View3D_WindowEnumObjectsById, window, );
+}
 
-		for (auto& obj : Dll().m_sources.Objects())
-		{
-			if (obj->m_context_id != context_id) continue;
-			View3D_WindowAddObject(window, obj.m_ptr);
-		}
+// Add/Remove objects by context id
+VIEW3D_API void __stdcall View3D_WindowAddObjectsById(View3DWindow window, GUID const* context_id, int count, BOOL all_except)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->AddObjectsById(context_id, count, all_except != 0);
 	}
 	CatchAndReport(View3D_WindowAddObjectsById, window,);
 }
-VIEW3D_API void __stdcall View3D_WindowRemoveObjectsById(View3DWindow window, BOOL all_except, GUID const& context_id)
+VIEW3D_API void __stdcall View3D_WindowRemoveObjectsById(View3DWindow window, GUID const* context_id, int count, BOOL all_except)
 {
 	try
 	{
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		window->RemoveObjectsById(context_id, all_except != 0);
+		window->RemoveObjectsById(context_id, count, all_except != 0);
 	}
 	CatchAndReport(View3D_WindowRemoveObjectsById, window,);
 }
@@ -1258,6 +1280,19 @@ VIEW3D_API BOOL __stdcall View3D_ContextIdFromFilepath(wchar_t const* filepath, 
 	CatchAndReport(View3D_ContextIdFromFilepath,,FALSE);
 }
 
+// Return the context id that this object belongs to
+VIEW3D_API GUID __stdcall View3D_ObjectContextIdGet(View3DObject object)
+{
+	try
+	{
+		if (!object) throw std::exception("object is null");
+
+		DllLockGuard;
+		return object->m_context_id;
+	}
+	CatchAndReport(View3D_ObjectContextIdGet, , GUID());
+}
+
 // Delete all objects
 VIEW3D_API void __stdcall View3D_ObjectsDeleteAll()
 {
@@ -1270,12 +1305,12 @@ VIEW3D_API void __stdcall View3D_ObjectsDeleteAll()
 }
 
 // Delete all objects matching a context id
-VIEW3D_API void __stdcall View3D_ObjectsDeleteById(GUID const& context_id)
+VIEW3D_API void __stdcall View3D_ObjectsDeleteById(GUID const* context_ids, int count)
 {
 	try
 	{
 		DllLockGuard;
-		Dll().DeleteAllObjectsById(context_id);
+		Dll().DeleteAllObjectsById(context_ids, count);
 	}
 	CatchAndReport(View3D_ObjectsDeleteById, ,);
 }
@@ -1452,6 +1487,21 @@ VIEW3D_API void __stdcall View3D_ObjectDelete(View3DObject object)
 	CatchAndReport(View3D_ObjectDelete, ,);
 }
 
+// Return the root object of 'object' (possibly itself)
+VIEW3D_API View3DObject __stdcall View3D_ObjectGetRoot(View3DObject object)
+{
+	try
+	{
+		if (!object) throw std::exception("object is null");
+
+		DllLockGuard;
+		auto p = object;
+		for (; p->m_parent != nullptr; p = p->m_parent) {}
+		return p;
+	}
+	CatchAndReport(View3D_ObjectGetRoot, , nullptr);
+}
+
 // Return the immediate parent of 'object'
 VIEW3D_API View3DObject __stdcall View3D_ObjectGetParent(View3DObject object)
 {
@@ -1473,8 +1523,7 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectGetChildByName(View3DObject objec
 		if (!object) throw std::exception("object is null");
 
 		DllLockGuard;
-		auto ptr = object->Child(name);
-		return ptr.m_ptr;
+		return object->Child(name);
 	}
 	CatchAndReport(View3D_ObjectGetChildByName, , nullptr);
 }
@@ -1485,8 +1534,7 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectGetChildByIndex(View3DObject obje
 		if (!object) throw std::exception("object is null");
 
 		DllLockGuard;
-		auto ptr = object->Child(index);
-		return ptr.m_ptr;
+		return object->Child(index);
 	}
 	CatchAndReport(View3D_ObjectGetChildByIndex, , nullptr);
 }
@@ -1549,6 +1597,27 @@ VIEW3D_API void __stdcall View3D_ObjectNameSet(View3DObject object, char const* 
 		object->m_name.assign(name);
 	}
 	CatchAndReport(View3D_ObjectNameGet, ,);
+}
+
+// Get the type of 'object'
+VIEW3D_API BSTR __stdcall View3D_ObjectTypeGetBStr(View3DObject object)
+{
+	try
+	{
+		DllLockGuard;
+		auto name = object->m_type.ToStringW();
+		return ::SysAllocStringLen(name, UINT(wcslen(name)));
+	}
+	CatchAndReport(View3D_ObjectTypeGetBStr, , BSTR());
+}
+VIEW3D_API char const*  __stdcall View3D_ObjectTypeGet(View3DObject object)
+{
+	try
+	{
+		DllLockGuard;
+		return object->m_type.ToStringA();
+	}
+	CatchAndReport(View3D_ObjectTypeGet, , nullptr);
 }
 
 // Get/Set the object to world transform for this object or the first child object that matches 'name'.
@@ -1644,20 +1713,19 @@ VIEW3D_API EView3DFlags __stdcall View3D_ObjectFlagsGet(View3DObject object, cha
 	}
 	CatchAndReport(View3D_ObjectFlagsGet, ,EView3DFlags::None);
 }
-VIEW3D_API void __stdcall View3D_ObjectFlagsSet(View3DObject object, EView3DFlags flags, char const* name)
+VIEW3D_API void __stdcall View3D_ObjectFlagsSet(View3DObject object, EView3DFlags flags, BOOL state, char const* name)
 {
 	try
 	{
 		if (!object) throw std::exception("Object is null");
 
 		DllLockGuard;
-		object->Flags(static_cast<pr::ldr::ELdrFlags>(flags), name);
+		object->Flags(static_cast<pr::ldr::ELdrFlags>(flags), state != 0, name);
 	}
 	CatchAndReport(View3D_ObjectFlagsSet, ,);
 }
 
-// Return the current or base colour of an object (the first object to match 'name')
-// See LdrObject::Apply for docs on the format of 'name'
+// Get/Set the current or base colour of an object (the first object to match 'name') (See LdrObject::Apply)
 VIEW3D_API View3DColour __stdcall View3D_ObjectColourGet(View3DObject object, BOOL base_colour, char const* name)
 {
 	try
@@ -1669,9 +1737,6 @@ VIEW3D_API View3DColour __stdcall View3D_ObjectColourGet(View3DObject object, BO
 	}
 	CatchAndReport(View3D_ObjectGetColour, ,View3DColour(0xFFFFFFFF));
 }
-
-// Set the object colour
-// See LdrObject::Apply for docs on the format of 'name'
 VIEW3D_API void __stdcall View3D_ObjectColourSet(View3DObject object, View3DColour colour, UINT32 mask, char const* name)
 {
 	try
@@ -1682,6 +1747,30 @@ VIEW3D_API void __stdcall View3D_ObjectColourSet(View3DObject object, View3DColo
 		object->Colour(pr::Colour32(colour), mask, name);
 	}
 	CatchAndReport(View3D_ObjectSetColour, ,);
+}
+
+// Get/Set wireframe mode for an object (the first object to match 'name') (See LdrObject::Apply)
+VIEW3D_API BOOL __stdcall View3D_ObjectWireframeGet(View3DObject object, char const* name)
+{
+	try
+	{
+		if (!object) throw std::exception("Object is null");
+
+		DllLockGuard;
+		return const_cast<pr::ldr::LdrObject const*>(object)->Wireframe(name);
+	}
+	CatchAndReport(View3D_ObjectWireframeGet, , FALSE);
+}
+VIEW3D_API void __stdcall View3D_ObjectWireframeSet(View3DObject object, BOOL wire_frame, char const* name)
+{
+	try
+	{
+		if (!object) throw std::exception("Object is null");
+
+		DllLockGuard;
+		object->Wireframe(wire_frame != 0, name);
+	}
+	CatchAndReport(View3D_ObjectWireframeSet, , );
 }
 
 // Reset the object colour back to its default
@@ -2455,7 +2544,7 @@ VIEW3D_API BOOL __stdcall View3D_TranslateKey(View3DWindow window, int key_code)
 			}
 		case VK_SPACE:
 			{
-				View3D_ShowObjectManager(window, true);
+				View3D_ObjectManagerShow(window, true);
 				return TRUE;
 			}
 		case 'W':
@@ -2491,7 +2580,7 @@ VIEW3D_API void __stdcall View3D_RestoreMainRT(View3DWindow window)
 }
 
 // Returns true if the depth buffer is enabled
-VIEW3D_API BOOL __stdcall View3D_DepthBufferEnabled(View3DWindow window)
+VIEW3D_API BOOL __stdcall View3D_DepthBufferEnabledGet(View3DWindow window)
 {
 	try
 	{
@@ -2500,11 +2589,11 @@ VIEW3D_API BOOL __stdcall View3D_DepthBufferEnabled(View3DWindow window)
 		DllLockGuard;
 		return window->m_scene.m_dsb.Desc().DepthEnable;
 	}
-	CatchAndReport(View3D_DepthBufferEnabled, window, TRUE);
+	CatchAndReport(View3D_DepthBufferEnabledGet, window, TRUE);
 }
 
 // Enables or disables the depth buffer
-VIEW3D_API void __stdcall View3D_SetDepthBufferEnabled(View3DWindow window, BOOL enabled)
+VIEW3D_API void __stdcall View3D_DepthBufferEnabledSet(View3DWindow window, BOOL enabled)
 {
 	try
 	{
@@ -2513,11 +2602,11 @@ VIEW3D_API void __stdcall View3D_SetDepthBufferEnabled(View3DWindow window, BOOL
 		DllLockGuard;
 		window->m_scene.m_dsb.Set(EDS::DepthEnable, enabled);
 	}
-	CatchAndReport(View3D_SetDepthBufferEnabled, window,);
+	CatchAndReport(View3D_DepthBufferEnabledSet, window,);
 }
 
 // Return true if the focus point is visible
-VIEW3D_API BOOL __stdcall View3D_FocusPointVisible(View3DWindow window)
+VIEW3D_API BOOL __stdcall View3D_FocusPointVisibleGet(View3DWindow window)
 {
 	try
 	{
@@ -2526,11 +2615,11 @@ VIEW3D_API BOOL __stdcall View3D_FocusPointVisible(View3DWindow window)
 		DllLockGuard;
 		return window->m_focus_point_visible;
 	}
-	CatchAndReport(View3D_FocusPointVisible, window, false);
+	CatchAndReport(View3D_FocusPointVisibleGet, window, false);
 }
 
 // Add the focus point to a window
-VIEW3D_API void __stdcall View3D_ShowFocusPoint(View3DWindow window, BOOL show)
+VIEW3D_API void __stdcall View3D_FocusPointVisibleSet(View3DWindow window, BOOL show)
 {
 	try
 	{
@@ -2539,11 +2628,11 @@ VIEW3D_API void __stdcall View3D_ShowFocusPoint(View3DWindow window, BOOL show)
 		DllLockGuard;
 		window->m_focus_point_visible = show != 0;
 	}
-	CatchAndReport(View3D_ShowFocusPoint, window,);
+	CatchAndReport(View3D_FocusPointVisibleSet, window,);
 }
 
 // Set the size of the focus point
-VIEW3D_API void __stdcall View3D_SetFocusPointSize(View3DWindow window, float size)
+VIEW3D_API void __stdcall View3D_FocusPointSizeSet(View3DWindow window, float size)
 {
 	try
 	{
@@ -2552,11 +2641,11 @@ VIEW3D_API void __stdcall View3D_SetFocusPointSize(View3DWindow window, float si
 		DllLockGuard;
 		window->m_focus_point_size = size;
 	}
-	CatchAndReport(View3D_SetFocusPointSize, window,);
+	CatchAndReport(View3D_FocusPointSizeSet, window,);
 }
 
 // Return true if the origin is visible
-VIEW3D_API BOOL __stdcall View3D_OriginVisible(View3DWindow window)
+VIEW3D_API BOOL __stdcall View3D_OriginVisibleGet(View3DWindow window)
 {
 	try
 	{
@@ -2565,11 +2654,11 @@ VIEW3D_API BOOL __stdcall View3D_OriginVisible(View3DWindow window)
 		DllLockGuard;
 		return window->m_origin_point_visible;
 	}
-	CatchAndReport(View3D_OriginVisible, window, false);
+	CatchAndReport(View3D_OriginVisibleGet, window, false);
 }
 
 // Add the focus point to a window
-VIEW3D_API void __stdcall View3D_ShowOrigin(View3DWindow window, BOOL show)
+VIEW3D_API void __stdcall View3D_OriginVisibleSet(View3DWindow window, BOOL show)
 {
 	try
 	{
@@ -2578,11 +2667,11 @@ VIEW3D_API void __stdcall View3D_ShowOrigin(View3DWindow window, BOOL show)
 		DllLockGuard;
 		window->m_origin_point_visible = show != 0;
 	}
-	CatchAndReport(View3D_ShowOrigin, window,);
+	CatchAndReport(View3D_OriginVisibleSet, window,);
 }
 
 // Set the size of the focus point
-VIEW3D_API void __stdcall View3D_SetOriginSize(View3DWindow window, float size)
+VIEW3D_API void __stdcall View3D_OriginSizeSet(View3DWindow window, float size)
 {
 	try
 	{
@@ -2591,7 +2680,7 @@ VIEW3D_API void __stdcall View3D_SetOriginSize(View3DWindow window, float size)
 		DllLockGuard;
 		window->m_origin_point_size = size;
 	}
-	CatchAndReport(View3D_SetOriginSize, window,);
+	CatchAndReport(View3D_OriginSizeSet, window,);
 }
 
 // Get/Set whether object bounding boxes are visible
@@ -2618,10 +2707,60 @@ VIEW3D_API void __stdcall View3D_BBoxesVisibleSet(View3DWindow window, BOOL visi
 	CatchAndReport(View3D_BBoxesVisibleSet, window, );
 }
 
+// Get/Set the visibility of the selection box
+VIEW3D_API BOOL __stdcall View3D_SelectionBoxVisibleGet(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return window->m_selection_box_visible;
+	}
+	CatchAndReport(View3D_SelectionBoxVisibleGet, window, FALSE);
+}
+VIEW3D_API void __stdcall View3D_SelectionBoxVisibleSet(View3DWindow window, BOOL visible)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_selection_box_visible = visible != 0;
+	}
+	CatchAndReport(View3D_SelectionBoxVisibleSet, window, );
+}
+
+// Set the position and size of the selection box
+VIEW3D_API void __stdcall View3D_SelectionBoxPosition(View3DWindow window, View3DBBox const& bbox, View3DM4x4 const& o2w)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->SetSelectionBox(view3d::To<pr::BBox>(bbox), view3d::To<pr::m4x4>(o2w));
+	}
+	CatchAndReport(View3D_SelectionBoxPosition, window, );
+}
+
+// Set the position of the selection box
+VIEW3D_API void __stdcall View3D_SelectionBoxFitToSelected(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->SelectionBoxFitToSelected();
+	}
+	CatchAndReport(View3D_SelectionBoxFitToSelected, window, );
+}
+
 pr::Guid const GuidDemoSceneObjects = { 0xFE51C164, 0x9E57, 0x456F, 0x9D, 0x8D, 0x39, 0xE3, 0xFA, 0xAF, 0xD3, 0xE7 };
 
 // Create a scene showing the capabilities of view3d (actually of ldr_object_manager)
-VIEW3D_API GUID __stdcall View3D_CreateDemoScene(View3DWindow window)
+VIEW3D_API GUID __stdcall View3D_DemoSceneCreate(View3DWindow window)
 {
 	using namespace pr::script;
 	using namespace pr::ldr;
@@ -2649,18 +2788,18 @@ VIEW3D_API GUID __stdcall View3D_CreateDemoScene(View3DWindow window)
 		View3D_ResetView(window, View3DV4{0.0f, 0.0f, -1.0f, 0.0f}, View3DV4{0.0f, 1.0f, 0.0f, 0.0f}, 0, TRUE, TRUE);
 		return GuidDemoSceneObjects;
 	}
-	CatchAndReport(View3D_CreateDemoScene, window, GuidDemoSceneObjects);
+	CatchAndReport(View3D_DemoSceneCreate, window, GuidDemoSceneObjects);
 }
 
 // Delete all objects belonging to the demo scene
-VIEW3D_API void __stdcall View3D_DeleteDemoScene()
+VIEW3D_API void __stdcall View3D_DemoSceneDelete()
 {
 	try
 	{
 		DllLockGuard;
-		View3D_ObjectsDeleteById(GuidDemoSceneObjects);
+		View3D_ObjectsDeleteById(&GuidDemoSceneObjects, 1);
 	}
-	CatchAndReport(View3D_DeleteDemoScene,,);
+	CatchAndReport(View3D_DemoSceneDelete,,);
 }
 
 // Return the example Ldr script as a BSTR
@@ -2676,7 +2815,7 @@ VIEW3D_API BSTR __stdcall View3D_ExampleScriptBStr()
 }
 
 // Show a window containing the demo scene script
-VIEW3D_API void __stdcall View3D_ShowDemoScript(View3DWindow window)
+VIEW3D_API void __stdcall View3D_DemoScriptShow(View3DWindow window)
 {
 	try
 	{
@@ -2686,11 +2825,11 @@ VIEW3D_API void __stdcall View3D_ShowDemoScript(View3DWindow window)
 		window->EditorUI().Show();
 		window->EditorUI().Text(pr::ldr::CreateDemoScene().c_str());
 	}
-	CatchAndReport(View3D_ShowDemoScript, window,);
+	CatchAndReport(View3D_DemoScriptShow, window,);
 }
 
 // Display the object manager UI
-VIEW3D_API void __stdcall View3D_ShowObjectManager(View3DWindow window, BOOL show)
+VIEW3D_API void __stdcall View3D_ObjectManagerShow(View3DWindow window, BOOL show)
 {
 	try
 	{
@@ -2699,7 +2838,7 @@ VIEW3D_API void __stdcall View3D_ShowObjectManager(View3DWindow window, BOOL sho
 		DllLockGuard;
 		window->ShowObjectManager(show != 0);
 	}
-	CatchAndReport(View3D_ShowObjectManager, window,);
+	CatchAndReport(View3D_ObjectManagerShow, window,);
 }
 
 // Parse an ldr *o2w {} description returning the transform

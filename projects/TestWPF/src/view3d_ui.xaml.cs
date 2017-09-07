@@ -45,7 +45,7 @@ namespace TestWPF
 
 			// Create object via callback
 			m_obj1 = new View3d.Object("net", 0xFF0000FF, 20, 20, 1,
-				(int vcount, int icount, int ncount, View3d.Vertex[] verts, ushort[] indices, View3d.Nugget[] nuggets, out int new_vcount, out int new_icount, out int new_ncount, IntPtr ctx) =>
+				(IntPtr ctx, int vcount, int icount, int ncount, View3d.Vertex[] verts, ushort[] indices, View3d.Nugget[] nuggets, out int new_vcount, out int new_icount, out int new_ncount) =>
 				{
 					new_vcount = 0;
 					new_icount = 0;

@@ -40,8 +40,10 @@ namespace pr.extn
 		/// <summary>Temporarily detaches the DataSource from this binding source</summary>
 		public static Scope PauseBinding(this BindingSource bs)
 		{
-			var sess_src = bs.DataSource;
-			return Scope.Create(() => bs.DataSource = null, () => bs.DataSource = sess_src);
+			var src = bs.DataSource;
+			return Scope.Create(
+				() => bs.DataSource = null,
+				() => bs.DataSource = src);
 		}
 
 		/// <summary>Returns an RAII object that suspends raising event</summary>
@@ -49,33 +51,46 @@ namespace pr.extn
 		{
 			return Scope.Create(
 				() =>
-					{
-						var r = bs.RaiseListChangedEvents;
-						bs.RaiseListChangedEvents = false;
-						return r;
-					},
+				{
+					var r = bs.RaiseListChangedEvents;
+					bs.RaiseListChangedEvents = false;
+					return r;
+				},
 				r =>
-					{
-						bs.RaiseListChangedEvents = r;
-						if (reset_bindings_on_resume)
-							bs.ResetBindings(false);
-					});
+				{
+					bs.RaiseListChangedEvents = r;
+					if (reset_bindings_on_resume)
+						bs.ResetBindings(false);
+				});
 		}
-		public static Scope SuspendEvents<T>(this BindingSource<T> bs, bool reset_bindings_on_resume)
+		public static Scope SuspendEvents<T>(this BindingSource<T> bs, bool reset_bindings_on_resume, bool preserve_position)
 		{
+			var pos = bs.Position;
 			return Scope.Create(
 				() =>
-					{
-						var r = bs.RaiseListChangedEvents;
-						bs.RaiseListChangedEvents = false;
-						return r;
-					},
+				{
+					// Notify pre-reset before any changes are made
+					if (reset_bindings_on_resume)
+						bs.PreResetBindings();
+
+					// Save the raise list changed events state
+					var r = bs.RaiseListChangedEvents;
+					bs.RaiseListChangedEvents = false;
+					return r;
+				},
 				r =>
-					{
-						bs.RaiseListChangedEvents = r;
-						if (reset_bindings_on_resume)
-							bs.ResetBindings(false);
-					});
+				{
+					// Restore the raise events state
+					bs.RaiseListChangedEvents = r;
+
+					// Notify reset
+					if (reset_bindings_on_resume)
+						bs.ResetBindings(false, preserve_position:false, include_pre_reset:false);
+
+					// Restore position
+					if (preserve_position)
+						bs.Position = pos;
+				});
 		}
 
 		/// <summary>True if the list changed event is probably something you care about</summary>

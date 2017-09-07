@@ -260,7 +260,7 @@ namespace pr.container
 		{
 			if (RaiseListChangedEvents)
 			{
-				var args = new ListChgEventArgs<T>(this, ListChg.PreReordered, -1, default(T));
+				var args = new ListChgEventArgs<T>(this, ListChg.PreReset, -1, default(T));
 				ListChanging.Raise(this, args);
 				if (args.Cancel)
 					return;
@@ -281,8 +281,11 @@ namespace pr.container
 				IsSorted = true;
 			}
 
+			// Sort should raise ListChanged Reset
+			base.ResetBindings();
+
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<T>(this, ListChg.Reordered, -1, default(T)));
+				ListChanging.Raise(this, new ListChgEventArgs<T>(this, ListChg.Reset, -1, default(T)));
 		}
 
 		/// <summary>Removes any sort applied with ApplySortCore()</summary>

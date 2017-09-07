@@ -39,7 +39,7 @@ namespace LDraw
 		private ToolStripMenuItem m_menu_file_exit;
 		private ToolStripMenuItem m_menu_data;
 		private ToolStripMenuItem m_menu_data_create_demo_scene;
-		private ToolStripMenuItem m_menu_data_clear_scene;
+		private ToolStripMenuItem m_menu_data_clear_all_scenes;
 		private ToolStripSeparator toolStripSeparator2;
 		private ToolStripMenuItem m_menu_nav;
 		private ToolStripMenuItem m_menu_nav_reset_view;
@@ -122,6 +122,8 @@ namespace LDraw
 		private ToolStripLabel m_lbl_link_axes;
 		private ToolStripButton m_btn_link_xaxis;
 		private ToolStripButton m_btn_link_yaxis;
+		private ToolStripMenuItem m_menu_data_clear_scene;
+		private ToolStripSeparator toolStripSeparator17;
 		private ToolStripMenuItem m_menu_file_save_as;
 		#endregion
 
@@ -268,14 +270,8 @@ namespace LDraw
 			private set
 			{
 				if (m_impl_model == value) return;
-				if (m_impl_model != null)
-				{
-					Util.Dispose(ref m_impl_model);
-				}
+				Util.Dispose(ref m_impl_model);
 				m_impl_model = value;
-				if (m_impl_model != null)
-				{
-				}
 				Update();
 			}
 		}
@@ -322,8 +318,9 @@ namespace LDraw
 		private DockContainer m_dc;
 		private void HandleActiveContentChanged(object sender, ActiveContentChangedEventArgs e)
 		{
-			if (e.ContentNew is SceneUI)
-				Model.CurrentScene = (SceneUI)e.ContentNew;
+			if (Model == null) return;
+			if (e.ContentNew is SceneUI scene)
+				Model.CurrentScene = scene;
 
 			UpdateUI();
 		}
@@ -332,6 +329,10 @@ namespace LDraw
 		private void SetupUI()
 		{
 			#region Dock Container
+			m_dc.ActiveContentChanged += (s,a) =>
+			{
+				UpdateUI();
+			};
 			if (Settings.UI.UILayout != null)
 			{
 				m_dc.LoadLayout(Settings.UI.UILayout, (name,ty) =>
@@ -495,15 +496,19 @@ namespace LDraw
 			};
 			#endregion
 			#region Data Menu
-			m_menu_data_clear_scene.Click += (s,a) =>
-			{
-				ClearScene();
-			};
 			m_menu_data_auto_refresh.Click += (s,a) =>
 			{
 				Model.Settings.AutoRefresh = !Model.Settings.AutoRefresh;
 				Model.AutoRefreshSources = Model.Settings.AutoRefresh;
 				UpdateUI();
+			};
+			m_menu_data_clear_all_scenes.Click += (s,a) =>
+			{
+				ClearAllScenes();
+			};
+			m_menu_data_clear_scene.Click += (s,a) =>
+			{
+				Model.CurrentScene.Clear();
 			};
 			m_menu_data_create_demo_scene.Click += (s,a) =>
 			{
@@ -529,6 +534,9 @@ namespace LDraw
 			};
 			m_menu_rendering_show_selection.Click += (s,a) =>
 			{
+				Model.CurrentScene.SelectionBoxVisible = !Model.CurrentScene.SelectionBoxVisible;
+				Invalidate();
+				UpdateUI();
 			};
 			m_menu_rendering_show_bounds.Click += (s,a) =>
 			{
@@ -655,8 +663,9 @@ namespace LDraw
 				return;
 
 			// Update menu state
-			m_menu_file_save.Enabled    = m_dc.ActiveContent?.Owner is ScriptUI;
-			m_menu_file_save_as.Enabled = m_dc.ActiveContent?.Owner is ScriptUI;
+			m_menu_file_save       .Enabled = m_dc.ActiveContent?.Owner is ScriptUI;
+			m_menu_file_save_as    .Enabled = m_dc.ActiveContent?.Owner is ScriptUI;
+			m_menu_data_clear_scene.Enabled = m_dc.ActiveContent?.Owner is SceneUI;
 
 			// Set check marks next to visible things
 			m_menu_nav_reset_on_reload     .Checked = Settings.ResetOnLoad;
@@ -664,7 +673,7 @@ namespace LDraw
 			m_menu_data_auto_refresh       .Checked = Model.AutoRefreshSources;
 			m_menu_rendering_show_focus    .Checked = Model.CurrentScene.FocusPointVisible;
 			m_menu_rendering_show_origin   .Checked = Model.CurrentScene.OriginPointVisible;
-			m_menu_rendering_show_selection.Checked = false;
+			m_menu_rendering_show_selection.Checked = Model.CurrentScene.SelectionBoxVisible;
 			m_menu_rendering_show_bounds   .Checked = Model.CurrentScene.BBoxesVisible;
 			m_menu_rendering_orthographic  .Checked = Model.CurrentScene.Camera.Orthographic;
 
@@ -680,6 +689,12 @@ namespace LDraw
 
 			// Display the multi scene tool-bar when there are multiple scenes
 			m_ts_multiview.Visible = Model.Scenes.Count > 1;
+
+			// Set the title to show the last filepath of the active scene
+			if (m_dc.ActiveContent?.Owner is SceneUI scene && scene.LastFilepath.HasValue())
+				Text = $"LDraw - {scene.LastFilepath}";
+			else
+				Text = $"LDraw";
 
 			// Update file loading progress
 			UpdateProgress();
@@ -726,9 +741,7 @@ namespace LDraw
 			// Load the file source
 			Model.CurrentScene.OpenFile(filepath, additional);
 
-			// Set the title to the last loaded file
-			if (Model.ContextIds.Count == 0 || !additional)
-				Text = "LDraw - {0}".Fmt(filepath);
+			Invalidate();
 		}
 
 		/// <summary>Save a script UI to file</summary>
@@ -747,8 +760,8 @@ namespace LDraw
 				dlg.ShowDialog();
 		}
 
-		/// <summary>Clear or script sources</summary>
-		private void ClearScene()
+		/// <summary>Clear all script sources</summary>
+		private void ClearAllScenes()
 		{
 			Model.ClearAllScenes();
 			Text = "LDraw";
@@ -922,7 +935,7 @@ namespace LDraw
 			this.toolStripSeparator12 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_nav_camera = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_data = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_data_clear_scene = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_data_clear_all_scenes = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_data_auto_refresh = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_data_create_demo_scene = new System.Windows.Forms.ToolStripMenuItem();
@@ -963,6 +976,8 @@ namespace LDraw
 			this.m_lbl_link_axes = new System.Windows.Forms.ToolStripLabel();
 			this.m_btn_link_xaxis = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_link_yaxis = new System.Windows.Forms.ToolStripButton();
+			this.m_menu_data_clear_scene = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator17 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
@@ -1389,8 +1404,10 @@ namespace LDraw
 			// m_menu_data
 			// 
 			this.m_menu_data.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_menu_data_clear_scene,
             this.m_menu_data_auto_refresh,
+            this.toolStripSeparator17,
+            this.m_menu_data_clear_all_scenes,
+            this.m_menu_data_clear_scene,
             this.toolStripSeparator2,
             this.m_menu_data_create_demo_scene,
             this.toolStripSeparator3,
@@ -1399,11 +1416,11 @@ namespace LDraw
 			this.m_menu_data.Size = new System.Drawing.Size(43, 20);
 			this.m_menu_data.Text = "&Data";
 			// 
-			// m_menu_data_clear_scene
+			// m_menu_data_clear_all_scenes
 			// 
-			this.m_menu_data_clear_scene.Name = "m_menu_data_clear_scene";
-			this.m_menu_data_clear_scene.Size = new System.Drawing.Size(177, 22);
-			this.m_menu_data_clear_scene.Text = "&Clear All Scenes";
+			this.m_menu_data_clear_all_scenes.Name = "m_menu_data_clear_all_scenes";
+			this.m_menu_data_clear_all_scenes.Size = new System.Drawing.Size(177, 22);
+			this.m_menu_data_clear_all_scenes.Text = "&Clear All Scenes";
 			// 
 			// m_menu_data_auto_refresh
 			// 
@@ -1622,7 +1639,7 @@ namespace LDraw
             this.m_btn_link_yaxis});
 			this.m_ts_multiview.Location = new System.Drawing.Point(3, 24);
 			this.m_ts_multiview.Name = "m_ts_multiview";
-			this.m_ts_multiview.Size = new System.Drawing.Size(381, 35);
+			this.m_ts_multiview.Size = new System.Drawing.Size(350, 35);
 			this.m_ts_multiview.TabIndex = 1;
 			// 
 			// m_lbl_link_cameras
@@ -1698,6 +1715,17 @@ namespace LDraw
 			this.m_btn_link_yaxis.Name = "m_btn_link_yaxis";
 			this.m_btn_link_yaxis.Size = new System.Drawing.Size(32, 32);
 			this.m_btn_link_yaxis.Text = "toolStripButton2";
+			// 
+			// m_menu_data_clear_scene
+			// 
+			this.m_menu_data_clear_scene.Name = "m_menu_data_clear_scene";
+			this.m_menu_data_clear_scene.Size = new System.Drawing.Size(177, 22);
+			this.m_menu_data_clear_scene.Text = "&Clear Scene";
+			// 
+			// toolStripSeparator17
+			// 
+			this.toolStripSeparator17.Name = "toolStripSeparator17";
+			this.toolStripSeparator17.Size = new System.Drawing.Size(174, 6);
 			// 
 			// MainUI
 			// 

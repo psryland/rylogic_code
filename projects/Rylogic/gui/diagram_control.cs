@@ -3664,7 +3664,7 @@ namespace pr.gui
 			public Tools()
 			{
 				m_area_select = new View3d.Object("*Rect selection 80000000 {3 1 1 *Solid}", false);
-				Resizer = Util.NewArray<ResizeGrabber>(8, i => new ResizeGrabber(i));
+				Resizer = Array_.New<ResizeGrabber>(8, i => new ResizeGrabber(i));
 			}
 			public void Dispose()
 			{

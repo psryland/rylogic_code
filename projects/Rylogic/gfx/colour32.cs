@@ -11,7 +11,7 @@ using System.Runtime.InteropServices;
 namespace pr.gfx
 {
 	[StructLayout(LayoutKind.Sequential)]
-	public struct Colour32
+	public struct Colour32 :IComparable<Colour32> ,IComparable
 	{
 		public uint m_argb;
 
@@ -32,8 +32,8 @@ namespace pr.gfx
 		public static implicit operator Colour32(uint col)  { return new Colour32(col); }
 
 		// Operators
-		public static Colour32 operator + (Colour32 lhs, Colour32 rhs)	{ return new Colour32(sat(lhs.A+rhs.A), sat(lhs.R+rhs.R), sat(lhs.G+rhs.G), sat(lhs.B+rhs.B)); }
-		public static Colour32 operator - (Colour32 lhs, Colour32 rhs)	{ return new Colour32(sat(lhs.A-rhs.A), sat(lhs.R-rhs.R), sat(lhs.G-rhs.G), sat(lhs.B-rhs.B)); }
+		public static Colour32 operator + (Colour32 lhs, Colour32 rhs)	{ return new Colour32(Sat(lhs.A+rhs.A), Sat(lhs.R+rhs.R), Sat(lhs.G+rhs.G), Sat(lhs.B+rhs.B)); }
+		public static Colour32 operator - (Colour32 lhs, Colour32 rhs)	{ return new Colour32(Sat(lhs.A-rhs.A), Sat(lhs.R-rhs.R), Sat(lhs.G-rhs.G), Sat(lhs.B-rhs.B)); }
 
 		// Constants
 		public static Colour32 Zero      = new Colour32(0x00,0x00,0x00,0x00);
@@ -48,7 +48,7 @@ namespace pr.gfx
 		public static Colour32 Gray      = new Colour32(0xFF,0x80,0x80,0x80);
 
 		/// <summary>Saturate 'i'</summary>
-		private static byte sat(int i)
+		private static byte Sat(int i)
 		{
 			return (byte)Math.Min(0xff, Math.Max(0, i));
 		}
@@ -124,6 +124,21 @@ namespace pr.gfx
 		{
 			Colour32 col;
 			return TryParse(s, out col, radix) ? (Colour32?)col : null;
+		}
+		#endregion
+
+		#region IComparible
+		public int CompareTo(Colour32 rhs)
+		{
+			// Compare using RGBA so that the same colours with different alpha are adjacent
+			var lhs = this;
+			var l_rgb = ((lhs.m_argb << 8) & 0xFFFFFF00) | ((lhs.m_argb >> 24) & 0xFF);
+			var r_rgb = ((rhs.m_argb << 8) & 0xFFFFFF00) | ((rhs.m_argb >> 24) & 0xFF);
+			return l_rgb.CompareTo(r_rgb);
+		}
+		public int CompareTo(object rhs)
+		{
+			return CompareTo((Colour32)rhs);
 		}
 		#endregion
 	}

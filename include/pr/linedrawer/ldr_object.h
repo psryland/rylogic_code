@@ -407,7 +407,7 @@ namespace pr
 			// If 'name' is "", then 'func' is applied to this object and all children recursively
 			// Otherwise, 'func' is applied to all child objects that match name.
 			// If 'name' begins with '#' then the remainder of the name is treated as a regular expression
-			// 'func' should have a signature: 'bool func(pr::ldr::LdrObject* obj);'
+			// 'func' should have a signature: 'bool func(pr::ldr::LdrObject* obj);' returning false to 'quick-out'.
 			// 'obj' is a recursion parameter, callers should use 'nullptr'
 			// Returns 'true' if 'func' always returns 'true'.
 			template <typename TFunc> bool Apply(TFunc func, char const* name = nullptr, LdrObject* obj = nullptr) const
@@ -442,10 +442,10 @@ namespace pr
 			}
 
 			// Get the first child object of this object that matches 'name' (see Apply)
-			LdrObjectPtr Child(char const* name) const;
+			LdrObject* Child(char const* name) const;
 
 			// Get a child object of this object by index
-			LdrObjectPtr Child(int index) const;
+			LdrObject* Child(int index) const;
 
 			// Get/Set the object to world transform of this object or the first child object matching 'name' (see Apply)
 			// Note, it is more efficient to set O2P.
@@ -466,7 +466,7 @@ namespace pr
 
 			// Get/Set meta behaviour flags for this object or child objects matching 'name' (see Apply)
 			ELdrFlags Flags(char const* name = nullptr) const;
-			void Flags(ELdrFlags flags, char const* name = nullptr);
+			void Flags(ELdrFlags flags, bool state, char const* name = nullptr);
 
 			// Get/Set the colour of this object or child objects matching 'name' (see Apply)
 			// For 'Get', the colour of the first object to match 'name' is returned
@@ -531,7 +531,7 @@ namespace pr
 			}
 
 			// Add/Remove 'child' as a child of this object
-			void AddChild(LdrObjectPtr child);
+			void AddChild(LdrObjectPtr& child);
 			LdrObjectPtr RemoveChild(LdrObjectPtr& child);
 			LdrObjectPtr RemoveChild(size_t i);
 			void RemoveAllChildren();

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 using pr.common;
+using pr.container;
 using pr.extn;
 using pr.gfx;
 using pr.gui;
@@ -43,12 +44,12 @@ namespace LDraw
 			DefaultKeyboardShortcuts = true;
 
 			// Apply settings
-			Window.FocusPointVisible  = Model.Settings.FocusPointVisible;
-			Window.OriginPointVisible = Model.Settings.OriginPointVisible;
-			Window.FocusPointSize     = Model.Settings.FocusPointSize;
-			Window.OriginPointSize    = Model.Settings.OriginPointSize;
-			Scene.Window.LightProperties  = new View3d.Light(Settings.Light);
-
+			Window.FocusPointVisible     = Model.Settings.FocusPointVisible;
+			Window.OriginPointVisible    = Model.Settings.OriginPointVisible;
+			Window.FocusPointSize        = Model.Settings.FocusPointSize;
+			Window.OriginPointSize       = Model.Settings.OriginPointSize;
+			Window.SelectionBoxVisible   = Settings.ShowSelectionBox;
+			Scene.Window.LightProperties = new View3d.Light(Settings.Light);
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -57,6 +58,7 @@ namespace LDraw
 			ObjectManagerUI = null;
 			DragDropCtx = null;
 			DockControl = null;
+			Settings = null;
 			Model = null;
 			base.Dispose(disposing);
 		}
@@ -108,11 +110,7 @@ namespace LDraw
 		private string m_name;
 
 		/// <summary>App settings</summary>
-		public SceneSettings Settings
-		{
-			[DebuggerStepThrough] get;
-			private set;
-		}
+		public SceneSettings Settings { [DebuggerStepThrough] get; private set; }
 
 		/// <summary>The app logic</summary>
 		public Model Model
@@ -125,12 +123,14 @@ namespace LDraw
 				{
 					m_model.Settings.SettingChanged -= HandleSettingChanged;
 					Scene.View3d.OnSourcesChanged -= HandleSourcesChanged;
+					Scene.Window.OnSceneChanged -= HandleSceneChanged;
 				}
 				m_model = value;
 				if (m_model != null)
 				{
-					m_model.Settings.SettingChanged += HandleSettingChanged;
+					Scene.Window.OnSceneChanged += HandleSceneChanged;
 					Scene.View3d.OnSourcesChanged += HandleSourcesChanged;
+					m_model.Settings.SettingChanged += HandleSettingChanged;
 				}
 			}
 		}
@@ -165,49 +165,100 @@ namespace LDraw
 			private set;
 		}
 
-		/// <summary>Enumerate all root objects in this scene</summary>
-		public IList<View3d.Object> Objects
-		{
-			get { return Window.Objects; }
-		}
+		/// <summary>Raised when objects are added/removed from the scene</summary>
+		public event EventHandler<View3d.SceneChangedEventArgs> SceneChanged;
 
 		/// <summary>Get/Set whether the focus point is visible in this scene</summary>
 		public bool FocusPointVisible
 		{
 			get { return Window?.FocusPointVisible ?? false; }
-			set { if (Window != null) Window.FocusPointVisible = value; }
+			set
+			{
+				if (FocusPointVisible == value) return;
+				Model.Settings.FocusPointVisible = value;
+				if (Window != null) Window.FocusPointVisible = value;
+			}
 		}
 
 		/// <summary>Get/Set whether the origin point is visible in this scene</summary>
 		public bool OriginPointVisible
 		{
 			get { return Window?.OriginPointVisible ?? false; }
-			set { if (Window != null) Window.OriginPointVisible = value; }
+			set
+			{
+				if (OriginPointVisible == value) return;
+				Model.Settings.OriginPointVisible = value;
+				if (Window != null) Window.OriginPointVisible = value;
+			}
+		}
+
+		/// <summary>Get/Set whether the selection box is visible in this scene</summary>
+		public bool SelectionBoxVisible
+		{
+			get { return Window?.SelectionBoxVisible ?? false; }
+			set
+			{
+				if (SelectionBoxVisible == value) return;
+				Settings.ShowSelectionBox = value;
+				if (Window != null) Window.SelectionBoxVisible = value;
+			}
 		}
 
 		/// <summary>Get/Set whether bounding boxes are visible in this scene</summary>
 		public bool BBoxesVisible
 		{
 			get { return Window?.BBoxesVisible ?? false; }
-			set { if (Window != null) Window.BBoxesVisible = value; }
+			set
+			{
+				if (BBoxesVisible == value) return;
+				Settings.ShowBBoxes = value;
+				if (Window != null) Window.BBoxesVisible = value;
+			}
 		}
+
+		/// <summary>The filepath of the last file loaded into this scene</summary>
+		public string LastFilepath { get; private set; }
 
 		/// <summary>Clear the instances from this scene</summary>
 		public void Clear()
 		{
+			// Remove all objects from the window's drawlist
+			Window.RemoveObjects(ContextIds.ToArray());
+
 			ContextIds.Clear();
 			Invalidate();
+		}
+
+		/// <summary>Add objects to the scene just prior to rendering</summary>
+		public void Populate()
+		{
+			// Add all objects to the window's drawlist
+			Window.AddObjects(ContextIds.ToArray());
+
+			// Update the selection box if necessary
+			if (SelectionBoxVisible)
+				Window.SelectionBoxFitToSelected();
 		}
 
 		/// <summary>Add a file source to this scene</summary>
 		public void OpenFile(string filepath, bool additional, bool auto_range = true)
 		{
+			// Record the filepath of the opened file
+			if (!additional)
+				LastFilepath = filepath;
+
 			// If the file has already been loaded in another scene, just add instances to this scene
 			var ctx_id = View3d.ContextIdFromFilepath(filepath);
 			if (ctx_id != null)
 			{
-				if (!additional) Clear();
+				if (!additional)
+				{
+					Clear();
+				}
+
+				// Add the context id to this scene only
 				ContextIds.Add(ctx_id.Value);
+
 				if (auto_range)
 				{
 					Populate();
@@ -223,9 +274,15 @@ namespace LDraw
 				var id = View3d.LoadScriptSource(filepath, true, include_paths: Model.IncludePaths.ToArray());
 				this.BeginInvoke(() =>
 				{
-					if (!additional) Clear();
-					Model.ContextIds.Add(id);
+					if (!additional)
+					{
+						Clear();
+					}
+
+					// Add the context id to both the collection of all context ids and the ids for this scene.
+					Model.SourceContextIds.Add(id);
 					ContextIds.Add(id);
+
 					if (auto_range)
 					{
 						Populate();
@@ -269,19 +326,6 @@ namespace LDraw
 				Options.ResetUp              = Settings.Camera.ResetUp;
 				Options.ResetForward         = Settings.Camera.ResetForward;
 			}
-		}
-
-		/// <summary>Add objects to the scene just prior to rendering</summary>
-		public void Populate()
-		{
-			// Add all objects to the window's drawlist
-			foreach (var id in ContextIds)
-				Window.AddObjects(id);
-
-		//??	// Add bounding boxes
-		//??	if (Settings.ShowBBoxes)
-		//??		foreach (var id in ContextIds)
-		//??			Window.AddObjects(id);
 		}
 
 		/// <summary>Show the object manager for this scene</summary>
@@ -335,6 +379,7 @@ namespace LDraw
 				}
 			}
 		}
+
 		private DragDrop m_dd;
 		private bool HandleDrop(object sender, DragEventArgs args, DragDrop.EDrop mode)
 		{
@@ -370,17 +415,23 @@ namespace LDraw
 		}
 
 		/// <summary>Handle notification that the script sources have changed</summary>
-		private void HandleSourcesChanged(object sender, View3d.SourcesChangedEventArgs e)
+		private void HandleSourcesChanged(object sender, View3d.SourcesChangedEventArgs args)
 		{
-			if (e.Reason == View3d.ESourcesChangedReason.Reload)
+			if (args.Reason == View3d.ESourcesChangedReason.Reload)
 			{
 				// Just after reloading sources
-				if (!e.Before && Model.Settings.ResetOnLoad)
+				if (!args.Before && Model.Settings.ResetOnLoad)
 				{
 					Populate();
 					AutoRange(View3d.ESceneBounds.All);
 				}
 			}
+		}
+
+		/// <summary>Handle scene changed notification</summary>
+		private void HandleSceneChanged(object sender, View3d.SceneChangedEventArgs args)
+		{
+			SceneChanged.Raise(this, args);
 		}
 
 		/// <summary>Apply setting changes</summary>
@@ -400,7 +451,13 @@ namespace LDraw
 			case nameof(LDraw.Settings.OriginPointSize):
 				Window.OriginPointSize = Model.Settings.OriginPointSize;
 				break;
-			case nameof(Settings.Light):
+			case nameof(LDraw.SceneSettings.ShowBBoxes):
+				Window.BBoxesVisible = Settings.ShowBBoxes;
+				break;
+			case nameof(LDraw.SceneSettings.ShowSelectionBox):
+				Window.SelectionBoxVisible = Settings.ShowSelectionBox;
+				break;
+			case nameof(LDraw.SceneSettings.Light):
 				Scene.Window.LightProperties = new View3d.Light(Settings.Light);
 				break;
 			}

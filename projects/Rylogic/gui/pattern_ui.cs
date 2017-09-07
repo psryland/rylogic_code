@@ -9,6 +9,7 @@ using pr.common;
 using pr.extn;
 using RichTextBox = pr.gui.RichTextBox;
 using DataGridView = pr.gui.DataGridView;
+using pr.util;
 
 namespace pr.gui
 {
@@ -162,6 +163,11 @@ namespace pr.gui
 			m_grid_grps.Columns.Add(new DataGridViewTextBoxColumn{Name="Value" ,HeaderText="Value" ,FillWeight=2 ,DataPropertyName = "Value", ToolTipText = "The values of the capture groups based on the test text and the match pattern"});
 			m_grid_grps.DataError += (s,a) => Debug.Assert(false, "Data error in groups grid: {0}".Fmt(a.Exception.MessageFull()));
 		}
+		protected override void Dispose(bool disposing)
+		{
+			Util.Dispose(ref components);
+			base.Dispose(disposing);
+		}
 
 		/// <summary>Access to the test text field</summary>
 		public override string TestText
@@ -272,23 +278,7 @@ namespace pr.gui
 		private HelpUI m_dlg_help;
 		
 		#region Component Designer generated code
-
-		/// <summary>Required designer variable.</summary>
 		private System.ComponentModel.IContainer components = null;
-
-		/// <summary>Clean up any resources being used.</summary>
-		/// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing && (components != null))
-				components.Dispose();
-			base.Dispose(disposing);
-		}
-
-		/// <summary>
-		/// Required method for Designer support - do not modify
-		/// the contents of this method with the code editor.
-		/// </summary>
 		private void InitializeComponent()
 		{
 			this.components = new System.ComponentModel.Container();
@@ -324,7 +314,7 @@ namespace pr.gui
 			// m_check_invert
 			// 
 			this.m_check_invert.AutoSize = true;
-			this.m_check_invert.Location = new System.Drawing.Point(166, 3);
+			this.m_check_invert.Location = new System.Drawing.Point(187, 3);
 			this.m_check_invert.Name = "m_check_invert";
 			this.m_check_invert.Size = new System.Drawing.Size(86, 17);
 			this.m_check_invert.TabIndex = 3;
@@ -363,7 +353,7 @@ namespace pr.gui
 			// m_lbl_match
 			// 
 			this.m_lbl_match.AutoSize = true;
-			this.m_lbl_match.Location = new System.Drawing.Point(28, 32);
+			this.m_lbl_match.Location = new System.Drawing.Point(12, 32);
 			this.m_lbl_match.Name = "m_lbl_match";
 			this.m_lbl_match.Size = new System.Drawing.Size(44, 13);
 			this.m_lbl_match.TabIndex = 14;
@@ -374,9 +364,9 @@ namespace pr.gui
 			// 
 			this.m_edit_match.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_edit_match.Location = new System.Drawing.Point(73, 29);
+			this.m_edit_match.Location = new System.Drawing.Point(62, 29);
 			this.m_edit_match.Name = "m_edit_match";
-			this.m_edit_match.Size = new System.Drawing.Size(235, 20);
+			this.m_edit_match.Size = new System.Drawing.Size(246, 20);
 			this.m_edit_match.TabIndex = 0;
 			// 
 			// m_edit_test
@@ -418,7 +408,7 @@ namespace pr.gui
 			// m_radio_wildcard
 			// 
 			this.m_radio_wildcard.AutoSize = true;
-			this.m_radio_wildcard.Location = new System.Drawing.Point(72, 3);
+			this.m_radio_wildcard.Location = new System.Drawing.Point(78, 3);
 			this.m_radio_wildcard.Name = "m_radio_wildcard";
 			this.m_radio_wildcard.Size = new System.Drawing.Size(67, 17);
 			this.m_radio_wildcard.TabIndex = 1;
@@ -429,7 +419,7 @@ namespace pr.gui
 			// m_radio_regex
 			// 
 			this.m_radio_regex.AutoSize = true;
-			this.m_radio_regex.Location = new System.Drawing.Point(139, 3);
+			this.m_radio_regex.Location = new System.Drawing.Point(152, 3);
 			this.m_radio_regex.Margin = new System.Windows.Forms.Padding(0);
 			this.m_radio_regex.Name = "m_radio_regex";
 			this.m_radio_regex.Size = new System.Drawing.Size(116, 17);
@@ -443,19 +433,19 @@ namespace pr.gui
 			this.m_panel_patntype.Controls.Add(this.m_radio_substring);
 			this.m_panel_patntype.Controls.Add(this.m_radio_wildcard);
 			this.m_panel_patntype.Controls.Add(this.m_radio_regex);
-			this.m_panel_patntype.Location = new System.Drawing.Point(70, 3);
+			this.m_panel_patntype.Location = new System.Drawing.Point(62, 3);
 			this.m_panel_patntype.Name = "m_panel_patntype";
-			this.m_panel_patntype.Size = new System.Drawing.Size(259, 23);
+			this.m_panel_patntype.Size = new System.Drawing.Size(271, 23);
 			this.m_panel_patntype.TabIndex = 5;
 			// 
 			// m_lbl_match_type
 			// 
 			this.m_lbl_match_type.AutoSize = true;
-			this.m_lbl_match_type.Location = new System.Drawing.Point(1, 8);
+			this.m_lbl_match_type.Location = new System.Drawing.Point(22, 8);
 			this.m_lbl_match_type.Name = "m_lbl_match_type";
-			this.m_lbl_match_type.Size = new System.Drawing.Size(71, 13);
+			this.m_lbl_match_type.Size = new System.Drawing.Size(34, 13);
 			this.m_lbl_match_type.TabIndex = 15;
-			this.m_lbl_match_type.Text = "Pattern Type:";
+			this.m_lbl_match_type.Text = "Type:";
 			this.m_lbl_match_type.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			// 
 			// m_split
@@ -514,7 +504,7 @@ namespace pr.gui
 			// 
 			this.m_lbl_groups.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_lbl_groups.AutoSize = true;
-			this.m_lbl_groups.Location = new System.Drawing.Point(298, 60);
+			this.m_lbl_groups.Location = new System.Drawing.Point(298, 58);
 			this.m_lbl_groups.Name = "m_lbl_groups";
 			this.m_lbl_groups.Size = new System.Drawing.Size(81, 13);
 			this.m_lbl_groups.TabIndex = 17;
@@ -524,7 +514,7 @@ namespace pr.gui
 			// m_check_whole_line
 			// 
 			this.m_check_whole_line.AutoSize = true;
-			this.m_check_whole_line.Location = new System.Drawing.Point(86, 3);
+			this.m_check_whole_line.Location = new System.Drawing.Point(95, 3);
 			this.m_check_whole_line.Name = "m_check_whole_line";
 			this.m_check_whole_line.Size = new System.Drawing.Size(80, 17);
 			this.m_check_whole_line.TabIndex = 18;
@@ -538,7 +528,7 @@ namespace pr.gui
 			this.m_panel_flags.Controls.Add(this.m_check_invert);
 			this.m_panel_flags.Location = new System.Drawing.Point(15, 52);
 			this.m_panel_flags.Name = "m_panel_flags";
-			this.m_panel_flags.Size = new System.Drawing.Size(256, 21);
+			this.m_panel_flags.Size = new System.Drawing.Size(277, 21);
 			this.m_panel_flags.TabIndex = 19;
 			// 
 			// PatternUI
@@ -627,7 +617,7 @@ namespace pr.gui
 		protected override void UpdateUIInternal() {}
 	}
 
-	/// <summary>Base class for editing objects the implement IPattern</summary>
+	/// <summary>Base class for editing objects that implement IPattern</summary>
 	public abstract class PatternUIBase<TPattern> :UserControl ,IPatternUI where TPattern:class, IPattern, new()
 	{
 		protected readonly ToolTip m_tt;

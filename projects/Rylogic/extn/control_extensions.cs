@@ -252,6 +252,14 @@ namespace pr.extn
 			return Scope.Create(ctrl.SuspendLayout, () => ctrl.ResumeLayout(layout_on_resume));
 		}
 
+		/// <summary>Yet another window update blocker</summary>
+		public static Scope SuspendWindowUpdate(this Control ctrl)
+		{
+			return Scope.Create(
+				() => Win32.LockWindowUpdate(ctrl.Handle),
+				() => Win32.LockWindowUpdate(IntPtr.Zero));
+		}
+
 		/// <summary>Block redrawing of the control</summary>
 		public static Scope SuspendRedraw(this IWin32Window ctrl, bool refresh_on_resume)
 		{

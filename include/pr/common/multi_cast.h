@@ -19,6 +19,8 @@ namespace pr
 
 		TypeCont m_cont;
 		mutable std::mutex m_cs;
+		int m_suspend; // Nesting count of calls to suspend this event
+		int m_blocked; // The number of 'Raise' calls that where blocked by being suspended
 
 		// Access 'A' as a reference (independent of whether its a pointer or instance)
 		template <typename A> static typename std::enable_if<!std::is_pointer<A>::value, typename std::remove_pointer<A>::type&>::type get(A& i) { return i; }
@@ -36,11 +38,23 @@ namespace pr
 			Lock(Lock const&) = delete;
 			Lock& operator =(Lock const&) = delete;
 		public:
-			Lock(MultiCast& mc) :m_mc(mc) ,m_lock(mc.m_cs) {}
+			explicit Lock(MultiCast& mc) :m_mc(mc) ,m_lock(mc.m_cs) {}
 			citer begin() const { return m_mc.m_cont.begin(); }
 			iter  begin()       { return m_mc.m_cont.begin(); }
 			citer end() const   { return m_mc.m_cont.end(); }
 			iter  end()         { return m_mc.m_cont.end(); }
+
+			// Suspend/Resume this event. 'resume' returns true if events were blocked while suspended
+			void suspend()
+			{
+				++m_mc.m_suspend;
+			}
+			bool resume() 
+			{
+				--m_mc.m_suspend;
+				assert(m_mc.m_suspend >= 0);
+				return m_mc.m_suspend == 0 && m_mc.m_blocked != 0;
+			}
 		};
 
 		// A reference to a handler and the multicast delegate it's attached to
@@ -55,25 +69,38 @@ namespace pr
 			void detach() { if (m_mc) *m_mc -= *this; m_mc = nullptr; }
 		};
 
-		MultiCast() :m_cont() ,m_cs() {}
+		MultiCast()
+			:m_cont()
+			,m_cs()
+			,m_suspend()
+			,m_blocked()
+		{}
 		MultiCast(MultiCast&& rhs)
 			:m_cont(std::move(rhs.m_cont))
 			,m_cs()
+			,m_suspend(rhs.m_suspend)
+			,m_blocked(rhs.m_blocked)
 		{}
 		MultiCast(MultiCast const& rhs)
 			:m_cont(rhs.m_cont)
 			,m_cs()
+			,m_suspend(rhs.m_suspend)
+			,m_blocked(rhs.m_blocked)
 		{}
 		MultiCast& operator = (MultiCast&& rhs)
 		{
 			if (this == &rhs) return *this;
 			std::swap(m_cont, rhs.m_cont);
+			std::swap(m_suspend, rhs.m_suspend);
+			std::swap(m_blocked, rhs.m_blocked);
 			return *this;
 		}
 		MultiCast& operator = (MultiCast const& rhs)
 		{
 			if (this == &rhs) return *this;
 			m_cont = rhs.m_cont;
+			m_suspend = rhs.m_suspend;
+			m_blocked = rhs.m_blocked;
 			return *this;
 		}
 
@@ -141,7 +168,13 @@ namespace pr
 			TypeCont cont;
 			{
 				std::lock_guard<std::mutex> lock(m_cs);
+				if (m_suspend != 0)
+				{
+					++m_blocked;
+					return;
+				}
 				cont = m_cont;
+				m_blocked = 0;
 			}
 			for (auto i : cont)
 				get(i)(std::forward<Args>(args)...);
@@ -156,7 +189,13 @@ namespace pr
 			TypeCont cont;
 			{
 				std::lock_guard<std::mutex> lock(m_cs);
+				if (m_suspend != 0)
+				{
+					++m_blocked;
+					return;
+				}
 				cont = m_cont;
+				m_blocked = 0;
 			}
 
 			auto combine_with_and = result;

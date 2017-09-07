@@ -11,6 +11,50 @@ namespace pr.extn
 {
 	public static class Array_
 	{
+		/// <summary>Create a new array of constructed classes</summary>
+		public static T[] New<T>(int length) where T : new()
+		{
+			return New(length, i => new T());
+		}
+		/// <summary>Create a new 2-dimensional array of constructed classes</summary>
+		public static T[,] New<T>(int col_count, int row_count) where T : new()
+		{
+			return New(col_count, row_count, (c,r) => new T());
+		}
+
+		/// <summary>Create a new array of length 'length' initialised by 'factory' for each element</summary>
+		public static T[] New<T>(int length, Func<int,T> factory)
+		{
+			var arr = new T[length];
+			for (int i = 0; i != arr.Length; ++i)
+				arr[i] = factory(i);
+
+			return arr;
+		}
+
+		/// <summary>Create a new 2-dimensional array initialised by 'factory' for each element</summary>
+		public static T[,] New<T>(int col_count, int row_count, Func<int,int,T> construct)
+		{
+			var arr = new T[col_count, row_count];
+			for (var r = 0; r != row_count; ++r)
+				for (var c = 0; c != col_count; ++c)
+					arr[c,r] = construct(c,r);
+
+			return arr;
+		}
+
+		/// <summary>Create a new array of length 'length' initialised with 'init' for each element</summary>
+		public static T[] New<T>(int length, T init)
+		{
+			return New(length, i => init);
+		}
+
+		/// <summary>Create a new 2-dimensional array initialised with 'init' for each element</summary>
+		public static T[,] New<T>(int col_count, int row_count, T init)
+		{
+			return New(col_count, row_count, (c,r) => init);
+		}
+
 		/// <summary>Reset the array to default</summary>
 		public static void Clear<T>(this T[] arr)
 		{

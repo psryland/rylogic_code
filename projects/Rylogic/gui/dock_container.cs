@@ -575,8 +575,21 @@ namespace pr.gui
 					// Menu item for each content
 					foreach (var content in AllContentInternal.OrderBy(x => x.TabText))
 					{
-						var opt = menu.DropDownItems.Add2(new ToolStripMenuItem(content.TabText, content.TabIcon, (ss,aa) => FindAndShow(content)));
-						opt.Checked = content == ActiveContent;
+						var opt = menu.DropDownItems.Add2(new ToolStripMenuItem(content.TabText, content.TabIcon){ Checked = content == ActiveContent });
+						opt.Click += (ss,aa) =>
+						{
+							FindAndShow(content);
+						};
+
+						// If the content has a tab context menu, show the context menu on right click on the menu option
+						if (content.TabCMenu != null)
+						{
+							opt.MouseDown += (ss,aa) =>
+							{
+								if (aa.Button == MouseButtons.Right)
+									content.TabCMenu.Show(opt.PointToScreen(aa.Location));
+							};
+						}
 					}
 
 					menu.DropDownItems.Add(sep);
@@ -1073,7 +1086,7 @@ namespace pr.gui
 					This = @this;
 
 					// Create an array to hold the five child controls (DockPanes or Branches)
-					m_child = Util.NewArray((int)DockSiteCount, i => new ChildCtrl(This, (EDockSite)i));
+					m_child = Array_.New((int)DockSiteCount, i => new ChildCtrl(This, (EDockSite)i));
 				}
 				public void Dispose()
 				{
@@ -5253,7 +5266,7 @@ namespace pr.gui
 				/// <summary>Create a region from a list of points</summary>
 				private Region MakeRegion(params int[] pts)
 				{
-					return GfxExtensions.MakeRegion(pts);
+					return Gfx_.MakeRegion(pts);
 				}
 
 				/// <summary>Test 'pt' against the hotspots on this indicator</summary>

@@ -286,6 +286,9 @@
     <Compile Include="gui\open_folder_ui.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="gui\pattern_filter.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="gui\progress_ctrl.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -305,6 +308,9 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="gui\toolstrip_combobox.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="gui\toolstrip_pattern_filter.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="gui\value_text_box.cs">
@@ -568,6 +574,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="gui\message_box.resx">
       <DependentUpon>message_box.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="gui\pattern_filter.resx">
+      <DependentUpon>pattern_filter.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="gui\pattern_ui.resx">
       <DependentUpon>pattern_ui.cs</DependentUpon>

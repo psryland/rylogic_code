@@ -67,7 +67,7 @@ namespace view3d
 	using SourcesChangedCB      = pr::StaticCB<void, ESourcesChangedReason, BOOL>;
 	using EmbeddedCodeHandlerCB = pr::StaticCB<BOOL, BOOL, wchar_t const*, wchar_t const*, BSTR&, BSTR&>;
 	using RenderingCB           = pr::StaticCB<void, Window*>;
-	using SceneChangedCB        = pr::StaticCB<void, Window*>;
+	using SceneChangedCB        = pr::StaticCB<void, Window*, GUID const*, int>;
 	using ReportErrorCB         = pr::StaticCB<void, wchar_t const*>;
 
 	// An instance type for other models used in LDraw

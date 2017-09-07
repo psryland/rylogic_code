@@ -970,21 +970,25 @@ namespace pr.gui
 				if (Window == null || this.IsInDesignMode())
 					return;
 
-				// Clear the scene
-				Window.RemoveObjects(all_except:true, context_id:ChartTools.Id);
-
-				// Add axis graphics
-				m_owner.Range.AddToScene(Window);
-
-				// Add all chart elements
-				foreach (var elem in m_owner.Elements)
+				// Block scene changed events while clearing/re-adding objects to the window
+				using (Window.SuspendSceneChanged())
 				{
-					if (!elem.Visible) continue;
-					elem.AddToScene(Window);
-				}
+					// Clear the scene
+					Window.RemoveObjects(all_except: true, context_id: ChartTools.Id);
 
-				// Add user graphics
-				m_owner.RaiseChartRendering(new ChartRenderingEventArgs(Window));
+					// Add axis graphics
+					m_owner.Range.AddToScene(Window);
+
+					// Add all chart elements
+					foreach (var elem in m_owner.Elements)
+					{
+						if (!elem.Visible) continue;
+						elem.AddToScene(Window);
+					}
+
+					// Add user graphics
+					m_owner.RaiseChartRendering(new ChartRenderingEventArgs(Window));
+				}
 
 				// Start the render
 				Window.BackgroundColour = m_owner.Options.ChartBkColour;
@@ -2088,8 +2092,7 @@ namespace pr.gui
 							// Need to allow for one step in either direction because we only create the
 							// grid lines model when scaling and we can translate by a max of one step in
 							// either direction.
-							double min, max, step;
-							GridLines(out min, out max, out step);
+							GridLines(out var min, out var max, out var step);
 							var num_lines = (int)(2 + (max - min) / step);
 
 							// Create the grid lines at the origin, they get positioned as the camera moves
@@ -2133,8 +2136,8 @@ namespace pr.gui
 
 							// Grid nugget
 							nuggets[0] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert|View3d.EGeom.Colr);
-							m_gridlines = new View3d.Object(name, 0xFFFFFFFF, verts.Length, indices.Length, nuggets.Length, verts, indices, nuggets, Guid.Empty);
-							m_gridlines.FlagsSet(View3d.EFlags.BBoxInvisible); 
+							m_gridlines = new View3d.Object(name, 0xFFFFFFFF, verts.Length, indices.Length, nuggets.Length, verts, indices, nuggets, ChartTools.Id);
+							m_gridlines.FlagsSet(View3d.EFlags.BBoxInvisible, true); 
 						}
 						return m_gridlines;
 					}
@@ -4022,21 +4025,21 @@ namespace pr.gui
 				if (owner.IsInDesignMode())
 					return;
 
-				Options     = opts;
-				AreaSelect  = CreateAreaSelect();
-				Resizer     = Util.NewArray(8, i => new ResizeGrabber(i));
-				CrossHairH  = CreateCrossHair(true);
-				CrossHairV  = CreateCrossHair(false);
-				TapeMeasure = CreateTapeMeasure();
+				Options      = opts;
+				AreaSelect   = CreateAreaSelect();
+				Resizer      = Array_.New(8, i => new ResizeGrabber(i));
+				CrossHairH   = CreateCrossHair(true);
+				CrossHairV   = CreateCrossHair(false);
+				TapeMeasure  = CreateTapeMeasure();
 			}
 			public void Dispose()
 			{
-				Options     = null;
-				AreaSelect  = null;
-				Resizer     = null;
-				CrossHairH  = null;
-				CrossHairV  = null;
-				TapeMeasure = null;
+				Options      = null;
+				AreaSelect   = null;
+				Resizer      = null;
+				CrossHairH   = null;
+				CrossHairV   = null;
+				TapeMeasure  = null;
 			}
 
 			/// <summary>Chart options</summary>
@@ -4185,7 +4188,7 @@ namespace pr.gui
 					m_tape_measure = value;
 				}
 			}
-			public View3d.Object m_tape_measure;
+			private View3d.Object m_tape_measure;
 			private View3d.Object CreateTapeMeasure()
 			{
 				var col = Options.ChartBkColour.ToV4().Length3 > 0.5 ? 0xFFFFFFFF : 0xFF000000;

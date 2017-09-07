@@ -890,7 +890,6 @@ namespace pr
 				// Draw the string
 				dc->BeginDraw();
 				dc->Clear(&bk);
-				//dc->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_ALIASED);
 				dc->DrawTextLayout(D2D1::Point2F(0, 0), text, brush.get(), D2D1_DRAW_TEXT_OPTIONS_NONE);
 				pr::Throw(dc->EndDraw());
 

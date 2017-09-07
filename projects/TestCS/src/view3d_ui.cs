@@ -149,7 +149,7 @@ namespace TestCS
 		}
 
 		/// <summary>Callback for creating the "net" object</summary>
-		private void CreateOnlyCB(int vcount, int icount, int ncount, View3d.Vertex[] verts, ushort[] indices, View3d.Nugget[] nuggets, out int new_vcount, out int new_icount, out int new_ncount, IntPtr ctx)
+		private void CreateOnlyCB(IntPtr ctx, int vcount, int icount, int ncount, View3d.Vertex[] verts, ushort[] indices, View3d.Nugget[] nuggets, out int new_vcount, out int new_icount, out int new_ncount)
 		{
 			new_vcount = 0;
 			new_icount = 0;

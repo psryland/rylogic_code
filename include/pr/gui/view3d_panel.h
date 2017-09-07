@@ -70,7 +70,7 @@ namespace pr
 				,m_win(View3D_WindowCreate(CreateHandle(), View3DWindowOptions{p.m_error_cb, p.m_error_ctx, p.m_gdi_compat, 4, "vrex_gui"}))
 			{
 				//View3D_CreateDemoScene(m_win);
-				View3D_ShowFocusPoint(m_win, cp().m_show_focus_point);
+				View3D_FocusPointVisibleSet(m_win, cp().m_show_focus_point);
 			}
 			~View3DPanel()
 			{

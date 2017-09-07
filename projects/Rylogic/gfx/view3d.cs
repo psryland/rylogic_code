@@ -11,6 +11,7 @@ using System.Windows.Forms;
 using System.Windows.Threading;
 using System.Xml.Linq;
 using pr.common;
+using pr.container;
 using pr.extn;
 using pr.maths;
 using pr.util;
@@ -336,6 +337,8 @@ namespace pr.gfx
 			// Doesn't contribute to the bounding box on an object.
 			// Typically used for objects in a scene that are not part of the scene bbox
 			BBoxInvisible = 1 << 1,
+
+			All = ~0,
 		}
 		public enum ESceneBounds
 		{
@@ -750,10 +753,14 @@ namespace pr.gfx
 			View3D_ObjectsDeleteAll();
 		}
 
-		/// <summary>Release all created objects with context id 'id'</summary>
-		public void DeleteAllObjects(Guid id)
+		/// <summary>Release all created objects with context id 'context_id'</summary>
+		public void DeleteAllObjects(Guid context_id)
 		{
-			View3D_ObjectsDeleteById(ref id);
+			DeleteAllObjects(new []{ context_id });
+		}
+		public void DeleteAllObjects(Guid[] context_ids)
+		{
+			View3D_ObjectsDeleteById(context_ids, context_ids.Length);
 		}
 
 		/// <summary>Return the context id for objects created from file 'filepath' (or null if 'filepath' is not an existing source)</summary>
@@ -778,7 +785,7 @@ namespace pr.gfx
 			private readonly SettingsChangedCB m_settings_cb;   // A local reference to prevent the callback being garbage collected
 			private readonly RenderCB m_render_cb;              // A local reference to prevent the callback being garbage collected
 			private readonly SceneChangedCB m_scene_changed_cb; // A local reference to prevent the callback being garbage collected
-			private HWindow m_wnd;
+			private HWindow m_handle;
 
 			public Window(View3d view, HWND hwnd, WindowOptions opts)
 			{
@@ -786,25 +793,25 @@ namespace pr.gfx
 				m_opts = opts;
 
 				// Create the window
-				m_wnd = View3D_WindowCreate(hwnd, ref opts);
-				if (m_wnd == null)
+				m_handle = View3D_WindowCreate(hwnd, ref opts);
+				if (m_handle == null)
 					throw new Exception("Failed to create View3D window");
 
 				// Attach the global error handler
 				m_error_cb = (ctx, msg) => Error.Raise(this, new ErrorEventArgs(msg));
-				View3D_WindowErrorCBSet(m_wnd, m_error_cb, IntPtr.Zero, true);
+				View3D_WindowErrorCBSet(m_handle, m_error_cb, IntPtr.Zero, true);
 
 				// Set up a callback for when settings are changed
 				m_settings_cb = (c,w) => OnSettingsChanged.Raise(this, EventArgs.Empty);
-				View3D_WindowSettingsChangedCB(m_wnd, m_settings_cb, IntPtr.Zero, true);
+				View3D_WindowSettingsChangedCB(m_handle, m_settings_cb, IntPtr.Zero, true);
 
 				// Set up a callback for when a render is about to happen
 				m_render_cb = (c,w) => OnRendering.Raise(this, EventArgs.Empty);
-				View3D_WindowRenderingCB(m_wnd, m_render_cb, IntPtr.Zero, true);
+				View3D_WindowRenderingCB(m_handle, m_render_cb, IntPtr.Zero, true);
 
 				// Set up a callback for when the object store for this window changes
-				m_scene_changed_cb = (c,w) => OnSceneChanged.Raise(this, EventArgs.Empty);
-				View3d_WindowSceneChangedCB(m_wnd, m_scene_changed_cb, IntPtr.Zero, true);
+				m_scene_changed_cb = (c,w,ids,cnt) => OnSceneChanged.Raise(this, new SceneChangedEventArgs(ids));
+				View3d_WindowSceneChangedCB(m_handle, m_scene_changed_cb, IntPtr.Zero, true);
 
 				// Set up the light source
 				SetLightSource(v4.Origin, -v4.ZAxis, true);
@@ -819,51 +826,53 @@ namespace pr.gfx
 			public void Dispose()
 			{
 				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
-				if (m_wnd == HWindow.Zero) return;
-				View3d_WindowSceneChangedCB(m_wnd, m_scene_changed_cb, IntPtr.Zero, false);
-				View3D_WindowRenderingCB(m_wnd, m_render_cb, IntPtr.Zero, false);
-				View3D_WindowSettingsChangedCB(m_wnd, m_settings_cb, IntPtr.Zero, false);
-				View3D_WindowErrorCBSet(m_wnd, m_error_cb, IntPtr.Zero, false);
-				View3D_WindowDestroy(m_wnd);
-				m_wnd = HWindow.Zero;
+				if (m_handle == HWindow.Zero) return;
+				View3d_WindowSceneChangedCB(m_handle, m_scene_changed_cb, IntPtr.Zero, false);
+				View3D_WindowRenderingCB(m_handle, m_render_cb, IntPtr.Zero, false);
+				View3D_WindowSettingsChangedCB(m_handle, m_settings_cb, IntPtr.Zero, false);
+				View3D_WindowErrorCBSet(m_handle, m_error_cb, IntPtr.Zero, false);
+				View3D_WindowDestroy(m_handle);
+				m_handle = HWindow.Zero;
 			}
 
 			/// <summary>Event call on errors. Note: can be called in a background thread context</summary>
 			public event EventHandler<ErrorEventArgs> Error;
-			public class ErrorEventArgs :EventArgs
-			{
-				public ErrorEventArgs(string msg)
-				{
-					Message = msg;
-				}
-
-				/// <summary>The error message</summary>
-				public string Message { get; private set; }
-			}
 
 			/// <summary>Event notifying whenever rendering settings have changed</summary>
 			public event EventHandler OnSettingsChanged;
 
+			/// <summary>Event notifying whenever objects are added/removed from the scene (Not raised during Render however)</summary>
+			public event EventHandler<SceneChangedEventArgs> OnSceneChanged;
+
 			/// <summary>Event notifying of a render about to happen</summary>
 			public event EventHandler OnRendering;
-
-			/// <summary>Event notifying when the object collection for this window is changed</summary>
-			public event EventHandler OnSceneChanged;
 
 			/// <summary>Cause a redraw to happen the near future. This method can be called multiple times</summary>
 			public void Invalidate()
 			{
-				View3D_Invalidate(m_wnd, false);
+				View3D_Invalidate(m_handle, false);
 			}
 
 			/// <summary>The associated view3d object</summary>
-			public View3d View { [DebuggerStepThrough] get { return m_view; } }
+			public View3d View
+			{
+				[DebuggerStepThrough]
+				get { return m_view; }
+			}
 
 			/// <summary>Get the native view3d handle for the window</summary>
-			public HWindow Handle { [DebuggerStepThrough] get { return m_wnd; } }
+			public HWindow Handle
+			{
+				[DebuggerStepThrough]
+				get { return m_handle; }
+			}
 
 			/// <summary>Camera controls</summary>
-			public CameraControls Camera { [DebuggerStepThrough] get; private set; }
+			public CameraControls Camera
+			{
+				[DebuggerStepThrough]
+				get; private set;
+			}
 
 			/// <summary>
 			/// Mouse navigation and/or object manipulation.
@@ -924,264 +933,281 @@ namespace pr.gfx
 
 			/// <summary>Raised just before a mouse navigation happens</summary>
 			public event EventHandler<MouseNavigateEventArgs> MouseNavigating;
-			public class MouseNavigateEventArgs :EventArgs
-			{
-				public MouseNavigateEventArgs(PointF point, ENavOp nav_op, bool nav_beg_or_end)
-				{
-					ZNavigation         = false;
-					Point       = point;
-					NavOp       = nav_op;
-					NavBegOrEnd = nav_beg_or_end;
-				}
-				public MouseNavigateEventArgs(PointF point, float delta, bool along_ray)
-				{
-					ZNavigation      = true;
-					Point    = point;
-					Delta    = delta;
-					AlongRay = along_ray;
-				}
-
-				/// <summary>True if this is a Z axis navigation</summary>
-				public bool ZNavigation { get; private set; }
-
-				/// <summary>The mouse pointer in client rect space</summary>
-				public PointF Point { get; private set; }
-
-				/// <summary>The navigation operation to perform</summary>
-				public ENavOp NavOp { get; private set; }
-
-				/// <summary>True if this is the beginning or end of the navigation, false if during</summary>
-				public bool NavBegOrEnd { get; private set; }
-
-				/// <summary>The mouse wheel scroll delta</summary>
-				public float Delta { get; private set; }
-
-				/// <summary>True if Z axis navigation moves the camera along a ray through the mouse pointer</summary>
-				public bool AlongRay { get; private set; }
-			}
 
 			/// <summary>Get the render target texture</summary>
 			public Texture RenderTarget
 			{
-				get { return new Texture(View3D_TextureRenderTarget(m_wnd)); }
+				get { return new Texture(View3D_TextureRenderTarget(m_handle)); }
 			}
 
 			/// <summary>Import/Export a settings string</summary>
 			public string Settings
 			{
-				get { return Marshal.PtrToStringAnsi(View3D_WindowSettingsGet(m_wnd)); }
-				set { View3D_WindowSettingsSet(m_wnd, value); }
+				get { return Marshal.PtrToStringAnsi(View3D_WindowSettingsGet(m_handle)); }
+				set { View3D_WindowSettingsSet(m_handle, value); }
+			}
+
+			/// <summary>Enumerate the objects associated with this window</summary>
+			public void EnumObjects(Action<Object> cb)
+			{
+				EnumObjects(obj => { cb(obj); return true; });
+			}
+			public void EnumObjects(Func<Object, bool> cb)
+			{
+				View3D_WindowEnumObjects(m_handle, (c,obj) => cb(new Object(obj)), IntPtr.Zero);
+			}
+			public void EnumObjects(Action<Object> cb, Guid context_id, bool all_except = false)
+			{
+				EnumObjects(obj => { cb(obj); return true; }, context_id, all_except);
+			}
+			public void EnumObjects(Func<Object, bool> cb, Guid context_id, bool all_except = false)
+			{
+				EnumObjects(cb, new [] { context_id }, all_except);
+			}
+			public void EnumObjects(Action<Object> cb, Guid[] context_id, bool all_except = false)
+			{
+				EnumObjects(obj => { cb(obj); return true; }, context_id, all_except);
+			}
+			public void EnumObjects(Func<Object, bool> cb, Guid[] context_id, bool all_except = false)
+			{
+				View3D_WindowEnumObjectsById(m_handle, (c,obj) => cb(new Object(obj)), IntPtr.Zero, context_id, context_id.Length, all_except);
+			}
+
+			/// <summary>Suspend scene changed events</summary>
+			public Scope SuspendSceneChanged()
+			{
+				// This suspends the events from View3d.
+				// As a result, the 'Objects' collection may get out of sync
+				return Scope.Create(
+					() => View3D_WindowSceneChangedSuspend(m_handle, true),
+					() => View3D_WindowSceneChangedSuspend(m_handle, false));
 			}
 
 			/// <summary>Add an object to the window</summary>
 			public void AddObject(Object obj)
 			{
-				View3D_WindowAddObject(m_wnd, obj.m_handle);
+				View3D_WindowAddObject(m_handle, obj.m_handle);
 			}
 
 			/// <summary>Add a gizmo to the window</summary>
 			public void AddGizmo(Gizmo giz)
 			{
-				View3D_WindowAddGizmo(m_wnd, giz.m_handle);
+				View3D_WindowAddGizmo(m_handle, giz.m_handle);
 			}
 
 			/// <summary>Add multiple objects by context id</summary>
-			public void AddObjects(Guid context_id)
+			public void AddObjects(Guid context_id, bool all_except = false)
 			{
-				View3D_WindowAddObjectsById(m_wnd, ref context_id);
+				AddObjects(new[]{ context_id });
+			}
+			public void AddObjects(Guid[] context_ids, bool all_except = false)
+			{
+				View3D_WindowAddObjectsById(m_handle, context_ids, context_ids.Length, all_except);
 			}
 
 			/// <summary>Add a collection of objects to the window</summary>
 			public void AddObjects(IEnumerable<Object> objects)
 			{
 				foreach (var obj in objects)
-					View3D_WindowAddObject(m_wnd, obj.m_handle);
+					View3D_WindowAddObject(m_handle, obj.m_handle);
 			}
 
 			/// <summary>Remove an object from the window</summary>
 			public void RemoveObject(Object obj)
 			{
-				View3D_WindowRemoveObject(m_wnd, obj.m_handle);
+				View3D_WindowRemoveObject(m_handle, obj.m_handle);
 			}
 
 			/// <summary>Remove a gizmo from the window</summary>
 			public void RemoveGizmo(Gizmo giz)
 			{
-				View3D_WindowRemoveGizmo(m_wnd, giz.m_handle);
+				View3D_WindowRemoveGizmo(m_handle, giz.m_handle);
 			}
 
 			/// <summary>Remove multiple objects by context id</summary>
-			public void RemoveObjects(bool all_except, Guid context_id)
+			public void RemoveObjects(Guid context_id, bool all_except = false)
 			{
-				View3D_WindowRemoveObjectsById(m_wnd, all_except, ref context_id);
+				RemoveObjects(new []{ context_id }, all_except);
+			}
+			public void RemoveObjects(Guid[] context_ids, bool all_except = false)
+			{
+				View3D_WindowRemoveObjectsById(m_handle, context_ids, context_ids.Length, all_except);
 			}
 
 			/// <summary>Remove a collection of objects from the window</summary>
 			public void RemoveObjects(IEnumerable<Object> objects)
 			{
 				foreach (var obj in objects)
-					View3D_WindowRemoveObject(m_wnd, obj.m_handle);
+					View3D_WindowRemoveObject(m_handle, obj.m_handle);
 			}
 
 			/// <summary>Remove all instances from the window</summary>
 			public void RemoveAllObjects()
 			{
-				View3D_WindowRemoveAllObjects(m_wnd);
+				View3D_WindowRemoveAllObjects(m_handle);
 			}
 
 			/// <summary>Return the number of objects in a window</summary>
 			public int ObjectCount
 			{
-				get { return View3D_WindowObjectCount(m_wnd); }
+				get { return View3D_WindowObjectCount(m_handle); }
 			}
 
 			/// <summary>True if 'obj' is a member of this window</summary>
 			public bool HasObject(Object obj)
 			{
-				return View3D_WindowHasObject(m_wnd, obj.m_handle);
-			}
-
-			/// <summary>Return a list of all objects in this window</summary>
-			public IList<Object> Objects
-			{
-				get
-				{
-					var objects = new List<Object>(capacity:ObjectCount);
-					View3D_WindowEnumObjects(m_wnd, (ctx,obj) => { objects.Add(new Object(obj)); return true; }, IntPtr.Zero);
-					return objects;
-				}
+				return View3D_WindowHasObject(m_handle, obj.m_handle);
 			}
 
 			/// <summary>Return a bounding box of the objects in this window</summary>
 			public BBox SceneBounds(ESceneBounds bounds, Guid[] except = null)
 			{
-				return View3D_WindowSceneBounds(m_wnd, bounds, except?.Length ?? 0, except);
+				return View3D_WindowSceneBounds(m_handle, bounds, except?.Length ?? 0, except);
 			}
 
 			/// <summary>Show/Hide the focus point</summary>
 			public bool FocusPointVisible
 			{
-				get { return View3D_FocusPointVisible(m_wnd); }
-				set { View3D_ShowFocusPoint(m_wnd, value); }
+				get { return View3D_FocusPointVisibleGet(m_handle); }
+				set { View3D_FocusPointVisibleSet(m_handle, value); }
 			}
 
 			/// <summary>Set the size of the focus point graphic</summary>
 			public float FocusPointSize
 			{
-				set { View3D_SetFocusPointSize(m_wnd, value); }
+				set { View3D_FocusPointSizeSet(m_handle, value); }
 			}
 
 			/// <summary>Show/Hide the origin point</summary>
 			public bool OriginPointVisible
 			{
-				get { return View3D_OriginVisible(m_wnd); }
-				set { View3D_ShowOrigin(m_wnd, value); }
+				get { return View3D_OriginVisibleGet(m_handle); }
+				set { View3D_OriginVisibleSet(m_handle, value); }
 			}
 
 			/// <summary>Set the size of the origin graphic</summary>
 			public float OriginPointSize
 			{
-				set { View3D_SetOriginSize(m_wnd, value); }
+				set { View3D_OriginSizeSet(m_handle, value); }
 			}
 
 			/// <summary>Get/Set whether object bounding boxes are visible</summary>
 			public bool BBoxesVisible
 			{
-				get { return View3D_BBoxesVisibleGet(m_wnd); }
-				set { View3D_BBoxesVisibleSet(m_wnd, value); }
+				get { return View3D_BBoxesVisibleGet(m_handle); }
+				set { View3D_BBoxesVisibleSet(m_handle, value); }
+			}
+
+			/// <summary>Get/Set whether the selection box is visible</summary>
+			public bool SelectionBoxVisible
+			{
+				get { return View3D_SelectionBoxVisibleGet(m_handle); }
+				set { View3D_SelectionBoxVisibleSet(m_handle, value); }
+			}
+
+			/// <summary>Set the position of the selection box</summary>
+			public void SelectionBoxPosition(BBox box, m4x4 o2w)
+			{
+				View3D_SelectionBoxPosition(m_handle, ref box, ref o2w);
+			}
+
+			/// <summary>Set the size and position of the selection box to bound the selected objects in this view</summary>
+			public void SelectionBoxFitToSelected()
+			{
+				View3D_SelectionBoxFitToSelected(m_handle);
 			}
 
 			/// <summary>Get/Set the render mode</summary>
 			public EFillMode FillMode
 			{
-				get { return View3D_FillModeGet(m_wnd); }
-				set { View3D_FillModeSet(m_wnd, value); }
+				get { return View3D_FillModeGet(m_handle); }
+				set { View3D_FillModeSet(m_handle, value); }
 			}
 
 			/// <summary>Get/Set the face culling mode</summary>
 			public ECullMode CullMode
 			{
-				get { return View3D_CullModeGet(m_wnd); }
-				set { View3D_CullModeSet(m_wnd, value); }
+				get { return View3D_CullModeGet(m_handle); }
+				set { View3D_CullModeSet(m_handle, value); }
 			}
 
 			/// <summary>Get/Set the multi-sampling level for the window</summary>
 			public int MultiSampling
 			{
-				get { return View3D_MultiSamplingGet(m_wnd); }
-				set { View3D_MultiSamplingSet(m_wnd, value); }
+				get { return View3D_MultiSamplingGet(m_handle); }
+				set { View3D_MultiSamplingSet(m_handle, value); }
 			}
 
 			/// <summary>Get/Set the light properties. Note returned value is a value type</summary>
 			public LightInfo LightProperties
 			{
-				get { LightInfo light; View3D_LightProperties(m_wnd, out light); return light; }
-				set { View3D_SetLightProperties(m_wnd, ref value); }
+				get { LightInfo light; View3D_LightProperties(m_handle, out light); return light; }
+				set { View3D_SetLightProperties(m_handle, ref value); }
 			}
 
 			/// <summary>Show the lighting dialog</summary>
 			public void ShowLightingDlg()
 			{
-				View3D_ShowLightingDlg(m_wnd);
+				View3D_ShowLightingDlg(m_handle);
 			}
 
 			/// <summary>Set the single light source</summary>
 			public void SetLightSource(v4 position, v4 direction, bool camera_relative)
 			{
-				View3D_LightSource(m_wnd, position, direction, camera_relative);
+				View3D_LightSource(m_handle, position, direction, camera_relative);
 			}
 
 			/// <summary>Show/Hide the measuring tool</summary>
 			public bool ShowMeasureTool
 			{
-				get { return View3D_MeasureToolVisible(m_wnd); }
-				set { View3D_ShowMeasureTool(m_wnd, value); }
+				get { return View3D_MeasureToolVisible(m_handle); }
+				set { View3D_ShowMeasureTool(m_handle, value); }
 			}
 
 			/// <summary>Show/Hide the angle tool</summary>
 			public bool ShowAngleTool
 			{
-				get { return View3D_AngleToolVisible(m_wnd); }
-				set { View3D_ShowAngleTool(m_wnd, value); }
+				get { return View3D_AngleToolVisible(m_handle); }
+				set { View3D_ShowAngleTool(m_handle, value); }
 			}
 
 			/// <summary>Get/Set orthographic rendering mode</summary>
 			public bool Orthographic
 			{
-				get { return View3D_Orthographic(m_wnd); }
-				set { View3D_SetOrthographic(m_wnd, value); }
+				get { return View3D_Orthographic(m_handle); }
+				set { View3D_SetOrthographic(m_handle, value); }
 			}
 
 			/// <summary>The background colour for the window</summary>
 			public Color BackgroundColour
 			{
-				get { return Color.FromArgb(View3D_BackgroundColour(m_wnd)); }
-				set { View3D_SetBackgroundColour(m_wnd, value.ToArgb()); }
+				get { return Color.FromArgb(View3D_BackgroundColour(m_handle)); }
+				set { View3D_SetBackgroundColour(m_handle, value.ToArgb()); }
 			}
 
 			/// <summary>Cause the window to be rendered. Remember to call Present when done</summary>
 			public void Render()
 			{
-				View3D_Render(m_wnd);
+				View3D_Render(m_handle);
 			}
 
 			/// <summary>Called to flip the back buffer to the screen after all window have been rendered</summary>
 			public void Present()
 			{
-				View3D_Present(m_wnd);
+				View3D_Present(m_handle);
 			}
 
 			/// <summary>Resize the render target</summary>
 			public Size RenderTargetSize
 			{
-				get { int w,h; View3D_RenderTargetSize(m_wnd, out w, out h); return new Size(w,h); }
-				set { View3D_SetRenderTargetSize(m_wnd, value.Width, value.Height); }
+				get { int w,h; View3D_RenderTargetSize(m_handle, out w, out h); return new Size(w,h); }
+				set { View3D_SetRenderTargetSize(m_handle, value.Width, value.Height); }
 			}
 
 			/// <summary>Restore the render target as the main output</summary>
 			public void RestoreRT()
 			{
-				View3D_RestoreMainRT(m_wnd);
+				View3D_RestoreMainRT(m_handle);
 			}
 
 			/// <summary>
@@ -1191,27 +1217,27 @@ namespace pr.gfx
 			/// a source and destination texture at the same time</summary>
 			public void RenderTo(Texture render_target, Texture depth_buffer = null)
 			{
-				View3D_RenderTo(m_wnd, render_target.m_handle, depth_buffer != null ? depth_buffer.m_handle : IntPtr.Zero);
+				View3D_RenderTo(m_handle, render_target.m_handle, depth_buffer != null ? depth_buffer.m_handle : IntPtr.Zero);
 			}
 
 			/// <summary>Get/Set the size/position of the viewport within the render target</summary>
 			public Viewport Viewport
 			{
-				get { return View3D_Viewport(m_wnd); }
-				set { View3D_SetViewport(m_wnd, value); }
+				get { return View3D_Viewport(m_handle); }
+				set { View3D_SetViewport(m_handle, value); }
 			}
 
 			/// <summary>Get/Set whether the depth buffer is enabled</summary>
 			public bool DepthBufferEnabled
 			{
-				get { return View3D_DepthBufferEnabled(m_wnd); }
-				set { View3D_SetDepthBufferEnabled(m_wnd, value); }
+				get { return View3D_DepthBufferEnabledGet(m_handle); }
+				set { View3D_DepthBufferEnabledSet(m_handle, value); }
 			}
 
 			/// <summary>Convert a screen space point to a normalised point</summary>
 			public v2 SSPointToNSSPoint(PointF screen)
 			{
-				return View3D_SSPointToNSSPoint(m_wnd, v2.From(screen));
+				return View3D_SSPointToNSSPoint(m_handle, v2.From(screen));
 			}
 
 			/// <summary>Convert a normalised point into a screen space point</summary>
@@ -1236,7 +1262,7 @@ namespace pr.gfx
 			/// <summary>Handy method for creating random objects</summary>
 			public Guid CreateDemoScene()
 			{
-				return View3D_CreateDemoScene(Handle);
+				return View3D_DemoSceneCreate(Handle);
 
 				#if false
 				{// Create an object using ldr script
@@ -1273,14 +1299,85 @@ namespace pr.gfx
 			/// <summary>Show a window containing and example ldr script file</summary>
 			public void ShowExampleScript()
 			{
-				View3D_ShowDemoScript(m_wnd);
+				View3D_DemoScriptShow(m_handle);
 			}
 
 			/// <summary>Show/Hide the object manager UI</summary>
 			public void ShowObjectManager(bool show)
 			{
-				View3D_ShowObjectManager(m_wnd, show);
+				View3D_ObjectManagerShow(m_handle, show);
 			}
+
+			#region Equals
+			public static bool operator == (Window lhs, Window rhs)
+			{
+				return ReferenceEquals(lhs,rhs) || Equals(lhs, rhs);
+			}
+			public static bool operator != (Window lhs, Window rhs)
+			{
+				return !(lhs == rhs);
+			}
+			public bool Equals(Window rhs)
+			{
+				return rhs != null && m_handle == rhs.m_handle;
+			}
+			public override bool Equals(object rhs)
+			{
+				return Equals(rhs as Window);
+			}
+			public override int GetHashCode()
+			{
+				return m_handle.ToInt32();
+			}
+			#endregion
+
+			#region Event Args
+			public class ErrorEventArgs :EventArgs
+			{
+				public ErrorEventArgs(string msg)
+				{
+					Message = msg;
+				}
+
+				/// <summary>The error message</summary>
+				public string Message { get; private set; }
+			}
+			public class MouseNavigateEventArgs :EventArgs
+			{
+				public MouseNavigateEventArgs(PointF point, ENavOp nav_op, bool nav_beg_or_end)
+				{
+					ZNavigation         = false;
+					Point       = point;
+					NavOp       = nav_op;
+					NavBegOrEnd = nav_beg_or_end;
+				}
+				public MouseNavigateEventArgs(PointF point, float delta, bool along_ray)
+				{
+					ZNavigation      = true;
+					Point    = point;
+					Delta    = delta;
+					AlongRay = along_ray;
+				}
+
+				/// <summary>True if this is a Z axis navigation</summary>
+				public bool ZNavigation { get; private set; }
+
+				/// <summary>The mouse pointer in client rect space</summary>
+				public PointF Point { get; private set; }
+
+				/// <summary>The navigation operation to perform</summary>
+				public ENavOp NavOp { get; private set; }
+
+				/// <summary>True if this is the beginning or end of the navigation, false if during</summary>
+				public bool NavBegOrEnd { get; private set; }
+
+				/// <summary>The mouse wheel scroll delta</summary>
+				public float Delta { get; private set; }
+
+				/// <summary>True if Z axis navigation moves the camera along a ray through the mouse pointer</summary>
+				public bool AlongRay { get; private set; }
+			}
+			#endregion
 		}
 
 		/// <summary>Namespace for the camera controls</summary>
@@ -1584,6 +1681,29 @@ namespace pr.gfx
 			{
 				return View3D_MouseBtnToNavOp(mk);
 			}
+
+			#region Equals
+			public static bool operator == (CameraControls lhs, CameraControls rhs)
+			{
+				return ReferenceEquals(lhs,rhs) || Equals(lhs, rhs);
+			}
+			public static bool operator != (CameraControls lhs, CameraControls rhs)
+			{
+				return !(lhs == rhs);
+			}
+			public bool Equals(CameraControls rhs)
+			{
+				return rhs != null && m_window == rhs.m_window;
+			}
+			public override bool Equals(object obj)
+			{
+				return Equals(obj as CameraControls);
+			}
+			public override int GetHashCode()
+			{
+				return m_window.GetHashCode() * 137;
+			}
+			#endregion
 		}
 
 		/// <summary>Object resource wrapper</summary>
@@ -1672,6 +1792,12 @@ namespace pr.gfx
 				set { View3D_ObjectNameSet(m_handle, value); }
 			}
 
+			/// <summary>Get the type of Ldr object this is</summary>
+			public string Type
+			{
+				get { return View3D_ObjectTypeGetBStr(m_handle); }
+			}
+
 			/// <summary>Get/Set the visibility of this object (set applies to all child objects as well)</summary>
 			public bool Visible
 			{
@@ -1686,11 +1812,23 @@ namespace pr.gfx
 				set { ColourSet(value, string.Empty); }
 			}
 
-			/// <summary>Get/Set the state flags of this object (set applies to all child objects as well)</summary>
+			/// <summary>Get/Set wire-frame mode of this object (set applies to all child objects as well)</summary>
+			public bool Wireframe
+			{
+				get { return WireframeGet(string.Empty); }
+				set { WireframeSet(value, string.Empty); }
+			}
+
+			/// <summary>Get the state flags of this object</summary>
 			public EFlags Flags
 			{
 				get { return FlagsGet(string.Empty); }
-				set { FlagsSet(value, string.Empty); }
+			}
+
+			/// <summary>The context id that this object belongs to</summary>
+			public Guid ContextId
+			{
+				get { return View3D_ObjectContextIdGet(m_handle); }
 			}
 
 			/// <summary>Change the model for this object</summary>
@@ -1718,22 +1856,33 @@ namespace pr.gfx
 				return View3D_ObjectBBoxMS(m_handle, include_children);
 			}
 
+			/// <summary>Return the object that is the root parent of this object (possibly itself)</summary>
+			public Object Root
+			{
+				get
+				{
+					var root = View3D_ObjectGetRoot(m_handle);
+					return root != HObject.Zero ? new Object(root, false) : null;
+				}
+			}
+
 			/// <summary>Return the object that is the immediate parent of this object</summary>
 			public Object Parent
 			{
 				get
 				{
 					var parent = View3D_ObjectGetParent(m_handle);
-					return parent != HObject.Zero ? new Object(parent, false) : null; }
+					return parent != HObject.Zero ? new Object(parent, false) : null;
+				}
 			}
 
 			/// <summary>Return a child object of this object</summary>
-			public Object GetChild(string name)
+			public Object Child(string name)
 			{
 				var child = View3D_ObjectGetChildByName(m_handle, name);
 				return child != HObject.Zero ? new Object(child, false) : null;
 			}
-			public Object GetChild(int index)
+			public Object Child(int index)
 			{
 				var child = View3D_ObjectGetChildByIndex(m_handle, index);
 				return child != HObject.Zero ? new Object(child, false) : null;
@@ -1802,15 +1951,30 @@ namespace pr.gfx
 			}
 
 			/// <summary>
+			/// Get/Set wireframe mode of this object or any of its child objects that match 'name'.
+			/// If 'name' is null, then the state change is applied to this object only
+			/// If 'name' is "", then the state change is applied to this object and all children recursively
+			/// Otherwise, the state change is applied to all child objects that match name.
+			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
+			public bool WireframeGet(string name = null)
+			{
+				return View3D_ObjectWireframeGet(m_handle, name);
+			}
+			public void WireframeSet(bool vis, string name = null)
+			{
+				View3D_ObjectWireframeSet(m_handle, vis, name);
+			}
+		
+			/// <summary>
 			/// Get/Set the object flags
 			/// See LdrObject::Apply for docs on the format of 'name'</summary>
 			public EFlags FlagsGet(string name = null)
 			{
 				return View3D_ObjectFlagsGet(m_handle, name);
 			}
-			public void FlagsSet(EFlags flags, string name = null)
+			public void FlagsSet(EFlags flags, bool state, string name = null)
 			{
-				View3D_ObjectFlagsSet(m_handle, flags, name);
+				View3D_ObjectFlagsSet(m_handle, flags, state, name);
 			}
 
 			/// <summary>
@@ -1861,12 +2025,35 @@ namespace pr.gfx
 			/// <summary>String description of the object</summary>
 			public string Description
 			{
-				get { return $"{Name} Vis={Visible} Flags={Flags} ChildCount={ChildCount}"; }
+				get { return $"{Name} ChildCount={ChildCount} Vis={Visible} Flags={Flags}"; }
 			}
 			public override string ToString()
 			{
 				return Description;
 			}
+
+			#region Equals
+			public static bool operator == (Object lhs, Object rhs)
+			{
+				return ReferenceEquals(lhs,rhs) || Equals(lhs, rhs);
+			}
+			public static bool operator != (Object lhs, Object rhs)
+			{
+				return !(lhs == rhs);
+			}
+			public bool Equals(Object rhs)
+			{
+				return rhs != null && m_handle == rhs.m_handle;
+			}
+			public override bool Equals(object rhs)
+			{
+				return Equals(rhs as Object);
+			}
+			public override int GetHashCode()
+			{
+				return m_handle.GetHashCode();
+			}
+			#endregion
 		}
 
 		/// <summary>A 3D manipulation gizmo</summary>
@@ -1986,12 +2173,36 @@ namespace pr.gfx
 
 			/// <summary>Callback function type and data from the native gizmo object</summary>
 			internal delegate void Callback(IntPtr ctx, ref Evt_Gizmo args);
+
 			[StructLayout(LayoutKind.Sequential)]
 			internal struct Evt_Gizmo
 			{
 				public IntPtr m_gizmo;
 				public EEvent m_state;
 			}
+
+			#region Equals
+			public static bool operator == (Gizmo lhs, Gizmo rhs)
+			{
+				return ReferenceEquals(lhs,rhs) || Equals(lhs, rhs);
+			}
+			public static bool operator != (Gizmo lhs, Gizmo rhs)
+			{
+				return !(lhs == rhs);
+			}
+			public bool Equals(Gizmo rhs)
+			{
+				return rhs != null && m_handle == rhs.m_handle;
+			}
+			public override bool Equals(object rhs)
+			{
+				return Equals(rhs as Gizmo);
+			}
+			public override int GetHashCode()
+			{
+				return m_handle.GetHashCode();
+			}
+			#endregion
 		}
 
 		/// <summary>Texture resource wrapper</summary>
@@ -2140,8 +2351,28 @@ namespace pr.gfx
 				return new Lock(this, discard);
 			}
 
-			public override bool Equals(object obj) { return obj is Texture && m_handle.Equals(((Texture)obj).m_handle); }
-			public override int GetHashCode()       { return m_handle.GetHashCode(); }
+			#region Equals
+			public static bool operator == (Texture lhs, Texture rhs)
+			{
+				return ReferenceEquals(lhs,rhs) || Equals(lhs, rhs);
+			}
+			public static bool operator != (Texture lhs, Texture rhs)
+			{
+				return !(lhs == rhs);
+			}
+			public bool Equals(Texture rhs)
+			{
+				return rhs != null && m_handle == rhs.m_handle;
+			}
+			public override bool Equals(object rhs)
+			{
+				return Equals(rhs as Texture);
+			}
+			public override int GetHashCode()
+			{
+				return m_handle.GetHashCode();
+			}
+			#endregion
 		}
 
 		/// <summary>Reference type wrapper of a view3d light</summary>
@@ -2463,6 +2694,18 @@ namespace ldr
 			/// <summary>True if files are about to change</summary>
 			public bool Before { get; private set; }
 		}
+
+		public class SceneChangedEventArgs :EventArgs
+		{
+			public SceneChangedEventArgs(Guid[] context_ids)
+			{
+				ContextIds = context_ids;
+			}
+
+			/// <summary>The context ids of the objects that were changed in the scene</summary>
+			public Guid[] ContextIds { get; private set; }
+		}
+
 		#endregion
 
 		#region DLL extern functions
@@ -2498,7 +2741,7 @@ namespace ldr
 		public delegate void RenderCB(IntPtr ctx, HWindow wnd);
 
 		/// <summary>Callback for when the collection of objects associated with a window changes</summary>
-		public delegate void SceneChangedCB(IntPtr ctx, HWindow wnd);
+		public delegate void SceneChangedCB(IntPtr ctx, HWindow wnd, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 3)] Guid[] context_ids, int count);
 
 		/// <summary>Edit object callback</summary>
 		public delegate void EditObjectCB(IntPtr ctx, int vcount, int icount, int ncount,
@@ -2521,25 +2764,27 @@ namespace ldr
 		[DllImport(Dll)] private static extern void            View3D_GlobalErrorCBSet       (ReportErrorCB error_cb, IntPtr ctx, bool add);
 
 		// Windows
-		[DllImport(Dll)] private static extern HWindow         View3D_WindowCreate            (HWND hwnd, ref WindowOptions opts);
-		[DllImport(Dll)] private static extern void            View3D_WindowDestroy           (HWindow window);
-		[DllImport(Dll)] private static extern void            View3D_WindowErrorCBSet        (HWindow window, ReportErrorCB error_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)] private static extern IntPtr          View3D_WindowSettingsGet       (HWindow window);
-		[DllImport(Dll)] private static extern void            View3D_WindowSettingsSet       (HWindow window, string settings);
-		[DllImport(Dll)] private static extern void            View3D_WindowSettingsChangedCB (HWindow window, SettingsChangedCB settings_changed_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)] private static extern void            View3D_WindowRenderingCB       (HWindow window, RenderCB rendering_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)] private static extern void            View3d_WindowSceneChangedCB    (HWindow window, SceneChangedCB scene_changed_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)] private static extern void            View3D_WindowAddObject         (HWindow window, HObject obj);
-		[DllImport(Dll)] private static extern void            View3D_WindowRemoveObject      (HWindow window, HObject obj);
-		[DllImport(Dll)] private static extern void            View3D_WindowRemoveAllObjects  (HWindow window);
-		[DllImport(Dll)] private static extern bool            View3D_WindowHasObject         (HWindow window, HObject obj);
-		[DllImport(Dll)] private static extern int             View3D_WindowObjectCount       (HWindow window);
-		[DllImport(Dll)] private static extern void            View3D_WindowEnumObjects       (HWindow window, EnumObjectsCB enum_objects_cb, IntPtr ctx);
-		[DllImport(Dll)] private static extern void            View3D_WindowAddObjectsById    (HWindow window, ref Guid context_id);
-		[DllImport(Dll)] private static extern void            View3D_WindowRemoveObjectsById (HWindow window, bool all_except, ref Guid context_id);
-		[DllImport(Dll)] private static extern void            View3D_WindowAddGizmo          (HWindow window, HGizmo giz);
-		[DllImport(Dll)] private static extern void            View3D_WindowRemoveGizmo       (HWindow window, HGizmo giz);
-		[DllImport(Dll)] private static extern BBox            View3D_WindowSceneBounds       (HWindow window, ESceneBounds bounds, int except_count, Guid[] except);
+		[DllImport(Dll)] private static extern HWindow         View3D_WindowCreate              (HWND hwnd, ref WindowOptions opts);
+		[DllImport(Dll)] private static extern void            View3D_WindowDestroy             (HWindow window);
+		[DllImport(Dll)] private static extern void            View3D_WindowErrorCBSet          (HWindow window, ReportErrorCB error_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)] private static extern IntPtr          View3D_WindowSettingsGet         (HWindow window);
+		[DllImport(Dll)] private static extern void            View3D_WindowSettingsSet         (HWindow window, string settings);
+		[DllImport(Dll)] private static extern void            View3D_WindowSettingsChangedCB   (HWindow window, SettingsChangedCB settings_changed_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)] private static extern void            View3D_WindowRenderingCB         (HWindow window, RenderCB rendering_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)] private static extern void            View3d_WindowSceneChangedCB      (HWindow window, SceneChangedCB scene_changed_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)] private static extern void            View3D_WindowSceneChangedSuspend (HWindow window, bool suspend);
+		[DllImport(Dll)] private static extern void            View3D_WindowAddObject           (HWindow window, HObject obj);
+		[DllImport(Dll)] private static extern void            View3D_WindowRemoveObject        (HWindow window, HObject obj);
+		[DllImport(Dll)] private static extern void            View3D_WindowRemoveAllObjects    (HWindow window);
+		[DllImport(Dll)] private static extern bool            View3D_WindowHasObject           (HWindow window, HObject obj);
+		[DllImport(Dll)] private static extern int             View3D_WindowObjectCount         (HWindow window);
+		[DllImport(Dll)] private static extern void            View3D_WindowEnumObjects         (HWindow window, EnumObjectsCB enum_objects_cb, IntPtr ctx);
+		[DllImport(Dll)] private static extern void            View3D_WindowEnumObjectsById     (HWindow window, EnumObjectsCB enum_objects_cb, IntPtr ctx, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 4)] Guid[] context_id, int count, bool all_except);
+		[DllImport(Dll)] private static extern void            View3D_WindowAddObjectsById      (HWindow window, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] Guid[] context_id, int count, bool all_except);
+		[DllImport(Dll)] private static extern void            View3D_WindowRemoveObjectsById   (HWindow window, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] Guid[] context_id, int count, bool all_except);
+		[DllImport(Dll)] private static extern void            View3D_WindowAddGizmo            (HWindow window, HGizmo giz);
+		[DllImport(Dll)] private static extern void            View3D_WindowRemoveGizmo         (HWindow window, HGizmo giz);
+		[DllImport(Dll)] private static extern BBox            View3D_WindowSceneBounds         (HWindow window, ESceneBounds bounds, int except_count, Guid[] except);
 
 		// Camera
 		[DllImport(Dll)] private static extern void            View3D_CameraToWorldGet       (HWindow window, out m4x4 c2w);
@@ -2598,14 +2843,16 @@ namespace ldr
 		[DllImport(Dll)] private static extern void              View3D_SourcesChangedCBSet      (SourcesChangedCB sources_changed_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern void              View3D_EmbeddedCodeCBSet        (EmbeddedCodeHandlerCB embedded_code_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern bool              View3D_ContextIdFromFilepath    ([MarshalAs(UnmanagedType.LPWStr)] string filepath, out Guid id);
+		[DllImport(Dll)] private static extern Guid              View3D_ObjectContextIdGet       (HObject obj);
 		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteAll         ();
-		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteById        (ref Guid context_id);
+		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteById        ([MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)] Guid[] context_ids, int count);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, ref View3DIncludes includes);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreate             (string name, uint colour, int vcount, int icount, int ncount, IntPtr verts, IntPtr indices, IntPtr nuggets, ref Guid context_id);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateEditCB       (string name, uint colour, int vcount, int icount, int ncount, EditObjectCB edit_cb, IntPtr ctx, ref Guid context_id);
 		[DllImport(Dll)] private static extern void              View3D_ObjectUpdate             (HObject obj, [MarshalAs(UnmanagedType.LPWStr)] string ldr_script, EUpdateObject flags);
 		[DllImport(Dll)] private static extern void              View3D_ObjectEdit               (HObject obj, EditObjectCB edit_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern void              View3D_ObjectDelete             (HObject obj);
+		[DllImport(Dll)] private static extern HObject           View3D_ObjectGetRoot            (HObject obj);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectGetParent          (HObject obj);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectGetChildByName     (HObject obj, string name);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectGetChildByIndex    (HObject obj, int index);
@@ -2614,6 +2861,8 @@ namespace ldr
 		[return:MarshalAs(UnmanagedType.BStr)]
 		[DllImport(Dll)] private static extern string            View3D_ObjectNameGetBStr        (HObject obj);
 		[DllImport(Dll)] private static extern void              View3D_ObjectNameSet            (HObject obj, [MarshalAs(UnmanagedType.LPStr)] string name);
+		[return:MarshalAs(UnmanagedType.BStr)]
+		[DllImport(Dll)] private static extern string            View3D_ObjectTypeGetBStr        (HObject obj);
 		[DllImport(Dll)] private static extern m4x4              View3D_ObjectO2WGet             (HObject obj, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectO2WSet             (HObject obj, ref m4x4 o2w, string name);
 		[DllImport(Dll)] private static extern m4x4              View3D_ObjectO2PGet             (HObject obj, string name);
@@ -2621,9 +2870,11 @@ namespace ldr
 		[DllImport(Dll)] private static extern bool              View3D_ObjectVisibilityGet      (HObject obj, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectVisibilitySet      (HObject obj, bool visible, string name);
 		[DllImport(Dll)] private static extern EFlags            View3D_ObjectFlagsGet           (HObject obj, string name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectFlagsSet           (HObject obj, EFlags flags, string  name);
+		[DllImport(Dll)] private static extern void              View3D_ObjectFlagsSet           (HObject obj, EFlags flags, bool state, string  name);
 		[DllImport(Dll)] private static extern uint              View3D_ObjectColourGet          (HObject obj, bool base_colour, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectColourSet          (HObject obj, uint colour, uint mask, string name);
+		[DllImport(Dll)] private static extern bool              View3D_ObjectWireframeGet       (HObject obj, string name);
+		[DllImport(Dll)] private static extern void              View3D_ObjectWireframeSet       (HObject obj, bool wireframe, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectResetColour        (HObject obj, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectSetTexture         (HObject obj, HTexture tex, string name);
 		[DllImport(Dll)] private static extern BBox              View3D_ObjectBBoxMS             (HObject obj, bool include_children);
@@ -2689,20 +2940,24 @@ namespace ldr
 		// Miscellaneous
 		[DllImport(Dll)] private static extern bool              View3D_TranslateKey             (HWindow window, int key_code);
 		[DllImport(Dll)] private static extern void              View3D_RestoreMainRT            (HWindow window);
-		[DllImport(Dll)] private static extern bool              View3D_DepthBufferEnabled       (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_SetDepthBufferEnabled    (HWindow window, bool enabled);
-		[DllImport(Dll)] private static extern bool              View3D_FocusPointVisible        (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_ShowFocusPoint           (HWindow window, bool show);
-		[DllImport(Dll)] private static extern void              View3D_SetFocusPointSize        (HWindow window, float size);
-		[DllImport(Dll)] private static extern bool              View3D_OriginVisible            (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_ShowOrigin               (HWindow window, bool show);
-		[DllImport(Dll)] private static extern void              View3D_SetOriginSize            (HWindow window, float size);
+		[DllImport(Dll)] private static extern bool              View3D_DepthBufferEnabledGet    (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_DepthBufferEnabledSet    (HWindow window, bool enabled);
+		[DllImport(Dll)] private static extern bool              View3D_FocusPointVisibleGet     (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_FocusPointVisibleSet     (HWindow window, bool show);
+		[DllImport(Dll)] private static extern void              View3D_FocusPointSizeSet        (HWindow window, float size);
+		[DllImport(Dll)] private static extern bool              View3D_OriginVisibleGet         (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_OriginVisibleSet         (HWindow window, bool show);
+		[DllImport(Dll)] private static extern void              View3D_OriginSizeSet            (HWindow window, float size);
 		[DllImport(Dll)] private static extern bool              View3D_BBoxesVisibleGet         (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_BBoxesVisibleSet         (HWindow window, bool visible);
-		[DllImport(Dll)] private static extern Guid              View3D_CreateDemoScene          (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_DeleteDemoScene          ();
-		[DllImport(Dll)] private static extern void              View3D_ShowDemoScript           (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_ShowObjectManager        (HWindow window, bool show);
+		[DllImport(Dll)] private static extern bool              View3D_SelectionBoxVisibleGet   (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_SelectionBoxVisibleSet   (HWindow window, bool visible);
+		[DllImport(Dll)] private static extern void              View3D_SelectionBoxPosition     (HWindow window, ref BBox box, ref m4x4 o2w);
+		[DllImport(Dll)] private static extern void              View3D_SelectionBoxFitToSelected(HWindow window);
+		[DllImport(Dll)] private static extern Guid              View3D_DemoSceneCreate          (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_DemoSceneDelete          ();
+		[DllImport(Dll)] private static extern void              View3D_DemoScriptShow           (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_ObjectManagerShow        (HWindow window, bool show);
 		[DllImport(Dll)] private static extern m4x4              View3D_ParseLdrTransform        (string ldr_script);
 		[return:MarshalAs(UnmanagedType.BStr)]
 		[DllImport(Dll)] private static extern string            View3D_ExampleScriptBStr();

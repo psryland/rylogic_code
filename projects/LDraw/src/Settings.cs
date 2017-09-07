@@ -26,6 +26,7 @@ namespace LDraw
 			OriginPointVisible = false;
 			LinkCameras        = ELinkCameras.None;
 			LinkAxes           = ELinkAxes.None;
+			FilterHistory      = new Pattern[0];
 			Scenes             = new SceneSettings[1] { new SceneSettings() };
 			UI                 = new UISettings();
 
@@ -100,6 +101,13 @@ namespace LDraw
 			set { set(x => x.LinkAxes, value); }
 		}
 
+		/// <summary>The filter patterns used in the object manager</summary>
+		public Pattern[] FilterHistory
+		{
+			get { return get(x => x.FilterHistory); }
+			set { set(x => x.FilterHistory, value); }
+		}
+
 		/// <summary>Style options for scenes</summary>
 		public SceneSettings[] Scenes
 		{
@@ -171,6 +179,7 @@ namespace LDraw
 		{
 			Name = name ?? string.Empty;
 			ShowBBoxes = false;
+			ShowSelectionBox = false;
 
 			Camera = new CameraSettings();
 
@@ -198,6 +207,13 @@ namespace LDraw
 		{
 			get { return get(x => x.ShowBBoxes); }
 			set { set(x => x.ShowBBoxes, value); }
+		}
+
+		/// <summary>Show the selection box</summary>
+		public bool ShowSelectionBox
+		{
+			get { return get(x => x.ShowSelectionBox); }
+			set { set(x => x.ShowSelectionBox, value); }
 		}
 
 		/// <summary>Camera settings</summary>

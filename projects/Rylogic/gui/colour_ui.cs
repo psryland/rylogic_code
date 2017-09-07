@@ -40,7 +40,7 @@ namespace pr.gui
 		private Button m_btn_cancel;
 
 		/// <summary>Recently selected colours</summary>
-		private static Color[] m_recent = Util.NewArray(RecentColoursColumns*RecentColoursRows, i => Color.White);
+		private static Color[] m_recent = Array_.New(RecentColoursColumns*RecentColoursRows, i => Color.White);
 		private const int RecentColoursColumns = 7;
 		private const int RecentColoursRows = 2;
 

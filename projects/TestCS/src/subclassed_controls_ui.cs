@@ -27,6 +27,7 @@ namespace TestCS
 		private Label m_lbl_vb_value;
 		private AnimCheckBox m_abtn_switch;
 		private ImageList m_abtn_images;
+		private PatternFilter m_pattern_filter;
 		private BindingListEx<Thing> m_bl1;
 
 		public SubclassedControlsUI()
@@ -181,6 +182,7 @@ namespace TestCS
 		{
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SubclassedControlsUI));
+			pr.common.Pattern pattern1 = new pr.common.Pattern();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
 			this.m_btn_test = new System.Windows.Forms.Button();
 			this.m_timer = new System.Windows.Forms.Timer(this.components);
@@ -194,6 +196,7 @@ namespace TestCS
 			this.m_cb = new pr.gui.ComboBox();
 			this.m_abtn_switch = new pr.gui.AnimCheckBox();
 			this.m_abtn_images = new System.Windows.Forms.ImageList(this.components);
+			this.m_pattern_filter = new pr.gui.PatternFilter();
 			this.SuspendLayout();
 			// 
 			// m_ts
@@ -225,22 +228,31 @@ namespace TestCS
 			// 
 			// m_vb_value
 			// 
+			this.m_vb_value.BackColorInvalid = System.Drawing.Color.White;
+			this.m_vb_value.BackColorValid = System.Drawing.Color.White;
+			this.m_vb_value.CommitValueOnFocusLost = true;
+			this.m_vb_value.ForeColorInvalid = System.Drawing.Color.Gray;
+			this.m_vb_value.ForeColorValid = System.Drawing.Color.Black;
 			this.m_vb_value.Location = new System.Drawing.Point(93, 260);
 			this.m_vb_value.Name = "m_vb_value";
 			this.m_vb_value.Size = new System.Drawing.Size(146, 20);
 			this.m_vb_value.TabIndex = 8;
+			this.m_vb_value.UseValidityColours = true;
 			this.m_vb_value.Value = null;
 			// 
 			// m_browse_path
 			// 
 			this.m_browse_path.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_browse_path.FileFilter = "";
 			this.m_browse_path.History = new string[0];
 			this.m_browse_path.Location = new System.Drawing.Point(12, 28);
 			this.m_browse_path.Name = "m_browse_path";
+			this.m_browse_path.Padding = new System.Windows.Forms.Padding(1);
 			this.m_browse_path.Path = "";
 			this.m_browse_path.Size = new System.Drawing.Size(356, 32);
 			this.m_browse_path.TabIndex = 7;
+			this.m_browse_path.Title = "Choose a file";
 			this.m_browse_path.Type = pr.gui.BrowsePathUI.EType.OpenFile;
 			// 
 			// m_pb
@@ -266,7 +278,6 @@ namespace TestCS
 			// 
 			// m_lb
 			// 
-			this.m_lb.DisplayProperty = null;
 			this.m_lb.FormattingEnabled = true;
 			this.m_lb.Location = new System.Drawing.Point(12, 92);
 			this.m_lb.Name = "m_lb";
@@ -286,16 +297,24 @@ namespace TestCS
 			// 
 			// m_cb
 			// 
+			this.m_cb.BackColorInvalid = System.Drawing.Color.White;
+			this.m_cb.BackColorValid = System.Drawing.Color.White;
+			this.m_cb.CommitValueOnFocusLost = true;
 			this.m_cb.DisplayProperty = null;
+			this.m_cb.ForeColorInvalid = System.Drawing.Color.Gray;
+			this.m_cb.ForeColorValid = System.Drawing.Color.Black;
 			this.m_cb.FormattingEnabled = true;
 			this.m_cb.Location = new System.Drawing.Point(12, 65);
 			this.m_cb.Name = "m_cb";
 			this.m_cb.PreserveSelectionThruFocusChange = false;
 			this.m_cb.Size = new System.Drawing.Size(121, 21);
 			this.m_cb.TabIndex = 0;
+			this.m_cb.UseValidityColours = true;
+			this.m_cb.Value = null;
 			// 
 			// m_abtn_switch
 			// 
+			this.m_abtn_switch.FrameRate = 5F;
 			this.m_abtn_switch.ImageAlign = System.Drawing.ContentAlignment.TopCenter;
 			this.m_abtn_switch.ImageIndex = 0;
 			this.m_abtn_switch.ImageList = this.m_abtn_images;
@@ -315,11 +334,27 @@ namespace TestCS
 			this.m_abtn_images.Images.SetKeyName(3, "slide_switch3.png");
 			this.m_abtn_images.Images.SetKeyName(4, "slide_switch4.png");
 			// 
+			// m_pattern_filter
+			// 
+			this.m_pattern_filter.History = new pr.common.Pattern[0];
+			this.m_pattern_filter.Location = new System.Drawing.Point(12, 356);
+			this.m_pattern_filter.Name = "m_pattern_filter";
+			pattern1.Active = true;
+			pattern1.Expr = "";
+			pattern1.IgnoreCase = false;
+			pattern1.Invert = false;
+			pattern1.PatnType = pr.common.EPattern.Substring;
+			pattern1.WholeLine = false;
+			this.m_pattern_filter.Pattern = pattern1;
+			this.m_pattern_filter.Size = new System.Drawing.Size(356, 27);
+			this.m_pattern_filter.TabIndex = 11;
+			// 
 			// SubclassedControlsUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(380, 415);
+			this.Controls.Add(this.m_pattern_filter);
 			this.Controls.Add(this.m_abtn_switch);
 			this.Controls.Add(this.m_lbl_vb_value);
 			this.Controls.Add(this.m_vb_value);

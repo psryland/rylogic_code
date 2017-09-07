@@ -3397,7 +3397,10 @@ namespace pr
 				{
 					object->RemoveAllChildren();
 					while (!rhs->m_child.empty())
-						object->AddChild(rhs->RemoveChild(0));
+					{
+						auto child = rhs->RemoveChild(0);
+						object->AddChild(child);
+					}
 				}
 				else
 					ApplyObjectState(object.get());
@@ -4337,15 +4340,16 @@ LR"(// *************************************************************************
 		}
 
 		// Get the first child object of this object that matches 'name' (see Apply)
-		LdrObjectPtr LdrObject::Child(char const* name) const
+		LdrObject* LdrObject::Child(char const* name) const
 		{
-			LdrObjectPtr obj = nullptr;
+			LdrObject* obj = nullptr;
 			Apply([&](LdrObject* o){ obj = o; return false; }, name);
 			return obj;
 		}
-		LdrObjectPtr LdrObject::Child(int index) const
+		LdrObject* LdrObject::Child(int index) const
 		{
-			return m_child[index];
+			if (index < 0 || index >= int(m_child.size())) throw std::exception(pr::FmtS("LdrObject child index (%d) out of range [0,%d)", index, int(m_child.size())));
+			return m_child[index].get();
 		}
 
 		// Get/Set the object to world transform of this object or the first child object matching 'name' (see Apply)
@@ -4428,11 +4432,11 @@ LR"(// *************************************************************************
 			auto obj = Child(name);
 			return obj ? obj->m_flags : ELdrFlags::None;
 		}
-		void LdrObject::Flags(ELdrFlags flags, char const* name)
+		void LdrObject::Flags(ELdrFlags flags, bool state, char const* name)
 		{
 			Apply([=](LdrObject* o)
 			{
-				o->m_flags = flags;
+				o->m_flags = SetBits(o->m_flags, flags, state);
 				return true;
 			}, name);
 		}
@@ -4507,7 +4511,7 @@ LR"(// *************************************************************************
 		}
 
 		// Add/Remove 'child' as a child of this object
-		void LdrObject::AddChild(LdrObjectPtr child)
+		void LdrObject::AddChild(LdrObjectPtr& child)
 		{
 			PR_ASSERT(PR_DBG, child->m_parent != this, "child is already a child of this object");
 			PR_ASSERT(PR_DBG, child->m_parent == nullptr, "child already has a parent");

@@ -110,7 +110,7 @@ namespace view3d
 			for (auto src : m_sources.Files())
 			{
 				auto id = src.second.m_file_group_id;
-				DeleteAllObjectsById(id);
+				DeleteAllObjectsById(&id, 1);
 			}
 
 			// Reload the source data
@@ -160,13 +160,15 @@ namespace view3d
 		}
 
 		// Delete all objects with matching ids
-		void DeleteAllObjectsById(pr::Guid const& context_id)
+		void DeleteAllObjectsById(pr::Guid const* context_ids, int count)
 		{
 			// Remove objects from any windows they might be assigned to
 			for (auto wnd : m_wnd_cont)
-				View3D_WindowRemoveObjectsById(wnd, false, context_id);
+				View3D_WindowRemoveObjectsById(wnd, context_ids, count, false);
 
-			m_sources.Remove(context_id);
+			// Clear sources associated with 'context_ids'
+			for (auto& id : std::initializer_list<pr::Guid>(context_ids, context_ids+count))
+				m_sources.Remove(id);
 		}
 
 		// Delete a single object

@@ -60,6 +60,7 @@ namespace pr.gui
 			ValueType = typeof(object);
 			UseValidityColours = true;
 			CommitValueOnFocusLost = true;
+			PreserveSelectionThruFocusChange = true;
 			ForeColorValid = Color.Black;
 			BackColorValid = Color.White;
 			ForeColorInvalid = Color.Gray;
@@ -211,6 +212,11 @@ namespace pr.gui
 				base.OnFormat(e);
 			}
 		}
+		public override string Text
+		{
+			get { return base.Text; }
+			set { base.Text = value; }
+		}
 
 		/// <summary>The property of the data bound items to display</summary>
 		public string DisplayProperty
@@ -283,20 +289,20 @@ namespace pr.gui
 					// For built in types, validate the text. For user types
 					// assume the text is valid (even tho we may not be able to
 					// convert the text to an instance of the user type).
-					if (!x.HasValue()) return false;
 					switch (ValueType.Name) {
-					default: return true;
-					case nameof(Byte   ): return byte   .TryParse(x, out var b);
-					case nameof(Char   ): return char   .TryParse(x, out var c);
-					case nameof(Int16  ): return short  .TryParse(x, out var s);
-					case nameof(UInt16 ): return ushort .TryParse(x, out var us);
-					case nameof(Int32  ): return int    .TryParse(x, out var i);
-					case nameof(UInt32 ): return uint   .TryParse(x, out var ui);
-					case nameof(Int64  ): return long   .TryParse(x, out var l);
-					case nameof(UInt64 ): return ulong  .TryParse(x, out var ul);
-					case nameof(Single ): return float  .TryParse(x, out var f);
-					case nameof(Double ): return double .TryParse(x, out var d);
-					case nameof(Decimal): return decimal.TryParse(x, out var ld);
+					default: return x.HasValue();
+					case nameof(String ): return true;
+					case nameof(Byte   ): return x.HasValue() && byte   .TryParse(x, out var b);
+					case nameof(Char   ): return x.HasValue() && char   .TryParse(x, out var c);
+					case nameof(Int16  ): return x.HasValue() && short  .TryParse(x, out var s);
+					case nameof(UInt16 ): return x.HasValue() && ushort .TryParse(x, out var us);
+					case nameof(Int32  ): return x.HasValue() && int    .TryParse(x, out var i);
+					case nameof(UInt32 ): return x.HasValue() && uint   .TryParse(x, out var ui);
+					case nameof(Int64  ): return x.HasValue() && long   .TryParse(x, out var l);
+					case nameof(UInt64 ): return x.HasValue() && ulong  .TryParse(x, out var ul);
+					case nameof(Single ): return x.HasValue() && float  .TryParse(x, out var f);
+					case nameof(Double ): return x.HasValue() && double .TryParse(x, out var d);
+					case nameof(Decimal): return x.HasValue() && decimal.TryParse(x, out var ld);
 					}
 				});
 			}
@@ -320,21 +326,20 @@ namespace pr.gui
 					// For built in types, convert the text to the type.
 					// For user types, assume the text is a description of the type
 					// and not convertible to the type.
-					if (!x.HasValue()) return null;
 					switch (ValueType.Name) {
-					default: return Value;
-					case nameof(String ): return x;
-					case nameof(Byte   ): return byte   .Parse(x);
-					case nameof(Char   ): return char   .Parse(x);
-					case nameof(Int16  ): return short  .Parse(x);
-					case nameof(UInt16 ): return ushort .Parse(x);
-					case nameof(Int32  ): return int    .Parse(x);
-					case nameof(UInt32 ): return uint   .Parse(x);
-					case nameof(Int64  ): return long   .Parse(x);
-					case nameof(UInt64 ): return ulong  .Parse(x);
-					case nameof(Single ): return float  .Parse(x);
-					case nameof(Double ): return double .Parse(x);
-					case nameof(Decimal): return decimal.Parse(x);
+					default: return x.HasValue() ? (object)x : null;
+					case nameof(String ): return x ?? string.Empty;
+					case nameof(Byte   ): return x.HasValue() ? (object)byte   .Parse(x) : null;
+					case nameof(Char   ): return x.HasValue() ? (object)char   .Parse(x) : null;
+					case nameof(Int16  ): return x.HasValue() ? (object)short  .Parse(x) : null;
+					case nameof(UInt16 ): return x.HasValue() ? (object)ushort .Parse(x) : null;
+					case nameof(Int32  ): return x.HasValue() ? (object)int    .Parse(x) : null;
+					case nameof(UInt32 ): return x.HasValue() ? (object)uint   .Parse(x) : null;
+					case nameof(Int64  ): return x.HasValue() ? (object)long   .Parse(x) : null;
+					case nameof(UInt64 ): return x.HasValue() ? (object)ulong  .Parse(x) : null;
+					case nameof(Single ): return x.HasValue() ? (object)float  .Parse(x) : null;
+					case nameof(Double ): return x.HasValue() ? (object)double .Parse(x) : null;
+					case nameof(Decimal): return x.HasValue() ? (object)decimal.Parse(x) : null;
 					}
 				});
 			}
@@ -544,7 +549,7 @@ namespace pr.gui
 			get { return Items.Count > 0 ? base.SelectedIndex : -1; }
 			set
 			{
-				if (value < 0 || value >= Items.Count) return;
+				if (value == base.SelectedIndex || !value.Within(0,Items.Count)) return;
 				base.SelectedIndex = value;
 			}
 		}
@@ -585,16 +590,6 @@ namespace pr.gui
 		/// Raised whenever an attempt to change the selected item to an unknown item is made.
 		/// I.e. whenever the combo box ignores a call to 'SelectedItem = value'</summary>
 		public event EventHandler<UnknownItemSelectedEventArgs> UnknownItemSelected;
-		public class UnknownItemSelectedEventArgs :EventArgs
-		{
-			public UnknownItemSelectedEventArgs(object unknown_item)
-			{
-				UnknownItem =  unknown_item;
-			}
-
-			/// <summary>The item that was attempted as the selected item</summary>
-			public object UnknownItem { get; private set; }
-		}
 
 		/// <summary>Get/Set the selected text</summary>
 		public new string SelectedText
@@ -676,6 +671,19 @@ namespace pr.gui
 			return selection;
 		}
 	}
+
+	#region EventArgs
+	public class UnknownItemSelectedEventArgs :EventArgs
+	{
+		public UnknownItemSelectedEventArgs(object unknown_item)
+		{
+			UnknownItem =  unknown_item;
+		}
+
+		/// <summary>The item that was attempted as the selected item</summary>
+		public object UnknownItem { get; private set; }
+	}
+	#endregion
 }
 
 #if PR_UNITTESTS

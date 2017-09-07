@@ -47,6 +47,11 @@ namespace pr
 		auto iter = std::find(std::begin(cont), std::end(cont), item);
 		return iter != std::end(cont);
 	}
+	template <typename TIter> inline bool contains(TIter beg, TIter end, decltype(*beg) const& item)
+	{
+		auto iter = std::find(beg, end, item);
+		return iter != end;
+	}
 
 	// Return the lower bound
 	template <typename TCont, typename TValue> inline auto lower_bound(TCont const& cont, TValue const& val) -> decltype(std::begin(cont))

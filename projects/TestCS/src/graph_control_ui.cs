@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
+using pr.extn;
 using pr.gui;
 using pr.maths;
 using pr.util;
@@ -109,13 +111,11 @@ namespace TestCS
 		/// <summary>Add a function as a series</summary>
 		private void Add(string title, int points, Func<int,dynamic> Func, GraphControl.Series.RdrOptions opts)
 		{
-			var series = new GraphControl.Series(title, points, opts);
-			for (var i = 0; i != points; ++i)
+			m_graph.Data.Add(new GraphControl.Series(title, points, opts, int_.Range(points).Select(i =>
 			{
 				var d = Func(i);
-				series.Add(new GraphControl.GraphValue(d.X,d.Y,d.ErrLo,d.ErrHi,null));
-			}
-			m_graph.Data.Add(series);
+				return new GraphControl.GraphValue(d.X,d.Y,d.ErrLo,d.ErrHi,null);
+			})));
 		}
 
 		#region Windows Form Designer generated code

@@ -2040,7 +2040,9 @@ namespace RyLogViewer
 			var sel_range = m_grid.SelectedRowIndexRange();
 			var line_range = CalcLineRange(Settings.LineCacheCount);
 			var limit_cache_move = sel_range.Count > 1 ||
-				(MouseButtons == MouseButtons.Left && hti.Type != DataGridViewHitTestType.HorizontalScrollBar && hti.Type != DataGridViewHitTestType.VerticalScrollBar);
+				(MouseButtons == MouseButtons.Left &&
+				hti.Type != DataGridView_.HitTestInfo.EType.HorizontalScrollBar &&
+				hti.Type != DataGridView_.HitTestInfo.EType.VerticalScrollBar);
 
 			// Clamp the cache move
 			if (limit_cache_move)

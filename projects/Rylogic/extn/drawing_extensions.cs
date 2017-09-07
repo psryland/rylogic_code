@@ -5,14 +5,9 @@
 
 using System;
 using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using pr.gfx;
 using pr.maths;
-using pr.util;
-using pr.win32;
 using Matrix = System.Drawing.Drawing2D.Matrix;
 
 namespace pr.extn
@@ -532,68 +527,6 @@ namespace pr.extn
 				style   ?? prototype.Style,
 				unit    ?? prototype.Unit
 				);
-		}
-
-		/// <summary>Returns a scope object that locks and unlocks the data of a bitmap</summary>
-		public static Scope<BitmapData> LockBits(this Bitmap bm, ImageLockMode mode, PixelFormat format, Rectangle? rect = null)
-		{
-			return Scope<BitmapData>.Create(
-				() => bm.LockBits(rect ?? bm.Size.ToRect(), mode, format),
-				dat => bm.UnlockBits(dat));
-		}
-
-		/// <summary>Generate a GraphicsPath from this bitmap by rastering the non-background pixels</summary>
-		public static GraphicsPath ToGraphicsPath(this Bitmap bitmap, Color? bk_colour = null)
-		{
-			var gp = new GraphicsPath();
-
-			// Copy the bitmap to memory
-			int[] px; int sign;
-			using (var bits = bitmap.LockBits(ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb))
-			{
-				const int bytes_per_px = 4;
-				sign = Maths.Sign(bits.Value.Stride);
-				px = new int[Math.Abs(bits.Value.Stride) * bits.Value.Height / bytes_per_px];
-				Marshal.Copy(bits.Value.Scan0, px, 0, px.Length);
-			}
-
-			// Get the transparent colour
-			var bkcol = bk_colour?.ToArgb() ?? px[0];
-
-			// Generates a graphics path by rastering a bitmap into rectangles
-			var y    = sign > 0 ? 0 : bitmap.Height - 1;
-			var yend = sign > 0 ? bitmap.Height : -1;
-			for (; y != yend; y += sign)
-			{
-				// Find the first non-background colour pixel
-				int x0; for (x0 = 0; x0 != bitmap.Width && px[y * bitmap.Height + x0] == bkcol; ++x0) {}
-
-				// Find the last non-background colour pixel
-				int x1; for (x1 = bitmap.Width; x1-- != 0 && px[y * bitmap.Height + x1] == bkcol; ) {}
-
-				// Add a rectangle for the raster line
-				gp.AddRectangle(new Rectangle(x0, y, x1-x0+1, 1));
-			}
-			return gp;
-		}
-
-		/// <summary>Convert this bitmap to a cursor with hotspot at 'hot_spot'</summary>
-		public static Cursor ToCursor(this Bitmap bm, Point hot_spot)
-		{
-			var tmp = new Win32.IconInfo();
-			Win32.GetIconInfo(bm.GetHicon(), ref tmp);
-			tmp.xHotspot = hot_spot.X;
-			tmp.yHotspot = hot_spot.Y;
-			tmp.fIcon = false;
-			return new Cursor(Win32.CreateIconIndirect(ref tmp));
-		}
-
-		/// <summary>Convert this bitmap to an icon</summary>
-		public static Icon ToIcon(this Bitmap bm)
-		{
-			if (bm.Width > 128 || bm.Height > 128) throw new Exception("Icons can only be created from bitmaps up to 128x128 pixels in size");
-			using (var handle = Scope.Create(() => bm.GetHicon(), h => Win32.DestroyIcon(h)))
-				return Icon.FromHandle(handle.Value);
 		}
 	}
 

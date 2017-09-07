@@ -384,20 +384,36 @@ namespace pr.common
 			return new Pattern(this);
 		}
 
-		/// <summary>Value equality test</summary>
-		public override bool Equals(object obj)
+		/// <summary>Expression</summary>
+		public override string ToString()
 		{
-			var rhs = obj as Pattern;
-			return rhs != null
-				&& rhs.m_patn_type     == m_patn_type
-				&& rhs.m_expr          == m_expr
-				&& rhs.m_ignore_case   == m_ignore_case
-				&& rhs.m_active        == m_active
-				&& rhs.m_invert        == m_invert
-				&& rhs.m_whole_line    == m_whole_line;
+			return "{0}: {1}".Fmt(PatnType, Expr);
 		}
 
-		/// <summary>Value hash code</summary>
+		#region Equals
+		public static bool operator == (Pattern lhs, Pattern rhs)
+		{
+			return ReferenceEquals(lhs,rhs) || Equals(lhs, rhs);
+		}
+		public static bool operator != (Pattern lhs, Pattern rhs)
+		{
+			return !(lhs == rhs);
+		}
+		public bool Equals(Pattern rhs)
+		{
+			return
+				rhs != null &&
+				m_patn_type     == rhs.m_patn_type   && 
+				m_expr          == rhs.m_expr        && 
+				m_ignore_case   == rhs.m_ignore_case && 
+				m_active        == rhs.m_active      && 
+				m_invert        == rhs.m_invert      && 
+				m_whole_line    == rhs.m_whole_line; 
+		}
+		public override bool Equals(object obj)
+		{
+			return Equals(obj as Pattern);
+		}
 		public override int GetHashCode()
 		{
 			// ReSharper disable NonReadonlyFieldInGetHashCode
@@ -410,12 +426,7 @@ namespace pr.common
 				m_whole_line  .GetHashCode();
 			// ReSharper restore NonReadonlyFieldInGetHashCode
 		}
-
-		/// <summary>Expression</summary>
-		public override string ToString()
-		{
-			return "{0}: {1}".Fmt(PatnType, Expr);
-		}
+		#endregion
 	}
 }
 

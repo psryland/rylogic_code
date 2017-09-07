@@ -62,16 +62,27 @@ namespace pr.container
 		private BSource m_bs;
 		private class BSource :BindingSource
 		{
-			private BindingSource<TItem> This;
-			public int m_impl_previous_position;
+			private BindingSource<TItem> Owner;
 			public FieldInfo m_impl_listposition;
+			public int m_impl_previous_position;
 
-			public BSource(BindingSource<TItem> @this) { Init(@this); }
-			public BSource(BindingSource<TItem> @this, IContainer container) :base(container) { Init(@this); }
-			public BSource(BindingSource<TItem> @this, object dataSource, string dataMember) :base(dataSource, dataMember) { Init(@this); }
-			private void Init(BindingSource<TItem> @this)
+			public BSource(BindingSource<TItem> owner)
 			{
-				This = @this; 
+				Init(owner);
+			}
+			public BSource(BindingSource<TItem> owner, IContainer container)
+				:base(container)
+			{
+				Init(owner);
+			}
+			public BSource(BindingSource<TItem> owner, object dataSource, string dataMember)
+				:base(dataSource, dataMember)
+			{
+				Init(owner);
+			}
+			private void Init(BindingSource<TItem> owner)
+			{
+				Owner = owner; 
 				m_impl_previous_position = -1;
 				m_impl_listposition = typeof(CurrencyManager).GetField("listposition", BindingFlags.NonPublic|BindingFlags.Instance);
 
@@ -90,7 +101,7 @@ namespace pr.container
 					if (value == base.Position)
 					{
 					}
-					else if (value == -1 && Position != -1 && This.AllowNoCurrent)
+					else if (value == -1 && Position != -1 && Owner.AllowNoCurrent)
 					{
 						m_impl_listposition.SetValue(base.CurrencyManager, -1);
 						OnPositionChanged(EventArgs.Empty);
@@ -121,8 +132,8 @@ namespace pr.container
 				var prev_position = m_impl_previous_position;
 				m_impl_previous_position = Position;
 
-				// Raise the improved version of PositionChanged
-				This.RaisePositionChanged(this, new PositionChgEventArgs(prev_position, Position));
+				// Raise the improved version of PositionChanged (Owner is null during construction)
+				Owner?.RaisePositionChanged(this, new PositionChgEventArgs(prev_position, Position));
 				base.OnPositionChanged(e);
 			}
 		}
@@ -549,10 +560,9 @@ namespace pr.container
 				throw new NotSupportedException("Sorting is not supported for this collection");
 
 			// Suspend events, since this is just a reorder
-			using (this.SuspendEvents(false))
+			// Sort is expected to raise the ListChanged.Reset event
+			using (this.SuspendEvents(reset_bindings_on_resume:true, preserve_position:false))
 				List_.Sort(this, comparer);
-
-			RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.Reordered, -1, default(TItem)));
 		}
 
 		/// <summary>Sorts the data source with the specified sort descriptions.</summary>
@@ -561,6 +571,7 @@ namespace pr.container
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public virtual void ApplySort(ListSortDescriptionCollection sorts)
 		{
+			// Sort raises ListChanged Reset
 			m_bs.ApplySort(sorts);
 		}
 
@@ -571,6 +582,7 @@ namespace pr.container
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public virtual void ApplySort(PropertyDescriptor property, ListSortDirection sort)
 		{
+			// Sort raises ListChanged Reset
 			m_bs.ApplySort(property, sort);
 		}
 
@@ -755,23 +767,48 @@ namespace pr.container
 			m_bs.ResetAllowNew();
 		}
 
-		/// <summary>Causes a control bound to the System.Windows.Forms.BindingSource to reread all the items in the list and refresh their displayed values.</summary>
-		/// <param name="metadataChanged">true if the data schema has changed; false if only values have changed.</param>
-		public void ResetBindings(bool metadataChanged)
+		/// <summary>Notify prior to changes to the data source that will be followed by a Reset event</summary>
+		public void PreResetBindings()
 		{
+			RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.PreReset, -1, default(TItem)));
+		}
+
+		/// <summary>Causes a control bound to the System.Windows.Forms.BindingSource to reread all the items in the list and refresh their displayed values.</summary>
+		/// <param name="metadata_changed">true if the data schema has changed; false if only values have changed.</param>
+		public void ResetBindings(bool metadata_changed, bool preserve_position = true, bool include_pre_reset = true)
+		{
+			// Note:
+			//  This results in a PositionChanged event before the ListChanged.Reset event.
+			//  If the observer reads from the data source when the position changes it can cause an
+			//  out of range exception because, typically, the Reset event is used to set the new length
+			//  of available data. (e.g. DGV reads cell values when setting CurrentCell to null).
+			//  Callers should set the Position to -1 before causing changes to the data source in this case.
+			//  Use 'PreservePosition' to restore the position after reset.
+			//  i.e.
+			//    set DGV.CurrentCell = null before changing a grids data source and resetting bindings
+			// Event order is:
+			//    ListChg.PreReset
+			//    PositionChanged (-1 or 0 based on AllowNoCurrent)
+			//    ListChangeType.Reset
+			//    ListChg.Reset
+			//    PositionChanged (restored position)
+
+			// Record the current position
 			var idx = m_bs.Position;
 
-			if (RaiseListChangedEvents)
+			// Notify pre-reset. Causes Position = -1, PositionChanged event
+			if (include_pre_reset)
 				RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.PreReset, -1, default(TItem)));
 
-			m_bs.ResetBindings(metadataChanged);
+			// Notify ListChangeType.Reset. Can cause a Position = 0, PositionChanged event
+			m_bs.ResetBindings(metadata_changed);
 
-			// Preserve the current position if possible
-			if (idx >= 0 && idx < m_bs.Count)
+			// Notify Reset complete
+			RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.Reset, -1, default(TItem)));
+
+			// Restore the current position
+			if (preserve_position && idx.Within(0, m_bs.Count))
 				m_bs.Position = idx;
-
-			if (RaiseListChangedEvents)
-				RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.Reset, -1, default(TItem)));
 		}
 
 		/// <summary>Causes a control bound to the System.Windows.Forms.BindingSource to reread the currently selected item and refresh its displayed value.</summary>
@@ -780,13 +817,11 @@ namespace pr.container
 			var item = Current;
 			var index = Position;
 
-			if (RaiseListChangedEvents)
-				RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.ItemPreReset, index, item));
+			RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.ItemPreReset, index, item));
 
 			m_bs.ResetCurrentItem();
 
-			if (RaiseListChangedEvents)
-				RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.ItemReset, index, item));
+			RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.ItemReset, index, item));
 		}
 
 		/// <summary>Causes a control bound to this BindingSource to reread the item at the specified index, and refresh its displayed value.</summary>
@@ -795,13 +830,11 @@ namespace pr.container
 		{
 			var item = this[itemIndex];
 
-			if (RaiseListChangedEvents)
-				RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.ItemPreReset, itemIndex, item));
+			RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.ItemPreReset, itemIndex, item));
 
 			m_bs.ResetItem(itemIndex);
 
-			if (RaiseListChangedEvents)
-				RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.ItemReset, itemIndex, item));
+			RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.ItemReset, itemIndex, item));
 		}
 
 		/// <summary>Reset bindings for 'item'</summary>
@@ -844,7 +877,9 @@ namespace pr.container
 		/// <summary>RAII object to restore the current position</summary>
 		public Scope PreservePosition()
 		{
-			return Scope.Create(() => Position, p => Position = Count != 0 ? Maths.Clamp(p, 0, Count-1) : -1);
+			return Scope.Create(
+				() => Position,
+				p => Position = Count != 0 ? Maths.Clamp(p, 0, Count-1) : -1);
 		}
 
 		/// <summary>Occurs when the underlying list changes or an item in the list changes.</summary>
@@ -862,6 +897,9 @@ namespace pr.container
 		}
 		private void RaiseListChanging(object sender, ListChgEventArgs<TItem> args)
 		{
+			if (!RaiseListChangedEvents)
+				return;
+			
 			OnListChanging(sender, args);
 
 			// If we're about to remove all items, set Position to -1
@@ -1334,14 +1372,12 @@ namespace pr.container
 						break;
 					}
 				case ListChg.PreReset:
-				case ListChg.PreReordered:
 					{
 						// Invalidate 'Index' before a reset/position changed
 						Index.Clear();
 						break;
 					}
 				case ListChg.Reset:
-				case ListChg.Reordered:
 					{
 						// Populate the Index collection with those that pass the predicate
 						Index.Clear();

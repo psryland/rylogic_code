@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using pr.extn;
 using pr.maths;
 using pr.util;
 
@@ -40,7 +41,7 @@ namespace EscapeVelocity
 					return FuelComponent.MolarMass * consts.GasConstant * world.AverageLocalTemperature / ContainmentPressure;
 				}
 
-				// Otherwise assume an imcompressable liquid/solid; Density = Mass/Volume, V = M/D
+				// Otherwise assume an incompressible liquid/solid; Density = Mass/Volume, V = M/D
 				return Mass / FuelComponent.Density(world.AverageLocalTemperature, ContainmentPressure);
 			}
 
@@ -95,7 +96,7 @@ namespace EscapeVelocity
 		/// The rate at which the fuel will be burnt (kg/s).
 		/// This is the total mass flow rate. Fuel A and B will be combined at the ideal
 		/// ratio so this property defines how long the fuel can be burnt before being
-		/// used up. If the ratio of FuelMass A and B are not choosen correctly, the
+		/// used up. If the ratio of FuelMass A and B are not chosen correctly, the
 		/// remainder will be left on the ship contributing to it's weight</summary>
 		[Description("How fast the fuel should be burnt")]
 		public double FuelBurnRate { get; set; }
@@ -116,7 +117,7 @@ namespace EscapeVelocity
 
 		public ShipSpec()
 		{
-			Fuel = Util.NewArray<FuelSpec>(2);
+			Fuel = Array_.New<FuelSpec>(2);
 			HullCompound = new Compound();
 		}
 	}

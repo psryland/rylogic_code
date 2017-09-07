@@ -51,23 +51,31 @@ namespace pr.gui
 		}
 		protected override bool SetCurrentCellAddressCore(int columnIndex, int rowIndex, bool setAnchorCellAddress, bool validateCurrentCell, bool throughMouseClick)
 		{
-			if (BindingContext != null && DataSource != null)
+			// Set current cell is often reentrant. 'InSetCurrentCell' is for derived classes to
+			// prevent setting the current cell during a set current cell handler.
+			// e.g. 'OnCurrentCellChanged' can use 'InSetCurrentCell'
+			using (Scope.Create(() => InSetCurrentCell = true, () => InSetCurrentCell = false))
 			{
-				// If the currency manager has no current value, set the current cell address to -1,-1
-				// This prevents an IndexOutOfRange exception when the data source has Count != 0 but Position == -1.
-				var cm = BindingContext[DataSource] as CurrencyManager;
-				if (cm != null && cm.Position == -1)
+				if (BindingContext != null && DataSource != null)
 				{
-					columnIndex = -1;
-					rowIndex = -1;
+					// If the currency manager has no current value, set the current cell address to -1,-1
+					// This prevents an IndexOutOfRange exception when the data source has Count != 0 but Position == -1.
+					if (BindingContext[DataSource] is CurrencyManager cm && cm.Position == -1)
+					{
+						columnIndex = -1;
+						rowIndex = -1;
+					}
 				}
+				return base.SetCurrentCellAddressCore(columnIndex, rowIndex, setAnchorCellAddress, validateCurrentCell, throughMouseClick);
 			}
-			return base.SetCurrentCellAddressCore(columnIndex, rowIndex, setAnchorCellAddress, validateCurrentCell, throughMouseClick);
 		}
 		public void Invalidate(object sender, EventArgs args)
 		{
 			Invalidate();
 		}
+
+		/// <summary>True while 'SetCurrentCellAddressCore' is on the call stack</summary>
+		public bool InSetCurrentCell { get; private set; }
 
 		/// <summary>Add rows to the selection </summary>
 		public void SelectRowRange(int index, int count, bool select)

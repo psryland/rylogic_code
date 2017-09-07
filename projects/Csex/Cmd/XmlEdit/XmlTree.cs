@@ -169,7 +169,7 @@ namespace Csex
 			if (e.Button == MouseButtons.Right)
 			{
 				var hit = this.HitTestEx(e.X, e.Y);
-				if (hit.Type == DataGridViewHitTestType.Cell && hit.ColumnIndex == 0 && hit.Cell != null)
+				if (hit.Type == DataGridView_.HitTestInfo.EType.Cell && hit.ColumnIndex == 0 && hit.Cell != null)
 				{
 					var elem = (XElement)hit.Row.Tag;
 					var sib_count = elem.Parent?.Elements().Count(x => x.Name == elem.Name) ?? 0;

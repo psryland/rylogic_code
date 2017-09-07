@@ -106,7 +106,7 @@ namespace EscapeVelocity
 			CommonName      = UnknownCompoundName;
 			ScientificName  = UnknownCompoundName;
 			SymbolicName    = UnknownCompoundSymName;
-			Bonds           = Util.NewArray<Bond>(EPerm.Perm2Count);
+			Bonds           = Array_.New<Bond>(EPerm.Perm2Count);
 			Ionicity        = 0;
 			Discovered    = false;
 		}

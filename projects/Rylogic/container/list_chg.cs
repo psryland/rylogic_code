@@ -1,42 +1,35 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 
 namespace pr.container
 {
 	public enum ListChg
 	{
-		/// <summary>Raised after the entire list is reset</summary>
-		Reset = 1,
-
 		/// <summary>Raised before the entire list is reset</summary>
 		PreReset = Pre | Reset,
 		
-		/// <summary>Raised after a single item is reset</summary>
-		ItemReset = 2,
+		/// <summary>Raised after the entire list is reset, or reordered (sorted)</summary>
+		Reset = 1,
 
 		/// <summary>Raised before a single item is reset</summary>
 		ItemPreReset = Pre | ItemReset,
 
-		/// <summary>Raised just after an item is added to the list</summary>
-		ItemAdded = 3,
+		/// <summary>Raised after a single item is reset</summary>
+		ItemReset = 2,
 
 		/// <summary>Raised just before an item is added to the list</summary>
 		ItemPreAdd = Pre | ItemAdded,
 
-		/// <summary>Raised just after an item is removed from the list</summary>
-		ItemRemoved = 4,
+		/// <summary>Raised just after an item is added to the list</summary>
+		ItemAdded = 3,
 
 		/// <summary>Raised just before an item is removed from the list</summary>
 		ItemPreRemove = Pre | ItemRemoved,
 
-		/// <summary>Raised just after the list is reordered</summary>
-		Reordered = 5,
-
-		/// <summary>Raised just before the list is reordered</summary>
-		PreReordered = Pre | Reordered,
+		/// <summary>Raised just after an item is removed from the list</summary>
+		ItemRemoved = 4,
 
 		/// <summary>Flags the change type as 'pre' the change</summary>
 		Pre = 0x8000,
@@ -123,7 +116,7 @@ namespace pr.container
 		/// <summary>True if data in the collection has possibly changed, not just the collection order</summary>
 		public bool IsDataChanged
 		{
-			get { return IsPostEvent && ChangeType != ListChg.Reordered; }
+			get { return IsPostEvent; }
 		}
 	}
 
@@ -178,7 +171,7 @@ namespace pr.container
 		/// <summary>True if data in the collection has possibly changed, not just the collection order</summary>
 		public bool IsDataChanged
 		{
-			get { return IsPostEvent && ChangeType != ListChg.Reordered; }
+			get { return IsPostEvent; }
 		}
 	}
 

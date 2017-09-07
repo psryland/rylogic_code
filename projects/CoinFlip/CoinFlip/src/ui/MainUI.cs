@@ -644,6 +644,7 @@ namespace CoinFlip
 			try
 			{
 				// Create an event handle to prevent multiple instances
+				Debug.WriteLine("ClipFlip is running as a {0}bit process".Fmt(Environment.Is64BitProcess ? 64 : 32));
 				using (var app_running = new EventWaitHandle(true, EventResetMode.AutoReset, "CoinFlip", out var was_created))
 				{
 					// Only run the app if we created the event handle

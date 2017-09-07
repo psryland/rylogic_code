@@ -17,13 +17,13 @@ namespace LDraw
 	{
 		public Model(MainUI main_ui)
 		{
-			Owner        = main_ui;
-			View3d       = new View3d(gdi_compatibility:true);
-			IncludePaths = new List<string>();
-			ContextIds   = new HashSet<Guid>();
-			SavedViews   = new List<SavedView>();
-			Scenes       = new BindingListEx<SceneUI>();
-			Log          = new LogUI(this);
+			Owner            = main_ui;
+			View3d           = new View3d(gdi_compatibility:true);
+			IncludePaths     = new List<string>();
+			SourceContextIds = new HashSet<Guid>();
+			SavedViews       = new List<SavedView>();
+			Scenes           = new BindingListEx<SceneUI>{ PerItemClear = true };
+			Log              = new LogUI(this);
 
 			// Add the default scene
 			CurrentScene = Scenes.Add2(new SceneUI("Scene", this));
@@ -87,6 +87,7 @@ namespace LDraw
 				if (m_scenes == value) return;
 				if (m_scenes != null)
 				{
+					m_scenes.Clear();
 					m_scenes.ListChanging -= HandleScenesListChanging;
 				}
 				m_scenes = value;
@@ -184,7 +185,7 @@ namespace LDraw
 		}
 
 		/// <summary>Context Ids of loaded script sources</summary>
-		public HashSet<Guid> ContextIds
+		public HashSet<Guid> SourceContextIds
 		{
 			get;
 			private set;
@@ -271,15 +272,19 @@ namespace LDraw
 		/// <summary>Clear all scenes</summary>
 		public void ClearAllScenes()
 		{
+			// Reset the context ids lists in each scene
+			foreach (var scene in Scenes)
+				scene.Clear();
+
 			// Remove and delete all objects (excluding focus points, selection boxes, etc)
-			foreach (var id in ContextIds)
+			foreach (var id in SourceContextIds)
 				View3d.DeleteAllObjects(id);
 
 			// Remove all script sources
 			View3d.ClearScriptSources();
 
 			// Reset the list script source objects
-			ContextIds.Clear();
+			SourceContextIds.Clear();
 		}
 
 		/// <summary>Add a demo scene to the scene</summary>
