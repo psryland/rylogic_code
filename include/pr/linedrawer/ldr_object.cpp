@@ -362,17 +362,17 @@ namespace pr
 					}
 				case EKeyword::Period:
 					{
-						reader.Real(anim.m_period);
+						reader.RealS(anim.m_period);
 						break;
 					}
 				case EKeyword::Velocity:
 					{
-						reader.Vector3(anim.m_velocity, 0.0f);
+						reader.Vector3S(anim.m_velocity, 0.0f);
 						break;
 					}
 				case EKeyword::AngVelocity:
 					{
-						reader.Vector3(anim.m_ang_velocity, 0.0f);
+						reader.Vector3S(anim.m_ang_velocity, 0.0f);
 						break;
 					}
 				}
@@ -3509,10 +3509,10 @@ LR"(// There are a number of other object modifiers that can also be used:
 	*RandColour              // Apply a random colour to this object
 	*Animation               // Add simple animation to this object
 	{
-		*Style PingPong      // Animation style, one of: NoAnimation, PlayOnce, PlayReverse, PingPong, PlayContinuous
-		*Period 1.2          // The period of the animation in seconds
-		*Velocity 1 1 1      // Linear velocity vector in m/s
-		*AngVelocity 1 0 0   // Angular velocity vector in rad/s
+		*Style PingPong        // Animation style, one of: NoAnimation, PlayOnce, PlayReverse, PingPong, PlayContinuous
+		*Period { 1.2 }        // The period of the animation in seconds
+		*Velocity { 1 1 1 }    // Linear velocity vector in m/s
+		*AngVelocity { 1 0 0 } // Angular velocity vector in rad/s
 	}
 	*Hidden                  // Object is created in an invisible state
 	*Wireframe               // Object is created with wireframe fill mode

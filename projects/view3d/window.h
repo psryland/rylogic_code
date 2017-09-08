@@ -31,6 +31,7 @@ namespace view3d
 		view3d::PointInstance m_origin_point;             // Origin point graphics
 		view3d::Instance      m_bbox_model;               // Bounding box graphics
 		view3d::Instance      m_selection_box;            // Selection box graphics
+		float                 m_anim_time_s;              // Animation time in seconds
 		float                 m_focus_point_size;         // The base size of the focus point object
 		float                 m_origin_point_size;        // The base size of the origin instance
 		bool                  m_focus_point_visible;      // True if we should draw the focus point
@@ -79,6 +80,7 @@ namespace view3d
 			,m_origin_point()
 			,m_bbox_model()
 			,m_selection_box()
+			,m_anim_time_s(0.0f)
 			,m_focus_point_size(1.0f)
 			,m_origin_point_size(1.0f)
 			,m_focus_point_visible(false)
@@ -138,8 +140,6 @@ namespace view3d
 				throw;
 			}
 		}
-		Window(Window const&) = delete;
-		Window& operator=(Window const&) = delete;
 		~Window()
 		{
 			m_dll->m_sources.OnStoreChanged -= m_eh_store_updated;
@@ -149,6 +149,9 @@ namespace view3d
 			m_scene.RemoveInstance(m_bbox_model);
 			m_scene.RemoveInstance(m_selection_box);
 		}
+
+		Window(Window const&) = delete;
+		Window& operator=(Window const&) = delete;
 
 		// Error event. Can be called in a worker thread context
 		pr::MultiCast<ReportErrorCB> OnError;
@@ -182,7 +185,7 @@ namespace view3d
 
 			// Add objects from the window to the scene
 			for (auto& obj : m_objects)
-				obj->AddToScene(m_scene);
+				obj->AddToScene(m_scene, m_anim_time_s);
 
 			// Add gizmos from the window to the scene
 			for (auto& giz : m_gizmos)

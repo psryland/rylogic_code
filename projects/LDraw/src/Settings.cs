@@ -143,6 +143,12 @@ namespace LDraw
 			ResetForward = -v4.ZAxis;
 			ResetUp      = +v4.YAxis;
 		}
+		public CameraSettings(CameraSettings rhs)
+		{
+			AlignAxis    = rhs.AlignAxis;
+			ResetForward = rhs.ResetForward;
+			ResetUp      = rhs.ResetUp;
+		}
 
 		/// <summary>The camera align axis</summary>
 		public v4 AlignAxis
@@ -193,6 +199,15 @@ namespace LDraw
 
 			var light = new View3d.Light(0x00000000, 0xFF808080, 0xFFFFFFFF, 1000, direction:new v4(-1,-1,-10, 0)) { CameraRelative = true };
 			Light = light.ToXml(new XElement(nameof(View3d.Light)));
+		}
+		public SceneSettings(string name, SceneSettings rhs)
+			:this(name)
+		{
+			ShowBBoxes = rhs.ShowBBoxes;
+			ShowSelectionBox = rhs.ShowSelectionBox;
+			Camera = new CameraSettings(rhs.Camera);
+			Options = new ChartControl.RdrOptions(rhs.Options);
+			Light = rhs.Light.As<View3d.Light>().ToXml(new XElement(nameof(View3d.Light)));
 		}
 
 		/// <summary>The name of the scene that this settings apply to</summary>

@@ -23,7 +23,7 @@ namespace RyLogViewer
 			RestoreScreenLoc            = false; // False so that first runs start in the default window position
 			ScreenPosition              = new Point(100, 100);
 			WindowSize                  = new Size(640, 480);
-			PatternSetDirectory         = Util.ResolveUserDocumentsPath("Rylogic", Application.ProductName);
+			PatternSetDirectory         = Util.ResolveUserDocumentsPath(Application.CompanyName, Application.ProductName);
 			ExportFilepath              = null;
 			AlternateLineColours        = true;
 			LineSelectBackColour        = Color.DarkGreen;

@@ -773,8 +773,8 @@ namespace pr.gui
 		/// <summary>
 		/// Update the layout of this dock container using the data in 'node'
 		/// Use 'content_factory' to create content on demand during loading.
-		/// 'content_factory(persistence_name, type_name)'</summary>
-		public virtual void LoadLayout(XElement node, Func<string, string, DockControl> content_factory = null)
+		/// 'content_factory(string persist_name, string type_name, XElement user_data)'</summary>
+		public virtual void LoadLayout(XElement node, Func<string, string, XElement, DockControl> content_factory = null)
 		{
 			if (node.Name != XmlTag.DockContainerLayout)
 				throw new Exception("XML data does not contain dock container layout information");
@@ -783,16 +783,17 @@ namespace pr.gui
 			{
 				// Get a collection of the content currently loaded
 				var all_content = AllContentInternal.ToDictionary(x => x.PersistName, x => x);
-				DockControl content; 
 
 				// For each content node find a content object with matching PersistName and
 				// move it to the location indicated in the saved state.
 				foreach (var content_node in node.Elements(XmlTag.Contents, XmlTag.Content))
 				{
 					// Find a content object with a matching persistence name
-					var name = content_node.Element(XmlTag.Name).As<string>();
-					var type = content_node.Element(XmlTag.Type).As<string>(string.Empty);
-					if (all_content.TryGetValue(name, out content) || (content = content_factory?.Invoke(name, type)) != null)
+					var name = content_node.Element(XmlTag.Name).As(string.Empty);
+					var type = content_node.Element(XmlTag.Type).As(string.Empty);
+					var udat = content_node.Element(XmlTag.UserData);
+					if (all_content.TryGetValue(name, out var content) ||
+						(content = content_factory?.Invoke(name, type, udat)) != null)
 					{
 						var loc = new DockLocation(content_node);
 						if (loc.Address.First() != EDockSite.None)
@@ -817,9 +818,11 @@ namespace pr.gui
 				}
 
 				// Restore the active content
-				var active = node.Element(XmlTag.Active)?.As<string>();
-				if (active != null && all_content.TryGetValue(active, out content))
-					ActiveContent = content;
+				{
+					var active = node.Element(XmlTag.Active)?.As<string>();
+					if (active != null && all_content.TryGetValue(active, out var content))
+						ActiveContent = content;
+				}
 			}
 		}
 
@@ -2806,6 +2809,9 @@ namespace pr.gui
 					ActiveChanged.Raise(this, e);
 			}
 
+			/// <summary>Raised during 'ToXml' to allow clients to add extra data to the XML data for this object</summary>
+			public event EventHandler<DockContainerSavingLayoutEventArgs> SavingLayout;
+
 			/// <summary>The name to use for this instance when saving layout to XML</summary>
 			public string PersistName { get; private set; }
 
@@ -3185,10 +3191,16 @@ namespace pr.gui
 			/// <summary>Save to XML</summary>
 			public XElement ToXml(XElement node)
 			{
+				// Allow clients to add extra data that will be provided in LoadLayout
+				var user = new XElement(XmlTag.UserData);
+				SavingLayout.Raise(this, new DockContainerSavingLayoutEventArgs(user));
+
 				// Add the name to identify the content
 				node.Add2(XmlTag.Name, PersistName, false);
 				node.Add2(XmlTag.Type, Owner.GetType().FullName, false);
 				CurrentDockLocation.ToXml(node);
+				node.Add2(user);
+
 				return node;
 			}
 
@@ -6126,6 +6138,7 @@ namespace pr.gui
 			public const string Visible = "visible";
 			public const string StripLocation = "strip_location";
 			public const string Active = "active";
+			public const string UserData = "user_data";
 		}
 
 		#endregion
@@ -6280,6 +6293,18 @@ namespace pr.gui
 
 		/// <summary>The new dock container</summary>
 		public DockContainer Current { get; private set; }
+	}
+
+	/// <summary>Args for when layout is being saved</summary>
+	public class DockContainerSavingLayoutEventArgs :EventArgs
+	{
+		public DockContainerSavingLayoutEventArgs(XElement node)
+		{
+			Node = node;
+		}
+
+		/// <summary>The XML element to add data to</summary>
+		public XElement Node { get; private set; }
 	}
 
 	#endregion

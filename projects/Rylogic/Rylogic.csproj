@@ -307,10 +307,7 @@
     <Compile Include="gui\toolstripcontainer.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\toolstrip_combobox.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="gui\toolstrip_pattern_filter.cs">
+    <Compile Include="gui\toolstrip_controls.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="gui\value_text_box.cs">
@@ -360,18 +357,6 @@
     </Compile>
     <Compile Include="gui\hint_balloon.cs">
       <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="gui\toolstrip_dropdown_singleselect.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="gui\toolstrip_splitbuttoncheckable.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="gui\toolstrip_datetimepicker.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="gui\toolstrip_tablelayoutextender.cs">
-      <SubType>Component</SubType>
     </Compile>
     <Compile Include="gui\tool_form.cs">
       <SubType>Form</SubType>

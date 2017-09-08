@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using pr.container;
@@ -23,19 +24,20 @@ namespace LDraw
 			SourceContextIds = new HashSet<Guid>();
 			SavedViews       = new List<SavedView>();
 			Scenes           = new BindingListEx<SceneUI>{ PerItemClear = true };
+			Scripts          = new BindingListEx<ScriptUI>{ PerItemClear = true };
 			Log              = new LogUI(this);
 
-			// Add the default scene
-			CurrentScene = Scenes.Add2(new SceneUI("Scene", this));
-
 			// Apply initial settings
+			Directory.CreateDirectory(TempScriptsDirectory);
 			AutoRefreshSources = Settings.AutoRefresh;
 			LinkCameras = Settings.LinkCameras;
 		}
 		public void Dispose()
 		{
+			CurrentScript = null;
 			CurrentScene = null;
 			Log = null;
+			Scripts = null;
 			Scenes = null;
 			View3d = null;
 		}
@@ -51,6 +53,12 @@ namespace LDraw
 		public Settings Settings
 		{
 			[DebuggerStepThrough] get { return Owner.Settings; }
+		}
+
+		/// <summary>The location for temporary script files</summary>
+		public string TempScriptsDirectory
+		{
+			get { return Util.ResolveUserDocumentsPath(Application.CompanyName, Application.ProductName, "Temporary Scripts"); }
 		}
 
 		/// <summary>A view3d context reference that lives for the lifetime of the application</summary>
@@ -87,6 +95,7 @@ namespace LDraw
 				if (m_scenes == value) return;
 				if (m_scenes != null)
 				{
+					Util.DisposeAll(m_scenes);
 					m_scenes.Clear();
 					m_scenes.ListChanging -= HandleScenesListChanging;
 				}
@@ -107,6 +116,9 @@ namespace LDraw
 				{
 					if (CurrentScene == scene)
 						CurrentScene = Scenes.Except(scene).FirstOrDefault();
+					if (Scripts != null)
+						foreach (var script in Scripts.Where(x => x.Scene == scene))
+							script.Scene = null;
 
 					Owner.DockContainer.Remove(scene);
 					scene.Options.PropertyChanged -= Owner.UpdateUI;
@@ -129,7 +141,78 @@ namespace LDraw
 			}
 		}
 
-		/// <summary>The scene with input focus (or the last to have input focus). Always non-null except when disposed</summary>
+		/// <summary>The script windows</summary>
+		public BindingListEx<ScriptUI> Scripts
+		{
+			get { return m_scripts; }
+			private set
+			{
+				if (m_scripts == value) return;
+				if (m_scripts != null)
+				{
+					Util.DisposeAll(m_scripts);
+					m_scripts.Clear();
+					m_scripts.ListChanging -= HandleScriptListChanging;
+				}
+				m_scripts = value;
+				if (m_scripts != null)
+				{
+					m_scripts.ListChanging += HandleScriptListChanging;
+				}
+			}
+		}
+		private BindingListEx<ScriptUI> m_scripts;
+		private void HandleScriptListChanging(object sender, ListChgEventArgs<ScriptUI> e)
+		{
+			var script = e.Item;
+			switch (e.ChangeType)
+			{
+			case ListChg.ItemRemoved:
+				{
+					if (CurrentScript == script)
+						CurrentScript = Scripts.Except(script).FirstOrDefault();
+
+					Owner.DockContainer.Remove(script);
+					Util.Dispose(ref script);
+					Owner.UpdateUI();
+					break;
+				}
+			case ListChg.ItemAdded:
+				{
+					// Determine a dock location from the current script
+					var dloc =
+						CurrentScript?.DockControl.CurrentDockLocation ??
+						new DockContainer.DockLocation();
+
+					Owner.DockContainer.Add(script, dloc);
+					Owner.UpdateUI();
+					break;
+				}
+			}
+		}
+
+		/// <summary>The error log</summary>
+		public LogUI Log
+		{
+			[DebuggerStepThrough] get { return m_log; }
+			private set
+			{
+				if (m_log == value) return;
+				if (m_log != null)
+				{
+					Owner.DockContainer.Remove(m_log);
+					Util.Dispose(ref m_log);
+				}
+				m_log = value;
+				if (m_log != null)
+				{
+					Owner.DockContainer.Add(m_log);
+				}
+			}
+		}
+		private LogUI m_log;
+
+		/// <summary>The scene with input focus (or the last to have input focus)</summary>
 		public SceneUI CurrentScene
 		{
 			[DebuggerStepThrough] get { return m_current_scene; }
@@ -156,26 +239,17 @@ namespace LDraw
 		}
 		private SceneUI m_current_scene;
 
-		/// <summary>The error log</summary>
-		public LogUI Log
+		/// <summary>The script with input focus (or the last to have input focus)</summary>
+		public ScriptUI CurrentScript
 		{
-			[DebuggerStepThrough] get { return m_log; }
-			private set
+			get { return m_current_script; }
+			set
 			{
-				if (m_log == value) return;
-				if (m_log != null)
-				{
-					Owner.DockContainer.Remove(m_log);
-					Util.Dispose(ref m_log);
-				}
-				m_log = value;
-				if (m_log != null)
-				{
-					Owner.DockContainer.Add(m_log);
-				}
+				if (m_current_script == value) return;
+				m_current_script = value;
 			}
 		}
-		private LogUI m_log;
+		private ScriptUI m_current_script;
 
 		/// <summary>Application include paths</summary>
 		public List<string> IncludePaths
@@ -226,13 +300,13 @@ namespace LDraw
 		private ELinkAxes m_link_axes;
 
 		/// <summary>Return the settings for a scene with the given name</summary>
-		public SceneSettings SceneSettings(string name)
+		public SceneSettings SceneSettings(string name, SceneSettings def = null)
 		{
 			var ss = Settings.Scenes.FirstOrDefault(x => x.Name == name);
 			if (ss != null)
 				return ss;
 
-			ss = new SceneSettings(name);
+			ss = def != null ? new SceneSettings(name, def) : new SceneSettings(name);
 			Settings.Scenes = Util.AddToHistoryList(Settings.Scenes, ss, 20, cmp:(l,r) => l.Name == r.Name);
 			return ss;
 		}
@@ -248,6 +322,9 @@ namespace LDraw
 		/// <summary>Save the current camera position and view</summary>
 		public void SaveView()
 		{
+			if (CurrentScene == null)
+				throw new Exception("No scene to save view");
+
 			// Prompt for a name
 			using (var dlg = new PromptUI { Title = "View Name:", Value = $"View{SavedViews.Count+1}" })
 			{
@@ -258,15 +335,25 @@ namespace LDraw
 		}
 
 		/// <summary>Add a new scene</summary>
-		public void AddNewScene()
+		public SceneUI AddNewScene(string name = SceneUI.DefaultName)
 		{
-			var name = "Scene";
-			if (Scenes.Count >= 1)
+			if (name == SceneUI.DefaultName && Scenes.Count >= 1)
 			{
-				var highest = int_.TryParse(Scenes.Max(x => x.SceneName.SubstringRegex(@"Scene(\d*)").FirstOrDefault())) ?? 1;
-				name = "Scene{0}".Fmt(highest + 1);
+				var highest = int_.TryParse(Scenes.Max(x => x.SceneName.SubstringRegex($@"{SceneUI.DefaultName}(\d*)").FirstOrDefault())) ?? 1;
+				name = $"{SceneUI.DefaultName}{highest + 1}";
 			}
-			Scenes.Add(new SceneUI(name, this));
+			return Scenes.Add2(new SceneUI(name, this));
+		}
+
+		/// <summary>Add a new script</summary>
+		public ScriptUI AddNewScript(string name = ScriptUI.DefaultName, string filepath = null)
+		{
+			if (name == ScriptUI.DefaultName && Scripts.Count >= 1)
+			{
+				var highest = int_.TryParse(Scripts.Max(x => x.ScriptName.SubstringRegex($@"{ScriptUI.DefaultName}(\d*)").FirstOrDefault())) ?? 1;
+				name = $"{ScriptUI.DefaultName}{highest + 1}";
+			}
+			return Scripts.Add2(new ScriptUI(name, this, filepath));
 		}
 
 		/// <summary>Clear all scenes</summary>
@@ -290,7 +377,7 @@ namespace LDraw
 		/// <summary>Add a demo scene to the scene</summary>
 		public void CreateDemoScene()
 		{
-			var scene = Scenes.Add2(new SceneUI("Demo", this));
+			var scene = AddNewScene("Demo");
 			var id = scene.Window.CreateDemoScene();
 			scene.ContextIds.Add(id);
 			scene.DockControl.IsActiveContent = true;
@@ -324,24 +411,28 @@ namespace LDraw
 				return;
 
 			// Set the axes ranges in the other scenes
-			foreach (var scene in Scenes.Except(CurrentScene).ToArray())
+			var scene = CurrentScene;
+			if (scene != null)
 			{
-				var update = false;
-				if (LinkAxes.HasFlag(ELinkAxes.XAxis))
+				foreach (var scn in Scenes.Except(scene).ToArray())
 				{
-					scene.XAxis.Range = CurrentScene.XAxis.Range;
-					update = true;
-				}
-				if (LinkAxes.HasFlag(ELinkAxes.YAxis))
-				{
-					scene.YAxis.Range = CurrentScene.YAxis.Range;
-					update = true;
-				}
-				if (update)
-				{
-					scene.SetCameraFromRange();
-					scene.Invalidate();
-					scene.Update();
+					var update = false;
+					if (LinkAxes.HasFlag(ELinkAxes.XAxis))
+					{
+						scn.XAxis.Range = scene.XAxis.Range;
+						update = true;
+					}
+					if (LinkAxes.HasFlag(ELinkAxes.YAxis))
+					{
+						scn.YAxis.Range = scene.YAxis.Range;
+						update = true;
+					}
+					if (update)
+					{
+						scn.SetCameraFromRange();
+						scn.Invalidate();
+						scn.Update();
+					}
 				}
 			}
 		}
@@ -353,27 +444,31 @@ namespace LDraw
 				return;
 
 			// Replicate navigation commands in the other scenes
-			foreach (var scene in Scenes.Except(CurrentScene).ToArray())
+			var scene = CurrentScene;
+			if (scene != null)
 			{
-				// Use the camera lock to limit motion
-				using (Scope.Create(() => scene.Camera.LockMask, m => scene.Camera.LockMask = m))
+				foreach (var scn in Scenes.Except(scene).ToArray())
 				{
-					var lock_mask = View3d.ECameraLockMask.All;
-					if (LinkCameras.HasFlag(ELinkCameras.LeftRight) && !LinkAxes.HasFlag(ELinkAxes.XAxis)) lock_mask = Bit.SetBits(lock_mask, View3d.ECameraLockMask.TransX, false);
-					if (LinkCameras.HasFlag(ELinkCameras.UpDown   ) && !LinkAxes.HasFlag(ELinkAxes.YAxis)) lock_mask = Bit.SetBits(lock_mask, View3d.ECameraLockMask.TransY, false);
-					if (LinkCameras.HasFlag(ELinkCameras.InOut    )) lock_mask = Bit.SetBits(lock_mask, View3d.ECameraLockMask.TransZ|View3d.ECameraLockMask.Zoom, false);
-					if (LinkCameras.HasFlag(ELinkCameras.Rotate   )) lock_mask = Bit.SetBits(lock_mask, View3d.ECameraLockMask.RotX|View3d.ECameraLockMask.RotY|View3d.ECameraLockMask.RotZ, false);
-					scene.Camera.LockMask = lock_mask;
+					// Use the camera lock to limit motion
+					using (Scope.Create(() => scn.Camera.LockMask, m => scn.Camera.LockMask = m))
+					{
+						var lock_mask = View3d.ECameraLockMask.All;
+						if (LinkCameras.HasFlag(ELinkCameras.LeftRight) && !LinkAxes.HasFlag(ELinkAxes.XAxis)) lock_mask = Bit.SetBits(lock_mask, View3d.ECameraLockMask.TransX, false);
+						if (LinkCameras.HasFlag(ELinkCameras.UpDown   ) && !LinkAxes.HasFlag(ELinkAxes.YAxis)) lock_mask = Bit.SetBits(lock_mask, View3d.ECameraLockMask.TransY, false);
+						if (LinkCameras.HasFlag(ELinkCameras.InOut    )) lock_mask = Bit.SetBits(lock_mask, View3d.ECameraLockMask.TransZ|View3d.ECameraLockMask.Zoom, false);
+						if (LinkCameras.HasFlag(ELinkCameras.Rotate   )) lock_mask = Bit.SetBits(lock_mask, View3d.ECameraLockMask.RotX|View3d.ECameraLockMask.RotY|View3d.ECameraLockMask.RotZ, false);
+						scn.Camera.LockMask = lock_mask;
 
-					// Replicate the navigation command
-					if (!e.ZNavigation)
-						scene.Window.MouseNavigate(e.Point, e.NavOp, e.NavBegOrEnd);
-					else
-						scene.Window.MouseNavigateZ(e.Point, e.Delta, e.AlongRay);
+						// Replicate the navigation command
+						if (!e.ZNavigation)
+							scn.Window.MouseNavigate(e.Point, e.NavOp, e.NavBegOrEnd);
+						else
+							scn.Window.MouseNavigateZ(e.Point, e.Delta, e.AlongRay);
 
-					scene.SetRangeFromCamera();
-					scene.Invalidate();
-					scene.Update();
+						scn.SetRangeFromCamera();
+						scn.Invalidate();
+						scn.Update();
+					}
 				}
 			}
 		}
@@ -382,11 +477,15 @@ namespace LDraw
 		private void LinkSceneCrossHairs()
 		{
 			// Position the cross hairs in other scenes
-			foreach (var scene in Scenes.Except(CurrentScene).ToArray())
+			var scene = CurrentScene;
+			if (scene != null)
 			{
-				scene.CrossHairVisible = CurrentScene.CrossHairVisible;
-				if (scene.CrossHairVisible)
-					scene.CrossHairLocation = CurrentScene.CrossHairLocation;
+				foreach (var scn in Scenes.Except(scene).ToArray())
+				{
+					scn.CrossHairVisible = scene.CrossHairVisible;
+					if (scn.CrossHairVisible)
+						scn.CrossHairLocation = scene.CrossHairLocation;
+				}
 			}
 		}
 

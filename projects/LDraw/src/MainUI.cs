@@ -5,9 +5,11 @@
 //#define TRAP_UNHANDLED_EXCEPTIONS
 using System;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using LDraw.Properties;
 using pr.common;
 using pr.extn;
 using pr.gfx;
@@ -124,6 +126,18 @@ namespace LDraw
 		private ToolStripButton m_btn_link_yaxis;
 		private ToolStripMenuItem m_menu_data_clear_scene;
 		private ToolStripSeparator toolStripSeparator17;
+		private ToolStrip m_ts_anim_controls;
+		private ToolStripButton m_btn_reset;
+		private ToolStripLabel m_lbl_anim_controls;
+		private ToolStripButton m_btn_run;
+		private ToolStripButton m_btn_step_bck;
+		private ToolStripButton m_btn_step_fwd;
+		private ToolStripLabel m_lbl_step_rate;
+		private ToolStripLabel m_lbl_anim_clock;
+		private ToolStripTextBox m_tb_clock;
+		private ToolStripSeparator toolStripSeparator18;
+		private ToolStripMenuItem m_menu_rendering_anim_controls;
+		private ToolStripTrackBar m_tr_speed;
 		private ToolStripMenuItem m_menu_file_save_as;
 		#endregion
 
@@ -189,9 +203,10 @@ namespace LDraw
 			InitializeComponent();
 			KeyPreview = true;
 
-			Settings = new Settings(Util.ResolveUserDocumentsPath("Rylogic", "LDraw", "settings.xml"));
+			Settings = new Settings(Util.ResolveUserDocumentsPath(Application.CompanyName, Application.ProductName, "settings.xml"));
 			DockContainer = new DockContainer();
 			Model = new Model(this);
+			AnimTimer = new Timer{ Interval = 1, Enabled = false };
 
 			SetupUI();
 			UpdateUI();
@@ -202,10 +217,12 @@ namespace LDraw
 		{
 			// The scripts and scene need to be disposed before view3d.
 			// The Scene owns the view3d Window and the Model owns the Scene.
+			// This is why 'Model' is disposed before 'DockContainer'
 			Model = null;
 			DockContainer = null;
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
+			AnimTimer = null;
 		}
 		protected override void OnInvalidated(InvalidateEventArgs e)
 		{
@@ -221,6 +238,14 @@ namespace LDraw
 			Settings.Save();
 			base.OnFormClosed(e);
 		}
+		protected override void OnShown(EventArgs e)
+		{
+			// Create a default scene if one has not been created from the settings
+			if (Model.Scenes.Count == 0)
+				Model.AddNewScene();
+
+			base.OnShown(e);
+		}
 		protected override void WndProc(ref Message m)
 		{
 			base.WndProc(ref m);
@@ -234,15 +259,11 @@ namespace LDraw
 		protected override void OnKeyDown(KeyEventArgs e)
 		{
 			// Cycle through fill modes
-			if (e.KeyCode == Keys.W && e.Control)
+			if (e.KeyCode == Keys.W && e.Control && Model.CurrentScene is SceneUI scene)
 			{
-				var scene = Model.CurrentScene;
-				if (scene != null)
-				{
-					scene.Options.FillMode = Enum<View3d.EFillMode>.Cycle(scene.Options.FillMode);
-					scene.Invalidate();
-					e.Handled = true;
-				}
+				scene.Options.FillMode = Enum<View3d.EFillMode>.Cycle(scene.Options.FillMode);
+				scene.Invalidate();
+				e.Handled = true;
 			}
 			base.OnKeyDown(e);
 		}
@@ -325,6 +346,54 @@ namespace LDraw
 			UpdateUI();
 		}
 
+		/// <summary>Animation timer</summary>
+		public Timer AnimTimer
+		{
+			get { return m_anim_timer; }
+			private set
+			{
+				if (m_anim_timer == value) return;
+				if (m_anim_timer != null)
+				{
+					m_anim_timer.Tick -= HandleAnimTimerTick;
+				}
+				m_anim_timer = value;
+				if (m_anim_timer != null)
+				{
+					m_anim_timer.Tick += HandleAnimTimerTick;
+				}
+			}
+		}
+		private Timer m_anim_timer;
+		private void HandleAnimTimerTick(object sender, EventArgs e)
+		{
+			if (m_anim_steps > 0)
+			{
+				if (m_anim_steps != int.MaxValue)
+					--m_anim_steps;
+
+				// Advance the clock
+				AnimClock += m_anim_dir * (float)Maths.Sqr(2.0f * m_tr_speed.TrackBar.ValueFrac()) * 0.05f;
+			}
+
+			// Update the animation time in each scene
+			foreach (var scene in Model.Scenes)
+			{
+				// Note: forcing a render in here doesn't prevent jerkiness during mouse operations
+				scene.Window.AnimTime = AnimClock;
+				scene.Window.Invalidate();
+			}
+
+			// Update the clock value
+			m_tb_clock.Text = $"{AnimClock:N1}";
+			AnimTimer.Enabled = m_anim_steps != 0;
+		}
+
+		/// <summary>The animation time</summary>
+		public float AnimClock { get; set; }
+		private int m_anim_steps;
+		private int m_anim_dir;
+
 		/// <summary>Set up the UI</summary>
 		private void SetupUI()
 		{
@@ -335,15 +404,17 @@ namespace LDraw
 			};
 			if (Settings.UI.UILayout != null)
 			{
-				m_dc.LoadLayout(Settings.UI.UILayout, (name,ty) =>
+				// Restore the layout
+				m_dc.LoadLayout(Settings.UI.UILayout, (name,ty,udat) =>
 				{
+					// Restore the scenes
 					if (ty == typeof(SceneUI).FullName)
-						return Model.Scenes.Add2(new SceneUI(name, Model)).DockControl;
-					
-					// Don't add script UIs because we can't restore the text content
-					// and they don't get cleaned up properly
-					//if (ty == typeof(ScriptUI).FullName)
-					//	return new ScriptUI(Model).DockControl;
+						return Model.Scenes.Add2(new SceneUI(name, Model, udat)).DockControl;
+
+					// Restore the scripts
+					if (ty == typeof(ScriptUI).FullName)
+						return Model.Scripts.Add2(new ScriptUI(name, Model, udat)).DockControl;
+
 					return null;
 				});
 			}
@@ -452,7 +523,6 @@ namespace LDraw
 			m_menu_nav_zoom_aspect11.Click += (s,a) =>
 			{
 				Model.CurrentScene.Aspect = 1.0f;
-
 				UpdateUI();
 			};
 			m_menu_nav_zoom_lock_aspect.Click += (s,a) =>
@@ -586,6 +656,11 @@ namespace LDraw
 				Invalidate();
 				UpdateUI();
 			};
+			m_menu_rendering_anim_controls.Click += (s,a) =>
+			{
+				m_ts_anim_controls.Visible = !m_ts_anim_controls.Visible;
+				m_menu_rendering_anim_controls.Checked = m_ts_anim_controls.Visible;
+			};
 			m_menu_rendering_lighting.Click += (s,a) =>
 			{
 				ShowLightingUI();
@@ -613,7 +688,7 @@ namespace LDraw
 			#endregion
 			#endregion
 
-			#region Tool bar
+			#region Link Cameras Tool bar
 			m_btn_link_camera_left_right.Checked = Model.LinkCameras.HasFlag(ELinkCameras.LeftRight);
 			m_btn_link_camera_left_right.CheckedChanged += (s,a) =>
 			{
@@ -647,6 +722,60 @@ namespace LDraw
 			};
 			#endregion
 
+			#region Animation Controls Tool bar
+
+			// Hide until needed
+			m_ts_anim_controls.Visible = false;
+
+			// Animation control buttons
+			m_btn_reset.Image = Res.ImgStop;
+			m_btn_reset.Click += (s,a) =>
+			{
+				AnimClock = 0;
+				m_anim_steps = 0;
+				m_btn_run.Image = Res.ImgPlay;
+				AnimTimer.Enabled = true;
+			};
+			m_btn_step_bck.Image = Res.ImgStepBck;
+			m_btn_step_bck.Click += (s,a) =>
+			{
+				m_anim_dir = -1;
+				m_anim_steps = 1;
+				m_btn_run.Image = Res.ImgPlay;
+				AnimTimer.Enabled = true;
+			};
+			m_btn_step_fwd.Image = Res.ImgStepFwd;
+			m_btn_step_fwd.Click += (s,a) =>
+			{
+				m_anim_dir = +1;
+				m_anim_steps = 1;
+				m_btn_run.Image = Res.ImgPlay;
+				AnimTimer.Enabled = true;
+			};
+			m_btn_run.Image = Res.ImgPlay;
+			m_btn_run.Click += (s,a) =>
+			{
+				// Toggle between play/pause
+				if (m_btn_run.Image == Res.ImgPlay)
+				{
+					m_anim_dir = +1;
+					m_anim_steps = int.MaxValue;
+					m_btn_run.Image = Res.ImgPause;
+					AnimTimer.Enabled = true;
+				}
+				else if (m_btn_run.Image == Res.ImgPause)
+				{
+					m_anim_dir = +1;
+					m_anim_steps = 0;
+					m_btn_run.Image = Res.ImgPlay;
+					AnimTimer.Enabled = true;
+				}
+			};
+
+			// Step rate
+			m_tr_speed.TrackBar.Set(50, 0, 100);
+			#endregion
+
 			#region Progress Bar
 			m_pb_loading.Alignment = ToolStripItemAlignment.Right;
 			#endregion
@@ -662,36 +791,98 @@ namespace LDraw
 			if (Model == null)
 				return;
 
-			// Update menu state
-			m_menu_file_save       .Enabled = m_dc.ActiveContent?.Owner is ScriptUI;
-			m_menu_file_save_as    .Enabled = m_dc.ActiveContent?.Owner is ScriptUI;
-			m_menu_data_clear_scene.Enabled = m_dc.ActiveContent?.Owner is SceneUI;
+			var scene         = Model.CurrentScene;
+			var has_scene     = scene != null;
+			var scene_active  = m_dc.ActiveContent?.Owner is SceneUI;
+			var script_active = m_dc.ActiveContent?.Owner is ScriptUI;
+
+			// Enable/Disable menu items
+			{
+				m_menu_file_new            .Enabled = true;
+				m_menu_file_edit_script    .Enabled = true;
+				m_menu_file_open           .Enabled = scene_active;
+				m_menu_file_open_additional.Enabled = scene_active;
+				m_menu_file_save           .Enabled = script_active;
+				m_menu_file_save_as        .Enabled = script_active;
+				m_menu_file_options        .Enabled = true;
+				m_menu_file_recent_files   .Enabled = true;
+				m_menu_file_exit           .Enabled = true;
+
+				m_menu_nav_reset_on_reload    .Enabled = true;
+				m_menu_nav_reset_view_all     .Enabled = scene_active;
+				m_menu_nav_reset_view_selected.Enabled = scene_active;
+				m_menu_nav_reset_view_visible .Enabled = scene_active;
+				m_menu_nav_view_xpos          .Enabled = scene_active;
+				m_menu_nav_view_xneg          .Enabled = scene_active;
+				m_menu_nav_view_ypos          .Enabled = scene_active;
+				m_menu_nav_view_yneg          .Enabled = scene_active;
+				m_menu_nav_view_zpos          .Enabled = scene_active;
+				m_menu_nav_view_zneg          .Enabled = scene_active;
+				m_menu_nav_view_xyz           .Enabled = scene_active;
+				m_menu_nav_zoom_default       .Enabled = scene_active;
+				m_menu_nav_zoom_aspect11      .Enabled = scene_active;
+				m_menu_nav_zoom_lock_aspect   .Enabled = scene_active;
+				m_menu_nav_align_none         .Enabled = scene_active;
+				m_menu_nav_align_x            .Enabled = scene_active;
+				m_menu_nav_align_y            .Enabled = scene_active;
+				m_menu_nav_align_z            .Enabled = scene_active;
+				m_menu_nav_align_current      .Enabled = scene_active;
+				m_menu_nav_save_view          .Enabled = scene_active;
+				m_menu_nav_saved_views_clear  .Enabled = true;
+				m_menu_nav_camera             .Enabled = scene_active;
+
+				m_menu_data_auto_refresh     .Enabled = true;
+				m_menu_data_clear_all_scenes .Enabled = true;
+				m_menu_data_clear_scene      .Enabled = scene_active;
+				m_menu_data_create_demo_scene.Enabled = scene_active;
+				m_menu_data_object_manager   .Enabled = scene_active;
+
+				m_menu_rendering_show_focus        .Enabled = scene_active;
+				m_menu_rendering_show_origin       .Enabled = scene_active;
+				m_menu_rendering_show_selection    .Enabled = scene_active;
+				m_menu_rendering_show_bounds       .Enabled = scene_active;
+				m_menu_rendering_fillmode_solid    .Enabled = scene_active;
+				m_menu_rendering_fillmode_wireframe.Enabled = scene_active;
+				m_menu_rendering_fillmode_solidwire.Enabled = scene_active;
+				m_menu_rendering_cullmode_none     .Enabled = scene_active;
+				m_menu_rendering_cullmode_back     .Enabled = scene_active;
+				m_menu_rendering_cullmode_front    .Enabled = scene_active;
+				m_menu_rendering_orthographic      .Enabled = scene_active;
+				m_menu_rendering_anim_controls     .Enabled = true;
+				m_menu_rendering_lighting          .Enabled = scene_active;
+			}
 
 			// Set check marks next to visible things
-			m_menu_nav_reset_on_reload     .Checked = Settings.ResetOnLoad;
-			m_menu_nav_zoom_lock_aspect    .Checked = Model.CurrentScene.LockAspect;
-			m_menu_data_auto_refresh       .Checked = Model.AutoRefreshSources;
-			m_menu_rendering_show_focus    .Checked = Model.CurrentScene.FocusPointVisible;
-			m_menu_rendering_show_origin   .Checked = Model.CurrentScene.OriginPointVisible;
-			m_menu_rendering_show_selection.Checked = Model.CurrentScene.SelectionBoxVisible;
-			m_menu_rendering_show_bounds   .Checked = Model.CurrentScene.BBoxesVisible;
-			m_menu_rendering_orthographic  .Checked = Model.CurrentScene.Camera.Orthographic;
+			{
+				m_menu_nav_reset_on_reload     .Checked = Settings.ResetOnLoad;
+				m_menu_nav_zoom_lock_aspect    .Checked = scene?.LockAspect ?? false;
+				m_menu_data_auto_refresh       .Checked = Model.AutoRefreshSources;
+				m_menu_rendering_show_focus    .Checked = scene?.FocusPointVisible ?? false;
+				m_menu_rendering_show_origin   .Checked = scene?.OriginPointVisible ?? false;
+				m_menu_rendering_show_selection.Checked = scene?.SelectionBoxVisible ?? false;
+				m_menu_rendering_show_bounds   .Checked = scene?.BBoxesVisible ?? false;
+				m_menu_rendering_orthographic  .Checked = scene?.Camera.Orthographic ?? false;
 
-			// Display the next fill mode
-			m_menu_rendering_fillmode_solid    .Checked = Model.CurrentScene.Options.FillMode == View3d.EFillMode.Solid;
-			m_menu_rendering_fillmode_wireframe.Checked = Model.CurrentScene.Options.FillMode == View3d.EFillMode.Wireframe;
-			m_menu_rendering_fillmode_solidwire.Checked = Model.CurrentScene.Options.FillMode == View3d.EFillMode.SolidWire;
-			m_menu_rendering_cullmode_none     .Checked = Model.CurrentScene.Options.CullMode == View3d.ECullMode.None;
-			m_menu_rendering_cullmode_back     .Checked = Model.CurrentScene.Options.CullMode == View3d.ECullMode.Back;
-			m_menu_rendering_cullmode_front    .Checked = Model.CurrentScene.Options.CullMode == View3d.ECullMode.Front;
+				// Display the next fill mode
+				m_menu_rendering_fillmode_solid    .Checked = scene?.Options.FillMode == View3d.EFillMode.Solid;
+				m_menu_rendering_fillmode_wireframe.Checked = scene?.Options.FillMode == View3d.EFillMode.Wireframe;
+				m_menu_rendering_fillmode_solidwire.Checked = scene?.Options.FillMode == View3d.EFillMode.SolidWire;
+				m_menu_rendering_cullmode_none     .Checked = scene?.Options.CullMode == View3d.ECullMode.None;
+				m_menu_rendering_cullmode_back     .Checked = scene?.Options.CullMode == View3d.ECullMode.Back;
+				m_menu_rendering_cullmode_front    .Checked = scene?.Options.CullMode == View3d.ECullMode.Front;
 
-			m_menu_window_always_on_top.Checked = TopMost;
+				// Always on top
+				m_menu_window_always_on_top.Checked = TopMost;
+			}
 
 			// Display the multi scene tool-bar when there are multiple scenes
 			m_ts_multiview.Visible = Model.Scenes.Count > 1;
 
+			// Animation
+			m_tb_clock.Text = $"{AnimClock:N1}";
+
 			// Set the title to show the last filepath of the active scene
-			if (m_dc.ActiveContent?.Owner is SceneUI scene && scene.LastFilepath.HasValue())
+			if (scene_active && scene.LastFilepath.HasValue())
 				Text = $"LDraw - {scene.LastFilepath}";
 			else
 				Text = $"LDraw";
@@ -703,6 +894,7 @@ namespace LDraw
 		/// <summary>Create a new file and an editor to edit the file</summary>
 		private void EditFile(string filepath, bool prompt)
 		{
+			// Prompt for a filepath if this is an 'open' operation
 			if (prompt && !filepath.HasValue())
 			{
 				using (var dlg = new OpenFileDialog { Title = "Edit Ldr Script file", Filter = Util.FileDialogFilter("Ldr Script","*.ldr") })
@@ -712,15 +904,12 @@ namespace LDraw
 				}
 			}
 
-			// Add a script window
-			var script = m_dc.Add2(new ScriptUI(Model), EDockSite.Left);
+			// Add a new script window
+			var script = Model.AddNewScript(filepath);
 
-			// If a filepath is given, load the script UI with the file
-			if (filepath.HasValue())
-			{
-				m_recent_files.Add(filepath);
-				script.LoadFile(filepath);
-			}
+			// If the script is not a temporary script, add to the recent files
+			if (!script.IsTempScript)
+				m_recent_files.Add(script.Filepath);
 		}
 
 		/// <summary>Add a file source</summary>
@@ -747,10 +936,37 @@ namespace LDraw
 		/// <summary>Save a script UI to file</summary>
 		private void SaveFile(bool save_as)
 		{
-			// Get the script window to save
+			// Get the script to save (the active content)
 			var script = m_dc.ActiveContent.Owner as ScriptUI;
-			Debug.Assert(script != null, "Should be able to save if a script isn't selected");
-			script.SaveFile(save_as ? null : script.Filepath);
+			Debug.Assert(script != null, "Should not be able to save if a script isn't selected");
+
+			// Write the script to disk at it's current location
+			script.SaveFile();
+
+			// If this is a 'save as' or the script is a temporary script,
+			// prompt for a save location and copy the script to that location
+			if (save_as || script.IsTempScript)
+			{
+				// Get the save location
+				var filepath = (string)null;
+				using (var dlg = new SaveFileDialog { Title = "Save Script", Filter = Util.FileDialogFilter("Script Files", "*.ldr") })
+				{
+					// Don't allow saving to the temporary script folder
+					dlg.FileOk += (s,a) => a.Cancel = Path_.IsSubPath(Model.TempScriptsDirectory, filepath);
+					if (dlg.ShowDialog(Model.Owner) != DialogResult.OK) return;
+					filepath = dlg.FileName;
+				}
+
+				// Move the script to the new location
+				File.Move(script.Filepath, filepath);
+
+				// Update the script with the new location
+				script.Filepath = filepath;
+			}
+
+			// If the script is not a temporary script, add to the recent files
+			if (!script.IsTempScript)
+				m_recent_files.Add(script.Filepath);
 		}
 
 		/// <summary>Display the options dialog</summary>
@@ -792,6 +1008,10 @@ namespace LDraw
 			{
 				var opt = m_menu_nav_saved_views.DropDownItems.Add2(new ToolStripMenuItem(sv.Name));
 				opt.ShortcutKeys = Keys.Control | (Keys)('1' + i++);
+				opt.DropDownOpening += (s,a) =>
+				{
+					opt.Enabled = Model.CurrentScene != null;
+				};
 				opt.Click += (s,a) =>
 				{
 					sv.Apply(Model.CurrentScene.Camera);
@@ -854,7 +1074,7 @@ namespace LDraw
 		/// <summary>Create a Text window containing the example script</summary>
 		private void ShowExampleScript()
 		{
-			var ui = m_dc.Add2(new ScriptUI(Model), EDockSite.Left);
+			var ui = Model.AddNewScript("Example");
 			ui.Editor.Text = Model.View3d.ExampleScript;
 		}
 
@@ -872,6 +1092,15 @@ namespace LDraw
 				var finfo = new FileInfo(progress.Filepath);
 				m_pb_loading.ValueFrac(finfo.Length != 0 ? Maths.Clamp((float)progress.FileOffset / finfo.Length, 0f, 1f) : 1f);
 			}
+		}
+
+		private static class Res
+		{
+			public readonly static Image ImgStop    = Resources.media_stop;
+			public readonly static Image ImgPlay    = Resources.media_play;
+			public readonly static Image ImgStepBck = Resources.media_step_back;
+			public readonly static Image ImgStepFwd = Resources.media_step_forward;
+			public readonly static Image ImgPause   = Resources.media_pause;
 		}
 
 		#region Windows Form Designer generated code
@@ -935,8 +1164,10 @@ namespace LDraw
 			this.toolStripSeparator12 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_nav_camera = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_data = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_data_clear_all_scenes = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_data_auto_refresh = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator17 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_data_clear_all_scenes = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_data_clear_scene = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_data_create_demo_scene = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
@@ -956,6 +1187,8 @@ namespace LDraw
 			this.m_menu_rendering_cullmode_back = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_rendering_cullmode_front = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_rendering_orthographic = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator18 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_rendering_anim_controls = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator10 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_rendering_lighting = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_window = new System.Windows.Forms.ToolStripMenuItem();
@@ -966,6 +1199,16 @@ namespace LDraw
 			this.m_menu_window_example_script = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_window_about = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_ts_anim_controls = new System.Windows.Forms.ToolStrip();
+			this.m_lbl_anim_controls = new System.Windows.Forms.ToolStripLabel();
+			this.m_btn_reset = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_step_bck = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_step_fwd = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_run = new System.Windows.Forms.ToolStripButton();
+			this.m_lbl_step_rate = new System.Windows.Forms.ToolStripLabel();
+			this.m_lbl_anim_clock = new System.Windows.Forms.ToolStripLabel();
+			this.m_tb_clock = new System.Windows.Forms.ToolStripTextBox();
+			this.m_tr_speed = new pr.gui.ToolStripTrackBar();
 			this.m_ts_multiview = new System.Windows.Forms.ToolStrip();
 			this.m_lbl_link_cameras = new System.Windows.Forms.ToolStripLabel();
 			this.m_btn_link_camera_left_right = new System.Windows.Forms.ToolStripButton();
@@ -976,13 +1219,12 @@ namespace LDraw
 			this.m_lbl_link_axes = new System.Windows.Forms.ToolStripLabel();
 			this.m_btn_link_xaxis = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_link_yaxis = new System.Windows.Forms.ToolStripButton();
-			this.m_menu_data_clear_scene = new System.Windows.Forms.ToolStripMenuItem();
-			this.toolStripSeparator17 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
 			this.m_ss.SuspendLayout();
 			this.m_menu.SuspendLayout();
+			this.m_ts_anim_controls.SuspendLayout();
 			this.m_ts_multiview.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -995,7 +1237,7 @@ namespace LDraw
 			// 
 			// m_tsc.ContentPanel
 			// 
-			this.m_tsc.ContentPanel.Size = new System.Drawing.Size(663, 508);
+			this.m_tsc.ContentPanel.Size = new System.Drawing.Size(663, 516);
 			this.m_tsc.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_tsc.Location = new System.Drawing.Point(0, 0);
 			this.m_tsc.Name = "m_tsc";
@@ -1006,6 +1248,7 @@ namespace LDraw
 			// m_tsc.TopToolStripPanel
 			// 
 			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_menu);
+			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_ts_anim_controls);
 			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_ts_multiview);
 			// 
 			// m_ss
@@ -1416,17 +1659,28 @@ namespace LDraw
 			this.m_menu_data.Size = new System.Drawing.Size(43, 20);
 			this.m_menu_data.Text = "&Data";
 			// 
+			// m_menu_data_auto_refresh
+			// 
+			this.m_menu_data_auto_refresh.Name = "m_menu_data_auto_refresh";
+			this.m_menu_data_auto_refresh.Size = new System.Drawing.Size(177, 22);
+			this.m_menu_data_auto_refresh.Text = "&Auto Refresh";
+			// 
+			// toolStripSeparator17
+			// 
+			this.toolStripSeparator17.Name = "toolStripSeparator17";
+			this.toolStripSeparator17.Size = new System.Drawing.Size(174, 6);
+			// 
 			// m_menu_data_clear_all_scenes
 			// 
 			this.m_menu_data_clear_all_scenes.Name = "m_menu_data_clear_all_scenes";
 			this.m_menu_data_clear_all_scenes.Size = new System.Drawing.Size(177, 22);
 			this.m_menu_data_clear_all_scenes.Text = "&Clear All Scenes";
 			// 
-			// m_menu_data_auto_refresh
+			// m_menu_data_clear_scene
 			// 
-			this.m_menu_data_auto_refresh.Name = "m_menu_data_auto_refresh";
-			this.m_menu_data_auto_refresh.Size = new System.Drawing.Size(177, 22);
-			this.m_menu_data_auto_refresh.Text = "&Auto Refresh";
+			this.m_menu_data_clear_scene.Name = "m_menu_data_clear_scene";
+			this.m_menu_data_clear_scene.Size = new System.Drawing.Size(177, 22);
+			this.m_menu_data_clear_scene.Text = "&Clear Scene";
 			// 
 			// toolStripSeparator2
 			// 
@@ -1461,6 +1715,8 @@ namespace LDraw
             this.m_menu_rendering_fillmode,
             this.m_menu_rendering_cullmode,
             this.m_menu_rendering_orthographic,
+            this.toolStripSeparator18,
+            this.m_menu_rendering_anim_controls,
             this.toolStripSeparator10,
             this.m_menu_rendering_lighting});
 			this.m_menu_rendering.Name = "m_menu_rendering";
@@ -1558,6 +1814,17 @@ namespace LDraw
 			this.m_menu_rendering_orthographic.Size = new System.Drawing.Size(158, 22);
 			this.m_menu_rendering_orthographic.Text = "O&rthographic";
 			// 
+			// toolStripSeparator18
+			// 
+			this.toolStripSeparator18.Name = "toolStripSeparator18";
+			this.toolStripSeparator18.Size = new System.Drawing.Size(155, 6);
+			// 
+			// m_menu_rendering_anim_controls
+			// 
+			this.m_menu_rendering_anim_controls.Name = "m_menu_rendering_anim_controls";
+			this.m_menu_rendering_anim_controls.Size = new System.Drawing.Size(158, 22);
+			this.m_menu_rendering_anim_controls.Text = "&Animation";
+			// 
 			// toolStripSeparator10
 			// 
 			this.toolStripSeparator10.Name = "toolStripSeparator10";
@@ -1623,10 +1890,100 @@ namespace LDraw
 			this.m_menu_window_about.Size = new System.Drawing.Size(151, 22);
 			this.m_menu_window_about.Text = "&About";
 			// 
+			// m_ts_anim_controls
+			// 
+			this.m_ts_anim_controls.Dock = System.Windows.Forms.DockStyle.None;
+			this.m_ts_anim_controls.ImageScalingSize = new System.Drawing.Size(20, 20);
+			this.m_ts_anim_controls.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_lbl_anim_controls,
+            this.m_btn_reset,
+            this.m_btn_step_bck,
+            this.m_btn_step_fwd,
+            this.m_btn_run,
+            this.m_lbl_step_rate,
+            this.m_tr_speed,
+            this.m_lbl_anim_clock,
+            this.m_tb_clock});
+			this.m_ts_anim_controls.Location = new System.Drawing.Point(3, 24);
+			this.m_ts_anim_controls.Name = "m_ts_anim_controls";
+			this.m_ts_anim_controls.Size = new System.Drawing.Size(416, 27);
+			this.m_ts_anim_controls.TabIndex = 2;
+			// 
+			// m_lbl_anim_controls
+			// 
+			this.m_lbl_anim_controls.Name = "m_lbl_anim_controls";
+			this.m_lbl_anim_controls.Size = new System.Drawing.Size(66, 24);
+			this.m_lbl_anim_controls.Text = "Animation:";
+			// 
+			// m_btn_reset
+			// 
+			this.m_btn_reset.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_reset.Image = global::LDraw.Properties.Resources.media_stop;
+			this.m_btn_reset.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_reset.Name = "m_btn_reset";
+			this.m_btn_reset.Size = new System.Drawing.Size(24, 24);
+			this.m_btn_reset.Text = "Stop";
+			this.m_btn_reset.ToolTipText = "Stop and reset the animation clock to zero";
+			// 
+			// m_btn_step_bck
+			// 
+			this.m_btn_step_bck.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_step_bck.Image = global::LDraw.Properties.Resources.media_step_back;
+			this.m_btn_step_bck.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_step_bck.Name = "m_btn_step_bck";
+			this.m_btn_step_bck.Size = new System.Drawing.Size(24, 24);
+			this.m_btn_step_bck.Text = "Step Back";
+			this.m_btn_step_bck.ToolTipText = "Step backwards one frame";
+			// 
+			// m_btn_step_fwd
+			// 
+			this.m_btn_step_fwd.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_step_fwd.Image = global::LDraw.Properties.Resources.media_step_forward;
+			this.m_btn_step_fwd.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_step_fwd.Name = "m_btn_step_fwd";
+			this.m_btn_step_fwd.Size = new System.Drawing.Size(24, 24);
+			this.m_btn_step_fwd.Text = "Step Forward";
+			this.m_btn_step_fwd.ToolTipText = "Step forward by one frame";
+			// 
+			// m_btn_run
+			// 
+			this.m_btn_run.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_run.Image = global::LDraw.Properties.Resources.media_play;
+			this.m_btn_run.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_run.Name = "m_btn_run";
+			this.m_btn_run.Size = new System.Drawing.Size(24, 24);
+			this.m_btn_run.Text = "Run";
+			this.m_btn_run.ToolTipText = "Run the animations";
+			// 
+			// m_lbl_step_rate
+			// 
+			this.m_lbl_step_rate.Name = "m_lbl_step_rate";
+			this.m_lbl_step_rate.Size = new System.Drawing.Size(42, 24);
+			this.m_lbl_step_rate.Text = "Speed:";
+			// 
+			// m_lbl_anim_clock
+			// 
+			this.m_lbl_anim_clock.Name = "m_lbl_anim_clock";
+			this.m_lbl_anim_clock.Size = new System.Drawing.Size(37, 24);
+			this.m_lbl_anim_clock.Text = "Time:";
+			// 
+			// m_tb_clock
+			// 
+			this.m_tb_clock.BackColor = System.Drawing.SystemColors.Window;
+			this.m_tb_clock.Name = "m_tb_clock";
+			this.m_tb_clock.ReadOnly = true;
+			this.m_tb_clock.Size = new System.Drawing.Size(50, 27);
+			this.m_tb_clock.Text = "100.0";
+			// 
+			// m_tr_speed
+			// 
+			this.m_tr_speed.Name = "m_tr_speed";
+			this.m_tr_speed.Size = new System.Drawing.Size(80, 24);
+			// 
 			// m_ts_multiview
 			// 
 			this.m_ts_multiview.Dock = System.Windows.Forms.DockStyle.None;
-			this.m_ts_multiview.ImageScalingSize = new System.Drawing.Size(28, 28);
+			this.m_ts_multiview.ImageScalingSize = new System.Drawing.Size(20, 20);
 			this.m_ts_multiview.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_lbl_link_cameras,
             this.m_btn_link_camera_left_right,
@@ -1637,15 +1994,15 @@ namespace LDraw
             this.m_lbl_link_axes,
             this.m_btn_link_xaxis,
             this.m_btn_link_yaxis});
-			this.m_ts_multiview.Location = new System.Drawing.Point(3, 24);
+			this.m_ts_multiview.Location = new System.Drawing.Point(419, 24);
 			this.m_ts_multiview.Name = "m_ts_multiview";
-			this.m_ts_multiview.Size = new System.Drawing.Size(350, 35);
+			this.m_ts_multiview.Size = new System.Drawing.Size(244, 27);
 			this.m_ts_multiview.TabIndex = 1;
 			// 
 			// m_lbl_link_cameras
 			// 
 			this.m_lbl_link_cameras.Name = "m_lbl_link_cameras";
-			this.m_lbl_link_cameras.Size = new System.Drawing.Size(81, 32);
+			this.m_lbl_link_cameras.Size = new System.Drawing.Size(81, 24);
 			this.m_lbl_link_cameras.Text = "Link Cameras:";
 			// 
 			// m_btn_link_camera_left_right
@@ -1655,7 +2012,7 @@ namespace LDraw
 			this.m_btn_link_camera_left_right.Image = global::LDraw.Properties.Resources.green_left_right;
 			this.m_btn_link_camera_left_right.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_link_camera_left_right.Name = "m_btn_link_camera_left_right";
-			this.m_btn_link_camera_left_right.Size = new System.Drawing.Size(32, 32);
+			this.m_btn_link_camera_left_right.Size = new System.Drawing.Size(24, 24);
 			this.m_btn_link_camera_left_right.ToolTipText = "Apply camera navigation to all views";
 			// 
 			// m_btn_link_camera_up_down
@@ -1665,7 +2022,7 @@ namespace LDraw
 			this.m_btn_link_camera_up_down.Image = global::LDraw.Properties.Resources.green_up_down;
 			this.m_btn_link_camera_up_down.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_link_camera_up_down.Name = "m_btn_link_camera_up_down";
-			this.m_btn_link_camera_up_down.Size = new System.Drawing.Size(32, 32);
+			this.m_btn_link_camera_up_down.Size = new System.Drawing.Size(24, 24);
 			// 
 			// m_btn_link_camera_in_out
 			// 
@@ -1674,7 +2031,7 @@ namespace LDraw
 			this.m_btn_link_camera_in_out.Image = global::LDraw.Properties.Resources.green_in_out;
 			this.m_btn_link_camera_in_out.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_link_camera_in_out.Name = "m_btn_link_camera_in_out";
-			this.m_btn_link_camera_in_out.Size = new System.Drawing.Size(32, 32);
+			this.m_btn_link_camera_in_out.Size = new System.Drawing.Size(24, 24);
 			// 
 			// m_btn_link_camera_rotate
 			// 
@@ -1683,17 +2040,17 @@ namespace LDraw
 			this.m_btn_link_camera_rotate.Image = global::LDraw.Properties.Resources.green_rotate;
 			this.m_btn_link_camera_rotate.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_link_camera_rotate.Name = "m_btn_link_camera_rotate";
-			this.m_btn_link_camera_rotate.Size = new System.Drawing.Size(32, 32);
+			this.m_btn_link_camera_rotate.Size = new System.Drawing.Size(24, 24);
 			// 
 			// toolStripSeparator16
 			// 
 			this.toolStripSeparator16.Name = "toolStripSeparator16";
-			this.toolStripSeparator16.Size = new System.Drawing.Size(6, 35);
+			this.toolStripSeparator16.Size = new System.Drawing.Size(6, 27);
 			// 
 			// m_lbl_link_axes
 			// 
 			this.m_lbl_link_axes.Name = "m_lbl_link_axes";
-			this.m_lbl_link_axes.Size = new System.Drawing.Size(59, 32);
+			this.m_lbl_link_axes.Size = new System.Drawing.Size(59, 24);
 			this.m_lbl_link_axes.Text = "Link Axes:";
 			// 
 			// m_btn_link_xaxis
@@ -1703,7 +2060,7 @@ namespace LDraw
 			this.m_btn_link_xaxis.Image = global::LDraw.Properties.Resources.XAxis;
 			this.m_btn_link_xaxis.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_link_xaxis.Name = "m_btn_link_xaxis";
-			this.m_btn_link_xaxis.Size = new System.Drawing.Size(32, 32);
+			this.m_btn_link_xaxis.Size = new System.Drawing.Size(24, 24);
 			this.m_btn_link_xaxis.Text = "X";
 			// 
 			// m_btn_link_yaxis
@@ -1713,19 +2070,8 @@ namespace LDraw
 			this.m_btn_link_yaxis.Image = global::LDraw.Properties.Resources.YAxis;
 			this.m_btn_link_yaxis.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_link_yaxis.Name = "m_btn_link_yaxis";
-			this.m_btn_link_yaxis.Size = new System.Drawing.Size(32, 32);
+			this.m_btn_link_yaxis.Size = new System.Drawing.Size(24, 24);
 			this.m_btn_link_yaxis.Text = "toolStripButton2";
-			// 
-			// m_menu_data_clear_scene
-			// 
-			this.m_menu_data_clear_scene.Name = "m_menu_data_clear_scene";
-			this.m_menu_data_clear_scene.Size = new System.Drawing.Size(177, 22);
-			this.m_menu_data_clear_scene.Text = "&Clear Scene";
-			// 
-			// toolStripSeparator17
-			// 
-			this.toolStripSeparator17.Name = "toolStripSeparator17";
-			this.toolStripSeparator17.Size = new System.Drawing.Size(174, 6);
 			// 
 			// MainUI
 			// 
@@ -1747,6 +2093,8 @@ namespace LDraw
 			this.m_ss.PerformLayout();
 			this.m_menu.ResumeLayout(false);
 			this.m_menu.PerformLayout();
+			this.m_ts_anim_controls.ResumeLayout(false);
+			this.m_ts_anim_controls.PerformLayout();
 			this.m_ts_multiview.ResumeLayout(false);
 			this.m_ts_multiview.PerformLayout();
 			this.ResumeLayout(false);

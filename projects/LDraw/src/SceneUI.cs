@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
+using System.Xml.Linq;
 using pr.common;
 using pr.container;
 using pr.extn;
@@ -20,6 +21,8 @@ namespace LDraw
 	[DebuggerDisplay("{SceneName}")]
 	public class SceneUI :ChartControl ,IDockable
 	{
+		public const string DefaultName = "Scene";
+
 		private SceneUI() { InitializeComponent(); }
 		public SceneUI(string name, Model model)
 			:base(string.Empty, model.SceneSettings(name).Options)
@@ -50,6 +53,15 @@ namespace LDraw
 			Window.OriginPointSize       = Model.Settings.OriginPointSize;
 			Window.SelectionBoxVisible   = Settings.ShowSelectionBox;
 			Scene.Window.LightProperties = new View3d.Light(Settings.Light);
+
+			CreateHandle();
+		}
+		public SceneUI(string name, Model model, XElement user_data)
+			:this(name, model)
+		{
+			// Load the scene camera
+			if (user_data != null)
+				Camera.Load(user_data.Element(nameof(Camera)));
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -103,8 +115,11 @@ namespace LDraw
 				if (m_name == value) return;
 				m_name = value;
 				DockControl.TabText = m_name;
-				Settings = Model.SceneSettings(m_name);
+				Settings = Model.SceneSettings(m_name, Settings);
 				Options = Settings.Options;
+
+				// Invalidate anything looking at this scene
+				Model.Scenes.ResetItem(this, optional:true);
 			}
 		}
 		private string m_name;
@@ -140,23 +155,25 @@ namespace LDraw
 		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public DockControl DockControl
 		{
-			[DebuggerStepThrough] get { return m_impl_dock_control; }
+			[DebuggerStepThrough] get { return m_dock_control; }
 			private set
 			{
-				if (m_impl_dock_control == value) return;
-				if (m_impl_dock_control != null)
+				if (m_dock_control == value) return;
+				if (m_dock_control != null)
 				{
-					m_impl_dock_control.ActiveChanged -= HandleSceneActive;
-					Util.Dispose(ref m_impl_dock_control);
+					m_dock_control.ActiveChanged -= HandleSceneActive;
+					m_dock_control.SavingLayout -= HandleSavingLayout;
+					Util.Dispose(ref m_dock_control);
 				}
-				m_impl_dock_control = value;
-				if (m_impl_dock_control != null)
+				m_dock_control = value;
+				if (m_dock_control != null)
 				{
-					m_impl_dock_control.ActiveChanged += HandleSceneActive;
+					m_dock_control.SavingLayout += HandleSavingLayout;
+					m_dock_control.ActiveChanged += HandleSceneActive;
 				}
 			}
 		}
-		private DockControl m_impl_dock_control;
+		private DockControl m_dock_control;
 
 		/// <summary>Context Ids of objects added to this scene</summary>
 		public HashSet<Guid> ContextIds
@@ -435,9 +452,9 @@ namespace LDraw
 		}
 
 		/// <summary>Apply setting changes</summary>
-		private void HandleSettingChanged(object sender, SettingChangedEventArgs e)
+		private void HandleSettingChanged(object sender, SettingChangedEventArgs args)
 		{
-			switch (e.Key)
+			switch (args.Key)
 			{
 			case nameof(LDraw.Settings.FocusPointVisible):
 				Window.FocusPointVisible = Model.Settings.FocusPointVisible;
@@ -465,10 +482,16 @@ namespace LDraw
 		}
 
 		/// <summary>Handle this scene gaining or losing focus</summary>
-		private void HandleSceneActive(object sender, ActiveContentChangedEventArgs e)
+		private void HandleSceneActive(object sender, ActiveContentChangedEventArgs args)
 		{
-			Options.BkColour = e.ContentNew == this ? Color.LightSteelBlue : Color.LightGray;
+			Options.BkColour = args.ContentNew == this ? Color.LightSteelBlue : Color.LightGray;
 			Invalidate();
+		}
+
+		/// <summary>Handle scene layout being saved to XML</summary>
+		private void HandleSavingLayout(object sender, DockContainerSavingLayoutEventArgs args)
+		{
+			args.Node.Add2(nameof(Camera), Camera, false);
 		}
 
 		/// <summary>Create a context menu for the tab</summary>
@@ -498,7 +521,6 @@ namespace LDraw
 				cmenu.Items.AddSeparator();
 				{
 					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Close"));
-					cmenu.Opening += (s,a) => opt.Enabled = Model.Scenes.Count > 1;
 					opt.Click += (s,a) =>
 					{
 						DockControl.DockPane = null;

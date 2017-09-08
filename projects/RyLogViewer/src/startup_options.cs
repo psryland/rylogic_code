@@ -50,7 +50,7 @@ namespace RyLogViewer
 			PortableMode = Path_.FileExists(Path.Combine(exe_dir, "portable"));
 
 			// Set the UserDataDir based on whether we're running in portable mode or not
-			UserDataDir = Path.GetFullPath(PortableMode ? exe_dir : Util.ResolveUserDocumentsPath("Rylogic", Application.ProductName));
+			UserDataDir = Path.GetFullPath(PortableMode ? exe_dir : Util.ResolveUserDocumentsPath(Application.CompanyName, Application.ProductName));
 
 			// If we're in portable mode, check that we have write access to the local directory
 			if (PortableMode)

@@ -69,6 +69,8 @@ namespace pr.gui
 					var h = Maths.Max(sz_client.Height, y_10px + sz_info.Height + y_10px + ctrl.Height + y_10px + btns[0].Height + y_10px);
 					ClientSize = new Size(w,h);
 				}
+
+				ctrl.Focus();
 			}
 			base.OnShown(e);
 		}
@@ -179,8 +181,14 @@ namespace pr.gui
 				switch (Mode)
 				{
 				default: throw new Exception($"Can not set a value in mode {Mode}");
-				case EMode.ValueInput: m_tb_value.Value = value; break;
-				case EMode.OptionSelect: m_cb_value.Value = value; break;
+				case EMode.ValueInput:
+					m_tb_value.Value = value;
+					m_tb_value.SelectAll();
+					break;
+				case EMode.OptionSelect:
+					m_cb_value.Value = value;
+					m_cb_value.SelectAll();
+					break;
 				}
 			}
 		}

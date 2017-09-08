@@ -144,5 +144,23 @@
 	<data name="ZAxis" type="System.Resources.ResXFileRef, System.Windows.Forms">
 		<value>..\res\ZAxis.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
 	</data>
+	<data name="media_reset" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\media_player_start.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="media_stop" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\media_player_stop.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="media_play" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\media_player_play.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="media_pause" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\media_player_pause.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="media_step_back" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\media_player_step_bck.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="media_step_forward" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\media_player_step_fwd.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
 
 </root>

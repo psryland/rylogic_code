@@ -42,6 +42,7 @@ namespace pr.container
 			Init();
 		}
 
+		/// <summary>Construction</summary>
 		private void Init()
 		{
 			PerItemClear = false;
@@ -327,11 +328,13 @@ namespace pr.container
 		}
 	
 		/// <summary>Notify observers of a specific item changing</summary>
-		public void ResetItem(T item)
+		public void ResetItem(T item, bool optional = false)
 		{
 			var idx = IndexOf(item);
-			if (idx < 0 || idx >= Count) throw new Exception("Item is not within this container");
-			ResetItem(idx);
+			if (idx.Within(0, Count))
+				ResetItem(idx);
+			else if (!optional)
+				throw new Exception("Item is not within this container");
 		}
 
 		/// <summary>

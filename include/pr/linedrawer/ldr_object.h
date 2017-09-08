@@ -282,7 +282,7 @@ namespace pr
 
 			Animation()
 				:m_style(EAnimStyle::NoAnimation)
-				,m_period(0)
+				,m_period(1.0f)
 				,m_velocity(pr::v4Zero)
 				,m_ang_velocity(pr::v4Zero)
 			{}
@@ -291,16 +291,29 @@ namespace pr
 			// added by this object at time 'time_s'
 			pr::m4x4 Step(float time_s) const
 			{
-				if (m_style == EAnimStyle::NoAnimation) return pr::m4x4Identity;
+				if (m_style == EAnimStyle::NoAnimation)
+					return pr::m4x4Identity;
 
-				float t = 0.0f;
+				auto t = 0.0f;
 				switch (m_style)
 				{
-				default:break;
-				case EAnimStyle::PlayOnce:          t = time_s < m_period ? time_s : m_period; break;
-				case EAnimStyle::PlayReverse:       t = time_s < m_period ? m_period - time_s : 0.0f; break;
-				case EAnimStyle::PingPong:          t = pr::Fmod(time_s, 2.0f*m_period) >= m_period ? m_period - pr::Fmod(time_s, m_period) : pr::Fmod(time_s, m_period); break;
-				case EAnimStyle::PlayContinuous:    t = time_s; break;
+				default: throw std::exception("Unknown animation style");
+				case EAnimStyle::NoAnimation:
+					break;
+				case EAnimStyle::PlayOnce:
+					t = time_s < m_period ? time_s : m_period;
+					break;
+				case EAnimStyle::PlayReverse:
+					t = time_s < m_period ? m_period - time_s : 0.0f;
+					break;
+				case EAnimStyle::PingPong:
+					t = pr::Fmod(time_s, 2.0f*m_period) >= m_period
+						? m_period - pr::Fmod(time_s, m_period)
+						: pr::Fmod(time_s, m_period);
+					break;
+				case EAnimStyle::PlayContinuous:
+					t = time_s;
+					break;
 				}
 
 				return m4x4::Transform(m_ang_velocity*t, m_velocity*t + pr::v4Origin);

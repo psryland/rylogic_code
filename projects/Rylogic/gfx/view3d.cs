@@ -1185,6 +1185,13 @@ namespace pr.gfx
 				set { View3D_SetBackgroundColour(m_handle, value.ToArgb()); }
 			}
 
+			/// <summary>Get/Set the animation clock</summary>
+			public float AnimTime
+			{
+				get { return View3D_WindowAnimTimeGet(m_handle); }
+				set { View3D_WindowAnimTimeSet(m_handle, value); }
+			}
+
 			/// <summary>Cause the window to be rendered. Remember to call Present when done</summary>
 			public void Render()
 			{
@@ -1389,15 +1396,10 @@ namespace pr.gfx
 			{
 				m_window = window;
 			}
-			public CameraControls(Window window, XElement node) :this(window)
+			public CameraControls(Window window, XElement node)
+				:this(window)
 			{
-				O2W          = node.Element(nameof(O2W         )).As(O2W         );
-				FocusDist    = node.Element(nameof(FocusDist   )).As(FocusDist   );
-				Orthographic = node.Element(nameof(Orthographic)).As(Orthographic);
-				Aspect       = node.Element(nameof(Aspect      )).As(Aspect      );
-				FovY         = node.Element(nameof(FovY        )).As(FovY        );
-				AlignAxis    = node.Element(nameof(AlignAxis   )).As(AlignAxis   );
-				Commit();
+				Load(node);
 			}
 			public XElement ToXml(XElement node)
 			{
@@ -1408,6 +1410,16 @@ namespace pr.gfx
 				node.Add2(nameof(FovY        ), FovY        , false);
 				node.Add2(nameof(AlignAxis   ), AlignAxis   , false);
 				return node;
+			}
+			public void Load(XElement node)
+			{
+				O2W          = node.Element(nameof(O2W         )).As(O2W         );
+				FocusDist    = node.Element(nameof(FocusDist   )).As(FocusDist   );
+				Orthographic = node.Element(nameof(Orthographic)).As(Orthographic);
+				Aspect       = node.Element(nameof(Aspect      )).As(Aspect      );
+				FovY         = node.Element(nameof(FovY        )).As(FovY        );
+				AlignAxis    = node.Element(nameof(AlignAxis   )).As(AlignAxis   );
+				Commit();
 			}
 
 			/// <summary>Get/Set Orthographic projection mode</summary>
@@ -2785,6 +2797,8 @@ namespace ldr
 		[DllImport(Dll)] private static extern void            View3D_WindowAddGizmo            (HWindow window, HGizmo giz);
 		[DllImport(Dll)] private static extern void            View3D_WindowRemoveGizmo         (HWindow window, HGizmo giz);
 		[DllImport(Dll)] private static extern BBox            View3D_WindowSceneBounds         (HWindow window, ESceneBounds bounds, int except_count, Guid[] except);
+		[DllImport(Dll)] private static extern float           View3D_WindowAnimTimeGet         (HWindow window);
+		[DllImport(Dll)] private static extern void            View3D_WindowAnimTimeSet         (HWindow window, float time_s);
 
 		// Camera
 		[DllImport(Dll)] private static extern void            View3D_CameraToWorldGet       (HWindow window, out m4x4 c2w);

@@ -47,9 +47,6 @@
     <Filter Include="pr\gui">
       <UniqueIdentifier>{51c9bc32-69e7-4267-9ef9-44aaeffcff7e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="pr\linedrawer">
-      <UniqueIdentifier>{811b143f-5d27-4d0b-941f-6a429943b4eb}</UniqueIdentifier>
-    </Filter>
     <Filter Include="pr\hardware">
       <UniqueIdentifier>{884fa0a0-434f-4d8a-981f-74085358d4c0}</UniqueIdentifier>
     </Filter>
@@ -91,6 +88,9 @@
     </Filter>
     <Filter Include="pr\physics\shape">
       <UniqueIdentifier>{dd869478-365f-47a5-82be-d217d2dc60bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\ldraw">
+      <UniqueIdentifier>{811b143f-5d27-4d0b-941f-6a429943b4eb}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -292,10 +292,10 @@
       <Filter>pr\gui</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\linedrawer\ldr_helper_c.h">
-      <Filter>pr\linedrawer</Filter>
+      <Filter>pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\linedrawer\ldr_helper.h">
-      <Filter>pr\linedrawer</Filter>
+      <Filter>pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\container\kdtree.h">
       <Filter>pr\container</Filter>
@@ -364,16 +364,16 @@
       <Filter>pr\crypt</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\linedrawer\ldr_tools.h">
-      <Filter>pr\linedrawer</Filter>
+      <Filter>pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\linedrawer\ldr_object.h">
-      <Filter>pr\linedrawer</Filter>
+      <Filter>pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\linedrawer\ldr_objects_dlg.h">
-      <Filter>pr\linedrawer</Filter>
+      <Filter>pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\linedrawer\ldr_script_editor_dlg.h">
-      <Filter>pr\linedrawer</Filter>
+      <Filter>pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\common\keystate.h">
       <Filter>pr\common</Filter>
@@ -955,7 +955,7 @@
       <Filter>pr\maths</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\linedrawer\ldr_sources.h">
-      <Filter>pr\linedrawer</Filter>
+      <Filter>pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\threads\synchronise.h">
       <Filter>pr\threads</Filter>

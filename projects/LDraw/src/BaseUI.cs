@@ -29,23 +29,27 @@ namespace LDraw
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public DockControl DockControl
 		{
-			[DebuggerStepThrough] get { return m_impl_dock_control; }
+			[DebuggerStepThrough] get { return m_dock_control; }
 			private set
 			{
-				if (m_impl_dock_control == value) return;
-				if (m_impl_dock_control != null)
+				if (m_dock_control == value) return;
+				if (m_dock_control != null)
 				{
-					m_impl_dock_control.DockContainerChanged -= HandleDockContainerChanged;
-					Util.Dispose(ref m_impl_dock_control);
+					m_dock_control.DockContainerChanged -= HandleDockContainerChanged;
+					m_dock_control.SavingLayout -= HandleSavingLayout;
+					m_dock_control.Closed -= HandleClosed;
+					Util.Dispose(ref m_dock_control);
 				}
-				m_impl_dock_control = value;
-				if (m_impl_dock_control != null)
+				m_dock_control = value;
+				if (m_dock_control != null)
 				{
-					m_impl_dock_control.DockContainerChanged += HandleDockContainerChanged;
+					m_dock_control.Closed += HandleClosed;
+					m_dock_control.SavingLayout += HandleSavingLayout;
+					m_dock_control.DockContainerChanged += HandleDockContainerChanged;
 				}
 			}
 		}
-		private DockControl m_impl_dock_control;
+		private DockControl m_dock_control;
 
 		/// <summary>Application settings</summary>
 		public Settings Settings
@@ -62,12 +66,10 @@ namespace LDraw
 				if (m_model == value) return;
 				if (m_model != null)
 				{
-		//			m_model.Window.OnRendering -= HandleSceneRendering;
 				}
 				SetModelCore(value);
 				if (m_model != null)
 				{
-		//			m_model.Window.OnRendering += HandleSceneRendering;
 				}
 			}
 		}
@@ -79,27 +81,34 @@ namespace LDraw
 			m_model = model;
 		}
 
-		///// <summary>Add instances to the scene just prior to rendering</summary>
-		//protected virtual void OnSceneRendering()
-		//{ }
-		//private void HandleSceneRendering(object sender, EventArgs e)
-		//{
-		//	OnSceneRendering();
-		//}
-
 		/// <summary>Invalidate this control and all children</summary>
 		protected void Invalidate(object sender, EventArgs e)
 		{
 			Invalidate(true);
 		}
 
-		/// <summary>Raised when the dock container is assigned/changed</summary>
+		/// <summary>Called when the dock container is assigned/changed</summary>
 		protected virtual void OnDockContainerChanged(DockContainerChangedEventArgs args)
 		{}
-		private void HandleDockContainerChanged(object sender, DockContainerChangedEventArgs e)
+		private void HandleDockContainerChanged(object sender, DockContainerChangedEventArgs args)
 		{
-			OnDockContainerChanged(e);
+			OnDockContainerChanged(args);
 		}
 
+		/// <summary>Called when layout is saving for this UI</summary>
+		protected virtual void OnSavingLayout(DockContainerSavingLayoutEventArgs args)
+		{}
+		private void HandleSavingLayout(object sender, DockContainerSavingLayoutEventArgs args)
+		{
+			OnSavingLayout(args);
+		}
+
+		/// <summary>Called when the tab for this UI is closed by the user</summary>
+		protected virtual void OnClosed()
+		{}
+		private void HandleClosed(object sender, EventArgs e)
+		{
+			OnClosed();
+		}
 	}
 }

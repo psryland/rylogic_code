@@ -475,6 +475,30 @@ VIEW3D_API View3DBBox __stdcall View3D_WindowSceneBounds(View3DWindow window, EV
 	CatchAndReport(View3D_WindowSceneBounds, window, view3d::To<View3DBBox>(pr::BBoxUnit));
 }
 
+// Get/Set the animation time
+VIEW3D_API float __stdcall View3D_WindowAnimTimeGet(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return window->m_anim_time_s;
+	}
+	CatchAndReport(View3D_WindowAnimTimeGet, window, 0.0f);
+}
+VIEW3D_API void __stdcall View3D_WindowAnimTimeSet(View3DWindow window, float time_s)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_anim_time_s = time_s;
+	}
+	CatchAndReport(View3D_WindowAnimTimeSet, window, );
+}
+
 //  ********************************************************
 
 // Return the camera to world transform

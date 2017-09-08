@@ -368,6 +368,8 @@ extern "C"
 	VIEW3D_API void         __stdcall View3D_WindowAddGizmo           (View3DWindow window, View3DGizmo giz);
 	VIEW3D_API void         __stdcall View3D_WindowRemoveGizmo        (View3DWindow window, View3DGizmo giz);
 	VIEW3D_API View3DBBox   __stdcall View3D_WindowSceneBounds        (View3DWindow window, EView3DSceneBounds bounds, int except_count, GUID const* except);
+	VIEW3D_API float        __stdcall View3D_WindowAnimTimeGet        (View3DWindow window);
+	VIEW3D_API void         __stdcall View3D_WindowAnimTimeSet        (View3DWindow window, float time_s);
 
 	// Camera
 	VIEW3D_API void                  __stdcall View3D_CameraToWorldGet      (View3DWindow window, View3DM4x4& c2w);

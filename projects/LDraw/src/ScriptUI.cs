@@ -7,11 +7,21 @@ using pr.gui;
 using pr.util;
 using ToolStripContainer = pr.gui.ToolStripContainer;
 using ToolStripComboBox = pr.gui.ToolStripComboBox;
+using System.Xml.Linq;
+using pr.container;
 
 namespace LDraw
 {
 	public class ScriptUI :BaseUI
 	{
+		// Notes:
+		//  - A 'temporary script' is one whose filepath is in the 'Model.TempScriptDirectory'
+		//  - 'New' creates a temporary script
+		//  - On startup, all temporary files in the user data folder are opened.
+		//  - If a temporary script is closed, it is removed from the temp script directory.
+		//  - If a temporary file is saved by the user it is moved to the new location and added to recent files.
+		public const string DefaultName = "Script";
+
 		#region UI Elements
 		private ToolStripContainer m_tsc;
 		private ToolStripButton m_btn_render;
@@ -21,7 +31,6 @@ namespace LDraw
 		private ToolStripMenuItem m_menu_shortcuts;
 		private ToolStripMenuItem m_menu_shortcuts_render;
 		private ToolStripMenuItem m_menu_shortcuts_clear;
-		private ToolStripButton m_btn_open;
 		private ToolStripButton m_btn_save;
 		private ToolStripSeparator toolStripSeparator1;
 		private ToolStripSeparator toolStripSeparator2;
@@ -30,22 +39,59 @@ namespace LDraw
 		private ToolStrip m_ts;
 		#endregion
 
-		public ScriptUI(Model model, Guid? context_id = null)
-			:base(model, "Script")
+		public ScriptUI(string name, Model model, string filepath = null)
+			:base(model, name)
 		{
 			InitializeComponent();
-			ContextId = context_id ?? Guid.NewGuid();
+			ContextId = Guid.NewGuid();
 			Filepath = string.Empty;
 			Editor = new ScintillaCtrl();
+			ScriptName = name;
+			DockControl.TabCMenu = CreateTabCMenu();
 
 			SetupUI();
-			UpdateUI();
+
+			// If a filepath is given, load the script with the file.
+			// If not, then this is a temporary script. Create a filepath
+			// in the temporary scripts folder.
+			if (!filepath.HasValue())
+				filepath = Path_.CombinePath(Model.TempScriptsDirectory, $"Script_{Guid.NewGuid()}.ldr");
+
+			// Load the script file if it exists
+			Filepath = filepath;
+			if (Path_.FileExists(Filepath))
+				LoadFile(Filepath);
 		}
+		public ScriptUI(string name, Model model, XElement user_data)
+			:this(name, model, user_data.Element(nameof(Filepath)).As<string>())
+		{}
 		protected override void Dispose(bool disposing)
 		{
+			Scene = null;
 			Editor = null;
 			base.Dispose(disposing);
 		}
+		protected override void OnSavingLayout(DockContainerSavingLayoutEventArgs args)
+		{
+			args.Node.Add2(nameof(Filepath), Filepath, false);
+			base.OnSavingLayout(args);
+		}
+
+		/// <summary>The name of this script</summary>
+		public string ScriptName
+		{
+			get { return m_name; }
+			set
+			{
+				if (m_name == value) return;
+				m_name = value;
+				DockControl.TabText = m_name;
+
+				// Invalidate anything looking at this script
+				Model.Scripts.ResetItem(this, optional:true);
+			}
+		}
+		private string m_name;
 
 		/// <summary>The editor control</summary>
 		public ScintillaCtrl Editor
@@ -57,6 +103,7 @@ namespace LDraw
 				if (m_editor != null)
 				{
 					m_tsc.ContentPanel.Controls.Remove(m_editor);
+					m_editor.TextChanged -= HandleScriptChanged;
 				}
 				m_editor = value;
 				if (m_editor != null)
@@ -64,6 +111,7 @@ namespace LDraw
 					m_editor.Dock = DockStyle.Fill;
 					m_editor.InitLdrStyle();
 
+					m_editor.TextChanged += HandleScriptChanged;
 					m_tsc.ContentPanel.Controls.Add(m_editor);
 				}
 			}
@@ -77,17 +125,56 @@ namespace LDraw
 			private set;
 		}
 
+		/// <summary>The scene that this script renders to</summary>
+		public SceneUI Scene
+		{
+			get { return m_scene; }
+			set
+			{
+				if (m_scene == value) return;
+				if (m_scene != null)
+				{
+					RemoveScriptObjects();
+					m_btn_render.Enabled = false;
+					m_btn_clear.Enabled = false;
+				}
+				m_scene = value;
+				if (m_scene != null)
+				{
+					m_btn_clear.Enabled = true;
+					m_btn_render.Enabled = true;
+					RenderScript();
+				}
+			}
+		}
+		private SceneUI m_scene;
+
 		/// <summary>The filepath for this script</summary>
 		public string Filepath
 		{
 			get { return m_filepath; }
 			set
 			{
+				// Update to the new filepath
+				var old = m_filepath;
 				m_filepath = value;
-				DockControl.TabText = m_filepath.HasValue() ? Path_.FileTitle(m_filepath) : "Script";
+
+				// Update the tab text if it hasn't been changed by the user
+				if (DockControl.TabText == DefaultName ||
+					DockControl.TabText == Path_.FileTitle(old))
+				{
+					// Use the file title, unless this is a temporary script
+					DockControl.TabText = !IsTempScript ? Path_.FileTitle(m_filepath) : DefaultName;
+				}
 			}
 		}
 		private string m_filepath;
+
+		/// <summary>True if this is a temporary script</summary>
+		public bool IsTempScript
+		{
+			get { return Filepath.HasValue() && Path_.IsSubPath(Model.TempScriptsDirectory, Filepath); }
+		}
 
 		/// <summary>Set up UI Elements</summary>
 		private void SetupUI()
@@ -100,16 +187,9 @@ namespace LDraw
 
 			#region Tool bar
 
-			// Open file
-			m_btn_open.ToolTipText = "Open a file";
-			m_btn_open.Click += (s,a) =>
-			{
-				LoadFile(null);
-			};
-
 			// Save file
-			m_btn_open.ToolTipText = "Save this script to file";
-			m_btn_open.Click += (s,a) =>
+			m_btn_save.ToolTipText = "Save this script to file";
+			m_btn_save.Click += (s,a) =>
 			{
 				SaveFile(Filepath);
 			};
@@ -125,20 +205,19 @@ namespace LDraw
 			m_btn_clear.ToolTipText = "Remove objects created by this script\r\n[Ctrl+D]";
 			m_btn_clear.Click += (s,a) =>
 			{
-				ClearScript();
+				RemoveScriptObjects();
 			};
 
 			// Render to scene
 			m_cb_scene.ToolTipText = "The scene to render to";
-			m_cb_scene.ComboBox.DataSource = Model.Scenes;
+			m_cb_scene.ComboBox.DataSource = new BindingSource<SceneUI>{ DataSource = Model.Scenes };
 			m_cb_scene.ComboBox.DisplayMember = nameof(SceneUI.SceneName);
+			m_cb_scene.ComboBox.SelectedIndexChanged += (s,a) =>
+			{
+				Scene = ((BindingSource<SceneUI>)m_cb_scene.ComboBox.DataSource).Current;
+			};
 
 			#endregion
-		}
-
-		/// <summary>Update the state of UI Elements</summary>
-		private void UpdateUI(object sender = null, EventArgs args = null)
-		{
 		}
 
 		/// <summary>Load the script UI from a file</summary>
@@ -194,17 +273,34 @@ namespace LDraw
 		/// <summary>True if the script has been edited</summary>
 		public bool SaveNeeded
 		{
-			get;
-			set;
+			get { return m_save_needed; }
+			set
+			{
+				if (m_save_needed == value) return;
+				m_save_needed = value;
+
+				// Add/Remove a '*' from the tab
+				DockControl.TabText = DockControl.TabText.TrimEnd('*') + (m_save_needed ? "*" : string.Empty);
+
+				// Enable/Disable buttons
+				m_btn_save.Enabled = m_save_needed;
+			}
 		}
+		private bool m_save_needed;
 
 		/// <summary>Remove any objects associated with this script</summary>
-		private void ClearScript()
+		private void RemoveScriptObjects()
 		{
+			// Remove the objects from the associated scene
+			if (Scene != null)
+			{
+				Scene.ContextIds.Remove(ContextId);
+				Scene.Invalidate();
+			}
+
+			// Remove the objects from the sources
 			Model.SourceContextIds.Remove(ContextId);
-			Model.CurrentScene.ContextIds.Remove(ContextId);
-			Model.CurrentScene.Invalidate();
-			
+
 			// Remove any objects previously created by this script
 			Model.View3d.DeleteAllObjects(ContextId);
 		}
@@ -212,22 +308,63 @@ namespace LDraw
 		/// <summary>Render the script in this window</summary>
 		private void RenderScript()
 		{
-			ClearScript();
+			// Save the script first
+			if (SaveNeeded)
+				SaveFile();
 
-			// Need a View3d method for rendering a string containing a scene
+			// Remove any objects from last time we rendered this script
+			RemoveScriptObjects();
+
+			// Parse the script, adding objects to the view3d context
 			Model.View3d.LoadScript(Editor.Text, false, ContextId, null);
 			Model.SourceContextIds.Add(ContextId);
 
 			// Add the script content to the selected scene
-			var scene = m_cb_scene.ComboBox.SelectedItem as SceneUI ?? Model.CurrentScene;
-			scene.ContextIds.Add(ContextId);
-			scene.Invalidate();
+			if (Scene != null)
+			{
+				Scene.ContextIds.Add(ContextId);
+				Scene.Invalidate();
+			}
 		}
 
 		/// <summary>Handle the script changing</summary>
 		private void HandleScriptChanged(object sender, EventArgs e)
 		{
 			SaveNeeded = true;
+		}
+
+		/// <summary>Create a context menu for the tab</summary>
+		private ContextMenuStrip CreateTabCMenu()
+		{
+			var cmenu = new ContextMenuStrip();
+			using (cmenu.SuspendLayout(true))
+			{
+				{
+					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Rename"));
+					opt.Click += (s,a) =>
+					{
+						using (var dlg = new PromptUI { Title = "Rename", PromptText = "Enter a name for the script", Value = DockControl.TabText })
+						{
+							dlg.ShowDialog(this);
+							ScriptName = (string)dlg.Value;
+						}
+					};
+				}
+				cmenu.Items.AddSeparator();
+				{
+					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Close"));
+					opt.Click += (s,a) =>
+					{
+						// When a temporary script is closed, remove the file from disk
+						if (IsTempScript)
+							File.Delete(Filepath);
+
+						DockControl.DockPane = null;
+						Model.Scripts.Remove(this);
+					};
+				}
+			}
+			return cmenu;
 		}
 
 		#region Windows Form Designer generated code
@@ -242,15 +379,14 @@ namespace LDraw
 			this.m_menu_shortcuts_render = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_shortcuts_clear = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
-			this.m_btn_open = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_save = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_render = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_clear = new System.Windows.Forms.ToolStripButton();
-			this.m_il_toolbar = new System.Windows.Forms.ImageList(this.components);
 			this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cb_scene = new pr.gui.ToolStripComboBox();
+			this.m_il_toolbar = new System.Windows.Forms.ImageList(this.components);
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
 			this.m_menu.SuspendLayout();
@@ -315,7 +451,6 @@ namespace LDraw
 			this.m_ts.Dock = System.Windows.Forms.DockStyle.None;
 			this.m_ts.ImageScalingSize = new System.Drawing.Size(24, 24);
 			this.m_ts.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_btn_open,
             this.m_btn_save,
             this.toolStripSeparator1,
             this.m_btn_render,
@@ -325,18 +460,8 @@ namespace LDraw
             this.m_cb_scene});
 			this.m_ts.Location = new System.Drawing.Point(3, 24);
 			this.m_ts.Name = "m_ts";
-			this.m_ts.Size = new System.Drawing.Size(296, 31);
+			this.m_ts.Size = new System.Drawing.Size(245, 31);
 			this.m_ts.TabIndex = 0;
-			// 
-			// m_btn_open
-			// 
-			this.m_btn_open.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_open.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_open.Image")));
-			this.m_btn_open.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_btn_open.Name = "m_btn_open";
-			this.m_btn_open.Size = new System.Drawing.Size(28, 28);
-			this.m_btn_open.Text = "Open Script";
-			this.m_btn_open.ToolTipText = "Open a script file";
 			// 
 			// m_btn_save
 			// 
@@ -378,12 +503,6 @@ namespace LDraw
 			this.m_btn_clear.Text = "Clear";
 			this.m_btn_clear.ToolTipText = "Remove objects, created by this script, from the scene";
 			// 
-			// m_il_toolbar
-			// 
-			this.m_il_toolbar.ColorDepth = System.Windows.Forms.ColorDepth.Depth32Bit;
-			this.m_il_toolbar.ImageSize = new System.Drawing.Size(16, 16);
-			this.m_il_toolbar.TransparentColor = System.Drawing.Color.Transparent;
-			// 
 			// toolStripSeparator3
 			// 
 			this.toolStripSeparator3.Name = "toolStripSeparator3";
@@ -392,8 +511,18 @@ namespace LDraw
 			// m_cb_scene
 			// 
 			this.m_cb_scene.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+			this.m_cb_scene.FlatStyle = System.Windows.Forms.FlatStyle.Standard;
 			this.m_cb_scene.Name = "m_cb_scene";
-			this.m_cb_scene.Size = new System.Drawing.Size(121, 31);
+			this.m_cb_scene.SelectedIndex = -1;
+			this.m_cb_scene.SelectedItem = null;
+			this.m_cb_scene.SelectedText = "";
+			this.m_cb_scene.Size = new System.Drawing.Size(100, 28);
+			// 
+			// m_il_toolbar
+			// 
+			this.m_il_toolbar.ColorDepth = System.Windows.Forms.ColorDepth.Depth32Bit;
+			this.m_il_toolbar.ImageSize = new System.Drawing.Size(16, 16);
+			this.m_il_toolbar.TransparentColor = System.Drawing.Color.Transparent;
 			// 
 			// ScriptUI
 			// 

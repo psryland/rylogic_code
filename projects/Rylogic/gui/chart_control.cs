@@ -1797,6 +1797,10 @@ namespace pr.gui
 					XAxis.GridLineGfx.O2WSet(o2w);
 					window.AddObject(XAxis.GridLineGfx);
 				}
+				else
+				{
+					window.RemoveObject(XAxis.GridLineGfx);
+				}
 				if (YAxis.Owner.Options.ShowGridLines && YAxis.Options.ShowGridLines)
 				{
 					YAxis.GridLines(out var min, out var max, out var step);
@@ -1806,6 +1810,10 @@ namespace pr.gui
 
 					YAxis.GridLineGfx.O2WSet(o2w);
 					window.AddObject(YAxis.GridLineGfx);
+				}
+				else
+				{
+					window.RemoveObject(YAxis.GridLineGfx);
 				}
 			}
 
