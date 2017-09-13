@@ -51,6 +51,9 @@ namespace CoinFlip
 			TimeFrames = new BindingSource<ETimeFrame>();
 			Pairs = new BindingSource<TradePair>();
 
+			// Chart indicators
+			Indicators = new BindingSource<Indicator> { DataSource = new BindingListEx<Indicator>(), PerItemClear = true };
+
 			SetupUI();
 		}
 		protected override void Dispose(bool disposing)
@@ -192,6 +195,9 @@ namespace CoinFlip
 				}
 				ChartSettings.Inherit = Model.Settings.ChartTemplate;
 				m_chart.Options = ChartSettings.Style;
+
+				// Create indicators
+				UpdateIndicators();
 			}
 		}
 		private void HandleDataChanged(object sender, DataEventArgs e)
@@ -227,6 +233,68 @@ namespace CoinFlip
 
 			// Signal a refresh
 			m_chart.Invalidate();
+		}
+
+		/// <summary>The collection of indicators on this chart</summary>
+		public BindingSource<Indicator> Indicators
+		{
+			[DebuggerStepThrough] get { return m_indicators; }
+			private set
+			{
+				if (m_indicators == value) return;
+				if (m_indicators != null)
+				{
+					m_indicators.ListChanging -= HandleIndicatorsListChanging;
+				}
+				m_indicators = value;
+				if (m_indicators != null)
+				{
+					m_indicators.ListChanging += HandleIndicatorsListChanging;
+				}
+			}
+		}
+		private BindingSource<Indicator> m_indicators;
+		private void HandleIndicatorsListChanging(object sender, ListChgEventArgs<Indicator> args)
+		{
+			// Handle indicators being added/removed from the chart
+			switch (args.ChangeType)
+			{
+			case ListChg.ItemAdded:
+				{
+				//	// Ensure the 'Chart' property is set on the indicator
+				//	args.Item.Instrument = Instrument;
+				//	args.Item.Chart = m_chart;
+				//
+				//	// When the indicator changes, update the saved chart settings
+				//	args.Item.DataChanged += HandleIndicatorChanged;
+				//
+				//	// Update the settings.
+				//	HandleIndicatorChanged();
+
+					// Refresh the chart
+					Invalidate(true);
+					break;
+				}
+			case ListChg.ItemRemoved:
+				{
+				//	// Remove from the Chart
+				//	args.Item.Chart = null;
+				//	args.Item.Instrument = null;
+				//
+				//	// Ignore changes
+				//	args.Item.DataChanged -= HandleIndicatorChanged;
+				//
+				//	// Dispose the indicator
+				//	Util.Dispose(args.Item);
+				//
+				//	// Update the settings.
+				//	HandleIndicatorChanged();
+
+					// Refresh the chart
+					Invalidate(true);
+					break;
+				}
+			}
 		}
 
 		/// <summary>The selected time frame</summary>
@@ -332,6 +400,16 @@ namespace CoinFlip
 		private IEnumerable<Position> AllPositions
 		{
 			get { return Instrument?.AllPositions ?? new Position[0]; }
+		}
+
+		/// <summary>(Re)create indicators</summary>
+		private void UpdateIndicators()
+		{
+			Indicators.Clear();
+			foreach (var node in ChartSettings.Indicators.Elements(nameof(Indicator)))
+			{
+
+			}
 		}
 
 		/// <summary>Convert the XAxis values into pretty datetime strings</summary>
@@ -484,12 +562,12 @@ namespace CoinFlip
 				{
 					int idx = 0;
 					
-					//#region Indicators
-					//var indicators_menu = e.Menu.Items.Insert2(idx++, new ToolStripMenuItem("Indicators"));
-					//{
-					//	// Add a new indicator
-					//	var add_menu = indicators_menu.DropDownItems.Add2(new ToolStripMenuItem("Add Indicator"));
-					//	{
+					#region Indicators
+					var indicators_menu = e.Menu.Items.Insert2(idx++, new ToolStripMenuItem("Indicators"));
+					{
+						// Add a new indicator
+						var add_menu = indicators_menu.DropDownItems.Add2(new ToolStripMenuItem("Add Indicator"));
+						{
 					//		// S&R Level
 					//		var opt = add_menu.DropDownItems.Add2(new ToolStripMenuItem("Support/Resistance Level"));
 					//		opt.Click += (s,a) =>
@@ -500,23 +578,23 @@ namespace CoinFlip
 					//			Instrument.SupportResistLevels.Add(snr);
 					//			EditSnRLevel(Indicators.OfType<SnRIndicator>().First(x => x.Id == snr.Id));
 					//		};
-					//	}{
-					//		// EMA
-					//		var opt = add_menu.DropDownItems.Add2(new ToolStripMenuItem("Exponential Moving Average"));
-					//		opt.Click += (s,a) => EditEmaIndicator();
-					//	}{
+						}{
+							// MA
+							var opt = add_menu.DropDownItems.Add2(new ToolStripMenuItem("Moving Average"));
+							opt.Click += (s,a) => EditMaIndicator();
+						}{
 					//		// S&R
 					//		var opt = add_menu.DropDownItems.Add2(new ToolStripMenuItem("Support and Resistance"));
 					//		opt.Click += (s,a) => EditSnRIndicator();
-					//	}{
+						}{
 					//		// Trend Strength
 					//		var opt = add_menu.DropDownItems.Add2(new ToolStripMenuItem("Trend Strength"));
 					//		opt.Click += (s,a) => EditTrendStrengthIndicator();
-					//	}
+						}
 
-					//	indicators_menu.DropDownItems.AddSeparator();
+						indicators_menu.DropDownItems.AddSeparator();
 
-					//	// Modify existing indicators
+						// Modify existing indicators
 					//	var hit_indicators = e.HitResult.Hits.Where(x => x.Element is IndicatorBase).Select(x => (IndicatorBase)x.Element).ToArray();
 					//	foreach (var indicator in Indicators)
 					//	{
@@ -524,13 +602,13 @@ namespace CoinFlip
 					//		var opt = indicators_menu.DropDownItems.Add2(new ToolStripMenuItem(indicator.Name) { ForeColor = colour });
 					//		opt.Click += (s,a) => EditIndicator(indicator);
 					//	}
-					//}
-					//#endregion
+					}
+					#endregion
 
 					e.Menu.Items.InsertSeparator(idx++);
 
-					//#region Orders
-					//{
+					#region Orders
+					{
 					//	// The price where the mouse was clicked
 					//	var click_price = Misc.RoundToNearestPip(e.HitResult.ChartPoint.Y,  Instrument.PriceData);
 					//	Action<ETradeType> new_order = (tt) =>
@@ -551,8 +629,8 @@ namespace CoinFlip
 					//		var opt = e.Menu.Items.Insert2(idx++, new ToolStripMenuItem("Sell at {0}".Fmt(click_price)) { ForeColor = Settings.UI.BidColour });
 					//		opt.Click += (s,a) => new_order(ETradeType.Short);
 					//	}
-					//}
-					//#endregion
+					}
+					#endregion
 
 					e.Menu.Items.InsertSeparator(idx++);
 
@@ -604,7 +682,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Handle the chart about to render</summary>
-		private void HandleChartRendering(object sender, ChartControl.ChartRenderingEventArgs e)
+		private void HandleChartRendering(object sender, ChartControl.ChartRenderingEventArgs args)
 		{
 			if (Instrument == null || TimeFrame == ETimeFrame.None)
 				return;
@@ -626,7 +704,7 @@ namespace CoinFlip
 					{
 						// Position the graphics object
 						gfx.Gfx.O2P = m4x4.Translation(new v4(gfx.DBIndexRange.Begi, 0.0f, Z.Candles, 1.0f));
-						e.AddToScene(gfx.Gfx);
+						args.AddToScene(gfx.Gfx);
 					}
 				}
 			}
@@ -639,14 +717,22 @@ namespace CoinFlip
 				{
 					var price = (float)Instrument.Q2BPrice;
 					GfxAsk.O2P = m4x4.Scale((float)m_chart.XAxis.Span, 1f, 1f, new v4((float)m_chart.XAxis.Min, price, Z.CurrentPrice, 1f));
-					e.AddToScene(GfxAsk);
+					args.AddToScene(GfxAsk);
 				}
 				if (GfxBid != null)
 				{
 					var price = (float)Instrument.B2QPrice;
 					GfxBid.O2P = m4x4.Scale((float)m_chart.XAxis.Span, 1f, 1f, new v4((float)m_chart.XAxis.Min, price, Z.CurrentPrice, 1f));
-					e.AddToScene(GfxBid);
+					args.AddToScene(GfxBid);
 				}
+			}
+			#endregion
+
+			#region Indicators
+			{
+				// Add Indicator chart items
+				foreach (var indy in Indicators)
+					indy.AddToScene(args);
 			}
 			#endregion
 
@@ -660,11 +746,22 @@ namespace CoinFlip
 					var x = Instrument.IndexAt(new TimeFrameTime(pos.Created.Value, TimeFrame));
 					var y = (float)(decimal)pos.Price;
 					gfx.O2P = m4x4.Scale(Instrument.Count + 10 - x, 1f, 1f, new v4(x, y, Z.Trades, 1f));
-					e.AddToScene(gfx);
+					args.AddToScene(gfx);
 				}
 			}
 			#endregion
 		}
+
+		#region Indicators
+
+		/// <summary>Add/Edit a moving average indicator</summary>
+		private void EditMaIndicator(IndicatorMA ma = null)
+		{
+			ma = ma ?? Indicators.Add2(new IndicatorMA(Instrument));
+			new EditMaUI(this, ma).Show(this);
+		}
+
+		#endregion
 
 		#region Gfx
 
@@ -847,8 +944,8 @@ namespace CoinFlip
 		}
 
 		/// <summary>Z-values for chart elements</summary>
-		private ZOrder Z = new ZOrder();
-		private class ZOrder
+		public static ZOrder Z = new ZOrder();
+		public class ZOrder
 		{
 			// Grid lines are drawn at 0
 			public float Min          = 0f;

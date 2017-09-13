@@ -468,6 +468,12 @@ namespace pr.extn
 			}
 			return -1;
 		}
+
+		/// <summary>Test for this enum value within the set of provided arguments</summary>
+		public static bool Within(this Enum e, params Enum[] args)
+		{
+			return args.Contains(e);
+		}
 	}
 }
 

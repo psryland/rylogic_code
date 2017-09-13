@@ -84,7 +84,7 @@ namespace Cryptopia.API
 			// Submit the request
 			var response = await _client.GetAsync(url, m_cancel_token);
 			if (!response.IsSuccessStatusCode)
-				throw new Exception(response.ReasonPhrase);
+				throw new HttpResponseException(response);
 
 			// Interpret the reply
 			var reply = await response.Content.ReadAsStringAsync();

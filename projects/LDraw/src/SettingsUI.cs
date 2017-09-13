@@ -83,11 +83,15 @@ namespace LDraw
 				Settings.FocusPointVisible = m_chk_focus_point_visible.Checked;
 			};
 
+			// Use a quadratic to scale the focus point size;
+			const float point_scale = 5.0f;
+			var quadratic = Quadratic.FromPoints(new v2(0f, 1f/point_scale), new v2(0.5f, 1f), new v2(1f, point_scale));
+
 			// Use a quadratic to scale the point size
-			m_track_focus_point_size.ValueFrac(Maths.Sqrt(Settings.FocusPointSize));
+			m_track_focus_point_size.ValueFrac((float)quadratic.Solve(Settings.FocusPointSize).Back());
 			m_track_focus_point_size.ValueChanged += (s,a) =>
 			{
-				var size = (float)Maths.Sqr(m_track_focus_point_size.ValueFrac());
+				var size = (float)quadratic.F(m_track_focus_point_size.ValueFrac());
 				Settings.FocusPointSize = size;
 			};
 
@@ -99,10 +103,10 @@ namespace LDraw
 			};
 
 			// Use a quadratic to scale the point size
-			m_track_origin_point_size.ValueFrac(Maths.Sqrt(Settings.OriginPointSize));
+			m_track_origin_point_size.ValueFrac((float)quadratic.Solve(Settings.OriginPointSize).Back());
 			m_track_origin_point_size.ValueChanged += (s,a) =>
 			{
-				var size = (float)Maths.Sqr(m_track_origin_point_size.ValueFrac());
+				var size = (float)quadratic.F(m_track_origin_point_size.ValueFrac());
 				Settings.OriginPointSize = size;
 			};
 

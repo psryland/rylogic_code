@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace pr.maths
 {
@@ -24,6 +21,9 @@ namespace pr.maths
 
 		/// <summary>Return the X values of the maxima, minima, or inflection points</summary>
 		double[] StationaryPoints { get; }
+
+		/// <summary>Return the values of X where Y = 'y'</summary>
+		double[] Solve(double y);
 	}
 
 	/// <summary>'F(x) = Ax + B. a.k.a. Linear</summary>
@@ -86,6 +86,14 @@ namespace pr.maths
 		public double[] StationaryPoints
 		{
 			get { return new double[0] {}; }
+		}
+
+		/// <summary>Return the values of X where Y = 'y'</summary>
+		public double[] Solve(double y)
+		{
+			//' Ax + B - y == 0
+			return new Monic(A, B - y).Roots;
+
 		}
 
 		/// <summary>Returns a linear approximation of a curve defined by evaluating F(x), dF(x)/dx at 'x'</summary>
@@ -212,6 +220,13 @@ namespace pr.maths
 		public double[] StationaryPoints
 		{
 			get { return new double[1] { -B / (2*A) }; }
+		}
+
+		/// <summary>Return the values of X where Y = 'y'</summary>
+		public double[] Solve(double y)
+		{
+			//' Ax² + Bx + C - y == 0
+			return new Quadratic(A, B, C - y).Roots;
 		}
 
 		/// <summary>Returns a quadratic approximation of a curve defined by evaluating F(x), dF(x)/dx, and d²F(x)/dx at 'x'</summary>
@@ -466,6 +481,13 @@ namespace pr.maths
 				// dF(x) == 0 at the roots of dF(x)
 				return new Quadratic(3*A, 2*B, C).Roots;
 			}
+		}
+
+		/// <summary>Return the values of X where Y = 'y'</summary>
+		public double[] Solve(double y)
+		{
+			//' Ax³ + Bx² + Cx + D - y == 0
+			return new Cubic(A, B, C, D - y).Roots;
 		}
 
 		// Create a cubic from 4 points

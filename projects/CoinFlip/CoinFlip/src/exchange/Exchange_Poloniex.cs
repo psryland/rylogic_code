@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Poloniex.API;
 using pr.common;
@@ -88,6 +89,24 @@ namespace CoinFlip
 			}
 		}
 
+		/// <summary>True if this exchange supports retrieving chart data</summary>
+		public override IEnumerable<ETimeFrame> ChartDataAvailable(TradePair pair)
+		{
+			if (pair.Exchange != this) throw new Exception($"Trade pair {pair.NameWithExchange} is not provided by this exchange ({Name})");
+			return Enum<MarketPeriod>.Values.Select(x => ToTimeFrame(x));
+		}
+
+		/// <summary>Return the chart data for a given pair, over a given time range</summary>
+		protected async override Task<List<Candle>> ChartDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end)
+		{
+			// Get the chart data
+			var data = await Api.GetChartData(new CurrencyPair(pair.Base, pair.Quote), ToMarketPeriod(timeframe), time_beg, time_end);
+
+			// Convert it to candles (yes, Polo gets the base/quote backwards for 'Volume')
+			var candles = data.Select(x => new Candle(x.Time.Ticks, (double)x.Open, (double)x.High, (double)x.Low, (double)x.Close, (double)x.WeightedAverage, (double)x.VolumeQuote)).ToList();
+			return candles;
+		}
+
 		/// <summary>Update this exchange's set of trading pairs</summary>
 		public async override Task UpdatePairs(HashSet<string> coi) // Worker thread context
 		{
@@ -128,32 +147,8 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
-				if (ex is OperationCanceledException) {}
-				else
-				{
-					Model.Log.Write(ELogLevel.Error, ex, "Poloniex UpdatePairs() failed");
-					Status = EStatus.Error;
-				}
+				HandleUpdateException(nameof(UpdatePairs), ex);
 			}
-		}
-
-		/// <summary>True if this exchange supports retrieving chart data</summary>
-		public override IEnumerable<ETimeFrame> ChartDataAvailable(TradePair pair)
-		{
-			if (pair.Exchange != this) throw new Exception($"Trade pair {pair.NameWithExchange} is not provided by this exchange ({Name})");
-			return Enum<MarketPeriod>.Values.Select(x => ToTimeFrame(x));
-		}
-
-		/// <summary>Return the chart data for a given pair, over a given time range</summary>
-		protected async override Task<List<Candle>> ChartDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end)
-		{
-			// Get the chart data
-			var data = await Api.GetChartData(new CurrencyPair(pair.Base, pair.Quote), ToMarketPeriod(timeframe), time_beg, time_end);
-
-			// Convert it to candles (yes, Polo gets the base/quote backwards for 'Volume')
-			var candles = data.Select(x => new Candle(x.Time.Ticks, (double)x.Open, (double)x.High, (double)x.Low, (double)x.Close, (double)x.WeightedAverage, (double)x.VolumeQuote)).ToList();
-			return candles;
 		}
 
 		/// <summary>Update the market data, balances, and open positions</summary>
@@ -190,13 +185,7 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
-				if (ex is OperationCanceledException) {}
-				else
-				{
-					Model.Log.Write(ELogLevel.Error, ex, "Poloniex UpdateData() failed");
-					Status = EStatus.Error;
-				}
+				HandleUpdateException(nameof(UpdateData), ex);
 			}
 		}
 
@@ -237,13 +226,7 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
-				if (ex is OperationCanceledException) {}
-				else
-				{
-					Model.Log.Write(ELogLevel.Error, ex, "Poloniex UpdateBalances() failed");
-					Status = EStatus.Error;
-				}
+				HandleUpdateException(nameof(UpdateBalances), ex);
 			}
 		}
 
@@ -282,13 +265,7 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
-				if (ex is OperationCanceledException) {}
-				else
-				{
-					Model.Log.Write(ELogLevel.Error, ex, "Poloniex UpdatePositions() failed");
-					Status = EStatus.Error;
-				}
+				HandleUpdateException(nameof(UpdatePositions), ex);
 			}
 		}
 
@@ -322,14 +299,37 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
-				if (ex is OperationCanceledException) {}
-				else
-				{
-					Model.Log.Write(ELogLevel.Error, ex, "Poloniex UpdateTradeHistory() failed");
-					Status = EStatus.Error;
-				}
+				HandleUpdateException(nameof(UpdateTradeHistory), ex);
 			}
+		}
+
+		/// <summary>Handle an exception during an update call</summary>
+		private void HandleUpdateException(string method_name, Exception ex)
+		{
+			if (ex is AggregateException ae)
+			{
+				ex = ae.InnerExceptions.First();
+			}
+			if (ex is OperationCanceledException)
+			{
+				// Ignore operation cancelled
+				return;
+			}
+			if (ex is HttpResponseException hre)
+			{
+				if (hre.StatusCode == HttpStatusCode.ServiceUnavailable)
+				{
+					if (Status != EStatus.Offline)
+						Model.Log.Write(ELogLevel.Warn, "Poloniex Service Unavailable");
+
+					Status = EStatus.Offline;
+				}
+				return;
+			}
+
+			// Log all other error types
+			Model.Log.Write(ELogLevel.Error, ex, $"Poloniex {method_name} failed");
+			Status = EStatus.Error;
 		}
 
 		/// <summary>Convert a Poloniex order into a position</summary>

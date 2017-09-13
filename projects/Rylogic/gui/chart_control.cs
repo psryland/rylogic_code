@@ -987,7 +987,7 @@ namespace pr.gui
 					}
 
 					// Add user graphics
-					m_owner.RaiseChartRendering(new ChartRenderingEventArgs(Window));
+					m_owner.RaiseChartRendering(new ChartRenderingEventArgs(m_owner, Window));
 				}
 
 				// Start the render
@@ -4486,10 +4486,14 @@ namespace pr.gui
 		public class ChartRenderingEventArgs :EventArgs
 		{
 			private View3d.Window m_window;
-			public ChartRenderingEventArgs(View3d.Window window)
+			public ChartRenderingEventArgs(ChartControl chart, View3d.Window window)
 			{
+				Chart = chart;
 				m_window = window;
 			}
+
+			/// <summary>The chart that is rendering</summary>
+			public ChartControl Chart { get; private set; }
 
 			/// <summary>Add a view3d object to the chart scene</summary>
 			public void AddToScene(View3d.Object obj)

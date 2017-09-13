@@ -34,6 +34,7 @@ namespace LDraw
 		}
 		public void Dispose()
 		{
+			AutoRefreshSources = false;
 			CurrentScript = null;
 			CurrentScene = null;
 			Log = null;

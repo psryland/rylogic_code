@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using pr.extn;
@@ -43,8 +44,39 @@ namespace pr.maths
 		}
 		public static T SetBits<T>(T value, T mask, bool state) where T :struct, IConvertible
 		{
-			System.Diagnostics.Debug.Assert(typeof(T).HasAttribute<FlagsAttribute>(), "Type {0} is not a flags enum".Fmt(typeof(T).Name));
-			return (T)Enum.ToObject(typeof(T), SetBits(value.ToInt32(null), mask.ToInt32(null), state));
+			var new_value = SetBits(value.ToUInt64(null), mask.ToUInt64(null), state);
+			if (!typeof(T).IsEnum)
+				return Util.ConvertTo<T>(new_value);
+
+			Debug.Assert(typeof(T).HasAttribute<FlagsAttribute>(), $"Type {typeof(T).Name} is not a flags enum");
+			return (T)Enum.ToObject(typeof(T), new_value);
+		}
+
+		/// <summary>Set/Clear bits in 'value'</summary>
+		public static ulong SetBits(ulong value, ulong mask, ulong state)
+		{
+			return (value & ~mask) | (state & mask);
+		}
+		public static long SetBits(long value, long mask, long state)
+		{
+			return (value & ~mask) | (state & mask);
+		}
+		public static uint SetBits(uint value, uint mask, uint state)
+		{
+			return (value & ~mask) | (state & mask);
+		}
+		public static int SetBits(int value, int mask, int state)
+		{
+			return (value & ~mask) | (state & mask);
+		}
+		public static T SetBits<T>(T value, T mask, T state) where T :struct, IConvertible
+		{
+			var new_value = SetBits(value.ToUInt64(null), mask.ToUInt64(null), state.ToUInt64(null));
+			if (!typeof(T).IsEnum)
+				return Util.ConvertTo<T>(new_value);
+
+			Debug.Assert(typeof(T).HasAttribute<FlagsAttribute>(), $"Type {typeof(T).Name} is not a flags enum");
+			return (T)Enum.ToObject(typeof(T), new_value);
 		}
 
 		/// <summary>Returns true if 'value & mask' != 0</summary>

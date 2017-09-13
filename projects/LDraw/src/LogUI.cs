@@ -25,7 +25,7 @@ namespace LDraw
 			:base(model, "Log")
 		{
 			InitializeComponent();
-			DockControl.DefaultDockLocation = new DockContainer.DockLocation(auto_hide:EDockSite.Bottom);
+			DockControl.DefaultDockLocation = new DockContainer.DockLocation(auto_hide:EDockSite.Right);
 			DockControl.TabColoursActive = new DockContainer.OptionData().TabStrip.ActiveTab;
 			DockControl.ActiveChanged += HandleActiveChanged;
 

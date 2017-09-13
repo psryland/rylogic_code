@@ -202,7 +202,7 @@ namespace view3d
 			// Position the focus point
 			if (m_focus_point_visible)
 			{
-				float const screen_fraction = 0.1f;
+				float const screen_fraction = 0.05f;
 				auto fd = m_camera.FocusDist();
 				auto sz = m_focus_point_size * screen_fraction * fd;
 				m_focus_point.m_i2w = pr::m4x4::Scale(sz, sz, sz, m_camera.FocusPoint());
@@ -213,7 +213,7 @@ namespace view3d
 			// Scale the origin point
 			if (m_origin_point_visible)
 			{
-				float const screen_fraction = 0.1f;
+				float const screen_fraction = 0.05f;
 				auto fd = pr::Length3(m_camera.CameraToWorld().pos);
 				auto sz = m_origin_point_size * screen_fraction * fd;
 				m_origin_point.m_i2w = pr::m4x4::Scale(sz, sz, sz, pr::v4Origin);

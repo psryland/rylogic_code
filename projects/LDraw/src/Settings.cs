@@ -190,7 +190,11 @@ namespace LDraw
 			Camera = new CameraSettings();
 
 			Options                  = new ChartControl.RdrOptions();
-			Options.AntiAliasing     = false;
+			Options.NavigationMode   = ChartControl.ENavMode.Scene3D;
+			Options.AntiAliasing     = true;
+			Options.LockAspect       = 1.0;
+			Options.ShowAxes         = false;
+			Options.ShowGridLines    = false;
 			Options.BkColour         = Color_.FromArgb(0xFFB9D1EA);
 			Options.ChartBkColour    = Color_.FromArgb(0xFF808080);
 			Options.XAxis.GridColour = Color_.FromArgb(0xFF8C8C8C);

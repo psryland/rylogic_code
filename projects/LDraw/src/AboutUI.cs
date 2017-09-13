@@ -25,11 +25,10 @@ namespace LDraw
 		protected override void OnShown(EventArgs e)
 		{
 			base.OnShown(e);
-			m_tb_desc.Text = Str.Build(
-				"LDraw - Text based 3D rendering.\r\n",
-				"Version: 5.00.00\r\n",
-				"Copyright (C) Rylogic Limited 2002\r\n",
-				"All Rights Reserved.\r\n");
+			m_tb_desc.Text =
+				$"{Application.ProductName} - Scripted 3D object viewer.\r\n" +
+				$"Version: {Application.ProductVersion}\r\n" +
+				$"{Util.AppCopyright}\r\n";
 			m_tb_desc.SelectionLength = 0;
 		}
 

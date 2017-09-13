@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
@@ -183,7 +184,7 @@ namespace Bittrex.API
 					// Submit the request
 					var response = m_client.SendAsync(req, m_cancel_token).Result;
 					if (!response.IsSuccessStatusCode)
-						throw new Exception(response.ReasonPhrase);
+						throw new HttpResponseException(response);
 
 					// Interpret the reply
 					var reply = response.Content.ReadAsStringAsync().Result;
@@ -197,5 +198,18 @@ namespace Bittrex.API
 		private long m_last_request_ms;
 
 		#endregion
+	}
+
+	/// <summary>Http response exception</summary>
+	public class HttpResponseException :Exception
+	{
+		public HttpResponseException(HttpResponseMessage response)
+			:base(response.ReasonPhrase)
+		{
+			StatusCode = response.StatusCode;
+		}
+
+		/// <summary>Status code returned in the HTTP response</summary>
+		public HttpStatusCode StatusCode { get; private set; }
 	}
 }

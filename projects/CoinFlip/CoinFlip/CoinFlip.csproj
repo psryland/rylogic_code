@@ -57,6 +57,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="src\indicators\IndicatorMA.cs" />
     <Compile Include="src\loops\ArbitrageLoops.cs" />
     <Compile Include="src\model\Balance.cs" />
     <Compile Include="src\model\Candle.cs" />
@@ -66,6 +67,7 @@
     <Compile Include="src\exchange\Exchange_Cryptopia.cs" />
     <Compile Include="src\exchange\Exchange.cs" />
     <Compile Include="src\fishing\Fishing.cs" />
+    <Compile Include="src\indicators\Indicator.cs" />
     <Compile Include="src\model\Instrument.cs" />
     <Compile Include="src\model\TimeFrame.cs" />
     <Compile Include="src\ui\BaseUI.cs">
@@ -73,6 +75,9 @@
     </Compile>
     <Compile Include="src\ui\ChartUI.cs">
       <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="src\ui\EditMaUI.cs">
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="src\ui\FishingDetailsUI.cs">
       <SubType>UserControl</SubType>

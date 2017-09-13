@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
@@ -443,7 +444,7 @@ namespace Poloniex.API
 					// Submit the request
 					var response = m_client.GetAsync(url, m_cancel_token).Result;
 					if (!response.IsSuccessStatusCode)
-						throw new Exception(response.ReasonPhrase);
+						throw new HttpResponseException(response);
 
 					// Interpret the reply
 					var reply = response.Content.ReadAsStringAsync().Result;
@@ -551,4 +552,17 @@ namespace Poloniex.API
 		public OrderBookUpdate Update { get; private set; }
 	}
 	#endregion
+
+	/// <summary>Http response exception</summary>
+	public class HttpResponseException :Exception
+	{
+		public HttpResponseException(HttpResponseMessage response)
+			:base(response.ReasonPhrase)
+		{
+			StatusCode = response.StatusCode;
+		}
+
+		/// <summary>Status code returned in the HTTP response</summary>
+		public HttpStatusCode StatusCode { get; private set; }
+	}
 }

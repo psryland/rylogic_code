@@ -494,6 +494,7 @@ namespace CoinFlip
 				m_ask_colour     = null;
 				m_bid_colour     = null;
 				m_show_positions = null;
+				Indicators       = new XElement(nameof(Indicators));
 			}
 			public ChartSettings(ChartSettings rhs)
 			{
@@ -504,6 +505,7 @@ namespace CoinFlip
 				m_ask_colour     = rhs.m_ask_colour;
 				m_bid_colour     = rhs.m_bid_colour;
 				m_show_positions = rhs.m_show_positions;
+				Indicators       = new XElement(rhs.Indicators);
 			}
 			public ChartSettings(XElement node)
 			{
@@ -513,6 +515,7 @@ namespace CoinFlip
 				m_ask_colour     = node.Element(nameof(AskColour    )).As(m_ask_colour    );
 				m_bid_colour     = node.Element(nameof(BidColour    )).As(m_bid_colour    );
 				m_show_positions = node.Element(nameof(ShowPositions)).As(m_show_positions);
+				Indicators       = node.Element(nameof(Indicators   ));
 			}
 			public XElement ToXml(XElement node)
 			{
@@ -522,6 +525,7 @@ namespace CoinFlip
 				node.Add2(nameof(AskColour    ), m_ask_colour    , false);
 				node.Add2(nameof(BidColour    ), m_bid_colour    , false);
 				node.Add2(nameof(ShowPositions), m_show_positions, false);
+				node.Add2(Indicators);
 				return node;
 			}
 
@@ -577,6 +581,9 @@ namespace CoinFlip
 			}
 			private bool? m_show_positions;
 			private const bool m_def_show_positions = false;
+
+			/// <summary>Indicators on this chart</summary>
+			public XElement Indicators { get; set; }
 
 			/// <summary>Helper for setting inherited fields</summary>
 			private void SetProp<T>(string field, T value, T def)

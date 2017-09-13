@@ -42,6 +42,7 @@ namespace pr.gui
 		private ToolStripButton m_btn_tail;
 		private ToolTip m_tt;
 		private ToolStripButton m_chk_line_wrap;
+		private ToolStripButton m_btn_clear;
 		private FileWatch m_watch;
 		#endregion
 
@@ -102,7 +103,11 @@ namespace pr.gui
 			MaxLines = 500;
 			MaxFileBytes = 2 * 1024 * 1024;
 
+			// Hook up UI
 			SetupUI();
+
+			// Create straight away
+			CreateHandle();
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -213,12 +218,10 @@ namespace pr.gui
 				{
 					m_watch.Remove(m_log_filepath);
 					m_tb_log_filepath.Text = string.Empty;
-					m_ts.Visible = false;
 				}
 				m_log_filepath = value;
 				if (m_log_filepath != null)
 				{
-					m_ts.Visible = true;
 					m_tb_log_filepath.Text = value;
 					m_watch.Add(m_log_filepath, HandleFileChanged);
 					HandleFileChanged(m_log_filepath, null);
@@ -304,6 +307,14 @@ namespace pr.gui
 				m_tb_log_filepath.StretchToFit(250);
 			};
 
+			// Clear log
+			m_btn_clear.ToolTip(m_tt, "Clear the log");
+			m_btn_clear.Overflow = ToolStripItemOverflow.Never;
+			m_btn_clear.Click += (s,a) =>
+			{
+				Clear();
+			};
+
 			// Jump to the bottom of the log
 			m_btn_tail.ToolTip(m_tt, "Jump to the last log entry");
 			m_btn_tail.Overflow = ToolStripItemOverflow.Never;
@@ -369,10 +380,18 @@ namespace pr.gui
 		/// <summary>Add text to the log</summary>
 		public void AddMessage(string text)
 		{
-			// Use the FPos value of the last entry so that if 'AddMessage' is mixed with
-			// entries read from a log file, the read position in the log file is preserved.
-			var fpos = !LogEntries.Empty() ? LogEntries.Back().FPos : 0;
-			LogEntries.Add(new LogEntry(fpos, text, false));
+			if (!IsHandleCreated) return;
+			if (InvokeRequired)
+			{
+				BeginInvoke((Action<string>)AddMessage, text);
+			}
+			else
+			{
+				// Use the FPos value of the last entry so that if 'AddMessage' is mixed with
+				// entries read from a log file, the read position in the log file is preserved.
+				var fpos = !LogEntries.Empty() ? LogEntries.Back().FPos : 0;
+				LogEntries.Add(new LogEntry(fpos, text, false));
+			}
 		}
 
 		/// <summary>Use the log entry pattern to create columns</summary>
@@ -752,17 +771,18 @@ namespace pr.gui
 		private void InitializeComponent()
 		{
 			this.components = new System.ComponentModel.Container();
-			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
+			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(LogUI));
 			this.m_tsc = new pr.gui.ToolStripContainer();
 			this.m_view = new pr.gui.DataGridView();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
 			this.m_btn_log_filepath = new System.Windows.Forms.ToolStripButton();
 			this.m_tb_log_filepath = new System.Windows.Forms.ToolStripTextBox();
-			this.m_il_toolbar = new System.Windows.Forms.ImageList(this.components);
 			this.m_btn_tail = new System.Windows.Forms.ToolStripButton();
-			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
 			this.m_chk_line_wrap = new System.Windows.Forms.ToolStripButton();
+			this.m_il_toolbar = new System.Windows.Forms.ImageList(this.components);
+			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
+			this.m_btn_clear = new System.Windows.Forms.ToolStripButton();
 			this.m_tsc.ContentPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
@@ -797,14 +817,14 @@ namespace pr.gui
 			this.m_view.AutoSizeRowsMode = System.Windows.Forms.DataGridViewAutoSizeRowsMode.AllCells;
 			this.m_view.CellBorderStyle = System.Windows.Forms.DataGridViewCellBorderStyle.None;
 			this.m_view.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-			dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopLeft;
-			dataGridViewCellStyle2.BackColor = System.Drawing.SystemColors.Window;
-			dataGridViewCellStyle2.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-			dataGridViewCellStyle2.ForeColor = System.Drawing.SystemColors.ControlText;
-			dataGridViewCellStyle2.SelectionBackColor = System.Drawing.SystemColors.Highlight;
-			dataGridViewCellStyle2.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
-			dataGridViewCellStyle2.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
-			this.m_view.DefaultCellStyle = dataGridViewCellStyle2;
+			dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopLeft;
+			dataGridViewCellStyle1.BackColor = System.Drawing.SystemColors.Window;
+			dataGridViewCellStyle1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+			dataGridViewCellStyle1.ForeColor = System.Drawing.SystemColors.ControlText;
+			dataGridViewCellStyle1.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+			dataGridViewCellStyle1.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
+			dataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
+			this.m_view.DefaultCellStyle = dataGridViewCellStyle1;
 			this.m_view.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_view.EditMode = System.Windows.Forms.DataGridViewEditMode.EditProgrammatically;
 			this.m_view.Location = new System.Drawing.Point(0, 0);
@@ -821,6 +841,7 @@ namespace pr.gui
 			this.m_ts.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_btn_log_filepath,
             this.m_tb_log_filepath,
+            this.m_btn_clear,
             this.m_btn_tail,
             this.m_chk_line_wrap});
 			this.m_ts.Location = new System.Drawing.Point(0, 0);
@@ -845,12 +866,6 @@ namespace pr.gui
 			this.m_tb_log_filepath.ReadOnly = true;
 			this.m_tb_log_filepath.Size = new System.Drawing.Size(250, 25);
 			// 
-			// m_il_toolbar
-			// 
-			this.m_il_toolbar.ColorDepth = System.Windows.Forms.ColorDepth.Depth32Bit;
-			this.m_il_toolbar.ImageSize = new System.Drawing.Size(24, 24);
-			this.m_il_toolbar.TransparentColor = System.Drawing.Color.Transparent;
-			// 
 			// m_btn_tail
 			// 
 			this.m_btn_tail.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
@@ -869,6 +884,22 @@ namespace pr.gui
 			this.m_chk_line_wrap.Name = "m_chk_line_wrap";
 			this.m_chk_line_wrap.Size = new System.Drawing.Size(23, 22);
 			this.m_chk_line_wrap.Text = "Line Wrap";
+			// 
+			// m_il_toolbar
+			// 
+			this.m_il_toolbar.ColorDepth = System.Windows.Forms.ColorDepth.Depth32Bit;
+			this.m_il_toolbar.ImageSize = new System.Drawing.Size(24, 24);
+			this.m_il_toolbar.TransparentColor = System.Drawing.Color.Transparent;
+			// 
+			// m_btn_clear
+			// 
+			this.m_btn_clear.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_clear.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_clear.Image")));
+			this.m_btn_clear.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_clear.Name = "m_btn_clear";
+			this.m_btn_clear.Size = new System.Drawing.Size(23, 22);
+			this.m_btn_clear.Text = "Clear";
+			this.m_btn_clear.ToolTipText = "Clear Log";
 			// 
 			// LogUI
 			// 

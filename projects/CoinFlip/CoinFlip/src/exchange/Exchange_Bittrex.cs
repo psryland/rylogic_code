@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Bittrex.API;
@@ -126,13 +127,7 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
-				if (ex is OperationCanceledException) {}
-				else
-				{
-					Model.Log.Write(ELogLevel.Error, ex, "Bittrex UpdatePairs() failed");
-					Status = EStatus.Error;
-				}
+				HandleUpdateException(nameof(UpdatePairs), ex);
 			}
 		}
 
@@ -186,13 +181,7 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
-				if (ex is OperationCanceledException) {}
-				else
-				{
-					Model.Log.Write(ELogLevel.Error, ex, "Bittrex UpdateData() failed");
-					Status = EStatus.Error;
-				}
+				HandleUpdateException(nameof(UpdateData), ex);
 			}
 		}
 
@@ -232,13 +221,7 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
-				if (ex is OperationCanceledException) {}
-				else
-				{
-					Model.Log.Write(ELogLevel.Error, ex, "Bittrex UpdateBalances() failed");
-					Status = EStatus.Error;
-				}
+				HandleUpdateException(nameof(UpdateBalances), ex);
 			}
 		}
 
@@ -277,13 +260,7 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
-				if (ex is OperationCanceledException) {}
-				else
-				{
-					Model.Log.Write(ELogLevel.Error, ex, "Bittrex UpdatePositions() failed");
-					Status = EStatus.Error;
-				}
+				HandleUpdateException(nameof(UpdatePositions), ex);
 			}
 		}
 
@@ -316,14 +293,37 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
-				if (ex is OperationCanceledException) {}
-				else
-				{
-					Model.Log.Write(ELogLevel.Error, ex, "Cryptopia UpdateTradeHistory() failed");
-					Status = EStatus.Error;
-				}
+				HandleUpdateException(nameof(UpdateTradeHistory), ex);
 			}
+		}
+
+		/// <summary>Handle an exception during an update call</summary>
+		private void HandleUpdateException(string method_name, Exception ex)
+		{
+			if (ex is AggregateException ae)
+			{
+				ex = ae.InnerExceptions.First();
+			}
+			if (ex is OperationCanceledException)
+			{
+				// Ignore operation cancelled
+				return;
+			}
+			if (ex is HttpResponseException hre)
+			{
+				if (hre.StatusCode == HttpStatusCode.ServiceUnavailable)
+				{
+					if (Status != EStatus.Offline)
+						Model.Log.Write(ELogLevel.Warn, "Bittrex Service Unavailable");
+
+					Status = EStatus.Offline;
+				}
+				return;
+			}
+
+			// Log all other error types
+			Model.Log.Write(ELogLevel.Error, ex, $"Bittrex {method_name} failed");
+			Status = EStatus.Error;
 		}
 
 		/// <summary>Convert a Cryptopia open order result into a position object</summary>

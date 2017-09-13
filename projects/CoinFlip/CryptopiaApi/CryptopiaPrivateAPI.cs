@@ -1,12 +1,11 @@
-﻿using Cryptopia.API.DataObjects;
-using Cryptopia.API.Implementation;
-using System.Net.Http;
-using System.Threading.Tasks;
-using System.Threading;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Diagnostics;
-using System.Security.Cryptography;
+using System.Net;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Cryptopia.API.DataObjects;
+using Cryptopia.API.Implementation;
 
 namespace Cryptopia.API
 {
@@ -44,7 +43,7 @@ namespace Cryptopia.API
 		/// <summary>Hasher</summary>
 		private HMACSHA512 Hasher { get; set; }
 
-		#region API Calls
+	#region API Calls
 
 		/// <summary>Return the balances for the account</summary>
 		public async Task<BalanceResponse> GetBalances(BalanceRequest request)
@@ -101,7 +100,7 @@ namespace Cryptopia.API
 			return await response.Content.ReadAsAsync<T>(m_cancel_token);
 		}
 
-		#endregion
+	#endregion
 	}
 
 #else
@@ -192,7 +191,7 @@ namespace Cryptopia.API
 					// Submit the request
 					var response = m_client.PostAsJsonAsync(url, requestData, m_cancel_token).Result;
 					if (!response.IsSuccessStatusCode)
-						throw new Exception(response.ReasonPhrase);
+						throw new HttpResponseException(response);
 
 					// Interpret the reply
 					return response.Content.ReadAsAsync<T>(m_cancel_token).Result;
@@ -201,8 +200,20 @@ namespace Cryptopia.API
 		}
 		private object m_post_lock = new object();
 
-
 		#endregion
+	}
+
+	/// <summary>Http response exception</summary>
+	public class HttpResponseException :Exception
+	{
+		public HttpResponseException(HttpResponseMessage response)
+			:base(response.ReasonPhrase)
+		{
+			StatusCode = response.StatusCode;
+		}
+
+		/// <summary>Status code returned in the HTTP response</summary>
+		public HttpStatusCode StatusCode { get; private set; }
 	}
 
 	#endif
