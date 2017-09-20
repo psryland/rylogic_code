@@ -461,7 +461,16 @@ namespace CoinFlip
 							continue;
 
 						// Query for chart data
-						var data = utd.Exchange.ChartData(utd.Pair, utd.TimeFrame, end, DateTimeOffset.Now.Ticks).Result;
+						List<Candle> data;
+						try { data = utd.Exchange.ChartData(utd.Pair, utd.TimeFrame, end, DateTimeOffset.Now.Ticks).Result; }
+						catch (Exception ex)
+						{
+							if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
+							if (ex is OperationCanceledException) {}
+							else Model.Log.Write(ELogLevel.Error, ex, $"Instrument {SymbolCode} get chart data failed\r\n.{ex.Message}");
+							continue;
+						}
+
 						if (data.Count != 0)
 						{
 							// Update the end time range to include the returned data

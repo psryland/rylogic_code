@@ -600,6 +600,13 @@ namespace pr.extn
 
 	public static class ComboBox_
 	{
+		/// <summary>Add a range</summary>
+		public static void AddRange<T>(this ComboBox.ObjectCollection cb, IEnumerable<T> objs)
+		{
+			foreach (var obj in objs)
+				cb.Add(obj);
+		}
+
 		/// <summary>Return the auto-sized with of the drop down menu from it's current content</summary>
 		public static int DropDownWidthAutoSize(this ComboBox cb)
 		{

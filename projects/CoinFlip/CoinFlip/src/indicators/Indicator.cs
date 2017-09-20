@@ -136,5 +136,15 @@ namespace CoinFlip
 		{
 			return Misc.CompletedTask;
 		}
+
+		/// <summary>True if this indicator can be dragged around</summary>
+		public virtual bool Dragable
+		{
+			get { return false; }
+		}
+		public virtual ChartControl.MouseOp CreateDragMouseOp()
+		{
+			throw new NotSupportedException("Indicator not drag-able");
+		}
 	}
 }

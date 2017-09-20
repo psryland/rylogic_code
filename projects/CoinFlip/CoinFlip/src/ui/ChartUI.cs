@@ -53,10 +53,6 @@ namespace CoinFlip
 			GfxCache = new Cache<Guid, View3d.Object>{ Capacity = 100 };
 			CandleGfxCache = new Cache<int, CachedGfx>();
 
-			// Create the collections of pairs/time frames for which chart data is available
-			TimeFrames = new BindingSource<ETimeFrame>();
-			Pairs = new BindingSource<TradePair>();
-
 			// Chart indicators
 			Indicators = new BindingSource<Indicator> { DataSource = new BindingListEx<Indicator>(), PerItemClear = true };
 
@@ -64,8 +60,6 @@ namespace CoinFlip
 		}
 		protected override void Dispose(bool disposing)
 		{
-			TimeFrames = null;
-			Pairs = null;
 			ChartSettings = null;
 			Indicators.Clear();
 			Instrument = null;
@@ -81,21 +75,18 @@ namespace CoinFlip
 		{
 			if (Model != null)
 			{
-				Model.Pairs.ListChanging -= HandlePairsListChanging;
+				Model.Pairs.ListChanging -= HandleModelPairsListChanging;
 			}
 			base.SetModelCore(model);
 			if (Model != null)
 			{
-				Model.Pairs.ListChanging += HandlePairsListChanging;
-				HandlePairsListChanging();
+				Model.Pairs.ListChanging += HandleModelPairsListChanging;
+				HandleModelPairsListChanging();
 			}
 		}
-		private void HandlePairsListChanging(object sender = null, ListChgEventArgs<TradePair> e = null)
+		private void HandleModelPairsListChanging(object sender = null, ListChgEventArgs<TradePair> e = null)
 		{
-			// Update the available pairs
-			Pairs.DataSource = Model.Pairs
-				.Where(x => x.Exchange.ChartDataAvailable(x).Any())
-				.ToArray();
+			UpdateAvailablePairs();
 		}
 
 		/// <summary>Settings for this chart instance</summary>
@@ -108,58 +99,38 @@ namespace CoinFlip
 		}
 
 		/// <summary>The pairs with chart data available</summary>
-		private BindingSource<TradePair> Pairs
+		private IEnumerable<TradePair> AvailablePairs
 		{
-			get { return m_pairs; }
-			set
+			get { return Model.Pairs.Where(x => x.Exchange.ChartDataAvailable(x).Any()); }
+		}
+		private void UpdateAvailablePairs()
+		{
+			using (m_cb_pair.ComboBox.PreserveSelectedItem())
 			{
-				if (m_pairs == value) return;
-				if (m_pairs != null)
-				{
-					m_pairs.PositionChanged -= HandleCurrentPairChanged;
-				}
-				m_pairs = value;
-				if (m_pairs != null)
-				{
-					m_pairs.PositionChanged += HandleCurrentPairChanged;
-				}
+				m_cb_pair.ComboBox.Items.Clear();
+				m_cb_pair.ComboBox.Items.AddRange(AvailablePairs);
 			}
 		}
-		private BindingSource<TradePair> m_pairs;
-		private void HandleCurrentPairChanged(object sender = null, EventArgs e = null)
+
+		/// <summary>The time frames available for the current instrument</summary>
+		private IEnumerable<ETimeFrame> AvailableTimeFrames
 		{
-			var pair = Pairs.Current;
-
-			// Update the available time frames
-			TimeFrames.DataSource = pair?.Exchange.ChartDataAvailable(pair).ToArray()
-				?? new []{ ETimeFrame.None };
-
-			// Select the data source
-			SetInstrument(pair);
-		}
-
-		/// <summary>The available time frames for the current pair</summary>
-		private BindingSource<ETimeFrame> TimeFrames
-		{
-			get { return m_time_frames; }
-			set
+			get
 			{
-				if (m_time_frames == value) return;
-				if (m_time_frames != null)
-				{
-					m_time_frames.PositionChanged -= HandleCurrentTimeFrameChanged;
-				}
-				m_time_frames = value;
-				if (m_time_frames != null)
-				{
-					m_time_frames.PositionChanged += HandleCurrentTimeFrameChanged;
-				}
+				var pair = Instrument?.Pair;
+				var exch = pair?.Exchange;
+				return exch != null
+					? exch.ChartDataAvailable(pair)
+					: new [] { ETimeFrame.None };
 			}
 		}
-		private BindingSource<ETimeFrame> m_time_frames;
-		private void HandleCurrentTimeFrameChanged(object sender = null, PositionChgEventArgs e = null)
+		private void UpdateAvailableTimeFrames()
 		{
-			TimeFrame = TimeFrames.Current;
+			using (m_cb_time_frame.ComboBox.PreserveSelectedItem())
+			{
+				m_cb_time_frame.ComboBox.Items.Clear();
+				m_cb_time_frame.ComboBox.Items.AddRange(AvailableTimeFrames);
+			}
 		}
 
 		/// <summary>The currency pair displayed in the chart</summary>
@@ -184,6 +155,8 @@ namespace CoinFlip
 		private Instrument m_instrument;
 		private void SetInstrument(TradePair pair)
 		{
+			Debug.Assert(!IsChartLocked);
+
 			// Clear the previous instrument and settings
 			Instrument = null;
 			ChartSettings = null;
@@ -202,6 +175,9 @@ namespace CoinFlip
 				}
 				ChartSettings.Inherit = Model.Settings.ChartTemplate;
 				m_chart.Options = ChartSettings.Style;
+
+				// Update the time frames
+				UpdateAvailableTimeFrames();
 
 				// Create indicators
 				UpdateIndicators();
@@ -344,16 +320,26 @@ namespace CoinFlip
 		/// <summary>Set up UI elements</summary>
 		private void SetupUI()
 		{
-			#region Tool bar
+			#region Instrument Tool bar
 			
 			// Combo for choosing the pair to display
 			m_cb_pair.ToolTipText = "Select the currency pair to display";
 			m_cb_pair.ComboBox.DisplayProperty = nameof(TradePair.NameWithExchange);
-			m_cb_pair.ComboBox.DataSource = Pairs;
+			m_cb_pair.ComboBox.Items.AddRange(AvailablePairs);
+			m_cb_pair.ComboBox.SelectedIndexChanged += (s,a) =>
+			{
+				if (IsChartLocked) return;
+				SetInstrument((TradePair)m_cb_pair.ComboBox.SelectedItem);
+			};
 
 			// Combo for choosing the time frame
 			m_cb_time_frame.ToolTipText = "Select the time frame to display";
-			m_cb_time_frame.ComboBox.DataSource = TimeFrames;
+			m_cb_time_frame.ComboBox.Items.AddRange(AvailableTimeFrames);
+			m_cb_time_frame.ComboBox.SelectedIndexChanged += (s,a) =>
+			{
+				if (IsChartLocked) return;
+				TimeFrame = (ETimeFrame)m_cb_time_frame.ComboBox.SelectedItem;
+			};
 
 			// Show positions
 			m_chk_show_positions.ToolTipText = "Show/Hide current trades";
@@ -363,6 +349,22 @@ namespace CoinFlip
 				ChartSettings.ShowPositions = m_chk_show_positions.Checked;
 				m_chart.Invalidate();
 			};
+
+			#endregion
+
+			#region Drawing Tools Tool bar
+
+			m_btn_horz_line.ToolTipText = "Add a Support/Resistance line";
+			m_btn_horz_line.CheckOnClick = false;
+			m_btn_horz_line.Click += (s,a) =>
+			{
+				m_btn_horz_line.Checked = true;
+				m_chart.MouseOperations.SetPending(MouseButtons.Left,
+					new DropNewIndicatorOp(this,
+						() => new IndicatorHorzLine{ Price = (decimal)m_chart.YAxis.Centre },
+						() => m_btn_horz_line.Checked = false));
+			};
+
 			#endregion
 
 			#region Chart
@@ -427,6 +429,8 @@ namespace CoinFlip
 		/// <summary>(Re)create indicators from settings</summary>
 		private void UpdateIndicators()
 		{
+			Debug.Assert(!IsChartLocked, "Should not be called while the chart is locked");
+
 			Indicators.Clear();
 			if (ChartSettings.Indicators != null)
 				foreach (var node in ChartSettings.Indicators.Elements(nameof(Indicator)))
@@ -507,16 +511,16 @@ namespace CoinFlip
 			// Edit chart elements when Control is held down
 			if (ModifierKeys == Keys.Control)
 			{
-			//	// Look for hit drag-able indicators
-			//	var hit = m_chart.HitTestCS(args.Location, ModifierKeys, x => (x as IndicatorBase)?.Dragable ?? false);
-			//	if (hit.Hits.Count != 0)
-			//	{
-			//		var ind = (IndicatorBase)hit.Hits[0].Element;
-			//
-			//		// Create a mouse operation for dragging the indicator
-			//		var op = ind.CreateDragMouseOp();
-			//		m_chart.MouseOperations.SetPending(MouseButtons.Left, op);
-			//	}
+				// Look for hit drag-able indicators
+				var hit = m_chart.HitTestCS(args.Location, ModifierKeys, x => (x as Indicator)?.Dragable ?? false);
+				if (hit.Hits.Count != 0)
+				{
+					var indy = (Indicator)hit.Hits[0].Element;
+			
+					// Create a mouse operation for dragging the indicator
+					var op = indy.CreateDragMouseOp();
+					m_chart.MouseOperations.SetPending(MouseButtons.Left, op);
+				}
 			}
 		}
 
@@ -780,10 +784,19 @@ namespace CoinFlip
 		/// <summary>Edit an existing indicator</summary>
 		private void EditIndicator(object indicator)
 		{
-			if (indicator is IndicatorMA indy) { EditMaIndicator(indy); return; }
+			if (indicator is IndicatorHorzLine hl) { EditHorzLineIndicator(hl); return; }
+			if (indicator is IndicatorMA ma)       { EditMaIndicator(ma); return; }
 			//if (indicator is SnRIndicator) EditSnRLevel    ((SnRIndicator)indicator);
 			//if (indicator is SnR         ) EditSnRIndicator((SnR         )indicator);
 			throw new Exception($"Unknown indicator type: {indicator.GetType().Name}");
+		}
+
+		/// <summary>Add/Edit a horizontal line indicator</summary>
+		private void EditHorzLineIndicator(IndicatorHorzLine line = null)
+		{
+			line = line ?? Indicators.Add2(new IndicatorHorzLine());
+			using (var dlg = new EditHorzLineUI(this, line))
+				dlg.ShowDialog(this);
 		}
 
 		/// <summary>Add/Edit a moving average indicator</summary>
@@ -988,6 +1001,119 @@ namespace CoinFlip
 			public float Trades       = 0.013f;
 			public float Max          = 0.1f;
 		}
+
+		#endregion
+
+		#region Mouse Ops
+
+		/// <summary>Mouse operation for adding a new indicator to the chart</summary>
+		public class DropNewIndicatorOp :ChartControl.MouseOp
+		{
+			private readonly ChartUI m_chart_ui;
+			private readonly Func<Indicator> m_factory;
+			private readonly Action m_on_complete;
+			private ChartControl.MouseOp m_drag;
+			private Scope m_chart_lock;
+
+			public DropNewIndicatorOp(ChartUI chart_ui, Func<Indicator> factory, Action on_complete)
+				:base(chart_ui.m_chart)
+			{
+				StartOnMouseDown = true;
+				m_chart_ui = chart_ui;
+				m_factory = factory;
+				m_on_complete = on_complete;
+				m_chart_lock = chart_ui.LockChartSource();
+			}
+			public override void Dispose()
+			{
+				Indy = null;
+				Util.Dispose(ref m_chart_lock);
+				base.Dispose();
+			}
+
+			/// <summary>The created indicator</summary>
+			public Indicator Indy
+			{
+				get { return m_indy; }
+				set
+				{
+					if (m_indy == value) return;
+					if (m_indy != null)
+					{
+						m_indy.Selected = false;
+					}
+					m_indy = value;
+					if (m_indy != null)
+					{
+						m_indy.Selected = true;
+					}
+				}
+			}
+			private Indicator m_indy;
+
+			public override void MouseDown(MouseEventArgs e)
+			{
+				// Create the indicator on mouse down
+				Indy = m_chart_ui.Indicators.Add2(m_factory());
+
+				// Set the initial position if drag-able
+				if (Indy.Dragable)
+				{
+					m_drag = Indy.CreateDragMouseOp();
+					m_drag.MouseDown(e);
+				}
+
+				base.MouseDown(e);
+			}
+			public override void MouseMove(MouseEventArgs e)
+			{
+				if (m_drag != null)
+					m_drag.MouseMove(e);
+
+				base.MouseMove(e);
+			}
+			public override void MouseUp(MouseEventArgs e)
+			{
+				if (m_drag != null)
+					m_drag.MouseUp(e);
+
+				m_on_complete.Raise();
+				base.MouseUp(e);
+			}
+		}
+
+		#endregion
+
+		#region Lock Chart
+
+		/// <summary>Raised when the chart is unlocked</summary>
+		private event EventHandler ChartUnlocked;
+
+		/// <summary>Prevent the chart source data changing</summary>
+		private Scope LockChartSource()
+		{
+			return Scope.Create(
+				() => ++m_lock_chart_source,
+				() =>
+				{
+					--m_lock_chart_source;
+					if (m_lock_chart_source == 0)
+					{
+						// When the chart unlocks, raise the event on a later window message
+						// (only if it has not been locked again in the interim)
+						this.BeginInvoke(() =>
+						{
+							if (IsChartLocked) return;
+							ChartUnlocked.Raise();
+						});
+					}
+				});
+		}
+		private bool IsChartLocked
+		{
+			get { return m_lock_chart_source != 0; }
+		}
+		private int m_lock_chart_source;
 
 		#endregion
 

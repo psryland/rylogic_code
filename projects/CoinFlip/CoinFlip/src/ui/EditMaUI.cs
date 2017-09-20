@@ -55,7 +55,7 @@ namespace CoinFlip
 		/// <summary>The indicator whose settings we're editing</summary>
 		public IndicatorMA MA { get; private set; }
 
-		/// <summary>The chart that 'm_ema' is on</summary>
+		/// <summary>The chart that the indicator is on</summary>
 		public ChartUI Chart { get; private set; }
 
 		/// <summary>Set up the UI</summary>
