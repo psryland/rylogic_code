@@ -322,6 +322,18 @@ namespace CoinFlip
 		/// <summary>True if TradeHistory can be mapped to previous order id's</summary>
 		public bool TradeHistoryUseful { get; protected set; }
 
+		/// <summary>The maximum number of requests per second to the exchange server</summary>
+		public float ServerRequestRateLimit
+		{
+			get { return Settings.ServerRequestRateLimit; }
+			set
+			{
+				if (ServerRequestRateLimit == value) return;
+				Settings.ServerRequestRateLimit = value;
+				SetServerRequestRateLimit(value);
+			}
+		}
+
 		/// <summary>The percentage fee charged when performing exchanges</summary>
 		public decimal Fee
 		{
@@ -797,11 +809,11 @@ namespace CoinFlip
 			}
 		}
 
+		/// <summary>Set the maximum number of requests per second to the exchange server</summary>
+		protected abstract void SetServerRequestRateLimit(float limit);
+
 		/// <summary>The time range that the position history covers (in ticks)</summary>
 		public Range HistoryInterval { get; protected set; }
-
-		/// <summary>The maximum number of requests per second to the exchange server</summary>
-		public abstract float ServerRequestRateLimit { get; set; }
 
 		/// <summary></summary>
 		public override string ToString()

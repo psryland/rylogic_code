@@ -6,8 +6,6 @@ using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Cryptopia.API;
-using Cryptopia.API.DataObjects;
-using Cryptopia.API.Models;
 using pr.common;
 using pr.extn;
 using pr.util;
@@ -17,8 +15,6 @@ namespace CoinFlip
 	/// <summary>Cryptopia Exchange</summary>
 	public class Cryptopia :Exchange
 	{
-		private CryptopiaApiPublic Pub;
-		private CryptopiaApiPrivate Priv;
 		private HashSet<int> m_pair_ids;
 
 		public Cryptopia(Model model, string key, string secret)
@@ -26,8 +22,6 @@ namespace CoinFlip
 		{
 			m_pair_ids = new HashSet<int>();
 			Api = new CryptopiaApi(key, secret, Model.ShutdownToken);
-			Pub = new CryptopiaApiPublic(Model.ShutdownToken);
-			Priv = new CryptopiaApiPrivate(key, secret, Model.ShutdownToken);
 			TradeHistoryUseful = false;
 
 			// Start the exchange
@@ -54,6 +48,7 @@ namespace CoinFlip
 				m_api = value;
 				if (m_api != null)
 				{
+					m_api.ServerRequestRateLimit = Settings.ServerRequestRateLimit;
 				}
 			}
 		}
@@ -63,7 +58,7 @@ namespace CoinFlip
 		protected async override Task<TradeResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> price)
 		{
 			// Place the trade order
-			var msg = await Priv.SubmitTrade(new SubmitTradeRequest(pair.TradePairId.Value, tt.ToCryptopiaTT(), volume, price));
+			var msg = await Api.SubmitTrade(tt.ToCryptopiaTT(), pair.TradePairId.Value, volume, price);
 			if (!msg.Success)
 				throw new Exception(
 					"Cryptopia: Submit order failed. {0}\n".Fmt(msg.Error) +
@@ -76,7 +71,7 @@ namespace CoinFlip
 		/// <summary>Cancel an open trade</summary>
 		protected async override Task CancelOrderInternal(TradePair pair, ulong order_id)
 		{
-			var msg = await Priv.CancelTrade(new CancelTradeRequest((int)order_id));
+			var msg = await Api.CancelTrade(ECancelTradeType.Trade, order_id:(int)order_id);
 			if (!msg.Success && !Regex.IsMatch(msg.Error, @"Trade #\d+ does not exist"))
 				throw new Exception(
 					"Cryptopia: Cancel trade failed. {0}\n".Fmt(msg.Error) +
@@ -89,7 +84,7 @@ namespace CoinFlip
 			try
 			{
 				// Get all available trading pairs
-				var msg = await Pub.GetTradePairs();
+				var msg = await Api.GetTradePairs();
 				if (!msg.Success)
 					throw new Exception("Cryptopia: Failed to read available trading pairs. {0}".Fmt(msg.Error));
 
@@ -144,8 +139,8 @@ namespace CoinFlip
 
 				// Request the order book data for all of the pairs
 				var order_book = ids.Length != 0 
-					? await Pub.GetMarketOrderGroups(new MarketOrderGroupsRequest(ids, orderCount:10))
-					: await Task.FromResult(new global::Cryptopia.API.DataObjects.MarketOrderGroupsResponse());
+					? await Api.GetMarketOrderGroups(ids, order_count:10)
+					: await Task.FromResult(new MarketOrderGroupsResponse());
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
@@ -192,10 +187,8 @@ namespace CoinFlip
 				// Record the time just before the query to the server
 				var timestamp = DateTimeOffset.Now;
 
-				var msg2 = await Api.GetBalances();
-
 				// Request the account data
-				var msg = await Priv.GetBalances(new BalanceRequest());
+				var msg = await Api.GetBalances();
 				if (!msg.Success)
 					throw new Exception("Cryptopia: Failed to update account balances. {0}".Fmt(msg.Error));
 
@@ -235,7 +228,7 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the existing orders
-				var msg = await Priv.GetOpenOrders(new OpenOrdersRequest());
+				var msg = await Api.GetOpenOrders();
 				if (!msg.Success)
 					throw new Exception("Cryptopia: Failed to received existing orders. {0}".Fmt(msg.Error));
 
@@ -281,7 +274,7 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the history
-				var msg = await Priv.GetTradeHistory(new TradeHistoryRequest(count:10));
+				var msg = await Api.GetTradeHistory(count:10);
 				if (!msg.Success)
 					throw new Exception("Cryptopia: Failed to received trade history. {0}".Fmt(msg.Error));
 
@@ -310,6 +303,12 @@ namespace CoinFlip
 			{
 				HandleUpdateException(nameof(UpdateTradeHistory), ex);
 			}
+		}
+
+		/// <summary>Set the maximum number of requests per second to the exchange server</summary>
+		protected override void SetServerRequestRateLimit(float limit)
+		{
+			Api.ServerRequestRateLimit = limit;
 		}
 
 		/// <summary>Handle an exception during an update call</summary>
@@ -342,7 +341,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Convert a Cryptopia open order result into a position object</summary>
-		private Position PositionFrom(global::Cryptopia.API.Models.OpenOrderResult order, DateTimeOffset updated)
+		private Position PositionFrom(OpenOrder order, DateTimeOffset updated)
 		{
 			// Get the associated trade pair (add the pair if it doesn't exist)
 			var order_id = unchecked((ulong)order.OrderId);
@@ -356,7 +355,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Convert a Cryptopia trade history result into a position object</summary>
-		private Historic HistoricFrom(global::Cryptopia.API.Models.TradeHistoryResult his, DateTimeOffset updated)
+		private Historic HistoricFrom(TradeHistory his, DateTimeOffset updated)
 		{
 			// Get the associated trade pair (add the pair if it doesn't exist)
 			var order_id   = unchecked((ulong)his.OrderId);
@@ -370,16 +369,6 @@ namespace CoinFlip
 			var commission = tt == ETradeType.B2Q ? his.Fee._(pair.Quote)      : (volume_out - his.Amount._(pair.Base));
 			var created    = his.TimeStamp.As(DateTimeKind.Utc);
 			return new Historic(order_id, trade_id, pair, tt, price, volume_in, volume_out, commission, created, updated);
-		}
-
-		/// <summary>The maximum number of requests per second to the exchange server</summary>
-		public override float ServerRequestRateLimit
-		{
-			get { return 10f; }
-			set
-			{
-				//todo
-			}
 		}
 	}
 }

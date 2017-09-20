@@ -140,11 +140,9 @@ namespace CoinFlip
 			return base.UpdatePositions();
 		}
 
-		/// <summary>The maximum number of requests per second to the exchange server</summary>
-		public override float ServerRequestRateLimit
+		/// <summary>Set the maximum number of requests per second to the exchange server</summary>
+		protected override void SetServerRequestRateLimit(float limit)
 		{
-			get { return 1_000_000f; }
-			set { }
 		}
 	}
 }

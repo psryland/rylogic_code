@@ -41,8 +41,15 @@ namespace CoinFlip
 			set
 			{
 				if (m_api == value) return;
-				Util.Dispose(ref m_api);
+				if (m_api != null)
+				{
+					Util.Dispose(ref m_api);
+				}
 				m_api = value;
+				if (m_api != null)
+				{
+					m_api.ServerRequestRateLimit = Settings.ServerRequestRateLimit;
+				}
 			}
 		}
 		private BittrexApi m_api;
@@ -294,6 +301,12 @@ namespace CoinFlip
 			}
 		}
 
+		/// <summary>Set the maximum number of requests per second to the exchange server</summary>
+		protected override void SetServerRequestRateLimit(float limit)
+		{
+			Api.ServerRequestRateLimit = limit;
+		}
+
 		/// <summary>Handle an exception during an update call</summary>
 		private void HandleUpdateException(string method_name, Exception ex)
 		{
@@ -374,13 +387,6 @@ namespace CoinFlip
 		private Guid ToUuid(ulong order_id)
 		{
 			return m_order_id_lookup[order_id];
-		}
-
-		/// <summary>The maximum number of requests per second to the exchange server</summary>
-		public override float ServerRequestRateLimit
-		{
-			get { return Api.ServerRequestRateLimit; }
-			set { Api.ServerRequestRateLimit = value; }
 		}
 	}
 }

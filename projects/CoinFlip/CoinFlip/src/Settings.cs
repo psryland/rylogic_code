@@ -193,6 +193,7 @@ namespace CoinFlip
 				Active = true;
 				PollPeriod = 500;
 				TransactionFee = 0.002m;
+				ServerRequestRateLimit = 10f;
 			}
 
 			/// <summary>True if the exchange is active</summary>
@@ -214,6 +215,13 @@ namespace CoinFlip
 			{
 				get { return get(x => x.TransactionFee); }
 				set { set(x => x.TransactionFee, value); }
+			}
+
+			/// <summary>The maximum number of requests per second to the exchange server</summary>
+			public float ServerRequestRateLimit
+			{
+				get { return get(x => x.ServerRequestRateLimit); }
+				set { set(x => x.ServerRequestRateLimit, value); }
 			}
 
 			private class TyConv :GenericTypeConverter<CrypotopiaSettings> {}
@@ -229,6 +237,7 @@ namespace CoinFlip
 				Active = true;
 				PollPeriod = 500;
 				TransactionFee = 0.0025m;
+				ServerRequestRateLimit = 6f;
 			}
 
 			/// <summary>True if the exchange is active</summary>
@@ -250,6 +259,13 @@ namespace CoinFlip
 			{
 				get { return get(x => x.TransactionFee); }
 				set { set(x => x.TransactionFee, value); }
+			}
+
+			/// <summary>The maximum number of requests per second to the exchange server</summary>
+			public float ServerRequestRateLimit
+			{
+				get { return get(x => x.ServerRequestRateLimit); }
+				set { set(x => x.ServerRequestRateLimit, value); }
 			}
 
 			private class TyConv :GenericTypeConverter<PoloniexSettings> {}
@@ -265,6 +281,7 @@ namespace CoinFlip
 				Active = true;
 				PollPeriod = 500;
 				TransactionFee = 0.0025m;
+				ServerRequestRateLimit = 10f;
 			}
 
 			/// <summary>True if the exchange is active</summary>
@@ -286,6 +303,13 @@ namespace CoinFlip
 			{
 				get { return get(x => x.TransactionFee); }
 				set { set(x => x.TransactionFee, value); }
+			}
+
+			/// <summary>The maximum number of requests per second to the exchange server</summary>
+			public float ServerRequestRateLimit
+			{
+				get { return get(x => x.ServerRequestRateLimit); }
+				set { set(x => x.ServerRequestRateLimit, value); }
 			}
 
 			private class TyConv :GenericTypeConverter<BittrexSettings> {}
@@ -301,6 +325,7 @@ namespace CoinFlip
 				Active = true;
 				PollPeriod = 500;
 				TransactionFee = 0m;
+				ServerRequestRateLimit = 1_000_000f;
 			}
 
 			/// <summary>True if the exchange is active</summary>
@@ -322,6 +347,13 @@ namespace CoinFlip
 			{
 				get { return get(x => x.TransactionFee); }
 				set { set(x => x.TransactionFee, value); }
+			}
+
+			/// <summary>The maximum number of requests per second to the exchange server</summary>
+			public float ServerRequestRateLimit
+			{
+				get { return get(x => x.ServerRequestRateLimit); }
+				set { set(x => x.ServerRequestRateLimit, value); }
 			}
 
 			private class TyConv :GenericTypeConverter<CrossExchangeSettings> {}
@@ -641,5 +673,8 @@ namespace CoinFlip
 
 		/// <summary>The fee charged per trade</summary>
 		decimal TransactionFee { get; set; }
+
+		/// <summary>The maximum number of requests per second to the exchange server</summary>
+		float ServerRequestRateLimit { get; set; }
 	}
 }

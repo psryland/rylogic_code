@@ -70,12 +70,12 @@ namespace Cryptopia.API
 
 	public class MarketOrderGroupsResponse
 	{
-		//public MarketOrderGroupsResponse()
-		//{
-		//	Success = true;
-		//	Error = string.Empty;
-		//	Data = new List<MarketOrderGroups>();
-		//}
+		public MarketOrderGroupsResponse()
+		{
+			Success = true;
+			Error = string.Empty;
+			Data = new List<MarketOrderGroups>();
+		}
 
 		/// <summary></summary>
 		[JsonProperty("Success")] public bool Success { get; internal set; }
@@ -84,6 +84,6 @@ namespace Cryptopia.API
 		[JsonProperty("Error")] public string Error { get; internal set; }
 
 		/// <summary></summary>
-		[JsonProperty("Data")] List<MarketOrderGroups> Data { get; set; }
+		[JsonProperty("Data")] public List<MarketOrderGroups> Data { get; set; }
 	}
 }

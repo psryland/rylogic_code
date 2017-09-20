@@ -135,6 +135,25 @@ namespace CoinFlip
 					Model.ChangeAPIKeys(exch);
 				};
 			}
+			{
+				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Server Request Rate..."));
+				cmenu.Opening += (s,a) =>
+				{
+					opt.Enabled = SelectedRows.Count == 1;
+				};
+				opt.Click += (s,a) =>
+				{
+					var exch = (Exchange)SelectedRows[0].DataBoundItem;
+					using (var dlg = new PromptUI { Title = $"{exch.Name} Server Request Limit", PromptText = "The maximum number of requests posted to the exchange server per second" })
+					{
+						dlg.ValueType = typeof(float);
+						dlg.Value = exch.ServerRequestRateLimit;
+						dlg.ValidateValue = t => float.TryParse(t, out var x) && x > 0;
+						if (dlg.ShowDialog(Model.UI) != DialogResult.OK) return;
+						exch.ServerRequestRateLimit = (float)dlg.Value;
+					}
+				};
+			}
 			return cmenu;
 		}
 	}

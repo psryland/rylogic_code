@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
-using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
@@ -33,7 +31,7 @@ namespace Poloniex.API
 			m_cancel_token = cancel_token;
 			UrlBaseAddress = base_address;
 			UrlWssAddress = wss_address;
-			ServerRequestRateLimit = 6;
+			ServerRequestRateLimit = 6f;
 			Dispatcher = Dispatcher.CurrentDispatcher;
 			ActiveSubscriptions = new Dictionary<string, Subscription>();
 			Hasher = new HMACSHA512(Encoding.ASCII.GetBytes(m_secret));
@@ -556,17 +554,4 @@ namespace Poloniex.API
 		public OrderBookUpdate Update { get; private set; }
 	}
 	#endregion
-
-	/// <summary>Http response exception</summary>
-	public class HttpResponseException :Exception
-	{
-		public HttpResponseException(HttpResponseMessage response)
-			:base(response.ReasonPhrase)
-		{
-			StatusCode = response.StatusCode;
-		}
-
-		/// <summary>Status code returned in the HTTP response</summary>
-		public HttpStatusCode StatusCode { get; private set; }
-	}
 }

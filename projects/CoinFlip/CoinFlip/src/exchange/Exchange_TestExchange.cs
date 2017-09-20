@@ -92,11 +92,9 @@ namespace CoinFlip
 			return Misc.CompletedTask;
 		}
 
-		/// <summary>The maximum number of requests per second to the exchange server</summary>
-		public override float ServerRequestRateLimit
+		/// <summary>Set the maximum number of requests per second to the exchange server</summary>
+		protected override void SetServerRequestRateLimit(float limit)
 		{
-			get { return 1_000_000f; }
-			set {}
 		}
 
 		/// <summary>Fake settings</summary>
@@ -111,6 +109,7 @@ namespace CoinFlip
 			public bool Active { get; set; }
 			public int PollPeriod { get; set; }
 			public decimal TransactionFee { get; set; }
+			public float ServerRequestRateLimit { get; set; }
 		}
 	}
 }

@@ -46,6 +46,7 @@ namespace CoinFlip
 				m_api = value;
 				if (m_api != null)
 				{
+					m_api.ServerRequestRateLimit = Settings.ServerRequestRateLimit;
 					m_api.OnConnectionChanged += HandleConnectionEstablished;
 					m_api.OnOrdersChanged += HandleOrdersChanged;
 				}
@@ -300,6 +301,12 @@ namespace CoinFlip
 			}
 		}
 
+		/// <summary>Set the maximum number of requests per second to the exchange server</summary>
+		protected override void SetServerRequestRateLimit(float limit)
+		{
+			Api.ServerRequestRateLimit = limit;
+		}
+
 		/// <summary>Handle an exception during an update call</summary>
 		private void HandleUpdateException(string method_name, Exception ex)
 		{
@@ -447,13 +454,6 @@ namespace CoinFlip
 			case MarketPeriod.Hours4:    return ETimeFrame.Hour4;
 			case MarketPeriod.Day:       return ETimeFrame.Day1;
 			}
-		}
-
-		/// <summary>The maximum number of requests per second to the exchange server</summary>
-		public override float ServerRequestRateLimit
-		{
-			get { return Api.ServerRequestRateLimit; }
-			set { Api.ServerRequestRateLimit = value; }
 		}
 	}
 }

@@ -123,12 +123,12 @@ namespace CoinFlip
 		}
 
 		/// <summary>Convert a Cryptopia trade type to ETradeType</summary>
-		public static ETradeType TradeType(global::Cryptopia.API.DataObjects.TradeType order_type)
+		public static ETradeType TradeType(global::Cryptopia.API.EOrderType order_type)
 		{
 			switch (order_type) {
 			default: throw new Exception("Unknown trade type string");
-			case global::Cryptopia.API.DataObjects.TradeType.Buy: return ETradeType.Q2B;
-			case global::Cryptopia.API.DataObjects.TradeType.Sell: return ETradeType.B2Q;
+			case global::Cryptopia.API.EOrderType.Buy: return ETradeType.Q2B;
+			case global::Cryptopia.API.EOrderType.Sell: return ETradeType.B2Q;
 			}
 		}
 
@@ -153,12 +153,12 @@ namespace CoinFlip
 		}
 
 		/// <summary>Convert this trade type to the Cryptopia definition of a trade type</summary>
-		public static global::Cryptopia.API.DataObjects.TradeType ToCryptopiaTT(this ETradeType trade_type)
+		public static global::Cryptopia.API.EOrderType ToCryptopiaTT(this ETradeType trade_type)
 		{
 			switch (trade_type) {
 			default: throw new Exception("Unknown trade type");
-			case ETradeType.Q2B: return global::Cryptopia.API.DataObjects.TradeType.Buy;
-			case ETradeType.B2Q: return global::Cryptopia.API.DataObjects.TradeType.Sell;
+			case ETradeType.Q2B: return global::Cryptopia.API.EOrderType.Buy;
+			case ETradeType.B2Q: return global::Cryptopia.API.EOrderType.Sell;
 			}
 		}
 

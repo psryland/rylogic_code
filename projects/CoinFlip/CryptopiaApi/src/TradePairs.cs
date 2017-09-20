@@ -77,6 +77,6 @@ namespace Cryptopia.API
 		[JsonProperty("Error")] public string Error { get; internal set; }
 
 		/// <summary></summary>
-		[JsonProperty("Data")]  List<TradePair> Data { get; set; }
+		[JsonProperty("Data")] public List<TradePair> Data { get; internal set; }
 	}
 }
