@@ -185,6 +185,8 @@ namespace CoinFlip
 				}
 			}
 			#endregion
+
+			DockControl.TabText = m_fisher.Name;
 		}
 
 		#region Component Designer generated code

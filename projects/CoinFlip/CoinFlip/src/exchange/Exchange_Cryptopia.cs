@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Cryptopia.API;
 using Cryptopia.API.DataObjects;
-using CryptopiaApi.Models;
+using Cryptopia.API.Models;
 using pr.common;
 using pr.extn;
 using pr.util;
@@ -18,25 +17,47 @@ namespace CoinFlip
 	/// <summary>Cryptopia Exchange</summary>
 	public class Cryptopia :Exchange
 	{
-		private const string ApiKey    = "429162d7138f4275b5e9dd09ff6362fd";
-		private const string ApiSecret = "Dt6k0ZC3zqbNCxpDSsHqX7VIR21PEPO7vNeKDbQIKcI=";
-
 		private CryptopiaApiPublic Pub;
 		private CryptopiaApiPrivate Priv;
 		private HashSet<int> m_pair_ids;
 
-		public Cryptopia(Model model)
+		public Cryptopia(Model model, string key, string secret)
 			:base(model, model.Settings.Cryptopia)
 		{
 			m_pair_ids = new HashSet<int>();
+			Api = new CryptopiaApi(key, secret, Model.ShutdownToken);
 			Pub = new CryptopiaApiPublic(Model.ShutdownToken);
-			Priv = new CryptopiaApiPrivate(ApiKey, ApiSecret, Model.ShutdownToken);
+			Priv = new CryptopiaApiPrivate(key, secret, Model.ShutdownToken);
 			TradeHistoryUseful = false;
 
 			// Start the exchange
 			if (Model.Settings.Cryptopia.Active)
 				Model.RunOnGuiThread(() => Active = true);
 		}
+		public override void Dispose()
+		{
+			Api = null;
+			base.Dispose();
+		}
+
+		/// <summary>The API interface</summary>
+		private CryptopiaApi Api
+		{
+			[DebuggerStepThrough] get { return m_api; }
+			set
+			{
+				if (m_api == value) return;
+				if (m_api != null)
+				{
+					Util.Dispose(ref m_api);
+				}
+				m_api = value;
+				if (m_api != null)
+				{
+				}
+			}
+		}
+		private CryptopiaApi m_api;
 
 		/// <summary>Open a trade</summary>
 		protected async override Task<TradeResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> price)
@@ -124,7 +145,7 @@ namespace CoinFlip
 				// Request the order book data for all of the pairs
 				var order_book = ids.Length != 0 
 					? await Pub.GetMarketOrderGroups(new MarketOrderGroupsRequest(ids, orderCount:10))
-					: await Task.FromResult(new MarketOrderGroupsResponse());
+					: await Task.FromResult(new global::Cryptopia.API.DataObjects.MarketOrderGroupsResponse());
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
@@ -170,6 +191,8 @@ namespace CoinFlip
 			{
 				// Record the time just before the query to the server
 				var timestamp = DateTimeOffset.Now;
+
+				var msg2 = await Api.GetBalances();
 
 				// Request the account data
 				var msg = await Priv.GetBalances(new BalanceRequest());
@@ -347,6 +370,16 @@ namespace CoinFlip
 			var commission = tt == ETradeType.B2Q ? his.Fee._(pair.Quote)      : (volume_out - his.Amount._(pair.Base));
 			var created    = his.TimeStamp.As(DateTimeKind.Utc);
 			return new Historic(order_id, trade_id, pair, tt, price, volume_in, volume_out, commission, created, updated);
+		}
+
+		/// <summary>The maximum number of requests per second to the exchange server</summary>
+		public override float ServerRequestRateLimit
+		{
+			get { return 10f; }
+			set
+			{
+				//todo
+			}
 		}
 	}
 }

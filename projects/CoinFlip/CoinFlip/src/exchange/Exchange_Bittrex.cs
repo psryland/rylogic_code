@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 using Bittrex.API;
 using pr.common;
@@ -16,15 +14,14 @@ namespace CoinFlip
 {
 	public class Bittrex :Exchange
 	{
-		private const string ApiKey    = "dc2582c37e354244a6056c76f9e8e1f7"; 
-		private const string ApiSecret = "feb0ae42fcbf42fa8d42944fda308033";
 		private BiDictionary<ulong, Guid> m_order_id_lookup;
 
-		public Bittrex(Model model)
+		public Bittrex(Model model, string key, string secret)
 			:base(model, model.Settings.Bittrex)
 		{
 			m_order_id_lookup = new BiDictionary<ulong, Guid>();
-			Api = new BittrexApi(ApiKey, ApiSecret, Model.ShutdownToken);
+
+			Api = new BittrexApi(key, secret, Model.ShutdownToken);
 			TradeHistoryUseful = true;
 
 			// Start the exchange
@@ -377,6 +374,13 @@ namespace CoinFlip
 		private Guid ToUuid(ulong order_id)
 		{
 			return m_order_id_lookup[order_id];
+		}
+
+		/// <summary>The maximum number of requests per second to the exchange server</summary>
+		public override float ServerRequestRateLimit
+		{
+			get { return Api.ServerRequestRateLimit; }
+			set { Api.ServerRequestRateLimit = value; }
 		}
 	}
 }

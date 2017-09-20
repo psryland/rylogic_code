@@ -139,6 +139,13 @@ namespace CoinFlip
 			// to 'Coin' on 'Exchange1' (or visa versa)
 			return base.UpdatePositions();
 		}
+
+		/// <summary>The maximum number of requests per second to the exchange server</summary>
+		public override float ServerRequestRateLimit
+		{
+			get { return 1_000_000f; }
+			set { }
+		}
 	}
 }
 

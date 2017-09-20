@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using System.Xml.Linq;
 using pr.common;
 using pr.extn;
@@ -18,27 +19,25 @@ using pr.util;
 namespace CoinFlip
 {
 	/// <summary>Moving average indicator</summary>
-	public class IndicatorMA :Indicator ,IEnumerable<IndicatorMA.MAPoint>
+	public class IndicatorMA :Indicator
 	{
 		/// <summary>The moving average data. Each point is the average for one candle</summary>
 		private List<MAPoint> m_ma;
 
-		public IndicatorMA(Instrument instrument, SettingsData settings = null)
-			:base("MA", settings ?? new SettingsData())
+		public IndicatorMA(SettingsData settings = null)
+			:base(Guid.NewGuid(), "MA", settings ?? new SettingsData())
 		{
 			m_ma = new List<MAPoint>();
-			Instrument = instrument;
 		}
-		public IndicatorMA(Instrument instrument, XElement node)
+		public IndicatorMA(XElement node)
 			:base(node)
 		{
 			m_ma = new List<MAPoint>();
-			Instrument = instrument;
 		}
-		public override void Dispose()
+		protected override void Dispose(bool disposing)
 		{
 			Gfx = null;
-			base.Dispose();
+			base.Dispose(disposing);
 		}
 
 		/// <summary>Settings for this indicator</summary>
@@ -50,105 +49,195 @@ namespace CoinFlip
 		/// <summary>The graphics for the indicator</summary>
 		public View3d.Object Gfx
 		{
-			[DebuggerStepThrough] get { return m_impl_gfx; }
+			[DebuggerStepThrough] get { return m_gfx; }
 			set
 			{
-				if (m_impl_gfx == value) return;
-				Util.Dispose(ref m_impl_gfx);
-				m_impl_gfx = value;
+				if (m_gfx == value) return;
+				Util.Dispose(ref m_gfx);
+				m_gfx = value;
 			}
 		}
-		private View3d.Object m_impl_gfx;
+		private View3d.Object m_gfx;
+		private Range m_gfx_range;
 
-		/// <summary>Instrument assigned</summary>
-		protected override void SetInstrumentCore(Instrument instr)
+		/// <summary>Calculate the MA</summary>
+		protected async override Task ResetCore()
 		{
+			m_ma.Clear();
+
 			if (Instrument != null)
 			{
+				var ma = new List<MAPoint>(Instrument.Count);
+				await Task.Run(() =>
+				{
+					// Create a moving average stat that the instrument data is added to.
+					var avr = Settings.ExponentialMA
+						? (object)new ExpMovingAvr(Settings.WindowSize)
+						: (object)new MovingAvr(Settings.WindowSize);
+
+					using (var instrument = new Instrument(Instrument, update_active: false))
+					{
+						var stat = (IStatSingleVariable)avr;
+						var value = (IStatMeanAndVariance)avr;
+						var ts = DateTimeOffset.MinValue.Ticks;
+						foreach (var candle in instrument)
+						{
+							// Candle data must be strictly ordered by timestamp because I'm using binary search
+							Debug.Assert(candle.Timestamp >= ts);
+							ts = candle.Timestamp;
+
+							// Calculate the MA value and save it
+							stat.Add(candle.Close);
+							ma.Add(new MAPoint(ts, value.Mean, value.PopStdDev));
+						}
+					}
+				});
+				m_ma = ma;
 			}
-			base.SetInstrumentCore(instr);
-			if (Instrument != null)
+		}
+
+		/// <summary>Handle settings changing</summary>
+		protected override void HandleSettingChanged(object sender, SettingChangedEventArgs e)
+		{
+			// If the setting affects the underlying data, reset
+			switch (e.Key) {
+			case nameof(SettingsData.ExponentialMA):
+			case nameof(SettingsData.WindowSize):
+				ResetRequired = true;
+				break;
+			}
+
+			base.HandleSettingChanged(sender, e);
+		}
+
+		/// <summary>Invalidate if the chart moves beyond the range of the graphics</summary>
+		protected override void HandleChartMoved(object sender, ChartControl.ChartMovedEventArgs e)
+		{
+			base.HandleChartMoved(sender, e);
+
+			// Get the visible X axis range
+			var rng = Instrument.IndexRange((int)(Chart.XAxis.Min - 1), (int)(Chart.XAxis.Max + 1));
+			rng.Beg = Maths.Clamp(rng.Beg, 0, m_ma.Count);
+			rng.End = Maths.Clamp(rng.End, 0, m_ma.Count);
+
+			// Check that the graphics model spans the required range
+			if ((m_gfx_range.Beg != 0 && rng.Beg < m_gfx_range.Beg) ||
+				(m_gfx_range.End != m_ma.Count && rng.End > m_gfx_range.End))
+				Invalidate();
+
+			// IF the graphics are way bigger than necessary, recreate to free up memory
+			if (m_gfx_range.Count > 3 * rng.Count)
+				Invalidate();
+		}
+
+		/// <summary>Update the graphics model for this indicator</summary>
+		protected override void UpdateGfxCore()
+		{
+			base.UpdateGfxCore();
+
+			// Get the visible X axis range
+			var rng = Instrument.IndexRange((int)(Chart.XAxis.Min - 1), (int)(Chart.XAxis.Max + 1));
+			rng.Beg = Maths.Clamp(rng.Beg, 0, m_ma.Count);
+			rng.End = Maths.Clamp(rng.End, 0, m_ma.Count);
+			if (rng.Counti == 0)
 			{
+				// Indicator isn't visible
+				Gfx = null;
+				return;
 			}
+
+			// Resize the cache buffers
+			var count = rng.Counti;
+			m_vbuf.Resize(count);
+			m_ibuf.Resize((count - 1) * 2);
+			m_nbuf.Resize(1);
+
+			// Get the colours for the MA line
+			var ma_colour = Settings.ColourMA.ToArgbU();
+			var bol_colour = Settings.ColourBollingerBands.ToArgbU();
+
+			// Create the MA model
+			var v = 0;
+			var i = 0;
+			foreach (var candle_index in rng.Enumeratei)
+			{
+				m_vbuf[v++] = new View3d.Vertex(new v4(candle_index, (float)m_ma[candle_index].Value, ChartUI.Z.Indicators, 1f), ma_colour);
+			}
+			for (var vi = 0; i != m_ibuf.Count; ++vi)
+			{
+				m_ibuf[i++] = (ushort)(vi  );
+				m_ibuf[i++] = (ushort)(vi+1);
+			}
+			var mat = new View3d.Material(shader:View3d.EShader.ThickLineListGS, shader_data:new[] {Settings.Width,0,0,0});
+			m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert|View3d.EGeom.Colr, 0, (uint)v, 0, (uint)i, false, mat);
+
+			// Add geometry for Bollinger bands
+			if (Settings.ShowBollingerBands && Settings.BollingerBandsStdDev != 0)
+			{
+				m_vbuf.Resize(m_vbuf.Count + 2*count);
+				m_ibuf.Resize(m_ibuf.Count + 2*count);
+				m_nbuf.Resize(m_nbuf.Count + 2);
+
+				// Lower/Upper band
+				foreach (var candle_index in rng.Enumeratei)
+				{
+					var ma = m_ma[candle_index];
+					m_vbuf[v++] = new View3d.Vertex(new v4(candle_index, (float)(ma.Value - Settings.BollingerBandsStdDev * ma.StdDev), ChartUI.Z.Indicators, 1f), bol_colour);
+					m_ibuf[i++] = (ushort)(v-1);
+				}
+				m_nbuf[1] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert|View3d.EGeom.Colr, (uint)(v-count), (uint)v, (uint)(i-count), (uint)i);
+				foreach (var candle_index in rng.Enumeratei)
+				{
+					var ma = m_ma[candle_index];
+					m_vbuf[v++] = new View3d.Vertex(new v4(candle_index, (float)(ma.Value + Settings.BollingerBandsStdDev * ma.StdDev), ChartUI.Z.Indicators, 1f), bol_colour);
+					m_ibuf[i++] = (ushort)(v-1);
+				}
+				m_nbuf[2] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert|View3d.EGeom.Colr, (uint)(v-count), (uint)v, (uint)(i-count), (uint)i);
+			}
+
+			// Create the graphics
+			Gfx = new View3d.Object(Name, 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray());
+
+			// Record the range that the graphics covers
+			m_gfx_range = rng;
 		}
 
 		/// <summary>Update the graphics for this indicator and add it to the scene</summary>
-		public override void AddToScene(ChartControl.ChartRenderingEventArgs args)
+		protected override void AddToSceneCore(View3d.Window window)
 		{
-			base.AddToScene(args);
+			base.AddToSceneCore(window);
 
-			// Create the indicator graphics
-			if (Gfx == null || Dirty.HasFlag(EDirtyFlags.RecreateModel))
+			// Add to the scene
+			if (Gfx != null)
 			{
-				var chart = args.Chart;
+				Gfx.O2P = m4x4.Translation(Settings.XOffset, 0f, 0f);
+				window.AddObject(Gfx);
+			}
+		}
 
-				// Get the colours for the MA line
-				var ma_colour = Settings.ColourMA.ToArgbU();
-				var bol_colour = Settings.ColourBollingerBands.ToArgbU();
+		/// <summary>Hit test this indicator</summary>
+		public override ChartControl.HitTestResult.Hit HitTest(PointF chart_point, Point client_point, Keys modifier_keys, View3d.CameraControls cam)
+		{
+			// Test the distance to the MA over the selection distance
+			var dist_sq = Maths.Sqr(Chart.Options.MinSelectionDistance);
+			var xbeg = (int)Maths.Clamp(chart_point.X - Chart.Options.MinSelectionDistance/2f, 0, m_ma.Count);
+			var xend = (int)Maths.Clamp(chart_point.X + Chart.Options.MinSelectionDistance/2f, 0, m_ma.Count);
+			var yofs = Settings.ShowBollingerBands && Settings.BollingerBandsStdDev != 0
+				? new [] { 0f, -Settings.BollingerBandsStdDev, +Settings.BollingerBandsStdDev }
+				: new [] { 0f };
 
-				// Get the visible X axis range
-				var rng = Instrument.IndexRange((int)(chart.XAxis.Min - 1), (int)(chart.XAxis.Max + 1));
-				rng.Beg = Maths.Clamp(rng.Beg, 0, m_ma.Count);
-				rng.End = Maths.Clamp(rng.End, 0, m_ma.Count);
-				if (rng.Counti == 0)
+			for (var x = xbeg; x != xend; ++x)
+			{
+				var ma = m_ma[x];
+				foreach (var y in yofs)
 				{
-					Gfx = null;
-					return;
+					var pt = Chart.ChartToClient(new PointF(x, (float)(ma.Value + y * ma.StdDev)));
+					if (Drawing_.Subtract(client_point, pt).Length2Sq() < dist_sq)
+						return new ChartControl.HitTestResult.Hit(this, pt, null);
 				}
-
-				// Resize the cache buffers
-				var count = rng.Counti;
-				m_vbuf.Resize(count);
-				m_ibuf.Resize((count - 1) * 2);
-				m_nbuf.Resize(1);
-
-				// Create the MA model
-				var v = 0;
-				var i = 0;
-				foreach (var candle_index in rng.Enumeratei)
-				{
-					m_vbuf[v++] = new View3d.Vertex(new v4(candle_index, (float)m_ma[candle_index].Value, ChartUI.Z.Indicators, 1f), ma_colour);
-				}
-				for (var vi = 0; i != m_ibuf.Count; ++vi)
-				{
-					m_ibuf[i++] = (ushort)(vi  );
-					m_ibuf[i++] = (ushort)(vi+1);
-				}
-				var mat = new View3d.Material(shader:View3d.EShader.ThickLineListGS, shader_data:new[] {Settings.Width,0,0,0});
-				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert|View3d.EGeom.Colr, 0, (uint)v, 0, (uint)i, false, mat);
-
-				// Add geometry for Bollinger bands
-				if (Settings.BollingerBands != 0)
-				{
-					m_vbuf.Resize(m_vbuf.Count + 2*count);
-					m_ibuf.Resize(m_ibuf.Count + 2*count);
-					m_nbuf.Resize(m_nbuf.Count + 2);
-
-					// Lower/Upper band
-					foreach (var candle_index in rng.Enumeratei)
-					{
-						var ma = m_ma[candle_index];
-						m_vbuf[v++] = new View3d.Vertex(new v4(candle_index, (float)(ma.Value - Settings.BollingerBands * ma.StdDev), ChartUI.Z.Indicators, 1f), bol_colour);
-						m_ibuf[i++] = (ushort)(v-1);
-					}
-					m_nbuf[1] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert|View3d.EGeom.Colr, (uint)(v-count), (uint)v, (uint)(i-count), (uint)i);
-					foreach (var candle_index in rng.Enumeratei)
-					{
-						var ma = m_ma[candle_index];
-						m_vbuf[v++] = new View3d.Vertex(new v4(candle_index, (float)(ma.Value + Settings.BollingerBands * ma.StdDev), ChartUI.Z.Indicators, 1f), bol_colour);
-						m_ibuf[i++] = (ushort)(v-1);
-					}
-					m_nbuf[2] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert|View3d.EGeom.Colr, (uint)(v-count), (uint)v, (uint)(i-count), (uint)i);
-				}
-
-				// Create the graphics
-				Gfx = new View3d.Object(Name, 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray());
-
-				// Clear the dirty flag
-				Dirty = Bit.SetBits(Dirty, EDirtyFlags.RecreateModel, false);
 			}
 
-			args.AddToScene(Gfx);
+			return null;
 		}
 
 		/// <summary>The number of values in this MA data</summary>
@@ -168,49 +257,7 @@ namespace CoinFlip
 			}
 		}
 
-		/// <summary>Enumerable moving average points</summary>
-		public IEnumerator<MAPoint> GetEnumerator()
-		{
-			return m_ma.GetEnumerator();
-		}
-		IEnumerator IEnumerable.GetEnumerator()
-		{
-			return GetEnumerator();
-		}
-
-		/// <summary>Calculate the MA</summary>
-		private void Reset()
-		{
-			m_ma.Clear();
-			m_ma.Capacity = Instrument.Count;
-
-			// Create a moving average stat that the instrument data is added to.
-			// Take of a copy of it at each candle.
-			var ma = Settings.ExponentialMA
-				? (IMA)new ExpMovingAvr(Settings.WindowSize)
-				: (IMA)new MovingAvr(Settings.WindowSize);
-
-			var ts = DateTimeOffset.MinValue.Ticks;
-			foreach (var candle in Instrument)
-			{
-				// Candle data must be strictly ordered by timestamp because I'm using binary search
-				Debug.Assert(candle.Timestamp >= ts);
-				ts = candle.Timestamp;
-
-				// Calculate the MA value and save it
-				ma.Add(candle.Close);
-				m_ma.Add(new MAPoint(ts, ma.Mean, ma.PopStdDev));
-			}
-
-			// Invalidate the graphics
-			Invalidate();
-		}
-
 		#region MA Point
-
-		/// <summary>Interface for a moving average calculator</summary>
-		private interface IMA :IStatMean, IStatVariance, IStatSingleVariable
-		{}
 
 		/// <summary>A single point in the MA curve, representing a single candle</summary>
 		public class MAPoint
@@ -244,9 +291,14 @@ namespace CoinFlip
 				Width                = 5;
 				ExponentialMA        = false;
 				ColourMA             = Color.LightGreen;
-				BollingerBands       = 2f;
+				ShowBollingerBands   = false;
+				BollingerBandsStdDev = 2f;
 				ColourBollingerBands = Color.Purple;
+				XOffset              = 0f;
 			}
+			public SettingsData(XElement node)
+				:base(node)
+			{}
 
 			/// <summary>The window size of the EMA</summary>
 			public int WindowSize
@@ -277,11 +329,18 @@ namespace CoinFlip
 				set { set(x => x.ColourMA, value); }
 			}
 
-			/// <summary>The Bollinger band size in units of the standard deviations (0 = turns them off)</summary>
-			public float BollingerBands
+			/// <summary>Show Bollinger Bands around the MA</summary>
+			public bool ShowBollingerBands
 			{
-				get { return get(x => x.BollingerBands); }
-				set { set(x => x.BollingerBands, Maths.Clamp(value, 0, 5.0f)); }
+				get { return get(x => x.ShowBollingerBands); }
+				set { set(x => x.ShowBollingerBands, value); }
+			}
+
+			/// <summary>The Bollinger band size in units of the standard deviations</summary>
+			public float BollingerBandsStdDev
+			{
+				get { return get(x => x.BollingerBandsStdDev); }
+				set { set(x => x.BollingerBandsStdDev, Maths.Clamp(value, 0, 5.0f)); }
 			}
 
 			/// <summary>The line colour for the Bollinger Bands</summary>
@@ -289,6 +348,13 @@ namespace CoinFlip
 			{
 				get { return get(x => x.ColourBollingerBands); }
 				set { set(x => x.ColourBollingerBands, value); }
+			}
+
+			/// <summary>Shift the indicator in the X axis direction</summary>
+			public float XOffset
+			{
+				get { return get(x => x.XOffset); }
+				set { set(x => x.XOffset, value); }
 			}
 
 			private class TyConv :GenericTypeConverter<SettingsData> {}

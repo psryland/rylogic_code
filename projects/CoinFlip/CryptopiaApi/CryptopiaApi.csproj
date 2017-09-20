@@ -7,7 +7,7 @@
     <ProjectGuid>{30296406-237D-4B4B-8B5A-BDD18F0C2F53}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CryptopiaApi</RootNamespace>
+    <RootNamespace>Cryptopia.API</RootNamespace>
     <AssemblyName>CryptopiaApi</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -98,7 +98,6 @@
     <Compile Include="Implementation\PrivateApiCall.cs" />
     <Compile Include="Implementation\PublicApiCall.cs" />
     <Compile Include="Models\BalanceResult.cs" />
-    <Compile Include="Models\CurrencyPair.cs" />
     <Compile Include="Models\CurrencyResult.cs" />
     <Compile Include="Models\MarketHistoryResult.cs" />
     <Compile Include="Models\MarketOrderGroupsResult.cs" />
@@ -110,6 +109,15 @@
     <Compile Include="Models\TradePairResult.cs" />
     <Compile Include="Models\TransactionResult.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="src\Account.cs" />
+    <Compile Include="src\CryptopiaApi.cs" />
+    <Compile Include="src\Currencies.cs" />
+    <Compile Include="src\CurrencyPair.cs" />
+    <Compile Include="src\Markets.cs" />
+    <Compile Include="src\Misc.cs" />
+    <Compile Include="src\OrderBook.cs" />
+    <Compile Include="src\TradePairs.cs" />
+    <Compile Include="src\Trades.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

@@ -130,49 +130,49 @@ namespace Cryptopia.API
 
 		#region API Calls
 
-		public Task<BalanceResponse> GetBalances(BalanceRequest request)
+		public Task<DataObjects.BalanceResponse> GetBalances(BalanceRequest request)
 		{
-			return PostData<BalanceResponse, BalanceRequest>(PrivateApiCall.GetBalance, request);
+			return PostData<DataObjects.BalanceResponse, DataObjects.BalanceRequest>(PrivateApiCall.GetBalance, request);
 		}
 
-		public Task<CancelTradeResponse> CancelTrade(CancelTradeRequest request)
+		public Task<DataObjects.CancelTradeResponse> CancelTrade(CancelTradeRequest request)
 		{
-			return PostData<CancelTradeResponse, CancelTradeRequest>(PrivateApiCall.CancelTrade, request);
+			return PostData<DataObjects.CancelTradeResponse, CancelTradeRequest>(PrivateApiCall.CancelTrade, request);
 		}
 
-		public Task<SubmitTradeResponse> SubmitTrade(SubmitTradeRequest request)
+		public Task<DataObjects.SubmitTradeResponse> SubmitTrade(SubmitTradeRequest request)
 		{
-			return PostData<SubmitTradeResponse, SubmitTradeRequest>(PrivateApiCall.SubmitTrade, request);
+			return PostData<DataObjects.SubmitTradeResponse, SubmitTradeRequest>(PrivateApiCall.SubmitTrade, request);
 		}
 
-		public Task<OpenOrdersResponse> GetOpenOrders(OpenOrdersRequest request)
+		public Task<DataObjects.OpenOrdersResponse> GetOpenOrders(OpenOrdersRequest request)
 		{
-			return PostData<OpenOrdersResponse, OpenOrdersRequest>(PrivateApiCall.GetOpenOrders, request);
+			return PostData<DataObjects.OpenOrdersResponse, OpenOrdersRequest>(PrivateApiCall.GetOpenOrders, request);
 		}
 
-		public Task<TradeHistoryResponse> GetTradeHistory(TradeHistoryRequest request)
+		public Task<DataObjects.TradeHistoryResponse> GetTradeHistory(TradeHistoryRequest request)
 		{
-			return PostData<TradeHistoryResponse, TradeHistoryRequest>(PrivateApiCall.GetTradeHistory, request);
+			return PostData<DataObjects.TradeHistoryResponse, TradeHistoryRequest>(PrivateApiCall.GetTradeHistory, request);
 		}
 
-		public Task<TransactionResponse> GetTransactions(TransactionRequest request)
+		public Task<DataObjects.TransactionResponse> GetTransactions(TransactionRequest request)
 		{
-			return PostData<TransactionResponse, TransactionRequest>(PrivateApiCall.GetTransactions, request);
+			return PostData<DataObjects.TransactionResponse, TransactionRequest>(PrivateApiCall.GetTransactions, request);
 		}
 
-		public Task<DepositAddressResponse> GetDepositAddress(DepositAddressRequest request)
+		public Task<DataObjects.DepositAddressResponse> GetDepositAddress(DepositAddressRequest request)
 		{
-			return PostData<DepositAddressResponse, DepositAddressRequest>(PrivateApiCall.GetDepositAddress, request);
+			return PostData<DataObjects.DepositAddressResponse, DepositAddressRequest>(PrivateApiCall.GetDepositAddress, request);
 		}
 
-		public Task<SubmitTipResponse> SubmitTip(SubmitTipRequest request)
+		public Task<DataObjects.SubmitTipResponse> SubmitTip(SubmitTipRequest request)
 		{
-			return PostData<SubmitTipResponse, SubmitTipRequest>(PrivateApiCall.SubmitTip, request);
+			return PostData<DataObjects.SubmitTipResponse, SubmitTipRequest>(PrivateApiCall.SubmitTip, request);
 		}
 
-		public Task<SubmitWithdrawResponse> SubmitWithdraw(SubmitWithdrawRequest request)
+		public Task<DataObjects.SubmitWithdrawResponse> SubmitWithdraw(SubmitWithdrawRequest request)
 		{
-			return PostData<SubmitWithdrawResponse, SubmitWithdrawRequest>(PrivateApiCall.SubmitWithdraw, request);
+			return PostData<DataObjects.SubmitWithdrawResponse, SubmitWithdrawRequest>(PrivateApiCall.SubmitWithdraw, request);
 		}
 
 		/// <summary>POST request</summary>

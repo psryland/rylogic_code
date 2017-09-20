@@ -1,6 +1,9 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Drawing;
 using System.Windows.Forms;
 using pr.extn;
+using pr.gui;
+using pr.util;
 
 namespace CoinFlip
 {
@@ -62,6 +65,7 @@ namespace CoinFlip
 				DataPropertyName = nameof(Exchange.PairsAvailable),
 				FillWeight = 0.5f,
 			});
+			ContextMenuStrip = CreateCMenu();
 			DataSource = model.Exchanges;
 		}
 		protected override void OnCellClick(DataGridViewCellEventArgs a)
@@ -113,6 +117,25 @@ namespace CoinFlip
 					break;
 				}
 			}
+		}
+
+		/// <summary>Create the context menu for the grid</summary>
+		private ContextMenuStrip CreateCMenu()
+		{
+			var cmenu = new ContextMenuStrip();
+			{
+				var opt = cmenu.Items.Add2(new ToolStripMenuItem("API Keys"));
+				cmenu.Opening += (s,a) =>
+				{
+					opt.Enabled = SelectedRows.Count == 1;
+				};
+				opt.Click += (s,a) =>
+				{
+					var exch = (Exchange)SelectedRows[0].DataBoundItem;
+					Model.ChangeAPIKeys(exch);
+				};
+			}
+			return cmenu;
 		}
 	}
 }

@@ -88,6 +88,27 @@ namespace CoinFlip
 			return Meta.Value * amount;
 		}
 
+		/// <summary>True if the live price can be found using the LivePriceSymbols</summary>
+		public bool LivePriceAvailable
+		{
+			get
+			{
+				var coin = this;
+				var available = false;
+				var symbols = Meta.LivePriceSymbols.Split(new[]{','}, StringSplitOptions.RemoveEmptyEntries);
+				foreach (var sym in symbols)
+				{
+					// Find the pair to convert 'coin' to 'sym'
+					var pair = Exchange.Pairs[coin, sym];
+					available = pair != null;
+					if (!available) break;
+
+					coin = pair.OtherCoin(coin);
+				}
+				return available;
+			}
+		}
+
 		/// <summary>The maximum amount to automatically trade</summary>
 		public Unit<decimal> AutoTradeLimit
 		{

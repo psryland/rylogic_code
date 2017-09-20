@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -11,6 +12,7 @@ using System.Windows.Forms;
 using CoinFlip.Properties;
 using pr.common;
 using pr.container;
+using pr.crypt;
 using pr.db;
 using pr.extn;
 using pr.gfx;
@@ -40,7 +42,7 @@ namespace CoinFlip
 		private ToolStripMenuItem m_menu_file_exit;
 		private DockContainer m_dc;
 		private ToolStrip m_ts;
-		private ToolStripButton m_chk_run;
+		private ToolStripButton m_chk_trade_loops;
 		private ToolStripButton m_chk_allow_trades;
 		private ToolStripMenuItem toolsToolStripMenuItem;
 		private ToolStripMenuItem m_menu_tools_show_pairs;
@@ -53,22 +55,45 @@ namespace CoinFlip
 		private ToolStripButton m_chk_live;
 		private ToolStripSeparator toolStripSeparator3;
 		private ToolStripMenuItem m_menu_tools_chart;
+		private ToolStrip m_ts_backtesting;
+		private ToolStripButton m_chk_back_testing;
+		private ToolStripSeparator toolStripSeparator4;
+		private ToolStripButton m_btn_run_back_testing;
+		private ToolStripTrackBar m_trk_sim_time;
+		private LogUI m_win_log;
 		private LogUI m_log;
 		#endregion
 
 		public MainUI()
 		{
-			InitializeComponent();
+			try
+			{
+				InitializeComponent();
+				CreateHandle();
 
-			Model = new Model(this);
-			LoopsUI = new LoopsUI(Model, this);
-			PairsUI = new PairsUI(Model, this);
-			Charts = new List<ChartUI>();
+				// Ensure the app data directory exists
+				Directory.CreateDirectory(Misc.ResolveUserPath());
+				var settings = new Settings(Misc.ResolveUserPath(Util.IsDebug ? "settings_debug.xml" : "settings.xml"));
 
-			SetupUI();
-			UpdateUI();
+				// Get the user details
+				var user = Misc.LogIn(this, settings);
+				Text = $"{Application.ProductName} - {user.Username}";
 
-			RestoreWindowPosition();
+				Model = new Model(this, settings, user);
+				LoopsUI = new LoopsUI(Model, this);
+				PairsUI = new PairsUI(Model, this);
+				Charts = new List<ChartUI>();
+
+				SetupUI();
+				UpdateUI();
+
+				RestoreWindowPosition();
+			}
+			catch (Exception)
+			{
+				Dispose();
+				throw;
+			}
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -146,7 +171,7 @@ namespace CoinFlip
 					m_model.Coins.ListChanging     -= HandleCoinsListChanging;
 					m_model.Exchanges.ListChanging -= HandleExchangesChanging;
 					m_model.MarketDataChanging     -= HandleMarketDataChanging;
-					m_model.AllowTradesChanged     -= UpdateUI;
+					m_model.AllowTradesChanging    -= UpdateUI;
 					m_model.RunChanged             -= UpdateUI;
 					Util.Dispose(ref m_model);
 				}
@@ -157,7 +182,7 @@ namespace CoinFlip
 					m_model.Exchanges.ListChanging += HandleExchangesChanging;
 					m_model.Coins.ListChanging     += HandleCoinsListChanging;
 					m_model.Pairs.ListChanging     += HandlePairsChanging;
-					m_model.AllowTradesChanged     += UpdateUI;
+					m_model.AllowTradesChanging    += UpdateUI;
 					m_model.RunChanged             += UpdateUI;
 				}
 			}
@@ -233,25 +258,36 @@ namespace CoinFlip
 			}
 			#endregion
 
-			#region Tool bar
+			#region Trading Tool bar
 			{
-				m_chk_run.CheckedChanged += (s,a) =>
-				{
-					Model.RunLoopFinder = m_chk_run.Checked;
-					m_chk_run.Text = m_chk_run.Checked ? "Stop Loop Trading" : "Trade Loops";
-					m_chk_run.Image = m_chk_run.Checked ? Resources.power_blue : Resources.power_gray;
-					m_chk_run.BackColor = m_chk_run.Checked ? Color.LightGreen : SystemColors.Control;
-				};
 				m_chk_allow_trades.CheckedChanged += (s,a) =>
 				{
 					Model.AllowTrades = m_chk_allow_trades.Checked;
 					m_chk_allow_trades.Text = m_chk_allow_trades.Checked ? "Disable Trading" : "Enable Trading";
 					m_chk_allow_trades.BackColor = m_chk_allow_trades.Checked ? Color.LightGreen : SystemColors.Control;
 				};
+				m_chk_trade_loops.CheckedChanged += (s,a) =>
+				{
+					Model.RunLoopFinder = m_chk_trade_loops.Checked;
+					m_chk_trade_loops.Text = m_chk_trade_loops.Checked ? "Stop Loop Trading" : "Trade Loops";
+					m_chk_trade_loops.Image = m_chk_trade_loops.Checked ? Resources.power_blue : Resources.power_gray;
+					m_chk_trade_loops.BackColor = m_chk_trade_loops.Checked ? Color.LightGreen : SystemColors.Control;
+				};
 				m_chk_live.Checked = Settings.ShowLivePrices;
 				m_chk_live.CheckedChanged += (s,a) =>
 				{
 					Settings.ShowLivePrices = m_chk_live.Checked;
+				};
+			}
+			#endregion
+
+			#region Back Testing Tool bar
+			{
+				m_chk_back_testing.CheckedChanged += (s,a) =>
+				{
+					Model.BackTesting = m_chk_back_testing.Checked;
+					m_chk_back_testing.BackColor = m_chk_back_testing.Checked ? Color.LightGreen : SystemColors.Control;
+					UpdateUI();
 				};
 			}
 			#endregion
@@ -270,6 +306,12 @@ namespace CoinFlip
 
 			#region Log control
 			{
+				m_win_log = new LogUI("Wins!", nameof(m_win_log))
+				{
+					LogFilepath = ((LogToFile)Model.WinLog.LogCB).Filepath,
+					LogEntryPattern = Misc.LogEntryPattern,
+					PopOutOnNewMessages = false,
+				};
 				m_log = new LogUI("Log", nameof(m_log))
 				{
 					LogFilepath = ((LogToFile)Model.Log.LogCB).Filepath,
@@ -286,6 +328,7 @@ namespace CoinFlip
 			// Add content
 			NewChart();
 			m_dc.Add(m_log, EDockSite.Centre);
+			m_dc.Add(m_win_log, EDockSite.Centre);
 			m_dc.Add(m_grid_positions, EDockSite.Bottom);
 			m_dc.Add(m_grid_history, EDockSite.Bottom);
 			m_dc.Add(m_grid_exchanges, EDockSite.Top);
@@ -309,8 +352,15 @@ namespace CoinFlip
 		/// <summary>Handle the model properties changing</summary>
 		private void UpdateUI(object sender = null, EventArgs e = null)
 		{
+			m_chk_allow_trades.Enabled = !Model.BackTesting;
+			m_chk_back_testing.Enabled = !Model.AllowTrades;
 			m_chk_allow_trades.Checked = Model.AllowTrades;
-			m_chk_run.Checked = Model.RunLoopFinder;
+			m_chk_back_testing.Checked = Model.BackTesting;
+			m_chk_trade_loops.Checked = Model.RunLoopFinder;
+
+			// Enable items
+			m_btn_run_back_testing.Enabled = Model.BackTesting;
+			m_trk_sim_time.Enabled = Model.BackTesting;
 
 			// Invalidate the live price data 
 			m_grid_exchanges.InvalidateColumn(m_grid_exchanges.Columns[nameof(Exchange.NettWorth)].Index);
@@ -402,6 +452,8 @@ namespace CoinFlip
 			this.m_menu_tools_show_pairs = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_show_loops = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_test = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_tools_chart = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
 			this.m_chk_allow_trades = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
@@ -409,9 +461,12 @@ namespace CoinFlip
 			this.m_tb_nett_worth = new System.Windows.Forms.ToolStripTextBox();
 			this.m_chk_live = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_chk_run = new System.Windows.Forms.ToolStripButton();
-			this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_menu_tools_chart = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_chk_trade_loops = new System.Windows.Forms.ToolStripButton();
+			this.m_ts_backtesting = new System.Windows.Forms.ToolStrip();
+			this.m_chk_back_testing = new System.Windows.Forms.ToolStripButton();
+			this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_btn_run_back_testing = new System.Windows.Forms.ToolStripButton();
+			this.m_trk_sim_time = new pr.gui.ToolStripTrackBar();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.ContentPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
@@ -419,6 +474,7 @@ namespace CoinFlip
 			this.m_ss.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_ts.SuspendLayout();
+			this.m_ts_backtesting.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// m_tsc
@@ -433,18 +489,19 @@ namespace CoinFlip
 			this.m_tsc.ContentPanel.Controls.Add(this.m_dc);
 			this.m_tsc.ContentPanel.Margin = new System.Windows.Forms.Padding(0);
 			this.m_tsc.ContentPanel.Padding = new System.Windows.Forms.Padding(8, 0, 8, 0);
-			this.m_tsc.ContentPanel.Size = new System.Drawing.Size(674, 567);
+			this.m_tsc.ContentPanel.Size = new System.Drawing.Size(1025, 647);
 			this.m_tsc.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_tsc.Location = new System.Drawing.Point(0, 0);
 			this.m_tsc.Margin = new System.Windows.Forms.Padding(0);
 			this.m_tsc.Name = "m_tsc";
-			this.m_tsc.Size = new System.Drawing.Size(674, 638);
+			this.m_tsc.Size = new System.Drawing.Size(1025, 718);
 			this.m_tsc.TabIndex = 2;
 			this.m_tsc.Text = "tsc";
 			// 
 			// m_tsc.TopToolStripPanel
 			// 
 			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_menu);
+			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_ts_backtesting);
 			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_ts);
 			// 
 			// m_ss
@@ -454,7 +511,7 @@ namespace CoinFlip
             this.m_status});
 			this.m_ss.Location = new System.Drawing.Point(0, 0);
 			this.m_ss.Name = "m_ss";
-			this.m_ss.Size = new System.Drawing.Size(674, 22);
+			this.m_ss.Size = new System.Drawing.Size(1025, 22);
 			this.m_ss.TabIndex = 0;
 			// 
 			// m_status
@@ -472,7 +529,7 @@ namespace CoinFlip
 			this.m_dc.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_dc.Location = new System.Drawing.Point(8, 0);
 			this.m_dc.Name = "m_dc";
-			this.m_dc.Size = new System.Drawing.Size(658, 567);
+			this.m_dc.Size = new System.Drawing.Size(1009, 647);
 			this.m_dc.TabIndex = 4;
 			this.m_dc.Text = "dockContainer1";
 			// 
@@ -484,7 +541,7 @@ namespace CoinFlip
             this.toolsToolStripMenuItem});
 			this.m_menu.Location = new System.Drawing.Point(0, 0);
 			this.m_menu.Name = "m_menu";
-			this.m_menu.Size = new System.Drawing.Size(674, 24);
+			this.m_menu.Size = new System.Drawing.Size(1025, 24);
 			this.m_menu.TabIndex = 0;
 			this.m_menu.Text = "menuStrip1";
 			// 
@@ -517,20 +574,32 @@ namespace CoinFlip
 			// m_menu_tools_show_pairs
 			// 
 			this.m_menu_tools_show_pairs.Name = "m_menu_tools_show_pairs";
-			this.m_menu_tools_show_pairs.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_tools_show_pairs.Size = new System.Drawing.Size(138, 22);
 			this.m_menu_tools_show_pairs.Text = "&Show Pairs";
 			// 
 			// m_menu_tools_show_loops
 			// 
 			this.m_menu_tools_show_loops.Name = "m_menu_tools_show_loops";
-			this.m_menu_tools_show_loops.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_tools_show_loops.Size = new System.Drawing.Size(138, 22);
 			this.m_menu_tools_show_loops.Text = "&Show Loops";
 			// 
 			// m_menu_tools_test
 			// 
 			this.m_menu_tools_test.Name = "m_menu_tools_test";
-			this.m_menu_tools_test.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_tools_test.Size = new System.Drawing.Size(138, 22);
 			this.m_menu_tools_test.Text = "&TEST";
+			// 
+			// toolStripSeparator3
+			// 
+			this.toolStripSeparator3.Name = "toolStripSeparator3";
+			this.toolStripSeparator3.Size = new System.Drawing.Size(135, 6);
+			// 
+			// m_menu_tools_chart
+			// 
+			this.m_menu_tools_chart.Name = "m_menu_tools_chart";
+			this.m_menu_tools_chart.Size = new System.Drawing.Size(138, 22);
+			this.m_menu_tools_chart.Text = "&Chart";
+			this.m_menu_tools_chart.ToolTipText = "Open a new chart window";
 			// 
 			// m_ts
 			// 
@@ -542,7 +611,7 @@ namespace CoinFlip
             this.m_tb_nett_worth,
             this.m_chk_live,
             this.toolStripSeparator1,
-            this.m_chk_run});
+            this.m_chk_trade_loops});
 			this.m_ts.Location = new System.Drawing.Point(3, 24);
 			this.m_ts.Name = "m_ts";
 			this.m_ts.Size = new System.Drawing.Size(423, 25);
@@ -589,32 +658,61 @@ namespace CoinFlip
 			this.toolStripSeparator1.Name = "toolStripSeparator1";
 			this.toolStripSeparator1.Size = new System.Drawing.Size(6, 25);
 			// 
-			// m_chk_run
+			// m_chk_trade_loops
 			// 
-			this.m_chk_run.CheckOnClick = true;
-			this.m_chk_run.Image = global::CoinFlip.Properties.Resources.power_gray;
-			this.m_chk_run.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_chk_run.Name = "m_chk_run";
-			this.m_chk_run.Size = new System.Drawing.Size(91, 22);
-			this.m_chk_run.Text = "Trade Loops";
+			this.m_chk_trade_loops.CheckOnClick = true;
+			this.m_chk_trade_loops.Image = global::CoinFlip.Properties.Resources.power_gray;
+			this.m_chk_trade_loops.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_chk_trade_loops.Name = "m_chk_trade_loops";
+			this.m_chk_trade_loops.Size = new System.Drawing.Size(91, 22);
+			this.m_chk_trade_loops.Text = "Trade Loops";
 			// 
-			// toolStripSeparator3
+			// m_ts_backtesting
 			// 
-			this.toolStripSeparator3.Name = "toolStripSeparator3";
-			this.toolStripSeparator3.Size = new System.Drawing.Size(149, 6);
+			this.m_ts_backtesting.Dock = System.Windows.Forms.DockStyle.None;
+			this.m_ts_backtesting.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_chk_back_testing,
+            this.toolStripSeparator4,
+            this.m_btn_run_back_testing,
+            this.m_trk_sim_time});
+			this.m_ts_backtesting.Location = new System.Drawing.Point(426, 24);
+			this.m_ts_backtesting.Name = "m_ts_backtesting";
+			this.m_ts_backtesting.Size = new System.Drawing.Size(334, 25);
+			this.m_ts_backtesting.TabIndex = 2;
 			// 
-			// m_menu_tools_chart
+			// m_chk_back_testing
 			// 
-			this.m_menu_tools_chart.Name = "m_menu_tools_chart";
-			this.m_menu_tools_chart.Size = new System.Drawing.Size(152, 22);
-			this.m_menu_tools_chart.Text = "&Chart";
-			this.m_menu_tools_chart.ToolTipText = "Open a new chart window";
+			this.m_chk_back_testing.Image = ((System.Drawing.Image)(resources.GetObject("m_chk_back_testing.Image")));
+			this.m_chk_back_testing.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_chk_back_testing.Name = "m_chk_back_testing";
+			this.m_chk_back_testing.Size = new System.Drawing.Size(93, 22);
+			this.m_chk_back_testing.Text = "Back Testing";
+			// 
+			// toolStripSeparator4
+			// 
+			this.toolStripSeparator4.Name = "toolStripSeparator4";
+			this.toolStripSeparator4.Size = new System.Drawing.Size(6, 25);
+			// 
+			// m_btn_run_back_testing
+			// 
+			this.m_btn_run_back_testing.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_run_back_testing.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_run_back_testing.Image")));
+			this.m_btn_run_back_testing.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_run_back_testing.Name = "m_btn_run_back_testing";
+			this.m_btn_run_back_testing.Size = new System.Drawing.Size(23, 22);
+			this.m_btn_run_back_testing.Text = "Run";
+			// 
+			// m_trk_sim_time
+			// 
+			this.m_trk_sim_time.Name = "m_trk_sim_time";
+			this.m_trk_sim_time.Size = new System.Drawing.Size(200, 22);
+			this.m_trk_sim_time.Value = 0;
 			// 
 			// MainUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(674, 638);
+			this.ClientSize = new System.Drawing.Size(1025, 718);
 			this.Controls.Add(this.m_tsc);
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
 			this.MainMenuStrip = this.m_menu;
@@ -633,6 +731,8 @@ namespace CoinFlip
 			this.m_menu.PerformLayout();
 			this.m_ts.ResumeLayout(false);
 			this.m_ts.PerformLayout();
+			this.m_ts_backtesting.ResumeLayout(false);
+			this.m_ts_backtesting.PerformLayout();
 			this.ResumeLayout(false);
 
 		}
@@ -670,10 +770,13 @@ namespace CoinFlip
 					}
 				}
 			}
+			catch (OperationCanceledException) {}
+			#if !DEBUG
 			catch (Exception ex)
 			{
 				MsgBox.Show(null, ex.MessageFull(), "Crash!", MessageBoxButtons.OK);
 			}
+			#endif
 		}
 	}
 
@@ -693,5 +796,5 @@ namespace CoinFlip
 			set { m_list[m_index] = value; }
 		}
 	}
-	#endregion
+#endregion
 }

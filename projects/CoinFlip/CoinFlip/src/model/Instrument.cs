@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using pr.common;
 using pr.db;
 using pr.extn;
@@ -27,10 +28,10 @@ namespace CoinFlip
 
 		/// <summary>A cache of candle data read from the database</summary>
 		private List<Candle> m_cache;
-		private const int CacheSize = 10000;
-		private const int MaxCacheSize = 15000;
+		private const int CacheSize = 1000000;
+		private const int MaxCacheSize = 1500000;
 
-		public Instrument(Model model, TradePair pair, ETimeFrame time_frame)
+		public Instrument(Model model, TradePair pair, ETimeFrame time_frame, bool update_active)
 		{
 			Model = model;
 			Pair = pair;
@@ -57,13 +58,17 @@ namespace CoinFlip
 
 			// Initialise from the DB, so don't write back to the db
 			using (Scope.Create(() => ++m_suspend_db_updates, () => --m_suspend_db_updates))
-			{
-				// Select the time frame to begin with
-				TimeFrame = time_frame;
-			}
+				TimeFrame = time_frame; // Select the time frame to begin with
+
+			// Enable for updates
+			m_update_active = update_active;
+			UpdateThreadActive = update_active;
 		}
-		public Instrument(Instrument rhs, ETimeFrame time_frame)
-			:this(rhs.Model, rhs.Pair, time_frame)
+		public Instrument(Instrument rhs, ETimeFrame time_frame, bool update_active)
+			:this(rhs.Model, rhs.Pair, time_frame, update_active)
+		{}
+		public Instrument(Instrument rhs, bool update_active)
+			:this(rhs, rhs.TimeFrame, update_active)
 		{}
 		public virtual void Dispose()
 		{
@@ -129,24 +134,23 @@ namespace CoinFlip
 			set
 			{
 				if (m_time_frame == value) return;
+				using (Scope.Create(() => UpdateThreadActive, active => UpdateThreadActive = active))
+				{
+					// Stop the update thread while changing time frame
+					UpdateThreadActive = false;
 
-				// Stop the update thread while changing time frame
-				UpdateThreadActive = false;
+					// Set the new time frame
+					m_time_frame = value;
 
-				// Set the new time frame
-				m_time_frame = value;
+					// Flush any cached data
+					InvalidateCachedData();
 
-				// Flush any cached data
-				InvalidateCachedData();
+					// Set the last updated time to the timestamp of the last candle
+					LastUpdatedUTC = Latest.TimestampUTC;
 
-				// Set the last updated time to the timestamp of the last candle
-				LastUpdatedUTC = Latest.TimestampUTC;
-
-				// Notify time frame changed
-				OnTimeFrameChanged();
-
-				// Start the update thread for non-none time frames
-				UpdateThreadActive = m_time_frame != ETimeFrame.None;
+					// Notify time frame changed
+					OnTimeFrameChanged();
+				}
 			}
 		}
 		private ETimeFrame m_time_frame;
@@ -374,7 +378,7 @@ namespace CoinFlip
 		/// <summary>Generate a filepath for the given pair name</summary>
 		public static string CacheDBFilePath(string pair_name)
 		{
-			var dbpath = Util.ResolveUserDocumentsPath("Rylogic", "CoinFlip", $"PriceData\\{Path_.SanitiseFileName(pair_name)}.db");
+			var dbpath = Misc.ResolveUserPath($"PriceData\\{Path_.SanitiseFileName(pair_name)}.db");
 			Directory.CreateDirectory(Path_.Directory(dbpath));
 			return dbpath;
 		}
@@ -414,6 +418,10 @@ namespace CoinFlip
 			set
 			{
 				if (UpdateThreadActive == value) return;
+
+				if (value && !m_update_active)
+					throw new Exception("Only 'update active' instances can get updates");
+
 				if (UpdateThreadActive)
 				{
 					m_update_thread_exit.Set();
@@ -433,19 +441,25 @@ namespace CoinFlip
 		}
 		private Thread m_update_thread;
 		private ManualResetEvent m_update_thread_exit;
+		private bool m_update_active;
 
 		/// <summary>Thread entry point for the instrument update thread</summary>
 		private void UpdateThreadEntryPoint(UpdateTreadData utd)
 		{
 			try
 			{
-				Debug.Assert(utd.TimeFrame != ETimeFrame.None);
 				using (var db = new Sqlite.Database(DBFilepath))
 				{
 					var beg = utd.TimeRange.Beg;
 					var end = utd.TimeRange.End;
-					for (; !m_update_thread_exit.IsSignalled();)
+					for (;
+						!m_update_thread_exit.IsSignalled();
+						 m_update_thread_exit.WaitOne(TimeSpan.FromMilliseconds(500))) // Sleep for a bit
 					{
+						// Do nothing if the time frame is set to none
+						if (utd.TimeFrame == ETimeFrame.None)
+							continue;
+
 						// Query for chart data
 						var data = utd.Exchange.ChartData(utd.Pair, utd.TimeFrame, end, DateTimeOffset.Now.Ticks).Result;
 						if (data.Count != 0)
@@ -463,9 +477,6 @@ namespace CoinFlip
 									Add(utd.TimeFrame, data);
 							});
 						}
-
-						// Sleep for a bit
-						m_update_thread_exit.WaitOne(TimeSpan.FromMilliseconds(500));
 					}
 				}
 			}

@@ -92,6 +92,13 @@ namespace CoinFlip
 			return Misc.CompletedTask;
 		}
 
+		/// <summary>The maximum number of requests per second to the exchange server</summary>
+		public override float ServerRequestRateLimit
+		{
+			get { return 1_000_000f; }
+			set {}
+		}
+
 		/// <summary>Fake settings</summary>
 		private class TestExchangeSettings :IExchangeSettings
 		{

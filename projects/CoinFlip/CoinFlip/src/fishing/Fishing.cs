@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using pr.attrib;
 using pr.common;
 using pr.extn;
@@ -13,7 +15,7 @@ using pr.util;
 
 namespace CoinFlip
 {
-	public class Fishing :IDisposable, IShutdownAsync
+	public class Fishing :IDisposable, IShutdownAsync ,INotifyPropertyChanged
 	{
 		// Notes:
 		//  Go fishing on 'exch1' by setting offers above/below the best price on 'exch0'
@@ -21,7 +23,7 @@ namespace CoinFlip
 		public Fishing(Model model, Settings.FishingData data)
 		{
 			var logname = Util.IsDebug ? $"log_{data.Name}_debug.txt" : $"log_{data.Name}.txt";
-			var logpath = Util.ResolveUserDocumentsPath("Rylogic", "CoinFlip", $"Logs\\{logname}");
+			var logpath = Misc.ResolveUserPath($"Logs\\{logname}");
 			Directory.CreateDirectory(Path_.Directory(logpath));
 
 			Model = model;
@@ -35,6 +37,7 @@ namespace CoinFlip
 			Debug.Assert(!Active, "Main loop must be shutdown before Disposing");
 			DetailsUI = null;
 			Log = null;
+			Settings = null;
 			Model = null;
 		}
 
@@ -128,6 +131,12 @@ namespace CoinFlip
 		}
 		private Logger m_log;
 
+		/// <summary>A log for wins!</summary>
+		public Logger WinLog
+		{
+			get { return Model.WinLog; }
+		}
+
 		/// <summary>Enable/Disable fishing using this instance</summary>
 		public bool Active
 		{
@@ -150,6 +159,7 @@ namespace CoinFlip
 					m_main_loop_shutdown.Cancel();
 					m_main_loop_shutdown = null;
 				}
+				PropertyChanged.Raise(this, new PropertyChangedEventArgs(nameof(Active)));
 			}
 		}
 
@@ -160,13 +170,55 @@ namespace CoinFlip
 			private set
 			{
 				if (m_model == value) return;
+				if (m_model != null)
+				{
+					m_model.AllowTradesChanging -= HandleAllowTradesChanging;
+				}
 				m_model = value;
+				if (m_model != null)
+				{
+					m_model.AllowTradesChanging += HandleAllowTradesChanging;
+				}
 			}
 		}
 		private Model m_model;
+		private void HandleAllowTradesChanging(object sender, PrePostEventArgs e)
+		{
+			// Disable fishing when enable trading is switched
+			// so that trades don't get left behind.
+			Active = false;
+		}
 
 		/// <summary>Settings object for this instance</summary>
-		public Settings.FishingData Settings { get; set; }
+		public Settings.FishingData Settings
+		{
+			get { return m_settings; }
+			set
+			{
+				if (m_settings == value) return;
+				if (m_settings != null)
+				{
+					m_settings.SettingChanged -= HandleSettingChanged;
+				}
+				m_settings = value;
+				if (m_settings != null)
+				{
+					m_settings.SettingChanged += HandleSettingChanged;
+				}
+			}
+		}
+		private Settings.FishingData m_settings;
+		private void HandleSettingChanged(object sender, SettingChangedEventArgs args)
+		{
+			switch (args.Key) {
+			case nameof(CoinFlip.Settings.FishingData.Name):
+			case nameof(CoinFlip.Settings.FishingData.Pair):
+			case nameof(CoinFlip.Settings.FishingData.Exch0):
+			case nameof(CoinFlip.Settings.FishingData.Exch1):
+				PropertyChanged.Raise(this, new PropertyChangedEventArgs(args.Key));
+				break;
+			}
+		}
 
 		/// <summary>Binding helpers</summary>
 		public string Name      { get { return Settings.Name; } }
@@ -373,6 +425,9 @@ namespace CoinFlip
 		/// <summary>Raised after each update</summary>
 		public event EventHandler Updated;
 
+		/// <summary>Property changed notification</summary>
+		public event PropertyChangedEventHandler PropertyChanged;
+
 		/// <summary>Manages a fishing trade in a single direction</summary>
 		public class FishingTrade :IDisposable
 		{
@@ -412,6 +467,10 @@ namespace CoinFlip
 			private Logger Log
 			{
 				[DebuggerStepThrough] get { return m_fisher.Log; }
+			}
+			private Logger WinLog
+			{
+				[DebuggerStepThrough] get { return m_fisher.WinLog; }
 			}
 
 			/// <summary>The pair on Exch0</summary>
@@ -716,14 +775,16 @@ namespace CoinFlip
 							var effective_price1 = (decimal)Trade1.PriceNettQ2B;
 							var ratio = Math.Abs(effective_price0 - effective_price1) / effective_price0;
 
-							Log.Write(ELogLevel.Warn, Str.Build(
-								$"!Profit!\n",
+							var msg = Str.Build(
+								(Model.AllowTrades ? "!Profit!\n" : "!Virtual Profit!\n"),
 								$"  Bait order on {Exch1.Name}: {Trade1.Description} (After Fees: {out1:G6} @ {effective_price1:G6})\n",
 								$" Match order on {Exch0.Name}: {Trade0.Description} (After Fees: {out0:G6} @ {effective_price0:G6})\n",
 								$"\n",
 								$"  Nett {Trade0.CoinOut}: {nett0:G8}  ({value0:C})\n",
 								$"  Nett {Trade1.CoinOut}: {nett1:G8}  ({value1:C})\n",
-								$"  Total: {sum:C}  Ratio: {100*ratio:G6}%"));
+								$"  Total: {sum:C}  Ratio: {100*ratio:G6}%");
+							Log.Write(ELogLevel.Warn, msg);
+							WinLog.Write(ELogLevel.Info, msg);
 
 							Res.Coins.Play();
 							Result = EResult.Complete;

@@ -18,7 +18,6 @@ namespace Poloniex.API
 {
 	public class PoloniexApi :IDisposable
 	{
-		private const int MaxRequestsPerSecond = 6;
 		private string UrlBaseAddress;
 		private string UrlWssAddress;
 		private HttpClient m_client;
@@ -34,6 +33,7 @@ namespace Poloniex.API
 			m_cancel_token = cancel_token;
 			UrlBaseAddress = base_address;
 			UrlWssAddress = wss_address;
+			ServerRequestRateLimit = 6;
 			Dispatcher = Dispatcher.CurrentDispatcher;
 			ActiveSubscriptions = new Dictionary<string, Subscription>();
 			Hasher = new HMACSHA512(Encoding.ASCII.GetBytes(m_secret));
@@ -54,6 +54,9 @@ namespace Poloniex.API
 				m_client = null;
 			}
 		}
+
+		/// <summary>The maximum number of requests per second to the exchange server</summary>
+		public float ServerRequestRateLimit { get; set; }
 
 		/// <summary>Raised when a connection is established</summary>
 		public event EventHandler OnConnectionChanged;
@@ -383,6 +386,7 @@ namespace Poloniex.API
 			foreach (var pos in positions)
 				foreach (var p in pos.Value)
 					p.Pair = CurrencyPair.Parse(pos.Key);
+
 			return positions;
 		}
 
@@ -429,7 +433,7 @@ namespace Poloniex.API
 					m_cancel_token.ThrowIfCancellationRequested();
 
 					// Limit requests to the required rate
-					var request_period_ms = 1000 / MaxRequestsPerSecond;
+					var request_period_ms = 1000 / ServerRequestRateLimit;
 					for (; m_request_sw.ElapsedMilliseconds - m_last_request_ms < request_period_ms; Thread.Yield()){}
 					m_last_request_ms = m_request_sw.ElapsedMilliseconds;
 
@@ -467,7 +471,7 @@ namespace Poloniex.API
 					m_cancel_token.ThrowIfCancellationRequested();
 
 					// Limit requests to the required rate
-					var request_period_ms = 1000 / MaxRequestsPerSecond;
+					var request_period_ms = 1000 / ServerRequestRateLimit;
 					for (; m_request_sw.ElapsedMilliseconds - m_last_request_ms < request_period_ms; Thread.Yield()){}
 					m_last_request_ms = m_request_sw.ElapsedMilliseconds;
 

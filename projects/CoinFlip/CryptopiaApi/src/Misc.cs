@@ -4,8 +4,10 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using System.Text;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
-namespace Bittrex.API
+namespace Cryptopia.API
 {
 	/// <summary>Represents the type of an order.</summary>
 	public enum EOrderType
@@ -15,6 +17,26 @@ namespace Bittrex.API
 
 		/// <summary>A.k.a B2Q, Ask, Long</summary>
 		Sell,
+	}
+
+	/// <summary>Trade Cancel Type</summary>
+	public enum ECancelTradeType
+	{
+		/// <summary>Single open order cancel</summary>
+		Trade,
+
+		/// <summary>Cancel all open orders for trade pair</summary>
+		TradePair,
+
+		/// <summary>Cancel All open orders</summary>
+		All
+	}
+
+	/// <summary>Account transaction types</summary>
+	public enum ETransactionType
+	{
+		Deposit,
+		Withdraw
 	}
 
 	/// <summary>Global functions</summary>
@@ -42,26 +64,6 @@ namespace Bittrex.API
 		public static DateTimeOffset ParseDateTime(string dt)
 		{
 			return DateTimeOffset.ParseExact(dt, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
-		}
-
-		/// <summary>Parse the buy/sell string</summary>
-		public static EOrderType ToOrderType(string value)
-		{
-			switch (value.ToLowerInvariant()) {
-			default: throw new ArgumentOutOfRangeException("value");
-			case "limit_buy":  return EOrderType.Buy;
-			case "buylimit":   return EOrderType.Buy;
-			case "limit_sell": return EOrderType.Sell;
-			case "selllimit":  return EOrderType.Sell;
-			}
-		}
-		public static string ToString(EOrderType order_type)
-		{
-			switch (order_type) {
-			default: throw new ArgumentException("order_type");
-			case EOrderType.Buy: return "buylimit";
-			case EOrderType.Sell: return "selllimit";
-			}
 		}
 
 		/// <summary>Convert a byte array to a Hex character string</summary>
@@ -96,6 +98,17 @@ namespace Bittrex.API
 			}
 			if (s.Length != 0) s[0] = '?';
 			return s.ToString();
+		}
+
+		/// <summary>Encode 'kv' into a JSon string</summary>
+		public static string JsonEncode(IEnumerable<KV> parameters)
+		{
+			var s = new JObject();
+			foreach (var kv in parameters)
+			{
+				s.Add(new JProperty(kv.Key, kv.Value));
+			}
+			return s.ToString(Formatting.None);
 		}
 
 		/// <summary>Helper for generating "nonce"</summary>

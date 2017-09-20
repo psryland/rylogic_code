@@ -17,6 +17,7 @@ namespace CoinFlip
 	{
 		public Settings()
 		{
+			LastUser          = string.Empty;
 			MaximumLoopCount  = 5;
 			MainLoopPeriod    = 500;
 			ShowLivePrices    = false;
@@ -35,6 +36,13 @@ namespace CoinFlip
 			:base(filepath)
 		{
 			AutoSaveOnChanges = true;
+		}
+
+		/// <summary>The name of the last user to log on</summary>
+		public string LastUser
+		{
+			get { return get(x => x.LastUser); }
+			set { set(x => x.LastUser, value); }
 		}
 
 		/// <summary>The maximum number of hops in a loop</summary>
@@ -330,7 +338,7 @@ namespace CoinFlip
 				Value = value;
 				OfInterest = false;
 				AutoTradingLimit = 1m;
-				LivePriceSymbols = string.Empty;
+				LivePriceSymbols = "USDT";
 			}
 			public CoinData(XElement node)
 			{
@@ -380,7 +388,7 @@ namespace CoinFlip
 			/// <summary>A comma separated list of currencies used to convert this coin to a live price value</summary>
 			public string LivePriceSymbols
 			{
-				get { return m_live_price_symbols; }
+				get { return m_live_price_symbols ?? string.Empty; }
 				set { SetProp(ref m_live_price_symbols, value, nameof(LivePriceSymbols)); }
 			}
 			private string m_live_price_symbols;
@@ -398,8 +406,17 @@ namespace CoinFlip
 		/// <summary>Data needed to save a fishing instance in the settings</summary>
 		[Serializable]
 		[DebuggerDisplay("{Pair} {Exch0} {Exch1}")]
-		public class FishingData
+		[TypeConverter(typeof(TyConv))]
+		public class FishingData :SettingsXml<FishingData>
 		{
+			public FishingData()
+			{
+				Pair         = string.Empty;
+				Exch0        = string.Empty;
+				Exch1        = string.Empty;
+				PriceOffset  = 0m;
+				Direction    = ETradeDirection.None;
+			}
 			public FishingData(string pair, string exch0, string exch1, decimal price_offset, ETradeDirection direction)
 			{
 				Pair         = pair;
@@ -417,37 +434,43 @@ namespace CoinFlip
 				Direction    = rhs.Direction;
 			}
 			public FishingData(XElement node)
-			{
-				Pair         = node.Element(nameof(Pair )).As(Pair );
-				Exch0        = node.Element(nameof(Exch0)).As(Exch0);
-				Exch1        = node.Element(nameof(Exch1)).As(Exch1);
-				PriceOffset  = node.Element(nameof(PriceOffset)).As(PriceOffset);
-				Direction    = node.Element(nameof(Direction)).As(Direction);
-			}
-			public XElement ToXml(XElement node)
-			{
-				node.Add2(nameof(Pair), Pair, false);
-				node.Add2(nameof(Exch0), Exch0, false);
-				node.Add2(nameof(Exch1), Exch1, false);
-				node.Add2(nameof(PriceOffset), PriceOffset, false);
-				node.Add2(nameof(Direction), Direction, false);
-				return node;
-			}
+				:base(node)
+			{}
 
 			/// <summary>The name of the pair to trade</summary>
-			public string Pair { get; set; }
+			public string Pair
+			{
+				get { return get(x => x.Pair); }
+				set { set(x => x.Pair, value); }
+			}
 
 			/// <summary>The name of the reference exchange</summary>
-			public string Exch0 { get; set; }
+			public string Exch0
+			{
+				get { return get(x => x.Exch0); }
+				set { set(x => x.Exch0, value); }
+			}
 
 			/// <summary>The name of the target exchange</summary>
-			public string Exch1 { get; set; }
+			public string Exch1
+			{
+				get { return get(x => x.Exch1); }
+				set { set(x => x.Exch1, value); }
+			}
 
 			/// <summary>The price offset range (as a fraction of the reference price)</summary>
-			public decimal PriceOffset { get; set; }
+			public decimal PriceOffset
+			{
+				get { return get(x => x.PriceOffset); }
+				set { set(x => x.PriceOffset, value); }
+			}
 
 			/// <summary>The directions to fish in</summary>
-			public ETradeDirection Direction { get; set; }
+			public ETradeDirection Direction
+			{
+				get { return get(x => x.Direction); }
+				set { set(x => x.Direction, value); }
+			}
 
 			/// <summary>An identifying name for this fishing instance</summary>
 			public string Name
@@ -480,6 +503,8 @@ namespace CoinFlip
 						Direction == ETradeDirection.None ? "No trading direction\r\n"            : string.Empty);
 				}
 			}
+
+			private class TyConv :GenericTypeConverter<FishingData> {}
 		}
 
 		/// <summary>Settings for a chart</summary>
@@ -494,7 +519,7 @@ namespace CoinFlip
 				m_ask_colour     = null;
 				m_bid_colour     = null;
 				m_show_positions = null;
-				Indicators       = new XElement(nameof(Indicators));
+				Indicators       = null;
 			}
 			public ChartSettings(ChartSettings rhs)
 			{
@@ -515,7 +540,7 @@ namespace CoinFlip
 				m_ask_colour     = node.Element(nameof(AskColour    )).As(m_ask_colour    );
 				m_bid_colour     = node.Element(nameof(BidColour    )).As(m_bid_colour    );
 				m_show_positions = node.Element(nameof(ShowPositions)).As(m_show_positions);
-				Indicators       = node.Element(nameof(Indicators   ));
+				Indicators       = node.Element(nameof(Indicators   )).As(Indicators      );
 			}
 			public XElement ToXml(XElement node)
 			{

@@ -35,44 +35,44 @@ namespace Cryptopia.API
 
 		#region API Calls
 
-		public async Task<CurrenciesResponse> GetCurrencies()
+		public async Task<DataObjects.CurrenciesResponse> GetCurrencies()
 		{
-			return await GetResult<CurrenciesResponse>(PublicApiCall.GetCurrencies, null);
+			return await GetResult<DataObjects.CurrenciesResponse>(PublicApiCall.GetCurrencies, null);
 		}
 
-		public async Task<TradePairsResponse> GetTradePairs()
+		public async Task<DataObjects.TradePairsResponse> GetTradePairs()
 		{
-			return await GetResult<TradePairsResponse>(PublicApiCall.GetTradePairs, null);
+			return await GetResult<DataObjects.TradePairsResponse>(PublicApiCall.GetTradePairs, null);
 		}
 
-		public async Task<MarketsResponse> GetMarkets(MarketsRequest request)
+		public async Task<DataObjects.MarketsResponse> GetMarkets(MarketsRequest request)
 		{
 			var query = request.Hours.HasValue ? $"/{request.Hours}" : null;
-			return await GetResult<MarketsResponse>(PublicApiCall.GetMarkets, query);
+			return await GetResult<DataObjects.MarketsResponse>(PublicApiCall.GetMarkets, query);
 		}
 
-		public async Task<MarketResponse> GetMarket(MarketRequest request)
+		public async Task<DataObjects.MarketResponse> GetMarket(MarketRequest request)
 		{
 			var query = request.Hours.HasValue ? $"/{request.TradePairId}/{request.Hours}" : $"/{request.TradePairId}";
-			return await GetResult<MarketResponse>(PublicApiCall.GetMarket, query);
+			return await GetResult<DataObjects.MarketResponse>(PublicApiCall.GetMarket, query);
 		}
 
-		public async Task<MarketHistoryResponse> GetMarketHistory(MarketHistoryRequest request)
+		public async Task<DataObjects.MarketHistoryResponse> GetMarketHistory(MarketHistoryRequest request)
 		{
 			var query = $"/{request.TradePairId}";
-			return await GetResult<MarketHistoryResponse>(PublicApiCall.GetMarketHistory, query);
+			return await GetResult<DataObjects.MarketHistoryResponse>(PublicApiCall.GetMarketHistory, query);
 		}
 
-		public async Task<MarketOrdersResponse> GetMarketOrders(MarketOrdersRequest request)
+		public async Task<DataObjects.MarketOrdersResponse> GetMarketOrders(MarketOrdersRequest request)
 		{
 			var query = request.OrderCount.HasValue ? $"/{request.TradePairId}/{request.OrderCount}" : $"/{request.TradePairId}";
-			return await GetResult<MarketOrdersResponse>(PublicApiCall.GetMarketOrders, query);
+			return await GetResult<DataObjects.MarketOrdersResponse>(PublicApiCall.GetMarketOrders, query);
 		}
 
-		public async Task<MarketOrderGroupsResponse> GetMarketOrderGroups(MarketOrderGroupsRequest request)
+		public async Task<DataObjects.MarketOrderGroupsResponse> GetMarketOrderGroups(MarketOrderGroupsRequest request)
 		{
 			var query = request.OrderCount.HasValue ? $"/{string.Join("-", request.TradePairIds)}/{request.OrderCount}" : $"/{string.Join("-", request.TradePairIds)}";
-			return await GetResult<MarketOrderGroupsResponse>(PublicApiCall.GetMarketOrderGroups, query);
+			return await GetResult<DataObjects.MarketOrderGroupsResponse>(PublicApiCall.GetMarketOrderGroups, query);
 		}
 
 		/// <summary>Helper for GETs</summary>

@@ -70,6 +70,9 @@
     <Compile Include="src\indicators\Indicator.cs" />
     <Compile Include="src\model\Instrument.cs" />
     <Compile Include="src\model\TimeFrame.cs" />
+    <Compile Include="src\ui\APIKeysUI.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="src\ui\BaseUI.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -112,6 +115,9 @@
     <Compile Include="src\loops\LoopsUI.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\ui\LogInUI.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="src\ui\MainUI.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -140,14 +146,23 @@
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+    <EmbeddedResource Include="src\ui\APIKeysUI.resx">
+      <DependentUpon>APIKeysUI.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="src\ui\ChartUI.resx">
       <DependentUpon>ChartUI.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\ui\EditMaUI.resx">
+      <DependentUpon>EditMaUI.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\ui\FishingDetailsUI.resx">
       <DependentUpon>FishingDetailsUI.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\loops\LoopsUI.resx">
       <DependentUpon>LoopsUI.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\ui\LogInUI.resx">
+      <DependentUpon>LogInUI.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\ui\MainUI.resx">
       <DependentUpon>MainUI.cs</DependentUpon>

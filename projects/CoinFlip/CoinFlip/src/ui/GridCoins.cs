@@ -89,7 +89,10 @@ namespace CoinFlip
 			case nameof(ColumnNames.Value):
 				{
 					// Find the maximum price for the available exchanges
-					a.Value = Model.MaxLiveValue(cd.Symbol).ToString("C");
+					a.Value =
+						Model.Settings.ShowLivePrices && Model.LivePriceAvailable(cd.Symbol)
+						? Model.MaxLiveValue(cd.Symbol).ToString("C")
+						: "unknown";
 					a.FormattingApplied = true;
 					break;
 				}

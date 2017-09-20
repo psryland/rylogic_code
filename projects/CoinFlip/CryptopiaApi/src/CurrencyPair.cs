@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace CryptopiaApi.Models
+namespace Cryptopia.API
 {
 	/// <summary>Base/Quote currency trading pair</summary>
 	[DebuggerDisplay("{Base,nq}/{Quote,nq}")]
@@ -61,4 +58,3 @@ namespace CryptopiaApi.Models
 		#endregion
 	}
 }
-

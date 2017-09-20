@@ -2,22 +2,18 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Bittrex.API
 {
 	public class BittrexApi :IDisposable
 	{
-		private int MaxRequestsPerSecond = 10;
 		private string UrlBaseAddress;
 		private HttpClient m_client;
 		private JsonSerializer m_json;
@@ -34,6 +30,7 @@ namespace Bittrex.API
 			m_secret = secret;
 			m_cancel_token = cancel_token;
 			UrlBaseAddress = base_address;
+			ServerRequestRateLimit = 10;
 			m_client = new HttpClient { BaseAddress = new Uri(UrlBaseAddress), Timeout = TimeSpan.FromSeconds(10) };
 			m_json = new JsonSerializer { NullValueHandling = NullValueHandling.Ignore };
 			Hasher = m_secret != null ? new HMACSHA512(Encoding.ASCII.GetBytes(m_secret)) : null;
@@ -48,6 +45,9 @@ namespace Bittrex.API
 				m_client = null;
 			}
 		}
+
+		/// <summary>The maximum number of requests per second to the exchange server</summary>
+		public float ServerRequestRateLimit { get; set; }
 
 		/// <summary>Hasher</summary>
 		private HMACSHA512 Hasher { get; set; }
@@ -157,7 +157,7 @@ namespace Bittrex.API
 					m_cancel_token.ThrowIfCancellationRequested();
 
 					// Limit requests to the required rate
-					var request_period_ms = 1000 / MaxRequestsPerSecond;
+					var request_period_ms = 1000 / ServerRequestRateLimit;
 					for (; m_request_sw.ElapsedMilliseconds - m_last_request_ms < request_period_ms; Thread.Yield()){}
 					m_last_request_ms = m_request_sw.ElapsedMilliseconds;
 

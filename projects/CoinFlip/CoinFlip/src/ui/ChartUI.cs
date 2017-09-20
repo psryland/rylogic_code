@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
+using System.Xml.Linq;
 using pr.attrib;
 using pr.common;
 using pr.container;
@@ -31,6 +32,11 @@ namespace CoinFlip
 		private ToolStripSeparator toolStripSeparator1;
 		private ToolStripButton m_chk_show_positions;
 		private ToolStripButton m_chk_show_depth;
+		private ToolStrip m_ts_drawing;
+		private ToolStripLabel m_lbl_drawing_tools;
+		private ToolStripButton m_btn_horz_line;
+		private ToolStripButton m_btn_vert_line;
+		private ToolStripButton m_btn_trend_line;
 		private ChartControl m_chart;
 		#endregion
 
@@ -61,6 +67,7 @@ namespace CoinFlip
 			TimeFrames = null;
 			Pairs = null;
 			ChartSettings = null;
+			Indicators.Clear();
 			Instrument = null;
 			GfxAsk = null;
 			GfxBid = null;
@@ -184,7 +191,7 @@ namespace CoinFlip
 			if (pair != null)
 			{
 				// Create the new instrument
-				Instrument = new Instrument(Model, pair, TimeFrame);
+				Instrument = new Instrument(Model, pair, TimeFrame, update_active:true);
 
 				// Find the chart settings associated with this instrument
 				ChartSettings = Model.Settings.Charts.FirstOrDefault(x => x.SymbolCode == pair.Name);
@@ -261,15 +268,15 @@ namespace CoinFlip
 			{
 			case ListChg.ItemAdded:
 				{
-				//	// Ensure the 'Chart' property is set on the indicator
-				//	args.Item.Instrument = Instrument;
-				//	args.Item.Chart = m_chart;
-				//
+					// Ensure the 'Chart' property is set on the indicator
+					args.Item.Instrument = Instrument;
+					args.Item.Chart = m_chart;
+
 				//	// When the indicator changes, update the saved chart settings
 				//	args.Item.DataChanged += HandleIndicatorChanged;
-				//
-				//	// Update the settings.
-				//	HandleIndicatorChanged();
+
+					// Update the settings.
+					HandleIndicatorChanged();
 
 					// Refresh the chart
 					Invalidate(true);
@@ -277,24 +284,39 @@ namespace CoinFlip
 				}
 			case ListChg.ItemRemoved:
 				{
-				//	// Remove from the Chart
-				//	args.Item.Chart = null;
-				//	args.Item.Instrument = null;
-				//
+					// Remove from the Chart
+					args.Item.Chart = null;
+					args.Item.Instrument = null;
+
 				//	// Ignore changes
 				//	args.Item.DataChanged -= HandleIndicatorChanged;
-				//
-				//	// Dispose the indicator
-				//	Util.Dispose(args.Item);
-				//
-				//	// Update the settings.
-				//	HandleIndicatorChanged();
+
+					// Dispose the indicator
+					Util.Dispose(args.Item);
+
+					// Update the settings.
+					HandleIndicatorChanged();
 
 					// Refresh the chart
 					Invalidate(true);
 					break;
 				}
 			}
+		}
+		private void HandleIndicatorChanged(object sender = null, EventArgs e = null)
+		{
+			// ChartSettings is set to null on Dispose so that removing indicators
+			// doesn't write to the settings.
+			if (ChartSettings == null)
+				return;
+
+			// Save the indicators to the chart settings
+			var elements = new XElement(nameof(Indicators));
+			foreach (var indicator in Indicators)
+				elements.Add2(nameof(Indicator), indicator, true);
+
+			// Update the settings
+			ChartSettings.Indicators = elements;
 		}
 
 		/// <summary>The selected time frame</summary>
@@ -402,14 +424,13 @@ namespace CoinFlip
 			get { return Instrument?.AllPositions ?? new Position[0]; }
 		}
 
-		/// <summary>(Re)create indicators</summary>
+		/// <summary>(Re)create indicators from settings</summary>
 		private void UpdateIndicators()
 		{
 			Indicators.Clear();
-			foreach (var node in ChartSettings.Indicators.Elements(nameof(Indicator)))
-			{
-
-			}
+			if (ChartSettings.Indicators != null)
+				foreach (var node in ChartSettings.Indicators.Elements(nameof(Indicator)))
+					Indicators.Add((Indicator)node.ToObject());
 		}
 
 		/// <summary>Convert the XAxis values into pretty datetime strings</summary>
@@ -568,40 +589,47 @@ namespace CoinFlip
 						// Add a new indicator
 						var add_menu = indicators_menu.DropDownItems.Add2(new ToolStripMenuItem("Add Indicator"));
 						{
-					//		// S&R Level
-					//		var opt = add_menu.DropDownItems.Add2(new ToolStripMenuItem("Support/Resistance Level"));
-					//		opt.Click += (s,a) =>
-					//		{
-					//			// SnR levels are an Instrument thing. Add the SnRLevel to the instrument.
-					//			// We'll notice it in a different handler and add an indicator for it there.
-					//			var snr = new SnRLevel(e.HitResult.ChartPoint.Y, m_chart.YAxis.Span * 0.05 / Instrument.PriceData.PipSize);
-					//			Instrument.SupportResistLevels.Add(snr);
-					//			EditSnRLevel(Indicators.OfType<SnRIndicator>().First(x => x.Id == snr.Id));
-					//		};
-						}{
-							// MA
-							var opt = add_menu.DropDownItems.Add2(new ToolStripMenuItem("Moving Average"));
-							opt.Click += (s,a) => EditMaIndicator();
-						}{
-					//		// S&R
-					//		var opt = add_menu.DropDownItems.Add2(new ToolStripMenuItem("Support and Resistance"));
-					//		opt.Click += (s,a) => EditSnRIndicator();
-						}{
-					//		// Trend Strength
-					//		var opt = add_menu.DropDownItems.Add2(new ToolStripMenuItem("Trend Strength"));
-					//		opt.Click += (s,a) => EditTrendStrengthIndicator();
+							{
+								// MA
+								var opt = add_menu.DropDownItems.Add2(new ToolStripMenuItem("Moving Average"));
+								opt.Click += (s,a) => EditMaIndicator();
+							}
+							{
+								//// S&R Level
+								//var opt = add_menu.DropDownItems.Add2(new ToolStripMenuItem("Support/Resistance Level"));
+								//opt.Click += (s,a) =>
+								//{
+								//	// SnR levels are an Instrument thing. Add the SnRLevel to the instrument.
+								//	// We'll notice it in a different handler and add an indicator for it there.
+								//	var snr = new SnRLevel(e.HitResult.ChartPoint.Y, m_chart.YAxis.Span * 0.05 / Instrument.PriceData.PipSize);
+								//	Instrument.SupportResistLevels.Add(snr);
+								//	EditSnRLevel(Indicators.OfType<SnRIndicator>().First(x => x.Id == snr.Id));
+								//};
+							}
+							{
+								//// S&R
+								//var opt = add_menu.DropDownItems.Add2(new ToolStripMenuItem("Support and Resistance"));
+								//opt.Click += (s,a) => EditSnRIndicator();
+							}
+							{
+								//// Trend Strength
+								//var opt = add_menu.DropDownItems.Add2(new ToolStripMenuItem("Trend Strength"));
+								//opt.Click += (s,a) => EditTrendStrengthIndicator();
+							}
 						}
 
 						indicators_menu.DropDownItems.AddSeparator();
 
 						// Modify existing indicators
-					//	var hit_indicators = e.HitResult.Hits.Where(x => x.Element is IndicatorBase).Select(x => (IndicatorBase)x.Element).ToArray();
-					//	foreach (var indicator in Indicators)
-					//	{
-					//		var colour = hit_indicators.Contains(indicator) ? Color.Blue : Color.Black;
-					//		var opt = indicators_menu.DropDownItems.Add2(new ToolStripMenuItem(indicator.Name) { ForeColor = colour });
-					//		opt.Click += (s,a) => EditIndicator(indicator);
-					//	}
+						var hit_indicators = e.HitResult.Hits.Where(x => x.Element is Indicator).Select(x => (Indicator)x.Element).ToArray();
+						foreach (var indicator in Indicators)
+						{
+							var is_hit = hit_indicators.Contains(indicator);
+							var colour = is_hit ? Color.Blue : Color.Black;
+							var font = is_hit ? new Font(e.Menu.Font, FontStyle.Bold) : e.Menu.Font;
+							var opt = indicators_menu.DropDownItems.Add2(new ToolStripMenuItem(indicator.Name) { ForeColor = colour, Font = font });
+							opt.Click += (s,a) => EditIndicator(indicator);
+						}
 					}
 					#endregion
 
@@ -609,26 +637,26 @@ namespace CoinFlip
 
 					#region Orders
 					{
-					//	// The price where the mouse was clicked
-					//	var click_price = Misc.RoundToNearestPip(e.HitResult.ChartPoint.Y,  Instrument.PriceData);
-					//	Action<ETradeType> new_order = (tt) =>
-					//	{
+						// The price where the mouse was clicked
+						var click_price = e.HitResult.ChartPoint.Y;
+						Action<ETradeType> PlaceNewOrder = (tt) =>
+						{
 					//		Model.Positions.Orders.Add2(new Order(0, Instrument, tt, Trade.EState.Visualising)
 					//		{
 					//			EntryPrice = click_price,
 					//			StopLossRel = m_chart.YAxis.Span * 0.1,
 					//			TakeProfitRel = m_chart.YAxis.Span * 0.1,
 					//		});
-					//	};
+						};
 
-					//	{// Buy
-					//		var opt = e.Menu.Items.Insert2(idx++, new ToolStripMenuItem("Buy at {0}".Fmt(click_price)) { ForeColor = Settings.UI.AskColour });
-					//		opt.Click += (s,a) => new_order(ETradeType.Long);
-					//	}
-					//	{// Sell
-					//		var opt = e.Menu.Items.Insert2(idx++, new ToolStripMenuItem("Sell at {0}".Fmt(click_price)) { ForeColor = Settings.UI.BidColour });
-					//		opt.Click += (s,a) => new_order(ETradeType.Short);
-					//	}
+						{// Buy
+							var opt = e.Menu.Items.Insert2(idx++, new ToolStripMenuItem("Buy at {0}".Fmt(click_price)) { ForeColor = ChartSettings.AskColour });
+							opt.Click += (s,a) => PlaceNewOrder(ETradeType.B2Q);
+						}
+						{// Sell
+							var opt = e.Menu.Items.Insert2(idx++, new ToolStripMenuItem("Sell at {0}".Fmt(click_price)) { ForeColor = ChartSettings.BidColour });
+							opt.Click += (s,a) => PlaceNewOrder(ETradeType.Q2B);
+						}
 					}
 					#endregion
 
@@ -675,10 +703,13 @@ namespace CoinFlip
 					bb = BBox.Encompass(bb, new v4(bb.Centre.x, (float)(decimal)pos.Price, Z.Trades, 1f));
 			}
 
-			// Swell the box a little for margins
-			bb.Radius = new v4(bb.Radius.x, bb.Radius.y * 1.1f, bb.Radius.z, 0f);
-			e.ViewBBox = bb;
-			e.Handled = true;
+			if (bb.IsValid)
+			{
+				// Swell the box a little for margins
+				bb.Radius = new v4(bb.Radius.x, bb.Radius.y * 1.1f, bb.Radius.z, 0f);
+				e.ViewBBox = bb;
+				e.Handled = true;
+			}
 		}
 
 		/// <summary>Handle the chart about to render</summary>
@@ -728,14 +759,6 @@ namespace CoinFlip
 			}
 			#endregion
 
-			#region Indicators
-			{
-				// Add Indicator chart items
-				foreach (var indy in Indicators)
-					indy.AddToScene(args);
-			}
-			#endregion
-
 			#region Trades
 			if (ChartSettings.ShowPositions)
 			{
@@ -754,11 +777,21 @@ namespace CoinFlip
 
 		#region Indicators
 
+		/// <summary>Edit an existing indicator</summary>
+		private void EditIndicator(object indicator)
+		{
+			if (indicator is IndicatorMA indy) { EditMaIndicator(indy); return; }
+			//if (indicator is SnRIndicator) EditSnRLevel    ((SnRIndicator)indicator);
+			//if (indicator is SnR         ) EditSnRIndicator((SnR         )indicator);
+			throw new Exception($"Unknown indicator type: {indicator.GetType().Name}");
+		}
+
 		/// <summary>Add/Edit a moving average indicator</summary>
 		private void EditMaIndicator(IndicatorMA ma = null)
 		{
-			ma = ma ?? Indicators.Add2(new IndicatorMA(Instrument));
-			new EditMaUI(this, ma).Show(this);
+			ma = ma ?? Indicators.Add2(new IndicatorMA());
+			using (var dlg = new EditMaUI(this, ma))
+				dlg.ShowDialog(this);
 		}
 
 		#endregion
@@ -973,9 +1006,15 @@ namespace CoinFlip
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_chk_show_positions = new System.Windows.Forms.ToolStripButton();
 			this.m_chk_show_depth = new System.Windows.Forms.ToolStripButton();
+			this.m_ts_drawing = new System.Windows.Forms.ToolStrip();
+			this.m_btn_horz_line = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_vert_line = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_trend_line = new System.Windows.Forms.ToolStripButton();
+			this.m_lbl_drawing_tools = new System.Windows.Forms.ToolStripLabel();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
 			this.m_ts.SuspendLayout();
+			this.m_ts_drawing.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// m_tsc
@@ -994,6 +1033,7 @@ namespace CoinFlip
 			// m_tsc.TopToolStripPanel
 			// 
 			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_ts);
+			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_ts_drawing);
 			// 
 			// m_ts
 			// 
@@ -1009,7 +1049,7 @@ namespace CoinFlip
             this.m_chk_show_depth});
 			this.m_ts.Location = new System.Drawing.Point(3, 0);
 			this.m_ts.Name = "m_ts";
-			this.m_ts.Size = new System.Drawing.Size(395, 26);
+			this.m_ts.Size = new System.Drawing.Size(364, 26);
 			this.m_ts.TabIndex = 0;
 			// 
 			// m_lbl_pair
@@ -1073,6 +1113,52 @@ namespace CoinFlip
 			this.m_chk_show_depth.Size = new System.Drawing.Size(23, 23);
 			this.m_chk_show_depth.Text = "Show Market Depth";
 			// 
+			// m_ts_drawing
+			// 
+			this.m_ts_drawing.Dock = System.Windows.Forms.DockStyle.None;
+			this.m_ts_drawing.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_lbl_drawing_tools,
+            this.m_btn_horz_line,
+            this.m_btn_vert_line,
+            this.m_btn_trend_line});
+			this.m_ts_drawing.Location = new System.Drawing.Point(373, 0);
+			this.m_ts_drawing.Name = "m_ts_drawing";
+			this.m_ts_drawing.Size = new System.Drawing.Size(118, 25);
+			this.m_ts_drawing.TabIndex = 1;
+			// 
+			// m_btn_horz_line
+			// 
+			this.m_btn_horz_line.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_horz_line.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_horz_line.Image")));
+			this.m_btn_horz_line.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_horz_line.Name = "m_btn_horz_line";
+			this.m_btn_horz_line.Size = new System.Drawing.Size(23, 22);
+			this.m_btn_horz_line.Text = "Horizontal Line";
+			// 
+			// m_btn_vert_line
+			// 
+			this.m_btn_vert_line.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_vert_line.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_vert_line.Image")));
+			this.m_btn_vert_line.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_vert_line.Name = "m_btn_vert_line";
+			this.m_btn_vert_line.Size = new System.Drawing.Size(23, 22);
+			this.m_btn_vert_line.Text = "Vertical Line";
+			// 
+			// m_btn_trend_line
+			// 
+			this.m_btn_trend_line.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_trend_line.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_trend_line.Image")));
+			this.m_btn_trend_line.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_trend_line.Name = "m_btn_trend_line";
+			this.m_btn_trend_line.Size = new System.Drawing.Size(23, 22);
+			this.m_btn_trend_line.Text = "Trend Line";
+			// 
+			// m_lbl_drawing_tools
+			// 
+			this.m_lbl_drawing_tools.Name = "m_lbl_drawing_tools";
+			this.m_lbl_drawing_tools.Size = new System.Drawing.Size(37, 22);
+			this.m_lbl_drawing_tools.Text = "Draw:";
+			// 
 			// ChartUI
 			// 
 			this.Controls.Add(this.m_tsc);
@@ -1084,6 +1170,8 @@ namespace CoinFlip
 			this.m_tsc.PerformLayout();
 			this.m_ts.ResumeLayout(false);
 			this.m_ts.PerformLayout();
+			this.m_ts_drawing.ResumeLayout(false);
+			this.m_ts_drawing.PerformLayout();
 			this.ResumeLayout(false);
 
 		}

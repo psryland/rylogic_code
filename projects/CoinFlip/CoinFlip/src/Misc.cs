@@ -3,10 +3,13 @@ using System.Drawing;
 using System.Media;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using CoinFlip.Properties;
 using pr.common;
+using pr.crypt;
 using pr.extn;
 using pr.gui;
+using pr.util;
 
 namespace CoinFlip
 {
@@ -43,6 +46,7 @@ namespace CoinFlip
 		Error      = 1 << 16,
 	}
 
+	/// <summary>Odds and sods</summary>
 	public static class Misc
 	{
 		/// <summary>Helper for task no-ops</summary>
@@ -58,6 +62,41 @@ namespace CoinFlip
 			new LogUI.HLPattern(Color_.FromArgb(0xfffcffae), Color.Black, EPattern.Substring, "filled"),
 			new LogUI.HLPattern(Color_.FromArgb(0xffff7e39), Color.Black, EPattern.Substring, "ignored"),
 		};
+
+		/// <summary>Resolve a relative path to a user directory path</summary>
+		public static string ResolveUserPath(string rel_path = null)
+		{
+			return Util.ResolveUserDocumentsPath(Application.CompanyName, Application.ProductName, rel_path ?? string.Empty);
+		}
+
+		/// <summary>User log in</summary>
+		public static User LogIn(Form parent, Settings settings)
+		{
+			// Prompt for the user name and password, so we can load the exchange API keys
+			var dlg = new LogInUI
+			{
+				Username = settings.LastUser,
+				Icon = parent.Icon,
+				StartPosition = FormStartPosition.CenterScreen,
+			};
+			using (dlg)
+			{
+				#if DEBUG
+				dlg.Username = "Paul";
+				dlg.Password = "UltraSecurePasswordWotIMade";
+				#else
+				if (dlg.ShowDialog(parent) != DialogResult.OK)
+					throw new OperationCanceledException();
+				#endif
+
+				settings.LastUser = dlg.Username;
+				return new User
+				{
+					Username = dlg.Username,
+					Cred = Crypt.CredHash(dlg.Username, dlg.Password, "RylogicLimitedIsAwesome!"),
+				};
+			}
+		}
 
 		/// <summary>Formatting for log entries</summary>
 		public static void LogFormatting(object sender, LogUI.FormattingEventArgs args)
@@ -229,11 +268,27 @@ namespace CoinFlip
 		}
 	}
 
+	/// <summary>Application Resources</summary>
 	public static class Res
 	{
 		public static readonly Image Active   = new Bitmap(Resources.active, new Size(28,28));
 		public static readonly Image Inactive = new Bitmap(Resources.inactive, new Size(28,28));
 		public static readonly Image Changing = new Bitmap(Resources.changing, new Size(28,28));
 		public static readonly SoundPlayer Coins = new SoundPlayer(Resources.coins);
+	}
+
+	/// <summary>XML tags</summary>
+	public static class XmlTag
+	{
+		public const string Settings = "Settings";
+		public const string APIKey = "APIKey";
+		public const string APISecret = "APISecret";
+	}
+
+	/// <summary>User details</summary>
+	public struct User
+	{
+		public string Username;
+		public byte[] Cred;
 	}
 }

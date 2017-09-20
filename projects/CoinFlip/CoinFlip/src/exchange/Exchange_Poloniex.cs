@@ -14,13 +14,10 @@ namespace CoinFlip
 	/// <summary>'Poloniex' Exchange</summary>
 	public class Poloniex :Exchange
 	{
-		private const string ApiKey    = "ORQL9DAZ-HEPQ1HIY-NFIXELSG-0T4DW2VA";
-		private const string ApiSecret = "c7ebc4258332a994f80ced1ec3501a7705426c5fa9bd022d640c0c5e67513335babb453963102a25541c51a6ac4a6e827bf69dd831506c2a5b5d0bf9bfd58729";
-
-		public Poloniex(Model model)
+		public Poloniex(Model model, string key, string secret)
 			:base(model, model.Settings.Poloniex)
 		{
-			Api = new PoloniexApi(ApiKey, ApiSecret, Model.ShutdownToken);
+			Api = new PoloniexApi(key, secret, Model.ShutdownToken);
 			TradeHistoryUseful = true;
 
 			// Start the exchange
@@ -33,7 +30,7 @@ namespace CoinFlip
 			base.Dispose();
 		}
 
-		/// <summary>The public data interface</summary>
+		/// <summary>The API interface</summary>
 		private PoloniexApi Api
 		{
 			[DebuggerStepThrough] get { return m_api; }
@@ -450,6 +447,13 @@ namespace CoinFlip
 			case MarketPeriod.Hours4:    return ETimeFrame.Hour4;
 			case MarketPeriod.Day:       return ETimeFrame.Day1;
 			}
+		}
+
+		/// <summary>The maximum number of requests per second to the exchange server</summary>
+		public override float ServerRequestRateLimit
+		{
+			get { return Api.ServerRequestRateLimit; }
+			set { Api.ServerRequestRateLimit = value; }
 		}
 	}
 }

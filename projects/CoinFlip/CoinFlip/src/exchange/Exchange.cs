@@ -2,10 +2,13 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using pr.common;
 using pr.container;
 using pr.extn;
@@ -796,6 +799,9 @@ namespace CoinFlip
 
 		/// <summary>The time range that the position history covers (in ticks)</summary>
 		public Range HistoryInterval { get; protected set; }
+
+		/// <summary>The maximum number of requests per second to the exchange server</summary>
+		public abstract float ServerRequestRateLimit { get; set; }
 
 		/// <summary></summary>
 		public override string ToString()

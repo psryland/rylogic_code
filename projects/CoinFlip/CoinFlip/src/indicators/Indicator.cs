@@ -1,95 +1,77 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using pr.common;
 using pr.extn;
-using pr.gfx;
 using pr.gui;
-using pr.util;
+using pr.maths;
 
 namespace CoinFlip
 {
 	/// <summary>Base class for indicators</summary>
-	public abstract class Indicator :IDisposable
+	public abstract class Indicator :ChartControl.Element ,IDisposable
 	{
-		/// <summary>Cached buffers for creating the graphics</summary>
-		protected List<View3d.Vertex> m_vbuf;
-		protected List<ushort>        m_ibuf;
-		protected List<View3d.Nugget> m_nbuf;
+		// Notes:
+		//  Indicators are chart elements so that they can be hit tested.
+		//  I doesn't make sense to move indicators between charts anyway.
 
-		private Indicator()
+		protected Indicator(Guid id, string name, ISettingsSet settings)
+			:base(id, m4x4.Identity, name)
 		{
-			m_vbuf = new List<View3d.Vertex>();
-			m_ibuf = new List<ushort>();
-			m_nbuf = new List<View3d.Nugget>();
-		}
-		protected Indicator(string name, ISettingsSet settings)
-			:this()
-		{
-			Name = name;
 			SettingsInternal = settings;
 		}
 		protected Indicator(XElement node)
-			:this()
+			:base(node)
 		{
-			Name = name;
-			SettingsInternal = (ISettingsSet)node.Element(nameof(Settings)).ToObject();
+			SettingsInternal = (ISettingsSet)node.Element(XmlTag.Settings).ToObject();
 		}
-		public virtual void Dispose()
+		protected override void Dispose(bool disposing)
 		{
 			Instrument = null;
 			SettingsInternal = null;
+			base.Dispose(disposing);
 		}
-		protected virtual XElement ToXml(XElement node)
+		public override XElement ToXml(XElement node)
 		{
-			node.Add2(nameof(Settings), SettingsInternal, true);
+			base.ToXml(node);
+			node.Add2(XmlTag.Settings, SettingsInternal, true);
 			return node;
 		}
-
-		/// <summary>A string description of the indicator</summary>
-		public string Name
-		{
-			get { return m_name; }
-			set
-			{
-				if (m_name == value) return;
-				m_name = value;
-				Invalidate();
-			}
-		}
-		private string m_name;
 
 		/// <summary>The instrument that this indicator is associated with</summary>
 		public Instrument Instrument
 		{
-			[DebuggerStepThrough] get { return m_instr; }
+			[DebuggerStepThrough] get { return m_instrument; }
 			set
 			{
-				if (m_instr == value) return;
-				if (m_instr != null)
+				if (m_instrument == value) return;
+				if (m_instrument != null)
 				{
-					//m_instr.DataChanged -= HandleInstrumentDataChanged;
-					//m_instr.TimeFrameChanged -= HandleTimeFrameChanged;
-					// The indicator does not own the instrument
+					m_instrument.DataChanged -= HandleInstrumentDataChanged;
+					m_instrument.TimeFrameChanged -= HandleTimeFrameChanged;
 				}
 				SetInstrumentCore(value);
-				if (m_instr != null)
+				if (m_instrument != null)
 				{
-					//Debug.Assert(m_instr.TimeFrame != ETimeFrame.None);
-					//m_instr.TimeFrameChanged += HandleTimeFrameChanged;
-					//m_instr.DataChanged += HandleInstrumentDataChanged;
+					m_instrument.TimeFrameChanged += HandleTimeFrameChanged;
+					m_instrument.DataChanged += HandleInstrumentDataChanged;
 				}
+				ResetRequired = true;
 			}
 		}
-		private Instrument m_instr;
+		private Instrument m_instrument;
 		protected virtual void SetInstrumentCore(Instrument instr)
 		{
-			// Don't clone the instrument, derived types choose whether the instrument is cloned or not
-			m_instr = instr;
+			m_instrument = instr;
+		}
+		protected virtual void HandleInstrumentDataChanged(object sender, DataEventArgs e)
+		{
+			Invalidate();
+		}
+		protected virtual void HandleTimeFrameChanged(object sender, EventArgs e)
+		{
+			Invalidate();
 		}
 
 		/// <summary>Settings for this indicator</summary>
@@ -113,31 +95,46 @@ namespace CoinFlip
 		private ISettingsSet m_settings;
 		protected virtual void HandleSettingChanged(object sender, SettingChangedEventArgs e)
 		{
-		//	// Notify chart element changed
-		//	OnDataChanged();
-		//
-		//	// Invalidate this chart element and the chart
-		//	Invalidate();
-		//	InvalidateChart();
+			Invalidate();
+			InvalidateChart();
 		}
 
-		/// <summary>Invalidate this indicator, causing its graphics to be recreated</summary>
-		public void Invalidate(object sender = null, EventArgs args = null)
+		/// <summary>Set the owning chart</summary>
+		protected override void SetChartCore(ChartControl chart)
 		{
-			Dirty = EDirtyFlags.RecreateModel;
+			if (Chart != null)
+				Chart.ChartMoved -= HandleChartMoved;
+			base.SetChartCore(chart);
+			if (Chart != null)
+				Chart.ChartMoved += HandleChartMoved;
+		}
+		protected virtual void HandleChartMoved(object sender, ChartControl.ChartMovedEventArgs e)
+		{}
+
+		/// <summary>Update the graphics model for this indicator</summary>
+		protected async override void UpdateGfxCore()
+		{
+			base.UpdateGfxCore();
+
+			// Recreate underlying data if necessary
+			if (ResetRequired)
+				await Reset();
 		}
 
-		/// <summary>Dirty flag for updating indicator graphics</summary>
-		protected EDirtyFlags Dirty { get; set; }
-		protected enum EDirtyFlags
-		{
-			None = 0,
-			RecreateModel = 1 << 0,
-		}
+		/// <summary>Get/Set a flag to indicator the underlying data need recalculating</summary>
+		public bool ResetRequired { get; set; }
 
-		/// <summary>Update the graphics for this indicator and add it to the scene</summary>
-		public virtual void AddToScene(ChartControl.ChartRenderingEventArgs args)
+		/// <summary>Recreate the underlying data for the indicator</summary>
+		public async Task Reset()
 		{
+			await ResetCore();
+			Invalidate();
+			OnDataChanged();
+			ResetRequired = false;
+		}
+		protected virtual Task ResetCore()
+		{
+			return Misc.CompletedTask;
 		}
 	}
 }

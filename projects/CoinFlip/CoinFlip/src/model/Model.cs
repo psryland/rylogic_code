@@ -5,10 +5,13 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using System.Windows.Threading;
+using System.Xml.Linq;
 using pr.common;
 using pr.container;
 using pr.extn;
@@ -44,21 +47,22 @@ namespace CoinFlip
 		//    Copy staged data to Exchange data
 		//
 
-		public Model(MainUI main_ui)
+		public Model(MainUI main_ui, Settings settings, User user)
 		{
-			// Ensure the app data directory exists
-			Directory.CreateDirectory(Util.ResolveUserDocumentsPath("Rylogic", "CoinFlip"));
-			Settings = new Settings(Util.ResolveUserDocumentsPath("Rylogic", "CoinFlip", Util.IsDebug ? "settings_debug.xml" : "settings.xml"));
-
 			UI = main_ui;
+			Settings = settings;
+			User = user;
 			m_dispatcher = Dispatcher.CurrentDispatcher;
 			m_main_loop_step = new AutoResetEvent(false);
 			m_shutdown_token_source = new CancellationTokenSource();
 
 			// Start the log
-			Log = new Logger("", new LogToFile(Util.ResolveUserDocumentsPath("Rylogic", "CoinFlip", Util.IsDebug ? "log_debug.txt" : "log.txt"), append:false));
+			Log = new Logger(string.Empty, new LogToFile(Misc.ResolveUserPath(Util.IsDebug ? "log_debug.txt" : "log.txt"), append:false));
 			Log.TimeZero = Log.TimeZero - Log.TimeZero .TimeOfDay;
 			Log.Write(ELogLevel.Debug, "<<< Started >>>");
+
+			// Start the win log
+			WinLog = new Logger(string.Empty, new LogToFile(Misc.ResolveUserPath("win_log.txt"), append:true));
 
 			Coins         = new CoinDataTable(this);
 			Exchanges     = new BindingSource<Exchange>     { DataSource = new BindingListEx<Exchange>() };
@@ -69,13 +73,17 @@ namespace CoinFlip
 			Positions     = new BindingSource<Position>     { DataSource = null, AllowNoCurrent = true };
 			History       = new BindingSource<PositionFill> { DataSource = null, AllowNoCurrent = true };
 			MarketUpdates = new BlockingCollection<Action>();
-	
+
 			// Add exchanges
-			//Exchanges.Add(new TestExchange(this));
-			Exchanges.Add(new Poloniex(this));
-			Exchanges.Add(new Bittrex(this));
-			Exchanges.Add(new Cryptopia(this));
+			string key, secret;
+			if (LoadAPIKeys(user, nameof(Poloniex), out key, out secret))
+				Exchanges.Add(new Poloniex(this, key, secret));
+			if (LoadAPIKeys(user, nameof(Bittrex), out key, out secret))
+				Exchanges.Add(new Bittrex(this, key, secret));
+			if (LoadAPIKeys(user, nameof(Cryptopia), out key, out secret))
+				Exchanges.Add(new Cryptopia(this, key, secret));
 			Exchanges.Add(CrossExchange = new CrossExchange(this));
+			//Exchanges.Add(new TestExchange(this));
 
 			RunLoopFinder = false;
 			AllowTrades = false;
@@ -98,6 +106,7 @@ namespace CoinFlip
 			Balances = null;
 			Pairs = null;
 			Exchanges = null;
+			WinLog = null;
 			Log = null;
 		}
 
@@ -176,10 +185,13 @@ namespace CoinFlip
 		/// <summary>App settings</summary>
 		public Settings Settings { get; private set; }
 
+		/// <summary>The logged on user</summary>
+		public User User { get; private set; }
+
 		/// <summary>The current time (in UTC).</summary>
 		public DateTimeOffset UtcNow
 		{
-			get { return DateTimeOffset.UtcNow; } // Might use this for back-testing one day
+			get { return DateTimeOffset.UtcNow; }
 		}
 
 		/// <summary>Application log</summary>
@@ -194,6 +206,19 @@ namespace CoinFlip
 			}
 		}
 		private Logger m_log;
+
+		/// <summary>Log for profitable trades</summary>
+		public Logger WinLog
+		{
+			[DebuggerStepThrough] get { return m_win_log; }
+			private set
+			{
+				if (m_win_log == value) return;
+				Util.Dispose(ref m_win_log);
+				m_win_log = value;
+			}
+		}
+		private Logger m_win_log;
 
 		/// <summary>True when pairs need updating</summary>
 		public bool UpdatePairs
@@ -237,12 +262,21 @@ namespace CoinFlip
 			set
 			{
 				if (m_allow_trades == value) return;
+				if (BackTesting) return;
+
+				if (m_allow_trades)
+				{
+					AllowTradesChanging.Raise(this, new PrePostEventArgs(after:false));
+				}
 				m_allow_trades = value;
 				ResetFakeCash();
-				AllowTradesChanged.Raise(this);
+				if (m_allow_trades)
+				{
+					AllowTradesChanging.Raise(this, new PrePostEventArgs(after:true));
+				}
 			}
 		}
-		public event EventHandler AllowTradesChanged;
+		public event EventHandler<PrePostEventArgs> AllowTradesChanging;
 		private bool m_allow_trades;
 
 		/// <summary>True while back testing</summary>
@@ -252,6 +286,7 @@ namespace CoinFlip
 			set
 			{
 				if (m_back_testing == value) return;
+				if (AllowTrades) return;
 				m_back_testing = value;
 			}
 		}
@@ -260,16 +295,16 @@ namespace CoinFlip
 		/// <summary>Start/Stop finding loops</summary>
 		public bool RunLoopFinder
 		{
-			get { return m_run; }
+			get { return m_run_loop_finder; }
 			set
 			{
-				if (m_run == value) return;
-				m_run = value;
+				if (m_run_loop_finder == value) return;
+				m_run_loop_finder = value;
 				RunChanged.Raise(this);
 			}
 		}
 		public event EventHandler RunChanged;
-		private bool m_run;
+		private bool m_run_loop_finder;
 
 		/// <summary>Return the sum of all balances, weighted by their values</summary>
 		public decimal NettWorth
@@ -563,7 +598,7 @@ namespace CoinFlip
 		public event EventHandler<MarketDataChangingEventArgs> MarketDataChanging;
 
 		/// <summary>Update the collections of pairs</summary>
-		public async Task UpdatePairsAsync(CancellationToken shutdown)
+		public async Task UpdatePairsAsync(CancellationToken shutdown, Exchange exchange = null)
 		{
 			var sw = new Stopwatch().Start2();
 			for (; UpdatePairs;)
@@ -576,18 +611,30 @@ namespace CoinFlip
 				var coi = Coins.Where(x => x.OfInterest).ToHashSet(x => x.Symbol);
 
 				// Get each exchange to update it's available pairs/coins
-				await Task.WhenAll(TradingExchanges.Where(x => x.Active).Select(x => x.UpdatePairs(coi)));
-				if (CrossExchange.Active) await CrossExchange.UpdatePairs(coi);
+				if (exchange == null)
+					await Task.WhenAll(TradingExchanges.Where(x => x.Active).Select(x => x.UpdatePairs(coi)));
+				else
+					await exchange.UpdatePairs(coi);
+
+				// Update the cross exchange when other exchanges change
+				if (CrossExchange.Active)
+					await CrossExchange.UpdatePairs(coi);
+
+				// Apply any market data updates
 				IntegrateMarketUpdates();
 
 				// If the pairs have been invalidated in the meantime, give up
 				if (update_pairs_issue != m_update_pairs_issue || shutdown.IsCancellationRequested)
 					continue;
 
-				// Copy the pairs from each exchange to the Model's collection
-				Pairs.Clear();
+				// Update the Model's collection of pairs
+				var pairs = new HashSet<TradePair>();
 				foreach (var exch in Exchanges.Where(x => x.Active))
-					Pairs.AddRange(exch.Pairs.Values.Where(x => coi.Contains(x.Base) && coi.Contains(x.Quote)));
+					pairs.AddRange(exch.Pairs.Values.Where(x => coi.Contains(x.Base) && coi.Contains(x.Quote)));
+
+				Pairs.RemoveIf(x => !pairs.Contains(x));
+				Pairs.ForEach(x => pairs.Remove(x));
+				Pairs.AddRange(pairs);
 
 				// Clear the dirty flag
 				UpdatePairs = false;
@@ -615,6 +662,21 @@ namespace CoinFlip
 		{
 			foreach (var bal in Exchanges.SelectMany(x => x.Balance.Values))
 				bal.FakeCash.Clear();
+		}
+
+		/// <summary>True if we can get a live price for 'sym' from at least one exchange</summary>
+		public bool LivePriceAvailable(string sym)
+		{
+			var available = false;
+			foreach (var exch in TradingExchanges)
+			{
+				var coin = exch.Coins[sym];
+				if (coin == null) continue;
+				if (!coin.LivePriceAvailable) continue;
+				available = true;
+				break;
+			}
+			return available;
 		}
 
 		/// <summary>Find the maximum price for the given currency on the available exchanges</summary>
@@ -649,6 +711,156 @@ namespace CoinFlip
 			History.DataSource = exch?.History;
 		}
 
+		/// <summary>Return the key/secret for this exchange</summary>
+		private bool LoadAPIKeys(User user, string exch, out string key, out string secret)
+		{
+			var crypto = new AesCryptoServiceProvider();
+
+			// Get the key file name. This is an encrypted XML file
+			var key_file = Misc.ResolveUserPath($"{user.Username}.keys");
+
+			// If there is no keys file, or the keys file does not contain API keys for this exchange, prompt for them
+			if (!Path_.FileExists(key_file))
+				return CreateAPIKeys(user, exch, out key, out secret);
+
+			// Read the file contents to memory and decrypt it
+			string keys_xml;
+			var decryptor = crypto.CreateDecryptor(user.Cred, InitVector(user, crypto.BlockSize));
+			using (var fs = new FileStream(key_file, FileMode.Open, FileAccess.Read, FileShare.Read))
+			using (var cs = new CryptoStream(fs, decryptor, CryptoStreamMode.Read))
+			using (var sr = new StreamReader(cs))
+				keys_xml = sr.ReadToEnd();
+
+			// Find the element for this exchange
+			var root = XDocument.Parse(keys_xml, LoadOptions.None).Root;
+			var exch_xml = root?.Element(exch);
+			if (exch_xml == null)
+				return CreateAPIKeys(user, exch, out key, out secret);
+
+			// Read the key/secret
+			key    = exch_xml.Element(XmlTag.APIKey).As<string>();
+			secret = exch_xml.Element(XmlTag.APISecret).As<string>();
+			return true;
+		}
+
+		/// <summary>Create or replace API keys for this exchange</summary>
+		private bool CreateAPIKeys(User user, string exch, out string key, out string secret)
+		{
+			var crypto = new AesCryptoServiceProvider();
+			key    = null;
+			secret = null;
+
+			// Prompt for the API keys
+			var dlg = new APIKeysUI
+			{
+				Icon = UI.Icon,
+				StartPosition = FormStartPosition.CenterScreen,
+				Text = $"{exch} API Keys",
+				Desc = $"Enter the API key and secret for your account on {exch}\r\n"+
+						$"These will be stored in an encrypted file here:\r\n"+
+						$"\"{Misc.ResolveUserPath($"{user.Username}.keys")}\""+
+						$"\r\n"+
+						$"Changing API Keys will require restarting",
+			};
+			using (dlg)
+			{
+				if (dlg.ShowDialog(UI) != DialogResult.OK)
+					return false;
+
+				key    = dlg.APIKey;
+				secret = dlg.APISecret;
+
+				// Get the key file name. This is an encrypted XML file
+				var key_file = Misc.ResolveUserPath($"{user.Username}.keys");
+
+				// If there is an existing keys file, decrypt and the XML content, otherwise create from new
+				var root = (XElement)null;
+				if (Path_.FileExists(key_file))
+				{
+					// Read the file contents to memory and decrypt it
+					var decryptor = crypto.CreateDecryptor(user.Cred, InitVector(user, crypto.BlockSize));
+					using (var fs = new FileStream(key_file, FileMode.Open, FileAccess.Read, FileShare.Read))
+					using (var cs = new CryptoStream(fs, decryptor, CryptoStreamMode.Read))
+					using (var sr = new StreamReader(cs))
+						root = XDocument.Parse(sr.ReadToEnd(), LoadOptions.None).Root;
+				}
+				if (root == null)
+					root = new XElement("root");
+
+				// Add/replace the element for this exchange
+				root.RemoveNodes(exch);
+				var exch_xml = root.Add2(new XElement(exch));
+				exch_xml.Add2(XmlTag.APIKey, key, false);
+				exch_xml.Add2(XmlTag.APISecret, secret, false);
+				var keys_xml = root.ToString(SaveOptions.None);
+
+				// Write the keys file back to disk (encrypted)
+				var encryptor = crypto.CreateEncryptor(user.Cred, InitVector(user, crypto.BlockSize));
+				using (var fs = new FileStream(key_file, FileMode.Create, FileAccess.Write, FileShare.None))
+				using (var cs = new CryptoStream(fs, encryptor, CryptoStreamMode.Write))
+				using (var sw = new StreamWriter(cs))
+					sw.Write(keys_xml);
+
+				return true;
+			}
+		}
+
+		/// <summary>Display and/or change the API keys for 'exch'</summary>
+		public void ChangeAPIKeys(Exchange exch)
+		{
+			// Prompt for the user password again
+			var user = Misc.LogIn(UI, Settings);
+			if (user.Username != User.Username || !Array_.Equal(user.Cred, User.Cred))
+			{
+				MsgBox.Show(UI, "Invalid username or password", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+				return;
+			}
+
+			// Load the API keys
+			if (LoadAPIKeys(User, exch.Name, out var key, out var secret))
+			{
+				var dlg = new APIKeysUI
+				{
+					Icon = UI.Icon,
+					StartPosition = FormStartPosition.CenterScreen,
+					Text = $"{exch} API Keys",
+					Desc = $"Enter the API key and secret for your account on {exch}\r\n"+
+							$"These will be stored in an encrypted file here:\r\n"+
+							$"\"{Misc.ResolveUserPath($"{User.Username}.keys")}\""+
+							$"\r\n"+
+							$"Changing API Keys will require restarting",
+				};
+				using (dlg)
+				{
+					if (dlg.ShowDialog(UI) != DialogResult.OK)
+						return;
+
+					// Check if the Keys have changed
+					if (dlg.APIKey != key || dlg.APISecret != secret)
+					{
+						var res = MsgBox.Show(UI,
+							"A restart is required to use the new API keys.\r\n"+
+							"\r\n"+
+							"Restart now?",
+							Application.ProductName,
+							MessageBoxButtons.YesNo,
+							MessageBoxIcon.Question);
+						if (res == DialogResult.Yes)
+							Application.Restart();
+					}
+				}
+			}
+		}
+
+		/// <summary>Generate an initialisation vector for the encryption service provider</summary>
+		private byte[] InitVector(User user, int size_in_bits)
+		{
+			var buf = new byte[size_in_bits / 8];
+			for (int i = 0; i != buf.Length; ++i)
+				buf[i] = user.Cred[(i * 13) % user.Cred.Length];
+			return buf;
+		}
+
 		/// <summary>Assert that it is valid to read market data in the current thread</summary>
 		public bool AssertMarketDataRead()
 		{
@@ -679,7 +891,7 @@ namespace CoinFlip
 			{
 				var pair = Pairs.FirstOrDefault(x => x.Name == "BTC/USDT");
 				using (var dlg = new MsgBox())
-				using (var instr = new Instrument(this, pair, ETimeFrame.Min30))
+				using (var instr = new Instrument(this, pair, ETimeFrame.Min30, update_active:false))
 					dlg.ShowDialog(UI);
 
 				await Misc.CompletedTask;
