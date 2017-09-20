@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26730.3
+VisualStudioVersion = 15.0.26730.15
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "script", "script", "{35F27363-2AFF-455F-A38F-9FE3452EC620}"
 	ProjectSection(SolutionItems) = preProject
@@ -36,6 +36,7 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic", "..\projects\Rylogic\Rylogic.csproj", "{1735C773-5477-45E6-9CBF-5F2B6DC707EF}"
 	ProjectSection(ProjectDependencies) = postProject
 		{F4A1B209-47CA-4F5D-A80E-87004C91D52E} = {F4A1B209-47CA-4F5D-A80E-87004C91D52E}
+		{7CC6930C-889B-4B6E-958F-BEE16ED2FF44} = {7CC6930C-889B-4B6E-958F-BEE16ED2FF44}
 		{599D9118-2445-476A-9877-060417FE5FA5} = {599D9118-2445-476A-9877-060417FE5FA5}
 		{363D015B-B545-4623-A5CE-61245C9BF1F8} = {363D015B-B545-4623-A5CE-61245C9BF1F8}
 	EndProjectSection
@@ -61,6 +62,7 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestCS", "..\projects\TestCS\TestCS.csproj", "{9B271143-7D07-4E5F-85F7-0F0F1D8F4BF5}"
 	ProjectSection(ProjectDependencies) = postProject
 		{F4A1B209-47CA-4F5D-A80E-87004C91D52E} = {F4A1B209-47CA-4F5D-A80E-87004C91D52E}
+		{7CC6930C-889B-4B6E-958F-BEE16ED2FF44} = {7CC6930C-889B-4B6E-958F-BEE16ED2FF44}
 		{599D9118-2445-476A-9877-060417FE5FA5} = {599D9118-2445-476A-9877-060417FE5FA5}
 		{363D015B-B545-4623-A5CE-61245C9BF1F8} = {363D015B-B545-4623-A5CE-61245C9BF1F8}
 	EndProjectSection
@@ -123,6 +125,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreCalc", "..\projects\CoreCalc\CoreCalc.csproj", "{57B029C7-E6DA-4271-A0C4-2C4521E90F45}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RyLogViewer.ExamplePlugin", "..\projects\RyLogViewer\examples\ExamplePlugin\RyLogViewer.ExamplePlugin.csproj", "{C054B079-AC66-4C7E-A201-D57E32FB4F89}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "audio", "audio.vcxproj", "{7CC6930C-889B-4B6E-958F-BEE16ED2FF44}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -502,6 +506,16 @@ Global
 		{C054B079-AC66-4C7E-A201-D57E32FB4F89}.Release|x64.Build.0 = Release|Any CPU
 		{C054B079-AC66-4C7E-A201-D57E32FB4F89}.Release|x86.ActiveCfg = Release|Any CPU
 		{C054B079-AC66-4C7E-A201-D57E32FB4F89}.Release|x86.Build.0 = Release|Any CPU
+		{7CC6930C-889B-4B6E-958F-BEE16ED2FF44}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{7CC6930C-889B-4B6E-958F-BEE16ED2FF44}.Debug|x64.ActiveCfg = Debug|x64
+		{7CC6930C-889B-4B6E-958F-BEE16ED2FF44}.Debug|x64.Build.0 = Debug|x64
+		{7CC6930C-889B-4B6E-958F-BEE16ED2FF44}.Debug|x86.ActiveCfg = Debug|Win32
+		{7CC6930C-889B-4B6E-958F-BEE16ED2FF44}.Debug|x86.Build.0 = Debug|Win32
+		{7CC6930C-889B-4B6E-958F-BEE16ED2FF44}.Release|Any CPU.ActiveCfg = Release|Win32
+		{7CC6930C-889B-4B6E-958F-BEE16ED2FF44}.Release|x64.ActiveCfg = Release|x64
+		{7CC6930C-889B-4B6E-958F-BEE16ED2FF44}.Release|x64.Build.0 = Release|x64
+		{7CC6930C-889B-4B6E-958F-BEE16ED2FF44}.Release|x86.ActiveCfg = Release|Win32
+		{7CC6930C-889B-4B6E-958F-BEE16ED2FF44}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

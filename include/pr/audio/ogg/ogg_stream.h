@@ -2,19 +2,17 @@
 // Ogg Player
 //  Copyright (c) Rylogic Ltd 2007
 //*********************************************
-#ifndef PR_SOUNDS_OGG_OGGSTREAM_H
-#define PR_SOUNDS_OGG_OGGSTREAM_H
 #pragma once
 
 #include <dsound.h>                  // from the directx 8 sdk
-#include <vorbis/codec.h>            // from the vorbis sdk
-#include <vorbis/vorbisfile.h>       // also :)
+#include "vorbis/codec.h"            // from the vorbis sdk
+#include "vorbis/vorbisfile.h"       // also :)
 #include "pr/common/assert.h"
 #include "pr/common/exception.h"
 #include "pr/common/hresult.h"
 #include "pr/common/d3dptr.h"
-#include "pr/sound/sound.h"
-#include "pr/sound/player.h"
+#include "pr/audio/directsound/sound.h"
+#include "pr/audio/directsound/player.h"
 
 namespace pr
 {
@@ -123,5 +121,3 @@ namespace pr
 		};
 	}
 }
-
-#endif

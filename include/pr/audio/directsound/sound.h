@@ -2,9 +2,8 @@
 // DSound
 //  Copyright (c) Rylogic Ltd 2007
 //*********************************************
+// Legacy direct sound
 #pragma once
-#ifndef PR_SOUNDS_SOUND_H
-#define PR_SOUNDS_SOUND_H
 
 #include <mmreg.h>
 #include <dsound.h>
@@ -196,6 +195,3 @@ namespace pr
 		}
 	}
 }
-
-#endif
-

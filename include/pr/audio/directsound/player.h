@@ -2,12 +2,10 @@
 // Sound IDecoder
 //  Copyright (c) Rylogic Ltd 2007
 //*********************************************
-#ifndef PR_SOUNDS_PLAYER_H
-#define PR_SOUNDS_PLAYER_H
 #pragma once
 
-#include "pr/filesys/fileex.h"
-#include "pr/sound/sound.h"
+#include "pr/filesys/file.h"
+#include "pr/audio/directsound/sound.h"
 
 namespace pr
 {
@@ -168,23 +166,23 @@ namespace pr
 		};
 		
 		// Some default DataStream implementations
-		
+
 		// A local buffer containing the sound file data
 		struct MemDataStream :IDataStream
 		{
 			std::vector<pr::uint8> m_data;
 			size_t m_pos;
 			bool m_delete_on_close;
-			
+
 			MemDataStream(bool delete_on_close = false)
-			:m_data()
-			,m_pos(0)
-			,m_delete_on_close(delete_on_close)
+				:m_data()
+				, m_pos(0)
+				, m_delete_on_close(delete_on_close)
 			{}
 			MemDataStream(char const* filepath, bool delete_on_close = false)
-			:m_data()
-			,m_pos(0)
-			,m_delete_on_close(delete_on_close)
+				:m_data()
+				, m_pos(0)
+				, m_delete_on_close(delete_on_close)
 			{
 				pr::FileToBuffer(filepath, m_data); // Fill 'm_data' from the file
 			}
@@ -197,9 +195,9 @@ namespace pr
 			}
 			int  IDataStream_Seek(long offset, int seek_from)
 			{
-				if (seek_from == SEEK_SET) { m_pos  = size_t(offset);                 return 0; }
+				if (seek_from == SEEK_SET) { m_pos = size_t(offset);                 return 0; }
 				if (seek_from == SEEK_CUR) { m_pos += size_t(offset);                 return 0; }
-				if (seek_from == SEEK_END) { m_pos  = m_data.size() - size_t(offset); return 0; }
+				if (seek_from == SEEK_END) { m_pos = m_data.size() - size_t(offset); return 0; }
 				return -1;
 			}
 			long IDataStream_Tell() const
@@ -214,6 +212,3 @@ namespace pr
 		};
 	}
 }
-
-#endif
-
