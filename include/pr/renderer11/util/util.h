@@ -93,14 +93,14 @@ namespace pr
 		void GetSurfaceInfo(UINT width, UINT height, DXGI_FORMAT fmt, UINT* num_bytes, UINT* row_bytes, UINT* num_rows);
 
 		// Helper for checking values are not overwritten in a lookup table
-		template <class Table, typename Key, typename Value> inline void AddLookup(Table& table, Key key, Value value)
+		template <class Table, typename Key, typename Value> inline void AddLookup(Table& table, Key const& key, Value const& value)
 		{
 			PR_ASSERT(PR_DBG_RDR, table.count(key) == 0, "Overwriting an existing lookup table item");
 			table[key] = value;
 		}
 
 		// Set the name on a dx resource (debug only)
-		template <typename T> inline void NameResource(D3DPtr<T>& res, char const* name)
+		template <typename T> inline void NameResource(T* res, char const* name)
 		{
 			#if PR_DBG_RDR
 			char existing[256]; UINT size(sizeof(existing) - 1);

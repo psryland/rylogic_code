@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
+using pr.audio;
 using pr.db;
 using pr.extn;
 using pr.gfx;
@@ -54,6 +55,7 @@ namespace TestCS
 			Sci.LoadDll();
 			Sqlite.LoadDll();
 			View3d.LoadDll();
+			Audio.LoadDll();
 
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);

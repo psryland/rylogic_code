@@ -23,6 +23,8 @@ try:
 	# Copy native dlls
 	Tools.Copy(UserVars.root + "\\lib\\x86\\"+config+"\\view3d.dll"   , targetdir+"\\lib\\x86\\", only_if_modified=True)
 	Tools.Copy(UserVars.root + "\\lib\\x64\\"+config+"\\view3d.dll"   , targetdir+"\\lib\\x64\\", only_if_modified=True)
+	Tools.Copy(UserVars.root + "\\lib\\x86\\"+config+"\\audio.dll"    , targetdir+"\\lib\\x86\\", only_if_modified=True)
+	Tools.Copy(UserVars.root + "\\lib\\x64\\"+config+"\\audio.dll"    , targetdir+"\\lib\\x64\\", only_if_modified=True)
 	Tools.Copy(UserVars.root + "\\lib\\x86\\"+config+"\\scintilla.dll", targetdir+"\\lib\\x86\\", only_if_modified=True)
 	Tools.Copy(UserVars.root + "\\lib\\x64\\"+config+"\\scintilla.dll", targetdir+"\\lib\\x64\\", only_if_modified=True)
 	Tools.Copy(UserVars.root + "\\lib\\x86\\"+config+"\\sqlite3.dll"  , targetdir+"\\lib\\x86\\", only_if_modified=True)

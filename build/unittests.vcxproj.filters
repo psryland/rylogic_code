@@ -92,6 +92,12 @@
     <Filter Include="pr\ldraw">
       <UniqueIdentifier>{811b143f-5d27-4d0b-941f-6a429943b4eb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\sound">
+      <UniqueIdentifier>{5294c170-2100-4f5a-bc2f-0fa8c66d3bfd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\sound\ogg">
+      <UniqueIdentifier>{230b180e-176e-4b31-b100-d5bd84f3e30a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\unittests\unittests.cpp">
@@ -968,6 +974,15 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\crypt\hash.h">
       <Filter>pr\crypt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\sound\player.h">
+      <Filter>pr\sound</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\sound\sound.h">
+      <Filter>pr\sound</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\sound\ogg\ogg_stream.h">
+      <Filter>pr\sound\ogg</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

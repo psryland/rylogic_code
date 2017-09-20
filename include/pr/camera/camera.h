@@ -730,6 +730,8 @@ namespace pr
 		// Position the camera so that all of 'bbox' is visible to the camera when looking 'forward' and 'up'
 		void View(pr::BBox const& bbox_, pr::v4 const& forward, pr::v4 const& up, float focus_dist = 0, bool preserve_aspect = true, bool update_base = true)
 		{
+			if (!bbox_.valid())
+				throw std::exception("Camera: Cannot view an invalid bounding box");
 			if (bbox_.empty())
 				return;
 

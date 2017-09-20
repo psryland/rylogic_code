@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <type_traits>
 #include <windows.h>
 #include <guiddef.h>
 #include <objbase.h>
@@ -14,6 +15,7 @@
 #include "pr/str/string.h"
 #include "pr/crypt/md5.h"
 #include "pr/crypt/sha1.h"
+#include "pr/crypt/hash.h"
 
 // Required lib: rpcrt4.lib
 #pragma comment(lib, "rpcrt4.lib")
@@ -171,35 +173,54 @@ namespace pr
 	template <typename TFrom>               struct Convert<Guid, TFrom>                   :convert::ToGuid {};
 }
 
-	// Operators (==, != already defined)
-	namespace impl
+// Operators (==, != already defined)
+namespace impl
+{
+	constexpr bool GuidLess(unsigned long const* lhs, unsigned long const* rhs)
 	{
-		constexpr bool GuidLess(unsigned long const* lhs, unsigned long const* rhs)
+		return
+			lhs[0] != rhs[0] ? lhs[0] < rhs[0] :
+			lhs[1] != rhs[1] ? lhs[1] < rhs[1] :
+			lhs[2] != rhs[2] ? lhs[2] < rhs[2] :
+			lhs[3] != rhs[3] ? lhs[3] < rhs[3] :
+			false;
+	}
+}
+constexpr bool operator <  (GUID const& lhs, GUID const& rhs)
+{
+	return impl::GuidLess(reinterpret_cast<unsigned long const*>(&lhs), reinterpret_cast<unsigned long const*>(&rhs));
+}
+constexpr bool operator >  (GUID const& lhs, GUID const& rhs)
+{
+	return rhs < lhs;
+}
+constexpr bool operator <= (GUID const& lhs, GUID const& rhs)
+{
+	return !(rhs < lhs);
+}
+constexpr bool operator >= (GUID const& lhs, GUID const& rhs)
+{
+	return !(lhs < rhs);
+}
+
+namespace std
+{
+	template <> struct hash<GUID>
+	{
+		size_t operator()(GUID const& guid) const noexcept
 		{
+			static_assert(sizeof(guid) == 4 * sizeof(std::uint32_t), "GUID size != 4 * sizeof(u32)");
+			static_assert(alignment_of<GUID>::value >= alignment_of<std::uint32_t>::value, "GUID alignment != u32 alignment");
+			
+			hash<uint32_t> h32;
 			return
-				lhs[0] != rhs[0] ? lhs[0] < rhs[0] :
-				lhs[1] != rhs[1] ? lhs[1] < rhs[1] :
-				lhs[2] != rhs[2] ? lhs[2] < rhs[2] :
-				lhs[3] != rhs[3] ? lhs[3] < rhs[3] :
-				false;
+				h32(reinterpret_cast<uint32_t const*>(&guid)[0]) ^
+				h32(reinterpret_cast<uint32_t const*>(&guid)[1]) ^
+				h32(reinterpret_cast<uint32_t const*>(&guid)[2]) ^
+				h32(reinterpret_cast<uint32_t const*>(&guid)[3]);
 		}
-	}
-	constexpr bool operator <  (GUID const& lhs, GUID const& rhs)
-	{
-		return impl::GuidLess(reinterpret_cast<unsigned long const*>(&lhs), reinterpret_cast<unsigned long const*>(&rhs));
-	}
-	constexpr bool operator >  (GUID const& lhs, GUID const& rhs)
-	{
-		return rhs < lhs;
-	}
-	constexpr bool operator <= (GUID const& lhs, GUID const& rhs)
-	{
-		return !(rhs < lhs);
-	}
-	constexpr bool operator >= (GUID const& lhs, GUID const& rhs)
-	{
-		return !(lhs < rhs);
-	}
+	};
+}
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"

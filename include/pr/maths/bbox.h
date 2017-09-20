@@ -55,6 +55,12 @@ namespace pr
 			return m_radius.x < 0 || m_radius.y < 0 || m_radius.z < 0;
 		}
 
+		// Returns true if the bbox is valid
+		bool valid() const
+		{
+			return m_radius.x >= 0 && m_radius.y >= 0 && m_radius.z >= 0;
+		}
+
 		// Set this bbox to a unit cube centred on the origin
 		BBox& unit()
 		{

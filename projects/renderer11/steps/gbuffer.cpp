@@ -81,7 +81,7 @@ namespace pr
 				// Create the resource
 				tdesc.Format = fmt[i];
 				pr::Throw(device->CreateTexture2D(&tdesc, 0, &m_tex[i].m_ptr));
-				PR_EXPAND(PR_DBG_RDR, NameResource(m_tex[i], FmtS("GBuffer %s tex", ToString((GBuffer::RTEnum_)i))));
+				PR_EXPAND(PR_DBG_RDR, NameResource(m_tex[i].get(), FmtS("GBuffer %s tex", ToString((GBuffer::RTEnum_)i))));
 
 				// Get the render target view
 				RenderTargetViewDesc rtvdesc(tdesc.Format, D3D11_RTV_DIMENSION_TEXTURE2D);
@@ -101,7 +101,7 @@ namespace pr
 			tdesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 			tdesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
 			pr::Throw(device->CreateTexture2D(&tdesc, 0, &dtex.m_ptr));
-			PR_EXPAND(PR_DBG_RDR, NameResource(dtex, "GBuffer DSV"));
+			PR_EXPAND(PR_DBG_RDR, NameResource(dtex.get(), "GBuffer DSV"));
 
 			DepthStencilViewDesc dsvdesc(tdesc.Format);
 			dsvdesc.Texture2D.MipSlice = 0;

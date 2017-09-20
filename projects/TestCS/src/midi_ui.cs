@@ -1,30 +1,39 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using pr.audio;
+using pr.extn;
+using pr.gui;
+using pr.util;
 
 namespace TestCS
 {
 	public class MidiUI :Form
 	{
-		private Label m_lbl_version;
+		private Audio m_audio;
 		private VirtualMidi m_midi;
 		private VirtualMidi.Callback m_cb;
+
+		#region UI Elements
+		private Label m_lbl_version;
+		private Button m_btn_play;
+		private TextBox m_tb_wav_filepath;
+		private Button m_btn_make_instrument;
 		private pr.gui.LogUI m_log_ui;
+		#endregion
 
 		public MidiUI()
 		{
 			InitializeComponent();
 
+			// Create an Audio instance
+			m_audio = new Audio();
+
+			// Create a virtual MIDI device
+			bool CallbackMode = true;
 			VirtualMidi.LogMode = VirtualMidi.ELogMode.All;
 			var manufacturer = new Guid("aa4e075f-3504-4aab-9b06-9a4104a91cf0");
 			var product = new Guid("bb4e075f-3504-4aab-9b06-9a4104a91cf0");
-
-			bool CallbackMode = true;
 			m_midi = CallbackMode
 				? new VirtualMidi("Paul's Test Midi Device", m_cb = HandleMidiCommand, IntPtr.Zero, 65535, VirtualMidi.EFlags.ParseRX, manufacturer, product)
 				: new VirtualMidi("Paul's Test Midi Device", 65535, VirtualMidi.EFlags.ParseRX, manufacturer, product);
@@ -39,6 +48,7 @@ namespace TestCS
 		{
 			WorkerThreadActive = false;
 			m_midi.Shutdown();
+			Util.Dispose(m_audio);
 			base.Dispose(disposing);
 		}
 
@@ -48,6 +58,36 @@ namespace TestCS
 			m_lbl_version.Text =
 				$"Dll Version:    {VirtualMidi.VersionString}\r\n" +
 				$"Driver Version: {VirtualMidi.DriverVersionString}\r\n";
+
+			m_btn_make_instrument.Click += (s,a) =>
+			{
+				using (var dlg = new OpenFolderUI { Title = "Select Root instrument folder" })
+				{
+					if (dlg.ShowDialog(this) != DialogResult.OK) return;
+					m_audio.WaveBankCreateMidiInstrument("TEST", dlg.SelectedPath, "D:\\dump\\test.xwb", "D:\\dump\\test.h");
+				}
+			};
+
+			m_btn_play.Click += (s,a) =>
+			{
+				PlayWave();
+			};
+		}
+
+		/// <summary></summary>
+		private void PlayWave()
+		{
+			if (!m_tb_wav_filepath.Text.HasValue())
+			{
+				using (var dlg = new OpenFileDialog { Title = "Open WAV file", Filter = Util.FileDialogFilter("Wave Files", "*.wav") })
+				{
+					if (dlg.ShowDialog(this) != DialogResult.OK) return;
+					m_tb_wav_filepath.Text = dlg.FileName;
+				}
+			}
+
+			if (m_tb_wav_filepath.Text.HasValue())
+				m_audio.PlayFile(m_tb_wav_filepath.Text);
 		}
 
 		/// <summary>Worker thread for processing midi commands</summary>
@@ -68,7 +108,6 @@ namespace TestCS
 				}
 			}
 		}
-		private Thread m_thread;
 		public void WorkThreadFunction()
 		{
 			try
@@ -85,6 +124,7 @@ namespace TestCS
 				m_log_ui.AddMessage($"Thread aborting: {ex.Message}");
 			}
 		}
+		private Thread m_thread;
 
 		/// <summary>Alternative to the worker thread method</summary>
 		private void HandleMidiCommand(IntPtr handle, byte[] midi_data_bytes, uint length, IntPtr ctx)
@@ -106,6 +146,9 @@ namespace TestCS
 		{
 			this.m_lbl_version = new System.Windows.Forms.Label();
 			this.m_log_ui = new pr.gui.LogUI();
+			this.m_btn_play = new System.Windows.Forms.Button();
+			this.m_tb_wav_filepath = new System.Windows.Forms.TextBox();
+			this.m_btn_make_instrument = new System.Windows.Forms.Button();
 			this.SuspendLayout();
 			// 
 			// m_lbl_version
@@ -123,16 +166,44 @@ namespace TestCS
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_log_ui.LineWrap = false;
-			this.m_log_ui.Location = new System.Drawing.Point(12, 42);
+			this.m_log_ui.Location = new System.Drawing.Point(2, 110);
 			this.m_log_ui.Name = "m_log_ui";
 			this.m_log_ui.PopOutOnNewMessages = true;
-			this.m_log_ui.Size = new System.Drawing.Size(260, 207);
+			this.m_log_ui.Size = new System.Drawing.Size(335, 263);
 			this.m_log_ui.TabIndex = 1;
 			this.m_log_ui.Title = "Log";
 			// 
+			// m_btn_play
+			// 
+			this.m_btn_play.Location = new System.Drawing.Point(262, 53);
+			this.m_btn_play.Name = "m_btn_play";
+			this.m_btn_play.Size = new System.Drawing.Size(64, 23);
+			this.m_btn_play.TabIndex = 2;
+			this.m_btn_play.Text = "Play";
+			this.m_btn_play.UseVisualStyleBackColor = true;
+			// 
+			// m_tb_wav_filepath
+			// 
+			this.m_tb_wav_filepath.Location = new System.Drawing.Point(12, 55);
+			this.m_tb_wav_filepath.Name = "m_tb_wav_filepath";
+			this.m_tb_wav_filepath.Size = new System.Drawing.Size(241, 20);
+			this.m_tb_wav_filepath.TabIndex = 3;
+			// 
+			// m_btn_make_instrument
+			// 
+			this.m_btn_make_instrument.Location = new System.Drawing.Point(12, 81);
+			this.m_btn_make_instrument.Name = "m_btn_make_instrument";
+			this.m_btn_make_instrument.Size = new System.Drawing.Size(118, 23);
+			this.m_btn_make_instrument.TabIndex = 4;
+			this.m_btn_make_instrument.Text = "Make Instrument";
+			this.m_btn_make_instrument.UseVisualStyleBackColor = true;
+			// 
 			// MidiUI
 			// 
-			this.ClientSize = new System.Drawing.Size(284, 261);
+			this.ClientSize = new System.Drawing.Size(338, 374);
+			this.Controls.Add(this.m_btn_make_instrument);
+			this.Controls.Add(this.m_tb_wav_filepath);
+			this.Controls.Add(this.m_btn_play);
 			this.Controls.Add(this.m_log_ui);
 			this.Controls.Add(this.m_lbl_version);
 			this.Name = "MidiUI";

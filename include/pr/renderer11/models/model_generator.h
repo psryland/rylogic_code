@@ -310,7 +310,7 @@ namespace pr
 				{
 					// If the model geom has valid texture data but no texture, use white
 					if (AllSet(nug.m_geom, EGeom::Tex0) && nug.m_tex_diffuse == nullptr)
-						nug.m_tex_diffuse = rdr.m_tex_mgr.FindTexture(EStockTexture::White);
+						nug.m_tex_diffuse = Texture2DPtr(rdr.m_tex_mgr.FindTexture(EStockTexture::White), true);
 
 					// Create the nugget
 					model->CreateNugget(nug);

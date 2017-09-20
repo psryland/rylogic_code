@@ -49,9 +49,9 @@
 //#include "pr/input/dinput.h"
 #include "pr/renderer11/renderer.h"
 #include "pr/storage/settings.h"
-#include "pr/sound/sound.h"
-#include "pr/sound/player.h"
-#include "pr/sound/ogg/ogg_stream.h"
+#include "pr/audio/directsound/sound.h"
+#include "pr/audio/directsound/player.h"
+#include "pr/audio/ogg/ogg_stream.h"
 //#include "pr/gui/misc.h"
 #include "pr/win32/windows_com.h"
 

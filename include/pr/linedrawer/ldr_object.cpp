@@ -6,9 +6,10 @@
 #include <string>
 #include <sstream>
 #include <array>
-#include <set>
+#include <unordered_set>
 #include <unordered_map>
 #include <mutex>
+#include <cwctype>
 #include "pr/meta/optional.h"
 #include "pr/linedrawer/ldr_object.h"
 #include "pr/common/assert.h"
@@ -204,34 +205,36 @@ namespace pr
 			if (!reader.IsSectionStart()) { reader.Token(tok1, L"{}"); ++count; }
 			if (!reader.IsSectionStart()) { reader.Bool(attr.m_instance); }
 
-			// If not all tokens are given, allow the name and/or colour to be optional
-			uint32 aarrggbb;
-			auto ExtractColour = [](wstring32 const& tok, uint32& col)
+			if (count == 2)
 			{
-				wchar_t const* end;
-				col = ::wcstoul(tok.c_str(), (wchar_t**)&end, 16);
-				return std::size_t(end - tok.c_str()) == tok.size();
-			};
-
-			// If the second token is a valid colour, assume the first is the name
-			if (count == 2 && ExtractColour(tok1, aarrggbb))
-			{
-				attr.m_name.clear();
-				if (!pr::str::ExtractIdentifierC(attr.m_name, std::begin(tok0))) reader.ReportError(pr::script::EResult::TokenNotFound, "object name is invalid");
-				attr.m_colour = aarrggbb;
+				// If two tokens are given, assume <name> <colour>
+				if (!str::ExtractIdentifierC(attr.m_name, std::begin(tok0)))
+					reader.ReportError(pr::script::EResult::TokenNotFound, "object name is invalid");
+				if (!str::ExtractIntC(attr.m_colour.argb, 16, std::begin(tok1)))
+					reader.ReportError(pr::script::EResult::TokenNotFound, "object colour is invalid");
 			}
-			// If the first token is a valid colour and no second token was given, assume the first token is the colour and no name was given
-			else if (count == 1 && ExtractColour(tok0, aarrggbb))
+			else if (count == 1)
 			{
-				attr.m_colour = aarrggbb;
+				// If the first token is 8 hex digits, assume it is a colour, otherwise assume it is a name
+				if (tok0.size() == 8 && pr::all(tok0, std::iswxdigit))
+				{
+					attr.m_name = "";
+					if (!str::ExtractIntC(attr.m_colour.argb, 16, std::begin(tok1)))
+						reader.ReportError(pr::script::EResult::TokenNotFound, "object colour is invalid");
+				}
+				else
+				{
+					attr.m_colour = 0xFFFFFFFF;
+					if (!str::ExtractIdentifierC(attr.m_name, std::begin(tok0)))
+						reader.ReportError(pr::script::EResult::TokenNotFound, "object name is invalid");
+				}
 			}
-			// Otherwise, make no assumptions
 			else
 			{
-				if (count >= 1) attr.m_name.clear();
-				if (count >= 1 && !pr::str::ExtractIdentifierC(attr.m_name, std::begin(tok0))) reader.ReportError(pr::script::EResult::TokenNotFound, "object name is invalid");
-				if (count >= 2 && !ExtractColour(tok1, attr.m_colour.argb))                    reader.ReportError(pr::script::EResult::TokenNotFound, "object colour is invalid");
+				attr.m_name = model_type.ToStringA();
+				attr.m_colour = 0xFFFFFFFF;
 			}
+
 			return attr;
 		}
 
@@ -3069,7 +3072,7 @@ namespace pr
 		{
 			// Read the object attributes: name, colour, instance
 			auto attr = ParseAttributes(p.m_reader, ShapeType);
-			auto obj  = LdrObjectPtr(new LdrObject(attr, p.m_parent, p.m_context_id));
+			auto obj  = LdrObjectPtr(new LdrObject(attr, p.m_parent, p.m_context_id), true);
 
 			ObjectCreator<ShapeType> creator(p);
 
@@ -3296,7 +3299,7 @@ namespace pr
 		// Create an ldr object from creation data.
 		LdrObjectPtr Create(pr::Renderer& rdr, ObjectAttributes attr, MeshCreationData const& cdata, pr::Guid const& context_id)
 		{
-			LdrObjectPtr obj(new LdrObject(attr, 0, context_id));
+			LdrObjectPtr obj(new LdrObject(attr, 0, context_id), true);
 
 			// Create the model
 			obj->m_model = ModelGenerator<>::Mesh(rdr, cdata);
@@ -3308,7 +3311,7 @@ namespace pr
 		// Objects created by this method will have dynamic usage and are suitable for updating every frame via the 'Edit' function.
 		LdrObjectPtr CreateEditCB(pr::Renderer& rdr, ObjectAttributes attr, int vcount, int icount, int ncount, EditObjectCB edit_cb, void* ctx, pr::Guid const& context_id)
 		{
-			LdrObjectPtr obj(new LdrObject(attr, 0, context_id));
+			LdrObjectPtr obj(new LdrObject(attr, 0, context_id), true);
 
 			// Create buffers for a dynamic model
 			VBufferDesc vbs(vcount, sizeof(Vert), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
@@ -3331,14 +3334,14 @@ namespace pr
 		}
 
 		// Modify the geometry of an LdrObject
-		void Edit(pr::Renderer& rdr, LdrObjectPtr object, EditObjectCB edit_cb, void* ctx)
+		void Edit(pr::Renderer& rdr, LdrObject* object, EditObjectCB edit_cb, void* ctx)
 		{
 			edit_cb(object->m_model, ctx, rdr);
 			pr::events::Send(Evt_LdrObjectChg(object));
 		}
 
 		// Update 'object' with info from 'reader'. 'flags' describes the properties of 'object' to update
-		void Update(pr::Renderer& rdr, LdrObjectPtr object, pr::script::Reader& reader, EUpdateObject flags, CacheData* cache)
+		void Update(pr::Renderer& rdr, LdrObject* object, pr::script::Reader& reader, EUpdateObject flags, CacheData* cache)
 		{
 			// Parsing parameters
 			ParseResult result;
@@ -3403,7 +3406,7 @@ namespace pr
 					}
 				}
 				else
-					ApplyObjectState(object.get());
+					ApplyObjectState(object);
 
 				// Only want one object
 				return false;
@@ -3428,9 +3431,11 @@ namespace pr
 		}
 
 		// Remove 'obj' from 'objects'
-		void Remove(ObjectCont& objects, LdrObjectPtr obj)
+		void Remove(ObjectCont& objects, LdrObject* obj)
 		{
-			for (auto i = objects.begin(), iend = objects.end(); i != iend; ++i)
+			auto ibeg = std::begin(objects);
+			auto iend = std::end(objects);
+			for (auto i = ibeg; i != iend; ++i)
 			{
 				if (*i != obj) continue;
 				objects.erase(i);
@@ -3487,6 +3492,7 @@ LR"(
 		*Pos {0 1 0}                                  // {x y z}
 		*Align {3 0 1 0}                              // {axis_id dx dy dz } - direction vector, and axis id to align to that direction
 		*Quat {0 #eval{sin(pi/2)} 0 #eval{cos(pi/2)}} // {x y z s} - quaternion
+		*QuatPos {0 1 0 0  1 -2 3}                    // {q.x q.y q.z q.s p.x p.y p.z} - quaternion position
 		*Rand4x4 {0 1 0 2}                            // {cx cy cz r} - centre position, radius. Random orientation
 		*RandPos {0 1 0 2}                            // {cx cy cz r} - centre position, radius
 		*RandOri                                      // Randomises the orientation of the current transform
@@ -4223,7 +4229,7 @@ LR"(// *************************************************************************
 		#if PR_DBG
 		struct LeakedLdrObjects
 		{
-			std::set<LdrObject const*> m_ldr_objects;
+			std::unordered_set<LdrObject const*> m_ldr_objects;
 			std::mutex m_mutex;
 			
 			LeakedLdrObjects()
@@ -4495,14 +4501,14 @@ LR"(// *************************************************************************
 		// Note for 'difference-mode' drawlist management: if the object is currently in
 		// one or more drawlists (i.e. added to a scene) it will need to be removed and
 		// re-added so that the sort order is correct.
-		void LdrObject::SetTexture(Texture2DPtr tex, char const* name)
+		void LdrObject::SetTexture(Texture2D* tex, char const* name)
 		{
 			Apply([=](LdrObject* o)
 			{
 				if (o->m_model == nullptr) return true;
 				for (auto& nug : o->m_model->m_nuggets)
 				{
-					nug.m_tex_diffuse = tex;
+					nug.m_tex_diffuse = Texture2DPtr(tex, true);
 					nug.UpdateAlphaStates();
 				}
 

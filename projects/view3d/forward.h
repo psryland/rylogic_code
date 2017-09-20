@@ -4,19 +4,20 @@
 //*********************************************
 #pragma once
 
+#include <exception>
+#include <unordered_set>
+#include <mutex>
+#include <thread>
+
+#include <sdkddkver.h>
+#include <windows.h>
+#include <d3d11.h>
+
 #ifndef _WIN32_WINNT 
 #define _WIN32_WINNT _WIN32_WINNT_WIN7
 #elif _WIN32_WINNT < _WIN32_WINNT_WINXP 
 #error "_WIN32_WINNT >= _WIN32_WINNT_WINXP required"
 #endif
-
-#include <exception>
-#include <set>
-#include <mutex>
-#include <thread>
-
-#include <windows.h>
-#include <d3d11.h>
 
 #include "pr/common/min_max_fix.h"
 #include "pr/common/fmt.h"
@@ -56,10 +57,10 @@ namespace view3d
 {
 	using EditorPtr             = std::unique_ptr<pr::ldr::ScriptEditorUI>;
 	using CodeHandlerPtr        = std::unique_ptr<pr::script::IEmbeddedCode>;
-	using ObjectSet             = std::set<View3DObject>;
-	using GizmoSet              = std::set<View3DGizmo>;
-	using WindowCont            = std::set<View3DWindow>;
-	using EditorCont            = std::set<EditorPtr>;
+	using ObjectSet             = std::unordered_set<View3DObject>;
+	using GizmoSet              = std::unordered_set<View3DGizmo>;
+	using WindowCont            = std::unordered_set<View3DWindow>;
+	using EditorCont            = std::unordered_set<EditorPtr>;
 	using LockGuard             = std::lock_guard<std::recursive_mutex>;
 	using ReportErrorCB         = pr::StaticCB<void, wchar_t const*>;
 	using SettingsChangedCB     = pr::StaticCB<void, Window*>;

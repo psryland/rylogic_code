@@ -40,14 +40,6 @@ namespace pr
 			dc->GSSetShader(0, 0, 0);
 			dc->HSSetShader(0, 0, 0);
 			dc->DSSetShader(0, 0, 0);
-
-			// Release the ref added in CreateShader()
-			while (!m_lookup_shader.empty())
-			{
-				auto iter = begin(m_lookup_shader);
-				PR_INFO_IF(PR_DBG_RDR, pr::PtrRefCount(iter->second) != 1, pr::FmtS("External references to shader %d - %s still exist", iter->second->m_id, iter->second->m_name.c_str()));
-				iter->second->Release();
-			}
 		}
 
 		// Create the built-in shaders
@@ -74,59 +66,54 @@ namespace pr
 			CreateShader<ArrowHeadShaderGS>();
 		}
 
-		// Get (or create) a shader of type 'TShdr'.
-		template <typename TShdr, typename TCreate> D3DPtr<TShdr> Get(RdrId id, typename Lookup<RdrId, D3DPtr<TShdr>>& lookup, TCreate create)
+		// Get (or create) a d3d resource of type 'TRes'.
+		template <typename TRes, typename TCreate, typename TLookup = Lookup<RdrId, D3DPtr<TRes>>>
+		D3DPtr<TRes> Get(RdrId id, TLookup& lookup, TCreate create)
 		{
 			// If 'id' is AutoId, the caller wants a new instance.
 			if (id != AutoId)
 			{
 				// Check the lookup table as it may already exist
 				auto iter = lookup.find(id);
-				if (iter != end(lookup))
+				if (iter != std::end(lookup))
 					return iter->second;
 			}
 
 			// Doesn't already exist, or the caller wants a new instance
-			// Create the shader
-			D3DPtr<TShdr> shdr = create();
+			auto res = create();
 
 			// Add it to the lookup
-			id = id == AutoId ? MakeId(shdr.m_ptr) : id;
-			AddLookup(lookup, id, shdr.m_ptr);
-
-			// The ShaderManager acts as a container of custom shaders.
-			// We need to prevent the shader from immediately being destroyed
-			// even if the caller holds no references to the shader.
-			shdr->AddRef();
-			return shdr;
+			id = id == AutoId ? MakeId(res.m_ptr) : id;
+			AddLookup(lookup, id, res);
+			return std::move(res);
 		}
 
 		// Get (or create) an input layout
 		D3DPtr<ID3D11InputLayout> ShaderManager::GetIP(RdrId id, VShaderDesc const* desc)
 		{
-			std::lock_guard<std::recursive_mutex> lock(m_mutex);
+			std::lock_guard<std::recursive_mutex> lock0(m_mutex);
 
 			// Note: we need an input layout per vertex shader because the CreateInputLayout
 			// validates the input layout for the vertex shader and can make changes if there
 			// is a difference.
-			return Get(id, m_lookup_ip, [=]
+			return Get<ID3D11InputLayout>(id, m_lookup_ip, [&]
 			{
 				if (desc == nullptr)
 					throw pr::Exception<HRESULT>(E_FAIL, "Input layout description not provided");
 				
-				Renderer::Lock lock(m_rdr);
+				Renderer::Lock lock1(m_rdr);
 				D3DPtr<ID3D11InputLayout> ip;
-				pr::Throw(lock.D3DDevice()->CreateInputLayout(desc->m_iplayout, UINT(desc->m_iplayout_count), desc->m_data, desc->m_size, &ip.m_ptr));
-				return ip;
+				pr::Throw(lock1.D3DDevice()->CreateInputLayout(desc->m_iplayout, UINT(desc->m_iplayout_count), desc->m_data, desc->m_size, &ip.m_ptr));
+				return std::move(ip);
 			});
 		}
 
 		// Get (or create) a vertex shader.
 		D3DPtr<ID3D11VertexShader> ShaderManager::GetVS(RdrId id, VShaderDesc const* desc)
 		{
-			std::lock_guard<std::recursive_mutex> lock(m_mutex);
+			std::lock_guard<std::recursive_mutex> lock0(m_mutex);
 
-			return Get(id, m_lookup_vs, [=]
+			return Get<ID3D11VertexShader>(id, m_lookup_vs, [&]
 			{
 				if (desc == nullptr)
 					throw pr::Exception<HRESULT>(E_FAIL, "Vertex shader description not provided");
@@ -135,81 +122,60 @@ namespace pr
 				GetIP(id, desc);
 				
 				// Attach the input layout as private data to the vertex shader
-				Renderer::Lock lock(m_rdr);
+				Renderer::Lock lock1(m_rdr);
 				D3DPtr<ID3D11VertexShader> vs;
-				pr::Throw(lock.D3DDevice()->CreateVertexShader(desc->m_data, desc->m_size, 0, &vs.m_ptr));
-				return vs;
+				pr::Throw(lock1.D3DDevice()->CreateVertexShader(desc->m_data, desc->m_size, 0, &vs.m_ptr));
+				return std::move(vs);
 			});
 		}
 
 		// Get (or create) a pixel shader.
 		D3DPtr<ID3D11PixelShader> ShaderManager::GetPS(RdrId id, PShaderDesc const* desc)
 		{
-			std::lock_guard<std::recursive_mutex> lock(m_mutex);
+			std::lock_guard<std::recursive_mutex> lock0(m_mutex);
 
-			return Get(id, m_lookup_ps, [=]
+			return Get<ID3D11PixelShader>(id, m_lookup_ps, [&]
 			{
 				if (desc == nullptr)
 					throw pr::Exception<HRESULT>(E_FAIL, "Pixel shader description not provided");
 
 				// Create the pixel shader
-				Renderer::Lock lock(m_rdr);
+				Renderer::Lock lock1(m_rdr);
 				D3DPtr<ID3D11PixelShader> ps;
-				pr::Throw(lock.D3DDevice()->CreatePixelShader(desc->m_data, desc->m_size, 0, &ps.m_ptr));
-				return ps;
+				pr::Throw(lock1.D3DDevice()->CreatePixelShader(desc->m_data, desc->m_size, 0, &ps.m_ptr));
+				return std::move(ps);
 			});
 		}
 
 		// Get (or create) a geometry shader.
 		D3DPtr<ID3D11GeometryShader> ShaderManager::GetGS(RdrId id, GShaderDesc const* desc)
 		{
-			std::lock_guard<std::recursive_mutex> lock(m_mutex);
+			std::lock_guard<std::recursive_mutex> lock0(m_mutex);
 
-			return Get(id, m_lookup_gs, [=]
+			return Get<ID3D11GeometryShader>(id, m_lookup_gs, [&]
 			{
 				if (desc == nullptr)
 					throw pr::Exception<HRESULT>(E_FAIL, "Geometry shader description not provided");
 
 				// Create the pixel shader
-				Renderer::Lock lock(m_rdr);
+				Renderer::Lock lock1(m_rdr);
 				D3DPtr<ID3D11GeometryShader> gs;
-				pr::Throw(lock.D3DDevice()->CreateGeometryShader(desc->m_data, desc->m_size, 0, &gs.m_ptr));
-				return gs;
+				pr::Throw(lock1.D3DDevice()->CreateGeometryShader(desc->m_data, desc->m_size, 0, &gs.m_ptr));
+				return std::move(gs);
 			});
 		}
 
 		// Add a shader instance to our map
-		ShaderPtr ShaderManager::InitShader(ShaderBase* shdr)
+		void ShaderManager::AddShader(ShaderPtr const& shader)
 		{
 			// Should already be lock_guarded
-			PR_ASSERT(PR_DBG_RDR, FindShader(shdr->m_id) == nullptr, "A shader with this Id already exists");
+			PR_ASSERT(PR_DBG_RDR, FindShader(shader->m_id) == nullptr, "A shader with this Id already exists");
 
 			// Set up a sort id for the shader
-			shdr->m_sort_id = m_lookup_shader.size() % SortKey::MaxShaderId;
+			shader->m_sort_id = m_lookup_shader.size() % SortKey::MaxShaderId;
 
 			// Add the shader instance to the lookup map
-			AddLookup(m_lookup_shader, shdr->m_id, shdr);
-
-			// The ShaderManager acts as a container of custom shaders.
-			// We need to prevent the shader from immediately being destroyed
-			// if the caller holds no references to the shader.
-			shdr->AddRef();
-			return shdr;
-		}
-
-		// Delete a shader instance from our map
-		void ShaderManager::DestShader(ShaderBase* shdr)
-		{
-			// Should already be lock_guarded
-			if (shdr == nullptr)
-				return;
-
-			// Find 'shdr' in the map of RdrIds to shader instances
-			auto iter = m_lookup_shader.find(shdr->m_id);
-			PR_ASSERT(PR_DBG_RDR, iter != std::end(m_lookup_shader), "Shader not found");
-
-			// Remove the entry from the RdrId lookup map
-			m_lookup_shader.erase(iter);
+			AddLookup(m_lookup_shader, shader->m_id, shader);
 		}
 
 		// Find a shader by id
@@ -226,8 +192,7 @@ namespace pr
 			if (iter == std::end(m_lookup_shader))
 				return nullptr;
 
-			ShaderBase& existing = *(iter->second);
-			return &existing;
+			return iter->second;
 		}
 
 		// Create a copy of an existing shader.
@@ -253,9 +218,9 @@ namespace pr
 			D3DPtr<ID3D11Buffer> cbuf;
 			CBufferDesc cbdesc(sz);
 			pr::Throw(lock.D3DDevice()->CreateBuffer(&cbdesc, 0, &cbuf.m_ptr));
-			PR_EXPAND(PR_DBG_RDR, NameResource(cbuf, name)); (void)name;
+			PR_EXPAND(PR_DBG_RDR, NameResource(cbuf.get(), name)); (void)name;
 			m_lookup_cbuf[id] = cbuf;
-			return cbuf;
+			return std::move(cbuf);
 		}
 
 		//// Return a pointer to a shader that is best suited for rendering geometry with the vertex structure described by 'geom_mask'

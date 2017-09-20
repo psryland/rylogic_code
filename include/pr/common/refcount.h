@@ -26,7 +26,8 @@ namespace pr
 	// 'RefCount' itself contains a 'RefCountZero' function so that clients can use 'RefCount<Derived>'
 	// which will pick up the default behaviour of deleting the ref counted object when the count hits zero
 	// 'Shared' should be true if AddRef()/Release() can be called from multiple threads
-	template <typename Deleter, bool Shared = true> struct RefCount
+	template <typename Deleter, bool Shared = true>
+	struct RefCount
 	{
 		mutable volatile long m_ref_count;
 
@@ -83,7 +84,7 @@ namespace pr
 		}
 	};
 
-	// Return the current refcount for a ref pointer
+	// Return the current ref count for a ref pointer
 	template <typename T> inline long PtrRefCount(T* ptr)
 	{
 		if (!ptr) return 0;

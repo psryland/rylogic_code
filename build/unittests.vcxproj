@@ -304,6 +304,9 @@
     <ClInclude Include="..\include\pr\script\script_core.h" />
     <ClInclude Include="..\include\pr\script\token.h" />
     <ClInclude Include="..\include\pr\script\tokeniser.h" />
+    <ClInclude Include="..\include\pr\sound\ogg\ogg_stream.h" />
+    <ClInclude Include="..\include\pr\sound\player.h" />
+    <ClInclude Include="..\include\pr\sound\sound.h" />
     <ClInclude Include="..\include\pr\storage\csv.h" />
     <ClInclude Include="..\include\pr\storage\settings.h" />
     <ClInclude Include="..\include\pr\storage\sqlite.h" />
@@ -408,6 +411,7 @@
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <SDLCheck>false</SDLCheck>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
+      <AdditionalIncludeDirectories>..\sdk\vorbis\include;..\sdk\ogg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -436,6 +440,7 @@
       </PrecompiledHeader>
       <PreprocessorDefinitions>PR_UNITTESTS=1;PR_MATHS_USE_INTRINSICS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>..\sdk\vorbis\include;..\sdk\ogg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -465,6 +470,7 @@
       <PreprocessorDefinitions>PR_UNITTESTS=1;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>false</SDLCheck>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
+      <AdditionalIncludeDirectories>..\sdk\vorbis\include;..\sdk\ogg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -493,6 +499,7 @@
       </PrecompiledHeader>
       <PreprocessorDefinitions>PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
+      <AdditionalIncludeDirectories>..\sdk\vorbis\include;..\sdk\ogg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

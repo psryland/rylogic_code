@@ -94,6 +94,7 @@ namespace pr
 			x(Up                   ,= HashI("Up"                  ))\
 			x(Direction            ,= HashI("Direction"           ))\
 			x(Quat                 ,= HashI("Quat"                ))\
+			x(QuatPos              ,= HashI("QuatPos"             ))\
 			x(Rand4x4              ,= HashI("Rand4x4"             ))\
 			x(RandPos              ,= HashI("RandPos"             ))\
 			x(RandOri              ,= HashI("RandOri"             ))\
@@ -494,7 +495,7 @@ namespace pr
 			// Note for difference mode drawlist management, if the object is currently in
 			// one or more drawlists (i.e. added to a scene) it will need to be removed and
 			// re-added so that the sort order is correct.
-			void SetTexture(pr::rdr::Texture2DPtr tex, char const* name = nullptr);
+			void SetTexture(pr::rdr::Texture2D* tex, char const* name = nullptr);
 
 			// Return the bounding box for this object in model space
 			// To convert this to parent space multiply by 'm_o2p'
@@ -572,8 +573,8 @@ namespace pr
 		// An ldr object has been modified
 		struct Evt_LdrObjectChg
 		{
-			LdrObjectPtr m_obj; // The object that was changed.
-			Evt_LdrObjectChg(LdrObjectPtr obj) :m_obj(obj) {}
+			LdrObject* m_obj; // The object that was changed.
+			Evt_LdrObjectChg(LdrObject* obj) :m_obj(obj) {}
 		};
 
 		// Debugging only! - Notify of object destructed
@@ -670,10 +671,10 @@ namespace pr
 			pr::Guid const& context_id = GuidZero); // The context id to assign to the object
 
 		// Modify the geometry of an LdrObject
-		void Edit(pr::Renderer& rdr, LdrObjectPtr object, EditObjectCB edit_cb, void* ctx);
+		void Edit(pr::Renderer& rdr, LdrObject* object, EditObjectCB edit_cb, void* ctx);
 
 		// Update 'object' with info from 'desc'. 'keep' describes the properties of 'object' to update
-		void Update(pr::Renderer& rdr, LdrObjectPtr object, pr::script::Reader& reader, EUpdateObject flags = EUpdateObject::All, CacheData* cache = nullptr);
+		void Update(pr::Renderer& rdr, LdrObject* object, pr::script::Reader& reader, EUpdateObject flags = EUpdateObject::All, CacheData* cache = nullptr);
 
 		// Remove all objects from 'objects' that have a context id matching one in 'doomed' and not in 'excluded'
 		// If 'doomed' is 0, all are assumed doomed. If 'excluded' is 0, none are assumed excluded
@@ -681,7 +682,7 @@ namespace pr
 		void Remove(ObjectCont& objects, pr::Guid const* doomed, std::size_t dcount, pr::Guid const* excluded, std::size_t ecount);
 
 		// Remove 'obj' from 'objects'
-		void Remove(ObjectCont& objects, pr::ldr::LdrObjectPtr obj);
+		void Remove(ObjectCont& objects, LdrObject* obj);
 
 		// Parse an ldr transform description accumulatively
 		// 'o2w' should be a valid initial transform
@@ -754,6 +755,17 @@ namespace pr
 						pr::quat q;
 						reader.Vector4S(q.xyzw);
 						p2w = m4x4::Transform(q, v4Origin) * p2w;
+						break;
+					}
+				case EKeyword::QuatPos:
+					{
+						pr::v4 p;
+						pr::quat q;
+						reader.SectionStart();
+						reader.Vector4(q.xyzw);
+						reader.Vector3(p, 1.0f);
+						reader.SectionEnd();
+						p2w = m4x4::Transform(q, p.w1()) * p2w;
 						break;
 					}
 				case EKeyword::Rand4x4:

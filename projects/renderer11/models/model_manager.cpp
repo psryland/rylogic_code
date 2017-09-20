@@ -39,7 +39,7 @@ namespace pr
 			Renderer::Lock lock(m_rdr);
 
 			// Create a new model buffer
-			ModelBufferPtr mb(m_alex_mdlbuf.New());
+			ModelBufferPtr mb(m_alex_mdlbuf.New(), true);
 			assert(m_dbg_mem_mdlbuf.add(mb.m_ptr));
 			mb->m_mdl_mgr = this;
 			{// Create a vertex buffer
@@ -48,7 +48,7 @@ namespace pr
 				mb->m_vb.m_range.set(0, settings.m_vb.ElemCount);
 				mb->m_vb.m_used.set(0, 0);
 				mb->m_vb.m_stride = settings.m_vb.StructureByteStride;
-				PR_EXPAND(PR_DBG_RDR, NameResource(mb->m_vb, FmtS("model VBuffer <V:%d,I:%d>", settings.m_vb.ElemCount, settings.m_ib.ElemCount)));
+				PR_EXPAND(PR_DBG_RDR, NameResource(mb->m_vb.get(), FmtS("model VBuffer <V:%d,I:%d>", settings.m_vb.ElemCount, settings.m_ib.ElemCount)));
 			}
 			{// Create an index buffer
 				SubResourceData init(settings.m_ib.Data, 0, UINT(settings.m_ib.SizeInBytes()));
@@ -56,7 +56,7 @@ namespace pr
 				mb->m_ib.m_range.set(0, settings.m_ib.ElemCount);
 				mb->m_ib.m_used.set(0, 0);
 				mb->m_ib.m_format = settings.m_ib.Format;
-				PR_EXPAND(PR_DBG_RDR, NameResource(mb->m_ib, FmtS("model IBuffer <V:%d,I:%d>", settings.m_vb.ElemCount, settings.m_ib.ElemCount)));
+				PR_EXPAND(PR_DBG_RDR, NameResource(mb->m_ib.get(), FmtS("model IBuffer <V:%d,I:%d>", settings.m_vb.ElemCount, settings.m_ib.ElemCount)));
 			}
 			return mb;
 		}
@@ -76,7 +76,7 @@ namespace pr
 			PR_ASSERT(PR_DBG_RDR, model_buffer->IsRoomFor(settings.m_vb.ElemCount, settings.m_ib.ElemCount), "Insufficient room for a model of this size in this model buffer");
 			Renderer::Lock lock(m_rdr);
 
-			ModelPtr ptr(m_alex_model.New(settings, model_buffer));
+			ModelPtr ptr(m_alex_model.New(settings, model_buffer), true);
 			assert(m_dbg_mem_mdl.add(ptr.m_ptr));
 			return ptr;
 		}

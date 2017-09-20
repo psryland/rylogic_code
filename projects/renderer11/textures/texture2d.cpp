@@ -12,10 +12,13 @@ namespace pr
 {
 	namespace rdr
 	{
-		Texture2D::Texture2D(TextureManager* mgr, D3DPtr<ID3D11Texture2D> tex, D3DPtr<ID3D11ShaderResourceView> srv, SamplerDesc const& sam_desc, SortKeyId sort_id)
+		Texture2D::Texture2D(TextureManager* mgr, ID3D11Texture2D* tex, SamplerDesc const& sam_desc, SortKeyId sort_id)
+			:Texture2D(mgr, tex, nullptr, sam_desc, sort_id)
+		{}
+		Texture2D::Texture2D(TextureManager* mgr, ID3D11Texture2D* tex, ID3D11ShaderResourceView* srv, SamplerDesc const& sam_desc, SortKeyId sort_id)
 			:m_t2s(pr::m4x4Identity)
-			,m_tex(tex)
-			,m_srv(srv)
+			,m_tex(tex, true)
+			,m_srv(srv, true)
 			,m_samp()
 			,m_id()
 			,m_src_id()
@@ -33,7 +36,7 @@ namespace pr
 				srvdesc.Texture2D.MipLevels = tdesc.MipLevels;
 
 				Renderer::Lock lock(mgr->m_rdr);
-				pr::Throw(lock.D3DDevice()->CreateShaderResourceView(tex.m_ptr, &srvdesc, &srv.m_ptr));
+				pr::Throw(lock.D3DDevice()->CreateShaderResourceView(tex, &srvdesc, &m_srv.m_ptr));
 			}
 			SamDesc(sam_desc);
 		}

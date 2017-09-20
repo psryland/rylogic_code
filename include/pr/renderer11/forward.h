@@ -135,7 +135,7 @@ namespace pr
 		struct GBuffer;
 		struct DSLighting;
 		struct ShadowMap;
-		typedef std::shared_ptr<RenderStep> RenderStepPtr;
+		using RenderStepPtr = std::shared_ptr<RenderStep>;
 
 		// Models
 		class  ModelManager;
@@ -144,9 +144,9 @@ namespace pr
 		struct NuggetProps;
 		struct Nugget;
 		struct MdlSettings;
-		typedef pr::RefPtr<ModelBuffer> ModelBufferPtr;
-		typedef pr::RefPtr<Model> ModelPtr;
-		typedef pr::chain::head<Nugget, struct ChainGroupNugget> TNuggetChain;
+		using ModelBufferPtr = pr::RefPtr<ModelBuffer>;
+		using ModelPtr = pr::RefPtr<Model>;
+		using TNuggetChain = pr::chain::head<Nugget, struct ChainGroupNugget>;
 
 		// Instances
 		struct BaseInstance;
@@ -158,18 +158,16 @@ namespace pr
 		struct ShaderBase;
 		struct ShaderSet;
 		struct ShaderMap;
-		typedef pr::RefPtr<ShaderBase> ShaderPtr;
+		using ShaderPtr = pr::RefPtr<ShaderBase>;
 
 		// Textures
 		class  TextureManager;
 		struct TextureDesc;
 		struct Texture2D;
-		struct TextureGdi;
 		struct Image;
 		struct AllocPres;
 		struct ProjectedTexture;
-		typedef pr::RefPtr<Texture2D> Texture2DPtr;
-		typedef pr::RefPtr<TextureGdi> TextureGdiPtr;
+		using Texture2DPtr = pr::RefPtr<Texture2D>;
 
 		// Video
 		//struct Video;

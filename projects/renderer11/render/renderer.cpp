@@ -48,6 +48,11 @@ namespace pr
 			RdrSettings::BuildOptions bo;
 			pr::CheckBuildOptions(bo, settings.m_build_options);
 
+			// Add the debug layer in debug mode
+			// Note: this automatically disables multi-sampling as well
+			//PR_EXPAND(PR_DBG_RDR, m_settings.m_device_layers |= D3D11_CREATE_DEVICE_DEBUG);
+			//#pragma message(PR_LINK "WARNING: ************************************************** D3D11_CREATE_DEVICE_DEBUG enabled")
+
 			PR_INFO_IF(PR_DBG_RDR, AllSet(m_settings.m_device_layers, D3D11_CREATE_DEVICE_DEBUG       ), "D3D11_CREATE_DEVICE_DEBUG is enabled");
 			PR_INFO_IF(PR_DBG_RDR, AllSet(m_settings.m_device_layers, D3D11_CREATE_DEVICE_BGRA_SUPPORT), "D3D11_CREATE_DEVICE_BGRA_SUPPORT is enabled");
 
@@ -80,8 +85,8 @@ namespace pr
 					&m_immediate.m_ptr);
 			}
 			pr::Throw(hr);
-			PR_EXPAND(PR_DBG_RDR, NameResource(m_d3d_device, "D3D device"));
-			PR_EXPAND(PR_DBG_RDR, NameResource(m_immediate, "immediate DC"));
+			PR_EXPAND(PR_DBG_RDR, NameResource(m_d3d_device.get(), "D3D device"));
+			PR_EXPAND(PR_DBG_RDR, NameResource(m_immediate.get(), "immediate DC"));
 
 			// Check dlls,dx features,etc required to run the renderer are available
 			// Check the given settings are valid for the current adaptor

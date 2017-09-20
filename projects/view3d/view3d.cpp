@@ -1382,7 +1382,7 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreate(char const* name, View3DCo
 			nug.m_vrange = n->m_v0 != n->m_v1 ? Range(n->m_v0, n->m_v1) : Range(0, vcount);
 			nug.m_irange = n->m_i0 != n->m_i1 ? Range(n->m_i0, n->m_i1) : Range(0, icount);
 			nug.m_geometry_has_alpha = n->m_has_alpha != 0;
-			nug.m_tex_diffuse = n->m_mat.m_diff_tex;
+			nug.m_tex_diffuse = Texture2DPtr(n->m_mat.m_diff_tex, true);
 			switch (n->m_mat.m_shader)
 			{
 			default: break;

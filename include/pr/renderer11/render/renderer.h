@@ -49,12 +49,7 @@ namespace pr
 				,m_device_layers(bgra_support ? D3D11_CREATE_DEVICE_BGRA_SUPPORT : 0)
 				,m_feature_levels()
 				,m_fallback_to_sw_device(true)
-			{
-				// Add the debug layer in debug mode
-				// Note: this automatically disables multi-sampling as well
-				//PR_EXPAND(PR_DBG_RDR, m_device_layers |= D3D11_CREATE_DEVICE_DEBUG);
-				//#pragma message(PR_LINK "WARNING: ************************************************** D3D11_CREATE_DEVICE_DEBUG enabled")
-			}
+			{}
 		};
 
 		// Renderer state variables
@@ -97,7 +92,7 @@ namespace pr
 		rdr::DepthStateManager m_ds_mgr;
 		rdr::RasterStateManager m_rs_mgr;
 
-		Renderer(rdr::RdrSettings const& settings);
+		explicit Renderer(rdr::RdrSettings const& settings);
 		~Renderer();
 
 		// Synchronise access to D3D/D2D interfaces

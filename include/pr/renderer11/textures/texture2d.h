@@ -30,7 +30,8 @@ namespace pr
 			TextureManager*                  m_mgr;       // The texture manager that created this texture
 			string32                         m_name;      // Human readable id for the texture
 
-			Texture2D(TextureManager* mgr, D3DPtr<ID3D11Texture2D> tex, D3DPtr<ID3D11ShaderResourceView> srv, SamplerDesc const& sam_desc, SortKeyId sort_id);
+			Texture2D(TextureManager* mgr, ID3D11Texture2D* tex, SamplerDesc const& sam_desc, SortKeyId sort_id);
+			Texture2D(TextureManager* mgr, ID3D11Texture2D* tex, ID3D11ShaderResourceView* srv, SamplerDesc const& sam_desc, SortKeyId sort_id);
 			Texture2D(TextureManager* mgr, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, ShaderResViewDesc const* srvdesc = nullptr);
 			Texture2D(TextureManager* mgr, Texture2D const& existing, SortKeyId sort_id);
 

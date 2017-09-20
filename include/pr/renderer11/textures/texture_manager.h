@@ -76,7 +76,7 @@ namespace pr
 			// 'id' is the id to assign to this new texture instance. Use 'AutoId' to auto generate an id
 			// 'existing' is an existing texture instance to clone
 			// 'sam_desc' is an optional sampler state description to set on the clone.
-			Texture2DPtr CloneTexture2D(RdrId id, Texture2DPtr const& existing, SamplerDesc const* sam_desc = nullptr, char const* name = nullptr);
+			Texture2DPtr CloneTexture2D(RdrId id, Texture2D const* existing, SamplerDesc const* sam_desc = nullptr, char const* name = nullptr);
 
 			// Create a texture instance from a DDS file.
 			// 'filepath' can be a special string identifying a stock texture (e.g.  #black, #white, #checker, etc)
@@ -85,10 +85,10 @@ namespace pr
 			Texture2DPtr CreateTexture2D(RdrId id, SamplerDesc const& sam_desc, char const* filepath, char const* name = nullptr);
 
 			// Return a pointer to an existing texture
-			Texture2DPtr FindTexture(RdrId id) const
+			Texture2D* FindTexture(RdrId id) const
 			{
 				auto i = m_lookup_tex.find(id);
-				return i != m_lookup_tex.end() ? i->second : 0;
+				return i != m_lookup_tex.end() ? i->second : nullptr;
 			}
 
 			// Create a GDI texture instance
@@ -104,7 +104,7 @@ namespace pr
 			// 'id' is the id to assign to this new texture instance. Use 'AutoId' to auto generate an id
 			// 'existing' is an existing dx texture to wrap
 			// 'sam_desc' is the sampler state description to use on the texture
-			Texture2DPtr CreateTexture2D(RdrId id, D3DPtr<ID3D11Texture2D> existing_tex, D3DPtr<ID3D11ShaderResourceView> existing_srv, SamplerDesc const& sam_desc, char const* name = nullptr);
+			Texture2DPtr CreateTexture2D(RdrId id, ID3D11Texture2D* existing_tex, ID3D11ShaderResourceView* existing_srv, SamplerDesc const& sam_desc, char const* name = nullptr);
 		};
 	}
 }

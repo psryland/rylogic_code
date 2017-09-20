@@ -17,7 +17,7 @@ namespace pr
 		// PathCB should have a signature: bool (*EnumDirectories)(String pathname)
 		// Returns false if 'EnumDirectories' returns false, indicating that the search ended early
 		template <typename PathCB>
-		bool RecurseDirectory(std::wstring path, PathCB EnumDirectories)
+		bool EnumDirectories(std::wstring path, PathCB EnumDirectories)
 		{
 			// Enum this directory
 			if (!EnumDirectories(path))
@@ -36,7 +36,7 @@ namespace pr
 					continue;
 
 				// Recurse into subdirectories
-				if (!RecurseDirectory(ff.fullpath2(), EnumDirectories))
+				if (!EnumDirectories(ff.fullpath2(), EnumDirectories))
 					return false;
 			}
 			return true;
@@ -44,16 +44,16 @@ namespace pr
 
 		// Recursively enumerate files within and below 'path'
 		// 'file_masks' is a semicolon separated, null terminated, list of file masks
-		// PathCB should have a signature: bool (*EnumFiles)(String pathname)
-		// SkipDirCB should have a signature: bool (*SkipDir)(String pathname)
-		// Returns false if 'EnumFiles' returns false, indicating that the search ended early
+		// PathCB should have a signature: bool (*file_cb)(FindFiles const& ff)
+		// SkipDirCB should have a signature: bool (*SkipDir)(FindFiles const& ff)
+		// Returns false if 'file_cb' returns false, indicating that the search ended early
 		template <typename PathCB, typename SkipDirCB>
-		bool RecurseFiles(std::wstring path, PathCB EnumFiles, wchar_t const* file_masks, SkipDirCB SkipDir)
+		bool EnumFiles(std::wstring path, wchar_t const* file_masks, SkipDirCB SkipDir, PathCB file_cb)
 		{
 			// Find the files in this directory
 			for (FindFiles ff(path, file_masks); !ff.done(); ff.next())
 			{
-				if (!EnumFiles(ff.fullpath2()))
+				if (!file_cb(ff))
 					return false;
 			}
 
@@ -70,11 +70,11 @@ namespace pr
 
 				// Allow callers to exclude specific directories
 				// Directories will not have trailing '\' characters
-				if (SkipDir(ff.fullpath2()))
+				if (SkipDir(ff))
 					continue;
 
 				// Enumerate the files in this directory
-				if (!RecurseFiles(ff.fullpath2(), EnumFiles, file_masks, SkipDir))
+				if (!EnumFiles(ff.fullpath2(), file_masks, file_cb, SkipDir))
 					return false;
 			}
 			return true;
@@ -82,11 +82,11 @@ namespace pr
 
 		// Recursively enumerate files within and below 'path'
 		// 'file_masks' is a semicolon separated, null terminated, list of file masks
-		// PathCB should have a signature: bool (*EnumFiles)(String&& pathname)
+		// PathCB should have a signature: bool (*file_cb)(FindFiles const& ff)
 		template <typename PathCB>
-		bool RecurseFiles(std::wstring path, PathCB EnumFiles, wchar_t const* file_masks)
+		bool EnumFiles(std::wstring path, wchar_t const* file_masks, PathCB file_cb)
 		{
-			return RecurseFiles(path, EnumFiles, file_masks, [](std::wstring const&){ return false; });
+			return EnumFiles(path, file_masks, [](FindFiles const&){ return false; }, file_cb);
 		}
 	}
 }
@@ -101,15 +101,16 @@ namespace pr
 		PRUnitTest(pr_filesys_recurse_directory)
 		{
 			int found[4] = {}; // 0-*.cpp, 1-*.c, 2-*.h, 3-other
-			auto EnumFiles = [&](std::wstring path)
-				{
-					auto extn = pr::filesys::GetExtension(path);
-					if      (extn.compare(L"cpp") == 0) ++found[0];
-					else if (extn.compare(L"c")   == 0) ++found[1];
-					else if (extn.compare(L"h")   == 0) ++found[2];
-					else                                ++found[3];
-					return true;
-				};
+			auto file_cb = [&](FindFiles const& ff)
+			{
+				auto path = ff.fullpath2();
+				auto extn = pr::filesys::GetExtension(path);
+				if      (extn.compare(L"cpp") == 0) ++found[0];
+				else if (extn.compare(L"c")   == 0) ++found[1];
+				else if (extn.compare(L"h")   == 0) ++found[2];
+				else                                ++found[3];
+				return true;
+			};
 
 			wchar_t curr_dir[MAX_PATH];
 			GetCurrentDirectoryW(_countof(curr_dir), curr_dir);
@@ -121,8 +122,8 @@ namespace pr
 				return;
 			}
 
-			PR_CHECK(pr::filesys::RecurseFiles(root, EnumFiles, L"*.cpp;*.c"), true);
-			PR_CHECK(pr::filesys::RecurseFiles(root, EnumFiles, L"*.h;*.py"), true);
+			PR_CHECK(pr::filesys::EnumFiles(root, L"*.cpp;*.c", file_cb), true);
+			PR_CHECK(pr::filesys::EnumFiles(root, L"*.h;*.py" , file_cb), true);
 			PR_CHECK(found[0] == 1, true);
 			PR_CHECK(found[1] == 0, true);
 			PR_CHECK(found[2] == 2, true);

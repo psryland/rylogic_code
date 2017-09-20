@@ -23,6 +23,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <UseVSHostingProcess>false</UseVSHostingProcess>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -35,6 +36,9 @@
   </PropertyGroup>
   <PropertyGroup>
     <StartupObject>TestCS.MainUI</StartupObject>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RunPostBuildEvent>Always</RunPostBuildEvent>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -219,8 +223,57 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\lib\x64\debug\audio.dll">
+      <Link>lib\x64\debug\audio.dll</Link>
+    </None>
+    <None Include="..\..\lib\x64\debug\scintilla.dll">
+      <Link>lib\x64\debug\scintilla.dll</Link>
+    </None>
+    <None Include="..\..\lib\x64\debug\sqlite3.dll">
+      <Link>lib\x64\debug\sqlite3.dll</Link>
+    </None>
+    <None Include="..\..\lib\x64\debug\view3d.dll">
+      <Link>lib\x64\debug\view3d.dll</Link>
+    </None>
+    <None Include="..\..\lib\x64\release\audio.dll">
+      <Link>lib\x64\release\audio.dll</Link>
+    </None>
+    <None Include="..\..\lib\x64\release\scintilla.dll">
+      <Link>lib\x64\release\scintilla.dll</Link>
+    </None>
+    <None Include="..\..\lib\x64\release\sqlite3.dll">
+      <Link>lib\x64\release\sqlite3.dll</Link>
+    </None>
+    <None Include="..\..\lib\x64\release\view3d.dll">
+      <Link>lib\x64\release\view3d.dll</Link>
+    </None>
+    <None Include="..\..\lib\x86\debug\audio.dll">
+      <Link>lib\x86\debug\audio.dll</Link>
+    </None>
+    <None Include="..\..\lib\x86\debug\scintilla.dll">
+      <Link>lib\x86\debug\scintilla.dll</Link>
+    </None>
+    <None Include="..\..\lib\x86\debug\sqlite3.dll">
+      <Link>lib\x86\debug\sqlite3.dll</Link>
+    </None>
+    <None Include="..\..\lib\x86\debug\view3d.dll">
+      <Link>lib\x86\debug\view3d.dll</Link>
+    </None>
+    <None Include="..\..\lib\x86\release\audio.dll">
+      <Link>lib\x86\release\audio.dll</Link>
+    </None>
+    <None Include="..\..\lib\x86\release\scintilla.dll">
+      <Link>lib\x86\release\scintilla.dll</Link>
+    </None>
+    <None Include="..\..\lib\x86\release\sqlite3.dll">
+      <Link>lib\x86\release\sqlite3.dll</Link>
+    </None>
+    <None Include="..\..\lib\x86\release\view3d.dll">
+      <Link>lib\x86\release\view3d.dll</Link>
+    </None>
     <Content Include="post_build.py" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>$(ProjectDir)post_build.py $(ProjectDir) $(TargetDir) $(ConfigurationName)</PostBuildEvent>

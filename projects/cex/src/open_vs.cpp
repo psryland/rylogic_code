@@ -3,7 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2004
 //**********************************************
 
-#include <atlcomcli.h>
+#include "cex/src/forward.h"
 #include "cex/src/open_vs.h"
 
 // import EnvDTE

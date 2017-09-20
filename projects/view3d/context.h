@@ -11,7 +11,7 @@ namespace view3d
 	// Global data for this dll
 	struct Context :pr::AlignTo<16> , pr::script::IEmbeddedCode
 	{
-		using InitSet = std::set<View3DContext>;
+		using InitSet = std::unordered_set<View3DContext>;
 
 		InitSet                  m_inits;         // A unique id assigned to each Initialise call
 		bool                     m_compatible;    // True if the renderer will work on this system
@@ -284,7 +284,7 @@ namespace view3d
 					mat.m_irange = irange;
 					mat.m_vrange.resize(new_vcount);
 					mat.m_irange.resize(new_icount);
-					mat.m_tex_diffuse = nug.m_mat.m_diff_tex;
+					mat.m_tex_diffuse = Texture2DPtr(nug.m_mat.m_diff_tex, true);
 					model->CreateNugget(mat);
 				}
 			}

@@ -40,6 +40,9 @@ namespace pr.maths
 		/// <summary>Sample variance.<para/>Use the when the data values used are only a sample of the total population</summary>
 		double SamStdVar { get; }
 	}
+	public interface IStatMeanAndVariance :IStatMean, IStatVariance
+	{
+	}
 	public interface IStatSingleVariable
 	{
 		/// <summary>Add a single value to the stat</summary>
@@ -151,7 +154,7 @@ namespace pr.maths
 
 	/// <summary>Running Average with standard deviation and variance</summary>
 	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
-	public class AvrVar<T> :Avr<T> ,IStatMean ,IStatVariance ,IStatSingleVariable where T:AvrVar<T>
+	public class AvrVar<T> :Avr<T> ,IStatMeanAndVariance ,IStatSingleVariable where T:AvrVar<T>
 	{
 		//' let: D(k) = X(k) - avr(k-1)           => X(k) = D(k) + avr(k-1)
 		//'  avr(k-1) = SUM{X(k-1)} / (k-1)       => SUM{X(k-1)} = (k-1)*avr(k-1)
@@ -256,7 +259,7 @@ namespace pr.maths
 
 	/// <summary>Running average with standard deviation and min/max range</summary>
 	[DebuggerDisplay("{Mean ({PopStdDev}) N={Count} R=[{Min},{Max}]")]
-	public class AvrVarMinMax<T> :AvrVar<T> ,IStatMean ,IStatVariance ,IStatSingleVariable where T:AvrVarMinMax<T>
+	public class AvrVarMinMax<T> :AvrVar<T> ,IStatMeanAndVariance ,IStatSingleVariable where T:AvrVarMinMax<T>
 	{
 		protected double m_min;
 		protected double m_max;
@@ -343,7 +346,7 @@ namespace pr.maths
 
 	/// <summary>Exponential Moving Average</summary>
 	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
-	public class ExpMovingAvr<T> :IStatMean ,IStatVariance ,IStatSingleVariable where T:ExpMovingAvr<T>
+	public class ExpMovingAvr<T> :IStatMeanAndVariance ,IStatSingleVariable where T:ExpMovingAvr<T>
 	{
 		//'  avr(k) = a * X(k) + (1 - a) * avr(k-1)
 		//'         = a * X(k) + avr(k-1) - a * avr(k-1)
@@ -756,7 +759,7 @@ namespace pr.maths
 
 	/// <summary>Moving Window Average</summary>
 	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
-	public class MovingAvr :IStatMean ,IStatVariance ,IStatSingleVariable
+	public class MovingAvr :IStatMeanAndVariance ,IStatSingleVariable
 	{
 		// Let: D(k) = X(k) - X(k-N) => X(k-N) = X(k) - D(k)
 		// Average:

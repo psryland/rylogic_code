@@ -131,10 +131,13 @@ namespace pr
 			return h;
 		}
 
-		operator HANDLE() const { return m_handle; }
+		operator HANDLE() const
+		{
+			return m_handle;
+		}
 	};
 	
-	// A template version of FileOpen equal to CreateFile that handles unicode better
+	// A template version of FileOpen equal to CreateFile that handles UNICODE better
 	inline HANDLE FileOpen(char const* lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
 	{
 		return CreateFileA(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);

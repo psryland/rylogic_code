@@ -22,6 +22,8 @@
 #pragma once
 
 #include <string>
+
+#include <sdkddkver.h>
 #include <windows.h>
 #include <knownfolders.h>
 #include <shlobj.h>

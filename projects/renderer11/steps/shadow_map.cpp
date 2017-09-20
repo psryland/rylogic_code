@@ -83,7 +83,7 @@ namespace pr
 
 			// Create the resource
 			pr::Throw(device->CreateTexture2D(&tdesc, 0, &m_tex.m_ptr));
-			PR_EXPAND(PR_DBG_RDR, NameResource(m_tex, "smap tex"));
+			PR_EXPAND(PR_DBG_RDR, NameResource(m_tex.get(), "smap tex"));
 
 			// Get the render target view
 			RenderTargetViewDesc rtvdesc(tdesc.Format, D3D11_RTV_DIMENSION_TEXTURE2D);

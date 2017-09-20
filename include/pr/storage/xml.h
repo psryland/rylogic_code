@@ -14,7 +14,9 @@
 #include <algorithm>
 
 #include <atlbase.h>
-#include <xmllite.h> // import xmllite.lib shlwapi.lib
+#include <xmllite.h>
+
+#include "pr/common/flags_enum.h"
 
 #pragma comment(lib, "xmllite.lib")
 #pragma comment(lib, "shlwapi.lib")
@@ -23,22 +25,24 @@ namespace pr
 {
 	namespace xml
 	{
-		enum EProperty
+		enum class EProperty
 		{
-			EProperty_MultiLanguage      = 1 << XmlWriterProperty_MultiLanguage,
-			EProperty_Indent             = 1 << XmlWriterProperty_Indent,
-			EProperty_ByteOrderMark      = 1 << XmlWriterProperty_ByteOrderMark,
-			EProperty_OmitXmlDeclaration = 1 << XmlWriterProperty_OmitXmlDeclaration,
-			EProperty_ConformanceLevel   = 1 << XmlWriterProperty_ConformanceLevel,
+			None               = 0,
+			MultiLanguage      = 1 << XmlWriterProperty_MultiLanguage,
+			Indent             = 1 << XmlWriterProperty_Indent,
+			ByteOrderMark      = 1 << XmlWriterProperty_ByteOrderMark,
+			OmitXmlDeclaration = 1 << XmlWriterProperty_OmitXmlDeclaration,
+			ConformanceLevel   = 1 << XmlWriterProperty_ConformanceLevel,
+			_bitwise_operators_allowed,
 		};
 
-		// forward declarations
-		typedef int HashValue;
+		// Forward declarations
 		struct Attr;
 		struct Node;
-		typedef std::vector<std::wstring> StrVec;
-		typedef std::vector<Attr> AttrVec;
-		typedef std::vector<Node> NodeVec;
+		using HashValue = int;
+		using StrVec = std::vector<std::wstring>;
+		using AttrVec = std::vector<Attr>;
+		using NodeVec = std::vector<Node>;
 
 		// Convert a wide string into a hash code (crc32 algorithm)
 		inline HashValue Hash(std::wstring const& str)
@@ -60,20 +64,39 @@ namespace pr
 			return reinterpret_cast<HashValue const&>(crc);
 		}
 
-		// helpers for converting things to 'std::wstring'
+		// Helpers for converting things to 'std::wstring'
 		inline std::wstring const& str(std::wstring const& s) { return s; }
 		inline std::wstring str(std::string const& s)         { return std::wstring(s.begin(), s.end()); }
 		inline std::wstring str(char const* s)                { return std::wstring(s, s + strlen(s)); }
 		template <typename T> inline std::wstring str(T v)    { std::wstringstream s; s << v; return s.str(); }
 
+		// An XML element attribute
 		struct Attr
 		{
 			std::wstring m_prefix;
 			std::wstring m_localname;
 			std::wstring m_value;
-			Attr(std::wstring const& prefix, std::wstring const& localname, std::wstring const& value) :m_prefix(prefix), m_localname(localname), m_value(value) {}
+			
+			Attr(std::wstring const& prefix, std::wstring const& localname, std::wstring const& value)
+				:m_prefix(prefix)
+				,m_localname(localname)
+				,m_value(value)
+			{}
+
+			// Return the tag name for this attribute
+			std::wstring tag() const
+			{
+				return m_prefix + (m_prefix.empty() ? L"" : L":") + m_localname;
+			}
+
+			// Return the value of this attribute
+			std::wstring value() const
+			{
+				return m_value;
+			}
 		};
 
+		// An XML element
 		struct Node
 		{
 			std::wstring m_prefix;     // The tag prefix for the element
@@ -160,6 +183,52 @@ namespace pr
 			{
 				auto iter = std::find_if(std::begin(m_child), std::end(m_child), [&](Node const& n){ return n.tag() == tag; });
 				return iter != std::end(m_child) ? &*iter : nullptr;
+			}
+
+			// Return the first element with a name matching 'name' that passes 'pred'
+			template <typename Pred> Node const* element(std::wstring const& tag, Pred pred) const
+			{
+				auto iter = std::find_if(std::begin(m_child), std::end(m_child), [&](Node const& n){ return n.tag() == tag && pred(n); });
+				return iter != std::end(m_child) ? &*iter : nullptr;
+			}
+			template <typename Pred> Node* element(std::wstring const& tag, Pred pred)
+			{
+				auto iter = std::find_if(std::begin(m_child), std::end(m_child), [&](Node const& n){ return n.tag() == tag && pred(n); });
+				return iter != std::end(m_child) ? &*iter : nullptr;
+			}
+
+			// Return the first attribute with a name matching 'name'
+			Attr const* attribute(std::wstring const& tag) const
+			{
+				auto iter = std::find_if(std::begin(m_attr), std::end(m_attr), [&](Attr const& a){ return a.tag() == tag; });
+				return iter != std::end(m_attr) ? &*iter : nullptr;
+			}
+			Attr* attribute(std::wstring const& tag)
+			{
+				auto iter = std::find_if(std::begin(m_attr), std::end(m_attr), [&](Attr const& a){ return a.tag() == tag; });
+				return iter != std::end(m_attr) ? &*iter : nullptr;
+			}
+
+			// Access child elements via-array style syntax
+			Node const& operator[](int idx) const
+			{
+				return m_child[idx];
+			}
+			Node& operator[](int idx)
+			{
+				return m_child[idx];
+			}
+			Node const& operator[](std::wstring const& tag) const
+			{
+				auto ptr = element(tag);
+				if (ptr == nullptr) throw std::exception("element not found");
+				return *ptr;
+			}
+			Node& operator[](std::wstring const& tag)
+			{
+				auto ptr = element(tag);
+				if (ptr == nullptr) throw std::exception("element not found");
+				return *ptr;
 			}
 		};
 
@@ -470,7 +539,7 @@ namespace pr
 
 		// Save data in an XML format
 		// 'properties' is a bitwise combination of 'EProperty' (note, only some supported)
-		inline void Save(ATL::CComPtr<IStream>& stream, Node const& in, int properties = EProperty_Indent)
+		inline void Save(ATL::CComPtr<IStream>& stream, Node const& in, EProperty properties = EProperty::Indent)
 		{
 			ATL::CComPtr<IXmlWriter> writer;
 			impl::Check(CreateXmlWriter(__uuidof(IXmlWriter), (void**)&writer, 0));
@@ -478,11 +547,11 @@ namespace pr
 			// Set it as the stream source for the writer
 			impl::Check(writer->SetOutput(stream));
 
-			if (properties & EProperty_Indent)
+			if ((properties & EProperty::Indent) != EProperty::None)
 				impl::Check(writer->SetProperty(XmlWriterProperty_Indent, TRUE));
-			if (properties & EProperty_ByteOrderMark)
+			if ((properties & EProperty::ByteOrderMark) != EProperty::None)
 				impl::Check(writer->SetProperty(XmlWriterProperty_ByteOrderMark, TRUE));
-			if (properties & EProperty_OmitXmlDeclaration)
+			if ((properties & EProperty::OmitXmlDeclaration) != EProperty::None)
 				impl::Check(writer->SetProperty(XmlWriterProperty_OmitXmlDeclaration, TRUE));
 
 			// Start the document
@@ -493,14 +562,14 @@ namespace pr
 			impl::Check(writer->WriteEndDocument());
 			impl::Check(writer->Flush());
 		}
-		inline void Save(char const* filename, Node const& in, int properties = EProperty_Indent)
+		inline void Save(char const* filename, Node const& in, EProperty properties = EProperty::Indent)
 		{
 			// Create an 'IStream' from a file
 			ATL::CComPtr<IStream> stream;
 			impl::Check(SHCreateStreamOnFileA(filename, STGM_WRITE | STGM_CREATE, &stream));
 			Save(stream, in, properties);
 		}
-		inline void Save(wchar_t const* filename, Node const& in, int properties = EProperty_Indent)
+		inline void Save(wchar_t const* filename, Node const& in, EProperty properties = EProperty::Indent)
 		{
 			// Create an 'IStream' from a file
 			ATL::CComPtr<IStream> stream;

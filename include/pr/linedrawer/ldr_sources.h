@@ -9,7 +9,7 @@
 #include <string>
 #include <sstream>
 #include <unordered_map>
-#include <set>
+#include <unordered_set>
 #include <mutex>
 #include "pr/common/guid.h"
 #include "pr/container/vector.h"
@@ -32,6 +32,7 @@ namespace pr
 		public:
 			using filepath_t = pr::string<wchar_t>;
 			using Location = pr::script::Location;
+			using GroupIds = std::unordered_set<pr::Guid, std::hash<Guid>>;
 
 			enum class EReason
 			{
@@ -144,7 +145,7 @@ namespace pr
 			GizmoCont                    m_gizmos;  // The created ldr gizmos
 			pr::Renderer*                m_rdr;     // Renderer used to create models
 			pr::script::IEmbeddedCode*   m_embed;   // Embedded code handler
-			std::set<pr::Guid>           m_loading; // File group ids in the process of being reloaded
+			GroupIds                     m_loading; // File group ids in the process of being reloaded
 			std::thread::id              m_main_thread_id;
 
 		public:
@@ -344,7 +345,7 @@ namespace pr
 			// Create a gizmo object and add it to the gizmo collection
 			LdrGizmo* CreateGizmo(LdrGizmo::EMode mode, m4x4 const& o2w)
 			{
-				auto giz = LdrGizmoPtr(new LdrGizmo(*m_rdr, mode, o2w));
+				auto giz = LdrGizmoPtr(new LdrGizmo(*m_rdr, mode, o2w), true);
 				m_gizmos.push_back(giz);
 				return giz.m_ptr;
 			}

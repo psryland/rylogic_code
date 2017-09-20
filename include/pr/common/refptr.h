@@ -14,6 +14,7 @@
 
 #include <cassert>
 #include <type_traits>
+#include "pr/common/refcount.h"
 
 #define PR_REFPTR_TRACE 0
 #if PR_REFPTR_TRACE == 1
@@ -49,20 +50,21 @@ namespace pr
 	{
 		mutable T* m_ptr;
 
+		// Default Construct
 		RefPtr()
 			:m_ptr(nullptr)
 		{}
 
+		// Construct from nullptr
 		RefPtr(nullptr_t)
 			:m_ptr(nullptr)
 		{}
 
-		// Construct from any pointer convertible to 'T'
-		template <typename U> RefPtr(U* t)
-			:m_ptr(t)
+		// Move construct
+		RefPtr(RefPtr&& rhs)
+			:m_ptr(rhs.m_ptr)
 		{
-			if (m_ptr)
-				IncRef(m_ptr);
+			rhs.m_ptr = nullptr;
 		}
 
 		// Copy construct
@@ -71,6 +73,14 @@ namespace pr
 		{
 			if (m_ptr)
 				IncRef(m_ptr);
+		}
+
+		// Move construct from convertible pointer
+		template<class U, class = typename std::enable_if<std::is_convertible<U*,T*>::value>::type>
+		RefPtr(RefPtr<U>&& rhs)
+			:m_ptr(static_cast<T*>(rhs.m_ptr))
+		{
+			rhs.m_ptr = nullptr;
 		}
 
 		// Copy construct from convertible pointer
@@ -82,19 +92,18 @@ namespace pr
 				IncRef(m_ptr);
 		}
 
-		// Move construct
-		RefPtr(RefPtr&& rhs)
-			:m_ptr(rhs.m_ptr)
+		// Construct from a raw pointer that is convertible to 'T'
+		template <typename U, class = typename std::enable_if<std::is_convertible<U*,T*>::value>::type>
+		RefPtr(U* t, bool add_ref)
+			:m_ptr(t)
 		{
-			rhs.m_ptr = nullptr;
-		}
+			if (!m_ptr) return;
 
-		// Move construct from convertible pointer
-		template<class U, class = typename std::enable_if<std::is_convertible<U*,T*>::value>::type>
-		RefPtr(RefPtr<U>&& rhs)
-			:m_ptr(static_cast<T*>(rhs.m_ptr))
-		{
-			rhs.m_ptr = nullptr;
+			// There are two common cases:
+			//  - the object is created with an initial ref count of zero (COM case).
+			//  - the object is created with an initial ref count of one (DirectX case)
+			if (add_ref)
+				IncRef(m_ptr);
 		}
 
 		// Destructor
@@ -104,41 +113,35 @@ namespace pr
 				DecRef(m_ptr);
 		}
 
-		// Assignment
+		// Assignment to null
 		RefPtr& operator = (nullptr_t)
 		{
 			if (m_ptr) DecRef(m_ptr);
 			m_ptr = nullptr;
 			return *this;
 		}
+
+		// Move assign
+		RefPtr& operator = (RefPtr&& rhs)
+		{
+			std::swap(m_ptr, rhs.m_ptr);
+			return *this;
+		}
+
+		// Copy assign
 		RefPtr& operator = (RefPtr const& rhs)
 		{
 			if (this != &rhs)
 			{
-				T* ptr = m_ptr;
+				auto ptr = m_ptr;
 				m_ptr = rhs.m_ptr;
 				if (m_ptr) IncRef(m_ptr);
 				if (ptr) DecRef(ptr);
 			}
 			return *this;
 		}
-		RefPtr& operator = (RefPtr&& rhs)
-		{
-			std::swap(m_ptr, rhs.m_ptr);
-			return *this;
-		}
-		template <typename U, class = typename std::enable_if<std::is_convertible<U*,T*>::value>::type>
-		RefPtr& operator = (RefPtr<U> const& rhs)
-		{
-			if (m_ptr != static_cast<T*>(rhs.m_ptr))
-			{
-				T* ptr = m_ptr;
-				m_ptr = static_cast<T*>(rhs.m_ptr);
-				if (m_ptr) IncRef(m_ptr);
-				if (ptr) DecRef(ptr);
-			}
-			return *this;
-		}
+
+		// Move assign to convertible pointer type
 		template <typename U, class = typename std::enable_if<std::is_convertible<U*,T*>::value>::type>
 		RefPtr& operator = (RefPtr<U>&& rhs)
 		{
@@ -146,8 +149,23 @@ namespace pr
 			return *this;
 		}
 
+		// Copy assign to convertible pointer type
+		template <typename U, class = typename std::enable_if<std::is_convertible<U*,T*>::value>::type>
+		RefPtr& operator = (RefPtr<U> const& rhs)
+		{
+			if (m_ptr != static_cast<T*>(rhs.m_ptr))
+			{
+				auto ptr = m_ptr;
+				m_ptr = static_cast<T*>(rhs.m_ptr);
+				if (m_ptr) IncRef(m_ptr);
+				if (ptr) DecRef(ptr);
+			}
+			return *this;
+		}
+
 		// Implicit conversion to bool
-		struct bool_tester { int x; }; typedef int bool_tester::* bool_type;
+		struct bool_tester { int x; };
+		using bool_type = int bool_tester::*;
 		operator bool_type() const
 		{
 			return m_ptr != nullptr ? &bool_tester::x : static_cast<bool_type>(nullptr);
@@ -157,7 +175,7 @@ namespace pr
 		template <typename U, class = typename std::enable_if<std::is_convertible<U*,T*>::value>::type>
 		operator RefPtr<U>() const
 		{
-			return RefPtr<U>(static_cast<U*>(m_ptr));
+			return RefPtr<U>(static_cast<U*>(m_ptr), true);
 		}
 
 		// Pointer de-reference
@@ -167,7 +185,7 @@ namespace pr
 		long RefCount() const
 		{
 			if (!m_ptr) return 0;
-			long count = m_ptr->AddRef() - 1;
+			auto count = m_ptr->AddRef() - 1;
 			m_ptr->Release();
 			return count;
 		}
@@ -179,6 +197,7 @@ namespace pr
 		}
 
 	protected:
+
 		long IncRef(T* ptr) const
 		{
 			#if PR_REFPTR_TRACE == 1
@@ -194,7 +213,7 @@ namespace pr
 
 			// Before releasing the reference, check that there is at least one reference to release.
 			// This test will probably crash rather than assert, but hey, good enough.
-			// If this fails, check that two or more D3DPtrs haven't been created from the same raw pointer.
+			// If this fails, check that two or more RefPtrs haven't been created from the same raw pointer.
 			// e.g.
 			//   ID3DInterface* raw (ref count = 1)
 			//   D3DPtr p0(raw) (ref count = 1 still because the following DecRef)
@@ -213,6 +232,10 @@ namespace pr
 	template <typename T> inline bool operator >  (RefPtr<T> const& lhs, RefPtr<T> const& rhs) { return lhs.m_ptr >  rhs.m_ptr; }
 	template <typename T> inline bool operator <= (RefPtr<T> const& lhs, RefPtr<T> const& rhs) { return lhs.m_ptr <= rhs.m_ptr; }
 	template <typename T> inline bool operator >= (RefPtr<T> const& lhs, RefPtr<T> const& rhs) { return lhs.m_ptr >= rhs.m_ptr; }
+	template <typename T> inline bool operator == (RefPtr<T> const& lhs, T const* rhs) { return lhs.m_ptr == rhs; }
+	template <typename T> inline bool operator != (RefPtr<T> const& lhs, T const* rhs) { return lhs.m_ptr != rhs; }
+	template <typename T> inline bool operator == (T const* lhs, RefPtr<T> const& rhs) { return lhs == rhs.m_ptr; }
+	template <typename T> inline bool operator != (T const* lhs, RefPtr<T> const& rhs) { return lhs != rhs.m_ptr; }
 
 	// The interface required by RefPtr.
 	// Note, the 'T' in RefPtr<T> doesn't actually need to inherit this interface

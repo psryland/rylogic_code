@@ -1142,8 +1142,8 @@ namespace pr
 				uint val;
 				pr::RefPtr<Single> ptr;
 
-				Type() :val(0) ,ptr(&Refs())                      { ++ObjectCount(); }
-				Type(uint w) :val(w) ,ptr(&Refs())                { ++ObjectCount(); }
+				Type() :val(0) ,ptr(&Refs(), true)                { ++ObjectCount(); }
+				Type(uint w) :val(w) ,ptr(&Refs(), true)          { ++ObjectCount(); }
 				Type(Type&& rhs) :val(rhs.val) ,ptr(rhs.ptr)      { ++ObjectCount(); }
 				Type(Type const& rhs) :val(rhs.val) ,ptr(rhs.ptr) { ++ObjectCount(); }
 				Type& operator = (Type&& rhs)

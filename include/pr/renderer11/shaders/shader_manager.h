@@ -17,12 +17,12 @@ namespace pr
 	{
 		class ShaderManager
 		{
-			using IPLookup     = Lookup<RdrId, D3DPtr<ID3D11InputLayout>>    ;
-			using VSLookup     = Lookup<RdrId, D3DPtr<ID3D11VertexShader>>   ;
-			using PSLookup     = Lookup<RdrId, D3DPtr<ID3D11PixelShader>>    ;
-			using GSLookup     = Lookup<RdrId, D3DPtr<ID3D11GeometryShader>> ;
-			using CBufLookup   = Lookup<RdrId, D3DPtr<ID3D11Buffer>>         ;
-			using ShaderLookup = Lookup<RdrId, ShaderBase*>                  ;
+			using IPLookup     = Lookup<RdrId, D3DPtr<ID3D11InputLayout>>;
+			using VSLookup     = Lookup<RdrId, D3DPtr<ID3D11VertexShader>>;
+			using PSLookup     = Lookup<RdrId, D3DPtr<ID3D11PixelShader>>;
+			using GSLookup     = Lookup<RdrId, D3DPtr<ID3D11GeometryShader>>;
+			using CBufLookup   = Lookup<RdrId, D3DPtr<ID3D11Buffer>>;
+			using ShaderLookup = Lookup<RdrId, RefPtr<ShaderBase>>;
 
 			using ShaderAlexFunc = std::function<ShaderPtr(ShaderManager*)>;
 			using ShaderDeleteFunc = std::function<void(ShaderBase*)>;
@@ -47,15 +47,13 @@ namespace pr
 			// Used for stock shaders to specialise
 			template <typename TShader> void CreateShader();
 
-			// Adds/Removes a shader from the lookup map
-			ShaderPtr InitShader(ShaderBase* shdr);
-			void      DestShader(ShaderBase* shdr);
+			// Adds a shader to the lookup map
+			void AddShader(ShaderPtr const& shdr);
 
 			// Called when a shader's ref count hits zero to delete 'shdr' via the correct allocator
 			template <typename ShaderType> void DeleteShader(ShaderType* shdr)
 			{
 				std::lock_guard<std::recursive_mutex> lock(m_mutex);
-				DestShader(shdr);
 				assert(m_dbg_mem.remove(shdr));
 				Allocator<ShaderType>(m_mem).Delete(shdr);
 			}
@@ -83,9 +81,10 @@ namespace pr
 			{
 				std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
-				ShaderPtr shdr(Allocator<ShaderType>(m_mem).New(this, id, name, d3d_shdr));
+				ShaderPtr shdr(Allocator<ShaderType>(m_mem).New(this, id, name, d3d_shdr), true);
 				assert(m_dbg_mem.add(shdr.m_ptr));
-				return InitShader(shdr.m_ptr);
+				AddShader(shdr);
+				return std::move(shdr);
 			}
 
 			// Return the shader corresponding to 'id' or null if not found

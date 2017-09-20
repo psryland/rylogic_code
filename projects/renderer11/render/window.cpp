@@ -89,7 +89,7 @@ namespace pr
 				sd.SwapEffect   = settings.m_swap_effect;
 				sd.Flags        = settings.m_swap_chain_flags;
 				pr::Throw(factory->CreateSwapChain(device, &sd, &m_swap_chain.m_ptr));
-				PR_EXPAND(PR_DBG_RDR, NameResource(m_swap_chain , pr::FmtS("swap chain")));
+				PR_EXPAND(PR_DBG_RDR, NameResource(m_swap_chain.get(), pr::FmtS("swap chain")));
 
 				// Make DXGI monitor for Alt-Enter and switch between windowed and full screen
 				pr::Throw(factory->MakeWindowAssociation(settings.m_hwnd, settings.m_allow_alt_enter ? 0 : DXGI_MWA_NO_ALT_ENTER));
@@ -173,7 +173,7 @@ namespace pr
 			// Get the back buffer so we can copy its properties
 			D3DPtr<ID3D11Texture2D> back_buffer;
 			pr::Throw(m_swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&back_buffer.m_ptr));
-			PR_EXPAND(PR_DBG_RDR, NameResource(back_buffer, "main RT"));
+			PR_EXPAND(PR_DBG_RDR, NameResource(back_buffer.get(), "main RT"));
 			
 			// Read the texture properties from the BB
 			TextureDesc bbdesc;
@@ -188,7 +188,7 @@ namespace pr
 				pr::Throw(device->CreateShaderResourceView(back_buffer.m_ptr, nullptr, &m_main_srv.m_ptr));
 
 			// Get the render target as a texture
-			m_main_tex = tex_mgr().CreateTexture2D(AutoId, back_buffer, m_main_srv, SamplerDesc::LinearClamp(), "main_rt");
+			m_main_tex = tex_mgr().CreateTexture2D(AutoId, back_buffer.get(), m_main_srv.get(), SamplerDesc::LinearClamp(), "main_rt");
 
 			// Create a texture buffer that we will use as the depth buffer
 			TextureDesc desc;
@@ -204,7 +204,7 @@ namespace pr
 			desc.MiscFlags          = 0;
 			D3DPtr<ID3D11Texture2D> depth_stencil;
 			pr::Throw(device->CreateTexture2D(&desc, 0, &depth_stencil.m_ptr));
-			PR_EXPAND(PR_DBG_RDR, NameResource(depth_stencil, "main DB"));
+			PR_EXPAND(PR_DBG_RDR, NameResource(depth_stencil.get(), "main DB"));
 
 			// Create a depth/stencil view of the texture buffer we just created
 			D3D11_DEPTH_STENCIL_VIEW_DESC dsv_desc = {};
@@ -531,7 +531,7 @@ namespace pr
 			// render using GDI on a swap chain or a surface. This will allow the application
 			// to call IDXGISurface1::GetDC on the 0th back buffer or a surface.
 			pr::Throw(factory->CreateSwapChain(device, &sd, &m_swap_chain.m_ptr));
-			PR_EXPAND(PR_DBG_RDR, NameResource(m_swap_chain , pr::FmtS("swap chain")));
+			PR_EXPAND(PR_DBG_RDR, NameResource(m_swap_chain.get(), pr::FmtS("swap chain")));
 
 			m_multisamp = ms;
 

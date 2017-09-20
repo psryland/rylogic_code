@@ -19,7 +19,7 @@ namespace pr
 	namespace rdr
 	{
 		// Create a DX texture from a 'DDS,JPG,PNG,TGA,GIF,BMP' file
-		void LoadTextureFromFile(ID3D11Device* device, wchar_t const* filepath, D3DPtr<ID3D11Texture2D>& tex, D3DPtr<ID3D11ShaderResourceView>& srv)
+		void LoadTextureFromFile(ID3D11Device* device, wchar_t const* filepath, ID3D11Texture2D*& tex, ID3D11ShaderResourceView*& srv)
 		{
 			using namespace DirectX;
 			auto extn = pr::filesys::GetExtensionInPlace(filepath);
@@ -29,8 +29,8 @@ namespace pr
 			{
 				// This does not support some DDS formats tho, so might be worth trying the 'directxtex' DDS loader
 				D3DPtr<ID3D11Resource> res;
-				pr::Throw(DirectX::CreateDDSTextureFromFile(device, filepath, &res.m_ptr, &srv.m_ptr));
-				pr::Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex.m_ptr));
+				pr::Throw(DirectX::CreateDDSTextureFromFile(device, filepath, &res.m_ptr, &srv));
+				pr::Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex));
 			}
 			else
 			{
@@ -39,7 +39,7 @@ namespace pr
 
 				// Otherwise, use the WIC loader
 				D3DPtr<ID3D11Resource> res;
-				pr::Throw(DirectX::CreateWICTextureFromFile(device, dc.m_ptr, filepath, &res.m_ptr, &srv.m_ptr));
+				pr::Throw(DirectX::CreateWICTextureFromFile(device, dc.m_ptr, filepath, &res.m_ptr, &srv));
 			}
 		}
 
@@ -70,7 +70,7 @@ namespace pr
 
 			// Allocate a new texture instance and dx texture resource
 			SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
-			Texture2DPtr inst = m_alex_tex2d.New(this, src, tdesc, sdesc, sort_id);
+			Texture2DPtr inst(m_alex_tex2d.New(this, src, tdesc, sdesc, sort_id), true);
 			inst->m_id = id == AutoId ? MakeId(inst.m_ptr) : id;
 			inst->m_name = name ? name : "";
 
@@ -107,8 +107,8 @@ namespace pr
 			if (id != AutoId && m_lookup_tex.find(id) == end(m_lookup_tex))
 				throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Texture Id '%d' is already in use", id));
 
-			D3DPtr<ID3D11Texture2D> tex;
-			D3DPtr<ID3D11ShaderResourceView> srv;
+			ID3D11Texture2D* tex;
+			ID3D11ShaderResourceView* srv;
 
 			// Look for an existing dx texture corresponding to 'filepath'
 			RdrId texfile_id = MakeId(pr::filesys::Standardise<wstring256>(filepath).c_str());
@@ -120,17 +120,17 @@ namespace pr
 			else // Otherwise, if not loaded already, load now
 			{
 				LoadTextureFromFile(lock.D3DDevice(), filepath, tex, srv);
-				AddLookup(m_lookup_fname, texfile_id, tex.m_ptr);
+				AddLookup(m_lookup_fname, texfile_id, tex);
 			}
 
 			// Allocate the texture instance
 			SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
-			Texture2DPtr inst = m_alex_tex2d.New(this, tex, srv, sam_desc, sort_id);
+			Texture2DPtr inst(m_alex_tex2d.New(this, tex, srv, sam_desc, sort_id), true);
 			inst->m_id     = id == AutoId ? MakeId(inst.m_ptr) : id;
 			inst->m_src_id = texfile_id;
 			inst->m_name   = name ? name : pr::To<string32>(pr::filesys::GetFilename<wstring256>(filepath));
 			AddLookup(m_lookup_tex, inst->m_id, inst.m_ptr);
-			return inst;
+			return std::move(inst);
 		}
 		Texture2DPtr TextureManager::CreateTexture2D(RdrId id, SamplerDesc const& sam_desc, char const* filepath, char const* name)
 		{
@@ -191,7 +191,7 @@ namespace pr
 
 			// Allocate a new texture instance and dx texture resource
 			SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
-			Texture2DPtr inst = m_alex_tex2d.New(this, src, tdesc, sdesc, sort_id);
+			Texture2DPtr inst(m_alex_tex2d.New(this, src, tdesc, sdesc, sort_id), true);
 			inst->m_id = id == AutoId ? MakeId(inst.m_ptr) : id;
 			inst->m_name = name ? name : "";
 
@@ -215,7 +215,7 @@ namespace pr
 		// 'id' is the id to assign to this new texture instance. Use 'AutoId' to auto generate an id
 		// 'existing' is an existing texture instance to clone
 		// 'sam_desc' is an optional sampler state description to set on the clone.
-		Texture2DPtr TextureManager::CloneTexture2D(RdrId id, Texture2DPtr const& existing, SamplerDesc const* sam_desc, char const* name)
+		Texture2DPtr TextureManager::CloneTexture2D(RdrId id, Texture2D const* existing, SamplerDesc const* sam_desc, char const* name)
 		{
 			Renderer::Lock lock(m_rdr);
 
@@ -225,7 +225,7 @@ namespace pr
 
 			// Allocate a new texture instance that reuses the dx texture resource
 			SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
-			Texture2DPtr inst = m_alex_tex2d.New(this, *existing.m_ptr, sort_id);
+			Texture2DPtr inst(m_alex_tex2d.New(this, *existing, sort_id), true);
 			inst->m_id = id == AutoId ? MakeId(inst.m_ptr) : id;
 			inst->m_name = name ? name : "";
 
@@ -241,7 +241,7 @@ namespace pr
 		// 'id' is the id to assign to this new texture instance. Use 'AutoId' to auto generate an id
 		// 'existing' is an existing dx texture to wrap
 		// 'sam_desc' is an optional sampler state description to set on the clone.
-		Texture2DPtr TextureManager::CreateTexture2D(RdrId id, D3DPtr<ID3D11Texture2D> existing_tex, D3DPtr<ID3D11ShaderResourceView> existing_srv, SamplerDesc const& sam_desc, char const* name)
+		Texture2DPtr TextureManager::CreateTexture2D(RdrId id, ID3D11Texture2D* existing_tex, ID3D11ShaderResourceView* existing_srv, SamplerDesc const& sam_desc, char const* name)
 		{
 			Renderer::Lock lock(m_rdr);
 
@@ -251,7 +251,7 @@ namespace pr
 
 			// Allocate a new texture instance that reuses the dx texture resource
 			SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
-			Texture2DPtr inst = m_alex_tex2d.New(this, existing_tex, existing_srv, sam_desc, sort_id);
+			Texture2DPtr inst(m_alex_tex2d.New(this, existing_tex, existing_srv, sam_desc, sort_id), true);
 			inst->m_id = id == AutoId ? MakeId(inst.m_ptr) : id;
 			inst->m_name = name ? name : "";
 

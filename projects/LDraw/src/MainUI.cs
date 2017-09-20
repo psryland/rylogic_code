@@ -805,7 +805,7 @@ namespace LDraw
 				m_menu_file_save           .Enabled = script_active;
 				m_menu_file_save_as        .Enabled = script_active;
 				m_menu_file_options        .Enabled = true;
-				m_menu_file_recent_files   .Enabled = true;
+				m_menu_file_recent_files   .Enabled = scene_active;
 				m_menu_file_exit           .Enabled = true;
 
 				m_menu_nav_reset_on_reload    .Enabled = true;

@@ -6,15 +6,15 @@
 //  d3d11.lib
 //  dxgi.lib
 //
-// Feature Wishlist:
+// Feature Wish list:
 // Ambient occlusion
 //  - use the G-Buffer to sample normals in a spherical volume, scale
 //    intensity based on average "up-ness"
 // Thick Lines
 //  - Use a geometry shader to support thick lines by turning a line list
-//    into a tristrip
+//    into a tri strip
 // Shadow Mapping
-//  - Use Rylo-Shadows
+//  - Use 'Rylo-Shadows'
 // Order Independent Alpha
 //  - Try that thing you read about weighted alpha by screen depth
 

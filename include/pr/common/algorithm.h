@@ -2,11 +2,12 @@
 // Algorithm
 //  Copyright (c) Rylogic Ltd 2006
 //********************************
-// Helper wrappers to 'std::algorithim'
+// Helper wrappers to 'std::algorithm'
 #pragma once
 
 #include <exception>
 #include <algorithm>
+#include <unordered_set>
 #include <set>
 
 namespace pr
@@ -196,6 +197,16 @@ namespace pr
 	template <typename TType, typename Pred> inline void erase_if(std::set<TType>& cont, Pred pred)
 	{
 		// 'std::remove_if' does not work on 'std::set' because set cannot be reordered.
+		for (auto i = std::begin(cont);;)
+		{
+			i = std::find_if(i, std::end(cont), pred);
+			if (i == std::end(cont)) break;
+			i = cont.erase(i);
+		}
+	}
+	template <typename TType, typename Pred> inline void erase_if(std::unordered_set<TType>& cont, Pred pred)
+	{
+		// 'std::remove_if' does not work on 'std::unordered_set' because set cannot be reordered.
 		for (auto i = std::begin(cont);;)
 		{
 			i = std::find_if(i, std::end(cont), pred);

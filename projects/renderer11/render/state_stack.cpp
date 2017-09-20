@@ -234,7 +234,7 @@ namespace pr
 			m_ss.m_pending.m_topo = dle.m_nugget->m_topo;
 
 			// Texture
-			m_ss.m_pending.m_tex_diffuse = dle.m_nugget->m_tex_diffuse;
+			m_ss.m_pending.m_tex_diffuse = dle.m_nugget->m_tex_diffuse.get();
 		}
 
 		// State stack frame for shadow map texture

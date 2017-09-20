@@ -47,7 +47,7 @@ namespace pr
 				Renderer::Lock lock(*m_rdr);
 				auto sdesc = SamplerDesc::PointClamp();
 				pr::Throw(lock.D3DDevice()->CreateSamplerState(&sdesc, &m_point_sampler.m_ptr));
-				PR_EXPAND(PR_DBG_RDR, NameResource(m_point_sampler, "dslighting point sampler"));
+				PR_EXPAND(PR_DBG_RDR, NameResource(m_point_sampler.get(), "dslighting point sampler"));
 
 				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "dslighting_ps.cso"));
 			}
