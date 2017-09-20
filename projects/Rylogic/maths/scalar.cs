@@ -72,6 +72,7 @@ namespace pr.maths
 		public static double    Sign(double x)                                  { return SignD(x >= 0.0); }
 		public static int       OneIfZero(int x)                                { return x != 0 ? x : 1; }
 		public static float     OneIfZero(float x)                              { return x != 0f ? x : 1f; }
+		public static int       Sqr(int x)                                      { return x * x; }
 		public static float     Sqr(float x)                                    { return x * x; }
 		public static double    Sqr(double x)                                   { return x * x; }
 		public static float     Sqrt(float x)                                   { return (float)Sqrt((double)x); }

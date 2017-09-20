@@ -50,7 +50,9 @@ try:
 		outf.write(
 			"// This is a generated file\n"
 			"#pragma once\n"
-			"//\n"
+			"#include <sdkddkver.h>\n"
+			"\n"
+			"// Headers to unit test\n"
 			)
 		for sd in srcdirs:
 			for file in Tools.EnumFiles(sd):

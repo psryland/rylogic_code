@@ -654,7 +654,7 @@ namespace pr.gfx
 				if (m_thread_id != Thread.CurrentThread.ManagedThreadId)
 					m_dispatcher.BeginInvoke(m_error_cb, ctx, msg);
 				else
-					Error.Raise(this, new ErrorEventArgs(msg));
+					Error.Raise(this, new MessageEventArgs(msg));
 			};
 			View3D_GlobalErrorCBSet(m_error_cb, IntPtr.Zero, true);
 
@@ -682,7 +682,7 @@ namespace pr.gfx
 		}
 		public void Dispose()
 		{
-			Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
+			Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finaliser thread");
 
 			// Unsubscribe
 			Util.Dispose(ref m_embedded_cs_handler);
@@ -697,7 +697,7 @@ namespace pr.gfx
 		}
 
 		/// <summary>Event call on errors. Note: can be called in a background thread context</summary>
-		public event EventHandler<ErrorEventArgs> Error;
+		public event EventHandler<MessageEventArgs> Error;
 
 		/// <summary>Progress update when a file is being parsed</summary>
 		public event EventHandler<AddFileProgressEventArgs> AddFileProgress;
@@ -2658,17 +2658,6 @@ namespace ldr
 		}
 
 		#region Event Args
-		public class ErrorEventArgs :EventArgs
-		{
-			public ErrorEventArgs(string msg)
-			{
-				Message = msg;
-			}
-
-			/// <summary>The error message</summary>
-			public string Message { get; private set; }
-		}
-
 		public class AddFileProgressEventArgs :CancelEventArgs
 		{
 			public AddFileProgressEventArgs(Guid context_id, string filepath, long file_offset, bool complete)

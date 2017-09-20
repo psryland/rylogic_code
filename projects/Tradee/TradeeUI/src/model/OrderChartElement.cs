@@ -220,7 +220,7 @@ namespace Tradee
 		}
 
 		/// <summary>Hit test this order</summary>
-		public override ChartControl.HitTestResult.Hit HitTest(Point client_point, Keys modifier_keys, View3d.CameraControls cam)
+		public override ChartControl.HitTestResult.Hit HitTest(PointF chart_point, Point client_point, Keys modifier_keys, View3d.CameraControls cam)
 		{
 			// Chart elements can only be modified when selected
 			// Chart elements can only be selected when control is held down
@@ -233,7 +233,7 @@ namespace Tradee
 			// Hit testing is done in client space so we can use pixel tolerance
 			Func<EHitSite, ChartControl.HitTestResult.Hit> Hit = site =>
 			{
-				var elem_point = m4x4.Invert(Position) * new v4(Chart.ClientToChart(client_point), 0f, 1f);
+				var elem_point = m4x4.Invert(Position) * new v4(chart_point, 0f, 1f);
 				return new ChartControl.HitTestResult.Hit(this, new PointF(elem_point.x, elem_point.y), site);
 			};
 			const int tolerance = 5;

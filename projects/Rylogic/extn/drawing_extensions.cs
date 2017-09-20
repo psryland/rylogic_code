@@ -283,6 +283,42 @@ namespace pr.extn
 			return r.Size.Aspect();
 		}
 
+		/// <summary>Returns the squared 2D length: X² + Y²</summary>
+		public static int Length2Sq(this Point p)
+		{
+			return Maths.Sqr(p.X) + Maths.Sqr(p.Y);
+		}
+		public static float Length2Sq(this PointF p)
+		{
+			return Maths.Sqr(p.X) + Maths.Sqr(p.Y);
+		}
+		public static int Length2Sq(this Size s)
+		{
+			return Maths.Sqr(s.Width) + Maths.Sqr(s.Height);
+		}
+		public static float Length2Sq(this SizeF s)
+		{
+			return Maths.Sqr(s.Width) + Maths.Sqr(s.Height);
+		}
+
+		/// <summary>Returns the 2D length: sqrt(X² + Y²)</summary>
+		public static float Length2(this Point p)
+		{
+			return Maths.Sqrt(p.Length2Sq());
+		}
+		public static float Length2(this PointF p)
+		{
+			return Maths.Sqrt(p.Length2Sq());
+		}
+		public static float Length2(this Size s)
+		{
+			return Maths.Sqrt(s.Length2Sq());
+		}
+		public static float Length2(this SizeF s)
+		{
+			return Maths.Sqrt(s.Length2Sq());
+		}
+
 		/// <summary>Returns a point shifted by dx,dy</summary>
 		public static Point Shifted(this Point pt, int dx, int dy)
 		{

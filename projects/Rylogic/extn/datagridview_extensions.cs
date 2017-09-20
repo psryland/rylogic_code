@@ -442,6 +442,40 @@ namespace pr.extn
 			}
 		}
 
+		/// <summary>Static data associated with a grid to provide this extension functionality</summary>
+		[ThreadStatic] private static DGVStateMap GridState = new DGVStateMap();
+		private class DGVStateMap :Dictionary<DataGridView, DGVState>
+		{
+			public new DGVState this[DataGridView grid]
+			{
+				get { return this.GetOrAdd(grid, k => new DGVState(grid)); }
+				set { base[grid] = value; }
+			}
+		}
+		private class DGVState :IDisposable
+		{
+			public DGVState(DataGridView grid)
+			{
+				Grid = grid;
+				Grid.Disposed += HandleGridDisposed;
+			}
+			public void Dispose()
+			{
+				ColumnFilters?.Dispose();
+				Grid.Disposed -= HandleGridDisposed;
+				GridState.Remove(Grid);
+			}
+			private void HandleGridDisposed(object sender, EventArgs e)
+			{
+				Dispose();
+			}
+
+			public DataGridView Grid;
+			public ColumnFiltersData ColumnFilters;
+			public bool InSetGridColumnSizes;
+			public bool FitColumnsPending;
+		}
+
 		/// <summary>
 		/// Handle column sorting for grids with data sources that don't support sorting by default.
 		/// 'handle_sort' will be called after the column header glyph has changed.
@@ -777,8 +811,9 @@ namespace pr.extn
 			//  or 'FitColumnsWithNoLineWrap' for the log viewer case.
 
 			// Prevent reentrancy
-			if (m_set_grid_columns_sizes != null) return;
-			using (Scope.Create(() => m_set_grid_columns_sizes = grid, () => m_set_grid_columns_sizes = null))
+			var grid_state = GridState[grid];
+			if (grid_state.InSetGridColumnSizes) return;
+			using (Scope.Create(() => grid_state.InSetGridColumnSizes = true, () => grid_state.InSetGridColumnSizes = false))
 			{
 				// No columns, nothing to resize
 				if (grid.ColumnCount == 0)
@@ -805,10 +840,8 @@ namespace pr.extn
 		/// <summary>True while column widths are being set for this grid</summary>
 		public static bool SettingGridColumnWidths(this DataGridView grid)
 		{
-			return m_set_grid_columns_sizes == grid;
+			return GridState[grid].InSetGridColumnSizes;
 		}
-		[ThreadStatic] private static object m_set_grid_columns_sizes;
-		[ThreadStatic] private static bool m_fit_columns_pending;
 
 		/// <summary>
 		/// An event handler that resizes the columns in a grid to fill the available space, while preserving user column size changes.
@@ -816,11 +849,12 @@ namespace pr.extn
 		public static void FitColumnsToDisplayWidth(object sender, EventArgs args = null)
 		{
 			var grid = (DataGridView)sender;
-			if (grid.SettingGridColumnWidths() || m_fit_columns_pending || !grid.IsHandleCreated)
+			var grid_state = GridState[grid];
+			if (grid_state.InSetGridColumnSizes || grid_state.FitColumnsPending || !grid.IsHandleCreated)
 				return;
 
 			// Delay the column resize until the last triggering event (particularly scroll events)
-			m_fit_columns_pending = true;
+			grid_state.FitColumnsPending = true;
 			grid.BeginInvokeDelayed(10, () =>
 			{
 				// If this event is a column/row header width changed event,
@@ -830,7 +864,7 @@ namespace pr.extn
 
 				// Resize columns to fit
 				grid.SetGridColumnSizes(EColumnSizeOptions.FitToDisplayWidth);
-				m_fit_columns_pending = false;
+				grid_state.FitColumnsPending = false;
 			});
 		}
 
@@ -841,11 +875,12 @@ namespace pr.extn
 		public static void FitColumnsWithNoLineWrap(object sender, EventArgs args = null)
 		{
 			var grid = (DataGridView)sender;
-			if (grid.SettingGridColumnWidths() || m_fit_columns_pending || !grid.IsHandleCreated)
+			var grid_state = GridState[grid];
+			if (grid_state.InSetGridColumnSizes || grid_state.FitColumnsPending || !grid.IsHandleCreated)
 				return;
 		
 			// Delay the column resize until the last triggering event (particularly scroll events)
-			m_fit_columns_pending = true;
+			grid_state.FitColumnsPending = true;
 			grid.BeginInvokeDelayed(10, () =>
 			{
 				// If this event is a column/row header width changed event,
@@ -855,7 +890,7 @@ namespace pr.extn
 
 				// Resize columns to fit
 				grid.SetGridColumnSizes(EColumnSizeOptions.GrowToDisplayWidth|EColumnSizeOptions.Preferred);
-				m_fit_columns_pending = false;
+				grid_state.FitColumnsPending = false;
 			});
 		}
 
@@ -1517,9 +1552,6 @@ namespace pr.extn
 
 		#region Filter Columns
 
-		/// <summary>Live instances of ColumnFiltersData objects in use by grids</summary>
-		[ThreadStatic] private static Dictionary<DataGridView, ColumnFiltersData> m_column_filters = new Dictionary<DataGridView, ColumnFiltersData>();
-
 		/// <summary>Per-grid object for managing column filters</summary>
 		public class ColumnFiltersData :IMessageFilter ,IDisposable
 		{
@@ -1544,15 +1576,12 @@ namespace pr.extn
 				ShortcutKey    = Keys.F;
 
 				m_dgv.DataSourceChanged += HandleDataSourceChanged;
-				m_dgv.Disposed += HandleGridDisposed;
-
 				HandleDataSourceChanged();
 			}
 			public void Dispose()
 			{
 				Enabled = false;
 				m_dgv.DataSourceChanged -= HandleDataSourceChanged;
-				m_dgv.Disposed -= HandleGridDisposed;
 				m_header_cells = Util.DisposeAll(m_header_cells);
 				BSFilter = null;
 			}
@@ -1827,13 +1856,6 @@ namespace pr.extn
 				}
 			}
 
-			/// <summary>When the associated grid is disposed, remove this instance of column filters</summary>
-			private void HandleGridDisposed(object sender, EventArgs e)
-			{
-				m_column_filters.Remove(m_dgv);
-				Dispose();
-			}
-
 			/// <summary>If the data source on the DGV changes, we need to reset the BSFilter</summary>
 			private void HandleDataSourceChanged(object sender = null, EventArgs e = null)
 			{
@@ -2099,8 +2121,9 @@ namespace pr.extn
 		/// Column filters are automatically disposed when the associated grid is disposed</summary>
 		public static ColumnFiltersData ColumnFilters(this DataGridView grid, bool create_if_necessary = false)
 		{
-			if (m_column_filters.TryGetValue(grid, out var column_filters)) return column_filters;
-			if (create_if_necessary) return m_column_filters[grid] = new ColumnFiltersData(grid);
+			var grid_state = GridState[grid];
+			if (grid_state.ColumnFilters != null) return grid_state.ColumnFilters;
+			if (create_if_necessary) return grid_state.ColumnFilters = new ColumnFiltersData(grid);
 			return null;
 		}
 

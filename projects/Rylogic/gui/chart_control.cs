@@ -272,22 +272,34 @@ namespace pr.gui
 		/// <summary>Associative array from Element Ids to Elements</summary>
 		public Dictionary<Guid, Element> ElemIds { get; private set; }
 
+		/// <summary>Raised whenever the view3d area of the chart is scrolled or zoomed</summary>
+		public event EventHandler<ChartMovedEventArgs> ChartMoved;
+		protected virtual void OnChartMoved(ChartMovedEventArgs args)
+		{
+			ChartMoved.Raise(this, args);
+		}
+		private void RaiseChartMoved(ChartMovedEventArgs args)
+		{
+			if (!ChartMoved.IsSuspended())
+				OnChartMoved(args);
+		}
+
 		/// <summary>Raised whenever elements in the chart have been edited or moved</summary>
-		public event EventHandler<ChartChangedEventArgs> ChartChaged;
+		public event EventHandler<ChartChangedEventArgs> ChartChanged;
 		protected virtual void OnChartChanged(ChartChangedEventArgs args)
 		{
-			ChartChaged.Raise(this, args);
+			ChartChanged.Raise(this, args);
 		}
 		private ChartChangedEventArgs RaiseChartChanged(ChartChangedEventArgs args)
 		{
-			if (!ChartChaged.IsSuspended())
+			if (!ChartChanged.IsSuspended())
 				OnChartChanged(args);
 
 			return args;
 		}
 		public Scope SuspendChartChanged(bool raise_on_resume = true)
 		{
-			return ChartChaged.Suspend(raise_if_signalled: raise_on_resume, sender: this, args: new ChartChangedEventArgs(EChangeType.Edited));
+			return ChartChanged.Suspend(raise_if_signalled: raise_on_resume, sender: this, args: new ChartChangedEventArgs(EChangeType.Edited));
 		}
 
 		/// <summary>Called just before the chart renders. Used to add View3d objects to the scene</summary>
@@ -483,7 +495,7 @@ namespace pr.gui
 				var elements = pred != null ? Elements.Where(pred) : Elements;
 				foreach (var elem in elements)
 				{
-					var hit = elem.HitTest(client_point, modifier_keys, Scene.Camera);
+					var hit = elem.HitTest(chart_point, client_point, modifier_keys, Scene.Camera);
 					if (hit != null)
 						hits.Add(hit);
 				}
@@ -575,6 +587,8 @@ namespace pr.gui
 			// Allow the auto range to be handled by event
 			var args = new AutoRangeEventArgs(who);
 			RaiseOnAutoRanging(args);
+			if (args.Handled && !args.ViewBBox.IsValid)
+				throw new Exception($"Caller provided view bounding box is invalid: {args.ViewBBox}");
 
 			// Get the bounding box to fit into the view
 			var bbox = args.Handled
@@ -1849,7 +1863,7 @@ namespace pr.gui
 			/// <summary>Raise the ChartMoved event on the chart</summary>
 			private void NotifyMoved()
 			{
-				Owner.OnChartMoved(m_moved_args);
+				Owner.RaiseChartMoved(m_moved_args);
 				m_moved_args = null;
 			}
 			private ChartMovedEventArgs m_moved_args;
@@ -2201,13 +2215,6 @@ namespace pr.gui
 					return "{0} - [{1}:{2}]".Fmt(Label, Min, Max);
 				}
 			}
-		}
-
-		/// <summary>Raised whenever the view3d area of the chart is scrolled or zoomed</summary>
-		public event EventHandler<ChartMovedEventArgs> ChartMoved;
-		protected virtual void OnChartMoved(ChartMovedEventArgs args)
-		{
-			ChartMoved.Raise(this, args);
 		}
 
 		#endregion
@@ -3027,7 +3034,7 @@ namespace pr.gui
 				m_impl_visible               = true;
 				m_impl_visible_to_find_range = true;
 				m_impl_enabled               = true;
-				m_invalidated                = true;
+				IsInvalidated                = true;
 				UserData                     = new Dictionary<Guid, object>();
 			}
 			protected Element(XElement node)
@@ -3180,7 +3187,7 @@ namespace pr.gui
 			public event EventHandler Invalidated;
 			protected virtual void OnInvalidated()
 			{
-				m_invalidated = true;
+				IsInvalidated = true;
 				InvalidateChart();
 				Invalidated.Raise(this);
 			}
@@ -3242,10 +3249,12 @@ namespace pr.gui
 			/// <summary>Indicate that the graphics for this element needs to be recreated or modified</summary>
 			public void Invalidate(object sender = null, EventArgs args = null)
 			{
-				if (m_invalidated) return;
+				if (IsInvalidated) return;
 				OnInvalidated();
 			}
-			private bool m_invalidated;
+
+			/// <summary>True if this element has been invalidated. Call 'UpdateGfx' to clear the invalidated state</summary>
+			public bool IsInvalidated { get; private set; }
 
 			/// <summary>Get/Set the selected state</summary>
 			public virtual bool Selected
@@ -3447,7 +3456,7 @@ namespace pr.gui
 			}
 
 			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in client space because typically hit testing uses pixel tolerances</summary>
-			public virtual HitTestResult.Hit HitTest(Point client_point, Keys modifier_keys, View3d.CameraControls cam)
+			public virtual HitTestResult.Hit HitTest(PointF chart_point, Point client_point, Keys modifier_keys, View3d.CameraControls cam)
 			{
 				return null;
 			}
@@ -3477,7 +3486,7 @@ namespace pr.gui
 				using (Scope.Create(() => ++m_impl_updating_gfx, () => --m_impl_updating_gfx))
 				{
 					UpdateGfxCore();
-					m_invalidated = false;
+					IsInvalidated = false;
 				}
 			}
 			protected virtual void UpdateGfxCore() { }
@@ -3486,7 +3495,7 @@ namespace pr.gui
 			/// <summary>Add the graphics associated with this element to the window</summary>
 			internal void AddToScene(View3d.Window window)
 			{
-				if (m_invalidated) UpdateGfx();
+				if (IsInvalidated) UpdateGfx();
 				AddToSceneCore(window);
 			}
 			protected virtual void AddToSceneCore(View3d.Window window)
@@ -3863,6 +3872,7 @@ namespace pr.gui
 					}
 				}
 				#endregion
+				cmenu.Items.AddSeparator();
 				#region Properties
 				{
 					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Properties") { Name = CMenu.Properties });

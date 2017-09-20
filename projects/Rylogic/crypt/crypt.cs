@@ -90,6 +90,23 @@ namespace pr.crypt
 			if (thrw && !valid) throw new VerificationException("File signature incorrect");
 			return valid;
 		}
+
+		/// <summary>Hash a username and password</summary>
+		public static byte[] CredHash(string username, string password, string salt)
+		{
+			// get salted byte[] buffer, containing username, password and some (constant) salt
+			using (MemoryStream stream = new MemoryStream())
+			using (StreamWriter writer = new StreamWriter(stream))
+			{
+				writer.Write(salt);
+				writer.Write(username);
+				writer.Write(password);
+				writer.Flush();
+
+				var sha = SHA256.Create();
+				return sha.ComputeHash(stream.ToArray());
+			}
+		}
 	}
 }
 

@@ -1,11 +1,24 @@
 // This is a generated file
 #pragma once
-//
+#include <sdkddkver.h>
+
+// Headers to unit test
 #include "pr\app\forward.h"
 #include "pr\app\gimble.h"
 #include "pr\app\main.h"
 #include "pr\app\main_gui.h"
 #include "pr\app\skybox.h"
+#include "pr\audio\audio.h"
+#include "pr\audio\audio\audio_manager.h"
+#include "pr\audio\audio\forward.h"
+#include "pr\audio\config\config.h"
+#include "pr\audio\directsound\player.h"
+#include "pr\audio\directsound\sound.h"
+#include "pr\audio\dll\audio.h"
+#include "pr\audio\midi\midi.h"
+#include "pr\audio\ogg\ogg_stream.h"
+#include "pr\audio\waves\wave_bank.h"
+#include "pr\audio\waves\wave_file.h"
 #include "pr\camera\camctrl_dinput_wasd.h"
 #include "pr\camera\camera.h"
 #include "pr\camera\camera_ui.h"

@@ -346,6 +346,7 @@ namespace pr.gui
 			m_view.VirtualMode                 = true;
 			m_view.ColumnCount                 = 1;
 			m_view.RowCount                    = 0;
+			DataGridView_.FitColumnsWithNoLineWrap(m_view);
 		}
 
 		/// <summary>Invalidate this control and all children</summary>
@@ -766,6 +767,7 @@ namespace pr.gui
 			/// <summary>Get/Set the cell style</summary>
 			public DataGridViewCellStyle CellStyle { get; private set; }
 		}
+
 		#region Component Designer generated code
 		private IContainer components = null;
 		private void InitializeComponent()

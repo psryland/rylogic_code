@@ -2625,6 +2625,7 @@ namespace pr.gui
 					get { return DockPane.VisibleContent?.TabStripLocation ?? base.StripLocation; }
 					set { base.StripLocation = value; }
 				}
+
 				/// <summary>Gets the content in 'DockPane' with 'GhostTab' inserted at the appropriate position</summary>
 				public override IEnumerable<DockControl> Content
 				{
@@ -3207,9 +3208,12 @@ namespace pr.gui
 			/// <summary>Invalidate the tab that represents this content</summary>
 			public void InvalidateTab()
 			{
-				// Have to invalidate the whole strip, because tabs are not controls
 				if (DockPane == null) return;
-				DockPane.TabStripCtrl.Invalidate();
+				var tab = DockPane.TabStripCtrl.VisibleTabs.FirstOrDefault(x => x.Content == this);
+				if (tab != null)
+					DockPane.TabStripCtrl.Invalidate(tab.DisplayBounds);
+				else
+					DockPane.TabStripCtrl.Invalidate();
 			}
 
 			/// <summary>Invalidate the title that represents this content</summary>
@@ -4423,6 +4427,12 @@ namespace pr.gui
 
 			/// <summary>The bounds of this tab button in horizontal tab strip space</summary>
 			public Rectangle Bounds { get; private set; }
+
+			/// <summary>The bounds of this tab button in tab strip space (rotated for vertical strips)</summary>
+			public Rectangle DisplayBounds
+			{
+				get { return Strip.Transform.TransformRect(Bounds); }
+			}
 
 			/// <summary>True if the tab content is larger than the size of the tab</summary>
 			public bool Clipped { get; private set; }

@@ -26,8 +26,36 @@ namespace pr.gui
 		}
 		protected override void Dispose(bool disposing)
 		{
-			Style = EStyle.Basic;
+			Util.Dispose(ref m_chk);
+			Util.Dispose(ref m_rdo);
 			base.Dispose(disposing);
+		}
+		protected override void OnLayout(LayoutEventArgs levent)
+		{
+			base.OnLayout(levent);
+			DoLayout();
+		}
+		protected override void OnLocationChanged(EventArgs e)
+		{
+			base.OnLocationChanged(e);
+			DoLayout();
+		}
+		protected override void OnParentChanged(EventArgs e)
+		{
+			base.OnParentChanged(e);
+			HandleParentChanged();
+		}
+		protected override void OnForeColorChanged(EventArgs e)
+		{
+			if (m_chk != null) m_chk.ForeColor = ForeColor;
+			if (m_rdo != null) m_rdo.ForeColor = ForeColor;
+			base.OnForeColorChanged(e);
+		}
+		protected override void OnBackColorChanged(EventArgs e)
+		{
+			if (m_chk != null) m_chk.BackColor = BackColor;
+			if (m_rdo != null) m_rdo.BackColor = BackColor;
+			base.OnBackColorChanged(e);
 		}
 
 		/// <summary>The style of checked group box</summary>
@@ -56,7 +84,8 @@ namespace pr.gui
 						{
 							AutoSize = true,
 							Text = m_text,
-							ForeColor = BackColor,
+							BackColor = BackColor,
+							ForeColor = ForeColor,
 							Checked = false,
 						};
 						m_chk.CheckedChanged += HandleCheckedChanged;
@@ -68,6 +97,7 @@ namespace pr.gui
 						{
 							AutoSize = true,
 							Text = m_text,
+							BackColor = BackColor,
 							ForeColor = ForeColor,
 							Checked = false,
 						};
@@ -138,37 +168,6 @@ namespace pr.gui
 		}
 		private string m_text;
 
-		protected override void OnLayout(LayoutEventArgs levent)
-		{
-			base.OnLayout(levent);
-			var chk = (ButtonBase)m_chk ?? m_rdo;
-			if (chk != null)
-			{
-				chk.Location = Location.Shifted(3, 0);
-				chk.BringToFront();
-			}
-		}
-		protected override void OnLocationChanged(EventArgs e)
-		{
-			base.OnLocationChanged(e);
-			PerformLayout();
-		}
-		protected override void OnParentChanged(EventArgs e)
-		{
-			base.OnParentChanged(e);
-			HandleParentChanged();
-		}
-		protected override void OnForeColorChanged(EventArgs e)
-		{
-			if (m_rdo != null) m_rdo.ForeColor = ForeColor;
-			base.OnForeColorChanged(e);
-		}
-		protected override void OnBackColorChanged(EventArgs e)
-		{
-			if (m_rdo != null) m_rdo.BackColor = BackColor;
-			base.OnBackColorChanged(e);
-		}
-
 		/// <summary>Called when the check state changes for the group box</summary>
 		private void HandleCheckedChanged(object sender = null, EventArgs args = null)
 		{
@@ -182,7 +181,21 @@ namespace pr.gui
 		{
 			var chk = (ButtonBase)m_chk ?? m_rdo;
 			if (chk != null) chk.Parent = Parent;
-			PerformLayout();
+			DoLayout();
+		}
+
+		/// <summary>Reposition the CheckBox</summary>
+		private void DoLayout()
+		{
+			using (this.SuspendLayout(layout_on_resume: false))
+			{
+				var chk = (ButtonBase)m_chk ?? m_rdo;
+				if (chk != null)
+				{
+					chk.Location = Location.Shifted(3, 0);
+					chk.BringToFront();
+				}
+			}
 		}
 	}
 }

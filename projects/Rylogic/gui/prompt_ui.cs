@@ -254,6 +254,7 @@ namespace pr.gui
 			{
 				m_btn_ok.Enabled = m_tb_value.Valid;
 			};
+			m_tb_value.Value = string.Empty;
 
 			// Combo box
 			m_cb_value.UseValidityColours = true;

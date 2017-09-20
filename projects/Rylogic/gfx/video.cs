@@ -32,12 +32,6 @@ namespace pr.gfx
 		private DsROTEntry       m_ds_rot            ;       // Allow you to "Connect to remote graph" from GraphEdit
 		#endif
 
-		/// <summary>Called when a video file is loaded successfully</summary>
-		public event Action<Video, string> FileLoaded;
-
-		/// <summary>Called when the video starts/stops/resets</summary>
-		public event Action<Video, EPlayState> PlayStateChanged;
-
 		public Video()
 		{
 			m_shutdown_lock = new object();
@@ -49,25 +43,29 @@ namespace pr.gfx
 		{
 			LoadFile(file);
 		}
-		~Video()
-		{
-			CloseInterfaces();
-		}
 		public void Dispose()
 		{
 			CloseInterfaces();
 		}
+
+		/// <summary>Called when a video file is loaded successfully</summary>
+		public event Action<Video, string> FileLoaded;
+
+		/// <summary>Called when the video starts/stops/resets</summary>
+		public event Action<Video, EPlayState> PlayStateChanged;
 
 		/// <summary>Load a video/audio file and prepare to play it</summary>
 		public void LoadFile(string file)
 		{
 			try
 			{
-				if (m_filter_graph != null) throw new Exception("Reusing this Video object is not allowed");
+				if (m_filter_graph != null)
+					throw new Exception("Reusing this Video object is not allowed");
 
 				m_file = file;
 				m_filter_graph = new FilterGraph() as IFilterGraph2;
-				if (m_filter_graph == null) throw new Exception("failed to create direct show filter graph");
+				if (m_filter_graph == null)
+					throw new Exception("failed to create direct show filter graph");
 
 				// Have the filter graph construct the appropriate graph automatically
 				DsError.ThrowExceptionForHR(m_filter_graph.RenderFile(file, null));
@@ -122,11 +120,12 @@ namespace pr.gfx
 			#endif
 		}
 
-		// Wait for direct show events to happen. This approach uses waiting on an event handle.
-		// The nice thing about doing it this way is that you aren't in the windows message
-		// loop, and don't have to worry about re-entrency or taking too long.  Plus, being
-		// in a class as we are, we don't have access to the message loop.
-		// Alternately, you can receive your events as windows messages.  See IMediaEventEx.SetNotifyWindow.
+		/// <summary>
+		/// Wait for direct show events to happen. This approach uses waiting on an event handle.
+		/// The nice thing about doing it this way is that you aren't in the windows message
+		/// loop, and don't have to worry about reentrancy or taking too long. Plus, being
+		/// in a class as we are, we don't have access to the message loop.
+		/// Alternately, you can receive your events as windows messages.  See IMediaEventEx.SetNotifyWindow.</summary>
 		private void MediaEventWait()
 		{
 			// Returned when GetEvent is called but there are no events
@@ -173,7 +172,8 @@ namespace pr.gfx
 			}
 		}
 
-		/// <summary>Returns true if this an audio-only file (no video component)
+		/// <summary>
+		/// Returns true if this an audio-only file (no video component)
 		/// Audio-only files have no video interfaces.  This might also be a file
 		/// whose video component uses an unknown video codec.</summary>
 		public bool AudioOnly
@@ -357,7 +357,7 @@ namespace pr.gfx
 			}
 		}
 
-		/// <summary>Setup the filter graph for grabbing snapshots</summary>
+		/// <summary>Set up the filter graph for grabbing snapshots</summary>
 		public void EnableGrabbing()
 		{
 			ICaptureGraphBuilder2 icgb2 = null;
@@ -421,7 +421,7 @@ namespace pr.gfx
 			finally { if (ip != IntPtr.Zero) Marshal.FreeCoTaskMem(ip); }
 		}
 
-		/// <summary>Cleanup the video resources</summary>
+		/// <summary>Clean up the video resources</summary>
 		private void CloseInterfaces()
 		{
 			Stop();

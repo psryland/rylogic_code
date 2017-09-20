@@ -113,10 +113,10 @@ namespace Tradee
 		private View3d.Object m_impl_gfx;
 
 		/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in client space because typically hit testing uses pixel tolerances</summary>
-		public override ChartControl.HitTestResult.Hit HitTest(Point client_point, Keys modifier_keys, View3d.CameraControls cam)
+		public override ChartControl.HitTestResult.Hit HitTest(PointF chart_point, Point client_point, Keys modifier_keys, View3d.CameraControls cam)
 		{
 			// Find the nearest point to 'client_point' on the line
-			var chart_pt  = Chart.ClientToChart(client_point);
+			var chart_pt  = chart_point;
 			var client_pt = Chart.ChartToClient(new PointF(chart_pt.X, (float)Settings.Price));
 
 			// If clicked within 'tolerance' of the line

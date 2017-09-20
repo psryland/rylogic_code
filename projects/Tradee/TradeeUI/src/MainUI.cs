@@ -218,7 +218,7 @@ namespace Tradee
 				try
 				{
 					// Load the layout, create charts on demand
-					m_dc.LoadLayout(Settings.UI.UILayout, (persistence_name, type_name) =>
+					m_dc.LoadLayout(Settings.UI.UILayout, (persistence_name, type_name, udayt) =>
 					{
 						var sym = ChartUI.ToSymbolCode(persistence_name);
 						var instr = Model.MarketData.GetOrCreateInstrument(sym);
