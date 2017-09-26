@@ -36,13 +36,15 @@ namespace CoinFlip
 		#endregion
 
 		public EditFishingUI(Model model)
-			:this(model, new Settings.FishingData(string.Empty, string.Empty, string.Empty, 0.005m, ETradeDirection.Both))
+			:this(model, new Settings.FishingData(string.Empty, string.Empty, string.Empty, 0.005m, ETradeDirection.Both), false)
 		{ }
-		public EditFishingUI(Model model, Settings.FishingData fishing_data)
+		public EditFishingUI(Model model, Settings.FishingData fishing_data, bool active)
 		{
 			InitializeComponent();
 			Model = model;
+
 			m_fishing = new Settings.FishingData(fishing_data);
+			m_fishing_active = active;
 
 			SetupUI();
 			UpdateUI();
@@ -87,6 +89,7 @@ namespace CoinFlip
 			}
 		}
 		private Settings.FishingData m_fishing;
+		private bool m_fishing_active;
 
 		/// <summary>The reference exchange</summary>
 		public Exchange Exch0
@@ -255,6 +258,13 @@ namespace CoinFlip
 				m_chk_b2q.Text = $"Base → Quote";
 				m_chk_q2b.Text = $"Quote → Base";
 			}
+
+			// Disable UI elements that can't be changed while active
+			m_cb_exch0.Enabled = !m_fishing_active;
+			m_cb_exch1.Enabled = !m_fishing_active;
+			m_cb_pair.Enabled = !m_fishing_active;
+			m_chk_b2q.Enabled = !m_fishing_active;
+			m_chk_q2b.Enabled = !m_fishing_active;
 
 			// Enable the OK button
 			m_btn_ok.Enabled =

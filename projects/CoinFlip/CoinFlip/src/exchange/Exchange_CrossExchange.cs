@@ -18,19 +18,19 @@ namespace CoinFlip
 		}
 
 		/// <summary>Open a trade</summary>
-		protected override Task<TradeResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> rate)
+		protected override TradeResult CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> rate)
 		{
-			return Task.FromResult(new TradeResult());
+			return new TradeResult();
 		}
 
 		/// <summary>Cancel an open trade</summary>
-		protected override Task CancelOrderInternal(TradePair pair, ulong order_id)
+		protected override void CancelOrderInternal(TradePair pair, ulong order_id)
 		{
 			throw new Exception("Cannot cancel trades on the CrossExchange");
 		}
 
 		/// <summary>Update this exchange's set of trading pairs</summary>
-		public override Task UpdatePairs(HashSet<string> coi) // Worker thread context
+		public override void UpdatePairs(HashSet<string> coi) // Worker thread context
 		{
 			Model.MarketUpdates.Add(() =>
 			{
@@ -66,11 +66,10 @@ namespace CoinFlip
 					}
 				}
 			});
-			return Misc.CompletedTask;
 		}
 
 		/// <summary>Update the market data, balances, and open positions</summary>
-		protected override Task UpdateData() // Worker thread context
+		protected override void UpdateData() // Worker thread context
 		{
 			try
 			{
@@ -99,11 +98,10 @@ namespace CoinFlip
 				Model.Log.Write(ELogLevel.Error, ex, "CrossExchange UpdateData() failed");
 				Status = EStatus.Error;
 			}
-			return Misc.CompletedTask;
 		}
 
 		/// <summary>Update account balance data</summary>
-		protected override Task UpdateBalances()
+		protected override void UpdateBalances()
 		{
 			try
 			{
@@ -128,16 +126,15 @@ namespace CoinFlip
 				Model.Log.Write(ELogLevel.Error, ex, "CrossExchange UpdateBalances() failed");
 				Status = EStatus.Error;
 			}
-			return Misc.CompletedTask;
 		}
 
 		/// <summary>Update open positions</summary>
-		protected override Task UpdatePositions() // Worker thread context
+		protected override void UpdatePositions() // Worker thread context
 		{
 			// There shouldn't be any of these. Cross-exchange trades
 			// are virtual, we only pretend to convert 'Coin' on 'Exchange0'
 			// to 'Coin' on 'Exchange1' (or visa versa)
-			return base.UpdatePositions();
+			base.UpdatePositions();
 		}
 
 		/// <summary>Set the maximum number of requests per second to the exchange server</summary>

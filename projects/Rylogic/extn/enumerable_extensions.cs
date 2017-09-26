@@ -57,6 +57,11 @@ namespace pr.extn
 			foreach (var item in source)
 				action(item);
 		}
+		public static void ForEach<TSource>(this IEnumerable source, Action<TSource> action)
+		{
+			foreach (var item in source)
+				action((TSource)item);
+		}
 
 		/// <summary>Apply 'action' to each item in the collection. Includes an indexing variable</summary>
 		public static void ForEach<TSource>(this IEnumerable<TSource> source, Action<TSource, int> action)
@@ -65,12 +70,24 @@ namespace pr.extn
 			foreach (var item in source)
 				action(item, i++);
 		}
+		public static void ForEach<TSource>(this IEnumerable source, Action<TSource, int> action)
+		{
+			int i = 0;
+			foreach (var item in source)
+				action((TSource)item, i++);
+		}
 
 		/// <summary>Apply 'action' to each item in the collection</summary>
 		public static TRet ForEach<TSource,TRet>(this IEnumerable<TSource> source, TRet initial, Func<TSource, TRet, TRet> action)
 		{
 			foreach (var item in source)
 				initial = action(item, initial);
+			return initial;
+		}
+		public static TRet ForEach<TSource,TRet>(this IEnumerable source, TRet initial, Func<TSource, TRet, TRet> action)
+		{
+			foreach (var item in source)
+				initial = action((TSource)item, initial);
 			return initial;
 		}
 

@@ -11,6 +11,7 @@ namespace pr
 	// An integer that represents one of the basis axis: ±X, ±Y, ±Z
 	struct AxisId
 	{
+		static int const None = 0;
 		static int const PosX = +1;
 		static int const PosY = +2;
 		static int const PosZ = +3;
@@ -20,10 +21,9 @@ namespace pr
 
 		int value;
 
-		AxisId(int axis_id) :value(axis_id)
-		{
-			assert(IsValid(*this) && "axis_id must one of ±1, ±2, ±3");
-		}
+		AxisId(int axis_id)
+			:value(axis_id)
+		{}
 		operator int const&() const
 		{
 			return value;
@@ -34,6 +34,7 @@ namespace pr
 		}
 		operator v4() const // Convert an axis id to an axis
 		{
+			//assert(IsValid(*this) && "axis_id must one of ±1, ±2, ±3");
 			switch (value) {
 			default: return  v4Zero;
 			case +1: return  v4XAxis;

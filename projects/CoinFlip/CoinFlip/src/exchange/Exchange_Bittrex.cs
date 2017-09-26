@@ -55,12 +55,12 @@ namespace CoinFlip
 		private BittrexApi m_api;
 
 		/// <summary>Open a trade</summary>
-		protected async override Task<TradeResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> price)
+		protected override TradeResult CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> price)
 		{
 			try
 			{
 				// Place the trade order
-				var res = await Api.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), Misc.ToBittrexTT(tt), price, volume);
+				var res = Api.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), Misc.ToBittrexTT(tt), price, volume);
 				if (!res.Success)
 					throw new Exception(res.Message);
 
@@ -76,13 +76,13 @@ namespace CoinFlip
 		}
 
 		/// <summary>Cancel an open trade</summary>
-		protected async override Task CancelOrderInternal(TradePair pair, ulong order_id)
+		protected override void CancelOrderInternal(TradePair pair, ulong order_id)
 		{
 			try
 			{
 				// Cancel the trade
 				var uuid = ToUuid(order_id);
-				var msg = await Api.CancelTrade(new CurrencyPair(pair.Base, pair.Quote), uuid);
+				var msg = Api.CancelTrade(new CurrencyPair(pair.Base, pair.Quote), uuid);
 				if (!msg.Success && msg.Message != "ORDER_NOT_OPEN")
 					throw new Exception(msg.Message);
 			}
@@ -95,12 +95,12 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update this exchange's set of trading pairs</summary>
-		public async override Task UpdatePairs(HashSet<string> coi) // Worker thread context
+		public override void UpdatePairs(HashSet<string> coi) // Worker thread context
 		{
 			try
 			{
 				// Get all available trading pairs
-				var msg = await Api.GetMarkets();
+				var msg = Api.GetMarkets();
 				if (!msg.Success)
 					throw new Exception("Bittrex: Failed to read market data. {0}".Fmt(msg.Message));
 
@@ -131,12 +131,12 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				HandleUpdateException(nameof(UpdatePairs), ex);
+				HandleException(nameof(UpdatePairs), ex);
 			}
 		}
 
 		/// <summary>Update the market data, balances, and open positions</summary>
-		protected async override Task UpdateData() // Worker thread context
+		protected override void UpdateData() // Worker thread context
 		{
 			try
 			{
@@ -146,10 +146,10 @@ namespace CoinFlip
 				// Request order book data for all of the pairs
 				var order_books = new List<Task<OrderBookResponse>>();
 				foreach (var pair in Pairs.Values)
-					order_books.Add(Api.GetOrderBook(new CurrencyPair(pair.Base, pair.Quote), BittrexApi.EGetOrderBookType.Both, depth:20));
+					order_books.Add(Api.GetOrderBookAsync(new CurrencyPair(pair.Base, pair.Quote), BittrexApi.EGetOrderBookType.Both, depth:Settings.MarketDepth));
 
 				// Wait for replies for all queries
-				await Task.WhenAll(order_books);
+				Task.WhenAll(order_books).Wait();
 
 				// Check the responses
 				foreach (var ob in order_books)
@@ -185,12 +185,12 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				HandleUpdateException(nameof(UpdateData), ex);
+				HandleException(nameof(UpdateData), ex);
 			}
 		}
 
 		/// <summary>Update account balance data</summary>
-		protected async override Task UpdateBalances() // Worker thread context
+		protected override void UpdateBalances() // Worker thread context
 		{
 			try
 			{
@@ -198,7 +198,7 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the account data
-				var msg = await Api.GetBalances();
+				var msg = Api.GetBalances();
 				if (!msg.Success)
 					throw new Exception("Bittrex: Failed to read account balances. {0}".Fmt(msg.Message));
 
@@ -225,12 +225,12 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				HandleUpdateException(nameof(UpdateBalances), ex);
+				HandleException(nameof(UpdateBalances), ex);
 			}
 		}
 
 		/// <summary>Update open positions</summary>
-		protected async override Task UpdatePositions() // Worker thread context
+		protected override void UpdatePositions() // Worker thread context
 		{
 			try
 			{
@@ -238,7 +238,7 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the existing orders
-				var msg = await Api.GetOpenOrders();
+				var msg = Api.GetOpenOrders();
 				if (!msg.Success)
 					throw new Exception("Bittrex: Failed to read open orders. {0}".Fmt(msg.Message));
 
@@ -264,12 +264,12 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				HandleUpdateException(nameof(UpdatePositions), ex);
+				HandleException(nameof(UpdatePositions), ex);
 			}
 		}
 
 		/// <summary>Update the trade history</summary>
-		protected async override Task UpdateTradeHistory() // Worker thread context
+		protected override void UpdateTradeHistory() // Worker thread context
 		{
 			try
 			{
@@ -277,7 +277,7 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the history
-				var msg = await Api.GetTradeHistory();
+				var msg = Api.GetTradeHistory();
 				if (!msg.Success)
 					throw new Exception("Cryptopia: Failed to received trade history. {0}".Fmt(msg.Message));
 
@@ -297,7 +297,7 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				HandleUpdateException(nameof(UpdateTradeHistory), ex);
+				HandleException(nameof(UpdateTradeHistory), ex);
 			}
 		}
 
@@ -305,35 +305,6 @@ namespace CoinFlip
 		protected override void SetServerRequestRateLimit(float limit)
 		{
 			Api.ServerRequestRateLimit = limit;
-		}
-
-		/// <summary>Handle an exception during an update call</summary>
-		private void HandleUpdateException(string method_name, Exception ex)
-		{
-			if (ex is AggregateException ae)
-			{
-				ex = ae.InnerExceptions.First();
-			}
-			if (ex is OperationCanceledException)
-			{
-				// Ignore operation cancelled
-				return;
-			}
-			if (ex is HttpResponseException hre)
-			{
-				if (hre.StatusCode == HttpStatusCode.ServiceUnavailable)
-				{
-					if (Status != EStatus.Offline)
-						Model.Log.Write(ELogLevel.Warn, "Bittrex Service Unavailable");
-
-					Status = EStatus.Offline;
-				}
-				return;
-			}
-
-			// Log all other error types
-			Model.Log.Write(ELogLevel.Error, ex, $"Bittrex {method_name} failed");
-			Status = EStatus.Error;
 		}
 
 		/// <summary>Convert a Cryptopia open order result into a position object</summary>

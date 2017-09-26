@@ -173,6 +173,7 @@ namespace pr
 			x(Filter               ,= HashI("Filter"              ))\
 			x(Range                ,= HashI("Range"               ))\
 			x(Specular             ,= HashI("Specular"            ))\
+			x(Billboard            ,= HashI("Billboard"           ))\
 			x(CastShadow           ,= HashI("CastShadow"        ))
 		PR_DEFINE_ENUM2(EKeyword, PR_ENUM);
 		#undef PR_ENUM
@@ -331,6 +332,9 @@ namespace pr
 			bool empty() const  { return m_code.empty(); }
 		};
 
+		// Add to scene callback
+		using AddToSceneCB = pr::StaticCB<void, LdrObject*, rdr::Scene const&>;
+
 		#pragma endregion
 
 		#pragma region Parse Result
@@ -405,6 +409,10 @@ namespace pr
 
 			// Return the type and name of this object
 			string32 TypeAndName() const;
+
+			// Called just prior to this object being added to a scene.
+			// Allows handlers to change the object's 'i2w' transform, visibility, etc.
+			pr::EventHandler<LdrObject&, rdr::Scene const&> OnAddToScene;
 
 			// Recursively add this object and its children to a scene
 			// Note, LdrObject does not inherit Evt_UpdateScene, because child LdrObjects need to be

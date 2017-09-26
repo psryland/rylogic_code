@@ -7,9 +7,9 @@ using System.Linq;
 using System.Windows.Forms;
 using pr.common;
 using pr.extn;
+using pr.util;
 using RichTextBox = pr.gui.RichTextBox;
 using DataGridView = pr.gui.DataGridView;
-using pr.util;
 
 namespace pr.gui
 {

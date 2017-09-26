@@ -193,6 +193,7 @@ namespace CoinFlip
 				Active = true;
 				PollPeriod = 500;
 				TransactionFee = 0.002m;
+				MarketDepth = 20;
 				ServerRequestRateLimit = 10f;
 			}
 
@@ -217,6 +218,13 @@ namespace CoinFlip
 				set { set(x => x.TransactionFee, value); }
 			}
 
+			/// <summary>The market depth to retrieve</summary>
+			public int MarketDepth
+			{
+				get { return get(x => x.MarketDepth); }
+				set { set(x => x.MarketDepth, value); }
+			}
+
 			/// <summary>The maximum number of requests per second to the exchange server</summary>
 			public float ServerRequestRateLimit
 			{
@@ -237,6 +245,7 @@ namespace CoinFlip
 				Active = true;
 				PollPeriod = 500;
 				TransactionFee = 0.0025m;
+				MarketDepth = 20;
 				ServerRequestRateLimit = 6f;
 			}
 
@@ -261,6 +270,13 @@ namespace CoinFlip
 				set { set(x => x.TransactionFee, value); }
 			}
 
+			/// <summary>The market depth to retrieve</summary>
+			public int MarketDepth
+			{
+				get { return get(x => x.MarketDepth); }
+				set { set(x => x.MarketDepth, value); }
+			}
+
 			/// <summary>The maximum number of requests per second to the exchange server</summary>
 			public float ServerRequestRateLimit
 			{
@@ -281,6 +297,7 @@ namespace CoinFlip
 				Active = true;
 				PollPeriod = 500;
 				TransactionFee = 0.0025m;
+				MarketDepth = 20;
 				ServerRequestRateLimit = 10f;
 			}
 
@@ -305,6 +322,13 @@ namespace CoinFlip
 				set { set(x => x.TransactionFee, value); }
 			}
 
+			/// <summary>The market depth to retrieve</summary>
+			public int MarketDepth
+			{
+				get { return get(x => x.MarketDepth); }
+				set { set(x => x.MarketDepth, value); }
+			}
+
 			/// <summary>The maximum number of requests per second to the exchange server</summary>
 			public float ServerRequestRateLimit
 			{
@@ -325,6 +349,7 @@ namespace CoinFlip
 				Active = true;
 				PollPeriod = 500;
 				TransactionFee = 0m;
+				MarketDepth = 20;
 				ServerRequestRateLimit = 1_000_000f;
 			}
 
@@ -347,6 +372,13 @@ namespace CoinFlip
 			{
 				get { return get(x => x.TransactionFee); }
 				set { set(x => x.TransactionFee, value); }
+			}
+
+			/// <summary>The market depth to retrieve</summary>
+			public int MarketDepth
+			{
+				get { return get(x => x.MarketDepth); }
+				set { set(x => x.MarketDepth, value); }
 			}
 
 			/// <summary>The maximum number of requests per second to the exchange server</summary>
@@ -545,43 +577,47 @@ namespace CoinFlip
 		{
 			public ChartSettings(string symbol_code = null)
 			{
-				SymbolCode       = symbol_code ?? string.Empty;
-				TimeFrame        = ETimeFrame.Hour12;
-				m_style          = null;
-				m_ask_colour     = null;
-				m_bid_colour     = null;
-				m_show_positions = null;
-				Indicators       = null;
+				SymbolCode          = symbol_code ?? string.Empty;
+				TimeFrame           = ETimeFrame.Hour12;
+				m_style             = null;
+				m_ask_colour        = null;
+				m_bid_colour        = null;
+				m_show_positions    = null;
+				m_show_market_depth = null;
+				Indicators          = null;
 			}
 			public ChartSettings(ChartSettings rhs)
 			{
-				Inherit          = rhs.Inherit;
-				SymbolCode       = rhs.SymbolCode;
-				TimeFrame        = rhs.TimeFrame;
-				m_style          = rhs.m_style;
-				m_ask_colour     = rhs.m_ask_colour;
-				m_bid_colour     = rhs.m_bid_colour;
-				m_show_positions = rhs.m_show_positions;
-				Indicators       = new XElement(rhs.Indicators);
+				Inherit             = rhs.Inherit;
+				SymbolCode          = rhs.SymbolCode;
+				TimeFrame           = rhs.TimeFrame;
+				m_style             = rhs.m_style;
+				m_ask_colour        = rhs.m_ask_colour;
+				m_bid_colour        = rhs.m_bid_colour;
+				m_show_positions    = rhs.m_show_positions;
+				m_show_market_depth = rhs.m_show_market_depth;
+				Indicators          = new XElement(rhs.Indicators);
 			}
 			public ChartSettings(XElement node)
 			{
-				SymbolCode       = node.Element(nameof(SymbolCode   )).As(SymbolCode      );
-				TimeFrame        = node.Element(nameof(TimeFrame    )).As(TimeFrame       );
-				m_style          = node.Element(nameof(Style        )).As(m_style         );
-				m_ask_colour     = node.Element(nameof(AskColour    )).As(m_ask_colour    );
-				m_bid_colour     = node.Element(nameof(BidColour    )).As(m_bid_colour    );
-				m_show_positions = node.Element(nameof(ShowPositions)).As(m_show_positions);
-				Indicators       = node.Element(nameof(Indicators   )).As(Indicators      );
+				SymbolCode          = node.Element(nameof(SymbolCode     )).As(SymbolCode         );
+				TimeFrame           = node.Element(nameof(TimeFrame      )).As(TimeFrame          );
+				m_style             = node.Element(nameof(Style          )).As(m_style            );
+				m_ask_colour        = node.Element(nameof(AskColour      )).As(m_ask_colour       );
+				m_bid_colour        = node.Element(nameof(BidColour      )).As(m_bid_colour       );
+				m_show_positions    = node.Element(nameof(ShowPositions  )).As(m_show_positions   );
+				m_show_market_depth = node.Element(nameof(ShowMarketDepth)).As(m_show_market_depth);
+				Indicators          = node.Element(nameof(Indicators     )).As(Indicators         );
 			}
 			public XElement ToXml(XElement node)
 			{
-				node.Add2(nameof(SymbolCode   ), SymbolCode      , false);
-				node.Add2(nameof(TimeFrame    ), TimeFrame       , false);
-				node.Add2(nameof(Style        ), m_style         , false);
-				node.Add2(nameof(AskColour    ), m_ask_colour    , false);
-				node.Add2(nameof(BidColour    ), m_bid_colour    , false);
-				node.Add2(nameof(ShowPositions), m_show_positions, false);
+				node.Add2(nameof(SymbolCode     ), SymbolCode         , false);
+				node.Add2(nameof(TimeFrame      ), TimeFrame          , false);
+				node.Add2(nameof(Style          ), m_style            , false);
+				node.Add2(nameof(AskColour      ), m_ask_colour       , false);
+				node.Add2(nameof(BidColour      ), m_bid_colour       , false);
+				node.Add2(nameof(ShowPositions  ), m_show_positions   , false);
+				node.Add2(nameof(ShowMarketDepth), m_show_market_depth, false);
 				node.Add2(Indicators);
 				return node;
 			}
@@ -639,6 +675,15 @@ namespace CoinFlip
 			private bool? m_show_positions;
 			private const bool m_def_show_positions = false;
 
+			/// <summary>Show current market depth</summary>
+			public bool ShowMarketDepth
+			{
+				get { return m_show_market_depth ?? Inherit?.m_show_market_depth ?? m_def_show_market_depth; }
+				set { SetProp(nameof(m_show_market_depth), value, m_def_show_market_depth); }
+			}
+			private bool? m_show_market_depth;
+			private const bool m_def_show_market_depth = false;
+
 			/// <summary>Indicators on this chart</summary>
 			public XElement Indicators { get; set; }
 
@@ -673,6 +718,9 @@ namespace CoinFlip
 
 		/// <summary>The fee charged per trade</summary>
 		decimal TransactionFee { get; set; }
+
+		/// <summary>The market depth to retrieve</summary>
+		int MarketDepth { get; set; }
 
 		/// <summary>The maximum number of requests per second to the exchange server</summary>
 		float ServerRequestRateLimit { get; set; }

@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Net;
-using System.Net.Http;
 using System.Reflection;
 using System.Text;
 
@@ -127,18 +125,5 @@ namespace Bittrex.API
 		}
 		public string Key;
 		public object Value;
-	}
-
-	/// <summary>Http response exception</summary>
-	public class HttpResponseException :Exception
-	{
-		public HttpResponseException(HttpResponseMessage response)
-			:base(response.ReasonPhrase)
-		{
-			StatusCode = response.StatusCode;
-		}
-
-		/// <summary>Status code returned in the HTTP response</summary>
-		public HttpStatusCode StatusCode { get; private set; }
 	}
 }

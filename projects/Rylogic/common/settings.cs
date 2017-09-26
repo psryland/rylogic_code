@@ -442,9 +442,14 @@ namespace pr.common
 			{
 				// If anything goes wrong, use the defaults
 				// Use 'new T().Data' so that reference types can be used, otherwise we'll change the defaults
-				SettingsEvent(ESettingsEvent.LoadFailed, ex, "Failed to load settings from {0}".Fmt(Filepath));
 				foreach (var d in new T().Data) // use 'set' so that ISettingsSets are parented correctly
 					set(d.Key, d.Value);
+
+				// Notify of load failure
+				SettingsEvent(ESettingsEvent.LoadFailed, ex, "Failed to load settings from {0}".Fmt(Filepath));
+
+				// Parse the exception up
+				throw;
 			}
 		}
 

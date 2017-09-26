@@ -55,10 +55,10 @@ namespace CoinFlip
 		private CryptopiaApi m_api;
 
 		/// <summary>Open a trade</summary>
-		protected async override Task<TradeResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> price)
+		protected override TradeResult CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> price)
 		{
 			// Place the trade order
-			var msg = await Api.SubmitTrade(tt.ToCryptopiaTT(), pair.TradePairId.Value, volume, price);
+			var msg = Api.SubmitTrade(tt.ToCryptopiaTT(), pair.TradePairId.Value, volume, price);
 			if (!msg.Success)
 				throw new Exception(
 					"Cryptopia: Submit order failed. {0}\n".Fmt(msg.Error) +
@@ -69,9 +69,9 @@ namespace CoinFlip
 		}
 
 		/// <summary>Cancel an open trade</summary>
-		protected async override Task CancelOrderInternal(TradePair pair, ulong order_id)
+		protected override void CancelOrderInternal(TradePair pair, ulong order_id)
 		{
-			var msg = await Api.CancelTrade(ECancelTradeType.Trade, order_id:(int)order_id);
+			var msg = Api.CancelTrade(ECancelTradeType.Trade, order_id:(int)order_id);
 			if (!msg.Success && !Regex.IsMatch(msg.Error, @"Trade #\d+ does not exist"))
 				throw new Exception(
 					"Cryptopia: Cancel trade failed. {0}\n".Fmt(msg.Error) +
@@ -79,12 +79,12 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update the collections of coins and pairs</summary>
-		public async override Task UpdatePairs(HashSet<string> coi) // Worker thread context
+		public override void UpdatePairs(HashSet<string> coi) // Worker thread context
 		{
 			try
 			{
 				// Get all available trading pairs
-				var msg = await Api.GetTradePairs();
+				var msg = Api.GetTradePairs();
 				if (!msg.Success)
 					throw new Exception("Cryptopia: Failed to read available trading pairs. {0}".Fmt(msg.Error));
 
@@ -120,12 +120,12 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				HandleUpdateException(nameof(UpdatePairs), ex);
+				HandleException(nameof(UpdatePairs), ex);
 			}
 		}
 
 		/// <summary>Update the market data, balances, and open positions</summary>
-		protected async override Task UpdateData() // Worker thread context
+		protected override void UpdateData() // Worker thread context
 		{
 			try
 			{
@@ -139,8 +139,8 @@ namespace CoinFlip
 
 				// Request the order book data for all of the pairs
 				var order_book = ids.Length != 0 
-					? await Api.GetMarketOrderGroups(ids, order_count:10)
-					: await Task.FromResult(new MarketOrderGroupsResponse());
+					? Api.GetMarketOrderGroups(ids, order_count:Settings.MarketDepth)
+					: new MarketOrderGroupsResponse();
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
@@ -175,12 +175,12 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				HandleUpdateException(nameof(UpdateData), ex);
+				HandleException(nameof(UpdateData), ex);
 			}
 		}
 
 		/// <summary>Update account balance data</summary>
-		protected async override Task UpdateBalances() // Worker thread context
+		protected override void UpdateBalances() // Worker thread context
 		{
 			try
 			{
@@ -188,7 +188,7 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the account data
-				var msg = await Api.GetBalances();
+				var msg = Api.GetBalances();
 				if (!msg.Success)
 					throw new Exception("Cryptopia: Failed to update account balances. {0}".Fmt(msg.Error));
 
@@ -215,12 +215,12 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				HandleUpdateException(nameof(UpdateBalances), ex);
+				HandleException(nameof(UpdateBalances), ex);
 			}
 		}
 
 		/// <summary>Update open positions</summary>
-		protected async override Task UpdatePositions() // Worker thread context
+		protected override void UpdatePositions() // Worker thread context
 		{
 			try
 			{
@@ -228,7 +228,7 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the existing orders
-				var msg = await Api.GetOpenOrders();
+				var msg = Api.GetOpenOrders();
 				if (!msg.Success)
 					throw new Exception("Cryptopia: Failed to received existing orders. {0}".Fmt(msg.Error));
 
@@ -261,12 +261,12 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				HandleUpdateException(nameof(UpdatePositions), ex);
+				HandleException(nameof(UpdatePositions), ex);
 			}
 		}
 
 		/// <summary>Update the trade history</summary>
-		protected async override Task UpdateTradeHistory() // Worker thread context
+		protected override void UpdateTradeHistory() // Worker thread context
 		{
 			try
 			{
@@ -274,7 +274,7 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the history
-				var msg = await Api.GetTradeHistory(count:10);
+				var msg = Api.GetTradeHistory(count:10);
 				if (!msg.Success)
 					throw new Exception("Cryptopia: Failed to received trade history. {0}".Fmt(msg.Error));
 
@@ -301,7 +301,7 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				HandleUpdateException(nameof(UpdateTradeHistory), ex);
+				HandleException(nameof(UpdateTradeHistory), ex);
 			}
 		}
 
@@ -309,35 +309,6 @@ namespace CoinFlip
 		protected override void SetServerRequestRateLimit(float limit)
 		{
 			Api.ServerRequestRateLimit = limit;
-		}
-
-		/// <summary>Handle an exception during an update call</summary>
-		private void HandleUpdateException(string method_name, Exception ex)
-		{
-			if (ex is AggregateException ae)
-			{
-				ex = ae.InnerExceptions.First();
-			}
-			if (ex is OperationCanceledException)
-			{
-				// Ignore operation cancelled
-				return;
-			}
-			if (ex is HttpResponseException hre)
-			{
-				if (hre.StatusCode == HttpStatusCode.ServiceUnavailable)
-				{
-					if (Status != EStatus.Offline)
-						Model.Log.Write(ELogLevel.Warn, "Cryptopia Service Unavailable");
-
-					Status = EStatus.Offline;
-				}
-				return;
-			}
-
-			// Log all other error types
-			Model.Log.Write(ELogLevel.Error, ex, $"Cryptopia {method_name} failed");
-			Status = EStatus.Error;
 		}
 
 		/// <summary>Convert a Cryptopia open order result into a position object</summary>

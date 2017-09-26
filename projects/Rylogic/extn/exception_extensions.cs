@@ -14,23 +14,24 @@ namespace pr.extn
 		/// <summary>Returns a message that includes the messages from any inner exceptions as well</summary>
 		public static string MessageFull(this Exception e)
 		{
-			var sb = new StringBuilder();
-			do
+			var sb = new StringBuilder(e.Message);
+			for (;(e = e.InnerException) != null;)
 			{
-				var skip = (e is TargetInvocationException && e.InnerException != null);
-				if (!skip) sb.AppendLine(e.Message);
+				sb.AppendLine();
+				sb.Append(e.Message);
 			}
-			while ((e = e.InnerException) != null);
 			return sb.ToString();
 		}
 
 		/// <summary>Returns a message that includes the messages from any inner exceptions as well</summary>
 		public static string MessageFull(this AggregateException e)
 		{
+			e = e.Flatten();
 			var sb = new StringBuilder();
-			foreach (var ex in e.InnerExceptions)
+			for (int i = 0, iend = e.InnerExceptions.Count; i != iend; ++i)
 			{
-				sb.AppendLine(ex.Message);
+				sb.Append(e.InnerExceptions[i].MessageFull());
+				if (i+1 != iend) sb.AppendLine();
 			}
 			return sb.ToString();
 		}

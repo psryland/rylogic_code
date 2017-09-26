@@ -4,12 +4,42 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using pr.container;
 using pr.extn;
-using pr.maths;
 using pr.util;
 
 namespace CoinFlip
 {
-	/// <summary>Depth of market. The available trades ordered by price. (Increasing for Ask, Decreasing for Bid).</summary>
+	/// <summary>Depth of market (both buys and sells)</summary>
+	public class MarketDepth
+	{
+		public MarketDepth(Coin base_, Coin quote)
+		{
+			Q2B = new OrderBook(base_, quote);
+			B2Q = new OrderBook(base_, quote);
+		}
+
+		/// <summary>Prices for converting Base to Quote. First price is a maximum</summary>
+		public OrderBook B2Q { [DebuggerStepThrough] get; private set; }
+
+		/// <summary>Prices for converting Quote to Base. First price is a minimum</summary>
+		public OrderBook Q2B { [DebuggerStepThrough] get; private set; }
+
+		/// <summary>Update the list of buy/sell orders</summary>
+		public void UpdateOrderBook(IEnumerable<Order> buys, IEnumerable<Order> sells)
+		{
+			using (B2Q.Orders.SuspendEvents(reset_bindings_on_resume: true))
+			{
+				B2Q.Orders.Clear();
+				B2Q.Orders.AddRange(buys);
+			}
+			using (Q2B.Orders.SuspendEvents(reset_bindings_on_resume: true))
+			{
+				Q2B.Orders.Clear();
+				Q2B.Orders.AddRange(sells);
+			}
+		}
+	}
+
+	/// <summary>Depth of market (one side, buy or sell). The available trades ordered by price. (Increasing for Ask, Decreasing for Bid).</summary>
 	[DebuggerDisplay("{Description,nq}")]
 	public class OrderBook :IEnumerable<Order>
 	{

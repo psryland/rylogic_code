@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using pr.attrib;
@@ -37,26 +38,34 @@ namespace CoinFlip
 		private ToolStripButton m_btn_horz_line;
 		private ToolStripButton m_btn_vert_line;
 		private ToolStripButton m_btn_trend_line;
-		private ChartControl m_chart;
 		#endregion
 
 		public ChartUI(Model model)
 			:base(model, "Chart")
 		{
-			InitializeComponent();
+			try
+			{
+				InitializeComponent();
 
-			// Create the chart control
-			m_chart = new ChartControl(string.Empty, new ChartControl.RdrOptions());
-			ChartSettings = model.Settings.ChartTemplate;
+				// Create the chart control
+				ChartCtrl = new ChartControl(string.Empty, new ChartControl.RdrOptions());
+				ChartSettings = model.Settings.ChartTemplate;
 
-			// Graphics cache
-			GfxCache = new Cache<Guid, View3d.Object>{ Capacity = 100 };
-			CandleGfxCache = new Cache<int, CachedGfx>();
+				// Graphics
+				GfxCandles = new GfxObjectCandles(this);
+				GfxMarketDepth = new GfxObjectMarketDepth(this);
+				GfxPositions = new GfxObjectPositions(this);
 
-			// Chart indicators
-			Indicators = new BindingSource<Indicator> { DataSource = new BindingListEx<Indicator>(), PerItemClear = true };
+				// Chart indicators
+				Indicators = new BindingSource<Indicator> { DataSource = new BindingListEx<Indicator>(), PerItemClear = true };
 
-			SetupUI();
+				SetupUI();
+			}
+			catch (Exception)
+			{
+				Dispose();
+				throw;
+			}
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -65,9 +74,10 @@ namespace CoinFlip
 			Instrument = null;
 			GfxAsk = null;
 			GfxBid = null;
-			GfxCache = null;
-			CandleGfxCache = null;
-			Util.Dispose(ref m_chart);
+			GfxPositions = null;
+			GfxMarketDepth = null;
+			GfxCandles = null;
+			ChartCtrl = null;
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
@@ -86,17 +96,46 @@ namespace CoinFlip
 		}
 		private void HandleModelPairsListChanging(object sender = null, ListChgEventArgs<TradePair> e = null)
 		{
-			UpdateAvailablePairs();
+			if (e == null || e.IsDataChanged)
+				UpdateAvailablePairs();
 		}
 
 		/// <summary>Settings for this chart instance</summary>
-		public Settings.ChartSettings ChartSettings { get; private set; }
+		public Settings.ChartSettings ChartSettings
+		{
+			get { return m_chart_settings; }
+			private set
+			{
+				if (m_chart_settings == value) return;
+				m_chart_settings = value;
+				if (m_chart_settings != null)
+				{
+					// Apply new settings
+					m_chk_show_positions.Checked = m_chart_settings.ShowPositions;
+					m_chk_show_depth.Checked = m_chart_settings.ShowMarketDepth;
+				}
+			}
+		}
+		private Settings.ChartSettings m_chart_settings;
 
 		/// <summary>The tab text for the chart</summary>
 		public string ChartTitle
 		{
 			get { return $"{Instrument?.SymbolCode ?? "Chart"},{TimeFrame}"; }
 		}
+
+		/// <summary>The ChartControl</summary>
+		public ChartControl ChartCtrl
+		{
+			get { return m_chart_ctrl; }
+			set
+			{
+				if (m_chart_ctrl == value) return;
+				Util.Dispose(ref m_chart_ctrl);
+				m_chart_ctrl = value;
+			}
+		}
+		private ChartControl m_chart_ctrl;
 
 		/// <summary>The pairs with chart data available</summary>
 		private IEnumerable<TradePair> AvailablePairs
@@ -106,11 +145,13 @@ namespace CoinFlip
 		private void UpdateAvailablePairs()
 		{
 			using (m_cb_pair.ComboBox.PreserveSelectedItem())
+			using (Scope.Create(() => ++m_in_update_available_pairs, () => --m_in_update_available_pairs))
 			{
-				m_cb_pair.ComboBox.Items.Clear();
-				m_cb_pair.ComboBox.Items.AddRange(AvailablePairs);
+				m_cb_pair.ComboBox.Items.Merge(AvailablePairs);
+				m_cb_pair.ComboBox.Items.Sort();
 			}
 		}
+		private int m_in_update_available_pairs;
 
 		/// <summary>The time frames available for the current instrument</summary>
 		private IEnumerable<ETimeFrame> AvailableTimeFrames
@@ -119,19 +160,24 @@ namespace CoinFlip
 			{
 				var pair = Instrument?.Pair;
 				var exch = pair?.Exchange;
-				return exch != null
-					? exch.ChartDataAvailable(pair)
-					: new [] { ETimeFrame.None };
+				yield return ETimeFrame.None;
+				if (exch == null) yield break;
+				foreach (var tf in exch.ChartDataAvailable(pair))
+					yield return tf;
 			}
 		}
 		private void UpdateAvailableTimeFrames()
 		{
 			using (m_cb_time_frame.ComboBox.PreserveSelectedItem())
+			using (Scope.Create(() => ++m_in_update_time_frames, () => --m_in_update_time_frames))
 			{
-				m_cb_time_frame.ComboBox.Items.Clear();
-				m_cb_time_frame.ComboBox.Items.AddRange(AvailableTimeFrames);
+				m_cb_time_frame.ComboBox.Items.Merge(AvailableTimeFrames);
+				m_cb_time_frame.ComboBox.Items.Sort();
 			}
+			if (m_cb_time_frame.ComboBox.SelectedItem == null)
+				m_cb_time_frame.ComboBox.SelectedItem = ETimeFrame.None;
 		}
+		private int m_in_update_time_frames;
 
 		/// <summary>The currency pair displayed in the chart</summary>
 		public Instrument Instrument
@@ -156,10 +202,13 @@ namespace CoinFlip
 		private void SetInstrument(TradePair pair)
 		{
 			Debug.Assert(!IsChartLocked);
+			if (Instrument?.Pair == pair)
+				return;
 
 			// Clear the previous instrument and settings
 			Instrument = null;
 			ChartSettings = null;
+			TimeFrame = ETimeFrame.None;
 
 			if (pair != null)
 			{
@@ -174,7 +223,7 @@ namespace CoinFlip
 					Model.Settings.Charts = Model.Settings.Charts.Concat(ChartSettings).ToArray();
 				}
 				ChartSettings.Inherit = Model.Settings.ChartTemplate;
-				m_chart.Options = ChartSettings.Style;
+				ChartCtrl.Options = ChartSettings.Style;
 
 				// Update the time frames
 				UpdateAvailableTimeFrames();
@@ -192,13 +241,12 @@ namespace CoinFlip
 			{
 				// Invalidate the cache value that contains 'idx'
 				var idx = Instrument.IndexAt(new TimeFrameTime(e.Candle.Timestamp, TimeFrame));
-				var cache_idx = idx / GfxModelBatchSize;
-				CandleGfxCache.Invalidate(cache_idx);
+				GfxCandles.Invalidate(idx);
 			}
 			else
 			{
 				// Otherwise, just invalidate the whole cache
-				CandleGfxCache.Flush();
+				GfxCandles.Flush();
 			}
 
 			// Auto scroll if 'e.Candle' is a new candle
@@ -206,16 +254,19 @@ namespace CoinFlip
 			{
 				// If the latest candle is visible, move the X-Axis range forward.
 				var latest_idx = (double)Instrument.Count;
-				if (latest_idx.Within(m_chart.XAxis.Min, m_chart.XAxis.Max))
-					m_chart.XAxis.Set(m_chart.XAxis.Min + 1, m_chart.XAxis.Max + 1);
+				if (latest_idx.Within(ChartCtrl.XAxis.Min, ChartCtrl.XAxis.Max))
+					ChartCtrl.XAxis.Set(ChartCtrl.XAxis.Min + 1, ChartCtrl.XAxis.Max + 1);
 				
 				// Otherwise, scroll the YAxis to ensure the latest price is visible
 				//else
 				//	EnsureLatestPriceDisplayed();
 			}
 
+			// Invalidate other instrument data dependent graphics
+			GfxMarketDepth.Invalidate();
+
 			// Signal a refresh
-			m_chart.Invalidate();
+			ChartCtrl.Invalidate();
 		}
 
 		/// <summary>The collection of indicators on this chart</summary>
@@ -246,7 +297,7 @@ namespace CoinFlip
 				{
 					// Ensure the 'Chart' property is set on the indicator
 					args.Item.Instrument = Instrument;
-					args.Item.Chart = m_chart;
+					args.Item.Chart = ChartCtrl;
 
 				//	// When the indicator changes, update the saved chart settings
 				//	args.Item.DataChanged += HandleIndicatorChanged;
@@ -301,12 +352,14 @@ namespace CoinFlip
 			[DebuggerStepThrough] get { return Instrument?.TimeFrame ?? ETimeFrame.None; }
 			set
 			{
-				if (TimeFrame == value) return;
-				if (Instrument == null) return;
-				Instrument.TimeFrame = value;
+				if (Instrument?.TimeFrame == value) return;
+				if (Instrument != null)
+					Instrument.TimeFrame = value;
+
 				DockControl.TabText = ChartTitle;
-				CandleGfxCache.Flush();
-				m_chart.AutoRange();
+				GfxCandles.Flush();
+				ChartCtrl.AutoRange();
+				m_cb_time_frame.SelectedItem = value;
 			}
 		}
 
@@ -325,19 +378,28 @@ namespace CoinFlip
 			// Combo for choosing the pair to display
 			m_cb_pair.ToolTipText = "Select the currency pair to display";
 			m_cb_pair.ComboBox.DisplayProperty = nameof(TradePair.NameWithExchange);
-			m_cb_pair.ComboBox.Items.AddRange(AvailablePairs);
+			UpdateAvailablePairs();
+			m_cb_pair.ComboBox.DropDown += (s,a) =>
+			{
+				UpdateAvailablePairs();
+			};
 			m_cb_pair.ComboBox.SelectedIndexChanged += (s,a) =>
 			{
-				if (IsChartLocked) return;
+				if (IsChartLocked || m_in_update_available_pairs != 0) return;
 				SetInstrument((TradePair)m_cb_pair.ComboBox.SelectedItem);
 			};
 
 			// Combo for choosing the time frame
 			m_cb_time_frame.ToolTipText = "Select the time frame to display";
-			m_cb_time_frame.ComboBox.Items.AddRange(AvailableTimeFrames);
+			UpdateAvailableTimeFrames();
+			m_cb_time_frame.SelectedItem = ETimeFrame.None;
+			m_cb_time_frame.ComboBox.DropDown += (s,a) =>
+			{
+				UpdateAvailableTimeFrames();
+			};
 			m_cb_time_frame.ComboBox.SelectedIndexChanged += (s,a) =>
 			{
-				if (IsChartLocked) return;
+				if (IsChartLocked || m_in_update_time_frames != 0) return;
 				TimeFrame = (ETimeFrame)m_cb_time_frame.ComboBox.SelectedItem;
 			};
 
@@ -347,7 +409,16 @@ namespace CoinFlip
 			m_chk_show_positions.CheckedChanged += (s,a) =>
 			{
 				ChartSettings.ShowPositions = m_chk_show_positions.Checked;
-				m_chart.Invalidate();
+				ChartCtrl.Invalidate();
+			};
+
+			// Show market depth
+			m_chk_show_depth.ToolTipText = "Show/Hide market depth";
+			m_chk_show_depth.Checked = ChartSettings.ShowMarketDepth;
+			m_chk_show_depth.CheckedChanged += (s,a) =>
+			{
+				ChartSettings.ShowMarketDepth = m_chk_show_depth.Checked;
+				ChartCtrl.Invalidate();
 			};
 
 			#endregion
@@ -359,49 +430,49 @@ namespace CoinFlip
 			m_btn_horz_line.Click += (s,a) =>
 			{
 				m_btn_horz_line.Checked = true;
-				m_chart.MouseOperations.SetPending(MouseButtons.Left,
+				ChartCtrl.MouseOperations.SetPending(MouseButtons.Left,
 					new DropNewIndicatorOp(this,
-						() => new IndicatorHorzLine{ Price = (decimal)m_chart.YAxis.Centre },
+						() => new IndicatorHorzLine{ Price = (decimal)ChartCtrl.YAxis.Centre },
 						() => m_btn_horz_line.Checked = false));
 			};
 
 			#endregion
 
 			#region Chart
-			m_chart.Name                     = "m_chart";
-			m_chart.BorderStyle              = BorderStyle.FixedSingle;
-			m_chart.Dock                     = DockStyle.Fill;
-			m_chart.DefaultMouseControl      = true;
-			m_chart.DefaultKeyboardShortcuts = true;
+			ChartCtrl.Name                     = "m_chart";
+			ChartCtrl.BorderStyle              = BorderStyle.FixedSingle;
+			ChartCtrl.Dock                     = DockStyle.Fill;
+			ChartCtrl.DefaultMouseControl      = true;
+			ChartCtrl.DefaultKeyboardShortcuts = true;
 
-			m_chart.XAxis.Options.ShowGridLines = true;
-			m_chart.XAxis.Options.PixelsPerTick = 50;
-			m_chart.XAxis.Options.TickFont = new Font("tahoma", 7f, FontStyle.Regular, GraphicsUnit.Point);
-			m_chart.XAxis.Options.MinTickSize = m_chart.XAxis.Options.TickFont.Height * 2.2f;
-			m_chart.XAxis.TickText = HandleChartXAxisLabels;
+			ChartCtrl.XAxis.Options.ShowGridLines = true;
+			ChartCtrl.XAxis.Options.PixelsPerTick = 50;
+			ChartCtrl.XAxis.Options.TickFont = new Font("tahoma", 7f, FontStyle.Regular, GraphicsUnit.Point);
+			ChartCtrl.XAxis.Options.MinTickSize = ChartCtrl.XAxis.Options.TickFont.Height * 2.2f;
+			ChartCtrl.XAxis.TickText = HandleChartXAxisLabels;
 
-			m_chart.YAxis.Options.ShowGridLines = true;
-			m_chart.YAxis.Options.PixelsPerTick = 20;
-			m_chart.YAxis.Options.MinTickSize = 50;
-			m_chart.YAxis.Options.TickFont = new Font("tahoma", 7f, FontStyle.Regular, GraphicsUnit.Point);
-			m_chart.YAxis.TickText = HandleChartYAxisTickText;
-			m_chart.YAxis.MeasureTickText = HandleChartYAxisMeasureTickText;
+			ChartCtrl.YAxis.Options.ShowGridLines = true;
+			ChartCtrl.YAxis.Options.PixelsPerTick = 20;
+			ChartCtrl.YAxis.Options.MinTickSize = 50;
+			ChartCtrl.YAxis.Options.TickFont = new Font("tahoma", 7f, FontStyle.Regular, GraphicsUnit.Point);
+			ChartCtrl.YAxis.TickText = HandleChartYAxisTickText;
+			ChartCtrl.YAxis.MeasureTickText = HandleChartYAxisMeasureTickText;
 
-			//m_chart.FindingDefaultRange += HandleFindingDefaultRange;
-			m_chart.ChartRendering      += HandleChartRendering;
-			m_chart.MouseDown           += HandleChartMouseDown;
-			m_chart.AddOverlaysOnPaint  += HandleAddOverlaysOnPaint;
-			m_chart.AddUserMenuOptions  += HandleChartCMenu;
-			m_chart.AutoRanging         += HandleAutoRanging;
+			ChartCtrl.ChartMoved          += HandleChartMoved;
+			ChartCtrl.ChartRendering      += HandleChartRendering;
+			ChartCtrl.MouseDown           += HandleChartMouseDown;
+			ChartCtrl.AddOverlaysOnPaint  += HandleAddOverlaysOnPaint;
+			ChartCtrl.AddUserMenuOptions  += HandleChartCMenu;
+			ChartCtrl.AutoRanging         += HandleAutoRanging;
 
-			m_chart.OptionsChanged += (s,a) =>
+			ChartCtrl.OptionsChanged += (s,a) =>
 			{
 				// Have to manually invoke save because the reference 'm_chart.Options'
 				// doesn't change, only the properties within it.
-				ChartSettings.Style = m_chart.Options;
+				ChartSettings.Style = ChartCtrl.Options;
 				Model.Settings.Save();
 			};
-			m_chart.ChartAreaSelect += (s,a) =>
+			ChartCtrl.ChartAreaSelect += (s,a) =>
 			{
 				// Area select zoom if control is held down
 //fixme			var rect = new RectangleF(a.SelectionArea.MinX, a.SelectionArea.MinY, a.SelectionArea.SizeX, a.SelectionArea.SizeY);
@@ -411,7 +482,7 @@ namespace CoinFlip
 				a.Handled = true;
 			};
 
-			m_tsc.ContentPanel.Controls.Add(m_chart);
+			m_tsc.ContentPanel.Controls.Add(ChartCtrl);
 			#endregion
 
 			#region Chart Graphics
@@ -435,6 +506,23 @@ namespace CoinFlip
 			if (ChartSettings.Indicators != null)
 				foreach (var node in ChartSettings.Indicators.Elements(nameof(Indicator)))
 					Indicators.Add((Indicator)node.ToObject());
+		}
+
+		/// <summary>Place a new order directly from the chart</summary>
+		private void PlaceNewOrder(ETradeType tt)
+		{
+			// Add an order/trade indicator to the chart
+
+			// Display a UI with the properties of the order (non-modal)
+
+			// Allow the order to be dragged up and down on the chart
+
+			//		Model.Positions.Orders.Add2(new Order(0, Instrument, tt, Trade.EState.Visualising)
+			//		{
+			//			EntryPrice = click_price,
+			//			StopLossRel = m_chart.YAxis.Span * 0.1,
+			//			TakeProfitRel = m_chart.YAxis.Span * 0.1,
+			//		});
 		}
 
 		/// <summary>Convert the XAxis values into pretty datetime strings</summary>
@@ -467,7 +555,7 @@ namespace CoinFlip
 
 			// Get the time stamp of the candle at the tick mark in local time
 			var dt_curr = TimeZone.CurrentTimeZone.ToLocalTime(new DateTimeOffset(Instrument[curr].Timestamp, TimeSpan.Zero).DateTime);
-			if (curr == first || prev < first || x - step < m_chart.XAxis.Min) // First tick on the x axis
+			if (curr == first || prev < first || x - step < ChartCtrl.XAxis.Min) // First tick on the x axis
 				return dt_curr.ToString(long_fmt);
 
 			// If the current tick mark represents the same candle as the previous one, no text is required
@@ -500,8 +588,8 @@ namespace CoinFlip
 		/// <summary>Measure the size of the y axis text</summary>
 		private float HandleChartYAxisMeasureTickText(Graphics gfx, bool width)
 		{
-			var sz0 = gfx.MeasureString(HandleChartYAxisTickText(m_chart.YAxis.Min, 0.0), m_chart.YAxis.Options.TickFont);
-			var sz1 = gfx.MeasureString(HandleChartYAxisTickText(m_chart.YAxis.Max, 0.0), m_chart.YAxis.Options.TickFont);
+			var sz0 = gfx.MeasureString(HandleChartYAxisTickText(ChartCtrl.YAxis.Min, 0.0), ChartCtrl.YAxis.Options.TickFont);
+			var sz1 = gfx.MeasureString(HandleChartYAxisTickText(ChartCtrl.YAxis.Max, 0.0), ChartCtrl.YAxis.Options.TickFont);
 			return width ? Math.Max(sz0.Width, sz1.Width) : Math.Max(sz0.Height, sz1.Height);
 		}
 
@@ -512,14 +600,14 @@ namespace CoinFlip
 			if (ModifierKeys == Keys.Control)
 			{
 				// Look for hit drag-able indicators
-				var hit = m_chart.HitTestCS(args.Location, ModifierKeys, x => (x as Indicator)?.Dragable ?? false);
+				var hit = ChartCtrl.HitTestCS(args.Location, ModifierKeys, x => (x as Indicator)?.Dragable ?? false);
 				if (hit.Hits.Count != 0)
 				{
 					var indy = (Indicator)hit.Hits[0].Element;
 			
 					// Create a mouse operation for dragging the indicator
 					var op = indy.CreateDragMouseOp();
-					m_chart.MouseOperations.SetPending(MouseButtons.Left, op);
+					ChartCtrl.MouseOperations.SetPending(MouseButtons.Left, op);
 				}
 			}
 		}
@@ -533,9 +621,9 @@ namespace CoinFlip
 			// Add the ask/bid price to the Y axis
 			using (var bsh = new SolidBrush(ChartSettings.AskColour))
 			{
-				var price     = Instrument.Q2BPrice;
+				var price     = (float)(decimal)Instrument.Q2BPrice;
 				var price_str = e.Chart.YAxis.TickText(price, 0.0);
-				var pt        = e.Chart.ChartToClient(new PointF((float)e.Chart.XAxis.Min, (float)price));
+				var pt        = e.Chart.ChartToClient(new PointF((float)e.Chart.XAxis.Min, price));
 				var sz        = e.Gfx.MeasureString(price_str, e.Chart.YAxis.Options.TickFont);
 				var box       = sz.Scaled(1.05f);
 				e.Gfx.FillRectangle(bsh, new RectangleF(pt.X - box.Width, pt.Y - box.Height/2, box.Width, box.Height));
@@ -543,9 +631,9 @@ namespace CoinFlip
 			}
 			using (var bsh = new SolidBrush(ChartSettings.BidColour))
 			{
-				var price     = Instrument.B2QPrice;
+				var price     = (float)(decimal)Instrument.B2QPrice;
 				var price_str = e.Chart.YAxis.TickText(price, 0.0);
-				var pt        = e.Chart.ChartToClient(new PointF((float)e.Chart.XAxis.Min, (float)price));
+				var pt        = e.Chart.ChartToClient(new PointF((float)e.Chart.XAxis.Min, price));
 				var sz        = e.Gfx.MeasureString(price_str, e.Chart.YAxis.Options.TickFont);
 				var box       = sz.Scaled(1.05f);
 				e.Gfx.FillRectangle(bsh, new RectangleF(pt.X - box.Width, pt.Y - box.Height/2, box.Width, box.Height));
@@ -642,23 +730,15 @@ namespace CoinFlip
 					#region Orders
 					{
 						// The price where the mouse was clicked
-						var click_price = e.HitResult.ChartPoint.Y;
-						Action<ETradeType> PlaceNewOrder = (tt) =>
-						{
-					//		Model.Positions.Orders.Add2(new Order(0, Instrument, tt, Trade.EState.Visualising)
-					//		{
-					//			EntryPrice = click_price,
-					//			StopLossRel = m_chart.YAxis.Span * 0.1,
-					//			TakeProfitRel = m_chart.YAxis.Span * 0.1,
-					//		});
-						};
-
+						var click_price = ((decimal)e.HitResult.ChartPoint.Y)._(Instrument.Pair.RateUnits);
 						{// Buy
-							var opt = e.Menu.Items.Insert2(idx++, new ToolStripMenuItem("Buy at {0}".Fmt(click_price)) { ForeColor = ChartSettings.AskColour });
+							var type = click_price > Instrument.B2QPrice ? "Stop" : "Limit";
+							var opt = e.Menu.Items.Insert2(idx++, new ToolStripMenuItem($"Buy {type} at {click_price}") { ForeColor = ChartSettings.AskColour });
 							opt.Click += (s,a) => PlaceNewOrder(ETradeType.B2Q);
 						}
 						{// Sell
-							var opt = e.Menu.Items.Insert2(idx++, new ToolStripMenuItem("Sell at {0}".Fmt(click_price)) { ForeColor = ChartSettings.BidColour });
+							var type = click_price < Instrument.Q2BPrice ? "Stop" : "Limit";
+							var opt = e.Menu.Items.Insert2(idx++, new ToolStripMenuItem("Sell {type} at {0}".Fmt(click_price)) { ForeColor = ChartSettings.BidColour });
 							opt.Click += (s,a) => PlaceNewOrder(ETradeType.Q2B);
 						}
 					}
@@ -707,13 +787,20 @@ namespace CoinFlip
 					bb = BBox.Encompass(bb, new v4(bb.Centre.x, (float)(decimal)pos.Price, Z.Trades, 1f));
 			}
 
+			// Swell the box a little for margins
 			if (bb.IsValid)
 			{
-				// Swell the box a little for margins
 				bb.Radius = new v4(bb.Radius.x, bb.Radius.y * 1.1f, bb.Radius.z, 0f);
 				e.ViewBBox = bb;
 				e.Handled = true;
 			}
+		}
+
+		/// <summary>Handle the chart moving (zoom or scroll)</summary>
+		private void HandleChartMoved(object sender, ChartControl.ChartMovedEventArgs args)
+		{
+			if (Bit.AnySet(args.MoveType, ChartControl.EMoveType.XZoomed|ChartControl.EMoveType.YZoomed))
+				GfxMarketDepth.Invalidate();
 		}
 
 		/// <summary>Handle the chart about to render</summary>
@@ -726,22 +813,11 @@ namespace CoinFlip
 			{
 				// Convert the XAxis values into an index range.
 				// (indices, not time frame units, because of the gaps in the price data).
-				var range = Instrument.IndexRange((int)(m_chart.XAxis.Min - 1), (int)(m_chart.XAxis.Max + 1));
+				var range = Instrument.IndexRange((int)(ChartCtrl.XAxis.Min - 1), (int)(ChartCtrl.XAxis.Max + 1));
 
-				// Convert the index range into a cache index range
-				var cache0 = range.Begi / GfxModelBatchSize;
-				var cache1 = range.Endi / GfxModelBatchSize;
-				for (int i = cache0; i <= cache1; ++i)
-				{
-					// Get the graphics model that contains candle 'i'
-					var gfx = GfxAt(i);
-					if (gfx.Gfx != null)
-					{
-						// Position the graphics object
-						gfx.Gfx.O2P = m4x4.Translation(new v4(gfx.DBIndexRange.Begi, 0.0f, Z.Candles, 1.0f));
-						args.AddToScene(gfx.Gfx);
-					}
-				}
+				// Add the candles that cover 'range'
+				foreach (var gfx in GfxCandles.Get(range))
+					args.AddToScene(gfx);
 			}
 			#endregion
 
@@ -750,14 +826,14 @@ namespace CoinFlip
 				// Add the ask and bid lines
 				if (GfxAsk != null)
 				{
-					var price = (float)Instrument.Q2BPrice;
-					GfxAsk.O2P = m4x4.Scale((float)m_chart.XAxis.Span, 1f, 1f, new v4((float)m_chart.XAxis.Min, price, Z.CurrentPrice, 1f));
+					var price = (float)(decimal)Instrument.Q2BPrice;
+					GfxAsk.O2P = m4x4.Scale((float)ChartCtrl.XAxis.Span, 1f, 1f, new v4((float)ChartCtrl.XAxis.Min, price, Z.CurrentPrice, 1f));
 					args.AddToScene(GfxAsk);
 				}
 				if (GfxBid != null)
 				{
-					var price = (float)Instrument.B2QPrice;
-					GfxBid.O2P = m4x4.Scale((float)m_chart.XAxis.Span, 1f, 1f, new v4((float)m_chart.XAxis.Min, price, Z.CurrentPrice, 1f));
+					var price = (float)(decimal)Instrument.B2QPrice;
+					GfxBid.O2P = m4x4.Scale((float)ChartCtrl.XAxis.Span, 1f, 1f, new v4((float)ChartCtrl.XAxis.Min, price, Z.CurrentPrice, 1f));
 					args.AddToScene(GfxBid);
 				}
 			}
@@ -768,11 +844,18 @@ namespace CoinFlip
 			{
 				// Get all positions on this instruction
 				foreach (var pos in AllPositions)
+					args.AddToScene(GfxPositions.Get(pos));
+			}
+			#endregion
+
+			#region Market Depth
+			if (ChartSettings.ShowMarketDepth)
+			{
+				var gfx = GfxMarketDepth.Gfx;
+				if (gfx != null)
 				{
-					var gfx = GfxCache.Get(pos.UniqueKey, g => new View3d.Object($"*Line Position_{pos.OrderId} FF8080FF {{ 0 0 0 1 0 0 }}", file:false));
-					var x = Instrument.IndexAt(new TimeFrameTime(pos.Created.Value, TimeFrame));
-					var y = (float)(decimal)pos.Price;
-					gfx.O2P = m4x4.Scale(Instrument.Count + 10 - x, 1f, 1f, new v4(x, y, Z.Trades, 1f));
+					// Market depth graphics created at x = 0
+					gfx.O2P = m4x4.Translation(Instrument.Count, 0f, Z.Indicators);
 					args.AddToScene(gfx);
 				}
 			}
@@ -811,18 +894,85 @@ namespace CoinFlip
 
 		#region Gfx
 
-		/// <summary>A cache of graphics models</summary>
-		private Cache<Guid, View3d.Object> GfxCache
+		/// <summary>Base class for graphics V,I,N buffers</summary>
+		private class GfxBuffers :IDisposable
 		{
-			get { return m_gfx_cache; }
-			set
+			/// <summary>Buffers for creating the graphics</summary>
+			protected List<View3d.Vertex> m_vbuf;
+			protected List<ushort>        m_ibuf;
+			protected List<View3d.Nugget> m_nbuf;
+
+			public GfxBuffers()
 			{
-				if (m_gfx_cache == value) return;
-				Util.Dispose(ref m_gfx_cache);
-				m_gfx_cache = value;
+				m_vbuf = new List<View3d.Vertex>();
+				m_ibuf = new List<ushort>();
+				m_nbuf = new List<View3d.Nugget>();
+			}
+			public virtual void Dispose()
+			{
+				m_vbuf = null;
+				m_ibuf = null;
+				m_nbuf = null;
 			}
 		}
-		private Cache<Guid, View3d.Object> m_gfx_cache;
+
+		/// <summary>A graphics instance that can be invalidated and recreated asynchronously</summary>
+		private abstract class GfxObject :GfxBuffers
+		{
+			public GfxObject()
+			{
+				m_issue0 = 0;
+				m_issue1 = 1;
+			}
+			public override void Dispose()
+			{
+				IsDisposed = true;
+				Invalidate();
+				Gfx = null;
+				base.Dispose();
+			}
+			protected bool IsDisposed { get; private set; }
+
+			/// <summary>The model to draw</summary>
+			public View3d.Object Gfx
+			{
+				get
+				{
+					// If the model is out of date, kick off an update
+					if (IsInvalidated && !IsDisposed)
+					{
+						m_issue0 = m_issue1;
+						UpdateGfx();
+					}
+					return m_gfx;
+				}
+				protected set
+				{
+					if (m_gfx == value) return;
+					Util.Dispose(ref m_gfx);
+					m_gfx = value;
+				}
+			}
+			private View3d.Object m_gfx;
+
+			/// <summary>Invalidate this graphics instance</summary>
+			public void Invalidate()
+			{
+				if (IsInvalidated) return;
+				++m_issue1;
+			}
+
+			/// <summary>True if the graphics object is out of date</summary>
+			public bool IsInvalidated
+			{
+				get { return m_issue1 != m_issue0; }
+			}
+			protected int m_issue1;
+			protected int m_issue0;
+
+			/// <summary>Update the graphic object asynchronously</summary>
+			protected abstract void UpdateGfx();
+		}
 
 		/// <summary>Graphics for the asking price line</summary>
 		private View3d.Object GfxAsk
@@ -850,143 +1000,363 @@ namespace CoinFlip
 		}
 		private View3d.Object m_gfx_bid;
 
-		/// <summary>A cache of the candle graphics</summary>
-		private Cache<int, CachedGfx> CandleGfxCache
+		/// <summary>Graphics objects for the candle data</summary>
+		private GfxObjectCandles GfxCandles
 		{
-			get { return m_gfx_candes_cache; }
+			get { return m_gfx_candles; }
 			set
 			{
-				if (m_gfx_candes_cache == value) return;
-				if (m_gfx_candes_cache != null)
-				{
-					m_vbuf = null;
-					m_ibuf = null;
-					m_nbuf = null;
-					Util.Dispose(ref m_gfx_candes_cache);
-				}
-				m_gfx_candes_cache = value;
-				if (m_gfx_candes_cache != null)
-				{
-					m_vbuf = new List<View3d.Vertex>();
-					m_ibuf = new List<ushort>();
-					m_nbuf = new List<View3d.Nugget>();
-				}
+				if (m_gfx_candles == value) return;
+				Util.Dispose(ref m_gfx_candles);
+				m_gfx_candles = value;
 			}
 		}
-		private Cache<int, CachedGfx> m_gfx_candes_cache;
-		private const int GfxModelBatchSize = 1024;
-		private class CachedGfx :IDisposable
+		private GfxObjectCandles m_gfx_candles;
+		private class GfxObjectCandles :GfxBuffers
 		{
-			public CachedGfx(View3d.Object gfx, Range db_index_range)
+			private const int BatchSize = 1024;
+
+			private readonly ChartUI m_chart;
+			private Cache<int, CandleGfx> m_cache;
+			public GfxObjectCandles(ChartUI chart)
 			{
-				Gfx = gfx;
-				DBIndexRange = db_index_range;
+				m_chart = chart;
+				m_cache = new Cache<int, CandleGfx>();
 			}
-			public void Dispose()
+			public override void Dispose()
 			{
-				Gfx = Util.Dispose(Gfx);
-				DBIndexRange = Range.Zero;
+				Util.Dispose(ref m_cache);
+				base.Dispose();
 			}
 
-			/// <summary>The graphics object containing 'GfxModelBatchSize' candles</summary>
-			public View3d.Object Gfx { get; private set; }
-
-			/// <summary>The index range of candles in this graphic</summary>
-			public Range DBIndexRange { get; private set; }
-		}
-
-		/// <summary>Buffers for creating the chart graphics</summary>
-		private List<View3d.Vertex> m_vbuf;
-		private List<ushort>        m_ibuf;
-		private List<View3d.Nugget> m_nbuf;
-
-		/// <summary>Returns the graphics model containing the data point with index 'cache_idx'</summary>
-		private CachedGfx GfxAt(int cache_idx)
-		{
-			// On miss, generate the graphics model for the data range [idx, idx + min(GfxModelBatchSize, Count-idx))
-			return CandleGfxCache.Get(cache_idx, i =>
+			/// <summary>Returns the candles graphics model containing the data point with index 'cache_idx'</summary>
+			private CandleGfx At(int cache_idx)
 			{
-				var db_idx_range = new Range((i+0) * GfxModelBatchSize, (i+1) * GfxModelBatchSize);
-
-				// Get the series data over the time range specified
-				var rng = Instrument.IndexRange(db_idx_range.Begi, db_idx_range.Endi);
-				if (rng.Counti == 0)
-					return new CachedGfx(null, rng);
-
-				// Using TriList for the bodies, and LineList for the wicks.
-				// So:    6 indices for the body, 4 for the wicks
-				//   __|__
-				//  |\    |
-				//  |  \  |
-				//  |____\|
-				//     |
-				// Dividing the index buffer into [bodies, wicks]
-				var candles = Instrument.CandleRange(rng.Begi, rng.Endi);
-				var count = rng.Counti;
-
-				// Resize the cache buffers
-				m_vbuf.Resize(8 * count);
-				m_ibuf.Resize((6+4) * count);
-				m_nbuf.Resize(2);
-
-				// Index of the first body index and the first wick index.
-				var vert = 0;
-				var body = 0;
-				var wick = 6 * count;
-				var nugt = 0;
-
-				// Create the geometry
-				var candle_idx = 0;
-				foreach (var candle in candles)
+				// On miss, generate the graphics model for the data range [idx, idx + min(BatchSize, Count-idx))
+				return m_cache.Get(cache_idx, i =>
 				{
-					// Create the graphics with the first candle at x == 0
-					var x = (float)candle_idx++;
-					var o = (float)Math.Max(candle.Open, candle.Close);
-					var h = (float)candle.High;
-					var l = (float)candle.Low;
-					var c = (float)Math.Min(candle.Open, candle.Close);
-					var col = candle.Bullish ? ChartSettings.BullishColour.ToArgbU() : candle.Bearish ? ChartSettings.BearishColour.ToArgbU() : 0xFFA0A0A0;
-					var v = vert;
+					var instrument = m_chart.Instrument;
+					var colour_bullish = m_chart.ChartSettings.BullishColour.ToArgbU();
+					var colour_bearish = m_chart.ChartSettings.BearishColour.ToArgbU();
+					var db_idx_range = new Range((i+0) * BatchSize, (i+1) * BatchSize);
 
-					// Prevent degenerate triangles
-					if (o == c)
+					// Get the series data over the time range specified
+					var rng = instrument.IndexRange(db_idx_range.Begi, db_idx_range.Endi);
+					if (rng.Counti == 0)
+						return new CandleGfx(null, rng);
+
+					// Using TriList for the bodies, and LineList for the wicks.
+					// So:    6 indices for the body, 4 for the wicks
+					//   __|__
+					//  |\    |
+					//  |  \  |
+					//  |____\|
+					//     |
+					// Dividing the index buffer into [bodies, wicks]
+					var candles = instrument.CandleRange(rng.Begi, rng.Endi);
+					var count = rng.Counti;
+
+					// Resize the cache buffers
+					m_vbuf.Resize(8 * count);
+					m_ibuf.Resize((6+4) * count);
+					m_nbuf.Resize(2);
+
+					// Index of the first body index and the first wick index.
+					var vert = 0;
+					var body = 0;
+					var wick = 6 * count;
+					var nugt = 0;
+
+					// Create the geometry
+					var candle_idx = 0;
+					foreach (var candle in candles)
 					{
-						o += m_chart.ClientToChart(new SizeF(0, 0.25f)).Height;
-						c -= m_chart.ClientToChart(new SizeF(0, 0.25f)).Height;
+						// Create the graphics with the first candle at x == 0
+						var x = (float)candle_idx++;
+						var o = (float)Math.Max(candle.Open, candle.Close);
+						var h = (float)candle.High;
+						var l = (float)candle.Low;
+						var c = (float)Math.Min(candle.Open, candle.Close);
+						var col = candle.Bullish ? colour_bullish : candle.Bearish ? colour_bearish : 0xFFA0A0A0;
+						var v = vert;
+
+						// Prevent degenerate triangles
+						if (o == c)
+						{
+							o += m_chart.ChartCtrl.ClientToChart(new SizeF(0, 0.25f)).Height;
+							c -= m_chart.ChartCtrl.ClientToChart(new SizeF(0, 0.25f)).Height;
+						}
+
+						// Candle verts
+						m_vbuf[vert++] = new View3d.Vertex(new v4(x        , h, 0f, 1f), col);
+						m_vbuf[vert++] = new View3d.Vertex(new v4(x        , o, 0f, 1f), col);
+						m_vbuf[vert++] = new View3d.Vertex(new v4(x - 0.4f , o, 0f, 1f), col);
+						m_vbuf[vert++] = new View3d.Vertex(new v4(x + 0.4f , o, 0f, 1f), col);
+						m_vbuf[vert++] = new View3d.Vertex(new v4(x - 0.4f , c, 0f, 1f), col);
+						m_vbuf[vert++] = new View3d.Vertex(new v4(x + 0.4f , c, 0f, 1f), col);
+						m_vbuf[vert++] = new View3d.Vertex(new v4(x        , c, 0f, 1f), col);
+						m_vbuf[vert++] = new View3d.Vertex(new v4(x        , l, 0f, 1f), col);
+
+						// Candle body
+						m_ibuf[body++] = (ushort)(v + 3);
+						m_ibuf[body++] = (ushort)(v + 2);
+						m_ibuf[body++] = (ushort)(v + 4);
+						m_ibuf[body++] = (ushort)(v + 4);
+						m_ibuf[body++] = (ushort)(v + 5);
+						m_ibuf[body++] = (ushort)(v + 3);
+
+						// Candle wick
+						m_ibuf[wick++] = (ushort)(v + 0);
+						m_ibuf[wick++] = (ushort)(v + 1);
+						m_ibuf[wick++] = (ushort)(v + 6);
+						m_ibuf[wick++] = (ushort)(v + 7);
 					}
 
-					// Candle verts
-					m_vbuf[vert++] = new View3d.Vertex(new v4(x        , h, 0f, 1f), col);
-					m_vbuf[vert++] = new View3d.Vertex(new v4(x        , o, 0f, 1f), col);
-					m_vbuf[vert++] = new View3d.Vertex(new v4(x - 0.4f , o, 0f, 1f), col);
-					m_vbuf[vert++] = new View3d.Vertex(new v4(x + 0.4f , o, 0f, 1f), col);
-					m_vbuf[vert++] = new View3d.Vertex(new v4(x - 0.4f , c, 0f, 1f), col);
-					m_vbuf[vert++] = new View3d.Vertex(new v4(x + 0.4f , c, 0f, 1f), col);
-					m_vbuf[vert++] = new View3d.Vertex(new v4(x        , c, 0f, 1f), col);
-					m_vbuf[vert++] = new View3d.Vertex(new v4(x        , l, 0f, 1f), col);
+					m_nbuf[nugt++] = new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert|View3d.EGeom.Colr, 0, (uint)vert, 0, (uint)body);
+					m_nbuf[nugt++] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert|View3d.EGeom.Colr, 0, (uint)vert, (uint)body, (uint)wick);
 
-					// Candle body
-					m_ibuf[body++] = (ushort)(v + 3);
-					m_ibuf[body++] = (ushort)(v + 2);
-					m_ibuf[body++] = (ushort)(v + 4);
-					m_ibuf[body++] = (ushort)(v + 4);
-					m_ibuf[body++] = (ushort)(v + 5);
-					m_ibuf[body++] = (ushort)(v + 3);
+					// Create the graphics
+					var gfx = new View3d.Object($"Candles-[{db_idx_range.Begi},{db_idx_range.Endi})", 0xFFFFFFFF, vert, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray());
+					return new CandleGfx(gfx, db_idx_range);
+				});
+			}
 
-					// Candle wick
-					m_ibuf[wick++] = (ushort)(v + 0);
-					m_ibuf[wick++] = (ushort)(v + 1);
-					m_ibuf[wick++] = (ushort)(v + 6);
-					m_ibuf[wick++] = (ushort)(v + 7);
+			/// <summary>Return graphics objects for the candles over the given range</summary>
+			public IEnumerable<View3d.Object> Get(Range candle_range)
+			{
+				// Convert the index range into a cache index range
+				var cache0 = candle_range.Begi / BatchSize;
+				var cache1 = candle_range.Endi / BatchSize;
+				for (int i = cache0; i <= cache1; ++i)
+				{
+					// Get the graphics model that contains candle 'i'
+					var gfx = At(i);
+					if (gfx.Gfx != null)
+					{
+						// Position the graphics object
+						gfx.Gfx.O2P = m4x4.Translation(new v4(gfx.DBIndexRange.Begi, 0.0f, Z.Candles, 1.0f));
+						yield return gfx.Gfx;
+					}
+				}
+			}
+
+			/// <summary>Invalidate the graphics object that contains the candle at 'candle_index'</summary>
+			public void Invalidate(int candle_index)
+			{
+				var cache_idx = candle_index / BatchSize;
+				m_cache.Invalidate(cache_idx);
+			}
+
+			/// <summary>Invalidate all candle graphics</summary>
+			public void Flush()
+			{
+				m_cache.Flush();
+			}
+
+			private class CandleGfx :IDisposable
+			{
+				public CandleGfx(View3d.Object gfx, Range db_index_range)
+				{
+					Gfx = gfx;
+					DBIndexRange = db_index_range;
+				}
+				public void Dispose()
+				{
+					Gfx = Util.Dispose(Gfx);
+					DBIndexRange = Range.Zero;
 				}
 
-				m_nbuf[nugt++] = new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert|View3d.EGeom.Colr, 0, (uint)vert, 0, (uint)body);
-				m_nbuf[nugt++] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert|View3d.EGeom.Colr, 0, (uint)vert, (uint)body, (uint)wick);
+				/// <summary>The graphics object containing 'GfxModelBatchSize' candles</summary>
+				public View3d.Object Gfx { get; private set; }
 
-				// Create the graphics
-				var gfx = new View3d.Object($"Candles-[{db_idx_range.Begi},{db_idx_range.Endi})", 0xFFFFFFFF, vert, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray());
-				return new CachedGfx(gfx, db_idx_range);
-			});
+				/// <summary>The index range of candles in this graphic</summary>
+				public Range DBIndexRange { get; private set; }
+			}
+		}
+
+		/// <summary>Graphics for the market depth indicator</summary>
+		private GfxObjectMarketDepth GfxMarketDepth
+		{
+			get { return m_gfx_market_depth; }
+			set
+			{
+				if (m_gfx_market_depth == value) return;
+				Util.Dispose(ref m_gfx_market_depth);
+				m_gfx_market_depth = value;
+			}
+		}
+		private GfxObjectMarketDepth m_gfx_market_depth;
+		private class GfxObjectMarketDepth :GfxObject
+		{
+			private readonly ChartUI m_chart;
+			public GfxObjectMarketDepth(ChartUI chart)
+			{
+				m_chart = chart;
+			}
+			protected override void UpdateGfx()
+			{
+				var pair = m_chart.Instrument.Pair;
+				var b2q_colour = m_chart.ChartSettings.AskColour.Alpha(0.5f).ToArgbU();
+				var q2b_colour = m_chart.ChartSettings.BidColour.Alpha(0.5f).ToArgbU();
+
+				// Update the graphics. Abort if a new invalidate arrives, or cancel is signalled
+				ThreadPool.QueueUserWorkItem(_ =>
+				{
+					if (IsInvalidated)
+						return;
+
+					// Get the market depth data (order book)
+					MarketDepth market_depth;
+					try { market_depth = pair.Exchange.MarketDepth(pair, 500); }
+					catch (Exception ex)
+					{
+						pair.Exchange.HandleException(nameof(Exchange.MarketDepth), ex);
+						return;
+					}
+					if (IsInvalidated)
+						return;
+
+					var b2q = market_depth.B2Q;
+					var q2b = market_depth.Q2B;
+					var count_b2q = b2q.Count;
+					var count_q2b = q2b.Count;
+					if (count_b2q == 0 && count_q2b == 0)
+						return;
+
+					// Find the bounds on the order book
+					var b2q_volume = 0m;
+					var q2b_volume = 0m;
+					var price_range = RangeF<decimal>.Invalid;
+					foreach (var order in b2q)
+					{
+						price_range.Encompass(order.Price);
+						b2q_volume += order.VolumeBase;
+					}
+					foreach (var order in q2b)
+					{
+						price_range.Encompass(order.Price);
+						q2b_volume += order.VolumeBase;
+					}
+					var max_volume = Math.Max(b2q_volume, q2b_volume);
+
+					// Update the graphics model in the GUI thread
+					m_chart.Model.RunOnGuiThread(() =>
+					{
+						if (IsInvalidated || IsDisposed)
+							return;
+
+						// Create triangles, 2 per order
+						//  [..---''']
+						//    [.--']     = q2b
+						//      [/]
+						//      []
+						//     [   ]     = b2q
+						//  [         ]
+						var count = count_b2q + count_q2b;
+						var width_scale = 0.01f; // todo settings
+					
+						// Resize the cache buffers
+						m_vbuf.Resize(4 * count);
+						m_ibuf.Resize(6 * count);
+						m_nbuf.Resize(1);
+
+						var vert = 0;
+						var indx = 0;
+
+						//  b2q = /\
+						var volume = 0m;
+						for (int i = 0; i != count_b2q; ++i)
+						{
+							volume += b2q[i].VolumeBase;
+							var y1 = (float)(decimal)b2q[i].Price;
+							var y0 = i+1 != count_b2q ? (float)(decimal)b2q[i+1].Price : y1;
+							var hx = width_scale * (float)(volume / 2);
+							var v = vert;
+
+							m_vbuf[vert++] = new View3d.Vertex(new v4(-hx, y1, Z.Indicators, 1f), b2q_colour);
+							m_vbuf[vert++] = new View3d.Vertex(new v4(+hx, y1, Z.Indicators, 1f), b2q_colour);
+							m_vbuf[vert++] = new View3d.Vertex(new v4(-hx, y0, Z.Indicators, 1f), b2q_colour);
+							m_vbuf[vert++] = new View3d.Vertex(new v4(+hx, y0, Z.Indicators, 1f), b2q_colour);
+
+							m_ibuf[indx++] = (ushort)(v + 0);
+							m_ibuf[indx++] = (ushort)(v + 2);
+							m_ibuf[indx++] = (ushort)(v + 3);
+							m_ibuf[indx++] = (ushort)(v + 3);
+							m_ibuf[indx++] = (ushort)(v + 1);
+							m_ibuf[indx++] = (ushort)(v + 0);
+						}
+
+						// q2b = \/
+						volume = 0m;
+						for (int i = 0; i != count_q2b; ++i)
+						{
+							volume += q2b[i].VolumeBase;
+							var y0 = (float)(decimal)q2b[i].Price;
+							var y1 = i+1 != count_q2b ? (float)(decimal)q2b[i+1].Price : y0;
+							var hx = width_scale * (float)volume / 2;
+							var v = vert;
+
+							m_vbuf[vert++] = new View3d.Vertex(new v4(-hx, y1, Z.Indicators, 1f), q2b_colour);
+							m_vbuf[vert++] = new View3d.Vertex(new v4(+hx, y1, Z.Indicators, 1f), q2b_colour);
+							m_vbuf[vert++] = new View3d.Vertex(new v4(-hx, y0, Z.Indicators, 1f), q2b_colour);
+							m_vbuf[vert++] = new View3d.Vertex(new v4(+hx, y0, Z.Indicators, 1f), q2b_colour);
+
+							m_ibuf[indx++] = (ushort)(v + 0);
+							m_ibuf[indx++] = (ushort)(v + 2);
+							m_ibuf[indx++] = (ushort)(v + 3);
+							m_ibuf[indx++] = (ushort)(v + 3);
+							m_ibuf[indx++] = (ushort)(v + 1);
+							m_ibuf[indx++] = (ushort)(v + 0);
+						}
+
+						m_nbuf[0] = new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert|View3d.EGeom.Colr, 0, (uint)vert, 0, (uint)indx, true);
+						var gfx = new View3d.Object("MarketDepth", 0xFFFFFFFF, vert, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray());
+
+						Gfx = gfx;
+						m_chart.Invalidate();
+					});
+				});
+			}
+		}
+
+		/// <summary>Graphics for positions</summary>
+		private GfxObjectPositions GfxPositions
+		{
+			get { return m_gfx_positions; }
+			set
+			{
+				if (m_gfx_positions == value) return;
+				Util.Dispose(ref m_gfx_positions);
+				m_gfx_positions = value;
+			}
+		}
+		private GfxObjectPositions m_gfx_positions;
+		private class GfxObjectPositions :IDisposable
+		{
+			private readonly ChartUI m_chart;
+			private Cache<Guid, View3d.Object> m_cache;
+			public GfxObjectPositions(ChartUI chart)
+			{
+				m_chart = chart;
+				m_cache = new Cache<Guid, View3d.Object>();
+			}
+			public virtual void Dispose()
+			{
+				Util.Dispose(ref m_cache);
+			}
+
+			/// <summary>Get the graphics for the given position</summary>
+			public View3d.Object Get(Position pos)
+			{
+				var instrument = m_chart.Instrument;
+				var time_frame = m_chart.TimeFrame;
+
+				var gfx = m_cache.Get(pos.UniqueKey, g => new View3d.Object($"*Line Position_{pos.OrderId} FF8080FF {{ 0 0 0 1 0 0 }}", file:false));
+				var x = instrument.IndexAt(new TimeFrameTime(pos.Created.Value, time_frame));
+				var y = (float)(decimal)pos.Price;
+				gfx.O2P = m4x4.Scale(instrument.Count + 10 - x, 1f, 1f, new v4(x, y, Z.Trades, 1f));
+				return gfx;
+			}	
 		}
 
 		/// <summary>Z-values for chart elements</summary>
@@ -1016,7 +1386,7 @@ namespace CoinFlip
 			private Scope m_chart_lock;
 
 			public DropNewIndicatorOp(ChartUI chart_ui, Func<Indicator> factory, Action on_complete)
-				:base(chart_ui.m_chart)
+				:base(chart_ui.ChartCtrl)
 			{
 				StartOnMouseDown = true;
 				m_chart_ui = chart_ui;
@@ -1232,6 +1602,7 @@ namespace CoinFlip
 			// 
 			// m_chk_show_depth
 			// 
+			this.m_chk_show_depth.CheckOnClick = true;
 			this.m_chk_show_depth.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
 			this.m_chk_show_depth.Image = ((System.Drawing.Image)(resources.GetObject("m_chk_show_depth.Image")));
 			this.m_chk_show_depth.ImageTransparentColor = System.Drawing.Color.Magenta;

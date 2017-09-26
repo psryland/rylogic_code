@@ -418,6 +418,7 @@ namespace LDraw
 					return null;
 				});
 			}
+			m_dc.ActiveContent = Model.Scenes.FirstOrDefault()?.DockControl;
 			#endregion
 
 			#region Menu

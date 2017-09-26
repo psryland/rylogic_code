@@ -144,7 +144,7 @@ namespace CoinFlip
 				opt.Click += (s,a) =>
 				{
 					var exch = (Exchange)SelectedRows[0].DataBoundItem;
-					using (var dlg = new PromptUI { Title = $"{exch.Name} Server Request Limit", PromptText = "The maximum number of requests posted to the exchange server per second" })
+					using (var dlg = new PromptUI { Title = $"{exch.Name} Server Request Limit", PromptText = "The maximum number of requests posted\r\nto the exchange server per second" })
 					{
 						dlg.ValueType = typeof(float);
 						dlg.Value = exch.ServerRequestRateLimit;

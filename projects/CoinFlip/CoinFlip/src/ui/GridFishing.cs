@@ -148,13 +148,12 @@ namespace CoinFlip
 				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Properties"));
 				cmenu.Opening += (s,a) =>
 				{
-					var fisher = SelectedRows.Cast<DataGridViewRow>().Select(x => (Fishing)x.DataBoundItem).FirstOrDefault();
-					opt.Enabled = SelectedRows.Count == 1 && fisher != null && !fisher.Active;
+					opt.Enabled = SelectedRows.Count == 1;
 				};
 				opt.Click += (s,a) =>
 				{
-					var fisher = SelectedRows.Cast<DataGridViewRow>().Select(x => (Fishing)x.DataBoundItem).First();
-					using (var dlg = new EditFishingUI(Model, fisher.Settings))
+					var fisher = (Fishing)SelectedRows[0].DataBoundItem;
+					using (var dlg = new EditFishingUI(Model, fisher.Settings, fisher.Active))
 					{
 						if (dlg.ShowDialog(this) != DialogResult.OK) return;
 						fisher.Settings = dlg.FishingData;

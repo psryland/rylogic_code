@@ -439,7 +439,7 @@ namespace CoinFlip
 					if (pair.Base == coin)
 					{
 						var trade = pair.BaseToQuote(volume);
-						tasks.Add(trade.CreateOrder());
+						tasks.Add(trade.CreateOrderAsync());
 						new_volume = trade.VolumeOut;
 
 						// Trade 'coin' to 'Quote'
@@ -448,7 +448,7 @@ namespace CoinFlip
 					else
 					{
 						var trade = pair.QuoteToBase(volume);
-						tasks.Add(trade.CreateOrder());
+						tasks.Add(trade.CreateOrderAsync());
 						new_volume = trade.VolumeOut;
 
 						// Trade 'coin' to 'Base'

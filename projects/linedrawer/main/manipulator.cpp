@@ -19,7 +19,7 @@ namespace ldr
 	// LostInputFocus() to abort any control operations in progress.
 	void Manipulator::GainInputFocus(IInputHandler* gained_from)
 	{
-		m_gizmo = pr::ldr::LdrGizmoPtr(new pr::ldr::LdrGizmo(m_rdr, pr::ldr::LdrGizmo::EMode::Scale, pr::m4x4Identity));
+		m_gizmo = pr::ldr::LdrGizmoPtr(new pr::ldr::LdrGizmo(m_rdr, pr::ldr::LdrGizmo::EMode::Scale, pr::m4x4Identity), true);
 		m_fwd_input = gained_from;
 		pr::events::Send(Evt_Refresh());
 	}

@@ -2127,7 +2127,7 @@ namespace RyLogViewer
 							m_grid.SelectSingleRow(selected + row_delta);
 
 							// Select the rows that were previously selected.
-							selected_rows.Sort();
+							selected_rows.Sort<int>();
 							var ibeg = selected_rows.BinarySearch(x => (x + row_delta).CompareTo(    0), find_insert_position:true);
 							var iend = selected_rows.BinarySearch(x => (x + row_delta).CompareTo(count), find_insert_position:true);
 							using (m_grid.SuspendSelectionChanged())

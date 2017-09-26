@@ -17,6 +17,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -160,7 +161,7 @@ namespace pr.util
 			else
 			{
 				Type sender_type = sender.GetType();
-				tag = string.Format("{0}.{1}", sender_type.Namespace, sender_type.Name);
+				tag = $"{sender_type.Namespace}.{sender_type.Name}";
 			}
 
 			// Filter out messages based on tag
@@ -168,7 +169,7 @@ namespace pr.util
 				return;
 
 			// Construct the log message and write it
-			var msg = string.Format("[{0}][{1}] {2}{3}"+Environment.NewLine, level, tag, str, ex != null ? Environment.NewLine + ex.MessageFull() : string.Empty);
+			var msg = $"[{level}][{tag}] {str}{(ex != null ? Environment.NewLine + ex.MessageFull() : string.Empty)}"+Environment.NewLine;
 			Writer.Write(msg);
 		}
 
@@ -350,7 +351,11 @@ namespace pr.util
 		public void Write(ELogLevel level, Exception ex, string msg, string file = null, int? line = null)
 		{
 			if (!Enabled) return;
-			var evt = new LogEvent(level, Context.TimeZero, Tag, string.Concat(msg, " - Exception: ", ex.Message), file, line);
+			var message =
+				ex is AggregateException        ae ? string.Concat(msg," - Exception: ", ae.MessageFull()) :
+				ex is TargetInvocationException ie ? string.Concat(msg," - Exception: ", ie.InnerException.Message) :
+				string.Concat(msg," - Exception: ", ex.MessageFull());
+			var evt = new LogEvent(level, Context.TimeZero, Tag, message, file, line);
 			Write(evt);
 			ForwardLog?.Write(evt);
 		}

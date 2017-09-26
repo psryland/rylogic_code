@@ -107,7 +107,6 @@
     <ClInclude Include="..\include\pr\common\objectpool.h" />
     <ClInclude Include="..\include\pr\common\observe.h" />
     <ClInclude Include="..\include\pr\common\pe_file.h" />
-    <ClInclude Include="..\include\pr\common\pipe.h" />
     <ClInclude Include="..\include\pr\common\pollingtoevent.h" />
     <ClInclude Include="..\include\pr\common\predicate.h" />
     <ClInclude Include="..\include\pr\common\profile.h" />
@@ -275,6 +274,7 @@
     <ClInclude Include="..\include\pr\meta\remove_pointer.h" />
     <ClInclude Include="..\include\pr\network\bluetooth.h" />
     <ClInclude Include="..\include\pr\network\bluetooth_ui.h" />
+    <ClInclude Include="..\include\pr\network\pipe.h" />
     <ClInclude Include="..\include\pr\network\sockets.h" />
     <ClInclude Include="..\include\pr\network\tcpip.h" />
     <ClInclude Include="..\include\pr\network\web_get.h" />

@@ -649,33 +649,13 @@ namespace pr.gfx
 				throw new Exception(init_error ?? "Failed to initialised View3d");
 
 			// Attach the global error handler
-			m_error_cb = (ctx, msg) =>
-			{
-				if (m_thread_id != Thread.CurrentThread.ManagedThreadId)
-					m_dispatcher.BeginInvoke(m_error_cb, ctx, msg);
-				else
-					Error.Raise(this, new MessageEventArgs(msg));
-			};
-			View3D_GlobalErrorCBSet(m_error_cb, IntPtr.Zero, true);
+			View3D_GlobalErrorCBSet(m_error_cb = HandleError, IntPtr.Zero, true);
 
 			// Sign up for progress reports
-			m_add_file_progress_cb = (ctx, context_id, fpath, foffset, complete) =>
-			{
-				var args = new AddFileProgressEventArgs(context_id, fpath, foffset, complete);
-				AddFileProgress.Raise(this, args);
-				return args.Cancel;
-			};
-			View3D_AddFileProgressCBSet(m_add_file_progress_cb, IntPtr.Zero, true);
+			View3D_AddFileProgressCBSet(m_add_file_progress_cb = HandleAddFileProgress, IntPtr.Zero, true);
 
 			// Sign up for notification of the sources changing
-			m_sources_changed_cb = (ctx, reason, before) =>
-			{
-				if (m_thread_id != Thread.CurrentThread.ManagedThreadId)
-					m_dispatcher.BeginInvoke(m_sources_changed_cb, ctx, reason, before);
-				else
-					OnSourcesChanged.Raise(this, new SourcesChangedEventArgs(reason, before));
-			};
-			View3D_SourcesChangedCBSet(m_sources_changed_cb, IntPtr.Zero, true);
+			View3D_SourcesChangedCBSet(m_sources_changed_cb = HandleSourcesChanged, IntPtr.Zero, true);
 
 			// Install a C# embedded code handler
 			m_embedded_cs_handler = new EmbeddedCSHandler(this);
@@ -698,12 +678,32 @@ namespace pr.gfx
 
 		/// <summary>Event call on errors. Note: can be called in a background thread context</summary>
 		public event EventHandler<MessageEventArgs> Error;
+		private void HandleError(IntPtr ctx, string msg)
+		{
+			if (m_thread_id != Thread.CurrentThread.ManagedThreadId)
+				m_dispatcher.BeginInvoke(m_error_cb, ctx, msg);
+			else
+				Error.Raise(this, new MessageEventArgs(msg));
+		}
 
 		/// <summary>Progress update when a file is being parsed</summary>
 		public event EventHandler<AddFileProgressEventArgs> AddFileProgress;
+		private bool HandleAddFileProgress(IntPtr ctx, ref Guid context_id, string filepath, long foffset, bool complete)
+		{
+			var args = new AddFileProgressEventArgs(context_id, filepath, foffset, complete);
+			AddFileProgress.Raise(this, args);
+			return args.Cancel;
+		}
 
 		/// <summary>Event notifying whenever sources are loaded/reloaded</summary>
 		public event EventHandler<SourcesChangedEventArgs> OnSourcesChanged;
+		private void HandleSourcesChanged(IntPtr ctx, ESourcesChangedReason reason, bool before)
+		{
+			if (m_thread_id != Thread.CurrentThread.ManagedThreadId)
+				m_dispatcher.BeginInvoke(m_sources_changed_cb, ctx, reason, before);
+			else
+				OnSourcesChanged.Raise(this, new SourcesChangedEventArgs(reason, before));
+		}
 
 		/// <summary>
 		/// Create multiple objects from a source script file and store the script file in the collection of sources.
@@ -2733,7 +2733,7 @@ namespace ldr
 		public delegate bool EnumObjectsCB(IntPtr ctx, HObject obj);
 
 		/// <summary>Callback for progress updates during AddFile / Reload</summary>
-		public delegate bool AddFileProgressCB(IntPtr ctx, Guid context_id, [MarshalAs(UnmanagedType.LPWStr)] string filepath, long file_offset, bool complete);
+		public delegate bool AddFileProgressCB(IntPtr ctx, ref Guid context_id, [MarshalAs(UnmanagedType.LPWStr)] string filepath, long file_offset, bool complete);
 
 		/// <summary>Callback when the sources are reloaded</summary>
 		public delegate void SourcesChangedCB(IntPtr ctx, ESourcesChangedReason reason, bool before);

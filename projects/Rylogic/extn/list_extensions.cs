@@ -159,6 +159,12 @@ namespace pr.extn
 				list.Add(i);
 			return list;
 		}
+		public static IList AddRange(this IList list, IEnumerable items)
+		{
+			foreach (var i in items)
+				list.Add(i);
+			return list;
+		}
 
 		/// <summary>Reset the list with the given items. Equivalent to Clear() followed by AddRange()</summary>
 		public static IList<T> Assign<T>(this IList<T> list, IEnumerable<T> items)
@@ -405,6 +411,30 @@ namespace pr.extn
 			return e - s;
 		}
 
+		/// <summary>Add items from 'set' to this collection. Items not already in the collection are added to the end</summary>
+		public static void Merge<T>(this IList<T> list, IEnumerable<T> set)
+		{
+			Merge(list, set.ToHashSet());
+		}
+		public static void Merge(this IList list, IEnumerable set)
+		{
+			Merge(list, set.Cast<object>().ToHashSet());
+		}
+
+		/// <summary>Add items from 'set' to this collection. Items not already in the collection are added to the end. On return, 'set' contains the new items that were added</summary>
+		public static void Merge<T>(this IList<T> list, HashSet<T> set)
+		{
+			list.RemoveIf(x => !set.Contains(x));
+			list.ForEach(x => set.Remove(x));
+			list.AddRange(set);
+		}
+		public static void Merge(this IList list, HashSet<object> set)
+		{
+			list.RemoveIf<object>(x => !set.Contains(x));
+			list.ForEach<object>(x => set.Remove(x));
+			list.AddRange(set);
+		}
+
 		/// <summary>Remove elements from the start of this list that satisfy 'pred'</summary>
 		public static void TrimStart<T>(this IList<T> list, Func<T,bool> pred)
 		{
@@ -525,12 +555,22 @@ namespace pr.extn
 		{
 			return list.Sort(0, list.Count, comparer);
 		}
+		public static IList Sort(this IList list, Cmp<object> comparer = null)
+		{
+			return list.Sort(0, list.Count, comparer);
+		}
 
 		/// <summary>Sub range sort using a delegate</summary>
 		public static IList<T> Sort<T>(this IList<T> list, int start, int count, Cmp<T> comparer = null)
 		{
 			comparer = comparer ?? Cmp<T>.Default;
 			list.QuickSort(start, count, comparer);
+			return list;
+		}
+		public static IList Sort(this IList list, int start, int count, Cmp<object> comparer = null)
+		{
+			// This is the quick sort algorithm. Sorts in place
+			ArrayList.Adapter(list).Sort(start, count, comparer);
 			return list;
 		}
 

@@ -48,6 +48,12 @@ namespace CoinFlip
 			:this(rhs.TradeType, rhs.Pair, rhs.VolumeIn * scale, rhs.VolumeOut * scale, rhs.Price)
 		{}
 
+		/// <summary>Access the app model</summary>
+		public Model Model
+		{
+			get { return Pair.Exchange.Model; }
+		}
+
 		/// <summary>The trade type</summary>
 		public ETradeType TradeType { get; private set; }
 
@@ -95,6 +101,12 @@ namespace CoinFlip
 		public int OrderBookIndex
 		{
 			get { return Pair.OrderBookIndex(TradeType, PriceQ2B); }
+		}
+
+		/// <summary>The depth of this position in the order book for the trade type</summary>
+		public Unit<decimal> OrderBookDepth
+		{
+			get { return Pair.OrderBookDepth(TradeType, PriceQ2B); }
 		}
 
 		/// <summary>The coin type being sold</summary>
@@ -161,9 +173,13 @@ namespace CoinFlip
 		}
 
 		/// <summary>Create this trade on the Exchange that owns 'Pair'</summary>
-		public Task<TradeResult> CreateOrder()
+		public TradeResult CreateOrder()
 		{
 			return Pair.Exchange.CreateOrder(TradeType, Pair, VolumeIn, Price);
+		}
+		public Task<TradeResult> CreateOrderAsync()
+		{
+			return Task.Run(() => CreateOrder(), Model.ShutdownToken); 
 		}
 
 		[Flags] public enum EValidation

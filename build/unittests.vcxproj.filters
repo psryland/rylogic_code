@@ -483,9 +483,6 @@
     <ClInclude Include="..\include\pr\threads\process.h">
       <Filter>pr\threads</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\common\pipe.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\common\pollingtoevent.h">
       <Filter>pr\common</Filter>
     </ClInclude>
@@ -983,6 +980,9 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\sound\ogg\ogg_stream.h">
       <Filter>pr\sound\ogg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\network\pipe.h">
+      <Filter>pr\network</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

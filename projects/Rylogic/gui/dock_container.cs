@@ -3032,9 +3032,12 @@ namespace pr.gui
 				set
 				{
 					if (m_impl_tab_text == value) return;
+
+					// Have to invalidate the whole tab strip, because the text length
+					// will change causing the other tabs to move.
 					m_impl_tab_text = value;
 					InvalidateTitle();
-					InvalidateTab();
+					InvalidateTabStrip();
 				}
 			}
 			private string m_impl_tab_text;
@@ -3066,7 +3069,7 @@ namespace pr.gui
 				{
 					if (m_impl_icon == value) return;
 					m_impl_icon = value;
-					InvalidateTab();
+					InvalidateTabStrip();
 				}
 			}
 			private Image m_impl_icon;
@@ -3105,8 +3108,11 @@ namespace pr.gui
 				set
 				{
 					if (m_tab_font_active == value) return;
+
+					// Changing the font can effect the size of the tab, and therefore
+					// the layout of the whole tab strip
 					m_tab_font_active = value;
-					InvalidateTab();
+					InvalidateTabStrip();
 				}
 			}
 			private Font m_tab_font_active;
@@ -3118,8 +3124,11 @@ namespace pr.gui
 				set
 				{
 					if (m_tab_font_inactive == value) return;
+
+					// Changing the font can effect the size of the tab, and therefore
+					// the layout of the whole tab strip
 					m_tab_font_inactive = value;
-					InvalidateTab();
+					InvalidateTabStrip();
 				}
 			}
 			private Font m_tab_font_inactive;
@@ -3213,7 +3222,14 @@ namespace pr.gui
 				if (tab != null)
 					DockPane.TabStripCtrl.Invalidate(tab.DisplayBounds);
 				else
-					DockPane.TabStripCtrl.Invalidate();
+					InvalidateTabStrip();
+			}
+
+			/// <summary>Invalidate the tab strip that contains the tab for this content</summary>
+			public void InvalidateTabStrip()
+			{
+				if (DockPane == null) return;
+				DockPane.TabStripCtrl.Invalidate();
 			}
 
 			/// <summary>Invalidate the title that represents this content</summary>

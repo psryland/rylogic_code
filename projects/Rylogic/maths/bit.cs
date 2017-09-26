@@ -44,12 +44,9 @@ namespace pr.maths
 		}
 		public static T SetBits<T>(T value, T mask, bool state) where T :struct, IConvertible
 		{
-			var new_value = SetBits(value.ToUInt64(null), mask.ToUInt64(null), state);
-			if (!typeof(T).IsEnum)
-				return Util.ConvertTo<T>(new_value);
-
-			Debug.Assert(typeof(T).HasAttribute<FlagsAttribute>(), $"Type {typeof(T).Name} is not a flags enum");
-			return (T)Enum.ToObject(typeof(T), new_value);
+			return state
+				? Operators<T>.BitwiseOR(value, mask)
+				: Operators<T>.BitwiseAND(value, Operators<T>.OnesComp(mask));
 		}
 
 		/// <summary>Set/Clear bits in 'value'</summary>
@@ -71,12 +68,9 @@ namespace pr.maths
 		}
 		public static T SetBits<T>(T value, T mask, T state) where T :struct, IConvertible
 		{
-			var new_value = SetBits(value.ToUInt64(null), mask.ToUInt64(null), state.ToUInt64(null));
-			if (!typeof(T).IsEnum)
-				return Util.ConvertTo<T>(new_value);
-
-			Debug.Assert(typeof(T).HasAttribute<FlagsAttribute>(), $"Type {typeof(T).Name} is not a flags enum");
-			return (T)Enum.ToObject(typeof(T), new_value);
+			return Operators<T>.BitwiseOR(
+				Operators<T>.BitwiseAND(value, Operators<T>.OnesComp(mask)),
+				Operators<T>.BitwiseAND(state, mask));
 		}
 
 		/// <summary>Returns true if 'value & mask' != 0</summary>
@@ -102,8 +96,7 @@ namespace pr.maths
 		}
 		public static bool AnySet<T>(T value, T mask) where T :struct, IConvertible
 		{
-			System.Diagnostics.Debug.Assert(typeof(T).HasAttribute<FlagsAttribute>(), "Type {0} is not a flags enum".Fmt(typeof(T).Name));
-			return AnySet(value.ToUInt64(null), mask.ToUInt64(null));
+			return !Equals(Operators<T>.BitwiseAND(value, mask), default(T));
 		}
 
 		/// <summary>Returns true if 'value & mask' == mask</summary>
@@ -129,8 +122,7 @@ namespace pr.maths
 		}
 		public static bool AllSet<T>(T value, T mask) where T :struct, IConvertible
 		{
-			System.Diagnostics.Debug.Assert(typeof(T).HasAttribute<FlagsAttribute>(), "Type {0} is not an enum with the [Flags] attribute".Fmt(typeof(T).Name));
-			return AnySet(value.ToUInt64(null), mask.ToUInt64(null));
+			return Equals(Operators<T>.BitwiseAND(value, mask), mask);
 		}
 
 		/// <summary>Iterate over the index positions of bits in a bit field</summary>
@@ -373,8 +365,13 @@ namespace pr.unittests
 			const Flags f     = Flags.One;
 
 			Assert.Throws(typeof(ArgumentException), () => Assert.True(f.HasFlag(nf)));
-		    Assert.True(f.HasFlag(Flags.One));
-		    Assert.False(f.HasFlag(Flags.One|Flags.Two));
+			Assert.True(f.HasFlag(Flags.One));
+			Assert.False(f.HasFlag(Flags.One|Flags.Two));
+			Assert.True(Bit.AllSet(f, Flags.One));
+			Assert.False(Bit.AllSet(f, Flags.Two));
+
+			var mask = Bit.SetBits(f, Flags.One|Flags.Two|Flags.Three, true);
+			Assert.AreEqual(mask, Flags.One|Flags.Two|Flags.Three);
 		}
 		[Test] public void BitParse()
 		{

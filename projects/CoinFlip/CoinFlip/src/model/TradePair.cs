@@ -128,14 +128,14 @@ namespace CoinFlip
 		/// <summary>Prices for converting Quote to Base. First price is a minimum</summary>
 		public OrderBook Q2B { [DebuggerStepThrough] get; private set; }
 
-		/// <summary>The allowable range of volume for </summary>
+		/// <summary>The allowable range of volume for trading the base currency</summary>
 		public RangeF<Unit<decimal>> VolumeRangeBase
 		{
 			get;
 			private set;
 		}
 
-		/// <summary>The allowable range of volume for </summary>
+		/// <summary>The allowable range of volume for trading the quote currency</summary>
 		public RangeF<Unit<decimal>> VolumeRangeQuote
 		{
 			get;
@@ -252,6 +252,14 @@ namespace CoinFlip
 			return tt == ETradeType.B2Q
 				? Q2B.Orders.BinarySearch(x => +x.Price.CompareTo(price), find_insert_position:true)
 				: B2Q.Orders.BinarySearch(x => -x.Price.CompareTo(price), find_insert_position:true);
+		}
+
+		/// <summary>The volume of orders with a better price than 'price'</summary>
+		public Unit<decimal> OrderBookDepth(ETradeType tt, Unit<decimal> price)
+		{
+			var index = OrderBookIndex(tt, price);
+			var orders = tt == ETradeType.B2Q ? Q2B.Orders : B2Q.Orders;
+			return orders.Take(index).Sum(x => x.VolumeBase)._(Base);
 		}
 
 		/// <summary>Update this pair using the contents of 'rhs'</summary>

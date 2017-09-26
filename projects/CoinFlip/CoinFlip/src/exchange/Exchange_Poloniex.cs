@@ -1,4 +1,5 @@
-﻿using System;
+﻿//#define USE_WAMP
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -29,6 +30,16 @@ namespace CoinFlip
 			Api = null;
 			base.Dispose();
 		}
+		protected override void SetActive(bool active)
+		{
+			#if USE_WAMP
+			if (active)
+				Api.Start();
+			else
+				Api.Stop();
+			#endif
+			base.SetActive(active);
+		}
 
 		/// <summary>The API interface</summary>
 		private PoloniexApi Api
@@ -55,12 +66,12 @@ namespace CoinFlip
 		private PoloniexApi m_api;
 
 		/// <summary>Open a trade</summary>
-		protected async override Task<TradeResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> price)
+		protected override TradeResult CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> price)
 		{
 			try
 			{
 				// Place the trade order
-				var res = await Api.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), Misc.ToPoloniexTT(tt), price, volume);
+				var res = Api.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), Misc.ToPoloniexTT(tt), price, volume);
 				return new TradeResult(res.OrderId, res.FilledOrders.Select(x => x.TradeId));
 			}
 			catch (Exception ex)
@@ -72,12 +83,12 @@ namespace CoinFlip
 		}
 
 		/// <summary>Cancel an open trade</summary>
-		protected async override Task CancelOrderInternal(TradePair pair, ulong order_id)
+		protected override void CancelOrderInternal(TradePair pair, ulong order_id)
 		{
 			try
 			{
 				// Cancel the trade
-				await Api.CancelTrade(new CurrencyPair(pair.Base, pair.Quote), order_id);
+				Api.CancelTrade(new CurrencyPair(pair.Base, pair.Quote), order_id);
 			}
 			catch (Exception ex)
 			{
@@ -95,23 +106,36 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the chart data for a given pair, over a given time range</summary>
-		protected async override Task<List<Candle>> ChartDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end)
+		protected override List<Candle> ChartDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end)
 		{
 			// Get the chart data
-			var data = await Api.GetChartData(new CurrencyPair(pair.Base, pair.Quote), ToMarketPeriod(timeframe), time_beg, time_end);
+			var data = Api.GetChartData(new CurrencyPair(pair.Base, pair.Quote), ToMarketPeriod(timeframe), time_beg, time_end);
 
 			// Convert it to candles (yes, Polo gets the base/quote backwards for 'Volume')
 			var candles = data.Select(x => new Candle(x.Time.Ticks, (double)x.Open, (double)x.High, (double)x.Low, (double)x.Close, (double)x.WeightedAverage, (double)x.VolumeQuote)).ToList();
 			return candles;
 		}
 
+		/// <summary>Return the order book for 'pair' to a depth of 'count'</summary>
+		protected override MarketDepth MarketDepthInternal(TradePair pair, int depth)
+		{
+			var orders = Api.GetOrderBook(new CurrencyPair(pair.Base, pair.Quote), depth);
+
+			// Update the depth of market data
+			var market_depth = new MarketDepth(pair.Base, pair.Quote);
+			var buys  = orders.BuyOrders .Select(x => new Order(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
+			var sells = orders.SellOrders.Select(x => new Order(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
+			market_depth.UpdateOrderBook(buys, sells);
+			return market_depth;
+		}
+
 		/// <summary>Update this exchange's set of trading pairs</summary>
-		public async override Task UpdatePairs(HashSet<string> coi) // Worker thread context
+		public override void UpdatePairs(HashSet<string> coi) // Worker thread context
 		{
 			try
 			{
 				// Get all available trading pairs
-				var msg = await Api.GetTradePairs();
+				var msg = Api.GetTradePairs();
 				if (msg == null)
 					throw new Exception("Poloniex: Failed to read market data.");
 
@@ -138,19 +162,21 @@ namespace CoinFlip
 						Balance.GetOrAdd(c);
 
 					// Currently not working on the Poloniex site
-					//' // Ensure we're subscribed to the order book streams for each pair
-					//' foreach (var p in Pairs.Values)
-					//' 	Pub.SubscribePair(new CurrencyPair(p.Base, p.Quote));
+					#if USE_WAMP
+					// Ensure we're subscribed to the order book streams for each pair
+					foreach (var p in Pairs.Values)
+						Api.SubscribePair(new CurrencyPair(p.Base, p.Quote));
+					#endif
 				});
 			}
 			catch (Exception ex)
 			{
-				HandleUpdateException(nameof(UpdatePairs), ex);
+				HandleException(nameof(UpdatePairs), ex);
 			}
 		}
 
 		/// <summary>Update the market data, balances, and open positions</summary>
-		protected async override Task UpdateData() // Worker thread context
+		protected override void UpdateData() // Worker thread context
 		{
 			try
 			{
@@ -158,9 +184,9 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request order book data for all of the pairs
-				// Poloniex only allows 6 API calls per second, so even though it's more unnecessary data
-				// it's better to get all order books in one call.
-				var order_book = await Api.GetOrderBook(depth:10);
+				// Poloniex only allows 6 API calls per second, so even though this returns
+				// unnecessary data it's better to get all order books in one call.
+				var order_book = Api.GetOrderBook(depth:Settings.MarketDepth);
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
@@ -183,12 +209,12 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				HandleUpdateException(nameof(UpdateData), ex);
+				HandleException(nameof(UpdateData), ex);
 			}
 		}
 
 		/// <summary>Update account balance data</summary>
-		protected async override Task UpdateBalances() // Worker thread context
+		protected override void UpdateBalances() // Worker thread context
 		{
 			try
 			{
@@ -196,7 +222,7 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the account data
-				var balance_data = await Api.GetBalances();
+				var balance_data = Api.GetBalances();
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
@@ -224,12 +250,12 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				HandleUpdateException(nameof(UpdateBalances), ex);
+				HandleException(nameof(UpdateBalances), ex);
 			}
 		}
 
 		/// <summary>Update open positions</summary>
-		protected async override Task UpdatePositions() // Worker thread context
+		protected override void UpdatePositions() // Worker thread context
 		{
 			try
 			{
@@ -237,7 +263,7 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the existing orders
-				var existing_orders = await Api.GetOpenOrders();
+				var existing_orders = Api.GetOpenOrders();
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
@@ -263,12 +289,12 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				HandleUpdateException(nameof(UpdatePositions), ex);
+				HandleException(nameof(UpdatePositions), ex);
 			}
 		}
 
 		/// <summary>Update the trade history</summary>
-		protected async override Task UpdateTradeHistory() // Worker thread context
+		protected override void UpdateTradeHistory() // Worker thread context
 		{
 			try
 			{
@@ -276,7 +302,7 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the history
-				var history = await Api.GetTradeHistory(beg:new DateTimeOffset(HistoryInterval.End, TimeSpan.Zero), end:timestamp);
+				var history = Api.GetTradeHistory(beg:new DateTimeOffset(HistoryInterval.End, TimeSpan.Zero), end:timestamp);
 		
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
@@ -297,7 +323,7 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				HandleUpdateException(nameof(UpdateTradeHistory), ex);
+				HandleException(nameof(UpdateTradeHistory), ex);
 			}
 		}
 
@@ -305,35 +331,6 @@ namespace CoinFlip
 		protected override void SetServerRequestRateLimit(float limit)
 		{
 			Api.ServerRequestRateLimit = limit;
-		}
-
-		/// <summary>Handle an exception during an update call</summary>
-		private void HandleUpdateException(string method_name, Exception ex)
-		{
-			if (ex is AggregateException ae)
-			{
-				ex = ae.InnerExceptions.First();
-			}
-			if (ex is OperationCanceledException)
-			{
-				// Ignore operation cancelled
-				return;
-			}
-			if (ex is HttpResponseException hre)
-			{
-				if (hre.StatusCode == HttpStatusCode.ServiceUnavailable)
-				{
-					if (Status != EStatus.Offline)
-						Model.Log.Write(ELogLevel.Warn, "Poloniex Service Unavailable");
-
-					Status = EStatus.Offline;
-				}
-				return;
-			}
-
-			// Log all other error types
-			Model.Log.Write(ELogLevel.Error, ex, $"Poloniex {method_name} failed");
-			Status = EStatus.Error;
 		}
 
 		/// <summary>Convert a Poloniex order into a position</summary>

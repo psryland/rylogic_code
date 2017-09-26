@@ -185,10 +185,10 @@ namespace CoinFlip
 				{
 					opt.Enabled = SelectedRows.Count == 1;
 				};
-				opt.Click += async (s,a) =>
+				opt.Click += (s,a) =>
 				{
 					var pos = SelectedRows.Cast<DataGridViewRow>().Select(x => (Position)x.DataBoundItem).First();
-					await pos.CancelOrder();
+					pos.CancelOrder();
 				};
 			}
 			if (!Model.AllowTrades)
@@ -199,11 +199,11 @@ namespace CoinFlip
 					var pos = SelectedRows.Cast<DataGridViewRow>().Select(x => (Position)x.DataBoundItem).FirstOrDefault();
 					opt.Visible = pos != null && pos.Fake;
 				};
-				opt.Click += async (s,a) =>
+				opt.Click += (s,a) =>
 				{
 					// Cancel the order and create a fake history entry to simulate the fake order being filled
 					var pos = SelectedRows.Cast<DataGridViewRow>().Select(x => (Position)x.DataBoundItem).First();
-					await pos.FillFakeOrder();
+					pos.FillFakeOrder();
 				};
 			}
 			return cmenu;

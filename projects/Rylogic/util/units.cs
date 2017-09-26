@@ -146,21 +146,25 @@ namespace pr.util
 		{
 			return Value.ToString();
 		}
-		public string ToString(IFormatProvider fp)
+		public string ToString(bool include_units)
 		{
-			return Operators<T>.ToString(Value, fp);
+			var str = Value.ToString();
+			return include_units ? $"{str} {Unit_.Types[UnitId]}" : str;
 		}
-		public string ToString(string fmt)
+		public string ToString(IFormatProvider fp, bool include_units = false)
 		{
-			return Operators<T>.ToString(Value, fmt);
+			var str = Operators<T>.ToString(Value, fp);
+			return include_units ? $"{str} {Unit_.Types[UnitId]}" : str;
 		}
-		public string ToString(string fmt, IFormatProvider fp)
+		public string ToString(string fmt, bool include_units = false)
 		{
-			return Operators<T>.ToString(Value, fmt, fp);
+			var str = Operators<T>.ToString(Value, fmt);
+			return include_units ? $"{str} {Unit_.Types[UnitId]}" : str;
 		}
-		public string ToStringWithUnits()
+		public string ToString(string fmt, IFormatProvider fp, bool include_units = false)
 		{
-			return string.Format("{0} {1}", Value, Unit_.Types[UnitId]);
+			var str = Operators<T>.ToString(Value, fmt, fp);
+			return include_units ? $"{str} {Unit_.Types[UnitId]}" : str;
 		}
 
 		/// <summary></summary>

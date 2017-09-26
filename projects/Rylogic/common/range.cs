@@ -518,6 +518,7 @@ namespace pr.common
 
 		/// <summary>An invalid range. Used as an initialiser when finding a bounding range</summary>
 		public static readonly RangeF<T> Invalid = new RangeF<T>{Beg = Operators<T>.MaxValue, End = Operators<T>.MinValue};
+		public static RangeF<T> Reset { get { return Invalid; } }
 
 		/// <summary>Create a range from a Start and Length</summary>
 		public static RangeF<T> FromStartLength(T start, T length)

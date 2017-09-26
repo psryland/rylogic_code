@@ -75,19 +75,19 @@ namespace CoinFlip
 		}
 
 		/// <summary>Cancel this position</summary>
-		public Task CancelOrder()
+		public void CancelOrder()
 		{
-			return Exchange.CancelOrder(Pair, OrderId);
+			Exchange.CancelOrder(Pair, OrderId);
 		}
 
 		/// <summary>Simulate this order being filled. Must be a Fake order</summary>
-		public async Task FillFakeOrder()
+		public void FillFakeOrder()
 		{
 			if (!Fake)
 				throw new Exception("Cannot fill a live order");
 
 			// Cancel the order
-			await CancelOrder();
+			CancelOrder();
 
 			// Add a fake entry to the history
 			var fill = Exchange.History.GetOrAdd(OrderId, TradeType, Pair);

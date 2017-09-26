@@ -138,6 +138,8 @@ namespace CoinFlip
 				// Infinite loop till shutdown
 				for (;;)
 				{
+					AssertMainThread();
+
 					try
 					{
 						await Task.Run(() => m_main_loop_step.WaitOne(Settings.MainLoopPeriod), shutdown);
@@ -159,7 +161,7 @@ namespace CoinFlip
 
 						// Simulate fake orders being filled
 						if (!AllowTrades)
-							await SimulateFakeOrders();
+							SimulateFakeOrders();
 					}
 					catch (Exception ex)
 					{
@@ -612,13 +614,13 @@ namespace CoinFlip
 
 				// Get each exchange to update it's available pairs/coins
 				if (exchange == null)
-					await Task.WhenAll(TradingExchanges.Where(x => x.Active).Select(x => x.UpdatePairs(coi)));
+					await Task.WhenAll(TradingExchanges.Where(x => x.Active).Select(x => Task.Run(() => x.UpdatePairs(coi), ShutdownToken)));
 				else
-					await exchange.UpdatePairs(coi);
+					await Task.Run(() => exchange.UpdatePairs(coi), ShutdownToken);
 
 				// Update the cross exchange when other exchanges change
 				if (CrossExchange.Active)
-					await CrossExchange.UpdatePairs(coi);
+					await Task.Run(() => CrossExchange.UpdatePairs(coi), ShutdownToken);
 
 				// Apply any market data updates
 				IntegrateMarketUpdates();
@@ -632,9 +634,8 @@ namespace CoinFlip
 				foreach (var exch in Exchanges.Where(x => x.Active))
 					pairs.AddRange(exch.Pairs.Values.Where(x => coi.Contains(x.Base) && coi.Contains(x.Quote)));
 
-				Pairs.RemoveIf(x => !pairs.Contains(x));
-				Pairs.ForEach(x => pairs.Remove(x));
-				Pairs.AddRange(pairs);
+				// Update the collection of pairs in the model
+				Pairs.Merge(pairs);
 
 				// Clear the dirty flag
 				UpdatePairs = false;
@@ -643,16 +644,16 @@ namespace CoinFlip
 		}
 
 		/// <summary>Look for fake orders that would be filled by the current price levels</summary>
-		private async Task SimulateFakeOrders()
+		private void SimulateFakeOrders()
 		{
 			foreach (var exch in Exchanges)
 			{
 				foreach (var pos in exch.Positions.Values.Where(x => x.Fake).ToArray())
 				{
 					if (pos.TradeType == ETradeType.B2Q && pos.Pair.QuoteToBase(pos.VolumeQuote).PriceQ2B > pos.Price * 1.00000000000001m)
-						await pos.FillFakeOrder();
+						pos.FillFakeOrder();
 					if (pos.TradeType == ETradeType.Q2B && pos.Pair.BaseToQuote(pos.VolumeBase).PriceQ2B < pos.Price * 0.999999999999999m)
-						await pos.FillFakeOrder();
+						pos.FillFakeOrder();
 				}
 			}
 		}

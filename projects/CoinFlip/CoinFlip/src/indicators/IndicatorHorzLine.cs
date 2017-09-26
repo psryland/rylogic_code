@@ -203,7 +203,7 @@ namespace CoinFlip
 			{
 				Price        = 0m;
 				Width        = 1.0;
-				Colour       = Color.LightBlue;
+				Colour       = Color.DarkBlue;
 				RegionColour = Color.LightBlue.Alpha(0.5f);
 				RegionWidth  = 0;
 			}

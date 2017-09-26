@@ -80,16 +80,15 @@ namespace CoinFlip
 		}
 
 		/// <summary>Open a trade</summary>
-		protected override Task<TradeResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> rate)
+		protected override TradeResult CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> rate)
 		{
-			return Task.FromResult(new TradeResult(++m_order_id));
+			return new TradeResult(++m_order_id);
 		}
 		private ulong m_order_id;
 
 		/// <summary>Cancel a trade</summary>
-		protected override Task CancelOrderInternal(TradePair pair, ulong order_id)
+		protected override void CancelOrderInternal(TradePair pair, ulong order_id)
 		{
-			return Misc.CompletedTask;
 		}
 
 		/// <summary>Set the maximum number of requests per second to the exchange server</summary>
@@ -109,6 +108,7 @@ namespace CoinFlip
 			public bool Active { get; set; }
 			public int PollPeriod { get; set; }
 			public decimal TransactionFee { get; set; }
+			public int MarketDepth { get; set; }
 			public float ServerRequestRateLimit { get; set; }
 		}
 	}

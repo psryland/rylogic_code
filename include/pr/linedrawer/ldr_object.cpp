@@ -197,44 +197,63 @@ namespace pr
 		{
 			ObjectAttributes attr;
 			attr.m_type = model_type;
-			attr.m_name = ELdrObject::ToStringA(model_type);
+			attr.m_name = "";
 			
-			// Read the next tokens
-			wstring32 tok0, tok1; auto count = 0;
+			// Read the next tokens up to the section start
+			wstring32 tok0, tok1, tok2; auto count = 0;
 			if (!reader.IsSectionStart()) { reader.Token(tok0, L"{}"); ++count; }
 			if (!reader.IsSectionStart()) { reader.Token(tok1, L"{}"); ++count; }
-			if (!reader.IsSectionStart()) { reader.Bool(attr.m_instance); }
+			if (!reader.IsSectionStart()) { reader.Token(tok2, L"{}"); ++count; }
+			if (!reader.IsSectionStart())
+				reader.ReportError(pr::script::EResult::UnknownToken, "object attributes are invalid");
 
-			if (count == 2)
+			switch (count)
 			{
-				// If two tokens are given, assume <name> <colour>
-				if (!str::ExtractIdentifierC(attr.m_name, std::begin(tok0)))
-					reader.ReportError(pr::script::EResult::TokenNotFound, "object name is invalid");
-				if (!str::ExtractIntC(attr.m_colour.argb, 16, std::begin(tok1)))
-					reader.ReportError(pr::script::EResult::TokenNotFound, "object colour is invalid");
-			}
-			else if (count == 1)
-			{
-				// If the first token is 8 hex digits, assume it is a colour, otherwise assume it is a name
-				if (tok0.size() == 8 && pr::all(tok0, std::iswxdigit))
+			case 3:
 				{
-					attr.m_name = "";
-					if (!str::ExtractIntC(attr.m_colour.argb, 16, std::begin(tok1)))
-						reader.ReportError(pr::script::EResult::TokenNotFound, "object colour is invalid");
-				}
-				else
-				{
-					attr.m_colour = 0xFFFFFFFF;
+					// Expect: *Type <name> <colour> <instance>
 					if (!str::ExtractIdentifierC(attr.m_name, std::begin(tok0)))
 						reader.ReportError(pr::script::EResult::TokenNotFound, "object name is invalid");
+					if (!str::ExtractIntC(attr.m_colour.argb, 16, std::begin(tok1)))
+						reader.ReportError(pr::script::EResult::TokenNotFound, "object colour is invalid");
+					if (!str::ExtractBoolC(attr.m_instance, std::begin(tok2)))
+						reader.ReportError(pr::script::EResult::TokenNotFound, "object instance attribute is invalid");
+					break;
+				}
+			case 2:
+				{
+					// Expect: *Type <name> <colour>
+					if (!str::ExtractIdentifierC(attr.m_name, std::begin(tok0)))
+						reader.ReportError(pr::script::EResult::TokenNotFound, "object name is invalid");
+					if (!str::ExtractIntC(attr.m_colour.argb, 16, std::begin(tok1)))
+						reader.ReportError(pr::script::EResult::TokenNotFound, "object colour is invalid");
+					break;
+				}
+			case 1:
+				{
+					// Expect: *Type <name>  or *Type <colour>
+					// If the first token is 8 hex digits, assume it is a colour, otherwise assume it is a name
+					if (tok0.size() == 8 && pr::all(tok0, std::iswxdigit))
+					{
+						attr.m_name = "";
+						if (!str::ExtractIntC(attr.m_colour.argb, 16, std::begin(tok0)))
+							reader.ReportError(pr::script::EResult::TokenNotFound, "object colour is invalid");
+					}
+					else
+					{
+						attr.m_colour = 0xFFFFFFFF;
+						if (!str::ExtractIdentifierC(attr.m_name, std::begin(tok0)))
+							reader.ReportError(pr::script::EResult::TokenNotFound, "object name is invalid");
+					}
+					break;
+				}
+			case 0:
+				{
+					attr.m_name = model_type.ToStringA();
+					attr.m_colour = 0xFFFFFFFF;
+					break;
 				}
 			}
-			else
-			{
-				attr.m_name = model_type.ToStringA();
-				attr.m_colour = 0xFFFFFFFF;
-			}
-
 			return attr;
 		}
 
@@ -2875,12 +2894,21 @@ namespace pr
 					,m_word_wrapping(DWRITE_WORD_WRAPPING_WRAP)
 				{}
 			};
+			struct Billboard
+			{
+				bool m_enabled;
+
+				Billboard()
+					:m_enabled()
+				{}
+			};
 
 			std::wstring m_text;
 			Colour32 m_fr_colour;
 			Colour32 m_bk_colour;
 			Font m_font;
 			Layout m_layout;
+			Billboard m_billboard;
 			v2 m_dim;
 			v2 m_pos;
 			AxisId m_axis_id;
@@ -2893,6 +2921,7 @@ namespace pr
 				,m_bk_colour(0x00000000)
 				,m_font()
 				,m_layout()
+				,m_billboard()
 				,m_dim(512.0f, 128.0f)
 				,m_pos()
 				,m_axis_id(AxisId::PosZ)
@@ -3001,9 +3030,17 @@ namespace pr
 						p.m_reader.SectionEnd();
 						return true;
 					}
-				case EKeyword::Pos:
+				case EKeyword::Billboard:
 					{
-						p.m_reader.Vector2S(m_pos);
+						m_billboard.m_enabled = true;
+
+						// Look for an optional section
+						if (p.m_reader.IsSectionStart())
+						{
+							for (;!p.m_reader.IsSectionEnd();)
+							{
+							}
+						}
 						return true;
 					}
 				case EKeyword::Dim:
@@ -3041,6 +3078,17 @@ namespace pr
 				// Create the model
 				obj->m_model = ModelGenerator<>::Text(p.m_rdr, text_layout.get(), m_axis_id, m_fr_colour, m_bk_colour);
 				obj->m_model->m_name = obj->TypeAndName();
+
+				// If the text is in bill-board mode, add an OnAddToScene handler
+				if (m_billboard.m_enabled)
+				{
+					obj->OnAddToScene += [](LdrObject& ob, rdr::Scene const& scene)
+					{
+						auto c2w = scene.m_view.CameraToWorld();
+						auto i2w = m4x4::LookAt(ob.m_i2w.pos, c2w.pos, c2w.y);
+						ob.m_i2w = i2w;
+					};
+				}
 			}
 		};
 
@@ -4306,16 +4354,25 @@ LR"(// *************************************************************************
 		// Recursively add this object and its children to a viewport
 		void LdrObject::AddToScene(Scene& scene, float time_s, pr::m4x4 const* p2w)
 		{
-			// Set the instance to world
-			m_i2w = *p2w * m_o2p * m_anim.Step(time_s);
+			// Set the instance to world.
+			// Take a copy in case the 'OnAddToScene' event changes it.
+			// We want parenting to be unaffected by the event handlers.
+			auto i2w = *p2w * m_o2p * m_anim.Step(time_s);
+			m_i2w = i2w;
+
+			// Allow the object to change it's transform just before rendering
+			OnAddToScene(*this, scene);
 
 			// Add the instance to the scene drawlist
 			if (m_instanced && m_visible && m_model)
-				scene.AddInstance(*this); // Could add occlusion culling here...
+			{
+				// Could add occlusion culling here...
+				scene.AddInstance(*this);
+			}
 
 			// Rinse and repeat for all children
 			for (auto& child : m_child)
-				child->AddToScene(scene, time_s, &m_i2w);
+				child->AddToScene(scene, time_s, &i2w);
 		}
 
 		// Recursively add this object using 'bbox_model' instead of its

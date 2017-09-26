@@ -26,7 +26,7 @@ namespace CoinFlip
 		private Label m_lbl_b2q_match_trade;
 		private Label m_lbl_b2q_bait_trade;
 		private TextBox m_tb_b2q_bait_trade;
-		private Panel panel1;
+		private Panel m_panel1;
 		private Label m_lbl_q2b_bait_trade;
 		private TextBox m_tb_q2b_bait_trade;
 		private TextBox m_tb_q2b_match_trade;
@@ -43,6 +43,10 @@ namespace CoinFlip
 		private Label m_lbl_q2b_order_book_index;
 		private Label m_lbl_b2q_order_book_index;
 		private TextBox m_tb_b2q_order_book_index;
+		private TextBox m_tb_q2b_order_book_depth;
+		private Label m_lbl_q2b_order_book_depth;
+		private TextBox m_tb_b2q_order_book_depth;
+		private Label m_lbl_b2q_order_book_depth;
 		private TextBox m_tb_b2q_profit_ratio;
 		#endregion
 
@@ -138,6 +142,7 @@ namespace CoinFlip
 					m_tb_b2q_bait_price.Text       = $"{price1.ToString("G6")} {fisher.Trade1.Pair.RateUnits}";
 					m_tb_b2q_profit_ratio.Text     = $"{100m*ratio:G4}%";
 					m_tb_b2q_order_book_index.Text = $"{fisher.Trade1.OrderBookIndex}";
+					m_tb_b2q_order_book_depth.Text = $"{fisher.Trade1.OrderBookDepth.ToString("G6", true)}";
 					m_tb_b2q_status.Text           = $"{fisher.Result}";
 					m_tb_b2q_status.BackColor      = Color_.FromArgb(fisher.Result.Assoc<uint>("Color"));
 				}
@@ -149,6 +154,7 @@ namespace CoinFlip
 					m_tb_b2q_bait_price.Text       = string.Empty;
 					m_tb_b2q_profit_ratio.Text     = string.Empty;
 					m_tb_b2q_order_book_index.Text = string.Empty;
+					m_tb_b2q_order_book_depth.Text = string.Empty;
 					m_tb_b2q_status.Text           = "No Trade";
 					m_tb_b2q_status.BackColor      = Color_.FromArgb(Fishing.FishingTrade.EResult.Unknown.Assoc<uint>("Color"));
 				}
@@ -169,6 +175,7 @@ namespace CoinFlip
 					m_tb_q2b_bait_price.Text       = $"{price1.ToString("G6")} {fisher.Trade1.Pair.RateUnits}";
 					m_tb_q2b_profit_ratio.Text     = $"{100m*ratio:G4}%";
 					m_tb_q2b_order_book_index.Text = $"{fisher.Trade1.OrderBookIndex}";
+					m_tb_q2b_order_book_depth.Text = $"{fisher.Trade1.OrderBookDepth.ToString("G6", true)}";
 					m_tb_q2b_status.Text           = $"{fisher.Result}";
 					m_tb_q2b_status.BackColor      = Color_.FromArgb(fisher.Result.Assoc<uint>("Color"));
 				}
@@ -180,6 +187,7 @@ namespace CoinFlip
 					m_tb_q2b_bait_price.Text       = string.Empty;
 					m_tb_q2b_profit_ratio.Text     = string.Empty;
 					m_tb_q2b_order_book_index.Text = string.Empty;
+					m_tb_q2b_order_book_depth.Text = string.Empty;
 					m_tb_q2b_status.Text           = "No Trade";
 					m_tb_q2b_status.BackColor      = Color_.FromArgb(Fishing.FishingTrade.EResult.Unknown.Assoc<uint>("Color"));
 				}
@@ -195,7 +203,9 @@ namespace CoinFlip
 		{
 			this.m_log_ui = new pr.gui.LogUI();
 			this.m_table0 = new System.Windows.Forms.TableLayoutPanel();
-			this.panel1 = new System.Windows.Forms.Panel();
+			this.m_panel1 = new System.Windows.Forms.Panel();
+			this.m_tb_q2b_order_book_index = new System.Windows.Forms.TextBox();
+			this.m_lbl_q2b_order_book_index = new System.Windows.Forms.Label();
 			this.m_tb_q2b_status = new System.Windows.Forms.TextBox();
 			this.m_lbl_q2b_bait_trade = new System.Windows.Forms.Label();
 			this.m_tb_q2b_bait_trade = new System.Windows.Forms.TextBox();
@@ -208,6 +218,8 @@ namespace CoinFlip
 			this.m_lbl_q2b_profit_ratio = new System.Windows.Forms.Label();
 			this.m_tb_q2b_profit_ratio = new System.Windows.Forms.TextBox();
 			this.m_panel0 = new System.Windows.Forms.Panel();
+			this.m_lbl_b2q_order_book_index = new System.Windows.Forms.Label();
+			this.m_tb_b2q_order_book_index = new System.Windows.Forms.TextBox();
 			this.m_tb_b2q_status = new System.Windows.Forms.TextBox();
 			this.m_lbl_b2q_bait_trade = new System.Windows.Forms.Label();
 			this.m_tb_b2q_bait_trade = new System.Windows.Forms.TextBox();
@@ -219,12 +231,12 @@ namespace CoinFlip
 			this.m_lbl_b2q_match = new System.Windows.Forms.Label();
 			this.m_lbl_profit_ratio = new System.Windows.Forms.Label();
 			this.m_tb_b2q_profit_ratio = new System.Windows.Forms.TextBox();
-			this.m_tb_b2q_order_book_index = new System.Windows.Forms.TextBox();
-			this.m_lbl_b2q_order_book_index = new System.Windows.Forms.Label();
-			this.m_lbl_q2b_order_book_index = new System.Windows.Forms.Label();
-			this.m_tb_q2b_order_book_index = new System.Windows.Forms.TextBox();
+			this.m_lbl_b2q_order_book_depth = new System.Windows.Forms.Label();
+			this.m_tb_b2q_order_book_depth = new System.Windows.Forms.TextBox();
+			this.m_lbl_q2b_order_book_depth = new System.Windows.Forms.Label();
+			this.m_tb_q2b_order_book_depth = new System.Windows.Forms.TextBox();
 			this.m_table0.SuspendLayout();
-			this.panel1.SuspendLayout();
+			this.m_panel1.SuspendLayout();
 			this.m_panel0.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -232,10 +244,11 @@ namespace CoinFlip
 			// 
 			this.m_table0.SetColumnSpan(this.m_log_ui, 2);
 			this.m_log_ui.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_log_ui.LineWrap = false;
 			this.m_log_ui.Location = new System.Drawing.Point(3, 170);
 			this.m_log_ui.Name = "m_log_ui";
 			this.m_log_ui.PopOutOnNewMessages = true;
-			this.m_log_ui.Size = new System.Drawing.Size(643, 325);
+			this.m_log_ui.Size = new System.Drawing.Size(894, 444);
 			this.m_log_ui.TabIndex = 0;
 			this.m_log_ui.Title = "Log";
 			// 
@@ -244,7 +257,7 @@ namespace CoinFlip
 			this.m_table0.ColumnCount = 2;
 			this.m_table0.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
 			this.m_table0.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
-			this.m_table0.Controls.Add(this.panel1, 1, 0);
+			this.m_table0.Controls.Add(this.m_panel1, 1, 0);
 			this.m_table0.Controls.Add(this.m_panel0, 0, 0);
 			this.m_table0.Controls.Add(this.m_log_ui, 0, 1);
 			this.m_table0.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -254,33 +267,54 @@ namespace CoinFlip
 			this.m_table0.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.m_table0.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.m_table0.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-			this.m_table0.Size = new System.Drawing.Size(649, 498);
+			this.m_table0.Size = new System.Drawing.Size(900, 617);
 			this.m_table0.TabIndex = 1;
 			// 
-			// panel1
+			// m_panel1
 			// 
-			this.panel1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+			this.m_panel1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			this.panel1.BackColor = System.Drawing.SystemColors.Window;
-			this.panel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.panel1.Controls.Add(this.m_tb_q2b_order_book_index);
-			this.panel1.Controls.Add(this.m_lbl_q2b_order_book_index);
-			this.panel1.Controls.Add(this.m_tb_q2b_status);
-			this.panel1.Controls.Add(this.m_lbl_q2b_bait_trade);
-			this.panel1.Controls.Add(this.m_tb_q2b_bait_trade);
-			this.panel1.Controls.Add(this.m_tb_q2b_match_trade);
-			this.panel1.Controls.Add(this.m_lbl_q2b_match_trade);
-			this.panel1.Controls.Add(this.m_tb_q2b_bait_price);
-			this.panel1.Controls.Add(this.m_lbl_q2b_bait_price);
-			this.panel1.Controls.Add(this.m_tb_q2b_match_price);
-			this.panel1.Controls.Add(this.m_lbl_q2b_match_price);
-			this.panel1.Controls.Add(this.m_lbl_q2b_profit_ratio);
-			this.panel1.Controls.Add(this.m_tb_q2b_profit_ratio);
-			this.panel1.Location = new System.Drawing.Point(324, 0);
-			this.panel1.Margin = new System.Windows.Forms.Padding(0);
-			this.panel1.Name = "panel1";
-			this.panel1.Size = new System.Drawing.Size(325, 167);
-			this.panel1.TabIndex = 1;
+			this.m_panel1.BackColor = System.Drawing.SystemColors.Window;
+			this.m_panel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.m_panel1.Controls.Add(this.m_tb_q2b_order_book_depth);
+			this.m_panel1.Controls.Add(this.m_lbl_q2b_order_book_depth);
+			this.m_panel1.Controls.Add(this.m_tb_q2b_order_book_index);
+			this.m_panel1.Controls.Add(this.m_lbl_q2b_order_book_index);
+			this.m_panel1.Controls.Add(this.m_tb_q2b_status);
+			this.m_panel1.Controls.Add(this.m_lbl_q2b_bait_trade);
+			this.m_panel1.Controls.Add(this.m_tb_q2b_bait_trade);
+			this.m_panel1.Controls.Add(this.m_tb_q2b_match_trade);
+			this.m_panel1.Controls.Add(this.m_lbl_q2b_match_trade);
+			this.m_panel1.Controls.Add(this.m_tb_q2b_bait_price);
+			this.m_panel1.Controls.Add(this.m_lbl_q2b_bait_price);
+			this.m_panel1.Controls.Add(this.m_tb_q2b_match_price);
+			this.m_panel1.Controls.Add(this.m_lbl_q2b_match_price);
+			this.m_panel1.Controls.Add(this.m_lbl_q2b_profit_ratio);
+			this.m_panel1.Controls.Add(this.m_tb_q2b_profit_ratio);
+			this.m_panel1.Location = new System.Drawing.Point(450, 0);
+			this.m_panel1.Margin = new System.Windows.Forms.Padding(0);
+			this.m_panel1.Name = "m_panel1";
+			this.m_panel1.Size = new System.Drawing.Size(450, 167);
+			this.m_panel1.TabIndex = 1;
+			// 
+			// m_tb_q2b_order_book_index
+			// 
+			this.m_tb_q2b_order_book_index.BackColor = System.Drawing.SystemColors.Window;
+			this.m_tb_q2b_order_book_index.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.m_tb_q2b_order_book_index.Location = new System.Drawing.Point(205, 116);
+			this.m_tb_q2b_order_book_index.Name = "m_tb_q2b_order_book_index";
+			this.m_tb_q2b_order_book_index.ReadOnly = true;
+			this.m_tb_q2b_order_book_index.Size = new System.Drawing.Size(54, 20);
+			this.m_tb_q2b_order_book_index.TabIndex = 14;
+			// 
+			// m_lbl_q2b_order_book_index
+			// 
+			this.m_lbl_q2b_order_book_index.AutoSize = true;
+			this.m_lbl_q2b_order_book_index.Location = new System.Drawing.Point(145, 119);
+			this.m_lbl_q2b_order_book_index.Name = "m_lbl_q2b_order_book_index";
+			this.m_lbl_q2b_order_book_index.Size = new System.Drawing.Size(54, 13);
+			this.m_lbl_q2b_order_book_index.TabIndex = 13;
+			this.m_lbl_q2b_order_book_index.Text = "OB Index:";
 			// 
 			// m_tb_q2b_status
 			// 
@@ -291,7 +325,7 @@ namespace CoinFlip
 			this.m_tb_q2b_status.Location = new System.Drawing.Point(77, 142);
 			this.m_tb_q2b_status.Name = "m_tb_q2b_status";
 			this.m_tb_q2b_status.ReadOnly = true;
-			this.m_tb_q2b_status.Size = new System.Drawing.Size(237, 20);
+			this.m_tb_q2b_status.Size = new System.Drawing.Size(362, 20);
 			this.m_tb_q2b_status.TabIndex = 11;
 			this.m_tb_q2b_status.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
 			// 
@@ -313,7 +347,7 @@ namespace CoinFlip
 			this.m_tb_q2b_bait_trade.Location = new System.Drawing.Point(77, 30);
 			this.m_tb_q2b_bait_trade.Name = "m_tb_q2b_bait_trade";
 			this.m_tb_q2b_bait_trade.ReadOnly = true;
-			this.m_tb_q2b_bait_trade.Size = new System.Drawing.Size(237, 20);
+			this.m_tb_q2b_bait_trade.Size = new System.Drawing.Size(362, 20);
 			this.m_tb_q2b_bait_trade.TabIndex = 8;
 			// 
 			// m_tb_q2b_match_trade
@@ -325,7 +359,7 @@ namespace CoinFlip
 			this.m_tb_q2b_match_trade.Location = new System.Drawing.Point(77, 4);
 			this.m_tb_q2b_match_trade.Name = "m_tb_q2b_match_trade";
 			this.m_tb_q2b_match_trade.ReadOnly = true;
-			this.m_tb_q2b_match_trade.Size = new System.Drawing.Size(237, 20);
+			this.m_tb_q2b_match_trade.Size = new System.Drawing.Size(362, 20);
 			this.m_tb_q2b_match_trade.TabIndex = 7;
 			// 
 			// m_lbl_q2b_match_trade
@@ -346,7 +380,7 @@ namespace CoinFlip
 			this.m_tb_q2b_bait_price.Location = new System.Drawing.Point(77, 91);
 			this.m_tb_q2b_bait_price.Name = "m_tb_q2b_bait_price";
 			this.m_tb_q2b_bait_price.ReadOnly = true;
-			this.m_tb_q2b_bait_price.Size = new System.Drawing.Size(237, 20);
+			this.m_tb_q2b_bait_price.Size = new System.Drawing.Size(362, 20);
 			this.m_tb_q2b_bait_price.TabIndex = 5;
 			// 
 			// m_lbl_q2b_bait_price
@@ -367,7 +401,7 @@ namespace CoinFlip
 			this.m_tb_q2b_match_price.Location = new System.Drawing.Point(77, 65);
 			this.m_tb_q2b_match_price.Name = "m_tb_q2b_match_price";
 			this.m_tb_q2b_match_price.ReadOnly = true;
-			this.m_tb_q2b_match_price.Size = new System.Drawing.Size(237, 20);
+			this.m_tb_q2b_match_price.Size = new System.Drawing.Size(362, 20);
 			this.m_tb_q2b_match_price.TabIndex = 3;
 			// 
 			// m_lbl_q2b_match_price
@@ -395,7 +429,7 @@ namespace CoinFlip
 			this.m_tb_q2b_profit_ratio.Location = new System.Drawing.Point(77, 117);
 			this.m_tb_q2b_profit_ratio.Name = "m_tb_q2b_profit_ratio";
 			this.m_tb_q2b_profit_ratio.ReadOnly = true;
-			this.m_tb_q2b_profit_ratio.Size = new System.Drawing.Size(77, 20);
+			this.m_tb_q2b_profit_ratio.Size = new System.Drawing.Size(62, 20);
 			this.m_tb_q2b_profit_ratio.TabIndex = 0;
 			// 
 			// m_panel0
@@ -404,6 +438,8 @@ namespace CoinFlip
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_panel0.BackColor = System.Drawing.SystemColors.Window;
 			this.m_panel0.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.m_panel0.Controls.Add(this.m_tb_b2q_order_book_depth);
+			this.m_panel0.Controls.Add(this.m_lbl_b2q_order_book_depth);
 			this.m_panel0.Controls.Add(this.m_lbl_b2q_order_book_index);
 			this.m_panel0.Controls.Add(this.m_tb_b2q_order_book_index);
 			this.m_panel0.Controls.Add(this.m_tb_b2q_status);
@@ -420,8 +456,27 @@ namespace CoinFlip
 			this.m_panel0.Location = new System.Drawing.Point(0, 0);
 			this.m_panel0.Margin = new System.Windows.Forms.Padding(0);
 			this.m_panel0.Name = "m_panel0";
-			this.m_panel0.Size = new System.Drawing.Size(324, 167);
+			this.m_panel0.Size = new System.Drawing.Size(450, 167);
 			this.m_panel0.TabIndex = 0;
+			// 
+			// m_lbl_b2q_order_book_index
+			// 
+			this.m_lbl_b2q_order_book_index.AutoSize = true;
+			this.m_lbl_b2q_order_book_index.Location = new System.Drawing.Point(145, 119);
+			this.m_lbl_b2q_order_book_index.Name = "m_lbl_b2q_order_book_index";
+			this.m_lbl_b2q_order_book_index.Size = new System.Drawing.Size(54, 13);
+			this.m_lbl_b2q_order_book_index.TabIndex = 12;
+			this.m_lbl_b2q_order_book_index.Text = "OB Index:";
+			// 
+			// m_tb_b2q_order_book_index
+			// 
+			this.m_tb_b2q_order_book_index.BackColor = System.Drawing.SystemColors.Window;
+			this.m_tb_b2q_order_book_index.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.m_tb_b2q_order_book_index.Location = new System.Drawing.Point(205, 116);
+			this.m_tb_b2q_order_book_index.Name = "m_tb_b2q_order_book_index";
+			this.m_tb_b2q_order_book_index.ReadOnly = true;
+			this.m_tb_b2q_order_book_index.Size = new System.Drawing.Size(54, 20);
+			this.m_tb_b2q_order_book_index.TabIndex = 11;
 			// 
 			// m_tb_b2q_status
 			// 
@@ -432,7 +487,7 @@ namespace CoinFlip
 			this.m_tb_b2q_status.Location = new System.Drawing.Point(77, 142);
 			this.m_tb_b2q_status.Name = "m_tb_b2q_status";
 			this.m_tb_b2q_status.ReadOnly = true;
-			this.m_tb_b2q_status.Size = new System.Drawing.Size(236, 20);
+			this.m_tb_b2q_status.Size = new System.Drawing.Size(362, 20);
 			this.m_tb_b2q_status.TabIndex = 10;
 			this.m_tb_b2q_status.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
 			// 
@@ -454,7 +509,7 @@ namespace CoinFlip
 			this.m_tb_b2q_bait_trade.Location = new System.Drawing.Point(77, 30);
 			this.m_tb_b2q_bait_trade.Name = "m_tb_b2q_bait_trade";
 			this.m_tb_b2q_bait_trade.ReadOnly = true;
-			this.m_tb_b2q_bait_trade.Size = new System.Drawing.Size(236, 20);
+			this.m_tb_b2q_bait_trade.Size = new System.Drawing.Size(362, 20);
 			this.m_tb_b2q_bait_trade.TabIndex = 8;
 			// 
 			// m_tb_b2q_match_trade
@@ -466,7 +521,7 @@ namespace CoinFlip
 			this.m_tb_b2q_match_trade.Location = new System.Drawing.Point(77, 4);
 			this.m_tb_b2q_match_trade.Name = "m_tb_b2q_match_trade";
 			this.m_tb_b2q_match_trade.ReadOnly = true;
-			this.m_tb_b2q_match_trade.Size = new System.Drawing.Size(236, 20);
+			this.m_tb_b2q_match_trade.Size = new System.Drawing.Size(362, 20);
 			this.m_tb_b2q_match_trade.TabIndex = 7;
 			// 
 			// m_lbl_b2q_match_trade
@@ -487,7 +542,7 @@ namespace CoinFlip
 			this.m_tb_b2q_bait_price.Location = new System.Drawing.Point(77, 91);
 			this.m_tb_b2q_bait_price.Name = "m_tb_b2q_bait_price";
 			this.m_tb_b2q_bait_price.ReadOnly = true;
-			this.m_tb_b2q_bait_price.Size = new System.Drawing.Size(236, 20);
+			this.m_tb_b2q_bait_price.Size = new System.Drawing.Size(362, 20);
 			this.m_tb_b2q_bait_price.TabIndex = 5;
 			// 
 			// m_lbl_b2q_bait_price
@@ -508,7 +563,7 @@ namespace CoinFlip
 			this.m_tb_b2q_match_price.Location = new System.Drawing.Point(77, 65);
 			this.m_tb_b2q_match_price.Name = "m_tb_b2q_match_price";
 			this.m_tb_b2q_match_price.ReadOnly = true;
-			this.m_tb_b2q_match_price.Size = new System.Drawing.Size(236, 20);
+			this.m_tb_b2q_match_price.Size = new System.Drawing.Size(362, 20);
 			this.m_tb_b2q_match_price.TabIndex = 3;
 			// 
 			// m_lbl_b2q_match
@@ -536,46 +591,46 @@ namespace CoinFlip
 			this.m_tb_b2q_profit_ratio.Location = new System.Drawing.Point(77, 117);
 			this.m_tb_b2q_profit_ratio.Name = "m_tb_b2q_profit_ratio";
 			this.m_tb_b2q_profit_ratio.ReadOnly = true;
-			this.m_tb_b2q_profit_ratio.Size = new System.Drawing.Size(77, 20);
+			this.m_tb_b2q_profit_ratio.Size = new System.Drawing.Size(62, 20);
 			this.m_tb_b2q_profit_ratio.TabIndex = 0;
 			// 
-			// m_tb_b2q_order_book_index
+			// m_lbl_b2q_order_book_depth
 			// 
-			this.m_tb_b2q_order_book_index.BackColor = System.Drawing.SystemColors.Window;
-			this.m_tb_b2q_order_book_index.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.m_tb_b2q_order_book_index.Location = new System.Drawing.Point(259, 116);
-			this.m_tb_b2q_order_book_index.Name = "m_tb_b2q_order_book_index";
-			this.m_tb_b2q_order_book_index.ReadOnly = true;
-			this.m_tb_b2q_order_book_index.Size = new System.Drawing.Size(54, 20);
-			this.m_tb_b2q_order_book_index.TabIndex = 11;
+			this.m_lbl_b2q_order_book_depth.AutoSize = true;
+			this.m_lbl_b2q_order_book_depth.Location = new System.Drawing.Point(265, 119);
+			this.m_lbl_b2q_order_book_depth.Name = "m_lbl_b2q_order_book_depth";
+			this.m_lbl_b2q_order_book_depth.Size = new System.Drawing.Size(57, 13);
+			this.m_lbl_b2q_order_book_depth.TabIndex = 13;
+			this.m_lbl_b2q_order_book_depth.Text = "OB Depth:";
 			// 
-			// m_lbl_b2q_order_book_index
+			// m_tb_b2q_order_book_depth
 			// 
-			this.m_lbl_b2q_order_book_index.AutoSize = true;
-			this.m_lbl_b2q_order_book_index.Location = new System.Drawing.Point(160, 119);
-			this.m_lbl_b2q_order_book_index.Name = "m_lbl_b2q_order_book_index";
-			this.m_lbl_b2q_order_book_index.Size = new System.Drawing.Size(93, 13);
-			this.m_lbl_b2q_order_book_index.TabIndex = 12;
-			this.m_lbl_b2q_order_book_index.Text = "Order Book Index:";
+			this.m_tb_b2q_order_book_depth.BackColor = System.Drawing.SystemColors.Window;
+			this.m_tb_b2q_order_book_depth.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.m_tb_b2q_order_book_depth.Location = new System.Drawing.Point(325, 117);
+			this.m_tb_b2q_order_book_depth.Name = "m_tb_b2q_order_book_depth";
+			this.m_tb_b2q_order_book_depth.ReadOnly = true;
+			this.m_tb_b2q_order_book_depth.Size = new System.Drawing.Size(114, 20);
+			this.m_tb_b2q_order_book_depth.TabIndex = 14;
 			// 
-			// m_lbl_q2b_order_book_index
+			// m_lbl_q2b_order_book_depth
 			// 
-			this.m_lbl_q2b_order_book_index.AutoSize = true;
-			this.m_lbl_q2b_order_book_index.Location = new System.Drawing.Point(160, 119);
-			this.m_lbl_q2b_order_book_index.Name = "m_lbl_q2b_order_book_index";
-			this.m_lbl_q2b_order_book_index.Size = new System.Drawing.Size(93, 13);
-			this.m_lbl_q2b_order_book_index.TabIndex = 13;
-			this.m_lbl_q2b_order_book_index.Text = "Order Book Index:";
+			this.m_lbl_q2b_order_book_depth.AutoSize = true;
+			this.m_lbl_q2b_order_book_depth.Location = new System.Drawing.Point(265, 119);
+			this.m_lbl_q2b_order_book_depth.Name = "m_lbl_q2b_order_book_depth";
+			this.m_lbl_q2b_order_book_depth.Size = new System.Drawing.Size(57, 13);
+			this.m_lbl_q2b_order_book_depth.TabIndex = 15;
+			this.m_lbl_q2b_order_book_depth.Text = "OB Depth:";
 			// 
-			// m_tb_q2b_order_book_index
+			// m_tb_q2b_order_book_depth
 			// 
-			this.m_tb_q2b_order_book_index.BackColor = System.Drawing.SystemColors.Window;
-			this.m_tb_q2b_order_book_index.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.m_tb_q2b_order_book_index.Location = new System.Drawing.Point(259, 116);
-			this.m_tb_q2b_order_book_index.Name = "m_tb_q2b_order_book_index";
-			this.m_tb_q2b_order_book_index.ReadOnly = true;
-			this.m_tb_q2b_order_book_index.Size = new System.Drawing.Size(54, 20);
-			this.m_tb_q2b_order_book_index.TabIndex = 14;
+			this.m_tb_q2b_order_book_depth.BackColor = System.Drawing.SystemColors.Window;
+			this.m_tb_q2b_order_book_depth.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.m_tb_q2b_order_book_depth.Location = new System.Drawing.Point(328, 116);
+			this.m_tb_q2b_order_book_depth.Name = "m_tb_q2b_order_book_depth";
+			this.m_tb_q2b_order_book_depth.ReadOnly = true;
+			this.m_tb_q2b_order_book_depth.Size = new System.Drawing.Size(111, 20);
+			this.m_tb_q2b_order_book_depth.TabIndex = 16;
 			// 
 			// FishingDetailsUI
 			// 
@@ -583,10 +638,10 @@ namespace CoinFlip
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.Controls.Add(this.m_table0);
 			this.Name = "FishingDetailsUI";
-			this.Size = new System.Drawing.Size(649, 498);
+			this.Size = new System.Drawing.Size(900, 617);
 			this.m_table0.ResumeLayout(false);
-			this.panel1.ResumeLayout(false);
-			this.panel1.PerformLayout();
+			this.m_panel1.ResumeLayout(false);
+			this.m_panel1.PerformLayout();
 			this.m_panel0.ResumeLayout(false);
 			this.m_panel0.PerformLayout();
 			this.ResumeLayout(false);

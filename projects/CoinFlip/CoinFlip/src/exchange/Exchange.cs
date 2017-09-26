@@ -4,10 +4,12 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using System.Xml.Linq;
 using pr.common;
 using pr.container;
@@ -162,7 +164,7 @@ namespace CoinFlip
 				m_heart.Start();
 			}
 		}
-		private async void HeartBeatThreadEntry()
+		private void HeartBeatThreadEntry()
 		{
 			try
 			{
@@ -187,7 +189,7 @@ namespace CoinFlip
 					if (BalanceUpdateRequired || (sw.ElapsedMilliseconds - last_balance_update) > BalanceUpdatePeriodMS)
 					{
 						BalanceUpdateRequired = false;
-						tasks.Add(UpdateBalances());
+						tasks.Add(Task.Run(() => UpdateBalances(), Model.ShutdownToken));
 						last_balance_update = sw.ElapsedMilliseconds;
 					}
 
@@ -196,7 +198,7 @@ namespace CoinFlip
 					if (PositionUpdateRequired || (sw.ElapsedMilliseconds - last_position_update) > PositionUpdatePeriodMS)
 					{
 						PositionUpdateRequired = false;
-						tasks.Add(UpdatePositions());
+						tasks.Add(Task.Run(() => UpdatePositions(), Model.ShutdownToken));
 						last_position_update = sw.ElapsedMilliseconds;
 					}
 
@@ -205,7 +207,7 @@ namespace CoinFlip
 					if (HistoryUpdateRequired || (sw.ElapsedMilliseconds - last_trade_history_update) > TradeHistoryUpdatePeriodMS)
 					{
 						HistoryUpdateRequired = false;
-						tasks.Add(UpdateTradeHistory());
+						tasks.Add(Task.Run(() => UpdateTradeHistory(), Model.ShutdownToken));
 						last_trade_history_update = sw.ElapsedMilliseconds;
 					}
 
@@ -213,11 +215,11 @@ namespace CoinFlip
 					if (MarketDataUpdateRequired || (sw.ElapsedMilliseconds - last_market_update) > PollPeriod)
 					{
 						MarketDataUpdateRequired = false;
-						tasks.Add(UpdateData());
+						tasks.Add(Task.Run(() => UpdateData(), Model.ShutdownToken));
 						last_market_update = sw.ElapsedMilliseconds;
 					}
 
-					await Task.WhenAll(tasks);
+					Task.WhenAll(tasks).Wait();
 				}
 				Status = EStatus.Stopped;
 			}
@@ -225,7 +227,7 @@ namespace CoinFlip
 			{
 				Model.Log.Write(ELogLevel.Error, ex, $"Exchange {Name} heart beat thread exit");
 				Status = EStatus.Error;
-				Active = false;
+				Model.RunOnGuiThread(() => Active = false);
 			}
 		}
 		private AutoResetEvent m_pace_maker;
@@ -588,7 +590,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Place an order to convert 'volume' (base currency) to quote currency at 'price' (Quote/Base)</summary>
-		public Task<TradeResult> CreateB2QOrder(TradePair pair, Unit<decimal> volume_base, Unit<decimal>? price = null)
+		public TradeResult CreateB2QOrder(TradePair pair, Unit<decimal> volume_base, Unit<decimal>? price = null)
 		{
 			// Check units
 			if (volume_base < 0m._(pair.Base))
@@ -606,7 +608,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Place an order to convert 'volume' (quote currency) to base currency at 'price' (Base/Quote)</summary>
-		public Task<TradeResult> CreateQ2BOrder(TradePair pair, Unit<decimal> volume_quote, Unit<decimal>? price = null)
+		public TradeResult CreateQ2BOrder(TradePair pair, Unit<decimal> volume_quote, Unit<decimal>? price = null)
 		{
 			// Check units
 			if (volume_quote < 0m._(pair.Quote))
@@ -624,7 +626,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Place an order on the exchange to buy/sell 'volume' (currency depends on 'tt')</summary>
-		public async Task<TradeResult> CreateOrder(ETradeType tt, TradePair pair, Unit<decimal> volume_, Unit<decimal> price_)
+		public TradeResult CreateOrder(ETradeType tt, TradePair pair, Unit<decimal> volume_, Unit<decimal> price_)
 		{
 			// Sanity checks
 			if (pair.Exchange != this)
@@ -677,12 +679,12 @@ namespace CoinFlip
 			// 2) the entire trade can be met by existing orders in the order book -> a collection of trade IDs is returned
 			// 3) some of the trade can be met by existing orders -> a single order number and a collection of trade IDs are returned.
 			var order_result = Model.AllowTrades // Obey the global trade switch
-				? await CreateOrderInternal(pair, tt, volume, price)
+				? CreateOrderInternal(pair, tt, volume, price)
 				: new TradeResult(m_fake_order_number, new ulong[0]);
 
 			// Simulate the delay of submitting a trade when 'AllowTrades' is not enabled
 			if (!Model.AllowTrades)
-				await Task.Delay(800);
+				Thread.Sleep(800);
 
 			// Log the event
 			Model.Log.Write(ELogLevel.Info, "{0}: (id={1}) {2} {3} → {4} {5} @ {6} {7}".Fmt(
@@ -722,15 +724,15 @@ namespace CoinFlip
 
 			return order_result;
 		}
-		protected abstract Task<TradeResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume_base, Unit<decimal> price);
+		protected abstract TradeResult CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume_base, Unit<decimal> price);
 		private ulong m_fake_order_number;
 
 		/// <summary>Cancel an existing position</summary>
-		public async Task CancelOrder(TradePair pair, ulong order_id)
+		public void CancelOrder(TradePair pair, ulong order_id)
 		{
 			// Obey the global trade switch
 			if (Model.AllowTrades)
-				await CancelOrderInternal(pair, order_id);
+				CancelOrderInternal(pair, order_id);
 
 			// Remove the position from the Positions collection so that there is no race condition
 			Positions.RemoveIf(x => x.Pair == pair && x.OrderId == order_id);
@@ -739,16 +741,7 @@ namespace CoinFlip
 			PositionUpdateRequired = true;
 			BalanceUpdateRequired = true;
 		}
-		protected abstract Task CancelOrderInternal(TradePair pair, ulong order_id);
-
-		/// <summary>Update the collections of coins and pairs</summary>
-		public virtual Task UpdatePairs(HashSet<string> coins_of_interest) // Worker thread context
-		{
-			// This method should await server responses, collect data in local buffers
-			// then use 'RunOnGuiThread' to copy data to the Exchange's main collections.
-			Model.RunOnGuiThread(() => { }, block:true);
-			return Misc.CompletedTask;
-		}
+		protected abstract void CancelOrderInternal(TradePair pair, ulong order_id);
 
 		/// <summary>Returns the time frames for which chart data is available for 'pair'</summary>
 		public virtual IEnumerable<ETimeFrame> ChartDataAvailable(TradePair pair)
@@ -757,44 +750,87 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the chart data for a given pair, over a given time range</summary>
-		public async Task<List<Candle>> ChartData(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end)
+		public List<Candle> ChartData(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end)
 		{
-			return await ChartDataInternal(pair, timeframe, time_beg, time_end);
+			return ChartDataInternal(pair, timeframe, time_beg, time_end);
 		}
-		protected virtual Task<List<Candle>> ChartDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end)
+		protected virtual List<Candle> ChartDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end)
 		{
-			return Task.FromResult(new List<Candle>());
+			return new List<Candle>();
+		}
+
+		/// <summary>Return the order book for 'pair' to a depth of 'depth'</summary>
+		public MarketDepth MarketDepth(TradePair pair, int depth)
+		{
+			return MarketDepthInternal(pair, depth);
+		}
+		protected virtual MarketDepth MarketDepthInternal(TradePair pair, int count)
+		{
+			return new MarketDepth(pair.Base, pair.Quote);
+		}
+
+		/// <summary>Update the collections of coins and pairs</summary>
+		public virtual void UpdatePairs(HashSet<string> coins_of_interest) // Worker thread context
+		{
+			// This method should await server responses, collect data in local buffers
+			// then use 'RunOnGuiThread' to copy data to the Exchange's main collections.
+			Model.RunOnGuiThread(() => { }, block:true);
 		}
 
 		/// <summary>Update the market data, balances, and open positions</summary>
-		protected virtual Task UpdateData() // Worker thread context
+		protected virtual void UpdateData() // Worker thread context
 		{
 			// This method should await all server responses, then add an action
 			// to the Model.MarketUpdates collection for integration at a suitable time.
 			lock (MarketDataUpdatedTime)
 				MarketDataUpdatedTime.NotifyOne(MarketDataUpdatedTime, DateTimeOffset.Now);
-			return Misc.CompletedTask;
 		}
 
 		/// <summary>Update the account balances</summary>
-		protected virtual Task UpdateBalances()  // Worker thread context
+		protected virtual void UpdateBalances()  // Worker thread context
 		{
 			BalanceUpdatedTime.NotifyOne(DateTimeOffset.Now);
-			return Misc.CompletedTask;
 		}
 
 		/// <summary>Update all open positions</summary>
-		protected virtual Task UpdatePositions() // Worker thread context
+		protected virtual void UpdatePositions() // Worker thread context
 		{
 			PositionUpdatedTime.NotifyOne(DateTimeOffset.Now);
-			return Misc.CompletedTask;
 		}
 
 		/// <summary>Update the trade history</summary>
-		protected virtual Task UpdateTradeHistory() // Worker thread context
+		protected virtual void UpdateTradeHistory() // Worker thread context
 		{
 			TradeHistoryUpdatedTime.NotifyOne(DateTimeOffset.Now);
-			return Misc.CompletedTask;
+		}
+
+		/// <summary>Handle an exception during an update call</summary>
+		public void HandleException(string method_name, Exception ex, string msg = null)
+		{
+			for (; ex is AggregateException ae && ae.InnerExceptions.Count == 1; )
+			{
+				ex = ae.InnerExceptions[0];
+			}
+			if (ex is OperationCanceledException || ex is TaskCanceledException)
+			{
+				// Ignore operation cancelled
+				return;
+			}
+			if (ex is HttpException he)
+			{
+				if (he.GetHttpCode() == (int)HttpStatusCode.ServiceUnavailable)
+				{
+					if (Status != EStatus.Offline)
+						Model.Log.Write(ELogLevel.Warn, $"{GetType().Name} Service Unavailable");
+
+					Status = EStatus.Offline;
+					return;
+				}
+			}
+
+			// Log all other error types
+			Model.Log.Write(ELogLevel.Error, ex, $"{GetType().Name} {method_name} failed. {msg ?? string.Empty}");
+			//Status = EStatus.Error;
 		}
 
 		/// <summary>Remove positions that are older than 'timestamp' and not in 'order_ids'</summary>

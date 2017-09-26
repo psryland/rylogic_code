@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq.Expressions;
 using System.Reflection;
+using pr.extn;
 
 namespace pr.util
 {
@@ -38,9 +39,16 @@ namespace pr.util
 			#endregion
 			#region Plus
 			{
-				var paramA = Expression.Parameter(typeof(T), "a");
-				var body = Expression.UnaryPlus(paramA);
-				m_plus = Expression.Lambda<Func<T, T>>(body, paramA).Compile();
+				if (typeof(T).IsEnum)
+				{
+					m_plus = x => { throw new Exception($"Type {typeof(T).Name} does not define the Unary Plus operator"); };
+				}
+				else
+				{
+					var paramA = Expression.Parameter(typeof(T), "a");
+					var body = Expression.UnaryPlus(paramA);
+					m_plus = Expression.Lambda<Func<T, T>>(body, paramA).Compile();
+				}
 			}
 			#endregion
 			#region Neg
@@ -58,6 +66,10 @@ namespace pr.util
 					var body = Expression.Subtract(Expression.Constant(0UL), paramA);
 					m_neg = Expression.Lambda<Func<T, T>>(body, paramA).Compile();
 				}
+				else if (typeof(T).IsEnum)
+				{
+					m_neg = x => { throw new Exception($"Type {typeof(T).Name} does not define the Unary Minus operator"); };
+				}
 				else
 				{
 					var paramA = Expression.Parameter(typeof(T), "a");
@@ -66,36 +78,157 @@ namespace pr.util
 				}
 			}
 			#endregion
+			#region Ones complement
+			{
+				if (typeof(T).IsEnum)
+				{
+					if (typeof(T).HasAttribute<FlagsAttribute>())
+					{
+						var paramA = Expression.Parameter(typeof(T), "a");
+						var cast0 = Expression.Convert(paramA, Enum.GetUnderlyingType(typeof(T)));
+						var comp = Expression.OnesComplement(cast0);
+						var body = Expression.Convert(comp, typeof(T));
+						m_ones_comp = Expression.Lambda<Func<T, T>>(body, paramA).Compile();
+					}
+					else
+					{
+						m_ones_comp = x => { throw new Exception($"Type {typeof(T).Name} does not define the Ones Complement operator"); };
+					}
+				}
+				else if (typeof(T).IsPrimitive && typeof(T) != typeof(float) && typeof(T) != typeof(double) && typeof(T) != typeof(decimal))
+				{
+					var paramA = Expression.Parameter(typeof(T), "a");
+					var body = Expression.OnesComplement(paramA);
+					m_ones_comp = Expression.Lambda<Func<T, T>>(body, paramA).Compile();
+				}
+				else
+				{
+					m_ones_comp = x => { throw new Exception($"Type {typeof(T).Name} does not define the Ones Complement operator"); };
+				}
+			}
+			#endregion
 			#region Add
 			{
-				var paramA = Expression.Parameter(typeof(T), "a");
-				var paramB = Expression.Parameter(typeof(T), "b");
-				var body = Expression.Add(paramA, paramB);
-				m_add = Expression.Lambda<Func<T, T, T>>(body, paramA, paramB).Compile();
+				if (typeof(T).IsEnum)
+				{
+					m_add = (a,b) => { throw new Exception($"Type {typeof(T).Name} does not define the Add operator"); };
+				}
+				else
+				{
+					var paramA = Expression.Parameter(typeof(T), "a");
+					var paramB = Expression.Parameter(typeof(T), "b");
+					var body = Expression.Add(paramA, paramB);
+					m_add = Expression.Lambda<Func<T, T, T>>(body, paramA, paramB).Compile();
+				}
 			}
 			#endregion
 			#region Sub
 			{
-				var paramA = Expression.Parameter(typeof(T), "a");
-				var paramB = Expression.Parameter(typeof(T), "b");
-				var body = Expression.Subtract(paramA, paramB);
-				m_sub = Expression.Lambda<Func<T, T, T>>(body, paramA, paramB).Compile();
+				if (typeof(T).IsEnum)
+				{
+					m_sub = (a,b) => { throw new Exception($"Type {typeof(T).Name} does not define the Subtraction operator"); };
+				}
+				else
+				{
+					var paramA = Expression.Parameter(typeof(T), "a");
+					var paramB = Expression.Parameter(typeof(T), "b");
+					var body = Expression.Subtract(paramA, paramB);
+					m_sub = Expression.Lambda<Func<T, T, T>>(body, paramA, paramB).Compile();
+				}
 			}
 			#endregion
 			#region Multiply
 			{
-				var paramA = Expression.Parameter(typeof(T), "a");
-				var paramB = Expression.Parameter(typeof(T), "b");
-				var body = Expression.Multiply(paramA, paramB);
-				m_mul = Expression.Lambda<Func<T, T, T>>(body, paramA, paramB).Compile();
+				if (typeof(T).IsEnum)
+				{
+					m_mul = (a,b) => { throw new Exception($"Type {typeof(T).Name} does not define the Multiplication operator"); };
+				}
+				else
+				{
+					var paramA = Expression.Parameter(typeof(T), "a");
+					var paramB = Expression.Parameter(typeof(T), "b");
+					var body = Expression.Multiply(paramA, paramB);
+					m_mul = Expression.Lambda<Func<T, T, T>>(body, paramA, paramB).Compile();
+				}
 			}
 			#endregion
 			#region Divide
 			{
-				var paramA = Expression.Parameter(typeof(T), "a");
-				var paramB = Expression.Parameter(typeof(T), "b");
-				var body = Expression.Divide(paramA, paramB);
-				m_div = Expression.Lambda<Func<T, T, T>>(body, paramA, paramB).Compile();
+				if (typeof(T).IsEnum)
+				{
+					m_div = (a,b) => { throw new Exception($"Type {typeof(T).Name} does not define the Division operator"); };
+				}
+				else
+				{
+					var paramA = Expression.Parameter(typeof(T), "a");
+					var paramB = Expression.Parameter(typeof(T), "b");
+					var body = Expression.Divide(paramA, paramB);
+					m_div = Expression.Lambda<Func<T, T, T>>(body, paramA, paramB).Compile();
+				}
+			}
+			#endregion
+			#region Bitwise OR
+			{
+				if (typeof(T).IsEnum)
+				{
+					if (typeof(T).HasAttribute<FlagsAttribute>())
+					{
+						var paramA   = Expression.Parameter(typeof(T), "a");
+						var paramB   = Expression.Parameter(typeof(T), "a");
+						var castA0   = Expression.Convert(paramA, Enum.GetUnderlyingType(typeof(T)));
+						var castB0   = Expression.Convert(paramB, Enum.GetUnderlyingType(typeof(T)));
+						var or       = Expression.Or(castA0, castB0);
+						var body     = Expression.Convert(or, typeof(T));
+						m_bitwise_or = Expression.Lambda<Func<T,T,T>>(body, paramA, paramB).Compile();
+					}
+					else
+					{
+						m_bitwise_or = (a,b) => { throw new Exception($"Type {typeof(T).Name} does not define the Bitwise OR operator"); };
+					}
+				}
+				else if (typeof(T).IsPrimitive && typeof(T) != typeof(float) && typeof(T) != typeof(double) && typeof(T) != typeof(decimal))
+				{
+					var paramA = Expression.Parameter(typeof(T), "a");
+					var paramB = Expression.Parameter(typeof(T), "b");
+					var body = Expression.Or(paramA, paramB);
+					m_bitwise_or = Expression.Lambda<Func<T, T, T>>(body, paramA, paramB).Compile();
+				}
+				else
+				{
+					m_bitwise_or = (a,b) => { throw new Exception($"Type {typeof(T).Name} does not define the Bitwise OR operator"); };
+				}
+			}
+			#endregion
+			#region Bitwise AND
+			{
+				if (typeof(T).IsEnum)
+				{
+					if (typeof(T).HasAttribute<FlagsAttribute>())
+					{
+						var paramA    = Expression.Parameter(typeof(T), "a");
+						var paramB    = Expression.Parameter(typeof(T), "a");
+						var castA0    = Expression.Convert(paramA, Enum.GetUnderlyingType(typeof(T)));
+						var castB0    = Expression.Convert(paramB, Enum.GetUnderlyingType(typeof(T)));
+						var and       = Expression.And(castA0, castB0);
+						var body      = Expression.Convert(and, typeof(T));
+						m_bitwise_and = Expression.Lambda<Func<T,T,T>>(body, paramA, paramB).Compile();
+					}
+					else
+					{
+						m_bitwise_and = (a,b) => { throw new Exception($"Type {typeof(T).Name} does not define the Bitwise AND operator"); };
+					}
+				}
+				else if (typeof(T).IsPrimitive && typeof(T) != typeof(float) && typeof(T) != typeof(double) && typeof(T) != typeof(decimal))
+				{
+					var paramA = Expression.Parameter(typeof(T), "a");
+					var paramB = Expression.Parameter(typeof(T), "b");
+					var body = Expression.And(paramA, paramB);
+					m_bitwise_and = Expression.Lambda<Func<T, T, T>>(body, paramA, paramB).Compile();
+				}
+				else
+				{
+					m_bitwise_and = (a,b) => { throw new Exception($"Type {typeof(T).Name} does not define the Bitwise AND operator"); };
+				}
 			}
 			#endregion
 			#region Equal
@@ -108,10 +241,23 @@ namespace pr.util
 			#endregion
 			#region Less Than
 			{
-				var paramA = Expression.Parameter(typeof(T), "a");
-				var paramB = Expression.Parameter(typeof(T), "b");
-				var body = Expression.LessThan(paramA, paramB);
-				m_less = Expression.Lambda<Func<T, T, bool>>(body, paramA, paramB).Compile();
+				if (typeof(T).IsEnum)
+				{
+					var paramA = Expression.Parameter(typeof(T), "a");
+					var paramB = Expression.Parameter(typeof(T), "b");
+					var castA0 = Expression.Convert(paramA, Enum.GetUnderlyingType(typeof(T)));
+					var castB0 = Expression.Convert(paramB, Enum.GetUnderlyingType(typeof(T)));
+					var body   = Expression.LessThan(castA0, castB0);
+					m_less     = Expression.Lambda<Func<T, T, bool>>(body, paramA, paramB).Compile();
+
+				}
+				else
+				{
+					var paramA = Expression.Parameter(typeof(T), "a");
+					var paramB = Expression.Parameter(typeof(T), "b");
+					var body = Expression.LessThan(paramA, paramB);
+					m_less = Expression.Lambda<Func<T, T, bool>>(body, paramA, paramB).Compile();
+				}
 			}
 			#endregion
 			#region ToString
@@ -145,6 +291,10 @@ namespace pr.util
 		public static T Neg(T a) { return m_neg(a); }
 		private static Func<T,T> m_neg;
 
+		/// <summary>~a</summary>
+		public static T OnesComp(T a) { return m_ones_comp(a); }
+		private static Func<T,T> m_ones_comp;
+
 		/// <summary>a + b</summary>
 		public static T Add(T a, T b) { return m_add(a,b); }
 		private static Func<T,T,T> m_add;
@@ -160,6 +310,14 @@ namespace pr.util
 		/// <summary>a * b</summary>
 		public static T Div(T a, T b) { return m_div(a,b); }
 		private static Func<T,T,T> m_div;
+
+		/// <summary>a | b</summary>
+		public static T BitwiseOR(T a, T b) { return m_bitwise_or(a,b); }
+		private static Func<T,T,T> m_bitwise_or;
+
+		/// <summary>a & b</summary>
+		public static T BitwiseAND(T a, T b) { return m_bitwise_and(a,b); }
+		private static Func<T,T,T> m_bitwise_and;
 
 		/// <summary>a == b</summary>
 		public static bool Eql(T a, T b) { return m_eql(a,b); }
@@ -229,6 +387,20 @@ namespace pr.unittests
 
 	[TestFixture] public class TestOperators
 	{
+		private enum Enum0
+		{
+			One   = 1,
+			Two   = 2,
+			Three = 3,
+		}
+		[Flags] private enum Enum1
+		{
+			One  = 1 << 0,
+			Two  = 1 << 1,
+			Four = 1 << 2,
+			Seven = One | Two | Four,
+		}
+
 		[Test] public void DefaultUse()
 		{
 			// Force instantiation for all supported basic types (i.e. not < 'int')
@@ -271,6 +443,17 @@ namespace pr.unittests
 			Assert.AreEqual(Operators<float,int>.Div(1.23f, 45), 1.23f / 45);
 
 			Assert.AreEqual(Operators<float>.ToString(1.23f, "C") , 1.23f.ToString("C"));
+		}
+		[Test] public void EnumUse()
+		{
+			// Non-flags
+			Assert.AreEqual(Operators<Enum0>.Less(Enum0.One, Enum0.Three), true);
+
+			// Flags
+			Assert.AreEqual(Operators<Enum1>.BitwiseOR(Enum1.One, Enum1.Four), Enum1.One|Enum1.Four);
+			Assert.AreEqual(Operators<Enum1>.BitwiseAND(Enum1.Seven, Enum1.Two), Enum1.Two);
+			Assert.AreEqual(Operators<Enum1>.OnesComp(Enum1.Two), ~Enum1.Two);
+			Assert.AreEqual(Operators<Enum1>.Less(Enum1.One, Enum1.Four), true);
 		}
 	}
 }

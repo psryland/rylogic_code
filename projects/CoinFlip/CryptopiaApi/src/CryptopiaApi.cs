@@ -59,21 +59,29 @@ namespace Cryptopia.API
 		#region Public
 
 		/// <summary>Return all available currencies</summary>
-		public Task<CurrenciesResponse> GetCurrencies()
+		public CurrenciesResponse GetCurrencies()
 		{
 			// https://www.cryptopia.co.nz/api/GetCurrencies
 			return GetData<CurrenciesResponse>(HttpMethod.Get, "GetCurrencies");
 		}
+		public Task<CurrenciesResponse> GetCurrenciesAsync()
+		{
+			return Task.Run(() => GetCurrencies(), m_cancel_token);
+		}
 
 		/// <summary>Return all available trading pairs</summary>
-		public Task<TradePairsResponse> GetTradePairs()
+		public TradePairsResponse GetTradePairs()
 		{
 			// https://www.cryptopia.co.nz/api/GetTradePairs
 			return GetData<TradePairsResponse>(HttpMethod.Get, "GetTradePairs");
 		}
+		public Task<TradePairsResponse> GetTradePairsAsync()
+		{
+			return Task.Run(() => GetTradePairs(), m_cancel_token);
+		}
 
 		/// <summary>Return the available market data for all markets (or markets with 'base_currency' as the base)</summary>
-		public Task<MarketsResponse> GetMarkets(string base_currency = null, int? hours = null)
+		public MarketsResponse GetMarkets(string base_currency = null, int? hours = null)
 		{
 			// https://www.cryptopia.co.nz/api/GetMarkets
 			// https://www.cryptopia.co.nz/api/GetMarkets/BTC
@@ -84,9 +92,13 @@ namespace Cryptopia.API
 			if (hours         != null) command += $"/{hours.Value}";
 			return GetData<MarketsResponse>(HttpMethod.Get, command);
 		}
+		public Task<MarketsResponse> GetMarketsAsync(string base_currency = null, int? hours = null)
+		{
+			return Task.Run(() => GetMarkets(base_currency, hours), m_cancel_token);
+		}
 
 		/// <summary>Returns market data for the specified trade pair</summary>
-		public Task<MarketResponse> GetMarket(int trade_pair_id, int? hours = null)
+		public MarketResponse GetMarket(int trade_pair_id, int? hours = null)
 		{
 			// https://www.cryptopia.co.nz/api/GetMarket/100
 			// https://www.cryptopia.co.nz/api/GetMarket/100/6
@@ -94,7 +106,7 @@ namespace Cryptopia.API
 			if (hours != null) command += $"/{hours.Value}";
 			return GetData<MarketResponse>(HttpMethod.Get, command);
 		}
-		public Task<MarketResponse> GetMarket(CurrencyPair pair, int? hours = null)
+		public MarketResponse GetMarket(CurrencyPair pair, int? hours = null)
 		{
 			// https://www.cryptopia.co.nz/api/GetMarket/DOT_BTC
 			// https://www.cryptopia.co.nz/api/GetMarket/DOT_BTC/6
@@ -102,9 +114,17 @@ namespace Cryptopia.API
 			if (hours != null) command += $"/{hours.Value}";
 			return GetData<MarketResponse>(HttpMethod.Get, command);
 		}
+		public Task<MarketResponse> GetMarketAsync(int trade_pair_id, int? hours = null)
+		{
+			return Task.Run(() => GetMarket(trade_pair_id, hours), m_cancel_token);
+		}
+		public Task<MarketResponse> GetMarketAsync(CurrencyPair pair, int? hours = null)
+		{
+			return Task.Run(() => GetMarket(pair, hours), m_cancel_token);
+		}
 
 		/// <summary>Returns the market history data for the specified trade pair. 'hours' defaults to 24 if not given</summary>
-		public Task<MarketHistoryResponse> GetMarketHistory(int trade_pair_id, int? hours = null)
+		public MarketHistoryResponse GetMarketHistory(int trade_pair_id, int? hours = null)
 		{
 			// https://www.cryptopia.co.nz/api/GetMarketHistory/100
 			// https://www.cryptopia.co.nz/api/GetMarketHistory/100/48
@@ -112,7 +132,7 @@ namespace Cryptopia.API
 			if (hours != null) command += $"/{hours.Value}";
 			return GetData<MarketHistoryResponse>(HttpMethod.Get, command);
 		}
-		public Task<MarketHistoryResponse> GetMarketHistory(CurrencyPair pair, int? hours = null)
+		public MarketHistoryResponse GetMarketHistory(CurrencyPair pair, int? hours = null)
 		{
 			// https://www.cryptopia.co.nz/api/GetMarketHistory/DOT_BTC/48
 			// https://www.cryptopia.co.nz/api/GetMarketHistory/DOT_BTC
@@ -120,9 +140,17 @@ namespace Cryptopia.API
 			if (hours != null) command += $"/{hours.Value}";
 			return GetData<MarketHistoryResponse>(HttpMethod.Get, command);
 		}
+		public Task<MarketHistoryResponse> GetMarketHistoryAsync(int trade_pair_id, int? hours = null)
+		{
+			return Task.Run(() => GetMarketHistory(trade_pair_id, hours), m_cancel_token);
+		}
+		public Task<MarketHistoryResponse> GetMarketHistoryAsync(CurrencyPair pair, int? hours = null)
+		{
+			return Task.Run(() => GetMarketHistory(pair, hours), m_cancel_token);
+		}
 
 		/// <summary>Returns the open buy and sell orders for the specified trade pair. 'order_count' defaults to 100 if not given</summary>
-		public Task<MarketOrdersResponse> GetMarketOrders(int trade_pair_id, int? order_count = null)
+		public MarketOrdersResponse GetMarketOrders(int trade_pair_id, int? order_count = null)
 		{
 			// https://www.cryptopia.co.nz/api/GetMarketOrders/100
 			// https://www.cryptopia.co.nz/api/GetMarketOrders/100/50
@@ -130,7 +158,7 @@ namespace Cryptopia.API
 			if (order_count != null) command += $"{order_count.Value}";
 			return GetData<MarketOrdersResponse>(HttpMethod.Get, command);
 		}
-		public Task<MarketOrdersResponse> GetMarketOrders(CurrencyPair pair, int? order_count = null)
+		public MarketOrdersResponse GetMarketOrders(CurrencyPair pair, int? order_count = null)
 		{
 			// https://www.cryptopia.co.nz/api/GetMarketOrders/DOT_BTC
 			// https://www.cryptopia.co.nz/api/GetMarketOrders/DOT_BTC/50
@@ -138,9 +166,17 @@ namespace Cryptopia.API
 			if (order_count != null) command += $"{order_count.Value}";
 			return GetData<MarketOrdersResponse>(HttpMethod.Get, command);
 		}
+		public Task<MarketOrdersResponse> GetMarketOrdersAsync(int trade_pair_id, int? order_count = null)
+		{
+			return Task.Run(() => GetMarketOrders(trade_pair_id, order_count), m_cancel_token);
+		}
+		public Task<MarketOrdersResponse> GetMarketOrdersAsync(CurrencyPair pair, int? order_count = null)
+		{
+			return Task.Run(() => GetMarketOrders(pair, order_count), m_cancel_token);
+		}
 
 		/// <summary>Returns the open buy and sell orders for the specified markets. 'order_count' defaults to 100 if not given</summary>
-		public Task<MarketOrderGroupsResponse> GetMarketOrderGroups(IEnumerable<int> trade_pair_ids, int? order_count = null)
+		public MarketOrderGroupsResponse GetMarketOrderGroups(IEnumerable<int> trade_pair_ids, int? order_count = null)
 		{
 			// https://www.cryptopia.co.nz/api/GetMarketOrderGroups/100-101-102-103
 			// https://www.cryptopia.co.nz/api/GetMarketOrderGroups/100-101-102-103/50
@@ -148,7 +184,7 @@ namespace Cryptopia.API
 			if (order_count != null) command += $"/{order_count.Value}";
 			return GetData<MarketOrderGroupsResponse>(HttpMethod.Get, command);
 		}
-		public Task<MarketOrderGroupsResponse> GetMarketOrderGroups(IEnumerable<CurrencyPair> pairs, int? order_count = null)
+		public MarketOrderGroupsResponse GetMarketOrderGroups(IEnumerable<CurrencyPair> pairs, int? order_count = null)
 		{
 			// https://www.cryptopia.co.nz/api/GetMarketOrderGroups/DOT_BTC-DOT_LTC-DOT_DOGE-DOT_UNO
 			// https://www.cryptopia.co.nz/api/GetMarketOrderGroups/DOT_BTC-DOT_LTC-DOT_DOGE-DOT_UNO/50
@@ -156,36 +192,56 @@ namespace Cryptopia.API
 			if (order_count != null) command += $"/{order_count.Value}";
 			return GetData<MarketOrderGroupsResponse>(HttpMethod.Get, command);
 		}
+		public Task<MarketOrderGroupsResponse> GetMarketOrderGroupsAsync(IEnumerable<int> trade_pair_ids, int? order_count = null)
+		{
+			return Task.Run(() => GetMarketOrderGroups(trade_pair_ids, order_count), m_cancel_token);
+		}
+		public Task<MarketOrderGroupsResponse> GetMarketOrderGroupsAsync(IEnumerable<CurrencyPair> pairs, int? order_count = null)
+		{
+			return Task.Run(() => GetMarketOrderGroups(pairs, order_count), m_cancel_token);
+		}
 
 		#endregion
 
 		#region Account
 
 		/// <summary>Returns all balances or a specific currency balance</summary>
-		public Task<BalanceResponse> GetBalances()
+		public BalanceResponse GetBalances()
 		{
 			// https://www.cryptopia.co.nz/api/GetBalance 
 			return GetData<BalanceResponse>(HttpMethod.Post, "GetBalance",
 				new KV("Currency", null),
 				new KV("CurrencyId", null));
 		}
-		public Task<BalanceResponse> GetBalances(string currency)
+		public BalanceResponse GetBalances(string currency)
 		{
 			// https://www.cryptopia.co.nz/api/GetBalance 
 			return GetData<BalanceResponse>(HttpMethod.Post, "GetBalance",
 				new KV("Currency", currency),
 				new KV("CurrencyId", null));
 		}
-		public Task<BalanceResponse> GetBalances(int currency_id)
+		public BalanceResponse GetBalances(int currency_id)
 		{
 			// https://www.cryptopia.co.nz/api/GetBalance 
 			return GetData<BalanceResponse>(HttpMethod.Post, "GetBalance",
 				new KV("Currency", null),
 				new KV("CurrencyId", currency_id));
 		}
+		public Task<BalanceResponse> GetBalancesAsync()
+		{
+			return Task.Run(() => GetBalances(), m_cancel_token);
+		}
+		public Task<BalanceResponse> GetBalancesAsync(string currency)
+		{
+			return Task.Run(() => GetBalances(currency), m_cancel_token);
+		}
+		public Task<BalanceResponse> GetBalancesAsync(int currency_id)
+		{
+			return Task.Run(() => GetBalances(currency_id), m_cancel_token);
+		}
 
 		/// <summary>Returns a list of open orders for all trade pairs or specified trade pair. 'count' defaults to 100 if not given</summary>
-		public Task<OpenOrdersResponse> GetOpenOrders(int? count = null)
+		public OpenOrdersResponse GetOpenOrders(int? count = null)
 		{
 			// https://www.cryptopia.co.nz/api/GetOpenOrders
 			return GetData<OpenOrdersResponse>(HttpMethod.Post, "GetOpenOrders",
@@ -193,7 +249,7 @@ namespace Cryptopia.API
 				new KV("TradePairId", null),
 				new KV("Count", count));
 		}
-		public Task<OpenOrdersResponse> GetOpenOrders(CurrencyPair pair, int? count = null)
+		public OpenOrdersResponse GetOpenOrders(CurrencyPair pair, int? count = null)
 		{
 			// https://www.cryptopia.co.nz/api/GetOpenOrders
 			return GetData<OpenOrdersResponse>(HttpMethod.Post, "GetOpenOrders",
@@ -201,16 +257,28 @@ namespace Cryptopia.API
 				new KV("TradePairId", null),
 				new KV("Count", count));
 		}
-		public Task<OpenOrdersResponse> GetOpenOrders(int trade_pair_id, int? count = null)
+		public OpenOrdersResponse GetOpenOrders(int trade_pair_id, int? count = null)
 		{
 			return GetData<OpenOrdersResponse>(HttpMethod.Post, "GetOpenOrders",
 				new KV("Market", null),
 				new KV("TradePairId", trade_pair_id),
 				new KV("Count", count));
 		}
+		public Task<OpenOrdersResponse> GetOpenOrdersAsync(int? count = null)
+		{
+			return Task.Run(() => GetOpenOrders(count), m_cancel_token);
+		}
+		public Task<OpenOrdersResponse> GetOpenOrdersAsync(CurrencyPair pair, int? count = null)
+		{
+			return Task.Run(() => GetOpenOrders(pair, count), m_cancel_token);
+		}
+		public Task<OpenOrdersResponse> GetOpenOrdersAsync(int trade_pair_id, int? count = null)
+		{
+			return Task.Run(() => GetOpenOrders(trade_pair_id, count), m_cancel_token);
+		}
 
 		/// <summary>Cancels a single order, all orders for a trade pair or all open orders</summary>
-		public Task<CancelTradeResponse> CancelTrade(ECancelTradeType type, int? order_id = null, int? trade_pair_id = null)
+		public CancelTradeResponse CancelTrade(ECancelTradeType type, int? order_id = null, int? trade_pair_id = null)
 		{
 			// https://www.cryptopia.co.nz/api/CancelTrade
 			return GetData<CancelTradeResponse>(HttpMethod.Post, "CancelTrade",
@@ -218,9 +286,13 @@ namespace Cryptopia.API
 				new KV("TradePairId", trade_pair_id),
 				new KV("OrderId", order_id));
 		}
+		public Task<CancelTradeResponse> CancelTradeAsync(ECancelTradeType type, int? order_id = null, int? trade_pair_id = null)
+		{
+			return Task.Run(() => CancelTrade(type, order_id, trade_pair_id), m_cancel_token);
+		}
 
 		/// <summary>Submits a new trade order</summary>
-		public Task<SubmitTradeResponse> SubmitTrade(EOrderType type, CurrencyPair pair, decimal amount, decimal rate)
+		public SubmitTradeResponse SubmitTrade(EOrderType type, CurrencyPair pair, decimal amount, decimal rate)
 		{
 			return GetData<SubmitTradeResponse>(HttpMethod.Post, "SubmitTrade",
 				new KV("Type", type.ToString()),
@@ -229,7 +301,7 @@ namespace Cryptopia.API
 				new KV("Amount", amount),
 				new KV("Rate", rate));
 		}
-		public Task<SubmitTradeResponse> SubmitTrade(EOrderType type, int trade_pair_id, decimal amount, decimal rate)
+		public SubmitTradeResponse SubmitTrade(EOrderType type, int trade_pair_id, decimal amount, decimal rate)
 		{
 			return GetData<SubmitTradeResponse>(HttpMethod.Post, "SubmitTrade",
 				new KV("Type", type.ToString()),
@@ -238,9 +310,17 @@ namespace Cryptopia.API
 				new KV("Amount", amount),
 				new KV("Rate", rate));
 		}
+		public Task<SubmitTradeResponse> SubmitTradeAsync(EOrderType type, CurrencyPair pair, decimal amount, decimal rate)
+		{
+			return Task.Run(() => SubmitTrade(type, pair, amount, rate), m_cancel_token);
+		}
+		public Task<SubmitTradeResponse> SubmitTradeAsync(EOrderType type, int trade_pair_id, decimal amount, decimal rate)
+		{
+			return Task.Run(() => SubmitTrade(type, trade_pair_id, amount, rate), m_cancel_token);
+		}
 
 		/// <summary>Returns a list of trade history for all trade pairs or specified trade pair</summary>
-		public Task<TradeHistoryResponse> GetTradeHistory(int? count = null)
+		public TradeHistoryResponse GetTradeHistory(int? count = null)
 		{
 			// https://www.cryptopia.co.nz/api/GetTradeHistory
 			return GetData<TradeHistoryResponse>(HttpMethod.Post, "GetTradeHistory",
@@ -248,48 +328,72 @@ namespace Cryptopia.API
 				new KV("TradePairId", null),
 				new KV("Count", count));
 		}
-		public Task<TradeHistoryResponse> GetTradeHistory(CurrencyPair pair, int? count = null)
+		public TradeHistoryResponse GetTradeHistory(CurrencyPair pair, int? count = null)
 		{
 			return GetData<TradeHistoryResponse>(HttpMethod.Post, "GetTradeHistory",
 				new KV("Market", pair.Id),
 				new KV("TradePairId", null),
 				new KV("Count", count));
 		}
-		public Task<TradeHistoryResponse> GetTradeHistory(int trade_pair_id, int? count = null)
+		public TradeHistoryResponse GetTradeHistory(int trade_pair_id, int? count = null)
 		{
 			return GetData<TradeHistoryResponse>(HttpMethod.Post, "GetTradeHistory",
 				new KV("Market", null),
 				new KV("TradePairId", trade_pair_id),
 				new KV("Count", count));
 		}
+		public Task<TradeHistoryResponse> GetTradeHistoryAsync(int? count = null)
+		{
+			return Task.Run(() => GetTradeHistory(count), m_cancel_token);
+		}
+		public Task<TradeHistoryResponse> GetTradeHistoryAsync(CurrencyPair pair, int? count = null)
+		{
+			return Task.Run(() => GetTradeHistory(pair, count), m_cancel_token);
+		}
+		public Task<TradeHistoryResponse> GetTradeHistoryAsync(int trade_pair_id, int? count = null)
+		{
+			return Task.Run(() => GetTradeHistory(trade_pair_id, count), m_cancel_token);
+		}
 
 		/// <summary>Returns a list of transactions. 'count' defaults to 100 if not given</summary>
-		public Task<TransactionResponse> GetTransactions(ETransactionType type, int? count = null)
+		public TransactionResponse GetTransactions(ETransactionType type, int? count = null)
 		{
 			// https://www.cryptopia.co.nz/api/GetTransactions
 			return GetData<TransactionResponse>(HttpMethod.Post, "GetTransactions",
 				new KV("Type", type.ToString()),
 				new KV("Count", count));
 		}
+		public Task<TransactionResponse> GetTransactionsAsync(ETransactionType type, int? count = null)
+		{
+			return Task.Run(() => GetTransactions(type, count), m_cancel_token);
+		}
 
 		/// <summary>Creates or returns a deposit address for the specified currency</summary>
-		public Task<DepositAddressResponse> GetDepositAddress(string currency)
+		public DepositAddressResponse GetDepositAddress(string currency)
 		{
 			// https://www.cryptopia.co.nz/api/GetDepositAddress
 			return GetData<DepositAddressResponse>(HttpMethod.Post, "GetDepositAddress",
 				new KV("Currency", currency),
 				new KV("CurrencyId", null));
 		}
-		public Task<DepositAddressResponse> GetDepositAddress(int currency_id)
+		public DepositAddressResponse GetDepositAddress(int currency_id)
 		{
 			// https://www.cryptopia.co.nz/api/GetDepositAddress
 			return GetData<DepositAddressResponse>(HttpMethod.Post, "GetDepositAddress",
 				new KV("Currency", null),
 				new KV("CurrencyId", currency_id));
 		}
+		public Task<DepositAddressResponse> GetDepositAddressAsync(string currency)
+		{
+			return Task.Run(() => GetDepositAddress(currency), m_cancel_token);
+		}
+		public Task<DepositAddressResponse> GetDepositAddressAsync(int currency_id)
+		{
+			return Task.Run(() => GetDepositAddress(currency_id), m_cancel_token);
+		}
 
 		/// <summary>Submits a withdrawal request</summary>
-		public Task<SubmitWithdrawResponse> SubmitWithdraw(string currency, decimal amount, string address)
+		public SubmitWithdrawResponse SubmitWithdraw(string currency, decimal amount, string address)
 		{
 			// https://www.cryptopia.co.nz/api/SubmitWithdraw
 			return GetData<SubmitWithdrawResponse>(HttpMethod.Post, "SubmitWithdraw",
@@ -298,7 +402,7 @@ namespace Cryptopia.API
 				new KV("Amount", amount),
 				new KV("Address", address));
 		}
-		public Task<SubmitWithdrawResponse> SubmitWithdraw(int currency_id, decimal amount, string address)
+		public SubmitWithdrawResponse SubmitWithdraw(int currency_id, decimal amount, string address)
 		{
 			// https://www.cryptopia.co.nz/api/SubmitWithdraw
 			return GetData<SubmitWithdrawResponse>(HttpMethod.Post, "SubmitWithdraw",
@@ -307,73 +411,79 @@ namespace Cryptopia.API
 				new KV("Amount", amount),
 				new KV("Address", address));
 		}
+		public Task<SubmitWithdrawResponse> SubmitWithdrawAsync(string currency, decimal amount, string address)
+		{
+			return Task.Run(() => SubmitWithdraw(currency, amount, address), m_cancel_token);
+		}
+		public Task<SubmitWithdrawResponse> SubmitWithdrawAsync(int currency_id, decimal amount, string address)
+		{
+			return Task.Run(() => SubmitWithdraw(currency_id, amount, address), m_cancel_token);
+		}
 
 		#endregion
 
 		/// <summary>Helper for GETs</summary>
-		private Task<T> GetData<T>(HttpMethod method, string command, params KV[] parameters)
+		private T GetData<T>(HttpMethod method, string command, params KV[] parameters)
 		{
 			Debug.Assert(!m_cancel_token.IsCancellationRequested, "Shouldn't be making new requests when shutdown is signalled");
-			return Task.Run(() =>
+
+			lock (m_lock)
 			{
-				lock (m_lock)
+				m_cancel_token.ThrowIfCancellationRequested();
+
+				// Limit requests to the required rate
+				var request_period_ms = 1000 / ServerRequestRateLimit;
+				for (; m_request_sw.ElapsedMilliseconds - m_last_request_ms < request_period_ms; Thread.Yield()){}
+				m_last_request_ms = m_request_sw.ElapsedMilliseconds;
+
+				// Create the URL for the command + parameters
+				var url = $"{UrlBaseAddress}api/{command}";
+
+				// Construct the request
+				var req = new HttpRequestMessage(method, url);
+
+				// Add parameters as string content
+				if (parameters.Length != 0)
+					req.Content = new StringContent(Misc.JsonEncode(parameters), Encoding.UTF8, "application/json");
+
+				// Add authentication data for Posts
+				if (method == HttpMethod.Post)
 				{
-					m_cancel_token.ThrowIfCancellationRequested();
-
-					// Limit requests to the required rate
-					var request_period_ms = 1000 / ServerRequestRateLimit;
-					for (; m_request_sw.ElapsedMilliseconds - m_last_request_ms < request_period_ms; Thread.Yield()){}
-					m_last_request_ms = m_request_sw.ElapsedMilliseconds;
-
-					// Create the URL for the command + parameters
-					var url = $"{UrlBaseAddress}api/{command}";
-
-					// Construct the request
-					var req = new HttpRequestMessage(method, url);
-
-					// Add parameters as string content
+					// Hashing the request body
+					var content_hash_b64 = string.Empty;
 					if (parameters.Length != 0)
-						req.Content = new StringContent(Misc.JsonEncode(parameters), Encoding.UTF8, "application/json");
-
-					// Add authentication data for Posts
-					if (method == HttpMethod.Post)
 					{
-						// Hashing the request body
-						var content_hash_b64 = string.Empty;
-						if (parameters.Length != 0)
+						using (var md5 = MD5.Create())
 						{
-							using (var md5 = MD5.Create())
-							{
-								var content = req.Content.ReadAsByteArrayAsync().Result;
-								var content_hash = md5.ComputeHash(content);
-								content_hash_b64 = Convert.ToBase64String(content_hash);
-							}
+							var content = req.Content.ReadAsByteArrayAsync().Result;
+							var content_hash = md5.ComputeHash(content);
+							content_hash_b64 = Convert.ToBase64String(content_hash);
 						}
-
-						// Create random nonce for each request
-						var nonce = Misc.Nonce;
-
-						// Create the signature
-						var uri = HttpUtility.UrlEncode(req.RequestUri.AbsoluteUri.ToLower());
-						var signature = string.Concat(m_key, "POST", uri, nonce, content_hash_b64);
-						var signature_bytes = Encoding.UTF8.GetBytes(signature);
-						var signature_hash = Hasher.ComputeHash(signature_bytes);
-
-						// Setting the values in the Authorization header using custom scheme 'amx'
-						req.Headers.Authorization = new AuthenticationHeaderValue("amx", $"{m_key}:{Convert.ToBase64String(signature_hash)}:{nonce}");
 					}
 
-					// Submit the request
-					var response = m_client.SendAsync(req, m_cancel_token).Result;
-					if (!response.IsSuccessStatusCode)
-						throw new HttpResponseException(response);
+					// Create random nonce for each request
+					var nonce = Misc.Nonce;
 
-					// Interpret the reply
-					var reply = response.Content.ReadAsStringAsync().Result;
-					using (var tr = new JsonTextReader(new StringReader(reply)))
-						return m_json.Deserialize<T>(tr);
+					// Create the signature
+					var uri = HttpUtility.UrlEncode(req.RequestUri.AbsoluteUri.ToLower());
+					var signature = string.Concat(m_key, "POST", uri, nonce, content_hash_b64);
+					var signature_bytes = Encoding.UTF8.GetBytes(signature);
+					var signature_hash = Hasher.ComputeHash(signature_bytes);
+
+					// Setting the values in the Authorization header using custom scheme 'amx'
+					req.Headers.Authorization = new AuthenticationHeaderValue("amx", $"{m_key}:{Convert.ToBase64String(signature_hash)}:{nonce}");
 				}
-			}, m_cancel_token);
+
+				// Submit the request
+				var response = Task.Run(() => m_client.SendAsync(req, m_cancel_token), m_cancel_token).Result;
+				if (!response.IsSuccessStatusCode)
+					throw new HttpException((int)response.StatusCode, response.ReasonPhrase);
+
+				// Interpret the reply
+				var reply = response.Content.ReadAsStringAsync().Result;
+				using (var tr = new JsonTextReader(new StringReader(reply)))
+					return m_json.Deserialize<T>(tr);
+			}
 		}
 		private object m_lock = new object();
 		private Stopwatch m_request_sw;

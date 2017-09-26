@@ -289,7 +289,7 @@ namespace CoinFlip
 			var tasks = new List<Task>();
 
 			// Helper for placing the bait order
-			Func<Trade, Trade, bool, Task<FishingTrade>> CreateBaitOrder = async (Trade trade0, Trade trade1, bool suppress_not_created) =>
+			Func<Trade, Trade, bool, FishingTrade> CreateBaitOrder = (Trade trade0, Trade trade1, bool suppress_not_created) =>
 			{
 				// Check the amounts we want to trade are valid
 				var validate0 = trade0.Validate();
@@ -298,7 +298,7 @@ namespace CoinFlip
 				{
 					// Create the fishing trade
 					var fisher = new FishingTrade(this, trade0, trade1);
-					await fisher.Start();
+					fisher.Start();
 					return fisher;
 				}
 				else
@@ -364,7 +364,7 @@ namespace CoinFlip
 					var trade0 = new Trade(ETradeType.Q2B, Pair0, volume/trade.Price, volume, trade.Price); // Match
 					var trade1 = new Trade(ETradeType.B2Q, Pair1, volume, volume*price, price); // Bait
 
-					BaitB2Q = await CreateBaitOrder(trade0, trade1, m_suppress_not_created_b2q);
+					BaitB2Q = CreateBaitOrder(trade0, trade1, m_suppress_not_created_b2q);
 					m_suppress_not_created_b2q = BaitB2Q == null;
 				}
 			}
@@ -406,7 +406,7 @@ namespace CoinFlip
 					var trade0 = new Trade(ETradeType.B2Q, Pair0, volume/trade.Price, volume, trade.Price);
 					var trade1 = new Trade(ETradeType.Q2B, Pair1, volume, volume*price, price);
 
-					BaitQ2B = await CreateBaitOrder(trade0, trade1, m_suppress_not_created_q2b);
+					BaitQ2B = CreateBaitOrder(trade0, trade1, m_suppress_not_created_q2b);
 					m_suppress_not_created_q2b = BaitQ2B == null;
 				}
 			}
@@ -528,13 +528,13 @@ namespace CoinFlip
 			}
 
 			/// <summary>Open the bait trade and start fishing</summary>
-			public async Task Start()
+			public void Start()
 			{
 				// Reserve funds for 'trade0' until the bait order is taken. (enough to cover the transaction fee as well)
 				m_balance_hold = Trade0.CoinIn.Balance.Hold(Trade0.VolumeIn * (1m + Pair0.Fee), b => !Done);
 
 				// Create the bait order
-				var order_result = await Trade1.CreateOrder();
+				var order_result = Trade1.CreateOrder();
 
 				// Record the bait trade id
 				BaitId = order_result.OrderId ?? 0;
@@ -683,7 +683,7 @@ namespace CoinFlip
 							var pos = Exch1.Positions[BaitId];
 							if (pos != null)
 							{
-								await Exch1.CancelOrder(Pair1, BaitId);
+								Exch1.CancelOrder(Pair1, BaitId);
 								Log.Write(ELogLevel.Info, $"Bait order (id={BaitId}) on {Exch1.Name} cancelled. ({Trade1.Description})");
 							}
 							BaitId = 0;
@@ -706,7 +706,7 @@ namespace CoinFlip
 								var validation0 = Trade0.Validate();
 								if (validation0 == Trade.EValidation.Valid)
 								{
-									var match_result = await Trade0.CreateOrder();
+									var match_result = Trade0.CreateOrder();
 									MatchId = match_result.OrderId ?? 0;
 									Log.Write(ELogLevel.Info, $"Match order (id={MatchId}) on {Exch0.Name} created. Volume match={(100*MatchVolumeFrac).ToString("G5")}%. ({Trade0.Description})");
 

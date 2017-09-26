@@ -27,31 +27,31 @@ namespace pr
 	namespace rdr
 	{
 		// Instance component types
-		#define PR_ENUM(x)/*
-			*/x(ModelPtr           )/* pr::rdr::ModelPtr
-			*/x(I2WTransform       )/* pr::m4x4
-			*/x(I2WTransformPtr    )/* pr::m4x4*
-			*/x(I2WTransformFuncPtr)/* pr::m4x4 const& (*func)(void* context);
-			*/x(C2STransform       )/* pr::m4x4
-			*/x(C2STransformPtr    )/* pr::m4x4*
-			*/x(SortkeyOverride    )/* pr::rdr::SKOverride
-			*/x(BSBlock            )/* pr::rdr::BSBlock
-			*/x(DSBlock            )/* pr::rdr::DSBlock
-			*/x(RSBlock            )/* pr::rdr::RSBlock
-			*/x(TintColour32       )/* pr::Colour32
-			*/x(SSWidth            )/* pr::uint (screen space width)
-			*/x(FirstUserCpt       ) // Clients may add other component types
-		PR_DEFINE_ENUM1(EInstComp, PR_ENUM);
-		#undef PR_ENUM
+		enum class EInstComp :pr::uint16
+		{
+			ModelPtr           , // pr::rdr::ModelPtr
+			I2WTransform       , // pr::m4x4
+			I2WTransformPtr    , // pr::m4x4*
+			I2WTransformFuncPtr, // pr::m4x4 const& (*func)(void* context);
+			C2STransform       , // pr::m4x4
+			C2STransformPtr    , // pr::m4x4*
+			SortkeyOverride    , // pr::rdr::SKOverride
+			BSBlock            , // pr::rdr::BSBlock
+			DSBlock            , // pr::rdr::DSBlock
+			RSBlock            , // pr::rdr::RSBlock
+			TintColour32       , // pr::Colour32
+			SSWidth            , // pr::uint (screen space width)
+			FirstUserCpt       , // Clients may add other component types
+		};
 
 		// Component description
 		struct CompDesc
 		{
-			pr::uint16 m_type;    // The type of component this is an offset to
+			EInstComp m_type;    // The type of component this is an offset to
 			pr::uint16 m_offset;  // Byte offset from the instance pointer
 			static CompDesc make(EInstComp comp, pr::uint16 offset)
 			{
-				CompDesc c = {checked_cast<pr::uint16>(comp.value), offset};
+				CompDesc c = {comp, offset};
 				return c;
 			}
 		};
@@ -72,25 +72,29 @@ namespace pr
 			CompDesc const* end() const   { return begin() + m_cpt_count; }
 			CompDesc*       end()         { return begin() + m_cpt_count; }
 
+			// Access the component at 'ofs'
+			template <typename Comp> Comp const* get(pr::uint16 ofs) const
+			{
+				return reinterpret_cast<Comp const*>(byte_ptr(this) + ofs);
+			}
+			template <typename Comp> Comp* get(pr::uint16 ofs)
+			{
+				return reinterpret_cast<Comp*>(byte_ptr(this) + ofs);
+			}
+
 			// Find the 'index'th component in this instance. Returns non-null if the component was found
 			template <typename Comp> Comp const* find(EInstComp comp, int index = 0) const
 			{
-				//for (auto c : *this)
-				//	if (c.m_type == comp && index-- == 0)
-				//		return pr::type_ptr<Comp>(pr::byte_ptr(this) + c.m_offset);
-				for (CompDesc const *i = begin(), *iend = end(); i != iend; ++i)
-					if (i->m_type == comp && index-- == 0)
-						return pr::type_ptr<Comp>(pr::byte_ptr(this) + i->m_offset);
+				for (auto& c : *this)
+					if (c.m_type == comp && index-- == 0)
+						return get<Comp>(c.m_offset);
 				return nullptr;
 			}
 			template <typename Comp> Comp* find(EInstComp comp, int index = 0)
 			{
-				//for (auto c : *this)
-				//	if (c.m_type == comp && index-- == 0)
-				//		return pr::type_ptr<Comp>(pr::byte_ptr(this) + c.m_offset);
-				for (CompDesc *i = begin(), *iend = end(); i != iend; ++i)
-					if (i->m_type == comp && index-- == 0)
-						return pr::type_ptr<Comp>(pr::byte_ptr(this) + i->m_offset);
+				for (auto& c : *this)
+					if (c.m_type == comp && index-- == 0)
+						return get<Comp>(c.m_offset);
 				return nullptr;
 			}
 
@@ -130,16 +134,23 @@ namespace pr
 		// An instance must have an i2w transform or a shared i2w transform
 		inline pr::m4x4 const& GetO2W(BaseInstance const& inst)
 		{
-			m4x4 const*        pi2w  = inst.find<m4x4>       (EInstComp::I2WTransform);        if (pi2w)  return *pi2w;
-			m4x4 const* const* ppi2w = inst.find<m4x4 const*>(EInstComp::I2WTransformPtr);     if (ppi2w) return **ppi2w;
-			m4x4Func const&    pi2wf = inst.get<m4x4Func>    (EInstComp::I2WTransformFuncPtr); return pi2wf.GetI2W();
+			auto pi2w = inst.find<m4x4>(EInstComp::I2WTransform);
+			if (pi2w)
+				return *pi2w;
+
+			auto ppi2w = inst.find<m4x4 const*>(EInstComp::I2WTransformPtr);
+			if (ppi2w)
+				return **ppi2w;
+
+			auto pi2wf = inst.get<m4x4Func>(EInstComp::I2WTransformFuncPtr);
+			return pi2wf.GetI2W();
 		}
 
 		// Look for a camera to screen (or instance specific projection) transform for an instance
 		inline bool FindC2S(BaseInstance const& inst, m4x4& camera_to_screen)
 		{
-			m4x4 const* c2s = inst.find<m4x4>(EInstComp::C2STransform);
-			if (!c2s)   c2s = inst.find<m4x4>(EInstComp::C2STransformPtr);
+			auto c2s = inst.find<m4x4>(EInstComp::C2STransform);
+			if (!c2s) c2s = inst.find<m4x4>(EInstComp::C2STransformPtr);
 			if (!c2s) return false; // not found
 			camera_to_screen = *c2s;
 			return true;

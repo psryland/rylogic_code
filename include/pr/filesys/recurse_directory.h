@@ -45,10 +45,10 @@ namespace pr
 		// Recursively enumerate files within and below 'path'
 		// 'file_masks' is a semicolon separated, null terminated, list of file masks
 		// PathCB should have a signature: bool (*file_cb)(FindFiles const& ff)
-		// SkipDirCB should have a signature: bool (*SkipDir)(FindFiles const& ff)
+		// SkipDirCB should have a signature: bool (*skip_cb)(FindFiles const& ff, int)
 		// Returns false if 'file_cb' returns false, indicating that the search ended early
 		template <typename PathCB, typename SkipDirCB>
-		bool EnumFiles(std::wstring path, wchar_t const* file_masks, SkipDirCB SkipDir, PathCB file_cb)
+		bool EnumFiles(std::wstring path, wchar_t const* file_masks, PathCB file_cb, SkipDirCB skip_cb)
 		{
 			// Find the files in this directory
 			for (FindFiles ff(path, file_masks); !ff.done(); ff.next())
@@ -70,11 +70,11 @@ namespace pr
 
 				// Allow callers to exclude specific directories
 				// Directories will not have trailing '\' characters
-				if (SkipDir(ff))
+				if (skip_cb(ff, 0))
 					continue;
 
 				// Enumerate the files in this directory
-				if (!EnumFiles(ff.fullpath2(), file_masks, file_cb, SkipDir))
+				if (!EnumFiles(ff.fullpath2(), file_masks, file_cb, skip_cb))
 					return false;
 			}
 			return true;
@@ -86,7 +86,7 @@ namespace pr
 		template <typename PathCB>
 		bool EnumFiles(std::wstring path, wchar_t const* file_masks, PathCB file_cb)
 		{
-			return EnumFiles(path, file_masks, [](FindFiles const&){ return false; }, file_cb);
+			return EnumFiles(path, file_masks, file_cb, [](FindFiles const&, int){ return false; });
 		}
 	}
 }
@@ -101,7 +101,7 @@ namespace pr
 		PRUnitTest(pr_filesys_recurse_directory)
 		{
 			int found[4] = {}; // 0-*.cpp, 1-*.c, 2-*.h, 3-other
-			auto file_cb = [&](FindFiles const& ff)
+			auto file_cb = [&](filesys::FindFiles const& ff)
 			{
 				auto path = ff.fullpath2();
 				auto extn = pr::filesys::GetExtension(path);

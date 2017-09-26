@@ -562,7 +562,7 @@ namespace pr.container
 			// Suspend events, since this is just a reorder
 			// Sort is expected to raise the ListChanged.Reset event
 			using (this.SuspendEvents(reset_bindings_on_resume:true, preserve_position:false))
-				List_.Sort(this, comparer);
+				List_.Sort<TItem>(this, comparer);
 		}
 
 		/// <summary>Sorts the data source with the specified sort descriptions.</summary>

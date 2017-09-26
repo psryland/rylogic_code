@@ -289,15 +289,15 @@ namespace CoinFlip
 		#region Price Data
 
 		/// <summary>The current spot price for Quote to Base trades</summary>
-		public double Q2BPrice
+		public Unit<decimal> Q2BPrice
 		{
-			get { return (double)(decimal)Pair.QuoteToBase(0m._(Pair.Quote)).PriceQ2B; }
+			get { return Pair.QuoteToBase(0m._(Pair.Quote)).PriceQ2B; }
 		}
 
 		/// <summary>The current spot price for Base to Quote trades</summary>
-		public double B2QPrice
+		public Unit<decimal> B2QPrice
 		{
-			get { return (double)(decimal)Pair.BaseToQuote(0m._(Pair.Base)).PriceQ2B; }
+			get { return Pair.BaseToQuote(0m._(Pair.Base)).PriceQ2B; }
 		}
 
 		/// <summary>Get all positions on this instruction</summary>
@@ -305,7 +305,6 @@ namespace CoinFlip
 		{
 			get { return Model.TradingExchanges.SelectMany(x => x.Positions.Values).Where(x => x.Pair.Name == Pair.Name); }
 		}
-
 
 		#endregion
 
@@ -407,7 +406,7 @@ namespace CoinFlip
 			get
 			{
 				if (m_cache.Count == 0) return Range.Zero;
-				return new Range(m_cache.Front().Timestamp, m_cache.Back().Timestamp);
+				return new Range(m_cache.Front().Timestamp, m_cache.Back().Timestamp + Misc.TimeFrameToTicks(1.0, TimeFrame));
 			}
 		}
 
@@ -421,6 +420,9 @@ namespace CoinFlip
 
 				if (value && !m_update_active)
 					throw new Exception("Only 'update active' instances can get updates");
+
+				// This should only be called from the main thread
+				Model.AssertMainThread();
 
 				if (UpdateThreadActive)
 				{
@@ -448,6 +450,9 @@ namespace CoinFlip
 		{
 			try
 			{
+				Model.Log.Write(ELogLevel.Debug, $"Instrument {SymbolCode} update thread started");
+				Thread.CurrentThread.Name = $"{SymbolCode} Instrument Update";
+
 				using (var db = new Sqlite.Database(DBFilepath))
 				{
 					var beg = utd.TimeRange.Beg;
@@ -462,12 +467,10 @@ namespace CoinFlip
 
 						// Query for chart data
 						List<Candle> data;
-						try { data = utd.Exchange.ChartData(utd.Pair, utd.TimeFrame, end, DateTimeOffset.Now.Ticks).Result; }
+						try { data = utd.Exchange.ChartData(utd.Pair, utd.TimeFrame, end, DateTimeOffset.Now.Ticks); }
 						catch (Exception ex)
 						{
-							if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
-							if (ex is OperationCanceledException) {}
-							else Model.Log.Write(ELogLevel.Error, ex, $"Instrument {SymbolCode} get chart data failed\r\n.{ex.Message}");
+							utd.Exchange.HandleException(nameof(Exchange.ChartData), ex, $"Instrument {SymbolCode} get chart data failed.");
 							continue;
 						}
 
@@ -488,12 +491,11 @@ namespace CoinFlip
 						}
 					}
 				}
+				Model.Log.Write(ELogLevel.Debug, $"Instrument {SymbolCode} update thread stopped");
 			}
 			catch (Exception ex)
 			{
-				if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
-				if (ex is OperationCanceledException) {}
-				else Model.Log.Write(ELogLevel.Error, ex, $"Instrument {SymbolCode} update thread exit\r\n.{ex.StackTrace}");
+				utd.Exchange.HandleException(nameof(Exchange.ChartData), ex, $"Instrument {SymbolCode} update thread exit\r\n.{ex.StackTrace}");
 			}
 		}
 		private class UpdateTreadData

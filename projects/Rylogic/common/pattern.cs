@@ -416,7 +416,6 @@ namespace pr.common
 		}
 		public override int GetHashCode()
 		{
-			// ReSharper disable NonReadonlyFieldInGetHashCode
 			return
 				m_patn_type   .GetHashCode()^
 				m_expr        .GetHashCode()^
@@ -424,7 +423,6 @@ namespace pr.common
 				m_active      .GetHashCode()^
 				m_invert      .GetHashCode()^
 				m_whole_line  .GetHashCode();
-			// ReSharper restore NonReadonlyFieldInGetHashCode
 		}
 		#endregion
 	}

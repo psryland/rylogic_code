@@ -63,6 +63,10 @@ namespace CoinFlip
 				var symbols = Meta.LivePriceSymbols.Split(new[]{','}, StringSplitOptions.RemoveEmptyEntries);
 				foreach (var sym in symbols)
 				{
+					// Skip degenerate conversions
+					if (sym == coin)
+						continue;
+
 					// Find the pair to convert 'coin' to 'sym'
 					var pair = Exchange.Pairs[coin, sym];
 					if (pair == null)
@@ -98,6 +102,12 @@ namespace CoinFlip
 				var symbols = Meta.LivePriceSymbols.Split(new[]{','}, StringSplitOptions.RemoveEmptyEntries);
 				foreach (var sym in symbols)
 				{
+					if (sym == coin)
+					{
+						available = true;
+						continue;
+					}
+
 					// Find the pair to convert 'coin' to 'sym'
 					var pair = Exchange.Pairs[coin, sym];
 					available = pair != null;
