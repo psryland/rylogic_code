@@ -51,7 +51,7 @@ namespace pr
 			Texture2DPtr                     m_main_tex;         // The render target as a texture
 			bool                             m_idle;             // True while the window is occluded
 			string32                         m_name;             // A debugging name for the window
-			pr::iv2                          m_area;             // The size of the render target last set (for debugging only)
+			pr::iv2                          m_dbg_area;         // The size of the render target last set (for debugging only)
 
 			Window(Renderer& rdr, WndSettings const& settings);
 			~Window();
@@ -103,6 +103,9 @@ namespace pr
 			// Changing the multi-sampling mode is a bit like resizing the back buffer
 			MultiSamp MultiSampling() const;
 			void MultiSampling(MultiSamp ms);
+
+			// Release all references to the swap chain to allow it to be created or resized.
+			void RebuildRT(std::function<void(ID3D11Device*)> work);
 
 			// Rendering:
 			//  For each scene to be rendered:

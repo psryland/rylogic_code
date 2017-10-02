@@ -255,7 +255,7 @@ namespace pr.gui
 		}
 
 		/// <summary>The view of the chart</summary>
-		public View3d.CameraControls Camera
+		public View3d.Camera Camera
 		{
 			[DebuggerStepThrough] get { return Scene?.Camera; }
 		}
@@ -960,11 +960,11 @@ namespace pr.gui
 			private View3d.Window m_window;
 
 			/// <summary>The view of the chart</summary>
-			public View3d.CameraControls Camera
+			public View3d.Camera Camera
 			{
 				[DebuggerStepThrough] get { return m_camera; }
 			}
-			private View3d.CameraControls m_camera;
+			private View3d.Camera m_camera;
 
 			/// <summary>Add an object to the scene</summary>
 			public void AddObject(View3d.Object obj)
@@ -2650,10 +2650,12 @@ namespace pr.gui
 			public Point         m_grab_client; // The client space location of where the chart was "grabbed" (note: ChartControl, not ChartPanel space)
 			public PointF        m_grab_chart;  // The chart space location of where the chart was "grabbed"
 			public HitTestResult m_hit_result;  // The hit test result on mouse down
+			private bool         m_is_click;    // True until the mouse is dragged beyond the click threshold
 
 			public MouseOp(ChartControl chart)
 			{
 				m_chart = chart;
+				m_is_click = true;
 				StartOnMouseDown = true;
 				Cancelled = false;
 			}
@@ -2671,9 +2673,10 @@ namespace pr.gui
 			/// <summary>True if the mouse down event should be treated as a click (so far)</summary>
 			protected bool IsClick(Point location)
 			{
+				if (!m_is_click) return false;
 				var grab = v2.From(m_grab_client);
 				var diff = v2.From(location) - grab;
-				return diff.Length2Sq < Maths.Sqr(m_chart.Options.MinDragPixelDistance);
+				return m_is_click = diff.Length2Sq < Maths.Sqr(m_chart.Options.MinDragPixelDistance);
 			}
 
 			/// <summary>Called on mouse down</summary>
@@ -3456,7 +3459,7 @@ namespace pr.gui
 			}
 
 			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in client space because typically hit testing uses pixel tolerances</summary>
-			public virtual HitTestResult.Hit HitTest(PointF chart_point, Point client_point, Keys modifier_keys, View3d.CameraControls cam)
+			public virtual HitTestResult.Hit HitTest(PointF chart_point, Point client_point, Keys modifier_keys, View3d.Camera cam)
 			{
 				return null;
 			}
@@ -4260,7 +4263,7 @@ namespace pr.gui
 		/// <summary>Results collection for a hit test</summary>
 		public class HitTestResult
 		{
-			public HitTestResult(EZone zone, Point client_point, PointF chart_point, Keys modifier_keys, IEnumerable<Hit> hits, View3d.CameraControls cam)
+			public HitTestResult(EZone zone, Point client_point, PointF chart_point, Keys modifier_keys, IEnumerable<Hit> hits, View3d.Camera cam)
 			{
 				Zone         = zone;
 				ClientPoint  = client_point;
@@ -4294,7 +4297,7 @@ namespace pr.gui
 			public Keys ModifierKeys { get; private set; }
 
 			/// <summary>The camera position when the hit test was performed (needed for chart to screen space conversion)</summary>
-			public View3d.CameraControls Camera { get; private set; }
+			public View3d.Camera Camera { get; private set; }
 
 			public class Hit
 			{

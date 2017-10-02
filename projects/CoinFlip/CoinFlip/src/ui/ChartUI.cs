@@ -235,6 +235,11 @@ namespace CoinFlip
 		private void HandleDataChanged(object sender, DataEventArgs e)
 		{
 			// Handle instrument data changing
+
+			// Ignore if this update is for a different TimeFrame
+			if (TimeFrame != e.TimeFrame)
+				return;
+
 			// If the event is specific to one candle, invalidate the graphics object
 			// that contains the representation of that candle.
 			if (e.Candle != null)
@@ -738,7 +743,7 @@ namespace CoinFlip
 						}
 						{// Sell
 							var type = click_price < Instrument.Q2BPrice ? "Stop" : "Limit";
-							var opt = e.Menu.Items.Insert2(idx++, new ToolStripMenuItem("Sell {type} at {0}".Fmt(click_price)) { ForeColor = ChartSettings.BidColour });
+							var opt = e.Menu.Items.Insert2(idx++, new ToolStripMenuItem($"Sell {type} at {click_price}") { ForeColor = ChartSettings.BidColour });
 							opt.Click += (s,a) => PlaceNewOrder(ETradeType.Q2B);
 						}
 					}

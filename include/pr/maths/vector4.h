@@ -68,6 +68,9 @@ namespace pr
 		template <typename T, typename = maths::enable_if_v2<T>> Vec4(T const& v, float z_, float w_)
 			:Vec4(x_as<float>(v), y_as<float>(v), z_, w_)
 		{}
+		template <typename T, typename = maths::enable_if_v2<T>> Vec4(T const& xy, T const& zw)
+			:Vec4(x_as<float>(xy), y_as<float>(xy), x_as<float>(zw), y_as<float>(zw))
+		{}
 		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit Vec4(T const* v)
 			:Vec4(x_as<float>(v), y_as<float>(v), z_as<float>(v), w_as<float>(v))
 		{}

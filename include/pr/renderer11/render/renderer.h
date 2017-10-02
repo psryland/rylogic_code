@@ -62,8 +62,7 @@ namespace pr
 			D3DPtr<ID2D1Factory1>       m_d2dfactory;
 			D3DPtr<IDWriteFactory>      m_dwrite;
 			D3DPtr<ID2D1Device>         m_d2d_device;
-			float                       m_dpi_x;
-			float                       m_dpi_y;
+			pr::v2                      m_dpi_scale;
 
 			RdrState(RdrSettings const& settings);
 			~RdrState();
@@ -154,7 +153,13 @@ namespace pr
 		// Return the current desktop DPI
 		v2 Dpi() const
 		{
-			return v2(m_dpi_x, m_dpi_y);
+			return m_dpi_scale * 96.0f;
+		}
+
+		// Return the scaling factors to convert DIP to physical pixels
+		v2 DpiScale() const
+		{
+			return m_dpi_scale;
 		}
 
 		// Returns an allocator object suitable for allocating instances of 'T'

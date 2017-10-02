@@ -412,13 +412,13 @@ namespace pr.gui
 			}
 
 			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in diagram space</summary>
-			public virtual HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam)
+			public virtual HitTestResult.Hit HitTest(v2 point, View3d.Camera cam)
 			{
 				return null;
 			}
 
 			/// <summary>Handle a click event on this element</summary>
-			internal virtual bool HandleClicked(HitTestResult.Hit hit, View3d.CameraControls cam)
+			internal virtual bool HandleClicked(HitTestResult.Hit hit, View3d.Camera cam)
 			{
 				return false;
 			}
@@ -963,7 +963,7 @@ namespace pr.gui
 			}
 
 			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in diagram space</summary>
-			public override HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam)
+			public override HitTestResult.Hit HitTest(v2 point, View3d.Camera cam)
 			{
 				var pt = point - Centre;
 				if (pt.Length2Sq > Maths.Sqr(Bounds.Diametre/2f))
@@ -1099,7 +1099,7 @@ namespace pr.gui
 			}
 
 			/// <summary>Perform a hit test on this element. Returns null for no hit. 'point' is in diagram space</summary>
-			public override HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam)
+			public override HitTestResult.Hit HitTest(v2 point, View3d.Camera cam)
 			{
 				var bounds = Bounds;
 				if (!bounds.IsWithin(point)) return null;
@@ -1377,7 +1377,7 @@ namespace pr.gui
 			}
 
 			/// <summary>Perform a hit test on this element. Returns null for no hit. 'point' is in diagram space</summary>
-			public override HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam)
+			public override HitTestResult.Hit HitTest(v2 point, View3d.Camera cam)
 			{
 				var bounds = Bounds;
 				if (!bounds.IsWithin(point)) return null;
@@ -1762,7 +1762,7 @@ namespace pr.gui
 			}
 
 			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in diagram space</summary>
-			public override HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam)
+			public override HitTestResult.Hit HitTest(v2 point, View3d.Camera cam)
 			{
 				var points = Points(true);
 				var dist_sq = float.MaxValue;
@@ -1805,7 +1805,7 @@ namespace pr.gui
 			}
 
 			/// <summary>Handle a click event on this element</summary>
-			internal override bool HandleClicked(HitTestResult.Hit hit, View3d.CameraControls cam)
+			internal override bool HandleClicked(HitTestResult.Hit hit, View3d.Camera cam)
 			{
 				// Only respond if selected and editing is allowed
 				if (Selected && Diagram.AllowEditing)
@@ -3584,9 +3584,9 @@ namespace pr.gui
 			public List<Hit> Hits { get; private set; }
 
 			/// <summary>The camera position when the hit test was performed (needed for diagram to screen space conversion)</summary>
-			public View3d.CameraControls Camera { get; private set; }
+			public View3d.Camera Camera { get; private set; }
 
-			public HitTestResult(View3d.CameraControls cam)
+			public HitTestResult(View3d.Camera cam)
 			{
 				Hits = new List<Hit>();
 				Camera = cam;
@@ -3832,7 +3832,7 @@ namespace pr.gui
 		private View3d                     m_view3d;           // Renderer
 		private View3d.Window              m_window;           // A view3d window for this control instance
 		private HoverScroll                m_hoverscroll;      // Hover-scroll
-		private View3d.CameraControls      m_camera;           // The virtual window over the diagram
+		private View3d.Camera      m_camera;           // The virtual window over the diagram
 		private Tools                      m_tools;            // Tools
 		private StyleCache<NodeStyle>      m_node_styles;      // The collection of node styles
 		private StyleCache<ConnectorStyle> m_connector_styles; //

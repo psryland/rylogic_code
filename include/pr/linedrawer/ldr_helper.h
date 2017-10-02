@@ -265,13 +265,28 @@ namespace pr
 		{
 			return Append(str,"*LineBox",name,colour,"{",dim.xyz,O2W(position),"}\n");
 		}
-		inline TStr& FrustumFA(TStr& str, typename TStr::value_type const* name, Col colour, AxisId axis, float fovY, float aspect, float nplane, float fplane, m4x4 const& o2w)
+		inline TStr& Frustum(TStr& str, typename TStr::value_type const* name, Col colour, AxisId axis, float fovY, float aspect, float nplane, float fplane, m4x4 const& o2w)
 		{
-			return Append(str,"*FrustumFA",name,colour,"{",axis,pr::RadiansToDegrees(fovY),aspect,nplane,fplane,O2W(o2w),"}\n");
+			return Append(str, "*FrustumFA", name, colour, "{", axis, pr::RadiansToDegrees(fovY), aspect, nplane, fplane, O2W(o2w), "}\n");
 		}
-		inline TStr& Frustum(TStr& str, typename TStr::value_type const* name, Col colour, pr::Frustum const& f, m4x4 const& o2w)
+		inline TStr& Frustum(TStr& str, typename TStr::value_type const* name, Col colour, float dist, float width, float height, float nplane, float fplane)
 		{
-			return FrustumFA(str, name, colour, -3, f.FovY(), f.Aspect(), 0.0f, f.ZDist(), o2w * m4x4::Translation(0.0f, 0.0f, f.ZDist()));
+			// tan(fovY/2) = (height/2)/dist
+			auto aspect = width / height;
+			auto fovY = 2.0f * atan(0.5f * height / dist);
+			return Frustum(str, name, colour, AxisId::NegZ, fovY, aspect, nplane, fplane, m4x4Identity);
+		}
+		inline TStr& Frustum(TStr& str, typename TStr::value_type const* name, Col colour, pr::Frustum const& f, float nplane, float fplane, m4x4 const& o2w)
+		{
+			return Frustum(str, name, colour, AxisId::NegZ, f.FovY(), f.Aspect(), nplane, fplane, o2w);
+		}
+		inline TStr& Frustum(TStr& str, typename TStr::value_type const* name, Col colour, pr::Frustum const& f, float nplane, float fplane)
+		{
+			return Frustum(str, name, colour, f, nplane, fplane, m4x4Identity);
+		}
+		inline TStr& Frustum(TStr& str, typename TStr::value_type const* name, Col colour, pr::Frustum const& f)
+		{
+			return Frustum(str, name, colour, f, 0.0f, f.ZDist(), m4x4Identity);
 		}
 		inline TStr& Cylinder(TStr& str, typename TStr::value_type const* name, Col colour, m4x4 const& o2w, int axis_id, float height, float radius)
 		{

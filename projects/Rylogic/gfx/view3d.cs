@@ -820,7 +820,7 @@ namespace pr.gfx
 				FocusPointVisible = true;
 
 				// Position the camera
-				Camera = new CameraControls(this);
+				Camera = new Camera(this);
 				Camera.SetPosition(new v4(0f, 0f, -2f, 1f), v4.Origin, v4.YAxis);
 			}
 			public void Dispose()
@@ -868,7 +868,7 @@ namespace pr.gfx
 			}
 
 			/// <summary>Camera controls</summary>
-			public CameraControls Camera
+			public Camera Camera
 			{
 				[DebuggerStepThrough]
 				get; private set;
@@ -897,7 +897,7 @@ namespace pr.gfx
 			}
 			public bool MouseNavigate(PointF point, MouseButtons btn, bool nav_beg_or_end)
 			{
-				var op = CameraControls.MouseBtnToNavOp(btn);
+				var op = Camera.MouseBtnToNavOp(btn);
 				return MouseNavigate(point, op, nav_beg_or_end);
 			}
 			private int m_in_mouse_navigate;
@@ -1389,14 +1389,14 @@ namespace pr.gfx
 
 		/// <summary>Namespace for the camera controls</summary>
 		[DebuggerDisplay("{O2W.pos} FPoint={FocusPoint} FDist={FocusDist}")]
-		public class CameraControls
+		public class Camera
 		{
 			private readonly Window m_window;
-			public CameraControls(Window window)
+			public Camera(Window window)
 			{
 				m_window = window;
 			}
-			public CameraControls(Window window, XElement node)
+			public Camera(Window window, XElement node)
 				:this(window)
 			{
 				Load(node);
@@ -1695,21 +1695,21 @@ namespace pr.gfx
 			}
 
 			#region Equals
-			public static bool operator == (CameraControls lhs, CameraControls rhs)
+			public static bool operator == (Camera lhs, Camera rhs)
 			{
 				return ReferenceEquals(lhs,rhs) || Equals(lhs, rhs);
 			}
-			public static bool operator != (CameraControls lhs, CameraControls rhs)
+			public static bool operator != (Camera lhs, Camera rhs)
 			{
 				return !(lhs == rhs);
 			}
-			public bool Equals(CameraControls rhs)
+			public bool Equals(Camera rhs)
 			{
 				return rhs != null && m_window == rhs.m_window;
 			}
 			public override bool Equals(object obj)
 			{
-				return Equals(obj as CameraControls);
+				return Equals(obj as Camera);
 			}
 			public override int GetHashCode()
 			{

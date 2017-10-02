@@ -319,6 +319,38 @@ namespace pr.maths
 			return B;
 		}
 
+		// Return the inverse of 'mat' using double precision floats
+		public static m4x4 InvertPrecise(m4x4 mat)
+		{
+			var inv = new double[4,4];
+			inv[0,0] = 0.0 + mat.y.y * mat.z.z * mat.w.w - mat.y.y * mat.z.w * mat.w.z - mat.z.y * mat.y.z * mat.w.w + mat.z.y * mat.y.w * mat.w.z + mat.w.y * mat.y.z * mat.z.w - mat.w.y * mat.y.w * mat.z.z;
+			inv[0,1] = 0.0 - mat.x.y * mat.z.z * mat.w.w + mat.x.y * mat.z.w * mat.w.z + mat.z.y * mat.x.z * mat.w.w - mat.z.y * mat.x.w * mat.w.z - mat.w.y * mat.x.z * mat.z.w + mat.w.y * mat.x.w * mat.z.z;
+			inv[0,2] = 0.0 + mat.x.y * mat.y.z * mat.w.w - mat.x.y * mat.y.w * mat.w.z - mat.y.y * mat.x.z * mat.w.w + mat.y.y * mat.x.w * mat.w.z + mat.w.y * mat.x.z * mat.y.w - mat.w.y * mat.x.w * mat.y.z;
+			inv[0,3] = 0.0 - mat.x.y * mat.y.z * mat.z.w + mat.x.y * mat.y.w * mat.z.z + mat.y.y * mat.x.z * mat.z.w - mat.y.y * mat.x.w * mat.z.z - mat.z.y * mat.x.z * mat.y.w + mat.z.y * mat.x.w * mat.y.z;
+			inv[1,0] = 0.0 - mat.y.x * mat.z.z * mat.w.w + mat.y.x * mat.z.w * mat.w.z + mat.z.x * mat.y.z * mat.w.w - mat.z.x * mat.y.w * mat.w.z - mat.w.x * mat.y.z * mat.z.w + mat.w.x * mat.y.w * mat.z.z;
+			inv[1,1] = 0.0 + mat.x.x * mat.z.z * mat.w.w - mat.x.x * mat.z.w * mat.w.z - mat.z.x * mat.x.z * mat.w.w + mat.z.x * mat.x.w * mat.w.z + mat.w.x * mat.x.z * mat.z.w - mat.w.x * mat.x.w * mat.z.z;
+			inv[1,2] = 0.0 - mat.x.x * mat.y.z * mat.w.w + mat.x.x * mat.y.w * mat.w.z + mat.y.x * mat.x.z * mat.w.w - mat.y.x * mat.x.w * mat.w.z - mat.w.x * mat.x.z * mat.y.w + mat.w.x * mat.x.w * mat.y.z;
+			inv[1,3] = 0.0 + mat.x.x * mat.y.z * mat.z.w - mat.x.x * mat.y.w * mat.z.z - mat.y.x * mat.x.z * mat.z.w + mat.y.x * mat.x.w * mat.z.z + mat.z.x * mat.x.z * mat.y.w - mat.z.x * mat.x.w * mat.y.z;
+			inv[2,0] = 0.0 + mat.y.x * mat.z.y * mat.w.w - mat.y.x * mat.z.w * mat.w.y - mat.z.x * mat.y.y * mat.w.w + mat.z.x * mat.y.w * mat.w.y + mat.w.x * mat.y.y * mat.z.w - mat.w.x * mat.y.w * mat.z.y;
+			inv[2,1] = 0.0 - mat.x.x * mat.z.y * mat.w.w + mat.x.x * mat.z.w * mat.w.y + mat.z.x * mat.x.y * mat.w.w - mat.z.x * mat.x.w * mat.w.y - mat.w.x * mat.x.y * mat.z.w + mat.w.x * mat.x.w * mat.z.y;
+			inv[2,2] = 0.0 + mat.x.x * mat.y.y * mat.w.w - mat.x.x * mat.y.w * mat.w.y - mat.y.x * mat.x.y * mat.w.w + mat.y.x * mat.x.w * mat.w.y + mat.w.x * mat.x.y * mat.y.w - mat.w.x * mat.x.w * mat.y.y;
+			inv[2,3] = 0.0 - mat.x.x * mat.y.y * mat.z.w + mat.x.x * mat.y.w * mat.z.y + mat.y.x * mat.x.y * mat.z.w - mat.y.x * mat.x.w * mat.z.y - mat.z.x * mat.x.y * mat.y.w + mat.z.x * mat.x.w * mat.y.y;
+			inv[3,0] = 0.0 - mat.y.x * mat.z.y * mat.w.z + mat.y.x * mat.z.z * mat.w.y + mat.z.x * mat.y.y * mat.w.z - mat.z.x * mat.y.z * mat.w.y - mat.w.x * mat.y.y * mat.z.z + mat.w.x * mat.y.z * mat.z.y;
+			inv[3,1] = 0.0 + mat.x.x * mat.z.y * mat.w.z - mat.x.x * mat.z.z * mat.w.y - mat.z.x * mat.x.y * mat.w.z + mat.z.x * mat.x.z * mat.w.y + mat.w.x * mat.x.y * mat.z.z - mat.w.x * mat.x.z * mat.z.y;
+			inv[3,2] = 0.0 - mat.x.x * mat.y.y * mat.w.z + mat.x.x * mat.y.z * mat.w.y + mat.y.x * mat.x.y * mat.w.z - mat.y.x * mat.x.z * mat.w.y - mat.w.x * mat.x.y * mat.y.z + mat.w.x * mat.x.z * mat.y.y;
+			inv[3,3] = 0.0 + mat.x.x * mat.y.y * mat.z.z - mat.x.x * mat.y.z * mat.z.y - mat.y.x * mat.x.y * mat.z.z + mat.y.x * mat.x.z * mat.z.y + mat.z.x * mat.x.y * mat.y.z - mat.z.x * mat.x.z * mat.y.y;
+
+			var det = mat.x.x * inv[0,0] + mat.x.y * inv[1,0] + mat.x.z * inv[2,0] + mat.x.w * inv[3,0];
+			Debug.Assert(det != 0, "matrix has no inverse");
+			var inv_det = 1.0 / det;
+
+			return new m4x4(
+				new v4((float)(inv[0,0] * inv_det), (float)(inv[0,1] * inv_det), (float)(inv[0,2] * inv_det), (float)(inv[0,3] * inv_det)),
+				new v4((float)(inv[1,0] * inv_det), (float)(inv[1,1] * inv_det), (float)(inv[1,2] * inv_det), (float)(inv[1,3] * inv_det)),
+				new v4((float)(inv[2,0] * inv_det), (float)(inv[2,1] * inv_det), (float)(inv[2,2] * inv_det), (float)(inv[2,3] * inv_det)),
+				new v4((float)(inv[3,0] * inv_det), (float)(inv[3,1] * inv_det), (float)(inv[3,2] * inv_det), (float)(inv[3,3] * inv_det)));
+		}
+
 		// Permute the rotation vectors in a matrix by 'n'
 		public static m4x4 Permute(m4x4 mat, int n)
 		{
@@ -399,6 +431,88 @@ namespace pr.maths
 		public static m4x4 Scale(float sx, float sy, float sz, v4 translation)
 		{
 			return new m4x4(sx*v4.XAxis, sy*v4.YAxis, sz*v4.ZAxis, translation);
+		}
+
+		// Create a shear matrix
+		public static m4x4 Shear(float sxy, float sxz, float syx, float syz, float szx, float szy, v4 translation)
+		{
+			return new m4x4(m3x4.Shear(sxy, sxz, syx, syz, szx, szy), translation);
+		}
+
+		// Orientation matrix to "look" at a point
+		public static m4x4 LookAt(v4 eye, v4 at, v4 up)
+		{
+			Debug.Assert(eye.w == 1.0f && at.w == 1.0f && up.w == 0.0f, "Invalid position/direction vectors passed to LookAt");
+			Debug.Assert(eye - at != v4.Zero, "LookAt 'eye' and 'at' positions are coincident");
+			Debug.Assert(!v4.Parallel(eye - at, up, 0f), "LookAt 'forward' and 'up' axes are aligned");
+			var mat = new m4x4{};
+			mat.z = v4.Normalise3(eye - at);
+			mat.x = v4.Normalise3(v4.Cross3(up, mat.z));
+			mat.y = v4.Cross3(mat.z, mat.x);
+			mat.pos = eye;
+			return mat;
+		}
+
+		// Construct an orthographic projection matrix
+		public static m4x4 ProjectionOrthographic(float w, float h, float zn, float zf, bool righthanded)
+		{
+			Debug.Assert(Maths.IsFinite(w) && Maths.IsFinite(h) && w > 0 && h > 0, "invalid view rect");
+			Debug.Assert(Maths.IsFinite(zn) && Maths.IsFinite(zf) && (zn - zf) != 0, "invalid near/far planes");
+			var rh = Maths.SignF(righthanded);
+			var mat = new m4x4{};
+			mat.x.x = 2.0f / w;
+			mat.y.y = 2.0f / h;
+			mat.z.z = rh / (zn - zf);
+			mat.w.w = 1.0f;
+			mat.w.z = rh * zn / (zn - zf);
+			return mat;
+		}
+
+		// Construct a perspective projection matrix
+		public static m4x4 ProjectionPerspective(float w, float h, float zn, float zf, bool righthanded)
+		{
+			Debug.Assert(Maths.IsFinite(w) && Maths.IsFinite(h) && w > 0 && h > 0, "invalid view rect");
+			Debug.Assert(Maths.IsFinite(zn) && Maths.IsFinite(zf) && zn > 0 && zf > 0 && (zn - zf) != 0, "invalid near/far planes");
+			var rh = Maths.SignF(righthanded);
+			var mat = new m4x4{};
+			mat.x.x = 2.0f * zn / w;
+			mat.y.y = 2.0f * zn / h;
+			mat.z.w = -rh;
+			mat.z.z = rh * zf / (zn - zf);
+			mat.w.z = zn * zf / (zn - zf);
+			return mat;
+		}
+
+		// Construct a perspective projection matrix offset from the centre
+		public static m4x4 ProjectionPerspective(float l, float r, float t, float b, float zn, float zf, bool righthanded)
+		{
+			Debug.Assert(Maths.IsFinite(l)  && Maths.IsFinite(r) && Maths.IsFinite(t) && Maths.IsFinite(b) && (r - l) > 0 && (t - b) > 0, "invalid view rect");
+			Debug.Assert(Maths.IsFinite(zn) && Maths.IsFinite(zf) && zn > 0 && zf > 0 && (zn - zf) != 0, "invalid near/far planes");
+			var rh = Maths.SignF(righthanded);
+			var mat = new m4x4{};
+			mat.x.x = 2.0f * zn / (r - l);
+			mat.y.y = 2.0f * zn / (t - b);
+			mat.z.x = rh * (r + l) / (r - l);
+			mat.z.y = rh * (t + b) / (t - b);
+			mat.z.w = -rh;
+			mat.z.z = rh * zf / (zn - zf);
+			mat.w.z = zn * zf / (zn - zf);
+			return mat;
+		}
+
+		// Construct a perspective projection matrix using field of view
+		public static m4x4 ProjectionPerspectiveFOV(float fovY, float aspect, float zn, float zf, bool righthanded)
+		{
+			Debug.Assert(Maths.IsFinite(aspect) && aspect > 0, "invalid aspect ratio");
+			Debug.Assert(Maths.IsFinite(zn) && Maths.IsFinite(zf) && zn > 0 && zf > 0 && (zn - zf) != 0, "invalid near/far planes");
+			var rh = Maths.SignF(righthanded);
+			var mat = new m4x4{};
+			mat.y.y = (float)(1 / Math.Tan(fovY/2));
+			mat.x.x = mat.y.y / aspect;
+			mat.z.w = -rh;
+			mat.z.z = rh * zf / (zn - zf);
+			mat.w.z = zn * zf / (zn - zf);
+			return mat;
 		}
 
 		/// <summary>Spherically interpolate between two affine transforms</summary>

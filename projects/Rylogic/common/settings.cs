@@ -257,6 +257,13 @@ namespace pr.common
 		/// <summary>An event raised after a setting has been changed</summary>
 		public event EventHandler<SettingChangedEventArgs> SettingChanged;
 
+		/// <summary>Manually notify of a setting change</summary>
+		public void RaiseSettingChanged(string key)
+		{
+			var val = get<object>(key);
+			OnSettingChanged(new SettingChangedEventArgs(key, val, val));
+		}
+
 		/// <summary>Called just before a setting changes</summary>
 		protected virtual void OnSettingChanging(SettingChangingEventArgs args)
 		{

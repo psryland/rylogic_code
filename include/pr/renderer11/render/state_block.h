@@ -15,32 +15,32 @@ namespace pr
 		// Blend state flags
 		enum class EBS
 		{
-			AlphaToCoverageEnable = 1 << 0,
+			AlphaToCoverageEnable  = 1 << 0,
 			IndependentBlendEnable = 1 << 1,
-			BlendEnable = 1 << 2,
-			SrcBlend = 1 << 3,
-			DestBlend = 1 << 4,
-			BlendOp = 1 << 5,
-			SrcBlendAlpha = 1 << 6,
-			DestBlendAlpha = 1 << 7,
-			BlendOpAlpha = 1 << 8,
-			RenderTargetWriteMask = 1 << 9,
+			BlendEnable            = 1 << 2,
+			SrcBlend               = 1 << 3,
+			DestBlend              = 1 << 4,
+			BlendOp                = 1 << 5,
+			SrcBlendAlpha          = 1 << 6,
+			DestBlendAlpha         = 1 << 7,
+			BlendOpAlpha           = 1 << 8,
+			RenderTargetWriteMask  = 1 << 9,
 			_bitwise_operators_allowed,
 		};
 
 		// Depth state flags
 		enum class EDS
 		{
-			DepthEnable = 1 << 0,
-			DepthWriteMask = 1 << 1,
-			DepthFunc = 1 << 2,
-			StencilEnable = 1 << 3,
-			StencilReadMask = 1 << 4,
-			StencilWriteMask = 1 << 5,
-			StencilFunc = 1 << 6,
+			DepthEnable        = 1 << 0,
+			DepthWriteMask     = 1 << 1,
+			DepthFunc          = 1 << 2,
+			StencilEnable      = 1 << 3,
+			StencilReadMask    = 1 << 4,
+			StencilWriteMask   = 1 << 5,
+			StencilFunc        = 1 << 6,
 			StencilDepthFailOp = 1 << 7,
-			StencilPassOp = 1 << 8,
-			StencilFailOp = 1 << 9,
+			StencilPassOp      = 1 << 8,
+			StencilFailOp      = 1 << 9,
 			_bitwise_operators_allowed,
 		};
 

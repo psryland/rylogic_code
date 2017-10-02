@@ -87,7 +87,7 @@ namespace pr.container
 		{
 			public CommentRow(string comment)
 			{
-				Comment = comment;
+				Comment = comment ?? string.Empty;
 			}
 
 			/// <summary>The comment text</summary>
@@ -140,7 +140,7 @@ namespace pr.container
 		}
 
 		/// <summary>Add a comment row to the CSV data</summary>
-		public CommentRow AddComment(string comment)
+		public CommentRow AddComment(string comment = null)
 		{
 			return m_data.Add2(new CommentRow(comment));
 		}

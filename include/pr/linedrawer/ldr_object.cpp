@@ -102,7 +102,27 @@ namespace pr
 			return pr::hash::Hash(str);
 		}
 
-		// LdrObject Creation functions *********************************************
+		// A Direct2D font description
+		struct Font
+		{
+			wstring256          m_name;   // Font family name
+			float               m_size;   // in points (1 pt = 1/72.272 inches = 0.35145mm)
+			DWRITE_FONT_WEIGHT  m_weight; // boldness
+			DWRITE_FONT_STRETCH m_stretch;
+			DWRITE_FONT_STYLE   m_style;
+			bool                m_underline;
+			bool                m_strikeout;
+
+			Font()
+				:m_name(L"tahoma")
+				,m_size(12.0f)
+				,m_weight(DWRITE_FONT_WEIGHT_NORMAL)
+				,m_stretch(DWRITE_FONT_STRETCH_NORMAL)
+				,m_style(DWRITE_FONT_STYLE_NORMAL)
+				,m_underline(false)
+				,m_strikeout(false)
+			{}
+		};
 
 		// Helper object for passing parameters between parsing functions
 		struct ParseParams
@@ -119,6 +139,7 @@ namespace pr
 			pr::Guid        m_context_id;
 			HashValue       m_keyword;
 			LdrObject*      m_parent;
+			Font            m_font;
 			ParseProgressCB m_progress_cb;
 			time_point      m_last_progress_update;
 			bool&           m_cancel;
@@ -133,6 +154,7 @@ namespace pr
 				,m_context_id(context_id)
 				,m_keyword()
 				,m_parent()
+				,m_font()
 				,m_progress_cb(progress_cb)
 				,m_last_progress_update(system_clock::now())
 				,m_cancel(cancel)
@@ -147,6 +169,7 @@ namespace pr
 				,m_context_id(p.m_context_id)
 				,m_keyword(keyword)
 				,m_parent(parent)
+				,m_font(p.m_font)
 				,m_progress_cb(p.m_progress_cb)
 				,m_last_progress_update(p.m_last_progress_update)
 				,m_cancel(p.m_cancel)
@@ -358,6 +381,55 @@ namespace pr
 			reader.SectionEnd();
 		}
 
+		// Parse a font description
+		void ParseFont(pr::script::Reader& reader, Font& font)
+		{
+			reader.SectionStart();
+			
+			// Parse required fields
+			reader.String(font.m_name);
+			reader.Real(font.m_size);
+			reader.Int(font.m_weight, 10);
+			
+			// Parse optional fields
+			for (EKeyword kw; reader.NextKeywordH(kw);)
+			{
+				switch (kw)
+				{
+				default:
+					{
+						reader.ReportError(pr::script::EResult::UnknownToken);
+						break;
+					}
+				case EKeyword::Style:
+					{
+						string32 ident;
+						reader.IdentifierS(ident);
+						if (str::EqualI(ident, "normal" )) font.m_style = DWRITE_FONT_STYLE_NORMAL;
+						if (str::EqualI(ident, "italic" )) font.m_style = DWRITE_FONT_STYLE_ITALIC;
+						if (str::EqualI(ident, "oblique")) font.m_style = DWRITE_FONT_STYLE_OBLIQUE;
+						break;
+					}
+				case EKeyword::Stretch:
+					{
+						reader.IntS(font.m_stretch, 10);
+						break;
+					}
+				case EKeyword::Underline:
+					{
+						font.m_underline = true;
+						break;
+					}
+				case EKeyword::Strikeout:
+					{
+						font.m_strikeout = true;
+						break;
+					}
+				}
+			}
+			reader.SectionEnd();
+		}
+
 		// Parse a simple animation description
 		void ParseAnimation(pr::script::Reader& reader, Animation& anim)
 		{
@@ -402,12 +474,6 @@ namespace pr
 			reader.SectionEnd();
 		}
 
-		// Parse a step block for an object
-		void ParseStep(pr::script::Reader& reader, LdrObjectStepData& step)
-		{
-			reader.Section(step.m_code, false);
-		}
-
 		// Parse keywords that can appear in any section. Returns true if the keyword was recognised.
 		bool ParseProperties(ParseParams& p, EKeyword kw, LdrObject* obj)
 		{
@@ -448,11 +514,6 @@ namespace pr
 			case EKeyword::Wireframe:
 				{
 					obj->m_wireframe = true;
-					return true;
-				}
-			case EKeyword::Step:
-				{
-					ParseStep(p.m_reader, obj->m_step);
 					return true;
 				}
 			}
@@ -2862,68 +2923,50 @@ namespace pr
 		// ELdrObject::Text
 		template <> struct ObjectCreator<ELdrObject::Text> :IObjectCreator
 		{
-			struct Font
+			enum class EType
 			{
-				wstring256 m_name;
-				float m_size;
-				DWRITE_FONT_WEIGHT m_weight;
-				DWRITE_FONT_STRETCH m_stretch;
-				DWRITE_FONT_STYLE m_style;
-				bool m_underline;
-				bool m_strikeout;
-
-				Font()
-					:m_name(L"tahoma")
-					,m_size(12.0f)
-					,m_weight(DWRITE_FONT_WEIGHT_NORMAL)
-					,m_stretch(DWRITE_FONT_STRETCH_NORMAL)
-					,m_style(DWRITE_FONT_STYLE_NORMAL)
-					,m_underline(false)
-					,m_strikeout(false)
-				{}
+				Full3D,
+				Billboard,
+				CameraSpace,
 			};
-			struct Layout
+			struct TextLayout
 			{
-				DWRITE_TEXT_ALIGNMENT m_align_h;
+				DWRITE_TEXT_ALIGNMENT      m_align_h;
 				DWRITE_PARAGRAPH_ALIGNMENT m_align_v;
-				DWRITE_WORD_WRAPPING m_word_wrapping;
+				DWRITE_WORD_WRAPPING       m_word_wrapping;
 
-				Layout()
+				TextLayout()
 					:m_align_h(DWRITE_TEXT_ALIGNMENT_LEADING)
 					,m_align_v(DWRITE_PARAGRAPH_ALIGNMENT_NEAR)
 					,m_word_wrapping(DWRITE_WORD_WRAPPING_WRAP)
 				{}
 			};
-			struct Billboard
-			{
-				bool m_enabled;
 
-				Billboard()
-					:m_enabled()
-				{}
-			};
-
-			std::wstring m_text;
-			Colour32 m_fr_colour;
-			Colour32 m_bk_colour;
-			Font m_font;
-			Layout m_layout;
-			Billboard m_billboard;
-			v2 m_dim;
-			v2 m_pos;
-			AxisId m_axis_id;
+			std::wstring   m_text;
+			EType          m_type;
+			Colour32       m_fr_colour;
+			Colour32       m_bk_colour;
+			Font           m_font;
+			TextLayout     m_layout;
+			v2             m_anchor;
+			v2             m_dim;
+			bool           m_no_z_write;
+			bool           m_no_z_test;
+			AxisId         m_axis_id;
 			wchar_t const* m_newline;
 
 			ObjectCreator(ParseParams& p)
 				:IObjectCreator(p)
 				,m_text()
+				,m_type(EType::Full3D)
 				,m_fr_colour(0xFFFFFFFF)
 				,m_bk_colour(0x00000000)
-				,m_font()
+				,m_font(p.m_font)
 				,m_layout()
-				,m_billboard()
+				,m_anchor()
 				,m_dim(512.0f, 128.0f)
-				,m_pos()
+				,m_no_z_write()
+				,m_no_z_test()
 				,m_axis_id(AxisId::PosZ)
 				,m_newline(L"")
 			{}
@@ -2953,6 +2996,16 @@ namespace pr
 						p.m_reader.SectionEnd();
 						return true;
 					}
+				case EKeyword::CameraSpace:
+					{
+						m_type = EType::CameraSpace;
+						return true;
+					}
+				case EKeyword::Billboard:
+					{
+						m_type = EType::Billboard;
+						return true;
+					}
 				case EKeyword::ForeColour:
 					{
 						p.m_reader.IntS(m_fr_colour.argb, 16);
@@ -2965,47 +3018,7 @@ namespace pr
 					}
 				case EKeyword::Font:
 					{
-						string32 ident;
-						p.m_reader.SectionStart();
-						p.m_reader.String(m_font.m_name);
-						p.m_reader.Real(m_font.m_size);
-						p.m_reader.Int(m_font.m_weight, 10);
-						for (;p.m_reader.IsKeyword();)
-						{
-							// Parse optional font parameters
-							switch ((EKeyword)p.m_reader.NextKeywordH())
-							{
-							default:
-								{
-									p.m_reader.ReportError(pr::script::EResult::UnknownToken);
-									break;
-								}
-							case EKeyword::Style:
-								{
-									p.m_reader.IdentifierS(ident);
-									if (str::EqualI(ident, "normal" )) m_font.m_style = DWRITE_FONT_STYLE_NORMAL;
-									if (str::EqualI(ident, "italic" )) m_font.m_style = DWRITE_FONT_STYLE_ITALIC;
-									if (str::EqualI(ident, "oblique")) m_font.m_style = DWRITE_FONT_STYLE_OBLIQUE;
-									break;
-								}
-							case EKeyword::Stretch:
-								{
-									p.m_reader.IntS(m_font.m_stretch, 10);
-									break;
-								}
-							case EKeyword::Underline:
-								{
-									m_font.m_underline = true;
-									break;
-								}
-							case EKeyword::Strikeout:
-								{
-									m_font.m_strikeout = true;
-									break;
-								}
-							}
-						}
-						p.m_reader.SectionEnd();
+						ParseFont(p.m_reader, m_font);
 						return true;
 					}
 				case EKeyword::Format:
@@ -3014,33 +3027,32 @@ namespace pr
 						p.m_reader.SectionStart();
 						for (; !p.m_reader.IsSectionEnd(); )
 						{
-							p.m_reader.Identifier(ident            );
-							if (str::EqualI(ident, "left"          )) m_layout.m_align_h = DWRITE_TEXT_ALIGNMENT_LEADING;
-							if (str::EqualI(ident, "centreh"       )) m_layout.m_align_h = DWRITE_TEXT_ALIGNMENT_CENTER;
-							if (str::EqualI(ident, "right"         )) m_layout.m_align_h = DWRITE_TEXT_ALIGNMENT_TRAILING;
-							if (str::EqualI(ident, "top"           )) m_layout.m_align_v = DWRITE_PARAGRAPH_ALIGNMENT_NEAR;
-							if (str::EqualI(ident, "centrev"       )) m_layout.m_align_v = DWRITE_PARAGRAPH_ALIGNMENT_CENTER;
-							if (str::EqualI(ident, "bottom"        )) m_layout.m_align_v = DWRITE_PARAGRAPH_ALIGNMENT_FAR;
-							if (str::EqualI(ident, "wrap"          )) m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_WRAP;
-							if (str::EqualI(ident, "nowrap"        )) m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_NO_WRAP;
-							if (str::EqualI(ident, "wholeword"     )) m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_WHOLE_WORD;
-							if (str::EqualI(ident, "character"     )) m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_CHARACTER;
-							if (str::EqualI(ident, "emergencybreak")) m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_EMERGENCY_BREAK;
+							#include <pr/common/algorithm.h>
+							p.m_reader.Identifier(ident);
+							pr::transform(ident, [](char c) { return static_cast<char>(tolower(c)); });
+							switch (HashI(ident.c_str()))
+							{
+							case HashI("left"          ): m_layout.m_align_h = DWRITE_TEXT_ALIGNMENT_LEADING; break;
+							case HashI("centreh"       ): m_layout.m_align_h = DWRITE_TEXT_ALIGNMENT_CENTER; break;
+							case HashI("right"         ): m_layout.m_align_h = DWRITE_TEXT_ALIGNMENT_TRAILING; break;
+							case HashI("top"           ): m_layout.m_align_v = DWRITE_PARAGRAPH_ALIGNMENT_NEAR; break;
+							case HashI("centrev"       ): m_layout.m_align_v = DWRITE_PARAGRAPH_ALIGNMENT_CENTER; break;
+							case HashI("bottom"        ): m_layout.m_align_v = DWRITE_PARAGRAPH_ALIGNMENT_FAR; break;
+							case HashI("wrap"          ): m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_WRAP; break;
+							case HashI("nowrap"        ): m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_NO_WRAP; break;
+							case HashI("wholeword"     ): m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_WHOLE_WORD; break;
+							case HashI("character"     ): m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_CHARACTER; break;
+							case HashI("emergencybreak"): m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_EMERGENCY_BREAK; break;
+							case HashI("nozwrite"      ): m_no_z_write = true; break;
+							case HashI("noztest"       ): m_no_z_test = true; break;
+							}
 						}
 						p.m_reader.SectionEnd();
 						return true;
 					}
-				case EKeyword::Billboard:
+				case EKeyword::Anchor:
 					{
-						m_billboard.m_enabled = true;
-
-						// Look for an optional section
-						if (p.m_reader.IsSectionStart())
-						{
-							for (;!p.m_reader.IsSectionEnd();)
-							{
-							}
-						}
+						p.m_reader.Vector2S(m_anchor);
 						return true;
 					}
 				case EKeyword::Dim:
@@ -3076,18 +3088,113 @@ namespace pr
 					text_layout->SetStrikethrough(TRUE, DWRITE_TEXT_RANGE{ 0U, UINT32(m_text.size()) });
 
 				// Create the model
-				obj->m_model = ModelGenerator<>::Text(p.m_rdr, text_layout.get(), m_axis_id, m_fr_colour, m_bk_colour);
-				obj->m_model->m_name = obj->TypeAndName();
-
-				// If the text is in bill-board mode, add an OnAddToScene handler
-				if (m_billboard.m_enabled)
+				switch (m_type)
 				{
-					obj->OnAddToScene += [](LdrObject& ob, rdr::Scene const& scene)
+				default:
 					{
-						auto c2w = scene.m_view.CameraToWorld();
-						auto i2w = m4x4::LookAt(ob.m_i2w.pos, c2w.pos, c2w.y);
-						ob.m_i2w = i2w;
-					};
+						throw std::exception(FmtS("Unknown Text mode: %d", m_type));
+					}
+				// Text is a normal 3D object
+				case EType::Full3D:
+					{
+						// Create a quad containing the text
+						obj->m_model = ModelGenerator<>::Text(p.m_rdr, text_layout.get(), m_axis_id, m_fr_colour, m_bk_colour, m_anchor);
+						obj->m_model->m_name = obj->TypeAndName();
+						break;
+					}
+				// Position the text quad so that it always faces the camera and has the same size
+				case EType::Billboard:
+					{
+						obj->m_model = ModelGenerator<>::Text(p.m_rdr, text_layout.get(), m_axis_id, m_fr_colour, m_bk_colour, m_anchor);
+						obj->m_model->m_name = obj->TypeAndName();
+
+						// Do not include in bounding box calculations because we're scaling
+						// this model at a point that the bounding box calculation can't see
+						obj->m_flags = SetBits(obj->m_flags, ELdrFlags::BBoxInvisible, true);
+
+						// Update the rendering 'i2w' transform on add-to-scene
+						obj->OnAddToScene += [](LdrObject& ob, rdr::Scene const& scene)
+						{
+							auto c2w = scene.m_view.CameraToWorld();
+							auto w2c = scene.m_view.WorldToCamera();
+							auto w = float(scene.m_viewport.Width);
+							auto h = float(scene.m_viewport.Height);
+
+							// Create a camera with an aspect ratio that matches the viewport
+							auto& m_camera = static_cast<Camera const&>(scene.m_view);
+							auto  v_camera = m_camera; v_camera.Aspect(w / h);
+							auto fd = m_camera.FocusDist();
+
+							// Get the scaling factors from 'm_camera' to 'v_camera'
+							auto viewarea_c = m_camera.ViewArea(fd);
+							auto viewarea_v = v_camera.ViewArea(fd);
+
+							// Scale the X,Y coords in camera space
+							auto pt_cs = w2c * ob.m_i2w.pos;
+							pt_cs.x *= viewarea_v.x / viewarea_c.x;
+							pt_cs.y *= viewarea_v.y / viewarea_c.y;
+							auto pt_ws = c2w * pt_cs;
+
+							// Scale the instance so that it covers 'dim' pixels on-screen
+							auto sz_z = abs(pt_cs.z) / m_camera.FocusDist();
+							auto sz_x = (viewarea_v.x / w) * sz_z;
+							auto sz_y = (viewarea_v.y / h) * sz_z;
+							ob.m_i2w = m4x4(c2w.rot, pt_ws) * m4x4::Scale(sz_x, sz_y, 1.0f, v4Origin);
+							ob.m_c2s = v_camera.CameraToScreen();
+						};
+						break;
+					}
+				// Position the text quad in camera space.
+				case EType::CameraSpace:
+					{
+						// Scale up the view port to reduce floating point precision noise.
+						enum { ViewPortSize = 1000 };
+
+						obj->m_model = ModelGenerator<>::Text(p.m_rdr, text_layout.get(), m_axis_id, m_fr_colour, m_bk_colour, m_anchor);
+						obj->m_model->m_name = obj->TypeAndName();
+
+						// Do not include in bounding box calculations because we're scaling
+						// this model at a point that the bounding box calculation can't see
+						obj->m_flags = SetBits(obj->m_flags, ELdrFlags::BBoxInvisible, true);
+
+						// Camera space text uses a standard normalised orthographic projection over the volume (-1,-1,0) -> (+1,+1,1)
+						obj->m_c2s = m4x4::ProjectionOrthographic(float(ViewPortSize), float(ViewPortSize), -0.01f, 1, true);
+
+						// Update the rendering 'i2w' transform on add-to-scene.
+						obj->OnAddToScene += [](LdrObject& ob, rdr::Scene const& scene)
+						{
+							// The 'ob.m_i2w' is a normalised screen space position
+							// (-1,-1,+0) is the lower left corner on the near plane,
+							// (+1,+1,+1) is the upper right corner on the far plane.
+							auto w = float(scene.m_viewport.Width);
+							auto h = float(scene.m_viewport.Height);
+							auto c2w = scene.m_view.CameraToWorld();
+
+							// Scale the object from physical pixels to normalised screen space
+							auto scale = m4x4::Scale(ViewPortSize/w, ViewPortSize/h, 1, v4Origin);
+
+							// Reverse 'pos.z' so positive values can be used
+							ob.m_i2w.pos.x *= 0.5f*ViewPortSize;
+							ob.m_i2w.pos.y *= 0.5f*ViewPortSize;
+							ob.m_i2w.pos.z = -ob.m_i2w.pos.z;
+
+							// Convert 'i2w', which is being interpreted as 'i2c', into an actual 'i2w'
+							ob.m_i2w = c2w * ob.m_i2w * scale;
+						};
+						break;
+					}
+				}
+
+				// Z Write
+				if (m_no_z_write)
+				{
+					obj->m_dsb.Set(rdr::EDS::DepthWriteMask, D3D11_DEPTH_WRITE_MASK_ZERO);
+				}
+
+				// Z Test
+				if (m_no_z_test)
+				{
+					obj->m_dsb.Set(rdr::EDS::DepthEnable, false);
 				}
 			}
 		};
@@ -3250,7 +3357,6 @@ namespace pr
 				switch (kw)
 				{
 				default:
-					#pragma region
 					{
 						// Save the current number of objects
 						auto object_count = int(p.m_objects.size());
@@ -3267,20 +3373,16 @@ namespace pr
 						add_cb(object_count);
 						break;
 					}
-					#pragma endregion
 
 				// Camera position description
 				case EKeyword::Camera:
-					#pragma region
 					{
 						ParseCamera(p.m_reader, p.m_result);
 						break;
 					}
-					#pragma endregion
 
 				// Application commands
 				case EKeyword::Clear:
-					#pragma region
 					{
 						// Clear resets the scene up to the point of the clear, that includes
 						// objects we may have already parsed. A use for this is for a script
@@ -3290,25 +3392,29 @@ namespace pr
 						p.m_result.m_clear = true;
 						break;
 					}
-					#pragma endregion
 				case EKeyword::AllowMissingIncludes:
-					#pragma region
 					{
 						p.m_reader.Includes().m_ignore_missing_includes = true;
 						break;
 					}
-					#pragma endregion
 				case EKeyword::Wireframe:
-					#pragma region
 					{
 						p.m_result.m_wireframe = true;
 						break;
 					}
-					#pragma endregion
+				case EKeyword::Font:
+					{
+						ParseFont(p.m_reader, p.m_font);
+						break;
+					}
 				case EKeyword::Lock:
-					break;
+					{
+						break;
+					}
 				case EKeyword::Delimiters:
-					break;
+					{
+						break;
+					}
 				}
 			}
 		}
@@ -3436,8 +3542,6 @@ namespace pr
 					std::swap(object->m_visible, rhs->m_visible);
 				if (AllSet(flags, EUpdateObject::Animation))
 					std::swap(object->m_anim, rhs->m_anim);
-				if (AllSet(flags, EUpdateObject::StepData))
-					std::swap(object->m_step, rhs->m_step);
 				if (AllSet(flags, EUpdateObject::ColourMask))
 					std::swap(object->m_colour_mask, rhs->m_colour_mask);
 				if (AllSet(flags, EUpdateObject::Colour))
@@ -3716,23 +3820,61 @@ LR"(// *************************************************************************
 // ************************************************************************************
 // Below is an example of every supported object type with notes on their syntax
 
-// Text box
-*Text words FFFFFFFF
+// Font's declared at global scope set the default for following text objects
+*Font
 {
-	"Normal multi-"
-	"line text string"          // Normal text string, everything between quotes (including new lines)
-	                           // Text data is appended together
-	*CString                   // Alternative. Text is a C-Style string that uses escape characters
-	{
-		"\nWords Words NewLine "
-		"Words \"Quotes\" more Words" // Everything between matched quotes (including new lines)
-	}
+	"tahoma"  // Font name
+	18        // Font size (in points)
+	300       // Font weight (100 = ultra light, 300 = normal, 900 = heavy)
+	//*Style{Normal} // Style. One of: Normal Italic Oblique
+	//*Stretch{5}    // Stretch. 1 = condensed, 5 = normal, 9 = expanded
+	//*Underline
+	//*Strikeout
+}
 
-	*ForeColour {FFFFFFFF}
-	*BackColour {10000000}
+// Camera space text.
+*Text camera_space_text
+{
+	"This is camera space text"
+	*CameraSpace
+
+	// Anchor defines the origin of the quad. (-1,-1) = bottom,left. (0,0) = centre (default). (+1,+1) = top,right
+	*Anchor { -1 +1 }
+	
+	// *o2w is interpreted as a 'text to camera space' transform
+	// (-1,-1,0) is the lower left corner on the near plane.
+	// (+1,+1,1) is the upper right corner on the far plane.
+	// The quad is automatically scaled to make the text unscaled on-screen
+	*o2w{*pos{-1, +1, 0}}
+}
+
+// Billboard text always faces the camera
+*Text billboard_text
+{
+	"This is billboard text"
+	*Billboard
+	
+	*Anchor {0 0}
+	*ForeColour {FF00FF00}
+	//*BackColour {00808080}
+	
+	// The rotational part of *o2w is ignored, only the 3d position is used
+	*o2w{*pos{0,1,0}}
+}
+
+// Simple text, billboarded, scaled based on camera distance
+*Text three_dee_text
+{
+	"This is a normal"         // Normal text string, everything between quotes (including new lines)
+	"3D text"
+	*CString
+	{
+		"Can even "                 // Alternative. Text is a C-Style string that uses escape characters
+		"use\n \"C-Style\" strings" // Everything between matched quotes (including new lines)
+	}
 	*Font
 	{
-		"tahoma"  // Font name
+		"Courier New"  // Font name
 		40        // Font size (in points)
 		300       // Font weight (100 = ultra light, 300 = normal, 900 = heavy)
 		//*Style{Normal} // Style. One of: Normal Italic Oblique
@@ -3740,20 +3882,19 @@ LR"(// *************************************************************************
 		//*Underline
 		//*Strikeout
 	}
-	*Format
-	{
-	    Left        // Horizontal alignment. One of: Left, CentreH, Right
-		Top         // Vertical Alignment. One of: Top, CentreV, Bottom
-	    Wrap      // Text wrapping. One of: NoWrap, Wrap, WholeWord, Character, EmergencyBreak
-	}
-
-	*Dim {512 128}  // Optional. The size used to determine the layout area
-	*Pos {100,50}    // Optional. Screen space position. If omitted, the quad is a standard 3D object that uses *o2w
 	*Axis {+3}      // Optional. Set the direction of the quad normal. One of: X = ±1, Y = ±2, Z = ±3
-}
-*Box box 8000FF00
-{
-	1 2 3
+	*Dim {512 128}  // Optional. The size used to determine the layout area
+	*Format         // Optional
+	{
+	    Left      // Horizontal alignment. One of: Left, CentreH, Right
+		Top       // Vertical Alignment. One of: Top, CentreV, Bottom
+	    Wrap      // Text wrapping. One of: NoWrap, Wrap, WholeWord, Character, EmergencyBreak
+		NoZWrite  // Don't write to the Z buffer
+		NoZTest   // Don't depth-text
+	}
+	*ForeColour {FF0000FF}
+	*BackColour {40000000}
+	*o2w{*scale{0.02}}
 }
 
 // Line modifiers:
@@ -4327,7 +4468,6 @@ LR"(// *************************************************************************
 			,m_base_colour(attr.m_colour)
 			,m_colour_mask()
 			,m_anim()
-			,m_step()
 			,m_bbox_instance()
 			,m_instanced(attr.m_instance)
 			,m_visible(true)

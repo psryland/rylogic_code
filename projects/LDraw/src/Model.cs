@@ -564,7 +564,7 @@ namespace LDraw
 
 		public class SavedView
 		{
-			public SavedView(string name, View3d.CameraControls camera)
+			public SavedView(string name, View3d.Camera camera)
 			{
 				Name         = name;
 				C2W          = camera.O2W;
@@ -585,7 +585,7 @@ namespace LDraw
 			public float  FovY         { get; private set; }
 			public bool   Orthographic { get; private set; }
 
-			public void Apply(View3d.CameraControls camera)
+			public void Apply(View3d.Camera camera)
 			{
 				camera.FocusDist    = FocusDist;
 				camera.AlignAxis    = AlignAxis;

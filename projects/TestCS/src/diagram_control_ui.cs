@@ -159,7 +159,7 @@ namespace TestCS
 			//	m_gfx.UpdateModel(ldr.ToString(), View3d.EUpdateObject.All ^ View3d.EUpdateObject.Transform);
 			//	m_gfx.O2P = Position;
 			//}
-			public override DiagramControl.HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam)
+			public override DiagramControl.HitTestResult.Hit HitTest(v2 point, View3d.Camera cam)
 			{
 				if ((PositionXY - point).Length2 > 20)
 					return null;

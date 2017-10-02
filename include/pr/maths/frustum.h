@@ -24,7 +24,7 @@ namespace pr
 		m4x4 m_Tnorms;
 
 		// Create a frustum from Width/Height at 'z' from the apex
-		static Frustum makeWH(float width, float height, float z, float zfar = 0)
+		static Frustum MakeWH(float width, float height, float z, float zfar = 0)
 		{
 			Frustum f = {};
 			f.m_Tnorms.x = v4(    z, 0.0f, -width  * 0.5f, 0.0f); // left
@@ -40,20 +40,19 @@ namespace pr
 			return f;
 		}
 
-		// Create a frustum from vertical field of view and an aspect ratio
-		static Frustum makeFA(float fovY, float aspect, float zfar = 0)
+		// Create a frustum from vertical 'field-of-view' and an 'aspect' ratio
+		static Frustum MakeFA(float fovY, float aspect, float z, float zfar = 0)
 		{
-			auto h = 2.0f * Tan(fovY * 0.5f);
-			auto w = h * aspect;
-			return makeWH(w, h, 1.0f, zfar);
+			auto h = 2.0f * z * tan(0.5f * fovY);
+			return MakeWH(h * aspect, h, z, zfar);
 		}
 
 		// Create a frustum from horizontal and vertical fields of view
-		static Frustum makeHV(float horz_angle, float vert_angle, float zfar = 0)
+		static Frustum MakeHV(float fovX, float fovY, float z, float zfar = 0)
 		{
-			auto h = 2.0f * pr::Tan(vert_angle * 0.5f);
-			auto w = 2.0f * pr::Tan(horz_angle * 0.5f);
-			return makeWH(w, h, 1.0f, zfar);
+			auto w = 2.0f * z * tan(0.5f * fovX);
+			auto h = 2.0f * z * tan(0.5f * fovY);
+			return MakeWH(w, h, z, zfar);
 		}
 
 		// Get/Set the z position of the sharp end or equivalently, the distance to the far clip plane.

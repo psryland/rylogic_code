@@ -73,7 +73,7 @@ namespace pr.gui
 		private View3d.Window m_impl_wnd;
 
 		/// <summary>The main camera</summary>
-		public View3d.CameraControls Camera
+		public View3d.Camera Camera
 		{
 			[DebuggerStepThrough] get { return Window.Camera; }
 		}

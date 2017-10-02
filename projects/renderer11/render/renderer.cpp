@@ -41,8 +41,7 @@ namespace pr
 			,m_d2dfactory()
 			,m_dwrite()
 			,m_d2d_device()
-			,m_dpi_x()
-			,m_dpi_y()
+			,m_dpi_scale(1.0f, 1.0f)
 		{
 			// Check for incompatible build settings
 			RdrSettings::BuildOptions bo;
@@ -113,7 +112,8 @@ namespace pr
 			}
 
 			// Save the desktop DPI
-			m_d2dfactory->GetDesktopDpi(&m_dpi_x, &m_dpi_y);
+			m_d2dfactory->GetDesktopDpi(&m_dpi_scale.x, &m_dpi_scale.y);
+			m_dpi_scale /= 96.0f;
 		}
 
 		// Renderer state destruction

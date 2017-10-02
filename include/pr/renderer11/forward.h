@@ -35,6 +35,7 @@
 #include "pr/macros/no_copy.h"
 #include "pr/macros/align.h"
 #include "pr/meta/alignment_of.h"
+#include "pr/meta/optional.h"
 #include "pr/common/min_max_fix.h"
 #include "pr/common/build_options.h"
 #include "pr/common/prtypes.h"

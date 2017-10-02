@@ -224,4 +224,10 @@ namespace pr
 	{
 		std::sort(std::begin(cont), std::end(cont), pred);
 	}
+
+	// Transform
+	template <typename TCont, typename Func> inline void transform(TCont& cont, Func func)
+	{
+		std::transform(std::begin(cont), std::end(cont), std::begin(cont), func);
+	}
 }

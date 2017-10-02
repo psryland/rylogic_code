@@ -354,6 +354,80 @@ namespace pr
 		return r;
 	}
 
+	// Ceil
+	template <typename T, typename = std::enable_if<std::is_arithmetic<T>::value>::type> inline T Ceil(T x)
+	{
+		return static_cast<T>(std::ceil(x));
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> inline T Ceil(T const& v)
+	{
+		// Note: arrays as vectors cannot use this function because arrays cannot be returned by value
+		auto r = v;
+		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Ceil(r[i]);
+		return r;
+	}
+	template <typename T, typename = maths::enable_if_v4<T>> inline T Ceil4(T const& v)
+	{
+		auto r = v;
+		r[0] = Ceil(x_cp(r));
+		r[1] = Ceil(y_cp(r));
+		r[2] = Ceil(z_cp(r));
+		r[3] = Ceil(w_cp(r));
+		return r;
+	}
+	template <typename T, typename = maths::enable_if_v3<T>> inline T Ceil3(T const& v)
+	{
+		auto r = v;
+		r[0] = Ceil(x_cp(r));
+		r[1] = Ceil(y_cp(r));
+		r[2] = Ceil(z_cp(r));
+		return r;
+	}
+	template <typename T, typename = maths::enable_if_v2<T>> inline T Ceil2(T const& v)
+	{
+		auto r = v;
+		r[0] = Ceil(x_cp(r));
+		r[1] = Ceil(y_cp(r));
+		return r;
+	}
+
+	// Floor
+	template <typename T, typename = std::enable_if<std::is_arithmetic<T>::value>::type> inline T Floor(T x)
+	{
+		return static_cast<T>(std::floor(x));
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> inline T Floor(T const& v)
+	{
+		// Note: arrays as vectors cannot use this function because arrays cannot be returned by value
+		auto r = v;
+		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Floor(r[i]);
+		return r;
+	}
+	template <typename T, typename = maths::enable_if_v4<T>> inline T Floor4(T const& v)
+	{
+		auto r = v;
+		r[0] = Floor(x_cp(r));
+		r[1] = Floor(y_cp(r));
+		r[2] = Floor(z_cp(r));
+		r[3] = Floor(w_cp(r));
+		return r;
+	}
+	template <typename T, typename = maths::enable_if_v3<T>> inline T Floor3(T const& v)
+	{
+		auto r = v;
+		r[0] = Floor(x_cp(r));
+		r[1] = Floor(y_cp(r));
+		r[2] = Floor(z_cp(r));
+		return r;
+	}
+	template <typename T, typename = maths::enable_if_v2<T>> inline T Floor2(T const& v)
+	{
+		auto r = v;
+		r[0] = Floor(x_cp(r));
+		r[1] = Floor(y_cp(r));
+		return r;
+	}
+
 	// Converts bool to +1,-1 (note: no 0 value)
 	inline int SignI(bool positive)
 	{
@@ -570,14 +644,6 @@ namespace pr
 	template <typename T> inline T RadiansToDegrees(T radians)
 	{
 		return T(radians * maths::E60_by_tau);
-	}
-	template <typename T> inline T Ceil(T x)
-	{
-		return std::ceil(x);
-	}
-	template <typename T> inline T Floor(T x)
-	{
-		return std::floor(x);
 	}
 	template <typename T> inline T Sin(T x)
 	{

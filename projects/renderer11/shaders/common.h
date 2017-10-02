@@ -63,7 +63,7 @@ namespace pr
 		{
 			pr::m4x4 o2w = GetO2W(inst);
 			pr::m4x4 w2c = pr::InvertFast(view.CameraToWorld());
-			pr::m4x4 c2s; if (!FindC2S(inst, c2s)) c2s = view.CameraToScreen();
+			pr::m4x4 c2s = FindC2S(inst, c2s) ? c2s : view.CameraToScreen();
 
 			cb.m_o2s = c2s * w2c * o2w;
 			cb.m_o2w = o2w;

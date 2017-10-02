@@ -151,7 +151,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in client space because typically hit testing uses pixel tolerances</summary>
-		public override ChartControl.HitTestResult.Hit HitTest(PointF chart_point, Point client_point, Keys modifier_keys, View3d.CameraControls cam)
+		public override ChartControl.HitTestResult.Hit HitTest(PointF chart_point, Point client_point, Keys modifier_keys, View3d.Camera cam)
 		{
 			// Find the nearest point to 'client_point' on the line
 			var chart_pt  = chart_point;

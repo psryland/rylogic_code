@@ -63,7 +63,7 @@ namespace LDraw
 		}
 
 		/// <summary>The camera whose properties are displayed</summary>
-		private View3d.CameraControls Camera
+		private View3d.Camera Camera
 		{
 			get;
 			set;

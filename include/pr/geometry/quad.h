@@ -72,10 +72,10 @@ namespace pr
 
 		// Generate quads from sets of four points
 		// Point Order: (bottom to top 'S')
-		//  -x, -y = 0
-		//  +x, -y = 1
-		//  -x, +y = 2
-		//  +x, +y = 3
+		//  -x, -y = 0  uv = 00
+		//  +x, -y = 1  uv = 10
+		//  -x, +y = 2  uv = 01
+		//  +x, +y = 3  uv = 11
 		// 'num_quads' is the number of sets of 4 points pointed to by 'verts'
 		// 'verts' is the input array of corner points for the quads
 		// 'num_colours' should be either 0, 1, num_quads, or num_quads*4 representing; no colour, 1 colour for all, 1 colour per quad, or 1 colour per quad vertex
@@ -101,10 +101,10 @@ namespace pr
 			auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
 
 			// Texture coords
-			auto t00 = (t2q * v4(0.000f, 0.000f, 0.0f, 1.0f)).xy;
-			auto t01 = (t2q * v4(0.000f, 0.999f, 0.0f, 1.0f)).xy;
-			auto t10 = (t2q * v4(0.999f, 0.000f, 0.0f, 1.0f)).xy;
-			auto t11 = (t2q * v4(0.999f, 0.999f, 0.0f, 1.0f)).xy;
+			auto t00 = (t2q * v4(0.0f, 0.0f, 0.0f, 1.0f)).xy;
+			auto t10 = (t2q * v4(1.0f, 0.0f, 0.0f, 1.0f)).xy;
+			auto t01 = (t2q * v4(0.0f, 1.0f, 0.0f, 1.0f)).xy;
+			auto t11 = (t2q * v4(1.0f, 1.0f, 0.0f, 1.0f)).xy;
 
 			for (int i = 0; i != num_quads; ++i)
 			{
@@ -118,10 +118,10 @@ namespace pr
 				auto c3 = *col++;
 
 				// Set verts
-				SetPCNT(*v_out++, bb(v0), cc(c0), norm(v1,v0,v2), t01);
-				SetPCNT(*v_out++, bb(v1), cc(c1), norm(v3,v1,v0), t11);
-				SetPCNT(*v_out++, bb(v2), cc(c2), norm(v0,v2,v3), t00);
-				SetPCNT(*v_out++, bb(v3), cc(c3), norm(v2,v3,v1), t10);
+				SetPCNT(*v_out++, bb(v0), cc(c0), norm(v1,v0,v2), t00);
+				SetPCNT(*v_out++, bb(v1), cc(c1), norm(v3,v1,v0), t10);
+				SetPCNT(*v_out++, bb(v2), cc(c2), norm(v0,v2,v3), t01);
+				SetPCNT(*v_out++, bb(v3), cc(c3), norm(v2,v3,v1), t11);
 
 				// Set faces
 				auto ibase = i * 4;
@@ -135,13 +135,11 @@ namespace pr
 
 			return props;
 		}
-
 		template <typename TVertCIter, typename TVertIter, typename TIdxIter>
 		Props Quad(int num_quads, TVertCIter verts, int num_colours, Colour32 const* colours, TVertIter v_out, TIdxIter i_out)
 		{
 			return Quad(num_quads, verts, num_colours, colours, m4x4Identity, v_out, i_out);
 		}
-
 		template <typename TVertCIter, typename TVertIter, typename TIdxIter>
 		Props Quad(int num_quads, TVertCIter verts, TVertIter v_out, TIdxIter i_out)
 		{
@@ -149,34 +147,36 @@ namespace pr
 		}
 
 		// Generate an NxM patch of triangles
-		// 'origin' is the top/left corner of the patch
-		// 'quad_w' is the length and direction of the quad_w axis (see above)
-		// 'quad_h' is the length and direction of the quad_h axis (see above)
-		// 'divisions' is the number of times to divide the width/height of the quad. NOTE: num_verts_across = divisions.x + 2
+		// 'anchor' is the origin of the quad, (0,0) = centre, (-1,-1) = left,bottom, (+1,+1) = right,top, etc
+		// 'quad_w' is the length and direction of the quad_w axis
+		// 'quad_h' is the length and direction of the quad_h axis
+		// 'divisions' is the number of times to divide the width/height of the quad. Note: num_verts_across = divisions.x + 2
 		// 'colour' is a colour for the whole quad
 		// 't2q' is a transform to apply to the standard texture coordinates 0,0 -> 1,1
 		template <typename TVertIter, typename TIdxIter>
-		Props Quad(v4 const& origin, v4 const& quad_w, v4 const& quad_h, iv2 const& divisions, Colour32 colour, m4x4 const& t2q, TVertIter v_out, TIdxIter i_out)
+		Props Quad(v2 const& anchor, v4 const& quad_w, v4 const& quad_h, iv2 const& divisions, Colour32 colour, m4x4 const& t2q, TVertIter v_out, TIdxIter i_out)
 		{
 			using VIdx = typename std::remove_reference<decltype(*i_out)>::type;
 
-			Props props;
-			props.m_geom = EGeom::Vert|EGeom::Colr|EGeom::Norm|EGeom::Tex0;
-			props.m_bbox = BBox(origin, Abs(origin + quad_w + quad_h));
-			props.m_has_alpha = colour.a != 0xFF;
-
-			// Create the vertices
-			auto norm = Normalise3(Cross3(quad_h,quad_w), v4Zero);
+			// Set the start point so that the model origin matches 'anchor'
+			auto origin = v4Origin
+				- 0.5f * (1.0f + anchor.x) * quad_w
+				- 0.5f * (1.0f + anchor.y) * quad_h;
+			auto norm = Normalise3(Cross3(quad_w, quad_h));
 			auto step_x = quad_w / float(divisions.x + 1);
 			auto step_y = quad_h / float(divisions.y + 1);
+
+			// Texture coordinates
 			auto uvbase = (t2q * v4Origin).xy;
 			auto du     = (t2q * v4XAxis).xy;
 			auto dv     = (t2q * v4YAxis).xy;
-			for (int h = 0, hend = divisions.y + 2; h != hend; ++h, uvbase += dv)
+
+			// Create the vertices
+			for (int h = 0, hend = divisions.y+2; h != hend; ++h, uvbase += dv)
 			{
+				auto uv = uvbase;
 				auto vert = origin + float(h) * step_y;
-				auto uv   = uvbase;
-				for (int w = 0, wend = divisions.x + 2; w != wend; ++w, vert += step_x, uv += du)
+				for (int w = 0, wend = divisions.x+2; w != wend; ++w, vert += step_x, uv += du)
 					SetPCNT(*v_out++, vert, colour, norm, uv);
 			}
 
@@ -189,42 +189,39 @@ namespace pr
 				{
 					auto col = row + w;
 					*i_out++ = checked_cast<VIdx>(col);
-					*i_out++ = checked_cast<VIdx>(col + verts_per_row);
 					*i_out++ = checked_cast<VIdx>(col + 1);
+					*i_out++ = checked_cast<VIdx>(col + verts_per_row);
 
-					*i_out++ = checked_cast<VIdx>(col + 1);
 					*i_out++ = checked_cast<VIdx>(col + verts_per_row);
-					*i_out++ = checked_cast<VIdx>(col + verts_per_row + 1);
+					*i_out++ = checked_cast<VIdx>(col + 1);
+					*i_out++ = checked_cast<VIdx>(col + 1 + verts_per_row);
 				}
 			}
 
+			Props props;
+			props.m_geom = EGeom::Vert|EGeom::Colr|EGeom::Norm|EGeom::Tex0;
+			props.m_bbox = BBox::Make(origin, Abs(origin + quad_w + quad_h));
+			props.m_has_alpha = colour.a != 0xFF;
 			return props;
 		}
 
-		// Create an NxM patch with a texture mapped over the whole surface
+		// Create a simple quad, with a normal along 'axis_id', with a texture mapped over the whole surface
 		template <typename TVertIter, typename TIdxIter>
-		Props Quad(v4 const& origin, v4 const& quad_w, v4 const& quad_h, iv2 const& divisions, Colour32 colour, TVertIter v_out, TIdxIter i_out)
-		{
-			return Quad(origin, quad_w, quad_h, divisions, colour, m4x4Identity, v_out, i_out);
-		}
-
-		// Create a simple quad, centred on the origin with a normal along 'axis_id', with a texture mapped over the whole surface
-		template <typename TVertIter, typename TIdxIter>
-		Props Quad(AxisId axis_id, float width, float height, iv2 const& divisions, Colour32 colour, m4x4 const& t2q, TVertIter v_out, TIdxIter i_out)
+		Props Quad(AxisId axis_id, v2 const& anchor, float width, float height, iv2 const& divisions, Colour32 colour, m4x4 const& t2q, TVertIter v_out, TIdxIter i_out)
 		{
 			// X => Y = width, Z = Height
 			// Y => Z = width, X = Height
 			// Z => X = width, Y = Height
-			v4 quad_w, quad_h, origin;
+			v4 quad_w, quad_h;
 			switch (axis_id) {
-			case AxisId::PosX: quad_w = +width  * v4YAxis; quad_h = +height * v4ZAxis; origin = v4(0.0f, -0.5f * width, -0.5f * height, 1.0f); break;
-			case AxisId::PosY: quad_w = +width  * v4ZAxis; quad_h = +height * v4XAxis; origin = v4(-0.5f * height, 0.0f, -0.5f * width, 1.0f); break;
-			case AxisId::PosZ: quad_w = +width  * v4XAxis; quad_h = +height * v4YAxis; origin = v4(-0.5f * width, -0.5f * height, 0.0f, 1.0f); break;
-			case AxisId::NegX: quad_w = -width  * v4YAxis; quad_h = -height * v4ZAxis; origin = v4(0.0f, +0.5f * width, +0.5f * height, 1.0f); break;
-			case AxisId::NegY: quad_w = -width  * v4ZAxis; quad_h = -height * v4XAxis; origin = v4(+0.5f * height, 0.0f, +0.5f * width, 1.0f); break;
-			case AxisId::NegZ: quad_w = -width  * v4XAxis; quad_h = -height * v4YAxis; origin = v4(+0.5f * width, +0.5f * height, 0.0f, 1.0f); break;
+			case AxisId::PosX: quad_w = +width * v4YAxis; quad_h = +height * v4ZAxis; break;
+			case AxisId::PosY: quad_w = +width * v4ZAxis; quad_h = +height * v4XAxis; break;
+			case AxisId::PosZ: quad_w = +width * v4XAxis; quad_h = +height * v4YAxis; break;
+			case AxisId::NegX: quad_w = -width * v4YAxis; quad_h = -height * v4ZAxis; break;
+			case AxisId::NegY: quad_w = -width * v4ZAxis; quad_h = -height * v4XAxis; break;
+			case AxisId::NegZ: quad_w = -width * v4XAxis; quad_h = -height * v4YAxis; break;
 			}
-			return Quad(origin, quad_w, quad_h, divisions, colour, t2q, v_out, i_out);
+			return Quad(anchor, quad_w, quad_h, divisions, colour, t2q, v_out, i_out);
 		}
 
 		// Create a quad centred on an arbitrary position with a normal in the given direction.
@@ -235,14 +232,15 @@ namespace pr
 		template <typename TVertIter, typename TIdxIter>
 		Props Quad(v4 const& centre, v4 const& forward, v4 const& top, float width, float height, iv2 const& divisions, Colour32 colour, m4x4 const& t2q, TVertIter v_out, TIdxIter i_out)
 		{
-			v4 fwd = !IsZero3(forward) ? forward :  pr::v4YAxis;
-			v4 up  = !IsZero3(top)     ? top     : -pr::v4ZAxis;
-			if (Parallel(up, fwd)) up = -pr::v4XAxis;
+			auto fwd = !IsZero3(forward) ? forward :  pr::v4YAxis;
+			auto up  = !IsZero3(top)     ? top     : -pr::v4ZAxis;
+			if (Parallel(up, fwd))
+				up = -pr::v4XAxis;
 
-			v4 quad_x = width  * Normalise3(Cross3(up, fwd));
-			v4 quad_z = height * Normalise3(Cross3(quad_x, fwd));
-			v4 origin = centre - 0.5f * quad_x - 0.5f * quad_z;
-			return Quad(origin, quad_x, quad_z, divisions, colour, t2q, v_out, i_out);
+			auto quad_w = width  * Normalise3(Cross3(up, fwd));
+			auto quad_h = height * Normalise3(Cross3(fwd, quad_w));
+			auto origin = centre - 0.5f * quad_w - 0.5f * quad_h;
+			return Quad(origin, quad_w, quad_h, divisions, colour, t2q, v_out, i_out);
 		}
 
 		// Generate a strip of quads centred on a line of verts.
@@ -278,8 +276,8 @@ namespace pr
 			auto bb = [&](v4 const& v) { lwr = Min(lwr,v); upr = Max(upr,v); return v; };
 
 			// Texture coords (note: 1D texture)
-			auto t00 = v2(0.000f, 0.000f);
-			auto t10 = v2(0.999f, 0.000f);
+			auto t00 = v2(0.0f, 0.0f);
+			auto t10 = v2(1.0f, 0.0f);
 
 			VIdx index = 0;
 			auto hwidth = width * 0.5f;

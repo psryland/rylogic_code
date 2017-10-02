@@ -101,6 +101,11 @@ namespace pr
 	//  point = v2(2.0f * pt.x / float(Width) - 1.0f, 1.0f - 2.0f * pt.y / float(Height));
 	struct Camera
 	{
+		// Note:
+		// The camera does not contain any info about the size of the screen
+		// that the camera view is on. Therefore, there are no screen space to normalised
+		// screen space methods in here. You need the Window for that.
+
 		using NavKeyBindings = camera::NavKeyBindings;
 		using ELockMask      = camera::ELockMask;
 		using ENavOp         = camera::ENavOp;
@@ -180,7 +185,7 @@ namespace pr
 			return InvertFast(m_c2w);
 		}
 
-		// Return a perspective projection transform
+		// Return a projection transform
 		pr::m4x4 CameraToScreen(float near_clip, float far_clip, float aspect, float fovY, float focus_dist) const
 		{
 			float height = 2.0f * focus_dist * tan(fovY * 0.5f);
@@ -200,10 +205,6 @@ namespace pr
 		{
 			return CameraToScreen(Near(), Far());
 		}
-
-		// Note, the camera does not contain any info about the size of the screen
-		// that the camera view is on. Therefore, there are no screen space to normalised
-		// screen space methods in here. You need the Window for that.
 
 		// Return a point in world space corresponding to a normalised screen space point.
 		// The x,y components of 'nss_point' should be in normalised screen space, i.e. (-1,-1)->(1,1)
@@ -387,11 +388,11 @@ namespace pr
 		// Return the view frustum for this camera
 		Frustum ViewFrustum(float zfar) const
 		{
-			return Frustum::makeFA(m_fovY, m_aspect, zfar);
+			return Frustum::MakeFA(m_fovY, m_aspect, m_focus_dist, zfar);
 		}
 		Frustum ViewFrustum() const
 		{
-			return ViewFrustum(m_far);
+			return ViewFrustum(Far());
 		}
 
 		// Return the world space position of the focus point

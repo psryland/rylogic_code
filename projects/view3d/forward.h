@@ -48,6 +48,7 @@
 #include "pr/linedrawer/ldr_tools.h"
 #include "pr/linedrawer/ldr_script_editor_dlg.h"
 #include "pr/linedrawer/ldr_sources.h"
+#include "pr/linedrawer/ldr_helper.h"
 #include "pr/win32/win32.h"
 
 #include "pr/view3d/view3d.h"

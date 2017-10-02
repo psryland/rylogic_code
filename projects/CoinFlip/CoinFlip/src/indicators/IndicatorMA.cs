@@ -216,7 +216,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Hit test this indicator</summary>
-		public override ChartControl.HitTestResult.Hit HitTest(PointF chart_point, Point client_point, Keys modifier_keys, View3d.CameraControls cam)
+		public override ChartControl.HitTestResult.Hit HitTest(PointF chart_point, Point client_point, Keys modifier_keys, View3d.Camera cam)
 		{
 			// Test the distance to the MA over the selection distance
 			var dist_sq = Maths.Sqr(Chart.Options.MinSelectionDistance);

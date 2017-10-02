@@ -51,7 +51,7 @@ namespace pr
 			,m_main_tex()
 			,m_idle(false)
 			,m_name(settings.m_name)
-			,m_area()
+			,m_dbg_area()
 		{
 			try
 			{
@@ -417,6 +417,63 @@ namespace pr
 		// Called when the window size changes (e.g. from a WM_SIZE message)
 		void Window::RenderTargetSize(iv2 const& size, bool force)
 		{
+			PR_ASSERT(PR_DBG_RDR, size.x >= 0 && size.y >= 0, "Size should be positive definite");
+
+			// Ignore resizes that aren't changes in size
+			auto area = RenderTargetSize();
+			if (size == area && !force)
+				return;
+
+			RebuildRT([size, this](ID3D11Device*)
+			{
+				// Get the swap chain to resize itself
+				// Pass 0 for width and height, DirectX gets them from the associated window
+				pr::Throw(m_swap_chain->ResizeBuffers(0, checked_cast<UINT>(size.x), checked_cast<UINT>(size.y), DXGI_FORMAT_UNKNOWN, m_swap_chain_flags));
+			});
+		}
+
+		// Get/Set the multi sampling used.
+		MultiSamp Window::MultiSampling() const
+		{
+			return m_multisamp;
+		}
+		void Window::MultiSampling(MultiSamp ms)
+		{
+			// Changing the multi-sampling mode is a bit like resizing the back buffer
+			RebuildRT([&ms, this](ID3D11Device* device)
+			{
+				// Get the factory that was used to create 'device'
+				D3DPtr<IDXGIDevice> dxgi_device;
+				D3DPtr<IDXGIAdapter> adapter;
+				D3DPtr<IDXGIFactory> factory;
+				pr::Throw(device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgi_device.m_ptr));
+				pr::Throw(dxgi_device->GetParent(__uuidof(IDXGIAdapter), (void**)&adapter.m_ptr));
+				pr::Throw(adapter->GetParent(__uuidof(IDXGIFactory), (void **)&factory.m_ptr));
+
+				// Get the description of the existing swap chain
+				DXGI_SWAP_CHAIN_DESC sd = {0};
+				pr::Throw(m_swap_chain->GetDesc(&sd), "Failed to get current swap chain description");
+				pr::Throw(!AllSet(sd.Flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) || ms.Count == 1, "GDI compatibility cannot be used with multi-sampling");
+
+				// Check for feature support
+				ms.Validate(device, sd.BufferDesc.Format);
+				sd.SampleDesc = ms;
+
+				// Create a new swap chain with the new multi-sampling mode
+				// Uses the flag 'DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE' to enable an application to
+				// render using GDI on a swap chain or a surface. This will allow the application
+				// to call IDXGISurface1::GetDC on the 0th back buffer or a surface.
+				m_swap_chain = nullptr;
+				pr::Throw(factory->CreateSwapChain(device, &sd, &m_swap_chain.m_ptr));
+				PR_EXPAND(PR_DBG_RDR, NameResource(m_swap_chain.get(), "swap chain"));
+
+				m_multisamp = ms;
+			});
+		}
+
+		// Release all references to the swap chain to allow it to be created or resized.
+		void Window::RebuildRT(std::function<void(ID3D11Device*)> work)
+		{
 			// Applications can make some changes to make the transition from windowed to full screen more efficient.
 			// For example, on a WM_SIZE message, the application should release any outstanding swap-chain back buffers,
 			// call IDXGISwapChain::ResizeBuffers, then re-acquire the back buffers from the swap chain(s). This gives the
@@ -440,18 +497,13 @@ namespace pr
 			// to WM_SIZE), can preclude the optimization of flipping, wherein DXGI can simply swap which buffer is being displayed,
 			// rather than copying a full screen's worth of data around.
 
-			// Ignore resizes that aren't changes in size
-			auto area = RenderTargetSize();
-			if (size == area && !force)
-				return;
-
-			PR_ASSERT(PR_DBG_RDR, size.x >= 0 && size.y >= 0, "Size should be positive definite");
 			Renderer::Lock lock(*m_rdr);
+			auto device = lock.D3DDevice();
 			auto dc = lock.ImmediateDC();
 
 			// Notify that a resize of the swap chain is about to happen.
 			// Receivers need to ensure they don't have any outstanding references to the swap chain resources
-			pr::events::Send(rdr::Evt_Resize(this, false, area)); // notify before changing the RT (with the old size)
+			pr::events::Send(rdr::Evt_Resize(this, false, RenderTargetSize())); // notify before changing the RT (with the old size)
 
 			// Drop the render targets from the immediate context and D2D
 			if (m_d2d_dc != nullptr) m_d2d_dc->SetTarget(nullptr);
@@ -463,85 +515,18 @@ namespace pr
 			m_main_srv = nullptr;
 			m_main_dsv = nullptr;
 
-			// Get the swap chain to resize itself
-			// Pass 0 for width and height, DirectX gets them from the associated window
-			pr::Throw(m_swap_chain->ResizeBuffers(0, checked_cast<UINT>(size.x), checked_cast<UINT>(size.y), DXGI_FORMAT_UNKNOWN, m_swap_chain_flags));
+			PR_EXPAND(PR_DBG_RDR, auto rcnt = (m_swap_chain->AddRef(), m_swap_chain->Release()));
+			PR_ASSERT(PR_DBG_RDR, rcnt == 1, "Outstanding references to the dx device");
 
-			//// Only set the width/height, leave the other options unchanged
-			//DXGI_MODE_DESC target_mode = {};
-			//target_mode.Width = area.x;
-			//target_mode.Height = area.y;
-			//pr::Throw(m_swap_chain->ResizeTarget(&target_mode));
+			// Do the operation that requires the swap chain tear-down
+			work(device);
 
 			// Set up the render targets again
 			InitRT();
 			RestoreRT();
 
 			// Notify that the resize is done
-			m_area = RenderTargetSize();
-			pr::events::Send(rdr::Evt_Resize(this, true, m_area)); // notify after changing the RT (with the new size)
-		}
-
-		// Get/Set the multi sampling used.
-		// Changing the multi-sampling mode is a bit like resizing the back buffer
-		MultiSamp Window::MultiSampling() const
-		{
-			return m_multisamp;
-		}
-		void Window::MultiSampling(MultiSamp ms)
-		{
-			Renderer::Lock lock(*m_rdr);
-			auto device = lock.D3DDevice();
-			auto dc = lock.ImmediateDC();
-			auto area = RenderTargetSize();
-
-			// Get the description of the existing swap chain
-			DXGI_SWAP_CHAIN_DESC sd = {0};
-			pr::Throw(m_swap_chain->GetDesc(&sd), "Failed to get current swap chain description");
-			pr::Throw(!AllSet(sd.Flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) || ms.Count == 1, "GDI compatibility cannot be used with multi-sampling");
-
-			// Check for feature support
-			ms.Validate(device, sd.BufferDesc.Format);
-
-			// Notify that a resize of the swap chain is about to happen.
-			// Receivers need to ensure they don't have any outstanding references to the swap chain resources
-			pr::events::Send(rdr::Evt_Resize(this, false, area)); // notify before changing the RT (with the old size)
-
-			// Drop the render targets from the immediate context
-			dc->OMSetRenderTargets(0, nullptr, nullptr);
-			dc->ClearState();
-
-			m_main_tex = nullptr;
-			m_main_rtv = nullptr;
-			m_main_srv = nullptr;
-			m_main_dsv = nullptr;
-
-			// Get the factory that was used to create 'device'
-			D3DPtr<IDXGIDevice> dxgi_device;
-			D3DPtr<IDXGIAdapter> adapter;
-			D3DPtr<IDXGIFactory> factory;
-			pr::Throw(device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgi_device.m_ptr));
-			pr::Throw(dxgi_device->GetParent(__uuidof(IDXGIAdapter), (void**)&adapter.m_ptr));
-			pr::Throw(adapter->GetParent(__uuidof(IDXGIFactory), (void **)&factory.m_ptr));
-
-			sd.SampleDesc = ms;
-
-			// Create a new swap chain with the new multi-sampling mode
-			// Uses the flag 'DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE' to enable an application to
-			// render using GDI on a swap chain or a surface. This will allow the application
-			// to call IDXGISurface1::GetDC on the 0th back buffer or a surface.
-			pr::Throw(factory->CreateSwapChain(device, &sd, &m_swap_chain.m_ptr));
-			PR_EXPAND(PR_DBG_RDR, NameResource(m_swap_chain.get(), pr::FmtS("swap chain")));
-
-			m_multisamp = ms;
-
-			// Set up the render targets again
-			InitRT();
-			RestoreRT();
-
-			// Notify that the resize is done
-			m_area = RenderTargetSize();
-			pr::events::Send(rdr::Evt_Resize(this, true, m_area)); // notify after changing the RT (with the new size)
+			pr::events::Send(rdr::Evt_Resize(this, true, m_dbg_area = RenderTargetSize())); // notify after changing the RT (with the new size)
 		}
 
 		// Flip the scene to the display

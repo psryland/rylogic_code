@@ -418,6 +418,16 @@ namespace pr.maths
 			return new m3x4(sx*v4.XAxis, sy*v4.YAxis, sz*v4.ZAxis);
 		}
 
+		// Create a shear matrix
+		public static m3x4 Shear(float sxy, float sxz, float syx, float syz, float szx, float szy)
+		{
+			var mat = new m3x4{};
+			mat.x = new v4(1.0f, sxy, sxz, 0.0f);
+			mat.y = new v4(syx, 1.0f, syz, 0.0f);
+			mat.z = new v4(szx, szy, 1.0f, 0.0f);
+			return mat;
+		}
+
 		/// <summary>Spherically interpolate between two rotations</summary>
 		public static m3x4 Slerp(m3x4 lhs, m3x4 rhs, float frac)
 		{

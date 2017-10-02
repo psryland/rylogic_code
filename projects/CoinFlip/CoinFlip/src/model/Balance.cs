@@ -157,7 +157,7 @@ namespace CoinFlip
 			TimeStamp       = rhs.TimeStamp;
 
 			// Transfer the 'holds' to 'value'
-			var holds = rhs.Holds; // StillNeeded can modify the collection
+			var holds = rhs.Holds.ToList(); // StillNeeded can modify the collection
 			foreach (var hold in holds.Where(x => x.StillNeeded(rhs)))
 				Holds.Add(hold);
 

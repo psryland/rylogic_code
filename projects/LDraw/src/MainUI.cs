@@ -531,6 +531,15 @@ namespace LDraw
 				Model.CurrentScene.LockAspect = !Model.CurrentScene.LockAspect;
 				UpdateUI();
 			};
+			m_menu_nav_align.DropDownOpening += (s,a) =>
+			{
+				var axis = Model.CurrentScene?.Camera.AlignAxis ?? v4.Zero;
+				m_menu_nav_align_none   .Checked = axis == v4.Zero;
+				m_menu_nav_align_x      .Checked = axis == v4.XAxis;
+				m_menu_nav_align_y      .Checked = axis == v4.YAxis;
+				m_menu_nav_align_z      .Checked = axis == v4.ZAxis;
+				m_menu_nav_align_current.Checked = axis != v4.Zero && axis != v4.XAxis && axis != v4.YAxis && axis != v4.ZAxis;
+			};
 			m_menu_nav_align_none.Click += (s, a) =>
 			{
 				AlignCamera(v4.Zero);
@@ -988,11 +997,6 @@ namespace LDraw
 		/// <summary>Align the camera to an axis</summary>
 		private void AlignCamera(v4 axis)
 		{
-			m_menu_nav_align_none   .Checked = axis == v4.Zero;
-			m_menu_nav_align_x      .Checked = axis == v4.XAxis;
-			m_menu_nav_align_y      .Checked = axis == v4.YAxis;
-			m_menu_nav_align_z      .Checked = axis == v4.ZAxis;
-			m_menu_nav_align_current.Checked = axis == Model.CurrentScene.Camera.O2W.y;
 			Model.CurrentScene.AlignCamera(axis);
 			Invalidate();
 		}

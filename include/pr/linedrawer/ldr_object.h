@@ -122,6 +122,8 @@ namespace pr
 			x(Animation            ,= HashI("Animation"           ))\
 			x(Style                ,= HashI("Style"               ))\
 			x(Format               ,= HashI("Format"              ))\
+			x(TextLayout           ,= HashI("TextLayout"          ))\
+			x(Anchor               ,= HashI("Anchor"              ))\
 			x(Period               ,= HashI("Period"              ))\
 			x(Velocity             ,= HashI("Velocity"            ))\
 			x(AngVelocity          ,= HashI("AngVelocity"         ))\
@@ -173,6 +175,7 @@ namespace pr
 			x(Filter               ,= HashI("Filter"              ))\
 			x(Range                ,= HashI("Range"               ))\
 			x(Specular             ,= HashI("Specular"            ))\
+			x(CameraSpace          ,= HashI("CameraSpace"         ))\
 			x(Billboard            ,= HashI("Billboard"           ))\
 			x(CastShadow           ,= HashI("CastShadow"        ))
 		PR_DEFINE_ENUM2(EKeyword, PR_ENUM);
@@ -245,14 +248,15 @@ namespace pr
 		// An instance for passing to the renderer
 		// A renderer instance type for the body
 		// Note: don't use 'm_i2w' to control the object transform, use m_o2p in the LdrObject instead
-		#define PR_RDR_INST(x)\
-			x(pr::m4x4            ,m_i2w    ,pr::rdr::EInstComp::I2WTransform   )\
-			x(pr::rdr::ModelPtr   ,m_model  ,pr::rdr::EInstComp::ModelPtr       )\
-			x(pr::Colour32        ,m_colour ,pr::rdr::EInstComp::TintColour32   )\
-			x(pr::rdr::SKOverride ,m_sko    ,pr::rdr::EInstComp::SortkeyOverride)\
-			x(pr::rdr::BSBlock    ,m_bsb    ,pr::rdr::EInstComp::BSBlock        )\
-			x(pr::rdr::DSBlock    ,m_dsb    ,pr::rdr::EInstComp::DSBlock        )\
-			x(pr::rdr::RSBlock    ,m_rsb    ,pr::rdr::EInstComp::RSBlock        )
+		#define PR_RDR_INST(x) \
+			x(pr::m4x4            ,m_i2w    ,pr::rdr::EInstComp::I2WTransform       )\
+			x(pr::rdr::ModelPtr   ,m_model  ,pr::rdr::EInstComp::ModelPtr           )\
+			x(pr::Colour32        ,m_colour ,pr::rdr::EInstComp::TintColour32       )\
+			x(pr::optional<m4x4>  ,m_c2s    ,pr::rdr::EInstComp::C2SOptional        )\
+			x(pr::rdr::SKOverride ,m_sko    ,pr::rdr::EInstComp::SortkeyOverride    )\
+			x(pr::rdr::BSBlock    ,m_bsb    ,pr::rdr::EInstComp::BSBlock            )\
+			x(pr::rdr::DSBlock    ,m_dsb    ,pr::rdr::EInstComp::DSBlock            )\
+			x(pr::rdr::RSBlock    ,m_rsb    ,pr::rdr::EInstComp::RSBlock            )
 		PR_RDR_DEFINE_INSTANCE(RdrInstance, PR_RDR_INST);
 		#undef PR_RDR_INST
 
@@ -322,16 +326,6 @@ namespace pr
 			}
 		};
 
-		// Step data for an ldr object
-		struct LdrObjectStepData
-		{
-			typedef pr::chain::Link<LdrObjectStepData> Link;
-			std::string m_code;
-			Link m_link;
-			LdrObjectStepData() { m_link.init(this); }
-			bool empty() const  { return m_code.empty(); }
-		};
-
 		// Add to scene callback
 		using AddToSceneCB = pr::StaticCB<void, LdrObject*, rdr::Scene const&>;
 
@@ -396,7 +390,6 @@ namespace pr
 			pr::Colour32      m_base_colour;   // The original colour of this object
 			pr::uint          m_colour_mask;   // A bit mask for applying the base colour to child objects
 			Animation         m_anim;          // Animation data
-			LdrObjectStepData m_step;          // Step data for the object
 			BBoxInstance      m_bbox_instance; // Used for rendering the bounding box for this instance
 			bool              m_instanced;     // False if this instance should never be drawn (it's used for instancing only)
 			bool              m_visible;       // True if the instance should be rendered

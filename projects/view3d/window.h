@@ -183,42 +183,56 @@ namespace view3d
 			// Notify of a render about to happen
 			NotifyRendering();
 
-			// Add objects from the window to the scene
-			for (auto& obj : m_objects)
-				obj->AddToScene(m_scene, m_anim_time_s);
+			// Set the view and projection matrices. Do this before adding objects to the
+			// scene as they do last minute transform adjustments based on the camera position.
+			auto& cam = m_camera;
+			m_scene.SetView(cam);
+			cam.m_moved = false;
 
-			// Add gizmos from the window to the scene
-			for (auto& giz : m_gizmos)
-				giz->AddToScene(m_scene);
-
-			// Add the measure tool objects if the window is visible
-			if (m_measure_tool_ui != nullptr && LdrMeasureUI().Visible() && LdrMeasureUI().Gfx())
-				LdrMeasureUI().Gfx()->AddToScene(m_scene);
-
-			// Add the angle tool objects if the window is visible
-			if (m_angle_tool_ui != nullptr && LdrAngleUI().Visible() && LdrAngleUI().Gfx())
-				LdrAngleUI().Gfx()->AddToScene(m_scene);
-
-			// Position the focus point
-			if (m_focus_point_visible)
+			// Position and scale the focus point and origin point
+			if (m_focus_point_visible || m_origin_point_visible)
 			{
+				// Draw the point with perspective or orthographic projection based on the camera settings,
+				// but with an aspect ratio matching the viewport regardless of the camera's aspect ratio.
 				float const screen_fraction = 0.05f;
+				auto aspect_v = float(m_scene.m_viewport.Width) / float(m_scene.m_viewport.Height);
+
+				// Create a camera with the same aspect as the viewport
+				auto v_camera = m_camera; v_camera.Aspect(aspect_v);
 				auto fd = m_camera.FocusDist();
-				auto sz = m_focus_point_size * screen_fraction * fd;
-				m_focus_point.m_i2w = pr::m4x4::Scale(sz, sz, sz, m_camera.FocusPoint());
-				m_focus_point.m_c2s = m_camera.CameraToScreen(float(m_scene.m_viewport.Width)/float(m_scene.m_viewport.Height), float(pr::maths::tau_by_8), m_camera.FocusDist());
-				m_scene.AddInstance(m_focus_point);
-			}
 
-			// Scale the origin point
-			if (m_origin_point_visible)
-			{
-				float const screen_fraction = 0.05f;
-				auto fd = pr::Length3(m_camera.CameraToWorld().pos);
-				auto sz = m_origin_point_size * screen_fraction * fd;
-				m_origin_point.m_i2w = pr::m4x4::Scale(sz, sz, sz, pr::v4Origin);
-				m_origin_point.m_c2s = m_camera.CameraToScreen(float(m_scene.m_viewport.Width)/float(m_scene.m_viewport.Height), float(pr::maths::tau_by_8), m_camera.FocusDist());
-				m_scene.AddInstance(m_origin_point);
+				// Get the scaling factors from 'm_camera' to 'v_camera'
+				auto viewarea_c = m_camera.ViewArea(fd);
+				auto viewarea_v = v_camera.ViewArea(fd);
+
+				if (m_focus_point_visible)
+				{
+					// Scale the camera space X,Y coords
+					// Note: this cannot be added as a matrix to 'i2w' or 'c2s' because we're
+					// only scaling the instance position, not the whole instance geometry
+					auto pt_cs = m_camera.WorldToCamera() * m_camera.FocusPoint();
+					pt_cs.x *= viewarea_v.x / viewarea_c.x;
+					pt_cs.y *= viewarea_v.y / viewarea_c.y;
+					auto pt_ws = m_camera.CameraToWorld() * pt_cs;
+
+					auto sz = m_focus_point_size * screen_fraction * abs(pt_cs.z);
+					m_focus_point.m_i2w = pr::m4x4::Scale(sz, sz, sz, pt_ws);
+					m_focus_point.m_c2s = v_camera.CameraToScreen();
+					m_scene.AddInstance(m_focus_point);
+				}
+				if (m_origin_point_visible)
+				{
+					// Scale the camera space X,Y coords
+					auto pt_cs = m_camera.WorldToCamera() * pr::v4Origin;
+					pt_cs.x *= viewarea_v.x / viewarea_c.x;
+					pt_cs.y *= viewarea_v.y / viewarea_c.y;
+					auto pt_ws = m_camera.CameraToWorld() * pt_cs;
+
+					auto sz = m_origin_point_size * screen_fraction * abs(pt_cs.z);
+					m_origin_point.m_i2w = pr::m4x4::Scale(sz, sz, sz, pt_ws);
+					m_origin_point.m_c2s = v_camera.CameraToScreen();
+					m_scene.AddInstance(m_origin_point);
+				}
 			}
 
 			// Bounding boxes
@@ -240,11 +254,6 @@ namespace view3d
 					m_scene.AddInstance(m_selection_box);
 			}
 
-			// Set the view and projection matrices
-			auto& cam = m_camera;
-			m_scene.SetView(cam);
-			cam.m_moved = false;
-
 			// Set the light source
 			auto& light = m_scene.m_global_light;
 			light = m_light;
@@ -253,6 +262,22 @@ namespace view3d
 				light.m_direction = m_camera.CameraToWorld() * m_light.m_direction;
 				light.m_position  = m_camera.CameraToWorld() * m_light.m_position;
 			}
+
+			// Add objects from the window to the scene
+			for (auto& obj : m_objects)
+				obj->AddToScene(m_scene, m_anim_time_s);
+
+			// Add gizmos from the window to the scene
+			for (auto& giz : m_gizmos)
+				giz->AddToScene(m_scene);
+
+			// Add the measure tool objects if the window is visible
+			if (m_measure_tool_ui != nullptr && LdrMeasureUI().Visible() && LdrMeasureUI().Gfx())
+				LdrMeasureUI().Gfx()->AddToScene(m_scene);
+
+			// Add the angle tool objects if the window is visible
+			if (m_angle_tool_ui != nullptr && LdrAngleUI().Visible() && LdrAngleUI().Gfx())
+				LdrAngleUI().Gfx()->AddToScene(m_scene);
 
 			// Set the background colour
 			m_scene.m_bkgd_colour = m_background_colour;
@@ -535,10 +560,16 @@ namespace view3d
 				{
 					// Update the scene bounding box if out of date
 					if (m_bbox_scene == pr::BBoxReset)
-						m_bbox_scene = except_count != 0
-							? BBox([&](pr::ldr::LdrObject const& obj){ return !pr::contains(except_arr, obj.m_context_id); })
-							: BBox();
-
+					{
+						bbox = pr::BBoxReset;
+						for (auto& obj : m_objects)
+						{
+							if (pr::AllSet(obj->m_flags, pr::ldr::ELdrFlags::BBoxInvisible)) continue;
+							if (pr::contains(except_arr, obj->m_context_id)) continue;
+							pr::Encompass(bbox, obj->BBoxWS(true));
+						}
+						m_bbox_scene = bbox;
+					}
 					bbox = m_bbox_scene;
 					break;
 				}
@@ -547,6 +578,7 @@ namespace view3d
 					bbox = pr::BBoxReset;
 					for (auto& obj : m_objects)
 					{
+						if (pr::AllSet(obj->m_flags, pr::ldr::ELdrFlags::BBoxInvisible)) continue;
 						if (!pr::AllSet(obj->m_flags, pr::ldr::ELdrFlags::Selected)) continue;
 						if (pr::contains(except_arr, obj->m_context_id)) continue;
 						pr::Encompass(bbox, obj->BBoxWS(true));
@@ -558,6 +590,7 @@ namespace view3d
 					bbox = pr::BBoxReset;
 					for (auto& obj : m_objects)
 					{
+						if (pr::AllSet(obj->m_flags, pr::ldr::ELdrFlags::BBoxInvisible)) continue;
 						if (pr::contains(except_arr, obj->m_context_id)) continue;
 						obj->Apply([&](pr::ldr::LdrObject* o)
 						{

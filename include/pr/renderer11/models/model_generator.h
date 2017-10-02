@@ -388,7 +388,7 @@ namespace pr
 				// Create the model
 				return Create(rdr, cont);
 			}
-			static ModelPtr Quad(Renderer& rdr, v4 const& origin, v4 const& patch_x, v4 const& patch_y, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, m4x4 const& t2q = m4x4Identity, NuggetProps const* mat = nullptr)
+			static ModelPtr Quad(Renderer& rdr, v2 const& anchor, v4 const& quad_w, v4 const& quad_h, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, m4x4 const& t2q = m4x4Identity, NuggetProps const* mat = nullptr)
 			{
 				// Calculate the required buffer sizes
 				int vcount, icount;
@@ -396,14 +396,14 @@ namespace pr
 
 				// Generate the geometry
 				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::Quad(origin, quad_x, quad_z, divisions, colour, t2q, std::begin(cont.m_vcont), std::begin(cont.m_icont));
+				auto props = pr::geometry::Quad(anchor, quad_w, quad_h, divisions, colour, t2q, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
 				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
 				return Create(rdr, cont);
 			}
-			static ModelPtr Quad(Renderer& rdr, AxisId axis_id, float width, float height, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, m4x4 const& t2q = m4x4Identity, NuggetProps const* mat = nullptr)
+			static ModelPtr Quad(Renderer& rdr, AxisId axis_id, v2 const& anchor, float width, float height, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, m4x4 const& t2q = m4x4Identity, m4x4 const& o2w = m4x4Identity, NuggetProps const* mat = nullptr)
 			{
 				// Calculate the required buffer sizes
 				int vcount, icount;
@@ -411,7 +411,7 @@ namespace pr
 
 				// Generate the geometry
 				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::Quad(axis_id, width, height, divisions, colour, t2q, std::begin(cont.m_vcont), std::begin(cont.m_icont));
+				auto props = pr::geometry::Quad(axis_id, anchor, width, height, divisions, colour, t2q, o2w, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
 				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
@@ -864,17 +864,34 @@ namespace pr
 
 			// Text *******************************************************************************
 			// Create a quad containing text
-			// 'max_width','max_height' define the area of the layout box (in DIP units, where 96 = inch)
-			static ModelPtr Text(Renderer& rdr, IDWriteTextLayout* text, AxisId axis_id, Colour32 fr_colour, Colour32 bk_colour)
+			// 'text' is the formatting interface for the text
+			// 'axis_id' is the basis axis of the quad normal
+			// 'fr_colour' and 'bk_colour' are the text colour and background colours
+			// 'anchor' controls the position of the origin of the quad, anchor.x = -1,0,+1 = left,centre_h,right. anchor.y = -1,0,+1 = top,centre_v,bottom
+			// 'dim_out.xy' is the dimensions of the text texture. (measured in pixels)
+			// 'dim_out.zw' is the dimensions of the quad that contains the text (measured in pixels)
+			static ModelPtr Text(Renderer& rdr, IDWriteTextLayout* text, AxisId axis_id, Colour32 fr_colour, Colour32 bk_colour, v2 const& anchor, v4& dim_out, m4x4 const* bake = nullptr)
 			{
-				// Get the text layout to measure the string
+				// Get the text layout to measure the string.
 				DWRITE_TEXT_METRICS metrics;
 				pr::Throw(text->GetMetrics(&metrics));
 
+				// Texture sizes are in physical pixels, but D2D operates in DIP so we need to determine
+				// the size in physical pixels on this device that correspond to the returned metrics.
+				// From: https://msdn.microsoft.com/en-us/library/windows/desktop/ff684173%28v=vs.85%29.aspx?f=255&MSPPError=-2147217396
+				// "Direct2D automatically performs scaling to match the DPI setting.
+				//  In Direct2D, coordinates are measured in units called device-independent pixels (DIPs).
+				//  A DIP is defined as 1/96th of a logical inch. In Direct2D, all drawing operations are
+				//  specified in DIPs and then scaled to the current DPI setting."
+				auto dpi = rdr.DpiScale();
+				auto text_size = v2(metrics.width * dpi.x, metrics.height * dpi.y);
+				auto texture_size = Ceil(text_size);
+
 				// Create a texture large enough to contain the text, and render the text into it
-				TextureDesc tdesc(size_t(metrics.width + 0.5f), size_t(metrics.height + 0.5f), 1, DXGI_FORMAT_R8G8B8A8_UNORM);
+				SamplerDesc sdesc(D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_FILTER_MIN_MAG_MIP_POINT);
+				TextureDesc tdesc(size_t(texture_size.x), size_t(texture_size.y), 1, DXGI_FORMAT_R8G8B8A8_UNORM);
 				tdesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-				auto tex = rdr.m_tex_mgr.CreateTexture2D(AutoId, Image(), tdesc, SamplerDesc::LinearClamp());
+				auto tex = rdr.m_tex_mgr.CreateTexture2D(AutoId, Image(), tdesc, sdesc);
 				tex->m_has_alpha = bk_colour.a != 0xff || fr_colour.a != 0xff;
 
 				// Get a D2D device context to draw on
@@ -897,18 +914,31 @@ namespace pr
 				int vcount, icount;
 				pr::geometry::QuadSize(1, vcount, icount);
 
-				// Use the current DPI to determine the size of the quad
-				auto dpi = rdr.Dpi();
-				auto w = metrics.width / dpi.x;
-				auto h = metrics.height/ dpi.y;
+				// Return the size of the quad and the texture
+				dim_out = v4(text_size, texture_size);
+
+				// Set the texture coordinates to match the text metrics and the quad size
+				auto t2q = m4x4::Scale(text_size.x/texture_size.x, text_size.y/texture_size.y, 1.0f, v4Origin) * m4x4(v4XAxis, -v4YAxis, v4ZAxis, v4(0, 1, 0, 1));
 
 				// Create a quad with this size
 				NuggetProps mat(EPrim::TriList);
 				mat.m_tex_diffuse = tex;
-				auto t2q = m4x4::Transform(static_cast<v4>(axis_id), float(maths::tau_by_2), v4(1.0f, 1.0f, 0.0f, 1.0f));
-				return Quad(rdr, axis_id, w, h, iv2Zero, Colour32White, t2q, &mat);
+
+				// Generate the geometry
+				auto& cont = CacheCont(vcount, icount);
+				auto props = pr::geometry::Quad(axis_id, anchor, text_size.x, text_size.y, iv2Zero, Colour32White, t2q, std::begin(cont.m_vcont), std::begin(cont.m_icont));
+				cont.m_bbox = props.m_bbox;
+				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, &mat);
+
+				// Create the model
+				return Create(rdr, cont, bake);
 			}
-			static ModelPtr Text(Renderer& rdr, wchar_t const* text, int length, AxisId axis_id, Colour32 fr_colour, Colour32 bk_colour, float max_width, float max_height)
+			static ModelPtr Text(Renderer& rdr, IDWriteTextLayout* text, AxisId axis_id, Colour32 fr_colour, Colour32 bk_colour, v2 const& anchor)
+			{
+				v4 dim_out;
+				return Text(rdr, text, axis_id, fr_colour, bk_colour, anchor, dim_out);
+			}
+			static ModelPtr Text(Renderer& rdr, wchar_t const* text, int length, AxisId axis_id, Colour32 fr_colour, Colour32 bk_colour, float max_width, float max_height, v2 const& anchor, v4& dim_out)
 			{
 				using namespace D2D1;
 				auto dwrite = rdr.DWrite();
@@ -922,7 +952,12 @@ namespace pr
 				pr::Throw(dwrite->CreateTextLayout(text, UINT32(length), text_format.get(), max_width, max_height, &text_layout.m_ptr));
 
 				// Create the text model
-				return Text(rdr, text_layout.get(), axis_id, fr_colour, bk_colour);
+				return Text(rdr, text_layout.get(), axis_id, fr_colour, bk_colour, anchor, dim_out);
+			}
+			static ModelPtr Text(Renderer& rdr, wchar_t const* text, int length, AxisId axis_id, Colour32 fr_colour, Colour32 bk_colour, float max_width, float max_height, v2 const& anchor)
+			{
+				v4 dim_out;
+				return Text(rdr, text, length, axis_id, fr_colour, bk_colour, max_width, max_height, anchor, dim_out);
 			}
 		};
 	}
