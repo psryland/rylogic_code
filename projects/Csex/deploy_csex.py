@@ -17,11 +17,9 @@ try:
 
 	dstdir = UserVars.root + "\\bin"
 	srcdir = UserVars.root + "\\projects\\Csex"
-	symdir = UserVars.root + "\\local\\symbols"
 	proj   = srcdir + "\\Csex.csproj"
 	config = "release"
 	dst    = dstdir + "\\csex"
-	sym    = symdir + "\\csex"
 	bindir = srcdir + "\\bin\\" + config
 
 	input(
@@ -36,9 +34,7 @@ try:
 
 	#Ensure directories exist and are empty
 	if os.path.exists(dst): shutil.rmtree(dst)
-	if os.path.exists(sym): shutil.rmtree(sym)
 	os.makedirs(dst)
-	os.makedirs(sym)
 
 	#Copy build products to dst
 	print("Copying files to " + dst)

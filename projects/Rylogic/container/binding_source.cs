@@ -767,15 +767,8 @@ namespace pr.container
 			m_bs.ResetAllowNew();
 		}
 
-		/// <summary>Notify prior to changes to the data source that will be followed by a Reset event</summary>
-		public void PreResetBindings()
-		{
-			RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.PreReset, -1, default(TItem)));
-		}
-
 		/// <summary>Causes a control bound to the System.Windows.Forms.BindingSource to reread all the items in the list and refresh their displayed values.</summary>
-		/// <param name="metadata_changed">true if the data schema has changed; false if only values have changed.</param>
-		public void ResetBindings(bool metadata_changed, bool preserve_position = true, bool include_pre_reset = true)
+		public void ResetBindings(bool metadata_changed, bool preserve_position, bool include_pre_reset)
 		{
 			// Note:
 			//  This results in a PositionChanged event before the ListChanged.Reset event.
@@ -796,49 +789,78 @@ namespace pr.container
 			// Record the current position
 			var idx = m_bs.Position;
 
-			// Notify pre-reset. Causes Position = -1, PositionChanged event
-			if (include_pre_reset)
-				RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.PreReset, -1, default(TItem)));
+			if (PerItem)
+			{
+				for (int i = 0; i != Count; ++i)
+					ResetItem(i, include_pre_reset);
+			}
+			else
+			{
+				// Notify pre-reset. Causes Position = -1, PositionChanged event
+				if (include_pre_reset)
+					RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.PreReset, -1, default(TItem)));
 
-			// Notify ListChangeType.Reset. Can cause a Position = 0, PositionChanged event
-			m_bs.ResetBindings(metadata_changed);
+				// Notify ListChangeType.Reset. Can cause a Position = 0, PositionChanged event
+				m_bs.ResetBindings(metadata_changed);
 
-			// Notify Reset complete
-			RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.Reset, -1, default(TItem)));
+				// Notify Reset complete
+				RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.Reset, -1, default(TItem)));
+			}
 
 			// Restore the current position
 			if (preserve_position && idx.Within(0, m_bs.Count))
 				m_bs.Position = idx;
 		}
+		public void ResetBindings(bool metadata_changed, bool preserve_position)
+		{
+			ResetBindings(metadata_changed, preserve_position, include_pre_reset:true);
+		}
+		public void ResetBindings(bool metadata_changed)
+		{
+			ResetBindings(metadata_changed, preserve_position:true);
+		}
+		public void ResetBindings()
+		{
+			ResetBindings(metadata_changed:false);
+		}
 
 		/// <summary>Causes a control bound to the System.Windows.Forms.BindingSource to reread the currently selected item and refresh its displayed value.</summary>
-		public void ResetCurrentItem()
+		public void ResetCurrentItem(bool include_pre_reset)
 		{
 			var item = Current;
 			var index = Position;
 
-			RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.ItemPreReset, index, item));
+			if (include_pre_reset)
+				RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.ItemPreReset, index, item));
 
 			m_bs.ResetCurrentItem();
 
 			RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.ItemReset, index, item));
 		}
+		public void ResetCurrentItem()
+		{
+			ResetCurrentItem(include_pre_reset:true);
+		}
 
 		/// <summary>Causes a control bound to this BindingSource to reread the item at the specified index, and refresh its displayed value.</summary>
-		/// <param name="itemIndex">The zero-based index of the item that has changed.</param>
-		public void ResetItem(int itemIndex)
+		public void ResetItem(int itemIndex, bool include_pre_reset)
 		{
 			var item = this[itemIndex];
 
-			RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.ItemPreReset, itemIndex, item));
+			if (include_pre_reset)
+				RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.ItemPreReset, itemIndex, item));
 
 			m_bs.ResetItem(itemIndex);
 
 			RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.ItemReset, itemIndex, item));
 		}
+		public void ResetItem(int itemIndex)
+		{
+			ResetItem(itemIndex, true);
+		}
 
 		/// <summary>Reset bindings for 'item'</summary>
-		public void ResetItem(TItem item, bool ignore_missing = false)
+		public void ResetItem(TItem item, bool ignore_missing, bool include_pre_reset)
 		{
 			var idx = List.IndexOf(item);
 			if (idx < 0 || idx >= List.Count)
@@ -846,9 +868,23 @@ namespace pr.container
 				if (ignore_missing || Equals(item, default(TItem))) return;
 				throw new IndexOutOfRangeException("Cannot reset a value that isn't in this collection");
 			}
-			ResetItem(idx);
+			ResetItem(idx, include_pre_reset);
 		}
-		
+		public void ResetItem(TItem item, bool ignore_missing)
+		{
+			ResetItem(item, ignore_missing, true);
+		}
+		public void ResetItem(TItem item)
+		{
+			ResetItem(item, false);
+		}
+
+		/// <summary>Notify prior to changes to the data source that will be followed by a Reset event</summary>
+		public void PreResetBindings()
+		{
+			RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.PreReset, -1, default(TItem)));
+		}
+
 		/// <summary>Resumes data binding.</summary>
 		private void ResumeBinding()
 		{
@@ -861,16 +897,16 @@ namespace pr.container
 			m_bs.SuspendBinding();
 		}
 
-		/// <summary>Get/Set whether the Clear() method results in individual events for each item or just the PreReset/Reset events</summary>
+		/// <summary>Get/Set whether all methods create in individual events for each item rather than batch PreReset/Reset events</summary>
 		[Browsable(false)]
-		public virtual bool PerItemClear
+		public virtual bool PerItem
 		{
-			get { return DataSource is BindingListEx<TItem> && DataSource.As<BindingListEx<TItem>>().PerItemClear; }
+			get { return DataSource is BindingListEx<TItem> bl && bl.PerItem; }
 			set
 			{
 				var bl = DataSource as BindingListEx<TItem>;
-				if (bl == null) throw new Exception("PerItemClear only works for BindingListEx<> data sources");
-				bl.PerItemClear = value;
+				if (bl == null) throw new Exception("PerItem only works for BindingListEx<> data sources");
+				bl.PerItem = value;
 			}
 		}
 
@@ -880,6 +916,14 @@ namespace pr.container
 			return Scope.Create(
 				() => Position,
 				p => Position = Count != 0 ? Maths.Clamp(p, 0, Count-1) : -1);
+		}
+
+		/// <summary>RAII object to restore the current item (if still available)</summary>
+		public Scope PreserveCurrent()
+		{
+			return Scope.Create(
+				() => Current,
+				c => Current = c != null && Contains(c) ? c : default(TItem));
 		}
 
 		/// <summary>Occurs when the underlying list changes or an item in the list changes.</summary>
@@ -1932,7 +1976,7 @@ namespace pr.unittests
 					));
 				clear();
 
-				bs.PerItemClear = true;
+				bs.PerItem = true;
 				bs.Clear();
 				Assert.True(Contains(bl_evts
 					,ListChg.PreReset

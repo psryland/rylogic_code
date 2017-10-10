@@ -22,6 +22,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -53,53 +54,25 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Properties\Resources.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
-    <Compile Include="src\indicators\IndicatorHorzLine.cs" />
-    <Compile Include="src\indicators\IndicatorMA.cs" />
-    <Compile Include="src\loops\ArbitrageLoops.cs" />
-    <Compile Include="src\model\Balance.cs" />
-    <Compile Include="src\model\Candle.cs" />
-    <Compile Include="src\model\Coin.cs" />
-    <Compile Include="src\exchange\Exchange_Bittrex.cs" />
-    <Compile Include="src\exchange\Exchange_CrossExchange.cs" />
-    <Compile Include="src\exchange\Exchange_Cryptopia.cs" />
-    <Compile Include="src\exchange\Exchange.cs" />
-    <Compile Include="src\fishing\Fishing.cs" />
-    <Compile Include="src\indicators\Indicator.cs" />
-    <Compile Include="src\model\Instrument.cs" />
-    <Compile Include="src\model\TimeFrame.cs" />
-    <Compile Include="src\ui\APIKeysUI.cs">
+    <Compile Include="src\dlg\SimulationUI.cs">
       <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="src\ui\BaseUI.cs">
-      <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="src\ui\ChartUI.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="src\ui\EditHorzLineUI.cs">
+    <Compile Include="src\dlg\EditHorzLineUI.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\ui\EditMaUI.cs">
+    <Compile Include="src\dlg\EditMaUI.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\ui\EditOrderUI.cs">
+    <Compile Include="src\dlg\EditOrderUI.cs">
       <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="src\ui\FishingDetailsUI.cs">
-      <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="src\ui\GridArbitrage.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="src\ui\GridBalances.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="src\ui\GridBase.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="src\ui\GridCoins.cs">
@@ -108,83 +81,44 @@
     <Compile Include="src\ui\GridExchanges.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="src\ui\GridFishing.cs">
-      <SubType>Component</SubType>
-    </Compile>
     <Compile Include="src\ui\GridHistory.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="src\ui\GridPositions.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="src\model\Historic.cs" />
-    <Compile Include="src\model\PositionFill.cs" />
-    <Compile Include="src\loops\Loop.cs" />
-    <Compile Include="src\loops\LoopsUI.cs">
+    <Compile Include="src\ui\GridBots.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="src\MainUI.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\ui\LogInUI.cs">
+    <Compile Include="src\dlg\PairsUI.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\ui\MainUI.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="src\Misc.cs" />
-    <Compile Include="src\model\Model.cs" />
-    <Compile Include="src\ui\EditFishingUI.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="src\model\OrderBook.cs" />
-    <Compile Include="src\ui\PairsUI.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="src\exchange\Exchange_Poloniex.cs" />
-    <Compile Include="src\model\Position.cs" />
-    <Compile Include="src\model\PriceTick.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="src\Settings.cs" />
-    <Compile Include="src\exchange\Exchange_TestExchange.cs" />
-    <Compile Include="src\model\Trade.cs" />
-    <Compile Include="src\model\TradePair.cs" />
     <Compile Include="src\ui\TreeBase.cs">
       <SubType>Component</SubType>
     </Compile>
-    <EmbeddedResource Include="Properties\Resources.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <SubType>Designer</SubType>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
-    <EmbeddedResource Include="src\ui\APIKeysUI.resx">
-      <DependentUpon>APIKeysUI.cs</DependentUpon>
+    <EmbeddedResource Include="src\dlg\SimulationUI.resx">
+      <DependentUpon>SimulationUI.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\ui\ChartUI.resx">
       <DependentUpon>ChartUI.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\ui\EditHorzLineUI.resx">
+    <EmbeddedResource Include="src\dlg\EditHorzLineUI.resx">
       <DependentUpon>EditHorzLineUI.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\ui\EditMaUI.resx">
+    <EmbeddedResource Include="src\dlg\EditMaUI.resx">
       <DependentUpon>EditMaUI.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\ui\EditOrderUI.resx">
+    <EmbeddedResource Include="src\dlg\EditOrderUI.resx">
       <DependentUpon>EditOrderUI.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\ui\FishingDetailsUI.resx">
-      <DependentUpon>FishingDetailsUI.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="src\loops\LoopsUI.resx">
-      <DependentUpon>LoopsUI.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="src\ui\LogInUI.resx">
-      <DependentUpon>LogInUI.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="src\ui\MainUI.resx">
+    <EmbeddedResource Include="src\MainUI.resx">
       <DependentUpon>MainUI.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\ui\EditFishingUI.resx">
-      <DependentUpon>EditFishingUI.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="src\ui\PairsUI.resx">
+    <EmbeddedResource Include="src\dlg\PairsUI.resx">
       <DependentUpon>PairsUI.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="packages.config" />
@@ -201,6 +135,10 @@
       <Project>{4cc09856-852f-44f2-ab0c-d981036ea17d}</Project>
       <Name>BittrexApi</Name>
     </ProjectReference>
+    <ProjectReference Include="..\CoinFlip.Model\CoinFlip.Model.csproj">
+      <Project>{2be1f961-7b09-469b-bbc8-a68eca8fabc6}</Project>
+      <Name>CoinFlip.Model</Name>
+    </ProjectReference>
     <ProjectReference Include="..\CryptopiaApi\CryptopiaApi.csproj">
       <Project>{30296406-237d-4b4b-8b5a-bdd18f0c2f53}</Project>
       <Name>CryptopiaApi</Name>
@@ -211,9 +149,11 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="bots\ReadMe.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="money.ico" />
     <Content Include="post_build.py" />
-    <None Include="res\coins.wav" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -13,57 +13,57 @@ namespace CoinFlip
 			:base(model, title, name)
 		{
 			ReadOnly = true;
-			Columns.Add(new DataGridViewImageColumn
-			{
-				Name = nameof(Exchange.Active),
-				HeaderText = "Active",
-				DataPropertyName = nameof(Exchange.Active),
-				AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader,
-				ImageLayout = DataGridViewImageCellLayout.Normal,
-				FillWeight = 0.1f,
-			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Exchange.Colour),
 				HeaderText = "Colour",
+				Name = nameof(Exchange.Colour),
 				DataPropertyName = nameof(Exchange.Colour),
 				FillWeight = 0.1f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Exchange.Name),
 				HeaderText = "Exchange",
+				Name = nameof(Exchange.Name),
 				DataPropertyName = nameof(Exchange.Name),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Exchange.Status),
 				HeaderText = "Status",
+				Name = nameof(Exchange.Status),
 				DataPropertyName = nameof(Exchange.Status),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Exchange.NettWorth),
 				HeaderText = "Nett Worth",
+				Name = nameof(Exchange.NettWorth),
 				DataPropertyName = nameof(Exchange.NettWorth),
 				DefaultCellStyle = new DataGridViewCellStyle{ Format = "C" },
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Exchange.CoinsAvailable),
 				HeaderText = "Coins",
+				Name = nameof(Exchange.CoinsAvailable),
 				DataPropertyName = nameof(Exchange.CoinsAvailable),
 				FillWeight = 0.5f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Exchange.PairsAvailable),
 				HeaderText = "Pairs",
+				Name = nameof(Exchange.PairsAvailable),
 				DataPropertyName = nameof(Exchange.PairsAvailable),
 				FillWeight = 0.5f,
+			});
+			Columns.Add(new DataGridViewImageColumn
+			{
+				HeaderText = "Active",
+				Name = nameof(Exchange.Active),
+				DataPropertyName = nameof(Exchange.Active),
+				AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader,
+				ImageLayout = DataGridViewImageCellLayout.Normal,
+				FillWeight = 0.1f,
 			});
 			ContextMenuStrip = CreateCMenu();
 			DataSource = model.Exchanges;

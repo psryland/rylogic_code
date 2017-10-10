@@ -328,7 +328,7 @@
     <Compile Include="gui\diagram_control.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="gui\list_form.cs">
+    <Compile Include="gui\list_ui.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="gui\message_box.cs">
@@ -553,8 +553,8 @@
     <EmbeddedResource Include="gui\help_ui.resx">
       <DependentUpon>help_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="gui\list_form.resx">
-      <DependentUpon>list_form.cs</DependentUpon>
+    <EmbeddedResource Include="gui\list_ui.resx">
+      <DependentUpon>list_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="gui\log_ui.resx">
       <DependentUpon>log_ui.cs</DependentUpon>

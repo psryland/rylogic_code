@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
@@ -102,8 +103,8 @@ namespace RyLogViewer
 					// Loads dlls from the plugins directory looking for transform substitutions
 					if (!Util.InDesignMode)
 					{
-						var plugins = PluginLoader<ITransformSubstitution>.LoadWithUI(null, Util.ResolveAppPath("plugins"), null, true);
-						foreach (var sub in plugins.Plugins)
+						var plugins = Plugins<ITransformSubstitution>.LoadWithUI(null, Util.ResolveAppPath("plugins"), null, SearchOption.AllDirectories);
+						foreach (var sub in plugins.Instances)
 							m_substitutors.Add(sub);
 					}
 				}

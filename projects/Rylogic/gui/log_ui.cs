@@ -87,9 +87,9 @@ namespace pr.gui
 			// Column fill weights
 			FillWeights = new Dictionary<string, float>
 			{
+				{ColumnNames.Tag         , 0.3f},
 				{ColumnNames.Level       , 0.3f},
 				{ColumnNames.Timestamp   , 0.6f},
-				{ColumnNames.Context     , 0.3f},
 				{ColumnNames.Message     , 5.0f},
 				{ColumnNames.File        , 2.0f},
 				{ColumnNames.Line        , 0.02f},
@@ -482,9 +482,9 @@ namespace pr.gui
 					switch (grp)
 					{
 					default:                      e.Value = value; break;
+					case ColumnNames.Tag:         e.Value = value; break;
 					case ColumnNames.Level:       e.Value = Enum<ELogLevel>.Parse(value); break;
 					case ColumnNames.Timestamp:   e.Value = TimeSpan.Parse(value); break;
-					case ColumnNames.Context:     e.Value = value; break;
 					case ColumnNames.Message:     e.Value = value; break;
 					case ColumnNames.File:        e.Value = value; break;
 					case ColumnNames.Line:        e.Value = int.Parse(value); break;
@@ -727,9 +727,9 @@ namespace pr.gui
 		/// <summary>Typical column names</summary>
 		public static class ColumnNames
 		{
+			public const string Tag         = nameof(Logger.LogEvent.Tag);
 			public const string Level       = nameof(Logger.LogEvent.Level);
 			public const string Timestamp   = nameof(Logger.LogEvent.Timestamp);
-			public const string Context     = nameof(Logger.LogEvent.Context);
 			public const string Message     = nameof(Logger.LogEvent.Message);
 			public const string File        = nameof(Logger.LogEvent.File);
 			public const string Line        = nameof(Logger.LogEvent.Line);

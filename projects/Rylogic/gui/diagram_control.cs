@@ -3832,7 +3832,7 @@ namespace pr.gui
 		private View3d                     m_view3d;           // Renderer
 		private View3d.Window              m_window;           // A view3d window for this control instance
 		private HoverScroll                m_hoverscroll;      // Hover-scroll
-		private View3d.Camera      m_camera;           // The virtual window over the diagram
+		private View3d.Camera              m_camera;           // The virtual window over the diagram
 		private Tools                      m_tools;            // Tools
 		private StyleCache<NodeStyle>      m_node_styles;      // The collection of node styles
 		private StyleCache<ConnectorStyle> m_connector_styles; //
@@ -3847,8 +3847,8 @@ namespace pr.gui
 			{
 				ConsistencyCheckSuspended = true;
 
-				Elements              = new BindingListEx<Element> { PerItemClear = true, UseHashSet = true };
-				Selected              = new BindingListEx<Element> { PerItemClear = false };
+				Elements              = new BindingListEx<Element> { PerItem = true, UseHashSet = true };
+				Selected              = new BindingListEx<Element> { PerItem = false };
 				ElemIds               = new Dictionary<Guid, Element>();
 				m_impl_options        = options ?? new DiagramOptions();
 				m_hoverscroll         = new HoverScroll(Handle);

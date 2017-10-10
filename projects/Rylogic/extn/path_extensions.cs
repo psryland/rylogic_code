@@ -1,9 +1,4 @@
-﻿//***************************************************
-// Xml Helper Functions
-//  Copyright (c) Rylogic Ltd 2010
-//***************************************************
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -95,6 +90,12 @@ namespace pr.common
 		public static bool PathExists(string file_or_directory_path)
 		{
 			return FileExists(file_or_directory_path) || DirExists(file_or_directory_path);
+		}
+
+		/// <summary>Create any missing directory paths in 'directory'</summary>
+		public static void CreateDirs(string path)
+		{
+			System.IO.Directory.CreateDirectory(path);
 		}
 
 		/// <summary>True if 'path' is a file</summary>
@@ -396,10 +397,11 @@ namespace pr.common
 					if (handle.IsInvalid) throw new FileNotFoundException("Failed to get WIN32_FIND_Data for {0}".Fmt(dir));
 				FullPath = dir;
 			}
-			public FileData(string dir, ref Win32.WIN32_FIND_DATA find_data)
+			public FileData(string dir, ref Win32.WIN32_FIND_DATA find_data, Match regex_match = null)
 			{
 				m_find_data = find_data;
 				FullPath = Path.Combine(dir, FileName);
+				RegexMatch = regex_match;
 			}
 			public FileData(FileData rhs)
 			{
@@ -409,6 +411,9 @@ namespace pr.common
 
 			/// <summary>Full path to the file.</summary>
 			public string FullPath { get; private set; }
+
+			/// <summary>The result of the regular expression filter match (if used)</summary>
+			public Match RegexMatch { get; private set; }
 
 			/// <summary>The filename.extn of the file</summary>
 			public string FileName { get { return m_find_data.FileName; } }
@@ -441,6 +446,7 @@ namespace pr.common
 			/// <summary>File last write time in UTC</summary>
 			public DateTime LastWriteTimeUtc { get { return  m_find_data.LastWriteTimeUtc; } }
 
+			/// <summary></summary>
 			public override string ToString() { return FullPath; }
 		}
 
@@ -498,8 +504,13 @@ namespace pr.common
 
 						// Filter if provided
 						if (find_data.FileName != "." && find_data.FileName != "..")
-							if (filter == null || filter.IsMatch(find_data.FileName))
+						{
+							Match m;
+							if (filter == null)
 								yield return new FileData(dir, ref find_data);
+							else if ((m = filter.Match(find_data.FileName)).Success)
+								yield return new FileData(dir, ref find_data, m);
+						}
 
 						// If the found object is a directory, see if we should be recursing
 						if (search_flags == SearchOption.AllDirectories && (find_data.Attributes & FileAttributes.Directory) == FileAttributes.Directory)

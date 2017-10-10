@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using pr.common;
 using pr.util;
 
 namespace pr.extn
@@ -234,6 +235,10 @@ namespace pr.extn
 		public static bool Within(this int? x, int beg, int end)
 		{
 			return x.HasValue && x.Value.Within(beg,end);
+		}
+		public static bool Within(this int x, Range range)
+		{
+			return Within(x, range.Begi, range.Endi);
 		}
 	}
 

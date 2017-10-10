@@ -122,38 +122,38 @@ namespace CoinFlip
 				}
 			case nameof(Position.TradeType):
 				{
-					a.Value = "{0}→{1} ({2})".Fmt(
-						pos.TradeType == ETradeType.Q2B ? pos.Pair.Quote : pos.Pair.Base ,
-						pos.TradeType == ETradeType.Q2B ? pos.Pair.Base  : pos.Pair.Quote,
-						pos.TradeType);
+					a.Value = pos.TradeType == ETradeType.Q2B
+						? $"{pos.Pair.Quote}→{pos.Pair.Base} ({pos.TradeType})"
+						: $"{pos.Pair.Base}→{pos.Pair.Quote} ({pos.TradeType})";
 					a.FormattingApplied = true;
 					break;
 				}
 			case nameof(Position.Price):
 				{
-					a.Value = "{0:G8} {1}".Fmt((decimal)pos.Price, pos.Pair.RateUnits);
+					a.Value = $"{(decimal)pos.Price:G8} {pos.Pair.RateUnits}";
 					a.FormattingApplied = true;
 					break;
 				}
 			case nameof(ColumnNames.LivePrice):
 				{
-					a.Value = pos.Pair.CurrentPrice(pos.TradeType).ToString("G8");
+					a.Value = pos.Pair.SpotPrice(pos.TradeType).ToString("G8");
 					a.FormattingApplied = true;
 					break;
 				}
 			case nameof(ColumnNames.PriceDist):
 				{
-					a.Value = "{0:G8} ({1})".Fmt(
-						pos.TradeType == ETradeType.B2Q ? (decimal)(pos.Price - pos.Pair.CurrentPrice(ETradeType.B2Q)) :
-						pos.TradeType == ETradeType.Q2B ? (decimal)(pos.Pair.CurrentPrice(ETradeType.Q2B) - pos.Price) :
-						0m,
-						pos.Pair.OrderBookIndex(pos.TradeType, pos.Price));
+					var dist =
+						pos.TradeType == ETradeType.B2Q ? (decimal)(pos.Price - pos.Pair.SpotPrice(ETradeType.B2Q)) :
+						pos.TradeType == ETradeType.Q2B ? (decimal)(pos.Pair.SpotPrice(ETradeType.Q2B) - pos.Price) :
+						0m;
+
+					a.Value = $"{dist:G8} ({pos.Pair.OrderBookIndex(pos.TradeType, pos.Price)})";
 					a.FormattingApplied = true;
 					break;
 				}
 			case nameof(Position.VolumeBase):
 				{
-					a.Value = "{0:G8} {1}".Fmt((decimal)pos.VolumeBase, pos.Pair.Base);
+					a.Value = $"{(decimal)pos.VolumeBase:G8} {pos.Pair.Base}";
 					a.FormattingApplied = true;
 					break;
 				}

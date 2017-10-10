@@ -380,7 +380,7 @@ namespace pr.util
 			if (entry_delimiter != '\0')        { Str.Build(sb, entry_delimiter); }
 			if (evt.File.HasValue())            { Str.Append(sb, evt.File); pre = " "; }
 			if (evt.Line != null)               { Str.Append(sb, "(", evt.Line.Value, "):"); pre = " "; }
-			if (evt.Context.HasValue())         { Str.Append(sb, pre, "{0:8}".Fmt(evt.Context)); pre = "|"; }
+			if (evt.Tag.HasValue())         { Str.Append(sb, pre, "{0:8}".Fmt(evt.Tag)); pre = "|"; }
 			if (evt.Level != ELogLevel.NoLevel) { Str.Append(sb, pre, evt.Level); pre = "|"; }
 			if (timestamp)                      { Str.Append(sb, pre, evt.Timestamp.ToString("c")); pre = "|"; }
 			Str.Append(sb, pre, evt.Message);
@@ -399,7 +399,7 @@ namespace pr.util
 
 				// Clean up when there are no more loggers referencing this context
 				RefCount = new RefCount(0);
-				RefCount.ZeroCount += Dispose;
+				RefCount.ZeroCount += (s,a) => Dispose();
 
 				Queue = new BlockingCollection<LogEvent>();
 				Idle = new ManualResetEvent(true);
@@ -573,7 +573,7 @@ namespace pr.util
 			{
 				Level       = ELogLevel.Error;
 				Timestamp   = TimeSpan.Zero;
-				Context     = string.Empty;
+				Tag     = string.Empty;
 				Message     = string.Empty;
 				File        = string.Empty;
 				Line        = 0;
@@ -583,7 +583,7 @@ namespace pr.util
 			{
 				Level       = level;
 				Timestamp   = DateTimeOffset.Now - tzero;
-				Context     = ctx;
+				Tag     = ctx;
 				Message     = msg;
 				File        = file;
 				Line        = line;
@@ -597,7 +597,7 @@ namespace pr.util
 			public TimeSpan Timestamp { get; internal set; }
 
 			/// <summary>The tag of the logger through which the event was added</summary>
-			public string Context { get; private set; }
+			public string Tag { get; private set; }
 
 			/// <summary>The log message</summary>
 			public string Message { get; private set; }
@@ -622,7 +622,7 @@ namespace pr.util
 			{
 				return
 					lhs.Level   == rhs.Level   &&
-					lhs.Context == rhs.Context &&
+					lhs.Tag == rhs.Tag &&
 					lhs.File    == rhs.File    &&
 					lhs.Line    == rhs.Line    &&
 					lhs.Message == rhs.Message;

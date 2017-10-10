@@ -4,6 +4,8 @@
 //***************************************************
 
 using System;
+using System.Diagnostics;
+using pr.extn;
 using pr.util;
 
 namespace pr.common
@@ -11,7 +13,9 @@ namespace pr.common
 	/// <summary>A helper object for maintaining a reference count</summary>
 	public class RefCount
 	{
-		public RefCount() :this(0) {}
+		public RefCount()
+			:this(0)
+		{ }
 		public RefCount(int initial_count)
 		{
 			m_count = initial_count;
@@ -42,14 +46,20 @@ namespace pr.common
 			get { return m_count; }
 			private set
 			{
+				if (m_count == value) return;
+				Debug.Assert(Math.Abs(m_count - value) == 1);
 				m_count = value;
-				if (m_count == 0 && ZeroCount != null) ZeroCount();
+				if (m_count == 1) Referenced.Raise(this);
+				if (m_count == 0) ZeroCount.Raise(this);
 				if (m_count < 0) throw new Exception("Ref count mismatch");
 			}
 		}
 		private int m_count;
 
-		/// <summary>A event raised when the reference count reaches 0</summary>
-		public event Action ZeroCount;
+		/// <summary>Raised when the reference count goes from 0 to non-0</summary>
+		public event EventHandler Referenced;
+
+		/// <summary>Raised when the reference count goes from non-0 to 0</summary>
+		public event EventHandler ZeroCount;
 	}
 }

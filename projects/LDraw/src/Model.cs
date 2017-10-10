@@ -24,8 +24,8 @@ namespace LDraw
 			IncludePaths     = new List<string>();
 			SourceContextIds = new HashSet<Guid>();
 			SavedViews       = new List<SavedView>();
-			Scenes           = new BindingListEx<SceneUI>{ PerItemClear = true };
-			Scripts          = new BindingListEx<ScriptUI>{ PerItemClear = true };
+			Scenes           = new BindingListEx<SceneUI>{ PerItem = true };
+			Scripts          = new BindingListEx<ScriptUI>{ PerItem = true };
 			Log              = new LogUI(this);
 
 			// Apply initial settings

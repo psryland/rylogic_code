@@ -22,7 +22,7 @@ namespace pr.extn
 		}
 
 		/// <summary>Overload ToString with options for transforming the string</summary>
-		[DebuggerStepThrough] public static string ToString(this object obj, Str.ECapitalise word_start, Str.ECapitalise word_case = Str.ECapitalise.DontChange, Str.ESeparate word_sep = Str.ESeparate.DontChange, string sep = " ")
+		[DebuggerStepThrough] public static string ToString(this object obj, Str.ECapitalise word_start = Str.ECapitalise.DontChange, Str.ECapitalise word_case = Str.ECapitalise.DontChange, Str.ESeparate word_sep = Str.ESeparate.DontChange, string sep = " ")
 		{
 			return obj.ToString().Txfm(word_start, word_case, word_sep, sep);
 		}

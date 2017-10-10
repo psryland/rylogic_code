@@ -1,4 +1,4 @@
-﻿//#define SQLITE_HANDLES
+﻿#define SQLITE_HANDLES
 #define COMPILED_LAMBDAS
 
 using System;
@@ -556,7 +556,7 @@ namespace pr.db
 			{
 				get
 				{
-					AssertCorrectThread();
+					Debug.Assert(AssertCorrectThread());
 					Debug.Assert(!m_db.IsInvalid, "Invalid database handle");
 					return m_db;
 				}
@@ -580,7 +580,7 @@ namespace pr.db
 			/// <summary>Close a database file</summary>
 			public void Close()
 			{
-				AssertCorrectThread();
+				Debug.Assert(AssertCorrectThread());
 				if (m_db.IsClosed) return;
 
 				// Release the db handle
@@ -601,7 +601,7 @@ namespace pr.db
 			}
 			public int Execute(Query query)
 			{
-				AssertCorrectThread();
+				Debug.Assert(AssertCorrectThread());
 				return query.Run();
 			}
 
@@ -613,7 +613,7 @@ namespace pr.db
 			}
 			public int ExecuteScalar(Query query)
 			{
-				AssertCorrectThread();
+				Debug.Assert(AssertCorrectThread());
 
 				if (!query.Step())
 					throw new SqliteException(Result.Error, "Scalar query returned no results");
@@ -842,7 +842,7 @@ namespace pr.db
 				db.RaiseDataChangedEvent((ChangeType)change_type, table_name, row_id);
 			}
 
-			[Conditional("DEBUG")] public void AssertCorrectThread()
+			public bool AssertCorrectThread()
 			{
 				// This is not strictly correct but is probably good enough.
 				// If ConfigOption.SingleThreaded is used, all access must be from the thread that opened the db connection.
@@ -852,6 +852,7 @@ namespace pr.db
 				{
 					throw new SqliteException(Result.Misuse, string.Format("Cross-thread use of Sqlite ORM.\n{0}", new StackTrace()));
 				}
+				return true;
 			}
 		}
 
@@ -869,7 +870,7 @@ namespace pr.db
 			{}
 			public Table(string table_name, Type type, Database db)
 			{
-				db.AssertCorrectThread();
+				Debug.Assert(db.AssertCorrectThread());
 				if (db.Handle.IsInvalid)
 					throw new ArgumentNullException("db", "Invalid database handle");
 
@@ -1807,7 +1808,7 @@ namespace pr.db
 				db.m_queries.Add(m_query_id);
 				#endif
 
-				db.AssertCorrectThread();
+				Debug.Assert(db.AssertCorrectThread());
 				if (stmt.IsInvalid)
 					throw new ArgumentNullException("stmt", "Invalid sqlite prepared statement handle");
 
@@ -1852,7 +1853,7 @@ namespace pr.db
 				if (cancel.Cancel) return;
 
 				#if SQLITE_HANDLES
-				m_db.m_queries.Remove(m_query_id);
+				DB.m_queries.Remove(m_query_id);
 				#endif
 
 				// After 'sqlite3_finalize()', it is illegal to use 'm_stmt'. So save 'db' here first
@@ -1965,7 +1966,7 @@ namespace pr.db
 			/// <summary>Iterate to the next row in the result. Returns true if there are more rows available</summary>
 			public bool Step()
 			{
-				DB.AssertCorrectThread();
+				Debug.Assert(DB.AssertCorrectThread());
 				for (;;)
 				{
 					var res = NativeDll.Step(Stmt);
@@ -2034,7 +2035,7 @@ namespace pr.db
 			}
 			public IEnumerable Rows(Type type)
 			{
-				DB.AssertCorrectThread();
+				Debug.Assert(DB.AssertCorrectThread());
 
 				var meta = TableMetaData.GetMetaData(type);
 				while (Step())
@@ -2064,7 +2065,7 @@ namespace pr.db
 			/// <summary>Typically created using the Database.NewTransaction() method</summary>
 			public Transaction(Database db, Action on_dispose)
 			{
-				db.AssertCorrectThread();
+				Debug.Assert(db.AssertCorrectThread());
 
 				DB = db;
 				m_disposed = on_dispose;

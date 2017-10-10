@@ -1561,7 +1561,7 @@ namespace pr.gui
 					ApplyToVisibleContentOnly = false;
 
 					// Create the collection that manages the content within this pane
-					Content = new BindingSource<DockControl>{DataSource = new BindingListEx<DockControl>{PerItemClear = true}};
+					Content = new BindingSource<DockControl>{DataSource = new BindingListEx<DockControl>{PerItem = true}};
 					Content.ListChanging += HandleContentListChanged;
 					Content.PositionChanged += HandleContentPositionChanged;
 

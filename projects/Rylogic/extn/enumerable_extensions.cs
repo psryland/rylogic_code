@@ -195,6 +195,22 @@ namespace pr.extn
 			}
 		}
 
+		/// <summary>Returns true if adjacent items in the collection satisfy 'pred(x[i], x[i+1])'</summary>
+		public static bool IsOrdered<TSource>(this IEnumerable<TSource> source, Func<TSource,TSource,bool> pred)
+		{
+			var iter = source.GetIterator();
+			if (iter.AtEnd) return true;
+			for (var prev = iter.CurrentThenNext(); !iter.AtEnd && pred(prev, iter.Current); prev = iter.CurrentThenNext()) {}
+			return iter.AtEnd;
+		}
+		public static bool IsOrdered<TSource>(this IEnumerable<TSource> source, bool ascending = true, IComparer<TSource> comparer = null)
+		{
+			comparer = comparer ?? Cmp<TSource>.Default;
+			return ascending
+				? source.IsOrdered((l,r) => comparer.Compare(l,r) <= 0)
+				: source.IsOrdered((l,r) => comparer.Compare(l,r) >= 0);
+		}
+
 		/// <summary>Returns true if all elements this collection result in the same result from 'selector'</summary>
 		public static bool AllSame<TSource, TRet>(this IEnumerable<TSource> source, Func<TSource,TRet> selector, IEqualityComparer<TRet> comparer = null)
 		{
@@ -585,6 +601,20 @@ namespace pr.unittests
 			Assert.True(s1.SequenceEqualUnordered(s2));
 			Assert.True(!s1.SequenceEqualUnordered(s3));
 			Assert.True(!s3.SequenceEqualUnordered(s1));
+		}
+		[Test] public void IsOrdered()
+		{
+			var s0 = new[] { 1,1,2,2,3,4,6,8,10 };
+			var s1 = new[] { 1,1,2,3,2,4,6,8,10 };
+			var s2 = new[] { 1,1,2,3,4,6,8,10,9 };
+			var s3 = new[] { 2,1,2,3,4,6,8,10,9 };
+			var s4 = new[] { 10,9,8,6,4,2,1,1 };
+
+			Assert.True (s0.IsOrdered());
+			Assert.False(s1.IsOrdered());
+			Assert.False(s2.IsOrdered());
+			Assert.False(s3.IsOrdered());
+			Assert.True(s4.IsOrdered(ascending:false));
 		}
 	}
 }

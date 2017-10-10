@@ -182,12 +182,10 @@ namespace Bittrex.API
 		/// <summary>Helper for GETs</summary>
 		private T GetData<T>(string method, string command, params KV[] parameters)
 		{
-			Debug.Assert(!m_cancel_token.IsCancellationRequested, "Shouldn't be making new requests when shutdown is signalled");
+			m_cancel_token.ThrowIfCancellationRequested();
 
 			lock (m_lock)
 			{
-				m_cancel_token.ThrowIfCancellationRequested();
-
 				// Limit requests to the required rate
 				var request_period_ms = 1000 / ServerRequestRateLimit;
 				for (; m_request_sw.ElapsedMilliseconds - m_last_request_ms < request_period_ms; Thread.Yield()){}

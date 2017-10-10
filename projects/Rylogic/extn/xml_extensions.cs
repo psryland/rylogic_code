@@ -264,7 +264,10 @@ namespace pr.extn
 
 				var type = obj.GetType();
 				type = Nullable.GetUnderlyingType(type) ?? type;
-				if (type_attr) node.SetAttributeValue(TypeAttr, type.FullName);
+
+				// Add the type attribute
+				if (type_attr)
+					node.SetAttributeValue(TypeAttr, type.FullName);
 
 				// Get the generic type if generic
 				var gen_type = type.IsGenericType ? type.GetGenericTypeDefinition() : type;
@@ -517,37 +520,37 @@ namespace pr.extn
 				};
 				this[typeof(Size)] = (elem, type, ctor) =>
 				{
-					var wh = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
+					var wh = elem.Value.Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
 					return new Size(int.Parse(wh[0]), int.Parse(wh[1]));
 				};
 				this[typeof(SizeF)] = (elem, type, ctor) =>
 				{
-					var wh = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
+					var wh = elem.Value.Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
 					return new SizeF(float.Parse(wh[0]), float.Parse(wh[1]));
 				};
 				this[typeof(Point)] = (elem, type, ctor) =>
 				{
-					var xy = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
+					var xy = elem.Value.Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
 					return new Point(int.Parse(xy[0]), int.Parse(xy[1]));
 				};
 				this[typeof(PointF)] = (elem, type, ctor) =>
 				{
-					var xy = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
+					var xy = elem.Value.Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
 					return new PointF(float.Parse(xy[0]), float.Parse(xy[1]));
 				};
 				this[typeof(Rectangle)] = (elem, type, ctor) =>
 				{
-					var xywh = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
+					var xywh = elem.Value.Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
 					return new Rectangle(int.Parse(xywh[0]), int.Parse(xywh[1]), int.Parse(xywh[2]), int.Parse(xywh[3]));
 				};
 				this[typeof(RectangleF)] = (elem, type, ctor) =>
 				{
-					var xywh = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
+					var xywh = elem.Value.Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
 					return new RectangleF(float.Parse(xywh[0]), float.Parse(xywh[1]), float.Parse(xywh[2]), float.Parse(xywh[3]));
 				};
 				this[typeof(Padding)] = (elem, type, ctor) =>
 				{
-					var ltrb = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
+					var ltrb = elem.Value.Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
 					return new Padding(int.Parse(ltrb[0]), int.Parse(ltrb[1]), int.Parse(ltrb[2]), int.Parse(ltrb[3]));
 				};
 				this[typeof(Font)] = (elem, type, instance) =>
@@ -660,6 +663,10 @@ namespace pr.extn
 			/// an array, in which case factory is used to construct the array elements</summary>
 			public object Convert(XElement elem, Type type, Func<Type,object> factory_)
 			{
+				// XElement values are strings already
+				if (type == typeof(string))
+					return elem.Value;
+
 				var factory = factory_ ?? Activator.CreateInstance;
 
 				// If 'type' is nullable then returning the underlying type will
@@ -668,26 +675,27 @@ namespace pr.extn
 				var is_nullable = ty != null;
 				if (is_nullable) type = ty;
 
-				// If 'type' is of type object, then try to read the type from the node
-				if (type == typeof(object))
+				// If the node has a type attribute use it instead of 'type'
+				if (elem.Attribute(TypeAttr) is XAttribute attr && type.FullName != attr.Value)
 				{
-					XAttribute attr;
-					if ((attr = elem.Attribute(TypeAttr)) == null)
-					{
-						// Only throw if a value is given and we can't determine it's type
-						if (string.IsNullOrEmpty(elem.Value)) return null;
-						throw new Exception("Cannot determine the type for XML element: {0}" + elem);
-					}
 					try { type = TypeExtensions.Resolve(attr.Value); }
 					catch (Exception ex)
 					{
 						// If you get this error you can use GC.KeepAlive(typeof(TheTypeName)); to force
 						// the assembly to be loaded before you try to load the XML.
 						throw new Exception(
-							"Failed to resolve type name {0}. No type with this name found in the loaded assemblies.\r\n".Fmt(attr.Value)+
+							$"Failed to resolve type name {attr.Value}. No type with this name found in the loaded assemblies.\r\n"+
 							"This error indicates that the XML being parsed contains a type that this application does not recognise.\r\n"+
 							"If the type should be recognised by this application, it may be that the assembly has not been loaded yet. ", ex);
 					}
+				}
+
+				// If 'type' is still 'object', report unresolvable
+				if (type == typeof(object))
+				{
+					// Only throw if a value is given and we can't determine it's type
+					if (string.IsNullOrEmpty(elem.Value)) return null;
+					throw new Exception($"Cannot determine the type for XML element: {elem}");
 				}
 
 				// 'IsEmpty' elements return null, 'elem.Value == ""' returns default instances.
@@ -757,8 +765,8 @@ namespace pr.extn
 					if (factory_ != null) { func = this[type] = AsFromFactory; break; }
 
 					// Note, the constructor can be private, but not inherited
-					Debug.Assert(false, "{0} does not have a constructor taking an XElement parameter or is not a data contract class".Fmt(type.Name));
-					throw new NotSupportedException("No binding for converting XElement to type {0}".Fmt(type.Name));
+					Debug.Assert(false, $"{type.Name} does not have a constructor taking an XElement parameter or is not a data contract class");
+					throw new NotSupportedException($"No binding for converting XElement to type {type.Name}");
 				}
 				return func(elem, type, factory);
 			}
@@ -774,7 +782,7 @@ namespace pr.extn
 		public static object AsCtor(XElement elem, Type type, Func<Type,object> factory)
 		{
 			var ctor = type.GetConstructor(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, null, new[]{typeof(XElement)}, null);
-			if (ctor == null) throw new NotSupportedException("{0} does not have a constructor taking a single XElement argument".Fmt(type.Name));
+			if (ctor == null) throw new NotSupportedException($"{type.Name} does not have a constructor taking a single XElement argument");
 
 			// Replace the mapping with a call that doesn't need to search for the constructor
 			AsMap[type] = (e,t,i) => ctor.Invoke(new object[]{e});
@@ -785,7 +793,7 @@ namespace pr.extn
 		public static object AsFromXmlMethod(XElement elem, Type type, Func<Type,object> factory)
 		{
 			var method = type.GetMethod("FromXml", BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, null, new[]{typeof(XElement)}, null);
-			if (method == null) throw new NotSupportedException("{0} does not have a method called 'FromXml(XElement)'".Fmt(type.Name));
+			if (method == null) throw new NotSupportedException($"{type.Name} does not have a method called 'FromXml(XElement)'");
 
 			// Replace the mapping with a call that doesn't need to search for the constructor
 			AsMap[type] = (e,t,i) =>

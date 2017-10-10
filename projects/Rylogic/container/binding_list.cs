@@ -24,7 +24,7 @@ namespace pr.container
 			Init();
 		}
 		
-		/// <summary>Careful: this constructor doesn't copy 'collection' it wraps it. So sort/readonly/etc depend on the given list</summary>
+		/// <summary>Construct from a range</summary>
 		public BindingListEx(IEnumerable<T> collection) :base(collection.ToList())
 		{
 			Init();
@@ -45,7 +45,7 @@ namespace pr.container
 		/// <summary>Construction</summary>
 		private void Init()
 		{
-			PerItemClear = false;
+			PerItem = false;
 			AllowSort = true;
 			IsSorted = false;
 			SortDirection = ListSortDirection.Ascending;
@@ -81,8 +81,8 @@ namespace pr.container
 		/// <summary>Get/Set whether sorting is allowed on this list</summary>
 		public bool AllowSort { get; set; }
 
-		/// <summary>Get/Set whether calling Clear() results in events for each item or just PreReset/Reset</summary>
-		public bool PerItemClear { get; set; }
+		/// <summary>Get/Set whether events for each item are generated for Clear, Reset, etc, or just PreReset/Reset</summary>
+		public bool PerItem { get; set; }
 
 		/// <summary>Raised whenever items are added or about to be removed from the list</summary>
 		public event EventHandler<ListChgEventArgs<T>> ListChanging;
@@ -102,7 +102,7 @@ namespace pr.container
 			}
 
 			// Remove items one at a time so that events are generated for each
-			if (PerItemClear)
+			if (PerItem)
 				for (;Count != 0;) RemoveAt(Count - 1);
 
 			// Call ClearItems even if 'PerItemClear' is true so that the ListChg.Reset event is raised

@@ -39,37 +39,6 @@ namespace pr.common
 		SaveFailed,
 	}
 
-	/// <summary>A single setting</summary>
-	[Serializable]
-	[DebuggerDisplay("{Key}={Value}")]
-	public class Setting
-	{
-		public Setting() {}
-		public Setting(string key, object value)
-		{
-			Key   = key;
-			Value = value;
-		}
-		public override string ToString()
-		{
-			return Key + "  " + Value;
-		}
-
-		/// <summary>The name of the setting variable</summary>
-		public string Key
-		{
-			get;
-			set;
-		}
-
-		/// <summary>The value of the setting</summary>
-		public object Value
-		{
-			get;
-			set;
-		}
-	}
-
 	/// <summary>Common interface for 'SettingsSet' and 'SettingsBase'</summary>
 	public interface ISettingsSet
 	{
@@ -93,13 +62,13 @@ namespace pr.common
 	[Serializable]
 	public abstract class SettingsSet<T> :ISettingsSet where T:SettingsSet<T>, new()
 	{
+		/// <summary>The collection of settings</summary>
+		protected readonly Dictionary<string, object> m_data;
+
 		protected SettingsSet()
 		{
-			Data = new List<Setting>();
+			m_data = new Dictionary<string, object>();
 		}
-
-		/// <summary>The collection of settings</summary>
-		protected readonly List<Setting> Data;
 
 		/// <summary>The default values for the settings</summary>
 		public static T Default
@@ -132,26 +101,20 @@ namespace pr.common
 			}
 		}
 
-		/// <summary>Return the index of 'key' in the data. Returned value is negative if not found</summary>
-		protected int index(string key)
-		{
-			return Data.BinarySearch(x => string.CompareOrdinal(x.Key, key));
-		}
-
 		/// <summary>Returns true if 'key' is present within the data</summary>
 		protected bool has(string key)
 		{
-			return index(key) >= 0;
+			return m_data.ContainsKey(key);
 		}
 
 		/// <summary>Read a settings value</summary>
 		protected virtual Value get<Value>(string key)
 		{
-			int idx = index(key);
-			if (idx >= 0) return (Value)Data[idx].Value;
-			idx = Default.index(key);
-			if (idx >= 0) return (Value)Default.Data[idx].Value;
-			throw new KeyNotFoundException("Unknown setting '"+key+"'.\r\n"+
+			if (m_data.TryGetValue(key, out var value) ||
+				Default.m_data.TryGetValue(key, out value))
+				return (Value)value;
+
+			throw new KeyNotFoundException($"Unknown setting '{key}'.\r\n"+
 				"This is probably because there is no default value set "+
 				"in the constructor of the derived settings class");
 		}
@@ -165,24 +128,34 @@ namespace pr.common
 		/// <summary>Write a settings value</summary>
 		protected virtual void set<Value>(string key, Value value)
 		{
-			if (ReadOnly)
-				return;
-
 			// If 'value' is a nested setting, set this object as the parent
 			SetParentIfNesting(value);
 
 			// Key not in the data yet? Must be initial value from startup
-			int idx = index(key);
-			if (idx < 0) { Data.Insert(~idx, new Setting{Key = key, Value = value}); return; }
+			if (!m_data.TryGetValue(key, out var old))
+			{
+				m_data[key] = value;
+				return;
+			}
 
-			object old_value = Data[idx].Value;
-			if (Equals(old_value, value)) return; // If the values are the same, don't raise 'changing' events
+			if (ReadOnly)
+				return;
 
-			var args = new SettingChangingEventArgs(key, old_value, value, false);
+			// If the values are the same, don't raise 'changing' events
+			if (Equals(old, value))
+				return;
+
+			// Notify about to change
+			var args = new SettingChangingEventArgs(key, old, value, false);
 			OnSettingChanging(args);
-			if (args.Cancel) return;
-			Data[idx].Value = value;
-			OnSettingChanged(new SettingChangedEventArgs(key, old_value, value));
+			if (args.Cancel)
+				return;
+
+			// Update the value
+			m_data[key] = value;
+
+			// Notify changed
+			OnSettingChanged(new SettingChangedEventArgs(key, old, value));
 		}
 
 		/// <summary>Write a settings value</summary>
@@ -194,7 +167,7 @@ namespace pr.common
 		/// <summary>Return the settings as an XML node tree</summary>
 		public virtual XElement ToXml(XElement node)
 		{
-			foreach (var d in Data)
+			foreach (var d in m_data.OrderBy(x => x.Key))
 			{
 				var elem = node.Add2(new XElement("setting"));
 				elem.SetAttributeValue("key", d.Key);
@@ -207,7 +180,7 @@ namespace pr.common
 		public virtual void FromXml(XElement node)
 		{
 			// Load data from settings
-			Data.Clear();
+			m_data.Clear();
 			foreach (var setting in node.Elements())
 			{
 				var key = setting.Attribute("key")?.Value;
@@ -222,32 +195,24 @@ namespace pr.common
 					key = key_elem.As<string>();
 					var val = val_elem.ToObject();
 					SetParentIfNesting(val);
-					Data.Add(new Setting(key, val));
+					m_data[key] = val;
 				}
 				else
 				{
 					var val = setting.ToObject();
 					SetParentIfNesting(val);
-					Data.Add(new Setting(key, val));
+					m_data[key] = val;
 				}
 			}
 
-			// Sort for binary search
-			Data.Sort((l,r) => string.CompareOrdinal(l.Key, r.Key));
-
 			// Add any default options that aren't in the settings file
 			// Use 'new T().Data' so that reference types can be used, otherwise we'll change the defaults
-			foreach (var i in new T().Data)
+			foreach (var i in new T().m_data.Where(x => !has(x.Key)))
 			{
-				if (has(i.Key)) continue;
-
-				int idx = index(i.Key);
-				Debug.Assert(idx < 0, "has() is supposed to check the key is not already present");
-
 				SetParentIfNesting(i.Value);
 
 				// Key not in the data yet? Must be initial value from startup
-				Data.Insert(~idx, new Setting(i.Key, i.Value));
+				m_data[i.Key] = i.Value;
 			}
 		}
 
@@ -296,13 +261,11 @@ namespace pr.common
 				return;
 
 			// If 'nested' is a settings set
-			var set = nested as ISettingsSet;
-			if (set != null)
+			if (nested is ISettingsSet set)
 				set.Parent = this;
 
 			// Of if 'nested' is a collection of settings sets
-			var sets = nested as IEnumerable<ISettingsSet>;
-			if (sets != null)
+			if (nested is IEnumerable<ISettingsSet> sets)
 				sets.ForEach(x => x.Parent = this);
 		}
 	}
@@ -322,34 +285,29 @@ namespace pr.common
 		protected SettingsBase(SettingsBase<T> rhs, bool read_only = false)
 			:this(rhs.ToXml(new XElement("root")), read_only)
 		{}
-		protected SettingsBase(XElement node, bool read_only = false) :this()
+		protected SettingsBase(XElement node, bool read_only = false)
+			:this()
 		{
-			try
+			if (node != null)
 			{
-				FromXml(node, read_only);
+				try { FromXml(node, read_only); return; }
+				catch (Exception ex) { SettingsEvent(ESettingsEvent.LoadFailed, ex, "Failed to load settings from XML data"); }
 			}
-			catch (Exception ex)
-			{
-				// If anything goes wrong, use the defaults
-				// Use 'new T().Data' so that reference types can be used, otherwise we'll change the defaults
-				SettingsEvent(ESettingsEvent.LoadFailed, ex, "Failed to load settings from XML data");
-				Data.AddRange(new T().Data);
-			}
+
+			// Fall back to default values
+			ResetToDefaults();
 		}
-		protected SettingsBase(Stream stream, bool read_only = false) :this()
+		protected SettingsBase(Stream stream, bool read_only = false)
+			:this()
 		{
-			Debug.Assert(stream != null);
-			try
+			if (stream != null)
 			{
-				Load(stream, read_only);
+				try { Load(stream, read_only); return; }
+				catch (Exception ex) { SettingsEvent(ESettingsEvent.LoadFailed, ex, "Failed to load settings from stream"); }
 			}
-			catch (Exception ex)
-			{
-				// If anything goes wrong, use the defaults
-				// Use 'new T().Data' so that reference types can be used, otherwise we'll change the defaults
-				SettingsEvent(ESettingsEvent.LoadFailed, ex, "Failed to load settings from stream");
-				Data.AddRange(new T().Data);
-			}
+
+			// Fall back to default values
+			ResetToDefaults();
 		}
 		protected SettingsBase(string filepath, bool read_only = false) :this()
 		{
@@ -431,7 +389,16 @@ namespace pr.common
 		}
 		private Action<ESettingsEvent, Exception, string> m_impl_settings_error;
 
-		/// <summary>Resets the persistent settings to their defaults</summary>
+		/// <summary>Populate these settings from the default instance values</summary>
+		private void ResetToDefaults()
+		{
+			// Use 'new T()' so that reference types can be used, otherwise we'll change the defaults
+			// Use 'set' so that ISettingsSets are parented correctly
+			foreach (var d in new T().m_data)
+				set(d.Key, d.Value); 
+		}
+
+		/// <summary>Resets the persisted settings to their defaults</summary>
 		public void Reset()
 		{
 			Default.Save(Filepath);
@@ -448,9 +415,7 @@ namespace pr.common
 			catch (Exception ex)
 			{
 				// If anything goes wrong, use the defaults
-				// Use 'new T().Data' so that reference types can be used, otherwise we'll change the defaults
-				foreach (var d in new T().Data) // use 'set' so that ISettingsSets are parented correctly
-					set(d.Key, d.Value);
+				ResetToDefaults();
 
 				// Notify of load failure
 				SettingsEvent(ESettingsEvent.LoadFailed, ex, "Failed to load settings from {0}".Fmt(Filepath));
@@ -678,26 +643,44 @@ namespace pr.common
 		{
 			m_data = new Dictionary<string, object>();
 		}
-		protected SettingsXml(XElement node) :this()
+		protected SettingsXml(XElement node)
+			:this()
 		{
-			Upgrade(node);
-
-			var ty = typeof(T);
-			foreach (var n in node.Elements())
+			if (node != null)
 			{
-				// Use the type to determine the type of the XML element
-				var prop_name = n.Name.LocalName;
-				var pi = ty.GetProperty(prop_name, BindingFlags.Instance|BindingFlags.Public);
+				Upgrade(node);
 
-				// Ignore XML values that are no longer properties of 'T'
-				if (pi == null) continue;
-				m_data[prop_name] = n.As(pi.PropertyType);
+				var ty = typeof(T);
+				foreach (var n in node.Elements())
+				{
+					// Use the type to determine the type of the XML element
+					var prop_name = n.Name.LocalName;
+					var pi = ty.GetProperty(prop_name, BindingFlags.Instance|BindingFlags.Public);
+
+					// Ignore XML values that are no longer properties of 'T'
+					if (pi == null) continue;
+					m_data[prop_name] = n.As(pi.PropertyType);
+				}
+
+				// Exceptions will bubble up to the root SettingsBase object
+				return;
 			}
+
+			// Fall back to default values
+			// Use 'new T().Data' so that reference types can be used, otherwise we'll change the defaults
+			m_data = new T().m_data;
 		}
 		public virtual XElement ToXml(XElement node)
 		{
+			var ty = typeof(T);
 			foreach (var pair in m_data.OrderBy(x => x.Key))
-				node.Add2(pair.Key, pair.Value);
+			{
+				// Set the type attribute if the type of value is not the save as the type of the property
+				var pi = ty.GetProperty(pair.Key, BindingFlags.Instance|BindingFlags.Public);
+				var type_attr = pi != null && pair.Value != null && pi.PropertyType != pair.Value.GetType();
+
+				node.Add2(pair.Key, pair.Value, type_attr);
+			}
 
 			return node;
 		}
@@ -753,8 +736,7 @@ namespace pr.common
 		/// <summary>Read a settings value</summary>
 		protected virtual Value get<Value>(string key)
 		{
-			object value;
-			if (m_data.TryGetValue(key, out value))
+			if (m_data.TryGetValue(key, out var value))
 				return (Value)value;
 
 			var ty = typeof(T);

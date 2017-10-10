@@ -320,8 +320,8 @@ namespace pr.extn
 			return plural;
 		}
 		private static Dictionary<string,string> m_mutated_plurals = new Dictionary<string, string>()
-			.Add2("barracks","barracks").Add2("child","children").Add2("goose","geese").Add2("man","men")
-			.Add2("mouse","mice").Add2("person","people").Add2("woman","women")
+			.ChainAdd("barracks","barracks").ChainAdd("child","children").ChainAdd("goose","geese").ChainAdd("man","men")
+			.ChainAdd("mouse","mice").ChainAdd("person","people").ChainAdd("woman","women")
 			; // Add to this on demand... (*sigh*... English...)
 
 		/// <summary>

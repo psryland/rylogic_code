@@ -11,8 +11,15 @@ namespace pr.extn
 			return dic.TryGetValue(key, out var value) ? value : null;
 		}
 
+		/// <summary>Insert the given key,value pair into this dictionary, returning 'value'</summary>
+		public static V Add2<K,V>(this Dictionary<K,V> dic, K key, V value)
+		{
+			dic.Add(key, value);
+			return value;
+		}
+
 		/// <summary>Insert the given key,value pair into this dictionary, returning this for method chaining</summary>
-		public static Dictionary<K,V> Add2<K,V>(this Dictionary<K,V> dic, K key, V value)
+		public static Dictionary<K,V> ChainAdd<K,V>(this Dictionary<K,V> dic, K key, V value)
 		{
 			dic.Add(key, value);
 			return dic;

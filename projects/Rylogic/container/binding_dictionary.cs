@@ -32,6 +32,12 @@ namespace pr.container
 			m_keys = new List<TKey>();
 			Init();
 		}
+		public BindingDict(BindingDict<TKey, TValue> rhs)
+		{
+			m_dict = new Dictionary<TKey, TValue>(rhs.m_dict);
+			m_keys = new List<TKey>(rhs.m_keys);
+			Init(rhs);
+		}
 		public BindingDict(int capacity)
 		{
 			m_dict = new Dictionary<TKey, TValue>(capacity);
@@ -62,10 +68,25 @@ namespace pr.container
 			m_keys = new List<TKey>(capacity);
 			Init();
 		}
-		public void Init()
+		private void Init()
 		{
-			SupportsSorting = true;
+			SupportsSorting        = true;
 			RaiseListChangedEvents = true;
+			KeyFrom                = null;
+			IsReadOnly             = false;
+			IsSorted               = false;
+			SortProperty           = null;
+			SortDirection          = ListSortDirection.Ascending;
+		}
+		private void Init(BindingDict<TKey, TValue> rhs)
+		{
+			SupportsSorting        = rhs.SupportsSorting;
+			RaiseListChangedEvents = rhs.RaiseListChangedEvents;
+			KeyFrom                = rhs.KeyFrom;
+			IsReadOnly             = rhs.IsReadOnly;
+			IsSorted               = rhs.IsSorted;
+			SortProperty           = rhs.SortProperty;
+			SortDirection          = rhs.SortDirection;
 		}
 
 		/// <summary>A function to return the key from a value</summary>

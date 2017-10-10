@@ -73,7 +73,6 @@ namespace CoinFlip
 			case nameof(Settings.CoinData.OfInterest):
 				{
 					cd.OfInterest = !cd.OfInterest;
-					Model.RebuildLoops = true;
 					break;
 				}
 			}

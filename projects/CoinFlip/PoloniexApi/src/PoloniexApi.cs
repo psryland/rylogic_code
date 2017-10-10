@@ -477,15 +477,13 @@ namespace Poloniex.API
 		/// <summary>Helper for GETs</summary>
 		private T GetData<T>(string command, params KV[] parameters)
 		{
-			Debug.Assert(!m_cancel_token.IsCancellationRequested, "Shouldn't be making new requests when shutdown is signalled");
+			m_cancel_token.ThrowIfCancellationRequested();
 
 			// Poloniex requires the 'nonce' values to be strictly increasing.
 			// That means all POSTs must be serialised to avoid a race condition
 			// when POSTing two messages in quick succession.
 			lock (m_post_lock)
 			{
-				m_cancel_token.ThrowIfCancellationRequested();
-
 				// Limit requests to the required rate
 				var request_period_ms = 1000 / ServerRequestRateLimit;
 				for (; m_request_sw.ElapsedMilliseconds - m_last_request_ms < request_period_ms; Thread.Yield()){}
@@ -513,15 +511,13 @@ namespace Poloniex.API
 		/// <summary>Helper for POSTs</summary>
 		private T PostData<T>(string command, params KV[] parameters)
 		{
-			Debug.Assert(!m_cancel_token.IsCancellationRequested, "Shouldn't be making new requests when shutdown is signalled");
+			m_cancel_token.ThrowIfCancellationRequested();
 
 			// Poloniex requires the 'nonce' values to be strictly increasing.
 			// That means all POSTs must be serialised to avoid a race condition
 			// when POSTing two messages in quick succession.
 			lock (m_post_lock)
 			{
-				m_cancel_token.ThrowIfCancellationRequested();
-
 				// Limit requests to the required rate
 				var request_period_ms = 1000 / ServerRequestRateLimit;
 				for (; m_request_sw.ElapsedMilliseconds - m_last_request_ms < request_period_ms; Thread.Yield()){}

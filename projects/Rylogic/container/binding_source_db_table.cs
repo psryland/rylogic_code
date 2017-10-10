@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using pr.common;
@@ -219,7 +220,7 @@ namespace pr.container
 				return;
 			}
 
-			DB.AssertCorrectThread();
+			Debug.Assert(DB.AssertCorrectThread());
 
 			// TODO: this can take a long time. It needs to be asynchronous somehow
 
@@ -355,7 +356,7 @@ namespace pr.container
 			if (DB == null)
 				return Enumerable.Empty<Type>().GetEnumerator();
 
-			DB.AssertCorrectThread();
+			Debug.Assert(DB.AssertCorrectThread());
 			var sql = Sqlite.Sql("select ",BaseTableName,".* from ",TableName," join ",BaseTableName," on [Key]=[Id]");
 			return DB.EnumRows<Type>(sql).GetEnumerator();
 		}

@@ -7,18 +7,28 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Xml.Linq;
 using pr.container;
 using pr.extn;
 
 namespace pr.util
 {
-	[DebuggerDisplay("{ToStringWithUnits(),nq}")]
+	[DebuggerDisplay("{ToString(true),nq}")]
 	public struct Unit<T> :IComparable<Unit<T>>, IComparable<T>, IComparable where T:IComparable
 	{
 		public Unit(T value, int unit)
 		{
 			Value = value;
 			UnitId = unit;
+		}
+		public Unit(XElement node)
+		{
+			this = Parse(node.Value);
+		}
+		public XElement ToXml(XElement node)
+		{
+			node.Value = UnitId != Unit_.NoUnitsId ? $"{Value} {Unit_.Types[UnitId]}" : $"{Value}";
+			return node;
 		}
 
 		internal T Value;
@@ -109,34 +119,34 @@ namespace pr.util
 		{
 			// Comparing different units is an error. A == B cannot have
 			// different behaviour depending on whether checking is enabled or not.
-			if (lhs.UnitId != rhs.UnitId && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
+			if (lhs.UnitId != rhs.UnitId && !lhs.IsScalarZero && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
 			return lhs.Value.CompareTo(rhs.Value) == 0;
 		}
 		[DebuggerStepThrough] public static bool operator != (Unit<T> lhs, Unit<T> rhs)
 		{
 			// Comparing different units is an error. A == B cannot have
 			// different behaviour depending on whether checking is enabled or not.
-			if (lhs.UnitId != rhs.UnitId && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
+			if (lhs.UnitId != rhs.UnitId && !lhs.IsScalarZero && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
 			return lhs.Value.CompareTo(rhs.Value) != 0;
 		}
 		[DebuggerStepThrough] public static bool operator <  (Unit<T> lhs, Unit<T> rhs)
 		{
-			if (lhs.UnitId != rhs.UnitId && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
+			if (lhs.UnitId != rhs.UnitId && !lhs.IsScalarZero && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
 			return lhs.Value.CompareTo(rhs.Value) < 0;
 		}
 		[DebuggerStepThrough] public static bool operator >  (Unit<T> lhs, Unit<T> rhs)
 		{
-			if (lhs.UnitId != rhs.UnitId && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
+			if (lhs.UnitId != rhs.UnitId && !lhs.IsScalarZero && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
 			return lhs.Value.CompareTo(rhs.Value) > 0;
 		}
 		[DebuggerStepThrough] public static bool operator <= (Unit<T> lhs, Unit<T> rhs)
 		{
-			if (lhs.UnitId != rhs.UnitId && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
+			if (lhs.UnitId != rhs.UnitId && !lhs.IsScalarZero && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
 			return lhs.Value.CompareTo(rhs.Value) <= 0;
 		}
 		[DebuggerStepThrough] public static bool operator >= (Unit<T> lhs, Unit<T> rhs)
 		{
-			if (lhs.UnitId != rhs.UnitId && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
+			if (lhs.UnitId != rhs.UnitId && !lhs.IsScalarZero && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
 			return lhs.Value.CompareTo(rhs.Value) >= 0;
 		}
 		#endregion
@@ -167,12 +177,44 @@ namespace pr.util
 			return include_units ? $"{str} {Unit_.Types[UnitId]}" : str;
 		}
 
+		/// <summary>Parse a unit from a string</summary>
+		public static Unit<T> Parse(string str)
+		{
+			if (str == null)
+				throw new ArgumentNullException();
+
+			var parts = str.Split(new[]{' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+			if (parts.Length != 1 && parts.Length != 2)
+				throw new FormatException();
+			
+			return new Unit<T>(Operators<T>.Parse(parts[0]), parts.Length == 2 ? Unit_.UnitId(parts[1]) : Unit_.NoUnitsId);
+		}
+		public static bool TryParse(string str, out Unit<T> unit)
+		{
+			unit = default(Unit<T>);
+
+			if (str == null)
+				return false;
+
+			var parts = str.Split(new[]{' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+			if (parts.Length != 1 && parts.Length != 2)
+				return false;
+
+			if (!Operators<T>.TryParse(parts[0], out unit.Value))
+				return false;
+
+			if (parts.Length == 2)
+				unit.UnitId = Unit_.UnitId(parts[1]);
+
+			return true;
+		}
+
 		/// <summary></summary>
 		[DebuggerStepThrough] public bool Equals(Unit<T> rhs)
 		{
 			// Comparing different units is an error. A == B cannot have
 			// different behaviour depending on whether checking is enabled or not.
-			if (UnitId != rhs.UnitId && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
+			if (UnitId != rhs.UnitId && !IsScalarZero && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
 			return Value.Equals(rhs.Value);
 		}
 		[DebuggerStepThrough] public override bool Equals(object rhs)
@@ -185,7 +227,7 @@ namespace pr.util
 		}
 		[DebuggerStepThrough] public int CompareTo(Unit<T> rhs)
 		{
-			if (UnitId != rhs.UnitId && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
+			if (UnitId != rhs.UnitId && !IsScalarZero && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
 			return Value.CompareTo(rhs.Value);
 		}
 		[DebuggerStepThrough] public int CompareTo(T rhs)
@@ -448,6 +490,17 @@ namespace pr.unittests
 			Assert.AreEqual(Unit_.CombineUnits("A.B/C","C", divide:false)                , "A.B"     );
 			Assert.AreEqual(Unit_.CombineUnits("A/B.C","B/A", divide:false)              , "1/C"     );
 			Assert.AreEqual(Unit_.CombineUnits("A³.B²/C.D^4","B³.C.D/A².C²", divide:true) , "A^5/B.D^5" );
+		}
+		[Test] public void Parse()
+		{
+			var val = 0.123m._("Spon");
+			var str = val.ToString(true);
+			var VAL = Unit<decimal>.Parse(str);
+			Assert.AreEqual(val, VAL);
+
+			var r = Unit<decimal>.TryParse(str, out VAL);
+			Assert.True(r);
+			Assert.AreEqual(val, VAL);
 		}
 	}
 }

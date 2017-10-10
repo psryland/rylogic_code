@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using pr.extn;
 using pr.util;
 
 namespace pr.maths
@@ -89,11 +90,6 @@ namespace pr.maths
 		public static v4        RadiansToDegrees(v4 degrees)                    { return new v4(RadiansToDegrees(degrees.x), RadiansToDegrees(degrees.y), RadiansToDegrees(degrees.z), RadiansToDegrees(degrees.w)); }
 
 		public static void      Swap<T>(ref T lhs, ref T rhs)                   { var tmp = lhs; lhs = rhs; rhs = tmp; }
-		public static int       Lerp(int lhs, int rhs, double frac)             { return (int)Math.Round(Lerp((float)lhs, (float)rhs, frac), 0); }
-		public static long      Lerp(long lhs, long rhs, double frac)           { return (long)Math.Round(Lerp((double)lhs, (double)rhs, frac), 0); }
-		public static float     Lerp(float lhs, float rhs, double frac)         { return (float)Lerp((double)lhs, (double)rhs, frac); }
-		public static double    Lerp(double lhs, double rhs, double frac)       { return lhs * (1.0 - frac) + rhs * (frac); }
-		public static decimal   Lerp(decimal lhs, decimal rhs, double frac)     { return lhs * (decimal)(1.0 - frac) + rhs * (decimal)(frac); }
 		public static float     Frac(int min, int x, int max)                   { Debug.Assert(max != min); return (float)(x - min) / (max - min); }
 		public static double    Frac(long min, long x, long max)                { Debug.Assert(max != min); return (double)(x - min) / (max - min); }
 		public static float     Frac(float min, float x, float max)             { Debug.Assert(Math.Abs(max - min) > float .Epsilon); return (x - min) / (max - min); }
@@ -190,6 +186,77 @@ namespace pr.maths
 			min = Operators<T>.Sub(min, tol);
 			max = Operators<T>.Add(max, tol);
 			return x.CompareTo(min) >= 0 && x.CompareTo(max) <= 0;
+		}
+
+		/// <summary>Return the average of the given values</summary>
+		public static T Average<T>(params T[] values)
+		{
+			if (values.Length == 0)
+				throw new Exception("Average: no values provided");
+			if (values.Length == 1)
+				return values[0];
+
+			var sum = default(T);
+			foreach (var v in values)
+				sum = Operators<T>.Add(sum, v); 
+
+			return Operators<T,int>.Div(sum, values.Length);
+		}
+
+		/// <summary>Return the median of the given values</summary>
+		public static T Median<T>(params T[] values) where T:IComparable<T>
+		{
+			if (values.Length == 0)
+				throw new Exception("Median: no values provided");
+			if (values.Length == 1)
+				return values[0];
+
+			// If there are an even number of values, find the centre two and average them.
+			// Otherwise, the median is just the middle value.
+			var idx = values.Length / 2;
+			return (values.Length & 1) == 0
+				? Average(values.NthElement(idx-1), values.NthElement(idx))
+				: values.NthElement(idx);
+		}
+
+		/// <summary>Linear interpolate</summary>
+		public static int Lerp(int lhs, int rhs, float frac)
+		{
+			return (int)Math.Round(Lerp((float)lhs, (float)rhs, frac), 0);
+		}
+		public static long Lerp(long lhs, long rhs, double frac)
+		{
+			return (long)Math.Round(Lerp((double)lhs, (double)rhs, frac), 0);
+		}
+		public static float Lerp(float lhs, float rhs, float frac)
+		{
+			return (float)Lerp((double)lhs, (double)rhs, (double)frac);
+		}
+		public static double Lerp(double lhs, double rhs, double frac)
+		{
+			return lhs * (1.0 - frac) + rhs * (frac);
+		}
+		public static decimal Lerp(decimal lhs, decimal rhs, double frac)
+		{
+			return lhs * (decimal)(1.0 - frac) + rhs * (decimal)(frac);
+		}
+		public static T Lerp<T>(T lhs, T rhs, double frac)
+		{
+			return Operators<T>.Add(Operators<T,double>.Mul(lhs, 1.0 - frac), Operators<T,double>.Mul(rhs, frac));
+		}
+		public static T Lerp<T>(double frac, params T[] values)
+		{
+			var len = values.Length;
+			if (len == 0)
+				throw new Exception("No values to interpolate");
+
+			// Scale 'frac' up to the number of values
+			var fidx = frac * (len - 1);
+			if (fidx <=   0.0) return values[0];
+			if (fidx >= len-1) return values[len-1];
+			
+			var idx = (int)fidx;
+			return Lerp(values[idx], values[idx+1], fidx - idx);
 		}
 
 		/// <summary>
@@ -306,3 +373,39 @@ namespace pr.maths
 		}
 	}
 }
+
+#if PR_UNITTESTS
+namespace pr.unittests
+{
+	using System.Text;
+	using maths;
+
+	[TestFixture] public class TestMathsScalar
+	{
+		[Test] public void Average()
+		{
+			var a = Maths.Average(1.0, 4.0, 2.0, 7.0, -3.0);
+			Assert.AreEqual(a, 2.2);
+
+			var m = Maths.Median(1.0, 4.0, 2.0, 7.0, -3.0);
+			Assert.AreEqual(m, 2.0);
+
+			m = Maths.Median(1.0, 4.0, 2.0, 7.0, -3.0, -1.0);
+			Assert.AreEqual(m, 1.5);
+		}
+		[Test] public void Lerp()
+		{
+			var a0 = new[]{ 1.0, 10.0, 2.0, 5.0 };
+			Assert.AreEqual(Maths.Lerp(-0.1, a0), 1.0);
+			Assert.AreEqual(Maths.Lerp( 0.0, a0), 1.0);
+			Assert.AreEqual(Maths.Lerp( 1.0, a0), 5.0);
+			Assert.AreEqual(Maths.Lerp( 1.1, a0), 5.0);
+			Assert.AreEqual(Maths.Lerp(1/2.0, a0), 6.0);
+			Assert.AreEqual(Maths.Lerp(1/3.0, a0), 10.0);
+			Assert.AreEqual(Maths.Lerp(2/3.0, a0), 2.0);
+			Assert.AreEqual(Maths.Lerp(1/6.0, a0), 5.5);
+			Assert.AreEqual(Maths.Lerp(5/6.0, a0), 3.5);
+		}
+	}
+}
+#endif

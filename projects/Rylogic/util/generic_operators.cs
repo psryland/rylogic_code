@@ -273,6 +273,15 @@ namespace pr.util
 				else             m_tostring3 = (a,fmt,fp) => { throw new Exception($"Type {typeof(T).Name} has no ToString(string, IFormatProvider) overload"); };
 			}
 			#endregion
+			#region Parse
+			{
+				var mi = typeof(T).GetMethod("Parse", BindingFlags.Public|BindingFlags.Static|BindingFlags.FlattenHierarchy, null, new Type[]{ typeof(string) }, null);
+				if (mi != null)
+					m_parse = s => (T)mi.Invoke(null, new object[]{ s });
+				else
+					m_parse = s => { throw new Exception($"Type {typeof(T).Name} has no static method named 'Parse'"); };
+			}
+			#endregion
 		}
 
 		/// <summary>Return the maximum value</summary>
@@ -347,6 +356,15 @@ namespace pr.util
 		private static Func<T,IFormatProvider,string>        m_tostring1;
 		private static Func<T,string,string>                 m_tostring2;
 		private static Func<T,string,IFormatProvider,string> m_tostring3;
+
+		/// <summary>Parse</summary>
+		public static bool TryParse(string str, out T val)
+		{
+			try   { val = Parse(str); return true; }
+			catch { val = default(T); return false; }
+		}
+		public static T Parse(string str) { return m_parse(str); }
+		private static Func<string, T> m_parse;
 	}
 	public static class Operators<T,U>
 	{

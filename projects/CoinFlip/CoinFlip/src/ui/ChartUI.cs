@@ -57,7 +57,7 @@ namespace CoinFlip
 				GfxPositions = new GfxObjectPositions(this);
 
 				// Chart indicators
-				Indicators = new BindingSource<Indicator> { DataSource = new BindingListEx<Indicator>(), PerItemClear = true };
+				Indicators = new BindingSource<Indicator> { DataSource = new BindingListEx<Indicator>(), PerItem = true };
 
 				SetupUI();
 			}
@@ -93,11 +93,13 @@ namespace CoinFlip
 				Model.Pairs.ListChanging += HandleModelPairsListChanging;
 				HandleModelPairsListChanging();
 			}
-		}
-		private void HandleModelPairsListChanging(object sender = null, ListChgEventArgs<TradePair> e = null)
-		{
-			if (e == null || e.IsDataChanged)
-				UpdateAvailablePairs();
+
+			// Handlers
+			void HandleModelPairsListChanging(object sender = null, ListChgEventArgs<TradePair> e = null)
+			{
+				if (e == null || e.IsDataChanged)
+					UpdateAvailablePairs();
+			}
 		}
 
 		/// <summary>Settings for this chart instance</summary>
@@ -121,7 +123,7 @@ namespace CoinFlip
 		/// <summary>The tab text for the chart</summary>
 		public string ChartTitle
 		{
-			get { return $"{Instrument?.SymbolCode ?? "Chart"},{TimeFrame}"; }
+			get { return $"{Instrument?.SymbolCode ?? "Chart"},{Instrument?.TimeFrame.ToString() ?? string.Empty}"; }
 		}
 
 		/// <summary>The ChartControl</summary>
@@ -136,48 +138,6 @@ namespace CoinFlip
 			}
 		}
 		private ChartControl m_chart_ctrl;
-
-		/// <summary>The pairs with chart data available</summary>
-		private IEnumerable<TradePair> AvailablePairs
-		{
-			get { return Model.Pairs.Where(x => x.Exchange.ChartDataAvailable(x).Any()); }
-		}
-		private void UpdateAvailablePairs()
-		{
-			using (m_cb_pair.ComboBox.PreserveSelectedItem())
-			using (Scope.Create(() => ++m_in_update_available_pairs, () => --m_in_update_available_pairs))
-			{
-				m_cb_pair.ComboBox.Items.Merge(AvailablePairs);
-				m_cb_pair.ComboBox.Items.Sort();
-			}
-		}
-		private int m_in_update_available_pairs;
-
-		/// <summary>The time frames available for the current instrument</summary>
-		private IEnumerable<ETimeFrame> AvailableTimeFrames
-		{
-			get
-			{
-				var pair = Instrument?.Pair;
-				var exch = pair?.Exchange;
-				yield return ETimeFrame.None;
-				if (exch == null) yield break;
-				foreach (var tf in exch.ChartDataAvailable(pair))
-					yield return tf;
-			}
-		}
-		private void UpdateAvailableTimeFrames()
-		{
-			using (m_cb_time_frame.ComboBox.PreserveSelectedItem())
-			using (Scope.Create(() => ++m_in_update_time_frames, () => --m_in_update_time_frames))
-			{
-				m_cb_time_frame.ComboBox.Items.Merge(AvailableTimeFrames);
-				m_cb_time_frame.ComboBox.Items.Sort();
-			}
-			if (m_cb_time_frame.ComboBox.SelectedItem == null)
-				m_cb_time_frame.ComboBox.SelectedItem = ETimeFrame.None;
-		}
-		private int m_in_update_time_frames;
 
 		/// <summary>The currency pair displayed in the chart</summary>
 		public Instrument Instrument
@@ -196,83 +156,42 @@ namespace CoinFlip
 				{
 					m_instrument.DataChanged += HandleDataChanged;
 				}
+
+				// Handlers
+				void HandleDataChanged(object sender, DataEventArgs e)
+				{
+					// If the event is specific to one candle, invalidate the graphics object
+					// that contains the representation of that candle.
+					if (e.Candle != null)
+					{
+						// Invalidate the cache value that contains 'idx'
+						var idx = Instrument.IndexAt(new TimeFrameTime(e.Candle.Timestamp, Instrument.TimeFrame));
+						GfxCandles.Invalidate(idx);
+					}
+					else
+					{
+						// Otherwise, just invalidate the range of candles that have changed
+						GfxCandles.Invalidate(e.IndexRange);
+					}
+
+					// Auto scroll if 'e.Candle' is a new candle
+					if (e.CandleType == DataEventArgs.ECandleType.New)
+					{
+						// If the latest candle is visible, move the X-Axis range forward.
+						var latest_idx = (double)Instrument.Count;
+						if (latest_idx.Within(ChartCtrl.XAxis.Min, ChartCtrl.XAxis.Max))
+							ChartCtrl.XAxis.Set(ChartCtrl.XAxis.Min + 1, ChartCtrl.XAxis.Max + 1);
+					}
+
+					// Invalidate other instrument data dependent graphics
+					GfxMarketDepth.Invalidate();
+
+					// Signal a refresh
+					ChartCtrl.Invalidate();
+				}
 			}
 		}
 		private Instrument m_instrument;
-		private void SetInstrument(TradePair pair)
-		{
-			Debug.Assert(!IsChartLocked);
-			if (Instrument?.Pair == pair)
-				return;
-
-			// Clear the previous instrument and settings
-			Instrument = null;
-			ChartSettings = null;
-			TimeFrame = ETimeFrame.None;
-
-			if (pair != null)
-			{
-				// Create the new instrument
-				Instrument = new Instrument(Model, pair, TimeFrame, update_active:true);
-
-				// Find the chart settings associated with this instrument
-				ChartSettings = Model.Settings.Charts.FirstOrDefault(x => x.SymbolCode == pair.Name);
-				if (ChartSettings == null)
-				{
-					ChartSettings = new Settings.ChartSettings(pair.Name);
-					Model.Settings.Charts = Model.Settings.Charts.Concat(ChartSettings).ToArray();
-				}
-				ChartSettings.Inherit = Model.Settings.ChartTemplate;
-				ChartCtrl.Options = ChartSettings.Style;
-
-				// Update the time frames
-				UpdateAvailableTimeFrames();
-
-				// Create indicators
-				UpdateIndicators();
-			}
-		}
-		private void HandleDataChanged(object sender, DataEventArgs e)
-		{
-			// Handle instrument data changing
-
-			// Ignore if this update is for a different TimeFrame
-			if (TimeFrame != e.TimeFrame)
-				return;
-
-			// If the event is specific to one candle, invalidate the graphics object
-			// that contains the representation of that candle.
-			if (e.Candle != null)
-			{
-				// Invalidate the cache value that contains 'idx'
-				var idx = Instrument.IndexAt(new TimeFrameTime(e.Candle.Timestamp, TimeFrame));
-				GfxCandles.Invalidate(idx);
-			}
-			else
-			{
-				// Otherwise, just invalidate the whole cache
-				GfxCandles.Flush();
-			}
-
-			// Auto scroll if 'e.Candle' is a new candle
-			if (e.NewCandle)
-			{
-				// If the latest candle is visible, move the X-Axis range forward.
-				var latest_idx = (double)Instrument.Count;
-				if (latest_idx.Within(ChartCtrl.XAxis.Min, ChartCtrl.XAxis.Max))
-					ChartCtrl.XAxis.Set(ChartCtrl.XAxis.Min + 1, ChartCtrl.XAxis.Max + 1);
-				
-				// Otherwise, scroll the YAxis to ensure the latest price is visible
-				//else
-				//	EnsureLatestPriceDisplayed();
-			}
-
-			// Invalidate other instrument data dependent graphics
-			GfxMarketDepth.Invalidate();
-
-			// Signal a refresh
-			ChartCtrl.Invalidate();
-		}
 
 		/// <summary>The collection of indicators on this chart</summary>
 		public BindingSource<Indicator> Indicators
@@ -290,90 +209,68 @@ namespace CoinFlip
 				{
 					m_indicators.ListChanging += HandleIndicatorsListChanging;
 				}
+
+				// Handlers
+				void HandleIndicatorsListChanging(object sender, ListChgEventArgs<Indicator> args)
+				{
+					// Handle indicators being added/removed from the chart
+					switch (args.ChangeType)
+					{
+					case ListChg.ItemAdded:
+						{
+							// Ensure the 'Chart' property is set on the indicator
+							args.Item.Instrument = Instrument;
+							args.Item.Chart = ChartCtrl;
+
+						//	// When the indicator changes, update the saved chart settings
+						//	args.Item.DataChanged += HandleIndicatorChanged;
+
+							// Update the settings.
+							HandleIndicatorChanged();
+
+							// Refresh the chart
+							Invalidate(true);
+							break;
+						}
+					case ListChg.ItemRemoved:
+						{
+							// Remove from the Chart
+							args.Item.Chart = null;
+							args.Item.Instrument = null;
+
+						//	// Ignore changes
+						//	args.Item.DataChanged -= HandleIndicatorChanged;
+
+							// Dispose the indicator
+							Util.Dispose(args.Item);
+
+							// Update the settings.
+							HandleIndicatorChanged();
+
+							// Refresh the chart
+							Invalidate(true);
+							break;
+						}
+					}
+				}
+				void HandleIndicatorChanged(object sender = null, EventArgs e = null)
+				{
+					// ChartSettings is set to null on Dispose so that removing indicators
+					// doesn't write to the settings.
+					if (ChartSettings == null)
+						return;
+
+					// Save the indicators to the chart settings
+					var elements = new XElement(nameof(Indicators));
+					foreach (var indicator in Indicators)
+						elements.Add2(nameof(Indicator), indicator, true);
+
+					// Update the settings
+					ChartSettings.Indicators = elements;
+				}
 			}
 		}
 		private BindingSource<Indicator> m_indicators;
-		private void HandleIndicatorsListChanging(object sender, ListChgEventArgs<Indicator> args)
-		{
-			// Handle indicators being added/removed from the chart
-			switch (args.ChangeType)
-			{
-			case ListChg.ItemAdded:
-				{
-					// Ensure the 'Chart' property is set on the indicator
-					args.Item.Instrument = Instrument;
-					args.Item.Chart = ChartCtrl;
-
-				//	// When the indicator changes, update the saved chart settings
-				//	args.Item.DataChanged += HandleIndicatorChanged;
-
-					// Update the settings.
-					HandleIndicatorChanged();
-
-					// Refresh the chart
-					Invalidate(true);
-					break;
-				}
-			case ListChg.ItemRemoved:
-				{
-					// Remove from the Chart
-					args.Item.Chart = null;
-					args.Item.Instrument = null;
-
-				//	// Ignore changes
-				//	args.Item.DataChanged -= HandleIndicatorChanged;
-
-					// Dispose the indicator
-					Util.Dispose(args.Item);
-
-					// Update the settings.
-					HandleIndicatorChanged();
-
-					// Refresh the chart
-					Invalidate(true);
-					break;
-				}
-			}
-		}
-		private void HandleIndicatorChanged(object sender = null, EventArgs e = null)
-		{
-			// ChartSettings is set to null on Dispose so that removing indicators
-			// doesn't write to the settings.
-			if (ChartSettings == null)
-				return;
-
-			// Save the indicators to the chart settings
-			var elements = new XElement(nameof(Indicators));
-			foreach (var indicator in Indicators)
-				elements.Add2(nameof(Indicator), indicator, true);
-
-			// Update the settings
-			ChartSettings.Indicators = elements;
-		}
-
-		/// <summary>The selected time frame</summary>
-		public ETimeFrame TimeFrame
-		{
-			[DebuggerStepThrough] get { return Instrument?.TimeFrame ?? ETimeFrame.None; }
-			set
-			{
-				if (Instrument?.TimeFrame == value) return;
-				if (Instrument != null)
-					Instrument.TimeFrame = value;
-
-				DockControl.TabText = ChartTitle;
-				GfxCandles.Flush();
-				ChartCtrl.AutoRange();
-				m_cb_time_frame.SelectedItem = value;
-			}
-		}
-
-		/// <summary>Enable\Disable chart updating</summary>
-		public bool UpdateThreadActive
-		{
-			get { return Instrument?.UpdateThreadActive ?? false;  }
-			set { if (Instrument != null) Instrument.UpdateThreadActive = value; }
-		}
 
 		/// <summary>Set up UI elements</summary>
 		private void SetupUI()
@@ -381,9 +278,9 @@ namespace CoinFlip
 			#region Instrument Tool bar
 			
 			// Combo for choosing the pair to display
+			UpdateAvailablePairs();
 			m_cb_pair.ToolTipText = "Select the currency pair to display";
 			m_cb_pair.ComboBox.DisplayProperty = nameof(TradePair.NameWithExchange);
-			UpdateAvailablePairs();
 			m_cb_pair.ComboBox.DropDown += (s,a) =>
 			{
 				UpdateAvailablePairs();
@@ -391,12 +288,15 @@ namespace CoinFlip
 			m_cb_pair.ComboBox.SelectedIndexChanged += (s,a) =>
 			{
 				if (IsChartLocked || m_in_update_available_pairs != 0) return;
-				SetInstrument((TradePair)m_cb_pair.ComboBox.SelectedItem);
+				UpdateAvailableTimeFrames();
+				var tp = (TradePair)m_cb_pair.ComboBox.SelectedItem;
+				var tf = (ETimeFrame)m_cb_time_frame.ComboBox.SelectedItem;
+				SetInstrument(tp, tf);
 			};
 
 			// Combo for choosing the time frame
-			m_cb_time_frame.ToolTipText = "Select the time frame to display";
 			UpdateAvailableTimeFrames();
+			m_cb_time_frame.ToolTipText = "Select the time frame to display";
 			m_cb_time_frame.SelectedItem = ETimeFrame.None;
 			m_cb_time_frame.ComboBox.DropDown += (s,a) =>
 			{
@@ -405,7 +305,9 @@ namespace CoinFlip
 			m_cb_time_frame.ComboBox.SelectedIndexChanged += (s,a) =>
 			{
 				if (IsChartLocked || m_in_update_time_frames != 0) return;
-				TimeFrame = (ETimeFrame)m_cb_time_frame.ComboBox.SelectedItem;
+				var tp = (TradePair)m_cb_pair.ComboBox.SelectedItem;
+				var tf = (ETimeFrame)m_cb_time_frame.ComboBox.SelectedItem;
+				SetInstrument(tp, tf);
 			};
 
 			// Show positions
@@ -480,9 +382,9 @@ namespace CoinFlip
 			ChartCtrl.ChartAreaSelect += (s,a) =>
 			{
 				// Area select zoom if control is held down
-//fixme			var rect = new RectangleF(a.SelectionArea.MinX, a.SelectionArea.MinY, a.SelectionArea.SizeX, a.SelectionArea.SizeY);
-//fixme			if (rect.Width > 0 && rect.Height > 0 && ModifierKeys == Keys.Shift)
-//fixme				m_chart.ZoomArea(rect, false);
+				//todo var rect = new RectangleF(a.SelectionArea.MinX, a.SelectionArea.MinY, a.SelectionArea.SizeX, a.SelectionArea.SizeY);
+				//todo if (rect.Width > 0 && rect.Height > 0 && ModifierKeys == Keys.Shift)
+				//todo 	m_chart.ZoomArea(rect, false);
 
 				a.Handled = true;
 			};
@@ -496,10 +398,85 @@ namespace CoinFlip
 			#endregion
 		}
 
-		/// <summary>Get all positions on this instruction</summary>
+		/// <summary>Change the instrument displayed in this chart</summary>
+		private void SetInstrument(TradePair pair, ETimeFrame time_frame)
+		{
+			Debug.Assert(!IsChartLocked);
+
+			// Clear the previous instrument and settings
+			Instrument = null;
+			ChartSettings = null;
+
+			if (pair != null && time_frame != ETimeFrame.None)
+			{
+				// Create the new instrument
+				Instrument = new Instrument($"Chart {pair.Name} {time_frame}", Model.PriceData[pair, time_frame]);
+
+				// Find the chart settings associated with this instrument
+				ChartSettings = Model.ChartSettings(pair);
+				ChartCtrl.Options = ChartSettings.Style;
+
+				// Create indicators
+				UpdateIndicators();
+
+				// Update UI elements
+				DockControl.TabText = ChartTitle;
+				GfxCandles.Flush();
+				ChartCtrl.AutoRange();
+			}
+		}
+
+		/// <summary>The pairs with chart data available</summary>
+		private IEnumerable<TradePair> AvailablePairs
+		{
+			get { return Model.Pairs.Where(x => x.Exchange.ChartDataAvailable(x).Any()); }
+		}
+		private void UpdateAvailablePairs()
+		{
+			using (m_cb_pair.ComboBox.PreserveSelectedItem())
+			using (Scope.Create(() => ++m_in_update_available_pairs, () => --m_in_update_available_pairs))
+			{
+				m_cb_pair.ComboBox.Items.Merge(AvailablePairs);
+				m_cb_pair.ComboBox.Items.Sort();
+			}
+		}
+		private int m_in_update_available_pairs;
+
+		/// <summary>The time frames available for the current instrument</summary>
+		private IEnumerable<ETimeFrame> AvailableTimeFrames
+		{
+			get
+			{
+				var pair = m_cb_pair.SelectedItem as TradePair;
+				var exch = pair?.Exchange;
+				yield return ETimeFrame.None;
+				if (exch == null) yield break;
+				foreach (var tf in exch.ChartDataAvailable(pair))
+					yield return tf;
+			}
+		}
+		private void UpdateAvailableTimeFrames()
+		{
+			using (m_cb_time_frame.ComboBox.PreserveSelectedItem())
+			using (Scope.Create(() => ++m_in_update_time_frames, () => --m_in_update_time_frames))
+			{
+				m_cb_time_frame.ComboBox.Items.Merge(AvailableTimeFrames);
+				m_cb_time_frame.ComboBox.Items.Sort();
+			}
+			if (m_cb_time_frame.ComboBox.SelectedItem == null)
+				m_cb_time_frame.ComboBox.SelectedItem = ETimeFrame.None;
+		}
+		private int m_in_update_time_frames;
+
+		/// <summary>Get all positions on the instrument displayed in this chart</summary>
 		private IEnumerable<Position> AllPositions
 		{
-			get { return Instrument?.AllPositions ?? new Position[0]; }
+			get
+			{
+				return Instrument != null
+					? Model.AllPositions(Instrument.Pair.Name)
+					: new Position[0];
+			}
 		}
 
 		/// <summary>(Re)create indicators from settings</summary>
@@ -540,14 +517,11 @@ namespace CoinFlip
 			// values to X Axis values.
 
 			// Draw the X Axis labels as indices instead of time stamps
-			if (m_xaxis_in_candle_indices)
+			if (m_xaxis_label_mode == EXAxisLabelMode.CandleIndex)
 				return x.ToString();
 
 			if (Instrument == null)
 				return string.Empty;
-
-			const string long_fmt  = "HH:mm'\r\n'ddd dd-MMM-yy";
-			const string short_fmt = "HH:mm";
 
 			// The range of indices
 			var first = 0;
@@ -559,9 +533,10 @@ namespace CoinFlip
 				return string.Empty;
 
 			// Get the time stamp of the candle at the tick mark in local time
-			var dt_curr = TimeZone.CurrentTimeZone.ToLocalTime(new DateTimeOffset(Instrument[curr].Timestamp, TimeSpan.Zero).DateTime);
+			var dt_curr = new DateTimeOffset(Instrument[curr].Timestamp, TimeSpan.Zero).DateTime;
+			if (m_xaxis_label_mode == EXAxisLabelMode.LocalTime) dt_curr = TimeZone.CurrentTimeZone.ToLocalTime(dt_curr);
 			if (curr == first || prev < first || x - step < ChartCtrl.XAxis.Min) // First tick on the x axis
-				return dt_curr.ToString(long_fmt);
+				return dt_curr.ToString("HH:mm'\r\n'dd-MMM-yy");
 
 			// If the current tick mark represents the same candle as the previous one, no text is required
 			if (prev == curr)
@@ -570,14 +545,20 @@ namespace CoinFlip
 			// Get the time stamp of the candle at the previous tick mark in local time
 			if (prev >= first && prev < last)
 			{
-				var dt_prev = TimeZone.CurrentTimeZone.ToLocalTime(new DateTime(Instrument[prev].Timestamp, DateTimeKind.Utc));
+				var dt_prev = new DateTimeOffset(Instrument[prev].Timestamp, TimeSpan.Zero).DateTime;
+				if (m_xaxis_label_mode == EXAxisLabelMode.LocalTime) dt_prev = TimeZone.CurrentTimeZone.ToLocalTime(dt_prev);
+				if (dt_curr.Year != dt_prev.Year)
+					return dt_curr.ToString("HH:mm'\r\n'dd-MMM-yy");
+				if (dt_curr.Month != dt_prev.Month)
+					return dt_curr.ToString("HH:mm'\r\n'dd-MMM");
 				if (dt_curr.Day != dt_prev.Day)
-					return dt_curr.ToString(long_fmt);
+					return dt_curr.ToString("HH:mm'\r\n'ddd dd");
 			}
 
-			return dt_curr.ToString(short_fmt);
+			return dt_curr.ToString("HH:mm");
 		}
-		private bool m_xaxis_in_candle_indices;
+		private enum EXAxisLabelMode { LocalTime, UtcTime, CandleIndex }
+		private EXAxisLabelMode m_xaxis_label_mode;
 
 		/// <summary>Convert the YAxis values into pretty price strings</summary>
 		private string HandleChartYAxisTickText(double x, double step)
@@ -587,7 +568,7 @@ namespace CoinFlip
 
 			var str = new StringBuilder(Math.Round(x, 5, MidpointRounding.AwayFromZero).ToString("F5"));
 			for (; str.Length > 6 && str[str.Length-1] == '0';) str.Length--;
-			return str.ToString();;
+			return str.ToString();
 		}
 
 		/// <summary>Measure the size of the y axis text</summary>
@@ -620,7 +601,7 @@ namespace CoinFlip
 		/// <summary>Called when the chart paints</summary>
 		private void HandleAddOverlaysOnPaint(object sender, ChartControl.AddOverlaysOnPaintEventArgs e)
 		{
-			 if (Instrument == null || TimeFrame == ETimeFrame.None)
+			 if (Instrument == null)
 				return;
 
 			// Add the ask/bid price to the Y axis
@@ -651,7 +632,7 @@ namespace CoinFlip
 			{
 				// Find the remaining time
 				var latest = Instrument.Latest;
-				var one = Misc.TimeFrameToTimeSpan(1.0, TimeFrame);
+				var one = Misc.TimeFrameToTimeSpan(1.0, Instrument.TimeFrame);
 				var age = Model.UtcNow - latest.TimestampUTC;
 				var str = (one - age).ToMinimalString();
 
@@ -757,10 +738,10 @@ namespace CoinFlip
 			case ChartControl.AddUserMenuOptionsEventArgs.EType.XAxis:
 				#region
 				{
-					var opt = e.Menu.Items.Add2(new ToolStripMenuItem(m_xaxis_in_candle_indices ? "Local Time" : "Candle Index"));
+					var opt = e.Menu.Items.Add2(new ToolStripMenuItem(Enum<EXAxisLabelMode>.Cycle(m_xaxis_label_mode).ToString(word_sep:Str.ESeparate.Add)));
 					opt.Click += (s,a) =>
 					{
-						m_xaxis_in_candle_indices = !m_xaxis_in_candle_indices;
+						m_xaxis_label_mode = Enum<EXAxisLabelMode>.Cycle(m_xaxis_label_mode);
 						Invalidate(true);
 					};
 					break;
@@ -772,7 +753,7 @@ namespace CoinFlip
 		/// <summary>Handle the auto range command of the chart</summary>
 		private void HandleAutoRanging(object sender, ChartControl.AutoRangeEventArgs e)
 		{
-			if (Instrument == null || TimeFrame == ETimeFrame.None)
+			if (Instrument == null)
 				return;
 
 			// Display the last few candles
@@ -781,15 +762,15 @@ namespace CoinFlip
 			var idx_max = Instrument.Count + 20;
 			foreach (var candle in Instrument.CandleRange(idx_min, idx_max))
 			{
-				bb = BBox.Encompass(bb, new v4(idx_min, (float)candle.Low , -Z.Max, 1f));
-				bb = BBox.Encompass(bb, new v4(idx_max, (float)candle.High, +Z.Max, 1f));
+				bb = BBox.Encompass(bb, new v4(idx_min, (float)candle.Low , -ZOrder.Max, 1f));
+				bb = BBox.Encompass(bb, new v4(idx_max, (float)candle.High, +ZOrder.Max, 1f));
 			}
 
 			// Include trades
 			if (ChartSettings.ShowPositions)
 			{
 				foreach (var pos in AllPositions)
-					bb = BBox.Encompass(bb, new v4(bb.Centre.x, (float)(decimal)pos.Price, Z.Trades, 1f));
+					bb = BBox.Encompass(bb, new v4(bb.Centre.x, (float)(decimal)pos.Price, ZOrder.Trades, 1f));
 			}
 
 			// Swell the box a little for margins
@@ -811,7 +792,7 @@ namespace CoinFlip
 		/// <summary>Handle the chart about to render</summary>
 		private void HandleChartRendering(object sender, ChartControl.ChartRenderingEventArgs args)
 		{
-			if (Instrument == null || TimeFrame == ETimeFrame.None)
+			if (Instrument == null)
 				return;
 
 			#region Candles
@@ -832,13 +813,13 @@ namespace CoinFlip
 				if (GfxAsk != null)
 				{
 					var price = (float)(decimal)Instrument.Q2BPrice;
-					GfxAsk.O2P = m4x4.Scale((float)ChartCtrl.XAxis.Span, 1f, 1f, new v4((float)ChartCtrl.XAxis.Min, price, Z.CurrentPrice, 1f));
+					GfxAsk.O2P = m4x4.Scale((float)ChartCtrl.XAxis.Span, 1f, 1f, new v4((float)ChartCtrl.XAxis.Min, price, ZOrder.CurrentPrice, 1f));
 					args.AddToScene(GfxAsk);
 				}
 				if (GfxBid != null)
 				{
 					var price = (float)(decimal)Instrument.B2QPrice;
-					GfxBid.O2P = m4x4.Scale((float)ChartCtrl.XAxis.Span, 1f, 1f, new v4((float)ChartCtrl.XAxis.Min, price, Z.CurrentPrice, 1f));
+					GfxBid.O2P = m4x4.Scale((float)ChartCtrl.XAxis.Span, 1f, 1f, new v4((float)ChartCtrl.XAxis.Min, price, ZOrder.CurrentPrice, 1f));
 					args.AddToScene(GfxBid);
 				}
 			}
@@ -860,7 +841,7 @@ namespace CoinFlip
 				if (gfx != null)
 				{
 					// Market depth graphics created at x = 0
-					gfx.O2P = m4x4.Translation(Instrument.Count, 0f, Z.Indicators);
+					gfx.O2P = m4x4.Translation(Instrument.Count, 0f, ZOrder.Indicators);
 					args.AddToScene(gfx);
 				}
 			}
@@ -1076,12 +1057,17 @@ namespace CoinFlip
 					var candle_idx = 0;
 					foreach (var candle in candles)
 					{
+						// Use the spot price for the close of the 'Latest' candle.
+						var close = rng.Begi + candle_idx == instrument.Count-1
+							? (double)(decimal)instrument.SpotPrice(ETradeType.B2Q)
+							: candle.Close;
+
 						// Create the graphics with the first candle at x == 0
 						var x = (float)candle_idx++;
-						var o = (float)Math.Max(candle.Open, candle.Close);
+						var o = (float)Math.Max(candle.Open, close);
 						var h = (float)candle.High;
 						var l = (float)candle.Low;
-						var c = (float)Math.Min(candle.Open, candle.Close);
+						var c = (float)Math.Min(candle.Open, close);
 						var col = candle.Bullish ? colour_bullish : candle.Bearish ? colour_bearish : 0xFFA0A0A0;
 						var v = vert;
 
@@ -1139,7 +1125,7 @@ namespace CoinFlip
 					if (gfx.Gfx != null)
 					{
 						// Position the graphics object
-						gfx.Gfx.O2P = m4x4.Translation(new v4(gfx.DBIndexRange.Begi, 0.0f, Z.Candles, 1.0f));
+						gfx.Gfx.O2P = m4x4.Translation(new v4(gfx.DBIndexRange.Begi, 0.0f, ZOrder.Candles, 1.0f));
 						yield return gfx.Gfx;
 					}
 				}
@@ -1150,6 +1136,13 @@ namespace CoinFlip
 			{
 				var cache_idx = candle_index / BatchSize;
 				m_cache.Invalidate(cache_idx);
+			}
+			public void Invalidate(Range candle_index_range)
+			{
+				var idx_beg = candle_index_range.Begi / BatchSize;
+				var idx_end = candle_index_range.Endi / BatchSize;
+				for (var i = idx_beg; i != idx_end; ++i)
+					m_cache.Invalidate(i);
 			}
 
 			/// <summary>Invalidate all candle graphics</summary>
@@ -1278,10 +1271,10 @@ namespace CoinFlip
 							var hx = width_scale * (float)(volume / 2);
 							var v = vert;
 
-							m_vbuf[vert++] = new View3d.Vertex(new v4(-hx, y1, Z.Indicators, 1f), b2q_colour);
-							m_vbuf[vert++] = new View3d.Vertex(new v4(+hx, y1, Z.Indicators, 1f), b2q_colour);
-							m_vbuf[vert++] = new View3d.Vertex(new v4(-hx, y0, Z.Indicators, 1f), b2q_colour);
-							m_vbuf[vert++] = new View3d.Vertex(new v4(+hx, y0, Z.Indicators, 1f), b2q_colour);
+							m_vbuf[vert++] = new View3d.Vertex(new v4(-hx, y1, ZOrder.Indicators, 1f), b2q_colour);
+							m_vbuf[vert++] = new View3d.Vertex(new v4(+hx, y1, ZOrder.Indicators, 1f), b2q_colour);
+							m_vbuf[vert++] = new View3d.Vertex(new v4(-hx, y0, ZOrder.Indicators, 1f), b2q_colour);
+							m_vbuf[vert++] = new View3d.Vertex(new v4(+hx, y0, ZOrder.Indicators, 1f), b2q_colour);
 
 							m_ibuf[indx++] = (ushort)(v + 0);
 							m_ibuf[indx++] = (ushort)(v + 2);
@@ -1301,10 +1294,10 @@ namespace CoinFlip
 							var hx = width_scale * (float)volume / 2;
 							var v = vert;
 
-							m_vbuf[vert++] = new View3d.Vertex(new v4(-hx, y1, Z.Indicators, 1f), q2b_colour);
-							m_vbuf[vert++] = new View3d.Vertex(new v4(+hx, y1, Z.Indicators, 1f), q2b_colour);
-							m_vbuf[vert++] = new View3d.Vertex(new v4(-hx, y0, Z.Indicators, 1f), q2b_colour);
-							m_vbuf[vert++] = new View3d.Vertex(new v4(+hx, y0, Z.Indicators, 1f), q2b_colour);
+							m_vbuf[vert++] = new View3d.Vertex(new v4(-hx, y1, ZOrder.Indicators, 1f), q2b_colour);
+							m_vbuf[vert++] = new View3d.Vertex(new v4(+hx, y1, ZOrder.Indicators, 1f), q2b_colour);
+							m_vbuf[vert++] = new View3d.Vertex(new v4(-hx, y0, ZOrder.Indicators, 1f), q2b_colour);
+							m_vbuf[vert++] = new View3d.Vertex(new v4(+hx, y0, ZOrder.Indicators, 1f), q2b_colour);
 
 							m_ibuf[indx++] = (ushort)(v + 0);
 							m_ibuf[indx++] = (ushort)(v + 2);
@@ -1354,27 +1347,19 @@ namespace CoinFlip
 			public View3d.Object Get(Position pos)
 			{
 				var instrument = m_chart.Instrument;
-				var time_frame = m_chart.TimeFrame;
 
 				var gfx = m_cache.Get(pos.UniqueKey, g => new View3d.Object($"*Line Position_{pos.OrderId} FF8080FF {{ 0 0 0 1 0 0 }}", file:false));
-				var x = instrument.IndexAt(new TimeFrameTime(pos.Created.Value, time_frame));
+				var x = instrument.IndexAt(new TimeFrameTime(pos.Created.Value, instrument.TimeFrame));
 				var y = (float)(decimal)pos.Price;
-				gfx.O2P = m4x4.Scale(instrument.Count + 10 - x, 1f, 1f, new v4(x, y, Z.Trades, 1f));
+				gfx.O2P = m4x4.Scale(instrument.Count + 10 - x, 1f, 1f, new v4(x, y, ZOrder.Trades, 1f));
 				return gfx;
 			}	
 		}
 
-		/// <summary>Z-values for chart elements</summary>
-		public static ZOrder Z = new ZOrder();
-		public class ZOrder
+		/// <summary>Debugging method</summary>
+		public void InvalidateCandleGfx()
 		{
-			// Grid lines are drawn at 0
-			public float Min          = 0f;
-			public float Candles      = 0.010f;
-			public float CurrentPrice = 0.011f;
-			public float Indicators   = 0.012f;
-			public float Trades       = 0.013f;
-			public float Max          = 0.1f;
+			GfxCandles.Flush();
 		}
 
 		#endregion

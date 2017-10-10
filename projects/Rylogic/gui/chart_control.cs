@@ -66,9 +66,9 @@ namespace pr.gui
 				Tools           = new ChartTools(this, Options);
 				m_tt_show_value = new HintBalloon { AutoSizeMode = AutoSizeMode.GrowOnly };
 
-				Elements = new BindingListEx<Element> { PerItemClear = true, UseHashSet = true };
-				Selected = new BindingListEx<Element> { PerItemClear = false };
-				Hovered  = new BindingListEx<Element> { PerItemClear = false };
+				Elements = new BindingListEx<Element> { PerItem = true, UseHashSet = true };
+				Selected = new BindingListEx<Element> { PerItem = false };
+				Hovered  = new BindingListEx<Element> { PerItem = false };
 				ElemIds  = new Dictionary<Guid, Element>();
 
 				Elements.ListChanging += (s,a) => OnElementListChanging(a);
