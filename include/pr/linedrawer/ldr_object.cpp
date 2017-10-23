@@ -608,6 +608,12 @@ namespace pr
 					obj->m_wireframe = true;
 					return true;
 				}
+			case EKeyword::ScreenSpace:
+				{
+					// Use a magic number to signal screen space mode to the ApplyState function
+					obj->m_screen_space = ~EventHandlerId();
+					return true;
+				}
 			}
 		}
 
