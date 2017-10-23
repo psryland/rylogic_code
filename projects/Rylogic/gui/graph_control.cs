@@ -219,7 +219,7 @@ namespace pr.gui
 					continue;
 
 				// Note: series.Sorted doesn't help because we still need to scan all the Y values.
-				using (var s = series.Lock)
+				using (var s = series.Lock())
 				{
 					foreach (var value in s.Values(i0, i1))
 					{
@@ -336,7 +336,7 @@ namespace pr.gui
 			public Series(Series rhs)
 				:this(rhs.Name, rhs.m_data.Capacity, new RdrOptions(rhs.Options))
 			{
-				using (var s = rhs.Lock)
+				using (var s = rhs.Lock())
 				{
 					m_data.AddRange(rhs.m_data);
 					m_sorted = rhs.m_sorted;
@@ -383,7 +383,7 @@ namespace pr.gui
 			public UserData UserData { get; private set; }
 
 			/// <summary>Sync access to the series data</summary>
-			public LockData Lock { get { return new LockData(this); } }
+			public LockData Lock() { return new LockData(this); }
 			public class LockData :IDisposable
 			{
 				private readonly Series m_series;
@@ -484,7 +484,7 @@ namespace pr.gui
 			/// <summary>Thread-safe helper for adding data</summary>
 			public void AddRange(IEnumerable<GraphValue> data, bool clear = false)
 			{
-				using (var s = Lock)
+				using (var s = Lock())
 				{
 					if (clear) s.Data.Clear();
 					s.Data.AddRange(data);
@@ -593,7 +593,7 @@ namespace pr.gui
 			if (series_index < 0 || series_index >= Data.Count)
 				throw new Exception("series index out of range");
 
-			using (var s = Data[series_index].Lock)
+			using (var s = Data[series_index].Lock())
 			{
 				// Binary search on X for the nearest data point
 				var series = s.Data;
@@ -629,7 +629,7 @@ namespace pr.gui
 			if (series_index < 0 || series_index >= Data.Count)
 				throw new Exception("series index out of range");
 
-			using (var s = Data[series_index].Lock)
+			using (var s = Data[series_index].Lock())
 			{
 				var tol = px_tol * m_plot_area.Width / XAxis.Span;
 				var dist_sq = tol * tol;
@@ -1121,7 +1121,6 @@ namespace pr.gui
 					AllowZoom       = true;
 					LockRange       = false;
 					TickText        = (x,step) => Math.Round(x, 4, MidpointRounding.AwayFromZero).ToString("F2");
-					MeasureTickText = (gfx,w)  => Options.MinTickSize;
 				}
 				public Axis(Axis rhs)
 				{
@@ -1133,7 +1132,6 @@ namespace pr.gui
 					AllowZoom       = rhs.AllowZoom;
 					LockRange       = rhs.LockRange;
 					TickText        = rhs.TickText;
-					MeasureTickText = rhs.MeasureTickText;
 				}
 				public virtual void Dispose()
 				{}
@@ -1235,9 +1233,6 @@ namespace pr.gui
 
 				/// <summary>Convert the axis value to a string. "string TickText(double tick_value, double step_size)" </summary>
 				public Func<double, double, string> TickText;
-
-				/// <summary>Return the width/height to reserve for the tick text. "float MeasureTickText(Graphics gfx, bool width)"</summary>
-				public Func<Graphics, bool, float> MeasureTickText;
 
 				/// <summary>Set the range without risk of an assert if 'min' is greater than 'Max' or visa versa</summary>
 				public void Set(double min, double max)
@@ -1902,14 +1897,16 @@ namespace pr.gui
 			// Add space for the tick labels
 			if (XAxis.Options.DrawTickLabels)
 			{
-				var h = Math.Max(XAxis.MeasureTickText(gfx, false), XAxis.Options.MinTickSize);
-				rect.Height -= h;
+				var tick_text = XAxis.TickText(XAxis.Min, 0.0);
+				var sz = gfx.MeasureString(tick_text, XAxis.Options.TickFont);
+				rect.Height -= Math.Max(sz.Height, XAxis.Options.MinTickSize);
 			}
 			if (YAxis.Options.DrawTickLabels)
 			{
-				var w = Maths.Max(YAxis.MeasureTickText(gfx, true), YAxis.Options.MinTickSize);
-				rect.X     += w;
-				rect.Width -= w;
+				var tick_text = YAxis.TickText(YAxis.Min, 0.0);
+				var sz = gfx.MeasureString(tick_text, YAxis.Options.TickFont);
+				rect.X     += Maths.Max(sz.Width, YAxis.Options.MinTickSize);
+				rect.Width -= Maths.Max(sz.Width, YAxis.Options.MinTickSize);
 			}
 
 			return new Rectangle((int)rect.X, (int)rect.Y, (int)rect.Width, (int)rect.Height);
@@ -2120,7 +2117,7 @@ namespace pr.gui
 					using (var bsh_err  = new SolidBrush(opts.ErrorBarColour))
 					using (var pen_line = new Pen(opts.LineColour, opts.LineWidth))
 					using (var pen_bar = new Pen(opts.BarColour, 0.0f))
-					using (var s = series.Lock)
+					using (var s = series.Lock())
 					{
 						// Loop over data points
 						var indices = s.Indices(XAxis.Min, XAxis.Max);
@@ -3381,7 +3378,7 @@ namespace pr.gui
 
 						file.WriteLine(Data[i].Name);
 						file.WriteLine(XAxis.Label+","+YAxis.Label+",Lower Bound,Upper Bound");
-						using (var s = Data[i].Lock)
+						using (var s = Data[i].Lock())
 							foreach (var gv in s.Data)
 								file.WriteLine(gv.x+","+gv.y+","+gv.ylo+","+gv.yhi);
 					}
@@ -3413,7 +3410,7 @@ namespace pr.gui
 						for (;;)
 						{
 							var series = new Series{ AllowDelete = true };
-							using (var s = series.Lock)
+							using (var s = series.Lock())
 							{
 								// Peek at the first line
 								var fpos = fs.Position;

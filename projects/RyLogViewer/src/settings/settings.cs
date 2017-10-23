@@ -97,400 +97,400 @@ namespace RyLogViewer
 		/// <summary>The recent log files list</summary>
 		public string RecentFiles
 		{
-			get { return get(x => x.RecentFiles); }
-			set { set(x => x.RecentFiles, value); }
+			get { return get<string>(nameof(RecentFiles)); }
+			set { set(nameof(RecentFiles), value); }
 		}
 
 		/// <summary>The recent pattern set files</summary>
 		public string RecentPatternSets
 		{
-			get { return get(x => x.RecentPatternSets); }
-			set { set(x => x.RecentPatternSets, value); }
+			get { return get<string>(nameof(RecentPatternSets)); }
+			set { set(nameof(RecentPatternSets), value); }
 		}
 
 		/// <summary>Log view font</summary>
 		public Font Font
 		{
-			get { return get(x => x.Font); }
-			set { set(x => x.Font, value); }
+			get { return get<Font>(nameof(Font)); }
+			set { set(nameof(Font), value); }
 		}
 
 		/// <summary>Restore the screen location on startup</summary>
 		public bool RestoreScreenLoc
 		{
-			get { return get(x => x.RestoreScreenLoc); }
-			set { set(x => x.RestoreScreenLoc, value); }
+			get { return get<bool>(nameof(RestoreScreenLoc)); }
+			set { set(nameof(RestoreScreenLoc), value); }
 		}
 
 		/// <summary>The main window position on screen</summary>
 		public Point ScreenPosition
 		{
-			get { return get(x => x.ScreenPosition); }
-			set { set(x => x.ScreenPosition, value); }
+			get { return get<Point>(nameof(ScreenPosition)); }
+			set { set(nameof(ScreenPosition), value); }
 		}
 
 		/// <summary>The size of the main window</summary>
 		public Size WindowSize
 		{
-			get { return get(x => x.WindowSize); }
-			set { set(x => x.WindowSize, value); }
+			get { return get<Size>(nameof(WindowSize)); }
+			set { set(nameof(WindowSize), value); }
 		}
 
 		/// <summary>The last open/save location of a pattern set</summary>
 		public string PatternSetDirectory
 		{
-			get { return get(x => x.PatternSetDirectory); }
-			set { set(x => x.PatternSetDirectory, value); }
+			get { return get<string>(nameof(PatternSetDirectory)); }
+			set { set(nameof(PatternSetDirectory), value); }
 		}
 
 		/// <summary>The last filepath used in the export dialog</summary>
 		public string ExportFilepath
 		{
-			get { return get(x => x.ExportFilepath); }
-			set { set(x => x.ExportFilepath, value); }
+			get { return get<string>(nameof(ExportFilepath)); }
+			set { set(nameof(ExportFilepath), value); }
 		}
 
 		/// <summary>Alternating line colours in the main view</summary>
 		public bool AlternateLineColours
 		{
-			get { return get(x => x.AlternateLineColours); }
-			set { set(x => x.AlternateLineColours, value); }
+			get { return get<bool>(nameof(AlternateLineColours)); }
+			set { set(nameof(AlternateLineColours), value); }
 		}
 
 		/// <summary></summary>
 		public Color LineSelectBackColour
 		{
-			get { return get(x => x.LineSelectBackColour); }
-			set { set(x => x.LineSelectBackColour, value); }
+			get { return get<Color>(nameof(LineSelectBackColour)); }
+			set { set(nameof(LineSelectBackColour), value); }
 		}
 
 		/// <summary></summary>
 		public Color LineSelectForeColour
 		{
-			get { return get(x => x.LineSelectForeColour); }
-			set { set(x => x.LineSelectForeColour, value); }
+			get { return get<Color>(nameof(LineSelectForeColour)); }
+			set { set(nameof(LineSelectForeColour), value); }
 		}
 
 		/// <summary></summary>
 		public Color LineBackColour1
 		{
-			get { return get(x => x.LineBackColour1); }
-			set { set(x => x.LineBackColour1, value); }
+			get { return get<Color>(nameof(LineBackColour1)); }
+			set { set(nameof(LineBackColour1), value); }
 		}
 
 		/// <summary></summary>
 		public Color LineBackColour2
 		{
-			get { return get(x => x.LineBackColour2); }
-			set { set(x => x.LineBackColour2, value); }
+			get { return get<Color>(nameof(LineBackColour2)); }
+			set { set(nameof(LineBackColour2), value); }
 		}
 
 		/// <summary></summary>
 		public Color LineForeColour1
 		{
-			get { return get(x => x.LineForeColour1); }
-			set { set(x => x.LineForeColour1, value); }
+			get { return get<Color>(nameof(LineForeColour1)); }
+			set { set(nameof(LineForeColour1), value); }
 		}
 
 		/// <summary></summary>
 		public Color LineForeColour2
 		{
-			get { return get(x => x.LineForeColour2); }
-			set { set(x => x.LineForeColour2, value); }
+			get { return get<Color>(nameof(LineForeColour2)); }
+			set { set(nameof(LineForeColour2), value); }
 		}
 
 		/// <summary></summary>
 		public int FileScrollWidth
 		{
-			get { return get(x => x.FileScrollWidth); }
-			set { set(x => x.FileScrollWidth, value); }
+			get { return get<int>(nameof(FileScrollWidth)); }
+			set { set(nameof(FileScrollWidth), value); }
 		}
 
 		/// <summary></summary>
 		public Color ScrollBarFileRangeColour
 		{
-			get { return get(x => x.ScrollBarFileRangeColour); }
-			set { set(x => x.ScrollBarFileRangeColour, value); }
+			get { return get<Color>(nameof(ScrollBarFileRangeColour)); }
+			set { set(nameof(ScrollBarFileRangeColour), value); }
 		}
 
 		/// <summary></summary>
 		public Color ScrollBarCachedRangeColour
 		{
-			get { return get(x => x.ScrollBarCachedRangeColour); }
-			set { set(x => x.ScrollBarCachedRangeColour, value); }
+			get { return get<Color>(nameof(ScrollBarCachedRangeColour)); }
+			set { set(nameof(ScrollBarCachedRangeColour), value); }
 		}
 
 		/// <summary></summary>
 		public Color ScrollBarDisplayRangeColour
 		{
-			get { return get(x => x.ScrollBarDisplayRangeColour); }
-			set { set(x => x.ScrollBarDisplayRangeColour, value); }
+			get { return get<Color>(nameof(ScrollBarDisplayRangeColour)); }
+			set { set(nameof(ScrollBarDisplayRangeColour), value); }
 		}
 
 		/// <summary></summary>
 		public Color BookmarkColour
 		{
-			get { return get(x => x.BookmarkColour); }
-			set { set(x => x.BookmarkColour, value); }
+			get { return get<Color>(nameof(BookmarkColour)); }
+			set { set(nameof(BookmarkColour), value); }
 		}
 
 		/// <summary></summary>
 		public int RowHeight
 		{
-			get { return get(x => x.RowHeight); }
-			set { set(x => x.RowHeight, value); }
+			get { return get<int>(nameof(RowHeight)); }
+			set { set(nameof(RowHeight), value); }
 		}
 
 		/// <summary></summary>
 		public bool LoadLastFile
 		{
-			get { return get(x => x.LoadLastFile); }
-			set { set(x => x.LoadLastFile, value); }
+			get { return get<bool>(nameof(LoadLastFile)); }
+			set { set(nameof(LoadLastFile), value); }
 		}
 
 		/// <summary></summary>
 		public string LastLoadedFile
 		{
-			get { return get(x => x.LastLoadedFile); }
-			set { set(x => x.LastLoadedFile, value); }
+			get { return get<string>(nameof(LastLoadedFile)); }
+			set { set(nameof(LastLoadedFile), value); }
 		}
 
 		/// <summary></summary>
 		public bool OpenAtEnd
 		{
-			get { return get(x => x.OpenAtEnd); }
-			set { set(x => x.OpenAtEnd, value); }
+			get { return get<bool>(nameof(OpenAtEnd)); }
+			set { set(nameof(OpenAtEnd), value); }
 		}
 
 		/// <summary></summary>
 		public bool FullPathInTitle
 		{
-			get { return get(x => x.FullPathInTitle); }
-			set { set(x => x.FullPathInTitle, value); }
+			get { return get<bool>(nameof(FullPathInTitle)); }
+			set { set(nameof(FullPathInTitle), value); }
 		}
 
 		/// <summary></summary>
 		public int TabSizeInSpaces
 		{
-			get { return get(x => x.TabSizeInSpaces); }
-			set { set(x => x.TabSizeInSpaces, value); }
+			get { return get<int>(nameof(TabSizeInSpaces)); }
+			set { set(nameof(TabSizeInSpaces), value); }
 		}
 
 		/// <summary></summary>
 		public bool FileChangesAdditive
 		{
-			get { return get(x => x.FileChangesAdditive); }
-			set { set(x => x.FileChangesAdditive, value); }
+			get { return get<bool>(nameof(FileChangesAdditive)); }
+			set { set(nameof(FileChangesAdditive), value); }
 		}
 
 		/// <summary></summary>
 		public bool IgnoreBlankLines
 		{
-			get { return get(x => x.IgnoreBlankLines); }
-			set { set(x => x.IgnoreBlankLines, value); }
+			get { return get<bool>(nameof(IgnoreBlankLines)); }
+			set { set(nameof(IgnoreBlankLines), value); }
 		}
 
 		/// <summary></summary>
 		public bool AlwaysOnTop
 		{
-			get { return get(x => x.AlwaysOnTop); }
-			set { set(x => x.AlwaysOnTop, value); }
+			get { return get<bool>(nameof(AlwaysOnTop)); }
+			set { set(nameof(AlwaysOnTop), value); }
 		}
 
 		/// <summary></summary>
 		public bool FirstRun
 		{
-			get { return get(x => x.FirstRun); }
-			set { set(x => x.FirstRun, value); }
+			get { return get<bool>(nameof(FirstRun)); }
+			set { set(nameof(FirstRun), value); }
 		}
 
 		/// <summary></summary>
 		public bool ShowTOTD
 		{
-			get { return get(x => x.ShowTOTD); }
-			set { set(x => x.ShowTOTD, value); }
+			get { return get<bool>(nameof(ShowTOTD)); }
+			set { set(nameof(ShowTOTD), value); }
 		}
 
 		/// <summary></summary>
 		public bool CheckForUpdates
 		{
-			get { return get(x => x.CheckForUpdates); }
-			set { set(x => x.CheckForUpdates, value); }
+			get { return get<bool>(nameof(CheckForUpdates)); }
+			set { set(nameof(CheckForUpdates), value); }
 		}
 
 		/// <summary></summary>
 		public string CheckForUpdatesServer
 		{
-			get { return get(x => x.CheckForUpdatesServer); }
-			set { set(x => x.CheckForUpdatesServer, value); }
+			get { return get<string>(nameof(CheckForUpdatesServer)); }
+			set { set(nameof(CheckForUpdatesServer), value); }
 		}
 
 		/// <summary></summary>
 		public bool UseWebProxy
 		{
-			get { return get(x => x.UseWebProxy); }
-			set { set(x => x.UseWebProxy, value); }
+			get { return get<bool>(nameof(UseWebProxy)); }
+			set { set(nameof(UseWebProxy), value); }
 		}
 
 		/// <summary></summary>
 		public string WebProxyHost
 		{
-			get { return get(x => x.WebProxyHost); }
-			set { set(x => x.WebProxyHost, value); }
+			get { return get<string>(nameof(WebProxyHost)); }
+			set { set(nameof(WebProxyHost), value); }
 		}
 
 		/// <summary></summary>
 		public int WebProxyPort
 		{
-			get { return get(x => x.WebProxyPort); }
-			set { set(x => x.WebProxyPort, value); }
+			get { return get<int>(nameof(WebProxyPort)); }
+			set { set(nameof(WebProxyPort), value); }
 		}
 
 		/// <summary></summary>
 		public bool QuickFilterEnabled
 		{
-			get { return get(x => x.QuickFilterEnabled); }
-			set { set(x => x.QuickFilterEnabled, value); }
+			get { return get<bool>(nameof(QuickFilterEnabled)); }
+			set { set(nameof(QuickFilterEnabled), value); }
 		}
 
 		/// <summary></summary>
 		public bool HighlightsEnabled
 		{
-			get { return get(x => x.HighlightsEnabled); }
-			set { set(x => x.HighlightsEnabled, value); }
+			get { return get<bool>(nameof(HighlightsEnabled)); }
+			set { set(nameof(HighlightsEnabled), value); }
 		}
 
 		/// <summary></summary>
 		public bool FiltersEnabled
 		{
-			get { return get(x => x.FiltersEnabled); }
-			set { set(x => x.FiltersEnabled, value); }
+			get { return get<bool>(nameof(FiltersEnabled)); }
+			set { set(nameof(FiltersEnabled), value); }
 		}
 
 		/// <summary></summary>
 		public bool TransformsEnabled
 		{
-			get { return get(x => x.TransformsEnabled); }
-			set { set(x => x.TransformsEnabled, value); }
+			get { return get<bool>(nameof(TransformsEnabled)); }
+			set { set(nameof(TransformsEnabled), value); }
 		}
 
 		/// <summary></summary>
 		public bool ActionsEnabled
 		{
-			get { return get(x => x.ActionsEnabled); }
-			set { set(x => x.ActionsEnabled, value); }
+			get { return get<bool>(nameof(ActionsEnabled)); }
+			set { set(nameof(ActionsEnabled), value); }
 		}
 
 		/// <summary></summary>
 		public bool TailEnabled
 		{
-			get { return get(x => x.TailEnabled); }
-			set { set(x => x.TailEnabled, value); }
+			get { return get<bool>(nameof(TailEnabled)); }
+			set { set(nameof(TailEnabled), value); }
 		}
 
 		/// <summary></summary>
 		public bool WatchEnabled
 		{
-			get { return get(x => x.WatchEnabled); }
-			set { set(x => x.WatchEnabled, value); }
+			get { return get<bool>(nameof(WatchEnabled)); }
+			set { set(nameof(WatchEnabled), value); }
 		}
 
 		/// <summary></summary>
 		public int FileBufSize
 		{
-			get { return get(x => x.FileBufSize); }
-			set { set(x => x.FileBufSize, value); }
+			get { return get<int>(nameof(FileBufSize)); }
+			set { set(nameof(FileBufSize), value); }
 		}
 
 		/// <summary></summary>
 		public int MaxLineLength
 		{
-			get { return get(x => x.MaxLineLength); }
-			set { set(x => x.MaxLineLength, value); }
+			get { return get<int>(nameof(MaxLineLength)); }
+			set { set(nameof(MaxLineLength), value); }
 		}
 
 		/// <summary></summary>
 		public int LineCacheCount
 		{
-			get { return get(x => x.LineCacheCount); }
-			set { set(x => x.LineCacheCount, value); }
+			get { return get<int>(nameof(LineCacheCount)); }
+			set { set(nameof(LineCacheCount), value); }
 		}
 
 		/// <summary></summary>
 		public string RowDelimiter
 		{
-			get { return get(x => x.RowDelimiter); }
-			set { set(x => x.RowDelimiter, value); }
+			get { return get<string>(nameof(RowDelimiter)); }
+			set { set(nameof(RowDelimiter), value); }
 		}
 
 		/// <summary></summary>
 		public string ColDelimiter
 		{
-			get { return get(x => x.ColDelimiter); }
-			set { set(x => x.ColDelimiter, value); }
+			get { return get<string>(nameof(ColDelimiter)); }
+			set { set(nameof(ColDelimiter), value); }
 		}
 
 		/// <summary>Columns</summary>
 		public int ColumnCount
 		{
-			get { return get(x => x.ColumnCount); }
-			set { set(x => x.ColumnCount, value); }
+			get { return get<int>(nameof(ColumnCount)); }
+			set { set(nameof(ColumnCount), value); }
 		}
 
 		/// <summary>File encoding</summary>
 		public string Encoding
 		{
-			get { return get(x => x.Encoding); }
-			set { set(x => x.Encoding, value); }
+			get { return get<string>(nameof(Encoding)); }
+			set { set(nameof(Encoding), value); }
 		}
 
 		/// <summary>Patterns</summary>
 		public PatternSet Patterns
 		{
-			get { return get(x => x.Patterns); }
-			set { set(x => x.Patterns, value); }
+			get { return get<PatternSet>(nameof(Patterns)); }
+			set { set(nameof(Patterns), value); }
 		}
 
 		/// <summary>The output filepath for streamed data sources</summary>
 		public string[] OutputFilepathHistory
 		{
-			get { return get(x => x.OutputFilepathHistory); }
-			set { set(x => x.OutputFilepathHistory, value); }
+			get { return get<string[]>(nameof(OutputFilepathHistory)); }
+			set { set(nameof(OutputFilepathHistory), value); }
 		}
 
 		/// <summary></summary>
 		public LaunchApp[] LogProgramOutputHistory
 		{
-			get { return get(x => x.LogProgramOutputHistory); }
-			set { set(x => x.LogProgramOutputHistory, value); }
+			get { return get<LaunchApp[]>(nameof(LogProgramOutputHistory)); }
+			set { set(nameof(LogProgramOutputHistory), value); }
 		}
 
 		/// <summary></summary>
 		public NetConn[] NetworkConnectionHistory
 		{
-			get { return get(x => x.NetworkConnectionHistory); }
-			set { set(x => x.NetworkConnectionHistory, value); }
+			get { return get<NetConn[]>(nameof(NetworkConnectionHistory)); }
+			set { set(nameof(NetworkConnectionHistory), value); }
 		}
 
 		/// <summary></summary>
 		public SerialConn[] SerialConnectionHistory
 		{
-			get { return get(x => x.SerialConnectionHistory); }
-			set { set(x => x.SerialConnectionHistory, value); }
+			get { return get<SerialConn[]>(nameof(SerialConnectionHistory)); }
+			set { set(nameof(SerialConnectionHistory), value); }
 		}
 
 		/// <summary></summary>
 		public PipeConn[] PipeConnectionHistory
 		{
-			get { return get(x => x.PipeConnectionHistory); }
-			set { set(x => x.PipeConnectionHistory, value); }
+			get { return get<PipeConn[]>(nameof(PipeConnectionHistory)); }
+			set { set(nameof(PipeConnectionHistory), value); }
 		}
 
 		/// <summary></summary>
 		public AndroidLogcat AndroidLogcat
 		{
-			get { return get(x => x.AndroidLogcat); }
-			set { set(x => x.AndroidLogcat, value); }
+			get { return get<AndroidLogcat>(nameof(AndroidLogcat)); }
+			set { set(nameof(AndroidLogcat), value); }
 		}
 
 		/// <summary>Perform validation on the loaded settings</summary>

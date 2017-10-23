@@ -10,14 +10,16 @@
 
 namespace pr
 {
+	#pragma warning (push)
+	#pragma warning (disable:4324)
 	template <typename T>
 	class optional
 	{
 		using storage_t = typename std::aligned_storage<sizeof(T), alignof(T)>::type;
-		static_assert(sizeof(storage_t) == sizeof(T), "");
+		static_assert(sizeof(storage_t) == sizeof(T), "Storage type has the wrong size");
 
 		T const* m_value;
-		storage_t m_storage;
+		alignas(alignof(T)) storage_t m_storage;
 
 		T const* ptr() const
 		{
@@ -164,6 +166,7 @@ namespace pr
 			return value();
 		}
 	};
+	#pragma warning (pop)
 
 	// Compare optional with an optional. Empty optionals are considered Less that all values
 	template <typename T> constexpr bool operator == (optional<T> const& lhs, optional<T> const& rhs)
@@ -374,6 +377,10 @@ namespace pr
 				pr::optional<v4> a = v4Zero;
 				PR_CHECK(a != v4One, true);
 				PR_CHECK(bool(a), true);
+			}
+			{
+				pr::optional<m4x4> a = m4x4Identity;
+				PR_CHECK(maths::is_aligned(&a.value()), true);
 			}
 			{
 				pr::optional<Thing> a;

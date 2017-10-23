@@ -1,4 +1,4 @@
-﻿#define SQLITE_HANDLES
+﻿//#define SQLITE_HANDLES
 #define COMPILED_LAMBDAS
 
 using System;

@@ -2,6 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using pr.common;
+using pr.util;
 
 namespace pr.container
 {
@@ -63,6 +65,16 @@ namespace pr.container
 	{
 		/// <summary>Raised whenever an element in the collection is changed</summary>
 		event EventHandler<ItemChgEventArgs> ItemChanged;
+	}
+
+	/// <summary>Supports notification of batched changes</summary>
+	public interface IBatchChanges
+	{
+		/// <summary>Raised before and after a batch of changes</summary>
+		event EventHandler<PrePostEventArgs> BatchChanges;
+
+		/// <summary>Create a new batch of changes</summary>
+		Scope BatchChange();
 	}
 
 	/// <summary>Args for the event raised whenever the list is changed</summary>

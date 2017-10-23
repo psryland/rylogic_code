@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using pr.maths;
 
 namespace pr.extn
 {
@@ -158,6 +159,26 @@ namespace pr.extn
 		public static IEnumerable<double> DoublesC(this Random r, double centre, double radius)
 		{
 			for (;;) yield return r.DoubleC(centre, radius);
+		}
+
+		#endregion
+
+		#region Gaussian 
+
+		/// <summary>Return a random double with Gaussian distribution</summary>
+		public static double GaussianDouble(this Random rng, double mean = 0.0, double std_dev = 1.0)
+		{
+			// Use a 'Box-Muller' transformation to get Gaussian distribution
+
+			// Uniformly distributed random doubles on (0,1]
+			var u1 = 1.0 - rng.NextDouble();
+			var u2 = 1.0 - rng.NextDouble();
+
+			// Gaussian distribution with mean == 0, standard deviation = 1
+			var std_norm = Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Sin(Maths.Tau * u2);
+
+			// Offset and scaled
+			return mean + std_dev * std_norm;
 		}
 
 		#endregion

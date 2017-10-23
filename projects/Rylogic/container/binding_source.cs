@@ -19,11 +19,11 @@ namespace pr.container
 {
 	/// <summary>Type-safe version of BindingSource</summary>
 	public class BindingSource<TItem>
-		:Component, IEnumerable<TItem>, IList<TItem>, IBindingListView, IBindingList, IList,
-		ICollection, IEnumerable, ITypedList, ICancelAddNew, ISupportInitializeNotification,
-		ISupportInitialize, ICurrencyManagerProvider,
-		IListChanging<TItem>, IItemChanged<TItem>,
-		IListChanging, IItemChanged
+		:Component, IEnumerable<TItem>, IList<TItem>, IBindingListView, IBindingList, IList
+		,ICollection, IEnumerable, ITypedList, ICancelAddNew, ISupportInitializeNotification
+		,ISupportInitialize, ICurrencyManagerProvider
+		,IListChanging<TItem>, IItemChanged<TItem>
+		,IListChanging, IItemChanged, IBatchChanges
 	{
 		// Notes:
 		// Reset methods invoked on this object do not cause the equivalent
@@ -287,6 +287,8 @@ namespace pr.container
 					lc0.ListChanging -= RaiseListChanging;
 				if (m_bs.DataSource is IItemChanged<TItem> ic0)
 					ic0.ItemChanged  -= RaiseItemChanged;
+				if (m_bs.DataSource is IBatchChanges bc0)
+					bc0.BatchChanges -= HandleBatchChanges;
 
 				// Set new data source
 				// Don't set to null because that causes controls with 'DisplayMember' properties to throw exceptions
@@ -307,8 +309,16 @@ namespace pr.container
 					lc1.ListChanging += RaiseListChanging;
 				if (m_bs.DataSource is IListChanging<TItem> lc2)
 					RaiseListChangedEvents = lc2.RaiseListChangedEvents;
+				if (m_bs.DataSource is IBatchChanges bc1)
+					bc1.BatchChanges += HandleBatchChanges;
 
 				RaiseListChanging(this, new ListChgEventArgs<TItem>(this, ListChg.Reset, -1, default(TItem)));
+
+				// Handlers
+				void HandleBatchChanges(object sender, PrePostEventArgs args)
+				{
+					BatchChanges.Raise(this, args);
+				}
 			}
 		}
 
@@ -981,6 +991,15 @@ namespace pr.container
 			OnPositionChanged(sender, args);
 		}
 
+		/// <summary>Raised when the caller signals a batch of changes are about to happen</summary>
+		public event EventHandler<PrePostEventArgs> BatchChanges;
+		public Scope BatchChange()
+		{
+			return Scope.Create(
+				() => BatchChanges.Raise(this, new PrePostEventArgs(after:false)),
+				() => BatchChanges.Raise(this, new PrePostEventArgs(after:true)));
+		}
+
 		public override string ToString()
 		{
 			return "{0} Current: {1}".Fmt(Count, Current);
@@ -1227,6 +1246,8 @@ namespace pr.container
 			remove { ((ISupportInitializeNotification)m_bs).Initialized -= value; }
 		}
 		#endregion
+
+		#region View
 
 		/// <summary>Create a new view of this binding source</summary>
 		public BindingSource<TItem> CreateView(Func<TItem,bool> pred)
@@ -1819,6 +1840,8 @@ namespace pr.container
 				return true;
 			}
 		}
+
+		#endregion
 	}
 }
 

@@ -109,6 +109,8 @@
     <Compile Include="common\html.cs" />
     <Compile Include="common\iterator.cs" />
     <Compile Include="common\sequence.cs" />
+    <Compile Include="container\accumulator.cs" />
+    <Compile Include="container\lazy_dictionary.cs" />
     <Compile Include="container\sqlite3.cs" />
     <Compile Include="common\synchronised.cs" />
     <Compile Include="container\binding.cs" />
@@ -455,6 +457,7 @@
     <Compile Include="util\Dynamic.cs" />
     <Compile Include="util\fnv_hash.cs" />
     <Compile Include="util\generic_operators.cs" />
+    <Compile Include="util\completion.cs" />
     <Compile Include="util\LoadSaveTag.cs" />
     <Compile Include="util\sherlock.cs" />
     <Compile Include="util\file_watch.cs" />

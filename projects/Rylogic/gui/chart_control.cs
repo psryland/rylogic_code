@@ -65,6 +65,7 @@ namespace pr.gui
 				MouseOperations = new MouseOps();
 				Tools           = new ChartTools(this, Options);
 				m_tt_show_value = new HintBalloon { AutoSizeMode = AutoSizeMode.GrowOnly };
+				m_chart_frame   = new ChartFrame(this);
 
 				Elements = new BindingListEx<Element> { PerItem = true, UseHashSet = true };
 				Selected = new BindingListEx<Element> { PerItem = false };
@@ -507,87 +508,13 @@ namespace pr.gui
 			return new HitTestResult(zone, client_point, chart_point, modifier_keys, hits, Scene.Camera);
 		}
 
-		///// <summary>Find the appropriate range for all data in the chart. Call ResetToDefaultRange() to zoom the chart to this range.</summary>
-		//public void FindDefaultRange(EAxis axis = EAxis.Both, bool visible_only = true)
-		//{
-		//	// Notes:
-		//	//  - Find the range on camera X/Y regardless of the aspect ratio. It's up to
-		//	//   'ResetToDefaultRange()' to apply the aspect ratio. This means 'FindDefaultRange()'
-		//	//    does not need to called after changing the aspect ratio.
-
-		//	var do_x = axis.HasFlag(EAxis.XAxis);
-		//	var do_y = axis.HasFlag(EAxis.YAxis);
-
-		//	// Measure elements? or just use the scene bounding box?
-		//	// Measure the range on each axis
-		//	//var xrange = do_x ? FindRange(e => new RangeF(e.Bounds.MinX, e.Bounds.MaxX), Elements, visible_only) : RangeF.Zero;
-		//	//var yrange = do_y ? FindRange(e => new RangeF(e.Bounds.MinY, e.Bounds.MaxY), Elements, visible_only) : RangeF.Zero;
-
-		//	// Set the range based on the scene bounding box
-		//	// Determine the X/Y range spanned by the bounding box as viewed from the camera
-		//	var bbox = Window.SceneBounds(View3d.ESceneBounds.All);
-		//	var bbox_cs = m4x4.InvertFast(Camera.O2W) * bbox;
-		//	var xrange = do_x ? new RangeF(bbox_cs.MinX, bbox_cs.MaxX) : RangeF.Zero;
-		//	var yrange = do_y ? new RangeF(bbox_cs.MinY, bbox_cs.MaxY) : RangeF.Zero;
-
-		//	// Allow users to adjust the default range
-		//	var args = new FindingDefaultRangeEventArgs(axis, xrange, yrange);
-		//	OnFindingDefaultRange(args);
-		//	xrange = args.XRange;
-		//	yrange = args.YRange;
-
-		//	// Scale up the ranges to leave a margin around the default range
-		//	const float MarginScale = 1.05f;
-		//	if (do_x && xrange.Size > 0) xrange = xrange.Scale(MarginScale); else xrange = new RangeF(0.0, 1.0);
-		//	if (do_y && yrange.Size > 0) yrange = yrange.Scale(MarginScale); else yrange = new RangeF(0.0, 1.0);
-		//	if (do_x) BaseRangeX = xrange;
-		//	if (do_y) BaseRangeY = yrange;
-		//}
-
-		///// <summary>Find the appropriate range on a single axis</summary>
-		//public static RangeF FindRange(Func<Element, RangeF> selector, IEnumerable<Element> elements, bool visible_only)
-		//{
-		//	var range = new RangeF(double.MaxValue, -double.MaxValue);
-		//	foreach (var elem in elements)
-		//	{
-		//		if (!elem.VisibleToFindRange)
-		//			continue;
-		//		if (visible_only && !elem.Visible)
-		//			continue;
-
-		//		// Get the bounding box of the chart element
-		//		var bnds = selector(elem);
-		//		if (bnds.Begin < range.Begin) range.Begin = bnds.Begin;
-		//		if (bnds.End   > range.End  ) range.End   = bnds.End;
-		//	}
-
-		//	return range;
-		//}
-
-		///// <summary>Raised when the default range is being found</summary>
-		//public event EventHandler<FindingDefaultRangeEventArgs> FindingDefaultRange;
-		//protected virtual void OnFindingDefaultRange(FindingDefaultRangeEventArgs args)
-		//{
-		//	FindingDefaultRange.Raise(this, args);
-		//}
-
-		///// <summary>Reset the axis ranges to the default. Call FindDefaultRange() to set the default range</summary>
-		//public void ResetToDefaultRange(EAxis axis = EAxis.Both)
-		//{
-		//	if (!XAxis.LockRange && axis.HasFlag(EAxis.XAxis)) Range.XAxis.Set(BaseRangeX);
-		//	if (!YAxis.LockRange && axis.HasFlag(EAxis.YAxis)) Range.YAxis.Set(BaseRangeY);
-		//	if (Options.LockAspect != null) Aspect = Options.LockAspect.Value;
-		//	SetCameraFromRange();
-		//	Invalidate();
-		//}
-
 		/// <summary>Find the default range, then reset to the default range</summary>
 		public void AutoRange(View3d.ESceneBounds who = View3d.ESceneBounds.All)
 		{
 			// Allow the auto range to be handled by event
 			var args = new AutoRangeEventArgs(who);
 			RaiseOnAutoRanging(args);
-			if (args.Handled && !args.ViewBBox.IsValid)
+			if (args.Handled && (!args.ViewBBox.IsValid || args.ViewBBox.Radius == v4.Zero))
 				throw new Exception($"Caller provided view bounding box is invalid: {args.ViewBBox}");
 
 			// Get the bounding box to fit into the view
@@ -682,12 +609,12 @@ namespace pr.gui
 				// Get the areas to draw in
 				var dims = ChartDimensions;
 
+				// Draw the chart frame
+				m_chart_frame.DoPaint(gfx, dims);
+
 				// Ensure the scene is rendered
 				Scene.Bounds = dims.ChartArea;
 				Scene.Update();
-
-				// Draw the chart frame
-				DoPaintFrame(gfx, dims);
 
 				// Add user graphics over the chart
 				RaiseAddOverlaysOnPaint(new AddOverlaysOnPaintEventArgs(gfx, dims, ChartToClientSpace()));
@@ -699,116 +626,7 @@ namespace pr.gui
 					gfx.DrawString("Rendering error within .NET", Options.TitleFont, bsh, PointF.Empty);
 			}
 		}
-
-		/// <summary>Draw the titles, axis labels, ticks, etc around the chart</summary>
-		private void DoPaintFrame(Graphics gfx, ChartDims dims)
-		{
-			// This is not enforced in the axis.Min/Max accessors because it's useful
-			// to be able to change the min/max independently of each other, set them
-			// to float max etc. It's only invalid to render a chart with a negative range
-			Debug.Assert(XAxis.Span > 0, "Negative x range");
-			Debug.Assert(YAxis.Span > 0, "Negative y range");
-
-			// Clear to the background colour
-			gfx.Clear(Options.BkColour);
-
-			// Draw the chart title and labels
-			if (Title.HasValue())
-			{
-				using (var bsh = new SolidBrush(Options.TitleColour))
-				{
-					var r = gfx.MeasureString(Title, Options.TitleFont);
-					var x = (dims.Area.Width - r.Width) * 0.5f;
-					var y = (dims.Area.Top + Options.Margin.Top) * 1f;
-					gfx.TranslateTransform(x, y);
-					gfx.MultiplyTransform(Options.TitleTransform);
-					gfx.DrawString(Title, Options.TitleFont, bsh, PointF.Empty);
-					gfx.ResetTransform();
-				}
-			}
-			if (XAxis.Label.HasValue() && Options.ShowAxes)
-			{
-				using (var bsh = new SolidBrush(XAxis.Options.LabelColour))
-				{
-					var r = gfx.MeasureString(XAxis.Label, XAxis.Options.LabelFont);
-					var x = (dims.Area.Width - r.Width) * 0.5f;
-					var y = (dims.Area.Bottom - Options.Margin.Bottom - r.Height) * 1f;
-					gfx.TranslateTransform(x, y);
-					gfx.MultiplyTransform(XAxis.Options.LabelTransform);
-					gfx.DrawString(XAxis.Label, XAxis.Options.LabelFont, bsh, PointF.Empty);
-					gfx.ResetTransform();
-				}
-			}
-			if (YAxis.Label.HasValue() && Options.ShowAxes)
-			{
-				using (var bsh = new SolidBrush(YAxis.Options.LabelColour))
-				{
-					var r = gfx.MeasureString(YAxis.Label, YAxis.Options.LabelFont);
-					var x = (dims.Area.Left + Options.Margin.Left) * 1f;
-					var y = (dims.Area.Height + r.Width) * 0.5f;
-					gfx.TranslateTransform(x, y);
-					gfx.RotateTransform(-90.0f);
-					gfx.MultiplyTransform(YAxis.Options.LabelTransform);
-					gfx.DrawString(YAxis.Label, YAxis.Options.LabelFont, bsh, PointF.Empty);
-					gfx.ResetTransform();
-				}
-			}
-
-			// Tick marks and labels
-			if (Options.ShowAxes)
-			{
-				var lblx = (float)(dims.ChartArea.Left - YAxis.Options.TickLength - 1);
-				var lbly = (float)(dims.ChartArea.Top + dims.ChartArea.Height + XAxis.Options.TickLength + 1);
-				if (XAxis.Options.DrawTickLabels || XAxis.Options.DrawTickMarks)
-				{
-					using (var pen = new Pen(XAxis.Options.TickColour))
-					using (var bsh = new SolidBrush(XAxis.Options.TickColour))
-					{
-						XAxis.GridLines(out var min, out var max, out var step);
-						for (var x = min; x < max; x += step)
-						{
-							var X = (int)(dims.ChartArea.Left + x * dims.ChartArea.Width / XAxis.Span);
-							var s = XAxis.TickText(x + XAxis.Min, step);
-							var r = gfx.MeasureString(s, XAxis.Options.TickFont);
-							if (XAxis.Options.DrawTickLabels)
-								gfx.DrawString(s, XAxis.Options.TickFont, bsh, new PointF(X, lbly), new StringFormat{Alignment = StringAlignment.Center});
-							if (XAxis.Options.DrawTickMarks)
-								gfx.DrawLine(pen, X, dims.ChartArea.Top + dims.ChartArea.Height, X, dims.ChartArea.Top + dims.ChartArea.Height + XAxis.Options.TickLength);
-						}
-					}
-				}
-				if (YAxis.Options.DrawTickLabels || YAxis.Options.DrawTickMarks)
-				{
-					using (var pen = new Pen(YAxis.Options.TickColour))
-					using (var bsh = new SolidBrush(YAxis.Options.TickColour))
-					{
-						YAxis.GridLines(out var min, out var max, out var step);
-						for (var y = min; y < max; y += step)
-						{
-							var Y = (int)(dims.ChartArea.Top + dims.ChartArea.Height - y * dims.ChartArea.Height / YAxis.Span);
-							var s = YAxis.TickText(y + YAxis.Min, step);
-							var r = gfx.MeasureString(s, YAxis.Options.TickFont);
-							if (YAxis.Options.DrawTickLabels)
-								gfx.DrawString(s, YAxis.Options.TickFont, bsh, new PointF(lblx - r.Width, Y), new StringFormat{LineAlignment = StringAlignment.Center});
-							if (YAxis.Options.DrawTickMarks)
-								gfx.DrawLine(pen, dims.ChartArea.Left - YAxis.Options.TickLength, Y, dims.ChartArea.Left, Y);
-						}
-					}
-				}
-
-				// Axes
-				using (var pen = new Pen(XAxis.Options.AxisColour, XAxis.Options.AxisThickness))
-				{
-					var y = dims.ChartArea.Bottom;
-					gfx.DrawLine(pen, new Point(dims.ChartArea.Left, y), new Point(dims.ChartArea.Right, y));
-				}
-				using (var pen = new Pen(YAxis.Options.AxisColour, YAxis.Options.AxisThickness))
-				{
-					var x = (int)(dims.ChartArea.Left - XAxis.Options.AxisThickness*0.5f);
-					gfx.DrawLine(pen, new Point(x, dims.ChartArea.Top), new Point(x, dims.ChartArea.Bottom));
-				}
-			}
-		}
+		private ChartFrame m_chart_frame;
 
 		/// <summary>The Z value of the highest element in the diagram</summary>
 		private float HighestZ { get; set; }
@@ -865,6 +683,196 @@ namespace pr.gui
 			get { return LocationText(PointToClient(MousePosition)); }
 		}
 
+		#region Chart Frame
+		private class ChartFrame
+		{
+			private readonly ChartControl m_chart;
+			private bool m_invalidated;
+			private int m_xaxis_hash;
+			private int m_yaxis_hash;
+			private int m_xaxis_options;
+			private int m_yaxis_options;
+			private Bitmap m_image;
+
+			public ChartFrame(ChartControl chart)
+			{
+				m_chart = chart;
+				m_image = null;
+			}
+
+			/// <summary>Force a repaint of the frame</summary>
+			public void Invalidate()
+			{
+				m_invalidated = true;
+			}
+
+			/// <summary>Draw the titles, axis labels, ticks, etc around the chart</summary>
+			public void DoPaint(Graphics gfx, ChartDims dims)
+			{
+				// Drawing the frame can take a while, cache the frame image so if the chart
+				// is not moved, we can just blit the cached copy to the screen
+				var repaint = true;
+				for (;;)
+				{
+					// Control size changed?
+					if (m_image == null || m_image.Size != dims.Area.Size)
+					{
+						m_image = new Bitmap(dims.Area.Size.Width, dims.Area.Size.Height, gfx);
+						break;
+					}
+
+					// Manually invalidated?
+					if (m_invalidated)
+						break;
+
+					// Axes zoomed/scrolled?
+					if (m_chart.XAxis.GetHashCode() != m_xaxis_hash)
+						break;
+					if (m_chart.YAxis.GetHashCode() != m_yaxis_hash)
+						break;
+
+					// Rendering options changed?
+					if (m_chart.XAxis.Options.ChangeCounter != m_xaxis_options)
+						break;
+					if (m_chart.YAxis.Options.ChangeCounter != m_yaxis_options)
+						break;
+
+					// Cached copy is still good
+					repaint = false;
+					break;
+				}
+
+				// Repaint the frame if the cached version is out of date
+				if (repaint)
+				{
+					var bmp = Graphics.FromImage(m_image);
+					var opts = m_chart.Options;
+					var xaxis = m_chart.XAxis;
+					var yaxis = m_chart.YAxis;
+					var title = m_chart.Title;
+					var size = dims.Area.Size;
+					var chart_area = dims.ChartArea.Shifted(-dims.Area.Left, -dims.Area.Top);
+
+					// This is not enforced in the axis.Min/Max accessors because it's useful
+					// to be able to change the min/max independently of each other, set them
+					// to float max etc. It's only invalid to render a chart with a negative range
+					Debug.Assert(xaxis.Span > 0, "Negative x range");
+					Debug.Assert(yaxis.Span > 0, "Negative y range");
+
+					// Clear to the background colour
+					bmp.Clear(opts.BkColour);
+
+					// Draw the chart title and labels
+					if (title.HasValue())
+					{
+						using (var bsh = new SolidBrush(opts.TitleColour))
+						{
+							var r = bmp.MeasureString(title, opts.TitleFont);
+							var x = (size.Width - r.Width) * 0.5f;
+							var y = (0 + opts.Margin.Top) * 1f;
+							bmp.TranslateTransform(x, y);
+							bmp.MultiplyTransform(opts.TitleTransform);
+							bmp.DrawString(title, opts.TitleFont, bsh, PointF.Empty);
+							bmp.ResetTransform();
+						}
+					}
+					if (xaxis.Label.HasValue() && opts.ShowAxes)
+					{
+						using (var bsh = new SolidBrush(xaxis.Options.LabelColour))
+						{
+							var r = bmp.MeasureString(xaxis.Label, xaxis.Options.LabelFont);
+							var x = (size.Width - r.Width) * 0.5f;
+							var y = (size.Height - opts.Margin.Bottom - r.Height) * 1f;
+							bmp.TranslateTransform(x, y);
+							bmp.MultiplyTransform(xaxis.Options.LabelTransform);
+							bmp.DrawString(xaxis.Label, xaxis.Options.LabelFont, bsh, PointF.Empty);
+							bmp.ResetTransform();
+						}
+					}
+					if (yaxis.Label.HasValue() && opts.ShowAxes)
+					{
+						using (var bsh = new SolidBrush(yaxis.Options.LabelColour))
+						{
+							var r = bmp.MeasureString(yaxis.Label, yaxis.Options.LabelFont);
+							var x = (0 + opts.Margin.Left) * 1f;
+							var y = (size.Height + r.Width) * 0.5f;
+							bmp.TranslateTransform(x, y);
+							bmp.RotateTransform(-90.0f);
+							bmp.MultiplyTransform(yaxis.Options.LabelTransform);
+							bmp.DrawString(yaxis.Label, yaxis.Options.LabelFont, bsh, PointF.Empty);
+							bmp.ResetTransform();
+						}
+					}
+
+					// Tick marks and labels
+					if (opts.ShowAxes)
+					{
+						var lblx = (float)(chart_area.Left - yaxis.Options.TickLength - 1);
+						var lbly = (float)(chart_area.Top + chart_area.Height + xaxis.Options.TickLength + 1);
+						if (xaxis.Options.DrawTickLabels || xaxis.Options.DrawTickMarks)
+						{
+							using (var pen = new Pen(xaxis.Options.TickColour))
+							using (var bsh = new SolidBrush(xaxis.Options.TickColour))
+							{
+								xaxis.GridLines(out var min, out var max, out var step);
+								for (var x = min; x < max; x += step)
+								{
+									var X = (int)(chart_area.Left + x * chart_area.Width / xaxis.Span);
+									var s = xaxis.TickText(x + xaxis.Min, step);
+									var r = bmp.MeasureString(s, xaxis.Options.TickFont);
+									if (xaxis.Options.DrawTickLabels)
+										bmp.DrawString(s, xaxis.Options.TickFont, bsh, new PointF(X, lbly), new StringFormat{Alignment = StringAlignment.Center});
+									if (xaxis.Options.DrawTickMarks)
+										bmp.DrawLine(pen, X, chart_area.Top + chart_area.Height, X, chart_area.Top + chart_area.Height + xaxis.Options.TickLength);
+								}
+							}
+						}
+						if (yaxis.Options.DrawTickLabels || yaxis.Options.DrawTickMarks)
+						{
+							using (var pen = new Pen(yaxis.Options.TickColour))
+							using (var bsh = new SolidBrush(yaxis.Options.TickColour))
+							{
+								yaxis.GridLines(out var min, out var max, out var step);
+								for (var y = min; y < max; y += step)
+								{
+									var Y = (int)(chart_area.Top + chart_area.Height - y * chart_area.Height / yaxis.Span);
+									var s = yaxis.TickText(y + yaxis.Min, step);
+									var r = bmp.MeasureString(s, yaxis.Options.TickFont);
+									if (yaxis.Options.DrawTickLabels)
+										bmp.DrawString(s, yaxis.Options.TickFont, bsh, new PointF(lblx - r.Width, Y), new StringFormat{LineAlignment = StringAlignment.Center});
+									if (yaxis.Options.DrawTickMarks)
+										bmp.DrawLine(pen, chart_area.Left - yaxis.Options.TickLength, Y, chart_area.Left, Y);
+								}
+							}
+						}
+
+						// Axes
+						using (var pen = new Pen(xaxis.Options.AxisColour, xaxis.Options.AxisThickness))
+						{
+							var y = chart_area.Bottom;
+							bmp.DrawLine(pen, new Point(chart_area.Left, y), new Point(chart_area.Right, y));
+						}
+						using (var pen = new Pen(yaxis.Options.AxisColour, yaxis.Options.AxisThickness))
+						{
+							var x = (int)(chart_area.Left - xaxis.Options.AxisThickness*0.5f);
+							bmp.DrawLine(pen, new Point(x, chart_area.Top), new Point(x, chart_area.Bottom));
+						}
+
+						// Record cache invalidating values
+						m_xaxis_hash = xaxis.GetHashCode();
+						m_yaxis_hash = yaxis.GetHashCode();
+						m_xaxis_options = xaxis.Options.ChangeCounter;
+						m_yaxis_options = yaxis.Options.ChangeCounter;
+						m_invalidated = false;
+					}
+				}
+
+				// Blit the cached image to the screen
+				gfx.DrawImageUnscaled(m_image, dims.Area.TopLeft());
+			}
+		}
+		#endregion
+
 		#region Chart Panel
 		public class ChartPanel :Control
 		{
@@ -879,16 +887,15 @@ namespace pr.gui
 
 				try
 				{
-					// No GDI compatibility, cause we want anti aliasing...
-					var gdi_compatible = false;
-					var opts = new View3d.WindowOptions(gdi_compatible, null, IntPtr.Zero)
+					// No GDI compatible back buffer, cause we want anti aliasing...
+					var opts = new View3d.WindowOptions(null, IntPtr.Zero)
 					{
 						DbgName = "Chart",
-						Multisampling = (!gdi_compatible && owner.Options.AntiAliasing) ? 4 : 1,
+						Multisampling = owner.Options.AntiAliasing ? 4 : 1,
 					};
 
 					m_owner = owner;
-					m_view3d = new View3d(opts.GdiCompatible);
+					m_view3d = new View3d();
 					m_window = new View3d.Window(m_view3d, Handle, opts);
 					m_window.LightProperties = View3d.LightInfo.Directional(-v4.ZAxis, Colour32.Zero, Colour32.Gray, Colour32.Zero, 0f, 0f);
 					m_window.FocusPointVisible = false;
@@ -1572,8 +1579,10 @@ namespace pr.gui
 				{
 					if (Equals(prop, value)) return;
 					prop = value;
+					unchecked {++ChangeCounter;}
 					PropertyChanged.Raise(this, new PropertyChangedEventArgs(name));
 				}
+				public int ChangeCounter { get; private set; }
 
 				/// <summary>The colour of the main axes</summary>
 				public Color AxisColour
@@ -1965,6 +1974,7 @@ namespace pr.gui
 					set
 					{
 						if (Span == value) return;
+						if (value <= 0) throw new Exception ($"Invalid axis span: {value}");
 						Set(Centre - 0.5*value, Centre + 0.5*value);
 					}
 				}
@@ -2214,6 +2224,28 @@ namespace pr.gui
 				{
 					return "{0} - [{1}:{2}]".Fmt(Label, Min, Max);
 				}
+
+				#region Equals
+				public bool Equals(Axis rhs)
+				{
+					// Value equal if the axes represent the same range
+					// but not necessarily the same options.
+					return
+						rhs      != null &&
+						AxisType == rhs.AxisType &&
+						Label    == rhs.Label &&
+						Min      == rhs.Min &&
+						Max      == rhs.Max;
+				}
+				public override bool Equals(object obj)
+				{
+					return Equals(obj as Axis);
+				}
+				public override int GetHashCode()
+				{
+					return new { AxisType, Label, Min, Max, Options }.GetHashCode();
+				}
+				#endregion
 			}
 		}
 
@@ -2365,7 +2397,7 @@ namespace pr.gui
 				var scale = 0.001f;
 				if (ModifierKeys.HasFlag(Keys.Shift)) scale *= 0.1f;
 				if (ModifierKeys.HasFlag(Keys.Alt  )) scale *= 0.01f;
-				var delta = Maths.Clamp(e.Delta * scale, -999f, 999f);
+				var delta = Maths.Clamp(e.Delta * scale, -0.999f, 0.999f);
 
 				// Change the aspect ratio by zooming on the XAxis
 				var chg = false;

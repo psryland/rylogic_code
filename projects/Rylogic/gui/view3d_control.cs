@@ -25,20 +25,25 @@ namespace pr.gui
 
 	public class View3dControl :UserControl
 	{
-		public View3dControl() :this(false, string.Empty) {}
-		public View3dControl(bool gdi_compat, string dbg_name)
+		public View3dControl()
+			:this(string.Empty)
+		{}
+		public View3dControl(string name)
+			:this(name, bgra_compatibility:true, gdi_compatible_backbuffer:false)
+		{}
+		public View3dControl(string name, bool bgra_compatibility, bool gdi_compatible_backbuffer)
 		{
 			BackColor = Color.Gray;
 			if (this.IsInDesignMode()) return;
 			SetStyle(ControlStyles.Selectable, false);
 
-			m_impl_view3d = new View3d(gdi_compatibility:gdi_compat);
-			var opts = new View3d.WindowOptions(gdi_compat, HandleReportError, IntPtr.Zero) { DbgName = dbg_name ?? string.Empty };
+			m_impl_view3d = new View3d(bgra_compatibility);
+			var opts = new View3d.WindowOptions(HandleReportError, IntPtr.Zero, gdi_compatible_backbuffer) { DbgName = name ?? string.Empty };
 			m_impl_wnd = new View3d.Window(View3d, Handle, opts);
 
 			InitializeComponent();
 
-			Name = dbg_name;
+			Name = name;
 			ClickTimeMS = 180;
 			MouseNavigation = true;
 			DefaultKeyboardShortcuts = true;

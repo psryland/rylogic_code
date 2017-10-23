@@ -477,16 +477,16 @@ namespace pr.gfx
 		{
 			public ReportErrorCB ErrorCB;
 			public IntPtr ErrorCBCtx;
-			public bool GdiCompatible;
+			public bool GdiCompatibleBackBuffer;
 			public int Multisampling;
 			public string DbgName;
-			public WindowOptions(bool gdi_compatible, ReportErrorCB error_cb, IntPtr error_cb_ctx)
+			public WindowOptions(ReportErrorCB error_cb, IntPtr error_cb_ctx, bool gdi_compatible_bb = false)
 			{
-				ErrorCB       = error_cb;
-				ErrorCBCtx    = error_cb_ctx;
-				GdiCompatible = gdi_compatible;
-				Multisampling = gdi_compatible ? 1 : 4;
-				DbgName       = string.Empty;
+				ErrorCB                 = error_cb;
+				ErrorCBCtx              = error_cb_ctx;
+				GdiCompatibleBackBuffer = gdi_compatible_bb;
+				Multisampling           = gdi_compatible_bb ? 1 : 4;
+				DbgName                 = string.Empty;
 			}
 		}
 
@@ -632,7 +632,10 @@ namespace pr.gfx
 		private SourcesChangedCB      m_sources_changed_cb;   // Reference to callback
 		private EmbeddedCSHandler     m_embedded_cs_handler;  // Handler object for embedded C# code
 
-		public View3d(bool gdi_compatibility)
+		public View3d()
+			:this(true)
+		{}
+		public View3d(bool bgra_compatibility)
 		{
 			if (!ModuleLoaded)
 				throw new Exception("View3d.dll has not been loaded");
@@ -644,7 +647,7 @@ namespace pr.gfx
 			// Initialise view3d
 			string init_error = null;
 			ReportErrorCB error_cb = (ctx, msg) => init_error = msg;
-			m_context = View3D_Initialise(error_cb, IntPtr.Zero, gdi_compatibility);
+			m_context = View3D_Initialise(error_cb, IntPtr.Zero, bgra_compatibility);
 			if (m_context == HContext.Zero)
 				throw new Exception(init_error ?? "Failed to initialised View3d");
 
@@ -1918,6 +1921,16 @@ namespace pr.gfx
 				}
 			}
 
+			/// <summary>Create a new Object that shares the model (but not transform) of this object</summary>
+			public Object CreateInstance()
+			{
+				var handle = View3D_ObjectCreateInstance(m_handle);
+				if (handle == HObject.Zero)
+					throw new Exception("Failed to create object instance");
+
+				return new Object(handle, true);
+			}
+
 			/// <summary>
 			/// Get/Set the object to world transform for this object or the first child object that matches 'name'.
 			/// If 'name' is null, then the state of the root object is returned
@@ -2852,6 +2865,7 @@ namespace ldr
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, ref View3DIncludes includes);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreate             (string name, uint colour, int vcount, int icount, int ncount, IntPtr verts, IntPtr indices, IntPtr nuggets, ref Guid context_id);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateEditCB       (string name, uint colour, int vcount, int icount, int ncount, EditObjectCB edit_cb, IntPtr ctx, ref Guid context_id);
+		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateInstance     (HObject obj);
 		[DllImport(Dll)] private static extern void              View3D_ObjectUpdate             (HObject obj, [MarshalAs(UnmanagedType.LPWStr)] string ldr_script, EUpdateObject flags);
 		[DllImport(Dll)] private static extern void              View3D_ObjectEdit               (HObject obj, EditObjectCB edit_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern void              View3D_ObjectDelete             (HObject obj);

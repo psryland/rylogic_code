@@ -53,12 +53,12 @@ namespace pr.util
 		#endif
 
 		/// <summary>Convenience disposer</summary>
-		[DebuggerStepThrough] public static void Dispose<T>(ref T doomed) where T:class, IDisposable
+		[DebuggerStepThrough] public static void Dispose<T>(ref T doomed, bool gc_ok = false) where T:class, IDisposable
 		{
 			// Set 'doomed' to null before disposing to catch accidental
 			// use of 'doomed' in a partially disposed state
 			if (doomed == null) return;
-			BreakIf(IsGCFinalizerThread, "Disposing in the GC finalizer thread");
+			BreakIf(!gc_ok && IsGCFinalizerThread, "Disposing in the GC finalizer thread");
 
 			var junk = doomed;
 			doomed = null;

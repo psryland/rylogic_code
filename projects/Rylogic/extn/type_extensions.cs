@@ -430,6 +430,9 @@ namespace pr.extn
 	/// <summary>'decimal' type extensions</summary>
 	public static class decimal_
 	{
+		/// <summary>The smallest positive number representable with a decimal</summary>
+		public const decimal Epsilon = 1e-28m;
+
 		/// <summary>Enumerate values in the range [beg, end) with a step size of 'step'</summary>
 		public static IEnumerable<decimal> Range(decimal beg, decimal end, decimal step)
 		{

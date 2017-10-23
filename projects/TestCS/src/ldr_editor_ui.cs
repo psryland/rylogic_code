@@ -20,7 +20,7 @@ namespace TestCS
 		public LdrEditorUI()
 		{
 			InitializeComponent();
-			m_view3d = new View3d(gdi_compatibility:false);
+			m_view3d = new View3d();
 			m_sci.InitLdrStyle();
 		}
 		protected override void Dispose(bool disposing)

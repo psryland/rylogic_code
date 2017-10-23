@@ -31,7 +31,7 @@ namespace pr
 			//   BitBlt modes: 0 = present immediately, 1,2,3,.. present after the nth vertical blank (has the effect of locking the frame rate to a fixed multiple of the VSync rate)
 			//   Flip modes (Sequential): 0 = drop this frame if there is a new frame waiting, n > 0 = same as bitblt case
 
-			WndSettings(HWND hwnd = 0, bool windowed = true, bool bgra_support = false, iv2 const& client_area = iv2(1024,768));
+			WndSettings(HWND hwnd = 0, bool windowed = true, bool gdi_compatible_bb = false, iv2 const& client_area = iv2(1024,768));
 		};
 
 		// Renderer window.

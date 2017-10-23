@@ -34,8 +34,8 @@ namespace CppPad
 		/// <summary>The type of compiler to use</summary>
 		public ECompiler CompilerType
 		{
-			get { return get(x => x.CompilerType); }
-			set { set(x => x.CompilerType, value); }
+			get { return get<ECompiler>(nameof(CompilerType)); }
+			set { set(nameof(CompilerType), value); }
 		}
 		public enum ECompiler
 		{
@@ -45,47 +45,47 @@ namespace CppPad
 		/// <summary>MSVC Compiler settings</summary>
 		public MSVCCompilerSettings MSVC
 		{
-			get { return get(x => x.MSVC); }
+			get { return get<MSVCCompilerSettings>(nameof(MSVC)); }
 			set
 			{
 				if (value == null) throw new ArgumentNullException("Setting '{0}' cannot be null".Fmt(nameof(Settings.MSVC)));
-				set(x => x.MSVC, value);
+				set(nameof(MSVC), value);
 			}
 		}
 
 		/// <summary>The last project loaded</summary>
 		public string LastProject
 		{
-			get { return get(x => x.LastProject); }
-			set { set(x => x.LastProject, value); }
+			get { return get<string>(nameof(LastProject)); }
+			set { set(nameof(LastProject), value); }
 		}
 
 		/// <summary>Recent projects list</summary>
 		public string RecentProjects
 		{
-			get { return get(x => x.RecentProjects); }
-			set { set(x => x.RecentProjects, value); }
+			get { return get<string>(nameof(RecentProjects)); }
+			set { set(nameof(RecentProjects), value); }
 		}
 
 		/// <summary>Recent files list</summary>
 		public string RecentFiles
 		{
-			get { return get(x => x.RecentFiles); }
-			set { set(x => x.RecentFiles, value); }
+			get { return get<string>(nameof(RecentFiles)); }
+			set { set(nameof(RecentFiles), value); }
 		}
 
 		/// <summary>Save all open files before compiling</summary>
 		public bool SaveAllBeforeCompile
 		{
-			get { return get(x => x.SaveAllBeforeCompile); }
-			set { set(x => x.SaveAllBeforeCompile, value); }
+			get { return get<bool>(nameof(SaveAllBeforeCompile)); }
+			set { set(nameof(SaveAllBeforeCompile), value); }
 		}
 
 		/// <summary>The dock panel layout</summary>
 		public XElement UILayout
 		{
-			get { return get(x => x.UILayout); }
-			set { set(x => x.UILayout, value); }
+			get { return get<XElement>(nameof(UILayout)); }
+			set { set(nameof(UILayout), value); }
 		}
 	}
 
@@ -164,144 +164,144 @@ namespace CppPad
 		[Description("The full path to the compiler")]
 		public string CompilerExePath
 		{
-			get { return get(x => x.CompilerExePath); }
-			set { set(x => x.CompilerExePath, value); }
+			get { return get<string>(nameof(CompilerExePath)); }
+			set { set(nameof(CompilerExePath), value); }
 		}
 
 		/// <summary>The full path to the linker</summary>
 		[Description("The full path to the linker")]
 		public string LinkerExePath
 		{
-			get { return get(x => x.LinkerExePath); }
-			set { set(x => x.LinkerExePath, value); }
+			get { return get<string>(nameof(LinkerExePath)); }
+			set { set(nameof(LinkerExePath), value); }
 		}
 
 		/// <summary>Command line switches</summary>
 		[Description("The compiler switches")]
 		public List<string> Switches
 		{
-			get { return get(x => x.Switches); }
-			set { set(x => x.Switches, value); }
+			get { return get<List<string>>(nameof(Switches)); }
+			set { set(nameof(Switches), value); }
 		}
 
 		/// <summary>Preprocessor defines</summary>
 		[Description("Preprocessor defines")]
 		public List<string> Defines
 		{
-			get { return get(x => x.Defines); }
-			set { set(x => x.Defines, value); }
+			get { return get<List<string>>(nameof(Defines)); }
+			set { set(nameof(Defines), value); }
 		}
 
 		/// <summary>Additional include search paths provided on the command line</summary>
 		[Description("Additional include search paths provided on the command line")]
 		public List<string> IncludePaths
 		{
-			get { return get(x => x.IncludePaths); }
-			set { set(x => x.IncludePaths, value); }
+			get { return get<List<string>>(nameof(IncludePaths)); }
+			set { set(nameof(IncludePaths), value); }
 		}
 
 		/// <summary>Additional library search paths provided on the command line</summary>
 		[Description("Additional library search paths provided on the command line")]
 		public List<string> LibraryPaths
 		{
-			get { return get(x => x.LibraryPaths); }
-			set { set(x => x.LibraryPaths, value); }
+			get { return get<List<string>>(nameof(LibraryPaths)); }
+			set { set(nameof(LibraryPaths), value); }
 		}
 
 		/// <summary>The include paths that are set as environment variables</summary>
 		[Description("The include paths that are set as environment variables")]
 		public List<string> EnvironmentIncludePaths
 		{
-			get { return get(x => x.EnvironmentIncludePaths); }
-			set { set(x => x.EnvironmentIncludePaths, value); }
+			get { return get<List<string>>(nameof(EnvironmentIncludePaths)); }
+			set { set(nameof(EnvironmentIncludePaths), value); }
 		}
 
 		/// <summary>Library search paths that are set as environment variables</summary>
 		[Description("Library search paths that are set as environment variables")]
 		public List<string> EnvironmentLibraryPaths
 		{
-			get { return get(x => x.EnvironmentLibraryPaths); }
-			set { set(x => x.EnvironmentLibraryPaths, value); }
+			get { return get<List<string>>(nameof(EnvironmentLibraryPaths)); }
+			set { set(nameof(EnvironmentLibraryPaths), value); }
 		}
 
 		/// <summary>Library search paths that are set as environment variables</summary>
 		[Description("Library search paths that are set as environment variables")]
 		public List<string> CompilerLibraryPaths
 		{
-			get { return get(x => x.EnvironmentLibraryPaths); }
-			set { set(x => x.EnvironmentLibraryPaths, value); }
+			get { return get<List<string>>(nameof(EnvironmentLibraryPaths)); }
+			set { set(nameof(EnvironmentLibraryPaths), value); }
 		}
 
 		/// <summary>Search paths for the windows libraries</summary>
 		[Description("Search paths for the windows libraries")]
 		public List<string> WindowsLibPaths
 		{
-			get { return get(x => x.WindowsLibPaths); }
-			set { set(x => x.WindowsLibPaths, value); }
+			get { return get<List<string>>(nameof(WindowsLibPaths)); }
+			set { set(nameof(WindowsLibPaths), value); }
 		}
 
 		/// <summary>The environment variables required by the compiler</summary>
 		[Description("The environment variables required by the compiler")]
 		public Dictionary<string,string> EnvironmentVars
 		{
-			get { return get(x => x.EnvironmentVars); }
-			set { set(x => x.EnvironmentVars, value); }
+			get { return get<Dictionary<string,string>>(nameof(EnvironmentVars)); }
+			set { set(nameof(EnvironmentVars), value); }
 		}
 
 		/// <summary>The version of visual studio</summary>
 		[Description("The version of visual studio to use")]
 		public string VSVersion
 		{
-			get { return get(x => x.VSDirectory); }
-			set { set(x => x.VSDirectory, value); }
+			get { return get<string>(nameof(VSDirectory)); }
+			set { set(nameof(VSDirectory), value); }
 		}
 
 		/// <summary>The root install directory of visual studio</summary>
 		[Description("The root directory of where Visual Studio is installed")]
 		public string VSDirectory
 		{
-			get { return get(x => x.VSDirectory); }
-			set { set(x => x.VSDirectory, value); }
+			get { return get<string>(nameof(VSDirectory)); }
+			set { set(nameof(VSDirectory), value); }
 		}
 
 		/// <summary>The Windows Kit (SDK) root directory</summary>
 		[Description("The Windows Kit (SDK) root directory")]
 		public string WinSDK
 		{
-			get { return get(x => x.WinSDK); }
-			set { set(x => x.WinSDK, value); }
+			get { return get<string>(nameof(WinSDK)); }
+			set { set(nameof(WinSDK), value); }
 		}
 
 		/// <summary>The full version of the Windows Kit (SDK)</summary>
 		[Description("The full version of the Windows Kit (SDK)")]
 		public string WinKitVersion
 		{
-			get { return get(x => x.WinKitVersion); }
-			set { set(x => x.WinKitVersion, value); }
+			get { return get<string>(nameof(WinKitVersion)); }
+			set { set(nameof(WinKitVersion), value); }
 		}
 
 		/// <summary>The .NET framework root directory</summary>
 		[Description("The .NET framework root directory")]
 		public string DotNetFramework
 		{
-			get { return get(x => x.DotNetFramework); }
-			set { set(x => x.DotNetFramework, value); }
+			get { return get<string>(nameof(DotNetFramework)); }
+			set { set(nameof(DotNetFramework), value); }
 		}
 
 		/// <summary>The .NET framework full version</summary>
 		[Description("The .NET framework full version")]
 		public string DotNetFrameworkVersion
 		{
-			get { return get(x => x.DotNetFrameworkVersion); }
-			set { set(x => x.DotNetFrameworkVersion, value); }
+			get { return get<string>(nameof(DotNetFrameworkVersion)); }
+			set { set(nameof(DotNetFrameworkVersion), value); }
 		}
 
 		/// <summary>The .NET framework tools root directory</summary>
 		[Description("The .NET framework tools root directory")]
 		public string DotNetTools
 		{
-			get { return get(x => x.DotNetTools); }
-			set { set(x => x.DotNetTools, value); }
+			get { return get<string>(nameof(DotNetTools)); }
+			set { set(nameof(DotNetTools), value); }
 		}
 
 		/// <summary>Update include paths that used to start with 'old' to 'nue'</summary>

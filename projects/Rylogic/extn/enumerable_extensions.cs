@@ -126,7 +126,7 @@ namespace pr.extn
 			return lookup.Count == 0;
 		}
 
-		/// <summary>Exactly the same as 'Reverse' but doesn't clash with List.Reverse()</summary>
+		/// <summary>Enumerate this range in reverse. Note: Same as "IEnumerable.Reverse". "IList.Reverse" however, does an in-place reverse</summary>
 		public static IEnumerable<TSource> Reversed<TSource>(this IEnumerable<TSource> source)
 		{
 			return source.Reverse();
@@ -281,6 +281,15 @@ namespace pr.extn
 		{
 			if (!source.Any()) return default(TSource);
 			return source.MinBy(selector, comparer);
+		}
+
+		/// <summary>Returns the sum value the values in the collection</summary>
+		public static TValue Sum<TSource,TValue>(this IEnumerable<TSource> source, Func<TSource, TValue> selector)
+		{
+			var sum = default(TValue);
+			foreach (var x in source)
+				sum = Operators<TValue>.Add(sum, selector(x));
+			return sum;
 		}
 
 		/// <summary>Returns one of the items that occur most frequently within a sequence</summary>

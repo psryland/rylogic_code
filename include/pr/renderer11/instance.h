@@ -23,6 +23,7 @@
 
 // Notes:
 // No inheritance in this type. It relies on POD behaviour
+// Be careful with alignment of members, esp. m4x4's
 #define PR_RDR_DEFINE_INSTANCE(name, fields)\
 	struct name\
 	{\

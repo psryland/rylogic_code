@@ -6,7 +6,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using pr.common;
@@ -17,6 +16,11 @@ namespace pr.extn
 	/// <summary>Extensions for Lists</summary>
 	public static class List_
 	{
+		// NOtes:
+		//  To disambiguate IList and IList<T>:
+		//   - Implement for IList<T> and specialise for the non-generic concrete classes.
+		//     Generic versions are by far the most common.
+
 		/// <summary>Return true if the list is empty</summary>
 		public static bool Empty(this IList list)
 		{
@@ -51,8 +55,8 @@ namespace pr.extn
 			return list[list.Count - index - 1];
 		}
 
-		/// <summary>Return all of the range except the last 'count' items</summary>
-		public static IEnumerable<TSource> SubRange<TSource>(this IList<TSource> list, int start, int count)
+		/// <summary>Enumerate a sub-range of the list. (Note: Skip/Take are *NOT* optimised for lists)</summary>
+		public static IEnumerable<TSource> EnumRange<TSource>(this IList<TSource> list, int start, int count)
 		{
 			for (int i = start; count-- != 0; ++i)
 				yield return list[i];
@@ -190,37 +194,46 @@ namespace pr.extn
 		//	((IList)list).Swap(index0, index1);
 		//}
 
-		/// <summary>Reverse the order of all elements in this list</summary>
-		public static IList Reverse(this IList list)
+		/// <summary>Reverse *in-place* the order of all elements in this list</summary>
+		public static IList<T> ReverseInPlace<T>(this IList<T> list)
 		{
-			list.Reverse(0, list.Count);
-			return list;
+			return list.ReverseInPlace(0, list.Count);
 		}
-		public static BindingList<T> Reverse<T>(this BindingList<T> list)
+		public static Array ReverseInPlace(this Array list)
 		{
-			return list.As<IList>().Reverse().As<BindingList<T>>();
+			return list.ReverseInPlace(0, list.Length);
 		}
 
-		/// <summary>Reverses the order of the elements in the specified range.</summary>
-		public static IList Reverse(this IList list, int index, int count)
+		/// <summary>Reverses the order of the elements in the specified range *in-place*.</summary>
+		public static IList<T> ReverseInPlace<T>(this IList<T> list, int index, int count)
 		{
 			if (index < 0) throw new ArgumentOutOfRangeException("index", "index must be >= 0");
 			if (count < 0) throw new ArgumentOutOfRangeException("count", "count must be >= 0");
 			if (list.Count - index < count) throw new ArgumentException("count exceeds the size of the list");
 
-			var index1 = index;
-			var index2 = index + count - 1;
-			for (; index1 < index2; ++index1, --index2)
+			int s = index, e = s + count - 1;
+			for (; s < e; ++s, --e)
 			{
-				var tmp = list[index1];
-				list[index1] = list[index2];
-				list[index2] = tmp;
+				var tmp = list[s];
+				list[s] = list[e];
+				list[e] = tmp;
 			}
 			return list;
 		}
-		public static BindingList<T> Reverse<T>(this BindingList<T> list, int index, int count)
+		public static Array ReverseInPlace(this Array list, int index, int count)
 		{
-			return list.As<IList>().Reverse(index, count).As<BindingList<T>>();
+			if (index < 0) throw new ArgumentOutOfRangeException("index", "index must be >= 0");
+			if (count < 0) throw new ArgumentOutOfRangeException("count", "count must be >= 0");
+			if (list.Length - index < count) throw new ArgumentException("count exceeds the size of the list");
+
+			int s = index, e = s + count - 1;
+			for (; s < e; ++s, --e)
+			{
+				var tmp = list.GetValue(s);
+				list.SetValue(list.GetValue(e), s);
+				list.SetValue(tmp, e);
+			}
+			return list;
 		}
 
 		/// <summary>Replaces 'replacee' with 'replacer' in this list. Throws if 'replacee' can't be found.</summary>
@@ -230,27 +243,6 @@ namespace pr.extn
 			var idx = list.IndexOf(replacee);
 			list[idx] = replacer;
 		}
-
-		///// <summary>Replaces 'replacee' with 'replacer' in this list. Throws if 'replacee' can't be found.</summary>
-		//public static void Replace<T>(this IList<T> list, T replacee, T replacer)
-		//{
-		//	if (ReferenceEquals(replacee, replacer)) return;
-		//	var idx = list.IndexOf(replacee);
-		//	list[idx] = replacer;
-		//}
-
-		///// <summary>Return the index of the occurrence of an element that causes 'pred' to return true (or -1)</summary>
-		//public static int IndexOf<T>(this IList list, Func<T,bool> pred, int start_index, int count)
-		//{
-		//	int i; for (i = start_index; i != count && !pred((T)list[i]); ++i) {}
-		//	return i != count ? i : -1;
-		//}
-
-		///// <summary>Return the index of the occurrence of an element that causes 'pred' to return true (or -1)</summary>
-		//public static int IndexOf<T>(this IList list, Func<T,bool> pred)
-		//{
-		//	return list.IndexOf(pred, 0, list.Count);
-		//}
 
 		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true (or -1)</summary>
 		public static int IndexOf<T>(this IList<T> list, Func<T,bool> pred, int start_index, int count)
@@ -551,6 +543,10 @@ namespace pr.extn
 		}
 
 		/// <summary>Sort the list using a lambda</summary>
+		public static IList<T> Sort<T>(this IList<T> list, Func<T,T,int> cmp)
+		{
+			return list.Sort(Cmp<T>.From(cmp));
+		}
 		public static IList<T> Sort<T>(this IList<T> list, Cmp<T> comparer = null)
 		{
 			return list.Sort(0, list.Count, comparer);
@@ -863,3 +859,24 @@ namespace pr.unittests
 	}
 }
 #endif
+
+		///// <summary>Replaces 'replacee' with 'replacer' in this list. Throws if 'replacee' can't be found.</summary>
+		//public static void Replace<T>(this IList<T> list, T replacee, T replacer)
+		//{
+		//	if (ReferenceEquals(replacee, replacer)) return;
+		//	var idx = list.IndexOf(replacee);
+		//	list[idx] = replacer;
+		//}
+
+		///// <summary>Return the index of the occurrence of an element that causes 'pred' to return true (or -1)</summary>
+		//public static int IndexOf<T>(this IList list, Func<T,bool> pred, int start_index, int count)
+		//{
+		//	int i; for (i = start_index; i != count && !pred((T)list[i]); ++i) {}
+		//	return i != count ? i : -1;
+		//}
+
+		///// <summary>Return the index of the occurrence of an element that causes 'pred' to return true (or -1)</summary>
+		//public static int IndexOf<T>(this IList list, Func<T,bool> pred)
+		//{
+		//	return list.IndexOf(pred, 0, list.Count);
+		//}

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using pr.util;
 
 namespace pr.extn
 {
@@ -29,6 +30,44 @@ namespace pr.extn
 		{
 			sw.Start();
 			return sw;
+		}
+
+		/// <summary>RAII scope lock this semaphore</summary>
+		public static Scope Lock(this SemaphoreSlim ss)
+		{
+			return Scope.Create(
+				() => ss.Wait(),
+				() => ss.Release());
+		}
+		public static Scope Lock(this SemaphoreSlim ss, CancellationToken cancel)
+		{
+			return Scope.Create(
+				() => ss.Wait(cancel),
+				() => ss.Release());
+		}
+		public static Scope Lock(this SemaphoreSlim ss, int timeout_ms)
+		{
+			return Scope.Create(
+				() => ss.Wait(timeout_ms),
+				() => ss.Release());
+		}
+		public static Scope Lock(this SemaphoreSlim ss, TimeSpan timeout)
+		{
+			return Scope.Create(
+				() => ss.Wait(timeout),
+				() => ss.Release());
+		}
+		public static Scope Lock(this SemaphoreSlim ss, int timeout_ms, CancellationToken cancel)
+		{
+			return Scope.Create(
+				() => ss.Wait(timeout_ms, cancel),
+				() => ss.Release());
+		}
+		public static Scope Lock(this SemaphoreSlim ss, TimeSpan timeout, CancellationToken cancel)
+		{
+			return Scope.Create(
+				() => ss.Wait(timeout, cancel),
+				() => ss.Release());
 		}
 	}
 }

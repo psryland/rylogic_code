@@ -11,6 +11,21 @@ namespace pr.extn
 {
 	public static class ToolStrip_
 	{
+		/// <summary>RAII scope for temporarily disabling 'Enabled' on this control</summary>
+		public static Scope SuspendEnabled(this ToolStripItem ctrl)
+		{
+			return Scope.Create(
+				() => { var e = ctrl.Enabled; ctrl.Enabled = false; return e; },
+				e => { ctrl.Enabled = e; });
+		}
+
+		/// <summary>Enable/Disable this item and set the tool tip at the same time</summary>
+		public static void EnabledWithTT(this ToolStripItem item, bool enabled, string tool_tip)
+		{
+			item.Enabled = enabled;
+			item.ToolTipText = tool_tip;
+		}
+
 		/// <summary>Add and return an item to this collection</summary>
 		public static T Add2<T>(this ToolStripItemCollection items, T item) where T:ToolStripItem
 		{

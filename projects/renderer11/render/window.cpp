@@ -11,21 +11,21 @@ namespace pr
 	namespace rdr
 	{
 		// Default WndSettings
-		WndSettings::WndSettings(HWND hwnd, bool windowed, bool bgra_support, pr::iv2 const& client_area)
+		WndSettings::WndSettings(HWND hwnd, bool windowed, bool gdi_compatible_bb, pr::iv2 const& client_area)
 			:m_hwnd(hwnd)
 			,m_windowed(windowed)
 			,m_mode(client_area)
 			,m_multisamp(4)
 			,m_buffer_count(2)
 			,m_swap_effect(DXGI_SWAP_EFFECT_DISCARD)// DXGI_SWAP_EFFECT_SEQUENTIAL <- cannot use with multi-sampling
-			,m_swap_chain_flags(DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH|(bgra_support ? DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE : 0))
+			,m_swap_chain_flags(DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH|(gdi_compatible_bb ? DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE : 0))
 			,m_depth_format(DXGI_FORMAT_D24_UNORM_S8_UINT)
 			,m_usage(DXGI_USAGE_RENDER_TARGET_OUTPUT|DXGI_USAGE_SHADER_INPUT)
 			,m_vsync(1)
 			,m_allow_alt_enter(false)
 			,m_name()
 		{
-			if (bgra_support)
+			if (gdi_compatible_bb)
 			{
 				// Must use B8G8R8A8_UNORM for GDI compatibility
 				m_mode.Format = DXGI_FORMAT_B8G8R8A8_UNORM;

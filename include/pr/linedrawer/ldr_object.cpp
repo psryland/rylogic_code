@@ -474,51 +474,6 @@ namespace pr
 			reader.SectionEnd();
 		}
 
-		// Parse keywords that can appear in any section. Returns true if the keyword was recognised.
-		bool ParseProperties(ParseParams& p, EKeyword kw, LdrObject* obj)
-		{
-			switch (kw)
-			{
-			default: return false;
-			case EKeyword::O2W:
-			case EKeyword::Txfm:
-				{
-					ParseLdrTransform(p.m_reader, obj->m_o2p);
-					return true;
-				}
-			case EKeyword::Colour:
-				{
-					p.m_reader.IntS(obj->m_base_colour.argb, 16);
-					return true;
-				}
-			case EKeyword::ColourMask:
-				{
-					p.m_reader.IntS(obj->m_colour_mask, 16);
-					return true;
-				}
-			case EKeyword::RandColour:
-				{
-					obj->m_base_colour = pr::RandomRGB(g_rng());
-					return true;
-				}
-			case EKeyword::Animation:
-				{
-					ParseAnimation(p.m_reader, obj->m_anim);
-					return true;
-				}
-			case EKeyword::Hidden:
-				{
-					obj->m_visible = false;
-					return true;
-				}
-			case EKeyword::Wireframe:
-				{
-					obj->m_wireframe = true;
-					return true;
-				}
-			}
-		}
-
 		// Parse a texture description. Returns a pointer to the Texture created in the renderer.
 		bool ParseTexture(ParseParams& p, Texture2DPtr& tex)
 		{
@@ -609,6 +564,75 @@ namespace pr
 			}
 			p.m_reader.SectionEnd();
 			return true;
+		}
+
+		// Parse keywords that can appear in any section. Returns true if the keyword was recognised.
+		bool ParseProperties(ParseParams& p, EKeyword kw, LdrObject* obj)
+		{
+			switch (kw)
+			{
+			default: return false;
+			case EKeyword::O2W:
+			case EKeyword::Txfm:
+				{
+					ParseLdrTransform(p.m_reader, obj->m_o2p);
+					return true;
+				}
+			case EKeyword::Colour:
+				{
+					p.m_reader.IntS(obj->m_base_colour.argb, 16);
+					return true;
+				}
+			case EKeyword::ColourMask:
+				{
+					p.m_reader.IntS(obj->m_colour_mask, 16);
+					return true;
+				}
+			case EKeyword::RandColour:
+				{
+					obj->m_base_colour = pr::RandomRGB(g_rng());
+					return true;
+				}
+			case EKeyword::Animation:
+				{
+					ParseAnimation(p.m_reader, obj->m_anim);
+					return true;
+				}
+			case EKeyword::Hidden:
+				{
+					obj->m_visible = false;
+					return true;
+				}
+			case EKeyword::Wireframe:
+				{
+					obj->m_wireframe = true;
+					return true;
+				}
+			}
+		}
+
+		// Apply the states such as colour,wireframe,etc to the objects renderer model
+		void ApplyObjectState(LdrObject* obj)
+		{
+			// Set colour on 'obj' (so that render states are set correctly)
+			// Note that the colour is 'blended' with 'm_base_colour' so m_base_colour * White = m_base_colour.
+			obj->Colour(obj->m_base_colour, 0xFFFFFFFF);
+
+			// Apply the colour of 'obj' to all children using a mask
+			if (obj->m_colour_mask != 0)
+				obj->Colour(obj->m_base_colour, obj->m_colour_mask, "");
+
+			// If flagged as hidden, hide
+			if (!obj->m_visible)
+				obj->Visible(false);
+
+			// If flagged as wireframe, set wireframe
+			if (obj->m_wireframe)
+				obj->Wireframe(true);
+
+			// If flagged as screen space rendering mode
+			if (obj->m_screen_space)
+				obj->ScreenSpace(true);
 		}
 
 		#pragma endregion
@@ -2927,7 +2951,7 @@ namespace pr
 			{
 				Full3D,
 				Billboard,
-				CameraSpace,
+				ScreenSpace,
 			};
 			struct TextLayout
 			{
@@ -2996,9 +3020,9 @@ namespace pr
 						p.m_reader.SectionEnd();
 						return true;
 					}
-				case EKeyword::CameraSpace:
+				case EKeyword::ScreenSpace:
 					{
-						m_type = EType::CameraSpace;
+						m_type = EType::ScreenSpace;
 						return true;
 					}
 				case EKeyword::Billboard:
@@ -3144,8 +3168,8 @@ namespace pr
 						};
 						break;
 					}
-				// Position the text quad in camera space.
-				case EType::CameraSpace:
+				// Position the text quad in screen space.
+				case EType::ScreenSpace:
 					{
 						// Scale up the view port to reduce floating point precision noise.
 						enum { ViewPortSize = 1000 };
@@ -3157,15 +3181,15 @@ namespace pr
 						// this model at a point that the bounding box calculation can't see
 						obj->m_flags = SetBits(obj->m_flags, ELdrFlags::BBoxInvisible, true);
 
-						// Camera space text uses a standard normalised orthographic projection over the volume (-1,-1,0) -> (+1,+1,1)
+						// Screen space uses a standard normalised orthographic projection
 						obj->m_c2s = m4x4::ProjectionOrthographic(float(ViewPortSize), float(ViewPortSize), -0.01f, 1, true);
 
 						// Update the rendering 'i2w' transform on add-to-scene.
 						obj->OnAddToScene += [](LdrObject& ob, rdr::Scene const& scene)
 						{
 							// The 'ob.m_i2w' is a normalised screen space position
-							// (-1,-1,+0) is the lower left corner on the near plane,
-							// (+1,+1,+1) is the upper right corner on the far plane.
+							// (-1,-1,-0) is the lower left corner on the near plane,
+							// (+1,+1,-1) is the upper right corner on the far plane.
 							auto w = float(scene.m_viewport.Width);
 							auto h = float(scene.m_viewport.Height);
 							auto c2w = scene.m_view.CameraToWorld();
@@ -3176,7 +3200,6 @@ namespace pr
 							// Reverse 'pos.z' so positive values can be used
 							ob.m_i2w.pos.x *= 0.5f*ViewPortSize;
 							ob.m_i2w.pos.y *= 0.5f*ViewPortSize;
-							ob.m_i2w.pos.z = -ob.m_i2w.pos.z;
 
 							// Convert 'i2w', which is being interpreted as 'i2c', into an actual 'i2w'
 							ob.m_i2w = c2w * ob.m_i2w * scale;
@@ -3195,6 +3218,7 @@ namespace pr
 				if (m_no_z_test)
 				{
 					obj->m_dsb.Set(rdr::EDS::DepthEnable, false);
+					obj->m_sko.Group(rdr::ESortGroup::PostAlpha); // Draw above all objects
 				}
 			}
 		};
@@ -3237,17 +3261,29 @@ namespace pr
 			{
 				if (p.m_reader.IsKeyword())
 				{
-					// Interpret child objects
+					// The next script token is a keyword
 					auto kw = p.m_reader.NextKeywordH<EKeyword>();
+
+					// Let the object creator have the first go with the keyword
+					if (creator.ParseKeyword(kw))
+						continue;
+
+					// Is the keyword a common object property
+					if (ParseProperties(p, kw, obj.get()))
+						continue;
+
+					// Recursively parse child objects
 					ParseParams pp(p, obj->m_child, kw, obj.get());
-					if (ParseLdrObject(pp)) continue;
-					if (ParseProperties(pp, kw, obj.get())) continue;
-					if (creator.ParseKeyword(kw)) continue;
+					if (ParseLdrObject(pp))
+						continue;
+
+					// Unknown token
 					p.ReportError(EResult::UnknownToken);
 					continue;
 				}
 				else
 				{
+					// Not a keyword, let the object creator interpret it
 					creator.Parse();
 				}
 			}
@@ -3265,26 +3301,6 @@ namespace pr
 
 			// Report progress
 			p.ReportProgress();
-		}
-
-		// Apply the states such as colour,wireframe,etc to the objects renderer model
-		void ApplyObjectState(LdrObject* obj)
-		{
-			// Set colour on 'obj' (so that render states are set correctly)
-			// Note that the colour is 'blended' with 'm_base_colour' so m_base_colour * White = m_base_colour.
-			obj->Colour(obj->m_base_colour, 0xFFFFFFFF);
-
-			// Apply the colour of 'obj' to all children using a mask
-			if (obj->m_colour_mask != 0)
-				obj->Colour(obj->m_base_colour, obj->m_colour_mask, "");
-
-			// If flagged as wireframe, set wireframe
-			if (obj->m_wireframe)
-				obj->Wireframe(true);
-
-			// If flagged as hidden, hide
-			if (!obj->m_visible)
-				obj->Visible(false);
 		}
 
 		// Reads a single ldr object from a script adding object (+ children) to 'p.m_objects'.
@@ -3361,7 +3377,7 @@ namespace pr
 						// Save the current number of objects
 						auto object_count = int(p.m_objects.size());
 
-						// Assign the keyword is an object and start parsing
+						// Assume the keyword is an object and start parsing
 						if (!ParseLdrObject(p))
 						{
 							p.m_reader.ReportError(pr::script::EResult::UnknownToken);
@@ -3453,11 +3469,22 @@ namespace pr
 		// Create an ldr object from creation data.
 		LdrObjectPtr Create(pr::Renderer& rdr, ObjectAttributes attr, MeshCreationData const& cdata, pr::Guid const& context_id)
 		{
-			LdrObjectPtr obj(new LdrObject(attr, 0, context_id), true);
+			LdrObjectPtr obj(new LdrObject(attr, nullptr, context_id), true);
 
 			// Create the model
 			obj->m_model = ModelGenerator<>::Mesh(rdr, cdata);
 			obj->m_model->m_name = obj->TypeAndName();
+			return obj;
+		}
+
+		// Create an instance of an existing ldr object.
+		LdrObjectPtr CreateInstance(LdrObject const* existing)
+		{
+			ObjectAttributes attr(existing->m_type, existing->m_name.c_str(), existing->m_base_colour, true);
+			LdrObjectPtr obj(new LdrObject(attr, nullptr, existing->m_context_id), true);
+
+			// Use the same model
+			obj->m_model = existing->m_model;
 			return obj;
 		}
 
@@ -3685,6 +3712,10 @@ LR"(// There are a number of other object modifiers that can also be used:
 			*euler{0 0 90}
 		}
 	}
+	//*ScreenSpace    // If specified, the object's *o2w transform is interpreted as a screen space position/orientation
+	                  // Screen space coordinates are in the volume:
+	                  //  (-1,-1,-0) = bottom, left, near plane
+	                  //  (+1,+1,-1) = top, right, far plane
 }
 
 )"
@@ -3832,18 +3863,18 @@ LR"(// *************************************************************************
 	//*Strikeout
 }
 
-// Camera space text.
-*Text camera_space_text
+// Screen space text.
+*Text screen_space_text
 {
-	"This is camera space text"
-	*CameraSpace
+	"This is screen space text"
+	*ScreenSpace
 
 	// Anchor defines the origin of the quad. (-1,-1) = bottom,left. (0,0) = centre (default). (+1,+1) = top,right
 	*Anchor { -1 +1 }
 	
-	// *o2w is interpreted as a 'text to camera space' transform
-	// (-1,-1,0) is the lower left corner on the near plane.
-	// (+1,+1,1) is the upper right corner on the far plane.
+	// *o2w is interpreted as a 'text to screen space' transform
+	// (-1,-1,-0) is the lower left corner on the near plane.
+	// (+1,+1,-1) is the upper right corner on the far plane.
 	// The quad is automatically scaled to make the text unscaled on-screen
 	*o2w{*pos{-1, +1, 0}}
 }
@@ -3965,7 +3996,7 @@ LR"(// *************************************************************************
 	FwdBack                             // Type of  arrow. One of Line, Fwd, Back, or FwdBack
 	*Coloured                           // Optional. If specified each line section has an aarrggbb colour after it. Must occur before any point data if used
 	-1 -1 -1 FF00FF00                   // Corner points forming a line strip of connected lines
-	-2  3  4 FFFF0000                   // Note, colour blend smoothly between each vertex
+	-2  3  4 FFFF0000                   // Note, colour blends smoothly between each vertex
 	 2  0 -2 FFFFFF00
 	*Smooth                             // Optional. Turns the line segments into a smooth spline
 	*Width { 5 }                        // Optional line width and arrow head size
@@ -4472,6 +4503,7 @@ LR"(// *************************************************************************
 			,m_instanced(attr.m_instance)
 			,m_visible(true)
 			,m_wireframe(false)
+			,m_screen_space(false)
 			,m_flags(ELdrFlags::None)
 			,m_user_data()
 		{
@@ -4625,6 +4657,63 @@ LR"(// *************************************************************************
 				else                o->m_rsb.Clear(ERS::FillMode);
 				return true;
 			}, name);
+		}
+
+		// Get/Set screen space rendering mode for this object and all child objects
+		bool LdrObject::ScreenSpace() const
+		{
+			auto obj = Child("");
+			return obj ? obj->m_screen_space : false;
+		}
+		void LdrObject::ScreenSpace(bool screen_space)
+		{
+			Apply([=](LdrObject* o)
+			{
+				if (screen_space)
+				{
+					enum { ViewPortSize = 2 };
+
+					// Do not include in bounding box calculations because we're scaling
+					// this model at a point that the bounding box calculation can't see
+					o->m_flags = SetBits(o->m_flags, ELdrFlags::BBoxInvisible, true);
+
+					// Update the rendering 'i2w' transform on add-to-scene.
+					o->m_screen_space = o->OnAddToScene += [](LdrObject& ob, rdr::Scene const& scene)
+					{
+						// The 'ob.m_i2w' is a normalised screen space position
+						// (-1,-1,-0) is the lower left corner on the near plane,
+						// (+1,+1,-1) is the upper right corner on the far plane.
+						auto w = float(scene.m_viewport.Width);
+						auto h = float(scene.m_viewport.Height);
+						auto c2w = scene.m_view.CameraToWorld();
+
+						// Screen space uses a standard normalised orthographic projection
+						ob.m_c2s = w >= h
+							? m4x4::ProjectionOrthographic(float(ViewPortSize) * w / h, float(ViewPortSize), -0.01f, 1.01f, true)
+							: m4x4::ProjectionOrthographic(float(ViewPortSize), float(ViewPortSize) * h / w, -0.01f, 1.01f, true);
+
+						// Scale the object to normalised screen space
+						auto scale = w >= h
+							? m4x4::Scale(0.5f * ViewPortSize * (w/h), 0.5f * ViewPortSize, 1, v4Origin)
+							: m4x4::Scale(0.5f * ViewPortSize, 0.5f * ViewPortSize * (h/w), 1, v4Origin);
+
+						// Scale the X,Y position so that positions are still in normalised screen space
+						ob.m_i2w.pos.x *= w >= h ? (w/h) : 1.0f;
+						ob.m_i2w.pos.y *= w >= h ? 1.0f : (h/w);
+			
+						// Convert 'i2w', which is being interpreted as 'i2c', into an actual 'i2w'
+						ob.m_i2w = c2w * ob.m_i2w * scale;
+					};
+				}
+				else
+				{
+					o->m_c2s = m4x4Zero;
+					o->m_flags = SetBits(o->m_flags, ELdrFlags::BBoxInvisible, false);
+					o->OnAddToScene -= o->m_screen_space;
+					o->m_screen_space = 0;
+				}
+				return true;
+			}, "");
 		}
 
 		// Get/Set meta behaviour flags for this object or child objects matching 'name' (see Apply)

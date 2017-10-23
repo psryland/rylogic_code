@@ -337,6 +337,7 @@ namespace pr.gui
 			m_view.ColumnHeadersVisible        = false;
 			m_view.CellValueNeeded            += HandleCellValueNeeded;
 			m_view.CellFormatting             += HandleCellFormatting;
+			m_view.VisibleChanged             += DataGridView_.FitColumnsWithNoLineWrap;
 			m_view.ColumnWidthChanged         += DataGridView_.FitColumnsWithNoLineWrap;
 			m_view.RowHeadersWidthChanged     += DataGridView_.FitColumnsWithNoLineWrap;
 			m_view.AutoSizeColumnsModeChanged += DataGridView_.FitColumnsWithNoLineWrap;
@@ -346,7 +347,6 @@ namespace pr.gui
 			m_view.VirtualMode                 = true;
 			m_view.ColumnCount                 = 1;
 			m_view.RowCount                    = 0;
-			DataGridView_.FitColumnsWithNoLineWrap(m_view);
 		}
 
 		/// <summary>Invalidate this control and all children</summary>

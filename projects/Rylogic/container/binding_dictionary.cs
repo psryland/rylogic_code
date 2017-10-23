@@ -3,7 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Reflection;
+using pr.common;
+using pr.extn;
+using pr.util;
 
 namespace pr.container
 {
@@ -12,7 +14,7 @@ namespace pr.container
 		:IDictionary<TKey, TValue>
 		,IBindingList, IList<TValue>, IList, IReadOnlyList<TValue>, IListChanging<TValue>, IItemChanged<TValue>
 		,ICollection<TValue>, ICollection, IReadOnlyCollection<TValue>
-		,ICancelAddNew
+		,ICancelAddNew , IBatchChanges
 	{
 		// Notes:
 		//  - Hybrid container:
@@ -165,10 +167,12 @@ namespace pr.container
 		}
 
 		/// <summary>Gets/Sets a value indicating whether adding or removing items within the list raises ListChanged events.</summary>
-		public bool RaiseListChangedEvents
+		public bool RaiseListChangedEvents { get; set; }
+		public Scope SuspendEvents(bool reset_on_resume)
 		{
-			get;
-			set;
+			return Scope.Create(
+				() => { var r = RaiseListChangedEvents; RaiseListChangedEvents = false; return r; },
+				re => { RaiseListChangedEvents = re; if (reset_on_resume) ResetBindings(); });
 		}
 
 		/// <summary>True if the collection is read only</summary>
@@ -458,6 +462,15 @@ namespace pr.container
 		{
 			if (KeyFrom != null) return;
 			throw new NotSupportedException("List-like access requires the 'KeyFrom' member to be valid");
+		}
+
+		/// <summary>Raised when the caller signals a batch of changes are about to happen</summary>
+		public event EventHandler<PrePostEventArgs> BatchChanges;
+		public Scope BatchChange()
+		{
+			return Scope.Create(
+				() => BatchChanges.Raise(this, new PrePostEventArgs(after:false)),
+				() => BatchChanges.Raise(this, new PrePostEventArgs(after:true)));
 		}
 
 		#region IBindingList

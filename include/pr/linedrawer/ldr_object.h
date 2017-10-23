@@ -175,7 +175,7 @@ namespace pr
 			x(Filter               ,= HashI("Filter"              ))\
 			x(Range                ,= HashI("Range"               ))\
 			x(Specular             ,= HashI("Specular"            ))\
-			x(CameraSpace          ,= HashI("CameraSpace"         ))\
+			x(ScreenSpace          ,= HashI("ScreenSpace"         ))\
 			x(Billboard            ,= HashI("Billboard"           ))\
 			x(CastShadow           ,= HashI("CastShadow"        ))
 		PR_DEFINE_ENUM2(EKeyword, PR_ENUM);
@@ -249,14 +249,14 @@ namespace pr
 		// A renderer instance type for the body
 		// Note: don't use 'm_i2w' to control the object transform, use m_o2p in the LdrObject instead
 		#define PR_RDR_INST(x) \
-			x(pr::m4x4            ,m_i2w    ,pr::rdr::EInstComp::I2WTransform       )\
-			x(pr::rdr::ModelPtr   ,m_model  ,pr::rdr::EInstComp::ModelPtr           )\
-			x(pr::Colour32        ,m_colour ,pr::rdr::EInstComp::TintColour32       )\
-			x(pr::optional<m4x4>  ,m_c2s    ,pr::rdr::EInstComp::C2SOptional        )\
-			x(pr::rdr::SKOverride ,m_sko    ,pr::rdr::EInstComp::SortkeyOverride    )\
-			x(pr::rdr::BSBlock    ,m_bsb    ,pr::rdr::EInstComp::BSBlock            )\
-			x(pr::rdr::DSBlock    ,m_dsb    ,pr::rdr::EInstComp::DSBlock            )\
-			x(pr::rdr::RSBlock    ,m_rsb    ,pr::rdr::EInstComp::RSBlock            )
+			x(pr::m4x4            ,m_i2w    ,pr::rdr::EInstComp::I2WTransform       )/*     16 bytes */\
+			x(pr::m4x4            ,m_c2s    ,pr::rdr::EInstComp::C2SOptional        )/*     16 bytes */\
+			x(pr::rdr::ModelPtr   ,m_model  ,pr::rdr::EInstComp::ModelPtr           )/* 4 or 8 bytes */\
+			x(pr::Colour32        ,m_colour ,pr::rdr::EInstComp::TintColour32       )/*      4 bytes */\
+			x(pr::rdr::SKOverride ,m_sko    ,pr::rdr::EInstComp::SortkeyOverride    )/*      8 bytes */\
+			x(pr::rdr::BSBlock    ,m_bsb    ,pr::rdr::EInstComp::BSBlock            )/*    296 bytes */\
+			x(pr::rdr::DSBlock    ,m_dsb    ,pr::rdr::EInstComp::DSBlock            )/*     60 bytes */\
+			x(pr::rdr::RSBlock    ,m_rsb    ,pr::rdr::EInstComp::RSBlock            )/*     44 bytes */
 		PR_RDR_DEFINE_INSTANCE(RdrInstance, PR_RDR_INST);
 		#undef PR_RDR_INST
 
@@ -394,6 +394,7 @@ namespace pr
 			bool              m_instanced;     // False if this instance should never be drawn (it's used for instancing only)
 			bool              m_visible;       // True if the instance should be rendered
 			bool              m_wireframe;     // True if this object is drawn in wireframe
+			EventHandlerId    m_screen_space;  // True if this object should be rendered in screen space
 			ELdrFlags         m_flags;         // Property flags controlling meta behaviour of the object
 			pr::UserData      m_user_data;     // User data
 
@@ -478,6 +479,10 @@ namespace pr
 			// Get/Set the render mode for this object or child objects matching 'name' (see Apply)
 			bool Wireframe(char const* name = nullptr) const;
 			void Wireframe(bool wireframe, char const* name = nullptr);
+
+			// Get/Set screen space rendering mode for this object (and all child objects)
+			bool ScreenSpace() const;
+			void ScreenSpace(bool screen_space3);
 
 			// Get/Set meta behaviour flags for this object or child objects matching 'name' (see Apply)
 			ELdrFlags Flags(char const* name = nullptr) const;
@@ -658,6 +663,10 @@ namespace pr
 			ObjectAttributes attr,                  // Object attributes to use with the created object
 			MeshCreationData const& cdata,          // Model creation data
 			pr::Guid const& context_id = GuidZero); // The context id to assign to the object
+		
+		// Create an instance of an existing ldr object.
+		LdrObjectPtr CreateInstance(
+			LdrObject const* existing);             // The existing object whose model the instance will use.
 
 		// Create an ldr object using a callback to populate the model data.
 		// Objects created by this method will have dynamic usage and are suitable for updating every frame via the 'Edit' function.

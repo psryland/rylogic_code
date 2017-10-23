@@ -34,7 +34,7 @@ namespace pr
 			I2WTransformPtr    , // pr::m4x4*
 			I2WTransformFuncPtr, // pr::m4x4 const& (*func)(void* context);
 			C2STransform       , // pr::m4x4
-			C2SOptional        , // pr::optional<m4x4>
+			C2SOptional        , // pr::m4x4 (set to m4x4Zero to indicate not used)
 			C2STransformPtr    , // pr::m4x4*
 			C2STransformFuncPtr, // pr::m4x4 const& (*func)(void* context);
 			SortkeyOverride    , // pr::rdr::SKOverride
@@ -165,10 +165,10 @@ namespace pr
 				return true;
 			}
 				
-			auto c2s_optional = inst.find<pr::optional<m4x4>>(EInstComp::C2SOptional);
-			if (c2s_optional && *c2s_optional != nullptr)
+			auto c2s_optional = inst.find<pr::m4x4>(EInstComp::C2SOptional);
+			if (c2s_optional && c2s_optional->x != v4Zero)
 			{
-				camera_to_screen = (*c2s_optional).value();
+				camera_to_screen = *c2s_optional;
 				return true;
 			}
 

@@ -11,7 +11,7 @@ using pr.util;
 namespace pr.container
 {
 	/// <summary>Extension to BindingList that notifies *before* an item is removed</summary>
-	[DataContract] public class BindingListEx<T> :BindingList<T>, IEnumerable<T>, IListChanging<T>, IItemChanged<T>
+	[DataContract] public class BindingListEx<T> :BindingList<T>, IEnumerable<T>, IListChanging<T>, IItemChanged<T>, IBatchChanges
 	{
 		public BindingListEx() :base()
 		{
@@ -105,7 +105,7 @@ namespace pr.container
 			if (PerItem)
 				for (;Count != 0;) RemoveAt(Count - 1);
 
-			// Call ClearItems even if 'PerItemClear' is true so that the ListChg.Reset event is raised
+			// Call ClearItems even if 'PerItem' is true so that the ListChg.Reset event is raised
 			// Reset event is raised from ListChanged handler
 			base.ClearItems();
 			m_hash_set?.Clear();
@@ -259,6 +259,10 @@ namespace pr.container
 		/// <summary>Reorders the list</summary>
 		protected override void ApplySortCore(PropertyDescriptor prop, ListSortDirection direction)
 		{
+			// Don't allow sort on non-comparable properties
+			if (!prop.PropertyType.Inherits(typeof(IComparable)))
+				return;
+
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<T>(this, ListChg.PreReset, -1, default(T));
@@ -357,6 +361,15 @@ namespace pr.container
 					RaiseListChangedEvents = true;
 					if (raise && initial_raise) ResetBindings();
 				});
+		}
+
+		/// <summary>Raised when the caller signals a batch of changes are about to happen</summary>
+		public event EventHandler<PrePostEventArgs> BatchChanges;
+		public Scope BatchChange()
+		{
+			return Scope.Create(
+				() => BatchChanges.Raise(this, new PrePostEventArgs(after:false)),
+				() => BatchChanges.Raise(this, new PrePostEventArgs(after:true)));
 		}
 	}
 }

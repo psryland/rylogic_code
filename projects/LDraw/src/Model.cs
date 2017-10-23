@@ -20,7 +20,7 @@ namespace LDraw
 		public Model(MainUI main_ui)
 		{
 			Owner            = main_ui;
-			View3d           = new View3d(gdi_compatibility:true);
+			View3d           = new View3d();
 			IncludePaths     = new List<string>();
 			SourceContextIds = new HashSet<Guid>();
 			SavedViews       = new List<SavedView>();

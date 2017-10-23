@@ -96,12 +96,13 @@ $(ProjectDir)scripts\LexGen.py
 $(ProjectDir)scripts\HFacer.py
 </Command>
     </PreBuildEvent>
-    <PostBuildEvent>
-      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
-    </PostBuildEvent>
+    <PostBuildEvent />
     <Link>
       <AdditionalDependencies>imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile />
@@ -122,12 +123,13 @@ $(ProjectDir)scripts\LexGen.py
 $(ProjectDir)scripts\HFacer.py
 </Command>
     </PreBuildEvent>
-    <PostBuildEvent>
-      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
-    </PostBuildEvent>
+    <PostBuildEvent />
     <Link>
       <AdditionalDependencies>imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile />
@@ -145,15 +147,16 @@ $(ProjectDir)scripts\LexGen.py
 $(ProjectDir)scripts\HFacer.py
 </Command>
     </PreBuildEvent>
-    <PostBuildEvent>
-      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
-    </PostBuildEvent>
+    <PostBuildEvent />
     <Lib>
       <TargetMachine>MachineX86</TargetMachine>
     </Lib>
     <Link>
       <AdditionalDependencies>imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile />
@@ -171,12 +174,13 @@ $(ProjectDir)scripts\LexGen.py
 $(ProjectDir)scripts\HFacer.py
 </Command>
     </PreBuildEvent>
-    <PostBuildEvent>
-      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
-    </PostBuildEvent>
+    <PostBuildEvent />
     <Link>
       <AdditionalDependencies>imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\lexers\LexCPP.cxx" />

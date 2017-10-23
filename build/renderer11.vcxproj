@@ -81,6 +81,7 @@
     <CustomBuild>
       <AdditionalInputs>%(AdditionalInputs)</AdditionalInputs>
     </CustomBuild>
+    <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -98,6 +99,7 @@
     <CustomBuild>
       <AdditionalInputs>%(AdditionalInputs)</AdditionalInputs>
     </CustomBuild>
+    <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile />
@@ -113,6 +115,7 @@
     <Bscmake>
       <PreserveSBR>true</PreserveSBR>
     </Bscmake>
+    <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile />
@@ -125,6 +128,7 @@
     <CustomBuild>
       <AdditionalInputs>%(AdditionalInputs)</AdditionalInputs>
     </CustomBuild>
+    <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pr\geometry\3ds.h" />

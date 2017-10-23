@@ -174,7 +174,8 @@ namespace pr.gui
 			{
 				foreach (var s in str.Split(new []{","}, StringSplitOptions.RemoveEmptyEntries))
 					Add(s, false);
-				m_files.Reverse();
+
+				m_files.ReverseInPlace();
 			}
 			UpdateMenu();
 			return this;

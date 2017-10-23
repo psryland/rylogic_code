@@ -26,8 +26,10 @@ namespace pr.gui
 		#endregion
 
 		/// <summary>Display a modal message box</summary>
-		public static DialogResult Show(Control owner, string message, string title, MessageBoxButtons btns = MessageBoxButtons.OK, MessageBoxIcon icon = MessageBoxIcon.None, MessageBoxDefaultButton dflt_btn = MessageBoxDefaultButton.Button1, bool reflow = true, float reflow_aspect = DefaultReflowAspect)
+		public static DialogResult Show(Control owner, string message, string title = null, MessageBoxButtons btns = MessageBoxButtons.OK, MessageBoxIcon icon = MessageBoxIcon.None, MessageBoxDefaultButton dflt_btn = MessageBoxDefaultButton.Button1, bool reflow = true, float reflow_aspect = DefaultReflowAspect)
 		{
+			title = title ?? string.Empty;
+			message = message ?? string.Empty;
 			using (var dlg = new MsgBox(owner, message, title, btns, icon, dflt_btn))
 			{
 				dlg.Reflow = reflow;

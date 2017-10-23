@@ -11,6 +11,7 @@ using pr.util;
 namespace pr.common
 {
 	/// <summary>A helper object for maintaining a reference count</summary>
+	[DebuggerDisplay("Count={Count}")]
 	public class RefCount
 	{
 		public RefCount()

@@ -275,7 +275,7 @@ extern "C"
 	{
 		View3D_ReportErrorCB m_error_cb;
 		void*                m_error_cb_ctx;
-		BOOL                 m_gdi_compatible;
+		BOOL                 m_gdi_compatible_backbuffer;
 		int                  m_multisampling;
 		char const*          m_dbg_name;
 	};
@@ -434,6 +434,7 @@ extern "C"
 	VIEW3D_API View3DObject    __stdcall View3D_ObjectCreateLdr          (wchar_t const* ldr_script, BOOL file, GUID const* context_id, View3DIncludes const* includes);
 	VIEW3D_API View3DObject    __stdcall View3D_ObjectCreate             (char const* name, View3DColour colour, int vcount, int icount, int ncount, View3DVertex const* verts, UINT16 const* indices, View3DNugget const* nuggets, GUID const& context_id);
 	VIEW3D_API View3DObject    __stdcall View3D_ObjectCreateEditCB       (char const* name, View3DColour colour, int vcount, int icount, int ncount, View3D_EditObjectCB edit_cb, void* ctx, GUID const& context_id);
+	VIEW3D_API View3DObject    __stdcall View3D_ObjectCreateInstance     (View3DObject object);
 	VIEW3D_API void            __stdcall View3D_ObjectEdit               (View3DObject object, View3D_EditObjectCB edit_cb, void* ctx);
 	VIEW3D_API void            __stdcall View3D_ObjectUpdate             (View3DObject object, wchar_t const* ldr_script, EView3DUpdateObject flags);
 	VIEW3D_API void            __stdcall View3D_ObjectDelete             (View3DObject object);
@@ -576,10 +577,11 @@ namespace view3d
 	{
 		WindowOptions() :View3DWindowOptions()
 		{
-			m_error_cb       = nullptr;
-			m_error_cb_ctx   = nullptr;
-			m_gdi_compatible = false;
-			m_dbg_name       = "";
+			m_error_cb                  = nullptr;
+			m_error_cb_ctx              = nullptr;
+			m_gdi_compatible_backbuffer = FALSE;
+			m_multisampling             = 4;
+			m_dbg_name                  = "";
 		}
 	};
 	struct TextureOptions :View3DTextureOptions

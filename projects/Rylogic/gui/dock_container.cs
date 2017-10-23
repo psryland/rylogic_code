@@ -332,6 +332,8 @@ namespace pr.gui
 			if (dc == null)
 				throw new ArgumentNullException(nameof(dc), "'dockable' or 'dockable.DockControl' cannot be 'null'");
 
+			loc = loc ?? dc.DefaultDockLocation;
+
 			var pane = (DockPane)null;
 			if (loc.FloatingWindowId != null)
 			{
@@ -3531,20 +3533,6 @@ namespace pr.gui
 				AutoHide         = node.Element(XmlTag.AutoHide).As((EDockSite?)null);
 				FloatingWindowId = node.Element(XmlTag.FloatingWindow).As((int?)null);
 			}
-
-			/// <summary>The location within the host's tree</summary>
-			public EDockSite[] Address { get; set; }
-
-			/// <summary>The index within the content of the dock pace at 'Address'</summary>
-			public int Index { get; set; }
-
-			/// <summary>The auto hide site (or null if not in an auto site location)</summary>
-			public EDockSite? AutoHide { get; set; }
-
-			/// <summary>The Id of a floating window to dock to (or null if not in a floating window)</summary>
-			public int? FloatingWindowId { get; set; }
-
-			/// <summary>Save to XML</summary>
 			public XElement ToXml(XElement node)
 			{
 				// Add info about the host of this content
@@ -3569,6 +3557,18 @@ namespace pr.gui
 				return node;
 			}
 
+			/// <summary>The location within the host's tree</summary>
+			public EDockSite[] Address { get; set; }
+
+			/// <summary>The index within the content of the dock pace at 'Address'</summary>
+			public int Index { get; set; }
+
+			/// <summary>The auto hide site (or null if not in an auto site location)</summary>
+			public EDockSite? AutoHide { get; set; }
+
+			/// <summary>The Id of a floating window to dock to (or null if not in a floating window)</summary>
+			public int? FloatingWindowId { get; set; }
+
 			/// <summary></summary>
 			public override string ToString()
 			{
@@ -3576,6 +3576,12 @@ namespace pr.gui
 				if (FloatingWindowId != null) return "Floating Window {0}: {1} (Index:{2})".Fmt(FloatingWindowId.Value, addr, Index);
 				if (AutoHide != null) return "Auto Hide {0}: {1} (Index:{2})".Fmt(AutoHide.Value, addr, Index);
 				return "Dock Container: {0} (Index:{1})".Fmt(addr, Index);
+			}
+
+			/// <summary>Implicit conversion from array of dock sites to a doc location</summary>
+			public static implicit operator DockLocation(EDockSite[] site)
+			{
+				return new DockLocation(address:site);
 			}
 		}
 
@@ -3952,7 +3958,6 @@ namespace pr.gui
 				if (e.Button == MouseButtons.Left)
 				{
 					Capture = true;
-
 					SetPositionFromPoint(e.Location);
 					OnDragBegin();
 				}
@@ -3960,7 +3965,7 @@ namespace pr.gui
 			protected override void OnMouseMove(MouseEventArgs e)
 			{
 				base.OnMouseMove(e);
-				if (Capture)
+				if (m_drag_bar != null)
 				{
 					SetPositionFromPoint(e.Location);
 					OnDragging();
@@ -3969,7 +3974,7 @@ namespace pr.gui
 			protected override void OnMouseUp(MouseEventArgs e)
 			{
 				base.OnMouseUp(e);
-				if (Capture)
+				if (m_drag_bar != null)
 				{
 					Capture = false;
 					SetPositionFromPoint(e.Location);

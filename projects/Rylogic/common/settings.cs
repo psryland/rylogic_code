@@ -5,27 +5,41 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
+using System.Windows.Forms;
+using System.Windows.Threading;
 using System.Xml.Linq;
 using pr.common;
-using pr.util;
 using pr.extn;
 using pr.gui;
-using System.Windows.Forms;
+using pr.util;
 
 // Example use of settings
-//  private sealed class Settings :SettingsBase<Settings>
-//  {
-//  	public string Name  { get { return get(x => x.Name ); } set { set(x => x.Name , value); } }
-//  	public int    Value { get { return get(x => x.Value); } set { set(x => x.Value, value); } }
-//  	public Settings()
-//  	{
-//  		Name  = "default";
-//  		Value = 4;
-//  	}
-//		public Settings(string filepath) :base(filepath) {}
-//  }
+#if false
+public class Settings :SettingsBase<Settings>
+{
+	public Settings()
+	{
+		Name  = "default";
+		Value = 4;
+	}
+	public Settings(string filepath)
+		: base(filepath)
+	{}
+
+	public string Name
+	{
+		get { return get<string>(nameof(Name)); }
+		set { set(nameof(Name), value); }
+	}
+
+	public int Value
+	{
+		get { return get<int>(nameof(Value)); }
+		set { set(nameof(Value), value); }
+	}
+}
+#endif
 
 namespace pr.common
 {
@@ -60,7 +74,7 @@ namespace pr.common
 
 	/// <summary>A base class for settings structures</summary>
 	[Serializable]
-	public abstract class SettingsSet<T> :ISettingsSet where T:SettingsSet<T>, new()
+	public abstract class SettingsSet<T> :ISettingsSet ,INotifyPropertyChanged ,INotifyPropertyChanging where T:SettingsSet<T>, new()
 	{
 		/// <summary>The collection of settings</summary>
 		protected readonly Dictionary<string, object> m_data;
@@ -119,12 +133,6 @@ namespace pr.common
 				"in the constructor of the derived settings class");
 		}
 
-		/// <summary>Read a settings value</summary>
-		protected Value get<Value>(Expression<Func<T,Value>> expression)
-		{
-			return get<Value>(R<T>.Name(expression));
-		}
-
 		/// <summary>Write a settings value</summary>
 		protected virtual void set<Value>(string key, Value value)
 		{
@@ -147,21 +155,15 @@ namespace pr.common
 
 			// Notify about to change
 			var args = new SettingChangingEventArgs(key, old, value, false);
-			OnSettingChanging(args);
-			if (args.Cancel)
-				return;
+			OnSettingChanging(args); if (args.Cancel) return;
+			PropertyChanging.Raise(this, new PropertyChangingEventArgs(key));
 
 			// Update the value
 			m_data[key] = value;
 
 			// Notify changed
 			OnSettingChanged(new SettingChangedEventArgs(key, old, value));
-		}
-
-		/// <summary>Write a settings value</summary>
-		protected void set<Value>(Expression<Func<T,Value>> expression, Value value)
-		{
-			set(R<T>.Name(expression), value);
+			PropertyChanged.Raise(this, new PropertyChangedEventArgs(key));
 		}
 
 		/// <summary>Return the settings as an XML node tree</summary>
@@ -221,6 +223,10 @@ namespace pr.common
 
 		/// <summary>An event raised after a setting has been changed</summary>
 		public event EventHandler<SettingChangedEventArgs> SettingChanged;
+
+		/// <summary>Property changed</summary>
+		public event PropertyChangedEventHandler PropertyChanged;
+		public event PropertyChangingEventHandler PropertyChanging;
 
 		/// <summary>Manually notify of a setting change</summary>
 		public void RaiseSettingChanged(string key)
@@ -364,15 +370,36 @@ namespace pr.common
 				if (m_auto_save == value) return;
 				if (m_auto_save)
 				{
-					SettingChanged -= Save;
+					SettingChanged -= HandleSettingChanged;
 				}
 				m_auto_save = value;
 				if (m_auto_save)
 				{
-					SettingChanged += Save;
+					SettingChanged += HandleSettingChanged;
+				}
+
+				// Handlers
+				void HandleSettingChanged(object sender, EventArgs args)
+				{
+					if (m_block_saving)
+						return;
+
+					// Save already pending?
+					if (m_auto_save_in_progress != m_auto_save_issue) return;
+					++m_auto_save_issue;
+
+					// Save settings soon, to batch up multiple changes
+					Dispatcher.CurrentDispatcher.BeginInvokeDelayed(AutoSave, TimeSpan.FromMilliseconds(500));
+				}
+				void AutoSave()
+				{
+					m_auto_save_in_progress = m_auto_save_issue;
+					Save();
 				}
 			}
 		}
+		private int m_auto_save_in_progress;
+		private int m_auto_save_issue;
 		private bool m_auto_save;
 
 		/// <summary>An event raised whenever the settings are loaded from persistent storage</summary>
@@ -582,10 +609,6 @@ namespace pr.common
 		{
 			Save(Filepath);
 		}
-		public void Save(object sender, EventArgs args)
-		{
-			Save();
-		}
 
 		/// <summary>Remove the settings file from persistent storage</summary>
 		public void Delete()
@@ -635,7 +658,7 @@ namespace pr.common
 	}
 
 	/// <summary>A base class for a class that gets saved to/loaded from XML only</summary>
-	public abstract class SettingsXml<T> :ISettingsSet where T:SettingsXml<T>, new()
+	public abstract class SettingsXml<T> :ISettingsSet ,INotifyPropertyChanged ,INotifyPropertyChanging where T:SettingsXml<T>, new()
 	{
 		private readonly Dictionary<string, object> m_data;
 
@@ -708,6 +731,10 @@ namespace pr.common
 		/// <summary>An event raised after a setting has been changed</summary>
 		public event EventHandler<SettingChangedEventArgs> SettingChanged;
 
+		/// <summary>Property changed</summary>
+		public event PropertyChangedEventHandler PropertyChanged;
+		public event PropertyChangingEventHandler PropertyChanging;
+
 		/// <summary>Called just before a setting changes</summary>
 		protected virtual void OnSettingChanging(SettingChangingEventArgs args)
 		{
@@ -749,12 +776,6 @@ namespace pr.common
 				"in the constructor of the derived settings class");
 		}
 
-		/// <summary>Read a settings value</summary>
-		protected Value get<Value>(Expression<Func<T,Value>> expression)
-		{
-			return get<Value>(R<T>.Name(expression));
-		}
-
 		/// <summary>Write a settings value</summary>
 		protected virtual void set<Value>(string key, Value value)
 		{
@@ -774,20 +795,15 @@ namespace pr.common
 
 			// Notify about to change
 			var args = new SettingChangingEventArgs(key, old_value, value, false);
-			OnSettingChanging(args);
-			if (args.Cancel) return;
+			OnSettingChanging(args); if (args.Cancel) return;
+			PropertyChanging.Raise(this, new PropertyChangingEventArgs(key));
 
 			// Change the property
 			m_data[key] = value;
 
 			// Notify changed
 			OnSettingChanged(new SettingChangedEventArgs(key, old_value, value));
-		}
-
-		/// <summary>Write a settings value</summary>
-		protected void set<Value>(Expression<Func<T,Value>> expression, Value value)
-		{
-			set(R<T>.Name(expression), value);
+			PropertyChanged.Raise(this, new PropertyChangedEventArgs(key));
 		}
 
 		/// <summary>Allow XML settings to up converted to the latest version before being loaded</summary>
@@ -876,8 +892,8 @@ namespace pr.unittests
 		private sealed class SubSettings :SettingsSet<SubSettings>
 		{
 			public SubSettings() { Field = 2; Buffer = new byte[]{1,2,3}; }
-			public int Field     { get { return get(x => x.Field); } set { set(x => x.Field, value); } }
-			public byte[] Buffer { get { return get(x => x.Buffer); } set { set(x => x.Buffer, value); } }
+			public int Field     { get { return get<int>(nameof(Field)); } set { set(nameof(Field), value); } }
+			public byte[] Buffer { get { return get<byte[]>(nameof(Buffer)); } set { set(nameof(Buffer), value); } }
 		}
 		private sealed class Settings :SettingsBase<Settings>
 		{
@@ -895,14 +911,14 @@ namespace pr.unittests
 			public Settings(string filepath) :base(filepath) {}
 			public Settings(XElement node) : base(node) {}
 
-			public string         Str    { get { return get(x => x.Str   ); } set { set(x => x.Str    , value); } }
-			public int            Int    { get { return get(x => x.Int   ); } set { set(x => x.Int    , value); } }
-			public DateTimeOffset DTO    { get { return get(x => x.DTO   ); } set { set(x => x.DTO    , value); } }
-			public Font           Font   { get { return get(x => x.Font  ); } set { set(x => x.Font   , value); } }
-			public float[]        Floats { get { return get(x => x.Floats); } set { set(x => x.Floats , value); } }
-			public SubSettings    Sub    { get { return get(x => x.Sub   ); } set { set(x => x.Sub    , value); } }
-			public XElement       Sub2   { get { return get(x => x.Sub2  ); } set { set(x => x.Sub2   , value); } }
-			public object[]       Things { get { return get(x => x.Things); } set { set(x => x.Things , value); } }
+			public string         Str    { get { return get<string        >(nameof(Str   )); } set { set(nameof(Str   ) , value); } }
+			public int            Int    { get { return get<int           >(nameof(Int   )); } set { set(nameof(Int   ) , value); } }
+			public DateTimeOffset DTO    { get { return get<DateTimeOffset>(nameof(DTO   )); } set { set(nameof(DTO   ) , value); } }
+			public Font           Font   { get { return get<Font          >(nameof(Font  )); } set { set(nameof(Font  ) , value); } }
+			public float[]        Floats { get { return get<float[]       >(nameof(Floats)); } set { set(nameof(Floats) , value); } }
+			public SubSettings    Sub    { get { return get<SubSettings   >(nameof(Sub   )); } set { set(nameof(Sub   ) , value); } }
+			public XElement       Sub2   { get { return get<XElement      >(nameof(Sub2  )); } set { set(nameof(Sub2  ) , value); } }
+			public object[]       Things { get { return get<object[]      >(nameof(Things)); } set { set(nameof(Things) , value); } }
 		}
 
 		[Test] public void TestSettings1()

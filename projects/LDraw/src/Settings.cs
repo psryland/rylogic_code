@@ -41,88 +41,88 @@ namespace LDraw
 		/// <summary>Recently loaded files</summary>
 		public string RecentFiles
 		{
-			get { return get(x => x.RecentFiles); }
-			set { set(x => x.RecentFiles, value); }
+			get { return get<string>(nameof(RecentFiles)); }
+			set { set(nameof(RecentFiles), value); }
 		}
 
 		/// <summary>Auto reload script sources when changes are detected</summary>
 		public bool AutoRefresh
 		{
-			get { return get(x => x.AutoRefresh); }
-			set { set(x => x.AutoRefresh, value); }
+			get { return get<bool>(nameof(AutoRefresh)); }
+			set { set(nameof(AutoRefresh), value); }
 		}
 
 		/// <summary>True if the scene should auto range after loading files</summary>
 		public bool ResetOnLoad
 		{
-			get { return get(x => x.ResetOnLoad); }
-			set { set(x => x.ResetOnLoad, value); }
+			get { return get<bool>(nameof(ResetOnLoad)); }
+			set { set(nameof(ResetOnLoad), value); }
 		}
 
 		/// <summary>The size of the focus point</summary>
 		public float FocusPointSize
 		{
-			get { return get(x => x.FocusPointSize); }
-			set { set(x => x.FocusPointSize, value); }
+			get { return get<float>(nameof(FocusPointSize)); }
+			set { set(nameof(FocusPointSize), value); }
 		}
 
 		/// <summary>The size of the focus point</summary>
 		public float OriginPointSize
 		{
-			get { return get(x => x.OriginPointSize); }
-			set { set(x => x.OriginPointSize, value); }
+			get { return get<float>(nameof(OriginPointSize)); }
+			set { set(nameof(OriginPointSize), value); }
 		}
 
 		/// <summary>True if the focus point should be visible</summary>
 		public bool FocusPointVisible
 		{
-			get { return get(x => x.FocusPointVisible); }
-			set { set(x => x.FocusPointVisible, value); }
+			get { return get<bool>(nameof(FocusPointVisible)); }
+			set { set(nameof(FocusPointVisible), value); }
 		}
 
 		/// <summary>True if the origin point should be visible</summary>
 		public bool OriginPointVisible
 		{
-			get { return get(x => x.OriginPointVisible); }
-			set { set(x => x.OriginPointVisible, value); }
+			get { return get<bool>(nameof(OriginPointVisible)); }
+			set { set(nameof(OriginPointVisible), value); }
 		}
 
 		/// <summary>Bitmask of the navigation actions that are applied to all scenes</summary>
 		public ELinkCameras LinkCameras
 		{
-			get { return get(x => x.LinkCameras); }
-			set { set(x => x.LinkCameras, value); }
+			get { return get<ELinkCameras>(nameof(LinkCameras)); }
+			set { set(nameof(LinkCameras), value); }
 		}
 
 		/// <summary>Bitmask of linked grid axes in all scenes</summary>
 		public ELinkAxes LinkAxes
 		{
-			get { return get(x => x.LinkAxes); }
-			set { set(x => x.LinkAxes, value); }
+			get { return get<ELinkAxes>(nameof(LinkAxes)); }
+			set { set(nameof(LinkAxes), value); }
 		}
 
 		/// <summary>The filter patterns used in the object manager</summary>
 		public Pattern[] FilterHistory
 		{
-			get { return get(x => x.FilterHistory); }
-			set { set(x => x.FilterHistory, value); }
+			get { return get<Pattern[]>(nameof(FilterHistory)); }
+			set { set(nameof(FilterHistory), value); }
 		}
 
 		/// <summary>Style options for scenes</summary>
 		public SceneSettings[] Scenes
 		{
-			get { return get(x => x.Scenes); }
-			set { set(x => x.Scenes, value); }
+			get { return get<SceneSettings[]>(nameof(Scenes)); }
+			set { set(nameof(Scenes), value); }
 		}
 
 		/// <summary>UI settings</summary>
 		public UISettings UI
 		{
-			get { return get(x => x.UI); }
+			get { return get<UISettings>(nameof(UI)); }
 			set
 			{
 				if (value == null) throw new ArgumentNullException("Setting '{0}' cannot be null".Fmt(nameof(UI)));
-				set(x => x.UI, value);
+				set(nameof(UI), value);
 			}
 		}
 
@@ -153,22 +153,22 @@ namespace LDraw
 		/// <summary>The camera align axis</summary>
 		public v4 AlignAxis
 		{
-			get { return get(x => x.AlignAxis); }
-			set { set(x => x.AlignAxis, value); }
+			get { return get<v4>(nameof(AlignAxis)); }
+			set { set(nameof(AlignAxis), value); }
 		}
 
 		/// <summary>The reset camera forward direction</summary>
 		public v4 ResetForward
 		{
-			get { return get(x => x.ResetForward); }
-			set { set(x => x.ResetForward, value); Debug.Assert(value != v4.Zero); }
+			get { return get<v4>(nameof(ResetForward)); }
+			set { set(nameof(ResetForward), value); Debug.Assert(value != v4.Zero); }
 		}
 
 		/// <summary>The reset camera up direction</summary>
 		public v4 ResetUp
 		{
-			get { return get(x => x.ResetUp); }
-			set { set(x => x.ResetUp, value); Debug.Assert(value != v4.Zero); }
+			get { return get<v4>(nameof(ResetUp)); }
+			set { set(nameof(ResetUp), value); Debug.Assert(value != v4.Zero); }
 		}
 
 		private class TyConv :GenericTypeConverter<CameraSettings> {}
@@ -217,47 +217,47 @@ namespace LDraw
 		/// <summary>The name of the scene that this settings apply to</summary>
 		public string Name
 		{
-			get { return get(x => x.Name); }
-			set { set(x => x.Name, value); }
+			get { return get<string>(nameof(Name)); }
+			set { set(nameof(Name), value); }
 		}
 
 		/// <summary>Show bounding boxes for objects</summary>
 		public bool ShowBBoxes
 		{
-			get { return get(x => x.ShowBBoxes); }
-			set { set(x => x.ShowBBoxes, value); }
+			get { return get<bool>(nameof(ShowBBoxes)); }
+			set { set(nameof(ShowBBoxes), value); }
 		}
 
 		/// <summary>Show the selection box</summary>
 		public bool ShowSelectionBox
 		{
-			get { return get(x => x.ShowSelectionBox); }
-			set { set(x => x.ShowSelectionBox, value); }
+			get { return get<bool>(nameof(ShowSelectionBox)); }
+			set { set(nameof(ShowSelectionBox), value); }
 		}
 
 		/// <summary>Camera settings</summary>
 		public CameraSettings Camera
 		{
-			get { return get(x => x.Camera); }
+			get { return get<CameraSettings>(nameof(Camera)); }
 			set
 			{
 				if (value == null) throw new ArgumentNullException("Setting '{0}' cannot be null".Fmt(nameof(Camera)));
-				set(x => x.Camera, value);
+				set(nameof(Camera), value);
 			}
 		}
 
 		/// <summary>Scene rendering options</summary>
 		public ChartControl.RdrOptions Options
 		{
-			get { return get(x => x.Options); }
-			set { set(x => x.Options, value); }
+			get { return get<ChartControl.RdrOptions>(nameof(Options)); }
+			set { set(nameof(Options), value); }
 		}
 
 		/// <summary>Light settings</summary>
 		public XElement Light
 		{
-			get { return get(x => x.Light); }
-			set { set(x => x.Light, value); }
+			get { return get<XElement>(nameof(Light)); }
+			set { set(nameof(Light), value); }
 		}
 
 		private class TyConv :GenericTypeConverter<SceneSettings> {}
@@ -279,34 +279,34 @@ namespace LDraw
 		/// <summary>Clear the error log when source data is reloaded</summary>
 		public bool ClearErrorLogOnReload
 		{
-			get { return get(x => x.ClearErrorLogOnReload); }
-			set { set(x => x.ClearErrorLogOnReload, value); }
+			get { return get<bool>(nameof(ClearErrorLogOnReload)); }
+			set { set(nameof(ClearErrorLogOnReload), value); }
 		}
 
 		/// <summary>Show the log window when new errors are added</summary>
 		public bool ShowErrorLogOnNewMessages
 		{
-			get { return get(x => x.ShowErrorLogOnNewMessages); }
-			set { set(x => x.ShowErrorLogOnNewMessages, value); }
+			get { return get<bool>(nameof(ShowErrorLogOnNewMessages)); }
+			set { set(nameof(ShowErrorLogOnNewMessages), value); }
 		}
 
 		/// <summary>The dock panel layout</summary>
 		public XElement UILayout
 		{
-			get { return get(x => x.UILayout); }
-			set { set(x => x.UILayout, value); }
+			get { return get<XElement>(nameof(UILayout)); }
+			set { set(nameof(UILayout), value); }
 		}
 
 		/// <summary>The last position on screen</summary>
 		public Rectangle WindowPosition
 		{
-			get { return get(x => x.WindowPosition); }
-			set { set(x => x.WindowPosition, value); }
+			get { return get<Rectangle>(nameof(WindowPosition)); }
+			set { set(nameof(WindowPosition), value); }
 		}
 		public bool WindowMaximised
 		{
-			get { return get(x => x.WindowMaximised); }
-			set { set(x => x.WindowMaximised, value); }
+			get { return get<bool>(nameof(WindowMaximised)); }
+			set { set(nameof(WindowMaximised), value); }
 		}
 
 		private class TyConv :GenericTypeConverter<UISettings> {}

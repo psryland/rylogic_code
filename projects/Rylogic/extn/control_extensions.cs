@@ -454,6 +454,14 @@ namespace pr.extn
 				() => si.BeginInit(),
 				() => si.EndInit());
 		}
+
+		/// <summary>RAII scope for temporarily disabling 'Enabled' on this control</summary>
+		public static Scope SuspendEnabled(this Control ctrl)
+		{
+			return Scope.Create(
+				() => { var e = ctrl.Enabled; ctrl.Enabled = false; return e; },
+				e => { ctrl.Enabled = e; });
+		}
 	}
 
 	/// <summary>Used to persist control locations and sizes in XML</summary>
@@ -692,11 +700,11 @@ namespace pr.extn
 			if (val != Maths.Clamp(min, val, max))
 				throw new Exception("Value is not within the given range of values");
 
-			// Setting to Minimum/Maximum values first to avoids problems if min > Value or max < Value
-			tb.Minimum = int.MinValue;
-			tb.Maximum = int.MaxValue;
+			// Setting to Minimum/Maximum values first to avoid problems if min > Value or max < Value
+			tb.Minimum = Math.Min(min, tb.Value);
+			tb.Maximum = Math.Max(max, tb.Value);
 
-			// Setting Value before Min/Max avoids setting Value twice when Value < MinDate or Value > MaxDate
+			// Setting Value before Min/Max avoids setting Value twice when Value < Min or Value > Max
 			tb.Value = val;
 			tb.Minimum = min;
 			tb.Maximum = max;

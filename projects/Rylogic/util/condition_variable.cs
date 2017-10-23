@@ -77,7 +77,6 @@ namespace pr.util
 	}
 
 	/// <summary>A condition variable that encapsulates a shared state variable</summary>
-	/// <typeparam name="T"></typeparam>
 	public class ConditionVariable<T>
 	{
 		// Use:

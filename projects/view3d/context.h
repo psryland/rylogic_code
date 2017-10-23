@@ -20,10 +20,10 @@ namespace view3d
 		pr::ldr::ScriptSources   m_sources;       // A container of Ldr objects and a file watcher
 		std::recursive_mutex     m_mutex;
 
-		explicit Context(HINSTANCE instance, BOOL gdi_compatible)
+		explicit Context(HINSTANCE instance, BOOL bgra_compatible)
 			:m_inits()
 			,m_compatible(pr::rdr::TestSystemCompatibility())
-			,m_rdr(pr::rdr::RdrSettings(instance, gdi_compatible))
+			,m_rdr(pr::rdr::RdrSettings(instance, bgra_compatible))
 			,m_wnd_cont()
 			,m_sources(m_rdr, This())
 			,m_mutex()

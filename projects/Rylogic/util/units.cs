@@ -62,6 +62,9 @@ namespace pr.util
 		// Binary operators
 		[DebuggerStepThrough] public static Unit<T> operator + (Unit<T> lhs, Unit<T> rhs)
 		{
+			// Allow add to scalar zero
+			if (rhs.IsScalarZero) return lhs;
+			if (lhs.IsScalarZero) return rhs;
 			if (lhs.UnitId != rhs.UnitId) throw new Exception("Unit types don't match");
 			return new Unit<T>(Operators<T>.Add(lhs.Value, rhs.Value), lhs.UnitId);
 		}
@@ -75,6 +78,9 @@ namespace pr.util
 		}
 		[DebuggerStepThrough] public static Unit<T> operator - (Unit<T> lhs, Unit<T> rhs)
 		{
+			// Allow subtract with scalar zero
+			if (rhs.IsScalarZero) return lhs;
+			if (lhs.IsScalarZero) return -rhs;
 			if (lhs.UnitId != rhs.UnitId) throw new Exception("Unit types don't match");
 			return new Unit<T>(Operators<T>.Sub(lhs.Value, rhs.Value), lhs.UnitId);
 		}
@@ -407,6 +413,24 @@ namespace pr.util
 		{
 			return x.HasValue && x.Value.Within(beg, end);
 		}
+
+		/// <summary>ToString</summary>
+		public static string ToString<T>(this Unit<T>? x, bool include_units) where T:IComparable
+		{
+			return x?.ToString(include_units) ?? string.Empty;
+		}
+		public static string ToString<T>(this Unit<T>? x, IFormatProvider fp, bool include_units = false) where T:IComparable
+		{
+			return x?.ToString(fp, include_units) ?? string.Empty;
+		}
+		public static string ToString<T>(this Unit<T>? x, string fmt, bool include_units = false) where T:IComparable
+		{
+			return x?.ToString(fmt, include_units) ?? string.Empty;
+		}
+		public static string ToString<T>(this Unit<T>? x, string fmt, IFormatProvider fp, bool include_units = false) where T:IComparable
+		{
+			return x?.ToString(fmt, fp, include_units) ?? string.Empty;
+		}
 	}
 }
 
@@ -428,6 +452,8 @@ namespace pr.unittests
 			Assert.AreEqual(-v0, -0.123m._("A"));
 
 			// Binary Operators
+			Assert.AreEqual(v0 + 0m, 0.123m._("A"));
+			Assert.AreEqual(0m - v1, -0.456m._("A"));
 			Assert.AreEqual(v0 + 0.456m, 0.579m._("A"));
 			Assert.AreEqual(0.123m + v1, 0.579m._("A"));
 			Assert.AreEqual(v0 + v1, 0.579m._("A"));

@@ -411,10 +411,10 @@ namespace pr
 	inline Colour32 Lerp(Colour32 lhs, Colour32 rhs, float frac)
 	{
 		return Colour32(
-			lhs.r * (1.0f - frac) + rhs.r * frac,
-			lhs.g * (1.0f - frac) + rhs.g * frac,
-			lhs.b * (1.0f - frac) + rhs.b * frac,
-			lhs.a * (1.0f - frac) + rhs.a * frac);
+			int(lhs.r * (1.0f - frac) + rhs.r * frac),
+			int(lhs.g * (1.0f - frac) + rhs.g * frac),
+			int(lhs.b * (1.0f - frac) + rhs.b * frac),
+			int(lhs.a * (1.0f - frac) + rhs.a * frac));
 	}
 
 	// Create a random colour

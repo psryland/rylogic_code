@@ -733,7 +733,7 @@ namespace pr
 		{
 			if (!bbox_.valid())
 				throw std::exception("Camera: Cannot view an invalid bounding box");
-			if (bbox_.empty())
+			if (bbox_.empty() || bbox_.m_radius == v4Zero)
 				return;
 
 			// Handle degenerate bounding boxes

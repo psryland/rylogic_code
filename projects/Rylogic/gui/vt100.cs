@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
-using System.Runtime.InteropServices;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using System.Xml.Linq;
 using pr.common;
 using pr.extn;
 using pr.util;
@@ -29,62 +28,6 @@ namespace pr.gui
 		[TypeConverter(typeof(Settings.TyConv))]
 		public class Settings :SettingsSet<Settings>
 		{
-			// Some values are cached for performance
-
-			/// <summary>True if input characters should be echoed into the screen buffer</summary>
-			public bool LocalEcho
-			{
-				get { return get(x => x.LocalEcho); }
-				set { set(x => x.LocalEcho, value); }
-			}
-
-			/// <summary>Get/Set the width of the terminal in columns</summary>
-			public int TerminalWidth
-			{
-				get { return (m_cached_terminal_width ?? (m_cached_terminal_width = get(x => x.TerminalWidth))).Value; }
-				set { set(x => x.TerminalWidth, m_cached_terminal_width = value); }
-			}
-			private int? m_cached_terminal_width;
-
-			/// <summary>Get/Set the height of the terminal in lines</summary>
-			public int TerminalHeight
-			{
-				get { return (m_cached_terminal_height ?? (m_cached_terminal_height = get(x => x.TerminalHeight))).Value; }
-				set { set(x => x.TerminalHeight, m_cached_terminal_height = value); }
-			}
-			private int? m_cached_terminal_height;
-
-			/// <summary>Get/Set the tab size in characters</summary>
-			public int TabSize
-			{
-				get { return (m_cached_tab_size ?? (m_cached_tab_size = get(x => x.TabSize))).Value; }
-				set { set(x => x.TabSize, m_cached_tab_size = value); }
-			}
-			private int? m_cached_tab_size;
-
-			/// <summary>Get/Set the newline mode for received newlines</summary>
-			public ENewLineMode NewlineRecv
-			{
-				get { return (m_cached_newline_recv ?? (m_cached_newline_recv = get(x => x.NewlineRecv))).Value; }
-				set { set(x => x.NewlineRecv, m_cached_newline_recv = value); }
-			}
-			private ENewLineMode? m_cached_newline_recv;
-
-			/// <summary>Get/Set the newline mode for sent newlines</summary>
-			public ENewLineMode NewlineSend
-			{
-				get { return (m_cached_newline_send ?? (m_cached_newline_send = get(x => x.NewlineSend))).Value; }
-				set { set(x => x.NewlineSend, m_cached_newline_send = value); }
-			}
-			private ENewLineMode? m_cached_newline_send;
-
-			/// <summary>Get/Set the received data being written has hex data into the buffer</summary>
-			public bool HexOutput
-			{
-				get { return get(x => x.HexOutput); }
-				set { set(x => x.HexOutput, value); }
-			}
-
 			public Settings()
 			{
 				LocalEcho      = false;
@@ -96,16 +39,53 @@ namespace pr.gui
 				HexOutput      = false;
 			}
 
-			public override void FromXml(XElement node)
+			/// <summary>True if input characters should be echoed into the screen buffer</summary>
+			public bool LocalEcho
 			{
-				base.FromXml(node);
+				get { return get<bool>(nameof(LocalEcho)); }
+				set { set(nameof(LocalEcho), value); }
+			}
 
-				// Reset cached values after loading
-				m_cached_tab_size = null;
-				m_cached_terminal_width = null;
-				m_cached_terminal_height = null;
-				m_cached_newline_recv = null;
-				m_cached_newline_send = null;
+			/// <summary>Get/Set the width of the terminal in columns</summary>
+			public int TerminalWidth
+			{
+				get { return get<int>(nameof(TerminalWidth)); }
+				set { set(nameof(TerminalWidth), value); }
+			}
+
+			/// <summary>Get/Set the height of the terminal in lines</summary>
+			public int TerminalHeight
+			{
+				get { return get<int>(nameof(TerminalHeight)); }
+				set { set(nameof(TerminalHeight), value); }
+			}
+
+			/// <summary>Get/Set the tab size in characters</summary>
+			public int TabSize
+			{
+				get { return get<int>(nameof(TabSize)); }
+				set { set(nameof(TabSize), value); }
+			}
+
+			/// <summary>Get/Set the newline mode for received newlines</summary>
+			public ENewLineMode NewlineRecv
+			{
+				get { return get<ENewLineMode>(nameof(NewlineRecv)); }
+				set { set(nameof(NewlineRecv), value); }
+			}
+
+			/// <summary>Get/Set the newline mode for sent newlines</summary>
+			public ENewLineMode NewlineSend
+			{
+				get { return get<ENewLineMode>(nameof(NewlineSend)); }
+				set { set(nameof(NewlineSend), value); }
+			}
+
+			/// <summary>Get/Set the received data being written has hex data into the buffer</summary>
+			public bool HexOutput
+			{
+				get { return get<bool>(nameof(HexOutput)); }
+				set { set(nameof(HexOutput), value); }
 			}
 
 			/// <summary>Type converter for displaying in a property grid</summary>

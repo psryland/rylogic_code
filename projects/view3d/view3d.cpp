@@ -113,13 +113,13 @@ namespace pr
 // Initialise calls are reference counted and must be matched with Shutdown calls
 // 'initialise_error_cb' is used to report dll initialisation errors only (i.e. it isn't stored)
 // Note: this function is not thread safe, avoid race calls
-VIEW3D_API View3DContext __stdcall View3D_Initialise(View3D_ReportErrorCB initialise_error_cb, void* ctx, BOOL gdi_compatibility)
+VIEW3D_API View3DContext __stdcall View3D_Initialise(View3D_ReportErrorCB initialise_error_cb, void* ctx, BOOL bgra_compatibility)
 {
 	try
 	{
 		// Create the dll context on the first call
 		if (g_ctx == nullptr)
-			g_ctx = new Context(g_hInstance, gdi_compatibility);
+			g_ctx = new Context(g_hInstance, bgra_compatibility);
 
 		// Generate a unique handle per Initialise call, used to match up with Shutdown calls
 		static View3DContext context = nullptr;
@@ -347,6 +347,20 @@ VIEW3D_API void __stdcall View3D_WindowRemoveObject(View3DWindow window, View3DO
 
 		DllLockGuard;
 		window->Remove(object);
+
+		// Sanity check, make sure there are no other references to 'object' still
+		#if PR_DBG
+		{
+			pr::MultiCast<RenderingCB>::Lock mclock(window->OnRendering);
+			for (auto& cb : mclock)
+				assert(cb.m_ctx != object);
+		}
+		{
+			pr::MultiCast<SceneChangedCB>::Lock mclock(window->OnSceneChanged);
+			for (auto& cb : mclock)
+				assert(cb.m_ctx != object);
+		}
+		#endif
 	}
 	CatchAndReport(View3D_WindowRemoveObject, window,);
 }
@@ -1351,11 +1365,15 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(wchar_t const* ldr_scri
 	try
 	{
 		DllLockGuard;
+		auto& cont = Dll().m_sources.Objects();
+		auto count = cont.size();
+
+		// Load the ldr script
 		Dll().LoadScript(ldr_script, file != 0, context_id, GetIncludes(includes));
 
-		// Return the last object. expecting 'ldr_script' to define one object only
-		auto& cont = Dll().m_sources.Objects();
-		return !cont.empty() ? cont.back().m_ptr : nullptr;
+		// Return the last object. expecting 'ldr_script' to define one object only.
+		// It doesn't matter if more are defined however, they're just created as
+		return cont.size() != count ? cont.back().m_ptr : nullptr;
 	}
 	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
 }
@@ -1470,6 +1488,21 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreateEditCB(char const* name, Vi
 		return obj.m_ptr;
 	}
 	CatchAndReport(View3D_ObjectCreateEditCB, , nullptr);
+}
+
+// Create an instance of 'obj'
+VIEW3D_API View3DObject __stdcall View3D_ObjectCreateInstance(View3DObject existing)
+{
+	try
+	{
+		DllLockGuard;
+		auto obj = pr::ldr::CreateInstance(existing);
+		if (obj)
+			Dll().m_sources.Add(obj);
+
+		return obj.m_ptr;
+	}
+	CatchAndReport(View3D_ObjectCreateInstance, , nullptr);
 }
 
 // Edit an existing model

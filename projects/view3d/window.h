@@ -58,7 +58,7 @@ namespace view3d
 			RECT rect;
 			::GetClientRect(hwnd, &rect);
 
-			auto settings        = pr::rdr::WndSettings(hwnd, true, opts.m_gdi_compatible != 0, pr::To<pr::iv2>(rect));
+			auto settings        = pr::rdr::WndSettings(hwnd, true, opts.m_gdi_compatible_backbuffer != 0, pr::To<pr::iv2>(rect));
 			settings.m_multisamp = pr::rdr::MultiSamp(opts.m_multisampling);
 			settings.m_name      = opts.m_dbg_name;
 			return settings;

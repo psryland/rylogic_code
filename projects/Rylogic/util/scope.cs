@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace pr.util
 {
@@ -14,12 +15,24 @@ namespace pr.util
 			s.Init(on_enter, on_exit);
 			return s;
 		}
+		public static async Task<Scope> CreateAsync(Func<Task> on_enter, Action on_exit)
+		{
+			var s = new Scope();
+			await s.InitAsync(on_enter, on_exit);
+			return s;
+		}
 
 		/// <summary>Create a scope around a value</summary>
 		public static Scope<T> Create<T>(Func<T> on_enter, Action<T> on_exit)
 		{
 			var s = new Scope<T>();
 			s.Init(() => s.Value = on_enter(), () => on_exit(s.Value));
+			return s;
+		}
+		public static async Task<Scope<T>> CreateAsync<T>(Func<Task<T>> on_enter, Action<T> on_exit)
+		{
+			var s = new Scope<T>();
+			await s.InitAsync(async () => s.Value = await on_enter(), () => on_exit(s.Value));
 			return s;
 		}
 
@@ -30,6 +43,13 @@ namespace pr.util
 			m_on_exit = on_exit;
 			if (on_enter != null)
 				on_enter();
+		}
+		protected async Task<Scope> InitAsync(Func<Task> on_enter, Action on_exit)
+		{
+			// Note: important to save 'on_exit' before calling 'on_enter' in case it throws
+			m_on_exit = on_exit;
+			if (on_enter != null) await on_enter();
+			return this;
 		}
 
 		/// <summary>Allow subclasses to inherit without having to forward the on_enter/on_exit constructor</summary>
