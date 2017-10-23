@@ -69,6 +69,7 @@ namespace Bot.Fishing
 		protected override void Dispose(bool disposing)
 		{
 			Fisher = null;
+			DockControl = null;
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
@@ -94,21 +95,15 @@ namespace Bot.Fishing
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public DockControl DockControl
 		{
-			[DebuggerStepThrough] get { return m_impl_dock_control; }
+			[DebuggerStepThrough] get { return m_dock_control; }
 			private set
 			{
-				if (m_impl_dock_control == value) return;
-				if (m_impl_dock_control != null)
-				{
-					Util.Dispose(ref m_impl_dock_control);
-				}
-				m_impl_dock_control = value;
-				if (m_impl_dock_control != null)
-				{
-				}
+				if (m_dock_control == value) return;
+				Util.Dispose(ref m_dock_control);
+				m_dock_control = value;
 			}
 		}
-		private DockControl m_impl_dock_control;
+		private DockControl m_dock_control;
 
 		/// <summary>Set up UI elements</summary>
 		private void SetupUI()

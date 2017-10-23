@@ -2,12 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using pr.common;
 using pr.db;
 using pr.extn;
@@ -37,17 +32,17 @@ namespace CoinFlip
 		/// <summary>The candle index range covered by 'm_cache'. 0 = Oldest, Count = Latest</summary>
 		private Range m_index_range;
 
+		/// <summary>Create a view of price data that updates as new data arrives</summary>
 		public Instrument(string name, PriceData pd)
 		{
 			try
 			{
+				Debug.Assert(pd.Model.AssertMainThread());
+
 				Name = name;
 				PriceData = pd;
 				Model = pd.Model;
 				Pair = pd.Pair;
-
-				// Access the sqlite database of historic price data
-				DB = new Sqlite.Database(PriceData.DBFilepath);
 
 				// A cache of candle data read from the DB
 				m_cache = new List<Candle>();
@@ -62,7 +57,6 @@ namespace CoinFlip
 		public virtual void Dispose()
 		{
 			Util.BreakIf(Util.IsGCFinalizerThread, "Leaked Instrument");
-			DB = null;
 			Pair = null;
 			Model = null;
 			PriceData = null;
@@ -133,36 +127,26 @@ namespace CoinFlip
 					var idx = m_cache.BinarySearch(x => x.Timestamp.CompareTo(time), find_insert_position:true) - 1;
 					m_count = idx + m_index_range.Begi;
 
-					// Reset the order books to the current price at the new sim time
-					// (After the instrument.Count, Latest, etc have been updated)
-					CreateFakeOrderBook();
-
 					// Raise data changed so that dependent charts update
 					OnDataChanged(new DataEventArgs(PriceData, range));
 				}
 				void HandleSimStep(object sender, SimStepEventArgs e)
 				{
-					// Get the candle for the current sim time. Can't use 'IndexAt' because it is limited by 'Count'
-					var time = e.Clock.Ticks + 1; // +1 so binary search returns the same candle for [time, time + TimeFrame)
-					var idx = m_cache.BinarySearch(x => x.Timestamp.CompareTo(time), find_insert_position:true) - 1;
-					var candle = idx.Within(0, m_cache.Count) ? m_cache[idx] : null;
-					if (candle == null)
-						return;
+					var candle_type = DataEventArgs.ECandleType.Current;
 
-					var candle_type = 
-						candle.Timestamp >= Latest.Timestamp + Misc.TimeFrameToTicks(1.0, TimeFrame) ? DataEventArgs.ECandleType.New :
-						candle.Timestamp >= Latest.Timestamp ? DataEventArgs.ECandleType.Current :
-						DataEventArgs.ECandleType.Other;
+					// Update 'Latest' for the new clock value
+					if (!e.Clock.Ticks.Within(Latest.Timestamp, Latest.Timestamp + Misc.TimeFrameToTicks(1.0, TimeFrame)))
+					{
+						if (Count - m_index_range.Begi < m_index_range.Endi)
+							++m_count;
 
-					// New candle?
-					switch (candle_type) {
-					case DataEventArgs.ECandleType.New: m_count += 1; break;
-					case DataEventArgs.ECandleType.Current: break;
-					default: m_count = null; break;
+						candle_type = DataEventArgs.ECandleType.New;
+						if (!e.Clock.Ticks.Within(Latest.Timestamp, Latest.Timestamp + Misc.TimeFrameToTicks(1.0, TimeFrame)))
+						{
+							m_count = null;
+							candle_type = DataEventArgs.ECandleType.Other;
+						}
 					}
-
-					// Update the order books to the current price at the new sim time
-					CreateFakeOrderBook();
 
 					// Raise data changed to simulate the new data having 'arrived'
 					OnDataChanged(new DataEventArgs(PriceData, new Range(Count-1,Count), Latest, candle_type));
@@ -180,6 +164,7 @@ namespace CoinFlip
 				if (m_price_data == value) return;
 				if (m_price_data != null)
 				{
+					m_price_data.DataSyncingChanged -= HandleDataSyncingChanged;
 					m_price_data.DataChanged -= HandleDataChanged;
 					Util.Dispose(ref m_pd_ref);
 				}
@@ -188,6 +173,7 @@ namespace CoinFlip
 				{
 					m_pd_ref = m_price_data.RefToken();
 					m_price_data.DataChanged += HandleDataChanged;
+					m_price_data.DataSyncingChanged += HandleDataSyncingChanged;
 				}
 
 				// Handlers
@@ -207,23 +193,14 @@ namespace CoinFlip
 					// Notify source data changed
 					OnDataChanged(e);
 				}
+				void HandleDataSyncingChanged(object sender, EventArgs e)
+				{
+					OnDataSyncingChanged();
+				}
 			}
 		}
 		private PriceData m_price_data;
 		private Scope m_pd_ref;
-
-		/// <summary>Database access</summary>
-		private Sqlite.Database DB
-		{
-			[DebuggerStepThrough] get { return m_impl_db; }
-			set
-			{
-				if (m_impl_db == value) return;
-				Util.Dispose(ref m_impl_db);
-				m_impl_db = value;
-			}
-		}
-		private Sqlite.Database m_impl_db;
 
 		/// <summary>The currency pair this instrument represents</summary>
 		public TradePair Pair
@@ -234,12 +211,12 @@ namespace CoinFlip
 				if (m_pair == value) return;
 				if (m_pair != null)
 				{
-					m_pair.OrderBookChanged -= HandlePairOrderBookChanged;
+					m_pair.MarketDepth.OrderBookChanged -= HandlePairOrderBookChanged;
 				}
 				m_pair = value;
 				if (m_pair != null)
 				{
-					m_pair.OrderBookChanged += HandlePairOrderBookChanged;
+					m_pair.MarketDepth.OrderBookChanged += HandlePairOrderBookChanged;
 				}
 
 				// Handlers
@@ -274,7 +251,6 @@ namespace CoinFlip
 		private int DBCandleCount
 		{
 			// This is different to 'Count' when the simulation time is less than the current time.
-			// It allows finding the index of the last candle < Model.UtcNow
 			get { return PriceData.Count; }
 		}
 
@@ -287,7 +263,8 @@ namespace CoinFlip
 				{
 					if (TimeFrame == ETimeFrame.None) throw new Exception("Invalid time frame");
 					var sql = Str.Build("select count(*) from ",TimeFrame," where [",nameof(Candle.Timestamp),"] <= ?");
-					m_count = DB.ExecuteScalar(sql, 1, new object[] { Model.UtcNow.Ticks });
+					using (var db = new Sqlite.Database(PriceData.DBFilepath))
+						m_count = db.ExecuteScalar(sql, 1, new object[] { Model.UtcNow.Ticks });
 				}
 				return m_count.Value;
 			}
@@ -315,7 +292,9 @@ namespace CoinFlip
 		{
 			get
 			{
-				Debug.Assert(idx.Within(0, Count));
+				if (!idx.Within(0, Count))
+					throw new ArgumentOutOfRangeException(nameof(idx), $"Invalid candle index: {idx}. Range: [0,{Count})");
+
 				EnsureCached(idx);
 				return m_cache[idx - m_index_range.Begi];
 			}
@@ -340,66 +319,30 @@ namespace CoinFlip
 			DataChanged.Raise(this, args);
 		}
 
+		/// <summary>True when the price data is out of date</summary>
+		public bool DataSyncing
+		{
+			get { return m_price_data.DataSyncing; }
+		}
+
+		/// <summary>Raised whenever the price data may be out of date, or back into date</summary>
+		public event EventHandler DataSyncingChanged;
+		protected virtual void OnDataSyncingChanged()
+		{
+			DataSyncingChanged.Raise();
+		}
+
 		/// <summary>String description of the instrument</summary>
 		public string Description
 		{
 			get { return $"{Name} {Pair.NameWithExchange} {TimeFrame}"; }
 		}
 
-		#region Price Data
-
 		/// <summary>The current spot price for Quote to Base trades</summary>
-		public Unit<decimal> SpotPrice(ETradeType tt)
+		public Unit<decimal>? SpotPrice(ETradeType tt)
 		{
 			return Pair.SpotPrice(tt); 
 		}
-
-		/// <summary>The current spot price for Quote to Base trades</summary>
-		public Unit<decimal> Q2BPrice
-		{
-			get { return SpotPrice(ETradeType.Q2B); }
-		}
-
-		/// <summary>The current spot price for Base to Quote trades</summary>
-		public Unit<decimal> B2QPrice
-		{
-			get { return SpotPrice(ETradeType.B2Q); }
-		}
-
-		/// <summary>Populate the order book for 'Pair' with fake orders based on the Latest candle</summary>
-		public void CreateFakeOrderBook()
-		{
-			if (!Model.BackTesting)
-				throw new Exception("Don't create fake orders unless back testing");
-
-			// Interpolate the latest candle to determine the spot price
-			var t = Maths.Frac(Latest.Timestamp, Model.Simulation.Clock.Ticks, Latest.Timestamp + Misc.TimeFrameToTicks(1.0, TimeFrame));
-			var latest = Latest.SubCandle(Maths.Clamp(t, 0.0, 1.0));
-			var spread = latest.Close * Model.Settings.BackTesting.SpreadFrac;
-			var spot_price_q2b = ((decimal)(latest.Close         ))._(Pair.RateUnits);
-			var spot_price_b2q = ((decimal)(latest.Close + spread))._(Pair.RateUnits);
-
-			// Generate fake buy and sell orders
-			var b2q_ffers = new Order[]
-			{
-				new Order(spot_price_q2b * 1.00m,   0.1m._(Pair.Base)),
-				new Order(spot_price_q2b * 0.99m,   1.0m._(Pair.Base)),
-				new Order(spot_price_q2b * 0.97m,  10.0m._(Pair.Base)),
-				new Order(spot_price_q2b * 0.91m, 100.0m._(Pair.Base)),
-			};
-			var q2b_offers = new Order[]
-			{
-				new Order(spot_price_b2q * 1.00m,   0.1m._(Pair.Base)),
-				new Order(spot_price_b2q * 1.01m,   1.0m._(Pair.Base)),
-				new Order(spot_price_b2q * 1.03m,  10.0m._(Pair.Base)),
-				new Order(spot_price_b2q * 1.09m, 100.0m._(Pair.Base)),
-			};
-
-			// Don't notify, because we do that in SimStep and SimReset
-			Pair.UpdateOrderBook(b2q_ffers, q2b_offers, notify_changed:false);
-		}
-
-		#endregion
 
 		#region Ranges and Indexing
 
@@ -425,11 +368,24 @@ namespace CoinFlip
 			// Otherwise, use a database query to determine the index, and grow the cache
 			else
 			{
-				var sql = $"select count(*)-1 from {TimeFrame} where [{nameof(Candle.Timestamp)}] <= ? order by [{nameof(Candle.Timestamp)}]";
-				var idx = DB.ExecuteScalar(sql, 1, new object[] { time_stamp.ExactTicks });
+				int idx = 0;
+				using (var db = new Sqlite.Database(PriceData.DBFilepath))
+				{
+					var sql = $"select count(*)-1 from {TimeFrame} where [{nameof(Candle.Timestamp)}] <= ? order by [{nameof(Candle.Timestamp)}]";
+					idx = db.ExecuteScalar(sql, 1, new object[] { time_stamp.ExactTicks });
+					if (idx == -1) idx = 0; // -1 means before the first item
+				}
 				EnsureCached(idx);
 				return idx;
 			}
+		}
+
+		/// <summary>Return the fractional index of the candle at 'time_stamp'</summary>
+		public double FIndexAt(TimeFrameTime time_stamp)
+		{
+			var idx = IndexAt(time_stamp);
+			var frac = Misc.TicksToTimeFrame(time_stamp.ExactTicks - this[idx].Timestamp, TimeFrame);
+			return idx + frac;
 		}
 
 		/// <summary>Clamps the given index range to a valid range within the data. [0, Count]</summary>
@@ -485,41 +441,56 @@ namespace CoinFlip
 		}
 
 		/// <summary>Ensure the cached data contains candle index 'idx'</summary>
-		private void EnsureCached(int idx)
+		public void EnsureCached(int idx)
 		{
-			// Already cached?
-			if (m_index_range.Contains(idx))
-				return;
+			// Instrument should only be accessed from the main thread
+			Debug.Assert(Model.AssertMainThread());
 
 			// Shouldn't be requesting indices outside the range of available data
 			Debug.Assert(idx.Within(0, DBCandleCount));
 
-			// Read from the database. Order by timestamp so that the oldest is first, and the newest is at the end.
-			var sql = Str.Build("select * from ",TimeFrame," order by [",nameof(Candle.Timestamp),"] limit ?,?");
+			// Already cached?
+			if (m_index_range.Contains(idx))
+				return;
 
-			// Grow the index range in multiples of chunk size
+			// Read from the sqlite database of historic price data
+			Candle[] ReadCandles(Range read)
+			{
+				using (var db = new Sqlite.Database(PriceData.DBFilepath))
+				{
+					// Read from the database. Order by timestamp so that the oldest is first, and the newest is at the end.
+					var sql = Str.Build("select * from ", TimeFrame, " order by [", nameof(Candle.Timestamp), "] limit ?,?");
+					return db.EnumRows<Candle>(sql, 1, new object[] { read.Begi, read.Sizei }).ToArray();
+				}
+			}
+
+			// Determine the range of data to read
 			if (m_index_range.Empty)
 			{
-				var to_get = new Range(Math.Max(0L, idx - CacheChunkSize), Math.Min(DBCandleCount, idx + CacheChunkSize));
-				m_cache.AddRange(DB.EnumRows<Candle>(sql, 1, new object[] { to_get.Begi, to_get.Sizei }));
-				m_index_range = to_get;
+				var read = new Range(Math.Max(0L, idx - CacheChunkSize), Math.Min(DBCandleCount, idx + CacheChunkSize));
+				m_cache.AddRange(ReadCandles(read));
+				m_index_range = read;
 			}
-			if (idx < m_index_range.Beg)
-			{
-				var chunks = (m_index_range.Beg - idx + CacheChunkSize - 1) / CacheChunkSize;
-				var to_get = new Range(Math.Max(0L, m_index_range.Beg - chunks*CacheChunkSize), m_index_range.Beg);
-				m_cache.InsertRange(0, DB.EnumRows<Candle>(sql, 1, new object[] { to_get.Begi, to_get.Sizei }));
-				m_index_range.Beg = to_get.Beg;
-			}
-			if (idx >= m_index_range.End)
+			else if (idx >= m_index_range.End)
 			{
 				var chunks = (idx+1 - m_index_range.End + CacheChunkSize - 1) / CacheChunkSize;
-				var to_get = new Range(m_index_range.End, Math.Min(DBCandleCount, m_index_range.End + chunks*CacheChunkSize));
-				m_cache.AddRange(DB.EnumRows<Candle>(sql, 1, new object[] { to_get.Begi, to_get.Sizei }));
-				m_index_range.End = to_get.End;
+				var read = new Range(m_index_range.End, Math.Min(DBCandleCount, m_index_range.End + chunks*CacheChunkSize));
+				m_cache.AddRange(ReadCandles(read));
+				m_index_range.End = read.End;
+			}
+			else if (idx < m_index_range.Beg)
+			{
+				var chunks = (m_index_range.Beg - idx + CacheChunkSize - 1) / CacheChunkSize;
+				var read = new Range(Math.Max(0L, m_index_range.Beg - chunks*CacheChunkSize), m_index_range.Beg);
+				m_cache.InsertRange(0, ReadCandles(read));
+				m_index_range.Beg = read.Beg;
+			}
+			else
+			{
+				throw new Exception();
 			}
 
-			// We should have grown the cache to contain 'idx'
+			// We should now have 'idx' in the cache
 			Debug.Assert(idx.Within(m_index_range.Begi, m_index_range.Endi));
 		}
 

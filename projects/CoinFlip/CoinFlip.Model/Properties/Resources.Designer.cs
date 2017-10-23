@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace CoinFlip.Properties {
+namespace CoinFlip {
     using System;
     
     

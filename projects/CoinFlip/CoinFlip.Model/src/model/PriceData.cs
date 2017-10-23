@@ -2,13 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
 using pr.common;
 using pr.db;
 using pr.extn;
+using pr.maths;
 using pr.util;
 
 namespace CoinFlip
@@ -63,6 +61,7 @@ namespace CoinFlip
 		}
 		public void Dispose()
 		{
+			Util.BreakIf(m_ref.Count != 0, "Price Data still in use");
 			UpdateThreadActive = false;
 			DB = null;
 			Pair = null;
@@ -101,10 +100,14 @@ namespace CoinFlip
 				if (m_model != null)
 				{
 					m_model.BackTestingChanging -= HandleBackTestingChanging;
+					m_model.SimReset -= HandleSimReset;
+					m_model.SimStep -= HandleSimStep;
 				}
 				m_model = value;
 				if (m_model != null)
 				{
+					m_model.SimStep += HandleSimStep;
+					m_model.SimReset += HandleSimReset;
 					m_model.BackTestingChanging += HandleBackTestingChanging;
 				}
 
@@ -118,6 +121,25 @@ namespace CoinFlip
 					// If back testing is just been disabled, turn on the update thread
 					if (!Model.BackTesting && e.After)
 						UpdateThreadActive = m_ref.Count != 0;
+				}
+				void HandleSimReset(object sender, SimResetEventArgs e)
+				{
+					ValidateCurrent(e.StartTime);
+				}
+				void HandleSimStep(object sender, SimStepEventArgs e)
+				{
+					ValidateCurrent(e.Clock);
+				}
+				void ValidateCurrent(DateTimeOffset clock)
+				{
+					// Update 'm_current' for the new clock value
+					if (!clock.Ticks.Within(Current.Timestamp, Current.Timestamp + Misc.TimeFrameToTicks(1.0, TimeFrame)))
+					{
+						m_current = 
+							clock.Ticks > Newest.Timestamp ? m_newest :
+							clock.Ticks < Oldest.Timestamp ? m_oldest :
+							null;
+					}
 				}
 			}
 		}
@@ -177,39 +199,59 @@ namespace CoinFlip
 		}
 		private int? m_total;
 
-		/// <summary>The candle with the latest timestamp for the current time frame</summary>
+		/// <summary>The candle with the newest timestamp in the database</summary>
 		public Candle Newest
 		{
 			get
 			{
 				if (m_newest == null)
 				{
-					var ts = $"[{nameof(Candle.Timestamp)}]";
-					var sql = Str.Build("select * from ",TimeFrame," where ",ts," <= ? order by ",ts," desc limit 1");
-					m_newest = DB.EnumRows<Candle>(sql, 1, new object[] { Model.UtcNow.Ticks }).FirstOrDefault();
+					var sql = Str.Build("select * from ",TimeFrame," order by [",nameof(Candle.Timestamp),"] desc limit 1");
+					m_newest = DB.EnumRows<Candle>(sql).FirstOrDefault();
 				}
 				return m_newest ?? Candle.Default;
 			}
 		}
 		private Candle m_newest;
 
-		/// <summary>The candle with the oldest timestamp for the current time frame</summary>
+		/// <summary>The candle with the oldest timestamp in the database</summary>
 		public Candle Oldest
 		{
 			get
 			{
 				if (m_oldest == null)
 				{
-					var ts = $"[{nameof(Candle.Timestamp)}]";
-					var sql = Str.Build("select * from ",TimeFrame," where ",ts," < ? order by ",ts," asc limit 1");
-					m_oldest = DB.EnumRows<Candle>(sql, 1, new object[] { Model.UtcNow.Ticks }).FirstOrDefault();
+					var sql = Str.Build("select * from ",TimeFrame," order by [",nameof(Candle.Timestamp),"] asc limit 1");
+					m_oldest = DB.EnumRows<Candle>(sql).FirstOrDefault();
 				}
 				return m_oldest ?? Candle.Default;
 			}
 		}
 		private Candle m_oldest;
 
-		/// <summary>The timestamp of the last time we received data (not necessarily the an update to 'Latest) (in UTC)</summary>
+		/// <summary>The candle with the latest timestamp for the current time. Note: Current != Newest when back testing</summary>
+		public Candle Current
+		{
+			get
+			{
+				if (m_current == null)
+				{
+					var ts = $"[{nameof(Candle.Timestamp)}]";
+					var sql = Str.Build("select * from ",TimeFrame," where ",ts," <= ? order by ",ts," desc limit 1");
+					m_current = DB.EnumRows<Candle>(sql, 1, new object[] { Model.UtcNow.Ticks }).FirstOrDefault();
+				}
+				if (m_current != null && Model.BackTesting)
+				{
+					// Interpolate the latest candle to determine the spot price
+					var t = Maths.Frac(m_current.Timestamp, Model.UtcNow.Ticks, m_current.Timestamp + Misc.TimeFrameToTicks(1.0, TimeFrame));
+					return m_current.SubCandle(Maths.Clamp(t, 0.0, 1.0));
+				}
+				return m_current ?? Candle.Default;
+			}
+		}
+		private Candle m_current;
+
+		/// <summary>The timestamp of the last time we received data (not necessarily an update to 'Latest) (in UTC)</summary>
 		public DateTimeOffset LastUpdatedUTC
 		{
 			[DebuggerStepThrough] get;
@@ -240,27 +282,37 @@ namespace CoinFlip
 				if (UpdateThreadActive)
 				{
 					m_update_thread_exit.Set();
+					m_update_thread_cancel.Cancel();
 					if (m_update_thread.IsAlive)
 						m_update_thread.Join();
 
 					Util.Dispose(ref m_update_thread_exit);
+					Util.Dispose(ref m_update_thread_cancel);
 				}
 
 				// Create the worker thread
-				var x = new UpdateThreadData
+				m_update_thread = null;
+				if (value)
 				{
-					Pair = Pair,
-					Exchange = Pair.Exchange,
-					TimeFrame = TimeFrame,
-					StartTimestamp = Count != 0 ? Newest.Timestamp : new DateTimeOffset(1970, 1, 1, 0, 0, 0, TimeSpan.Zero).Ticks,
-					UpdatePeriod = TimeSpan.FromMilliseconds(Model.Settings.PriceDataUpdatePeriodMS),
-				};
-				m_update_thread = value ? new Thread(() => UpdateThreadEntryPoint(x)) : null;
+					var x = new UpdateThreadData
+					{
+						Pair = Pair,
+						Exchange = Pair.Exchange,
+						TimeFrame = TimeFrame,
+						StartTimestamp = Count != 0 ? Newest.Timestamp : new DateTimeOffset(1970, 1, 1, 0, 0, 0, TimeSpan.Zero).Ticks,
+						UpdatePeriod = TimeSpan.FromMilliseconds(Model.Settings.PriceDataUpdatePeriodMS),
+						Cancel = m_update_thread_cancel = CancellationTokenSource.CreateLinkedTokenSource(Model.Shutdown.Token),
+					};
+					m_update_thread = new Thread(() => UpdateThreadEntryPoint(x));
+				}
 
 				if (UpdateThreadActive)
 				{
 					m_update_thread_exit = new ManualResetEvent(false);
 					m_update_thread.Start();
+
+					// Raise the data syncing event to set the initial state
+					DataSyncingChanged.Raise(this);
 				}
 
 				/// <summary>Thread entry point for the instrument update thread</summary>
@@ -280,7 +332,7 @@ namespace CoinFlip
 									continue;
 
 								// Query for chart data
-								var data = args.Exchange.ChartData(args.Pair, args.TimeFrame, end, DateTimeOffset.Now.Ticks);
+								var data = args.Exchange.CandleData(args.Pair, args.TimeFrame, end, DateTimeOffset.Now.Ticks, args.Cancel.Token);
 								if (data == null || data.Count == 0)
 									continue;
 
@@ -290,11 +342,18 @@ namespace CoinFlip
 								// Add the received data to the database
 								Model.RunOnGuiThread(() =>
 								{
-									if (!UpdateThreadActive) return;
+									if (!UpdateThreadActive)
+										return;
+
+									var data_syncing = DataSyncing;
 									if (data.Count == 1)
 										Add(args.TimeFrame, data[0]);
 									else
 										Add(args.TimeFrame, data);
+
+									// Raise the event if 'DataSyncing' has changed
+									if (data_syncing != DataSyncing)
+										DataSyncingChanged.Raise(this);
 								});
 							}
 						}
@@ -314,7 +373,9 @@ namespace CoinFlip
 			public ETimeFrame TimeFrame;
 			public long StartTimestamp;
 			public TimeSpan UpdatePeriod;
+			public CancellationTokenSource Cancel;
 		}
+		private CancellationTokenSource m_update_thread_cancel;
 		private ManualResetEvent m_update_thread_exit;
 		private Thread m_update_thread;
 
@@ -327,7 +388,7 @@ namespace CoinFlip
 			Debug.Assert(tf != ETimeFrame.None);
 			Debug.Assert(tf == TimeFrame);
 			if (Model.BackTesting)
-				throw new Exception();
+				throw new Exception("Should not be added candles to the DB while back testing");
 
 			// This is a new candle if it's time stamp is >= the TimeFrame period after the Newest candle.
 			// This is an update to the latest candle if within a TimeFrame period of the Newest candle.
@@ -344,12 +405,14 @@ namespace CoinFlip
 			case DataEventArgs.ECandleType.New:
 				{
 					m_newest = candle;
+					m_current = m_newest;
 					m_total += 1;
 					break;
 				}
 			case DataEventArgs.ECandleType.Current:
 				{
 					m_newest.Update(candle);
+					m_current = m_newest;
 					break;
 				}
 			default:
@@ -359,6 +422,7 @@ namespace CoinFlip
 					m_total = null;
 					m_newest = null;
 					m_oldest = null;
+					m_current = null;
 					break;
 				}
 			}
@@ -390,6 +454,7 @@ namespace CoinFlip
 			m_total = null;
 			m_newest = null;
 			m_oldest = null;
+			m_current = null;
 
 			// Record the last time data was received
 			LastUpdatedUTC = Model.UtcNow;
@@ -404,6 +469,13 @@ namespace CoinFlip
 		{
 			DataChanged.Raise(this, args);
 		}
+
+		/// <summary>Indicates that the data is out of date and is being updated. False when UtcNow is within [Newest.Timestamp, Newest.Timestamp + TimeFrame)</summary>
+		public bool DataSyncing
+		{
+			get { return Newest == null || Model.UtcNow > Newest.TimestampEnd(TimeFrame); }
+		}
+		public event EventHandler DataSyncingChanged;
 
 		#endregion
 

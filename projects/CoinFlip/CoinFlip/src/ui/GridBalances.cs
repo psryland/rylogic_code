@@ -11,7 +11,6 @@ namespace CoinFlip
 		public GridBalances(Model model, string title, string name)
 			:base(model, title, name)
 		{
-			ReadOnly = true;
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				HeaderText = "Currency",
@@ -42,6 +41,14 @@ namespace CoinFlip
 				Name = nameof(Balance.Value),
 				DataPropertyName = nameof(Balance.Value),
 				DefaultCellStyle = new DataGridViewCellStyle{ Format = "C" },
+				SortMode = DataGridViewColumnSortMode.Automatic,
+				FillWeight = 0.6f,
+			});
+			Columns.Add(new DataGridViewTextBoxColumn
+			{
+				HeaderText = "Auto Trade Limit",
+				Name = nameof(Balance.AutoTradeLimit),
+				DataPropertyName = nameof(Balance.AutoTradeLimit),
 				SortMode = DataGridViewColumnSortMode.Automatic,
 				FillWeight = 0.6f,
 			});

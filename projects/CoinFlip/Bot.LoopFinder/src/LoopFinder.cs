@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using CoinFlip;
@@ -55,14 +54,9 @@ namespace Bot.LoopFinder
 			Loops = null;
 			base.Dispose(disposing);
 		}
-		protected override void HandlePairsInvalidated(object sender, EventArgs e)
+		protected override void HandlePairsUpdated(object sender, EventArgs e)
 		{
-			InvalidateLoops();
-		}
-		protected override void HandleExchangeListChanging(object sender, ListChgEventArgs<Exchange> e)
-		{
-			if (e.IsDataChanged)
-				InvalidateLoops();
+			TriggerLoopsUpdate();
 		}
 
 		/// <summary>Settings for this strategy</summary>
@@ -97,17 +91,16 @@ namespace Bot.LoopFinder
 		private LoopsUI m_loops_ui;
 
 		/// <summary>Start the bot</summary>
-		public override Task OnStart()
+		public override void OnStart()
 		{
-			InvalidateLoops();
-			return base.OnStart();
+			TriggerLoopsUpdate();
 		}
 
 		/// <summary>Main loop step</summary>
-		public override Task Step()
+		public override void Step()
 		{
 			// Test the loops for profitability, and execute the best
-			return ExecuteProfitableLoops();
+			ExecuteProfitableLoops();
 		}
 
 		/// <summary>Return items to add to the context menu for this bot</summary>
@@ -124,195 +117,219 @@ namespace Bot.LoopFinder
 		}
 
 		/// <summary>Cause the set of loops to be regenerated</summary>
-		public void InvalidateLoops()
+		public void TriggerLoopsUpdate()
 		{
+			// If an update is already pending, ignore
 			if (m_rebuild_loops_issue != m_rebuild_loops_in_progress) return;
 			++m_rebuild_loops_issue;
-			TriggerMainLoopStep();
+
+			Model.RunOnGuiThread(FindLoops);
 		}
 		private int m_rebuild_loops_in_progress;
 		private int m_rebuild_loops_issue;
 
-		/// <summary>Update the collection of loops</summary>
-		public async Task RebuildLoopsAsync()
-		{
-			var sw = new Stopwatch().Start2();
-			for (;m_rebuild_loops_in_progress != m_rebuild_loops_issue;)
-			{
-				// Record the update issue number
-				Log.Write(ELogLevel.Info, "Rebuilding loops ...");
-				m_rebuild_loops_in_progress = m_rebuild_loops_issue;
-				if (Shutdown.IsCancellationRequested)
-					return;
-
-				// Get each exchange to update it's available pairs/coins if necessary
-				await Model.UpdatePairsAsync(Shutdown);
-
-				// If the loops have been invalidated in the meantime, give up
-				if (m_rebuild_loops_issue != m_rebuild_loops_in_progress || Shutdown.IsCancellationRequested)
-					continue;
-
-				// Update the collection of loops
-				await FindLoops();
-
-				// If the loops have been invalidated in the meantime, give up
-				if (m_rebuild_loops_issue != m_rebuild_loops_in_progress || Shutdown.IsCancellationRequested)
-					continue;
-
-				// Done
-				Log.Write(ELogLevel.Info, $"{Loops.Count} trading pair loops found. (Taking {sw.Elapsed.TotalSeconds} seconds)");
-				break;
-			}
-		}
-
 		/// <summary>Find the available trade loops</summary>
-		private async Task FindLoops()
+		private void FindLoops()
 		{
+			Debug.Assert(Model.AssertMainThread());
+			bool Abort() { return m_rebuild_loops_issue != m_rebuild_loops_in_progress || Shutdown.IsCancellationRequested; }
+
+			// Record the update issue number
+			Log.Write(ELogLevel.Info, "Rebuilding loops ...");
+			m_rebuild_loops_in_progress = m_rebuild_loops_issue;
+			if (Abort())
+				return;
+
 			// Local copy of shared variables
 			var pairs = Model.Pairs.ToList();
+			var x_exch = Model.CrossExchange;
 			var max_loop_count = Settings.MaximumLoopCount;
+			var sw = new Stopwatch().Start2();
 
 			// A collection of complete loops
 			var result = new ConcurrentDictionary<int, Loop>();
 
 			// Run the background process
-			await Task.Run(() =>
+			ThreadPool.QueueUserWorkItem(_ =>
 			{
-				// Create a producer/consumer queue of partial loops
-				// Don't use CrossExchange pairs to start the loops to guarantee all
-				// loops have at least one non-CrossExchange pair in them
-				var queue = new BlockingCollection<Loop>();
-				foreach (var pair in pairs.Where(x => x.Exchange != Model.CrossExchange))
-					queue.Add(new Loop(pair));
-
-				// Create a map from Coins to pairs involving those coins
-				var map = new Dictionary<Coin, List<TradePair>>();
-				foreach (var pair in pairs)
+				try
 				{
-					map.GetOrAdd(pair.Base , k => new List<TradePair>()).Add(pair);
-					map.GetOrAdd(pair.Quote, k => new List<TradePair>()).Add(pair);
-				}
+					// Create a producer/consumer queue of partial loops
+					// Don't use CrossExchange pairs to start the loops to guarantee all
+					// loops have at least one non-CrossExchange pair in them
+					var queue = new BlockingCollection<Loop>();
+					foreach (var pair in pairs.Where(x => x.Exchange != x_exch))
+						queue.Add(new Loop(pair));
 
-				// Stop when there are no more partial loops to process
-				var tasks = new List<Task>();
-				for (;;)
-				{
-					// Take a partial loop from the queue
-					if (!queue.TryTake(out var loop, TimeSpan.FromMilliseconds(50)))
+					// Create a map from coins to pairs involving those coins
+					var map = new Dictionary<Coin, List<TradePair>>();
+					foreach (var pair in pairs)
 					{
-						// If there are no partial loops to process and
-						// no running tasks we must be done.
-						tasks.RemoveIf(x => x.IsCompleted);
-						if (tasks.Count == 0) break;
-						continue;
+						map.GetOrAdd(pair.Base , k => new List<TradePair>()).Add(pair);
+						map.GetOrAdd(pair.Quote, k => new List<TradePair>()).Add(pair);
 					}
 
-					// Process the partial loop in a worker thread
-					tasks.Add(Task.Run(() =>
+					// Stop when there are no more partial loops to process
+					var workers = new List<Completion>();
+					for (;;)
 					{
-						// - A closed loop is a chain of pairs that go from one currency, through one or more other
-						//   currencies, and back to the starting currency. Note: the ending currency does *NOT* have to
-						//   be on the same exchange.
-						// - Loops cannot start or end with a cross-exchange pair
-						// - Don't allow sequential cross-exchange pairs
+						// If the loops have been invalidated in the meantime, give up
+						if (Abort())
+							return;
 
-						var beg = loop.Beg;
-						var end = loop.End;
-
-						// Special case for single-pair loops, allow for the first pair to be reversed
-						if (loop.Pairs.Count == 1)
+						// Take a partial loop from the queue
+						if (!queue.TryTake(out var loop, TimeSpan.FromMilliseconds(50)))
 						{
-							// Get all the pairs that match 'beg' or 'end' and don't close the loop
-							var links = Enumerable.Concat(
-								map[beg].Except(loop.Pairs[0]).Where(x => x.OtherCoin(beg).Symbol != end.Symbol),
-								map[end].Except(loop.Pairs[0]).Where(x => x.OtherCoin(end).Symbol != beg.Symbol));
-							foreach (var pair in links)
-							{
-								// Grow the loop
-								var nue_loop = new Loop(loop);
-								nue_loop.Pairs.Add(pair);
-								queue.Add(nue_loop);
-							}
+							// If there are no partial loops to process and
+							// no running workers we must be done.
+							workers.RemoveIf(x => x.IsCompleted);
+							if (workers.Count == 0) break;
+							continue;
 						}
-						else
-						{
-							// Look for a pair to add to the loop
-							var existing_pairs = loop.Pairs.ToHashSet();
-							foreach (var pair in map[end].Except(existing_pairs))
-							{
-								// Don't allow sequential cross-exchange pairs
-								if (loop.Pairs.Back().Exchange == Model.CrossExchange && pair.Exchange == Model.CrossExchange)
-									continue;
 
-								// Does this pair close the loop?
-								if (pair.OtherCoin(end).Symbol == beg.Symbol)
+						// Process the partial loop in a worker thread
+						ThreadPool.QueueUserWorkItem(completion_ =>
+						{
+							// - A closed loop is a chain of pairs that go from one currency, through one or more other
+							//   currencies, and back to the starting currency. Note: the ending currency does *NOT* have to
+							//   be on the same exchange.
+							// - Loops cannot start or end with a cross-exchange pair
+							// - Don't allow sequential cross-exchange pairs
+							var completion = (Completion)completion_;
+							try
+							{
+								var beg = loop.Beg;
+								var end = loop.End;
+
+								// Special case for single-pair loops, allow for the first pair to be reversed
+								if (loop.Pairs.Count == 1)
 								{
-									// Add a complete loop
-									var nue_loop = new Loop(loop);
-									nue_loop.Pairs.Add(pair);
-									result.TryAdd(nue_loop.HashKey, nue_loop);
+									// Get all the pairs that match 'beg' or 'end' and don't close the loop
+									var links = Enumerable.Concat(
+										map[beg].Except(loop.Pairs[0]).Where(x => x.OtherCoin(beg).Symbol != end.Symbol),
+										map[end].Except(loop.Pairs[0]).Where(x => x.OtherCoin(end).Symbol != beg.Symbol));
+
+									foreach (var pair in links)
+									{
+										if (Abort())
+											break;
+	
+										// Grow the loop
+										var nue_loop = new Loop(loop);
+										nue_loop.Pairs.Add(pair);
+										queue.Add(nue_loop);
+									}
 								}
-								else if (loop.Pairs.Count < max_loop_count)
+								else
 								{
-									// Grow the loop
-									var nue_loop = new Loop(loop);
-									nue_loop.Pairs.Add(pair);
-									queue.Add(nue_loop);
+									// Look for a pair to add to the loop
+									var existing_pairs = loop.Pairs.ToHashSet();
+									foreach (var pair in map[end].Except(existing_pairs))
+									{
+										if (Abort())
+											break;
+
+										// Don't allow sequential cross-exchange pairs
+										if (loop.Pairs.Back().Exchange == Model.CrossExchange && pair.Exchange == Model.CrossExchange)
+											continue;
+
+										// Does this pair close the loop?
+										if (pair.OtherCoin(end).Symbol == beg.Symbol)
+										{
+											// Add a complete loop
+											var nue_loop = new Loop(loop);
+											nue_loop.Pairs.Add(pair);
+											result.TryAdd(nue_loop.HashKey, nue_loop);
+										}
+										else if (loop.Pairs.Count < max_loop_count)
+										{
+											// Grow the loop
+											var nue_loop = new Loop(loop);
+											nue_loop.Pairs.Add(pair);
+											queue.Add(nue_loop);
+										}
+									}
 								}
+
+								if (Abort())
+									completion.Cancelled = true;
+								else
+									completion.Completed();
 							}
-						}
-					}, Shutdown));
+							catch (Exception ex)
+							{
+								completion.Exception = ex;
+							}
+						}, workers.Add2(new Completion()));
+					}
+
+					// Update the loops collection
+					Model.RunOnGuiThread(() =>
+					{
+						// If the loops have been invalidated in the meantime, give up
+						if (Abort())
+							return;
+
+						Loops.Clear();
+						Loops.AddRange(result.Values.ToArray());
+
+						// Done
+						Log.Write(ELogLevel.Info, $"{Loops.Count} trading pair loops found. (Taking {sw.Elapsed.TotalSeconds} seconds)");
+					});
 				}
-			}, Shutdown);
-			Debug.Assert(Model.AssertMainThread());
-
-			// Reduce the bag to a unique set of loops
-			Loops.Clear();
-			Loops.AddRange(result.Values.ToArray());
+				catch (Exception ex)
+				{
+					Log.Write(ELogLevel.Error, ex, "Unhandled exception in 'FindLoops'");
+				}
+			});
 		}
 
 		/// <summary>Check the loops collection for profitable loops</summary>
-		private async Task ExecuteProfitableLoops()
+		private void ExecuteProfitableLoops()
 		{
-			// When the coins of interest, available pairs, etc change, rebuild the collection of loops
-			await RebuildLoopsAsync();
-
-			// Find the potentially profitable loops ignoring account balances and fees.
-			var tasks = new List<Task>();
-			var bag = new ConcurrentBag<Loop>();
-			foreach (var loop in Loops)
+			ThreadPool.QueueUserWorkItem(async _ =>
 			{
-				// Find loops in both directions in parallel
-				tasks.Add(Task.Run(() => AddLoopIfProfitable(loop, true , bag), Shutdown));
-				tasks.Add(Task.Run(() => AddLoopIfProfitable(loop, false, bag), Shutdown));
-				//AddLoopIfProfitable(loop, true , bag);
-				//AddLoopIfProfitable(loop, false, bag);
-			}
-			await Task.WhenAll(tasks);
-
-			// Return the profitable loops in order of most profitable
-			var profitable_loops = bag.OrderByDescending(x => x.ProfitRatio).ToList();
-
-			// Execute the most profitable loop
-			foreach (var loop in profitable_loops)
-			{
-				if (loop.TradeScale == 0)
+				// Find the potentially profitable loops ignoring account balances and fees.
+				var tasks = new List<System.Threading.Tasks.Task>();
+				var bag = new ConcurrentBag<Loop>();
+				foreach (var loop in Loops)
 				{
-					var exchanges = string.Join(",", loop.Pairs.Select(x => x.Exchange.Name).Distinct());
-					Log.Write(ELogLevel.Info, $"Potential Loop {loop.Description} ({exchanges}). Profit Ratio: {loop.ProfitRatio:G4}.\n{loop.Tradeability}");
-					continue;
+					tasks.Add(System.Threading.Tasks.Task.Run(() => AddLoopIfProfitable(loop, true , bag), Shutdown.Token));
+					tasks.Add(System.Threading.Tasks.Task.Run(() => AddLoopIfProfitable(loop, false, bag), Shutdown.Token));
+					//AddLoopIfProfitable(loop, true , bag);
+					//AddLoopIfProfitable(loop, false, bag);
 				}
 
-				// Execute the loop
-				await ExecuteLoop(loop);
+				// Wait for the profitable loops be found
+				await System.Threading.Tasks.Task.WhenAll(tasks);
 
-				// Execute one loop only
-				break;
-			}
+				// Return the profitable loops in order of most profitable
+				var profitable_loops = bag.OrderByDescending(x => x.ProfitRatio).ToList();
 
-			// Sort loops by profitability
-			using (Loops.PreservePosition())
-				Loops.Sort(Cmp<Loop>.From((l, r) => -l.ProfitRatio.CompareTo(r.ProfitRatio)));
+				// Execute the most profitable loop
+				foreach (var loop in profitable_loops)
+				{
+					if (loop.TradeScale == 0)
+					{
+						var exchanges = string.Join(",", loop.Pairs.Select(x => x.Exchange.Name).Distinct());
+						Log.Write(ELogLevel.Info, $"Potential Loop {loop.Description} ({exchanges}). Profit Ratio: {loop.ProfitRatio:G4}.\n{loop.Tradeability}");
+						continue;
+					}
+
+					// Execute the loop
+					ExecuteLoop(loop);
+
+					// Execute one loop only
+					break;
+				}
+
+				Model.RunOnGuiThread(() =>
+				{
+					// Sort loops by profitability
+					using (Loops.PreservePosition())
+						Loops.Sort(Cmp<Loop>.From((l, r) => -l.ProfitRatio.CompareTo(r.ProfitRatio)));
+				});
+			});
 		}
 
 		/// <summary>Determine if executing trades in 'loop' should result in a profit</summary>
@@ -334,7 +351,8 @@ namespace Bot.LoopFinder
 			// Construct an "order book" of volumes and complete-loop prices (e.g. BTC to BTC price for each volume)
 			var dir = forward ? +1 : -1;
 			var coin = forward ? src_loop.Beg : src_loop.End;
-			var obk = new OrderBook(coin, coin){ new Order(1m, decimal.MaxValue._(coin.Symbol)) };
+			var tt = forward ? ETradeType.B2Q : ETradeType.Q2B;
+			var obk = new OrderBook(coin, coin, tt){ new Order(1m, decimal.MaxValue._(coin.Symbol)) };
 			foreach (var pair in src_loop.EnumPairs(dir))
 			{
 				// Limit the volume calculated, there's no point in calculating large volumes if we can't trade them
@@ -447,7 +465,7 @@ namespace Bot.LoopFinder
 			}
 
 			// Check that all traded volumes are within the limits
-			var all_trades_valid = Trade.EValidation.Valid;
+			var all_trades_valid = EValidation.Valid;
 			foreach (var trade in trades)
 			{
 				// Check the unscaled amount, if that's too small we'll ignore this loop
@@ -455,28 +473,28 @@ namespace Bot.LoopFinder
 				all_trades_valid |= validation0;
 
 				// Record why the base trade isn't valid
-				if (validation0 != Trade.EValidation.Valid)
+				if (validation0 != EValidation.Valid)
 					loop.Tradeability += $"{trade.Description} - {validation0}\n";
 
 				// If the volume to trade, multiplied by the trade scale, is outside the
 				// allowed range of trading volume, set the scale to zero. This is to prevent
 				// loops being traded where part of the loop would be rejected.
 				var validation1 = new Trade(trade, loop.TradeScale).Validate();
-				if (validation1.HasFlag(Trade.EValidation.VolumeInOutOfRange))
+				if (validation1.HasFlag(EValidation.VolumeInOutOfRange))
 					loop.Tradeability += $"Not enough {trade.CoinIn} to trade\n";
-				if (validation1.HasFlag(Trade.EValidation.VolumeOutOutOfRange))
+				if (validation1.HasFlag(EValidation.VolumeOutOutOfRange))
 					loop.Tradeability += $"Trade result volume of {trade.CoinOut} is too small\n";
-				if (validation1 != Trade.EValidation.Valid)
+				if (validation1 != EValidation.Valid)
 					loop.TradeScale = 0m;
 			}
 
 			// Save the profitable loop (even if scaled to 0)
-			if (all_trades_valid == Trade.EValidation.Valid)
+			if (all_trades_valid == EValidation.Valid)
 				profitable_loops.Add(loop);
 		}
 
 		/// <summary>Determine the exchange rate based on volume</summary>
-		private static OrderBook MergeRates(OrderBook rates, OrderBook orders, Unit<decimal> balance, bool invert)
+		private static OrderBook MergeRates(OrderBook rates, OrderBook orders, Unit<decimal> balance, bool invert) // Worker thread context
 		{
 			// 'rates' is a table of volumes in the current coin currency (i.e. the current
 			// coin in the loop) along with the accumulated exchange rate for each volume.
@@ -486,7 +504,7 @@ namespace Bot.LoopFinder
 			// currency to Base currency, however the volumes and prices are still in Base
 			// and Quote respectively.
 			var new_coin = invert ? orders.Base : orders.Quote;
-			var ret = new OrderBook(new_coin, new_coin);
+			var ret = new OrderBook(new_coin, new_coin, rates.TradeType);
 
 			// Volume accumulators for the 'rates' and 'orders' order books.
 			var R_vol = 0m._(rates.Base.Symbol);
@@ -536,7 +554,7 @@ namespace Bot.LoopFinder
 		}
 
 		/// <summary>Execute a profitable loop</summary>
-		private async Task ExecuteLoop(Loop loop)
+		private void ExecuteLoop(Loop loop) // Worker thread context
 		{
 			try
 			{
@@ -559,7 +577,6 @@ namespace Bot.LoopFinder
 				var initial_volume = volume;
 
 				// Trade each pair in the loop (in the given direction).
-				var tasks = new List<Task>();
 				foreach (var pair in loop.EnumPairs(loop.Direction))
 				{
 					var new_coin = pair.OtherCoin(coin);
@@ -567,7 +584,7 @@ namespace Bot.LoopFinder
 					if (pair.Base == coin)
 					{
 						var trade = pair.BaseToQuote(volume);
-						tasks.Add(trade.CreateOrderAsync());
+						trade.CreateOrder();
 						new_volume = trade.VolumeOut;
 
 						// Trade 'coin' to 'Quote'
@@ -576,7 +593,7 @@ namespace Bot.LoopFinder
 					else
 					{
 						var trade = pair.QuoteToBase(volume);
-						tasks.Add(trade.CreateOrderAsync());
+						trade.CreateOrder();
 						new_volume = trade.VolumeOut;
 
 						// Trade 'coin' to 'Base'
@@ -597,16 +614,13 @@ namespace Bot.LoopFinder
 				sb.AppendLine(" Fee:   {0} {1}.".Fmt((-fee).ToString("G6"), coin));
 				sb.AppendLine(" Nett:  {0} {1}.".Fmt((gross - fee).ToString("G6"), coin));
 
-				// Wait for all orders to complete
-				await Task.WhenAll(tasks);
-
 				// Log the trades
 				Log.Write(ELogLevel.Info, sb.ToString());
 			}
 			catch (Exception ex)
 			{
 				Log.Write(ELogLevel.Error, ex, "Trade Loop aborted.");
-				Active = false;
+				Model.RunOnGuiThread(() => Active = false);
 			}
 		}
 
@@ -629,8 +643,8 @@ namespace Bot.LoopFinder
 			/// <summary>The maximum number of hops in a loop</summary>
 			public int MaximumLoopCount
 			{
-				get { return get(x => x.MaximumLoopCount); }
-				set { set(x => x.MaximumLoopCount, value); }
+				get { return get<int>(nameof(MaximumLoopCount)); }
+				set { set(nameof(MaximumLoopCount), value); }
 			}
 		}
 	}

@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using pr.common;
 using pr.container;
@@ -18,10 +17,12 @@ using pr.scintilla;
 using pr.util;
 using pr.win32;
 using ToolStripContainer = pr.gui.ToolStripContainer;
+using Timer = System.Windows.Forms.Timer;
+using System.Linq;
 
 namespace CoinFlip
 {
-	public class MainUI :Form ,IShutdownAsync
+	public class MainUI :Form
 	{
 		#region UI Elements
 		private ToolStripContainer m_tsc;
@@ -49,7 +50,6 @@ namespace CoinFlip
 		private ToolStripButton m_chk_live;
 		private ToolStrip m_ts_backtesting;
 		private ToolStripButton m_chk_back_testing;
-		private ToolStripSeparator toolStripSeparator4;
 		private ToolStripButton m_btn_backtesting_run;
 		private ToolStripTrackBar m_trk_sim_time;
 		private LogUI m_win_log;
@@ -57,7 +57,6 @@ namespace CoinFlip
 		private System.Windows.Forms.ToolStripComboBox m_cb_sim_timeframe;
 		private ToolStripMenuItem m_menu_file_new_chart;
 		private ToolStripSeparator toolStripSeparator5;
-		private ToolStripLabel m_lbl_start_time;
 		private ToolStripSeparator toolStripSeparator6;
 		private ToolStripMenuItem m_menu_tools_back_testing;
 		private ToolStripMenuItem m_menu_debug;
@@ -65,6 +64,9 @@ namespace CoinFlip
 		private ToolStripMenuItem m_menu_debug_test;
 		private ToolStripButton m_btn_backtesting_reset;
 		private ToolStripButton m_btn_backtesting_step1;
+		private ToolStripButton m_btn_backtesting_run_to_trade;
+		private ToolStripMenuItem m_menu_tools_update_pairs;
+		private ToolStripTextBox m_tb_sim_time;
 		private LogUI m_log;
 		#endregion
 
@@ -91,6 +93,7 @@ namespace CoinFlip
 				UpdateUI();
 
 				RestoreWindowPosition();
+				UpdateActive = true;
 			}
 			catch (Exception)
 			{
@@ -100,6 +103,7 @@ namespace CoinFlip
 		}
 		protected override void Dispose(bool disposing)
 		{
+			UpdateActive = false;
 			PairsUI = null;
 			Charts = null;
 			Util.Dispose(ref components);
@@ -122,7 +126,7 @@ namespace CoinFlip
 					Settings.UI.WindowMaximised = WindowState == FormWindowState.Maximized;
 			}
 		}
-		protected async override void OnClosing(CancelEventArgs e)
+		protected override void OnClosing(CancelEventArgs e)
 		{
 			// Save the layout and window position
 			Settings.UI.UILayout = m_dc.SaveLayout();
@@ -130,21 +134,14 @@ namespace CoinFlip
 			// Form shutdown is a PITA when using async methods.
 			// Disable the form while we wait for shutdown to be allowed
 			Enabled = false;
-			if (Model.Running)
+			if (!Model.Shutdown.IsCancellationRequested)
 			{
 				e.Cancel = true;
-				await ShutdownAsync();
+				Model.Shutdown.Cancel();
 				Close();
 				return;
 			}
 			base.OnClosing(e);
-		}
-
-		/// <summary>Async shutdown</summary>
-		public async Task ShutdownAsync()
-		{
-			// Begin shutdown of the model
-			await Model.ShutdownAsync();
 		}
 
 		/// <summary>App settings</summary>
@@ -163,36 +160,154 @@ namespace CoinFlip
 				if (m_model != null)
 				{
 					m_model.AllowTradesChanging     -= UpdateUI;
-					m_model.BackTestingChanging     -= UpdateUI;
+					m_model.BackTestingChanging     -= HandleBackTestingChanged;
 					m_model.SimRunningChanged       -= UpdateUI;
-					m_model.SimStep                 -= UpdateUI;
-					m_model.SimReset                -= UpdateUI;
 					m_model.Settings.SettingChanged -= HandleSettingsChanged;
 					m_model.Pairs.ListChanging      -= HandlePairsChanging;
 					m_model.Coins.ListChanging      -= HandleCoinsListChanging;
 					m_model.Exchanges.ListChanging  -= HandleExchangesChanging;
-					m_model.MarketDataChanging      -= HandleMarketDataChanging;
 					m_model.OnAddToUI               -= HandleAddToUI;
+					m_model.OnEditTrade             -= HandleEditTrade;
 					Util.Dispose(ref m_model);
 				}
 				m_model = value;
 				if (m_model != null)
 				{
+					m_model.OnEditTrade             += HandleEditTrade;
 					m_model.OnAddToUI               += HandleAddToUI;
-					m_model.MarketDataChanging      += HandleMarketDataChanging;
 					m_model.Exchanges.ListChanging  += HandleExchangesChanging;
 					m_model.Coins.ListChanging      += HandleCoinsListChanging;
 					m_model.Pairs.ListChanging      += HandlePairsChanging;
 					m_model.Settings.SettingChanged += HandleSettingsChanged;
-					m_model.SimReset                += UpdateUI;
-					m_model.SimStep                 += UpdateUI;
 					m_model.SimRunningChanged       += UpdateUI;
-					m_model.BackTestingChanging     += UpdateUI;
+					m_model.BackTestingChanging     += HandleBackTestingChanged;
 					m_model.AllowTradesChanging     += UpdateUI;
+				}
+
+				// Handlers
+				void HandleSettingsChanged(object sender, SettingChangedEventArgs e)
+				{
+					switch (e.Key)
+					{
+					case nameof(Settings.ShowLivePrices):
+						{
+							m_chk_live.Checked = Settings.ShowLivePrices;
+							break;
+						}
+					case nameof(Settings.BackTestingSettings.TimeFrame):
+						{
+							m_cb_sim_timeframe.SelectedItem = Settings.BackTesting.TimeFrame;
+							break;
+						}
+					case nameof(Settings.BackTestingSettings.Steps):
+						{
+							m_trk_sim_time.TrackBar.ValueClamped(m_trk_sim_time.TrackBar.Maximum - Settings.BackTesting.Steps);
+							break;
+						}
+					case nameof(Settings.BackTestingSettings.MaxSteps):
+						{
+							m_trk_sim_time.TrackBar.Set(Settings.BackTesting.MaxSteps - Settings.BackTesting.Steps, 0, Settings.BackTesting.MaxSteps);
+							break;
+						}
+					}
+				}
+				void HandleBackTestingChanged(object sender, EventArgs e)
+				{
+					m_tb_sim_time.Visible = Model.BackTesting;
+					UpdateUI();
+				}
+				void HandleCoinsListChanging(object sender, ListChgEventArgs<Settings.CoinData> e)
+				{
+					m_grid_coins.Invalidate();
+					m_grid_balances.Invalidate();
+				}
+				void HandleExchangesChanging(object sender, ListChgEventArgs<Exchange> e)
+				{
+					m_grid_exchanges.Invalidate();
+					m_grid_balances.Invalidate();
+					m_grid_positions.Invalidate();
+				}
+				void HandlePairsChanging(object sender, EventArgs e)
+				{
+					m_grid_exchanges.InvalidateColumn(m_grid_exchanges.Columns[nameof(Exchange.CoinsAvailable)].Index);
+					m_grid_exchanges.InvalidateColumn(m_grid_exchanges.Columns[nameof(Exchange.PairsAvailable)].Index);
+				}
+				void HandleAddToUI(object sender, AddToUIEventArgs e)
+				{
+					if (e.Dockable != null)
+						m_dc.Add(e.Dockable, e.DockLocation);
+
+					if (e.Toolbar != null)
+						m_tsc.TopToolStripPanel.Controls.Add(e.Toolbar);
+				}
+				void HandleEditTrade(object sender, EditTradeEventArgs e)
+				{
+					// Find a chart for the pair that is being edited, add one if not found
+					var chart = Charts.FirstOrDefault(x => x.Instrument.Pair == e.Trade.Pair);
+					if (chart == null)
+					{
+						chart = NewChart();
+						chart.SetInstrument(e.Trade.Pair, ETimeFrame.Hour1);
+					}
+
+					// Create an edit order UI that places the trade when OK'd
+					var ui = new EditOrderUI(e.Trade, chart, e.ExistingOrderId);
+					ui.FormClosed += (s,a) => ui.Dispose();
+
+					// Show the create/modify order UI
+					ui.Show(this);
 				}
 			}
 		}
 		private Model m_model;
+
+		/// <summary>UI refresh timer</summary>
+		public bool UpdateActive
+		{
+			get { return m_timer != null; }
+			set
+			{
+				if (UpdateActive == value) return;
+				if (UpdateActive)
+				{
+					m_timer.Stop();
+					m_timer.Tick -= HandleTick;
+					Util.Dispose(ref m_timer);
+				}
+				m_timer = value ? new Timer() : null;
+				if (UpdateActive)
+				{
+					m_timer.Interval = 200;
+					m_timer.Tick += HandleTick;
+					m_timer.Start();
+				}
+
+				// Handlers
+				void HandleTick(object sender, EventArgs args)
+				{
+					// Invalidate the live price data 
+					m_grid_exchanges.InvalidateColumn(m_grid_exchanges.Columns[nameof(Exchange.NettWorth)].Index);
+					m_grid_balances .InvalidateColumn(m_grid_balances.Columns[nameof(Balance.Available)].Index);
+					m_grid_balances .InvalidateColumn(m_grid_balances.Columns[nameof(Balance.Total)].Index);
+					m_grid_balances .InvalidateColumn(m_grid_balances.Columns[nameof(Balance.Value)].Index);
+					m_grid_positions.InvalidateColumn(m_grid_positions.Columns[nameof(GridPositions.ColumnNames.LivePrice)].Index);
+					m_grid_positions.InvalidateColumn(m_grid_positions.Columns[nameof(GridPositions.ColumnNames.PriceDist)].Index);
+					m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Total)].Index);
+					m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Available)].Index);
+					m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Value)].Index);
+					m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Balance)].Index);
+					m_grid_arbitrage.Invalidate();
+
+					// Update the back-testing clock
+					if (Model.BackTesting)
+						m_tb_sim_time.Text = Model.Simulation.Clock.ToString("yyyy-MM-dd ddd HH:mm:ss");
+
+					// Update the nett worth value
+					m_tb_nett_worth.Text = Model.NettWorth.ToString("c");
+				}
+			}
+		}
+		private Timer m_timer;
 
 		/// <summary>The UI for displaying info about a particular pair</summary>
 		public PairsUI PairsUI
@@ -233,6 +348,10 @@ namespace CoinFlip
 				{
 					Close();
 				};
+				m_menu_tools_update_pairs.Click += (s,a) =>
+				{
+					Model.TriggerPairsUpdate();
+				};
 				m_menu_tools_show_pairs.Click += (s,a) =>
 				{
 					PairsUI.Show();
@@ -259,7 +378,7 @@ namespace CoinFlip
 			{
 				m_chk_allow_trades.CheckedChanged += (s,a) =>
 				{
-					Model.AllowTrades = m_chk_allow_trades.Checked;
+					Model.SetAllowTrades(m_chk_allow_trades.Checked);
 					m_chk_allow_trades.Text = m_chk_allow_trades.Checked ? "Disable Trading" : "Enable Trading";
 					m_chk_allow_trades.BackColor = m_chk_allow_trades.Checked ? Color.LightGreen : SystemColors.Control;
 				};
@@ -285,6 +404,8 @@ namespace CoinFlip
 				{
 					if (Model.Simulation == null) return;
 					Model.Simulation.Reset();
+					foreach (var chart in Charts)
+						chart.AutoRange();
 					UpdateUI();
 				};
 
@@ -293,6 +414,14 @@ namespace CoinFlip
 				{
 					if (Model.Simulation == null) return;
 					Model.Simulation.StepOne();
+					UpdateUI();
+				};
+
+				m_btn_backtesting_run_to_trade.ToolTip(m_tt, "Run up to the next submitted or filled trade");
+				m_btn_backtesting_run_to_trade.Click += (s,a) =>
+				{
+					if (Model.Simulation == null) return;
+					Model.Simulation.RunToTrade();
 					UpdateUI();
 				};
 
@@ -386,48 +515,37 @@ namespace CoinFlip
 			// Clean up
 			m_dc.Options.DisposeContent = true;
 			#endregion
+
+			// Persist tool bar locations
+			m_tsc.AutoPersistLocations(Settings.UI.ToolStripLayout, loc => Settings.UI.ToolStripLayout = loc);
 		}
 
 		/// <summary>Handle the model properties changing</summary>
 		private void UpdateUI(object sender = null, EventArgs e = null)
 		{
+			var back_testing = Model.BackTesting;
+			var allow_trades = Model.AllowTrades;
 			var sim_running =  Model.Simulation?.Running ?? false;
 
-			m_chk_allow_trades.Enabled = !Model.BackTesting;
-			m_chk_back_testing.Enabled = !Model.AllowTrades && !sim_running;
-			m_chk_allow_trades.Checked = Model.AllowTrades;
-			m_chk_back_testing.Checked = Model.BackTesting;
+			// Enable
+			m_chk_allow_trades.Enabled             = !back_testing;
+			m_chk_back_testing.Enabled             = !allow_trades && !sim_running;
+			m_menu_tools_back_testing.Enabled      = back_testing;
+			m_btn_backtesting_run.Enabled          = back_testing;
+			m_btn_backtesting_reset.Enabled        = back_testing && !sim_running;
+			m_btn_backtesting_step1.Enabled        = back_testing && !sim_running;
+			m_btn_backtesting_run_to_trade.Enabled = back_testing && !sim_running;
+			m_trk_sim_time.Enabled                 = back_testing;
+			m_cb_sim_timeframe.Enabled             = back_testing && !sim_running;
 
-			// Back testing
-			m_btn_backtesting_run.Enabled = Model.BackTesting;
-			m_btn_backtesting_reset.Enabled = Model.BackTesting && !sim_running;
-			m_btn_backtesting_step1.Enabled = Model.BackTesting && !sim_running;
-			m_trk_sim_time.Enabled = Model.BackTesting;
-			m_cb_sim_timeframe.Enabled = Model.BackTesting && !sim_running;
-
-			m_lbl_start_time.Visible = Model.BackTesting;
-			m_lbl_start_time.Text = Model.Simulation?.Clock.ToString("yyyy-MM-dd ddd HH:mm:ss") ?? string.Empty;
-			m_chk_back_testing.BackColor = Model.BackTesting ? Color.LightGreen : SystemColors.Control;
+			// Appearance
+			m_chk_allow_trades.Checked = allow_trades;
+			m_chk_back_testing.Checked = back_testing;
 			m_btn_backtesting_run.Image = sim_running ? Res.Pause : Res.Play;
-
-			// Invalidate the live price data 
-			m_grid_exchanges.InvalidateColumn(m_grid_exchanges.Columns[nameof(Exchange.NettWorth)].Index);
-			m_grid_balances .InvalidateColumn(m_grid_balances.Columns[nameof(Balance.Available)].Index);
-			m_grid_balances .InvalidateColumn(m_grid_balances.Columns[nameof(Balance.Value)].Index);
-			m_grid_positions.InvalidateColumn(m_grid_positions.Columns[nameof(GridPositions.ColumnNames.LivePrice)].Index);
-			m_grid_positions.InvalidateColumn(m_grid_positions.Columns[nameof(GridPositions.ColumnNames.PriceDist)].Index);
-			m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Total)].Index);
-			m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Available)].Index);
-			m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Value)].Index);
-			m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Balance)].Index);
-			m_grid_arbitrage.Invalidate();
-
-			// Update the nett worth value
-			m_tb_nett_worth.Text = Model.NettWorth.ToString("c");
 		}
 
 		/// <summary>Create a new chart instance</summary>
-		private void NewChart()
+		private ChartUI NewChart()
 		{
 			var chart = Charts.Add2(new ChartUI(Model));
 			m_dc.Add(chart, EDockSite.Centre);
@@ -437,13 +555,13 @@ namespace CoinFlip
 				m_dc.Remove(chart);
 				Util.Dispose(chart);
 			};
+			return chart;
 		}
 
 		/// <summary>Display a dialog for configuring the simulation</summary>
 		public void ShowSimUI()
 		{
-			if (!Model.BackTesting) return;
-			using (var dlg = new SimulationUI(this, Settings.BackTesting))
+			using (var dlg = new SimulationUI(this, Settings))
 				dlg.ShowDialog(this);
 		}
 
@@ -463,73 +581,6 @@ namespace CoinFlip
 			}
 		}
 
-		/// <summary>Handle settings changed notification</summary>
-		private void HandleSettingsChanged(object sender, SettingChangedEventArgs e)
-		{
-			switch (e.Key)
-			{
-			case nameof(Settings.ShowLivePrices):
-				{
-					m_chk_live.Checked = Settings.ShowLivePrices;
-					break;
-				}
-			case nameof(Settings.BackTestingSettings.TimeFrame):
-				{
-					m_cb_sim_timeframe.SelectedItem = Settings.BackTesting.TimeFrame;
-					break;
-				}
-			case nameof(Settings.BackTestingSettings.Steps):
-				{
-					m_trk_sim_time.TrackBar.ValueClamped(m_trk_sim_time.TrackBar.Maximum - Settings.BackTesting.Steps);
-					break;
-				}
-			case nameof(Settings.BackTestingSettings.MaxSteps):
-				{
-					m_trk_sim_time.TrackBar.Set(Settings.BackTesting.MaxSteps - Settings.BackTesting.Steps, 0, Settings.BackTesting.MaxSteps);
-					break;
-				}
-			}
-		}
-
-		/// <summary>Model heart beat event handler</summary>
-		private void HandleMarketDataChanging(object sender, MarketDataChangingEventArgs e)
-		{
-			if (e.Done)
-				UpdateUI();
-		}
-
-		/// <summary>Coins of interest changed</summary>
-		private void HandleCoinsListChanging(object sender, ListChgEventArgs<Settings.CoinData> e)
-		{
-			m_grid_coins.Invalidate();
-			m_grid_balances.Invalidate();
-		}
-
-		/// <summary>Exchanges changed</summary>
-		private void HandleExchangesChanging(object sender, ListChgEventArgs<Exchange> e)
-		{
-			m_grid_exchanges.Invalidate();
-			m_grid_balances.Invalidate();
-			m_grid_positions.Invalidate();
-		}
-
-		/// <summary>Available pairs changed</summary>
-		private void HandlePairsChanging(object sender, EventArgs e)
-		{
-			m_grid_exchanges.InvalidateColumn(m_grid_exchanges.Columns[nameof(Exchange.CoinsAvailable)].Index);
-			m_grid_exchanges.InvalidateColumn(m_grid_exchanges.Columns[nameof(Exchange.PairsAvailable)].Index);
-		}
-
-		/// <summary>Handle bots adding UI elements</summary>
-		private void HandleAddToUI(object sender, AddToUIEventArgs e)
-		{
-			if (e.Dockable != null)
-				m_dc.Add(e.Dockable, e.DockSite);
-
-			if (e.Toolbar != null)
-				m_tsc.TopToolStripPanel.Controls.Add(e.Toolbar);
-		}
-
 		#region Windows Form Designer generated code
 		private System.ComponentModel.IContainer components = null;
 		private void InitializeComponent()
@@ -546,6 +597,7 @@ namespace CoinFlip
 			this.toolStripSeparator5 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_exit = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_update_pairs = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_show_pairs = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_tools_back_testing = new System.Windows.Forms.ToolStripMenuItem();
@@ -560,15 +612,15 @@ namespace CoinFlip
 			this.m_chk_live = new System.Windows.Forms.ToolStripButton();
 			this.m_ts_backtesting = new System.Windows.Forms.ToolStrip();
 			this.m_chk_back_testing = new System.Windows.Forms.ToolStripButton();
-			this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_backtesting_reset = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_backtesting_step1 = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_backtesting_run_to_trade = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_backtesting_run = new System.Windows.Forms.ToolStripButton();
 			this.m_trk_sim_time = new pr.gui.ToolStripTrackBar();
 			this.m_cb_sim_timeframe = new System.Windows.Forms.ToolStripComboBox();
-			this.m_lbl_start_time = new System.Windows.Forms.ToolStripLabel();
+			this.m_tb_sim_time = new System.Windows.Forms.ToolStripTextBox();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
-			this.m_btn_backtesting_step1 = new System.Windows.Forms.ToolStripButton();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.ContentPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
@@ -678,12 +730,19 @@ namespace CoinFlip
 			// toolsToolStripMenuItem
 			// 
 			this.toolsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_tools_update_pairs,
             this.m_menu_tools_show_pairs,
             this.toolStripSeparator6,
             this.m_menu_tools_back_testing});
 			this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
 			this.toolsToolStripMenuItem.Size = new System.Drawing.Size(47, 20);
 			this.toolsToolStripMenuItem.Text = "&Tools";
+			// 
+			// m_menu_tools_update_pairs
+			// 
+			this.m_menu_tools_update_pairs.Name = "m_menu_tools_update_pairs";
+			this.m_menu_tools_update_pairs.Size = new System.Drawing.Size(149, 22);
+			this.m_menu_tools_update_pairs.Text = "Update &Pairs";
 			// 
 			// m_menu_tools_show_pairs
 			// 
@@ -778,16 +837,16 @@ namespace CoinFlip
 			this.m_ts_backtesting.Dock = System.Windows.Forms.DockStyle.None;
 			this.m_ts_backtesting.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_chk_back_testing,
-            this.toolStripSeparator4,
+            this.m_cb_sim_timeframe,
             this.m_btn_backtesting_reset,
             this.m_btn_backtesting_step1,
+            this.m_btn_backtesting_run_to_trade,
             this.m_btn_backtesting_run,
             this.m_trk_sim_time,
-            this.m_cb_sim_timeframe,
-            this.m_lbl_start_time});
+            this.m_tb_sim_time});
 			this.m_ts_backtesting.Location = new System.Drawing.Point(3, 49);
 			this.m_ts_backtesting.Name = "m_ts_backtesting";
-			this.m_ts_backtesting.Size = new System.Drawing.Size(554, 25);
+			this.m_ts_backtesting.Size = new System.Drawing.Size(652, 25);
 			this.m_ts_backtesting.TabIndex = 2;
 			// 
 			// m_chk_back_testing
@@ -799,11 +858,6 @@ namespace CoinFlip
 			this.m_chk_back_testing.Size = new System.Drawing.Size(93, 22);
 			this.m_chk_back_testing.Text = "Back Testing";
 			// 
-			// toolStripSeparator4
-			// 
-			this.toolStripSeparator4.Name = "toolStripSeparator4";
-			this.toolStripSeparator4.Size = new System.Drawing.Size(6, 25);
-			// 
 			// m_btn_backtesting_reset
 			// 
 			this.m_btn_backtesting_reset.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
@@ -812,6 +866,25 @@ namespace CoinFlip
 			this.m_btn_backtesting_reset.Name = "m_btn_backtesting_reset";
 			this.m_btn_backtesting_reset.Size = new System.Drawing.Size(23, 22);
 			this.m_btn_backtesting_reset.Text = "toolStripButton1";
+			// 
+			// m_btn_backtesting_step1
+			// 
+			this.m_btn_backtesting_step1.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_backtesting_step1.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_backtesting_step1.Image")));
+			this.m_btn_backtesting_step1.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_backtesting_step1.Name = "m_btn_backtesting_step1";
+			this.m_btn_backtesting_step1.Size = new System.Drawing.Size(23, 22);
+			this.m_btn_backtesting_step1.Text = "Step One";
+			this.m_btn_backtesting_step1.ToolTipText = "Step forward by one candle then pause";
+			// 
+			// m_btn_backtesting_run_to_trade
+			// 
+			this.m_btn_backtesting_run_to_trade.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_backtesting_run_to_trade.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_backtesting_run_to_trade.Image")));
+			this.m_btn_backtesting_run_to_trade.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_backtesting_run_to_trade.Name = "m_btn_backtesting_run_to_trade";
+			this.m_btn_backtesting_run_to_trade.Size = new System.Drawing.Size(23, 22);
+			this.m_btn_backtesting_run_to_trade.Text = "Run to Trade";
 			// 
 			// m_btn_backtesting_run
 			// 
@@ -834,26 +907,17 @@ namespace CoinFlip
 			this.m_cb_sim_timeframe.Name = "m_cb_sim_timeframe";
 			this.m_cb_sim_timeframe.Size = new System.Drawing.Size(80, 25);
 			// 
-			// m_lbl_start_time
+			// m_tb_sim_time
 			// 
-			this.m_lbl_start_time.Name = "m_lbl_start_time";
-			this.m_lbl_start_time.Size = new System.Drawing.Size(61, 22);
-			this.m_lbl_start_time.Text = "Start Time";
+			this.m_tb_sim_time.BackColor = System.Drawing.SystemColors.Control;
+			this.m_tb_sim_time.BorderStyle = System.Windows.Forms.BorderStyle.None;
+			this.m_tb_sim_time.Name = "m_tb_sim_time";
+			this.m_tb_sim_time.Size = new System.Drawing.Size(140, 25);
 			// 
 			// toolStripSeparator1
 			// 
 			this.toolStripSeparator1.Name = "toolStripSeparator1";
 			this.toolStripSeparator1.Size = new System.Drawing.Size(6, 25);
-			// 
-			// m_btn_backtesting_step1
-			// 
-			this.m_btn_backtesting_step1.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_backtesting_step1.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_backtesting_step1.Image")));
-			this.m_btn_backtesting_step1.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_btn_backtesting_step1.Name = "m_btn_backtesting_step1";
-			this.m_btn_backtesting_step1.Size = new System.Drawing.Size(23, 22);
-			this.m_btn_backtesting_step1.Text = "Step One";
-			this.m_btn_backtesting_step1.ToolTipText = "Step forward by one candle then pause";
 			// 
 			// MainUI
 			// 
@@ -906,7 +970,7 @@ namespace CoinFlip
 						Application.SetCompatibleTextRenderingDefault(false);
 
 						// A view3d context reference the lives for the lifetime of the application
-						using (var view3d = new View3d(gdi_compatibility: false))
+						using (var view3d = new View3d(bgra_compatibility: true))
 						using (var ui = new MainUI())
 							Application.Run(ui);
 					}

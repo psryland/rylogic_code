@@ -1,10 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
+using System.Windows.Threading;
 using CoinFlip;
 using pr.attrib;
 using pr.common;
@@ -14,39 +13,34 @@ using pr.util;
 
 namespace Bot.Fishing
 {
-	public class Fisher :IDisposable, IShutdownAsync ,INotifyPropertyChanged
+	public class Fisher :IDisposable ,INotifyPropertyChanged
 	{
 		// Notes:
 		//  Go fishing on 'exch1' by setting offers above/below the best price on 'exch0'
 		//  If the orders on 'exch1' are filled, offset the trade with the reverse trade on 'exch0'
 		public Fisher(FishFinder ff, FishFinder.FishingData data)
 		{
-			var logpath = Misc.ResolveUserPath($"Logs\\FishFinder\\log_{data.Name}.txt");
+			var logpath = Misc.ResolveUserPath($"Logs\\{ff.Name}\\log_{data.Name}.txt");
 			Path_.CreateDirs(Path_.Directory(logpath));
 
 			FishFinder = ff;
 			Settings = data;
+			m_main_loop_exit = new CancellationTokenSource();
 			Log = new Logger($"FF-{data.Pair}", new LogToFile(logpath, append:false), Model.Log);
 			Log.TimeZero = Log.TimeZero - Log.TimeZero .TimeOfDay;
 			DetailsUI = new FishingDetailsUI(this);
 		}
 		public virtual void Dispose()
 		{
-			Debug.Assert(!Active, "Main loop must be shutdown before Disposing");
+			Active = false;
 			DetailsUI = null;
 			Log = null;
 			Settings = null;
 			FishFinder = null;
+			Util.Dispose(ref m_main_loop_exit);
 		}
 
-		/// <summary>Async shutdown</summary>
-		public Task ShutdownAsync()
-		{
-			Active = false;
-			return Task_.WaitWhile(() => Active);
-		}
-
-		/// <summary>The bot</summary>
+		/// <summary>The owning bot</summary>
 		public FishFinder FishFinder
 		{
 			get { return m_fish_finder; }
@@ -55,88 +49,99 @@ namespace Bot.Fishing
 				if (m_fish_finder == value) return;
 				if (m_fish_finder != null)
 				{
-					Model.AllowTradesChanging -= HandleAllowTradesChanging;
 				}
 				m_fish_finder = value;
 				if (m_fish_finder != null)
 				{
-					Model.AllowTradesChanging += HandleAllowTradesChanging;
 				}
 			}
 		}
 		private FishFinder m_fish_finder;
-		private void HandleAllowTradesChanging(object sender, PrePostEventArgs e)
-		{
-			// Disable fishing when enable trading is switched
-			// so that trades don't get left behind.
-			Active = false;
-		}
 
 		/// <summary>Enable/Disable fishing using this instance</summary>
 		public bool Active
 		{
-			get { return m_active != 0 && m_main_loop_shutdown != null; }
+			get { return m_timer != null; }
 			set
 			{
 				if (Active == value) return;
-				if (value)
-				{
-					if (!Settings.Valid)
-						return;
+				Debug.Assert(Model.AssertMainThread());
 
-					m_suppress_not_created_b2q = false;
-					m_suppress_not_created_q2b = false;
-					m_main_loop_shutdown = new CancellationTokenSource();
-					MainLoop(m_main_loop_shutdown.Token);
-				}
-				else if (m_main_loop_shutdown != null)
-				{
-					m_main_loop_shutdown.Cancel();
-					m_main_loop_shutdown = null;
-				}
-				PropertyChanged.Raise(this, new PropertyChangedEventArgs(nameof(Active)));
-			}
-		}
-
-		/// <summary>Main loop for the fisher</summary>
-		private async void MainLoop(CancellationToken shutdown)
-		{
-			using (Scope.Create(() => ++m_active, () => --m_active))
-			{
-				// Locate the trading pairs to fish with
-				var exch0 = Model.Exchanges.FirstOrDefault(x => x.Name == Settings.Exch0);
-				var exch1 = Model.Exchanges.FirstOrDefault(x => x.Name == Settings.Exch1);
-				Pair0 = exch0?.Pairs.Values.FirstOrDefault(x => x.Name == Settings.Pair);
-				Pair1 = exch1?.Pairs.Values.FirstOrDefault(x => x.Name == Settings.Pair);
-				if (Pair0 == null || Pair1 == null)
+				// Don't allow activation with invalid settings
+				if (value && !Settings.Valid)
 					return;
 
-				// Sanity check
-				if (Pair0.Exchange == Pair1.Exchange)
-					throw new Exception("Pairs must be from different exchanges");
-				if (Pair0.Exchange == Model.CrossExchange)
-					throw new Exception("Pairs cannot be CrossExchange pairs");
-				if (Pair1.Exchange == Model.CrossExchange)
-					throw new Exception("Pairs cannot be CrossExchange pairs");
-				if (Pair0.Base.Symbol != Pair1.Base.Symbol ||
-					Pair0.Quote.Symbol != Pair1.Quote.Symbol)
-					throw new Exception("Pairs must be for the same currencies but on different exchanges");
-
-				Log.Write(ELogLevel.Info, $"Fishing started - {Pair0.Name} on {Exch1.Name} vs {Exch0.Name}");
-
-				// Infinite loop till Shutdown called
-				for (;;)
+				// Start/Stop
+				if (Active)
 				{
-					Debug.Assert(Model.AssertMainThread());
+					// Shutdown
+					m_timer.Stop();
 
 					try
 					{
-						var exit = await Task.Run(() => shutdown.WaitHandle.WaitOne(500), shutdown);
-						if (exit) break;
-						shutdown.ThrowIfCancellationRequested();
+						// Cancel any outstanding bait trades
+						BaitB2Q?.Cancel();
+						BaitQ2B?.Cancel();
 
+						Updated.Raise(this);
+					}
+					catch (Exception ex)
+					{
+						if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
+						if (ex is OperationCanceledException) {}
+						else Log.Write(ELogLevel.Error, ex, $"Fishing instance {Settings.Name} ClosePositions failed.\r\n{ex.StackTrace}");
+					}
+
+					Log.Write(ELogLevel.Info, $"Fishing stopped - {Pair0.Name} on {Exch1.Name} vs {Exch0.Name}");
+				}
+
+				// Create the main loop timer
+				m_timer = value ? new DispatcherTimer(TimeSpan.FromMilliseconds(500), DispatcherPriority.Normal, HandleTick, Dispatcher.CurrentDispatcher) : null;
+
+				if (Active)
+				{
+					m_suppress_not_created_b2q = false;
+					m_suppress_not_created_q2b = false;
+
+					Util.Dispose(ref m_main_loop_exit);
+					m_main_loop_exit = CancellationTokenSource.CreateLinkedTokenSource(FishFinder.Shutdown.Token);
+
+					// Locate the trading pairs to fish with
+					var exch0 = Model.Exchanges.FirstOrDefault(x => x.Name == Settings.Exch0);
+					var exch1 = Model.Exchanges.FirstOrDefault(x => x.Name == Settings.Exch1);
+					Pair0 = exch0?.Pairs.Values.FirstOrDefault(x => x.Name == Settings.Pair);
+					Pair1 = exch1?.Pairs.Values.FirstOrDefault(x => x.Name == Settings.Pair);
+					if (Pair0 == null || Pair1 == null)
+						return;
+
+					// Sanity check
+					if (Pair0.Exchange == Pair1.Exchange)
+						throw new Exception("Pairs must be from different exchanges");
+					if (Pair0.Exchange == Model.CrossExchange)
+						throw new Exception("Pairs cannot be CrossExchange pairs");
+					if (Pair1.Exchange == Model.CrossExchange)
+						throw new Exception("Pairs cannot be CrossExchange pairs");
+					if (Pair0.Base.Symbol != Pair1.Base.Symbol ||
+						Pair0.Quote.Symbol != Pair1.Quote.Symbol)
+						throw new Exception("Pairs must be for the same currencies but on different exchanges");
+
+					Log.Write(ELogLevel.Info, $"Fishing started - {Pair0.Name} on {Exch1.Name} vs {Exch0.Name}");
+
+					// Start the main loop
+					m_timer.Start();
+				}
+
+				// Notify changed
+				PropertyChanged.Raise(this, new PropertyChangedEventArgs(nameof(Active)));
+
+				// Handlers
+				void HandleTick(object sender, EventArgs args)
+				{
+					Debug.Assert(Model.AssertMainThread());
+					try
+					{
 						// Service the fishing trades
-						await Update();
+						Update();
 
 						// Notify updated
 						Updated.Raise(this);
@@ -144,31 +149,14 @@ namespace Bot.Fishing
 					catch (Exception ex)
 					{
 						if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
-						if (ex is OperationCanceledException) { break; }
+						if (ex is OperationCanceledException) {}
 						else Log.Write(ELogLevel.Error, ex, $"Fishing instance {Settings.Name} update failed.\r\n{ex.StackTrace}");
 					}
 				}
-
-				try
-				{
-					// Cancel any outstanding bait trades
-					await Task.WhenAll(
-						BaitB2Q?.Cancel() ?? Misc.CompletedTask,
-						BaitQ2B?.Cancel() ?? Misc.CompletedTask);
-				}
-				catch (Exception ex)
-				{
-					if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
-					if (ex is OperationCanceledException) {}
-					else Log.Write(ELogLevel.Error, ex, $"Fishing instance {Settings.Name} ClosePositions failed.\r\n{ex.StackTrace}");
-				}
-
-				Updated.Raise(this);
-				Log.Write(ELogLevel.Info, $"Fishing stopped - {Pair0.Name} on {Exch1.Name} vs {Exch0.Name}");
 			}
 		}
-		private CancellationTokenSource m_main_loop_shutdown;
-		private int m_active;
+		private DispatcherTimer m_timer;
+		private CancellationTokenSource m_main_loop_exit;
 
 		/// <summary>App logic</summary>
 		public Model Model
@@ -284,36 +272,8 @@ namespace Bot.Fishing
 		private FishingTrade m_baitq2b;
 
 		/// <summary>Service the fishing orders</summary>
-		private async Task Update()
+		private void Update()
 		{
-			var tasks = new List<Task>();
-
-			// Helper for placing the bait order
-			Func<Trade, Trade, bool, FishingTrade> CreateBaitOrder = (Trade trade0, Trade trade1, bool suppress_not_created) =>
-			{
-				// Check the amounts we want to trade are valid
-				var validate0 = trade0.Validate();
-				var validate1 = trade1.Validate();
-				if (validate0 == Trade.EValidation.Valid && validate1 == Trade.EValidation.Valid)
-				{
-					// Create the fishing trade
-					var fisher = new FishingTrade(this, trade0, trade1);
-					fisher.Start();
-					return fisher;
-				}
-				else
-				{
-					if (!suppress_not_created)
-					{
-						var msg = $"Bait order on {Exch1.Name} not created for {trade1.TradeType}. ";
-						if (validate1 != Trade.EValidation.Valid) msg += $"\n  Bait Trade: {trade1.Description} ({validate1}). ";
-						if (validate0 != Trade.EValidation.Valid) msg += $"\n   Ref Trade: {trade0.Description} ({validate0}). ";
-						Log.Write(ELogLevel.Warn, msg);
-					}
-					return null;
-				}
-			};
-
 			// Pair: B/Q
 			//  on Exch1:  B -> Q @ P1  <--- this is the bait trade (the one we have in the order book on the exchange, waiting to be taken)
 			//  on Exch0:  Q -> B @ P0  <--- this is the match trade (used to match the bait trade when it is taken)
@@ -344,25 +304,25 @@ namespace Bot.Fishing
 					Pair1.B2Q.Orders.Count != 0)
 				{
 					// Find the available balances on each exchange (reduced to allow for fees and rounding)
-					var volumeQ = Maths.Min(FishFinder.FundAllocation * Pair0.Quote.Balance.Available * (1m - Pair0.Fee) * 0.99999m, Pair0.Quote.AutoTradeLimit);
-					var volumeB = Maths.Min(FishFinder.FundAllocation * Pair1.Base .Balance.Available * (1m - Pair1.Fee) * 0.99999m, Pair1.Base .AutoTradeLimit);
+					var availableQ = Maths.Min(FishFinder.FundAllocation * Pair0.Quote.Balance.Available * (1m - Pair0.Fee) * 0.99999m, Pair0.Quote.AutoTradeLimit);
+					var availableB = Maths.Min(FishFinder.FundAllocation * Pair1.Base .Balance.Available * (1m - Pair1.Fee) * 0.99999m, Pair1.Base .AutoTradeLimit);
 
-					// Determine the current price on Exch0 for converting Quote to Base
-					var trade = Pair0.QuoteToBase(volumeQ);
-
+					// Determine the market price on Exch0 for converting Quote to Base (this will be the match order)
 					// This tells us the equivalent volume of base currency we would get on Exch0.
-					// Choose the volume of base currency to trade as the minimum of this and our available on Exch1
-					var volume = Maths.Min(trade.VolumeOut, volumeB);
+					var trade = Pair0.QuoteToBase(availableQ);
 
-					// Find the spot price on Exch1 for trading Base to Quote.
-					var spot = Pair1.QuoteToBase(volumeQ);
+					// Choose the volume of base currency to trade as the minimum of the volume on Exch0 and our available on Exch1
+					var volumeB = Maths.Min(trade.VolumeOut, availableB);
+
+					// Find the market price on Exch1 for trading Base to Quote.
+					var market_price = Pair1.QuoteToBase(availableQ);
 					var min = trade.PriceInv * (1m + Settings.PriceOffset);
 					var def = trade.PriceInv * (1m + Settings.PriceOffset * 1.5m);
-					var price = spot.PriceInv > min ? spot.PriceInv : def;
+					var price = market_price.PriceInv > min ? market_price.PriceInv : def;
 
 					// Create trade objects to represent the trades we intend to make
-					var trade0 = new Trade(ETradeType.Q2B, Pair0, volume/trade.Price, volume, trade.Price); // Match
-					var trade1 = new Trade(ETradeType.B2Q, Pair1, volume, volume*price, price); // Bait
+					var trade0 = new Trade(ETradeType.Q2B, Pair0, trade.PriceQ2B, volumeB); // Match
+					var trade1 = new Trade(ETradeType.B2Q, Pair1, price, volumeB); // Bait
 
 					BaitB2Q = CreateBaitOrder(trade0, trade1, m_suppress_not_created_b2q);
 					m_suppress_not_created_b2q = BaitB2Q == null;
@@ -370,8 +330,8 @@ namespace Bot.Fishing
 			}
 			else
 			{
-				// Queue the update task
-				tasks.Add(BaitB2Q.Update());
+				// Service the trade
+				BaitB2Q.Update();
 			}
 
 			// (Re)Create the quote to base fishing trade
@@ -385,26 +345,26 @@ namespace Bot.Fishing
 					Pair1.Q2B.Orders.Count != 0)
 				{
 					// Find the available balances each exchange (reduced to allow for fees and rounding)
-					var volumeB = Maths.Min(FishFinder.FundAllocation * Pair0.Base.Balance.Available  * (1m - Pair0.Fee) * 0.99999m, Pair0.Base .AutoTradeLimit);
-					var volumeQ = Maths.Min(FishFinder.FundAllocation * Pair1.Quote.Balance.Available * (1m - Pair1.Fee) * 0.99999m, Pair1.Quote.AutoTradeLimit);
+					var availableB = Maths.Min(FishFinder.FundAllocation * Pair0.Base.Balance.Available  * (1m - Pair0.Fee) * 0.99999m, Pair0.Base .AutoTradeLimit);
+					var availableQ = Maths.Min(FishFinder.FundAllocation * Pair1.Quote.Balance.Available * (1m - Pair1.Fee) * 0.99999m, Pair1.Quote.AutoTradeLimit);
 
 					// Determine the current price on Exch0 for converting Base to Quote
-					var trade = Pair0.BaseToQuote(volumeB);
-
 					// This tells us the equivalent volume of quote currency we would get on Exch0.
+					var trade = Pair0.BaseToQuote(availableB);
+
 					// Choose the volume of quote currency to trade as the minimum of this and our available on Exch1
-					var volume = Maths.Min(trade.VolumeOut, volumeQ);
+					var volumeQ = Maths.Min(trade.VolumeOut, availableQ);
 
 					// Find the spot price on Exch1 for trading Quote to Base.
 					// If the price is within the price offset range, use this price, otherwise use the middle of the offset range
-					var spot = Pair1.BaseToQuote(volumeB);
+					var market_price = Pair1.BaseToQuote(availableB);
 					var min = trade.PriceInv * (1m + Settings.PriceOffset);
 					var def = trade.PriceInv * (1m + Settings.PriceOffset * 1.5m);
-					var price = spot.PriceInv > min ? spot.PriceInv : def;
+					var price = market_price.PriceInv > min ? market_price.PriceInv : def;
 
 					// Create trade objects to represent the trades we intend to make
-					var trade0 = new Trade(ETradeType.B2Q, Pair0, volume/trade.Price, volume, trade.Price);
-					var trade1 = new Trade(ETradeType.Q2B, Pair1, volume, volume*price, price);
+					var trade0 = new Trade(ETradeType.B2Q, Pair0, trade.PriceQ2B, volumeQ/trade.PriceQ2B);
+					var trade1 = new Trade(ETradeType.Q2B, Pair1, price, volumeQ/price);
 
 					BaitQ2B = CreateBaitOrder(trade0, trade1, m_suppress_not_created_q2b);
 					m_suppress_not_created_q2b = BaitQ2B == null;
@@ -412,12 +372,35 @@ namespace Bot.Fishing
 			}
 			else
 			{
-				// Quote the update task
-				tasks.Add(BaitQ2B.Update());
+				// Service the trade
+				BaitQ2B.Update();
 			}
 
-			// Service the bait trades
-			await Task.WhenAll(tasks);
+			// Helper for placing the bait order
+			FishingTrade CreateBaitOrder(Trade trade0, Trade trade1, bool suppress_not_created)
+			{
+				// Check the amounts we want to trade are valid
+				var validate0 = trade0.Validate();
+				var validate1 = trade1.Validate();
+				if (validate0 == EValidation.Valid && validate1 == EValidation.Valid)
+				{
+					// Create the fishing trade
+					var fisher = new FishingTrade(this, trade0, trade1);
+					fisher.Start();
+					return fisher;
+				}
+				else
+				{
+					if (!suppress_not_created)
+					{
+						var msg = $"Bait order on {Exch1.Name} not created for {trade1.TradeType}. ";
+						if (validate1 != EValidation.Valid) msg += $"\n  Bait Trade: {trade1.Description} ({validate1}). ";
+						if (validate0 != EValidation.Valid) msg += $"\n   Ref Trade: {trade0.Description} ({validate0}). ";
+						Log.Write(ELogLevel.Warn, msg);
+					}
+					return null;
+				}
+			}
 		}
 		bool m_suppress_not_created_b2q;
 		bool m_suppress_not_created_q2b;
@@ -548,12 +531,12 @@ namespace Bot.Fishing
 			}
 
 			/// <summary>Cancel this fishing trade</summary>
-			public async Task Cancel()
+			public void Cancel()
 			{
 				if (Result == EResult.Fishing)
 					Result = EResult.Cancel;
 
-				try { await Update(); }
+				try { Update(); }
 				catch (Exception ex)
 				{
 					if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
@@ -563,7 +546,7 @@ namespace Bot.Fishing
 			}
 
 			/// <summary>Check the bait</summary>
-			public async Task Update()
+			public void Update()
 			{
 				// State machine - go around till the state stops changing
 				for (var result = EResult.Unknown; Result != result;)
@@ -581,7 +564,8 @@ namespace Bot.Fishing
 								if (Exch1.TradeHistoryUseful)
 								{
 									// Ensure the trade history is up to date
-									await Exch1.TradeHistoryUpdated();
+									Debug.Assert(Exch1.History.LastUpdated >= Exch1.Positions.LastUpdated);
+									//await Exch1.WaitForTradeHistoryUpdate();
 
 									// If there is a historic trade matching the bait order then the order has been filled.
 									var his = Exch1.History[BaitId];
@@ -611,7 +595,7 @@ namespace Bot.Fishing
 							else
 							{
 								// Update the volume to be matched
-								MatchVolumeFrac = 1m - (pos.Remaining / pos.VolumeBase);
+								MatchVolumeFrac = 1m - (pos.RemainingBase / pos.VolumeBase);
 
 								// Get the current price for trading on Exch0
 								Trade0 = Trade0.TradeType == ETradeType.B2Q
@@ -625,7 +609,7 @@ namespace Bot.Fishing
 
 								// Determine the price to reference price ratio.
 								var sign = pos.TradeType == ETradeType.B2Q ? +1 : -1;
-								var fishing_ratio = sign * Maths.Div((decimal)(         pos.Price - Trade0.PriceQ2B), (decimal)Trade0.PriceQ2B, 0m);
+								var fishing_ratio = sign * Maths.Div((decimal)(         pos.PriceQ2B - Trade0.PriceQ2B), (decimal)Trade0.PriceQ2B, 0m);
 								var current_ratio = sign * Maths.Div((decimal)(current_best_price - Trade0.PriceQ2B), (decimal)Trade0.PriceQ2B, 0m);
 								var validation0 = Trade0.Validate(m_balance_hold);
 
@@ -639,7 +623,7 @@ namespace Bot.Fishing
 								// If the bait trade price is too close to the reference price, cancel it and create it again
 								else if (fishing_ratio <= PriceOffset)
 								{
-									Log.Write(ELogLevel.Info, $"Bait order (id={BaitId}) on {Exch1.Name} price is too close to the reference price: {pos.Price.ToString("G6")} vs {Trade0.PriceQ2B.ToString("G6")} ({100*fishing_ratio:G6}%)");
+									Log.Write(ELogLevel.Info, $"Bait order (id={BaitId}) on {Exch1.Name} price is too close to the reference price: {pos.PriceQ2B.ToString("G6")} vs {Trade0.PriceQ2B.ToString("G6")} ({100*fishing_ratio:G6}%)");
 									Result = EResult.Cancel;
 								}
 
@@ -652,14 +636,14 @@ namespace Bot.Fishing
 									var idx = Trade1.OrderBookIndex;
 									if (idx >= 10)
 									{
-										Log.Write(ELogLevel.Info, $"Bait order (id={BaitId}) on {Exch1.Name} price is too far from the reference price: {pos.Price.ToString("G6")} vs {Trade0.PriceQ2B.ToString("G6")}, order book index: {idx} ({100*fishing_ratio:G6}%)");
+										Log.Write(ELogLevel.Info, $"Bait order (id={BaitId}) on {Exch1.Name} price is too far from the reference price: {pos.PriceQ2B.ToString("G6")} vs {Trade0.PriceQ2B.ToString("G6")}, order book index: {idx} ({100*fishing_ratio:G6}%)");
 										Result = EResult.Cancel;
 									}
 								}
 
 								// If, for some reason, the matching trade is no longer valid (e.g. lack of funds)
 								// cancel the bait trade, because we won't be able to match it.
-								else if (validation0 != Trade.EValidation.Valid)
+								else if (validation0 != EValidation.Valid)
 								{
 									Log.Write(ELogLevel.Info, $"Bait order (id={BaitId}) on {Exch1.Name} can not be matched on {Exch0.Name}: {validation0} ({Trade0.Description})");
 									Result = EResult.Cancel;
@@ -704,7 +688,7 @@ namespace Bot.Fishing
 
 								// Match any partial trade
 								var validation0 = Trade0.Validate();
-								if (validation0 == Trade.EValidation.Valid)
+								if (validation0 == EValidation.Valid)
 								{
 									var match_result = Trade0.CreateOrder();
 									MatchId = match_result.OrderId;
@@ -732,7 +716,8 @@ namespace Bot.Fishing
 								if (Exch0.TradeHistoryUseful)
 								{
 									// Ensure the trade history is up to date
-									await Exch0.TradeHistoryUpdated();
+									Debug.Assert(Exch1.History.LastUpdated >= Exch1.Positions.LastUpdated);
+									//await Exch0.WaitForTradeHistoryUpdate();
 
 									// If there is a historic trade matching the match order then the order has been filled.
 									var his = Exch0.History[MatchId];
@@ -767,8 +752,8 @@ namespace Bot.Fishing
 							var value1 = Trade1.CoinOut.Value(nett1);
 							var sum = value0 + value1;
 
-							var effective_price0 = (decimal)Trade0.PriceNettQ2B;
-							var effective_price1 = (decimal)Trade1.PriceNettQ2B;
+							var effective_price0 = (decimal)Trade0.PriceQ2BNett;
+							var effective_price1 = (decimal)Trade1.PriceQ2BNett;
 							var ratio = Math.Abs(effective_price0 - effective_price1) / effective_price0;
 
 							var msg = Str.Build(

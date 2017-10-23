@@ -19,7 +19,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Cancel an open trade</summary>
-		protected override void CancelOrderInternal(TradePair pair, ulong order_id)
+		protected override bool CancelOrderInternal(TradePair pair, ulong order_id)
 		{
 			throw new Exception("Cannot cancel trades on the CrossExchange");
 		}
@@ -81,55 +81,50 @@ namespace CoinFlip
 						// Available balance is applied after the loop is identified.
 						var buys  = new[]{ new Order(1m._(), decimal.MaxValue._(coin0)) };
 						var sells = new[]{ new Order(1m._(), decimal.MaxValue._(coin1)) };
-						pair.UpdateOrderBook(buys, sells);
-					}
+						pair.MarketDepth.UpdateOrderBook(buys, sells);
 
-					// Notify updated
-					MarketDataUpdatedTime.NotifyAll(DateTimeOffset.Now);
+						// Notify updated
+						Pairs.LastUpdated = DateTimeOffset.Now;
+					}
 				});
 			}
 			catch (Exception ex)
 			{
 				Model.Log.Write(ELogLevel.Error, ex, "CrossExchange UpdateData() failed");
-				Status = EStatus.Error;
 			}
 		}
 
 		/// <summary>Update account balance data</summary>
-		protected override void UpdateBalances()
+		protected override void UpdateBalances() // Worker thread context
 		{
 			try
 			{
 				Model.MarketUpdates.Add(() =>
 				{
 					// Update the Balances data
-					using (Model.Balances.PreservePosition())
+					foreach (var pair in Pairs.Values)
 					{
-						foreach (var pair in Pairs.Values)
-						{
-							Balance[pair.Base ] = pair.Base.Balance;
-							Balance[pair.Quote] = pair.Quote.Balance;
-						}
+						Balance[pair.Base ] = pair.Base.Balance;
+						Balance[pair.Quote] = pair.Quote.Balance;
 					}
 
 					// Notify updated
-					BalanceUpdatedTime.NotifyAll(DateTimeOffset.Now);
+					Balance.LastUpdated = DateTimeOffset.Now;
 				});
 			}
 			catch (Exception ex)
 			{
 				Model.Log.Write(ELogLevel.Error, ex, "CrossExchange UpdateBalances() failed");
-				Status = EStatus.Error;
 			}
 		}
 
 		/// <summary>Update open positions</summary>
-		protected override void UpdatePositions() // Worker thread context
+		protected override void UpdatePositionsAndHistory() // Worker thread context
 		{
 			// There shouldn't be any of these. Cross-exchange trades
 			// are virtual, we only pretend to convert 'Coin' on 'Exchange0'
 			// to 'Coin' on 'Exchange1' (or visa versa)
-			base.UpdatePositions();
+			base.UpdatePositionsAndHistory();
 		}
 
 		/// <summary>Set the maximum number of requests per second to the exchange server</summary>

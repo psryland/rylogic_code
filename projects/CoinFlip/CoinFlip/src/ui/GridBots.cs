@@ -136,11 +136,16 @@ namespace CoinFlip
 					DataSource = m_bots;
 					m_bots.ListChanging += HandleBotsListChanging;
 				}
+
+				// Handlers
+				void HandleBotsListChanging(object sender, ListChgEventArgs<IBot> e)
+				{
+					if (e.Index.Within(0, RowCount))
+						InvalidateRow(e.Index);
+				}
 			}
 		}
 		private BindingSource<IBot> m_bots;
-		private void HandleBotsListChanging(object sender, ListChgEventArgs<IBot> e)
-		{}
 
 		/// <summary>Create the context menu for the grid</summary>
 		private ContextMenuStrip CreateCMenu()
@@ -161,11 +166,10 @@ namespace CoinFlip
 				{
 					opt.Enabled = SelectedRows.Count == 1;
 				};
-				opt.Click += async (s,a) =>
+				opt.Click += (s,a) =>
 				{
 					var bot = (IBot)SelectedRows[0].DataBoundItem;
 					Model.Bots.Remove(bot);
-					await bot.ShutdownAsync();
 					Util.Dispose(ref bot);
 				};
 			}

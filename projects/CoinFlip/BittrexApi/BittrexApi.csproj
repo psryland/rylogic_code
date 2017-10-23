@@ -63,6 +63,7 @@
     <Compile Include="src\Position.cs" />
     <Compile Include="src\OrderBook.cs" />
     <Compile Include="src\PositionHistory.cs" />
+    <Compile Include="src\Scope.cs" />
     <Compile Include="src\TradeResult.cs" />
   </ItemGroup>
   <ItemGroup>

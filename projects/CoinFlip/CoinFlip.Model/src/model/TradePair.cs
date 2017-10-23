@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using pr.common;
@@ -33,9 +32,7 @@ namespace CoinFlip
 			VolumeRangeBase  = volume_range_base  ?? new RangeF<Unit<decimal>>(0m._(Base), decimal.MaxValue._(Base));
 			VolumeRangeQuote = volume_range_quote ?? new RangeF<Unit<decimal>>(0m._(Quote), decimal.MaxValue._(Quote));
 			PriceRange       = price_range        ?? new RangeF<Unit<decimal>>(0m._(RateUnits), decimal.MaxValue._(RateUnits));
-
-			Q2B = new OrderBook(base_, quote);
-			B2Q = new OrderBook(base_, quote);
+			MarketDepth      = new MarketDepth(base_, quote);
 		}
 
 		/// <summary>The name of this pair. Format Base/Quote</summary>
@@ -113,6 +110,12 @@ namespace CoinFlip
 		}
 		private Exchange m_exchange;
 
+		/// <summary>App logic</summary>
+		public Model Model
+		{
+			get { return Exchange.Model; }
+		}
+
 		/// <summary>Return the other coin involved in the trade pair</summary>
 		public Coin OtherCoin(Coin coin)
 		{
@@ -121,11 +124,14 @@ namespace CoinFlip
 			throw new Exception("'coin' is not in this pair");
 		}
 
+		/// <summary>The order books for this pair</summary>
+		public MarketDepth MarketDepth { [DebuggerStepThrough] get; private set; }
+
 		/// <summary>Prices for converting Base to Quote. First price is a maximum</summary>
-		public OrderBook B2Q { [DebuggerStepThrough] get; private set; }
+		public OrderBook B2Q { [DebuggerStepThrough] get { return MarketDepth.B2Q; } }
 
 		/// <summary>Prices for converting Quote to Base. First price is a minimum</summary>
-		public OrderBook Q2B { [DebuggerStepThrough] get; private set; }
+		public OrderBook Q2B { [DebuggerStepThrough] get { return MarketDepth.Q2B; } }
 
 		/// <summary>The allowable range of volume for trading the base currency</summary>
 		public RangeF<Unit<decimal>> VolumeRangeBase
@@ -141,7 +147,7 @@ namespace CoinFlip
 			private set;
 		}
 
-		/// <summary>The allowed price range when trading this pair</summary>
+		/// <summary>The allowed price range (in Quote/Base) when trading this pair</summary>
 		public RangeF<Unit<decimal>> PriceRange
 		{
 			get;
@@ -166,13 +172,22 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the spot price (Quote/Base) for the given trade type</summary>
-		public Unit<decimal> SpotPrice(ETradeType tt)
+		public Unit<decimal>? SpotPrice(ETradeType tt)
 		{
 			switch (tt) {
 			default: throw new Exception("Unknown trade type: {0}".Fmt(tt));
-			case ETradeType.Q2B: return B2Q.Orders.Count != 0 ? B2Q.Orders[0].Price : 0m._(RateUnits);
-			case ETradeType.B2Q: return Q2B.Orders.Count != 0 ? Q2B.Orders[0].Price : 0m._(RateUnits);
+			case ETradeType.Q2B: return B2Q.Orders.Count != 0 ? B2Q.Orders[0].Price : (Unit<decimal>?)null;
+			case ETradeType.B2Q: return Q2B.Orders.Count != 0 ? Q2B.Orders[0].Price : (Unit<decimal>?)null;
 			}
+		}
+
+		/// <summary>Return the current difference between buy/sell prices</summary>
+		public Unit<decimal>? Spread
+		{
+			// Remember: Q2B spot price = B2Q[0].Price and visa versa
+			// Spread is the difference between the buy and sell price,
+			// which is always a loss (i.e. negative).
+			get { return -(SpotPrice(ETradeType.Q2B) - SpotPrice(ETradeType.B2Q)); }
 		}
 
 		/// <summary>
@@ -186,7 +201,7 @@ namespace CoinFlip
 				throw new Exception("Invalid volume");
 
 			// Determine the best price and volume in quote currency.
-			var trade = new Trade(ETradeType.B2Q, this, 0m._(Base), 0m._(Quote), 0m._(Quote)/1m._(Base));
+			var trade = new Trade(ETradeType.B2Q, this, 0m._(RateUnits), 0m._(Base));
 			foreach (var x in B2Q)
 			{
 				if (x.VolumeBase > volume)
@@ -220,7 +235,7 @@ namespace CoinFlip
 			// Determine the best price and volume in base currency
 			// Note, the units are not the typical units for an order because
 			// I'm just using 'Order' to pass back a price and volume pair.
-			var trade = new Trade(ETradeType.Q2B, this, 0m._(Quote), 0m._(Base), 0m._(Base)/1m._(Quote));
+			var trade = new Trade(ETradeType.Q2B, this, 0m._(RateUnits), 0m._(Base));
 			foreach (var x in Q2B)
 			{
 				if (x.Price * x.VolumeBase > volume)
@@ -241,6 +256,15 @@ namespace CoinFlip
 			return trade;
 		}
 
+		/// <summary>Convert a volume of currency using the available orders. e.g. Q2B => 'volume' in Quote, out in 'Base'</summary>
+		public Trade MakeTrade(ETradeType tt, Unit<decimal> volume)
+		{
+			return
+				tt == ETradeType.Q2B ? QuoteToBase(volume) :
+				tt == ETradeType.B2Q ? BaseToQuote(volume) :
+				throw new Exception("Unknown trade type");
+		}
+
 		/// <summary>The position of this trade in the order book for the trade type</summary>
 		public int OrderBookIndex(ETradeType tt, Unit<decimal> price)
 		{
@@ -248,6 +272,11 @@ namespace CoinFlip
 			if (price < 0m._(RateUnits))
 				throw new Exception("Invalid price");
 
+			// If a trade cannot be filled by existing orders, it becomes an offer.
+			// E.g.
+			//  - Want to trade B2Q == Sell our 'B' to get 'Q'.
+			//  - If there are no suitable B2Q.Orders (i.e. people wanting to buy 'B') then our trade becomes an offer in the Q2B order book.
+			//    i.e. we want to buy 'Q' so our trade is a Q2B offer.
 			return tt == ETradeType.B2Q
 				? Q2B.Orders.BinarySearch(x => +x.Price.CompareTo(price), find_insert_position:true)
 				: B2Q.Orders.BinarySearch(x => -x.Price.CompareTo(price), find_insert_position:true);
@@ -273,30 +302,8 @@ namespace CoinFlip
 			VolumeRangeBase  = rhs.VolumeRangeBase;
 			VolumeRangeQuote = rhs.VolumeRangeQuote;
 			PriceRange       = rhs.PriceRange;
-			UpdateOrderBook(rhs.B2Q.Orders, rhs.Q2B.Orders);
+			MarketDepth.UpdateOrderBook(rhs.B2Q.Orders, rhs.Q2B.Orders);
 		}
-
-		/// <summary>Update the list of buy/sell orders</summary>
-		public void UpdateOrderBook(IEnumerable<Order> b2q_offers, IEnumerable<Order> q2b_offers, bool notify_changed = true)
-		{
-			using (B2Q.Orders.SuspendEvents(reset_bindings_on_resume: true))
-			{
-				B2Q.Orders.Clear();
-				B2Q.Orders.AddRange(b2q_offers);
-			}
-			using (Q2B.Orders.SuspendEvents(reset_bindings_on_resume: true))
-			{
-				Q2B.Orders.Clear();
-				Q2B.Orders.AddRange(q2b_offers);
-			}
-			Debug.Assert(AssertOrdersValid());
-
-			if (notify_changed)
-				OrderBookChanged.Raise(this);
-		}
-
-		/// <summary>Raised when the order book for this pair is updated</summary>
-		public event EventHandler OrderBookChanged;
 
 		/// <summary></summary>
 		public override string ToString()
@@ -338,14 +345,30 @@ namespace CoinFlip
 		public bool AssertOrdersValid()
 		{
 			// Asking price should increase
-			for (int i = 1; i < Q2B.Count; ++i)
-				if (Q2B[i-1].Price > Q2B[i].Price)
-					return false;
+			for (int i = 0; i != Q2B.Count; ++i)
+			{
+				if (Q2B[i].Price < 0m._(RateUnits))
+					throw new Exception("Q2B order book price is invalid");
+				if (Q2B[i].VolumeBase < 0m._(Base))
+					throw new Exception("Q2B order book volume is invalid");
+				if (i > 0 && Q2B[i-1].Price > Q2B[i].Price)
+					throw new Exception("Q2B order book prices are out of order");
+			}
 
 			// Bid price should decrease
-			for (int i = 1; i < B2Q.Count; ++i)
-				if (B2Q[i-1].Price < B2Q[i].Price)
-					return false;
+			for (int i = 0; i != B2Q.Count; ++i)
+			{
+				if (B2Q[i].Price < 0m._(RateUnits))
+					throw new Exception("B2Q order book price is invalid");
+				if (B2Q[i].VolumeBase < 0m._(Base))
+					throw new Exception("B2Q order book volume is invalid");
+				if (i > 0 && B2Q[i-1].Price < B2Q[i].Price)
+					throw new Exception("B2Q order book prices are out of order");
+			}
+
+			// Check the spread
+			if (Spread < 0m._(RateUnits))
+				throw new Exception("Spread is negative");
 
 			return true;
 		}
@@ -353,11 +376,11 @@ namespace CoinFlip
 		/// <summary>Convert two currency symbols into a unique key for this pair</summary>
 		public static string MakeKey(string sym0, string sym1)
 		{
-			return "{0}/{1}".Fmt(sym0, sym1);
+			return $"{sym0}/{sym1}";
 		}
 		public static string MakeKey(string sym0, string sym1, Exchange exch0, Exchange exch1)
 		{
-			return MakeKey(sym0, sym1) + " {0}/{1}".Fmt(exch0.Name, exch1.Name);
+			return MakeKey(sym0, sym1) + $" {exch0.Name}/{exch1.Name}";
 		}
 		public static string MakeKey(TradePair pair)
 		{

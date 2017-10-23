@@ -1,90 +1,119 @@
-﻿using System;
-using System.Drawing;
-using System.Linq;
+﻿using System.Drawing;
 using System.Windows.Forms;
-using pr.container;
+using pr.common;
 using pr.extn;
 using pr.gui;
 
 namespace CoinFlip
 {
-	public class GridHistory :TreeBase
+	public class GridHistory :GridBase
 	{
+		private readonly string[] m_dummy_row;
 		public GridHistory(Model model, string title, string name)
-			:base(model, title, name)
+			:base(model, title,name)
 		{
+			m_dummy_row = new string[1];
 			ReadOnly = true;
-			Columns.Add(new TreeGridColumn
+			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(PositionFill.OrderId),
 				HeaderText = "Order/Trade Id",
+				Name = nameof(PositionFill.OrderId),
 				DataPropertyName = nameof(PositionFill.OrderId),
 				SortMode = DataGridViewColumnSortMode.Automatic,
 				FillWeight = 0.6f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Historic.Created),
 				HeaderText = "Date",
-				DataPropertyName = nameof(Historic.Created),
+				Name = nameof(PositionFill.Created),
+				DataPropertyName = nameof(PositionFill.Created),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Historic.TradeType),
 				HeaderText = "Type",
-				DataPropertyName = nameof(Historic.TradeType),
+				Name = nameof(PositionFill.TradeType),
+				DataPropertyName = nameof(PositionFill.TradeType),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Historic.Pair),
 				HeaderText = "Pair",
-				DataPropertyName = nameof(Historic.Pair),
+				Name = nameof(PositionFill.Pair),
+				DataPropertyName = nameof(PositionFill.Pair),
 				FillWeight = 0.5f,
 				Visible = false,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Historic.PriceQ2B),
 				HeaderText = "Price",
-				DataPropertyName = nameof(Historic.PriceQ2B),
+				Name = nameof(PositionFill.PriceQ2B),
+				DataPropertyName = nameof(PositionFill.PriceQ2B),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Historic.VolumeIn),
 				HeaderText = "Volume In",
-				DataPropertyName = nameof(Historic.VolumeIn),
+				Name = nameof(PositionFill.VolumeIn),
+				DataPropertyName = nameof(PositionFill.VolumeIn),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Historic.VolumeOut),
 				HeaderText = "Volume Out",
-				DataPropertyName = nameof(Historic.VolumeOut),
+				Name = nameof(PositionFill.VolumeOut),
+				DataPropertyName = nameof(PositionFill.VolumeOut),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Historic.VolumeNett),
 				HeaderText = "Volume Nett",
-				DataPropertyName = nameof(Historic.VolumeNett),
+				Name = nameof(PositionFill.VolumeNett),
+				DataPropertyName = nameof(PositionFill.VolumeNett),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Historic.Commission),
 				HeaderText = "Commission",
-				DataPropertyName = nameof(Historic.Commission),
+				Name = nameof(PositionFill.Commission),
+				DataPropertyName = nameof(PositionFill.Commission),
 				FillWeight = 1.0f,
 			});
+			Columns.Add(new DataGridViewTextBoxColumn
+			{
+				HeaderText = "Trade Count",
+				Name = nameof(PositionFill.TradeCount),
+				DataPropertyName = nameof(PositionFill.TradeCount),
+				FillWeight = 0.1f,
+			});
+			ContextMenuStrip = CreateCMenu();
 			DataSource = Model.History;
 		}
-		protected override void Dispose(bool disposing)
+		protected override void SetModelCore(Model model)
 		{
-			DataSource = null;
-			base.Dispose(disposing);
+			if (Model != null)
+			{
+				Model.SimRunningChanged -= HandleSimRunning;
+			}
+			base.SetModelCore(model);
+			if (Model != null)
+			{
+				Model.SimRunningChanged += HandleSimRunning;
+			}
+
+			// Handlers
+			void HandleSimRunning(object sender, PrePostEventArgs e)
+			{
+				// Disable the data source while the simulation is running, for performance reasons
+				if (e.Before && !Model.SimRunning)
+				{
+					DataSource = m_dummy_row;
+				}
+				if (e.After && !Model.SimRunning)
+				{
+					DataSource = Model.History;
+				}
+			}
 		}
 		protected override void OnMouseDown(MouseEventArgs e)
 		{
@@ -97,83 +126,105 @@ namespace CoinFlip
 			if (!this.Within(a.ColumnIndex, a.RowIndex, out DataGridViewColumn col, out DataGridViewCell cell))
 				return;
 
-			var node  = (TreeGridNode)Rows[a.RowIndex];
-			var fill  = node.DataBoundItem as PositionFill;
-			var trade = node.DataBoundItem as Historic;
-			var tt    = fill?.TradeType ?? trade.TradeType;
-			var pair  = fill?.Pair      ?? trade.Pair;
+			// Display a message while the simulation is running
+			if (DataSource == m_dummy_row)
+			{
+				a.Value = a.ColumnIndex == 0 && a.RowIndex == 0 ? "... Simulation Running ..." : string.Empty;
+				a.FormattingApplied = true;
+				return;
+			}
 
+			// Can happen during the change over from dummy row back to a data source
+			var fill = (PositionFill)cell.OwningRow.DataBoundItem;
+			if (fill == null)
+				return;
+
+			// Format cells
 			switch (col.DataPropertyName)
 			{
-			case nameof(PositionFill.OrderId):
+			case nameof(PositionFill.Created):
 				{
-					a.Value = fill?.OrderId ?? trade?.TradeId ?? 0UL;
-					break;
-				}
-			case nameof(Historic.Created):
-				{
-					var ts = fill?.Created ?? trade?.Created ?? DateTimeOffset.MinValue;
-					a.Value = ts.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss");
+					a.Value = fill.Created.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss");
 					a.FormattingApplied = true;
 					break;
 				}
-			case nameof(Historic.TradeType):
+			case nameof(PositionFill.TradeType):
 				{
-					a.Value = "{0}→{1} ({2})".Fmt(
-						tt == ETradeType.Q2B ? pair.Quote : pair.Base ,
-						tt == ETradeType.Q2B ? pair.Base  : pair.Quote,
-						tt);
+					a.Value =
+						fill.TradeType == ETradeType.Q2B ? $"{fill.Pair.Quote}→{fill.Pair.Base} ({fill.TradeType})" :
+						fill.TradeType == ETradeType.B2Q ? $"{fill.Pair.Base}→{fill.Pair.Quote} ({fill.TradeType})" :
+						"---";
 					a.FormattingApplied = true;
 					break;
 				}
-			case nameof(Historic.Pair):
+			case nameof(PositionFill.Pair):
 				{
-					a.Value = pair.Name;
+					a.Value = fill.Pair.Name;
 					a.FormattingApplied = true;
 					break;
 				}
-			case nameof(Historic.PriceQ2B):
+			case nameof(PositionFill.PriceQ2B):
 				{
-					var price = fill?.PriceQ2B ?? trade?.PriceQ2B ?? 0m;
-					a.Value = $"{price.ToString("G8")} {pair.RateUnits}";
+					a.Value = fill.PriceQ2B.ToString("G8",true);
 					a.FormattingApplied = true;
 					break;
 				}
-			case nameof(Historic.VolumeIn):
+			case nameof(PositionFill.VolumeIn):
 				{
-					var vol = fill?.VolumeIn ?? trade?.VolumeIn ?? 0m;
-					var coin = fill?.CoinIn ?? trade?.CoinIn ?? string.Empty;
-					a.Value = $"{vol.ToString("G8")} {coin}";
+					a.Value = fill.VolumeIn.ToString("G8",true);
 					a.FormattingApplied = true;
 					break;
 				}
-			case nameof(Historic.VolumeOut):
+			case nameof(PositionFill.VolumeOut):
 				{
-					var vol = fill?.VolumeOut ?? trade?.VolumeOut ?? 0m;
-					var coin = fill?.CoinOut ?? trade?.CoinOut ?? string.Empty;
-					a.Value = $"{vol.ToString("G8")} {coin}";
+					a.Value = fill.VolumeOut.ToString("G8",true);
 					a.FormattingApplied = true;
 					break;
 				}
-			case nameof(Historic.VolumeNett):
+			case nameof(PositionFill.VolumeNett):
 				{
-					var vol = fill?.VolumeNett ?? trade?.VolumeNett ?? 0m;
-					var coin = fill?.CoinOut ?? trade?.CoinOut ?? string.Empty;
-					a.Value = $"{vol.ToString("G8")} {coin}";
+					a.Value = fill.VolumeNett.ToString("G8",true);
 					a.FormattingApplied = true;
 					break;
 				}
-			case nameof(Historic.Commission):
+			case nameof(PositionFill.Commission):
 				{
-					var fees = fill?.Commission ?? trade?.Commission ?? 0m;
-					var coin = fill?.CoinOut ?? trade?.CoinOut ?? string.Empty;
-					a.Value = $"{fees.ToString("G10")} {coin}";
+					a.Value = fill.Commission.ToString("G10",true);
 					a.FormattingApplied = true;
 					break;
 				}
 			}
 			a.CellStyle.SelectionBackColor = a.CellStyle.BackColor.Lerp(Color.Gray, 0.5f);
 			a.CellStyle.SelectionForeColor = a.CellStyle.ForeColor;
+		}
+
+		/// <summary>Create the context menu for the grid</summary>
+		private ContextMenuStrip CreateCMenu()
+		{
+			var cmenu = new ContextMenuStrip();
+			{
+				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Show Trades"));
+				cmenu.Opening += (s,a) =>
+				{
+					opt.Enabled = SelectedRows.Count == 1;
+				};
+				opt.Click += (s,a) =>
+				{
+					MsgBox.Show(this, "TODO");
+					//var pos = SelectedRows.Cast<DataGridViewRow>().Select(x => (Position)x.DataBoundItem).First();
+					//pos.CancelOrder();
+				};
+			}
+			return cmenu;
+		}
+	}
+#if false
+	public class GridHistory :TreeBase
+	{
+		protected override void Dispose(bool disposing)
+		{
+			DataSource = null;
+			base.Dispose(disposing);
 		}
 
 		/// <summary>The data source for the tree</summary>
@@ -245,4 +296,5 @@ namespace CoinFlip
 			}
 		}
 	}
+#endif
 }

@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using pr.container;
 using pr.extn;
 using pr.util;
@@ -13,8 +14,14 @@ namespace CoinFlip
 	{
 		public MarketDepth(Coin base_, Coin quote)
 		{
-			Q2B = new OrderBook(base_, quote);
-			B2Q = new OrderBook(base_, quote);
+			Q2B = new OrderBook(base_, quote, ETradeType.Q2B);
+			B2Q = new OrderBook(base_, quote, ETradeType.B2Q);
+		}
+
+		/// <summary>Access the order book for the given trade direction</summary>
+		public OrderBook this[ETradeType tt]
+		{
+			get { return tt == ETradeType.B2Q ? B2Q : Q2B; }
 		}
 
 		/// <summary>Prices for converting Base to Quote. First price is a maximum</summary>
@@ -24,18 +31,56 @@ namespace CoinFlip
 		public OrderBook Q2B { [DebuggerStepThrough] get; private set; }
 
 		/// <summary>Update the list of buy/sell orders</summary>
-		public void UpdateOrderBook(IEnumerable<Order> buys, IEnumerable<Order> sells)
+		public void UpdateOrderBook(IEnumerable<Order> b2q, IEnumerable<Order> q2b)
 		{
 			using (B2Q.Orders.SuspendEvents(reset_bindings_on_resume: true))
 			{
 				B2Q.Orders.Clear();
-				B2Q.Orders.AddRange(buys);
+				B2Q.Orders.AddRange(b2q);
 			}
 			using (Q2B.Orders.SuspendEvents(reset_bindings_on_resume: true))
 			{
 				Q2B.Orders.Clear();
-				Q2B.Orders.AddRange(sells);
+				Q2B.Orders.AddRange(q2b);
 			}
+			Debug.Assert(AssertOrdersValid());
+			OrderBookChanged.Raise(this);
+		}
+
+		/// <summary>Raised when the order book for this pair is updated</summary>
+		public event EventHandler OrderBookChanged;
+
+		/// <summary>Check the orders are in the correct order</summary>
+		public bool AssertOrdersValid()
+		{
+			var q2b_price0 = 0m._(Q2B.RateUnits);
+			var b2q_price0 = 0m._(B2Q.RateUnits);
+			var q2b0 = 0m._(Q2B.Base);
+			var b2q0 = 0m._(B2Q.Base);
+
+			// Asking price should increase
+			for (int i = 0; i != Q2B.Count; ++i)
+			{
+				if (Q2B[i].Price < q2b_price0)
+					throw new Exception("Q2B order book price is invalid");
+				if (Q2B[i].VolumeBase < q2b0)
+					throw new Exception("Q2B order book volume is invalid");
+				if (i > 0 && Q2B[i-1].Price > Q2B[i].Price)
+					throw new Exception("Q2B order book prices are out of order");
+			}
+
+			// Bid price should decrease
+			for (int i = 0; i != B2Q.Count; ++i)
+			{
+				if (B2Q[i].Price < b2q_price0)
+					throw new Exception("B2Q order book price is invalid");
+				if (B2Q[i].VolumeBase < b2q0)
+					throw new Exception("B2Q order book volume is invalid");
+				if (i > 0 && B2Q[i-1].Price < B2Q[i].Price)
+					throw new Exception("B2Q order book prices are out of order");
+			}
+
+			return true;
 		}
 	}
 
@@ -43,17 +88,19 @@ namespace CoinFlip
 	[DebuggerDisplay("{Description,nq}")]
 	public class OrderBook :IEnumerable<Order>
 	{
-		public OrderBook(Coin base_, Coin quote)
+		public OrderBook(Coin base_, Coin quote, ETradeType tt)
 		{
 			Orders = new BindingListEx<Order>();
 			Base = base_;
 			Quote = quote;
+			TradeType = tt;
 		}
 		public OrderBook(OrderBook rhs)
 		{
 			Base = rhs.Base;
 			Quote = rhs.Quote;
 			Orders = new BindingListEx<Order>((IEnumerable<Order>)rhs.Orders);
+			TradeType = rhs.TradeType;
 		}
 
 		/// <summary>Base currency</summary>
@@ -64,6 +111,12 @@ namespace CoinFlip
 
 		/// <summary>The buy/sell offers</summary>
 		public BindingListEx<Order> Orders { get; private set; }
+
+		/// <summary>The trade direction of offer in this order book. E.g. B2Q means offers to convert Base to Quote</summary>
+		public ETradeType TradeType { get; private set; }
+
+		/// <summary>If positive, then the first order is a minimum (i.e. Q2B). If negative, then the first order is a maximum (i.e. B2Q)</summary>
+		public int Sign { get { return TradeType.Sign(); } }
 
 		/// <summary>The number of orders</summary>
 		public int Count
@@ -91,26 +144,63 @@ namespace CoinFlip
 			get { return Orders[index]; }
 		}
 
-		/// <summary>Remove orders up to 'price' or 'volume' (simulating them being filled)</summary>
-		public void RemoveOrders(int sign, Unit<decimal> volume, Unit<decimal> price)
+		/// <summary>
+		/// Consume orders up to 'price' or 'volume' (simulating them being filled).
+		/// 'pair' is the trade pair that this OrderBook is associated with.
+		/// Returns the orders that were consumed. 'volume_remaining' is what remains unfilled</summary>
+		public IList<Order> Consume(TradePair pair, Unit<decimal> price, Unit<decimal> volume, out Unit<decimal> volume_remaining)
 		{
-			// If 'sign' is positive, then the first order is a minimum
-			// If 'sign' is negative, then the first order is a maximum
+			// Note: Have to be careful not to leave behind volumes that are less than the allowable limits for 'pair'
+			volume_remaining = volume;
+
 			var count = 0;
 			foreach (var order in Orders)
 			{
-				if (sign * price.CompareTo(order.Price) < 0) break;
-				if (order.VolumeBase > volume) break;
-				volume -= order.VolumeBase;
+				// Price is too high/low to fill 'order', stop.
+				if (Sign * price.CompareTo(order.Price) < 0)
+					break;
+
+				// The volume remaining is less than the volume of 'order', stop
+				if (volume_remaining <= order.VolumeBase)
+					break;
+
+				// 'order' is smaller than the remaining volume so it would be consumed. However, don't consume
+				// 'order' if doing so would leave 'volume_remaining' with an invalid trading volume.
+				var rem = volume_remaining - order.VolumeBase;
+				if (!pair.VolumeRangeBase.Contains(rem) || !pair.VolumeRangeQuote.Contains(rem * price))
+					break;
+				
+				volume_remaining = rem;
 				++count;
 			}
 
 			// Remove the orders that have been filled
+			var consumed = Orders.Take(count).ToList();
 			Orders.RemoveRange(0, count);
 
-			// Remove any remaining volume from the top order
-			if (volume != 0m._(volume) && Orders.Count != 0 && sign * price.CompareTo(Orders[0].Price) >= 0)
-				Orders[0] = new Order(Orders[0].Price, Orders[0].VolumeBase - volume);
+			// Remove any remaining volume from the top remaining order if doing so don't leave an invalid trading volume
+			if (volume_remaining != 0 && Orders.Count != 0 && Sign * price.CompareTo(Orders[0].Price) >= 0)
+			{
+				var rem = Orders[0].VolumeBase - volume_remaining;
+				if (pair.VolumeRangeBase.Contains(rem) && pair.VolumeRangeQuote.Contains(rem * Orders[0].Price))
+				{
+					consumed.Add(new Order(Orders[0].Price, volume_remaining));
+					Orders[0] = new Order(Orders[0].Price, rem);
+					volume_remaining = 0m._(volume);
+				}
+			}
+
+			return consumed;
+		}
+
+		/// <summary>Return the units for the conversion rate from Base to Quote (i.e. Quote/Base)</summary>
+		public string RateUnits
+		{
+			get { return Base.Symbol != Quote.Symbol ? $"{Quote}/{Base}" : string.Empty; }
+		}
+		public string RateUnitsInv
+		{
+			get { return Base.Symbol != Quote.Symbol ? $"{Base}/{Quote}" : string.Empty; }
 		}
 
 		/// <summary>A string description of the order book</summary>
@@ -147,15 +237,27 @@ namespace CoinFlip
 		public Unit<decimal> VolumeBase { get; set; }
 
 		/// <summary>The volume (in quote currency)</summary>
-		public Unit<decimal> VolumeQuote
-		{
-			get { return VolumeBase * Price; }
-		}
+		public Unit<decimal> VolumeQuote { get { return VolumeBase * Price; } }
 
 		/// <summary>Orders are compared by price</summary>
 		public int CompareTo(Order rhs)
 		{
 			return Price.CompareTo(rhs.Price);
+		}
+
+		/// <summary>Check this order against the limits given in 'pair'</summary>
+		public bool Validate(TradePair pair)
+		{
+			if (Price <= 0m)
+				return false;
+
+			if (!pair.VolumeRangeBase.Contains(VolumeBase))
+				return false;
+
+			if (!pair.VolumeRangeQuote.Contains(VolumeQuote))
+				return false;
+
+			return true;
 		}
 	}
 }

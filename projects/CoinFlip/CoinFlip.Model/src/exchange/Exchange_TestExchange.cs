@@ -67,9 +67,9 @@ namespace CoinFlip
 			// Set the balances
 			#region Balance
 			{
-				Balance[Coins["LTC"]] = new Balance(Coins["LTC"], 1m, 1m, 0m, 0m, 0m, DateTimeOffset.Now);
-				Balance[Coins["BTC"]] = new Balance(Coins["BTC"], 1m, 1m, 0m, 0m, 0m, DateTimeOffset.Now);
-				Balance[Coins["ETC"]] = new Balance(Coins["ETC"], 1m, 1m, 0m, 0m, 0m, DateTimeOffset.Now);
+				Balance[Coins["LTC"]] = new Balance(Coins["LTC"], 1m._(Coins["LTC"]), Model.UtcNow);
+				Balance[Coins["BTC"]] = new Balance(Coins["BTC"], 1m._(Coins["BTC"]), Model.UtcNow);
+				Balance[Coins["ETC"]] = new Balance(Coins["ETC"], 1m._(Coins["ETC"]), Model.UtcNow);
 			}
 			#endregion
 		}
@@ -82,8 +82,9 @@ namespace CoinFlip
 		private ulong m_order_id;
 
 		/// <summary>Cancel a trade</summary>
-		protected override void CancelOrderInternal(TradePair pair, ulong order_id)
+		protected override bool CancelOrderInternal(TradePair pair, ulong order_id)
 		{
+			return true;
 		}
 
 		/// <summary>Set the maximum number of requests per second to the exchange server</summary>

@@ -28,7 +28,7 @@ namespace Bot.Fishing
 			// Create a grid to display the fisher instances in
 			m_grid_fishing = new GridFishing(this, "Fishing", nameof(m_grid_fishing));
 			m_grid_fishing.DataSource = Fishers;
-			Model.AddToUI(m_grid_fishing, EDockSite.Right);
+			Model.AddToUI(m_grid_fishing, new[] { EDockSite.Right, EDockSite.Bottom });
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -44,25 +44,25 @@ namespace Bot.Fishing
 		}
 
 		/// <summary>Enable/Disable this bot.</summary>
-		public override bool Active
+		protected override bool GetActiveInternal()
 		{
 			// This bot doesn't use the single main loop method
 			// Each fisher instance has it's own main loop.
-			get { return Fishers.Any(x => x.Active); }
-			set
+			return Fishers.Any(x => x.Active);
+		}
+		protected override void SetActiveInternal(bool enabled)
+		{
+			if (enabled)
 			{
-				if (Active == value) return;
-				if (value)
-				{
-					// Start all fishing instances?
-				}
-				else
-				{
-					// Shutdown fishing instances
-					foreach (var fisher in Fishers)
-						fisher.Active = false;
-				}
-				RaisePropertyChanged(new PropertyChangedEventArgs(nameof(Active)));
+				// Start all fishing instances
+				foreach (var fisher in Fishers)
+					fisher.Active = true;
+			}
+			else
+			{
+				// Shutdown fishing instances
+				foreach (var fisher in Fishers)
+					fisher.Active = false;
 			}
 		}
 
@@ -85,32 +85,34 @@ namespace Bot.Fishing
 					m_fishing.ListChanging += HandleFishingListChanging;
 					if (m_grid_fishing != null) m_grid_fishing.DataSource = m_fishing;
 				}
+
+				// Handlers
+				void HandleFishingListChanging(object sender, ListChgEventArgs<Fisher> e)
+				{
+					switch (e.ChangeType)
+					{
+					case ListChg.ItemAdded:
+						{
+							e.Item.PropertyChanged += HandleFisherPropertyChanged;
+							break;
+						}
+					case ListChg.ItemPreRemove:
+						{
+							e.Item.PropertyChanged -= HandleFisherPropertyChanged;
+							break;
+						}
+					}
+					if (e.IsDataChanged)
+						Settings.Fishers = Fishers.Select(x => x.Settings).ToArray();
+				}
+				void HandleFisherPropertyChanged(object sender, PropertyChangedEventArgs e)
+				{
+					if (e.PropertyName == nameof(Fisher.Active))
+						RaisePropertyChanged(new PropertyChangedEventArgs(nameof(FishFinder.Active)));
+				}
 			}
 		}
 		private BindingSource<Fisher> m_fishing;
-		private void HandleFishingListChanging(object sender, ListChgEventArgs<Fisher> e)
-		{
-			switch (e.ChangeType)
-			{
-			case ListChg.ItemAdded:
-				{
-					e.Item.PropertyChanged += HandleFisherPropertyChanged;
-					break;
-				}
-			case ListChg.ItemPreRemove:
-				{
-					e.Item.PropertyChanged -= HandleFisherPropertyChanged;
-					break;
-				}
-			}
-			if (e.IsDataChanged)
-				Settings.Fishers = Fishers.Select(x => x.Settings).ToArray();
-		}
-		private void HandleFisherPropertyChanged(object sender, PropertyChangedEventArgs e)
-		{
-			if (e.PropertyName == nameof(Fisher.Active))
-				RaisePropertyChanged(new PropertyChangedEventArgs(nameof(FishFinder.Active)));
-		}
 
 		/// <summary></summary>
 		public class SettingsData :SettingsBase<SettingsData>
@@ -131,8 +133,8 @@ namespace Bot.Fishing
 			/// <summary>The fishing instances</summary>
 			public FishingData[] Fishers
 			{
-				get { return get(x => x.Fishers); }
-				set { set(x => x.Fishers, value); }
+				get { return get<FishingData[]>(nameof(Fishers)); }
+				set { set(nameof(Fishers), value); }
 			}
 		}
 
@@ -172,36 +174,36 @@ namespace Bot.Fishing
 			/// <summary>The name of the pair to trade</summary>
 			public string Pair
 			{
-				get { return get(x => x.Pair); }
-				set { set(x => x.Pair, value); }
+				get { return get<string>(nameof(Pair)); }
+				set { set(nameof(Pair), value); }
 			}
 
 			/// <summary>The name of the reference exchange</summary>
 			public string Exch0
 			{
-				get { return get(x => x.Exch0); }
-				set { set(x => x.Exch0, value); }
+				get { return get<string>(nameof(Exch0)); }
+				set { set(nameof(Exch0), value); }
 			}
 
 			/// <summary>The name of the target exchange</summary>
 			public string Exch1
 			{
-				get { return get(x => x.Exch1); }
-				set { set(x => x.Exch1, value); }
+				get { return get<string>(nameof(Exch1)); }
+				set { set(nameof(Exch1), value); }
 			}
 
 			/// <summary>The price offset range (as a fraction of the reference price)</summary>
 			public decimal PriceOffset
 			{
-				get { return get(x => x.PriceOffset); }
-				set { set(x => x.PriceOffset, value); }
+				get { return get<decimal>(nameof(PriceOffset)); }
+				set { set(nameof(PriceOffset), value); }
 			}
 
 			/// <summary>The directions to fish in</summary>
 			public ETradeDirection Direction
 			{
-				get { return get(x => x.Direction); }
-				set { set(x => x.Direction, value); }
+				get { return get<ETradeDirection>(nameof(Direction)); }
+				set { set(nameof(Direction), value); }
 			}
 
 			/// <summary>An identifying name for this fishing instance</summary>

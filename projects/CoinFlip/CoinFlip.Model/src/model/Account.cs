@@ -16,7 +16,10 @@ namespace CoinFlip
 				foreach (var exch in TradingExchanges)
 				{
 					foreach (var bal in exch.Balance.Values)
+					{
+						if (!Coins[bal.Coin].OfInterest) continue;
 						worth += bal.Coin.Value(bal.Total);
+					}
 				}
 				return worth;
 			}

@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using pr.common;
@@ -21,13 +17,10 @@ namespace CoinFlip
 	{
 		public IndicatorHorzLine(SettingsData settings = null)
 			:base(Guid.NewGuid(), "HorzLine", settings ?? new SettingsData())
-		{
-		}
+		{}
 		public IndicatorHorzLine(XElement node)
 			:base(node)
-		{
-			
-		}
+		{}
 		protected override void Dispose(bool disposing)
 		{
 			Gfx = null;
@@ -64,27 +57,6 @@ namespace CoinFlip
 			}
 		}
 		private View3d.Object m_gfx;
-
-		/// <summary>Calculate the MA</summary>
-		protected override Task ResetCore()
-		{
-			return Misc.CompletedTask;
-		}
-
-		/// <summary>Handle settings changing</summary>
-		protected override void HandleSettingChanged(object sender, SettingChangedEventArgs e)
-		{
-			// If the setting affects the underlying data, reset
-			//switch (e.Key) {
-			//case nameof(SettingsData.Price):
-			//case nameof(SettingsData.Width):
-			//case nameof(SettingsData.RegionWidth):
-			//	ResetRequired = true;
-			//	break;
-			//}
-
-			base.HandleSettingChanged(sender, e);
-		}
 
 		/// <summary>Invalidate if the chart moves beyond the range of the graphics</summary>
 		protected override void HandleChartMoved(object sender, ChartControl.ChartMovedEventArgs e)
@@ -188,9 +160,9 @@ namespace CoinFlip
 			}
 			public override void MouseMove(MouseEventArgs e)
 			{
-				var chart_pt = m_line.Chart.ClientToChart(e.Location);
+				var chart_pt = m_chart.ClientToChart(e.Location);
 				m_line.Settings.Price = (decimal)chart_pt.Y;
-				m_line.InvalidateChart();
+				m_chart.Invalidate();
 				m_chart.Update();
 			}
 		}
@@ -214,36 +186,36 @@ namespace CoinFlip
 			/// <summary>The Y value of this line</summary>
 			public decimal Price
 			{
-				get { return get(x => x.Price); }
-				set { set(x => x.Price, value); }
+				get { return get<decimal>(nameof(Price)); }
+				set { set(nameof(Price), value); }
 			}
 
 			/// <summary>The width of the line</summary>
 			public double Width
 			{
-				get { return get(x => x.Width); }
-				set { set(x => x.Width, value); }
+				get { return get<double>(nameof(Width)); }
+				set { set(nameof(Width), value); }
 			}
 
 			/// <summary>Colour of the line</summary>
 			public Color Colour
 			{
-				get { return get(x => x.Colour); }
-				set { set(x => x.Colour, value); }
+				get { return get<Color>(nameof(Colour)); }
+				set { set(nameof(Colour), value); }
 			}
 
 			/// <summary>Colour of the surrounding region</summary>
 			public Color RegionColour
 			{
-				get { return get(x => x.RegionColour); }
-				set { set(x => x.RegionColour, value); }
+				get { return get<Color>(nameof(RegionColour)); }
+				set { set(nameof(RegionColour), value); }
 			}
 
 			/// <summary>The size of the region area</summary>
 			public double RegionWidth
 			{
-				get { return get(x => x.RegionWidth); }
-				set { set(x => x.RegionWidth, value); }
+				get { return get<double>(nameof(RegionWidth)); }
+				set { set(nameof(RegionWidth), value); }
 			}
 
 			private class TyConv :GenericTypeConverter<SettingsData> {}

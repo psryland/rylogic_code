@@ -59,8 +59,8 @@ namespace CoinFlip
 			Columns.Add(new DataGridViewImageColumn
 			{
 				HeaderText = "Active",
-				Name = nameof(Exchange.Active),
-				DataPropertyName = nameof(Exchange.Active),
+				Name = nameof(Exchange.Enabled),
+				DataPropertyName = nameof(Exchange.Enabled),
 				AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader,
 				ImageLayout = DataGridViewImageCellLayout.Normal,
 				FillWeight = 0.1f,
@@ -77,9 +77,9 @@ namespace CoinFlip
 			if (exch == null) return;
 
 			switch (col.Name) {
-			case nameof(Exchange.Active):
+			case nameof(Exchange.Enabled):
 				{
-					exch.Active = !exch.Active;
+					exch.Enabled = !exch.Enabled;
 					break;
 				}
 			}
@@ -95,17 +95,17 @@ namespace CoinFlip
 				exch == null ? Color.White :
 				exch.Status.HasFlag(EStatus.Error     ) ? Color.Red :
 				exch.Status.HasFlag(EStatus.Stopped   ) ? Color.LightYellow :
+				exch.Status.HasFlag(EStatus.Simulated ) ? Color.LightBlue :
 				exch.Status.HasFlag(EStatus.Connected ) ? Color.LightGreen :
-				exch.Status.HasFlag(EStatus.Connecting) ? Color.PaleGoldenrod :
 				exch.Status.HasFlag(EStatus.Offline   ) ? Color.LightGray :
 				Color.White;
 			a.CellStyle.SelectionForeColor = a.CellStyle.ForeColor;
 			a.CellStyle.SelectionBackColor = a.CellStyle.BackColor.Lerp(Color.Gray, 0.5f);
 
 			switch (col.Name) {
-			case nameof(Exchange.Active):
+			case nameof(Exchange.Enabled):
 				{
-					a.Value = (exch?.Active ?? false) ? Res.Active : Res.Inactive;
+					a.Value = (exch?.Enabled ?? false) ? Res.Active : Res.Inactive;
 					break;
 				}
 			case nameof(Exchange.Colour):

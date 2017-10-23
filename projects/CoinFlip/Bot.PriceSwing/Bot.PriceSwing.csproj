@@ -45,7 +45,7 @@
     <Compile Include="src\PriceSwing.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="src\PriceSwingUI.cs">
-      <SubType>Form</SubType>
+      <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="src\TradeRecord.cs" />
   </ItemGroup>

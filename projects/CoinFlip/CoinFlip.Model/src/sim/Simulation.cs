@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Windows.Threading;
 using pr.common;
 using pr.extn;
@@ -11,17 +12,15 @@ namespace CoinFlip
 	/// <summary>A container for the data maintained by the back testing simulation</summary>
 	public class Simulation :IDisposable
 	{
-		// Notes:
-		//  - The simulation has to run on a clock-based step because the bot MainLoop runs on a clock-based loop.
-		//    Some bots can be event driven which would allow faster back testing, but that depends on the bot.
-
 		public Simulation(Model model)
 		{
+			m_main_loop_sw = new Stopwatch();
 			Exch = new Dictionary<string, SimExchange>();
 			Model = model;
-
-			// Initialise the clock to valid that will get changed by 'SetStartTime'
-			Clock = DateTimeOffset.UtcNow;
+			Clock = StartTime;
+			TimeFrame = Settings.TimeFrame;
+			EquityData = new EquityMap();
+			EquityUI = new EquityUI("Equity");
 
 			// Create a SimExchange for each exchange
 			foreach (var exch in Model.Exchanges)
@@ -29,6 +28,7 @@ namespace CoinFlip
 		}
 		public void Dispose()
 		{
+			EquityUI = null;
 			Running = false;
 			Exch = null;
 			Model = null;
@@ -37,7 +37,7 @@ namespace CoinFlip
 		/// <summary>Simulated Exchanges</summary>
 		private Dictionary<string, SimExchange> Exch
 		{
-			get { return m_exchanges; }
+			[DebuggerStepThrough] get { return m_exchanges; }
 			set
 			{
 				if (m_exchanges == value) return;
@@ -56,21 +56,31 @@ namespace CoinFlip
 				if (m_model == value) return;
 				if (m_model != null)
 				{
-					m_model.BackTestingChanging -= HandleBackTestingChanged;
+					m_model.Settings.BackTesting.SettingChanged -= HandleSettingChanged;
 				}
 				m_model = value;
 				if (m_model != null)
 				{
-					m_model.BackTestingChanging += HandleBackTestingChanged;
+					m_model.Settings.BackTesting.SettingChanged += HandleSettingChanged;
 				}
 
 				// Handlers
-				void HandleBackTestingChanged(object sender, PrePostEventArgs e)
+				void HandleSettingChanged(object sender, SettingChangedEventArgs args)
 				{
-					// If back-testing has just been enabled, configure the sim exchanges with PriceData sources
-					//if (Model.BackTesting && e.After)
-					//	foreach (var exch in Exch.Values)
-					//		exch.Initials
+					switch (args.Key)
+					{
+					case nameof(Settings.TimeFrame):
+						{
+							if (Running)
+								throw new Exception("Don't change the time frame while the simulation is running");
+
+							// Update the data sources in each exchange
+							foreach (var exch in Exch.Values)
+								exch.FindDataSources();
+
+							break;
+						}
+					}
 				}
 			}
 		}
@@ -81,6 +91,12 @@ namespace CoinFlip
 		{
 			get { return Model.Settings.BackTesting; }
 		}
+
+		/// <summary>Get the current simulation time</summary>
+		public DateTimeOffset Clock { get; private set; }
+
+		/// <summary>The simulation step resolution</summary>
+		public ETimeFrame TimeFrame { get; private set; }
 
 		/// <summary>Get the back testing start time</summary>
 		public DateTimeOffset StartTime
@@ -97,17 +113,30 @@ namespace CoinFlip
 			}
 		}
 
-		/// <summary>Get the current simulation time</summary>
-		public DateTimeOffset Clock
+		/// <summary>Equity data</summary>
+		public EquityMap EquityData { get; private set; }
+
+		/// <summary>A chart for displaying the equity vs. time</summary>
+		public EquityUI EquityUI
 		{
-			get { return m_clock; }
-			private set
+			get { return m_equity_ui; }
+			set
 			{
-				if (m_clock == value) return;
-				Model.UtcNow = m_clock = value;
+				if (m_equity_ui == value) return;
+				if (m_equity_ui != null)
+				{
+					m_equity_ui.Data = null;
+					Util.Dispose(ref m_equity_ui);
+				}
+				m_equity_ui = value;
+				if (m_equity_ui != null)
+				{
+					Model.AddToUI(m_equity_ui);
+					m_equity_ui.Data = EquityData;
+				}
 			}
 		}
-		private DateTimeOffset m_clock;
+		private EquityUI m_equity_ui;
 
 		/// <summary>Set the back testing start time to 'now - steps * time_frame'</summary>
 		public void SetStartTime(ETimeFrame time_frame, int steps)
@@ -128,28 +157,58 @@ namespace CoinFlip
 		/// <summary>Access a simulated exchange by name</summary>
 		public SimExchange this[Exchange exch]
 		{
-			get { return Exch[exch.Name]; }
+			[DebuggerStepThrough] get { return Exch[exch.Name]; }
 		}
 
 		/// <summary>Reset the sim back to the start time</summary>
 		public void Reset()
 		{
-			m_steps_to_run = 0;
+			// All bots must be stopped and restarted
+			var active_bots = Model.Bots.Where(x => x.Active).ToArray();
+			foreach (var bot in active_bots)
+				bot.Active = false;
+
+			// Reset the sim time back to 'StartTime'
+			m_main_loop_sw.Reset();
+			RunMode = ERunMode.Stopped;
+			m_main_loop_last_step = StartTime.Ticks;
+			TimeFrame = Settings.TimeFrame;
 			Clock = StartTime;
+
+			// Reset the equity data.
+			EquityData.Reset(StartTime, TimeFrame);
+
+			// Reset the exchanges
+			foreach (var exch in Exch.Values)
+				exch.Reset();
+
+			// Restart the bots that were started
+			foreach (var bot in active_bots)
+				bot.Active = true;
+
+			// Notify of reset
 			SimReset.Raise(this, new SimResetEventArgs(Settings.Steps, Settings.TimeFrame, StartTime));
 		}
 
 		/// <summary>Advance the simulation forward by one step</summary>
 		public void StepOne()
 		{
-			m_steps_to_run = 1;
+			RunMode = ERunMode.StepOne;
+			Running = true;
+		}
+
+		/// <summary>Advance the simulation to the next submitted or filled trade</summary>
+		public void RunToTrade()
+		{
+			RunMode = ERunMode.RunToTrade;
 			Running = true;
 		}
 
 		/// <summary>Advance the simulation forward by one step</summary>
 		public void Run()
 		{
-			m_steps_to_run = -1;
+			Model.Log.Write(ELogLevel.Debug, "Simulation started");
+			RunMode = ERunMode.Continuous;
 			Running = true;
 		}
 
@@ -157,6 +216,7 @@ namespace CoinFlip
 		public void Pause()
 		{
 			Running = false;
+			Model.Log.Write(ELogLevel.Debug, "Simulation stopped");
 		}
 
 		/// <summary>The thread the runs the simulation</summary>
@@ -171,41 +231,81 @@ namespace CoinFlip
 				SimRunningChanged.Raise(this, new PrePostEventArgs(after:false));
 				if (Running)
 				{
+					m_main_loop_sw.Stop();
 					m_timer.Stop();
-					Model.Log.Write(ELogLevel.Debug, "Simulation stopped");
 				}
-				m_timer = value ? new DispatcherTimer(TimeSpan.FromSeconds(1.0 / Settings.StepRate), DispatcherPriority.Normal, HandleTick, Dispatcher.CurrentDispatcher) : null;
+				m_timer = value ? new DispatcherTimer(TimeSpan.FromMilliseconds(1), DispatcherPriority.Normal, HandleTick, Dispatcher.CurrentDispatcher) : null;
 				if (Running)
 				{
-					Model.Log.Write(ELogLevel.Debug, "Simulation started");
 					m_timer.Start();
+					m_main_loop_sw.Start();
+					m_max_ticks_per_step =  Misc.TimeFrameToTicks(1.0 / Settings.StepsPerCandle, Settings.TimeFrame);
 				}
 				SimRunningChanged.Raise(this, new PrePostEventArgs(after:true));
 
 				// Handlers
 				void HandleTick(object sender, EventArgs args)
 				{
+					// Advance the simulation clock at a rate of 'Settings.StepRate' candles per second.
+					// 'm_main_loop_sw' tracks the amount of real world time that has elapsed while 'Running' is true
+					switch (RunMode)
+					{
+					case ERunMode.Continuous:
+					case ERunMode.RunToTrade:
+						{
+							var elapsed_ticks = Math.Max(m_max_ticks_per_step, m_main_loop_sw.ElapsedTicks - m_main_loop_last_ticks);
+							m_main_loop_last_ticks = m_main_loop_sw.ElapsedTicks;
+							Clock += new TimeSpan(elapsed_ticks);
+							break;
+						}
+					case ERunMode.StepOne:
+						{
+							// If this is a single step, increment the clock by a fixed amount
+							Clock += new TimeSpan(m_max_ticks_per_step);
+							break;
+						}
+					}
+
 					// Stop when the clock has caught up to real time or we've done enough steps
-					if (Clock > DateTimeOffset.UtcNow || m_steps_to_run == 0)
+					if (Clock > DateTimeOffset.UtcNow)
 					{
 						Running = false;
 						return;
 					}
 
+					// Run the sim exchanges at top speed
+					foreach (var exch in Exch.Values)
+						exch.Step();
+
+					// See if it's time for a sim step
+					var elapsed = Clock.Ticks - m_main_loop_last_step;
+					if (elapsed < m_max_ticks_per_step) return;
+					m_main_loop_last_step += m_max_ticks_per_step;
+
 					// Notify the sim step. This causes PriceData's to "add" candles
 					SimStep.Raise(this, new SimStepEventArgs(Clock));
 
-					// Advance the simulation by 0.25 of a time frame since we're adding 4 sub-candles per candle
-					Clock += new TimeSpan(Misc.TimeFrameToTicks(1.0 / Settings.SubStepsPerCandle, Settings.TimeFrame));
-
 					// Run the required number of steps
-					if (m_steps_to_run > 0)
-						--m_steps_to_run;
+					if (RunMode == ERunMode.StepOne)
+						Running = false;
 				}
 			}
 		}
 		private DispatcherTimer m_timer;
-		private int m_steps_to_run;
+		private Stopwatch m_main_loop_sw;
+		private long m_max_ticks_per_step;
+		private long m_main_loop_last_step;
+		private long m_main_loop_last_ticks;
+
+		/// <summary>Modes to run the simulation in</summary>
+		public ERunMode RunMode { get; private set; }
+		public enum ERunMode
+		{
+			Stopped,
+			Continuous,
+			StepOne,
+			RunToTrade,
+		}
 
 		/// <summary>Raised when the simulation starts/stops</summary>
 		public event EventHandler<PrePostEventArgs> SimRunningChanged;

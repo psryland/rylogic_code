@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using pr.common;
@@ -61,34 +57,41 @@ namespace CoinFlip
 		private Range m_gfx_range;
 
 		/// <summary>Calculate the MA</summary>
-		protected async override Task ResetCore()
+		protected override void ResetCore()
 		{
 			m_ma.Clear();
 
 			if (Instrument != null)
 			{
-				var ma = new List<MAPoint>(Instrument.Count);
-				await Task.Run(() =>
+				// Create a moving average stat that the instrument data is added to.
+				var avr = Settings.ExponentialMA
+					? (object)new ExpMovingAvr(Settings.WindowSize)
+					: (object)new MovingAvr(Settings.WindowSize);
+
+				// Ensure the visible range is cached (plus a bit)
+				var xmin = (int)Maths.Clamp(Chart.XAxis.Min - Chart.XAxis.Span, 0, Instrument.Count-1);
+				var xmax = (int)Maths.Clamp(Chart.XAxis.Max + Chart.XAxis.Span, 0, Instrument.Count-1);
+				Instrument.EnsureCached(xmin);
+				Instrument.EnsureCached(xmax);
+
+				// Load the
+				var ma = new List<MAPoint>(xmax - xmin);
+				var stat = (IStatSingleVariable)avr;
+				var value = (IStatMeanAndVariance)avr;
+				var ts = DateTimeOffset.MinValue.Ticks;
+				for (var i = xmin; i != xmax; ++i)
 				{
-					// Create a moving average stat that the instrument data is added to.
-					var avr = Settings.ExponentialMA
-						? (object)new ExpMovingAvr(Settings.WindowSize)
-						: (object)new MovingAvr(Settings.WindowSize);
+					var candle = Instrument[i];
 
-					var stat = (IStatSingleVariable)avr;
-					var value = (IStatMeanAndVariance)avr;
-					var ts = DateTimeOffset.MinValue.Ticks;
-					foreach (var candle in Instrument)
-					{
-						// Candle data must be strictly ordered by timestamp because I'm using binary search
-						Debug.Assert(candle.Timestamp >= ts);
-						ts = candle.Timestamp;
+					// Candle data must be strictly ordered by timestamp because I'm using binary search
+					Debug.Assert(candle.Timestamp >= ts);
+					ts = candle.Timestamp;
 
-						// Calculate the MA value and save it
-						stat.Add(candle.Close);
-						ma.Add(new MAPoint(ts, value.Mean, value.PopStdDev));
-					}
-				});
+					// Calculate the MA value and save it
+					stat.Add(candle.Close);
+					ma.Add(new MAPoint(ts, value.Mean, value.PopStdDev));
+				}
+				
 				m_ma = ma;
 			}
 		}
@@ -300,58 +303,58 @@ namespace CoinFlip
 			/// <summary>The window size of the EMA</summary>
 			public int WindowSize
 			{
-				get { return get(x => x.WindowSize); }
-				set { set(x => x.WindowSize, Maths.Clamp(value, 1, MaxWindowSize)); }
+				get { return get<int>(nameof(WindowSize)); }
+				set { set(nameof(WindowSize), Maths.Clamp(value, 1, MaxWindowSize)); }
 			}
 			public const int MaxWindowSize = 500;
 
 			/// <summary>The width of the line to draw</summary>
 			public int Width
 			{
-				get { return get(x => x.Width); }
-				set { set(x => x.Width, Maths.Clamp(value, 1, 50)); }
+				get { return get<int>(nameof(Width)); }
+				set { set(nameof(Width), Maths.Clamp(value, 1, 50)); }
 			}
 
 			/// <summary>True to use an exponential moving average</summary>
 			public bool ExponentialMA
 			{
-				get { return get(x => x.ExponentialMA); }
-				set { set(x => x.ExponentialMA, value); }
+				get { return get<bool>(nameof(ExponentialMA)); }
+				set { set(nameof(ExponentialMA), value); }
 			}
 
 			/// <summary>The line colour</summary>
 			public Color ColourMA
 			{
-				get { return get(x => x.ColourMA); }
-				set { set(x => x.ColourMA, value); }
+				get { return get<Color>(nameof(ColourMA)); }
+				set { set(nameof(ColourMA), value); }
 			}
 
 			/// <summary>Show Bollinger Bands around the MA</summary>
 			public bool ShowBollingerBands
 			{
-				get { return get(x => x.ShowBollingerBands); }
-				set { set(x => x.ShowBollingerBands, value); }
+				get { return get<bool>(nameof(ShowBollingerBands)); }
+				set { set(nameof(ShowBollingerBands), value); }
 			}
 
 			/// <summary>The Bollinger band size in units of the standard deviations</summary>
 			public float BollingerBandsStdDev
 			{
-				get { return get(x => x.BollingerBandsStdDev); }
-				set { set(x => x.BollingerBandsStdDev, Maths.Clamp(value, 0, 5.0f)); }
+				get { return get<float>(nameof(BollingerBandsStdDev)); }
+				set { set(nameof(BollingerBandsStdDev), Maths.Clamp(value, 0, 5.0f)); }
 			}
 
 			/// <summary>The line colour for the Bollinger Bands</summary>
 			public Color ColourBollingerBands
 			{
-				get { return get(x => x.ColourBollingerBands); }
-				set { set(x => x.ColourBollingerBands, value); }
+				get { return get<Color>(nameof(ColourBollingerBands)); }
+				set { set(nameof(ColourBollingerBands), value); }
 			}
 
 			/// <summary>Shift the indicator in the X axis direction</summary>
 			public float XOffset
 			{
-				get { return get(x => x.XOffset); }
-				set { set(x => x.XOffset, value); }
+				get { return get<float>(nameof(XOffset)); }
+				set { set(nameof(XOffset), value); }
 			}
 
 			private class TyConv :GenericTypeConverter<SettingsData> {}

@@ -2,14 +2,15 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
+using pr.common;
+using pr.maths;
 using pr.util;
 
 namespace CoinFlip
 {
 	/// <summary>
 	/// A 'Trade' is a description of a trade that could be placed. It is different
-	/// to a 'Position' which is an order that is live on an exchange, waiting to be filled.</summary>
+	/// to a 'Position' which is live on an exchange, waiting to be filled.</summary>
 	[DebuggerDisplay("{Description,nq}")]
 	public class Trade
 	{
@@ -17,8 +18,14 @@ namespace CoinFlip
 		//  - VolumeIn * Price does not have to equal VolumeOut, because 'Trade' is used
 		//    with the order book to calculate the best price for trading 'volume_in'.
 
-		public Trade(ETradeType tt, TradePair pair, Unit<decimal> volume_in, Unit<decimal> volume_out, Unit<decimal> price)
+		/// <summary>Create a trade on 'pair' at 'price_q2b' using 'volume_base' or the default for CoinIn if not given</summary>
+		public Trade(ETradeType tt, TradePair pair, Unit<decimal> price_q2b, Unit<decimal>? volume_base = null)
 		{
+			var vol_base = volume_base ?? tt.DefaultTradeVolumeBase(pair, price_q2b);
+			var price = tt.Price(price_q2b);
+			var volume_in = tt.VolumeIn(vol_base, price_q2b);
+			var volume_out = tt.VolumeOut(vol_base, price_q2b);
+
 			// Check trade volumes and units
 			if (tt == ETradeType.B2Q)
 			{
@@ -43,10 +50,22 @@ namespace CoinFlip
 			Pair      = pair;
 			VolumeIn  = volume_in;
 			VolumeOut = volume_out;
-			Price     = price;
+			PriceQ2B  = price_q2b;
 		}
+
+		/// <summary>Copy construct a trade, with the volume scaled by 'scale'</summary>
 		public Trade(Trade rhs, decimal scale = 1m)
-			:this(rhs.TradeType, rhs.Pair, rhs.VolumeIn * scale, rhs.VolumeOut * scale, rhs.Price)
+		{
+			TradeType = rhs.TradeType;
+			Pair      = rhs.Pair;
+			VolumeIn  = rhs.VolumeIn * scale;
+			VolumeOut = rhs.VolumeOut * scale;
+			PriceQ2B  = rhs.PriceQ2B;
+		}
+
+		/// <summary>Create a trade based on an existing position</summary>
+		public Trade(Position pos)
+			:this(pos.TradeType, pos.Pair, pos.PriceQ2B, pos.VolumeBase)
 		{}
 
 		/// <summary>Access the app model</summary>
@@ -56,10 +75,60 @@ namespace CoinFlip
 		}
 
 		/// <summary>The trade type</summary>
-		public ETradeType TradeType { get; private set; }
+		public ETradeType TradeType
+		{
+			get { return m_trade_type; }
+			set
+			{
+				if (m_trade_type == value) return;
+				m_trade_type = value;
+
+				// Swap
+				var tmp = VolumeIn;
+				VolumeIn = VolumeOut;
+				VolumeOut = tmp;
+			}
+		}
+		private ETradeType m_trade_type;
 
 		/// <summary>The pair being traded</summary>
-		public TradePair Pair { get; private set; }
+		public TradePair Pair
+		{
+			get { return m_pair; }
+			set
+			{
+				if (m_pair == value) return;
+				m_pair = value;
+				PriceQ2B = PriceQ2B._(value.RateUnits);
+				VolumeIn = VolumeIn._(TradeType.CoinIn(value));
+				VolumeOut = VolumeOut._(TradeType.CoinOut(value));
+			}
+		}
+		private TradePair m_pair;
+
+		/// <summary>Give the current spot price, return the order type</summary>
+		public EPlaceOrderType OrderType
+		{
+			get
+			{
+				var market_price_q2b = Pair.MakeTrade(TradeType, VolumeIn).PriceQ2B;
+				if (TradeType == ETradeType.Q2B)
+				{
+					return
+						PriceQ2B > market_price_q2b * (decimal)(1.0 + Model.Settings.MarketOrderPriceToleranceFrac) ? EPlaceOrderType.Stop :
+						PriceQ2B < market_price_q2b * (decimal)(1.0 - Model.Settings.MarketOrderPriceToleranceFrac) ? EPlaceOrderType.Limit :
+						EPlaceOrderType.Market;
+				}
+				if (TradeType == ETradeType.B2Q)
+				{
+					return
+						PriceQ2B < market_price_q2b * (decimal)(1.0 + Model.Settings.MarketOrderPriceToleranceFrac) ? EPlaceOrderType.Stop :
+						PriceQ2B > market_price_q2b * (decimal)(1.0 - Model.Settings.MarketOrderPriceToleranceFrac) ? EPlaceOrderType.Limit :
+						EPlaceOrderType.Market;
+				}
+				throw new Exception("Unknown trade type");
+			}
+		}
 
 		/// <summary>The volume being sold</summary>
 		public Unit<decimal> VolumeIn { get; set; }
@@ -73,29 +142,32 @@ namespace CoinFlip
 			get { return VolumeOut * (1 - Pair.Fee); }
 		}
 
-		/// <summary>The price of the trade (in VolumeOut/VolumeIn units)</summary>
-		public Unit<decimal> Price { get; set; }
-		public Unit<decimal> PriceInv
+		/// <summary>The price to make the trade at (Quote/Base)</summary>
+		public Unit<decimal> PriceQ2B { get; set; }
+
+		/// <summary>The price to make the trade at (CoinOut/CoinIn)</summary>
+		public Unit<decimal> Price
 		{
-			get { return Price != 0m._(Price) ? (1m / Price) : (0m._(VolumeIn) / 1m._(VolumeOut)); }
-		}
-		public Unit<decimal> PriceQ2B
-		{
-			get { return TradeType == ETradeType.B2Q ? Price : PriceInv; }
+			get { return TradeType.Price(PriceQ2B); }
+			set { PriceQ2B = TradeType.PriceQ2B(value); }
 		}
 
-		/// <summary>The effective price after fees</summary>
+		/// <summary>The inverse of the price to make the trade at (in CoinIn/CoinOut)</summary>
+		public Unit<decimal> PriceInv
+		{
+			get { return Maths.Div(1m._(), Price, 0m / 1m._(Price)); }
+		}
+
+		/// <summary>The effective price of this trade after fees (in Quote/Base)</summary>
+		public Unit<decimal> PriceQ2BNett
+		{
+			get { return TradeType.PriceQ2B(PriceNett); }
+		}
+
+		/// <summary>The effective price of this trade after fees (in CoinOut/CoinIn)</summary>
 		public Unit<decimal> PriceNett
 		{
 			get { return VolumeNett / VolumeIn; }
-		}
-		public Unit<decimal> PriceNettInv
-		{
-			get { return PriceNett != 0m._(PriceNett) ? (1m / PriceNett) : (0m._(VolumeIn) / 1m._(VolumeNett)); }
-		}
-		public Unit<decimal> PriceNettQ2B
-		{
-			get { return TradeType == ETradeType.B2Q ? PriceNett : PriceNettInv; }
 		}
 
 		/// <summary>The position of this trade in the order book for the trade type</summary>
@@ -122,53 +194,69 @@ namespace CoinFlip
 			get { return TradeType == ETradeType.B2Q ? Pair.Quote : Pair.Base; }
 		}
 
+		/// <summary>The allowable range on input trade volumes</summary>
+		public RangeF<Unit<decimal>> PriceRange
+		{
+			get { return Pair.PriceRange; }
+		}
+
+		/// <summary>The allowable range on input trade volumes</summary>
+		public RangeF<Unit<decimal>> VolumeRangeIn
+		{
+			get { return TradeType.VolumeRangeIn(Pair); }
+		}
+
+		/// <summary>The allowable range on output trade volumes</summary>
+		public RangeF<Unit<decimal>> VolumeRangeOut
+		{
+			get { return TradeType.VolumeRangeOut(Pair); }
+		}
+
 		/// <summary>String description of the trade</summary>
 		public string Description
 		{
-			get
-			{
-				var sym0 = TradeType == ETradeType.B2Q ? Pair.Base : Pair.Quote;
-				var sym1 = TradeType == ETradeType.B2Q ? Pair.Quote : Pair.Base;
-				return $"{VolumeIn.ToString("G6")} {sym0} → {VolumeOut.ToString("G6")} {sym1} @ {PriceQ2B.ToString("G6")} {Pair.RateUnits}"; }
+			get { return $"{VolumeIn.ToString("G6", true)} → {VolumeOut.ToString("G6", true)} @ {PriceQ2B.ToString("G6", true)}"; }
 		}
 
-		/// <summary>Check whether the given trade is an allowed trade</summary>
+		/// <summary>Check whether this trade is an allowed trade</summary>
 		public EValidation Validate(Guid? reserved_balance = null)
 		{
 			var result = EValidation.Valid;
 
-			// Check that the trade volumes
-			if (VolumeIn <= 0m._(VolumeIn))
-			{
+			// Check the trade volumes
+			if (VolumeIn <= 0)
 				result |= EValidation.VolumeInIsInvalid;
-			}
-			else
-			{
-				var rangeI = TradeType == ETradeType.B2Q ? Pair.VolumeRangeBase  : Pair.VolumeRangeQuote;
-				var rangeO = TradeType == ETradeType.B2Q ? Pair.VolumeRangeQuote : Pair.VolumeRangeBase;
-				if (!rangeI.Contains(VolumeIn))
-					result |= EValidation.VolumeInOutOfRange;
-				if (!rangeO.Contains(VolumeOut))
-					result |= EValidation.VolumeOutOutOfRange;
-			}
+			else if (!TradeType.VolumeRangeIn(Pair).Contains(VolumeIn))
+				result |= EValidation.VolumeInOutOfRange;
+			if (VolumeOut <= 0)
+				result |= EValidation.VolumeOutIsInvalid;
+			else if (!TradeType.VolumeRangeOut(Pair).Contains(VolumeOut))
+				result |= EValidation.VolumeOutOutOfRange;
 
 			// Check the price limits.
-			if (Price == 0m._(Price))
-			{
+			if (Price <= 0)
 				result |= EValidation.PriceIsInvalid;
-			}
-			else
-			{
-				var price = TradeType == ETradeType.B2Q ? Price : 1m / Price;
-				if (!Pair.PriceRange.Contains(price))
-					result |= EValidation.PriceOutOfRange;
-			}
+			else if (!Pair.PriceRange.Contains(PriceQ2B))
+				result |= EValidation.PriceOutOfRange;
 
-			// Check the balances (allowing for fees)
-			var bal = TradeType == ETradeType.B2Q ? Pair.Base.Balance : Pair.Quote.Balance;
+			// Check for sufficient balance
+			var bal = TradeType.CoinIn(Pair).Balance;
 			var available = bal.Available + (reserved_balance != null ? bal.Reserved(reserved_balance.Value) : 0m._(bal.Coin));
-			if (available < VolumeIn * (1.0000001m + Pair.Fee))
+			if (VolumeIn > available)
 				result |= EValidation.InsufficientBalance;
+
+			// Allowing for fees:
+			// Poloniex: Fee reduces the currency being received.
+			// Cryptopia: Fee is charged on the quote volume amount.
+
+			// When trading Q2B (i.e. buying base currency) commissions reduce the amount of base currency received.
+			// When trading B2Q (i.e. selling base currency) commissions are removed from
+
+			//// Check the balances (allowing for fees)
+			//var bal = TradeType == ETradeType.B2Q ? Pair.Base.Balance : Pair.Quote.Balance;
+			//var available = bal.Available + (reserved_balance != null ? bal.Reserved(reserved_balance.Value) : 0m._(bal.Coin));
+			//if (available < VolumeIn * (1.0000001m + Pair.Fee))
+			//	result |= EValidation.InsufficientBalance;
 
 			return result;
 		}
@@ -177,21 +265,6 @@ namespace CoinFlip
 		public TradeResult CreateOrder()
 		{
 			return Pair.Exchange.CreateOrder(TradeType, Pair, VolumeIn, Price);
-		}
-		public Task<TradeResult> CreateOrderAsync()
-		{
-			return Task.Run(() => CreateOrder(), Model.Shutdown); 
-		}
-
-		[Flags] public enum EValidation
-		{
-			Valid               = 0,
-			VolumeInOutOfRange  = 1 << 0,
-			VolumeOutOutOfRange = 1 << 1,
-			PriceOutOfRange     = 1 << 2,
-			InsufficientBalance = 1 << 3,
-			PriceIsInvalid      = 1 << 4,
-			VolumeInIsInvalid   = 1 << 5,
 		}
 	}
 
@@ -224,7 +297,7 @@ namespace CoinFlip
 		/// <summary>A string description of this trade result</summary>
 		public string Description
 		{
-			get { return $"{Pair.Name} Id={OrderId} [{TradeIds}]"; }
+			get { return $"{Pair.Name} Id={OrderId} [{string.Join(",",TradeIds)}]"; }
 		}
 	}
 }

@@ -66,6 +66,7 @@
     <Compile Include="src\Markets.cs" />
     <Compile Include="src\Misc.cs" />
     <Compile Include="src\OrderBook.cs" />
+    <Compile Include="src\Scope.cs" />
     <Compile Include="src\TradePairs.cs" />
     <Compile Include="src\Trades.cs" />
   </ItemGroup>

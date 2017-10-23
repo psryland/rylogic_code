@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -126,6 +127,30 @@ namespace Cryptopia.API
 		}
 		private static long m_nonce = (long)((DateTimeOffset.UtcNow - UnixEpochStart).TotalMilliseconds * 1000);
 		private static object m_nonce_lock = new object();
+
+		/// <summary>Returns an RAII scope that temporarily sets the current sync context to null</summary>
+		public static Scope NoSyncContext()
+		{
+			return Scope.Create(
+				() =>
+				{
+					var context = SynchronizationContext.Current;
+					SynchronizationContext.SetSynchronizationContext(null);
+					return context;
+				},
+				sc =>
+				{
+					SynchronizationContext.SetSynchronizationContext(sc);
+				});
+		}
+
+		/// <summary>RAII scope lock this semaphore</summary>
+		public static Scope Lock(this SemaphoreSlim ss, CancellationToken cancel)
+		{
+			return Scope.Create(
+				() => ss.Wait(cancel),
+				() => ss.Release());
+		}
 	}
 
 	/// <summary>Helper for passing Key/Value pair parameters</summary>

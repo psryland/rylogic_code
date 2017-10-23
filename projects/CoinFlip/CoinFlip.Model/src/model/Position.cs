@@ -7,19 +7,31 @@ namespace CoinFlip
 	[DebuggerDisplay("{Description,nq}")]
 	public class Position
 	{
-		public Position(ulong order_id, TradePair pair, ETradeType tt, Unit<decimal> price, Unit<decimal> volume, Unit<decimal> remaining, DateTimeOffset? created, DateTimeOffset updated, bool fake = false)
+		public Position(ulong order_id, TradePair pair, ETradeType tt, Unit<decimal> price_q2b, Unit<decimal> volume_base, Unit<decimal> remaining_base, DateTimeOffset? created, DateTimeOffset updated, bool fake = false)
 		{
-			OrderId    = order_id;
-			UniqueKey  = Guid.NewGuid();
-			Pair       = pair;
-			TradeType  = tt;
-			Price      = price;
-			VolumeBase = volume;
-			Remaining  = remaining;
-			Created    = created;
-			Updated    = updated;
-			Fake       = fake;
+			OrderId       = order_id;
+			UniqueKey     = Guid.NewGuid();
+			Pair          = pair;
+			TradeType     = tt;
+			PriceQ2B      = price_q2b;
+			VolumeBase    = volume_base;
+			RemainingBase = remaining_base;
+			Created       = created;
+			Updated       = updated;
+			Fake          = fake;
 		}
+		public Position(Position rhs)
+			:this(rhs.OrderId, rhs.Pair, rhs.TradeType, rhs.PriceQ2B, rhs.VolumeBase, rhs.RemainingBase, rhs.Created, rhs.Updated, rhs.Fake)
+		{}
+
+		/// <summary>App logic</summary>
+		public Model Model { get { return Exchange.Model; } }
+
+		/// <summary>The exchange that this position is on</summary>
+		public Exchange Exchange { get { return Pair.Exchange; } }
+
+		/// <summary>The pair being traded</summary>
+		public TradePair Pair { get; private set; }
 
 		/// <summary>Unique Id for the open position on an exchange</summary>
 		public ulong OrderId { get; private set; }
@@ -31,23 +43,17 @@ namespace CoinFlip
 		/// <summary>The trade type</summary>
 		public ETradeType TradeType { get; private set; }
 
-		/// <summary>The pair being traded</summary>
-		public TradePair Pair { get; private set; }
-
-		/// <summary>The exchange that this position is on</summary>
-		public Exchange Exchange { get { return Pair.Exchange; } }
-
-		/// <summary>The price that the order trades at</summary>
-		public Unit<decimal> Price { get; private set; }
+		/// <summary>The price that the order trades at (Quote/Base)</summary>
+		public Unit<decimal> PriceQ2B { get; private set; }
 
 		/// <summary>The volume of the trade (in base currency)</summary>
 		public Unit<decimal> VolumeBase { get; private set; }
 
 		/// <summary>The volume of the trade (in quote currency) based on the trade price</summary>
-		public Unit<decimal> VolumeQuote { get { return VolumeBase * Price; } }
+		public Unit<decimal> VolumeQuote { get { return VolumeBase * PriceQ2B; } }
 
-		/// <summary>The remaining volume to be traded</summary>
-		public Unit<decimal> Remaining { get; private set; }
+		/// <summary>The remaining volume to be traded (in base currency)</summary>
+		public Unit<decimal> RemainingBase { get; private set; }
 
 		/// <summary>When the order was created</summary>
 		public DateTimeOffset? Created { get; private set; }
@@ -58,16 +64,52 @@ namespace CoinFlip
 		/// <summary>True if this order is not really on the exchange</summary>
 		public bool Fake { get; private set; }
 
+		/// <summary>The coin type being sold</summary>
+		public Coin CoinIn
+		{
+			get { return TradeType == ETradeType.B2Q ? Pair.Base : Pair.Quote; }
+		}
+
+		/// <summary>The coin type being bought</summary>
+		public Coin CoinOut
+		{
+			get { return TradeType == ETradeType.B2Q ? Pair.Quote : Pair.Base; }
+		}
+
+		/// <summary>The input volume of the trade (in base or quote, depending on 'TradeType')</summary>
+		public Unit<decimal> VolumeIn
+		{
+			get { return TradeType.VolumeIn(VolumeBase, PriceQ2B); }
+		}
+
+		/// <summary>The remaining volume to be traded (in VolumeIn currency)</summary>
+		public Unit<decimal> Remaining
+		{
+			get { return TradeType.VolumeIn(RemainingBase, PriceQ2B); }
+		}
+
+		/// <summary>The output volume of the trade excluding commissions (in quote or base, depending on 'TradeType')</summary>
+		public Unit<decimal> VolumeOut
+		{
+			get { return TradeType.VolumeOut(VolumeBase, PriceQ2B); }
+		}
+
+		/// <summary>The output volume of the trade including commissions (in quote or base, depending on 'TradeType')</summary>
+		public Unit<decimal> VolumeOutNett
+		{
+			get { return VolumeOut - Commission; }
+		}
+
+		/// <summary>The commission that would be charged on this trade (in the same currency as VolumeOut)</summary>
+		public Unit<decimal> Commission
+		{
+			get { return Exchange.Fee * VolumeOut; }
+		}
+
 		/// <summary>String description of the trade</summary>
 		public string Description
 		{
-			get
-			{
-				var volI = TradeType == ETradeType.B2Q ? VolumeBase : VolumeQuote;
-				var volO = TradeType == ETradeType.B2Q ? VolumeQuote : VolumeBase;
-				var sym0 = TradeType == ETradeType.B2Q ? Pair.Base : Pair.Quote;
-				var sym1 = TradeType == ETradeType.B2Q ? Pair.Quote : Pair.Base;
-				return $"[Id:{OrderId}] {volI.ToString("G6")} {sym0} → {volO.ToString("G6")} {sym1} @ {Price.ToString("G6")} {Pair.RateUnits}"; }
+			get { return $"[Id:{OrderId}] {VolumeIn.ToString("G6",true)} → {VolumeOut.ToString("G6",true)} @ {PriceQ2B.ToString("G6",true)}"; }
 		}
 
 		/// <summary>Cancel this position</summary>
@@ -89,7 +131,10 @@ namespace CoinFlip
 			var fill = Exchange.History.GetOrAdd(OrderId, TradeType, Pair);
 			var tid = (ulong)fill.Trades.Count;
 			fill.Trades[tid] = new Historic(tid, this, DateTimeOffset.Now);
-			Exchange.HistoryUpdateRequired = true;
+			Exchange.PositionUpdateRequired = true;
+
+			// Log message
+			Model.Log.Write(ELogLevel.Info, $"Fake Order Filled: {Description}");
 		}
 
 		#region Equals

@@ -1,18 +1,19 @@
 ﻿using System;
 using System.Drawing;
 using System.Media;
+using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using CoinFlip.Properties;
 using pr.common;
 using pr.crypt;
 using pr.extn;
 using pr.gui;
+using pr.maths;
 using pr.util;
 
 namespace CoinFlip
 {
+	/// <summary>Buy/Sell</summary>
 	public enum ETradeType
 	{
 		/// <summary>Quote->Base, Buy, Bid, Long, High spot price</summary>
@@ -21,6 +22,20 @@ namespace CoinFlip
 		/// <summary>Base->Quote, Sell, Ask, Short. Low spot price</summary>
 		B2Q,
 	}
+
+	public enum EPlaceOrderType
+	{
+		/// <summary>Place the order at the current price, whatever it is</summary>
+		Market,
+
+		/// <summary>Place the order when the order book for an instrument has orders available at the given price level</summary>
+		Limit,
+
+		/// <summary>Place the order when the spot price of an instrument reaches a given price level. </summary>
+		Stop,
+	}
+
+	/// <summary>Bitmask of trade directions</summary>
 	[Flags] public enum ETradeDirection
 	{
 		/// <summary></summary>
@@ -40,18 +55,77 @@ namespace CoinFlip
 	[Flags] public enum EStatus
 	{
 		Offline    = 1 << 0,
-		Connecting = 1 << 1,
 		Connected  = 1 << 2,
 		Stopped    = 1 << 3,
+		Simulated  = 1 << 4,
 		Error      = 1 << 16,
+	}
+
+	/// <summary>Trade validation</summary>
+	[Flags] public enum EValidation
+	{
+		Valid               = 0,
+		VolumeInOutOfRange  = 1 << 0,
+		VolumeOutOutOfRange = 1 << 1,
+		PriceOutOfRange     = 1 << 2,
+		InsufficientBalance = 1 << 3,
+		PriceIsInvalid      = 1 << 4,
+		VolumeInIsInvalid   = 1 << 5,
+		VolumeOutIsInvalid  = 1 << 6,
+	}
+
+	public static class Validation
+	{
+		/// <summary>Return a string description of this validation result</summary>
+		public static string ToErrorDescription(this EValidation val)
+		{
+			var sb = new StringBuilder();
+			if (val.HasFlag(EValidation.VolumeInOutOfRange))
+			{
+				sb.AppendLine("The volume of currency being sold is not within the valid range.");
+				val ^= EValidation.VolumeInOutOfRange;
+			}
+			if (val.HasFlag(EValidation.VolumeOutOutOfRange))
+			{
+				sb.AppendLine("The volume of currency being bought is not within the valid range.");
+				val ^= EValidation.VolumeOutOutOfRange;
+			}
+			if (val.HasFlag(EValidation.PriceOutOfRange))
+			{
+				sb.AppendLine("The price level to trade at is not within the valid range.");
+				val ^= EValidation.PriceOutOfRange;
+			}
+			if (val.HasFlag(EValidation.InsufficientBalance))
+			{
+				sb.AppendLine("There is insufficient balance of the currency being sold.");
+				val ^= EValidation.InsufficientBalance;
+			}
+			if (val.HasFlag(EValidation.PriceIsInvalid))
+			{
+				sb.AppendLine("The price level to trade at is invalid.");
+				val ^= EValidation.PriceIsInvalid;
+			}
+			if (val.HasFlag(EValidation.VolumeInIsInvalid))
+			{
+				sb.AppendLine("The volume of currency being sold is invalid.");
+				val ^= EValidation.VolumeInIsInvalid;
+			}
+			if (val.HasFlag(EValidation.VolumeOutIsInvalid))
+			{
+				sb.AppendLine("The volume of currency being bought is invalid.");
+				val ^= EValidation.VolumeOutIsInvalid;
+			}
+			if (val != 0)
+			{
+				throw new Exception("Unknown validation flags");
+			}
+			return sb.ToString();
+		}
 	}
 
 	/// <summary>Odds and sods</summary>
 	public static class Misc
 	{
-		/// <summary>Helper for task no-ops</summary>
-		public static readonly Task CompletedTask = Task.FromResult(false);
-
 		/// <summary>Regex pattern for log UIs</summary>
 		public static readonly Regex LogEntryPattern = new Regex(@"^(?<Tag>.*?)\|(?<Level>.*?)\|(?<Timestamp>.*?)\|(?<Message>.*)",RegexOptions.Singleline|RegexOptions.Multiline|RegexOptions.CultureInvariant|RegexOptions.Compiled);
 		public static readonly LogUI.HLPattern[] LogHighlighting = new[]
@@ -130,6 +204,122 @@ namespace CoinFlip
 					break;
 				}
 			}
+		}
+
+		/// <summary>Return the opposite trade type</summary>
+		public static ETradeType Opposite(this ETradeType tt)
+		{
+			return
+				tt == ETradeType.Q2B ? ETradeType.B2Q :
+				tt == ETradeType.B2Q ? ETradeType.Q2B :
+				throw new Exception($"Unknown trade type: {tt}");
+		}
+
+		/// <summary>Returns +1 for Q2B, -1 for B2Q</summary>
+		public static int Sign(this ETradeType tt)
+		{
+			return
+				tt == ETradeType.Q2B ? +1 :
+				tt == ETradeType.B2Q ? -1 :
+				throw new Exception("Unknown trade type");
+		}
+
+		/// <summary>Return the 'in' coin for a trade on 'pair' in this trade direction</summary>
+		public static Coin CoinIn(this ETradeType tt, TradePair pair)
+		{
+			return 
+				tt == ETradeType.B2Q ? pair.Base :
+				tt == ETradeType.Q2B ? pair.Quote :
+				throw new Exception("Unknown trade type");
+		}
+
+		/// <summary>Return the 'out' coin for a trade on 'pair' in this trade direction</summary>
+		public static Coin CoinOut(this ETradeType tt, TradePair pair)
+		{
+			return 
+				tt == ETradeType.B2Q ? pair.Quote :
+				tt == ETradeType.Q2B ? pair.Base :
+				throw new Exception("Unknown trade type");
+		}
+
+		/// <summary>Return the 'in' volume for a trade in this trade direction</summary>
+		public static Unit<decimal> VolumeIn(this ETradeType tt, Unit<decimal> volume_base, Unit<decimal> price_q2b)
+		{
+			return 
+				tt == ETradeType.B2Q ? volume_base :
+				tt == ETradeType.Q2B ? volume_base * price_q2b :
+				throw new Exception("Unknown trade type");
+		}
+
+		/// <summary>Return the 'out' volume for a trade in this trade direction</summary>
+		public static Unit<decimal> VolumeOut(this ETradeType tt, Unit<decimal> volume_base, Unit<decimal> price_q2b)
+		{
+			return 
+				tt == ETradeType.B2Q ? volume_base * price_q2b :
+				tt == ETradeType.Q2B ? volume_base :
+				throw new Exception("Unknown trade type");
+		}
+
+		/// <summary>Return 'price' in (CoinOut/CoinIn) for this trade direction. Assumes price is in (Quote/Base)</summary>
+		public static Unit<decimal> Price(this ETradeType tt, Unit<decimal> price_q2b)
+		{
+			return
+				tt == ETradeType.B2Q ? price_q2b :
+				tt == ETradeType.Q2B ? Maths.Div(1m._(), price_q2b, 0m / 1m._(price_q2b)) :
+				throw new Exception("Unknown trade type");
+		}
+
+		/// <summary>Return 'price' in (Quote/Base) for this trade direction. Assumes price is in (CoinOut/CoinIn)</summary>
+		public static Unit<decimal> PriceQ2B(this ETradeType tt, Unit<decimal> price)
+		{
+			return
+				tt == ETradeType.B2Q ? price :
+				tt == ETradeType.Q2B ? (1m / price) :
+				throw new Exception("Unknown trade type");
+		}
+
+		/// <summary>Return the volume range to validate against for the input currency</summary>
+		public static RangeF<Unit<decimal>> VolumeRangeIn(this ETradeType tt, TradePair pair)
+		{
+			return
+				tt == ETradeType.B2Q ? pair.VolumeRangeBase :
+				tt == ETradeType.Q2B ? pair.VolumeRangeQuote :
+				throw new Exception("Unknown trade type");
+		}
+
+		/// <summary>Return the volume range to validate against for the output currency</summary>
+		public static RangeF<Unit<decimal>> VolumeRangeOut(this ETradeType tt, TradePair pair)
+		{
+			return
+				tt == ETradeType.B2Q ? pair.VolumeRangeQuote :
+				tt == ETradeType.Q2B ? pair.VolumeRangeBase :
+				throw new Exception("Unknown trade type");
+		}
+
+		/// <summary>Return the default volume to use for a trade on 'pair' (in CoinIn currency)</summary>
+		public static Unit<decimal> DefaultTradeVolume(this ETradeType tt, TradePair pair)
+		{
+			var coin = tt.CoinIn(pair);
+			return coin.DefaultTradeVolume;
+		}
+
+		/// <summary>Return the default volume to use for a trade on 'pair' (in Base currency)</summary>
+		public static Unit<decimal> DefaultTradeVolumeBase(this ETradeType tt, TradePair pair, Unit<decimal> price_q2b)
+		{
+			var vol = DefaultTradeVolume(tt, pair);
+			return
+				tt == ETradeType.B2Q ? vol :                // 'vol' is in base 
+				tt == ETradeType.Q2B ? vol / price_q2b :    // 'vol' is in quote
+				throw new Exception("Unknown trade type");
+		}
+
+		/// <summary>Return the order book that provides offers for a trade in this direction</summary>
+		public static OrderBook OrderBook(this ETradeType tt, TradePair pair)
+		{
+			return
+				tt == ETradeType.B2Q ? pair.B2Q :
+				tt == ETradeType.Q2B ? pair.Q2B :
+				throw new Exception("Unknown trade type");
 		}
 
 		/// <summary>Convert a trade type string to the enumeration value</summary>
@@ -293,6 +483,12 @@ namespace CoinFlip
 			var tf = TimeFrameToTicks(1.0, time_frame);
 			var ticks = (time.Ticks / tf) * tf;
 			return new DateTimeOffset(ticks, time.Offset);
+		}
+
+		/// <summary>Return the end time for this candle given 'time_frame'</summary>
+		public static DateTimeOffset TimestampEnd(this Candle candle, ETimeFrame time_frame)
+		{
+			return candle.TimestampUTC + TimeFrameToTimeSpan(1.0, time_frame);
 		}
 	}
 

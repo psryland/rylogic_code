@@ -13,13 +13,13 @@ namespace CoinFlip
 	/// <summary>Cryptopia Exchange</summary>
 	public class Cryptopia :Exchange
 	{
-		private HashSet<int> m_pair_ids;
+		private readonly HashSet<int> m_pairs;
 
 		public Cryptopia(Model model, string key, string secret)
 			:base(model, model.Settings.Cryptopia)
 		{
-			m_pair_ids = new HashSet<int>();
-			Api = new CryptopiaApi(key, secret, Model.Shutdown);
+			m_pairs = new HashSet<int>();
+			Api = new CryptopiaApi(key, secret, Model.Shutdown.Token);
 			TradeHistoryUseful = false;
 		}
 		public override void Dispose()
@@ -54,9 +54,7 @@ namespace CoinFlip
 			// Place the trade order
 			var msg = Api.SubmitTrade(tt.ToCryptopiaTT(), pair.TradePairId.Value, volume, price);
 			if (!msg.Success)
-				throw new Exception(
-					"Cryptopia: Submit order failed. {0}\n".Fmt(msg.Error) +
-					"{0} Pair: {1}  Vol: {2} @ {3}".Fmt(tt, pair.Name, volume, price));
+				throw new Exception($"Cryptopia: Submit trade failed. {msg.Error}\n{tt} Pair: {pair.Name}  Vol: {volume.ToString("G8",true)} @  {price.ToString("G8",true)}");
 
 			// Return the result
 			// Cryptopia Hack: OrderId will be null if the order is filled immediately
@@ -64,13 +62,12 @@ namespace CoinFlip
 		}
 
 		/// <summary>Cancel an open trade</summary>
-		protected override void CancelOrderInternal(TradePair pair, ulong order_id)
+		protected override bool CancelOrderInternal(TradePair pair, ulong order_id)
 		{
 			var msg = Api.CancelTrade(ECancelTradeType.Trade, order_id:(int)order_id);
-			if (!msg.Success && !Regex.IsMatch(msg.Error, @"Trade #\d+ does not exist"))
-				throw new Exception(
-					"Cryptopia: Cancel trade failed. {0}\n".Fmt(msg.Error) +
-					"Order Id: {0}".Fmt(order_id));
+			if (msg.Success) return true;
+			if (Regex.IsMatch(msg.Error, @"Trade #\d+ does not exist")) return false;
+			throw new Exception($"Cryptopia: Cancel trade (id={order_id}) failed. {msg.Error}");
 		}
 
 		/// <summary>Update the collections of coins and pairs</summary>
@@ -79,7 +76,9 @@ namespace CoinFlip
 			try
 			{
 				// Get all available trading pairs
-				var msg = Api.GetTradePairs();
+				// Use 'Model.Shutdown' because updating pairs is independent of the Exchange.UpdateThread
+				// and we don't want updating pairs to be interrupted by the update thread stopping
+				var msg = Api.GetTradePairs(cancel:Model.Shutdown.Token);
 				if (!msg.Success)
 					throw new Exception("Cryptopia: Failed to read available trading pairs. {0}".Fmt(msg.Error));
 
@@ -95,11 +94,13 @@ namespace CoinFlip
 						var base_ = Coins.GetOrAdd(p.SymbolBase);
 						var quote = Coins.GetOrAdd(p.SymbolQuote);
 
-						// Update the trade pairs
+						// Create a trade pair
 						var instr = new TradePair(base_, quote, this, p.Id,
 							volume_range_base:new RangeF<Unit<decimal>>(p.MinimumTradeBase ._(p.SymbolBase ), p.MaximumTradeBase ._(p.SymbolBase )),
 							volume_range_quote:new RangeF<Unit<decimal>>(p.MinimumTradeQuote._(p.SymbolQuote), p.MaximumTradeQuote._(p.SymbolQuote)),
 							price_range:null);
+
+						// Update the pairs collection
 						Pairs[instr.UniqueKey] = instr;
 						ids.Add(p.Id);
 					}
@@ -109,8 +110,11 @@ namespace CoinFlip
 						Balance.GetOrAdd(c);
 
 					// Record the pair Ids
-					lock (m_pair_ids)
-						m_pair_ids.AddRange(ids);
+					lock (m_pairs)
+					{
+						m_pairs.Clear();
+						m_pairs.AddRange(ids);
+					}
 				});
 			}
 			catch (Exception ex)
@@ -128,13 +132,13 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Get the trade pair ids
-				var ids = (int[])null;
-				lock (m_pair_ids)
-					ids = m_pair_ids.ToArray();
+				int[] pairs;
+				lock (m_pairs)
+					pairs = m_pairs.ToArray();
 
 				// Request the order book data for all of the pairs
-				var order_book = ids.Length != 0 
-					? Api.GetMarketOrderGroups(ids, order_count:Settings.MarketDepth)
+				var order_book = pairs.Length != 0 
+					? Api.GetMarketOrderGroups(pairs, order_count:Settings.MarketDepth, cancel:Shutdown.Token)
 					: new MarketOrderGroupsResponse();
 
 				// Queue integration of the market data
@@ -161,11 +165,11 @@ namespace CoinFlip
 						// Update the depth of market data
 						var buys  = orders.Buy .Select(x => new Order(x.Price._(pair.RateUnits), x.Volume._(pair.Base))).ToArray();
 						var sells = orders.Sell.Select(x => new Order(x.Price._(pair.RateUnits), x.Volume._(pair.Base))).ToArray();
-						pair.UpdateOrderBook(buys, sells);
+						pair.MarketDepth.UpdateOrderBook(buys, sells);
 					}
 
 					// Notify updated
-					MarketDataUpdatedTime.NotifyAll(timestamp);
+					Pairs.LastUpdated = timestamp;
 				});
 			}
 			catch (Exception ex)
@@ -183,7 +187,7 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the account data
-				var msg = Api.GetBalances();
+				var msg = Api.GetBalances(cancel:Shutdown.Token);
 				if (!msg.Success)
 					throw new Exception("Cryptopia: Failed to update account balances. {0}".Fmt(msg.Error));
 
@@ -191,21 +195,19 @@ namespace CoinFlip
 				Model.MarketUpdates.Add(() =>
 				{
 					// Update the account balance
-					using (Model.Balances.PreservePosition())
+					foreach (var b in msg.Data.Where(x => x.Available != 0 || Coins.ContainsKey(x.Symbol)))
 					{
-						foreach (var b in msg.Data.Where(x => x.Available != 0 || Coins.ContainsKey(x.Symbol)))
-						{
-							// Find the currency that this balance is for
-							var coin = Coins.GetOrAdd(b.Symbol);
+						// Find the currency that this balance is for
+						var coin = Coins.GetOrAdd(b.Symbol);
 
-							// Update the balance
-							var bal = new Balance(coin, b.Total, b.Available, b.Unconfirmed, b.HeldForTrades, b.PendingWithdraw, timestamp);
-							Balance[coin] = bal;
-						}
+						// Update the balance
+						var bal = new Balance(coin, b.Total._(coin), b.HeldForTrades._(coin), timestamp, b.Unconfirmed._(coin), b.PendingWithdraw._(coin));
+						Debug.Assert(bal.AssertValid());
+						Balance[coin] = bal;
 					}
 
 					// Notify updated
-					BalanceUpdatedTime.NotifyAll(timestamp);
+					Balance.LastUpdated = timestamp;
 				});
 			}
 			catch (Exception ex)
@@ -215,7 +217,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update open positions</summary>
-		protected override void UpdatePositions() // Worker thread context
+		protected override void UpdatePositionsAndHistory() // Worker thread context
 		{
 			try
 			{
@@ -223,60 +225,31 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the existing orders
-				var msg = Api.GetOpenOrders();
-				if (!msg.Success)
-					throw new Exception("Cryptopia: Failed to received existing orders. {0}".Fmt(msg.Error));
+				var position = Api.GetOpenOrders(cancel:Shutdown.Token);
+				if (!position.Success)
+					throw new Exception("Cryptopia: Failed to received existing orders. {0}".Fmt(position.Error));
+
+				// Request the history
+				var history = Api.GetTradeHistory(count:10, cancel:Shutdown.Token);
+				if (!history.Success)
+					throw new Exception("Cryptopia: Failed to received trade history. {0}".Fmt(history.Error));
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
 				{
 					var order_ids = new HashSet<ulong>();
-					var pair_ids = new HashSet<int>();
+					var pairs = new HashSet<int>();
 
 					// Update the collection of existing orders
-					foreach (var order in msg.Data)
+					foreach (var order in position.Data)
 					{
 						// Add the position to the collection
 						var pos = PositionFrom(order, timestamp);
 						Positions[pos.OrderId] = pos;
 						order_ids.Add(pos.OrderId);
-						pair_ids.Add(pos.Pair.TradePairId.Value);
+						pairs.Add(pos.Pair.TradePairId.Value);
 					}
-
-					// Remove any positions that are no longer valid.
-					RemovePositionsNotIn(order_ids, timestamp);
-
-					// Notify updated
-					PositionUpdatedTime.NotifyAll(timestamp);
-
-					// Update the trade pair ids
-					lock (m_pair_ids)
-						m_pair_ids.AddRange(pair_ids);
-				});
-			}
-			catch (Exception ex)
-			{
-				HandleException(nameof(UpdatePositions), ex);
-			}
-		}
-
-		/// <summary>Update the trade history</summary>
-		protected override void UpdateTradeHistory() // Worker thread context
-		{
-			try
-			{
-				// Record the time just before the query to the server
-				var timestamp = DateTimeOffset.Now;
-
-				// Request the history
-				var msg = Api.GetTradeHistory(count:10);
-				if (!msg.Success)
-					throw new Exception("Cryptopia: Failed to received trade history. {0}".Fmt(msg.Error));
-
-				// Queue integration of the market data
-				Model.MarketUpdates.Add(() =>
-				{
-					foreach (var order in msg.Data)
+					foreach (var order in history.Data)
 					{
 						var his = HistoricFrom(order, timestamp);
 
@@ -285,21 +258,26 @@ namespace CoinFlip
 						if (fill == null) fill = History.GetOrAdd(his.TradeId, his.TradeType, his.Pair);
 						his.OrderIdHACK = fill.OrderId;
 						fill.Trades[his.TradeId] = his;
-
-						//var fill = History.GetOrAdd(his.OrderId, his.TradeType, his.Pair);
-						//fill.Trades[his.TradeId] = his;
 					}
+
+					// Update the trade pair ids
+					lock (m_pairs)
+						m_pairs.AddRange(pairs);
+
+					// Remove any positions that are no longer valid.
+					RemovePositionsNotIn(order_ids, timestamp);
 
 					// Save the history range
 					HistoryInterval = new Range(HistoryInterval.Beg, timestamp.Ticks);
 
 					// Notify updated
-					TradeHistoryUpdatedTime.NotifyAll(timestamp);
+					History.LastUpdated = timestamp;
+					Positions.LastUpdated = timestamp;
 				});
 			}
 			catch (Exception ex)
 			{
-				HandleException(nameof(UpdateTradeHistory), ex);
+				HandleException(nameof(UpdatePositionsAndHistory), ex);
 			}
 		}
 
@@ -326,18 +304,16 @@ namespace CoinFlip
 		/// <summary>Convert a Cryptopia trade history result into a position object</summary>
 		private Historic HistoricFrom(TradeHistory his, DateTimeOffset updated)
 		{
-			// Get the associated trade pair (add the pair if it doesn't exist)
-			var order_id   = unchecked((ulong)his.OrderId);
-			var trade_id   = unchecked((ulong)his.TradeId);
-			var tt         = Misc.TradeType(his.Type);
-			var sym        = CurrencyPair.Parse(his.Market);
-			var pair       = Pairs.GetOrAdd(sym.Base, sym.Quote, trade_pair_id:his.TradePairId);
-			var price      = tt == ETradeType.B2Q ? his.Rate._(pair.RateUnits) : (1m / his.Rate._(pair.RateUnits));
-			var volume_in  = tt == ETradeType.B2Q ? his.Amount._(pair.Base)    : (his.Total._(pair.Quote) + his.Fee._(pair.Quote));
-			var volume_out = tt == ETradeType.B2Q ? his.Total._(pair.Quote)    : (volume_in * price);
-			var commission = tt == ETradeType.B2Q ? his.Fee._(pair.Quote)      : (volume_out - his.Amount._(pair.Base));
-			var created    = his.TimeStamp.As(DateTimeKind.Utc);
-			return new Historic(order_id, trade_id, pair, tt, price, volume_in, volume_out, commission, created, updated);
+			var order_id         = unchecked((ulong)his.OrderId);
+			var trade_id         = unchecked((ulong)his.TradeId);
+			var tt               = Misc.TradeType(his.Type);
+			var sym              = CurrencyPair.Parse(his.Market);
+			var pair             = Pairs.GetOrAdd(sym.Base, sym.Quote, trade_pair_id:his.TradePairId);
+			var price            = his.Rate._(pair.RateUnits);
+			var volume_base      = his.Amount._(pair.Base);
+			var commission_quote = his.Fee._(pair.Quote);
+			var created          = his.TimeStamp.As(DateTimeKind.Utc);
+			return new Historic(order_id, trade_id, pair, tt, price, volume_base, commission_quote, created, updated);
 		}
 	}
 }

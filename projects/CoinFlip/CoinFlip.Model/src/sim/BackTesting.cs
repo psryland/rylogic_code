@@ -12,41 +12,58 @@ namespace CoinFlip
 		/// <summary>True while back testing</summary>
 		public bool BackTesting
 		{
-			get { return m_back_testing; }
+			[DebuggerStepThrough] get { return m_impl_backtesting; }
 			set
 			{
-				if (m_back_testing == value || AllowTrades) return;
+				if (BackTesting == value) return;
+				Debug.Assert(AssertMainThread());
+
+				// Don't allow back testing to be enabled when 'AllowTrades' is enabled
+				if (value && AllowTrades)
+					return;
+
+				// Notify about to change back testing mode
 				BackTestingChanging.Raise(this, new PrePostEventArgs(after:false));
 
-				if (m_back_testing)
-				{
-					Log.Write(ELogLevel.Debug, "Back testing disabled");
-				}
+				// Stop all bots before enabling/disabling back testing
+				foreach (var bot in Bots)
+					bot.Active = false;
 
 				// Integrate market updates before enabling/disabling back testing so that
 				// updates from live data don't end up in back testing data or visa versa.
+				// All exchanges should have their update threads deactivated by now.
+				Debug.Assert(Exchanges.All(x => x.UpdateThreadActive == false));
 				IntegrateMarketUpdates();
 
-				// Create a new Simulation instance for this back testing. Do this before
-				// setting 'm_back_testing' to true so that the constructor can make copies
-				// of the existing collections.
-				Simulation = value ? new Simulation(this) : null;
-
 				// Enable/Disable back testing
-				m_back_testing = value;
-
-				if (m_back_testing)
+				// Create a new Simulation instance for back testing. Do this before
+				// setting 'BackTesting' to true so that the constructor can make copies
+				// of the existing collections. Careful with UtcNow tho...
+				if (value)
 				{
-					Log.Write(ELogLevel.Debug, "Back testing enabled");
-
-					// Reset to the start time
-					Simulation.SetStartTime(Settings.BackTesting.TimeFrame, Settings.BackTesting.Steps);
+					Simulation = new Simulation(this);
+					m_impl_backtesting = true;
+				}
+				else
+				{
+					m_impl_backtesting = false;
+					Simulation = null;
 				}
 
+				// Notify back testing changed
+				Log.Write(ELogLevel.Debug, value ? "Back testing enabled" : "Back testing disabled");
 				BackTestingChanging.Raise(this, new PrePostEventArgs(after:true));
+
+				// Reset after back-testing starts
+				if (value)
+				{
+					var ss = Settings.BackTesting;
+					Simulation.SetStartTime(ss.TimeFrame, ss.Steps);
+					Simulation.Reset();
+				}
 			}
 		}
-		private bool m_back_testing;
+		private bool m_impl_backtesting;
 
 		/// <summary>Raise before and after 'BackTesting' is changed</summary>
 		public event EventHandler<PrePostEventArgs> BackTestingChanging;
@@ -90,6 +107,12 @@ namespace CoinFlip
 		}
 		private Simulation m_simulation;
 
+		/// <summary>True while the simulation is running</summary>
+		public bool SimRunning
+		{
+			get { return Simulation != null && Simulation.Running; }
+		}
+
 		/// <summary>Raised when the simulation is reset back to the start time</summary>
 		public event EventHandler<SimResetEventArgs> SimReset;
 
@@ -106,9 +129,8 @@ namespace CoinFlip
 			{
 				foreach (var pos in exch.Positions.Values.Where(x => x.Fake).ToArray())
 				{
-					if (pos.TradeType == ETradeType.B2Q && pos.Pair.QuoteToBase(pos.VolumeQuote).PriceQ2B > pos.Price * 1.00000000000001m)
-						pos.FillFakeOrder();
-					if (pos.TradeType == ETradeType.Q2B && pos.Pair.BaseToQuote(pos.VolumeBase).PriceQ2B < pos.Price * 0.999999999999999m)
+					var trade = pos.Pair.MakeTrade(pos.TradeType, pos.VolumeIn);
+					if (Math.Sign(pos.PriceQ2B - trade.PriceQ2B) == pos.TradeType.Sign())
 						pos.FillFakeOrder();
 				}
 			}

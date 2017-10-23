@@ -54,6 +54,11 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
     <Compile Include="src\dlg\SimulationUI.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -100,6 +105,10 @@
     <Compile Include="src\ui\TreeBase.cs">
       <SubType>Component</SubType>
     </Compile>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
     <EmbeddedResource Include="src\dlg\SimulationUI.resx">
       <DependentUpon>SimulationUI.cs</DependentUpon>
     </EmbeddedResource>

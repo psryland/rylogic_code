@@ -3,15 +3,10 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
-using System.IO;
 using System.Linq;
 using System.Net;
-using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Web;
-using System.Xml.Linq;
 using pr.common;
 using pr.container;
 using pr.extn;
@@ -47,27 +42,22 @@ namespace CoinFlip
 			Balance = new BalanceCollection(this);
 			Positions = new PositionsCollection(this);
 			History = new HistoryCollection(this);
-			MarketDataUpdatedTime = new ConditionVariable<DateTimeOffset>(DateTimeOffset.Now);
-			BalanceUpdatedTime = new ConditionVariable<DateTimeOffset>(DateTimeOffset.Now);
-			PositionUpdatedTime = new ConditionVariable<DateTimeOffset>(DateTimeOffset.Now);
-			TradeHistoryUpdatedTime = new ConditionVariable<DateTimeOffset>(DateTimeOffset.Now);
-			m_update_thread_stop = new CancellationTokenSource();
+			Shutdown = CancellationTokenSource.CreateLinkedTokenSource(Model.Shutdown.Token);
 			m_update_thread_step = new AutoResetEvent(false);
 			TradeHistoryUseful = false;
 
-			var history_start = (DateTimeOffset.Now - TimeSpan.FromDays(5)).Ticks;
+			// Limit the amount of history to retrieve
+			var history_start = (Model.UtcNow - TimeSpan.FromDays(5)).Ticks;
 			HistoryInterval = new Range(history_start, history_start);
 			m_history_last = HistoryInterval.End;
-
-			Status = EStatus.Offline;
 
 			// Start the exchange if enabled in the settings
 			if (Settings.Active)
 				Model.RunOnGuiThread(() => UpdateThreadActive = true);
-
 		}
 		public virtual void Dispose()
 		{
+			Shutdown = null;
 			UpdateThreadActive = false;
 			Model = null;
 		}
@@ -81,24 +71,18 @@ namespace CoinFlip
 		/// <summary>The connection status of the exchange</summary>
 		public EStatus Status
 		{
-			get { return m_status; }
-			protected set
+			get
 			{
-				// Status change can happen from any thread
-				if (m_status == value) return;
-				Model.RunOnGuiThread(() =>
-				{
-					m_status = value;
-					OnStatusChanged();
-
-					// Disable in the event of an error
-					// Don't do this because it stops the bot
-					//if (m_status == EStatus.Error)
-					//	Active = false;
-				});
+				return
+					!Enabled ? EStatus.Stopped :
+					Model.BackTesting ? EStatus.Simulated :
+					UpdateThreadActive ? EStatus.Connected :
+					EStatus.Offline;
 			}
 		}
-		private EStatus m_status;
+
+		/// <summary>Settings for this exchange</summary>
+		public IExchangeSettings Settings { get; private set; }
 
 		/// <summary>App logic</summary>
 		public Model Model
@@ -127,36 +111,53 @@ namespace CoinFlip
 
 					// If back testing is just been disabled, turn on the update thread
 					if (!Model.BackTesting && e.After)
-						UpdateThreadActive = true;
+						UpdateThreadActive = Enabled;
+
+					RaisePropertyChanged(new PropertyChangedEventArgs(nameof(Status)));
 				}
 			}
 		}
 		private Model m_model;
 
-		/// <summary>Settings for this exchange</summary>
-		public IExchangeSettings Settings { get; private set; }
+		/// <summary>A cancellation token for graceful shutdown</summary>
+		public CancellationTokenSource Shutdown
+		{
+			get { return m_shutdown; }
+			private set
+			{
+				if (m_shutdown == value) return;
+				m_shutdown?.Cancel();
+				m_shutdown = value;
+			}
+		}
+		private CancellationTokenSource m_shutdown;
 
 		/// <summary>True if this exchange is to be used</summary>
-		public bool Active
+		public bool Enabled
 		{
 			get { return Settings.Active; }
 			set
 			{
-				if (Active == value) return;
+				if (Enabled == value) return;
 				Settings.Active = value;
 				UpdateThreadActive = value;
-				RaisePropertyChanged(new PropertyChangedEventArgs(nameof(Active)));
+				RaisePropertyChanged(new PropertyChangedEventArgs(nameof(Enabled)));
+				RaisePropertyChanged(new PropertyChangedEventArgs(nameof(Status)));
 			}
 		}
 
-		/// <summary>Enable/Disable the exchange</summary>
-		private bool UpdateThreadActive
+		/// <summary>Enable/Disable the exchange update thread</summary>
+		public bool UpdateThreadActive
 		{
 			get { return m_update_thread != null; }
-			set
+			private set
 			{
 				if (UpdateThreadActive == value) return;
 				Debug.Assert(Model.AssertMainThread());
+
+				// Don't enable inactive exchanges
+				if (value && !Enabled)
+					throw new Exception("Don't enable inactive exchanges");
 
 				// Don't enable the update thread while back testing
 				if (value && Model.BackTesting)
@@ -167,117 +168,87 @@ namespace CoinFlip
 				{
 					// Stop the thread
 					m_update_thread_exit = true;
-					m_update_thread_stop.Cancel();
+					Shutdown.Cancel();
 					m_update_thread_step.Set();
 					if (m_update_thread.IsAlive)
 						m_update_thread.Join();
-
-					Util.Dispose(ref m_update_thread_stop);
 				}
 
 				// Start the heart beat thread, if active
-				Status = value ? EStatus.Connecting : EStatus.Stopped;
-				m_update_thread = (value && !Model.BackTesting) ? new Thread(new ThreadStart(UpdateThreadEntryPoint)) : null;
+				m_update_thread = value ? new Thread(new ThreadStart(UpdateThreadEntryPoint)) : null;
 
 				// On enable...
 				if (m_update_thread != null)
 				{
-					// Trigger a positions and balances update
-					PositionUpdateRequired = true;
+					// Trigger updates
 					BalanceUpdateRequired = true;
+					PositionUpdateRequired = true;
 
+					// Start the thread
 					m_update_thread_exit = false;
-					m_update_thread_stop = new CancellationTokenSource();
+					Shutdown = CancellationTokenSource.CreateLinkedTokenSource(Model.Shutdown.Token);
 					m_update_thread.Start();
+				}
+
+				// Notify updating
+				RaisePropertyChanged(new PropertyChangedEventArgs(nameof(Status)));
+
+				/// <summary>Thread entry point for the exchange update thread</summary>
+				void UpdateThreadEntryPoint()
+				{
+					try
+					{
+						Thread.CurrentThread.Name = Name;
+						Model.Log.Write(ELogLevel.Debug, $"Exchange {Name} update thread started");
+
+						// Note: there is no point in trying to run the updates in parallel because
+						// the 'nonce' system requires each query to be sequential.
+						for (;!m_update_thread_exit;) try
+						{
+							// Wait for the step period. If triggered early, retest exit flag
+							const int MainLoopPeriodMS = 100;
+							if (Shutdown.IsCancellationRequested) break;
+							if (m_update_thread_step.WaitOne(MainLoopPeriodMS))
+								continue;
+
+							// Update the balances
+							const double BalanceUpdatePeriodMS = 1000;
+							if (BalanceUpdateRequired || (Model.UtcNow - Balance.LastUpdated).TotalMilliseconds > BalanceUpdatePeriodMS)
+							{
+								BalanceUpdateRequired = false;
+								UpdateBalances();
+							}
+
+							// Update positions/history
+							const int PositionUpdatePeriodMS = 1000;
+							if (PositionUpdateRequired || (Model.UtcNow - Positions.LastUpdated).TotalMilliseconds > PositionUpdatePeriodMS)
+							{
+								PositionUpdateRequired = false;
+								UpdatePositionsAndHistory();
+							}
+
+							// Update market data
+							const int MarketDataUpdatePeriodMS = 100;
+							if (MarketDataUpdateRequired || (Model.UtcNow - Pairs.LastUpdated).TotalMilliseconds > MarketDataUpdatePeriodMS)
+							{
+								MarketDataUpdateRequired = false;
+								UpdateData();
+							}
+						}
+						catch (OperationCanceledException) { break; }
+						Model.Log.Write(ELogLevel.Debug, $"Exchange {Name} update thread stopped");
+					}
+					catch (Exception ex)
+					{
+						Model.Log.Write(ELogLevel.Error, ex, $"Exchange {Name} heart beat thread exit");
+						Model.RunOnGuiThread(() => UpdateThreadActive = false);
+					}
 				}
 			}
 		}
 		private Thread m_update_thread;
-		private bool m_update_thread_exit;
 		private AutoResetEvent m_update_thread_step;
-		private CancellationTokenSource m_update_thread_stop;
-
-		/// <summary>Thread entry point for the exchange update thread</summary>
-		private void UpdateThreadEntryPoint()
-		{
-			try
-			{
-				Thread.CurrentThread.Name = Name;
-				Model.Log.Write(ELogLevel.Debug, $"Exchange {Name} update thread started");
-
-				var sw = new Stopwatch().Start2();
-				var last_balance_update = 0L;
-				var last_market_update = 0L;
-				var last_position_update = 0L;
-				var last_trade_history_update = 0L;
-
-				// Create a cancel token that watches shutdown or exit thread
-				var cancel_or_shutdown_src = CancellationTokenSource.CreateLinkedTokenSource(Model.Shutdown, m_update_thread_stop.Token);
-				var cancel_or_shutdown = cancel_or_shutdown_src.Token;
-
-				var tasks = new List<Task>();
-				for (;!m_update_thread_exit;) try
-				{
-					Status = EStatus.Connected;
-
-					// Wait for the step period. If triggered early, retest exit flag
-					const int MainLoopPeriodMS = 100;
-					if (cancel_or_shutdown.IsCancellationRequested) break;
-					if (m_update_thread_step.WaitOne(MainLoopPeriodMS))
-						continue;
-
-					// Create a collection of update tasks
-					tasks.Clear();
-
-					// Update the balances
-					const int BalanceUpdatePeriodMS = 1000;
-					if (BalanceUpdateRequired || (sw.ElapsedMilliseconds - last_balance_update) > BalanceUpdatePeriodMS)
-					{
-						BalanceUpdateRequired = false;
-						tasks.Add(Task.Run(() => UpdateBalances(), cancel_or_shutdown));
-						last_balance_update = sw.ElapsedMilliseconds;
-					}
-
-					// Update the existing positions
-					const int PositionUpdatePeriodMS = 1000;
-					if (PositionUpdateRequired || (sw.ElapsedMilliseconds - last_position_update) > PositionUpdatePeriodMS)
-					{
-						PositionUpdateRequired = false;
-						tasks.Add(Task.Run(() => UpdatePositions(), cancel_or_shutdown));
-						last_position_update = sw.ElapsedMilliseconds;
-					}
-
-					// Update trade history
-					const int TradeHistoryUpdatePeriodMS = 1000;
-					if (HistoryUpdateRequired || (sw.ElapsedMilliseconds - last_trade_history_update) > TradeHistoryUpdatePeriodMS)
-					{
-						HistoryUpdateRequired = false;
-						tasks.Add(Task.Run(() => UpdateTradeHistory(), cancel_or_shutdown));
-						last_trade_history_update = sw.ElapsedMilliseconds;
-					}
-
-					// Update market data at the polling rate
-					if (MarketDataUpdateRequired || (sw.ElapsedMilliseconds - last_market_update) > PollPeriod)
-					{
-						MarketDataUpdateRequired = false;
-						tasks.Add(Task.Run(() => UpdateData(), cancel_or_shutdown));
-						last_market_update = sw.ElapsedMilliseconds;
-					}
-
-					Task.WhenAll(tasks).Wait(cancel_or_shutdown);
-				}
-				catch (OperationCanceledException) { break; }
-
-				Status = EStatus.Stopped;
-				Model.Log.Write(ELogLevel.Debug, $"Exchange {Name} update thread stopped");
-			}
-			catch (Exception ex)
-			{
-				Model.Log.Write(ELogLevel.Error, ex, $"Exchange {Name} heart beat thread exit");
-				Status = EStatus.Error;
-				Model.RunOnGuiThread(() => UpdateThreadActive = false);
-			}
-		}
+		private bool m_update_thread_exit;
 
 		/// <summary>The rate that 'Heart' beats at</summary>
 		public int PollPeriod
@@ -298,13 +269,6 @@ namespace CoinFlip
 			}
 		}
 		private bool m_market_data_update_required;
-		public Task MarketDataUpdated()
-		{
-			var now = DateTimeOffset.Now;
-			MarketDataUpdateRequired = true;
-			return Task.Run(() => MarketDataUpdatedTime.Wait(ts => ts > now));
-		}
-		protected ConditionVariable<DateTimeOffset> MarketDataUpdatedTime { get; private set; }
 
 		/// <summary>Dirty flag for account balance data</summary>
 		public bool BalanceUpdateRequired
@@ -318,13 +282,6 @@ namespace CoinFlip
 			}
 		}
 		private bool m_balance_update_required;
-		public Task BalanceUpdated()
-		{
-			var now = DateTimeOffset.Now;
-			BalanceUpdateRequired = true;
-			return Task.Run(() => BalanceUpdatedTime.Wait(ts => ts > now));
-		}
-		protected ConditionVariable<DateTimeOffset> BalanceUpdatedTime { get; private set; }
 
 		/// <summary>Dirty flag for existing positions data</summary>
 		public bool PositionUpdateRequired
@@ -338,33 +295,6 @@ namespace CoinFlip
 			}
 		}
 		private bool m_position_update_required;
-		public Task PositionUpdated()
-		{
-			var now = DateTimeOffset.Now;
-			PositionUpdateRequired = true;
-			return Task.Run(() => PositionUpdatedTime.Wait(ts => ts > now));
-		}
-		protected ConditionVariable<DateTimeOffset> PositionUpdatedTime { get; private set; }
-
-		/// <summary>Dirty flag for updating trade history data</summary>
-		public bool HistoryUpdateRequired
-		{
-			get { return m_trade_history_update_required; }
-			set
-			{
-				if (m_trade_history_update_required == value) return;
-				m_trade_history_update_required = value;
-				if (value) m_update_thread_step.Set();
-			}
-		}
-		private bool m_trade_history_update_required;
-		public Task TradeHistoryUpdated()
-		{
-			var now = DateTimeOffset.Now;
-			HistoryUpdateRequired = true;
-			return Task.Run(() => TradeHistoryUpdatedTime.Wait(ts => ts > now));
-		}
-		protected ConditionVariable<DateTimeOffset> TradeHistoryUpdatedTime { get; private set; }
 
 		/// <summary>True if TradeHistory can be mapped to previous order id's</summary>
 		public bool TradeHistoryUseful { get; protected set; }
@@ -378,8 +308,10 @@ namespace CoinFlip
 				if (ServerRequestRateLimit == value) return;
 				Settings.ServerRequestRateLimit = value;
 				SetServerRequestRateLimit(value);
+				RaisePropertyChanged(new PropertyChangedEventArgs(nameof(ServerRequestRateLimit)));
 			}
 		}
+		protected abstract void SetServerRequestRateLimit(float limit);
 
 		/// <summary>The percentage fee charged when performing exchanges</summary>
 		public decimal Fee
@@ -413,53 +345,19 @@ namespace CoinFlip
 		public Color Colour { get; set; }
 
 		/// <summary>The coins associated with this exchange</summary>
-		public CoinCollection Coins
-		{
-			get { return Model.BackTesting ? Model.Simulation[this].Coins : m_coins; }
-			private set { m_coins = value; }
-		}
-		private CoinCollection m_coins;
+		public CoinCollection Coins { get; private set; }
 
 		/// <summary>The pairs associated with this exchange</summary>
-		public PairCollection Pairs
-		{
-			get { return Model.BackTesting ? Model.Simulation[this].Pairs : m_pairs; }
-			private set { m_pairs = value; }
-		}
-		private PairCollection m_pairs;
+		public PairCollection Pairs { get; private set; }
 
 		/// <summary>The balance of the given coin on this exchange</summary>
-		public BalanceCollection Balance
-		{
-			get { return Model.BackTesting ? Model.Simulation[this].Balance : m_balance; }
-			private set { m_balance = value; }
-		}
-		private BalanceCollection m_balance;
+		public BalanceCollection Balance { get; private set; }
 
 		/// <summary>Open positions held on this exchange, keyed on order ID</summary>
-		public PositionsCollection Positions
-		{
-			get { return Model.BackTesting ? Model.Simulation[this].Positions : m_positions; }
-			private set { m_positions = value; }
-		}
-		private PositionsCollection m_positions;
+		public PositionsCollection Positions { get; private set; }
 
 		/// <summary>Trade history on this exchange, keyed on order ID</summary>
-		public HistoryCollection History
-		{
-			get { return Model.BackTesting ? Model.Simulation[this].History : m_history; }
-			private set { m_history = value; }
-		}
-		private HistoryCollection m_history;
-
-		/// <summary>Raised when the 'Status' value changes</summary>
-		public event EventHandler StatusChanged;
-		protected virtual void OnStatusChanged()
-		{
-			if (Model == null || Model.Exchanges == null) return;
-			StatusChanged.Raise(this);
-			Model.Exchanges.ResetItem(this, ignore_missing:true);
-		}
+		public HistoryCollection History { get; private set; }
 
 		/// <summary>Place an order to convert 'volume' (base currency) to quote currency at 'price' (Quote/Base)</summary>
 		public TradeResult CreateB2QOrder(TradePair pair, Unit<decimal> volume_base, Unit<decimal>? price = null)
@@ -524,46 +422,36 @@ namespace CoinFlip
 					throw new Exception($"Order volume is greater than the current balance: {Balance[pair.Quote].Available}");
 			}
 
-			// Convert the volume to base currency and the price to quote/base
-			var volume = tt == ETradeType.B2Q ? volume_ : (price_ * volume_);
-			var price  = tt == ETradeType.B2Q ? price_  : (1m / price_);
-			var now = DateTimeOffset.Now;
+			// Fake positions when not back testing and not live trading.
+			// Back testing looks like live trading because of the emulated exchanges.
+			var fake = Model.AllowTrades == false && Model.BackTesting == false;
 
-			// Set the Id for this fake order
-			if (!Model.AllowTrades)
-				++m_fake_order_number;
+			// Convert the volume to base currency and the price to quote/base
+			var volume = tt.VolumeIn(volume_, price_);
+			var price  = tt.PriceQ2B(price_);
+			var now = Model.UtcNow;
 
 			// Put a hold on the balance we're about to trade to prevent a race condition
 			// with other trades being placed while we wait for this one to go through.
 			// Only reduce balances, don't assume the trade has completed.
 			// If we're live trading, remove the balance until the next balance update is received.
-			// If not live trading, hold the balance until the fake order is removed.
-			var bal = tt == ETradeType.B2Q ? pair.Base.Balance : pair.Quote.Balance;
-			var hold = tt == ETradeType.B2Q ? volume : (volume * price);
-			if (Model.AllowTrades)
-				bal.Hold(hold);
-			else
-				bal.Hold(hold, b => Positions[m_fake_order_number] != null);
+			// If not live trading, hold the balance until the fake order is removed (hold is updated below)
+			var bal = tt.CoinIn(pair).Balance;
+			var hold = tt.VolumeIn(volume, price);
+			var hold_id = bal.Hold(hold);
 
 			// Make the trade
 			// This can have the following results:
 			// 1) the entire trade is added to the order book for the pair -> a single order number is returned
 			// 2) the entire trade can be met by existing orders in the order book -> a collection of trade IDs is returned
 			// 3) some of the trade can be met by existing orders -> a single order number and a collection of trade IDs are returned.
-			var order_result = Model.AllowTrades // Obey the global trade switch
-				? CreateOrderInternal(pair, tt, volume, price)
-				: new TradeResult(pair, m_fake_order_number, new ulong[0]);
-
-			// Simulate the delay of submitting a trade when 'AllowTrades' is not enabled
-			if (!Model.AllowTrades)
-				Thread.Sleep(800);
+			var order_result =
+				Model.AllowTrades ? CreateOrderInternal(pair, tt, volume, price) :
+				Model.BackTesting ? Model.Simulation[this].CreateOrderInternal(pair, tt, volume, price) :
+				new TradeResult(pair, ++m_fake_order_number, new ulong[0]);
 
 			// Log the event
-			Model.Log.Write(ELogLevel.Info, "{0}: (id={1}) {2} {3} → {4} {5} @ {6} {7}".Fmt(
-				Name, order_result.OrderId,
-				(volume_         ).ToString("G6"), tt == ETradeType.B2Q ? pair.Base  : pair.Quote,
-				(volume_ * price_).ToString("G6"), tt == ETradeType.B2Q ? pair.Quote : pair.Base,
-				price.ToString("G6"), pair.RateUnits));
+			Model.Log.Write(ELogLevel.Info, $"{Name}: (id={order_result.OrderId}) {volume_.ToString("G6",true)} → {(volume_ * price_).ToString("G6",true)} @ {price.ToString("G6",true)}");
 
 			// Add the position to the Positions collection so that there is no race condition
 			// between placing an order and checking 'Positions' for the order just placed.
@@ -571,8 +459,12 @@ namespace CoinFlip
 			{
 				// It is possible for the 'Positions' collection to be updated between 'CreateOrderInternal'
 				// and here, therefore we can't use 'Add' because the key may already be in the dictionary
-				var pos = new Position(order_result.OrderId, pair, tt, price, volume, volume, now, now, fake:!Model.AllowTrades);
+				var pos = new Position(order_result.OrderId, pair, tt, price, volume, volume, now, now, fake:fake);
 				Positions[order_result.OrderId] = pos;
+
+				// Update the hold with a 'StillNeeded' function
+				if (fake)
+					bal.Hold(hold_id, b => Positions[order_result.OrderId] != null);
 			}
 
 			// The order may have also been completed or partially filled. Add the filled orders to the trade history
@@ -583,19 +475,15 @@ namespace CoinFlip
 				// means we can't match orders to the trades that filled them though.
 				var order_id = order_result.OrderId != 0 ? order_result.OrderId : tid;
 				var fill = History.GetOrAdd(order_id, tt, pair);
-				fill.Trades[tid] = new Historic(order_id, tid, pair, tt, price, volume, volume*price, volume*price*Fee, now, now);
+				fill.Trades[tid] = new Historic(order_id, tid, pair, tt, price, volume, price*volume*Fee, now, now);
 			}
 
 			// Remove any orders we might have filled from the order book.
-			if (tt == ETradeType.B2Q)
-				pair.B2Q.RemoveOrders(-1, volume, price);
-			else
-				pair.Q2B.RemoveOrders(+1, volume, price);
+			tt.OrderBook(pair).Consume(pair, price, volume, out var remaining);
 
 			// Trigger updates of market data
 			PositionUpdateRequired = true;
 			BalanceUpdateRequired = true;
-			HistoryUpdateRequired = true;
 
 			return order_result;
 		}
@@ -603,11 +491,13 @@ namespace CoinFlip
 		private ulong m_fake_order_number;
 
 		/// <summary>Cancel an existing position</summary>
-		public void CancelOrder(TradePair pair, ulong order_id)
+		public bool CancelOrder(TradePair pair, ulong order_id)
 		{
 			// Obey the global trade switch
-			if (Model.AllowTrades)
-				CancelOrderInternal(pair, order_id);
+			var result = 
+				Model.AllowTrades ? CancelOrderInternal(pair, order_id) :
+				Model.BackTesting ? Model.Simulation[this].CancelOrderInternal(pair, order_id) :
+				true;
 
 			// Remove the position from the Positions collection so that there is no race condition
 			Positions.RemoveIf(x => x.Pair == pair && x.OrderId == order_id);
@@ -615,37 +505,51 @@ namespace CoinFlip
 			// Trigger a positions and balances update
 			PositionUpdateRequired = true;
 			BalanceUpdateRequired = true;
+			return result;
 		}
-		protected abstract void CancelOrderInternal(TradePair pair, ulong order_id);
+		protected abstract bool CancelOrderInternal(TradePair pair, ulong order_id);
 
-		/// <summary>Returns the time frames for which chart data is available for 'pair'</summary>
-		public virtual IEnumerable<ETimeFrame> ChartDataAvailable(TradePair pair)
+		/// <summary>Returns the time frames for which candle data is available for 'pair'</summary>
+		public IEnumerable<ETimeFrame> CandleDataAvailable(TradePair pair)
+		{
+			if (pair.Exchange != this)
+				throw new Exception($"Trade pair {pair.NameWithExchange} is not provided by this exchange ({Name})");
+
+			// Back-testing sim exchanges provide the same time frames as the real exchanges
+			return CandleDataAvailableInternal(pair);
+		}
+		protected virtual IEnumerable<ETimeFrame> CandleDataAvailableInternal(TradePair pair)
 		{
 			yield break;
 		}
 
-		/// <summary>Return the chart data for a given pair, over a given time range</summary>
-		public List<Candle> ChartData(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end)
+		/// <summary>Return the candle data for a given pair, over a given time range</summary>
+		public List<Candle> CandleData(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end, CancellationToken? cancel)
 		{
 			try
 			{
-				return ChartDataInternal(pair, timeframe, time_beg, time_end);
+				if (Model.BackTesting) throw new Exception("Shouldn't require candle data while back testing");
+				using (Scope.Create(() => CandleDataUpdateInProgress = true, () => CandleDataUpdateInProgress = false))
+					return CandleDataInternal(pair, timeframe, time_beg, time_end, cancel);
 			}
 			catch (Exception ex)
 			{
-				HandleException(nameof(Exchange.ChartData), ex, $"PriceData {pair.NameWithExchange} get chart data failed.");
+				HandleException(nameof(Exchange.CandleData), ex, $"PriceData {pair.NameWithExchange} get chart data failed.");
 				return null;
 			}
 		}
-		protected virtual List<Candle> ChartDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end)
+		protected virtual List<Candle> CandleDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end, CancellationToken? cancel)
 		{
 			return new List<Candle>();
 		}
+		public bool CandleDataUpdateInProgress { get; private set; }
 
 		/// <summary>Return the order book for 'pair' to a depth of 'depth'</summary>
 		public MarketDepth MarketDepth(TradePair pair, int depth)
 		{
-			return MarketDepthInternal(pair, depth);
+			return Model.BackTesting
+				? Model.Simulation[this].MarketDepthInternal(pair, depth)
+				: MarketDepthInternal(pair, depth);
 		}
 		protected virtual MarketDepth MarketDepthInternal(TradePair pair, int count)
 		{
@@ -655,45 +559,35 @@ namespace CoinFlip
 		/// <summary>Update the collections of coins and pairs</summary>
 		public void UpdatePairs(HashSet<string> coins_of_interest) // Worker thread context
 		{
-			// Only update pairs when not back testing. Back testing uses the pairs and
-			// coins that were available at the time back testing is enabled.
-			if (!Model.BackTesting)
-				UpdatePairsInternal(coins_of_interest);
+			// Allow update pairs in back testing mode as well
+			UpdatePairsInternal(coins_of_interest);
 		}
-
-		/// <summary>Update the collections of coins and pairs available on this exchange</summary>
 		protected virtual void UpdatePairsInternal(HashSet<string> coins_of_interest)
 		{
-			// This method should await server responses, collect data in local buffers
-			// then use 'RunOnGuiThread' to copy data to the Exchange's main collections.
-			Model.RunOnGuiThread(() => { }, block:true);
+			// This method should wait for server responses in worker threads,
+			// collect data in local buffers, then use 'RunOnGuiThread' to copy
+			// data to the Exchange's main collections.
 		}
 
 		/// <summary>Update the market data, balances, and open positions</summary>
 		protected virtual void UpdateData() // Worker thread context
 		{
-			// This method should await all server responses, then add an action
-			// to the Model.MarketUpdates collection for integration at a suitable time.
-			lock (MarketDataUpdatedTime)
-				MarketDataUpdatedTime.NotifyOne(MarketDataUpdatedTime, DateTimeOffset.Now);
+			Pairs.LastUpdated = Model.UtcNow;
 		}
 
 		/// <summary>Update the account balances</summary>
 		protected virtual void UpdateBalances()  // Worker thread context
 		{
-			BalanceUpdatedTime.NotifyOne(DateTimeOffset.Now);
+			Balance.LastUpdated = Model.UtcNow;
 		}
 
 		/// <summary>Update all open positions</summary>
-		protected virtual void UpdatePositions() // Worker thread context
+		protected virtual void UpdatePositionsAndHistory() // Worker thread context
 		{
-			PositionUpdatedTime.NotifyOne(DateTimeOffset.Now);
-		}
-
-		/// <summary>Update the trade history</summary>
-		protected virtual void UpdateTradeHistory() // Worker thread context
-		{
-			TradeHistoryUpdatedTime.NotifyOne(DateTimeOffset.Now);
+			// Do history and positions together so there's no change of a position being
+			// filled without it appearing in the history
+			History.LastUpdated = Model.UtcNow;
+			Positions.LastUpdated = Model.UtcNow;
 		}
 
 		/// <summary>Handle an exception during an update call</summary>
@@ -703,7 +597,7 @@ namespace CoinFlip
 			{
 				ex = ae.InnerExceptions[0];
 			}
-			if (ex is OperationCanceledException || ex is TaskCanceledException)
+			if (ex is OperationCanceledException)
 			{
 				// Ignore operation cancelled
 				return;
@@ -715,14 +609,12 @@ namespace CoinFlip
 					if (Status != EStatus.Offline)
 						Model.Log.Write(ELogLevel.Warn, $"{GetType().Name} Service Unavailable");
 
-					Status = EStatus.Offline;
 					return;
 				}
 			}
 
 			// Log all other error types
 			Model.Log.Write(ELogLevel.Error, ex, $"{GetType().Name} {method_name} failed. {msg ?? string.Empty}");
-			//Status = EStatus.Error;
 		}
 
 		/// <summary>Remove positions that are older than 'timestamp' and not in 'order_ids'</summary>
@@ -736,9 +628,6 @@ namespace CoinFlip
 				Positions.Remove(pos.OrderId);
 			}
 		}
-
-		/// <summary>Set the maximum number of requests per second to the exchange server</summary>
-		protected abstract void SetServerRequestRateLimit(float limit);
 
 		/// <summary>The time range that the position history covers (in ticks)</summary>
 		public Range HistoryInterval { get; protected set; }
@@ -766,24 +655,38 @@ namespace CoinFlip
 	#region Collections
 	public class CollectionBase<TKey,TValue> :BindingDict<TKey, TValue>
 	{
-		private readonly Exchange m_exch;
 		public CollectionBase(Exchange exch)
 		{
-			m_exch = exch;
+			Exch = exch;
+			Updated = new ConditionVariable<DateTimeOffset>(Model.UtcNow);
 		}
 		public CollectionBase(CollectionBase<TKey,TValue> rhs)
-			:base(rhs)
-		{
-			m_exch = rhs.m_exch;
-		}
-		public Exchange Exch
-		{
-			get { return m_exch; }
-		}
+			:this(rhs.Exch)
+		{}
+
+		/// <summary>The owning exchange</summary>
+		public Exchange Exch { get; private set; }
+
+		/// <summary>App logic</summary>
 		public Model Model
 		{
-			get { return m_exch.Model; }
+			get { return Exch.Model; }
 		}
+
+		/// <summary>The time when data in this collection was last updated. Note: *NOT* when collection changed, when the elements in the collection changed</summary>
+		public DateTimeOffset LastUpdated
+		{
+			get { return m_last_updated; }
+			set
+			{
+				m_last_updated = value;
+				Updated.NotifyAll(value);
+			}
+		}
+		private DateTimeOffset m_last_updated;
+
+		/// <summary>Wait-able object for update notification</summary>
+		public ConditionVariable<DateTimeOffset> Updated { get; private set; }
 	}
 	public class CoinCollection :CollectionBase<string, Coin>
 	{
@@ -909,7 +812,7 @@ namespace CoinFlip
 		public Balance GetOrAdd(Coin coin)
 		{
 			Debug.Assert(Model.AssertMarketDataWrite());
-			return this.GetOrAdd(coin, x => new Balance(x));
+			return this.GetOrAdd(coin, x => new Balance(x, Model.UtcNow));
 		}
 
 		/// <summary>Get/Set the balance for the given coin. Returns zero balance for unknown coins</summary>
@@ -919,11 +822,12 @@ namespace CoinFlip
 			{
 				Debug.Assert(Model.AssertMarketDataRead());
 				if (coin.Exchange != Exch && !(Exch is CrossExchange)) throw new Exception("Currency not associated with this exchange");
-				return TryGetValue(coin, out var bal) ? bal : new Balance(coin);
+				return TryGetValue(coin, out var bal) ? bal : new Balance(coin, Model.UtcNow);
 			}
 			set
 			{
 				Debug.Assert(Model.AssertMarketDataWrite());
+				Debug.Assert(value.AssertValid());
 				if (coin.Exchange != Exch && !(Exch is CrossExchange)) throw new Exception("Currency not associated with this exchange");
 				if (TryGetValue(coin, out var bal) && bal.TimeStamp > value.TimeStamp) return; // Ignore out of date data
 				if (bal != null)

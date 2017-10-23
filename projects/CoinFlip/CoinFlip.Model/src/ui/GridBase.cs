@@ -1,7 +1,10 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
+using pr.common;
+using pr.container;
 using pr.extn;
 using pr.gui;
 using pr.util;
@@ -26,6 +29,7 @@ namespace CoinFlip
 				BackgroundColor             = SystemColors.Window;
 				CellBorderStyle             = DataGridViewCellBorderStyle.None;
 				ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+				ColumnHeadersDefaultCellStyle.WrapMode = DataGridViewTriState.False;
 				Dock                        = DockStyle.None;
 				DoubleBuffered              = true;
 				Location                    = Point.Empty;
@@ -65,6 +69,29 @@ namespace CoinFlip
 			base.OnMouseDown(e);
 			DataGridView_.RightMouseSelect(this, e);
 		}
+		protected override void OnDataSourceChanged(EventArgs e)
+		{
+			base.OnDataSourceChanged(e);
+			if (m_data_source is IBatchChanges bc0)
+			{
+				bc0.BatchChanges -= HandleBatchChanges;
+			}
+			m_data_source = DataSource;
+			if (m_data_source is IBatchChanges bc1)
+			{
+				bc1.BatchChanges += HandleBatchChanges;
+			}
+
+			// Handlers
+			void HandleBatchChanges(object sender, PrePostEventArgs args)
+			{
+				if (args.Before)
+					SuspendLayout();
+				else
+					ResumeLayout();
+			}
+		}
+		private object m_data_source;
 
 		/// <summary>Provides support for the DockContainer</summary>
 		[Browsable(false)]

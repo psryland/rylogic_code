@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Threading.Tasks;
 using System.Xml.Linq;
 using pr.common;
 using pr.extn;
@@ -106,30 +105,28 @@ namespace CoinFlip
 		{}
 
 		/// <summary>Update the graphics model for this indicator</summary>
-		protected async override void UpdateGfxCore()
+		protected override void UpdateGfxCore()
 		{
 			base.UpdateGfxCore();
 
 			// Recreate underlying data if necessary
 			if (ResetRequired)
-				await Reset();
+				Reset();
 		}
 
 		/// <summary>Get/Set a flag to indicator the underlying data need recalculating</summary>
 		public bool ResetRequired { get; set; }
 
 		/// <summary>Recreate the underlying data for the indicator</summary>
-		public async Task Reset()
+		public void Reset()
 		{
-			await ResetCore();
+			ResetCore();
 			Invalidate();
 			OnDataChanged();
 			ResetRequired = false;
 		}
-		protected virtual Task ResetCore()
-		{
-			return Misc.CompletedTask;
-		}
+		protected virtual void ResetCore()
+		{}
 
 		/// <summary>True if this indicator can be dragged around</summary>
 		public virtual bool Dragable

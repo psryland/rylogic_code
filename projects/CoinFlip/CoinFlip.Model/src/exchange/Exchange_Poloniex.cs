@@ -3,8 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
+using System.Threading;
 using Poloniex.API;
 using pr.common;
 using pr.extn;
@@ -15,10 +14,13 @@ namespace CoinFlip
 	/// <summary>'Poloniex' Exchange</summary>
 	public class Poloniex :Exchange
 	{
+		private readonly HashSet<CurrencyPair> m_pairs;
+
 		public Poloniex(Model model, string key, string secret)
 			:base(model, model.Settings.Poloniex)
 		{
-			Api = new PoloniexApi(key, secret, Model.Shutdown);
+			m_pairs = new HashSet<CurrencyPair>();
+			Api = new PoloniexApi(key, secret, Model.Shutdown.Token);
 			TradeHistoryUseful = true;
 		}
 		public override void Dispose()
@@ -69,40 +71,35 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				throw new Exception(
-					"Poloniex: Submit trade failed. {0}\n".Fmt(ex.Message) +
-					"{0} Pair: {1}  Vol: {2} @ {3}".Fmt(tt, pair.Name, volume, price), ex);
+				throw new Exception($"Poloniex: Submit trade failed. {ex.Message}\n{tt} Pair: {pair.Name}  Vol: {volume.ToString("G8",true)} @  {price.ToString("G8",true)}", ex);
 			}
 		}
 
 		/// <summary>Cancel an open trade</summary>
-		protected override void CancelOrderInternal(TradePair pair, ulong order_id)
+		protected override bool CancelOrderInternal(TradePair pair, ulong order_id)
 		{
 			try
 			{
 				// Cancel the trade
-				Api.CancelTrade(new CurrencyPair(pair.Base, pair.Quote), order_id);
+				return Api.CancelTrade(new CurrencyPair(pair.Base, pair.Quote), order_id);
 			}
 			catch (Exception ex)
 			{
-				throw new Exception(
-					"Poloniex: Cancel trade failed. {0}\n".Fmt(ex.Message) +
-					"Order Id: {0}".Fmt(order_id));
+				throw new Exception($"Poloniex: Cancel trade (id={order_id}) failed. {ex.Message}");
 			}
 		}
 
 		/// <summary>True if this exchange supports retrieving chart data</summary>
-		public override IEnumerable<ETimeFrame> ChartDataAvailable(TradePair pair)
+		protected override IEnumerable<ETimeFrame> CandleDataAvailableInternal(TradePair pair)
 		{
-			if (pair.Exchange != this) throw new Exception($"Trade pair {pair.NameWithExchange} is not provided by this exchange ({Name})");
 			return Enum<MarketPeriod>.Values.Select(x => ToTimeFrame(x));
 		}
 
 		/// <summary>Return the chart data for a given pair, over a given time range</summary>
-		protected override List<Candle> ChartDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end)
+		protected override List<Candle> CandleDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end, CancellationToken? cancel)
 		{
 			// Get the chart data
-			var data = Api.GetChartData(new CurrencyPair(pair.Base, pair.Quote), ToMarketPeriod(timeframe), time_beg, time_end);
+			var data = Api.GetChartData(new CurrencyPair(pair.Base, pair.Quote), ToMarketPeriod(timeframe), time_beg, time_end, cancel);
 
 			// Convert it to candles (yes, Polo gets the base/quote backwards for 'Volume')
 			var candles = data.Select(x => new Candle(x.Time.Ticks, (double)x.Open, (double)x.High, (double)x.Low, (double)x.Close, (double)x.WeightedAverage, (double)x.VolumeQuote)).ToList();
@@ -112,7 +109,7 @@ namespace CoinFlip
 		/// <summary>Return the order book for 'pair' to a depth of 'count'</summary>
 		protected override MarketDepth MarketDepthInternal(TradePair pair, int depth)
 		{
-			var orders = Api.GetOrderBook(new CurrencyPair(pair.Base, pair.Quote), depth);
+			var orders = Api.GetOrderBook(new CurrencyPair(pair.Base, pair.Quote), depth, cancel:Shutdown.Token);
 
 			// Update the depth of market data
 			var market_depth = new MarketDepth(pair.Base, pair.Quote);
@@ -128,13 +125,17 @@ namespace CoinFlip
 			try
 			{
 				// Get all available trading pairs
-				var msg = Api.GetTradePairs();
+				// Use 'Model.Shutdown' because updating pairs is independent of the Exchange.UpdateThread
+				// and we don't want updating pairs to be interrupted by the update thread stopping
+				var msg = Api.GetTradePairs(cancel:Model.Shutdown.Token);
 				if (msg == null)
 					throw new Exception("Poloniex: Failed to read market data.");
 
 				// Add an action to integrate the data
 				Model.MarketUpdates.Add(() =>
 				{
+					var pairs = new HashSet<CurrencyPair>();
+
 					// Create the trade pairs and associated coins
 					foreach (var p in msg.Where(x => coi.Contains(x.Value.Pair.Base) && coi.Contains(x.Value.Pair.Quote)))
 					{
@@ -142,12 +143,15 @@ namespace CoinFlip
 						var base_ = Coins.GetOrAdd(p.Value.Pair.Base);
 						var quote = Coins.GetOrAdd(p.Value.Pair.Quote);
 
-						// Add the trade pair.
+						// Create the trade pair
 						var instr = new TradePair(base_, quote, this, p.Value.Id,
 							volume_range_base:new RangeF<Unit<decimal>>(0.0001m._(base_), 10000000m._(base_)),
 							volume_range_quote:new RangeF<Unit<decimal>>(0.0001m._(quote), 10000000m._(quote)),
 							price_range:null);
+
+						// Add the trade pair.
 						Pairs[instr.UniqueKey] = instr;
+						pairs.Add(p.Value.Pair);
 					}
 
 					// Ensure a 'Balance' object exists for each coin type
@@ -160,6 +164,13 @@ namespace CoinFlip
 					foreach (var p in Pairs.Values)
 						Api.SubscribePair(new CurrencyPair(p.Base, p.Quote));
 					#endif
+
+					// Record the pairs
+					lock (m_pairs)
+					{
+						m_pairs.Clear();
+						m_pairs.AddRange(pairs);
+					}
 				});
 			}
 			catch (Exception ex)
@@ -176,10 +187,20 @@ namespace CoinFlip
 				// Record the time just before the query to the server
 				var timestamp = DateTimeOffset.Now;
 
+				// Get the array of pairs to query for
+				HashSet<string> pairs;
+				lock (m_pairs)
+					pairs = m_pairs.ToHashSet(x => x.Id);
+
 				// Request order book data for all of the pairs
 				// Poloniex only allows 6 API calls per second, so even though this returns
 				// unnecessary data it's better to get all order books in one call.
-				var order_book = Api.GetOrderBook(depth:Settings.MarketDepth);
+				var order_book = Api.GetOrderBook(depth:Settings.MarketDepth, cancel:Shutdown.Token);
+
+				// Remove the unnecessary data. (don't really need to do this, but it's consistent with the other exchanges)
+				var surplus = order_book.Keys.Where(x => !pairs.Contains(x)).ToArray();
+				foreach (var k in surplus)
+					order_book.Remove(k);
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
@@ -193,11 +214,11 @@ namespace CoinFlip
 						// Update the depth of market data
 						var buys  = orders.BuyOrders .Select(x => new Order(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
 						var sells = orders.SellOrders.Select(x => new Order(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
-						pair.UpdateOrderBook(buys, sells);
+						pair.MarketDepth.UpdateOrderBook(buys, sells);
 					}
 
 					// Notify updated
-					MarketDataUpdatedTime.NotifyAll(timestamp);
+					Pairs.LastUpdated = timestamp;
 				});
 			}
 			catch (Exception ex)
@@ -215,7 +236,7 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the account data
-				var balance_data = Api.GetBalances();
+				var balance_data = Api.GetBalances(cancel:Shutdown.Token);
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
@@ -224,21 +245,19 @@ namespace CoinFlip
 					var msg = balance_data;
 
 					// Update the account balance
-					using (Model.Balances.PreservePosition())
+					foreach (var b in msg.Where(x => x.Value.Available != 0 || Coins.ContainsKey(x.Key)))
 					{
-						foreach (var b in msg.Where(x => x.Value.Available != 0 || Coins.ContainsKey(x.Key)))
-						{
-							// Find the currency that this balance is for. If it's not a coin of interest, ignore
-							var coin = Coins.GetOrAdd(b.Key);
+						// Find the currency that this balance is for. If it's not a coin of interest, ignore
+						var coin = Coins.GetOrAdd(b.Key);
 
-							// Update the balance
-							var bal = new Balance(coin, b.Value.HeldForTrades + b.Value.Available, b.Value.Available, 0, b.Value.HeldForTrades, 0, timestamp);
-							Balance[coin] = bal;
-						}
+						// Update the balance
+						var bal = new Balance(coin, (b.Value.HeldForTrades+b.Value.Available)._(coin), b.Value.HeldForTrades._(coin), timestamp);
+						Debug.Assert(bal.AssertValid());
+						Balance[coin] = bal;
 					}
 
 					// Notify updated
-					BalanceUpdatedTime.NotifyAll(timestamp);
+					Balance.LastUpdated = timestamp;
 				});
 			}
 			catch (Exception ex)
@@ -248,7 +267,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update open positions</summary>
-		protected override void UpdatePositions() // Worker thread context
+		protected override void UpdatePositionsAndHistory() // Worker thread context
 		{
 			try
 			{
@@ -256,51 +275,27 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the existing orders
-				var existing_orders = Api.GetOpenOrders();
+				var existing_orders = Api.GetOpenOrders(cancel:Shutdown.Token);
+
+				// Request the history
+				var history = Api.GetTradeHistory(beg:new DateTimeOffset(m_history_last, TimeSpan.Zero), end:timestamp, cancel:Shutdown.Token);
+				m_history_last = timestamp.Ticks;
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
 				{
-					Debug.Assert(Model.AssertMainThread());
+					var order_ids = new HashSet<ulong>();
+					var pairs = new HashSet<CurrencyPair>();
 
 					// Update the collection of existing orders
-					var order_ids = new HashSet<ulong>();
 					foreach (var order in existing_orders.Values.Where(x => x.Count != 0).SelectMany(x => x))
 					{
 						// Add the position to the collection
 						var pos = PositionFrom(order, timestamp);
 						Positions[pos.OrderId] = pos;
 						order_ids.Add(pos.OrderId);
+						pairs.Add(order.Pair);
 					}
-
-					// Remove any positions that are no longer valid.
-					RemovePositionsNotIn(order_ids, timestamp);
-
-					// Notify updated
-					PositionUpdatedTime.NotifyAll(timestamp);
-				});
-			}
-			catch (Exception ex)
-			{
-				HandleException(nameof(UpdatePositions), ex);
-			}
-		}
-
-		/// <summary>Update the trade history</summary>
-		protected override void UpdateTradeHistory() // Worker thread context
-		{
-			try
-			{
-				// Record the time just before the query to the server
-				var timestamp = DateTimeOffset.Now;
-
-				// Request the history
-				var history = Api.GetTradeHistory(beg:new DateTimeOffset(m_history_last, TimeSpan.Zero), end:timestamp);
-				m_history_last = timestamp.Ticks;
-
-				// Queue integration of the market data
-				Model.MarketUpdates.Add(() =>
-				{
 					foreach (var order in history.Values.SelectMany(x => x))
 					{
 						var his = HistoricFrom(order, timestamp);
@@ -308,16 +303,24 @@ namespace CoinFlip
 						fill.Trades[his.TradeId] = his;
 					}
 
+					// Update the trade pairs
+					lock (m_pairs)
+						m_pairs.AddRange(pairs);
+
+					// Remove any positions that are no longer valid.
+					RemovePositionsNotIn(order_ids, timestamp);
+
 					// Save the history range
 					HistoryInterval = new Range(HistoryInterval.Beg, timestamp.Ticks);
 
 					// Notify updated
-					TradeHistoryUpdatedTime.NotifyAll(timestamp);
+					History.LastUpdated = timestamp;
+					Positions.LastUpdated = timestamp;
 				});
 			}
 			catch (Exception ex)
 			{
-				HandleException(nameof(UpdateTradeHistory), ex);
+				HandleException(nameof(UpdatePositionsAndHistory), ex);
 			}
 		}
 
@@ -342,22 +345,24 @@ namespace CoinFlip
 		/// <summary>Convert a Poloniex trade history result into a position object</summary>
 		private Historic HistoricFrom(global::Poloniex.API.Historic his, DateTimeOffset updated)
 		{
-			var order_id   = his.OrderId;
-			var trade_id   = his.GlobalTradeId;
-			var tt         = Misc.TradeType(his.Type);
-			var pair       = Pairs.GetOrAdd(his.Pair.Base, his.Pair.Quote);
-			var price      = tt == ETradeType.B2Q ? his.Price._(pair.RateUnits) : (1m / his.Price._(pair.RateUnits));
-			var volume_in  = tt == ETradeType.B2Q ? his.Amount._(pair.Base)     : his.Total._(pair.Quote);
-			var volume_out = tt == ETradeType.B2Q ? his.Total._(pair.Quote)     : his.Amount._(pair.Base);
-			var commission = volume_out * his.Fee;
-			var created    = his.Timestamp;
-			return new Historic(order_id, trade_id, pair, tt, price, volume_in, volume_out, commission, created, updated);
+			var order_id         = his.OrderId;
+			var trade_id         = his.GlobalTradeId;
+			var tt               = Misc.TradeType(his.Type);
+			var pair             = Pairs.GetOrAdd(his.Pair.Base, his.Pair.Quote);
+			var price            = his.Price._(pair.RateUnits);
+			var volume_base      = his.Amount._(pair.Base);
+			var commission_quote = price * volume_base * his.Fee;
+			var created          = his.Timestamp;
+			return new Historic(order_id, trade_id, pair, tt, price, volume_base, commission_quote, created, updated);
 		}
 
 		/// <summary>Handle connection to Poloniex</summary>
 		private void HandleConnectionEstablished(object sender, EventArgs e)
 		{
-			Status = Api.IsConnected ? EStatus.Connected : EStatus.Offline;
+			if (Api.IsConnected)
+				Model.Log.Write(ELogLevel.Info, $"Poloniex connection established");
+			else
+				Model.Log.Write(ELogLevel.Info, $"Poloniex connection offline");
 		}
 
 		/// <summary>Handle market data updates</summary>

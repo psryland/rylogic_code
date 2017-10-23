@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using pr.extn;
 using pr.util;
 
 namespace CoinFlip
@@ -12,31 +11,23 @@ namespace CoinFlip
 	{
 		public Coin(string sym, Exchange exch)
 		{
+			Symbol = sym;
 			Pairs = new HashSet<TradePair>();
 			Meta = exch.Model.Coins[sym];
 			Exchange = exch;
 		}
 
-		/// <summary>Meta data for the coin</summary>
-		public Settings.CoinData Meta { get; private set; }
-
-		/// <summary>App logic</summary>
-		public Model Model
-		{
-			get { return Exchange.Model; }
-		}
-
 		/// <summary>Coin name</summary>
-		public string Symbol
-		{
-			[DebuggerStepThrough] get { return Meta.Symbol; }
-		}
+		public string Symbol { [DebuggerStepThrough] get; private set; }
 
 		/// <summary>Return the Coin with the exchange</summary>
-		public string SymbolWithExchange
-		{
-			get { return "{0} - {1}".Fmt(Symbol, Exchange.Name); }
-		}
+		public string SymbolWithExchange { get { return $"{Symbol} - {Exchange.Name}"; } }
+
+		/// <summary>Meta data for the coin</summary>
+		private Settings.CoinData Meta { [DebuggerStepThrough] get; set; }
+
+		/// <summary>App logic</summary>
+		public Model Model { get { return Exchange.Model; } }
 
 		/// <summary>The Exchange trading this coin</summary>
 		public Exchange Exchange { get; private set; }
@@ -45,21 +36,19 @@ namespace CoinFlip
 		public HashSet<TradePair> Pairs { get; private set; }
 
 		/// <summary>Return the balance for this coin on its associated exchange</summary>
-		public Balance Balance
-		{
-			get { return Exchange.Balance[this]; }
-		}
+		public Balance Balance { get { return Exchange.Balance[this]; } }
 
 		/// <summary>Return the value of 'amount' units of this currency</summary>
 		public decimal Value(decimal amount)
 		{
 			// Live price is only available for coins of interest
-			if (Meta.OfInterest && Model.Settings.ShowLivePrices)
+			if (Model.Settings.ShowLivePrices/* && Meta.OfInterest*/)
 			{
-				// Calculate the live price using the sequence of currencies in the meta data
 				var coin = this;
 				var valid = true;
-				var value = amount._(coin);
+
+				// Calculate the live price using the sequence of currencies in the meta data
+				var value = (Unit<decimal>?)amount._(coin);
 				var symbols = Meta.LivePriceSymbols.Split(new[]{','}, StringSplitOptions.RemoveEmptyEntries);
 				foreach (var sym in symbols)
 				{
@@ -77,15 +66,15 @@ namespace CoinFlip
 
 					// Use spot prices
 					value = (coin == pair.Base)
-						? value * pair.BaseToQuote(0m._(pair.Base)).Price
-						: value * pair.QuoteToBase(0m._(pair.Quote)).Price;
+						? value * pair.SpotPrice(ETradeType.B2Q)
+						: value * pair.SpotPrice(ETradeType.Q2B);
 
 					coin = pair.OtherCoin(coin);
 				}
 
 				// Return the live price if it could be determined
-				if (valid)
-					return value;
+				if (valid && value.HasValue)
+					return value.Value;
 			}
 
 			// Otherwise, fall back to using the given value for the currency
@@ -124,6 +113,19 @@ namespace CoinFlip
 		{
 			get { return Meta.AutoTradingLimit._(Symbol); }
 			set { Meta.AutoTradingLimit = value; }
+		}
+
+		/// <summary>The assigned amount this coin type is worth</summary>
+		public decimal AssignedValue
+		{
+			get { return Meta.Value; }
+			set { Meta.Value = value; }
+		}
+
+		/// <summary>The default amount to use when creating a trade from this Coin</summary>
+		public Unit<decimal> DefaultTradeVolume
+		{
+			get { return Meta.DefaultTradeVolume._(Symbol); }
 		}
 
 		/// <summary></summary>

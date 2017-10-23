@@ -4,18 +4,19 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Windows.Threading;
 using System.Xml.Linq;
 using pr.common;
 using pr.container;
 using pr.extn;
+using pr.gui;
 using pr.maths;
 using pr.util;
 
 namespace CoinFlip
 {
-	public abstract class IBot :IDisposable ,IShutdownAsync ,INotifyPropertyChanged
+	public abstract class IBot :IDisposable ,INotifyPropertyChanged
     {
 		// How to create a new Bot:
 		// - Create a Class library project called 'Bot.<BotName>'
@@ -26,20 +27,18 @@ namespace CoinFlip
 		// - Add a constructor like this: @"public MyBot(Model model, XElement settings_xml) :base("my_bot", model, new SettingsData(settings_xml)) {}"
 		//   'SettingsData' is type that inherits 'SettingsBase<SettingsData>'
 		//
-		// Bots can be clock-based, and run at a fixed rate by override the 'Step()' method, or they can be
+		// Bots can be clock-based, and run at a fixed rate by overriding the 'Step()' method, or they can be
 		// event-driven by subscribing to the 'OnDataChanged' event for the instruments they care about.
 		// Event-driven bots should override 'Active' to have it reflect the active status of the bot,
 		// and to not start/stop the bot MainLoop function.
-		// Back-testing clock-based bots is tricky however. The rate that the simulation runs through candle data
-		// must be controlled so that the clock-based bot doesn't miss candle data.
+		// Clock-based bots should use Model.UtcNow as the "current time". This allows faster than real-time back-testing to work.
 
 		public IBot(string name, Model model, ISettingsData settings)
 		{
 			Name = name;
 			Model = model;
 			Settings = settings;
-			m_main_loop_step = new AutoResetEvent(false);
-			m_main_loop_shutdown = new CancellationTokenSource();
+			Shutdown = CancellationTokenSource.CreateLinkedTokenSource(Model.Shutdown.Token);
 			MonitoredTrades = new List<TradeResult>();
 
 			// Initialise the log for this bot instance
@@ -50,92 +49,147 @@ namespace CoinFlip
 		}
 		public void Dispose()
 		{
-			Debug.Assert(!Active, "Main loop must be shut down before Disposing");
+			Shutdown = null;
+			Active = false;
 			Dispose(true);
 			Log = null;
 			Settings = null;
 			Model = null;
-			Util.Dispose(ref m_main_loop_step);
-			Util.Dispose(ref m_main_loop_shutdown);
 		}
 		protected virtual void Dispose(bool disposing)
 		{}
 
-		/// <summary>Async shutdown</summary>
-		public Task ShutdownAsync()
+		/// <summary>The cancellation token for shutting down the bot.</summary>
+		public CancellationTokenSource Shutdown
 		{
-			Active = false;
-			return Task_.WaitWhile(() => Active);
-		}
-
-		/// <summary>The cancellation token for shutting down async tasks</summary>
-		public CancellationToken Shutdown { get { return m_main_loop_shutdown.Token; } }
-		private CancellationTokenSource m_main_loop_shutdown;
-
-		/// <summary>Enable/Disable the time-based main loop for this bot</summary>
-		public virtual bool Active
-		{
-			get { return m_active != 0; }
-			set
+			// This is a combination of the Model.Shutdown token and a token created at the last activation.
+			// Bots should use this token in their 'await' calls.
+			get { return m_shutdown; }
+			private set
 			{
-				if (Active == value) return;
-				if (value)
-				{
-					if (!Settings.Valid)
-						return;
-
-					// Create a new shutdown token for each activation of the bot
-					Util.Dispose(ref m_main_loop_shutdown);
-					m_main_loop_shutdown = new CancellationTokenSource();
-					MainLoop();
-				}
-				else
-				{
-					m_main_loop_shutdown.Cancel();
-				}
-				RaisePropertyChanged(new PropertyChangedEventArgs(nameof(Active)));
+				if (m_shutdown == value) return;
+				m_shutdown?.Cancel();
+				m_shutdown = value;
 			}
 		}
-		private int m_active;
+		private CancellationTokenSource m_shutdown;
 
-		/// <summary>Main loop for the bot</summary>
-		private async void MainLoop()
+		/// <summary>Enable/Disable this bot</summary>
+		public bool Active
 		{
-			if (m_active != 0) throw new Exception("Main loop already running");
-			using (Scope.Create(() => ++m_active, () => --m_active))
+			get { return GetActiveInternal(); }
+			set
 			{
-				await OnStart();
-
-				// Infinite loop till Shutdown called
-				for (;;)
+				if (m_activating != 0) throw new Exception("Reentrancy detected");
+				using (Scope.Create(() => ++m_activating, () => --m_activating))
 				{
+					if (Active == value) return;
+
 					// Note: all bots run in the main thread context. Market data is also
 					// updated in the main thread context so there should never be race conditions.
 					Debug.Assert(Model.AssertMainThread());
 
-					try
-					{
-						var step_rate = Settings.StepRateMS;
-						await Task.Run(() => m_main_loop_step.WaitOne(step_rate), Shutdown);
-						if (Shutdown.IsCancellationRequested)
-							break;
+					// Don't allow activation with invalid settings
+					if (value && !Settings.Valid)
+						return;
 
-						// Step the bot
-						await Step();
-					}
-					catch (Exception ex)
+					// Start/Stop
+					if (!value)
 					{
-						if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
-						if (ex is OperationCanceledException) { break; }
-						else Log.Write(ELogLevel.Error, ex, $"Unhandled exception in Bot {Name} step.\r\n{ex.StackTrace}");
+						// Signal exit
+						Shutdown.Cancel();
+
+						// Derived deactivation. Call before 'OnStop' so that no 'Step' calls happen after 'OnStop'
+						SetActiveInternal(value);
+
+						// Derived bot shutdown
+						try { OnStop(); }
+						catch (Exception ex) { Log.Write(ELogLevel.Error, ex, "Unhandled Bot.OnStop exception"); }
+
+						// Reset monitored trades
+						MonitoredTrades.Clear();
+
+						// The bot is now inactive
+						Log.Write(ELogLevel.Debug, $"Bot '{Name}' stopped");
+					}
+					else
+					{
+						// The bot is now active
+						Log.Write(ELogLevel.Debug, $"Bot '{Name}' started");
+
+						// Derived bot startup
+						try { OnStart(); }
+						catch (Exception ex) { Log.Write(ELogLevel.Error, ex, "Unhandled Bot.OnStart exception"); }
+
+						// Create a cancel token
+						Shutdown = CancellationTokenSource.CreateLinkedTokenSource(Model.Shutdown.Token);
+
+						// Derived activation
+						SetActiveInternal(value);
 					}
 				}
-
-				await OnStop();
+				ActiveChanged.Raise(this);
+				RaisePropertyChanged(new PropertyChangedEventArgs(nameof(Active)));
 			}
-			RaisePropertyChanged(new PropertyChangedEventArgs(nameof(Active)));
 		}
-		private AutoResetEvent m_main_loop_step;
+		private int m_activating;
+
+		/// <summary>Raised on active changed</summary>
+		public event EventHandler ActiveChanged;
+
+		/// <summary>Allow sub-classes to specialise the meaning of 'active'</summary>
+		protected virtual bool GetActiveInternal()
+		{
+			return m_main_loop_timer != null;
+		}
+		protected virtual void SetActiveInternal(bool enabled)
+		{
+			if (enabled)
+			{
+				// Start the bot heartbeat timer
+				m_main_loop_timer = new DispatcherTimer(TimeSpan.FromMilliseconds(10), DispatcherPriority.Normal, HandleTick, Dispatcher.CurrentDispatcher);
+				m_main_loop_last_step = Model.UtcNow;
+				m_main_loop_timer.Start();
+			}
+			else
+			{
+				// Stop the heartbeat timer
+				m_main_loop_timer.Stop();
+				m_main_loop_timer = null;
+			}
+
+			// Handlers
+			void HandleTick(object sender = null, EventArgs e = null)
+			{
+				// See if it's time to step the bot
+				var elapsed = Model.UtcNow - m_main_loop_last_step;
+				if (elapsed < TimeSpan.FromMilliseconds(Settings.StepRateMS))
+					return;
+
+				// Record the time of the last step
+				m_main_loop_last_step = Model.UtcNow;
+				if (Shutdown.IsCancellationRequested)
+					return;
+
+				// Step the bot
+				try
+				{
+					// Test for filled trades
+					UpdateMonitoredTrades();
+
+					// Step the derived bot
+					Step();
+				}
+				catch (Exception ex)
+				{
+					if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
+					if (ex is OperationCanceledException) return;
+					else Log.Write(ELogLevel.Error, ex, $"Unhandled exception in Bot '{Name}' step.\r\n{ex.StackTrace}");
+				}
+			}
+		}
+		private DispatcherTimer m_main_loop_timer;
+		private DateTimeOffset m_main_loop_last_step;
 
 		/// <summary>A name for the type of bot this is</summary>
 		public string Name { get; private set; }
@@ -178,8 +232,11 @@ namespace CoinFlip
 				if (m_model == value) return;
 				if (m_model != null)
 				{
+					m_model.SimStep -= HandleSimStep;
+					m_model.SimReset -= HandleSimReset;
+					m_model.BackTestingChanging -= HandleBackTestingChanged;
 					m_model.AllowTradesChanging -= HandleAllowTradesChanging;
-					m_model.PairsInvalidated -= HandlePairsInvalidated;
+					m_model.PairsUpdated -= HandlePairsUpdated;
 					m_model.Exchanges.ListChanging -= HandleExchangeListChanging;
 					m_model.Pairs.ListChanging -= HandlePairsListChanging;
 				}
@@ -188,23 +245,28 @@ namespace CoinFlip
 				{
 					m_model.Pairs.ListChanging += HandlePairsListChanging;
 					m_model.Exchanges.ListChanging += HandleExchangeListChanging;
-					m_model.PairsInvalidated += HandlePairsInvalidated;
+					m_model.PairsUpdated += HandlePairsUpdated;
 					m_model.AllowTradesChanging += HandleAllowTradesChanging;
+					m_model.BackTestingChanging += HandleBackTestingChanged;
+					m_model.SimReset += HandleSimReset;
+					m_model.SimStep += HandleSimStep;
 				}
 			}
 		}
 		private Model m_model;
 		protected virtual void HandleAllowTradesChanging(object sender, PrePostEventArgs e)
-		{
-			// Disable the bot when enable trading is switched
-			// so that trades don't get left behind.
-			Active = false;
-		}
-		protected virtual void HandlePairsInvalidated(object sender, EventArgs e)
+		{}
+		protected virtual void HandlePairsUpdated(object sender, EventArgs e)
 		{}
 		protected virtual void HandleExchangeListChanging(object sender, ListChgEventArgs<Exchange> e)
 		{}
 		protected virtual void HandlePairsListChanging(object sender, ListChgEventArgs<TradePair> e)
+		{}
+		protected virtual void HandleBackTestingChanged(object sender, PrePostEventArgs e)
+		{}
+		protected virtual void HandleSimReset(object sender, SimResetEventArgs e)
+		{}
+		protected virtual void HandleSimStep(object sender, SimStepEventArgs e)
 		{}
 
 		/// <summary>Settings object for this instance</summary>
@@ -256,42 +318,32 @@ namespace CoinFlip
 		}
 
 		/// <summary>Called when the bot is activated</summary>
-		public virtual Task OnStart()
-		{
-			Log.Write(ELogLevel.Info, $"Starting Bot: {Name}");
-			return Misc.CompletedTask;
-		}
+		public virtual void OnStart()
+		{}
 
 		/// <summary>Called when the bot is deactivated</summary>
-		public virtual Task OnStop()
-		{
-			Log.Write(ELogLevel.Info, $"Stopping Bot: {Name}");
-			return Misc.CompletedTask;
-		}
+		public virtual void OnStop()
+		{}
 
 		/// <summary>Main loop step</summary>
-		public virtual Task Step()
-		{
-			return Misc.CompletedTask;
-		}
+		public virtual void Step()
+		{}
 
 		/// <summary>Return items to add to the context menu for this bot</summary>
 		public virtual void CMenuItems(ContextMenuStrip cmenu)
 		{}
 
-		/// <summary>Cause a main loop step sooner than then next scheduled step</summary>
-		protected void TriggerMainLoopStep()
-		{
-			m_main_loop_step.Set();
-		}
+		/// <summary>Handle the chart about to render</summary>
+		public virtual void OnChartRendering(Instrument instrument, Settings.ChartSettings chart_settings, ChartControl.ChartRenderingEventArgs args)
+		{}
 
 		/// <summary>Active orders to monitor</summary>
 		protected List<TradeResult> MonitoredTrades { get; private set; }
 
 		/// <summary>Update the state of all monitored active trades</summary>
-		protected async Task UpdateMonitoredTrades()
+		protected void UpdateMonitoredTrades()
 		{
-			foreach (var res in MonitoredTrades)
+			foreach (var res in MonitoredTrades.ToArray())
 			{
 				var exch = res.Pair.Exchange;
 
@@ -300,12 +352,9 @@ namespace CoinFlip
 				if (pos != null)
 					continue;
 
-				// If not, then it may have been filled or cancelled.
+				// The position is gone, it may have been filled or cancelled.
 				if (exch.TradeHistoryUseful)
 				{
-					// Ensure the trade history is up to date
-					await exch.TradeHistoryUpdated();
-
 					// If there is a historic trade matching the order id then the order has been filled.
 					var his = exch.History[res.OrderId];
 					if (his != null)
@@ -318,6 +367,9 @@ namespace CoinFlip
 					// Trade has gone, assume it was filled
 					OnPositionFilled(res.OrderId, null);
 				}
+
+				// Stop monitoring it
+				MonitoredTrades.Remove(res);
 			}
 		}
 		protected virtual void OnPositionFilled(ulong order_id, PositionFill his)
@@ -366,15 +418,15 @@ namespace CoinFlip
 			/// <summary>The main loop step rate (approx)</summary>
 			public int StepRateMS
 			{
-				get { return get(x => x.StepRateMS); }
-				set { set(x => x.StepRateMS, value); }
+				get { return get<int>(nameof(StepRateMS)); }
+				set { set(nameof(StepRateMS), value); }
 			}
 
 			/// <summary>The percentage of the balance for each currency available to this bot</summary>
 			public decimal FundAllocation
 			{
-				get { return get(x => x.FundAllocation); }
-				set { set(x => x.FundAllocation, value); }
+				get { return get<decimal>(nameof(FundAllocation)); }
+				set { set(nameof(FundAllocation), value); }
 			}
 
 			/// <summary></summary>

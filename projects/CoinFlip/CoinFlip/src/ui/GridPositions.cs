@@ -1,8 +1,7 @@
-﻿using System;
-using System.Drawing;
+﻿using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
-using pr.container;
+using pr.common;
 using pr.extn;
 using pr.maths;
 using pr.util;
@@ -11,38 +10,40 @@ namespace CoinFlip
 {
 	public class GridPositions :GridBase
 	{
+		private readonly string[] m_dummy_row;
 		public GridPositions(Model model, string title, string name)
 			:base(model, title, name)
 		{
+			m_dummy_row = new string[1];
 			ReadOnly = true;
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Position.OrderId),
 				HeaderText = "Order Id",
+				Name = nameof(Position.OrderId),
 				DataPropertyName = nameof(Position.OrderId),
 				SortMode = DataGridViewColumnSortMode.Automatic,
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Position.Created),
 				HeaderText = "Date",
+				Name = nameof(Position.Created),
 				DataPropertyName = nameof(Position.Created),
 				SortMode = DataGridViewColumnSortMode.Automatic,
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Position.TradeType),
 				HeaderText = "Type",
+				Name = nameof(Position.TradeType),
 				DataPropertyName = nameof(Position.TradeType),
 				SortMode = DataGridViewColumnSortMode.Automatic,
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Position.Pair),
 				HeaderText = "Pair",
+				Name = nameof(Position.Pair),
 				DataPropertyName = nameof(Position.Pair),
 				SortMode = DataGridViewColumnSortMode.Automatic,
 				FillWeight = 0.5f,
@@ -50,54 +51,80 @@ namespace CoinFlip
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Position.Price),
 				HeaderText = "Price",
-				DataPropertyName = nameof(Position.Price),
+				Name = nameof(Position.PriceQ2B),
+				DataPropertyName = nameof(Position.PriceQ2B),
 				SortMode = DataGridViewColumnSortMode.NotSortable,
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(ColumnNames.LivePrice),
 				HeaderText = "Live Price",
+				Name = nameof(ColumnNames.LivePrice),
 				DataPropertyName = nameof(ColumnNames.LivePrice),
 				SortMode = DataGridViewColumnSortMode.NotSortable,
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(ColumnNames.PriceDist),
 				HeaderText = "Distance (Index)",
+				Name = nameof(ColumnNames.PriceDist),
 				DataPropertyName = nameof(ColumnNames.PriceDist),
 				SortMode = DataGridViewColumnSortMode.NotSortable,
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Position.VolumeBase),
 				HeaderText = "Volume (Base)",
+				Name = nameof(Position.VolumeBase),
 				DataPropertyName = nameof(Position.VolumeBase),
 				SortMode = DataGridViewColumnSortMode.NotSortable,
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Position.VolumeQuote),
 				HeaderText = "Volume (Quote)",
+				Name = nameof(Position.VolumeQuote),
 				DataPropertyName = nameof(Position.VolumeQuote),
 				SortMode = DataGridViewColumnSortMode.NotSortable,
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
-				Name = nameof(Position.Remaining),
 				HeaderText = "Remaining (%)",
-				DataPropertyName = nameof(Position.Remaining),
+				Name = nameof(Position.RemainingBase),
+				DataPropertyName = nameof(Position.RemainingBase),
 				SortMode = DataGridViewColumnSortMode.NotSortable,
 				FillWeight = 1.0f,
 			});
 			ContextMenuStrip = CreateCMenu();
 			DataSource = Model.Positions;
+		}
+		protected override void SetModelCore(Model model)
+		{
+			if (Model != null)
+			{
+				Model.SimRunningChanged -= HandleSimRunning;
+			}
+			base.SetModelCore(model);
+			if (Model != null)
+			{
+				Model.SimRunningChanged += HandleSimRunning;
+			}
+
+			// Handlers
+			void HandleSimRunning(object sender, PrePostEventArgs e)
+			{
+				// Disable the data source while the simulation is running, for performance reasons
+				if (e.Before && !Model.SimRunning)
+				{
+					DataSource = m_dummy_row;
+				}
+				if (e.After && !Model.SimRunning)
+				{
+					DataSource = Model.Positions;
+				}
+			}
 		}
 		protected override void OnMouseDown(MouseEventArgs e)
 		{
@@ -107,11 +134,23 @@ namespace CoinFlip
 		protected override void OnCellFormatting(DataGridViewCellFormattingEventArgs a)
 		{
 			base.OnCellFormatting(a);
+			if (!this.Within(a.ColumnIndex, a.RowIndex, out DataGridViewColumn col, out DataGridViewCell cell))
+				return;
 
-			if (!this.Within(a.ColumnIndex, a.RowIndex, out DataGridViewColumn col)) return;
-			if (!a.RowIndex.Within(0, Model.Positions.Count)) return;
-			var pos = Model.Positions[a.RowIndex];
+			// Display a message while the simulation is running
+			if (DataSource == m_dummy_row)
+			{
+				a.Value = a.ColumnIndex == 0 && a.RowIndex == 0 ? "... Simulation Running ..." : string.Empty;
+				a.FormattingApplied = true;
+				return;
+			}
 
+			// Can happen during the change over from dummy row back to a data source
+			var pos= (Position)cell.OwningRow.DataBoundItem;
+			if (pos== null)
+				return;
+
+			// Format cells
 			switch (col.Name)
 			{
 			case nameof(Position.Created):
@@ -122,15 +161,16 @@ namespace CoinFlip
 				}
 			case nameof(Position.TradeType):
 				{
-					a.Value = pos.TradeType == ETradeType.Q2B
-						? $"{pos.Pair.Quote}→{pos.Pair.Base} ({pos.TradeType})"
-						: $"{pos.Pair.Base}→{pos.Pair.Quote} ({pos.TradeType})";
+					a.Value =
+						pos.TradeType == ETradeType.Q2B ? $"{pos.Pair.Quote}→{pos.Pair.Base} ({pos.TradeType})" :
+						pos.TradeType == ETradeType.B2Q ? $"{pos.Pair.Base}→{pos.Pair.Quote} ({pos.TradeType})" :
+						"---";
 					a.FormattingApplied = true;
 					break;
 				}
-			case nameof(Position.Price):
+			case nameof(Position.PriceQ2B):
 				{
-					a.Value = $"{(decimal)pos.Price:G8} {pos.Pair.RateUnits}";
+					a.Value = pos.PriceQ2B.ToString("G8",true);
 					a.FormattingApplied = true;
 					break;
 				}
@@ -142,37 +182,52 @@ namespace CoinFlip
 				}
 			case nameof(ColumnNames.PriceDist):
 				{
+					var spot_b2q = pos.Pair.SpotPrice(ETradeType.B2Q);
+					var spot_q2b = pos.Pair.SpotPrice(ETradeType.Q2B);
 					var dist =
-						pos.TradeType == ETradeType.B2Q ? (decimal)(pos.Price - pos.Pair.SpotPrice(ETradeType.B2Q)) :
-						pos.TradeType == ETradeType.Q2B ? (decimal)(pos.Pair.SpotPrice(ETradeType.Q2B) - pos.Price) :
-						0m;
+						pos.TradeType == ETradeType.B2Q && spot_b2q != null ? (pos.PriceQ2B - spot_b2q.Value) :
+						pos.TradeType == ETradeType.Q2B && spot_q2b != null ? (spot_q2b.Value - pos.PriceQ2B) :
+						(decimal?)0m;
 
-					a.Value = $"{dist:G8} ({pos.Pair.OrderBookIndex(pos.TradeType, pos.Price)})";
+					a.Value = dist != null ? $"{dist:G8} ({pos.Pair.OrderBookIndex(pos.TradeType, pos.PriceQ2B)})" : "---";
 					a.FormattingApplied = true;
 					break;
 				}
 			case nameof(Position.VolumeBase):
 				{
-					a.Value = $"{(decimal)pos.VolumeBase:G8} {pos.Pair.Base}";
+					a.Value = pos.VolumeBase.ToString("G8", true);
 					a.FormattingApplied = true;
 					break;
 				}
 			case nameof(Position.VolumeQuote):
 				{
-					a.Value = "{0:G8} {1}".Fmt((decimal)pos.VolumeQuote, pos.Pair.Quote);
+					a.Value = pos.VolumeQuote.ToString("G8",true);
 					a.FormattingApplied = true;
 					break;
 				}
-			case nameof(Position.Remaining):
+			case nameof(Position.RemainingBase):
 				{
-					var pc = 100m * Maths.Div((decimal)pos.Remaining, (decimal)pos.VolumeBase, 0m);
-					a.Value = "{0:G4} %".Fmt((decimal)pc);
+					a.Value = $"{100m * Maths.Div((decimal)pos.RemainingBase, (decimal)pos.VolumeBase, 0m):G4} %";
 					a.FormattingApplied = true;
 					break;
 				}
 			}
 			a.CellStyle.SelectionBackColor = a.CellStyle.BackColor.Lerp(Color.Gray, 0.5f);
 			a.CellStyle.SelectionForeColor = a.CellStyle.ForeColor;
+		}
+		protected override void OnCellDoubleClick(DataGridViewCellEventArgs a)
+		{
+			base.OnCellDoubleClick(a);
+			if (!this.Within(a.ColumnIndex, a.RowIndex, out DataGridViewColumn col, out DataGridViewCell cell) || DataSource == m_dummy_row)
+				return;
+
+			// Can happen during the change over from dummy row back to a data source
+			var pos = (Position)cell.OwningRow.DataBoundItem;
+			if (pos== null)
+				return;
+
+			// Launch an editor for the trade
+			Model.EditTrade(pos);
 		}
 
 		/// <summary>Create the context menu for the grid</summary>
@@ -204,6 +259,19 @@ namespace CoinFlip
 					// Cancel the order and create a fake history entry to simulate the fake order being filled
 					var pos = SelectedRows.Cast<DataGridViewRow>().Select(x => (Position)x.DataBoundItem).First();
 					pos.FillFakeOrder();
+				};
+			}
+			cmenu.Items.AddSeparator();
+			{
+				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Modify"));
+				cmenu.Opening += (s,a) =>
+				{
+					opt.Enabled = SelectedRows.Count == 1;
+				};
+				opt.Click += (s,a) =>
+				{
+					var pos = SelectedRows.Cast<DataGridViewRow>().Select(x => (Position)x.DataBoundItem).First();
+					Model.EditTrade(pos);
 				};
 			}
 			return cmenu;

@@ -6,9 +6,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Threading;
 using System.Xml.Linq;
@@ -20,7 +18,7 @@ using pr.util;
 
 namespace CoinFlip
 {
-	public partial class Model :IDisposable, IShutdownAsync
+	public partial class Model :IDisposable
 	{
 		public Model(Form main_ui, Settings settings, User user)
 		{
@@ -28,10 +26,8 @@ namespace CoinFlip
 			Settings = settings;
 			User = user;
 			m_dispatcher = Dispatcher.CurrentDispatcher;
-			m_main_loop_step = new AutoResetEvent(false);
-			m_shutdown_token_source = new CancellationTokenSource();
+			Shutdown = new CancellationTokenSource();
 			MarketDataLock = new Mutex();
-			TimeStep = new ConditionVariable();
 
 			// Start the log
 			Log = new Logger(Application.ProductName, new LogToFile(Misc.ResolveUserPath("Logs\\log.txt"), append:false));
@@ -41,8 +37,7 @@ namespace CoinFlip
 			// Start the win log
 			WinLog = new Logger(Application.ProductName, new LogToFile(Misc.ResolveUserPath("Logs\\win_log.txt"), append:true));
 
-			Coins         = new CoinDataTable(this);
-			PriceData     = new PriceDataMap(this);
+			// Create collections
 			Exchanges     = new BindingSource<Exchange>     { DataSource = new BindingListEx<Exchange>(), PerItem = true };
 			Pairs         = new BindingSource<TradePair>    { DataSource = new BindingListEx<TradePair>() };
 			Bots          = new BindingSource<IBot>         { DataSource = new BindingListEx<IBot>(), PerItem = true };
@@ -50,6 +45,8 @@ namespace CoinFlip
 			Positions     = new BindingSource<Position>     { DataSource = null, AllowNoCurrent = true };
 			History       = new BindingSource<PositionFill> { DataSource = null, AllowNoCurrent = true };
 			MarketUpdates = new BlockingCollection<Action>();
+			Coins         = new CoinDataTable(this);
+			PriceData     = new PriceDataMap(this);
 
 			// Add exchanges
 			string key, secret;
@@ -59,23 +56,19 @@ namespace CoinFlip
 			Exchanges.Add(CrossExchange = new CrossExchange(this));
 			//Exchanges.Add(new TestExchange(this));
 
+			// Update the available pairs
+			TriggerPairsUpdate();
+
 			// Create Bots listed in the settings
 			RunOnGuiThread(() => CreateBotsFromSettings());
  
-			// Start with trading disabled
-			 AllowTrades = false;
-
-			// Run the async main loop
-			MainLoop();
+			// Run the main loop
+			MainLoopRunning = true;
 		}
 		public virtual void Dispose()
 		{
-			// Main loops needs to have shutdown before here
-			if (!Shutdown.IsCancellationRequested)
-				throw new Exception("Disposing before ShutdownAsync has completed");
-			if (Running)
-				throw new Exception("Disposing while process loops are still running");
-
+			Shutdown = null;
+			MainLoopRunning = false;
 			Simulation = null;
 			Bots = null;
 			Positions = null;
@@ -88,101 +81,109 @@ namespace CoinFlip
 			MarketDataLock = null;
 			WinLog = null;
 			Log = null;
-			Util.Dispose(ref m_main_loop_step);
-		}
-
-		/// <summary>Async shutdown</summary>
-		public async Task ShutdownAsync()
-		{
-			// Signal shutdown
-			m_shutdown_token_source.Cancel();
-
-			// Shut down all bot instances
-			await Task.WhenAll(Bots.Select(x => x.ShutdownAsync()));
-
-			// Wait for async methods to exit
-			await Task_.WaitWhile(() => Running);
 		}
 
 		/// <summary>A cancellation token for graceful shutdown</summary>
-		public CancellationToken Shutdown { get { return m_shutdown_token_source.Token; } }
-		private CancellationTokenSource m_shutdown_token_source;
-
-		/// <summary>Application main loop</summary>
-		private async void MainLoop()
+		public CancellationTokenSource Shutdown
 		{
-			using (Scope.Create(() => ++m_main_loop_running, () => --m_main_loop_running))
+			get { return m_shutdown; }
+			private set
 			{
-				// Infinite loop till shutdown
-				for (;;)
+				if (m_shutdown == value) return;
+				if (m_shutdown != null)
 				{
-					Debug.Assert(AssertMainThread());
+					if (!m_shutdown.IsCancellationRequested)
+						throw new Exception();
 
+					Util.Dispose(ref m_shutdown);
+				}
+				m_shutdown = value;
+			}
+		}
+		private CancellationTokenSource m_shutdown;
+
+		/// <summary>A main thread timer that simply updates the 'UtcNow' time to the current time (or back-testing clock)</summary>
+		public bool MainLoopRunning
+		{
+			get { return m_clock_poller != null; }
+			set
+			{
+				if (MainLoopRunning == value) return;
+				Debug.Assert(AssertMainThread());
+
+				if (MainLoopRunning)
+				{
+					m_clock_poller.Stop();
+					Log.Write(ELogLevel.Debug, "MainLoop stopped");
+				}
+				m_clock_poller = value ? new DispatcherTimer(TimeSpan.FromMilliseconds(10), DispatcherPriority.Normal, HandleTick, Dispatcher.CurrentDispatcher) : null;
+				if (MainLoopRunning)
+				{
+					Log.Write(ELogLevel.Debug, "MainLoop started");
+					m_clock_poller.Start();
+					HandleTick();
+				}
+
+				// Handlers
+				void HandleTick(object sender = null, EventArgs e = null)
+				{
 					try
 					{
-						await Task.Run(() => m_main_loop_step.WaitOne(Settings.MainLoopPeriodMS), Shutdown);
-						if (Shutdown.IsCancellationRequested) break;
-
-						// Update the trading pairs
-						await UpdatePairsAsync(Shutdown);
-
 						// Process any pending market data updates
 						IntegrateMarketUpdates();
 
 						// Simulate fake orders being filled
-						if (!AllowTrades)
+						if (!AllowTrades && !BackTesting)
 							SimulateFakeOrders();
 					}
 					catch (Exception ex)
 					{
 						if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
-						if (ex is OperationCanceledException) { break; }
+						if (ex is OperationCanceledException) return;
 						else Log.Write(ELogLevel.Error, ex, "Error during main loop.");
 					}
 				}
 			}
 		}
-		private AutoResetEvent m_main_loop_step;
-		private int m_main_loop_running;
+		private DispatcherTimer m_clock_poller;
 
-		/// <summary>Cause a main loop step sooner than then next scheduled step</summary>
-		protected void TriggerMainLoopStep()
+		/// <summary>The "current time" (in UTC). When back-testing, this is a time in the past</summary>
+		public DateTimeOffset UtcNow
 		{
-			m_main_loop_step.Set();
-		}
-
-		/// <summary>True if the Model can be closed gracefully</summary>
-		public bool Running
-		{
-			get { return m_main_loop_running != 0; }
+			get { return BackTesting ? Simulation.Clock : DateTimeOffset.UtcNow; }
 		}
 
 		/// <summary>A global switch to control actually placing orders</summary>
-		public bool AllowTrades
-		{
-			get { return m_allow_trades; }
-			set
-			{
-				if (m_allow_trades == value && BackTesting) return;
-
-				AllowTradesChanging.Raise(this, new PrePostEventArgs(after:false));
-
-				if (m_allow_trades)
-				{
-					Log.Write(ELogLevel.Debug, "Allow trades disabled");
-				}
-				m_allow_trades = value;
-				ResetFakeCash();
-				if (m_allow_trades)
-				{
-					Log.Write(ELogLevel.Debug, "Allow trades enabled");
-				}
-
-				AllowTradesChanging.Raise(this, new PrePostEventArgs(after:true));
-			}
-		}
-		public event EventHandler<PrePostEventArgs> AllowTradesChanging;
+		public bool AllowTrades { [DebuggerStepThrough] get { return m_allow_trades; } }
 		private bool m_allow_trades;
+
+		/// <summary>Enable/Disable live trades</summary>
+		public void SetAllowTrades(bool enabled)
+		{
+			// Don't allow trades when 'BackTesting' is enabled
+			if (AllowTrades == enabled || BackTesting)
+				return;
+
+			// Notify about to change allow trades
+			AllowTradesChanging.Raise(this, new PrePostEventArgs(after:false));
+
+			// Stop any running bots
+			foreach (var bot in Bots)
+				bot.Active = false;
+
+			// Reset any fake cash
+			ResetFakeCash();
+
+			// Enable/Disable
+			m_allow_trades = enabled;
+			Log.Write(ELogLevel.Debug, enabled ? "Live trades allowed" : "Live trades disabled");
+
+			// Notify allow trades changed
+			AllowTradesChanging.Raise(this, new PrePostEventArgs(after:true));
+		}
+
+		/// <summary>Raised before and after 'AllowTrades' is changed</summary>
+		public event EventHandler<PrePostEventArgs> AllowTradesChanging;
 
 		/// <summary>The main UI</summary>
 		public Form UI { get; private set; }
@@ -192,22 +193,6 @@ namespace CoinFlip
 
 		/// <summary>The logged on user</summary>
 		public User User { get; private set; }
-
-		/// <summary>The current time (in UTC).</summary>
-		public DateTimeOffset UtcNow
-		{
-			get { return BackTesting ? m_utc_now : (m_utc_now = DateTimeOffset.UtcNow); }
-			set
-			{
-				m_utc_now = value;
-				//todo: condition variable - signal
-				// Bots run on time changes so that the can run faster than real time during back testing
-			}
-		}
-		private DateTimeOffset m_utc_now;
-
-		/// <summary>Condition variable signalled when time advances</summary>
-		public ConditionVariable TimeStep { get; private set; }
 
 		/// <summary>Application log</summary>
 		public Logger Log
@@ -238,7 +223,7 @@ namespace CoinFlip
 		/// <summary>"Real" exchanges that are flagged as active</summary>
 		public IEnumerable<Exchange> TradingExchanges
 		{
-			get { return Exchanges.Except(CrossExchange).Where(x => x.Active); }
+			get { return Exchanges.Except(CrossExchange).Where(x => x.Enabled); }
 		}
 
 		/// <summary>The special case cross exchange</summary>
@@ -292,13 +277,14 @@ namespace CoinFlip
 				// Handlers
 				void HandleExchangesListChanging(object sender, ListChgEventArgs<Exchange> e)
 				{
+					// Don't trigger pair updates on the exchanges collection changing,
+					// do it after all exchanges have been added
 					switch (e.ChangeType)
 					{
 					case ListChg.ItemAdded:
 						{
 							Log.Write(ELogLevel.Info, "Exchange Added: {0}".Fmt(e.Item.Name));
 							e.Item.PropertyChanged += HandleExchangePropertyChanged;
-							InvalidatePairs();
 							break;
 						}
 					case ListChg.ItemPreRemove:
@@ -310,7 +296,6 @@ namespace CoinFlip
 						{
 							Log.Write(ELogLevel.Info, "Exchange Removed: {0}".Fmt(e.Item.Name));
 							Util.Dispose(e.Item);
-							InvalidatePairs();
 							break;
 						}
 					}
@@ -325,8 +310,11 @@ namespace CoinFlip
 				}
 				void HandleExchangePropertyChanged(object sender, PropertyChangedEventArgs e)
 				{
-					Exchanges.ResetItem((Exchange)sender);
-					InvalidatePairs();
+					if (e.PropertyName == nameof(Exchange.Enabled))
+					{
+						Exchanges.ResetItem((Exchange)sender);
+						TriggerPairsUpdate();
+					}
 				}
 			}
 		}
@@ -416,8 +404,11 @@ namespace CoinFlip
 				if (m_bots == value) return;
 				if (m_bots != null)
 				{
+					// Dispose each bot
+					using (Scope.Create(() => m_suspend_saving_bots = true, () => m_suspend_saving_bots = false))
+						m_bots.Clear();
+
 					m_bots.ListChanging -= HandleBotsListChanging;
-					Util.DisposeAll(m_bots);
 				}
 				m_bots = value;
 				if (m_bots != null)
@@ -438,6 +429,11 @@ namespace CoinFlip
 					case ListChg.ItemPreRemove:
 						{
 							e.Item.PropertyChanged -= HandleBotPropertyChanged;
+							break;
+						}
+					case ListChg.ItemRemoved:
+						{
+							Util.Dispose(e.Item);
 							break;
 						}
 					}
@@ -495,10 +491,10 @@ namespace CoinFlip
 
 			// Lock the data while we're changing it
 			using (LockMarketData())
-			using (Scope.Create(() => ++m_in_integrate_market_updates, () => --m_in_integrate_market_updates))
 			using (Positions.PreservePosition())
 			using (History.PreservePosition())
 			using (Balances.PreservePosition())
+			using (Scope.Create(() => ++m_in_integrate_market_updates, () => --m_in_integrate_market_updates))
 			{
 				Positions.Position = -1;
 				History.Position = -1;
@@ -521,64 +517,98 @@ namespace CoinFlip
 		}
 		private int m_in_integrate_market_updates;
 
-		/// <summary>True when pairs need updating</summary>
-		public void InvalidatePairs()
+		/// <summary>Call to kick-off an update of the pairs</summary>
+		public void TriggerPairsUpdate()
 		{
+			// If an update is already pending, ignore
 			if (m_update_pairs_issue != m_update_pairs_in_progress) return;
 			++m_update_pairs_issue;
-			PairsInvalidated.Raise(this);
-			TriggerMainLoopStep();
+
+			// Run the update on the next message
+			RunOnGuiThread(UpdatePairs);
 		}
-		private int m_update_pairs_issue;
 		private int m_update_pairs_in_progress;
+		private int m_update_pairs_issue;
 
-		/// <summary>Raised when the trading pairs are invalidated</summary>
-		public event EventHandler PairsInvalidated;
-
-		/// <summary>Update the collections of pairs</summary>
-		public async Task UpdatePairsAsync(CancellationToken shutdown, Exchange exchange = null)
+		/// <summary>Get each exchange to update it's pairs</summary>
+		private void UpdatePairs()
 		{
+			// Allow update pairs in back testing mode
+			Debug.Assert(AssertMainThread());
+			bool Abort() { return m_update_pairs_issue != m_update_pairs_in_progress || Shutdown.IsCancellationRequested; }
+
+			// Record the update issue number that this update is for
+			Log.Write(ELogLevel.Info, "Updating pairs ...");
+			m_update_pairs_in_progress = m_update_pairs_issue;
+			if (Abort())
+				return;
+
+			// Local copy of shared variables
+			var coi = Coins.Where(x => x.OfInterest).ToHashSet(x => x.Symbol);
+			var exchanges = TradingExchanges.ToList();
 			var sw = new Stopwatch().Start2();
-			for (;m_update_pairs_in_progress != m_update_pairs_issue;)
+
+			// Query for the pairs data on a worker thread
+			ThreadPool.QueueUserWorkItem(_ =>
 			{
-				// Record the update issue number that this update is for
-				Log.Write(ELogLevel.Info, "Updating pairs ...");
-				m_update_pairs_in_progress = m_update_pairs_issue;
-				if (shutdown.IsCancellationRequested)
-					return;
+				try
+				{
+					// Get each exchange to update it's available pairs/coins
+					foreach (var exch in exchanges)
+						exch.UpdatePairs(coi);
 
-				// Get the coins of interest
-				var coi = Coins.Where(x => x.OfInterest).ToHashSet(x => x.Symbol);
+					// Update the cross exchange after the other exchanges
+					if (CrossExchange.Enabled)
+						CrossExchange.UpdatePairs(coi);
 
-				// Get each exchange to update it's available pairs/coins
-				if (exchange == null)
-					await Task.WhenAll(TradingExchanges.Select(x => Task.Run(() => x.UpdatePairs(coi), Shutdown)));
-				else
-					await Task.Run(() => exchange.UpdatePairs(coi), Shutdown);
+					// Merge the results
+					MarketUpdates.Add(() =>
+					{
+						// If the pairs have been invalidated in the meantime, give up
+						if (Abort())
+							return;
 
-				// Update the cross exchange after the other exchanges
-				if (CrossExchange.Active)
-					await Task.Run(() => CrossExchange.UpdatePairs(coi), Shutdown);
+						// Update the Model's collection of pairs
+						var pairs = new HashSet<TradePair>();
+						foreach (var exch in Exchanges.Where(x => x.Enabled))
+							pairs.AddRange(exch.Pairs.Values.Where(x => coi.Contains(x.Base) && coi.Contains(x.Quote)));
 
-				// Apply any pending market data updates
-				IntegrateMarketUpdates();
+						// Update the collection of pairs in the model
+						Pairs.Merge(pairs);
 
-				// If the pairs have been invalidated in the meantime, give up
-				if (m_update_pairs_issue != m_update_pairs_in_progress || shutdown.IsCancellationRequested)
-					continue;
+						// Done
+						Log.Write(ELogLevel.Info, $"Trading pairs updated ... ({Pairs.Count} pairs, taking {sw.Elapsed.TotalSeconds} seconds)");
 
-				// Update the Model's collection of pairs
-				var pairs = new HashSet<TradePair>();
-				foreach (var exch in Exchanges.Where(x => x.Active))
-					pairs.AddRange(exch.Pairs.Values.Where(x => coi.Contains(x.Base) && coi.Contains(x.Quote)));
+						// Notify pairs updated
+						OnPairsUpdated();
+					});
+				}
+				catch (Exception ex)
+				{
+					if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
+					if (ex is OperationCanceledException) { return; }
+					else Log.Write(ELogLevel.Error, ex, "Error updating pairs.");
+				}
+			});
+		}
 
-				// Update the collection of pairs in the model
-				Pairs.Merge(pairs);
+		/// <summary>Raised when the trading pairs are updated</summary>
+		private void OnPairsUpdated()
+		{
+			PairsUpdated.Raise(this);
+		}
+		public event EventHandler PairsUpdated;
 
-				// Done
-				Log.Write(ELogLevel.Info, $"Trading pairs updated ... ({Pairs.Count} pairs, taking {sw.Elapsed.TotalSeconds} seconds)");
-				break;
-			}
+		/// <summary>Find the pair with the given name on 'exch' (or return null if not available)</summary>
+		public TradePair FindPairOnExchange(string pair_name, Exchange exch)
+		{
+			return exch.Pairs.Values.FirstOrDefault(x => x.Name == pair_name);
+		}
+
+		/// <summary>Find the pair with the given name on the currently selected exchange (or return null if not available)</summary>
+		public TradePair FindPairOnCurrentExchange(string pair_name)
+		{
+			return FindPairOnExchange(pair_name, Exchanges.Current);
 		}
 
 		/// <summary>Execute 'action' in the GUI thread context</summary>
@@ -671,7 +701,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Add a dockable to the UI</summary>
-		public void AddToUI(IDockable content, EDockSite site)
+		public void AddToUI(IDockable content, DockContainer.DockLocation site = null)
 		{
 			OnAddToUI.Raise(this, new AddToUIEventArgs(content, site));
 		}
@@ -680,6 +710,17 @@ namespace CoinFlip
 			OnAddToUI.Raise(this, new AddToUIEventArgs(ts));
 		}
 		public event EventHandler<AddToUIEventArgs> OnAddToUI;
+
+		/// <summary>Launch UI to edit a trade</summary>
+		public void EditTrade(Trade trade, ulong? existing_order_id)
+		{
+			OnEditTrade.Raise(this, new EditTradeEventArgs(trade, existing_order_id));
+		}
+		public void EditTrade(Position pos)
+		{
+			EditTrade(new Trade(pos), pos.OrderId);
+		}
+		public event EventHandler<EditTradeEventArgs> OnEditTrade;
 
 		/// <summary>Return the chart settings for 'pair'</summary>
 		public Settings.ChartSettings ChartSettings(TradePair pair)
@@ -728,7 +769,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Debugging test</summary>
-		public async void Test()
+		public void Test()
 		{
 			try
 			{
@@ -736,8 +777,6 @@ namespace CoinFlip
 				using (var dlg = new MsgBox())
 				using (var instr = new Instrument("TEST", PriceData[pair, ETimeFrame.Min30]))
 					dlg.ShowDialog(UI);
-
-				await Misc.CompletedTask;
 			}
 			catch (Exception ex)
 			{
@@ -754,7 +793,6 @@ namespace CoinFlip
 		{
 			Model = model;
 			DataSource = new BindingListEx<Settings.CoinData>(Model.Settings.Coins.ToList());
-			Model.InvalidatePairs();
 		}
 		public Settings.CoinData this[string sym]
 		{
@@ -772,7 +810,7 @@ namespace CoinFlip
 				Model.Settings.Coins = this.ToArray();
 
 				// The COI have changed, we'll need to update pairs.
-				Model.InvalidatePairs();
+				Model.TriggerPairsUpdate();
 			}
 			base.OnListChanging(sender, args);
 		}
@@ -783,26 +821,32 @@ namespace CoinFlip
 		public class TPMap :Dictionary<TradePair, TFMap> { }
 
 		private readonly Model m_model;
-		private readonly TPMap m_map;
 		public PriceDataMap(Model model)
 		{
 			m_model = model;
-			m_map = new TPMap();
+			Pairs = new TPMap();
 		}
 		public void Dispose()
 		{
-			foreach (var tf_map in m_map.Values)
+			foreach (var tf_map in Pairs.Values)
 				foreach (var pd in tf_map.Values)
 					Util.Dispose(pd);
 
-			m_map.Clear();
+			Pairs.Clear();
 		}
+		public TPMap Pairs { get; private set; }
 		public PriceData this[TradePair pair, ETimeFrame time_frame]
 		{
 			get
 			{
-				if (time_frame == ETimeFrame.None) throw new Exception("TimeFrame is None. No price data available");
-				var tf_map = m_map.TryGetValue(pair, out var tf) ? tf : m_map.Add2(pair, new TFMap());
+				if (pair == null)
+					throw new ArgumentNullException(nameof(pair));
+				if (time_frame == ETimeFrame.None)
+					throw new Exception("TimeFrame is None. No price data available");
+				if (!pair.Exchange.Enabled)
+					throw new Exception("Requesting a trading pair on an inactive exchange");
+
+				var tf_map = Pairs.TryGetValue(pair, out var tf) ? tf : Pairs.Add2(pair, new TFMap());
 				return tf_map.TryGetValue(time_frame, out var pd) ? pd : tf_map.Add2(time_frame, new PriceData(m_model, pair, time_frame));
 			}
 		}
@@ -820,10 +864,10 @@ namespace CoinFlip
 	}
 	public class AddToUIEventArgs :EventArgs
 	{
-		public AddToUIEventArgs(IDockable dockable, params EDockSite[] dock_site)
+		public AddToUIEventArgs(IDockable dockable, DockContainer.DockLocation dock_location = null)
 		{
 			Dockable = dockable;
-			DockSite = dock_site;
+			DockLocation = dock_location;
 		}
 		public AddToUIEventArgs(ToolStrip toolbar)
 		{
@@ -832,10 +876,24 @@ namespace CoinFlip
 
 		/// <summary>Dockable content</summary>
 		public IDockable Dockable { get; private set; }
-		public EDockSite[] DockSite { get; private set; }
+		public DockContainer.DockLocation DockLocation { get; private set; }
 
 		/// <summary>Tool bar UI element</summary>
 		public ToolStrip Toolbar { get; private set; }
+	}
+	public class EditTradeEventArgs :EventArgs
+	{
+		public EditTradeEventArgs(Trade trade, ulong? existing_order_id)
+		{
+			Trade = trade;
+			ExistingOrderId = existing_order_id;
+		}
+
+		/// <summary>The trade to edit/create</summary>
+		public Trade Trade { get; private set; }
+
+		/// <summary>The ID of the existing position this trade represents</summary>
+		public ulong? ExistingOrderId { get; private set; }
 	}
 	#endregion
 }

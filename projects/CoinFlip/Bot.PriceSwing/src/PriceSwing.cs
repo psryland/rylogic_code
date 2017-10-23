@@ -11,6 +11,8 @@ using CoinFlip;
 using pr.common;
 using pr.container;
 using pr.extn;
+using pr.gfx;
+using pr.gui;
 using pr.maths;
 using pr.util;
 
@@ -31,16 +33,18 @@ namespace Bot.PriceSwing
 		public PriceSwing(Model model, XElement settings_xml)
 			:base("Price Swing", model, new SettingsData(settings_xml))
 		{
-			TradeRecords = new BindingSource<TradeRecord>{ DataSource = new BindingListEx<TradeRecord>() };
+			TradeRecords = new BindingSource<TradeRecord>{ DataSource = new BindingListEx<TradeRecord>{ PerItem = true } };
 			PendingTradeRecords = new List<TradeRecord>();
-			PriceSwingUI = new PriceSwingUI(this, Model.UI);
-			m_rng = new Random();
-			RestorePair();
+			PriceSwingUI = new PriceSwingUI(this);
+			GfxTemplate = new View3d.Object("*Line trade FFFFFFFF { -2 0 0 +2 0 0 }", false);
+			m_rng = new Random(653);
 		}
 		protected override void Dispose(bool disposing)
 		{
-			PriceSwingUI = null;
+			Pair = null;
 			TradeRecords = null;
+			PriceSwingUI = null;
+			GfxTemplate = null;
 			base.Dispose(disposing);
 		}
 		protected override void HandlePairsListChanging(object sender, ListChgEventArgs<TradePair> e)
@@ -61,14 +65,8 @@ namespace Bot.PriceSwing
 			private set
 			{
 				if (m_price_swing_ui == value) return;
-				if (m_price_swing_ui != null)
-				{
-					Util.Dispose(ref m_price_swing_ui);
-				}
+				Util.Dispose(ref m_price_swing_ui);
 				m_price_swing_ui = value;
-				if (m_price_swing_ui != null)
-				{
-				}
 			}
 		}
 		private PriceSwingUI m_price_swing_ui;
@@ -80,22 +78,17 @@ namespace Bot.PriceSwing
 			set
 			{
 				if (m_pair == value) return;
+
+				if (Active)
+					throw new Exception("Don't change the pair while the bot is running");
+
 				if (m_pair != null)
 				{
-					TradeRecords.Clear();
 				}
 				m_pair = value;
 				if (m_pair != null)
 				{
 					Settings.PairWithExchange = m_pair.NameWithExchange;
-
-					//// Create some fake records
-					//SaveTradeRecords(new[]
-					//{
-					//	new TradeRecord(ETradeType.B2Q, 0.07m._(m_pair.RateUnits), 1m._(m_pair.Base), 2m._(m_pair.Quote)),
-					//}.ToList());
-
-					LoadTradesRecord();
 				}
 				RaisePropertyChanged(new PropertyChangedEventArgs(nameof(Pair)));
 			}
@@ -118,89 +111,155 @@ namespace Bot.PriceSwing
 				{
 					m_trade_records.ListChanging += HandleTradeRecordsListChanging;
 				}
+
+				// Handlers
+				void HandleTradeRecordsListChanging(object sender, ListChgEventArgs<TradeRecord> e)
+				{
+					switch (e.ChangeType)
+					{
+					case ListChg.ItemAdded:
+						{
+							e.Item.Gfx = GfxTemplate.CreateInstance();
+							break;
+						}
+					case ListChg.ItemRemoved:
+						{
+							Util.Dispose(e.Item);
+							break;
+						}
+					}
+					if (e.IsDataChanged)
+						SaveTradeRecords();
+				}
 			}
 		}
 		private BindingSource<TradeRecord> m_trade_records;
-		private void HandleTradeRecordsListChanging(object sender, ListChgEventArgs<TradeRecord> e)
-		{
-			if (e.IsDataChanged)
-				SaveTradeRecords();
-		}
 
 		/// <summary>Trade records for orders that have been placed, but not confirmed as filled yet</summary>
 		public List<TradeRecord> PendingTradeRecords { get; private set; }
 
-		/// <summary>Main loop step</summary>
-		public async override Task Step()
+		/// <summary>Start the bot</summary>
+		public override void OnStart()
 		{
-			// Test for filled trades
-			await UpdateMonitoredTrades();
-
-			// Compare the current price with the trade records, 
-			// If we can trade such that the nett with a trade record
-			// is above the profit threshold, then do it.
-			// - Get the volume that was previously traded
-			// - Get the current price to trade this volume
-			// - Maximise by nett profit
-			MatchTrade(TradeRecords
-				.Where(x => x.TradeType == ETradeType.Q2B)
-				.MaxByOrDefault(x => Pair.BaseToQuote(x.VolumeOut).Price - x.Price));
-			MatchTrade(TradeRecords
-				.Where(x => x.TradeType == ETradeType.B2Q)
-				.MaxByOrDefault(x => Pair.QuoteToBase(x.VolumeOut).Price - x.Price));
-
-			// See if there are any trade records near the current price. If not, create a trade.
-			// Pick the trade direction based on the counts of B2Q and Q2B.
-			var sign = TradeRecords.Sum(x =>
-				x.TradeType == ETradeType.Q2B ? +1 :
-				x.TradeType == ETradeType.B2Q ? -1 : 0);
-			for (; sign == 0; sign = m_rng.Next(0,3) - 1) {}
-			var tt = sign > 0 ? ETradeType.B2Q : ETradeType.Q2B;
-
-			// Get the volume to trade (reduced to allow for fees and rounding)
-			var vol = 
-				tt == ETradeType.B2Q ? Maths.Min(Settings.VolumeFrac * Settings.FundAllocation * Pair.Base .Balance.Available * (1m - Pair.Fee) * 0.99999m, Pair.Base .AutoTradeLimit) :
-				tt == ETradeType.Q2B ? Maths.Min(Settings.VolumeFrac * Settings.FundAllocation * Pair.Quote.Balance.Available * (1m - Pair.Fee) * 0.99999m, Pair.Quote.AutoTradeLimit) :
-				0;
-
-			// Get the price that we can trade 'vol' in the direction of 'tt' for
-			var trade =
-				tt == ETradeType.Q2B ? Pair.QuoteToBase(vol) :
-				tt == ETradeType.B2Q ? Pair.BaseToQuote(vol) :
-				(Trade)null;
-
-			// Look for existing trade records near this price
-			Debug.Assert(TradeRecords.IsOrdered((l,r) => l.PriceQ2B <= r.PriceQ2B), "TradeRecords should be ordered");
-			var idx = TradeRecords.BinarySearch(x => x.PriceQ2B.CompareTo(trade.PriceQ2B), find_insert_position:true);
-
-			// Place a trade if there are no trade records within range of 'trade.PriceQ2B'
-			var do_trade = true;
-			if (idx >                  0) do_trade &= Maths.Abs(TradeRecords[idx - 1].PriceQ2B - trade.PriceQ2B) > Settings.PriceChange;
-			if (idx < TradeRecords.Count) do_trade &= Maths.Abs(TradeRecords[idx    ].PriceQ2B - trade.PriceQ2B) > Settings.PriceChange;
-			if (do_trade)
+			RestorePair();
+			if (Pair == null)
 			{
-				var validate = trade.Validate();
-				if (validate == Trade.EValidation.Valid)
-				{
-					// Place the trade. Add it to the trade records once it's been filled.
-					var res = MonitoredTrades.Add2(trade.CreateOrder());
-					PendingTradeRecords.Add(new TradeRecord(trade.TradeType, res.OrderId, trade.Price, trade.VolumeIn, trade.VolumeOut));
-					m_suppress_not_created = false;
-				}
-				else if (!m_suppress_not_created)
-				{
-					Log.Write(ELogLevel.Warn, $"Order skipped. {trade.Description} - {validate}");
-					m_suppress_not_created = true;
-				}
+				Model.AddToUI(PriceSwingUI);
+				PriceSwingUI.DockControl.IsActiveContent = true;
+			}
+			else
+			{
+				LoadTradesRecord();
 			}
 		}
+
+		/// <summary>Stop the bot</summary>
+		public override void OnStop()
+		{
+			using (SuspendSaving())
+				TradeRecords.Clear();
+		}
+
+		/// <summary>Main loop step</summary>
+		public override void Step()
+		{
+			if (Pair == null)
+				return;
+
+			// Test for opportunities to match earlier trades for profit
+			#region Match Trade Records
+			if (TradeRecords.Count != 0)
+			{
+				// Compare the current price with the trade records, 
+				// If we can trade such that the nett with a trade record
+				// is above the profit threshold, then do it.
+				// - Get the volume that was previously traded
+				// - Get the current price to trade this volume
+				// - Maximise by nett profit
+				TradeRecord record;
+				if (MaxPriceDiff(TradeRecords.Where(x => x.TradeType == ETradeType.Q2B), ETradeType.B2Q, out record))
+					MatchTrade(record);
+				if (MaxPriceDiff(TradeRecords.Where(x => x.TradeType == ETradeType.B2Q), ETradeType.Q2B, out record))
+					MatchTrade(record);
+
+				// Find the most profitable trade record
+				bool MaxPriceDiff(IEnumerable<TradeRecord> trade_records, ETradeType tt, out TradeRecord rec)
+				{
+					rec = null;
+
+					// Get the current spot price to work out the price threshold
+					var spot = Pair.SpotPrice(tt);
+					if (spot == null)
+						return false;
+
+					// Determine the price difference threshold
+					var threshold = (tt == ETradeType.B2Q ? spot.Value : (1m / spot.Value)) * (decimal)Settings.PriceChangeFrac;
+					
+					// Find the record with the maximum profitable price difference
+					var dprice = threshold;
+					foreach (var r in trade_records)
+					{
+						var dp = Pair.MakeTrade(tt, r.VolumeOut).Price - r.PriceInv;
+						if (dp < dprice) continue;
+						dprice = dp;
+						rec = r;
+					}
+
+					return rec != null;
+				}
+			}
+			#endregion
+
+			// See if there are any trade records near the current price. If not, create a trade.
+			#region Generate New Trades
+			{
+				// Pick the trade direction based on the counts of B2Q and Q2B.
+				var tt = NewTradeType;
+				var spot = Pair.SpotPrice(tt);
+				if (spot == null)
+					return;
+
+				// Get the volume to trade (reduced to allow for fees and rounding)
+				var vol = 
+					tt == ETradeType.B2Q ? Maths.Min((decimal)Settings.VolumeFrac * Settings.FundAllocation * Pair.Base .Balance.Available * (1m - Pair.Fee) * 0.99999m, Pair.Base .AutoTradeLimit) :
+					tt == ETradeType.Q2B ? Maths.Min((decimal)Settings.VolumeFrac * Settings.FundAllocation * Pair.Quote.Balance.Available * (1m - Pair.Fee) * 0.99999m, Pair.Quote.AutoTradeLimit) :
+					0;
+
+				// Get the price that we can trade 'vol' in the direction of 'tt' for
+				var trade = Pair.MakeTrade(tt, vol);
+
+				// Determine the required price distance from other existing or pending trades
+				var threshold = spot.Value * (decimal)Settings.PriceChangeFrac;
+
+				// Look for existing trade records or pending trades near this price
+				// Place a trade if there are no trade records within range of 'trade.PriceQ2B'
+				var do_trade = NearbyTrades(trade.PriceQ2B, threshold);
+				if (do_trade)
+				{
+					var validate = trade.Validate();
+					if (validate == EValidation.Valid)
+					{
+						// Place the trade. Add it to the trade records once it's been filled.
+						var res = MonitoredTrades.Add2(trade.CreateOrder());
+						PendingTradeRecords.Add(new TradeRecord(trade.TradeType, res.OrderId, Model.UtcNow, trade.Price, trade.VolumeIn, trade.VolumeOut));
+						m_suppress_not_created = false;
+					}
+					else if (!m_suppress_not_created)
+					{
+						Log.Write(ELogLevel.Warn, $"Order skipped. {trade.Description} - {validate}");
+						m_suppress_not_created = true;
+					}
+				}
+			}
+			#endregion
+
+			Stepped.Raise(this);
+		}
+		public event EventHandler Stepped;
 
 		/// <summary>Place a trade that is the reverse of 'rec'</summary>
 		private void MatchTrade(TradeRecord rec)
 		{
-			if (rec == null)
-				return;
-
 			// Create the matching trade
 			var trade =
 				rec.TradeType == ETradeType.B2Q ? Pair.QuoteToBase(rec.VolumeOut) :
@@ -209,7 +268,7 @@ namespace Bot.PriceSwing
 
 			// Place the trade
 			var validate = trade.Validate();
-			if (validate == Trade.EValidation.Valid)
+			if (validate == EValidation.Valid)
 			{
 				// Record the trade record and the matching trade so that when the matched
 				// trade is filled we can remove the trade record.
@@ -222,6 +281,43 @@ namespace Bot.PriceSwing
 			}
 		}
 
+		/// <summary>Return true if there is a trade record or a pending trade near 'price_q2b'</summary>
+		private bool NearbyTrades(Unit<decimal> price_q2b, Unit<decimal> threshold)
+		{
+			// Check the pending trades
+			if (PendingTradeRecords.Any(x =>  Maths.Abs(x.PriceQ2B - price_q2b) <= threshold))
+				return false;
+			
+			// Check the trade records
+			Debug.Assert(TradeRecords.IsOrdered((l,r) => l.PriceQ2B <= r.PriceQ2B), "TradeRecords should be ordered");
+			var idx = TradeRecords.BinarySearch(x => x.PriceQ2B.CompareTo(price_q2b), find_insert_position:true);
+
+			if ((idx >                  0 && Maths.Abs(TradeRecords[idx-1].PriceQ2B - price_q2b) <= threshold) ||
+				(idx < TradeRecords.Count && Maths.Abs(TradeRecords[idx  ].PriceQ2B - price_q2b) <= threshold))
+				return false;
+
+			return true;
+		}
+
+		/// <summary>Return the trade direction for a new trade, given the directions of the existing trade records</summary>
+		private ETradeType NewTradeType
+		{
+			get
+			{
+				// See what we have more of, Q2B or B2Q
+				var sign = TradeRecords.Sum(x =>
+					x.TradeType == ETradeType.Q2B ? +1 :
+					x.TradeType == ETradeType.B2Q ? -1 : 0);
+
+				// If it's even, choose at random
+				if (sign == 0)
+					sign = 2 * m_rng.Next(0,2) - 1;
+
+				// Return the trade direction
+				return sign > 0 ? ETradeType.B2Q : ETradeType.Q2B;
+			}
+		}
+
 		/// <summary>Handle a monitored trade being filled</summary>
 		protected override void OnPositionFilled(ulong order_id, PositionFill his)
 		{
@@ -231,20 +327,41 @@ namespace Bot.PriceSwing
 			if ((rec = TradeRecords.FirstOrDefault(x => x.MatchTradeId == order_id)) != null)
 			{
 				TradeRecords.Remove(rec);
+
+				// Log the win
+				var nett0 = his.VolumeOut - rec.VolumeIn;
+				var nett1 = rec.VolumeOut - his.VolumeIn;
+				var value0 = his.CoinOut.Value(nett0);
+				var value1 = his.CoinIn.Value(nett1);
+				var sum = value0 + value1;
+
+				var msg = Str.Build(
+					(Model.AllowTrades ? "!Profit!\n" : "!Virtual Profit!\n")
+					,$" On {Pair.Exchange.Name}:\n"
+					,$"   Initial order: {rec.Description}\n"
+					,$"   Matched by: {his.Description}\n"
+					,$"\n"
+					,$"  Nett: {nett0.ToString("G8",true)}  ({value0:C})\n"
+					,$"  Nett: {nett1.ToString("G8",true)}  ({value1:C})\n"
+					,$"  Total: {sum:C}"
+					);
+				Log.Write(ELogLevel.Warn, msg);
+				Model.WinLog.Write(ELogLevel.Info, msg);
+				Res.Coins.Play();
 			}
 			// The filled position is a new trade, add a new trade record
 			else if ((rec = PendingTradeRecords.FirstOrDefault(x => x.OrderId == order_id)) != null)
 			{
 				PendingTradeRecords.Remove(rec);
-				TradeRecords.Add(rec);
+				var idx = TradeRecords.BinarySearch(x => x.PriceQ2B.CompareTo(rec.PriceQ2B), find_insert_position:true);
+				TradeRecords.Insert(idx, rec);
 			}
 			// Otherwise, what the hell was it?
 			else
 			{
-				throw new Exception("Unknown monitored trade");
+				Debug.WriteLine("Unknown monitored trade!");
+				//throw new Exception("Unknown monitored trade");
 			}
-
-			base.OnPositionFilled(order_id, his);
 		}
 
 		/// <summary>Handle a monitored trade being cancelled</summary>
@@ -267,8 +384,6 @@ namespace Bot.PriceSwing
 			{
 				throw new Exception("Unknown monitored trade");
 			}
-
-			base.OnPositionCancelled(order_id);
 		}
 
 		/// <summary>Return items to add to the context menu for this bot</summary>
@@ -276,11 +391,33 @@ namespace Bot.PriceSwing
 		{
 			cmenu.Items.AddSeparator();
 			{
-				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Properties"));
+				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Monitor"));
 				opt.Click += (s,a) =>
 				{
-					PriceSwingUI.Show(Model.UI);
+					Model.AddToUI(PriceSwingUI);
+					PriceSwingUI.DockControl.IsActiveContent = true;
 				};
+			}
+		}
+
+		/// <summary>Add graphics to an chart displaying 'Pair'</summary>
+		public override void OnChartRendering(Instrument instrument, Settings.ChartSettings chart_settings, ChartControl.ChartRenderingEventArgs args)
+		{
+			if (instrument.Pair != Pair)
+				return;
+
+			// Draw all of the unmatched trade records
+			foreach (var tr in TradeRecords)
+			{
+				if (tr.Gfx == null) continue;
+				var x = (float)instrument.FIndexAt(new TimeFrameTime(tr.Timestamp, instrument.TimeFrame));
+				tr.Gfx.Colour =
+					tr.TradeType == ETradeType.Q2B ? (Colour32)0xFF00FF80 :
+					tr.TradeType == ETradeType.B2Q ? (Colour32)0xFFFF0080 :
+					tr.Gfx.Colour;
+
+				tr.Gfx.O2P = m4x4.Translation(new v4(x, (float)(decimal)tr.PriceQ2B, ZOrder.Trades, 1f));
+				args.AddToScene(tr.Gfx);
 			}
 		}
 
@@ -294,13 +431,21 @@ namespace Bot.PriceSwing
 		/// <summary>Return the filepath of the file containing trade records for 'pair'</summary>
 		private string TradeRecordFilepath
 		{
-			get { return Misc.ResolveUserPath($"Bots\\{Name}\\TradeRecord-{Pair.Name.Strip('/')}.xml"); }
+			get
+			{
+				var filename =
+					 Model.BackTesting ? $"TradeRecord-{Pair.Name.Strip('/')}-BackTesting.xml" :
+					!Model.AllowTrades ? $"TradeRecord-{Pair.Name.Strip('/')}-Fake.xml" :
+					$"TradeRecord-{Pair.Name.Strip('/')}.xml";
+
+				return Misc.ResolveUserPath($"Bots\\{Name}\\{filename}");
+			}
 		}
 
 		/// <summary>Load the history of unmatched trades for 'pair'</summary>
 		private void LoadTradesRecord()
 		{
-			using (TradeRecords.SuspendEvents(reset_bindings_on_resume: true, preserve_position: false))
+			using (SuspendSaving())
 			{
 				TradeRecords.Clear();
 
@@ -313,11 +458,11 @@ namespace Bot.PriceSwing
 				{
 					// Load the record from disk
 					var root = XDocument.Load(filepath).Root;
-					foreach (var elem in root.Elements("trade"))
-						TradeRecords.Add(elem.As<TradeRecord>());
-
-					// Order the records by price
-					TradeRecords.Sort(Cmp<TradeRecord>.From((l,r) => l.Price.CompareTo(r.Price)));
+					TradeRecords.AddRange(root
+						.Elements("trade")
+						.Select(x => x.As<TradeRecord>())
+						.Where(x => x.Timestamp <= Model.UtcNow.Ticks)
+						.OrderBy(x => x.PriceQ2B));
 				}
 				catch (Exception ex)
 				{
@@ -329,6 +474,9 @@ namespace Bot.PriceSwing
 		/// <summary>Write the trade records to disk</summary>
 		private void SaveTradeRecords()
 		{
+			if (m_suspend_save_records)
+				return;
+
 			var filepath = TradeRecordFilepath;
 			Path_.CreateDirs(Path_.Directory(filepath));
 			
@@ -346,6 +494,26 @@ namespace Bot.PriceSwing
 			}
 		}
 
+		/// <summary>Temporarily suspend saving of trade records</summary>
+		private Scope SuspendSaving()
+		{
+			return Scope.Create(() => m_suspend_save_records = true, () => m_suspend_save_records = false);
+		}
+		private bool m_suspend_save_records;
+
+		/// <summary>Template graphics object used to show trade records</summary>
+		private View3d.Object GfxTemplate
+		{
+			get { return m_gfx_template; }
+			set
+			{
+				if (m_gfx_template == value) return;
+				Util.Dispose(ref m_gfx_template);
+				m_gfx_template = value;
+			}
+		}
+		private View3d.Object m_gfx_template;
+
 		/// <summary>Data needed to save a fishing instance in the settings</summary>
 		[TypeConverter(typeof(TyConv))]
 		public class SettingsData :SettingsBase<SettingsData>
@@ -353,14 +521,14 @@ namespace Bot.PriceSwing
 			public SettingsData()
 			{
 				PairWithExchange = string.Empty;
-				PriceChange      = 0m._();
-				VolumeFrac       = 0.01m;
+				PriceChangeFrac  = 0;
+				VolumeFrac       = 0;
 			}
 			public SettingsData(SettingsData rhs)
 				:base(rhs)
 			{
 				PairWithExchange = rhs.PairWithExchange;
-				PriceChange      = rhs.PriceChange;
+				PriceChangeFrac  = rhs.PriceChangeFrac;
 				VolumeFrac       = rhs.VolumeFrac;
 			}
 			public SettingsData(XElement node)
@@ -370,28 +538,38 @@ namespace Bot.PriceSwing
 			/// <summary>The name of the pair to trade and the exchange it's on</summary>
 			public string PairWithExchange
 			{
-				get { return get(x => x.PairWithExchange); }
-				set { set(x => x.PairWithExchange, value); }
+				get { return get<string>(nameof(PairWithExchange)); }
+				set { set(nameof(PairWithExchange), value); }
 			}
 
 			/// <summary>The change in quote price required before matching a trade</summary>
-			public Unit<decimal> PriceChange
+			public double PriceChangeFrac
 			{
-				get { return get(x => x.PriceChange); }
-				set { set(x => x.PriceChange, value); }
+				get { return get<double>(nameof(PriceChangeFrac)); }
+				set { set(nameof(PriceChangeFrac), value); }
+			}
+			public double PriceChangePC
+			{
+				get { return PriceChangeFrac * 100.0; }
+				set { PriceChangeFrac = value * 0.01; }
 			}
 
 			/// <summary>The proportion of available balance to use in each trade</summary>
-			public decimal VolumeFrac
+			public double VolumeFrac
 			{
-				get { return get(x => x.VolumeFrac); }
-				set { set(x => x.VolumeFrac, value); }
+				get { return get<double>(nameof(VolumeFrac)); }
+				set { set(nameof(VolumeFrac), value); }
+			}
+			public double VolumePC
+			{
+				get { return VolumeFrac * 100.0; }
+				set { VolumeFrac = value * 0.01; }
 			}
 
 			/// <summary>True if the settings are valid</summary>
 			public override bool Valid
 			{
-				get { return PairWithExchange.HasValue() && PriceChange > 0 && VolumeFrac > 0; }
+				get { return PairWithExchange.HasValue() && PriceChangeFrac > 0 && VolumeFrac > 0; }
 			}
 
 			/// <summary>If 'Valid' is false, this is a text description of why</summary>
@@ -401,8 +579,8 @@ namespace Bot.PriceSwing
 				{
 					return
 						!(PairWithExchange.HasValue()) ? "No trading pair selected" :
-						!(PriceChange > 0) ? "Price change is invalid. Must be > 0" :
-						!(VolumeFrac > 0) ? "Volume fraction is invalid. Must be > 0" :
+						!(PriceChangeFrac > 0) ? "Price change is invalid. Must be > 0" :
+						!(VolumeFrac > 0) ? "Volume is invalid. Must be > 0" :
 						string.Empty;
 				}
 			}

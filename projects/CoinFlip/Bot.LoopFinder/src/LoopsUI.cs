@@ -31,11 +31,11 @@ namespace Bot.LoopFinder
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
-		protected async override void OnVisibleChanged(EventArgs e)
+		protected override void OnVisibleChanged(EventArgs e)
 		{
 			base.OnVisibleChanged(e);
-			if (Visible)
-				await Bot.RebuildLoopsAsync();
+			//?if (Visible)
+			//?	Bot.TriggerLoopsUpdate();
 		}
 
 		/// <summary>App logic</summary>
