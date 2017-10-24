@@ -1039,6 +1039,7 @@ namespace pr.gui
 		#region Chart Dims
 
 		/// <summary>The calculated areas of the control</summary>
+		[DebuggerDisplay("Area={Area}  ChartArea={ChartArea}")]
 		public struct ChartDims
 		{
 			public ChartDims(ChartControl chart)

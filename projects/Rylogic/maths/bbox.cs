@@ -60,6 +60,12 @@ namespace pr.maths
 			get { return m_radius.x >= 0f && m_radius.y >= 0f && m_radius.z >= 0f; }
 		}
 
+		/// <summary>Returns true if this bbox encompasses a single point</summary>
+		public bool IsPoint
+		{
+			get { return m_radius == v4.Zero;  }
+		}
+
 		/// <summary>Minimum X bound</summary>
 		public float MinX
 		{

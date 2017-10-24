@@ -396,7 +396,6 @@ namespace LDraw
 				}
 			}
 		}
-
 		private DragDrop m_dd;
 		private bool HandleDrop(object sender, DragEventArgs args, DragDrop.EDrop mode)
 		{

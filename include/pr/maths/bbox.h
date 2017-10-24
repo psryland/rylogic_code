@@ -49,16 +49,16 @@ namespace pr
 			return *this;
 		}
 
-		// Returns true if this bbox does not bound anything
-		bool empty() const
-		{
-			return m_radius.x < 0 || m_radius.y < 0 || m_radius.z < 0;
-		}
-
 		// Returns true if the bbox is valid
 		bool valid() const
 		{
 			return m_radius.x >= 0 && m_radius.y >= 0 && m_radius.z >= 0;
+		}
+
+		// Returns true if this bbox encompasses a single point
+		bool is_point() const
+		{
+			return m_radius == v4Zero;
 		}
 
 		// Set this bbox to a unit cube centred on the origin
@@ -208,7 +208,7 @@ namespace pr
 	}
 	inline BBox pr_vectorcall operator * (m4x4_cref m, BBox_cref rhs)
 	{
-		assert("Transforming an invalid bounding box" && !rhs.empty());
+		assert("Transforming an invalid bounding box" && rhs.valid());
 
 		BBox bb(m.pos, v4Zero);
 		m4x4 mat = Transpose3x3(m);
@@ -221,7 +221,7 @@ namespace pr
 	}
 	inline BBox pr_vectorcall operator * (m3x4_cref m, BBox_cref rhs)
 	{
-		assert("Transforming an invalid bounding box" && !rhs.empty());
+		assert("Transforming an invalid bounding box" && rhs.valid());
 
 		BBox bb(v4Origin, v4Zero);
 		auto mat = Transpose(m);
@@ -326,8 +326,8 @@ namespace pr
 	// Encompass 'rhs' in 'lhs'
 	inline BBox& pr_vectorcall Encompass(BBox& lhs, BBox_cref rhs)
 	{
-		// Don't treat rhs.empty() as an error, it's the only way to Encompass a empty bbox
-		if (rhs.empty()) return lhs;
+		// Don't treat !rhs.valid() as an error, it's the only way to Encompass a empty bbox
+		if (!rhs.valid()) return lhs;
 		Encompass(lhs, rhs.m_centre + rhs.m_radius);
 		Encompass(lhs, rhs.m_centre - rhs.m_radius);
 		return lhs;

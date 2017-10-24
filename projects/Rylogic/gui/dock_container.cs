@@ -272,7 +272,7 @@ namespace pr.gui
 			set
 			{
 				if (m_impl_root == value) return;
-				using (this.SuspendLayout(true))
+				using (this.SuspendLayout(layout_on_resume:false))
 				{
 					if (m_impl_root != null)
 					{
@@ -285,6 +285,7 @@ namespace pr.gui
 					{
 						Controls.Add(m_impl_root);
 						m_impl_root.TreeChanged += HandleTreeChanged;
+						TriggerLayout();
 					}
 				}
 			}
@@ -442,6 +443,17 @@ namespace pr.gui
 			}
 			base.OnLayout(levent);
 		}
+		public void TriggerLayout()
+		{
+			if (m_layout_pending || !IsHandleCreated) return;
+			m_layout_pending = true;
+			this.BeginInvoke(() =>
+			{
+				m_layout_pending = false;
+				PerformLayout();
+			});
+		}
+		private bool m_layout_pending;
 
 		/// <summary>Initiate dragging of a pane or content</summary>
 		private static void DragBegin(object draggee)
@@ -524,7 +536,7 @@ namespace pr.gui
 			case TreeChangedEventArgs.EAction.Added:
 			case TreeChangedEventArgs.EAction.Removed:
 				{
-					PerformLayout();
+					TriggerLayout();
 					if (obj.DockControl != null)
 						OnDockableMoved(new DockableMovedEventArgs((DockableMovedEventArgs.EAction)obj.Action, obj.DockControl.Dockable));
 					break;
@@ -781,7 +793,7 @@ namespace pr.gui
 			if (node.Name != XmlTag.DockContainerLayout)
 				throw new Exception("XML data does not contain dock container layout information");
 
-			using (this.SuspendLayout(true))
+			using (this.SuspendLayout(layout_on_resume:false))
 			{
 				// Get a collection of the content currently loaded
 				var all_content = AllContentInternal.ToDictionary(x => x.PersistName, x => x);
@@ -825,6 +837,8 @@ namespace pr.gui
 					if (active != null && all_content.TryGetValue(active, out var content))
 						ActiveContent = content;
 				}
+
+				TriggerLayout();
 			}
 		}
 
@@ -920,9 +934,12 @@ namespace pr.gui
 				if (location.Length == 0)
 					throw new ArgumentException("A valid tree location is required", nameof(location));
 
-				using (DockContainer.SuspendLayout(true))
-				using (this.SuspendLayout(true))
+				//using (DockContainer.SuspendLayout(layout_on_resume:false))
+				using (this.SuspendLayout(layout_on_resume:false))
 				{
+					//DockContainer.TriggerLayout();
+					TriggerLayout();
+
 					// If already on a pane, remove first (raising events)
 					// Removing panes causes PruneBranches to be called, so this must be called before
 					// DockPane() otherwise the newly added pane/branches will be deleted.
@@ -1153,7 +1170,7 @@ namespace pr.gui
 						Debug.Assert(value == null || value is DockPane || value is Branch);
 
 						if (m_ctrl == value) return;
-						using (This.SuspendLayout(true))
+						using (This.SuspendLayout(layout_on_resume:false))
 						{
 							if (m_ctrl != null)
 							{
@@ -1182,6 +1199,7 @@ namespace pr.gui
 								// Notify of the tree change
 								This.OnTreeChanged(new TreeChangedEventArgs(TreeChangedEventArgs.EAction.Added, pane:m_ctrl as DockPane, branch:m_ctrl as Branch));
 							}
+							This.TriggerLayout();
 						}
 					}
 				}
@@ -1206,7 +1224,7 @@ namespace pr.gui
 					set
 					{
 						if (m_split == value) return;
-						using (This.SuspendLayout(true))
+						using (This.SuspendLayout(layout_on_resume:false))
 						{
 							if (m_split != null)
 							{
@@ -1220,6 +1238,7 @@ namespace pr.gui
 								This.Controls.Add(m_split);
 								This.Controls.SetChildIndex(m_split, 0);
 							}
+							This.TriggerLayout();
 						}
 					}
 				}
@@ -1286,7 +1305,7 @@ namespace pr.gui
 					case EDockSite.Top:    This.DockSizes[DockSite] = (                    split) / (This.DockSizes[DockSite] <= 1 ? Split.Area.Height : 1); break;
 					case EDockSite.Bottom: This.DockSizes[DockSite] = (Split.Area.Height - split) / (This.DockSizes[DockSite] <= 1 ? Split.Area.Height : 1); break;
 					}
-					This.PerformLayout();
+					This.TriggerLayout();
 				}
 			}
 
@@ -1419,6 +1438,17 @@ namespace pr.gui
 				}
 				base.OnLayout(levent);
 			}
+			public void TriggerLayout()
+			{
+				if (m_layout_pending || !IsHandleCreated) return;
+				m_layout_pending = true;
+				this.BeginInvoke(() =>
+				{
+					m_layout_pending = false;
+					PerformLayout();
+				});
+			}
+			private bool m_layout_pending;
 
 			/// <summary>Record the layout of the tree</summary>
 			public XElement ToXml(XElement node)
@@ -1619,7 +1649,7 @@ namespace pr.gui
 			/// If this is the active pane, then the dock container events are also raised.</summary>
 			public DockControl VisibleContent
 			{
-				get { return m_impl_visible_content; }
+				[DebuggerStepThrough] get { return m_impl_visible_content; }
 				set
 				{
 					if (m_impl_visible_content == value || m_in_visible_content) return;
@@ -1636,7 +1666,7 @@ namespace pr.gui
 
 						// Switch to the new active content
 						var prev = m_impl_visible_content;
-						using (this.SuspendLayout(true))
+						using (this.SuspendLayout(layout_on_resume:false))
 						{
 							if (m_impl_visible_content != null)
 							{
@@ -1665,6 +1695,8 @@ namespace pr.gui
 								// Restore the input focus for this content
 								m_impl_visible_content.RestoreFocus();
 							}
+
+							TriggerLayout();
 						}
 
 						// Ensure the tab for the active content is visible
@@ -1712,7 +1744,7 @@ namespace pr.gui
 					if (content == null)
 						return;
 
-					using (this.SuspendLayout(true))
+					using (this.SuspendLayout(layout_on_resume:false))
 					{
 						// Record properties of this pane so we can set them on the new pane
 						// (this pane will be disposed if empty after the content has changed floating state)
@@ -1727,10 +1759,9 @@ namespace pr.gui
 
 						// Add the remaining content to the same pane that 'content' is now in
 						if (!ApplyToVisibleContentOnly)
-						{
-							using (pane.SuspendLayout(true))
-								pane.Content.AddRange(Content.ToArray());
-						}
+							pane.Content.AddRange(Content.ToArray());
+
+						TriggerLayout();
 					}
 				}
 			}
@@ -1752,7 +1783,7 @@ namespace pr.gui
 					if (content == null)
 						return;
 
-					using (this.SuspendLayout(true))
+					using (this.SuspendLayout(layout_on_resume:false))
 					{
 						// Change the state of the active content
 						content.IsAutoHide = value;
@@ -1761,9 +1792,10 @@ namespace pr.gui
 						if (!ApplyToVisibleContentOnly)
 						{
 							var pane = content.DockPane;
-							using (pane.SuspendLayout(true))
-								pane.Content.AddRange(Content.ToArray());
+							pane.Content.AddRange(Content.ToArray());
 						}
+
+						TriggerLayout();
 					}
 				}
 			}
@@ -1778,7 +1810,7 @@ namespace pr.gui
 				set
 				{
 					if (m_impl_caption_ctrl == value) return;
-					using (this.SuspendLayout(true))
+					using (this.SuspendLayout(layout_on_resume:false))
 					{
 						if (m_impl_caption_ctrl != null)
 						{
@@ -1791,6 +1823,8 @@ namespace pr.gui
 							Controls.Add(m_impl_caption_ctrl);
 							Controls.SetChildIndex(m_impl_caption_ctrl, 100);
 						}
+
+						TriggerLayout();
 					}
 				}
 			}
@@ -1803,7 +1837,7 @@ namespace pr.gui
 				set
 				{
 					if (m_impl_tab_strip_ctrl == value) return;
-					using (this.SuspendLayout(true))
+					using (this.SuspendLayout(layout_on_resume:false))
 					{
 						if (m_impl_tab_strip_ctrl != null)
 						{
@@ -1816,6 +1850,7 @@ namespace pr.gui
 							Controls.Add(m_impl_tab_strip_ctrl);
 							Controls.SetChildIndex(m_impl_tab_strip_ctrl, 100);
 						}
+						TriggerLayout();
 					}
 				}
 			}
@@ -1872,7 +1907,7 @@ namespace pr.gui
 
 						// Perform layout, since a tab has been added which might mean the tab strip needs to shown
 						Invalidate(true);
-						PerformLayout();
+						TriggerLayout();
 						break;
 					}
 				case ListChg.ItemRemoved:
@@ -1892,7 +1927,7 @@ namespace pr.gui
 
 						// Perform layout, since a tab has been removed which might mean the tab strip needs to hide
 						Invalidate(true);
-						PerformLayout();
+						TriggerLayout();
 						break;
 					}
 				}
@@ -1973,22 +2008,28 @@ namespace pr.gui
 						VerticalScroll.Value = 0;
 
 						// Position the title bar
-						if (TitleCtrl != null && TitleCtrl.Visible)
+						if (TitleCtrl != null)
 						{
 							var bounds = TitleCtrl.CalcBounds(rect);
-							rect = rect.Subtract(bounds);
 							TitleCtrl.Bounds = bounds;
 
+							// Update the available area if the title control is visible
+							if (TitleCtrl.Visible)
+								rect = rect.Subtract(bounds);
+
 							// Auto hide is hidden if the pane is in the centre dock site
-							TitleCtrl.ButtonAutoHide.Visible = AutoHideSide != EDockSite.Centre || IsAutoHide; // Always visible if the pane in within an auto-hide panel
+							TitleCtrl.ButtonAutoHide.Visible = AutoHideSide != EDockSite.Centre || IsAutoHide; // Always visible if the pane is within an auto-hide panel
 						}
 
 						// Position the tab strip
-						if (TabStripCtrl != null && TabStripCtrl.Visible)
+						if (TabStripCtrl != null)
 						{
 							var bounds = TabStripCtrl.CalcBounds(rect);
-							rect = rect.Subtract(bounds);
 							TabStripCtrl.Bounds = bounds;
+
+							// Update the available area if the tab strip is visible
+							if (TabStripCtrl.Visible)
+								rect = rect.Subtract(bounds);
 						}
 
 						// Use the remaining area for content
@@ -1999,6 +2040,17 @@ namespace pr.gui
 
 				base.OnLayout(e);
 			}
+			public void TriggerLayout()
+			{
+				if (m_layout_pending || !IsHandleCreated) return;
+				m_layout_pending = true;
+				this.BeginInvoke(() =>
+				{
+					m_layout_pending = false;
+					PerformLayout();
+				});
+			}
+			private bool m_layout_pending;
 
 			/// <summary>Handle mouse activation of the content within this pane</summary>
 			[SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
@@ -2075,7 +2127,7 @@ namespace pr.gui
 					SetStyle(ControlStyles.Selectable, false);
 					Text = GetType().FullName;
 					ResizeRedraw = true;
-					Visible = true;
+					Hidden = false;
 
 					DockPane = owner;
 					using (this.SuspendLayout(false))
@@ -2098,23 +2150,25 @@ namespace pr.gui
 					DockPane = null;
 					base.Dispose(disposing);
 				}
+				protected override void OnVisibleChanged(EventArgs e)
+				{
+					Visible &= !Hidden;
+					base.OnVisibleChanged(e);
+				}
 
-				/// <summary>Get/Set whether this control is visible</summary>
-				public new bool Visible
+				/// <summary>Get/Set whether this control is displayed</summary>
+				public bool Hidden
 				{
 					get
 					{
-						return
-							m_impl_visible &&
-							(DockPane.VisibleContent?.ShowTitle ?? true) &&
-							DockPane.DockContainer.Options.TitleBar.ShowTitleBars;
+						if (m_hidden) return true;
+						if (DockPane?.VisibleContent?.ShowTitle is bool show0 && show0 == false) return true;
+						if (DockPane?.DockContainer?.Options.TitleBar.ShowTitleBars is bool show1 && show1 == false) return true;
+						return false;
 					}
-					set
-					{
-						base.Visible = m_impl_visible = value;
-					}
+					set { Visible = !(m_hidden = value); }
 				}
-				private bool m_impl_visible;
+				private bool m_hidden;
 
 				/// <summary>The dock pane that hosts this control</summary>
 				public DockPane DockPane
@@ -2328,7 +2382,7 @@ namespace pr.gui
 				protected override void OnRightToLeftChanged(EventArgs e)
 				{
 					base.OnRightToLeftChanged(e);
-					PerformLayout();
+					DockPane.TriggerLayout();
 				}
 
 				/// <summary>Start dragging the pane on mouse-down over the title</summary>
@@ -2373,7 +2427,7 @@ namespace pr.gui
 				protected override void OnHandleCreated(EventArgs e)
 				{
 					base.OnHandleCreated(e);
-					base.Visible = m_impl_visible;
+					Visible = !Hidden;
 				}
 
 				/// <summary>Helper overload of invalidate</summary>
@@ -2386,7 +2440,7 @@ namespace pr.gui
 				private static ContextMenuStrip CreateContextMenu(DockPane pane)
 				{
 					var cmenu = new ContextMenuStrip();
-					using (cmenu.SuspendLayout(true))
+					using (cmenu.SuspendLayout(false))
 					{
 						{ // Float the pane in a new window
 							var opt = cmenu.Items.Add2(new ToolStripMenuItem("Float"));
@@ -2468,16 +2522,21 @@ namespace pr.gui
 						Text = GetType().FullName;
 						BackColor = Color.Transparent;
 						Image = image;
-						Visible = true;
+						Hidden = false;
+					}
+					protected override void SetVisibleCore(bool value)
+					{
+						value &= !Hidden;
+						base.SetVisibleCore(value);
 					}
 
 					/// <summary>Get/Set whether this control is visible</summary>
-					public new bool Visible
+					public bool Hidden
 					{
-						get { return m_impl_visible; }
-						set { base.Visible = m_impl_visible = value; }
+						get { return m_hidden; }
+						set { Visible = !(m_hidden = value); }
 					}
-					private bool m_impl_visible;
+					private bool m_hidden;
 
 					/// <summary>The image to display on the button</summary>
 					public Bitmap Image { get; set; }
@@ -2544,7 +2603,7 @@ namespace pr.gui
 					protected override void OnHandleCreated(EventArgs e)
 					{
 						base.OnHandleCreated(e);
-						base.Visible = m_impl_visible;
+						Visible = !Hidden;
 					}
 				}
 			}
@@ -3155,7 +3214,7 @@ namespace pr.gui
 			public ContextMenuStrip DefaultTabCMenu()
 			{
 				var cmenu = new ContextMenuStrip();
-				using (cmenu.SuspendLayout(true))
+				using (cmenu.SuspendLayout(false))
 				{
 					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Close"));
 					opt.Click += (s,a) =>
@@ -3627,7 +3686,7 @@ namespace pr.gui
 				if (Equals(prop,value)) return;
 				Debug.Assert(value >= 0);
 				prop = value;
-				Owner?.PerformLayout();
+				Owner?.TriggerLayout();
 			}
 
 			/// <summary>
@@ -4006,7 +4065,7 @@ namespace pr.gui
 				m_opts = opts;
 				TabStripOpts = tabstrip_opts;
 				m_tt = new ToolTip{ShowAlways = true, InitialDelay = 2000};
-				Visible = true;
+				Hidden = false;
 
 				StripLocation = ds;
 				StripSize = PreferredStripSize;
@@ -4016,14 +4075,19 @@ namespace pr.gui
 				Util.Dispose(ref m_tt);
 				base.Dispose(disposing);
 			}
-
-			/// <summary>Get/Set whether this control is visible</summary>
-			public new bool Visible
+			protected override void SetVisibleCore(bool value)
 			{
-				get { return m_impl_visible; }
-				set { base.Visible = m_impl_visible = value; }
+				value &= !Hidden;
+				base.SetVisibleCore(value);
 			}
-			private bool m_impl_visible;
+
+			/// <summary>Get/Set whether this control is displayed</summary>
+			public bool Hidden
+			{
+				get { return m_hidden; }
+				set { Visible = !(m_hidden = value); }
+			}
+			private bool m_hidden;
 
 			/// <summary>Override the window creation parameters</summary>
 			protected override CreateParams CreateParams
@@ -4054,7 +4118,7 @@ namespace pr.gui
 						throw new Exception("Invalid tab strip location");
 
 					m_impl_strip_loc = value;
-					Parent?.PerformLayout();
+					((DockPane)Parent)?.TriggerLayout();
 				}
 			}
 			private EDockSite m_impl_strip_loc;
@@ -4407,7 +4471,7 @@ namespace pr.gui
 			protected override void OnHandleCreated(EventArgs e)
 			{
 				base.OnHandleCreated(e);
-				base.Visible = m_impl_visible;
+				Visible = !Hidden;
 			}
 		}
 
@@ -4733,12 +4797,15 @@ namespace pr.gui
 						if (dockpane != null)
 						{
 							var target = DropRootBranch.DockPane(DropAddress.First(), DropAddress.Skip(1));
-							using (dockpane.SuspendLayout(true))
-							using (target.SuspendLayout(true))
+							using (dockpane.SuspendLayout(layout_on_resume:false))
+							using (target.SuspendLayout(layout_on_resume:false))
 							{
 								var index = Maths.Clamp(DropIndex, 0, dockpane.Content.Count);
 								foreach (var c in dockpane.Content.Reversed().ToArray())
 									target.Content.Insert(index, c);
+
+								dockpane.TriggerLayout();
+								target.TriggerLayout();
 							}
 						}
 					}
@@ -5395,7 +5462,7 @@ namespace pr.gui
 				set
 				{
 					if (m_impl_root == value) return;
-					using (this.SuspendLayout(true))
+					using (this.SuspendLayout(layout_on_resume:false))
 					{
 						if (m_impl_root != null)
 						{
@@ -5409,6 +5476,7 @@ namespace pr.gui
 							Controls.Add(m_impl_root);
 							m_impl_root.Dock = DockStyle.Fill;
 							m_impl_root.TreeChanged += HandleTreeChanged;
+							m_impl_root.TriggerLayout();
 						}
 					}
 				}
@@ -5508,11 +5576,13 @@ namespace pr.gui
 							(int)Win32.SendMessage(Handle, Win32.WM_NCHITTEST, IntPtr.Zero, m.LParam) == (int)Win32.HitTest.HTCAPTION)
 						{
 							// Move all content back to the dock container
-							using (this.SuspendLayout(true))
+							using (this.SuspendLayout(layout_on_resume:false))
 							{
 								var content = Root.AllPanes.SelectMany(x => x.Content).ToArray();
 								foreach (var c in content)
 									c.IsFloating = false;
+
+								Root?.TriggerLayout();
 							}
 
 							Hide();
@@ -5666,7 +5736,7 @@ namespace pr.gui
 				set
 				{
 					if (m_impl_root == value) return;
-					using (this.SuspendLayout(true))
+					using (this.SuspendLayout(layout_on_resume:false))
 					{
 						if (m_impl_root != null)
 						{
@@ -5679,6 +5749,7 @@ namespace pr.gui
 						{
 							Controls.Add(m_impl_root);
 							m_impl_root.TreeChanged += HandleTreeChanged;
+							m_impl_root.TriggerLayout();
 						}
 					}
 				}
@@ -5696,7 +5767,7 @@ namespace pr.gui
 				set
 				{
 					if (m_split == value) return;
-					using (this.SuspendLayout(true))
+					using (this.SuspendLayout(layout_on_resume:false))
 					{
 						if (m_split != null)
 						{
@@ -5710,6 +5781,7 @@ namespace pr.gui
 							Controls.Add(m_split);
 							Controls.SetChildIndex(m_split, 0);
 						}
+						Root?.TriggerLayout();
 					}
 				}
 			}
@@ -5753,7 +5825,7 @@ namespace pr.gui
 					m_impl_popped_out = value;
 
 					// Force a layout of the dock container
-					Parent?.PerformLayout();
+					((DockContainer)Parent)?.TriggerLayout();
 
 					// When no longer popped out, make the last active content active again
 					if (!m_impl_popped_out)
@@ -5786,7 +5858,7 @@ namespace pr.gui
 					if (m_impl_popped_out_size == value) return;
 					m_impl_popped_out_size = value;
 					if (PoppedOut)
-						Parent?.PerformLayout();
+						((DockContainer)Parent)?.TriggerLayout();
 				}
 			}
 			private float m_impl_popped_out_size;
@@ -5973,7 +6045,7 @@ namespace pr.gui
 						if (Root.AllContent.CountAtMost(2) == 1)
 						{
 							ActivePane = Root.AllPanes.First();
-							DockContainer.PerformLayout();
+							DockContainer.TriggerLayout();
 						}
 
 						// Change the behaviour of all dock panes in the auto hide panel to only operate on the visible content
@@ -5990,7 +6062,7 @@ namespace pr.gui
 						if (!Root.AllContent.Any())
 						{
 							PoppedOut = false;
-							DockContainer.PerformLayout();
+							DockContainer.TriggerLayout();
 						}
 						break;
 					}

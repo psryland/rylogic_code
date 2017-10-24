@@ -515,7 +515,7 @@ namespace pr
 				if (m_model && !AllSet(m_flags,ELdrFlags::BBoxInvisible) && pred(*this)) // Get the bbox from the graphics model
 				{
 					auto bb = i2w * m_model->m_bbox;
-					if (!bb.empty()) pr::Encompass(bbox, bb);
+					if (bb.valid()) pr::Encompass(bbox, bb);
 				}
 				if (include_children) // Add the bounding boxes of the children
 				{
@@ -523,7 +523,7 @@ namespace pr
 					{
 						auto c2w = i2w * child->m_o2p;
 						auto cbbox = child->BBoxMS(include_children, pred, time_s, &c2w);
-						if (!cbbox.empty()) pr::Encompass(bbox, cbbox);
+						if (cbbox.valid()) pr::Encompass(bbox, cbbox);
 					}
 				}
 				return bbox;

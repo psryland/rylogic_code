@@ -601,7 +601,7 @@ namespace view3d
 					break;
 				}
 			}
-			return !bbox.empty() ? bbox : pr::BBoxUnit;
+			return bbox.valid() ? bbox : pr::BBoxUnit;
 		}
 
 		// Set the position and size of the selection box. If 'bbox' is 'BBoxReset' the selection box is not shown

@@ -187,6 +187,7 @@ namespace LDraw
 						new DockContainer.DockLocation();
 
 					Owner.DockContainer.Add(script, dloc);
+					script.DockControl.IsActiveContent = true;
 					Owner.UpdateUI();
 					break;
 				}
